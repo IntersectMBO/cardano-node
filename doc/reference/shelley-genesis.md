@@ -323,8 +323,11 @@ example genesis template for us in `example/genesis.spec.json`:
 
 TODO: the generated file puts the fields in an unhelpful order.
 
-We will mostly use these defaults for this demo. The meaning of all the ones
+We will mostly use these defaults for this demo. The various fields are described [here](genesis-file-format.md)
+
+The meaning of all the ones
 we do not edit here will be covered elsewhere.
+
 
 When we regenerate the genesis file it will fill in the:
 
