@@ -18,6 +18,6 @@ jobs:
     - name: Invoke workflow
       uses: benc-uk/workflow-dispatch@v1
       with:
-        workflow: Haskell CI
+        workflow: 4656235
         token: ${{ secrets.MACHINE_TOKEN }}
         inputs: '{ "reason": "nightly", "tests": "all" }'
