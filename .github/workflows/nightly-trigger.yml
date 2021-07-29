@@ -16,8 +16,8 @@ jobs:
     steps:
 
     - name: Invoke workflow
-      uses: benc-uk/workflow-dispatch@v1
+      uses: input-output-hk/workflow-dispatch@v1
       with:
-        workflow: Haskell CI
+        workflow: .github/workflows/haskell.yml
         token: ${{ secrets.MACHINE_TOKEN }}
         inputs: '{ "reason": "nightly", "tests": "all" }'
