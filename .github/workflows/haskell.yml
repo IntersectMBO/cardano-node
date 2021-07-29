@@ -101,11 +101,10 @@ jobs:
 
     - name: Environment
       run: |
-        if [ "${{github.event.inputs.tests}}" == "all" ]; then
-          echo "Reconfigure cabal projects to run tests for all dependencies"
-          cat cabal.project | sed 's|tests: False|tests: True|g' > cabal.project.new
-          mv cabal.project.new cabal.project
-        fi
+        echo "Reconfigure cabal projects to run tests for all dependencies"
+        cat cabal.project | sed 's|tests: False|tests: True|g' > cabal.project.new
+        mv cabal.project.new cabal.project
+        cat cabal.project
 
     - name: Configure build
       run: cp .github/workflows/cabal.project.local.$RUNNER_OS cabal.project.local
