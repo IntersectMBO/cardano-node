@@ -380,7 +380,7 @@ genTxOutValue era =
     Left adaOnlyInEra     -> TxOutAdaOnly adaOnlyInEra <$> genLovelace
     Right multiAssetInEra -> TxOutValue multiAssetInEra <$> genValueForTxOut
 
-genTxOut :: CardanoEra era -> Gen (TxOut era)
+genTxOut :: CardanoEra era -> Gen (TxOut CtxTx era)
 genTxOut era =
   TxOut <$> genAddressInEra era
         <*> genTxOutValue era
@@ -488,7 +488,6 @@ genTxBodyContent era = do
   txValidityRange <- genTxValidityRange era
   txMetadata <- genTxMetadataInEra era
   txAuxScripts <- genTxAuxScripts era
-  let txExtraScriptData = BuildTxWith TxExtraScriptDataNone --TODO: Alonzo era: Generate extra script data
   let txExtraKeyWits = TxExtraKeyWitnessesNone --TODO: Alonzo era: Generate witness key hashes
   txProtocolParams <- BuildTxWith <$> Gen.maybe genProtocolParameters
   txWithdrawals <- genTxWithdrawals era
@@ -504,7 +503,6 @@ genTxBodyContent era = do
     , Api.txValidityRange
     , Api.txMetadata
     , Api.txAuxScripts
-    , Api.txExtraScriptData
     , Api.txExtraKeyWits
     , Api.txProtocolParams
     , Api.txWithdrawals
@@ -738,16 +736,17 @@ genExecutionUnits = ExecutionUnits <$> Gen.integral (Range.constant 0 1000)
 genExecutionUnitPrices :: Gen ExecutionUnitPrices
 genExecutionUnitPrices = ExecutionUnitPrices <$> genRational <*> genRational
 
-genTxOutDatumHash :: CardanoEra era -> Gen (TxOutDatumHash era)
+genTxOutDatumHash :: CardanoEra era -> Gen (TxOutDatum CtxTx era)
 genTxOutDatumHash era = case era of
-    ByronEra -> pure TxOutDatumHashNone
-    ShelleyEra -> pure TxOutDatumHashNone
-    AllegraEra -> pure TxOutDatumHashNone
-    MaryEra -> pure TxOutDatumHashNone
-    AlonzoEra -> Gen.choice
-      [ pure TxOutDatumHashNone
-      , TxOutDatumHash ScriptDataInAlonzoEra <$> genHashScriptData
-      ]
+    ByronEra   -> pure TxOutDatumNone
+    ShelleyEra -> pure TxOutDatumNone
+    AllegraEra -> pure TxOutDatumNone
+    MaryEra    -> pure TxOutDatumNone
+    AlonzoEra  -> Gen.choice
+                    [ pure TxOutDatumNone
+                    , TxOutDatumHash ScriptDataInAlonzoEra <$> genHashScriptData
+                    , TxOutDatum     ScriptDataInAlonzoEra <$> genScriptData
+                    ]
 
 mkDummyHash :: forall h a. CRYPTO.HashAlgorithm h => Int -> CRYPTO.Hash h a
 mkDummyHash = coerce . CRYPTO.hashWithSerialiser @h CBOR.toCBOR

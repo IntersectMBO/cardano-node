@@ -769,7 +769,7 @@ makeTransactionBodyAutoBalance eraInMode systemstart history pparams
                makeTransactionBody txbodycontent {
                  txOuts = TxOut changeaddr
                                 (lovelaceToTxOutValue 0)
-                                TxOutDatumHashNone
+                                TxOutDatumNone
                         : txOuts txbodycontent
                                 --TODO: think about the size of the change output
                                 -- 1,2,4 or 8 bytes?
@@ -825,7 +825,7 @@ makeTransactionBodyAutoBalance eraInMode systemstart history pparams
     txbody3 <- first TxBodyError $ -- TODO: impossible to fail now
                makeTransactionBody txbodycontent1 {
                  txFee  = TxFeeExplicit explicitTxFees fee,
-                 txOuts = TxOut changeaddr balance TxOutDatumHashNone
+                 txOuts = TxOut changeaddr balance TxOutDatumNone
                         : txOuts txbodycontent
                }
 
