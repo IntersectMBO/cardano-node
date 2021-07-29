@@ -1,6 +1,17 @@
 name: Haskell CI
 
-on: [push]
+on:
+  push:
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Reason'
+        required: false
+        default: manual
+      tests:
+        description: 'Tests'
+        required: false
+        default: some
 
 jobs:
   build:
@@ -87,6 +98,14 @@ jobs:
 
     - name: Cabal update
       run: retry 2 cabal update
+
+    - name: Environment
+      run: |
+        if [ "${{github.event.inputs.tests}}" == "all" ]; then
+          echo "Reconfigure cabal projects to run tests for all dependencies"
+          cat cabal.project | sed 's|tests: False|tests: True|g' > cabal.project.new
+          mv cabal.project.new cabal.project
+        fi
 
     - name: Configure build
       run: cp .github/workflows/cabal.project.local.$RUNNER_OS cabal.project.local
