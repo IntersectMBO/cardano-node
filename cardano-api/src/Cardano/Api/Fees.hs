@@ -796,7 +796,7 @@ handleExUnitsErrors ScriptInvalid failuresMap exUnitsMap
 data BalancedTxBody era
   = BalancedTxBody
       (TxBody era)
-      (TxOut era) -- ^ Transaction balance (change output)
+      (TxOut CtxTx era) -- ^ Transaction balance (change output)
       Lovelace    -- ^ Estimated transaction fee
 
 -- | This is much like 'makeTransactionBody' but with greater automation to
@@ -846,7 +846,7 @@ makeTransactionBodyAutoBalance eraInMode systemstart history pparams
     txbody0 <-
       first TxBodyError $ makeTransactionBody txbodycontent
         { txOuts =
-              TxOut changeaddr (lovelaceToTxOutValue 0) TxOutDatumHashNone
+              TxOut changeaddr (lovelaceToTxOutValue 0) TxOutDatumNone
             : txOuts txbodycontent
             --TODO: think about the size of the change output
             -- 1,2,4 or 8 bytes?
@@ -886,7 +886,7 @@ makeTransactionBodyAutoBalance eraInMode systemstart history pparams
                  txFee  = TxFeeExplicit explicitTxFees $ Lovelace (2^(32 :: Integer) - 1),
                  txOuts = TxOut changeaddr
                                 (lovelaceToTxOutValue $ Lovelace (2^(64 :: Integer)) - 1)
-                                TxOutDatumHashNone
+                                TxOutDatumNone
                         : txOuts txbodycontent
                }
 
@@ -932,7 +932,7 @@ makeTransactionBodyAutoBalance eraInMode systemstart history pparams
                      (TxOut changeaddr balance TxOutDatumHashNone)
                      (txOuts txbodycontent)
         }
-    return (BalancedTxBody txbody3 (TxOut changeaddr balance TxOutDatumHashNone) fee)
+    return (BalancedTxBody txbody3 (TxOut changeaddr balance TxOutDatumNone) fee)
  where
    era :: ShelleyBasedEra era
    era = shelleyBasedEra
@@ -957,14 +957,14 @@ makeTransactionBodyAutoBalance eraInMode systemstart history pparams
     | txOutValueToLovelace balance < 0 =
         Left . TxBodyErrorAdaBalanceNegative $ txOutValueToLovelace balance
     | otherwise =
-        case checkMinUTxOValue (TxOut changeaddr balance TxOutDatumHashNone) pparams of
+        case checkMinUTxOValue (TxOut changeaddr balance TxOutDatumNone) pparams of
           Left (TxBodyErrorMinUTxONotMet txOutAny minUTxO) ->
             Left $ TxBodyErrorAdaBalanceTooSmall txOutAny minUTxO (txOutValueToLovelace balance)
           Left err -> Left err
           Right _ -> Right ()
 
    checkMinUTxOValue
-     :: TxOut era
+     :: TxOut CtxTx era
      -> ProtocolParameters
      -> Either TxBodyErrorAutoBalance ()
    checkMinUTxOValue txout@(TxOut _ v _) pparams' = do

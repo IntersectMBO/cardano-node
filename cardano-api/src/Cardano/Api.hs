@@ -168,10 +168,10 @@ module Cardano.Api (
     TxIx(TxIx),
 
     -- ** Transaction outputs
+    CtxTx, CtxUTxO,
     TxOut(TxOut),
     TxOutValue(..),
-    serialiseAddressForTxOut,
-    TxOutDatumHash(..),
+    TxOutDatum(..),
 
     -- ** Other transaction body types
     TxInsCollateral(..),
@@ -182,7 +182,6 @@ module Cardano.Api (
     EpochSlots(..),
     TxMetadataInEra(..),
     TxAuxScripts(..),
-    TxExtraScriptData(..),
     TxExtraKeyWitnesses(..),
     TxWithdrawals(..),
     TxCertificates(..),
