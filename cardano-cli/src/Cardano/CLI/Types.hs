@@ -20,6 +20,7 @@ module Cardano.CLI.Types
   , TransferDirection(..)
   , TxOutAnyEra (..)
   , TxOutChangeAddress (..)
+  , TxOutDatumAnyEra (..)
   , UpdateProposalFile (..)
   , VerificationKeyFile (..)
   , Stakes (..)
@@ -191,7 +192,13 @@ data TransferDirection = TransferToReserves | TransferToTreasury
 data TxOutAnyEra = TxOutAnyEra
                      AddressAny
                      Value
-                     (Maybe (Hash ScriptData))
+                     TxOutDatumAnyEra
+  deriving (Eq, Show)
+
+data TxOutDatumAnyEra = TxOutDatumByHashOnly (Hash ScriptData)
+                      | TxOutDatumByHashOf    ScriptDataOrFile
+                      | TxOutDatumByValue     ScriptDataOrFile
+                      | TxOutDatumByNone
   deriving (Eq, Show)
 
 -- | A partially-specified transaction output indented to use as a change

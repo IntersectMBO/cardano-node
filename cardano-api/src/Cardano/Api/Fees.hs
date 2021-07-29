@@ -929,7 +929,7 @@ makeTransactionBodyAutoBalance eraInMode systemstart history pparams
         makeTransactionBody txbodycontent1 {
           txFee  = TxFeeExplicit explicitTxFees fee,
           txOuts = accountForNoChange
-                     (TxOut changeaddr balance TxOutDatumHashNone)
+                     (TxOut changeaddr balance TxOutDatumNone)
                      (txOuts txbodycontent)
         }
     return (BalancedTxBody txbody3 (TxOut changeaddr balance TxOutDatumNone) fee)
@@ -945,7 +945,7 @@ makeTransactionBodyAutoBalance eraInMode systemstart history pparams
    -- output. Note that this does not save any fees because by default
    -- the fee calculation includes a change address for simplicity and
    -- we make no attempt to recalculate the tx fee without a change address.
-   accountForNoChange :: TxOut era -> [TxOut era] -> [TxOut era]
+   accountForNoChange :: TxOut CtxTx era -> [TxOut CtxTx era] -> [TxOut CtxTx era]
    accountForNoChange change@(TxOut _ balance _) rest =
      case txOutValueToLovelace balance of
        Lovelace 0 -> rest
@@ -994,7 +994,7 @@ substituteExecutionUnits exUnitsMap =
 
 calculateMinimumUTxO
   :: ShelleyBasedEra era
-  -> TxOut era
+  -> TxOut CtxTx era
   -> ProtocolParameters
   -> Either MinimumUTxOError Value
 calculateMinimumUTxO era txout@(TxOut _ v _) pparams' =
@@ -1006,7 +1006,7 @@ calculateMinimumUTxO era txout@(TxOut _ v _) pparams' =
       case protocolParamUTxOCostPerWord pparams' of
         Just (Lovelace costPerWord) -> do
           Right . lovelaceToValue
-            $ Lovelace (Alonzo.utxoEntrySize (toShelleyTxOut era txout) * costPerWord)
+            $ Lovelace (Alonzo.utxoEntrySize (toShelleyTxOutAny era txout) * costPerWord)
         Nothing -> Left PParamsUTxOCostPerWordMissing
  where
    calcMinUTxOAllegraMary :: Either MinimumUTxOError Value

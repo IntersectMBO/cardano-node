@@ -357,7 +357,6 @@ runTxBuildRaw (AnyCardanoEra era)
                  <*> validateTxValidityUpperBound era mUpperBound)
         <*> validateTxMetadataInEra  era metadataSchema metadataFiles
         <*> validateTxAuxScripts     era scriptFiles
-        <*> pure (BuildTxWith TxExtraScriptDataNone) --TODO alonzo: support this
         <*> validateRequiredSigners  era reqSigners
         <*> validateProtocolParameters era mpparams
         <*> validateTxWithdrawals    era withdrawals
@@ -429,7 +428,6 @@ runTxBuild (AnyCardanoEra era) (AnyConsensusModeParams cModeParams) networkId mS
                    <*> validateTxValidityUpperBound era mUpperBound)
           <*> validateTxMetadataInEra     era metadataSchema metadataFiles
           <*> validateTxAuxScripts        era scriptFiles
-          <*> pure (BuildTxWith TxExtraScriptDataNone) --TODO alonzo: support this
           <*> validateRequiredSigners     era reqSigners
           <*> validateProtocolParameters  era mpparams
           <*> validateTxWithdrawals       era withdrawals
@@ -580,7 +578,7 @@ validateTxInsCollateral era txins =
 validateTxOuts :: forall era.
                   CardanoEra era
                -> [TxOutAnyEra]
-               -> ExceptT ShelleyTxCmdError IO [TxOut era]
+               -> ExceptT ShelleyTxCmdError IO [TxOut CtxTx era]
 validateTxOuts era = mapM (toTxOutInAnyEra era)
 
 toAddressInAnyEra
@@ -610,18 +608,32 @@ toTxOutValueInAnyEra era val =
 
 toTxOutInAnyEra :: CardanoEra era
                 -> TxOutAnyEra
-                -> ExceptT ShelleyTxCmdError IO (TxOut era)
+                -> ExceptT ShelleyTxCmdError IO (TxOut CtxTx era)
 toTxOutInAnyEra era (TxOutAnyEra addr val mDatumHash) =
   case (scriptDataSupportedInEra era, mDatumHash) of
-    (_, Nothing) ->
+    (_, TxOutDatumByNone) ->
       TxOut <$> toAddressInAnyEra era addr
             <*> toTxOutValueInAnyEra era val
-            <*> pure TxOutDatumHashNone
-    (Just supported, Just dh) ->
+            <*> pure TxOutDatumNone
+
+    (Just supported, TxOutDatumByHashOnly dh) ->
       TxOut <$> toAddressInAnyEra era addr
             <*> toTxOutValueInAnyEra era val
             <*> pure (TxOutDatumHash supported dh)
-    (Nothing, Just _) ->
+
+    (Just supported, TxOutDatumByHashOf fileOrSdata) -> do
+      sData <- readScriptDataOrFile fileOrSdata
+      TxOut <$> toAddressInAnyEra era addr
+            <*> toTxOutValueInAnyEra era val
+            <*> pure (TxOutDatumHash supported $ hashScriptData sData)
+
+    (Just supported, TxOutDatumByValue fileOrSdata) -> do
+      sData <- readScriptDataOrFile fileOrSdata
+      TxOut <$> toAddressInAnyEra era addr
+            <*> toTxOutValueInAnyEra era val
+            <*> pure (TxOutDatum supported sData)
+
+    (Nothing, _) ->
       txFeatureMismatch era TxFeatureTxOutDatum
 
 validateTxFee :: CardanoEra era
