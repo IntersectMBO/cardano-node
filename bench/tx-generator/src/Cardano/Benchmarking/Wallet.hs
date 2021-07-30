@@ -10,7 +10,7 @@ import           Control.Concurrent.MVar
 
 import           Cardano.Api
 
-import           Cardano.Benchmarking.Types (NumberOfOutputsPerTx(..), NumberOfTxs(..))
+import           Cardano.Benchmarking.Types (NumberOfTxs(..))
 import           Cardano.Benchmarking.GeneratorTx.Tx as Tx hiding (Fund)
 import           Cardano.Benchmarking.FundSet as FundSet
 
@@ -74,29 +74,30 @@ walletExtractFunds w s
 
 walletCreateCoins ::
      TxGenerator era
-  -> [Lovelace]
+  -> FundSelector
+  -> ([Lovelace] -> [Lovelace])
   -> Wallet
   -> Either String (Wallet, Tx era)
-walletCreateCoins txGenerator genValues wallet = do
-  inputFunds <- selectMinValue (sum genValues) (walletFunds wallet)
-  let outValues = includeChange (map getFundLovelace inputFunds) genValues
-  (tx, newFunds) <- txGenerator inputFunds outValues Confirmed
+walletCreateCoins txGenerator selector inOut wallet = do
+  inputFunds <- selector (walletFunds wallet)
+  (tx, newFunds) <- txGenerator inputFunds (inOut $ map getFundLovelace inputFunds) Confirmed
   Right (walletUpdateFunds newFunds inputFunds wallet, tx)
 
-includeChange :: [Lovelace] -> [Lovelace] -> [Lovelace]
-includeChange have spend = case compare changeValue 0 of
+includeChange :: Lovelace -> [Lovelace] -> [Lovelace] -> [Lovelace]
+includeChange fee spend have = case compare changeValue 0 of
   GT -> changeValue : spend
   EQ -> spend
   LT -> error "genTX: Bad transaction: insufficient funds"
-  where changeValue = sum have - sum spend
+  where changeValue = sum have - sum spend - fee
 
 -- genTx assumes that inFunds and outValues are of equal value.
 genTx :: forall era. IsShelleyBasedEra era
   => SigningKey PaymentKey
   -> NetworkId
+  -> TxFee era
   -> TxMetadataInEra era
   -> TxGenerator era
-genTx key networkId metadata inFunds outValues validity
+genTx key networkId fee metadata inFunds outValues validity
   = case makeTransactionBody txBodyContent of
       Left err -> error $ show err
       Right b -> Right ( signShelleyTransaction b (map (WitnessPaymentKey . getFundKey) inFunds)
@@ -107,7 +108,7 @@ genTx key networkId metadata inFunds outValues validity
       txIns = map (\f -> (getFundTxIn f, BuildTxWith $ KeyWitness KeyWitnessForSpending)) inFunds
     , txInsCollateral = TxInsCollateralNone
     , txOuts = map mkTxOut outValues
-    , txFee = mkFee 0
+    , txFee = fee
     , txValidityRange = (TxValidityNoLowerBound, upperBound)
     , txMetadata = metadata
     , txAuxScripts = TxAuxScriptsNone
@@ -143,12 +144,13 @@ genTx key networkId metadata inFunds outValues validity
 benchmarkTransaction ::
      Wallet
   -> FundSelector
+  -> ([Lovelace] -> [Lovelace])
   -> TxGenerator era
   -> Target
   -> Either String (Wallet, Tx era)
-benchmarkTransaction wallet selector txGenerator targetNode = do
+benchmarkTransaction wallet selector inOut txGenerator targetNode = do
   inputFunds <- selector (walletFunds wallet)
-  let outValues = map getFundLovelace inputFunds
+  let outValues = inOut $ map getFundLovelace inputFunds
   (tx, newFunds) <- txGenerator inputFunds outValues $ InFlight targetNode newSeqNumber
   let
     newWallet = (walletUpdateFunds newFunds inputFunds wallet) {walletSeqNumber = newSeqNumber}
@@ -166,26 +168,23 @@ data WalletStep era
 benchmarkWalletScript :: forall era .
      IsShelleyBasedEra era
   => WalletRef
-  -> TxMetadataInEra era
+  -> TxGenerator era
   -> NumberOfTxs
-  -> NumberOfOutputsPerTx
-  -- in this version : numberOfInputs == numberOfOutputs
+  -> (Target -> FundSelector)
+  -> ([Lovelace] -> [Lovelace])
   -> Target
   -> WalletScript era
-benchmarkWalletScript wRef metadata (NumberOfTxs maxCount) (NumberOfOutputsPerTx numInputs) targetNode
+benchmarkWalletScript wRef txGenerator (NumberOfTxs maxCount) selector inOut targetNode
   = WalletScript (modifyMVarMasked wRef nextTx)
  where
-  nextCall = benchmarkWalletScript wRef metadata (NumberOfTxs maxCount) (NumberOfOutputsPerTx numInputs) targetNode
+  nextCall = benchmarkWalletScript wRef txGenerator (NumberOfTxs maxCount) selector inOut targetNode
 
   nextTx :: Wallet -> IO (Wallet, WalletStep era)
   nextTx w = if walletSeqNumber w > SeqNumber (fromIntegral maxCount)
     then return (w, Done)
-    else case benchmarkTransaction w selector (txGenerator w) targetNode of
+    else case benchmarkTransaction w (selector targetNode) inOut txGenerator targetNode of
       Right (wNew, tx) -> return (wNew, NextTx nextCall tx)
       Left err -> return (w, Error err)
-  selector = selectCountTarget numInputs targetNode
-
-  txGenerator w = genTx (walletKey w) (walletNetworkId w) metadata
 
 limitSteps ::
      NumberOfTxs

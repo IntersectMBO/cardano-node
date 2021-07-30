@@ -13,6 +13,7 @@ import           Prelude
 import           Data.IxSet.Typed as IxSet
 import           Data.Proxy
 
+import           Control.Applicative ((<|>))
 import           Cardano.Api as Api
 
 -- Outputs that are available for spending.
@@ -26,7 +27,10 @@ data FundInEra era = FundInEra {
   , _fundValidity :: !Validity
   } deriving (Show)
 
-data Variant = PlainOldFund | PlutusScriptFund
+data Variant
+  = PlainOldFund
+  | PlutusScriptFund
+-- | DedicatedCollateral
   deriving  (Show, Eq, Ord)
 
 data Validity
@@ -150,3 +154,92 @@ selectCollateral fs = case coins of
   (c:_) -> Right [c]
  where
   coins = toAscList ( Proxy :: Proxy Lovelace) (fs @=PlainOldFund @= IsConfirmed @= (1492000000 :: Lovelace) )
+
+data AllowRecycle
+  = UseConfirmedOnly
+  | ReuseSameTarget
+-- ReuseAny can cause none-deterministic runtime errors !
+-- The problematic case is the reuse of an UTxO/Tx that is not yet confirmed
+-- and still waits in the mempool of an other target-node.
+  | ReuseAny
+  | ConfirmedBeforeReuse -- usefull for testing
+  deriving (Eq, Ord, Enum, Show)
+
+-- There are many possible heuristics to implement the selectInputs function.
+-- TODO: Check that the complexity of selectInputs is good enough.
+selectInputs ::
+     AllowRecycle
+  -> Int
+  -> Lovelace
+  -> Variant
+  -> Target
+  -> FundSet
+  -> Either String [Fund]
+selectInputs allowRecycle count minTotalValue variant targetNode fs
+  = case allowRecycle of
+    UseConfirmedOnly     -> selectConfirmed
+    ReuseSameTarget      -> reuseSameTarget <|> selectConfirmed
+    ReuseAny             -> reuseSameTarget <|> selectConfirmed <|> reuseAnyCoin
+    ConfirmedBeforeReuse -> selectConfirmed <|> reuseSameTarget
+  where
+  selectConfirmed = selectConfirmedSmallValue <|> selectConfirmedBigValue
+
+  isSufficiantCoins coins = length coins == count && sum (map getFundLovelace coins) >= minTotalValue
+
+  checkCoins :: String -> [Fund] -> Either String [Fund]
+  checkCoins err coins
+    = if isSufficiantCoins coins then Right coins else Left err
+
+  -- Share intermediate results for variantIxSet confirmedIxSet and targetIxSet
+  -- TODO: it unclear if this helps on the complexity or it it is even harmful.
+  variantIxSet   = fs @= variant
+  confirmedIxSet = variantIxSet @= IsConfirmed
+  targetIxSet    = variantIxSet @= targetNode
+
+  confirmedBigValueList = toDescList (Proxy :: Proxy Lovelace) confirmedIxSet
+  sameTargetList = toAscList (Proxy :: Proxy SeqNumber) targetIxSet
+
+  selectConfirmedSmallValue
+    = checkCoins
+        "selectConfirmedSmall: not enought coins available"
+        (take count $ toAscList (Proxy :: Proxy Lovelace) confirmedIxSet)
+
+  selectConfirmedBigValue
+    = checkCoins
+        "selectConfirmedSmall: not enought coins available"
+        (take count confirmedBigValueList)
+
+  -- reuseSameTargetStrict is problematic: It fails if the coins in the queues are too small. But it will never consume the small coins.
+  -- therefore: (reuseSameTargetStrict <|> reuseSameTargetWithBackup)
+  reuseSameTargetStrict
+    = checkCoins
+        "reuseSameTargetStrict: not enought coins available"
+        (take count sameTargetList)
+
+  -- reuseSameTargetWithBackup can collect some dust.
+  -- reuseSameTargetWithBackup works fine if there is at least one sufficiant confirmed UTxO available.
+  reuseSameTargetWithBackup = checkCoins "reuseSameTargetWithBackup: not enought coins available" (backupCoin ++ targetCoins)
+    where
+      -- targetCoins and backupCoins must be disjoint.
+      -- This is case because IsConfirmed \= InFlight target.
+      backupCoin = take 1 $ toAscList (Proxy :: Proxy Lovelace) (confirmedIxSet @> minTotalValue)
+      targetCoins = take (count - 1) sameTargetList
+
+  reuseSameTarget = reuseSameTargetStrict <|> reuseSameTargetWithBackup
+
+  -- reuseAnyCoin is the last resort !
+  reuseAnyCoin
+    = checkCoins
+        "reuseAnyTarget: not enought coins available"
+        (take count $ confirmedBigValueList ++ inFlightCoins)
+    where
+      -- inFlightCoins and confirmedCoins are disjoint
+      inFlightCoins = toAscList (Proxy :: Proxy SeqNumber) (variantIxSet @=IsNotConfirmed)
+
+-- Todo: check sufficant funds and minimumValuePerUtxo
+inputsToOutputsWithFee :: Lovelace -> Int -> [Lovelace] -> [Lovelace]
+inputsToOutputsWithFee fee count inputs = map (quantityToLovelace . Quantity) outputs
+  where
+    (Quantity totalAvailable) = lovelaceToQuantity $ sum inputs - fee
+    (out, rest) = divMod totalAvailable (fromIntegral count)
+    outputs = (out + rest) : replicate (count-1) out
