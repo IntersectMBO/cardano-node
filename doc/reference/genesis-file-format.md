@@ -18,9 +18,9 @@ All these entries are Optional.
 |  Field |  Type | Required? | Description |
 |---|---|---|---|
  `lovelacePerUTxOWord`  |  `<nat>` | Optional | How many lovelace are charged per word in a UTxO value |
-| `executionPrices` | `{ "priceSteps": rational, "priceMemory": rational } `  | Optional | Price (in lovelace) charged for Plutus script per CPU execution step/memory unit. |
-|  `maxTxExUnits` |     `{ "memory": <nat>, "steps" : <nat> }`| Optional  |  Maximum number of Plutus memory units/CPU steps allowed for a single transaction. |
-|  `maxBlockExUnits` |     `{ "memory": <nat>, "steps" : <nat> }`| Optional  |  Maximum number of Plutus memory units/CPU steps allowed for a complete block. |
+| `executionPrices` | `{ "prSteps": <rational>, "prMemory": <rational> } `  | Optional | Price (in lovelace) charged for Plutus script per CPU execution step/memory unit. |
+|  `maxTxExUnits` |     `{ "exUnitsMem": <nat>, "exUnitsSteps" : <nat> }`| Optional  |  Maximum number of Plutus memory units/CPU steps allowed for a single transaction. |
+|  `maxBlockExUnits` |     `{ "exUnitsMem": <nat>, "exUnitsSteps" : <nat> }`| Optional  |  Maximum number of Plutus memory units/CPU steps allowed for a complete block. |
 | `maxValueSize`  | `<nat>`  | Optional |  Maximum size of a Plutus `Value` in a transaction output. |
 | `collateralPercentage`  | `<nat>`  | Optional | The percentage of Plutus script execution fee that must be provided as collateral. |
 | `maxCollateralInputs`  |  `<nat>` | Optional |  The maximum number of collateral inputs that can be provided in a transaction. |
@@ -35,25 +35,25 @@ TODO: Provide this.
 {
     "lovelacePerUTxOWord": 34482,
     "executionPrices": {
-        "priceSteps":
+        "prSteps":
 		{ "numerator" : 1,
-		  "demoninator" : 100
+		  "denominator" : 100
 		},
-        "priceMemory":
+        "prMem":
 		{ "numerator" : 5,
-		  "demoninator" : 1000
+		  "denominator" : 1000
 		}
     },
     "maxTxExUnits": {
-        "memory": 11000000000,
-        "steps": 11000000000
+        "exUnitsMem": 10000000000,
+        "exUnitsSteps": 10000000000
     },
     "maxBlockExUnits": {
-        "memory": 110000000000,
-        "steps": 110000000000
+        "exUnitsMem": 40000000000,
+        "exUnitsSteps": 40000000000
     },
     "maxValueSize": 5000,
     "collateralPercentage": 150,
-    "maxCollateralInputs": 6
+    "maxCollateralInputs": 3
 }
 ```
