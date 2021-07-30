@@ -136,7 +136,7 @@ jobs:
       run: git clone https://github.com/input-output-hk/cardano-mainnet-mirror
 
     - name: Run tests
-      run: TMPDIR="${{ runner.temp }}" TMP="${{ runner.temp }}" KEEP_WORKSPACE=1 retry 2 cabal test cardano-node-chairman
+      run: TMPDIR="${{ runner.temp }}" TMP="${{ runner.temp }}" KEEP_WORKSPACE=1 cabal test all
 
     - name: Build & Test
       run: |
