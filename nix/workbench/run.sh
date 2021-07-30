@@ -329,6 +329,9 @@ EOF
         local tag=$(run current-tag)
         local dir=$(run get "$tag")
 
+        test -d "$dir" ||
+            fail "no valid current run to restart:  please set run/current appropriately"
+
         msg "restarting cluster in the same run directory: $dir"
 
         run stop                "$tag"
