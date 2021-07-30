@@ -26,6 +26,7 @@ import qualified Ouroboros.Consensus.Cardano.CanHardFork as Consensus
 import           Ouroboros.Consensus.HardFork.Combinator.Condense ()
 
 import           Ouroboros.Consensus.Cardano.Condense ()
+import qualified Ouroboros.Consensus.Mempool.TxLimits as TxLimits
 
 import           Cardano.Api
 import           Cardano.Api.Orphans ()
@@ -146,7 +147,9 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
               npcByronApplicationName
               npcByronApplicationVersion,
           byronLeaderCredentials =
-            byronLeaderCredentials
+            byronLeaderCredentials,
+          byronMaxTxCapacityOverrides =
+            TxLimits.mkOverrides TxLimits.noOverridesMeasure
         }
         Consensus.ProtocolParamsShelleyBased {
           shelleyBasedGenesis           = shelleyGenesis,
@@ -160,7 +163,9 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
           -- is in the Shelley era. That is, it is the version of protocol
           -- /after/ Shelley, i.e. Allegra.
           shelleyProtVer =
-            ProtVer 3 0
+            ProtVer 3 0,
+          shelleyMaxTxCapacityOverrides =
+            TxLimits.mkOverrides TxLimits.noOverridesMeasure
         }
         Consensus.ProtocolParamsAllegra {
           -- This is /not/ the Allegra protocol version. It is the protocol
@@ -168,7 +173,9 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
           -- is in the Allegra era. That is, it is the version of protocol
           -- /after/ Allegra, i.e. Mary.
           allegraProtVer =
-            ProtVer 4 0
+            ProtVer 4 0,
+          allegraMaxTxCapacityOverrides =
+            TxLimits.mkOverrides TxLimits.noOverridesMeasure
         }
         Consensus.ProtocolParamsMary {
           -- This is /not/ the Mary protocol version. It is the protocol
@@ -184,14 +191,18 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
           maryProtVer =
             if npcTestEnableDevelopmentHardForkEras
               then ProtVer 5 0  -- Advertise we can support Alonzo
-              else ProtVer 4 0  -- Otherwise only advertise we know about Mary.
+              else ProtVer 4 0, -- Otherwise only advertise we know about Mary.
+          maryMaxTxCapacityOverrides =
+            TxLimits.mkOverrides TxLimits.noOverridesMeasure
         }
         Consensus.ProtocolParamsAlonzo {
           -- This is /not/ the Alonzo protocol version. It is the protocol
           -- version that this node will declare that it understands, when it
           -- is in the Alonzo era. Since Alonzo is currently the last known
           -- protocol version then this is also the Alonzo protocol version.
-          alonzoProtVer = ProtVer 5 0
+          alonzoProtVer = ProtVer 5 0,
+          alonzoMaxTxCapacityOverrides =
+            TxLimits.mkOverrides TxLimits.noOverridesMeasure
         }
 
         -- ProtocolParamsTransition specifies the parameters needed to transition between two eras

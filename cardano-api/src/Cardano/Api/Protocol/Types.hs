@@ -54,10 +54,10 @@ instance IOLike m => Protocol m (CardanoBlock StandardCrypto) where
          ProtocolInfoArgsCardano
            ProtocolParamsByron
           (ProtocolParamsShelleyBased StandardShelley)
-           ProtocolParamsShelley
-           ProtocolParamsAllegra
-           ProtocolParamsMary
-           ProtocolParamsAlonzo
+          (ProtocolParamsShelley StandardCrypto)
+          (ProtocolParamsAllegra StandardCrypto)
+          (ProtocolParamsMary StandardCrypto)
+          (ProtocolParamsAlonzo StandardCrypto)
           (ProtocolTransitionParamsShelleyBased StandardShelley)
           (ProtocolTransitionParamsShelleyBased StandardAllegra)
           (ProtocolTransitionParamsShelleyBased StandardMary)
@@ -101,7 +101,7 @@ instance ProtocolClient (CardanoBlock StandardCrypto) where
 instance IOLike m => Protocol m (ShelleyBlockHFC StandardShelley) where
   data ProtocolInfoArgs m (ShelleyBlockHFC StandardShelley) = ProtocolInfoArgsShelley
     (ProtocolParamsShelleyBased StandardShelley)
-    ProtocolParamsShelley
+    (ProtocolParamsShelley StandardCrypto)
   protocolInfo (ProtocolInfoArgsShelley paramsShelleyBased paramsShelley) =
     inject $ protocolInfoShelley paramsShelleyBased paramsShelley
 

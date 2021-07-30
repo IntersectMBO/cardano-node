@@ -92,6 +92,7 @@ import qualified Ouroboros.Consensus.HardFork.Combinator.AcrossEras as HFC
 import qualified Ouroboros.Consensus.HardFork.Combinator.Basics as HFC
 import qualified Ouroboros.Consensus.Ledger.Abstract as Ledger
 import qualified Ouroboros.Consensus.Ledger.Extended as Ledger
+import qualified Ouroboros.Consensus.Mempool.TxLimits as TxLimits
 import qualified Ouroboros.Consensus.Node.ProtocolInfo as Consensus
 import qualified Ouroboros.Consensus.Shelley.Eras as Shelley
 import qualified Ouroboros.Consensus.Shelley.Ledger.Block as Shelley
@@ -618,6 +619,7 @@ mkProtocolInfoCardano (GenesisCardano dnc byronGenesis shelleyGenesis)
             , Consensus.byronProtocolVersion = ncByronProtocolVersion dnc
             , Consensus.byronSoftwareVersion = ncByronSoftwareVersion dnc
             , Consensus.byronLeaderCredentials = Nothing
+            , Consensus.byronMaxTxCapacityOverrides = TxLimits.mkOverrides TxLimits.noOverridesMeasure
             }
           Consensus.ProtocolParamsShelleyBased
             { Consensus.shelleyBasedGenesis = scConfig shelleyGenesis
@@ -626,15 +628,19 @@ mkProtocolInfoCardano (GenesisCardano dnc byronGenesis shelleyGenesis)
             }
           Consensus.ProtocolParamsShelley
             { Consensus.shelleyProtVer = shelleyProtVer dnc
+            , Consensus.shelleyMaxTxCapacityOverrides = TxLimits.mkOverrides TxLimits.noOverridesMeasure
             }
           Consensus.ProtocolParamsAllegra
             { Consensus.allegraProtVer = shelleyProtVer dnc
+            , Consensus.allegraMaxTxCapacityOverrides = TxLimits.mkOverrides TxLimits.noOverridesMeasure
             }
           Consensus.ProtocolParamsMary
             { Consensus.maryProtVer = shelleyProtVer dnc
+            , Consensus.maryMaxTxCapacityOverrides = TxLimits.mkOverrides TxLimits.noOverridesMeasure
             }
           Consensus.ProtocolParamsAlonzo
             { Consensus.alonzoProtVer = error "mkProtocolInfoCardano: alonzoProtVer"
+            , Consensus.alonzoMaxTxCapacityOverrides  = TxLimits.mkOverrides TxLimits.noOverridesMeasure
             }
           (ncByronToShelley dnc)
           (ncShelleyToAllegra dnc)

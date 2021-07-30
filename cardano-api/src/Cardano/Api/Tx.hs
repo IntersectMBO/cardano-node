@@ -568,7 +568,7 @@ makeSignedTransaction witnesses (ShelleyTxBody era txbody
                           | sw <- txscripts ])
             datums
             redeemers)
-          (Alonzo.IsValidating True) --TODO: expose this in the API
+          (Alonzo.IsValid True) --TODO: expose this in the API
           (maybeToStrictMaybe txmetadata)
       where
         (datums, redeemers) =
