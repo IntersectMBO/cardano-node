@@ -5,6 +5,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
 -- | The various Cardano protocol parameters, including:
@@ -57,11 +58,13 @@ module Cardano.Api.ProtocolParameters (
 
 import           Prelude
 
+import           Control.Applicative
 import           Data.ByteString (ByteString)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.String (IsString)
 import qualified Data.Scientific as Scientific
+import           Data.Scientific (Scientific)
 import           Data.Text (Text)
 import           Data.Maybe (fromMaybe)
 import           GHC.Generics
@@ -71,6 +74,7 @@ import           Control.Monad
 
 import           Data.Aeson (FromJSON (..), ToJSON (..), object, withObject,
                    (.!=), (.:), (.:?), (.=))
+import           Data.Aeson.Types (Parser)
 import qualified Data.Aeson as Aeson
 import           Data.Bifunctor (bimap)
 
@@ -281,13 +285,16 @@ data ProtocolParameters =
     }
   deriving (Eq, Generic, Show)
 
+parseRationalJSON :: Aeson.Value -> Parser Rational
+parseRationalJSON v = parseJSON v <|> (toRational @Scientific <$> parseJSON v)
+
 instance FromJSON ProtocolParameters where
   parseJSON =
     withObject "ProtocolParameters" $ \o -> do
       v <- o .: "protocolVersion"
       ProtocolParameters
         <$> ((,) <$> v .: "major" <*> v .: "minor")
-        <*> o .: "decentralization"
+        <*> (o .: "decentralization" >>= parseRationalJSON)
         <*> o .: "extraPraosEntropy"
         <*> o .: "maxBlockHeaderSize"
         <*> o .: "maxBlockBodySize"
@@ -300,9 +307,9 @@ instance FromJSON ProtocolParameters where
         <*> o .: "minPoolCost"
         <*> o .: "poolRetireMaxEpoch"
         <*> o .: "stakePoolTargetNum"
-        <*> o .: "poolPledgeInfluence"
-        <*> o .: "monetaryExpansion"
-        <*> o .: "treasuryCut"
+        <*> (o .: "poolPledgeInfluence" >>= parseRationalJSON)
+        <*> (o .: "monetaryExpansion" >>= parseRationalJSON)
+        <*> (o .: "treasuryCut" >>= parseRationalJSON)
         <*> o .:? "utxoCostPerWord"
         <*> o .:? "costModels" .!= Map.empty
         <*> o .:? "executionUnitPrices"
@@ -343,18 +350,18 @@ instance ToJSON ProtocolParameters where
       , "collateralPercentage"   .= protocolParamCollateralPercent
       , "maxCollateralInputs"    .= protocolParamMaxCollateralInputs
       ]
-    where
-      -- Rationals and JSON are an awkward mix. We cannot convert rationals
-      -- like @1/3@ to JSON numbers. But _most_ of the numbers we want to use
-      -- in practice have simple decimal representations. Our solution here is
-      -- to use simple decimal representations where we can and representation
-      -- in a @{"numerator": 1, "denominator": 3}@ style otherwise.
-      --
-      toRationalJSON :: Rational -> Aeson.Value
-      toRationalJSON r =
-        case Scientific.fromRationalRepetend (Just 5) r of
-          Right (s, Nothing) -> toJSON s
-          _                  -> toJSON r
+
+-- Rationals and JSON are an awkward mix. We cannot convert rationals
+-- like @1/3@ to JSON numbers. But _most_ of the numbers we want to use
+-- in practice have simple decimal representations. Our solution here is
+-- to use simple decimal representations where we can and representation
+-- in a @{"numerator": 1, "denominator": 3}@ style otherwise.
+--
+toRationalJSON :: Rational -> Aeson.Value
+toRationalJSON r =
+  case Scientific.fromRationalRepetend (Just 5) r of
+    Right (s, Nothing) -> toJSON s
+    _                  -> toJSON r
 
 
 -- ----------------------------------------------------------------------------
@@ -475,6 +482,7 @@ data ProtocolParametersUpdate =
        -- This is the \"tau\" incentives parameter from the design document.
        --
        protocolUpdateTreasuryCut :: Maybe Rational,
+
        -- Introduced in Alonzo
 
        -- | Cost in ada per word of UTxO storage.
@@ -714,15 +722,16 @@ instance FromCBOR ExecutionUnitPrices where
 
 instance ToJSON ExecutionUnitPrices where
   toJSON ExecutionUnitPrices{priceExecutionSteps, priceExecutionMemory} =
-    object [ "priceSteps"  .= priceExecutionSteps
-           , "priceMemory" .= priceExecutionMemory ]
+    object [ "priceSteps"  .= toRationalJSON priceExecutionSteps
+           , "priceMemory" .= toRationalJSON priceExecutionMemory
+           ]
 
 instance FromJSON ExecutionUnitPrices where
   parseJSON =
     withObject "ExecutionUnitPrices" $ \o ->
       ExecutionUnitPrices
-        <$> o .: "priceSteps"
-        <*> o .: "priceMemory"
+        <$> (o .: "priceSteps" >>= parseRationalJSON)
+        <*> (o .: "priceMemory" >>= parseRationalJSON)
 
 
 toAlonzoPrices :: ExecutionUnitPrices -> Maybe Alonzo.Prices
