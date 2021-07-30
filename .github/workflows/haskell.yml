@@ -12,6 +12,7 @@ on:
         description: 'Tests'
         required: false
         default: some
+  create:
 
 jobs:
   build:
