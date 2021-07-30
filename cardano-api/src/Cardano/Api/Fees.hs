@@ -35,47 +35,48 @@ module Cardano.Api.Fees (
 
 import           Prelude
 
-import           Data.Maybe (fromMaybe)
-import qualified Data.ByteString as BS
-import           Data.Bifunctor (bimap, first)
 import qualified Data.Array as Array
+import           Data.Bifunctor (bimap, first)
+import qualified Data.ByteString as BS
+import           Data.Map (Map)
+import qualified Data.Map as Map
+import           Data.Maybe (fromMaybe)
+import           Data.Sequence.Strict (StrictSeq (..))
 import           Data.Set (Set)
 import qualified Data.Set as Set
 import qualified Data.Text as Text
-import           Data.Map (Map)
-import qualified Data.Map as Map
 import           GHC.Records (HasField (..))
 import           Numeric.Natural
-import           Data.Sequence.Strict (StrictSeq(..))
 
+import           Control.Monad.Trans.Except
 import qualified Data.Text.Prettyprint.Doc as PP
 import qualified Data.Text.Prettyprint.Doc.Render.String as PP
-import           Control.Monad.Trans.Except
 
 import qualified Cardano.Binary as CBOR
 import           Cardano.Slotting.EpochInfo (EpochInfo, hoistEpochInfo)
 
 import qualified Cardano.Chain.Common as Byron
 
+import qualified Cardano.Ledger.Alonzo.Rules.Utxo as Alonzo
 import qualified Cardano.Ledger.Coin as Ledger
 import qualified Cardano.Ledger.Core as Ledger
-import qualified Cardano.Ledger.Era  as Ledger.Era (Crypto)
-import qualified Cardano.Ledger.Keys as Ledger
 import qualified Cardano.Ledger.Crypto as Ledger
-import qualified Shelley.Spec.Ledger.API as Ledger (CLI, TxIn, DCert, Wdrl)
-import qualified Shelley.Spec.Ledger.API.Wallet as Ledger
-                   (evaluateTransactionBalance, evaluateTransactionFee)
+import qualified Cardano.Ledger.Era as Ledger.Era (Crypto)
+import qualified Cardano.Ledger.Keys as Ledger
+import qualified Shelley.Spec.Ledger.API as Ledger (CLI, DCert, TxIn, Wdrl)
+import qualified Shelley.Spec.Ledger.API.Wallet as Ledger (evaluateTransactionBalance,
+                   evaluateTransactionFee)
 
-import           Shelley.Spec.Ledger.PParams (PParams'(..))
+import           Shelley.Spec.Ledger.PParams (PParams' (..))
 
 import qualified Cardano.Ledger.Mary.Value as Mary
 
-import           Cardano.Ledger.Alonzo.PParams (PParams'(..))
 import qualified Cardano.Ledger.Alonzo as Alonzo
 import qualified Cardano.Ledger.Alonzo.Language as Alonzo
+import           Cardano.Ledger.Alonzo.PParams (PParams' (..))
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
-import qualified Cardano.Ledger.Alonzo.TxWitness as Alonzo
 import qualified Cardano.Ledger.Alonzo.Tools as Alonzo
+import qualified Cardano.Ledger.Alonzo.TxWitness as Alonzo
 
 import qualified Plutus.V1.Ledger.Api as Plutus
 
@@ -342,7 +343,7 @@ data ScriptExecutionError =
 
        -- | The script evaluation failed. This usually means it evaluated to an
        -- error value. This is not a case of running out of execution units
-       -- (which is not possible for 'evaluateTransactionExecutionUnits' since 
+       -- (which is not possible for 'evaluateTransactionExecutionUnits' since
        -- the whole point of it is to discover how many execution units are
        -- needed).
        --
@@ -675,9 +676,18 @@ data TxBodyErrorAutoBalance =
        -- word parameter, for eras that use this parameter.
      | TxBodyErrorMissingParamCostPerWord
 
-       -- The transaction validity interval is too far into the future.
+       -- | The transaction validity interval is too far into the future.
        -- See 'TransactionValidityIntervalError' for details.
      | TxBodyErrorValidityInterval TransactionValidityIntervalError
+
+       -- | The minimum spendable UTxO threshold has not been met.
+     | TxBodyErrorMinUTxONotMet
+         -- ^ Offending TxOut
+         TxOutInAnyEra
+         -- ^ Minimum UTxO
+         Lovelace
+
+     | TxBodyErrorNonAdaAssetsUnbalanced Value
   deriving Show
 
 
@@ -720,6 +730,12 @@ instance Error TxBodyErrorAutoBalance where
   displayError (TxBodyErrorValidityInterval err) =
       displayError err
 
+  displayError (TxBodyErrorMinUTxONotMet txout minUTxO) =
+      "Minimum UTxO threshold not met for: " <> Text.unpack (prettyRenderTxOut txout)
+   <> " Minimum requires UTxO: " <> show minUTxO
+
+  displayError (TxBodyErrorNonAdaAssetsUnbalanced val) =
+      "Non-Ada assets are unbalanced: " <> Text.unpack (renderValue val)
 
 -- | This is much like 'makeTransactionBody' but with greater automation to
 -- calculate suitable values for several things.
@@ -793,42 +809,63 @@ makeTransactionBodyAutoBalance eraInMode systemstart history pparams
     explicitTxFees <- first (const TxBodyErrorByronEraNotSupported) $
                         txFeesExplicitInEra era'
 
-    -- Insert change address and set tx fee to 0
+    -- Make a txbody that we will use for calculating the fees. For the purpose
+    -- of fees we just need to make a txbody of the right size in bytes. We do
+    -- not need the right values for the fee or change output. We use
+    -- "big enough" values for the change output and set so that the CBOR
+    -- encoding size of the tx will be big enough to cover the size of the final
+    -- output and fee. Yes this means this current code will only work for
+    -- final fee of less than around 4000 ada (2^32-1 lovelace) and change output
+    -- of less than around 18 trillion ada  (2^64-1 lovelace).
     txbody1 <- first TxBodyError $ -- TODO: impossible to fail now
                makeTransactionBody txbodycontent1 {
-                 txFee = TxFeeExplicit explicitTxFees 0
+                 txFee  = TxFeeExplicit explicitTxFees $ Lovelace (2^(32 :: Integer) - 1),
+                 txOuts = TxOut changeaddr
+                                (lovelaceToTxOutValue $ Lovelace (2^(64 :: Integer)) - 1)
+                                TxOutDatumHashNone
+                        : txOuts txbodycontent
                }
 
     let nkeys = fromMaybe (estimateTransactionKeyWitnessCount txbodycontent1)
                           mnkeys
         fee   = evaluateTransactionFee pparams txbody1 nkeys 0 --TODO: byron keys
 
+    -- Make a txbody for calculating the balance. For this the size of the tx
+    -- does not matter, instead it's just the values of the fee and outputs.
+    -- Here we do not want to start with any change output, since that's what
+    -- we need to calculate.
     txbody2 <- first TxBodyError $ -- TODO: impossible to fail now
                makeTransactionBody txbodycontent1 {
                  txFee = TxFeeExplicit explicitTxFees fee
                }
 
     let balance = evaluateTransactionBalance pparams poolids utxo txbody2
+
+    mapM_ (`checkMinUTxOValue` pparams) $ txOuts txbodycontent1
+
     -- check if the balance is positive or negative
     -- in one case we can produce change, in the other the inputs are insufficient
-    minUTxOValue <- getMinUTxOValue pparams
     case balance of
-      TxOutAdaOnly _ l -> balanceCheck minUTxOValue l
+      TxOutAdaOnly _ _ -> balanceCheck balance
       TxOutValue _ v   ->
         case valueToLovelace v of
-          Nothing -> Left $ error "TODO: non-ada assets not balanced"
-          Just c -> balanceCheck minUTxOValue c
+          Nothing -> Left $ TxBodyErrorNonAdaAssetsUnbalanced v
+          Just _ -> balanceCheck balance
 
     --TODO: we could add the extra fee for the CBOR encoding of the change,
     -- now that we know the magnitude of the change: i.e. 1-8 bytes extra.
 
+    -- The txbody with the final fee and change output. This should work
+    -- provided that the fee and change are less than 2^32-1, and so will
+    -- fit within the encoding size we picked above when calculating the fee.
+    -- Yes this could be an over-estimate by a few bytes if the fee or change
+    -- would fit within 2^16-1. That's a possible optimisation.
     txbody3 <- first TxBodyError $ -- TODO: impossible to fail now
                makeTransactionBody txbodycontent1 {
                  txFee  = TxFeeExplicit explicitTxFees fee,
                  txOuts = TxOut changeaddr balance TxOutDatumHashNone
                         : txOuts txbodycontent
                }
-
     return txbody3
  where
    era :: ShelleyBasedEra era
@@ -837,24 +874,51 @@ makeTransactionBodyAutoBalance eraInMode systemstart history pparams
    era' :: CardanoEra era
    era' = cardanoEra
 
-   balanceCheck :: Lovelace -> Lovelace -> Either TxBodyErrorAutoBalance ()
-   balanceCheck minUTxOValue balance
-    | balance < 0            = Left (TxBodyErrorAdaBalanceNegative balance)
-      -- check the change is over the min utxo threshold
-    | balance < minUTxOValue = Left (TxBodyErrorAdaBalanceTooSmall balance)
-    | otherwise              = return ()
+   balanceCheck :: TxOutValue era -> Either TxBodyErrorAutoBalance ()
+   balanceCheck balance
+    | txOutValueToLovelace balance < 0 =
+        Left . TxBodyErrorAdaBalanceNegative $ txOutValueToLovelace balance
+    | otherwise =
+        case checkMinUTxOValue (TxOut changeaddr balance TxOutDatumHashNone) pparams of
+          Left _ -> Left . TxBodyErrorAdaBalanceTooSmall $ txOutValueToLovelace balance
+          Right _ -> Right ()
 
-   getMinUTxOValue :: ProtocolParameters
-                   -> Either TxBodyErrorAutoBalance Lovelace
-   getMinUTxOValue pparams' =
+   -- TODO: Move to top level and expose
+   checkMinUTxOValue
+     :: TxOut era
+     -> ProtocolParameters
+     -> Either TxBodyErrorAutoBalance ()
+   checkMinUTxOValue txout@(TxOut _ v _) pparams' =
      case era of
-       ShelleyBasedEraShelley -> minUTxOHelper pparams'
-       ShelleyBasedEraAllegra -> minUTxOHelper pparams'
-       ShelleyBasedEraMary    -> minUTxOHelper pparams'
-       ShelleyBasedEraAlonzo  ->
+       ShelleyBasedEraAlonzo -> do
          case protocolParamUTxOCostPerWord pparams' of
-           Just minUtxo -> Right minUtxo
-           Nothing      -> Left TxBodyErrorMissingParamCostPerWord
+           Just (Lovelace costPerWord) -> do
+             let minUTxO = Lovelace (Alonzo.utxoEntrySize (toShelleyTxOut era txout) * costPerWord)
+             if txOutValueToLovelace v >= minUTxO
+             then Right ()
+             else Left $ TxBodyErrorMinUTxONotMet (txOutInAnyEra txout) minUTxO
+           Nothing -> Left TxBodyErrorMissingParamCostPerWord
+       ShelleyBasedEraMary -> checkAllegraMaryMinUTxO txout pparams'
+       ShelleyBasedEraAllegra -> checkAllegraMaryMinUTxO txout pparams'
+       ShelleyBasedEraShelley -> do
+         let l = txOutValueToLovelace v
+         minUTxO <- minUTxOHelper pparams'
+         if l >= minUTxO
+         then Right ()
+         else Left $ TxBodyErrorMinUTxONotMet (txOutInAnyEra txout) minUTxO
+
+   checkAllegraMaryMinUTxO
+     :: TxOut era
+     -> ProtocolParameters
+     -> Either TxBodyErrorAutoBalance ()
+   checkAllegraMaryMinUTxO txOut@(TxOut _ v _) pparams' = do
+     let l = txOutValueToLovelace v
+         val = txOutValueToValue v
+     mUtxo <- minUTxOHelper pparams'
+     let minUTxO = calcMinimumDeposit val mUtxo
+     if l >= minUTxO
+     then Right ()
+     else Left $ TxBodyErrorMinUTxONotMet (txOutInAnyEra txOut) minUTxO
 
    minUTxOHelper :: ProtocolParameters
                  -> Either TxBodyErrorAutoBalance Lovelace

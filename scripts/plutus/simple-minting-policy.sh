@@ -26,7 +26,7 @@ cardano-cli query utxo --address $utxoaddr --cardano-mode --testnet-magic 42 --o
 txin=$(jq -r 'keys[]' utxo.json)
 
 lovelaceattxin=$(jq -r ".[\"$txin\"].value.lovelace" utxo.json)
-lovelaceattxindiv2=$(expr $lovelaceattxin / 2)
+lovelaceattxindiv3=$(expr $lovelaceattxin / 3)
 
 cardano-cli address key-gen \
   --normal-key \
@@ -37,12 +37,17 @@ targetvkey="$work/minting.vkey"
 targetskey="$work/minting.skey"
 targetaddr=$(cardano-cli address build --testnet-magic 42 --payment-verification-key-file $targetvkey)
 
-cardano-cli transaction build-raw \
+cardano-cli query protocol-parameters --testnet-magic 42 --out-file example/pparams.json
+
+cardano-cli transaction build \
   --alonzo-era \
-  --fee 0 \
+  --cardano-mode \
+  --testnet-magic 42 \
+  --change-address "$utxoaddr" \
   --tx-in "$txin" \
-  --tx-out "$targetaddr+$lovelaceattxindiv2" \
-  --tx-out "$targetaddr+$lovelaceattxindiv2" \
+  --tx-out "$targetaddr+$lovelaceattxindiv3" \
+  --tx-out "$targetaddr+$lovelaceattxindiv3" \
+  --protocol-params-file example/pparams.json \
   --out-file "$work/fund-script-owner.body"
 
 cardano-cli transaction sign \
@@ -67,8 +72,6 @@ scriptownerCollateral=$(jq -r 'keys[1]' "$work/updatedutxo.json")
 policyid=$(cardano-cli transaction policyid --script-file $plutusscriptinuse)
 redeemer=scripts/plutus/data/42.redeemer
 lovelaceatplutusscriptaddr=$(jq -r ".[\"$scriptownertxin\"].value.lovelace" "$work/updatedutxo.json")
-
-cardano-cli query protocol-parameters --testnet-magic 42 --out-file example/pparams.json
 
 dummyaddress=addr_test1vpqgspvmh6m2m5pwangvdg499srfzre2dd96qq57nlnw6yctpasy4
 

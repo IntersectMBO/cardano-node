@@ -444,6 +444,7 @@ runTxBuild (AnyCardanoEra era) (AnyConsensusModeParams cModeParams) networkId tx
           $ makeTransactionBodyAutoBalance eInMode systemStart eraHistory
                                            pparams Set.empty utxo txBodyContent
                                            cAddr Nothing
+
       firstExceptT ShelleyTxCmdWriteFileError . newExceptT
         $ writeFileTextEnvelope fpath Nothing balancedTxBody
 

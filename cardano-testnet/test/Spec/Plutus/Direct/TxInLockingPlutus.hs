@@ -85,8 +85,6 @@ hprop_plutus = H.integration . H.runFinallies . H.workspace "chairman" $ \tempAb
 
   -- This datum hash is the hash of the untyped 42
   let scriptDatumHash = "9e1199a988ba72ffd6e9c269cadb3b53b5f360ff99f112d9b2ee30c4d74ad88b"
-  let plutusRequiredSpace = id @Integer 70000000
-  let plutusRequiredTime = id @Integer 70000000
 
   datumFile <- H.note $ base </> "scripts/plutus/data/42.datum"
   redeemerFile <- H.note $ base </> "scripts/plutus/data/42.redeemer"
@@ -124,16 +122,28 @@ hprop_plutus = H.integration . H.runFinallies . H.workspace "chairman" $ \tempAb
   utxo1 <- H.noteShowM $ H.jsonErrorFail $ J.fromJSON @(HashMap Text Utxo) utxo1Json
   txin <- H.noteShow $ head $ HM.keys utxo1
   lovelaceAtTxin <- H.nothingFailM . H.noteShow $ utxo1 & HM.lookup txin <&> value >>= HM.lookup "lovelace"
-  lovelaceAtTxinDiv2 <- H.noteShow $ lovelaceAtTxin `div` 2
+  lovelaceAtTxinDiv3 <- H.noteShow $ lovelaceAtTxin `div` 3
 
-  void $ H.execCli
-    [ "transaction", "build-raw"
+  void $ H.execCli' execConfig
+    [ "query", "protocol-parameters"
+    , "--testnet-magic", show @Int testnetMagic
+    , "--out-file", work </> "pparams.json"
+    ]
+
+  let dummyaddress = "addr_test1vpqgspvmh6m2m5pwangvdg499srfzre2dd96qq57nlnw6yctpasy4"
+      targetaddress = "addr_test1qpmxr8d8jcl25kyz2tz9a9sxv7jxglhddyf475045y8j3zxjcg9vquzkljyfn3rasfwwlkwu7hhm59gzxmsyxf3w9dps8832xh"
+
+  void $ H.execCli' execConfig
+    [ "transaction", "build"
     , "--alonzo-era"
-    , "--fee", "0"
+    , "--cardano-mode"
+    , "--testnet-magic", show @Int testnetMagic
+    , "--change-address", dummyaddress
     , "--tx-in", T.unpack txin
-    , "--tx-out", plutusScriptAddr <> "+" <> show @Integer lovelaceAtTxinDiv2
+    , "--tx-out", plutusScriptAddr <> "+" <> show @Integer lovelaceAtTxinDiv3
     , "--tx-out-datum-hash", scriptDatumHash
-    , "--tx-out", utxoAddr <> "+" <> show @Integer lovelaceAtTxinDiv2
+    , "--tx-out", utxoAddr <> "+" <> show @Integer lovelaceAtTxinDiv3
+    , "--protocol-params-file", work </> "pparams.json"
     , "--out-file", work </> "create-datum-output.body"
     ]
 
@@ -182,17 +192,9 @@ hprop_plutus = H.integration . H.runFinallies . H.workspace "chairman" $ \tempAb
   utxo2 <- H.noteShowM $ H.jsonErrorFail $ J.fromJSON @(HashMap Text Utxo) utxo2Json
   txinCollateral <- H.noteShow $ head $ HM.keys utxo2
 
-  void $ H.execCli' execConfig
-    [ "query", "protocol-parameters"
-    , "--testnet-magic", show @Int testnetMagic
-    , "--out-file", work </> "pparams.json"
-    ]
-
-  let dummyaddress = "addr_test1vpqgspvmh6m2m5pwangvdg499srfzre2dd96qq57nlnw6yctpasy4"
-
   lovelaceAtplutusScriptAddr <- H.nothingFailM . H.noteShow $ plutusUtxo & HM.lookup plutusUtxoTxIn <&> value >>= HM.lookup "lovelace"
 
-  spendable <- H.noteShow $ lovelaceAtplutusScriptAddr - plutusRequiredTime - plutusRequiredSpace
+  spendable <- H.noteShow $ lovelaceAtplutusScriptAddr `div` 3
 
   void $ H.execCli' execConfig
     [ "transaction", "build"
@@ -202,7 +204,7 @@ hprop_plutus = H.integration . H.runFinallies . H.workspace "chairman" $ \tempAb
     , "--change-address", dummyaddress
     , "--tx-in", T.unpack plutusUtxoTxIn
     , "--tx-in-collateral", T.unpack txinCollateral
-    , "--tx-out", dummyaddress <> "+" <> show @Integer spendable
+    , "--tx-out", targetaddress <> "+" <> show @Integer spendable
     , "--tx-in-script-file", plutusScriptFileInUse
     , "--tx-in-datum-file", datumFile
     , "--protocol-params-file", work </> "pparams.json"
@@ -226,12 +228,12 @@ hprop_plutus = H.integration . H.runFinallies . H.workspace "chairman" $ \tempAb
 
   H.threadDelay 5000000
 
-  -- Querying UTxO at $dummyaddress. If there is ADA at the address the Plutus script successfully executed!
+  -- Querying UTxO at $targetaddress. If there is ADA at the address the Plutus script successfully executed!
 
   result <- T.pack <$> H.execCli' execConfig
     [ "query", "utxo"
-    , "--address", dummyaddress
+    , "--address", targetaddress
     , "--testnet-magic", show @Int testnetMagic
     ]
 
-  L.filter (not . T.null) (T.splitOn " " (T.lines result !! 2)) !! 2 === "139837584"
+  L.filter (not . T.null) (T.splitOn " " (T.lines result !! 2)) !! 2 === "111111111"

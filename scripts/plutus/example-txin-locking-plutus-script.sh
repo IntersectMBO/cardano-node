@@ -58,16 +58,21 @@ cat $WORK/utxo-1.json
 
 txin=$(jq -r 'keys[]' $WORK/utxo-1.json)
 lovelaceattxin=$(jq -r ".[\"$txin\"].value.lovelace" $WORK/utxo-1.json)
-lovelaceattxindiv2=$(expr $lovelaceattxin / 2)
+lovelaceattxindiv3=$(expr $lovelaceattxin / 3)
 
-$CARDANO_CLI transaction build-raw \
+$CARDANO_CLI query protocol-parameters --testnet-magic "$TESTNET_MAGIC" --out-file $WORK/pparams.json
+
+$CARDANO_CLI transaction build \
   --alonzo-era \
-  --fee 0 \
-  --tx-in $txin \
-  --tx-out "$plutusscriptaddr+$lovelaceattxindiv2" \
+  --cardano-mode \
+  --testnet-magic "$TESTNET_MAGIC" \
+  --change-address "$utxoaddr" \
+  --tx-in "$txin" \
+  --tx-out "$plutusscriptaddr+$lovelaceattxindiv3" \
   --tx-out-datum-hash "$scriptdatumhash" \
-  --tx-out "$utxoaddr+$lovelaceattxindiv2" \
-  --out-file $WORK/create-datum-output.body
+  --tx-out "$utxoaddr+$lovelaceattxindiv3" \
+  --protocol-params-file "$WORK/pparams.json" \
+  --out-file "$WORK/create-datum-output.body"
 
 $CARDANO_CLI transaction sign \
   --tx-body-file $WORK/create-datum-output.body \
@@ -90,9 +95,8 @@ plutusutxotxin=$(jq -r 'keys[]' $WORK/plutusutxo.json)
 
 $CARDANO_CLI query utxo --address $utxoaddr --cardano-mode --testnet-magic "$TESTNET_MAGIC" --out-file $WORK/utxo-2.json
 cat $WORK/utxo-2.json
-txinCollateral=$(jq -r 'keys[]' $WORK/utxo-2.json)
+txinCollateral=$(jq -r 'keys[0]' $WORK/utxo-2.json)
 
-$CARDANO_CLI query protocol-parameters --testnet-magic "$TESTNET_MAGIC" --out-file $WORK/pparams.json
 
 dummyaddress=addr_test1vpqgspvmh6m2m5pwangvdg499srfzre2dd96qq57nlnw6yctpasy4
 
@@ -109,12 +113,12 @@ $CARDANO_CLI transaction build \
   --cardano-mode \
   --testnet-magic "$TESTNET_MAGIC" \
   --change-address "$utxoaddr" \
-  --tx-in $plutusutxotxin \
-  --tx-in-collateral $txinCollateral \
-  --tx-out "$dummyaddress+1000000" \
-  --tx-in-script-file $plutusscriptinuse \
+  --tx-in "$plutusutxotxin" \
+  --tx-in-collateral "$txinCollateral" \
+  --tx-out "$dummyaddress+10000000" \
+  --tx-in-script-file "$plutusscriptinuse" \
   --tx-in-datum-file "$datumfilepath"  \
-  --protocol-params-file $WORK/pparams.json\
+  --protocol-params-file "$WORK/pparams.json" \
   --tx-in-redeemer-file "$redeemerfilepath" \
   --out-file $WORK/test-alonzo.body
 

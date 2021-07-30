@@ -133,16 +133,28 @@ hprop_plutus = Test.integration . HE.runFinallies . HE.workspace "chairman" $ \t
   utxo1 <- HE.noteShowM $ HE.jsonErrorFail $ J.fromJSON @(HashMap Text Utxo) utxo1Json
   txin <- HE.noteShow $ head $ HM.keys utxo1
   lovelaceAtTxin <- HE.nothingFailM . HE.noteShow $ utxo1 & HM.lookup txin <&> value >>= HM.lookup "lovelace"
-  lovelaceAtTxinDiv2 <- HE.noteShow $ lovelaceAtTxin `div` 2
+  lovelaceAtTxinDiv3 <- HE.noteShow $ lovelaceAtTxin `div` 3
 
-  void $ Test.execCli
-    [ "transaction", "build-raw"
+  let dummyaddress = "addr_test1vpqgspvmh6m2m5pwangvdg499srfzre2dd96qq57nlnw6yctpasy4"
+      targetaddress = "addr_test1qpmxr8d8jcl25kyz2tz9a9sxv7jxglhddyf475045y8j3zxjcg9vquzkljyfn3rasfwwlkwu7hhm59gzxmsyxf3w9dps8832xh"
+
+  void $ Test.execCli' execConfig
+    [ "query", "protocol-parameters"
+    , "--testnet-magic", show @Int testnetMagic
+    , "--out-file", work </> "pparams.json"
+    ]
+
+  void $ H.execCli' execConfig
+    [ "transaction", "build"
     , "--alonzo-era"
-    , "--fee", "0"
+    , "--cardano-mode"
+    , "--testnet-magic", show @Int testnetMagic
+    , "--change-address", dummyaddress
     , "--tx-in", Text.unpack txin
-    , "--tx-out", plutusScriptAddr <> "+" <> show @Integer lovelaceAtTxinDiv2
+    , "--tx-out", plutusScriptAddr <> "+" <> show @Integer lovelaceAtTxinDiv3
     , "--tx-out-datum-hash", scriptDatumHash
-    , "--tx-out", utxoAddr <> "+" <> show @Integer lovelaceAtTxinDiv2
+    , "--tx-out", utxoAddr <> "+" <> show @Integer lovelaceAtTxinDiv3
+    , "--protocol-params-file", work </> "pparams.json"
     , "--out-file", work </> "create-datum-output.body"
     ]
 
@@ -191,13 +203,6 @@ hprop_plutus = Test.integration . HE.runFinallies . HE.workspace "chairman" $ \t
   utxo2 <- HE.noteShowM $ HE.jsonErrorFail $ J.fromJSON @(HashMap Text Utxo) utxo2Json
   txinCollateral <- HE.noteShow $ head $ HM.keys utxo2
 
-  void $ Test.execCli' execConfig
-    [ "query", "protocol-parameters"
-    , "--testnet-magic", show @Int testnetMagic
-    , "--out-file", work </> "pparams.json"
-    ]
-
-  let dummyaddress = "addr_test1vpqgspvmh6m2m5pwangvdg499srfzre2dd96qq57nlnw6yctpasy4"
 
   lovelaceAtplutusScriptAddr <- HE.nothingFailM . HE.noteShow $ plutusUtxo & HM.lookup plutusUtxoTxIn <&> value >>= HM.lookup "lovelace"
 
@@ -211,7 +216,7 @@ hprop_plutus = Test.integration . HE.runFinallies . HE.workspace "chairman" $ \t
     , "--change-address", dummyaddress
     , "--tx-in", Text.unpack plutusUtxoTxIn
     , "--tx-in-collateral", Text.unpack txinCollateral
-    , "--tx-out", dummyaddress <> "+" <> show @Integer spendable
+    , "--tx-out", targetaddress <> "+" <> show @Integer spendable
     , "--tx-in-script-file", plutusScriptFileInUse
     , "--tx-in-datum-file", datumFile
     , "--protocol-params-file", work </> "pparams.json"
@@ -231,14 +236,14 @@ hprop_plutus = Test.integration . HE.runFinallies . HE.workspace "chairman" $ \t
 
   HE.threadDelay 5000000
 
-  -- Querying UTxO at $dummyaddress. If there is ADA at the address the Plutus script successfully executed!
+  -- Querying UTxO at $targetaddress. If there is ADA at the address the Plutus script successfully executed!
 
   result <- H.evalM $ Text.pack <$> Test.execCli' execConfig
     [ "query", "utxo"
-    , "--address", dummyaddress
+    , "--address", targetaddress
     , "--testnet-magic", show @Int testnetMagic
     ]
 
   HE.note_ $ Text.unpack result
 
-  List.filter (not . Text.null) (Text.splitOn " " (Text.lines result !! 2)) !! 2 === "139837584"
+  List.filter (not . Text.null) (Text.splitOn " " (Text.lines result !! 2)) !! 2 === "193333333"
