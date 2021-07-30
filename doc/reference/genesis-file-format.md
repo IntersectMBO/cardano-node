@@ -18,7 +18,7 @@ All these entries are Optional.
 |  Field |  Type | Required? | Description |
 |---|---|---|---|
  `lovelacePerUTxOWord`  |  `<nat>` | Optional | How many lovelace are charged per word in a UTxO value |
-| `executionPrices` | `{ "prSteps": <rational>, "prMemory": <rational> } `  | Optional | Price (in lovelace) charged for Plutus script per CPU execution step/memory unit. |
+| `executionPrices` | `{ "prSteps": <rational>, "prMem": <rational> } `  | Optional | Price (in lovelace) charged for Plutus script per CPU execution step/memory unit. |
 |  `maxTxExUnits` |     `{ "exUnitsMem": <nat>, "exUnitsSteps" : <nat> }`| Optional  |  Maximum number of Plutus memory units/CPU steps allowed for a single transaction. |
 |  `maxBlockExUnits` |     `{ "exUnitsMem": <nat>, "exUnitsSteps" : <nat> }`| Optional  |  Maximum number of Plutus memory units/CPU steps allowed for a complete block. |
 | `maxValueSize`  | `<nat>`  | Optional |  Maximum size of a Plutus `Value` in a transaction output. |
