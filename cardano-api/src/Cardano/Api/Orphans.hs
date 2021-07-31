@@ -16,18 +16,19 @@ module Cardano.Api.Orphans () where
 
 import           Prelude
 
+import           Data.Aeson (FromJSON (..), ToJSON (..), object, (.=), (.!=), (.:), (.:?))
+import qualified Data.Aeson as Aeson
+import           Data.Aeson.Types (FromJSONKey (..), ToJSONKey (..), toJSONKeyText)
 import qualified Data.ByteString.Base16 as B16
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import qualified Data.Map.Strict as Map
-import           Data.Aeson (FromJSON (..), ToJSON (..), object, (.=), (.!=), (.:), (.:?))
-import qualified Data.Aeson as Aeson
-import           Data.Aeson.Types (FromJSONKey (..), ToJSONKey (..), toJSONKeyText)
 
 import           Control.Applicative
 import           Control.Iterate.SetAlgebra (BiMap (..), Bimap)
 
+import           Cardano.Api.Json
 import qualified Cardano.Ledger.BaseTypes as Ledger
 import           Cardano.Ledger.BaseTypes (StrictMaybe (..), strictMaybeToMaybe)
 import           Cardano.Ledger.Crypto (StandardCrypto)
@@ -302,8 +303,8 @@ deriving instance FromJSON Alonzo.ExUnits
 instance ToJSON Alonzo.Prices where
   toJSON Alonzo.Prices { Alonzo.prSteps, Alonzo.prMem } =
     -- We cannot round-trip via NonNegativeInterval, so we go via Rational
-    object [ "prSteps" .= Ledger.unboundRational prSteps
-           , "prMem"   .= Ledger.unboundRational prMem
+    object [ "prSteps" .= toRationalJSON (Ledger.unboundRational prSteps)
+           , "prMem"   .= toRationalJSON (Ledger.unboundRational prMem)
            ]
 
 instance FromJSON Alonzo.Prices where

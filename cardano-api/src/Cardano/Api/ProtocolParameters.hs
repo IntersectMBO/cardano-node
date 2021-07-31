@@ -57,23 +57,20 @@ module Cardano.Api.ProtocolParameters (
 
 import           Prelude
 
+import           Control.Monad
+import           Data.Aeson (FromJSON (..), ToJSON (..), object, withObject,
+                   (.!=), (.:), (.:?), (.=))
+import           Data.Bifunctor (bimap)
 import           Data.ByteString (ByteString)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.String (IsString)
-import qualified Data.Scientific as Scientific
 import           Data.Text (Text)
 import           Data.Maybe (fromMaybe)
 import           GHC.Generics
 import           Numeric.Natural
 
-import           Control.Monad
-
-import           Data.Aeson (FromJSON (..), ToJSON (..), object, withObject,
-                   (.!=), (.:), (.:?), (.=))
-import qualified Data.Aeson as Aeson
-import           Data.Bifunctor (bimap)
-
+import           Cardano.Api.Json
 import qualified Cardano.Binary as CBOR
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import           Cardano.Slotting.Slot (EpochNo)
@@ -343,18 +340,6 @@ instance ToJSON ProtocolParameters where
       , "collateralPercentage"   .= protocolParamCollateralPercent
       , "maxCollateralInputs"    .= protocolParamMaxCollateralInputs
       ]
-    where
-      -- Rationals and JSON are an awkward mix. We cannot convert rationals
-      -- like @1/3@ to JSON numbers. But _most_ of the numbers we want to use
-      -- in practice have simple decimal representations. Our solution here is
-      -- to use simple decimal representations where we can and representation
-      -- in a @{"numerator": 1, "denominator": 3}@ style otherwise.
-      --
-      toRationalJSON :: Rational -> Aeson.Value
-      toRationalJSON r =
-        case Scientific.fromRationalRepetend (Just 5) r of
-          Right (s, Nothing) -> toJSON s
-          _                  -> toJSON r
 
 
 -- ----------------------------------------------------------------------------
@@ -475,6 +460,7 @@ data ProtocolParametersUpdate =
        -- This is the \"tau\" incentives parameter from the design document.
        --
        protocolUpdateTreasuryCut :: Maybe Rational,
+
        -- Introduced in Alonzo
 
        -- | Cost in ada per word of UTxO storage.
@@ -714,8 +700,9 @@ instance FromCBOR ExecutionUnitPrices where
 
 instance ToJSON ExecutionUnitPrices where
   toJSON ExecutionUnitPrices{priceExecutionSteps, priceExecutionMemory} =
-    object [ "priceSteps"  .= priceExecutionSteps
-           , "priceMemory" .= priceExecutionMemory ]
+    object [ "priceSteps"  .= toRationalJSON priceExecutionSteps
+           , "priceMemory" .= toRationalJSON priceExecutionMemory
+           ]
 
 instance FromJSON ExecutionUnitPrices where
   parseJSON =
