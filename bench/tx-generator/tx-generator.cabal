@@ -137,10 +137,12 @@ test-suite tx-generator-test
   type:                 exitcode-stdio-1.0
 
   build-depends:        base >=4.12 && <5
-                      , tasty-hunit
-                      , tasty
+                      , hedgehog
                       , heredoc
                       , optparse-applicative
+                      , tasty
+                      , tasty-hedgehog
+                      , tasty-hunit
                       , tx-generator
 
   default-language:     Haskell2010

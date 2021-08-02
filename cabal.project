@@ -107,6 +107,20 @@ package cardano-ledger-alonzo-test
 -- --------------------------- 8< --------------------------
 -- Please do not put any `source-repository-package` clause above this line.
 
+-- Using a fork until our patches can be merged upstream
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/optparse-applicative
+  tag: 3876479d01d681ee529d1b26784335cbe0baf7cd
+  --sha256: 00gavws6jvl930rq09gs5rdwmyc4n42avk7p9s7pjv52d205v967
+
+-- Using a fork until our patches can be merged upstream
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/criterion
+  tag: fb2e7be532db96255d203f86360230cae37130f3
+  --sha256: 14r9zkfa8zslky3969gaq27gi7yi9rlqv0h1iq7zam9l15z53vhr
+
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/hedgehog-extras
