@@ -35,9 +35,9 @@ import           Cardano.Node.Types
 import           Cardano.Tracing.OrphanInstances.Byron ()
 import           Cardano.Tracing.OrphanInstances.Shelley ()
 
+import qualified Cardano.Node.Protocol.Alonzo as Alonzo
 import qualified Cardano.Node.Protocol.Byron as Byron
 import qualified Cardano.Node.Protocol.Shelley as Shelley
-import qualified Cardano.Node.Protocol.Alonzo as Alonzo
 
 import           Cardano.Node.Protocol.Types
 
@@ -106,12 +106,12 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
         Byron.readLeaderCredentials byronGenesis files
 
     (shelleyGenesis, shelleyGenesisHash) <-
-      firstExceptT CardanoProtocolInstantiationGenesisReadError $
+      firstExceptT CardanoProtocolInstantiationShelleyGenesisReadError $
         Shelley.readGenesis npcShelleyGenesisFile
                             npcShelleyGenesisFileHash
 
     (alonzoGenesis, _alonzoGenesisHash) <-
-      firstExceptT CardanoProtocolInstantiationGenesisReadError $
+      firstExceptT CardanoProtocolInstantiationAlonzoGenesisReadError $
         Alonzo.readGenesis npcAlonzoGenesisFile
                            npcAlonzoGenesisFileHash
 
@@ -260,7 +260,10 @@ data CardanoProtocolInstantiationError =
        CardanoProtocolInstantiationErrorByron
          Byron.ByronProtocolInstantiationError
 
-     | CardanoProtocolInstantiationGenesisReadError
+     | CardanoProtocolInstantiationShelleyGenesisReadError
+         Shelley.GenesisReadError
+
+     | CardanoProtocolInstantiationAlonzoGenesisReadError
          Shelley.GenesisReadError
 
      | CardanoProtocolInstantiationPraosLeaderCredentialsError
@@ -273,8 +276,10 @@ data CardanoProtocolInstantiationError =
 instance Error CardanoProtocolInstantiationError where
   displayError (CardanoProtocolInstantiationErrorByron err) =
     displayError err
-  displayError (CardanoProtocolInstantiationGenesisReadError err) =
-    displayError err
+  displayError (CardanoProtocolInstantiationShelleyGenesisReadError err) =
+    "Shelley related: " <> displayError err
+  displayError (CardanoProtocolInstantiationAlonzoGenesisReadError err) =
+    "Alonzo related: " <> displayError err
   displayError (CardanoProtocolInstantiationPraosLeaderCredentialsError err) =
     displayError err
   displayError (CardanoProtocolInstantiationErrorAlonzo err) =

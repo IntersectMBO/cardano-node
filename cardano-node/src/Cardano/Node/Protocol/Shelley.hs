@@ -272,8 +272,8 @@ instance Error GenesisReadError where
      <> toS fp <> " Error: " <> show err
 
   displayError (GenesisHashMismatch actual expected) =
-        "Wrong Shelley genesis file: the actual hash is " <> show actual
-     <> ", but the expected Shelley genesis hash given in the node "
+        "Wrong genesis file: the actual hash is " <> show actual
+     <> ", but the expected genesis hash given in the node "
      <> "configuration file is " <> show expected
 
   displayError (GenesisDecodeError fp err) =
