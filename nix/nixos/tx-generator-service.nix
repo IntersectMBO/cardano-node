@@ -4,17 +4,18 @@ let
   ##
   ## For definitions of the cfg attributes referred here,
   ## please see the 'defServiceModule.extraOptionDecls' attset below.
-  defaultGeneratorScriptFn =
-    cfg: with cfg;
+  basicValueTxWorkload =
+    cfg: with cfg; with pkgs.lib;
     [
-      { setNumberOfInputsPerTx   = 2; } ## XXX: inputs_per_tx
-      { setNumberOfOutputsPerTx  = 2; } ## XXX: outputs_per_tx
+      { setNumberOfInputsPerTx   = inputs_per_tx; }
+      { setNumberOfOutputsPerTx  = outputs_per_tx; }
       { setNumberOfTxs           = tx_count; }
-      { setTxAdditionalSize      = 0; } ## XXX: add_tx_size
+      { setTxAdditionalSize      = add_tx_size; }
+      { setMinValuePerUTxO       = 1000000; }
       { setFee                   = tx_fee; }
       { setTTL                   = 1000000; }
       { startProtocol            = nodeConfigFile; }
-      { setEra                   = "Mary"; } ## XXX: era
+      { setEra                   = capitalise era; }
       { setTargets =
            __attrValues
              (__mapAttrs (name: { ip, port }:
@@ -25,11 +26,15 @@ let
       { readSigningKey    = "pass-partout"; filePath = sigKey; }
       { importGenesisFund = "pass-partout"; fundKey  = "pass-partout"; }
       { delay             = init_cooldown; }
-      { createChange      = 1000; count = tx_count * 2; }
+      { createChange      = 1000;
+                          count = (length (__attrNames targetNodes))
+                                  * 2 * inputs_per_tx; }
       { runBenchmark      = "walletBasedBenchmark";
                                txCount = tx_count; tps = tps; }
       { waitBenchmark     = "walletBasedBenchmark"; }
     ];
+
+  defaultGeneratorScriptFn = basicValueTxWorkload;
 
   ## The standard decision procedure for the run script:
   ##
@@ -41,6 +46,8 @@ let
         (if runScript != null
          then runScript
          else runScriptFn cfg);
+
+  capitalise = x: (pkgs.lib.toUpper (__substring 0 1 x)) + __substring 1 99999 x;
 
 in pkgs.commonLib.defServiceModule
   (lib: with lib;
@@ -105,7 +112,8 @@ in pkgs.commonLib.defServiceModule
           then
             let jsonFile =
                   if runScriptFile != null then runScriptFile
-                  else "${pkgs.writeText "run-script.json" (decideRunScript cfg)}";
+                  else "${pkgs.writeText "generator-config-run-script.json"
+                                         (decideRunScript cfg)}";
             in ["json" jsonFile]
           else
           (["cliArguments"

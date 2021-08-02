@@ -173,8 +173,10 @@ let
   ## and compact definition of services.
   serviceDeclarationLib = with pkgs.lib; with types;
     types // rec {
+      ## A shorter alternative to mkOption.
       opt    = type: default: description:
                mkOption { inherit type default description; };
+      ## Maybe `opt`: same as `opt`, but nullable and defaults to `null`.
       mayOpt = type: description:
                opt (nullOr type) null description;
     };
