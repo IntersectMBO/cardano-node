@@ -31,7 +31,7 @@ let
                 path   = toString;
                 string = toString;
               }."${__typeOf x}" or
-              (_: throw "\nWhile processing service declaration for '${svcName}':  Unsupported type of command arg: ${__typeOf x}\n")) x);
+              (_: throw "\nWhile computing the stringified arglist for service '${svcName}':  Unsupported type of command arg: ${__typeOf (traceValSeqN 2 x)}\n")) x);
     in  ''
         ${if traceServiceStartup then "set -x" else ""}
         ${configScriptPreambleFn config}
@@ -66,8 +66,8 @@ let
   ##  - systemd extra config (see defaults below)
   ##  - systemd extra service config (see defaults below)
   defServiceModule = argClosure:
-    let dsmDeclSpec = argClosure (pkgs.lib // serviceDeclarationLib);
-    in defServiceModule__ dsmDeclSpec;
+    traceValSeqN 2
+    (defServiceModule__ (argClosure (pkgs.lib // serviceDeclarationLib)));
   defServiceModule__ =
     { ## WARNING: when changing this arglist,
       ## make sure to update 'unhandledArgs' below.
@@ -155,9 +155,9 @@ let
           };
         } // extraOptionDecls;
       };
-      config = mkIf svcConfig.enable ({
+      config = {
         systemd.services."${svcName}" = {
-          enable        = true;
+          enable        = svcConfig.enable;
           description   = "${svcName}, ${svcDesc}.";
           script        = svcConfig.script;
           serviceConfig = {
@@ -166,24 +166,20 @@ let
           } // systemdExtraServiceConfig;
         } // systemdExtraConfig;
         assertions = configAssertions { inherit lib; config = svcConfig; };
-      });
+      };
     };
 
   ## A small library of helpers, to establish comfortable
   ## and compact definition of services.
-  serviceDeclarationLib = with pkgs.lib; rec {
-    opt = type: default: description:
-              mkOption { inherit type default description; };
-    intOpt  = opt types.int;
-    pathOpt = opt (types.or types.path types.str);
-    strOpt  = opt types.str;
-    boolOpt = opt types.bool;
-    attrOpt = opt types.attrs;
-    listOpt = opt (types.listOf types.attrs);
-    enumOpt = set: default: description:
-      mkOption { inherit default description;
-                 type = types.enum set; };
-  };
+  serviceDeclarationLib = with pkgs.lib; with types;
+    types // rec {
+      ## A shorter alternative to mkOption.
+      opt    = type: default: description:
+               mkOption { inherit type default description; };
+      ## Maybe `opt`: same as `opt`, but nullable and defaults to `null`.
+      mayOpt = type: description:
+               opt (nullOr type) null description;
+    };
 
   ## Make a script equivalent to a startup script of a NixOS service,
   ## given:

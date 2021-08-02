@@ -19,36 +19,6 @@ let
   exemplarNode = profile.node-services."node-0";
 
   ##
-  ## mkGeneratorRunScript :: ServiceConfig -> GeneratorRunScript
-  ##
-  mkGeneratorRunScript =
-    cfg: with cfg;
-    [
-      { setNumberOfInputsPerTx   = 2; } ## XXX: inputs_per_tx
-      { setNumberOfOutputsPerTx  = 2; } ## XXX: outputs_per_tx
-      { setNumberOfTxs           = tx_count; }
-      { setTxAdditionalSize      = 0; } ## XXX: add_tx_size
-      { setFee                   = tx_fee; }
-      { setTTL                   = 1000000; }
-      { startProtocol            = nodeConfigFile; }
-      { setEra                   = "Mary"; } ## XXX: era
-      { setTargets =
-           __attrValues
-             (__mapAttrs (name: { ip, port }:
-                            { addr = ip; port = port; })
-                         targetNodes);
-      }
-      { setLocalSocket    = localNodeSocketPath; }
-      { readSigningKey    = "pass-partout"; filePath = sigKey; }
-      { importGenesisFund = "pass-partout"; fundKey  = "pass-partout"; }
-      { delay             = init_cooldown; }
-      { createChange      = 1000; count = tx_count * 2; }
-      { runBenchmark      = "walletBasedBenchmark";
-                               txCount = tx_count; tps = tps; }
-      { waitBenchmark     = "walletBasedBenchmark"; }
-    ];
-
-  ##
   ## generatorServiceConfig :: Map NodeId NodeSpec -> ServiceConfig
   ##
   generatorServiceConfig =
@@ -60,10 +30,10 @@ let
                Protocol
                ShelleyGenesisFile ByronGenesisFile;
            };
-      configValue =
+    in
         backend.finaliseGeneratorService
         {
-          era = profile.value.era;
+          inherit (profile.value) era;
 
           targetNodes = __mapAttrs
             (name: { name, port, ...}@nodeSpec:
@@ -105,15 +75,11 @@ let
             # rtsOpts = ["-xc"];
           };
         } // profile.value.generator;
-    in
-      configValue //
-      { runScript = mkGeneratorRunScript configValue;
-      };
 
   ## Given an env config, evaluate it and produce the node service.
   ## Call the given function on this service.
   ##
-  ## generatorServiceConfigServiced :: GeneratorServiceConfig -> GeneratorService
+  ## generatorServiceConfigService :: GeneratorServiceConfig -> GeneratorService
   ##
   generatorServiceConfigService =
     serviceConfig:
@@ -177,7 +143,7 @@ let
         value = service.runScript;
         JSON  = runJq "generator-run-script.json"
                   ''--null-input
-                    --argjson x '${__toJSON service.runScript}'
+                    --argjson x '${service.decideRunScript service}'
                   '' "$x";
       };
 

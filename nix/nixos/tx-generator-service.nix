@@ -1,4 +1,55 @@
-pkgs: pkgs.commonLib.defServiceModule
+pkgs:
+let
+  ## Standard, simplest possible value transaction workload.
+  ##
+  ## For definitions of the cfg attributes referred here,
+  ## please see the 'defServiceModule.extraOptionDecls' attset below.
+  basicValueTxWorkload =
+    cfg: with cfg; with pkgs.lib;
+    [
+      { setNumberOfInputsPerTx   = inputs_per_tx; }
+      { setNumberOfOutputsPerTx  = outputs_per_tx; }
+      { setNumberOfTxs           = tx_count; }
+      { setTxAdditionalSize      = add_tx_size; }
+      { setMinValuePerUTxO       = 1000000; }
+      { setFee                   = tx_fee; }
+      { setTTL                   = 1000000; }
+      { startProtocol            = nodeConfigFile; }
+      { setEra                   = capitalise era; }
+      { setTargets =
+           __attrValues
+             (__mapAttrs (name: { ip, port }:
+                            { addr = ip; port = port; })
+                         targetNodes);
+      }
+      { setLocalSocket    = localNodeSocketPath; }
+      { readSigningKey    = "pass-partout"; filePath = sigKey; }
+      { importGenesisFund = "pass-partout"; fundKey  = "pass-partout"; }
+      { delay             = init_cooldown; }
+      { createChange      = 1000;
+                          count = (length (__attrNames targetNodes))
+                                  * 2 * inputs_per_tx; }
+      { runBenchmark      = "walletBasedBenchmark";
+                               txCount = tx_count; tps = tps; }
+      { waitBenchmark     = "walletBasedBenchmark"; }
+    ];
+
+  defaultGeneratorScriptFn = basicValueTxWorkload;
+
+  ## The standard decision procedure for the run script:
+  ##
+  ##  - if the config explicitly specifies a script, take that,
+  ##  - otherwise compute it from the configuration.
+  defaultDecideRunScript =
+    cfg: with cfg;
+      __toJSON
+        (if runScript != null
+         then runScript
+         else runScriptFn cfg);
+
+  capitalise = x: (pkgs.lib.toUpper (__substring 0 1 x)) + __substring 1 99999 x;
+
+in pkgs.commonLib.defServiceModule
   (lib: with lib;
     { svcName = "tx-generator";
       svcDesc = "configurable transaction generator";
@@ -13,51 +64,59 @@ pkgs: pkgs.commonLib.defServiceModule
       exeName = "tx-generator";
 
       extraOptionDecls = {
-        scriptMode      = boolOpt true       "Whether to use the modern script parametrisation mode of the generator.";
+        scriptMode      = opt bool true      "Whether to use the modern script parametrisation mode of the generator.";
 
         ## TODO: the defaults should be externalised to a file.
         ##
-        tx_count        =  intOpt 1000       "How many Txs to send, total.";
-        add_tx_size     =  intOpt 100        "Extra Tx payload, in bytes.";
-        inputs_per_tx   =  intOpt 4          "Inputs per Tx.";
-        outputs_per_tx  =  intOpt 4          "Outputs per Tx.";
-        tx_fee          =  intOpt 10000000   "Tx fee, in Lovelace.";
-        tps             =  intOpt 100        "Strength of generated load, in TPS.";
-        init_cooldown   =  intOpt 100        "Delay between init and main submissions.";
+        tx_count        = opt int 1000       "How many Txs to send, total.";
+        add_tx_size     = opt int 100        "Extra Tx payload, in bytes.";
+        inputs_per_tx   = opt int 4          "Inputs per Tx.";
+        outputs_per_tx  = opt int 4          "Outputs per Tx.";
+        tx_fee          = opt int 10000000   "Tx fee, in Lovelace.";
+        tps             = opt int 100        "Strength of generated load, in TPS.";
+        init_cooldown   = opt int 100        "Delay between init and main submissions.";
 
-        runScriptFile   =  strOpt null       "Generator config script file.";
-        runScript       = listOpt null       "Generator config script.";
+        runScriptFn     = opt (functionTo (listOf attrs)) defaultGeneratorScriptFn
+          "Function accepting this service config and producing the generator run script (a list of command attrsets).  Takes effect unless runScript or runScriptFile are specified.";
+        runScript       = mayOpt (listOf attrs)
+          "Generator run script (a list of command attrsets).  Takes effect unless runScriptFile is specified.";
+        runScriptFile   = mayOpt str         "Generator config script file.";
 
-        nodeConfigFile  =  strOpt null       "Node-style config file path.";
-        nodeConfig      = attrOpt {}         "Node-style config, overrides the default.";
+        nodeConfigFile  = mayOpt str         "Node-style config file path.";
+        nodeConfig      = mayOpt attrs       "Node-style config, overrides the default.";
 
-        sigKey          =  strOpt null       "Key with funds";
+        sigKey          = mayOpt str         "Key with funds";
 
         localNodeSocketPath =
-                           strOpt null       "Local node socket path";
-        localNodeConf   = attrOpt null       "Config of the local node";
+                           mayOpt str        "Local node socket path";
+        localNodeConf   = mayOpt attrs       "Config of the local node";
 
-        targetNodes     = attrOpt null       "Targets: { name = { ip, port } }";
+        targetNodes     = mayOpt attrs       "Targets: { name = { ip, port } }";
 
-        era             = enumOpt [ "shelley"
-                                    "allegra"
-                                    "mary"
-                                    "alonzo"
-                                  ]
-                                  "shelley"
-                                  "Cardano era to generate transactions for.";
+        era             = opt (enum [ "shelley"
+                                      "allegra"
+                                      "mary"
+                                      "alonzo"
+                                    ])
+                              "mary"
+                              "Cardano era to generate transactions for.";
+
+        ## Internals: not user-serviceable.
+        decideRunScript = opt (functionTo str) defaultDecideRunScript
+          "Decision procedure for the run script content.";
       };
 
       configExeArgsFn =
         cfg: with cfg;
           if scriptMode
           then
-            let json = if runScriptFile != null then runScriptFile
-                       else writeText "run-script.json" (__toJSON runScript);
-            in
-          [ "json" json ]
+            let jsonFile =
+                  if runScriptFile != null then runScriptFile
+                  else "${pkgs.writeText "generator-config-run-script.json"
+                                         (decideRunScript cfg)}";
+            in ["json" jsonFile]
           else
-          ([ "cliArguments"
+          (["cliArguments"
 
             "--config"                 nodeConfigFile
 
