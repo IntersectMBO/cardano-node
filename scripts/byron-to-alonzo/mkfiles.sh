@@ -59,11 +59,22 @@ FUNDS_PER_BYRON_ADDRESS=$((${FUNDS_PER_GENESIS_ADDRESS} - 1000000))
 NETWORK_MAGIC=42
 SECURITY_PARAM=10
 
-OS=$(uname -s) DATE=
-case $OS in
-  Darwin )       DATE="gdate";;
-  * )            DATE="date";;
+UNAME=$(uname -s) DATE=
+case $UNAME in
+  Darwin )      DATE="gdate";;
+  Linux )       DATE="date";;
+  MINGW64_NT* ) UNAME="Windows_NT"
+                DATE="date";;
 esac
+
+sprocket() {
+  if [ "$UNAME" == "Windows_NT" ]; then
+    echo -n "\\\\.\\pipe\\"
+    echo "$1" | sed 's|/|\\|g'
+  else
+    echo "$1"
+  fi
+}
 
 START_TIME="$(${DATE} -d "now + 30 seconds" +%s)"
 
@@ -476,13 +487,14 @@ mkdir -p run
 
 for NODE in ${BFT_NODES}; do
   (
+    SPROCKET="$(sprocket "${ROOT}/${NODE}/node.sock")"
     echo "#!/usr/bin/env bash"
     echo ""
     echo "cardano-node run \\"
     echo "  --config                          ${ROOT}/configuration.yaml \\"
     echo "  --topology                        ${ROOT}/${NODE}/topology.json \\"
     echo "  --database-path                   ${ROOT}/${NODE}/db \\"
-    echo "  --socket-path                     ${ROOT}/${NODE}/node.sock \\"
+    echo "  --socket-path                     '${SPROCKET}' \\"
     echo "  --shelley-kes-key                 ${ROOT}/${NODE}/shelley/kes.skey \\"
     echo "  --shelley-vrf-key                 ${ROOT}/${NODE}/shelley/vrf.skey \\"
     echo "  --shelley-operational-certificate ${ROOT}/${NODE}/shelley/node.cert \\"
@@ -499,13 +511,14 @@ done
 
 for NODE in ${POOL_NODES}; do
   (
+    SPROCKET="$(sprocket "${ROOT}/${NODE}/node.sock")"
     echo "#!/usr/bin/env bash"
     echo ""
     echo "cardano-node run \\"
     echo "  --config                          ${ROOT}/configuration.yaml \\"
     echo "  --topology                        ${ROOT}/${NODE}/topology.json \\"
     echo "  --database-path                   ${ROOT}/${NODE}/db \\"
-    echo "  --socket-path                     ${ROOT}/${NODE}/node.sock \\"
+    echo "  --socket-path                     '${SPROCKET}' \\"
     echo "  --shelley-kes-key                 ${ROOT}/${NODE}/shelley/kes.skey \\"
     echo "  --shelley-vrf-key                 ${ROOT}/${NODE}/shelley/vrf.skey \\"
     echo "  --shelley-operational-certificate ${ROOT}/${NODE}/shelley/node.cert \\"
