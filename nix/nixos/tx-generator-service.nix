@@ -11,7 +11,7 @@ let
       { setNumberOfOutputsPerTx  = outputs_per_tx; }
       { setNumberOfTxs           = tx_count; }
       { setTxAdditionalSize      = add_tx_size; }
-      { setMinValuePerUTxO       = 1000000; }
+      { setMinValuePerUTxO       = min_utxo_value; }
       { setFee                   = tx_fee; }
       { setTTL                   = 1000000; }
       { startProtocol            = nodeConfigFile; }
@@ -26,11 +26,17 @@ let
       { readSigningKey    = "pass-partout"; filePath = sigKey; }
       { importGenesisFund = "pass-partout"; fundKey  = "pass-partout"; }
       { delay             = init_cooldown; }
-      { createChange      = 1000;
-                          count = (length (__attrNames targetNodes))
-                                  * 2 * inputs_per_tx; }
+      (if continuousMode
+       then
+         { createChange   = tx_count * tx_fee + min_utxo_value;
+                            ## WARNING: this could go over the genesis UTxO funds!
+                    count = (length (__attrNames targetNodes)) * 2 * inputs_per_tx; }
+       else
+         { createChange   = min_utxo_value + tx_fee;
+                    count = tx_count * inputs_per_tx; })
+      { delay             = init_cooldown; }
       { runBenchmark      = "walletBasedBenchmark";
-                               txCount = tx_count; tps = tps; }
+                  txCount = tx_count; tps = tps; }
       { waitBenchmark     = "walletBasedBenchmark"; }
     ];
 
@@ -65,6 +71,7 @@ in pkgs.commonLib.defServiceModule
 
       extraOptionDecls = {
         scriptMode      = opt bool true      "Whether to use the modern script parametrisation mode of the generator.";
+        continuousMode  = opt bool false     "Whether to use continuous generation, without the full UTxO pre-splitting phase.";
 
         ## TODO: the defaults should be externalised to a file.
         ##
@@ -74,7 +81,8 @@ in pkgs.commonLib.defServiceModule
         outputs_per_tx  = opt int 4          "Outputs per Tx.";
         tx_fee          = opt int 10000000   "Tx fee, in Lovelace.";
         tps             = opt int 100        "Strength of generated load, in TPS.";
-        init_cooldown   = opt int 100        "Delay between init and main submissions.";
+        init_cooldown   = opt int 50         "Delay between init and main submissions.";
+        min_utxo_value  = opt int 10000000   "Minimum value allowed per UTxO entry";
 
         runScriptFn     = opt (functionTo (listOf attrs)) defaultGeneratorScriptFn
           "Function accepting this service config and producing the generator run script (a list of command attrsets).  Takes effect unless runScript or runScriptFile are specified.";

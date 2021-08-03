@@ -344,7 +344,7 @@ runBenchmarkInEra (ThreadName threadName) txCount tps era = do
     minTxValue = fromIntegral numOutputs * minValuePerUTxO + fee
 
     selector :: FundSet.Target -> FundSet.FundSelector
-    selector = FundSet.selectInputs ReuseAny numInputs minTxValue PlainOldFund
+    selector = FundSet.selectInputs ConfirmedBeforeReuse numInputs minTxValue PlainOldFund
 
     inToOut :: [Lovelace] -> [Lovelace]
     inToOut = FundSet.inputsToOutputsWithFee fee numOutputs
