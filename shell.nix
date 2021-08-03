@@ -155,12 +155,13 @@ let
     in cardanoNodeProject.shellFor {
     name = "devops-shell";
 
-    packages = lib.attrVals cardanoNodeProject.projectPackages;
+    packages = _: [];
 
     nativeBuildInputs = [
       nixWrapped
       cardano-cli
       bech32
+      cardano-ping
       cardano-node
       python3Packages.supervisor
       python3Packages.ipython
