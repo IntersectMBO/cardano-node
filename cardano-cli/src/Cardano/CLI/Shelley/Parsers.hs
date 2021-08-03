@@ -34,6 +34,7 @@ import           Data.Time.Format (defaultTimeLocale, iso8601DateFormat, parseTi
 import           Network.Socket (PortNumber)
 import           Options.Applicative hiding (help, str)
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
+import           Prettyprinter (line, pretty)
 
 import qualified Data.ByteString.Base16 as B16
 import qualified Data.ByteString.Char8 as BSC
@@ -557,9 +558,17 @@ pTransaction :: Parser TransactionCmd
 pTransaction =
   asum
     [ subParser "build-raw"
-        (Opt.info pTransactionBuildRaw $ Opt.progDesc "Build a transaction (low-level, inconvenient)")
+        $ Opt.info pTransactionBuildRaw $ Opt.progDescDoc $ Just $
+          pretty @String "Build a transaction (low-level, inconvenient)"
+          <> line <> line
+          <> "Please note the order of some cmd options is crucial. If used incorrectly may produce "
+          <> "undesired tx body. See nested [] notation above for details."
     , subParser "build"
-        (Opt.info pTransactionBuild $ Opt.progDesc "Build a balanced transaction (automatically calculates fees)")
+        $ Opt.info pTransactionBuild $ Opt.progDescDoc $ Just $
+          pretty @String "Build a balanced transaction (automatically calculates fees)"
+          <> line <> line
+          <> "Please note the order of some cmd options is crucial. If used incorrectly may produce "
+          <> "undesired tx body. See nested [] notation above for details."
     , subParser "sign"
         (Opt.info pTransactionSign $ Opt.progDesc "Sign a transaction")
     , subParser "witness"

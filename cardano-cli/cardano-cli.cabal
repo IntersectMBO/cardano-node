@@ -52,6 +52,7 @@ library
 
   exposed-modules:      Cardano.CLI.Helpers
                         Cardano.CLI.Parsers
+                        Cardano.CLI.Render
                         Cardano.CLI.Run
                         Cardano.CLI.Run.Friendly
                         Cardano.CLI.Types
@@ -132,6 +133,7 @@ library
                       , ouroboros-network
                       , parsec
                       , plutus-ledger-api
+                      , prettyprinter
                       , shelley-spec-ledger
                       , small-steps
                       , split

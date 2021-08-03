@@ -1,5 +1,7 @@
+{-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE Trustworthy #-}
+
 module Main (main) where
 
 import           Prelude
@@ -12,7 +14,11 @@ import           Options.Applicative
 import           Cardano.Benchmarking.Command (commandParser)
 import           Cardano.Benchmarking.CliArgsScript (parseGeneratorCmd)
 import           Cardano.Benchmarking.GeneratorTx.SizedMetadata
+import           Hedgehog ((===))
 
+import           Test.Tasty.Hedgehog (testProperty)
+
+import           Hedgehog qualified as H
 
 main :: IO ()
 main = defaultMain tests
@@ -43,8 +49,8 @@ sizedMetadata = testGroup "properties of the CBOR encoding relevant for generati
 cliArgs = testGroup "cli arguments"
   [
      -- Also update readme and documentation when the help-messages changes.
-    testCase "check help message against pinned version"
-      $ assertBool "help message == pinned help message" $ helpMessage == pinnedHelpMessage
+    testProperty "check help message against pinned version"
+      $ H.withTests 1 $ H.property $ H.test $ filter (/= ' ') helpMessage === filter (/= ' ') pinnedHelpMessage
 
      -- examples for calling the tx-generator found in the shell scripts.
   , testCmdLine [here|cliArguments --config /work/cli-tests/benchmarks/shelley3pools/configuration/configuration-generator.yaml --socket-path /work/cli-tests/benchmarks/shelley3pools/logs/sockets/1 --num-of-txs 1000 --add-tx-size 0 --inputs-per-tx 1 --outputs-per-tx 1 --tx-fee 1000000 --tps 10 --init-cooldown 5 --target-node ("127.0.0.1",3000) --target-node ("127.0.0.1",3001) --target-node ("127.0.0.1",3002) --genesis-funds-key configuration/genesis-shelley/utxo-keys/utxo1.skey|]
@@ -56,15 +62,23 @@ cliArgs = testGroup "cli arguments"
     testCmdLine l = testCase "check that example cmd line parses" $ assertBool l $ isJust
                         $ getParseResult $ execParserPure defaultPrefs (info commandParser fullDesc)
                            $ words l
-pinnedHelpMessage = [here|ParserFailure(Usage: <program> --config FILEPATH --socket-path FILEPATH 
-                 [--shelley | --mary | --allegra] [(--target-node (HOST,PORT))] 
-                 [--init-cooldown INT] [--initial-ttl INT] [--num-of-txs INT] 
-                 [--tps DOUBLE] [--inputs-per-tx INT] [--outputs-per-tx INT] 
-                 [--tx-fee INT] [--add-tx-size INT] 
-                 [--fail-on-submission-errors] 
-                 (--genesis-funds-key FILEPATH | --utxo-funds-key FILEPATH
-                   --tx-in TX-IN --tx-out TX-OUT |
-                   --split-utxo-funds-key FILEPATH --split-utxo FILEPATH)
+pinnedHelpMessage = [here|ParserFailure(Usage: <program> --config FILEPATH
+                   --socket-path FILEPATH
+                   [--shelley | --mary | --allegra]
+                   [(--target-node (HOST,PORT))]
+                   [--init-cooldown INT]
+                   [--initial-ttl INT]
+                   [--num-of-txs INT]
+                   [--tps DOUBLE]
+                   [--inputs-per-tx INT]
+                   [--outputs-per-tx INT]
+                   [--tx-fee INT]
+                   [--add-tx-size INT]
+                   [--fail-on-submission-errors]
+                   ( --genesis-funds-key FILEPATH
+                   | --utxo-funds-key FILEPATH --tx-in TX-IN --tx-out TX-OUT
+                   | --split-utxo-funds-key FILEPATH --split-utxo FILEPATH
+                   )
 
 Available options:
   --config FILEPATH        Configuration file for the cardano-node
