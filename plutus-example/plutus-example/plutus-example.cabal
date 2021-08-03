@@ -58,6 +58,8 @@ library
                       , plutus-tx-plugin
                       , serialise
 
+  ghc-options: -fobject-code -fno-ignore-interface-pragmas -fno-omit-interface-pragmas
+
 executable plutus-example
   import:               base, project-config
   hs-source-dirs:       app
