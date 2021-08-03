@@ -52,6 +52,10 @@ import           System.IO (FilePath)
 import           Text.Read
 import           Text.Show
 
+#ifdef UNIX
+import           System.Posix.Files
+#endif
+
 import qualified Data.Aeson as J
 import qualified Data.Yaml as Y
 import qualified Data.HashMap.Lazy as HM
@@ -64,6 +68,7 @@ import qualified Hedgehog.Extras.Stock.IO.File as IO
 import qualified Hedgehog.Extras.Stock.IO.Network.Socket as IO
 import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 import qualified Hedgehog.Extras.Stock.String as S
+import qualified Hedgehog.Extras.Stock.OS as OS
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.Concurrent as H
 import qualified Hedgehog.Extras.Test.File as H
@@ -73,9 +78,6 @@ import qualified System.Directory as IO
 import qualified System.Environment as IO
 import qualified System.IO as IO
 import qualified System.Info as OS
-#ifdef UNIX
-import           System.Posix.Files
-#endif
 import qualified System.Process as IO
 import qualified Test.Process as H
 import qualified Testnet.Conf as H
@@ -128,12 +130,16 @@ data Wallet = Wallet
 ifaceAddress :: String
 ifaceAddress = "127.0.0.1"
 
+-- | For an unknown reason, CLI commands are a lot slowere on Windows than on Linux and
+-- MacOS.  We need to allow a lot more time to set up a testnet.
+startTimeOffsetSeconds :: DTC.NominalDiffTime
+startTimeOffsetSeconds = if OS.isWin32 then 90 else 15
+
 testnet :: TestnetOptions -> H.Conf -> H.Integration TestnetRuntime
 testnet testnetOptions H.Conf {..} = do
   void $ H.note OS.os
-  env <- H.evalIO IO.getEnvironment
   currentTime <- H.noteShowIO DTC.getCurrentTime
-  startTime <- H.noteShow $ DTC.addUTCTime 15 currentTime -- 15 seconds into the future
+  startTime <- H.noteShow $ DTC.addUTCTime startTimeOffsetSeconds currentTime
   configurationTemplate <- H.noteShow $ base </> "configuration/defaults/byron-mainnet/configuration.yaml"
   configurationFile <- H.noteShow $ tempAbsPath </> "configuration.yaml"
 

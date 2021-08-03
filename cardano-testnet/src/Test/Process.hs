@@ -1,5 +1,6 @@
 module Test.Process
-  ( execCli
+  ( bashPath
+  , execCli
   , execCli'
   , procCli
   , procNode
@@ -7,17 +8,35 @@ module Test.Process
   , procChairman
   ) where
 
+import           Control.Monad (return)
 import           Control.Monad.Catch (MonadCatch)
 import           Control.Monad.IO.Class (MonadIO)
 import           Data.Function
+import           Data.Maybe
 import           Data.String
 import           GHC.Stack (HasCallStack)
 import           Hedgehog (MonadTest)
 import           Hedgehog.Extras.Test.Process (ExecConfig)
+import           System.IO (FilePath)
 import           System.Process (CreateProcess)
 
 import qualified GHC.Stack as GHC
 import qualified Hedgehog.Extras.Test.Process as H
+import qualified System.Environment as IO
+import qualified System.IO.Unsafe as IO
+
+-- | Path to the bash executable.  This is used on Windows so that the caller can supply a Windows
+-- path to the bash executable because there is no reliable way to invoke bash without the full
+-- Windows path from Haskell.
+bashPath :: FilePath
+bashPath = IO.unsafePerformIO $ do
+  mValue <- IO.lookupEnv "BASH_PATH"
+  case mValue of
+    Just "" -> return "bash"
+    Just value -> return value
+    Nothing -> return "bash"
+  
+{-# NOINLINE bashPath #-}
 
 -- | Run cardano-cli, returning the stdout
 execCli
