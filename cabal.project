@@ -126,6 +126,7 @@ source-repository-package
     cardano-crypto-praos
     cardano-crypto-tests
     measures
+    orphans-deriving-via
     slotting
     strict-containers
 
@@ -138,8 +139,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger-specs
-  tag: bc5e54f0611a416db1e906d3783e4b973429f5eb
-  --sha256: 1j7b6aglr1j51qmfn4nx7mamv81qyl8411fwsx6bw2cpghvizpmg
+  tag: 38850aa9ac042b5456e3285e9d6933dd9b9fb25e
+  --sha256: 0dsplzxanm9fig70d3dbdx0230gxf0lq0h7pkwswn3hp2rcv6vwa
   subdir:
     alonzo/impl
     byron/chain/executable-spec
@@ -198,8 +199,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: f026e71e8925dc2cb1a55a9a77b54bbeb1273ef0
-  --sha256: 0wmlrkdi7q868872p4ah35z51511yqkr8pj90fwadlr6ipkbpkl9
+  tag: e9cda57df7ea6969edbc3bfc4e117668277d09c8
+  --sha256: 1a91z6yvlhzlqrf7fy51fmmpm3ssk684h6pjgg022cdlsq56yif2
   subdir:
     io-sim
     io-classes

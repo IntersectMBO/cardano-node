@@ -966,7 +966,7 @@ instance ToObject (Alonzo.UtxosPredicateFailure (AlonzoEra StandardCrypto)) wher
   toObject verb (Alonzo.UpdateFailure pFailure) =
     toObject verb pFailure
 
-deriving newtype instance ToJSON Alonzo.IsValidating
+deriving newtype instance ToJSON Alonzo.IsValid
 
 instance ToJSON (Alonzo.CollectError StandardCrypto) where
   toJSON cError =
