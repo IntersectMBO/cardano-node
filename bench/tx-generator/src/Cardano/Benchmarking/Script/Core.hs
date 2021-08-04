@@ -484,7 +484,7 @@ createChangeGeneric createCoins value count = do
   forM_ chunks $ \coins -> do
     gen <- createCoins coins
     case gen of
-      Left (_err :: String) -> return ()
+      Left err -> throwE $ WalletError err
       Right tx -> void $ localSubmitTx tx
  where
   chunkList :: Int -> [a] -> [[a]]
