@@ -70,4 +70,4 @@ hprop_plutus = H.integration . H.runFinallies . H.workspace "chairman" $ \tempAb
 
   result <- T.pack <$> H.readFile resultFile
 
-  L.filter (not . T.null) (T.splitOn " " (T.lines result !! 2)) !! 2 === "1000000"
+  L.filter (not . T.null) (T.splitOn " " (T.lines result !! 2)) !! 2 === "10000000"

@@ -11,8 +11,8 @@ module Cardano.Api.Shelley.Genesis
 import           Prelude
 
 import qualified Data.Map.Strict as Map
-import qualified Data.Time as Time
 import           Data.Maybe (fromMaybe)
+import qualified Data.Time as Time
 
 import           Cardano.Ledger.BaseTypes as Ledger
 import           Cardano.Slotting.Slot (EpochSize (..))
@@ -61,6 +61,8 @@ shelleyGenesisDefaults =
         , Ledger._maxBBSize = 64 * 1024             -- max 64kb blocks
         , Ledger._maxTxSize = 16 * 1024             -- max 16kb txs
         , Ledger._eMax      = 18
+        , Ledger._minfeeA   = 1                     -- The linear factor for the minimum fee calculation
+        , Ledger._minfeeB   = 0                     -- The constant factor for the minimum fee calculation
         }
 
       -- genesis keys and initial funds
