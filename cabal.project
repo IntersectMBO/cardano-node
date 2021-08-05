@@ -9,6 +9,7 @@ packages:
     cardano-node-chairman
     cardano-submit-api
     cardano-testnet
+    trace-forward
     nix/workbench/cardano-topology
     bench/tx-generator
     nix/workbench/locli
