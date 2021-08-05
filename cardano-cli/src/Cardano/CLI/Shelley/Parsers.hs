@@ -614,6 +614,7 @@ pTransaction =
     TxBuild <$> pCardanoEra
             <*> pConsensusModeParams
             <*> pNetworkId
+            <*> optional pWitnessOverride
             <*> some (pTxIn AutoBalance)
             <*> many pTxInCollateral
             <*> many pTxOut
@@ -1788,6 +1789,14 @@ pTxInCollateral =
       <> Opt.metavar "TX-IN"
       <> Opt.help "TxId#TxIx"
       )
+
+pWitnessOverride :: Parser Word
+pWitnessOverride = Opt.option Opt.auto
+  (  Opt.long "witness-override"
+  <> Opt.metavar "WORD"
+  <> Opt.help "Specify and override the number of \
+              \witnesses the transaction requires."
+  )
 
 parseTxIn :: Parsec.Parser TxIn
 parseTxIn = TxIn <$> parseTxId <*> (Parsec.char '#' *> parseTxIx)

@@ -191,6 +191,8 @@ data TransactionCmd
       AnyCardanoEra
       AnyConsensusModeParams
       NetworkId
+      (Maybe Word)
+      -- ^ Override the required number of tx witnesses
       [(TxIn, Maybe (ScriptWitnessFiles WitCtxTxIn))]
       -- ^ Transaction inputs with optional spending scripts
       [TxIn]

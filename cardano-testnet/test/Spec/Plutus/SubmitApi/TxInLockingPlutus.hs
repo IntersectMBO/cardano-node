@@ -35,7 +35,10 @@ import qualified Data.Text as Text
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 import qualified Hedgehog.Extras.Test as HE
+import qualified Hedgehog.Extras.Test.Base as H
+import qualified Hedgehog.Extras.Test.Process as H
 import qualified System.Directory as IO
+import qualified System.Environment as IO
 import qualified Test.Base as Test
 import qualified Test.Process as H
 import qualified Test.Process as Test
@@ -64,11 +67,16 @@ hprop_plutus = Test.integration . HE.runFinallies . HE.workspace "chairman" $ \t
 
   TN.TestnetRuntime { TN.configurationFile, TN.bftSprockets, TN.testnetMagic } <- TN.testnet TN.defaultTestnetOptions conf
 
-  execConfig <- HE.noteShow HE.ExecConfig
-        { HE.execConfigEnv = Last $ Just
+  env <- H.evalIO IO.getEnvironment
+
+  execConfig <- H.noteShow H.ExecConfig
+        { H.execConfigEnv = Last $ Just $
           [ ("CARDANO_NODE_SOCKET_PATH", IO.sprocketArgumentName (head bftSprockets))
           ]
-        , HE.execConfigCwd = Last $ Just tempBaseAbsPath
+          -- The environment must be passed onto child process on Windows in order to
+          -- successfully start that process.
+          <> env
+        , H.execConfigCwd = Last $ Just tempBaseAbsPath
         }
 
   base <- HE.note projectBase

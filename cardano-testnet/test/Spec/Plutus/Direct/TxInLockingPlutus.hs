@@ -32,12 +32,14 @@ import qualified Data.Aeson as J
 import qualified Data.HashMap.Lazy as HM
 import qualified Data.List as L
 import qualified Data.Text as T
+import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.Concurrent as H
 import qualified Hedgehog.Extras.Test.File as H
 import qualified Hedgehog.Extras.Test.Process as H
 import qualified System.Directory as IO
+import qualified System.Environment as IO
 import qualified Test.Base as H
 import qualified Test.Process as H
 import qualified Testnet.Cardano as H
@@ -64,10 +66,15 @@ hprop_plutus = H.integration . H.runFinallies . H.workspace "chairman" $ \tempAb
 
   H.TestnetRuntime { H.bftSprockets, H.testnetMagic } <- H.testnet H.defaultTestnetOptions conf
 
+  env <- H.evalIO IO.getEnvironment
+
   execConfig <- H.noteShow H.ExecConfig
-        { H.execConfigEnv = Last $ Just
+        { H.execConfigEnv = Last $ Just $
           [ ("CARDANO_NODE_SOCKET_PATH", IO.sprocketArgumentName (head bftSprockets))
           ]
+          -- The environment must be passed onto child process on Windows in order to
+          -- successfully start that process.
+          <> env
         , H.execConfigCwd = Last $ Just tempBaseAbsPath
         }
 

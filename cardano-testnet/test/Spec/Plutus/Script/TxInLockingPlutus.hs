@@ -30,6 +30,7 @@ import qualified Hedgehog.Internal.Property as H
 import qualified System.Directory as IO
 import qualified System.Environment as IO
 import qualified Test.Base as H
+import qualified Test.Process as H
 import qualified Testnet.Cardano as H
 import qualified Testnet.Conf as H
 
@@ -63,7 +64,7 @@ hprop_plutus = H.integration . H.runFinallies . H.workspace "chairman" $ \tempAb
 
   scriptPath <- H.eval $ projectBase </> "scripts/plutus/example-txin-locking-plutus-script.sh"
 
-  H.exec_ execConfig "bash"
+  H.exec_ execConfig H.bashPath
     [ "-x"
     , scriptPath
     ]

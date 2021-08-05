@@ -263,12 +263,12 @@ renderFeature TxFeatureTxOutDatum           = "Transaction output datums"
 runTransactionCmd :: TransactionCmd -> ExceptT ShelleyTxCmdError IO ()
 runTransactionCmd cmd =
   case cmd of
-    TxBuild era consensusModeParams nid txins txinsc txouts changeAddr mValue mLowBound
-            mUpperBound certs wdrls metadataSchema scriptFiles
-            metadataFiles mpparams mUpProp out ->
+    TxBuild era consensusModeParams nid mOverrideWits txins txinsc txouts
+            changeAddr mValue mLowBound mUpperBound certs wdrls metadataSchema
+            scriptFiles metadataFiles mpparams mUpProp out ->
       runTxBuild era consensusModeParams nid txins txinsc txouts changeAddr mValue mLowBound
                  mUpperBound certs wdrls metadataSchema scriptFiles
-                 metadataFiles mpparams mUpProp out
+                 metadataFiles mpparams mUpProp out mOverrideWits
     TxBuildRaw era txins txinsc txouts mValue mLowBound mUpperBound
                fee certs wdrls metadataSchema scriptFiles
                metadataFiles mpparams mUpProp out ->
@@ -383,10 +383,12 @@ runTxBuild
   -> Maybe ProtocolParamsSourceSpec
   -> Maybe UpdateProposalFile
   -> TxBodyFile
+  -> Maybe Word
   -> ExceptT ShelleyTxCmdError IO ()
 runTxBuild (AnyCardanoEra era) (AnyConsensusModeParams cModeParams) networkId txins txinsc txouts
            (TxOutChangeAddress changeAddr) mValue mLowerBound mUpperBound certFiles withdrawals
-           metadataSchema scriptFiles metadataFiles mpparams mUpdatePropFile outBody@(TxBodyFile fpath) = do
+           metadataSchema scriptFiles metadataFiles mpparams mUpdatePropFile outBody@(TxBodyFile fpath)
+           mOverrideWits = do
   SocketPath sockPath <- firstExceptT ShelleyTxCmdSocketEnvError readEnvSocketPath
 
   let localNodeConnInfo = LocalNodeConnectInfo cModeParams networkId sockPath
@@ -443,7 +445,7 @@ runTxBuild (AnyCardanoEra era) (AnyConsensusModeParams cModeParams) networkId tx
           . hoistEither
           $ makeTransactionBodyAutoBalance eInMode systemStart eraHistory
                                            pparams Set.empty utxo txBodyContent
-                                           cAddr Nothing
+                                           cAddr mOverrideWits
 
       firstExceptT ShelleyTxCmdWriteFileError . newExceptT
         $ writeFileTextEnvelope fpath Nothing balancedTxBody
