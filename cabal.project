@@ -111,8 +111,8 @@ package cardano-ledger-alonzo-test
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/optparse-applicative
-  tag: 90f5ee66e2df4e7c3b3877b4d28babb8163e96b4
-  --sha256: 13ax7vv1k885bki8a72q5f6zsk573fdkbqsra4rhf4snd6hzms6h
+  tag: 3b259646f60325a0759fdf10b129ddc23518d11a
+  --sha256: 110sis5l8xff9sgxvk49sad2j1i3nikfycf8ff0yfxmbj0vx3b3k
 
 source-repository-package
   type: git
