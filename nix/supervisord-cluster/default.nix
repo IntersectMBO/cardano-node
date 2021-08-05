@@ -1,7 +1,7 @@
 let
   basePortDefault    = 30000;
   cacheDirDefault    = "${__getEnv "HOME"}/.cache/cardano-workbench";
-  stateDirDefault    = "state-cluster";
+  stateDirDefault    = "run/current";
   profileNameDefault = "default-alzo";
 in
 { pkgs

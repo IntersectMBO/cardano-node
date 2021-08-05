@@ -43,12 +43,17 @@ CLUSTER_PROFILE    ?= default-alzo
 CLUSTER_ARGS_EXTRA ?=
 
 cluster-shell:
-	nix-shell --max-jobs 8 --cores 0 --show-trace --argstr clusterProfile ${CLUSTER_PROFILE} --arg 'autoStartCluster' true ${CLUSTER_ARGS_EXTRA}
+	nix-shell --max-jobs 8 --cores 0 --show-trace --argstr clusterProfile ${CLUSTER_PROFILE} --arg 'autoStartCluster' true
 
-cluster-shell-dev:       CLUSTER_ARGS_EXTRA += --arg 'workbenchDevMode' true
-cluster-shell-trace:     CLUSTER_ARGS_EXTRA += --argstr 'autoStartClusterArgs' '--trace --trace-workbench'
-cluster-shell-dev-trace: CLUSTER_ARGS_EXTRA += --arg 'workbenchDevMode' true --argstr 'autoStartClusterArgs' '--trace --trace-workbench'
-cluster-shell-dev cluster-shell-trace cluster-shell-dev-trace: cluster-shell
+shell-dev:               CLUSTER_ARGS_EXTRA += --arg 'workbenchDevMode' true
+cluster-shell:           CLUSTER_ARGS_EXTRA += --arg 'autoStartCluster' true --arg 'workbenchDevMode' true
+cluster-shell-dev:       CLUSTER_ARGS_EXTRA += --arg 'autoStartCluster' true --arg 'workbenchDevMode' true
+cluster-shell-trace:     CLUSTER_ARGS_EXTRA += --arg 'autoStartCluster' true --argstr 'autoStartClusterArgs' '--trace --trace-workbench'
+cluster-shell-dev-trace: CLUSTER_ARGS_EXTRA += --arg 'autoStartCluster' true --arg 'workbenchDevMode' true --argstr 'autoStartClusterArgs' '--trace --trace-workbench'
+shell-dev cluster-shell-dev cluster-shell-trace cluster-shell-dev-trace: shell
+
+shell:
+	nix-shell --max-jobs 8 --cores 0 --show-trace --argstr clusterProfile ${CLUSTER_PROFILE} ${CLUSTER_ARGS_EXTRA}
 
 cli node:
 	cabal --ghc-options="+RTS -qn8 -A32M -RTS" build cardano-$@
