@@ -119,7 +119,7 @@ source-repository-package
   type: git
   location: https://github.com/input-output-hk/optparse-applicative
   tag: 7497a29cb998721a9068d5725d49461f2bba0e7a
-  --sha256: 1gvsrg925vynwgqwplgjmp53vj953qyh3wbdf34pw21c8r47w35r
+  --sha256: 13ax7vv1k885bki8a72q5f6zsk573fdkbqsra4rhf4snd6hzms6h
 
 source-repository-package
   type: git
