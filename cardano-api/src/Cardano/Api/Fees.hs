@@ -663,7 +663,13 @@ data TxBodyErrorAutoBalance =
        -- new UTxO entries. The transaction should be changed to provide more
        -- input ada.
        --
-     | TxBodyErrorAdaBalanceTooSmall Lovelace
+     | TxBodyErrorAdaBalanceTooSmall
+         -- ^ Offending TxOut
+         TxOutInAnyEra
+         -- ^ Minimum UTxO
+         Lovelace
+         -- ^ Tx balance
+         Lovelace
 
        -- | 'makeTransactionBodyAutoBalance' does not yet support the Byron era.
      | TxBodyErrorByronEraNotSupported
@@ -712,11 +718,14 @@ instance Error TxBodyErrorAutoBalance where
    ++ "of the transaction is negative: " ++ show lovelace ++ " lovelace. "
    ++ "The usual solution is to provide more inputs, or inputs with more ada."
 
-  displayError (TxBodyErrorAdaBalanceTooSmall lovelace) =
+  displayError (TxBodyErrorAdaBalanceTooSmall changeOutput minUTxO balance) =
       "The transaction does balance in its use of ada, however the net "
-   ++ "balance (that would be used for a change output) is smaller than the "
-   ++ "permitted value for new UTxO entries: " ++ show lovelace ++ " lovelace. "
-   ++ "The usual solution is to provide more inputs, or inputs with more ada."
+   ++ "balance does not meet the minimum UTxO threshold. \n"
+   ++ "Balance: " ++ show balance ++ "\n"
+   ++ "Offending output (change output): " ++ Text.unpack (prettyRenderTxOut changeOutput) ++ "\n"
+   ++ "Minimum UTxO threshold: " ++ show minUTxO ++ "\n"
+   ++ "The usual solution is to provide more inputs, or inputs with more ada to \
+      \meet the minimum UTxO threshold"
 
   displayError TxBodyErrorByronEraNotSupported =
       "The Byron era is not yet supported by makeTransactionBodyAutoBalance"
@@ -731,8 +740,8 @@ instance Error TxBodyErrorAutoBalance where
       displayError err
 
   displayError (TxBodyErrorMinUTxONotMet txout minUTxO) =
-      "Minimum UTxO threshold not met for: " <> Text.unpack (prettyRenderTxOut txout)
-   <> " Minimum requires UTxO: " <> show minUTxO
+      "Minimum UTxO threshold not met for tx output: " <> Text.unpack (prettyRenderTxOut txout) <> "\n"
+   <> "Minimum required UTxO: " <> show minUTxO
 
   displayError (TxBodyErrorNonAdaAssetsUnbalanced val) =
       "Non-Ada assets are unbalanced: " <> Text.unpack (renderValue val)
@@ -880,7 +889,9 @@ makeTransactionBodyAutoBalance eraInMode systemstart history pparams
         Left . TxBodyErrorAdaBalanceNegative $ txOutValueToLovelace balance
     | otherwise =
         case checkMinUTxOValue (TxOut changeaddr balance TxOutDatumHashNone) pparams of
-          Left _ -> Left . TxBodyErrorAdaBalanceTooSmall $ txOutValueToLovelace balance
+          Left (TxBodyErrorMinUTxONotMet txOutAny minUTxO) ->
+            Left $ TxBodyErrorAdaBalanceTooSmall txOutAny minUTxO (txOutValueToLovelace balance)
+          Left err -> Left err
           Right _ -> Right ()
 
    -- TODO: Move to top level and expose
