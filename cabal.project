@@ -11,6 +11,7 @@ packages:
     cardano-testnet
     trace-dispatcher
     trace-forward
+    trace-forward-demo
     nix/workbench/cardano-topology
     bench/tx-generator
     nix/workbench/locli
