@@ -1,0 +1,27 @@
+{
+  "connectMode": "Initiator",
+  "acceptAt": [
+    "/tmp/forwarder-1.sock",
+    "/tmp/forwarder-2.sock",
+    "/tmp/forwarder-3.sock"
+  ],
+  "loRequestNum": 1,
+  "ekgRequestFreq": 1,
+  "hasEKG": null,
+  "hasPrometheus": [
+    "127.0.0.1",
+    12798
+  ],
+  "logging": [
+    {
+      "logRoot": "/tmp/cardano-tracer-logs",
+      "logMode": "FileMode",
+      "logFormat": "ForMachine"
+    }
+  ],
+  "rotation": {
+    "rpKeepFilesNum": 1,
+    "rpLogLimitBytes": 50000,
+    "rpMaxAgeHours": 1
+  }
+}

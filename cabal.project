@@ -9,6 +9,7 @@ packages:
     cardano-node-chairman
     cardano-submit-api
     cardano-testnet
+    cardano-tracer
     bench/cardano-topology
     bench/locli
     bench/tx-generator
@@ -74,13 +75,16 @@ package cardano-submit-api
 package cardano-testnet
   tests: True
 
-package trace-resources
+package cardano-tracer
   tests: True
 
 package trace-dispatcher
   tests: True
 
 package trace-forward
+  tests: True
+
+package trace-resources
   tests: True
 
 -- The following is needed because Nix is doing something crazy.
