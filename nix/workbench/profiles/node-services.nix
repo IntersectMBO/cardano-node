@@ -51,10 +51,39 @@ let
                Protocol             = "Cardano";
                RequiresNetworkMagic = "RequiresMagic";
 
+               UseTraceDispatcher   = true;
+
                TracingVerbosity     = "NormalVerbosity";
                minSeverity          = "Debug";
 
                TraceMempool         = true;
+
+               TraceOptionSeverity  = [
+                 {ns = ""; severity = "DebugF";}
+                 {ns = "Node.Resources"; severity = "DebugF";}
+                 ## {ns = "Node.Mempool"; severity = "DebugF";}
+                 {ns = "Node.ChainDB"; severity = "DebugF";}
+                 ## {ns = "Node.ChainDB.ImmutableDBEvent"; severity = "WarningF";}
+               ];
+
+               TraceOptionDetail = [
+                 {ns = ""; detail = "DNormal";}
+                 ## {ns = "Node.BlockFetchClient"; detail = "DMinimal";}
+               ];
+
+               TraceOptionBackend = [
+                 {ns = ""; backends = ["Stdout MachineFormat" "EKGBackend" "Forwarder"];}
+                 ## {ns = "Node.ChainDB"; backends = ["Stdout HumanFormatColoured"];}
+               ];
+
+               TraceOptionLimiter = [
+                 {ns = "Node.ChainDB.OpenEvent"; limiterName = "ChainDB open limiter"; limiterFrequency = 0.1;}
+               ];
+
+               TraceOptionForwarder = {filePath = "/tmp/forwarder-${toString i}.sock";};
+
+               TraceOptionForwardQueueSize = 700;
+
                TraceTxInbound       = true;
 
                defaultScribes = [
