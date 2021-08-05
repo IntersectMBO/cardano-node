@@ -43,10 +43,6 @@ let
         stderr_logfile = "${stateDir}/generator/stderr";
         autostart      = false;
       };
-      "program:webserver" = {
-        command = "${pkgs.python3}/bin/python -m http.server ${toString (basePort - 1)}";
-        directory = "${stateDir}/shelley/webserver";
-      };
     }
     //
     extraSupervisorConfig;
