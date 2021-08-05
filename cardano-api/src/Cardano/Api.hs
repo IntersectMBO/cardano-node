@@ -239,6 +239,7 @@ module Cardano.Api (
 
     -- ** Building transactions with automated fees and balancing
     makeTransactionBodyAutoBalance,
+    BalancedTxBody(..),
     TxBodyErrorAutoBalance(..),
 
     -- * Signing transactions
