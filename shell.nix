@@ -102,6 +102,7 @@ let
       pkgs.git
       pkgs.hlint
       pkgs.moreutils
+      pkgs.psmisc
     ] ++ lib.optional haveGlibcLocales pkgs.glibcLocales
     ## Workbench's main script is called directly in dev mode.
     ++ lib.optionals (!workbenchDevMode)
@@ -173,6 +174,7 @@ let
       cluster.restart
       cardanolib-py
       cluster.workbench.workbench
+      psmisc
     ];
 
     # Prevents cabal from choosing alternate plans, so that
