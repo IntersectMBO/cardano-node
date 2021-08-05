@@ -15,6 +15,7 @@ packages:
     plutus-example/plutus-example
     trace-dispatcher
     trace-forward
+    trace-forward-demo
     trace-resources
 
 package cardano-api
