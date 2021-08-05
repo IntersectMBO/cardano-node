@@ -129,7 +129,7 @@ library
                       , network
                       , network-mux
                       , nothunks
-                      , optparse-applicative-fork
+                      , optparse-applicative
                       , ouroboros-consensus
                       , ouroboros-consensus-byron
                       , ouroboros-consensus-cardano
@@ -167,7 +167,7 @@ executable cardano-node
   build-depends:        cardano-config
                       , cardano-node
                       , cardano-prelude
-                      , optparse-applicative-fork
+                      , optparse-applicative
                       , text
 
 test-suite cardano-node-test

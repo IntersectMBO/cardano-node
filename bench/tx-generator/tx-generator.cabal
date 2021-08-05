@@ -86,7 +86,7 @@ library
                      , ixset-typed
                      , network
                      , network-mux
-                     , optparse-applicative-fork
+                     , optparse-applicative
                      , ouroboros-consensus
                      , ouroboros-consensus-byron
                      , ouroboros-consensus-cardano
@@ -139,7 +139,7 @@ test-suite tx-generator-test
   build-depends:        base >=4.12 && <5
                       , hedgehog
                       , heredoc
-                      , optparse-applicative-fork
+                      , optparse-applicative
                       , tasty
                       , tasty-hedgehog
                       , tasty-hunit

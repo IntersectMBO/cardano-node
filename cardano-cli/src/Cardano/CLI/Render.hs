@@ -10,6 +10,7 @@ import           Options.Applicative.Help.Types (helpText)
 import           Prelude (String)
 import           Prettyprinter
 import           Prettyprinter.Render.Util.SimpleDocTree
+import           Options.Applicative.Help.Types (renderHelp)
 
 import qualified Data.Text as T
 import qualified System.Environment as IO
@@ -26,7 +27,12 @@ cliHelpTraceEnabled = IO.unsafePerformIO $ do
 -- tools can be used to inspect tracing that aids in describing the structure of the output
 -- document.
 customRenderHelp :: Int -> ParserHelp -> String
-customRenderHelp cols
+customRenderHelp = if cliHelpTraceEnabled
+  then customRenderHelpAsHtml
+  else customRenderHelpAsAnsi
+
+customRenderHelpAsHtml :: Int -> ParserHelp -> String
+customRenderHelpAsHtml cols
   = T.unpack
   . wrapper
   . renderSimplyDecorated id renderElement
@@ -34,8 +40,9 @@ customRenderHelp cols
   . layoutSmart (LayoutOptions (AvailablePerLine cols 1.0))
   . helpText
   where
-    renderElement = if cliHelpTraceEnabled
-      then \ann x -> case ann of
+    renderElement :: Ann -> Text -> Text
+    renderElement ann x = if cliHelpTraceEnabled
+      then case ann of
         AnnTrace _ name -> "<span name=" <> show name <> ">" <> x <> "</span>"
         AnnStyle _ -> x
       else flip const
@@ -48,3 +55,6 @@ customRenderHelp cols
         . (<> "\n</body>")
         . (<> "\n</pre>")
       else id
+
+customRenderHelpAsAnsi :: Int -> ParserHelp -> String
+customRenderHelpAsAnsi = renderHelp

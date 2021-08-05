@@ -48,6 +48,7 @@ import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Parser as Aeson.Parser
 import qualified Data.Attoparsec.ByteString.Char8 as Atto
 import qualified Options.Applicative as Opt
+import qualified Options.Applicative.Help as H
 import qualified Text.Parsec as Parsec
 import qualified Text.Parsec.Error as Parsec
 import qualified Text.Parsec.Language as Parsec
@@ -558,17 +559,25 @@ pTransaction :: Parser TransactionCmd
 pTransaction =
   asum
     [ subParser "build-raw"
-        $ Opt.info pTransactionBuildRaw $ Opt.progDescDoc $ Just $
-          pretty @String "Build a transaction (low-level, inconvenient)"
-          <> line <> line
-          <> "Please note the order of some cmd options is crucial. If used incorrectly may produce "
-          <> "undesired tx body. See nested [] notation above for details."
+        $ Opt.info pTransactionBuildRaw $ Opt.progDescDoc $ Just $ mconcat
+          [ pretty @String "Build a transaction (low-level, inconvenient)"
+          , line
+          , line
+          , H.yellow $ mconcat
+            [ "Please note the order of some cmd options is crucial. If used incorrectly may produce "
+            , "undesired tx body. See nested [] notation above for details."
+            ]
+          ]
     , subParser "build"
-        $ Opt.info pTransactionBuild $ Opt.progDescDoc $ Just $
-          pretty @String "Build a balanced transaction (automatically calculates fees)"
-          <> line <> line
-          <> "Please note the order of some cmd options is crucial. If used incorrectly may produce "
-          <> "undesired tx body. See nested [] notation above for details."
+        $ Opt.info pTransactionBuild $ Opt.progDescDoc $ Just $ mconcat
+          [ pretty @String "Build a balanced transaction (automatically calculates fees)"
+          , line
+          , line
+          , H.yellow $ mconcat
+            [ "Please note the order of some cmd options is crucial. If used incorrectly may produce "
+            , "undesired tx body. See nested [] notation above for details."
+            ]
+          ]
     , subParser "sign"
         (Opt.info pTransactionSign $ Opt.progDesc "Sign a transaction")
     , subParser "witness"
