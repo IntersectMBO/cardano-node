@@ -574,7 +574,9 @@ pTransaction =
           , line
           , line
           , H.yellow $ mconcat
-            [ "Please note the order of some cmd options is crucial. If used incorrectly may produce "
+            [ "Please note "
+            , H.underline "the order"
+            , " of some cmd options is crucial. If used incorrectly may produce "
             , "undesired tx body. See nested [] notation above for details."
             ]
           ]
