@@ -1,5 +1,6 @@
 .stack-work/
 .ghc.environment.*
+.nix-shell-cabal.project
 /cabal.project.diff
 /cabal.project.local
 /cabal.project.old
