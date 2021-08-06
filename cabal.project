@@ -48,6 +48,9 @@ test-show-details: direct
 package cardano-api
   tests: True
 
+package cardano-api-test
+  tests: True
+
 package cardano-cli
   tests: True
 
