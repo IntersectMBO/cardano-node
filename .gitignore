@@ -1,6 +1,7 @@
 .stack-work/
 .ghc.environment.*
 /cabal.project.diff
+/cabal.project.freeze
 /cabal.project.local
 /cabal.project.old
 configuration/defaults/simpleview/genesis/
@@ -61,4 +62,3 @@ logs
 /example
 /.hlint.yaml
 /testnet
-
