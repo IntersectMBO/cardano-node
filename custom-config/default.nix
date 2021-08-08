@@ -3,7 +3,7 @@ self: {
   withR = false;
   localCluster = {
     cacheDir    = "${self.localCluster.stateDir}/.cache";
-    stateDir    = "state-cluster";
+    stateDir    = "run/current";
     profileName = "default-alzo";
     basePort    = 30000;
     autoStartCluster = false;
