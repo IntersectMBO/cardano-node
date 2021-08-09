@@ -1,4 +1,5 @@
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -48,11 +49,8 @@ import           Prelude
 import           Data.Aeson (ToJSON, toJSON)
 import           Data.Type.Equality (TestEquality (..), (:~:) (Refl))
 
-import           Ouroboros.Consensus.Shelley.Eras as Ledger
-                   (StandardShelley,
-                    StandardAllegra,
-                    StandardMary,
-                    StandardAlonzo)
+import           Ouroboros.Consensus.Shelley.Eras as Ledger (StandardAllegra, StandardAlonzo,
+                   StandardMary, StandardShelley)
 
 import           Cardano.Api.HasTypeProxy
 
@@ -144,6 +142,7 @@ data CardanoEra era where
      AllegraEra :: CardanoEra AllegraEra
      MaryEra    :: CardanoEra MaryEra
      AlonzoEra  :: CardanoEra AlonzoEra
+     -- when you add era here, change `instance Bounded AnyCardanoEra`
 
 deriving instance Eq   (CardanoEra era)
 deriving instance Ord  (CardanoEra era)
@@ -199,6 +198,33 @@ instance Eq AnyCardanoEra where
       case testEquality era era' of
         Nothing   -> False
         Just Refl -> True -- since no constructors share types
+
+instance Bounded AnyCardanoEra where
+   minBound = AnyCardanoEra ByronEra
+   maxBound = AnyCardanoEra AlonzoEra
+
+instance Enum AnyCardanoEra where
+
+   -- [e..] = [e..maxBound]
+   enumFrom e = enumFromTo e maxBound
+
+   fromEnum = \case
+      AnyCardanoEra ByronEra   -> 0
+      AnyCardanoEra ShelleyEra -> 1
+      AnyCardanoEra AllegraEra -> 2
+      AnyCardanoEra MaryEra    -> 3
+      AnyCardanoEra AlonzoEra  -> 4
+
+   toEnum = \case
+      0 -> AnyCardanoEra ByronEra
+      1 -> AnyCardanoEra ShelleyEra
+      2 -> AnyCardanoEra AllegraEra
+      3 -> AnyCardanoEra MaryEra
+      4 -> AnyCardanoEra AlonzoEra
+      n ->
+         error $
+            "AnyCardanoEra.toEnum: " <> show n
+            <> " does not correspond to any known enumerated era."
 
 instance ToJSON AnyCardanoEra where
    toJSON (AnyCardanoEra era) = toJSON era
@@ -333,4 +359,3 @@ type family ShelleyLedgerEra era where
   ShelleyLedgerEra AllegraEra = Ledger.StandardAllegra
   ShelleyLedgerEra MaryEra    = Ledger.StandardMary
   ShelleyLedgerEra AlonzoEra  = Ledger.StandardAlonzo
-
