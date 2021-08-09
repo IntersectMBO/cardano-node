@@ -19,7 +19,6 @@ import Control.Concurrent.STM
 import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.Trans.Cont
-import Control.Monad.Trans.Except
 import Data.Either
 import Data.Function
 import Data.Maybe
@@ -141,19 +140,18 @@ setupLocalStateQueryExpr waitDone mPointVar' resultVar' f =
     }
 
 -- | Use 'queryExpr' in a do block to construct monadic local state queries.
-queryExpr :: Monad m => query a -> ExceptT e (LocalStateQueryExpr block point query r m) a
-queryExpr q = ExceptT $ do
-  r <- LocalStateQueryExpr . ContT $ \f -> pure $
+queryExpr :: Monad m => query a -> LocalStateQueryExpr block point query r m a
+queryExpr q =
+  LocalStateQueryExpr . ContT $ \f -> pure $
     Net.Query.SendMsgQuery q $
       Net.Query.ClientStQuerying
       { Net.Query.recvMsgResult = f
       }
-  return (Right r)
 
 -- | A monad expresion that determines what era the node is in.
 determineEraExpr :: Monad m
   => ConsensusModeParams mode
-  -> ExceptT e (LocalStateQueryExpr block point (QueryInMode mode) r m) AnyCardanoEra
+  -> LocalStateQueryExpr block point (QueryInMode mode) r m AnyCardanoEra
 determineEraExpr cModeParams =
   case consensusModeOnly cModeParams of
     ByronMode -> return $ AnyCardanoEra ByronEra
