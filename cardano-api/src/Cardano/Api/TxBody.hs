@@ -163,6 +163,7 @@ import qualified Data.Set as Set
 import           Data.String
 import           Data.Text (Text)
 import qualified Data.Text as Text
+import           Data.Type.Equality (TestEquality (..), (:~:) (Refl))
 import           Data.Word (Word32, Word64)
 import           GHC.Generics
 import qualified Text.Parsec as Parsec
@@ -470,6 +471,12 @@ data TxOutInAnyEra where
                    -> TxOutInAnyEra
 
 deriving instance Show TxOutInAnyEra
+
+instance Eq TxOutInAnyEra where
+  TxOutInAnyEra era1 out1 == TxOutInAnyEra era2 out2 =
+    case testEquality era1 era2 of
+      Just Refl -> out1 == out2
+      Nothing   -> False
 
 -- | Convenience constructor for 'TxOutInAnyEra'
 txOutInAnyEra :: IsCardanoEra era => TxOut CtxTx era -> TxOutInAnyEra
@@ -1338,6 +1345,7 @@ data TxBodyContent build era =
        txMintValue      :: TxMintValue    build era,
        txScriptValidity :: TxScriptValidity era
      }
+     deriving (Eq, Show)
 
 
 -- ----------------------------------------------------------------------------
@@ -1712,7 +1720,7 @@ data TxBodyError =
      | TxBodyMintAdaError
      | TxBodyMissingProtocolParams
      | TxBodyInIxOverflow TxIn
-     deriving Show
+     deriving (Eq, Show)
 
 instance Error TxBodyError where
     displayError TxBodyEmptyTxIns  = "Transaction body has no inputs"
