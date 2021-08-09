@@ -125,8 +125,13 @@ data BPErrorKind
 --
 -- * Key properties
 --
-isValidBlockEvent :: BlockEvents -> Bool
-isValidBlockEvent BlockEvents{..} = (== 1) . bfChainDelta $ beForge
+isValidBlockEvent :: Profile -> BlockEvents -> Bool
+isValidBlockEvent Profile{genesis=GenesisProfile{..}} BlockEvents{..} = beForge &
+  \BlockForge{..} ->
+    -- 1. All timings account for processing of a single block
+    bfChainDelta == 1
+    -- 2. Block is >90% full
+    && bfBlockSize >= floor ((fromIntegral max_block_size :: Double) * 0.9)
 
 isValidBlockObservation :: BlockObservation -> Bool
 isValidBlockObservation BlockObservation{..} =
@@ -140,7 +145,7 @@ isValidBlockObservation BlockObservation{..} =
 -- * Instances
 --
 instance RenderDistributions BlockPropagation where
-  rdFields =
+  rdFields _ =
     --  Width LeftPad
     [ Field 6 0 "forged"        (f!!0) "Forge"  $ DDeltaT bpForgerForges
     , Field 6 0 "fAdopted"      (f!!1) "Adopt"  $ DDeltaT bpForgerAdoptions
@@ -160,7 +165,7 @@ instance RenderDistributions BlockPropagation where
                          else error $ printf "Percspec mismatch: [%d]: exp=%f act=%f" i ps ps')
                       . fromMaybe
                         (error $ printf "No percentile %d/%f in bpPropagation." i ps)
-                      . (flip atMay i) . bpPropagation))
+                      . flip atMay i . bpPropagation))
     | (i, Perc ps) <- zip [0::Int ..] (adoptionPcts <> [Perc 1.0]) ] ++
     [ Field 9 0 "sizes"         "Size"  "bytes" $ DInt    bpSizes
     ]
@@ -175,7 +180,7 @@ adoptionPcts =
   [ Perc 0.5, Perc 0.8, Perc 0.9, Perc 0.92, Perc 0.94, Perc 0.96, Perc 0.98 ]
 
 instance RenderTimeline BlockEvents where
-  rtFields =
+  rtFields _ =
     --  Width LeftPad
     [ Field 5 0 "block"        "block" "no."    $ IWord64 (unBlockNo . beBlockNo)
     , Field 5 0 "abs.slot"     "abs."  "slot#"  $ IWord64 (unSlotNo  . beSlotNo)

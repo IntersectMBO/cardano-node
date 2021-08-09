@@ -220,43 +220,45 @@ beForgedAt BlockEvents{beForge=BlockForge{..}} =
 
 mapChainToBlockEventCDF ::
   (Real a, ToRealFrac a Float)
-  => [PercSpec Float]
+  => Profile
+  -> [PercSpec Float]
   -> [BlockEvents]
   -> (BlockEvents -> Maybe a)
   -> Distribution Float a
-mapChainToBlockEventCDF percs cbe proj =
-  computeDistribution percs $ mapMaybe proj cbe
+mapChainToBlockEventCDF p percs cbe proj =
+  computeDistribution percs $ mapMaybe proj $ filter (isValidBlockEvent p) cbe
 
 mapChainToPeerBlockObservationCDF ::
-     [PercSpec Float]
+     Profile
+  -> [PercSpec Float]
   -> [BlockEvents]
   -> (BlockObservation -> Maybe NominalDiffTime)
   -> String
   -> Distribution Float NominalDiffTime
-mapChainToPeerBlockObservationCDF percs chainBlockEvents proj desc =
+mapChainToPeerBlockObservationCDF p percs chainBlockEvents proj desc =
   computeDistribution percs allObservations
  where
    allObservations :: [NominalDiffTime]
    allObservations =
      concat $
-     filter isValidBlockEvent chainBlockEvents
+     filter (isValidBlockEvent p) chainBlockEvents
      <&> blockObservations
 
    blockObservations :: BlockEvents -> [NominalDiffTime]
    blockObservations be =
-     proj `mapMaybe` beObservations be
+     proj `mapMaybe` filter isValidBlockObservation (beObservations be)
 
 blockProp :: ChainInfo -> [(JsonLogfile, [LogObject])] -> IO BlockPropagation
 blockProp ci xs = do
   putStrLn ("blockProp: recovering block event maps" :: String)
-  doBlockProp =<< mapConcurrently
+  doBlockProp (cProfile ci) =<< mapConcurrently
     (\x ->
         evaluate $ DS.force $
         blockEventMapsFromLogObjects ci x)
     xs
 
-doBlockProp :: [MachBlockMap UTCTime] -> IO BlockPropagation
-doBlockProp eventMaps = do
+doBlockProp :: Profile -> [MachBlockMap UTCTime] -> IO BlockPropagation
+doBlockProp p eventMaps = do
   putStrLn ("tip block: "    <> show tipBlock :: String)
   putStrLn ("chain length: " <> show (length chain) :: String)
   pure BlockPropagation
@@ -281,8 +283,8 @@ doBlockProp eventMaps = do
     }
  where
    forgerEventsCDF   :: (Real a, ToRealFrac a Float) => (BlockEvents -> Maybe a) -> Distribution Float a
-   forgerEventsCDF   = mapChainToBlockEventCDF           stdPercentiles chain
-   observerEventsCDF = mapChainToPeerBlockObservationCDF stdPercentiles chain
+   forgerEventsCDF   = mapChainToBlockEventCDF           p stdPercentiles chain
+   observerEventsCDF = mapChainToPeerBlockObservationCDF p stdPercentiles chain
 
    chain          :: [BlockEvents]
    chain          = rebuildChain (fmap deltifyEvents <$> eventMaps) tipHash
