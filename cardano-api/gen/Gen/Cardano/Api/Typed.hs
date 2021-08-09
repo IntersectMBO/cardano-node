@@ -372,7 +372,7 @@ genTxId :: Gen TxId
 genTxId = TxId <$> genShelleyHash
 
 genTxIndex :: Gen TxIx
-genTxIndex = TxIx <$> Gen.word Range.constantBounded
+genTxIndex = TxIx . fromIntegral <$> Gen.word32 Range.constantBounded
 
 genTxOutValue :: CardanoEra era -> Gen (TxOutValue era)
 genTxOutValue era =
