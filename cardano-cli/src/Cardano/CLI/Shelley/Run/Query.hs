@@ -143,7 +143,7 @@ runQueryProtocolParameters (AnyConsensusModeParams cModeParams) network mOutFile
   let localNodeConnInfo = LocalNodeConnectInfo cModeParams network sockPath
 
   result <- liftIO $ executeQueryLocalState localNodeConnInfo Nothing $ \_ntcVersion -> runExceptT $ do
-    anyE@(AnyCardanoEra era) <- determineEraExpr cModeParams
+    anyE@(AnyCardanoEra era) <- lift $ determineEraExpr cModeParams
 
     case cardanoEraStyle era of
       LegacyByronEra -> left ShelleyQueryCmdByronEra
@@ -153,7 +153,7 @@ runQueryProtocolParameters (AnyConsensusModeParams cModeParams) network mOutFile
         eInMode <- toEraInMode era cMode
           & hoistMaybe (ShelleyQueryCmdEraConsensusModeMismatch (AnyConsensusMode cMode) anyE)
 
-        ppResult <- queryExpr $ QueryInEra eInMode $ QueryInShelleyBasedEra sbe QueryProtocolParameters
+        ppResult <- lift . queryExpr $ QueryInEra eInMode $ QueryInShelleyBasedEra sbe QueryProtocolParameters
 
         except ppResult & firstExceptT ShelleyQueryCmdEraMismatch
 
@@ -208,7 +208,7 @@ runQueryTip (AnyConsensusModeParams cModeParams) network mOutFile = do
       let localNodeConnInfo = LocalNodeConnectInfo cModeParams network sockPath
 
       (chainTip, eLocalState) <- liftIO $
-        executeQueryLocalStateWithChainSync localNodeConnInfo Nothing $ \ntcVersion -> runExceptT $ do
+        executeQueryLocalStateWithChainSync localNodeConnInfo Nothing $ \ntcVersion -> do
           era <- queryExpr (QueryCurrentEra CardanoModeIsMultiEra)
           eraHistory <- queryExpr (QueryEraHistory CardanoModeIsMultiEra)
           mSystemStart <- if ntcVersion >= NodeToClientV_9
@@ -220,7 +220,7 @@ runQueryTip (AnyConsensusModeParams cModeParams) network mOutFile = do
             , O.mSystemStart = mSystemStart
             }
 
-      mLocalState <- hushM (join (first ShelleyQueryCmdAcquireFailure eLocalState)) $ \e ->
+      mLocalState <- hushM (first ShelleyQueryCmdAcquireFailure eLocalState) $ \e ->
         liftIO . T.hPutStrLn IO.stderr $ "Warning: Local state unavailable: " <> renderShelleyQueryCmdError e
 
       let tipSlotNo = case chainTip of
