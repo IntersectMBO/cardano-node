@@ -117,7 +117,7 @@ renderDistributions mode x =
                   else renderLineDistCsv) $
     \Field{..} ->
       let getCapPerc :: forall b c. Distribution b c -> c
-          getCapPerc d = dPercIx d pctIx
+          getCapPerc = dPercIx pctIx
       in T.pack $ case fSelect of
         DInt    (($x)->d) -> (if mode == RenderPretty
                               then printf "%*d" fWidth

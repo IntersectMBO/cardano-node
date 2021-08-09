@@ -273,7 +273,9 @@ doBlockProp eventMaps = do
     , bpPeerAdoptions       = observerEventsCDF boAdopted            "adopted"
     , bpPeerAnnouncements   = observerEventsCDF boAnnounced          "announced"
     , bpPeerSends           = observerEventsCDF boSending            "sending"
-    , bpPropagation         = forgerEventsCDF   (Just . bePropagation)
+    , bpPropagation         =
+      [ (p', forgerEventsCDF (Just . dPercSpec' "bePropagation" p . bePropagation))
+      | p@(Perc p') <- adoptionPcts <> [Perc 1.0] ]
     , bpSizes               = forgerEventsCDF   (Just . bfBlockSize . beForge)
     , bpChainBlockEvents    = chain
     }
@@ -373,7 +375,7 @@ doBlockProp eventMaps = do
              <*> Just boeAnnounced
              <*> Just boeSending
              <*> Just boeErrs
-     , bePropagation  = lastAdoption `sinceSlot` bfeSlotStart
+     , bePropagation  = computeDistribution adoptionPcts adoptions
      , beOtherBlocks  = otherBlocks
      , beErrors =
          errs
@@ -384,7 +386,8 @@ doBlockProp eventMaps = do
          <> concatMap boeErrs os
      }
     where
-      lastAdoption = maximum $ Map.lookup bfeBlock `mapMaybe` adoptionMap
+      adoptions    =
+        (fmap (`sinceSlot` bfeSlotStart) . Map.lookup bfeBlock) `mapMaybe` adoptionMap
 
       otherBlocks = Map.lookup bfeBlockNo heightMap
                     & handleMiss "height map"
