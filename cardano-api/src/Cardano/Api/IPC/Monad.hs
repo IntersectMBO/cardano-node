@@ -51,8 +51,8 @@ newtype LocalStateQueryExpr block point query r m a = LocalStateQueryExpr
 executeQueryLocalState
   :: LocalNodeConnectInfo mode
   -> Maybe ChainPoint
-  -> (NodeToClientVersion -> ExceptT e (LocalStateQueryExpr (BlockInMode mode) ChainPoint (QueryInMode mode) () IO) a)
-  -> IO (Either AcquireFailure (Either e a))
+  -> (NodeToClientVersion -> LocalStateQueryExpr (BlockInMode mode) ChainPoint (QueryInMode mode) () IO a)
+  -> IO (Either AcquireFailure a)
 executeQueryLocalState connectInfo mpoint f = do
   tmvResultLocalState <- newEmptyTMVarIO
   let waitResult = readTMVar tmvResultLocalState
@@ -62,7 +62,7 @@ executeQueryLocalState connectInfo mpoint f = do
     (\ntcVersion ->
       LocalNodeClientProtocols
       { localChainSyncClient    = NoLocalChainSyncClient
-      , localStateQueryClient   = Just $ setupLocalStateQueryExpr waitResult mpoint tmvResultLocalState (runExceptT (f ntcVersion))
+      , localStateQueryClient   = Just $ setupLocalStateQueryExpr waitResult mpoint tmvResultLocalState (f ntcVersion)
       , localTxSubmissionClient = Nothing
       }
     )
@@ -73,8 +73,8 @@ executeQueryLocalState connectInfo mpoint f = do
 executeQueryLocalStateWithChainSync
   :: LocalNodeConnectInfo mode
   -> Maybe ChainPoint
-  -> (NodeToClientVersion -> ExceptT e (LocalStateQueryExpr (BlockInMode mode) ChainPoint (QueryInMode mode) () IO) a)
-  -> IO (ChainTip, Either AcquireFailure (Either e a))
+  -> (NodeToClientVersion -> LocalStateQueryExpr (BlockInMode mode) ChainPoint (QueryInMode mode) () IO a)
+  -> IO (ChainTip, Either AcquireFailure a)
 executeQueryLocalStateWithChainSync connectInfo mpoint f = do
   tmvResultLocalState <- newEmptyTMVarIO
   tmvResultChainTip <- newEmptyTMVarIO
@@ -88,7 +88,7 @@ executeQueryLocalStateWithChainSync connectInfo mpoint f = do
     (\ntcVersion ->
       LocalNodeClientProtocols
       { localChainSyncClient    = LocalChainSyncClient $ chainSyncGetCurrentTip waitResult tmvResultChainTip
-      , localStateQueryClient   = Just $ setupLocalStateQueryExpr waitResult mpoint tmvResultLocalState (runExceptT (f ntcVersion))
+      , localStateQueryClient   = Just $ setupLocalStateQueryExpr waitResult mpoint tmvResultLocalState (f ntcVersion)
       , localTxSubmissionClient = Nothing
       }
     )
