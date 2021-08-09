@@ -142,7 +142,7 @@ runQueryProtocolParameters (AnyConsensusModeParams cModeParams) network mOutFile
                            readEnvSocketPath
   let localNodeConnInfo = LocalNodeConnectInfo cModeParams network sockPath
 
-  result <- liftIO $ executeQueryLocalState localNodeConnInfo Nothing $ \_ntcVersion -> do
+  result <- liftIO $ executeQueryLocalState localNodeConnInfo Nothing $ \_ntcVersion -> runExceptT $ do
     anyE@(AnyCardanoEra era) <- determineEraExpr cModeParams
 
     case cardanoEraStyle era of
@@ -208,7 +208,7 @@ runQueryTip (AnyConsensusModeParams cModeParams) network mOutFile = do
       let localNodeConnInfo = LocalNodeConnectInfo cModeParams network sockPath
 
       (chainTip, eLocalState) <- liftIO $
-        executeQueryLocalStateWithChainSync localNodeConnInfo Nothing $ \ntcVersion -> do
+        executeQueryLocalStateWithChainSync localNodeConnInfo Nothing $ \ntcVersion -> runExceptT $ do
           era <- queryExpr (QueryCurrentEra CardanoModeIsMultiEra)
           eraHistory <- queryExpr (QueryEraHistory CardanoModeIsMultiEra)
           mSystemStart <- if ntcVersion >= NodeToClientV_9
