@@ -1,6 +1,7 @@
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE LambdaCase #-}
@@ -17,6 +18,8 @@ module Data.Distribution
   , mapToDistribution
   , zeroDistribution
   , dPercIx
+  , dPercSpec
+  , dPercSpec'
   , PercSpec(..)
   , renderPercSpec
   , Percentile(..)
@@ -26,7 +29,7 @@ module Data.Distribution
   , spans
   ) where
 
-import Prelude (String, (!!), head, last, show)
+import Prelude (String, (!!), error, head, last, show)
 import Cardano.Prelude hiding (head, show)
 
 import Control.Arrow
@@ -49,13 +52,22 @@ data Distribution a b =
 instance (FromJSON a, FromJSON b) => FromJSON (Distribution a b)
 instance (  ToJSON a,   ToJSON b) => ToJSON   (Distribution a b)
 
-newtype PercSpec a = Perc { psFrac :: a } deriving (Generic, Show)
+newtype PercSpec a = Perc { psFrac :: a } deriving (Eq, Generic, Show)
 
 instance (FromJSON a) => FromJSON (PercSpec a)
 instance (  ToJSON a) => ToJSON   (PercSpec a)
 
-dPercIx :: Distribution a b -> Int -> b
-dPercIx d = pctSample . (dPercentiles d !!)
+dPercIx :: Int -> Distribution a b -> b
+dPercIx i d = pctSample $ dPercentiles d !! i
+
+dPercSpec :: Eq (PercSpec a) => PercSpec a -> Distribution a b -> Maybe b
+dPercSpec p = fmap pctSample . find ((== p) . pctSpec) . dPercentiles
+
+dPercSpec' :: (Show a, Eq (PercSpec a)) => String -> PercSpec a -> Distribution a b -> b
+dPercSpec' desc p =
+  maybe (error er) pctSample . find ((== p) . pctSpec) . dPercentiles
+ where
+   er = printf "Missing centile %f in %s" (show $ psFrac p) desc
 
 renderPercSpec :: PrintfArg a => Int -> PercSpec a -> String
 renderPercSpec width = \case
