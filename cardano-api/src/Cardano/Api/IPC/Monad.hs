@@ -20,7 +20,6 @@ import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.Trans.Cont
 import Control.Monad.Trans.Except
-import Data.Bifunctor
 import Data.Either
 import Data.Function
 import Data.Maybe
@@ -52,10 +51,9 @@ newtype LocalStateQueryExpr block point query r m a = LocalStateQueryExpr
 executeQueryLocalState
   :: LocalNodeConnectInfo mode
   -> Maybe ChainPoint
-  -> (AcquireFailure -> e)
   -> (NodeToClientVersion -> ExceptT e (LocalStateQueryExpr (BlockInMode mode) ChainPoint (QueryInMode mode) () IO) a)
-  -> IO (Either e a)
-executeQueryLocalState connectInfo mpoint mapError f = do
+  -> IO (Either AcquireFailure (Either e a))
+executeQueryLocalState connectInfo mpoint f = do
   tmvResultLocalState <- newEmptyTMVarIO
   let waitResult = readTMVar tmvResultLocalState
 
@@ -69,16 +67,15 @@ executeQueryLocalState connectInfo mpoint mapError f = do
       }
     )
 
-  join . first mapError <$> atomically waitResult
+  atomically waitResult
 
 -- | Execute a local state query expression concurrently with a chain sync.
 executeQueryLocalStateWithChainSync
   :: LocalNodeConnectInfo mode
   -> Maybe ChainPoint
-  -> (AcquireFailure -> e)
   -> (NodeToClientVersion -> ExceptT e (LocalStateQueryExpr (BlockInMode mode) ChainPoint (QueryInMode mode) () IO) a)
-  -> IO (ChainTip, Either e a)
-executeQueryLocalStateWithChainSync connectInfo mpoint mapError f = do
+  -> IO (ChainTip, Either AcquireFailure (Either e a))
+executeQueryLocalStateWithChainSync connectInfo mpoint f = do
   tmvResultLocalState <- newEmptyTMVarIO
   tmvResultChainTip <- newEmptyTMVarIO
 
@@ -96,7 +93,7 @@ executeQueryLocalStateWithChainSync connectInfo mpoint mapError f = do
       }
     )
 
-  fmap (join . first mapError) <$> atomically waitResult
+  atomically waitResult
 
   where
     chainSyncGetCurrentTip
