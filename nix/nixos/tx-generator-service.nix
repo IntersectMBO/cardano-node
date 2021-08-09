@@ -26,15 +26,19 @@ let
       { readSigningKey    = "pass-partout"; filePath = sigKey; }
       { importGenesisFund = "pass-partout"; fundKey  = "pass-partout"; }
       { delay             = init_cooldown; }
-      (if continuousMode
-       then
-         { createChange   = tx_count * tx_fee + min_utxo_value;
-                            ## WARNING: this could go over the genesis UTxO funds!
-                    count = (length (__attrNames targetNodes)) * 2 * inputs_per_tx; }
-       else
-         { createChange   = min_utxo_value + tx_fee;
-                    count = tx_count * inputs_per_tx; })
-      { delay             = init_cooldown; }
+    ]
+    ++
+    (if continuousMode
+             ## WARNING: this could go over the genesis UTxO funds!
+     then createChangeScript cfg
+            (tx_count * tx_fee + min_utxo_value)
+            (length (__attrNames targetNodes) * 2 * inputs_per_tx)
+     else createChangeRecursive cfg
+            (min_utxo_value + tx_fee)
+            (tx_count * inputs_per_tx)
+    )
+    ++
+    [
       { runBenchmark      = "walletBasedBenchmark";
                   txCount = tx_count; tps = tps; }
       { waitBenchmark     = "walletBasedBenchmark"; }
@@ -54,6 +58,15 @@ let
          else runScriptFn cfg);
 
   capitalise = x: (pkgs.lib.toUpper (__substring 0 1 x)) + __substring 1 99999 x;
+
+  createChangeScript = cfg: value: count:
+    [ { createChange = value; count=count; }
+      { delay = cfg.init_cooldown; }
+    ];
+
+  createChangeRecursive = cfg: value: count: if count <= 30
+    then createChangeScript cfg value count
+    else createChangeRecursive cfg (value * 30 + cfg.tx_fee) (count / 30 + 1) ++ createChangeScript cfg value count;
 
 in pkgs.commonLib.defServiceModule
   (lib: with lib;
