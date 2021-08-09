@@ -142,7 +142,7 @@ runQueryProtocolParameters (AnyConsensusModeParams cModeParams) network mOutFile
                            readEnvSocketPath
   let localNodeConnInfo = LocalNodeConnectInfo cModeParams network sockPath
 
-  result <- liftIO $ executeQueryLocalState localNodeConnInfo Nothing ShelleyQueryCmdAcquireFailure $ \_ntcVersion -> do
+  result <- liftIO $ executeQueryLocalState localNodeConnInfo Nothing $ \_ntcVersion -> do
     anyE@(AnyCardanoEra era) <- determineEraExpr cModeParams
 
     case cardanoEraStyle era of
@@ -157,7 +157,7 @@ runQueryProtocolParameters (AnyConsensusModeParams cModeParams) network mOutFile
 
         except ppResult & firstExceptT ShelleyQueryCmdEraMismatch
 
-  writeProtocolParameters mOutFile =<< except result
+  writeProtocolParameters mOutFile =<< except (join (first ShelleyQueryCmdAcquireFailure result))
  where
   writeProtocolParameters
     :: Maybe OutputFile
@@ -208,7 +208,7 @@ runQueryTip (AnyConsensusModeParams cModeParams) network mOutFile = do
       let localNodeConnInfo = LocalNodeConnectInfo cModeParams network sockPath
 
       (chainTip, eLocalState) <- liftIO $
-        executeQueryLocalStateWithChainSync localNodeConnInfo Nothing ShelleyQueryCmdAcquireFailure $ \ntcVersion -> do
+        executeQueryLocalStateWithChainSync localNodeConnInfo Nothing $ \ntcVersion -> do
           era <- queryExpr (QueryCurrentEra CardanoModeIsMultiEra)
           eraHistory <- queryExpr (QueryEraHistory CardanoModeIsMultiEra)
           mSystemStart <- if ntcVersion >= NodeToClientV_9
@@ -220,7 +220,7 @@ runQueryTip (AnyConsensusModeParams cModeParams) network mOutFile = do
             , O.mSystemStart = mSystemStart
             }
 
-      mLocalState <- hushM eLocalState $ \e ->
+      mLocalState <- hushM (join (first ShelleyQueryCmdAcquireFailure eLocalState)) $ \e ->
         liftIO . T.hPutStrLn IO.stderr $ "Warning: Local state unavailable: " <> renderShelleyQueryCmdError e
 
       let tipSlotNo = case chainTip of
