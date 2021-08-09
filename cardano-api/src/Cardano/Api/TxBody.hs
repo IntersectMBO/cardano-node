@@ -1816,17 +1816,15 @@ fromLedgerTxInsCollateral
 fromLedgerTxInsCollateral era body =
     case collateralSupportedInEra (shelleyBasedToCardanoEra era) of
       Nothing        -> TxInsCollateralNone
-      Just supported -> TxInsCollateral supported
-                          [ fromShelleyTxIn input
-                          | input <- Set.toList (collateral era body) ]
+      Just supported ->
+        TxInsCollateral supported $ map fromShelleyTxIn collateral
   where
-    collateral :: ShelleyBasedEra era
-               -> Ledger.TxBody (ShelleyLedgerEra era)
-               -> Set (Ledger.TxIn StandardCrypto)
-    collateral ShelleyBasedEraShelley = const Set.empty
-    collateral ShelleyBasedEraAllegra = const Set.empty
-    collateral ShelleyBasedEraMary    = const Set.empty
-    collateral ShelleyBasedEraAlonzo  = Alonzo.collateral'
+    collateral :: [Ledger.TxIn StandardCrypto]
+    collateral = case era of
+      ShelleyBasedEraShelley -> []
+      ShelleyBasedEraAllegra -> []
+      ShelleyBasedEraMary    -> []
+      ShelleyBasedEraAlonzo  -> toList $ Alonzo.collateral' body
 
 
 fromLedgerTxOuts
