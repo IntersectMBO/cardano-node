@@ -1,6 +1,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
@@ -48,21 +49,20 @@ module Gen.Cardano.Api.Typed
 
 import           Cardano.Api hiding (txIns)
 import qualified Cardano.Api as Api
-import           Cardano.Api.Byron (Lovelace(Lovelace), KeyWitness(ByronKeyWitness),
-                    WitnessNetworkIdOrByronAddress(..) )
-import           Cardano.Api.Shelley (Hash(ScriptDataHash), KESPeriod(KESPeriod),
-                    StakePoolKey, PlutusScript(PlutusScriptSerialised),
-                    StakeCredential(StakeCredentialByKey),
-                    ProtocolParameters(ProtocolParameters),
-                    OperationalCertificateIssueCounter(OperationalCertificateIssueCounter) )
+import           Cardano.Api.Byron (KeyWitness (ByronKeyWitness), Lovelace (Lovelace),
+                   WitnessNetworkIdOrByronAddress (..))
+import           Cardano.Api.Shelley (Hash (ScriptDataHash), KESPeriod (KESPeriod),
+                   OperationalCertificateIssueCounter (OperationalCertificateIssueCounter),
+                   PlutusScript (PlutusScriptSerialised), ProtocolParameters (ProtocolParameters),
+                   StakeCredential (StakeCredentialByKey), StakePoolKey)
 
 import           Cardano.Prelude
 
 import           Control.Monad.Fail (fail)
-import           Data.Coerce
-import           Data.String
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Short as SBS
+import           Data.Coerce
+import           Data.String
 
 import qualified Cardano.Binary as CBOR
 import qualified Cardano.Crypto.Hash as Crypto
@@ -73,11 +73,11 @@ import           Hedgehog (Gen, Range)
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 
+import qualified Cardano.Crypto.Hash.Class as CRYPTO
+import           Cardano.Ledger.SafeHash (unsafeMakeSafeHash)
 import           Gen.Cardano.Api.Metadata (genTxMetadata)
 import           Test.Cardano.Chain.UTxO.Gen (genVKWitness)
 import           Test.Cardano.Crypto.Gen (genProtocolMagicId)
-import qualified Cardano.Crypto.Hash.Class as CRYPTO
-import           Cardano.Ledger.SafeHash (unsafeMakeSafeHash)
 
 {- HLINT ignore "Reduce duplication" -}
 
@@ -678,33 +678,33 @@ genProtocolParameters =
     <*> Gen.maybe genNat
 
 genProtocolParametersUpdate :: Gen ProtocolParametersUpdate
-genProtocolParametersUpdate =
-  ProtocolParametersUpdate
-    <$> Gen.maybe ((,) <$> genNat <*> genNat)
-    <*> Gen.maybe genRational
-    <*> Gen.maybe genMaybePraosNonce
-    <*> Gen.maybe genNat
-    <*> Gen.maybe genNat
-    <*> Gen.maybe genNat
-    <*> Gen.maybe genNat
-    <*> Gen.maybe genNat
-    <*> Gen.maybe genLovelace
-    <*> Gen.maybe genLovelace
-    <*> Gen.maybe genLovelace
-    <*> Gen.maybe genLovelace
-    <*> Gen.maybe genEpochNo
-    <*> Gen.maybe genNat
-    <*> Gen.maybe genRationalInt64
-    <*> Gen.maybe genRational
-    <*> Gen.maybe genRational
-    <*> Gen.maybe genLovelace
-    <*> genCostModels
-    <*> Gen.maybe genExecutionUnitPrices
-    <*> Gen.maybe genExecutionUnits
-    <*> Gen.maybe genExecutionUnits
-    <*> Gen.maybe genNat
-    <*> Gen.maybe genNat
-    <*> Gen.maybe genNat
+genProtocolParametersUpdate = do
+  protocolUpdateProtocolVersion     <- Gen.maybe ((,) <$> genNat <*> genNat)
+  protocolUpdateDecentralization    <- Gen.maybe genRational
+  protocolUpdateExtraPraosEntropy   <- Gen.maybe genMaybePraosNonce
+  protocolUpdateMaxBlockHeaderSize  <- Gen.maybe genNat
+  protocolUpdateMaxBlockBodySize    <- Gen.maybe genNat
+  protocolUpdateMaxTxSize           <- Gen.maybe genNat
+  protocolUpdateTxFeeFixed          <- Gen.maybe genNat
+  protocolUpdateTxFeePerByte        <- Gen.maybe genNat
+  protocolUpdateMinUTxOValue        <- Gen.maybe genLovelace
+  protocolUpdateStakeAddressDeposit <- Gen.maybe genLovelace
+  protocolUpdateStakePoolDeposit    <- Gen.maybe genLovelace
+  protocolUpdateMinPoolCost         <- Gen.maybe genLovelace
+  protocolUpdatePoolRetireMaxEpoch  <- Gen.maybe genEpochNo
+  protocolUpdateStakePoolTargetNum  <- Gen.maybe genNat
+  protocolUpdatePoolPledgeInfluence <- Gen.maybe genRationalInt64
+  protocolUpdateMonetaryExpansion   <- Gen.maybe genRational
+  protocolUpdateTreasuryCut         <- Gen.maybe genRational
+  protocolUpdateUTxOCostPerWord     <- Gen.maybe genLovelace
+  protocolUpdateCostModels          <- genCostModels
+  protocolUpdatePrices              <- Gen.maybe genExecutionUnitPrices
+  protocolUpdateMaxTxExUnits        <- Gen.maybe genExecutionUnits
+  protocolUpdateMaxBlockExUnits     <- Gen.maybe genExecutionUnits
+  protocolUpdateMaxValueSize        <- Gen.maybe genNat
+  protocolUpdateCollateralPercent   <- Gen.maybe genNat
+  protocolUpdateMaxCollateralInputs <- Gen.maybe genNat
+  pure ProtocolParametersUpdate{..}
 
 
 genUpdateProposal :: Gen UpdateProposal
