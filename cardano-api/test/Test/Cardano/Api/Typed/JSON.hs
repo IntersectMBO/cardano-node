@@ -14,7 +14,7 @@ module Test.Cardano.Api.Typed.JSON
 
 import           Cardano.Prelude
 
-import           Data.Aeson
+import           Data.Aeson (eitherDecode, encode)
 import           Hedgehog (Property, forAll, tripping)
 import qualified Hedgehog as H
 import qualified Hedgehog.Gen as Gen
@@ -22,7 +22,8 @@ import           Test.Tasty (TestTree)
 import           Test.Tasty.Hedgehog (testProperty)
 import           Test.Tasty.TH (testGroupGenerator)
 
-import           Gen.Cardano.Api.Typed
+import           Gen.Cardano.Api.Typed (genMaybePraosNonce, genProtocolParameters)
+
 import           Test.Cardano.Api.Typed.Orphans ()
 
 {- HLINT ignore "Use camelCase" -}

@@ -6,6 +6,7 @@ module Test.Cardano.Api.Typed.CBOR
   ) where
 
 import           Cardano.Api
+
 import           Gen.Cardano.Api.Typed
 import           Gen.Hedgehog.Roundtrip.CBOR (roundtrip_CBOR)
 
