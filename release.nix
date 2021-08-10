@@ -127,6 +127,8 @@ let
     [ "checks" "tests" "cardano-node-chairman" ]
     [ "workbench" ] [ "profiles" ]
     [ "tx-generator" "components" "exes" ]
+    [ "tx-generator-profiled" ]
+    [ "locli-profiled" ]
   ];
   # Paths or prefix of paths for which cross-builds (mingwW64, musl64) are disabled:
   noCrossBuild = [

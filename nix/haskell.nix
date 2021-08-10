@@ -166,6 +166,8 @@ let
       (lib.optionalAttrs profiling {
         enableLibraryProfiling = true;
         packages.cardano-node.components.exes.cardano-node.enableExecutableProfiling = true;
+        packages.tx-generator.components.exes.tx-generator.enableExecutableProfiling = true;
+        packages.locli.components.exes.locli.enableExecutableProfilig = true;
       })
       {
         packages = lib.genAttrs assertedPackages

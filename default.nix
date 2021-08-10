@@ -31,7 +31,9 @@ let
   packages = {
     inherit haskellPackages shell
       cardano-node cardano-node-profiled cardano-node-eventlogged
-      cardano-cli db-converter cardano-ping tx-generator
+      cardano-cli db-converter cardano-ping
+      locli locli-profiled
+      tx-generator tx-generator-profiled
       scripts environments dockerImage submitApiDockerImage bech32;
 
     devopsShell = shell.devops;
