@@ -134,8 +134,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: 8c732560b201b5da8e3bdf175c6eda73a32d64bc
-  --sha256: 0nwy03wyd2ks4qxg47py7lm18karjz6vs7p8knmn3zy72i3n9rfi
+  tag: cb0f19c85e5bb5299839ad4ed66af6fa61322cc4
+  --sha256: 0dnkfqcvbifbk3m5pg8kyjqjy0zj1l4vd23p39n6ym4q0bnib1cq
   subdir:
     base-deriving-via
     binary
@@ -157,8 +157,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger-specs
-  tag: 30eca73a2f5c13f1fbed9a98a59540ac3d0c8afe
-  --sha256: 02klj4zpcl98p22n2v9nkjxxdf8mmw069mw4ddhlgr931bfigz6w
+  tag: febc1c3008a42a632ff5630c7793f8e987ec7546
+  --sha256: 1rxhy6d052am726h2lckdcznpb204yc2j5wnlzyfx96yqbv29gcb
   subdir:
     alonzo/impl
     byron/chain/executable-spec
@@ -217,8 +217,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: e9cda57df7ea6969edbc3bfc4e117668277d09c8
-  --sha256: 1a91z6yvlhzlqrf7fy51fmmpm3ssk684h6pjgg022cdlsq56yif2
+  tag: f36b37168b3790c5e3a1974994b04de188d8b0ae
+  --sha256: 01d9agy50v97irraz9fdzgxwdvkbmrrw4mk5x8gq3kphh1vdrvrg
   subdir:
     io-sim
     io-classes
@@ -237,8 +237,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/plutus
-  tag: 826c2514a40e962c2e4d56ce912803a434cc28fe
-  --sha256: 04jryrgi2wggkf4a994smbcp8j39clshbzfnvfvvk7lq0sm8kssz
+  tag: 7eac9409c178df13c26b56c4b92e7f705b3c4f6e
+  --sha256: 0w2ls0nz2z94ra5vwd7rsixg14h0vss8z6xmyiscid8cw8zmp8d1
   subdir:
     plutus-core
     plutus-ledger-api

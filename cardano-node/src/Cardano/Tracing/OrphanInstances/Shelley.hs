@@ -298,9 +298,9 @@ instance ( ShelleyBasedEra era
 instance ToObject (AlonzoPredFail (Alonzo.AlonzoEra StandardCrypto)) where
   toObject v (WrappedShelleyEraFailure utxoPredFail) =
     toObject v utxoPredFail
-  toObject _ (UnRedeemableScripts scripts) =
-    mkObject [ "kind" .= String "UnRedeemableScripts"
-             , "scripts" .= renderUnredeemableScripts scripts
+  toObject _ (MissingRedeemers scripts) =
+    mkObject [ "kind" .= String "MissingRedeemers"
+             , "scripts" .= renderMissingRedeemersScripts scripts
              ]
   toObject _ (MissingRequiredDatums required received) =
     mkObject [ "kind" .= String "MissingRequiredDatums"
@@ -311,8 +311,8 @@ instance ToObject (AlonzoPredFail (Alonzo.AlonzoEra StandardCrypto)) where
              ]
   toObject _ (PPViewHashesDontMatch ppHashInTxBody ppHashFromPParams) =
     mkObject [ "kind" .= String "PPViewHashesDontMatch"
-             , "fromTxBody" .= renderWitnessPPDataHash (strictMaybeToMaybe ppHashInTxBody)
-             , "fromPParams" .= renderWitnessPPDataHash (strictMaybeToMaybe ppHashFromPParams)
+             , "fromTxBody" .= renderScriptIntegrityHash (strictMaybeToMaybe ppHashInTxBody)
+             , "fromPParams" .= renderScriptIntegrityHash (strictMaybeToMaybe ppHashFromPParams)
              ]
   toObject _ (MissingRequiredSigners missingKeyWitnesses) =
     mkObject [ "kind" .= String "MissingRequiredSigners"
@@ -332,16 +332,16 @@ instance ToObject (AlonzoPredFail (Alonzo.AlonzoEra StandardCrypto)) where
              , "rdmrs" .= map (Api.renderScriptWitnessIndex . Api.fromAlonzoRdmrPtr) rdmrs
              ]
 
-renderWitnessPPDataHash :: Maybe (Alonzo.WitnessPPDataHash StandardCrypto) -> Aeson.Value
-renderWitnessPPDataHash (Just witPPDataHash) =
+renderScriptIntegrityHash :: Maybe (Alonzo.ScriptIntegrityHash StandardCrypto) -> Aeson.Value
+renderScriptIntegrityHash (Just witPPDataHash) =
   Aeson.String . Crypto.hashToTextAsHex $ SafeHash.extractHash witPPDataHash
-renderWitnessPPDataHash Nothing = Aeson.Null
+renderScriptIntegrityHash Nothing = Aeson.Null
 
 renderScriptHash :: ScriptHash StandardCrypto -> Text
 renderScriptHash = Api.serialiseToRawBytesHexText . Api.fromShelleyScriptHash
 
-renderUnredeemableScripts :: [(Alonzo.ScriptPurpose StandardCrypto, ScriptHash StandardCrypto)] -> Aeson.Value
-renderUnredeemableScripts scripts = Aeson.object $ map renderTuple  scripts
+renderMissingRedeemersScripts :: [(Alonzo.ScriptPurpose StandardCrypto, ScriptHash StandardCrypto)] -> Aeson.Value
+renderMissingRedeemersScripts scripts = Aeson.object $ map renderTuple  scripts
  where
   renderTuple :: (Alonzo.ScriptPurpose StandardCrypto, ScriptHash StandardCrypto) -> Aeson.Pair
   renderTuple (scriptPurpose, sHash) =  renderScriptHash sHash .= renderScriptPurpose scriptPurpose
@@ -955,9 +955,10 @@ instance ToObject (Alonzo.UtxoPredicateFailure (Alonzo.AlonzoEra StandardCrypto)
     mkObject [ "kind" .= String "NoCollateralInputs" ]
 
 instance ToObject (Alonzo.UtxosPredicateFailure (AlonzoEra StandardCrypto)) where
-  toObject _ (Alonzo.ValidationTagMismatch isValidating) =
+  toObject _ (Alonzo.ValidationTagMismatch isValidating errors) =
     mkObject [ "kind" .= String "ValidationTagMismatch"
              , "isvalidating" .= isValidating
+             , "errors" .= errors
              ]
   toObject _ (Alonzo.CollectErrors errors) =
     mkObject [ "kind" .= String "CollectErrors"

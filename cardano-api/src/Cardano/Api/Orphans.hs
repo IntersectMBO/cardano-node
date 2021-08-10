@@ -50,6 +50,7 @@ import qualified Cardano.Ledger.Mary.Value as Mary
 import qualified Cardano.Ledger.SafeHash as SafeHash
 import qualified Cardano.Ledger.Shelley.Constraints as Shelley
 import qualified Ouroboros.Consensus.Shelley.Eras as Consensus
+import Plutus.V1.Ledger.Api (defaultCostModelParams)
 import qualified Shelley.Spec.Ledger.API as Shelley
 import qualified Shelley.Spec.Ledger.Delegation.Certificates as Shelley
 import qualified Shelley.Spec.Ledger.EpochBoundary as ShelleyEpoch
@@ -360,7 +361,7 @@ instance FromJSON Alonzo.AlonzoGenesis where
     collateralPercentage <- o .:  "collateralPercentage"
     maxCollateralInputs  <- o .:  "maxCollateralInputs"
     case cModels of
-      Nothing -> case Alonzo.defaultCostModel of
+      Nothing -> case Alonzo.CostModel <$> defaultCostModelParams of
         Just m -> return Alonzo.AlonzoGenesis
           { Alonzo.coinsPerUTxOWord
           , Alonzo.costmdls = Map.singleton Alonzo.PlutusV1 m

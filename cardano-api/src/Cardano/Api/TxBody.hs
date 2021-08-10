@@ -2191,7 +2191,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraAlonzo
           (case txProtocolParams of
              BuildTxWith Nothing        -> SNothing
              BuildTxWith (Just pparams) ->
-               Alonzo.hashWitnessPPData
+               Alonzo.hashScriptIntegrity
                  (toLedgerPParams ShelleyBasedEraAlonzo pparams)
                  languages
                  redeemers
