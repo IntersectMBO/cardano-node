@@ -87,7 +87,6 @@ case "$op" in
                  do local fixed=$(basename "$logdir" | cut -c6-)
                     mv "$logdir" "$dir"/analysis/$fixed; done; fi
 
-            cp "$global_envjson" "$dir"/env.json
             jq_fmutate "$dir"/env.json '. *
               { type:         "legacy"
               , staggerPorts: false
