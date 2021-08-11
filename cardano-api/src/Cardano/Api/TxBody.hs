@@ -26,6 +26,9 @@ module Cardano.Api.TxBody (
     TxBodyContent(..),
     TxBodyError(..),
     TxBodyScriptData(..),
+    ScriptValidity(..),
+    txScriptValidityToIsValid,
+    isValidToTxScriptValidity,
 
     -- * Transaction Ids
     TxId(..),
@@ -216,6 +219,22 @@ import           Cardano.Ledger.Crypto (StandardCrypto)
 {- HLINT ignore "Redundant flip" -}
 {- HLINT ignore "Use section" -}
 
+data ScriptValidity = ScriptInvalid | ScriptValid
+  deriving (Eq, Show)
+
+instance ToCBOR ScriptValidity where
+  toCBOR = toCBOR . txScriptValidityToIsValid
+
+instance FromCBOR ScriptValidity where
+  fromCBOR = isValidToTxScriptValidity <$> fromCBOR
+
+txScriptValidityToIsValid :: ScriptValidity -> Alonzo.IsValid
+txScriptValidityToIsValid ScriptInvalid = Alonzo.IsValid False
+txScriptValidityToIsValid ScriptValid = Alonzo.IsValid True
+
+isValidToTxScriptValidity :: Alonzo.IsValid -> ScriptValidity
+isValidToTxScriptValidity (Alonzo.IsValid False) = ScriptInvalid
+isValidToTxScriptValidity (Alonzo.IsValid True) = ScriptValid
 
 -- ----------------------------------------------------------------------------
 -- Transaction Ids
@@ -262,7 +281,7 @@ getTxId (ByronTxBody tx) =
     impossible =
       error "getTxId: byron and shelley hash sizes do not match"
 
-getTxId (ShelleyTxBody era tx _ _ _) =
+getTxId (ShelleyTxBody era tx _ _ _ _) =
     case era of
       ShelleyBasedEraShelley -> getTxIdShelley tx
       ShelleyBasedEraAllegra -> getTxIdShelley tx
@@ -1138,6 +1157,8 @@ data TxBody era where
           -- auxiliary data.
        -> Maybe (Ledger.AuxiliaryData (ShelleyLedgerEra era))
 
+       -> ScriptValidity
+
        -> TxBody era
      -- The 'ShelleyBasedEra' GADT tells us what era we are in.
      -- The 'ShelleyLedgerEra' type family maps that to the era type from the
@@ -1161,8 +1182,8 @@ instance Eq (TxBody era) where
     (==) (ByronTxBody txbodyA)
          (ByronTxBody txbodyB) = txbodyA == txbodyB
 
-    (==) (ShelleyTxBody era txbodyA txscriptsA redeemersA txmetadataA)
-         (ShelleyTxBody _   txbodyB txscriptsB redeemersB txmetadataB) =
+    (==) (ShelleyTxBody era txbodyA txscriptsA redeemersA txmetadataA scriptValidityA)
+         (ShelleyTxBody _   txbodyB txscriptsB redeemersB txmetadataB scriptValidityB) =
          case era of
            ShelleyBasedEraShelley -> txbodyA     == txbodyB
                                   && txscriptsA  == txscriptsB
@@ -1176,12 +1197,13 @@ instance Eq (TxBody era) where
                                   && txscriptsA  == txscriptsB
                                   && txmetadataA == txmetadataB
 
-           ShelleyBasedEraAlonzo  -> txbodyA     == txbodyB
-                                  && txscriptsA  == txscriptsB
-                                  && redeemersA  == redeemersB
-                                  && txmetadataA == txmetadataB
+           ShelleyBasedEraAlonzo  -> txbodyA         == txbodyB
+                                  && txscriptsA      == txscriptsB
+                                  && redeemersA      == redeemersB
+                                  && txmetadataA     == txmetadataB
+                                  && scriptValidityA == scriptValidityB
 
-    (==) ByronTxBody{} (ShelleyTxBody era _ _ _ _) = case era of {}
+    (==) ByronTxBody{} (ShelleyTxBody era _ _ _ _ _) = case era of {}
 
 
 -- The GADT in the ShelleyTxBody case requires a custom instance
@@ -1193,7 +1215,7 @@ instance Show (TxBody era) where
         )
 
     showsPrec p (ShelleyTxBody ShelleyBasedEraShelley
-                               txbody txscripts redeemers txmetadata) =
+                               txbody txscripts redeemers txmetadata scriptValidity) =
       showParen (p >= 11)
         ( showString "ShelleyTxBody ShelleyBasedEraShelley "
         . showsPrec 11 txbody
@@ -1203,10 +1225,12 @@ instance Show (TxBody era) where
         . showsPrec 11 redeemers
         . showChar ' '
         . showsPrec 11 txmetadata
+        . showChar ' '
+        . showsPrec 11 scriptValidity
         )
 
     showsPrec p (ShelleyTxBody ShelleyBasedEraAllegra
-                               txbody txscripts redeemers txmetadata) =
+                               txbody txscripts redeemers txmetadata scriptValidity) =
       showParen (p >= 11)
         ( showString "ShelleyTxBody ShelleyBasedEraAllegra "
         . showsPrec 11 txbody
@@ -1216,10 +1240,12 @@ instance Show (TxBody era) where
         . showsPrec 11 redeemers
         . showChar ' '
         . showsPrec 11 txmetadata
+        . showChar ' '
+        . showsPrec 11 scriptValidity
         )
 
     showsPrec p (ShelleyTxBody ShelleyBasedEraMary
-                               txbody txscripts redeemers txmetadata) =
+                               txbody txscripts redeemers txmetadata scriptValidity) =
       showParen (p >= 11)
         ( showString "ShelleyTxBody ShelleyBasedEraMary "
         . showsPrec 11 txbody
@@ -1229,10 +1255,12 @@ instance Show (TxBody era) where
         . showsPrec 11 redeemers
         . showChar ' '
         . showsPrec 11 txmetadata
+        . showChar ' '
+        . showsPrec 11 scriptValidity
         )
 
     showsPrec p (ShelleyTxBody ShelleyBasedEraAlonzo
-                               txbody txscripts redeemers txmetadata) =
+                               txbody txscripts redeemers txmetadata scriptValidity) =
       showParen (p >= 11)
         ( showString "ShelleyTxBody ShelleyBasedEraMary "
         . showsPrec 11 txbody
@@ -1242,6 +1270,8 @@ instance Show (TxBody era) where
         . showsPrec 11 redeemers
         . showChar ' '
         . showsPrec 11 txmetadata
+        . showChar ' '
+        . showsPrec 11 scriptValidity
         )
 
 
@@ -1266,17 +1296,17 @@ instance IsCardanoEra era => SerialiseAsCBOR (TxBody era) where
     serialiseToCBOR (ByronTxBody txbody) =
       recoverBytes txbody
 
-    serialiseToCBOR (ShelleyTxBody era txbody txscripts redeemers txmetadata) =
+    serialiseToCBOR (ShelleyTxBody era txbody txscripts redeemers txmetadata scriptValidity) =
       case era of
         -- Use the same serialisation impl, but at different types:
         ShelleyBasedEraShelley -> serialiseShelleyBasedTxBody
-                                    era txbody txscripts redeemers txmetadata
+                                    era txbody txscripts redeemers txmetadata scriptValidity
         ShelleyBasedEraAllegra -> serialiseShelleyBasedTxBody
-                                    era txbody txscripts redeemers txmetadata
+                                    era txbody txscripts redeemers txmetadata scriptValidity
         ShelleyBasedEraMary    -> serialiseShelleyBasedTxBody
-                                    era txbody txscripts redeemers txmetadata
+                                    era txbody txscripts redeemers txmetadata scriptValidity
         ShelleyBasedEraAlonzo  -> serialiseShelleyBasedTxBody
-                                    era txbody txscripts redeemers txmetadata
+                                    era txbody txscripts redeemers txmetadata scriptValidity
 
     deserialiseFromCBOR _ bs =
       case cardanoEra :: CardanoEra era of
@@ -1308,9 +1338,10 @@ serialiseShelleyBasedTxBody
   -> [Ledger.Script ledgerera]
   -> TxBodyScriptData era
   -> Maybe (Ledger.AuxiliaryData ledgerera)
+  -> ScriptValidity
   -> ByteString
 serialiseShelleyBasedTxBody _era txbody txscripts
-                            TxBodyNoScriptData txmetadata =
+                            TxBodyNoScriptData txmetadata _scriptValidity =
     -- Backwards compat for pre-Alonzo era tx body files
     CBOR.serializeEncoding' $
         CBOR.encodeListLen 3
@@ -1320,13 +1351,14 @@ serialiseShelleyBasedTxBody _era txbody txscripts
 
 serialiseShelleyBasedTxBody _era txbody txscripts
                             (TxBodyScriptData _ datums redeemers)
-                            txmetadata =
+                            txmetadata scriptValidity =
     CBOR.serializeEncoding' $
-        CBOR.encodeListLen 5
+        CBOR.encodeListLen 6
      <> CBOR.toCBOR txbody
      <> CBOR.toCBOR txscripts
      <> CBOR.toCBOR datums
      <> CBOR.toCBOR redeemers
+     <> CBOR.toCBOR scriptValidity
      <> CBOR.encodeNullMaybe CBOR.toCBOR txmetadata
 
 deserialiseShelleyBasedTxBody
@@ -1351,22 +1383,27 @@ deserialiseShelleyBasedTxBody era bs =
       len <- CBOR.decodeListLen
       txbody     <- fromCBOR
       txscripts  <- fromCBOR
-      txscriptdata <-
+      (txscriptdata, scriptValidity) <-
         -- Backwards compat for pre-Alonzo era tx body files
         case len of
-          3 -> return (return TxBodyNoScriptData)
-          5 -> case scriptDataSupportedInEra (shelleyBasedToCardanoEra era) of
-                 Nothing -> do
-                   CBOR.decodeNull
-                   CBOR.decodeNull
-                   return (return TxBodyNoScriptData)
-                 Just supported -> do
-                   datums    <- fromCBOR
-                   redeemers <- fromCBOR
-                   return $ CBOR.Annotator $ \fbs ->
-                     TxBodyScriptData supported
-                       (flip CBOR.runAnnotator fbs datums)
-                       (flip CBOR.runAnnotator fbs redeemers)
+          3 -> return (return TxBodyNoScriptData, return ScriptValid)
+          6 -> case scriptDataSupportedInEra (shelleyBasedToCardanoEra era) of
+                  Nothing -> do
+                    CBOR.decodeNull
+                    CBOR.decodeNull
+                    CBOR.decodeNull
+                    return (return TxBodyNoScriptData, return ScriptValid)
+                  Just supported -> do
+                    datums    <- fromCBOR
+                    redeemers <- fromCBOR
+                    scriptValidity <- fromCBOR
+                    return
+                      ( CBOR.Annotator $ \fbs ->
+                          TxBodyScriptData supported
+                            (flip CBOR.runAnnotator fbs datums)
+                            (flip CBOR.runAnnotator fbs redeemers)
+                      , return scriptValidity
+                      )
           _ -> fail "expected tx body tuple of size 3 or 5"
       txmetadata <- CBOR.decodeNullMaybe fromCBOR
       return $ CBOR.Annotator $ \fbs ->
@@ -1375,6 +1412,7 @@ deserialiseShelleyBasedTxBody era bs =
           (map (flip CBOR.runAnnotator fbs) txscripts)
           (flip CBOR.runAnnotator fbs txscriptdata)
           (fmap (flip CBOR.runAnnotator fbs) txmetadata)
+          (flip CBOR.runAnnotator fbs scriptValidity)
 
 instance IsCardanoEra era => HasTextEnvelope (TxBody era) where
     textEnvelopeType _ =
@@ -1434,12 +1472,13 @@ instance Error TxBodyError where
 
 makeTransactionBody :: forall era.
                        IsCardanoEra era
-                    => TxBodyContent BuildTx era
+                    => ScriptValidity
+                    -> TxBodyContent BuildTx era
                     -> Either TxBodyError (TxBody era)
-makeTransactionBody =
+makeTransactionBody scriptValidity =
     case cardanoEraStyle (cardanoEra :: CardanoEra era) of
       LegacyByronEra      -> makeByronTransactionBody
-      ShelleyBasedEra era -> makeShelleyTransactionBody era
+      ShelleyBasedEra era -> makeShelleyTransactionBody era scriptValidity
 
 
 pattern TxBody :: TxBodyContent ViewTx era -> TxBody era
@@ -1448,7 +1487,7 @@ pattern TxBody txbodycontent <- (getTxBodyContent -> txbodycontent)
 
 getTxBodyContent :: TxBody era -> TxBodyContent ViewTx era
 getTxBodyContent (ByronTxBody body) = getByronTxBodyContent body
-getTxBodyContent (ShelleyTxBody era body _scripts _redeemers mAux) =
+getTxBodyContent (ShelleyTxBody era body _scripts _redeemers mAux _scriptValidity) =
     fromLedgerTxBody era body mAux
 
 
@@ -1867,9 +1906,11 @@ getByronTxBodyContent (Annotated Byron.UnsafeTx{txInputs, txOutputs} _) =
     }
 
 makeShelleyTransactionBody :: ShelleyBasedEra era
+                           -> ScriptValidity
                            -> TxBodyContent BuildTx era
                            -> Either TxBodyError (TxBody era)
 makeShelleyTransactionBody era@ShelleyBasedEraShelley
+                           scriptValidity
                            txbodycontent@TxBodyContent {
                              txIns,
                              txOuts,
@@ -1918,6 +1959,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraShelley
         scripts
         TxBodyNoScriptData
         txAuxData
+        scriptValidity
   where
     scripts :: [Ledger.Script StandardShelley]
     scripts =
@@ -1936,6 +1978,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraShelley
                TxMetadataInEra _ (TxMetadata ms') -> ms'
 
 makeShelleyTransactionBody era@ShelleyBasedEraAllegra
+                           scriptValidity
                            txbodycontent@TxBodyContent {
                              txIns,
                              txOuts,
@@ -1992,6 +2035,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraAllegra
         scripts
         TxBodyNoScriptData
         txAuxData
+        scriptValidity
   where
     scripts :: [Ledger.Script StandardAllegra]
     scripts =
@@ -2014,6 +2058,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraAllegra
                TxAuxScripts _ ss' -> ss'
 
 makeShelleyTransactionBody era@ShelleyBasedEraMary
+                           scriptValidity
                            txbodycontent@TxBodyContent {
                              txIns,
                              txOuts,
@@ -2082,6 +2127,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraMary
         scripts
         TxBodyNoScriptData
         txAuxData
+        scriptValidity
   where
     scripts :: [Ledger.Script StandardMary]
     scripts =
@@ -2104,6 +2150,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraMary
                TxAuxScripts _ ss' -> ss'
 
 makeShelleyTransactionBody era@ShelleyBasedEraAlonzo
+                           scriptValidity
                            txbodycontent@TxBodyContent {
                              txIns,
                              txInsCollateral,
@@ -2202,6 +2249,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraAlonzo
         scripts
         (TxBodyScriptData ScriptDataInAlonzoEra datums redeemers)
         txAuxData
+        scriptValidity
   where
     witnesses :: [(ScriptWitnessIndex, AnyScriptWitness AlonzoEra)]
     witnesses = collectTxBodyScriptWitnesses txbodycontent

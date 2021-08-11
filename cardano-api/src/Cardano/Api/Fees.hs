@@ -548,7 +548,7 @@ evaluateTransactionBalance _ _ _ (ByronTxBody _) =
     --TODO: we could actually support Byron here, it'd be different but simpler
 
 evaluateTransactionBalance pparams poolids utxo
-                           (ShelleyTxBody era txbody _ _ _) =
+                           (ShelleyTxBody era txbody _ _ _ _) =
     withLedgerConstraints era evalAdaOnly evalMultiAsset
   where
     isNewPool :: Ledger.KeyHash Ledger.StakePool Ledger.StandardCrypto -> Bool
@@ -746,6 +746,24 @@ instance Error TxBodyErrorAutoBalance where
   displayError (TxBodyErrorNonAdaAssetsUnbalanced val) =
       "Non-Ada assets are unbalanced: " <> Text.unpack (renderValue val)
 
+handleExUnitsErrors ::
+     ScriptValidity
+  -> Map ScriptWitnessIndex ScriptExecutionError
+  -> Map ScriptWitnessIndex ExecutionUnits
+  -> Either TxBodyErrorAutoBalance (Map ScriptWitnessIndex ExecutionUnits)
+handleExUnitsErrors scriptValidity failures exUnitsMap =
+    if null relevantFailures
+      then Right exUnitsMap
+      else Left (TxBodyScriptExecutionError relevantFailures)
+  where relevantFailures :: [(ScriptWitnessIndex, ScriptExecutionError)]
+        relevantFailures = filter byScriptValidity (Map.toList failures)
+        byScriptValidity :: (ScriptWitnessIndex, ScriptExecutionError) -> Bool
+        byScriptValidity (_, e) = case scriptValidity of
+          ScriptValid -> True
+          ScriptInvalid -> case e of
+            ScriptErrorEvaluationFailed _ -> False
+            _ -> True
+
 -- | This is much like 'makeTransactionBody' but with greater automation to
 -- calculate suitable values for several things.
 --
@@ -777,12 +795,13 @@ makeTransactionBodyAutoBalance
   -> ProtocolParameters
   -> Set PoolId       -- ^ The set of registered stake pools
   -> UTxO era         -- ^ Just the transaction inputs, not the entire 'UTxO'.
+  -> ScriptValidity
   -> TxBodyContent BuildTx era
   -> AddressInEra era -- ^ Change address
   -> Maybe Word       -- ^ Override key witnesses
   -> Either TxBodyErrorAutoBalance (TxBody era)
 makeTransactionBodyAutoBalance eraInMode systemstart history pparams
-                            poolids utxo txbodycontent changeaddr mnkeys = do
+                            poolids utxo scriptValidity txbodycontent changeaddr mnkeys = do
 
     -- Our strategy is to:
     -- 1. evaluate all the scripts to get the exec units, update with ex units
@@ -791,7 +810,7 @@ makeTransactionBodyAutoBalance eraInMode systemstart history pparams
     -- 4. balance the transaction and update tx change output
 
     txbody0 <- first TxBodyError $
-               makeTransactionBody txbodycontent {
+               makeTransactionBody scriptValidity txbodycontent {
                  txOuts = TxOut changeaddr
                                 (lovelaceToTxOutValue 0)
                                 TxOutDatumHashNone
@@ -804,14 +823,13 @@ makeTransactionBodyAutoBalance eraInMode systemstart history pparams
                     evaluateTransactionExecutionUnits
                       eraInMode
                       systemstart history
-                      pparams utxo
+                      pparams
+                      utxo
                       txbody0
 
-    exUnitsMap' <- case Map.mapEither id exUnitsMap of
-                     (failures, exUnitsMap')
-                       | Map.null failures -> return exUnitsMap'
-                       | otherwise         -> Left (TxBodyScriptExecutionError
-                                                     (Map.toList failures))
+    exUnitsMap' <-
+      case Map.mapEither id exUnitsMap of
+        (failures, exUnitsMap') -> handleExUnitsErrors scriptValidity failures exUnitsMap'
 
     let txbodycontent1 = substituteExecutionUnits exUnitsMap' txbodycontent
 
@@ -827,7 +845,7 @@ makeTransactionBodyAutoBalance eraInMode systemstart history pparams
     -- final fee of less than around 4000 ada (2^32-1 lovelace) and change output
     -- of less than around 18 trillion ada  (2^64-1 lovelace).
     txbody1 <- first TxBodyError $ -- TODO: impossible to fail now
-               makeTransactionBody txbodycontent1 {
+               makeTransactionBody scriptValidity txbodycontent1 {
                  txFee  = TxFeeExplicit explicitTxFees $ Lovelace (2^(32 :: Integer) - 1),
                  txOuts = TxOut changeaddr
                                 (lovelaceToTxOutValue $ Lovelace (2^(64 :: Integer)) - 1)
@@ -844,7 +862,7 @@ makeTransactionBodyAutoBalance eraInMode systemstart history pparams
     -- Here we do not want to start with any change output, since that's what
     -- we need to calculate.
     txbody2 <- first TxBodyError $ -- TODO: impossible to fail now
-               makeTransactionBody txbodycontent1 {
+               makeTransactionBody scriptValidity txbodycontent1 {
                  txFee = TxFeeExplicit explicitTxFees fee
                }
 
@@ -870,7 +888,7 @@ makeTransactionBodyAutoBalance eraInMode systemstart history pparams
     -- Yes this could be an over-estimate by a few bytes if the fee or change
     -- would fit within 2^16-1. That's a possible optimisation.
     txbody3 <- first TxBodyError $ -- TODO: impossible to fail now
-               makeTransactionBody txbodycontent1 {
+               makeTransactionBody scriptValidity txbodycontent1 {
                  txFee  = TxFeeExplicit explicitTxFees fee,
                  txOuts = TxOut changeaddr balance TxOutDatumHashNone
                         : txOuts txbodycontent

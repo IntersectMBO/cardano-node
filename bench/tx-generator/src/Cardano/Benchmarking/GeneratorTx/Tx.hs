@@ -61,7 +61,7 @@ mkGenesisTransaction :: forall era .
   -> [TxOut era]
   -> Tx era
 mkGenesisTransaction key _payloadSize ttl fee txins txouts
-  = case makeTransactionBody txBodyContent of
+  = case makeTransactionBody ScriptValid txBodyContent of
     Right b -> signShelleyTransaction b [WitnessGenesisUTxOKey key]
     Left err -> error $ show err
  where
@@ -102,7 +102,7 @@ mkTransaction :: forall era .
   -> [TxOut era]
   -> Tx era
 mkTransaction key metadata ttl fee txins txouts
-  = case makeTransactionBody txBodyContent of
+  = case makeTransactionBody ScriptValid txBodyContent of
     Right b -> signShelleyTransaction b [WitnessPaymentKey key]
     Left err -> error $ show err
  where

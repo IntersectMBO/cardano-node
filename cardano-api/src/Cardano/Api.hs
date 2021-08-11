@@ -246,6 +246,7 @@ module Cardano.Api (
     Tx(Tx),
     getTxBody,
     getTxWitnesses,
+    ScriptValidity(..),
 
     -- ** Signing in one go
     signByronTransaction,

@@ -20,15 +20,16 @@ import Cardano.Benchmarking.GeneratorTx.Tx as Tx (mkFee, mkTxOutValueAdaOnly, ke
 import Cardano.Benchmarking.Wallet
 
 payToScript ::
-      SigningKey PaymentKey
+     SigningKey PaymentKey
   -> (Script PlutusScriptV1, Hash ScriptData)
   -> NetworkId
   -> TxGenerator AlonzoEra
 payToScript key (script, txOutDatumHash) networkId inFunds outValues validity
-  = case makeTransactionBody txBodyContent of
+  = case makeTransactionBody ScriptValid txBodyContent of
       Left err -> error $ show err
       Right b -> Right ( signShelleyTransaction b (map (WitnessPaymentKey . getFundKey) inFunds)
-                         , newFunds $ getTxId b                       )
+                       , newFunds $ getTxId b
+                       )
  where
   txBodyContent = TxBodyContent {
       txIns = map (\f -> (getFundTxIn f, BuildTxWith $ KeyWitness KeyWitnessForSpending)) inFunds
@@ -83,7 +84,7 @@ toScriptHash str
     Nothing  -> error $ "Invalid datum hash: " ++ show str
 
 spendFromScript ::
-      SigningKey PaymentKey
+     SigningKey PaymentKey
   -> PlutusScript PlutusScriptV1
   -> NetworkId
   -> ProtocolParameters
@@ -92,10 +93,11 @@ spendFromScript ::
   -> Validity
   -> Either String (Tx AlonzoEra, [Fund])
 spendFromScript key script networkId protocolParameters collateral inFunds validity
-  = case makeTransactionBody txBodyContent of
+  = case makeTransactionBody ScriptValid txBodyContent of
       Left err -> error $ show err
       Right b -> Right ( signShelleyTransaction b (map (WitnessPaymentKey . getFundKey) inFunds)
-                         , newFunds $ getTxId b                       )
+                       , newFunds $ getTxId b
+                       )
  where
   txBodyContent = TxBodyContent {
       txIns = map (\f -> (getFundTxIn f, BuildTxWith $ ScriptWitness ScriptWitnessForSpending plutusScriptWitness )) inFunds

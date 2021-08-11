@@ -162,6 +162,7 @@ renderKeyCmd cmd =
 data TransactionCmd
   = TxBuildRaw
       AnyCardanoEra
+      ScriptValidity
       [(TxIn, Maybe (ScriptWitnessFiles WitCtxTxIn))]
       -- ^ Transaction inputs with optional spending scripts
       [TxIn]
@@ -191,6 +192,7 @@ data TransactionCmd
       AnyCardanoEra
       AnyConsensusModeParams
       NetworkId
+      ScriptValidity
       (Maybe Word)
       -- ^ Override the required number of tx witnesses
       [(TxIn, Maybe (ScriptWitnessFiles WitCtxTxIn))]
