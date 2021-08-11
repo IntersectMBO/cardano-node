@@ -45,7 +45,8 @@ library
 
   hs-source-dirs:       src
 
-  exposed-modules:      Cardano.PlutusExample.AlwaysSucceeds
+  exposed-modules:      Cardano.PlutusExample.AlwaysFails
+                        Cardano.PlutusExample.AlwaysSucceeds
                         Cardano.PlutusExample.DatumRedeemerGuess
                         Cardano.PlutusExample.MintingScript
                         Cardano.PlutusExample.CustomDatumRedeemerGuess
