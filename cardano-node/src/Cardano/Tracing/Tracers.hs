@@ -74,7 +74,7 @@ import qualified Ouroboros.Consensus.Shelley.Protocol.HotKey as HotKey
 import qualified Ouroboros.Network.AnchoredFragment as AF
 import           Ouroboros.Network.Block (BlockNo (..), HasHeader (..), Point, StandardHash,
                    blockNo, pointSlot, unBlockNo)
-import           Ouroboros.Network.BlockFetch.ClientState (TraceLabelPeer (..), , TraceFetchClientState(..))
+import           Ouroboros.Network.BlockFetch.ClientState (TraceLabelPeer (..), TraceFetchClientState(..))
 import           Ouroboros.Network.BlockFetch.Decision (FetchDecision, FetchDecline (..))
 import           Ouroboros.Network.Point (fromWithOrigin, withOrigin)
 import           Ouroboros.Network.Protocol.LocalStateQuery.Type (ShowQuery)
