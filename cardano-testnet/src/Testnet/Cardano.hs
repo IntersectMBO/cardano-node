@@ -237,7 +237,6 @@ testnet testnetOptions H.Conf {..} = do
           . HM.insert "TestAlonzoHardForkAtEpoch" (J.toJSON @Int 0)
           . HM.insert "LastKnownBlockVersion-Major" (J.toJSON @Int 5)
 
-<<<<<<< HEAD:cardano-testnet/src/Testnet/Cardano.hs
   -- We're going to use really quick epochs (300 seconds), by using short slots 0.2s
   -- and K=10, but we'll keep long KES periods so we don't have to bother
   -- cycling KES keys
