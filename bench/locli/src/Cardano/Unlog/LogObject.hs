@@ -204,7 +204,9 @@ interpreters = Map.fromList
     \v -> LOBlockAddedToCurrentChain
             <$> ((v .: "newtip")     <&> hashFromPoint)
             <*> pure Nothing
-            <*> v .: "chainLengthDelta"
+            <*> (v AE..:? "chainLengthDelta"
+                -- Compat for node versions 1.27 and older:
+                 & fmap (fromMaybe 1))
   -- TODO: we should clarify the distinction between the two cases (^ and v).
   , (,) "TraceAdoptedBlock" $
     \v -> LOBlockAddedToCurrentChain

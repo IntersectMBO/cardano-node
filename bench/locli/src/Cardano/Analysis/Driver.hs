@@ -99,7 +99,7 @@ runAnalysisCommand SubstringKeysCmd =
 
 runBlockPropagation ::
   ChainInfo -> [JsonLogfile] -> BlockPropagationOutputFiles -> ExceptT Text IO ()
-runBlockPropagation chainInfo logfiles BlockPropagationOutputFiles{..} = do
+runBlockPropagation cInfo logfiles BlockPropagationOutputFiles{..} = do
   liftIO $ do
     putStrLn ("runBlockPropagation: lifting LO streams" :: Text)
     -- 0. Recover LogObjects
@@ -113,7 +113,7 @@ runBlockPropagation chainInfo logfiles BlockPropagationOutputFiles{..} = do
             dumpLOStream objs
               (JsonOutputFile $ F.dropExtension f <> ".logobjects.json")
 
-    blockPropagation <- blockProp chainInfo objLists
+    blockPropagation <- blockProp cInfo objLists
 
     forM_ bpofTimelinePretty $
       \(TextOutputFile f) ->
@@ -121,9 +121,9 @@ runBlockPropagation chainInfo logfiles BlockPropagationOutputFiles{..} = do
           putStrLn ("runBlockPropagation: dumping pretty timeline" :: Text)
           hPutStrLn hnd . T.pack $ printf "--- input: %s" f
           mapM_ (T.hPutStrLn hnd)
-            (renderDistributions RenderPretty blockPropagation)
+            (renderDistributions (cProfile cInfo) RenderPretty blockPropagation)
           mapM_ (T.hPutStrLn hnd)
-            (renderTimeline $ bpChainBlockEvents blockPropagation)
+            (renderTimeline (cProfile cInfo) $ bpChainBlockEvents blockPropagation)
 
     forM_ bpofAnalysis $
       \(JsonOutputFile f) ->
@@ -180,6 +180,8 @@ runMachineTimeline chainInfo logfiles MachineTimelineOutputFiles{..} = do
           withFile f WriteMode $ \hnd ->
             LBS.hPutStrLn hnd timelineOutput
  where
+   p = cProfile chainInfo
+
    renderHistogram :: Integral a
      => String -> String -> [a] -> OutputFile -> IO ()
    renderHistogram desc ylab xs (OutputFile f) =
@@ -196,15 +198,15 @@ runMachineTimeline chainInfo logfiles MachineTimelineOutputFiles{..} = do
        hPutStrLn hnd . T.pack $
          printf "--- input: %s" (intercalate " " $ unJsonLogfile <$> srcs)
        mapM_ (T.hPutStrLn hnd)
-         (renderDistributions RenderPretty s)
+         (renderDistributions p RenderPretty s)
        mapM_ (T.hPutStrLn hnd)
-         (renderTimeline xs)
+         (renderTimeline p xs)
    renderExportStats :: RunScalars -> MachTimeline -> CsvOutputFile -> IO ()
    renderExportStats rs s (CsvOutputFile o) =
      withFile o WriteMode $
        \h -> do
          mapM_ (hPutStrLn h)
-           (renderDistributions RenderCsv s)
+           (renderDistributions p RenderCsv s)
          mapM_ (hPutStrLn h) $
            renderChainInfoExport chainInfo
            <>

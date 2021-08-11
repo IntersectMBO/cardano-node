@@ -1,3 +1,4 @@
+{-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -5,16 +6,18 @@
 {-# LANGUAGE ViewPatterns #-}
 module Cardano.Unlog.Render (module Cardano.Unlog.Render) where
 
-import           Prelude (head, id, tail)
-import           Cardano.Prelude hiding (head)
+import Prelude                  (head, id, tail)
+import Cardano.Prelude          hiding (head)
 
-import           Control.Arrow ((&&&))
-import           Data.List (dropWhileEnd)
-import qualified Data.Text as T
-import           Data.Time.Clock (NominalDiffTime)
-import           Text.Printf (printf)
+import Control.Arrow            ((&&&))
+import Data.List                (dropWhileEnd)
+import Data.Text                qualified as T
+import Data.Time.Clock          (NominalDiffTime)
+import Text.Printf              (printf)
 
-import           Data.Distribution
+import Data.Distribution
+
+import Cardano.Analysis.Profile
 
 
 data RenderMode
@@ -23,10 +26,10 @@ data RenderMode
   deriving (Eq, Show)
 
 class Show a => RenderDistributions a where
-  rdFields :: [DField a]
+  rdFields :: Profile -> [DField a]
 
 class Show a => RenderTimeline a where
-  rtFields     :: [IField a]
+  rtFields     :: Profile -> [IField a]
   rtCommentary :: a -> [Text]
   rtCommentary _ = []
 
@@ -64,8 +67,8 @@ mapSomeFieldDistribution f a = \case
   DFloat  s -> f (s a)
   DDeltaT s -> f (s a)
 
-renderTimeline :: forall a. RenderTimeline a => [a] -> [Text]
-renderTimeline xs =
+renderTimeline :: forall a. RenderTimeline a => Profile -> [a] -> [Text]
+renderTimeline p xs =
   concatMap (uncurry fLine) $ zip xs [(0 :: Int)..]
  where
    fLine :: a -> Int -> [Text]
@@ -83,7 +86,7 @@ renderTimeline xs =
          IText   (($v)->x) -> T.take fWidth . T.dropWhileEnd (== 's') $ x
 
    fields :: [IField a]
-   fields = rtFields
+   fields = rtFields p
 
    head1, head2 :: Maybe Text
    head1 = if all ((== 0) . T.length . fHead1) fields then Nothing
@@ -100,8 +103,8 @@ renderTimeline xs =
    renderLine' lpfn wfn rfn = renderField lpfn wfn rfn <$> fields
    renderField lpfn wfn rfn f = T.replicate (lpfn f) " " <> T.center (wfn f) ' ' (rfn f)
 
-renderDistributions :: forall a. RenderDistributions a => RenderMode -> a -> [Text]
-renderDistributions mode x =
+renderDistributions :: forall a. RenderDistributions a => Profile -> RenderMode -> a -> [Text]
+renderDistributions p mode x =
   case mode of
     RenderPretty -> catMaybes [head1, head2] <> pLines <> sizeAvg
     RenderCsv    -> headCsv : pLines
@@ -117,7 +120,7 @@ renderDistributions mode x =
                   else renderLineDistCsv) $
     \Field{..} ->
       let getCapPerc :: forall b c. Distribution b c -> c
-          getCapPerc d = dPercIx d pctIx
+          getCapPerc = dPercIx pctIx
       in T.pack $ case fSelect of
         DInt    (($x)->d) -> (if mode == RenderPretty
                               then printf "%*d" fWidth
@@ -163,12 +166,13 @@ renderDistributions mode x =
    renderField lpfn wfn rfn f = T.replicate (lpfn f) " " <> T.center (wfn f) ' ' (rfn f)
 
    fields :: [DField a]
-   fields = percField : rdFields
+   fields = percField : rdFields p
+
    percField :: DField a
    percField = Field 6 0 "%tile" "" "%tile" (DFloat $ const percsDistrib)
    nPercs = length $ dPercentiles percsDistrib
    percsDistrib = mapSomeFieldDistribution
-                    distribPercsAsDistrib x (fSelect $ head rdFields)
+                    distribPercsAsDistrib x (fSelect $ head (rdFields p))
 
 -- * Auxiliaries
 --

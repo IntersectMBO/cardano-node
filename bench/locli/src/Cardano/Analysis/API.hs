@@ -1,16 +1,19 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# OPTIONS_GHC -Wno-name-shadowing #-}
 {- HLINT ignore "Use head" -}
 module Cardano.Analysis.API (module Cardano.Analysis.API) where
 
-import Prelude                  ((!!))
+import Prelude                  ((!!), error)
 import Cardano.Prelude          hiding (head)
 
 import Data.Aeson               (ToJSON(..), FromJSON(..))
+import Data.Text   qualified as T
 import Data.Text.Short          (toText)
 import Data.Time.Clock          (NominalDiffTime)
+import Text.Printf              (printf)
 
 import Ouroboros.Network.Block  (BlockNo(..), SlotNo(..))
 
@@ -37,7 +40,7 @@ data BlockPropagation
     , bpPeerAdoptions       :: !(Distribution Float NominalDiffTime)
     , bpPeerAnnouncements   :: !(Distribution Float NominalDiffTime)
     , bpPeerSends           :: !(Distribution Float NominalDiffTime)
-    , bpPropagation         :: !(Distribution Float NominalDiffTime)
+    , bpPropagation         :: ![(Float, Distribution Float NominalDiffTime)]
     , bpSizes               :: !(Distribution Float Int)
     , bpChainBlockEvents    :: [BlockEvents]
     }
@@ -52,7 +55,8 @@ data BlockEvents
   , beSlotNo       :: !SlotNo
   , beForge        :: !BlockForge
   , beObservations :: [BlockObservation]
-  , bePropagation  :: !NominalDiffTime -- ^ Slot start to last adoption on cluster
+  , bePropagation  :: !(Distribution Float NominalDiffTime)
+                      -- ^ CDF of slot-start-to-adoptions on cluster
   , beOtherBlocks  :: [Hash]
   , beErrors       :: [BPError]
   }
@@ -121,8 +125,13 @@ data BPErrorKind
 --
 -- * Key properties
 --
-isValidBlockEvent :: BlockEvents -> Bool
-isValidBlockEvent BlockEvents{..} = (== 1) . bfChainDelta $ beForge
+isValidBlockEvent :: Profile -> BlockEvents -> Bool
+isValidBlockEvent Profile{genesis=GenesisProfile{..}} BlockEvents{..} = beForge &
+  \BlockForge{..} ->
+    -- 1. All timings account for processing of a single block
+    bfChainDelta == 1
+    -- 2. Block is >90% full
+    && bfBlockSize >= floor ((fromIntegral max_block_size :: Double) * 0.9)
 
 isValidBlockObservation :: BlockObservation -> Bool
 isValidBlockObservation BlockObservation{..} =
@@ -136,7 +145,7 @@ isValidBlockObservation BlockObservation{..} =
 -- * Instances
 --
 instance RenderDistributions BlockPropagation where
-  rdFields =
+  rdFields _ =
     --  Width LeftPad
     [ Field 6 0 "forged"        (f!!0) "Forge"  $ DDeltaT bpForgerForges
     , Field 6 0 "fAdopted"      (f!!1) "Adopt"  $ DDeltaT bpForgerAdoptions
@@ -148,15 +157,30 @@ instance RenderDistributions BlockPropagation where
     , Field 5 0 "pAdoptedVal"   (p!!3) "Adopt"  $ DDeltaT bpPeerAdoptions
     , Field 5 0 "pAnnouncedVal" (p!!4) "Annou"  $ DDeltaT bpPeerAnnouncements
     , Field 5 0 "pSendStartVal" (p!!5) "Send"   $ DDeltaT bpPeerSends
-    , Field 5 0 "propagation"   "Propa" "gatio" $ DDeltaT bpPropagation
-    , Field 9 0 "sizes"         "Size"  "bytes" $ DInt    bpSizes
+    ] ++
+    [ Field 5 0 "propagation"   (r!!i)
+            (T.take 4 $ T.pack $ printf "%.04f" ps)
+            (DDeltaT ((\(ps', d) ->
+                         if ps' == ps then d
+                         else error $ printf "Percspec mismatch: [%d]: exp=%f act=%f" i ps ps')
+                      . fromMaybe
+                        (error $ printf "No percentile %d/%f in bpPropagation." i ps)
+                      . flip atMay i . bpPropagation))
+    | (i, Perc ps) <- zip [0::Int ..] (adoptionPcts <> [Perc 1.0]) ] ++
+    [ Field 9 0 "sizes"         "Size"  "bytes" $ DInt    bpSizes
     ]
    where
-     f = nChunksEachOf 4 7 "Forger event Δt:"
-     p = nChunksEachOf 6 6 "Peer event Δt:"
+     f = nChunksEachOf 4    7 "Forger event Δt:"
+     p = nChunksEachOf 6    6 "Peer event Δt:"
+     r = nChunksEachOf aLen 6 "Slot-rel. Δt to adoption centile:"
+     aLen = length adoptionPcts + 1 -- +1 is for the implied 1.0 percentile
+
+adoptionPcts :: [PercSpec Float]
+adoptionPcts =
+  [ Perc 0.5, Perc 0.8, Perc 0.9, Perc 0.92, Perc 0.94, Perc 0.96, Perc 0.98 ]
 
 instance RenderTimeline BlockEvents where
-  rtFields =
+  rtFields _ =
     --  Width LeftPad
     [ Field 5 0 "block"        "block" "no."    $ IWord64 (unBlockNo . beBlockNo)
     , Field 5 0 "abs.slot"     "abs."  "slot#"  $ IWord64 (unSlotNo  . beSlotNo)
@@ -177,7 +201,9 @@ instance RenderTimeline BlockEvents where
     , Field 5 0 "pAdoptedVal"   (p!!3) "Adopt"  $ IDeltaT (af' boAdopted   . valids)
     , Field 5 0 "pAnnouncedVal" (p!!4) "Annou"  $ IDeltaT (af' boAnnounced . valids)
     , Field 5 0 "pSendStartVal" (p!!5) "Send"   $ IDeltaT (af' boSending   . valids)
-    , Field 5 0 "pPropagation" "Propa" "gatio"  $ IDeltaT bePropagation
+    , Field 5 0 "pPropag0.5"    (r!!0) "0.5"    $ IDeltaT (percSpec 0.5  . bePropagation)
+    , Field 5 0 "pPropag0.96"   (r!!1) "0.96"   $ IDeltaT (percSpec 0.96 . bePropagation)
+    , Field 5 0 "pPropag1.0"    (r!!2) "1.0"    $ IDeltaT (percSpec 1.0  . bePropagation)
     , Field 5 0 "errors"        "all"  "errs"   $ IInt    (length . beErrors)
     , Field 3 0 "missAdopt"     (m!!0) "ado"    $ IInt    (count (bpeIsMissing Adopt) . beErrors)
     , Field 3 0 "missAnnou"     (m!!1) "ann"    $ IInt    (count (bpeIsMissing Announce) . beErrors)
@@ -189,8 +215,13 @@ instance RenderTimeline BlockEvents where
      valids = filter isValidBlockObservation . beObservations
      f = nChunksEachOf 4 7 "Forger event Δt:"
      p = nChunksEachOf 6 6 "Peer event Δt averages:"
+     r = nChunksEachOf 3 6 "Propagation Δt:"
      m = nChunksEachOf 3 4 "Missing"
      n = nChunksEachOf 2 4 "Negative"
+
+     percSpec :: Float -> Distribution Float NominalDiffTime -> NominalDiffTime
+     percSpec ps d = dPercSpec (Perc ps) d
+       & fromMaybe (error $ printf "No percentile %f in distribution." ps)
      af  f = avg . fmap f
      af' f = avg . mapMaybe f
      avg :: [NominalDiffTime] -> NominalDiffTime

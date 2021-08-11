@@ -11,7 +11,7 @@ let
       { setNumberOfOutputsPerTx  = outputs_per_tx; }
       { setNumberOfTxs           = tx_count; }
       { setTxAdditionalSize      = add_tx_size; }
-      { setMinValuePerUTxO       = 1000000; }
+      { setMinValuePerUTxO       = min_utxo_value; }
       { setFee                   = tx_fee; }
       { setTTL                   = 1000000; }
       { startProtocol            = nodeConfigFile; }
@@ -26,11 +26,21 @@ let
       { readSigningKey    = "pass-partout"; filePath = sigKey; }
       { importGenesisFund = "pass-partout"; fundKey  = "pass-partout"; }
       { delay             = init_cooldown; }
-      { createChange      = 1000;
-                          count = (length (__attrNames targetNodes))
-                                  * 2 * inputs_per_tx; }
+    ]
+    ++
+    (if continuousMode
+             ## WARNING: this could go over the genesis UTxO funds!
+     then createChangeScript cfg
+            (tx_count * tx_fee + min_utxo_value)
+            (length (__attrNames targetNodes) * 2 * inputs_per_tx)
+     else createChangeRecursive cfg
+            (min_utxo_value + tx_fee)
+            (tx_count * inputs_per_tx)
+    )
+    ++
+    [
       { runBenchmark      = "walletBasedBenchmark";
-                               txCount = tx_count; tps = tps; }
+                  txCount = tx_count; tps = tps; }
       { waitBenchmark     = "walletBasedBenchmark"; }
     ];
 
@@ -49,6 +59,15 @@ let
 
   capitalise = x: (pkgs.lib.toUpper (__substring 0 1 x)) + __substring 1 99999 x;
 
+  createChangeScript = cfg: value: count:
+    [ { createChange = value; count=count; }
+      { delay = cfg.init_cooldown; }
+    ];
+
+  createChangeRecursive = cfg: value: count: if count <= 30
+    then createChangeScript cfg value count
+    else createChangeRecursive cfg (value * 30 + cfg.tx_fee) (count / 30 + 1) ++ createChangeScript cfg value count;
+
 in pkgs.commonLib.defServiceModule
   (lib: with lib;
     { svcName = "tx-generator";
@@ -65,6 +84,7 @@ in pkgs.commonLib.defServiceModule
 
       extraOptionDecls = {
         scriptMode      = opt bool true      "Whether to use the modern script parametrisation mode of the generator.";
+        continuousMode  = opt bool false     "Whether to use continuous generation, without the full UTxO pre-splitting phase.";
 
         ## TODO: the defaults should be externalised to a file.
         ##
@@ -74,7 +94,8 @@ in pkgs.commonLib.defServiceModule
         outputs_per_tx  = opt int 4          "Outputs per Tx.";
         tx_fee          = opt int 10000000   "Tx fee, in Lovelace.";
         tps             = opt int 100        "Strength of generated load, in TPS.";
-        init_cooldown   = opt int 100        "Delay between init and main submissions.";
+        init_cooldown   = opt int 50         "Delay between init and main submissions.";
+        min_utxo_value  = opt int 10000000   "Minimum value allowed per UTxO entry";
 
         runScriptFn     = opt (functionTo (listOf attrs)) defaultGeneratorScriptFn
           "Function accepting this service config and producing the generator run script (a list of command attrsets).  Takes effect unless runScript or runScriptFile are specified.";

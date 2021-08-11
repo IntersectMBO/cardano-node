@@ -58,7 +58,7 @@ data MachTimeline
   deriving Show
 
 instance RenderDistributions MachTimeline where
-  rdFields =
+  rdFields _ =
     --  Width LeftPad
     [ Field 4 0 "missR"    "Miss"  "ratio"  $ DFloat   sMissDistrib
     , Field 6 0 "CheckΔ"   ""      "ChkΔt"  $ DDeltaT  sSpanCheckDistrib

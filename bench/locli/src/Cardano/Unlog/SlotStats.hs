@@ -55,7 +55,7 @@ data SlotStats
   deriving (Generic, Show)
 
 instance RenderTimeline SlotStats where
-  rtFields =
+  rtFields _ =
     --  Width LeftPad
     [ Field 5 0 "abs.slot"     "abs."  "slot#"   $ IWord64 (unSlotNo . slSlot)
     , Field 4 0 "slot"         "  epo" "slot"    $ IWord64 slEpochSlot
