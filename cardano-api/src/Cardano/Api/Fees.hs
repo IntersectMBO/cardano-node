@@ -747,7 +747,7 @@ instance Error TxBodyErrorAutoBalance where
       "Non-Ada assets are unbalanced: " <> Text.unpack (renderValue val)
 
 handleExUnitsErrors ::
-     ScriptValidity
+     ScriptValidity -- ^ Mark script as expected to pass or fail validation
   -> Map ScriptWitnessIndex ScriptExecutionError
   -> Map ScriptWitnessIndex ExecutionUnits
   -> Either TxBodyErrorAutoBalance (Map ScriptWitnessIndex ExecutionUnits)
@@ -795,7 +795,7 @@ makeTransactionBodyAutoBalance
   -> ProtocolParameters
   -> Set PoolId       -- ^ The set of registered stake pools
   -> UTxO era         -- ^ Just the transaction inputs, not the entire 'UTxO'.
-  -> ScriptValidity
+  -> ScriptValidity   -- ^ Mark script as expected to pass or fail validation
   -> TxBodyContent BuildTx era
   -> AddressInEra era -- ^ Change address
   -> Maybe Word       -- ^ Override key witnesses

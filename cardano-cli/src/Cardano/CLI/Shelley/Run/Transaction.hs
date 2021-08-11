@@ -300,6 +300,7 @@ runTransactionCmd cmd =
 runTxBuildRaw
   :: AnyCardanoEra
   -> ScriptValidity
+  -- ^ Mark script as expected to pass or fail validation
   -> [(TxIn, Maybe (ScriptWitnessFiles WitCtxTxIn))]
   -- ^ TxIn with potential script witness
   -> [TxIn]
@@ -362,6 +363,7 @@ runTxBuild
   -> AnyConsensusModeParams
   -> NetworkId
   -> ScriptValidity
+  -- ^ Mark script as expected to pass or fail validation
   -> [(TxIn, Maybe (ScriptWitnessFiles WitCtxTxIn))]
   -- ^ TxIn with potential script witness
   -> [TxIn]

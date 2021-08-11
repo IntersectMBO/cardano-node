@@ -219,7 +219,16 @@ import           Cardano.Ledger.Crypto (StandardCrypto)
 {- HLINT ignore "Redundant flip" -}
 {- HLINT ignore "Use section" -}
 
-data ScriptValidity = ScriptInvalid | ScriptValid
+-- | Indicates whether a script is expected to fail or pass validation.
+data ScriptValidity
+  = ScriptInvalid -- ^ Script is expected to fail validation.
+                  -- Transactions marked as such can include scripts that fail validation.
+                  -- Such transactions may be submitted to the chain, in which case the
+                  -- collateral will be taken upon on chain script validation failure.
+
+  | ScriptValid   -- ^ Script is expected to pass validation.
+                  -- Transactions marked as such cannot include scripts that fail validation.
+
   deriving (Eq, Show)
 
 instance ToCBOR ScriptValidity where
@@ -1157,7 +1166,7 @@ data TxBody era where
           -- auxiliary data.
        -> Maybe (Ledger.AuxiliaryData (ShelleyLedgerEra era))
 
-       -> ScriptValidity
+       -> ScriptValidity -- ^ Mark script as expected to pass or fail validation
 
        -> TxBody era
      -- The 'ShelleyBasedEra' GADT tells us what era we are in.
@@ -1338,7 +1347,7 @@ serialiseShelleyBasedTxBody
   -> [Ledger.Script ledgerera]
   -> TxBodyScriptData era
   -> Maybe (Ledger.AuxiliaryData ledgerera)
-  -> ScriptValidity
+  -> ScriptValidity -- ^ Mark script as expected to pass or fail validation
   -> ByteString
 serialiseShelleyBasedTxBody _era txbody txscripts
                             TxBodyNoScriptData txmetadata _scriptValidity =
@@ -1470,11 +1479,11 @@ instance Error TxBodyError where
       "parameters to hash"
 
 
-makeTransactionBody :: forall era.
-                       IsCardanoEra era
-                    => ScriptValidity
-                    -> TxBodyContent BuildTx era
-                    -> Either TxBodyError (TxBody era)
+makeTransactionBody :: forall era. ()
+  => IsCardanoEra era
+  => ScriptValidity -- ^ Mark script as expected to pass or fail validation
+  -> TxBodyContent BuildTx era
+  -> Either TxBodyError (TxBody era)
 makeTransactionBody scriptValidity =
     case cardanoEraStyle (cardanoEra :: CardanoEra era) of
       LegacyByronEra      -> makeByronTransactionBody
@@ -1905,10 +1914,11 @@ getByronTxBodyContent (Annotated Byron.UnsafeTx{txInputs, txOutputs} _) =
       txMintValue      = TxMintNone
     }
 
-makeShelleyTransactionBody :: ShelleyBasedEra era
-                           -> ScriptValidity
-                           -> TxBodyContent BuildTx era
-                           -> Either TxBodyError (TxBody era)
+makeShelleyTransactionBody :: ()
+  => ShelleyBasedEra era
+  -> ScriptValidity -- ^ Mark script as expected to pass or fail validation
+  -> TxBodyContent BuildTx era
+  -> Either TxBodyError (TxBody era)
 makeShelleyTransactionBody era@ShelleyBasedEraShelley
                            scriptValidity
                            txbodycontent@TxBodyContent {
