@@ -20,12 +20,14 @@ import           Prelude (String, show, id)
 
 import           Control.Monad.Class.MonadTime (DiffTime, Time (..))
 import           Data.Aeson (Value (..))
+import           Data.Aeson.Types (listValue)
 import qualified Data.Aeson as Aeson
 import qualified Data.IP as IP
 import qualified Data.Set as Set
 import qualified Data.Map.Strict as Map
 import           Data.Text (pack)
 
+import           Network.TypedProtocol.Codec (AnyMessageAndAgency (..))
 import           Network.TypedProtocol.Core (ClientHasAgency,
                      PeerHasAgency (..), ServerHasAgency)
 
@@ -54,7 +56,6 @@ import           Ouroboros.Network.ConnectionManager.Types ( AbstractState(..),
                     ConnectionManagerTrace(..) , ConnectionManagerCounters(..),
                     AbstractState(..) , ConnectionManagerCounters(..) , OperationResult(..))
 import           Ouroboros.Network.ConnectionHandler (ConnectionHandlerTrace(..))
-import           Ouroboros.Network.Codec (AnyMessageAndAgency (..))
 import           Ouroboros.Network.DeltaQ (GSV (..), PeerGSV (..))
 import           Ouroboros.Network.Driver.Limits (ProtocolLimitFailure (..))
 import           Ouroboros.Network.KeepAlive (TraceKeepAliveClient (..))
@@ -855,13 +856,6 @@ instance ToJSON peerAddr => ToJSON (ConnectionId peerAddr) where
                  , "remoteAddress" .= toJSON remoteAddress
                  ]
 
-instance ToJSON peerAddr => ToObject (ConnectionId peerAddr) where
-  toObject _verb connId =
-    mkObject
-      [ "kind" .= String "ConnectionId"
-      , "connectionId" .= toJSON connId
-      ]
-
 instance Aeson.ToJSON ConnectionManagerCounters where
   toJSON ConnectionManagerCounters { prunableConns
                                    , duplexConns
@@ -966,13 +960,6 @@ instance ToObject (NtN.HandshakeTr RemoteAddress NodeToNodeVersion) where
     mkObject [ "kind" .= String "HandshakeTrace"
              , "bearer" .= show b
              , "event" .= show ev ]
-
-
-instance ToObject LocalAddress where
-    toObject _verb addr =
-      mkObject [ "kind" .= String "LocalAddress"
-               , "path" .= toJSON addr
-               ]
 
 instance ToJSON LocalAddress where
     toJSON (LocalAddress path) = String (pack path)
@@ -1101,21 +1088,6 @@ instance ToObject (TraceTxSubmissionInbound txid tx) where
 
 
 instance Aeson.ToJSONKey SockAddr where
-
--- TODO: ouroboros-network should provide a newtype wrapper for 'SockAddr'.
-instance ToObject SockAddr where
-    toObject _verb (SockAddrInet port addr) =
-        let ip = IP.fromHostAddress addr in
-        mkObject [ "address" .= toJSON ip
-                 , "port" .= show port
-                 ]
-    toObject _verb (SockAddrInet6 port _ addr _) =
-        let ip = IP.fromHostAddress6 addr in
-        mkObject [ "address" .= toJSON ip
-                 , "port" .= show port
-                 ]
-    toObject _verb (SockAddrUnix path) =
-        mkObject [ "path" .= show path ]
 
 instance Aeson.ToJSON SockAddr where
     toJSON (SockAddrInet port addr) =
@@ -1819,7 +1791,7 @@ instance (Show addr, Show versionNumber, Show agreedOptions, ToObject addr,
       TrState cmState ->
         mkObject
           [ "kind"  .= String "ConnectionManagerState"
-          , "state" .= Aeson.listValue (\(addr, connState) ->
+          , "state" .= listValue (\(addr, connState) ->
                                          Aeson.object
                                            [ "remoteAddress"   .= toJSON addr
                                            , "connectionState" .= toJSON connState
