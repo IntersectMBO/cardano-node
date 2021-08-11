@@ -97,9 +97,13 @@ executeQueryLocalStateWithChainSync connectInfo mpoint f = do
   where
     chainSyncGetCurrentTip
       :: STM b
-      -> TMVar  ChainTip
+      -> TMVar ChainTip
       -> ChainSyncClient (BlockInMode mode) ChainPoint ChainTip IO ()
-    chainSyncGetCurrentTip waitDone tipVar =
+    chainSyncGetCurrentTip
+        waitDone  -- ^ An STM expression that only returns when all protocols are complete.
+                  -- Protocols must wait until 'waitDone' returns because premature exit will
+                  -- cause other incomplete protocols to abort which may lead to deadlock.
+        tipVar =
       ChainSyncClient $ pure clientStIdle
       where
         clientStIdle :: Net.Sync.ClientStIdle (BlockInMode mode) ChainPoint ChainTip IO ()
@@ -110,11 +114,11 @@ executeQueryLocalStateWithChainSync connectInfo mpoint f = do
         clientStNext = Net.Sync.ClientStNext
           { Net.Sync.recvMsgRollForward = \_block tip -> ChainSyncClient $ do
               void . atomically $ putTMVar tipVar tip
-              void $ atomically waitDone
+              void $ atomically waitDone -- Wait for all protocols to complete before exiting.
               pure $ Net.Sync.SendMsgDone ()
           , Net.Sync.recvMsgRollBackward = \_point tip -> ChainSyncClient $ do
               void . atomically $ putTMVar tipVar tip
-              void $ atomically waitDone
+              void $ atomically waitDone -- Wait for all protocols to complete before exiting.
               pure $ Net.Sync.SendMsgDone ()
           }
 
@@ -125,17 +129,23 @@ setupLocalStateQueryExpr ::
   -> TMVar (Either Net.Query.AcquireFailure a)
   -> LocalStateQueryExpr (BlockInMode mode) ChainPoint (QueryInMode mode) () IO a
   -> Net.Query.LocalStateQueryClient (BlockInMode mode) ChainPoint (QueryInMode mode) IO ()
-setupLocalStateQueryExpr waitDone mPointVar' resultVar' f =
+setupLocalStateQueryExpr
+    waitDone  -- ^ An STM expression that only returns when all protocols are complete.
+              -- Protocols must wait until 'waitDone' returns because premature exit will
+              -- cause other incomplete protocols to abort which may lead to deadlock.
+    mPointVar'
+    resultVar'
+    f =
   LocalStateQueryClient . pure . Net.Query.SendMsgAcquire mPointVar' $
     Net.Query.ClientStAcquiring
     { Net.Query.recvMsgAcquired = runContT (runLocalStateQueryExpr f) $ \result -> do
         atomically $ putTMVar resultVar' (Right result)
-        void $ atomically waitDone
+        void $ atomically waitDone -- Wait for all protocols to complete before exiting.
         pure $ Net.Query.SendMsgRelease $ pure $ Net.Query.SendMsgDone ()
 
     , Net.Query.recvMsgFailure = \failure -> do
         atomically $ putTMVar resultVar' (Left failure)
-        void $ atomically waitDone
+        void $ atomically waitDone -- Wait for all protocols to complete before exiting.
         pure $ Net.Query.SendMsgDone ()
     }
 
