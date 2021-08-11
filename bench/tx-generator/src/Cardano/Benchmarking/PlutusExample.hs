@@ -4,7 +4,6 @@
 module Cardano.Benchmarking.PlutusExample
 where
 import Prelude
-import Control.Concurrent.MVar
 
 import qualified Data.ByteString.Char8 as BSC
 import Control.Monad.Trans.Except
@@ -14,41 +13,21 @@ import Cardano.CLI.Shelley.Script (readFileScriptInAnyLang)
 import Cardano.Api
 import Cardano.Api.Shelley (ProtocolParameters)
 
-import Cardano.Benchmarking.Types (NumberOfTxs(..))
 import Cardano.Benchmarking.FundSet
-import Cardano.Benchmarking.GeneratorTx.Tx as Tx (mkFee, mkTxOutValueAdaOnly, keyAddress )
+import Cardano.Benchmarking.GeneratorTx.Tx as Tx (mkTxOutValueAdaOnly)
 import Cardano.Benchmarking.Wallet
 
-payToScript ::
-     SigningKey PaymentKey
+mkUtxoScript ::
+     NetworkId
+  -> SigningKey PaymentKey
   -> (Script PlutusScriptV1, Hash ScriptData)
-  -> NetworkId
-  -> TxGenerator AlonzoEra
-payToScript key (script, txOutDatumHash) networkId inFunds outValues validity
-  = case makeTransactionBody txBodyContent of
-      Left err -> error $ show err
-      Right b -> Right ( signShelleyTransaction b (map (WitnessPaymentKey . getFundKey) inFunds)
-                       , newFunds $ getTxId b
-                       )
+  -> Validity
+  -> ToUTxO AlonzoEra
+mkUtxoScript networkId key (script, txOutDatumHash) validity values
+  = ( map mkTxOut values
+    , newFunds
+    )
  where
-  txBodyContent = TxBodyContent {
-      txIns = map (\f -> (getFundTxIn f, BuildTxWith $ KeyWitness KeyWitnessForSpending)) inFunds
-    , txInsCollateral = TxInsCollateralNone
-    , txOuts = map mkTxOut outValues
-    , txFee = mkFee 0
-    , txValidityRange = (TxValidityNoLowerBound, TxValidityNoUpperBound ValidityNoUpperBoundInAlonzoEra)
-    , txMetadata = TxMetadataNone
-    , txAuxScripts = TxAuxScriptsNone
-    , txExtraScriptData = BuildTxWith TxExtraScriptDataNone
-    , txExtraKeyWits = TxExtraKeyWitnessesNone
-    , txProtocolParams = BuildTxWith Nothing
-    , txWithdrawals = TxWithdrawalsNone
-    , txCertificates = TxCertificatesNone
-    , txUpdateProposal = TxUpdateProposalNone
-    , txMintValue = TxMintNone
-    , txScriptValidity = TxScriptValidityNone
-    }
-
   mkTxOut v = TxOut plutusScriptAddr (mkTxOutValueAdaOnly v) (TxOutDatumHash ScriptDataInAlonzoEra txOutDatumHash)
 
   plutusScriptAddr = makeShelleyAddressInEra
@@ -56,7 +35,7 @@ payToScript key (script, txOutDatumHash) networkId inFunds outValues validity
                        (PaymentCredentialByScript $ hashScript script)
                        NoStakeAddress
 
-  newFunds txId = zipWith (mkNewFund txId) [TxIx 0 ..] outValues
+  newFunds txId = zipWith (mkNewFund txId) [TxIx 0 ..] values
 
   mkNewFund :: TxId -> TxIx -> Lovelace -> Fund
   mkNewFund txId txIx val = Fund $ InAnyCardanoEra AlonzoEra $ FundInEra {
@@ -84,29 +63,27 @@ toScriptHash str
     Just x -> x
     Nothing  -> error $ "Invalid datum hash: " ++ show str
 
-spendFromScript ::
-     SigningKey PaymentKey
-  -> PlutusScript PlutusScriptV1
-  -> NetworkId
-  -> ProtocolParameters
+genTxPlutusSpend ::
+     ProtocolParameters
   -> [Fund]
-  -> [Fund]
-  -> Validity
-  -> Either String (Tx AlonzoEra, [Fund])
-spendFromScript key script networkId protocolParameters collateral inFunds validity
+  -> ScriptWitness WitCtxTxIn AlonzoEra
+  -> TxFee AlonzoEra
+  -> TxMetadataInEra AlonzoEra
+  -> TxGenerator AlonzoEra
+genTxPlutusSpend protocolParameters collateral scriptWitness fee metadata inFunds outputs
   = case makeTransactionBody txBodyContent of
       Left err -> error $ show err
       Right b -> Right ( signShelleyTransaction b (map (WitnessPaymentKey . getFundKey) inFunds)
-                       , newFunds $ getTxId b
+                       , getTxId b
                        )
  where
   txBodyContent = TxBodyContent {
-      txIns = map (\f -> (getFundTxIn f, BuildTxWith $ ScriptWitness ScriptWitnessForSpending plutusScriptWitness )) inFunds
+      txIns = map (\f -> (getFundTxIn f, BuildTxWith $ ScriptWitness ScriptWitnessForSpending scriptWitness )) inFunds
     , txInsCollateral = TxInsCollateral CollateralInAlonzoEra $  map getFundTxIn collateral
-    , txOuts = [mkTxOut outValue]
-    , txFee = mkFee (fromIntegral requiredSteps + fromIntegral requiredMemory)
+    , txOuts = outputs
+    , txFee = fee
     , txValidityRange = (TxValidityNoLowerBound, TxValidityNoUpperBound ValidityNoUpperBoundInAlonzoEra)
-    , txMetadata = TxMetadataNone
+    , txMetadata = metadata
     , txAuxScripts = TxAuxScriptsNone
     , txExtraScriptData = BuildTxWith TxExtraScriptDataNone
     , txExtraKeyWits = TxExtraKeyWitnessesNone
@@ -117,61 +94,3 @@ spendFromScript key script networkId protocolParameters collateral inFunds valid
     , txMintValue = TxMintNone
     , txScriptValidity = TxScriptValidityNone
     }
-  requiredMemory = 700000000
-  requiredSteps  = 700000000
-
-  plutusScriptWitness = PlutusScriptWitness
-                          PlutusScriptV1InAlonzo
-                          PlutusScriptV1
-                          script
-                          (ScriptDatumForTxIn $ ScriptDataNumber 3) -- script data
-                          (ScriptDataNumber 6) -- script redeemer
-                          (ExecutionUnits requiredSteps requiredMemory)
-
-  outValue = sum (map getFundLovelace inFunds) - fromIntegral requiredSteps - fromIntegral requiredMemory
-
-  mkTxOut v = TxOut (Tx.keyAddress  networkId key) (mkTxOutValueAdaOnly v) TxOutDatumHashNone
-
-  newFunds txId = zipWith (mkNewFund txId) [TxIx 0 ..] [outValue]
-
-  mkNewFund :: TxId -> TxIx -> Lovelace -> Fund
-  mkNewFund txId txIx val = Fund $ InAnyCardanoEra AlonzoEra $ FundInEra {
-      _fundTxIn = TxIn txId txIx
-    , _fundVal = mkTxOutValueAdaOnly val
-    , _fundSigningKey = key
-    , _fundValidity = validity
-    , _fundVariant = PlainOldFund
-    }
-
-
-plutusWalletScript ::
-      SigningKey PaymentKey
-  -> PlutusScript PlutusScriptV1
-  -> NetworkId
-  -> ProtocolParameters
-  -> [Fund]
-  -> WalletRef
-  -> NumberOfTxs
-  -> Target
-  -> WalletScript AlonzoEra
-plutusWalletScript key script networkId protocolParameters collateral wRef (NumberOfTxs maxCount) targetNode
-  = WalletScript (modifyMVarMasked wRef nextTx)
- where
-  nextCall = plutusWalletScript key script networkId protocolParameters collateral wRef (NumberOfTxs maxCount) targetNode
-
-  nextTx :: Wallet -> IO (Wallet, WalletStep AlonzoEra)
-  nextTx w = if walletSeqNumber w > SeqNumber (fromIntegral maxCount)
-    then return (w, Done)
-    else case makeTransaction w of
-      Right (wNew, tx) -> return (wNew, NextTx nextCall tx)
-      Left err -> return (w, Error err)
-
-  makeTransaction :: Wallet -> Either String (Wallet, Tx AlonzoEra)
-  makeTransaction w = do
-    let newSeqNumber = succ $ walletSeqNumber w
-    inputFunds <- selectPlutusFund (walletFunds w)
---    myCollateral <- selectCollateral (walletFunds w)
-    (tx, newFunds) <- spendFromScript key script networkId protocolParameters collateral inputFunds $ InFlight targetNode newSeqNumber
-    let
-      newWallet = (walletUpdateFunds newFunds inputFunds w) {walletSeqNumber = newSeqNumber}
-    Right (newWallet , tx)

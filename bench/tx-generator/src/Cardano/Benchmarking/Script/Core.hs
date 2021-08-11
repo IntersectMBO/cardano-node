@@ -23,23 +23,7 @@ import           Control.Concurrent (threadDelay)
 import           Control.Tracer (traceWith, nullTracer)
 
 import           Ouroboros.Network.Protocol.LocalTxSubmission.Type (SubmitResult (..))
-import           Cardano.Api ( AlonzoEra, AsType(..), CardanoEra(..), InAnyCardanoEra(..), AnyCardanoEra(..), IsShelleyBasedEra, Tx
-                             , Lovelace, NetworkId(..), cardanoEra
-                             , CardanoMode, LocalNodeConnectInfo
-                             , PaymentKey
-                             , PlutusScriptVersion(..)
-                             , QueryInMode(..)
-                             , EraInMode(..)
-                             , QueryInEra(..)
-                             , QueryInShelleyBasedEra(..)
-                             , Script(PlutusScript)
-                             , ShelleyBasedEra(..)
-                             , SigningKey
-                             , TxInMode
-                             , TxValidationErrorInMode
-                             , TxMetadataInEra (..)
-                             , getLocalChainTip, queryNodeLocalState, QueryInMode( QueryCurrentEra), ConsensusModeIsMultiEra( CardanoModeIsMultiEra )
-                             , chainTipToChainPoint )
+import           Cardano.Api
 import           Cardano.Api.Shelley ( ProtocolParameters)
 
 import qualified Cardano.Benchmarking.FundSet as FundSet
@@ -57,7 +41,7 @@ import           Cardano.Benchmarking.GeneratorTx.Tx as Core (keyAddress, mkFee,
 
 import           Cardano.Benchmarking.OuroborosImports as Core
                    (LocalSubmitTx, SigningKeyFile
-                   , getGenesis, protocolToNetworkId, protocolToCodecConfig, makeLocalConnectInfo, submitTxToNodeLocal)
+                   , getGenesis, protocolToNetworkId, protocolToCodecConfig, makeLocalConnectInfo)
 import           Cardano.Benchmarking.PlutusExample as PlutusExample
 import           Cardano.Benchmarking.Tracer as Core
                    ( TraceBenchTxSubmit (..)
@@ -320,7 +304,6 @@ makeMetadata = do
     Right m -> return m
     Left err -> throwE $ MetadataError err
 
--- TODO use withEra here!
 runBenchmark :: ThreadName -> NumberOfTxs -> TPSRate -> ActionM ()
 runBenchmark threadName txCount tps
   = withEra $ runBenchmarkInEra threadName txCount tps
@@ -342,16 +325,21 @@ runBenchmarkInEra (ThreadName threadName) txCount tps era = do
     minTxValue :: Lovelace
     minTxValue = fromIntegral numOutputs * minValuePerUTxO + fee
 
-    selector :: FundSet.Target -> FundSet.FundSelector
-    selector = FundSet.selectInputs ConfirmedBeforeReuse numInputs minTxValue PlainOldFund
+    fundSource :: FundSet.Target -> FundSet.FundSource
+    fundSource target = mkWalletFundSource walletRef $ FundSet.selectInputs ConfirmedBeforeReuse numInputs minTxValue PlainOldFund target
 
     inToOut :: [Lovelace] -> [Lovelace]
     inToOut = FundSet.inputsToOutputsWithFee fee numOutputs
 
-    txGenerator = genTx fundKey networkId (mkFee fee) metadata
+    txGenerator = genTx (mkFee fee) metadata
+
+    toUTxO :: FundSet.Target -> FundSet.SeqNumber -> ToUTxO era
+    toUTxO target seqNumber = Wallet.mkUTxO networkId fundKey (InFlight target seqNumber)
+
+    fundToStore = mkWalletFundStore walletRef
 
     walletScript :: FundSet.Target -> WalletScript era
-    walletScript = benchmarkWalletScript walletRef txGenerator txCount selector inToOut
+    walletScript = benchmarkWalletScript walletRef txGenerator txCount fundSource inToOut toUTxO fundToStore
 
     coreCall :: AsType era -> ExceptT TxGenError IO AsyncBenchmarkControl
     coreCall eraProxy = GeneratorTx.walletBenchmark (btTxSubmit_ tracers) (btN2N_ tracers) connectClient
@@ -377,10 +365,40 @@ runPlutusBenchmark (ThreadName threadName) txCount tps = do
     -- Otherwise it may be spend accidentially
     Right c -> return c
     Left err -> throwE $ WalletError err
+  baseFee <- getUser TFee
+  _minValuePerUTxO <- getUser TMinValuePerUTxO -- TODO:Fix
+  metadata <- makeMetadata
   connectClient <- getConnectClient
   let
+    fundSource :: FundSet.Target -> FundSet.FundSource
+    fundSource _target = mkWalletFundSource walletRef FundSet.selectPlutusFund
+
+    requiredMemory = 700000000
+    requiredSteps  = 700000000
+    totalFee = baseFee + fromIntegral requiredMemory + fromIntegral requiredSteps
+  
+    inToOut :: [Lovelace] -> [Lovelace]
+--    inToOut = FundSet.inputsToOutputsWithFee totalFee numOutputs
+    inToOut = FundSet.inputsToOutputsWithFee totalFee 1
+
+    scriptWitness :: ScriptWitness WitCtxTxIn AlonzoEra
+    scriptWitness = PlutusScriptWitness
+                          PlutusScriptV1InAlonzo
+                          PlutusScriptV1
+                          script
+                          (ScriptDatumForTxIn $ ScriptDataNumber 3) -- script data
+                          (ScriptDataNumber 6) -- script redeemer
+                          (ExecutionUnits requiredSteps requiredMemory)
+
+    txGenerator = genTxPlutusSpend protocolParameters collateral scriptWitness (mkFee totalFee) metadata
+
+    fundToStore = mkWalletFundStore walletRef
+
+    toUTxO :: FundSet.Target -> FundSet.SeqNumber -> ToUTxO AlonzoEra
+    toUTxO target seqNumber = Wallet.mkUTxO networkId fundKey (InFlight target seqNumber)
+
     walletScript :: FundSet.Target -> WalletScript AlonzoEra
-    walletScript = plutusWalletScript fundKey script networkId protocolParameters collateral walletRef txCount
+    walletScript = benchmarkWalletScript walletRef txGenerator txCount fundSource inToOut toUTxO fundToStore
 
 --  TODO: this is useful for debugging: add to JSON scripting language
 --  localTestWalletScript $ walletScript $ FundSet.Target "local"
@@ -444,11 +462,14 @@ localCreateScriptFunds value count = do
   let
     createCoins coins = do
       let
-        selector :: FundSet.FundSelector
-        selector = FundSet.selectMinValue $ sum coins + fee
+        selector :: FundSet.FundSource
+        selector = mkWalletFundSource walletRef $ FundSet.selectMinValue $ sum coins + fee
         inOut :: [Lovelace] -> [Lovelace]
-        inOut = Wallet.includeChange fee coins        
-      tx <- liftIO $ modifyWalletRefEither walletRef (walletCreateCoins (PlutusExample.payToScript fundKey (script, scriptData) networkId) selector inOut)
+        inOut = Wallet.includeChange fee coins
+        toUTxO = PlutusExample.mkUtxoScript networkId fundKey (script,scriptData) Confirmed
+        fundToStore = mkWalletFundStore walletRef
+
+      tx <- liftIO $ sourceToStoreTransaction (genTx (mkFee fee) TxMetadataNone) selector inOut toUTxO fundToStore
       return $ fmap txInModeCardano tx
   createChangeGeneric createCoins value count
 
@@ -465,12 +486,14 @@ createChangeInEra value count _proxy = do
     createCoins :: [Lovelace] -> ActionM (Either String (TxInMode CardanoMode))
     createCoins coins = do
       let
-        selector :: FundSet.FundSelector
-        selector = FundSet.selectMinValue $ sum coins + fee
+        selector :: FundSet.FundSource
+        selector = mkWalletFundSource walletRef $ FundSet.selectMinValue $ sum coins + fee
         inOut :: [Lovelace] -> [Lovelace]
         inOut = Wallet.includeChange fee coins
-        
-      (tx :: Either String (Tx era)) <- liftIO $ modifyWalletRefEither walletRef (walletCreateCoins (genTx fundKey networkId (mkFee fee) TxMetadataNone) selector inOut)
+        toUTxO = Wallet.mkUTxO networkId fundKey Confirmed
+        fundToStore = mkWalletFundStore walletRef
+
+      (tx :: Either String (Tx era)) <- liftIO $ sourceToStoreTransaction (genTx (mkFee fee) TxMetadataNone) selector inOut toUTxO fundToStore
       return $ fmap txInModeCardano tx
   createChangeGeneric createCoins value count
 
