@@ -204,7 +204,7 @@ instance FromJSON PartialNodeConfiguration where
         <- Last . fmap getDiffusionMode <$> v .:? "DiffusionMode"
       pncSnapshotInterval
         <- Last . fmap RequestedSnapshotInterval <$> v .:? "SnapshotInterval"
-      pncTestEnableDevelopmentNetworkProtocols'
+      pncTestEnableDevelopmentNetworkProtocols
         <- Last <$> v .:? "TestEnableDevelopmentNetworkProtocols"
 
       -- Blockfetch parameters
@@ -250,17 +250,16 @@ instance FromJSON PartialNodeConfiguration where
               Just True  -> Last $ Just EnabledP2PMode
 
       pure PartialNodeConfiguration {
-             pncProtocolConfig = pncProtocolConfig'
-           , pncSocketPath = pncSocketPath'
-           , pncDiffusionMode = pncDiffusionMode'
-           , pncSnapshotInterval = pncSnapshotInterval'
-           , pncTestEnableDevelopmentNetworkProtocols =
-              pncTestEnableDevelopmentNetworkProtocols'
-           , pncMaxConcurrencyBulkSync = pncMaxConcurrencyBulkSync'
-           , pncMaxConcurrencyDeadline = pncMaxConcurrencyDeadline'
-           , pncLoggingSwitch = Last $ Just pncLoggingSwitch'
-           , pncLogMetrics = pncLogMetrics'
-           , pncTraceConfig = pncTraceConfig'
+             pncProtocolConfig
+           , pncSocketPath
+           , pncDiffusionMode
+           , pncSnapshotInterval
+           , pncTestEnableDevelopmentNetworkProtocols
+           , pncMaxConcurrencyBulkSync
+           , pncMaxConcurrencyDeadline
+           , pncLoggingSwitch
+           , pncLogMetrics
+           , pncTraceConfig
            , pncNodeIPv4Addr = mempty
            , pncNodeIPv6Addr = mempty
            , pncNodePortNumber = mempty
@@ -429,10 +428,6 @@ makeNodeConfiguration pnc = do
   traceConfig <- lastToEither "Missing TraceConfig" $ pncTraceConfig pnc
   diffusionMode <- lastToEither "Missing DiffusionMode" $ pncDiffusionMode pnc
   snapshotInterval <- lastToEither "Missing SnapshotInterval" $ pncSnapshotInterval pnc
-
-  testEnableDevelopmentNetworkProtocols <-
-    lastToEither "Missing TestEnableDevelopmentNetworkProtocols" $
-      pncTestEnableDevelopmentNetworkProtocols pnc
 
   ncTargetNumberOfRootPeers <-
     lastToEither "Missing TargetNumberOfRootPeers"
