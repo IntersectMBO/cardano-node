@@ -13,7 +13,9 @@ packages:
     bench/locli
     bench/tx-generator
     plutus-example/plutus-example
+    trace-dispatcher
     trace-forward
+    trace-resources
 
 package cardano-api
   ghc-options: -Werror
@@ -31,6 +33,12 @@ package cardano-node-chairman
   ghc-options: -Werror
 
 package tx-generator
+  ghc-options: -Werror
+
+package trace-dispatcher
+  ghc-options: -Werror
+
+package trace-resources
   ghc-options: -Werror
 
 package cryptonite
@@ -63,6 +71,12 @@ package cardano-submit-api
   tests: True
 
 package cardano-testnet
+  tests: True
+
+package trace-resources
+  tests: True
+
+package trace-dispatcher
   tests: True
 
 package trace-forward
@@ -248,6 +262,12 @@ source-repository-package
     prettyprinter-configurable
     stubs/plutus-ghc-stub
     word-array
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/ekg-forward
+  tag: d3e8a3abe2b55e72aca79212b053b4aabade91f4
+  --sha256: 04gwrmkkq0ami6qff0vsi8i5m4qan6pv7jj76k2b88qhk0407wyj
 
 -- Drops an instance breaking our code. Should be released to Hackage eventually.
 source-repository-package
