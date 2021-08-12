@@ -795,7 +795,7 @@ makeTransactionBodyAutoBalance
   -> ProtocolParameters
   -> Set PoolId       -- ^ The set of registered stake pools
   -> UTxO era         -- ^ Just the transaction inputs, not the entire 'UTxO'.
-  -> ScriptValidity   -- ^ Mark script as expected to pass or fail validation
+  -> TxBodyScriptValidity era -- ^ Mark script as expected to pass or fail validation
   -> TxBodyContent BuildTx era
   -> AddressInEra era -- ^ Change address
   -> Maybe Word       -- ^ Override key witnesses
@@ -829,7 +829,8 @@ makeTransactionBodyAutoBalance eraInMode systemstart history pparams
 
     exUnitsMap' <-
       case Map.mapEither id exUnitsMap of
-        (failures, exUnitsMap') -> handleExUnitsErrors scriptValidity failures exUnitsMap'
+        (failures, exUnitsMap') ->
+          handleExUnitsErrors (txBodyScriptValidityToScriptValidity scriptValidity) failures exUnitsMap'
 
     let txbodycontent1 = substituteExecutionUnits exUnitsMap' txbodycontent
 

@@ -531,11 +531,16 @@ genTxFee era =
 genTxBody :: IsCardanoEra era => CardanoEra era -> Gen (TxBody era)
 genTxBody era = do
   res <- makeTransactionBody
-    <$> genScriptValidity
+    <$> genTxBodyScriptValidity
     <*> genTxBodyContent era
   case res of
     Left err -> fail (displayError err)
     Right txBody -> pure txBody
+
+genTxBodyScriptValidity :: forall era. IsCardanoEra era => Gen (TxBodyScriptValidity era)
+genTxBodyScriptValidity = case txBodyScriptValiditySupportedInEra (cardanoEra @era) of
+  Nothing -> pure TxBodyScriptValidityNone
+  Just witness -> TxBodyScriptValidity witness <$> genScriptValidity
 
 genScriptValidity :: Gen ScriptValidity
 genScriptValidity = Gen.element [ScriptInvalid, ScriptValid]

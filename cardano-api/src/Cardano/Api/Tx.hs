@@ -412,7 +412,7 @@ getTxBody (ShelleyTx era tx) =
       ShelleyBasedEraShelley -> getShelleyTxBody tx
       ShelleyBasedEraAllegra -> getShelleyTxBody tx
       ShelleyBasedEraMary    -> getShelleyTxBody tx
-      ShelleyBasedEraAlonzo  -> getAlonzoTxBody ScriptDataInAlonzoEra tx
+      ShelleyBasedEraAlonzo  -> getAlonzoTxBody ScriptDataInAlonzoEra TxBodyScriptValiditySupportedInAlonzoEra tx
   where
     getShelleyTxBody :: forall ledgerera.
                         ShelleyLedgerEra era ~ ledgerera
@@ -432,14 +432,15 @@ getTxBody (ShelleyTx era tx) =
                     (Map.elems msigWits)
                     TxBodyNoScriptData
                     (strictMaybeToMaybe txAuxiliaryData)
-                    ScriptValid
+                    TxBodyScriptValidityNone
 
     getAlonzoTxBody :: forall ledgerera.
                        ShelleyLedgerEra era ~ ledgerera
                     => ScriptDataSupportedInEra era
+                    -> TxBodyScriptValiditySupportedInEra era
                     -> Alonzo.ValidatedTx ledgerera
                     -> TxBody era
-    getAlonzoTxBody scriptDataInEra
+    getAlonzoTxBody scriptDataInEra txBodyScriptValidityInEra
                     Alonzo.ValidatedTx {
                       Alonzo.body = txbody,
                       Alonzo.wits = Alonzo.TxWitness'
@@ -455,7 +456,7 @@ getTxBody (ShelleyTx era tx) =
                     (Map.elems txscripts)
                     (TxBodyScriptData scriptDataInEra txdats redeemers)
                     (strictMaybeToMaybe auxiliaryData)
-                    (isValidToTxScriptValidity isValid)
+                    (TxBodyScriptValidity txBodyScriptValidityInEra (isValidToScriptValidity isValid))
 
 
 getTxWitnesses :: forall era. Tx era -> [KeyWitness era]
@@ -571,7 +572,7 @@ makeSignedTransaction witnesses (ShelleyTxBody era txbody
                           | sw <- txscripts ])
             datums
             redeemers)
-          (txScriptValidityToIsValid scriptValidity)
+          (txBodyScriptValidityToIsValid scriptValidity)
           (maybeToStrictMaybe txmetadata)
       where
         (datums, redeemers) =

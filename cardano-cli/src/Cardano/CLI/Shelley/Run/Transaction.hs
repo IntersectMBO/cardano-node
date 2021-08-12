@@ -353,7 +353,7 @@ runTxBuildRaw (AnyCardanoEra era)
 
     txBody <-
       firstExceptT ShelleyTxCmdTxBodyError . hoistEither $
-        makeTransactionBody scriptValidity txBodyContent
+        makeTransactionBody (scriptValidityToTxBodyScriptValidity era scriptValidity) txBodyContent
     firstExceptT ShelleyTxCmdWriteFileError . newExceptT $
       writeFileTextEnvelope fpath Nothing txBody
 
@@ -448,7 +448,7 @@ runTxBuild (AnyCardanoEra era) (AnyConsensusModeParams cModeParams) networkId sc
         firstExceptT ShelleyTxCmdBalanceTxBody
           . hoistEither
           $ makeTransactionBodyAutoBalance eInMode systemStart eraHistory
-                                           pparams Set.empty utxo scriptValidity txBodyContent
+                                           pparams Set.empty utxo (scriptValidityToTxBodyScriptValidity era scriptValidity) txBodyContent
                                            cAddr mOverrideWits
 
       firstExceptT ShelleyTxCmdWriteFileError . newExceptT

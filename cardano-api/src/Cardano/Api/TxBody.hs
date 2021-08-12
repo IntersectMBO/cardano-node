@@ -26,9 +26,17 @@ module Cardano.Api.TxBody (
     TxBodyContent(..),
     TxBodyError(..),
     TxBodyScriptData(..),
+    TxBodyScriptValidity(..),
+    TxBodyScriptValiditySupportedInEra(..),
+
     ScriptValidity(..),
-    txScriptValidityToIsValid,
-    isValidToTxScriptValidity,
+    scriptValidityToIsValid,
+    isValidToScriptValidity,
+    scriptValidityToTxBodyScriptValidity,
+    scriptValidityToTxBodyScriptValidity',
+    txBodyScriptValidityToIsValid,
+    txBodyScriptValidityToScriptValidity,
+    txBodyScriptValiditySupportedInEra,
 
     -- * Transaction Ids
     TxId(..),
@@ -232,18 +240,62 @@ data ScriptValidity
   deriving (Eq, Show)
 
 instance ToCBOR ScriptValidity where
-  toCBOR = toCBOR . txScriptValidityToIsValid
+  toCBOR = toCBOR . scriptValidityToIsValid
 
 instance FromCBOR ScriptValidity where
-  fromCBOR = isValidToTxScriptValidity <$> fromCBOR
+  fromCBOR = isValidToScriptValidity <$> fromCBOR
 
-txScriptValidityToIsValid :: ScriptValidity -> Alonzo.IsValid
-txScriptValidityToIsValid ScriptInvalid = Alonzo.IsValid False
-txScriptValidityToIsValid ScriptValid = Alonzo.IsValid True
+scriptValidityToIsValid :: ScriptValidity -> Alonzo.IsValid
+scriptValidityToIsValid ScriptInvalid = Alonzo.IsValid False
+scriptValidityToIsValid ScriptValid = Alonzo.IsValid True
 
-isValidToTxScriptValidity :: Alonzo.IsValid -> ScriptValidity
-isValidToTxScriptValidity (Alonzo.IsValid False) = ScriptInvalid
-isValidToTxScriptValidity (Alonzo.IsValid True) = ScriptValid
+isValidToScriptValidity :: Alonzo.IsValid -> ScriptValidity
+isValidToScriptValidity (Alonzo.IsValid False) = ScriptInvalid
+isValidToScriptValidity (Alonzo.IsValid True) = ScriptValid
+
+-- | A representation of whether the era supports tx script validity.
+--
+-- The Mary and subsequent eras support script validity.
+--
+data TxBodyScriptValidity era where
+  TxBodyScriptValidityNone :: TxBodyScriptValidity era
+
+  -- | Tx script validity is supported in transactions in the 'Alonzo' era.
+  TxBodyScriptValidity
+    :: TxBodyScriptValiditySupportedInEra era
+    -> ScriptValidity
+    -> TxBodyScriptValidity era
+
+deriving instance Eq   (TxBodyScriptValiditySupportedInEra era)
+deriving instance Show (TxBodyScriptValiditySupportedInEra era)
+
+data TxBodyScriptValiditySupportedInEra era where
+  TxBodyScriptValiditySupportedInAlonzoEra :: TxBodyScriptValiditySupportedInEra AlonzoEra
+
+deriving instance Eq   (TxBodyScriptValidity era)
+deriving instance Show (TxBodyScriptValidity era)
+
+txBodyScriptValiditySupportedInEra :: CardanoEra era -> Maybe (TxBodyScriptValiditySupportedInEra era)
+txBodyScriptValiditySupportedInEra ByronEra   = Nothing
+txBodyScriptValiditySupportedInEra ShelleyEra = Nothing
+txBodyScriptValiditySupportedInEra AllegraEra = Nothing
+txBodyScriptValiditySupportedInEra MaryEra    = Nothing
+txBodyScriptValiditySupportedInEra AlonzoEra  = Just TxBodyScriptValiditySupportedInAlonzoEra
+
+txBodyScriptValidityToScriptValidity :: TxBodyScriptValidity era -> ScriptValidity
+txBodyScriptValidityToScriptValidity TxBodyScriptValidityNone = ScriptValid
+txBodyScriptValidityToScriptValidity (TxBodyScriptValidity _ scriptValidity) = scriptValidity
+
+scriptValidityToTxBodyScriptValidity :: CardanoEra era -> ScriptValidity -> TxBodyScriptValidity era
+scriptValidityToTxBodyScriptValidity era scriptValidity = case txBodyScriptValiditySupportedInEra era of
+  Nothing -> TxBodyScriptValidityNone
+  Just witness -> TxBodyScriptValidity witness scriptValidity
+
+scriptValidityToTxBodyScriptValidity' :: IsCardanoEra era => ScriptValidity -> TxBodyScriptValidity era
+scriptValidityToTxBodyScriptValidity' = scriptValidityToTxBodyScriptValidity cardanoEra
+
+txBodyScriptValidityToIsValid :: TxBodyScriptValidity era -> Alonzo.IsValid
+txBodyScriptValidityToIsValid = scriptValidityToIsValid . txBodyScriptValidityToScriptValidity
 
 -- ----------------------------------------------------------------------------
 -- Transaction Ids
@@ -1166,7 +1218,7 @@ data TxBody era where
           -- auxiliary data.
        -> Maybe (Ledger.AuxiliaryData (ShelleyLedgerEra era))
 
-       -> ScriptValidity -- ^ Mark script as expected to pass or fail validation
+       -> TxBodyScriptValidity era -- ^ Mark script as expected to pass or fail validation
 
        -> TxBody era
      -- The 'ShelleyBasedEra' GADT tells us what era we are in.
@@ -1347,7 +1399,7 @@ serialiseShelleyBasedTxBody
   -> [Ledger.Script ledgerera]
   -> TxBodyScriptData era
   -> Maybe (Ledger.AuxiliaryData ledgerera)
-  -> ScriptValidity -- ^ Mark script as expected to pass or fail validation
+  -> TxBodyScriptValidity era -- ^ Mark script as expected to pass or fail validation
   -> ByteString
 serialiseShelleyBasedTxBody _era txbody txscripts
                             TxBodyNoScriptData txmetadata _scriptValidity =
@@ -1360,14 +1412,14 @@ serialiseShelleyBasedTxBody _era txbody txscripts
 
 serialiseShelleyBasedTxBody _era txbody txscripts
                             (TxBodyScriptData _ datums redeemers)
-                            txmetadata scriptValidity =
+                            txmetadata txBodycriptValidity =
     CBOR.serializeEncoding' $
         CBOR.encodeListLen 6
      <> CBOR.toCBOR txbody
      <> CBOR.toCBOR txscripts
      <> CBOR.toCBOR datums
      <> CBOR.toCBOR redeemers
-     <> CBOR.toCBOR scriptValidity
+     <> CBOR.toCBOR (txBodyScriptValidityToScriptValidity txBodycriptValidity)
      <> CBOR.encodeNullMaybe CBOR.toCBOR txmetadata
 
 deserialiseShelleyBasedTxBody
@@ -1392,16 +1444,16 @@ deserialiseShelleyBasedTxBody era bs =
       len <- CBOR.decodeListLen
       txbody     <- fromCBOR
       txscripts  <- fromCBOR
-      (txscriptdata, scriptValidity) <-
+      (txscriptdata, txBodyScriptValidity) <-
         -- Backwards compat for pre-Alonzo era tx body files
         case len of
-          3 -> return (return TxBodyNoScriptData, return ScriptValid)
+          3 -> return (return TxBodyNoScriptData, return TxBodyScriptValidityNone)
           6 -> case scriptDataSupportedInEra (shelleyBasedToCardanoEra era) of
                   Nothing -> do
                     CBOR.decodeNull
                     CBOR.decodeNull
                     CBOR.decodeNull
-                    return (return TxBodyNoScriptData, return ScriptValid)
+                    return (return TxBodyNoScriptData, return TxBodyScriptValidityNone)
                   Just supported -> do
                     datums    <- fromCBOR
                     redeemers <- fromCBOR
@@ -1411,7 +1463,10 @@ deserialiseShelleyBasedTxBody era bs =
                           TxBodyScriptData supported
                             (flip CBOR.runAnnotator fbs datums)
                             (flip CBOR.runAnnotator fbs redeemers)
-                      , return scriptValidity
+                      , case txBodyScriptValiditySupportedInEra (shelleyBasedToCardanoEra era) of
+                          Nothing -> return TxBodyScriptValidityNone
+                          Just txBodyScriptValiditySupportedInEraWitness ->
+                            return $ TxBodyScriptValidity txBodyScriptValiditySupportedInEraWitness scriptValidity
                       )
           _ -> fail "expected tx body tuple of size 3 or 5"
       txmetadata <- CBOR.decodeNullMaybe fromCBOR
@@ -1421,7 +1476,7 @@ deserialiseShelleyBasedTxBody era bs =
           (map (flip CBOR.runAnnotator fbs) txscripts)
           (flip CBOR.runAnnotator fbs txscriptdata)
           (fmap (flip CBOR.runAnnotator fbs) txmetadata)
-          (flip CBOR.runAnnotator fbs scriptValidity)
+          (flip CBOR.runAnnotator fbs txBodyScriptValidity)
 
 instance IsCardanoEra era => HasTextEnvelope (TxBody era) where
     textEnvelopeType _ =
@@ -1479,9 +1534,9 @@ instance Error TxBodyError where
       "parameters to hash"
 
 
-makeTransactionBody :: forall era. ()
-  => IsCardanoEra era
-  => ScriptValidity -- ^ Mark script as expected to pass or fail validation
+makeTransactionBody :: forall era.
+     IsCardanoEra era
+  => TxBodyScriptValidity era -- ^ Mark script as expected to pass or fail validation
   -> TxBodyContent BuildTx era
   -> Either TxBodyError (TxBody era)
 makeTransactionBody scriptValidity =
@@ -1916,7 +1971,7 @@ getByronTxBodyContent (Annotated Byron.UnsafeTx{txInputs, txOutputs} _) =
 
 makeShelleyTransactionBody :: ()
   => ShelleyBasedEra era
-  -> ScriptValidity -- ^ Mark script as expected to pass or fail validation
+  -> TxBodyScriptValidity era -- ^ Mark script as expected to pass or fail validation
   -> TxBodyContent BuildTx era
   -> Either TxBodyError (TxBody era)
 makeShelleyTransactionBody era@ShelleyBasedEraShelley

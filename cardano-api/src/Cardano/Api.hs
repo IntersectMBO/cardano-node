@@ -240,13 +240,18 @@ module Cardano.Api (
     -- ** Building transactions with automated fees and balancing
     makeTransactionBodyAutoBalance,
     TxBodyErrorAutoBalance(..),
+    TxBodyScriptValidity(..),
+    ScriptValidity(..),
+    TxBodyScriptValiditySupportedInEra(..),
+    scriptValidityToTxBodyScriptValidity,
+    scriptValidityToTxBodyScriptValidity',
+    txBodyScriptValiditySupportedInEra,
 
     -- * Signing transactions
     -- | Creating transaction witnesses one by one, or all in one go.
     Tx(Tx),
     getTxBody,
     getTxWitnesses,
-    ScriptValidity(..),
 
     -- ** Signing in one go
     signByronTransaction,

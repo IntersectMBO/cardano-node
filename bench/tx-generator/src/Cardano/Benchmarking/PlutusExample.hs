@@ -25,7 +25,7 @@ payToScript ::
   -> NetworkId
   -> TxGenerator AlonzoEra
 payToScript key (script, txOutDatumHash) networkId inFunds outValues validity
-  = case makeTransactionBody ScriptValid txBodyContent of
+  = case makeTransactionBody TxBodyScriptValidityNone txBodyContent of
       Left err -> error $ show err
       Right b -> Right ( signShelleyTransaction b (map (WitnessPaymentKey . getFundKey) inFunds)
                        , newFunds $ getTxId b
@@ -93,7 +93,7 @@ spendFromScript ::
   -> Validity
   -> Either String (Tx AlonzoEra, [Fund])
 spendFromScript key script networkId protocolParameters collateral inFunds validity
-  = case makeTransactionBody ScriptValid txBodyContent of
+  = case makeTransactionBody TxBodyScriptValidityNone txBodyContent of
       Left err -> error $ show err
       Right b -> Right ( signShelleyTransaction b (map (WitnessPaymentKey . getFundKey) inFunds)
                        , newFunds $ getTxId b

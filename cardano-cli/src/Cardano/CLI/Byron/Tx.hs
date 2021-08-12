@@ -169,7 +169,7 @@ txSpendGenesisUTxOByronPBFT gc nId sk (ByronAddress bAddr) outs = do
             TxCertificatesNone
             TxUpdateProposalNone
             TxMintNone
-    case makeTransactionBody ScriptValid txBodyCont of
+    case makeTransactionBody TxBodyScriptValidityNone txBodyCont of
       Left err -> error $ "Error occured while creating a Byron genesis based UTxO transaction: " <> show err
       Right txBody -> let bWit = fromByronWitness sk nId txBody
                       in makeSignedTransaction [bWit] txBody
@@ -208,7 +208,7 @@ txSpendUTxOByronPBFT nId sk txIns outs = do
                      TxCertificatesNone
                      TxUpdateProposalNone
                      TxMintNone
-  case makeTransactionBody ScriptValid txBodyCont of
+  case makeTransactionBody TxBodyScriptValidityNone txBodyCont of
     Left err -> error $ "Error occured while creating a Byron genesis based UTxO transaction: " <> show err
     Right txBody -> let bWit = fromByronWitness sk nId txBody
                     in makeSignedTransaction [bWit] txBody

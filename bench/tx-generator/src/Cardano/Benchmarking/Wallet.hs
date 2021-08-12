@@ -98,7 +98,7 @@ genTx :: forall era. IsShelleyBasedEra era
   -> TxMetadataInEra era
   -> TxGenerator era
 genTx key networkId fee metadata inFunds outValues validity
-  = case makeTransactionBody ScriptValid txBodyContent of
+  = case makeTransactionBody TxBodyScriptValidityNone txBodyContent of
       Left err -> error $ show err
       Right b -> Right ( signShelleyTransaction b (map (WitnessPaymentKey . getFundKey) inFunds)
                        , newFunds $ getTxId b
