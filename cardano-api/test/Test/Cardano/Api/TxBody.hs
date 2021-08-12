@@ -20,14 +20,39 @@ import           Gen.Cardano.Api.Typed (genTxBody, genTxBodyContent)
 
 -- * Properties
 
--- | Check that conversion from 'TxBodyContent' to 'TxBody' and back gives
--- result equivalent to original.
---
--- The original randomly-generated data requires
--- BuildTx/ViewTx type conversion (see Review section) and
--- normalization (see Normalization section).
---
--- Roundtrip data requires normalization, too.
+{-|
+Check that conversion from 'TxBodyContent' to 'TxBody' and back gives
+result equivalent to original.
+
+The original randomly-generated data requires
+BuildTx/ViewTx type conversion (see Review section) and
+normalization (see Normalization section).
+Roundtrip data requires normalization, too.
+
+                    +------------------+
+                    | genTxBodyContent |
+                    +---------+--------+
+                              |
+                              v
+                ( :: TxBodyContent BuildTx )
+                  |                     |
+                  |                     | makeTransactionBody
+                  |                     v
+           review |                ( :: TxBody )
+                  v                     |
+      ( :: TxBodyContent ViewTx )       | unwrap pattern TxBody
+                  |                     v
+normalizeOriginal |         ( :: TxBodyContent ViewTx )
+                  v                     |
+      ( :: TxBodyContent ViewTx )       | normalizeRoundtrip
+                        \               v
+                         \  ( :: TxBodyContent ViewTx )
+                          \      /
+                           v    v
+                          +------+
+                          | (==) |
+                          +------+
+-}
 test_roundtrip_TxBody_make_get :: [TestTree]
 test_roundtrip_TxBody_make_get =
   [ testProperty (show era) $
@@ -40,15 +65,40 @@ test_roundtrip_TxBody_make_get =
   | AnyCardanoEra era <- [minBound..]
   ]
 
--- | Check that conversion from 'TxBody' to 'TxBodyContent' and back gives
--- result equivalent to original.
---
--- The original randomly-generated data requires
--- ViewTx/BuildTx type conversion (see Rebuild section).
---
--- No normalization is needed here, because 'TxBody' keeps less information
--- on type and value level than 'TxBodyContent'.
--- For instance, no special /None/ values.
+{- | Check that conversion from 'TxBody' to 'TxBodyContent' and back gives
+result equivalent to original.
+
+The original randomly-generated data requires
+ViewTx/BuildTx type conversion (see Rebuild section).
+
+No normalization is needed here, because 'TxBody' keeps less information
+on type and value level than 'TxBodyContent'.
+For instance, no special /None/ values.
+
+                       +-----------+
+                       | genTxBody |
+                       +-----+-----+
+                             |
+                             v
+                       ( :: TxBody )
+                          /     \
+   unwrap pattern TxBody /       \
+                        v         \
+ ( :: TxBodyContent ViewTx )       |
+                        |          |
+                rebuild |          |
+                        v          |
+( :: TxBodyContent BuildTx )       |
+                        |          |
+    makeTransactionBody |          |
+                        v          |
+               ( :: TxBody )      /
+                          \      /
+                           v    v
+                          +------+
+                          | (==) |
+                          +------+
+-}
 test_roundtrip_TxBody_get_make :: [TestTree]
 test_roundtrip_TxBody_get_make =
   [ testProperty (show era) $
