@@ -87,8 +87,6 @@ import           Ouroboros.Network.Protocol.LocalStateQuery.Type (LocalStateQuer
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as LocalStateQuery
 import           Ouroboros.Network.Protocol.LocalTxSubmission.Type (LocalTxSubmission)
 import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Type as LocalTxSub
-import           Ouroboros.Network.Protocol.Trans.Hello.Type (ClientHasAgency (..), Message (..),
-                   ServerHasAgency (..))
 import           Ouroboros.Network.Protocol.TxSubmission.Type (Message (..), TxSubmission)
 import           Ouroboros.Network.Snocket (LocalAddress (..))
 import           Ouroboros.Network.Subscription (ConnectResult (..), DnsTrace (..),

@@ -117,7 +117,6 @@ import           Ouroboros.Network.TxSubmission.Inbound
 
 import qualified Cardano.Node.STM as STM
 import qualified Control.Concurrent.STM as STM
-import qualified Ouroboros.Network.Diffusion as ND
 
 import           Shelley.Spec.Ledger.OCert (KESPeriod (..))
 

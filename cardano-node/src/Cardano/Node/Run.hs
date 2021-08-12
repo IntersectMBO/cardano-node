@@ -83,7 +83,6 @@ import           Ouroboros.Network.Subscription
 import qualified Ouroboros.Network.Diffusion as Diffusion
 import qualified Ouroboros.Network.Diffusion.P2P as P2P
 import qualified Ouroboros.Network.Diffusion.NonP2P as NonP2P
-import           Ouroboros.Network.Magic (NetworkMagic (..))
 import           Ouroboros.Network.NodeToClient (LocalAddress (..), LocalSocket (..))
 import           Ouroboros.Network.NodeToNode (RemoteAddress,
                    AcceptedConnectionsLimit (..), PeerSelectionTargets (..))
