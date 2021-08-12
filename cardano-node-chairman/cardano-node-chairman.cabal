@@ -65,13 +65,10 @@ test-suite chairman-tests
   type:                 exitcode-stdio-1.0
 
   build-depends:        cardano-testnet
-                      , bytestring
-		      , cardano-node
                       , filepath
                       , hedgehog
                       , hedgehog-extras
                       , network
-                      , ouroboros-network
                       , process
                       , random
                       , resourcet
