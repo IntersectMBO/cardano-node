@@ -135,12 +135,6 @@ data Wallet = Wallet
   , paymentSKey :: FilePath
   } deriving (Eq, Show)
 
--- | Rewrite a line in the configuration file
-rewriteConfiguration :: Bool -> String -> String
-rewriteConfiguration True "EnableP2P: False" = "EnableP2P: True"
-rewriteConfiguration False "EnableP2P: True" = "EnableP2P: False"
-rewriteConfiguration _ s                     = s
-
 ifaceAddress :: String
 ifaceAddress = "127.0.0.1"
 
