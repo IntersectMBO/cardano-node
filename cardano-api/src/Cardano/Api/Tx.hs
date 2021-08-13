@@ -22,6 +22,7 @@ module Cardano.Api.Tx (
     Tx(.., Tx),
     getTxBody,
     getTxWitnesses,
+    ScriptValidity(..),
 
     -- ** Signing in one go
     ShelleySigningKey(..),
@@ -109,7 +110,6 @@ import           Cardano.Api.NetworkId
 import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseTextEnvelope
 import           Cardano.Api.TxBody
-
 
 -- ----------------------------------------------------------------------------
 -- Signed transactions
@@ -394,7 +394,6 @@ instance IsCardanoEra era => HasTextEnvelope (KeyWitness era) where
         MaryEra    -> "TxWitness MaryEra"
         AlonzoEra  -> "TxWitness AlonzoEra"
 
-
 pattern Tx :: TxBody era -> [KeyWitness era] -> Tx era
 pattern Tx txbody ws <- (getTxBodyAndWitnesses -> (txbody, ws))
   where
@@ -413,7 +412,7 @@ getTxBody (ShelleyTx era tx) =
       ShelleyBasedEraShelley -> getShelleyTxBody tx
       ShelleyBasedEraAllegra -> getShelleyTxBody tx
       ShelleyBasedEraMary    -> getShelleyTxBody tx
-      ShelleyBasedEraAlonzo  -> getAlonzoTxBody ScriptDataInAlonzoEra tx
+      ShelleyBasedEraAlonzo  -> getAlonzoTxBody ScriptDataInAlonzoEra TxScriptValiditySupportedInAlonzoEra tx
   where
     getShelleyTxBody :: forall ledgerera.
                         ShelleyLedgerEra era ~ ledgerera
@@ -433,13 +432,15 @@ getTxBody (ShelleyTx era tx) =
                     (Map.elems msigWits)
                     TxBodyNoScriptData
                     (strictMaybeToMaybe txAuxiliaryData)
+                    TxScriptValidityNone
 
     getAlonzoTxBody :: forall ledgerera.
                        ShelleyLedgerEra era ~ ledgerera
                     => ScriptDataSupportedInEra era
+                    -> TxScriptValiditySupportedInEra era
                     -> Alonzo.ValidatedTx ledgerera
                     -> TxBody era
-    getAlonzoTxBody scriptDataInEra
+    getAlonzoTxBody scriptDataInEra txScriptValidityInEra
                     Alonzo.ValidatedTx {
                       Alonzo.body = txbody,
                       Alonzo.wits = Alonzo.TxWitness'
@@ -448,12 +449,14 @@ getTxBody (ShelleyTx era tx) =
                                      txscripts
                                      txdats
                                      redeemers,
-                      Alonzo.auxiliaryData = auxiliaryData
+                      Alonzo.auxiliaryData = auxiliaryData,
+                      Alonzo.isValid = isValid
                     } =
       ShelleyTxBody era txbody
                     (Map.elems txscripts)
                     (TxBodyScriptData scriptDataInEra txdats redeemers)
                     (strictMaybeToMaybe auxiliaryData)
+                    (TxScriptValidity txScriptValidityInEra (isValidToScriptValidity isValid))
 
 
 getTxWitnesses :: forall era. Tx era -> [KeyWitness era]
@@ -503,11 +506,10 @@ getTxWitnesses (ShelleyTx era tx) =
         map (ShelleyBootstrapWitness era) (Set.elems bootWits)
      ++ map (ShelleyKeyWitness       era) (Set.elems addrWits)
 
-
 makeSignedTransaction :: forall era.
-                         [KeyWitness era]
-                      -> TxBody era
-                      -> Tx era
+     [KeyWitness era]
+  -> TxBody era
+  -> Tx era
 makeSignedTransaction witnesses (ByronTxBody txbody) =
     ByronTx
   . Byron.annotateTxAux
@@ -518,7 +520,9 @@ makeSignedTransaction witnesses (ByronTxBody txbody) =
 makeSignedTransaction witnesses (ShelleyTxBody era txbody
                                                txscripts
                                                txscriptdata
-                                               txmetadata) =
+                                               txmetadata
+                                               scriptValidity
+                                               ) =
     case era of
       ShelleyBasedEraShelley -> makeShelleySignedTransaction txbody
       ShelleyBasedEraAllegra -> makeShelleySignedTransaction txbody
@@ -568,7 +572,7 @@ makeSignedTransaction witnesses (ShelleyTxBody era txbody
                           | sw <- txscripts ])
             datums
             redeemers)
-          (Alonzo.IsValid True) --TODO: expose this in the API
+          (txScriptValidityToIsValid scriptValidity)
           (maybeToStrictMaybe txmetadata)
       where
         (datums, redeemers) =
@@ -582,7 +586,7 @@ makeByronKeyWitness :: forall key.
                     -> TxBody ByronEra
                     -> SigningKey key
                     -> KeyWitness ByronEra
-makeByronKeyWitness _ (ShelleyTxBody era _ _ _ _) = case era of {}
+makeByronKeyWitness _ (ShelleyTxBody era _ _ _ _ _) = case era of {}
 makeByronKeyWitness nw (ByronTxBody txbody) =
     let txhash :: Byron.Hash Byron.Tx
         txhash = Byron.hashDecoded txbody
@@ -633,7 +637,7 @@ makeShelleyBootstrapWitness :: forall era.
 makeShelleyBootstrapWitness _ ByronTxBody{} _ =
     case shelleyBasedEra :: ShelleyBasedEra era of {}
 
-makeShelleyBootstrapWitness nwOrAddr (ShelleyTxBody era txbody _ _ _) sk =
+makeShelleyBootstrapWitness nwOrAddr (ShelleyTxBody era txbody _ _ _ _) sk =
     case era of
       ShelleyBasedEraShelley ->
         makeShelleyBasedBootstrapWitness era nwOrAddr txbody sk
@@ -746,7 +750,7 @@ makeShelleyKeyWitness :: forall era
                       => TxBody era
                       -> ShelleyWitnessSigningKey
                       -> KeyWitness era
-makeShelleyKeyWitness (ShelleyTxBody era txbody _ _ _) =
+makeShelleyKeyWitness (ShelleyTxBody era txbody _ _ _ _) =
     case era of
       ShelleyBasedEraShelley -> makeShelleyBasedKeyWitness txbody
       ShelleyBasedEraAllegra -> makeShelleyBasedKeyWitness txbody

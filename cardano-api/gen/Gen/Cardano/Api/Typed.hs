@@ -495,6 +495,7 @@ genTxBodyContent era = do
   txCertificates <- genTxCertificates era
   txUpdateProposal <- genTxUpdateProposal era
   txMintValue <- genTxMintValue era
+  txScriptValidity <- BuildTxWith <$> genTxScriptValidity era
 
   pure $ TxBodyContent
     { Api.txIns
@@ -511,6 +512,7 @@ genTxBodyContent era = do
     , Api.txCertificates
     , Api.txUpdateProposal
     , Api.txMintValue
+    , Api.txScriptValidity
     }
 
 genTxInsCollateral :: CardanoEra era -> Gen (TxInsCollateral era)
@@ -534,6 +536,14 @@ genTxBody era = do
   case res of
     Left err -> fail (displayError err)
     Right txBody -> pure txBody
+
+genTxScriptValidity :: CardanoEra era -> Gen (TxScriptValidity era)
+genTxScriptValidity era = case txScriptValiditySupportedInCardanoEra era of
+  Nothing -> pure TxScriptValidityNone
+  Just witness -> TxScriptValidity witness <$> genScriptValidity
+
+genScriptValidity :: Gen ScriptValidity
+genScriptValidity = Gen.element [ScriptInvalid, ScriptValid]
 
 genTx :: forall era. IsCardanoEra era => CardanoEra era -> Gen (Tx era)
 genTx era =
