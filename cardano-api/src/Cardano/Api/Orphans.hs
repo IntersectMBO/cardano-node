@@ -58,6 +58,8 @@ import           Shelley.Spec.Ledger.PParams (PParamsUpdate)
 import qualified Shelley.Spec.Ledger.Rewards as Shelley
 import qualified Shelley.Spec.Ledger.RewardUpdate as Shelley
 
+import Plutus.V1.Ledger.Api (defaultCostModelParams)
+
 -- Orphan instances involved in the JSON output of the API queries.
 -- We will remove/replace these as we provide more API wrapper types
 
@@ -360,7 +362,7 @@ instance FromJSON Alonzo.AlonzoGenesis where
     collateralPercentage <- o .:  "collateralPercentage"
     maxCollateralInputs  <- o .:  "maxCollateralInputs"
     case cModels of
-      Nothing -> case Alonzo.defaultCostModel of
+      Nothing -> case Alonzo.CostModel <$> defaultCostModelParams of
         Just m -> return Alonzo.AlonzoGenesis
           { Alonzo.coinsPerUTxOWord
           , Alonzo.costmdls = Map.singleton Alonzo.PlutusV1 m

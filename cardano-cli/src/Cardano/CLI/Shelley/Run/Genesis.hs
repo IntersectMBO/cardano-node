@@ -83,6 +83,7 @@ import           Cardano.CLI.Shelley.Run.Pool (ShelleyPoolCmdError (..), renderS
 import           Cardano.CLI.Shelley.Run.StakeAddress (ShelleyStakeAddressCmdError (..),
                    renderShelleyStakeAddressCmdError, runStakeAddressKeyGen)
 import           Cardano.CLI.Types
+import           Plutus.V1.Ledger.Api (defaultCostModelParams)
 
 {- HLINT ignore "Reduce duplication" -}
 
@@ -782,7 +783,7 @@ updateTemplate (SystemStart start)
               , sgsStake = Ledger._poolId <$> poolSpecs
               }
           }
-        cModel = case Alonzo.defaultCostModel of
+        cModel = case Alonzo.CostModel <$> defaultCostModelParams of
                    Just (Alonzo.CostModel m) ->
                      if Alonzo.validateCostModelParams m
                      then Map.singleton Alonzo.PlutusV1 (Alonzo.CostModel m)

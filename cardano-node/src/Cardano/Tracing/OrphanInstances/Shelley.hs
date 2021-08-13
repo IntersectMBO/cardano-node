@@ -955,9 +955,10 @@ instance ToObject (Alonzo.UtxoPredicateFailure (Alonzo.AlonzoEra StandardCrypto)
     mkObject [ "kind" .= String "NoCollateralInputs" ]
 
 instance ToObject (Alonzo.UtxosPredicateFailure (AlonzoEra StandardCrypto)) where
-  toObject _ (Alonzo.ValidationTagMismatch isValidating) =
+  toObject _ (Alonzo.ValidationTagMismatch isValidating reason) =
     mkObject [ "kind" .= String "ValidationTagMismatch"
              , "isvalidating" .= isValidating
+             , "reason" .= reason
              ]
   toObject _ (Alonzo.CollectErrors errors) =
     mkObject [ "kind" .= String "CollectErrors"
