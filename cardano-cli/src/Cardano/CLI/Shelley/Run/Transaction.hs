@@ -259,20 +259,21 @@ renderFeature TxFeatureShelleyKeys          = "Shelley keys"
 renderFeature TxFeatureCollateral           = "Collateral inputs"
 renderFeature TxFeatureProtocolParameters   = "Protocol parameters"
 renderFeature TxFeatureTxOutDatum           = "Transaction output datums"
+renderFeature TxFeatureScriptValidity       = "Script validity"
 
 runTransactionCmd :: TransactionCmd -> ExceptT ShelleyTxCmdError IO ()
 runTransactionCmd cmd =
   case cmd of
-    TxBuild era consensusModeParams nid mOverrideWits txins txinsc txouts
+    TxBuild era consensusModeParams nid mScriptValidity mOverrideWits txins txinsc txouts
             changeAddr mValue mLowBound mUpperBound certs wdrls metadataSchema
             scriptFiles metadataFiles mpparams mUpProp out ->
-      runTxBuild era consensusModeParams nid txins txinsc txouts changeAddr mValue mLowBound
+      runTxBuild era consensusModeParams nid mScriptValidity txins txinsc txouts changeAddr mValue mLowBound
                  mUpperBound certs wdrls metadataSchema scriptFiles
                  metadataFiles mpparams mUpProp out mOverrideWits
-    TxBuildRaw era txins txinsc txouts mValue mLowBound mUpperBound
+    TxBuildRaw era mScriptValidity txins txinsc txouts mValue mLowBound mUpperBound
                fee certs wdrls metadataSchema scriptFiles
                metadataFiles mpparams mUpProp out ->
-      runTxBuildRaw era txins txinsc txouts mLowBound mUpperBound
+      runTxBuildRaw era mScriptValidity txins txinsc txouts mLowBound mUpperBound
                     fee mValue certs wdrls metadataSchema
                     scriptFiles metadataFiles mpparams mUpProp out
     TxSign txinfile skfiles network txoutfile ->
@@ -299,6 +300,8 @@ runTransactionCmd cmd =
 
 runTxBuildRaw
   :: AnyCardanoEra
+  -> Maybe ScriptValidity
+  -- ^ Mark script as expected to pass or fail validation
   -> [(TxIn, Maybe (ScriptWitnessFiles WitCtxTxIn))]
   -- ^ TxIn with potential script witness
   -> [TxIn]
@@ -323,7 +326,7 @@ runTxBuildRaw
   -> TxBodyFile
   -> ExceptT ShelleyTxCmdError IO ()
 runTxBuildRaw (AnyCardanoEra era)
-              inputsAndScripts inputsCollateral txouts
+              mScriptValidity inputsAndScripts inputsCollateral txouts
               mLowerBound mUpperBound
               mFee mValue
               certFiles withdrawals
@@ -348,10 +351,12 @@ runTxBuildRaw (AnyCardanoEra era)
         <*> validateTxCertificates   era certFiles
         <*> validateTxUpdateProposal era mUpdatePropFile
         <*> validateTxMintValue      era mValue
+        <*> validateTxScriptValidity era mScriptValidity
 
     txBody <-
       firstExceptT ShelleyTxCmdTxBodyError . hoistEither $
         makeTransactionBody txBodyContent
+
     firstExceptT ShelleyTxCmdWriteFileError . newExceptT $
       writeFileTextEnvelope fpath Nothing txBody
 
@@ -360,6 +365,8 @@ runTxBuild
   :: AnyCardanoEra
   -> AnyConsensusModeParams
   -> NetworkId
+  -> Maybe ScriptValidity
+  -- ^ Mark script as expected to pass or fail validation
   -> [(TxIn, Maybe (ScriptWitnessFiles WitCtxTxIn))]
   -- ^ TxIn with potential script witness
   -> [TxIn]
@@ -385,7 +392,7 @@ runTxBuild
   -> TxBodyFile
   -> Maybe Word
   -> ExceptT ShelleyTxCmdError IO ()
-runTxBuild (AnyCardanoEra era) (AnyConsensusModeParams cModeParams) networkId txins txinsc txouts
+runTxBuild (AnyCardanoEra era) (AnyConsensusModeParams cModeParams) networkId mScriptValidity txins txinsc txouts
            (TxOutChangeAddress changeAddr) mValue mLowerBound mUpperBound certFiles withdrawals
            metadataSchema scriptFiles metadataFiles mpparams mUpdatePropFile outBody@(TxBodyFile fpath)
            mOverrideWits = do
@@ -414,6 +421,7 @@ runTxBuild (AnyCardanoEra era) (AnyConsensusModeParams cModeParams) networkId tx
           <*> validateTxCertificates      era certFiles
           <*> validateTxUpdateProposal    era mUpdatePropFile
           <*> validateTxMintValue         era mValue
+          <*> validateTxScriptValidity    era mScriptValidity
 
       -- TODO: Combine queries
       let localConnInfo = LocalNodeConnectInfo
@@ -520,6 +528,7 @@ data TxFeature = TxFeatureShelleyAddresses
                | TxFeatureCollateral
                | TxFeatureProtocolParameters
                | TxFeatureTxOutDatum
+               | TxFeatureScriptValidity
   deriving Show
 
 txFeatureMismatch :: CardanoEra era
@@ -770,6 +779,15 @@ validateTxUpdateProposal era (Just (UpdateProposalFile file)) =
                    readFileTextEnvelope AsUpdateProposal file
          return (TxUpdateProposal supported prop)
 
+validateTxScriptValidity :: forall era.
+     CardanoEra era
+  -> Maybe ScriptValidity
+  -> ExceptT ShelleyTxCmdError IO (BuildTxWith BuildTx (TxScriptValidity era))
+validateTxScriptValidity _ Nothing = pure $ BuildTxWith TxScriptValidityNone
+validateTxScriptValidity era (Just scriptValidity) =
+  case txScriptValiditySupportedInCardanoEra era of
+    Nothing -> txFeatureMismatch era TxFeatureScriptValidity
+    Just supported -> pure . BuildTxWith $ TxScriptValidity supported scriptValidity
 
 validateTxMintValue :: forall era.
                        CardanoEra era
@@ -904,7 +922,6 @@ runTxSign :: TxBodyFile
           -> TxFile
           -> ExceptT ShelleyTxCmdError IO ()
 runTxSign (TxBodyFile txbodyFile) witSigningData mnw (TxFile txFile) = do
-
   InAnyShelleyBasedEra _era txbody <-
         --TODO: in principle we should be able to support Byron era txs too
         onlyInShelleyBasedEras "sign for Byron era transactions"
@@ -978,7 +995,6 @@ runTxCalculateMinFee (TxBodyFile txbodyFile) nw protocolParamsSourceSpec
                      (TxInCount nInputs) (TxOutCount nOutputs)
                      (TxShelleyWitnessCount nShelleyKeyWitnesses)
                      (TxByronWitnessCount nByronKeyWitnesses) = do
-
     InAnyShelleyBasedEra _era txbody <-
           --TODO: in principle we should be able to support Byron era txs too
           onlyInShelleyBasedEras "calculate-min-fee for Byron era transactions"
@@ -1301,7 +1317,6 @@ runTxSignWitness
   -> OutputFile
   -> ExceptT ShelleyTxCmdError IO ()
 runTxSignWitness (TxBodyFile txbodyFile) witnessFiles (OutputFile oFp) = do
-
     InAnyCardanoEra era txbody  <- readFileTxBody txbodyFile
     InAnyShelleyBasedEra _ _ <-
           --TODO: in principle we should be able to support Byron era txs too

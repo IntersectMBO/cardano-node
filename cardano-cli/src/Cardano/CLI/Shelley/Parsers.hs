@@ -609,11 +609,28 @@ pTransaction =
     Opt.subparser
       $ Opt.command "sign-witness" assembleInfo <> Opt.internal
 
+  pScriptValidity :: Parser ScriptValidity
+  pScriptValidity = asum
+    [ Opt.flag' ScriptValid $ mconcat
+      [ Opt.long "script-valid"
+      , Opt.help "Assertion that the script is valid. (default)"
+      ]
+    , Opt.flag' ScriptInvalid $ mconcat
+      [ Opt.long "script-invalid"
+      , Opt.help $ mconcat
+        [ "Assertion that the script is invalid.  "
+        , "If a transaction is submitted with such a script, "
+        , "the script will fail and the collateral taken"
+        ]
+      ]
+    ]
+
   pTransactionBuild :: Parser TransactionCmd
   pTransactionBuild =
     TxBuild <$> pCardanoEra
             <*> pConsensusModeParams
             <*> pNetworkId
+            <*> optional pScriptValidity
             <*> optional pWitnessOverride
             <*> some (pTxIn AutoBalance)
             <*> many pTxInCollateral
@@ -646,6 +663,7 @@ pTransaction =
   pTransactionBuildRaw :: Parser TransactionCmd
   pTransactionBuildRaw =
     TxBuildRaw <$> pCardanoEra
+               <*> optional pScriptValidity
                <*> some (pTxIn ManualBalance)
                <*> many pTxInCollateral
                <*> many pTxOut
