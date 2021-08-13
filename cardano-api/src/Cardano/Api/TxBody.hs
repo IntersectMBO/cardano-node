@@ -26,6 +26,15 @@ module Cardano.Api.TxBody (
     TxBodyContent(..),
     TxBodyError(..),
     TxBodyScriptData(..),
+    TxScriptValidity(..),
+    TxScriptValiditySupportedInEra(..),
+
+    ScriptValidity(..),
+    scriptValidityToIsValid,
+    isValidToScriptValidity,
+    scriptValidityToTxScriptValidity,
+    txScriptValidityToIsValid,
+    txScriptValidityToScriptValidity,
 
     -- * Transaction Ids
     TxId(..),
@@ -64,6 +73,7 @@ module Cardano.Api.TxBody (
 
     -- ** Building vs viewing transactions
     BuildTxWith(..),
+    unBuildTxWith,
     BuildTx,
     ViewTx,
 
@@ -98,6 +108,8 @@ module Cardano.Api.TxBody (
     withdrawalsSupportedInEra,
     certificatesSupportedInEra,
     updateProposalSupportedInEra,
+    txScriptValiditySupportedInShelleyBasedEra,
+    txScriptValiditySupportedInCardanoEra,
 
     -- * Inspecting 'ScriptWitness'es
     AnyScriptWitness(..),
@@ -216,6 +228,78 @@ import           Cardano.Ledger.Crypto (StandardCrypto)
 {- HLINT ignore "Redundant flip" -}
 {- HLINT ignore "Use section" -}
 
+-- | Indicates whether a script is expected to fail or pass validation.
+data ScriptValidity
+  = ScriptInvalid -- ^ Script is expected to fail validation.
+                  -- Transactions marked as such can include scripts that fail validation.
+                  -- Such transactions may be submitted to the chain, in which case the
+                  -- collateral will be taken upon on chain script validation failure.
+
+  | ScriptValid   -- ^ Script is expected to pass validation.
+                  -- Transactions marked as such cannot include scripts that fail validation.
+
+  deriving (Eq, Show)
+
+instance ToCBOR ScriptValidity where
+  toCBOR = toCBOR . scriptValidityToIsValid
+
+instance FromCBOR ScriptValidity where
+  fromCBOR = isValidToScriptValidity <$> fromCBOR
+
+scriptValidityToIsValid :: ScriptValidity -> Alonzo.IsValid
+scriptValidityToIsValid ScriptInvalid = Alonzo.IsValid False
+scriptValidityToIsValid ScriptValid = Alonzo.IsValid True
+
+isValidToScriptValidity :: Alonzo.IsValid -> ScriptValidity
+isValidToScriptValidity (Alonzo.IsValid False) = ScriptInvalid
+isValidToScriptValidity (Alonzo.IsValid True) = ScriptValid
+
+-- | A representation of whether the era supports tx script validity.
+--
+-- The Mary and subsequent eras support script validity.
+--
+data TxScriptValidity era where
+  TxScriptValidityNone :: TxScriptValidity era
+
+  -- | Tx script validity is supported in transactions in the 'Alonzo' era onwards.
+  TxScriptValidity
+    :: TxScriptValiditySupportedInEra era
+    -> ScriptValidity
+    -> TxScriptValidity era
+
+deriving instance Eq   (TxScriptValiditySupportedInEra era)
+deriving instance Show (TxScriptValiditySupportedInEra era)
+
+data TxScriptValiditySupportedInEra era where
+  TxScriptValiditySupportedInAlonzoEra :: TxScriptValiditySupportedInEra AlonzoEra
+
+deriving instance Eq   (TxScriptValidity era)
+deriving instance Show (TxScriptValidity era)
+
+txScriptValiditySupportedInCardanoEra :: CardanoEra era -> Maybe (TxScriptValiditySupportedInEra era)
+txScriptValiditySupportedInCardanoEra ByronEra   = Nothing
+txScriptValiditySupportedInCardanoEra ShelleyEra = Nothing
+txScriptValiditySupportedInCardanoEra AllegraEra = Nothing
+txScriptValiditySupportedInCardanoEra MaryEra    = Nothing
+txScriptValiditySupportedInCardanoEra AlonzoEra  = Just TxScriptValiditySupportedInAlonzoEra
+
+txScriptValiditySupportedInShelleyBasedEra :: ShelleyBasedEra era -> Maybe (TxScriptValiditySupportedInEra era)
+txScriptValiditySupportedInShelleyBasedEra ShelleyBasedEraShelley = Nothing
+txScriptValiditySupportedInShelleyBasedEra ShelleyBasedEraAllegra = Nothing
+txScriptValiditySupportedInShelleyBasedEra ShelleyBasedEraMary    = Nothing
+txScriptValiditySupportedInShelleyBasedEra ShelleyBasedEraAlonzo  = Just TxScriptValiditySupportedInAlonzoEra
+
+txScriptValidityToScriptValidity :: TxScriptValidity era -> ScriptValidity
+txScriptValidityToScriptValidity TxScriptValidityNone = ScriptValid
+txScriptValidityToScriptValidity (TxScriptValidity _ scriptValidity) = scriptValidity
+
+scriptValidityToTxScriptValidity :: ShelleyBasedEra era -> ScriptValidity -> TxScriptValidity era
+scriptValidityToTxScriptValidity era scriptValidity = case txScriptValiditySupportedInShelleyBasedEra era of
+  Nothing -> TxScriptValidityNone
+  Just witness -> TxScriptValidity witness scriptValidity
+
+txScriptValidityToIsValid :: TxScriptValidity era -> Alonzo.IsValid
+txScriptValidityToIsValid = scriptValidityToIsValid . txScriptValidityToScriptValidity
 
 -- ----------------------------------------------------------------------------
 -- Transaction Ids
@@ -262,7 +346,7 @@ getTxId (ByronTxBody tx) =
     impossible =
       error "getTxId: byron and shelley hash sizes do not match"
 
-getTxId (ShelleyTxBody era tx _ _ _) =
+getTxId (ShelleyTxBody era tx _ _ _ _) =
     case era of
       ShelleyBasedEraShelley -> getTxIdShelley tx
       ShelleyBasedEraAllegra -> getTxIdShelley tx
@@ -827,6 +911,8 @@ data BuildTxWith build a where
 deriving instance Eq   a => Eq   (BuildTxWith build a)
 deriving instance Show a => Show (BuildTxWith build a)
 
+unBuildTxWith :: BuildTxWith BuildTx a -> a
+unBuildTxWith (BuildTxWith a) = a
 
 -- ----------------------------------------------------------------------------
 -- Transaction input values (era-dependent)
@@ -1101,7 +1187,8 @@ data TxBodyContent build era =
        txWithdrawals    :: TxWithdrawals  build era,
        txCertificates   :: TxCertificates build era,
        txUpdateProposal :: TxUpdateProposal era,
-       txMintValue      :: TxMintValue    build era
+       txMintValue      :: TxMintValue    build era,
+       txScriptValidity :: BuildTxWith build (TxScriptValidity era)
      }
 
 
@@ -1138,6 +1225,8 @@ data TxBody era where
           -- auxiliary data.
        -> Maybe (Ledger.AuxiliaryData (ShelleyLedgerEra era))
 
+       -> TxScriptValidity era -- ^ Mark script as expected to pass or fail validation
+
        -> TxBody era
      -- The 'ShelleyBasedEra' GADT tells us what era we are in.
      -- The 'ShelleyLedgerEra' type family maps that to the era type from the
@@ -1161,8 +1250,8 @@ instance Eq (TxBody era) where
     (==) (ByronTxBody txbodyA)
          (ByronTxBody txbodyB) = txbodyA == txbodyB
 
-    (==) (ShelleyTxBody era txbodyA txscriptsA redeemersA txmetadataA)
-         (ShelleyTxBody _   txbodyB txscriptsB redeemersB txmetadataB) =
+    (==) (ShelleyTxBody era txbodyA txscriptsA redeemersA txmetadataA scriptValidityA)
+         (ShelleyTxBody _   txbodyB txscriptsB redeemersB txmetadataB scriptValidityB) =
          case era of
            ShelleyBasedEraShelley -> txbodyA     == txbodyB
                                   && txscriptsA  == txscriptsB
@@ -1176,12 +1265,13 @@ instance Eq (TxBody era) where
                                   && txscriptsA  == txscriptsB
                                   && txmetadataA == txmetadataB
 
-           ShelleyBasedEraAlonzo  -> txbodyA     == txbodyB
-                                  && txscriptsA  == txscriptsB
-                                  && redeemersA  == redeemersB
-                                  && txmetadataA == txmetadataB
+           ShelleyBasedEraAlonzo  -> txbodyA         == txbodyB
+                                  && txscriptsA      == txscriptsB
+                                  && redeemersA      == redeemersB
+                                  && txmetadataA     == txmetadataB
+                                  && scriptValidityA == scriptValidityB
 
-    (==) ByronTxBody{} (ShelleyTxBody era _ _ _ _) = case era of {}
+    (==) ByronTxBody{} (ShelleyTxBody era _ _ _ _ _) = case era of {}
 
 
 -- The GADT in the ShelleyTxBody case requires a custom instance
@@ -1193,7 +1283,7 @@ instance Show (TxBody era) where
         )
 
     showsPrec p (ShelleyTxBody ShelleyBasedEraShelley
-                               txbody txscripts redeemers txmetadata) =
+                               txbody txscripts redeemers txmetadata scriptValidity) =
       showParen (p >= 11)
         ( showString "ShelleyTxBody ShelleyBasedEraShelley "
         . showsPrec 11 txbody
@@ -1203,10 +1293,12 @@ instance Show (TxBody era) where
         . showsPrec 11 redeemers
         . showChar ' '
         . showsPrec 11 txmetadata
+        . showChar ' '
+        . showsPrec 11 scriptValidity
         )
 
     showsPrec p (ShelleyTxBody ShelleyBasedEraAllegra
-                               txbody txscripts redeemers txmetadata) =
+                               txbody txscripts redeemers txmetadata scriptValidity) =
       showParen (p >= 11)
         ( showString "ShelleyTxBody ShelleyBasedEraAllegra "
         . showsPrec 11 txbody
@@ -1216,10 +1308,12 @@ instance Show (TxBody era) where
         . showsPrec 11 redeemers
         . showChar ' '
         . showsPrec 11 txmetadata
+        . showChar ' '
+        . showsPrec 11 scriptValidity
         )
 
     showsPrec p (ShelleyTxBody ShelleyBasedEraMary
-                               txbody txscripts redeemers txmetadata) =
+                               txbody txscripts redeemers txmetadata scriptValidity) =
       showParen (p >= 11)
         ( showString "ShelleyTxBody ShelleyBasedEraMary "
         . showsPrec 11 txbody
@@ -1229,10 +1323,12 @@ instance Show (TxBody era) where
         . showsPrec 11 redeemers
         . showChar ' '
         . showsPrec 11 txmetadata
+        . showChar ' '
+        . showsPrec 11 scriptValidity
         )
 
     showsPrec p (ShelleyTxBody ShelleyBasedEraAlonzo
-                               txbody txscripts redeemers txmetadata) =
+                               txbody txscripts redeemers txmetadata scriptValidity) =
       showParen (p >= 11)
         ( showString "ShelleyTxBody ShelleyBasedEraMary "
         . showsPrec 11 txbody
@@ -1242,6 +1338,8 @@ instance Show (TxBody era) where
         . showsPrec 11 redeemers
         . showChar ' '
         . showsPrec 11 txmetadata
+        . showChar ' '
+        . showsPrec 11 scriptValidity
         )
 
 
@@ -1266,17 +1364,17 @@ instance IsCardanoEra era => SerialiseAsCBOR (TxBody era) where
     serialiseToCBOR (ByronTxBody txbody) =
       recoverBytes txbody
 
-    serialiseToCBOR (ShelleyTxBody era txbody txscripts redeemers txmetadata) =
+    serialiseToCBOR (ShelleyTxBody era txbody txscripts redeemers txmetadata scriptValidity) =
       case era of
         -- Use the same serialisation impl, but at different types:
         ShelleyBasedEraShelley -> serialiseShelleyBasedTxBody
-                                    era txbody txscripts redeemers txmetadata
+                                    era txbody txscripts redeemers txmetadata scriptValidity
         ShelleyBasedEraAllegra -> serialiseShelleyBasedTxBody
-                                    era txbody txscripts redeemers txmetadata
+                                    era txbody txscripts redeemers txmetadata scriptValidity
         ShelleyBasedEraMary    -> serialiseShelleyBasedTxBody
-                                    era txbody txscripts redeemers txmetadata
+                                    era txbody txscripts redeemers txmetadata scriptValidity
         ShelleyBasedEraAlonzo  -> serialiseShelleyBasedTxBody
-                                    era txbody txscripts redeemers txmetadata
+                                    era txbody txscripts redeemers txmetadata scriptValidity
 
     deserialiseFromCBOR _ bs =
       case cardanoEra :: CardanoEra era of
@@ -1308,25 +1406,39 @@ serialiseShelleyBasedTxBody
   -> [Ledger.Script ledgerera]
   -> TxBodyScriptData era
   -> Maybe (Ledger.AuxiliaryData ledgerera)
+  -> TxScriptValidity era -- ^ Mark script as expected to pass or fail validation
   -> ByteString
-serialiseShelleyBasedTxBody _era txbody txscripts
-                            TxBodyNoScriptData txmetadata =
+serialiseShelleyBasedTxBody era txbody txscripts
+                            TxBodyNoScriptData txmetadata scriptValidity =
     -- Backwards compat for pre-Alonzo era tx body files
-    CBOR.serializeEncoding' $
-        CBOR.encodeListLen 3
-     <> CBOR.toCBOR txbody
-     <> CBOR.toCBOR txscripts
-     <> CBOR.encodeNullMaybe CBOR.toCBOR txmetadata
+    case era of
+      ShelleyBasedEraShelley -> preAlonzo
+      ShelleyBasedEraAllegra -> preAlonzo
+      ShelleyBasedEraMary -> preAlonzo
+      ShelleyBasedEraAlonzo ->
+        CBOR.serializeEncoding'
+          $ CBOR.encodeListLen 4
+         <> CBOR.toCBOR txbody
+         <> CBOR.toCBOR txscripts
+         <> CBOR.toCBOR (txScriptValidityToScriptValidity scriptValidity)
+         <> CBOR.encodeNullMaybe CBOR.toCBOR txmetadata
+ where
+   preAlonzo = CBOR.serializeEncoding'
+                 $ CBOR.encodeListLen 3
+                <> CBOR.toCBOR txbody
+                <> CBOR.toCBOR txscripts
+                <> CBOR.encodeNullMaybe CBOR.toCBOR txmetadata
 
 serialiseShelleyBasedTxBody _era txbody txscripts
                             (TxBodyScriptData _ datums redeemers)
-                            txmetadata =
+                            txmetadata txBodycriptValidity =
     CBOR.serializeEncoding' $
-        CBOR.encodeListLen 5
+        CBOR.encodeListLen 6
      <> CBOR.toCBOR txbody
      <> CBOR.toCBOR txscripts
      <> CBOR.toCBOR datums
      <> CBOR.toCBOR redeemers
+     <> CBOR.toCBOR (txScriptValidityToScriptValidity txBodycriptValidity)
      <> CBOR.encodeNullMaybe CBOR.toCBOR txmetadata
 
 deserialiseShelleyBasedTxBody
@@ -1349,32 +1461,74 @@ deserialiseShelleyBasedTxBody era bs =
     decodeAnnotatedTuple :: CBOR.Decoder s (CBOR.Annotator (TxBody era))
     decodeAnnotatedTuple = do
       len <- CBOR.decodeListLen
-      txbody     <- fromCBOR
-      txscripts  <- fromCBOR
-      txscriptdata <-
+
+      case len of
         -- Backwards compat for pre-Alonzo era tx body files
-        case len of
-          3 -> return (return TxBodyNoScriptData)
-          5 -> case scriptDataSupportedInEra (shelleyBasedToCardanoEra era) of
-                 Nothing -> do
-                   CBOR.decodeNull
-                   CBOR.decodeNull
-                   return (return TxBodyNoScriptData)
-                 Just supported -> do
-                   datums    <- fromCBOR
-                   redeemers <- fromCBOR
-                   return $ CBOR.Annotator $ \fbs ->
-                     TxBodyScriptData supported
-                       (flip CBOR.runAnnotator fbs datums)
-                       (flip CBOR.runAnnotator fbs redeemers)
-          _ -> fail "expected tx body tuple of size 3 or 5"
-      txmetadata <- CBOR.decodeNullMaybe fromCBOR
-      return $ CBOR.Annotator $ \fbs ->
-        ShelleyTxBody era
-          (flip CBOR.runAnnotator fbs txbody)
-          (map (flip CBOR.runAnnotator fbs) txscripts)
-          (flip CBOR.runAnnotator fbs txscriptdata)
-          (fmap (flip CBOR.runAnnotator fbs) txmetadata)
+        3 -> do
+          txbody     <- fromCBOR
+          txscripts  <- fromCBOR
+          txmetadata <- CBOR.decodeNullMaybe fromCBOR
+          return $ CBOR.Annotator $ \fbs ->
+            ShelleyTxBody era
+              (flip CBOR.runAnnotator fbs txbody)
+              (map (flip CBOR.runAnnotator fbs) txscripts)
+              (flip CBOR.runAnnotator fbs (return TxBodyNoScriptData))
+              (fmap (flip CBOR.runAnnotator fbs) txmetadata)
+              (flip CBOR.runAnnotator fbs (return TxScriptValidityNone))
+        4 -> do
+          sValiditySupported <-
+            case txScriptValiditySupportedInShelleyBasedEra era of
+              Nothing -> fail $ "deserialiseShelleyBasedTxBody: Expected an era that supports the \
+                                \script validity flag but got: "
+                              <> show era
+              Just supported -> return supported
+
+          txbody     <- fromCBOR
+          txscripts  <- fromCBOR
+          scriptValidity <- fromCBOR
+          txmetadata <- CBOR.decodeNullMaybe fromCBOR
+          return $ CBOR.Annotator $ \fbs ->
+            ShelleyTxBody era
+              (flip CBOR.runAnnotator fbs txbody)
+              (map (flip CBOR.runAnnotator fbs) txscripts)
+              (flip CBOR.runAnnotator fbs (return TxBodyNoScriptData))
+              (fmap (flip CBOR.runAnnotator fbs) txmetadata)
+              (flip CBOR.runAnnotator fbs (return $ TxScriptValidity sValiditySupported scriptValidity))
+        6 -> do
+          sDataSupported <-
+            case scriptDataSupportedInEra (shelleyBasedToCardanoEra era) of
+              Nothing -> fail $ "deserialiseShelleyBasedTxBody: Expected an era that supports script\
+                                \ data but got: "
+                             <> show era
+              Just supported -> return supported
+
+          sValiditySupported <-
+            case txScriptValiditySupportedInShelleyBasedEra era of
+              Nothing -> fail $ "deserialiseShelleyBasedTxBody: Expected an era that supports the \
+                                \script validity flag but got: "
+                              <> show era
+              Just supported -> return supported
+
+          txbody    <- fromCBOR
+          txscripts <- fromCBOR
+          datums    <- fromCBOR
+          redeemers <- fromCBOR
+          scriptValidity <- fromCBOR
+          txmetadata <- CBOR.decodeNullMaybe fromCBOR
+
+          let txscriptdata = CBOR.Annotator $ \fbs ->
+                               TxBodyScriptData sDataSupported
+                                 (flip CBOR.runAnnotator fbs datums)
+                                 (flip CBOR.runAnnotator fbs redeemers)
+
+          return $ CBOR.Annotator $ \fbs ->
+            ShelleyTxBody era
+              (flip CBOR.runAnnotator fbs txbody)
+              (map (flip CBOR.runAnnotator fbs) txscripts)
+              (flip CBOR.runAnnotator fbs txscriptdata)
+              (fmap (flip CBOR.runAnnotator fbs) txmetadata)
+              (flip CBOR.runAnnotator fbs (return $ TxScriptValidity sValiditySupported scriptValidity))
+        _ -> fail "expected tx body tuple of size 3, 4 or 6"
 
 instance IsCardanoEra era => HasTextEnvelope (TxBody era) where
     textEnvelopeType _ =
@@ -1433,9 +1587,9 @@ instance Error TxBodyError where
 
 
 makeTransactionBody :: forall era.
-                       IsCardanoEra era
-                    => TxBodyContent BuildTx era
-                    -> Either TxBodyError (TxBody era)
+     IsCardanoEra era
+  => TxBodyContent BuildTx era
+  -> Either TxBodyError (TxBody era)
 makeTransactionBody =
     case cardanoEraStyle (cardanoEra :: CardanoEra era) of
       LegacyByronEra      -> makeByronTransactionBody
@@ -1448,7 +1602,7 @@ pattern TxBody txbodycontent <- (getTxBodyContent -> txbodycontent)
 
 getTxBodyContent :: TxBody era -> TxBodyContent ViewTx era
 getTxBodyContent (ByronTxBody body) = getByronTxBodyContent body
-getTxBodyContent (ShelleyTxBody era body _scripts _redeemers mAux) =
+getTxBodyContent (ShelleyTxBody era body _scripts _redeemers mAux _scriptValidity) =
     fromLedgerTxBody era body mAux
 
 
@@ -1473,6 +1627,7 @@ fromLedgerTxBody era body mAux =
       , txMetadata
       , txAuxScripts
       , txExtraScriptData = ViewTx
+      , txScriptValidity = ViewTx
       }
   where
     (txMetadata, txAuxScripts) = fromLedgerTxAuxiliaryData era mAux
@@ -1526,7 +1681,6 @@ fromLedgerTxOuts era body =
     ShelleyBasedEraAllegra -> toList $ Allegra.outputs' body
     ShelleyBasedEraMary    -> toList $ Mary.outputs'    body
     ShelleyBasedEraAlonzo  -> toList $ Alonzo.outputs'  body
-
 
 fromLedgerTxFee
   :: ShelleyBasedEra era -> Ledger.TxBody (ShelleyLedgerEra era) -> TxFee era
@@ -1863,12 +2017,14 @@ getByronTxBodyContent (Annotated Byron.UnsafeTx{txInputs, txOutputs} _) =
       txWithdrawals    = TxWithdrawalsNone,
       txCertificates   = TxCertificatesNone,
       txUpdateProposal = TxUpdateProposalNone,
-      txMintValue      = TxMintNone
+      txMintValue      = TxMintNone,
+      txScriptValidity = ViewTx
     }
 
-makeShelleyTransactionBody :: ShelleyBasedEra era
-                           -> TxBodyContent BuildTx era
-                           -> Either TxBodyError (TxBody era)
+makeShelleyTransactionBody :: ()
+  => ShelleyBasedEra era
+  -> TxBodyContent BuildTx era
+  -> Either TxBodyError (TxBody era)
 makeShelleyTransactionBody era@ShelleyBasedEraShelley
                            txbodycontent@TxBodyContent {
                              txIns,
@@ -1918,6 +2074,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraShelley
         scripts
         TxBodyNoScriptData
         txAuxData
+        TxScriptValidityNone
   where
     scripts :: [Ledger.Script StandardShelley]
     scripts =
@@ -1992,6 +2149,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraAllegra
         scripts
         TxBodyNoScriptData
         txAuxData
+        TxScriptValidityNone
   where
     scripts :: [Ledger.Script StandardAllegra]
     scripts =
@@ -2082,6 +2240,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraMary
         scripts
         TxBodyNoScriptData
         txAuxData
+        TxScriptValidityNone
   where
     scripts :: [Ledger.Script StandardMary]
     scripts =
@@ -2118,7 +2277,8 @@ makeShelleyTransactionBody era@ShelleyBasedEraAlonzo
                              txWithdrawals,
                              txCertificates,
                              txUpdateProposal,
-                             txMintValue
+                             txMintValue,
+                             txScriptValidity
                            } = do
 
     guard (not (null txIns)) ?! TxBodyEmptyTxIns
@@ -2202,6 +2362,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraAlonzo
         scripts
         (TxBodyScriptData ScriptDataInAlonzoEra datums redeemers)
         txAuxData
+        (unBuildTxWith txScriptValidity)
   where
     witnesses :: [(ScriptWitnessIndex, AnyScriptWitness AlonzoEra)]
     witnesses = collectTxBodyScriptWitnesses txbodycontent
