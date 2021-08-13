@@ -20,7 +20,7 @@ import Cardano.Benchmarking.GeneratorTx.Tx as Tx (mkFee, mkTxOutValueAdaOnly, ke
 import Cardano.Benchmarking.Wallet
 
 payToScript ::
-      SigningKey PaymentKey
+     SigningKey PaymentKey
   -> (Script PlutusScriptV1, Hash ScriptData)
   -> NetworkId
   -> TxGenerator AlonzoEra
@@ -28,7 +28,8 @@ payToScript key (script, txOutDatumHash) networkId inFunds outValues validity
   = case makeTransactionBody txBodyContent of
       Left err -> error $ show err
       Right b -> Right ( signShelleyTransaction b (map (WitnessPaymentKey . getFundKey) inFunds)
-                         , newFunds $ getTxId b                       )
+                       , newFunds $ getTxId b
+                       )
  where
   txBodyContent = TxBodyContent {
       txIns = map (\f -> (getFundTxIn f, BuildTxWith $ KeyWitness KeyWitnessForSpending)) inFunds
@@ -45,6 +46,7 @@ payToScript key (script, txOutDatumHash) networkId inFunds outValues validity
     , txCertificates = TxCertificatesNone
     , txUpdateProposal = TxUpdateProposalNone
     , txMintValue = TxMintNone
+    , txScriptValidity = BuildTxWith TxScriptValidityNone
     }
 
   mkTxOut v = TxOut plutusScriptAddr (mkTxOutValueAdaOnly v) (TxOutDatumHash ScriptDataInAlonzoEra txOutDatumHash)
@@ -83,7 +85,7 @@ toScriptHash str
     Nothing  -> error $ "Invalid datum hash: " ++ show str
 
 spendFromScript ::
-      SigningKey PaymentKey
+     SigningKey PaymentKey
   -> PlutusScript PlutusScriptV1
   -> NetworkId
   -> ProtocolParameters
@@ -95,7 +97,8 @@ spendFromScript key script networkId protocolParameters collateral inFunds valid
   = case makeTransactionBody txBodyContent of
       Left err -> error $ show err
       Right b -> Right ( signShelleyTransaction b (map (WitnessPaymentKey . getFundKey) inFunds)
-                         , newFunds $ getTxId b                       )
+                       , newFunds $ getTxId b
+                       )
  where
   txBodyContent = TxBodyContent {
       txIns = map (\f -> (getFundTxIn f, BuildTxWith $ ScriptWitness ScriptWitnessForSpending plutusScriptWitness )) inFunds
@@ -112,6 +115,7 @@ spendFromScript key script networkId protocolParameters collateral inFunds valid
     , txCertificates = TxCertificatesNone
     , txUpdateProposal = TxUpdateProposalNone
     , txMintValue = TxMintNone
+    , txScriptValidity = BuildTxWith TxScriptValidityNone
     }
   requiredMemory = 700000000
   requiredSteps  = 700000000
