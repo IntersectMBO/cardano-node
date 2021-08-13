@@ -3,8 +3,8 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -16,30 +16,30 @@ module Cardano.Api.Orphans () where
 
 import           Prelude
 
-import           Data.Aeson (FromJSON (..), ToJSON (..), object, (.=), (.!=), (.:), (.:?))
+import           Data.Aeson (FromJSON (..), ToJSON (..), object, (.!=), (.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
 import           Data.Aeson.Types (FromJSONKey (..), ToJSONKey (..), toJSONKeyText)
 import qualified Data.ByteString.Base16 as B16
+import qualified Data.Map.Strict as Map
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
-import qualified Data.Map.Strict as Map
 
 import           Control.Applicative
 import           Control.Iterate.SetAlgebra (BiMap (..), Bimap)
 
 import           Cardano.Api.Json
-import qualified Cardano.Ledger.BaseTypes as Ledger
 import           Cardano.Ledger.BaseTypes (StrictMaybe (..), strictMaybeToMaybe)
+import qualified Cardano.Ledger.BaseTypes as Ledger
 import           Cardano.Ledger.Crypto (StandardCrypto)
 import           Cardano.Slotting.Slot (SlotNo (..))
 
 import qualified Cardano.Crypto.Hash.Class as Crypto
+import qualified Cardano.Ledger.Alonzo as Alonzo
 import qualified Cardano.Ledger.Alonzo.Genesis as Alonzo
 import qualified Cardano.Ledger.Alonzo.Language as Alonzo
 import qualified Cardano.Ledger.Alonzo.PParams as Alonzo
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
-import qualified Cardano.Ledger.Alonzo as Alonzo
 import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo
 import qualified Cardano.Ledger.Coin as Shelley
 import qualified Cardano.Ledger.Core as Core
@@ -55,8 +55,10 @@ import qualified Shelley.Spec.Ledger.Delegation.Certificates as Shelley
 import qualified Shelley.Spec.Ledger.EpochBoundary as ShelleyEpoch
 import qualified Shelley.Spec.Ledger.LedgerState as ShelleyLedger
 import           Shelley.Spec.Ledger.PParams (PParamsUpdate)
-import qualified Shelley.Spec.Ledger.Rewards as Shelley
 import qualified Shelley.Spec.Ledger.RewardUpdate as Shelley
+import qualified Shelley.Spec.Ledger.Rewards as Shelley
+
+import           Plutus.V1.Ledger.Api (defaultCostModelParams)
 
 -- Orphan instances involved in the JSON output of the API queries.
 -- We will remove/replace these as we provide more API wrapper types
@@ -345,9 +347,6 @@ instance ToJSONKey Alonzo.Language where
 instance FromJSONKey Alonzo.Language where
   fromJSONKey = Aeson.FromJSONKeyTextParser languageFromText
 
--- We defer parsing of the cost model so that we can
--- read it as a filepath. This is to reduce further pollution
--- of the genesis file.
 instance FromJSON Alonzo.AlonzoGenesis where
   parseJSON = Aeson.withObject "Alonzo Genesis" $ \o -> do
     coinsPerUTxOWord     <- o .:  "lovelacePerUTxOWord"
@@ -360,7 +359,7 @@ instance FromJSON Alonzo.AlonzoGenesis where
     collateralPercentage <- o .:  "collateralPercentage"
     maxCollateralInputs  <- o .:  "maxCollateralInputs"
     case cModels of
-      Nothing -> case Alonzo.defaultCostModel of
+      Nothing -> case Alonzo.CostModel <$> defaultCostModelParams of
         Just m -> return Alonzo.AlonzoGenesis
           { Alonzo.coinsPerUTxOWord
           , Alonzo.costmdls = Map.singleton Alonzo.PlutusV1 m

@@ -85,7 +85,12 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
                              npcAlonzoGenesisFileHash
                            }
                            NodeHardForkProtocolConfiguration {
-                             npcTestEnableDevelopmentHardForkEras,
+                            -- npcTestEnableDevelopmentHardForkEras,
+                            -- During testing of the Alonzo era, we conditionally declared that we
+                            -- knew about the Alonzo era. We do so only when a config option for
+                            -- testing development/unstable eras is used. This lets us include
+                            -- not-yet-ready eras in released node versions without mainnet nodes
+                            -- prematurely advertising that they could hard fork into the new era.
                              npcTestShelleyHardForkAtEpoch,
                              npcTestShelleyHardForkAtVersion,
                              npcTestAllegraHardForkAtEpoch,
@@ -180,18 +185,9 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
         Consensus.ProtocolParamsMary {
           -- This is /not/ the Mary protocol version. It is the protocol
           -- version that this node will declare that it understands, when it
-          -- is in the Mary era. Since Mary is currently the last known
-          -- protocol version then this is also the Mary protocol version.
-          --
-          -- During testing of the Alonzo era, we conditionally declare that we
-          -- know about the Alonzo era. We do so only when a config option for
-          -- testing development/unstable eras is used. This lets us include
-          -- not-yet-ready eras in released node versions without mainnet nodes
-          -- prematurely advertising that they could hard fork into the new era.
-          maryProtVer =
-            if npcTestEnableDevelopmentHardForkEras
-              then ProtVer 5 0  -- Advertise we can support Alonzo
-              else ProtVer 4 0, -- Otherwise only advertise we know about Mary.
+          -- is in the Mary era. That is, it is the version of protocol
+          -- /after/ Mary, i.e. Alonzo.
+          maryProtVer = ProtVer 5 0,
           maryMaxTxCapacityOverrides =
             TxLimits.mkOverrides TxLimits.noOverridesMeasure
         }
