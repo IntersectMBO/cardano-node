@@ -548,7 +548,7 @@ evaluateTransactionBalance _ _ _ (ByronTxBody _) =
     --TODO: we could actually support Byron here, it'd be different but simpler
 
 evaluateTransactionBalance pparams poolids utxo
-                           (ShelleyTxBody era txbody _ _ _) =
+                           (ShelleyTxBody era txbody _ _ _ _) =
     withLedgerConstraints era evalAdaOnly evalMultiAsset
   where
     isNewPool :: Ledger.KeyHash Ledger.StakePool Ledger.StandardCrypto -> Bool
@@ -746,6 +746,24 @@ instance Error TxBodyErrorAutoBalance where
   displayError (TxBodyErrorNonAdaAssetsUnbalanced val) =
       "Non-Ada assets are unbalanced: " <> Text.unpack (renderValue val)
 
+handleExUnitsErrors ::
+     ScriptValidity -- ^ Mark script as expected to pass or fail validation
+  -> Map ScriptWitnessIndex ScriptExecutionError
+  -> Map ScriptWitnessIndex ExecutionUnits
+  -> Either TxBodyErrorAutoBalance (Map ScriptWitnessIndex ExecutionUnits)
+handleExUnitsErrors scriptValidity failures exUnitsMap =
+    if null relevantFailures
+      then Right exUnitsMap
+      else Left (TxBodyScriptExecutionError relevantFailures)
+  where relevantFailures :: [(ScriptWitnessIndex, ScriptExecutionError)]
+        relevantFailures = filter byScriptValidity (Map.toList failures)
+        byScriptValidity :: (ScriptWitnessIndex, ScriptExecutionError) -> Bool
+        byScriptValidity (_, e) = case scriptValidity of
+          ScriptValid -> True
+          ScriptInvalid -> case e of
+            ScriptErrorEvaluationFailed _ -> False
+            _ -> True
+
 -- | This is much like 'makeTransactionBody' but with greater automation to
 -- calculate suitable values for several things.
 --
@@ -790,28 +808,29 @@ makeTransactionBodyAutoBalance eraInMode systemstart history pparams
     -- 3. update tx with fees
     -- 4. balance the transaction and update tx change output
 
-    txbody0 <- first TxBodyError $
-               makeTransactionBody txbodycontent {
-                 txOuts = TxOut changeaddr
-                                (lovelaceToTxOutValue 0)
-                                TxOutDatumHashNone
-                        : txOuts txbodycontent
-                                --TODO: think about the size of the change output
-                                -- 1,2,4 or 8 bytes?
-               }
+    txbody0 <-
+      first TxBodyError $ makeTransactionBody txbodycontent
+        { txOuts =
+              TxOut changeaddr (lovelaceToTxOutValue 0) TxOutDatumHashNone
+            : txOuts txbodycontent
+            --TODO: think about the size of the change output
+            -- 1,2,4 or 8 bytes?
+        }
 
     exUnitsMap <- first TxBodyErrorValidityInterval $
                     evaluateTransactionExecutionUnits
                       eraInMode
                       systemstart history
-                      pparams utxo
+                      pparams
+                      utxo
                       txbody0
 
-    exUnitsMap' <- case Map.mapEither id exUnitsMap of
-                     (failures, exUnitsMap')
-                       | Map.null failures -> return exUnitsMap'
-                       | otherwise         -> Left (TxBodyScriptExecutionError
-                                                     (Map.toList failures))
+    let aScriptValidity = unBuildTxWith (txScriptValidity txbodycontent)
+
+    exUnitsMap' <-
+      case Map.mapEither id exUnitsMap of
+        (failures, exUnitsMap') ->
+          handleExUnitsErrors (txScriptValidityToScriptValidity aScriptValidity) failures exUnitsMap'
 
     let txbodycontent1 = substituteExecutionUnits exUnitsMap' txbodycontent
 
@@ -869,12 +888,12 @@ makeTransactionBodyAutoBalance eraInMode systemstart history pparams
     -- fit within the encoding size we picked above when calculating the fee.
     -- Yes this could be an over-estimate by a few bytes if the fee or change
     -- would fit within 2^16-1. That's a possible optimisation.
-    txbody3 <- first TxBodyError $ -- TODO: impossible to fail now
-               makeTransactionBody txbodycontent1 {
-                 txFee  = TxFeeExplicit explicitTxFees fee,
-                 txOuts = TxOut changeaddr balance TxOutDatumHashNone
-                        : txOuts txbodycontent
-               }
+    txbody3 <-
+      first TxBodyError $ -- TODO: impossible to fail now
+        makeTransactionBody txbodycontent1 {
+          txFee  = TxFeeExplicit explicitTxFees fee,
+          txOuts = TxOut changeaddr balance TxOutDatumHashNone : txOuts txbodycontent
+        }
     return txbody3
  where
    era :: ShelleyBasedEra era
