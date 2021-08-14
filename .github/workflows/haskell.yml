@@ -144,7 +144,22 @@ jobs:
       run: git clone https://github.com/input-output-hk/cardano-mainnet-mirror
 
     - name: Run tests
-      run: TMPDIR="${{ runner.temp }}" TMP="${{ runner.temp }}" KEEP_WORKSPACE=1 cabal test all
+      run: |
+        if [ "${{github.event.inputs.tests}}" == "all" ]; then
+          TMPDIR="${{ runner.temp }}" TMP="${{ runner.temp }}" KEEP_WORKSPACE=1 cabal all
+        fi
+
+    - name: "Run tests: cardano-testnet"
+      run: |
+        if [ "${{github.event.inputs.tests}}" != "all" ]; then
+          TMPDIR="${{ runner.temp }}" TMP="${{ runner.temp }}" KEEP_WORKSPACE=1 cabal test \
+            cardano-testnet \
+            cardano-api \
+            cardano-node \
+            cardano-node-chairman \
+            cardano-cli \
+            cardano-submit-api
+        fi
 
     - name: Build & Test
       run: |

@@ -58,6 +58,9 @@ package cardano-node
 package cardano-node-chairman
   tests: True
 
+package cardano-submit-api
+  tests: True
+
 package cardano-testnet
   tests: True
 
