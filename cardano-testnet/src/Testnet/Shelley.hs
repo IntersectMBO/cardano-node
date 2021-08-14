@@ -53,6 +53,7 @@ import qualified Hedgehog.Extras.Stock.IO.File as IO
 import qualified Hedgehog.Extras.Stock.IO.Network.Socket as IO
 import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 import qualified Hedgehog.Extras.Stock.String as S
+import qualified Hedgehog.Extras.Stock.OS as OS
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
 import qualified Hedgehog.Extras.Test.Network as H
@@ -110,6 +111,11 @@ rewriteGenesisSpec testnetOptions startTime =
       ( rewriteObject (HM.insert "decentralisationParam" (toJSON @Double 0.7))
       )
 
+-- | For an unknown reason, CLI commands are a lot slower on Windows than on Linux and
+-- MacOS.  We need to allow a lot more time to set up a testnet.
+startTimeOffsetSeconds :: DTC.NominalDiffTime
+startTimeOffsetSeconds = if OS.isWin32 then 90 else 15
+
 testnet :: TestnetOptions -> H.Conf -> H.Integration [String]
 testnet testnetOptions H.Conf {..} = do
   void $ H.note OS.os
@@ -125,7 +131,7 @@ testnet testnetOptions H.Conf {..} = do
   allPorts <- H.noteShowIO $ IO.allocateRandomPorts numPraosNodes
   nodeToPort <- H.noteShow (M.fromList (L.zip allNodes allPorts))
   currentTime <- H.noteShowIO DTC.getCurrentTime
-  startTime <- H.noteShow $ DTC.addUTCTime 31 currentTime -- 31 seconds into the future
+  startTime <- H.noteShow $ DTC.addUTCTime startTimeOffsetSeconds currentTime
 
   let userAddrs = ("user" <>) <$> userPoolN
   let poolAddrs = ("pool-owner" <>) <$> poolNodesN
@@ -140,6 +146,7 @@ testnet testnetOptions H.Conf {..} = do
     [ "genesis", "create"
     , "--testnet-magic", show @Int testnetMagic
     , "--genesis-dir", tempAbsPath
+    , "--start-time", DTC.formatIso8601 startTime
     ]
 
   -- Then edit the genesis.spec.json ...
@@ -159,6 +166,7 @@ testnet testnetOptions H.Conf {..} = do
     , "--genesis-dir", tempAbsPath
     , "--gen-genesis-keys", show numPraosNodes
     , "--gen-utxo-keys", show @Int (numPoolNodes testnetOptions)
+    , "--start-time", DTC.formatIso8601 startTime
     ]
 
 #ifdef UNIX
