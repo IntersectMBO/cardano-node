@@ -52,7 +52,7 @@ library
                      , gnuplot
                      , Histogram
                      , iohk-monitoring
-                     , optparse-applicative
+                     , optparse-applicative-fork
                      , optparse-generic
                      , ouroboros-network
                      , process
@@ -94,7 +94,7 @@ executable locli
   build-depends:       base
                      , cardano-prelude
                      , locli
-                     , optparse-applicative
+                     , optparse-applicative-fork
                      , text
                      , text-short
                      , transformers

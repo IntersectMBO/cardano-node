@@ -74,7 +74,7 @@ executable cardano-testnet
                       , cardano-testnet
                       , hedgehog
                       , hedgehog-extras
-                      , optparse-applicative
+                      , optparse-applicative-fork
                       , resourcet
                       , stm
                       , text

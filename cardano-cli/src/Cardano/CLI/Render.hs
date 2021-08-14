@@ -35,7 +35,9 @@ customRenderHelp cols
   . helpText
   where
     renderElement = if cliHelpTraceEnabled
-      then \(AnnTrace _ name) x -> "<span name=" <> show name <> ">" <> x <> "</span>"
+      then \ann x -> case ann of
+        AnnTrace _ name -> "<span name=" <> show name <> ">" <> x <> "</span>"
+        AnnStyle _ -> x
       else flip const
     wrapper = if cliHelpTraceEnabled
       then id
