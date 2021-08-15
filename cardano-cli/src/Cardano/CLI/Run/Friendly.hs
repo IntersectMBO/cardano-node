@@ -17,17 +17,19 @@ import qualified Data.HashMap.Strict as HashMap
 import           Data.Yaml.Pretty (defConfig, encodePretty, setConfCompare)
 
 import           Cardano.Api as Api (AddressInEra (..),
-                   AddressTypeInEra (ByronAddressInAnyEra, ShelleyAddressInEra), CardanoEra,
-                   ShelleyBasedEra (ShelleyBasedEraAllegra, ShelleyBasedEraAlonzo, ShelleyBasedEraMary, ShelleyBasedEraShelley),
-                   ShelleyEra, TxBody, serialiseAddress)
+                     AddressTypeInEra (ByronAddressInAnyEra, ShelleyAddressInEra), CardanoEra,
+                     ShelleyBasedEra (ShelleyBasedEraAllegra, ShelleyBasedEraAlonzo, ShelleyBasedEraMary, ShelleyBasedEraShelley),
+                     ShelleyEra, TxBody, serialiseAddress)
 import           Cardano.Api.Byron (TxBody (ByronTxBody))
 import           Cardano.Api.Shelley (TxBody (ShelleyTxBody), fromShelleyAddr)
 import           Cardano.Binary (Annotated)
 import qualified Cardano.Chain.UTxO as Byron
+import           Cardano.Ledger.Alonzo (AlonzoEra)
+import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo
+import           Cardano.Ledger.Crypto (StandardCrypto)
 import           Cardano.Ledger.Shelley as Ledger (ShelleyEra)
 import           Cardano.Ledger.ShelleyMA (MaryOrAllegra (Allegra, Mary), ShelleyMAEra)
 import qualified Cardano.Ledger.ShelleyMA.TxBody as ShelleyMA
-import           Cardano.Ledger.Crypto (StandardCrypto)
 import           Shelley.Spec.Ledger.API (Addr (..), TxOut (TxOut))
 import qualified Shelley.Spec.Ledger.API as Shelley
 
@@ -50,11 +52,14 @@ friendlyTxBody era txbody =
         addAuxData aux $ friendlyTxBodyAllegra body
       ShelleyTxBody ShelleyBasedEraMary body _scripts _ aux _ ->
         addAuxData aux $ friendlyTxBodyMary body
-      ShelleyTxBody ShelleyBasedEraAlonzo _ _ _ _ _ ->
-        panic "friendlyTxBody: Alonzo not implemented yet" -- TODO alonzo
+      ShelleyTxBody ShelleyBasedEraAlonzo body _scripts datumredeemer aux _ ->
+        addAuxData aux $ addScriptData datumredeemer $ friendlyTxBodyAlonzo body
 
 addAuxData :: Show a => Maybe a -> Object -> Object
 addAuxData = HashMap.insert "auxiliary data" . maybe Null (toJSON . textShow)
+
+addScriptData :: Show a => a -> Object -> Object
+addScriptData = HashMap.insert "script data" . (toJSON . textShow)
 
 friendlyTxBodyByron :: Annotated Byron.Tx ByteString -> Object
 friendlyTxBodyByron = assertObject . toJSON
@@ -123,6 +128,40 @@ friendlyTxBodyMary
     , "mint" .= mint
     ]
 
+friendlyTxBodyAlonzo
+  :: Alonzo.TxBody (AlonzoEra StandardCrypto) -> Object
+friendlyTxBodyAlonzo
+  (Alonzo.TxBody
+    inputs
+    collateral
+    outputs
+    certificates
+    (Shelley.Wdrl withdrawals)-- todo
+    txfee
+    validity
+    update
+    reqSignerHashes
+    mint
+    scriptIntegrityHash
+    adHash
+    txnetworkid
+  ) =
+  HashMap.fromList
+    [ "inputs" .= inputs
+    , "collateral" .= collateral
+    , "outputs" .= fmap friendlyTxOutAlonzo outputs
+    , "certificates" .= fmap textShow certificates
+    , "withdrawals" .= withdrawals
+    , "req signer hashes" .= reqSignerHashes
+    , "script integrity hash" .= scriptIntegrityHash
+    , "txnetworkid" .= txnetworkid
+    , "fee" .= txfee
+    , "validity interval" .= friendlyValidityInterval validity
+    , "update" .= fmap textShow update
+    , "auxiliary data hash" .= fmap textShow adHash
+    , "mint" .= mint
+    ]
+
 friendlyValidityInterval :: ShelleyMA.ValidityInterval -> Value
 friendlyValidityInterval
   ShelleyMA.ValidityInterval{invalidBefore, invalidHereafter} =
@@ -142,6 +181,11 @@ friendlyTxOutAllegra (TxOut addr amount) =
 friendlyTxOutMary :: TxOut (ShelleyMAEra 'Mary StandardCrypto) -> Value
 friendlyTxOutMary (TxOut addr amount) =
   Object $ HashMap.insert "amount" (toJSON amount) $ friendlyAddress addr
+
+friendlyTxOutAlonzo :: Alonzo.TxOut (AlonzoEra StandardCrypto) -> Value
+friendlyTxOutAlonzo (Alonzo.TxOut addr amount hash) =
+  Object $ HashMap.insert "datumhash" (toJSON hash)
+         $ HashMap.insert "amount" (toJSON amount) $ friendlyAddress addr
 
 friendlyAddress :: Addr StandardCrypto -> Object
 friendlyAddress addr =
