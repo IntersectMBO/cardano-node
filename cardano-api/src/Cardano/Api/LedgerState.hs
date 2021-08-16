@@ -18,6 +18,7 @@ module Cardano.Api.LedgerState
       , LedgerStateShelley
       , LedgerStateAllegra
       , LedgerStateMary
+      , LedgerStateAlonzo
       )
   , initialLedgerState
   , applyBlock
@@ -66,12 +67,12 @@ import           System.FilePath
 
 import           Cardano.Api.Block
 import           Cardano.Api.Eras
-import           Cardano.Api.IPC (ConsensusModeParams,
+import           Cardano.Api.IPC (ConsensusModeParams (..),
                    LocalChainSyncClient (LocalChainSyncClientPipelined),
                    LocalNodeClientProtocols (..), LocalNodeClientProtocolsInMode,
                    LocalNodeConnectInfo (..), connectToLocalNode)
 import           Cardano.Api.LedgerEvent (LedgerEvent, toLedgerEvent)
-import           Cardano.Api.Modes (CardanoMode)
+import           Cardano.Api.Modes (CardanoMode, EpochSlots (..))
 import           Cardano.Api.NetworkId (NetworkId (..), NetworkMagic (NetworkMagic))
 import qualified Cardano.Chain.Genesis
 import qualified Cardano.Chain.Update
@@ -191,10 +192,16 @@ pattern LedgerStateMary
   -> LedgerState
 pattern LedgerStateMary st <- LedgerState  (Consensus.LedgerStateMary st)
 
+pattern LedgerStateAlonzo
+  :: Ledger.LedgerState (Shelley.ShelleyBlock (Shelley.AlonzoEra Shelley.StandardCrypto))
+  -> LedgerState
+pattern LedgerStateAlonzo st <- LedgerState  (Consensus.LedgerStateAlonzo st)
+
 {-# COMPLETE LedgerStateByron
            , LedgerStateShelley
            , LedgerStateAllegra
-           , LedgerStateMary #-}
+           , LedgerStateMary
+           , LedgerStateAlonzo #-}
 
 data FoldBlocksError
   = FoldBlocksInitialLedgerStateError InitialLedgerStateError
@@ -211,9 +218,6 @@ foldBlocks
   :: forall a.
   FilePath
   -- ^ Path to the cardano-node config file (e.g. <path to cardano-node project>/configuration/cardano/mainnet-config.json)
-  -> ConsensusModeParams CardanoMode
-  -- ^ This is needed for the number of slots per epoch for the Byron era (on
-  -- mainnet that should be 21600).
   -> FilePath
   -- ^ Path to local cardano-node socket. This is the path specified by the @--socket-path@ command line option when running the node.
   -> ValidationMode
@@ -238,7 +242,7 @@ foldBlocks
   -- truncating the last k blocks before the node's tip.
   -> ExceptT FoldBlocksError IO a
   -- ^ The final state
-foldBlocks nodeConfigFilePath cardanoModeParams socketPath validationMode state0 accumulate = do
+foldBlocks nodeConfigFilePath socketPath validationMode state0 accumulate = do
   -- NOTE this was originally implemented with a non-pipelined client then
   -- changed to a pipelined client for a modest speedup:
   --  * Non-pipelined: 1h  0m  19s
@@ -269,6 +273,8 @@ foldBlocks nodeConfigFilePath cardanoModeParams socketPath validationMode state0
       networkId = case Cardano.Chain.Genesis.configReqNetMagic byronConfig of
         RequiresNoMagic -> Mainnet
         RequiresMagic -> Testnet networkMagic
+
+      cardanoModeParams = CardanoModeParams . EpochSlots $ 10 * envSecurityParam env
 
   -- Connect to the node.
   let connectInfo :: LocalNodeConnectInfo CardanoMode

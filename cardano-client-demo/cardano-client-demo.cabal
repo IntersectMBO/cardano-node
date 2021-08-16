@@ -83,3 +83,27 @@ executable ledger-state
                        ouroboros-consensus-shelley,
                        cardano-ledger-shelley,
                        typed-protocols,
+
+executable stake-credential-history
+  import:               base, project-config
+  main-is:             StakeCredentialHistory.hs
+  ghc-options:        -Wall
+                      -Wcompat
+                      -Wincomplete-record-updates
+                      -Wincomplete-uni-patterns
+                      -Wpartial-fields
+                      -Wredundant-constraints
+                      -Wunused-packages
+  build-depends:       base16-bytestring,
+                       binary,
+                       bech32,
+                       bytestring,
+                       cardano-api,
+                       cardano-ledger-core,
+                       cardano-ledger-shelley,
+                       cardano-slotting,
+                       containers,
+                       optparse-applicative,
+                       ouroboros-consensus-shelley,
+                       text,
+                       transformers,
