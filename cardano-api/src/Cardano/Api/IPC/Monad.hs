@@ -97,13 +97,12 @@ executeQueryLocalStateWithChainSync connectInfo mpoint f = do
   where
     chainSyncGetCurrentTip
       :: STM b
+      -- ^ An STM expression that only returns when all protocols are complete.
+      -- Protocols must wait until 'waitDone' returns because premature exit will
+      -- cause other incomplete protocols to abort which may lead to deadlock.
       -> TMVar ChainTip
       -> ChainSyncClient (BlockInMode mode) ChainPoint ChainTip IO ()
-    chainSyncGetCurrentTip
-        waitDone  -- ^ An STM expression that only returns when all protocols are complete.
-                  -- Protocols must wait until 'waitDone' returns because premature exit will
-                  -- cause other incomplete protocols to abort which may lead to deadlock.
-        tipVar =
+    chainSyncGetCurrentTip waitDone tipVar =
       ChainSyncClient $ pure clientStIdle
       where
         clientStIdle :: Net.Sync.ClientStIdle (BlockInMode mode) ChainPoint ChainTip IO ()
@@ -125,17 +124,14 @@ executeQueryLocalStateWithChainSync connectInfo mpoint f = do
 -- | Use 'queryExpr' in a do block to construct monadic local state queries.
 setupLocalStateQueryExpr ::
      STM x
+     -- ^ An STM expression that only returns when all protocols are complete.
+     -- Protocols must wait until 'waitDone' returns because premature exit will
+     -- cause other incomplete protocols to abort which may lead to deadlock.
   -> Maybe ChainPoint
   -> TMVar (Either Net.Query.AcquireFailure a)
   -> LocalStateQueryExpr (BlockInMode mode) ChainPoint (QueryInMode mode) () IO a
   -> Net.Query.LocalStateQueryClient (BlockInMode mode) ChainPoint (QueryInMode mode) IO ()
-setupLocalStateQueryExpr
-    waitDone  -- ^ An STM expression that only returns when all protocols are complete.
-              -- Protocols must wait until 'waitDone' returns because premature exit will
-              -- cause other incomplete protocols to abort which may lead to deadlock.
-    mPointVar'
-    resultVar'
-    f =
+setupLocalStateQueryExpr waitDone mPointVar' resultVar' f =
   LocalStateQueryClient . pure . Net.Query.SendMsgAcquire mPointVar' $
     Net.Query.ClientStAcquiring
     { Net.Query.recvMsgAcquired = runContT (runLocalStateQueryExpr f) $ \result -> do
