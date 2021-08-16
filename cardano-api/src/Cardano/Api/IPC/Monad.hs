@@ -150,7 +150,7 @@ setupLocalStateQueryExpr
     }
 
 -- | Use 'queryExpr' in a do block to construct monadic local state queries.
-queryExpr :: query a -> LocalStateQueryExpr block point query r IO a
+queryExpr :: QueryInMode mode a -> LocalStateQueryExpr block point (QueryInMode mode) r IO a
 queryExpr q =
   LocalStateQueryExpr . ContT $ \f -> pure $
     Net.Query.SendMsgQuery q $
