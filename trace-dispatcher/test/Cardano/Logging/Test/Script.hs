@@ -45,13 +45,14 @@ playScript time config (Script msgs) = do
   ekgTrRef        <- newIORef []
   ekgTracer'      <- testTracer ekgTrRef
   tr              <- mkCardanoTracer
+                      stdoutTracer'
+                      forwardTracer'
+                      (Just ekgTracer')
                       "Test"
                       namesForMessage
                       severityForMessage
                       privacyForMessage
-                      stdoutTracer'
-                      forwardTracer'
-                      (Just ekgTracer')
+
   let sortedMsgs = sort msgs
   let (msgsWithIds,_) = withMessageIds 0 sortedMsgs
   let timedMessages = map (withTimeFactor time) msgsWithIds

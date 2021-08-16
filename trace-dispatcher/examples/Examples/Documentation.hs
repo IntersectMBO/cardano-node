@@ -1,6 +1,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 module Examples.Documentation (
-  docTracer
+  docTracers
 ) where
 
 import qualified Data.Text.IO as T
@@ -8,8 +8,8 @@ import qualified Data.Text.IO as T
 import           Cardano.Logging
 import           Examples.TestObjects
 
-docTracer :: IO ()
-docTracer = do
+docTracers :: IO ()
+docTracers = do
   t <- standardTracer Nothing
   t1' <- humanFormatter True "cardano" t
   let t1 = withSeverityTraceForgeEvent

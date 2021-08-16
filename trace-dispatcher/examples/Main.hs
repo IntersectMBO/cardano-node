@@ -18,5 +18,5 @@ main = do
     testRouting
     testConfig
     testLimiting
-    docTracer
+    docTracers
     testEKG

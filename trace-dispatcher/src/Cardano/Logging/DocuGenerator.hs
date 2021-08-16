@@ -13,18 +13,18 @@ module Cardano.Logging.DocuGenerator (
 ) where
 
 import           Cardano.Logging.Types
-import           Control.Monad.IO.Class (MonadIO, liftIO)
-import qualified Control.Tracer as T
-import           Data.Aeson.Text (encodeToLazyText)
-import           Data.IORef (modifyIORef, newIORef, readIORef)
-import           Data.List (intersperse, nub, sortBy)
-import qualified Data.Map as Map
-import           Data.Text (Text)
+import           Control.Monad.IO.Class     (MonadIO, liftIO)
+import qualified Control.Tracer             as T
+import           Data.Aeson.Text            (encodeToLazyText)
+import           Data.IORef                 (modifyIORef, newIORef, readIORef)
+import           Data.List                  (intersperse, nub, sortBy)
+import qualified Data.Map                   as Map
+import           Data.Text                  (Text)
 import           Data.Text.Internal.Builder (toLazyText)
-import           Data.Text.Lazy (toStrict)
-import           Data.Text.Lazy.Builder (Builder, fromString, fromText,
-                     singleton)
-import           Data.Time (getZonedTime)
+import           Data.Text.Lazy             (toStrict)
+import           Data.Text.Lazy.Builder     (Builder, fromString, fromText,
+                                             singleton)
+import           Data.Time                  (getZonedTime)
 
 docTracer :: MonadIO m
   => BackendConfig
@@ -33,13 +33,13 @@ docTracer backendConfig = liftIO $ do
     pure $ Trace $ T.arrow $ T.emit $ output
   where
     output p@(_, Just Document {}, FormattedMetrics m) =
-        docIt backendConfig (FormattedMetrics m) p
+      docIt backendConfig (FormattedMetrics m) p
     output (lk, Just c@Document {}, FormattedForwarder lo) =
-        docIt backendConfig (FormattedHuman False "") (lk, Just c, lo)
+      docIt backendConfig (FormattedHuman False "") (lk, Just c, lo)
     output (lk, Just c@Document {}, FormattedHuman co msg) =
-       docIt backendConfig (FormattedHuman co "") (lk, Just c, msg)
+      docIt backendConfig (FormattedHuman co "") (lk, Just c, msg)
     output (lk, Just c@Document {}, FormattedMachine msg) =
-       docIt backendConfig (FormattedMachine "") (lk, Just c, msg)
+      docIt backendConfig (FormattedMachine "") (lk, Just c, msg)
     output (_, _, _) = pure ()
 
 documentTracers :: MonadIO m => Documented a -> [Trace m a] -> m DocCollector
