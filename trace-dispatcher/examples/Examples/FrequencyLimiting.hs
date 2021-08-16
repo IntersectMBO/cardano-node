@@ -1,7 +1,3 @@
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DeriveGeneric  #-}
-
-
 module Examples.FrequencyLimiting (
   testLimiting
 ) where

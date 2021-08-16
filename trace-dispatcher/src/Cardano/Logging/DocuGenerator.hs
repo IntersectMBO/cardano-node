@@ -1,4 +1,3 @@
-{-# LANGUAGE DeriveGeneric       #-}
 {-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE RecordWildCards     #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -28,9 +27,9 @@ import           Data.Time                  (getZonedTime)
 
 docTracer :: MonadIO m
   => BackendConfig
-  -> m (Trace m (FormattedMessage))
+  -> m (Trace m FormattedMessage)
 docTracer backendConfig = liftIO $ do
-    pure $ Trace $ T.arrow $ T.emit $ output
+    pure $ Trace $ T.arrow $ T.emit output
   where
     output p@(_, Just Document {}, FormattedMetrics m) =
       docIt backendConfig (FormattedMetrics m) p
@@ -300,7 +299,7 @@ documentMarkdown (Documented documented) tracers = do
     metricFormatToText :: Map.Map Namespace Text -> Metric -> Builder
     metricFormatToText metricsDoc (IntM ns _) =
       fromText "#### _Int metric:_ "
-        <> (mconcat (intersperse (singleton '.') (map fromText ns)))
+        <> mconcat (intersperse (singleton '.') (map fromText ns))
           <> fromText "\n"
             <> case Map.lookup ns metricsDoc of
                         Just ""   -> mempty

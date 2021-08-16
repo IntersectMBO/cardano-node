@@ -1,4 +1,3 @@
-{-# LANGUAGE RecordWildCards     #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Cardano.Logging.Tracer.Composed (
@@ -6,16 +5,16 @@ module Cardano.Logging.Tracer.Composed (
   , mkCardanoTracer'
   ) where
 
-import           Control.Monad (liftM)
+import           Data.Maybe                       (fromMaybe)
 import           Data.Text
 
-import           Cardano.Logging.Types
-import           Cardano.Logging.Trace
 import           Cardano.Logging.Configuration
 import           Cardano.Logging.Formatter
 import           Cardano.Logging.FrequencyLimiter (LimitingMessage (..))
+import           Cardano.Logging.Trace
+import           Cardano.Logging.Types
 
-import qualified Control.Tracer as NT
+import qualified Control.Tracer                   as NT
 
 data MessageOrLimit m = Message m | Limit LimitingMessage
 
@@ -91,29 +90,29 @@ mkCardanoTracer' trStdout trForward mbTrEkg name namesFor severityFor privacyFor
       -> Trace m x
       -> IO (Trace IO (MessageOrLimit evt1))
     backendsAndFormat mbBackends _ =
-      let backends = case mbBackends of
-                        Just b -> b
-                        Nothing -> [EKGBackend, Forwarder, Stdout HumanFormatColoured]
+      let backends = fromMaybe
+                      [EKGBackend, Forwarder, Stdout HumanFormatColoured]
+                      mbBackends
       in do
         mbEkgTrace     <- case mbTrEkg of
                             Nothing -> pure Nothing
                             Just ekgTrace ->
-                              if elem EKGBackend backends
-                                then liftM Just
+                              if EKGBackend `elem` backends
+                                then fmap Just
                                       (metricsFormatter "Cardano" ekgTrace)
                                 else pure Nothing
-        mbForwardTrace <- if elem Forwarder backends
-                            then liftM (Just . filterTraceByPrivacy (Just Public))
+        mbForwardTrace <- if Forwarder `elem` backends
+                            then fmap (Just . filterTraceByPrivacy (Just Public))
                                   (forwardFormatter "Cardano" trForward)
                             else pure Nothing
-        mbStdoutTrace  <-  if elem (Stdout HumanFormatColoured) backends
-                            then liftM Just
+        mbStdoutTrace  <-  if Stdout HumanFormatColoured `elem` backends
+                            then fmap Just
                                 (humanFormatter True "Cardano" trStdout)
-                            else if elem (Stdout HumanFormatUncoloured) backends
-                              then liftM Just
+                            else if Stdout HumanFormatUncoloured `elem` backends
+                              then fmap Just
                                   (humanFormatter False "Cardano" trStdout)
-                              else if elem (Stdout MachineFormat) backends
-                                then liftM Just
+                              else if Stdout MachineFormat `elem` backends
+                                then fmap Just
                                   (machineFormatter "Cardano" trStdout)
                                 else pure Nothing
         case mbEkgTrace <> mbForwardTrace <> mbStdoutTrace of

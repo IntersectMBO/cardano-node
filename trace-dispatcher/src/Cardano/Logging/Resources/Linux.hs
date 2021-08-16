@@ -1,5 +1,4 @@
-{-# LANGUAGE CPP        #-}
-{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE CPP #-}
 
 module Cardano.Logging.Resources.Linux
     (
@@ -7,11 +6,13 @@ module Cardano.Logging.Resources.Linux
     ) where
 
 import           Cardano.Logging.Resources.Types
+import           Data.Maybe                      (fromMaybe)
 import           Data.Word
-import qualified GHC.Stats as GhcStats
-import           System.Posix.Files (getFileStatus,fileMode,ownerReadMode,
-                     intersectFileModes)
-import           Text.Read (readMaybe)
+import qualified GHC.Stats                       as GhcStats
+import           System.Posix.Files              (fileMode, getFileStatus,
+                                                  intersectFileModes,
+                                                  ownerReadMode)
+import           Text.Read                       (readMaybe)
 
 -- | TODO we have to expand the |readMemStats| function
 -- to read full data from |proc|
@@ -49,7 +50,7 @@ readProcList fp = do
     if readable fs
     then do
         cs <- readFile fp
-        return $ map (\s -> maybe 0 id $ (readMaybe s :: Maybe Integer)) (words cs)
+        return $ map (\s -> fromMaybe 0 (readMaybe s :: Maybe Integer)) (words cs)
     else
         return []
   where

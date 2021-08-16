@@ -28,7 +28,7 @@ data ResourceStats
       }
   deriving (Show)
 
-docResourceStats :: Documented (ResourceStats)
+docResourceStats :: Documented ResourceStats
 docResourceStats = Documented [
       DocMsg
         (ResourceStats 1 1 1 1 1 1 1 1 1 1)

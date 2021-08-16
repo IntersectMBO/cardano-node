@@ -1,11 +1,8 @@
 {-# LANGUAGE BangPatterns        #-}
-{-# LANGUAGE DeriveFunctor       #-}
 {-# LANGUAGE DeriveGeneric       #-}
 {-# LANGUAGE DerivingStrategies  #-}
 {-# LANGUAGE LambdaCase          #-}
-{-# LANGUAGE RecordWildCards     #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving  #-}
 
 
 module Cardano.Logging.Configuration
@@ -362,7 +359,7 @@ getOption sel config ns =
 
 readConfiguration :: FilePath -> IO TraceConfig
 readConfiguration fp =
-    either throwIO pure =<< parseRepresentation <$> BS.readFile fp
+    either throwIO pure . parseRepresentation =<< BS.readFile fp
 
 parseRepresentation :: ByteString -> Either ParseException TraceConfig
 parseRepresentation bs = transform (decodeEither' bs)

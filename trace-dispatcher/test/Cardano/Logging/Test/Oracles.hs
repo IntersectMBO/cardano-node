@@ -22,7 +22,7 @@ import Debug.Trace
 oracleFiltering ::  TraceConfig -> ScriptRes -> Property
 oracleFiltering conf ScriptRes {..} =
     let Script msgs = srScript
-    in property $ and (map oracleMessage msgs)
+    in property $ all oracleMessage msgs
   where
     oracleMessage :: ScriptedMessage -> Bool
     oracleMessage (ScriptedMessage _t msg) =
@@ -42,20 +42,22 @@ oracleFiltering conf ScriptRes {..} =
           res = isCorrectStdout && isCorrectForwarder && isCorrectEKG
       in case traceMessage isCorrectStdout isCorrectForwarder isCorrectEKG msg of
         Nothing -> res
-        Just str -> trace str $ res
+        Just str -> trace str res
     traceMessage :: Bool -> Bool -> Bool -> Message -> Maybe String
-    traceMessage isCorrectStdout isCorrectForwarder isCorrectEKG msg =
-      if not isCorrectStdout
-        then Just ("stdoutTracer wrong filtering or routing for " <> show msg
-                    <> " config " <> show conf)
-        else if not isCorrectForwarder
-          then Just ("forwardTracer wrong filtering or routing for " <> show msg
-                      <> " config " <> show conf)
-          else if not isCorrectEKG
-            then Just ("ekgTracer wrong filtering or routing for " <> show msg
-                        <> " config " <> show conf)
-            else Nothing
-
+    traceMessage isCorrectStdout isCorrectForwarder isCorrectEKG msg
+      | not isCorrectStdout
+      = Just
+          ("stdoutTracer wrong filtering or routing for "
+             <> show msg <> " config " <> show conf)
+      | not isCorrectForwarder
+      = Just
+          ("forwardTracer wrong filtering or routing for "
+             <> show msg <> " config " <> show conf)
+      | not isCorrectEKG
+      = Just
+          ("ekgTracer wrong filtering or routing for "
+             <> show msg <> " config " <> show conf)
+      | otherwise = Nothing
 
 
 -- | Is the stdout backend included in this configuration
@@ -105,7 +107,7 @@ idInText mid txt =
 -- | Extract a messageID from a text. It is always fumnd in the form '<?..>'
 extractId :: T.Text -> Maybe Int
 extractId txt =
-  let ntxt = T.takeWhile (\c -> c /= '>')
+  let ntxt = T.takeWhile (/= '>')
                 (T.drop 1
-                  (T.dropWhile (\c -> c /= '<') txt))
+                  (T.dropWhile (/= '<') txt))
   in readMaybe (T.unpack ntxt)

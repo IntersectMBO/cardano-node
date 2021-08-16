@@ -1,4 +1,3 @@
-{-# LANGUAGE RecordWildCards     #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Cardano.Logging.Test.Tracer (
@@ -12,10 +11,10 @@ import           Cardano.Logging
 
 testTracer :: MonadIO m
   => IORef [FormattedMessage]
-  -> m (Trace m (FormattedMessage))
+  -> m (Trace m FormattedMessage)
 testTracer ioRef = liftIO $ do
-    pure $ Trace $ arrow $ emit $ output
+    pure $ Trace $ arrow $ emit output
   where
     output (LoggingContext{}, Nothing, msg) = liftIO $ do
-      modifyIORef ioRef (\l -> msg : l)
+      modifyIORef ioRef (msg :)
     output (LoggingContext{}, _, _) = pure ()

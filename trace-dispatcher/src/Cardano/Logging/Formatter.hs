@@ -73,9 +73,7 @@ forwardFormatter application (Trace tr) = do
           thid <- liftIO myThreadId
           time <- liftIO getCurrentTime
           let fh = forHuman v
-              details = case lcDetails lc of
-                          Nothing  -> DNormal
-                          Just dtl -> dtl
+              details = fromMaybe DNormal (lcDetails lc)
               fm = forMachine details v
               nlc = lc { lcNamespace = application : lcNamespace lc}
               to = TraceObject {
@@ -83,12 +81,8 @@ forwardFormatter application (Trace tr) = do
                     , toMachine   = if fm == mempty then Nothing else
                                     Just $ decodeUtf8 (BS.toStrict (AE.encode fm))
                     , toNamespace = lcNamespace nlc
-                    , toSeverity  = case lcSeverity lc of
-                                      Nothing -> Info
-                                      Just s  -> s
-                    , toDetails   = case lcDetails lc of
-                                      Nothing -> DNormal
-                                      Just d  -> d
+                    , toSeverity  = fromMaybe Info (lcSeverity lc)
+                    , toDetails   = fromMaybe DNormal (lcDetails lc)
                     , toTimestamp = time
                     , toHostname  = hn
                     , toThreadId  = (pack . show) thid
@@ -104,12 +98,8 @@ forwardFormatter application (Trace tr) = do
                       toHuman     = Nothing
                     , toMachine   = Nothing
                     , toNamespace = lcNamespace nlc
-                    , toSeverity  = case lcSeverity lc of
-                                      Nothing -> Info
-                                      Just s  -> s
-                    , toDetails   = case lcDetails lc of
-                                      Nothing -> DNormal
-                                      Just d  -> d
+                    , toSeverity  = fromMaybe Info (lcSeverity lc)
+                    , toDetails   = fromMaybe DNormal (lcDetails lc)
                     , toTimestamp = time
                     , toHostname  = hn
                     , toThreadId  = (pack . show) thid
@@ -198,9 +188,7 @@ machineFormatter application (Trace tr) = do
     mkTracer hn = T.emit $
       \case
         (lc, Nothing, v) -> do
-          let detailLevel = case lcDetails lc of
-                              Nothing -> DNormal
-                              Just dl -> dl
+          let detailLevel = fromMaybe DNormal (lcDetails lc)
           obj <- liftIO $ formatContextMachine hn application lc (forMachine detailLevel v)
           T.traceWith tr (lc { lcNamespace = application : lcNamespace lc}
                              , Nothing
@@ -242,16 +230,14 @@ preFormatted ::
   -> Trace m (PreFormatted a)
   -> Trace m a
 preFormatted backends tr@(Trace tr')=
-  if elem Forwarder backends
+  if Forwarder `elem` backends
     then if elem (Stdout HumanFormatUncoloured) backends
             || elem (Stdout HumanFormatColoured) backends
       then contramap (\msg -> PreFormatted msg (Just (forHuman msg)) Nothing) tr
-      else if elem (Stdout MachineFormat) backends
+      else if Stdout MachineFormat `elem` backends
         then Trace $ T.contramap
               (\ (lc, mbC, msg) ->
-                let dtal = case lcDetails lc of
-                            Nothing  -> DNormal
-                            Just dtl -> dtl
+                let dtal = fromMaybe DNormal (lcDetails lc)
                 in (lc, mbC, PreFormatted msg Nothing (Just (forMachine dtal msg))))
               tr'
         else contramap (\msg -> PreFormatted msg Nothing Nothing) tr

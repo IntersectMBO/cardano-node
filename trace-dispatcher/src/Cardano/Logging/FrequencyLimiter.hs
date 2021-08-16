@@ -1,5 +1,4 @@
 {-# LANGUAGE DeriveGeneric       #-}
-{-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE RecordWildCards     #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
