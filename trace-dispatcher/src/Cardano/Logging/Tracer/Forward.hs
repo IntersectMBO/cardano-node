@@ -16,17 +16,13 @@ module Cardano.Logging.Tracer.Forward
 
 import           Codec.CBOR.Term (Term)
 import           Codec.Serialise (Serialise (..))
-import           Control.Concurrent (forkIO, threadDelay)
-import           Control.Concurrent.Async (async, wait, waitAnyCancel)
+import           Control.Concurrent.Async (race_, wait, withAsync)
 import           Control.Concurrent.STM.TBQueue (TBQueue, newTBQueueIO,
                      writeTBQueue)
-import           Control.Exception (SomeException, try)
-import           Control.Monad (void)
 import           Control.Monad.IO.Class
 import           Control.Monad.STM (atomically)
 import           GHC.Generics (Generic)
 
--- Temporary solution, to avoid conflicts with trace-dispatcher.
 import qualified Control.Tracer as T
 import           "contra-tracer" Control.Tracer (contramap, stdoutTracer)
 import qualified Data.ByteString.Lazy as LBS
@@ -35,7 +31,7 @@ import           Data.Word (Word16)
 
 import           Ouroboros.Network.Driver.Limits (ProtocolTimeLimits)
 import           Ouroboros.Network.ErrorPolicy (nullErrorPolicies)
-import           Ouroboros.Network.IOManager (withIOManager)
+import           Ouroboros.Network.IOManager (IOManager)
 import           Ouroboros.Network.Mux (MiniProtocol (..),
                      MiniProtocolLimits (..), MiniProtocolNum (..),
                      MuxMode (..), OuroborosApplication (..),
@@ -63,6 +59,7 @@ import           System.Metrics.Network.Forwarder (forwardEKGMetricsResp)
 import qualified Trace.Forward.Configuration as TF
 import           Trace.Forward.Network.Forwarder (forwardTraceObjectsResp)
 import           Trace.Forward.Protocol.Type (NodeInfo (..))
+import           Trace.Forward.Utils (runActionInLoop)
 
 import           Cardano.Logging.DocuGenerator
 import           Cardano.Logging.Types
@@ -89,14 +86,15 @@ instance ShowProxy TraceObject
 --   }
 
 forwardTracer :: forall m. (MonadIO m)
-  => TraceConfig
+  => IOManager
+  -> TraceConfig
   -> NodeInfo
   -> m (Trace m FormattedMessage)
-forwardTracer config nodeInfo = liftIO $ do
+forwardTracer iomgr config nodeInfo = liftIO $ do
     tbQueue <- newTBQueueIO (fromIntegral (tcForwarderQueueSize config))
     store <- EKG.newStore
     EKG.registerGcMetrics store
-    launchForwarders (tcForwarder config) nodeInfo tbQueue store
+    launchForwarders iomgr (tcForwarder config) nodeInfo tbQueue store
 --    stateRef <- liftIO $ newIORef (ForwardTracerState tbQueue)
     pure $ Trace $ T.arrow $ T.emit $ uncurry3 (output tbQueue)
   where
@@ -114,50 +112,47 @@ forwardTracer config nodeInfo = liftIO $ do
       docIt Forwarder (FormattedHuman False "") (lk, Just c, lo)
     output _tbQueue LoggingContext {} _ _a = pure ()
 
-launchForwarders :: RemoteAddr -> NodeInfo -> TBQueue TraceObject -> EKG.Store -> IO ()
-launchForwarders endpoint nodeInfo tbQueue store = void . forkIO $ launchForwarders'
+launchForwarders
+  :: IOManager
+  -> RemoteAddr
+  -> NodeInfo
+  -> TBQueue TraceObject
+  -> EKG.Store
+  -> IO ()
+launchForwarders iomgr ep@(LocalSocket p) nodeInfo tbQueue store = flip
+  withAsync
+    wait
+    $ runActionInLoop
+        (launchForwardersViaLocalSocket iomgr ep (ekgConfig, tfConfig) tbQueue store)
+        (TF.LocalPipe p)
+        1
  where
-  launchForwarders' =
-    try (launchForwardersViaLocalSocket endpoint (ekgConfig, tfConfig) tbQueue store)
-    >>= \case
-      Left (_e :: SomeException) -> do
-        -- There is some problem with the connection with the acceptor, try it again, after 1 second.
-        threadDelay 1000000
-        -- TODO JNF What if it runs in an infinite loop?
-        -- TODO DS Probably we have to limit the number of attempts here? For example, try it N times
-        -- (with 1 second delay between attempts) and, if it fails after N-th attempt, just stop.
-        launchForwarders'
-      Right _ ->
-        pure () -- Actually, the function 'withServerNode' never returns.
-
   ekgConfig :: EKGF.ForwarderConfiguration
   ekgConfig =
     EKGF.ForwarderConfiguration
       { EKGF.forwarderTracer    = contramap show stdoutTracer
-      , EKGF.acceptorEndpoint   = forEKGF endpoint
+      , EKGF.acceptorEndpoint   = EKGF.LocalPipe p
       , EKGF.reConnectFrequency = 1.0
-      , EKGF.actionOnRequest    = const (return ())
+      , EKGF.actionOnRequest    = const $ pure ()
       }
 
   tfConfig :: TF.ForwarderConfiguration TraceObject
   tfConfig =
     TF.ForwarderConfiguration
       { TF.forwarderTracer  = contramap show stdoutTracer
-      , TF.acceptorEndpoint = forTF endpoint
+      , TF.acceptorEndpoint = TF.LocalPipe p
       , TF.getNodeInfo      = pure nodeInfo
       }
 
-  forTF (LocalSocket p)   = TF.LocalPipe p
-  forEKGF (LocalSocket p) = EKGF.LocalPipe p
-
 launchForwardersViaLocalSocket
-  :: RemoteAddr
+  :: IOManager
+  -> RemoteAddr
   -> (EKGF.ForwarderConfiguration, TF.ForwarderConfiguration TraceObject)
   -> TBQueue TraceObject
   -> EKG.Store
   -> IO ()
-launchForwardersViaLocalSocket (LocalSocket localSock) configs tbQueue store = withIOManager $ \iocp -> do
-  let snocket = localSnocket iocp localSock
+launchForwardersViaLocalSocket iomgr (LocalSocket localSock) configs tbQueue store = do
+  let snocket = localSnocket iomgr localSock
       address = localAddressFromPath localSock
   doListenToAcceptor snocket address noTimeLimitsHandshake configs tbQueue store
 
@@ -172,31 +167,29 @@ doListenToAcceptor
   -> IO ()
 doListenToAcceptor snocket address timeLimits (ekgConfig, tfConfig) tbQueue store = do
   networkState <- newNetworkMutableState
-  nsAsync <- async $ cleanNetworkMutableState networkState
-  clAsync <- async . void $
-    withServerNode
-      snocket
-      nullNetworkServerTracers
-      networkState
-      (AcceptedConnectionsLimit maxBound maxBound 0)
-      address
-      unversionedHandshakeCodec
-      timeLimits
-      (cborTermVersionDataCodec unversionedProtocolDataCodec)
-      acceptableVersion
-      (simpleSingletonVersions
-        UnversionedProtocol
-        UnversionedProtocolData
-        (SomeResponderApplication $
-          forwarderApp [ (forwardEKGMetricsResp   ekgConfig store,  1)
-                       , (forwardTraceObjectsResp tfConfig tbQueue, 2)
-                       ]
-        )
-      )
-      nullErrorPolicies
-      $ \_ serverAsync ->
-        wait serverAsync -- Block until async exception.
-  void $ waitAnyCancel [nsAsync, clAsync]
+  race_ (cleanNetworkMutableState networkState)
+        $ withServerNode
+            snocket
+            nullNetworkServerTracers
+            networkState
+            (AcceptedConnectionsLimit maxBound maxBound 0)
+            address
+            unversionedHandshakeCodec
+            timeLimits
+            (cborTermVersionDataCodec unversionedProtocolDataCodec)
+            acceptableVersion
+            (simpleSingletonVersions
+              UnversionedProtocol
+              UnversionedProtocolData
+              (SomeResponderApplication $
+                forwarderApp [ (forwardEKGMetricsResp   ekgConfig store,  1)
+                             , (forwardTraceObjectsResp tfConfig tbQueue, 2)
+                             ]
+              )
+            )
+            nullErrorPolicies
+            $ \_ serverAsync ->
+              wait serverAsync -- Block until async exception.
  where
   forwarderApp
     :: [(RunMiniProtocol 'ResponderMode LBS.ByteString IO Void (), Word16)]
