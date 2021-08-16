@@ -6,11 +6,10 @@ import           Cardano.Prelude
 import           Data.Function (id)
 import           Options.Applicative
 import           Options.Applicative.Help.Ann
-import           Options.Applicative.Help.Types (helpText)
+import           Options.Applicative.Help.Types (helpText, renderHelp)
 import           Prelude (String)
 import           Prettyprinter
 import           Prettyprinter.Render.Util.SimpleDocTree
-import           Options.Applicative.Help.Types (renderHelp)
 
 import qualified Data.Text as T
 import qualified System.Environment as IO
@@ -45,7 +44,7 @@ customRenderHelpAsHtml cols
       then case ann of
         AnnTrace _ name -> "<span name=" <> show name <> ">" <> x <> "</span>"
         AnnStyle _ -> x
-      else flip const
+      else x
     wrapper = if cliHelpTraceEnabled
       then id
         . ("<html>\n" <>)
