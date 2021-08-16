@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+
+set -e
+
+RED='\033[0;31m'
+NC='\033[0m' # No Color
+
+mkdir -p tmp
+
+rm -rf tmp/dep-repo-result
+
+cat cabal.project | \
+  grep '\(^source-repository-package\|^ *location:\|^ *tag:\)' | sed 's|^source-repository-package|-|g' | \
+  yq eval -P -j \
+  > tmp/repositories.json
+
+for row in $(cat tmp/repositories.json | jq -r '.[] | @base64'); do
+  json="$(echo "${row}" | base64 --decode | jq -r ${1})"
+  location="$(echo "$json" | jq -r .location)"
+  tag="$(echo "$json" | jq -r .tag)"
+
+  rm -rf tmp/dep-repo
+  echo "$location"
+  git clone "$location" tmp/dep-repo
+  (cd tmp/dep-repo; git log --pretty=format:"%H") | grep "$tag" || (
+    printf "${RED}Commit $tag from $location is not on the main branch${NC}\n" >> tmp/dep-repo-result
+  )
+
+  rm -rf tmp/dep-repo
+done
+
+if [ -f tmp/dep-repo-result ]; then
+  printf "${RED}Commits not on the main branch detected in dependencies${NC}\n"
+  cat tmp/dep-repo-result
+  exit 1
+fi
