@@ -31,7 +31,7 @@ common http-media                   { build-depends: http-media                 
 common iohk-monitoring              { build-depends: iohk-monitoring                  >= 0.1.10.1                 }
 common mtl                          { build-depends: mtl                              >= 2.2.2                    }
 common network                      { build-depends: network                          >= 3.1.2.1                  }
-common optparse-applicative-fork    { build-depends: optparse-applicative-fork        >= 0.16.1.0                 }
+common optparse-applicative         { build-depends: optparse-applicative             >= 0.16.1.0                 }
 common ouroboros-consensus-cardano  { build-depends: ouroboros-consensus-cardano      >= 0.1.0.0                  }
 common ouroboros-network            { build-depends: ouroboros-network                >= 0.1.0.0                  }
 common prometheus                   { build-depends: prometheus                       >= 2.2.2                    }
@@ -78,7 +78,7 @@ library
                       , iohk-monitoring
                       , mtl
                       , network
-                      , optparse-applicative-fork
+                      , optparse-applicative
                       , ouroboros-consensus-cardano
                       , ouroboros-network
                       , prometheus
@@ -111,7 +111,7 @@ library
 executable cardano-submit-api
   import:               base, project-config
                       , cardano-submit-api
-                      , optparse-applicative-fork
+                      , optparse-applicative
   main-is:              Main.hs
   hs-source-dirs:       app
   ghc-options:          -threaded -rtsopts "-with-rtsopts=-T -I0"
