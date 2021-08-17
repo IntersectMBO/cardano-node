@@ -67,8 +67,8 @@ instance LogFormatting ResourceStats where
       , "Threads"       .= Number (fromIntegral $ rThreads rs)
       ]
 
-    asMetrics rs = [
-        IntM ["Stat","Cputicks"] (fromIntegral $ rCentiCpu rs)
+    asMetrics rs =
+      [ IntM ["Stat","Cputicks"] (fromIntegral $ rCentiCpu rs)
       , IntM ["Mem","Resident"] (fromIntegral $ rRSS rs)
       , IntM ["RTS","GcLiveBytes"] (fromIntegral $ rLive rs)
       , IntM ["RTS","GcMajorNum"] (fromIntegral $ rGcsMajor rs)

@@ -25,8 +25,8 @@ instance LogFormatting TestMessage where
            ]
 
 testMessageDocumented :: Documented TestMessage
-testMessageDocumented = Documented [
-  DocMsg (TestMessage "dummy") [] "just a text"
+testMessageDocumented = Documented
+  [ DocMsg (TestMessage "dummy") [] "just a text"
   ]
 
 tracers :: MonadIO m => m (Trace m TestMessage, Trace m TestMessage)
@@ -40,19 +40,22 @@ tracers  = do
 config1 :: TraceConfig
 config1 = TraceConfig {
       tcOptions = Map.fromList
-          [([], [CoSeverity SilenceF]),
-          (["tracer1"], [CoSeverity ErrorF]),
-          (["tracer2"], [CoSeverity CriticalF]),
-          (["tracer2","bubble"], [CoSeverity InfoF])]
+          [ ([], [CoSeverity SilenceF])
+          , (["tracer1"], [CoSeverity ErrorF])
+          , (["tracer2"], [CoSeverity CriticalF])
+          , (["tracer2","bubble"], [CoSeverity InfoF])
+          ]
     , tcForwarder = LocalSocket "forwarder.log"
     , tcForwarderQueueSize = 100
     }
 
 config2 :: TraceConfig
 config2 = TraceConfig {
-      tcOptions = Map.fromList [([], [CoSeverity InfoF]),
-          (["tracer2"], [CoSeverity WarningF]),
-          (["tracer2","bubble"], [CoSeverity WarningF])]
+      tcOptions = Map.fromList
+        [ ([], [CoSeverity InfoF])
+        , (["tracer2"], [CoSeverity WarningF])
+        , (["tracer2","bubble"], [CoSeverity WarningF])
+        ]
     , tcForwarder = LocalSocket "forwarder.log"
     , tcForwarderQueueSize = 100
     }

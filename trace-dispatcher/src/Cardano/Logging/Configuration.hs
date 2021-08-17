@@ -165,7 +165,7 @@ withNamespaceConfig name extract withConfig tr = do
         Left (_cmap, Just _v) ->
                       error $ "Trace not reset before reconfiguration (4)"
                                   ++ show (lcNamespace lc)
-    mkTrace ref (lc, Just dc@(Document {}), a) = do
+    mkTrace ref (lc, Just dc@Document {}, a) = do
       eitherConf <- liftIO $ readIORef ref
       case eitherConf of
         Right val -> do

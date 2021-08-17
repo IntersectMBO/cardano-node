@@ -22,7 +22,7 @@ data BaseStats = BaseStats {
     } deriving (Eq, Ord, Show, Generic)
 
 instance A.ToJSON BaseStats where
-    toEncoding = A.genericToEncoding A.defaultOptions
+  toEncoding = A.genericToEncoding A.defaultOptions
 
 instance LogFormatting BaseStats where
   forMachine = mempty
@@ -32,8 +32,8 @@ instance LogFormatting BaseStats where
 
 baseStatsDocumented :: Documented Double
 baseStatsDocumented =
-  Documented [
-    DocMsg 0.0 [] "This is the value of the measurement"
+  Documented
+  [ DocMsg 0.0 [] "This is the value of the measurement"
   , DocMsg 0.0 [] "This is the sum of all measurments so far"
   ]
 
@@ -42,11 +42,12 @@ emptyStats = BaseStats 0.0 100000000.0 (-100000000.0) 0 0.0
 
 calculate :: BaseStats -> LoggingContext -> Double -> BaseStats
 calculate BaseStats{..} _ val =
-   BaseStats  val
-              (min bsMin val)
-              (max bsMax val)
-              (1 + bsCount)
-              (bsSum + val)
+    BaseStats
+      val
+      (min bsMin val)
+      (max bsMax val)
+      (1 + bsCount)
+      (bsSum + val)
 
 testAggregation :: IO ()
 testAggregation = do
