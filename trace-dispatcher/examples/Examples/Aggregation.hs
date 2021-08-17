@@ -32,8 +32,8 @@ instance LogFormatting BaseStats where
 
 baseStatsDocumented :: Documented Double
 baseStatsDocumented =
-  Documented [
-    DocMsg 0.0 [] "This is the value of the measurement"
+  Documented
+  [ DocMsg 0.0 [] "This is the value of the measurement"
   , DocMsg 0.0 [] "This is the sum of all measurments so far"
   ]
 

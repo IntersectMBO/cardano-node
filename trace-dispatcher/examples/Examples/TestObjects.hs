@@ -149,8 +149,8 @@ instance LogFormatting (TraceForgeEvent LogBlock) where
     [IntM ["blockFromFuture"] (fromIntegral $ unSlotNo slot)]
 
 traceForgeEventDocu :: Documented (TraceForgeEvent LogBlock)
-traceForgeEventDocu = Documented [
-    DocMsg
+traceForgeEventDocu = Documented
+  [ DocMsg
       (TraceStartLeadershipCheck (SlotNo 1))
       []
       "Start of the leadership check\n\
@@ -210,36 +210,3 @@ message3 = TraceBlockFromFuture (SlotNo 4400) (SlotNo 300)
 
 message4 :: TraceForgeEvent LogBlock
 message4 = TraceStartLeadershipCheck (SlotNo 2002)
-
-
-
-  -- \(WithSeverity sev (Consensus.TraceLabelCreds creds event)) ->
-  --   case event of
-  --     Consensus.TraceStartLeadershipCheck slot -> do
-  --       !query <- mapNodeKernelDataIO
-  --                   (\nk ->
-  --                      (,,)
-  --                        <$> nkQueryLedger (ledgerUtxoSize . ledgerState) nk
-  --                        <*> nkQueryLedger (ledgerDelegMapSize . ledgerState) nk
-  --                        <*> nkQueryChain fragmentChainDensity nk)
-  --                   nodeKern
-  --       meta <- mkLOMeta sev Public
-  --       fromSMaybe (pure ()) $
-  --         query <&>
-  --           \(utxoSize, delegMapSize, _) -> do
-  --               traceCounter "utxoSize"     tr utxoSize
-  --               traceCounter "delegMapSize" tr delegMapSize
-  --       traceNamedObject (appendName "LeadershipCheck" tr)
-  --         ( meta
-  --         , LogStructured $ Map.fromList $
-  --           [("kind", String "TraceStartLeadershipCheck")
-  --           ,("credentials", String creds)
-  --           ,("slot", toJSON $ unSlotNo slot)]
-  --           ++ fromSMaybe []
-  --              (query <&>
-  --                \(utxoSize, delegMapSize, chainDensity) ->
-  --                  [ ("utxoSize",     toJSON utxoSize)
-  --                  , ("delegMapSize", toJSON delegMapSize)
-  --                  , ("chainDensity", toJSON (fromRational chainDensity :: Float))
-  --                  ])
-  --         )
