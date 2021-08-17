@@ -102,7 +102,6 @@ let
       pkgs.git
       pkgs.hlint
       pkgs.moreutils
-      pkgs.psmisc
     ] ++ lib.optional haveGlibcLocales pkgs.glibcLocales
     ## Workbench's main script is called directly in dev mode.
     ++ lib.optionals (!workbenchDevMode)
@@ -117,6 +116,7 @@ let
     ## because psmisc fails to build on Big Sur.
     ++ lib.optionals (!stdenv.isDarwin)
     [
+      pkgs.psmisc
       cluster.start
       cluster.stop
       cluster.restart
@@ -175,8 +175,9 @@ let
       cluster.restart
       cardanolib-py
       cluster.workbench.workbench
+    ] ++ (lib.optionals (!stdenv.isDarwin) [
       psmisc
-    ];
+    ]);
 
     # Prevents cabal from choosing alternate plans, so that
     # *all* dependencies are provided by Nix.
