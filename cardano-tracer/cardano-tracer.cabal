@@ -1,0 +1,132 @@
+cabal-version:       2.4
+name:                cardano-tracer
+version:             0.1.0
+synopsis:            See README for more info
+description:         See README for more info
+license:             Apache-2.0
+license-file:        LICENSE
+copyright:           2021 Input Output (Hong Kong) Ltd.
+author:              IOHK
+maintainer:          operations@iohk.io
+build-type:          Simple
+extra-doc-files:     README.md
+                     CHANGELOG.md
+
+common base            { build-depends: base >= 4.14 && < 4.15 }
+
+common project-config
+  default-language:    Haskell2010
+
+  ghc-options:         -Wall
+                       -Wcompat
+                       -Wincomplete-record-updates
+                       -Wincomplete-uni-patterns
+                       -Wno-unticked-promoted-constructors
+                       -Wno-orphans
+                       -Wpartial-fields
+                       -Wredundant-constraints
+                       -Wunused-packages
+
+library
+  import:              base, project-config
+  hs-source-dirs:      src
+
+  exposed-modules:     Cardano.Tracer.Acceptors
+                       Cardano.Tracer.CLI
+                       Cardano.Tracer.Configuration
+                       Cardano.Tracer.Handlers
+                       Cardano.Tracer.Run
+                       Cardano.Tracer.Types
+
+                       Cardano.Tracer.Handlers.TraceObjects
+
+                       Cardano.Tracer.Handlers.Logs.File
+                       Cardano.Tracer.Handlers.Logs.Journal
+                       Cardano.Tracer.Handlers.Logs.Log
+                       Cardano.Tracer.Handlers.Logs.Rotator
+
+                       Cardano.Tracer.Handlers.Metrics.Monitoring
+                       Cardano.Tracer.Handlers.Metrics.Prometheus
+                       Cardano.Tracer.Handlers.Metrics.Run
+
+  other-modules:       Paths_cardano_tracer
+
+  build-depends:         aeson
+                       , async
+                       , blaze-html
+                       , blaze-markup
+                       , bytestring
+                       , cborg
+                       , containers
+                       , contra-tracer
+                       , directory
+                       , ekg
+                       , ekg-core
+                       , ekg-forward
+                       , extra
+                       , filepath
+                       , hashable
+                       , libsystemd-journal
+                       , optparse-applicative
+                       , ouroboros-network-framework
+                       , snap-blaze
+                       , snap-core
+                       , snap-server
+                       , stm
+                       , text
+                       , time
+                       , trace-dispatcher
+                       , trace-forward
+                       , unordered-containers
+
+executable cardano-tracer
+  import:              base, project-config
+
+  hs-source-dirs:      app
+
+  main-is:             cardano-tracer.hs
+
+  other-modules:       Paths_cardano_tracer
+
+  build-depends:         cardano-tracer
+                       , optparse-applicative
+
+  ghc-options:         -threaded
+                       -rtsopts
+                       -with-rtsopts=-T
+
+test-suite cardano-tracer-test
+  import:              base, project-config
+  type:                exitcode-stdio-1.0
+
+  hs-source-dirs:      test
+
+  main-is:             cardano-tracer-test.hs
+
+  other-modules:       Cardano.Tracer.Test.Types
+                       Cardano.Tracer.Test.Forwarder
+                       Cardano.Tracer.Test.Logs.File
+                       Cardano.Tracer.Test.Logs.Rotator
+
+  build-depends:         async
+                       , base
+                       , bytestring
+                       , cardano-tracer
+                       , cborg
+                       , contra-tracer
+                       , directory
+                       , ekg-core
+                       , ekg-forward
+                       , filepath
+                       , ouroboros-network-framework
+                       , QuickCheck
+                       , stm
+                       , tasty
+                       , tasty-quickcheck
+                       , time
+                       , trace-dispatcher
+                       , trace-forward
+
+  ghc-options:         -threaded
+                       -rtsopts
+                       -with-rtsopts=-N
