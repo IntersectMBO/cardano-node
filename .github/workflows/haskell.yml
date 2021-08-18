@@ -59,7 +59,7 @@ jobs:
       if: matrix.os == 'windows-latest'
       run: |
         curl -Ls \
-          https://dl.haskellworks.io/binaries/libsodium/libsodium-Win32-66f017f1.tar.gz -o libsodium-Win32-66f017f1.tar.gz
+          https://github.com/input-output-hk/libsodium-release/releases/download/v66f017f1/libsodium-win64.tar.gz -o libsodium-Win32-66f017f1.tar.gz
         tar zxvf libsodium-Win32-66f017f1.tar.gz
 
         sed -i "s|/d/a/1/s/|D:/a/cardano-node/cardano-node/|g" libsodium-win64/lib/pkgconfig/libsodium.pc
