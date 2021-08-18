@@ -647,6 +647,9 @@ data TxBodyErrorAutoBalance =
        -- | One or more of the scripts fails to execute correctly.
      | TxBodyScriptExecutionError [(ScriptWitnessIndex, ScriptExecutionError)]
 
+       -- | One or more of the scripts were expected to fail validation, but none did.
+     | TxBodyScriptBadScriptValidity
+
        -- | The balance of the non-ada assets is not zero. The 'Value' here is
        -- that residual non-zero balance. The 'makeTransactionBodyAutoBalance'
        -- function only automatically balances ada, not other assets.
@@ -706,6 +709,9 @@ instance Error TxBodyErrorAutoBalance where
                 ++ " failed with " ++ displayError failure
               | (index, failure) <- failures ]
 
+  displayError TxBodyScriptBadScriptValidity =
+      "One or more of the scripts were expected to fail validation, but none did."
+
   displayError (TxBodyErrorAssetBalanceWrong _value) =
       "The transaction does not correctly balance in its non-ada assets. "
    ++ "The balance between inputs and outputs should sum to zero. "
@@ -751,18 +757,25 @@ handleExUnitsErrors ::
   -> Map ScriptWitnessIndex ScriptExecutionError
   -> Map ScriptWitnessIndex ExecutionUnits
   -> Either TxBodyErrorAutoBalance (Map ScriptWitnessIndex ExecutionUnits)
-handleExUnitsErrors scriptValidity failures exUnitsMap =
-    if null relevantFailures
+handleExUnitsErrors ScriptValid failuresMap exUnitsMap =
+    if null failures
       then Right exUnitsMap
-      else Left (TxBodyScriptExecutionError relevantFailures)
-  where relevantFailures :: [(ScriptWitnessIndex, ScriptExecutionError)]
-        relevantFailures = filter byScriptValidity (Map.toList failures)
-        byScriptValidity :: (ScriptWitnessIndex, ScriptExecutionError) -> Bool
-        byScriptValidity (_, e) = case scriptValidity of
-          ScriptValid -> True
-          ScriptInvalid -> case e of
-            ScriptErrorEvaluationFailed _ -> False
+      else Left (TxBodyScriptExecutionError failures)
+  where failures :: [(ScriptWitnessIndex, ScriptExecutionError)]
+        failures = Map.toList failuresMap
+handleExUnitsErrors ScriptInvalid failuresMap exUnitsMap
+  | null scriptFailures = Left TxBodyScriptBadScriptValidity
+  | null nonScriptFailures = Right exUnitsMap
+  | otherwise = Left (TxBodyScriptExecutionError nonScriptFailures)
+  where nonScriptFailures :: [(ScriptWitnessIndex, ScriptExecutionError)]
+        nonScriptFailures = filter (not . isScriptErrorEvaluationFailed) (Map.toList failuresMap)
+        scriptFailures :: [(ScriptWitnessIndex, ScriptExecutionError)]
+        scriptFailures = filter isScriptErrorEvaluationFailed (Map.toList failuresMap)
+        isScriptErrorEvaluationFailed :: (ScriptWitnessIndex, ScriptExecutionError) -> Bool
+        isScriptErrorEvaluationFailed (_, e) = case e of
+            ScriptErrorEvaluationFailed _ -> True
             _ -> True
+
 
 -- | This is much like 'makeTransactionBody' but with greater automation to
 -- calculate suitable values for several things.
