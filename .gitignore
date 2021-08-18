@@ -14,9 +14,8 @@ dist/
 *.swp
 .dir-locals.el
 .Rhistory
-result*
+/result*
 /launch-*
-stack.yaml.lock
 
 /.cache
 /db
