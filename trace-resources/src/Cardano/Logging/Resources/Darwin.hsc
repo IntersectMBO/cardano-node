@@ -7,6 +7,17 @@ module Cardano.Logging.Resources.Darwin
 
 #include "os-support-darwin.h"
 
+import           Data.Foldable (foldrM)
+import           Data.Word (Word32, Word8)
+import           Data.Text (pack)
+import           Foreign.C.Types
+import           Foreign.Marshal.Alloc
+import           Foreign.Ptr
+import           Foreign.Storable
+import qualified GHC.Stats as GhcStats
+import           System.Posix.Process (getProcessID)
+import           System.Posix.Types (ProcessID)
+
 {- type aliases -}
 type MACH_VM_SIZE_T = Word64
 data TIME_VALUE_T = TIME_VALUE_T Word64 Word64

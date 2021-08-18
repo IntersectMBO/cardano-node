@@ -8,7 +8,7 @@ module Cardano.Logging.Counters.Windows
     , readRessoureStatsInternal
     ) where
 
-#ifdef ENABLE_OBSERVABLES
+
 import           Data.Foldable (foldrM)
 -- import           Foreign.C.String
 import           Foreign.C.Types
@@ -195,7 +195,7 @@ readCounters (FilterTrace _)           = return []
 readCounters UntimedTrace              = return []
 readCounters DropOpening               = return []
 readCounters (SetSeverity _)           = return []
-#ifdef ENABLE_OBSERVABLES
+
 readCounters (ObservableTraceSelf tts) = do
     pid <- getCurrentProcessId
     takeMeasurements pid tts
@@ -216,13 +216,8 @@ takeMeasurements pid tts =
                 , (IOStats, readProcIO pid)
                 , (GhcRtsStats, readRTSStats)
                 ]
-#else
-readCounters (ObservableTraceSelf _)   = return []
-readCounters (ObservableTrace     _ _) = return []
-#endif
 
 
-#ifdef ENABLE_OBSERVABLES
 readProcMem :: ProcessId -> IO [Counter]
 readProcMem pid = do
     meminfo <- getMemoryInfo pid
@@ -248,10 +243,9 @@ getMemoryInfo pid =
         return $ ProcessMemoryCounters 0 0 0 0 0 0 0 0 0 0
       else
         peek ptr
-#endif
 
 
-#ifdef ENABLE_OBSERVABLES
+
 readSysStats :: ProcessId -> IO [Counter]
 readSysStats pid = do
     sysinfo <- getSysInfo
@@ -295,10 +289,8 @@ readSysStats pid = do
           else
             peek ptr
 
-#endif
 
 
-#ifdef ENABLE_OBSERVABLES
 readRessoureStatsInternal :: IO (Maybe ResourceStats)
 readRessoureStatsInternal = getCurrentProcessId >>= \pid -> do
   cpu <- getCpuTimes   pid
@@ -344,10 +336,8 @@ getCpuTimes pid =
       else
         peek ptr
 
-#endif
 
 
-#ifdef ENABLE_OBSERVABLES
 readProcIO :: ProcessId -> IO [Counter]
 readProcIO pid = do
     ioinfo <- getIOInfo
@@ -372,10 +362,5 @@ readProcIO pid = do
             peek ptr
 
 
-#endif
-
-
-#ifdef ENABLE_OBSERVABLES
 readProcNet :: ProcessId -> IO [Counter]
 readProcNet _pid = pure []
-#endif
