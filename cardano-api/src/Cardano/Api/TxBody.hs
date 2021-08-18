@@ -73,7 +73,6 @@ module Cardano.Api.TxBody (
 
     -- ** Building vs viewing transactions
     BuildTxWith(..),
-    unBuildTxWith,
     BuildTx,
     ViewTx,
 
@@ -911,9 +910,6 @@ data BuildTxWith build a where
 deriving instance Eq   a => Eq   (BuildTxWith build a)
 deriving instance Show a => Show (BuildTxWith build a)
 
-unBuildTxWith :: BuildTxWith BuildTx a -> a
-unBuildTxWith (BuildTxWith a) = a
-
 -- ----------------------------------------------------------------------------
 -- Transaction input values (era-dependent)
 --
@@ -1188,7 +1184,7 @@ data TxBodyContent build era =
        txCertificates   :: TxCertificates build era,
        txUpdateProposal :: TxUpdateProposal era,
        txMintValue      :: TxMintValue    build era,
-       txScriptValidity :: BuildTxWith build (TxScriptValidity era)
+       txScriptValidity :: TxScriptValidity era
      }
 
 
@@ -1602,16 +1598,17 @@ pattern TxBody txbodycontent <- (getTxBodyContent -> txbodycontent)
 
 getTxBodyContent :: TxBody era -> TxBodyContent ViewTx era
 getTxBodyContent (ByronTxBody body) = getByronTxBodyContent body
-getTxBodyContent (ShelleyTxBody era body _scripts _redeemers mAux _scriptValidity) =
-    fromLedgerTxBody era body mAux
+getTxBodyContent (ShelleyTxBody era body _scripts _redeemers mAux scriptValidity) =
+    fromLedgerTxBody era scriptValidity body mAux
 
 
 fromLedgerTxBody
   :: ShelleyBasedEra era
+  -> TxScriptValidity era
   -> Ledger.TxBody (ShelleyLedgerEra era)
   -> Maybe (Ledger.AuxiliaryData (ShelleyLedgerEra era))
   -> TxBodyContent ViewTx era
-fromLedgerTxBody era body mAux =
+fromLedgerTxBody era scriptValidity body mAux =
     TxBodyContent
       { txIns            = fromLedgerTxIns            era body
       , txInsCollateral  = fromLedgerTxInsCollateral  era body
@@ -1627,7 +1624,7 @@ fromLedgerTxBody era body mAux =
       , txMetadata
       , txAuxScripts
       , txExtraScriptData = ViewTx
-      , txScriptValidity = ViewTx
+      , txScriptValidity = scriptValidity
       }
   where
     (txMetadata, txAuxScripts) = fromLedgerTxAuxiliaryData era mAux
@@ -2018,7 +2015,7 @@ getByronTxBodyContent (Annotated Byron.UnsafeTx{txInputs, txOutputs} _) =
       txCertificates   = TxCertificatesNone,
       txUpdateProposal = TxUpdateProposalNone,
       txMintValue      = TxMintNone,
-      txScriptValidity = ViewTx
+      txScriptValidity = TxScriptValidityNone
     }
 
 makeShelleyTransactionBody :: ()
@@ -2362,7 +2359,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraAlonzo
         scripts
         (TxBodyScriptData ScriptDataInAlonzoEra datums redeemers)
         txAuxData
-        (unBuildTxWith txScriptValidity)
+        txScriptValidity
   where
     witnesses :: [(ScriptWitnessIndex, AnyScriptWitness AlonzoEra)]
     witnesses = collectTxBodyScriptWitnesses txbodycontent

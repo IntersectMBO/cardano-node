@@ -119,7 +119,7 @@ genTx key networkId fee metadata inFunds outValues validity
     , txCertificates = TxCertificatesNone
     , txUpdateProposal = TxUpdateProposalNone
     , txMintValue = TxMintNone
-    , txScriptValidity = BuildTxWith TxScriptValidityNone
+    , txScriptValidity = TxScriptValidityNone
     }
 
   mkTxOut v = TxOut (Tx.keyAddress @ era networkId key) (mkTxOutValueAdaOnly v) TxOutDatumHashNone

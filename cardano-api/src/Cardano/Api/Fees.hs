@@ -838,12 +838,13 @@ makeTransactionBodyAutoBalance eraInMode systemstart history pparams
                       utxo
                       txbody0
 
-    let aScriptValidity = unBuildTxWith (txScriptValidity txbodycontent)
-
     exUnitsMap' <-
       case Map.mapEither id exUnitsMap of
         (failures, exUnitsMap') ->
-          handleExUnitsErrors (txScriptValidityToScriptValidity aScriptValidity) failures exUnitsMap'
+          handleExUnitsErrors
+            (txScriptValidityToScriptValidity (txScriptValidity txbodycontent))
+            failures
+            exUnitsMap'
 
     let txbodycontent1 = substituteExecutionUnits exUnitsMap' txbodycontent
 

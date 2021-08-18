@@ -782,12 +782,12 @@ validateTxUpdateProposal era (Just (UpdateProposalFile file)) =
 validateTxScriptValidity :: forall era.
      CardanoEra era
   -> Maybe ScriptValidity
-  -> ExceptT ShelleyTxCmdError IO (BuildTxWith BuildTx (TxScriptValidity era))
-validateTxScriptValidity _ Nothing = pure $ BuildTxWith TxScriptValidityNone
+  -> ExceptT ShelleyTxCmdError IO (TxScriptValidity era)
+validateTxScriptValidity _ Nothing = pure TxScriptValidityNone
 validateTxScriptValidity era (Just scriptValidity) =
   case txScriptValiditySupportedInCardanoEra era of
     Nothing -> txFeatureMismatch era TxFeatureScriptValidity
-    Just supported -> pure . BuildTxWith $ TxScriptValidity supported scriptValidity
+    Just supported -> pure $ TxScriptValidity supported scriptValidity
 
 validateTxMintValue :: forall era.
                        CardanoEra era
