@@ -15,6 +15,7 @@ module Cardano.Api.Block (
     -- * Blocks in the context of an era
     Block(.., Block),
     BlockHeader(..),
+    getBlockHeaderAndTxs,
 
     -- ** Blocks in the context of a consensus mode
     BlockInMode(..),
