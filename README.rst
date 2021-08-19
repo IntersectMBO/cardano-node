@@ -475,7 +475,7 @@ If you require test ada during this period, please `fill out this form <https://
 
 API Documentation
 =================
-The API documentation is published `here <https://input-output-hk.github.io/cardano-node/>`_.
+The API documentation is published `here <https://input-output-hk.github.io/cardano-node/cardano-api/>`_.
 
 The documentation is built with each push, but is only published from `master` branch.  In order to
 test if the documentation is working, build the documentation locally with `./scripts/haddocs.sh` and
