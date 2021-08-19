@@ -146,7 +146,7 @@ jobs:
     - name: Run tests
       run: |
         if [ "${{github.event.inputs.tests}}" == "all" ]; then
-          TMPDIR="${{ runner.temp }}" TMP="${{ runner.temp }}" KEEP_WORKSPACE=1 cabal all
+          TMPDIR="${{ runner.temp }}" TMP="${{ runner.temp }}" KEEP_WORKSPACE=1 cabal test all
         fi
 
     - name: "Run tests: cardano-testnet"
