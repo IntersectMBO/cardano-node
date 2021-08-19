@@ -117,16 +117,9 @@ package cardano-ledger-alonzo-test
 -- Using a fork until our patches can be merged upstream
 source-repository-package
   type: git
-  location: https://github.com/input-output-hk/criterion
-  tag: fb2e7be532db96255d203f86360230cae37130f3
-  --sha256: 14r9zkfa8zslky3969gaq27gi7yi9rlqv0h1iq7zam9l15z53vhr
-
--- Using a fork until our patches can be merged upstream
-source-repository-package
-  type: git
   location: https://github.com/input-output-hk/optparse-applicative
-  tag: 84bcc6f18992a441886589a117249bfface8630e
-  --sha256: 09pr7m9gjsk8889m9d3mj75p69viv1acnrq63dgb11jl5gnnsblr
+  tag: 7497a29cb998721a9068d5725d49461f2bba0e7a
+  --sha256: 1gvsrg925vynwgqwplgjmp53vj953qyh3wbdf34pw21c8r47w35r
 
 source-repository-package
   type: git
