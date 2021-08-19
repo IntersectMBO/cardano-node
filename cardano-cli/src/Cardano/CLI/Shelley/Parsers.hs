@@ -1853,7 +1853,7 @@ pTxOut :: Parser TxOutAnyEra
 pTxOut =
         Opt.option (readerFromParsecParser parseTxOutAnyEra)
           (  Opt.long "tx-out"
-          <> Opt.metavar "ADDRESS VALUE"
+          <> Opt.metavar "ADDRESS+VALUE"
           -- TODO alonzo: Update the help text to describe the new syntax as well.
           <> Opt.help "The transaction output as Address+Lovelace where Address is \
                       \the Bech32-encoded address followed by the amount in \
@@ -2802,8 +2802,6 @@ parseTxOutAnyEra :: Parsec.Parser (Maybe (Hash ScriptData) -> TxOutAnyEra)
 parseTxOutAnyEra = do
     addr <- parseAddressAny
     Parsec.spaces
-    -- Accept the old style of separating the address and value in a
-    -- transaction output:
     Parsec.option () (Parsec.char '+' >> Parsec.spaces)
     val <- parseValue
     return (TxOutAnyEra addr val)
