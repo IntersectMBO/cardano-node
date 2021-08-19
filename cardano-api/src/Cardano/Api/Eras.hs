@@ -276,6 +276,7 @@ data InAnyShelleyBasedEra thing where
                           -> InAnyShelleyBasedEra thing
 
 
+-- | Converts a 'ShelleyBasedEra' to the broader 'CardanoEra'.
 shelleyBasedToCardanoEra :: ShelleyBasedEra era -> CardanoEra era
 shelleyBasedToCardanoEra ShelleyBasedEraShelley = ShelleyEra
 shelleyBasedToCardanoEra ShelleyBasedEraAllegra = AllegraEra
