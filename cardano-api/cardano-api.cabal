@@ -173,6 +173,7 @@ library gen
                       , cardano-prelude
                       , containers
                       , hedgehog
+                      , plutus-ledger-api
                       , shelley-spec-ledger
                       , tasty
                       , tasty-hedgehog
