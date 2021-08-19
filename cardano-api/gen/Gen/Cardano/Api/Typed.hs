@@ -67,6 +67,7 @@ import qualified Data.ByteString.Short as SBS
 import qualified Cardano.Binary as CBOR
 import qualified Cardano.Crypto.Hash as Crypto
 import qualified Cardano.Crypto.Seed as Crypto
+import qualified Plutus.V1.Ledger.Api as Plutus
 import qualified Shelley.Spec.Ledger.TxBody as Ledger (EraIndependentTxBody)
 
 import           Hedgehog (Gen, Range)
@@ -726,11 +727,13 @@ genUpdateProposal =
     <*> genEpochNo
 
 genCostModel :: Gen CostModel
-genCostModel =
-  CostModel
-    <$> Gen.map (Range.constant 1 10)
-                ((,) <$> Gen.text (Range.constant 1 10) Gen.alphaNum
-                     <*> Gen.integral (Range.linear 0 5000))
+genCostModel = case Plutus.defaultCostModelParams of
+  Nothing -> panic "Plutus defaultCostModelParams is broken."
+  Just dcm ->
+      CostModel
+    -- TODO This needs to be the cost model struct for whichever
+    -- Plutus version we're using, once we support multiple Plutus versions.
+    <$> mapM (const $ Gen.integral (Range.linear 0 5000)) dcm
 
 genCostModels :: Gen (Map AnyPlutusScriptVersion CostModel)
 genCostModels =
