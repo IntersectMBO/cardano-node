@@ -34,11 +34,6 @@
     package plutus-tx-plugin
       flags: +use-ghc-stub
   ''
-  # Needed for the Windows cabal constraint solver.
-  + lib.optionalString stdenv.hostPlatform.isWindows ''
-    max-backjumps: 10000
-    reorder-goals: True
-  ''
 
 , projectPackages ? lib.attrNames (haskell-nix.haskellLib.selectProjectPackages
     (haskell-nix.cabalProject' {
@@ -68,12 +63,16 @@ let
           "xhtml"
           # "stm" "terminfo"
         ];
+       # These fon't build on windows yet
+       packages.plutus-example.package.buildable = false;
+       packages.plutus-ledger.package.buildable = false;
       })
       {
         # Tell `release-lib` what to exclude these from windows builds
-        packages.plutus-example.components.library.buildable = lib.mkForce false;
-        packages.plutus-ledger.components.library.buildable = lib.mkForce false;
-        packages.plutus-tx-plugin.components.library.buildable = lib.mkForce false;
+        packages.plutus-example.components.library.platforms = with lib.platforms; [ linux darwin ];
+        packages.plutus-example.components.exes.plutus-example.platforms = with lib.platforms; [ linux darwin ];
+        packages.plutus-ledger.components.library.platforms = with lib.platforms; [ linux darwin ];
+        packages.plutus-tx-plugin.components.library.platforms = with lib.platforms; [ linux darwin ];
       }
       {
         # Needed for the CLI tests.
