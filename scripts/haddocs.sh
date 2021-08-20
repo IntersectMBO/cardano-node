@@ -75,27 +75,67 @@ if [[ !( -d ${OUTPUT_DIR} ) ]]; then
   mkdir -p ${OUTPUT_DIR}
 fi
 
-# copy the new docs
-for noopt_dir in $(find "${BUILD_DIR}/build/${OS_ARCH}/ghc-${GHC_VERSION}" -name noopt | grep -v /t/); do
-  for doc_index in $(find "${noopt_dir}" -name doc-index.html); do
-    package_dir="$(dirname "$doc_index")"
-    package="$(echo "$(basename "${package_dir}")" | sed 's/-[0-9]\+\(\.[0-9]\+\)*//')"
-    echo "Copying package: ${package}"
-    cp -r "${package_dir}" "${OUTPUT_DIR}"
-  done
+mkdir -p "${OUTPUT_DIR}/_plan/"
+
+# Build plan
+for row in $(
+  cat dist-newstyle/cache/plan.json | \
+    jq -r '
+      .
+      | ."install-plan"[]
+      | select(.style == "local")
+      | { "dist-dir": ."dist-dir"
+        , "pkg-name": ."pkg-name"
+        , "component-name": ."component-name" | split(":") | join("_")
+        }
+      | @base64'
+); do
+  json="$(echo "${row}" | base64 --decode)"
+
+  dist_dir="$(echo "$json" | jq -r '."dist-dir"')"
+
+  if [ -d "${dist_dir}" ]; then
+    echo "$json" > "${OUTPUT_DIR}/_plan/$(echo "$json" | sha256sum | cut -d ' ' -f 1).json"
+  fi
+done
+
+# Copy the docs
+for json in "${OUTPUT_DIR}"/_plan/*.json; do
+  dist_dir="$(cat "$json" | jq -r '."dist-dir"')"
+  pkg_name="$(cat "$json" | jq -r '."pkg-name"')"
+  component_name="$(cat "$json" | jq -r '."component-name"')"
+
+  if [ -d "${dist_dir}" ]; then
+    for doc_index in $(find "${dist_dir}" -name doc-index.html); do
+      package_dir="$(dirname "$doc_index")"
+      package="$(echo "$(basename "${package_dir}")" | sed 's/-[0-9]\+\(\.[0-9]\+\)*//')"
+      echo "Copying package: ${package}"
+      mkdir -p "${OUTPUT_DIR}/${pkg_name}/${component_name}"
+      cp -r "${package_dir}"/* "${OUTPUT_DIR}/${pkg_name}/${component_name}"
+      echo "${OUTPUT_DIR}/${pkg_name}/${component_name}"
+    done
+  fi
 done
 
 # --read-interface options
 interface_options () {
-  for package in $(ls "${OUTPUT_DIR}"); do
-    if [ -f "${OUTPUT_DIR}/${package}/${package}.haddock" ]; then
-      echo "--read-interface=${package},${OUTPUT_DIR}/${package}/${package}.haddock"
+  for json in "${OUTPUT_DIR}"/_plan/*.json; do
+    dist_dir="$(cat "$json" | jq -r '."dist-dir"')"
+    pkg_name="$(cat "$json" | jq -r '."pkg-name"')"
+    component_name="$(cat "$json" | jq -r '."component-name"')"
+
+    if [ -d "${dist_dir}" ]; then
+      for doc_index in $(find "${dist_dir}" -name doc-index.html); do
+        package_dir="$(dirname "$doc_index")"
+        package="$(echo "$(basename "${package_dir}")" | sed 's/-[0-9]\+\(\.[0-9]\+\)*//')"
+        if [ -f "${OUTPUT_DIR}/${pkg_name}/${component_name}/${package}.haddock" ]; then
+          echo "--read-interface=${pkg_name}/${component_name},${OUTPUT_DIR}/${pkg_name}/${component_name}/${package}.haddock"
+        fi
+      done
     fi
   done
 }
 
-# Generate top level index using interface files
-#
 haddock \
   -o ${OUTPUT_DIR} \
   --title "cardano-node API" \
@@ -108,7 +148,7 @@ haddock \
 # Assemble a toplevel `doc-index.json` from package level ones.
 #
 echo "[]" > "${OUTPUT_DIR}/doc-index.json"
-for file in $(ls $OUTPUT_DIR/*/doc-index.json); do
+for file in $(ls $OUTPUT_DIR/*/*/doc-index.json); do
   project=$(basename $(dirname $file));
   jq -s \
     ".[0] + [.[1][] | (. + {link: (\"${project}/\" + .link)}) ]" \
