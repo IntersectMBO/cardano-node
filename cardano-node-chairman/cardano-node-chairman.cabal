@@ -48,7 +48,7 @@ executable cardano-node-chairman
                       , contra-tracer
                       , io-classes
                       , network-mux
-                      , optparse-applicative
+                      , optparse-applicative-fork
                       , ouroboros-consensus
                       , ouroboros-network
                       , ouroboros-network-framework
