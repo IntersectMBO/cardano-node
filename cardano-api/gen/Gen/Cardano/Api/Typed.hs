@@ -496,7 +496,7 @@ genTxBodyContent era = do
   txCertificates <- genTxCertificates era
   txUpdateProposal <- genTxUpdateProposal era
   txMintValue <- genTxMintValue era
-  txScriptValidity <- BuildTxWith <$> genTxScriptValidity era
+  txScriptValidity <- genTxScriptValidity era
 
   pure $ TxBodyContent
     { Api.txIns

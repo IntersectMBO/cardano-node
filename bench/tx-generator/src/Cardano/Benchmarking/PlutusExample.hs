@@ -46,7 +46,7 @@ payToScript key (script, txOutDatumHash) networkId inFunds outValues validity
     , txCertificates = TxCertificatesNone
     , txUpdateProposal = TxUpdateProposalNone
     , txMintValue = TxMintNone
-    , txScriptValidity = BuildTxWith TxScriptValidityNone
+    , txScriptValidity = TxScriptValidityNone
     }
 
   mkTxOut v = TxOut plutusScriptAddr (mkTxOutValueAdaOnly v) (TxOutDatumHash ScriptDataInAlonzoEra txOutDatumHash)
@@ -115,7 +115,7 @@ spendFromScript key script networkId protocolParameters collateral inFunds valid
     , txCertificates = TxCertificatesNone
     , txUpdateProposal = TxUpdateProposalNone
     , txMintValue = TxMintNone
-    , txScriptValidity = BuildTxWith TxScriptValidityNone
+    , txScriptValidity = TxScriptValidityNone
     }
   requiredMemory = 700000000
   requiredSteps  = 700000000

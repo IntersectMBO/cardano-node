@@ -80,7 +80,7 @@ mkGenesisTransaction key _payloadSize ttl fee txins txouts
     , txCertificates = TxCertificatesNone
     , txUpdateProposal = TxUpdateProposalNone
     , txMintValue = TxMintNone
-    , txScriptValidity = BuildTxWith TxScriptValidityNone
+    , txScriptValidity = TxScriptValidityNone
     }
   fees = case shelleyBasedEra @ era of
     ShelleyBasedEraShelley -> TxFeeExplicit TxFeesExplicitInShelleyEra fee
@@ -122,7 +122,7 @@ mkTransaction key metadata ttl fee txins txouts
     , txCertificates = TxCertificatesNone
     , txUpdateProposal = TxUpdateProposalNone
     , txMintValue = TxMintNone
-    , txScriptValidity = BuildTxWith TxScriptValidityNone
+    , txScriptValidity = TxScriptValidityNone
     }
 
 mkFee :: forall era .

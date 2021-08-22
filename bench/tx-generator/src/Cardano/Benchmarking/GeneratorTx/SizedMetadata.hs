@@ -115,7 +115,7 @@ dummyTxSizeInEra metadata = case makeTransactionBody dummyTx of
     , txCertificates = TxCertificatesNone
     , txUpdateProposal = TxUpdateProposalNone
     , txMintValue = TxMintNone
-    , txScriptValidity = BuildTxWith TxScriptValidityNone
+    , txScriptValidity = TxScriptValidityNone
     }
 
 dummyTxSize :: forall era . IsShelleyBasedEra era => AsType era -> Maybe TxMetadata -> Int
