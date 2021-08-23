@@ -90,6 +90,9 @@ instance HasPrivacyAnnotation NtN.AcceptConnectionsPolicyTrace
 instance HasSeverityAnnotation NtN.AcceptConnectionsPolicyTrace where
   getSeverityAnnotation NtN.ServerTraceAcceptConnectionRateLimiting {} = Info
   getSeverityAnnotation NtN.ServerTraceAcceptConnectionHardLimit {} = Warning
+  getSeverityAnnotation NtN.ServerTraceReadyToAccept {} = Warning
+  getSeverityAnnotation NtN.ServerTraceAcceptedConnection {} = Warning
+  getSeverityAnnotation NtN.ServerTraceAcceptFailed {} = Warning
 
 
 instance HasPrivacyAnnotation (TraceFetchClientState header)
@@ -694,6 +697,17 @@ instance ToObject NtN.AcceptConnectionsPolicyTrace where
     mkObject [ "kind" .= String "ServerTraceAcceptConnectionHardLimit"
              , "softLimit" .= show softLimit
              ]
+  toObject _verb NtN.ServerTraceReadyToAccept =
+    mkObject [ "kind" .= String "ServerTraceReadyToAccept"
+             ]
+  toObject _verb NtN.ServerTraceAcceptedConnection =
+    mkObject [ "kind" .= String "ServerTraceAcceptedConnection"
+             ]
+  toObject _verb (NtN.ServerTraceAcceptFailed e) =
+    mkObject [ "kind" .= String "ServerTraceAcceptFailed"
+             , "exception" .= e
+             ]
+
 
 
 instance ConvertRawHash blk
