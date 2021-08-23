@@ -27,6 +27,13 @@
 , cabalProjectLocal ? ''
     allow-newer: terminfo:base
   ''
+  # Disable plutus-example on Windows because Windows builds are cross-compiled which
+  # does not work for plugins that are used by plutus-example.
+  + lib.optionalString stdenv.hostPlatform.isWindows ''
+    -- When cross compiling we don't have a `ghc` package
+    package plutus-tx-plugin
+      flags: +use-ghc-stub
+  ''
   # Needed for the Windows cabal constraint solver.
   + lib.optionalString stdenv.hostPlatform.isWindows ''
     max-backjumps: 10000
@@ -62,6 +69,12 @@ let
           # "stm" "terminfo"
         ];
       })
+      {
+        # Tell `release-lib` what to exclude these from windows builds
+        packages.plutus-example.components.library.buildable = lib.mkForce false;
+        packages.plutus-ledger.components.library.buildable = lib.mkForce false;
+        packages.plutus-tx-plugin.components.library.buildable = lib.mkForce false;
+      }
       {
         # Needed for the CLI tests.
         # Coreutils because we need 'paste'.

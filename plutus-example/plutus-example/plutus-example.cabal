@@ -15,6 +15,10 @@ Flag unexpected_thunks
   Description:   Turn on unexpected thunks checks
   Default:       False
 
+Flag buildable
+  Description:   Whether this package is buildable
+  Default:       True
+
 common base
   build-depends: base >= 4.14 && < 4.15
 
@@ -32,9 +36,12 @@ common project-config
                         -Wredundant-constraints
                         -Wunused-packages
 
+  if !flag(buildable)
+    buildable:          False
+
 common maybe-Win32
   if os(windows)
-     build-depends:    Win32
+     build-depends:     Win32
 
 library
   import:               base, project-config
@@ -69,3 +76,4 @@ executable plutus-example
                       , directory
                       , filepath
                       , plutus-example
+

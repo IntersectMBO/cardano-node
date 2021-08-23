@@ -60,7 +60,7 @@ jobs:
 
     - name: Dry run
       run: |
-        cabal build all --dependencies-only --dry-run
+        cabal build all --dry-run
         mkdir ./haddocks
         DRY_RUN=1 ./scripts/haddocs.sh ./haddocks true
 
@@ -78,7 +78,7 @@ jobs:
           cache-${{ env.CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}-
 
     - name: Install dependencies
-      run: cabal build all --only-dependencies
+      run: cabal build all
 
     - name: Build Haddock documentation 🔧
       run: ./scripts/haddocs.sh ./haddocks true
