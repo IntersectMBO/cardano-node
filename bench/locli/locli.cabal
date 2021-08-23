@@ -1,7 +1,7 @@
 cabal-version: 2.4
 
 name:                  locli
-version:               1.27
+version:               1.29
 description:           Cardano log analysis CLI.
 author:                IOHK
 maintainer:            operations@iohk.io

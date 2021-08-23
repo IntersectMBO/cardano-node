@@ -1,5 +1,24 @@
 # Changelog for cardano-cli
 
+## 1.29 -- August 2021
+
+- Add a "tx build" command to the CLI. This command takes care of calculating
+  the appropriate fee for a transaction, and balancing the transaction
+  appropriately. It does not do input selection for fees, so sufficient balance
+  must be available in the inputs to pay the computed fee, and sufficient
+  collateral must also be present when phase-2 validating scripts are used. The
+  tx build command is capable of computing both the fees required from
+  transaction size and the fees incurred by script execution. (#2921, #2953,
+  #2995, #3025)
+- Improve the output format for rational fields in protocol parameters and
+  genesis. When these are simple, we now convert them to decimal format. (#2992)
+- Various internal improvements. (#2932)
+- Make the CLI help text more nicely formatted. (#2945)
+- Introduce the `--script-valid` and `--script-invalid` flags. The latter can be
+  used to mark a script as being known invalid, such that the node will allow it
+  to be submitted anyway (whereas under normal operation it would reject such a transaction in order to avoid loss of collateral). This flag is only likely to be of use in testing.
+  The `--script-valid` flag is set as a default. (#3050, #3091, #3093)
+- Add colours to the CLI output. (#3023)
 ## 1.28 -- July 2021
 
 - The query tip command is now tidier and shows various additional pieces of
