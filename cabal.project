@@ -245,7 +245,7 @@ source-repository-package
 -- Drops an instance breaking our code. Should be released to Hackage eventually.
 source-repository-package
   type: git
-  location: https://github.com/michaelpj/flat.git
+  location: https://github.com/input-output-hk/flat
   tag: ee59880f47ab835dbd73bea0847dab7869fc20d8
   --sha256: 1lrzknw765pz2j97nvv9ip3l1mcpf2zr4n56hwlz0rk7wq7ls4cm
 

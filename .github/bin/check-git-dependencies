@@ -3,11 +3,25 @@
 set -e
 
 RED='\033[0;31m'
+YELLOW='\033[0;33m'
 NC='\033[0m' # No Color
 
 mkdir -p tmp
 
 rm -rf tmp/dep-repo-result
+
+branches () {
+  git rev-parse --abbrev-ref HEAD
+  git branch -r | grep 'origin/.*\<release\>' || true
+  git tag | grep '\<v[0-9]\+\>' || true
+}
+
+commits () {
+  for x in $(cat $1); do
+    git checkout $x
+    git log --pretty=format:"%H"
+  done
+}
 
 cat cabal.project | \
   grep '\(^source-repository-package\|^ *location:\|^ *tag:\)' | sed 's|^source-repository-package|-|g' | \
@@ -19,18 +33,30 @@ for row in $(cat tmp/repositories.json | jq -r '.[] | @base64'); do
   location="$(echo "$json" | jq -r .location)"
   tag="$(echo "$json" | jq -r .tag)"
 
+  rm -f tmp/tmp-dep-repo-result
   rm -rf tmp/dep-repo
   echo "$location"
+
   git clone "$location" tmp/dep-repo
-  (cd tmp/dep-repo; git log --pretty=format:"%H") | grep "$tag" || (
-    printf "${RED}Commit $tag from $location is not on the main branch${NC}\n" >> tmp/dep-repo-result
+  base="$(pwd)"
+  ( cd tmp/dep-repo
+
+    branches > branches.txt
+
+    commits branches.txt | grep "$tag" || (
+      printf "Commit $tag from $location is not on the main branch or any release branches\n" >> "$base/tmp/dep-repo-result"
+      printf "Branches searched:"
+      cat branches.txt | sed 's|^|  |g'
+    )
   )
 
   rm -rf tmp/dep-repo
 done
 
 if [ -f tmp/dep-repo-result ]; then
-  printf "${RED}Commits not on the main branch detected in dependencies${NC}\n"
+  printf "${RED}Commits not on the main branch or any release branches detected in dependencies${NC}\n"
+  printf "${YELLOW}"
   cat tmp/dep-repo-result
+  printf "${NC}"
   exit 1
 fi
