@@ -54,6 +54,7 @@ import qualified Cardano.Ledger.Alonzo.Rules.Utxo as Alonzo
 import qualified Cardano.Ledger.Alonzo.Rules.Utxos as Alonzo
 import           Cardano.Ledger.Alonzo.Rules.Utxow (AlonzoPredFail (..))
 import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
+import qualified Cardano.Ledger.Alonzo.TxInfo as Alonzo
 import qualified Cardano.Ledger.AuxiliaryData as Core
 import           Cardano.Ledger.BaseTypes (strictMaybeToMaybe)
 import qualified Cardano.Ledger.Core as Core
@@ -990,6 +991,36 @@ instance ToJSON (Alonzo.CollectError StandardCrypto) where
           , "error" .= String "NoCostModel"
           , "language" .= toJSON lang
           ]
+
+instance ToJSON Alonzo.TagMismatchDescription where
+  toJSON tmd = case tmd of
+    Alonzo.PassedUnexpectedly ->
+      object
+        [ "kind" .= String "TagMismatchDescription"
+        , "error" .= String "PassedUnexpectedly"
+        ]
+    Alonzo.FailedUnexpectedly forReasons ->
+      object
+        [ "kind" .= String "TagMismatchDescription"
+        , "error" .= String "FailedUnexpectedly"
+        , "reconstruction" .= forReasons
+        ]
+
+instance ToJSON Alonzo.FailureDescription where
+  toJSON f = case f of
+    Alonzo.OnePhaseFailure t ->
+      object
+        [ "kind" .= String "FailureDescription"
+        , "error" .= String "OnePhaseFailure"
+        , "description" .= t
+        ]
+    Alonzo.PlutusFailure t bs ->
+      object
+        [ "kind" .= String "FailureDescription"
+        , "error" .= String "PlutusFailure"
+        , "description" .= t
+        , "reconstructionDetail" .= bs
+        ]
 
 instance ToObject (AlonzoBbodyPredFail (Alonzo.AlonzoEra StandardCrypto)) where
   toObject _ err = mkObject [ "kind" .= String "AlonzoBbodyPredFail"
