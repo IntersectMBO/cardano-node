@@ -4,8 +4,8 @@
 
 module Cardano.Api.IPC.Monad
   ( LocalStateQueryExpr
-  , executeQueryLocalState
-  , executeQueryLocalStateWithChainSync
+  , executeLocalStateQueryExpr
+  , executeLocalStateQueryExprWithChainSync
   , queryExpr
   , determineEraExpr
   ) where
@@ -47,12 +47,12 @@ newtype LocalStateQueryExpr block point query r m a = LocalStateQueryExpr
   } deriving (Functor, Applicative, Monad, MonadIO)
 
 -- | Execute a local state query expression.
-executeQueryLocalState
+executeLocalStateQueryExpr
   :: LocalNodeConnectInfo mode
   -> Maybe ChainPoint
   -> (NodeToClientVersion -> LocalStateQueryExpr (BlockInMode mode) ChainPoint (QueryInMode mode) () IO a)
   -> IO (Either AcquireFailure a)
-executeQueryLocalState connectInfo mpoint f = do
+executeLocalStateQueryExpr connectInfo mpoint f = do
   tmvResultLocalState <- newEmptyTMVarIO
   let waitResult = readTMVar tmvResultLocalState
 
@@ -69,12 +69,12 @@ executeQueryLocalState connectInfo mpoint f = do
   atomically waitResult
 
 -- | Execute a local state query expression concurrently with a chain sync.
-executeQueryLocalStateWithChainSync
+executeLocalStateQueryExprWithChainSync
   :: LocalNodeConnectInfo mode
   -> Maybe ChainPoint
   -> (NodeToClientVersion -> LocalStateQueryExpr (BlockInMode mode) ChainPoint (QueryInMode mode) () IO a)
   -> IO (ChainTip, Either AcquireFailure a)
-executeQueryLocalStateWithChainSync connectInfo mpoint f = do
+executeLocalStateQueryExprWithChainSync connectInfo mpoint f = do
   tmvResultLocalState <- newEmptyTMVarIO
   tmvResultChainTip <- newEmptyTMVarIO
 
