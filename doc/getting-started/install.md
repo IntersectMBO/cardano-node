@@ -80,7 +80,7 @@ Create a working directory for your builds:
     mkdir -p ~/src
     cd ~/src
 
- Download and install the latest version of GHC:
+ Download and install version 8.10.4 of GHC:
 
     wget https://downloads.haskell.org/ghc/8.10.4/ghc-8.10.4-x86_64-deb9-linux.tar.xz
     tar -xf ghc-8.10.4-x86_64-deb9-linux.tar.xz
@@ -89,7 +89,7 @@ Create a working directory for your builds:
     ./configure
     sudo make install
 
-This assumes GHC 8.10.4 on Linux (the most recent version at the time of writing).  If you are installing on MacOSX or Windows, download the compiler from `https://www.haskell.org/platform/mac.html` instead, and follow the installation instructions. Note that using a newer version than the one specified may produce compilation errors.
+If you are installing on MacOSX or Windows, download the compiler from `https://www.haskell.org/platform/mac.html` instead, and follow the installation instructions. Note that using a newer version than the one specified may produce compilation errors.
 
 #### Installing Libsodium
 
