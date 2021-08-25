@@ -12,9 +12,13 @@ elif [[ $1 == "cli" ]]; then
 
   exec /usr/local/bin/run-client $@
 
+elif [[ $1 == "submit-api" ]]; then
+
+  exec /usr/local/bin/run-submit-api $@
+
 else
 
-  echo "Nothing to do! Perhaps try [run|cli], or set NETWORK environment variable."
+  echo "Nothing to do! Perhaps try [run|cli|submit-api], or set NETWORK environment variable."
   exit 1
 
 fi

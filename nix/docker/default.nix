@@ -31,6 +31,7 @@
 # The main contents of the image.
 , cardano-cli
 , cardano-node
+, cardano-submit-api
 , scripts
 
 # Set gitrev to null, to ensure the version below is used
@@ -62,17 +63,18 @@ let
   baseImage = dockerTools.buildImage {
     name = "${repoName}-env";
     contents = [
-      cardano-cli       # Provide cardano-cli capability
-      bashInteractive   # Provide the BASH shell
-      cacert            # X.509 certificates of public CA's
-      coreutils         # Basic utilities expected in GNU OS's
-      curl              # CLI tool for transferring files via URLs
-      glibcLocales      # Locale information for the GNU C Library
-      iana-etc          # IANA protocol and port number assignments
-      iproute           # Utilities for controlling TCP/IP networking
-      iputils           # Useful utilities for Linux networking
-      socat             # Utility for bidirectional data transfer
-      utillinux         # System utilities for Linux
+      cardano-cli        # Provide cardano-cli capability
+      cardano-submit-api # Provide cardano-submit-api support
+      bashInteractive    # Provide the BASH shell
+      cacert             # X.509 certificates of public CA's
+      coreutils          # Basic utilities expected in GNU OS's
+      curl               # CLI tool for transferring files via URLs
+      glibcLocales       # Locale information for the GNU C Library
+      iana-etc           # IANA protocol and port number assignments
+      iproute            # Utilities for controlling TCP/IP networking
+      iputils            # Useful utilities for Linux networking
+      socat              # Utility for bidirectional data transfer
+      utillinux          # System utilities for Linux
     ];
     # set up /tmp (override with TMPDIR variable)
     extraCommands = ''
@@ -132,6 +134,7 @@ in
       cp ${context}/bin/* usr/local/bin
       ln -s ${cardano-node}/bin/cardano-node usr/local/bin/cardano-node
       ln -s ${cardano-cli}/bin/cardano-cli usr/local/bin/cardano-cli
+      ln -s ${cardano-submit-api}/bin/cardano-submit-api usr/local/bin/cardano-submit-api
     '';
     config = {
       EntryPoint = [ "entrypoint" ];
