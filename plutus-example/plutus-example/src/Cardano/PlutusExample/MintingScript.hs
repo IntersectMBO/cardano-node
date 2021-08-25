@@ -4,10 +4,6 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
--- TODO: Ledger currently always supplies a redeemer while the plutus-repo's
--- minting validator does not expect a redeemer. This needs to be rectified
--- before we can successfully use minting Plutus scripts.
--- TODO: We should potentially parameterize the script creation
 
 module Cardano.PlutusExample.MintingScript
   ( apiExamplePlutusMintingScript

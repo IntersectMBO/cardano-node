@@ -1,4 +1,4 @@
-cabal-version: 2.4
+cabal-version: 3.0
 
 name:                   plutus-example
 version:                1.29.0
@@ -6,8 +6,6 @@ description:            End to end examples of creating and executing Plutus scr
 author:                 IOHK
 maintainer:             operations@iohk.io
 license:                Apache-2.0
-license-files:          LICENSE
-                        NOTICE
 build-type:             Simple
 extra-source-files:     README.md
 
@@ -35,6 +33,9 @@ common project-config
                         -Wpartial-fields
                         -Wredundant-constraints
                         -Wunused-packages
+                        -fobject-code
+                        -fno-ignore-interface-pragmas
+                        -fno-omit-interface-pragmas
 
   if !flag(buildable)
     buildable:          False
@@ -54,18 +55,34 @@ library
 
   exposed-modules:      Cardano.PlutusExample.AlwaysFails
                         Cardano.PlutusExample.AlwaysSucceeds
+                        Cardano.PlutusExample.CustomDatumRedeemerGuess
                         Cardano.PlutusExample.DatumRedeemerGuess
                         Cardano.PlutusExample.MintingScript
-                        Cardano.PlutusExample.CustomDatumRedeemerGuess
+                        Cardano.PlutusExample.ScriptContextChecker
                         Cardano.PlutusExample.Sum
-  build-depends:        bytestring
+
+  build-depends:        aeson
+                      , bytestring
                       , cardano-api
+                      , cardano-cli
+                      , cardano-ledger-alonzo
+                      , cardano-ledger-core
+                      , cardano-protocol-tpraos
+                      , cardano-slotting
+                      , containers
+                      , filepath
                       , ouroboros-consensus
+                      , ouroboros-network
                       , plutus-ledger
                       , plutus-ledger-api
                       , plutus-tx
                       , plutus-tx-plugin
                       , serialise
+                      , shelley-spec-ledger
+                      , strict-containers
+                      , transformers
+                      , transformers-except
+
 
 executable plutus-example
   import:               base, project-config
@@ -77,4 +94,44 @@ executable plutus-example
                       , directory
                       , filepath
                       , plutus-example
+
+
+executable create-script-context
+  import:               base, project-config
+  hs-source-dirs:       app
+  main-is:              create-script-context.hs
+  ghc-options:          -threaded -rtsopts "-with-rtsopts=-T"
+
+  build-depends:        bytestring
+                      , cardano-api
+                      , optparse-applicative
+                      , plutus-example
+                      , transformers
+
+test-suite plutus-example-test
+  import:               base, project-config
+
+  hs-source-dirs:       test
+  main-is:              plutus-example-test.hs
+  type:                 exitcode-stdio-1.0
+
+  build-depends:        cardano-prelude
+                      , aeson
+                      , cardano-api
+                      , cardano-api:gen
+                      , cardano-ledger-alonzo
+                      , cardano-ledger-core
+                      , containers
+                      , hedgehog
+                      , plutus-example
+                      , plutus-ledger
+                      , plutus-ledger-api
+                      , shelley-spec-ledger
+
+
+  other-modules:        Test.PlutusExample.Gen
+                        Test.PlutusExample.Plutus
+                        Test.PlutusExample.ScriptData
+
+  ghc-options:          -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
 

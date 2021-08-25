@@ -294,7 +294,7 @@ module Cardano.Api (
     TxMetadataJsonSchemaError (..),
 
     -- * Certificates
-    Certificate,
+    Certificate(..),
 
     -- ** Registering stake address and delegating
     -- | Certificates that are embedded in transactions for registering and
