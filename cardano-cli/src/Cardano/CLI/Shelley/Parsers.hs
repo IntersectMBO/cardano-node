@@ -644,6 +644,7 @@ pTransaction =
             <*> optional pScriptValidity
             <*> optional pWitnessOverride
             <*> some (pTxIn AutoBalance)
+            <*> many pRequiredSigner
             <*> many pTxInCollateral
             <*> many pTxOut
             <*> pChangeAddress
@@ -677,6 +678,7 @@ pTransaction =
                <*> optional pScriptValidity
                <*> some (pTxIn ManualBalance)
                <*> many pTxInCollateral
+               <*> many pRequiredSigner
                <*> many pTxOut
                <*> optional (pMintMultiAsset ManualBalance)
                <*> optional pInvalidBefore
@@ -1396,6 +1398,21 @@ pColdSigningKeyFile =
       <> Opt.internal
       )
     )
+
+pRequiredSigner :: Parser WitnessSigningData
+pRequiredSigner =
+    KeyWitnessSigningData
+      <$>
+        ( SigningKeyFile <$>
+            Opt.strOption
+              (  Opt.long "required-signer"
+              <> Opt.metavar "FILE"
+              <> Opt.help "Input filepath of the signing key (zero or more) whose \
+                          \signature is required."
+              <> Opt.completer (Opt.bashCompleter "file")
+              )
+        )
+      <*> pure Nothing
 
 pSomeWitnessSigningData :: Parser [WitnessSigningData]
 pSomeWitnessSigningData =
