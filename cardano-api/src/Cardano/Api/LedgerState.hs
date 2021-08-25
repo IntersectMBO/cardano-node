@@ -61,7 +61,7 @@ import           System.FilePath
 
 import           Cardano.Api.Block
 import           Cardano.Api.Eras
-import           Cardano.Api.IPC (ConsensusModeParams (CardanoModeParams), EpochSlots (..),
+import           Cardano.Api.IPC (ConsensusModeParams,
                    LocalChainSyncClient (LocalChainSyncClientPipelined),
                    LocalNodeClientProtocols (..), LocalNodeClientProtocolsInMode,
                    LocalNodeConnectInfo (..), connectToLocalNode)
@@ -206,6 +206,9 @@ foldBlocks
   :: forall a.
   FilePath
   -- ^ Path to the cardano-node config file (e.g. <path to cardano-node project>/configuration/cardano/mainnet-config.json)
+  -> ConsensusModeParams CardanoMode
+  -- ^ This is needed for the number of slots per epoch for the Byron era (on
+  -- mainnet that should be 21600).
   -> FilePath
   -- ^ Path to local cardano-node socket. This is the path specified by the @--socket-path@ command line option when running the node.
   -> Bool
@@ -229,7 +232,7 @@ foldBlocks
   -- truncating the last k blocks before the node's tip.
   -> ExceptT FoldBlocksError IO a
   -- ^ The final state
-foldBlocks nodeConfigFilePath socketPath enableValidation state0 accumulate = do
+foldBlocks nodeConfigFilePath cardanoModeParams socketPath enableValidation state0 accumulate = do
   -- NOTE this was originally implemented with a non-pipelined client then
   -- changed to a pipelined client for a modest speedup:
   --  * Non-pipelined: 1h  0m  19s
@@ -265,7 +268,7 @@ foldBlocks nodeConfigFilePath socketPath enableValidation state0 accumulate = do
   let connectInfo :: LocalNodeConnectInfo CardanoMode
       connectInfo =
           LocalNodeConnectInfo {
-            localConsensusModeParams = CardanoModeParams (EpochSlots 21600),
+            localConsensusModeParams = cardanoModeParams,
             localNodeNetworkId       = networkId,
             localNodeSocketPath      = socketPath
           }
