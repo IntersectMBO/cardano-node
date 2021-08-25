@@ -23,8 +23,7 @@ if [ "$1" == "guessinggame" ]; then
  # NB: This plutus script uses a "typed" redeemer and "typed" datum.
  plutusscriptinuse="$BASE/scripts/plutus/scripts/custom-guess-42-datum-42.plutus"
  # This datum hash is the hash of the typed 42
- scriptdatumhash="e68306b4087110b0191f5b70638b9c6fc1c3eb335275e40d110779d71aa86083"
- #50000000000
+ scriptdatumhash="fcaa61fb85676101d9e3398a484674e71c45c3fd41b492682f3b0054f4cf3273"
  datumfilepath="$BASE/scripts/plutus/data/typed-42.datum"
  redeemerfilepath="$BASE/scripts/plutus/data/typed-42.redeemer"
  echo "Guessing game Plutus script in use. The datum and redeemer must be equal to 42."
@@ -34,7 +33,6 @@ elif [ "$1" == "" ]; then
  plutusscriptinuse="$BASE/scripts/plutus/scripts/always-succeeds-spending.plutus"
  # This datum hash is the hash of the untyped 42
  scriptdatumhash="9e1199a988ba72ffd6e9c269cadb3b53b5f360ff99f112d9b2ee30c4d74ad88b"
- #ExUnits {exUnitsMem = 11300, exUnitsSteps = 45070000}))
  datumfilepath="$BASE/scripts/plutus/data/42.datum"
  redeemerfilepath="$BASE/scripts/plutus/data/42.redeemer"
  echo "Always succeeds Plutus script in use. Any datum and redeemer combination will succeed."
