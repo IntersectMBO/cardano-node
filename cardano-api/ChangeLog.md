@@ -1,5 +1,17 @@
 # Changelog for cardano-api
 
+## 1.29 -- August 2021
+
+- Support for automated Tx building. (#2953)
+- A few additional exports for API consumers. (#3001, 3055)
+- Miscallaneous internal improvements. (#2948)
+- Block folding interface now derives the network ID automatically from the
+  ledger config. (#2955, #2975)
+- Improve the error generated when a Tx output does not meet the minimum UTxO
+  value. (#3027)
+- Add support for querying the Alonzo ledger state. (#2974)
+- Update the API documentation.
+
 ## 1.28 -- July 2021
 
 - Support for the upcoming Alonzo era, including protocol parameters, Plutus

@@ -1,5 +1,5 @@
 name:                  tx-generator
-version:               1.27
+version:               1.29
 description:           The transaction generator for cardano node
 author:                IOHK
 maintainer:            operations@iohk.io
