@@ -39,6 +39,7 @@ module Cardano.Api.TxBody (
     -- * Transaction Ids
     TxId(..),
     getTxId,
+    getTxIdShelley,
 
     -- * Transaction inputs
     TxIn(..),
@@ -127,6 +128,7 @@ module Cardano.Api.TxBody (
     toAlonzoRdmrPtr,
     fromAlonzoRdmrPtr,
     fromByronTxIn,
+    fromLedgerTxOuts,
     renderTxIn,
 
     -- * Data family instances
@@ -346,20 +348,28 @@ getTxId (ByronTxBody tx) =
       error "getTxId: byron and shelley hash sizes do not match"
 
 getTxId (ShelleyTxBody era tx _ _ _ _) =
-    case era of
-      ShelleyBasedEraShelley -> getTxIdShelley tx
-      ShelleyBasedEraAllegra -> getTxIdShelley tx
-      ShelleyBasedEraMary    -> getTxIdShelley tx
-      ShelleyBasedEraAlonzo  -> getTxIdShelley tx
-  where
-    getTxIdShelley :: Ledger.Crypto (ShelleyLedgerEra era) ~ StandardCrypto
-                   => Ledger.UsesTxBody (ShelleyLedgerEra era)
-                   => Ledger.TxBody (ShelleyLedgerEra era) -> TxId
-    getTxIdShelley =
-        TxId
-      . Crypto.castHash
-      . (\(Shelley.TxId txhash) -> SafeHash.extractHash txhash)
-      . Shelley.txid
+  obtainConstraints era $ getTxIdShelley era tx
+ where
+  obtainConstraints
+    :: ShelleyBasedEra era
+    -> (( Ledger.Crypto (ShelleyLedgerEra era) ~ StandardCrypto
+        , Ledger.UsesTxBody (ShelleyLedgerEra era)
+        ) => a)
+    -> a
+  obtainConstraints ShelleyBasedEraShelley f = f
+  obtainConstraints ShelleyBasedEraAllegra f = f
+  obtainConstraints ShelleyBasedEraMary    f = f
+  obtainConstraints ShelleyBasedEraAlonzo  f = f
+
+getTxIdShelley
+  :: Ledger.Crypto (ShelleyLedgerEra era) ~ StandardCrypto
+  => Ledger.UsesTxBody (ShelleyLedgerEra era)
+  => ShelleyBasedEra era -> Ledger.TxBody (ShelleyLedgerEra era) -> TxId
+getTxIdShelley _ tx =
+    TxId
+  . Crypto.castHash
+  . (\(Shelley.TxId txhash) -> SafeHash.extractHash txhash)
+  $ Shelley.txid tx
 
 
 -- ----------------------------------------------------------------------------

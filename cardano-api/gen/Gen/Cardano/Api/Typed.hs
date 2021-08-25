@@ -45,6 +45,9 @@ module Gen.Cardano.Api.Typed
   , genProtocolParametersUpdate
   , genScriptDataSupportedInAlonzoEra
   , genTxOutDatumHash
+  , genTxOutValue
+  , genValueForTxOut
+  , genValueForMinting
 
   , genRational
   ) where
