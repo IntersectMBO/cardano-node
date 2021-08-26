@@ -77,7 +77,7 @@ module Cardano.Api.Shelley
       , WitnessGenesisDelegateKey
       , WitnessGenesisDelegateExtendedKey
       ),
-    ShelleySigningKey,
+    ShelleySigningKey(..),
     getShelleyKeyWitnessVerificationKey,
     makeShelleySignature,
     toShelleySigningKey,

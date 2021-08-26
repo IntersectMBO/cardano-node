@@ -70,9 +70,6 @@ Confirm that you installed cabal version `3.4.0.0`:
 
     cabal --version
 
-**Note:** We no longer provide supported `stack` or `nix` installer packages. We recommend using `cabal` instead.
-
-
 #### Downloading and installing the GHC compiler:
 
 Create a working directory for your builds:

@@ -260,21 +260,22 @@ renderFeature TxFeatureCollateral           = "Collateral inputs"
 renderFeature TxFeatureProtocolParameters   = "Protocol parameters"
 renderFeature TxFeatureTxOutDatum           = "Transaction output datums"
 renderFeature TxFeatureScriptValidity       = "Script validity"
+renderFeature TxFeatureExtraKeyWits         = "Required signers"
 
 runTransactionCmd :: TransactionCmd -> ExceptT ShelleyTxCmdError IO ()
 runTransactionCmd cmd =
   case cmd of
-    TxBuild era consensusModeParams nid mScriptValidity mOverrideWits txins txinsc txouts
-            changeAddr mValue mLowBound mUpperBound certs wdrls metadataSchema
+    TxBuild era consensusModeParams nid mScriptValidity mOverrideWits txins reqSigners
+            txinsc txouts changeAddr mValue mLowBound mUpperBound certs wdrls metadataSchema
             scriptFiles metadataFiles mpparams mUpProp out ->
       runTxBuild era consensusModeParams nid mScriptValidity txins txinsc txouts changeAddr mValue mLowBound
-                 mUpperBound certs wdrls metadataSchema scriptFiles
+                 mUpperBound certs wdrls reqSigners metadataSchema scriptFiles
                  metadataFiles mpparams mUpProp out mOverrideWits
-    TxBuildRaw era mScriptValidity txins txinsc txouts mValue mLowBound mUpperBound
+    TxBuildRaw era mScriptValidity txins txinsc reqSigners txouts mValue mLowBound mUpperBound
                fee certs wdrls metadataSchema scriptFiles
                metadataFiles mpparams mUpProp out ->
       runTxBuildRaw era mScriptValidity txins txinsc txouts mLowBound mUpperBound
-                    fee mValue certs wdrls metadataSchema
+                    fee mValue certs wdrls reqSigners metadataSchema
                     scriptFiles metadataFiles mpparams mUpProp out
     TxSign txinfile skfiles network txoutfile ->
       runTxSign txinfile skfiles network txoutfile
@@ -318,6 +319,8 @@ runTxBuildRaw
   -> [(CertificateFile, Maybe (ScriptWitnessFiles WitCtxStake))]
   -- ^ Certificate with potential script witness
   -> [(StakeAddress, Lovelace, Maybe (ScriptWitnessFiles WitCtxStake))]
+  -> [WitnessSigningData]
+  -- ^ Required signers
   -> TxMetadataJsonSchema
   -> [ScriptFile]
   -> [MetadataFile]
@@ -329,7 +332,7 @@ runTxBuildRaw (AnyCardanoEra era)
               mScriptValidity inputsAndScripts inputsCollateral txouts
               mLowerBound mUpperBound
               mFee mValue
-              certFiles withdrawals
+              certFiles withdrawals reqSigners
               metadataSchema scriptFiles
               metadataFiles mpparams mUpdatePropFile
               (TxBodyFile fpath) = do
@@ -345,7 +348,7 @@ runTxBuildRaw (AnyCardanoEra era)
         <*> validateTxMetadataInEra  era metadataSchema metadataFiles
         <*> validateTxAuxScripts     era scriptFiles
         <*> pure (BuildTxWith TxExtraScriptDataNone) --TODO alonzo: support this
-        <*> pure TxExtraKeyWitnessesNone --TODO alonzo: support this
+        <*> validateRequiredSigners  era reqSigners
         <*> validateProtocolParameters era mpparams
         <*> validateTxWithdrawals    era withdrawals
         <*> validateTxCertificates   era certFiles
@@ -384,6 +387,8 @@ runTxBuild
   -> [(CertificateFile, Maybe (ScriptWitnessFiles WitCtxStake))]
   -- ^ Certificate with potential script witness
   -> [(StakeAddress, Lovelace, Maybe (ScriptWitnessFiles WitCtxStake))]
+  -> [WitnessSigningData]
+  -- ^ Required signers
   -> TxMetadataJsonSchema
   -> [ScriptFile]
   -> [MetadataFile]
@@ -393,7 +398,7 @@ runTxBuild
   -> Maybe Word
   -> ExceptT ShelleyTxCmdError IO ()
 runTxBuild (AnyCardanoEra era) (AnyConsensusModeParams cModeParams) networkId mScriptValidity txins txinsc txouts
-           (TxOutChangeAddress changeAddr) mValue mLowerBound mUpperBound certFiles withdrawals
+           (TxOutChangeAddress changeAddr) mValue mLowerBound mUpperBound certFiles withdrawals reqSigners
            metadataSchema scriptFiles metadataFiles mpparams mUpdatePropFile outBody@(TxBodyFile fpath)
            mOverrideWits = do
   SocketPath sockPath <- firstExceptT ShelleyTxCmdSocketEnvError readEnvSocketPath
@@ -415,7 +420,7 @@ runTxBuild (AnyCardanoEra era) (AnyConsensusModeParams cModeParams) networkId mS
           <*> validateTxMetadataInEra     era metadataSchema metadataFiles
           <*> validateTxAuxScripts        era scriptFiles
           <*> pure (BuildTxWith TxExtraScriptDataNone) --TODO alonzo: support this
-          <*> pure TxExtraKeyWitnessesNone --TODO alonzo: support this
+          <*> validateRequiredSigners     era reqSigners
           <*> validateProtocolParameters  era mpparams
           <*> validateTxWithdrawals       era withdrawals
           <*> validateTxCertificates      era certFiles
@@ -529,6 +534,7 @@ data TxFeature = TxFeatureShelleyAddresses
                | TxFeatureProtocolParameters
                | TxFeatureTxOutDatum
                | TxFeatureScriptValidity
+               | TxFeatureExtraKeyWits
   deriving Show
 
 txFeatureMismatch :: CardanoEra era
@@ -675,6 +681,25 @@ validateTxAuxScripts era files =
              validateScriptSupportedInEra era script
         | ScriptFile file <- files ]
       return $ TxAuxScripts supported scripts
+
+validateRequiredSigners :: CardanoEra era
+                        -> [WitnessSigningData]
+                        -> ExceptT ShelleyTxCmdError IO (TxExtraKeyWitnesses era)
+validateRequiredSigners _ [] = return TxExtraKeyWitnessesNone
+validateRequiredSigners era reqSigs =
+  case extraKeyWitnessesSupportedInEra era of
+    Nothing -> txFeatureMismatch era TxFeatureExtraKeyWits
+    Just supported -> do
+      keyWits <- firstExceptT ShelleyTxCmdReadWitnessSigningDataError
+                   $ mapM readWitnessSigningData reqSigs
+      let (_sksByron, sksShelley) = partitionSomeWitnesses $ map categoriseSomeWitness keyWits
+          shelleySigningKeys = map toShelleySigningKey sksShelley
+          paymentKeyHashes = map (verificationKeyHash . getVerificationKey) $ mapMaybe excludeExtendedKeys shelleySigningKeys
+      return $ TxExtraKeyWitnesses supported paymentKeyHashes
+ where
+  excludeExtendedKeys :: ShelleySigningKey -> Maybe (SigningKey PaymentKey)
+  excludeExtendedKeys (ShelleyExtendedSigningKey _) = Nothing
+  excludeExtendedKeys (ShelleyNormalSigningKey sk) = Just $ PaymentSigningKey sk
 
 validateTxWithdrawals
   :: forall era.
