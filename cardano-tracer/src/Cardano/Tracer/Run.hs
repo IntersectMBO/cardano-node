@@ -7,12 +7,13 @@ module Cardano.Tracer.Run
   , runCardanoTracerWithConfig
   ) where
 
-import           Control.Concurrent.Async (concurrently_)
+import           Control.Concurrent.Async (withAsync, wait)
 
 import           Cardano.Tracer.Acceptors (runAcceptors)
 import           Cardano.Tracer.CLI (TracerParams (..))
 import           Cardano.Tracer.Configuration (TracerConfig, readTracerConfig)
-import           Cardano.Tracer.Handlers (runHandlers)
+import           Cardano.Tracer.Handlers.Logs.Rotator (runLogsRotator)
+import           Cardano.Tracer.Handlers.Metrics.Run (runMetricsHandler)
 import           Cardano.Tracer.Types
 
 runCardanoTracer :: TracerParams -> IO ()
@@ -23,5 +24,9 @@ runCardanoTracerWithConfig :: TracerConfig -> IO ()
 runCardanoTracerWithConfig config = do
   acceptedMetrics  <- initAcceptedMetrics
   acceptedNodeInfo <- initAcceptedNodeInfo
-  concurrently_ (runAcceptors config acceptedMetrics acceptedNodeInfo)
-                (runHandlers  config acceptedMetrics acceptedNodeInfo)
+
+  runAndWait $ runLogsRotator    config
+  runAndWait $ runMetricsHandler config acceptedMetrics acceptedNodeInfo
+  runAndWait $ runAcceptors      config acceptedMetrics acceptedNodeInfo
+ where
+  runAndWait action = withAsync action wait

@@ -32,6 +32,7 @@ traceObjectsHandler
   -> AcceptedNodeInfo
   -> [TraceObject]
   -> IO ()
+traceObjectsHandler _ _ _ [] = return ()
 traceObjectsHandler TracerConfig{logging} nodeId acceptedNodeInfo traceObjects = do
   -- The protocol guarantees that node's info is received _before_ any trace object(s) from that node.
   -- So if we are here, it means that info about corresponding node is already received and stored.
