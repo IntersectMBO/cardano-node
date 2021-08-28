@@ -74,6 +74,7 @@ import qualified Shelley.Spec.Ledger.API.Protocol as Ledger
 import qualified System.IO as IO
 
 {- HLINT ignore "Reduce duplication" -}
+{- HLINT ignore "Use const" -}
 {- HLINT ignore "Use let" -}
 
 data ShelleyQueryCmdError
@@ -258,19 +259,32 @@ queryQueryTip
   -> Maybe ChainPoint
   -> IO (ChainTip, Either AcquireFailure (Maybe O.QueryTipLocalState))
 queryQueryTip connectInfo mpoint = do
-  resultVarQueryTipLocalState <- newEmptyTMVarIO
   resultVarChainTip <- newEmptyTMVarIO
 
-  waitResult <- pure $ (,)
-    <$> readTMVar resultVarChainTip
-    <*> (sequence <$> readTMVar resultVarQueryTipLocalState)
+  let waitChainTip = readTMVar resultVarChainTip
+
+  connectToLocalNodeWithVersion
+    connectInfo
+    (\_ntcVersion ->
+      LocalNodeClientProtocols
+      { localChainSyncClient    = LocalChainSyncClient $ chainSyncGetCurrentTip waitChainTip resultVarChainTip
+      , localStateQueryClient   = Nothing
+      , localTxSubmissionClient = Nothing
+      }
+    )
+
+  a <- atomically waitChainTip
+
+  resultVarQueryTipLocalState <- newEmptyTMVarIO
+
+  let waitQueryTipLocalState = readTMVar resultVarQueryTipLocalState
 
   connectToLocalNodeWithVersion
     connectInfo
     (\ntcVersion ->
       LocalNodeClientProtocols
-      { localChainSyncClient    = LocalChainSyncClient $ chainSyncGetCurrentTip waitResult resultVarChainTip
-      , localStateQueryClient   = Just $ setupLocalStateQueryScript waitResult mpoint ntcVersion resultVarQueryTipLocalState $ do
+      { localChainSyncClient    = NoLocalChainSyncClient
+      , localStateQueryClient   = Just $ setupLocalStateQueryScript waitQueryTipLocalState mpoint ntcVersion resultVarQueryTipLocalState $ do
           era <- sendMsgQuery (QueryCurrentEra CardanoModeIsMultiEra)
           eraHistory <- sendMsgQuery (QueryEraHistory CardanoModeIsMultiEra)
           mSystemStart <- if ntcVersion >= NodeToClientV_9
@@ -286,7 +300,9 @@ queryQueryTip connectInfo mpoint = do
       }
     )
 
-  atomically waitResult
+  b <- atomically waitQueryTipLocalState
+
+  return (a, sequence b)
 
   where
     chainSyncGetCurrentTip
