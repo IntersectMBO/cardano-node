@@ -117,6 +117,8 @@ runQueryCmd cmd =
       runQueryProtocolParameters consensusModeParams network mOutFile
     QueryTip consensusModeParams network mOutFile ->
       runQueryTip consensusModeParams network mOutFile
+    QueryStakePools' consensusModeParams network mOutFile ->
+      runQueryStakePools consensusModeParams network mOutFile
     QueryStakeDistribution' consensusModeParams network mOutFile ->
       runQueryStakeDistribution consensusModeParams network mOutFile
     QueryStakeAddressInfo consensusModeParams addr network mOutFile ->
@@ -664,6 +666,54 @@ printUtxo shelleyBasedEra' txInOutTuple =
   printableValue (TxOutValue _ val) = renderValue val
   printableValue (TxOutAdaOnly _ (Lovelace i)) = Text.pack $ show i
 
+joinEither :: (x -> z) -> (y -> z) -> Either x (Either y a) -> Either z a
+joinEither f g = join . bimap f (first g)
+
+joinEitherM :: Functor m => (x -> z) -> (y -> z) -> m (Either x (Either y a)) -> m (Either z a)
+joinEitherM f g = fmap (joinEither f g)
+
+runQueryStakePools
+  :: AnyConsensusModeParams
+  -> NetworkId
+  -> Maybe OutputFile
+  -> ExceptT ShelleyQueryCmdError IO ()
+runQueryStakePools (AnyConsensusModeParams cModeParams)
+                          network mOutFile = do
+  SocketPath sockPath <- firstExceptT ShelleyQueryCmdEnvVarSocketErr readEnvSocketPath
+
+  let localNodeConnInfo = LocalNodeConnectInfo cModeParams network sockPath
+
+  result <- ExceptT . joinEitherM ShelleyQueryCmdAcquireFailure id $
+    executeLocalStateQueryExpr localNodeConnInfo Nothing $ \_ntcVersion -> runExceptT @ShelleyQueryCmdError $ do
+      anyE@(AnyCardanoEra era) <- case consensusModeOnly cModeParams of
+        ByronMode -> return $ AnyCardanoEra ByronEra
+        ShelleyMode -> return $ AnyCardanoEra ShelleyEra
+        CardanoMode -> lift . queryExpr $ QueryCurrentEra CardanoModeIsMultiEra
+
+      let cMode = consensusModeOnly cModeParams
+
+      case toEraInMode era cMode of
+        Just eInMode -> do
+          sbe <- getSbe $ cardanoEraStyle era
+
+          firstExceptT ShelleyQueryCmdEraMismatch . ExceptT $
+            queryExpr . QueryInEra eInMode . QueryInShelleyBasedEra sbe $ QueryStakePools
+
+        Nothing -> left $ ShelleyQueryCmdEraConsensusModeMismatch (AnyConsensusMode cMode) anyE
+
+  writeStakePools mOutFile result
+
+writeStakePools
+  :: Maybe OutputFile
+  -> Set PoolId
+  -> ExceptT ShelleyQueryCmdError IO ()
+writeStakePools (Just (OutputFile outFile)) stakePools =
+  handleIOExceptT (ShelleyQueryCmdWriteFileError . FileIOError outFile) $
+    LBS.writeFile outFile (encodePretty stakePools)
+
+writeStakePools Nothing stakePools =
+  forM_ (Set.toList stakePools) $ \poolId ->
+    liftIO . putStrLn $ Text.unpack (serialiseToBech32 poolId)
 
 runQueryStakeDistribution
   :: AnyConsensusModeParams
@@ -794,7 +844,7 @@ executeQuery era cModeP localNodeConnInfo q = do
    execQuery :: IO (Either AcquireFailure (Either EraMismatch result))
    execQuery = queryNodeLocalState localNodeConnInfo Nothing q
 
-getSbe :: CardanoEraStyle era -> ExceptT ShelleyQueryCmdError IO (ShelleyBasedEra era)
+getSbe :: Monad m => CardanoEraStyle era -> ExceptT ShelleyQueryCmdError m (ShelleyBasedEra era)
 getSbe LegacyByronEra = left ShelleyQueryCmdByronEra
 getSbe (ShelleyBasedEra sbe) = return sbe
 

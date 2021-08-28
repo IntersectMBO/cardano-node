@@ -340,6 +340,7 @@ renderPoolCmd cmd =
 data QueryCmd =
     QueryProtocolParameters' AnyConsensusModeParams NetworkId (Maybe OutputFile)
   | QueryTip AnyConsensusModeParams NetworkId (Maybe OutputFile)
+  | QueryStakePools' AnyConsensusModeParams NetworkId (Maybe OutputFile)
   | QueryStakeDistribution' AnyConsensusModeParams NetworkId (Maybe OutputFile)
   | QueryStakeAddressInfo AnyConsensusModeParams StakeAddress NetworkId (Maybe OutputFile)
   | QueryUTxO' AnyConsensusModeParams QueryUTxOFilter NetworkId (Maybe OutputFile)
@@ -354,6 +355,7 @@ renderQueryCmd cmd =
   case cmd of
     QueryProtocolParameters' {} -> "query protocol-parameters "
     QueryTip {} -> "query tip"
+    QueryStakePools' {} -> "query stake-pools"
     QueryStakeDistribution' {} -> "query stake-distribution"
     QueryStakeAddressInfo {} -> "query stake-address-info"
     QueryUTxO' {} -> "query utxo"
