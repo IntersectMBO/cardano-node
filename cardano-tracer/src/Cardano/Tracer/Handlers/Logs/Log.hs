@@ -1,9 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Cardano.Tracer.Handlers.Logs.Log
-  ( logPrefix
-  , logExtension
-  , createLogAndSymLink
+  ( createLogAndSymLink
   , createLogAndUpdateSymLink
   , doesSymLinkValid
   , getTimeStampFromLog
