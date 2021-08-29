@@ -436,7 +436,7 @@ runTxBuild (AnyCardanoEra era) (AnyConsensusModeParams cModeParams) networkId mS
                      left (ShelleyTxCmdEraConsensusModeMismatchTxBalance outBody
                             (AnyConsensusMode CardanoMode) (AnyCardanoEra era))
 
-      (utxo, pparams, eraHistory, systemStart) <-
+      (utxo, pparams, eraHistory, systemStart, stakePools) <-
         newExceptT . joinEitherM ShelleyTxCmdAcquireFailure id $
           executeLocalStateQueryExpr localNodeConnInfo Nothing $ \_ntcVersion -> runExceptT $ do
             utxo <- firstExceptT ShelleyTxCmdTxSubmitErrorEraMismatch . newExceptT . queryExpr
@@ -450,7 +450,10 @@ runTxBuild (AnyCardanoEra era) (AnyConsensusModeParams cModeParams) networkId mS
 
             systemStart <- lift $ queryExpr QuerySystemStart
 
-            return (utxo, pparams, eraHistory, systemStart)
+            stakePools <- firstExceptT ShelleyTxCmdTxSubmitErrorEraMismatch . ExceptT $
+              queryExpr . QueryInEra eInMode . QueryInShelleyBasedEra sbe $ QueryStakePools
+
+            return (utxo, pparams, eraHistory, systemStart, stakePools)
 
       let cAddr = case anyAddressInEra era changeAddr of
                     Just addr -> addr
@@ -460,7 +463,7 @@ runTxBuild (AnyCardanoEra era) (AnyConsensusModeParams cModeParams) networkId mS
         firstExceptT ShelleyTxCmdBalanceTxBody
           . hoistEither
           $ makeTransactionBodyAutoBalance eInMode systemStart eraHistory
-                                           pparams Set.empty utxo txBodyContent
+                                           pparams stakePools utxo txBodyContent
                                            cAddr mOverrideWits
 
       putStrLn $ "Estimated transaction fee: " <> (show fee :: String)
