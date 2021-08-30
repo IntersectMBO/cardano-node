@@ -62,7 +62,7 @@ import           Ouroboros.Consensus.HeaderValidation (OtherHeaderEnvelopeError)
 import           Ouroboros.Consensus.Ledger.Abstract (LedgerErr, LedgerState)
 import           Ouroboros.Consensus.Ledger.Extended (ledgerState)
 import           Ouroboros.Consensus.Ledger.Inspect (InspectLedger, LedgerEvent)
-import           Ouroboros.Consensus.Ledger.Query (Query)
+import           Ouroboros.Consensus.Ledger.Query (BlockQuery)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx, GenTxId, HasTxs,
                    LedgerSupportsMempool)
 import           Ouroboros.Consensus.Ledger.SupportsProtocol (LedgerSupportsProtocol)
@@ -514,7 +514,6 @@ mkConsensusTracers
      , Consensus.RunNode blk
      , HasKESMetricsData blk
      , HasKESInfo blk
-     , Show (Header blk)
      )
   => Maybe EKGDirect
   -> TraceSelection
@@ -964,12 +963,8 @@ forgeStateInfoTracer p _ts tracer = Tracer $ \ev -> do
 --------------------------------------------------------------------------------
 
 nodeToClientTracers'
-  :: ( StandardHash blk
-     , Show (ApplyTxErr blk)
-     , Show (GenTx blk)
-     , Show localPeer
-     , ToObject localPeer
-     , ShowQuery (Query blk)
+  :: ( ToObject localPeer
+     , ShowQuery (BlockQuery blk)
      )
   => TraceSelection
   -> TracingVerbosity
@@ -993,8 +988,6 @@ nodeToNodeTracers'
   :: ( Consensus.RunNode blk
      , ConvertTxId blk
      , HasTxs blk
-     , Show blk
-     , Show (Header blk)
      , Show peer
      , ToObject peer
      )
