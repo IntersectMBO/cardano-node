@@ -29,6 +29,7 @@ import qualified Ouroboros.Network.Protocol.ChainSync.Client as Net.Sync
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Client as Net.Query
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as Net.Query
 
+{- HLINT ignore "Use const" -}
 {- HLINT ignore "Use let" -}
 
 -- | Monadic type for constructing local state query expressions.
@@ -75,24 +76,39 @@ executeLocalStateQueryExprWithChainSync
   -> (NodeToClientVersion -> LocalStateQueryExpr (BlockInMode mode) ChainPoint (QueryInMode mode) () IO a)
   -> IO (ChainTip, Either AcquireFailure a)
 executeLocalStateQueryExprWithChainSync connectInfo mpoint f = do
-  tmvResultLocalState <- newEmptyTMVarIO
   tmvResultChainTip <- newEmptyTMVarIO
 
-  let waitResult = (,)
-        <$> readTMVar tmvResultChainTip
-        <*> readTMVar tmvResultLocalState
+  let readChainTip = readTMVar tmvResultChainTip
+
+  connectToLocalNodeWithVersion
+    connectInfo
+    (\_ntcVersion ->
+      LocalNodeClientProtocols
+      { localChainSyncClient    = LocalChainSyncClient $ chainSyncGetCurrentTip readChainTip tmvResultChainTip
+      , localStateQueryClient   = Nothing
+      , localTxSubmissionClient = Nothing
+      }
+    )
+
+  chainTip <- atomically readChainTip
+
+  tmvResultLocalState <- newEmptyTMVarIO
+
+  let readLocalState = readTMVar tmvResultLocalState
 
   connectToLocalNodeWithVersion
     connectInfo
     (\ntcVersion ->
       LocalNodeClientProtocols
-      { localChainSyncClient    = LocalChainSyncClient $ chainSyncGetCurrentTip waitResult tmvResultChainTip
-      , localStateQueryClient   = Just $ setupLocalStateQueryExpr waitResult mpoint tmvResultLocalState (f ntcVersion)
+      { localChainSyncClient    = NoLocalChainSyncClient
+      , localStateQueryClient   = Just $ setupLocalStateQueryExpr readLocalState mpoint tmvResultLocalState (f ntcVersion)
       , localTxSubmissionClient = Nothing
       }
     )
 
-  atomically waitResult
+  localState <- atomically readLocalState
+
+  return (chainTip, localState)
 
   where
     chainSyncGetCurrentTip
