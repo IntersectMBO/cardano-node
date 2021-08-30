@@ -30,6 +30,7 @@ module Cardano.Api.Fees (
 
     -- * Automated transaction building
     makeTransactionBodyAutoBalance,
+    BalancedTxBody(..),
     TxBodyErrorAutoBalance(..),
   ) where
 
@@ -776,6 +777,11 @@ handleExUnitsErrors ScriptInvalid failuresMap exUnitsMap
             ScriptErrorEvaluationFailed _ -> True
             _ -> True
 
+data BalancedTxBody era
+  = BalancedTxBody
+      (TxBody era)
+      (TxOut era) -- ^ Transaction balance (change output)
+      Lovelace    -- ^ Estimated transaction fee
 
 -- | This is much like 'makeTransactionBody' but with greater automation to
 -- calculate suitable values for several things.
@@ -811,7 +817,7 @@ makeTransactionBodyAutoBalance
   -> TxBodyContent BuildTx era
   -> AddressInEra era -- ^ Change address
   -> Maybe Word       -- ^ Override key witnesses
-  -> Either TxBodyErrorAutoBalance (TxBody era)
+  -> Either TxBodyErrorAutoBalance (BalancedTxBody era)
 makeTransactionBodyAutoBalance eraInMode systemstart history pparams
                             poolids utxo txbodycontent changeaddr mnkeys = do
 
@@ -908,7 +914,7 @@ makeTransactionBodyAutoBalance eraInMode systemstart history pparams
           txFee  = TxFeeExplicit explicitTxFees fee,
           txOuts = TxOut changeaddr balance TxOutDatumHashNone : txOuts txbodycontent
         }
-    return txbody3
+    return (BalancedTxBody txbody3 (TxOut changeaddr balance TxOutDatumHashNone) fee)
  where
    era :: ShelleyBasedEra era
    era = shelleyBasedEra

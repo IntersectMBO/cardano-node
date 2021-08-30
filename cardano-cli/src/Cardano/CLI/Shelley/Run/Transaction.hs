@@ -453,12 +453,14 @@ runTxBuild (AnyCardanoEra era) (AnyConsensusModeParams cModeParams) networkId mS
                     Just addr -> addr
                     Nothing -> error $ "runTxBuild: Byron address used: " <> show changeAddr
 
-      balancedTxBody <-
+      (BalancedTxBody balancedTxBody _ fee) <-
         firstExceptT ShelleyTxCmdBalanceTxBody
           . hoistEither
           $ makeTransactionBodyAutoBalance eInMode systemStart eraHistory
                                            pparams Set.empty utxo txBodyContent
                                            cAddr mOverrideWits
+
+      putStrLn $ "Estimated transaction fee: " <> (show fee :: String)
 
       firstExceptT ShelleyTxCmdWriteFileError . newExceptT
         $ writeFileTextEnvelope fpath Nothing balancedTxBody
