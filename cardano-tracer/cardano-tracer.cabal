@@ -48,6 +48,10 @@ library
                        Cardano.Tracer.Handlers.Metrics.Prometheus
                        Cardano.Tracer.Handlers.Metrics.Run
 
+                       Cardano.Tracer.Handlers.RTView.Run
+                       Cardano.Tracer.Handlers.RTView.SupportedNodes
+                       Cardano.Tracer.Handlers.RTView.WebServer
+
   other-modules:       Paths_cardano_tracer
 
   build-depends:         aeson
@@ -73,6 +77,7 @@ library
                        , snap-server
                        , stm
                        , text
+                       , threepenny-gui
                        , time
                        , trace-dispatcher
                        , trace-forward

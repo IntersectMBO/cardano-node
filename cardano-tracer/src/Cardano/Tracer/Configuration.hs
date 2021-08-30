@@ -75,6 +75,7 @@ data TracerConfig = TracerConfig
   , ekgRequestFreq :: !(Maybe Pico)           -- ^ How often to request for EKG-metrics, in seconds.
   , hasEKG         :: !(Maybe Endpoint)       -- ^ Endpoint for EKG web-page.
   , hasPrometheus  :: !(Maybe Endpoint)       -- ^ Endpoint for Promeheus web-page.
+  , hasRTView      :: !(Maybe Endpoint)       -- ^ Endpoint for RTView web-page.
   , logging        :: ![LoggingParams]        -- ^ Logging parameters. 
   , rotation       :: !(Maybe RotationParams) -- ^ Rotation parameters.
   } deriving (Eq, Generic, FromJSON, Show, ToJSON)

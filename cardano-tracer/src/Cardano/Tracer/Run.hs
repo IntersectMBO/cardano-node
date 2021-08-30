@@ -14,6 +14,7 @@ import           Cardano.Tracer.CLI (TracerParams (..))
 import           Cardano.Tracer.Configuration (TracerConfig, readTracerConfig)
 import           Cardano.Tracer.Handlers.Logs.Rotator (runLogsRotator)
 import           Cardano.Tracer.Handlers.Metrics.Run (runMetricsHandler)
+import           Cardano.Tracer.Handlers.RTView.Run (runRTView)
 import           Cardano.Tracer.Types
 
 runCardanoTracer :: TracerParams -> IO ()
@@ -27,6 +28,7 @@ runCardanoTracerWithConfig config = do
 
   runAndWait $ runLogsRotator    config
   runAndWait $ runMetricsHandler config acceptedMetrics acceptedNodeInfo
+  runAndWait $ runRTView         config acceptedMetrics acceptedNodeInfo
   runAndWait $ runAcceptors      config acceptedMetrics acceptedNodeInfo
  where
   runAndWait action = withAsync action wait

@@ -85,6 +85,7 @@ propFile format suffix localSockName = ioProperty $ do
     , loRequestNum   = Just 1
     , ekgRequestFreq = Just 1.0
     , hasEKG         = Nothing
+    , hasRTView      = Nothing
     , hasPrometheus  = Nothing
     , logging        = [LoggingParams rootDir' FileMode format]
     , rotation       = Nothing
