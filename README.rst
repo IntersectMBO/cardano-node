@@ -459,19 +459,18 @@ You can validate Byron era blocks, delegation certificates, txs and update propo
 ``cabal exec cardano-cli -- validate-cbor --byron-block 21600 --filepath CBOREncodedByronBlockFile``
 
 
-Native Token Pre-Production Environment
+Native Tokens 
 =======================================
 
-Thanks for your interest in building native tokens on Cardano. To help you get started we have compiled a handy list of resources:
+Native tokens is a new feature that enables the transacting of multi-assets on Cardano. Native tokens are now supported on mainnet and users can transact with ada, and an unlimited number of user-defined (custom) tokens natively.
 
-`Cardano Forum discussion forum <https://forum.cardano.org/c/developers/cardano-tokens/150>`_
+To help you get started we have compiled a handy list of resources:
 
-`Developer Documentation for Native Tokens <https://developers.cardano.org/en/development-environments/native-tokens/native-tokens/>`_
+`Cardano Forum discussion <https://forum.cardano.org/c/developers/cardano-tokens/150>`_
 
+`Documentation for native tokens <https://docs.cardano.org/native-tokens/learn>`_
 
-**Please note that over the holiday period, technical support for the pre-production environment and token builder tool will be extremely limited**. Support is unavailable between the dates of 23rd - 27th December and 31 December - 3rd January inclusive. Outside these hours, our technical and community teams will be periodically checking in on the GitHub repo and dedicated Cardano Forum discussion forum, to expedite any urgent queries or requests. We encourage you to draw on community feedback and support as much as possible.
-
-If you require test ada during this period, please `fill out this form <https://input-output.typeform.com/to/KmeBcnDa>`_ and you will be sent your test ada. Note that until the wallet backend is fully integrated, this is an essentially manual process and there may therefore be some delay before the request is processed.  For technical reasons, it may only be possible to fund newly created addresses that have been properly set up on the Pre-Production Environment.  Unfortunately, since the form only records payment addresses, it will not be possible to contact you if the funding attempt fails, or to notify you that it has succeeded. Please check that you have submitted the address correctly, and retry if you need to
+You can also read more about `native tokens and how they compare to ada and ERC20 <https://github.com/input-output-hk/cardano-ledger-specs/blob/master/doc/explanations/features.rst>`_. Browse native tokens created on the Cardano blockchain and see their transactions in an interactive dashboard that allows filtering and searching: nativetokens.da.iogservices.io.
 
 API Documentation
 =================
