@@ -267,6 +267,12 @@ source-repository-package
   tag: 4c481a0df60d169574ef7db887440c1f1f634529
   --sha256: 0xz40h23na43d4y1qnn48f69rv58cd6kb08w5pfsx69x7mbskjnd
 
+source-repository-package
+  type: git
+  location: https://github.com/HeinrichApfelmus/threepenny-gui
+  tag: 1e532a286ed3ec2756e905361b41f549579759e6
+  --sha256: 07a1ip5b0sp8bfm60m77c28dndzbnm0yh28jvwbnjwmrv6ligqmv
+
 -- Drops an instance breaking our code. Should be released to Hackage eventually.
 source-repository-package
   type: git
