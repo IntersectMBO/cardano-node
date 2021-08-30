@@ -20,6 +20,7 @@ module Cardano.Api.LedgerState
       )
   , initialLedgerState
   , applyBlock
+  , ValidationMode(..)
 
     -- * Traversing the block chain
   , foldBlocks
@@ -150,15 +151,13 @@ applyBlock
   -- ^ The environment returned by @initialLedgerState@
   -> LedgerState
   -- ^ The current ledger state
-  -> Bool
-  -- ^ True to perform validation. If True, `tickThenApply` will be used instead
-  -- of `tickThenReapply`.
+  -> ValidationMode
   -> Block era
   -- ^ Some block to apply
   -> Either Text LedgerState
   -- ^ The new ledger state (or an error).
-applyBlock env oldState enableValidation block
-  = applyBlock' env oldState enableValidation $ case block of
+applyBlock env oldState validationMode block
+  = applyBlock' env oldState validationMode $ case block of
       ByronBlock byronBlock -> Consensus.BlockByron byronBlock
       ShelleyBlock blockEra shelleyBlock -> case blockEra of
         ShelleyBasedEraShelley -> Consensus.BlockShelley shelleyBlock
@@ -211,9 +210,7 @@ foldBlocks
   -- mainnet that should be 21600).
   -> FilePath
   -- ^ Path to local cardano-node socket. This is the path specified by the @--socket-path@ command line option when running the node.
-  -> Bool
-  -- ^ True to enable validation. Under the hood this will use @applyBlock@
-  -- instead of @reapplyBlock@ from the @ApplyBlock@ type class.
+  -> ValidationMode
   -> a
   -- ^ The initial accumulator state.
   -> (Env -> LedgerState -> BlockInMode CardanoMode -> a -> IO a)
@@ -235,7 +232,7 @@ foldBlocks
   -- truncating the last k blocks before the node's tip.
   -> ExceptT FoldBlocksError IO a
   -- ^ The final state
-foldBlocks nodeConfigFilePath cardanoModeParams socketPath enableValidation state0 accumulate = do
+foldBlocks nodeConfigFilePath cardanoModeParams socketPath validationMode state0 accumulate = do
   -- NOTE this was originally implemented with a non-pipelined client then
   -- changed to a pipelined client for a modest speedup:
   --  * Non-pipelined: 1h  0m  19s
@@ -339,7 +336,7 @@ foldBlocks nodeConfigFilePath cardanoModeParams socketPath enableValidation stat
                           (\(_,x,_) -> x)
                           (Seq.lookup 0 knownLedgerStates)
                         )
-                        enableValidation
+                        validationMode
                         block
                   case newLedgerStateE of
                     Left err -> clientIdle_DoneN n (Just err)
@@ -396,11 +393,7 @@ chainSyncClientWithLedgerState
   => Env
   -> LedgerState
   -- ^ Initial ledger state
-  -> Bool
-  -- ^ True to enable validation. Under the hood this will use @applyBlock@
-  -- instead of @reapplyBlock@ from the @ApplyBlock@ type class. Even when
-  -- @False@, a fast check of hashes is still done, so applying blocks can still
-  -- result in an error.
+  -> ValidationMode
   -> CS.ChainSyncClient (BlockInMode CardanoMode, Either Text LedgerState)
                         ChainPoint
                         ChainTip
@@ -419,7 +412,7 @@ chainSyncClientWithLedgerState
                         a
   -- ^ A client that acts just like the wrapped client but doesn't require the
   -- 'LedgerState' annotation on the block type.
-chainSyncClientWithLedgerState env ledgerState0 enableValidation (CS.ChainSyncClient clientTop)
+chainSyncClientWithLedgerState env ledgerState0 validationMode (CS.ChainSyncClient clientTop)
   = CS.ChainSyncClient (goClientStIdle initialLedgerStateHistory <$> clientTop)
   where
     goClientStIdle
@@ -445,7 +438,7 @@ chainSyncClientWithLedgerState env ledgerState0 enableValidation (CS.ChainSyncCl
             Just (_, Right oldLedgerState, _) -> applyBlock
                   env
                   oldLedgerState
-                  enableValidation
+                  validationMode
                   blk
           (history', _) = pushLedgerState env history slotNo newLedgerStateE blkInMode
           in goClientStIdle history' <$> CS.runChainSyncClient (recvMsgRollForward (blkInMode, newLedgerStateE) tip)
@@ -474,7 +467,7 @@ chainSyncClientPipelinedWithLedgerState
      Monad m
   => Env
   -> LedgerState
-  -> Bool
+  -> ValidationMode
   -> CSP.ChainSyncClientPipelined
                         (BlockInMode CardanoMode, Either Text LedgerState)
                         ChainPoint
@@ -487,7 +480,7 @@ chainSyncClientPipelinedWithLedgerState
                         ChainTip
                         m
                         a
-chainSyncClientPipelinedWithLedgerState env ledgerState0 enableValidation (CSP.ChainSyncClientPipelined clientTop)
+chainSyncClientPipelinedWithLedgerState env ledgerState0 validationMode (CSP.ChainSyncClientPipelined clientTop)
   = CSP.ChainSyncClientPipelined (goClientPipelinedStIdle initialLedgerStateHistory Zero <$> clientTop)
   where
     goClientPipelinedStIdle
@@ -518,7 +511,7 @@ chainSyncClientPipelinedWithLedgerState env ledgerState0 enableValidation (CSP.C
             Just (_, Right oldLedgerState, _) -> applyBlock
                   env
                   oldLedgerState
-                  enableValidation
+                  validationMode
                   blk
           (history', _) = pushLedgerState env history slotNo newLedgerStateE blkInMode
         in goClientPipelinedStIdle history' n <$> recvMsgRollForward (blkInMode, newLedgerStateE) tip
@@ -1024,23 +1017,30 @@ envSecurityParam env = k
       = HFC.hardForkConsensusConfigK
       $ envProtocolConfig env
 
+-- | How to do validation when applying a block to a ledger state.
+data ValidationMode
+  -- | Do all validation implied by the ledger layer's 'applyBlock`.
+  = FullValidation
+  -- | Only check that the previous hash from the block matches the head hash of
+  -- the ledger state.
+  | QuickValidation
+
 -- The function 'tickThenReapply' does zero validation, so add minimal
 -- validation ('blockPrevHash' matches the tip hash of the 'LedgerState'). This
 -- was originally for debugging but the check is cheap enough to keep.
 applyBlock'
   :: Env
   -> LedgerState
-  -> Bool
-  -- ^ True to validate
+  -> ValidationMode
   ->  HFC.HardForkBlock
             (Consensus.CardanoEras Consensus.StandardCrypto)
   -> Either Text LedgerState
-applyBlock' env oldState enableValidation block = do
+applyBlock' env oldState validationMode block = do
   let config = envLedgerConfig env
       stateOld = clsState oldState
-  stateNew <- if enableValidation
-    then tickThenApply config block stateOld
-    else tickThenReapplyCheckHash config block stateOld
+  stateNew <- case validationMode of
+    FullValidation -> tickThenApply config block stateOld
+    QuickValidation -> tickThenReapplyCheckHash config block stateOld
   return oldState { clsState = stateNew }
 
 -- Like 'Consensus.tickThenReapply' but also checks that the previous hash from

@@ -482,6 +482,7 @@ module Cardano.Api (
     LedgerState(..),
     initialLedgerState,
     applyBlock,
+    ValidationMode(..),
 
     -- *** Traversing the block chain
     foldBlocks,

@@ -58,7 +58,7 @@ main = do
   let client = chainSyncClientWithLedgerState
         env
         initialLedgerState
-        True
+        FullValidation
         chainSyncClient
 
       protocols :: LocalNodeClientProtocolsInMode CardanoMode

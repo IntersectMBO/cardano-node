@@ -41,7 +41,7 @@ main = do
     configFilePath
     (CardanoModeParams (EpochSlots byronSlotLength))
     socketPath
-    True -- enable validation?
+    FullValidation
     (0 :: Int) -- We just use a count of the blocks as the current state
     (\_env
       !ledgerState
