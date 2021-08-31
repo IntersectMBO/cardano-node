@@ -49,6 +49,8 @@ library
                        Cardano.Tracer.Handlers.Metrics.Run
 
                        Cardano.Tracer.Handlers.RTView.Run
+                       Cardano.Tracer.Handlers.RTView.UI.CSS.Bulma
+                       Cardano.Tracer.Handlers.RTView.UI.CSS.Own
                        Cardano.Tracer.Handlers.RTView.SupportedNodes
                        Cardano.Tracer.Handlers.RTView.WebServer
 
@@ -60,6 +62,7 @@ library
                        , blaze-markup
                        , bytestring
                        , cborg
+                       , clay
                        , containers
                        , contra-tracer
                        , directory
@@ -76,6 +79,7 @@ library
                        , snap-core
                        , snap-server
                        , stm
+                       , string-qq
                        , text
                        , threepenny-gui
                        , time
