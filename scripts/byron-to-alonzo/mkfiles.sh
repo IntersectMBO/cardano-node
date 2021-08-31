@@ -220,16 +220,16 @@ for N in ${BFT_NODES_N}; do
     --secret byron/payment-keys.00$((${N} - 1)).key \
 
   cardano-cli byron key signing-key-address \
-    --testnet-magic 42 \
+    --testnet-magic ${NETWORK_MAGIC} \
     --secret byron/payment-keys.00$((${N} - 1)).key > byron/address-00$((${N} - 1))
 
   cardano-cli byron key signing-key-address \
-    --testnet-magic 42 \
+    --testnet-magic ${NETWORK_MAGIC} \
     --secret byron/genesis-keys.00$((${N} - 1)).key > byron/genesis-address-00$((${N} - 1))
 
   cardano-cli byron transaction issue-genesis-utxo-expenditure \
     --genesis-json byron/genesis.json \
-    --testnet-magic 42 \
+    --testnet-magic ${NETWORK_MAGIC} \
     --tx tx$((${N} - 1)).tx \
     --wallet-key byron/delegate-keys.00$((${N} - 1)).key \
     --rich-addr-from "$(head -n 1 byron/genesis-address-00$((${N} - 1)))" \
@@ -240,7 +240,7 @@ done
 # Update Proposal and votes
 cardano-cli byron governance create-update-proposal \
             --filepath update-proposal \
-            --testnet-magic 42 \
+            --testnet-magic "${NETWORK_MAGIC}" \
             --signing-key byron/delegate-keys.000.key \
             --protocol-version-major 1 \
             --protocol-version-minor 0 \
@@ -253,7 +253,7 @@ cardano-cli byron governance create-update-proposal \
 for N in ${BFT_NODES_N}; do
     cardano-cli byron governance create-proposal-vote \
                 --proposal-filepath update-proposal \
-                --testnet-magic 42 \
+                --testnet-magic ${NETWORK_MAGIC} \
                 --signing-key byron/delegate-keys.00$((${N} - 1)).key \
                 --vote-yes \
                 --output-filepath update-vote.00$((${N} - 1))
@@ -261,7 +261,7 @@ done
 
 cardano-cli byron governance create-update-proposal \
             --filepath update-proposal-1 \
-            --testnet-magic 42 \
+            --testnet-magic ${NETWORK_MAGIC} \
             --signing-key byron/delegate-keys.000.key \
             --protocol-version-major 2 \
             --protocol-version-minor 0 \
@@ -274,7 +274,7 @@ cardano-cli byron governance create-update-proposal \
 for N in ${BFT_NODES_N}; do
     cardano-cli byron governance create-proposal-vote \
                 --proposal-filepath update-proposal-1 \
-                --testnet-magic 42 \
+                --testnet-magic ${NETWORK_MAGIC} \
                 --signing-key byron/delegate-keys.00$((${N} - 1)).key \
                 --vote-yes \
                 --output-filepath update-vote-1.00$((${N} - 1))
@@ -289,7 +289,7 @@ echo "====================================================================="
 
 # Set up our template
 mkdir shelley
-cardano-cli genesis create --testnet-magic 42 --genesis-dir shelley
+cardano-cli genesis create --testnet-magic ${NETWORK_MAGIC} --genesis-dir shelley
 
 # Then edit the genesis.spec.json ...
 
@@ -309,7 +309,7 @@ sed -i shelley/genesis.spec.json \
 # Now generate for real:
 
 cardano-cli genesis create \
-    --testnet-magic 42 \
+    --testnet-magic ${NETWORK_MAGIC} \
     --genesis-dir shelley/ \
     --gen-genesis-keys ${NUM_BFT_NODES} \
     --gen-utxo-keys 1
@@ -407,13 +407,13 @@ for ADDR in ${ADDRS}; do
   cardano-cli address build \
       --payment-verification-key-file addresses/${ADDR}.vkey \
       --stake-verification-key-file addresses/${ADDR}-stake.vkey \
-      --testnet-magic 42 \
+      --testnet-magic ${NETWORK_MAGIC} \
       --out-file addresses/${ADDR}.addr
 
   # Stake addresses
   cardano-cli stake-address build \
       --stake-verification-key-file addresses/${ADDR}-stake.vkey \
-      --testnet-magic 42 \
+      --testnet-magic ${NETWORK_MAGIC} \
       --out-file addresses/${ADDR}-stake.addr
 
   # Stake addresses registration certs
@@ -451,7 +451,7 @@ echo "====================================================================="
 for NODE in ${POOL_NODES}; do
 
   cardano-cli stake-pool registration-certificate \
-    --testnet-magic 42 \
+    --testnet-magic ${NETWORK_MAGIC} \
     --pool-pledge 0 --pool-cost 0 --pool-margin 0 \
     --cold-verification-key-file             ${NODE}/shelley/operator.vkey \
     --vrf-verification-key-file              ${NODE}/shelley/vrf.vkey \
