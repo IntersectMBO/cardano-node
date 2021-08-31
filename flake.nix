@@ -13,9 +13,14 @@
       url = "github:input-output-hk/iohk-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    customConfig = {
-      url = "path:./custom-config";
-    };
+    # Custom user config (default: empty), eg.:
+    # { outputs = {...}: {
+    #   # Cutomize listeming port of node scripts:
+    #   nixosModules.cardano-node = {
+    #     services.cardano-node.port = 3002;
+    #   };
+    # };
+    customConfig.url = "github:input-output-hk/empty-flake";
   };
 
   outputs = { self, nixpkgs, utils, haskellNix, iohkNix, customConfig }:
@@ -36,7 +41,7 @@
         iohkNix.overlays.utils
         (final: prev: {
           customConfig = recursiveUpdate
-            (import ./custom-config final.customConfig)
+            (import ./nix/custom-config.nix final.customConfig)
             customConfig.outputs;
           gitrev = self.rev or "dirty";
           commonLib = lib

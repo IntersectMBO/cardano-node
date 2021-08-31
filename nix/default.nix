@@ -39,7 +39,7 @@ let
           then iohkNix.commitIdFromGitRepoOrZero ../.git
           else gitrev;
         customConfig = pkgs.lib.recursiveUpdate
-          (import ../custom-config pkgs.customConfig)
+          (import ./custom-config.nix pkgs.customConfig)
           customConfig;
         inherit (pkgs.iohkNix) cardanoLib;
         # commonLib: mix pkgs.lib with iohk-nix utils and our own:
