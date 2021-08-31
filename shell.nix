@@ -1,4 +1,4 @@
-let defaultCustomConfig = import ./custom-config defaultCustomConfig;
+let defaultCustomConfig = import ./nix/custom-config.nix defaultCustomConfig;
 # This file is used by nix-shell.
 # It just takes the shell attribute from default.nix.
 in
