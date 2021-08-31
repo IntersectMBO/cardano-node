@@ -1,8 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE PackageImports #-}
 
 module Cardano.Tracer.Acceptors
@@ -10,13 +8,13 @@ module Cardano.Tracer.Acceptors
   ) where
 
 import           Codec.CBOR.Term (Term)
+import           Control.Exception (onException)
 import           Control.Concurrent.Async (forConcurrently_, race_, wait)
-import           Control.Concurrent.STM (atomically)
-import           Control.Concurrent.STM.TVar (TVar, modifyTVar', newTVarIO, readTVarIO)
+import           Control.Concurrent.STM.TVar (TVar, newTVarIO, readTVarIO)
 import "contra-tracer" Control.Tracer (nullTracer)
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Maybe (fromMaybe)
-import           Data.HashMap.Strict ((!), insert)
+import           Data.HashMap.Strict ((!))
 import           Data.Time.Clock (secondsToNominalDiffTime)
 import           Data.Void (Void)
 import           Ouroboros.Network.Mux (MiniProtocol (..), MiniProtocolLimits (..),
@@ -56,7 +54,7 @@ import qualified System.Metrics.ReqResp as EKGF
 import           System.Metrics.Network.Acceptor (acceptEKGMetrics, acceptEKGMetricsInit)
 
 import           Cardano.Tracer.Configuration
-import           Cardano.Tracer.Handlers.TraceObjects (traceObjectsHandler)
+import           Cardano.Tracer.Handlers
 import           Cardano.Tracer.Types
 
 runAcceptors
@@ -117,8 +115,8 @@ runAcceptor config@TracerConfig{connectMode} p (ekgConfig, tfConfig) acceptedMet
     let snock = localSnocket iocp p
         addr  = localAddressFromPath p
     case connectMode of
-      Initiator ->
-        doConnectToForwarder snock addr noTimeLimitsHandshake $
+      Initiator -> do
+        doConnectToForwarder p snock addr noTimeLimitsHandshake acceptedNodeInfo $
           appInitiator
             [ (runEKGAcceptorInit ekgConfig acceptedMetrics, 1)
             , (runTraceObjectsAcceptorInit config tfConfig acceptedNodeInfo, 2)
@@ -151,12 +149,14 @@ runAcceptor config@TracerConfig{connectMode} p (ekgConfig, tfConfig) acceptedMet
       ]
 
 doConnectToForwarder
-  :: Snocket IO fd addr
+  :: FilePath
+  -> Snocket IO fd addr
   -> addr
   -> ProtocolTimeLimits (Handshake UnversionedProtocol Term)
+  -> AcceptedNodeInfo
   -> OuroborosApplication 'InitiatorMode addr LBS.ByteString IO () Void
   -> IO ()
-doConnectToForwarder snocket address timeLimits app =
+doConnectToForwarder p snocket address timeLimits acceptedNodeInfo app =
   connectToNode
     snocket
     unversionedHandshakeCodec
@@ -170,6 +170,7 @@ doConnectToForwarder snocket address timeLimits app =
     )
     Nothing
     address
+  `onException` nodeDisconnectHandler p acceptedNodeInfo
 
 doListenToAcceptor
   :: Ord addr
@@ -258,14 +259,3 @@ prepareMetricsStores acceptedMetrics connId = do
   prepareAcceptedMetrics nodeId acceptedMetrics
   metrics <- readTVarIO acceptedMetrics
   return $ metrics ! nodeId
-
--- | Node's info is required for many parts of cardano-tracer.
---   But some of these parts may be inactive (yet) when node's info
---   is accepted, so we have to store it.
-nodeInfoHandler
-  :: NodeId
-  -> AcceptedNodeInfo
-  -> TF.NodeInfo
-  -> IO ()
-nodeInfoHandler nodeId acceptedNodeInfo ni = atomically $
-  modifyTVar' acceptedNodeInfo $ insert nodeId ni

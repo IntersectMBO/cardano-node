@@ -37,7 +37,7 @@ library
                        Cardano.Tracer.Run
                        Cardano.Tracer.Types
 
-                       Cardano.Tracer.Handlers.TraceObjects
+                       Cardano.Tracer.Handlers
 
                        Cardano.Tracer.Handlers.Logs.File
                        Cardano.Tracer.Handlers.Logs.Journal

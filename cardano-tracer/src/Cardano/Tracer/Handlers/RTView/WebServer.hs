@@ -27,8 +27,6 @@ runWebServer
   -> AcceptedNodeInfo
   -> IO ()
 runWebServer (Endpoint host port) acceptedMetrics acceptedNodeInfo =
-  return ()
-  {-
   UI.startGUI config mainPage
  where
   config = UI.defaultConfig
@@ -37,15 +35,16 @@ runWebServer (Endpoint host port) acceptedMetrics acceptedNodeInfo =
     }
 
   mainPage window = do
-    void $ return window # set UI.title pageTitle
+    void $ return window # set UI.title ""-- pageTitle
     void $ UI.getHead window #+
       [ UI.link # set UI.rel "icon" # set UI.href "data:,"
       , UI.meta # set UI.name "viewport" # set UI.content "width=device-width, initial-scale=1"
-      , UI.mkElement "style" # set UI.html bulmaCSS
-      , UI.mkElement "style" # set UI.html ownCSS
+      -- , UI.mkElement "style" # set UI.html bulmaCSS
+      -- , UI.mkElement "style" # set UI.html ownCSS
       -- , UI.mkElement "script" # set UI.html chartJS
       ]
-    
+
+    {-
     (pageBody, noNodesNotify, rootElemForNodePanels) <- mkPageBody window
 
     pageElementsTVar :: TVar PageElements <- liftIO $ newTVarIO HM.empty
