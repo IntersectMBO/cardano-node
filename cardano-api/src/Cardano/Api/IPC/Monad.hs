@@ -1,14 +1,19 @@
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
 
 module Cardano.Api.IPC.Monad
-  ( LocalStateQueryScript
-  , sendMsgQuery
-  , setupLocalStateQueryScript
+  ( LocalStateQueryExpr
+  , executeLocalStateQueryExpr
+  , executeLocalStateQueryExprWithChainSync
+  , queryExpr
+  , determineEraExpr
   ) where
 
 import Cardano.Api.Block
+import Cardano.Api.Eras
 import Cardano.Api.IPC
+import Cardano.Api.Modes
 import Control.Applicative
 import Control.Concurrent.STM
 import Control.Monad
@@ -17,54 +22,160 @@ import Control.Monad.Trans.Cont
 import Data.Either
 import Data.Function
 import Data.Maybe
-import Data.Ord
 import Shelley.Spec.Ledger.Scripts ()
 import System.IO
 
+import qualified Ouroboros.Network.Protocol.ChainSync.Client as Net.Sync
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Client as Net.Query
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as Net.Query
 
--- | Monadic type for constructing local state queries.
+{- HLINT ignore "Use const" -}
+{- HLINT ignore "Use let" -}
+
+-- | Monadic type for constructing local state query expressions.
 --
--- Use 'sendMsgQuery' in a do block to construct queries of this type and convert
--- the expression to a 'Net.Query.LocalStateQueryClient' with 'setupLocalStateQueryScript'.
-newtype LocalStateQueryScript block point query r m a = LocalStateQueryScript
-  { runLocalStateQueryScript :: ContT (Net.Query.ClientStAcquired block point query m r) m a
+-- Use 'queryExpr' in a do block to construct queries of this type and convert
+-- the expression to a 'Net.Query.LocalStateQueryClient' with 'setupLocalStateQueryExpr'.
+--
+-- Some consideration was made to use Applicative instead of Monad as the abstraction in
+-- order to support pipelining, but we actually have a fair amount of code where the next
+-- query depends on the result of the former and therefore actually need Monad.
+--
+-- In order to make pipelining still possible we can explore the use of Selective Functors
+-- which would allow us to straddle both worlds.
+newtype LocalStateQueryExpr block point query r m a = LocalStateQueryExpr
+  { runLocalStateQueryExpr :: ContT (Net.Query.ClientStAcquired block point query m r) m a
   } deriving (Functor, Applicative, Monad, MonadIO)
 
--- | Use 'sendMsgQuery' in a do block to construct monadic local state queries.
-sendMsgQuery :: Monad m => query a -> LocalStateQueryScript block point query r m a
-sendMsgQuery q = LocalStateQueryScript . ContT $ \f -> pure $
-  Net.Query.SendMsgQuery q $
-    Net.Query.ClientStQuerying
-    { Net.Query.recvMsgResult = f
+-- | Execute a local state query expression.
+executeLocalStateQueryExpr
+  :: LocalNodeConnectInfo mode
+  -> Maybe ChainPoint
+  -> (NodeToClientVersion -> LocalStateQueryExpr (BlockInMode mode) ChainPoint (QueryInMode mode) () IO a)
+  -> IO (Either AcquireFailure a)
+executeLocalStateQueryExpr connectInfo mpoint f = do
+  tmvResultLocalState <- newEmptyTMVarIO
+  let waitResult = readTMVar tmvResultLocalState
+
+  connectToLocalNodeWithVersion
+    connectInfo
+    (\ntcVersion ->
+      LocalNodeClientProtocols
+      { localChainSyncClient    = NoLocalChainSyncClient
+      , localStateQueryClient   = Just $ setupLocalStateQueryExpr waitResult mpoint tmvResultLocalState (f ntcVersion)
+      , localTxSubmissionClient = Nothing
+      }
+    )
+
+  atomically waitResult
+
+-- | Execute a local state query expression concurrently with a chain sync.
+executeLocalStateQueryExprWithChainSync
+  :: LocalNodeConnectInfo mode
+  -> Maybe ChainPoint
+  -> (NodeToClientVersion -> LocalStateQueryExpr (BlockInMode mode) ChainPoint (QueryInMode mode) () IO a)
+  -> IO (ChainTip, Either AcquireFailure a)
+executeLocalStateQueryExprWithChainSync connectInfo mpoint f = do
+  tmvResultChainTip <- newEmptyTMVarIO
+
+  let readChainTip = readTMVar tmvResultChainTip
+
+  connectToLocalNodeWithVersion
+    connectInfo
+    (\_ntcVersion ->
+      LocalNodeClientProtocols
+      { localChainSyncClient    = LocalChainSyncClient $ chainSyncGetCurrentTip readChainTip tmvResultChainTip
+      , localStateQueryClient   = Nothing
+      , localTxSubmissionClient = Nothing
+      }
+    )
+
+  chainTip <- atomically readChainTip
+
+  tmvResultLocalState <- newEmptyTMVarIO
+
+  let readLocalState = readTMVar tmvResultLocalState
+
+  connectToLocalNodeWithVersion
+    connectInfo
+    (\ntcVersion ->
+      LocalNodeClientProtocols
+      { localChainSyncClient    = NoLocalChainSyncClient
+      , localStateQueryClient   = Just $ setupLocalStateQueryExpr readLocalState mpoint tmvResultLocalState (f ntcVersion)
+      , localTxSubmissionClient = Nothing
+      }
+    )
+
+  localState <- atomically readLocalState
+
+  return (chainTip, localState)
+
+  where
+    chainSyncGetCurrentTip
+      :: STM b
+      -- ^ An STM expression that only returns when all protocols are complete.
+      -- Protocols must wait until 'waitDone' returns because premature exit will
+      -- cause other incomplete protocols to abort which may lead to deadlock.
+      -> TMVar ChainTip
+      -> ChainSyncClient (BlockInMode mode) ChainPoint ChainTip IO ()
+    chainSyncGetCurrentTip waitDone tipVar =
+      ChainSyncClient $ pure clientStIdle
+      where
+        clientStIdle :: Net.Sync.ClientStIdle (BlockInMode mode) ChainPoint ChainTip IO ()
+        clientStIdle =
+          Net.Sync.SendMsgRequestNext clientStNext (pure clientStNext)
+
+        clientStNext :: Net.Sync.ClientStNext (BlockInMode mode) ChainPoint ChainTip IO ()
+        clientStNext = Net.Sync.ClientStNext
+          { Net.Sync.recvMsgRollForward = \_block tip -> ChainSyncClient $ do
+              void . atomically $ putTMVar tipVar tip
+              void $ atomically waitDone -- Wait for all protocols to complete before exiting.
+              pure $ Net.Sync.SendMsgDone ()
+          , Net.Sync.recvMsgRollBackward = \_point tip -> ChainSyncClient $ do
+              void . atomically $ putTMVar tipVar tip
+              void $ atomically waitDone -- Wait for all protocols to complete before exiting.
+              pure $ Net.Sync.SendMsgDone ()
+          }
+
+-- | Use 'queryExpr' in a do block to construct monadic local state queries.
+setupLocalStateQueryExpr ::
+     STM x
+     -- ^ An STM expression that only returns when all protocols are complete.
+     -- Protocols must wait until 'waitDone' returns because premature exit will
+     -- cause other incomplete protocols to abort which may lead to deadlock.
+  -> Maybe ChainPoint
+  -> TMVar (Either Net.Query.AcquireFailure a)
+  -> LocalStateQueryExpr (BlockInMode mode) ChainPoint (QueryInMode mode) () IO a
+  -> Net.Query.LocalStateQueryClient (BlockInMode mode) ChainPoint (QueryInMode mode) IO ()
+setupLocalStateQueryExpr waitDone mPointVar' resultVar' f =
+  LocalStateQueryClient . pure . Net.Query.SendMsgAcquire mPointVar' $
+    Net.Query.ClientStAcquiring
+    { Net.Query.recvMsgAcquired = runContT (runLocalStateQueryExpr f) $ \result -> do
+        atomically $ putTMVar resultVar' (Right result)
+        void $ atomically waitDone -- Wait for all protocols to complete before exiting.
+        pure $ Net.Query.SendMsgRelease $ pure $ Net.Query.SendMsgDone ()
+
+    , Net.Query.recvMsgFailure = \failure -> do
+        atomically $ putTMVar resultVar' (Left failure)
+        void $ atomically waitDone -- Wait for all protocols to complete before exiting.
+        pure $ Net.Query.SendMsgDone ()
     }
 
--- | Use 'sendMsgQuery' in a do block to construct monadic local state queries.
-setupLocalStateQueryScript ::
-     STM x
-  -> Maybe ChainPoint
-  -> NodeToClientVersion
-  -> TMVar (Maybe (Either Net.Query.AcquireFailure a))
-  -> LocalStateQueryScript (BlockInMode CardanoMode) ChainPoint (QueryInMode CardanoMode) () IO a
-  -> Net.Query.LocalStateQueryClient (BlockInMode CardanoMode) ChainPoint (QueryInMode CardanoMode) IO ()
-setupLocalStateQueryScript waitDone mPointVar' ntcVersion resultVar' f =
-  LocalStateQueryClient $
-    if ntcVersion >= NodeToClientV_8
-      then do
-        pure . Net.Query.SendMsgAcquire mPointVar' $
-          Net.Query.ClientStAcquiring
-          { Net.Query.recvMsgAcquired = runContT (runLocalStateQueryScript f) $ \result -> do
-              atomically $ putTMVar resultVar' (Just (Right result))
-              void $ atomically waitDone
-              pure $ Net.Query.SendMsgRelease $ pure $ Net.Query.SendMsgDone ()
+-- | Use 'queryExpr' in a do block to construct monadic local state queries.
+queryExpr :: QueryInMode mode a -> LocalStateQueryExpr block point (QueryInMode mode) r IO a
+queryExpr q =
+  LocalStateQueryExpr . ContT $ \f -> pure $
+    Net.Query.SendMsgQuery q $
+      Net.Query.ClientStQuerying
+      { Net.Query.recvMsgResult = f
+      }
 
-          , Net.Query.recvMsgFailure = \failure -> do
-              atomically $ putTMVar resultVar' (Just (Left failure))
-              void $ atomically waitDone
-              pure $ Net.Query.SendMsgDone ()
-          }
-      else do
-        atomically $ putTMVar resultVar' Nothing
-        void $ atomically waitDone
-        pure $ Net.Query.SendMsgDone ()
+-- | A monad expresion that determines what era the node is in.
+determineEraExpr ::
+     ConsensusModeParams mode
+  -> LocalStateQueryExpr block point (QueryInMode mode) r IO AnyCardanoEra
+determineEraExpr cModeParams =
+  case consensusModeOnly cModeParams of
+    ByronMode -> return $ AnyCardanoEra ByronEra
+    ShelleyMode -> return $ AnyCardanoEra ShelleyEra
+    CardanoMode -> queryExpr $ QueryCurrentEra CardanoModeIsMultiEra
