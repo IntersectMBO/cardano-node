@@ -68,13 +68,17 @@
     },
     "customConfig": {
       "locked": {
-        "narHash": "sha256-81c/VjU1Pb+HLyJowHqm6Bsml1zThDrdEkBwzYDYOgU=",
-        "path": "./custom-config",
-        "type": "path"
+        "lastModified": 1630400035,
+        "narHash": "sha256-MWaVOCzuFwp09wZIW9iHq5wWen5C69I940N1swZLEQ0=",
+        "owner": "input-output-hk",
+        "repo": "empty-flake",
+        "rev": "2040a05b67bf9a669ce17eca56beb14b4206a99a",
+        "type": "github"
       },
       "original": {
-        "path": "./custom-config",
-        "type": "path"
+        "owner": "input-output-hk",
+        "repo": "empty-flake",
+        "type": "github"
       }
     },
     "flake-utils": {

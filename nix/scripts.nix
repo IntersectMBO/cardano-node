@@ -26,6 +26,7 @@ let
 
   in pkgs.writeScriptBin "cardano-node-${service.environment}" ''
     #!${pkgs.runtimeShell}
+    export PATH=$PATH:${makeBinPath [ pkgs.coreutils ]}
     set -euo pipefail
     mkdir -p "$(dirname "${service.socketPath}")"
     ${service.script} $@
