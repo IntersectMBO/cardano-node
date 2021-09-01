@@ -72,21 +72,27 @@ Confirm that you installed cabal version `3.4.0.0`:
 
 #### Downloading and installing the GHC compiler:
 
+Download and install version `8.10.4` of GHC.  The easiest way to do this is to use [ghcup](https://www.haskell.org/ghcup/).
+
+```bash
+$ curl --proto '=https' --tlsv1.2 -sSf https://get-ghcup.haskell.org | sh
+```
+
+Then open a new terminal (to get an updated environment) and run:
+
+```bash
+$ ghcup install ghc 8.10.4
+$ ghcup install cabal 3.4.0.0
+$ ghcup set ghc 8.10.4
+$ ghcup set cabal 3.4.0.0
+```
+
 Create a working directory for your builds:
 
-    mkdir -p ~/src
-    cd ~/src
-
- Download and install the latest version of GHC:
-
-    wget https://downloads.haskell.org/ghc/8.10.4/ghc-8.10.4-x86_64-deb9-linux.tar.xz
-    tar -xf ghc-8.10.4-x86_64-deb9-linux.tar.xz
-    rm ghc-8.10.4-x86_64-deb9-linux.tar.xz
-    cd ghc-8.10.4
-    ./configure
-    sudo make install
-
-This assumes GHC 8.10.4 on Linux (the most recent version at the time of writing).  If you are installing on MacOSX or Windows, download the compiler from `https://www.haskell.org/platform/mac.html` instead, and follow the installation instructions. Note that using a newer version than the one specified may produce compilation errors.
+```bash
+$ mkdir -p ~/src
+$ cd ~/src
+```
 
 #### Installing Libsodium
 
