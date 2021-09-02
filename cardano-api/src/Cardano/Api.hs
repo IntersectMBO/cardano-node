@@ -584,6 +584,8 @@ module Cardano.Api (
     NetworkMagic(..),
 
     -- ** Conversions
+    toLedgerPParams,
+    fromLedgerPParams,
     --TODO: arrange not to export these
     toNetworkMagic,
     --TODO: Remove after updating cardano-node-chairman with new IPC
