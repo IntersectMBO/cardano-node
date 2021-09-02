@@ -114,7 +114,6 @@ import           Cardano.Api.Protocol.Types
 import           Cardano.Api.Query
 import           Cardano.Api.TxInMode
 
-
 -- ----------------------------------------------------------------------------
 -- The types for the client side of the node-to-client IPC protocols
 --
@@ -217,8 +216,8 @@ connectToLocalNodeWithVersion LocalNodeConnectInfo {
 
 
 mkVersionedProtocols :: forall block.
-                        ( Consensus.ShowQuery (Consensus.Query block),
-                          ProtocolClient block
+                        ( Consensus.ShowQuery (Consensus.Query block)
+                        , ProtocolClient block
                         )
                      => NetworkId
                      -> ProtocolClientInfoArgs block
@@ -578,4 +577,3 @@ chainSyncGetCurrentTip tipVar =
         void $ atomically $ tryPutTMVar tipVar tip
         pure $ Net.Sync.SendMsgDone ()
     }
-

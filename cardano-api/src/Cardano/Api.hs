@@ -609,7 +609,12 @@ module Cardano.Api (
     executeLocalStateQueryExpr,
     executeLocalStateQueryExprWithChainSync,
     queryExpr,
-    determineEraExpr
+    determineEraExpr,
+
+    Point(..),
+    pointToSlotNo,
+    pointToHeaderHash
+
   ) where
 
 import           Cardano.Api.Address
