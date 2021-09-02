@@ -84,6 +84,7 @@ module Cardano.Api (
 
     -- ** Addresses in specific eras
     AddressInEra(..),
+    isKeyAddress,
     AddressTypeInEra(..),
     byronAddressInEra,
     shelleyAddressInEra,

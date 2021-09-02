@@ -60,7 +60,10 @@ module Cardano.Api.Address (
 
     -- * Data family instances
     AsType(AsByronAddr, AsShelleyAddr, AsByronAddress, AsShelleyAddress,
-           AsAddress, AsAddressAny, AsAddressInEra, AsStakeAddress)
+           AsAddress, AsAddressAny, AsAddressInEra, AsStakeAddress),
+
+    -- * Helpers
+    isKeyAddress
   ) where
 
 import           Prelude
@@ -74,8 +77,8 @@ import qualified Data.Text.Encoding as Text
 import           Control.Applicative
 
 import           Cardano.Api.Eras
-import           Cardano.Api.Hash
 import           Cardano.Api.HasTypeProxy
+import           Cardano.Api.Hash
 import           Cardano.Api.Key
 import           Cardano.Api.KeysByron
 import           Cardano.Api.KeysShelley
@@ -482,6 +485,18 @@ makeStakeAddress nw sc =
     StakeAddress
       (toShelleyNetwork nw)
       (toShelleyStakeCredential sc)
+
+-- ----------------------------------------------------------------------------
+-- Helpers
+--
+
+-- | Is the UTxO at the address only spendable via a key witness.
+isKeyAddress :: AddressInEra era -> Bool
+isKeyAddress (AddressInEra ByronAddressInAnyEra _) = True
+isKeyAddress (AddressInEra (ShelleyAddressInEra _) (ShelleyAddress _ pCred _)) =
+  case fromShelleyPaymentCredential pCred of
+    PaymentCredentialByKey _ -> True
+    PaymentCredentialByScript _ -> False
 
 
 -- ----------------------------------------------------------------------------

@@ -19,6 +19,7 @@ import           Prelude (String, error)
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy.Char8 as LBS
+import           Data.List (intersect, (\\))
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import qualified Data.Text as Text
@@ -112,6 +113,8 @@ data ShelleyTxCmdError
   | ShelleyTxCmdEraConsensusModeMismatchQuery !AnyConsensusMode !AnyCardanoEra
   | ShelleyTxCmdByronEraQuery
   | ShelleyTxCmdLocalStateQueryError !ShelleyQueryCmdLocalStateQueryError
+  | ShelleyTxCmdExpectedKeyLockedTxIn ![TxIn]
+  | ShelleyTxCmdTxInsDoNotExist ![TxIn]
 
   deriving Show
 
@@ -233,6 +236,14 @@ renderShelleyTxCmdError err =
     ShelleyTxCmdByronEraQuery -> "Query not available in Byron era"
     ShelleyTxCmdLocalStateQueryError err' -> renderLocalStateQueryError err'
     ShelleyTxCmdBalanceTxBody err' -> Text.pack $ displayError err'
+    ShelleyTxCmdExpectedKeyLockedTxIn txins ->
+      "Expected key witnessed collateral tx inputs but got script witnessed tx inputs: " <>
+      Text.singleton '\n' <>
+      Text.intercalate (Text.singleton '\n') (map renderTxIn txins)
+    ShelleyTxCmdTxInsDoNotExist txins ->
+      "The following tx input(s) were not present in the UTxO: " <>
+      Text.singleton '\n' <>
+      Text.intercalate (Text.singleton '\n') (map renderTxIn txins)
 
 renderEra :: AnyCardanoEra -> Text
 renderEra (AnyCardanoEra ByronEra)   = "Byron"
@@ -407,6 +418,7 @@ runTxBuild (AnyCardanoEra era) (AnyConsensusModeParams cModeParams) networkId mS
       consensusMode = consensusModeOnly cModeParams
       dummyFee = Just $ Lovelace 0
       onlyInputs = [input | (input,_) <- txins]
+
   case (consensusMode, cardanoEraStyle era) of
     (CardanoMode, ShelleyBasedEra sbe) -> do
       txBodyContent <-
@@ -441,10 +453,22 @@ runTxBuild (AnyCardanoEra era) (AnyConsensusModeParams cModeParams) networkId mS
                      left (ShelleyTxCmdEraConsensusModeMismatchTxBalance outBody
                             (AnyConsensusMode CardanoMode) (AnyCardanoEra era))
 
-      let utxoQuery = QueryInEra eInMode $ QueryInShelleyBasedEra sbe
+      let collateralUTxOQuery = QueryInEra eInMode $ QueryInShelleyBasedEra sbe
+                                  (QueryUTxO . QueryUTxOByTxIn $ Set.fromList txinsc)
+          utxoQuery = QueryInEra eInMode $ QueryInShelleyBasedEra sbe
                         (QueryUTxO . QueryUTxOByTxIn $ Set.fromList onlyInputs)
-      let pParamsQuery = QueryInEra eInMode $ QueryInShelleyBasedEra sbe QueryProtocolParameters
+          pParamsQuery = QueryInEra eInMode $ QueryInShelleyBasedEra sbe QueryProtocolParameters
+
+      if null txinsc
+      then return ()
+      else do
+        collateralUtxo <- executeQuery era cModeParams localConnInfo collateralUTxOQuery
+        txinsExist txinsc collateralUtxo
+        notScriptLockedTxIns collateralUtxo
+
       utxo <- executeQuery era cModeParams localConnInfo utxoQuery
+      txinsExist onlyInputs utxo
+
       pparams <- executeQuery era cModeParams localConnInfo pParamsQuery
       (eraHistory, systemStart) <- firstExceptT ShelleyTxCmdAcquireFailure
                                      $ newExceptT $ queryEraHistoryAndSystemStart localNodeConnInfo Nothing
@@ -468,6 +492,24 @@ runTxBuild (AnyCardanoEra era) (AnyConsensusModeParams cModeParams) networkId mS
     (CardanoMode, LegacyByronEra) -> left ShelleyTxCmdByronEra
 
     (wrongMode, _) -> left (ShelleyTxCmdUnsupportedMode (AnyConsensusMode wrongMode))
+ where
+  txinsExist :: [TxIn] -> UTxO era -> ExceptT ShelleyTxCmdError IO ()
+  txinsExist ins (UTxO utxo)
+    | null utxo = left $ ShelleyTxCmdTxInsDoNotExist ins
+    | otherwise = do
+        let utxoIns = Map.keys utxo
+            occursInUtxo = [ txin | txin <- ins, txin `elem` utxoIns ]
+        if length occursInUtxo == length ins
+        then return ()
+        else left . ShelleyTxCmdTxInsDoNotExist $ ins \\ ins `intersect` occursInUtxo
+
+  notScriptLockedTxIns :: UTxO era -> ExceptT ShelleyTxCmdError IO ()
+  notScriptLockedTxIns (UTxO utxo) = do
+    let scriptLockedTxIns =
+          filter (\(_, TxOut aInEra _ _) -> not $ isKeyAddress aInEra ) $ Map.assocs utxo
+    if null scriptLockedTxIns
+    then return ()
+    else left . ShelleyTxCmdExpectedKeyLockedTxIn $ map fst scriptLockedTxIns
 
 queryEraHistoryAndSystemStart
   :: LocalNodeConnectInfo CardanoMode
