@@ -7,33 +7,82 @@ module Cardano.Tracer.Handlers.RTView.UI.Updater
   ) where
 
 import           Control.Concurrent.STM.TVar (TVar, readTVarIO)
-import           Control.Monad (forM_)
+import           Control.Monad (forM_, when)
+import           Control.Monad.Extra (whenJustM)
 import qualified Data.HashMap.Strict as HM
-import           Data.IORef (readIORef)
+import           Data.List ((\\))
+import           Data.Text (unpack)
+import qualified Graphics.UI.Threepenny as UI
 import           Graphics.UI.Threepenny.Core (Element, UI, liftIO)
 
-import           Cardano.Tracer.Handlers.RTView.UI.Elements
-import           Cardano.Tracer.Types (AcceptedItems)
+import           Cardano.Tracer.Handlers.RTView.UI.HTML.NodePanel (addNodePanel)
+import           Cardano.Tracer.Handlers.RTView.UI.Utils
+import           Cardano.Tracer.Types
 
 updateUI
-  :: AcceptedItems
-  -> TVar PageElements
-  -> Element
-  -> Element
+  :: UI.Window
+  -> ConnectedNodesIds
+  -> AcceptedNodeInfo
   -> UI ()
-updateUI acceptedItemsIORef pageElementsTVar noNodesNotify rootElemForNodePanels = do
-  pageElements <- liftIO . readTVarIO $ pageElementsTVar
-  acceptedItems <- liftIO . readIORef $ acceptedItemsIORef
-  forM_ (HM.toList acceptedItems) $ \(nodeId, (niStore, traceObjects, metrics)) ->
-    case HM.lookup nodeId pageElements of
-      Just (nodePanel, nodePanelEls) ->
-        -- Such node panel is already here, check if we need to update some of its elements.
-        -- check .
-        return ()
-      Nothing ->
-        -- No such node panel, it means that the new node with 'nodeId'
-        -- is connected to 'cardano-tracer' since the last check.
-        return ()
+updateUI window savedConnectedNodes acceptedNodeInfo = do
+  -- We should analyse nodes' info to check if some node was disconnected
+  -- and/or some new node was connected.
+  savedConnectedNodes    <- liftIO $             readTVarIO savedConnectedNodes
+  actuallyConnectedNodes <- liftIO $ HM.keys <$> readTVarIO acceptedNodeInfo
+  when (savedConnectedNodes /= actuallyConnectedNodes) $ do
+    let (disconnected, newlyConnected) =
+          checkNodesChanges savedConnectedNodes actuallyConnectedNodes
+    deletePanelsForDisconnectedNodes window disconnected
+    addPanelsForConnectedNodes window newlyConnected acceptedNodeInfo
+
+  return ()
+
+checkNodesChanges
+  :: NodeIds
+  -> NodeIds
+  -> (NodeIds, NodeIds)
+checkNodesChanges []             []                = ([],             [])                -- No nodes at all.
+checkNodesChanges savedConnected []                = (savedConnected, [])                -- All previously connected nodes are gone.
+checkNodesChanges []             actuallyConnected = ([],             actuallyConnected) -- All nodes are newly connected. 
+checkNodesChanges savedConnected actuallyConnected = (disconnected,   newlyConnected)
+ where
+  -- If node's id is in 'savedConnected' but not in 'actuallyConnected' - this node was disconnected.
+  disconnected   = savedConnected    \\ actuallyConnected
+  -- If node's id is in 'actuallyConnected' but not in 'savedConnected' - this node was newly connected.
+  newlyConnected = actuallyConnected \\ savedConnected
+
+deletePanelsForDisconnectedNodes
+  :: UI.Window
+  -> NodeIds
+  -> UI ()
+deletePanelsForDisconnectedNodes _ [] = return ()
+deletePanelsForDisconnectedNodes window disconnected =
+  forM_ disconnected $ \(NodeId textId) ->
+    findAndDo window textId UI.delete
+
+addPanelsForConnectedNodes
+  :: UI.Window
+  -> NodeIds
+  -> AcceptedNodeInfo
+  -> UI ()
+addPanelsForConnectedNodes _ [] _ = return ()
+addPanelsForConnectedNodes window newlyConnected acceptedNodeInfo = do
+  nodesInfo <- liftIO $ readTVarIO acceptedNodeInfo
+  forM_ newlyConnected $ \nodeId ->
+    addNodePanel window nodeId $ nodesInfo HM.! nodeId
+
+  --pageElements <- liftIO . readTVarIO $ pageElementsTVar
+  --acceptedItems <- liftIO . readIORef $ acceptedItemsIORef
+  --forM_ (HM.toList acceptedItems) $ \(nodeId, (niStore, traceObjects, metrics)) ->
+  --  case HM.lookup nodeId pageElements of
+  --    Just (nodePanel, nodePanelEls) ->
+  --      -- Such node panel is already here, check if we need to update some of its elements.
+  --      -- check .
+  --      return ()
+  --   Nothing ->
+  --      -- No such node panel, it means that the new node with 'nodeId'
+  --      -- is connected to 'cardano-tracer' since the last check.
+  --      return ()
 
 -- AcceptedItems: HashMap NodeId (NodeInfoStore, TraceObjects, Metrics)
 -- PageElements:  HashMap NodeId (Element, NodePanelElements)

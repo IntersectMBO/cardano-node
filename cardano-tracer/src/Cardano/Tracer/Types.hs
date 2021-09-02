@@ -6,11 +6,14 @@
 module Cardano.Tracer.Types
   ( AcceptedMetrics
   , AcceptedNodeInfo
+  , ConnectedNodesIds
   , Metrics
   , NodeId (..)
+  , NodeIds
   , connIdToNodeId
   , initAcceptedMetrics
   , initAcceptedNodeInfo
+  , initConnectedNodesIds
   , prepareAcceptedMetrics
   ) where
 
@@ -34,6 +37,8 @@ import           System.Metrics.Store.Acceptor (MetricsLocalStore, emptyMetricsL
 newtype NodeId = NodeId Text
   deriving (Eq, Generic, Hashable, Ord, Show)
 
+type NodeIds = [NodeId]
+
 connIdToNodeId :: Show addr => ConnectionId addr -> NodeId
 connIdToNodeId ConnectionId{remoteAddress} = NodeId preparedAddress
  where
@@ -54,11 +59,16 @@ type AcceptedMetrics = TVar (HashMap NodeId Metrics)
 
 type AcceptedNodeInfo = TVar (HashMap NodeId NodeInfo)
 
+type ConnectedNodesIds = TVar NodeIds
+
 initAcceptedMetrics :: IO AcceptedMetrics
 initAcceptedMetrics = newTVarIO HM.empty
 
 initAcceptedNodeInfo :: IO AcceptedNodeInfo
 initAcceptedNodeInfo = newTVarIO HM.empty
+
+initConnectedNodesIds :: IO ConnectedNodesIds
+initConnectedNodesIds = newTVarIO []
 
 prepareAcceptedMetrics
   :: NodeId

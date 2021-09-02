@@ -50,7 +50,8 @@ nodeDisconnectHandler pathToLocalSocket acceptedNodeInfo = atomically $
   modifyTVar' acceptedNodeInfo $ \nodesInfo ->
     case find (\(NodeId t) -> pack pathToLocalSocket `isInfixOf` t) (keys nodesInfo) of
       Just nodeId ->
-        -- This node was disconnected, remove its info (RTView will use it to remove corresponding elements).
+        -- This node was disconnected, remove its info
+        -- (RTView will use it to remove corresponding elements).
         delete nodeId nodesInfo
       Nothing ->
         nodesInfo

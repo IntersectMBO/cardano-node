@@ -9,27 +9,19 @@ import           Cardano.Tracer.Handlers.RTView.UI.Img.Icons
 import           Cardano.Tracer.Handlers.RTView.UI.HTML.OwnInfo (mkOwnInfo)
 import           Cardano.Tracer.Handlers.RTView.UI.Utils
 
-mkPageBody
-  :: UI.Window
-  -> UI (Element, Element, Element)
-mkPageBody window = do
-  noNodesNotify
-    <- UI.div #. "container is-max-widescreen has-text-centered" #+
-         [ image "rt-view-no-nodes-icon" noNodesSVG
-         , UI.p #. "rt-view-no-nodes-message" #+
-             [ string "There are no connected nodes. Yet." ]
-         ]
-  rootElemForNodePanels
-    <- UI.div #. "container is-max-widescreen" #+ []
-  body
-    <- UI.getBody window #+
-         [ topNavigation
-         , UI.mkElement "section" #. "section" #+
-             [ element noNodesNotify
-             , element rootElemForNodePanels
-             ]
-         ]
-  return (body, noNodesNotify, rootElemForNodePanels)
+mkPageBody :: UI.Window -> UI Element
+mkPageBody window =
+  UI.getBody window #+
+    [ topNavigation
+    , UI.mkElement "section" #. "section" #+
+        [ UI.div #. "container is-max-widescreen has-text-centered" #+
+            [ image "rt-view-no-nodes-icon" noNodesSVG
+            , UI.p #. "rt-view-no-nodes-message" #+
+                [ string "There are no connected nodes. Yet." ]
+            ]
+        , UI.div #. "container is-max-widescreen" #+ []
+        ]
+    ]
 
 topNavigation :: UI Element
 topNavigation = do

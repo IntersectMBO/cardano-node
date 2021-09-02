@@ -51,6 +51,12 @@ library
                        Cardano.Tracer.Handlers.RTView.Run
                        Cardano.Tracer.Handlers.RTView.UI.CSS.Bulma
                        Cardano.Tracer.Handlers.RTView.UI.CSS.Own
+                       Cardano.Tracer.Handlers.RTView.UI.Img.Icons
+                       Cardano.Tracer.Handlers.RTView.UI.HTML.NodePanel
+                       Cardano.Tracer.Handlers.RTView.UI.HTML.OwnInfo
+                       Cardano.Tracer.Handlers.RTView.UI.HTML.PageBody
+                       Cardano.Tracer.Handlers.RTView.UI.Updater
+                       Cardano.Tracer.Handlers.RTView.UI.Utils
                        Cardano.Tracer.Handlers.RTView.SupportedNodes
                        Cardano.Tracer.Handlers.RTView.WebServer
 
