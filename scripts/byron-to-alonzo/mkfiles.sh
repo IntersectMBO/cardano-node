@@ -69,6 +69,8 @@ esac
 
 sprocket() {
   if [ "$UNAME" == "Windows_NT" ]; then
+    # Named pipes names on Windows must have the structure: "\\.\pipe\PipeName"
+    # See https://docs.microsoft.com/en-us/windows/win32/ipc/pipe-names
     echo -n '\\.\pipe\'
     echo "$1" | sed 's|/|\\|g'
   else
