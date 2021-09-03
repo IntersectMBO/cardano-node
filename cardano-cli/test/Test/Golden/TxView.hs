@@ -16,10 +16,38 @@ txViewTests :: IO Bool
 txViewTests =
   checkSequential $
     Group "`transaction view` Goldens"
-      [ ("golden_view_shelley", golden_view_shelley)
+      [ ("golden_view_byron",   golden_view_byron)
+      , ("golden_view_shelley", golden_view_shelley)
       , ("golden_view_allegra", golden_view_allegra)
       , ("golden_view_mary",    golden_view_mary)
+      -- , ("golden_view_alonzo",  golden_view_alonzo)
       ]
+
+golden_view_byron :: Property
+golden_view_byron =
+  propertyOnce $
+  moduleWorkspace "tmp" $ \tempDir -> do
+    transactionBodyFile <- noteTempFile tempDir "transaction-body-file"
+
+    -- Create transaction body
+    void $
+      execCardanoCLI
+        [ "transaction", "build-raw"
+        , "--byron-era"
+        , "--tx-in"
+        ,   "F8EC302D19E3C8251C30B1434349BF2E949A1DBF14A4EBC3D512918D2D4D5C56\
+            \#88"
+        , "--tx-out"
+        ,   "5oP9ib6ym3XfwXuy3ksXZzgtBzXSArXAACQVXKqcPhiLnHVYjXJNu2T6Zomh8LAWLV\
+            \+68"
+        , "--out-file", transactionBodyFile
+        ]
+
+    -- View transaction body
+    result <-
+      execCardanoCLI
+        ["transaction", "view", "--tx-body-file", transactionBodyFile]
+    diffVsGoldenFile result "test/data/golden/byron/transaction-view.out"
 
 golden_view_shelley :: Property
 golden_view_shelley =
