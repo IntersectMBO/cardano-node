@@ -57,7 +57,7 @@
   - Auxiliary scripts (i.e. those included in the Tx auxiliary data, which are
     not required as transaction signers) must now be included with
     `--auxiliary-script-file` rather than with `--script-file`.
-  - Scripts witnessing txins, certificates, withdrawls and minting must now be
+  - Scripts witnessing txins, certificates, withdrawals and minting must now be
     paired with the thing they are witnessing. E.g.
     ```
     --certificate-file  $certfile --certificate-script-file $scriptfile
