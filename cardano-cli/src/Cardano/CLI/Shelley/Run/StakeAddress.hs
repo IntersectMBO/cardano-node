@@ -39,7 +39,8 @@ renderShelleyStakeAddressCmdError err =
 runStakeAddressCmd :: StakeAddressCmd -> ExceptT ShelleyStakeAddressCmdError IO ()
 runStakeAddressCmd (StakeAddressKeyGen vk sk) = runStakeAddressKeyGen vk sk
 runStakeAddressCmd (StakeAddressKeyHash vk mOutputFp) = runStakeAddressKeyHash vk mOutputFp
-runStakeAddressCmd (StakeAddressBuild vk nw mOutputFp) = runStakeAddressBuild vk nw mOutputFp
+runStakeAddressCmd (StakeAddressBuild stakeVerifier nw mOutputFp) =
+  runStakeAddressBuild stakeVerifier nw mOutputFp
 runStakeAddressCmd (StakeRegistrationCert stakeVerifier outputFp) =
   runStakeCredentialRegistrationCert stakeVerifier outputFp
 runStakeAddressCmd (StakeCredentialDelegationCert stakeVerifier stkPoolVerKeyHashOrFp outputFp) =
@@ -82,20 +83,36 @@ runStakeAddressKeyHash stakeVerKeyOrFile mOutputFp = do
     Just (OutputFile fpath) -> liftIO $ BS.writeFile fpath hexKeyHash
     Nothing -> liftIO $ BS.putStrLn hexKeyHash
 
-runStakeAddressBuild :: VerificationKeyOrFile StakeKey -> NetworkId -> Maybe OutputFile
-                     -> ExceptT ShelleyStakeAddressCmdError IO ()
-runStakeAddressBuild stakeVerKeyOrFile network mOutputFp = do
-    stakeVerKey <- firstExceptT ShelleyStakeAddressCmdReadKeyFileError
-      . newExceptT
-      $ readVerificationKeyOrFile AsStakeKey stakeVerKeyOrFile
+runStakeAddressBuild
+  :: StakeVerifier
+  -> NetworkId
+  -> Maybe OutputFile
+  -> ExceptT ShelleyStakeAddressCmdError IO ()
+runStakeAddressBuild stakeVerifier network mOutputFp =
+  case stakeVerifier of
+    StakeVerifierScriptFile (ScriptFile sFile) -> do
+      ScriptInAnyLang _ script <- firstExceptT ShelleyStakeAddressCmdReadScriptFileError
+                                    $ readFileScriptInAnyLang sFile
+      let stakeCred = StakeCredentialByScript $ hashScript script
+          stakeAddr = makeStakeAddress network stakeCred
+          stakeAddrText = serialiseAddress stakeAddr
 
-    let stakeCred = StakeCredentialByKey (verificationKeyHash stakeVerKey)
-        stakeAddr = makeStakeAddress network stakeCred
-        stakeAddrText = serialiseAddress stakeAddr
+      case mOutputFp of
+        Just (OutputFile fpath) -> liftIO $ Text.writeFile fpath stakeAddrText
+        Nothing -> liftIO $ Text.putStrLn stakeAddrText
 
-    case mOutputFp of
-      Just (OutputFile fpath) -> liftIO $ Text.writeFile fpath stakeAddrText
-      Nothing -> liftIO $ Text.putStrLn stakeAddrText
+    StakeVerifierKey stakeVerKeyOrFile -> do
+      stakeVerKey <- firstExceptT ShelleyStakeAddressCmdReadKeyFileError
+                       . newExceptT
+                       $ readVerificationKeyOrFile AsStakeKey stakeVerKeyOrFile
+
+      let stakeCred = StakeCredentialByKey (verificationKeyHash stakeVerKey)
+          stakeAddr = makeStakeAddress network stakeCred
+          stakeAddrText = serialiseAddress stakeAddr
+
+      case mOutputFp of
+        Just (OutputFile fpath) -> liftIO $ Text.writeFile fpath stakeAddrText
+        Nothing -> liftIO $ Text.putStrLn stakeAddrText
 
 
 runStakeCredentialRegistrationCert

@@ -117,7 +117,7 @@ renderAddressCmd cmd =
 data StakeAddressCmd
   = StakeAddressKeyGen VerificationKeyFile SigningKeyFile
   | StakeAddressKeyHash (VerificationKeyOrFile StakeKey) (Maybe OutputFile)
-  | StakeAddressBuild (VerificationKeyOrFile StakeKey) NetworkId (Maybe OutputFile)
+  | StakeAddressBuild StakeVerifier NetworkId (Maybe OutputFile)
   | StakeRegistrationCert StakeVerifier OutputFile
   | StakeCredentialDelegationCert
       StakeVerifier

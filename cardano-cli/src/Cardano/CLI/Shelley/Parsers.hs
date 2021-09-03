@@ -338,7 +338,7 @@ pStakeAddressCmd =
     pStakeAddressKeyHash = StakeAddressKeyHash <$> pStakeVerificationKeyOrFile <*> pMaybeOutputFile
 
     pStakeAddressBuild :: Parser StakeAddressCmd
-    pStakeAddressBuild = StakeAddressBuild <$> pStakeVerificationKeyOrFile
+    pStakeAddressBuild = StakeAddressBuild <$> pStakeVerifier
                                            <*> pNetworkId
                                            <*> pMaybeOutputFile
 
