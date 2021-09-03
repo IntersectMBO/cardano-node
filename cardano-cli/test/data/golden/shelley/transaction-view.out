@@ -7,14 +7,19 @@ inputs:
 metadata: null
 mint: null
 outputs:
-- address: addr1v9wmu83pzajplrtpsq6tsqdgwr98x888trpmah2u0ezznsge7del3
+- address: addr_test1vz7w0r9epak6nmnh3mc8e2ypkjyu8zsc3xf7dpct6k577acxmcfyv
   address era: Shelley
   amount: 31 Lovelace
-  network: Mainnet
+  network: Testnet
   payment credential:
-    key hash: 5dbe1e2117641f8d618034b801a870ca731ce758c3bedd5c7e4429c1
+    key hash: bce78cb90f6da9ee778ef07ca881b489c38a188993e6870bd5a9ef77
   stake reference: null
 update proposal: null
 validity range:
   time to live: 33
-withdrawals: null
+withdrawals:
+- address: stake_test1up00fz9lyqs5sjks82k22eqz7a9srym9vysjgp3h2ua2v2cm522kg
+  amount: 42 Lovelace
+  credential:
+    key hash: 5ef488bf2021484ad03aaca56402f74b0193656121240637573aa62b
+  network: Testnet

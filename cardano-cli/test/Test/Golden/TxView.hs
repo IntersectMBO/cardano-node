@@ -64,9 +64,12 @@ golden_view_shelley =
         ,   "fe5dd07fb576bff960d6e066eade5b26cdb5afebe29f76ea58d0a098bce5d891\
             \#29"
         , "--tx-out"
-        ,   "addr1v9wmu83pzajplrtpsq6tsqdgwr98x888trpmah2u0ezznsge7del3+31"
+        ,   "addr_test1vz7w0r9epak6nmnh3mc8e2ypkjyu8zsc3xf7dpct6k577acxmcfyv+31"
         , "--fee", "32"
         , "--invalid-hereafter", "33"
+        , "--withdrawal"
+        ,   "stake_test1up00fz9lyqs5sjks82k22eqz7a9srym9vysjgp3h2ua2v2cm522kg\
+            \+42"
         , "--out-file", transactionBodyFile
         ]
 
