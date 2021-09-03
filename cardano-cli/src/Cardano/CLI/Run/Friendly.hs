@@ -33,7 +33,8 @@ friendlyTxBody
   era
   (TxBody
     TxBodyContent
-      { txCertificates
+      { txAuxScripts
+      , txCertificates
       , txFee
       , txIns
       , txMetadata
@@ -44,7 +45,8 @@ friendlyTxBody
       , txWithdrawals
       }) =
   object
-    [ "certificates"      .= friendlyCertificates txCertificates
+    [ "auxiliary scripts" .= friendlyAuxScripts txAuxScripts
+    , "certificates"      .= friendlyCertificates txCertificates
     , "era"               .= era
     , "fee"               .= friendlyFee txFee
     , "inputs"            .= friendlyInputs txIns
@@ -185,6 +187,11 @@ friendlyMetadataValue = \case
     array
       [array [friendlyMetadataValue k, friendlyMetadataValue v] | (k, v) <- m]
   TxMetaText   text  -> toJSON text
+
+friendlyAuxScripts :: TxAuxScripts era -> Aeson.Value
+friendlyAuxScripts = \case
+  TxAuxScriptsNone       -> Null
+  TxAuxScripts _ scripts -> String $ textShow scripts
 
 friendlyInputs :: [(TxIn, build)] -> Aeson.Value
 friendlyInputs = toJSON . map fst
