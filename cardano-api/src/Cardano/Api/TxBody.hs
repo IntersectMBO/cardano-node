@@ -24,6 +24,21 @@ module Cardano.Api.TxBody (
     TxBody(.., TxBody),
     makeTransactionBody,
     TxBodyContent(..),
+    updateTxIns,
+    updateCollateralTxIns,
+    updateTxOuts,
+    updateTxFee,
+    updateTxValidityRange,
+    updateTxMetadata,
+    updateTxAuxScripts,
+    updateTxExtraScriptData,
+    updateTxExtraKeyWits,
+    updateTxProtocolParams,
+    updateTxWithdrawals,
+    updateTxCertificates,
+    updateTxUpdateProposal,
+    updateTxMintValue,
+    updateTxScriptValidity,
     TxBodyError(..),
     TxBodyScriptData(..),
     TxScriptValidity(..),
@@ -2700,7 +2715,7 @@ toAlonzoAuxiliaryData m ss =
 
 
 -- ----------------------------------------------------------------------------
--- Other utilities helpful with making transaction bodies
+-- Other utilities helpful with making/modifying transaction bodies
 --
 
 -- | Compute the 'TxIn' of the initial UTxO pseudo-transaction corresponding
@@ -2723,3 +2738,105 @@ genesisUTxOPseudoTxIn nw (GenesisUTxOKeyHash kh) =
              (toShelleyNetwork nw)
              (Shelley.KeyHashObj kh)
              Shelley.StakeRefNull
+
+updateTxIns
+  :: (TxIns build era -> TxIns build era)
+  -> TxBodyContent build era
+  -> TxBodyContent build era
+updateTxIns f txbodycontent = txbodycontent { txIns = f $ txIns txbodycontent }
+
+updateCollateralTxIns
+  :: (TxInsCollateral era -> TxInsCollateral era)
+  -> TxBodyContent build era
+  -> TxBodyContent build era
+updateCollateralTxIns f txbodycontent = txbodycontent { txInsCollateral = f $ txInsCollateral txbodycontent }
+
+updateTxOuts
+  :: ([TxOut era] -> [TxOut era])
+  -> TxBodyContent build era
+  -> TxBodyContent build era
+updateTxOuts f txbodycontent = txbodycontent { txOuts = f $ txOuts txbodycontent }
+
+updateTxFee
+  :: (TxFee era -> TxFee era)
+  -> TxBodyContent build era
+  -> TxBodyContent build era
+updateTxFee f txbodycontent = txbodycontent { txFee = f $ txFee txbodycontent }
+
+updateTxValidityRange
+  :: ((TxValidityLowerBound era, TxValidityUpperBound era)
+        -> (TxValidityLowerBound era, TxValidityUpperBound era))
+  -> TxBodyContent build era
+  -> TxBodyContent build era
+updateTxValidityRange f txbodycontent = txbodycontent { txValidityRange = f $ txValidityRange txbodycontent }
+
+updateTxMetadata
+  :: (TxMetadataInEra era -> TxMetadataInEra era)
+  -> TxBodyContent build era
+  -> TxBodyContent build era
+updateTxMetadata f txbodycontent = txbodycontent { txMetadata = f $ txMetadata txbodycontent }
+
+updateTxAuxScripts
+  :: (TxAuxScripts era -> TxAuxScripts era)
+  -> TxBodyContent build era
+  -> TxBodyContent build era
+updateTxAuxScripts f txbodycontent = txbodycontent { txAuxScripts = f $ txAuxScripts txbodycontent }
+
+updateTxExtraScriptData
+  :: (BuildTxWith build (TxExtraScriptData era)
+       -> BuildTxWith build (TxExtraScriptData era))
+  -> TxBodyContent build era
+  -> TxBodyContent build era
+updateTxExtraScriptData f txbodycontent =
+  txbodycontent { txExtraScriptData = f $ txExtraScriptData txbodycontent }
+
+updateTxExtraKeyWits
+  :: (TxExtraKeyWitnesses era -> TxExtraKeyWitnesses era)
+  -> TxBodyContent build era
+  -> TxBodyContent build era
+updateTxExtraKeyWits f txbodycontent =
+  txbodycontent { txExtraKeyWits = f $ txExtraKeyWits txbodycontent }
+
+updateTxProtocolParams
+  :: (BuildTxWith build (Maybe ProtocolParameters)
+       -> BuildTxWith build (Maybe ProtocolParameters))
+  -> TxBodyContent build era
+  -> TxBodyContent build era
+updateTxProtocolParams f txbodycontent =
+  txbodycontent { txProtocolParams = f $ txProtocolParams txbodycontent }
+
+updateTxWithdrawals
+  :: (TxWithdrawals build era -> TxWithdrawals build era)
+  -> TxBodyContent build era
+  -> TxBodyContent build era
+updateTxWithdrawals f txbodycontent =
+  txbodycontent { txWithdrawals = f $ txWithdrawals txbodycontent }
+
+updateTxCertificates
+  :: (TxCertificates build era -> TxCertificates build era)
+  -> TxBodyContent build era
+  -> TxBodyContent build era
+updateTxCertificates f txbodycontent =
+  txbodycontent { txCertificates = f $ txCertificates txbodycontent }
+
+updateTxUpdateProposal
+  :: (TxUpdateProposal era -> TxUpdateProposal era)
+  -> TxBodyContent build era
+  -> TxBodyContent build era
+updateTxUpdateProposal f txbodycontent =
+  txbodycontent { txUpdateProposal = f $ txUpdateProposal txbodycontent }
+
+updateTxMintValue
+  :: (TxMintValue build era -> TxMintValue build era)
+  -> TxBodyContent build era
+  -> TxBodyContent build era
+updateTxMintValue f txbodycontent =
+  txbodycontent { txMintValue = f $ txMintValue txbodycontent }
+
+updateTxScriptValidity
+  :: (TxScriptValidity era -> TxScriptValidity era)
+  -> TxBodyContent build era
+  -> TxBodyContent build era
+updateTxScriptValidity f txbodycontent =
+  txbodycontent { txScriptValidity = f $ txScriptValidity txbodycontent }
+
