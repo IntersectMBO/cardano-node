@@ -45,7 +45,7 @@ let
 
     inherit (haskellPackages.cardano-node.identifier) version;
 
-    exes = mapAttrsRecursiveCond (as: !(isDerivation as)) rewriteStatic (collectComponents' "exes" haskellPackages);
+    exes = collectComponents' "exes" haskellPackages;
 
     # `tests` are the test suites which have been built.
     tests = collectComponents' "tests" haskellPackages;
@@ -57,7 +57,7 @@ let
       tests = collectChecks haskellPackages;
 
       hlint = callPackage hlintCheck {
-        inherit (cardanoNodeProject.projectModule) src;
+        inherit (cardanoNodeProject) src;
       };
     };
 
