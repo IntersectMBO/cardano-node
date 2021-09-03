@@ -69,7 +69,7 @@ esac
 
 sprocket() {
   if [ "$UNAME" == "Windows_NT" ]; then
-    echo -n "\\\\.\\pipe\\"
+    echo -n '\\.\pipe\'
     echo "$1" | sed 's|/|\\|g'
   else
     echo "$1"
@@ -487,14 +487,13 @@ mkdir -p run
 
 for NODE in ${BFT_NODES}; do
   (
-    SPROCKET="$(sprocket "${ROOT}/${NODE}/node.sock")"
     echo "#!/usr/bin/env bash"
     echo ""
     echo "cardano-node run \\"
     echo "  --config                          ${ROOT}/configuration.yaml \\"
     echo "  --topology                        ${ROOT}/${NODE}/topology.json \\"
     echo "  --database-path                   ${ROOT}/${NODE}/db \\"
-    echo "  --socket-path                     '${SPROCKET}' \\"
+    echo "  --socket-path                     '$(sprocket "${ROOT}/${NODE}/node.sock")' \\"
     echo "  --shelley-kes-key                 ${ROOT}/${NODE}/shelley/kes.skey \\"
     echo "  --shelley-vrf-key                 ${ROOT}/${NODE}/shelley/vrf.skey \\"
     echo "  --shelley-operational-certificate ${ROOT}/${NODE}/shelley/node.cert \\"
@@ -511,14 +510,13 @@ done
 
 for NODE in ${POOL_NODES}; do
   (
-    SPROCKET="$(sprocket "${ROOT}/${NODE}/node.sock")"
     echo "#!/usr/bin/env bash"
     echo ""
     echo "cardano-node run \\"
     echo "  --config                          ${ROOT}/configuration.yaml \\"
     echo "  --topology                        ${ROOT}/${NODE}/topology.json \\"
     echo "  --database-path                   ${ROOT}/${NODE}/db \\"
-    echo "  --socket-path                     '${SPROCKET}' \\"
+    echo "  --socket-path                     '$(sprocket "${ROOT}/${NODE}/node.sock")' \\"
     echo "  --shelley-kes-key                 ${ROOT}/${NODE}/shelley/kes.skey \\"
     echo "  --shelley-vrf-key                 ${ROOT}/${NODE}/shelley/vrf.skey \\"
     echo "  --shelley-operational-certificate ${ROOT}/${NODE}/shelley/node.cert \\"
