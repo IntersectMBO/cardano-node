@@ -127,8 +127,13 @@ golden_view_mary =
         , "--fee", "139"
         , "--invalid-before", "140"
         , "--mint"
-        ,   "142 69596718df8203759c0f9e86f3f79d1dd45bc9d34109a4fccc824e02"
-        , "--minting-script-file", "test/data/golden/shelley/multisig/scripts/any"
+        ,   "42 d441227553a0f1a965fee7d60a0f724b368dd1bddbc208730fccebcf\
+            \ + \
+            \43 52dc3d43b6d2465e96109ce75ab61abe5e9c1d8a3c9ce6ff8a3af528.snow\
+            \ + \
+            \44 d441227553a0f1a965fee7d60a0f724b368dd1bddbc208730fccebcf.sky"
+        , "--minting-script-file", "test/data/golden/mary/scripts/mint.all"
+        , "--minting-script-file", "test/data/golden/mary/scripts/mint.any"
         , "--out-file", transactionBodyFile
         ]
 
