@@ -3,6 +3,7 @@ era: Mary
 fee: 139 Lovelace
 inputs:
 - fe5dd07fb576bff960d6e066eade5b26cdb5afebe29f76ea58d0a098bce5d891#135
+metadata: null
 mint:
   69596718df8203759c0f9e86f3f79d1dd45bc9d34109a4fccc824e02: 142
 outputs:

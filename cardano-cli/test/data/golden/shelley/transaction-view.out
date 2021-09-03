@@ -3,6 +3,7 @@ era: Shelley
 fee: 32 Lovelace
 inputs:
 - fe5dd07fb576bff960d6e066eade5b26cdb5afebe29f76ea58d0a098bce5d891#29
+metadata: null
 mint: null
 outputs:
 - address: addr1v9wmu83pzajplrtpsq6tsqdgwr98x888trpmah2u0ezznsge7del3

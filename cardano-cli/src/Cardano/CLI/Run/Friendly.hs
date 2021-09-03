@@ -12,12 +12,12 @@ module Cardano.CLI.Run.Friendly (friendlyTxBodyBS) where
 
 import           Cardano.Prelude
 
-import           Data.Aeson
+import           Data.Aeson (Value (..), object, toJSON, (.=))
 import qualified Data.Aeson as Aeson
 import           Data.Yaml (array)
 import           Data.Yaml.Pretty (defConfig, encodePretty, setConfCompare)
 
-import           Cardano.Api as Api
+import           Cardano.Api
 import           Cardano.Api.Byron (Lovelace (..))
 import           Cardano.Api.Shelley (Address (ShelleyAddress), StakeAddress (..))
 import qualified Shelley.Spec.Ledger.API as Shelley
@@ -36,6 +36,7 @@ friendlyTxBody
       { txCertificates
       , txFee
       , txIns
+      , txMetadata
       , txMintValue
       , txOuts
       , txUpdateProposal
@@ -47,6 +48,7 @@ friendlyTxBody
     , "era"               .= era
     , "fee"               .= friendlyFee txFee
     , "inputs"            .= friendlyInputs txIns
+    , "metadata"          .= friendlyMetadata txMetadata
     , "mint"              .= friendlyMintValue txMintValue
     , "outputs"           .= map friendlyTxOut txOuts
     , "update proposal"   .= friendlyUpdateProposal txUpdateProposal
@@ -168,6 +170,21 @@ friendlyTxOutValue :: TxOutValue era -> Aeson.Value
 friendlyTxOutValue = \case
   TxOutAdaOnly _ lovelace -> friendlyLovelace lovelace
   TxOutValue _ multiasset -> toJSON multiasset
+
+friendlyMetadata :: TxMetadataInEra era -> Aeson.Value
+friendlyMetadata = \case
+  TxMetadataNone                   -> Null
+  TxMetadataInEra _ (TxMetadata m) -> toJSON $ friendlyMetadataValue <$> m
+
+friendlyMetadataValue :: TxMetadataValue -> Aeson.Value
+friendlyMetadataValue = \case
+  TxMetaNumber int   -> toJSON int
+  TxMetaBytes  bytes -> String $ textShow bytes
+  TxMetaList   lst   -> array $ map friendlyMetadataValue lst
+  TxMetaMap    m     ->
+    array
+      [array [friendlyMetadataValue k, friendlyMetadataValue v] | (k, v) <- m]
+  TxMetaText   text  -> toJSON text
 
 friendlyInputs :: [(TxIn, build)] -> Aeson.Value
 friendlyInputs = toJSON . map fst

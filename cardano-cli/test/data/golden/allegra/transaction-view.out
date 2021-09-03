@@ -3,6 +3,7 @@ era: Allegra
 fee: 100 Lovelace
 inputs:
 - fe5dd07fb576bff960d6e066eade5b26cdb5afebe29f76ea58d0a098bce5d891#94
+metadata: null
 mint: null
 outputs:
 - address: addr_test1qrefnr4k09pvge6dq83v6s67ruter8sftmky8qrmkqqsxy7q5psgn8tgqmupq4r79jmxlyk4eqt6z6hj5g8jd8393msqaw47f4
