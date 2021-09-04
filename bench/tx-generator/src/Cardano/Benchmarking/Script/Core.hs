@@ -306,12 +306,11 @@ localSubmitTx tx = do
   submitTracer <- btTxSubmit_ <$> get BenchTracers
   submit <- getLocalSubmitTx
   ret <- liftIO $ submit tx
-  let
-    msg = case ret of
-      SubmitSuccess -> "local submit success."
-      SubmitFail e -> mconcat
-        [ "local submit failed: " , show e , " (" , show tx , ")"]
-  liftIO $ traceWith submitTracer $ TraceBenchTxSubDebug msg
+  case ret of
+    SubmitSuccess -> return ()
+    SubmitFail e -> liftIO $ traceWith submitTracer $
+                      TraceBenchTxSubDebug $ mconcat
+                        [ "local submit failed: " , show e , " (" , show tx , ")"]
   return ret
 
 makeMetadata :: forall era. IsShelleyBasedEra era => ActionM (TxMetadataInEra era)
@@ -477,15 +476,22 @@ createChangeInEra value count _proxy = do
 
 createChangeGeneric :: ([Lovelace] -> ActionM (Either String (TxInMode CardanoMode))) -> Lovelace -> Int -> ActionM ()
 createChangeGeneric createCoins value count = do
+  submitTracer <- btTxSubmit_ <$> get BenchTracers
   let
     coinsList = replicate count value
     maxTxSize = 30
     chunks = chunkList maxTxSize coinsList
+    msg = mconcat [ "createChangeGeneric: outputs: ", show count
+                  , " value: ", show value
+                  , " number of txs: ", show $ length chunks
+                  ]
+  liftIO $ traceWith submitTracer $ TraceBenchTxSubDebug msg
   forM_ chunks $ \coins -> do
     gen <- createCoins coins
     case gen of
       Left err -> throwE $ WalletError err
       Right tx -> void $ localSubmitTx tx
+  liftIO $ traceWith submitTracer $ TraceBenchTxSubDebug "createChangeGeneric: splitting done"
  where
   chunkList :: Int -> [a] -> [[a]]
   chunkList _ [] = []
