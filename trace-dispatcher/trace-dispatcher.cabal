@@ -1,6 +1,6 @@
 cabal-version:        2.4
 name:                 trace-dispatcher
-version:              0.1.0.0
+version:              1.29.0
 
 synopsis:             Package for development of simple and efficient tracers
                       based on the arrow based contra-tracer package

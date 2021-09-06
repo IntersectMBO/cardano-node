@@ -5,3 +5,8 @@ iohk-monitoring framework depends on the non-arrow based contra-tracer framework
 This should become a dependency later.
 
 The documentation can currently be found under: docs/trace-dispatcher.md  
+
+## Developers
+
+Benchmarking team is responsible for this library.
+The primary developer is [@JürgenNF](https://github.com/jutaro).
