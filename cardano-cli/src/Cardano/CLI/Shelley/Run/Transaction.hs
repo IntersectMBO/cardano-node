@@ -14,7 +14,7 @@ module Cardano.CLI.Shelley.Run.Transaction
   ) where
 
 import           Cardano.Prelude hiding (All, Any)
-import           Prelude (String, error, id)
+import           Prelude (String, error)
 
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Char8 as BS
@@ -369,12 +369,6 @@ runTxBuildRaw (AnyCardanoEra era)
     firstExceptT ShelleyTxCmdWriteFileError . newExceptT $
       writeFileTextEnvelope fpath Nothing txBody
 
-joinEither :: (x -> z) -> (y -> z) -> Either x (Either y a) -> Either z a
-joinEither f g = join . bimap f (first g)
-
-joinEitherM :: Functor m => (x -> z) -> (y -> z) -> m (Either x (Either y a)) -> m (Either z a)
-joinEitherM f g = fmap (joinEither f g)
-
 runTxBuild
   :: AnyCardanoEra
   -> AnyConsensusModeParams
@@ -446,8 +440,8 @@ runTxBuild (AnyCardanoEra era) (AnyConsensusModeParams cModeParams) networkId mS
                      left (ShelleyTxCmdEraConsensusModeMismatchTxBalance outBody
                             (AnyConsensusMode CardanoMode) (AnyCardanoEra era))
 
-      (utxo, pparams, eraHistory, systemStart) <-
-        newExceptT . joinEitherM ShelleyTxCmdAcquireFailure id $
+      (utxo, pparams, eraHistory, systemStart, stakePools) <-
+        newExceptT . fmap (join . first ShelleyTxCmdAcquireFailure) $
           executeLocalStateQueryExpr localNodeConnInfo Nothing $ \_ntcVersion -> runExceptT $ do
             utxo <- firstExceptT ShelleyTxCmdTxSubmitErrorEraMismatch . newExceptT . queryExpr
               $ QueryInEra eInMode $ QueryInShelleyBasedEra sbe
@@ -460,7 +454,10 @@ runTxBuild (AnyCardanoEra era) (AnyConsensusModeParams cModeParams) networkId mS
 
             systemStart <- lift $ queryExpr QuerySystemStart
 
-            return (utxo, pparams, eraHistory, systemStart)
+            stakePools <- firstExceptT ShelleyTxCmdTxSubmitErrorEraMismatch . ExceptT $
+              queryExpr . QueryInEra eInMode . QueryInShelleyBasedEra sbe $ QueryStakePools
+
+            return (utxo, pparams, eraHistory, systemStart, stakePools)
 
       let cAddr = case anyAddressInEra era changeAddr of
                     Just addr -> addr
@@ -470,7 +467,7 @@ runTxBuild (AnyCardanoEra era) (AnyConsensusModeParams cModeParams) networkId mS
         firstExceptT ShelleyTxCmdBalanceTxBody
           . hoistEither
           $ makeTransactionBodyAutoBalance eInMode systemStart eraHistory
-                                           pparams Set.empty utxo txBodyContent
+                                           pparams stakePools utxo txBodyContent
                                            cAddr mOverrideWits
 
       putStrLn $ "Estimated transaction fee: " <> (show fee :: String)

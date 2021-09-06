@@ -666,12 +666,6 @@ printUtxo shelleyBasedEra' txInOutTuple =
   printableValue (TxOutValue _ val) = renderValue val
   printableValue (TxOutAdaOnly _ (Lovelace i)) = Text.pack $ show i
 
-joinEither :: (x -> z) -> (y -> z) -> Either x (Either y a) -> Either z a
-joinEither f g = join . bimap f (first g)
-
-joinEitherM :: Functor m => (x -> z) -> (y -> z) -> m (Either x (Either y a)) -> m (Either z a)
-joinEitherM f g = fmap (joinEither f g)
-
 runQueryStakePools
   :: AnyConsensusModeParams
   -> NetworkId
@@ -683,7 +677,7 @@ runQueryStakePools (AnyConsensusModeParams cModeParams)
 
   let localNodeConnInfo = LocalNodeConnectInfo cModeParams network sockPath
 
-  result <- ExceptT . joinEitherM ShelleyQueryCmdAcquireFailure id $
+  result <- ExceptT . fmap (join . first ShelleyQueryCmdAcquireFailure) $
     executeLocalStateQueryExpr localNodeConnInfo Nothing $ \_ntcVersion -> runExceptT @ShelleyQueryCmdError $ do
       anyE@(AnyCardanoEra era) <- case consensusModeOnly cModeParams of
         ByronMode -> return $ AnyCardanoEra ByronEra
