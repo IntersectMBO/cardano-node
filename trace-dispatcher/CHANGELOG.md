@@ -1,5 +1,5 @@
 # Revision history for trace-dispatcher
 
-## 0.1.0.0 -- YYYY-mm-dd
+## 1.29.0 -- September 2021
 
-* First version. Released on an unsuspecting world.
+* Initial version.

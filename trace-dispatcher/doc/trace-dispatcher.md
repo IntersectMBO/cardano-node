@@ -78,7 +78,7 @@ Key design decisions were:
 3. Separation of data plane and control plane:  high-frequency events incur minimal processing on the data-plane, whereas complicated configuration logic only happens on the control plane, and that is proportional to infrequent reconfiguration events.
 4. A tougher stance on separation of concerns in the backend side:  we choose to move expensive trace processing to an external process.
 5. A measure of backward compatibility with the previous logging system.
-6. Retaining the global namespace for all traces.
+6. Retaining a global namespace for all traces.
 
 ## Overview and terminology
 
@@ -88,7 +88,7 @@ Therefore, we can conceptually decompose the __tracing system__ into three compo
 
 * __frontend__, the entry point for __program trace__ collection, which is just a single function `traceWith`;  Program locations that invoke this frontend (thereby injecting messages into the tracing system) is called __trace-ins__.
 * __dispatcher__, is a structured, namespaced set of contravariantly-composed transformations, triggered by the entry point.  Its role is specifically __trace interpretation__;
-* __backend__, externalises results of the interpretation ( __metrics__ and __messages__) outside the system, through __trace-outs__.
+* __backend__, externalises results of the interpretation ( __metrics__ and __messages__) outside the tracing system, through __trace-outs__.
 
 The trace-emitting program itself is only exposed to the the frontend part of the tracing system, as it only needs to define the traces themselves, and specify the __trace-ins__ -- call sites that inject traces.  It is notably free from any extra obligations, such as the need to define the `LogFormatting` instances.
 
@@ -128,7 +128,7 @@ data TraceAddBlockEvent blk =
   ...
 ```
 
-__Traces__ cannot be entered into the tracing system, unless they are accompanied by a matching __tracer__ -- a monadic callback, that expresses the action of tracing of values of that particular type:
+__Traces__ cannot be entered into the tracing system, unless they are accompanied by a matching __Trace__ -- a monadic callback, that expresses the action of tracing of values of that particular type:
 
 ```haskell
 trAddBlock :: Trace IO (TraceAddBlockEvent blk)
@@ -192,7 +192,7 @@ The __logging context__ of the trace is defined as follows:
 1. __trace filtering__ -- by __privacy__, __severity__ and __namespace__ context,
 2. __trace presentation__ -- by __detail level__ context.
 
-Severity an detail level can be configured.
+Severity and detail level can be configured.
 
 ## Filter context
 ### Severity
@@ -256,7 +256,7 @@ withPrivacy :: Monad m => (a -> Privacy) -> Trace m a -> Trace m a
 
 Trace privacy cannot be configured.
 
-See [Confidentiality and privacy filtering implementation](#Confidentiality-and-privacy -filtering-implementation) for a more full discussion of semantics.
+See [Confidentiality and privacy filtering implementation](#Confidentiality-and-privacy-filtering-implementation) for a more full discussion of semantics.
 
 To further prevent occasional leaks of `Confidential` traces, all output from those traces is tagged with the `CONFIDENTIAL` keyword.
 
@@ -268,7 +268,7 @@ Semantically, this is corresponds to a randomly-fair suppression of messages wit
 
 The __frequency limiter__ itself emits a __suppression summary__ message under the following conditions:
 
-* when it message suppression begins, and
+* when message suppression begins, and
 * when message suppression stops -- adding the number of suppressed messages.
 
 __Frequency limiters__ are given a name to identify its activity.
@@ -294,15 +294,15 @@ The frequency filtering is intended to be applied to a subset of traces (those k
 
 The `LogFormatting` typeclass is used to describe __trace presentation__ -- mapping __traces__ to __metrics__ and __messages__.
 
-* The `forMachine` method is used for a machine readable representation, which can varied through detail level.
+* The `forMachine` method is used for a machine readable representation, which can be varied through detail level.
   It requires an implementation to be provided by the trace author.
 
 * the `forHuman` method shall represent the message in human readable form.
   It's default implementation defers to `forMachine`.
 
 * the `asMetrics` method shall represent the message as `0` to `n` metrics.
-  It's default implementation assumes no metrics. If a text is given it is
-  appended as last element to the namespace.
+  It's default implementation assumes no metrics. Each metric can optionally
+  specify a namespace as a `[Text]`.
 
 ```haskell
 class LogFormatting a where
@@ -329,21 +329,26 @@ data FormattedMessage
     | Metrics [Metric]
 ```
 
-`humanFormatter` takes a `Bool` argument, which tells if color codes for the standard output __trace-out__ shall be inserted, and an argument which is the app name, which gets prepended to the namespace, while the `machineFormatter` has as arguments the desired detail level and as well the application name.  `metricsFormatter` takes no extra arguments:
-
 ```haskell
+-- | Format this trace for human readability
+-- The boolean value tells, if this representation is for the console and should be colored.
+-- The text argument gives the application name which is prepended to the namespace.
 humanFormatter :: (LogFormatting a, MonadIO m)
   => Bool
   -> Text
   -> Trace m FormattedMessage
   -> m (Trace m a)
 
+-- | Format this trace for machine readability.
+-- The detail level give a hint to the formatter.
+-- The text argument gives the application name which is prepended to the namespace.
 machineFormatter :: (LogFormatting a, MonadIO m)
   => DetailLevel
   -> Text
   -> Trace m FormattedMessage
   -> m (Trace m a)
 
+-- | Format this trace as metrics
 metricsFormatter :: (LogFormatting a, MonadIO m)
   => Trace m FormattedMessage
   -> m (Trace m a)
