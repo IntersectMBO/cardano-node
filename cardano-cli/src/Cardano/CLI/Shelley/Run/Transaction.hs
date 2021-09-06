@@ -280,10 +280,10 @@ runTransactionCmd cmd =
                  metadataFiles optDatums mpparams mUpProp out mOverrideWits
     TxBuildRaw era mScriptValidity txins txinsc reqSigners txouts mValue mLowBound mUpperBound
                fee certs wdrls metadataSchema scriptFiles
-               metadataFiles mpparams mUpProp out ->
+               metadataFiles optDatums mpparams mUpProp out ->
       runTxBuildRaw era mScriptValidity txins txinsc txouts mLowBound mUpperBound
                     fee mValue certs wdrls reqSigners metadataSchema
-                    scriptFiles metadataFiles mpparams mUpProp out
+                    scriptFiles metadataFiles optDatums mpparams mUpProp out
     TxSign txinfile skfiles network txoutfile ->
       runTxSign txinfile skfiles network txoutfile
     TxSubmit anyConensusModeParams network txFp ->
@@ -331,6 +331,7 @@ runTxBuildRaw
   -> TxMetadataJsonSchema
   -> [ScriptFile]
   -> [MetadataFile]
+  -> [ScriptDataOrFile]
   -> Maybe ProtocolParamsSourceSpec
   -> Maybe UpdateProposalFile
   -> TxBodyFile
@@ -341,7 +342,7 @@ runTxBuildRaw (AnyCardanoEra era)
               mFee mValue
               certFiles withdrawals reqSigners
               metadataSchema scriptFiles
-              metadataFiles mpparams mUpdatePropFile
+              metadataFiles optDatums mpparams mUpdatePropFile
               (TxBodyFile fpath) = do
     txBodyContent <-
       TxBodyContent
@@ -354,7 +355,7 @@ runTxBuildRaw (AnyCardanoEra era)
                  <*> validateTxValidityUpperBound era mUpperBound)
         <*> validateTxMetadataInEra  era metadataSchema metadataFiles
         <*> validateTxAuxScripts     era scriptFiles
-        <*> pure (BuildTxWith TxExtraScriptDataNone) --TODO alonzo: support this
+        <*> validateTxExtraScriptData era optDatums
         <*> validateRequiredSigners  era reqSigners
         <*> validateProtocolParameters era mpparams
         <*> validateTxWithdrawals    era withdrawals

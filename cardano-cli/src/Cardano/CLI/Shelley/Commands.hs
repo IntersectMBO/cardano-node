@@ -185,6 +185,8 @@ data TransactionCmd
       [ScriptFile]
       -- ^ Auxillary scripts
       [MetadataFile]
+      [ScriptDataOrFile]
+      -- ^ Optional datums
       (Maybe ProtocolParamsSourceSpec)
       (Maybe UpdateProposalFile)
       TxBodyFile

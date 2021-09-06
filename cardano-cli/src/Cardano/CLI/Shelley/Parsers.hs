@@ -693,6 +693,7 @@ pTransaction =
                            Nothing
                            "Filepath of auxiliary script(s)")
                <*> many pMetadataFile
+               <*> many (pScriptDataOrFile "optional-datum")
                <*> optional pProtocolParamsSourceSpec
                <*> optional pUpdateProposalFile
                <*> pTxBodyFile Output
