@@ -118,6 +118,7 @@ $CARDANO_CLI transaction build \
   --tx-out "$dummyaddress+10000000" \
   --tx-in-script-file "$plutusscriptinuse" \
   --tx-in-datum-file "$datumfilepath"  \
+  --optional-datum-file "$datumfilepath" \
   --protocol-params-file "$WORK/pparams.json" \
   --tx-in-redeemer-file "$redeemerfilepath" \
   --out-file $WORK/test-alonzo.body

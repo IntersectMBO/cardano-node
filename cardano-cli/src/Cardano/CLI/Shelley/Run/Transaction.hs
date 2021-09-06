@@ -267,16 +267,17 @@ renderFeature TxFeatureProtocolParameters   = "Protocol parameters"
 renderFeature TxFeatureTxOutDatum           = "Transaction output datums"
 renderFeature TxFeatureScriptValidity       = "Script validity"
 renderFeature TxFeatureExtraKeyWits         = "Required signers"
+renderFeature TxFeatureExtraScriptData      = "Extra script data"
 
 runTransactionCmd :: TransactionCmd -> ExceptT ShelleyTxCmdError IO ()
 runTransactionCmd cmd =
   case cmd of
     TxBuild era consensusModeParams nid mScriptValidity mOverrideWits txins reqSigners
             txinsc txouts changeAddr mValue mLowBound mUpperBound certs wdrls metadataSchema
-            scriptFiles metadataFiles mpparams mUpProp out ->
+            scriptFiles metadataFiles optDatums mpparams mUpProp out ->
       runTxBuild era consensusModeParams nid mScriptValidity txins txinsc txouts changeAddr mValue mLowBound
                  mUpperBound certs wdrls reqSigners metadataSchema scriptFiles
-                 metadataFiles mpparams mUpProp out mOverrideWits
+                 metadataFiles optDatums mpparams mUpProp out mOverrideWits
     TxBuildRaw era mScriptValidity txins txinsc reqSigners txouts mValue mLowBound mUpperBound
                fee certs wdrls metadataSchema scriptFiles
                metadataFiles mpparams mUpProp out ->
@@ -397,6 +398,8 @@ runTxBuild
   -> TxMetadataJsonSchema
   -> [ScriptFile]
   -> [MetadataFile]
+  -> [ScriptDataOrFile]
+  -- ^ Optional datums
   -> Maybe ProtocolParamsSourceSpec
   -> Maybe UpdateProposalFile
   -> TxBodyFile
@@ -404,7 +407,7 @@ runTxBuild
   -> ExceptT ShelleyTxCmdError IO ()
 runTxBuild (AnyCardanoEra era) (AnyConsensusModeParams cModeParams) networkId mScriptValidity txins txinsc txouts
            (TxOutChangeAddress changeAddr) mValue mLowerBound mUpperBound certFiles withdrawals reqSigners
-           metadataSchema scriptFiles metadataFiles mpparams mUpdatePropFile outBody@(TxBodyFile fpath)
+           metadataSchema scriptFiles metadataFiles optDatums mpparams mUpdatePropFile outBody@(TxBodyFile fpath)
            mOverrideWits = do
   SocketPath sockPath <- firstExceptT ShelleyTxCmdSocketEnvError readEnvSocketPath
 
@@ -425,7 +428,7 @@ runTxBuild (AnyCardanoEra era) (AnyConsensusModeParams cModeParams) networkId mS
                    <*> validateTxValidityUpperBound era mUpperBound)
           <*> validateTxMetadataInEra     era metadataSchema metadataFiles
           <*> validateTxAuxScripts        era scriptFiles
-          <*> pure (BuildTxWith TxExtraScriptDataNone) --TODO alonzo: support this
+          <*> validateTxExtraScriptData   era optDatums
           <*> validateRequiredSigners     era reqSigners
           <*> validateProtocolParameters  era mpparams
           <*> validateTxWithdrawals       era withdrawals
@@ -506,6 +509,7 @@ data TxFeature = TxFeatureShelleyAddresses
                | TxFeatureTxOutDatum
                | TxFeatureScriptValidity
                | TxFeatureExtraKeyWits
+               | TxFeatureExtraScriptData
   deriving Show
 
 txFeatureMismatch :: CardanoEra era
@@ -637,6 +641,17 @@ validateTxMetadataInEra era schema files =
         metadata <- mconcat <$> mapM (readFileTxMetadata schema) files
         return (TxMetadataInEra supported metadata)
 
+validateTxExtraScriptData
+  :: CardanoEra era
+  -> [ScriptDataOrFile]
+  -> ExceptT ShelleyTxCmdError IO (BuildTxWith BuildTx (TxExtraScriptData era))
+validateTxExtraScriptData _ [] = return $ BuildTxWith TxExtraScriptDataNone
+validateTxExtraScriptData era optDats =
+  case scriptDataSupportedInEra era of
+    Just supported -> do
+      optDatums <- mapM readScriptDataOrFile optDats
+      return . BuildTxWith $ TxExtraScriptData supported optDatums
+    Nothing -> txFeatureMismatch era TxFeatureExtraScriptData
 
 validateTxAuxScripts :: CardanoEra era
                      -> [ScriptFile]
