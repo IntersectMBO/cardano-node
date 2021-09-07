@@ -105,7 +105,7 @@ __Trace interpretation__ is specified in terms of:
 The __trace interpretation__ process requires that for each traced type the __dispatcher__ is provided with:
 
 * instances of the `LogFormatting` typeclass, and
-* __trace prototypes__ and __trace documentation__.
+* __message prototypes__ and __trace documentation__.
 
 __Trace interpretation__ would have been unusably static, if it wasn't allowed to be configured without recompilation -- and therefore the __effective tracing policy__ used by the __dispatcher__ can be partially defined by the externally-supplied __trace configuration__.
 
@@ -192,7 +192,7 @@ The __logging context__ of the trace is defined as follows:
 1. __trace filtering__ -- by __privacy__, __severity__ and __namespace__ context,
 2. __trace presentation__ -- by __detail level__ context.
 
-Severity and detail level can be configured.
+Severity an detail level can be configured.
 
 ## Filter context
 ### Severity
@@ -268,7 +268,7 @@ Semantically, this is corresponds to a randomly-fair suppression of messages wit
 
 The __frequency limiter__ itself emits a __suppression summary__ message under the following conditions:
 
-* when message suppression begins, and
+* when it message suppression begins, and
 * when message suppression stops -- adding the number of suppressed messages.
 
 __Frequency limiters__ are given a name to identify its activity.
@@ -376,7 +376,7 @@ If aggregated information from multiple consecutive messages is needed the follo
 
 
 ```haskell
--- | Folds the function with state b over messages a in the trace.
+-- | Folds the function with state acc over messages a in the trace.
 foldTraceM :: MonadIO m
   => (acc -> a -> acc)
   -> acc
@@ -447,7 +447,7 @@ To route one trace to multiple tracers simultaneously we use the fact that Trace
 mconcat :: Monoid m => [m] -> m
 ```
 
-In the third example we unite two traces to one tracer, for which we trivially use the same tracer on the right side.
+In the next example we unite two traces to one tracer, for which we trivially use the same tracer on the right side.
 
 ```haskell
 tracer1  = appendName "tracer1" exTracer
@@ -499,7 +499,7 @@ data TraceConfig = TraceConfig {
 ```
 
 If the configuration file is in Yaml format, the following entry means, that by default
-all messages with Info or higher Priority or higher are shown:
+all messages with Info or higher Priority are shown:
 
 ```yaml
 TraceOptionSeverity:
@@ -548,7 +548,7 @@ The self-documentation features of `trace-dispatcher` are provided by a combinat
 
 The per- __message__ `DocMsg` objects combine:
 
-* __trace prototypes__ -- a stubbed __message__ invocation,
+* __message prototypes__ -- an example __message__,
 * message documentation text, in Markdown format,
 
 *Because it is not enforced by the type system, it is very important that each trace provides a complete list of `DocMsg` entries for all message contructors, as these prototypes are also used for configuration*.
@@ -736,7 +736,7 @@ DECISION: there is value in maintaining a user-friendly trace message namespace.
 
 ### Decide inline trace type annotation with trace function 2
 
-DECISION: we use `traceWith` in the library code and `traceNamed` in th dispatcher.
+DECISION: we use `traceWith` in the library code and `traceNamed` in the dispatcher.
 
 > Since we require that every message has its unique name we encourage the use of the already introduced convenience function:
 >
