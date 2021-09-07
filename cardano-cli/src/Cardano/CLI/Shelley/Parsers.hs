@@ -849,8 +849,6 @@ pQueryCmd =
         (Opt.info pQueryProtocolParameters $ Opt.progDesc "Get the node's current protocol parameters")
     , subParser "tip"
         (Opt.info pQueryTip $ Opt.progDesc "Get the node's current tip (slot no, hash, block no)")
-    , subParser "stake-pools"
-        (Opt.info pQueryStakePools $ Opt.progDesc "Get the node's current set of stake pool ids")
     , subParser "stake-distribution"
         (Opt.info pQueryStakeDistribution $ Opt.progDesc "Get the node's current aggregated stake distribution")
     , subParser "stake-address-info"
@@ -888,13 +886,6 @@ pQueryCmd =
       QueryUTxO'
         <$> pConsensusModeParams
         <*> pQueryUTxOFilter
-        <*> pNetworkId
-        <*> pMaybeOutputFile
-
-    pQueryStakePools :: Parser QueryCmd
-    pQueryStakePools =
-      QueryStakePools'
-        <$> pConsensusModeParams
         <*> pNetworkId
         <*> pMaybeOutputFile
 
