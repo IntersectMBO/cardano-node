@@ -78,7 +78,8 @@ def add_derived_params:
      , genesis:
          { genesis_future_offset: $future_offset
          , delegators:            ($gsis.delegators // $n_pools)
-         , pool_coin:             ($gsis.pools_balance / $n_pools | floor)
+         , pool_coin:             (if $n_pools == 0 then 0
+                                   else $gsis.pools_balance / $n_pools | floor end)
          , verbatim:
            ## TODO: duplication
            { protocolParams:
@@ -109,9 +110,10 @@ def add_derived_params:
    ## Second derivation:
    { common:
      { genesis:
-       { delegator_coin:          ($gsis.pools_balance /
-                                   .common.genesis.delegators
-                                   | floor)
+       { delegator_coin:   (if .common.genesis.delegators == 0 then 0
+                            else $gsis.pools_balance / .common.genesis.delegators
+                                 | floor
+                            end)
        }
      }
    })  as $derived

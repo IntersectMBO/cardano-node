@@ -28,10 +28,9 @@ let
       topologyForNode =
         { profile, nodeSpec }:
         let inherit (nodeSpec) name i; in
-        workbench.runWorkbench "topology-${name}.json"
-          (if nodeSpec.isProducer
-           then "topology for-local-node     ${toString i}   ${profile.topology.files} ${toString basePort}"
-           else "topology for-local-observer ${profile.name} ${profile.topology.files} ${toString basePort}");
+        workbench.runWorkbench
+          "topology-${name}.json"
+          "topology projection-for local-${nodeSpec.kind} ${toString i} ${profile.name} ${profile.topology.files} ${toString basePort}";
 
       nodePublicIP =
         { i, name, ... }@nodeSpec:
