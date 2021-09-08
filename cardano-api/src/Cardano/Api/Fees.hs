@@ -32,6 +32,10 @@ module Cardano.Api.Fees (
     makeTransactionBodyAutoBalance,
     BalancedTxBody(..),
     TxBodyErrorAutoBalance(..),
+
+    -- * Minimum UTxO calculation
+    calculateMinimumUTxO,
+    MinimumUTxOError(..),
   ) where
 
 import           Prelude
@@ -696,7 +700,7 @@ data TxBodyErrorAutoBalance =
          TxOutInAnyEra
          -- ^ Minimum UTxO
          Lovelace
-
+     | TxBodyErrorMinUTxOMissingPParams MinimumUTxOError
      | TxBodyErrorNonAdaAssetsUnbalanced Value
   deriving Show
 
@@ -752,6 +756,8 @@ instance Error TxBodyErrorAutoBalance where
 
   displayError (TxBodyErrorNonAdaAssetsUnbalanced val) =
       "Non-Ada assets are unbalanced: " <> Text.unpack (renderValue val)
+
+  displayError (TxBodyErrorMinUTxOMissingPParams err) = displayError err
 
 handleExUnitsErrors ::
      ScriptValidity -- ^ Mark script as expected to pass or fail validation
@@ -933,49 +939,18 @@ makeTransactionBodyAutoBalance eraInMode systemstart history pparams
           Left err -> Left err
           Right _ -> Right ()
 
-   -- TODO: Move to top level and expose
    checkMinUTxOValue
      :: TxOut era
      -> ProtocolParameters
      -> Either TxBodyErrorAutoBalance ()
-   checkMinUTxOValue txout@(TxOut _ v _) pparams' =
-     case era of
-       ShelleyBasedEraAlonzo -> do
-         case protocolParamUTxOCostPerWord pparams' of
-           Just (Lovelace costPerWord) -> do
-             let minUTxO = Lovelace (Alonzo.utxoEntrySize (toShelleyTxOut era txout) * costPerWord)
-             if txOutValueToLovelace v >= minUTxO
-             then Right ()
-             else Left $ TxBodyErrorMinUTxONotMet (txOutInAnyEra txout) minUTxO
-           Nothing -> Left TxBodyErrorMissingParamCostPerWord
-       ShelleyBasedEraMary -> checkAllegraMaryMinUTxO txout pparams'
-       ShelleyBasedEraAllegra -> checkAllegraMaryMinUTxO txout pparams'
-       ShelleyBasedEraShelley -> do
-         let l = txOutValueToLovelace v
-         minUTxO <- minUTxOHelper pparams'
-         if l >= minUTxO
-         then Right ()
-         else Left $ TxBodyErrorMinUTxONotMet (txOutInAnyEra txout) minUTxO
-
-   checkAllegraMaryMinUTxO
-     :: TxOut era
-     -> ProtocolParameters
-     -> Either TxBodyErrorAutoBalance ()
-   checkAllegraMaryMinUTxO txOut@(TxOut _ v _) pparams' = do
-     let l = txOutValueToLovelace v
-         val = txOutValueToValue v
-     mUtxo <- minUTxOHelper pparams'
-     let minUTxO = calcMinimumDeposit val mUtxo
-     if l >= minUTxO
+   checkMinUTxOValue txout@(TxOut _ v _) pparams' = do
+     minUTxO  <- first TxBodyErrorMinUTxOMissingPParams
+                   $ calculateMinimumUTxO era txout pparams'
+     if txOutValueToLovelace v >= selectLovelace minUTxO
      then Right ()
-     else Left $ TxBodyErrorMinUTxONotMet (txOutInAnyEra txOut) minUTxO
-
-   minUTxOHelper :: ProtocolParameters
-                 -> Either TxBodyErrorAutoBalance Lovelace
-   minUTxOHelper pparams' = case protocolParamMinUTxOValue pparams' of
-                             Just minUtxo -> Right minUtxo
-                             Nothing -> Left TxBodyErrorMissingParamMinUTxO
-
+     else Left $ TxBodyErrorMinUTxONotMet
+                   (txOutInAnyEra txout)
+                   (selectLovelace minUTxO)
 
 substituteExecutionUnits :: Map ScriptWitnessIndex ExecutionUnits
                          -> TxBodyContent BuildTx era
@@ -992,3 +967,44 @@ substituteExecutionUnits exUnitsMap =
         Nothing      -> wit
         Just exunits -> PlutusScriptWitness langInEra version script
                                             datum redeemer exunits
+
+calculateMinimumUTxO
+  :: ShelleyBasedEra era
+  -> TxOut era
+  -> ProtocolParameters
+  -> Either MinimumUTxOError Value
+calculateMinimumUTxO era txout@(TxOut _ v _) pparams' =
+  case era of
+    ShelleyBasedEraShelley -> lovelaceToValue <$> getMinUTxOPreAlonzo pparams'
+    ShelleyBasedEraAllegra -> calcMinUTxOAllegraMary
+    ShelleyBasedEraMary -> calcMinUTxOAllegraMary
+    ShelleyBasedEraAlonzo ->
+      case protocolParamUTxOCostPerWord pparams' of
+        Just (Lovelace costPerWord) -> do
+          Right . lovelaceToValue
+            $ Lovelace (Alonzo.utxoEntrySize (toShelleyTxOut era txout) * costPerWord)
+        Nothing -> Left PParamsUTxOCostPerWordMissing
+ where
+   calcMinUTxOAllegraMary :: Either MinimumUTxOError Value
+   calcMinUTxOAllegraMary = do
+     let val = txOutValueToValue v
+     minUTxO <- getMinUTxOPreAlonzo pparams'
+     Right . lovelaceToValue $ calcMinimumDeposit val minUTxO
+
+   getMinUTxOPreAlonzo
+     :: ProtocolParameters -> Either MinimumUTxOError Lovelace
+   getMinUTxOPreAlonzo =
+     maybe (Left PParamsMinUTxOMissing) Right . protocolParamMinUTxOValue
+
+data MinimumUTxOError =
+    PParamsMinUTxOMissing
+  | PParamsUTxOCostPerWordMissing
+  deriving Show
+
+instance Error MinimumUTxOError where
+  displayError PParamsMinUTxOMissing =
+    "\"minUtxoValue\" field not present in protocol parameters when \
+    \trying to calculate minimum UTxO value."
+  displayError PParamsUTxOCostPerWordMissing =
+    "\"utxoCostPerWord\" field not present in protocol parameters when \
+    \trying to calculate minimum UTxO value."
