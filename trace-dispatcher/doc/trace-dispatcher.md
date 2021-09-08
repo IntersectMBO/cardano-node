@@ -75,7 +75,7 @@ Key design decisions were:
 
 1. Retaining the separation of concerns in the frontend side, as provided by the `contra-tracer` library.  The client code should not need to concern itself with any details beyond passing the traces down to the system.
 2. Rely on __trace combinators__ primarily, as opposed to opting for a typeclass heavy API.
-3. Separation of data plane and control plane:  high-frequency events incur minimal processing on the data-plane, whereas complicated configuration logic only happens on the control plane, and that is proportional to infrequent reconfiguration events.
+3. Separation of data plane and control plane:  high-frequency events of the data-plane (corresponding to actual trace emission), whereas complicated configuration-induced logic of the control plane is proportional to infrequent reconfiguration events.  This is the principle we tried to ensure across the system -- and hopefully succeeded to a reasonable degree.
 4. A tougher stance on separation of concerns in the backend side:  we choose to move expensive trace processing to an external process.
 5. A measure of backward compatibility with the previous logging system.
 6. Retaining a global namespace for all traces.
