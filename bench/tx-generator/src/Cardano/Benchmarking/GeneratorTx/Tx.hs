@@ -23,12 +23,12 @@ where
 
 import           Prelude
 
+import           Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.List.NonEmpty as NonEmpty
-import           Data.List.NonEmpty (NonEmpty(..))
-import qualified Data.Map.Strict as Map
 import           Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
 
-import           Cardano.Benchmarking.Types (TxAdditionalSize(..))
+import           Cardano.Benchmarking.Types (TxAdditionalSize (..))
 
 import           Cardano.Api
 
@@ -58,7 +58,7 @@ mkGenesisTransaction :: forall era .
   -> SlotNo
   -> Lovelace
   -> [TxIn]
-  -> [TxOut era]
+  -> [TxOut CtxTx era]
   -> Tx era
 mkGenesisTransaction key _payloadSize ttl fee txins txouts
   = case makeTransactionBody txBodyContent of
@@ -73,7 +73,6 @@ mkGenesisTransaction key _payloadSize ttl fee txins txouts
     , txValidityRange = (TxValidityNoLowerBound, validityUpperBound)
     , txMetadata = TxMetadataNone
     , txAuxScripts = TxAuxScriptsNone
-    , txExtraScriptData = BuildTxWith TxExtraScriptDataNone
     , txExtraKeyWits = TxExtraKeyWitnessesNone
     , txProtocolParams = BuildTxWith Nothing
     , txWithdrawals = TxWithdrawalsNone
@@ -100,7 +99,7 @@ mkTransaction :: forall era .
   -> SlotNo
   -> Lovelace
   -> [TxIn]
-  -> [TxOut era]
+  -> [TxOut CtxTx era]
   -> Tx era
 mkTransaction key metadata ttl fee txins txouts
   = case makeTransactionBody txBodyContent of
@@ -115,7 +114,6 @@ mkTransaction key metadata ttl fee txins txouts
     , txValidityRange = (TxValidityNoLowerBound, mkValidityUpperBound ttl)
     , txMetadata = metadata
     , txAuxScripts = TxAuxScriptsNone
-    , txExtraScriptData = BuildTxWith TxExtraScriptDataNone
     , txExtraKeyWits = TxExtraKeyWitnessesNone
     , txProtocolParams = BuildTxWith Nothing
     , txWithdrawals = TxWithdrawalsNone
@@ -150,7 +148,7 @@ mkTransactionGen :: forall era .
   => SigningKey PaymentKey
   -> NonEmpty Fund
   -> AddressInEra era
-  -> [(Int, TxOut era)]
+  -> [(Int, TxOut CtxTx era)]
   -- ^ Each recipient and their payment details
   -> TxMetadataInEra era
   -- ^ Optional size of additional binary blob in transaction (as 'txAttributes')
@@ -178,7 +176,7 @@ mkTransactionGen signingKey inputs address payments metadata fee =
 
   (txOutputs, mChange) = case compare changeValue 0 of
     GT ->
-      let changeTxOut   = TxOut address (mkTxOutValueAdaOnly changeValue) TxOutDatumHashNone
+      let changeTxOut   = TxOut address (mkTxOutValueAdaOnly changeValue) TxOutDatumNone
           changeIndex   = TxIx $ fromIntegral $ length payTxOuts -- 0-based index
       in
           (appendr payTxOuts (changeTxOut :| []), Just (changeIndex, changeValue))
@@ -192,7 +190,7 @@ mkTransactionGen signingKey inputs address payments metadata fee =
   offsetMap = Map.fromList $ zipWith (\payment index -> (fst payment, TxIx index))
                                      payments
                                      [0..]
-  txOutSum :: [ TxOut era ] -> Lovelace
+  txOutSum :: [ TxOut CtxTx era ] -> Lovelace
   txOutSum l = sum $ map toVal l
 
   toVal (TxOut _ val _) = txOutValueToLovelace val

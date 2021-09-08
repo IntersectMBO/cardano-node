@@ -395,7 +395,7 @@ genTxOut era =
 
 genUTxO :: CardanoEra era -> Gen (UTxO era)
 genUTxO era =
-  UTxO <$> Gen.map (Range.constant 0 5) ((,) <$> genTxIn <*> genTxOut era)
+  UTxO <$> Gen.map (Range.constant 0 5) ((,) <$> genTxIn <*> (toCtxUTxOTxOut <$> genTxOut era))
 
 genTtl :: Gen SlotNo
 genTtl = genSlotNo

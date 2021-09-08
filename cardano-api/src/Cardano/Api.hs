@@ -590,6 +590,7 @@ module Cardano.Api (
     -- ** Conversions
     toLedgerPParams,
     fromLedgerPParams,
+    toCtxUTxOTxOut,
     --TODO: arrange not to export these
     toNetworkMagic,
     fromLedgerTxOuts,

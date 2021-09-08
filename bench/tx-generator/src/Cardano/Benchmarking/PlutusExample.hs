@@ -3,19 +3,19 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 module Cardano.Benchmarking.PlutusExample
 where
-import Prelude
+import           Prelude
 
+import           Control.Monad.Trans.Except
 import qualified Data.ByteString.Char8 as BSC
-import Control.Monad.Trans.Except
 
-import Cardano.CLI.Shelley.Script (readFileScriptInAnyLang)
+import           Cardano.CLI.Shelley.Script (readFileScriptInAnyLang)
 
-import Cardano.Api
-import Cardano.Api.Shelley (ProtocolParameters)
+import           Cardano.Api
+import           Cardano.Api.Shelley (ProtocolParameters)
 
-import Cardano.Benchmarking.FundSet
-import Cardano.Benchmarking.GeneratorTx.Tx as Tx (mkTxOutValueAdaOnly)
-import Cardano.Benchmarking.Wallet
+import           Cardano.Benchmarking.FundSet
+import           Cardano.Benchmarking.GeneratorTx.Tx as Tx (mkTxOutValueAdaOnly)
+import           Cardano.Benchmarking.Wallet
 
 mkUtxoScript ::
      NetworkId
@@ -85,7 +85,6 @@ genTxPlutusSpend protocolParameters collateral scriptWitness fee metadata inFund
     , txValidityRange = (TxValidityNoLowerBound, TxValidityNoUpperBound ValidityNoUpperBoundInAlonzoEra)
     , txMetadata = metadata
     , txAuxScripts = TxAuxScriptsNone
-    , txExtraScriptData = BuildTxWith TxExtraScriptDataNone
     , txExtraKeyWits = TxExtraKeyWitnessesNone
     , txProtocolParams = BuildTxWith $ Just protocolParameters
     , txWithdrawals = TxWithdrawalsNone

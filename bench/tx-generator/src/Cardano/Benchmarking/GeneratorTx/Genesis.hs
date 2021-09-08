@@ -8,16 +8,17 @@ module Cardano.Benchmarking.GeneratorTx.Genesis
 where
 
 import           Cardano.Prelude hiding (TypeError, filter)
-import           Prelude (error, filter)
 import qualified Data.Map.Strict as Map
+import           Prelude (error, filter)
 
-import           Control.Arrow ((***))
 import           Cardano.Api
-import           Cardano.Api.Shelley (fromShelleyLovelace, fromShelleyStakeReference, fromShelleyPaymentCredential)
+import           Cardano.Api.Shelley (fromShelleyLovelace, fromShelleyPaymentCredential,
+                   fromShelleyStakeReference)
+import           Control.Arrow ((***))
 
 import           Cardano.Benchmarking.GeneratorTx.Tx
 
-import           Cardano.Ledger.Shelley.API (Addr(..), ShelleyGenesis, sgInitialFunds)
+import           Cardano.Ledger.Shelley.API (Addr (..), ShelleyGenesis, sgInitialFunds)
 import           Ouroboros.Consensus.Shelley.Eras (StandardShelley)
 
 genesisFunds :: forall era. IsShelleyBasedEra era
@@ -58,7 +59,7 @@ genesisExpenditure networkId key addr coin fee ttl = (tx, fund)
   tx = mkGenesisTransaction (castKey key) 0 ttl fee [ pseudoTxIn ] [ txout ]
 
   value = mkTxOutValueAdaOnly $ coin - fee
-  txout = TxOut addr value TxOutDatumHashNone
+  txout = TxOut addr value TxOutDatumNone
 
   pseudoTxIn = genesisUTxOPseudoTxIn networkId
                  (verificationKeyHash $ getVerificationKey $ castKey key)
