@@ -67,6 +67,7 @@ library
                         Cardano.Api.KeysByron
                         Cardano.Api.KeysPraos
                         Cardano.Api.KeysShelley
+                        Cardano.Api.LedgerEvent
                         Cardano.Api.LedgerState
                         Cardano.Api.Modes
                         Cardano.Api.NetworkId

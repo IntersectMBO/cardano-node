@@ -60,6 +60,7 @@ library
                         Cardano.PlutusExample.Sum
   build-depends:        bytestring
                       , cardano-api
+                      , ouroboros-consensus
                       , plutus-ledger
                       , plutus-ledger-api
                       , plutus-tx
