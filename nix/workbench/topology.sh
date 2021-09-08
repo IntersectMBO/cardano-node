@@ -38,6 +38,8 @@ case "${op}" in
         args=( --topology-output "$outdir"/topology-nixops.json
                --dot-output      "$outdir"/topology.dot
                --size             $n_hosts
+               ## TODO:  drop this, once we fully deprecate BFT in all scenarios
+               --with-bft-node-0
 
                $(jq '.composition.locations
                     | map("--loc " + .)

@@ -143,12 +143,18 @@ main = do
         ( long "loc"
           <> help "Region (at least one)"
           <> metavar "LOCNAME" ))
-      <*> pure defaultRoleSelector
+      <*> (roleSelector <$>
+           flag False True
+            ( long "with-bft-node-0"
+              <> help "Include a BFT node-0"))
 
-   defaultRoleSelector = \case
-      0 -> Nothing -- BFT node has no pools
-      1 -> Just 1  -- Regular pools have just 1 pool
-      _ -> Just 2  -- Dense pools have any amount >1 as marker
+   roleSelector withBft = \case
+     -- TODO:  prepare for deprecation of BFT nodes by switching 1 & 0
+      1 ->      Just 1  -- Normal pools are just that -- a single pool
+      0 -> if withBft
+           then Nothing -- The BFT node has no pools
+           else Just 1  -- Dense pools are denoted by any amount >1
+      _ ->      Just 2
 
    opts = info (cliParser <**> helper)
      ( fullDesc
