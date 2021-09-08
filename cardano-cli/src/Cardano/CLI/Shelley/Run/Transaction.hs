@@ -111,7 +111,8 @@ data ShelleyTxCmdError
   | ShelleyTxCmdLocalStateQueryError !ShelleyQueryCmdLocalStateQueryError
   | ShelleyTxCmdExpectedKeyLockedTxIn ![TxIn]
   | ShelleyTxCmdTxInsDoNotExist ![TxIn]
-
+  | ShelleyTxCmdMinimumUTxOErr !MinimumUTxOError
+  | ShelleyTxCmdPParamsErr !ProtocolParametersError
   deriving Show
 
 
@@ -240,6 +241,8 @@ renderShelleyTxCmdError err =
       "The following tx input(s) were not present in the UTxO: " <>
       Text.singleton '\n' <>
       Text.intercalate (Text.singleton '\n') (map renderTxIn txins)
+    ShelleyTxCmdMinimumUTxOErr err' -> Text.pack $ displayError err'
+    ShelleyTxCmdPParamsErr err' -> Text.pack $ displayError err'
 
 renderEra :: AnyCardanoEra -> Text
 renderEra (AnyCardanoEra ByronEra)   = "Byron"
@@ -292,7 +295,7 @@ runTransactionCmd cmd =
                       nShelleyKeyWitnesses nByronKeyWitnesses ->
       runTxCalculateMinFee txbody mnw pGenesisOrParamsFile nInputs nOutputs
                            nShelleyKeyWitnesses nByronKeyWitnesses
-    TxCalculateMinValue pParamSpec txOuts -> runTxCalculateMinValue pParamSpec txOuts
+    TxCalculateMinRequiredUTxO era pParamSpec txOuts -> runTxCalculateMinRequiredUTxO era pParamSpec txOuts
     TxHashScriptData scriptDataOrFile -> runTxHashScriptData scriptDataOrFile
     TxGetTxId txinfile -> runTxGetTxId txinfile
     TxView txinfile -> runTxView txinfile
@@ -578,43 +581,48 @@ validateTxOuts :: forall era.
                   CardanoEra era
                -> [TxOutAnyEra]
                -> ExceptT ShelleyTxCmdError IO [TxOut era]
-validateTxOuts era = mapM toTxOutInAnyEra
-  where
-    toTxOutInAnyEra :: TxOutAnyEra
-                    -> ExceptT ShelleyTxCmdError IO (TxOut era)
-    toTxOutInAnyEra (TxOutAnyEra addr val mDatumHash) =
-      case (scriptDataSupportedInEra era, mDatumHash) of
-        (_, Nothing) ->
-          TxOut <$> toAddressInAnyEra addr
-                <*> toTxOutValueInAnyEra val
-                <*> pure TxOutDatumHashNone
-        (Just supported, Just dh) ->
-          TxOut <$> toAddressInAnyEra addr
-                <*> toTxOutValueInAnyEra val
-                <*> pure (TxOutDatumHash supported dh)
-        (Nothing, Just _) ->
-          txFeatureMismatch era TxFeatureTxOutDatum
+validateTxOuts era = mapM (toTxOutInAnyEra era)
 
-    toAddressInAnyEra :: AddressAny -> ExceptT ShelleyTxCmdError IO (AddressInEra era)
-    toAddressInAnyEra addrAny =
-      case addrAny of
-        AddressByron   bAddr -> return (AddressInEra ByronAddressInAnyEra bAddr)
-        AddressShelley sAddr ->
-          case cardanoEraStyle era of
-            LegacyByronEra -> txFeatureMismatch era TxFeatureShelleyAddresses
+toAddressInAnyEra
+  :: CardanoEra era
+  -> AddressAny
+  -> ExceptT ShelleyTxCmdError IO (AddressInEra era)
+toAddressInAnyEra era addrAny =
+  case addrAny of
+    AddressByron   bAddr -> return (AddressInEra ByronAddressInAnyEra bAddr)
+    AddressShelley sAddr ->
+      case cardanoEraStyle era of
+        LegacyByronEra -> txFeatureMismatch era TxFeatureShelleyAddresses
+        ShelleyBasedEra era' ->
+          return (AddressInEra (ShelleyAddressInEra era') sAddr)
 
-            ShelleyBasedEra era' ->
-              return (AddressInEra (ShelleyAddressInEra era') sAddr)
+toTxOutValueInAnyEra
+  :: CardanoEra era
+  -> Value
+  -> ExceptT ShelleyTxCmdError IO (TxOutValue era)
+toTxOutValueInAnyEra era val =
+  case multiAssetSupportedInEra era of
+    Left adaOnlyInEra ->
+      case valueToLovelace val of
+        Just l  -> return (TxOutAdaOnly adaOnlyInEra l)
+        Nothing -> txFeatureMismatch era TxFeatureMultiAssetOutputs
+    Right multiAssetInEra -> return (TxOutValue multiAssetInEra val)
 
-    toTxOutValueInAnyEra :: Value -> ExceptT ShelleyTxCmdError IO (TxOutValue era)
-    toTxOutValueInAnyEra val =
-      case multiAssetSupportedInEra era of
-        Left adaOnlyInEra ->
-          case valueToLovelace val of
-            Just l  -> return (TxOutAdaOnly adaOnlyInEra l)
-            Nothing -> txFeatureMismatch era TxFeatureMultiAssetOutputs
-        Right multiAssetInEra -> return (TxOutValue multiAssetInEra val)
-
+toTxOutInAnyEra :: CardanoEra era
+                -> TxOutAnyEra
+                -> ExceptT ShelleyTxCmdError IO (TxOut era)
+toTxOutInAnyEra era (TxOutAnyEra addr val mDatumHash) =
+  case (scriptDataSupportedInEra era, mDatumHash) of
+    (_, Nothing) ->
+      TxOut <$> toAddressInAnyEra era addr
+            <*> toTxOutValueInAnyEra era val
+            <*> pure TxOutDatumHashNone
+    (Just supported, Just dh) ->
+      TxOut <$> toAddressInAnyEra era addr
+            <*> toTxOutValueInAnyEra era val
+            <*> pure (TxOutDatumHash supported dh)
+    (Nothing, Just _) ->
+      txFeatureMismatch era TxFeatureTxOutDatum
 
 validateTxFee :: CardanoEra era
               -> Maybe Lovelace
@@ -1041,21 +1049,22 @@ runTxCalculateMinFee (TxBodyFile txbodyFile) nw protocolParamsSourceSpec
 -- Transaction fee calculation
 --
 
-runTxCalculateMinValue
-  :: ProtocolParamsSourceSpec
-  -> Value
+runTxCalculateMinRequiredUTxO
+  :: AnyCardanoEra
+  -> ProtocolParamsSourceSpec
+  -> TxOutAnyEra
   -> ExceptT ShelleyTxCmdError IO ()
-runTxCalculateMinValue protocolParamsSourceSpec value = do
+runTxCalculateMinRequiredUTxO (AnyCardanoEra era) protocolParamsSourceSpec txOut = do
   pp <- readProtocolParametersSourceSpec protocolParamsSourceSpec
-
-  let minValues =
-        case protocolParamMinUTxOValue pp of
-          Nothing -> panic "TODO alonzo: runTxCalculateMinValue using new protocol params"
-          --TODO alonzo: there is a new formula for the min amount of ada in
-          -- a tx output, which uses a new param protocolParamUTxOCostPerWord
-          Just minUTxOValue -> calcMinimumDeposit value minUTxOValue
-
-  liftIO $ IO.print minValues
+  out <- toTxOutInAnyEra era txOut
+  case cardanoEraStyle era of
+    LegacyByronEra -> error "runTxCalculateMinRequiredUTxO: Byron era not implemented yet"
+    ShelleyBasedEra sbe -> do
+      firstExceptT ShelleyTxCmdPParamsErr . hoistEither
+        $ checkProtocolParameters sbe pp
+      minValue <- firstExceptT ShelleyTxCmdMinimumUTxOErr
+                    . hoistEither $ calculateMinimumUTxO sbe out pp
+      liftIO . IO.print $ selectLovelace minValue
 
 runTxCreatePolicyId :: ScriptFile -> ExceptT ShelleyTxCmdError IO ()
 runTxCreatePolicyId (ScriptFile sFile) = do

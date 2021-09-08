@@ -237,9 +237,10 @@ data TransactionCmd
       TxOutCount
       TxShelleyWitnessCount
       TxByronWitnessCount
-  | TxCalculateMinValue
+  | TxCalculateMinRequiredUTxO
+      AnyCardanoEra
       ProtocolParamsSourceSpec
-      Value
+      TxOutAnyEra
   | TxHashScriptData
       ScriptDataOrFile
   | TxGetTxId InputTxFile
@@ -271,7 +272,7 @@ renderTransactionCmd cmd =
     TxSubmit {} -> "transaction submit"
     TxMintedPolicyId {} -> "transaction policyid"
     TxCalculateMinFee {} -> "transaction calculate-min-fee"
-    TxCalculateMinValue {} -> "transaction calculate-min-value"
+    TxCalculateMinRequiredUTxO {} -> "transaction calculate-min-value"
     TxHashScriptData {} -> "transaction hash-script-data"
     TxGetTxId {} -> "transaction txid"
     TxView {} -> "transaction view"

@@ -3,6 +3,7 @@
 
 module Cardano.CLI.Helpers
   ( HelpersError(..)
+  , deprecationWarning
   , ensureNewFile
   , ensureNewFileLBS
   , pPrintCBOR
@@ -14,6 +15,7 @@ module Cardano.CLI.Helpers
   ) where
 
 import           Cardano.Prelude
+import           Prelude (String)
 
 import           Codec.CBOR.Pretty (prettyHexEnc)
 import           Codec.CBOR.Read (DeserialiseFailure, deserialiseFromBytes)
@@ -22,13 +24,16 @@ import           Control.Monad.Trans.Except.Extra (handleIOExceptT, left)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.Text as Text
+import           System.Console.ANSI
+import qualified System.Console.ANSI as ANSI
+import qualified System.IO as IO
 
 import           Cardano.Binary (Decoder, fromCBOR)
+import           Cardano.CLI.Types
 import           Cardano.Chain.Block (fromCBORABlockOrBoundary)
 import qualified Cardano.Chain.Delegation as Delegation
-import qualified Cardano.Chain.Update as Update
 import qualified Cardano.Chain.UTxO as UTxO
-import           Cardano.CLI.Types
+import qualified Cardano.Chain.Update as Update
 
 import qualified System.Directory as IO
 
@@ -55,6 +60,13 @@ decodeCBOR
   -> Either HelpersError (LB.ByteString, a)
 decodeCBOR bs decoder =
   first CBORDecodingError $ deserialiseFromBytes decoder bs
+
+deprecationWarning :: String -> IO ()
+deprecationWarning cmd = do
+  ANSI.hSetSGR IO.stderr [SetColor Foreground Vivid Yellow]
+  IO.hPutStrLn IO.stderr $ "WARNING: This CLI command is deprecated.  Please use "
+                         <> cmd <> " command instead."
+  ANSI.hSetSGR IO.stderr [Reset]
 
 -- | Checks if a path exists and throws and error if it does.
 ensureNewFile :: (FilePath -> a -> IO ()) -> FilePath -> a -> ExceptT HelpersError IO ()
