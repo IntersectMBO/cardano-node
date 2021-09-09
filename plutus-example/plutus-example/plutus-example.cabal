@@ -1,7 +1,7 @@
 cabal-version: 2.4
 
 name:                   plutus-example
-version:                1.29.0
+version:                1.29.1
 description:            End to end examples of creating and executing Plutus scripts.
 author:                 IOHK
 maintainer:             operations@iohk.io
@@ -76,4 +76,3 @@ executable plutus-example
                       , directory
                       , filepath
                       , plutus-example
-

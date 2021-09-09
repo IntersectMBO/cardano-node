@@ -1,5 +1,8 @@
 # Changelog for cardano-node
 
+## 1.29.1 -- September 2021
+- Include a fix for time translation in Plutus scripts.
+
 ## 1.29 -- August 2021
 
 ### node changes
