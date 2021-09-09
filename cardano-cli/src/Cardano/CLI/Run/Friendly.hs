@@ -46,16 +46,16 @@ friendlyTxBody
       }) =
   object
     [ "auxiliary scripts" .= friendlyAuxScripts txAuxScripts
-    , "certificates"      .= friendlyCertificates txCertificates
-    , "era"               .= era
-    , "fee"               .= friendlyFee txFee
-    , "inputs"            .= friendlyInputs txIns
-    , "metadata"          .= friendlyMetadata txMetadata
-    , "mint"              .= friendlyMintValue txMintValue
-    , "outputs"           .= map friendlyTxOut txOuts
-    , "update proposal"   .= friendlyUpdateProposal txUpdateProposal
-    , "validity range"    .= friendlyValidityRange era txValidityRange
-    , "withdrawals"       .= friendlyWithdrawals txWithdrawals
+    , "certificates" .= friendlyCertificates txCertificates
+    , "era" .= era
+    , "fee" .= friendlyFee txFee
+    , "inputs" .= friendlyInputs txIns
+    , "metadata" .= friendlyMetadata txMetadata
+    , "mint" .= friendlyMintValue txMintValue
+    , "outputs" .= map friendlyTxOut txOuts
+    , "update proposal" .= friendlyUpdateProposal txUpdateProposal
+    , "validity range" .= friendlyValidityRange era txValidityRange
+    , "withdrawals" .= friendlyWithdrawals txWithdrawals
     ]
 
 -- | Special case of validity range:
@@ -78,7 +78,7 @@ friendlyValidityRange era = \case
         object
           [ "lower bound" .=
                 case lowerBound of
-                  TxValidityNoLowerBound   -> Null
+                  TxValidityNoLowerBound -> Null
                   TxValidityLowerBound _ s -> toJSON s
           , "upper bound" .=
               case upperBound of
@@ -95,10 +95,10 @@ friendlyWithdrawals TxWithdrawalsNone = Null
 friendlyWithdrawals (TxWithdrawals _ withdrawals) =
   array
     [ object
-        [ "address"     .= serialiseAddress addr
-        , "network"     .= net
-        , "credential"  .= cred
-        , "amount"      .= friendlyLovelace amount
+        [ "address" .= serialiseAddress addr
+        , "network" .= net
+        , "credential" .= cred
+        , "amount" .= friendlyLovelace amount
         ]
     | (addr@(StakeAddress net cred), amount, _) <- withdrawals
     ]
@@ -109,26 +109,26 @@ friendlyTxOut (TxOut addr amount mdatum) =
     AddressInEra ByronAddressInAnyEra _ ->
       object $ ("address era" .= String "Byron") : common
     AddressInEra (ShelleyAddressInEra _) (ShelleyAddress net cred stake) ->
-      object
-        $   [ "address era"         .= String "Shelley"
-            , "network"             .= net
-            , "payment credential"  .= cred
-            , "stake reference"     .= friendlyStakeReference stake
-            ]
-        ++  ["datum" .= datum | TxOutDatumHash _ datum <- [mdatum]]
-        ++  common
+      object $
+        [ "address era" .= String "Shelley"
+        , "network" .= net
+        , "payment credential" .= cred
+        , "stake reference" .= friendlyStakeReference stake
+        ]
+        ++ ["datum" .= datum | TxOutDatumHash _ datum <- [mdatum]]
+        ++ common
   where
     common :: [(Text, Aeson.Value)]
     common =
       [ "address" .= serialiseAddressForTxOut addr
-      , "amount"  .= friendlyTxOutValue amount
+      , "amount" .= friendlyTxOutValue amount
       ]
 
 friendlyStakeReference :: Shelley.StakeReference crypto -> Aeson.Value
 friendlyStakeReference = \case
   Shelley.StakeRefBase cred -> toJSON cred
-  Shelley.StakeRefNull      -> Null
-  Shelley.StakeRefPtr ptr   -> toJSON ptr
+  Shelley.StakeRefNull -> Null
+  Shelley.StakeRefPtr ptr -> toJSON ptr
 
 friendlyUpdateProposal :: TxUpdateProposal era -> Aeson.Value
 friendlyUpdateProposal = \case
@@ -137,12 +137,12 @@ friendlyUpdateProposal = \case
 
 friendlyCertificates :: TxCertificates ViewTx era -> Aeson.Value
 friendlyCertificates = \case
-  TxCertificatesNone    -> Null
+  TxCertificatesNone -> Null
   TxCertificates _ cs _ -> toJSON $ map textShow cs
 
 friendlyFee :: TxFee era -> Aeson.Value
 friendlyFee = \case
-  TxFeeImplicit _     -> "implicit"
+  TxFeeImplicit _ -> "implicit"
   TxFeeExplicit _ fee -> friendlyLovelace fee
 
 friendlyLovelace :: Lovelace -> Aeson.Value
@@ -166,7 +166,7 @@ friendlyAssetId = \case
       suffix =
         case assetName of
           "" -> ""
-          _  -> "." <> assetName
+          _ -> "." <> assetName
 
 friendlyTxOutValue :: TxOutValue era -> Aeson.Value
 friendlyTxOutValue = \case
@@ -175,22 +175,22 @@ friendlyTxOutValue = \case
 
 friendlyMetadata :: TxMetadataInEra era -> Aeson.Value
 friendlyMetadata = \case
-  TxMetadataNone                   -> Null
+  TxMetadataNone -> Null
   TxMetadataInEra _ (TxMetadata m) -> toJSON $ friendlyMetadataValue <$> m
 
 friendlyMetadataValue :: TxMetadataValue -> Aeson.Value
 friendlyMetadataValue = \case
-  TxMetaNumber int   -> toJSON int
-  TxMetaBytes  bytes -> String $ textShow bytes
-  TxMetaList   lst   -> array $ map friendlyMetadataValue lst
-  TxMetaMap    m     ->
+  TxMetaNumber int -> toJSON int
+  TxMetaBytes bytes -> String $ textShow bytes
+  TxMetaList lst -> array $ map friendlyMetadataValue lst
+  TxMetaMap m ->
     array
       [array [friendlyMetadataValue k, friendlyMetadataValue v] | (k, v) <- m]
-  TxMetaText   text  -> toJSON text
+  TxMetaText text -> toJSON text
 
 friendlyAuxScripts :: TxAuxScripts era -> Aeson.Value
 friendlyAuxScripts = \case
-  TxAuxScriptsNone       -> Null
+  TxAuxScriptsNone -> Null
   TxAuxScripts _ scripts -> String $ textShow scripts
 
 friendlyInputs :: [(TxIn, build)] -> Aeson.Value
