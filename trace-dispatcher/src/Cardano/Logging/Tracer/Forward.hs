@@ -16,10 +16,7 @@ module Cardano.Logging.Tracer.Forward
 import           Codec.CBOR.Term (Term)
 import           Codec.Serialise (Serialise (..))
 import           Control.Concurrent.Async (race_, wait, withAsync)
-import           Control.Concurrent.STM.TBQueue (TBQueue, newTBQueueIO,
-                     writeTBQueue)
 import           Control.Monad.IO.Class
-import           Control.Monad.STM (atomically)
 import           GHC.Generics (Generic)
 
 import qualified Control.Tracer as T
@@ -58,7 +55,7 @@ import           System.Metrics.Network.Forwarder (forwardEKGMetricsResp)
 import qualified Trace.Forward.Configuration as TF
 import           Trace.Forward.Network.Forwarder (forwardTraceObjectsResp)
 import           Trace.Forward.Protocol.Type (NodeInfo (..))
-import           Trace.Forward.Utils (runActionInLoop)
+import           Trace.Forward.Utils
 
 import           Cardano.Logging.DocuGenerator
 import           Cardano.Logging.Types
@@ -80,52 +77,34 @@ instance ShowProxy TraceObject
 
 ---------------------------------------------------------------------------
 
--- newtype ForwardTracerState = ForwardTracerState {
---     ftQueue   :: TBQueue TraceObject
---   }
-
 forwardTracer :: forall m. (MonadIO m)
   => IOManager
   -> TraceConfig
   -> NodeInfo
   -> m (Trace m FormattedMessage)
 forwardTracer iomgr config nodeInfo = liftIO $ do
-    tbQueue <- newTBQueueIO (fromIntegral (tcForwarderQueueSize config))
-    store <- EKG.newStore
-    EKG.registerGcMetrics store
-    launchForwarders iomgr (tcForwarder config) nodeInfo tbQueue store
---    stateRef <- liftIO $ newIORef (ForwardTracerState tbQueue)
-    pure $ Trace $ T.arrow $ T.emit $ uncurry3 (output tbQueue)
-  where
-    output ::
-         TBQueue TraceObject
-      -> LoggingContext
-      -> Maybe TraceControl
-      -> FormattedMessage
-      -> m ()
-    output tbQueue LoggingContext {} Nothing (FormattedForwarder lo) = liftIO $ do
-      atomically $ writeTBQueue tbQueue lo
-    output _tbQueue LoggingContext {} (Just Reset) _msg = liftIO $ do
-      pure ()
-    output _tbQueue lk (Just c@Document {}) (FormattedForwarder lo) = do
-      docIt Forwarder (FormattedHuman False "") (lk, Just c, lo)
-    output _tbQueue LoggingContext {} _ _a = pure ()
-
-launchForwarders
-  :: IOManager
-  -> RemoteAddr
-  -> NodeInfo
-  -> TBQueue TraceObject
-  -> EKG.Store
-  -> IO ()
-launchForwarders iomgr ep@(LocalSocket p) nodeInfo tbQueue store = flip
-  withAsync
-    wait
-    $ runActionInLoop
-        (launchForwardersViaLocalSocket iomgr ep (ekgConfig, tfConfig) tbQueue store)
-        (TF.LocalPipe p)
-        1
+  forwardSink <- initForwardSink tfConfig
+  store <- EKG.newStore
+  EKG.registerGcMetrics store
+  launchForwarders iomgr (tcForwarder config) store ekgConfig tfConfig forwardSink
+  pure $ Trace $ T.arrow $ T.emit $ uncurry3 (output forwardSink)
  where
+  output ::
+       ForwardSink TraceObject
+    -> LoggingContext
+    -> Maybe TraceControl
+    -> FormattedMessage
+    -> m ()
+  output sink LoggingContext {} Nothing (FormattedForwarder lo) = liftIO $
+    writeToSink sink lo
+  output _sink LoggingContext {} (Just Reset) _msg = liftIO $ do
+    pure ()
+  output _sink lk (Just c@Document {}) (FormattedForwarder lo) = do
+    docIt Forwarder (FormattedHuman False "") (lk, Just c, lo)
+  output _sink LoggingContext {} _ _a = pure ()
+
+  LocalSocket p = tcForwarder config
+
   ekgConfig :: EKGF.ForwarderConfiguration
   ekgConfig =
     EKGF.ForwarderConfiguration
@@ -138,22 +117,40 @@ launchForwarders iomgr ep@(LocalSocket p) nodeInfo tbQueue store = flip
   tfConfig :: TF.ForwarderConfiguration TraceObject
   tfConfig =
     TF.ForwarderConfiguration
-      { TF.forwarderTracer  = contramap show stdoutTracer
-      , TF.acceptorEndpoint = TF.LocalPipe p
-      , TF.getNodeInfo      = pure nodeInfo
+      { TF.forwarderTracer       = contramap show stdoutTracer
+      , TF.acceptorEndpoint      = TF.LocalPipe p
+      , TF.getNodeInfo           = pure nodeInfo
+      , TF.disconnectedQueueSize = 200000
+      , TF.connectedQueueSize    = 2000
       }
+
+launchForwarders
+  :: IOManager
+  -> RemoteAddr
+  -> EKG.Store
+  -> EKGF.ForwarderConfiguration
+  -> TF.ForwarderConfiguration TraceObject
+  -> ForwardSink TraceObject
+  -> IO ()
+launchForwarders iomgr ep@(LocalSocket p) store ekgConfig tfConfig sink = flip
+  withAsync
+    wait
+    $ runActionInLoop
+        (launchForwardersViaLocalSocket iomgr ep (ekgConfig, tfConfig) sink store)
+        (TF.LocalPipe p)
+        1
 
 launchForwardersViaLocalSocket
   :: IOManager
   -> RemoteAddr
   -> (EKGF.ForwarderConfiguration, TF.ForwarderConfiguration TraceObject)
-  -> TBQueue TraceObject
+  -> ForwardSink TraceObject
   -> EKG.Store
   -> IO ()
-launchForwardersViaLocalSocket iomgr (LocalSocket localSock) configs tbQueue store = do
-  let snocket = localSnocket iomgr localSock
-      address = localAddressFromPath localSock
-  doListenToAcceptor snocket address noTimeLimitsHandshake configs tbQueue store
+launchForwardersViaLocalSocket iomgr (LocalSocket p) configs sink store = do
+  let snocket = localSnocket iomgr
+      address = localAddressFromPath p
+  doListenToAcceptor snocket address noTimeLimitsHandshake configs sink store
 
 doListenToAcceptor
   :: Ord addr
@@ -161,10 +158,10 @@ doListenToAcceptor
   -> addr
   -> ProtocolTimeLimits (Handshake UnversionedProtocol Term)
   -> (EKGF.ForwarderConfiguration, TF.ForwarderConfiguration TraceObject)
-  -> TBQueue TraceObject
+  -> ForwardSink TraceObject
   -> EKG.Store
   -> IO ()
-doListenToAcceptor snocket address timeLimits (ekgConfig, tfConfig) tbQueue store = do
+doListenToAcceptor snocket address timeLimits (ekgConfig, tfConfig) sink store = do
   networkState <- newNetworkMutableState
   race_ (cleanNetworkMutableState networkState)
         $ withServerNode
@@ -181,8 +178,8 @@ doListenToAcceptor snocket address timeLimits (ekgConfig, tfConfig) tbQueue stor
               UnversionedProtocol
               UnversionedProtocolData
               (SomeResponderApplication $
-                forwarderApp [ (forwardEKGMetricsResp   ekgConfig store,  1)
-                             , (forwardTraceObjectsResp tfConfig tbQueue, 2)
+                forwarderApp [ (forwardEKGMetricsResp ekgConfig store, 1)
+                             , (forwardTraceObjectsResp tfConfig sink, 2)
                              ]
               )
             )
