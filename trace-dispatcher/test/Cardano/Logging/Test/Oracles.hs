@@ -2,7 +2,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Cardano.Logging.Test.Oracles (
-    oracleFiltering
+    oracleMessages
   , occurences
   ) where
 
@@ -19,8 +19,8 @@ import Debug.Trace
 
 -- | Checks for every message that it appears or does not appear at the right
 -- backend. Tests filtering and routing to backends
-oracleFiltering ::  TraceConfig -> ScriptRes -> Property
-oracleFiltering conf ScriptRes {..} =
+oracleMessages ::  TraceConfig -> ScriptRes -> Property
+oracleMessages conf ScriptRes {..} =
     let Script msgs = srScript
     in property $ all oracleMessage msgs
   where

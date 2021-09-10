@@ -98,7 +98,8 @@ withNamespaceConfig name extract withConfig tr = do
                 Nothing  -> do
                   tt <- withConfig (Just v) tr
                   T.traceWith (unpackTrace tt) (lc, Nothing, a)
-        Left (_cmap, Nothing) -> error ("Missing configuration " <> name <> " ns " <> show (lcNamespace lc))
+        Left (_cmap, Nothing) -> pure ()
+        -- This can happen during reconfiguration, so we don't throw an error any more
     mkTrace ref (lc, Just Reset, a) = do
 --      trace ("mkTrace Reset  " <> show (lcNamespace lc)) $ pure ()
       liftIO $ writeIORef ref (Left (Map.empty, Nothing))

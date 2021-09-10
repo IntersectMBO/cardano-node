@@ -5,6 +5,7 @@ module Cardano.Logging.Test.Types (
   , Script (..)
   , ScriptRes (..)
   , scriptLength
+  , emptyScriptRes
   ) where
 
 import           Data.Aeson (Value (..), (.=))
@@ -90,3 +91,11 @@ data ScriptRes = ScriptRes {
   , srForwardRes :: [FormattedMessage]
   , srEkgRes     :: [FormattedMessage]
   }
+
+emptyScriptRes :: ScriptRes
+emptyScriptRes =  ScriptRes {
+    srScript = Script []
+  , srStdoutRes = []
+  , srForwardRes = []
+  , srEkgRes = []
+}

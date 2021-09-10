@@ -14,8 +14,12 @@ main = defaultMain tests
 
 tests :: TestTree
 tests = localOption (QuickCheckTests 10) $ testGroup "trace-dispatcher"
-    [ testProperty "not-filtered" $
-        runScriptSimple 1.0 oracleFiltering
-    , testProperty "not-filtered multithreaded" $  
-        runScriptMultithreaded 1.0 oracleFiltering
+    [ testProperty "single-threaded send tests" $
+        runScriptSimple 1.0 oracleMessages
+    , testProperty "multi-threaded send tests" $
+        runScriptMultithreaded 1.0 oracleMessages
+    -- , testProperty "multi-threaded send tests with reconfiguration" $
+    --     runScriptMultithreadedWithReconfig 1.0 oracleMessages
+    , testProperty "reconfiguration stress test" $
+        runScriptMultithreadedWithConstantReconfig 1.0 (\ _ _ -> property True)
     ]
