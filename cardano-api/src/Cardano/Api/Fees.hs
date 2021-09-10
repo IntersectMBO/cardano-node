@@ -356,6 +356,10 @@ data ScriptExecutionError =
        -- than the expected maximum of a few milliseconds.
        --
      | ScriptErrorExecutionUnitsOverflow
+
+       -- | An attempt was made to spend a key witnessed tx input
+       -- with a script witness.
+     | ScriptErrorNotPlutusWitnessedTxIn ScriptWitnessIndex
   deriving Show
 
 instance Error ScriptExecutionError where
@@ -385,6 +389,9 @@ instance Error ScriptExecutionError where
    ++ "impossible. So this probably indicates a chain configuration problem, "
    ++ "perhaps with the values in the cost model."
 
+  displayError (ScriptErrorNotPlutusWitnessedTxIn scriptWitness) =
+      renderScriptWitnessIndex scriptWitness <> " is not a Plutus script \
+      \witnessed tx input and cannot be spent using a Plutus script witness."
 
 -- | The transaction validity interval is too far into the future.
 --
@@ -515,11 +522,13 @@ evaluateTransactionExecutionUnits _eraInMode systemstart history pparams utxo tx
         Alonzo.ValidationFailed err -> ScriptErrorEvaluationFailed err
         Alonzo.IncompatibleBudget _ -> ScriptErrorExecutionUnitsOverflow
 
+        -- This is only possible for spending scripts and occurs when
+        -- we attempt to spend a key witnessed tx input with a Plutus
+        -- script witness.
+        Alonzo.RedeemerNotNeeded rdmrPtr ->
+          ScriptErrorNotPlutusWitnessedTxIn $ fromAlonzoRdmrPtr rdmrPtr
         -- Some of the errors are impossible by construction, given the way we
         -- build transactions in the API:
-        Alonzo.RedeemerNotNeeded rdmrPtr ->
-          impossible ("RedeemerNotNeeded " ++ show (fromAlonzoRdmrPtr rdmrPtr))
-
         Alonzo.MissingScript rdmrPtr ->
           impossible ("MissingScript " ++ show (fromAlonzoRdmrPtr rdmrPtr))
 
@@ -707,7 +716,7 @@ instance Error TxBodyErrorAutoBalance where
   displayError (TxBodyScriptExecutionError failures) =
       "The following scripts have execution failures:\n"
    ++ unlines [ "the script for " ++ renderScriptWitnessIndex index
-                ++ " failed with " ++ displayError failure
+                ++ " failed with: " ++ "\n" ++ displayError failure
               | (index, failure) <- failures ]
 
   displayError TxBodyScriptBadScriptValidity =
