@@ -232,6 +232,10 @@ module Cardano.Api (
     evaluateTransactionFee,
     estimateTransactionKeyWitnessCount,
 
+    -- ** Minimum required UTxO calculation
+    calculateMinimumUTxO,
+    MinimumUTxOError,
+
     -- ** Script execution units
     evaluateTransactionExecutionUnits,
     ScriptExecutionError(..),

@@ -17,6 +17,8 @@
 module Cardano.Api.ProtocolParameters (
     -- * The updateable protocol paramaters
     ProtocolParameters(..),
+    checkProtocolParameters,
+    ProtocolParametersError(..),
     EpochNo,
 
     -- * Updates to the protocol paramaters
@@ -58,15 +60,15 @@ module Cardano.Api.ProtocolParameters (
 import           Prelude
 
 import           Control.Monad
-import           Data.Aeson (FromJSON (..), ToJSON (..), object, withObject,
-                   (.!=), (.:), (.:?), (.=))
+import           Data.Aeson (FromJSON (..), ToJSON (..), object, withObject, (.!=), (.:), (.:?),
+                   (.=))
 import           Data.Bifunctor (bimap)
 import           Data.ByteString (ByteString)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import           Data.Maybe (fromMaybe, isJust)
 import           Data.String (IsString)
 import           Data.Text (Text)
-import           Data.Maybe (fromMaybe)
 import           GHC.Generics
 import           Numeric.Natural
 
@@ -82,13 +84,12 @@ import           Cardano.Ledger.Crypto (StandardCrypto)
 import qualified Cardano.Ledger.Era as Ledger
 import qualified Cardano.Ledger.Keys as Ledger
 
-import qualified Shelley.Spec.Ledger.PParams as Ledger
-                   (Update(..), ProposedPPUpdates(..), ProtVer(..))
+import qualified Shelley.Spec.Ledger.PParams as Ledger (ProposedPPUpdates (..), ProtVer (..),
+                   Update (..))
 -- Some of the things from Shelley.Spec.Ledger.PParams are generic across all
 -- eras, and some are specific to the Shelley era (and other pre-Alonzo eras).
 -- So we import in twice under different names.
-import qualified Shelley.Spec.Ledger.PParams as Shelley
-                   (PParams, PParams'(..), PParamsUpdate)
+import qualified Shelley.Spec.Ledger.PParams as Shelley (PParams, PParams' (..), PParamsUpdate)
 
 import qualified Cardano.Ledger.Alonzo.Language as Alonzo
 import qualified Cardano.Ledger.Alonzo.PParams as Alonzo
@@ -1431,3 +1432,64 @@ fromAlonzoPParams
     , protocolParamCollateralPercent   = Just _collateralPercentage
     , protocolParamMaxCollateralInputs = Just _maxCollateralInputs
     }
+
+data ProtocolParametersError =
+    PParamsErrorMissingMinUTxoValue AnyCardanoEra
+  | PParamsErrorMissingAlonzoProtocolParameter
+  deriving Show
+
+instance Error ProtocolParametersError where
+  displayError (PParamsErrorMissingMinUTxoValue (AnyCardanoEra era)) =
+   "The " <> show era <> " protocol parameters value is missing the following \
+       \field: MinUTxoValue. Did you intend to use a " <> show era <> " protocol \
+       \ parameters value?"
+  displayError PParamsErrorMissingAlonzoProtocolParameter =
+    "The Alonzo era protocol parameters in use is missing one or more of the \
+    \following fields: UTxOCostPerWord, CostModels, Prices, MaxTxExUnits, \
+    \MaxBlockExUnits, MaxValueSize, CollateralPercent, MaxCollateralInputs. Did \
+    \you intend to use an Alonzo era protocol parameters value?"
+
+checkProtocolParameters
+  :: forall era. IsCardanoEra era
+  => ShelleyBasedEra era
+  -> ProtocolParameters
+  -> Either ProtocolParametersError ()
+checkProtocolParameters sbe ProtocolParameters{..} =
+  case sbe of
+    ShelleyBasedEraShelley -> checkMinUTxOVal
+    ShelleyBasedEraAllegra -> checkMinUTxOVal
+    ShelleyBasedEraMary -> checkMinUTxOVal
+    ShelleyBasedEraAlonzo -> checkAlonzoParams
+ where
+   era :: CardanoEra era
+   era = shelleyBasedToCardanoEra sbe
+
+   costPerWord = isJust protocolParamUTxOCostPerWord
+   cModel = not $ Map.null protocolParamCostModels
+   prices = isJust protocolParamPrices
+   maxTxUnits = isJust protocolParamMaxTxExUnits
+   maxBlockExUnits = isJust protocolParamMaxBlockExUnits
+   maxValueSize = isJust protocolParamMaxValueSize
+   collateralPercent = isJust protocolParamCollateralPercent
+   maxCollateralInputs = isJust protocolParamMaxCollateralInputs
+
+   checkAlonzoParams :: Either ProtocolParametersError ()
+   checkAlonzoParams =
+     if all (== True) [ costPerWord
+                      , cModel
+                      , prices
+                      , maxTxUnits
+                      , maxBlockExUnits
+                      , maxValueSize
+                      , collateralPercent
+                      , maxCollateralInputs
+                      ]
+     then return ()
+     else Left PParamsErrorMissingAlonzoProtocolParameter
+
+   checkMinUTxOVal :: Either ProtocolParametersError ()
+   checkMinUTxOVal =
+     if isJust protocolParamMinUTxOValue
+     then return ()
+     else Left . PParamsErrorMissingMinUTxoValue
+               $ AnyCardanoEra era

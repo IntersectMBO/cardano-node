@@ -598,18 +598,29 @@ pTransaction =
     , subParser "policyid"
         (Opt.info pTransactionPolicyId $ Opt.progDesc "Calculate the PolicyId from the monetary policy script.")
     , subParser "calculate-min-fee"
-        (Opt.info pTransactionCalculateMinFee $ Opt.progDesc "Calculate the minimum fee for a transaction")
-    , subParser "calculate-min-value"
-        (Opt.info pTransactionCalculateMinValue $ Opt.progDesc "Calculate the minimum value for a transaction")
-
+        (Opt.info pTransactionCalculateMinFee $ Opt.progDesc "Calculate the minimum fee for a transaction.")
+    , subParser "calculate-min-required-utxo"
+        (Opt.info pTransactionCalculateMinReqUTxO $ Opt.progDesc "Calculate the minimum required UTxO for a transaction output.")
+    , pCalculateMinRequiredUtxoBackwardCompatible
     , subParser "hash-script-data"
-        (Opt.info pTxHashScriptData $ Opt.progDesc "Calculate the hash of script data")
+        (Opt.info pTxHashScriptData $ Opt.progDesc "Calculate the hash of script data.")
     , subParser "txid"
-        (Opt.info pTransactionId $ Opt.progDesc "Print a transaction identifier")
+        (Opt.info pTransactionId $ Opt.progDesc "Print a transaction identifier.")
     , subParser "view" $
-        Opt.info pTransactionView $ Opt.progDesc "Print a transaction"
+        Opt.info pTransactionView $ Opt.progDesc "Print a transaction."
     ]
  where
+  -- Backwards compatible parsers
+  calcMinValueInfo :: ParserInfo TransactionCmd
+  calcMinValueInfo =
+    Opt.info pTransactionCalculateMinReqUTxO
+      $ Opt.progDesc "DEPRECATED: Use 'calculate-min-required-utxo' instead."
+
+  pCalculateMinRequiredUtxoBackwardCompatible :: Parser TransactionCmd
+  pCalculateMinRequiredUtxoBackwardCompatible =
+    Opt.subparser
+      $ Opt.command "calculate-min-value" calcMinValueInfo <> Opt.internal
+
   assembleInfo :: ParserInfo TransactionCmd
   assembleInfo =
     Opt.info pTransactionAssembleTxBodyWit
@@ -734,10 +745,11 @@ pTransaction =
       <*> pTxShelleyWitnessCount
       <*> pTxByronWitnessCount
 
-  pTransactionCalculateMinValue :: Parser TransactionCmd
-  pTransactionCalculateMinValue = TxCalculateMinValue
-    <$> pProtocolParamsSourceSpec
-    <*> pMultiAsset
+  pTransactionCalculateMinReqUTxO :: Parser TransactionCmd
+  pTransactionCalculateMinReqUTxO = TxCalculateMinRequiredUTxO
+    <$> pCardanoEra
+    <*> pProtocolParamsSourceSpec
+    <*> pTxOut
 
   pProtocolParamsSourceSpec :: Parser ProtocolParamsSourceSpec
   pProtocolParamsSourceSpec =
@@ -1903,16 +1915,6 @@ pDatumHash  =
       case deserialiseFromRawBytesHex (AsHash AsScriptData) (BSC.pack str) of
         Just sdh -> return sdh
         Nothing  -> fail $ "Invalid datum hash: " ++ show str
-
-
-pMultiAsset :: Parser Value
-pMultiAsset =
-  Opt.option
-    (readerFromParsecParser parseValue)
-      (  Opt.long "multi-asset"
-      <> Opt.metavar "VALUE"
-      <> Opt.help "Multi-asset value(s) with the multi-asset cli syntax"
-      )
 
 pMintMultiAsset
   :: BalanceTxExecUnits
