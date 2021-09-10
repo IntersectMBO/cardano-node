@@ -35,6 +35,7 @@ library
                        Trace.Forward.Configuration
                        Trace.Forward.Forwarder
                        Trace.Forward.Queue
+                       Trace.Forward.Utils
 
                        Trace.Forward.Network.Acceptor
                        Trace.Forward.Network.Forwarder
@@ -44,15 +45,12 @@ library
                        Trace.Forward.Protocol.Forwarder
                        Trace.Forward.Protocol.Type
 
-  other-modules:       Trace.Forward.Utils
-
   build-depends:         async
                        , bytestring
                        , cborg
                        , contra-tracer
                        , extra
                        , io-classes
-                       , network
                        , ouroboros-network-framework
                        , serialise
                        , stm
@@ -81,7 +79,6 @@ test-suite test
                        , trace-forward
                        , QuickCheck
                        , serialise
-                       , stm
                        , tasty
                        , tasty-quickcheck
                        , typed-protocols

@@ -7,7 +7,6 @@ module Test.Trace.Forward.Demo.Tests
   ) where
 
 import           Control.Concurrent.Async (withAsync)
-import           Control.Concurrent.STM.TBQueue (newTBQueueIO, writeTBQueue)
 import           Data.Functor ((<&>))
 import           Data.IORef (IORef, atomicModifyIORef', newIORef, readIORef)
 import           GHC.Conc
@@ -30,6 +29,7 @@ import           Trace.Forward.Acceptor
 import           Trace.Forward.Configuration
 import           Trace.Forward.Forwarder
 import           Trace.Forward.Protocol.Type
+import           Trace.Forward.Utils
 
 import           Test.Trace.Forward.Demo.Configs
 import           Test.Trace.Forward.Protocol.Codec ()
@@ -44,9 +44,10 @@ prop_RemoteSocket :: Int -> Property
 prop_RemoteSocket n = ioProperty . withIOManager $ \iomgr -> do
   ep <- LocalPipe <$> mkLocalPipePath
 
-  forwarderQueue <- newTBQueueIO $ fromIntegral n
   acceptedItems :: IORef [TraceItem] <- newIORef []
   weAreDone <- newTVarIO False
+  let forwarderConfig = mkForwarderConfig ep (return nodeInfo) (fromIntegral n) (fromIntegral n)
+  sink <- initForwardSink forwarderConfig
 
   itemsToForward <- generateNTraceItems n
 
@@ -56,11 +57,8 @@ prop_RemoteSocket n = ioProperty . withIOManager $ \iomgr -> do
                (traceItemsHandler acceptedItems)
                nodeInfoHandler) $ \_ -> do
     sleep 0.5
-    withAsync (runTraceForwarder
-                 iomgr
-                 (mkForwarderConfig ep (return nodeInfo))
-                 forwarderQueue) $ \_ -> do
-      atomically $ mapM_ (writeTBQueue forwarderQueue) itemsToForward
+    withAsync (runTraceForwarder iomgr forwarderConfig sink) $ \_ -> do
+      mapM_ (writeToSink sink) itemsToForward
       -- Just wait till the acceptor will ask and receive all 'TraceItem's from the forwarder.
       waitForFinish acceptedItems n weAreDone
 

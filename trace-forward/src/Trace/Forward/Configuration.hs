@@ -32,9 +32,19 @@ data AcceptorConfiguration lo = AcceptorConfiguration
 -- | Forwarder configuration, parameterized by trace item's type.
 data ForwarderConfiguration lo = ForwarderConfiguration
   { -- | The tracer that will be used by the forwarder in its network layer.
-    forwarderTracer  :: !(Tracer IO (TraceSendRecv (TraceForward lo)))
+    forwarderTracer :: !(Tracer IO (TraceSendRecv (TraceForward lo)))
     -- | The endpoint that will be used to connect to the acceptor.
   , acceptorEndpoint :: !HowToConnect
     -- | An action that returns node's information.
-  , getNodeInfo      :: !(IO NodeInfo)
+  , getNodeInfo :: !(IO NodeInfo)
+    -- | The big size of internal queue for tracing items. We use it in
+    --   the beginning of the session, to avoid queue overflow, because
+    --   initially there is no connection with acceptor yet, and the
+    --   number of tracing items after node's start may be very big.
+  , disconnectedQueueSize :: !Word
+    -- | The small size of internal queue for tracing items. We use it
+    --   after the big queue is empty, which means that acceptor is connected
+    --   and tracing items are already forwarded to it. We switch to small
+    --   queue to reduce memory usage in the node.
+  , connectedQueueSize :: !Word
   }

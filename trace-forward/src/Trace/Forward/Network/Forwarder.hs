@@ -10,7 +10,6 @@ module Trace.Forward.Network.Forwarder
 
 import           Codec.CBOR.Term (Term)
 import qualified Codec.Serialise as CBOR
-import           Control.Concurrent.STM.TBQueue (TBQueue)
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Void (Void)
 import           Ouroboros.Network.Driver.Limits (ProtocolTimeLimits)
@@ -35,6 +34,7 @@ import           Ouroboros.Network.Util.ShowProxy (ShowProxy(..))
 
 import           Trace.Forward.Configuration (ForwarderConfiguration (..), HowToConnect (..))
 import           Trace.Forward.Queue (readItems)
+import           Trace.Forward.Utils
 import qualified Trace.Forward.Protocol.Forwarder as Forwarder
 import qualified Trace.Forward.Protocol.Codec as Forwarder
 
@@ -43,9 +43,9 @@ connectToAcceptor
       ShowProxy lo)
   => IOManager
   -> ForwarderConfiguration lo
-  -> TBQueue lo
+  -> ForwardSink lo
   -> IO ()
-connectToAcceptor iomgr config@ForwarderConfiguration{acceptorEndpoint} loQueue = do
+connectToAcceptor iomgr config@ForwarderConfiguration{acceptorEndpoint} sink = do
   let (LocalPipe localPipe) = acceptorEndpoint
       snocket = localSnocket iomgr localPipe
       address = localAddressFromPath localPipe
@@ -56,7 +56,7 @@ connectToAcceptor iomgr config@ForwarderConfiguration{acceptorEndpoint} loQueue 
       [ MiniProtocol
           { miniProtocolNum    = MiniProtocolNum 1
           , miniProtocolLimits = MiniProtocolLimits { maximumIngressQueue = maxBound }
-          , miniProtocolRun    = forwardTraceObjects config loQueue
+          , miniProtocolRun    = forwardTraceObjects config sink
           }
       ]
 
@@ -85,9 +85,9 @@ forwardTraceObjects
   :: (CBOR.Serialise lo,
       ShowProxy lo)
   => ForwarderConfiguration lo
-  -> TBQueue lo
+  -> ForwardSink lo
   -> RunMiniProtocol 'InitiatorMode LBS.ByteString IO () Void
-forwardTraceObjects config loQueue =
+forwardTraceObjects config sink =
   InitiatorProtocolOnly $
     MuxPeerRaw $ \channel ->
       runPeer
@@ -96,15 +96,15 @@ forwardTraceObjects config loQueue =
                                      CBOR.encode CBOR.decode
                                      CBOR.encode CBOR.decode)
         channel
-        (Forwarder.traceForwarderPeer $ readItems config loQueue)
+        (Forwarder.traceForwarderPeer $ readItems config sink)
 
 forwardTraceObjectsResp
   :: (CBOR.Serialise lo,
       ShowProxy lo)
   => ForwarderConfiguration lo
-  -> TBQueue lo
+  -> ForwardSink lo
   -> RunMiniProtocol 'ResponderMode LBS.ByteString IO Void ()
-forwardTraceObjectsResp config loQueue =
+forwardTraceObjectsResp config sink =
   ResponderProtocolOnly $
     MuxPeerRaw $ \channel ->
       runPeer
@@ -113,4 +113,4 @@ forwardTraceObjectsResp config loQueue =
                                      CBOR.encode CBOR.decode
                                      CBOR.encode CBOR.decode)
         channel
-        (Forwarder.traceForwarderPeer $ readItems config loQueue)
+        (Forwarder.traceForwarderPeer $ readItems config sink)

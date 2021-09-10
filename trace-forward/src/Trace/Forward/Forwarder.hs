@@ -8,21 +8,20 @@ module Trace.Forward.Forwarder
   ) where
 
 import qualified Codec.Serialise as CBOR
-import           Control.Concurrent.STM.TBQueue (TBQueue)
 
 import           Ouroboros.Network.IOManager (IOManager)
 import           Ouroboros.Network.Util.ShowProxy (ShowProxy(..))
 
 import           Trace.Forward.Configuration (ForwarderConfiguration (..))
 import           Trace.Forward.Network.Forwarder (connectToAcceptor)
-import           Trace.Forward.Utils (runActionInLoop)
+import           Trace.Forward.Utils
 
 runTraceForwarder
   :: (CBOR.Serialise lo,
       ShowProxy lo)
   => IOManager                 -- ^ 'IOManager' from the external application.
   -> ForwarderConfiguration lo -- ^ Forwarder configuration.
-  -> TBQueue lo                -- ^ The queue from which the forwarder will take 'TraceObject's.
+  -> ForwardSink lo            -- ^ Forward "sink" that will be used to write tracing items.
   -> IO ()
-runTraceForwarder iomgr config@ForwarderConfiguration{acceptorEndpoint} loQueue =
-  runActionInLoop (connectToAcceptor iomgr config loQueue) acceptorEndpoint 1
+runTraceForwarder iomgr config@ForwarderConfiguration{acceptorEndpoint} forwardSink =
+  runActionInLoop (connectToAcceptor iomgr config forwardSink) acceptorEndpoint 1

@@ -15,19 +15,25 @@ mkAcceptorConfig
   :: HowToConnect
   -> TVar Bool
   -> AcceptorConfiguration TraceItem
-mkAcceptorConfig ep weAreDone = AcceptorConfiguration
-  { acceptorTracer    = nullTracer
-  , forwarderEndpoint = ep
-  , whatToRequest     = NumberOfTraceObjects 10
-  , shouldWeStop      = weAreDone
-  }
+mkAcceptorConfig ep weAreDone =
+  AcceptorConfiguration
+    { acceptorTracer    = nullTracer
+    , forwarderEndpoint = ep
+    , whatToRequest     = NumberOfTraceObjects 10
+    , shouldWeStop      = weAreDone
+    }
 
 mkForwarderConfig
   :: HowToConnect
   -> IO NodeInfo
+  -> Word
+  -> Word
   -> ForwarderConfiguration TraceItem
-mkForwarderConfig ep getNI = ForwarderConfiguration
-  { forwarderTracer  = nullTracer
-  , acceptorEndpoint = ep
-  , getNodeInfo      = getNI
-  }
+mkForwarderConfig ep getNI disconnectedSize connectedSize =
+  ForwarderConfiguration
+    { forwarderTracer       = nullTracer
+    , acceptorEndpoint      = ep
+    , getNodeInfo           = getNI
+    , disconnectedQueueSize = disconnectedSize
+    , connectedQueueSize    = connectedSize
+    }
