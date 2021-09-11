@@ -712,7 +712,7 @@ traceBlockFetchClientMetrics (Just ekgDirect) slotMapVar cdf1sVar cdf2sVar cdf5s
             -- TODO: Revisit ekg counter access once there is a faster way.
             sendEKGDirectDouble ekgDirect "cardano.node.metrics.blockfetchclient.blockdelay.s"
                 $ realToFrac delay
-            sendEKGDirectInt ekgDirect
+            _sendEKGDirectInt ekgDirect
                "cardano.node.metrics.blockfetchclient.blocksize"
                blockSize
             sendEKGDirectDouble ekgDirect
