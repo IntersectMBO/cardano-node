@@ -679,7 +679,7 @@ traceBlockFetchClientMetrics (Just ekgDirect) slotMapVar cdf1sVar cdf2sVar cdf5s
        >> return ()
 
     bfTracer :: TraceLabelPeer remotePeer (TraceFetchClientState (Header blk)) -> IO ()
-    bfTracer e@(TraceLabelPeer _ (CompletedBlockFetch p _ _ _ delay)) = do
+    bfTracer e@(TraceLabelPeer _ (CompletedBlockFetch p _ _ _ delay blockSize)) = do
       traceWith tracer e
       case pointSlot p of
         Origin -> return () -- Nothing to do.
@@ -712,7 +712,11 @@ traceBlockFetchClientMetrics (Just ekgDirect) slotMapVar cdf1sVar cdf2sVar cdf5s
             -- TODO: Revisit ekg counter access once there is a faster way.
             sendEKGDirectDouble ekgDirect "cardano.node.metrics.blockfetchclient.blockdelay.s"
                 $ realToFrac delay
-            sendEKGDirectDouble ekgDirect "cardano.node.metrics.blockfetchclient.blockdelay.cdfOne"
+            sendEKGDirectInt ekgDirect
+               "cardano.node.metrics.blockfetchclient.blocksize"
+               blockSize
+            sendEKGDirectDouble ekgDirect
+               "cardano.node.metrics.blockfetchclient.blockdelay.cdfOne"
                cdf1s
             sendEKGDirectDouble ekgDirect "cardano.node.metrics.blockfetchclient.blockdelay.cdfTwo"
                cdf2s
