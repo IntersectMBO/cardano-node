@@ -1015,12 +1015,14 @@ instance (HasHeader header, ConvertRawHash header)
           (AS.Empty{}, AS.Empty{}) -> 0
           (firstHdr AS.:< _, _ AS.:> lastHdr) ->
             blockNo lastHdr - blockNo firstHdr + 1
-  toObject _verb (BlockFetch.CompletedBlockFetch pt _ _ _ _) =
+  toObject _verb (BlockFetch.CompletedBlockFetch pt _ _ _ delay blockSize) =
     mkObject [ "kind"  .= String "CompletedBlockFetch"
              , "block" .= String
                (case pt of
                   GenesisPoint -> "Genesis"
                   BlockPoint _ h -> renderHeaderHash (Proxy @header) h)
+             , "delay" .= delay
+             , "size"  .= blockSize
              ]
   toObject _verb BlockFetch.CompletedFetchBatch {} =
     mkObject [ "kind" .= String "CompletedFetchBatch" ]
