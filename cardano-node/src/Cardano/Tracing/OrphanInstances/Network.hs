@@ -1070,6 +1070,8 @@ instance (HasHeader header, ConvertRawHash header)
                (case pt of
                   GenesisPoint -> "Genesis"
                   BlockPoint _ h -> renderHeaderHash (Proxy @header) h)
+             , "delay" .= delay
+             , "size" .= blockSize
              ]
   toObject _verb BlockFetch.CompletedFetchBatch {} =
     mkObject [ "kind" .= String "CompletedFetchBatch" ]
