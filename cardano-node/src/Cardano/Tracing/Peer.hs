@@ -14,13 +14,12 @@ import           Cardano.Prelude hiding (atomically)
 import           Prelude (String)
 
 import qualified Control.Monad.Class.MonadSTM.Strict as STM
-
 import           Data.Aeson (ToJSON (..), Value (..), toJSON, (.=))
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import qualified Data.Text as Text
+import           NoThunks.Class (AllowThunk (..), NoThunks)
 import           Text.Printf (printf)
-import           NoThunks.Class (NoThunks, AllowThunk (..))
 
 import           Cardano.BM.Data.LogItem (LOContent (..))
 import           Cardano.BM.Data.Tracer (emptyObject, mkObject)
@@ -36,7 +35,7 @@ import           Ouroboros.Network.Block (unSlotNo)
 import qualified Ouroboros.Network.Block as Net
 import qualified Ouroboros.Network.BlockFetch.ClientRegistry as Net
 import           Ouroboros.Network.BlockFetch.ClientState (PeerFetchInFlight (..),
-                     PeerFetchStatus (..), readFetchClientState)
+                   PeerFetchStatus (..), readFetchClientState)
 
 import           Cardano.Tracing.Kernel
 
@@ -57,7 +56,7 @@ ppPeer (Peer cid _af status inflight) =
   Text.pack $ printf "%-15s %-8s %s" (ppCid cid) (ppStatus status) (ppInFlight inflight)
 
 ppCid :: RemoteConnectionId -> String
-ppCid = takeWhile (/= ':') . show . remoteAddress
+ppCid = show . remoteAddress
 
 ppInFlight :: PeerFetchInFlight header -> String
 ppInFlight f = printf
