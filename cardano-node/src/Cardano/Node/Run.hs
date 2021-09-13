@@ -86,7 +86,8 @@ import qualified Ouroboros.Network.Diffusion.NonP2P as NonP2P
 import           Ouroboros.Network.NodeToClient (LocalAddress (..), LocalSocket (..))
 import           Ouroboros.Network.NodeToNode (RemoteAddress,
                    AcceptedConnectionsLimit (..), PeerSelectionTargets (..))
-import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter (..), RelayAddress (..))
+import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter (..))
+import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
 
 import           Cardano.Api
 import qualified Cardano.Api.Protocol.Types as Protocol
@@ -342,7 +343,7 @@ handleSimpleNode scp runP p2pMode trace nodeTracers nc onKernel = do
         traceNamedObject
           (appendName "use-ledger-after-slot" trace)
           (meta, LogMessage . Text.pack . show $ useLedgerAfterSlot nt)
-        (localRootsVar :: StrictTVar IO [(Int, Map RelayAddress PeerAdvertise)])  <- newTVarIO localRoots
+        (localRootsVar :: StrictTVar IO [(Int, Map RelayAccessPoint PeerAdvertise)])  <- newTVarIO localRoots
         publicRootsVar <- newTVarIO publicRoots
         useLedgerVar   <- newTVarIO (useLedgerAfterSlot nt)
 #ifdef UNIX
@@ -404,6 +405,7 @@ handleSimpleNode scp runP p2pMode trace nodeTracers nc onKernel = do
               , srnDiffusionTracersExtra       = diffusionTracersExtra nodeTracers
               , srnEnableInDevelopmentVersions = ncTestEnableDevelopmentNetworkProtocols nc
               , srnTraceChainDB                = chainDBTracer nodeTracers
+              , srnMaybeMempoolCapacityOverride = ncMaybeMempoolCapacityOverride nc
               }
  where
   createTracers
@@ -432,8 +434,8 @@ handleSimpleNode scp runP p2pMode trace nodeTracers nc onKernel = do
 
 #ifdef UNIX
   updateVars :: LOMeta
-             -> StrictTVar IO [(Int, Map RelayAddress PeerAdvertise)]
-             -> StrictTVar IO [RelayAddress]
+             -> StrictTVar IO [(Int, Map RelayAccessPoint PeerAdvertise)]
+             -> StrictTVar IO [RelayAccessPoint]
              -> StrictTVar IO UseLedgerAfter
              -> Signals.Handler
   updateVars meta localRootsVar publicRootsVar useLedgerVar =
@@ -523,8 +525,8 @@ checkVRFFilePermissions vrfPrivKey = do
 
 mkP2PArguments
   :: NodeConfiguration
-  -> STM IO [(Int, Map RelayAddress PeerAdvertise)]
-  -> STM IO [RelayAddress]
+  -> STM IO [(Int, Map RelayAccessPoint PeerAdvertise)]
+  -> STM IO [RelayAccessPoint]
   -> STM IO UseLedgerAfter
   -> Diffusion.ExtraArguments 'Diffusion.P2P IO
 mkP2PArguments NodeConfiguration {
@@ -584,17 +586,17 @@ producerAddressesNonP2P nt =
 
 producerAddresses
   :: NetworkTopology
-  -> ([(Int, Map RelayAddress PeerAdvertise)], [RelayAddress])
+  -> ([(Int, Map RelayAccessPoint PeerAdvertise)], [RelayAccessPoint])
 producerAddresses nt =
   case nt of
     RealNodeTopology lrpg prp _ ->
       ( map (\lrp -> ( valency lrp
-                     , Map.fromList $ rootAddressToRelayAddress
+                     , Map.fromList $ rootAddressToRelayAccessPoint
                                     $ localRoots lrp
                      )
             )
             (groups lrpg)
-      , concatMap (map fst . rootAddressToRelayAddress)
+      , concatMap (map fst . rootAddressToRelayAccessPoint)
                   (map publicRoots prp)
       )
 

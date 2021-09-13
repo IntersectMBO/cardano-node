@@ -25,8 +25,9 @@ import           Cardano.Node.Types (NodeAddress' (..), NodeHostIPAddress (..),
                    NodeHostIPv4Address (..), NodeHostIPv6Address (..),
                    NodeIPAddress, NodeIPv4Address, NodeIPv6Address)
 import           Cardano.Slotting.Slot (SlotNo (..))
-import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter (..), RelayAddress (..),
-                   DomainAddress (..))
+import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter (..))
+import           Ouroboros.Network.PeerSelection.RelayAccessPoint (
+                   DomainAccessPoint (..), RelayAccessPoint (..))
 
 
 import qualified Data.IP as IP
@@ -92,18 +93,18 @@ genNodeSetup =
     <*> Gen.list (Range.linear 0 6) genRootAddress
     <*> genUseLedger
 
-genDomainAddress :: Gen DomainAddress
+genDomainAddress :: Gen DomainAccessPoint
 genDomainAddress =
-  DomainAddress
+  DomainAccessPoint
     <$> Gen.element cooking
     <*> (fromIntegral <$> Gen.int (Range.linear 1000 9000))
 
-genRelayAddress :: Gen RelayAddress
+genRelayAddress :: Gen RelayAccessPoint
 genRelayAddress = do
   isDomain <- Gen.bool
   if isDomain
-    then RelayDomain <$> genDomainAddress
-    else RelayAddress
+    then RelayDomainAccessPoint <$> genDomainAddress
+    else RelayAccessAddress
           <$> Gen.choice
                 [ IP.IPv4 . unNodeHostIPv4Address <$> genNodeHostIPv4Address
                 , IP.IPv6 . unNodeHostIPv6Address <$> genNodeHostIPv6Address
