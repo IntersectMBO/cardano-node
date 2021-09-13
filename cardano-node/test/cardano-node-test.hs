@@ -15,14 +15,10 @@ import qualified Test.Cardano.Node.POM
 
 main :: IO ()
 main = defaultMain
+  ( [ Test.Cardano.Node.Json.tests
+    , Test.Cardano.Node.POM.tests
+    ]
 #ifdef UNIX
-  [ Test.Cardano.Node.Json.tests
-  , Test.Cardano.Node.POM.tests
-  , Test.Cardano.Node.FilePermissions.tests
-  ]
-#else
-  [ Test.Cardano.Node.Json.tests
-  , Test.Cardano.Node.POM.tests
-  ]
+      ++ [Test.Cardano.Node.FilePermissions.tests]
 #endif
-
+  )
