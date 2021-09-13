@@ -108,6 +108,7 @@ library
                       , cardano-ledger-core
                       , cardano-ledger-shelley-ma
                       , cardano-prelude
+                      , cardano-protocol-tpraos
                       , cardano-slotting
                       , contra-tracer
                       , cborg >= 0.2.4 && < 0.3

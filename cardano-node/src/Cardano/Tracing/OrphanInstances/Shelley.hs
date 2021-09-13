@@ -63,11 +63,13 @@ import qualified Cardano.Ledger.Crypto as Core
 import qualified Cardano.Ledger.SafeHash as SafeHash
 import qualified Cardano.Ledger.ShelleyMA.Rules.Utxo as MA
 import qualified Cardano.Ledger.ShelleyMA.Timelocks as MA
-
+import           Cardano.Protocol.TPraos.BHeader (LastAppliedBlock, labBlockNo)
+import           Cardano.Protocol.TPraos.Rules.OCert
+import           Cardano.Protocol.TPraos.Rules.Overlay
+import           Cardano.Protocol.TPraos.Rules.Updn
 
 -- TODO: this should be exposed via Cardano.Api
 import           Shelley.Spec.Ledger.API hiding (ShelleyBasedEra)
-import           Shelley.Spec.Ledger.BlockChain (LastAppliedBlock (..))
 
 import           Shelley.Spec.Ledger.STS.Bbody
 import           Shelley.Spec.Ledger.STS.Chain
@@ -80,15 +82,12 @@ import           Shelley.Spec.Ledger.STS.Ledgers
 import           Shelley.Spec.Ledger.STS.Mir
 import           Shelley.Spec.Ledger.STS.NewEpoch
 import           Shelley.Spec.Ledger.STS.Newpp
-import           Shelley.Spec.Ledger.STS.Ocert
-import           Shelley.Spec.Ledger.STS.Overlay
 import           Shelley.Spec.Ledger.STS.Pool
 import           Shelley.Spec.Ledger.STS.PoolReap
 import           Shelley.Spec.Ledger.STS.Ppup
 import           Shelley.Spec.Ledger.STS.Rupd
 import           Shelley.Spec.Ledger.STS.Snap
 import           Shelley.Spec.Ledger.STS.Tick
-import           Shelley.Spec.Ledger.STS.Updn
 import           Shelley.Spec.Ledger.STS.Upec
 import           Shelley.Spec.Ledger.STS.Utxo
 import           Shelley.Spec.Ledger.STS.Utxow
