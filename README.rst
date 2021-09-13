@@ -6,7 +6,7 @@
   </p>
 
   <table align="center">
-    <tr><td colspan="2" align="center">Github Actions</td></tr>
+    <tr><td colspan="2" align="center">GitHub Actions</td></tr>
     <tr>
       <td>
         <a href="https://github.com/input-output-hk/cardano-node/actions/workflows/haskell.yml"><img alt="GitHub Workflow Status (master)" src="https://img.shields.io/github/workflow/status/input-output-hk/cardano-node/Haskell%20CI/master" /></a>
