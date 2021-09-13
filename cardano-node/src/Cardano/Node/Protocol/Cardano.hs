@@ -196,7 +196,7 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
           -- version that this node will declare that it understands, when it
           -- is in the Alonzo era. Since Alonzo is currently the last known
           -- protocol version then this is also the Alonzo protocol version.
-          alonzoProtVer = ProtVer 5 0,
+          alonzoProtVer = ProtVer 6 0,
           alonzoMaxTxCapacityOverrides =
             TxLimits.mkOverrides TxLimits.noOverridesMeasure
         }
