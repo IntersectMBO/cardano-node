@@ -154,8 +154,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger-specs
-  tag: 51e984debe69fbdf9ae5111db7c1849d8bdb83c0
-  --sha256: 1f9wj751n4zxcfzzg1vd08lmfi93k4aaj5lmzpw87biyvz436496
+  tag: ab138130d979d273f31a7a383c9ab81906e0727c
+  --sha256: 1pqdm1v6sjf19z3cy4jsyj81wizwafa1lprafnwn5plqd9qimz55
   subdir:
     alonzo/impl
     byron/chain/executable-spec
@@ -165,6 +165,7 @@ source-repository-package
     byron/ledger/impl
     byron/ledger/impl/test
     cardano-ledger-core
+    cardano-protocol-tpraos
     semantics/executable-spec
     semantics/small-steps-test
     shelley/chain-and-ledger/dependencies/non-integer
@@ -214,8 +215,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: 22d9b995e2c302fb14532aa459bc6b81627267bc
-  --sha256: 0lgkggcyyx8g7avpgkp1cdm1fjgr9cv6jqrasjkyjbr5q60n3nmz
+  tag: e74388a28e8775ed2e85067f0413792071686714
+  --sha256: 1msp9abhnp7pxhj79bfa61ps0g5ram9r7knv3nw6v8gla404zl3r
   subdir:
     io-sim
     io-classes

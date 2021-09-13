@@ -42,7 +42,7 @@ import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (OneEraForge
 import           Ouroboros.Consensus.Shelley.Ledger.Block (ShelleyBlock)
 import           Ouroboros.Consensus.Shelley.Node ()
 import qualified Ouroboros.Consensus.Shelley.Protocol.HotKey as HotKey
-import           Shelley.Spec.Ledger.OCert (KESPeriod (..))
+import           Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 
 -- | KES-related data to be traced as metrics.
 data KESMetricsData

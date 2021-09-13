@@ -92,6 +92,7 @@ instance HasPrivacyAnnotation NtN.AcceptConnectionsPolicyTrace
 instance HasSeverityAnnotation NtN.AcceptConnectionsPolicyTrace where
   getSeverityAnnotation NtN.ServerTraceAcceptConnectionRateLimiting {} = Info
   getSeverityAnnotation NtN.ServerTraceAcceptConnectionHardLimit {} = Warning
+  getSeverityAnnotation NtN.ServerTraceAcceptConnectionResume {} = Info
 
 
 instance HasPrivacyAnnotation (TraceFetchClientState header)
@@ -736,6 +737,10 @@ instance ToObject NtN.AcceptConnectionsPolicyTrace where
     mkObject [ "kind" .= String "ServerTraceAcceptConnectionHardLimit"
              , "softLimit" .= show softLimit
              ]
+  toObject _verb (NtN.ServerTraceAcceptConnectionResume numOfConnections) =
+    mkObject [ "kind" .= String "ServerTraceAcceptConnectionResume"
+             , "numberOfConnection" .= show numOfConnections
+             ]
 
 
 instance ConvertRawHash blk
@@ -778,8 +783,10 @@ instance (HasHeader header, ConvertRawHash header)
           (AS.Empty{}, AS.Empty{}) -> 0
           (firstHdr AS.:< _, _ AS.:> lastHdr) ->
             blockNo lastHdr - blockNo firstHdr + 1
-  toObject _verb (BlockFetch.CompletedBlockFetch pt _ _ _ _) =
+  toObject _verb (BlockFetch.CompletedBlockFetch pt _ _ _ delay blockSize) =
     mkObject [ "kind"  .= String "CompletedBlockFetch"
+             , "delay" .= (realToFrac delay :: Double)
+             , "size"  .= blockSize
              , "block" .= String
                (case pt of
                   GenesisPoint -> "Genesis"

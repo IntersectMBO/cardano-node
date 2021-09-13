@@ -482,6 +482,7 @@ evaluateTransactionExecutionUnits _eraInMode systemstart history pparams utxo tx
                               (Either ScriptExecutionError ExecutionUnits))
     evalAlonzo era tx =
       case Alonzo.evaluateTransactionExecutionUnits
+             (toLedgerPParams era pparams)
              tx
              (toLedgerUTxO era utxo)
              (toLedgerEpochInfo history)

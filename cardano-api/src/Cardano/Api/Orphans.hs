@@ -49,9 +49,9 @@ import qualified Cardano.Ledger.Era as Ledger
 import qualified Cardano.Ledger.Mary.Value as Mary
 import qualified Cardano.Ledger.SafeHash as SafeHash
 import qualified Cardano.Ledger.Shelley.Constraints as Shelley
+import qualified Cardano.Protocol.TPraos as Praos
 import qualified Ouroboros.Consensus.Shelley.Eras as Consensus
 import qualified Shelley.Spec.Ledger.API as Shelley
-import qualified Shelley.Spec.Ledger.Delegation.Certificates as Shelley
 import qualified Shelley.Spec.Ledger.EpochBoundary as ShelleyEpoch
 import qualified Shelley.Spec.Ledger.LedgerState as ShelleyLedger
 import           Shelley.Spec.Ledger.PParams (PParamsUpdate)
@@ -278,13 +278,13 @@ instance Crypto.Crypto crypto => ToJSON (Shelley.PulsingRewUpdate crypto) where
 instance ToJSON Shelley.DeltaCoin where
   toJSON (Shelley.DeltaCoin i) = toJSON i
 
-instance Crypto.Crypto crypto => ToJSON (Shelley.PoolDistr crypto) where
-  toJSON (Shelley.PoolDistr m) = toJSON m
+instance Crypto.Crypto crypto => ToJSON (Praos.PoolDistr crypto) where
+  toJSON (Praos.PoolDistr m) = toJSON m
 
-instance ToJSON (Shelley.IndividualPoolStake crypto) where
+instance ToJSON (Praos.IndividualPoolStake crypto) where
   toJSON indivPoolStake =
-    object [ "individualPoolStake" .= Shelley.individualPoolStake indivPoolStake
-           , "individualPoolStakeVrf" .= Shelley.individualPoolStakeVrf indivPoolStake
+    object [ "individualPoolStake" .= Praos.individualPoolStake indivPoolStake
+           , "individualPoolStakeVrf" .= Praos.individualPoolStakeVrf indivPoolStake
            ]
 
 instance ToJSON (Shelley.Reward crypto) where
