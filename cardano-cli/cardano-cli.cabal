@@ -137,7 +137,6 @@ library
                       , shelley-spec-ledger
                       , small-steps
                       , split
-                      , stm
                       , strict-containers
                       , text
                       , time

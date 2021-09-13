@@ -927,7 +927,9 @@ makeTransactionBodyAutoBalance eraInMode systemstart history pparams
       first TxBodyError $ -- TODO: impossible to fail now
         makeTransactionBody txbodycontent1 {
           txFee  = TxFeeExplicit explicitTxFees fee,
-          txOuts = TxOut changeaddr balance TxOutDatumHashNone : txOuts txbodycontent
+          txOuts = accountForNoChange
+                     (TxOut changeaddr balance TxOutDatumHashNone)
+                     (txOuts txbodycontent)
         }
     return (BalancedTxBody txbody3 (TxOut changeaddr balance TxOutDatumHashNone) fee)
  where
@@ -937,8 +939,20 @@ makeTransactionBodyAutoBalance eraInMode systemstart history pparams
    era' :: CardanoEra era
    era' = cardanoEra
 
+   -- In the event of spending the exact amount of lovelace in
+   -- the specified input(s), this function excludes the change
+   -- output. Note that this does not save any fees because by default
+   -- the fee calculation includes a change address for simplicity and
+   -- we make no attempt to recalculate the tx fee without a change address.
+   accountForNoChange :: TxOut era -> [TxOut era] -> [TxOut era]
+   accountForNoChange change@(TxOut _ balance _) rest =
+     case txOutValueToLovelace balance of
+       Lovelace 0 -> rest
+       _ -> change : rest
+
    balanceCheck :: TxOutValue era -> Either TxBodyErrorAutoBalance ()
    balanceCheck balance
+    | txOutValueToLovelace balance == 0 = return ()
     | txOutValueToLovelace balance < 0 =
         Left . TxBodyErrorAdaBalanceNegative $ txOutValueToLovelace balance
     | otherwise =
