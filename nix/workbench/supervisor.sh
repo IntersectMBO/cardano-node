@@ -148,11 +148,10 @@ EOF
 
         supervisorctl stop all
 
-        if test -f "${dir}/supervisor/cardano-node.pids"
-        then kill $(<${dir}/supervisor/supervisord.pid) $(<${dir}/supervisor/cardano-node.pids)
+        if test -f "${dir}/supervisor/supervisord.pid"
+        then kill $(<${dir}/supervisor/supervisord.pid) $(<${dir}/supervisor/cardano-node.pids) 2>/dev/null
         else pkill supervisord
         fi
-        rm -f ${dir}/supervisor/supervisord.pid ${dir}/supervisor/cardano-node.pids
         ;;
 
     save-pids )
@@ -163,16 +162,16 @@ EOF
         pstree -Ap "$(cat "$svpid")" > "$pstree"
 
         local pidsfile="$dir"/supervisor/cardano-node.pids
-        { fgrep '+-{cardano-node}' "$pstree" || fail 'save-pids: pattern not found';
-        } | sed -e 's/^.*-+-cardano-node(\([0-9]*\))-.*$/\1/' \
+        { grep -e '-[{]\?cardano-node[}]\?([0-9]*)-' "$pstree" || fail 'save-pids: pattern not found';
+        } | sed -e 's/^.*[+`|]-[{]\?cardano-node[}]\?(\([0-9]*\))-.*$/\1/' \
                 > "$pidsfile"
 
         local mapn2p="$dir"/supervisor/node2pid.map; echo '{}' > "$mapn2p"
         local mapp2n="$dir"/supervisor/pid2node.map; echo '{}' > "$mapp2n"
         for node in $(jq_tolist keys "$dir"/node-specs.json)
-        do local cabalpid=$(supervisorctl pid $node)
-           local pid=$(fgrep -e "-cabal($cabalpid)-" "$pstree" |
-                       sed -e 's/^.*-+-cardano-node(\([0-9]*\))-.*$/\1/')
+        do local service_pid=$(supervisorctl pid $node)
+           local pid=$(fgrep -e "($service_pid)-" "$pstree" |
+                       sed -e 's/^.*-cardano-node(\([0-9]*\))-.*$/\1/')
            jq_fmutate "$mapn2p" '. * { "'$node'": '$pid' }'
            jq_fmutate "$mapp2n" '. * { "'$pid'": "'$node'" }'
         done
