@@ -89,6 +89,7 @@ import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as LocalStateQu
 import           Ouroboros.Network.Protocol.LocalTxSubmission.Type (LocalTxSubmission)
 import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Type as LocalTxSub
 import           Ouroboros.Network.Protocol.TxSubmission.Type (Message (..), TxSubmission)
+import           Ouroboros.Network.Protocol.TxSubmission2.Type (TxSubmission2)
 import           Ouroboros.Network.Snocket (LocalAddress (..))
 import           Ouroboros.Network.Subscription (ConnectResult (..), DnsTrace (..),
                    SubscriberError (..), SubscriptionTrace (..), WithDomainName (..),
@@ -432,34 +433,35 @@ instance HasPrivacyAnnotation (ConnectionManagerTrace addr connTrace)
 instance HasSeverityAnnotation (ConnectionManagerTrace addr (ConnectionHandlerTrace versionNumber agreedOptions)) where
   getSeverityAnnotation ev =
     case ev of
-      TrIncludeConnection {}        -> Debug
-      TrUnregisterConnection {}     -> Debug
-      TrConnect {}                  -> Debug
-      TrConnectError {}             -> Info
-      TrTerminatingConnection {}    -> Debug
-      TrTerminatedConnection {}     -> Debug
+      TrIncludeConnection {}                  -> Debug
+      TrUnregisterConnection {}               -> Debug
+      TrConnect {}                            -> Debug
+      TrConnectError {}                       -> Info
+      TrTerminatingConnection {}              -> Debug
+      TrTerminatedConnection {}               -> Debug
       TrConnectionHandler _ ev'     ->
         case ev' of
-          TrHandshakeSuccess {}     -> Info
-          TrHandshakeClientError {} -> Error
-          TrHandshakeServerError {} -> Info
-          TrError _ _ ShutdownNode  -> Critical
-          TrError _ _ ShutdownPeer  -> Info
+          TrHandshakeSuccess {}               -> Info
+          TrHandshakeClientError {}           -> Error
+          TrHandshakeServerError {}           -> Info
+          TrError _ _ ShutdownNode            -> Critical
+          TrError _ _ ShutdownPeer            -> Info
 
-      TrShutdown                    -> Info
-      TrConnectionExists {}         -> Info
-      TrForbiddenConnection {}      -> Info
-      TrImpossibleConnection {}     -> Info
-      TrConnectionFailure {}        -> Info
-      TrConnectionNotFound {}       -> Debug
-      TrForbiddenOperation {}       -> Info
+      TrShutdown                              -> Info
+      TrConnectionExists {}                   -> Info
+      TrForbiddenConnection {}                -> Info
+      TrImpossibleConnection {}               -> Info
+      TrConnectionFailure {}                  -> Info
+      TrConnectionNotFound {}                 -> Debug
+      TrForbiddenOperation {}                 -> Info
 
-      TrPruneConnections {}         -> Notice
-      TrConnectionCleanup {}        -> Info
-      TrConnectionTimeWait {}       -> Info
-      TrConnectionTimeWaitDone {}   -> Info
-      TrConnectionManagerCounters {} -> Info
-      TrState {}                    -> Info
+      TrPruneConnections {}                   -> Notice
+      TrConnectionCleanup {}                  -> Info
+      TrConnectionTimeWait {}                 -> Info
+      TrConnectionTimeWaitDone {}             -> Info
+      TrConnectionManagerCounters {}          -> Info
+      TrState {}                              -> Info
+      TrUnexpectedlyMissingConnectionState {} -> Error
 
 instance HasPrivacyAnnotation (ServerTrace addr)
 instance HasSeverityAnnotation (ServerTrace addr) where
@@ -1070,6 +1072,8 @@ instance (HasHeader header, ConvertRawHash header)
                (case pt of
                   GenesisPoint -> "Genesis"
                   BlockPoint _ h -> renderHeaderHash (Proxy @header) h)
+             , "delay" .= delay
+             , "size" .= blockSize
              ]
   toObject _verb BlockFetch.CompletedFetchBatch {} =
     mkObject [ "kind" .= String "CompletedFetchBatch" ]
@@ -1200,7 +1204,7 @@ instance ToObject TraceLedgerPeers where
     mkObject
       [ "kind" .= String "PickedPeer"
       , "address" .= show addr
-      , "relativeStake" .= (realToFrac stake :: Double)
+      , "relativeStake" .= (realToFrac (unPoolStake stake) :: Double)
       ]
   toObject _verb (PickedPeers (NumberOfPeers n) addrs) =
     mkObject
@@ -1279,7 +1283,7 @@ instance (ToObject peer) => ToObject (WithMuxBearer peer MuxTrace) where
              , "bearer" .= toObject verb b
              , "event" .= show ev ]
 
-instance Aeson.ToJSONKey RelayAddress where
+instance Aeson.ToJSONKey RelayAccessPoint where
 
 instance Show exception => ToObject (TraceLocalRootPeers RemoteAddress exception) where
   toObject _verb (TraceLocalRootDomains groups) =
@@ -1305,9 +1309,14 @@ instance Show exception => ToObject (TraceLocalRootPeers RemoteAddress exception
              , "domainAddress" .= toJSON d
              , "error" .= show dexception
              ]
+  toObject _verb (TraceLocalRootError d dexception) =
+    mkObject [ "kind" .= String "LocalRootError"
+             , "domainAddress" .= toJSON d
+             , "error" .= show dexception
+             ]
 
 instance ToObject TracePublicRootPeers where
-  toObject _verb (TracePublicRootRelayAddresses relays) =
+  toObject _verb (TracePublicRootRelayAccessPoint relays) =
     mkObject [ "kind" .= String "PublicRootRelayAddresses"
              , "relayAddresses" .= Aeson.toJSONList relays
              ]
@@ -1843,6 +1852,11 @@ instance (Show addr, Show versionNumber, Show agreedOptions, ToObject addr,
                                            , "connectionState" .= toJSON connState
                                            ])
                                        (Map.toList cmState)
+          ]
+      TrUnexpectedlyMissingConnectionState connId ->
+        mkObject
+          [ "kind" .= String "UnexpectedlyMissingConnectionState"
+          , "connectionId" .= toJSON connId
           ]
 
 instance (Show addr, ToObject addr, ToJSON addr)

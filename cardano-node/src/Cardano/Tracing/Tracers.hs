@@ -623,6 +623,7 @@ mkConsensusTracers mbEKGDirect trSel verb tr nodeKern fStats = do
             tracerOnOff (traceBlockFetchClient trSel) verb "BlockFetchClient" tr
     , Consensus.blockFetchServerTracer = traceBlockFetchServerMetrics trmet meta tBlocksServed
         tLocalUp tMaxSlotNo $ tracerOnOff (traceBlockFetchServer trSel) verb "BlockFetchServer" tr
+    , Consensus.keepAliveClientTracer = tracerOnOff (traceKeepAliveClient trSel) verb "KeepAliveClient" tr
     , Consensus.forgeStateInfoTracer = tracerOnOff' (traceForgeStateInfo trSel) $
         forgeStateInfoTracer (Proxy @ blk) trSel tr
     , Consensus.txInboundTracer = tracerOnOff' (traceTxInbound trSel) $
