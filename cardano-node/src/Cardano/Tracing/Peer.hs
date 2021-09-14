@@ -6,6 +6,7 @@
 module Cardano.Tracing.Peer
   ( Peer (..)
   , getCurrentPeers
+  , ppCid
   , ppPeer
   , tracePeers
   ) where
