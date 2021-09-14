@@ -57,10 +57,9 @@ let
   #  you have to remove all `source-repository-package` entries from cabal.project
   #  after entering nix-shell for cabal to use nix provided dependencies for them.
   mkCluster =
-    { useCabalRun }:
+    { useCabalRun, profileName ? localCluster.profileName }:
     callPackage ./nix/supervisord-cluster
-      { inherit useCabalRun;
-        inherit (localCluster) profileName;
+      { inherit profileName useCabalRun;
         workbench = pkgs.callPackage ./nix/workbench { inherit useCabalRun; };
       };
 
@@ -156,7 +155,7 @@ let
   };
 
   devops =
-    let cluster = mkCluster { useCabalRun = false; };
+    let cluster = mkCluster { useCabalRun = false; profileName = "devops-alzo"; };
     in cardanoNodeProject.shellFor {
     name = "devops-shell";
 
