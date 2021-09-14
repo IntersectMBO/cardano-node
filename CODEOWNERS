@@ -8,7 +8,7 @@ cabal.project                                                 @LaurenceIO
 
 # General reviewers per PR
 #                       David          Duncan   Jordan     Erik   John      Nick Jared
-*                       @DavidEichmann @dcoutts @Jimbo4350 @erikd @newhoggy @nc6 @JaredCorduan 
+*                       @DavidEichmann @dcoutts @Jimbo4350 @erikd @newhoggy @nc6 @JaredCorduan
 
 # Specific reviewers for code pieces
 # NB - The last matching pattern takes precedence
@@ -34,6 +34,7 @@ nix                                                           @devops
 *.nix                                                         @devops
 flake.lock                                                    @devops
 bors.toml                                                     @devops
+docker-compose.yml                                            @devops
 cardano-node/src/Cardano/Tracing/OrphanInstances/Network.hs   @devops @coot @karknu
 cardano-node/src/Cardano/Node/Configuration/Logging.hs        @devops
 cardano-node/src/Cardano/Node/Configuration/Socket.hs         @devops
