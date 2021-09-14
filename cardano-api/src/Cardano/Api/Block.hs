@@ -66,6 +66,7 @@ import qualified Ouroboros.Network.Block as Consensus
 import qualified Cardano.Chain.Block as Byron
 import qualified Cardano.Chain.UTxO as Byron
 import qualified Cardano.Ledger.Era as Ledger
+import qualified Cardano.Protocol.TPraos.BHeader as Praos
 import qualified Shelley.Spec.Ledger.BlockChain as Ledger
 
 import           Cardano.Api.Eras
@@ -256,7 +257,7 @@ getBlockHeader (ShelleyBlock shelleyEra block) = case shelleyEra of
       where
         Consensus.HeaderFields {
             Consensus.headerFieldHash
-              = Consensus.ShelleyHash (Ledger.HashHeader (Cardano.Crypto.Hash.Class.UnsafeHash hashSBS)),
+              = Consensus.ShelleyHash (Praos.HashHeader (Cardano.Crypto.Hash.Class.UnsafeHash hashSBS)),
             Consensus.headerFieldSlot,
             Consensus.headerFieldBlockNo
           } = Consensus.getHeaderFields block
@@ -415,4 +416,3 @@ fromConsensusTip =
     conv TipGenesis                      = ChainTipAtGenesis
     conv (Tip slot (OneEraHash h) block) = ChainTip slot (HeaderHash h) block
 -}
-

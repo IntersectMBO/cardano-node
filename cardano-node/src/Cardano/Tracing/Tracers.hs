@@ -107,7 +107,7 @@ import qualified Cardano.Node.STM as STM
 import qualified Control.Concurrent.STM as STM
 import qualified Ouroboros.Network.Diffusion as ND
 
-import           Shelley.Spec.Ledger.OCert (KESPeriod (..))
+import           Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 
 {- HLINT ignore "Redundant bracket" -}
 {- HLINT ignore "Use record patterns" -}

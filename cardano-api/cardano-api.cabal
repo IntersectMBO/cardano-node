@@ -111,6 +111,7 @@ library
                       , cardano-ledger-core
                       , cardano-ledger-shelley-ma
                       , cardano-prelude
+                      , cardano-protocol-tpraos
                       , cardano-slotting
                       , cborg
                       , contra-tracer

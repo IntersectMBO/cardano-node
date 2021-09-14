@@ -36,7 +36,7 @@ import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseTextEnvelope
 import           Cardano.Api.Tx
 
-import qualified Shelley.Spec.Ledger.OCert as Shelley
+import qualified Cardano.Protocol.TPraos.OCert as Shelley
 
 -- ----------------------------------------------------------------------------
 -- Operational certificates
@@ -152,4 +152,3 @@ issueOperationalCertificate (KesVerificationKey kesVKey)
                     ShelleyNormalSigningKey poolSKey
                   Right (GenesisDelegateExtendedSigningKey delegSKey) ->
                     ShelleyExtendedSigningKey delegSKey
-
