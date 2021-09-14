@@ -38,11 +38,11 @@ jobs:
       run: |
         echo "BASH_PATH=$(cd $(dirname $(which bash)); pwd -W)/bash.exe" >> $GITHUB_ENV
 
-    - uses: haskell/actions/setup@v1
+    - uses: input-output-hk/actions/setup@v1
       id: setup-haskell
       with:
         ghc-version: ${{ matrix.ghc }}
-        cabal-version: 3.4.0.0
+        cabal-version: 3.6.0.0
 
     - name: Set cache version
       run: echo "CACHE_VERSION=grFfw8r" >> $GITHUB_ENV
