@@ -25,7 +25,13 @@ def adhoc_profiles:
     , utxo:                  0
     }
   }
-, { name: "default" }
+
+, { name: "default"
+  , genesis:
+    { genesis_future_offset: "1 seconds"
+    , utxo:                  0
+    }
+  }
 
 , { name: "devops"
   , genesis:
