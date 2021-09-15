@@ -466,8 +466,8 @@ sendEKGDirectCounter ekgDirect name = do
         Counter.inc counter
         pure $ SMap.insert name counter registeredMap
 
-_sendEKGDirectInt :: Integral a => EKGDirect -> Text -> a -> IO ()
-_sendEKGDirectInt ekgDirect name val = do
+sendEKGDirectInt :: Integral a => EKGDirect -> Text -> a -> IO ()
+sendEKGDirectInt ekgDirect name val = do
   modifyMVar_ (ekgGauges ekgDirect) $ \registeredMap -> do
     case SMap.lookup name registeredMap of
       Just gauge -> do
@@ -679,7 +679,7 @@ traceBlockFetchClientMetrics (Just ekgDirect) slotMapVar cdf1sVar cdf3sVar cdf5s
        >> return ()
 
     bfTracer :: TraceLabelPeer remotePeer (TraceFetchClientState (Header blk)) -> IO ()
-    bfTracer e@(TraceLabelPeer _ (CompletedBlockFetch p _ _ _ delay)) = do
+    bfTracer e@(TraceLabelPeer _ (CompletedBlockFetch p _ _ _ delay blockSize)) = do
       traceWith tracer e
       case pointSlot p of
         Origin -> return () -- Nothing to do.
@@ -712,6 +712,8 @@ traceBlockFetchClientMetrics (Just ekgDirect) slotMapVar cdf1sVar cdf3sVar cdf5s
             -- TODO: Revisit ekg counter access once there is a faster way.
             sendEKGDirectDouble ekgDirect "cardano.node.metrics.blockfetchclient.blockdelay.s"
                 $ realToFrac delay
+            sendEKGDirectInt ekgDirect "cardano.node.metrics.blockfetchclient.blocksize"
+               blockSize
             sendEKGDirectDouble ekgDirect "cardano.node.metrics.blockfetchclient.blockdelay.cdfOne"
                cdf1s
             sendEKGDirectDouble ekgDirect "cardano.node.metrics.blockfetchclient.blockdelay.cdfThree"
