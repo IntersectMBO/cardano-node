@@ -12,40 +12,37 @@ build-type:          Simple
 extra-doc-files:     README.md
                      CHANGELOG.md
 
-common common-options
-  build-depends:       base >=4.12 && <5
+common base            { build-depends: base >= 4.14 && < 4.15 }
+
+common project-config
+  default-language:    Haskell2010
 
   ghc-options:         -Wall
                        -Wcompat
-                       -Widentities
-                       -Wincomplete-uni-patterns
                        -Wincomplete-record-updates
-  if impl(ghc >= 8.0)
-    ghc-options:       -Wredundant-constraints
-  if impl(ghc >= 8.2)
-    ghc-options:       -fhide-source-paths
-  if impl(ghc >= 8.4)
-    ghc-options:       -Wmissing-export-lists
+                       -Wincomplete-uni-patterns
+                       -Wno-unticked-promoted-constructors
+                       -Wno-orphans
                        -Wpartial-fields
-
-  default-language:    Haskell2010
+                       -Wredundant-constraints
+                       -Wunused-packages
 
 library
-  import:              common-options
+  import:              base, project-config
   hs-source-dirs:      src
 
   exposed-modules:     Cardano.Tracer.Acceptors
                        Cardano.Tracer.CLI
                        Cardano.Tracer.Configuration
-                       Cardano.Tracer.Handlers
                        Cardano.Tracer.Run
                        Cardano.Tracer.Types
+
+                       Cardano.Tracer.Handlers
 
                        Cardano.Tracer.Handlers.Logs.File
                        Cardano.Tracer.Handlers.Logs.Journal
                        Cardano.Tracer.Handlers.Logs.Log
                        Cardano.Tracer.Handlers.Logs.Rotator
-                       Cardano.Tracer.Handlers.Logs.Run
 
                        Cardano.Tracer.Handlers.Metrics.Monitoring
                        Cardano.Tracer.Handlers.Metrics.Prometheus
@@ -69,10 +66,8 @@ library
                        , filepath
                        , hashable
                        , libsystemd-journal
-                       , network
                        , optparse-applicative
                        , ouroboros-network-framework
-                       , serialise
                        , snap-blaze
                        , snap-core
                        , snap-server
@@ -84,35 +79,38 @@ library
                        , unordered-containers
 
 executable cardano-tracer
+  import:              base, project-config
+
   hs-source-dirs:      app
 
   main-is:             cardano-tracer.hs
 
   other-modules:       Paths_cardano_tracer
 
-  build-depends:         base
-                       , cardano-tracer
+  build-depends:         cardano-tracer
                        , optparse-applicative
-                       , text
 
-  default-language:    Haskell2010
-  ghc-options:         -Wall
-                       -threaded
+  ghc-options:         -threaded
                        -rtsopts
                        -with-rtsopts=-T
 
 test-suite cardano-tracer-test
-  import:              common-options
+  import:              base, project-config
   type:                exitcode-stdio-1.0
-  hs-source-dirs:      test
-  main-is:             cardano-tracer-test.hs
-  other-modules:       Cardano.Tracer.Test.Types
-                       Cardano.Tracer.Test.Forwarder
-                       Cardano.Tracer.Test.Logs.File
-                       Cardano.Tracer.Test.Logs.Rotator
 
-  build-depends:         aeson
-                       , async
+  hs-source-dirs:      test
+
+  main-is:             cardano-tracer-test.hs
+
+  other-modules:       Cardano.Tracer.Test.Forwarder
+                       Cardano.Tracer.Test.Logs.Tests
+                       Cardano.Tracer.Test.Network.Tests
+                       Cardano.Tracer.Test.Queue.Tests
+                       Cardano.Tracer.Test.SSH.Tests
+
+                       Cardano.Tracer.Test.Utils
+
+  build-depends:         async
                        , base
                        , bytestring
                        , cardano-tracer
@@ -121,13 +119,11 @@ test-suite cardano-tracer-test
                        , directory
                        , ekg-core
                        , ekg-forward
+                       , extra
                        , filepath
-                       , io-sim
-                       , io-classes
-                       , network
                        , ouroboros-network-framework
+                       , process
                        , QuickCheck
-                       , serialise
                        , stm
                        , tasty
                        , tasty-quickcheck
@@ -135,11 +131,7 @@ test-suite cardano-tracer-test
                        , time
                        , trace-dispatcher
                        , trace-forward
-                       , typed-protocols-examples
-                       , unordered-containers
-                       , vector
 
   ghc-options:         -threaded
                        -rtsopts
                        -with-rtsopts=-N
-  default-extensions:  OverloadedStrings

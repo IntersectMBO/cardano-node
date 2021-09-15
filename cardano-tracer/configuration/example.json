@@ -1,12 +1,8 @@
 {
-  "connectMode": "Initiator",
-  "acceptAt": [
-    "/tmp/forwarder-1.sock",
-    "/tmp/forwarder-2.sock",
-    "/tmp/forwarder-3.sock"
-  ],
-  "loRequestNum": 1,
-  "ekgRequestFreq": 1,
+  "network": {
+    "tag": "AcceptAt",
+    "contents": "/tmp/forwarder-1.sock"
+  },
   "hasEKG": null,
   "hasPrometheus": [
     "127.0.0.1",
@@ -25,3 +21,4 @@
     "rpMaxAgeHours": 1
   }
 }
+

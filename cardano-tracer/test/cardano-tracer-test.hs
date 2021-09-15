@@ -1,14 +1,15 @@
 import           Test.Tasty
 
-import qualified Cardano.Tracer.Test.Logs.File as Test.File
-import qualified Cardano.Tracer.Test.Logs.Rotator as Test.Rotator
+import qualified Cardano.Tracer.Test.Logs.Tests as Logs
+import qualified Cardano.Tracer.Test.Network.Tests as Network
+import qualified Cardano.Tracer.Test.Queue.Tests as Queue
+import qualified Cardano.Tracer.Test.SSH.Tests as SSH
 
 main :: IO ()
-main = defaultMain tests
-
-tests :: TestTree
-tests =
+main = defaultMain $
   testGroup "cardano-tracer"
-    [ Test.File.tests
-    , Test.Rotator.tests
+    [ Logs.tests
+    , Network.tests
+    , Queue.tests
+    , SSH.tests
     ]
