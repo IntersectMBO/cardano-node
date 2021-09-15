@@ -10,16 +10,16 @@
 # Build system's Nixpkgs. We use this so that we have the same docker
 # version as the docker daemon.
 , hostPkgs ? import <nixpkgs> {}
-
-# Dockerhub repository for image tagging.
-, dockerHubRepoName ? null
 }:
 
 with hostPkgs;
 with hostPkgs.lib;
 
 let
-  image = impureCreated nodePackages.dockerImage;
+  images = map impureCreated [
+    nodePackages.dockerImage
+    nodePackages.submitApiDockerImage
+  ];
 
   # Override Docker image, setting its creation date to the current time rather than the unix epoch.
   impureCreated = image: image.overrideAttrs (oldAttrs: { created = "now"; }) // { inherit (image) version; };
@@ -32,15 +32,8 @@ in
 
     export PATH=${lib.makeBinPath [ docker gnused ]}
 
-    ${if dockerHubRepoName == null then ''
-    reponame=cardano-node
-    username="$(docker info | sed '/Username:/!d;s/.* //')"
-    fullrepo="$username/$reponame"
-    '' else ''
-    fullrepo="${dockerHubRepoName}"
-    ''}
-
   '' + concatMapStringsSep "\n" (image: ''
+    fullrepo="${image.imageName}"
     branch="''${BUILDKITE_BRANCH:-}"
     event="''${GITHUB_EVENT_NAME:-}"
 
@@ -89,4 +82,4 @@ in
 
     echo "Cleaning up with docker system prune"
     docker system prune -f
-  '') [ image ] )
+  '') images)
