@@ -65,6 +65,8 @@ let
         ];
        # These fon't build on windows yet
        packages.plutus-example.package.buildable = false;
+       packages.create-script-context.package.buildable = false;
+       packages.plutus-example-test.package.buildable = false;
        packages.plutus-ledger.package.buildable = false;
       })
       {

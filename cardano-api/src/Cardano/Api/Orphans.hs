@@ -33,6 +33,7 @@ import           Cardano.Ledger.BaseTypes (StrictMaybe (..), strictMaybeToMaybe)
 import qualified Cardano.Ledger.BaseTypes as Ledger
 import           Cardano.Ledger.Crypto (StandardCrypto)
 import           Cardano.Slotting.Slot (SlotNo (..))
+import           Cardano.Slotting.Time (SystemStart (..))
 
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import qualified Cardano.Ledger.Alonzo as Alonzo
@@ -474,3 +475,6 @@ instance (Ledger.Era era, Show (Ledger.Value era), ToJSON (Ledger.Value era))
            ]
 
 deriving instance Show Alonzo.AlonzoGenesis
+
+deriving newtype instance ToJSON SystemStart
+deriving newtype instance FromJSON SystemStart

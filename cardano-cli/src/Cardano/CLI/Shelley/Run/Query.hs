@@ -20,11 +20,13 @@ module Cardano.CLI.Shelley.Run.Query
   , runQueryCmd
   , percentage
   , executeQuery
+  , queryQueryTip
   ) where
 
 import           Cardano.Api
 import           Cardano.Api.Byron
 import           Cardano.Api.Shelley
+
 import           Cardano.Binary (decodeFull)
 import           Cardano.CLI.Environment (EnvSocketError, readEnvSocketPath, renderEnvSocketError)
 import           Cardano.CLI.Helpers (HelpersError (..), hushM, pPrintCBOR, renderHelpersError)
@@ -36,6 +38,7 @@ import           Cardano.Ledger.Coin
 import           Cardano.Ledger.Crypto (StandardCrypto)
 import           Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import           Cardano.Prelude hiding (atomically)
+import           Cardano.Slotting.EpochInfo (hoistEpochInfo)
 import           Control.Monad.Trans.Except (except)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistMaybe, left)
 import           Data.Aeson (ToJSON (..), (.=))
@@ -46,6 +49,7 @@ import           Numeric (showEFloat)
 import           Ouroboros.Consensus.BlockchainTime.WallClock.Types (RelativeTime (..),
                    SystemStart (..), toRelativeTime)
 import           Ouroboros.Consensus.Cardano.Block as Consensus (EraMismatch (..))
+import qualified Ouroboros.Consensus.HardFork.History as Consensus
 import           Ouroboros.Network.Block (Serialised (..))
 import           Ouroboros.Network.Protocol.LocalStateQuery.Type (AcquireFailure (..))
 import           Prelude (String, id)
@@ -210,18 +214,7 @@ runQueryTip (AnyConsensusModeParams cModeParams) network mOutFile = do
     CardanoMode -> do
       let localNodeConnInfo = LocalNodeConnectInfo cModeParams network sockPath
 
-      (chainTip, eLocalState) <- liftIO $
-        executeLocalStateQueryExprWithChainSync localNodeConnInfo Nothing $ \ntcVersion -> do
-          era <- queryExpr (QueryCurrentEra CardanoModeIsMultiEra)
-          eraHistory <- queryExpr (QueryEraHistory CardanoModeIsMultiEra)
-          mSystemStart <- if ntcVersion >= NodeToClientV_9
-            then Just <$> queryExpr QuerySystemStart
-            else return Nothing
-          return O.QueryTipLocalState
-            { O.era = era
-            , O.eraHistory = eraHistory
-            , O.mSystemStart = mSystemStart
-            }
+      (chainTip, eLocalState) <- liftIO $ queryQueryTip localNodeConnInfo Nothing
 
       mLocalState <- hushM (first ShelleyQueryCmdAcquireFailure eLocalState) $ \e ->
         liftIO . T.hPutStrLn IO.stderr $ "Warning: Local state unavailable: " <> renderShelleyQueryCmdError e
@@ -254,6 +247,7 @@ runQueryTip (AnyConsensusModeParams cModeParams) network mOutFile = do
               , O.mEpoch = Just epochNo
               , O.mSyncProgress = mSyncProgress
               }
+
 
       let jsonOutput = encodePretty $ O.QueryTipOutput
             { O.chainTip = chainTip
@@ -867,3 +861,25 @@ obtainLedgerEraClassConstraints ShelleyBasedEraShelley f = f
 obtainLedgerEraClassConstraints ShelleyBasedEraAllegra f = f
 obtainLedgerEraClassConstraints ShelleyBasedEraMary    f = f
 obtainLedgerEraClassConstraints ShelleyBasedEraAlonzo  f = f
+
+
+queryQueryTip
+  :: LocalNodeConnectInfo CardanoMode
+  -> Maybe ChainPoint
+  -> IO (ChainTip, Either AcquireFailure O.QueryTipLocalState)
+queryQueryTip connectInfo mpoint = do
+  liftIO $ executeLocalStateQueryExprWithChainSync connectInfo mpoint
+    $ \ntcVersion -> do
+        era <- queryExpr (QueryCurrentEra CardanoModeIsMultiEra)
+        eraHistory@(EraHistory _ interpreter)
+          <- queryExpr (QueryEraHistory CardanoModeIsMultiEra)
+        mSystemStart <- if ntcVersion >= NodeToClientV_9
+                        then Just <$> queryExpr QuerySystemStart
+                        else return Nothing
+        return O.QueryTipLocalState
+          { O.era = era
+          , O.eraHistory = eraHistory
+          , O.mSystemStart = mSystemStart
+          , O.epochInfo = hoistEpochInfo (first TransactionValidityIntervalError . runExcept)
+                            $ Consensus.interpreterToEpochInfo interpreter
+          }

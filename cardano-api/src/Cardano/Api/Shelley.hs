@@ -43,6 +43,7 @@ module Cardano.Api.Shelley
     TxId(TxId),
     toShelleyTxId,
     fromShelleyTxId,
+    getTxIdShelley,
     TxIn(TxIn),
     toShelleyTxIn,
     fromShelleyTxIn,

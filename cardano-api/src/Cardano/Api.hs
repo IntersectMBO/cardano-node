@@ -239,7 +239,7 @@ module Cardano.Api (
     -- ** Script execution units
     evaluateTransactionExecutionUnits,
     ScriptExecutionError(..),
-    TransactionValidityIntervalError,
+    TransactionValidityIntervalError(..),
 
     -- ** Transaction balance
     evaluateTransactionBalance,
@@ -294,7 +294,7 @@ module Cardano.Api (
     TxMetadataJsonSchemaError (..),
 
     -- * Certificates
-    Certificate,
+    Certificate(..),
 
     -- ** Registering stake address and delegating
     -- | Certificates that are embedded in transactions for registering and
@@ -593,6 +593,8 @@ module Cardano.Api (
     fromLedgerPParams,
     --TODO: arrange not to export these
     toNetworkMagic,
+    fromLedgerTxOuts,
+    toLedgerUTxO,
     --TODO: Remove after updating cardano-node-chairman with new IPC
     SomeNodeClientProtocol(..),
 
