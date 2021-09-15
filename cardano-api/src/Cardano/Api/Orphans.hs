@@ -243,11 +243,7 @@ instance ToJSON Shelley.Likelihood where
   toJSON (Shelley.Likelihood llhd) =
     toJSON $ fmap (\(Shelley.LogWeight f) -> exp $ realToFrac f :: Double) llhd
 
-instance Consensus.ShelleyBasedEra era => ToJSON (ShelleyEpoch.PulsingStakeDistr era m) where
-  toJSON (ShelleyEpoch.StillPulsing _) = Aeson.Null
-  toJSON (ShelleyEpoch.Completed ru) = toJSON ru
-
-instance Consensus.ShelleyBasedEra era => ToJSON (Shelley.SnapShots era) where
+instance Crypto.Crypto crypto => ToJSON (Shelley.SnapShots crypto) where
   toJSON ss = object [ "pstakeMark" .= Shelley._pstakeMark ss
                      , "pstakeSet" .= Shelley._pstakeSet ss
                      , "pstakeGo" .= Shelley._pstakeGo ss
