@@ -1548,8 +1548,6 @@ data TxBodyError =
      | TxBodyOutputOverflow Quantity TxOutInAnyEra
      | TxBodyMetadataError [(Word64, TxMetadataRangeError)]
      | TxBodyMintAdaError
-     | TxBodyAuxDataHashInvalidError
-     | TxBodyMintBeforeMaryError
      | TxBodyMissingProtocolParams
      deriving Show
 
@@ -1573,10 +1571,6 @@ instance Error TxBodyError where
         | (k, err) <- errs ]
     displayError TxBodyMintAdaError =
       "Transaction cannot mint ada, only non-ada assets"
-    displayError TxBodyMintBeforeMaryError =
-      "Transaction can mint in Mary era or later"
-    displayError TxBodyAuxDataHashInvalidError =
-      "Auxiliary data hash is invalid"
     displayError TxBodyMissingProtocolParams =
       "Transaction uses Plutus scripts but does not provide the protocol " ++
       "parameters to hash"
