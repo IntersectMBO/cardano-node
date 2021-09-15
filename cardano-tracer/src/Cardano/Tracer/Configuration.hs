@@ -12,23 +12,26 @@ module Cardano.Tracer.Configuration
   , LogMode (..)
   , LogFormat (..)
   , LoggingParams (..)
-  , ConnectMode (..)
+  , Network (..)
   , TracerConfig (..)
   , readTracerConfig
   ) where
 
 import           Data.Aeson (FromJSON, ToJSON, eitherDecodeFileStrict')
 import           Data.Fixed (Pico)
+import           Data.List.NonEmpty
 import           Data.Word (Word16, Word64)
 import           GHC.Generics (Generic)
-import qualified System.Exit as Ex
+import           System.Exit (die)
 
 type Host = String
 type Port = Int
 
+-- | Only local socket is supported.
 newtype Address = LocalSocket FilePath
   deriving (Eq, Generic, FromJSON, Show, ToJSON)
 
+-- | Endpoint for internal services.
 data Endpoint = Endpoint !Host !Port
   deriving (Eq, Generic, FromJSON, Show, ToJSON)
 
@@ -38,45 +41,44 @@ data RotationParams = RotationParams
   , rpKeepFilesNum  :: !Word    -- ^ Number of files to keep
   } deriving (Eq, Generic, FromJSON, Show, ToJSON)
 
+-- | Log mode: in the file or in Linux journal service.
 data LogMode
   = FileMode
   | JournalMode
   deriving (Eq, Generic, FromJSON, Show, ToJSON)
 
+-- | Format of log file: for human (text) or for machine (json).
 data LogFormat
   = ForHuman
   | ForMachine
   deriving (Eq, Generic, FromJSON, Show, ToJSON)
 
+-- | Logging parameters.
 data LoggingParams = LoggingParams
-  { logRoot   :: !FilePath
-  , logMode   :: !LogMode
-  , logFormat :: !LogFormat
+  { logRoot   :: !FilePath  -- ^ Root directory where all subdirs with logs will be created.
+  , logMode   :: !LogMode   -- ^ Log mode.
+  , logFormat :: !LogFormat -- ^ Log format.
   } deriving (Eq, Generic, FromJSON, Show, ToJSON)
 
--- | 'cardano-tracer' can be both an initiator and a responder, from
---   networking point of view:
---   1. In 'Initiator' mode it tries to establish the connection with the node.
---   2. In 'Responder' mode it accepts the conection from the node.
-data ConnectMode
-  = Initiator
-  | Responder
+data Network
+  = AcceptAt  !Address
+  | ConnectTo !(NonEmpty Address)
   deriving (Eq, Generic, FromJSON, Show, ToJSON)
 
+-- | Complete configuration.
 data TracerConfig = TracerConfig
-  { connectMode    :: !ConnectMode
-  , acceptAt       :: ![Address]
-  , loRequestNum   :: !Word16 -- ^ How many 'TraceObject's in one request.
-  , ekgRequestFreq :: !Pico   -- ^ How often to request EKG-metrics.
-  , hasEKG         :: !(Maybe Endpoint)
-  , hasPrometheus  :: !(Maybe Endpoint)
-  , logging        :: ![LoggingParams]
-  , rotation       :: !(Maybe RotationParams)
+  { network        :: !Network                  -- ^ How cardano-tracer will be connected to node(s).
+  , loRequestNum   :: !(Maybe Word16)           -- ^ How many 'TraceObject's will be asked in each request.
+  , ekgRequestFreq :: !(Maybe Pico)             -- ^ How often to request for EKG-metrics, in seconds.
+  , hasEKG         :: !(Maybe Endpoint)         -- ^ Endpoint for EKG web-page.
+  , hasPrometheus  :: !(Maybe Endpoint)         -- ^ Endpoint for Promeheus web-page.
+  , logging        :: !(NonEmpty LoggingParams) -- ^ Logging parameters.
+  , rotation       :: !(Maybe RotationParams)   -- ^ Rotation parameters.
   } deriving (Eq, Generic, FromJSON, Show, ToJSON)
 
--- | Reads the tracer's configuration file (path is passed via '--config' CLI option).
+-- | Read the tracer's configuration file (path is passed via '--config' CLI option).
 readTracerConfig :: FilePath -> IO TracerConfig
 readTracerConfig pathToConfig =
   eitherDecodeFileStrict' pathToConfig >>= \case
-    Left e -> Ex.die $ "Invalid tracer's configuration: " <> show e
+    Left e -> die $ "Invalid tracer's configuration: " <> show e
     Right (config :: TracerConfig) -> return config

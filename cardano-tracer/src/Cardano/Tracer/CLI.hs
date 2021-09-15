@@ -8,8 +8,7 @@ module Cardano.Tracer.CLI
 
 import           Data.Aeson (FromJSON, ToJSON)
 import           GHC.Generics (Generic)
-import           Options.Applicative (Parser, bashCompleter, completer,
-                                      help, long, metavar, strOption)
+import           Options.Applicative
 
 -- | Type for CLI parameters required for the service.
 newtype TracerParams = TracerParams
@@ -17,24 +16,11 @@ newtype TracerParams = TracerParams
   } deriving (Generic, FromJSON, ToJSON)
 
 parseTracerParams :: Parser TracerParams
-parseTracerParams =
-  TracerParams
-    <$> parseFilePath
-          "config"
-          "file"
-          "Configuration file for cardano-tracer service"
-
--- Aux parsers
-
-parseFilePath
-  :: String
-  -> String
-  -> String
-  -> Parser FilePath
-parseFilePath optname completion desc = strOption flags
- where
-  flags =
-       long optname
+parseTracerParams = TracerParams <$>
+  strOption (
+       long "config"
+    <> short 'c'
     <> metavar "FILEPATH"
-    <> help desc
-    <> completer (bashCompleter completion)
+    <> help "Configuration file for cardano-tracer service"
+    <> completer (bashCompleter "file")
+    )

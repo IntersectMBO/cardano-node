@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE NamedFieldPuns #-}
 
 module Cardano.Tracer.Handlers.Metrics.Run
   ( runMetricsHandler
@@ -9,16 +9,21 @@ import           Control.Concurrent.Async (concurrently_)
 import           Cardano.Tracer.Configuration (TracerConfig (..))
 import           Cardano.Tracer.Handlers.Metrics.Monitoring (runMonitoringServer)
 import           Cardano.Tracer.Handlers.Metrics.Prometheus (runPrometheusServer)
-import           Cardano.Tracer.Types (AcceptedItems)
+import           Cardano.Tracer.Types
 
 runMetricsHandler
   :: TracerConfig
-  -> AcceptedItems
+  -> AcceptedMetrics
+  -> AcceptedNodeInfo
   -> IO ()
-runMetricsHandler TracerConfig{..} acceptedItems =
+runMetricsHandler TracerConfig{hasEKG, hasPrometheus} acceptedMetrics acceptedNodeInfo =
   case (hasEKG, hasPrometheus) of
-    (Nothing,  Nothing)   -> return ()
-    (Nothing,  Just prom) -> runPrometheusServer prom acceptedItems
-    (Just ekg, Nothing)   -> runMonitoringServer ekg acceptedItems
-    (Just ekg, Just prom) -> concurrently_ (runPrometheusServer prom acceptedItems)
-                                           (runMonitoringServer ekg acceptedItems)
+    (Nothing, Nothing) ->
+      return ()
+    (Nothing, Just prom) ->
+      runPrometheusServer prom acceptedMetrics acceptedNodeInfo
+    (Just ekg, Nothing) ->
+      runMonitoringServer ekg acceptedMetrics
+    (Just ekg, Just prom) ->
+      concurrently_ (runPrometheusServer prom acceptedMetrics acceptedNodeInfo)
+                    (runMonitoringServer ekg acceptedMetrics)

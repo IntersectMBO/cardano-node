@@ -1,90 +1,80 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Cardano.Tracer.Types
-  ( AcceptedItems
-  , TraceObjects
+  ( AcceptedMetrics
+  , AcceptedNodeInfo
   , Metrics
   , NodeId (..)
-  , NodeName
-  , getNodeName
-  , addressToNodeId
-  , initAcceptedItems
-  , prepareAcceptedItems
+  , connIdToNodeId
+  , initAcceptedMetrics
+  , initAcceptedNodeInfo
+  , prepareAcceptedMetrics
+  , printNodeFullId
   ) where
 
-import           Control.Concurrent.STM.TBQueue (TBQueue, newTBQueueIO)
+import           Control.Concurrent.STM (atomically)
+import           Control.Concurrent.STM.TVar (TVar, modifyTVar', newTVarIO, readTVarIO)
 import           Control.Monad (unless)
 import           Data.Hashable (Hashable)
 import           Data.HashMap.Strict (HashMap)
 import qualified Data.HashMap.Strict as HM
-import           Data.IORef (IORef, atomicModifyIORef', newIORef, readIORef)
-import           Data.Text (Text, pack, replace, splitOn, unpack)
-import           Data.Word (Word16)
+import           Data.Text (Text)
+import qualified Data.Text as T
 import           GHC.Generics (Generic)
 import qualified System.Metrics as EKG
 
-import           Cardano.Logging (TraceObject)
+import           Ouroboros.Network.Socket (ConnectionId (..))
 
-import           Trace.Forward.Protocol.Type (NodeInfoStore)
+import           Trace.Forward.Protocol.Type (NodeInfo)
 
 import           System.Metrics.Store.Acceptor (MetricsLocalStore, emptyMetricsLocalStore)
 
--- | Human-readable name of node.
-type NodeName = Text
+-- | Unique identifier of the node, based on 'remoteAddress' from 'ConnectionId'.
+newtype NodeId = NodeId Text
+  deriving (Eq, Generic, Hashable, Ord, Show)
 
-getNodeName :: NodeInfoStore -> IO (Maybe NodeName)
-getNodeName niStore = lookup "NodeName" <$> readIORef niStore
-
--- | Unique identifier of the node.
-data NodeId = NodeId
-  { nodeHost :: !String
-  , nodePort :: !Word16
-  } deriving (Eq, Generic, Hashable, Ord)
-
-instance Show NodeId where
-  show (NodeId pipeWithNum 0) = pipeWithNum
-  show (NodeId ip port) = ip <> "-" <> show port
-
-addressToNodeId :: String -> NodeId
-addressToNodeId remoteAddress =
-  -- The string 'remoteAddress' can contain two kinds of address:
-  -- 1. the pair of IP:port
-  -- 2. the path to local socket file with the connection number,
-  --    to make 'remoteAddress' unique for each connected node.
-  case splitOn ":" . pack $ remoteAddress of
-    [ip, port] -> NodeId (unpack ip) (read (unpack port) :: Word16)
-    _          -> NodeId preparedLocalSocket 0
+connIdToNodeId :: Show addr => ConnectionId addr -> NodeId
+connIdToNodeId ConnectionId{remoteAddress} = NodeId preparedAddress
  where
-  preparedLocalSocket =
-    -- The format of 'remoteAddress' in this case looks like 'LocalAddress "temp-NUM"',
-    -- so make it simpler, like 'LocalAddress-temp-NUM'.
-    unpack . replace " " "-" . replace "\"" "" . replace "/" "-" . pack $ remoteAddress
+  -- We have to remove "wrong" symbols from 'NodeId',
+  -- to make it appropriate for the name of the subdirectory.
+  preparedAddress =
+      T.replace "LocalAddress" "" -- There are only local addresses by design.
+    . T.replace " " "-"
+    . T.replace "\"" ""
+    . T.replace "/" "-"
+    . T.pack
+    $ show remoteAddress
 
-type TraceObjects = TBQueue TraceObject
+printNodeFullId :: Text -> NodeId -> Text
+printNodeFullId ""       (NodeId p) = T.drop 2 p -- In this case, '--' in the beginning is useless.
+printNodeFullId nodeName (NodeId p) = nodeName <> p
 
-type Metrics = (EKG.Store, IORef MetricsLocalStore)
+-- | We have to create EKG.Store and MetricsLocalStore
+--   to keep the metrics accepted from the node.
+type Metrics = (EKG.Store, TVar MetricsLocalStore)
 
-type AcceptedItems = IORef (HashMap NodeId (NodeInfoStore, TraceObjects, Metrics))
+type AcceptedMetrics = TVar (HashMap NodeId Metrics)
 
-initAcceptedItems :: IO AcceptedItems
-initAcceptedItems = newIORef HM.empty
+type AcceptedNodeInfo = TVar (HashMap NodeId NodeInfo)
 
-prepareAcceptedItems
+initAcceptedMetrics :: IO AcceptedMetrics
+initAcceptedMetrics = newTVarIO HM.empty
+
+initAcceptedNodeInfo :: IO AcceptedNodeInfo
+initAcceptedNodeInfo = newTVarIO HM.empty
+
+prepareAcceptedMetrics
   :: NodeId
-  -> AcceptedItems
+  -> AcceptedMetrics
   -> IO ()
-prepareAcceptedItems nodeId itemsIORef = do
-  items' <- readIORef itemsIORef
-  -- If such 'nodeId' is already presented in 'items', it means that this node
-  -- already worked with the tracer and now it's re-connect to the tracer.
-  -- No need to re-create its stores.
-  unless (nodeId `HM.member` items') $ do
-    niStore    <- newIORef []
-    trObQueue  <- newTBQueueIO 2000
-    ekgStore   <- EKG.newStore
-    localStore <- newIORef emptyMetricsLocalStore
-    let storesForNewNode = (niStore, trObQueue, (ekgStore, localStore))
-    atomicModifyIORef' itemsIORef $ \items ->
-      (HM.insert nodeId storesForNewNode items, ())
+prepareAcceptedMetrics nodeId acceptedMetrics = do
+  metrics <- readTVarIO acceptedMetrics
+  unless (nodeId `HM.member` metrics) $ do
+    storesForNewNode <-
+      (,) <$> EKG.newStore
+          <*> newTVarIO emptyMetricsLocalStore
+    atomically $ modifyTVar' acceptedMetrics $ HM.insert nodeId storesForNewNode

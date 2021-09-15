@@ -1,6 +1,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE PackageImports #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Cardano.Tracer.Handlers.Logs.Rotator
@@ -8,100 +9,73 @@ module Cardano.Tracer.Handlers.Logs.Rotator
   ) where
 
 import           Control.Exception (SomeException, try)
-import           Control.Concurrent (threadDelay)
 import           Control.Concurrent.Async (forConcurrently_)
-import           Control.Monad (forM_, forever, when)
-import           Control.Monad.Extra (whenM)
-import           Data.List (find, nub, sort)
+import           Control.Monad (forM_, forever, unless, when)
+import           Control.Monad.Extra (whenJust, whenM)
+import "contra-tracer" Control.Tracer (showTracing, stdoutTracer, traceWith)
+import           Data.List (nub, sort)
+import           Data.List.Extra (dropEnd)
+import qualified Data.List.NonEmpty as NE
 import           Data.Time (diffUTCTime, getCurrentTime)
 import           Data.Word (Word64)
 import           System.Directory
 import           System.Directory.Extra (listDirectories, listFiles)
-import           System.FilePath ((</>), takeDirectory, takeFileName)
-import           System.IO (hPutStrLn, stderr)
+import           System.FilePath ((</>), takeDirectory)
+import           System.Time.Extra (sleep)
 
 import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.Handlers.Logs.Log
 
 runLogsRotator :: TracerConfig -> IO ()
-runLogsRotator TracerConfig{..} =
-  case rotation of
-    Nothing -> return () -- No rotation parameters are defined.
-    Just rotParams -> launchRotator rotParams rootDirsWithFormats
+runLogsRotator TracerConfig{rotation, logging} =
+  whenJust rotation $
+    launchRotator loggingParamsForFiles
  where
-  rootDirsWithFormats = nub . map getRootAndFormat . filter fileParamsOnly $ logging
-  fileParamsOnly   LoggingParams{..} = logMode == FileMode
-  getRootAndFormat LoggingParams{..} = (logRoot, logFormat)
+  loggingParamsForFiles = nub . NE.filter filesOnly $ logging
+  filesOnly LoggingParams{logMode} = logMode == FileMode
 
 -- | All the logs with 'TraceObject's received from particular node
 -- will be stored in a separate directory, so they can be checked
 -- concurrently.
 launchRotator
-  :: RotationParams
-  -> [(FilePath, LogFormat)]
+  :: [LoggingParams]
+  -> RotationParams
   -> IO ()
-launchRotator _ [] = return ()
-launchRotator rotParams rootDirsWithFormats = forever $ do
-  try (forM_ rootDirsWithFormats $ checkRootDir rotParams) >>= \case
+launchRotator [] _ = return ()
+launchRotator loggingParamsForFiles rotParams = forever $ do
+  try (forM_ loggingParamsForFiles $ checkRootDir rotParams) >>= \case
     Left (e :: SomeException) ->
-      hPutStrLn stderr $ "Problem with rotation of log files: " <> show e
+      logTrace $ "cardano-tracer, problem with logs rotation: " <> show e
     Right _ -> return ()
-  threadDelay 10000000
+  sleep 15.0
+ where
+  logTrace = traceWith $ showTracing stdoutTracer
 
 checkRootDir
   :: RotationParams
-  -> (FilePath, LogFormat)
+  -> LoggingParams
   -> IO ()
-checkRootDir rotParams (rootDir, format) =
-  whenM (doesDirectoryExist rootDir) $
+checkRootDir rotParams LoggingParams{logRoot, logFormat} =
+  whenM (doesDirectoryExist logRoot) $
     -- All the logs received from particular node will be stored in corresponding subdir.
-    listDirectories rootDir >>= \case
+    listDirectories logRoot >>= \case
       [] ->
         -- There are no nodes' subdirs yet (or they were deleted),
-        -- so no rotation can be performed.
+        -- so no rotation can be performed for now.
         return ()
-      subDirs -> do
-        let fullPathsToSubDirs = map (rootDir </>) subDirs  
-        -- Ok, list of subdirs is here, check each of them in parallel.
-        forConcurrently_ fullPathsToSubDirs $ checkLogsFromNode rotParams format
+      nodesSubDirs -> do
+        let fullPathsToSubDirs = map (logRoot </>) nodesSubDirs  
+        forConcurrently_ fullPathsToSubDirs $ checkLogs rotParams logFormat
 
-checkLogsFromNode
+checkLogs
   :: RotationParams
   -> LogFormat
   -> FilePath
   -> IO ()
-checkLogsFromNode RotationParams{..} format subDirForLogs =
-  listFiles subDirForLogs >>= \case
-    [] ->
-      -- There are no logs in this subdir (probably they were deleted),
-      -- so no rotation can be performed.
-      return ()
-    [oneFile] ->
-      -- At least two files must be there: one log and one symlink.
-      -- So if there is only one file, it's a weird situation,
-      -- (probably invalid symlink only), we have to try to fix it.
-      fixLog (subDirForLogs </> oneFile) format
-    logs -> do
-      let fullPathsToLogs = map (subDirForLogs </>) logs
-      checkIfCurrentLogIsFull fullPathsToLogs format rpLogLimitBytes
-      checkIfThereAreOldLogs  fullPathsToLogs format rpMaxAgeHours rpKeepFilesNum
-
-fixLog
-  :: FilePath
-  -> LogFormat
-  -> IO ()
-fixLog oneFile format =
-  isItSymLink format oneFile >>= \case
-    True -> do
-      -- It is a symlink, but corresponding log was deleted,
-      -- whch means that symlink is already invalid.
-      removeFile oneFile
-      createLogAndSymLink (takeDirectory oneFile) format
-    False ->
-      when (isItLog format oneFile) $
-        -- It is a single log, but its symlink was deleted.
-        withCurrentDirectory (takeDirectory oneFile) $
-          createFileLink (takeFileName oneFile) (symLinkName format)
+checkLogs RotationParams{rpLogLimitBytes, rpMaxAgeHours, rpKeepFilesNum} format subDirForLogs = do
+  logs <- map (subDirForLogs </>) . filter (isItLog format) <$> listFiles subDirForLogs
+  checkIfCurrentLogIsFull logs format rpLogLimitBytes
+  checkIfThereAreOldLogs logs rpMaxAgeHours rpKeepFilesNum
 
 checkIfCurrentLogIsFull
   :: [FilePath]
@@ -110,64 +84,44 @@ checkIfCurrentLogIsFull
   -> IO ()
 checkIfCurrentLogIsFull [] _ _ = return ()
 checkIfCurrentLogIsFull logs format maxSizeInBytes =
-  case find (\logPath -> takeFileName logPath == symLinkName format) logs of
-    Just symLink ->
-      doesSymLinkValid symLink >>= \case
-        True ->
-          whenM (isLogFull =<< getPathToLatestLog symLink) $
-            createLogAndUpdateSymLink subDirForLogs format
-        False ->
-          -- Remove invalid symlink.
-          removeFile symLink
-    Nothing ->
-      -- There is no symlink we need, so skip check for now:
-      -- this symlink will be created when the new 'TraceObject's will be received.
-      return ()
+  whenM (logIsFull pathToCurrentLog) $
+    createLogAndUpdateSymLink (takeDirectory pathToCurrentLog) format
  where
-  subDirForLogs = takeDirectory $ head logs -- All these logs are in the same subdir.
-
-  getPathToLatestLog symlink = do
-    logName <- getSymbolicLinkTarget symlink
-    return $ subDirForLogs </> logName
-
-  isLogFull logName = do
-    sz <- getFileSize logName
-    return $ fromIntegral sz >= maxSizeInBytes
+  logIsFull logName = do
+    size <- getFileSize logName
+    return $ fromIntegral size >= maxSizeInBytes
+  -- Since logs' names contain timestamps, the maximum one is the latest log,
+  -- or current log (i.e. the log we write 'TraceObject's in).
+  pathToCurrentLog = maximum logs
 
 checkIfThereAreOldLogs
   :: [FilePath]
-  -> LogFormat
   -> Word
   -> Word
   -> IO ()
-checkIfThereAreOldLogs [] _ _ _ = return ()
-checkIfThereAreOldLogs logs format maxAgeInHours keepFilesNum = do
-  now <- getCurrentTime
-  let logsWeNeed = filter (isItLog format) logs
-      -- Sort by name with timestamp, so the latest logs will always be in the end.
-      oldLogs = sort . filter (oldLog now) $ logsWeNeed
-      remainingLogsNum = length logsWeNeed - length oldLogs
-  if remainingLogsNum >= fromIntegral keepFilesNum
-    then mapM_ removeFile oldLogs
-    else removeSomeOldLogs oldLogs remainingLogsNum
+checkIfThereAreOldLogs [] _ _ = return ()
+checkIfThereAreOldLogs logs maxAgeInHours keepFilesNum = do
+  -- Logs' names contain timestamp, so we can sort them.  
+  let fromOldestToNewest = sort logs
+      -- N ('keepFilesNum') newest files have to be kept in any case.
+      logsWeHaveToCheck = dropEnd (fromIntegral keepFilesNum) fromOldestToNewest
+  unless (null logsWeHaveToCheck) $ do
+    now <- getCurrentTime
+    checkOldLogs now logsWeHaveToCheck
  where
-  oldLog now' logName =
-    case getTimeStampFromLog logName of
-      Just timeStamp ->
-        let logAge = now' `diffUTCTime` timeStamp
-        in toSeconds logAge >= maxAgeInSecs
-      Nothing -> False
+  checkOldLogs _ [] = return ()
+  checkOldLogs now' (oldestLog:otherLogs) =
+    case getTimeStampFromLog oldestLog of
+      Just ts -> do
+        let oldestLogAge = toSeconds $ now' `diffUTCTime` ts
+        when (oldestLogAge >= maxAgeInSecs) $ do
+          removeFile oldestLog
+          checkOldLogs now' otherLogs
+        -- If 'oldestLog' isn't outdated (yet), other logs aren't
+        -- outdated too (because they are newer), so we shouldn't check them.
+      Nothing ->
+        -- Something is wrong with log's name, continue.
+        checkOldLogs now' otherLogs
 
   maxAgeInSecs = fromIntegral maxAgeInHours * 3600
   toSeconds age = fromEnum age `div` 1000000000000
-
-  removeSomeOldLogs [] _ = return ()
-  removeSomeOldLogs oldLogs remainingLogsNum = do
-    -- Too many logs are old, so make sure we keep enough latest logs.
-    let oldLogsNumToKeep = fromIntegral keepFilesNum - remainingLogsNum
-    -- Reverse logs to place the latest ones in the beginning and drop
-    -- 'oldLogsNumToKeep' to keep them.
-    let oldLogsToRemove = drop oldLogsNumToKeep . reverse $ oldLogs
-    -- If the total num of old logs is less than 'keepFilesNum', all
-    -- of them will be kept.
-    mapM_ removeFile oldLogsToRemove

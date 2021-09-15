@@ -1,25 +1,22 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-
 {-# LANGUAGE PackageImports #-}
 
 module Cardano.Tracer.Acceptors
   ( runAcceptors
+  , runAcceptorsWithBrakes
   ) where
 
 import           Codec.CBOR.Term (Term)
-import           Control.Concurrent (ThreadId, killThread, myThreadId, threadDelay)
-import           Control.Concurrent.Async (async, asyncThreadId, wait, waitAnyCancel)
-import           Control.Concurrent.STM (atomically)
-import           Control.Concurrent.STM.TVar (TVar, modifyTVar', newTVarIO, readTVarIO)
-import           Control.Exception (SomeException, try)
-import           Control.Monad (forever, forM_, void)
+import           Control.Concurrent.Async (forConcurrently_, race_, wait)
+import           Control.Concurrent.STM.TVar (TVar, newTVarIO, readTVarIO)
 import "contra-tracer" Control.Tracer (nullTracer)
 import qualified Data.ByteString.Lazy as LBS
-import           Data.IORef (IORef, newIORef, readIORef)
+import           Data.List.NonEmpty (NonEmpty)
+import qualified Data.List.NonEmpty as NE
+import           Data.Maybe (fromMaybe)
 import           Data.HashMap.Strict ((!))
 import           Data.Time.Clock (secondsToNominalDiffTime)
 import           Data.Void (Void)
@@ -53,110 +50,119 @@ import           Cardano.Logging (TraceObject)
 import qualified Trace.Forward.Configuration as TF
 import qualified Trace.Forward.Protocol.Type as TF
 import           Trace.Forward.Network.Acceptor (acceptTraceObjects, acceptTraceObjectsInit)
+import           Trace.Forward.Utils (runActionInLoop)
 
 import qualified System.Metrics.Configuration as EKGF
 import qualified System.Metrics.ReqResp as EKGF
 import           System.Metrics.Network.Acceptor (acceptEKGMetrics, acceptEKGMetricsInit)
 
 import           Cardano.Tracer.Configuration
-import           Cardano.Tracer.Types (AcceptedItems, TraceObjects, Metrics,
-                                       addressToNodeId, prepareAcceptedItems)
+import           Cardano.Tracer.Handlers (nodeInfoHandler, traceObjectsHandler)
+import           Cardano.Tracer.Types
 
 runAcceptors
   :: TracerConfig
-  -> AcceptedItems
+  -> AcceptedMetrics
+  -> AcceptedNodeInfo
   -> IO ()
-runAcceptors config acceptedItems = do
-  runAcceptors' config acceptedItems
-  waitForever
- where
-  waitForever = forever $ threadDelay 1000000000
+runAcceptors config@TracerConfig{network} acceptedMetrics acceptedNodeInfo =
+  case network of
+    AcceptAt (LocalSocket p) -> do
+      stopEKG <- newTVarIO False
+      stopTF  <- newTVarIO False
+      runActionInLoop
+        (runAcceptorsResp config p (mkAcceptorsConfigs config p stopEKG stopTF) acceptedMetrics acceptedNodeInfo)
+        (TF.LocalPipe p) 1
+    ConnectTo localSocks ->
+      forConcurrently_ (NE.nub localSocks) $ \(LocalSocket p) -> do
+        stopEKG <- newTVarIO False
+        stopTF  <- newTVarIO False
+        runActionInLoop
+          (runAcceptorsInit config p (mkAcceptorsConfigs config p stopEKG stopTF) acceptedMetrics acceptedNodeInfo)
+          (TF.LocalPipe p) 1
 
-runAcceptors'
+runAcceptorsWithBrakes
   :: TracerConfig
-  -> AcceptedItems
+  -> AcceptedMetrics
+  -> AcceptedNodeInfo
+  -> NonEmpty (TVar Bool, TVar Bool)
   -> IO ()
-runAcceptors' config@TracerConfig{..} acceptedItems =
-  forM_ acceptAt $ \localSocket -> void . async . forever $ do
-    runAcceptorForOneNode localSocket
-    threadDelay 1000000
- where
-  runAcceptorForOneNode localSocket = do
-    stopEKG <- newIORef False
-    stopTF  <- newIORef False
+runAcceptorsWithBrakes config@TracerConfig{network} acceptedMetrics acceptedNodeInfo protocolsBrakes =
+  case network of
+    AcceptAt (LocalSocket p) -> do
+      let (stopEKG, stopTF) = NE.head protocolsBrakes
+      runActionInLoop
+        (runAcceptorsResp config p (mkAcceptorsConfigs config p stopEKG stopTF) acceptedMetrics acceptedNodeInfo)
+        (TF.LocalPipe p) 1
+    ConnectTo localSocks ->
+      forConcurrently_ (NE.zip localSocks protocolsBrakes) $ \(LocalSocket p, (stopEKG, stopTF)) ->
+        runActionInLoop
+          (runAcceptorsInit config p (mkAcceptorsConfigs config p stopEKG stopTF) acceptedMetrics acceptedNodeInfo)
+          (TF.LocalPipe p) 1
 
-    -- Temporary fill 'tidVar' using current 'ThreadId'. Later it will be
-    -- replaced by the real 'ThreadId' from 'serverAsync' (see below).
-    tmpTId <- myThreadId
-    tidVar :: TVar ThreadId <- newTVarIO tmpTId
-
-    let configs = mkAcceptorsConfigs config localSocket stopEKG stopTF
-    try (runAcceptor connectMode localSocket configs tidVar acceptedItems) >>= \case
-      Left (e :: SomeException) -> do
-        -- There is some problem (probably the connection was dropped).
-        putStrLn $ "cardano-tracer, runAcceptor problem: " <> show e
-        -- Explicitly stop 'serverAsync'.
-        killThread =<< readTVarIO tidVar
-      Right _ -> return ()
-    
 mkAcceptorsConfigs
   :: TracerConfig
-  -> Address
-  -> IORef Bool
-  -> IORef Bool
+  -> FilePath
+  -> TVar Bool
+  -> TVar Bool
   -> ( EKGF.AcceptorConfiguration
      , TF.AcceptorConfiguration TraceObject
      )
-mkAcceptorsConfigs TracerConfig{..} localSocket stopEKG stopTF = (ekgConfig, tfConfig)
- where
-  ekgConfig =
-    EKGF.AcceptorConfiguration
+mkAcceptorsConfigs TracerConfig{ekgRequestFreq, loRequestNum} p stopEKG stopTF =
+  ( EKGF.AcceptorConfiguration
       { EKGF.acceptorTracer    = nullTracer
-      , EKGF.forwarderEndpoint = forEKGF localSocket
-      , EKGF.requestFrequency  = secondsToNominalDiffTime ekgRequestFreq
+      , EKGF.forwarderEndpoint = EKGF.LocalPipe p
+      , EKGF.requestFrequency  = secondsToNominalDiffTime $ fromMaybe 1.0 ekgRequestFreq
       , EKGF.whatToRequest     = EKGF.GetAllMetrics
-      , EKGF.actionOnResponse  = print
       , EKGF.shouldWeStop      = stopEKG
-      , EKGF.actionOnDone      = putStrLn "EKGF: we are done!"
       }
-
-  tfConfig :: TF.AcceptorConfiguration TraceObject
-  tfConfig =
-    TF.AcceptorConfiguration
+  , TF.AcceptorConfiguration
       { TF.acceptorTracer    = nullTracer
-      , TF.forwarderEndpoint = forTF localSocket
-      , TF.whatToRequest     = TF.GetTraceObjects loRequestNum
-      , TF.actionOnReply     = print
+      , TF.forwarderEndpoint = TF.LocalPipe p
+      , TF.whatToRequest     = TF.NumberOfTraceObjects $ fromMaybe 100 loRequestNum
       , TF.shouldWeStop      = stopTF
-      , TF.actionOnDone      = putStrLn "TF: we are done!"
       }
+  )
 
-  forTF (LocalSocket p)   = TF.LocalPipe p
-  forEKGF (LocalSocket p) = EKGF.LocalPipe p
-
-runAcceptor
-  :: ConnectMode
-  -> Address
+runAcceptorsInit
+  :: TracerConfig
+  -> FilePath
   -> (EKGF.AcceptorConfiguration, TF.AcceptorConfiguration TraceObject)
-  -> TVar ThreadId
-  -> AcceptedItems
+  -> AcceptedMetrics
+  -> AcceptedNodeInfo
   -> IO ()
-runAcceptor mode (LocalSocket localSock) (ekgConfig, tfConfig) tidVar acceptedItems = withIOManager $ \iocp -> do
-  let snock = localSnocket iocp localSock
-      addr  = localAddressFromPath localSock
-  case mode of
-    Initiator ->
-      doConnectToAcceptor snock addr noTimeLimitsHandshake $
-        appInitiator
-          [ (runEKGAcceptorInit          ekgConfig acceptedItems, 1)
-          , (runTraceObjectsAcceptorInit tfConfig  acceptedItems, 2)
-          ]
-    Responder ->
-      doListenToForwarder snock addr noTimeLimitsHandshake tidVar $
-        appResponder
-          [ (runEKGAcceptor          ekgConfig acceptedItems, 1)
-          , (runTraceObjectsAcceptor tfConfig  acceptedItems, 2)
-          ]
+runAcceptorsInit config p (ekgConfig, tfConfig) acceptedMetrics acceptedNodeInfo =
+  withIOManager $ \iocp ->
+    doConnectToForwarder (localSnocket iocp p) (localAddressFromPath p) noTimeLimitsHandshake $
+      appInitiator
+        [ (runEKGAcceptorInit ekgConfig acceptedMetrics, 1)
+        , (runTraceObjectsAcceptorInit config tfConfig acceptedNodeInfo, 2)
+        ]
+ where
+  appInitiator protocols =
+    OuroborosApplication $ \connectionId _shouldStopSTM ->
+      [ MiniProtocol
+         { miniProtocolNum    = MiniProtocolNum num
+         , miniProtocolLimits = MiniProtocolLimits { maximumIngressQueue = maxBound }
+         , miniProtocolRun    = protocol connectionId
+         }
+      | (protocol, num) <- protocols
+      ]
+
+runAcceptorsResp
+  :: TracerConfig
+  -> FilePath
+  -> (EKGF.AcceptorConfiguration, TF.AcceptorConfiguration TraceObject)
+  -> AcceptedMetrics
+  -> AcceptedNodeInfo
+  -> IO ()
+runAcceptorsResp config p (ekgConfig, tfConfig) acceptedMetrics acceptedNodeInfo =
+  withIOManager $ \iocp -> do
+    doListenToForwarder (localSnocket iocp p) (localAddressFromPath p) noTimeLimitsHandshake $
+      appResponder
+        [ (runEKGAcceptor ekgConfig acceptedMetrics, 1)
+        , (runTraceObjectsAcceptor config tfConfig acceptedNodeInfo, 2)
+        ]
  where
   appResponder protocols =
     OuroborosApplication $ \connectionId _shouldStopSTM ->
@@ -168,23 +174,13 @@ runAcceptor mode (LocalSocket localSock) (ekgConfig, tfConfig) tidVar acceptedIt
       | (protocol, num) <- protocols
       ]
 
-  appInitiator protocols =
-    OuroborosApplication $ \connectionId _shouldStopSTM ->
-      [ MiniProtocol
-         { miniProtocolNum    = MiniProtocolNum num
-         , miniProtocolLimits = MiniProtocolLimits { maximumIngressQueue = maxBound }
-         , miniProtocolRun    = protocol connectionId
-         }
-      | (protocol, num) <- protocols
-      ]
-
-doConnectToAcceptor
+doConnectToForwarder
   :: Snocket IO fd addr
   -> addr
   -> ProtocolTimeLimits (Handshake UnversionedProtocol Term)
   -> OuroborosApplication 'InitiatorMode addr LBS.ByteString IO () Void
   -> IO ()
-doConnectToAcceptor snocket address timeLimits app =
+doConnectToForwarder snocket address timeLimits app =
   connectToNode
     snocket
     unversionedHandshakeCodec
@@ -204,87 +200,85 @@ doListenToForwarder
   => Snocket IO fd addr
   -> addr
   -> ProtocolTimeLimits (Handshake UnversionedProtocol Term)
-  -> TVar ThreadId
   -> OuroborosApplication 'ResponderMode addr LBS.ByteString IO Void ()
   -> IO ()
-doListenToForwarder snocket address timeLimits tidVar app = do
+doListenToForwarder snocket address timeLimits app = do
   networkState <- newNetworkMutableState
-  nsAsync <- async $ cleanNetworkMutableState networkState
-  clAsync <- async . void $
-    withServerNode
-      snocket
-      nullNetworkServerTracers
-      networkState
-      (AcceptedConnectionsLimit maxBound maxBound 0)
-      address
-      unversionedHandshakeCodec
-      timeLimits
-      (cborTermVersionDataCodec unversionedProtocolDataCodec)
-      acceptableVersion
-      (simpleSingletonVersions
-        UnversionedProtocol
-        UnversionedProtocolData
-        (SomeResponderApplication app)
-      )
-      nullErrorPolicies
-      $ \_ serverAsync -> do
-        -- Store 'serverAsync' to be able to kill it later.
-        atomically $ modifyTVar' tidVar $ const (asyncThreadId serverAsync)
-        wait serverAsync -- Block until async exception.
-  void $ waitAnyCancel [nsAsync, clAsync]
+  race_ (cleanNetworkMutableState networkState)
+        $ withServerNode
+            snocket
+            nullNetworkServerTracers
+            networkState
+            (AcceptedConnectionsLimit maxBound maxBound 0)
+            address
+            unversionedHandshakeCodec
+            timeLimits
+            (cborTermVersionDataCodec unversionedProtocolDataCodec)
+            acceptableVersion
+            (simpleSingletonVersions
+              UnversionedProtocol
+              UnversionedProtocolData
+              (SomeResponderApplication app)
+            )
+            nullErrorPolicies
+            $ \_ serverAsync -> do
+              wait serverAsync -- Block until async exception.
 
 runEKGAcceptor
   :: Show addr
   => EKGF.AcceptorConfiguration
-  -> AcceptedItems
+  -> AcceptedMetrics
   -> ConnectionId addr
   -> RunMiniProtocol 'ResponderMode LBS.ByteString IO Void ()
-runEKGAcceptor ekgConfig acceptedItems connId = do
-  let (_, _, (ekgStore, localStore)) =
-        unsafePerformIO $ prepareStores acceptedItems connId
+runEKGAcceptor ekgConfig acceptedMetrics connId = do
+  let (ekgStore, localStore) = unsafePerformIO $ prepareMetricsStores acceptedMetrics connId
   acceptEKGMetrics ekgConfig ekgStore localStore
 
 runTraceObjectsAcceptor
   :: Show addr
-  => TF.AcceptorConfiguration TraceObject
-  -> AcceptedItems
+  => TracerConfig
+  -> TF.AcceptorConfiguration TraceObject
+  -> AcceptedNodeInfo
   -> ConnectionId addr
   -> RunMiniProtocol 'ResponderMode LBS.ByteString IO Void ()
-runTraceObjectsAcceptor tfConfig acceptedItems connId = do
-  let (niStore, trObQueue, _) =
-        unsafePerformIO $ prepareStores acceptedItems connId
-  acceptTraceObjects tfConfig trObQueue niStore
+runTraceObjectsAcceptor config tfConfig acceptedNodeInfo connId = do
+  let nodeId = connIdToNodeId connId
+  acceptTraceObjects
+    tfConfig
+    (traceObjectsHandler config nodeId acceptedNodeInfo)
+    (nodeInfoHandler config nodeId acceptedNodeInfo)
 
 runEKGAcceptorInit
   :: Show addr
   => EKGF.AcceptorConfiguration
-  -> AcceptedItems
+  -> AcceptedMetrics
   -> ConnectionId addr
   -> RunMiniProtocol 'InitiatorMode LBS.ByteString IO () Void
-runEKGAcceptorInit ekgConfig acceptedItems connId = do
-  let (_, _, (ekgStore, localStore)) =
-        unsafePerformIO $ prepareStores acceptedItems connId
+runEKGAcceptorInit ekgConfig acceptedMetrics connId = do
+  let (ekgStore, localStore) = unsafePerformIO $ prepareMetricsStores acceptedMetrics connId
   acceptEKGMetricsInit ekgConfig ekgStore localStore
 
 runTraceObjectsAcceptorInit
   :: Show addr
-  => TF.AcceptorConfiguration TraceObject
-  -> AcceptedItems
+  => TracerConfig
+  -> TF.AcceptorConfiguration TraceObject
+  -> AcceptedNodeInfo
   -> ConnectionId addr
   -> RunMiniProtocol 'InitiatorMode LBS.ByteString IO () Void
-runTraceObjectsAcceptorInit tfConfig acceptedItems connId = do
-  let (niStore, trObQueue, _) =
-        unsafePerformIO $ prepareStores acceptedItems connId
-  acceptTraceObjectsInit tfConfig trObQueue niStore
+runTraceObjectsAcceptorInit config tfConfig acceptedNodeInfo connId = do
+  let nodeId = connIdToNodeId connId
+  acceptTraceObjectsInit
+    tfConfig
+    (traceObjectsHandler config nodeId acceptedNodeInfo)
+    (nodeInfoHandler config nodeId acceptedNodeInfo)
 
-prepareStores
+prepareMetricsStores
   :: Show addr
-  => AcceptedItems
+  => AcceptedMetrics
   -> ConnectionId addr
-  -> IO (TF.NodeInfoStore, TraceObjects, Metrics)
-prepareStores acceptedItems ConnectionId{..} = do
-  -- Remote address of the node is unique identifier, from the tracer's point of view.
-  let nodeId = addressToNodeId $ show remoteAddress
-  prepareAcceptedItems nodeId acceptedItems
-  items <- readIORef acceptedItems
-  return $ items ! nodeId
+  -> IO Metrics
+prepareMetricsStores acceptedMetrics connId = do
+  let nodeId = connIdToNodeId connId
+  prepareAcceptedMetrics nodeId acceptedMetrics
+  metrics <- readTVarIO acceptedMetrics
+  return $ metrics ! nodeId

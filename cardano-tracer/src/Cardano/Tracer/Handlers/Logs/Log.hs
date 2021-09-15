@@ -1,9 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Cardano.Tracer.Handlers.Logs.Log
-  ( logPrefix
-  , logExtension
-  , createLogAndSymLink
+  ( createLogAndSymLink
   , createLogAndUpdateSymLink
   , doesSymLinkValid
   , getTimeStampFromLog
@@ -56,37 +54,44 @@ doesSymLinkValid pathToSymLink = do
 
 isItLog :: LogFormat -> FilePath -> Bool
 isItLog format pathToLog = hasProperPrefix && hasTimestamp && hasProperExt
-  where
+ where
   fileName        = takeFileName pathToLog
   hasProperPrefix = T.pack logPrefix `T.isPrefixOf` T.pack fileName
   hasTimestamp    = isJust timeStamp
+
   timeStamp :: Maybe UTCTime
-  timeStamp = parseTimeM True defaultTimeLocale timeStampFormat (T.unpack maybeTimestamp)
+  timeStamp = parseTimeM True defaultTimeLocale timeStampFormat $ T.unpack maybeTimestamp
+
   maybeTimestamp  = T.drop (length logPrefix) . T.pack . takeBaseName $ fileName
   hasProperExt    = takeExtension fileName == logExtension format
 
--- | Create a new log file and symlink to it, from scratch.
+-- | Create a new log file and a symlink to it, from scratch.
 createLogAndSymLink :: FilePath -> LogFormat -> IO ()
-createLogAndSymLink subDirForLogs format = withCurrentDirectory subDirForLogs $
-  createLog format >>= flip createFileLink (symLinkName format)
+createLogAndSymLink subDirForLogs format =
+  createLog subDirForLogs format >>= flip createFileLink symLink
+ where
+  symLink = subDirForLogs </> symLinkName format
 
 -- | Create a new log file and move existing symlink
 -- from the old log file to the new one.
 createLogAndUpdateSymLink :: FilePath -> LogFormat -> IO ()
-createLogAndUpdateSymLink subDirForLogs format = withCurrentDirectory subDirForLogs $ do
-  newLog <- createLog format
-  let tmpSymLink  = symLinkNameTmp format
-      realSymLink = symLinkName format
-  whenM (doesFileExist tmpSymLink) $ removeFile tmpSymLink
+createLogAndUpdateSymLink subDirForLogs format = do
+  newLog <- createLog subDirForLogs format
+  whenM (doesFileExist tmpSymLink) $
+    removeFile tmpSymLink
   createFileLink newLog tmpSymLink
   renamePath tmpSymLink realSymLink -- Atomic operation, uses POSIX.rename.
+ where
+  tmpSymLink  = subDirForLogs </> symLinkNameTmp format
+  realSymLink = subDirForLogs </> symLinkName format
 
-createLog :: LogFormat -> IO FilePath
-createLog format = do
+createLog :: FilePath -> LogFormat -> IO FilePath
+createLog subDirForLogs format = do
   ts <- formatTime defaultTimeLocale timeStampFormat <$> getCurrentTime
   let logName = logPrefix <> ts <.> logExtension format
-  LBS.writeFile logName LBS.empty
-  return logName
+      pathToLog = subDirForLogs </> logName
+  LBS.writeFile pathToLog LBS.empty -- Create an empty log file.
+  return pathToLog
 
 -- | This function is applied to the log we already checked,
 -- so we definitely know it contains timestamp.

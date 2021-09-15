@@ -1,6 +1,5 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PackageImports #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -11,120 +10,140 @@ module Cardano.Tracer.Test.Forwarder
 
 import           Codec.CBOR.Term (Term)
 import           Control.Concurrent (threadDelay)
-import           Control.Concurrent.Async (async)
-import           Control.Concurrent.STM.TBQueue (TBQueue, newTBQueueIO, writeTBQueue)
-import           Control.Exception (SomeException, try)
+import           Control.Concurrent.Async
 import           Control.Monad (forever)
-import           Control.Monad.STM (atomically)
 import "contra-tracer" Control.Tracer (nullTracer)
 import qualified Data.ByteString.Lazy as LBS
-import           Data.Fixed (Pico)
-import           Data.Time.Clock (NominalDiffTime, UTCTime, getCurrentTime, secondsToNominalDiffTime)
+import           Data.Time.Clock (UTCTime, getCurrentTime)
 import           Data.Void (Void)
 import           Data.Word (Word16)
+
+import           Ouroboros.Network.IOManager (IOManager, withIOManager)
+
 import           Ouroboros.Network.Driver.Limits (ProtocolTimeLimits)
-import           Ouroboros.Network.IOManager (withIOManager)
-import           Ouroboros.Network.Mux (MiniProtocol (..), MiniProtocolLimits (..),
-                                        MiniProtocolNum (..), MuxMode (..),
-                                        OuroborosApplication (..), RunMiniProtocol (..),
-                                        miniProtocolLimits, miniProtocolNum, miniProtocolRun)
-import           Ouroboros.Network.Protocol.Handshake.Codec (cborTermVersionDataCodec,
-                                                             timeLimitsHandshake)
-import           Ouroboros.Network.Protocol.Handshake.Unversioned (UnversionedProtocol (..),
-                                                                   UnversionedProtocolData (..),
-                                                                   unversionedHandshakeCodec,
-                                                                   unversionedProtocolDataCodec)
+import           Ouroboros.Network.ErrorPolicy (nullErrorPolicies)
+import           Ouroboros.Network.Mux (MiniProtocol (..),
+                     MiniProtocolLimits (..), MiniProtocolNum (..),
+                     MuxMode (..), OuroborosApplication (..),
+                     RunMiniProtocol (..), miniProtocolLimits, miniProtocolNum,
+                     miniProtocolRun)
+import           Ouroboros.Network.Protocol.Handshake.Codec
+                     (cborTermVersionDataCodec, noTimeLimitsHandshake)
 import           Ouroboros.Network.Protocol.Handshake.Type (Handshake)
-import           Ouroboros.Network.Protocol.Handshake.Version (acceptableVersion, simpleSingletonVersions)
-import           Ouroboros.Network.Snocket (Snocket, localAddressFromPath, localSnocket)
-import           Ouroboros.Network.Socket (connectToNode, nullNetworkConnectTracers)
+import           Ouroboros.Network.Protocol.Handshake.Unversioned
+                     (UnversionedProtocol (..), UnversionedProtocolData (..),
+                     unversionedHandshakeCodec, unversionedProtocolDataCodec)
+import           Ouroboros.Network.Protocol.Handshake.Version
+                     (acceptableVersion, simpleSingletonVersions)
+import           Ouroboros.Network.Snocket (Snocket, localAddressFromPath,
+                     localSnocket)
+import           Ouroboros.Network.Socket (AcceptedConnectionsLimit (..),
+                     SomeResponderApplication (..), cleanNetworkMutableState,
+                     newNetworkMutableState, nullNetworkServerTracers,
+                     withServerNode)
+
 import qualified System.Metrics as EKG
 
-import           Cardano.Logging
+import           Cardano.Logging (DetailLevel (..), SeverityS (..), TraceObject (..))
 
 import qualified Trace.Forward.Configuration as TF
-import           Trace.Forward.Network.Forwarder (forwardTraceObjects)
+import           Trace.Forward.Network.Forwarder
 import           Trace.Forward.Protocol.Type (NodeInfo (..))
+import           Trace.Forward.Utils
 
 import qualified System.Metrics.Configuration as EKGF
-import           System.Metrics.Network.Forwarder (forwardEKGMetrics)
+import           System.Metrics.Network.Forwarder
 
-launchForwardersSimple :: String -> IO ()
-launchForwardersSimple localSock = do
+launchForwardersSimple
+  :: FilePath
+  -> Word
+  -> Word
+  -> IO ()
+launchForwardersSimple p connSize disconnSize = withIOManager $ \iomgr ->
+  runActionInLoop
+    (launchForwardersSimple' iomgr p connSize disconnSize)
+    (TF.LocalPipe p)
+    1
+
+launchForwardersSimple'
+  :: IOManager
+  -> FilePath
+  -> Word
+  -> Word
+  -> IO ()
+launchForwardersSimple' iomgr p connSize disconnSize = do
   now <- getCurrentTime
-  try (launchForwarders' localSock Nothing (ekgConfig, tfConfig now)) >>= \case
-    Left (_e :: SomeException) ->
-      launchForwardersSimple localSock
-    Right _ -> return ()
+  let snocket = localSnocket iomgr p
+      address = localAddressFromPath p
+  doListenToAcceptor snocket address noTimeLimitsHandshake (ekgConfig, tfConfig now)
  where
   ekgConfig :: EKGF.ForwarderConfiguration
   ekgConfig =
     EKGF.ForwarderConfiguration
-      { EKGF.forwarderTracer    = nullTracer
-      , EKGF.acceptorEndpoint   = EKGF.LocalPipe localSock
+      { EKGF.forwarderTracer = nullTracer
+      , EKGF.acceptorEndpoint = EKGF.LocalPipe p
       , EKGF.reConnectFrequency = 1.0
-      , EKGF.actionOnRequest    = const (return ())
+      , EKGF.actionOnRequest = const $ return ()
       }
 
   tfConfig :: UTCTime -> TF.ForwarderConfiguration TraceObject
   tfConfig now =
     TF.ForwarderConfiguration
-      { TF.forwarderTracer  = nullTracer
-      , TF.acceptorEndpoint = TF.LocalPipe localSock
-      , TF.nodeBasicInfo    = return
-        NodeInfo
-        { niName            = "core-1"
-        , niProtocol        = "Shelley"
-        , niVersion         = "1.28.0"
-        , niCommit          = "abcdefg"
-        , niStartTime       = now
-        , niSystemStartTime = now
-        }
+      { TF.forwarderTracer = nullTracer
+      , TF.acceptorEndpoint = TF.LocalPipe p
+      , TF.getNodeInfo =
+          return NodeInfo
+            { niName            = "core-1"
+            , niProtocol        = "Shelley"
+            , niVersion         = "1.28.0"
+            , niCommit          = "abcdefg"
+            , niStartTime       = now
+            , niSystemStartTime = now
+            }
+      , TF.disconnectedQueueSize = disconnSize
+      , TF.connectedQueueSize    = connSize
       }
 
-launchForwarders'
-  :: String
-  -> Maybe Pico
-  -> (EKGF.ForwarderConfiguration, TF.ForwarderConfiguration TraceObject)
-  -> IO ()
-launchForwarders' localSock benchFillFreq configs = withIOManager $ \iocp -> do
-  let snocket = localSnocket iocp localSock
-      address = localAddressFromPath localSock
-  doConnectToAcceptor snocket address timeLimitsHandshake benchFillFreq configs
-
-doConnectToAcceptor
-  :: Snocket IO fd addr
+doListenToAcceptor
+  :: Ord addr
+  => Snocket IO fd addr
   -> addr
   -> ProtocolTimeLimits (Handshake UnversionedProtocol Term)
-  -> Maybe Pico
   -> (EKGF.ForwarderConfiguration, TF.ForwarderConfiguration TraceObject)
   -> IO ()
-doConnectToAcceptor snocket address timeLimits benchFillFreq (ekgConfig, tfConfig) = do
-  tfQueue <- newTBQueueIO 1000000
-  _ <- async $ traceObjectsWriter tfQueue benchFillFreq
+doListenToAcceptor snocket address timeLimits (ekgConfig, tfConfig) = do
   store <- EKG.newStore
   EKG.registerGcMetrics store
-
-  connectToNode
-    snocket
-    unversionedHandshakeCodec
-    timeLimits
-    (cborTermVersionDataCodec unversionedProtocolDataCodec)
-    nullNetworkConnectTracers
-    acceptableVersion
-    (simpleSingletonVersions
-       UnversionedProtocol
-       UnversionedProtocolData $
-         forwarderApp [ (forwardEKGMetrics ekgConfig store,  1)
-                      , (forwardTraceObjects tfConfig tfQueue, 2)
-                      ]
-    )
-    Nothing
-    address
+  sink <- initForwardSink tfConfig
+  withAsync (traceObjectsWriter sink) $ \_ -> do
+    networkState <- newNetworkMutableState
+    race_ (cleanNetworkMutableState networkState)
+          $ withServerNode
+              snocket
+              nullNetworkServerTracers
+              networkState
+              (AcceptedConnectionsLimit maxBound maxBound 0)
+              address
+              unversionedHandshakeCodec
+              timeLimits
+              (cborTermVersionDataCodec unversionedProtocolDataCodec)
+              acceptableVersion
+              (simpleSingletonVersions
+                UnversionedProtocol
+                UnversionedProtocolData
+                (SomeResponderApplication $
+                  forwarderApp [ (forwardEKGMetricsResp ekgConfig store, 1)
+                               , (forwardTraceObjectsResp tfConfig sink, 2)
+                               ]
+                )
+              )
+              nullErrorPolicies
+              $ \_ serverAsync ->
+                wait serverAsync -- Block until async exception.
  where
   forwarderApp
-    :: [(RunMiniProtocol 'InitiatorMode LBS.ByteString IO () Void, Word16)]
-    -> OuroborosApplication 'InitiatorMode addr LBS.ByteString IO () Void
+    :: [(RunMiniProtocol 'ResponderMode LBS.ByteString IO Void (), Word16)]
+    -> OuroborosApplication 'ResponderMode addr LBS.ByteString IO Void ()
   forwarderApp protocols =
     OuroborosApplication $ \_connectionId _shouldStopSTM ->
       [ MiniProtocol
@@ -135,26 +154,18 @@ doConnectToAcceptor snocket address timeLimits benchFillFreq (ekgConfig, tfConfi
       | (prot, num) <- protocols
       ]
 
-traceObjectsWriter :: TBQueue TraceObject -> Maybe Pico -> IO ()
-traceObjectsWriter queue benchFillFreq = forever $ do
-  now <- getCurrentTime
-  atomically $ writeTBQueue queue (mkTraceObject now)
-  threadDelay fillPause
+traceObjectsWriter :: ForwardSink TraceObject -> IO ()
+traceObjectsWriter sink = forever $ do
+  writeToSink sink . mkTraceObject =<< getCurrentTime
+  threadDelay 50000
  where
-  mkTraceObject now' = TraceObject
+  mkTraceObject now = TraceObject
     { toHuman     = Just "Human Message"
     , toMachine   = Just "{\"msg\": \"forMachine\"}"
     , toNamespace = ["demoNamespace"]
     , toSeverity  = Info
     , toDetails   = DNormal
-    , toTimestamp = now'
-    , toHostname  = "linux"
+    , toTimestamp = now
+    , toHostname  = "nixos"
     , toThreadId  = "1"
     }
-
-  fillPause = case benchFillFreq of
-                Just ff -> toMicroSecs . secondsToNominalDiffTime $ ff
-                Nothing -> 500000
-
-  toMicroSecs :: NominalDiffTime -> Int
-  toMicroSecs dt = fromEnum dt `div` 1000000
