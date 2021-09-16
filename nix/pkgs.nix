@@ -5,9 +5,7 @@ final: prev: with final;
   in {
   cardanoNodeProject = import ./haskell.nix {
     inherit compiler-nix-name
-      pkgs
       lib
-      stdenv
       haskell-nix
       buildPackages
       gitrev
@@ -16,41 +14,29 @@ final: prev: with final;
   cardanoNodeHaskellPackages = cardanoNodeProject.hsPkgs;
   cardanoNodeProfiledHaskellPackages = (import ./haskell.nix {
     inherit compiler-nix-name
-      pkgs
       lib
-      stdenv
       haskell-nix
       buildPackages
       gitrev
       ;
-    inherit (cardanoNodeProject) projectPackages;
-    inherit (cardanoNodeProject.projectModule) src cabalProjectLocal;
     profiling = true;
   }).hsPkgs;
   cardanoNodeEventlogHaskellPackages = (import ./haskell.nix {
     inherit compiler-nix-name
-      pkgs
       lib
-      stdenv
       haskell-nix
       buildPackages
       gitrev
       ;
-    inherit (cardanoNodeProject) projectPackages;
-    inherit (cardanoNodeProject.projectModule) src cabalProjectLocal;
     eventlog = true;
   }).hsPkgs;
   cardanoNodeAssertedHaskellPackages = (import ./haskell.nix {
     inherit compiler-nix-name
-      pkgs
       lib
-      stdenv
       haskell-nix
       buildPackages
       gitrev
       ;
-    inherit (cardanoNodeProject) projectPackages;
-    inherit (cardanoNodeProject.projectModule) src cabalProjectLocal;
     assertedPackages = [
       "ouroboros-consensus"
       "ouroboros-consensus-cardano"

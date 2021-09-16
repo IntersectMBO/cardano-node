@@ -35,6 +35,7 @@
       defaultSystem = head supportedSystems;
 
       overlays = [
+        haskellNix.overlay
         iohkNix.overlays.haskell-nix-extra
         iohkNix.overlays.crypto
         iohkNix.overlays.cardano-lib
@@ -54,30 +55,28 @@
 
     in eachSystem supportedSystems (system:
       let
-        pkgs = haskellNix.legacyPackages.${system}.appendOverlays overlays;
+        pkgs = import nixpkgs {
+          inherit system overlays;
+          inherit (haskellNix) config;
+        };
 
         inherit (pkgs.commonLib) eachEnv environments;
 
         devShell = import ./shell.nix { inherit pkgs; };
 
-        flake = pkgs.cardanoNodeProject.flake {};
-
-        staticFlake = pkgs.pkgsStatic.cardanoNodeProject.flake {};
-
-        windowsFlake = pkgs.pkgsCross.${systems.examples.mingwW64}.cardanoNodeProject.flake {};
+        flake = pkgs.cardanoNodeProject.flake {
+          crossPlatforms = p: with p; [
+            mingwW64
+            musl64
+          ];
+        };
 
         scripts = flattenTree pkgs.scripts;
-
-        checkNames = attrNames flake.checks;
 
         checks =
           # Linux only checks:
           optionalAttrs (system == "x86_64-linux") (
-            prefixNamesWith "windows/" (removeAttrs
-              (getAttrs checkNames windowsFlake.checks)
-              ["cardano-node-chairman:test:chairman-tests"]
-            )
-            // (prefixNamesWith "nixosTests/" (mapAttrs (_: v: v.${system} or v) pkgs.nixosTests))
+            prefixNamesWith "nixosTests/" (mapAttrs (_: v: v.${system} or v) pkgs.nixosTests)
           )
           # checks run on default system only;
           // optionalAttrs (system == defaultSystem) {
@@ -86,9 +85,9 @@
             };
           };
 
-        exes = collectExes flake.packages;
-        exeNames = attrNames exes;
-        lazyCollectExe = p: getAttrs exeNames (collectExes p);
+        exes = collectExes
+           flake.packages;
+
 
         packages = {
           inherit (devShell) devops;
@@ -96,16 +95,12 @@
         }
         // scripts
         // exes
-        // (prefixNamesWith "static/"
-              (mapAttrs pkgs.rewriteStatic (lazyCollectExe staticFlake.packages)))
         # Linux only packages:
-        // optionalAttrs (system == "x86_64-linux") (
-          prefixNamesWith "windows/" (lazyCollectExe windowsFlake.packages)
-          // {
-            "dockerImage/node" = pkgs.dockerImage;
-            "dockerImage/submit-api" = pkgs.submitApiDockerImage;
-          }
-        )
+        // optionalAttrs (system == "x86_64-linux") {
+          "dockerImage/node" = pkgs.dockerImage;
+          "dockerImage/submit-api" = pkgs.submitApiDockerImage;
+        }
+
         # Add checks to be able to build them individually
         // (prefixNamesWith "checks/" checks);
 

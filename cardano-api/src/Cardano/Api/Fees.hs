@@ -54,8 +54,8 @@ import           GHC.Records (HasField (..))
 import           Numeric.Natural
 
 import           Control.Monad.Trans.Except
-import qualified Data.Text.Prettyprint.Doc as PP
-import qualified Data.Text.Prettyprint.Doc.Render.String as PP
+import qualified Prettyprinter as PP
+import qualified Prettyprinter.Render.String as PP
 
 import qualified Cardano.Binary as CBOR
 import           Cardano.Slotting.EpochInfo (EpochInfo, hoistEpochInfo)

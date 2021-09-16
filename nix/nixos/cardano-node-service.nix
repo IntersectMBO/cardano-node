@@ -9,29 +9,21 @@ let
   inherit (cfg.cardanoNodePkgs) commonLib cardano-node cardano-node-profiled cardano-node-eventlogged cardano-node-asserted;
   envConfig = cfg.environments.${cfg.environment};
   runtimeDir = if cfg.runtimeDir == null then cfg.stateDir else "/run/${cfg.runtimeDir}";
-  mkScript = cfg: i: let
-    instanceConfig =
-      cfg.nodeConfig
-      //
-      (optionalAttrs (cfg.nodeConfig ? hasEKG)
-        {
-          hasEKG = cfg.nodeConfig.hasEKG + i;
-        })
-      //
-      (optionalAttrs (cfg.nodeConfig ? hasPrometheus)
-        {
-          hasPrometheus = map (n: if isInt n then n + i else n) cfg.nodeConfig.hasPrometheus;
-        })
-      //
-      (foldl' (x: y: x // y) {}
-        (mapAttrsToList
-          (era: epoch:
-            { "Test${era}HardForkAtEpoch" = epoch;
-            })
-          cfg.forceHardForks));
+  mkScript = cfg:
+    let baseConfig = recursiveUpdate (cfg.nodeConfig
+      // (mapAttrs' (era: epoch:
+        nameValuePair "Test${era}HardForkAtEpoch" epoch
+      ) cfg.forceHardForks)) cfg.extraNodeConfig;
+    in i: let
+    instanceConfig = recursiveUpdate (baseConfig
+      // (optionalAttrs (baseConfig ? hasEKG) {
+          hasEKG = baseConfig.hasEKG + i;
+      })
+      // (optionalAttrs (baseConfig ? hasPrometheus) {
+          hasPrometheus = map (n: if isInt n then n + i else n) baseConfig.hasPrometheus;
+      })) (cfg.extraNodeInstanceConfig i);
     nodeConfigFile = if (cfg.nodeConfigFile != null) then cfg.nodeConfigFile
       else toFile "config-${toString cfg.nodeId}-${toString i}.json" (toJSON instanceConfig);
-    realNodeConfigFile = nodeConfigFile;
     topology = if cfg.topology != null then cfg.topology else toFile "topology.yaml" (toJSON {
       Producers = cfg.producers ++ (cfg.instanceProducers i);
     });
@@ -66,7 +58,7 @@ let
     instanceDbPath = "${cfg.databasePath}${optionalString (i > 0) "-${toString i}"}";
     cmd = builtins.filter (x: x != "") [
       "${cfg.executable} run"
-      "--config ${realNodeConfigFile}"
+      "--config ${nodeConfigFile}"
       "--database-path ${instanceDbPath}"
       "--topology ${topology}"
     ] ++ (lib.optionals (!cfg.systemdSocketActivation) ([
@@ -272,8 +264,7 @@ in {
       };
 
       extraServiceConfig = mkOption {
-        # activate type for nixos-21.03:
-        type = types.unspecified # types.functionTo (types.listOf types.attrs);
+        type = types.functionTo types.attrs
           // {
             merge = loc: foldl' (res: def: i: recursiveUpdate (res i) (def.value i)) (i: {});
           };
@@ -284,8 +275,7 @@ in {
       };
 
       extraSocketConfig = mkOption {
-        # activate type for nixos-21.03:
-        type = types.unspecified # types.functionTo (types.listOf types.attrs);
+        type = types.functionTo types.attrs
           // {
             merge = loc: foldl' (res: def: i: recursiveUpdate (res i) (def.value i)) (i: {});
           };
@@ -352,8 +342,7 @@ in {
       };
 
       instanceProducers = mkOption {
-        # activate type for nixos-21.03:
-        # type = types.functionTo (types.listOf types.attrs);
+        type = types.functionTo (types.listOf types.attrs);
         default = _: [];
         description = ''
           Static routes to peers, specific to a given instance (when multiple instances are used).
@@ -376,6 +365,23 @@ in {
         description = ''Internal representation of the config.'';
       };
 
+      extraNodeConfig = mkOption {
+        type = types.attrs // {
+          merge = loc: foldl' (res: def: recursiveUpdate res def.value) {};
+        };
+        default = {};
+        description = ''Additional node config.'';
+      };
+
+      extraNodeInstanceConfig = mkOption {
+        type = types.functionTo types.attrs
+          // {
+            merge = loc: foldl' (res: def: i: recursiveUpdate (res i) (def.value i)) (i: {});
+          };
+        default = i: {};
+        description = ''Additional node config for a particular instance.'';
+      };
+
       nodeConfigFile = mkOption {
         type = types.nullOr types.str;
         default = null;
@@ -383,7 +389,7 @@ in {
       };
 
       forceHardForks = mkOption {
-        type = types.attrs;
+        type = types.attrsOf types.int;
         default = {};
         description = ''
           A developer-oriented dictionary option to force hard forks for given eras at given epochs.  Maps capitalised era names (Shelley, Allegra, Mary, etc.) to hard fork epoch number.
