@@ -150,12 +150,103 @@ friendlyStakeReference = \case
 friendlyUpdateProposal :: TxUpdateProposal era -> Aeson.Value
 friendlyUpdateProposal = \case
   TxUpdateProposalNone -> Null
-  TxUpdateProposal _ p -> String $ textShow p
+  TxUpdateProposal _ (UpdateProposal parameterUpdates epoch) ->
+    object
+      [ "epoch" .= epoch
+      , "updates" .=
+        [ object
+            [ "genesis key hash" .= serialiseToRawBytesHexText genesisKeyHash
+            , "update" .= friendlyProtocolParametersUpdate parameterUpdate
+            ]
+        | (genesisKeyHash, parameterUpdate) <- Map.assocs parameterUpdates
+        ]
+      ]
+
+friendlyProtocolParametersUpdate :: ProtocolParametersUpdate -> Aeson.Value
+friendlyProtocolParametersUpdate
+  ProtocolParametersUpdate
+    { protocolUpdateProtocolVersion
+    , protocolUpdateDecentralization
+    , protocolUpdateExtraPraosEntropy
+    , protocolUpdateMaxBlockHeaderSize
+    , protocolUpdateMaxBlockBodySize
+    , protocolUpdateMaxTxSize
+    , protocolUpdateTxFeeFixed
+    , protocolUpdateTxFeePerByte
+    , protocolUpdateMinUTxOValue
+    , protocolUpdateStakeAddressDeposit
+    , protocolUpdateStakePoolDeposit
+    , protocolUpdateMinPoolCost
+    , protocolUpdatePoolRetireMaxEpoch
+    , protocolUpdateStakePoolTargetNum
+    , protocolUpdatePoolPledgeInfluence
+    , protocolUpdateMonetaryExpansion
+    , protocolUpdateTreasuryCut
+    , protocolUpdateUTxOCostPerWord
+    , protocolUpdateCollateralPercent
+    , protocolUpdateMaxBlockExUnits
+    , protocolUpdateMaxCollateralInputs
+    , protocolUpdateMaxTxExUnits
+    , protocolUpdateMaxValueSize
+    , protocolUpdatePrices
+    } =
+  object . catMaybes $
+    [ protocolUpdateProtocolVersion <&> \(major, minor) ->
+        "protocol version" .= (textShow major <> "." <> textShow minor)
+    , protocolUpdateDecentralization <&>
+        ("decentralization parameter" .=) . friendlyRational
+    , protocolUpdateExtraPraosEntropy <&>
+        ("extra entropy" .=) . maybe "reset" toJSON
+    , protocolUpdateMaxBlockHeaderSize <&> ("max block header size" .=)
+    , protocolUpdateMaxBlockBodySize<&> ("max block body size" .=)
+    , protocolUpdateMaxTxSize <&> ("max transaction size" .=)
+    , protocolUpdateTxFeeFixed <&> ("transaction fee constant" .=)
+    , protocolUpdateTxFeePerByte <&> ("transaction fee linear per byte" .=)
+    , protocolUpdateMinUTxOValue <&> ("min UTxO value" .=) . friendlyLovelace
+    , protocolUpdateStakeAddressDeposit <&>
+        ("key registration deposit" .=) . friendlyLovelace
+    , protocolUpdateStakePoolDeposit <&>
+        ("pool registration deposit" .=) . friendlyLovelace
+    , protocolUpdateMinPoolCost <&> ("min pool cost" .=) . friendlyLovelace
+    , protocolUpdatePoolRetireMaxEpoch <&> ("pool retirement epoch boundary" .=)
+    , protocolUpdateStakePoolTargetNum <&> ("number of pools" .=)
+    , protocolUpdatePoolPledgeInfluence <&>
+        ("pool influence" .=) . friendlyRational
+    , protocolUpdateMonetaryExpansion <&>
+        ("monetary expansion" .=) . friendlyRational
+    , protocolUpdateTreasuryCut <&> ("treasury expansion" .=) . friendlyRational
+    , protocolUpdateUTxOCostPerWord <&>
+        ("UTxO storage cost per unit" .=) . friendlyLovelace
+    , protocolUpdateCollateralPercent <&>
+        ("collateral inputs share" .=) . (<> "%") . textShow
+    , protocolUpdateMaxBlockExUnits <&> ("max block execution units" .=)
+    , protocolUpdateMaxCollateralInputs <&> ("max collateral inputs" .=)
+    , protocolUpdateMaxTxExUnits <&> ("max transaction execution units" .=)
+    , protocolUpdateMaxValueSize <&> ("max value size" .=)
+    , protocolUpdatePrices <&> ("execution prices" .=) . friendlyPrices
+    ]
+
+friendlyPrices :: ExecutionUnitPrices -> Aeson.Value
+friendlyPrices ExecutionUnitPrices{priceExecutionMemory, priceExecutionSteps} =
+  object
+    [ "memory" .= friendlyRational priceExecutionMemory
+    , "steps" .= friendlyRational priceExecutionSteps
+    ]
 
 friendlyCertificates :: TxCertificates ViewTx era -> Aeson.Value
 friendlyCertificates = \case
   TxCertificatesNone -> Null
   TxCertificates _ cs _ -> toJSON $ map textShow cs
+
+friendlyRational :: Rational -> Aeson.Value
+friendlyRational r =
+  String $
+    case d of
+      1 -> textShow n
+      _ -> textShow n <> "/" <> textShow d
+  where
+    n = numerator r
+    d = denominator r
 
 friendlyFee :: TxFee era -> Aeson.Value
 friendlyFee = \case
