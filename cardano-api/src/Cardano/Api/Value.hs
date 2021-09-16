@@ -58,7 +58,7 @@ import           Prelude
 
 import           Data.Aeson hiding (Value)
 import qualified Data.Aeson as Aeson
-import           Data.Aeson.Types (Parser)
+import           Data.Aeson.Types (Parser, toJSONKeyText)
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BSC
@@ -160,7 +160,6 @@ scriptPolicyId = PolicyId . hashScript
 newtype AssetName = AssetName ByteString
     deriving stock (Eq, Ord)
     deriving newtype (Show)
-    deriving (ToJSON, FromJSON, ToJSONKey, FromJSONKey) via UsingRawBytesHex AssetName
 
 instance IsString AssetName where
     fromString s
@@ -177,6 +176,19 @@ instance SerialiseAsRawBytes AssetName where
     deserialiseFromRawBytes AsAssetName bs
       | BS.length bs <= 32 = Just (AssetName bs)
       | otherwise          = Nothing
+
+instance ToJSON AssetName where
+  toJSON (AssetName an) = Aeson.String $ Text.decodeUtf8 an
+
+instance FromJSON AssetName where
+  parseJSON = withText "AssetName" (return . AssetName . Text.encodeUtf8)
+
+instance ToJSONKey AssetName where
+  toJSONKey = toJSONKeyText (\(AssetName asset) -> Text.decodeUtf8 asset)
+
+instance FromJSONKey AssetName where
+  fromJSONKey = FromJSONKeyText (AssetName . Text.encodeUtf8)
+
 
 data AssetId = AdaAssetId
              | AssetId !PolicyId !AssetName
