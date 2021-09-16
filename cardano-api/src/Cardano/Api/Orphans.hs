@@ -173,7 +173,7 @@ instance Crypto.Crypto crypto => ToJSON (Shelley.DState crypto) where
                          , "irwd" .= Shelley._irwd dState
                          ]
 
-instance ToJSON (ShelleyLedger.FutureGenDeleg crypto) where
+instance Crypto.Crypto crypto => ToJSON (ShelleyLedger.FutureGenDeleg crypto) where
   toJSON fGenDeleg =
     object [ "fGenDelegSlot" .= ShelleyLedger.fGenDelegSlot fGenDeleg
            , "fGenDelegGenKeyHash" .= ShelleyLedger.fGenDelegGenKeyHash fGenDeleg
@@ -182,16 +182,20 @@ instance ToJSON (ShelleyLedger.FutureGenDeleg crypto) where
 instance Crypto.Crypto crypto => ToJSON (Shelley.GenDelegs crypto) where
   toJSON (Shelley.GenDelegs delegs) = toJSON delegs
 
-instance ToJSON (Shelley.InstantaneousRewards crypto) where
+instance Crypto.Crypto crypto => ToJSON (Shelley.InstantaneousRewards crypto) where
   toJSON iRwds = object [ "iRReserves" .= Shelley.iRReserves iRwds
                         , "iRTreasury" .= Shelley.iRTreasury iRwds
                         ]
 
-instance ToJSON (Bimap Shelley.Ptr (Shelley.Credential Shelley.Staking crypto)) where
+instance
+  Crypto.Crypto crypto =>
+  ToJSON (Bimap Shelley.Ptr (Shelley.Credential Shelley.Staking crypto))
+  where
   toJSON (MkBiMap ptsStakeM stakePtrSetM) =
     object [ "stakedCreds" .= Map.toList ptsStakeM
            , "credPtrR" .= toJSON stakePtrSetM
            ]
+
 instance ToJSON Shelley.Ptr where
   toJSON (Shelley.Ptr slotNo txIndex certIndex) =
     object [ "slot" .= unSlotNo slotNo
@@ -244,11 +248,7 @@ instance ToJSON Shelley.Likelihood where
   toJSON (Shelley.Likelihood llhd) =
     toJSON $ fmap (\(Shelley.LogWeight f) -> exp $ realToFrac f :: Double) llhd
 
-instance Consensus.ShelleyBasedEra era => ToJSON (ShelleyEpoch.PulsingStakeDistr era m) where
-  toJSON (ShelleyEpoch.StillPulsing _) = Aeson.Null
-  toJSON (ShelleyEpoch.Completed ru) = toJSON ru
-
-instance Consensus.ShelleyBasedEra era => ToJSON (Shelley.SnapShots era) where
+instance Crypto.Crypto crypto => ToJSON (Shelley.SnapShots crypto) where
   toJSON ss = object [ "pstakeMark" .= Shelley._pstakeMark ss
                      , "pstakeSet" .= Shelley._pstakeSet ss
                      , "pstakeGo" .= Shelley._pstakeGo ss
@@ -261,7 +261,7 @@ instance Crypto.Crypto crypto => ToJSON (Shelley.SnapShot crypto) where
                      , "poolParams" .= Shelley._poolParams ss
                      ]
 
-instance ToJSON (Shelley.Stake crypto) where
+instance Crypto.Crypto crypto => ToJSON (Shelley.Stake crypto) where
   toJSON (Shelley.Stake s) = toJSON s
 
 instance Crypto.Crypto crypto => ToJSON (Shelley.RewardUpdate crypto) where
@@ -282,13 +282,13 @@ instance ToJSON Shelley.DeltaCoin where
 instance Crypto.Crypto crypto => ToJSON (Praos.PoolDistr crypto) where
   toJSON (Praos.PoolDistr m) = toJSON m
 
-instance ToJSON (Praos.IndividualPoolStake crypto) where
+instance Crypto.Crypto crypto => ToJSON (Praos.IndividualPoolStake crypto) where
   toJSON indivPoolStake =
     object [ "individualPoolStake" .= Praos.individualPoolStake indivPoolStake
            , "individualPoolStakeVrf" .= Praos.individualPoolStakeVrf indivPoolStake
            ]
 
-instance ToJSON (Shelley.Reward crypto) where
+instance Crypto.Crypto crypto => ToJSON (Shelley.Reward crypto) where
   toJSON reward =
      object [ "rewardType" .= Shelley.rewardType reward
             , "rewardPool" .= Shelley.rewardPool reward
@@ -299,7 +299,7 @@ instance ToJSON Shelley.RewardType where
   toJSON Shelley.MemberReward = "MemberReward"
   toJSON Shelley.LeaderReward = "LeaderReward"
 
-instance ToJSON (SafeHash.SafeHash c a) where
+instance Crypto.Crypto c => ToJSON (SafeHash.SafeHash c a) where
   toJSON = toJSON . SafeHash.extractHash
 
 -----

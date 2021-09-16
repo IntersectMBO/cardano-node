@@ -7,7 +7,6 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE ViewPatterns #-}
 
 {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
@@ -484,7 +483,6 @@ writeLedgerState mOutFile qState@(SerialisedDebugLedgerState serLedgerState) =
 
 writeStakeSnapshot :: forall era ledgerera. ()
   => ShelleyLedgerEra era ~ ledgerera
-  => Era.Era ledgerera
   => Era.Crypto ledgerera ~ StandardCrypto
   => FromCBOR (DebugLedgerState era)
   => PoolId
@@ -500,7 +498,7 @@ writeStakeSnapshot (StakePoolKeyHash hk) qState =
       let (DebugLedgerState snapshot) = ledgerState
 
       -- The three stake snapshots, obtained from the ledger state
-      let (SnapShots (runToCompletion @ledgerera -> markS) setS goS _) = esSnapshots $ nesEs snapshot
+      let (SnapShots markS setS goS _) = esSnapshots $ nesEs snapshot
 
       -- Calculate the three pool and active stake values for the given pool
       liftIO . LBS.putStrLn $ encodePretty $ Stakes

@@ -60,6 +60,7 @@ import           Cardano.Ledger.BaseTypes (strictMaybeToMaybe)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Core as Ledger
 import qualified Cardano.Ledger.Crypto as Core
+import qualified Cardano.Ledger.Era as Ledger
 import qualified Cardano.Ledger.SafeHash as SafeHash
 import qualified Cardano.Ledger.ShelleyMA.Rules.Utxo as MA
 import qualified Cardano.Ledger.ShelleyMA.Timelocks as MA
@@ -125,7 +126,7 @@ instance ( ShelleyBasedEra era
   toObject verb (ApplyTxError predicateFailures) =
     HMS.unions $ map (toObject verb) predicateFailures
 
-instance ToObject (TPraosCannotForge era) where
+instance Core.Crypto crypto => ToObject (TPraosCannotForge crypto) where
   toObject _verb (TPraosCannotForgeKeyNotUsableYet wallClockPeriod keyStartPeriod) =
     mkObject
       [ "kind" .= String "TPraosCannotForgeKeyNotUsableYet"
@@ -182,7 +183,7 @@ instance ( ShelleyBasedEra era
              , "updates" .= map (toObject verb) updates
              ]
 
-instance ToJSON (Ledger.PParamsDelta era)
+instance (Ledger.Era era, ToJSON (Ledger.PParamsDelta era))
          => ToObject (ProtocolUpdate era) where
   toObject verb ProtocolUpdate{protocolUpdateProposal, protocolUpdateState} =
     mkObject [ "proposal" .= toObject verb protocolUpdateProposal
@@ -197,7 +198,7 @@ instance ToJSON (Ledger.PParamsDelta era)
              , "epoch"   .= proposalEpoch
              ]
 
-instance ToObject (UpdateState crypto) where
+instance Core.Crypto crypto => ToObject (UpdateState crypto) where
   toObject _verb UpdateState{proposalVotes, proposalReachedQuorum} =
     mkObject [ "proposal"      .= proposalVotes
              , "reachedQuorum" .= proposalReachedQuorum
@@ -533,7 +534,7 @@ renderValueNotConservedErr :: Show val => val -> val -> Aeson.Value
 renderValueNotConservedErr consumed produced = String $
     "This transaction consumed " <> show consumed <> " but produced " <> show produced
 
-instance ToObject (PpupPredicateFailure era) where
+instance Ledger.Era era => ToObject (PpupPredicateFailure era) where
   toObject _verb (NonGenesisUpdatePPUP proposalKeys genesisKeys) =
     mkObject [ "kind" .= String "NonGenesisUpdatePPUP"
              , "keys" .= proposalKeys Set.\\ genesisKeys ]
@@ -569,7 +570,7 @@ instance ( ToObject (PredicateFailure (Core.EraRule "POOL" era))
   toObject verb (PoolFailure f) = toObject verb f
   toObject verb (DelegFailure f) = toObject verb f
 
-instance ToObject (DelegPredicateFailure era) where
+instance Ledger.Era era => ToObject (DelegPredicateFailure era) where
   toObject _verb (StakeKeyAlreadyRegisteredDELEG alreadyRegistered) =
     mkObject [ "kind" .= String "StakeKeyAlreadyRegisteredDELEG"
              , "credential" .= String (textShow alreadyRegistered)
@@ -1042,4 +1043,4 @@ showLastAppBlockNo wOblk =  case withOriginToMaybe wOblk of
 
 deriving newtype instance Core.Crypto crypto => ToJSON (Core.AuxiliaryDataHash crypto)
 
-deriving newtype instance ToJSON (TxId crypto)
+deriving newtype instance Core.Crypto crypto => ToJSON (TxId crypto)
