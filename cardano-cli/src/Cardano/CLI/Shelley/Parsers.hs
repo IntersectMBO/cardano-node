@@ -2401,7 +2401,7 @@ pPoolMargin :: Parser Rational
 pPoolMargin =
     Opt.option readRationalUnitInterval
       (  Opt.long "pool-margin"
-      <> Opt.metavar "DOUBLE"
+      <> Opt.metavar "RATIONAL"
       <> Opt.help "The stake pool's margin."
       )
 
@@ -2653,7 +2653,7 @@ pPoolInfluence :: Parser Rational
 pPoolInfluence =
     Opt.option readRational
       (  Opt.long "pool-influence"
-      <> Opt.metavar "DOUBLE"
+      <> Opt.metavar "RATIONAL"
       <> Opt.help "Pool influence."
       )
 
@@ -2661,7 +2661,7 @@ pTreasuryExpansion :: Parser Rational
 pTreasuryExpansion =
     Opt.option readRationalUnitInterval
       (  Opt.long "treasury-expansion"
-      <> Opt.metavar "DOUBLE"
+      <> Opt.metavar "RATIONAL"
       <> Opt.help "Treasury expansion."
       )
 
@@ -2669,7 +2669,7 @@ pMonetaryExpansion :: Parser Rational
 pMonetaryExpansion =
     Opt.option readRationalUnitInterval
       (  Opt.long "monetary-expansion"
-      <> Opt.metavar "DOUBLE"
+      <> Opt.metavar "RATIONAL"
       <> Opt.help "Monetary expansion."
       )
 
@@ -2677,7 +2677,7 @@ pDecentralParam :: Parser Rational
 pDecentralParam =
     Opt.option readRationalUnitInterval
       (  Opt.long "decentralization-parameter"
-      <> Opt.metavar "DOUBLE"
+      <> Opt.metavar "RATIONAL"
       <> Opt.help "Decentralization parameter."
       )
 
@@ -2686,7 +2686,7 @@ pExtraEntropy =
       Opt.option (Just <$> readerFromParsecParser parsePraosNonce)
         (  Opt.long "extra-entropy"
         <> Opt.metavar "HEX"
-        <> Opt.help "Praos extra entropy, as a hex byte string."
+        <> Opt.help "Praos extra entropy seed, as a hex byte string."
         )
   <|> Opt.flag' Nothing
         (  Opt.long "reset-extra-entropy"
