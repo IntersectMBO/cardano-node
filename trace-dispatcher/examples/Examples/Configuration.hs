@@ -47,6 +47,7 @@ config1 = TraceConfig {
           ]
     , tcForwarder = LocalSocket "forwarder.log"
     , tcForwarderQueueSize = 100
+    , tcNodeName = Nothing
     }
 
 config2 :: TraceConfig
@@ -58,6 +59,7 @@ config2 = TraceConfig {
         ]
     , tcForwarder = LocalSocket "forwarder.log"
     , tcForwarderQueueSize = 100
+    , tcNodeName = Just "node-1"
     }
 
 testConfig' :: MonadIO m => TraceConfig -> Trace m TestMessage -> Trace m TestMessage -> m ()

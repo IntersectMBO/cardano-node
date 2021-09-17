@@ -56,7 +56,7 @@ import           Cardano.Node.Configuration.Logging (EKGDirect (..),
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..),
                      PartialNodeConfiguration (..),
                      defaultPartialNodeConfiguration, makeNodeConfiguration,
-                     parseNodeConfigurationFP)
+                     ncProtocol, parseNodeConfigurationFP)
 import           Cardano.Node.Types
 import           Cardano.TraceDispatcher.BasicInfo.Combinators (getBasicInfo)
 import           Cardano.TraceDispatcher.BasicInfo.Types
@@ -66,21 +66,30 @@ import           Cardano.TraceDispatcher.Tracers (mkDispatchTracers)
 import           Cardano.Tracing.Config (TraceOptions (..), TraceSelection (..))
 import           Cardano.Tracing.Constraints (TraceConstraints)
 
+import qualified Ouroboros.Consensus.BlockchainTime.WallClock.Types as WCT
+import           Ouroboros.Consensus.Cardano.Block
+import           Ouroboros.Consensus.Cardano.CanHardFork
 import qualified Ouroboros.Consensus.Config as Consensus
-import           Ouroboros.Consensus.Config.SupportsNode (getNetworkMagic)
+import           Ouroboros.Consensus.Config.SupportsNode
+                     (ConfigSupportsNode (..))
+import           Ouroboros.Consensus.HardFork.Combinator.Degenerate
 import           Ouroboros.Consensus.Node (DiffusionArguments (..),
                      DiffusionTracers (..), DnsSubscriptionTarget (..),
                      IPSubscriptionTarget (..), RunNode, RunNodeArgs (..),
                      StdRunNodeArgs (..))
 import qualified Ouroboros.Consensus.Node as Node (getChainDB, run)
 import           Ouroboros.Consensus.Node.ProtocolInfo
+import           Ouroboros.Consensus.Shelley.Ledger.Ledger
 import           Ouroboros.Consensus.Util.Orphans ()
 import           Ouroboros.Network.IOManager (withIOManager)
 import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..),
                      DiffusionMode)
+import qualified Shelley.Spec.Ledger.API as SL
 
 import           Cardano.Api
 import qualified Cardano.Api.Protocol.Types as Protocol
+
+import           Cardano.Config.Git.Rev (gitRev)
 
 import           Trace.Forward.Protocol.Type (NodeInfo (..))
 
@@ -143,7 +152,7 @@ runNode cmdPc = do
         Just fileName -> NL.readConfiguration (unConfigPath fileName)
         Nothing -> putTextLn "No configuration file name found!" >> exitFailure
     baseTrace    <- NL.standardTracer Nothing
-    nodeInfo     <- prepareNodeInfo now
+    nodeInfo <- prepareNodeInfo nc p loggerConfiguration now
     forwardTrace <- withIOManager $ \iomgr -> NL.forwardTracer iomgr loggerConfiguration nodeInfo
     mbEkgTrace   <- case llEKGDirect loggingLayer of
                       Nothing -> pure Nothing
@@ -522,14 +531,47 @@ producerAddresses nt =
       . concatMap producers
       $ nodeSetup
 
--- TODO: temporary function. It will be replaced by the real collector of node's info.
-prepareNodeInfo :: UTCTime -> IO NodeInfo
-prepareNodeInfo now = return $
-  NodeInfo
-    { niName            = ""
-    , niProtocol        = ""
-    , niVersion         = ""
-    , niCommit          = ""
-    , niStartTime       = now
-    , niSystemStartTime = now
+-- | Prepare basic info about the node. This info will be sent to 'cardano-tracer'.
+prepareNodeInfo
+  :: NodeConfiguration
+  -> SomeConsensusProtocol
+  -> NL.TraceConfig
+  -> UTCTime
+  -> IO NodeInfo
+prepareNodeInfo nc (SomeConsensusProtocol whichP pForInfo) tc nodeStartTime = do
+  nodeName <- prepareNodeName
+  return $ NodeInfo
+    { niName            = nodeName
+    , niProtocol        = pack . protocolName $ ncProtocol nc
+    , niVersion         = pack . showVersion $ version
+    , niCommit          = gitRev
+    , niStartTime       = nodeStartTime
+    , niSystemStartTime = systemStartTime
     }
+ where
+  cfg = pInfoConfig $ Protocol.protocolInfo pForInfo
+
+  systemStartTime :: UTCTime
+  systemStartTime =
+    case whichP of
+      Protocol.ByronBlockType ->
+        getSystemStartByron
+      Protocol.ShelleyBlockType ->
+        let DegenLedgerConfig cfgShelley = Consensus.configLedger cfg
+        in getSystemStartShelley cfgShelley
+      Protocol.CardanoBlockType ->
+        let CardanoLedgerConfig _ cfgShelley cfgAllegra cfgMary cfgAlonzo = Consensus.configLedger cfg
+        in minimum [ getSystemStartByron
+                   , getSystemStartShelley cfgShelley
+                   , getSystemStartShelley cfgAllegra
+                   , getSystemStartShelley cfgMary
+                   , getSystemStartShelley cfgAlonzo
+                   ]
+
+  getSystemStartByron = WCT.getSystemStart . getSystemStart . Consensus.configBlock $ cfg
+  getSystemStartShelley cfg' = SL.sgSystemStart . shelleyLedgerGenesis . shelleyLedgerConfig $ cfg'
+
+  prepareNodeName =
+    case NL.tcNodeName tc of
+      Just aName -> return aName
+      Nothing -> pack <$> getHostName

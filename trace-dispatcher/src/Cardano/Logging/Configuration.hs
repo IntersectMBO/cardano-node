@@ -362,7 +362,7 @@ parseRepresentation bs = transform (decodeEither' bs)
     transform (Left e)   = Left e
     transform (Right rl) = Right $ transform' emptyTraceConfig rl
     transform' :: TraceConfig -> ConfigRepresentation -> TraceConfig
-    transform' (TraceConfig tc _fc _fcc) cr =
+    transform' (TraceConfig tc _fc _fcc _) cr =
       let tc'  = foldl' (\ tci (TraceOptionSeverity ns severity') ->
                           let ns' = split (=='.') ns
                               ns'' = if ns' == [""] then [] else ns'
@@ -391,6 +391,7 @@ parseRepresentation bs = transform (decodeEither' bs)
           tc''''
           (traceOptionForwarder cr)
           (traceOptionForwardQueueSize cr)
+          (traceOptionNodeName cr)
 
 data TraceOptionSeverity = TraceOptionSeverity {
       nsS      :: Text
@@ -463,6 +464,7 @@ data ConfigRepresentation = ConfigRepresentation {
   , traceOptionLimiter          :: [TraceOptionLimiter]
   , traceOptionForwarder        :: ForwarderAddr
   , traceOptionForwardQueueSize :: Int
+  , traceOptionNodeName         :: Maybe Text
   }
   deriving (Eq, Ord, Show)
 
@@ -474,3 +476,4 @@ instance AE.FromJSON ConfigRepresentation where
                            <*> obj .: "TraceOptionLimiter"
                            <*> obj .: "TraceOptionForwarder"
                            <*> obj .: "TraceOptionForwardQueueSize"
+                           <*> obj .:? "TraceOptionNodeName"
