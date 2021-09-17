@@ -594,6 +594,8 @@ module Cardano.Api (
     --TODO: arrange not to export these
     toNetworkMagic,
     --TODO: Remove after updating cardano-node-chairman with new IPC
+    toShelleyTxIn,
+    toShelleyTxOut,
     SomeNodeClientProtocol(..),
 
     SlotsInEpoch(..),
