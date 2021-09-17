@@ -21,6 +21,7 @@ import           Text.Parsec.String (Parser)
 import           Text.ParserCombinators.Parsec.Combinator (many1)
 
 import           Cardano.Api.SerialiseRaw
+import           Cardano.Api.Utils (note)
 import           Cardano.Api.Value
 
 -- | Parse a 'Value' from its string representation.
@@ -113,10 +114,10 @@ decimal = do
 
 -- | Asset name parser.
 assetName :: Parser AssetName
-assetName =
-    toAssetName <$> many alphaNum
-  where
-    toAssetName = AssetName . Text.encodeUtf8 . Text.pack
+assetName = do
+  hexText <- many hexDigit
+  note "AssetName deserisalisation failed" $
+    deserialiseFromRawBytesHex AsAssetName $ BSC.pack hexText
 
 -- | Policy ID parser.
 policyId :: Parser PolicyId
