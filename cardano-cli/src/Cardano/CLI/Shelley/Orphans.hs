@@ -23,8 +23,6 @@ import qualified Data.Text.Encoding as Text
 
 import           Cardano.Api.Orphans ()
 
-import           Cardano.Crypto.Hash.Class as Crypto
-
 import           Ouroboros.Consensus.Byron.Ledger.Block (ByronHash (..))
 import           Ouroboros.Consensus.HardFork.Combinator (OneEraHash (..))
 import           Ouroboros.Consensus.Shelley.Eras (StandardCrypto)
@@ -32,6 +30,7 @@ import           Ouroboros.Consensus.Shelley.Ledger.Block (ShelleyHash (..))
 import           Ouroboros.Network.Block (BlockNo (..), HeaderHash, Tip (..))
 
 import           Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
+import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import           Cardano.Protocol.TPraos (PoolDistr (..))
 import           Cardano.Protocol.TPraos.BHeader (HashHeader (..))
 
@@ -72,10 +71,10 @@ deriving newtype instance ToJSON BlockNo
 -- Simple newtype wrappers JSON conversion
 --
 
-deriving newtype instance ToJSON (TxId era)
+deriving newtype instance CC.Crypto crypto => ToJSON (TxId crypto)
 
-deriving newtype instance ToJSON (ShelleyHash era)
-deriving newtype instance ToJSON (HashHeader era)
+deriving newtype instance CC.Crypto crypto => ToJSON (ShelleyHash crypto)
+deriving newtype instance CC.Crypto crypto => ToJSON (HashHeader crypto)
 
 deriving newtype instance ToJSON (AuxiliaryDataHash StandardCrypto)
 deriving newtype instance ToJSON Ledger.LogWeight

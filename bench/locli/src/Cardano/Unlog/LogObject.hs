@@ -126,7 +126,6 @@ instance FromJSON BlockNo where
 instance ToJSON BlockNo where
   toJSON (BlockNo x) = toJSON x
 
-deriving anyclass instance NFData BlockNo
 deriving instance NFData a => NFData (Resources a)
 
 --

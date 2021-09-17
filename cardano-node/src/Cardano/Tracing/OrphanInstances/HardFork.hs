@@ -20,9 +20,10 @@ module Cardano.Tracing.OrphanInstances.HardFork () where
 import           Cardano.Prelude hiding (All)
 
 import           Data.Aeson
+import qualified Data.ByteString.Base16 as Base16
+import qualified Data.ByteString.Short as SBS
 import           Data.SOP.Strict
 
-import qualified Cardano.Crypto.Hash.Class as Crypto
 import           Cardano.Tracing.OrphanInstances.Common
 import           Cardano.Tracing.OrphanInstances.Consensus ()
 
@@ -53,7 +54,7 @@ import           Ouroboros.Consensus.Util.Condense (Condense (..))
 --
 
 instance Condense (OneEraHash xs) where
-    condense = condense . Crypto.UnsafeHash . getOneEraHash
+    condense = condense . Base16.encode . SBS.fromShort . getOneEraHash
 
 --
 -- instances for Header HardForkBlock

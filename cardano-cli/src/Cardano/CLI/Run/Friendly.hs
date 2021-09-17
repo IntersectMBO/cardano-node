@@ -20,6 +20,7 @@ import           Data.Yaml.Pretty (defConfig, encodePretty, setConfCompare)
 import           Cardano.Api
 import           Cardano.Api.Byron (Lovelace (..))
 import           Cardano.Api.Shelley (Address (ShelleyAddress), StakeAddress (..))
+import           Cardano.Ledger.Crypto (Crypto)
 import qualified Shelley.Spec.Ledger.API as Shelley
 
 import           Cardano.CLI.Helpers (textShow)
@@ -124,7 +125,7 @@ friendlyTxOut (TxOut addr amount mdatum) =
       , "amount" .= friendlyTxOutValue amount
       ]
 
-friendlyStakeReference :: Shelley.StakeReference crypto -> Aeson.Value
+friendlyStakeReference :: Crypto crypto => Shelley.StakeReference crypto -> Aeson.Value
 friendlyStakeReference = \case
   Shelley.StakeRefBase cred -> toJSON cred
   Shelley.StakeRefNull -> Null

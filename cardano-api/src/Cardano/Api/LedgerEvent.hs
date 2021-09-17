@@ -6,10 +6,12 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ViewPatterns #-}
+{-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
 
 module Cardano.Api.LedgerEvent
   ( LedgerEvent (..),
-    MIRDistributionDetails(..),
+    MIRDistributionDetails (..),
+    PoolReapDetails (..),
     toLedgerEvent,
   )
 where
@@ -17,12 +19,14 @@ where
 import           Cardano.Api.Address (StakeCredential, fromShelleyStakeCredential)
 import           Cardano.Api.Block (EpochNo)
 import           Cardano.Api.Certificate (Certificate)
+import           Cardano.Api.KeysShelley (Hash (StakePoolKeyHash), StakePoolKey)
 import           Cardano.Api.Value (Lovelace, fromShelleyDeltaLovelace, fromShelleyLovelace)
 import qualified Cardano.Ledger.Coin
 import qualified Cardano.Ledger.Core as Ledger.Core
 import qualified Cardano.Ledger.Credential
 import           Cardano.Ledger.Crypto (StandardCrypto)
 import           Cardano.Ledger.Era (Crypto)
+import qualified Cardano.Ledger.Keys
 import           Control.State.Transition (Event)
 import           Data.Function (($), (.))
 import           Data.Functor (fmap)
@@ -39,8 +43,10 @@ import           Ouroboros.Consensus.Shelley.Ledger (ShelleyBlock,
                    ShelleyLedgerEvent (ShelleyLedgerEventTICK))
 import           Ouroboros.Consensus.TypeFamilyWrappers
 import           Shelley.Spec.Ledger.API (InstantaneousRewards (InstantaneousRewards))
+import           Shelley.Spec.Ledger.STS.Epoch (EpochEvent (PoolReapEvent))
 import           Shelley.Spec.Ledger.STS.Mir (MirEvent (..))
-import           Shelley.Spec.Ledger.STS.NewEpoch (NewEpochEvent (MirEvent, SumRewards))
+import           Shelley.Spec.Ledger.STS.NewEpoch (NewEpochEvent (EpochEvent, MirEvent, SumRewards))
+import           Shelley.Spec.Ledger.STS.PoolReap (PoolreapEvent (RetiredPools))
 import           Shelley.Spec.Ledger.STS.Tick (TickEvent (NewEpochEvent))
 
 data LedgerEvent
@@ -52,6 +58,8 @@ data LedgerEvent
     RewardsDistribution EpochNo (Map StakeCredential Lovelace)
   | -- | MIR are being distributed.
     MIRDistribution MIRDistributionDetails
+  | -- | Pools have been reaped and deposits refunded.
+    PoolReap PoolReapDetails
 
 class ConvertLedgerEvent blk where
   toLedgerEvent :: WrapLedgerEvent blk -> Maybe LedgerEvent
@@ -63,6 +71,8 @@ instance
   ( Crypto ledgerera ~ StandardCrypto,
     Event (Ledger.Core.EraRule "TICK" ledgerera) ~ TickEvent ledgerera,
     Event (Ledger.Core.EraRule "NEWEPOCH" ledgerera) ~ NewEpochEvent ledgerera,
+    Event (Ledger.Core.EraRule "EPOCH" ledgerera) ~ EpochEvent ledgerera,
+    Event (Ledger.Core.EraRule "POOLREAP" ledgerera) ~ PoolreapEvent ledgerera,
     Event (Ledger.Core.EraRule "MIR" ledgerera) ~ MirEvent ledgerera
   ) =>
   ConvertLedgerEvent (ShelleyBlock ledgerera)
@@ -73,6 +83,7 @@ instance
       Just $
         MIRDistribution $
           MIRDistributionDetails rp rt rtt ttr
+    LERetiredPools r u -> Just $ PoolReap $ PoolReapDetails r u
     _ -> Nothing
 
 instance All ConvertLedgerEvent xs => ConvertLedgerEvent (HardForkBlock xs) where
@@ -96,6 +107,16 @@ data MIRDistributionDetails = MIRDistributionDetails
     treasuryPayouts :: Map StakeCredential Lovelace,
     reservesToTreasury :: Lovelace,
     treasuryToReserves :: Lovelace
+  }
+
+data PoolReapDetails = PoolReapDetails
+  { -- | Refunded deposits. The pools referenced are now retired, and the
+    --   'StakeCredential' accounts are credited with the deposits.
+    refunded :: Map StakeCredential (Map (Hash StakePoolKey) Lovelace),
+    -- | Unclaimed deposits. The 'StakeCredential' referenced in this map is not
+    -- actively registered at the time of the pool reaping, and as such the
+    -- funds are returned to the treasury.
+    unclaimed :: Map StakeCredential (Map (Hash StakePoolKey) Lovelace)
   }
 
 --------------------------------------------------------------------------------
@@ -149,3 +170,40 @@ convertSumRewardsMap ::
   Map StakeCredential Lovelace
 convertSumRewardsMap =
   Map.mapKeys fromShelleyStakeCredential . fmap fromShelleyLovelace
+
+pattern LERetiredPools ::
+  ( Crypto ledgerera ~ StandardCrypto,
+    Event (Ledger.Core.EraRule "TICK" ledgerera) ~ TickEvent ledgerera,
+    Event (Ledger.Core.EraRule "NEWEPOCH" ledgerera) ~ NewEpochEvent ledgerera,
+    Event (Ledger.Core.EraRule "EPOCH" ledgerera) ~ EpochEvent ledgerera,
+    Event (Ledger.Core.EraRule "POOLREAP" ledgerera) ~ PoolreapEvent ledgerera
+  ) =>
+  Map StakeCredential (Map (Hash StakePoolKey) Lovelace) ->
+  Map StakeCredential (Map (Hash StakePoolKey) Lovelace) ->
+  AuxLedgerEvent (LedgerState (ShelleyBlock ledgerera))
+pattern LERetiredPools r u <-
+  ShelleyLedgerEventTICK
+    ( NewEpochEvent
+        ( EpochEvent
+            ( PoolReapEvent
+                ( RetiredPools
+                    (convertRetiredPoolsMap -> r)
+                    (convertRetiredPoolsMap -> u)
+                  )
+              )
+          )
+      )
+
+convertRetiredPoolsMap ::
+  Map
+    ( Cardano.Ledger.Credential.StakeCredential
+        Cardano.Ledger.Crypto.StandardCrypto
+    )
+    ( Map
+        (Cardano.Ledger.Keys.KeyHash Cardano.Ledger.Keys.StakePool StandardCrypto)
+        Cardano.Ledger.Coin.Coin
+    ) ->
+  Map StakeCredential (Map (Hash StakePoolKey) Lovelace)
+convertRetiredPoolsMap =
+  Map.mapKeys fromShelleyStakeCredential
+    . fmap (Map.mapKeys StakePoolKeyHash . fmap fromShelleyLovelace)
