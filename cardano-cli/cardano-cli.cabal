@@ -208,6 +208,7 @@ test-suite cardano-cli-golden
   type:                 exitcode-stdio-1.0
 
   build-depends:        aeson             >= 1.5.6.0
+                      , base16-bytestring
                       , bytestring
                       , cardano-api
                       , cardano-cli

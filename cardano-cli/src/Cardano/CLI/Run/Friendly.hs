@@ -162,25 +162,21 @@ friendlyFee = \case
 friendlyLovelace :: Lovelace -> Aeson.Value
 friendlyLovelace (Lovelace value) = String $ textShow value <> " Lovelace"
 
+{-
+  current output:
+
+    52dc3d43b6d2465e96109ce75ab61abe5e9c1d8a3c9ce6ff8a3af528:
+      736b79: 142
+
+  TODO:
+
+    policy 52dc3d43b6d2465e96109ce75ab61abe5e9c1d8a3c9ce6ff8a3af528:
+      asset 736b79 (sky): 142
+-}
 friendlyMintValue :: TxMintValue ViewTx era -> Aeson.Value
 friendlyMintValue = \case
   TxMintNone -> Null
-  TxMintValue _ v _ ->
-    object
-      [ friendlyAssetId assetId .= quantity
-      | (assetId, quantity) <- valueToList v
-      ]
-
-friendlyAssetId :: AssetId -> Text
-friendlyAssetId = \case
-  AdaAssetId -> "ADA"
-  AssetId policyId (AssetName assetName) ->
-    decodeUtf8 $ serialiseToRawBytesHex policyId <> suffix
-    where
-      suffix =
-        case assetName of
-          "" -> ""
-          _ -> "." <> assetName
+  TxMintValue _ v _ -> toJSON v
 
 friendlyTxOutValue :: TxOutValue era -> Aeson.Value
 friendlyTxOutValue = \case

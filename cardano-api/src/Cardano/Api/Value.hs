@@ -83,6 +83,7 @@ import           Cardano.Api.Script
 import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseRaw
 import           Cardano.Api.SerialiseUsing
+import           Cardano.Api.Utils (note)
 
 
 -- ----------------------------------------------------------------------------
