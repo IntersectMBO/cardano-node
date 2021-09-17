@@ -10,6 +10,7 @@ module Cardano.Logging.Resources.Darwin
 import           Data.Word (Word64)
 import           Foreign.C.Types
 import           Foreign.Marshal.Alloc
+import           Foreign.Marshal.Error
 import           Foreign.Ptr
 import           Foreign.Storable
 import qualified GHC.Stats as GhcStats
@@ -76,14 +77,10 @@ foreign import ccall unsafe c_get_process_memory_info :: Ptr MachTaskBasicInfo -
 
 getMemoryInfo :: ProcessID -> IO MachTaskBasicInfo
 getMemoryInfo pid =
-  allocaBytes 128 $ \ptr -> do
-    res <- c_get_process_memory_info ptr (fromIntegral pid)
-    if res <= 0
-      then do
-        putStrLn $ "c_get_process_memory_info: failure returned: " ++ (show res)
-        return $ MachTaskBasicInfo 0 0 0 (TIME_VALUE_T 0 0) (TIME_VALUE_T 0 0) 0 0
-      else
-        peek ptr
+    allocaBytes 128 $ \ptr -> do
+      throwIfNeg_ (\res -> "c_get_process_memory_info: failure returned: " ++ show (pred res))
+                    (succ <$> c_get_process_memory_info ptr (fromIntegral pid))
+      peek ptr
 
 readRessoureStatsInternal :: IO (Maybe ResourceStats)
 readRessoureStatsInternal = getProcessID >>= \pid -> do

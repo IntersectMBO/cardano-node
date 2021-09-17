@@ -14,7 +14,10 @@ int c_get_process_memory_info (PROCESS_MEMORY_COUNTERS *counters, DWORD pid) {
     if (NULL == hProc) { return -2; }
     BOOL result = GetProcessMemoryInfo(hProc, counters, sizeof(PROCESS_MEMORY_COUNTERS));
     CloseHandle(hProc);
-    return result;
+    if (result == 1)
+      return 0;
+    else
+      return -1;
 }
 
 
@@ -91,4 +94,3 @@ int c_get_win_bits (DWORD pid) {
     }
     return 64;
 }
-

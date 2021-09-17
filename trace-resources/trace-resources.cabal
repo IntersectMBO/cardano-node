@@ -8,8 +8,8 @@ maintainer:           operations@iohk.io
 copyright:            2021 IOHK
 extra-source-files:   CHANGELOG.md
                       README.md
-                      src/Cardano/Logging/Resources/os-support-darwin.h
-                      src/Cardano/Logging/Resources/os-support-win.h
+                      include/os-support-darwin.h
+                      include/os-support-win.h
 
 library
   hs-source-dirs:     src
@@ -42,13 +42,13 @@ library
     exposed-modules:   Cardano.Logging.Resources.Linux
   if os(windows)
     exposed-modules:   Cardano.Logging.Resources.Windows
-    c-sources:         src/Cardano/Logging/Resources/os-support-win.c
-    include-dirs:      src/Cardano/Logging/Resources/
+    c-sources:         cbits/os-support-win.c
+    include-dirs:      include/
     cc-options:        -DPSAPI_VERSION=2
   if os(darwin)
     exposed-modules:   Cardano.Logging.Resources.Darwin
-    c-sources:         src/Cardano/Logging/Resources/os-support-darwin.c
-    include-dirs:      src/Cardano/Logging/Resources/
+    c-sources:         cbits/os-support-darwin.c
+    include-dirs:      include/
 
 test-suite trace-resources-test
   type:                exitcode-stdio-1.0
