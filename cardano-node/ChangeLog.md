@@ -1,8 +1,18 @@
 # Changelog for cardano-node
 
+## 1.30 -- September 2021
+
+### node changes
+
+- Miscellaneous documentation updates. (#3060, #3120, #3142)
+- Fix the verbosity of some log messages, which was causing excess detail in the
+  node logs. (#3046)
+- Various build, testing and infrastructure improvements. (#2821, #3005, #3127,
+  #3157, #3159, #3189, #3194, #3200, #3203)
 ## 1.29 -- August 2021
 
 ### node changes
+
 - Various build, testing and infrastructure improvements. (#2940, #2943, #2947,
   #2956, #2968, #2979, #2983, #2988, #2991, #2993, #2997, #3004, #3006, #3013,
   #3029, #3034, #3053, #3058, #3062, #3087, #3098)
