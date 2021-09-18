@@ -27,7 +27,7 @@ import           Cardano.Api
 import           Cardano.Api.Shelley ( ProtocolParameters)
 
 import qualified Cardano.Benchmarking.FundSet as FundSet
-import           Cardano.Benchmarking.FundSet (AllowRecycle(..), FundInEra(..), Validity(..), Variant(..), liftAnyEra )
+import           Cardano.Benchmarking.FundSet (FundInEra(..), Validity(..), Variant(..), liftAnyEra )
 import qualified Cardano.Benchmarking.GeneratorTx as GeneratorTx
                    (asyncBenchmark, waitBenchmark, walletBenchmark
                    , readSigningKey, secureGenesisFund, splitFunds, txGenerator)
@@ -50,6 +50,7 @@ import           Cardano.Benchmarking.Types as Core
                    (NumberOfInputsPerTx(..), NumberOfOutputsPerTx(..),NumberOfTxs(..), SubmissionErrorPolicy(..)
                    , TPSRate, TxAdditionalSize(..))
 import           Cardano.Benchmarking.Wallet as Wallet
+import           Cardano.Benchmarking.ListBufferedSelector
 
 import           Cardano.Benchmarking.Script.Env
 import           Cardano.Benchmarking.Script.Setters
@@ -322,12 +323,26 @@ runBenchmarkInEra (ThreadName threadName) txCount tps era = do
   metadata <- makeMetadata
   connectClient <- getConnectClient
   let
-    minTxValue :: Lovelace
-    minTxValue = fromIntegral numOutputs * minValuePerUTxO + fee
+--    minValue :: Lovelace
+    (Quantity minValue) = lovelaceToQuantity $ fromIntegral numOutputs * minValuePerUTxO + fee
 
-    fundSource :: FundSet.Target -> FundSet.FundSource
-    fundSource target = mkWalletFundSource walletRef $ FundSet.selectInputs ConfirmedBeforeReuse numInputs minTxValue PlainOldFund target
+  -- this is not totally correct:
+  -- beware of rounding errors !
+    minValuePerInput = quantityToLovelace $ fromIntegral (if m==0 then d else d+1)
+      where
+        (d, m) = minValue `divMod` fromIntegral numInputs
 
+--    fundSource :: FundSet.Target -> FundSet.FundSource
+--    fundSource target = mkWalletFundSource walletRef $ FundSet.selectInputs ConfirmedBeforeReuse numInputs minTxValue PlainOldFund target
+
+  fundSource <- liftIO (mkBufferedSource walletRef
+                   (fromIntegral (unNumberOfTxs txCount) * numInputs)
+                   minValuePerInput
+                   PlainOldFund numInputs) >>= \case
+    Right a  -> return a
+    Left err -> throwE $ WalletError err
+
+  let
     inToOut :: [Lovelace] -> [Lovelace]
     inToOut = FundSet.inputsToOutputsWithFee fee numOutputs
 
@@ -339,7 +354,7 @@ runBenchmarkInEra (ThreadName threadName) txCount tps era = do
     fundToStore = mkWalletFundStore walletRef
 
     walletScript :: FundSet.Target -> WalletScript era
-    walletScript = benchmarkWalletScript walletRef txGenerator txCount fundSource inToOut toUTxO fundToStore
+    walletScript = benchmarkWalletScript walletRef txGenerator txCount (const fundSource) inToOut toUTxO fundToStore
 
     coreCall :: AsType era -> ExceptT TxGenError IO AsyncBenchmarkControl
     coreCall eraProxy = GeneratorTx.walletBenchmark (btTxSubmit_ tracers) (btN2N_ tracers) connectClient
@@ -460,16 +475,16 @@ localCreateScriptFunds value count = do
   let scriptData = PlutusExample.toScriptHash "e88bd757ad5b9bedf372d8d3f0cf6c962a469db61a265f6418e1ffed86da29ec"
   script <- liftIO $ PlutusExample.readScript "bench/script/sum1ToN.plutus"
   let
-    createCoins coins = do
+    createCoins fundSource coins = do
       let
-        selector :: FundSet.FundSource
-        selector = mkWalletFundSource walletRef $ FundSet.selectMinValue $ sum coins + fee
+--        selector :: FundSet.FundSource
+--        selector = mkWalletFundSource walletRef $ FundSet.selectMinValue $ sum coins + fee
         inOut :: [Lovelace] -> [Lovelace]
         inOut = Wallet.includeChange fee coins
         toUTxO = PlutusExample.mkUtxoScript networkId fundKey (script,scriptData) Confirmed
         fundToStore = mkWalletFundStore walletRef
 
-      tx <- liftIO $ sourceToStoreTransaction (genTx (mkFee fee) TxMetadataNone) selector inOut toUTxO fundToStore
+      tx <- liftIO $ sourceToStoreTransaction (genTx (mkFee fee) TxMetadataNone) fundSource inOut toUTxO fundToStore
       return $ fmap txInModeCardano tx
   createChangeGeneric createCoins value count
 
@@ -479,38 +494,46 @@ createChange value count = withEra $ createChangeInEra value count
 createChangeInEra :: forall era. IsShelleyBasedEra era => Lovelace -> Int -> AsType era -> ActionM ()
 createChangeInEra value count _proxy = do
   networkId <- get NetworkId
-  fundKey <- getName $ KeyName "pass-partout"
   fee <- getUser TFee
   walletRef <- get GlobalWallet
+  fundKey <- getName $ KeyName "pass-partout"
   let
-    createCoins :: [Lovelace] -> ActionM (Either String (TxInMode CardanoMode))
-    createCoins coins = do
+    createCoins :: FundSet.FundSource -> [Lovelace] -> ActionM (Either String (TxInMode CardanoMode))
+    createCoins fundSource coins = do
       let
-        selector :: FundSet.FundSource
-        selector = mkWalletFundSource walletRef $ FundSet.selectMinValue $ sum coins + fee
+--        selector :: FundSet.FundSource
+--        selector = mkWalletFundSource walletRef $ FundSet.selectMinValue $ sum coins + fee
         inOut :: [Lovelace] -> [Lovelace]
         inOut = Wallet.includeChange fee coins
         toUTxO = Wallet.mkUTxO networkId fundKey Confirmed
         fundToStore = mkWalletFundStore walletRef
 
-      (tx :: Either String (Tx era)) <- liftIO $ sourceToStoreTransaction (genTx (mkFee fee) TxMetadataNone) selector inOut toUTxO fundToStore
+      (tx :: Either String (Tx era)) <- liftIO $ sourceToStoreTransaction (genTx (mkFee fee) TxMetadataNone) fundSource inOut toUTxO fundToStore
       return $ fmap txInModeCardano tx
   createChangeGeneric createCoins value count
 
-createChangeGeneric :: ([Lovelace] -> ActionM (Either String (TxInMode CardanoMode))) -> Lovelace -> Int -> ActionM ()
+createChangeGeneric :: (FundSet.FundSource -> [Lovelace] -> ActionM (Either String (TxInMode CardanoMode))) -> Lovelace -> Int -> ActionM ()
 createChangeGeneric createCoins value count = do
   submitTracer <- btTxSubmit_ <$> get BenchTracers
+  fee <- getUser TFee
+  walletRef <- get GlobalWallet
   let
     coinsList = replicate count value
     maxTxSize = 30
     chunks = chunkList maxTxSize coinsList
+    txCount = length chunks
+    txValue = fromIntegral (min maxTxSize count) * value + fee
     msg = mconcat [ "createChangeGeneric: outputs: ", show count
                   , " value: ", show value
-                  , " number of txs: ", show $ length chunks
+                  , " number of txs: ", show txCount
                   ]
   liftIO $ traceWith submitTracer $ TraceBenchTxSubDebug msg
+  fundSource <- liftIO (mkBufferedSource walletRef txCount txValue PlainOldFund 1) >>= \case
+    Right a  -> return a
+    Left err -> throwE $ WalletError err
+
   forM_ chunks $ \coins -> do
-    gen <- createCoins coins
+    gen <- createCoins fundSource coins
     case gen of
       Left err -> throwE $ WalletError err
       Right tx -> void $ localSubmitTx tx

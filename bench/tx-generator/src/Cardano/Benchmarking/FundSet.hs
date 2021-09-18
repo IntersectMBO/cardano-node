@@ -122,18 +122,6 @@ type FundSelector = FundSet -> Either String [Fund]
 type FundSource = IO (Either String [Fund])
 type FundToStore = [Fund] -> IO ()
 
--- Select a number of confirmed Fund that where send to a specific Target node.
--- TODO: dont ignore target.
-selectCountTarget :: Int -> Target -> FundSet -> Either String [Fund]
-selectCountTarget count _target fs =
-  if length funds == count
-    then Right funds
-    else Left "could not find enough input coins"
-  where
-    -- Just take confirmed coins.
-    -- TODO: extend this to unconfimed coins to the same target node
-    funds = take count $ toAscList ( Proxy :: Proxy Lovelace) (fs @=PlainOldFund @= IsConfirmed)
-
 -- Select Funds to cover a minimum value.
 -- TODO:
 -- This fails unless there is a single fund with the required value
@@ -237,6 +225,23 @@ selectInputs allowRecycle count minTotalValue variant targetNode fs
     where
       -- inFlightCoins and confirmedCoins are disjoint
       inFlightCoins = toAscList (Proxy :: Proxy SeqNumber) (variantIxSet @=IsNotConfirmed)
+
+selectToBuffer ::
+     Int
+  -> Lovelace
+  -> Variant
+  -> FundSet
+  -> Either String [Fund]
+selectToBuffer count minValue variant fs
+  = if length coins < count
+    then Left $ concat
+      [ "selectToBuffer: not enough coins found: count: ", show count
+      , "minValue: ", show minValue
+      , "variant: ", show variant
+      ]
+    else Right coins
+ where
+  coins = take count $ toAscList ( Proxy :: Proxy Lovelace) (fs @=variant @= IsConfirmed @>= minValue)
 
 -- Todo: check sufficant funds and minimumValuePerUtxo
 inputsToOutputsWithFee :: Lovelace -> Int -> [Lovelace] -> [Lovelace]
