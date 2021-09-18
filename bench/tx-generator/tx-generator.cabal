@@ -49,6 +49,7 @@ library
                        Cardano.Benchmarking.Script.Example
                        Cardano.Benchmarking.Script.Setters
                        Cardano.Benchmarking.Script.Store
+                       Cardano.Benchmarking.Script.Types
                        Cardano.Benchmarking.Tracer
                        Cardano.Benchmarking.Types
                        Cardano.Benchmarking.Wallet

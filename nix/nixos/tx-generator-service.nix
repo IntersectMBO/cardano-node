@@ -24,7 +24,7 @@ let
       }
       { setLocalSocket    = localNodeSocketPath; }
       { readSigningKey    = "pass-partout"; filePath = sigKey; }
-      { importGenesisFund = "pass-partout"; fundKey  = "pass-partout"; }
+      { importGenesisFund = "pass-partout"; fundKey  = "pass-partout"; submitMode = { tag = "LocalSocket"; }; }
       { delay             = init_cooldown; }
     ]
     ++
@@ -40,7 +40,10 @@ let
     ++
     [
       { runBenchmark      = "walletBasedBenchmark";
-                  txCount = tx_count; tps = tps; }
+        txCount = tx_count;
+        tps = tps;
+        submitMode = { tag = "NodeToNode"; };
+      }
       { waitBenchmark     = "walletBasedBenchmark"; }
     ];
 
@@ -60,7 +63,7 @@ let
   capitalise = x: (pkgs.lib.toUpper (__substring 0 1 x)) + __substring 1 99999 x;
 
   createChangeScript = cfg: value: count:
-    [ { createChange = value; count=count; }
+    [ { createChange = value; count=count; submitMode = { tag = "LocalSocket"; }; }
       { delay = cfg.init_cooldown; }
     ];
 

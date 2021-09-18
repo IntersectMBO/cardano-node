@@ -18,6 +18,7 @@ import           Cardano.Benchmarking.Script.Aeson
 import           Cardano.Benchmarking.Script.Env
 import           Cardano.Benchmarking.Script.Store
 import           Cardano.Benchmarking.Script.Setters
+import           Cardano.Benchmarking.Script.Types
 
 runTestScript :: IO (Either Error (), Env, ())
 runTestScript = withIOManager $ runActionM (forM_ testScript action)
@@ -54,9 +55,9 @@ testScript =
   , AsyncBenchmark threadName txList (TPSRate 10)
   , WaitForEra $ AnyCardanoEra ByronEra
   , CancelBenchmark threadName
-  , ImportGenesisFund passPartout passPartout
-  , CreateChange (quantityToLovelace 10000) 1000
-  , RunBenchmark (ThreadName "walletThread") (NumberOfTxs 1000) (TPSRate 10)
+  , ImportGenesisFund DiscardTX passPartout passPartout
+  , CreateChange LocalSocket (quantityToLovelace 10000) 1000
+  , RunBenchmark (DumpToFile "/tmp/tx-list.txt") (ThreadName "walletThread") (NumberOfTxs 1000) (TPSRate 10)
   , Reserved []
   ]
  where
