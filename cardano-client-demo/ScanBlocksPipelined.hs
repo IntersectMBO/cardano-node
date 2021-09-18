@@ -36,7 +36,7 @@ main :: IO ()
 main = do
   -- Get cocket path from CLI argument.
   socketDir:_ <- getArgs
-  let socketPath = socketDir </> "node.sock"
+  let socketPath = socketDir </> "node.socket"
 
   -- Connect to the node.
   putStrLn $ "Connecting to socket: " <> socketPath
