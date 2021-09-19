@@ -25,10 +25,10 @@ import qualified Data.Attoparsec.ByteString as Atto
 import           Cardano.Api (AnyCardanoEra(..), CardanoEra(..))
 import           Cardano.CLI.Types (SigningKeyFile(..))
 
-import           Cardano.Benchmarking.Script.Action
 import           Cardano.Benchmarking.Script.Env
 import           Cardano.Benchmarking.Script.Setters
 import           Cardano.Benchmarking.Script.Store
+import           Cardano.Benchmarking.Script.Types
 import           Cardano.Benchmarking.Types (NumberOfTxs(..), TPSRate(..))
 
 testJSONRoundTrip :: [Action] -> Maybe String
@@ -55,6 +55,10 @@ instance FromJSON AnyCardanoEra where
     "Mary"    -> return $ AnyCardanoEra MaryEra
     "Alonzo"    -> return $ AnyCardanoEra AlonzoEra
     era -> parseFail ("Error: Cannot parse JSON value '" <> Text.unpack era <> "' to AnyCardanoEra.")
+
+
+instance ToJSON SubmitMode
+instance FromJSON SubmitMode
 
 instance ToJSON (DSum Tag Identity) where
   toEncoding = error "DSum Tag Identity"
@@ -85,12 +89,12 @@ actionToJSON a = case a of
     -> object ["prepareTxList" .= name, "newKey" .= key, "fundList" .= fund ]
   AsyncBenchmark (ThreadName t) (TxListName txs) (TPSRate tps) 
     -> object ["asyncBenchmark" .= t, "txList" .= txs, "tps" .= tps]
-  ImportGenesisFund (KeyName genesisKey) (KeyName fundKey)
-    -> object ["importGenesisFund" .= genesisKey, "fundKey" .= fundKey ]
-  CreateChange value count
-    -> object ["createChange" .= value, "count" .= count]
-  RunBenchmark (ThreadName t) (NumberOfTxs txCount) (TPSRate tps)
-    -> object ["runBenchmark" .= t, "txCount" .= txCount, "tps" .= tps]
+  ImportGenesisFund submitMode (KeyName genesisKey) (KeyName fundKey)
+    -> object ["importGenesisFund" .= genesisKey, "submitMode" .= submitMode, "fundKey" .= fundKey ]
+  CreateChange submitMode value count
+    -> object ["createChange" .= value, "submitMode" .= submitMode, "count" .= count]
+  RunBenchmark submitMode (ThreadName t) (NumberOfTxs txCount) (TPSRate tps)
+    -> object ["runBenchmark" .= t, "submitMode" .= submitMode, "txCount" .= txCount, "tps" .= tps]
   WaitBenchmark (ThreadName t) ->  singleton "waitBenchmark" t
   CancelBenchmark (ThreadName t) ->  singleton "cancelBenchmark" t
   WaitForEra era -> singleton "waitForEra" era
@@ -178,16 +182,19 @@ objectToAction obj = case obj of
     <*> ( TPSRate <$> parseField obj "tps" )   
 
   parseRunBenchmark v = RunBenchmark
-    <$> ( ThreadName <$> parseJSON v )
+    <$> parseField obj "submitMode"
+    <*> ( ThreadName <$> parseJSON v )
     <*> ( NumberOfTxs <$> parseField obj "txCount" )
     <*> ( TPSRate <$> parseField obj "tps" )
 
   parseImportGenesisFund v = ImportGenesisFund
-    <$> ( KeyName <$> parseJSON v )
+    <$> parseField obj "submitMode"
+    <*> ( KeyName <$> parseJSON v )
     <*> parseKey "fundKey"
 
   parseCreateChange v = CreateChange
-    <$> parseJSON v
+    <$> parseField obj "submitMode"
+    <*> parseJSON v
     <*> parseField obj "count"
 
 parseScriptFile :: FilePath -> IO [Action]

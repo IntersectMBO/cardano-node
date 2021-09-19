@@ -16,18 +16,46 @@
         ] },
     { "setLocalSocket": "run/current/node-0/node.socket" },
     { "readSigningKey": "pass-partout", "filePath": "run/current/genesis/utxo-keys/utxo1.skey" },
-    { "importGenesisFund": "pass-partout", "fundKey": "pass-partout" },
-    { "delay": 10 },
-    { "createChange" : 2200000000000, "count" :       10 },
-    { "delay": 10 },
-    { "createChange" :   70000000000, "count" :      300 },
-    { "delay": 10 },
-    { "createChange" :    2200000000, "count" :     9000 },
-    { "delay": 10 },
-    { "createChange" :      70000000, "count" :   270000 },
-    { "delay": 10 },
-    { "createChange" :       2300000, "count" :  8100000 },    
-    { "delay": 10 },
-    { "runBenchmark": "walletBasedBenchmark", "txCount": 1000000, "tps": 100 },
-    { "waitBenchmark": "walletBasedBenchmark" }
+    { "importGenesisFund": "pass-partout", "fundKey": "pass-partout"
+      , "submitMode": {
+            "contents": "/tmp/tx-list.txt",
+            "tag": "DumpToFile"
+        }
+    },
+    { "createChange" : 2200000000000, "count" :       10
+      , "submitMode": {
+            "contents": "/tmp/tx-split.txt",
+            "tag": "DumpToFile"
+        }
+    },
+    { "createChange" :   70000000000, "count" :      300
+      , "submitMode": {
+            "contents": "/tmp/tx-split.txt",
+            "tag": "DumpToFile"
+        }
+    },
+    { "createChange" :    2200000000, "count" :     9000
+      , "submitMode": {
+            "contents": "/tmp/tx-split.txt",
+            "tag": "DumpToFile"
+        }
+    },
+    { "createChange" :      70000000, "count" :   270000
+      , "submitMode": {
+            "contents": "/tmp/tx-split.txt",
+            "tag": "DumpToFile"
+        }
+    },
+    { "createChange" :       2300000, "count" :  8100000
+      , "submitMode": {
+            "contents": "/tmp/tx-split.txt",
+            "tag": "DumpToFile"
+        }
+    },
+    { "runBenchmark": "walletBasedBenchmark", "txCount": 1000000, "tps": 100
+      , "submitMode": {
+            "contents": "/tmp/tx-submit.txt",
+            "tag": "DumpToFile"
+        }
+    }
 ]

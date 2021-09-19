@@ -20,6 +20,7 @@ import           Cardano.Benchmarking.Script.Action
 import           Cardano.Benchmarking.Script.Aeson (parseScriptFile)
 import           Cardano.Benchmarking.Script.Env
 import           Cardano.Benchmarking.Script.Store
+import           Cardano.Benchmarking.Script.Types
 
 type Script = [Action]
 
