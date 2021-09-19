@@ -140,7 +140,7 @@ mkMetadata size
     ShelleyBasedEraShelley -> 37
     ShelleyBasedEraAllegra -> 39
     ShelleyBasedEraMary    -> 39
-    ShelleyBasedEraAlonzo  -> error "39"
+    ShelleyBasedEraAlonzo  -> 39 -- TODO: check minSize for Alonzo
   nettoSize = size - minSize
 
   -- At 24 the CBOR representation changes.

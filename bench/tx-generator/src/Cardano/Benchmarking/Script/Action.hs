@@ -21,8 +21,8 @@ action a = case a of
   PrepareTxList name key fund -> prepareTxList name key fund
   AsyncBenchmark thread txs tps -> asyncBenchmark thread txs tps
   ImportGenesisFund submitMode genesisKey fundKey -> importGenesisFund submitMode genesisKey fundKey
-  CreateChange submitMode value count -> createChange submitMode value count
-  RunBenchmark submitMode thread count tps -> runBenchmark submitMode thread count tps
+  CreateChange payMode submitMode value count -> createChange payMode submitMode value count
+  RunBenchmark submitMode spendMode thread count tps -> runBenchmark submitMode spendMode thread count tps
   WaitBenchmark thread -> waitBenchmark thread
   CancelBenchmark thread -> cancelBenchmark thread
   WaitForEra era -> waitForEra era

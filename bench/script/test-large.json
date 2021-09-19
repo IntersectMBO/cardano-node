@@ -17,45 +17,32 @@
     { "setLocalSocket": "run/current/node-0/node.socket" },
     { "readSigningKey": "pass-partout", "filePath": "run/current/genesis/utxo-keys/utxo1.skey" },
     { "importGenesisFund": "pass-partout", "fundKey": "pass-partout"
-      , "submitMode": {
-            "contents": "/tmp/tx-list.txt",
-            "tag": "DumpToFile"
-        }
+      , "submitMode": { "DumpToFile": "/tmp/tx-list.txt" }
+      , "payMode": { "PayToAddr": [] }
     },
     { "createChange" : 2200000000000, "count" :       10
-      , "submitMode": {
-            "contents": "/tmp/tx-split.txt",
-            "tag": "DumpToFile"
-        }
+      , "submitMode": { "DumpToFile": "/tmp/tx-list.txt" }
+      , "payMode": { "PayToAddr": [] }
     },
     { "createChange" :   70000000000, "count" :      300
-      , "submitMode": {
-            "contents": "/tmp/tx-split.txt",
-            "tag": "DumpToFile"
-        }
+      , "submitMode": { "DumpToFile": "/tmp/tx-list.txt" }
+      , "payMode": { "PayToAddr": [] }
     },
     { "createChange" :    2200000000, "count" :     9000
-      , "submitMode": {
-            "contents": "/tmp/tx-split.txt",
-            "tag": "DumpToFile"
-        }
+      , "submitMode": { "DumpToFile": "/tmp/tx-list.txt" }
+      , "payMode": { "PayToAddr": [] }
     },
     { "createChange" :      70000000, "count" :   270000
-      , "submitMode": {
-            "contents": "/tmp/tx-split.txt",
-            "tag": "DumpToFile"
-        }
+      , "submitMode": { "DumpToFile": "/tmp/tx-list.txt" }
+      , "payMode": { "PayToAddr": [] }
     },
     { "createChange" :       2300000, "count" :  8100000
-      , "submitMode": {
-            "contents": "/tmp/tx-split.txt",
-            "tag": "DumpToFile"
-        }
+      , "submitMode": { "DumpToFile": "/tmp/tx-list.txt" }
+      , "payMode": { "PayToAddr": [] }
     },
     { "runBenchmark": "walletBasedBenchmark", "txCount": 1000000, "tps": 100
       , "submitMode": {
-            "contents": "/tmp/tx-submit.txt",
-            "tag": "DumpToFile"
-        }
+          "DumpToFile": "/tmp/submit-list.txt"
+      }
     }
 ]
