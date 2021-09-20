@@ -56,14 +56,30 @@ instance FromJSON AnyCardanoEra where
     "Alonzo"    -> return $ AnyCardanoEra AlonzoEra
     era -> parseFail ("Error: Cannot parse JSON value '" <> Text.unpack era <> "' to AnyCardanoEra.")
 
+jsonOptionsUnTaggedSum :: Options
+jsonOptionsUnTaggedSum = defaultOptions { sumEncoding = ObjectWithSingleField }
 
-instance ToJSON SubmitMode
-instance FromJSON SubmitMode
+instance ToJSON SubmitMode where
+  toJSON     = genericToJSON jsonOptionsUnTaggedSum
+  toEncoding = genericToEncoding jsonOptionsUnTaggedSum
+instance FromJSON SubmitMode where
+  parseJSON = genericParseJSON jsonOptionsUnTaggedSum
+
+instance ToJSON PayMode where
+  toJSON     = genericToJSON jsonOptionsUnTaggedSum
+  toEncoding = genericToEncoding jsonOptionsUnTaggedSum
+instance FromJSON PayMode where
+  parseJSON = genericParseJSON jsonOptionsUnTaggedSum
+
+instance ToJSON SpendMode where
+  toJSON     = genericToJSON jsonOptionsUnTaggedSum
+  toEncoding = genericToEncoding jsonOptionsUnTaggedSum
+instance FromJSON SpendMode where
+  parseJSON = genericParseJSON jsonOptionsUnTaggedSum
 
 instance ToJSON (DSum Tag Identity) where
   toEncoding = error "DSum Tag Identity"
   toJSON = error "DSum Tag Identity"
-
 instance FromJSON (DSum Tag Identity) where
   parseJSON = error "fromJSON"
 
@@ -91,10 +107,10 @@ actionToJSON a = case a of
     -> object ["asyncBenchmark" .= t, "txList" .= txs, "tps" .= tps]
   ImportGenesisFund submitMode (KeyName genesisKey) (KeyName fundKey)
     -> object ["importGenesisFund" .= genesisKey, "submitMode" .= submitMode, "fundKey" .= fundKey ]
-  CreateChange submitMode value count
-    -> object ["createChange" .= value, "submitMode" .= submitMode, "count" .= count]
-  RunBenchmark submitMode (ThreadName t) (NumberOfTxs txCount) (TPSRate tps)
-    -> object ["runBenchmark" .= t, "submitMode" .= submitMode, "txCount" .= txCount, "tps" .= tps]
+  CreateChange submitMode payMode value count
+    -> object ["createChange" .= value, "payMode" .= payMode, "submitMode" .= submitMode, "count" .= count ]
+  RunBenchmark submitMode spendMode (ThreadName t) (NumberOfTxs txCount) (TPSRate tps)
+    -> object ["runBenchmark" .= t, "submitMode" .= submitMode, "spendMode" .= spendMode, "txCount" .= txCount, "tps" .= tps]
   WaitBenchmark (ThreadName t) ->  singleton "waitBenchmark" t
   CancelBenchmark (ThreadName t) ->  singleton "cancelBenchmark" t
   WaitForEra era -> singleton "waitForEra" era
@@ -183,6 +199,7 @@ objectToAction obj = case obj of
 
   parseRunBenchmark v = RunBenchmark
     <$> parseField obj "submitMode"
+    <*> parseField obj "spendMode"
     <*> ( ThreadName <$> parseJSON v )
     <*> ( NumberOfTxs <$> parseField obj "txCount" )
     <*> ( TPSRate <$> parseField obj "tps" )
@@ -194,6 +211,7 @@ objectToAction obj = case obj of
 
   parseCreateChange v = CreateChange
     <$> parseField obj "submitMode"
+    <*> parseField obj "payMode"
     <*> parseJSON v
     <*> parseField obj "count"
 

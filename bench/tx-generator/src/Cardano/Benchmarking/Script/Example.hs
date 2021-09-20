@@ -56,8 +56,8 @@ testScript =
   , WaitForEra $ AnyCardanoEra ByronEra
   , CancelBenchmark threadName
   , ImportGenesisFund DiscardTX passPartout passPartout
-  , CreateChange LocalSocket (quantityToLovelace 10000) 1000
-  , RunBenchmark (DumpToFile "/tmp/tx-list.txt") (ThreadName "walletThread") (NumberOfTxs 1000) (TPSRate 10)
+  , CreateChange LocalSocket PayToAddr (quantityToLovelace 10000) 1000
+  , RunBenchmark (DumpToFile "/tmp/tx-list.txt") SpendOutput (ThreadName "walletThread") (NumberOfTxs 1000) (TPSRate 10)
   , Reserved []
   ]
  where

@@ -29,7 +29,7 @@ data FundInEra era = FundInEra {
 
 data Variant
   = PlainOldFund
-  | PlutusScriptFund
+  | PlutusScriptFund !FilePath
 -- | DedicatedCollateral
   deriving  (Show, Eq, Ord)
 
@@ -132,11 +132,11 @@ selectMinValue minValue fs = case coins of
     (c:_) -> Right [c]
     where coins = toAscList ( Proxy :: Proxy Lovelace) (fs @=PlainOldFund @= IsConfirmed @>= minValue)
 
-selectPlutusFund :: FundSet -> Either String [Fund]
-selectPlutusFund fs = case coins of
+selectPlutusFund :: FilePath -> FundSet -> Either String [Fund]
+selectPlutusFund scriptFile fs = case coins of
     [] -> Left "no Plutus fund found"
     (c:_) -> Right [c]
-    where coins = toAscList ( Proxy :: Proxy Lovelace) (fs @=PlutusScriptFund @= IsConfirmed )
+    where coins = toAscList ( Proxy :: Proxy Lovelace) (fs @=PlutusScriptFund scriptFile @= IsConfirmed )
 
 selectCollateral :: FundSet -> Either String [Fund]
 selectCollateral fs = case coins of
@@ -236,8 +236,8 @@ selectToBuffer count minValue variant fs
   = if length coins < count
     then Left $ concat
       [ "selectToBuffer: not enough coins found: count: ", show count
-      , "minValue: ", show minValue
-      , "variant: ", show variant
+      , " minValue: ", show minValue
+      , " variant: ", show variant
       ]
     else Right coins
  where

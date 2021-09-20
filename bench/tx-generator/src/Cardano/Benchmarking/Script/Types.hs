@@ -33,8 +33,8 @@ data Action where
   PrepareTxList      :: !TxListName -> !KeyName -> !FundListName -> Action
   AsyncBenchmark     :: !ThreadName -> !TxListName -> !TPSRate -> Action
   ImportGenesisFund  :: !SubmitMode -> !KeyName -> !KeyName -> Action
-  CreateChange       :: !SubmitMode -> !Lovelace -> !Int -> Action
-  RunBenchmark       :: !SubmitMode -> !ThreadName -> !NumberOfTxs -> !TPSRate -> Action
+  CreateChange       :: !SubmitMode -> !PayMode -> !Lovelace -> !Int -> Action
+  RunBenchmark       :: !SubmitMode -> !SpendMode -> !ThreadName -> !NumberOfTxs -> !TPSRate -> Action
   WaitBenchmark      :: !ThreadName -> Action
   CancelBenchmark    :: !ThreadName -> Action
   Reserved           :: [String] -> Action
@@ -49,3 +49,15 @@ data SubmitMode where
   DiscardTX   :: SubmitMode
   deriving (Show, Eq)
 deriving instance Generic SubmitMode
+
+data PayMode where
+  PayToAddr :: PayMode
+  PayToScript :: !String -> PayMode
+  deriving (Show, Eq)
+deriving instance Generic PayMode
+
+data SpendMode where
+  SpendOutput :: SpendMode
+  SpendScript :: !String -> SpendMode
+  deriving (Show, Eq)
+deriving instance Generic SpendMode
