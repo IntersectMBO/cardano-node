@@ -112,7 +112,15 @@ mkUTxO :: forall era. IsShelleyBasedEra era
   -> SigningKey PaymentKey
   -> Validity
   -> ToUTxO era
-mkUTxO networkId key validity values
+mkUTxO = mkUTxOVariant PlainOldFund
+
+mkUTxOVariant :: forall era. IsShelleyBasedEra era
+  => Variant
+  -> NetworkId
+  -> SigningKey PaymentKey
+  -> Validity
+  -> ToUTxO era
+mkUTxOVariant variant networkId key validity values
   = ( map mkTxOut values
     , newFunds
     )
@@ -127,7 +135,7 @@ mkUTxO networkId key validity values
     , _fundVal = mkTxOutValueAdaOnly val
     , _fundSigningKey = key
     , _fundValidity = validity
-    , _fundVariant = PlainOldFund
+    , _fundVariant = variant
     }
 
 genTx :: forall era. IsShelleyBasedEra era

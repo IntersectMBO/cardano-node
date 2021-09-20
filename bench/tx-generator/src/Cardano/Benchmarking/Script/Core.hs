@@ -16,6 +16,7 @@ module Cardano.Benchmarking.Script.Core
 where
 
 import           Prelude
+import           Data.Ratio ((%))
 import           Control.Monad
 import           Control.Monad.Trans.Except
 import           Control.Monad.IO.Class
@@ -24,7 +25,7 @@ import           Control.Tracer (traceWith, nullTracer)
 
 import           Ouroboros.Network.Protocol.LocalTxSubmission.Type (SubmitResult (..))
 import           Cardano.Api
-import           Cardano.Api.Shelley ( ProtocolParameters)
+import           Cardano.Api.Shelley ( ProtocolParameters, protocolParamPrices)
 
 import qualified Cardano.Benchmarking.FundSet as FundSet
 import           Cardano.Benchmarking.FundSet (FundInEra(..), Validity(..), Variant(..), liftAnyEra )
@@ -315,7 +316,7 @@ runBenchmark :: SubmitMode -> SpendMode -> ThreadName -> NumberOfTxs -> TPSRate 
 runBenchmark submitMode spendMode threadName txCount tps
   = case spendMode of
       SpendOutput -> withEra $ runBenchmarkInEra submitMode threadName txCount tps
-      SpendScript scriptFile -> runPlutusBenchmark submitMode scriptFile threadName txCount tps
+      SpendScript scriptFile executionUnits -> runPlutusBenchmark submitMode scriptFile executionUnits threadName txCount tps
 
 
 runBenchmarkInEra :: forall era. IsShelleyBasedEra era => SubmitMode -> ThreadName -> NumberOfTxs -> TPSRate -> AsType era -> ActionM ()
@@ -375,8 +376,8 @@ runBenchmarkInEra submitMode (ThreadName threadName) txCount tps era = do
         Right ctl -> setName (ThreadName threadName) ctl
     _otherwise -> runWalletScriptInMode submitMode $ walletScript $ FundSet.Target "alternate-submit-mode"
 
-runPlutusBenchmark :: SubmitMode -> FilePath -> ThreadName -> NumberOfTxs -> TPSRate -> ActionM ()
-runPlutusBenchmark submitMode scriptFile (ThreadName threadName) txCount tps = do
+runPlutusBenchmark :: SubmitMode -> FilePath -> ExecutionUnits -> ThreadName -> NumberOfTxs -> TPSRate -> ActionM ()
+runPlutusBenchmark submitMode scriptFile  executionUnits (ThreadName threadName) txCount tps = do
   tracers  <- get BenchTracers
   targets  <- getUser TTargets
   (NumberOfInputsPerTx   numInputs) <- getUser TNumberOfInputsPerTx
@@ -384,13 +385,15 @@ runPlutusBenchmark submitMode scriptFile (ThreadName threadName) txCount tps = d
   networkId <- get NetworkId
   minValuePerUTxO <- getUser TMinValuePerUTxO
   protocolParameters <- queryProtocolParameters
+  executionUnitPrices <- case protocolParamPrices protocolParameters of
+    Just x -> return x
+    Nothing -> throwE $ WalletError "unexpected protocolParamPrices == Nothing in runPlutusBenchmark"
   walletRef <- get GlobalWallet
   fundKey <- getName $ KeyName "pass-partout"
   (PlutusScript PlutusScriptV1 script) <- liftIO $ PlutusExample.readScript scriptFile
+  -- This does not remove the collateral from the wallet, i.e. same collateral is uses for everything.
+  -- This is fine unless a script ever fails.
   collateral <- liftIO ( askWalletRef walletRef (FundSet.selectCollateral . walletFunds)) >>= \case
-    -- TODO !! FIX THIS BUG !
-    -- This just selects one UTxO as colleteral, but I have to also remove it from the wallet.
-    -- Otherwise it may be spend accidentially
     Right c -> return c
     Left err -> throwE $ WalletError err
   baseFee <- getUser TFee
@@ -399,9 +402,15 @@ runPlutusBenchmark submitMode scriptFile (ThreadName threadName) txCount tps = d
   connectClient <- getConnectClient
 
   let
-    requiredMemory = 700000000
-    requiredSteps  = 700000000
-    totalFee = baseFee + fromIntegral requiredMemory + fromIntegral requiredSteps
+    scriptFee = quantityToLovelace $ Quantity $ ceiling f
+       where
+         f :: Rational
+         f = (executionSteps e `times` priceExecutionSteps p) + (executionMemory e `times` priceExecutionMemory p)
+         e = executionUnits
+         p = executionUnitPrices
+         times w c = fromIntegral w % 1 * c
+
+    totalFee = baseFee +  fromIntegral numInputs * scriptFee
     (Quantity minValue) = lovelaceToQuantity $ fromIntegral numOutputs * minValuePerUTxO + totalFee
   -- this is not totally correct:
   -- beware of rounding errors !
@@ -431,7 +440,7 @@ runPlutusBenchmark submitMode scriptFile (ThreadName threadName) txCount tps = d
                           script
                           (ScriptDatumForTxIn $ ScriptDataNumber 3) -- script data
                           (ScriptDataNumber 6) -- script redeemer
-                          (ExecutionUnits requiredSteps requiredMemory)
+                          executionUnits
 
     txGenerator = genTxPlutusSpend protocolParameters collateral scriptWitness (mkFee totalFee) metadata
 
@@ -505,7 +514,10 @@ initGlobalWallet networkId key ((txIn, outVal), skey) = do
 
 createChange :: SubmitMode -> PayMode -> Lovelace -> Int -> ActionM ()
 createChange submitMode payMode value count = case payMode of
-  PayToAddr -> withEra $ createChangeInEra submitMode value count
+  PayToAddr -> withEra $ createChangeInEra submitMode PlainOldFund value count
+  -- Problem here: PayToCollateral will create an output marked as collateral
+  -- and also return any change to a collateral, which makes the returned change unusable.
+  PayToCollateral -> withEra $ createChangeInEra submitMode CollateralFund value count
   PayToScript scriptFile -> createChangeScriptFunds submitMode scriptFile value count
 
 createChangeScriptFunds :: SubmitMode -> FilePath -> Lovelace -> Int -> ActionM ()
@@ -515,7 +527,7 @@ createChangeScriptFunds submitMode scriptFile value count = do
   fundKey <- getName $ KeyName "pass-partout"
   fee <- getUser TFee  
   let scriptData = PlutusExample.toScriptHash "e88bd757ad5b9bedf372d8d3f0cf6c962a469db61a265f6418e1ffed86da29ec"
-  script <- liftIO $ PlutusExample.readScript scriptFile
+  script <- liftIO $ PlutusExample.readScript scriptFile --TODO: this should throw a file-not-found-error !
   let
     createCoins fundSource coins = do
       let
@@ -530,8 +542,8 @@ createChangeScriptFunds submitMode scriptFile value count = do
       return $ fmap txInModeCardano tx
   createChangeGeneric submitMode createCoins value count
 
-createChangeInEra :: forall era. IsShelleyBasedEra era => SubmitMode -> Lovelace -> Int -> AsType era -> ActionM ()
-createChangeInEra submitMode value count _proxy = do
+createChangeInEra :: forall era. IsShelleyBasedEra era => SubmitMode -> Variant -> Lovelace -> Int -> AsType era -> ActionM ()
+createChangeInEra submitMode variant value count _proxy = do
   networkId <- get NetworkId
   fee <- getUser TFee
   walletRef <- get GlobalWallet
@@ -544,7 +556,7 @@ createChangeInEra submitMode value count _proxy = do
 --        selector = mkWalletFundSource walletRef $ FundSet.selectMinValue $ sum coins + fee
         inOut :: [Lovelace] -> [Lovelace]
         inOut = Wallet.includeChange fee coins
-        toUTxO = Wallet.mkUTxO networkId fundKey Confirmed
+        toUTxO = Wallet.mkUTxOVariant variant networkId fundKey Confirmed
         fundToStore = mkWalletFundStore walletRef
 
       (tx :: Either String (Tx era)) <- liftIO $ sourceToStoreTransaction (genTx (mkFee fee) TxMetadataNone) fundSource inOut toUTxO fundToStore
@@ -597,21 +609,6 @@ This is for dirty hacking and testing and quick-fixes.
 Its a function that can be called from the JSON scripts
 and for which the JSON encoding is "reserved".
 -}
-{-
 reserved :: [String] -> ActionM ()
 reserved _ = do
   throwE $ UserError "no dirty hack is implemented"
-
--}
-reserved :: [String] -> ActionM ()
-reserved _ = do
-  -- create some regular change first
-  -- genesis holds  100000000000000
---  createChange            800000000000 100
---  createChange              1492000000 1 -- magic value to tag collateral UTxO
-   -- max-tx-size 30 => ca 66 transcaction to create 2000 outputs
---  localCreateScriptFunds   20000000000 2000
-  delay 60
---  runPlutusBenchmark (ThreadName "plutusBenchmark") 1000 10
---  waitBenchmark (ThreadName "plutusBenchmark")
-  return ()

@@ -17,38 +17,36 @@
     { "setLocalSocket": "run/current/node-0/node.socket" },
     { "readSigningKey": "pass-partout", "filePath": "run/current/genesis/utxo-keys/utxo1.skey" },
     { "importGenesisFund": "pass-partout", "fundKey": "pass-partout"
-      , "submitMode": { "LocalSocket": [] }
+      , "submitMode": { "DumpToFile": "/tmp/split-txs.txt" }
       , "payMode": { "PayToAddr": [] }
     },
     { "createChange" :   149200212345, "count" :     1
-      , "submitMode": { "LocalSocket": [] }
+      , "submitMode": { "DumpToFile": "/tmp/script-txs.txt" }
       , "payMode": { "PayToAddr": [] }
     },
     { "createChange" :   149200000000, "count" :     1
-      , "submitMode": { "LocalSocket": [] }
+      , "submitMode": { "DumpToFile": "/tmp/script-txs.txt" }
       , "payMode": { "PayToCollateral": [] }
     },
     { "createChange" : 2200000000000, "count" :       10
-      , "submitMode": { "LocalSocket": [] }
+      , "submitMode": { "DumpToFile": "/tmp/split-txs.txt" }
       , "payMode": { "PayToAddr": [] }
     },
     { "createChange" :   70000000000, "count" :      300
-      , "submitMode": { "LocalSocket": [] }
+      , "submitMode": { "DumpToFile": "/tmp/split-txs.txt" }
       , "payMode": { "PayToAddr": [] }
     },
-    { "createChange" :    2300000000, "count" :     1000
-      , "submitMode": { "LocalSocket": [] }
+    { "createChange" :    2300000000, "count" :     9000
+      , "submitMode": { "DumpToFile": "/tmp/script-txs.txt" }
       , "payMode": { "PayToScript": "bench/script/sum1ToN.plutus" }
     },
-    { "runBenchmark": "spendPlutus", "txCount": 500, "tps": 10
-      , "submitMode": { "NodeToNode": [] }
+    { "runBenchmark": "walletBasedBenchmark", "txCount": 4000, "tps": 10
+      , "submitMode": { "DumpToFile": "/tmp/submit-txs.txt" }
       , "spendMode": {
 	  "SpendScript": [
 	      "bench/script/sum1ToN.plutus",
 	      { "memory": 700000000, "steps": 700000000 }
-
 	  ]
       }
-    },
-    { "waitBenchmark": "spendPlutus" }
+    }
 ]
