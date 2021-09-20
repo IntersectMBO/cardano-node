@@ -1470,6 +1470,16 @@ deserialiseShelleyBasedTxBody era bs =
 
       case len of
         -- Backwards compat for pre-Alonzo era tx body files
+        2 -> do
+          txbody     <- fromCBOR
+          txmetadata <- CBOR.decodeNullMaybe fromCBOR
+          return $ CBOR.Annotator $ \fbs ->
+            ShelleyTxBody era
+              (flip CBOR.runAnnotator fbs txbody)
+              [] -- scripts
+              (flip CBOR.runAnnotator fbs (return TxBodyNoScriptData))
+              (fmap (flip CBOR.runAnnotator fbs) txmetadata)
+              (flip CBOR.runAnnotator fbs (return TxScriptValidityNone))
         3 -> do
           txbody     <- fromCBOR
           txscripts  <- fromCBOR
@@ -1534,7 +1544,7 @@ deserialiseShelleyBasedTxBody era bs =
               (flip CBOR.runAnnotator fbs txscriptdata)
               (fmap (flip CBOR.runAnnotator fbs) txmetadata)
               (flip CBOR.runAnnotator fbs (return $ TxScriptValidity sValiditySupported scriptValidity))
-        _ -> fail "expected tx body tuple of size 3, 4 or 6"
+        _ -> fail $ "expected tx body tuple of size 2, 3, 4 or 6, got " <> show len
 
 instance IsCardanoEra era => HasTextEnvelope (TxBody era) where
     textEnvelopeType _ =
