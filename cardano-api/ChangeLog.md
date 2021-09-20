@@ -1,9 +1,23 @@
 # Changelog for cardano-api
 
+## 1.30 -- September 2021
+
+- Improvements to the ledger state API. (#3143)
+- Make it easier to use monadic queries. (#3151)
+- Implement 'getBlockHeader' for Alonzo. This was a stray function that got
+  missed when implementing Alonzo in the API. (#3158)
+- A few additional exports for API consumers. (#3156)
+- Expose ledger events through the API. Ledger events provide a way for
+  consumers to receive details about things that are happening inside the
+  ledger, and will be used by tools such as db-sync. (#3085)
+- Improve the error message reported when you try to spend a non-Plutus locked
+  input using a Plutus script. (#3187)
+
+
 ## 1.29 -- August 2021
 
 - Support for automated Tx building. (#2953)
-- A few additional exports for API consumers. (#3001, 3055)
+- A few additional exports for API consumers. (#3001, #3055)
 - Miscallaneous internal improvements. (#2948)
 - Block folding interface now derives the network ID automatically from the
   ledger config. (#2955, #2975)

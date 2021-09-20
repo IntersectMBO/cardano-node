@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name:                   plutus-example
-version:                1.29.0
+version:                1.30.0
 description:            End to end examples of creating and executing Plutus scripts.
 author:                 IOHK
 maintainer:             operations@iohk.io
@@ -134,4 +134,3 @@ test-suite plutus-example-test
                         Test.PlutusExample.ScriptData
 
   ghc-options:          -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
-

@@ -1,5 +1,25 @@
 # Changelog for cardano-cli
 
+## 1.30 -- September 2021
+
+- Allow the user to specify a signature as required when spending from a
+  multisig/timelock script using the `build` or `build-raw` commands. Required
+  signers *must* be present in the witnesses, and only required signers are
+  visible to Plutus scripts. (#3123)
+- Use a separate connection for the `query tip` command. This fixes an
+  occasional bug where the `query tip` command would fail. (#3130)
+- Print the Tx fee when using the `tx build` command. (#3032)
+- The `tx build` command now validates its inputs (ensuring they are in the UTxO
+  and that only basic VKey-locked inputs are used as collateral.) (#3151)
+- Add a new comment to query the stake pools. (#3152)
+- `tx build` now uses the set of existing stake pools to determing if a pool is
+  already registered (and hence whether it must pay a deposit). (#3152)
+- `calculate-min-req-utxo` now requires a transaction output, not just a value
+  as before. This is required in the Alonzo era, and the change is made
+  everywhere for consistency. (#3181)
+- Allow the `tx build` command to spend the entirety of a UTxO and create no
+  change output. (#3188)
+- Add withdrawls to the `tx view` command. (#2613)
 ## 1.29 -- August 2021
 
 - Add a "tx build" command to the CLI. This command takes care of calculating
