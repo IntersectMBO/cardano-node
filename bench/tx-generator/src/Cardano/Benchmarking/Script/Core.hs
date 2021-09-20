@@ -387,10 +387,9 @@ runPlutusBenchmark submitMode scriptFile (ThreadName threadName) txCount tps = d
   walletRef <- get GlobalWallet
   fundKey <- getName $ KeyName "pass-partout"
   (PlutusScript PlutusScriptV1 script) <- liftIO $ PlutusExample.readScript scriptFile
+  -- This does not remove the collateral from the wallet, i.e. same collateral is uses for everything.
+  -- This is fine unless a script ever fails.
   collateral <- liftIO ( askWalletRef walletRef (FundSet.selectCollateral . walletFunds)) >>= \case
-    -- TODO !! FIX THIS BUG !
-    -- This just selects one UTxO as colleteral, but I have to also remove it from the wallet.
-    -- Otherwise it may be spend accidentially
     Right c -> return c
     Left err -> throwE $ WalletError err
   baseFee <- getUser TFee
@@ -401,7 +400,7 @@ runPlutusBenchmark submitMode scriptFile (ThreadName threadName) txCount tps = d
   let
     requiredMemory = 700000000
     requiredSteps  = 700000000
-    totalFee = baseFee + fromIntegral requiredMemory + fromIntegral requiredSteps
+    totalFee = baseFee + (fromIntegral requiredMemory + fromIntegral requiredSteps) * fromIntegral numOutputs
     (Quantity minValue) = lovelaceToQuantity $ fromIntegral numOutputs * minValuePerUTxO + totalFee
   -- this is not totally correct:
   -- beware of rounding errors !
@@ -505,7 +504,10 @@ initGlobalWallet networkId key ((txIn, outVal), skey) = do
 
 createChange :: SubmitMode -> PayMode -> Lovelace -> Int -> ActionM ()
 createChange submitMode payMode value count = case payMode of
-  PayToAddr -> withEra $ createChangeInEra submitMode value count
+  PayToAddr -> withEra $ createChangeInEra submitMode PlainOldFund value count
+  -- Problem here: PayToCollateral will create an output marked as collateral
+  -- and also return any change to a collateral, which makes the returned change unusable.
+  PayToCollateral -> withEra $ createChangeInEra submitMode CollateralFund value count
   PayToScript scriptFile -> createChangeScriptFunds submitMode scriptFile value count
 
 createChangeScriptFunds :: SubmitMode -> FilePath -> Lovelace -> Int -> ActionM ()
@@ -530,8 +532,8 @@ createChangeScriptFunds submitMode scriptFile value count = do
       return $ fmap txInModeCardano tx
   createChangeGeneric submitMode createCoins value count
 
-createChangeInEra :: forall era. IsShelleyBasedEra era => SubmitMode -> Lovelace -> Int -> AsType era -> ActionM ()
-createChangeInEra submitMode value count _proxy = do
+createChangeInEra :: forall era. IsShelleyBasedEra era => SubmitMode -> Variant -> Lovelace -> Int -> AsType era -> ActionM ()
+createChangeInEra submitMode variant value count _proxy = do
   networkId <- get NetworkId
   fee <- getUser TFee
   walletRef <- get GlobalWallet
@@ -544,7 +546,7 @@ createChangeInEra submitMode value count _proxy = do
 --        selector = mkWalletFundSource walletRef $ FundSet.selectMinValue $ sum coins + fee
         inOut :: [Lovelace] -> [Lovelace]
         inOut = Wallet.includeChange fee coins
-        toUTxO = Wallet.mkUTxO networkId fundKey Confirmed
+        toUTxO = Wallet.mkUTxOVariant variant networkId fundKey Confirmed
         fundToStore = mkWalletFundStore walletRef
 
       (tx :: Either String (Tx era)) <- liftIO $ sourceToStoreTransaction (genTx (mkFee fee) TxMetadataNone) fundSource inOut toUTxO fundToStore
@@ -597,21 +599,6 @@ This is for dirty hacking and testing and quick-fixes.
 Its a function that can be called from the JSON scripts
 and for which the JSON encoding is "reserved".
 -}
-{-
 reserved :: [String] -> ActionM ()
 reserved _ = do
   throwE $ UserError "no dirty hack is implemented"
-
--}
-reserved :: [String] -> ActionM ()
-reserved _ = do
-  -- create some regular change first
-  -- genesis holds  100000000000000
---  createChange            800000000000 100
---  createChange              1492000000 1 -- magic value to tag collateral UTxO
-   -- max-tx-size 30 => ca 66 transcaction to create 2000 outputs
---  localCreateScriptFunds   20000000000 2000
-  delay 60
---  runPlutusBenchmark (ThreadName "plutusBenchmark") 1000 10
---  waitBenchmark (ThreadName "plutusBenchmark")
-  return ()

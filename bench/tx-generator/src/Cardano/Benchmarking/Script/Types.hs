@@ -52,6 +52,7 @@ deriving instance Generic SubmitMode
 
 data PayMode where
   PayToAddr :: PayMode
+  PayToCollateral :: PayMode  
   PayToScript :: !String -> PayMode
   deriving (Show, Eq)
 deriving instance Generic PayMode
