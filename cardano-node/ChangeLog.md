@@ -9,6 +9,42 @@
   node logs. (#3046)
 - Various build, testing and infrastructure improvements. (#2821, #3005, #3127,
   #3157, #3159, #3189, #3194, #3200, #3203)
+
+### consensus changes
+
+- Improved documentation. (#2957, #3279)
+- Removed strictness annotations in traces. (#3244)
+- Exposing the ledger event logger. (#3292)
+- Supporting Alonzo protocol version. (#3347)
+- Overhauling the db analyser tool. This will allow the ledger team to run micro
+  benchmarks without noise from other layers (like networking). (#3337)
+
+### network changes
+
+- Adding more information to trace events. (#3333)
+- Fixed a bug that could cause a node to become unresponsive to new connections.
+  (#3335)
+
+### ledger changes
+
+- Correctly translate time for Plutus (from protocol version 6 onwards). (#2451)
+- Various build, testing and infrastructure improvements. (#2429, #2435, #2440,
+  #2447, #2455, #2481)
+- Changed the computation of the stake distribution to be done incrementally, so
+  as to spread the CPU load over time. Unfortunately, we had to revert this for
+  now, due to a performance regression. Hope to include that in a later update
+  again (#2371, #2484)
+- Additions and corrections in the event logger. (#2441, #2487)
+- Memory optimisations. (#2442)
+- Updates to the Alonzo formal specification. (#2418, #2448)
+- Additional exports needed for db-sync integration. (#2450)
+- Moved protocol related types to a new module, `cardano-protocol-tpraos`.
+  (#2445)
+- Preparatory work for storing the ledger state on disk. (#2449)
+- Updated the CHAINHEAD rule in the Shelley formal spec. (#2313)
+- Providing more information about the reward calculation inside of the reward
+  provenance. (#2433)
+
 ## 1.29 -- August 2021
 
 ### node changes
