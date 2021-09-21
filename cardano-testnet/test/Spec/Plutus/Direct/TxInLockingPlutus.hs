@@ -243,4 +243,4 @@ hprop_plutus = H.integration . H.runFinallies . H.workspace "chairman" $ \tempAb
     , "--testnet-magic", show @Int testnetMagic
     ]
 
-  L.filter (not . T.null) (T.splitOn " " (T.lines result !! 2)) !! 2 === "111111111"
+  L.filter (not . T.null) (T.splitOn " " (T.lines result !! 2)) !! 2 === "100000000"
