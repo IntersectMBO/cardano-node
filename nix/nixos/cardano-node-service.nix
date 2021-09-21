@@ -136,7 +136,7 @@ in {
       };
 
       profiling = mkOption {
-        type = types.enum ["none" "time" "space" "space-module" "space-closure" "space-type" "space-retainer" "space-bio"];
+        type = types.enum ["none" "time" "space" "space-cost" "space-module" "space-closure" "space-type" "space-retainer" "space-bio"];
         default = "none";
       };
 
@@ -522,6 +522,7 @@ in {
           ++ lib.optional (cfg.eventlog) "-l";
           in if cfg.profiling == "time" then ["-P"] ++ commonProfilingArgs
             else if cfg.profiling == "space" then ["-h"] ++ commonProfilingArgs
+            else if cfg.profiling == "space-cost" then ["-hc"] ++ commonProfilingArgs
             else if cfg.profiling == "space-module" then ["-hm"] ++ commonProfilingArgs
             else if cfg.profiling == "space-closure" then ["-hd"] ++ commonProfilingArgs
             else if cfg.profiling == "space-type" then ["-hy"] ++ commonProfilingArgs
