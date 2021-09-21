@@ -93,6 +93,7 @@ instance HasSeverityAnnotation NtN.AcceptConnectionsPolicyTrace where
   getSeverityAnnotation NtN.ServerTraceAcceptConnectionRateLimiting {} = Info
   getSeverityAnnotation NtN.ServerTraceAcceptConnectionHardLimit {} = Warning
   getSeverityAnnotation NtN.ServerTraceAcceptConnectionResume {} = Info
+  getSeverityAnnotation NtN.ServerTraceAcceptConnections {} = Info
 
 
 instance HasPrivacyAnnotation (TraceFetchClientState header)
@@ -739,6 +740,10 @@ instance ToObject NtN.AcceptConnectionsPolicyTrace where
              ]
   toObject _verb (NtN.ServerTraceAcceptConnectionResume numOfConnections) =
     mkObject [ "kind" .= String "ServerTraceAcceptConnectionResume"
+             , "numberOfConnection" .= show numOfConnections
+             ]
+  toObject _verb (NtN.ServerTraceAcceptConnections numOfConnections) =
+    mkObject [ "kind" .= String "ServerTraceAcceptConnections"
              , "numberOfConnection" .= show numOfConnections
              ]
 
