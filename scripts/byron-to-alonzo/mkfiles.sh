@@ -310,13 +310,15 @@ cardano-cli genesis create --testnet-magic 42 --genesis-dir shelley
 # and K=10, but we'll keep long KES periods so we don't have to bother
 # cycling KES keys
 sed -i shelley/genesis.spec.json \
-    -e 's/"slotLength": 1/"slotLength": 0.2/' \
+    -e 's/"slotLength": 1/"slotLength": 0.1/' \
     -e 's/"activeSlotsCoeff": 5.0e-2/"activeSlotsCoeff": 0.1/' \
     -e 's/"securityParam": 2160/"securityParam": 10/' \
-    -e 's/"epochLength": 432000/"epochLength": 1500/' \
+    -e 's/"epochLength": 432000/"epochLength": 500/' \
     -e 's/"maxLovelaceSupply": 0/"maxLovelaceSupply": 1000000000000/' \
     -e 's/"decentralisationParam": 1.0/"decentralisationParam": 0.7/' \
-    -e 's/"major": 0/"major": 2/' \
+    -e 's/"major": 0/"major": 5/' \
+    -e 's/"rho": 0.0/"rho": 0.1/' \
+    -e 's/"tau": 0.0/"tau": 0.1/' \
     -e 's/"updateQuorum": 5/"updateQuorum": 2/'
 
 # Now generate for real:
@@ -326,6 +328,18 @@ cardano-cli genesis create \
     --genesis-dir shelley/ \
     --gen-genesis-keys ${NUM_BFT_NODES} \
     --gen-utxo-keys 1
+
+cardano-cli stake-address key-gen \
+  --verification-key-file shelley/utxo-keys/utxo-stake.vkey \
+  --signing-key-file shelley/utxo-keys/utxo-stake.skey
+
+cardano-cli address key-gen \
+  --verification-key-file shelley/utxo-keys/utxo2.vkey \
+  --signing-key-file shelley/utxo-keys/utxo2.skey
+
+cardano-cli stake-address key-gen \
+  --verification-key-file shelley/utxo-keys/utxo2-stake.vkey \
+  --signing-key-file shelley/utxo-keys/utxo2-stake.skey
 
 echo "====================================================================="
 echo "Generated genesis keys and genesis files:"
