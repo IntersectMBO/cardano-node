@@ -6,7 +6,7 @@ module Test.Cardano.Api.Typed.Value
 
 import           Prelude
 
-import           Data.Aeson
+import           Data.Aeson (eitherDecode, encode)
 import           Data.List (groupBy, sort)
 import qualified Data.Map.Strict as Map
 import           Hedgehog (Property, forAll, property, tripping, (===))
@@ -14,8 +14,10 @@ import           Test.Tasty (TestTree)
 import           Test.Tasty.Hedgehog (testProperty)
 import           Test.Tasty.TH (testGroupGenerator)
 
-import           Cardano.Api.Shelley
-import           Gen.Cardano.Api.Typed
+import           Cardano.Api (ValueNestedBundle (ValueNestedBundle, ValueNestedBundleAda),
+                   ValueNestedRep (..), valueFromNestedRep, valueToNestedRep)
+
+import           Gen.Cardano.Api.Typed (genAssetName, genValueDefault, genValueNestedRep)
 
 prop_roundtrip_Value_JSON :: Property
 prop_roundtrip_Value_JSON =
@@ -66,6 +68,20 @@ canonicalise =
 
     isZeroOrEmpty (ValueNestedBundleAda q) = q == 0
     isZeroOrEmpty (ValueNestedBundle _ as) = Map.null as
+
+
+prop_roundtrip_AssetName_JSON :: Property
+prop_roundtrip_AssetName_JSON =
+  property $ do
+    v <- forAll genAssetName
+    tripping v encode eitherDecode
+
+prop_roundtrip_AssetName_JSONKey :: Property
+prop_roundtrip_AssetName_JSONKey =
+  property $ do
+    v <- forAll genAssetName
+    tripping (Map.singleton v ()) encode eitherDecode
+
 
 -- -----------------------------------------------------------------------------
 
