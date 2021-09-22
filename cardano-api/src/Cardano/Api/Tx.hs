@@ -41,7 +41,7 @@ module Cardano.Api.Tx (
     getShelleyKeyWitnessVerificationKey,
 
     -- * Data family instances
-    AsType(AsTx, AsByronTx, AsShelleyTx,
+    AsType(AsTx, AsByronTx, AsShelleyTx, AsMaryTx, AsAllegraTx, AsAlonzoTx,
            AsKeyWitness, AsByronWitness, AsShelleyWitness),
   ) where
 
@@ -88,12 +88,12 @@ import           Cardano.Ledger.Crypto (StandardCrypto)
 
 import qualified Cardano.Ledger.Core as Ledger
 import qualified Cardano.Ledger.Era as Ledger
+import qualified Cardano.Ledger.Keys as Shelley
 import qualified Cardano.Ledger.SafeHash as Ledger
 import qualified Cardano.Ledger.Shelley.Constraints as Shelley
-import qualified Shelley.Spec.Ledger.TxBody as Ledger (EraIndependentTxBody)
 import qualified Shelley.Spec.Ledger.Address.Bootstrap as Shelley
-import qualified Cardano.Ledger.Keys as Shelley
 import qualified Shelley.Spec.Ledger.Tx as Shelley
+import qualified Shelley.Spec.Ledger.TxBody as Ledger (EraIndependentTxBody)
 
 import qualified Cardano.Ledger.Alonzo as Alonzo
 import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
@@ -174,13 +174,24 @@ instance HasTypeProxy era => HasTypeProxy (Tx era) where
     proxyToAsType _ = AsTx (proxyToAsType (Proxy :: Proxy era))
 
 pattern AsByronTx :: AsType (Tx ByronEra)
-pattern AsByronTx   = AsTx AsByronEra
+pattern AsByronTx = AsTx AsByronEra
 {-# COMPLETE AsByronTx #-}
 
 pattern AsShelleyTx :: AsType (Tx ShelleyEra)
 pattern AsShelleyTx = AsTx AsShelleyEra
 {-# COMPLETE AsShelleyTx #-}
 
+pattern AsMaryTx :: AsType (Tx MaryEra)
+pattern AsMaryTx = AsTx AsMaryEra
+{-# COMPLETE AsMaryTx #-}
+
+pattern AsAllegraTx :: AsType (Tx AllegraEra)
+pattern AsAllegraTx = AsTx AsAllegraEra
+{-# COMPLETE AsAllegraTx #-}
+
+pattern AsAlonzoTx :: AsType (Tx AlonzoEra)
+pattern AsAlonzoTx = AsTx AsAlonzoEra
+{-# COMPLETE AsAlonzoTx #-}
 
 instance IsCardanoEra era => SerialiseAsCBOR (Tx era) where
     serialiseToCBOR (ByronTx tx) = CBOR.recoverBytes tx

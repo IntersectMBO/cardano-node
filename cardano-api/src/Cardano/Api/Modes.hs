@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -42,6 +43,8 @@ import           Prelude
 import           Cardano.Api.Eras
 import           Cardano.Ledger.Crypto (StandardCrypto)
 
+import           Data.Aeson (Value, FromJSON (parseJSON), ToJSON (toJSON))
+import           Data.Aeson.Types (Parser, prependFailure, typeMismatch)
 import           Data.SOP.Strict (K (K), NS (S, Z))
 import           Data.Text (Text)
 
@@ -137,7 +140,6 @@ toEraInMode MaryEra    CardanoMode = Just MaryEraInCardanoMode
 toEraInMode AlonzoEra  CardanoMode = Just AlonzoEraInCardanoMode
 toEraInMode _ _                    = Nothing
 
-
 -- | A representation of which 'CardanoEra's are included in each
 -- 'ConsensusMode'.
 --
@@ -154,6 +156,70 @@ data EraInMode era mode where
 
 deriving instance Show (EraInMode era mode)
 
+deriving instance Eq (EraInMode era mode)
+
+instance FromJSON (EraInMode ByronEra ByronMode) where
+  parseJSON "ByronEraInByronMode" = pure ByronEraInByronMode
+  parseJSON invalid =
+      invalidJSONFailure "ByronEraInByronMode"
+                         "parsing 'EraInMode ByronEra ByronMode' failed, "
+                         invalid
+
+instance FromJSON (EraInMode ShelleyEra ShelleyMode) where
+  parseJSON "ShelleyEraInShelleyMode" = pure ShelleyEraInShelleyMode
+  parseJSON invalid =
+      invalidJSONFailure "ShelleyEraInShelleyMode"
+                         "parsing 'EraInMode ShelleyEra ShelleyMode' failed, "
+                         invalid
+
+instance FromJSON (EraInMode ByronEra CardanoMode) where
+  parseJSON "ByronEraInCardanoMode" = pure ByronEraInCardanoMode
+  parseJSON invalid =
+      invalidJSONFailure "ByronEraInCardanoMode"
+                         "parsing 'EraInMode ByronEra CardanoMode' failed, "
+                         invalid
+
+instance FromJSON (EraInMode ShelleyEra CardanoMode) where
+  parseJSON "ShelleyEraInCardanoMode" = pure ShelleyEraInCardanoMode
+  parseJSON invalid =
+      invalidJSONFailure "ShelleyEraInCardanoMode"
+                         "parsing 'EraInMode ShelleyEra CardanoMode' failed, "
+                         invalid
+
+instance FromJSON (EraInMode AllegraEra CardanoMode) where
+  parseJSON "AllegraEraInCardanoMode" = pure AllegraEraInCardanoMode
+  parseJSON invalid =
+      invalidJSONFailure "AllegraEraInCardanoMode"
+                         "parsing 'EraInMode AllegraEra CardanoMode' failed, "
+                         invalid
+
+instance FromJSON (EraInMode MaryEra CardanoMode) where
+  parseJSON "MaryEraInCardanoMode" = pure MaryEraInCardanoMode
+  parseJSON invalid =
+      invalidJSONFailure "MaryEraInCardanoMode"
+                         "parsing 'EraInMode MaryEra CardanoMode' failed, "
+                         invalid
+
+instance FromJSON (EraInMode AlonzoEra CardanoMode) where
+  parseJSON "AlonzoEraInCardanoMode" = pure AlonzoEraInCardanoMode
+  parseJSON invalid =
+      invalidJSONFailure "AlonzoEraInCardanoMode"
+                         "parsing 'EraInMode AlonzoEra CardanoMode' failed, "
+                         invalid
+
+invalidJSONFailure :: String -> String -> Value -> Parser a
+invalidJSONFailure expectedType errorMsg invalidValue =
+    prependFailure errorMsg
+                   (typeMismatch expectedType invalidValue)
+
+instance ToJSON (EraInMode era mode) where
+  toJSON ByronEraInByronMode = "ByronEraInByronMode"
+  toJSON ShelleyEraInShelleyMode  = "ShelleyEraInShelleyMode"
+  toJSON ByronEraInCardanoMode  = "ByronEraInCardanoMode"
+  toJSON ShelleyEraInCardanoMode = "ShelleyEraInCardanoMode"
+  toJSON AllegraEraInCardanoMode = "AllegraEraInCardanoMode"
+  toJSON MaryEraInCardanoMode = "MaryEraInCardanoMode"
+  toJSON AlonzoEraInCardanoMode = "AlonzoEraInCardanoMode"
 
 eraInModeToEra :: EraInMode era mode -> CardanoEra era
 eraInModeToEra ByronEraInByronMode     = ByronEra
