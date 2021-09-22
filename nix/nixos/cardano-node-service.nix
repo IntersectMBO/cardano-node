@@ -136,7 +136,7 @@ in {
       };
 
       profiling = mkOption {
-        type = types.enum ["none" "time" "space" "space-cost" "space-module" "space-closure" "space-type" "space-retainer" "space-bio"];
+        type = types.enum ["none" "time" "space" "space-cost" "space-module" "space-closure" "space-type" "space-retainer" "space-bio" "space-heap"];
         default = "none";
       };
 
@@ -528,6 +528,7 @@ in {
             else if cfg.profiling == "space-type" then ["-hy"] ++ commonProfilingArgs
             else if cfg.profiling == "space-retainer" then ["-hr"] ++ commonProfilingArgs
             else if cfg.profiling == "space-bio" then ["-hb"] ++ commonProfilingArgs
+            else if cfg.profiling == "space-heap" then ["-hT"] ++ commonProfilingArgs
             else [];
         description = ''RTS profiling options'';
       };
