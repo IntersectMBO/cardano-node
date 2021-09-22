@@ -1,5 +1,11 @@
 # Changelog for cardano-node
 
+## 1.30.0-min -- September 2021
+
+### ledger changes
+
+- Correctly translate time for Plutus (from protocol version 6 onwards). (#2451)
+
 ## 1.29 -- August 2021
 
 ### node changes
