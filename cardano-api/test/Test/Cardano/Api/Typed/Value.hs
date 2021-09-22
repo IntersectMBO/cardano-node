@@ -15,8 +15,6 @@ import           Test.Tasty (TestTree)
 
 import qualified Data.Map.Strict as Map
 
-{- HLINT ignore "Use map once" -}
-
 prop_roundtrip_Value_JSON :: Property
 prop_roundtrip_Value_JSON =
   property $ do v <- forAll genValueDefault
@@ -38,8 +36,7 @@ canonicalise :: ValueNestedRep -> ValueNestedRep
 canonicalise =
     ValueNestedRep
   . filter (not . isZeroOrEmpty)
-  . map filterZeros
-  . map (foldl1 mergeBundle)
+  . map (filterZeros . foldl1 mergeBundle)
   . groupBy samePolicyId
   . sort
   . (\(ValueNestedRep bundles) -> bundles)
