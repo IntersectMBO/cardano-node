@@ -1,10 +1,17 @@
 # Changelog for cardano-node
 
-## 1.30.0-min -- September 2021
+## 1.30.1 -- September 2021
 
 ### ledger changes
 
 - Correctly translate time for Plutus (from protocol version 6 onwards). (#2451)
+- Adding changes to the libsodium bindings. Those include a functional fix that
+  makes it safe to call the function that generates a public key from a private
+  key concurrently. We only use those functions in the CLI, in a non-concurrent
+  manner, but they are exposed in `cardano-api`. This fix ensures that custom
+  code written against `cardano-api` behaves as expected when run in multiple
+  threads. Furthermore, there are performance improvements that should have a
+  positive impact on sync times. (input-output-hk/cardano-base#236)
 
 ## 1.29 -- August 2021
 
