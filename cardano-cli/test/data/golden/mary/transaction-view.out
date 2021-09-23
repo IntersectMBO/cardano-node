@@ -6,19 +6,27 @@ inputs:
 - fe5dd07fb576bff960d6e066eade5b26cdb5afebe29f76ea58d0a098bce5d891#135
 metadata: null
 mint:
-  52dc3d43b6d2465e96109ce75ab61abe5e9c1d8a3c9ce6ff8a3af528:
-    736b79: 142
-    cafe: 132
-    dead: 136
-  d441227553a0f1a965fee7d60a0f724b368dd1bddbc208730fccebcf:
-    '': 130
-    736e6f77: 138
-    f00d: 134
+  policy 52dc3d43b6d2465e96109ce75ab61abe5e9c1d8a3c9ce6ff8a3af528:
+    asset 736b79 (sky): 142
+    asset cafe: 132
+    asset dead: 136
+  policy d441227553a0f1a965fee7d60a0f724b368dd1bddbc208730fccebcf:
+    asset 736e6f77 (snow): 138
+    asset f00d: 134
+    default asset: 130
 outputs:
 - address: addr_test1qrefnr4k09pvge6dq83v6s67ruter8sftmky8qrmkqqsxy7q5psgn8tgqmupq4r79jmxlyk4eqt6z6hj5g8jd8393msqaw47f4
   address era: Shelley
   amount:
     lovelace: 138
+    policy 52dc3d43b6d2465e96109ce75ab61abe5e9c1d8a3c9ce6ff8a3af528:
+      asset 736b79 (sky): 142
+      asset cafe: 132
+      asset dead: 136
+    policy d441227553a0f1a965fee7d60a0f724b368dd1bddbc208730fccebcf:
+      asset 736e6f77 (snow): 138
+      asset f00d: 134
+      default asset: 130
   network: Testnet
   payment credential:
     key hash: f2998eb67942c4674d01e2cd435e1f17919e095eec43807bb0010313

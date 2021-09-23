@@ -13,16 +13,15 @@ import           Prelude
 import           Cardano.Api
 
 import           Control.Monad
-import           Data.Monoid (Last (..))
-import           Data.String
-import           Hedgehog (Property, (===))
-import           System.Environment (getEnvironment)
-import           System.FilePath ((</>))
-
 import qualified Data.Aeson as J
 import qualified Data.Aeson.Types as Aeson
+import qualified Data.ByteString.Base16 as Base16
+import qualified Data.ByteString.Char8 as BSC
 import qualified Data.Map.Strict as Map
+import           Data.Monoid (Last (..))
+import           Data.String
 import qualified Data.Text as T
+import           Hedgehog (Property, (===))
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 import qualified Hedgehog.Extras.Test.Base as H
@@ -30,6 +29,9 @@ import qualified Hedgehog.Extras.Test.Concurrent as H
 import qualified Hedgehog.Extras.Test.File as H
 import qualified Hedgehog.Extras.Test.Process as H
 import qualified System.Directory as IO
+import           System.Environment (getEnvironment)
+import           System.FilePath ((</>))
+
 import qualified Test.Base as H
 import           Test.Process (execCreateScriptContext, execCreateScriptContext')
 import qualified Test.Process as H
@@ -40,6 +42,9 @@ import qualified Testnet.Conf as H
 {- HLINT ignore "Redundant <&>" -}
 {- HLINT ignore "Redundant return" -}
 {- HLINT ignore "Use let" -}
+
+millarCoin :: String
+millarCoin = BSC.unpack $ Base16.encode "MillarCoin"
 
 hprop_plutus_script_context_mint_equality :: Property
 hprop_plutus_script_context_mint_equality = H.integration . H.runFinallies . H.workspace "chairman" $ \tempAbsBasePath' -> do
@@ -183,8 +188,8 @@ hprop_plutus_script_context_mint_equality = H.integration . H.runFinallies . H.w
     , "--tx-in-collateral", T.unpack $ renderTxIn txinCollateral
     , "--mint-script-file", plutusContextEqualityMintScript
     , "--mint-redeemer-file", scriptDummyRedeemer
-    , "--tx-out", dummyaddress <> "+" <> show @Integer 10000000 <> "+ 5 " <> (policyId <> ".MillarCoin")
-    , "--mint", "5 " <> (policyId <> ".MillarCoin")
+    , "--tx-out", dummyaddress <> "+" <> show @Integer 10000000 <> "+ 5 " <> (policyId <> "." <> millarCoin)
+    , "--mint", "5 " <> (policyId <> "." <> millarCoin)
     , "--protocol-params-file", work </> "pparams.json"
     , "--out-file", work </> "mint-dummy.body"
     ]
@@ -223,8 +228,8 @@ hprop_plutus_script_context_mint_equality = H.integration . H.runFinallies . H.w
     , "--tx-in-collateral", T.unpack $ renderTxIn txinCollateral
     , "--mint-script-file", plutusContextEqualityMintScript
     , "--mint-redeemer-file", scriptContextRedeemer
-    , "--tx-out", dummyaddress <> "+" <> show @Integer 10000000 <> "+ 5 " <> (policyId <> ".MillarCoin")
-    , "--mint", "5 " <> (policyId <> ".MillarCoin")
+    , "--tx-out", dummyaddress <> "+" <> show @Integer 10000000 <> "+ 5 " <> (policyId <> "." <> millarCoin)
+    , "--mint", "5 " <> (policyId <> "." <> millarCoin)
     , "--protocol-params-file", work </> "pparams.json"
     , "--out-file", work </> "mint-final.body"
     ]
