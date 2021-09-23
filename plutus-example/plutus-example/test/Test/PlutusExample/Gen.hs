@@ -30,7 +30,8 @@ genPlutusTxOut = do
     TxOut <$> (shelleyAddressInEra <$> genAddressShelley)
           <*> genTxOutValue AlonzoEra
           <*> genTxOutDatumHash AlonzoEra
-  Gen.just $ return $ Alonzo.txInfoOut $ toShelleyTxOut ShelleyBasedEraAlonzo alonzoTxOut
+  Gen.just . return . Alonzo.txInfoOut
+    $ toShelleyTxOut ShelleyBasedEraAlonzo (toCtxUTxOTxOut alonzoTxOut)
 
 genMyCustomRedeemer :: Gen MyCustomRedeemer
 genMyCustomRedeemer =
@@ -63,11 +64,11 @@ genReqSigners = do
 genLedgerUTxO
   :: (Ledger.Crypto (ShelleyLedgerEra era) ~ StandardCrypto)
   => ShelleyBasedEra era
-  -> (TxIn, TxOut era)
+  -> (TxIn, TxOut CtxTx era)
   -> Gen (Ledger.UTxO (ShelleyLedgerEra era))
 genLedgerUTxO sbe (txin, out) = do
   UTxO utxoMap <- genUTxO (shelleyBasedToCardanoEra sbe)
-  return . toLedgerUTxO sbe . UTxO $ Map.insert txin out  utxoMap
+  return . toLedgerUTxO sbe . UTxO $ Map.insert txin (toCtxUTxOTxOut out) utxoMap
 
 genPlutusCert :: Gen Plutus.DCert
 genPlutusCert = Alonzo.transDCert . toShelleyCertificate <$> genCertificate
