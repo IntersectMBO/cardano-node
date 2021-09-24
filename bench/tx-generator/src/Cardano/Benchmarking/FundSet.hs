@@ -30,7 +30,7 @@ data FundInEra era = FundInEra {
 data Variant
   = PlainOldFund
   | PlutusScriptFund !FilePath
--- | DedicatedCollateral
+--- | DedicatedCollateral
   deriving  (Show, Eq, Ord)
 
 data Validity
