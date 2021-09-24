@@ -144,7 +144,6 @@ library
                       , transformers
                       , transformers-except
                       , utf8-string
-                      , unordered-containers
                       , vector
                       , yaml
 
