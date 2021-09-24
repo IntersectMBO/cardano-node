@@ -313,6 +313,14 @@ instance HasSeverityAnnotation (WithMuxBearer peer MuxTrace) where
     MuxTraceStartedOnDemand _ _ -> Debug
     MuxTraceTerminating {} -> Debug
     MuxTraceShutdown -> Debug
+    MuxTraceCompatStoppingMux {} -> Info
+    MuxTraceCompatWaiting {} -> Info
+    MuxTraceCompatDone {} -> Info
+    MuxTraceCompatTimeout {} -> Info
+    MuxTraceCompatDoneAfterTimeout {} -> Info
+    MuxTraceJobWaiting {} -> Info
+    MuxTraceJobTimeout {} -> Error
+    MuxTraceJobDone {} -> Info
 
 --
 -- | instances of @Transformable@
