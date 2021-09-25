@@ -144,7 +144,6 @@ library
                       , transformers
                       , transformers-except
                       , utf8-string
-                      , unordered-containers
                       , vector
                       , yaml
 
@@ -177,13 +176,17 @@ test-suite cardano-cli-test
                       , cardano-node
                       , cardano-prelude
                       , cardano-slotting
+                      , directory
                       , exceptions
+                      , filepath
                       , hedgehog
                       , hedgehog-extras
                       , parsec
                       , text
+                      , transformers
 
-  other-modules:        Test.Cli.FilePermissions
+  other-modules:        Test.Config.Mainnet
+                        Test.Cli.FilePermissions
                         Test.Cli.ITN
                         Test.Cli.MultiAssetParsing
                         Test.Cli.Pioneers.Exercise1
