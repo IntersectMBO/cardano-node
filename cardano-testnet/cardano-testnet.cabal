@@ -111,7 +111,8 @@ test-suite cardano-testnet-tests
                       , text
                       , unordered-containers
 
-  other-modules:        Spec.Plutus.Direct.TxInLockingPlutus
+  other-modules:        Spec.Plutus.Direct.ScriptContextEquality
+                        Spec.Plutus.Direct.TxInLockingPlutus
                         Spec.Plutus.Script.TxInLockingPlutus
                         Spec.Plutus.SubmitApi.TxInLockingPlutus
 
@@ -119,3 +120,5 @@ test-suite cardano-testnet-tests
 
   build-tool-depends:   cardano-node:cardano-node
                       , cardano-cli:cardano-cli
+                      , cardano-submit-api:cardano-submit-api
+                      , plutus-example:create-script-context
