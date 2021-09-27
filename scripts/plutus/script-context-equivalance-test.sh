@@ -95,7 +95,7 @@ echo "$txinCollateral"
 
 # We need to generate a dummy redeemer in order to create a txbody from which we can generate
 # a tx and then derive the correct redeemer.
-create-script-context --generate
+create-script-context --out-file "$WORK/script-context.redeemer"
 
 correctredeemer="$WORK/script-context.redeemer"
 
@@ -128,6 +128,7 @@ $CARDANO_CLI transaction sign \
 
 create-script-context \
   --generate-tx "$WORK/test-alonzo.tx" \
+  --out-file "$WORK/script-context.redeemer" \
   --cardano-mode \
   --testnet-magic 42 \
 
