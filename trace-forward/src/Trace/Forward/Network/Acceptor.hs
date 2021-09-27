@@ -63,7 +63,7 @@ listenToForwarder
   -> IO ()
 listenToForwarder iomgr config@AcceptorConfiguration{forwarderEndpoint} loHandler niHandler = do
   let (LocalPipe localPipe) = forwarderEndpoint
-      snocket = localSnocket iomgr localPipe
+      snocket = localSnocket iomgr
       address = localAddressFromPath localPipe
   doListenToForwarder snocket address noTimeLimitsHandshake app
  where
