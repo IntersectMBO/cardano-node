@@ -33,7 +33,6 @@ import           Data.Maybe as M
 import qualified Data.Sequence.Strict as Seq
 import qualified Data.Set as Set
 import           GHC.Records (HasField (..))
-import           System.FilePath.Posix
 
 import           Cardano.CLI.Environment
 import           Cardano.CLI.Shelley.Run.Query
@@ -360,14 +359,11 @@ txToRedeemer
   :: FilePath
   -> AnyConsensusModeParams
   -> NetworkId
-  -> ExceptT ScriptContextError IO ()
-txToRedeemer txFp anyCmodeParams nid = do
+  -> ExceptT ScriptContextError IO LB.ByteString
+txToRedeemer txFp anyCmodeParams nid  = do
   testScrContext <- readCustomRedeemerFromTx txFp anyCmodeParams nid
-  let redeemer = Aeson.encode . scriptDataToJson ScriptDataJsonDetailedSchema
-                   $ testScriptContextToScriptData testScrContext
-      outFp = dropFileName txFp </> "script-context.redeemer"
-  liftIO . print $ "Tx generated redeemer: " <> show redeemer
-  liftIO $ LB.writeFile outFp redeemer
+  return . Aeson.encode . scriptDataToJson ScriptDataJsonDetailedSchema
+                        $ testScriptContextToScriptData testScrContext
 
 getSbe :: CardanoEraStyle era -> ExceptT ScriptContextError IO (ShelleyBasedEra era)
 getSbe LegacyByronEra = left ScriptContextErrorByronEra
