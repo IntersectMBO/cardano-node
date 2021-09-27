@@ -70,7 +70,6 @@ library
                       , cardano-protocol-tpraos
                       , cardano-slotting
                       , containers
-                      , filepath
                       , ouroboros-consensus
                       , ouroboros-network
                       , plutus-ledger
