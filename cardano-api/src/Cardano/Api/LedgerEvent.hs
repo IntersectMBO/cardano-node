@@ -83,7 +83,7 @@ instance
       Just $
         MIRDistribution $
           MIRDistributionDetails rp rt rtt ttr
-    LERetiredPools r u -> Just $ PoolReap $ PoolReapDetails r u
+    LERetiredPools r u e -> Just $ PoolReap $ PoolReapDetails e r u
     _ -> Nothing
 
 instance All ConvertLedgerEvent xs => ConvertLedgerEvent (HardForkBlock xs) where
@@ -110,7 +110,8 @@ data MIRDistributionDetails = MIRDistributionDetails
   }
 
 data PoolReapDetails = PoolReapDetails
-  { -- | Refunded deposits. The pools referenced are now retired, and the
+  { epochNo :: EpochNo, 
+    -- | Refunded deposits. The pools referenced are now retired, and the
     --   'StakeCredential' accounts are credited with the deposits.
     refunded :: Map StakeCredential (Map (Hash StakePoolKey) Lovelace),
     -- | Unclaimed deposits. The 'StakeCredential' referenced in this map is not
@@ -180,8 +181,9 @@ pattern LERetiredPools ::
   ) =>
   Map StakeCredential (Map (Hash StakePoolKey) Lovelace) ->
   Map StakeCredential (Map (Hash StakePoolKey) Lovelace) ->
+  EpochNo ->
   AuxLedgerEvent (LedgerState (ShelleyBlock ledgerera))
-pattern LERetiredPools r u <-
+pattern LERetiredPools r u e <-
   ShelleyLedgerEventTICK
     ( NewEpochEvent
         ( EpochEvent
@@ -189,6 +191,7 @@ pattern LERetiredPools r u <-
                 ( RetiredPools
                     (convertRetiredPoolsMap -> r)
                     (convertRetiredPoolsMap -> u)
+                    e
                   )
               )
           )
