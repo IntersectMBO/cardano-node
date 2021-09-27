@@ -55,7 +55,7 @@ golden_shelleyTx = propertyOnce . H.moduleWorkspace "tmp" $ \tempDir -> do
     , "--out-file", transactionFile
     ]
 
-  let txType = textEnvelopeType AsShelleyTx
+  let txType = textEnvelopeType (AsTx AsShelleyEra)
 
   -- Check the newly created files have not deviated from the
   -- golden files
