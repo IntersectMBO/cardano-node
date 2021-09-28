@@ -47,7 +47,7 @@ connectToAcceptor
   -> IO ()
 connectToAcceptor iomgr config@ForwarderConfiguration{acceptorEndpoint} sink = do
   let (LocalPipe localPipe) = acceptorEndpoint
-      snocket = localSnocket iomgr localPipe
+      snocket = localSnocket iomgr
       address = localAddressFromPath localPipe
   doConnectToAcceptor snocket address noTimeLimitsHandshake app
  where
