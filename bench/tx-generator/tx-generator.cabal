@@ -97,7 +97,7 @@ library
                      , ouroboros-network-framework
                      , random
                      , serialise
-                     , shelley-spec-ledger
+                     , cardano-ledger-shelley
                      , stm
                      , text
                      , time

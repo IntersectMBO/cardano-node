@@ -42,12 +42,12 @@ import           Ouroboros.Consensus.Ledger.Basics (AuxLedgerEvent)
 import           Ouroboros.Consensus.Shelley.Ledger (ShelleyBlock,
                    ShelleyLedgerEvent (ShelleyLedgerEventTICK))
 import           Ouroboros.Consensus.TypeFamilyWrappers
-import           Shelley.Spec.Ledger.API (InstantaneousRewards (InstantaneousRewards))
-import           Shelley.Spec.Ledger.STS.Epoch (EpochEvent (PoolReapEvent))
-import           Shelley.Spec.Ledger.STS.Mir (MirEvent (..))
-import           Shelley.Spec.Ledger.STS.NewEpoch (NewEpochEvent (EpochEvent, MirEvent, SumRewards))
-import           Shelley.Spec.Ledger.STS.PoolReap (PoolreapEvent (RetiredPools))
-import           Shelley.Spec.Ledger.STS.Tick (TickEvent (NewEpochEvent))
+import           Cardano.Ledger.Shelley.API (InstantaneousRewards (InstantaneousRewards))
+import           Cardano.Ledger.Shelley.Rules.Epoch (EpochEvent (PoolReapEvent))
+import           Cardano.Ledger.Shelley.Rules.Mir (MirEvent (..))
+import           Cardano.Ledger.Shelley.Rules.NewEpoch (NewEpochEvent (EpochEvent, MirEvent, SumRewards))
+import           Cardano.Ledger.Shelley.Rules.PoolReap (PoolreapEvent (RetiredPools))
+import           Cardano.Ledger.Shelley.Rules.Tick (TickEvent (NewEpochEvent))
 
 data LedgerEvent
   = -- | The given pool is being registered for the first time on chain.
@@ -110,7 +110,7 @@ data MIRDistributionDetails = MIRDistributionDetails
   }
 
 data PoolReapDetails = PoolReapDetails
-  { epochNo :: EpochNo, 
+  { epochNo :: EpochNo,
     -- | Refunded deposits. The pools referenced are now retired, and the
     --   'StakeCredential' accounts are credited with the deposits.
     refunded :: Map StakeCredential (Map (Hash StakePoolKey) Lovelace),

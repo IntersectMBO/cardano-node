@@ -38,7 +38,7 @@ import           Cardano.Api
 
 import qualified Cardano.Ledger.Crypto as Crypto
 
-import           Shelley.Spec.Ledger.TxBody (PoolParams (..))
+import           Cardano.Ledger.Shelley.TxBody (PoolParams (..))
 
 -- | Specify what the CBOR file is
 -- i.e a block, a tx, etc
@@ -208,4 +208,3 @@ newtype TxOutChangeAddress = TxOutChangeAddress AddressAny
 -- | A flag that differentiates between automatically
 -- and manually balancing a tx.
 data BalanceTxExecUnits = AutoBalance | ManualBalance
-

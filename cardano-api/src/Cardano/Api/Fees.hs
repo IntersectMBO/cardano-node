@@ -68,11 +68,11 @@ import qualified Cardano.Ledger.Core as Ledger
 import qualified Cardano.Ledger.Crypto as Ledger
 import qualified Cardano.Ledger.Era as Ledger.Era (Crypto)
 import qualified Cardano.Ledger.Keys as Ledger
-import qualified Shelley.Spec.Ledger.API as Ledger (CLI, DCert, TxIn, Wdrl)
-import qualified Shelley.Spec.Ledger.API.Wallet as Ledger (evaluateTransactionBalance,
+import qualified Cardano.Ledger.Shelley.API as Ledger (CLI, DCert, TxIn, Wdrl)
+import qualified Cardano.Ledger.Shelley.API.Wallet as Ledger (evaluateTransactionBalance,
                    evaluateTransactionFee)
 
-import           Shelley.Spec.Ledger.PParams (PParams' (..))
+import           Cardano.Ledger.Shelley.PParams (PParams' (..))
 
 import qualified Cardano.Ledger.Mary.Value as Mary
 

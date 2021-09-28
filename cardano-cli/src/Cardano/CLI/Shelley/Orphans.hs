@@ -35,12 +35,12 @@ import           Cardano.Protocol.TPraos (PoolDistr (..))
 import           Cardano.Protocol.TPraos.BHeader (HashHeader (..))
 
 import qualified Cardano.Ledger.Credential as Ledger
-import qualified Shelley.Spec.Ledger.API.Protocol as Ledger
-import qualified Shelley.Spec.Ledger.EpochBoundary as Ledger
-import qualified Shelley.Spec.Ledger.Rewards as Ledger
+import qualified Cardano.Ledger.Shelley.API.Protocol as Ledger
+import qualified Cardano.Ledger.Shelley.EpochBoundary as Ledger
+import qualified Cardano.Ledger.Shelley.Rewards as Ledger
 import qualified Cardano.Protocol.TPraos.Rules.Prtcl as Ledger
-import qualified Shelley.Spec.Ledger.STS.Tickn as Ledger
-import           Shelley.Spec.Ledger.TxBody (TxId (..))
+import qualified Cardano.Ledger.Shelley.Rules.Tickn as Ledger
+import           Cardano.Ledger.Shelley.TxBody (TxId (..))
 
 import qualified Cardano.Ledger.Mary.Value as Ledger.Mary
 

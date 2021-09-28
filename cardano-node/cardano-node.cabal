@@ -140,7 +140,7 @@ library
                       , process
                       , safe-exceptions
                       , scientific
-                      , shelley-spec-ledger
+                      , cardano-ledger-shelley
                       , small-steps
                       , stm
                       , text

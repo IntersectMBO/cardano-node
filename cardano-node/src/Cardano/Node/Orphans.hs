@@ -16,7 +16,7 @@ import qualified Data.Text as Text
 import           Cardano.BM.Data.Tracer (TracingVerbosity (..))
 import qualified Cardano.Chain.Update as Update
 import           Cardano.Ledger.Crypto (StandardCrypto)
-import qualified Shelley.Spec.Ledger.CompactAddr as Shelley
+import qualified Cardano.Ledger.Shelley.CompactAddr as Shelley
 
 instance FromJSON TracingVerbosity where
   parseJSON (String str) = case str of

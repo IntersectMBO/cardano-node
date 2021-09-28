@@ -52,9 +52,9 @@ import qualified Ouroboros.Consensus.HardFork.History as Consensus
 import           Ouroboros.Network.Block (Serialised (..))
 import           Ouroboros.Network.Protocol.LocalStateQuery.Type (AcquireFailure (..))
 import           Prelude (String, id)
-import           Shelley.Spec.Ledger.EpochBoundary
-import           Shelley.Spec.Ledger.LedgerState hiding (_delegations)
-import           Shelley.Spec.Ledger.Scripts ()
+import           Cardano.Ledger.Shelley.EpochBoundary
+import           Cardano.Ledger.Shelley.LedgerState hiding (_delegations)
+import           Cardano.Ledger.Shelley.Scripts ()
 import           Text.Printf (printf)
 
 import qualified Cardano.CLI.Shelley.Output as O
@@ -72,7 +72,7 @@ import qualified Data.Text.IO as Text
 import qualified Data.Vector as Vector
 import qualified Ouroboros.Consensus.HardFork.History.Qry as Qry
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as LocalStateQuery
-import qualified Shelley.Spec.Ledger.API.Protocol as Ledger
+import qualified Cardano.Ledger.Shelley.API.Protocol as Ledger
 import qualified System.IO as IO
 
 {- HLINT ignore "Reduce duplication" -}

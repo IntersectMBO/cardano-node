@@ -84,12 +84,12 @@ import           Cardano.Ledger.Crypto (StandardCrypto)
 import qualified Cardano.Ledger.Era as Ledger
 import qualified Cardano.Ledger.Keys as Ledger
 
-import qualified Shelley.Spec.Ledger.PParams as Ledger (ProposedPPUpdates (..), ProtVer (..),
+import qualified Cardano.Ledger.Shelley.PParams as Ledger (ProposedPPUpdates (..), ProtVer (..),
                    Update (..))
--- Some of the things from Shelley.Spec.Ledger.PParams are generic across all
+-- Some of the things from Cardano.Ledger.Shelley.PParams are generic across all
 -- eras, and some are specific to the Shelley era (and other pre-Alonzo eras).
 -- So we import in twice under different names.
-import qualified Shelley.Spec.Ledger.PParams as Shelley (PParams, PParams' (..), PParamsUpdate)
+import qualified Cardano.Ledger.Shelley.PParams as Shelley (PParams, PParams' (..), PParamsUpdate)
 
 import qualified Cardano.Ledger.Alonzo.Language as Alonzo
 import qualified Cardano.Ledger.Alonzo.PParams as Alonzo

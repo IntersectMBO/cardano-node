@@ -12,7 +12,7 @@ import           Gen.Tasty.Hedgehog.Group (fromGroup)
 import           Hedgehog (Property, discover)
 import           Ouroboros.Consensus.Shelley.Eras (StandardCrypto)
 import           Test.Cardano.Api.Genesis
-import           Test.Shelley.Spec.Ledger.Serialisation.Generators.Genesis (genAddress)
+import           Test.Cardano.Ledger.Shelley.Serialisation.Generators.Genesis (genAddress)
 import           Test.Tasty (TestTree)
 
 import qualified Hedgehog as H

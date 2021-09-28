@@ -40,8 +40,8 @@ import           Ouroboros.Consensus.Shelley.Node (Nonce (..), ProtocolParamsShe
                    ProtocolParamsShelleyBased (..), TPraosLeaderCredentials (..))
 import           Ouroboros.Consensus.Shelley.Protocol (TPraosCanBeLeader (..))
 
-import qualified Shelley.Spec.Ledger.Genesis as Shelley
-import           Shelley.Spec.Ledger.PParams (ProtVer (..))
+import qualified Cardano.Ledger.Shelley.Genesis as Shelley
+import           Cardano.Ledger.Shelley.PParams (ProtVer (..))
 
 import qualified Cardano.Api as Api (FileError (..))
 import           Cardano.Api.Orphans ()

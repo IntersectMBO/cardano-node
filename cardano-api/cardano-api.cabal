@@ -134,7 +134,7 @@ library
                       , plutus-ledger-api
                       , prettyprinter
                       , scientific
-                      , shelley-spec-ledger
+                      , cardano-ledger-shelley
                       , small-steps
                       , stm
                       , strict-containers
@@ -176,7 +176,7 @@ library gen
                       , containers
                       , hedgehog
                       , plutus-ledger-api
-                      , shelley-spec-ledger
+                      , cardano-ledger-shelley
                       , tasty
                       , tasty-hedgehog
                       , text
@@ -205,8 +205,8 @@ test-suite cardano-api-test
                       , ouroboros-consensus
                       , ouroboros-consensus-shelley
                       , QuickCheck
-                      , shelley-spec-ledger
-                      , shelley-spec-ledger-test
+                      , cardano-ledger-shelley
+                      , cardano-ledger-shelley-test
                       , tasty
                       , tasty-quickcheck
                       , time

@@ -17,7 +17,7 @@ import           Cardano.Api.Shelley (fromShelleyLovelace, fromShelleyStakeRefer
 
 import           Cardano.Benchmarking.GeneratorTx.Tx
 
-import           Shelley.Spec.Ledger.API (Addr(..), ShelleyGenesis, sgInitialFunds)
+import           Cardano.Ledger.Shelley.API (Addr(..), ShelleyGenesis, sgInitialFunds)
 import           Ouroboros.Consensus.Shelley.Eras (StandardShelley)
 
 genesisFunds :: forall era. IsShelleyBasedEra era

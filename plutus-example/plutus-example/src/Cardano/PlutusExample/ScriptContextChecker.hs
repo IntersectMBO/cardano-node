@@ -59,7 +59,7 @@ import qualified PlutusTx.AssocMap as AMap
 import           PlutusTx.IsData.Class
 import           PlutusTx.Prelude hiding (Semigroup (..), unless)
 import qualified PlutusTx.Prelude as P
-import qualified Shelley.Spec.Ledger.TxBody as Shelley
+import qualified Cardano.Ledger.Shelley.TxBody as Shelley
 
 -- Description
 -- MyCustomRedeemer mimics the ScriptContext. MyCustomRedeemer is built via reading

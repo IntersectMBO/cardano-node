@@ -26,9 +26,9 @@ import           Cardano.Ledger.BaseTypes (Network (..))
 import           Cardano.Ledger.Coin (Coin (..))
 import           Cardano.Ledger.Keys (GenDelegPair (..), Hash, KeyHash (..), KeyRole (..),
                    VerKeyVRF)
-import           Shelley.Spec.Ledger.PParams (PParams' (..), emptyPParams)
+import           Cardano.Ledger.Shelley.PParams (PParams' (..), emptyPParams)
 
-import           Test.Shelley.Spec.Ledger.Utils (unsafeBoundRational)
+import           Test.Cardano.Ledger.Shelley.Utils (unsafeBoundRational)
 
 exampleShelleyGenesis :: ShelleyGenesis StandardShelley
 exampleShelleyGenesis =

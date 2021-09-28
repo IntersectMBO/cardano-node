@@ -38,7 +38,7 @@ import qualified Cardano.Binary as CBOR
 
 --TODO: following import needed for orphan Eq Script instance
 import           Cardano.Ledger.ShelleyMA.TxBody ()
-import           Shelley.Spec.Ledger.Scripts ()
+import           Cardano.Ledger.Shelley.Scripts ()
 
 import           Cardano.CLI.Environment (EnvSocketError, readEnvSocketPath, renderEnvSocketError)
 import           Cardano.CLI.Run.Friendly (friendlyTxBodyBS)

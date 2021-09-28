@@ -63,7 +63,7 @@ import           Cardano.Benchmarking.Tracer
 import           Cardano.Benchmarking.Wallet
 import qualified Cardano.Benchmarking.FundSet as FundSet
 
-import           Shelley.Spec.Ledger.API (ShelleyGenesis)
+import           Cardano.Ledger.Shelley.API (ShelleyGenesis)
 import           Ouroboros.Network.Protocol.LocalTxSubmission.Type (SubmitResult (..))
 
 readSigningKey :: SigningKeyFile -> ExceptT TxGenError IO (SigningKey PaymentKey)
