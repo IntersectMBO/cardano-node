@@ -173,10 +173,12 @@ instance HasTypeProxy era => HasTypeProxy (Tx era) where
     data AsType (Tx era) = AsTx (AsType era)
     proxyToAsType _ = AsTx (proxyToAsType (Proxy :: Proxy era))
 
+{-# DEPRECATED AsByronTx "Use AsTx AsByronEra instead." #-}
 pattern AsByronTx :: AsType (Tx ByronEra)
 pattern AsByronTx = AsTx AsByronEra
 {-# COMPLETE AsByronTx #-}
 
+{-# DEPRECATED AsShelleyTx "Use AsTx AsShelleyEra instead." #-}
 pattern AsShelleyTx :: AsType (Tx ShelleyEra)
 pattern AsShelleyTx = AsTx AsShelleyEra
 {-# COMPLETE AsShelleyTx #-}
