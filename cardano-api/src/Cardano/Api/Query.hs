@@ -88,8 +88,8 @@ import qualified Cardano.Chain.Update.Validation.Interface as Byron.Update
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Era as Ledger
 
-import qualified Shelley.Spec.Ledger.API as Shelley
-import qualified Shelley.Spec.Ledger.LedgerState as Shelley
+import qualified Cardano.Ledger.Shelley.API as Shelley
+import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
 
 import           Cardano.Api.Address
 import           Cardano.Api.Block
@@ -684,4 +684,3 @@ fromConsensusQueryResultMismatch =
 fromConsensusEraMismatch :: SListI xs
                          => Consensus.MismatchEraInfo xs -> EraMismatch
 fromConsensusEraMismatch = Consensus.mkEraMismatch
-

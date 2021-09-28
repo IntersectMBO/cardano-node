@@ -23,7 +23,7 @@ import           Data.Time (NominalDiffTime, UTCTime)
 import           Cardano.Slotting.Slot (EpochSize (..))
 
 import qualified Cardano.Ledger.BaseTypes as Ledger
-import qualified Shelley.Spec.Ledger.Genesis as Shelley
+import qualified Cardano.Ledger.Shelley.Genesis as Shelley
 
 import           Cardano.Api.NetworkId
 import           Cardano.Api.ProtocolParameters

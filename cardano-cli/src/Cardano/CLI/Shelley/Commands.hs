@@ -58,7 +58,7 @@ import           Cardano.CLI.Shelley.Key (PaymentVerifier, StakeVerifier, Verifi
                    VerificationKeyOrHashOrFile, VerificationKeyTextOrFile)
 import           Cardano.CLI.Types
 
-import           Shelley.Spec.Ledger.TxBody (MIRPot)
+import           Cardano.Ledger.Shelley.TxBody (MIRPot)
 --
 -- Shelley CLI command data types
 --

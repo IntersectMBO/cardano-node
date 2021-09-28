@@ -21,7 +21,7 @@ import           Cardano.Api
 import           Cardano.Api.Byron (Lovelace (..))
 import           Cardano.Api.Shelley (Address (ShelleyAddress), StakeAddress (..))
 import           Cardano.Ledger.Crypto (Crypto)
-import qualified Shelley.Spec.Ledger.API as Shelley
+import qualified Cardano.Ledger.Shelley.API as Shelley
 
 import           Cardano.CLI.Helpers (textShow)
 

@@ -52,12 +52,12 @@ import qualified Cardano.Ledger.SafeHash as SafeHash
 import qualified Cardano.Ledger.Shelley.Constraints as Shelley
 import qualified Cardano.Protocol.TPraos as Praos
 import qualified Ouroboros.Consensus.Shelley.Eras as Consensus
-import qualified Shelley.Spec.Ledger.API as Shelley
-import qualified Shelley.Spec.Ledger.EpochBoundary as ShelleyEpoch
-import qualified Shelley.Spec.Ledger.LedgerState as ShelleyLedger
-import           Shelley.Spec.Ledger.PParams (PParamsUpdate)
-import qualified Shelley.Spec.Ledger.RewardUpdate as Shelley
-import qualified Shelley.Spec.Ledger.Rewards as Shelley
+import qualified Cardano.Ledger.Shelley.API as Shelley
+import qualified Cardano.Ledger.Shelley.EpochBoundary as ShelleyEpoch
+import qualified Cardano.Ledger.Shelley.LedgerState as ShelleyLedger
+import           Cardano.Ledger.Shelley.PParams (PParamsUpdate)
+import qualified Cardano.Ledger.Shelley.RewardUpdate as Shelley
+import qualified Cardano.Ledger.Shelley.Rewards as Shelley
 
 import           Plutus.V1.Ledger.Api (defaultCostModelParams)
 

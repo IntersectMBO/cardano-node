@@ -55,7 +55,7 @@ import qualified Text.Parsec.Language as Parsec
 import qualified Text.Parsec.String as Parsec
 import qualified Text.Parsec.Token as Parsec
 
-import qualified Shelley.Spec.Ledger.TxBody as Shelley
+import qualified Cardano.Ledger.Shelley.TxBody as Shelley
 
 {- HLINT ignore "Use <$>" -}
 

@@ -58,8 +58,8 @@ import           Cardano.Ledger.Crypto (StandardCrypto)
 import           Cardano.Ledger.BaseTypes (maybeToStrictMaybe, strictMaybeToMaybe)
 import qualified Cardano.Ledger.BaseTypes as Shelley
 import qualified Cardano.Ledger.Coin as Shelley (toDeltaCoin)
-import           Shelley.Spec.Ledger.TxBody (MIRPot (..))
-import qualified Shelley.Spec.Ledger.TxBody as Shelley
+import           Cardano.Ledger.Shelley.TxBody (MIRPot (..))
+import qualified Cardano.Ledger.Shelley.TxBody as Shelley
 
 import           Cardano.Api.Address
 import           Cardano.Api.HasTypeProxy

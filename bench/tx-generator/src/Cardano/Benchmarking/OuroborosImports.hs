@@ -45,7 +45,7 @@ import           Cardano.Api (NetworkId(..), LocalNodeConnectInfo(..), Consensus
                              , submitTxToNodeLocal)
 import           Cardano.Api.Protocol.Types (BlockType(..), ProtocolInfoArgs(..), protocolInfo)
 
-import           Shelley.Spec.Ledger.Genesis (ShelleyGenesis)
+import           Cardano.Ledger.Shelley.Genesis (ShelleyGenesis)
 
 type CardanoBlock = Consensus.CardanoBlock StandardCrypto
 

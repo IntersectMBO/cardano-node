@@ -19,8 +19,8 @@ import qualified Ouroboros.Consensus.Byron.Ledger.Block as Byron
 import qualified Ouroboros.Consensus.Byron.Ledger.Ledger as Byron
 
 import qualified Ouroboros.Consensus.Shelley.Ledger as Shelley
-import qualified Shelley.Spec.Ledger.LedgerState as Shelley
-import qualified Shelley.Spec.Ledger.UTxO as Shelley
+import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
+import qualified Cardano.Ledger.Shelley.UTxO as Shelley
 
 import qualified Ouroboros.Consensus.Cardano as Cardano
 import qualified Ouroboros.Consensus.Cardano.Block as Cardano

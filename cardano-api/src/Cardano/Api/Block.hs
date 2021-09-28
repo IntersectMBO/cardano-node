@@ -67,7 +67,7 @@ import qualified Cardano.Chain.Block as Byron
 import qualified Cardano.Chain.UTxO as Byron
 import qualified Cardano.Ledger.Era as Ledger
 import qualified Cardano.Protocol.TPraos.BHeader as Praos
-import qualified Shelley.Spec.Ledger.BlockChain as Ledger
+import qualified Cardano.Ledger.Shelley.BlockChain as Ledger
 
 import           Cardano.Api.Eras
 import           Cardano.Api.HasTypeProxy

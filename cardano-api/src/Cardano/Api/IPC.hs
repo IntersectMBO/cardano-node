@@ -578,4 +578,3 @@ chainSyncGetCurrentTip tipVar =
         void $ atomically $ tryPutTMVar tipVar tip
         pure $ Net.Sync.SendMsgDone ()
     }
-

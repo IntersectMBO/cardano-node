@@ -81,5 +81,5 @@ executable ledger-state
                        ouroboros-consensus-cardano,
                        ouroboros-consensus-byron,
                        ouroboros-consensus-shelley,
-                       shelley-spec-ledger,
+                       cardano-ledger-shelley,
                        typed-protocols,

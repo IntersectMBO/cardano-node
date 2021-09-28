@@ -70,7 +70,7 @@ import           Control.Monad (guard, when)
 
 import qualified Cardano.Binary as CBOR
 
-import qualified Shelley.Spec.Ledger.Metadata as Shelley
+import qualified Cardano.Ledger.Shelley.Metadata as Shelley
 
 import           Cardano.Api.Eras
 import           Cardano.Api.Error
