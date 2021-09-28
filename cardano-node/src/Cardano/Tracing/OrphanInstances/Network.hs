@@ -743,7 +743,7 @@ instance ToObject NtN.AcceptConnectionsPolicyTrace where
   toObject _verb (NtN.ServerTraceAcceptConnectionRateLimiting delay numOfConnections) =
     mkObject [ "kind" .= String "ServerTraceAcceptConnectionRateLimiting"
              , "delay" .= show delay
-             , "numberOfConnection" .= show numOfConnections
+             , "numberOfConnections" .= show numOfConnections
              ]
   toObject _verb (NtN.ServerTraceAcceptConnectionHardLimit softLimit) =
     mkObject [ "kind" .= String "ServerTraceAcceptConnectionHardLimit"
@@ -751,23 +751,26 @@ instance ToObject NtN.AcceptConnectionsPolicyTrace where
              ]
   toObject _verb (NtN.ServerTraceAcceptConnectionResume numOfConnections) =
     mkObject [ "kind" .= String "ServerTraceAcceptConnectionResume"
-             , "numberOfConnection" .= show numOfConnections
+             , "numberOfConnections" .= show numOfConnections
              ]
   toObject _verb (NtN.ServerTraceAcceptConnections numOfConnections) =
     mkObject [ "kind" .= String "ServerTraceAcceptConnections"
              , "numberOfConnection" .= show numOfConnections
              ]
-  toObject _verb (NtN.ServerTraceAcceptAccept peer) =
+  toObject _verb (NtN.ServerTraceAcceptAccept peer numOfConnections) =
     mkObject [ "kind" .= String "ServerTraceAcceptAccept"
              , "peer" .= peer
+             , "numberOfConnections" .= show numOfConnections
              ]
-  toObject _verb (NtN.ServerTraceAcceptReject peer) =
+  toObject _verb (NtN.ServerTraceAcceptReject peer numOfConnections) =
     mkObject [ "kind" .= String "ServerTraceAcceptReject"
              , "peer" .= peer
+             , "numberOfConnections" .= show numOfConnections
              ]
-  toObject _verb (NtN.ServerTraceAcceptClose peer) =
+  toObject _verb (NtN.ServerTraceAcceptClose peer numOfConnections) =
     mkObject [ "kind" .= String "ServerTraceAcceptClose"
              , "peer" .= peer
+             , "numberOfConnections" .= show numOfConnections
              ]
 
 
