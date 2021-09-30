@@ -52,9 +52,6 @@ module Cardano.Api.Query (
     toLedgerUTxO,
     fromLedgerUTxO,
 
-    Point(..),
-    pointToSlotNo,
-    pointToHeaderHash
   ) where
 
 import           Data.Aeson (ToJSON (..), object, (.=))
@@ -83,9 +80,7 @@ import           Ouroboros.Consensus.Cardano.Block (LedgerState (..), StandardCr
 import qualified Ouroboros.Consensus.Cardano.Block as Consensus
 import qualified Ouroboros.Consensus.Ledger.Query as Consensus
 import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
-import           Ouroboros.Network.Block (Serialised, HeaderHash)
-import qualified Ouroboros.Network.Block as Network
-import qualified Ouroboros.Network.Point as Network (Block (..))
+import           Ouroboros.Network.Block (Serialised)
 
 import           Cardano.Binary
 import           Cardano.Slotting.Slot (WithOrigin (..))
@@ -138,28 +133,8 @@ data QueryInMode mode result where
     :: QueryInMode mode (WithOrigin BlockNo)
 
   QueryChainPoint
-    :: QueryInMode mode (Point mode)
-
-data Point mode where
-  Point
-    :: ConsensusBlockForMode mode ~ blk
-    => Network.Point blk
-    -> Point mode
-
-pointToSlotNo :: Point mode -> WithOrigin SlotNo
-pointToSlotNo (Point (Network.Point Origin)) = Origin
-pointToSlotNo (Point (Network.Point (At (Network.Block slotNo _)))) = At slotNo
-
-pointToHeaderHash :: ConsensusBlockForMode mode ~ blk => Point mode -> WithOrigin (HeaderHash blk)
-pointToHeaderHash (Point (Network.Point Origin)) = Origin
-pointToHeaderHash (Point (Network.Point (At (Network.Block _ headerHash)))) = At headerHash
-
-instance
-    ( Show (HeaderHash blk)
-    , Network.StandardHash blk
-    , ConsensusBlockForMode mode ~ blk
-    ) => Show (Point mode) where
-  show (Point cPoint) = show cPoint
+    :: ConsensusMode mode
+    -> QueryInMode mode ChainPoint
 
 data EraHistory mode where
   EraHistory
@@ -407,7 +382,7 @@ toConsensusQuery QuerySystemStart = Some Consensus.GetSystemStart
 
 toConsensusQuery QueryChainBlockNo = Some Consensus.GetChainBlockNo
 
-toConsensusQuery QueryChainPoint = Some Consensus.GetChainPoint
+toConsensusQuery (QueryChainPoint _) = Some Consensus.GetChainPoint
 
 toConsensusQuery (QueryInEra ByronEraInCardanoMode QueryByronUpdateState) =
     Some $ Consensus.BlockQuery $
@@ -533,10 +508,10 @@ fromConsensusQueryResult QueryChainBlockNo q' r' =
         -> r'
       _ -> fromConsensusQueryResultMismatch
 
-fromConsensusQueryResult QueryChainPoint q' r' =
+fromConsensusQueryResult (QueryChainPoint mode) q' r' =
     case q' of
       Consensus.GetChainPoint
-        -> Point r'
+        -> fromConsensusPointInMode mode r'
       _ -> fromConsensusQueryResultMismatch
 
 fromConsensusQueryResult (QueryCurrentEra CardanoModeIsMultiEra) q' r' =
