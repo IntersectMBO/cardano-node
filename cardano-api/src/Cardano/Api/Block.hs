@@ -38,6 +38,10 @@ module Cardano.Api.Block (
 
     -- * Data family instances
     Hash(..),
+
+    chainPointToHeaderHash,
+    chainPointToSlotNo,
+    makeChainTip,
   ) where
 
 import           Prelude
@@ -49,7 +53,7 @@ import qualified Data.ByteString.Short as SBS
 import           Data.Foldable (Foldable (toList))
 
 import           Cardano.Slotting.Block (BlockNo)
-import           Cardano.Slotting.Slot (EpochNo, SlotNo)
+import           Cardano.Slotting.Slot (EpochNo, SlotNo, WithOrigin (..))
 
 import qualified Cardano.Crypto.Hash.Class
 import qualified Cardano.Crypto.Hashing
@@ -343,6 +347,14 @@ fromConsensusPoint (Consensus.BlockPoint slot h) =
     proxy :: Proxy (Consensus.ShelleyBlock ledgerera)
     proxy = Proxy
 
+chainPointToSlotNo :: ChainPoint -> Maybe SlotNo
+chainPointToSlotNo ChainPointAtGenesis = Nothing
+chainPointToSlotNo (ChainPoint slotNo _) = Just slotNo
+
+chainPointToHeaderHash :: ChainPoint -> Maybe (Hash BlockHeader)
+chainPointToHeaderHash ChainPointAtGenesis = Nothing
+chainPointToHeaderHash (ChainPoint _ blockHeader) = Just blockHeader
+
 
 -- ----------------------------------------------------------------------------
 -- Chain tips
@@ -369,6 +381,12 @@ chainTipToChainPoint :: ChainTip -> ChainPoint
 chainTipToChainPoint ChainTipAtGenesis = ChainPointAtGenesis
 chainTipToChainPoint (ChainTip s h _)  = ChainPoint s h
 
+makeChainTip :: WithOrigin BlockNo -> ChainPoint -> ChainTip
+makeChainTip woBlockNo chainPoint = case woBlockNo of
+  Origin -> ChainTipAtGenesis
+  At blockNo -> case chainPoint of
+    ChainPointAtGenesis -> ChainTipAtGenesis
+    ChainPoint slotNo headerHash -> ChainTip slotNo headerHash blockNo
 
 fromConsensusTip  :: ConsensusBlockForMode mode ~ block
                   => ConsensusMode mode

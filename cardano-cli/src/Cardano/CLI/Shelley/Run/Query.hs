@@ -19,7 +19,6 @@ module Cardano.CLI.Shelley.Run.Query
   , runQueryCmd
   , percentage
   , executeQuery
-  , queryQueryTip
   ) where
 
 import           Cardano.Api
@@ -37,7 +36,6 @@ import           Cardano.Ledger.Coin
 import           Cardano.Ledger.Crypto (StandardCrypto)
 import           Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import           Cardano.Prelude hiding (atomically)
-import           Cardano.Slotting.EpochInfo (hoistEpochInfo)
 import           Control.Monad.Trans.Except (except)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistMaybe, left)
 import           Data.Aeson (ToJSON (..), (.=))
@@ -48,7 +46,6 @@ import           Numeric (showEFloat)
 import           Ouroboros.Consensus.BlockchainTime.WallClock.Types (RelativeTime (..),
                    SystemStart (..), toRelativeTime)
 import           Ouroboros.Consensus.Cardano.Block as Consensus (EraMismatch (..))
-import qualified Ouroboros.Consensus.HardFork.History as Consensus
 import           Ouroboros.Network.Block (Serialised (..))
 import           Ouroboros.Network.Protocol.LocalStateQuery.Type (AcquireFailure (..))
 import           Prelude (String, id)
@@ -201,6 +198,15 @@ percentage tolerance a b = Text.pack (printf "%.2f" pc)
 relativeTimeSeconds :: RelativeTime -> Integer
 relativeTimeSeconds (RelativeTime dt) = floor (nominalDiffTimeToSeconds dt)
 
+-- | Query the chain tip via the chain sync protocol.
+--
+-- This is a fallback query to support older versions of node to client protocol.
+queryChainTipViaChainSync :: MonadIO m => LocalNodeConnectInfo mode -> m ChainTip
+queryChainTipViaChainSync localNodeConnInfo = do
+  liftIO . T.hPutStrLn IO.stderr $
+    "Warning: Local header state query unavailable. Falling back to chain sync query"
+  liftIO $ getLocalChainTip localNodeConnInfo
+
 runQueryTip
   :: AnyConsensusModeParams
   -> NetworkId
@@ -213,21 +219,54 @@ runQueryTip (AnyConsensusModeParams cModeParams) network mOutFile = do
     CardanoMode -> do
       let localNodeConnInfo = LocalNodeConnectInfo cModeParams network sockPath
 
-      (chainTip, eLocalState) <- liftIO $ queryQueryTip localNodeConnInfo Nothing
+      eLocalState <- liftIO $ executeLocalStateQueryExpr localNodeConnInfo Nothing $ \ntcVersion -> do
+        era <- queryExpr (QueryCurrentEra CardanoModeIsMultiEra)
+        eraHistory <- queryExpr (QueryEraHistory CardanoModeIsMultiEra)
+        mChainBlockNo <- if ntcVersion >= NodeToClientV_10
+          then Just <$> queryExpr QueryChainBlockNo
+          else return Nothing
+        mChainPoint <- if ntcVersion >= NodeToClientV_10
+          then Just <$> queryExpr (QueryChainPoint CardanoMode)
+          else return Nothing
+        mSystemStart <- if ntcVersion >= NodeToClientV_9
+          then Just <$> queryExpr QuerySystemStart
+          else return Nothing
+
+        return O.QueryTipLocalState
+          { O.era = era
+          , O.eraHistory = eraHistory
+          , O.mSystemStart = mSystemStart
+          , O.mChainTip = makeChainTip <$> mChainBlockNo <*> mChainPoint
+          }
 
       mLocalState <- hushM (first ShelleyQueryCmdAcquireFailure eLocalState) $ \e ->
         liftIO . T.hPutStrLn IO.stderr $ "Warning: Local state unavailable: " <> renderShelleyQueryCmdError e
 
-      let tipSlotNo = case chainTip of
+      chainTip <- case mLocalState >>= O.mChainTip of
+        Just chainTip -> return chainTip
+
+        -- The chain tip is unavailable via local state query because we are connecting with an older
+        -- node to client protocol so we use chain sync instead which necessitates another connection.
+        -- At some point when we can stop supporting the older node to client protocols, this fallback
+        -- can be removed.
+        Nothing -> queryChainTipViaChainSync localNodeConnInfo
+
+      let tipSlotNo :: SlotNo = case chainTip of
             ChainTipAtGenesis -> 0
             ChainTip slotNo _ _ -> slotNo
 
-      mLocalStateOutput :: Maybe O.QueryTipLocalStateOutput <- fmap join . forM mLocalState $ \localState -> do
+      localStateOutput <- forM mLocalState $ \localState -> do
         case slotToEpoch tipSlotNo (O.eraHistory localState) of
           Left e -> do
             liftIO . T.hPutStrLn IO.stderr $
               "Warning: Epoch unavailable: " <> renderShelleyQueryCmdError (ShelleyQueryCmdPastHorizon e)
-            return Nothing
+            return $ O.QueryTipLocalStateOutput
+              { O.localStateChainTip = chainTip
+              , O.mEra = Nothing
+              , O.mEpoch = Nothing
+              , O.mSyncProgress = Nothing
+              }
+
           Right (epochNo, _, _) -> do
             syncProgressResult <- runExceptT $ do
               systemStart <- fmap getSystemStart (O.mSystemStart localState) & hoistMaybe ShelleyQueryCmdSystemStartUnavailable
@@ -241,21 +280,16 @@ runQueryTip (AnyConsensusModeParams cModeParams) network mOutFile = do
             mSyncProgress <- hushM syncProgressResult $ \e -> do
               liftIO . T.hPutStrLn IO.stderr $ "Warning: Sync progress unavailable: " <> renderShelleyQueryCmdError e
 
-            return $ Just $ O.QueryTipLocalStateOutput
-              { O.mEra = Just (O.era localState)
+            return $ O.QueryTipLocalStateOutput
+              { O.localStateChainTip = chainTip
+              , O.mEra = Just (O.era localState)
               , O.mEpoch = Just epochNo
               , O.mSyncProgress = mSyncProgress
               }
 
-
-      let jsonOutput = encodePretty $ O.QueryTipOutput
-            { O.chainTip = chainTip
-            , O.mLocalState = mLocalStateOutput
-            }
-
       case mOutFile of
-        Just (OutputFile fpath) -> liftIO $ LBS.writeFile fpath jsonOutput
-        Nothing                 -> liftIO $ LBS.putStrLn        jsonOutput
+        Just (OutputFile fpath) -> liftIO $ LBS.writeFile fpath $ encodePretty localStateOutput
+        Nothing                 -> liftIO $ LBS.putStrLn        $ encodePretty localStateOutput
 
     mode -> left (ShelleyQueryCmdUnsupportedMode (AnyConsensusMode mode))
 
@@ -859,25 +893,3 @@ obtainLedgerEraClassConstraints ShelleyBasedEraShelley f = f
 obtainLedgerEraClassConstraints ShelleyBasedEraAllegra f = f
 obtainLedgerEraClassConstraints ShelleyBasedEraMary    f = f
 obtainLedgerEraClassConstraints ShelleyBasedEraAlonzo  f = f
-
-
-queryQueryTip
-  :: LocalNodeConnectInfo CardanoMode
-  -> Maybe ChainPoint
-  -> IO (ChainTip, Either AcquireFailure O.QueryTipLocalState)
-queryQueryTip connectInfo mpoint = do
-  liftIO $ executeLocalStateQueryExprWithChainSync connectInfo mpoint
-    $ \ntcVersion -> do
-        era <- queryExpr (QueryCurrentEra CardanoModeIsMultiEra)
-        eraHistory@(EraHistory _ interpreter)
-          <- queryExpr (QueryEraHistory CardanoModeIsMultiEra)
-        mSystemStart <- if ntcVersion >= NodeToClientV_9
-                        then Just <$> queryExpr QuerySystemStart
-                        else return Nothing
-        return O.QueryTipLocalState
-          { O.era = era
-          , O.eraHistory = eraHistory
-          , O.mSystemStart = mSystemStart
-          , O.epochInfo = hoistEpochInfo (first TransactionValidityIntervalError . runExcept)
-                            $ Consensus.interpreterToEpochInfo interpreter
-          }
