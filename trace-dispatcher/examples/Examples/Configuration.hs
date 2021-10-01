@@ -31,7 +31,7 @@ testMessageDocumented = Documented
 
 tracers :: MonadIO m => m (Trace m TestMessage, Trace m TestMessage)
 tracers  = do
-  t <- standardTracer Nothing
+  t <- standardTracer
   t0 <- humanFormatter True "cardano" t
   t1 <- appendName "tracer1" <$> filterSeverityFromConfig t0
   t2 <- appendName "tracer2" <$> filterSeverityFromConfig t0

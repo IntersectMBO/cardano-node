@@ -24,7 +24,7 @@ routingTracer2 t1 t2 = pure (t1 <> t2)
 
 testRouting :: IO ()
 testRouting = do
-    t <- standardTracer Nothing
+    t <- standardTracer
     tf <- machineFormatter "cardano" t
     let t1 = appendName "tracer1" tf
     let t2 = appendName "tracer1" tf

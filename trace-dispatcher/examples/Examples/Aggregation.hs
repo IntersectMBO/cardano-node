@@ -51,7 +51,7 @@ calculate BaseStats{..} _ _ val =
 
 testAggregation :: IO ()
 testAggregation = do
-    simpleTracer  <- standardTracer Nothing
+    simpleTracer  <- standardTracer
     formTracer <- humanFormatter True "cardano" simpleTracer
     tracer <- foldTraceM calculate emptyStats formTracer
     configureTracers emptyTraceConfig baseStatsDocumented [tracer]
