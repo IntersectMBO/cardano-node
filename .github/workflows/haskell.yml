@@ -38,11 +38,35 @@ jobs:
       run: |
         echo "BASH_PATH=$(cd $(dirname $(which bash)); pwd -W)/bash.exe" >> $GITHUB_ENV
 
-    - uses: haskell/actions/setup@v1
+    - uses: haskell/actions/setup@v1.2.6
       id: setup-haskell
       with:
-        ghc-version: ${{ matrix.ghc }}
-        cabal-version: 3.4.0.0
+        ghcup: 0.1.16.2
+
+    # - name: Install ghcup (posix)
+    #   if: matrix.os == 'ubuntu-latest' || matrix.os == 'macos-latest'
+    #   run: |
+    #     curl --proto '=https' --tlsv1.2 -sSf https://get-ghcup.haskell.org | sh
+
+    # - name: Install ghcup (windows)
+    #   if: matrix.os == 'windows-latest'
+    #   shell: pwsh
+    #   run: |
+    #     Set-ExecutionPolicy Bypass -Scope Process -Force;[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072;Invoke-Command -ScriptBlock ([ScriptBlock]::Create((Invoke-WebRequest https://www.haskell.org/ghcup/sh/bootstrap-haskell.ps1 -UseBasicParsing))) -ArgumentList $true
+
+    - name: Install haskell tools
+      run: |
+        ghcup install ghc 8.10.4
+        ghcup set     ghc 8.10.4
+        ghcup install cabal 3.6.0.0
+        ghcup set     cabal 3.6.0.0
+        ghcup list
+        cabal --version
+        ghc --version
+
+    - name: Environment
+      run: |
+        ls -al $HOME
 
     - name: Set cache version
       run: echo "CACHE_VERSION=grFfw8r" >> $GITHUB_ENV
@@ -127,7 +151,7 @@ jobs:
     - uses: actions/cache@v2
       name: Cache cabal store
       with:
-        path: ${{ steps.setup-haskell.outputs.cabal-store }}
+        path: ${{ env.HOME }}/.cabal
         key: cache-${{ env.CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}-${{ hashFiles('dependencies.txt') }}-${{ hashFiles('date.txt') }}
         restore-keys: |
           cache-${{ env.CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}-${{ hashFiles('dependencies.txt') }}-${{ hashFiles('date.txt') }}
