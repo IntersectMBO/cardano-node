@@ -247,3 +247,4 @@ jobs:
         asset_path: ./artifacts-macOS-latest/cardano-submit-api.tar.gz
         asset_name: cardano-submit-api_${{ steps.create_release_tag.outputs.TAG }}-macOS.tar.gz
         asset_content_type: application/gzip
+
