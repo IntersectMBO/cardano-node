@@ -15,7 +15,7 @@ import qualified Data.Map.Strict as Map
 --TODO: why do we have this odd split? We can get rid of the old name "typed"
 import           Gen.Cardano.Api.Typed (genRational)
 
-import           Shelley.Spec.Ledger.Metadata (Metadata (..), Metadatum (..))
+import           Cardano.Ledger.Shelley.Metadata (Metadata (..), Metadatum (..))
 import qualified Cardano.Ledger.Alonzo.Genesis as Alonzo
 import qualified Cardano.Ledger.Alonzo.Language as Alonzo
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo

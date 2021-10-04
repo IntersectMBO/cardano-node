@@ -16,8 +16,8 @@ import           Cardano.PlutusExample.ScriptContextChecker
 import           Gen.Cardano.Api.Typed
 import qualified Ledger as Plutus
 import qualified Plutus.V1.Ledger.DCert as Plutus
-import qualified Shelley.Spec.Ledger.TxBody as Ledger
-import qualified Shelley.Spec.Ledger.UTxO as Ledger
+import qualified Cardano.Ledger.Shelley.TxBody as Ledger
+import qualified Cardano.Ledger.Shelley.UTxO as Ledger
 
 import           Hedgehog (Gen)
 import qualified Hedgehog.Gen as Gen

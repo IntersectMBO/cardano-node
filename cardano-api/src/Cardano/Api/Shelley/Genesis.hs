@@ -19,7 +19,7 @@ import           Cardano.Slotting.Slot (EpochSize (..))
 
 import           Ouroboros.Consensus.Shelley.Node (ShelleyGenesis (..), emptyGenesisStaking)
 
-import           Shelley.Spec.Ledger.PParams as Ledger (PParams' (..), emptyPParams)
+import           Cardano.Ledger.Shelley.PParams as Ledger (PParams' (..), emptyPParams)
 
 
 -- | Some reasonable starting defaults for constructing a 'ShelleyGenesis'.

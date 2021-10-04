@@ -15,7 +15,7 @@ import           Data.Aeson (KeyValue, ToJSON (..), (.=))
 import           Data.Function (id, ($), (.))
 import           Data.Maybe ( Maybe(..) )
 import           Data.Monoid (mconcat)
-import           Shelley.Spec.Ledger.Scripts ()
+import           Cardano.Ledger.Shelley.Scripts ()
 
 import qualified Data.Aeson as J
 

@@ -91,9 +91,9 @@ import qualified Cardano.Ledger.Era as Ledger
 import qualified Cardano.Ledger.Keys as Shelley
 import qualified Cardano.Ledger.SafeHash as Ledger
 import qualified Cardano.Ledger.Shelley.Constraints as Shelley
-import qualified Shelley.Spec.Ledger.Address.Bootstrap as Shelley
-import qualified Shelley.Spec.Ledger.Tx as Shelley
-import qualified Shelley.Spec.Ledger.TxBody as Ledger (EraIndependentTxBody)
+import qualified Cardano.Ledger.Shelley.Address.Bootstrap as Shelley
+import qualified Cardano.Ledger.Shelley.Tx as Shelley
+import qualified Cardano.Ledger.Shelley.TxBody as Ledger (EraIndependentTxBody)
 
 import qualified Cardano.Ledger.Alonzo as Alonzo
 import qualified Cardano.Ledger.Alonzo.Tx as Alonzo

@@ -21,7 +21,7 @@ import           Ouroboros.Consensus.HardFork.Combinator
 import           Ouroboros.Consensus.Shelley.Ledger.Block (ShelleyBlock)
 import           Ouroboros.Consensus.Shelley.Ledger.Mempool (TxId (..))
 import           Ouroboros.Consensus.TypeFamilyWrappers
-import qualified Shelley.Spec.Ledger.TxBody as Shelley
+import qualified Cardano.Ledger.Shelley.TxBody as Shelley
 
 -- | Convert a transaction ID to raw bytes.
 class ConvertTxId blk where

@@ -135,7 +135,7 @@ library
                       , parsec
                       , plutus-ledger-api
                       , prettyprinter
-                      , shelley-spec-ledger
+                      , cardano-ledger-shelley
                       , small-steps
                       , split
                       , strict-containers

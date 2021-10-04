@@ -78,7 +78,7 @@ library
                       , plutus-tx
                       , plutus-tx-plugin
                       , serialise
-                      , shelley-spec-ledger
+                      , cardano-ledger-shelley
                       , strict-containers
                       , transformers
                       , transformers-except
@@ -126,7 +126,7 @@ test-suite plutus-example-test
                       , plutus-example
                       , plutus-ledger
                       , plutus-ledger-api
-                      , shelley-spec-ledger
+                      , cardano-ledger-shelley
 
 
   other-modules:        Test.PlutusExample.Gen

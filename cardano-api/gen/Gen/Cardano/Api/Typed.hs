@@ -73,7 +73,7 @@ import qualified Cardano.Binary as CBOR
 import qualified Cardano.Crypto.Hash as Crypto
 import qualified Cardano.Crypto.Seed as Crypto
 import qualified Plutus.V1.Ledger.Api as Plutus
-import qualified Shelley.Spec.Ledger.TxBody as Ledger (EraIndependentTxBody)
+import qualified Cardano.Ledger.Shelley.TxBody as Ledger (EraIndependentTxBody)
 
 import           Hedgehog (Gen, Range)
 import qualified Hedgehog.Gen as Gen

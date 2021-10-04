@@ -22,7 +22,7 @@ import Control.Monad.Trans.Cont
 import Data.Either
 import Data.Function
 import Data.Maybe
-import Shelley.Spec.Ledger.Scripts ()
+import Cardano.Ledger.Shelley.Scripts ()
 import System.IO
 
 import qualified Ouroboros.Network.Protocol.ChainSync.Client as Net.Sync
