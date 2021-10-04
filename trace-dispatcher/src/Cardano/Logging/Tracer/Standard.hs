@@ -72,6 +72,7 @@ startStdoutThread :: IORef StandardTracerState -> IO ()
 startStdoutThread stateRef = do
     (inChan, outChan) <- newChan 2048
     as <- async (stdoutThread outChan)
+    link as
     modifyIORef stateRef (\ st ->
       st {stRunning = Just (inChan, outChan, as)})
 
