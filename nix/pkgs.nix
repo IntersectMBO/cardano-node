@@ -59,6 +59,8 @@ final: prev: with final;
   cardano-node-eventlogged = cardanoNodeEventlogHaskellPackages.cardano-node.components.exes.cardano-node;
   cardano-node-asserted = cardanoNodeAssertedHaskellPackages.cardano-node.components.exes.cardano-node;
   tx-generator-profiled = cardanoNodeProfiledHaskellPackages.tx-generator.components.exes.tx-generator;
+  plutus-scripts = callPackage ./plutus-scripts.nix { plutus-builder = cardanoNodeHaskellPackages.plutus-example.components.exes.plutus-example; };
+
   locli-profiled = cardanoNodeProfiledHaskellPackages.locli.components.exes.locli;
 
   # expose the db-converter and cardano-ping from the ouroboros-network we depend on
