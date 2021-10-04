@@ -266,8 +266,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ekg-forward
-  tag: d3e8a3abe2b55e72aca79212b053b4aabade91f4
-  --sha256: 04gwrmkkq0ami6qff0vsi8i5m4qan6pv7jj76k2b88qhk0407wyj
+  tag: 2d6691dd8ff68a0be4d9c73912b9559c96b76a25
+  --sha256: 00wlv9sx9jfnqf503mwvssf44q5lv0cq6virkdf6w25m3cnhx06w
 
 -- Drops an instance breaking our code. Should be released to Hackage eventually.
 source-repository-package
