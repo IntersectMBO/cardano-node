@@ -47,6 +47,8 @@ let
 
     exes = collectComponents' "exes" haskellPackages;
 
+    plutus-scripts = callPackage ./nix/plutus-scripts.nix { plutus-builder = haskellPackages.plutus-example.components.exes.plutus-example; };
+
     # `tests` are the test suites which have been built.
     tests = collectComponents' "tests" haskellPackages;
     # `benchmarks` (only built, not run).
