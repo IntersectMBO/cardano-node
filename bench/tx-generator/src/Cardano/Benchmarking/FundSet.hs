@@ -30,7 +30,9 @@ data FundInEra era = FundInEra {
 data Variant
   = PlainOldFund
   | PlutusScriptFund !FilePath
---- | DedicatedCollateral
+  -- A collateralFund is just a regular (PlainOldFund) on the chain,
+  -- but tagged in the wallet so that it is not selected for spending.
+  | CollateralFund
   deriving  (Show, Eq, Ord)
 
 data Validity
@@ -143,7 +145,7 @@ selectCollateral fs = case coins of
   [] -> Left "no matching none-Plutus fund found"
   (c:_) -> Right [c]
  where
-  coins = toAscList ( Proxy :: Proxy Lovelace) (fs @=PlainOldFund @= IsConfirmed @= (1492000000 :: Lovelace) )
+  coins = toAscList ( Proxy :: Proxy Lovelace) (fs @=CollateralFund @= IsConfirmed )
 
 data AllowRecycle
   = UseConfirmedOnly

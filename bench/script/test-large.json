@@ -41,8 +41,7 @@
       , "payMode": { "PayToAddr": [] }
     },
     { "runBenchmark": "walletBasedBenchmark", "txCount": 1000000, "tps": 100
-      , "submitMode": {
-          "DumpToFile": "/tmp/submit-list.txt"
-      }
+      , "submitMode": { "DumpToFile": "/tmp/submit-list.txt" }
+      , "spendMode" : { "SpendOutput": [] }
     }
 ]

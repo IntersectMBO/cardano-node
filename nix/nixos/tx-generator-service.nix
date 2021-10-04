@@ -1,5 +1,11 @@
 pkgs:
 let
+  plutus = false;
+  plutusScriptFile = "../../../bench/script/sum1ToN.plutus";
+  executionMemory = 700000000;
+  executionSteps  = 700000000;
+  scriptFees = executionMemory * 1 + executionSteps  * 1;
+  
   ## Standard, simplest possible value transaction workload.
   ##
   ## For definitions of the cfg attributes referred here,
@@ -28,24 +34,41 @@ let
       { delay             = init_cooldown; }
     ]
     ++
-    (if continuousMode
-             ## WARNING: this could go over the genesis UTxO funds!
-     then createChangeScript cfg
-            (tx_count * tx_fee + min_utxo_value)
-            (length (__attrNames targetNodes) * 2 * inputs_per_tx)
-     else createChangeRecursive cfg
-            (min_utxo_value + tx_fee)
-            (tx_count * inputs_per_tx)
+    ( let
+        totalFee = if plutus
+                   then tx_fee + scriptFees * inputs_per_tx
+                   else tx_fee;
+        safeCollateral = max scriptFees  min_utxo_value;
+        minTotalValue = min_utxo_value * outputs_per_tx + totalFee;
+        minValuePerInput = minTotalValue / inputs_per_tx + 1;
+      in
+        if !plutus
+          then createChangeRecursive cfg minValuePerInput (tx_count * inputs_per_tx)
+        else
+          [
+          { createChange = safeCollateral + tx_fee; count = 1;
+            submitMode.LocalSocket = []; payMode.PayToAddr = [];
+          }
+          { createChange = safeCollateral; count = 1;
+            submitMode.LocalSocket = []; payMode.PayToCollateral = [];
+          }
+          ]
+          ++ createChangePlutus cfg minValuePerInput (tx_count * inputs_per_tx)
     )
     ++
     [
-      { runBenchmark = "walletBasedBenchmark";
+      { runBenchmark = "tx-submit-benchmark";
         txCount = tx_count;
         tps = tps;
         submitMode.NodeToNode = [];
-        spendMode.SpendOutput = [];
+        spendMode = if plutus
+                    then { SpendScript = [
+                             plutusScriptFile
+                             {memory = executionMemory; steps = executionSteps; }
+                           ]; }
+                    else { SpendOutput = []; };
       }
-      { waitBenchmark = "walletBasedBenchmark"; }
+      { waitBenchmark = "tx-submit-benchmark"; }
     ];
 
   defaultGeneratorScriptFn = basicValueTxWorkload;
@@ -65,9 +88,18 @@ let
 
   createChangeScript = cfg: value: count:
     [ { createChange = value;
-        count=count;
+        count = count;
         submitMode.LocalSocket = [];
         payMode.PayToAddr = [];
+      }
+      { delay = cfg.init_cooldown; }
+    ];
+
+  createChangeScriptPlutus = cfg: value: count:
+    [ { createChange = value;
+        count = count;
+        submitMode.LocalSocket = [];
+        payMode.PayToScript = plutusScriptFile;
       }
       { delay = cfg.init_cooldown; }
     ];
@@ -76,6 +108,10 @@ let
     then createChangeScript cfg value count
     else createChangeRecursive cfg (value * 30 + cfg.tx_fee) (count / 30 + 1) ++ createChangeScript cfg value count;
 
+  createChangePlutus = cfg: value: count: if count <= 30
+    then createChangeScriptPlutus cfg value count
+    else createChangeRecursive cfg (value * 30 + cfg.tx_fee) (count / 30 + 1) ++ createChangeScriptPlutus cfg value count;
+  
 in pkgs.commonLib.defServiceModule
   (lib: with lib;
     { svcName = "tx-generator";
