@@ -45,9 +45,9 @@ defaultConfig :: TraceConfig
 defaultConfig = emptyTraceConfig {
   tcOptions = Map.fromList
     [([] :: Namespace,
-         [ CoSeverity InfoF
-         , CoDetail DNormal
-         , CoBackend [Stdout HumanFormatColoured]
+         [ ConfSeverity (SeverityF (Just Info))
+         , ConfDetail DNormal
+         , ConfBackend [Stdout HumanFormatColoured]
          ])
     ]
   }
@@ -101,13 +101,11 @@ withNamespaceConfig name extract withConfig tr = do
         Left (_cmap, Nothing) -> pure ()
         -- This can happen during reconfiguration, so we don't throw an error any more
     mkTrace ref (lc, Just Reset, a) = do
---      trace ("mkTrace Reset  " <> show (lcNamespace lc)) $ pure ()
       liftIO $ writeIORef ref (Left (Map.empty, Nothing))
       tt <- withConfig Nothing tr
       T.traceWith (unpackTrace tt) (lc, Just Reset, a)
 
     mkTrace ref (lc, Just (Config c), m) = do
---      trace ("mkTrace Config  " <> show (lcNamespace lc)) $ pure ()
       ! val <- extract c (lcNamespace lc)
       eitherConf <- liftIO $ readIORef ref
       case eitherConf of
@@ -136,12 +134,8 @@ withNamespaceConfig name extract withConfig tr = do
       case eitherConf of
         Left (cmap, Nothing) ->
           case nub (Map.elems cmap) of
-            []     -> -- trace ("mkTrace Optimize empty " <> show (lcNamespace lc)) $
-                      -- This will never be called!?
-                        pure ()
+            []     -> pure ()
             [val]  -> do
-                        -- trace ("mkTrace Optimize one "  <> show (lcNamespace lc)
-                        --   <> " val " <> show val) $ pure ()
                         liftIO $ writeIORef ref $ Right val
                         Trace tt <- withConfig (Just val) tr
                         T.traceWith tt (lc, Just Optimize, m)
@@ -155,9 +149,6 @@ withNamespaceConfig name extract withConfig tr = do
                                               (Map.assocs decidingDict)
                           newmap = Map.filter (/= mostCommon) cmap
                       in do
-                        -- trace ("mkTrace Optimize map " <> show (lcNamespace lc)
-                        --         <> " val " <> show mostCommon
-                        --         <> " map " <> show newmap) $ pure ()
                         liftIO $ writeIORef ref (Left (newmap, Just mostCommon))
                         Trace tt <- withConfig Nothing tr
                         T.traceWith tt (lc, Just Optimize, m)
@@ -296,11 +287,11 @@ withLimitersFromConfig tr trl = do
 -- | If no severity can be found in the config, it is set to Warning
 getSeverity :: TraceConfig -> Namespace -> SeverityF
 getSeverity config ns =
-    fromMaybe WarningF (getOption severitySelector config ns)
+    fromMaybe (SeverityF (Just Warning)) (getOption severitySelector config ns)
   where
     severitySelector :: ConfigOption -> Maybe SeverityF
-    severitySelector (CoSeverity s) = Just s
-    severitySelector _              = Nothing
+    severitySelector (ConfSeverity s) = Just s
+    severitySelector _                = Nothing
 
 getSeverity' :: Applicative m => TraceConfig -> Namespace -> m SeverityF
 getSeverity' config ns = pure $ getSeverity config ns
@@ -311,8 +302,8 @@ getDetails config ns =
     fromMaybe DNormal (getOption detailSelector config ns)
   where
     detailSelector :: ConfigOption -> Maybe DetailLevel
-    detailSelector (CoDetail d) = Just d
-    detailSelector _            = Nothing
+    detailSelector (ConfDetail d) = Just d
+    detailSelector _              = Nothing
 
 getDetails' :: Applicative m => TraceConfig -> Namespace -> m DetailLevel
 getDetails' config ns = pure $ getDetails config ns
@@ -325,8 +316,8 @@ getBackends config ns =
       (getOption backendSelector config ns)
   where
     backendSelector :: ConfigOption -> Maybe [BackendConfig]
-    backendSelector (CoBackend s) = Just s
-    backendSelector _             = Nothing
+    backendSelector (ConfBackend s) = Just s
+    backendSelector _               = Nothing
 
 getBackends' :: Applicative m => TraceConfig -> Namespace -> m [BackendConfig]
 getBackends' config ns = pure $ getBackends config ns
@@ -336,8 +327,8 @@ getLimiterSpec :: TraceConfig -> Namespace -> Maybe (Text, Double)
 getLimiterSpec = getOption limiterSelector
   where
     limiterSelector :: ConfigOption -> Maybe (Text, Double)
-    limiterSelector (CoLimiter n f) = Just (n, f)
-    limiterSelector _               = Nothing
+    limiterSelector (ConfLimiter n f) = Just (n, f)
+    limiterSelector _                 = Nothing
 
 
 -- | Searches in the config to find an option
@@ -375,25 +366,25 @@ parseRepresentation bs = transform (decodeEither' bs)
       let tc'  = foldl' (\ tci (TraceOptionSeverity ns severity') ->
                           let ns' = split (=='.') ns
                               ns'' = if ns' == [""] then [] else ns'
-                          in Map.insertWith (++) ns'' [CoSeverity severity'] tci)
+                          in Map.insertWith (++) ns'' [ConfSeverity severity'] tci)
                         tc
                         (traceOptionSeverity cr)
           tc'' = foldl' (\ tci (TraceOptionDetail ns detail') ->
                           let ns' = split (=='.') ns
                               ns'' = if ns' == [""] then [] else ns'
-                          in Map.insertWith (++) ns'' [CoDetail detail'] tci)
+                          in Map.insertWith (++) ns'' [ConfDetail detail'] tci)
                         tc'
                         (traceOptionDetail cr)
           tc''' = foldl' (\ tci (TraceOptionBackend ns backend') ->
                           let ns' = split (=='.') ns
                               ns'' = if ns' == [""] then [] else ns'
-                          in Map.insertWith (++) ns'' [CoBackend backend'] tci)
+                          in Map.insertWith (++) ns'' [ConfBackend backend'] tci)
                         tc''
                         (traceOptionBackend cr)
           tc'''' = foldl' (\ tci (TraceOptionLimiter ns name frequ) ->
                           let ns' = split (=='.') ns
                               ns'' = if ns' == [""] then [] else ns'
-                          in Map.insertWith (++) ns'' [CoLimiter name frequ] tci)
+                          in Map.insertWith (++) ns'' [ConfLimiter name frequ] tci)
                         tc'''
                         (traceOptionLimiter cr)
       in TraceConfig
@@ -470,7 +461,7 @@ data ConfigRepresentation = ConfigRepresentation {
   , traceOptionDetail           :: [TraceOptionDetail]
   , traceOptionBackend          :: [TraceOptionBackend]
   , traceOptionLimiter          :: [TraceOptionLimiter]
-  , traceOptionForwarder        :: RemoteAddr
+  , traceOptionForwarder        :: ForwarderAddr
   , traceOptionForwardQueueSize :: Int
   }
   deriving (Eq, Ord, Show)

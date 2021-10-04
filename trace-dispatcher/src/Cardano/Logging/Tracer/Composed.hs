@@ -3,6 +3,7 @@
 module Cardano.Logging.Tracer.Composed (
     mkCardanoTracer
   , mkCardanoTracer'
+  , MessageOrLimit(..)
   ) where
 
 import           Data.Maybe                       (fromMaybe)
@@ -53,7 +54,7 @@ mkCardanoTracer trStdout trForward mbTrEkg name namesFor severityFor privacyFor 
         privacyFor noHook
   where
     noHook :: Trace IO evt -> IO (Trace IO evt)
-    noHook tr = pure tr
+    noHook = pure
 
 -- | Adds the possibility to add special tracers via the hook function
 mkCardanoTracer' :: forall evt evt1.
@@ -98,7 +99,7 @@ mkCardanoTracer' trStdout trForward mbTrEkg name namesFor severityFor privacyFor
                             Nothing -> pure Nothing
                             Just ekgTrace ->
                               if EKGBackend `elem` backends
-                                then fmap Just
+                                then pure $ Just
                                       (metricsFormatter "Cardano" ekgTrace)
                                 else pure Nothing
         mbForwardTrace <- if Forwarder `elem` backends

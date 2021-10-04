@@ -16,7 +16,7 @@ testEKG :: IO ()
 testEKG = do
     server <- forkServer "localhost" 8000
     tracer <- ekgTracer (Right server)
-    formattedTracer <- metricsFormatter "cardano" tracer
+    let formattedTracer = metricsFormatter "cardano" tracer
     configureTracers emptyTraceConfig countDocumented [formattedTracer]
     loop (appendName "ekg1" formattedTracer) 1
   where

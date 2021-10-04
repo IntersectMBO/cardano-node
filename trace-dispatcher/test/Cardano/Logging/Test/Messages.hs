@@ -49,6 +49,6 @@ docMessage = Documented [
       "The second message."
   , DocMsg
       (Message3 1 1.0)
-      [(["Metrics1"], "A number")]
+      [("Metrics1", "A number")]
       "The third message."
   ]

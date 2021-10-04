@@ -12,7 +12,7 @@ import           Cardano.Logging
 testTracer :: MonadIO m
   => IORef [FormattedMessage]
   -> m (Trace m FormattedMessage)
-testTracer ioRef = liftIO $ do
+testTracer ioRef = liftIO $
     pure $ Trace $ arrow $ emit output
   where
     output (LoggingContext{}, Nothing, msg) = liftIO $ do

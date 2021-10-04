@@ -16,7 +16,9 @@ test1 = do
     stdoutTracer' <- standardTracer Nothing
     simpleTracer <- machineFormatter "cardano" stdoutTracer'
     configureTracers emptyTraceConfig traceForgeEventDocu [simpleTracer]
-    let simpleTracer1 = filterTraceBySeverity (Just WarningF) simpleTracer
+    let simpleTracer1 = filterTraceBySeverity
+                          (Just (SeverityF (Just Warning)))
+                          simpleTracer
     let simpleTracerC1 = appendName "Outer1" simpleTracer1
     let simpleTracerC2 = appendName "Inner1" simpleTracerC1
     let simpleTracerC3 = setSeverity Error
@@ -33,7 +35,9 @@ test2 = do
     simpleTracer <- humanFormatter True "cardano" stdoutTracer'
     configureTracers emptyTraceConfig traceForgeEventDocu [simpleTracer]
     let simpleTracer1  = withSeverity loSeverity
-                            (filterTraceBySeverity (Just WarningF) simpleTracer)
+                            (filterTraceBySeverity
+                              (Just (SeverityF (Just Warning)))
+                              simpleTracer)
     let simpleTracerC1 = appendName "Outer1" simpleTracer1
     let simpleTracerC2 = appendName "Inner1" simpleTracerC1
     let simpleTracerC3 = setPrivacy Confidential $ appendName "Inner2" simpleTracerC1

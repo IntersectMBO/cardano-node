@@ -14,9 +14,9 @@ config1 :: TraceConfig
 config1 = emptyTraceConfig {
   tcOptions = fromList
     [([] :: Namespace,
-         [ CoSeverity DebugF
-         , CoDetail DNormal
-         , CoBackend [Stdout HumanFormatColoured, Forwarder, EKGBackend]
+         [ ConfSeverity (SeverityF (Just Debug))
+         , ConfDetail DNormal
+         , ConfBackend [Stdout HumanFormatColoured, Forwarder, EKGBackend]
          ])
     ]
   }
@@ -25,19 +25,19 @@ config2 :: TraceConfig
 config2 = emptyTraceConfig {
   tcOptions = fromList
     [ ([] :: Namespace,
-         [ CoSeverity DebugF
-         , CoDetail DNormal
-         , CoBackend [Stdout HumanFormatColoured, Forwarder, EKGBackend]
+         [ ConfSeverity (SeverityF (Just Debug))
+         , ConfDetail DNormal
+         , ConfBackend [Stdout HumanFormatColoured, Forwarder, EKGBackend]
          ])
     , (["Node", "Test", "Message1"],
-         [ CoSeverity InfoF
-         , CoDetail DNormal
-         , CoBackend [Stdout HumanFormatColoured, EKGBackend]
+         [ ConfSeverity (SeverityF (Just Info))
+         , ConfDetail DNormal
+         , ConfBackend [Stdout HumanFormatColoured, EKGBackend]
          ])
     , (["Node", "Test", "Message2"],
-         [ CoSeverity ErrorF
-         , CoDetail DMinimal
-         , CoBackend [Forwarder, EKGBackend]
+         [ ConfSeverity (SeverityF (Just Error))
+         , ConfDetail DMinimal
+         , ConfBackend [Forwarder, EKGBackend]
          ])
     ]
   }

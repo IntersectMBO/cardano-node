@@ -1,8 +1,9 @@
-{-# LANGUAGE DeriveGeneric              #-}
-{-# LANGUAGE GADTs                      #-}
-{-# LANGUAGE RankNTypes                 #-}
-{-# LANGUAGE RecordWildCards            #-}
-{-# LANGUAGE TypeSynonymInstances       #-}
+{-# LANGUAGE DeriveGeneric        #-}
+{-# LANGUAGE GADTs                #-}
+{-# LANGUAGE RankNTypes           #-}
+{-# LANGUAGE RecordWildCards      #-}
+{-# LANGUAGE StandaloneDeriving   #-}
+{-# LANGUAGE TypeSynonymInstances #-}
 
 module Cardano.Logging.Types (
     Trace(..)
@@ -20,7 +21,7 @@ module Cardano.Logging.Types (
   , SeverityS(..)
   , SeverityF(..)
   , ConfigOption(..)
-  , RemoteAddr(..)
+  , ForwarderAddr(..)
   , FormatLogging(..)
   , TraceConfig(..)
   , emptyTraceConfig
@@ -36,7 +37,8 @@ module Cardano.Logging.Types (
   , PreFormatted(..)
 ) where
 
-import           Control.Tracer
+-- import           Control.Tracer
+import           Codec.Serialise (Serialise (..))
 import qualified Control.Tracer as T
 import           Data.Aeson ((.=))
 import qualified Data.Aeson as AE
@@ -51,13 +53,15 @@ import           Data.Time (UTCTime)
 import           GHC.Generics
 import           Network.HostName (HostName)
 
+import           Ouroboros.Network.Util.ShowProxy (ShowProxy (..))
+
 -- | The Trace carries the underlying tracer Tracer from the contra-tracer package.
 --   It adds a 'LoggingContext' and maybe a 'TraceControl' to every message.
 newtype Trace m a = Trace
-  {unpackTrace :: Tracer m (LoggingContext, Maybe TraceControl, a)}
+  {unpackTrace :: T.Tracer m (LoggingContext, Maybe TraceControl, a)}
 
 -- | Contramap lifted to Trace
-instance Monad m => Contravariant (Trace m) where
+instance Monad m => T.Contravariant (Trace m) where
     contramap f (Trace tr) = Trace $
       T.contramap (\ (lc, mbC, a) -> (lc, mbC, f a)) tr
 
@@ -89,14 +93,14 @@ class LogFormatting a where
 
 data Metric
   -- | An integer metric.
-  -- If the text array is not empty it is used as namespace namespace
-    = IntM Namespace Integer
+  -- Text is used to name the metric
+    = IntM Text Integer
   -- | A double metric.
-  -- If the text array is not empty it is used as namespace
-    | DoubleM Namespace Double
+  -- Text is used to name the metric
+    | DoubleM Text Double
   -- | An counter metric.
-  -- If the text array is not empty it is used as namespace namespace
-    | CounterM Namespace (Maybe Int)
+  -- Text is used to name the metric
+    | CounterM Text (Maybe Int)
   deriving (Show, Eq)
 
 -- | A helper function for creating an |Object| given a list of pairs, named items,
@@ -122,7 +126,7 @@ type Namespace = [Text]
 -- and a comment in markdown format
 data DocMsg a = DocMsg {
     dmPrototype :: a
-  , dmMetricsMD :: [(Namespace, Text)]
+  , dmMetricsMD :: [(Text, Text)]
   , dmMarkdown  :: Text
 } deriving (Show)
 
@@ -168,21 +172,41 @@ data SeverityS
   deriving (Show, Eq, Ord, Bounded, Enum)
 
 -- | Severity for a filter
-data SeverityF
-    = DebugF                   -- ^ Debug messages
-    | InfoF                    -- ^ Information
-    | NoticeF                  -- ^ Normal runtime Conditions
-    | WarningF                 -- ^ General Warnings
-    | ErrorF                   -- ^ General Errors
-    | CriticalF                -- ^ Severe situations
-    | AlertF                   -- ^ Take immediate action
-    | EmergencyF               -- ^ System is unusable
-    | SilenceF                 -- ^ Don't show anything
-  deriving (Show, Eq, Ord, Bounded, Enum, Generic)
+-- Nothing means don't show anything (Silence)
+-- Nothing level means show messages with severity >= level
+newtype SeverityF = SeverityF (Maybe SeverityS)
+  deriving (Eq)
+
+instance Enum SeverityF where
+  toEnum 8 = SeverityF Nothing
+  toEnum i = SeverityF (Just (toEnum i))
+  fromEnum (SeverityF Nothing)  = 8
+  fromEnum (SeverityF (Just s)) = fromEnum s
 
 instance AE.ToJSON SeverityF where
-    toEncoding = AE.genericToEncoding AE.defaultOptions
-instance AE.FromJSON SeverityF
+    toJSON (SeverityF (Just s)) = AE.String ((pack . show) s)
+    toJSON (SeverityF Nothing)  = AE.String "Silence"
+
+instance AE.FromJSON SeverityF where
+    parseJSON (AE.String "Debug")     = pure (SeverityF (Just Debug))
+    parseJSON (AE.String "Info")      = pure (SeverityF (Just Info))
+    parseJSON (AE.String "Notice")    = pure (SeverityF (Just Notice))
+    parseJSON (AE.String "Warning")   = pure (SeverityF (Just Warning))
+    parseJSON (AE.String "Error")     = pure (SeverityF (Just Error))
+    parseJSON (AE.String "Critical")  = pure (SeverityF (Just Critical))
+    parseJSON (AE.String "Alert")     = pure (SeverityF (Just Alert))
+    parseJSON (AE.String "Emergency") = pure (SeverityF (Just Emergency))
+    parseJSON (AE.String "Scilence")  = pure (SeverityF Nothing)
+
+instance Ord SeverityF where
+  compare (SeverityF (Just s1)) (SeverityF (Just s2)) = compare s1 s2
+  compare (SeverityF Nothing) (SeverityF Nothing)     = EQ
+  compare (SeverityF (Just _s1)) (SeverityF Nothing)  = LT
+  compare (SeverityF Nothing) (SeverityF (Just _s2))  = GT
+
+instance Show SeverityF where
+  show (SeverityF (Just s)) = show s
+  show (SeverityF Nothing)  = "Silence"
 
 -- | Used as interface object for ForwarderTracer
 data TraceObject = TraceObject {
@@ -239,28 +263,28 @@ data FormatLogging =
 -- Configuration options for individual namespace elements
 data ConfigOption =
     -- | Severity level for a filter (default is WarningF)
-    CoSeverity SeverityF
+    ConfSeverity SeverityF
     -- | Detail level (default is DNormal)
-  | CoDetail DetailLevel
+  | ConfDetail DetailLevel
   -- | To which backend to pass
   --   Default is [EKGBackend, Forwarder, Stdout HumanFormatColoured]
-  | CoBackend [BackendConfig]
+  | ConfBackend [BackendConfig]
   -- | Construct a limiter with name (Text) and limiting to the Double,
   -- which represents frequency in number of messages per second
-  | CoLimiter Text Double
+  | ConfLimiter Text Double
   deriving (Eq, Ord, Show)
 
-newtype RemoteAddr
+newtype ForwarderAddr
   = LocalSocket FilePath
   deriving (Eq, Ord, Show)
 
-instance AE.FromJSON RemoteAddr where
-  parseJSON = AE.withObject "RemoteAddr" $ \o -> LocalSocket <$> o AE..: "filePath"
+instance AE.FromJSON ForwarderAddr where
+  parseJSON = AE.withObject "ForwarderAddr" $ \o -> LocalSocket <$> o AE..: "filePath"
 
 data TraceConfig = TraceConfig {
      -- | Options specific to a certain namespace
     tcOptions            :: Map.Map Namespace [ConfigOption]
-  , tcForwarder          :: RemoteAddr
+  , tcForwarder          :: ForwarderAddr
   , tcForwarderQueueSize :: Int
 }
   deriving (Eq, Ord, Show)
@@ -282,13 +306,13 @@ data TraceControl where
     Reset     :: TraceControl
     Config    :: TraceConfig -> TraceControl
     Optimize  :: TraceControl
-    Document  :: Int -> Text -> [(Namespace, Text)] -> DocCollector -> TraceControl
+    Document  :: Int -> Text -> [(Text, Text)] -> DocCollector -> TraceControl
 
 newtype DocCollector = DocCollector (IORef (Map Int LogDoc))
 
 data LogDoc = LogDoc {
     ldDoc        :: Text
-  , ldMetricsDoc :: Map Namespace Text
+  , ldMetricsDoc :: Map Text Text
   , ldNamespace  :: [Namespace]
   , ldSeverity   :: [SeverityS]
   , ldPrivacy    :: [Privacy]
@@ -298,10 +322,11 @@ data LogDoc = LogDoc {
   , ldLimiter    :: [(Text, Double)]
 } deriving(Eq, Show)
 
-emptyLogDoc :: Text -> [(Namespace, Text)] -> LogDoc
+emptyLogDoc :: Text -> [(Text, Text)] -> LogDoc
 emptyLogDoc d m = LogDoc d (Map.fromList m) [] [] [] [] [] [] []
 
--- | Type for a Fold
+-- | Type for the functions foldTraceM and foldMTraceM from module
+-- Cardano/Logging/Trace
 newtype Folding a b = Folding b
 
 unfold :: Folding a b -> b
@@ -333,14 +358,30 @@ instance LogFormatting b => LogFormatting (Folding a b) where
 instance LogFormatting Double where
   forMachine _dtal d = mkObject [ "val" .= AE.String ((pack . show) d)]
   forHuman d         = (pack . show) d
-  asMetrics d        = [DoubleM [] d]
+  asMetrics d        = [DoubleM "" d]
 
 instance LogFormatting Int where
   forMachine _dtal i = mkObject [ "val" .= AE.String ((pack . show) i)]
   forHuman i         = (pack . show) i
-  asMetrics i        = [IntM [] (fromIntegral i)]
+  asMetrics i        = [IntM "" (fromIntegral i)]
 
 instance LogFormatting Integer where
   forMachine _dtal i = mkObject [ "val" .= AE.String ((pack . show) i)]
   forHuman i         = (pack . show) i
-  asMetrics i        = [IntM [] i]
+  asMetrics i        = [IntM "" i]
+
+---------------------------------------------------------------------------
+-- Instances for 'TraceObject' to forward it using 'trace-forward' library.
+
+deriving instance Generic Privacy
+deriving instance Generic SeverityS
+deriving instance Generic LoggingContext
+deriving instance Generic TraceObject
+
+instance Serialise DetailLevel
+instance Serialise Privacy
+instance Serialise SeverityS
+instance Serialise LoggingContext
+instance Serialise TraceObject
+
+instance ShowProxy TraceObject

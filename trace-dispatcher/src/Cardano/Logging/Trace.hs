@@ -68,7 +68,7 @@ filterTraceMaybe :: Monad m =>
 filterTraceMaybe (Trace tr) = Trace $
     T.squelchUnless
       (\case
-        (_lc, _mbC, Just _a) -> True
+        (_lc, _mbC, Just _) -> True
         (_lc, _mbC, Nothing) -> False)
       (T.contramap
           (\case
@@ -86,9 +86,11 @@ filterTraceBySeverity (Just minSeverity) =
     filterTrace $
       \case
         (_lc, Just _, _a)  -> True
-        (lc, _, _e)                ->
+        (lc, _, _e)        ->
           case lcSeverity lc of
-            Just s  -> fromEnum s >= fromEnum minSeverity
+            Just s  -> case minSeverity of
+                          SeverityF (Just fs) -> s >= fs
+                          SeverityF Nothing   -> False
             Nothing -> True
 filterTraceBySeverity Nothing = id
 
@@ -202,7 +204,7 @@ withDetails fs (Trace tr) = Trace $
 -- Uses an MVar to store the state
 foldTraceM
   :: forall a acc m . (MonadUnliftIO m)
-  => (acc -> LoggingContext -> a -> acc)
+  => (acc -> LoggingContext -> Maybe TraceControl -> a -> acc)
   -> acc
   -> Trace m (Folding a acc)
   -> m (Trace m a)
@@ -215,17 +217,19 @@ foldTraceM cata initial (Trace tr) = do
       \case
         (lc, Nothing, v) -> do
           x' <- modifyMVar ref $ \x ->
-            let ! accu = cata x lc v
-            in pure $ join (,) accu
+            let ! accu = cata x lc Nothing v
+            in pure (accu,accu)
           T.traceWith tr (lc, Nothing, Folding x')
-        (lc, Just control, _v) -> do
-          T.traceWith tr (lc, Just control, Folding initial)
+        (lc, Just control, v) -> do
+          let x' = cata initial lc (Just control) v
+          T.traceWith tr (lc, Just control, Folding x')
+
 
 -- | Folds the monadic cata function with acc over a.
 -- Uses an IORef to store the state
 foldMTraceM
   :: forall a acc m . (MonadUnliftIO m)
-  => (acc -> LoggingContext -> a -> m acc)
+  => (acc -> LoggingContext -> Maybe TraceControl -> a -> m acc)
   -> acc
   -> Trace m (Folding a acc)
   -> m (Trace m a)
@@ -238,11 +242,12 @@ foldMTraceM cata initial (Trace tr) = do
       \case
         (lc, Nothing, v) -> do
           x' <- modifyMVar ref $ \x -> do
-            ! accu <- cata x lc v
+            ! accu <- cata x lc Nothing v
             pure $ join (,) accu
           T.traceWith tr (lc, Nothing, Folding x')
-        (lc, Just control, _v) -> do
-          T.traceWith tr (lc, Just control, Folding initial)
+        (lc, Just control, v) -> do
+          x' <- cata initial lc (Just control) v
+          T.traceWith tr (lc, Just control, Folding x')
 
 -- | Allows to route to different tracers, based on the message being processed.
 --   The second argument must mappend all possible tracers of the first

@@ -1,12 +1,9 @@
 {-# LANGUAGE DataKinds           #-}
-{-# LANGUAGE DeriveGeneric       #-}
 {-# LANGUAGE FlexibleInstances   #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE PackageImports      #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving  #-}
 
-{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Logging.Tracer.Forward
   (
@@ -14,10 +11,8 @@ module Cardano.Logging.Tracer.Forward
   ) where
 
 import           Codec.CBOR.Term (Term)
-import           Codec.Serialise (Serialise (..))
 import           Control.Concurrent.Async (race_, wait, withAsync)
 import           Control.Monad.IO.Class
-import           GHC.Generics (Generic)
 
 import qualified Control.Tracer as T
 import           "contra-tracer" Control.Tracer (contramap, stdoutTracer)
@@ -47,7 +42,6 @@ import           Ouroboros.Network.Socket (AcceptedConnectionsLimit (..),
                      SomeResponderApplication (..), cleanNetworkMutableState,
                      newNetworkMutableState, nullNetworkServerTracers,
                      withServerNode)
-import           Ouroboros.Network.Util.ShowProxy (ShowProxy (..))
 
 import qualified System.Metrics as EKG
 import qualified System.Metrics.Configuration as EKGF
@@ -59,21 +53,7 @@ import           Trace.Forward.Utils
 
 import           Cardano.Logging.DocuGenerator
 import           Cardano.Logging.Types
-
--- Instances for 'TraceObject' to forward it using 'trace-forward' library.
-
-deriving instance Generic Privacy
-deriving instance Generic SeverityS
-deriving instance Generic LoggingContext
-deriving instance Generic TraceObject
-
-instance Serialise DetailLevel
-instance Serialise Privacy
-instance Serialise SeverityS
-instance Serialise LoggingContext
-instance Serialise TraceObject
-
-instance ShowProxy TraceObject
+import           Cardano.Logging.Utils(uncurry3)
 
 ---------------------------------------------------------------------------
 
@@ -126,7 +106,7 @@ forwardTracer iomgr config nodeInfo = liftIO $ do
 
 launchForwarders
   :: IOManager
-  -> RemoteAddr
+  -> ForwarderAddr
   -> EKG.Store
   -> EKGF.ForwarderConfiguration
   -> TF.ForwarderConfiguration TraceObject
@@ -142,7 +122,7 @@ launchForwarders iomgr ep@(LocalSocket p) store ekgConfig tfConfig sink = flip
 
 launchForwardersViaLocalSocket
   :: IOManager
-  -> RemoteAddr
+  -> ForwarderAddr
   -> (EKGF.ForwarderConfiguration, TF.ForwarderConfiguration TraceObject)
   -> ForwardSink TraceObject
   -> EKG.Store
@@ -199,7 +179,3 @@ doListenToAcceptor snocket address timeLimits (ekgConfig, tfConfig) sink store =
          }
       | (prot, num) <- protocols
       ]
-
--- | Converts a curried function to a function on a triple.
-uncurry3 :: (a -> b -> c -> d) -> ((a, b, c) -> d)
-uncurry3 f ~(a,b,c) = f a b c

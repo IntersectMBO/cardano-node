@@ -191,16 +191,14 @@ documentMarkdown (Documented documented) tracers = do
                   (intersperse (singleton '\n')
                     (map
                       (\case
-                        (IntM ns i) ->
+                        (IntM name i) ->
                           fromText "Integer metrics:\n"
-                          <> asCode (mconcat $ intersperse (singleton '.')
-                                              (map fromText ns))
+                          <> asCode (fromText name)
                           <> singleton ' '
                           <> fromString (show i)
-                        (DoubleM ns i) ->
+                        (DoubleM name i) ->
                           fromText "Double metrics:\n"
-                          <> asCode (mconcat $ intersperse (singleton '.')
-                                              (map fromText ns))
+                          <> asCode (fromText name)
                           <> singleton ' '
                           <> fromString (show i))
                       l))
@@ -254,10 +252,11 @@ documentMarkdown (Documented documented) tracers = do
     filteredBuilder l r =
       fromText "Filtered: "
       <> case (l, r) of
-            ([lh], [rh]) ->
+            ([SeverityF (Just lh)], [rh]) ->
               if fromEnum rh >= fromEnum lh
                 then (asCode . fromString) "Visible"
                 else (asCode . fromString) "Invisible"
+            ([SeverityF Nothing], [_rh]) -> "Invisible"
             _ -> mempty
       <> fromText " ~ "
       <> mconcat (intersperse (fromText ", ")
@@ -281,7 +280,7 @@ documentMarkdown (Documented documented) tracers = do
     fMetrics _                                        = False
 
     metricsBuilder ::
-         Map.Map Namespace Text
+         Map.Map Text Text
       -> [(BackendConfig, FormattedMessage)]
       -> Builder
     metricsBuilder _ [] = mempty
@@ -289,36 +288,36 @@ documentMarkdown (Documented documented) tracers = do
       mconcat $ map (metricsFormatToText metricsDoc) l
 
     metricsFormatToText ::
-         Map.Map Namespace Text
+         Map.Map Text Text
       -> (BackendConfig, FormattedMessage)
       -> Builder
     metricsFormatToText metricsDoc (_be, FormattedMetrics l) =
       mconcat (intersperse (fromText ",\n")
         (map (metricFormatToText metricsDoc) l))
 
-    metricFormatToText :: Map.Map Namespace Text -> Metric -> Builder
-    metricFormatToText metricsDoc (IntM ns _) =
+    metricFormatToText :: Map.Map Text Text -> Metric -> Builder
+    metricFormatToText metricsDoc (IntM name _) =
       fromText "#### _Int metric:_ "
-        <> mconcat (intersperse (singleton '.') (map fromText ns))
+        <> fromText name
           <> fromText "\n"
-            <> case Map.lookup ns metricsDoc of
+            <> case Map.lookup name metricsDoc of
                         Just ""   -> mempty
                         Just text -> betweenLines (fromText text)
                         Nothing   -> mempty
 
-    metricFormatToText metricsDoc (DoubleM ns _) =
+    metricFormatToText metricsDoc (DoubleM name _) =
       fromText "#### _Double metric:_ "
-          <> mconcat (intersperse (singleton '.') (map fromText ns))
+          <> fromText name
             <> fromText "\n"
-              <> case Map.lookup ns metricsDoc of
+              <> case Map.lookup name metricsDoc of
                         Just ""   -> mempty
                         Just text -> betweenLines (fromText text)
                         Nothing   -> mempty
-    metricFormatToText metricsDoc (CounterM ns _) =
+    metricFormatToText metricsDoc (CounterM name _) =
       fromText "#### _Counter metric:_ "
-          <> mconcat (intersperse (singleton '.') (map fromText ns))
+          <> fromText name
             <> fromText "\n"
-              <> case Map.lookup ns metricsDoc of
+              <> case Map.lookup name metricsDoc of
                         Just ""   -> mempty
                         Just text -> betweenLines (fromText text)
                         Nothing   -> mempty

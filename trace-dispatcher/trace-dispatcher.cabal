@@ -24,6 +24,7 @@ library
                       Cardano.Logging.Tracer.Standard
                       Cardano.Logging.Tracer.Forward
                       Cardano.Logging.Tracer.Composed
+                      Cardano.Logging.Utils
                       Control.Tracer.Arrow
                       Control.Tracer
 

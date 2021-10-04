@@ -53,7 +53,7 @@ instance LogFormatting Message where
   forHuman (Message3 mid d) =
       "Message3 <" <> showT mid <> "> " <> showT d
   asMetrics (Message1 mid _i) =
-      [IntM ["Metrics1"] (fromIntegral mid)]
+      [IntM "Metrics1" (fromIntegral mid)]
   asMetrics _ = []
 
 instance Arbitrary Message where

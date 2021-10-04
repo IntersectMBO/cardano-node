@@ -11,9 +11,9 @@ import           Cardano.Logging.Types
 
 import           Control.Monad.IO.Class (MonadIO, liftIO)
 import qualified Control.Tracer as T
-import           Data.IORef (newIORef, readIORef, writeIORef)
+import           Data.IORef (newIORef, readIORef, writeIORef, IORef)
 import qualified Data.Map.Strict as Map
-import           Data.Text (intercalate, pack)
+import           Data.Text (pack, Text)
 import qualified System.Metrics as Metrics
 import qualified System.Metrics.Counter as Counter
 import qualified System.Metrics.Gauge as Gauge
@@ -30,6 +30,12 @@ ekgTracer storeOrServer = liftIO $ do
     pure $ Trace $ T.arrow $ T.emit $
       output rgsGauges rgsLabels rgsCounters
   where
+    output :: MonadIO m =>
+         IORef (Map.Map Text Gauge.Gauge)
+      -> IORef (Map.Map Text Label.Label)
+      -> IORef (Map.Map Text Counter.Counter)
+      -> (LoggingContext, Maybe TraceControl, FormattedMessage)
+      -> m ()
     output rgsGauges rgsLabels rgsCounters
       (LoggingContext{..}, Nothing, FormattedMetrics m) =
         liftIO $ mapM_
@@ -39,10 +45,16 @@ ekgTracer storeOrServer = liftIO $ do
     output _ _ _ (LoggingContext{}, Just _c, _v) =
       pure ()
 
+    setIt ::
+         IORef (Map.Map Text Gauge.Gauge)
+      -> IORef (Map.Map Text Label.Label)
+      -> IORef (Map.Map Text Counter.Counter)
+      -> Namespace
+      -> Metric
+      -> IO ()
     setIt rgsGauges _rgsLabels _rgsCounters _namespace
-      (IntM ns theInt) = do
+      (IntM name theInt) = do
         rgsMap <- readIORef rgsGauges
-        let name = intercalate "." ns
         case Map.lookup name rgsMap of
           Just gauge -> Gauge.set gauge (fromIntegral theInt)
           Nothing -> do
@@ -53,9 +65,8 @@ ekgTracer storeOrServer = liftIO $ do
             writeIORef rgsGauges rgsGauges'
             Gauge.set gauge (fromIntegral theInt)
     setIt _rgsGauges rgsLabels _rgsCounters _namespace
-      (DoubleM ns theDouble) = do
+      (DoubleM name theDouble) = do
         rgsMap <- readIORef rgsLabels
-        let name = intercalate "." ns
         case Map.lookup name rgsMap of
           Just label -> Label.set label ((pack . show) theDouble)
           Nothing -> do
@@ -66,9 +77,8 @@ ekgTracer storeOrServer = liftIO $ do
             writeIORef rgsLabels rgsLabels'
             Label.set label ((pack . show) theDouble)
     setIt _rgsGauges _rgsLabels rgsCounters _namespace
-      (CounterM ns mbInt) = do
+      (CounterM name mbInt) = do
         rgsMap <- readIORef rgsCounters
-        let name = intercalate "." ns
         case Map.lookup name rgsMap of
           Just counter -> case mbInt of
                             Nothing -> Counter.inc counter

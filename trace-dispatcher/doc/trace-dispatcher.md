@@ -378,13 +378,13 @@ If aggregated information from multiple consecutive messages is needed the follo
 ```haskell
 -- | Folds the function with state acc over messages a in the trace.
 foldTraceM :: MonadIO m
-  => (acc -> a -> acc)
+  => (acc -> LoggingContext -> Maybe TraceControl -> a -> acc)
   -> acc
   -> Trace m (Folding a acc)
   -> m (Trace m a)
 
 foldMTraceM :: forall a acc m . MonadIO m
-  => (acc -> a -> m acc)
+  => (acc -> LoggingContext -> Maybe TraceControl -> a -> acc)
   -> acc
   -> Trace m (Folding a acc)
   -> m (Trace m a)
@@ -423,17 +423,21 @@ following way, and it will output the Stats:
 
 During definition of the __trace dispatcher__, it is sometimes useful to have a number of functions to route them.
 
-To send the message of a trace to different tracers depending on some criteria use the following function:
+To send the message of a trace to different tracers depending on some criteria use the following function
+
+-- | Allows to route to different tracers, based on the message being processed.
+--   The second argument must mappend all possible tracers of the first
+--   argument to one tracer. This is required for the configuration!
 
 ```haskell
-routingTrace :: Monad m => (a -> Trace m a) -> Trace m a
+routingTrace :: Monad m => (a -> m (Trace m a)) -> Trace m a -> m (Trace m a)
 let resTrace = routingTrace routingf (tracer1 <> tracer2)
   where
     routingf LO1 {} = tracer1
     routingf LO2 {} = tracer2
 ```
 
-The second argument must mappend all possible tracers of the first argument to one tracer. This is required for the configuration. We could have construct a more secure interface by having a map of values to tracers, but the ability for full pattern matching outweigh this disadvantage in our view.
+The second argument must mappend all tracers used in the routing trace function to one tracer. This is required for the configuration. We could have construct a more secure interface by having a map of values to tracers, but the ability for full pattern matching outweigh this disadvantage in our view.
 In the following example we send the messages of one trace to two tracers simultaneously:
 
 ```haskell
@@ -474,15 +478,15 @@ These are the options that can be configured based on a namespace:
 ```haskell
 data ConfigOption =
     -- | Severity level for filtering (default is WarningF)
-    CoSeverity SeverityF
+    ConfSeverity SeverityF
     -- | Detail level of message representation (Default is DNormal)
-  | CoDetail DetailLevel
+  | ConfDetail DetailLevel
   -- | To which backend to pass
   -- Default is [EKGBackend, Forwarder, Stdout HumanFormatColoured]
-  | CoBackend [BackendConfig]
+  | ConfBackend [BackendConfig]
   -- | Construct a limiter with name (Text) and limiting to the Double,
   -- which represents frequency in number of messages per second
-  | CoLimiter Text Double
+  | ConfLimiter Text Double
 
 data BackendConfig =
     Forwarder
@@ -493,7 +497,7 @@ data TraceConfig = TraceConfig {
      -- | Options specific to a certain namespace
     tcOptions            :: Map.Map Namespace [ConfigOption]
      -- | Options for trace-forwarder    
-  , tcForwarder          :: RemoteAddr
+  , tcForwarder          :: ForwarderAddr
   , tcForwarderQueueSize :: Int
 }
 ```
