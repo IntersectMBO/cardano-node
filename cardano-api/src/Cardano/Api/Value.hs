@@ -70,6 +70,7 @@ import           Data.String (IsString (..))
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
+import qualified Data.Text.Encoding.Error as Text
 
 import qualified Cardano.Chain.Common as Byron
 
@@ -178,13 +179,13 @@ instance SerialiseAsRawBytes AssetName where
       | otherwise          = Nothing
 
 instance ToJSON AssetName where
-  toJSON (AssetName an) = Aeson.String $ Text.decodeUtf8 an
+  toJSON (AssetName an) = Aeson.String $ Text.decodeUtf8With Text.ignore an
 
 instance FromJSON AssetName where
   parseJSON = withText "AssetName" (return . AssetName . Text.encodeUtf8)
 
 instance ToJSONKey AssetName where
-  toJSONKey = toJSONKeyText (\(AssetName asset) -> Text.decodeUtf8 asset)
+  toJSONKey = toJSONKeyText (\(AssetName asset) -> Text.decodeUtf8With Text.ignore asset)
 
 instance FromJSONKey AssetName where
   fromJSONKey = FromJSONKeyText (AssetName . Text.encodeUtf8)
@@ -408,4 +409,4 @@ renderAssetId :: AssetId -> Text
 renderAssetId AdaAssetId = "lovelace"
 renderAssetId (AssetId polId (AssetName assetName))
   | BS.null assetName = renderPolicyId polId
-  | otherwise         = renderPolicyId polId <> "." <> Text.decodeUtf8 assetName
+  | otherwise         = renderPolicyId polId <> "." <> Text.decodeUtf8With Text.ignore assetName
