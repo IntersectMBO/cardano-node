@@ -1,37 +1,81 @@
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE FlexibleInstances #-}
 
 module Cardano.Logging.Resources.Types
-    (
-      ResourceStats(..)
+    ( Resources(..)
+    , ResourceStats
     , docResourceStats
     ) where
 
 
 import           Cardano.Logging.Types
-import           Data.Aeson (Value (Number, String), (.=))
+import           Data.Aeson
 import           Data.Text (pack)
 import           Data.Word
+import           GHC.Generics (Generic)
 
 -- | Struct for resources used by the process
-data ResourceStats
-  = ResourceStats
-      { rCentiCpu   :: !Word64
-      , rCentiGC    :: !Word64
-      , rCentiMut   :: !Word64
-      , rGcsMajor   :: !Word64
-      , rGcsMinor   :: !Word64
-      , rAlloc      :: !Word64
-      , rLive       :: !Word64
-      , rRSS        :: !Word64
-      , rCentiBlkIO :: !Word64
-      , rThreads    :: !Word64
+type ResourceStats = Resources Word64
+
+-- * HKD for resources used by the process.
+--
+data Resources a
+  = Resources
+      { rCentiCpu   :: !a
+      , rCentiGC    :: !a
+      , rCentiMut   :: !a
+      , rGcsMajor   :: !a
+      , rGcsMinor   :: !a
+      , rAlloc      :: !a
+      , rLive       :: !a
+      , rHeap       :: !a
+      , rRSS        :: !a
+      , rCentiBlkIO :: !a
+      , rThreads    :: !a
       }
-  deriving (Show)
+  deriving (Functor, Generic, Show)
+
+instance Applicative Resources where
+  pure a = Resources a a a a a a a a a a a
+  f <*> x =
+    Resources
+    { rCentiCpu   = rCentiCpu   f (rCentiCpu   x)
+    , rCentiGC    = rCentiGC    f (rCentiGC    x)
+    , rCentiMut   = rCentiMut   f (rCentiMut   x)
+    , rGcsMajor   = rGcsMajor   f (rGcsMajor   x)
+    , rGcsMinor   = rGcsMinor   f (rGcsMinor   x)
+    , rAlloc      = rAlloc      f (rAlloc      x)
+    , rLive       = rLive       f (rLive       x)
+    , rHeap       = rHeap       f (rHeap       x)
+    , rRSS        = rRSS        f (rRSS        x)
+    , rCentiBlkIO = rCentiBlkIO f (rCentiBlkIO x)
+    , rThreads    = rThreads    f (rThreads    x)
+    }
+
+instance FromJSON a => FromJSON (Resources a) where
+  parseJSON = genericParseJSON jsonEncodingOptions
+
+instance ToJSON a => ToJSON (Resources a) where
+  toJSON = genericToJSON jsonEncodingOptions
+  toEncoding = genericToEncoding jsonEncodingOptions
+
+jsonEncodingOptions :: Options
+jsonEncodingOptions = defaultOptions
+  { fieldLabelModifier     = drop 1
+  , tagSingleConstructors  = True
+  , sumEncoding =
+    TaggedObject
+    { tagFieldName = "kind"
+    , contentsFieldName = "contents"
+    }
+  }
 
 docResourceStats :: Documented ResourceStats
 docResourceStats = Documented [
       DocMsg
-        (ResourceStats 1 1 1 1 1 1 1 1 1 1)
+        (pure 0)
         [("Stat.Cputicks", "Reports the CPU ticks, sice the process was started")
         ,("Mem.Resident", "TODO JNF")
         ,("RTS.GcLiveBytes", "TODO JNF")

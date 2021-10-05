@@ -28,7 +28,7 @@ readRessoureStatsInternal = do
                :_:_:_:rss:_:_:_:_:_:_          -- 20-29
                :_:_:_:_:_:_:_:_:_:_            -- 30-39
                :_:blkio:_rest) =               -- 40-42
-     Just $ ResourceStats
+     Just $ Resources
        { rCentiCpu   = user + sys
        , rCentiGC    = nsToCenti $ GhcStats.gc_cpu_ns rts
        , rCentiMut   = nsToCenti $ GhcStats.mutator_cpu_ns rts
@@ -36,6 +36,7 @@ readRessoureStatsInternal = do
        , rGcsMinor   = fromIntegral $ GhcStats.gcs rts - GhcStats.major_gcs rts
        , rAlloc      = GhcStats.allocated_bytes rts
        , rLive       = GhcStats.gcdetails_live_bytes $ GhcStats.gc rts
+       , rHeap       = GhcStats.gcdetails_mem_in_use_bytes $ GhcStats.gc rts
        , rRSS        = rss * 4096 -- TODO:  this is really PAGE_SIZE.
        , rCentiBlkIO = blkio
        , rThreads    = threads

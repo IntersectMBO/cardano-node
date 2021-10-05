@@ -1,8 +1,8 @@
 {-# LANGUAGE CPP #-}
 
 module Cardano.Logging.Resources
-    (
-      ResourceStats(..)
+    ( Resources(..)
+    , ResourceStats
     , readResourceStats
     ) where
 
