@@ -28,16 +28,16 @@ import           Prelude (map)
 
 import           Control.Applicative (pure)
 import           Control.Monad
-import           Data.Aeson ((.=), Value)
+import           Control.Monad.IO.Class (liftIO)
+import           Data.Aeson (Value, (.=))
 import           Data.Bool
+import           Data.Either
 import           Data.Eq
 import           Data.Function
 import           Data.Functor
 import           Data.Int
 import           Data.List ((\\))
 import           Data.Maybe
-import           Control.Monad.IO.Class (liftIO)
-import           Data.Either
 import           Data.Ord
 import           Data.Semigroup
 import           Data.String
@@ -57,18 +57,18 @@ import           System.Posix.Files
 #endif
 
 import qualified Data.Aeson as J
-import qualified Data.Yaml as Y
 import qualified Data.HashMap.Lazy as HM
 import qualified Data.List as L
 import qualified Data.Map as M
 import qualified Data.Time.Clock as DTC
+import qualified Data.Yaml as Y
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Stock.Aeson as J
 import qualified Hedgehog.Extras.Stock.IO.File as IO
 import qualified Hedgehog.Extras.Stock.IO.Network.Socket as IO
 import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
-import qualified Hedgehog.Extras.Stock.String as S
 import qualified Hedgehog.Extras.Stock.OS as OS
+import qualified Hedgehog.Extras.Stock.String as S
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.Concurrent as H
 import qualified Hedgehog.Extras.Test.File as H
@@ -130,7 +130,7 @@ data Wallet = Wallet
 ifaceAddress :: String
 ifaceAddress = "127.0.0.1"
 
--- | For an unknown reason, CLI commands are a lot slowere on Windows than on Linux and
+-- | For an unknown reason, CLI commands are a lot slower on Windows than on Linux and
 -- MacOS.  We need to allow a lot more time to set up a testnet.
 startTimeOffsetSeconds :: DTC.NominalDiffTime
 startTimeOffsetSeconds = if OS.isWin32 then 90 else 15
@@ -190,7 +190,7 @@ testnet testnetOptions H.Conf {..} = do
           . HM.insert "TestAllegraHardForkAtEpoch" (J.toJSON @Int 0)
           . HM.insert "TestMaryHardForkAtEpoch" (J.toJSON @Int 0)
           . HM.insert "TestAlonzoHardForkAtEpoch" (J.toJSON @Int 0)
-          . HM.insert "LastKnownBlockVersion-Major" (J.toJSON @Int 5)
+          . HM.insert "LastKnownBlockVersion-Major" (J.toJSON @Int 6)
 
   -- We're going to use really quick epochs (300 seconds), by using short slots 0.2s
   -- and K=10, but we'll keep long KES periods so we don't have to bother
@@ -203,7 +203,7 @@ testnet testnetOptions H.Conf {..} = do
     . HM.insert "ShelleyGenesisFile" (J.toJSON @String "shelley/genesis.json")
     . HM.insert "AlonzoGenesisFile" (J.toJSON @String "shelley/genesis.alonzo.json")
     . HM.insert "RequiresNetworkMagic" (J.toJSON @String "RequiresMagic")
-    . HM.insert "LastKnownBlockVersion-Major" (J.toJSON @Int 1)
+    . HM.insert "LastKnownBlockVersion-Major" (J.toJSON @Int 6)
     . HM.insert "LastKnownBlockVersion-Minor" (J.toJSON @Int 0)
     . HM.insert "TraceBlockchainTime" (J.toJSON True)
     . HM.delete "GenesisFile"
@@ -406,18 +406,14 @@ testnet testnetOptions H.Conf {..} = do
     , "--start-time", formatIso8601 startTime
     , "--gen-utxo-keys", show @Int (numPoolNodes testnetOptions)
     ]
-#ifdef UNIX
-  --TODO: Remove me after #1948 is merged.
-  let vrfPath n = tempAbsPath </> "shelley" </> "delegate-keys" </> "delegate" <> n <> ".vrf.skey"
-  H.evalIO . forM_ bftNodesN $ \n -> setFileMode (vrfPath (show @Int n)) ownerModes
-#endif
+
   -- Generated genesis keys and genesis files
   H.noteEachM_ . H.listDirectory $ tempAbsPath </> "shelley"
 
   H.rewriteJsonFile (tempAbsPath </> "shelley/genesis.json") . J.rewriteObject
     $ flip HM.adjust "protocolParams"
       ( J.rewriteObject
-        ( flip HM.adjust "protocolVersion" 
+        ( flip HM.adjust "protocolVersion"
           ( J.rewriteObject (HM.insert "major" (J.toJSON @Int 2))
           )
         )
@@ -446,10 +442,7 @@ testnet testnetOptions H.Conf {..} = do
       , "--verification-key-file", tempAbsPath </> node </> "shelley/vrf.vkey"
       , "--signing-key-file", tempAbsPath </> node </> "shelley/vrf.skey"
       ]
-#ifdef UNIX
-    --TODO: Remove me after #1948 is merged.
-    H.evalIO $ setFileMode (tempAbsPath </> node </> "shelley/vrf.skey") ownerModes
-#endif
+
   -- Symlink the BFT operator keys from the genesis delegates, for uniformity
   forM_ bftNodesN $ \n -> do
     H.createFileLink (tempAbsPath </> "shelley/delegate-keys/delegate" <> show @Int n <> ".skey") (tempAbsPath </> "node-bft" <> show @Int n </> "shelley/operator.skey")
@@ -601,7 +594,6 @@ testnet testnetOptions H.Conf {..} = do
       , "--certificate-file", tempAbsPath </> "addresses/user1-stake.deleg.cert"
       , "--out-file", tempAbsPath </> "tx1.txbody"
       ]
-
   -- TODO: this will become the transaction to register the pool, etc.
   -- We'll need to pick the tx-in from the actual UTxO since it contains the txid,
   -- we'll have to query this via cardano-cli query utxo.
