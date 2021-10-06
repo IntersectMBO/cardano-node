@@ -197,7 +197,7 @@ runSpendGenesisUTxO
   -> NewTxFile
   -> SigningKeyFile
   -> Address ByronAddr
-  -> [TxOut ByronEra]
+  -> [TxOut CtxTx ByronEra]
   -> ExceptT ByronClientCmdError IO ()
 runSpendGenesisUTxO genesisFile nw bKeyFormat (NewTxFile ctTx) ctKey genRichAddr outs = do
     genesis <- firstExceptT ByronCmdGenesisError $ readGenesis genesisFile nw
@@ -212,7 +212,7 @@ runSpendUTxO
   -> NewTxFile
   -> SigningKeyFile
   -> [TxIn]
-  -> [TxOut ByronEra]
+  -> [TxOut CtxTx ByronEra]
   -> ExceptT ByronClientCmdError IO ()
 runSpendUTxO nw bKeyFormat (NewTxFile ctTx) ctKey ins outs = do
     sk <- firstExceptT ByronCmdKeyFailure $ readByronSigningKey bKeyFormat ctKey

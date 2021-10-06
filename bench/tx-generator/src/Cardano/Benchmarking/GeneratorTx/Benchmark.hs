@@ -25,7 +25,7 @@ import           Options.Applicative as Opt
 
 -- Node API imports
 import           Cardano.Api
-import           Cardano.CLI.Types (SigningKeyFile(..))
+import           Cardano.CLI.Types (SigningKeyFile (..))
 
 -- Node imports
 import           Cardano.Node.Types
@@ -197,7 +197,7 @@ parseGeneratorCmd =
 
 data GeneratorFunds
   = FundsGenesis   SigningKeyFile
-  | FundsUtxo      SigningKeyFile TxIn (TxOut ShelleyEra)
+  | FundsUtxo      SigningKeyFile TxIn (TxOut CtxTx ShelleyEra)
   | FundsSplitUtxo SigningKeyFile FilePath
   deriving stock Show
 

@@ -6,22 +6,19 @@ where
 import           Cardano.Prelude hiding (option)
 import           Prelude (String)
 
+import           Cardano.Api
+import           Cardano.CLI.Types (SigningKeyFile (..))
+import           Cardano.Node.Types
+import qualified Control.Arrow as Arr
 import           Control.Monad (fail)
 import qualified Data.Attoparsec.ByteString.Char8 as Atto
 import qualified Data.ByteString.Char8 as BSC
 import qualified Data.Char as Char
-import qualified Data.Text.Encoding as Text
 import qualified Data.Text as Text
-import           Options.Applicative
-                    ( Parser
-                    , auto, bashCompleter, completer, flag, help
-                    , long, metavar, option, strOption
-                    )
+import qualified Data.Text.Encoding as Text
+import           Options.Applicative (Parser, auto, bashCompleter, completer, flag, help, long,
+                   metavar, option, strOption)
 import qualified Options.Applicative as Opt
-import qualified Control.Arrow as Arr
-import           Cardano.Api
-import           Cardano.CLI.Types (SigningKeyFile (..))
-import           Cardano.Node.Types
 
 
 lastly :: Parser a -> Parser (Last a)
@@ -133,7 +130,7 @@ readerFromAttoParser :: Atto.Parser a -> Opt.ReadM a
 readerFromAttoParser p =
     Opt.eitherReader (Atto.parseOnly (p <* Atto.endOfInput) . BSC.pack)
 
-pTxOut :: Parser (TxOut ShelleyEra)
+pTxOut :: Parser (TxOut CtxTx ShelleyEra)
 pTxOut =
   Opt.option (readerFromAttoParser parseTxOut)
     (  Opt.long "tx-out"
@@ -143,12 +140,12 @@ pTxOut =
                 \Lovelace."
     )
   where
-    parseTxOut :: Atto.Parser (TxOut ShelleyEra)
+    parseTxOut :: Atto.Parser (TxOut CtxTx ShelleyEra)
     parseTxOut =
       TxOut <$> parseAddressInEra
             <*  Atto.char '+'
             <*> (TxOutAdaOnly AdaOnlyInShelleyEra <$> parseLovelace)
-            <*> pure TxOutDatumHashNone
+            <*> pure TxOutDatumNone
 
 parseAddressInEra :: IsCardanoEra era => Atto.Parser (AddressInEra era)
 parseAddressInEra = do

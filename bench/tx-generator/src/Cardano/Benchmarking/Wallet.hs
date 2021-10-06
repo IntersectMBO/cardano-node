@@ -11,14 +11,14 @@ import           Control.Concurrent.MVar
 
 import           Cardano.Api
 
-import           Cardano.Benchmarking.Types (NumberOfTxs(..))
-import           Cardano.Benchmarking.GeneratorTx.Tx as Tx hiding (Fund)
 import           Cardano.Benchmarking.FundSet as FundSet
+import           Cardano.Benchmarking.GeneratorTx.Tx as Tx hiding (Fund)
+import           Cardano.Benchmarking.Types (NumberOfTxs (..))
 
 type WalletRef = MVar Wallet
 
-type TxGenerator era = [Fund] -> [TxOut era] -> Either String (Tx era, TxId)
-type ToUTxO era = [Lovelace] -> ([TxOut era], TxId -> [Fund])
+type TxGenerator era = [Fund] -> [TxOut CtxTx era] -> Either String (Tx era, TxId)
+type ToUTxO era = [Lovelace] -> ([TxOut CtxTx era], TxId -> [Fund])
 
 data Wallet = Wallet {
     walletNetworkId :: !NetworkId
@@ -125,7 +125,7 @@ mkUTxOVariant variant networkId key validity values
     , newFunds
     )
  where
-  mkTxOut v = TxOut (Tx.keyAddress @ era networkId key) (mkTxOutValueAdaOnly v) TxOutDatumHashNone
+  mkTxOut v = TxOut (Tx.keyAddress @ era networkId key) (mkTxOutValueAdaOnly v) TxOutDatumNone
 
   newFunds txId = zipWith (mkNewFund txId) [TxIx 0 ..] values
 
@@ -157,7 +157,6 @@ genTx fee metadata inFunds outputs
     , txValidityRange = (TxValidityNoLowerBound, upperBound)
     , txMetadata = metadata
     , txAuxScripts = TxAuxScriptsNone
-    , txExtraScriptData = BuildTxWith TxExtraScriptDataNone
     , txExtraKeyWits = TxExtraKeyWitnessesNone
     , txProtocolParams = BuildTxWith Nothing
     , txWithdrawals = TxWithdrawalsNone

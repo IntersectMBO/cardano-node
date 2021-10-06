@@ -14,6 +14,7 @@ import           Cardano.Prelude
 
 import           Data.Aeson (Value (..), object, toJSON, (.=))
 import qualified Data.Aeson as Aeson
+import qualified Data.Aeson.Types as Aeson
 import           Data.Yaml (array)
 import           Data.Yaml.Pretty (defConfig, encodePretty, setConfCompare)
 
@@ -104,26 +105,39 @@ friendlyWithdrawals (TxWithdrawals _ withdrawals) =
     | (addr@(StakeAddress net cred), amount, _) <- withdrawals
     ]
 
-friendlyTxOut :: TxOut era -> Aeson.Value
+friendlyTxOut :: TxOut CtxTx era -> Aeson.Value
 friendlyTxOut (TxOut addr amount mdatum) =
   case addr of
-    AddressInEra ByronAddressInAnyEra _ ->
-      object $ ("address era" .= String "Byron") : common
-    AddressInEra (ShelleyAddressInEra _) (ShelleyAddress net cred stake) ->
-      object $
-        [ "address era" .= String "Shelley"
-        , "network" .= net
-        , "payment credential" .= cred
-        , "stake reference" .= friendlyStakeReference stake
-        ]
-        ++ ["datum" .= datum | TxOutDatumHash _ datum <- [mdatum]]
-        ++ common
+    AddressInEra ByronAddressInAnyEra byronAdr ->
+      object  [ "address era" .= String "Byron"
+              , "address" .= serialiseAddress byronAdr
+              , "amount" .= friendlyTxOutValue amount
+              ]
+
+    AddressInEra (ShelleyAddressInEra sbe) saddr@(ShelleyAddress net cred stake) ->
+      let preAlonzo :: [Aeson.Pair]
+          preAlonzo =
+            [ "address era" .= Aeson.String "Shelley"
+            , "network" .= net
+            , "payment credential" .= cred
+            , "stake reference" .= friendlyStakeReference stake
+            , "address" .= serialiseAddress saddr
+            , "amount" .= friendlyTxOutValue amount
+            ]
+          datum :: ShelleyBasedEra era -> [Aeson.Pair]
+          datum ShelleyBasedEraShelley = []
+          datum ShelleyBasedEraAllegra = []
+          datum ShelleyBasedEraMary = []
+          datum ShelleyBasedEraAlonzo = ["datum" .= renderDatum mdatum]
+      in object $ preAlonzo ++ datum sbe
   where
-    common :: [(Text, Aeson.Value)]
-    common =
-      [ "address" .= serialiseAddressForTxOut addr
-      , "amount" .= friendlyTxOutValue amount
-      ]
+   renderDatum :: TxOutDatum CtxTx era -> Aeson.Value
+   renderDatum TxOutDatumNone = Aeson.Null
+   renderDatum (TxOutDatumHash _ h) =
+     Aeson.String $ serialiseToRawBytesHexText h
+   renderDatum (TxOutDatum _ sData) =
+     scriptDataToJson ScriptDataJsonDetailedSchema sData
+
 
 friendlyStakeReference :: Crypto crypto => Shelley.StakeReference crypto -> Aeson.Value
 friendlyStakeReference = \case

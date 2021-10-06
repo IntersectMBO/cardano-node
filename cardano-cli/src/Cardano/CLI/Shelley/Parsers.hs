@@ -261,12 +261,17 @@ pScriptWitnessFiles witctx autoBalanceExecUnits scriptFlagPrefix scriptFlagPrefi
     pScriptDatumOrFile =
       case witctx of
         WitCtxTxIn  -> ScriptDatumOrFileForTxIn <$>
-                         pScriptDataOrFile (scriptFlagPrefix ++ "-datum")
+                         pScriptDataOrFile
+                           (scriptFlagPrefix ++ "-datum")
+                           "The script datum, in JSON syntax."
+                           "The script datum, in the given JSON file."
         WitCtxMint  -> pure NoScriptDatumOrFileForMint
         WitCtxStake -> pure NoScriptDatumOrFileForStake
 
     pScriptRedeemerOrFile :: Parser ScriptDataOrFile
     pScriptRedeemerOrFile = pScriptDataOrFile (scriptFlagPrefix ++ "-redeemer")
+                           "The script redeemer, in JSON syntax."
+                           "The script redeemer, in the given JSON file."
 
     pExecutionUnits :: Parser ExecutionUnits
     pExecutionUnits =
@@ -278,8 +283,8 @@ pScriptWitnessFiles witctx autoBalanceExecUnits scriptFlagPrefix scriptFlagPrefi
           )
 
 
-pScriptDataOrFile :: String -> Parser ScriptDataOrFile
-pScriptDataOrFile dataFlagPrefix =
+pScriptDataOrFile :: String -> String -> String -> Parser ScriptDataOrFile
+pScriptDataOrFile dataFlagPrefix helpTextForValue helpTextForFile =
       ScriptDataFile  <$> pScriptDataFile
   <|> ScriptDataValue <$> pScriptDataValue
   where
@@ -287,14 +292,17 @@ pScriptDataOrFile dataFlagPrefix =
       Opt.strOption
         (  Opt.long (dataFlagPrefix ++ "-file")
         <> Opt.metavar "FILE"
-        <> Opt.help "The JSON file containing the script data."
+        <> Opt.help (helpTextForFile ++ " The file must follow the special \
+                                         \JSON schema for script data.")
         )
 
     pScriptDataValue =
       Opt.option readerScriptData
         (  Opt.long (dataFlagPrefix ++ "-value")
         <> Opt.metavar "JSON VALUE"
-        <> Opt.help "The JSON value for the script data. Supported JSON data types: string, number, object & array."
+        <> Opt.help (helpTextForValue ++ " There is no schema: (almost) any \
+                                         \JSON value is supported, including \
+                                         \top-level strings and numbers.")
         )
 
     readerScriptData = do
@@ -760,7 +768,11 @@ pTransaction =
     ParamsFromFile <$> pProtocolParamsFile
 
   pTxHashScriptData :: Parser TransactionCmd
-  pTxHashScriptData = TxHashScriptData <$> pScriptDataOrFile "script-data"
+  pTxHashScriptData = TxHashScriptData <$>
+                        pScriptDataOrFile
+                          "script-data"
+                          "The script data, in JSON syntax."
+                          "The script data, in the given JSON file."
 
   pTransactionId  :: Parser TransactionCmd
   pTransactionId = TxGetTxId <$> pInputTxFile
@@ -1893,22 +1905,47 @@ pTxOut =
           (  Opt.long "tx-out"
           <> Opt.metavar "ADDRESS VALUE"
           -- TODO alonzo: Update the help text to describe the new syntax as well.
-          <> Opt.help "The transaction output as Address+Lovelace where Address is \
-                      \the Bech32-encoded address followed by the amount in \
-                      \Lovelace."
+          <> Opt.help "The transaction output as ADDRESS VALUE where ADDRESS is \
+                      \the Bech32-encoded address followed by the value in \
+                      \the multi-asset syntax (including simply Lovelace)."
           )
-    <*> optional pDatumHash
+    <*> pTxOutDatum
 
 
-pDatumHash :: Parser (Hash ScriptData)
-pDatumHash  =
-  Opt.option (readerFromParsecParser parseHashScriptData)
-    (  Opt.long "tx-out-datum-hash"
-    <> Opt.metavar "HASH"
-    <> Opt.help "Required datum hash for tx inputs intended \
-               \to be utilizied by a Plutus script."
-    )
+pTxOutDatum :: Parser TxOutDatumAnyEra
+pTxOutDatum =
+      pTxOutDatumByHashOnly
+  <|> pTxOutDatumByHashOf
+  <|> pTxOutDatumByValue
+  <|> pure TxOutDatumByNone
   where
+    pTxOutDatumByHashOnly =
+      TxOutDatumByHashOnly <$>
+        Opt.option (readerFromParsecParser parseHashScriptData)
+          (  Opt.long "tx-out-datum-hash"
+          <> Opt.metavar "HASH"
+          <> Opt.help "The script datum hash for this tx output, as \
+                     \the raw datum hash (in hex)."
+          )
+
+    pTxOutDatumByHashOf =
+      TxOutDatumByHashOf <$>
+        pScriptDataOrFile
+          "tx-out-datum-hash"
+          "The script datum hash for this tx output, by hashing the \
+          \script datum given here in JSON syntax."
+          "The script datum hash for this tx output, by hashing the \
+          \script datum in the given JSON file."
+
+    pTxOutDatumByValue =
+      TxOutDatumByValue <$>
+        pScriptDataOrFile
+          "tx-out-datum-embed"
+          "The script datum to embed in the tx for this output, \
+          \given here in JSON syntax."
+          "The script datum to embed in the tx for this output, \
+          \in the given JSON file."
+
     parseHashScriptData :: Parsec.Parser (Hash ScriptData)
     parseHashScriptData = do
       str <- Parsec.many1 Parsec.hexDigit Parsec.<?> "script data hash"
@@ -2826,7 +2863,7 @@ parseStakeAddress = do
       Nothing   -> fail $ "invalid address: " <> Text.unpack str
       Just addr -> pure addr
 
-parseTxOutAnyEra :: Parsec.Parser (Maybe (Hash ScriptData) -> TxOutAnyEra)
+parseTxOutAnyEra :: Parsec.Parser (TxOutDatumAnyEra -> TxOutAnyEra)
 parseTxOutAnyEra = do
     addr <- parseAddressAny
     Parsec.spaces

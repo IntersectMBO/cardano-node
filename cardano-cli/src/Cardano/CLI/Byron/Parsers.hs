@@ -284,12 +284,12 @@ parseTxIdAtto = (<?> "Transaction ID (hexadecimal)") $ do
 parseTxIxAtto :: Atto.Parser TxIx
 parseTxIxAtto = toEnum <$> Atto.decimal
 
-parseTxOut :: Parser (TxOut ByronEra)
+parseTxOut :: Parser (TxOut CtxTx ByronEra)
 parseTxOut =
   option
     ( (\(addr, lovelace) -> TxOut (pAddressInEra addr)
                                   (pLovelaceTxOut lovelace)
-                                  TxOutDatumHashNone)
+                                  TxOutDatumNone)
       <$> auto
     )
     $ long "txout"

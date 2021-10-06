@@ -30,7 +30,7 @@ module Cardano.Benchmarking.GeneratorTx
   ) where
 
 import           Cardano.Prelude
-import           Prelude (error, id, String)
+import           Prelude (String, error, id)
 
 import qualified Control.Concurrent.STM as STM
 import           Control.Monad (fail)
@@ -42,7 +42,7 @@ import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
 import           Data.Text (pack)
 import           Network.Socket (AddrInfo (..), AddrInfoFlag (..), Family (..), SocketType (Stream),
-                                 addrFamily, addrFlags, addrSocketType, defaultHints, getAddrInfo)
+                   addrFamily, addrFlags, addrSocketType, defaultHints, getAddrInfo)
 
 import           Cardano.CLI.Types (SigningKeyFile (..))
 import           Cardano.Node.Types
@@ -51,17 +51,17 @@ import           Ouroboros.Consensus.Shelley.Eras (StandardShelley)
 
 import           Cardano.Api hiding (txFee)
 
-import           Cardano.Benchmarking.Types
+import qualified Cardano.Benchmarking.FundSet as FundSet
 import           Cardano.Benchmarking.GeneratorTx.Error
 import           Cardano.Benchmarking.GeneratorTx.Genesis
 import           Cardano.Benchmarking.GeneratorTx.NodeToNode
+import           Cardano.Benchmarking.GeneratorTx.SizedMetadata (mkMetadata)
 import           Cardano.Benchmarking.GeneratorTx.Submission
 import           Cardano.Benchmarking.GeneratorTx.SubmissionClient
 import           Cardano.Benchmarking.GeneratorTx.Tx
-import           Cardano.Benchmarking.GeneratorTx.SizedMetadata (mkMetadata)
 import           Cardano.Benchmarking.Tracer
+import           Cardano.Benchmarking.Types
 import           Cardano.Benchmarking.Wallet
-import qualified Cardano.Benchmarking.FundSet as FundSet
 
 import           Cardano.Ledger.Shelley.API (ShelleyGenesis)
 import           Ouroboros.Network.Protocol.LocalTxSubmission.Type (SubmitResult (..))
@@ -195,7 +195,7 @@ splitFunds
             -- same TxOut for all
             outs = zip [identityIndex ..
                         identityIndex + fromIntegral numOutsPerInitTx - 1]
-                       (repeat (TxOut globalOutAddr txOut TxOutDatumHashNone))
+                       (repeat (TxOut globalOutAddr txOut TxOutDatumNone))
             (mFunds, _fees, outIndices, splitTx) =
               mkTransactionGen sKey (initialFund :| []) globalOutAddr outs TxMetadataNone fee
             !splitTxId = getTxId $ getTxBody splitTx
@@ -388,7 +388,7 @@ txGenerator
   initRecipientIndex = 0 :: Int
   -- The same output for all transactions.
   valueForRecipient = quantityToLovelace $ Quantity 1000000 -- 10 ADA
-  !txOut = TxOut recipientAddress (mkTxOutValueAdaOnly valueForRecipient) TxOutDatumHashNone
+  !txOut = TxOut recipientAddress (mkTxOutValueAdaOnly valueForRecipient) TxOutDatumNone
   totalValue = valueForRecipient + txFee
   -- Send possible change to the same 'recipientAddress'.
   addressForChange = recipientAddress

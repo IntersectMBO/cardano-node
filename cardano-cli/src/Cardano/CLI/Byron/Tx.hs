@@ -146,7 +146,7 @@ txSpendGenesisUTxOByronPBFT
   -> NetworkId
   -> SomeByronSigningKey
   -> Address ByronAddr
-  -> [TxOut ByronEra]
+  -> [TxOut CtxTx ByronEra]
   -> Tx ByronEra
 txSpendGenesisUTxOByronPBFT gc nId sk (ByronAddress bAddr) outs = do
     let txBodyCont =
@@ -162,7 +162,6 @@ txSpendGenesisUTxOByronPBFT gc nId sk (ByronAddress bAddr) outs = do
             )
             TxMetadataNone
             TxAuxScriptsNone
-            (BuildTxWith TxExtraScriptDataNone)
             TxExtraKeyWitnessesNone
             (BuildTxWith Nothing)
             TxWithdrawalsNone
@@ -186,7 +185,7 @@ txSpendUTxOByronPBFT
   :: NetworkId
   -> SomeByronSigningKey
   -> [TxIn]
-  -> [TxOut ByronEra]
+  -> [TxOut CtxTx ByronEra]
   -> Tx ByronEra
 txSpendUTxOByronPBFT nId sk txIns outs = do
   let txBodyCont = TxBodyContent
@@ -202,7 +201,6 @@ txSpendUTxOByronPBFT nId sk txIns outs = do
                      )
                      TxMetadataNone
                      TxAuxScriptsNone
-                     (BuildTxWith TxExtraScriptDataNone)
                      TxExtraKeyWitnessesNone
                      (BuildTxWith Nothing)
                      TxWithdrawalsNone

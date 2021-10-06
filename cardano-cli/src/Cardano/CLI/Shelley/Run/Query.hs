@@ -646,7 +646,7 @@ printFilteredUTxOs shelleyBasedEra' (UTxO utxo) = do
 
 printUtxo
   :: ShelleyBasedEra era
-  -> (TxIn, TxOut era)
+  -> (TxIn, TxOut CtxUTxO era)
   -> IO ()
 printUtxo shelleyBasedEra' txInOutTuple =
   case shelleyBasedEra' of

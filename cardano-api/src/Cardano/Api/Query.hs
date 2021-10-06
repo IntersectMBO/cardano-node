@@ -246,7 +246,7 @@ data QueryUTxOFilter =
 newtype ByronUpdateState = ByronUpdateState Byron.Update.State
   deriving Show
 
-newtype UTxO era = UTxO (Map TxIn (TxOut era))
+newtype UTxO era = UTxO (Map TxIn (TxOut CtxUTxO era))
   deriving (Eq, Show)
 
 data UTxOInAnyEra where
