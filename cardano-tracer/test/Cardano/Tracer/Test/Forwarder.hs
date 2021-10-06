@@ -73,7 +73,7 @@ launchForwardersSimple'
   -> IO ()
 launchForwardersSimple' iomgr p connSize disconnSize = do
   now <- getCurrentTime
-  let snocket = localSnocket iomgr p
+  let snocket = localSnocket iomgr
       address = localAddressFromPath p
   doListenToAcceptor snocket address noTimeLimitsHandshake (ekgConfig, tfConfig now)
  where

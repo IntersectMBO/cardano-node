@@ -133,7 +133,7 @@ runAcceptorsInit
   -> IO ()
 runAcceptorsInit config p (ekgConfig, tfConfig) acceptedMetrics acceptedNodeInfo =
   withIOManager $ \iocp ->
-    doConnectToForwarder (localSnocket iocp p) (localAddressFromPath p) noTimeLimitsHandshake $
+    doConnectToForwarder (localSnocket iocp) (localAddressFromPath p) noTimeLimitsHandshake $
       appInitiator
         [ (runEKGAcceptorInit ekgConfig acceptedMetrics, 1)
         , (runTraceObjectsAcceptorInit config tfConfig acceptedNodeInfo, 2)
@@ -158,7 +158,7 @@ runAcceptorsResp
   -> IO ()
 runAcceptorsResp config p (ekgConfig, tfConfig) acceptedMetrics acceptedNodeInfo =
   withIOManager $ \iocp -> do
-    doListenToForwarder (localSnocket iocp p) (localAddressFromPath p) noTimeLimitsHandshake $
+    doListenToForwarder (localSnocket iocp) (localAddressFromPath p) noTimeLimitsHandshake $
       appResponder
         [ (runEKGAcceptor ekgConfig acceptedMetrics, 1)
         , (runTraceObjectsAcceptor config tfConfig acceptedNodeInfo, 2)
