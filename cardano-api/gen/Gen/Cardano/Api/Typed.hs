@@ -54,7 +54,7 @@ module Gen.Cardano.Api.Typed
 
 import           Cardano.Api hiding (txIns)
 import qualified Cardano.Api as Api
-import           Cardano.Api.Byron (KeyWitness (ByronKeyWitness), Lovelace (Lovelace),
+import           Cardano.Api.Byron (KeyWitness (ByronKeyWitness),
                    WitnessNetworkIdOrByronAddress (..))
 import           Cardano.Api.Shelley (Hash (ScriptDataHash), KESPeriod (KESPeriod),
                    OperationalCertificateIssueCounter (OperationalCertificateIssueCounter),
@@ -72,8 +72,8 @@ import           Data.String
 import qualified Cardano.Binary as CBOR
 import qualified Cardano.Crypto.Hash as Crypto
 import qualified Cardano.Crypto.Seed as Crypto
-import qualified Plutus.V1.Ledger.Api as Plutus
 import qualified Cardano.Ledger.Shelley.TxBody as Ledger (EraIndependentTxBody)
+import qualified Plutus.V1.Ledger.Api as Plutus
 
 import           Hedgehog (Gen, Range)
 import qualified Hedgehog.Gen as Gen

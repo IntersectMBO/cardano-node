@@ -81,6 +81,8 @@ module Cardano.Api (
 
     -- ** Addresses in any era
     AddressAny(..),
+    lexPlausibleAddressString,
+    parseAddressAny,
 
     -- ** Addresses in specific eras
     AddressInEra(..),
@@ -104,7 +106,7 @@ module Cardano.Api (
 
     -- * Currency values
     -- ** Ada \/ Lovelace
-    Lovelace,
+    Lovelace(..),
 
     -- ** Multi-asset values
     Quantity(..),
@@ -113,6 +115,7 @@ module Cardano.Api (
     AssetName(..),
     AssetId(..),
     Value,
+    parseValue,
     selectAsset,
     valueFromList,
     valueToList,
@@ -166,12 +169,16 @@ module Cardano.Api (
     -- ** Transaction inputs
     TxIn(TxIn),
     TxIx(TxIx),
+    renderTxIn,
 
     -- ** Transaction outputs
     CtxTx, CtxUTxO,
     TxOut(TxOut),
     TxOutValue(..),
+    txOutValueToLovelace,
+    txOutValueToValue,
     TxOutDatum(..),
+    parseHashScriptData,
 
     -- ** Other transaction body types
     TxInsCollateral(..),
@@ -597,6 +604,7 @@ module Cardano.Api (
     toLedgerUTxO,
     --TODO: Remove after updating cardano-node-chairman with new IPC
     SomeNodeClientProtocol(..),
+    runParsecParser,
 
     SlotsInEpoch(..),
     SlotsToEpochEnd(..),
@@ -649,6 +657,8 @@ import           Cardano.Api.StakePoolMetadata
 import           Cardano.Api.Tx
 import           Cardano.Api.TxBody
 import           Cardano.Api.TxMetadata
+import           Cardano.Api.Utils
 import           Cardano.Api.Value
+import           Cardano.Api.ValueParser
 --TODO: Remove after updating cardano-node-chairman with new IPC
 import           Cardano.Api.Protocol.Types
