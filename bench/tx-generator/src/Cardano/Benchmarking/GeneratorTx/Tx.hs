@@ -30,7 +30,7 @@ import qualified Data.Map.Strict as Map
 
 import           Cardano.Benchmarking.Types (TxAdditionalSize (..))
 
-import           Cardano.Api
+import           Cardano.Api hiding (txOutValueToLovelace)
 
 type Fund = (TxIn, InAnyCardanoEra TxOutValue)
 
