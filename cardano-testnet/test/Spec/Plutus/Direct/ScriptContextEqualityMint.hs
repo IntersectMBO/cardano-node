@@ -4,31 +4,24 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Spec.Plutus.Direct.ScriptContextEquality
-  ( hprop_plutus_script_context_equality
+module Spec.Plutus.Direct.ScriptContextEqualityMint
+  ( hprop_plutus_script_context_mint_equality
   ) where
 
-import           Control.Applicative
+import           Prelude
+
+import           Cardano.Api
+
 import           Control.Monad
-import           Data.Aeson (FromJSON (..), Value, (.:))
-import           Data.Eq
-import           Data.Function
-import           Data.Functor ((<&>))
-import           Data.HashMap.Lazy (HashMap)
-import           Data.Int
-import           Data.Maybe
-import           Data.Monoid (Last (..), (<>))
-import           Data.Text (Text)
-import           GHC.Num
-import           GHC.Real
-import           Hedgehog (Property, (/==))
-import           Prelude (head)
+import           Data.Monoid (Last (..))
+import           Data.String
+import           Hedgehog (Property, (===))
 import           System.Environment (getEnvironment)
 import           System.FilePath ((</>))
-import           Text.Show (Show (..))
 
 import qualified Data.Aeson as J
-import qualified Data.HashMap.Lazy as HM
+import qualified Data.Aeson.Types as Aeson
+import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
@@ -48,18 +41,8 @@ import qualified Testnet.Conf as H
 {- HLINT ignore "Redundant return" -}
 {- HLINT ignore "Use let" -}
 
-data Utxo = Utxo
-  { address :: Text
-  , value :: HashMap Text Integer
-  } deriving (Eq, Show)
-
-instance FromJSON Utxo where
-  parseJSON = J.withObject "Utxo" $ \v -> Utxo
-    <$> v .: "address"
-    <*> v .: "value"
-
-hprop_plutus_script_context_equality :: Property
-hprop_plutus_script_context_equality = H.integration . H.runFinallies . H.workspace "chairman" $ \tempAbsBasePath' -> do
+hprop_plutus_script_context_mint_equality :: Property
+hprop_plutus_script_context_mint_equality = H.integration . H.runFinallies . H.workspace "chairman" $ \tempAbsBasePath' -> do
   projectBase <- H.note =<< H.noteIO . IO.canonicalizePath =<< H.getProjectBase
   conf@H.Conf { H.tempBaseAbsPath, H.tempAbsPath } <- H.noteShowM $ H.mkConf tempAbsBasePath' Nothing
 
@@ -84,40 +67,23 @@ hprop_plutus_script_context_equality = H.integration . H.runFinallies . H.worksp
   -- We get our UTxOs from here
   utxoVKeyFile <- H.note $ tempAbsPath </> "shelley/utxo-keys/utxo1.vkey"
   utxoSKeyFile <- H.note $ tempAbsPath </> "shelley/utxo-keys/utxo1.skey"
-  scriptDummyRedeemer <- H.note $ work </> "script-context-dummy.redeemer"
-  scriptContextRedeemer <- H.note $ work </> "script-context.redeemer"
+  scriptDummyRedeemer <- H.note $ work </> "mint-script-context-dummy.redeemer"
+  scriptContextRedeemer <- H.note $ work </> "mint-script-context.redeemer"
+  requiredSignerSKey <- H.note $ tempAbsPath </> "addresses/user1.skey"
+  plutusContextEqualityMintScript <- H.note $ base </> "scripts/plutus/scripts/minting-context-equivalance-test.plutus"
 
-  plutusContextEqualityScript <- H.note $ base </> "scripts/plutus/scripts/context-equivalance-test.plutus"
+  policyId <- filter (/= '\n')
+                <$> H.execCli
+                      [ "transaction", "policyid"
+                      , "--script-file", plutusContextEqualityMintScript
+                      ]
+
+  void . H.note $ "Policy ID: " <> policyId
 
   H.noteEachM_ . H.listDirectory $ base
   H.noteEachM_ . H.listDirectory $ base </> "scripts"
   H.noteEachM_ . H.listDirectory $ base </> "scripts/plutus"
   H.noteEachM_ . H.listDirectory $ base </> "scripts/plutus/scripts"
-
-  exampleStakeVKey <- H.note $ tempAbsPath </> "addresses/user1-stake.vkey"
-  exampleCertificate <- H.note $ tempAbsPath </> "addresses/user1-stake.reg.cert"
-
-  void $ H.execCli
-           [ "stake-address", "registration-certificate"
-           , "--stake-verification-key-file", exampleStakeVKey
-           , "--out-file", exampleCertificate
-           ]
-
-  -- This datum hash is the hash of the typed 42. TODO: Have the cli create this
-  let scriptDatumHash = "fcaa61fb85676101d9e3398a484674e71c45c3fd41b492682f3b0054f4cf3273"
-
-  typedDatumFile <- H.note $ base </> "scripts/plutus/data/typed-42.datum"
-
-
-  -- Step 1: Create a tx ouput with a datum hash at the script address. In order for a tx ouput to be locked
-  -- by a plutus script, it must have a datahash. We also need collateral tx inputs so we split the utxo
-  -- in order to accomodate this.
-
-  plutusScriptAddr <- H.execCli
-    [ "address", "build"
-    , "--payment-script-file", plutusContextEqualityScript
-    , "--testnet-magic", show @Int testnetMagic
-    ]
 
   utxoAddr <- H.execCli
     [ "address", "build"
@@ -136,9 +102,10 @@ hprop_plutus_script_context_equality = H.integration . H.runFinallies . H.worksp
   H.cat $ work </> "utxo-1.json"
 
   utxo1Json <- H.leftFailM . H.readJsonFile $ work </> "utxo-1.json"
-  utxo1 <- H.noteShowM $ H.jsonErrorFail $ J.fromJSON @(HashMap Text Utxo) utxo1Json
-  txin <- H.noteShow $ head $ HM.keys utxo1
-  lovelaceAtTxin <- H.nothingFailM . H.noteShow $ utxo1 & HM.lookup txin <&> value >>= HM.lookup "lovelace"
+  UTxO utxo1 <- H.noteShowM $ H.jsonErrorFail $ J.fromJSON @(UTxO AlonzoEra) utxo1Json
+  txin <- H.noteShow $ head $ Map.keys utxo1
+  TxOut _ txoutVal _ <- H.nothingFailM . H.noteShow $ Map.lookup txin utxo1
+  let Lovelace lovelaceAtTxin = txOutValueToLovelace txoutVal
   lovelaceAtTxinDiv3 <- H.noteShow $ lovelaceAtTxin `div` 3
 
   void $ H.execCli' execConfig
@@ -150,32 +117,30 @@ hprop_plutus_script_context_equality = H.integration . H.runFinallies . H.worksp
   let dummyaddress = "addr_test1vpqgspvmh6m2m5pwangvdg499srfzre2dd96qq57nlnw6yctpasy4"
 
 
-  -- STEP 1 - Create collateral and a UTxO at the script address
+  -- STEP 1 - Create collateral
   void $ H.execCli' execConfig
     [ "transaction", "build"
     , "--alonzo-era"
     , "--cardano-mode"
     , "--testnet-magic", show @Int testnetMagic
     , "--change-address", utxoAddr
-    , "--tx-in", T.unpack txin
-    , "--tx-out", plutusScriptAddr <> "+" <> show @Integer lovelaceAtTxinDiv3
-    , "--tx-out-datum-hash", scriptDatumHash
+    , "--tx-in", T.unpack $ renderTxIn txin
     , "--tx-out", utxoAddr <> "+" <> show @Integer lovelaceAtTxinDiv3
     , "--protocol-params-file", work </> "pparams.json"
-    , "--out-file", work </> "create-datum-output.body"
+    , "--out-file", work </> "create-collateral-output.body"
     ]
 
   void $ H.execCli
     [ "transaction", "sign"
-    , "--tx-body-file", work </> "create-datum-output.body"
+    , "--tx-body-file", work </> "create-collateral-output.body"
     , "--testnet-magic", show @Int testnetMagic
     , "--signing-key-file", utxoSKeyFile
-    , "--out-file", work </> "create-datum-output.tx"
+    , "--out-file", work </> "create-collateral-output.tx"
     ]
 
   void $ H.execCli' execConfig
     [ "transaction", "submit"
-    , "--tx-file", work </> "create-datum-output.tx"
+    , "--tx-file", work </> "create-collateral-output.tx"
     , "--testnet-magic", show @Int testnetMagic
     ]
 
@@ -195,25 +160,14 @@ hprop_plutus_script_context_equality = H.integration . H.runFinallies . H.worksp
 
   H.cat $ work </> "utxo-2.json"
 
-  utxo2Json :: Value <- H.leftFailM $ H.readJsonFile $ work </> "utxo-2.json"
-  utxo2 <- H.noteShowM $ H.jsonErrorFail $ J.fromJSON @(HashMap Text Utxo) utxo2Json
-  txinCollateral <- H.noteShow $ head $ HM.keys utxo2
-
-
-  void $ H.execCli' execConfig
-    [ "query", "utxo"
-    , "--address", plutusScriptAddr
-    , "--testnet-magic", show @Int testnetMagic
-    , "--out-file", work </> "plutusutxo.json"
-    ]
-
-  H.cat $ work </> "plutusutxo.json"
-
-  plutusUtxoJson <- H.leftFailM . H.readJsonFile $ work </> "plutusutxo.json"
-  plutusUtxo <- H.noteShowM $ H.jsonErrorFail $ J.fromJSON @(HashMap Text Utxo) plutusUtxoJson
-  plutusUtxoTxIn <- H.noteShow $ head $ HM.keys plutusUtxo
+  utxo2Json :: Aeson.Value <- H.leftFailM $ H.readJsonFile $ work </> "utxo-2.json"
+  UTxO utxo2 <- H.noteShowM $ H.jsonErrorFail $ J.fromJSON @(UTxO AlonzoEra) utxo2Json
+  txinFunding <- H.noteShow . head $ Map.keys utxo2
+  txinCollateral <- H.noteShow $ Map.keys utxo2 !! 1
 
   void $ execCreateScriptContext ["--out-file", scriptDummyRedeemer]
+
+  H.cat $ work </> scriptDummyRedeemer
 
   void $ H.execCli' execConfig
     [ "transaction", "build"
@@ -222,34 +176,36 @@ hprop_plutus_script_context_equality = H.integration . H.runFinallies . H.worksp
     , "--script-invalid"
     , "--testnet-magic", show @Int testnetMagic
     , "--change-address", utxoAddr
-    , "--certificate-file", exampleCertificate
     , "--invalid-before", "1"
     , "--invalid-hereafter", "3000"
-    , "--tx-in", T.unpack plutusUtxoTxIn
-    , "--tx-in-collateral", T.unpack txinCollateral
-    , "--tx-out", dummyaddress <> "+" <> show @Integer 10000000
-    , "--tx-in-script-file", plutusContextEqualityScript
-    , "--tx-in-datum-file", typedDatumFile
-    , "--tx-in-redeemer-file", scriptDummyRedeemer
+    , "--required-signer", requiredSignerSKey
+    , "--tx-in", T.unpack $ renderTxIn txinFunding
+    , "--tx-in-collateral", T.unpack $ renderTxIn txinCollateral
+    , "--mint-script-file", plutusContextEqualityMintScript
+    , "--mint-redeemer-file", scriptDummyRedeemer
+    , "--tx-out", dummyaddress <> "+" <> show @Integer 10000000 <> "+ 5 " <> (policyId <> ".MillarCoin")
+    , "--mint", "5 " <> (policyId <> ".MillarCoin")
     , "--protocol-params-file", work </> "pparams.json"
-    , "--out-file", work </> "dummy.body"
+    , "--out-file", work </> "mint-dummy.body"
     ]
 
   void $ H.execCli
     [ "transaction", "sign"
-    , "--tx-body-file", work </> "dummy.body"
+    , "--tx-body-file", work </> "mint-dummy.body"
     , "--testnet-magic", show @Int testnetMagic
     , "--signing-key-file", utxoSKeyFile
-    , "--out-file", work </> "dummy.tx"
+    , "--out-file", work </> "mint-dummy.tx"
     ]
 
   -- Generate the redeeemer we will use in the tx!
   void $ execCreateScriptContext' execConfig
-           [ "--generate-tx" , work </> "dummy.tx"
+           [ "--generate-tx" , work </> "mint-dummy.tx"
            , "--cardano-mode"
            , "--testnet-magic", show @Int testnetMagic
            , "--out-file", scriptContextRedeemer
            ]
+
+  H.cat $ work </> scriptContextRedeemer
 
   H.threadDelay 5000000
 
@@ -260,37 +216,38 @@ hprop_plutus_script_context_equality = H.integration . H.runFinallies . H.worksp
     , "--script-valid"
     , "--testnet-magic", show @Int testnetMagic
     , "--change-address", utxoAddr
-    , "--certificate-file", exampleCertificate
     , "--invalid-before", "1"
     , "--invalid-hereafter", "3000"
-    , "--tx-in", T.unpack plutusUtxoTxIn
-    , "--tx-in-collateral", T.unpack txinCollateral
-    , "--tx-out", dummyaddress <> "+" <> show @Integer 10000000
-    , "--tx-in-script-file", plutusContextEqualityScript
-    , "--tx-in-datum-file", typedDatumFile
-    , "--tx-in-redeemer-file", scriptContextRedeemer
+    , "--required-signer", requiredSignerSKey
+    , "--tx-in", T.unpack $ renderTxIn txinFunding
+    , "--tx-in-collateral", T.unpack $ renderTxIn txinCollateral
+    , "--mint-script-file", plutusContextEqualityMintScript
+    , "--mint-redeemer-file", scriptContextRedeemer
+    , "--tx-out", dummyaddress <> "+" <> show @Integer 10000000 <> "+ 5 " <> (policyId <> ".MillarCoin")
+    , "--mint", "5 " <> (policyId <> ".MillarCoin")
     , "--protocol-params-file", work </> "pparams.json"
-    , "--out-file", work </> "final.body"
+    , "--out-file", work </> "mint-final.body"
     ]
 
   void $ H.execCli
     [ "transaction", "sign"
-    , "--tx-body-file", work </> "final.body"
+    , "--tx-body-file", work </> "mint-final.body"
     , "--testnet-magic", show @Int testnetMagic
     , "--signing-key-file", utxoSKeyFile
-    , "--out-file", work </> "final.tx"
+    , "--signing-key-file", requiredSignerSKey
+    , "--out-file", work </> "mint-final.tx"
     ]
 
 
   void $ H.execCli' execConfig
     [ "transaction", "submit"
-    , "--tx-file", work </> "final.tx"
+    , "--tx-file", work </> "mint-final.tx"
     , "--testnet-magic", show @Int testnetMagic
     ]
 
   H.threadDelay 5000000
 
-  -- Query UTxO at dummyAddress. If there is ADA there then the script context script was successful
+  -- Query UTxO at dummyAddress.
 
   void $ H.execCli' execConfig
     [ "query", "utxo"
@@ -302,7 +259,10 @@ hprop_plutus_script_context_equality = H.integration . H.runFinallies . H.worksp
   H.cat $ work </> "dummyaddress.json"
 
   dummyUtxoJson <- H.leftFailM . H.readJsonFile $ work </> "dummyaddress.json"
-  dummyUtxo <- H.noteShowM $ H.jsonErrorFail $ J.fromJSON @(HashMap Text Utxo) dummyUtxoJson
+  UTxO dummyUtxo <- H.noteShowM $ H.jsonErrorFail $ J.fromJSON @(UTxO AlonzoEra) dummyUtxoJson
 
-  -- I.E the dummy address should have some ADA if the script context test was successful.
-  dummyUtxo /== HM.empty
+  let allValues = mconcat . map (\(TxOut _ val _) -> txOutValueToValue val) $ Map.elems dummyUtxo
+      millarAssetId = AssetId (fromString policyId) $ fromString "MillarCoin"
+
+  -- There should be a multi asset value at the dummy address
+  1 === length (valueToList $ filterValue (== millarAssetId) allValues)

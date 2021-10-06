@@ -253,13 +253,13 @@ txToCustomRedeemer _ _ _ _ _ (ByronTx _) = Left NoScriptsInByronEra
 txToCustomRedeemer sbe pparams utxo eInfo sStart (ShelleyTx ShelleyBasedEraAlonzo ledgerTx) = do
   let txBody = Alonzo.body ledgerTx
       witness = Alonzo.wits ledgerTx
-      Alonzo.TxWitness _ _ _ _ rdmrs = witness
-      redeemerPtrs = Map.toList $ Alonzo.unRedeemers rdmrs
+      Alonzo.TxWitness _ _ _ _ _rdmrs = witness
+      _redeemerPtrs = Map.toList $ Alonzo.unRedeemers _rdmrs
       ledgerUTxO = toLedgerUTxO ShelleyBasedEraAlonzo utxo
       scriptsNeeded = Alonzo.scriptsNeeded ledgerUTxO ledgerTx
       sPurpose = case scriptsNeeded of
                    [(p ,_)] -> Alonzo.transScriptPurpose p
-                   _ -> Prelude.error $ "More than one redeemer ptr: " <> show redeemerPtrs
+                   needed -> Prelude.error $ "More than one redeemer ptr: " <> show needed
       mTxIns = Prelude.map (Alonzo.txInfoIn ledgerUTxO) . Set.toList $ Alonzo.inputs txBody
       mTouts = Prelude.map Alonzo.txInfoOut $ seqToList $ Alonzo.outputs txBody
       minted = Alonzo.transValue $ Alonzo.mint txBody

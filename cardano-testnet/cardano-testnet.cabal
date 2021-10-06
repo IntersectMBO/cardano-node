@@ -101,7 +101,9 @@ test-suite cardano-testnet-tests
   type:                 exitcode-stdio-1.0
 
   build-depends:        aeson
+                      , cardano-api
                       , cardano-testnet
+                      , containers
                       , directory
                       , hedgehog
                       , hedgehog-extras
@@ -112,6 +114,7 @@ test-suite cardano-testnet-tests
                       , unordered-containers
 
   other-modules:        Spec.Plutus.Direct.ScriptContextEquality
+                        Spec.Plutus.Direct.ScriptContextEqualityMint
                         Spec.Plutus.Direct.TxInLockingPlutus
                         Spec.Plutus.Script.TxInLockingPlutus
                         Spec.Plutus.SubmitApi.TxInLockingPlutus
