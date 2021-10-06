@@ -12,7 +12,6 @@ module Cardano.CLI.Shelley.Parsers
 
     -- * Field parser and renderers
   , parseTxIn
-  , renderTxIn
   ) where
 
 import           Cardano.Prelude hiding (All, Any, option)
@@ -21,7 +20,6 @@ import           Prelude (String)
 import           Cardano.Api
 import           Cardano.Api.Shelley
 
-import           Cardano.CLI.Mary.ValueParser (parseValue)
 import           Cardano.CLI.Shelley.Commands
 import           Cardano.CLI.Shelley.Key (InputFormat (..), PaymentVerifier (..),
                    StakeVerifier (..), VerificationKeyOrFile (..), VerificationKeyOrHashOrFile (..),
@@ -1880,14 +1878,6 @@ pWitnessOverride = Opt.option Opt.auto
 parseTxIn :: Parsec.Parser TxIn
 parseTxIn = TxIn <$> parseTxId <*> (Parsec.char '#' *> parseTxIx)
 
-renderTxIn :: TxIn -> Text
-renderTxIn (TxIn txid (TxIx txix)) =
-  mconcat
-    [ serialiseToRawBytesHexText txid
-    , "#"
-    , Text.pack (show txix)
-    ]
-
 parseTxId :: Parsec.Parser TxId
 parseTxId = do
   str <- Parsec.many1 Parsec.hexDigit Parsec.<?> "transaction id (hexadecimal)"
@@ -1945,13 +1935,6 @@ pTxOutDatum =
           \given here in JSON syntax."
           "The script datum to embed in the tx for this output, \
           \in the given JSON file."
-
-    parseHashScriptData :: Parsec.Parser (Hash ScriptData)
-    parseHashScriptData = do
-      str <- Parsec.many1 Parsec.hexDigit Parsec.<?> "script data hash"
-      case deserialiseFromRawBytesHex (AsHash AsScriptData) (BSC.pack str) of
-        Just sdh -> return sdh
-        Nothing  -> fail $ "Invalid datum hash: " ++ show str
 
 pMintMultiAsset
   :: BalanceTxExecUnits
@@ -2849,12 +2832,6 @@ parseLovelace = do
   then fail $ show i <> " lovelace exceeds the Word64 upper bound"
   else return $ Lovelace i
 
-parseAddressAny :: Parsec.Parser AddressAny
-parseAddressAny = do
-    str <- lexPlausibleAddressString
-    case deserialiseAddress AsAddressAny str of
-      Nothing   -> fail "invalid address"
-      Just addr -> pure addr
 
 parseStakeAddress :: Parsec.Parser StakeAddress
 parseStakeAddress = do
@@ -2872,17 +2849,6 @@ parseTxOutAnyEra = do
     Parsec.option () (Parsec.char '+' >> Parsec.spaces)
     val <- parseValue
     return (TxOutAnyEra addr val)
-
-lexPlausibleAddressString :: Parsec.Parser Text
-lexPlausibleAddressString =
-    Text.pack <$> Parsec.many1 (Parsec.satisfy isPlausibleAddressChar)
-  where
-    -- Covers both base58 and bech32 (with constrained prefixes)
-    isPlausibleAddressChar c =
-         (c >= 'a' && c <= 'z')
-      || (c >= 'A' && c <= 'Z')
-      || (c >= '0' && c <= '9')
-      || c == '_'
 
 decimal :: Parsec.Parser Integer
 Parsec.TokenParser { Parsec.decimal = decimal } = Parsec.haskell

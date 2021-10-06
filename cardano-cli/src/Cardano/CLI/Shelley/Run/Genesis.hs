@@ -75,7 +75,6 @@ import           Cardano.CLI.Helpers (textShow)
 import           Cardano.CLI.Shelley.Commands
 import           Cardano.CLI.Shelley.Key
 import           Cardano.CLI.Shelley.Orphans ()
-import           Cardano.CLI.Shelley.Parsers (renderTxIn)
 import           Cardano.CLI.Shelley.Run.Address
 import           Cardano.CLI.Shelley.Run.Node (ShelleyNodeCmdError (..), renderShelleyNodeCmdError,
                    runNodeIssueOpCert, runNodeKeyGenCold, runNodeKeyGenKES, runNodeKeyGenVRF)

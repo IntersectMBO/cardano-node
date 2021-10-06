@@ -90,8 +90,6 @@ library
                         Cardano.CLI.Shelley.Run.Transaction
                         Cardano.CLI.Shelley.Script
 
-                        Cardano.CLI.Mary.ValueParser
-
                         Cardano.CLI.TopHandler
 
   other-modules:        Paths_cardano_cli
