@@ -47,7 +47,7 @@ let
 
     exes = collectComponents' "exes" haskellPackages;
 
-    plutus-scripts = callPackage ./nix/plutus-scripts.nix { plutus-builder = haskellPackages.plutus-example.components.exes.plutus-example; };
+    inherit plutus-scripts;
 
     # `tests` are the test suites which have been built.
     tests = collectComponents' "tests" haskellPackages;

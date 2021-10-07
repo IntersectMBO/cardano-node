@@ -1,7 +1,5 @@
 pkgs:
 let
-  plutus = false;
-  plutusScriptFile = "../../../bench/script/sum1ToN.plutus";
   executionMemory = 700000000;
   executionSteps  = 700000000;
   scriptFees = executionMemory * 1 + executionSteps  * 1;
@@ -35,14 +33,14 @@ let
     ]
     ++
     ( let
-        totalFee = if plutus
+        totalFee = if plutusMode
                    then tx_fee + scriptFees * inputs_per_tx
                    else tx_fee;
-        safeCollateral = max scriptFees  min_utxo_value;
+        safeCollateral = max (scriptFees + tx_fee) min_utxo_value;
         minTotalValue = min_utxo_value * outputs_per_tx + totalFee;
         minValuePerInput = minTotalValue / inputs_per_tx + 1;
       in
-        if !plutus
+        if !plutusMode
           then createChangeRecursive cfg minValuePerInput (tx_count * inputs_per_tx)
         else
           [
@@ -60,16 +58,24 @@ let
       { runBenchmark = "tx-submit-benchmark";
         txCount = tx_count;
         tps = tps;
-        submitMode.NodeToNode = [];
-        spendMode = if plutus
+        submitMode = if !debugMode
+                     then { NodeToNode = []; }
+                     else { LocalSocket = []; };
+        spendMode = if plutusMode
                     then { SpendScript = [
-                             plutusScriptFile
+                             (plutusScript cfg)
                              {memory = executionMemory; steps = executionSteps; }
                            ]; }
                     else { SpendOutput = []; };
       }
-      { waitBenchmark = "tx-submit-benchmark"; }
-    ];
+    ]
+    ++
+    (
+      if !debugMode
+      then [ { waitBenchmark = "tx-submit-benchmark"; } ]
+      else [ ]
+    )
+    ;
 
   defaultGeneratorScriptFn = basicValueTxWorkload;
 
@@ -99,7 +105,7 @@ let
     [ { createChange = value;
         count = count;
         submitMode.LocalSocket = [];
-        payMode.PayToScript = plutusScriptFile;
+        payMode.PayToScript = plutusScript cfg;
       }
       { delay = cfg.init_cooldown; }
     ];
@@ -111,6 +117,8 @@ let
   createChangePlutus = cfg: value: count: if count <= 30
     then createChangeScriptPlutus cfg value count
     else createChangeRecursive cfg (value * 30 + cfg.tx_fee) (count / 30 + 1) ++ createChangeScriptPlutus cfg value count;
+
+  plutusScript = cfg: "${pkgs.plutus-scripts}/generated-plutus-scripts/${cfg.plutusScript}";
   
 in pkgs.commonLib.defServiceModule
   (lib: with lib;
@@ -132,6 +140,10 @@ in pkgs.commonLib.defServiceModule
 
         ## TODO: the defaults should be externalised to a file.
         ##
+        plutusMode      = opt bool false     "Whether to benchmark Plutus scripts";
+        plutusScript    = opt str  "sum.plutus" "Path to the plutus script";
+        debugMode       = opt bool false     "Set debug mode: Redirect benchmarkting txs to localhost";
+
         tx_count        = opt int 1000       "How many Txs to send, total.";
         add_tx_size     = opt int 100        "Extra Tx payload, in bytes.";
         inputs_per_tx   = opt int 4          "Inputs per Tx.";
