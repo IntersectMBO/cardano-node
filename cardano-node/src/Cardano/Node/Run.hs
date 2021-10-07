@@ -85,7 +85,7 @@ import           Ouroboros.Consensus.Util.Orphans ()
 import           Ouroboros.Network.IOManager (withIOManager)
 import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..),
                      DiffusionMode)
-import qualified Shelley.Spec.Ledger.API as SL
+import qualified Cardano.Ledger.Shelley.API  as SL
 
 import           Cardano.Api
 import qualified Cardano.Api.Protocol.Types as Protocol
@@ -154,7 +154,7 @@ runNode cmdPc = do
       case getLast $ pncConfigFile cmdPc of
         Just fileName -> NL.readConfiguration (unConfigPath fileName)
         Nothing -> putTextLn "No configuration file name found!" >> exitFailure
-    baseTrace    <- NL.standardTracer Nothing
+    baseTrace    <- NL.standardTracer
     nodeInfo <- prepareNodeInfo nc p loggerConfiguration now
     forwardTrace <- withIOManager $ \iomgr -> NL.forwardTracer iomgr loggerConfiguration nodeInfo
     mbEkgTrace   <- case llEKGDirect loggingLayer of
@@ -578,4 +578,4 @@ prepareNodeInfo nc (SomeConsensusProtocol whichP pForInfo) tc nodeStartTime = do
   prepareNodeName =
     case NL.tcNodeName tc of
       Just aName -> return aName
-      Nothing -> pack <$> getHostName
+      Nothing    -> pack <$> getHostName

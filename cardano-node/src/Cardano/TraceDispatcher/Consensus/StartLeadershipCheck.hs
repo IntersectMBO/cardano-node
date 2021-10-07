@@ -46,8 +46,8 @@ import           Cardano.Slotting.Slot (fromWithOrigin)
 
 import           Cardano.Ledger.BaseTypes (StrictMaybe (..), fromSMaybe)
 import qualified Ouroboros.Consensus.Shelley.Ledger as Shelley
-import qualified Shelley.Spec.Ledger.LedgerState as Shelley
-import qualified Shelley.Spec.Ledger.UTxO as Shelley
+import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
+import qualified Cardano.Ledger.Shelley.UTxO as Shelley
 
 import           Cardano.Tracing.Kernel (NodeKernelData (..))
 
@@ -77,8 +77,8 @@ forgeTracerTransform ::
   -> IO (Trace IO (ForgeTracerType blk))
 forgeTracerTransform nodeKern (Trace tr) = pure $ Trace $ T.arrow $ T.emit $
     \case
-      (lc, Nothing, (Left (TraceLabelCreds creds
-                        (TraceStartLeadershipCheck slotNo)))) -> do
+      (lc, Nothing, Left (TraceLabelCreds creds
+                        (TraceStartLeadershipCheck slotNo))) -> do
         query <- mapNodeKernelDataIO
                     (\nk ->
                        (,,)

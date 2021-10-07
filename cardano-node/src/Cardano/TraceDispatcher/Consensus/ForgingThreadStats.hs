@@ -13,7 +13,6 @@ module Cardano.TraceDispatcher.Consensus.ForgingThreadStats
 import           Cardano.Logging
 import           Cardano.Prelude hiding ((:.:), All, concat)
 import           Data.Aeson (Value (..), (.=))
-
 import qualified Data.Map.Strict as Map
 
 import           Cardano.Slotting.Slot (SlotNo (..))
@@ -56,11 +55,11 @@ instance LogFormatting ForgeThreadStats where
              , "lastSlot"           .= String (show ftsLastSlot)
              ]
   asMetrics ForgeThreadStats {..} =
-    [ IntM ["nodeCannotForgeNum"] (fromIntegral ftsNodeCannotForgeNum)
-    , IntM ["nodeIsLeaderNum"]    (fromIntegral ftsNodeIsLeaderNum)
-    , IntM ["blocksForgedNum"]    (fromIntegral ftsBlocksForgedNum)
-    , IntM ["slotsMissed"]        (fromIntegral ftsSlotsMissedNum)
-    , IntM ["lastSlot"]           (fromIntegral ftsLastSlot)
+    [ IntM "nodeCannotForgeNum" (fromIntegral ftsNodeCannotForgeNum)
+    , IntM "nodeIsLeaderNum"    (fromIntegral ftsNodeIsLeaderNum)
+    , IntM "blocksForgedNum"    (fromIntegral ftsBlocksForgedNum)
+    , IntM "slotsMissed"        (fromIntegral ftsSlotsMissedNum)
+    , IntM "lastSlot"           (fromIntegral ftsLastSlot)
     ]
 
 
@@ -92,10 +91,10 @@ instance LogFormatting ForgingStats where
              , "slotsMissed"        .= String (show fsSlotsMissedNum)
              ]
   asMetrics ForgingStats {..} =
-    [ IntM ["nodeCannotForgeNum"] (fromIntegral fsNodeCannotForgeNum)
-    , IntM ["nodeIsLeaderNum"]    (fromIntegral fsNodeIsLeaderNum)
-    , IntM ["blocksForgedNum"]    (fromIntegral fsBlocksForgedNum)
-    , IntM ["slotsMissed"]        (fromIntegral fsSlotsMissedNum)
+    [ IntM "nodeCannotForgeNum" (fromIntegral fsNodeCannotForgeNum)
+    , IntM "nodeIsLeaderNum"    (fromIntegral fsNodeIsLeaderNum)
+    , IntM "blocksForgedNum"    (fromIntegral fsBlocksForgedNum)
+    , IntM "slotsMissed"        (fromIntegral fsSlotsMissedNum)
     ]
 
 emptyForgingStats :: ForgingStats
@@ -108,16 +107,17 @@ forgeThreadStats = foldMTraceM calculateThreadStats emptyForgingStats
 calculateThreadStats :: MonadIO m
   => ForgingStats
   -> LoggingContext
+  -> Maybe TraceControl
   -> ForgeTracerType blk
   -> m ForgingStats
-calculateThreadStats stats _context
+calculateThreadStats stats _context _mbCtrl
     (Left (TraceLabelCreds _ (TraceNodeCannotForge {}))) = do
       mapThreadStats
         stats
         (\fts -> (fts { ftsNodeCannotForgeNum = ftsNodeCannotForgeNum fts + 1}
                       , Nothing))
         (\fs _ ->  (fs  { fsNodeCannotForgeNum  = fsNodeCannotForgeNum fs + 1 }))
-calculateThreadStats stats _context
+calculateThreadStats stats _context _mbCtrl
     (Left (TraceLabelCreds _ (TraceNodeIsLeader (SlotNo slot')))) = do
       let slot = fromIntegral slot'
       mapThreadStats
@@ -125,14 +125,14 @@ calculateThreadStats stats _context
         (\fts -> (fts { ftsNodeIsLeaderNum = ftsNodeIsLeaderNum fts + 1
                    , ftsLastSlot = slot}, Nothing))
         (\fs _ ->  (fs  { fsNodeIsLeaderNum  = fsNodeIsLeaderNum fs + 1 }))
-calculateThreadStats stats _context
+calculateThreadStats stats _context _mbCtrl
     (Left (TraceLabelCreds _ (TraceForgedBlock {}))) = do
       mapThreadStats
         stats
         (\fts -> (fts { ftsBlocksForgedNum = ftsBlocksForgedNum fts + 1}
                       , Nothing))
         (\fs _ ->  (fs  { fsBlocksForgedNum  = fsBlocksForgedNum fs + 1 }))
-calculateThreadStats stats _context
+calculateThreadStats stats _context _mbCtrl
     (Left (TraceLabelCreds _ (TraceNodeNotLeader (SlotNo slot')))) = do
       let slot = fromIntegral slot'
       mapThreadStats
@@ -149,7 +149,7 @@ calculateThreadStats stats _context
                             Nothing -> fs
                             Just missed -> (fs { fsSlotsMissedNum =
                               fsSlotsMissedNum fs + missed}))
-calculateThreadStats stats _context _message = pure stats
+calculateThreadStats stats _context _mbCtrl _message = pure stats
 
 mapThreadStats ::
      MonadIO m
@@ -158,10 +158,8 @@ mapThreadStats ::
   -> (ForgingStats -> Maybe a -> ForgingStats)
   -> m ForgingStats
 mapThreadStats fs@ForgingStats { fsStats } f1 f2 = do
-  tid <- liftIO $ myThreadId
-  let threadStats   = case Map.lookup tid fsStats of
-                        Nothing       -> emptyForgeThreadStats
-                        Just vs       -> vs
+  tid <- liftIO myThreadId
+  let threadStats   =  fromMaybe emptyForgeThreadStats (Map.lookup tid fsStats)
       (newStats, w) = f1 threadStats
   pure $ f2 (fs {fsStats = Map.insert tid newStats fsStats}) w
 
@@ -169,13 +167,13 @@ docForgeStats :: Documented ForgeThreadStats
 docForgeStats = Documented [
     DocMsg
       emptyForgeThreadStats
-      [(["nodeCannotForgeNum"],
+      [("nodeCannotForgeNum",
         "How many times this node could not forge?")
-      ,(["nodeIsLeaderNum"],
+      ,("nodeIsLeaderNum",
         "How many times this node was leader?")
-      ,(["blocksForgedNum"],
+      ,("blocksForgedNum",
         "How many blocks did forge in this node?")
-      ,(["slotsMissed"],
+      ,("slotsMissed",
         "How many slots were missed in this node?")
       ]
       "nodeCannotForgeNum shows how many times this node could not forge.\

@@ -43,7 +43,7 @@ import           Ouroboros.Consensus.Node.ProtocolInfo (ProtocolInfo (..))
 import           Ouroboros.Consensus.Shelley.Ledger.Ledger
                      (shelleyLedgerGenesis)
 
-import qualified Shelley.Spec.Ledger.API as SL
+import           Cardano.Ledger.Shelley.API as SL
 
 severityBasicInfo :: BasicInfo -> SeverityS
 severityBasicInfo _ = Notice

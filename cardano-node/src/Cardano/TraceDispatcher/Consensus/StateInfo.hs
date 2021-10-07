@@ -22,10 +22,10 @@ import           Cardano.Logging
 import           Cardano.Prelude hiding (All, Show, show)
 import           Cardano.TraceDispatcher.Consensus.Formatting
 
+import           Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 import           Ouroboros.Consensus.Block.Forging
 import           Ouroboros.Consensus.Node.Tracers (TraceLabelCreds (..))
 import qualified Ouroboros.Consensus.Shelley.Protocol.HotKey as HotKey
-import           Shelley.Spec.Ledger.OCert (KESPeriod (..))
 
 
 

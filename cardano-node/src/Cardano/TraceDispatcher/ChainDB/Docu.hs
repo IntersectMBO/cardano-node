@@ -167,17 +167,17 @@ docChainDBTraceEvent = Documented [
   , DocMsg
       (ChainDB.TraceAddBlockEvent
         (ChainDB.AddedToCurrentChain [] protoNTI protoAFH protoAFH))
-      [(["density"],
+      [("density",
         "The actual number of blocks created over the maximum expected number\
         \ of blocks that could be created over the span of the last @k@ blocks.")
-      , (["slots"],
+      , ("slots",
         "Number of slots in this chain fragment.")
-      , (["blocks"],
+      , ("blocks",
         "Number of blocks in this chain fragment.")
-      , (["slotInEpoch"],
+      , ("slotInEpoch",
         "Relative slot number of the tip of the current chain within the\
         \epoch..")
-      , (["epoch"],
+      , ("epoch",
         "In which epoch is the tip of the current chain.")
       ]
       "The new block fits onto the current chain (first\
@@ -186,17 +186,17 @@ docChainDBTraceEvent = Documented [
   , DocMsg
       (ChainDB.TraceAddBlockEvent
         (ChainDB.SwitchedToAFork [] protoNTI protoAFH protoAFH))
-      [(["density"],
+      [ ("density",
         "The actual number of blocks created over the maximum expected number\
         \ of blocks that could be created over the span of the last @k@ blocks.")
-      , (["slots"],
+      , ("slots",
         "Number of slots in this chain fragment.")
-      , (["blocks"],
+      , ("blocks",
         "Number of blocks in this chain fragment.")
-      , (["slotInEpoch"],
+      , ("slotInEpoch",
         "Relative slot number of the tip of the current chain within the\
         \epoch..")
-      , (["epoch"],
+      , ("epoch",
         "In which epoch is the tip of the current chain.")
       ]
       "The new block fits onto some fork and we have switched to that fork\
