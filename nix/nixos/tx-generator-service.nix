@@ -1,9 +1,5 @@
 pkgs:
 let
-  executionMemory = 700000000;
-  executionSteps  = 700000000;
-  scriptFees = executionMemory * 1 + executionSteps  * 1;
-  
   ## Standard, simplest possible value transaction workload.
   ##
   ## For definitions of the cfg attributes referred here,
@@ -33,6 +29,9 @@ let
     ]
     ++
     ( let
+        ## hard-code mainnet cost model
+        scriptFees = executionMemory * 577 / 10000 + executionSteps  * 721 / 10000000;
+
         totalFee = if plutusMode
                    then tx_fee + scriptFees * inputs_per_tx
                    else tx_fee;
@@ -141,7 +140,10 @@ in pkgs.commonLib.defServiceModule
         ## TODO: the defaults should be externalised to a file.
         ##
         plutusMode      = opt bool false     "Whether to benchmark Plutus scripts";
-        plutusScript    = opt str  "sum.plutus" "Path to the plutus script";
+        plutusScript    = opt str  "sum.plutus" "Path to the Plutus script";
+        executionMemory = opt int    1000000 "Max memory available for the Plutus script";
+        executionSteps  = opt int  700000000 "Max execution steps available for the Plutus script";
+
         debugMode       = opt bool false     "Set debug mode: Redirect benchmarkting txs to localhost";
 
         tx_count        = opt int 1000       "How many Txs to send, total.";
