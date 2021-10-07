@@ -6,6 +6,7 @@
 
 module Cardano.PlutusExample.DatumRedeemerGuess
   ( guessScript
+  , guessScriptStake
   , datumRedeemerGuessScriptShortBs
   ) where
 
@@ -41,3 +42,20 @@ datumRedeemerGuessScriptShortBs = SBS.toShort . LBS.toStrict $ serialise script
 guessScript :: PlutusScript PlutusScriptV1
 guessScript = PlutusScriptSerialised datumRedeemerGuessScriptShortBs
 
+{-# INLINEABLE mkValidatorStake #-}
+mkValidatorStake :: BuiltinData -> BuiltinData -> ()
+mkValidatorStake redeemer _txContext
+  | redeemer == toBuiltinData (42 :: Integer) = ()
+  | otherwise = traceError "Incorrect datum. Expected 42."
+
+validatorStake :: Plutus.StakeValidator
+validatorStake = Plutus.mkStakeValidatorScript $$(PlutusTx.compile [||mkValidatorStake||])
+
+scriptStake :: Plutus.Script
+scriptStake = Plutus.unStakeValidatorScript validatorStake
+
+datumRedeemerGuessScriptStakeShortBs :: SBS.ShortByteString
+datumRedeemerGuessScriptStakeShortBs = SBS.toShort . LBS.toStrict $ serialise scriptStake
+
+guessScriptStake :: PlutusScript PlutusScriptV1
+guessScriptStake = PlutusScriptSerialised datumRedeemerGuessScriptStakeShortBs
