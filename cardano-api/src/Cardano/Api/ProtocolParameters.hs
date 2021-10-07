@@ -77,7 +77,7 @@ import qualified Cardano.Binary as CBOR
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import           Cardano.Slotting.Slot (EpochNo)
 
-import           Cardano.Ledger.BaseTypes (maybeToStrictMaybe, strictMaybeToMaybe)
+import           Cardano.Ledger.BaseTypes (strictMaybeToMaybe)
 import qualified Cardano.Ledger.BaseTypes as Ledger
 import qualified Cardano.Ledger.Core as Ledger
 import           Cardano.Ledger.Crypto (StandardCrypto)
@@ -109,6 +109,7 @@ import           Cardano.Api.SerialiseTextEnvelope
 import           Cardano.Api.SerialiseUsing
 import           Cardano.Api.StakePoolMetadata
 import           Cardano.Api.TxMetadata
+import           Cardano.Api.Utils
 import           Cardano.Api.Value
 
 
@@ -889,33 +890,33 @@ toShelleyPParamsUpdate
     , protocolUpdateTreasuryCut
     } =
     Shelley.PParams {
-      Shelley._minfeeA     = maybeToStrictMaybe protocolUpdateTxFeePerByte
-    , Shelley._minfeeB     = maybeToStrictMaybe protocolUpdateTxFeeFixed
-    , Shelley._maxBBSize   = maybeToStrictMaybe protocolUpdateMaxBlockBodySize
-    , Shelley._maxTxSize   = maybeToStrictMaybe protocolUpdateMaxTxSize
-    , Shelley._maxBHSize   = maybeToStrictMaybe protocolUpdateMaxBlockHeaderSize
+      Shelley._minfeeA     = noInlineMaybeToStrictMaybe protocolUpdateTxFeePerByte
+    , Shelley._minfeeB     = noInlineMaybeToStrictMaybe protocolUpdateTxFeeFixed
+    , Shelley._maxBBSize   = noInlineMaybeToStrictMaybe protocolUpdateMaxBlockBodySize
+    , Shelley._maxTxSize   = noInlineMaybeToStrictMaybe protocolUpdateMaxTxSize
+    , Shelley._maxBHSize   = noInlineMaybeToStrictMaybe protocolUpdateMaxBlockHeaderSize
     , Shelley._keyDeposit  = toShelleyLovelace <$>
-                               maybeToStrictMaybe protocolUpdateStakeAddressDeposit
+                               noInlineMaybeToStrictMaybe protocolUpdateStakeAddressDeposit
     , Shelley._poolDeposit = toShelleyLovelace <$>
-                               maybeToStrictMaybe protocolUpdateStakePoolDeposit
-    , Shelley._eMax        = maybeToStrictMaybe protocolUpdatePoolRetireMaxEpoch
-    , Shelley._nOpt        = maybeToStrictMaybe protocolUpdateStakePoolTargetNum
-    , Shelley._a0          = maybeToStrictMaybe $ Ledger.boundRational =<<
+                               noInlineMaybeToStrictMaybe protocolUpdateStakePoolDeposit
+    , Shelley._eMax        = noInlineMaybeToStrictMaybe protocolUpdatePoolRetireMaxEpoch
+    , Shelley._nOpt        = noInlineMaybeToStrictMaybe protocolUpdateStakePoolTargetNum
+    , Shelley._a0          = noInlineMaybeToStrictMaybe $ Ledger.boundRational =<<
                               protocolUpdatePoolPledgeInfluence
-    , Shelley._rho         = maybeToStrictMaybe $ Ledger.boundRational =<<
+    , Shelley._rho         = noInlineMaybeToStrictMaybe $ Ledger.boundRational =<<
                                 protocolUpdateMonetaryExpansion
-    , Shelley._tau         = maybeToStrictMaybe $ Ledger.boundRational =<<
+    , Shelley._tau         = noInlineMaybeToStrictMaybe $ Ledger.boundRational =<<
                                 protocolUpdateTreasuryCut
-    , Shelley._d           = maybeToStrictMaybe $ Ledger.boundRational =<<
+    , Shelley._d           = noInlineMaybeToStrictMaybe $ Ledger.boundRational =<<
                                 protocolUpdateDecentralization
     , Shelley._extraEntropy    = toLedgerNonce <$>
-                                   maybeToStrictMaybe protocolUpdateExtraPraosEntropy
+                                   noInlineMaybeToStrictMaybe protocolUpdateExtraPraosEntropy
     , Shelley._protocolVersion = uncurry Ledger.ProtVer <$>
-                                   maybeToStrictMaybe protocolUpdateProtocolVersion
+                                   noInlineMaybeToStrictMaybe protocolUpdateProtocolVersion
     , Shelley._minUTxOValue    = toShelleyLovelace <$>
-                                   maybeToStrictMaybe protocolUpdateMinUTxOValue
+                                   noInlineMaybeToStrictMaybe protocolUpdateMinUTxOValue
     , Shelley._minPoolCost     = toShelleyLovelace <$>
-                                   maybeToStrictMaybe protocolUpdateMinPoolCost
+                                   noInlineMaybeToStrictMaybe protocolUpdateMinPoolCost
     }
 
 
@@ -949,46 +950,46 @@ toAlonzoPParamsUpdate
     , protocolUpdateMaxCollateralInputs
     } =
     Alonzo.PParams {
-      Alonzo._minfeeA     = maybeToStrictMaybe protocolUpdateTxFeePerByte
-    , Alonzo._minfeeB     = maybeToStrictMaybe protocolUpdateTxFeeFixed
-    , Alonzo._maxBBSize   = maybeToStrictMaybe protocolUpdateMaxBlockBodySize
-    , Alonzo._maxTxSize   = maybeToStrictMaybe protocolUpdateMaxTxSize
-    , Alonzo._maxBHSize   = maybeToStrictMaybe protocolUpdateMaxBlockHeaderSize
+      Alonzo._minfeeA     = noInlineMaybeToStrictMaybe protocolUpdateTxFeePerByte
+    , Alonzo._minfeeB     = noInlineMaybeToStrictMaybe protocolUpdateTxFeeFixed
+    , Alonzo._maxBBSize   = noInlineMaybeToStrictMaybe protocolUpdateMaxBlockBodySize
+    , Alonzo._maxTxSize   = noInlineMaybeToStrictMaybe protocolUpdateMaxTxSize
+    , Alonzo._maxBHSize   = noInlineMaybeToStrictMaybe protocolUpdateMaxBlockHeaderSize
     , Alonzo._keyDeposit  = toShelleyLovelace <$>
-                              maybeToStrictMaybe protocolUpdateStakeAddressDeposit
+                              noInlineMaybeToStrictMaybe protocolUpdateStakeAddressDeposit
     , Alonzo._poolDeposit = toShelleyLovelace <$>
-                              maybeToStrictMaybe protocolUpdateStakePoolDeposit
-    , Alonzo._eMax        = maybeToStrictMaybe protocolUpdatePoolRetireMaxEpoch
-    , Alonzo._nOpt        = maybeToStrictMaybe protocolUpdateStakePoolTargetNum
-    , Alonzo._a0          = maybeToStrictMaybe $ Ledger.boundRational =<<
+                              noInlineMaybeToStrictMaybe protocolUpdateStakePoolDeposit
+    , Alonzo._eMax        = noInlineMaybeToStrictMaybe protocolUpdatePoolRetireMaxEpoch
+    , Alonzo._nOpt        = noInlineMaybeToStrictMaybe protocolUpdateStakePoolTargetNum
+    , Alonzo._a0          = noInlineMaybeToStrictMaybe $ Ledger.boundRational =<<
                               protocolUpdatePoolPledgeInfluence
-    , Alonzo._rho         = maybeToStrictMaybe $ Ledger.boundRational =<<
+    , Alonzo._rho         = noInlineMaybeToStrictMaybe $ Ledger.boundRational =<<
                                protocolUpdateMonetaryExpansion
-    , Alonzo._tau         = maybeToStrictMaybe $ Ledger.boundRational =<<
+    , Alonzo._tau         = noInlineMaybeToStrictMaybe $ Ledger.boundRational =<<
                                protocolUpdateTreasuryCut
-    , Alonzo._d           = maybeToStrictMaybe $ Ledger.boundRational =<<
+    , Alonzo._d           = noInlineMaybeToStrictMaybe $ Ledger.boundRational =<<
                                protocolUpdateDecentralization
     , Alonzo._extraEntropy    = toLedgerNonce <$>
-                                  maybeToStrictMaybe protocolUpdateExtraPraosEntropy
+                                  noInlineMaybeToStrictMaybe protocolUpdateExtraPraosEntropy
     , Alonzo._protocolVersion = uncurry Ledger.ProtVer <$>
-                                  maybeToStrictMaybe protocolUpdateProtocolVersion
+                                  noInlineMaybeToStrictMaybe protocolUpdateProtocolVersion
     , Alonzo._minPoolCost     = toShelleyLovelace <$>
-                                  maybeToStrictMaybe protocolUpdateMinPoolCost
+                                  noInlineMaybeToStrictMaybe protocolUpdateMinPoolCost
     , Alonzo._coinsPerUTxOWord  = toShelleyLovelace <$>
-                                  maybeToStrictMaybe protocolUpdateUTxOCostPerWord
+                                  noInlineMaybeToStrictMaybe protocolUpdateUTxOCostPerWord
     , Alonzo._costmdls        = if Map.null protocolUpdateCostModels
                                   then Ledger.SNothing
                                   else Ledger.SJust
                                          (toAlonzoCostModels protocolUpdateCostModels)
-    , Alonzo._prices          = maybeToStrictMaybe $
+    , Alonzo._prices          = noInlineMaybeToStrictMaybe $
                                   toAlonzoPrices =<< protocolUpdatePrices
     , Alonzo._maxTxExUnits    = toAlonzoExUnits  <$>
-                                  maybeToStrictMaybe protocolUpdateMaxTxExUnits
+                                  noInlineMaybeToStrictMaybe protocolUpdateMaxTxExUnits
     , Alonzo._maxBlockExUnits = toAlonzoExUnits  <$>
-                                  maybeToStrictMaybe protocolUpdateMaxBlockExUnits
-    , Alonzo._maxValSize      = maybeToStrictMaybe protocolUpdateMaxValueSize
-    , Alonzo._collateralPercentage = maybeToStrictMaybe protocolUpdateCollateralPercent
-    , Alonzo._maxCollateralInputs  = maybeToStrictMaybe protocolUpdateMaxCollateralInputs
+                                  noInlineMaybeToStrictMaybe protocolUpdateMaxBlockExUnits
+    , Alonzo._maxValSize      = noInlineMaybeToStrictMaybe protocolUpdateMaxValueSize
+    , Alonzo._collateralPercentage = noInlineMaybeToStrictMaybe protocolUpdateCollateralPercent
+    , Alonzo._maxCollateralInputs  = noInlineMaybeToStrictMaybe protocolUpdateMaxCollateralInputs
     }
 
 
