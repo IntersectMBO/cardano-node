@@ -277,20 +277,20 @@ instance ( LogFormatting (Header blk)
   asMetrics (ChainDB.SwitchedToAFork _warnings newTipInfo _oldChain newChain) =
     let ChainInformation { slots, blocks, density, epoch, slotInEpoch } =
           chainInformation newTipInfo newChain 0
-    in  [ DoubleM ["density"] (fromRational density)
-        , IntM    ["slots"] (fromIntegral slots)
-        , IntM    ["blocks"] (fromIntegral blocks)
-        , IntM    ["slotInEpoch"] (fromIntegral slotInEpoch)
-        , IntM    ["epoch"] (fromIntegral (unEpochNo epoch))
+    in  [ DoubleM "density" (fromRational density)
+        , IntM    "slots" (fromIntegral slots)
+        , IntM    "blocks" (fromIntegral blocks)
+        , IntM    "slotInEpoch" (fromIntegral slotInEpoch)
+        , IntM    "epoch" (fromIntegral (unEpochNo epoch))
         ]
   asMetrics (ChainDB.AddedToCurrentChain _warnings newTipInfo _oldChain newChain) =
     let ChainInformation { slots, blocks, density, epoch, slotInEpoch } =
           chainInformation newTipInfo newChain 0
-    in  [ DoubleM ["density"] (fromRational density)
-        , IntM    ["slotNum"] (fromIntegral slots)
-        , IntM    ["blockNum"] (fromIntegral blocks)
-        , IntM    ["slotInEpoch"] (fromIntegral slotInEpoch)
-        , IntM    ["epoch"] (fromIntegral (unEpochNo epoch))
+    in  [ DoubleM "density" (fromRational density)
+        , IntM    "slotNum" (fromIntegral slots)
+        , IntM    "blockNum" (fromIntegral blocks)
+        , IntM    "slotInEpoch" (fromIntegral slotInEpoch)
+        , IntM    "epoch" (fromIntegral (unEpochNo epoch))
         ]
   asMetrics _ = []
 

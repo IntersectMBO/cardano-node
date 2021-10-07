@@ -76,7 +76,7 @@ import           Ouroboros.Network.KeepAlive (TraceKeepAliveClient (..))
 import           Ouroboros.Network.TxSubmission.Inbound
 import           Ouroboros.Network.TxSubmission.Outbound
 
-import           Shelley.Spec.Ledger.OCert (KESPeriod (..))
+import           Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 
 
 class HasKESInfoX blk where
@@ -152,7 +152,7 @@ instance (Show (Header blk), ConvertRawHash blk, LedgerSupportsProtocol blk)
   forHuman (TraceException exc) =
     "An exception was thrown by the Chain Sync Client. "
       <> showT exc
-  forHuman (TraceFoundIntersection _ _ _) =
+  forHuman TraceFoundIntersection {} =
       "We found an intersection between our chain fragment and the\
       \ candidate's chain."
   forHuman (TraceTermination res) =
@@ -167,7 +167,7 @@ instance (Show (Header blk), ConvertRawHash blk, LedgerSupportsProtocol blk)
   forMachine _dtal (TraceException exc) =
       mkObject [ "kind" .= String "Exception"
                , "exception" .= String (Text.pack $ show exc) ]
-  forMachine _dtal (TraceFoundIntersection _ _ _) =
+  forMachine _dtal TraceFoundIntersection {} =
       mkObject [ "kind" .= String "FoundIntersection" ]
   forMachine _dtal (TraceTermination _) =
       mkObject [ "kind" .= String "Termination" ]
@@ -205,7 +205,7 @@ instance ConvertRawHash blk
                ]
 
   asMetrics (TraceChainSyncRollForward _point) =
-      [CounterM ["ChainSync","RollForward"] Nothing]
+      [CounterM "ChainSync.RollForward" Nothing]
   asMetrics _ = []
 
 
@@ -218,7 +218,7 @@ instance (LogFormatting peer, Show peer)
     , "peers" .= toJSON
       (foldl' (\acc x -> forMachine DDetailed x : acc) [] xs) ]
 
-  asMetrics peers = [IntM ["connectedPeers"] (fromIntegral (length peers))]
+  asMetrics peers = [IntM "connectedPeers" (fromIntegral (length peers))]
 
 
 instance (LogFormatting peer, Show peer, LogFormatting a)
@@ -262,7 +262,7 @@ instance LogFormatting (TraceBlockFetchServerEvent blk) where
     mkObject [ "kind" .= String "BlockFetchServer" ]
 
   asMetrics (TraceBlockFetchServerSendBlock _p) =
-    [CounterM ["served","block","count"] Nothing]
+    [CounterM "served.block.count" Nothing]
 
 instance LogFormatting (TraceTxSubmissionInbound txid tx) where
   forMachine _dtal (TraceTxSubmissionCollected count) =
@@ -292,11 +292,11 @@ instance LogFormatting (TraceTxSubmissionInbound txid tx) where
       ]
 
   asMetrics (TraceTxSubmissionCollected count)=
-    [CounterM ["submissions", "submitted", "count"] (Just count)]
+    [CounterM "submissions.submitted.count" (Just count)]
   asMetrics (TraceTxSubmissionProcessed processed) =
-    [ CounterM ["submissions", "accepted", "count"]
+    [ CounterM "submissions.accepted.count"
         (Just (ptxcAccepted processed))
-    , CounterM ["submissions", "rejected", "count"]
+    , CounterM "submissions.rejected.count"
         (Just (ptxcRejected processed))
     ]
   asMetrics _ = []
@@ -365,25 +365,25 @@ instance
       ]
 
   asMetrics (TraceMempoolAddedTx _tx _mpSzBefore mpSz) =
-    [ IntM ["txsInMempool"] (fromIntegral $ msNumTxs mpSz)
-    , IntM ["mempoolBytes"] (fromIntegral $ msNumBytes mpSz)
+    [ IntM "txsInMempool" (fromIntegral $ msNumTxs mpSz)
+    , IntM "mempoolBytes" (fromIntegral $ msNumBytes mpSz)
     ]
   asMetrics (TraceMempoolRejectedTx _tx _txApplyErr mpSz) =
-    [ IntM ["txsInMempool"] (fromIntegral $ msNumTxs mpSz)
-    , IntM ["mempoolBytes"] (fromIntegral $ msNumBytes mpSz)
+    [ IntM "txsInMempool" (fromIntegral $ msNumTxs mpSz)
+    , IntM "mempoolBytes" (fromIntegral $ msNumBytes mpSz)
     ]
   asMetrics (TraceMempoolRemoveTxs _txs mpSz) =
-    [ IntM ["txsInMempool"] (fromIntegral $ msNumTxs mpSz)
-    , IntM ["mempoolBytes"] (fromIntegral $ msNumBytes mpSz)
+    [ IntM "txsInMempool" (fromIntegral $ msNumTxs mpSz)
+    , IntM "mempoolBytes" (fromIntegral $ msNumBytes mpSz)
     ]
   asMetrics (TraceMempoolManuallyRemovedTxs [] _txs1 mpSz) =
-    [ IntM ["txsInMempool"] (fromIntegral $ msNumTxs mpSz)
-    , IntM ["mempoolBytes"] (fromIntegral $ msNumBytes mpSz)
+    [ IntM "txsInMempool" (fromIntegral $ msNumTxs mpSz)
+    , IntM "mempoolBytes" (fromIntegral $ msNumBytes mpSz)
     ]
   asMetrics (TraceMempoolManuallyRemovedTxs txs _txs1 mpSz) =
-    [ IntM ["txsInMempool"] (fromIntegral $ msNumTxs mpSz)
-    , IntM ["mempoolBytes"] (fromIntegral $ msNumBytes mpSz)
-    , CounterM ["txsProcessedNum"] (Just (fromIntegral $ length txs))
+    [ IntM "txsInMempool" (fromIntegral $ msNumTxs mpSz)
+    , IntM "mempoolBytes" (fromIntegral $ msNumBytes mpSz)
+    , CounterM "txsProcessedNum" (Just (fromIntegral $ length txs))
     ]
 
 instance LogFormatting MempoolSize where
@@ -590,55 +590,55 @@ instance ( tx ~ GenTx blk
       --  <> ", TxIds: " <> showT (map txId txs) TODO Fix
 
   asMetrics (TraceForgeStateUpdateError slot reason) =
-    IntM ["forgeStateUpdateError"] (fromIntegral $ unSlotNo slot) :
+    IntM "forgeStateUpdateError" (fromIntegral $ unSlotNo slot) :
       (case getKESInfoX (Proxy @blk) reason of
         Nothing -> []
         Just kesInfo ->
           [ IntM
-              ["operationalCertificateStartKESPeriod"]
+              "operationalCertificateStartKESPeriod"
               (fromIntegral . unKESPeriod . HotKey.kesStartPeriod $ kesInfo)
           , IntM
-              ["operationalCertificateExpiryKESPeriod"]
+              "operationalCertificateExpiryKESPeriod"
               (fromIntegral . unKESPeriod . HotKey.kesEndPeriod $ kesInfo)
           , IntM
-              ["currentKESPeriod"]
+              "currentKESPeriod"
               0
           , IntM
-              ["remainingKESPeriods"]
+              "remainingKESPeriods"
               0
           ])
 
   asMetrics (TraceStartLeadershipCheck slot) =
-    [IntM ["aboutToLeadSlotLast"] (fromIntegral $ unSlotNo slot)]
+    [IntM "aboutToLeadSlotLast" (fromIntegral $ unSlotNo slot)]
   asMetrics (TraceSlotIsImmutable slot _tipPoint _tipBlkNo) =
-    [IntM ["slotIsImmutable"] (fromIntegral $ unSlotNo slot)]
+    [IntM "slotIsImmutable" (fromIntegral $ unSlotNo slot)]
   asMetrics (TraceBlockFromFuture slot _slotNo) =
-    [IntM ["blockFromFuture"] (fromIntegral $ unSlotNo slot)]
+    [IntM "blockFromFuture" (fromIntegral $ unSlotNo slot)]
   asMetrics (TraceBlockContext slot _tipBlkNo _tipPoint) =
-    [IntM ["blockContext"] (fromIntegral $ unSlotNo slot)]
+    [IntM "blockContext" (fromIntegral $ unSlotNo slot)]
   asMetrics (TraceNoLedgerState slot _) =
-    [IntM ["couldNotForgeSlotLast"] (fromIntegral $ unSlotNo slot)]
+    [IntM "couldNotForgeSlotLast" (fromIntegral $ unSlotNo slot)]
   asMetrics (TraceLedgerState slot _) =
-    [IntM ["ledgerState"] (fromIntegral $ unSlotNo slot)]
+    [IntM "ledgerState" (fromIntegral $ unSlotNo slot)]
   asMetrics (TraceNoLedgerView slot _) =
-    [IntM ["couldNotForgeSlotLast"] (fromIntegral $ unSlotNo slot)]
+    [IntM "couldNotForgeSlotLast" (fromIntegral $ unSlotNo slot)]
   asMetrics (TraceLedgerView slot) =
-    [IntM ["ledgerView"] (fromIntegral $ unSlotNo slot)]
+    [IntM "ledgerView" (fromIntegral $ unSlotNo slot)]
   -- see above
   asMetrics (TraceNodeCannotForge slot _reason) =
-    [IntM ["nodeCannotForge"] (fromIntegral $ unSlotNo slot)]
+    [IntM "nodeCannotForge" (fromIntegral $ unSlotNo slot)]
   asMetrics (TraceNodeNotLeader slot) =
-    [IntM ["nodeNotLeader"] (fromIntegral $ unSlotNo slot)]
+    [IntM "nodeNotLeader" (fromIntegral $ unSlotNo slot)]
   asMetrics (TraceNodeIsLeader slot) =
-    [IntM ["nodeIsLeader"] (fromIntegral $ unSlotNo slot)]
+    [IntM "nodeIsLeader" (fromIntegral $ unSlotNo slot)]
   asMetrics (TraceForgedBlock slot _ _ _) =
-    [IntM ["forgedSlotLast"] (fromIntegral $ unSlotNo slot)]
+    [IntM "forgedSlotLast" (fromIntegral $ unSlotNo slot)]
   asMetrics (TraceDidntAdoptBlock slot _) =
-    [IntM ["notAdoptedSlotLast"] (fromIntegral $ unSlotNo slot)]
+    [IntM "notAdoptedSlotLast" (fromIntegral $ unSlotNo slot)]
   asMetrics (TraceForgedInvalidBlock slot _ _) =
-    [IntM ["forgedInvalidSlotLast"] (fromIntegral $ unSlotNo slot)]
+    [IntM "forgedInvalidSlotLast" (fromIntegral $ unSlotNo slot)]
   asMetrics (TraceAdoptedBlock slot _ _) =
-    [IntM ["adoptedSlotLast"] (fromIntegral $ unSlotNo slot)]
+    [IntM "adoptedSlotLast" (fromIntegral $ unSlotNo slot)]
 
 instance LogFormatting TraceStartLeadershipCheckPlus where
   forMachine _dtal TraceStartLeadershipCheckPlus {..} =
@@ -654,8 +654,8 @@ instance LogFormatting TraceStartLeadershipCheckPlus where
       <> " delegMapSize " <> showT tsDelegMapSize
       <> " chainDensity " <> showT tsChainDensity
   asMetrics TraceStartLeadershipCheckPlus {..} =
-    [IntM ["utxoSize"] (fromIntegral tsUtxoSize),
-     IntM ["delegMapSize"] (fromIntegral tsDelegMapSize)]
+    [IntM "utxoSize" (fromIntegral tsUtxoSize),
+     IntM "delegMapSize" (fromIntegral tsDelegMapSize)]
      -- TODO JNF: Why not deleg map size?
 
 instance Show t => LogFormatting (TraceBlockchainTimeEvent t) where

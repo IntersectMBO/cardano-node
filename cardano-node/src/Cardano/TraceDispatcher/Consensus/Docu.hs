@@ -234,7 +234,7 @@ docChainSyncServerEvent = Documented [
       "A server read has blocked, either for an add block or a rollback"
     , DocMsg
       (TraceChainSyncRollForward protoPoint)
-      [(["ChainSync","RollForward"], "TODO Doc")]
+      [("ChainSync.RollForward", "TODO Doc")]
       "Roll forward to the given point."
     , DocMsg
       (TraceChainSyncRollBackward protoPoint)
@@ -243,11 +243,11 @@ docChainSyncServerEvent = Documented [
   ]
 
 docBlockFetchDecision ::
-  Documented ([BlockFetch.TraceLabelPeer remotePeer (FetchDecision [Point (Header blk)])])
+  Documented [BlockFetch.TraceLabelPeer remotePeer (FetchDecision [Point (Header blk)])]
 docBlockFetchDecision = Documented [
     DocMsg
       [BlockFetch.TraceLabelPeer protoRemotePeer protoFetchDecline]
-      [(["connectedPeers"], "Number of connected peers")]
+      [("connectedPeers", "Number of connected peers")]
       "Throughout the decision making process we accumulate reasons to decline\
       \ to fetch any blocks. This message carries the intermediate and final\
       \ results."
@@ -288,19 +288,19 @@ docBlockFetchClient = Documented [
       "Mark the start of receiving a streaming batch of blocks. This will\
       \ be followed by one or more 'CompletedBlockFetch' and a final\
       \ 'CompletedFetchBatch'"
-  ,
-    DocMsg
-      (BlockFetch.TraceLabelPeer protoRemotePeer
-        (BlockFetch.CompletedBlockFetch
-          protoPointH
-          protoPeerFetchInFlight
-          protoPeerFetchInFlightLimits
-          protoPeerFetchStatus
-          protoNominalDiffTime))
-      []
-      "Mark the completion of of receiving a single block within a\
-      \ streaming batch of blocks."
-  ,
+  -- , TODO JNF Recover
+  --   DocMsg
+  --     (BlockFetch.TraceLabelPeer protoRemotePeer
+  --       (BlockFetch.CompletedBlockFetch
+  --         protoPointH
+  --         protoPeerFetchInFlight
+  --         protoPeerFetchInFlightLimits
+  --         protoPeerFetchStatus
+  --         protoNominalDiffTime))
+  --     []
+  --     "Mark the completion of of receiving a single block within a\
+  --     \ streaming batch of blocks."
+   ,
     DocMsg
       (BlockFetch.TraceLabelPeer protoRemotePeer
         (BlockFetch.CompletedFetchBatch
@@ -335,7 +335,7 @@ docBlockFetchServer ::
 docBlockFetchServer = Documented [
     DocMsg
       (TraceBlockFetchServerSendBlock protoPoint)
-      [(["served","block","count"], "TODO Doc")]
+      [("served.block.count", "TODO Doc")]
       "The server sent a block to the peer."
   ]
 
@@ -347,14 +347,14 @@ docTxInbound = Documented [
     DocMsg
     (BlockFetch.TraceLabelPeer protoRemotePeer
       (TraceTxSubmissionCollected 1))
-    [ (["submissions", "submitted", "count"], "TODO Doc")]
+    [ ("submissions.submitted.count", "TODO Doc")]
     "Number of transactions just about to be inserted."
   ,
     DocMsg
     (BlockFetch.TraceLabelPeer protoRemotePeer
       (TraceTxSubmissionProcessed protoProcessedTxCount))
-    [ (["submissions", "accepted", "count"], "TODO Doc")
-    , (["submissions", "rejected", "count"], "TODO Doc")
+    [ ("submissions.accepted.count", "TODO Doc")
+    , ("submissions.rejected.count", "TODO Doc")
     ]
     "Just processed transaction pass/fail breakdown."
   ,
@@ -416,30 +416,30 @@ docMempool :: forall blk. Documented (TraceEventMempool blk)
 docMempool = Documented [
     DocMsg
       (TraceMempoolAddedTx protoValidatedGenTx protoMempoolSize protoMempoolSize)
-      [ (["txsInMempool"],"Transactions in mempool")
-      , (["mempoolBytes"], "Byte size of the mempool")
+      [ ("txsInMempool","Transactions in mempool")
+      , ("mempoolBytes", "Byte size of the mempool")
       ]
       "New, valid transaction that was added to the Mempool."
   , DocMsg
       (TraceMempoolRejectedTx protoGenTx (undefined :: ApplyTxErr blk) protoMempoolSize)
-      [ (["txsInMempool"],"Transactions in mempool")
-      , (["mempoolBytes"], "Byte size of the mempool")
+      [ ("txsInMempool","Transactions in mempool")
+      , ("mempoolBytes", "Byte size of the mempool")
       ]
       "New, invalid transaction thas was rejected and thus not added to\
       \ the Mempool."
   , DocMsg
       (TraceMempoolRemoveTxs [protoValidatedGenTx] protoMempoolSize)
-      [ (["txsInMempool"],"Transactions in mempool")
-      , (["mempoolBytes"], "Byte size of the mempool")
+      [ ("txsInMempool","Transactions in mempool")
+      , ("mempoolBytes", "Byte size of the mempool")
       ]
       "Previously valid transactions that are no longer valid because of\
       \ changes in the ledger state. These transactions have been removed\
       \ from the Mempool."
   , DocMsg
       (TraceMempoolManuallyRemovedTxs [protoGenTxId] [protoValidatedGenTx] protoMempoolSize)
-      [ (["txsInMempool"],"Transactions in mempool")
-      , (["mempoolBytes"], "Byte size of the mempool")
-      , (["txsProcessedNum"], "TODO Doc")
+      [ ("txsInMempool","Transactions in mempool")
+      , ("mempoolBytes", "Byte size of the mempool")
+      , ("txsProcessedNum", "TODO Doc")
       ]
       "Transactions that have been manually removed from the Mempool."
   ]
@@ -451,12 +451,12 @@ docForge = Documented [
     DocMsg
       (Left (TraceLabelCreds protoTxt
         (TraceStartLeadershipCheck protoSlotNo)))
-      [(["aboutToLeadSlotLast"], "TODO Doc")]
+      [("aboutToLeadSlotLast", "TODO Doc")]
       "Start of the leadership check."
   , DocMsg
       (Left (TraceLabelCreds protoTxt
         (TraceSlotIsImmutable protoSlotNo protoPoint protoBlockNo)))
-      [(["slotIsImmutable"], "TODO Doc")]
+      [("slotIsImmutable", "TODO Doc")]
       "Leadership check failed: the tip of the ImmutableDB inhabits the\
       \  current slot\
       \ \
@@ -477,7 +477,7 @@ docForge = Documented [
   , DocMsg
       (Left (TraceLabelCreds protoTxt
         (TraceBlockFromFuture protoSlotNo protoSlotNo)))
-      [(["blockFromFuture"], "TODO Doc")]
+      [("blockFromFuture", "TODO Doc")]
       "Leadership check failed: the current chain contains a block from a slot\
       \  /after/ the current slot\
       \ \
@@ -490,7 +490,7 @@ docForge = Documented [
   , DocMsg
       (Left (TraceLabelCreds protoTxt
         (TraceBlockContext protoSlotNo protoBlockNo protoPoint)))
-      [(["blockContext"], "TODO Doc")]
+      [("blockContext", "TODO Doc")]
       "We found out to which block we are going to connect the block we are about\
       \  to forge.\
       \ \
@@ -502,7 +502,7 @@ docForge = Documented [
   , DocMsg
       (Left (TraceLabelCreds protoTxt
         (TraceNoLedgerState protoSlotNo protoPoint)))
-      [(["couldNotForgeSlotLast"], "TODO Doc")]
+      [("couldNotForgeSlotLast", "TODO Doc")]
       "Leadership check failed: we were unable to get the ledger state for the\
       \  point of the block we want to connect to\
       \ \
@@ -517,7 +517,7 @@ docForge = Documented [
   , DocMsg
       (Left (TraceLabelCreds protoTxt
         (TraceLedgerState protoSlotNo protoPoint)))
-      [(["ledgerState"], "TODO Doc")]
+      [("ledgerState", "TODO Doc")]
       "We obtained a ledger state for the point of the block we want to\
       \  connect to\
       \ \
@@ -527,7 +527,7 @@ docForge = Documented [
   , DocMsg
       (Left (TraceLabelCreds protoTxt
         (TraceNoLedgerView protoSlotNo protoOutsideForecastRange)))
-      [(["couldNotForgeSlotLast"], "TODO Doc")]
+      [("couldNotForgeSlotLast", "TODO Doc")]
       "Leadership check failed: we were unable to get the ledger view for the\
       \  current slot number\
       \ \
@@ -538,17 +538,17 @@ docForge = Documented [
   , DocMsg
       (Left (TraceLabelCreds protoTxt
         (TraceLedgerView protoSlotNo)))
-      [(["ledgerView"], "TODO Doc")]
+      [("ledgerView", "TODO Doc")]
       "We obtained a ledger view for the current slot number\
       \ \
       \  We record the current slot number."
   , DocMsg
       (Left (TraceLabelCreds protoTxt
         (TraceForgeStateUpdateError protoSlotNo undefined)))
-      [ (["operationalCertificateStartKESPeriod"], "TODO Doc")
-      , (["operationalCertificateExpiryKESPeriod"], "TODO Doc")
-      , (["currentKESPeriod"], "TODO Doc")
-      , (["remainingKESPeriods"], "TODO Doc")
+      [ ("operationalCertificateStartKESPeriod", "TODO Doc")
+      , ("operationalCertificateExpiryKESPeriod", "TODO Doc")
+      , ("currentKESPeriod", "TODO Doc")
+      , ("remainingKESPeriods", "TODO Doc")
       ]
       "Updating the forge state failed.\
       \ \
@@ -558,7 +558,7 @@ docForge = Documented [
   , DocMsg
       (Left (TraceLabelCreds protoTxt
         (TraceNodeCannotForge protoSlotNo undefined)))
-      [(["nodeCannotForge"], "TODO Doc")]
+      [("nodeCannotForge", "TODO Doc")]
       "We did the leadership check and concluded that we should lead and forge\
       \  a block, but cannot.\
       \ \
@@ -568,14 +568,14 @@ docForge = Documented [
   , DocMsg
       (Left (TraceLabelCreds protoTxt
         (TraceNodeNotLeader protoSlotNo)))
-      [(["nodeNotLeader"], "TODO Doc")]
+      [("nodeNotLeader", "TODO Doc")]
       "We did the leadership check and concluded we are not the leader\
       \ \
       \  We record the current slot number"
   , DocMsg
       (Left (TraceLabelCreds protoTxt
         (TraceNodeIsLeader protoSlotNo)))
-      [(["nodeIsLeader"], "TODO Doc")]
+      [("nodeIsLeader", "TODO Doc")]
       "We did the leadership check and concluded we /are/ the leader\
       \ \
       \  The node will soon forge; it is about to read its transactions from the\
@@ -583,7 +583,7 @@ docForge = Documented [
   , DocMsg
       (Left (TraceLabelCreds protoTxt
         (TraceForgedBlock protoSlotNo protoPoint protoBlk protoMempoolSize)))
-      [(["forgedSlotLast"], "TODO Doc")]
+      [("forgedSlotLast", "TODO Doc")]
       "We forged a block\
       \ \
       \  We record the current slot number, the point of the predecessor, the block\
@@ -599,7 +599,7 @@ docForge = Documented [
   , DocMsg
       (Left (TraceLabelCreds protoTxt
         (TraceDidntAdoptBlock protoSlotNo protoBlk)))
-      [(["notAdoptedSlotLast"], "TODO Doc")]
+      [("notAdoptedSlotLast", "TODO Doc")]
       "We did not adopt the block we produced, but the block was valid. We\
       \  must have adopted a block that another leader of the same slot produced\
       \  before we got the chance of adopting our own block. This is very rare,\
@@ -607,29 +607,29 @@ docForge = Documented [
   , DocMsg
       (Left (TraceLabelCreds protoTxt
         (TraceForgedInvalidBlock protoSlotNo protoBlk protoInvalidBlockReason)))
-      [(["forgedInvalidSlotLast"], "TODO Doc")]
+      [("forgedInvalidSlotLast", "TODO Doc")]
       "We forged a block that is invalid according to the ledger in the\
       \  ChainDB. This means there is an inconsistency between the mempool\
       \  validation and the ledger validation. This is a serious error!"
   , DocMsg
       (Left (TraceLabelCreds protoTxt
         (TraceAdoptedBlock protoSlotNo protoBlk [protoValidatedGenTx])))
-      [(["adoptedSlotLast"], "TODO Doc")]
+      [("adoptedSlotLast", "TODO Doc")]
       "We adopted the block we produced, we also trace the transactions\
       \  that were adopted."
   , DocMsg
       (Right (TraceLabelCreds protoTxt
         (TraceStartLeadershipCheckPlus protoSlotNo 0 0 0.0)))
-      [ (["aboutToLeadSlotLast"], "TODO Doc")
-      , (["utxoSize"], "TODO Doc")
-      , (["delegMapSize"], "TODO Doc")
+      [ ("aboutToLeadSlotLast", "TODO Doc")
+      , ("utxoSize", "TODO Doc")
+      , ("delegMapSize", "TODO Doc")
       ]
       "We adopted the block we produced, we also trace the transactions\
       \  that were adopted."
 
   ]
 
-docForgeStateInfo :: Documented (TraceLabelCreds (HotKey.KESInfo))
+docForgeStateInfo :: Documented (TraceLabelCreds HotKey.KESInfo)
 docForgeStateInfo = Documented [
     DocMsg
       (TraceLabelCreds protoTxt protoKESInfo)
