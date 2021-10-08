@@ -38,15 +38,16 @@
     },
     { "createChange" :    2300000000, "count" :     1000
       , "submitMode": { "LocalSocket": [] }
-      , "payMode": { "PayToScript": "bench/script/sum1ToN.plutus" }
+      , "payMode": { "PayToScript": [ "bench/script/sum1ToN.plutus", 3] }
     },
     { "runBenchmark": "spendPlutus", "txCount": 500, "tps": 10
       , "submitMode": { "NodeToNode": [] }
       , "spendMode": {
 	  "SpendScript": [
 	      "bench/script/sum1ToN.plutus",
-	      { "memory": 700000000, "steps": 700000000 }
-
+	      { "memory": 700000000, "steps": 700000000 },
+              3,
+	      6
 	  ]
       }
     },

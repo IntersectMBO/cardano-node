@@ -316,7 +316,8 @@ runBenchmark :: SubmitMode -> SpendMode -> ThreadName -> NumberOfTxs -> TPSRate 
 runBenchmark submitMode spendMode threadName txCount tps
   = case spendMode of
       SpendOutput -> withEra $ runBenchmarkInEra submitMode threadName txCount tps
-      SpendScript scriptFile executionUnits -> runPlutusBenchmark submitMode scriptFile executionUnits threadName txCount tps
+      SpendScript scriptFile executionUnits scriptData scriptRedeemer
+        -> runPlutusBenchmark submitMode scriptFile executionUnits scriptData scriptRedeemer threadName txCount tps
 
 
 runBenchmarkInEra :: forall era. IsShelleyBasedEra era => SubmitMode -> ThreadName -> NumberOfTxs -> TPSRate -> AsType era -> ActionM ()
@@ -376,8 +377,8 @@ runBenchmarkInEra submitMode (ThreadName threadName) txCount tps era = do
         Right ctl -> setName (ThreadName threadName) ctl
     _otherwise -> runWalletScriptInMode submitMode $ walletScript $ FundSet.Target "alternate-submit-mode"
 
-runPlutusBenchmark :: SubmitMode -> FilePath -> ExecutionUnits -> ThreadName -> NumberOfTxs -> TPSRate -> ActionM ()
-runPlutusBenchmark submitMode scriptFile  executionUnits (ThreadName threadName) txCount tps = do
+runPlutusBenchmark :: SubmitMode -> FilePath -> ExecutionUnits -> ScriptData -> ScriptRedeemer -> ThreadName -> NumberOfTxs -> TPSRate -> ActionM ()
+runPlutusBenchmark submitMode scriptFile executionUnits scriptData scriptRedeemer (ThreadName threadName) txCount tps = do
   tracers  <- get BenchTracers
   targets  <- getUser TTargets
   (NumberOfInputsPerTx   numInputs) <- getUser TNumberOfInputsPerTx
@@ -438,8 +439,8 @@ runPlutusBenchmark submitMode scriptFile  executionUnits (ThreadName threadName)
                           PlutusScriptV1InAlonzo
                           PlutusScriptV1
                           script
-                          (ScriptDatumForTxIn $ ScriptDataNumber 3) -- script data
-                          (ScriptDataNumber 6) -- script redeemer
+                          (ScriptDatumForTxIn scriptData)
+                          scriptRedeemer
                           executionUnits
 
     txGenerator = genTxPlutusSpend protocolParameters collateral scriptWitness (mkFee totalFee) metadata
@@ -518,15 +519,14 @@ createChange submitMode payMode value count = case payMode of
   -- Problem here: PayToCollateral will create an output marked as collateral
   -- and also return any change to a collateral, which makes the returned change unusable.
   PayToCollateral -> withEra $ createChangeInEra submitMode CollateralFund value count
-  PayToScript scriptFile -> createChangeScriptFunds submitMode scriptFile value count
+  PayToScript scriptFile scriptData -> createChangeScriptFunds submitMode scriptFile scriptData value count
 
-createChangeScriptFunds :: SubmitMode -> FilePath -> Lovelace -> Int -> ActionM ()
-createChangeScriptFunds submitMode scriptFile value count = do
+createChangeScriptFunds :: SubmitMode -> FilePath -> ScriptData -> Lovelace -> Int -> ActionM ()
+createChangeScriptFunds submitMode scriptFile scriptData value count = do
   walletRef <- get GlobalWallet
   networkId <- get NetworkId
   fundKey <- getName $ KeyName "pass-partout"
   fee <- getUser TFee  
-  let scriptData = PlutusExample.toScriptHash "e88bd757ad5b9bedf372d8d3f0cf6c962a469db61a265f6418e1ffed86da29ec"
   script <- liftIO $ PlutusExample.readScript scriptFile --TODO: this should throw a file-not-found-error !
   let
     createCoins fundSource coins = do
@@ -535,7 +535,7 @@ createChangeScriptFunds submitMode scriptFile value count = do
 --        selector = mkWalletFundSource walletRef $ FundSet.selectMinValue $ sum coins + fee
         inOut :: [Lovelace] -> [Lovelace]
         inOut = Wallet.includeChange fee coins
-        toUTxO = PlutusExample.mkUtxoScript networkId fundKey (scriptFile,script,scriptData) Confirmed
+        toUTxO = PlutusExample.mkUtxoScript networkId fundKey (scriptFile, script, hashScriptData scriptData) Confirmed
         fundToStore = mkWalletFundStore walletRef
 
       tx <- liftIO $ sourceToStoreTransaction (genTx (mkFee fee) TxMetadataNone) fundSource inOut toUTxO fundToStore

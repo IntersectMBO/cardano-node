@@ -38,14 +38,16 @@
     },
     { "createChange" :    2300000000, "count" :     9000
       , "submitMode": { "DumpToFile": "/tmp/script-txs.txt" }
-      , "payMode": { "PayToScript": "bench/script/sum1ToN.plutus" }
+      , "payMode": { "PayToScript": [ "bench/script/sum1ToN.plutus", 3] }
     },
     { "runBenchmark": "walletBasedBenchmark", "txCount": 4000, "tps": 10
       , "submitMode": { "DumpToFile": "/tmp/submit-txs.txt" }
       , "spendMode": {
 	  "SpendScript": [
 	      "bench/script/sum1ToN.plutus",
-	      { "memory": 700000000, "steps": 700000000 }
+	      { "memory": 700000000, "steps": 700000000 },
+	      3,
+	      6
 	  ]
       }
     }

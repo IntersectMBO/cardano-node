@@ -64,6 +64,8 @@ let
                     then { SpendScript = [
                              (plutusScript cfg)
                              {memory = executionMemory; steps = executionSteps; }
+                             plutusData
+                             plutusRedeemer
                            ]; }
                     else { SpendOutput = []; };
       }
@@ -104,7 +106,7 @@ let
     [ { createChange = value;
         count = count;
         submitMode.LocalSocket = [];
-        payMode.PayToScript = plutusScript cfg;
+        payMode = { PayToScript = [ (plutusScript cfg) cfg.plutusData ]; };
       }
       { delay = cfg.init_cooldown; }
     ];
@@ -141,6 +143,8 @@ in pkgs.commonLib.defServiceModule
         ##
         plutusMode      = opt bool false     "Whether to benchmark Plutus scripts";
         plutusScript    = opt str  "sum.plutus" "Path to the Plutus script";
+        plutusData      = opt int          3 "Data passed to the Plutus script (for now only an int).";
+        plutusRedeemer  = opt int          6 "Redeemer data passed to the Plutus script (for now only an int).";
         executionMemory = opt int    1000000 "Max memory available for the Plutus script";
         executionSteps  = opt int  700000000 "Max execution steps available for the Plutus script";
 
