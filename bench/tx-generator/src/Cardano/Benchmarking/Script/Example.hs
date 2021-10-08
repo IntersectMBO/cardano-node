@@ -8,7 +8,7 @@ import qualified Data.List.NonEmpty as NonEmpty
 import           Data.Word
 import           Data.Dependent.Sum ((==>) )
 
-import           Cardano.Api (AnyCardanoEra(..), CardanoEra(..), Quantity(..), SlotNo(..), quantityToLovelace )
+import           Cardano.Api (AnyCardanoEra(..), CardanoEra(..), Quantity(..), ScriptData(..), SlotNo(..), quantityToLovelace )
 import           Cardano.Api.Shelley (ExecutionUnits(..))
 import           Cardano.Node.Types
 import           Ouroboros.Network.NodeToClient (withIOManager)
@@ -63,7 +63,7 @@ testScript =
   , Reserved []
   ]
  where
-  scriptDef = SpendScript "filePath" (ExecutionUnits 70000000 70000000)
+  scriptDef = SpendScript "filePath" (ExecutionUnits 70000000 70000000) (ScriptDataNumber 3) (ScriptDataNumber 6)
   passPartout = KeyName "pass-partout"
   genFund = FundName "genFund"
   outputFunds = map FundName ["fund1", "fund2", "fund3", "fund4"]

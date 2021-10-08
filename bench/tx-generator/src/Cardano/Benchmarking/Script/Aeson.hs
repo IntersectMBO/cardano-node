@@ -22,7 +22,7 @@ import           Data.Aeson.Types
 import           Data.Aeson.Encode.Pretty
 import qualified Data.Attoparsec.ByteString as Atto
 
-import           Cardano.Api (AnyCardanoEra(..), CardanoEra(..))
+import           Cardano.Api (AnyCardanoEra(..), CardanoEra(..), ScriptData, ScriptDataJsonSchema(..), scriptDataFromJson, scriptDataToJson)
 import           Cardano.CLI.Types (SigningKeyFile(..))
 
 import           Cardano.Benchmarking.Script.Env
@@ -58,6 +58,14 @@ instance FromJSON AnyCardanoEra where
 
 jsonOptionsUnTaggedSum :: Options
 jsonOptionsUnTaggedSum = defaultOptions { sumEncoding = ObjectWithSingleField }
+
+-- Orphan instance used in the tx-generator
+instance ToJSON ScriptData where
+  toJSON = scriptDataToJson ScriptDataJsonNoSchema
+instance FromJSON ScriptData where
+  parseJSON v = case scriptDataFromJson ScriptDataJsonNoSchema v of
+    Right r -> return r
+    Left err -> fail $ show err
 
 instance ToJSON SubmitMode where
   toJSON     = genericToJSON jsonOptionsUnTaggedSum

@@ -15,7 +15,7 @@ import           Prelude
 import           GHC.Generics
 
 import           Cardano.Benchmarking.OuroborosImports (SigningKeyFile)
-import           Cardano.Api (AnyCardanoEra, ExecutionUnits, Lovelace)
+import           Cardano.Api (AnyCardanoEra, ExecutionUnits, Lovelace, ScriptData, ScriptRedeemer)
 
 import           Cardano.Benchmarking.Script.Env
 import           Cardano.Benchmarking.Script.Store
@@ -53,12 +53,12 @@ deriving instance Generic SubmitMode
 data PayMode where
   PayToAddr :: PayMode
   PayToCollateral :: PayMode  
-  PayToScript :: !String -> PayMode
+  PayToScript :: !String -> !ScriptData -> PayMode
   deriving (Show, Eq)
 deriving instance Generic PayMode
 
 data SpendMode where
   SpendOutput :: SpendMode
-  SpendScript :: !String -> !ExecutionUnits -> SpendMode
+  SpendScript :: !String -> !ExecutionUnits -> !ScriptData -> !ScriptRedeemer -> SpendMode
   deriving (Show, Eq)
 deriving instance Generic SpendMode
