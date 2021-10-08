@@ -145,8 +145,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: 64d7702866225f6d53afab4e2fe935f2f0d5848a
-  --sha256: 0aalxzrgb1pgaz254mddmrcn2zk6g0yip383kc346ma1nn49frh1
+  tag: 654f5b7c76f7cc57900b4ddc664a82fc3b925fb0
+  --sha256: 0j4x9zbx5dkww82sqi086h39p456iq5xr476ylmrnpwcpfb4xai4
   subdir:
     base-deriving-via
     binary
@@ -168,8 +168,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger-specs
-  tag: c6c4be1562e23a3dd48282387c4e48ff918fbab0
-  --sha256: 1csi3ypq9h14hpf7fw40my11gb6gr4dvdiy7bl1nsi913qzbcra8
+  tag: ac51494e151af0ad99b937a787458ce71db0aaea
+  --sha256: 1dh80kaqhq4fn0w1dixcqiir3mz5nahr7n9drds3rrjlx1nkczi4
   subdir:
     eras/alonzo/impl
     eras/alonzo/test-suite
@@ -195,8 +195,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-prelude
-  tag: fd773f7a58412131512b9f694ab95653ac430852
-  --sha256: 02jddik1yw0222wd6q0vv10f7y8rdgrlqaiy83ph002f9kjx7mh6
+  tag: c7fc9fba236972c27a55e0f3d34c2758cf616bfc
+  --sha256: 0sg1hhnifqxfc5n5f9ikbxyrjlg77hynbhsql0h4smqniw29dbwk
   subdir:
     cardano-prelude
     cardano-prelude-test
@@ -231,8 +231,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: e0ccbb73296027a5e5fd224a78374321974758ce
-  --sha256: 1a6djwb2jkhh4pq6iwr10zxgpiz3n3f2yw54ciwnwqdm59cami38
+  tag: c834f359e519a31afc5a285b6aad9fc49355ff19
+  --sha256: 1dimgkjc8d96k5gwp5cml8l79rpydyi7cvk6af94ihhgpshfz428
   subdir:
     io-sim
     io-classes
@@ -251,8 +251,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/plutus
-  tag: 15121dd4dc66df7c17c6c0f2f4a8702ad841c020
-  --sha256: 1g5jm1r58x5ly3vsk8hr3dviqnv1bqhxi2b87vmr53554pd6zcqp
+  tag: cc7bc06c4344cee6cd59bc170063fd627da25ed3
+  --sha256: 0fas8kv57lyrsn3larvbfgif48d506w73y7g3g0mxfilfsl5nyfz
   subdir:
     plutus-core
     plutus-ledger
@@ -260,7 +260,6 @@ source-repository-package
     plutus-tx
     plutus-tx-plugin
     prettyprinter-configurable
-    stubs/plutus-ghc-stub
     word-array
 
 source-repository-package
