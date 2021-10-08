@@ -29,6 +29,11 @@ in {
       socketPath = lib.mkOption {
         type = lib.types.nullOr lib.types.path;
         default = null;
+        description = ''
+          cardano node socket path. If set, the entrypoint
+          takes this value over CARDANO_NODE_SOCKET_PATH env
+          variable.
+        '';
       };
       config = lib.mkOption {
         type = lib.types.nullOr lib.types.attrs;
