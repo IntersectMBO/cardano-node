@@ -12,27 +12,13 @@ export CARDANO_NODE_SOCKET_PATH="${CARDANO_NODE_SOCKET_PATH:-example/node-bft1/n
 export TESTNET_MAGIC="${TESTNET_MAGIC:-42}"
 export UTXO_VKEY="${UTXO_VKEY:-example/shelley/utxo-keys/utxo1.vkey}"
 export UTXO_SKEY="${UTXO_SKEY:-example/shelley/utxo-keys/utxo1.skey}"
-export RESULT_FILE="${RESULT_FILE:-$WORK/result.out}"
+export RESULT_FILE_TARGET="${RESULT_FILE:-$WORK/target.out}"
+export RESULT_FILE_CHANGE="${RESULT_FILE:-$WORK/change.out}"
 
 echo "Socket path: $CARDANO_NODE_SOCKET_PATH"
 echo "Socket path: $(pwd)"
 
 ls -al "$CARDANO_NODE_SOCKET_PATH"
-
-plutusscriptinuse="$BASE/scripts/plutus/scripts/always-fails.plutus"
-# This datum hash is the hash of the untyped 42
-scriptdatumhash="9e1199a988ba72ffd6e9c269cadb3b53b5f360ff99f112d9b2ee30c4d74ad88b"
-#ExUnits {exUnitsMem = 11300, exUnitsSteps = 45070000}))
-datumfilepath="$BASE/scripts/plutus/data/42.datum"
-redeemerfilepath="$BASE/scripts/plutus/data/42.redeemer"
-echo "Always succeeds Plutus script in use. Any datum and redeemer combination will succeed."
-echo "Script at: $plutusscriptinuse"
-
-# Step 1: Create a tx ouput with a datum hash at the script address. In order for a tx ouput to be locked
-# by a plutus script, it must have a datahash. We also need collateral tx inputs so we split the utxo
-# in order to accomodate this.
-
-plutusscriptaddr=$($CARDANO_CLI address build --payment-script-file "$plutusscriptinuse"  --testnet-magic "$TESTNET_MAGIC")
 
 mkdir -p "$WORK"
 
@@ -43,9 +29,10 @@ cat $WORK/utxo-1.json
 
 txin=$(jq -r 'keys[]' $WORK/utxo-1.json)
 lovelaceattxin=$(jq -r ".[\"$txin\"].value.lovelace" $WORK/utxo-1.json)
-lovelaceattxindiv3=$(expr $lovelaceattxin / 3)
+lovelaceattxindiv2=$(expr $lovelaceattxin / 2)
 
-$CARDANO_CLI query protocol-parameters --testnet-magic "$TESTNET_MAGIC" --out-file $WORK/pparams.json
+changeaddr=addr_test1qpmxr8d8jcl25kyz2tz9a9sxv7jxglhddyf475045y8j3zxjcg9vquzkljyfn3rasfwwlkwu7hhm59gzxmsyxf3w9dps8832xh
+targetaddr=addr_test1vpqgspvmh6m2m5pwangvdg499srfzre2dd96qq57nlnw6yctpasy4
 
 $CARDANO_CLI transaction build \
   --alonzo-era \
@@ -62,4 +49,18 @@ $CARDANO_CLI transaction sign \
   --signing-key-file $UTXO_SKEY \
   --out-file $WORK/build.tx
 
+# SUBMIT
 $CARDANO_CLI transaction submit --tx-file $WORK/build.tx --testnet-magic "$TESTNET_MAGIC"
+echo "Pausing for 5 seconds..."
+sleep 5
+
+echo "Querying UTxO at change address and target address."
+echo ""
+echo "Target address"
+echo ""
+$CARDANO_CLI query utxo --address "$targetaddr"  --testnet-magic "$TESTNET_MAGIC" \
+  | tee "$RESULT_FILE_TARGET"
+echo "Change address"
+echo ""
+$CARDANO_CLI query utxo --address "$changeaddr"  --testnet-magic "$TESTNET_MAGIC" \
+  | tee "$RESULT_FILE_CHANGE"
