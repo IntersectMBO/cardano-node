@@ -620,7 +620,7 @@ echo ""
 echo "EnableLogMetrics: False" >> ${ROOT}/configuration.yaml
 echo "EnableLogging: True" >> ${ROOT}/configuration.yaml
 
-echo "MempoolCapacityBytesOverride: 10000" >> ${ROOT}/configuration.yaml
+echo "MempoolCapacityBytesOverride: 1" >> ${ROOT}/configuration.yaml
 
 if [ "$1" = "alonzo" ]; then
   echo "TestShelleyHardForkAtEpoch: 0" >> ${ROOT}/configuration.yaml
