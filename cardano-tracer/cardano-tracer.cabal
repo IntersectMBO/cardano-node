@@ -65,7 +65,6 @@ library
                        , extra
                        , filepath
                        , hashable
-                       , libsystemd-journal
                        , optparse-applicative
                        , ouroboros-network-framework
                        , snap-blaze
@@ -77,6 +76,9 @@ library
                        , trace-dispatcher
                        , trace-forward
                        , unordered-containers
+
+  if !os(windows)
+    build-depends:     libsystemd-journal
 
 executable cardano-tracer
   import:              base, project-config
