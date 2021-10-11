@@ -4,16 +4,18 @@ module Test.Cardano.Api.Typed.Value
   ( tests
   ) where
 
-import           Cardano.Api.Shelley
+import           Prelude
+
 import           Data.Aeson
 import           Data.List (groupBy, sort)
-import           Gen.Cardano.Api.Typed
-import           Gen.Tasty.Hedgehog.Group (fromGroup)
-import           Hedgehog (Property, discover, forAll, property, tripping, (===))
-import           Prelude
-import           Test.Tasty (TestTree)
-
 import qualified Data.Map.Strict as Map
+import           Hedgehog (Property, forAll, property, tripping, (===))
+import           Test.Tasty (TestTree)
+import           Test.Tasty.Hedgehog (testProperty)
+import           Test.Tasty.TH (testGroupGenerator)
+
+import           Cardano.Api.Shelley
+import           Gen.Cardano.Api.Typed
 
 prop_roundtrip_Value_JSON :: Property
 prop_roundtrip_Value_JSON =
@@ -68,4 +70,4 @@ canonicalise =
 -- -----------------------------------------------------------------------------
 
 tests :: TestTree
-tests = fromGroup $$discover
+tests = $testGroupGenerator

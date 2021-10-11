@@ -7,16 +7,18 @@ module Test.Cardano.Api.Ledger
   ) where
 
 import           Cardano.Prelude
+
+import           Hedgehog (Property)
+import qualified Hedgehog as H
+import qualified Hedgehog.Extras.Aeson as H
+import           Test.Tasty (TestTree)
+import           Test.Tasty.Hedgehog (testProperty)
+import           Test.Tasty.TH (testGroupGenerator)
+
 import           Cardano.Ledger.Address (deserialiseAddr, serialiseAddr)
-import           Gen.Tasty.Hedgehog.Group (fromGroup)
-import           Hedgehog (Property, discover)
 import           Ouroboros.Consensus.Shelley.Eras (StandardCrypto)
 import           Test.Cardano.Api.Genesis
 import           Test.Cardano.Ledger.Shelley.Serialisation.Generators.Genesis (genAddress)
-import           Test.Tasty (TestTree)
-
-import qualified Hedgehog as H
-import qualified Hedgehog.Extras.Aeson as H
 
 prop_golden_ShelleyGenesis :: Property
 prop_golden_ShelleyGenesis = H.goldenTestJsonValuePretty exampleShelleyGenesis "test/Golden/ShelleyGenesis"
@@ -33,4 +35,4 @@ prop_roundtrip_Address_CBOR = H.property $ do
 -- -----------------------------------------------------------------------------
 
 tests :: TestTree
-tests = fromGroup $$discover
+tests = $testGroupGenerator

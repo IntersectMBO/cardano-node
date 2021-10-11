@@ -5,15 +5,17 @@ module Test.Cardano.Api.Typed.RawBytes
   ( tests
   ) where
 
-import           Cardano.Api
 import           Cardano.Prelude
-import           Gen.Cardano.Api.Typed
-import           Gen.Tasty.Hedgehog.Group (fromGroup)
-import           Hedgehog (Property, discover)
-import           Test.Cardano.Api.Typed.Orphans ()
-import           Test.Tasty (TestTree)
 
+import           Hedgehog (Property)
 import qualified Hedgehog as H
+import           Test.Tasty (TestTree)
+import           Test.Tasty.Hedgehog (testProperty)
+import           Test.Tasty.TH (testGroupGenerator)
+
+import           Cardano.Api
+import           Gen.Cardano.Api.Typed
+import           Test.Cardano.Api.Typed.Orphans ()
 
 {- HLINT ignore "Use camelCase" -}
 
@@ -95,4 +97,4 @@ roundtrip_verification_key_hash_raw roletoken =
 -- -----------------------------------------------------------------------------
 
 tests :: TestTree
-tests = fromGroup $$discover
+tests = $testGroupGenerator
