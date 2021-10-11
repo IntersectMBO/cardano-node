@@ -54,14 +54,18 @@ module Cardano.Api.Query (
 
   ) where
 
-import           Data.Aeson (ToJSON (..), object, (.=))
+import           Data.Aeson (FromJSON (..), ToJSON (..), object, withObject, (.=))
+import qualified Data.Aeson as Aeson
+import           Data.Aeson.Types (Parser)
 import           Data.Bifunctor (bimap)
+import qualified Data.HashMap.Strict as HMS
 import           Data.Map (Map)
 import qualified Data.Map as Map
 import           Data.Maybe (mapMaybe)
 import           Data.SOP.Strict (SListI)
 import           Data.Set (Set)
 import qualified Data.Set as Set
+import           Data.Text (Text)
 import           Data.Typeable
 import           Prelude
 
@@ -246,7 +250,7 @@ data QueryUTxOFilter =
 newtype ByronUpdateState = ByronUpdateState Byron.Update.State
   deriving Show
 
-newtype UTxO era = UTxO (Map TxIn (TxOut CtxUTxO era))
+newtype UTxO era = UTxO { unUTxO :: Map TxIn (TxOut CtxUTxO era) }
   deriving (Eq, Show)
 
 data UTxOInAnyEra where
@@ -258,6 +262,18 @@ deriving instance Show UTxOInAnyEra
 
 instance IsCardanoEra era => ToJSON (UTxO era) where
   toJSON (UTxO m) = toJSON m
+
+instance (IsCardanoEra era, IsShelleyBasedEra era, FromJSON (TxOut CtxUTxO era))
+  => FromJSON (UTxO era) where
+    parseJSON = withObject "UTxO" $ \hm -> do
+      let l = HMS.toList hm
+      res <- mapM toTxIn l
+      pure . UTxO $ Map.fromList res
+     where
+      toTxIn :: (Text, Aeson.Value) -> Parser (TxIn, TxOut CtxUTxO era)
+      toTxIn (txinText, txOutVal) = do
+        (,) <$> parseJSON (Aeson.String txinText)
+            <*> parseJSON txOutVal
 
 newtype SerialisedDebugLedgerState era
   = SerialisedDebugLedgerState (Serialised (Shelley.NewEpochState (ShelleyLedgerEra era)))

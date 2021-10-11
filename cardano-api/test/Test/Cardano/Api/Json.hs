@@ -7,27 +7,41 @@ module Test.Cardano.Api.Json
   ( tests
   ) where
 
-import           Cardano.Api (EraInMode (..))
+import           Cardano.Prelude
+
+import           Cardano.Api
 import           Cardano.Api.Orphans ()
-import           Cardano.Prelude (Either (Right), ($), (==))
+
 import           Data.Aeson (FromJSON (parseJSON), ToJSON (toJSON), eitherDecode, encode)
 import           Data.Aeson.Types (Parser, parseEither)
 import           Gen.Cardano.Api (genAlonzoGenesis)
+import           Gen.Cardano.Api.Typed
 import           Gen.Tasty.Hedgehog.Group (fromGroup)
-import           Hedgehog (Property, discover, forAll, tripping)
-import           Test.Tasty (TestTree)
 
+import           Hedgehog (Property, discover, forAll, tripping)
 import qualified Hedgehog as H
+import           Test.Tasty (TestTree)
 
 {- HLINT ignore "Use camelCase" -}
 
-prop_roundtrip_alonzo_genesis :: Property
-prop_roundtrip_alonzo_genesis = H.property $ do
+prop_json_roundtrip_alonzo_genesis :: Property
+prop_json_roundtrip_alonzo_genesis = H.property $ do
   genesis <- forAll genAlonzoGenesis
   tripping genesis encode eitherDecode
 
-prop_roundtrip_eraInMode :: Property
-prop_roundtrip_eraInMode = H.property $ do
+prop_json_roundtrip_utxo :: Property
+prop_json_roundtrip_utxo = H.property $ do
+  utxo <- forAll $ genUTxO AlonzoEra
+  tripping utxo encode eitherDecode
+
+prop_json_roundtrip_txoutvalue :: Property
+prop_json_roundtrip_txoutvalue = H.property $ do
+  oVal <- forAll $ genTxOutValue AlonzoEra
+  tripping oVal encode eitherDecode
+
+
+prop_json_roundtrip_eraInMode :: Property
+prop_json_roundtrip_eraInMode = H.property $ do
   H.assert $ parseEither rountripEraInModeParser ByronEraInByronMode == Right ByronEraInByronMode
   H.assert $ parseEither rountripEraInModeParser ShelleyEraInShelleyMode == Right ShelleyEraInShelleyMode
   H.assert $ parseEither rountripEraInModeParser ByronEraInCardanoMode == Right ByronEraInCardanoMode

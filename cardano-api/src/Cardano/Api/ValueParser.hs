@@ -1,5 +1,6 @@
-module Cardano.CLI.Mary.ValueParser
+module Cardano.Api.ValueParser
   ( parseValue
+  , assetName
   ) where
 
 import           Prelude
@@ -11,7 +12,7 @@ import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import           Data.Word (Word64)
 
-import           Control.Applicative (some, (<|>))
+import           Control.Applicative (many, some, (<|>))
 
 import           Text.Parsec as Parsec (notFollowedBy, try, (<?>))
 import           Text.Parsec.Char (alphaNum, char, digit, hexDigit, space, spaces, string)
@@ -19,7 +20,8 @@ import           Text.Parsec.Expr (Assoc (..), Operator (..), buildExpressionPar
 import           Text.Parsec.String (Parser)
 import           Text.ParserCombinators.Parsec.Combinator (many1)
 
-import           Cardano.Api
+import           Cardano.Api.SerialiseRaw
+import           Cardano.Api.Value
 
 -- | Parse a 'Value' from its string representation.
 parseValue :: Parser Value
@@ -112,7 +114,7 @@ decimal = do
 -- | Asset name parser.
 assetName :: Parser AssetName
 assetName =
-    toAssetName <$> some alphaNum
+    toAssetName <$> many alphaNum
   where
     toAssetName = AssetName . Text.encodeUtf8 . Text.pack
 

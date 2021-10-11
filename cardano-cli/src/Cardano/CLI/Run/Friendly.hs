@@ -19,7 +19,6 @@ import           Data.Yaml (array)
 import           Data.Yaml.Pretty (defConfig, encodePretty, setConfCompare)
 
 import           Cardano.Api
-import           Cardano.Api.Byron (Lovelace (..))
 import           Cardano.Api.Shelley (Address (ShelleyAddress), StakeAddress (..))
 import           Cardano.Ledger.Crypto (Crypto)
 import qualified Cardano.Ledger.Shelley.API as Shelley

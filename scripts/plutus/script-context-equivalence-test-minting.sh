@@ -105,13 +105,14 @@ cardano-cli transaction sign \
   --out-file "$work/plutusmint.tx"
 
 # Generate the "real" redeeemer!
+correctredeemer="$work/script-context.redeemer"
 
 create-script-context \
   --generate-tx "$work/plutusmint.tx" \
   --cardano-mode \
   --testnet-magic 42 \
+  --out-file "$correctredeemer" \
 
-correctredeemer="$work/script-context.redeemer"
 
 cardano-cli transaction build \
   --alonzo-era \

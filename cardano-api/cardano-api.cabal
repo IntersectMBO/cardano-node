@@ -93,6 +93,7 @@ library
                         Cardano.Api.TxSubmit.Types
                         Cardano.Api.Utils
                         Cardano.Api.Value
+                        Cardano.Api.ValueParser
 
   build-depends:        aeson             >= 1.5.6.0
                       , aeson-pretty      >= 0.8.5
@@ -131,6 +132,7 @@ library
                       , ouroboros-consensus-shelley
                       , ouroboros-network
                       , ouroboros-network-framework
+                      , parsec
                       , plutus-ledger-api
                       , prettyprinter
                       , scientific

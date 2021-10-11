@@ -25,6 +25,8 @@ module Cardano.Api.Address (
 
     -- ** Addresses in any era
     AddressAny(..),
+    lexPlausibleAddressString,
+    parseAddressAny,
 
     -- ** Addresses in specific eras
     AddressInEra(..),
@@ -68,11 +70,15 @@ module Cardano.Api.Address (
 
 import           Prelude
 
-import           Data.Aeson (ToJSON (..))
+import           Data.Aeson (FromJSON (..), ToJSON (..), withText)
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Base58 as Base58
+import           Data.Char
 import           Data.Text (Text)
+import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
+import qualified Text.Parsec as Parsec
+import qualified Text.Parsec.String as Parsec
 
 import           Control.Applicative
 
@@ -86,6 +92,7 @@ import           Cardano.Api.NetworkId
 import           Cardano.Api.Script
 import           Cardano.Api.SerialiseBech32
 import           Cardano.Api.SerialiseRaw
+import           Cardano.Api.Utils
 import qualified Cardano.Chain.Common as Byron
 import qualified Cardano.Ledger.Address as Shelley
 import qualified Cardano.Ledger.BaseTypes as Shelley
@@ -316,6 +323,29 @@ data AddressInEra era where
 
 instance IsCardanoEra era => ToJSON (AddressInEra era) where
   toJSON = Aeson.String . serialiseAddress
+
+instance IsShelleyBasedEra era => FromJSON (AddressInEra era) where
+  parseJSON = withText "AddressInEra" $ \txt -> do
+    addressAny <- runParsecParser parseAddressAny txt
+    pure $ anyAddressInShelleyBasedEra addressAny
+
+parseAddressAny :: Parsec.Parser AddressAny
+parseAddressAny = do
+    str <- lexPlausibleAddressString
+    case deserialiseAddress AsAddressAny str of
+      Nothing   -> fail $ "invalid address: " <> Text.unpack str
+      Just addr -> pure addr
+
+lexPlausibleAddressString :: Parsec.Parser Text
+lexPlausibleAddressString =
+    Text.pack <$> Parsec.many1 (Parsec.satisfy isPlausibleAddressChar)
+  where
+    -- Covers both base58 and bech32 (with constrained prefixes)
+    isPlausibleAddressChar c =
+         isAsciiLower c
+      || isAsciiUpper c
+      || isDigit c
+      || c == '_'
 
 instance Eq (AddressInEra era) where
   (==) (AddressInEra ByronAddressInAnyEra addr1)
@@ -576,3 +606,4 @@ fromShelleyStakeReference (Shelley.StakeRefPtr ptr) =
   StakeAddressByPointer (StakeAddressPointer ptr)
 fromShelleyStakeReference Shelley.StakeRefNull =
   NoStakeAddress
+

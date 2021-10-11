@@ -6,7 +6,7 @@ where
 import           Cardano.Prelude hiding (option)
 import           Prelude (String)
 
-import           Cardano.Api
+import           Cardano.Api hiding (lexPlausibleAddressString, parseAddressAny)
 import           Cardano.CLI.Types (SigningKeyFile (..))
 import           Cardano.Node.Types
 import qualified Control.Arrow as Arr

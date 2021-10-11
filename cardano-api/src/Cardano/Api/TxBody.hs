@@ -19,7 +19,7 @@
 -- | Transaction bodies
 --
 module Cardano.Api.TxBody (
-
+    parseTxId,
     -- * Transaction bodies
     TxBody(.., TxBody),
     makeTransactionBody,
@@ -56,6 +56,7 @@ module Cardano.Api.TxBody (
     prettyRenderTxOut,
     txOutValueToLovelace,
     txOutValueToValue,
+    parseHashScriptData,
     TxOutInAnyEra(..),
     txOutInAnyEra,
 
@@ -139,27 +140,35 @@ module Cardano.Api.TxBody (
 import           Prelude
 
 import           Control.Monad (guard)
-import           Data.Aeson (object, (.=))
+import           Data.Aeson (object, withObject, withText, (.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
 import           Data.Aeson.Types (ToJSONKey (..), toJSONKeyText)
+import qualified Data.Aeson.Types as Aeson
 import           Data.Bifunctor (first)
 import           Data.ByteString (ByteString)
+import qualified Data.ByteString.Char8 as BSC
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Foldable (toList)
 import           Data.Function (on)
+import qualified Data.HashMap.Strict as HMS
 import           Data.List (intercalate, sortBy)
 import qualified Data.List.NonEmpty as NonEmpty
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (fromMaybe, maybeToList)
+import           Data.Scientific (toBoundedInteger)
 import qualified Data.Sequence.Strict as Seq
 import           Data.Set (Set)
 import qualified Data.Set as Set
-import           Data.String (IsString)
+import           Data.String
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Data.Word (Word64)
 import           GHC.Generics
+import qualified Text.Parsec as Parsec
+import qualified Text.Parsec.Language as Parsec
+import qualified Text.Parsec.String as Parsec
+import qualified Text.Parsec.Token as Parsec
 
 import           Cardano.Binary (Annotated (..), reAnnotate, recoverBytes)
 import qualified Cardano.Binary as CBOR
@@ -226,6 +235,7 @@ import           Cardano.Api.SerialiseUsing
 import           Cardano.Api.TxMetadata
 import           Cardano.Api.Utils
 import           Cardano.Api.Value
+import           Cardano.Api.ValueParser
 import           Cardano.Ledger.Crypto (StandardCrypto)
 
 {- HLINT ignore "Redundant flip" -}
@@ -387,6 +397,26 @@ instance ToJSON TxIn where
 instance ToJSONKey TxIn where
   toJSONKey = toJSONKeyText renderTxIn
 
+instance FromJSON TxIn where
+  parseJSON = withText "TxIn" $ \txinStr -> runParsecParser parseTxIn txinStr
+
+parseTxId :: Parsec.Parser TxId
+parseTxId = do
+  str <- Parsec.many1 Parsec.hexDigit Parsec.<?> "transaction id (hexadecimal)"
+  case deserialiseFromRawBytesHex AsTxId (BSC.pack str) of
+    Just addr -> return addr
+    Nothing -> fail $ "Incorrect transaction id format:: " ++ show str
+
+parseTxIn :: Parsec.Parser TxIn
+parseTxIn = TxIn <$> parseTxId <*> (Parsec.char '#' *> parseTxIx)
+
+parseTxIx :: Parsec.Parser TxIx
+parseTxIx = TxIx . fromIntegral <$> decimal
+
+decimal :: Parsec.Parser Integer
+Parsec.TokenParser { Parsec.decimal = decimal } = Parsec.haskell
+
+
 renderTxIn :: TxIn -> Text
 renderTxIn (TxIn txId (TxIx ix)) =
   serialiseToRawBytesHexText txId <> "#" <> Text.pack (show ix)
@@ -470,6 +500,53 @@ instance IsCardanoEra era => ToJSON (TxOut ctx era) where
            , "datum"     .= scriptDataToJson ScriptDataJsonDetailedSchema d
            ]
 
+instance (IsShelleyBasedEra era, IsCardanoEra era)
+  => FromJSON (TxOut CtxTx era) where
+      parseJSON = withObject "TxOut" $ \o -> do
+        addr <- o .: "address"
+        val <- o .: "value"
+        case scriptDataSupportedInEra cardanoEra of
+          Just supported -> do
+            mData <- o .:? "datum"
+            mDatumHash <- o .:? "datumhash"
+            case (mData, mDatumHash) of
+              (Nothing, Nothing) ->
+                pure $ TxOut addr val TxOutDatumNone
+              (Nothing, Just (Aeson.String dHashTxt))  -> do
+                dh <- runParsecParser parseHashScriptData dHashTxt
+                pure $ TxOut addr val $ TxOutDatumHash supported dh
+              (Just sDataVal, Just (Aeson.String dHashTxt)) ->
+                case scriptDataFromJson ScriptDataJsonDetailedSchema sDataVal of
+                  Left err ->
+                    fail $ "Error parsing TxOut JSON: " <> displayError err
+                  Right sData -> do
+                    dHash <- runParsecParser parseHashScriptData dHashTxt
+                    pure . TxOut addr val $ TxOutDatum' supported dHash sData
+              (mDatVal, wrongDatumHashFormat) ->
+                fail $ "Error parsing TxOut's datum hash/data: " <>
+                       "\nData value:" <> show mDatVal <>
+                       "\nDatumHash: " <> show wrongDatumHashFormat
+
+          Nothing -> pure $ TxOut addr val TxOutDatumNone
+
+instance (IsShelleyBasedEra era, IsCardanoEra era)
+  => FromJSON (TxOut CtxUTxO era) where
+      parseJSON = withObject "TxOut" $ \o -> do
+        addr <- o .: "address"
+        val <- o .: "value"
+        case scriptDataSupportedInEra cardanoEra of
+          Just supported -> do
+            mDatumHash <- o .:? "datumhash"
+            case mDatumHash of
+              Nothing ->
+                pure $ TxOut addr val TxOutDatumNone
+              Just (Aeson.String dHashTxt)  -> do
+                dh <- runParsecParser parseHashScriptData dHashTxt
+                pure $ TxOut addr val $ TxOutDatumHash supported dh
+              Just wrongDatumHashFormat ->
+                fail $ "Error parsing TxOut's datum hash: " <>
+                       "\nDatumHash: " <> show wrongDatumHashFormat
+          Nothing -> pure $ TxOut addr val TxOutDatumNone
 
 fromByronTxOut :: Byron.TxOut -> TxOut ctx ByronEra
 fromByronTxOut (Byron.TxOut addr value) =
@@ -970,6 +1047,46 @@ instance ToJSON (TxOutValue era) where
   toJSON (TxOutAdaOnly _ ll) = toJSON ll
   toJSON (TxOutValue _ val) = toJSON val
 
+instance IsCardanoEra era => FromJSON (TxOutValue era) where
+  parseJSON = withObject "TxOutValue" $ \o -> do
+    case multiAssetSupportedInEra cardanoEra of
+      Left onlyAda -> do
+        ll <- o .: "lovelace"
+        pure $ TxOutAdaOnly onlyAda $ selectLovelace ll
+      Right maSupported -> do
+        let l = HMS.toList o
+        vals <- mapM decodeAssetId l
+        pure $ TxOutValue maSupported $ mconcat vals
+    where
+     decodeAssetId :: (Text, Aeson.Value) -> Aeson.Parser Value
+     decodeAssetId (polid, Aeson.Object assetNameHm) = do
+       let polId = fromString $ Text.unpack polid
+       aNameQuantity <- decodeAssets assetNameHm
+       pure . valueFromList
+         $ map (first $ AssetId polId) aNameQuantity
+
+     decodeAssetId ("lovelace", Aeson.Number sci) =
+       case toBoundedInteger sci of
+         Just (ll :: Word64) ->
+           pure $ valueFromList [(AdaAssetId, Quantity $ toInteger ll)]
+         Nothing ->
+           fail $ "Expected a Bounded number but got: " <> show sci
+     decodeAssetId wrong = fail $ "Expected a policy id and a JSON object but got: " <> show wrong
+
+     decodeAssets :: Aeson.Object -> Aeson.Parser [(AssetName, Quantity)]
+     decodeAssets assetNameHm =
+       let l = HMS.toList assetNameHm
+       in mapM (\(aName, q) -> (,) <$> parseAssetName aName <*> decodeQuantity q) l
+
+     parseAssetName :: Text -> Aeson.Parser AssetName
+     parseAssetName aName = runParsecParser assetName aName
+
+     decodeQuantity :: Aeson.Value -> Aeson.Parser Quantity
+     decodeQuantity (Aeson.Number sci) =
+       case toBoundedInteger sci of
+         Just (ll :: Word64) -> return . Quantity $ toInteger ll
+         Nothing -> fail $ "Expected a Bounded number but got: " <> show sci
+     decodeQuantity wrong = fail $ "Expected aeson Number but got: " <> show wrong
 
 lovelaceToTxOutValue :: IsCardanoEra era => Lovelace -> TxOutValue era
 lovelaceToTxOutValue l =
@@ -1031,6 +1148,13 @@ pattern TxOutDatum s d  <- TxOutDatum' s _ d
 {-# COMPLETE TxOutDatumNone, TxOutDatumHash, TxOutDatum' #-}
 {-# COMPLETE TxOutDatumNone, TxOutDatumHash, TxOutDatum  #-}
 
+
+parseHashScriptData :: Parsec.Parser (Hash ScriptData)
+parseHashScriptData = do
+  str <- Parsec.many1 Parsec.hexDigit Parsec.<?> "script data hash"
+  case deserialiseFromRawBytesHex (AsHash AsScriptData) (BSC.pack str) of
+    Just sdh -> return sdh
+    Nothing  -> fail $ "Invalid datum hash: " ++ show str
 
 -- ----------------------------------------------------------------------------
 -- Transaction fees
