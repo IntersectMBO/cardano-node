@@ -4,7 +4,6 @@
 {-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE NamedFieldPuns    #-}
 {-# LANGUAGE PackageImports    #-}
-{-# LANGUAGE RecordWildCards   #-}
 
 module Cardano.TraceDispatcher.Consensus.StartLeadershipCheck
   (

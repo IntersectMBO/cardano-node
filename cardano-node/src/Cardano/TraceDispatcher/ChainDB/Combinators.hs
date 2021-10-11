@@ -170,7 +170,7 @@ namesForChainDBTraceEvents (ChainDB.TraceCopyToImmutableDBEvent
   (ChainDB.CopiedBlockToImmutableDB {})) =
       ["CopyToImmutableDBEvent", "CopiedBlockToImmutableDB"]
 namesForChainDBTraceEvents (ChainDB.TraceCopyToImmutableDBEvent
-  (ChainDB.NoBlocksToCopyToImmutableDB)) =
+  ChainDB.NoBlocksToCopyToImmutableDB) =
       ["CopyToImmutableDBEvent", "NoBlocksToCopyToImmutableDB"]
 namesForChainDBTraceEvents (ChainDB.TraceGCEvent
   (ChainDB.ScheduledGC {})) =

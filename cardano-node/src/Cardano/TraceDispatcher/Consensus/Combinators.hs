@@ -147,7 +147,7 @@ severityBlockFetchClient ::
 severityBlockFetchClient (BlockFetch.TraceLabelPeer _p bf) = severityBlockFetchClient' bf
 
 severityBlockFetchClient' ::
-     (BlockFetch.TraceFetchClientState header)
+     BlockFetch.TraceFetchClientState header
   -> SeverityS
 severityBlockFetchClient' BlockFetch.AddedFetchRequest {}        = Info
 severityBlockFetchClient' BlockFetch.AcknowledgedFetchRequest {} = Info
@@ -184,12 +184,12 @@ namesForBlockFetchClient' BlockFetch.ClientTerminating {} =
       ["ClientTerminating"]
 
 severityBlockFetchServer ::
-     (TraceBlockFetchServerEvent blk)
+     TraceBlockFetchServerEvent blk
   -> SeverityS
 severityBlockFetchServer _ = Info
 
 namesForBlockFetchServer ::
-     (TraceBlockFetchServerEvent blk)
+     TraceBlockFetchServerEvent blk
   -> [Text]
 namesForBlockFetchServer TraceBlockFetchServerSendBlock {} = ["SendBlock"]
 
@@ -248,17 +248,17 @@ namesForTxOutbound' TraceControlMessage {} =
     ["ControlMessage"]
 
 severityLocalTxSubmissionServer ::
-     (TraceLocalTxSubmissionServerEvent blk)
+     TraceLocalTxSubmissionServerEvent blk
   -> SeverityS
 severityLocalTxSubmissionServer _ = Info
 
 namesForLocalTxSubmissionServer ::
-  (TraceLocalTxSubmissionServerEvent blk)
+  TraceLocalTxSubmissionServerEvent blk
   -> [Text]
 namesForLocalTxSubmissionServer TraceReceivedTx {} = ["ReceivedTx"]
 
 severityMempool ::
-     (TraceEventMempool blk)
+     TraceEventMempool blk
   -> SeverityS
 severityMempool _ = Info
 

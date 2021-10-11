@@ -67,7 +67,7 @@ import           Ouroboros.Consensus.Node.Run (SerialiseNodeToNodeConstraints,
                      estimateBlockSize)
 import           Ouroboros.Consensus.Node.Tracers
 
-import           Ouroboros.Network.Block
+import           Ouroboros.Network.Block hiding (blockPrevHash)
 import           Ouroboros.Network.BlockFetch.ClientState (TraceLabelPeer (..))
 import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
 import           Ouroboros.Network.BlockFetch.Decision
@@ -141,6 +141,19 @@ instance (LogFormatting (LedgerUpdate blk), LogFormatting (LedgerWarning blk))
     LedgerUpdate  update  -> forMachine dtal update
     LedgerWarning warning -> forMachine dtal warning
 
+tipToObject :: forall blk. ConvertRawHash blk => Tip blk -> [(Text, Value)]
+tipToObject = \case
+  TipGenesis ->
+    [ "slot"    .= toJSON (0 :: Int)
+    , "block"   .= String "genesis"
+    , "blockNo" .= toJSON ((-1) :: Int)
+    ]
+  Tip slot hash blockno ->
+    [ "slot"    .= slot
+    , "block"   .= String (renderHeaderHash (Proxy @blk) hash)
+    , "blockNo" .= blockno
+    ]
+
 instance (Show (Header blk), ConvertRawHash blk, LedgerSupportsProtocol blk)
       => LogFormatting (TraceChainSyncClientEvent blk) where
   forHuman (TraceDownloadedHeader pt) =
@@ -158,9 +171,10 @@ instance (Show (Header blk), ConvertRawHash blk, LedgerSupportsProtocol blk)
   forHuman (TraceTermination res) =
       "The client has terminated. " <> showT res
 
-  forMachine dtal (TraceDownloadedHeader pt) =
-      mkObject [ "kind" .= String "DownloadedHeader"
-               , "block" .= forMachine dtal (headerPoint pt) ]
+  forMachine _dtal (TraceDownloadedHeader h) =
+      mkObject $
+               [ "kind" .= String "DownloadedHeader"
+               ] <> tipToObject (tipFromHeader h)
   forMachine dtal (TraceRolledBack tip) =
       mkObject [ "kind" .= String "RolledBack"
                , "tip" .= forMachine dtal tip ]
@@ -175,39 +189,34 @@ instance (Show (Header blk), ConvertRawHash blk, LedgerSupportsProtocol blk)
 
 instance ConvertRawHash blk
       => LogFormatting (TraceChainSyncServerEvent blk) where
-  forMachine dtal (TraceChainSyncServerRead tip (AddBlock hdr)) =
-      mkObject [ "kind" .= String "ChainSyncServerRead.AddBlock"
-               , "tip" .= String (renderTipForDetails dtal tip)
-               , "addedBlock" .= String (renderPointForDetails dtal hdr)
-               ]
-  forMachine dtal (TraceChainSyncServerRead tip (RollBack pt)) =
-      mkObject [ "kind" .= String "ChainSyncServerRead.RollBack"
-               , "tip" .= String (renderTipForDetails dtal tip)
-               , "rolledBackBlock" .= String (renderPointForDetails dtal pt)
-               ]
-  forMachine dtal (TraceChainSyncServerReadBlocked tip (AddBlock hdr)) =
-      mkObject [ "kind" .= String "ChainSyncServerReadBlocked.RollForward"
-               , "tip" .= String (renderTipForDetails dtal tip)
-               , "addedBlock" .= String (renderPointForDetails dtal hdr)
-               ]
-  forMachine dtal (TraceChainSyncServerReadBlocked tip (RollBack pt)) =
-      mkObject [ "kind" .= String "ChainSyncServerReadBlocked.RollBack"
-               , "tip" .= String (renderTipForDetails dtal tip)
-               , "rolledBackBlock" .= String (renderPointForDetails dtal pt)
-               ]
+  forMachine _dtal (TraceChainSyncServerRead tip (AddBlock _hdr)) =
+      mkObject $
+               [ "kind" .= String "ChainSyncServerRead.AddBlock"
+               ] <> tipToObject tip
+  forMachine _dtal (TraceChainSyncServerRead tip (RollBack _pt)) =
+      mkObject $
+               [ "kind" .= String "ChainSyncServerRead.RollBack"
+               ] <> tipToObject tip
+  forMachine _dtal (TraceChainSyncServerReadBlocked tip (AddBlock _hdr)) =
+      mkObject $
+               [ "kind" .= String "ChainSyncServerReadBlocked.AddBlock"
+               ] <> tipToObject tip
+  forMachine _dtal (TraceChainSyncServerReadBlocked tip (RollBack _pt)) =
+      mkObject $
+               [ "kind" .= String "ChainSyncServerReadBlocked.RollBack"
+               ] <> tipToObject tip
   forMachine dtal (TraceChainSyncRollForward point) =
-      mkObject [ "kind" .= String "ChainSyncRollForward"
+      mkObject [ "kind" .= String "ChainSyncServerRead.RollForward"
                , "point" .= forMachine dtal point
                ]
   forMachine dtal (TraceChainSyncRollBackward point) =
-      mkObject [ "kind" .= String "ChainSyncRollBackward"
+      mkObject [ "kind" .= String "ChainSyncServerRead.ChainSyncRollBackward"
                , "point" .= forMachine dtal point
                ]
 
   asMetrics (TraceChainSyncRollForward _point) =
       [CounterM "ChainSync.RollForward" Nothing]
   asMetrics _ = []
-
 
 instance (LogFormatting peer, Show peer)
       => LogFormatting [TraceLabelPeer peer (FetchDecision [Point header])] where
@@ -257,9 +266,13 @@ instance LogFormatting (BlockFetch.TraceFetchClientState header) where
   forMachine _dtal BlockFetch.ClientTerminating {} =
     mkObject [ "kind" .= String "ClientTerminating" ]
 
-instance LogFormatting (TraceBlockFetchServerEvent blk) where
-  forMachine _dtal (TraceBlockFetchServerSendBlock _p) =
-    mkObject [ "kind" .= String "BlockFetchServer" ]
+instance ConvertRawHash blk => LogFormatting (TraceBlockFetchServerEvent blk) where
+  forMachine _dtal (TraceBlockFetchServerSendBlock blk) =
+    mkObject [ "kind" .= String "BlockFetchServer"
+             , "block" .= String (renderChainHash
+                                    @blk
+                                    (renderHeaderHash (Proxy @blk))
+                                    $ pointHash blk)]
 
   asMetrics (TraceBlockFetchServerSendBlock _p) =
     [CounterM "served.block.count" Nothing]
@@ -493,10 +506,16 @@ instance ( tx ~ GenTx blk
       [ "kind" .= String "TraceNodeIsLeader"
       , "slot" .= toJSON (unSlotNo slotNo)
       ]
-  forMachine _dtal (TraceForgedBlock slotNo _ _ _) =
+  forMachine _dtal (TraceForgedBlock slotNo _ blk _) =
     mkObject
       [ "kind" .= String "TraceForgedBlock"
       , "slot" .= toJSON (unSlotNo slotNo)
+      , "block"     .= String (renderHeaderHash (Proxy @blk) $ blockHash blk)
+      , "blockNo"   .= toJSON (unBlockNo $ blockNo blk)
+      , "blockPrev" .= String (renderChainHash
+                                @blk
+                                (renderHeaderHash (Proxy @blk))
+                                $ blockPrevHash blk)
       ]
   forMachine _dtal (TraceDidntAdoptBlock slotNo _) =
     mkObject

@@ -1,6 +1,5 @@
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE FlexibleInstances     #-}
-{-# LANGUAGE NamedFieldPuns        #-}
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
 {-# LANGUAGE TypeApplications      #-}
@@ -38,8 +37,8 @@ import           Ouroboros.Consensus.Node.Run (SerialiseNodeToNodeConstraints,
 
 import           Ouroboros.Network.Block (HasHeader, Point, Serialised,
                      blockHash)
-import           Ouroboros.Network.Codec (AnyMessageAndAgency (..))
-import           Ouroboros.Network.Codec (PeerHasAgency (..))
+import           Ouroboros.Network.Codec (AnyMessageAndAgency (..),
+                     PeerHasAgency (..))
 import qualified Ouroboros.Network.Diffusion as ND
 import           Ouroboros.Network.Driver.Simple (TraceSendRecv (..))
 import qualified Ouroboros.Network.NodeToClient as NtC
@@ -214,6 +213,8 @@ instance ( ConvertTxId' blk
              , "agency" .= String (pack $ show stok)
              ]
 
+
+-- TODO Tracers
 instance ( ConvertTxId' blk
          , HasTxId (GenTx blk)
          , ConvertRawHash blk
@@ -274,7 +275,7 @@ instance (Show txid, Show tx)
       , "agency" .= String (pack $ show stok)
       , "txs" .= String (pack $ show txs)
       ]
-  forMachine _dtal (AnyMessageAndAgency stok (STX.MsgRequestTxIds _ _ _)) =
+  forMachine _dtal (AnyMessageAndAgency stok STX.MsgRequestTxIds {}) =
     mkObject
       [ "kind" .= String "MsgRequestTxIds"
       , "agency" .= String (pack $ show stok)
@@ -319,9 +320,9 @@ instance LogFormatting (WithIPList (SubscriptionTrace Socket.SockAddr)) where
   forHuman (WithIPList localAddresses dests ev) =
                      pack (show ev)
                   <> ". Local addresses are "
-                  <> (pack $ show localAddresses)
+                  <> pack (show localAddresses)
                   <> ". Destinations are "
-                  <> (pack $ show dests)
+                  <> pack (show dests)
                   <> "."
 
 instance LogFormatting (WithDomainName (SubscriptionTrace Socket.SockAddr)) where
@@ -393,6 +394,10 @@ instance LogFormatting NtN.AcceptConnectionsPolicyTrace where
     forMachine _dtal (NtN.ServerTraceAcceptConnectionHardLimit softLimit) =
       mkObject [ "kind" .= String "ServerTraceAcceptConnectionHardLimit"
                , "softLimit" .= show softLimit
+               ]
+    forMachine _dtal (NtN.ServerTraceAcceptConnectionResume numOfConnections) =
+      mkObject [ "kind" .= String "ServerTraceAcceptConnectionResume"
+               , "numberOfConnection" .= show numOfConnections
                ]
     forHuman m = showT m
 

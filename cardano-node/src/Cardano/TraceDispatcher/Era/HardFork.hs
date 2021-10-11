@@ -1,13 +1,10 @@
-{-# LANGUAGE DeriveAnyClass             #-}
 {-# LANGUAGE DerivingStrategies         #-}
 {-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE FlexibleInstances          #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses      #-}
 {-# LANGUAGE NamedFieldPuns             #-}
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
-{-# LANGUAGE StandaloneDeriving         #-}
 {-# LANGUAGE TypeApplications           #-}
 {-# LANGUAGE TypeFamilies               #-}
 {-# LANGUAGE TypeOperators              #-}
@@ -56,11 +53,10 @@ import           Ouroboros.Consensus.Util.Condense (Condense (..))
 
 
 --
--- instances for hashes
+-- instances for hashes -- TODO ROL : put here 
 --
-
 -- instance Condense (OneEraHash xs) where
---     condense = condense . Crypto.UnsafeHash . getOneEraHash
+--     condense = condense . Base16.encode . SBS.fromShort . getOneEraHash
 
 --
 -- instances for Header HardForkBlock
