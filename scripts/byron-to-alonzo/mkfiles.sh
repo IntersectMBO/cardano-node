@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 set -e
-# Unoffiical bash strict mode.
+# Unofficial bash strict mode.
 # See: http://redsymbol.net/articles/unofficial-bash-strict-mode/
 set -u
 set -o pipefail
