@@ -46,6 +46,7 @@ config1 = TraceConfig {
           , (["tracer2","bubble"], [ConfSeverity (SeverityF (Just Info))])
           ]
     , tcForwarder = LocalSocket "forwarder.log"
+    , tcForwarderMode = Responder
     , tcForwarderQueueSize = 100
     , tcNodeName = Nothing
     }
@@ -58,6 +59,7 @@ config2 = TraceConfig {
         , (["tracer2","bubble"], [ConfSeverity (SeverityF (Just Debug))])
         ]
     , tcForwarder = LocalSocket "forwarder.log"
+    , tcForwarderMode = Responder
     , tcForwarderQueueSize = 100
     , tcNodeName = Just "node-1"
     }
