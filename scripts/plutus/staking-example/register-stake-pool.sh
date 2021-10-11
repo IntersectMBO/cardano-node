@@ -20,7 +20,6 @@ export UTXO_STAKING_SKEY1="${UTXO_STAKING_SKEY1:=example/shelley/utxo-keys/utxo-
 export UTXO_STAKING_VKEY2="${UTXO_STAKING_VKEY2:=example/shelley/utxo-keys/utxo2-stake.vkey}"
 export UTXO_STAKING_SKEY2="${UTXO_STAKING_SKEY2:=example/shelley/utxo-keys/utxo2-stake.skey}"
 
-# TODO: Left off here. You should try a staking key address to see if you are the problem!
 mkdir -p "$WORK"
 
 utxoaddr=$(cardano-cli address build --testnet-magic "$TESTNET_MAGIC" --payment-verification-key-file "$UTXO_VKEY1")
@@ -39,11 +38,10 @@ echo "UTxO"
 cat "$WORK/utxo-1.json"
 echo ""
 
-txin=$(jq -r 'keys[]' $WORK/utxo-1.json)
-lovelaceattxin=$(jq -r ".[\"$txin\"].value.lovelace" $WORK/utxo-1.json)
-lovelaceattxindiv3=$(expr $lovelaceattxin / 3)
-scriptpaymentaddrwithstakecred=$(cardano-cli address build --payment-verification-key-file $UTXO_VKEY1  --stake-script-file "scripts/plutus/scripts/guess-42-stake.plutus" --testnet-magic 42)
-#TODO: Look at stake-distbution cmd
+txin=$(jq -r 'keys[]' "$WORK/utxo-1.json")
+lovelaceattxin=$(jq -r ".[\"$txin\"].value.lovelace" "$WORK/utxo-1.json")
+lovelaceattxindiv3=$((lovelaceattxin / 3))
+scriptpaymentaddrwithstakecred=$(cardano-cli address build --payment-verification-key-file "$UTXO_VKEY1"  --stake-script-file "scripts/plutus/scripts/guess-42-stake.plutus" --testnet-magic 42)
 poolownerstakekey="example/addresses/pool-owner1-stake.vkey"
 poolowneraddresswstakecred=$(cardano-cli address build --payment-verification-key-file  example/addresses/pool-owner1.vkey --stake-verification-key-file example/addresses/pool-owner1-stake.vkey --testnet-magic 42)
 poolcoldkey="example/node-pool1/shelley/operator.vkey"
@@ -98,7 +96,7 @@ cardano-cli query stake-address-info \
   --address "$poolownerstakeaddr" \
   --testnet-magic 42 \
   --out-file "$WORK/pledgeownerregistration.json"
-registered=$(jq -r '.[0]' $WORK/pledgeownerregistration.json)
+registered=$(jq -r '.[0]' "$WORK/pledgeownerregistration.json")
 
 echo ""
 echo "Registered pool owner/pledger address. If null it was not successfully registered"
@@ -121,7 +119,7 @@ echo "Staking key UTxO"
 cat "$WORK/staking-key-utxo-1.json"
 echo ""
 
-keytxin=$(jq -r 'keys[]' $WORK/staking-key-utxo-1.json)
+keytxin=$(jq -r 'keys[]' "$WORK/staking-key-utxo-1.json")
 
 cardano-cli stake-address registration-certificate \
   --stake-verification-key-file "$UTXO_STAKING_VKEY2" \
@@ -158,7 +156,7 @@ cardano-cli query stake-address-info \
   --testnet-magic 42 \
   --out-file "$WORK/keyregistration.json"
 
-registeredkey=$(jq -r '.[0]' $WORK/keyregistration.json)
+registeredkey=$(jq -r '.[0]' "$WORK/keyregistration.json")
 echo ""
 echo "Registered key staking address. If null it was not successfully registered"
 echo "$registeredkey"
@@ -174,7 +172,7 @@ cardano-cli query utxo \
 
 cat "$WORK/utxo-1.json"
 
-txinupdated=$(jq -r 'keys[0]' $WORK/utxo-1.json)
+txinupdated=$(jq -r 'keys[0]' "$WORK/utxo-1.json")
 
 
 # STEP 2
@@ -228,7 +226,7 @@ cardano-cli query stake-address-info \
   --address "$poolownerstakeaddr" \
   --testnet-magic 42 \
   --out-file "$WORK/pledgeownerregistration.json"
-delegated=$(jq -r '.[0]' $WORK/pledgeownerregistration.json)
+delegated=$(jq -r '.[0]' "$WORK/pledgeownerregistration.json")
 
 echo ""
 echo "Currently registered stake pools"
@@ -257,7 +255,7 @@ echo "Staking key UTxO"
 cat "$WORK/staking-key-utxo-2.json"
 echo ""
 
-keytxin2=$(jq -r 'keys[0]' $WORK/staking-key-utxo-2.json)
+keytxin2=$(jq -r 'keys[0]' "$WORK/staking-key-utxo-2.json")
 
 cardano-cli transaction build \
   --alonzo-era \
@@ -291,7 +289,7 @@ cardano-cli query stake-address-info \
   --testnet-magic 42 \
   --out-file "$WORK/keydelegation.json"
 
-delegatedkey=$(jq -r '.[0]' $WORK/keydelegation.json)
+delegatedkey=$(jq -r '.[0]' "$WORK/keydelegation.json")
 echo ""
 echo "Delegating key staking address. If null it was not successfully registered"
 echo "$delegatedkey"
@@ -311,16 +309,16 @@ cardano-cli query utxo \
 
 cat "$WORK/utxo-2.json"
 
-txinupdated2=$(jq -r 'keys[0]' $WORK/utxo-2.json)
+txinupdated2=$(jq -r 'keys[0]' "$WORK/utxo-2.json")
 echo ""
 echo "Selected txin: $txinupdated2"
 # Step 1: Create registration certificate for the staking script
 
 # We also create collateral.
 
-txin=$(jq -r 'keys[]' $WORK/utxo-2.json)
-lovelaceattxin=$(jq -r ".[\"$txin\"].value.lovelace" $WORK/utxo-2.json)
-lovelaceattxindiv3=$(expr $lovelaceattxin / 3)
+txin=$(jq -r 'keys[]' "$WORK/utxo-2.json")
+lovelaceattxin=$(jq -r ".[\"$txin\"].value.lovelace" "$WORK/utxo-2.json")
+lovelaceattxindiv3=$((lovelaceattxin / 3))
 
 cardano-cli stake-address registration-certificate \
   --stake-script-file "scripts/plutus/scripts/guess-42-stake.plutus" \
@@ -361,7 +359,7 @@ cardano-cli query stake-address-info \
   --testnet-magic 42 \
   --out-file "$WORK/scriptregistration.json"
 
-registeredscr=$(jq -r '.[0]' $WORK/scriptregistration.json)
+registeredscr=$(jq -r '.[0]' "$WORK/scriptregistration.json")
 echo "$registeredscr"
 
 # We have successfully registered our script staking address.
@@ -373,7 +371,7 @@ cardano-cli stake-address delegation-certificate \
   --cold-verification-key-file "$poolcoldkey" \
   --out-file "$WORK/script.delegcert"
 
-cardano-cli query protocol-parameters --testnet-magic "$TESTNET_MAGIC" --out-file $WORK/pparams.json
+cardano-cli query protocol-parameters --testnet-magic "$TESTNET_MAGIC" --out-file "$WORK/pparams.json"
 
 # We also need collateral
 
@@ -385,8 +383,8 @@ cardano-cli query utxo \
 
 cat "$WORK/utxo-2.json"
 
-txinupdated3=$(jq -r 'keys[0]' $WORK/utxo-2.json)
-txincollateral=$(jq -r 'keys[1]' $WORK/utxo-2.json)
+txinupdated3=$(jq -r 'keys[0]' "$WORK/utxo-2.json")
+txincollateral=$(jq -r 'keys[1]' "$WORK/utxo-2.json")
 echo ""
 echo "Selected txin: $txinupdated2"
 
@@ -426,82 +424,8 @@ cardano-cli query stake-address-info \
   --testnet-magic 42 \
   --out-file "$WORK/scriptdelegation.json"
 
-delegatedscript=$(jq -r '.[0]' $WORK/scriptdelegation.json)
+delegatedscript=$(jq -r '.[0]' "$WORK/scriptdelegation.json")
 echo "$delegatedscript"
 echo ""
 echo "Stake payment address"
 echo "$scriptpaymentaddrwithstakecred"
-# We have two scenarios to test, deregistration and rewards withdrawal
-# SCENARIO 1: WITHDRAWAL
-
-
-# SCENARIO 2: DEREGISTRATION -- THIS WORKS
-
-# Update UTxO again
-#echo ""
-#echo "Script staking address deregistration"
-#echo ""
-#cardano-cli query utxo \
-#  --address "$utxoaddr" \
-#  --cardano-mode \
-#  --testnet-magic "$TESTNET_MAGIC" \
-#  --out-file "$WORK/utxo-2.json"
-#
-#cat "$WORK/utxo-2.json"
-#
-#txinupdated3=$(jq -r 'keys[0]' $WORK/utxo-2.json)
-#txincollateral=$(jq -r 'keys[1]' $WORK/utxo-2.json)
-#echo ""
-#echo "Selected txin: $txinupdated2"
-#
-## Create deregistration certificate
-#cardano-cli stake-address deregistration-certificate \
-#  --stake-script-file "scripts/plutus/scripts/guess-42-stake.plutus" \
-#  --out-file "$WORK/script.deregcert"
-#
-#
-## TODO: Then figure out why rewards aren't being dispersed.
-#
-## Get PParams
-#
-#cardano-cli query protocol-parameters --testnet-magic "$TESTNET_MAGIC" --out-file $WORK/pparams.json
-#
-#cardano-cli transaction build \
-#  --alonzo-era \
-#  --testnet-magic "$TESTNET_MAGIC" \
-#  --change-address "$utxoaddr" \
-#  --tx-in "$txinupdated3" \
-#  --tx-in-collateral "$txincollateral" \
-#  --tx-out "$scriptpaymentaddrwithstakecred+500" \
-#  --witness-override 3 \
-#  --certificate-file "$WORK/script.deregcert" \
-#  --certificate-script-file "scripts/plutus/scripts/guess-42-stake.plutus" \
-#  --certificate-redeemer-file "scripts/plutus/data/42.redeemer" \
-#  --protocol-params-file "$WORK/pparams.json" \
-#  --out-file "$WORK/script-deregistration-cert.txbody"
-#
-#cardano-cli transaction sign \
-#  --tx-body-file "$WORK/script-deregistration-cert.txbody" \
-#  --testnet-magic "$TESTNET_MAGIC" \
-#  --signing-key-file "$UTXO_SKEY1" \
-#  --out-file "$WORK/script-deregistration-cert.tx"
-#
-#cardano-cli transaction submit \
-#  --tx-file "$WORK/script-deregistration-cert.tx" \
-#  --testnet-magic "$TESTNET_MAGIC"
-#
-#echo "Staking script adress"
-#echo "$stakingscriptaddr"
-#echo "Waiting 5 seconds..."
-#sleep 5
-#echo "Check to see if the script staking address was successfully deregistered"
-#
-#cardano-cli query stake-address-info \
-#  --address "$stakingscriptaddr" \
-#  --testnet-magic 42 \
-#  --out-file "$WORK/scriptderegistration.json"
-#
-#deregistered=$(jq -r '.[0]' $WORK/scriptderegistration.json)
-#echo "$deregistered"
-
-
