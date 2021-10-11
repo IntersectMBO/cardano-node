@@ -640,12 +640,16 @@ namesForLocalErrorPolicy (WithAddr _ ev) = case ev of
 severityAcceptPolicy :: NtN.AcceptConnectionsPolicyTrace -> SeverityS
 severityAcceptPolicy NtN.ServerTraceAcceptConnectionRateLimiting {} = Info
 severityAcceptPolicy NtN.ServerTraceAcceptConnectionHardLimit {}    = Warning
+severityAcceptPolicy NtN.ServerTraceAcceptConnectionResume {}       = Info
+
 
 namesForAcceptPolicy :: NtN.AcceptConnectionsPolicyTrace -> [Text]
 namesForAcceptPolicy NtN.ServerTraceAcceptConnectionRateLimiting {} =
     ["ConectionRateLimiting"]
 namesForAcceptPolicy NtN.ServerTraceAcceptConnectionHardLimit {} =
     ["ConnectionHardLimit"]
+namesForAcceptPolicy NtN.ServerTraceAcceptConnectionResume {} =
+    ["ConnectionLimitResume"]
 
 severityMux :: WithMuxBearer peer MuxTrace -> SeverityS
 severityMux (WithMuxBearer _ mt) = severityMux' mt
@@ -724,9 +728,10 @@ severityHandshake'' :: AnyMessageAndAgency (HS.Handshake nt CBOR.Term) -> Severi
 severityHandshake'' (AnyMessageAndAgency _agency msg) = severityHandshake''' msg
 
 severityHandshake''' :: Message (HS.Handshake nt CBOR.Term) from to -> SeverityS
-severityHandshake''' HS.MsgProposeVersions {} = Info
-severityHandshake''' HS.MsgAcceptVersion {}   = Info
-severityHandshake''' HS.MsgRefuse {}          = Info
+severityHandshake''' HS.MsgProposeVersions {}  = Info
+severityHandshake''' HS.MsgProposeVersions' {} = Info
+severityHandshake''' HS.MsgAcceptVersion {}    = Info
+severityHandshake''' HS.MsgRefuse {}           = Info
 
 namesForHandshake :: NtN.HandshakeTr -> [Text]
 namesForHandshake (WithMuxBearer _ e) = namesForHandshake' e
@@ -741,9 +746,10 @@ namesForHandshake'' :: AnyMessageAndAgency (HS.Handshake nt CBOR.Term) -> [Text]
 namesForHandshake'' (AnyMessageAndAgency _agency msg) = namesForHandshake''' msg
 
 namesForHandshake''' :: Message (HS.Handshake nt CBOR.Term) from to -> [Text]
-namesForHandshake''' HS.MsgProposeVersions {} = ["ProposeVersions"]
-namesForHandshake''' HS.MsgAcceptVersion {}   = ["AcceptVersion"]
-namesForHandshake''' HS.MsgRefuse {}          = ["Refuse"]
+namesForHandshake''' HS.MsgProposeVersions {}  = ["ProposeVersions"]
+namesForHandshake''' HS.MsgProposeVersions' {} = ["ProposeVersions'"]
+namesForHandshake''' HS.MsgAcceptVersion {}    = ["AcceptVersion"]
+namesForHandshake''' HS.MsgRefuse {}           = ["Refuse"]
 
 severityLocalHandshake :: NtC.HandshakeTr -> SeverityS
 severityLocalHandshake (WithMuxBearer _ e) = severityLocalHandshake' e
@@ -758,9 +764,10 @@ severityLocalHandshake'' :: AnyMessageAndAgency (HS.Handshake nt CBOR.Term) -> S
 severityLocalHandshake'' (AnyMessageAndAgency _agency msg) = severityLocalHandshake''' msg
 
 severityLocalHandshake''' :: Message (HS.Handshake nt CBOR.Term) from to -> SeverityS
-severityLocalHandshake''' HS.MsgProposeVersions {} = Info
-severityLocalHandshake''' HS.MsgAcceptVersion {}   = Info
-severityLocalHandshake''' HS.MsgRefuse {}          = Info
+severityLocalHandshake''' HS.MsgProposeVersions {}  = Info
+severityLocalHandshake''' HS.MsgProposeVersions' {} = Info
+severityLocalHandshake''' HS.MsgAcceptVersion {}    = Info
+severityLocalHandshake''' HS.MsgRefuse {}           = Info
 
 namesForLocalHandshake :: NtC.HandshakeTr -> [Text]
 namesForLocalHandshake (WithMuxBearer _ e) = namesForLocalHandshake' e
@@ -775,9 +782,10 @@ namesForLocalHandshake'' :: AnyMessageAndAgency (HS.Handshake nt CBOR.Term) -> [
 namesForLocalHandshake'' (AnyMessageAndAgency _agency msg) = namesForLocalHandshake''' msg
 
 namesForLocalHandshake''' :: Message (HS.Handshake nt CBOR.Term) from to -> [Text]
-namesForLocalHandshake''' HS.MsgProposeVersions {} = ["ProposeVersions"]
-namesForLocalHandshake''' HS.MsgAcceptVersion {}   = ["AcceptVersion"]
-namesForLocalHandshake''' HS.MsgRefuse {}          = ["Refuse"]
+namesForLocalHandshake''' HS.MsgProposeVersions {}  = ["ProposeVersions"]
+namesForLocalHandshake''' HS.MsgProposeVersions' {} = ["ProposeVersions'"]
+namesForLocalHandshake''' HS.MsgAcceptVersion {}    = ["AcceptVersion"]
+namesForLocalHandshake''' HS.MsgRefuse {}           = ["Refuse"]
 
 severityDiffusionInit :: ND.DiffusionInitializationTracer -> SeverityS
 severityDiffusionInit ND.RunServer {}                         = Info

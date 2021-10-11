@@ -276,7 +276,7 @@ docChainDBTraceEvent = Documented [
       "A block was successfully copied to the ImmDB."
   , DocMsg
       (ChainDB.TraceCopyToImmutableDBEvent
-        (ChainDB.NoBlocksToCopyToImmutableDB))
+        ChainDB.NoBlocksToCopyToImmutableDB)
       []
       "There are no block to copy to the ImmDB."
   , DocMsg
@@ -550,12 +550,12 @@ docChainDBTraceEvent = Documented [
 
   , DocMsg
       (ChainDB.TraceVolatileDBEvent
-        (VolDB.DBAlreadyClosed))
+        VolDB.DBAlreadyClosed)
       []
       "When closing the DB it was found itis closed already."
   , DocMsg
       (ChainDB.TraceVolatileDBEvent
-        (VolDB.DBAlreadyOpen))
+        VolDB.DBAlreadyOpen)
       []
       "TODO Doc"
   , DocMsg
