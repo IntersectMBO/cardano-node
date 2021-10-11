@@ -1,9 +1,9 @@
 {-# LANGUAGE DataKinds           #-}
 {-# LANGUAGE FlexibleInstances   #-}
+{-# LANGUAGE NamedFieldPuns      #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE PackageImports      #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-
 
 module Cardano.Logging.Tracer.Forward
   (
@@ -40,14 +40,14 @@ import           Ouroboros.Network.Snocket (Snocket, localAddressFromPath,
                      localSnocket)
 import           Ouroboros.Network.Socket (AcceptedConnectionsLimit (..),
                      SomeResponderApplication (..), cleanNetworkMutableState,
-                     newNetworkMutableState, nullNetworkServerTracers,
-                     withServerNode)
+                     connectToNode, newNetworkMutableState, nullNetworkConnectTracers,
+                     nullNetworkServerTracers, withServerNode)
 
 import qualified System.Metrics as EKG
 import qualified System.Metrics.Configuration as EKGF
-import           System.Metrics.Network.Forwarder (forwardEKGMetricsResp)
+import           System.Metrics.Network.Forwarder
 import qualified Trace.Forward.Configuration as TF
-import           Trace.Forward.Network.Forwarder (forwardTraceObjectsResp)
+import           Trace.Forward.Network.Forwarder
 import           Trace.Forward.Protocol.Type (NodeInfo (..))
 import           Trace.Forward.Utils
 
@@ -66,7 +66,7 @@ forwardTracer iomgr config nodeInfo = liftIO $ do
   forwardSink <- initForwardSink tfConfig
   store <- EKG.newStore
   EKG.registerGcMetrics store
-  launchForwarders iomgr (tcForwarder config) store ekgConfig tfConfig forwardSink
+  launchForwarders iomgr config store ekgConfig tfConfig forwardSink
   pure $ Trace $ T.arrow $ T.emit $ uncurry3 (output forwardSink)
  where
   output ::
@@ -106,31 +106,74 @@ forwardTracer iomgr config nodeInfo = liftIO $ do
 
 launchForwarders
   :: IOManager
-  -> ForwarderAddr
+  -> TraceConfig
   -> EKG.Store
   -> EKGF.ForwarderConfiguration
   -> TF.ForwarderConfiguration TraceObject
   -> ForwardSink TraceObject
   -> IO ()
-launchForwarders iomgr ep@(LocalSocket p) store ekgConfig tfConfig sink = flip
+launchForwarders iomgr TraceConfig{tcForwarder, tcForwarderMode} store ekgConfig tfConfig sink = flip
   withAsync
     wait
     $ runActionInLoop
-        (launchForwardersViaLocalSocket iomgr ep (ekgConfig, tfConfig) sink store)
+        (launchForwardersViaLocalSocket iomgr tcForwarder tcForwarderMode (ekgConfig, tfConfig) sink store)
         (TF.LocalPipe p)
         1
+ where
+  LocalSocket p = tcForwarder
 
 launchForwardersViaLocalSocket
   :: IOManager
   -> ForwarderAddr
+  -> ForwarderMode
   -> (EKGF.ForwarderConfiguration, TF.ForwarderConfiguration TraceObject)
   -> ForwardSink TraceObject
   -> EKG.Store
   -> IO ()
-launchForwardersViaLocalSocket iomgr (LocalSocket p) configs sink store = do
-  let snocket = localSnocket iomgr
-      address = localAddressFromPath p
-  doListenToAcceptor snocket address noTimeLimitsHandshake configs sink store
+launchForwardersViaLocalSocket iomgr (LocalSocket p) Initiator configs sink store =
+  doConnectToAcceptor (localSnocket iomgr) (localAddressFromPath p) noTimeLimitsHandshake configs sink store
+launchForwardersViaLocalSocket iomgr (LocalSocket p) Responder configs sink store =
+  doListenToAcceptor (localSnocket iomgr) (localAddressFromPath p) noTimeLimitsHandshake configs sink store
+
+doConnectToAcceptor
+  :: Snocket IO fd addr
+  -> addr
+  -> ProtocolTimeLimits (Handshake UnversionedProtocol Term)
+  -> (EKGF.ForwarderConfiguration, TF.ForwarderConfiguration TraceObject)
+  -> ForwardSink TraceObject
+  -> EKG.Store
+  -> IO ()
+doConnectToAcceptor snocket address timeLimits (ekgConfig, tfConfig) sink store = do
+  connectToNode
+    snocket
+    unversionedHandshakeCodec
+    timeLimits
+    (cborTermVersionDataCodec unversionedProtocolDataCodec)
+    nullNetworkConnectTracers
+    acceptableVersion
+    (simpleSingletonVersions
+       UnversionedProtocol
+       UnversionedProtocolData
+         (forwarderApp [ (forwardEKGMetrics ekgConfig store, 1)
+                       , (forwardTraceObjects tfConfig sink, 2)
+                       ]
+         )
+    )
+    Nothing
+    address
+ where
+  forwarderApp
+    :: [(RunMiniProtocol 'InitiatorMode LBS.ByteString IO () Void, Word16)]
+    -> OuroborosApplication 'InitiatorMode addr LBS.ByteString IO () Void
+  forwarderApp protocols =
+    OuroborosApplication $ \_connectionId _shouldStopSTM ->
+      [ MiniProtocol
+         { miniProtocolNum    = MiniProtocolNum num
+         , miniProtocolLimits = MiniProtocolLimits { maximumIngressQueue = maxBound }
+         , miniProtocolRun    = prot
+         }
+      | (prot, num) <- protocols
+      ]
 
 doListenToAcceptor
   :: Ord addr

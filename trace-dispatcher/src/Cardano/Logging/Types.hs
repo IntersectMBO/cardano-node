@@ -23,6 +23,7 @@ module Cardano.Logging.Types (
   , ConfigOption(..)
   , ForwarderAddr(..)
   , FormatLogging(..)
+  , ForwarderMode(..)
   , TraceConfig(..)
   , emptyTraceConfig
   , FormattedMessage(..)
@@ -281,10 +282,23 @@ newtype ForwarderAddr
 instance AE.FromJSON ForwarderAddr where
   parseJSON = AE.withObject "ForwarderAddr" $ \o -> LocalSocket <$> o AE..: "filePath"
 
+data ForwarderMode =
+    -- | Forwarder initiates network connection with 'cardano-tracer' as a client.
+    Initiator
+    -- | Forwarder accepts network connection from 'cardano-tracer' as a server.
+  | Responder
+  deriving (Eq, Ord, Show, Generic)
+
+instance AE.FromJSON ForwarderMode where
+  parseJSON (AE.String "Initiator") = pure Initiator
+  parseJSON (AE.String "Responder") = pure Responder
+  parseJSON other                   = error (show other)
+
 data TraceConfig = TraceConfig {
      -- | Options specific to a certain namespace
     tcOptions            :: Map.Map Namespace [ConfigOption]
   , tcForwarder          :: ForwarderAddr
+  , tcForwarderMode      :: ForwarderMode
   , tcForwarderQueueSize :: Int
     -- | Opional human-readable name of the node.
   , tcNodeName           :: Maybe Text
@@ -295,6 +309,7 @@ emptyTraceConfig :: TraceConfig
 emptyTraceConfig = TraceConfig {
     tcOptions = Map.empty
   , tcForwarder = LocalSocket "forwarder.log"
+  , tcForwarderMode = Responder
   , tcForwarderQueueSize = 1500
   , tcNodeName = Nothing
   }
