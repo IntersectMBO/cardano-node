@@ -54,7 +54,7 @@ utxoaddr=$($CARDANO_CLI address build --testnet-magic "$TESTNET_MAGIC" --payment
 $CARDANO_CLI query utxo --address "$utxoaddr" --cardano-mode --testnet-magic "$TESTNET_MAGIC" --out-file $WORK/utxo-1.json
 cat $WORK/utxo-1.json
 
-txin=$(jq -r 'keys[]' $WORK/utxo-1.json)
+txin=$(jq -r 'keys[0]' $WORK/utxo-1.json)
 lovelaceattxin=$(jq -r ".[\"$txin\"].value.lovelace" $WORK/utxo-1.json)
 lovelaceattxindiv3=$(expr $lovelaceattxin / 3)
 
