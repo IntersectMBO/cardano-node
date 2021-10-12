@@ -30,7 +30,7 @@ propQueue _rootDir localSock =
     -- misconfigured and the connection cannot be established at all.
     -- In this case, the forwarder should collect trace items in its internal
     -- "flexible queue" and periodically flush them to stdout.
-    withAsyncBound (launchForwardersSimple localSock connSize disconnSize) $ \_ -> do
+    withAsyncBound (launchForwardersSimple Responder localSock connSize disconnSize) $ \_ -> do
       redirectStdoutToFile tmpStdout
       (True ===) <$> stdoutAnalyzer tmpStdout
 

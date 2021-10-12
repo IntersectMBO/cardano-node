@@ -5,7 +5,8 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Cardano.Tracer.Test.Forwarder
-  ( launchForwardersSimple
+  ( ForwardersMode (..)
+  , launchForwardersSimple
   ) where
 
 import           Codec.CBOR.Term (Term)
@@ -39,8 +40,8 @@ import           Ouroboros.Network.Snocket (Snocket, localAddressFromPath,
                      localSnocket)
 import           Ouroboros.Network.Socket (AcceptedConnectionsLimit (..),
                      SomeResponderApplication (..), cleanNetworkMutableState,
-                     newNetworkMutableState, nullNetworkServerTracers,
-                     withServerNode)
+                     connectToNode, newNetworkMutableState, nullNetworkConnectTracers,
+                     nullNetworkServerTracers, withServerNode)
 
 import qualified System.Metrics as EKG
 
@@ -54,28 +55,42 @@ import           Trace.Forward.Utils
 import qualified System.Metrics.Configuration as EKGF
 import           System.Metrics.Network.Forwarder
 
+data ForwardersMode = Initiator | Responder
+
 launchForwardersSimple
-  :: FilePath
+  :: ForwardersMode
+  -> FilePath
   -> Word
   -> Word
   -> IO ()
-launchForwardersSimple p connSize disconnSize = withIOManager $ \iomgr ->
+launchForwardersSimple mode p connSize disconnSize = withIOManager $ \iomgr ->
   runActionInLoop
-    (launchForwardersSimple' iomgr p connSize disconnSize)
+    (launchForwardersSimple' iomgr mode p connSize disconnSize)
     (TF.LocalPipe p)
     1
 
 launchForwardersSimple'
   :: IOManager
+  -> ForwardersMode
   -> FilePath
   -> Word
   -> Word
   -> IO ()
-launchForwardersSimple' iomgr p connSize disconnSize = do
+launchForwardersSimple' iomgr mode p connSize disconnSize = do
   now <- getCurrentTime
-  let snocket = localSnocket iomgr
-      address = localAddressFromPath p
-  doListenToAcceptor snocket address noTimeLimitsHandshake (ekgConfig, tfConfig now)
+  case mode of
+    Initiator ->
+      doConnectToAcceptor
+        (localSnocket iomgr)
+        (localAddressFromPath p)
+        noTimeLimitsHandshake
+        (ekgConfig, tfConfig now)
+    Responder ->
+      doListenToAcceptor
+        (localSnocket iomgr)
+        (localAddressFromPath p)
+        noTimeLimitsHandshake
+        (ekgConfig, tfConfig now)
  where
   ekgConfig :: EKGF.ForwarderConfiguration
   ekgConfig =
@@ -103,6 +118,48 @@ launchForwardersSimple' iomgr p connSize disconnSize = do
       , TF.disconnectedQueueSize = disconnSize
       , TF.connectedQueueSize    = connSize
       }
+
+doConnectToAcceptor
+  :: Snocket IO fd addr
+  -> addr
+  -> ProtocolTimeLimits (Handshake UnversionedProtocol Term)
+  -> (EKGF.ForwarderConfiguration, TF.ForwarderConfiguration TraceObject)
+  -> IO ()
+doConnectToAcceptor snocket address timeLimits (ekgConfig, tfConfig) = do
+  store <- EKG.newStore
+  EKG.registerGcMetrics store
+  sink <- initForwardSink tfConfig
+  withAsync (traceObjectsWriter sink) $ \_ -> do
+    connectToNode
+      snocket
+      unversionedHandshakeCodec
+      timeLimits
+      (cborTermVersionDataCodec unversionedProtocolDataCodec)
+      nullNetworkConnectTracers
+      acceptableVersion
+      (simpleSingletonVersions
+         UnversionedProtocol
+         UnversionedProtocolData
+           (forwarderApp [ (forwardEKGMetrics ekgConfig store, 1)
+                         , (forwardTraceObjects tfConfig sink, 2)
+                         ]
+           )
+      )
+      Nothing
+      address
+ where
+  forwarderApp
+    :: [(RunMiniProtocol 'InitiatorMode LBS.ByteString IO () Void, Word16)]
+    -> OuroborosApplication 'InitiatorMode addr LBS.ByteString IO () Void
+  forwarderApp protocols =
+    OuroborosApplication $ \_connectionId _shouldStopSTM ->
+      [ MiniProtocol
+         { miniProtocolNum    = MiniProtocolNum num
+         , miniProtocolLimits = MiniProtocolLimits { maximumIngressQueue = maxBound }
+         , miniProtocolRun    = prot
+         }
+      | (prot, num) <- protocols
+      ]
 
 doListenToAcceptor
   :: Ord addr

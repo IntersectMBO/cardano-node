@@ -22,7 +22,7 @@ import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.Handlers.Logs.Log (isItLog, isItSymLink)
 import           Cardano.Tracer.Run (runCardanoTracerWithConfigBrakes)
 
-import           Cardano.Tracer.Test.Forwarder (launchForwardersSimple)
+import           Cardano.Tracer.Test.Forwarder
 import           Cardano.Tracer.Test.Utils
 
 tests :: TestTree
@@ -37,7 +37,7 @@ propLogs format rootDir localSock = do
   stopTF  <- newTVarIO False
   let brakes = NE.fromList [(stopEKG, stopTF)]
   withAsync (runCardanoTracerWithConfigBrakes (config rootDir localSock) brakes) $ \_ ->
-    withAsync (launchForwardersSimple localSock 1000 10000) $ \_ -> do
+    withAsync (launchForwardersSimple Responder localSock 1000 10000) $ \_ -> do
       sleep 15.0 -- Wait till some rotation is done.
       atomically $ do
         modifyTVar' stopEKG . const $ True

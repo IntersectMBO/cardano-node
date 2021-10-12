@@ -18,6 +18,7 @@ import           Cardano.Tracer.Test.Forwarder
 import           Cardano.Tracer.Test.Utils
 
 data SideToRestart = First | Second
+data Mode = Initiate | Response
 
 tests :: TestTree
 tests = localOption (QuickCheckTests 1) $ testGroup "Test.Network"
@@ -31,14 +32,14 @@ propNetwork whichSide rootDir localSock = do
     First ->
       propNetwork'
         rootDir
-        ( runCardanoTracerWithConfig (config rootDir localSock)
-        , launchForwardersSimple localSock 1000 10000
+        ( runCardanoTracerWithConfig (config Initiate rootDir localSock)
+        , launchForwardersSimple Responder localSock 1000 10000
         )
     Second ->
       propNetwork'
         rootDir
-        ( launchForwardersSimple localSock 1000 10000
-        , runCardanoTracerWithConfig (config rootDir localSock)
+        ( launchForwardersSimple Initiator localSock 1000 10000
+        , runCardanoTracerWithConfig (config Response rootDir localSock)
         )
 
 propNetwork' :: FilePath -> (IO (), IO ()) -> IO Property
@@ -66,9 +67,15 @@ propNetwork' rootDir (fstSide, sndSide) = do
     (false "root dir is empty")
     (return $ property True)
 
-config :: FilePath -> FilePath -> TracerConfig
-config root p = TracerConfig
-  { network        = ConnectTo $ NE.fromList [LocalSocket p]
+config
+  :: Mode
+  -> FilePath
+  -> FilePath
+  -> TracerConfig
+config mode root p = TracerConfig
+  { network        = case mode of 
+                       Initiate -> ConnectTo $ NE.fromList [LocalSocket p]
+                       Response -> AcceptAt $ LocalSocket p
   , loRequestNum   = Just 1
   , ekgRequestFreq = Just 1.0
   , hasEKG         = Nothing

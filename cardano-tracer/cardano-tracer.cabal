@@ -108,7 +108,6 @@ test-suite cardano-tracer-test
                        Cardano.Tracer.Test.Logs.Tests
                        Cardano.Tracer.Test.Network.Tests
                        Cardano.Tracer.Test.Queue.Tests
-                       Cardano.Tracer.Test.SSH.Tests
 
                        Cardano.Tracer.Test.Utils
 
@@ -124,7 +123,6 @@ test-suite cardano-tracer-test
                        , extra
                        , filepath
                        , ouroboros-network-framework
-                       , process
                        , QuickCheck
                        , stm
                        , tasty
