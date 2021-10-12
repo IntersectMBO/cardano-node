@@ -206,6 +206,22 @@ runNode cmdPc = do
     case p of
       SomeConsensusProtocol _ runP -> handleNodeWithTracers runP
 
+initTraceDispatcher :: ... -> TraceDispatcher
+initTraceDispatcher = do
+    forwardTrace <- withIOManager $ \iomgr -> NL.forwardTracer iomgr loggerConfiguration nodeInfo
+    mbEkgTrace   <- case llEKGDirect loggingLayer of
+                      Nothing -> pure Nothing
+                      Just ekgDirect ->
+                        liftM Just (NL.ekgTracer (Right (ekgServer ekgDirect)))
+    baseTrace    <- NL.standardTracer
+
+data TraceDispatcher
+  =  TraceDispatcher
+     { tdForwardTracer :: ForwardTracer
+     , tdEKGTracer     :: Maybe EKGTracer
+     , tdStdoutTracer    :: StdoutTracer
+     }
+
 logTracingVerbosity :: NodeConfiguration -> Tracer IO String -> IO ()
 logTracingVerbosity nc tracer =
   case ncTraceConfig nc of

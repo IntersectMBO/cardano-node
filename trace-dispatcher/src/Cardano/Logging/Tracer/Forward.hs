@@ -58,16 +58,10 @@ import           Cardano.Logging.Utils(uncurry3)
 ---------------------------------------------------------------------------
 
 forwardTracer :: forall m. (MonadIO m)
-  => IOManager
-  -> TraceConfig
-  -> NodeInfo
-  -> m (Trace m FormattedMessage)
-forwardTracer iomgr config nodeInfo = liftIO $ do
-  forwardSink <- initForwardSink tfConfig
-  store <- EKG.newStore
-  EKG.registerGcMetrics store
-  launchForwarders iomgr config store ekgConfig tfConfig forwardSink
-  pure $ Trace $ T.arrow $ T.emit $ uncurry3 (output forwardSink)
+  => ForwardSink
+  -> Trace m FormattedMessage
+forwardTracer forwardSink =
+  Trace $ T.arrow $ T.emit $ uncurry3 (output forwardSink)
  where
   output ::
        ForwardSink TraceObject
@@ -83,7 +77,19 @@ forwardTracer iomgr config nodeInfo = liftIO $ do
     docIt Forwarder (FormattedHuman False "") (lk, Just c, lo)
   output _sink LoggingContext {} _ _a = pure ()
 
-  LocalSocket p = tofAddress $ tcForwarder config
+startForwarding :: forall m. (MonadIO m)
+  => IOManager
+  -> TraceConfig
+  -> EkgConfig
+  -> EkgStore
+  -> NodeInfo
+  -> m ForwarderSink
+startForwarding iomgr tfsink ekgconf ekgstore dpsink nodeInfo = liftIO $ do
+  forwardSink <- initForwardSink tfConfig
+  launchForwarders iomgr config mekes tfConfig forwardSink
+  forwardSink
+ where
+  LocalSocket p = tcForwarder config
 
   ekgConfig :: EKGF.ForwarderConfiguration
   ekgConfig =
@@ -112,33 +118,28 @@ launchForwarders
   -> TF.ForwarderConfiguration TraceObject
   -> ForwardSink TraceObject
   -> IO ()
-launchForwarders iomgr TraceConfig{tcForwarder} store ekgConfig tfConfig sink = flip
+launchForwarders iomgr TraceConfig{tcForwarder, tcForwarderMode} store ekgConfig tfConfig sink = flip
   withAsync
     wait
     $ runActionInLoop
-        (launchForwardersViaLocalSocket iomgr tcForwarder (ekgConfig, tfConfig) sink store)
+        (launchForwardersViaLocalSocket iomgr tcForwarder tcForwarderMode (ekgConfig, tfConfig) sink store)
         (TF.LocalPipe p)
         1
  where
-  LocalSocket p = tofAddress tcForwarder
+  LocalSocket p = tcForwarder
 
 launchForwardersViaLocalSocket
   :: IOManager
-  -> TraceOptionForwarder
+  -> ForwarderAddr
+  -> ForwarderMode
   -> (EKGF.ForwarderConfiguration, TF.ForwarderConfiguration TraceObject)
   -> ForwardSink TraceObject
   -> EKG.Store
   -> IO ()
-launchForwardersViaLocalSocket iomgr
-  TraceOptionForwarder {tofAddress=(LocalSocket p), tofMode=Initiator}
-  configs sink store =
-    doConnectToAcceptor (localSnocket iomgr) (localAddressFromPath p)
-      noTimeLimitsHandshake configs sink store
-launchForwardersViaLocalSocket iomgr
-  TraceOptionForwarder {tofAddress=(LocalSocket p), tofMode=Responder}
-  configs sink store =
-    doListenToAcceptor (localSnocket iomgr) (localAddressFromPath p)
-      noTimeLimitsHandshake configs sink store
+launchForwardersViaLocalSocket iomgr (LocalSocket p) Initiator configs sink store =
+  doConnectToAcceptor (localSnocket iomgr) (localAddressFromPath p) noTimeLimitsHandshake configs sink store
+launchForwardersViaLocalSocket iomgr (LocalSocket p) Responder configs sink store =
+  doListenToAcceptor (localSnocket iomgr) (localAddressFromPath p) noTimeLimitsHandshake configs sink store
 
 doConnectToAcceptor
   :: Snocket IO fd addr
@@ -223,7 +224,7 @@ doListenToAcceptor snocket address timeLimits (ekgConfig, tfConfig) sink store =
       [ MiniProtocol
          { miniProtocolNum    = MiniProtocolNum num
          , miniProtocolLimits = MiniProtocolLimits { maximumIngressQueue = maxBound }
-         , miniProtocolRun    = prot
+g         , miniProtocolRun    = prot
          }
       | (prot, num) <- protocols
       ]
