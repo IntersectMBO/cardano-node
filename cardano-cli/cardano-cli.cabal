@@ -165,7 +165,8 @@ test-suite cardano-cli-test
   main-is:              cardano-cli-test.hs
   type:                 exitcode-stdio-1.0
 
-  build-depends:        bech32            >= 1.1.0
+  build-depends:        aeson
+                      , bech32            >= 1.1.0
                       , bytestring
                       , base16-bytestring
                       , cardano-api
@@ -182,6 +183,7 @@ test-suite cardano-cli-test
                       , parsec
                       , text
                       , transformers
+                      , yaml
 
   other-modules:        Test.Config.Mainnet
                         Test.Cli.FilePermissions
