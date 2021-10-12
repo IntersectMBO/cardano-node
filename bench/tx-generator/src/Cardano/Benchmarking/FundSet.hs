@@ -29,7 +29,8 @@ data FundInEra era = FundInEra {
 
 data Variant
   = PlainOldFund
-  | PlutusScriptFund !FilePath
+  -- maybe better use the script itself instead of the filePath
+  | PlutusScriptFund !FilePath !ScriptData
   -- A collateralFund is just a regular (PlainOldFund) on the chain,
   -- but tagged in the wallet so that it is not selected for spending.
   | CollateralFund
@@ -133,12 +134,6 @@ selectMinValue minValue fs = case coins of
     [] -> Left $ "findSufficientCoin: no single coin with min value >= " ++ show minValue
     (c:_) -> Right [c]
     where coins = toAscList ( Proxy :: Proxy Lovelace) (fs @=PlainOldFund @= IsConfirmed @>= minValue)
-
-selectPlutusFund :: FilePath -> FundSet -> Either String [Fund]
-selectPlutusFund scriptFile fs = case coins of
-    [] -> Left "no Plutus fund found"
-    (c:_) -> Right [c]
-    where coins = toAscList ( Proxy :: Proxy Lovelace) (fs @=PlutusScriptFund scriptFile @= IsConfirmed )
 
 selectCollateral :: FundSet -> Either String [Fund]
 selectCollateral fs = case coins of

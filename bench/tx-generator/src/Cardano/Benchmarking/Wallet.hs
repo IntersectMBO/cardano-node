@@ -180,6 +180,9 @@ data WalletStep era
   | NextTx !(WalletScript era) !(Tx era)
   | Error String
 
+-- TODO:
+-- use explicit tx- counter for each walletscript
+-- Do not rely on global walletSeqNum
 benchmarkWalletScript :: forall era .
      IsShelleyBasedEra era
   => WalletRef
