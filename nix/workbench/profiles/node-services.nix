@@ -59,11 +59,11 @@ let
                TraceMempool         = true;
 
                TraceOptionSeverity  = [
-                 {ns = ""; severity = "DebugF";}
-                 {ns = "Node.Resources"; severity = "DebugF";}
-                 ## {ns = "Node.Mempool"; severity = "DebugF";}
-                 {ns = "Node.ChainDB"; severity = "DebugF";}
-                 ## {ns = "Node.ChainDB.ImmutableDBEvent"; severity = "WarningF";}
+                 {ns = ""; severity = "Debug";}
+                 {ns = "Node.Resources"; severity = "Debug";}
+                 ## {ns = "Node.Mempool"; severity = "Debug";}
+                 {ns = "Node.ChainDB"; severity = "Debug";}
+                 ## {ns = "Node.ChainDB.ImmutableDBEvent"; severity = "Warning";}
                ];
 
                TraceOptionDetail = [

@@ -14,43 +14,44 @@
   "ShelleyGenesisFile": "mainnet-shelley-genesis.json",
   "ShelleyGenesisHash": "1a3be38bcbb7911969283716ad7aa550250226b76a61fc51cc9a9a35d9276d81",
   "TraceAcceptPolicy": true,
-  "TraceBlockFetchClient": false,
-  "TraceBlockFetchDecisions": false,
-  "TraceBlockFetchProtocol": false,
-  "TraceBlockFetchProtocolSerialised": false,
-  "TraceBlockFetchServer": false,
+  "TraceBlockFetchClient": true,
+  "TraceBlockFetchDecisions": true,
+  "TraceBlockFetchProtocol": true,
+  "TraceBlockFetchProtocolSerialised": true,
+  "TraceBlockFetchServer": true,
   "TraceChainDb": true,
-  "TraceChainSyncBlockServer": false,
-  "TraceChainSyncClient": false,
-  "TraceChainSyncHeaderServer": false,
-  "TraceChainSyncProtocol": false,
+  "TraceChainSyncBlockServer": true,
+  "TraceChainSyncClient": true,
+  "TraceChainSyncHeaderServer": true,
+  "TraceChainSyncProtocol": true,
   "TraceConnectionManager": true,
   "TraceDNSResolver": true,
   "TraceDNSSubscription": true,
   "TraceDiffusionInitialization": true,
   "TraceErrorPolicy": true,
   "TraceForge": true,
-  "TraceHandshake": false,
+  "TraceHandshake": true,
   "TraceInboundGovernor": true,
   "TraceIpSubscription": true,
   "TraceLedgerPeers": true,
-  "TraceLocalChainSyncProtocol": false,
+  "TraceLocalChainSyncProtocol": true,
   "TraceLocalErrorPolicy": true,
-  "TraceLocalHandshake": false,
+  "TraceLocalHandshake": true,
   "TraceLocalRootPeers": true,
-  "TraceLocalTxSubmissionProtocol": false,
-  "TraceLocalTxSubmissionServer": false,
+  "TraceLocalTxSubmissionProtocol": true,
+  "TraceLocalTxSubmissionServer": true,
   "TraceMempool": true,
-  "TraceMux": false,
+  "TraceMux": true,
   "TracePeerSelection": true,
   "TracePeerSelectionActions": true,
   "TracePublicRootPeers": true,
   "TraceServer": true,
-  "TraceTxInbound": false,
-  "TraceTxOutbound": false,
-  "TraceTxSubmissionProtocol": false,
+  "TraceTxInbound": true,
+  "TraceTxOutbound": true,
+  "TraceTxSubmissionProtocol": true,
   "TracingVerbosity": "NormalVerbosity",
   "TurnOnLogMetrics": true,
+  "TurnOnLogging": true,
   "TurnOnLogging": true,
   "defaultBackends": [
     "KatipBK"
@@ -66,7 +67,7 @@
     "127.0.0.1",
     12798
   ],
-  "minSeverity": "Info",
+  "minSeverity": "Debug",
   "options": {
     "mapBackends": {
       "cardano.node.metrics": [
@@ -97,5 +98,37 @@
       "scName": "stdout",
       "scRotation": null
     }
-  ]
+  ],
+
+  "UseTraceDispatcher": false,
+  "TraceOptionSeverity": [
+    {
+      "ns": "",
+      "severity": "Debug"
+    }
+  ],
+  "TraceOptionDetail": [
+    {
+      "ns": "",
+      "detail": "DNormal"
+    }
+  ],
+  "TraceOptionBackend": [
+    {
+      "ns": "",
+      "backends": [
+        "Stdout MachineFormat",
+        "EKGBackend"
+      ]
+    }
+  ],
+  "TraceOptionLimiter": [
+  ],
+
+  "TraceOptionForwarder": {
+    "address": {"filePath": "/tmp/forwarder.sock"},
+    "mode" : "Responder",
+    "queueSize" : 1000
+  }
+
 }

@@ -45,9 +45,11 @@ config1 = TraceConfig {
           , (["tracer2"], [ConfSeverity (SeverityF (Just Critical))])
           , (["tracer2","bubble"], [ConfSeverity (SeverityF (Just Info))])
           ]
-    , tcForwarder = LocalSocket "forwarder.log"
-    , tcForwarderMode = Responder
-    , tcForwarderQueueSize = 100
+    , tcForwarder = TraceOptionForwarder {
+        tofAddress = LocalSocket "forwarder.log"
+      , tofMode = Responder
+      , tofQueueSize = 100
+      }
     , tcNodeName = Nothing
     }
 
@@ -58,9 +60,11 @@ config2 = TraceConfig {
         , (["tracer2"], [ConfSeverity (SeverityF (Just Warning))])
         , (["tracer2","bubble"], [ConfSeverity (SeverityF (Just Debug))])
         ]
-    , tcForwarder = LocalSocket "forwarder.log"
-    , tcForwarderMode = Responder
-    , tcForwarderQueueSize = 100
+    , tcForwarder = TraceOptionForwarder {
+        tofAddress = LocalSocket "forwarder.log"
+      , tofMode = Responder
+      , tofQueueSize = 100
+      }
     , tcNodeName = Just "node-1"
     }
 

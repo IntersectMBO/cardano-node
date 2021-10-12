@@ -1,13 +1,10 @@
 {
   "network": {
-    "tag": "AcceptAt",
-    "contents": "/tmp/forwarder-1.sock"
+    "tag": "ConnectTo",
+    "contents": ["/tmp/forwarder.sock"]
   },
   "hasEKG": null,
-  "hasPrometheus": [
-    "127.0.0.1",
-    12798
-  ],
+  "hasPrometheus": null,
   "logging": [
     {
       "logRoot": "/tmp/cardano-tracer-logs",
@@ -21,4 +18,3 @@
     "rpMaxAgeHours": 1
   }
 }
-

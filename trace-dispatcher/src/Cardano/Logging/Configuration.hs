@@ -362,7 +362,7 @@ parseRepresentation bs = transform (decodeEither' bs)
     transform (Left e)   = Left e
     transform (Right rl) = Right $ transform' emptyTraceConfig rl
     transform' :: TraceConfig -> ConfigRepresentation -> TraceConfig
-    transform' (TraceConfig tc _fc _fcc _ _) cr =
+    transform' TraceConfig {tcOptions=tc} cr =
       let tc'  = foldl' (\ tci (TraceOptionSeverity ns severity') ->
                           let ns' = split (=='.') ns
                               ns'' = if ns' == [""] then [] else ns'
@@ -390,8 +390,6 @@ parseRepresentation bs = transform (decodeEither' bs)
       in TraceConfig
           tc''''
           (traceOptionForwarder cr)
-          (traceOptionForwarderMode cr)
-          (traceOptionForwardQueueSize cr)
           (traceOptionNodeName cr)
 
 data TraceOptionSeverity = TraceOptionSeverity {
@@ -458,14 +456,14 @@ instance AE.FromJSON TraceOptionLimiter where
                            <*> obj .: "limiterName"
                            <*> obj .: "limiterFrequency"
 
+
+
 data ConfigRepresentation = ConfigRepresentation {
     traceOptionSeverity         :: [TraceOptionSeverity]
   , traceOptionDetail           :: [TraceOptionDetail]
   , traceOptionBackend          :: [TraceOptionBackend]
   , traceOptionLimiter          :: [TraceOptionLimiter]
-  , traceOptionForwarder        :: ForwarderAddr
-  , traceOptionForwarderMode    :: ForwarderMode
-  , traceOptionForwardQueueSize :: Int
+  , traceOptionForwarder        :: TraceOptionForwarder
   , traceOptionNodeName         :: Maybe Text
   }
   deriving (Eq, Ord, Show)
@@ -477,6 +475,4 @@ instance AE.FromJSON ConfigRepresentation where
                            <*> obj .: "TraceOptionBackend"
                            <*> obj .: "TraceOptionLimiter"
                            <*> obj .: "TraceOptionForwarder"
-                           <*> obj .: "TraceOptionForwarderMode"
-                           <*> obj .: "TraceOptionForwardQueueSize"
                            <*> obj .:? "TraceOptionNodeName"

@@ -232,7 +232,7 @@ In addition, the __severity context__ of a particular trace can be further overr
 
 `Info` is the default __severity__, in the absence of trace context or configured severity overrides.
 
-NOTE: as en extension to the filtering severity type (`SeverityF`), a `SilenceF` constructor is defined, which encodes unconditional silencing of a particular trace -- and therefore serves as a semantic expression of the `nullTracer` functionality.
+NOTE: as en extension to the filtering severity type (`SeverityF`), a `Silence` constructor is defined, which encodes unconditional silencing of a particular trace -- and therefore serves as a semantic expression of the `nullTracer` functionality.
 
 ### Privacy
 
@@ -477,7 +477,7 @@ These are the options that can be configured based on a namespace:
 
 ```haskell
 data ConfigOption =
-    -- | Severity level for filtering (default is WarningF)
+    -- | Severity level for filtering (default is Warning)
     ConfSeverity SeverityF
     -- | Detail level of message representation (Default is DNormal)
   | ConfDetail DetailLevel
@@ -508,7 +508,7 @@ all messages with Info or higher Priority are shown:
 ```yaml
 TraceOptionSeverity:
   - ns: ''
-    severity: InfoF
+    severity: Info
 ```
 
 But if you want to see Debug messages of the ChainDB tracer, then add:
@@ -516,9 +516,9 @@ But if you want to see Debug messages of the ChainDB tracer, then add:
 ```yaml
 TraceOptionSeverity:
   - ns: ''
-    severity: InfoF
+    severity: Info
   - ns: Node.ChainDB
-    severity: DebugF
+    severity: Debug
 ```
 
 And if you never want to see any message of the AcceptPolicy tracer, then add:
@@ -526,9 +526,9 @@ And if you never want to see any message of the AcceptPolicy tracer, then add:
 ```yaml
 TraceOptionSeverity:
   - ns: ''
-    severity: InfoF
+    severity: Info
   - ns: Node.ChainDB
-    severity: DebugF    
+    severity: Debug    
   - ns: Node.AcceptPolicy
     severity: SilentF    
 ```
@@ -635,7 +635,7 @@ __Trace filtering__ is affected by __annotation__ and __configuration__ componen
 For the purposes of trace dispatcher implementation, direct trace filtering can be done by `filterTraceBySeverity`, which only processes messages further with a severity equal or greater as the given one. E.g.:
 
 ```haskell
-let filteredTracer = filterTraceBySeverity WarningF exampleTracer
+let filteredTracer = filterTraceBySeverity Warning exampleTracer
 ```
 
 A more general filter function is offered, which gives access to the object and a `LoggingContext`, which contains the namespace, the severity, the privacy and the detailLevel:

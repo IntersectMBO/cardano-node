@@ -262,11 +262,11 @@ UseTraceDispatcher: True
 
 TraceOptionSeverity:
   - ns: ''
-    severity: InfoF
+    severity: Info
   - ns: Node.AcceptPolicy
-    severity: SilenceF
+    severity: Silence
   - ns: Node.ChainDB
-    severity: DebugF
+    severity: Debug
 TraceOptionDetail:
   - ns: ''
     detail: DNormal

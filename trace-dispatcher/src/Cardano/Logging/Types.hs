@@ -24,6 +24,7 @@ module Cardano.Logging.Types (
   , ForwarderAddr(..)
   , FormatLogging(..)
   , ForwarderMode(..)
+  , TraceOptionForwarder(..)
   , TraceConfig(..)
   , emptyTraceConfig
   , FormattedMessage(..)
@@ -197,7 +198,9 @@ instance AE.FromJSON SeverityF where
     parseJSON (AE.String "Critical")  = pure (SeverityF (Just Critical))
     parseJSON (AE.String "Alert")     = pure (SeverityF (Just Alert))
     parseJSON (AE.String "Emergency") = pure (SeverityF (Just Emergency))
-    parseJSON (AE.String "Scilence")  = pure (SeverityF Nothing)
+    parseJSON (AE.String "Silence")  = pure (SeverityF Nothing)
+    parseJSON invalid = fail $ "Parsing of filter Severity failed."
+                          <> "Unknown severity: " <> show invalid
 
 instance Ord SeverityF where
   compare (SeverityF (Just s1)) (SeverityF (Just s2)) = compare s1 s2
@@ -253,7 +256,8 @@ instance AE.FromJSON BackendConfig where
   parseJSON (AE.String "Stdout HumanFormatUncoloured")
                                                = pure $ Stdout HumanFormatUncoloured
   parseJSON (AE.String "Stdout MachineFormat") = pure $ Stdout MachineFormat
-  parseJSON other                              = error (show other)
+  parseJSON other                              = fail $ "Parsing of backend config failed."
+                        <> "Unknown config: " <> show other
 
 data FormatLogging =
     HumanFormatColoured
@@ -263,7 +267,7 @@ data FormatLogging =
 
 -- Configuration options for individual namespace elements
 data ConfigOption =
-    -- | Severity level for a filter (default is WarningF)
+    -- | Severity level for a filter (default is Warning)
     ConfSeverity SeverityF
     -- | Detail level (default is DNormal)
   | ConfDetail DetailLevel
@@ -289,28 +293,45 @@ data ForwarderMode =
   | Responder
   deriving (Eq, Ord, Show, Generic)
 
+data TraceOptionForwarder = TraceOptionForwarder {
+    tofAddress   :: ForwarderAddr
+  , tofMode      :: ForwarderMode
+  , tofQueueSize :: Int
+} deriving (Eq, Ord, Show)
+
+instance AE.FromJSON TraceOptionForwarder where
+    parseJSON (AE.Object obj) = TraceOptionForwarder
+                           <$> obj AE..: "address"
+                           <*> obj AE..: "mode"
+                           <*> obj AE..: "queueSize"
+
+defaultForwarder :: TraceOptionForwarder
+defaultForwarder = TraceOptionForwarder {
+    tofAddress = LocalSocket "forwarder.log"
+  , tofMode = Responder
+  , tofQueueSize = 1500
+}
+
 instance AE.FromJSON ForwarderMode where
   parseJSON (AE.String "Initiator") = pure Initiator
   parseJSON (AE.String "Responder") = pure Responder
-  parseJSON other                   = error (show other)
+  parseJSON other                   = fail $ "Parsing of ForwarderMode failed."
+                        <> "Unknown ForwarderMode: " <> show other
 
 data TraceConfig = TraceConfig {
      -- | Options specific to a certain namespace
-    tcOptions            :: Map.Map Namespace [ConfigOption]
-  , tcForwarder          :: ForwarderAddr
-  , tcForwarderMode      :: ForwarderMode
-  , tcForwarderQueueSize :: Int
+    tcOptions   :: Map.Map Namespace [ConfigOption]
+     -- | Options for the forwarder
+  , tcForwarder :: TraceOptionForwarder
     -- | Opional human-readable name of the node.
-  , tcNodeName           :: Maybe Text
+  , tcNodeName  :: Maybe Text
 }
   deriving (Eq, Ord, Show)
 
 emptyTraceConfig :: TraceConfig
 emptyTraceConfig = TraceConfig {
     tcOptions = Map.empty
-  , tcForwarder = LocalSocket "forwarder.log"
-  , tcForwarderMode = Responder
-  , tcForwarderQueueSize = 1500
+  , tcForwarder = defaultForwarder
   , tcNodeName = Nothing
   }
 
