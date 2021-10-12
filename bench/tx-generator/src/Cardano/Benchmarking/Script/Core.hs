@@ -425,7 +425,7 @@ runPlutusBenchmark submitMode scriptFile executionUnits scriptData scriptRedeeme
   fundSource <- liftIO (mkBufferedSource walletRef
                    (fromIntegral (unNumberOfTxs txCount) * numInputs)
                    minValuePerInput
-                   (PlutusScriptFund scriptFile) numInputs) >>= \case
+                   (PlutusScriptFund scriptFile scriptData) numInputs) >>= \case
     Right a  -> return a
     Left err -> throwE $ WalletError err
 
@@ -535,7 +535,7 @@ createChangeScriptFunds submitMode scriptFile scriptData value count = do
 --        selector = mkWalletFundSource walletRef $ FundSet.selectMinValue $ sum coins + fee
         inOut :: [Lovelace] -> [Lovelace]
         inOut = Wallet.includeChange fee coins
-        toUTxO = PlutusExample.mkUtxoScript networkId fundKey (scriptFile, script, hashScriptData scriptData) Confirmed
+        toUTxO = PlutusExample.mkUtxoScript networkId fundKey (scriptFile, script, scriptData) Confirmed
         fundToStore = mkWalletFundStore walletRef
 
       tx <- liftIO $ sourceToStoreTransaction (genTx (mkFee fee) TxMetadataNone) fundSource inOut toUTxO fundToStore

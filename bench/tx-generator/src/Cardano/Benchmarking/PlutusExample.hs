@@ -20,15 +20,15 @@ import           Cardano.Benchmarking.Wallet
 mkUtxoScript ::
      NetworkId
   -> SigningKey PaymentKey
-  -> (FilePath, Script PlutusScriptV1, Hash ScriptData)
+  -> (FilePath, Script PlutusScriptV1, ScriptData)
   -> Validity
   -> ToUTxO AlonzoEra
-mkUtxoScript networkId key (scriptFile, script, txOutDatumHash) validity values
+mkUtxoScript networkId key (scriptFile, script, txOutDatum) validity values
   = ( map mkTxOut values
     , newFunds
     )
  where
-  mkTxOut v = TxOut plutusScriptAddr (mkTxOutValueAdaOnly v) (TxOutDatumHash ScriptDataInAlonzoEra txOutDatumHash)
+  mkTxOut v = TxOut plutusScriptAddr (mkTxOutValueAdaOnly v) (TxOutDatumHash ScriptDataInAlonzoEra $ hashScriptData txOutDatum)
 
   plutusScriptAddr = makeShelleyAddressInEra
                        networkId
@@ -43,7 +43,7 @@ mkUtxoScript networkId key (scriptFile, script, txOutDatumHash) validity values
     , _fundVal = mkTxOutValueAdaOnly val
     , _fundSigningKey = key
     , _fundValidity = validity
-    , _fundVariant = PlutusScriptFund scriptFile
+    , _fundVariant = PlutusScriptFund scriptFile txOutDatum
     }
 
 readScript :: FilePath -> IO (Script PlutusScriptV1)
