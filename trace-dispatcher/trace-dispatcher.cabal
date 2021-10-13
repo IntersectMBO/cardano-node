@@ -19,6 +19,7 @@ library
                       Cardano.Logging.Configuration
                       Cardano.Logging.DocuGenerator
                       Cardano.Logging.Formatter
+                      Cardano.Logging.Forwarding
                       Cardano.Logging.FrequencyLimiter
                       Cardano.Logging.Tracer.EKG
                       Cardano.Logging.Tracer.Standard

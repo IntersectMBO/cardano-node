@@ -33,6 +33,8 @@ import           Network.Socket (AddrInfo, Socket)
 import           System.Directory (canonicalizePath, createDirectoryIfMissing,
                      makeAbsolute)
 import           System.Environment (lookupEnv)
+import qualified System.Metrics as EKG
+
 #ifdef UNIX
 import           System.Posix.Files
 import           System.Posix.Types (FileMode)
@@ -150,17 +152,18 @@ runNode cmdPc = do
                       Right res -> return res
 
     -- New logging initialisation
+    let ekgServer' = ekgServer (llEKGDirect loggingLayer)
+    ekgStore <- EKG.newStore
     loggerConfiguration <-
       case getLast $ pncConfigFile cmdPc of
         Just fileName -> NL.readConfiguration (unConfigPath fileName)
         Nothing -> putTextLn "No configuration file name found!" >> exitFailure
     baseTrace    <- NL.standardTracer
     nodeInfo <- prepareNodeInfo nc p loggerConfiguration now
-    forwardTrace <- withIOManager $ \iomgr -> NL.forwardTracer iomgr loggerConfiguration nodeInfo
-    mbEkgTrace   <- case llEKGDirect loggingLayer of
-                      Nothing -> pure Nothing
-                      Just ekgDirect ->
-                        liftM Just (NL.ekgTracer (Right (ekgServer ekgDirect)))
+    forwardSink <- withIOManager $ \iomgr ->
+                        NL.initForwarding iomgr loggerConfiguration ekgStore nodeInfo
+    let forwardTrace = NL.forwardTracer forwardSink
+    ekgTrace   <- NL.ekgTracer (Right ekgServer')
     -- End new logging initialisation
 
     !trace <- setupTrace loggingLayer
@@ -188,10 +191,10 @@ runNode cmdPc = do
                        (ncTraceConfig nc)
                        trace
                        nodeKernelData
-                       (llEKGDirect loggingLayer)
+                       (Just (llEKGDirect loggingLayer))
                        baseTrace
                        forwardTrace
-                       mbEkgTrace
+                       (Just ekgTrace)
                        loggerConfiguration
                        bi
 
@@ -205,22 +208,6 @@ runNode cmdPc = do
 
     case p of
       SomeConsensusProtocol _ runP -> handleNodeWithTracers runP
-
-initTraceDispatcher :: ... -> TraceDispatcher
-initTraceDispatcher = do
-    forwardTrace <- withIOManager $ \iomgr -> NL.forwardTracer iomgr loggerConfiguration nodeInfo
-    mbEkgTrace   <- case llEKGDirect loggingLayer of
-                      Nothing -> pure Nothing
-                      Just ekgDirect ->
-                        liftM Just (NL.ekgTracer (Right (ekgServer ekgDirect)))
-    baseTrace    <- NL.standardTracer
-
-data TraceDispatcher
-  =  TraceDispatcher
-     { tdForwardTracer :: ForwardTracer
-     , tdEKGTracer     :: Maybe EKGTracer
-     , tdStdoutTracer    :: StdoutTracer
-     }
 
 logTracingVerbosity :: NodeConfiguration -> Tracer IO String -> IO ()
 logTracingVerbosity nc tracer =
