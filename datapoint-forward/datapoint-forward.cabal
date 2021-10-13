@@ -1,0 +1,91 @@
+cabal-version:       2.4
+name:                datapoint-forward
+version:             0.1.0
+synopsis:            See README for more info
+description:         See README for more info
+license:             Apache-2.0
+license-file:        LICENSE
+copyright:           2021 Input Output (Hong Kong) Ltd.
+author:              IOHK
+maintainer:          operations@iohk.io
+build-type:          Simple
+extra-doc-files:     README.md
+                     CHANGELOG.md
+
+common base            { build-depends: base >= 4.14 && < 4.15 }
+
+common project-config
+  default-language:    Haskell2010
+
+  ghc-options:         -Wall
+                       -Wcompat
+                       -Wincomplete-record-updates
+                       -Wincomplete-uni-patterns
+                       -Wno-unticked-promoted-constructors
+                       -Wno-orphans
+                       -Wpartial-fields
+                       -Wredundant-constraints
+                       -Wunused-packages
+
+library
+  import:              base, project-config
+  hs-source-dirs:      src
+
+  exposed-modules:     DataPoint.Forward.Acceptor
+                       DataPoint.Forward.Configuration
+                       DataPoint.Forward.Forwarder
+                       DataPoint.Forward.Utils
+
+                       DataPoint.Forward.Network.Acceptor
+                       DataPoint.Forward.Network.Forwarder
+
+                       DataPoint.Forward.Protocol.Acceptor
+                       DataPoint.Forward.Protocol.Codec
+                       DataPoint.Forward.Protocol.Forwarder
+                       DataPoint.Forward.Protocol.Type
+
+  build-depends:         aeson
+                       , async
+                       , bytestring
+                       , cborg
+                       , contra-tracer
+                       , extra
+                       , io-classes
+                       , ouroboros-network-framework
+                       , serialise
+                       , stm
+                       , text
+                       , typed-protocols
+                       , unordered-containers
+
+test-suite test
+  import:              base, project-config
+  type:                exitcode-stdio-1.0
+  main-is:             Main.hs
+  hs-source-dirs:      test
+
+  other-modules:       Test.DataPoint.Forward.Protocol.Codec
+                       Test.DataPoint.Forward.Protocol.Tests
+                       Test.DataPoint.Forward.Demo.Configs
+                       Test.DataPoint.Forward.Demo.Tests
+                       Test.DataPoint.Forward.Types
+
+  build-depends:         aeson
+                       , async
+                       , contra-tracer
+                       , directory
+                       , extra
+                       , filepath
+                       , ouroboros-network-framework
+                       , datapoint-forward
+                       , QuickCheck
+                       , serialise
+                       , stm
+                       , tasty
+                       , tasty-quickcheck
+                       , typed-protocols
+                       , typed-protocols-examples
+                       , text
+
+  ghc-options:         -rtsopts
+                       -threaded

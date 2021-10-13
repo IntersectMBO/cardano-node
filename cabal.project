@@ -14,6 +14,7 @@ packages:
     bench/locli
     bench/tx-generator
     plutus-example/plutus-example
+    datapoint-forward
     trace-dispatcher
     trace-forward
     trace-resources
@@ -81,6 +82,9 @@ package plutus-examples
   tests: True
 
 package trace-resources
+  tests: True
+
+package datapoint-forward
   tests: True
 
 package trace-dispatcher
