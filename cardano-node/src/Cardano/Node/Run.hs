@@ -33,7 +33,7 @@ import           Network.Socket (AddrInfo, Socket)
 import           System.Directory (canonicalizePath, createDirectoryIfMissing,
                      makeAbsolute)
 import           System.Environment (lookupEnv)
-import qualified System.Metrics as EKG
+import qualified System.Remote.Monitoring as EKG
 
 #ifdef UNIX
 import           System.Posix.Files
@@ -153,7 +153,7 @@ runNode cmdPc = do
 
     -- New logging initialisation
     let ekgServer' = ekgServer (llEKGDirect loggingLayer)
-    ekgStore <- EKG.newStore
+    let ekgStore = EKG.serverMetricStore ekgServer'
     loggerConfiguration <-
       case getLast $ pncConfigFile cmdPc of
         Just fileName -> NL.readConfiguration (unConfigPath fileName)
@@ -163,7 +163,7 @@ runNode cmdPc = do
     forwardSink <- withIOManager $ \iomgr ->
                         NL.initForwarding iomgr loggerConfiguration ekgStore nodeInfo
     let forwardTrace = NL.forwardTracer forwardSink
-    ekgTrace   <- NL.ekgTracer (Right ekgServer')
+    ekgTrace   <- NL.ekgTracer (Left ekgStore)
     -- End new logging initialisation
 
     !trace <- setupTrace loggingLayer
