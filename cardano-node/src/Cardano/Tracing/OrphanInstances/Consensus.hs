@@ -46,7 +46,8 @@ import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client (TraceChainSy
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Server (TraceChainSyncServerEvent (..))
 import           Ouroboros.Consensus.MiniProtocol.LocalTxSubmission.Server
                    (TraceLocalTxSubmissionServerEvent (..))
-import           Ouroboros.Consensus.Node.Run (RunNode, estimateBlockSize)
+import           Ouroboros.Consensus.Node.Run (RunNode, SerialiseNodeToNodeConstraints,
+                   estimateBlockSize)
 import           Ouroboros.Consensus.Node.Tracers (TraceForgeEvent (..))
 import qualified Ouroboros.Consensus.Node.Tracers as Consensus
 import           Ouroboros.Consensus.Protocol.Abstract
@@ -104,6 +105,7 @@ instance HasSeverityAnnotation (ChainDB.TraceEvent blk) where
       ChainDB.CandidateContainsFutureBlocks{} -> Debug
       ChainDB.CandidateContainsFutureBlocksExceedingClockSkew{} -> Error
     ChainDB.ChainSelectionForFutureBlock{} -> Debug
+    ChainDB.DoneAddingBlock{} -> Info
 
   getSeverityAnnotation (ChainDB.TraceLedgerReplayEvent ev) = case ev of
     LedgerDB.ReplayFromGenesis {} -> Info
@@ -352,6 +354,7 @@ instance (HasPrivacyAnnotation a, HasSeverityAnnotation a, ToObject a)
 
 instance ( ConvertRawHash blk
          , LedgerSupportsProtocol blk
+         , SerialiseNodeToNodeConstraints blk
          , InspectLedger blk
          , ToObject (Header blk)
          , ToObject (LedgerEvent blk))
@@ -360,6 +363,7 @@ instance ( ConvertRawHash blk
 
 instance ( ConvertRawHash blk
          , LedgerSupportsProtocol blk
+         , SerialiseNodeToNodeConstraints blk
          , InspectLedger blk)
       => HasTextFormatter (ChainDB.TraceEvent blk) where
     formatText tev _obj = case tev of
@@ -405,6 +409,10 @@ instance ( ConvertRawHash blk
           "Chain added block " <> renderRealPointAsPhrase pt
         ChainDB.ChainSelectionForFutureBlock pt ->
           "Chain selection run for block previously from future: " <> renderRealPointAsPhrase pt
+        ChainDB.DoneAddingBlock pt (ChainDB.Ignorable b) forgeDelay delay tip -> "DoneAddingBlock block " <>
+          renderRealPointAsPhrase pt <> " tip " <> renderPointAsPhrase tip <>
+          " forgeDelay " <> showT forgeDelay <> " delay " <> showT delay <> " size " <>
+          showT (estimateBlockSize (getHeader b))
       ChainDB.TraceLedgerReplayEvent ev -> case ev of
         LedgerDB.ReplayFromGenesis _replayTo ->
           "Replaying ledger from genesis"
@@ -622,7 +630,8 @@ instance ConvertRawHash blk
         , "hash" .= renderHeaderHashForVerbosity (Proxy @blk) verb (realPointHash p) ]
 
 
-instance (ToObject (LedgerUpdate blk), ToObject (LedgerWarning blk))
+instance (ToObject (LedgerUpdate blk), ToObject (LedgerWarning blk),
+          SerialiseNodeToNodeConstraints blk)
       => ToObject (LedgerEvent blk) where
   toObject verb = \case
     LedgerUpdate  update  -> toObject verb update
@@ -632,7 +641,8 @@ instance (ToObject (LedgerUpdate blk), ToObject (LedgerWarning blk))
 instance ( ConvertRawHash blk
          , LedgerSupportsProtocol blk
          , ToObject (Header blk)
-         , ToObject (LedgerEvent blk))
+         , ToObject (LedgerEvent blk)
+         , SerialiseNodeToNodeConstraints blk)
       => ToObject (ChainDB.TraceEvent blk) where
   toObject verb (ChainDB.TraceAddBlockEvent ev) = case ev of
     ChainDB.IgnoreBlockOlderThanK pt ->
@@ -708,6 +718,14 @@ instance ( ConvertRawHash blk
     ChainDB.ChainSelectionForFutureBlock pt ->
       mkObject [ "kind" .= String "TraceAddBlockEvent.ChainSelectionForFutureBlock"
                , "block" .= toObject verb pt ]
+    ChainDB.DoneAddingBlock pt (ChainDB.Ignorable b) forgeDelay delay tip ->
+      mkObject [ "kind" .= String "TraceAddBlockEven.DoneAddingBlock"
+               , "block" .= renderRealPointAsPhrase pt
+               , "tip " .= renderPointAsPhrase tip
+               , "forgeDelay" .= show forgeDelay
+               , "delay" .= show delay
+               , "size" .= estimateBlockSize (getHeader b)
+               ]
    where
      addedHdrsNewChain
        :: AF.AnchoredFragment (Header blk)
