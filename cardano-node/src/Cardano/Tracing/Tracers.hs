@@ -56,7 +56,7 @@ import           Cardano.BM.Internal.ElidingTracer
 import           Cardano.BM.Trace (traceNamedObject)
 import           Cardano.BM.Tracing
 
-import           Ouroboros.Consensus.Block (BlockConfig, BlockProtocol, CannotForge, ConvertRawHash,
+import           Ouroboros.Consensus.Block (BlockConfig, BlockProtocol, CannotForge,
                    ForgeStateInfo, ForgeStateUpdateError, Header, realPointSlot)
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..),
                    TraceBlockchainTimeEvent (..))
@@ -75,6 +75,7 @@ import           Ouroboros.Consensus.Node (NetworkP2PMode (..))
 import qualified Ouroboros.Consensus.Node.Run as Consensus (RunNode)
 import qualified Ouroboros.Consensus.Node.Tracers as Consensus
 import           Ouroboros.Consensus.Protocol.Abstract (ValidationErr)
+import           Ouroboros.Consensus.Node.Run (SerialiseNodeToNodeConstraints)
 import qualified Ouroboros.Consensus.Shelley.Protocol.HotKey as HotKey
 
 import qualified Ouroboros.Network.AnchoredFragment as AF
@@ -225,6 +226,7 @@ instance ElidingTracer (WithSeverity (ChainDB.TraceEvent blk)) where
   doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.AddBlockValidation (ChainDB.InvalidCandidate _)))) = False
   doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.AddBlockValidation ChainDB.CandidateContainsFutureBlocksExceedingClockSkew{}))) = False
   doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.AddedToCurrentChain events _ _  _))) = null events
+  doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.DoneAddingBlock{}))) = False
   doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent _)) = True
   doelide (WithSeverity _ (ChainDB.TraceCopyToImmutableDBEvent _)) = True
   doelide _ = False
@@ -451,9 +453,9 @@ mkTracers _ TracingOff _ _ _ enableP2P =
 --------------------------------------------------------------------------------
 
 teeTraceChainTip
-  :: ( ConvertRawHash blk
-     , LedgerSupportsProtocol blk
+  :: ( LedgerSupportsProtocol blk
      , InspectLedger blk
+     , SerialiseNodeToNodeConstraints blk
      , ToObject (Header blk)
      , ToObject (LedgerEvent blk)
      )
@@ -473,9 +475,9 @@ teeTraceChainTip blockConfig fStats (TracingOn trSel) elided ekgDirect tFork trT
     traceWith (ignoringSeverity (traceChainMetrics ekgDirect tFork blockConfig fStats trMet)) ev
 
 teeTraceChainTipElide
-  :: ( ConvertRawHash blk
-     , LedgerSupportsProtocol blk
+  :: ( LedgerSupportsProtocol blk
      , InspectLedger blk
+     , SerialiseNodeToNodeConstraints blk
      , ToObject (Header blk)
      , ToObject (LedgerEvent blk)
      )
