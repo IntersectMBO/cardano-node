@@ -11,7 +11,8 @@ module Cardano.Logging.Forwarding
   ) where
 
 import           Codec.CBOR.Term (Term)
-import           Control.Concurrent.Async (race_, wait, withAsync)
+import           Control.Concurrent.Async (async, race_, wait)
+import           Control.Monad (void)
 import           Control.Monad.IO.Class
 
 import           "contra-tracer" Control.Tracer (contramap, stdoutTracer)
@@ -93,13 +94,12 @@ launchForwarders
   -> TF.ForwarderConfiguration TraceObject
   -> ForwardSink TraceObject
   -> IO ()
-launchForwarders iomgr TraceConfig{tcForwarder} store ekgConfig tfConfig sink = flip
-  withAsync
-    wait
-    $ runActionInLoop
-        (launchForwardersViaLocalSocket iomgr tcForwarder (ekgConfig, tfConfig) sink store)
-        (TF.LocalPipe p)
-        1
+launchForwarders iomgr TraceConfig{tcForwarder} store ekgConfig tfConfig sink =
+  void . async $
+    runActionInLoop
+      (launchForwardersViaLocalSocket iomgr tcForwarder (ekgConfig, tfConfig) sink store)
+      (TF.LocalPipe p)
+      1
  where
   LocalSocket p = tofAddress tcForwarder
 
