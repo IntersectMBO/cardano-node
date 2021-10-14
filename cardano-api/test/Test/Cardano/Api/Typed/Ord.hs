@@ -4,16 +4,18 @@ module Test.Cardano.Api.Typed.Ord
   ( tests
   ) where
 
-import           Cardano.Api
 import           Prelude
-import           Cardano.Api.Shelley
-import           Gen.Cardano.Api.Typed
-import           Gen.Tasty.Hedgehog.Group (fromGroup)
-import           Hedgehog (Property, discover, (===))
+
+import           Hedgehog (Property, (===))
+import qualified Hedgehog as H
 import           Test.Cardano.Api.Metadata (genTxMetadataValue)
 import           Test.Tasty (TestTree)
+import           Test.Tasty.Hedgehog (testProperty)
+import           Test.Tasty.TH (testGroupGenerator)
 
-import qualified Hedgehog as H
+import           Cardano.Api
+import           Cardano.Api.Shelley
+import           Gen.Cardano.Api.Typed
 
 {- HLINT ignore "Use camelCase" -}
 
@@ -57,5 +59,4 @@ prop_ord_distributive_ScriptData =
 -- -----------------------------------------------------------------------------
 
 tests :: TestTree
-tests = fromGroup $$discover
-
+tests = $testGroupGenerator

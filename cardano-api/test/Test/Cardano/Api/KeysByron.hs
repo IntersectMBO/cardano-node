@@ -5,15 +5,17 @@ module Test.Cardano.Api.KeysByron
   ( tests
   ) where
 
-import           Cardano.Api
 import           Cardano.Prelude
-import           Gen.Hedgehog.Roundtrip.CBOR (roundtrip_CBOR)
-import           Gen.Tasty.Hedgehog.Group (fromGroup)
-import           Hedgehog (Property, discover)
+
+import           Hedgehog (Property)
 import           Test.Cardano.Api.Typed.Orphans ()
 import           Test.Tasty (TestTree)
+import           Test.Tasty.Hedgehog (testProperty)
+import           Test.Tasty.TH (testGroupGenerator)
 
+import           Cardano.Api
 import qualified Gen.Cardano.Crypto.Seed as Gen
+import           Gen.Hedgehog.Roundtrip.CBOR (roundtrip_CBOR)
 
 {- HLINT ignore "Use camelCase" -}
 
@@ -22,4 +24,4 @@ prop_roundtrip_byron_key_CBOR =
   roundtrip_CBOR (AsSigningKey AsByronKey) (deterministicSigningKey AsByronKey <$> Gen.genSeedForKey AsByronKey)
 
 tests :: TestTree
-tests = fromGroup $$discover
+tests = $testGroupGenerator

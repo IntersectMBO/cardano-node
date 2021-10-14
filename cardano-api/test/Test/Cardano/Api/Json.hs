@@ -9,18 +9,18 @@ module Test.Cardano.Api.Json
 
 import           Cardano.Prelude
 
-import           Cardano.Api
-import           Cardano.Api.Orphans ()
-
 import           Data.Aeson (FromJSON (parseJSON), ToJSON (toJSON), eitherDecode, encode)
 import           Data.Aeson.Types (Parser, parseEither)
-import           Gen.Cardano.Api (genAlonzoGenesis)
-import           Gen.Cardano.Api.Typed
-import           Gen.Tasty.Hedgehog.Group (fromGroup)
-
-import           Hedgehog (Property, discover, forAll, tripping)
+import           Hedgehog (Property, forAll, tripping)
 import qualified Hedgehog as H
 import           Test.Tasty (TestTree)
+import           Test.Tasty.Hedgehog (testProperty)
+import           Test.Tasty.TH (testGroupGenerator)
+
+import           Cardano.Api
+import           Cardano.Api.Orphans ()
+import           Gen.Cardano.Api (genAlonzoGenesis)
+import           Gen.Cardano.Api.Typed
 
 {- HLINT ignore "Use camelCase" -}
 
@@ -66,4 +66,4 @@ prop_json_roundtrip_eraInMode = H.property $ do
 
 
 tests :: TestTree
-tests = fromGroup $$discover
+tests = $testGroupGenerator

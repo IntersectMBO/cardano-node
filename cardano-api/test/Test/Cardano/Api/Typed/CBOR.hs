@@ -8,10 +8,12 @@ module Test.Cardano.Api.Typed.CBOR
 import           Cardano.Api
 import           Gen.Cardano.Api.Typed
 import           Gen.Hedgehog.Roundtrip.CBOR (roundtrip_CBOR)
-import           Gen.Tasty.Hedgehog.Group (fromGroup)
-import           Hedgehog (Property, discover)
+
+import           Hedgehog (Property)
 import           Test.Cardano.Api.Typed.Orphans ()
 import           Test.Tasty (TestTree)
+import           Test.Tasty.Hedgehog (testProperty)
+import           Test.Tasty.TH (testGroupGenerator)
 
 {- HLINT ignore "Use camelCase" -}
 
@@ -172,4 +174,4 @@ prop_roundtrip_UpdateProposal_CBOR =
 -- -----------------------------------------------------------------------------
 
 tests :: TestTree
-tests = fromGroup $$discover
+tests = $testGroupGenerator

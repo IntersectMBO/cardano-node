@@ -4,17 +4,19 @@ module Test.Cardano.Api.Typed.Script
   ( tests
   ) where
 
-import           Cardano.Api
-import           Cardano.Api.Shelley
 import           Cardano.Prelude
+
 import           Data.Aeson
-import           Gen.Cardano.Api.Typed
-import           Gen.Tasty.Hedgehog.Group (fromGroup)
-import           Hedgehog (Property, discover, (===))
+import           Hedgehog (Property, (===))
+import qualified Hedgehog as H
 import           Hedgehog.Extras.Aeson
 import           Test.Tasty (TestTree)
+import           Test.Tasty.Hedgehog (testProperty)
+import           Test.Tasty.TH (testGroupGenerator)
 
-import qualified Hedgehog as H
+import           Cardano.Api
+import           Cardano.Api.Shelley
+import           Gen.Cardano.Api.Typed
 
 {- HLINT ignore "Use camelCase" -}
 
@@ -129,5 +131,4 @@ prop_roundtrip_ScriptData =
 -- -----------------------------------------------------------------------------
 
 tests :: TestTree
-tests = fromGroup $$discover
-
+tests = $testGroupGenerator
