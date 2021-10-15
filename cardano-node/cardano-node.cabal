@@ -138,6 +138,7 @@ library
                       , ouroboros-network
                       , ouroboros-network-framework
                       , process
+                      , psqueues
                       , safe-exceptions
                       , scientific
                       , cardano-ledger-shelley
