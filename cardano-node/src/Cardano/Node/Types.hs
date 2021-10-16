@@ -65,7 +65,7 @@ import qualified Cardano.Chain.Update as Byron
 import           Cardano.Crypto (RequiresNetworkMagic (..))
 import qualified Cardano.Crypto.Hash as Crypto
 import           Cardano.Node.Protocol.Types (Protocol (..))
-import           Ouroboros.Network.PeerSelection.RootPeersDNS (DomainAddress (..))
+import           Ouroboros.Network.PeerSelection.RootPeersDNS (DomainAccessPoint (..))
 
 --TODO: things will probably be clearer if we don't use these newtype wrappers and instead
 -- use records with named fields in the CLI code.
@@ -139,9 +139,9 @@ nodeIPv4ToIPAddress = fmap nodeHostIPv4AddressToIPAddress
 nodeIPv6ToIPAddress :: NodeIPv6Address -> NodeIPAddress
 nodeIPv6ToIPAddress = fmap nodeHostIPv6AddressToIPAddress
 
-nodeDnsAddressToDomainAddress :: NodeDnsAddress -> DomainAddress
+nodeDnsAddressToDomainAddress :: NodeDnsAddress -> DomainAccessPoint
 nodeDnsAddressToDomainAddress NodeAddress { naHostAddress = NodeHostDnsAddress dns, naPort }
-  = DomainAddress (Text.encodeUtf8 dns) naPort
+  = DomainAccessPoint (Text.encodeUtf8 dns) naPort
 
 nodeAddressToSockAddr :: NodeIPAddress -> SockAddr
 nodeAddressToSockAddr (NodeAddress addr port) =
