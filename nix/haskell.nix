@@ -14,6 +14,7 @@
 , assertedPackages ? []
 # Version info, to be passed when not building from a git work tree
 , gitrev ? null
+, name
 }:
 let
 
@@ -30,7 +31,7 @@ let
   # It is important this common options matches in both calls to cabalProject or `cabal configure`
   # will run twice.
   mkProjectArgs = modules: {pkgs, ...}: {
-    inherit compiler-nix-name  src modules;
+    inherit compiler-nix-name  src modules name;
     cabalProjectLocal = ''
       allow-newer: terminfo:base
     '' + lib.optionalString pkgs.stdenv.hostPlatform.isWindows ''
