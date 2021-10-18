@@ -33,7 +33,7 @@ import           Text.Show
 
 import qualified Cardano.Node.Configuration.Topology    as NonP2P
 import qualified Cardano.Node.Configuration.TopologyP2P as P2P
-import           Ouroboros.Network.PeerSelection.RootPeersDNS (RelayAddress (..))
+import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
 import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter (..))
 
 import qualified Data.Aeson as J
@@ -113,7 +113,7 @@ mkTopologyConfig i numBftNodes allPorts True = J.encode topologyP2P
     rootAddress =
       P2P.RootAddress
         (flip fmap ([0 .. numBftNodes - 1] L.\\ [i])
-        $ \j -> RelayAddress "127.0.0.1"
+        $ \j -> RelayAccessAddress "127.0.0.1"
                             (fromIntegral $ allPorts L.!! j)
         )
         P2P.DoNotAdvertisePeer

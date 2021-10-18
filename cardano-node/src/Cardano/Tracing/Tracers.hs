@@ -621,12 +621,8 @@ mkConsensusTracers mbEKGDirect trSel verb tr nodeKern fStats = do
     , Consensus.blockFetchClientTracer = traceBlockFetchClientMetrics mbEKGDirect tBlockDelayM
         tBlockDelayCDF1s tBlockDelayCDF3s tBlockDelayCDF5s $
             tracerOnOff (traceBlockFetchClient trSel) verb "BlockFetchClient" tr
-    , Consensus.blockFetchServerTracer = tracerOnOff' (traceBlockFetchServer trSel) $
-        Tracer $ \ev -> do
-          traceWith (annotateSeverity . toLogObject' verb $ appendName "BlockFetchServer" tr) ev
-          when (isTraceBlockFetchServerBlockCount ev) $
-            traceI trmet meta "served.block.count" =<<
-              STM.modifyReadTVarIO tBlocksServed (+1)
+    , Consensus.blockFetchServerTracer = traceBlockFetchServerMetrics mbEKGDirect tBlocksServed
+        tLocalUp tMaxSlotNo $ tracerOnOff (traceBlockFetchServer trSel) verb "BlockFetchServer" tr
     , Consensus.keepAliveClientTracer = tracerOnOff (traceKeepAliveClient trSel) verb "KeepAliveClient" tr
     , Consensus.forgeStateInfoTracer = tracerOnOff' (traceForgeStateInfo trSel) $
         forgeStateInfoTracer (Proxy @ blk) trSel tr

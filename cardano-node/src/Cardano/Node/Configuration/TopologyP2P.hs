@@ -17,7 +17,7 @@ module Cardano.Node.Configuration.TopologyP2P
   , nodeAddressToSockAddr
   , readTopologyFile
   , readTopologyFileOrError
-  , rootAddressToRelayAddress
+  , rootAddressToRelayAccessPoint
   )
 where
 
@@ -37,7 +37,8 @@ import           Cardano.Node.Types
 import           Cardano.Node.Configuration.Topology (TopologyError (..))
 
 import           Ouroboros.Network.NodeToNode (PeerAdvertise (..))
-import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter (..), RelayAddress (..))
+import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter (..))
+import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
 
 newtype UseLedger = UseLedger UseLedgerAfter deriving (Eq, Show)
 
@@ -79,7 +80,7 @@ instance ToJSON NodeSetup where
       ]
 
 data RootAddress = RootAddress
-  { addrs :: [RelayAddress]
+  { addrs :: [RelayAccessPoint]
   , advertise :: PeerAdvertise
   } deriving (Eq, Show)
 
@@ -96,13 +97,13 @@ instance ToJSON RootAddress where
       , "advertise" .= advertise ra
       ]
 
--- | Transforms a 'RootAddress' into a pair of 'RelayAddress' and its
+-- | Transforms a 'RootAddress' into a pair of 'RelayAccessPoint' and its
 -- corresponding 'PeerAdvertise' value.
 --
-rootAddressToRelayAddress
+rootAddressToRelayAccessPoint
   :: RootAddress
-  -> [(RelayAddress, PeerAdvertise)]
-rootAddressToRelayAddress RootAddress { addrs, advertise } =
+  -> [(RelayAccessPoint, PeerAdvertise)]
+rootAddressToRelayAccessPoint RootAddress { addrs, advertise } =
     [ (ra, advertise) | ra <- addrs ]
 
 data LocalRootPeers = LocalRootPeers
