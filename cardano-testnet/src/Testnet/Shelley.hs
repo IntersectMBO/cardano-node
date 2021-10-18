@@ -46,7 +46,7 @@ import           Text.Show
 
 import qualified Cardano.Node.Configuration.Topology    as NonP2P
 import qualified Cardano.Node.Configuration.TopologyP2P as P2P
-import           Ouroboros.Network.PeerSelection.RootPeersDNS (RelayAddress (..))
+import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
 import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter (..))
 
 import qualified Control.Concurrent as IO
@@ -148,7 +148,7 @@ mkTopologyConfig numPraosNodes allPorts port True = J.encode topologyP2P
     rootAddress :: P2P.RootAddress
     rootAddress =
       P2P.RootAddress
-        [ RelayAddress (fromString ifaceAddress)
+        [ RelayAccessAddress (fromString ifaceAddress)
                        (fromIntegral peerPort)
         | peerPort <- allPorts \\ [port]
         ]
