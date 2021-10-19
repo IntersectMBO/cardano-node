@@ -48,9 +48,9 @@ import qualified Cardano.Ledger.Core as Ledger
 import qualified Cardano.Ledger.Crypto as Crypto
 import qualified Cardano.Ledger.Era as Ledger
 import qualified Cardano.Ledger.Mary.Value as Mary
+import qualified Cardano.Ledger.PoolDistr as Ledger
 import qualified Cardano.Ledger.SafeHash as SafeHash
 import qualified Cardano.Ledger.Shelley.Constraints as Shelley
-import qualified Cardano.Protocol.TPraos as Praos
 import qualified Ouroboros.Consensus.Shelley.Eras as Consensus
 import qualified Cardano.Ledger.Shelley.API as Shelley
 import qualified Cardano.Ledger.Shelley.EpochBoundary as ShelleyEpoch
@@ -279,13 +279,13 @@ instance Crypto.Crypto crypto => ToJSON (Shelley.PulsingRewUpdate crypto) where
 instance ToJSON Shelley.DeltaCoin where
   toJSON (Shelley.DeltaCoin i) = toJSON i
 
-instance Crypto.Crypto crypto => ToJSON (Praos.PoolDistr crypto) where
-  toJSON (Praos.PoolDistr m) = toJSON m
+instance Crypto.Crypto crypto => ToJSON (Ledger.PoolDistr crypto) where
+  toJSON (Ledger.PoolDistr m) = toJSON m
 
-instance Crypto.Crypto crypto => ToJSON (Praos.IndividualPoolStake crypto) where
+instance Crypto.Crypto crypto => ToJSON (Ledger.IndividualPoolStake crypto) where
   toJSON indivPoolStake =
-    object [ "individualPoolStake" .= Praos.individualPoolStake indivPoolStake
-           , "individualPoolStakeVrf" .= Praos.individualPoolStakeVrf indivPoolStake
+    object [ "individualPoolStake" .= Ledger.individualPoolStake indivPoolStake
+           , "individualPoolStakeVrf" .= Ledger.individualPoolStakeVrf indivPoolStake
            ]
 
 instance Crypto.Crypto crypto => ToJSON (Shelley.Reward crypto) where
@@ -304,8 +304,10 @@ instance Crypto.Crypto c => ToJSON (SafeHash.SafeHash c a) where
 
 -----
 
+deriving instance ToJSON a => ToJSON (Alonzo.ExUnits' a)
 instance ToJSON Alonzo.ExUnits
-deriving instance FromJSON Alonzo.ExUnits
+deriving instance FromJSON a => FromJSON (Alonzo.ExUnits' a)
+deriving newtype instance FromJSON Alonzo.ExUnits
 
 instance ToJSON Alonzo.Prices where
   toJSON Alonzo.Prices { Alonzo.prSteps, Alonzo.prMem } =
@@ -335,6 +337,7 @@ deriving newtype instance ToJSON Alonzo.CostModel
 
 languageToText :: Alonzo.Language -> Text
 languageToText Alonzo.PlutusV1 = "PlutusV1"
+languageToText Alonzo.PlutusV2 = "PlutusV2"
 
 languageFromText :: MonadFail m => Text -> m Alonzo.Language
 languageFromText "PlutusV1" = pure Alonzo.PlutusV1

@@ -352,7 +352,7 @@ data ScriptExecutionError =
        -- the whole point of it is to discover how many execution units are
        -- needed).
        --
-     | ScriptErrorEvaluationFailed Plutus.EvaluationError
+     | ScriptErrorEvaluationFailed Plutus.EvaluationError [Text.Text]
 
        -- | The execution units overflowed a 64bit word. Congratulations if
        -- you encounter this error. With the current style of cost model this
@@ -364,6 +364,9 @@ data ScriptExecutionError =
        -- | An attempt was made to spend a key witnessed tx input
        -- with a script witness.
      | ScriptErrorNotPlutusWitnessedTxIn ScriptWitnessIndex
+
+       -- | A cost model was missing for a language which was used.
+     | ScriptErrorMissingCostModel Alonzo.Language
   deriving Show
 
 instance Error ScriptExecutionError where
@@ -379,7 +382,7 @@ instance Error ScriptExecutionError where
       "The Plutus script witness has the wrong datum (according to the UTxO). "
    ++ "The expected datum value has hash " ++ show dh
 
-  displayError (ScriptErrorEvaluationFailed evalErr) =
+  displayError (ScriptErrorEvaluationFailed evalErr _logs) = -- TODO display logs
       "The Plutus script evaluation failed: " ++ pp evalErr
     where
       pp :: PP.Pretty p => p -> String
@@ -396,6 +399,9 @@ instance Error ScriptExecutionError where
   displayError (ScriptErrorNotPlutusWitnessedTxIn scriptWitness) =
       renderScriptWitnessIndex scriptWitness <> " is not a Plutus script \
       \witnessed tx input and cannot be spent using a Plutus script witness."
+
+  displayError (ScriptErrorMissingCostModel language) =
+      "No cost model was found for language " <> show language
 
 -- | The transaction validity interval is too far into the future.
 --
@@ -524,7 +530,8 @@ evaluateTransactionExecutionUnits _eraInMode systemstart history pparams utxo tx
         Alonzo.InvalidTxIn     txin -> ScriptErrorTxInWithoutDatum txin'
                                          where txin' = fromShelleyTxIn txin
         Alonzo.MissingDatum      dh -> ScriptErrorWrongDatum (ScriptDataHash dh)
-        Alonzo.ValidationFailed err -> ScriptErrorEvaluationFailed err
+        Alonzo.ValidationFailedV1 err logs -> ScriptErrorEvaluationFailed err logs
+        Alonzo.ValidationFailedV2 err logs -> ScriptErrorEvaluationFailed err logs
         Alonzo.IncompatibleBudget _ -> ScriptErrorExecutionUnitsOverflow
 
         -- This is only possible for spending scripts and occurs when
@@ -536,6 +543,7 @@ evaluateTransactionExecutionUnits _eraInMode systemstart history pparams utxo tx
         -- build transactions in the API:
         Alonzo.MissingScript rdmrPtr ->
           impossible ("MissingScript " ++ show (fromAlonzoRdmrPtr rdmrPtr))
+        Alonzo.NoCostModel l -> ScriptErrorMissingCostModel l
 
     impossible detail = error $ "evaluateTransactionExecutionUnits: "
                              ++ "the impossible happened: " ++ detail
@@ -790,7 +798,7 @@ handleExUnitsErrors ScriptInvalid failuresMap exUnitsMap
         scriptFailures = filter isScriptErrorEvaluationFailed (Map.toList failuresMap)
         isScriptErrorEvaluationFailed :: (ScriptWitnessIndex, ScriptExecutionError) -> Bool
         isScriptErrorEvaluationFailed (_, e) = case e of
-            ScriptErrorEvaluationFailed _ -> True
+            ScriptErrorEvaluationFailed _ _ -> True
             _ -> True
 
 data BalancedTxBody era

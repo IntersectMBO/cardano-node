@@ -96,7 +96,6 @@ module Cardano.Api.Script (
 
 import           Prelude
 
-import           Data.Word (Word64)
 import qualified Data.ByteString.Lazy as LBS
 import           Data.ByteString.Short (ShortByteString)
 import qualified Data.ByteString.Short as SBS
@@ -330,6 +329,7 @@ toAlonzoLanguage (AnyPlutusScriptVersion PlutusScriptV1) = Alonzo.PlutusV1
 
 fromAlonzoLanguage :: Alonzo.Language -> AnyPlutusScriptVersion
 fromAlonzoLanguage Alonzo.PlutusV1 = AnyPlutusScriptVersion PlutusScriptV1
+fromAlonzoLanguage Alonzo.PlutusV2 = error "PlutusV2 not supported"
 
 
 class HasTypeProxy lang => IsScriptLanguage lang where
@@ -749,11 +749,11 @@ deriving instance Show (ScriptWitnessInCtx witctx)
 data ExecutionUnits =
      ExecutionUnits {
         -- | This corresponds roughly to the time to execute a script.
-        executionSteps  :: Word64,
+        executionSteps  :: Natural,
 
         -- | This corresponds roughly to the peak memory used during script
         -- execution.
-        executionMemory :: Word64
+        executionMemory :: Natural
      }
   deriving (Eq, Show)
 
@@ -846,7 +846,7 @@ hashScript (PlutusScript PlutusScriptV1 (PlutusScriptSerialised script)) =
     -- hash that. Later ledger eras have to be compatible anyway.
     ScriptHash
   . Ledger.hashScript @(ShelleyLedgerEra AlonzoEra)
-  $ Alonzo.PlutusScript script
+  $ Alonzo.PlutusScript Alonzo.PlutusV1 script
 
 toShelleyScriptHash :: ScriptHash -> Shelley.ScriptHash StandardCrypto
 toShelleyScriptHash (ScriptHash h) =  h
@@ -1029,7 +1029,7 @@ toShelleyScript (ScriptInEra langInEra (SimpleScript SimpleScriptV2 script)) =
 toShelleyScript (ScriptInEra langInEra (PlutusScript PlutusScriptV1
                                          (PlutusScriptSerialised script))) =
     case langInEra of
-      PlutusScriptV1InAlonzo  -> Alonzo.PlutusScript script
+      PlutusScriptV1InAlonzo  -> Alonzo.PlutusScript Alonzo.PlutusV1 script
 
 fromShelleyBasedScript  :: ShelleyBasedEra era
                         -> Ledger.Script (ShelleyLedgerEra era)
@@ -1054,10 +1054,12 @@ fromShelleyBasedScript era script =
           ScriptInEra SimpleScriptV2InAlonzo $
           SimpleScript SimpleScriptV2 $
           fromAllegraTimelock TimeLocksInSimpleScriptV2 s
-        Alonzo.PlutusScript s ->
+        Alonzo.PlutusScript Alonzo.PlutusV1 s ->
           ScriptInEra PlutusScriptV1InAlonzo $
           PlutusScript PlutusScriptV1 $
           PlutusScriptSerialised s
+        Alonzo.PlutusScript Alonzo.PlutusV2 _ ->
+          error "PlutusV2 not supported"
 
 
 -- | Conversion for the 'Shelley.MultiSig' language used by the Shelley era.

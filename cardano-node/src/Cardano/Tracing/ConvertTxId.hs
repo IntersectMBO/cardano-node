@@ -21,7 +21,7 @@ import           Ouroboros.Consensus.HardFork.Combinator
 import           Ouroboros.Consensus.Shelley.Ledger.Block (ShelleyBlock)
 import           Ouroboros.Consensus.Shelley.Ledger.Mempool (TxId (..))
 import           Ouroboros.Consensus.TypeFamilyWrappers
-import qualified Cardano.Ledger.Shelley.TxBody as Shelley
+import qualified Cardano.Ledger.TxIn as Ledger
 
 -- | Convert a transaction ID to raw bytes.
 class ConvertTxId blk where
@@ -37,7 +37,7 @@ instance ConvertTxId ByronBlock where
 
 instance ConvertTxId (ShelleyBlock c) where
   txIdToRawBytes (ShelleyTxId txId) =
-    Crypto.hashToBytes . Ledger.extractHash . Shelley._unTxId $ txId
+    Crypto.hashToBytes . Ledger.extractHash . Ledger._unTxId $ txId
 
 instance All ConvertTxId xs
       => ConvertTxId (HardForkBlock xs) where

@@ -57,6 +57,7 @@ library
                        , text
                        , time
                        , typed-protocols
+                       , typed-protocols-cborg
 
 test-suite test
   import:              base, project-config
@@ -82,7 +83,6 @@ test-suite test
                        , tasty
                        , tasty-quickcheck
                        , typed-protocols
-                       , typed-protocols-examples
                        , text
                        , time
 

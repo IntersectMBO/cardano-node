@@ -76,8 +76,8 @@ genPrices = do
 
 genExUnits :: Gen Alonzo.ExUnits
 genExUnits = do
-  exUnitsMem' <- Gen.word64 (Range.linear 0 10)
-  exUnitsSteps' <- Gen.word64 (Range.linear 0 10)
+  exUnitsMem' <- Gen.integral (Range.linear 0 10)
+  exUnitsSteps' <- Gen.integral (Range.linear 0 10)
   return Alonzo.ExUnits
     { Alonzo.exUnitsMem = exUnitsMem'
     , Alonzo.exUnitsSteps = exUnitsSteps'

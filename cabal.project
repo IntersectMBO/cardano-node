@@ -145,8 +145,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: 64d7702866225f6d53afab4e2fe935f2f0d5848a
-  --sha256: 0aalxzrgb1pgaz254mddmrcn2zk6g0yip383kc346ma1nn49frh1
+  tag: 654f5b7c76f7cc57900b4ddc664a82fc3b925fb0
+  --sha256: 0j4x9zbx5dkww82sqi086h39p456iq5xr476ylmrnpwcpfb4xai4
   subdir:
     base-deriving-via
     binary
@@ -162,14 +162,14 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-crypto
-  tag: 07397f0e50da97eaa0575d93bee7ac4b2b2576ec
-  --sha256: 06sdx5ndn2g722jhpicmg96vsrys89fl81k8290b3lr6b1b0w4m3
+  tag: f73079303f663e028288f9f4a9e08bcca39a923e
+  --sha256: 1n87i15x54s0cjkh3nsxs4r1x016cdw1fypwmr68936n3xxsjn6q
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger-specs
-  tag: ac51494e151af0ad99b937a787458ce71db0aaea
-  --sha256: 1dh80kaqhq4fn0w1dixcqiir3mz5nahr7n9drds3rrjlx1nkczi4
+  tag: bf008ce028751cae9fb0b53c3bef20f07c06e333
+  --sha256: 0my3801w1vinc0kf5yh9lxl6saqxgwm6ccg0vvzi104pafcwwcqx
   subdir:
     eras/alonzo/impl
     eras/alonzo/test-suite
@@ -184,6 +184,7 @@ source-repository-package
     eras/shelley-ma/impl
     eras/shelley-ma/test-suite
     libs/cardano-ledger-core
+    libs/cardano-ledger-pretty
     libs/cardano-protocol-tpraos
     libs/small-steps
     libs/small-steps-test
@@ -195,8 +196,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-prelude
-  tag: fd773f7a58412131512b9f694ab95653ac430852
-  --sha256: 02jddik1yw0222wd6q0vv10f7y8rdgrlqaiy83ph002f9kjx7mh6
+  tag: bb4ed71ba8e587f672d06edf9d2e376f4b055555
+  --sha256: 00h10l5mmiza9819p9v5q5749nb9pzgi20vpzpy1d34zmh6gf1cj
   subdir:
     cardano-prelude
     cardano-prelude-test
@@ -231,8 +232,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: e72d3dc867e946d877f45c22de0b6462723eb589
-  --sha256: 01rpknlp926x7nifr9zhv3nvn6wv0p3i84vibkb1n3g4minlwb25
+  tag: 94782e5ca52f234ff8eeddc6322a46cca0b69c0e
+  --sha256: 1da3pka4pn6sjf6w19d957aryjc9ip1a3g0vz7jz66pjri3v2n0j
   subdir:
     io-sim
     io-classes
@@ -246,14 +247,16 @@ source-repository-package
     ouroboros-network-framework
     ouroboros-network-testing
     typed-protocols
+    typed-protocols-cborg
     typed-protocols-examples
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/plutus
-  tag: 15121dd4dc66df7c17c6c0f2f4a8702ad841c020
-  --sha256: 1g5jm1r58x5ly3vsk8hr3dviqnv1bqhxi2b87vmr53554pd6zcqp
+  tag: 1efbb276ef1a10ca6961d0fd32e6141e9798bd11
+  --sha256: 1jicyk4hr8p0xksj4048gdxndrb42jz4wsnkhc3ymxbm5v6snalf
   subdir:
+    freer-extras
     plutus-core
     plutus-ledger
     plutus-ledger-api
@@ -266,8 +269,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ekg-forward
-  tag: 2d6691dd8ff68a0be4d9c73912b9559c96b76a25
-  --sha256: 00wlv9sx9jfnqf503mwvssf44q5lv0cq6virkdf6w25m3cnhx06w
+  tag: d9e8fd302fa6ba41c07183d371e6777286d37bc2
+  --sha256: 0s8cblhq3i528jj7r7yd4v82nqzafj8vrgf0y80l7saxc3a5f2lk
 
 -- Drops an instance breaking our code. Should be released to Hackage eventually.
 source-repository-package
