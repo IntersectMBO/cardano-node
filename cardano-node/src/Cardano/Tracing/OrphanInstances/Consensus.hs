@@ -392,9 +392,11 @@ instance ( ConvertRawHash blk
         ChainDB.AddedToCurrentChain es _ _ c ->
           "Chain extended, new tip: " <> renderPointAsPhrase (AF.headPoint c) <>
           Text.concat [ "\nEvent: " <> showT e | e <- es ]
-        ChainDB.SwitchedToAFork es _ _ c ->
-          "Switched to a fork, new tip: " <> renderPointAsPhrase (AF.headPoint c) <>
-          Text.concat [ "\nEvent: " <> showT e | e <- es ]
+        ChainDB.SwitchedToAFork es _ old new ->
+          "Switched to a fork, real " <> pack (show (not $ AF.withinFragmentBounds (AF.lastPoint old) new)) <>
+          " new tip: " <> renderPointAsPhrase (AF.headPoint new) <>
+          Text.concat [ "\nEvent: " <> showT e | e <- es ] 
+
         ChainDB.AddBlockValidation ev' -> case ev' of
           ChainDB.InvalidBlock err pt ->
             "Invalid block " <> renderRealPointAsPhrase pt <> ": " <> showT err
@@ -685,7 +687,18 @@ instance ( ConvertRawHash blk
       mkObject $
                [ "kind" .= String "TraceAddBlockEvent.SwitchedToAFork"
                , "newtip" .= renderPointForVerbosity verb (AF.headPoint new)
+               , "oldtip" .= renderPointForVerbosity verb (AF.headPoint old)
                , "chainLengthDelta" .= new `chainLengthΔ` old
+               , "realFork" .= if not $ AF.withinFragmentBounds (AF.lastPoint old) new
+                                  then String "Real"
+                                  else String "Fake"
+               , "realForkPrim" .= case AF.intersect old new of
+                                        Nothing -> "No Intersect"
+                                        Just (_p1, _p2, s1, s2) -> show $ AF.prettyPrint "S1" (Text.unpack . renderPointForVerbosity verb)
+                                                                          (Text.unpack . (renderPointForVerbosity verb) . headerPoint) s1 <>
+                                                                          AF.prettyPrint "S2" (Text.unpack . renderPointForVerbosity verb)
+                                                                          (Text.unpack . (renderPointForVerbosity verb) . headerPoint) s2 <>
+                                                                              show (AF.null s1) <> show (AF.null s2)
                ]
             ++ [ "headers" .= toJSON (toObject verb `map` addedHdrsNewChain old new)
                | verb == MaximalVerbosity ]

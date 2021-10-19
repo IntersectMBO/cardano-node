@@ -489,23 +489,23 @@ traceChainMetrics
   -> Trace IO Text
   -> Tracer IO (ChainDB.TraceEvent blk)
 traceChainMetrics Nothing _ _ _ = nullTracer
-traceChainMetrics (Just _ekgDirect) _blockConfig _fStats tr = do
+traceChainMetrics (Just ekgDirect) _blockConfig _fStats tr = do
   Tracer $ \ev ->
     fromMaybe (pure ()) $ doTrace <$> chainTipInformation ev
   where
     chainTipInformation :: ChainDB.TraceEvent blk -> Maybe ChainInformation
     chainTipInformation = \case
       ChainDB.TraceAddBlockEvent ev -> case ev of
-        ChainDB.SwitchedToAFork _warnings newTipInfo _oldChain newChain ->
-          Just $ chainInformation newTipInfo newChain 0
+        ChainDB.SwitchedToAFork _warnings newTipInfo oldChain newChain ->
+          Just $ chainInformation newTipInfo (Just oldChain) newChain 0
         ChainDB.AddedToCurrentChain _warnings newTipInfo _oldChain newChain ->
-          Just $ chainInformation newTipInfo newChain 0
+          Just $ chainInformation newTipInfo Nothing newChain 0
         _ -> Nothing
       _ -> Nothing
     doTrace :: ChainInformation -> IO ()
 
     doTrace
-        ChainInformation { slots, blocks, density, epoch, slotInEpoch } = do
+        ChainInformation { slots, blocks, density, epoch, slotInEpoch, fork } = do
       -- TODO this is executed each time the newFhain changes. How cheap is it?
       meta <- mkLOMeta Critical Public
 
@@ -514,6 +514,8 @@ traceChainMetrics (Just _ekgDirect) _blockConfig _fStats tr = do
       traceI tr meta "blockNum"    blocks
       traceI tr meta "slotInEpoch" slotInEpoch
       traceI tr meta "epoch"       (unEpochNo epoch)
+      when (fork) $
+        sendEKGDirectCounter ekgDirect "cardano.node.metrics.forks.count"
 
 traceD :: Trace IO a -> LOMeta -> Text -> Double -> IO ()
 traceD tr meta msg d = traceNamedObject tr (meta, LogValue msg (PureD d))
@@ -1381,21 +1383,35 @@ data ChainInformation = ChainInformation
   , blocksUncoupledDelta :: Int64
     -- ^ The net change in number of blocks forged since last restart not on the
     -- current chain.
+  , fork :: Bool
+    -- ^ Was this a fork.
   }
 
 chainInformation
   :: forall blk. HasHeader (Header blk)
   => ChainDB.NewTipInfo blk
+  -> Maybe (AF.AnchoredFragment (Header blk))
   -> AF.AnchoredFragment (Header blk)
   -> Int64
   -> ChainInformation
-chainInformation newTipInfo frag blocksUncoupledDelta = ChainInformation
-    { slots = unSlotNo $ fromWithOrigin 0 (AF.headSlot frag)
-    , blocks = unBlockNo $ fromWithOrigin (BlockNo 1) (AF.headBlockNo frag)
-    , density = fragmentChainDensity frag
+chainInformation newTipInfo oldFrag_m newFrag blocksUncoupledDelta = ChainInformation
+    { slots = unSlotNo $ fromWithOrigin 0 (AF.headSlot newFrag)
+    , blocks = unBlockNo $ fromWithOrigin (BlockNo 1) (AF.headBlockNo newFrag)
+    , density = fragmentChainDensity newFrag
     , epoch = ChainDB.newTipEpoch newTipInfo
     , slotInEpoch = ChainDB.newTipSlotInEpoch newTipInfo
     , blocksUncoupledDelta = blocksUncoupledDelta
+    {-, fork = case oldFrag_m of
+                  Nothing -> False
+                  Just oldFrag ->
+                      not $ AF.withinFragmentBounds (AF.lastPoint oldFrag) newFrag
+    -}
+    , fork = case oldFrag_m of
+                  Nothing -> False
+                  Just oldFrag ->
+                      case AF.intersect oldFrag newFrag of
+                           Just (_, _, s1, s2) -> not (AF.null s1) && not (AF.null s2)
+                           Nothing -> False
     }
 
 fragmentChainDensity ::
