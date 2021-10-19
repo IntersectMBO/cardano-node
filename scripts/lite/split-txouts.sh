@@ -34,10 +34,10 @@ echo "Queried UTxO for address: utxoaddr=$utxoaddr"
 txins="$(jq -r ". | to_entries | sort_by(.value.value.lovelace) | reverse | map(.key)[0:$count][]" $WORK/utxo-1.json)"
 
 for txin in $txins; do
-  lovelaceattxin=$(jq -r ".[\"$txin\"].value.lovelace" $WORK/utxo-1.json)
-  lovelaceattxindiv2=$(expr $lovelaceattxin / 2)
+  lovelaceattxin="$(jq -r ".[\"$txin\"].value.lovelace" $WORK/utxo-1.json)"
+  lovelaceattxindiv2="$(expr $lovelaceattxin / 2)"
 
-  targetaddr=$utxoaddr
+  targetaddr="$utxoaddr"
 
   $CARDANO_CLI transaction build \
     --alonzo-era \
@@ -46,16 +46,25 @@ for txin in $txins; do
     --change-address "$utxoaddr" \
     --tx-in $txin \
     --tx-out "$targetaddr+$lovelaceattxindiv2" \
-    --out-file $WORK/build.body
+    --out-file "$WORK/build.body"
 
   $CARDANO_CLI transaction sign \
-    --tx-body-file $WORK/build.body \
+    --tx-body-file "$WORK/build.body" \
     --testnet-magic "$TESTNET_MAGIC" \
     --signing-key-file $UTXO_SKEY \
-    --out-file $WORK/build.tx
+    --out-file "$WORK/build.tx.signed"
 
-  # SUBMIT
-  $CARDANO_CLI transaction submit --tx-file $WORK/build.tx --testnet-magic "$TESTNET_MAGIC"
+  if [ "$SUBMIT_API_PORT" != "" ]; then
+    xxd -r -p <<< $(jq .cborHex $WORK/build.tx.signed) > $WORK/build.tx.signed.cbor
+
+    curl \
+      -s \
+      --header "Content-Type: application/cbor" \
+      -X POST "http://localhost:$SUBMIT_API_PORT/api/submit/tx" \
+      --data-binary "@$WORK/build.tx.signed.cbor"
+  else
+    $CARDANO_CLI transaction submit --tx-file "$WORK/build.tx.signed" --testnet-magic "$TESTNET_MAGIC"
+  fi
 done
 
 echo "Submitted $(echo "$txins" | wc -w) transactions"
