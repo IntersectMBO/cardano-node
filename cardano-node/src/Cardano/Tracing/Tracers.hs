@@ -498,9 +498,6 @@ isRollForward :: TraceChainSyncServerEvent blk -> Bool
 isRollForward (TraceChainSyncRollForward _) = True
 isRollForward _ = False
 
-isTraceBlockFetchServerBlockCount :: TraceBlockFetchServerEvent blk -> Bool
-isTraceBlockFetchServerBlockCount (TraceBlockFetchServerSendBlock _) = True
-
 mkConsensusTracers
   :: forall blk peer localPeer.
      ( Show peer
@@ -533,7 +530,9 @@ mkConsensusTracers mbEKGDirect trSel verb tr nodeKern fStats = do
   forgeTracers <- mkForgeTracers
   meta <- mkLOMeta Critical Public
 
-  tBlocksServed <- STM.newTVarIO @Int 0
+  tBlocksServed <- STM.newTVarIO 0
+  tLocalUp <- STM.newTVarIO 0
+  tMaxSlotNo <- STM.newTVarIO $ SlotNo 0
   tSubmissionsCollected <- STM.newTVarIO 0
   tSubmissionsAccepted <- STM.newTVarIO 0
   tSubmissionsRejected <- STM.newTVarIO 0
@@ -555,12 +554,8 @@ mkConsensusTracers mbEKGDirect trSel verb tr nodeKern fStats = do
     , Consensus.blockFetchClientTracer = traceBlockFetchClientMetrics mbEKGDirect tBlockDelayM
         tBlockDelayCDF1s tBlockDelayCDF3s tBlockDelayCDF5s $
             tracerOnOff (traceBlockFetchClient trSel) verb "BlockFetchClient" tr
-    , Consensus.blockFetchServerTracer = tracerOnOff' (traceBlockFetchServer trSel) $
-        Tracer $ \ev -> do
-          traceWith (annotateSeverity . toLogObject' verb $ appendName "BlockFetchServer" tr) ev
-          when (isTraceBlockFetchServerBlockCount ev) $
-            traceI trmet meta "served.block.count" =<<
-              STM.modifyReadTVarIO tBlocksServed (+1)
+    , Consensus.blockFetchServerTracer = traceBlockFetchServerMetrics trmet meta tBlocksServed
+        tLocalUp tMaxSlotNo $ tracerOnOff (traceBlockFetchServer trSel) verb "BlockFetchServer" tr
     , Consensus.forgeStateInfoTracer = tracerOnOff' (traceForgeStateInfo trSel) $
         forgeStateInfoTracer (Proxy @ blk) trSel tr
     , Consensus.txInboundTracer = tracerOnOff' (traceTxInbound trSel) $
@@ -620,6 +615,46 @@ mkConsensusTracers mbEKGDirect trSel verb tr nodeKern fStats = do
    traceServedCount (Just ekgDirect) ev =
      when (isRollForward ev) $
        sendEKGDirectCounter ekgDirect "cardano.node.metrics.served.header.counter.int"
+
+traceBlockFetchServerMetrics
+  :: forall blk. ()
+  => Tracer IO (LoggerName, LogObject Text)
+  -> LOMeta
+  -> STM.TVar Int64
+  -> STM.TVar Int64
+  -> STM.TVar SlotNo
+  -> Tracer IO (TraceBlockFetchServerEvent blk)
+  -> Tracer IO (TraceBlockFetchServerEvent blk)
+traceBlockFetchServerMetrics trMeta meta tBlocksServed tLocalUp tMaxSlotNo tracer = Tracer bsTracer
+
+  where
+    bsTracer :: TraceBlockFetchServerEvent blk -> IO ()
+    bsTracer e@(TraceBlockFetchServerSendBlock p) = do
+      traceWith tracer e
+
+      (served, mbLocalUpstreamyness) <- atomically $ do
+          served <- STM.modifyReadTVar' tBlocksServed (+1)
+          maxSlotNo <- STM.readTVar tMaxSlotNo
+          case pointSlot p of
+               Origin    -> return (served, Nothing)
+               At slotNo ->
+                   case compare maxSlotNo slotNo of
+                        LT -> do
+                            STM.writeTVar tMaxSlotNo slotNo
+                            lu <- STM.modifyReadTVar' tLocalUp (+1)
+                            return (served, Just lu)
+                        GT -> do
+                            return (served, Nothing)
+                        EQ -> do
+                            lu <- STM.modifyReadTVar' tLocalUp (+1)
+                            return (served, Just lu)
+
+      traceI trMeta meta "served.block.count" served
+      case mbLocalUpstreamyness of
+           Just localUpstreamyness ->
+             traceI trMeta meta "served.block.latest.count" localUpstreamyness
+           Nothing -> return ()
+
 
 -- | CdfCounter tracks the number of time a value below 'limit' has been seen.
 newtype CdfCounter (limit :: Nat) = CdfCounter Int64
