@@ -7,6 +7,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -24,6 +25,7 @@ import qualified Data.Map.Strict as Map
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
+import           Data.Word (Word64)
 
 import           Control.Applicative
 import           Control.Iterate.SetAlgebra (BiMap (..), Bimap)
@@ -305,9 +307,27 @@ instance Crypto.Crypto c => ToJSON (SafeHash.SafeHash c a) where
 -----
 
 deriving instance ToJSON a => ToJSON (Alonzo.ExUnits' a)
-instance ToJSON Alonzo.ExUnits
 deriving instance FromJSON a => FromJSON (Alonzo.ExUnits' a)
-deriving newtype instance FromJSON Alonzo.ExUnits
+
+instance ToJSON Alonzo.ExUnits where
+  toJSON Alonzo.ExUnits {Alonzo.exUnitsMem, Alonzo.exUnitsSteps} =
+    object [ "exUnitsMem" .= toJSON exUnitsMem
+           , "exUnitsSteps" .= toJSON exUnitsSteps
+           ]
+
+instance FromJSON Alonzo.ExUnits where
+  parseJSON = Aeson.withObject "exUnits" $ \o -> do
+    mem <- o .: "exUnitsMem"
+    steps <- o .: "exUnitsSteps"
+    bmem <- checkWord64Bounds mem
+    bsteps <- checkWord64Bounds steps
+    return $ Alonzo.ExUnits bmem bsteps
+    where
+      checkWord64Bounds n =
+        if n >= fromIntegral (minBound @Word64)
+            && n <= fromIntegral (maxBound @Word64)
+        then pure n
+        else fail ("Unit out of bounds for Word64: " <> show n)
 
 instance ToJSON Alonzo.Prices where
   toJSON Alonzo.Prices { Alonzo.prSteps, Alonzo.prMem } =

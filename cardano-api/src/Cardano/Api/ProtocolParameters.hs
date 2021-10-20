@@ -748,6 +748,9 @@ validateCostModel :: PlutusScriptVersion lang
 validateCostModel PlutusScriptV1 (CostModel m)
   | Alonzo.validateCostModelParams m = Right ()
   | otherwise                        = Left (InvalidCostModel (CostModel m))
+validateCostModel PlutusScriptV2 (CostModel m)
+  | Alonzo.validateCostModelParams m = Right ()
+  | otherwise                        = Left (InvalidCostModel (CostModel m))
 
 -- TODO alonzo: it'd be nice if the library told us what was wrong
 newtype InvalidCostModel = InvalidCostModel CostModel
@@ -776,10 +779,11 @@ fromAlonzoCostModels =
 
 toAlonzoScriptLanguage :: AnyPlutusScriptVersion -> Alonzo.Language
 toAlonzoScriptLanguage (AnyPlutusScriptVersion PlutusScriptV1) = Alonzo.PlutusV1
+toAlonzoScriptLanguage (AnyPlutusScriptVersion PlutusScriptV2) = Alonzo.PlutusV2
 
 fromAlonzoScriptLanguage :: Alonzo.Language -> AnyPlutusScriptVersion
 fromAlonzoScriptLanguage Alonzo.PlutusV1 = AnyPlutusScriptVersion PlutusScriptV1
-fromAlonzoScriptLanguage Alonzo.PlutusV2 = error "PlutusV2 is not supported"
+fromAlonzoScriptLanguage Alonzo.PlutusV2 = AnyPlutusScriptVersion PlutusScriptV2
 
 toAlonzoCostModel :: CostModel -> Alonzo.CostModel
 toAlonzoCostModel (CostModel m) = Alonzo.CostModel m

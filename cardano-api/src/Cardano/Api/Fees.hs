@@ -382,8 +382,9 @@ instance Error ScriptExecutionError where
       "The Plutus script witness has the wrong datum (according to the UTxO). "
    ++ "The expected datum value has hash " ++ show dh
 
-  displayError (ScriptErrorEvaluationFailed evalErr _logs) = -- TODO display logs
-      "The Plutus script evaluation failed: " ++ pp evalErr
+  displayError (ScriptErrorEvaluationFailed evalErr logs) =
+      "The Plutus script evaluation failed: " ++ pp evalErr ++
+      "\nScript debugging logs: " <> mconcat (map (\t -> Text.unpack $ t `Text.append` "\n") logs)
     where
       pp :: PP.Pretty p => p -> String
       pp = PP.renderString
