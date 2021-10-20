@@ -290,6 +290,7 @@ mkTracers blockConfig tOpts@(TracingOn trSel) tr nodeKern ekgDirect enableP2P = 
   fStats <- mkForgingStats
   consensusTracers <- mkConsensusTracers ekgDirect trSel verb tr nodeKern fStats
   elidedChainDB <- newstate  -- for eliding messages in ChainDB tracer
+  tForks <- STM.newTVarIO 0
 
   pure Tracers
     { chainDBTracer = tracerOnOff' (traceChainDB trSel) $
@@ -298,6 +299,7 @@ mkTracers blockConfig tOpts@(TracingOn trSel) tr nodeKern ekgDirect enableP2P = 
                              fStats
                              tOpts elidedChainDB
                              ekgDirect
+                             tForks
                              (appendName "ChainDB" tr)
                              (appendName "metrics" tr)
     , consensusTracers = consensusTracers
@@ -453,14 +455,15 @@ teeTraceChainTip
   -> TraceOptions
   -> MVar (Maybe (WithSeverity (ChainDB.TraceEvent blk)), Integer)
   -> Maybe EKGDirect
+  -> STM.TVar Word64
   -> Trace IO Text
   -> Trace IO Text
   -> Tracer IO (WithSeverity (ChainDB.TraceEvent blk))
-teeTraceChainTip _ _ TracingOff _ _ _ _ = nullTracer
-teeTraceChainTip blockConfig fStats (TracingOn trSel) elided ekgDirect trTrc trMet =
+teeTraceChainTip _ _ TracingOff _ _ _ _ _ = nullTracer
+teeTraceChainTip blockConfig fStats (TracingOn trSel) elided ekgDirect tForks trTrc trMet =
   Tracer $ \ev -> do
     traceWith (teeTraceChainTipElide (traceVerbosity trSel) elided trTrc) ev
-    traceWith (ignoringSeverity (traceChainMetrics ekgDirect blockConfig fStats trMet)) ev
+    traceWith (ignoringSeverity (traceChainMetrics ekgDirect tForks blockConfig fStats trMet)) ev
 
 teeTraceChainTipElide
   :: ( ConvertRawHash blk
@@ -484,12 +487,13 @@ traceChainMetrics
   :: forall blk. ()
   => HasHeader (Header blk)
   => Maybe EKGDirect
+  -> STM.TVar Word64
   -> BlockConfig blk
   -> ForgingStats
   -> Trace IO Text
   -> Tracer IO (ChainDB.TraceEvent blk)
-traceChainMetrics Nothing _ _ _ = nullTracer
-traceChainMetrics (Just ekgDirect) _blockConfig _fStats tr = do
+traceChainMetrics Nothing _ _ _ _ = nullTracer
+traceChainMetrics (Just _ekgDirect) tForks _blockConfig _fStats tr = do
   Tracer $ \ev ->
     fromMaybe (pure ()) $ doTrace <$> chainTipInformation ev
   where
@@ -515,7 +519,9 @@ traceChainMetrics (Just ekgDirect) _blockConfig _fStats tr = do
       traceI tr meta "slotInEpoch" slotInEpoch
       traceI tr meta "epoch"       (unEpochNo epoch)
       when (fork) $
-        sendEKGDirectCounter ekgDirect "cardano.node.metrics.forks.count"
+        traceI tr meta "cardano.node.metrics.forks.count" =<<
+            STM.modifyReadTVarIO tForks succ
+
 
 traceD :: Trace IO a -> LOMeta -> Text -> Double -> IO ()
 traceD tr meta msg d = traceNamedObject tr (meta, LogValue msg (PureD d))
