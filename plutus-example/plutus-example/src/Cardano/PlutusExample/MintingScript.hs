@@ -21,7 +21,7 @@ import qualified Data.ByteString.Short as SBS
 import           Ledger hiding (singleton)
 import qualified Ledger.Typed.Scripts as Scripts
 import qualified PlutusTx
-import           PlutusTx.Prelude hiding (Semigroup (..), unless)
+import           PlutusTx.Prelude hiding (Semigroup (..), unless, (.))
 
 
 {- HLINT ignore "Avoid lambda" -}

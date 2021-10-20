@@ -21,7 +21,7 @@ import qualified Data.ByteString.Short as SBS
 import qualified Plutus.V1.Ledger.Scripts as Plutus
 import           PlutusTx (toBuiltinData)
 import qualified PlutusTx
-import           PlutusTx.Prelude hiding (Semigroup (..), unless)
+import           PlutusTx.Prelude hiding (Semigroup (..), unless, (.))
 
 {-# INLINABLE mkValidator #-}
 mkValidator :: BuiltinData -> BuiltinData -> BuiltinData  -> ()
