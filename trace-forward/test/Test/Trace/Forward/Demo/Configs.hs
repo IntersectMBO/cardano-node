@@ -25,15 +25,13 @@ mkAcceptorConfig ep weAreDone =
 
 mkForwarderConfig
   :: HowToConnect
-  -> IO NodeInfo
   -> Word
   -> Word
   -> ForwarderConfiguration TraceItem
-mkForwarderConfig ep getNI disconnectedSize connectedSize =
+mkForwarderConfig ep disconnectedSize connectedSize =
   ForwarderConfiguration
     { forwarderTracer       = nullTracer
     , acceptorEndpoint      = ep
-    , getNodeInfo           = getNI
     , disconnectedQueueSize = disconnectedSize
     , connectedQueueSize    = connectedSize
     }

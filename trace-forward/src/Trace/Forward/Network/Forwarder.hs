@@ -93,10 +93,9 @@ forwardTraceObjects config sink =
       runPeer
         (forwarderTracer config)
         (Forwarder.codecTraceForward CBOR.encode CBOR.decode
-                                     CBOR.encode CBOR.decode
                                      CBOR.encode CBOR.decode)
         channel
-        (Forwarder.traceForwarderPeer $ readItems config sink)
+        (Forwarder.traceForwarderPeer $ readItems sink)
 
 forwardTraceObjectsResp
   :: (CBOR.Serialise lo,
@@ -110,7 +109,6 @@ forwardTraceObjectsResp config sink =
       runPeer
         (forwarderTracer config)
         (Forwarder.codecTraceForward CBOR.encode CBOR.decode
-                                     CBOR.encode CBOR.decode
                                      CBOR.encode CBOR.decode)
         channel
-        (Forwarder.traceForwarderPeer $ readItems config sink)
+        (Forwarder.traceForwarderPeer $ readItems sink)

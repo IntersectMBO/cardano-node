@@ -14,21 +14,16 @@ import           Control.Monad (unless)
 import qualified Data.List.NonEmpty as NE
 import           Data.Word (Word16)
 
-import           Trace.Forward.Configuration (ForwarderConfiguration (..))
 import qualified Trace.Forward.Protocol.Forwarder as Forwarder
 import           Trace.Forward.Protocol.Type
 import           Trace.Forward.Utils
 
 readItems
-  :: ForwarderConfiguration lo -- ^ The forwarder configuration.
-  -> ForwardSink lo            -- ^ The sink contains the queue we read 'TraceObject's from.
+  :: ForwardSink lo -- ^ The sink contains the queue we read 'TraceObject's from.
   -> Forwarder.TraceForwarder lo IO ()
-readItems config@ForwarderConfiguration{getNodeInfo} sink@ForwardSink{forwardQueue, wasUsed} =
+readItems sink@ForwardSink{forwardQueue, wasUsed} =
   Forwarder.TraceForwarder
-    { Forwarder.recvMsgNodeInfoRequest = do
-        reply <- getNodeInfo
-        return (reply, readItems config sink)
-    , Forwarder.recvMsgTraceObjectsRequest = \blocking (NumberOfTraceObjects n) -> do
+    { Forwarder.recvMsgTraceObjectsRequest = \blocking (NumberOfTraceObjects n) -> do
         replyList <-
           case blocking of
             TokBlocking -> do
@@ -42,7 +37,7 @@ readItems config@ForwarderConfiguration{getNodeInfo} sink@ForwardSink{forwardQue
               unless (null objs) $
                 atomically . modifyTVar' wasUsed . const $ True
               return $ NonBlockingReply objs
-        return (replyList, readItems config sink)
+        return (replyList, readItems sink)
     , Forwarder.recvMsgDone = return ()
     }
 

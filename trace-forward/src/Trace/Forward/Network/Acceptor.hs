@@ -59,9 +59,8 @@ listenToForwarder
   =>  IOManager
   -> AcceptorConfiguration lo
   -> ([lo] -> IO ())
-  -> (NodeInfo -> IO ())
   -> IO ()
-listenToForwarder iomgr config@AcceptorConfiguration{forwarderEndpoint} loHandler niHandler = do
+listenToForwarder iomgr config@AcceptorConfiguration{forwarderEndpoint} loHandler = do
   let (LocalPipe localPipe) = forwarderEndpoint
       snocket = localSnocket iomgr
       address = localAddressFromPath localPipe
@@ -76,7 +75,7 @@ listenToForwarder iomgr config@AcceptorConfiguration{forwarderEndpoint} loHandle
       [ MiniProtocol
           { miniProtocolNum    = MiniProtocolNum 1
           , miniProtocolLimits = MiniProtocolLimits { maximumIngressQueue = maxBound }
-          , miniProtocolRun    = acceptTraceObjects config loHandler niHandler
+          , miniProtocolRun    = acceptTraceObjects config loHandler
           }
       ]
 
@@ -113,9 +112,8 @@ acceptTraceObjects
       Typeable lo)
   => AcceptorConfiguration lo
   -> ([lo] -> IO ())
-  -> (NodeInfo -> IO ())
   -> RunMiniProtocol 'ResponderMode LBS.ByteString IO Void ()
-acceptTraceObjects config loHandler niHandler =
+acceptTraceObjects config loHandler =
   ResponderProtocolOnly $
     MuxPeerRaw $ \channel ->
       timeoutWhenStopped
@@ -124,11 +122,10 @@ acceptTraceObjects config loHandler niHandler =
         $ runPeer
             (acceptorTracer config)
             (Acceptor.codecTraceForward CBOR.encode CBOR.decode
-                                        CBOR.encode CBOR.decode
                                         CBOR.encode CBOR.decode)
             channel
             (Acceptor.traceAcceptorPeer $
-              acceptorActions config loHandler niHandler True)
+              acceptorActions config loHandler)
 
 acceptTraceObjectsInit
   :: (CBOR.Serialise lo,
@@ -136,19 +133,17 @@ acceptTraceObjectsInit
       Typeable lo)
   => AcceptorConfiguration lo
   -> ([lo] -> IO ())
-  -> (NodeInfo -> IO ())
   -> RunMiniProtocol 'InitiatorMode LBS.ByteString IO () Void
-acceptTraceObjectsInit config loHandler niHandler =
+acceptTraceObjectsInit config loHandler =
   InitiatorProtocolOnly $
     MuxPeerRaw $ \channel ->
       runPeer
         (acceptorTracer config)
         (Acceptor.codecTraceForward CBOR.encode CBOR.decode
-                                    CBOR.encode CBOR.decode
                                     CBOR.encode CBOR.decode)
         channel
         (Acceptor.traceAcceptorPeer $
-          acceptorActions config loHandler niHandler True)
+          acceptorActions config loHandler)
 
 acceptorActions
   :: (CBOR.Serialise lo,
@@ -156,28 +151,17 @@ acceptorActions
       Typeable lo)
   => AcceptorConfiguration lo -- ^ Acceptor's configuration.
   -> ([lo] -> IO ())          -- ^ The handler for accepted 'TraceObject's.
-  -> (NodeInfo -> IO ())      -- ^ The handler for accepted info about the node.
-  -> Bool                     -- ^ The flag for node's info request: only once in the beginning.
   -> Acceptor.TraceAcceptor lo IO ()
-acceptorActions config@AcceptorConfiguration{whatToRequest, shouldWeStop} loHandler niHandler askForNI =
+acceptorActions config@AcceptorConfiguration{whatToRequest, shouldWeStop} loHandler =
   -- We are able to send request for:
   -- 1. node's info,
   -- 2. new 'TraceObject's.
   -- But request for node's info should be sent only once (in the beginning of session).
-  if askForNI
-    then
-      Acceptor.SendMsgNodeInfoRequest $ \replyWithNI -> do
-        niHandler replyWithNI
-        checkIfWeShouldStop
-    else
-      Acceptor.SendMsgTraceObjectsRequest TokBlocking whatToRequest $ \replyWithTraceObjects -> do
-        loHandler $ getTraceObjects replyWithTraceObjects
-        checkIfWeShouldStop
- where
-  checkIfWeShouldStop =
+  Acceptor.SendMsgTraceObjectsRequest TokBlocking whatToRequest $ \replyWithTraceObjects -> do
+    loHandler $ getTraceObjects replyWithTraceObjects
     ifM (readTVarIO shouldWeStop)
       (return $ Acceptor.SendMsgDone $ return ())
-      (return $ acceptorActions config loHandler niHandler False)
+      (return $ acceptorActions config loHandler)
 
 data Timeout = Timeout
   deriving (Typeable, Show)
