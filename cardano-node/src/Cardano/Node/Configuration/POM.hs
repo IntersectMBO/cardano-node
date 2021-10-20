@@ -1,6 +1,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 {-# OPTIONS_GHC -Wno-noncanonical-monoid-instances #-}
 
@@ -33,9 +34,12 @@ import           Cardano.Crypto (RequiresNetworkMagic (..))
 import           Cardano.Node.Protocol.Types (Protocol (..))
 import           Cardano.Node.Types
 import           Cardano.Tracing.Config
+import           Ouroboros.Consensus.Mempool.API (MempoolCapacityBytesOverride (..), MempoolCapacityBytes (..))
 import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (SnapshotInterval (..))
 import           Ouroboros.Network.Block (MaxSlotNo (..))
 import           Ouroboros.Network.NodeToNode (DiffusionMode (..))
+
+import qualified Data.Aeson.Types as Aeson
 
 data NodeConfiguration
   = NodeConfiguration
@@ -83,6 +87,8 @@ data NodeConfiguration
        , ncLoggingSwitch  :: !Bool
        , ncLogMetrics     :: !Bool
        , ncTraceConfig    :: !TraceOptions
+
+       , ncMaybeMempoolCapacityOverride :: !(Maybe MempoolCapacityBytesOverride)
        } deriving (Eq, Show)
 
 
@@ -102,7 +108,7 @@ data PartialNodeConfiguration
        , pncShutdownIPC     :: !(Last (Maybe Fd))
        , pncShutdownOnSlotSynced :: !(Last MaxSlotNo)
 
-          -- Protocol-specific parameters:
+         -- Protocol-specific parameters:
        , pncProtocolConfig :: !(Last NodeProtocolConfiguration)
 
          -- Node parameters, not protocol-specific:
@@ -119,6 +125,9 @@ data PartialNodeConfiguration
        , pncLoggingSwitch  :: !(Last Bool)
        , pncLogMetrics     :: !(Last Bool)
        , pncTraceConfig    :: !(Last TraceOptions)
+
+         -- Configuration for testing purposes
+       , pncMaybeMempoolCapacityOverride :: !(Last MempoolCapacityBytesOverride)
        } deriving (Eq, Generic, Show)
 
 instance AdjustFilePaths PartialNodeConfiguration where
@@ -167,6 +176,8 @@ instance FromJSON PartialNodeConfiguration where
                                                                <*> parseShelleyProtocol v
                                                                <*> parseAlonzoProtocol v
                                                                <*> parseHardForkProtocol v)
+      pncMaybeMempoolCapacityOverride <- Last <$> parseMempoolCapacityBytesOverride v
+
       pure PartialNodeConfiguration {
              pncProtocolConfig
            , pncSocketPath
@@ -188,8 +199,21 @@ instance FromJSON PartialNodeConfiguration where
            , pncValidateDB = mempty
            , pncShutdownIPC = mempty
            , pncShutdownOnSlotSynced = mempty
+           , pncMaybeMempoolCapacityOverride
            }
     where
+      parseMempoolCapacityBytesOverride v = parseNoOverride <|> parseOverride
+        where
+          parseNoOverride = fmap (MempoolCapacityBytesOverride . MempoolCapacityBytes) <$> v .:? "MempoolCapacityBytesOverride"
+          parseOverride = do
+            maybeString :: Maybe String <- v .:? "MempoolCapacityBytesOverride"
+            case maybeString of
+              Just "NoOverride" -> return (Just NoMempoolCapacityBytesOverride)
+              Just invalid ->  fmap Just . Aeson.parseFail $
+                    "Invalid value for 'MempoolCapacityBytesOverride'.  \
+                    \Expecting byte count or NoOverride.  Value was: " <> show invalid
+              Nothing -> return Nothing
+
       parseByronProtocol v = do
         primary   <- v .:? "ByronGenesisFile"
         secondary <- v .:? "GenesisFile"
@@ -309,6 +333,7 @@ defaultPartialNodeConfiguration =
     , pncMaxConcurrencyDeadline = mempty
     , pncLogMetrics = mempty
     , pncTraceConfig = mempty
+    , pncMaybeMempoolCapacityOverride = mempty
     }
 
 lastOption :: Parser a -> Parser (Last a)
@@ -358,6 +383,7 @@ makeNodeConfiguration pnc = do
              , ncLogMetrics = logMetrics
              , ncTraceConfig = if loggingSwitch then traceConfig
                                                 else TracingOff
+             , ncMaybeMempoolCapacityOverride = getLast $ pncMaybeMempoolCapacityOverride pnc
              }
 
 ncProtocol :: NodeConfiguration -> Protocol

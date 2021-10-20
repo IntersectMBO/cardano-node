@@ -5,6 +5,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 #if !defined(mingw32_HOST_OS)
 #define UNIX
@@ -93,6 +94,8 @@ runNode cmdPc = do
     nc <- case makeNodeConfiguration $ defaultPartialNodeConfiguration <> configYamlPc <> cmdPc of
             Left err -> panic $ "Error in creating the NodeConfiguration: " <> Text.pack err
             Right nc' -> return nc'
+
+    putStrLn $ "Node configuration: " <> show @_ @Text nc
 
     case shelleyVRFFile $ ncProtocolFiles nc of
       Just vrfFp -> do vrf <- runExceptT $ checkVRFFilePermissions vrfFp
@@ -283,15 +286,16 @@ handleSimpleNode scp runP trace nodeTracers nc onKernel = do
            onKernel nodeKernel
        }
      StdRunNodeArgs
-       { srnBfcMaxConcurrencyBulkSync   = unMaxConcurrencyBulkSync <$> ncMaxConcurrencyBulkSync nc
-       , srnBfcMaxConcurrencyDeadline   = unMaxConcurrencyDeadline <$> ncMaxConcurrencyDeadline nc
-       , srnChainDbValidateOverride     = ncValidateDB nc
-       , srnSnapshotInterval            = ncSnapshotInterval nc
-       , srnDatabasePath                = dbPath
-       , srnDiffusionArguments          = diffusionArguments
-       , srnDiffusionTracers            = diffusionTracers
-       , srnEnableInDevelopmentVersions = ncTestEnableDevelopmentNetworkProtocols nc
-       , srnTraceChainDB                = chainDBTracer nodeTracers
+       { srnBfcMaxConcurrencyBulkSync    = unMaxConcurrencyBulkSync <$> ncMaxConcurrencyBulkSync nc
+       , srnBfcMaxConcurrencyDeadline    = unMaxConcurrencyDeadline <$> ncMaxConcurrencyDeadline nc
+       , srnChainDbValidateOverride      = ncValidateDB nc
+       , srnSnapshotInterval             = ncSnapshotInterval nc
+       , srnDatabasePath                 = dbPath
+       , srnDiffusionArguments           = diffusionArguments
+       , srnDiffusionTracers             = diffusionTracers
+       , srnEnableInDevelopmentVersions  = ncTestEnableDevelopmentNetworkProtocols nc
+       , srnTraceChainDB                 = chainDBTracer nodeTracers
+       , srnMaybeMempoolCapacityOverride = ncMaybeMempoolCapacityOverride nc
        }
  where
   createDiffusionTracers :: Tracers RemoteConnectionId LocalConnectionId blk
