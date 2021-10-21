@@ -715,9 +715,9 @@ validateRequiredSigners era reqSigs =
           paymentKeyHashes = map (verificationKeyHash . getVerificationKey) $ mapMaybe excludeExtendedKeys shelleySigningKeys
       return $ TxExtraKeyWitnesses supported paymentKeyHashes
  where
-  excludeExtendedKeys :: ShelleySigningKey -> Maybe (SigningKey PaymentKey)
-  excludeExtendedKeys (ShelleyExtendedSigningKey _) = Nothing
-  excludeExtendedKeys (ShelleyNormalSigningKey sk) = Just $ PaymentSigningKey sk
+  excludeExtendedKeys :: ShelleySigningKey -> Maybe (SigningKey PaymentExtendedKey)
+  excludeExtendedKeys (ShelleyExtendedSigningKey sk) = Just $ PaymentExtendedSigningKey sk
+  excludeExtendedKeys (ShelleyNormalSigningKey _) = Nothing
 
 validateTxWithdrawals
   :: forall era.

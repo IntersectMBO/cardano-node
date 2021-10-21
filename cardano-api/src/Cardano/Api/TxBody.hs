@@ -1241,7 +1241,7 @@ data TxExtraKeyWitnesses era where
   TxExtraKeyWitnessesNone :: TxExtraKeyWitnesses era
 
   TxExtraKeyWitnesses     :: TxExtraKeyWitnessesSupportedInEra era
-                          -> [Hash PaymentKey]
+                          -> [Hash PaymentExtendedKey]
                           -> TxExtraKeyWitnesses era
 
 deriving instance Eq   (TxExtraKeyWitnesses era)
@@ -2017,7 +2017,7 @@ fromLedgerTxExtraKeyWitnesses sbe body =
     ShelleyBasedEraMary    -> TxExtraKeyWitnessesNone
     ShelleyBasedEraAlonzo  -> TxExtraKeyWitnesses
                                 ExtraKeyWitnessesInAlonzoEra
-                                [ PaymentKeyHash (Shelley.coerceKeyRole keyhash)
+                                [ PaymentExtendedKeyHash (Shelley.coerceKeyRole keyhash)
                                 | let keyhashes = Alonzo.reqSignerHashes body
                                 , keyhash <- Set.toList keyhashes ]
 
@@ -2540,7 +2540,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraAlonzo
              TxExtraKeyWitnessesNone   -> Set.empty
              TxExtraKeyWitnesses _ khs -> Set.fromList
                                             [ Shelley.coerceKeyRole kh
-                                            | PaymentKeyHash kh <- khs ])
+                                            | PaymentExtendedKeyHash kh <- khs ])
           (case txMintValue of
              TxMintNone        -> mempty
              TxMintValue _ v _ -> toMaryValue v)
