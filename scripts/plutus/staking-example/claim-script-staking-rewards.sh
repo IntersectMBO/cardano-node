@@ -39,6 +39,15 @@ txincollateral=$(jq -r 'keys[1]' $WORK/utxo-1.json)
 scriptpaymentaddrwithstakecred=$(cardano-cli address build --payment-verification-key-file $UTXO_VKEY1  --stake-script-file "scripts/plutus/scripts/guess-42-stake.plutus" --testnet-magic 42)
 stakingscriptaddr=$(cardano-cli stake-address build --stake-script-file scripts/plutus/scripts/guess-42-stake.plutus --testnet-magic 42)
 
+echo "======= Before claiming =============="
+echo "--- utxoaddr ---"
+scripts/lite/query-utxo.sh "$utxoaddr"
+echo "--- scriptpaymentaddrwithstakecred ---"
+scripts/lite/query-utxo.sh "$scriptpaymentaddrwithstakecred"
+echo "--- stakingscriptaddr ---"
+cardano-cli query stake-address-info --address "$stakingscriptaddr" --testnet-magic 42
+echo "======================================"
+
 # STEP 1 - Get reward account balance
 
 cardano-cli query stake-address-info \
@@ -89,3 +98,12 @@ cardano-cli query stake-address-info \
 scriptrewardscheck=$(jq -r '.[0]' $WORK/scriptrewardscheck.json)
 echo "Checking if script rewards withdrawal was successful..."
 echo "$scriptrewardscheck"
+
+echo "======= After claiming =============="
+echo "--- utxoaddr ---"
+scripts/lite/query-utxo.sh "$utxoaddr"
+echo "--- scriptpaymentaddrwithstakecred ---"
+scripts/lite/query-utxo.sh "$scriptpaymentaddrwithstakecred"
+echo "--- stakingscriptaddr ---"
+cardano-cli query stake-address-info --address "$stakingscriptaddr" --testnet-magic 42
+echo "======================================"
