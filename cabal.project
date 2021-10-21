@@ -41,6 +41,9 @@ package trace-dispatcher
 package trace-resources
   ghc-options: -Werror
 
+package plutus-examples
+  ghc-options: -Werror
+
 package cryptonite
   -- Using RDRAND instead of /dev/urandom as an entropy source for key
   -- generation is dubious. Set the flag so we use /dev/urandom by default.
@@ -71,6 +74,9 @@ package cardano-submit-api
   tests: True
 
 package cardano-testnet
+  tests: True
+
+package plutus-examples
   tests: True
 
 package trace-resources
