@@ -31,11 +31,12 @@ let
     ( let
         ## hard-code mainnet cost model
         scriptFees = executionMemory * 577 / 10000 + executionSteps  * 721 / 10000000;
+        collateralPercentage = 200;
 
         totalFee = if plutusMode
                    then tx_fee + scriptFees * inputs_per_tx
                    else tx_fee;
-        safeCollateral = max (scriptFees + tx_fee) min_utxo_value;
+        safeCollateral = max ((scriptFees + tx_fee) * collateralPercentage / 100) min_utxo_value;
         minTotalValue = min_utxo_value * outputs_per_tx + totalFee;
         minValuePerInput = minTotalValue / inputs_per_tx + 1;
       in
