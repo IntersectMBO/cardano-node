@@ -112,7 +112,6 @@ import qualified Ouroboros.Network.Protocol.ChainSync.Client as CS
 import qualified Ouroboros.Network.Protocol.ChainSync.ClientPipelined as CSP
 import           Ouroboros.Network.Protocol.ChainSync.PipelineDecision
 import qualified Cardano.Ledger.Shelley.Genesis as Shelley.Spec
-import qualified Cardano.Ledger.Shelley.PParams as Shelley.Spec
 import Data.Maybe (mapMaybe)
 import Ouroboros.Consensus.TypeFamilyWrappers (WrapLedgerEvent(WrapLedgerEvent))
 

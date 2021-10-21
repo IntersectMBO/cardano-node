@@ -70,8 +70,8 @@ import qualified Ouroboros.Network.Block as Consensus
 import qualified Cardano.Chain.Block as Byron
 import qualified Cardano.Chain.UTxO as Byron
 import qualified Cardano.Ledger.Era as Ledger
-import qualified Cardano.Protocol.TPraos.BHeader as Praos
-import qualified Cardano.Ledger.Shelley.BlockChain as Ledger
+import qualified Cardano.Protocol.TPraos.BHeader as TPraos
+import qualified Cardano.Ledger.Block as Ledger
 
 import           Cardano.Api.Eras
 import           Cardano.Api.HasTypeProxy
@@ -158,7 +158,7 @@ getShelleyBlockTxs :: forall era ledgerera.
                       ledgerera ~ ShelleyLedgerEra era
                    => Consensus.ShelleyBasedEra ledgerera
                    => ShelleyBasedEra era
-                   -> Ledger.Block ledgerera
+                   -> Ledger.Block TPraos.BHeader ledgerera
                    -> [Tx era]
 getShelleyBlockTxs era (Ledger.Block _header txs) =
   [ ShelleyTx era txinblock
@@ -261,7 +261,7 @@ getBlockHeader (ShelleyBlock shelleyEra block) = case shelleyEra of
       where
         Consensus.HeaderFields {
             Consensus.headerFieldHash
-              = Consensus.ShelleyHash (Praos.HashHeader (Cardano.Crypto.Hash.Class.UnsafeHash hashSBS)),
+              = Consensus.ShelleyHash (TPraos.HashHeader (Cardano.Crypto.Hash.Class.UnsafeHash hashSBS)),
             Consensus.headerFieldSlot,
             Consensus.headerFieldBlockNo
           } = Consensus.getHeaderFields block

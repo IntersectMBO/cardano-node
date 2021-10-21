@@ -67,6 +67,8 @@ deserialiseScriptInAnyLang bs =
           Right script -> Right script
 
   where
+    -- TODO: Think of a way to get type checker to warn when there is a missing
+    -- script version.
     textEnvTypes :: [FromSomeType HasTextEnvelope ScriptInAnyLang]
     textEnvTypes =
       [ FromSomeType (AsScript AsSimpleScriptV1)
@@ -77,6 +79,9 @@ deserialiseScriptInAnyLang bs =
 
       , FromSomeType (AsScript AsPlutusScriptV1)
                      (ScriptInAnyLang (PlutusScriptLanguage PlutusScriptV1))
+
+      , FromSomeType (AsScript AsPlutusScriptV2)
+                     (ScriptInAnyLang (PlutusScriptLanguage PlutusScriptV2))
       ]
 
     toMinimumSimpleScriptVersion :: SimpleScript SimpleScriptV2

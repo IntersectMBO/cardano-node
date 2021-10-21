@@ -31,7 +31,7 @@ import           Ouroboros.Network.Block (BlockNo (..), HeaderHash, Tip (..))
 
 import           Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import           Cardano.Protocol.TPraos (PoolDistr (..))
+import           Cardano.Ledger.PoolDistr (PoolDistr (..))
 import           Cardano.Protocol.TPraos.BHeader (HashHeader (..))
 
 import qualified Cardano.Ledger.Credential as Ledger
@@ -39,8 +39,8 @@ import qualified Cardano.Ledger.Shelley.API.Protocol as Ledger
 import qualified Cardano.Ledger.Shelley.EpochBoundary as Ledger
 import qualified Cardano.Ledger.Shelley.Rewards as Ledger
 import qualified Cardano.Protocol.TPraos.Rules.Prtcl as Ledger
-import qualified Cardano.Ledger.Shelley.Rules.Tickn as Ledger
-import           Cardano.Ledger.Shelley.TxBody (TxId (..))
+import qualified Cardano.Protocol.TPraos.Rules.Tickn as Ledger
+import           Cardano.Ledger.TxIn (TxId (..))
 
 import qualified Cardano.Ledger.Mary.Value as Ledger.Mary
 

@@ -11,7 +11,7 @@
 module Cardano.PlutusExample.Sum
   where
 
-import           Prelude hiding (($),(==),(+),(-))
+import           Prelude hiding (($), (+), (-), (==))
 
 import           Cardano.Api.Shelley (PlutusScript (..), PlutusScriptV1)
 
@@ -22,7 +22,7 @@ import qualified Data.ByteString.Short as SBS
 import qualified Ledger.Typed.Scripts as Scripts
 import qualified Plutus.V1.Ledger.Scripts as Plutus
 import qualified PlutusTx
-import           PlutusTx.Prelude hiding (Semigroup (..), unless)
+import           PlutusTx.Prelude hiding (Semigroup (..), unless, (.))
 
 
 smartSum :: Integer -> Integer

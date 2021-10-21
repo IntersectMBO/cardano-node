@@ -195,7 +195,7 @@ import qualified Cardano.Ledger.Shelley.Genesis as Shelley
 import qualified Cardano.Ledger.Shelley.Metadata as Shelley
 import qualified Cardano.Ledger.Shelley.Tx as Shelley
 import qualified Cardano.Ledger.Shelley.TxBody as Shelley
-import qualified Cardano.Ledger.Shelley.UTxO as Shelley
+import qualified Cardano.Ledger.TxIn as Ledger
 
 import qualified Cardano.Ledger.Mary.Value as Mary
 import qualified Cardano.Ledger.ShelleyMA.AuxiliaryData as Allegra
@@ -337,12 +337,12 @@ toByronTxId :: TxId -> Byron.TxId
 toByronTxId (TxId h) =
     Byron.unsafeHashFromBytes (Crypto.hashToBytes h)
 
-toShelleyTxId :: TxId -> Shelley.TxId StandardCrypto
+toShelleyTxId :: TxId -> Ledger.TxId StandardCrypto
 toShelleyTxId (TxId h) =
-    Shelley.TxId (SafeHash.unsafeMakeSafeHash (Crypto.castHash h))
+    Ledger.TxId (SafeHash.unsafeMakeSafeHash (Crypto.castHash h))
 
-fromShelleyTxId :: Shelley.TxId StandardCrypto -> TxId
-fromShelleyTxId (Shelley.TxId h) =
+fromShelleyTxId :: Ledger.TxId StandardCrypto -> TxId
+fromShelleyTxId (Ledger.TxId h) =
     TxId (Crypto.castHash (SafeHash.extractHash h))
 
 -- | Calculate the transaction identifier for a 'TxBody'.
@@ -380,8 +380,8 @@ getTxIdShelley
 getTxIdShelley _ tx =
     TxId
   . Crypto.castHash
-  . (\(Shelley.TxId txhash) -> SafeHash.extractHash txhash)
-  $ Shelley.txid tx
+  . (\(Ledger.TxId txhash) -> SafeHash.extractHash txhash)
+  $ Ledger.txid tx
 
 
 -- ----------------------------------------------------------------------------
@@ -439,12 +439,12 @@ toByronTxIn :: TxIn -> Byron.TxIn
 toByronTxIn (TxIn txid (TxIx txix)) =
     Byron.TxInUtxo (toByronTxId txid) (fromIntegral txix)
 
-toShelleyTxIn :: TxIn -> Shelley.TxIn StandardCrypto
+toShelleyTxIn :: TxIn -> Ledger.TxIn StandardCrypto
 toShelleyTxIn (TxIn txid (TxIx txix)) =
-    Shelley.TxIn (toShelleyTxId txid) (fromIntegral txix)
+    Ledger.TxIn (toShelleyTxId txid) (fromIntegral txix)
 
-fromShelleyTxIn :: Shelley.TxIn StandardCrypto -> TxIn
-fromShelleyTxIn (Shelley.TxIn txid txix) =
+fromShelleyTxIn :: Ledger.TxIn StandardCrypto -> TxIn
+fromShelleyTxIn (Ledger.TxIn txid txix) =
     TxIn (fromShelleyTxId txid) (TxIx (fromIntegral txix))
 
 
@@ -1796,7 +1796,7 @@ fromLedgerTxIns era body =
   where
     inputs :: ShelleyBasedEra era
            -> Ledger.TxBody (ShelleyLedgerEra era)
-           -> Set (Shelley.TxIn StandardCrypto)
+           -> Set (Ledger.TxIn StandardCrypto)
     inputs ShelleyBasedEraShelley = Shelley._inputs
     inputs ShelleyBasedEraAllegra = Allegra.inputs'
     inputs ShelleyBasedEraMary    = Mary.inputs'
@@ -1817,7 +1817,7 @@ fromLedgerTxInsCollateral era body =
   where
     collateral :: ShelleyBasedEra era
                -> Ledger.TxBody (ShelleyLedgerEra era)
-               -> Set (Shelley.TxIn StandardCrypto)
+               -> Set (Ledger.TxIn StandardCrypto)
     collateral ShelleyBasedEraShelley = const Set.empty
     collateral ShelleyBasedEraAllegra = const Set.empty
     collateral ShelleyBasedEraMary    = const Set.empty
@@ -2858,7 +2858,7 @@ collectTxBodyScriptWitnesses TxBodyContent {
         ]
 
 -- This relies on the TxId Ord instance being consistent with the
--- Shelley.TxId Ord instance via the toShelleyTxId conversion
+-- Ledger.TxId Ord instance via the toShelleyTxId conversion
 -- This is checked by prop_ord_distributive_TxId
 orderTxIns :: [(TxIn, v)] -> [(TxIn, v)]
 orderTxIns = sortBy (compare `on` fst)

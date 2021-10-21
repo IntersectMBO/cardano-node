@@ -42,8 +42,10 @@ import qualified Cardano.Ledger.Alonzo.PlutusScriptApi as Alonzo
 import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
 import qualified Cardano.Ledger.Alonzo.TxInfo as Alonzo
 import qualified Cardano.Ledger.Alonzo.TxWitness as Alonzo
+import           Cardano.Ledger.BaseTypes (ProtVer)
+import qualified Cardano.Ledger.TxIn as Ledger
+
 import           Cardano.Ledger.Crypto (StandardCrypto)
-import           Cardano.Protocol.TPraos (ProtVer)
 import           Cardano.Slotting.EpochInfo (EpochInfo, hoistEpochInfo)
 import           Cardano.Slotting.Time (SystemStart)
 import           Control.Monad.Trans.Except
@@ -56,9 +58,8 @@ import qualified Plutus.V1.Ledger.DCert as Plutus
 import qualified PlutusTx
 import qualified PlutusTx.AssocMap as AMap
 import           PlutusTx.IsData.Class
-import           PlutusTx.Prelude hiding (Semigroup (..), unless)
+import           PlutusTx.Prelude hiding (Semigroup (..), unless, (.))
 import qualified PlutusTx.Prelude as P
-import qualified Cardano.Ledger.Shelley.TxBody as Shelley
 
 -- Description
 -- MyCustomRedeemer mimics the ScriptContext. MyCustomRedeemer is built via reading
@@ -372,7 +373,7 @@ getSbe (ShelleyBasedEra sbe) = return sbe
 
 -- Used in roundtrip testing
 
-fromPlutusTxId :: Plutus.TxId -> Shelley.TxId StandardCrypto
+fromPlutusTxId :: Plutus.TxId -> Ledger.TxId StandardCrypto
 fromPlutusTxId (Plutus.TxId builtInBs) =
   case deserialiseFromRawBytes AsTxId $ fromBuiltin builtInBs of
     Just txidHash -> toShelleyTxId txidHash

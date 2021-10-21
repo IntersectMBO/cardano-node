@@ -84,8 +84,7 @@ import           Cardano.Ledger.Crypto (StandardCrypto)
 import qualified Cardano.Ledger.Era as Ledger
 import qualified Cardano.Ledger.Keys as Ledger
 
-import qualified Cardano.Ledger.Shelley.PParams as Ledger (ProposedPPUpdates (..), ProtVer (..),
-                   Update (..))
+import qualified Cardano.Ledger.Shelley.PParams as Ledger (ProposedPPUpdates (..), Update (..))
 -- Some of the things from Cardano.Ledger.Shelley.PParams are generic across all
 -- eras, and some are specific to the Shelley era (and other pre-Alonzo eras).
 -- So we import in twice under different names.
@@ -749,6 +748,9 @@ validateCostModel :: PlutusScriptVersion lang
 validateCostModel PlutusScriptV1 (CostModel m)
   | Alonzo.validateCostModelParams m = Right ()
   | otherwise                        = Left (InvalidCostModel (CostModel m))
+validateCostModel PlutusScriptV2 (CostModel m)
+  | Alonzo.validateCostModelParams m = Right ()
+  | otherwise                        = Left (InvalidCostModel (CostModel m))
 
 -- TODO alonzo: it'd be nice if the library told us what was wrong
 newtype InvalidCostModel = InvalidCostModel CostModel
@@ -777,9 +779,11 @@ fromAlonzoCostModels =
 
 toAlonzoScriptLanguage :: AnyPlutusScriptVersion -> Alonzo.Language
 toAlonzoScriptLanguage (AnyPlutusScriptVersion PlutusScriptV1) = Alonzo.PlutusV1
+toAlonzoScriptLanguage (AnyPlutusScriptVersion PlutusScriptV2) = Alonzo.PlutusV2
 
 fromAlonzoScriptLanguage :: Alonzo.Language -> AnyPlutusScriptVersion
 fromAlonzoScriptLanguage Alonzo.PlutusV1 = AnyPlutusScriptVersion PlutusScriptV1
+fromAlonzoScriptLanguage Alonzo.PlutusV2 = AnyPlutusScriptVersion PlutusScriptV2
 
 toAlonzoCostModel :: CostModel -> Alonzo.CostModel
 toAlonzoCostModel (CostModel m) = Alonzo.CostModel m
@@ -1258,7 +1262,7 @@ toAlonzoPParams ProtocolParameters {
     Alonzo.PParams {
       Alonzo._protocolVersion
                            = let (maj, minor) = protocolParamProtocolVersion
-                              in Alonzo.ProtVer maj minor
+                              in Ledger.ProtVer maj minor
     , Alonzo._d            = fromMaybe
                                (error "toAlonzoPParams: invalid Decentralization value")
                                (Ledger.boundRational protocolParamDecentralization)

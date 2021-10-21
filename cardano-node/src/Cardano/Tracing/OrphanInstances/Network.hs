@@ -22,6 +22,7 @@ import           Data.Text (pack)
 
 import           Network.Mux (MuxTrace (..), WithMuxBearer (..))
 import           Network.Socket (SockAddr (..))
+import           Network.TypedProtocol.Codec (AnyMessageAndAgency (..), PeerHasAgency (..))
 
 import           Cardano.Tracing.ConvertTxId (ConvertTxId)
 import           Cardano.Tracing.OrphanInstances.Common
@@ -39,7 +40,6 @@ import           Ouroboros.Network.BlockFetch.ClientState (TraceFetchClientState
                    TraceLabelPeer (..))
 import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
 import           Ouroboros.Network.BlockFetch.Decision (FetchDecision, FetchDecline (..))
-import           Ouroboros.Network.Codec (AnyMessageAndAgency (..), PeerHasAgency (..))
 import           Ouroboros.Network.DeltaQ (GSV (..), PeerGSV (..))
 import           Ouroboros.Network.KeepAlive (TraceKeepAliveClient (..))
 import qualified Ouroboros.Network.NodeToClient as NtC

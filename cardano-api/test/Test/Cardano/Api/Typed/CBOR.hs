@@ -167,6 +167,11 @@ prop_roundtrip_script_PlutusScriptV1_CBOR =
   roundtrip_CBOR (AsScript AsPlutusScriptV1)
                  (genScript (PlutusScriptLanguage PlutusScriptV1))
 
+prop_roundtrip_script_PlutusScriptV2_CBOR :: Property
+prop_roundtrip_script_PlutusScriptV2_CBOR =
+  roundtrip_CBOR (AsScript AsPlutusScriptV2)
+                 (genScript (PlutusScriptLanguage PlutusScriptV2))
+
 prop_roundtrip_UpdateProposal_CBOR :: Property
 prop_roundtrip_UpdateProposal_CBOR =
   roundtrip_CBOR AsUpdateProposal genUpdateProposal

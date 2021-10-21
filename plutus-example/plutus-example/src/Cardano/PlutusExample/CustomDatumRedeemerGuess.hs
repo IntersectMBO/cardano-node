@@ -23,7 +23,7 @@ import           Ledger.Contexts (ScriptContext (..))
 import qualified Ledger.Typed.Scripts as Scripts
 import qualified Plutus.V1.Ledger.Scripts as Plutus
 import qualified PlutusTx
-import           PlutusTx.Prelude hiding (Semigroup (..), unless)
+import           PlutusTx.Prelude hiding (Semigroup (..), unless, (.))
 
 newtype MyCustomDatum = MyCustomDatum Integer
 newtype MyCustomRedeemer = MyCustomRedeemer Integer

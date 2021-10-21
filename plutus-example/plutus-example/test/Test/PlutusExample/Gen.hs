@@ -10,14 +10,15 @@ import qualified Data.Map.Strict as Map
 
 import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
 import qualified Cardano.Ledger.Alonzo.TxInfo as Alonzo
+-- import           Cardano.Ledger.BaseTypes (ProtoVer)
 import           Cardano.Ledger.Crypto (StandardCrypto)
 import qualified Cardano.Ledger.Era as Ledger
 import           Cardano.PlutusExample.ScriptContextChecker
 import           Gen.Cardano.Api.Typed
 import qualified Ledger as Plutus
 import qualified Plutus.V1.Ledger.DCert as Plutus
-import qualified Cardano.Ledger.Shelley.TxBody as Ledger
 import qualified Cardano.Ledger.Shelley.UTxO as Ledger
+import qualified Cardano.Ledger.TxIn as Ledger
 
 import           Hedgehog (Gen)
 import qualified Hedgehog.Gen as Gen
