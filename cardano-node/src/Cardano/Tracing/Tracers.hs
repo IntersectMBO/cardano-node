@@ -296,6 +296,7 @@ mkTracers blockConfig tOpts@(TracingOn trSel) tr nodeKern ekgDirect = do
   fStats <- mkForgingStats
   consensusTracers <- mkConsensusTracers ekgDirect trSel verb tr nodeKern fStats
   elidedChainDB <- newstate  -- for eliding messages in ChainDB tracer
+  tForks <- STM.newTVarIO 0
 
   pure Tracers
     { chainDBTracer = tracerOnOff' (traceChainDB trSel) $
@@ -304,6 +305,7 @@ mkTracers blockConfig tOpts@(TracingOn trSel) tr nodeKern ekgDirect = do
                              fStats
                              tOpts elidedChainDB
                              ekgDirect
+                             tForks
                              (appendName "ChainDB" tr)
                              (appendName "metrics" tr)
     , consensusTracers = consensusTracers
@@ -386,14 +388,15 @@ teeTraceChainTip
   -> TraceOptions
   -> MVar (Maybe (WithSeverity (ChainDB.TraceEvent blk)), Integer)
   -> Maybe EKGDirect
+  -> STM.TVar Word64
   -> Trace IO Text
   -> Trace IO Text
   -> Tracer IO (WithSeverity (ChainDB.TraceEvent blk))
-teeTraceChainTip _ _ TracingOff _ _ _ _ = nullTracer
-teeTraceChainTip blockConfig fStats (TracingOn trSel) elided ekgDirect trTrc trMet =
+teeTraceChainTip _ _ TracingOff _ _ _ _ _ = nullTracer
+teeTraceChainTip blockConfig fStats (TracingOn trSel) elided ekgDirect tFork trTrc trMet =
   Tracer $ \ev -> do
     traceWith (teeTraceChainTipElide (traceVerbosity trSel) elided trTrc) ev
-    traceWith (ignoringSeverity (traceChainMetrics ekgDirect blockConfig fStats trMet)) ev
+    traceWith (ignoringSeverity (traceChainMetrics ekgDirect tFork blockConfig fStats trMet)) ev
 
 teeTraceChainTipElide
   :: ( ConvertRawHash blk
@@ -417,28 +420,31 @@ traceChainMetrics
   :: forall blk. ()
   => HasHeader (Header blk)
   => Maybe EKGDirect
+  -> STM.TVar Word64
   -> BlockConfig blk
   -> ForgingStats
   -> Trace IO Text
   -> Tracer IO (ChainDB.TraceEvent blk)
-traceChainMetrics Nothing _ _ _ = nullTracer
-traceChainMetrics (Just _ekgDirect) _blockConfig _fStats tr = do
+traceChainMetrics Nothing _ _ _ _ = nullTracer
+traceChainMetrics (Just _ekgDirect) tForks _blockConfig _fStats tr = do
   Tracer $ \ev ->
     fromMaybe (pure ()) $ doTrace <$> chainTipInformation ev
   where
     chainTipInformation :: ChainDB.TraceEvent blk -> Maybe ChainInformation
     chainTipInformation = \case
       ChainDB.TraceAddBlockEvent ev -> case ev of
-        ChainDB.SwitchedToAFork _warnings newTipInfo _oldChain newChain ->
-          Just $ chainInformation newTipInfo newChain 0
+        ChainDB.SwitchedToAFork _warnings newTipInfo oldChain newChain ->
+          let fork = not $ AF.withinFragmentBounds (AF.headPoint oldChain)
+                              newChain in
+          Just $ chainInformation newTipInfo fork newChain 0
         ChainDB.AddedToCurrentChain _warnings newTipInfo _oldChain newChain ->
-          Just $ chainInformation newTipInfo newChain 0
+          Just $ chainInformation newTipInfo False newChain 0
         _ -> Nothing
       _ -> Nothing
     doTrace :: ChainInformation -> IO ()
 
     doTrace
-        ChainInformation { slots, blocks, density, epoch, slotInEpoch } = do
+        ChainInformation { slots, blocks, density, epoch, slotInEpoch, fork } = do
       -- TODO this is executed each time the newFhain changes. How cheap is it?
       meta <- mkLOMeta Critical Public
 
@@ -447,6 +453,9 @@ traceChainMetrics (Just _ekgDirect) _blockConfig _fStats tr = do
       traceI tr meta "blockNum"    blocks
       traceI tr meta "slotInEpoch" slotInEpoch
       traceI tr meta "epoch"       (unEpochNo epoch)
+      when fork $
+        traceI tr meta "forks" =<< STM.modifyReadTVarIO tForks succ
+
 
 traceD :: Trace IO a -> LOMeta -> Text -> Double -> IO ()
 traceD tr meta msg d = traceNamedObject tr (meta, LogValue msg (PureD d))
@@ -1214,21 +1223,25 @@ data ChainInformation = ChainInformation
   , blocksUncoupledDelta :: Int64
     -- ^ The net change in number of blocks forged since last restart not on the
     -- current chain.
+  , fork :: Bool
+    -- ^ Was this a fork.
   }
 
 chainInformation
   :: forall blk. HasHeader (Header blk)
   => ChainDB.NewTipInfo blk
+  -> Bool
   -> AF.AnchoredFragment (Header blk)
   -> Int64
   -> ChainInformation
-chainInformation newTipInfo frag blocksUncoupledDelta = ChainInformation
+chainInformation newTipInfo fork frag blocksUncoupledDelta = ChainInformation
     { slots = unSlotNo $ fromWithOrigin 0 (AF.headSlot frag)
     , blocks = unBlockNo $ fromWithOrigin (BlockNo 1) (AF.headBlockNo frag)
     , density = fragmentChainDensity frag
     , epoch = ChainDB.newTipEpoch newTipInfo
     , slotInEpoch = ChainDB.newTipSlotInEpoch newTipInfo
     , blocksUncoupledDelta = blocksUncoupledDelta
+    , fork = fork
     }
 
 fragmentChainDensity ::

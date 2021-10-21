@@ -686,6 +686,8 @@ instance ( ConvertRawHash blk
                [ "kind" .= String "TraceAddBlockEvent.SwitchedToAFork"
                , "newtip" .= renderPointForVerbosity verb (AF.headPoint new)
                , "chainLengthDelta" .= new `chainLengthΔ` old
+               -- Check that the SwitchedToAFork event was triggered by a proper fork.
+               , "realFork" .= not (AF.withinFragmentBounds (AF.headPoint old) new)
                ]
             ++ [ "headers" .= toJSON (toObject verb `map` addedHdrsNewChain old new)
                | verb == MaximalVerbosity ]
