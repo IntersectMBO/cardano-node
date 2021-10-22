@@ -52,12 +52,12 @@ data IsPoolRewardAccount = IsPoolRewardAccountYes | IsPoolRewardAccountNo
 data Event c
   = CheckPointEvent SlotNo
   | NewEraEvent EpochNo SlotNo String
-  | StakeRegistrationEvent SlotNo
-  | StakeDeRegistrationEvent SlotNo
+  | StakeRegistrationEvent EpochNo SlotNo
+  | StakeDeRegistrationEvent EpochNo SlotNo
   | DelegationEvent SlotNo (Hash StakePoolKey)
   | PoolRegistrationEvent SlotNo (Hash StakePoolKey) IsOwner IsPoolRewardAccount
-  | MIREvent SlotNo Lovelace L.MIRPot
-  | WithdrawalEvent SlotNo Lovelace
+  | MIREvent EpochNo SlotNo Lovelace L.MIRPot
+  | WithdrawalEvent EpochNo SlotNo Lovelace
   | RewardBalanceEvent EpochNo SlotNo Lovelace
   | RewardStartEvent EpochNo SlotNo Lovelace
   | RewardEndEvent EpochNo SlotNo (Set (L.Reward c))
@@ -75,11 +75,13 @@ msg ev = putStrLn (message ev)
         <> show e      <> ", "
         <> show slotNo <> ", "
         <> name
-    message (StakeRegistrationEvent slotNo)       =
+    message (StakeRegistrationEvent epochNo slotNo)       =
       "REGISTRATION ------ "
+        <> show epochNo <> ", "
         <> show slotNo
-    message (StakeDeRegistrationEvent slotNo)     =
+    message (StakeDeRegistrationEvent epochNo slotNo)     =
       "DE-REGISTRATION --- "
+        <> show epochNo <> ", "
         <> show slotNo
     message (DelegationEvent slotNo poolId)       =
       "DELEGATION -------- "
@@ -91,13 +93,15 @@ msg ev = putStrLn (message ev)
         <> ", PoolID " <> (tail . init $ show poolId)
         <> dispOwner owner
         <> dispRewardAcnt rewardAccount
-    message (MIREvent slotNo love pot) =
+    message (MIREvent epochNo slotNo love pot) =
       "MIR --------------- "
+        <> show epochNo <> ", "
         <> show slotNo <> ", "
         <> show pot <> ", "
         <> show love
-    message (WithdrawalEvent slotNo w)  =
+    message (WithdrawalEvent epochNo slotNo w)  =
       "WDRL -------------- "
+        <> show epochNo <> ", "
         <> show slotNo <> ", "
         <> show w
     message (RewardBalanceEvent e slotNo balance) =
@@ -238,34 +242,36 @@ main = do
              let getBalances = L._rewards . L._dstate . L._delegationState . L.esLState . L.nesEs
 
              -- in non-byron eras, get the necessary components of the ledger state
-             let (name, shelleyState) =
+             let (name, epochNo, shelleyState) =
                    case ledgerState of
                      LedgerStateByron _                                     ->
-                       ("byron",   Nothing)
+                       ("byron",   EpochNo 0, Nothing)
                      LedgerStateShelley (Shelley.ShelleyLedgerState _ ls _) ->
-                       ("shelley", Just (L.nesEL ls, L.nesRu ls, getGoSnapshot ls, getBalances ls))
+                       ("shelley", L.nesEL ls, Just (L.nesRu ls, getGoSnapshot ls, getBalances ls))
                      LedgerStateAllegra (Shelley.ShelleyLedgerState _ ls _) ->
-                       ("allegra", Just (L.nesEL ls, L.nesRu ls, getGoSnapshot ls, getBalances ls))
+                       ("allegra", L.nesEL ls, Just (L.nesRu ls, getGoSnapshot ls, getBalances ls))
                      LedgerStateMary    (Shelley.ShelleyLedgerState _ ls _) ->
-                       ("mary",    Just (L.nesEL ls, L.nesRu ls, getGoSnapshot ls, getBalances ls))
+                       ("mary",    L.nesEL ls, Just (L.nesRu ls, getGoSnapshot ls, getBalances ls))
                      LedgerStateAlonzo    (Shelley.ShelleyLedgerState _ ls _) ->
-                       ("alonzo",    Just (L.nesEL ls, L.nesRu ls, getGoSnapshot ls, getBalances ls))
+                       ("alonzo",  L.nesEL ls, Just (L.nesRu ls, getGoSnapshot ls, getBalances ls))
 
              let txBodyComponents = map ( (\(TxBody txbc) -> txbc) . getTxBody ) transactions
-             mapM_ (delegationEvents targetCredAsAPI slotNo) txBodyComponents
-             mapM_ (withdrawalEvents targetCredAsAPI slotNo) txBodyComponents
+
+             mapM_ (delegationEvents targetCredAsAPI epochNo slotNo) txBodyComponents
+             mapM_ (withdrawalEvents targetCredAsAPI epochNo slotNo) txBodyComponents
 
              lastcheck <- displayCheckpoint slotNo (lastCheckpoint state) (checkpoint args)
 
              case shelleyState of
-               Just (epochNo, L.SJust (L.Complete ru), goSnap, _) -> do
+               Just (L.SJust (L.Complete ru), goSnap, _) -> do
+
                  es <- rewardStartEvent (lastRewStartEpoch state) epochNo slotNo goSnap    targetCred
                  ee <- rewardEndEvent   (lastRewEndEpoch   state) epochNo slotNo (L.rs ru) targetCred
                  return $ state { lastCheckpoint = lastcheck
                                 , lastRewStartEpoch = es
                                 , lastRewEndEpoch = ee
                                 }
-               Just (epochNo, _, _, balances) -> do
+               Just (_, _, balances) -> do
                  eb  <- rewardBalance (lastBalanceCheck  state) epochNo slotNo balances targetCred
                  era <- newEraEvent name epochNo slotNo (lastEra state)
                  return $ state { lastCheckpoint = lastcheck
@@ -292,26 +298,26 @@ main = do
         else return eraLast
 
     -- Delegation Events --
-    delegationEvents :: StakeCredential -> SlotNo -> TxBodyContent ViewTx era -> IO ()
-    delegationEvents t slotNo txbc = case txCertificates txbc of
+    delegationEvents :: StakeCredential -> EpochNo -> SlotNo -> TxBodyContent ViewTx era -> IO ()
+    delegationEvents t epochNo slotNo txbc = case txCertificates txbc of
       TxCertificatesNone    -> return ()
-      TxCertificates _ cs _ -> mapM_ msg $ mapMaybe (targetedCert t slotNo) cs
+      TxCertificates _ cs _ -> mapM_ msg $ mapMaybe (targetedCert t epochNo slotNo) cs
 
-    targetedCert :: StakeCredential -> SlotNo -> Certificate -> Maybe (Event c)
-    targetedCert t slotNo (StakeAddressRegistrationCertificate cred)   =
-      if t == cred then Just (StakeRegistrationEvent slotNo) else Nothing
-    targetedCert t slotNo (StakeAddressDeregistrationCertificate cred) =
-      if t == cred then Just (StakeDeRegistrationEvent slotNo) else Nothing
-    targetedCert t slotNo (StakeAddressDelegationCertificate cred pool) =
+    targetedCert :: StakeCredential -> EpochNo -> SlotNo -> Certificate -> Maybe (Event c)
+    targetedCert t epochNo slotNo (StakeAddressRegistrationCertificate cred)   =
+      if t == cred then Just (StakeRegistrationEvent epochNo slotNo) else Nothing
+    targetedCert t epochNo slotNo (StakeAddressDeregistrationCertificate cred) =
+      if t == cred then Just (StakeDeRegistrationEvent epochNo slotNo) else Nothing
+    targetedCert t _epochNo slotNo (StakeAddressDelegationCertificate cred pool) =
       if t == cred then Just (DelegationEvent slotNo pool) else Nothing
-    targetedCert t slotNo (StakePoolRegistrationCertificate pool)      =
+    targetedCert t _epochNo slotNo (StakePoolRegistrationCertificate pool)      =
       inPoolCert t slotNo pool
-    targetedCert _ _ (StakePoolRetirementCertificate _ _)              = Nothing
-    targetedCert _ _ GenesisKeyDelegationCertificate {}                = Nothing
-    targetedCert t slotNo (MIRCertificate pot (StakeAddressesMIR mir)) =
-      inMir t slotNo mir pot
-    targetedCert _ _ (MIRCertificate _ (SendToReservesMIR _))          = Nothing
-    targetedCert _ _ (MIRCertificate _ (SendToTreasuryMIR _))          = Nothing
+    targetedCert _ _ _ (StakePoolRetirementCertificate _ _)              = Nothing
+    targetedCert _ _ _ GenesisKeyDelegationCertificate {}                = Nothing
+    targetedCert t epochNo slotNo (MIRCertificate pot (StakeAddressesMIR mir)) =
+      inMir t epochNo slotNo mir pot
+    targetedCert _ _ _ (MIRCertificate _ (SendToReservesMIR _))          = Nothing
+    targetedCert _ _ _ (MIRCertificate _ (SendToTreasuryMIR _))          = Nothing
 
     stakeCredentialFromStakeAddress (StakeAddress _ cred) = fromShelleyStakeCredential cred
 
@@ -326,19 +332,19 @@ main = do
        isRewardAccount = t == (stakeCredentialFromStakeAddress . stakePoolRewardAccount $ pool)
        rewardAccount = if isRewardAccount then IsPoolRewardAccountYes else IsPoolRewardAccountNo
 
-    inMir t slotNo mir pot =
+    inMir t epochNo slotNo mir pot =
       case filter ((t ==) . fst) mir of
         []          -> Nothing
-        [(_, love)] -> Just $ MIREvent slotNo love pot
+        [(_, love)] -> Just $ MIREvent epochNo slotNo love pot
         _           -> Just . Error $ "MIR keys should be unique: " <> show mir
 
     -- Withdrawal Events --
-    withdrawalEvents :: StakeCredential -> SlotNo -> TxBodyContent ViewTx era -> IO ()
-    withdrawalEvents t slotNo txbc = case txWithdrawals txbc of
+    withdrawalEvents :: StakeCredential -> EpochNo -> SlotNo -> TxBodyContent ViewTx era -> IO ()
+    withdrawalEvents t epochNo slotNo txbc = case txWithdrawals txbc of
       TxWithdrawalsNone  -> return ()
-      TxWithdrawals _ ws -> mapM_ (withdrawalEvent slotNo) $ filter (targetWithdrawal t) ws
+      TxWithdrawals _ ws -> mapM_ (withdrawalEvent epochNo slotNo) $ filter (targetWithdrawal t) ws
 
-    withdrawalEvent slotNo (_, c, _) = msg $ WithdrawalEvent slotNo c
+    withdrawalEvent epochNo slotNo (_, c, _) = msg $ WithdrawalEvent epochNo slotNo c
     targetWithdrawal t (sa, _, _) = t == stakeCredentialFromStakeAddress sa
 
     -- Once Per Epoch Events --
