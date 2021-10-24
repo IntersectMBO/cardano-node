@@ -216,7 +216,6 @@ instance ( ShelleyBasedEra era
          , ToObject (PredicateFailure (Core.EraRule "UTXOW" era))
          , ToObject (PredicateFailure (Core.EraRule "BBODY" era))
          , ToObject (PredicateFailure (Core.EraRule "TICK" era))
-         , ToObject (PredicateFailure (Core.EraRule "TICKN" era))
          ) => ToObject (ChainPredicateFailure era) where
   toObject _verb (HeaderSizeTooLargeCHAIN hdrSz maxHdrSz) =
     mkObject [ "kind" .= String "HeaderSizeTooLarge"
@@ -394,6 +393,10 @@ instance ( ShelleyBasedEra era
              ]
   toObject _verb InvalidMetadata =
     mkObject [ "kind" .= String "InvalidMetadata"
+             ]
+  toObject _verb (ExtraneousScriptWitnessesUTXOW extraneousScripts) =
+    mkObject [ "kind" .= String "ExtraneousScriptWitnessesUTXOW"
+             , "extraneousScripts" .= extraneousScripts
              ]
 
 instance ( ShelleyBasedEra era
