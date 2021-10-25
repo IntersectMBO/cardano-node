@@ -11,6 +11,8 @@ import           Data.Text (Text)
 import           Options.Applicative
 import qualified Options.Applicative as Opt
 
+import           Ouroboros.Network.Block (SlotNo(..))
+
 import           Cardano.Unlog.LogObject hiding (Text)
 
 --
@@ -25,6 +27,7 @@ data AnalysisCommand
       JsonRunMetafile
       [JsonLogfile]
       MachineTimelineOutputFiles
+      (Maybe SlotNo)
   | BlockPropagationCmd
       JsonGenesisFile
       JsonRunMetafile
@@ -106,6 +109,16 @@ parseBlockPropagationOutputFiles =
         (argJsonOutputFile "analysis-json"
            "Write analysis JSON to this file, if specified -- otherwise print to stdout.")
 
+pSlotNo :: String -> String -> Parser SlotNo
+pSlotNo name desc =
+  SlotNo <$>
+    ( Opt.option Opt.auto
+       (  Opt.long name
+       <> Opt.metavar "SLOT"
+       <> Opt.help desc
+       )
+    )
+
 parseAnalysisCommands :: Parser AnalysisCommand
 parseAnalysisCommands =
   Opt.subparser $
@@ -117,7 +130,8 @@ parseAnalysisCommands =
                        <*> argJsonRunMetafile "run-metafile"
                               "The meta.json file from the benchmark run"
                        <*> some argJsonLogfile
-                       <*> parseMachineTimelineOutputFiles) $
+                       <*> parseMachineTimelineOutputFiles
+                       <*> optional (pSlotNo "end-slot" "Ignore data after given slot number")) $
             Opt.progDesc "Analyse leadership checks")
       , Opt.command "block-propagation"
           (Opt.info (BlockPropagationCmd

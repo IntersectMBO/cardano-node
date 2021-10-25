@@ -80,7 +80,7 @@ renderAnalysisCmdError cmd err =
 --
 
 runAnalysisCommand :: AnalysisCommand -> ExceptT AnalysisCmdError IO ()
-runAnalysisCommand (MachineTimelineCmd genesisFile metaFile logfiles oFiles) = do
+runAnalysisCommand (MachineTimelineCmd genesisFile metaFile logfiles oFiles mEndSlot) = do
   chainInfo <-
     ChainInfo
       <$> firstExceptT (RunMetaParseError metaFile . Text.pack)
@@ -90,7 +90,7 @@ runAnalysisCommand (MachineTimelineCmd genesisFile metaFile logfiles oFiles) = d
                        (newExceptT $
                          Aeson.eitherDecode @Genesis <$> LBS.readFile (unJsonGenesisFile genesisFile))
   firstExceptT AnalysisCmdError $
-    runMachineTimeline chainInfo logfiles oFiles
+    runMachineTimeline chainInfo logfiles oFiles mEndSlot
 runAnalysisCommand (BlockPropagationCmd genesisFile metaFile logfiles oFiles) = do
   chainInfo <-
     ChainInfo

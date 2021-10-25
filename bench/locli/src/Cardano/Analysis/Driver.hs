@@ -31,6 +31,8 @@ import Graphics.Gnuplot.Frame.OptionSet qualified as Opts
 
 import Text.Printf
 
+import Ouroboros.Network.Block (SlotNo)
+
 import Cardano.Analysis.API
 import Cardano.Analysis.BlockProp
 import Cardano.Analysis.MachTimeline
@@ -72,7 +74,7 @@ renderAnalysisCmdError cmd err =
 -- Analysis command dispatch
 --
 runAnalysisCommand :: AnalysisCommand -> ExceptT AnalysisCmdError IO ()
-runAnalysisCommand (MachineTimelineCmd genesisFile metaFile logfiles oFiles) = do
+runAnalysisCommand (MachineTimelineCmd genesisFile metaFile logfiles oFiles mEndSlot) = do
   chainInfo <-
     ChainInfo
       <$> firstExceptT (RunMetaParseError metaFile . T.pack)
@@ -82,7 +84,7 @@ runAnalysisCommand (MachineTimelineCmd genesisFile metaFile logfiles oFiles) = d
                        (newExceptT $
                         AE.eitherDecode @Genesis <$> LBS.readFile (unJsonGenesisFile genesisFile))
   firstExceptT AnalysisCmdError $
-    runMachineTimeline chainInfo logfiles oFiles
+    runMachineTimeline chainInfo logfiles oFiles mEndSlot
 runAnalysisCommand (BlockPropagationCmd genesisFile metaFile logfiles oFiles) = do
   chainInfo <-
     ChainInfo
@@ -135,8 +137,8 @@ runBlockPropagation cInfo logfiles BlockPropagationOutputFiles{..} = do
    joinT (a, b) = (,) <$> a <*> b
 
 runMachineTimeline ::
-  ChainInfo -> [JsonLogfile] -> MachineTimelineOutputFiles -> ExceptT Text IO ()
-runMachineTimeline chainInfo logfiles MachineTimelineOutputFiles{..} = do
+  ChainInfo -> [JsonLogfile] -> MachineTimelineOutputFiles -> Maybe SlotNo -> ExceptT Text IO ()
+runMachineTimeline chainInfo logfiles MachineTimelineOutputFiles{..} mEndSlot = do
   liftIO $ do
     -- 0. Recover LogObjects
     objs :: [LogObject] <- concat <$> mapM readLogObjectStream logfiles
@@ -151,7 +153,7 @@ runMachineTimeline chainInfo logfiles MachineTimelineOutputFiles{..} = do
           forM_ noisySlotStats $ LBS.hPutStrLn hnd . AE.encode
 
     -- 2. Reprocess the slot stats
-    let slotStats = cleanupSlotStats noisySlotStats
+    let slotStats = cleanupSlotStats mEndSlot noisySlotStats
 
     -- 3. Derive the timeline
     let drvVectors0, _drvVectors1 :: [DerivedSlot]
