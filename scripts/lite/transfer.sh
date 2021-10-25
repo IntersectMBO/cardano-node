@@ -10,13 +10,13 @@ export BASE="${BASE:-.}"
 export CARDANO_CLI="${CARDANO_CLI:-cardano-cli}"
 export CARDANO_NODE_SOCKET_PATH="${CARDANO_NODE_SOCKET_PATH:-example/node-bft1/node.sock}"
 export TESTNET_MAGIC="${TESTNET_MAGIC:-42}"
-export UTXO_SKEY="${UTXO_SKEY:-example/shelley/utxo-keys/utxo1.skey}"
+export SOURCE_SKEY="${SOURCE_SKEY:-example/shelley/utxo-keys/utxo1.skey}"
+export TARGET_VKEY="${TARGET_VKEY:-example/shelley/utxo-keys/utxo2.vkey}"
 export SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
 amount="$1"
-source_skey="$2"
-source="$("$SCRIPT_DIR/address-of.sh" "${source_skey%.skey}.vkey")"
-target="$("$SCRIPT_DIR/address-of.sh" "$3")"
+source="$("$SCRIPT_DIR/address-of.sh" "${SOURCE_SKEY%.skey}.vkey")"
+target="$("$SCRIPT_DIR/address-of.sh" "$TARGET_VKEY")"
 
 utxo_file="$(mktemp)"
 
@@ -26,21 +26,21 @@ tx_base="$(mktemp)"
 
 echo "Queried UTxO for address: utxoaddr=$utxoaddr"
 
-txins="$(jq -r ". | to_entries | sort_by(.value.value.lovelace) | reverse | map(.key)[0:$count][]" "$utxo_file")"
+mapfile -t utxo_as_txins < <(cat "$utxo_file" | jq -r 'to_entries | map(["--tx-in", .key]) | flatten | .[]')
 
 "$CARDANO_CLI" transaction build \
   --alonzo-era \
   --cardano-mode \
   --testnet-magic "$TESTNET_MAGIC" \
   --change-address "$target" \
-  --tx-in "$txin" \
+  ${utxo_as_txins[@]} \
   --tx-out "$target+$amount" \
   --out-file "$tx_base.tx"
 
 "$CARDANO_CLI" transaction sign \
   --tx-body-file "$tx_base.tx" \
   --testnet-magic "$TESTNET_MAGIC" \
-  --signing-key-file "$source_skey" \
+  --signing-key-file "$SOURCE_SKEY" \
   --out-file "$tx_base.tx.signed"
 
 if [ "$SUBMIT_API_PORT" != "" ]; then
@@ -52,5 +52,5 @@ if [ "$SUBMIT_API_PORT" != "" ]; then
     -X POST "http://localhost:$SUBMIT_API_PORT/api/submit/tx" \
     --data-binary "@$tx_base.tx.signed.cbor"
 else
-  "$CARDANO_CLI" transaction submit --tx-file "$tx_base.tx.signed.cbor" --testnet-magic "$TESTNET_MAGIC"
+  "$CARDANO_CLI" transaction submit --tx-file "$tx_base.tx.signed" --testnet-magic "$TESTNET_MAGIC"
 fi

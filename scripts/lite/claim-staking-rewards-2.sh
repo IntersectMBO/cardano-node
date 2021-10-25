@@ -52,36 +52,14 @@ echo "Total ADA Balance: $utxo_total"
 echo "UTxO Count: $utxo_count"
 echo "UTxO args: ${utxo_as_txins[@]}"
 
-$CARDANO_CLI transaction build-raw \
-  --tx-out "$utxo_address+0" \
-  --invalid-hereafter "$(( $current_slot + 10000 ))" \
-  ${utxo_as_txins[@]} \
-  --withdrawal "$utxo_stake_addr+0" \
-  --fee 0 \
-  --out-file "$WORK/tx.tmp" \
-
-min_fee="$(cardano-cli transaction calculate-min-fee \
-    --tx-body-file "$WORK/tx.tmp" \
-    --tx-in-count "$utxo_count" \
-    --tx-out-count 1 \
-    --mainnet \
-    --witness-count 2 \
-    --byron-witness-count 0 \
-    --protocol-params-file "$WORK/protocol-params.json" | awk '{ print $1 }')"
-
-echo "Minimum fee: $min_fee"
-
-tx_out="$((${utxo_total}-${min_fee}+${rewards_balance}))"
-
-echo "Change Output: ${tx_out}"
-
-$CARDANO_CLI transaction build-raw \
-  --alonzo-era \
-  --tx-out "$utxo_address+$tx_out" \
-  --invalid-hereafter "$(( ${current_slot} + 10000 ))" \
+cardano-cli transaction build \
   ${utxo_as_txins[@]} \
   --withdrawal "$utxo_stake_addr+$rewards_balance" \
-  --fee "$min_fee" \
+  --tx-out "$utxo_address+$rewards_balance" \
+  --change-address "$utxo_address" \
+  --witness-override 4 \
+  --alonzo-era \
+  --testnet-magic 42 \
   --out-file "$WORK/tx.raw"
 
 $CARDANO_CLI transaction sign \
