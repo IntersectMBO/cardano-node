@@ -137,30 +137,55 @@ jobs:
     - name: Build
       run: retry 2 cabal build cardano-node cardano-cli cardano-node-chairman cardano-submit-api plutus-example
 
-    - name: "Run tests"
+    - name: "Run cardano-testnet tests"
       run: |
         if [ "${{github.event.inputs.tests}}" != "all" ]; then
           TMPDIR="${{ runner.temp }}" TMP="${{ runner.temp }}" KEEP_WORKSPACE=1 cabal test \
-            cardano-testnet \
-            cardano-api \
-            cardano-node \
-            cardano-node-chairman \
-            cardano-cli \
+            cardano-testnet
+        fi
+
+    - name: "Run cardano-api tests"
+      run: |
+        if [ "${{github.event.inputs.tests}}" != "all" ]; then
+          TMPDIR="${{ runner.temp }}" TMP="${{ runner.temp }}" KEEP_WORKSPACE=1 cabal test \
+            cardano-api
+        fi
+
+    - name: "Run cardano-node tests"
+      run: |
+        if [ "${{github.event.inputs.tests}}" != "all" ]; then
+          TMPDIR="${{ runner.temp }}" TMP="${{ runner.temp }}" KEEP_WORKSPACE=1 cabal test \
+            cardano-node
+        fi
+
+    - name: "Run cardano-node-chairman tests"
+      run: |
+        if [ "${{github.event.inputs.tests}}" != "all" ]; then
+          TMPDIR="${{ runner.temp }}" TMP="${{ runner.temp }}" KEEP_WORKSPACE=1 cabal test \
+            cardano-node-chairman
+        fi
+
+    - name: "Run cardano-cli tests"
+      run: |
+        if [ "${{github.event.inputs.tests}}" != "all" ]; then
+          TMPDIR="${{ runner.temp }}" TMP="${{ runner.temp }}" KEEP_WORKSPACE=1 cabal test \
+            cardano-cli
+        fi
+
+    - name: "Run cardano-submit-api tests"
+      run: |
+        if [ "${{github.event.inputs.tests}}" != "all" ]; then
+          TMPDIR="${{ runner.temp }}" TMP="${{ runner.temp }}" KEEP_WORKSPACE=1 cabal test \
             cardano-submit-api
         fi
 
-    - name: Git clone
-      if: matrix.os != 'windows-latest'
-      run: git clone https://github.com/input-output-hk/cardano-mainnet-mirror
-
-    - name: Run tests
-      if: matrix.os != 'windows-latest'
+    - name: Run all tests
       run: |
         if [ "${{github.event.inputs.tests}}" == "all" ]; then
           TMPDIR="${{ runner.temp }}" TMP="${{ runner.temp }}" KEEP_WORKSPACE=1 cabal test all
         fi
 
-    - name: Build & Test
+    - name: Generated artifacts
       run: |
         mkdir -p artifacts
 
