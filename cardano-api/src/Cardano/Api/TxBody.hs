@@ -2744,12 +2744,17 @@ mapTxScriptWitnesses f txbodycontent@TxBodyContent {
     mapScriptWitnessesWithdrawals  TxWithdrawalsNone = TxWithdrawalsNone
     mapScriptWitnessesWithdrawals (TxWithdrawals supported withdrawals) =
       TxWithdrawals supported
-        [ (addr, withdrawal, BuildTxWith (ScriptWitness ctx witness'))
+        [ (addr, withdrawal, BuildTxWith (adjustWitness (f (ScriptWitnessIndexWithdrawal ix)) wit))
           -- The withdrawals are indexed in the map order by stake credential
-        | (ix, (addr, withdrawal, BuildTxWith (ScriptWitness ctx witness)))
-             <- zip [0..] (orderStakeAddrs withdrawals)
-        , let witness' = f (ScriptWitnessIndexWithdrawal ix) witness
+        | (ix, (addr, withdrawal, BuildTxWith wit)) <- zip [0..] (orderStakeAddrs withdrawals)
         ]
+      where
+        adjustWitness
+          :: (ScriptWitness witctx era -> ScriptWitness witctx era)
+          -> Witness witctx era
+          -> Witness witctx era
+        adjustWitness _ (KeyWitness ctx) = KeyWitness ctx
+        adjustWitness g (ScriptWitness ctx witness') = ScriptWitness ctx (g witness')
 
     mapScriptWitnessesCertificates
       :: TxCertificates BuildTx era
