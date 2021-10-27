@@ -37,11 +37,12 @@ module Cardano.Api.KeysShelley (
 
 import           Prelude
 
-import           Data.Aeson.Types (ToJSONKey (..), toJSONKeyText)
+import           Data.Aeson.Types (ToJSONKey (..), toJSONKeyText, withText)
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import           Data.Maybe
 import           Data.String (IsString (..))
+import qualified Data.Text as Text
 
 import qualified Cardano.Crypto.DSIGN.Class as Crypto
 import qualified Cardano.Crypto.Hash.Class as Crypto
@@ -52,6 +53,8 @@ import qualified Cardano.Ledger.Keys as Shelley
 
 import           Cardano.Ledger.Crypto (StandardCrypto)
 
+import           Cardano.Api.Error
+import           Cardano.Api.Hash
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Hash
 import           Cardano.Api.Key
@@ -61,7 +64,6 @@ import           Cardano.Api.SerialiseJSON
 import           Cardano.Api.SerialiseRaw
 import           Cardano.Api.SerialiseTextEnvelope
 import           Cardano.Api.SerialiseUsing
-
 
 --
 -- Shelley payment keys
@@ -1204,6 +1206,14 @@ instance ToJSON (Hash StakePoolKey) where
 
 instance ToJSONKey (Hash StakePoolKey) where
   toJSONKey = toJSONKeyText serialiseToBech32
+
+instance FromJSON (Hash StakePoolKey) where
+  parseJSON = withText "PoolId" $ \str ->
+    case deserialiseFromBech32 (AsHash AsStakePoolKey) str of
+      Left err ->
+        fail $ "Error deserialising Hash StakePoolKey: " <> Text.unpack str <>
+               " Error: " <> displayError err
+      Right h -> pure h
 
 instance HasTextEnvelope (VerificationKey StakePoolKey) where
     textEnvelopeType _ = "StakePoolVerificationKey_"

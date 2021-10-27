@@ -515,6 +515,15 @@ instance SerialiseAddress StakeAddress where
       either (const Nothing) Just $
       deserialiseFromBech32 AsStakeAddress t
 
+instance ToJSON StakeAddress where
+  toJSON s = Aeson.String $ serialiseAddress s
+
+instance FromJSON StakeAddress where
+  parseJSON = withText "StakeAddress" $ \str ->
+    case deserialiseAddress AsStakeAddress str of
+      Nothing ->
+        fail $ "Error while deserialising StakeAddress: " <> Text.unpack str
+      Just sAddr -> pure sAddr
 
 makeStakeAddress :: NetworkId
                  -> StakeCredential
