@@ -20,7 +20,8 @@ import           System.Posix.Types (Fd (..))
 
 import           Ouroboros.Network.Block (MaxSlotNo (..), SlotNo (..))
 
-import           Ouroboros.Consensus.Mempool.API (MempoolCapacityBytesOverride (..), MempoolCapacityBytes (..))
+import           Ouroboros.Consensus.Mempool.API (MempoolCapacityBytes (..),
+                   MempoolCapacityBytesOverride (..))
 import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (SnapshotInterval (..))
 
 import           Cardano.Node.Configuration.POM (PartialNodeConfiguration (..), lastOption)
@@ -40,7 +41,7 @@ nodeRunParser = do
   -- Filepaths
   topFp <- lastOption parseTopologyFile
   dbFp <- lastOption parseDbPath
-  socketFp <-   lastOption $ parseSocketPath "Path to a cardano-node socket"
+  socketFp <- lastOption $ parseSocketPath "Path to a cardano-node socket"
 
   -- Protocol files
   byronCertFile   <- optional parseByronDelegationCert
@@ -200,14 +201,14 @@ parseValidateDB =
       <> help "Validate all on-disk database files"
     )
 
-parseShutdownIPC :: Parser (Maybe Fd)
+parseShutdownIPC :: Parser Fd
 parseShutdownIPC =
-    optional $ option (Fd <$> auto) (
-         long "shutdown-ipc"
-      <> metavar "FD"
-      <> help "Shut down the process when this inherited FD reaches EOF"
-      <> hidden
-    )
+  option (Fd <$> auto) (
+           long "shutdown-ipc"
+        <> metavar "FD"
+        <> help "Shut down the process when this inherited FD reaches EOF"
+        <> hidden
+      )
 
 parseShutdownOnSlotSynced :: Parser MaxSlotNo
 parseShutdownOnSlotSynced =

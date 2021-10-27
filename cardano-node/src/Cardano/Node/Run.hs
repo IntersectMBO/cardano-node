@@ -16,13 +16,13 @@ module Cardano.Node.Run
   , checkVRFFilePermissions
   ) where
 
-import           Cardano.Prelude hiding (ByteString, atomically, take, trace, STM)
-import           Prelude (String, id)
+import           Cardano.Prelude hiding (ByteString, STM, atomically, take, trace)
 import           Data.IP (toSockAddr)
+import           Prelude (String, id)
 
 import qualified Control.Concurrent.Async as Async
-import           Control.Monad.Trans.Except.Extra (left)
 import           Control.Monad.Class.MonadSTM.Strict
+import           Control.Monad.Trans.Except.Extra (left)
 import           Control.Tracer
 import qualified Data.Map.Strict as Map
 import           Data.Text (breakOn, pack, take)
@@ -37,8 +37,8 @@ import           System.Directory (canonicalizePath, createDirectoryIfMissing, m
 import           System.Environment (lookupEnv)
 #ifdef UNIX
 import           System.Posix.Files
-import           System.Posix.Types (FileMode)
 import qualified System.Posix.Signals as Signals
+import           System.Posix.Types (FileMode)
 #else
 import           System.Win32.File
 #endif
@@ -51,12 +51,11 @@ import           Paths_cardano_node (version)
 
 import qualified Cardano.Crypto.Libsodium as Crypto
 
-import           Cardano.Node.Configuration.Logging (LoggingLayer (..),
-                   createLoggingLayer, nodeBasicInfo, shutdownLoggingLayer)
+import           Cardano.Node.Configuration.Logging (LoggingLayer (..), createLoggingLayer,
+                   nodeBasicInfo, shutdownLoggingLayer)
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..),
                    PartialNodeConfiguration (..), SomeNetworkP2PMode (..),
-                   defaultPartialNodeConfiguration, makeNodeConfiguration,
-                   parseNodeConfigurationFP)
+                   defaultPartialNodeConfiguration, makeNodeConfiguration, parseNodeConfigurationFP)
 import           Cardano.Node.Queries (HasKESInfo (..), HasKESMetricsData (..))
 import           Cardano.Node.Types
 import           Cardano.Tracing.Config (TraceOptions (..), TraceSelection (..))
@@ -64,33 +63,31 @@ import           Cardano.Tracing.Constraints (TraceConstraints)
 import           Cardano.Tracing.Startup
 
 import qualified Ouroboros.Consensus.Config as Consensus
-import           Ouroboros.Consensus.Node (RunNode, RunNodeArgs (..)
-                   , StdRunNodeArgs (..), NetworkP2PMode (..))
+import           Ouroboros.Consensus.Node (NetworkP2PMode (..), RunNode, RunNodeArgs (..),
+                   StdRunNodeArgs (..))
 import qualified Ouroboros.Consensus.Node as Node (getChainDB, run)
-import           Ouroboros.Consensus.Node.ProtocolInfo
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
+import           Ouroboros.Consensus.Node.ProtocolInfo
 import           Ouroboros.Consensus.Util.Orphans ()
-import           Ouroboros.Network.Subscription
-                   ( DnsSubscriptionTarget (..)
-                   , IPSubscriptionTarget (..)
-                   )
 import qualified Ouroboros.Network.Diffusion as Diffusion
-import qualified Ouroboros.Network.Diffusion.P2P as P2P
 import qualified Ouroboros.Network.Diffusion.NonP2P as NonP2P
+import qualified Ouroboros.Network.Diffusion.P2P as P2P
 import           Ouroboros.Network.NodeToClient (LocalAddress (..), LocalSocket (..))
-import           Ouroboros.Network.NodeToNode (RemoteAddress,
-                   AcceptedConnectionsLimit (..), PeerSelectionTargets (..))
+import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..),
+                   PeerSelectionTargets (..), RemoteAddress)
 import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter (..))
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
+import           Ouroboros.Network.Subscription (DnsSubscriptionTarget (..),
+                   IPSubscriptionTarget (..))
 
 import           Cardano.Api
 import qualified Cardano.Api.Protocol.Types as Protocol
 
 import           Cardano.Node.Configuration.Socket (SocketOrSocketInfo (..),
-                     gatherConfiguredSockets, getSocketOrSocketInfoAddr)
-import qualified Cardano.Node.Configuration.TopologyP2P as TopologyP2P
-import           Cardano.Node.Configuration.TopologyP2P
+                   gatherConfiguredSockets, getSocketOrSocketInfoAddr)
 import qualified Cardano.Node.Configuration.Topology as TopologyNonP2P
+import           Cardano.Node.Configuration.TopologyP2P
+import qualified Cardano.Node.Configuration.TopologyP2P as TopologyP2P
 import           Cardano.Node.Handlers.Shutdown
 import           Cardano.Node.Protocol (mkConsensusProtocol)
 import           Cardano.Node.Protocol.Types
@@ -298,14 +295,14 @@ handleSimpleNode scp runP p2pMode trace nodeTracers nc onKernel = do
                          $ Proxy @blk
                          ))
 
-  withShutdownHandling nc trace $ \sfds ->
+  withShutdownHandling (ncShutdownIPC nc) trace $
     let nodeArgs = RunNodeArgs
           { rnTraceConsensus = consensusTracers nodeTracers
           , rnTraceNTN       = nodeToNodeTracers nodeTracers
           , rnTraceNTC       = nodeToClientTracers nodeTracers
           , rnProtocolInfo   = pInfo
           , rnNodeKernelHook = \registry nodeKernel -> do
-              maybeSpawnOnSlotSyncedShutdownHandler nc sfds trace registry
+              maybeSpawnOnSlotSyncedShutdownHandler nc trace registry
                 (Node.getChainDB nodeKernel)
               onKernel nodeKernel
           , rnEnableP2P      = p2pMode
