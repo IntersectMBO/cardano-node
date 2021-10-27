@@ -6,15 +6,14 @@ module Test.Cli.JSON where
 import           Cardano.Prelude hiding (filter)
 
 import           Cardano.Api.Shelley
-import           Gen.Cardano.Api.Typed (genStakeAddress, genLovelace, genVerificationKeyHash)
+import           Gen.Cardano.Api.Typed (genLovelace, genStakeAddress, genVerificationKeyHash)
 
 import           Data.Aeson
 import qualified Data.Map.Strict as Map
 
 import           Cardano.CLI.Shelley.Run.Query
 
-import           Hedgehog (Property, checkSequential, discover, forAll, property, tripping)
-import           Hedgehog (Gen)
+import           Hedgehog (Gen, Property, checkSequential, discover, forAll, property, tripping)
 import           Hedgehog.Gen as Gen
 import           Hedgehog.Range as Range
 
@@ -28,7 +27,7 @@ prop_json_roundtrip_delegations_and_rewards =
 genDelegationsAndRewards :: Gen DelegationsAndRewards
 genDelegationsAndRewards = do
   let r = Range.constant 0 3
-  sAddrs <- Gen.list r  genStakeAddress
+  sAddrs <- Gen.list r genStakeAddress
   sLovelace <- Gen.list r genLovelace
   let delegMapAmt = Map.fromList $ zip sAddrs sLovelace
   poolIDs <- Gen.list r genPoolId
