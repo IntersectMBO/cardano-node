@@ -39,7 +39,6 @@ module Cardano.CLI.Shelley.Commands
   , VerificationKeyBase64 (..)
   , GenesisKeyFile (..)
   , MetadataFile (..)
-  , PoolId (..)
   , PoolMetadataFile (..)
   , PrivKeyFile (..)
   , BlockId (..)
@@ -50,7 +49,7 @@ module Cardano.CLI.Shelley.Commands
 import           Data.Text (Text)
 import           Prelude
 
-import           Cardano.Api.Shelley hiding (PoolId)
+import           Cardano.Api.Shelley
 
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
 
@@ -465,10 +464,6 @@ data MetadataFile = MetadataFileJSON FilePath
 
 newtype OutputFile
   = OutputFile FilePath
-  deriving Show
-
-newtype PoolId
-  = PoolId String -- Probably not a String
   deriving Show
 
 newtype PoolMetadataFile = PoolMetadataFile

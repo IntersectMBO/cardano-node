@@ -176,6 +176,7 @@ test-suite cardano-cli-test
                       , cardano-node
                       , cardano-prelude
                       , cardano-slotting
+                      , containers
                       , directory
                       , exceptions
                       , filepath
@@ -189,6 +190,7 @@ test-suite cardano-cli-test
   other-modules:        Test.Config.Mainnet
                         Test.Cli.FilePermissions
                         Test.Cli.ITN
+                        Test.Cli.JSON
                         Test.Cli.MultiAssetParsing
                         Test.Cli.Pioneers.Exercise1
                         Test.Cli.Pioneers.Exercise2

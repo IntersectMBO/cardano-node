@@ -38,9 +38,9 @@ import qualified Cardano.Ledger.Credential as Ledger
 import qualified Cardano.Ledger.Shelley.API.Protocol as Ledger
 import qualified Cardano.Ledger.Shelley.EpochBoundary as Ledger
 import qualified Cardano.Ledger.Shelley.Rewards as Ledger
+import           Cardano.Ledger.TxIn (TxId (..))
 import qualified Cardano.Protocol.TPraos.Rules.Prtcl as Ledger
 import qualified Cardano.Protocol.TPraos.Rules.Tickn as Ledger
-import           Cardano.Ledger.TxIn (TxId (..))
 
 import qualified Cardano.Ledger.Mary.Value as Ledger.Mary
 
@@ -66,8 +66,8 @@ instance ToJSON (HeaderHash blk) => ToJSON (Tip blk) where
       , "blockNo"    .= blockNo
       ]
 
--- This instance is temporarily duplicated in cardano-config
 deriving newtype instance ToJSON BlockNo
+deriving newtype instance FromJSON BlockNo
 
 --
 -- Simple newtype wrappers JSON conversion
