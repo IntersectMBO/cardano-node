@@ -112,12 +112,11 @@ parseBlockPropagationOutputFiles =
 pSlotNo :: String -> String -> Parser SlotNo
 pSlotNo name desc =
   SlotNo <$>
-    ( Opt.option Opt.auto
-       (  Opt.long name
-       <> Opt.metavar "SLOT"
-       <> Opt.help desc
-       )
-    )
+    Opt.option Opt.auto
+     (  Opt.long name
+     <> Opt.metavar "SLOT"
+     <> Opt.help desc
+     )
 
 parseAnalysisCommands :: Parser AnalysisCommand
 parseAnalysisCommands =

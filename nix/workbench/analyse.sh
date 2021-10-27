@@ -9,15 +9,17 @@ usage_analyse() {
     Options of 'analyse' command:
 
        --reanalyse        Skip the preparatory steps and launch 'locli' directly
+       --end-slot SLOTNO  Ignore data past given slot (machine-timeline only)
 EOF
 }
 
 analyse() {
-local skip_preparation= time= dump_logobjects= args=()
+local skip_preparation= time= dump_logobjects= self_args=() locli_args=() end_slot=
 while test $# -gt 0
 do case "$1" in
-       --reanalyse | --re ) skip_preparation='true'; args+=($1);;
-       --dump-logobjects )  dump_logobjects='true';  args+=($1);;
+       --reanalyse | --re ) skip_preparation='true'; self_args+=($1);;
+       --dump-logobjects )  dump_logobjects='true';  self_args+=($1);;
+       --end-slot )         locli_args+=($1 $2); self_args+=($1 $2); shift;;
        * ) break;; esac; shift; done
 
 local op=${1:-$(usage_analyse)}; shift
@@ -70,7 +72,7 @@ case "$op" in
         msg "log sizes:  (files: $(ls "$adir"/*.flt.json 2>/dev/null | wc -l), lines: $(cat "$adir"/*.flt.json | wc -l))"
 
         msg "analysing.."
-        local locli_args=(
+        locli_args+=(
             --genesis         "$dir"/genesis.json
             --run-metafile    "$dir"/meta.json
             ## ->
@@ -84,7 +86,7 @@ case "$op" in
              "${locli_args[@]}" "$adir"/*.flt.json
 
         ## More than one run passed?
-        test $# -gt 0 && analyse ${args[*]} block-propagation "$@";;
+        test $# -gt 0 && analyse ${self_args[*]} block-propagation "$@";;
 
     grep-filtered-logs | grep | g )
         local usage="USAGE: wb analyse $op BLOCK [MACHSPEC=*] [RUN-NAME=current]"
@@ -149,7 +151,7 @@ case "$op" in
            then grep -hFf "$keyfile" "${logs[@]}"  > "$consolidated"; fi
 
            msg "analysing logs of:  $mach  (lines: $(wc -l "$consolidated"))"
-           local locli_args=(
+           locli_args+=(
                --genesis         "$dir"/genesis.json
                --run-metafile    "$dir"/meta.json
                ## ->
