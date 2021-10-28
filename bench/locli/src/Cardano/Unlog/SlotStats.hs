@@ -127,8 +127,8 @@ instance ToJSON SlotStats
 --   they start getting non-zero chain density reported.
 --
 --   On the trailing part, we drop everything since the last leadership check.
-cleanupSlotStats :: Maybe SlotNo -> [SlotStats] -> [SlotStats]
-cleanupSlotStats mEndSlot =
+cleanupSlotStats :: Maybe SlotNo -> Maybe SlotNo -> [SlotStats] -> [SlotStats]
+cleanupSlotStats mStartSlot mEndSlot =
   -- dropWhile ((== 0) . slDensity) .
   (\xs -> trace (printf "analysis slot range: [%d, %d]"
                  (unSlotNo $ slSlot $ head xs)
@@ -137,8 +137,11 @@ cleanupSlotStats mEndSlot =
   dropWhile    ((/= 500) . slSlot) .
   dropWhileEnd ((== 0)   . slCountChecks) .
   (case mEndSlot of
-     Nothing      -> identity
-     Just endSlot -> takeWhile ((<= endSlot) . slSlot))
+     Nothing   -> identity
+     Just slot -> takeWhile ((<= slot) . slSlot)) .
+  (case mStartSlot of
+     Nothing   -> identity
+     Just slot -> dropWhile ((< slot) . slSlot))
 
 zeroSlotStats :: SlotStats
 zeroSlotStats =

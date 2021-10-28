@@ -1,5 +1,8 @@
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving#-}
+{-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -11,18 +14,18 @@ module Cardano.Analysis.Profile (module Cardano.Analysis.Profile) where
 import           Prelude (String)
 import           Cardano.Prelude
 
-import qualified Data.Aeson.Types as Aeson
-import           Data.Aeson (FromJSON(..), Object, withObject, (.:))
-import qualified Data.Attoparsec.Text as Atto
-import qualified Data.Attoparsec.Time as Iso8601
-import           Data.Text (intercalate, pack)
-import           Data.Time.Clock (UTCTime, NominalDiffTime)
-import qualified Data.Time.Clock as Time
-import qualified Data.Time.Clock.POSIX as Time
-import           Options.Applicative
-import qualified Options.Applicative as Opt
+import Data.Aeson.Types qualified as Aeson
+import Data.Aeson (FromJSON(..), ToJSON, Object, withObject, (.:))
+import Data.Attoparsec.Text qualified as Atto
+import Data.Attoparsec.Time qualified as Iso8601
+import Data.Text (intercalate, pack)
+import Data.Time.Clock (UTCTime, NominalDiffTime)
+import Data.Time.Clock qualified as Time
+import Data.Time.Clock.POSIX qualified as Time
+import Options.Applicative
+import Options.Applicative qualified as Opt
 
-import           Ouroboros.Network.Block (SlotNo(..))
+import Ouroboros.Network.Block (SlotNo(..))
 
 
 data GenesisProfile
@@ -61,6 +64,16 @@ data Profile
   , date             :: UTCTime
   }
   deriving (Show)
+
+-- | Block classification -- primary for validity as subjects of analysis.
+data BlockCond
+  = BCUnitaryChainDelta
+    -- ^ All timings account for processing of a single block.
+  | BCBlockFullnessAbove !Double
+    -- ^ Block fullness is above fraction.
+  | BCSinceSlot !SlotNo
+  | BCUntilSlot !SlotNo
+  deriving (FromJSON, Generic, NFData, Show, ToJSON)
 
 renderChainInfoExport :: ChainInfo -> [Text]
 renderChainInfoExport CInfo{..} =
@@ -117,7 +130,8 @@ instance FromJSON Profile where
 
 newtype SlotStart =
   SlotStart { unSlotStart :: UTCTime }
-  deriving (Eq, Aeson.FromJSON, Generic, NFData, Show, Aeson.ToJSON)
+  deriving stock (Eq, Generic, Show)
+  deriving newtype (Aeson.FromJSON, NFData, Aeson.ToJSON)
 
 slotStart :: ChainInfo -> SlotNo -> SlotStart
 slotStart CInfo{..} =
