@@ -49,12 +49,15 @@ libdir=VCPKG_PATH/installed/x64-windows/bin
 includedir=VCPKG_PATH/installed/x64-windows/include
 
 Name: libsodium
+VERSION: LIBSODIUM_VERSION
 Description: libsodium library
 Cflags: -I${includedir}/sodium
 Libs: -L${libdir} -llibsodium
 ```
 > Note that you need to replace `VCPKG_PATH` with the
-absolute path, where you use `vcpkg`. Please verify that the paths above contain
+absolute path, where you use `vcpkg`, and `LIBSODIUM_VERSION` with the version
+number of `libsodium` which was installed on your system. Please verify that
+the paths above contain
 `libsodium.dll` file and headers.
 
 > Also, you cannot use `prefix=` in the `libsodium.pc` file. This might be changed for
