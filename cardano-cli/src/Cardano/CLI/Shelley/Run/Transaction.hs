@@ -37,8 +37,8 @@ import           Ouroboros.Consensus.Shelley.Eras (StandardAllegra, StandardMary
 import qualified Cardano.Binary as CBOR
 
 --TODO: following import needed for orphan Eq Script instance
-import           Cardano.Ledger.ShelleyMA.TxBody ()
 import           Cardano.Ledger.Shelley.Scripts ()
+import           Cardano.Ledger.ShelleyMA.TxBody ()
 
 import           Cardano.CLI.Environment (EnvSocketError, readEnvSocketPath, renderEnvSocketError)
 import           Cardano.CLI.Run.Friendly (friendlyTxBodyBS)
@@ -712,12 +712,16 @@ validateRequiredSigners era reqSigs =
                    $ mapM readWitnessSigningData reqSigs
       let (_sksByron, sksShelley) = partitionSomeWitnesses $ map categoriseSomeWitness keyWits
           shelleySigningKeys = map toShelleySigningKey sksShelley
-          paymentKeyHashes = map (verificationKeyHash . getVerificationKey) $ mapMaybe excludeExtendedKeys shelleySigningKeys
+          paymentKeyHashes = map getHash shelleySigningKeys
       return $ TxExtraKeyWitnesses supported paymentKeyHashes
  where
-  excludeExtendedKeys :: ShelleySigningKey -> Maybe (SigningKey PaymentKey)
-  excludeExtendedKeys (ShelleyExtendedSigningKey _) = Nothing
-  excludeExtendedKeys (ShelleyNormalSigningKey sk) = Just $ PaymentSigningKey sk
+  getHash :: ShelleySigningKey -> Hash PaymentKey
+  getHash (ShelleyExtendedSigningKey sk) =
+    let extSKey = PaymentExtendedSigningKey sk
+        payVKey = castVerificationKey $ getVerificationKey extSKey
+    in verificationKeyHash payVKey
+  getHash (ShelleyNormalSigningKey sk) =
+    verificationKeyHash . getVerificationKey $ PaymentSigningKey sk
 
 validateTxWithdrawals
   :: forall era.
