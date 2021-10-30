@@ -384,7 +384,7 @@ module Cardano.Api (
     adjustSimpleScriptVersion,
 
     -- ** Plutus scripts
-    PlutusScript,
+    PlutusScript(..),
     examplePlutusScriptAlwaysSucceeds,
     examplePlutusScriptAlwaysFails,
 
