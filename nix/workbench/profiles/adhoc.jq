@@ -1,5 +1,9 @@
 def adhoc_profiles:
-[ { name: "short"
+[ { name: "default"
+  , desc: "Default profile, as per nix/workbench/profiles/default.jq"
+  }
+
+, { name: "short"
   , generator: { tx_count: 10000, inputs_per_tx: 1, outputs_per_tx: 1,  tps: 100 }
   , genesis: { genesis_future_offset: "3 minutes" }
   }
@@ -31,13 +35,6 @@ def adhoc_profiles:
     }
   , genesis:
     { genesis_future_offset: "10 seconds"
-    , utxo:                  0
-    }
-  }
-
-, { name: "default"
-  , genesis:
-    { genesis_future_offset: "1 seconds"
     , utxo:                  0
     }
   }

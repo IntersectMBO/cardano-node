@@ -90,65 +90,26 @@ let
   shellHook = ''
     export WORKBENCH_BACKEND=supervisor
 
-      ${optionalString workbenchDevMode
+    ${optionalString
+      workbenchDevMode
     ''
     echo 'workbench:  dev mode enabled, calling wb directly from checkout (instead of using Nix store)' >&2
 
-    WORKBENCH_CARDANO_NODE_REPO_ROOT=$(git rev-parse --show-toplevel)
-    WORKBENCH_EXTRA_FLAGS=
+    export WORKBENCH_CARDANO_NODE_REPO_ROOT=$(git rev-parse --show-toplevel)
+    export WORKBENCH_EXTRA_FLAGS=
 
     function wb() {
       $WORKBENCH_CARDANO_NODE_REPO_ROOT/nix/workbench/wb --set-mode ${checkoutWbMode} $WORKBENCH_EXTRA_FLAGS "$@"
     }
-
-    export WORKBENCH_CARDANO_NODE_REPO_ROOT WORKBENCH_EXTRA_FLAGS
     export -f wb
 
-    ''}
-
-    ${optionalString useCabalRun
-    ''
-    echo 'workbench:  cabal-inside-nix-shell mode enabled, calling cardano-* via 'cabal run' (instead of using Nix store)' >&2
-
-    function cardano-cli() {
-      ${exeCabalOp "run" "cardano-cli"} "$@"
-    }
-
-    function cardano-node() {
-      ${exeCabalOp "run" "cardano-node"} "$@"
-    }
-
-    function cardano-topology() {
-      ${exeCabalOp "run" "cardano-topology"} "$@"
-    }
-
-    function locli() {
-      ${exeCabalOp "run" "locli"} "$@"
-    }
-
-    function tx-generator() {
-      ${exeCabalOp "run" "tx-generator"} "$@"
-    }
-
-    export -f cardano-cli cardano-node cardano-topology locli tx-generator
+    ${optionalString
+      useCabalRun
+      ''
+      . nix/workbench/lib-cabal.sh
+      ''}
 
     ''}
-
-    function workbench-prebuild-executables() {
-      ${optionalString useCabalRun
-        ''
-      git log -n1 --alternate-refs --pretty=format:"%Cred%cr %Cblue%h %Cgreen%D %Cblue%s%Creset" --color | sed "s/^/$(git diff --exit-code --quiet && echo ' ' || echo '[31mlocal changes + ')/"
-      echo
-      echo -n "workbench:  prebuilding executables (because of useCabalRun): "
-      for exe in tx-generator cardano-cli cardano-node cardano-topology locli
-      do echo -n "$exe "
-         ${exeCabalOp "build" "$exe"} 2>&1 >/dev/null | { grep -v 'Temporary modify'; true; } || return 1
-      done
-      echo
-        ''}
-      true
-    }
-    export -f workbench-prebuild-executables
 
     export CARDANO_NODE_SOCKET_PATH=run/current/node-0/node.socket
     '';
@@ -202,31 +163,43 @@ let
         runWorkbenchJqOnly "all-profiles.json" "profiles generate-all";
     };
 
-  initialiseProfileRunDirShellScript =
-    profile: runDir:
-      __concatStringsSep "\n"
-      (flip mapAttrsToList profile.node-services
-        (name: svc:
-          ''
-          cp -f ${svc.serviceConfig.JSON} ${runDir}/${name}/service-config.json
-          cp -f ${svc.nodeConfig.JSON}    ${runDir}/${name}/config.json
-          cp -f ${svc.topology.JSON}      ${runDir}/${name}/topology.json
-          cp -f ${svc.startupScript}      ${runDir}/${name}/start.sh
-          ''
-        )
-      ++
-      [ (let svc = profile.generator-service;
-         in
-          ''
-          cp -f ${svc.runScript.JSON}     ${runDir}/generator/run-script.json
-          cp -f ${svc.serviceConfig.JSON} ${runDir}/generator/service-config.json
-          cp -f ${svc.nodeConfig.JSON}    ${runDir}/generator/config.json
-          cp -f ${svc.startupScript}      ${runDir}/generator/start.sh
-          '')
-      ]);
+  ## ## This allows forwarding of Nix-expressed computation results to bash-land.
+  profileOutput =
+    { profile
+    , backendProfileOutput ## Backend-specific results for forwarding
+    }:
+    runCommand "workbench-profile-outputs-${profile.name}"
+      { buildInputs = [];
+        nodeServices =
+          __toJSON
+          (flip mapAttrs profile.node-services
+            (name: svc:
+              with svc;
+              { inherit name;
+                service-config = serviceConfig.JSON;
+                start          = startupScript;
+                config         = nodeConfig.JSON;
+                topology       = topology.JSON;
+              }));
+        generatorService =
+          with profile.generator-service;
+          __toJSON
+          { name           = "generator";
+            service-config = serviceConfig.JSON;
+            start          = startupScript;
+            run-script     = runScript.JSON;
+          };
+        passAsFile = [ "nodeServices" "generatorService" ];
+      }
+      ''
+      mkdir $out
+      cp    ${backendProfileOutput}/*  $out
+      cp    $nodeServicesPath          $out/node-services.json
+      cp    $generatorServicePath      $out/generator-service.json
+      '';
 in
 {
   inherit workbench runWorkbench runJq;
 
-  inherit generateProfiles initialiseProfileRunDirShellScript shellHook;
+  inherit generateProfiles profileOutput shellHook;
 }

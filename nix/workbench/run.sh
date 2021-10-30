@@ -12,9 +12,12 @@ usage_run() {
                           A unique name would be allocated for this run,
                             and a run alias 'current' will be created for it.
 
-    start [--no-generator] TAG
+    start [--scenario NAME] [--idle] TAG
                           Start the named run.
-                            --no-generator disables automatic tx-generator startup
+                            --scenario forces a scenario, different from what
+                                is implied by the run profile;
+                                See 'wb scenario --help' for scenario descriptions
+                            --idle is a short-cut for the 'generic-idle' scenario
 
     stop TAG              Stop the named run
 
@@ -111,7 +114,8 @@ case "$op" in
         local tag=${1:?$usage}
         local dir=$(run get "$tag")
 
-        rm -f      "$global_rundir"/current
+        rm -f      "$global_rundir"/{current,-current}
+        ln -s $tag "$global_rundir"/-current
         ln -s $tag "$global_rundir"/current;;
 
     current-run-path | current-path | path )
@@ -134,6 +138,7 @@ case "$op" in
         local cacheDir=$default_cacheDir basePort=$default_basePort staggerPorts='false'
         while test $# -gt 0
         do case "$1" in
+               --profile-out )   profileOut=$2; shift;;
                --cache-dir )     cacheDir=$2; shift;;
                --base-port )     basePort=$2; shift;;
                --stagger-ports ) staggerPorts=true;;
@@ -207,14 +212,23 @@ case "$op" in
 
         topology make    "$dir"/profile.json "$dir"/topology
 
+        local svcs=$profileOut/node-services.json
         for node in $(jq_tolist 'keys' "$dir"/node-specs.json)
         do local node_dir="$dir"/$node
-           mkdir -p                           "$node_dir"
-           jq '.["'"$node"'"]' "$dir"/node-specs.json > "$node_dir"/node-spec.json
+           mkdir -p                                          "$node_dir"
+           jq      '."'"$node"'"' "$dir"/node-specs.json   > "$node_dir"/node-spec.json
+           cp $(jq '."'"$node"'"."config"'         -r $svcs) "$node_dir"/config.json
+           cp $(jq '."'"$node"'"."service-config"' -r $svcs) "$node_dir"/service-config.json
+           cp $(jq '."'"$node"'"."start"'          -r $svcs) "$node_dir"/start.sh
+           cp $(jq '."'"$node"'"."topology"'       -r $svcs) "$node_dir"/topology.json
         done
 
+        local gtor=$profileOut/generator-service.json
         gen_dir="$dir"/generator
-        mkdir -p "$gen_dir"
+        mkdir -p                              "$gen_dir"
+        cp $(jq '."run-script"'     -r $gtor) "$gen_dir"/run-script.json
+        cp $(jq '."service-config"' -r $gtor) "$gen_dir"/service-config.json
+        cp $(jq '."start"'          -r $gtor) "$gen_dir"/start.sh
 
         backend allocate-run "$dir"
 
@@ -244,7 +258,7 @@ case "$op" in
         then fatal "run fails sanity checks:  $tag at $dir"; fi
 
         cat <<EOF
-workbench:  run $tag params:
+workbench:  run $(with_color yellow $tag) params:
   - run dir:         $dir
   - profile JSON:    $dir/profile.json
   - node specs:      $dir/node-specs.json
@@ -279,12 +293,13 @@ EOF
                }' "${compat_args[@]}";;
 
     start )
-        local usage="USAGE: wb run $op [--no-generator] TAG"
+        local usage="USAGE: wb run $op [--no-generator] [--scenario NAME] TAG"
 
-        local no_generator=
+        local scenario_override=
         while test $# -gt 0
         do case "$1" in
-               --no-generator | --no-gen )  no_generator='true';;
+               --idle )     scenario_override='generic-idle';;
+               --scenario ) scenario_override=$2; shift;;
                --* ) msg "FATAL:  unknown flag '$1'"; usage_run;;
                * ) break;; esac; shift; done
 
@@ -298,7 +313,7 @@ EOF
 
         local genesis_args=(
             ## Positionals:
-            "$cacheDir"/gene            "$dir"/profile.json
+            "$cacheDir"/genesis "$dir"/profile.json
             "$dir"/topology
             "$dir"/genesis
         )
@@ -307,9 +322,9 @@ EOF
         ## Record genesis.
         cp "$dir"/genesis/genesis.json "$dir"/genesis.json
 
-        backend start-cluster "$dir"
-        test -z "$no_generator" &&
-            backend start-generator "$dir"
+        ## Execute the scenario
+        local scenario=${scenario_override:-$(jq -r .scenario "$dir"/profile.json)}
+        scenario "$scenario" "$dir"
 
         run compat-meta-fixups "$tag"
         ;;

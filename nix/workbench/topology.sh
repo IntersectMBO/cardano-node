@@ -144,6 +144,12 @@ case "${op}" in
 
             loopback_node_topology_from_nixops_topology($topology[0]; $i)
             ' "${args[@]}";;
+        local-proxy )
+            local   name=$(jq '.name'   <<<$prof --raw-output)
+            local preset=$(jq '.preset' <<<$prof --raw-output)
+            local topo_proxy=$(profile preset-get-file "$preset" 'proxy topology' 'topology-proxy.json')
+
+            jq . "$topo_proxy";;
         local-observer )
             args=(--slurpfile topology "$topo_dir"/topology-nixops.json
                   --argjson   basePort $basePort

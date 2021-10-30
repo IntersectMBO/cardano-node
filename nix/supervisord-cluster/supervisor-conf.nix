@@ -38,14 +38,10 @@ let
     {
       "program:generator" = {
         directory      = "${stateDir}/generator";
-        command        = "${generator-service.startupScript}";
+        command        = "${stateDir}/generator/start.sh";
         stdout_logfile = "${stateDir}/generator/stdout";
         stderr_logfile = "${stateDir}/generator/stderr";
         autostart      = false;
-      };
-      "program:webserver" = {
-        command = "${pkgs.python3}/bin/python -m http.server ${toString (basePort - 1)}";
-        directory = "${stateDir}/shelley/webserver";
       };
     }
     //
@@ -56,10 +52,10 @@ let
   ##
   ## Refer to: http://supervisord.org/configuration.html#program-x-section-settings
   ##
-  nodeSvcSupervisorProgram = { nodeSpec, service, startupScript, ... }:
+  nodeSvcSupervisorProgram = { nodeSpec, service, ... }:
     nameValuePair "program:${nodeSpec.value.name}" {
       directory      = "${service.value.stateDir}";
-      command        = "${startupScript}";
+      command        = "sh start.sh";
       stdout_logfile = "${service.value.stateDir}/stdout";
       stderr_logfile = "${service.value.stateDir}/stderr";
     };

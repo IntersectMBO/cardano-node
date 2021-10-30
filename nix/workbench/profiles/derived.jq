@@ -31,6 +31,9 @@ def profile_name($p):
              $p.generator; $generator_defaults; 1; "i")
   + may_attr("outputs_per_tx";
              $p.generator; $generator_defaults; 1; "o")
+  + if $p.composition.with_proxy
+    then ["prox"]
+    else [] end
   + if $p.composition.with_observer | not
     then ["nobs"]
     else [] end
@@ -129,7 +132,7 @@ def add_derived_params:
 ;
 
 def profile_pretty_describe($p):
-  [ "Profile: \($p.name)"
+  [ "profile: \($p.name)"
   , "  - era:                \($p.era)"
   , "  - epoch slots:        \($p.genesis.epoch_length)"
   , "  - slot duration:      \($p.genesis.slot_duration)"

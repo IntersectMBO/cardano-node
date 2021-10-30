@@ -33,8 +33,6 @@ let
     rec {
       name = profileName;
 
-      inherit environment;
-
       inherit JSON value;
 
       topology.files =
@@ -52,12 +50,14 @@ let
 
       inherit (pkgs.callPackage
                ./node-services.nix
-               { inherit runJq backend environment profile; })
+               { inherit runJq backend profile;
+                 baseNodeConfig = environment.cardanoLib.environments.testnet.nodeConfig;
+               })
         node-services;
 
       inherit (pkgs.callPackage
                ./generator-service.nix
-               { inherit runJq backend environment profile; })
+               { inherit runJq backend profile; })
         generator-service;
     };
 

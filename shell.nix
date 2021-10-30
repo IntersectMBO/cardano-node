@@ -88,6 +88,7 @@ let
       cardano-ping
       cabalWrapped
       ghcid
+      pkgs.graphviz
       weeder
       nixWrapped
       pkgconfig
@@ -138,7 +139,6 @@ let
       }
       trap atexit EXIT
       ''}
-      unset NIX_ENFORCE_PURITY
 
       ${setLocale}
 
@@ -166,6 +166,7 @@ let
       bech32
       cardano-ping
       cardano-node
+      pkgs.graphviz
       python3Packages.supervisor
       python3Packages.ipython
       cluster.start

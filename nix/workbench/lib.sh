@@ -36,6 +36,30 @@ usage() {
     exit 1
 }
 
+declare -A colormap
+colormap=(
+    [black]=30
+    [red]=31
+    [green]=32
+    [yellow]=33
+    [blue]=34
+    [magenta]=35
+    [cyan]=36
+    [white]=37
+    [reset]=0
+)
+
+color() {
+    echo -ne "\033[${colormap[$1]}m"
+}
+
+with_color() {
+    local color=$1; shift
+    color $color
+    echo -ne "$*"
+    color reset
+}
+
 msg() {
     echo "workbench:  $*" >&2
 }
@@ -63,4 +87,3 @@ git_repo_commit_description() {
         git -C "$repo" diff --exit-code --quiet || echo '-modified'
     } || echo "unknown-not-a-git-repo"
 }
-
