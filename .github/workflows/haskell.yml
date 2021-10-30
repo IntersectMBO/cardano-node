@@ -144,15 +144,11 @@ jobs:
         fi
 
     - name: "Run tests"
+      timeout-minutes: 60
       run: |
         if [ "${{github.event.inputs.tests}}" != "all" ]; then
           TMPDIR="${{ runner.temp }}" TMP="${{ runner.temp }}" KEEP_WORKSPACE=1 cabal test \
-            cardano-testnet \
-            cardano-api \
-            cardano-node \
-            cardano-node-chairman \
-            cardano-cli \
-            cardano-submit-api
+            cardano-testnet
         fi
 
     - name: Build & Test
