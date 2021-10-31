@@ -40,8 +40,13 @@ hprop_plutus = H.integration . H.runFinallies . H.workspace "chairman" $ \tempAb
   conf@H.Conf { H.tempBaseAbsPath, H.tempAbsPath } <- H.noteShowM $ H.mkConf tempAbsBasePath' Nothing
 
   resultFile <- H.noteTempFile tempAbsPath "result.out"
+  logFile <- H.noteTempFile tempAbsPath "result.log"
+
+  H.writeFile logFile "Before testnet setup"
 
   H.TestnetRuntime { H.bftSprockets, H.testnetMagic } <- H.testnet H.defaultTestnetOptions conf
+
+  H.appendFile logFile "After testnet setup"
 
   cardanoCli <- H.binFlex "cardano-cli" "CARDANO_CLI"
 
@@ -58,16 +63,21 @@ hprop_plutus = H.integration . H.runFinallies . H.workspace "chairman" $ \tempAb
           , ("TESTNET_MAGIC", show @Int testnetMagic)
           , ("PATH", path)
           , ("RESULT_FILE", resultFile)
+          , ("LOG_FILE", resultFile)
           ]
         , H.execConfigCwd = Last $ Just tempBaseAbsPath
         }
 
   scriptPath <- H.eval $ projectBase </> "scripts/plutus/example-txin-locking-plutus-script.sh"
 
+  H.appendFile logFile "Before script"
+
   H.exec_ execConfig H.bashPath
-    [ "-x"
-    , scriptPath
+    [ "-c"
+    , show H.bashPath <> " -x " <> scriptPath
     ]
+
+  H.appendFile logFile "After script"
 
   result <- T.pack <$> H.readFile resultFile
 
