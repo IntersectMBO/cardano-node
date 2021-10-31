@@ -44,7 +44,6 @@ fi
 # by a plutus script, it must have a datahash. We also need collateral tx inputs so we split the utxo
 # in order to accomodate this.
 
-
 plutusscriptaddr=$($CARDANO_CLI address build --payment-script-file "$plutusscriptinuse"  --testnet-magic "$TESTNET_MAGIC")
 
 mkdir -p "$WORK"
