@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name:                   cardano-node
-version:                1.30.0
+version:                1.31.0
 description:            The cardano full node
 author:                 IOHK
 maintainer:             operations@iohk.io
