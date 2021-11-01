@@ -1,10 +1,10 @@
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
-
-{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Api.Shelley.Genesis
   ( ShelleyGenesis(..)
+  , alonzoGenesisDefaults
   , shelleyGenesisDefaults
   ) where
 
@@ -12,15 +12,23 @@ import           Prelude
 
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (fromMaybe)
+import           Data.Ratio
 import qualified Data.Time as Time
+import           Numeric.Natural
 
+import qualified Cardano.Ledger.Alonzo.Genesis as Alonzo
+import qualified Cardano.Ledger.Alonzo.Language as Alonzo
+import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 import           Cardano.Ledger.BaseTypes as Ledger
+import           Cardano.Ledger.Shelley.PParams as Ledger (PParams' (..), emptyPParams)
 import           Cardano.Slotting.Slot (EpochSize (..))
+import qualified Plutus.V1.Ledger.Api as Plutus
 
 import           Ouroboros.Consensus.Shelley.Node (ShelleyGenesis (..), emptyGenesisStaking)
 
-import           Cardano.Ledger.Shelley.PParams as Ledger (PParams' (..), emptyPParams)
-
+import           Cardano.Api.ProtocolParameters
+import           Cardano.Api.Script
+import           Cardano.Api.Value
 
 -- | Some reasonable starting defaults for constructing a 'ShelleyGenesis'.
 --
@@ -74,3 +82,60 @@ shelleyGenesisDefaults =
   where
     k = 2160
     zeroTime = Time.UTCTime (Time.fromGregorian 1970 1 1) 0 -- tradition
+
+-- | Reasonable starting defaults for constructing an 'AlonzoGenesis'.
+alonzoGenesisDefaults :: Alonzo.AlonzoGenesis
+alonzoGenesisDefaults =
+  let cModel = case Alonzo.CostModel <$> Plutus.defaultCostModelParams of
+                 Just (Alonzo.CostModel m) ->
+                   if Alonzo.validateCostModelParams m
+                   then Map.singleton Alonzo.PlutusV1 (Alonzo.CostModel m)
+                   else error "alonzoGenesisDefaults: defaultCostModel is invalid"
+                 Nothing ->
+                   error "alonzoGenesisDefaults: Could not extract cost model \
+                         \params from defaultCostModel"
+      --TODO: we need a better validation story. We also ought to wrap the
+      -- genesis type in the API properly.
+      prices' = case toAlonzoPrices alonzoGenesisDefaultExecutionPrices of
+                  Nothing -> error "alonzoGenesisDefaults: invalid prices"
+                  Just p  -> p
+  in Alonzo.AlonzoGenesis
+       { Alonzo.coinsPerUTxOWord     = toShelleyLovelace $ Lovelace 34482
+       , Alonzo.costmdls             = cModel
+       , Alonzo.prices               = prices'
+       , Alonzo.maxTxExUnits         = toAlonzoExUnits alonzoGenesisDefaultMaxTxExecutionUnits
+       , Alonzo.maxBlockExUnits      = toAlonzoExUnits alonzoGenesisDefaultMaxBlockExecutionUnits
+       , Alonzo.maxValSize           = alonzoGenesisDefaultMaxValueSize
+       , Alonzo.collateralPercentage = alonzoGenesisDefaultCollateralPercent
+       , Alonzo.maxCollateralInputs  = alonzoGenesisDefaultMaxCollateralInputs
+       }
+ where
+  alonzoGenesisDefaultExecutionPrices :: ExecutionUnitPrices
+  alonzoGenesisDefaultExecutionPrices =
+      ExecutionUnitPrices {
+         priceExecutionSteps  = 1 % 10,
+         priceExecutionMemory = 1 % 10
+      }
+
+  alonzoGenesisDefaultMaxTxExecutionUnits :: ExecutionUnits
+  alonzoGenesisDefaultMaxTxExecutionUnits =
+      ExecutionUnits {
+        executionSteps  = 500_000_000_000,
+        executionMemory = 500_000_000_000
+      }
+
+  alonzoGenesisDefaultMaxBlockExecutionUnits :: ExecutionUnits
+  alonzoGenesisDefaultMaxBlockExecutionUnits =
+      ExecutionUnits {
+        executionSteps  = 500_000_000_000,
+        executionMemory = 500_000_000_000
+      }
+
+  alonzoGenesisDefaultMaxValueSize :: Natural
+  alonzoGenesisDefaultMaxValueSize = 4000
+
+  alonzoGenesisDefaultCollateralPercent :: Natural
+  alonzoGenesisDefaultCollateralPercent = 1
+
+  alonzoGenesisDefaultMaxCollateralInputs :: Natural
+  alonzoGenesisDefaultMaxCollateralInputs = 5

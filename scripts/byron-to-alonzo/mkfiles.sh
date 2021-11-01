@@ -302,10 +302,13 @@ echo "====================================================================="
 
 # Set up our template
 mkdir shelley
+
+# Copy the QA testnet alonzo genesis which is equivalent to the mainnet
+
 cardano-cli genesis create --testnet-magic ${NETWORK_MAGIC} --genesis-dir shelley
 
 # Then edit the genesis.spec.json ...
-
+cp ../configuration/cardano/shelley_qa-alonzo-genesis.json shelley/genesis.alonzo.spec.json
 # We're going to use really quick epochs (300 seconds), by using short slots 0.2s
 # and K=10, but we'll keep long KES periods so we don't have to bother
 # cycling KES keys
@@ -315,6 +318,9 @@ sed -i shelley/genesis.spec.json \
     -e 's/"securityParam": 2160/"securityParam": 10/' \
     -e 's/"epochLength": 432000/"epochLength": 500/' \
     -e 's/"maxLovelaceSupply": 0/"maxLovelaceSupply": 1000000000000/' \
+    -e 's/"minFeeA": 1/"minFeeA": 44/' \
+    -e 's/"minFeeB": 0/"minFeeB": 155381/' \
+    -e 's/"minUTxOValue": 0/"minUTxOValue": 1000000/' \
     -e 's/"decentralisationParam": 1.0/"decentralisationParam": 0.7/' \
     -e 's/"major": 0/"major": 5/' \
     -e 's/"rho": 0.0/"rho": 0.1/' \
@@ -632,8 +638,6 @@ if [ "$1" = "alonzo" ]; then
       -e 's/LastKnownBlockVersion-Major: 1/LastKnownBlockVersion-Major: 5/'
 
   # Copy the cost model
-  mkdir ${ROOT}/shelley/alonzo
-  cp configuration/cardano/alonzo/shelley_qa_cost-model.json ${ROOT}/shelley/alonzo/costmodel.json
   echo "Nodes will start in Alonzo era from epoch 0"
 
 elif [ "$1" = "mary" ]; then
