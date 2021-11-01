@@ -108,6 +108,7 @@ test-suite cardano-testnet-tests
                       , hedgehog
                       , hedgehog-extras
                       , filepath
+                      , process
                       , tasty
                       , tasty-hedgehog
                       , text

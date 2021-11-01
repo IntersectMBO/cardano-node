@@ -28,7 +28,9 @@ import qualified Hedgehog.Extras.Test.File as H
 import qualified Hedgehog.Extras.Test.Process as H
 import qualified Hedgehog.Internal.Property as H
 import qualified System.Directory as IO
+import qualified System.IO as IO
 import qualified System.Environment as IO
+import qualified System.Process as IO
 import qualified Test.Base as H
 import qualified Test.Process as H
 import qualified Testnet.Cardano as H
@@ -41,6 +43,8 @@ hprop_plutus = H.integration . H.runFinallies . H.workspace "chairman" $ \tempAb
 
   resultFile <- H.noteTempFile tempAbsPath "result.out"
   logFile <- H.noteTempFile tempAbsPath "result.log"
+  scriptOutFile <- H.noteTempFile tempAbsPath "script.out"
+  scriptErrFile <- H.noteTempFile tempAbsPath "script.err"
 
   H.writeFile logFile "Before testnet setup"
 
@@ -52,7 +56,7 @@ hprop_plutus = H.integration . H.runFinallies . H.workspace "chairman" $ \tempAb
 
   path <- H.evalIO $ fromMaybe "" <$> IO.lookupEnv "PATH"
 
-  let execConfig = H.ExecConfig
+  let execConfig = H.defaultExecConfig
         { H.execConfigEnv = Last $ Just
           [ ("CARDANO_CLI", cardanoCli)
           , ("BASE", projectBase)
@@ -72,9 +76,18 @@ hprop_plutus = H.integration . H.runFinallies . H.workspace "chairman" $ \tempAb
 
   H.appendFile logFile "Before script"
 
-  H.exec_ execConfig H.bashPath
-    [ "-c"
-    , show H.bashPath <> " -x " <> scriptPath
+  hOut <- H.evalIO $ IO.openFile scriptOutFile IO.AppendMode
+  hErr <- H.evalIO $ IO.openFile scriptErrFile IO.AppendMode
+
+  H.exec_
+    ( execConfig
+      { H.execConfigStdout = IO.UseHandle hOut
+      , H.execConfigStderr = IO.UseHandle hErr
+      }
+    )
+    H.bashPath
+    [ "-x"
+    , scriptPath
     ]
 
   H.appendFile logFile "After script"

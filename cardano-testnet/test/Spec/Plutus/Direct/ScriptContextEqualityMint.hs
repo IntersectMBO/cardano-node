@@ -50,7 +50,7 @@ hprop_plutus_script_context_mint_equality = H.integration . H.runFinallies . H.w
 
   env <- H.evalIO getEnvironment
 
-  execConfig <- H.noteShow H.ExecConfig
+  execConfig <- H.noteShow H.defaultExecConfig
         { H.execConfigEnv = Last $ Just $
           [ ("CARDANO_NODE_SOCKET_PATH", IO.sprocketArgumentName (head bftSprockets))
           ]
