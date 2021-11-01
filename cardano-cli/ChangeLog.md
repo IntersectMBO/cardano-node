@@ -1,5 +1,18 @@
 # Changelog for cardano-cli
 
+## 1.31 -- October 2021
+
+- Restore support for deserialising transactions built by pre-1.27.0 node
+  versions. (#3226)
+- Various internal refactorings ang improvements. (#3234)
+- Use the new `GetChainBlockNo` and `GetChainPoint` queries in the query tip
+  command. There is a fallback to the older method using the full chain sync
+  query. (#3179)
+- Allow provision of optional datums to a transaction using the CLI option `--tx-out-datum-embed-value`. This mechanism
+  can for example be used to provide the actual script locking an output, for use when spending it. (#3171)
+- Fix the use of withdrawls using the `transaction build` command. (#3317)
+- Allow extended payment keys to be specified as a Plutus required signer. (#3319)
+
 ## 1.30 -- September 2021
 
 - Allow the user to specify a signature as required when spending from a

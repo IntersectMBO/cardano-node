@@ -1,5 +1,9 @@
 # Changelog for cardano-api
 
+## 1.31 -- October 2021
+
+- Various internal improvements and refactorings. (#3163, #3253, #3288)
+
 ## 1.30 -- September 2021
 
 - Improvements to the ledger state API. (#3143)

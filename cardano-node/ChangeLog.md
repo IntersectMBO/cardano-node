@@ -1,5 +1,88 @@
 # Changelog for cardano-node
 
+## 1.31 -- October 2021
+
+### node changes
+
+- Additional verification for the configuration files:
+  - Added a CI check that the configuration files in git match those produced
+    during the nix build. (#3222)
+  - Add a test that the configuration file is valid. (#3236)
+- Fix the configuration of the `chainSyncServerHeaderTracer`. This fixes a bug
+  which caused logs to be unnecessarily verbose. (#3252)
+- Various documentation updates. (#3191, #3243, #3265, #3284)
+- Various infrastrucutre updates. (#3244, #3223, #3266, #3270, #3277, #3280,
+  #3283 #3284, #3290, #3298, #3308)
+- Introduce the 'trace-dispatcher' library. This is built to replace the
+  existing 'iohk-monitoring-framework'. (#3073)
+- Additional testing. (#3255, #3274)
+- Add an example using a Plutus script as a stake credential. (#3162)
+- Don't inline a call to `maybeToStrictMaybe` during translation of
+  `ProtocolParameters`. This turns out to trigger a GHC bug, resulting in
+  extremely high compilation time. (#3275)
+- Introduce a YAML version of the mainnet configuration file, which can and has
+  been commented to explain the various options. (#3269)
+- Updates to the stake credential history tool. This is an internal tool used to
+  debug the various events that happen with regard to stake credentials and
+  rewards. (#3086, #3311)
+- Add various additional metrics:
+  - About block propagation. (#2476)
+  - Tracking how many tips a node has served to downstream peers. (#3300)
+  - Counting the number of forks seen. (#3305)
+- Add the ability to configure the mempool capacity override. This allows an
+  individual node operator to alter the maximum size of their mempool along
+  various axes (size, execution units). (#3273)
+
+### consensus changes
+
+- Fix a bug that could occur when opening a stored chain DB. (Note that this was
+  only considered a bug because of violating strictly defined operational
+  semantics. It would not have been visible to users.) (#3250)
+- Add additional capabilities in the db-analyser. (#3376, #3379, #3397, #3400,
+  #3414, #3418)
+- Add a new version (10) of the node to client protocol, with two new queries:
+  `GetChainBlockNo` and `GetChainPoint`. (#3346)
+- Expose the ability to override the mempool capacity. (#3413)
+### network changes
+
+- Work around a bug on OS/X calling `accept` on IPv6 sockets. (#3368)
+- Continual gradual merge of p2p functionality. (#3369, #3370, #3371, #3372,
+  #3373, #3374, #3377)
+- Miscallaneous documentation changes. (#3383, #3399)
+- Fix a race condition in the thread tracking set. This could result in a node
+  eventually refusing to accept new connections. (#3398)
+- Various internal refactorings. (#3079, #3416, #3432, #3437)
+
+### ledger changes
+
+- Add a `RetiredPools` event, which gives details about retiring pools and the
+  refund (or not) of the pool deposit. (#2487, #2495)
+- Additional testing in the Alonzo era. (#2434)
+- Fix the CDDL specification for transactions. (#2456, #2507, #2523)
+- Internal refactorings and improvements. (#2497, #2483, #2492, #2498, #2515,
+  #2519)
+- Infrastructure and documentation improvements. (#2499, #2500, #2508)
+- Various work factoring out the definition of the transitional Praos protocol
+  and isolating it from the ledger. This is done in anticipation of introducing
+  a new version of the consensus protocol in the Babbage release. (#2491, #2505,
+  #2510, #2516, #2518)
+- Document the minumum value computation for Alonzo. (#2486)
+- Various changes to compactify the in-memory representation of the Cardano
+  ledger state:
+  - Unpack the TxId in a transaction input. (#2501)
+- Add support for V2 of Plutus (and for multiple Plutus versions in general).
+  (#2485)
+- Expose more information concerning reward computation in the API. This is
+  intended to support revised display of pool rankings in the wallet. (#2511)
+- Document both `Value` and `TxInfo` in the spec. (#2383, #2494)
+- Fix the serialisation of Alonzo transaction witnesses in the case of multiple
+  Plutus versions. (#2525, #2526)
+- When incrementally computing the rewards, we now require this computation to
+  complete by the first block within 2k/f slots of the epoch end. Previously it
+  was required to complete by the end of the epoch. The motivation for this is
+  to allow db-sync some time to insert the rewards distributed this epoch (which
+  may be substantial) into its database before the end of the epoch. (#2521)
+
 ## 1.30 -- September 2021
 
 ### node changes
