@@ -143,14 +143,6 @@ jobs:
           TMPDIR="${{ runner.temp }}" TMP="${{ runner.temp }}" KEEP_WORKSPACE=1 cabal test all
         fi
 
-    - name: "Run tests"
-      timeout-minutes: 60
-      run: |
-        if [ "${{github.event.inputs.tests}}" != "all" ]; then
-          TMPDIR="${{ runner.temp }}" TMP="${{ runner.temp }}" KEEP_WORKSPACE=1 cabal test \
-            cardano-testnet
-        fi
-
     - name: Build & Test
       run: |
         mkdir -p artifacts
