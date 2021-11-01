@@ -411,6 +411,10 @@ instance HasSeverityAnnotation (TracePeerSelection addr) where
       TraceGovernorWakeup        {} -> Info
       TraceChurnWait             {} -> Info
       TraceChurnMode             {} -> Info
+      TracePromoteColdDoneNop    {} -> Notice
+      TracePromoteWarmDoneNop    {} -> Notice
+      TraceDemoteWarmDoneNop     {} -> Notice
+      TraceDemoteHotDoneNop      {} -> Notice
 
 instance HasPrivacyAnnotation (DebugPeerSelection addr conn)
 instance HasSeverityAnnotation (DebugPeerSelection addr conn) where
@@ -1431,6 +1435,12 @@ instance ToObject (TracePeerSelection SockAddr) where
              , "actualEstablished" .= aEst
              , "peer" .= toJSON p
              ]
+  toObject _verb (TracePromoteColdDoneNop tEst aEst p) =
+    mkObject [ "kind" .= String "PromoteColdDoneNop"
+             , "targetEstablished" .= tEst
+             , "actualEstablished" .= aEst
+             , "peer" .= toJSON p
+             ]
   toObject _verb (TracePromoteWarmPeers tActive aActive sp) =
     mkObject [ "kind" .= String "PromoteWarmPeers"
              , "targetActive" .= tActive
@@ -1455,6 +1465,12 @@ instance ToObject (TracePeerSelection SockAddr) where
              , "actualActive" .= aActive
              , "peer" .= toJSON p
              ]
+  toObject _verb (TracePromoteWarmDoneNop tActive aActive p) =
+    mkObject [ "kind" .= String "PromoteWarmDoneNop"
+             , "targetActive" .= tActive
+             , "actualActive" .= aActive
+             , "peer" .= toJSON p
+             ]
   toObject _verb (TraceDemoteWarmPeers tEst aEst sp) =
     mkObject [ "kind" .= String "DemoteWarmPeers"
              , "targetEstablished" .= tEst
@@ -1470,6 +1486,12 @@ instance ToObject (TracePeerSelection SockAddr) where
              ]
   toObject _verb (TraceDemoteWarmDone tEst aEst p) =
     mkObject [ "kind" .= String "DemoteWarmDone"
+             , "targetEstablished" .= tEst
+             , "actualEstablished" .= aEst
+             , "peer" .= toJSON p
+             ]
+  toObject _verb (TraceDemoteWarmDoneNop tEst aEst p) =
+    mkObject [ "kind" .= String "DemoteWarmDoneNop"
              , "targetEstablished" .= tEst
              , "actualEstablished" .= aEst
              , "peer" .= toJSON p
@@ -1494,6 +1516,12 @@ instance ToObject (TracePeerSelection SockAddr) where
              ]
   toObject _verb (TraceDemoteHotDone tActive aActive p) =
     mkObject [ "kind" .= String "DemoteHotDone"
+             , "targetActive" .= tActive
+             , "actualActive" .= aActive
+             , "peer" .= toJSON p
+             ]
+  toObject _verb (TraceDemoteHotDoneNop tActive aActive p) =
+    mkObject [ "kind" .= String "DemoteHotDoneNop"
              , "targetActive" .= tActive
              , "actualActive" .= aActive
              , "peer" .= toJSON p
