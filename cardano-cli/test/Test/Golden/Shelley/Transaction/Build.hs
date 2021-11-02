@@ -11,6 +11,8 @@ module Test.Golden.Shelley.Transaction.Build
 import           Cardano.Prelude
 import           Prelude (String)
 
+import qualified Data.ByteString.Base16 as Base16
+import qualified Data.ByteString.Char8 as BSC
 import           Hedgehog (Property)
 import           Test.OptParse
 
@@ -76,7 +78,9 @@ golden_shelleyTransactionBuild_Minting =
                , scriptWit
                ]
 
-    let dummyMA = filter (/= '\n') $ "50 " ++ polid ++ ".ethereum"
+    let dummyMA =
+          filter (/= '\n') $
+          "50 " ++ polid ++ "." ++ BSC.unpack (Base16.encode "ethereum")
 
     txBodyOutFile <- noteTempFile tempDir "tx-body-out"
 
@@ -134,5 +138,3 @@ golden_shelleyTransactionBuild_TxInScriptWitnessed =
     H.assertFileOccurences 1 "TxBodyMary" txBodyOutFile
 
     H.assertEndsWithSingleNewline txBodyOutFile
-
-

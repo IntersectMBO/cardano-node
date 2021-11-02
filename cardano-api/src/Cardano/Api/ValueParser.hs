@@ -5,15 +5,14 @@ module Cardano.Api.ValueParser
 
 import           Prelude
 
+import           Control.Applicative (many, some, (<|>))
+import qualified Data.ByteString.Char8 as BSC
 import qualified Data.Char as Char
 import           Data.Functor (void, ($>))
 import           Data.List (foldl')
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import           Data.Word (Word64)
-
-import           Control.Applicative (many, some, (<|>))
-
 import           Text.Parsec as Parsec (notFollowedBy, try, (<?>))
 import           Text.Parsec.Char (alphaNum, char, digit, hexDigit, space, spaces, string)
 import           Text.Parsec.Expr (Assoc (..), Operator (..), buildExpressionParser)
@@ -21,6 +20,7 @@ import           Text.Parsec.String (Parser)
 import           Text.ParserCombinators.Parsec.Combinator (many1)
 
 import           Cardano.Api.SerialiseRaw
+import           Cardano.Api.Utils (note)
 import           Cardano.Api.Value
 
 -- | Parse a 'Value' from its string representation.
@@ -113,10 +113,10 @@ decimal = do
 
 -- | Asset name parser.
 assetName :: Parser AssetName
-assetName =
-    toAssetName <$> many alphaNum
-  where
-    toAssetName = AssetName . Text.encodeUtf8 . Text.pack
+assetName = do
+  hexText <- many hexDigit
+  note "AssetName deserisalisation failed" $
+    deserialiseFromRawBytesHex AsAssetName $ BSC.pack hexText
 
 -- | Policy ID parser.
 policyId :: Parser PolicyId

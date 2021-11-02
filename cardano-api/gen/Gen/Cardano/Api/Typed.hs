@@ -30,6 +30,7 @@ module Gen.Cardano.Api.Typed
   , genScriptHash
   , genScriptData
 
+  , genAssetName
   , genOperationalCertificate
   , genOperationalCertificateIssueCounter
   , genShelleyWitness
@@ -227,8 +228,8 @@ genAssetName =
   Gen.frequency
     -- mostly from a small number of choices, so we get plenty of repetition
     [ (9, Gen.element ["", "a", "b", "c"])
-    , (1, AssetName <$> Gen.utf8 (Range.singleton  32) Gen.alphaNum)
-    , (1, AssetName <$> Gen.utf8 (Range.constant 1 31) Gen.alphaNum)
+    , (1, AssetName <$> Gen.bytes (Range.singleton  32))
+    , (1, AssetName <$> Gen.bytes (Range.constant 1 31))
     ]
 
 genPolicyId :: Gen PolicyId

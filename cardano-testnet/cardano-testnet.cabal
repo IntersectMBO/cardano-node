@@ -101,6 +101,8 @@ test-suite cardano-testnet-tests
   type:                 exitcode-stdio-1.0
 
   build-depends:        aeson
+                      , base16-bytestring
+                      , bytestring
                       , cardano-api
                       , cardano-testnet
                       , containers

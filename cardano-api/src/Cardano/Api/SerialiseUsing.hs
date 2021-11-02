@@ -10,14 +10,14 @@ module Cardano.Api.SerialiseUsing
 
 import           Prelude
 
+import qualified Data.Aeson.Types as Aeson
+import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Base16 as Base16
 import qualified Data.ByteString.Char8 as BSC
 import           Data.String (IsString (..))
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
-import           Data.Typeable
-
-import qualified Data.Aeson.Types as Aeson
+import           Data.Typeable (Typeable, tyConName, typeRep, typeRepTyCon)
 
 import           Cardano.Api.Error
 import           Cardano.Api.HasTypeProxy
@@ -63,33 +63,39 @@ instance SerialiseAsRawBytes a => Show (UsingRawBytesHex a) where
     show (UsingRawBytesHex x) = show (serialiseToRawBytesHex x)
 
 instance SerialiseAsRawBytes a => IsString (UsingRawBytesHex a) where
-    fromString str =
-      case Base16.decode (BSC.pack str) of
-        Right raw -> case deserialiseFromRawBytes ttoken raw of
-          Just x  -> UsingRawBytesHex x
-          Nothing -> error ("fromString: cannot deserialise " ++ show str)
-        Left msg -> error ("fromString: invalid hex " ++ show str ++ ", " ++ msg)
-      where
-        ttoken :: AsType a
-        ttoken = proxyToAsType Proxy
+    fromString = either error id . deserialiseFromRawBytesBase16 . BSC.pack
 
 instance SerialiseAsRawBytes a => ToJSON (UsingRawBytesHex a) where
     toJSON (UsingRawBytesHex x) = toJSON (serialiseToRawBytesHexText x)
 
 instance (SerialiseAsRawBytes a, Typeable a) => FromJSON (UsingRawBytesHex a) where
-    parseJSON =
-      Aeson.withText tname $ \str ->
-        case Base16.decode (Text.encodeUtf8 str) of
-          Right raw -> case deserialiseFromRawBytes ttoken raw of
-            Just x  -> return (UsingRawBytesHex x)
-            Nothing -> fail ("cannot deserialise " ++ show str)
-          Left msg  -> fail ("invalid hex " ++ show str ++ ", " ++ msg)
-      where
-        ttoken = proxyToAsType (Proxy :: Proxy a)
-        tname  = (tyConName . typeRepTyCon . typeRep) (Proxy :: Proxy a)
+  parseJSON =
+    Aeson.withText tname $
+      either fail pure . deserialiseFromRawBytesBase16 . Text.encodeUtf8
+    where
+      tname  = (tyConName . typeRepTyCon . typeRep) (Proxy :: Proxy a)
 
-instance SerialiseAsRawBytes a => ToJSONKey (UsingRawBytesHex a)
-instance (SerialiseAsRawBytes a, Typeable a) => FromJSONKey (UsingRawBytesHex a)
+instance SerialiseAsRawBytes a => ToJSONKey (UsingRawBytesHex a) where
+  toJSONKey =
+    Aeson.toJSONKeyText $ \(UsingRawBytesHex x) -> serialiseToRawBytesHexText x
+
+instance
+  (SerialiseAsRawBytes a, Typeable a) => FromJSONKey (UsingRawBytesHex a) where
+
+  fromJSONKey =
+    Aeson.FromJSONKeyTextParser $
+    either fail pure . deserialiseFromRawBytesBase16 . Text.encodeUtf8
+
+deserialiseFromRawBytesBase16 ::
+  SerialiseAsRawBytes a => ByteString -> Either String (UsingRawBytesHex a)
+deserialiseFromRawBytesBase16 str =
+  case Base16.decode str of
+    Right raw -> case deserialiseFromRawBytes ttoken raw of
+      Just x  -> Right (UsingRawBytesHex x)
+      Nothing -> Left ("cannot deserialise " ++ show str)
+    Left msg  -> Left ("invalid hex " ++ show str ++ ", " ++ msg)
+  where
+    ttoken = proxyToAsType (Proxy :: Proxy a)
 
 
 -- | For use with @deriving via@, to provide instances for any\/all of 'Show',

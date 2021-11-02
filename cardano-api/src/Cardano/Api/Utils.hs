@@ -1,3 +1,5 @@
+{-# LANGUAGE LambdaCase #-}
+
 -- | Internal utils for the other Api modules
 --
 module Cardano.Api.Utils
@@ -6,6 +8,7 @@ module Cardano.Api.Utils
   , formatParsecError
   , noInlineMaybeToStrictMaybe
   , runParsecParser
+  , note
   ) where
 
 import           Prelude
@@ -42,3 +45,8 @@ runParsecParser parser input =
   case Parsec.parse (parser <* Parsec.eof) "" (Text.unpack input) of
     Right txin -> pure txin
     Left parseError -> fail $ formatParsecError parseError
+
+note :: MonadFail m => String -> Maybe a -> m a
+note msg = \case
+  Nothing -> fail msg
+  Just a -> pure a

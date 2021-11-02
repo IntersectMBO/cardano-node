@@ -15,10 +15,13 @@ import           Cardano.Prelude
 import           Data.Aeson (Value (..), object, toJSON, (.=))
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Types as Aeson
+import qualified Data.ByteString.Char8 as BSC
+import qualified Data.Map.Strict as Map
+import qualified Data.Text as Text
 import           Data.Yaml (array)
 import           Data.Yaml.Pretty (defConfig, encodePretty, setConfCompare)
 
-import           Cardano.Api
+import           Cardano.Api as Api
 import           Cardano.Api.Shelley (Address (ShelleyAddress), StakeAddress (..))
 import           Cardano.Ledger.Crypto (Crypto)
 import qualified Cardano.Ledger.Shelley.API as Shelley
@@ -165,27 +168,40 @@ friendlyLovelace (Lovelace value) = String $ textShow value <> " Lovelace"
 friendlyMintValue :: TxMintValue ViewTx era -> Aeson.Value
 friendlyMintValue = \case
   TxMintNone -> Null
-  TxMintValue _ v _ ->
-    object
-      [ friendlyAssetId assetId .= quantity
-      | (assetId, quantity) <- valueToList v
-      ]
-
-friendlyAssetId :: AssetId -> Text
-friendlyAssetId = \case
-  AdaAssetId -> "ADA"
-  AssetId policyId (AssetName assetName) ->
-    decodeUtf8 $ serialiseToRawBytesHex policyId <> suffix
-    where
-      suffix =
-        case assetName of
-          "" -> ""
-          _ -> "." <> assetName
+  TxMintValue _ v _ -> friendlyValue v
 
 friendlyTxOutValue :: TxOutValue era -> Aeson.Value
 friendlyTxOutValue = \case
   TxOutAdaOnly _ lovelace -> friendlyLovelace lovelace
-  TxOutValue _ multiasset -> toJSON multiasset
+  TxOutValue _ v -> friendlyValue v
+
+friendlyValue :: Api.Value -> Aeson.Value
+friendlyValue v =
+  object
+    [ case bundle of
+        ValueNestedBundleAda q -> "lovelace" .= q
+        ValueNestedBundle policy assets ->
+          friendlyPolicyId policy .= friendlyAssets assets
+    | bundle <- bundles
+    ]
+  where
+
+    ValueNestedRep bundles = valueToNestedRep v
+
+    friendlyPolicyId = ("policy " <>) . serialiseToRawBytesHexText
+
+    friendlyAssets = Map.mapKeys friendlyAssetName
+
+    friendlyAssetName = \case
+      "" -> "default asset"
+      name@(AssetName nameBS) ->
+        "asset " <> serialiseToRawBytesHexText name <> nameAsciiSuffix
+        where
+          nameAsciiSuffix
+            | nameIsAscii = " (" <> nameAscii <> ")"
+            | otherwise = ""
+          nameIsAscii = BSC.all (\c -> isAscii c && isAlphaNum c) nameBS
+          nameAscii = Text.pack $ BSC.unpack nameBS
 
 friendlyMetadata :: TxMetadataInEra era -> Aeson.Value
 friendlyMetadata = \case
