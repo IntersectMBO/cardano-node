@@ -135,7 +135,7 @@ jobs:
           cache-${{ env.CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}
 
     - name: Build
-      run: retry 2 cabal build cardano-node cardano-cli cardano-node-chairman cardano-submit-api plutus-example
+      run: retry 2 cabal build all
 
     - name: Git clone
       run: git clone https://github.com/input-output-hk/cardano-mainnet-mirror

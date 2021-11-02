@@ -62,35 +62,6 @@ library
                         Testnet.Shelley
                         Testnet.SubmitApi
 
-executable cardano-testnet
-  import:               base, project-config
-
-  hs-source-dirs:       testnet
-
-  main-is:              Main.hs
-
-  build-depends:        ansi-terminal
-                      , cardano-config
-                      , cardano-testnet
-                      , hedgehog
-                      , hedgehog-extras
-                      , optparse-applicative-fork
-                      , resourcet
-                      , stm
-                      , text
-
-  other-modules:        Paths_cardano_testnet
-                        Testnet.Commands
-                        Testnet.Commands.Byron
-                        Testnet.Commands.Cardano
-                        Testnet.Commands.Shelley
-                        Testnet.Commands.Version
-                        Testnet.Run
-
-  autogen-modules:      Paths_cardano_testnet
-
-  ghc-options:          -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
-
 test-suite cardano-testnet-tests
   import:               base, project-config
 
@@ -101,7 +72,6 @@ test-suite cardano-testnet-tests
   type:                 exitcode-stdio-1.0
 
   build-depends:        aeson
-                      , cardano-api
                       , cardano-testnet
                       , containers
                       , directory
@@ -113,15 +83,6 @@ test-suite cardano-testnet-tests
                       , text
                       , unordered-containers
 
-  other-modules:        Spec.Plutus.Direct.ScriptContextEquality
-                        Spec.Plutus.Direct.ScriptContextEqualityMint
-                        Spec.Plutus.Direct.TxInLockingPlutus
-                        Spec.Plutus.Script.TxInLockingPlutus
-                        Spec.Plutus.SubmitApi.TxInLockingPlutus
+  other-modules:        Spec.Plutus.Script.TxInLockingPlutus
 
   ghc-options:          -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
-
-  build-tool-depends:   cardano-node:cardano-node
-                      , cardano-cli:cardano-cli
-                      , cardano-submit-api:cardano-submit-api
-                      , plutus-example:create-script-context
