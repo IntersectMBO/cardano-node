@@ -69,7 +69,7 @@ hprop_plutus = Test.integration . HE.runFinallies . HE.workspace "chairman" $ \t
 
   env <- H.evalIO IO.getEnvironment
 
-  execConfig <- H.noteShow H.ExecConfig
+  execConfig <- H.noteShow H.defaultExecConfig
         { H.execConfigEnv = Last $ Just $
           [ ("CARDANO_NODE_SOCKET_PATH", IO.sprocketArgumentName (head bftSprockets))
           ]
