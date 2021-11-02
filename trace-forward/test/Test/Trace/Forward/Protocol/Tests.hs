@@ -24,6 +24,5 @@ prop_codec_TraceForward :: AnyMessageAndAgency (TraceForward TraceItem) -> Bool
 prop_codec_TraceForward msg =
   runST $ prop_codecM
           (codecTraceForward CBOR.encode CBOR.decode
-                             CBOR.encode CBOR.decode
                              CBOR.encode CBOR.decode)
           msg
