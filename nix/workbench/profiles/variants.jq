@@ -4,36 +4,31 @@
 def genesis_profile_variants:
 
   ## Baseline:
-  [ { genesis: { utxo: 2000000, delegators:  500000 } }
+  [ { genesis: { utxo: 4000000, delegators: 1000000 } }
 
   ## Baseline, tweaked for fast local repro:
-  , { genesis: { utxo: 2000000, delegators:  500000
+  , { genesis: { utxo: 4000000, delegators: 1000000
                , slot_duration: 0.2 }
     , composition: { with_observer: false }}
 
   ## Size-varied derivatives of baseline:
-  , { genesis: { utxo: 2000000, delegators:  750000 } }
-  , { genesis: { utxo: 2000000, delegators: 1000000 } }
-  , { genesis: { utxo: 3000000, delegators:  500000 } }
-  , { genesis: { utxo: 4000000, delegators:  500000 } }
   , { genesis: { utxo: 4000000, delegators: 1000000 } }
-  , { genesis: { utxo: 2000000, delegators:  500000, dense_pool_density: 10 } }
-  , { genesis: { utxo: 2000000, delegators:  500000, dense_pool_density: 20 } }
+  , { genesis: { utxo: 5000000, delegators: 1250000 } }
+  , { genesis: { utxo: 6000000, delegators: 1500000 } }
+  , { genesis: { utxo: 4000000, delegators: 1000000, dense_pool_density:  2 } }
+  , { genesis: { utxo: 4000000, delegators: 1000000, dense_pool_density:  3 } }
+  , { genesis: { utxo: 4000000, delegators: 1000000, dense_pool_density: 10 } }
 
   ## TPS-varied derivatives of baseline:
-  , { genesis: { utxo: 2000000, delegators:  500000 }
-    , generator: { tps: 5 } }
-  , { genesis: { utxo: 2000000, delegators:  500000 }
-    , generator: { tps: 10 } }
   , { genesis: { utxo: 4000000, delegators: 1000000 }
     , generator: { tps: 5 } }
   , { genesis: { utxo: 4000000, delegators: 1000000 }
     , generator: { tps: 10 } }
 
   ## Calibration:
-  , { genesis: { utxo: 2000000, delegators:  500000, max_block_size:  128000 }
+  , { genesis: { utxo: 2000000, delegators: 1000000, max_block_size:  128000 }
     , generator: { tps:  16 } }
-  , { genesis: { utxo: 2000000, delegators:  500000, max_block_size:  256000 }
+  , { genesis: { utxo: 2000000, delegators: 1000000, max_block_size:  256000 }
     , generator: { tps:  32 } }
   , { genesis: { utxo: 2000000, delegators:  500000, max_block_size:  512000 }
     , generator: { tps:  64 } }
