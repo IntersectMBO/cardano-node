@@ -22,14 +22,11 @@ module Trace.Forward.Protocol.Type
   , NobodyHasAgency (..)
   , NumberOfTraceObjects (..)
   , BlockingReplyList (..)
-  , NodeInfo (..)
   ) where
 
 import           Codec.Serialise (Serialise (..))
 import           Data.List.NonEmpty (NonEmpty)
 import           Data.Proxy (Proxy(..))
-import           Data.Text (Text)
-import           Data.Time.Clock (UTCTime)
 import           Data.Word (Word16)
 import           GHC.Generics (Generic)
 import           Network.TypedProtocol.Core (Protocol (..))
@@ -61,19 +58,14 @@ instance Serialise NumberOfTraceObjects
 data TraceForward lo where
 
   -- | Both acceptor and forwarder are in idle state. The acceptor can send a
-  -- request for node's info ('MsgNodeInfoRequest') OR a request  for a list
-  -- of 'TraceObject's ('MsgTraceObjectsRequest'); the forwarder is waiting for a request.
-  -- It will replay either with 'MsgNodeInfoReply' or 'MsgTraceObjectsReply'.
+  -- request for a list of 'TraceObject's ('MsgTraceObjectsRequest');
+  -- the forwarder is waiting for a request.
+  -- It will replay with 'MsgTraceObjectsReply'.
   --
   -- Node's info is an important information about the node, such as
   -- its protocol, version, start time, etc. It is assuming that the node
   -- must provide this information.
   StIdle :: TraceForward lo
-
-  -- | The acceptor has sent a request for node's info. The acceptor is now
-  -- waiting for a reply, and the forwarder is busy getting ready to send a
-  -- reply with node's info.
-  StNodeInfoBusy :: TraceForward lo
 
   -- | The acceptor has sent a next request for 'TraceObject's. The acceptor is
   -- now waiting for a reply, and the forwarder is busy getting ready to send a
@@ -121,36 +113,11 @@ data BlockingReplyList (blocking :: StBlockingStyle) lo where
 deriving instance Eq   lo => Eq   (BlockingReplyList blocking lo)
 deriving instance Show lo => Show (BlockingReplyList blocking lo)
 
--- | In the beginning of the session the node must provide its information.
-data NodeInfo = NodeInfo
-  { niName            :: !Text
-  , niProtocol        :: !Text
-  , niVersion         :: !Text
-  , niCommit          :: !Text
-  , niStartTime       :: !UTCTime
-  , niSystemStartTime :: !UTCTime
-  } deriving (Eq, Generic, Show)
-
-instance ShowProxy NodeInfo
-instance Serialise NodeInfo
-
 instance Protocol (TraceForward lo) where
 
   -- | The messages in the trace forwarding/accepting protocol.
   --
   data Message (TraceForward lo) from to where
-
-    -- | Request the node's info from the forwarder.
-    --   State: Idle -> NodeInfoBusy.
-    MsgNodeInfoRequest
-      :: Message (TraceForward lo) 'StIdle 'StNodeInfoBusy
-
-    -- | Reply with the node's info.
-    --   State: NodeInfoBusy -> Idle.
-    MsgNodeInfoReply
-      :: NodeInfo
-      -> Message (TraceForward lo) 'StNodeInfoBusy 'StIdle
-
     -- | Request the list of 'TraceObject's from the forwarder.
     --   State: Idle -> Busy.
     --
@@ -192,8 +159,7 @@ instance Protocol (TraceForward lo) where
     TokIdle :: ClientHasAgency 'StIdle
 
   data ServerHasAgency st where
-    TokNodeInfoBusy :: ServerHasAgency 'StNodeInfoBusy
-    TokBusy         :: TokBlockingStyle blocking -> ServerHasAgency ('StBusy blocking)
+    TokBusy :: TokBlockingStyle blocking -> ServerHasAgency ('StBusy blocking)
 
   data NobodyHasAgency st where
     TokDone :: NobodyHasAgency 'StDone
@@ -205,8 +171,6 @@ instance Protocol (TraceForward lo) where
 
 instance Show lo
       => Show (Message (TraceForward lo) from to) where
-  show MsgNodeInfoRequest{}     = "MsgNodeInfoRequest"
-  show MsgNodeInfoReply{}       = "MsgNodeInfoReply"
   show MsgTraceObjectsRequest{} = "MsgTraceObjectsRequest"
   show MsgTraceObjectsReply{}   = "MsgTraceObjectsReply"
   show MsgDone{}                = "MsgDone"
@@ -215,5 +179,4 @@ instance Show (ClientHasAgency (st :: TraceForward lo)) where
   show TokIdle = "TokIdle"
 
 instance Show (ServerHasAgency (st :: TraceForward lo)) where
-  show TokNodeInfoBusy = "TokNodeInfoBusy"
-  show TokBusy{}       = "TokBusy"
+  show TokBusy{} = "TokBusy"

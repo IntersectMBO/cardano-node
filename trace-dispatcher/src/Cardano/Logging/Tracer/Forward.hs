@@ -48,7 +48,6 @@ import qualified System.Metrics.Configuration as EKGF
 import           System.Metrics.Network.Forwarder (forwardEKGMetricsResp)
 import qualified Trace.Forward.Configuration as TF
 import           Trace.Forward.Network.Forwarder (forwardTraceObjectsResp)
-import           Trace.Forward.Protocol.Type (NodeInfo (..))
 import           Trace.Forward.Utils
 
 import           Cardano.Logging.DocuGenerator
@@ -60,9 +59,8 @@ import           Cardano.Logging.Utils(uncurry3)
 forwardTracer :: forall m. (MonadIO m)
   => IOManager
   -> TraceConfig
-  -> NodeInfo
   -> m (Trace m FormattedMessage)
-forwardTracer iomgr config nodeInfo = liftIO $ do
+forwardTracer iomgr config = liftIO $ do
   forwardSink <- initForwardSink tfConfig
   store <- EKG.newStore
   EKG.registerGcMetrics store
@@ -99,7 +97,6 @@ forwardTracer iomgr config nodeInfo = liftIO $ do
     TF.ForwarderConfiguration
       { TF.forwarderTracer       = contramap show stdoutTracer
       , TF.acceptorEndpoint      = TF.LocalPipe p
-      , TF.getNodeInfo           = pure nodeInfo
       , TF.disconnectedQueueSize = 200000
       , TF.connectedQueueSize    = 2000
       }

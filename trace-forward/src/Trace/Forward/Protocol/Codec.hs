@@ -15,8 +15,9 @@ import           Control.Monad.Class.MonadST (MonadST)
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.List.NonEmpty as NE
 import           Text.Printf (printf)
-import           Network.TypedProtocol.Codec (Codec, PeerHasAgency (..), PeerRole (..),
-                    SomeMessage (..))
+
+import           Network.TypedProtocol.Codec (Codec, PeerHasAgency (..),
+                                              PeerRole (..), SomeMessage (..))
 import           Network.TypedProtocol.Codec.CBOR (mkCodecCborLazyBS)
 
 import           Trace.Forward.Protocol.Type
@@ -26,14 +27,11 @@ codecTraceForward
      MonadST m
   => (NumberOfTraceObjects -> CBOR.Encoding)          -- ^ Encoder for 'Request'.
   -> (forall s . CBOR.Decoder s NumberOfTraceObjects) -- ^ Decoder for 'Request'.
-  -> (NodeInfo -> CBOR.Encoding)                      -- ^ Encoder for reply with node's info.
-  -> (forall s . CBOR.Decoder s NodeInfo)             -- ^ Decoder for reply with node's info.
   -> ([lo] -> CBOR.Encoding)                          -- ^ Encoder for reply with list of 'TraceObject's.
   -> (forall s . CBOR.Decoder s [lo])                 -- ^ Decoder for reply with list of 'TraceObject's.
   -> Codec (TraceForward lo)
            DeserialiseFailure m LBS.ByteString
 codecTraceForward encodeRequest   decodeRequest
-                  encodeNIReply   decodeNIReply
                   encodeReplyList decodeReplyList =
   mkCodecCborLazyBS encode decode
  where
@@ -46,10 +44,6 @@ codecTraceForward encodeRequest   decodeRequest
     -> Message (TraceForward lo) st st'
     -> CBOR.Encoding
 
-  encode (ClientAgency TokIdle) MsgNodeInfoRequest =
-         CBOR.encodeListLen 1
-      <> CBOR.encodeWord 0
-
   encode (ClientAgency TokIdle) (MsgTraceObjectsRequest blocking request) =
          CBOR.encodeListLen 3
       <> CBOR.encodeWord 1
@@ -61,11 +55,6 @@ codecTraceForward encodeRequest   decodeRequest
   encode (ClientAgency TokIdle) MsgDone =
          CBOR.encodeListLen 1
       <> CBOR.encodeWord 2
-
-  encode (ServerAgency TokNodeInfoBusy) (MsgNodeInfoReply reply) =
-         CBOR.encodeListLen 2
-      <> CBOR.encodeWord 3
-      <> encodeNIReply reply
 
   encode (ServerAgency (TokBusy _)) (MsgTraceObjectsReply reply) =
          CBOR.encodeListLen 2
@@ -87,9 +76,6 @@ codecTraceForward encodeRequest   decodeRequest
     len <- CBOR.decodeListLen
     key <- CBOR.decodeWord
     case (key, len, stok) of
-      (0, 1, ClientAgency TokIdle) ->
-        return $ SomeMessage MsgNodeInfoRequest
-
       (1, 3, ClientAgency TokIdle) -> do
         blocking <- CBOR.decodeBool
         request <- decodeRequest
@@ -101,9 +87,6 @@ codecTraceForward encodeRequest   decodeRequest
 
       (2, 1, ClientAgency TokIdle) ->
         return $ SomeMessage MsgDone
-
-      (3, 2, ServerAgency TokNodeInfoBusy) ->
-        SomeMessage . MsgNodeInfoReply <$> decodeNIReply
 
       (4, 2, ServerAgency (TokBusy blocking)) -> do
         replyList <- decodeReplyList
@@ -119,8 +102,6 @@ codecTraceForward encodeRequest   decodeRequest
 
       -- Failures per protocol state
       (_, _, ClientAgency TokIdle) ->
-        fail (printf "codecTraceForward (%s) unexpected key (%d, %d)" (show stok) key len)
-      (_, _, ServerAgency TokNodeInfoBusy) ->
         fail (printf "codecTraceForward (%s) unexpected key (%d, %d)" (show stok) key len)
       (_, _, ServerAgency (TokBusy TokBlocking)) ->
         fail (printf "codecTraceForward (%s) unexpected key (%d, %d)" (show stok) key len)

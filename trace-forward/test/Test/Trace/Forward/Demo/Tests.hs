@@ -17,8 +17,6 @@ import qualified Data.Text as T
 #else
 import           System.FilePath ((</>))
 #endif
-import           Data.Time.Calendar (fromGregorian)
-import           Data.Time.Clock (UTCTime (..))
 import           Test.Tasty
 import           Test.Tasty.QuickCheck
 import           System.Time.Extra (sleep)
@@ -28,7 +26,6 @@ import           Ouroboros.Network.IOManager (withIOManager)
 import           Trace.Forward.Acceptor
 import           Trace.Forward.Configuration
 import           Trace.Forward.Forwarder
-import           Trace.Forward.Protocol.Type
 import           Trace.Forward.Utils
 
 import           Test.Trace.Forward.Demo.Configs
@@ -46,7 +43,7 @@ prop_RemoteSocket n = ioProperty . withIOManager $ \iomgr -> do
 
   acceptedItems :: IORef [TraceItem] <- newIORef []
   weAreDone <- newTVarIO False
-  let forwarderConfig = mkForwarderConfig ep (return nodeInfo) (fromIntegral n) (fromIntegral n)
+  let forwarderConfig = mkForwarderConfig ep (fromIntegral n) (fromIntegral n)
   sink <- initForwardSink forwarderConfig
 
   itemsToForward <- generateNTraceItems n
@@ -54,8 +51,7 @@ prop_RemoteSocket n = ioProperty . withIOManager $ \iomgr -> do
   withAsync (runTraceAcceptor
                iomgr
                (mkAcceptorConfig ep weAreDone)
-               (traceItemsHandler acceptedItems)
-               nodeInfoHandler) $ \_ -> do
+               (traceItemsHandler acceptedItems)) $ \_ -> do
     sleep 0.5
     withAsync (runTraceForwarder iomgr forwarderConfig sink) $ \_ -> do
       mapM_ (writeToSink sink) itemsToForward
@@ -70,9 +66,6 @@ traceItemsHandler :: IORef [TraceItem] -> [TraceItem] -> IO ()
 traceItemsHandler acceptedItems' items = do
   atomicModifyIORef' acceptedItems' $ \storedItems -> (storedItems ++ items, ())
 
-nodeInfoHandler :: NodeInfo -> IO ()
-nodeInfoHandler _ni = return ()
-
 generateNTraceItems :: Int -> IO [TraceItem]
 generateNTraceItems n = generate (infiniteListOf arbitrary) <&> take n
 
@@ -82,16 +75,6 @@ waitForFinish acceptedItems' n weAreDone' = do
   if length items' < n
     then sleep 0.001 >> waitForFinish acceptedItems' n weAreDone'
     else atomically $ writeTVar weAreDone' True
-
-nodeInfo :: NodeInfo
-nodeInfo = NodeInfo
-  { niName            = "core-3"
-  , niProtocol        = "Shelley"
-  , niVersion         = "1.28.0"
-  , niCommit          = "cffa06c"
-  , niStartTime       = UTCTime (fromGregorian 2021 7 24) ((22 * 3600) + (15 * 60) +  1)
-  , niSystemStartTime = UTCTime (fromGregorian 2017 9 24) (( 1 * 3600) + (44 * 60) + 51)
-  }
 
 mkLocalPipePath :: IO FilePath
 mkLocalPipePath = do

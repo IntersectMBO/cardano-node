@@ -54,8 +54,6 @@ library
                        , ouroboros-network-framework
                        , serialise
                        , stm
-                       , text
-                       , time
                        , typed-protocols
                        , typed-protocols-cborg
 

@@ -35,8 +35,6 @@ data ForwarderConfiguration lo = ForwarderConfiguration
     forwarderTracer :: !(Tracer IO (TraceSendRecv (TraceForward lo)))
     -- | The endpoint that will be used to connect to the acceptor.
   , acceptorEndpoint :: !HowToConnect
-    -- | An action that returns node's information.
-  , getNodeInfo :: !(IO NodeInfo)
     -- | The big size of internal queue for tracing items. We use it in
     --   the beginning of the session, to avoid queue overflow, because
     --   initially there is no connection with acceptor yet, and the

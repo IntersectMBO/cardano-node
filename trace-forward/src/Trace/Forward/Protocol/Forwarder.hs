@@ -15,12 +15,8 @@ import           Network.TypedProtocol.Core (Peer (..), PeerHasAgency (..),
 import           Trace.Forward.Protocol.Type
 
 data TraceForwarder lo m a = TraceForwarder
-  { -- | The acceptor sent us a request for node's info.
-    recvMsgNodeInfoRequest
-      :: m (NodeInfo, TraceForwarder lo m a)
-
-    -- | The acceptor sent us a request for new 'TraceObject's.
-  , recvMsgTraceObjectsRequest
+  { -- | The acceptor sent us a request for new 'TraceObject's.
+    recvMsgTraceObjectsRequest
       :: forall blocking.
          TokBlockingStyle blocking
       -> NumberOfTraceObjects
@@ -37,19 +33,10 @@ traceForwarderPeer
   :: Monad m
   => TraceForwarder lo m a
   -> Peer (TraceForward lo) 'AsServer 'StIdle m a
-traceForwarderPeer TraceForwarder{recvMsgNodeInfoRequest, recvMsgTraceObjectsRequest, recvMsgDone} =
+traceForwarderPeer TraceForwarder{recvMsgTraceObjectsRequest, recvMsgDone} =
   -- In the 'StIdle' state the forwarder is awaiting a request message
   -- from the acceptor.
   Await (ClientAgency TokIdle) $ \case
-    -- The acceptor sent us a request for node's info, so now we're
-    -- in the 'StBusy' state which means it's the forwarder's turn to send
-    -- a reply.
-    MsgNodeInfoRequest -> Effect $ do
-      (reply, next) <- recvMsgNodeInfoRequest
-      return $ Yield (ServerAgency TokNodeInfoBusy)
-                     (MsgNodeInfoReply reply)
-                     (traceForwarderPeer next)
-
     -- The acceptor sent us a request for new 'TraceObject's, so now we're
     -- in the 'StBusy' state which means it's the forwarder's turn to send
     -- a reply.
