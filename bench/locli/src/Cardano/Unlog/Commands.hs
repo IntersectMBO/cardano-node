@@ -11,6 +11,9 @@ import           Data.Text (Text)
 import           Options.Applicative
 import qualified Options.Applicative as Opt
 
+import           Ouroboros.Network.Block (SlotNo(..))
+
+import           Cardano.Analysis.Profile
 import           Cardano.Unlog.LogObject hiding (Text)
 
 --
@@ -25,9 +28,12 @@ data AnalysisCommand
       JsonRunMetafile
       [JsonLogfile]
       MachineTimelineOutputFiles
+      (Maybe SlotNo)
+      (Maybe SlotNo)
   | BlockPropagationCmd
       JsonGenesisFile
       JsonRunMetafile
+      [BlockCond]
       [JsonLogfile]
       BlockPropagationOutputFiles
   | SubstringKeysCmd
@@ -106,6 +112,15 @@ parseBlockPropagationOutputFiles =
         (argJsonOutputFile "analysis-json"
            "Write analysis JSON to this file, if specified -- otherwise print to stdout.")
 
+pSlotNo :: String -> String -> Parser SlotNo
+pSlotNo name desc =
+  SlotNo <$>
+    Opt.option Opt.auto
+     (  Opt.long name
+     <> Opt.metavar "SLOT"
+     <> Opt.help desc
+     )
+
 parseAnalysisCommands :: Parser AnalysisCommand
 parseAnalysisCommands =
   Opt.subparser $
@@ -117,7 +132,9 @@ parseAnalysisCommands =
                        <*> argJsonRunMetafile "run-metafile"
                               "The meta.json file from the benchmark run"
                        <*> some argJsonLogfile
-                       <*> parseMachineTimelineOutputFiles) $
+                       <*> parseMachineTimelineOutputFiles
+                       <*> optional (pSlotNo "since-slot" "Ignore data before given slot number")
+                       <*> optional (pSlotNo "until-slot" "Ignore data after given slot number")) $
             Opt.progDesc "Analyse leadership checks")
       , Opt.command "block-propagation"
           (Opt.info (BlockPropagationCmd
@@ -125,6 +142,7 @@ parseAnalysisCommands =
                               "Genesis file of the run"
                        <*> argJsonRunMetafile "run-metafile"
                               "The meta.json file from the benchmark run"
+                       <*> many argBlockCond
                        <*> some argJsonLogfile
                        <*> parseBlockPropagationOutputFiles) $
             Opt.progDesc "Analyse leadership checks")
@@ -136,6 +154,30 @@ parseAnalysisCommands =
 --
 -- Analysis CLI flag/option data types
 --
+
+argBlockCond :: Parser BlockCond
+argBlockCond =
+  flag' BCUnitaryChainDelta
+    (   long "blocks-unitary-chain-delta"
+    <>  help "Only consider blocks events which extend the chain by 1 block.")
+  <|>
+  fmap BCBlockFullnessAbove
+    (option auto
+     $  long "block-fullness-above"
+     <> metavar "FRAC"
+     <> help "Only consider events with blocks fuller than FRAC.")
+  <|>
+  fmap BCSinceSlot
+    (option (fmap SlotNo auto)
+     $  long "since-slot"
+     <> metavar "SLOT"
+     <> help "Only consider blocks since SLOT.")
+  <|>
+  fmap BCUntilSlot
+    (option (fmap SlotNo auto)
+     $  long "until-slot"
+     <> metavar "SLOT"
+     <> help "Only consider blocks until SLOT.")
 
 argJsonGenesisFile :: String -> String -> Parser JsonGenesisFile
 argJsonGenesisFile optname desc =
