@@ -46,17 +46,17 @@ def era_defaults($era):
     , max_block_size:                 64000
     , max_tx_size:                    16384
 
-    ## Verbatim:
-    , verbatim:
+    ## Verbatim overlay, for all era-specific genesis slices:
+    , shelley:
       { protocolParams:
-        { poolDeposit: 500000000
-        , keyDeposit: 400000
-        , rho: 0.0022
-        , tau: 0.05
-        , a0: 0.3
-        , minFeeA: 0
-        , minFeeB: 0
-        , decentralisationParam: 0
+        { poolDeposit:                500000000
+        , keyDeposit:                 400000
+        , rho:                        0.0022
+        , tau:                        0.05
+        , a0:                         0.3
+        , minFeeA:                    0
+        , minFeeB:                    0
+        , decentralisationParam:      0
         }
       }
     }
@@ -72,7 +72,7 @@ def era_defaults($era):
     }
 
   , node:
-    {
+    { rts_flags_override:             []
     }
 
   , tolerances:

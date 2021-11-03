@@ -11,26 +11,36 @@ def profile_name($p):
   era_defaults($p.era).genesis     as     $genesis_defaults
 | era_defaults($p.era).generator   as   $generator_defaults
 | era_defaults($p.era).composition as $composition_defaults
+| era_defaults($p.era).node        as        $node_defaults
   ## Genesis
 | [ "k\($p.composition.n_pools)" ]
   + if $p.composition.n_dense_hosts > 0
     then may_attr("dense_pool_density";
                   $p.composition; $composition_defaults; 1; "ppn")
     else [] end
-  + [ ($p.generator.epochs              | tostring) + "ep"
-    , ($p.genesis.utxo       | . / 1000 | tostring) + "kU"
-    , ($p.genesis.delegators | . / 1000 | tostring) + "kD"
+  + [ ($p.generator.epochs                  | tostring) + "ep"
+    , ($p.generator.tx_count     | . / 1000 | tostring) + "kTx"
+    , ($p.genesis.utxo           | . / 1000 | tostring) + "kU"
+    , ($p.genesis.delegators     | . / 1000 | tostring) + "kD"
+    , ($p.genesis.max_block_size | . / 1000 | tostring) + "kbs"
     ]
   + may_attr("tps";
              $p.generator; $generator_defaults; 1; "tps")
-  + may_attr("max_block_size";
-             $p.genesis;     $genesis_defaults; 1000; "kb")
   + may_attr("add_tx_size";
              $p.generator; $generator_defaults; 1; "b")
   + may_attr("inputs_per_tx";
              $p.generator; $generator_defaults; 1; "i")
   + may_attr("outputs_per_tx";
              $p.generator; $generator_defaults; 1; "o")
+  + if $p.generator.scriptMode
+    then if $p.generator.plutusMode
+         then [ ($p.generator.plutusScript | rtrimstr(".plutus"))
+              , ($p.generator.plutusData | tostring)
+              ]
+         else ["scr"] end
+    else ["cli"] end
+  + if $p.node.rts_flags_override == [] then []
+    else ["RTS", ($p.node.rts_flags_override | join(""))] end
   + if $p.composition.with_proxy
     then ["prox"]
     else [] end
@@ -51,10 +61,18 @@ def add_derived_params:
 | .genesis                                   as $gsis
 | .generator                                 as $gtor
 | .tolerances                                as $tolr
+| .era                                       as $era
+
+## Absolute durations:
 | ($gsis.epoch_length * $gsis.slot_duration) as $epoch_duration
 | ($epoch_duration * $gtor.epochs)           as $duration
+
+## Tx count for inferred absolute duration.
+##   Note that this the workload would take longer, if we saturate the cluster.
 | ($gtor.tx_count // ($duration * $gtor.tps))
                                              as $tx_count
+
+## Effective cluster composition:
 | (if $compo.dense_pool_density > 1
    then { singular:  $compo.n_singular_hosts
         , dense:     $compo.n_dense_hosts }
@@ -83,21 +101,21 @@ def add_derived_params:
          , delegators:            ($gsis.delegators // $n_pools)
          , pool_coin:             (if $n_pools == 0 then 0
                                    else $gsis.pools_balance / $n_pools | floor end)
-         , verbatim:
-           ## TODO: duplication
-           { protocolParams:
-             { activeSlotsCoeff:           $gsis.active_slots_coeff
-             , epochLength:                $gsis.epoch_length
-             , securityParam:              $gsis.parameter_k
-             , slotLength:                 $gsis.slot_duration
-             , maxTxSize:                  $gsis.max_tx_size
-             , protocolParams:
-               { "decentralisationParam":  $gsis.decentralisation_param
-               , "maxBlockBodySize":       $gsis.max_block_size
-               , "nOpt":                   $compo.n_pools
-               }
-             }
-           }
+         , shelley:
+           ({ protocolParams:
+              { activeSlotsCoeff:           $gsis.active_slots_coeff
+              , epochLength:                $gsis.epoch_length
+              , securityParam:              $gsis.parameter_k
+              , slotLength:                 $gsis.slot_duration
+              , maxTxSize:                  $gsis.max_tx_size
+              , protocolParams:
+                { "decentralisationParam":  $gsis.decentralisation_param
+                , "maxBlockBodySize":       $gsis.max_block_size
+                , "nOpt":                   $compo.n_pools
+                }
+              }
+            } * ($gsis.shelley // {}))
+         # , alonzo: supposed to already be filled
          }
      , generator:
          { tx_count:              $tx_count
@@ -109,10 +127,12 @@ def add_derived_params:
          { minimum_chain_density: ($gsis.active_slots_coeff * 0.5)
          }
      }
-   } | . *
+   }
+   | . *
    ## Second derivation:
    { common:
      { genesis:
+       ## Depends on computed delegators:
        { delegator_coin:   (if .common.genesis.delegators == 0 then 0
                             else $gsis.pools_balance / .common.genesis.delegators
                                  | floor

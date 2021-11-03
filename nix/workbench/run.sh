@@ -319,8 +319,9 @@ EOF
         )
         genesis prepare "${genesis_args[@]}"
 
-        ## Record genesis.
-        cp "$dir"/genesis/genesis.json "$dir"/genesis.json
+        ## Record geneses
+        cp "$dir"/genesis/genesis-shelley.json "$dir"/genesis-shelley.json
+        cp "$dir"/genesis/genesis-alonzo.json  "$dir"/genesis-alonzo.json
 
         ## Execute the scenario
         local scenario=${scenario_override:-$(jq -r .scenario "$dir"/profile.json)}

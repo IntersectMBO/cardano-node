@@ -79,7 +79,7 @@ case "$op" in
 
         msg "analysing.."
         locli_args+=(
-            --genesis         "$dir"/genesis.json
+            --genesis         "$dir"/genesis-shelley.json
             --run-metafile    "$dir"/meta.json
             ## ->
             --blocks-unitary-chain-delta
@@ -166,7 +166,7 @@ case "$op" in
 
            msg "analysing logs of:  $mach  (lines: $(wc -l "$consolidated"))"
            locli_args+=(
-               --genesis         "$dir"/genesis.json
+               --genesis         "$dir"/genesis-shelley.json
                --run-metafile    "$dir"/meta.json
                ## ->
                --timeline-pretty "$adir"/logs-$mach.timeline.txt

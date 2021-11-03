@@ -55,8 +55,8 @@ let
       finaliseNodeConfig =
         { port, ... }: cfg: recursiveUpdate cfg
           ({
-            AlonzoGenesisFile    = "../genesis/alonzo-genesis.json";
-            ShelleyGenesisFile   = "../genesis.json";
+            AlonzoGenesisFile    = "../genesis-alonzo.json";
+            ShelleyGenesisFile   = "../genesis-shelley.json";
             ByronGenesisFile     = "../genesis/byron/genesis.json";
           } // optionalAttrs enableEKG {
             hasEKG               = port + supervisord.portShiftEkg;
@@ -79,8 +79,8 @@ let
       finaliseGeneratorConfig =
         cfg: recursiveUpdate cfg
           ({
-            AlonzoGenesisFile    = "../genesis/alonzo-genesis.json";
-            ShelleyGenesisFile   = "../genesis.json";
+            AlonzoGenesisFile    = "../genesis-alonzo.json";
+            ShelleyGenesisFile   = "../genesis-shelley.json";
             ByronGenesisFile     = "../genesis/byron/genesis.json";
           });
 
