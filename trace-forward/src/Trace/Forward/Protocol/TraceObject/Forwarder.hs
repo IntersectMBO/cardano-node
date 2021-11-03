@@ -4,23 +4,23 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE NamedFieldPuns #-}
 
-module Trace.Forward.Protocol.Forwarder
-  ( TraceForwarder (..)
-  , traceForwarderPeer
+module Trace.Forward.Protocol.TraceObject.Forwarder
+  ( TraceObjectForwarder (..)
+  , traceObjectForwarderPeer
   ) where
 
 import           Network.TypedProtocol.Core (Peer (..), PeerHasAgency (..),
                                              PeerRole (..))
 
-import           Trace.Forward.Protocol.Type
+import           Trace.Forward.Protocol.TraceObject.Type
 
-data TraceForwarder lo m a = TraceForwarder
+data TraceObjectForwarder lo m a = TraceObjectForwarder
   { -- | The acceptor sent us a request for new 'TraceObject's.
     recvMsgTraceObjectsRequest
       :: forall blocking.
          TokBlockingStyle blocking
       -> NumberOfTraceObjects
-      -> m (BlockingReplyList blocking lo, TraceForwarder lo m a)
+      -> m (BlockingReplyList blocking lo, TraceObjectForwarder lo m a)
 
     -- | The acceptor terminated. Here we have a pure return value, but we
     -- could have done another action in 'm' if we wanted to.
@@ -29,11 +29,11 @@ data TraceForwarder lo m a = TraceForwarder
 
 -- | Interpret a particular action sequence into the server side of the protocol.
 --
-traceForwarderPeer
+traceObjectForwarderPeer
   :: Monad m
-  => TraceForwarder lo m a
-  -> Peer (TraceForward lo) 'AsServer 'StIdle m a
-traceForwarderPeer TraceForwarder{recvMsgTraceObjectsRequest, recvMsgDone} =
+  => TraceObjectForwarder lo m a
+  -> Peer (TraceObjectForward lo) 'AsServer 'StIdle m a
+traceObjectForwarderPeer TraceObjectForwarder{recvMsgTraceObjectsRequest, recvMsgDone} =
   -- In the 'StIdle' state the forwarder is awaiting a request message
   -- from the acceptor.
   Await (ClientAgency TokIdle) $ \case
@@ -44,7 +44,7 @@ traceForwarderPeer TraceForwarder{recvMsgTraceObjectsRequest, recvMsgDone} =
       (reply, next) <- recvMsgTraceObjectsRequest blocking request
       return $ Yield (ServerAgency (TokBusy blocking))
                      (MsgTraceObjectsReply reply)
-                     (traceForwarderPeer next)
+                     (traceObjectForwarderPeer next)
 
     -- The acceptor sent the done transition, so we're in the 'StDone' state
     -- so all we can do is stop using 'done', with a return value.

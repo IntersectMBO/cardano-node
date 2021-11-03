@@ -1,15 +1,15 @@
-module Main (main) where
+module Main
+  ( main
+  ) where
 
 import           Test.Tasty
 
-import qualified Test.Trace.Forward.Protocol.Tests as Protocol
-import qualified Test.Trace.Forward.Demo.Tests as Demo
+import qualified Test.Trace.Forward.Protocol.DataPoint.Tests as DataPoint
+import qualified Test.Trace.Forward.Protocol.TraceObject.Tests as TraceObject
 
 main :: IO ()
-main = defaultMain tests
-
-tests :: TestTree
-tests = testGroup "trace-forward"
-  [ Protocol.tests
-  , Demo.tests
-  ]
+main = defaultMain $
+  testGroup "trace-forward"
+    [ DataPoint.tests
+    , TraceObject.tests
+    ]

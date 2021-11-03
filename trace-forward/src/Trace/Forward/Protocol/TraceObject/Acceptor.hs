@@ -9,34 +9,34 @@
 --
 -- For execution, a conversion into the typed protocol is provided.
 --
-module Trace.Forward.Protocol.Acceptor
-  ( TraceAcceptor(..)
-  , traceAcceptorPeer
+module Trace.Forward.Protocol.TraceObject.Acceptor
+  ( TraceObjectAcceptor(..)
+  , traceObjectAcceptorPeer
   ) where
 
 import           Network.TypedProtocol.Core (Peer (..), PeerHasAgency (..),
                                              PeerRole (..))
 
-import           Trace.Forward.Protocol.Type
+import           Trace.Forward.Protocol.TraceObject.Type
 
-data TraceAcceptor lo m a where
+data TraceObjectAcceptor lo m a where
   SendMsgTraceObjectsRequest
     :: TokBlockingStyle blocking
     -> NumberOfTraceObjects
-    -> (BlockingReplyList blocking lo -> m (TraceAcceptor lo m a))
-    -> TraceAcceptor lo m a
+    -> (BlockingReplyList blocking lo -> m (TraceObjectAcceptor lo m a))
+    -> TraceObjectAcceptor lo m a
 
   SendMsgDone
     :: m a
-    -> TraceAcceptor lo m a
+    -> TraceObjectAcceptor lo m a
 
 -- | Interpret a particular action sequence into the client side of the protocol.
 --
-traceAcceptorPeer
+traceObjectAcceptorPeer
   :: Monad m
-  => TraceAcceptor lo m a
-  -> Peer (TraceForward lo) 'AsClient 'StIdle m a
-traceAcceptorPeer = \case
+  => TraceObjectAcceptor lo m a
+  -> Peer (TraceObjectForward lo) 'AsClient 'StIdle m a
+traceObjectAcceptorPeer = \case
   SendMsgTraceObjectsRequest TokBlocking request next ->
     -- Send our message (request for new 'TraceObject's from the forwarder).
     Yield (ClientAgency TokIdle) (MsgTraceObjectsRequest TokBlocking request) $
@@ -44,7 +44,7 @@ traceAcceptorPeer = \case
       -- from the forwarder.
       Await (ServerAgency (TokBusy TokBlocking)) $ \(MsgTraceObjectsReply reply) ->
         Effect $
-          traceAcceptorPeer <$> next reply
+          traceObjectAcceptorPeer <$> next reply
 
   SendMsgTraceObjectsRequest TokNonBlocking request next ->
     -- Send our message (request for new 'TraceObject's from the forwarder).
@@ -54,7 +54,7 @@ traceAcceptorPeer = \case
       -- immediately (even there are no 'TraceObject's).
       Await (ServerAgency (TokBusy TokNonBlocking)) $ \(MsgTraceObjectsReply reply) ->
         Effect $
-          traceAcceptorPeer <$> next reply
+          traceObjectAcceptorPeer <$> next reply
 
   SendMsgDone getResult ->
     -- We do an actual transition using 'yield', to go from the 'StIdle' to
