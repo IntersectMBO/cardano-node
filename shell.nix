@@ -9,7 +9,6 @@ in
 , autoStartCluster ? defaultCustomConfig.localCluster.autoStartCluster
 , autoStartClusterArgs ? ""
 , workbenchDevMode ? defaultCustomConfig.localCluster.workbenchDevMode
-, withR ? false
 , customConfig ? {
     inherit withHoogle;
     localCluster =  {
@@ -63,10 +62,6 @@ let
         workbench = pkgs.callPackage ./nix/workbench { inherit useCabalRun; };
       };
 
-  rstudio = pkgs.rstudioWrapper.override {
-    packages = with pkgs.rPackages; [ car dplyr ggplot2 reshape2 ];
-  };
-
   shell =
     let cluster = mkCluster { useCabalRun = true; };
     in cardanoNodeProject.shellFor {
@@ -106,10 +101,6 @@ let
     ++ lib.optionals (!workbenchDevMode)
     [
       cluster.workbench.workbench
-    ]
-    ++ lib.optionals withR
-    [
-      rstudio
     ]
     ## Local cluster not available on Darwin,
     ## because psmisc fails to build on Big Sur.
