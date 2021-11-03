@@ -231,11 +231,24 @@ let
   processScriptDeclaration =
     name: decl:
     extractServiceScript (decl // { svcName = name; });
+
+  # This provides a development environment that can be used with nix-shell or
+  # lorri. See https://input-output-hk.github.io/haskell.nix/user-guide/development/
+  # NOTE: due to some cabal limitation,
+  #  you have to remove all `source-repository-package` entries from cabal.project
+  #  after entering nix-shell for cabal to use nix provided dependencies for them.
+  mkSupervisordCluster =
+    { useCabalRun, profileName }:
+    pkgs.callPackage ./supervisord-cluster
+      { inherit profileName useCabalRun;
+        workbench = pkgs.callPackage ./workbench { inherit useCabalRun; };
+      };
 in
 {
   inherit
   defServiceModule
   mkScriptOfService
   mkServiceScript
+  mkSupervisordCluster
   ;
 }

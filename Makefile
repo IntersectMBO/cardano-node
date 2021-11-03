@@ -48,7 +48,7 @@ cluster-profiles: ## List available workbench profiles (for PROFILE=)
 	@./nix/workbench/wb profile list
 
 cluster-shell: ## Enter Nix shell and start the workbench cluster
-	nix-shell --max-jobs 8 --cores 0 --show-trace --argstr clusterProfile ${PROFILE} --arg 'autoStartCluster' true
+	nix-shell --max-jobs 8 --cores 0 --show-trace --argstr profileName ${PROFILE} --arg 'autoStartCluster' true
 
 shell-dev:               ARGS += --arg 'workbenchDevMode' true ## Enter Nix shell, dev mode (workbench run from checkout)
 cluster-shell:           ARGS += --arg 'autoStartCluster' true --arg 'workbenchDevMode' true ## Enter Nix shell, and start workbench cluster
@@ -58,7 +58,7 @@ cluster-shell-dev-trace: ARGS += --arg 'autoStartCluster' true --arg 'workbenchD
 shell-dev cluster-shell-dev cluster-shell-trace cluster-shell-dev-trace: shell
 
 shell: ## Enter Nix shell, CI mode (workbench run from Nix store)
-	nix-shell --max-jobs 8 --cores 0 --show-trace --argstr clusterProfile ${PROFILE} ${ARGS}
+	nix-shell --max-jobs 8 --cores 0 --show-trace --argstr profileName ${PROFILE} ${ARGS}
 
 cli node:
 	cabal --ghc-options="+RTS -qn8 -A32M -RTS" build cardano-$@

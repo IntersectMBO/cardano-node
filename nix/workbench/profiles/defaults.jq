@@ -9,8 +9,6 @@ def era_defaults($era):
   ## Choice of a cluster run scenario (wb scenario --help):
   , scenario:                         "default"
 
-  , tracing_backend:                  "iohk-monitoring"  ## or "trace-dispatcher"
-
   ## Cluster topology and composition:
   , composition:
     { locations:                      ["LO"]
@@ -73,6 +71,7 @@ def era_defaults($era):
 
   , node:
     { rts_flags_override:             []
+    , tracing_backend:                "iohk-monitoring"  ## or "trace-dispatcher"
     }
 
   , tolerances:

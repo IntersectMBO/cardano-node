@@ -10,7 +10,7 @@ function workbench-prebuild-executables()
 
     echo -n "workbench:  prebuilding executables (because of useCabalRun): "
     unset NIX_ENFORCE_PURITY
-    for exe in tx-generator cardano-cli cardano-node cardano-topology locli
+    for exe in cardano-cli cardano-node cardano-topology
     do echo -n "$exe "
        cabal -v0 build -- exe:$exe 2>&1 >/dev/null |
            { grep -v 'Temporary modify'; true; } || return 1
@@ -31,11 +31,15 @@ function cardano-topology() {
 }
 
 function locli() {
-  cabal -v0 run exe:locli -- "$@"
+    cabal -v0 build exe:locli
+    set-git-rev \
+        $(git rev-parse HEAD) \
+        $(find ./dist-newstyle/build/ -type f -name locli)
+    cabal -v0 exec      locli -- "$@"
 }
 
 function tx-generator() {
-  cabal -v0 run exe:tx-generator -- "$@"
+    cabal -v0 run exe:tx-generator -- "$@"
 }
 
 export WORKBENCH_CABAL_MODE=t

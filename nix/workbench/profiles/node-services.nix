@@ -129,6 +129,7 @@ let
             TestAlonzoHardForkAtEpoch  = 0;
           };
       }.${profile.value.era};
+    };
     in
     backend.finaliseNodeService nodeSpec
     {
@@ -142,7 +143,7 @@ let
            (if __hasAttr "preset" profile.value
             then readJSONMay (./presets + "/${profile.value.preset}/config.json")
             else nodeConfigBits.era_setup_hardforks //
-                 nodeConfigBits.tracing.${profile.tracing_backend}));
+                 nodeConfigBits.tracing.${profile.value.node.tracing_backend}));
     };
 
   ## Given an env config, evaluate it and produce the node service.

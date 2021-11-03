@@ -49,7 +49,6 @@ usage_extra() {
   Other OPs:
 
     scenario     (s)      Run scenario control
-    reanalyse    (rea)    Re-analyse a cluster run (synonym for analyse --re)
     call ARGS..           Call internal functions with arguments
     mode                  Report mode set by --set-mode
 
@@ -191,7 +190,6 @@ main() {
         ## Internals:
         #
         scenario     | s )        scenario            "$@";;
-        reanalyse    | rea | re ) analyse --reanalyse "$@";;
         backend )                 backend             "$@";;
         call )                                        "$@";;
         mode )                    echo -n      $global_mode;;
