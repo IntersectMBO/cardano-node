@@ -77,7 +77,7 @@ Build a raw transaction:
 
 ```bash
 playground $ cardano-cli transaction build-raw \
-  --mary-era \
+  --alonzo-era \
   --tx-in "$txhash#0" \
   --tx-out "$(cat testnet-user-1-payment.addr)+$remaining" \
   --tx-out "$(cat testnet-user-2-payment.addr)+1000000" \

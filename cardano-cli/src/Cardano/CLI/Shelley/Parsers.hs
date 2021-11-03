@@ -1842,7 +1842,7 @@ pCardanoEra = asum
       )
 
     -- Default for now:
-  , pure (AnyCardanoEra MaryEra)
+  , pure (AnyCardanoEra AlonzoEra)
   ]
 
 pTxIn :: BalanceTxExecUnits
