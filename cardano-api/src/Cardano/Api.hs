@@ -550,6 +550,9 @@ module Cardano.Api (
     QueryUTxOFilter(..),
     UTxO(..),
     queryNodeLocalState,
+    queryNodeLocalStateWithVersion,
+    QueryError(..),
+    MinNodeToClientVersion,
 
     EraHistory(..),
     getProgress,

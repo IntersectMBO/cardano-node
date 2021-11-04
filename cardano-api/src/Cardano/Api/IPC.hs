@@ -55,6 +55,7 @@ module Cardano.Api.IPC (
     QueryInEra(..),
     QueryInShelleyBasedEra(..),
     queryNodeLocalState,
+    queryNodeLocalStateWithVersion,
 
     EraHistory(..),
     getProgress,
@@ -67,7 +68,10 @@ module Cardano.Api.IPC (
     ConsensusMode(..),
     consensusModeOnly,
 
-    NodeToClientVersion(..)
+    NodeToClientVersion(..),
+
+    QueryError(..),
+    MinNodeToClientVersion
   ) where
 
 import           Prelude
@@ -159,6 +163,13 @@ data LocalNodeConnectInfo mode =
        localNodeNetworkId       :: NetworkId,
        localNodeSocketPath      :: FilePath
      }
+
+type MinNodeToClientVersion = NodeToClientVersion
+
+data QueryError
+  = QueryErrorAcquireFailure !Net.Query.AcquireFailure
+  | QueryErrorUnsupportedVersion !MinNodeToClientVersion !NodeToClientVersion
+  deriving (Eq, Show)
 
 localConsensusMode :: LocalNodeConnectInfo mode -> ConsensusMode mode
 localConsensusMode LocalNodeConnectInfo {localConsensusModeParams} =
@@ -479,40 +490,53 @@ queryNodeLocalState :: forall mode result.
                        LocalNodeConnectInfo mode
                     -> Maybe ChainPoint
                     -> QueryInMode mode result
-                    -> IO (Either Net.Query.AcquireFailure result)
-queryNodeLocalState connctInfo mpoint query = do
+                    -> IO (Either QueryError result)
+queryNodeLocalState = queryNodeLocalStateWithVersion NodeToClientV_1
+
+queryNodeLocalStateWithVersion :: forall mode result.
+                                  NodeToClientVersion
+                                -> LocalNodeConnectInfo mode
+                                -> Maybe ChainPoint
+                                -> QueryInMode mode result
+                                -> IO (Either QueryError result)
+queryNodeLocalStateWithVersion minNtcVersion connctInfo mpoint query = do
     resultVar <- newEmptyTMVarIO
     connectToLocalNodeWithVersion
       connctInfo
-      ( \_ntcVersion -> LocalNodeClientProtocols
+      ( \ntcVersion -> LocalNodeClientProtocols
         { localChainSyncClient    = NoLocalChainSyncClient
-        , localStateQueryClient   = Just (singleQuery mpoint resultVar)
+        , localStateQueryClient   = Just (singleQuery ntcVersion mpoint resultVar)
         , localTxSubmissionClient = Nothing
         }
       )
     atomically (takeTMVar resultVar)
   where
     singleQuery
-      :: Maybe ChainPoint
-      -> TMVar (Either Net.Query.AcquireFailure result)
+      :: NodeToClientVersion
+      -> Maybe ChainPoint
+      -> TMVar (Either QueryError result)
       -> Net.Query.LocalStateQueryClient (BlockInMode mode) ChainPoint
                                          (QueryInMode mode) IO ()
-    singleQuery mPointVar' resultVar' =
-      LocalStateQueryClient $ do
-      pure $
-        Net.Query.SendMsgAcquire mPointVar' $
-        Net.Query.ClientStAcquiring
-          { Net.Query.recvMsgAcquired =
-              pure $ Net.Query.SendMsgQuery query $
-                Net.Query.ClientStQuerying
-                  { Net.Query.recvMsgResult = \result -> do
-                    atomically $ putTMVar resultVar' (Right result)
+    singleQuery ntcVersion mPointVar' resultVar' =
+      LocalStateQueryClient . pure $ do
+        Net.Query.SendMsgAcquire mPointVar' $ Net.Query.ClientStAcquiring
+          { Net.Query.recvMsgAcquired = do
+              if ntcVersion >= minNtcVersion
+                then
+                  pure $ Net.Query.SendMsgQuery query $
+                    Net.Query.ClientStQuerying
+                      { Net.Query.recvMsgResult = \result -> do
+                        atomically $ putTMVar resultVar' (Right result)
 
-                    pure $ Net.Query.SendMsgRelease $
-                      pure $ Net.Query.SendMsgDone ()
-                  }
+                        pure $ Net.Query.SendMsgRelease $
+                          pure $ Net.Query.SendMsgDone ()
+                      }
+                else do
+                  atomically $ putTMVar resultVar' (Left (QueryErrorUnsupportedVersion minNtcVersion ntcVersion))
+                  pure $ Net.Query.SendMsgRelease $
+                    pure $ Net.Query.SendMsgDone ()
           , Net.Query.recvMsgFailure = \failure -> do
-              atomically $ putTMVar resultVar' (Left failure)
+              atomically $ putTMVar resultVar' (Left (QueryErrorAcquireFailure failure))
               pure $ Net.Query.SendMsgDone ()
           }
 
@@ -524,7 +548,7 @@ submitTxToNodeLocal connctInfo tx = do
     resultVar <- newEmptyTMVarIO
     connectToLocalNodeWithVersion
       connctInfo
-      ( \_ntcVersion -> LocalNodeClientProtocols
+      ( const LocalNodeClientProtocols
         { localChainSyncClient    = NoLocalChainSyncClient
         , localTxSubmissionClient = Just (localTxSubmissionClientSingle resultVar)
         , localStateQueryClient   = Nothing
@@ -553,7 +577,7 @@ getLocalChainTip localNodeConInfo = do
     resultVar <- newEmptyTMVarIO
     connectToLocalNodeWithVersion
       localNodeConInfo
-      ( \_ntcVersion -> LocalNodeClientProtocols
+      ( const LocalNodeClientProtocols
         { localChainSyncClient = LocalChainSyncClient $ chainSyncGetCurrentTip resultVar
         , localTxSubmissionClient = Nothing
         , localStateQueryClient = Nothing

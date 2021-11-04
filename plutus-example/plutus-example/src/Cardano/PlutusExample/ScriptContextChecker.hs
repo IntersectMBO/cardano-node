@@ -353,8 +353,10 @@ readCustomRedeemerFromTx fp (AnyConsensusModeParams cModeParams) network = do
                 $ executeQuery
                     cEra
                     cModeParams
+                    NodeToClientV_1
                     localNodeConnInfo
                     utxoQinMode
+
       hoistEither $ txToCustomRedeemer sbe pparams
                                        utxo eInfo sStart alonzoTx
     _ -> Prelude.error "Please specify --cardano-mode on cli."

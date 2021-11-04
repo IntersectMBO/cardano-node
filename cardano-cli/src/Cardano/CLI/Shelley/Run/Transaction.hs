@@ -113,6 +113,8 @@ data ShelleyTxCmdError
   | ShelleyTxCmdTxInsDoNotExist ![TxIn]
   | ShelleyTxCmdMinimumUTxOErr !MinimumUTxOError
   | ShelleyTxCmdPParamsErr !ProtocolParametersError
+  | ShelleyTxCmdUnsupportedVersion !MinNodeToClientVersion !NodeToClientVersion
+
   deriving Show
 
 
@@ -243,6 +245,10 @@ renderShelleyTxCmdError err =
       Text.intercalate (Text.singleton '\n') (map renderTxIn txins)
     ShelleyTxCmdMinimumUTxOErr err' -> Text.pack $ displayError err'
     ShelleyTxCmdPParamsErr err' -> Text.pack $ displayError err'
+    ShelleyTxCmdUnsupportedVersion minNtcVersion ntcVersion ->
+      "Unsupported feature for the node-to-client protocol version.\n\
+      \This transaction requires at least " <> show minNtcVersion <> " but the node negotiated " <> show ntcVersion <> ".\n\
+      \Later node versions support later protocol versions (but development protocol versions are not enabled in the node by default)."
 
 renderEra :: AnyCardanoEra -> Text
 renderEra (AnyCardanoEra ByronEra)   = "Byron"
