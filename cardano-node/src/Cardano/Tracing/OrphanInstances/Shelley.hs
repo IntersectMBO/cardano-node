@@ -395,6 +395,9 @@ instance ( ShelleyBasedEra era
   toObject _verb InvalidMetadata =
     mkObject [ "kind" .= String "InvalidMetadata"
              ]
+  toObject _verb (ExtraneousScriptWitnessesUTXOW _) =
+    mkObject [ "kind" .= String "ExtraneousScriptWitnessesUTXOW"
+             ]
 
 instance ( ShelleyBasedEra era
          , ToJSON (Core.Value era)

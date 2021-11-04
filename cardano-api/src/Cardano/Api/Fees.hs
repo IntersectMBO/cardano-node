@@ -496,7 +496,8 @@ evaluateTransactionExecutionUnits _eraInMode systemstart history pparams utxo tx
              systemstart
              (toAlonzoCostModels (protocolParamCostModels pparams))
         of Left  err   -> Left err
-           Right exmap -> Right (fromLedgerScriptExUnitsMap exmap)
+           Right (Left err) -> error $ show err -- TODO: This should be fixed before merging to master
+           Right (Right exmap) -> Right (fromLedgerScriptExUnitsMap exmap)
 
     toLedgerEpochInfo :: EraHistory mode
                       -> EpochInfo (Either TransactionValidityIntervalError)
