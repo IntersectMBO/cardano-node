@@ -1,32 +1,32 @@
-
+{-# LANGUAGE ImportQualifiedPost #-}
 -- | Dispatch for running all the CLI commands
 module Cardano.Unlog.Run
   ( Command(..)
   , CommandErrors
   , renderCommandError
   , runCommand
+  -- * Re-exports
+  , gitRev
+  , 
   ) where
 
-import           Cardano.Prelude
+import Cardano.Prelude
 
-import           Control.Monad.Trans.Except.Extra (firstExceptT)
-import qualified Data.Text as Text
+import Control.Monad.Trans.Except.Extra (firstExceptT)
+import Data.Aeson                 qualified as AE
+import Data.ByteString.Lazy.Char8 qualified as LBS
 
-import           Cardano.Analysis.Driver (AnalysisCmdError, renderAnalysisCmdError,
-                     runAnalysisCommand)
-import           Cardano.Unlog.Commands (AnalysisCommand)
+import Cardano.Analysis.Driver (AnalysisCmdError, renderAnalysisCmdError,
+           runAnalysisCommand)
+import Cardano.Unlog.Commands (AnalysisCommand)
 
-import           Cardano.Config.Git.Rev (gitRev)
-import           Data.Version (showVersion)
-import           Paths_locli (version)
+import Cardano.Analysis.Version
 
 -- | Sub-commands of 'locli'.
 data Command =
 
   -- | Analysis commands
     AnalysisCommand AnalysisCommand
-
-  | DisplayVersion
   deriving Show
 
 data CommandErrors
@@ -34,18 +34,10 @@ data CommandErrors
   deriving Show
 
 runCommand :: Command -> ExceptT CommandErrors IO ()
-runCommand (AnalysisCommand c) = firstExceptT (AnalysisError c) $ runAnalysisCommand c
-runCommand DisplayVersion = runDisplayVersion
+runCommand (AnalysisCommand c) = do
+  liftIO $ LBS.putStrLn $ AE.encode getVersion
+  firstExceptT (AnalysisError c) $ runAnalysisCommand c
 
 renderCommandError :: CommandErrors -> Text
 renderCommandError (AnalysisError cmd err) =
   renderAnalysisCmdError cmd err
-
-runDisplayVersion :: ExceptT CommandErrors IO ()
-runDisplayVersion = do
-    liftIO . putTextLn $ mconcat
-                [ "locli ", renderVersion version
-                , ", git rev ", gitRev
-                ]
-  where
-    renderVersion = Text.pack . showVersion

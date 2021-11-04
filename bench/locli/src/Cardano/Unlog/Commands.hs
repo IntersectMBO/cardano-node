@@ -1,20 +1,20 @@
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 -- | CLI command types
 module Cardano.Unlog.Commands (module Cardano.Unlog.Commands) where
 
-import           Prelude
+import Prelude
 
-import           Data.Text (Text)
+import Data.Text (Text)
 
-import           Options.Applicative
-import qualified Options.Applicative as Opt
+import Options.Applicative
+import Options.Applicative qualified as Opt
 
-import           Ouroboros.Network.Block (SlotNo(..))
+import Ouroboros.Network.Block (SlotNo(..))
 
-import           Cardano.Analysis.Profile
-import           Cardano.Unlog.LogObject hiding (Text)
+import Cardano.Unlog.LogObject hiding (Text)
 
 --
 -- Analysis CLI command data types
@@ -26,17 +26,19 @@ data AnalysisCommand
   = MachineTimelineCmd
       JsonGenesisFile
       JsonRunMetafile
+      [JsonSelectorFile]
       [JsonLogfile]
       MachineTimelineOutputFiles
-      (Maybe SlotNo)
-      (Maybe SlotNo)
   | BlockPropagationCmd
       JsonGenesisFile
       JsonRunMetafile
-      [BlockCond]
+      [JsonSelectorFile]
       [JsonLogfile]
       BlockPropagationOutputFiles
   | SubstringKeysCmd
+  | RunInfoCmd
+      JsonGenesisFile
+      JsonRunMetafile
   deriving (Show)
 
 data MachineTimelineOutputFiles
@@ -67,6 +69,7 @@ renderAnalysisCommand sc =
     MachineTimelineCmd {}  -> "analyse machine-timeline"
     BlockPropagationCmd {} -> "analyse block-propagation"
     SubstringKeysCmd {}    -> "analyse substring-keys"
+    RunInfoCmd {}        -> "print extracted Run information"
 
 parseMachineTimelineOutputFiles :: Parser MachineTimelineOutputFiles
 parseMachineTimelineOutputFiles =
@@ -131,60 +134,45 @@ parseAnalysisCommands =
                               "Genesis file of the run"
                        <*> argJsonRunMetafile "run-metafile"
                               "The meta.json file from the benchmark run"
+                       <*> many
+                             (argJsonBlockSelectors "filter"
+                               "List of block selection criteria, as JSON file")
                        <*> some argJsonLogfile
-                       <*> parseMachineTimelineOutputFiles
-                       <*> optional (pSlotNo "since-slot" "Ignore data before given slot number")
-                       <*> optional (pSlotNo "until-slot" "Ignore data after given slot number")) $
-            Opt.progDesc "Analyse leadership checks")
+                       <*> parseMachineTimelineOutputFiles) $
+            Opt.progDesc "Machine performance timeline")
       , Opt.command "block-propagation"
           (Opt.info (BlockPropagationCmd
                        <$> argJsonGenesisFile "genesis"
                               "Genesis file of the run"
                        <*> argJsonRunMetafile "run-metafile"
                               "The meta.json file from the benchmark run"
-                       <*> many argBlockCond
-                       <*> some argJsonLogfile
+                       <*> many
+                             (argJsonBlockSelectors "filter"
+                               "List of block selection criteria, as JSON file")
+                       <*> many argJsonLogfile
                        <*> parseBlockPropagationOutputFiles) $
-            Opt.progDesc "Analyse leadership checks")
+            Opt.progDesc "Block propagation")
       , Opt.command "substring-keys"
           (Opt.info (pure SubstringKeysCmd) $
+            Opt.progDesc "Dump substrings that narrow logs to relevant subset")
+      , Opt.command "chaininfo"
+          (Opt.info (RunInfoCmd
+                       <$> argJsonGenesisFile "genesis"
+                              "Genesis file of the run"
+                       <*> argJsonRunMetafile "run-metafile"
+                              "The meta.json file from the benchmark run") $
             Opt.progDesc "Dump substrings that narrow logs to relevant subset")
       ]
 
 --
 -- Analysis CLI flag/option data types
 --
-
-argBlockCond :: Parser BlockCond
-argBlockCond =
-  flag' BCUnitaryChainDelta
-    (   long "blocks-unitary-chain-delta"
-    <>  help "Only consider blocks events which extend the chain by 1 block.")
-  <|>
-  fmap BCBlockFullnessAbove
-    (option auto
-     $  long "block-fullness-above"
-     <> metavar "FRAC"
-     <> help "Only consider events with blocks fuller than FRAC.")
-  <|>
-  fmap BCSinceSlot
-    (option (fmap SlotNo auto)
-     $  long "since-slot"
-     <> metavar "SLOT"
-     <> help "Only consider blocks since SLOT.")
-  <|>
-  fmap BCUntilSlot
-    (option (fmap SlotNo auto)
-     $  long "until-slot"
-     <> metavar "SLOT"
-     <> help "Only consider blocks until SLOT.")
-
 argJsonGenesisFile :: String -> String -> Parser JsonGenesisFile
 argJsonGenesisFile optname desc =
   fmap JsonGenesisFile $
     Opt.option Opt.str
       $ long optname
-      <> metavar "JSON-GENESIS-FILE"
+      <> metavar "GENESIS-FILE"
       <> help desc
 
 argJsonRunMetafile :: String -> String -> Parser JsonRunMetafile
@@ -192,13 +180,21 @@ argJsonRunMetafile optname desc =
   fmap JsonRunMetafile $
     Opt.option Opt.str
       $ long optname
-      <> metavar "JSON-RUN-METAFILE"
+      <> metavar "RUN-METAFILE"
+      <> help desc
+
+argJsonBlockSelectors :: String -> String -> Parser JsonSelectorFile
+argJsonBlockSelectors optname desc =
+  fmap JsonSelectorFile $
+    Opt.option Opt.str
+      $ long optname
+      <> metavar "BLOCK-SELECTOR-FILE"
       <> help desc
 
 argJsonLogfile :: Parser JsonLogfile
 argJsonLogfile =
   JsonLogfile <$>
-    Opt.argument Opt.str (Opt.metavar "JSON-LOGFILE")
+    Opt.argument Opt.str (Opt.metavar "LOGFILE")
 
 argJsonOutputFile :: String -> String -> Parser JsonOutputFile
 argJsonOutputFile optname desc =

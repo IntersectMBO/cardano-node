@@ -1,68 +1,39 @@
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StrictData #-}
 {-# OPTIONS_GHC -Wno-incomplete-patterns -Wno-name-shadowing -Wno-orphans #-}
 {- HLINT ignore "Use head" -}
 module Cardano.Analysis.MachTimeline (module Cardano.Analysis.MachTimeline) where
 
-import           Prelude (String, (!!), error)
-import           Cardano.Prelude
+import Prelude (String, (!!), error, head, last)
+import Cardano.Prelude hiding (head)
 
-import           Control.Arrow ((&&&), (***))
-import qualified Data.Aeson as AE
-import           Data.Aeson
-import qualified Data.HashMap.Strict as HashMap
-import           Data.Vector (Vector)
-import qualified Data.Vector as Vec
-import qualified Data.Map.Strict as Map
+import Control.Arrow ((&&&), (***))
+import Data.Vector (Vector)
+import Data.Vector qualified as Vec
+import Data.Map.Strict qualified as Map
 
-import           Data.Time.Clock (NominalDiffTime, UTCTime)
-import qualified Data.Time.Clock as Time
+import Data.Time.Clock (NominalDiffTime, UTCTime)
+import Data.Time.Clock qualified as Time
 
-import           Ouroboros.Network.Block (SlotNo(..))
+import Ouroboros.Network.Block (SlotNo(..))
 
-import           Data.Accum
-import           Data.Distribution
+import Data.Accum
+import Data.Distribution
 
-import           Cardano.Analysis.Profile
-import           Cardano.Unlog.LogObject hiding (Text)
-import           Cardano.Unlog.Render
-import           Cardano.Unlog.Resources
-import           Cardano.Unlog.SlotStats
-
--- | The top-level representation of the machine timeline analysis results.
-data MachTimeline
-  = MachTimeline
-    { sMaxChecks         :: !Word64
-    , sSlotMisses        :: ![Word64]
-    , sSpanLensCPU85     :: ![Int]
-    , sSpanLensCPU85EBnd :: ![Int]
-    , sSpanLensCPU85Rwd  :: ![Int]
-    -- distributions
-    , sMissDistrib       :: !(Distribution Float Float)
-    , sLeadsDistrib      :: !(Distribution Float Word64)
-    , sUtxoDistrib       :: !(Distribution Float Word64)
-    , sDensityDistrib    :: !(Distribution Float Float)
-    , sSpanCheckDistrib  :: !(Distribution Float NominalDiffTime)
-    , sSpanLeadDistrib   :: !(Distribution Float NominalDiffTime)
-    , sBlocklessDistrib  :: !(Distribution Float Word64)
-    , sSpanLensCPU85Distrib
-                         :: !(Distribution Float Int)
-    , sSpanLensCPU85EBndDistrib :: !(Distribution Float Int)
-    , sSpanLensCPU85RwdDistrib  :: !(Distribution Float Int)
-    , sResourceDistribs  :: !(Resources (Distribution Float Word64))
-    }
-  deriving Show
+import Cardano.Analysis.API
+import Cardano.Analysis.Chain
+import Cardano.Analysis.Run
+import Cardano.Analysis.Version
+import Cardano.Unlog.LogObject hiding (Text)
+import Cardano.Unlog.Render
+import Cardano.Unlog.Resources
 
 instance RenderDistributions MachTimeline where
   rdFields _ =
     --  Width LeftPad
     [ Field 4 0 "missR"    "Miss"  "ratio"  $ DFloat   sMissDistrib
-    , Field 6 0 "CheckΔ"   ""      "ChkΔt"  $ DDeltaT  sSpanCheckDistrib
-    , Field 6 0 "LeadΔ"    ""      "LeadΔt" $ DDeltaT  sSpanLeadDistrib
+    , Field 5 0 "CheckΔ"   (d!!0)  "Check"  $ DDeltaT  sSpanCheckDistrib
+    , Field 5 0 "LeadΔ"    (d!!1)  "Lead"   $ DDeltaT  sSpanLeadDistrib
+    , Field 5 0 "ForgeΔ"   (d!!2)  "Forge"  $ DDeltaT  sSpanForgeDistrib
     , Field 4 0 "BlkGap"   "Block" "gap"    $ DWord64  sBlocklessDistrib
     , Field 5 0 "chDensity" "Dens" "ity"    $ DFloat   sDensityDistrib
     , Field 3 0 "CPU"      "CPU"   "%"      $ DWord64 (rCentiCpu . sResourceDistribs)
@@ -78,73 +49,38 @@ instance RenderDistributions MachTimeline where
     , Field 5 0 "CPU85%LensEBnd" (c!!1) "EBnd"  $ DInt     sSpanLensCPU85EBndDistrib
     ]
    where
+     d = nChunksEachOf  3 6 "---- Δt ----"
      m = nChunksEachOf  3 6 "Memory usage, MB"
      c = nChunksEachOf  2 6 "CPU85% spans"
 
-instance ToJSON MachTimeline where
-  toJSON MachTimeline{..} = AE.Array $ Vec.fromList
-    [ AE.Object $ HashMap.fromList
-        [ "kind" .= String "spanLensCPU85EBnd"
-        , "xs" .= toJSON sSpanLensCPU85EBnd]
-    , AE.Object $ HashMap.fromList
-        [ "kind" .= String "spanLensCPU85Rwd"
-        , "xs" .= toJSON sSpanLensCPU85Rwd]
-    , AE.Object $ HashMap.fromList
-        [ "kind" .= String "spanLensCPU85"
-        , "xs" .= toJSON sSpanLensCPU85]
-    , AE.Object $ HashMap.fromList
-        [ "kind" .= String "spanLensCPU85Sorted"
-        , "xs" .= toJSON (sort sSpanLensCPU85)]
-    , extendObject "kind" "spancheck" $ toJSON sSpanCheckDistrib
-    , extendObject "kind" "spanlead"  $ toJSON sSpanLeadDistrib
-    , extendObject "kind" "cpu"       $ toJSON (rCentiCpu sResourceDistribs)
-    , extendObject "kind" "gc"        $ toJSON (rCentiGC  sResourceDistribs)
-    , extendObject "kind" "density"   $ toJSON sDensityDistrib
-    , extendObject "kind" "utxo"      $ toJSON sUtxoDistrib
-    , extendObject "kind" "leads"     $ toJSON sLeadsDistrib
-    , extendObject "kind" "misses"    $ toJSON sMissDistrib
-    , extendObject "kind" "blockless" $ toJSON sBlocklessDistrib
-    , extendObject "kind" "rss"       $ toJSON (rRSS      sResourceDistribs)
-    , extendObject "kind" "heap"      $ toJSON (rHeap     sResourceDistribs)
-    , extendObject "kind" "live"      $ toJSON (rLive     sResourceDistribs)
-    , extendObject "kind" "spanLensCPU85Distrib"  $
-                                        toJSON sSpanLensCPU85Distrib
-    , extendObject "kind" "spanLensCPU85EBndDistrib"  $
-                                        toJSON sSpanLensCPU85EBndDistrib
-    , extendObject "kind" "spanLensCPU85RwdDistrib"  $
-                                        toJSON sSpanLensCPU85RwdDistrib
-    ]
-
-slotStatsMachTimeline :: ChainInfo -> [SlotStats] -> MachTimeline
-slotStatsMachTimeline CInfo{} slots =
+slotStatsMachTimeline :: Run -> [SlotStats] -> MachTimeline
+slotStatsMachTimeline _ slots =
   MachTimeline
-  { sMaxChecks        = maxChecks
-  , sSlotMisses       = misses
-  , sSpanLensCPU85    = spanLensCPU85
-  , sSpanLensCPU85EBnd = sSpanLensCPU85EBnd
-  , sSpanLensCPU85Rwd  = sSpanLensCPU85Rwd
+  { sMaxChecks            = maxChecks
+  , sSlotMisses           = misses
+  , sSpanLensCPU85        = spanLensCPU85
+  , sSpanLensCPU85EBnd    = sSpanLensCPU85EBnd
+  , sSpanLensCPU85Rwd     = sSpanLensCPU85Rwd
+  , sSlotRange            = (,) (slSlot $ head slots)
+                                (slSlot $ last slots)
+  , sVersion              = getVersion
   --
-  , sMissDistrib      = computeDistribution stdPercentiles missRatios
-  , sLeadsDistrib     =
-      computeDistribution stdPercentiles (slCountLeads <$> slots)
-  , sUtxoDistrib      =
-      computeDistribution stdPercentiles (slUtxoSize <$> slots)
-  , sDensityDistrib   =
-      computeDistribution stdPercentiles (slDensity <$> slots)
-  , sSpanCheckDistrib =
-      computeDistribution stdPercentiles (slSpanCheck <$> slots)
-  , sSpanLeadDistrib =
-      computeDistribution stdPercentiles (slSpanLead <$> slots)
-  , sBlocklessDistrib =
-      computeDistribution stdPercentiles (slBlockless <$> slots)
-  , sSpanLensCPU85Distrib
-                      = computeDistribution stdPercentiles spanLensCPU85
-  , sResourceDistribs =
-      computeResDistrib stdPercentiles resDistProjs slots
-  , sSpanLensCPU85EBndDistrib = computeDistribution stdPercentiles sSpanLensCPU85EBnd
-  , sSpanLensCPU85RwdDistrib  = computeDistribution stdPercentiles sSpanLensCPU85Rwd
+  , sMissDistrib          = dist missRatios
+  , sLeadsDistrib         = dist (slCountLeads <$> slots)
+  , sUtxoDistrib          = dist (slUtxoSize <$> slots)
+  , sDensityDistrib       = dist (slDensity <$> slots)
+  , sSpanCheckDistrib     = dist (slSpanCheck <$> slots)
+  , sSpanLeadDistrib      = dist (slSpanLead <$> slots)
+  , sSpanForgeDistrib     = dist (filter (/= 0) $ slSpanForge <$> slots)
+  , sBlocklessDistrib     = dist (slBlockless <$> slots)
+  , sSpanLensCPU85Distrib = dist spanLensCPU85
+  , sSpanLensCPU85EBndDistrib = dist sSpanLensCPU85EBnd
+  , sSpanLensCPU85RwdDistrib  = dist sSpanLensCPU85Rwd
+  , sResourceDistribs         = computeResDistrib stdPercentiles resDistProjs slots
   }
  where
+   dist :: (Real a, ToRealFrac a Float) => [a] -> Distribution Float a
+   dist = computeDistribution stdPercentiles
    sSpanLensCPU85EBnd = Vec.length <$>
                         filter (spanContainsEpochSlot 3) spansCPU85
    sSpanLensCPU85Rwd  = Vec.length <$>
@@ -163,8 +99,8 @@ slotStatsMachTimeline CInfo{} slots =
    spanContainsEpochSlot :: Word64 -> Vector SlotStats -> Bool
    spanContainsEpochSlot s =
      uncurry (&&)
-     . ((s >) . slEpochSlot . Vec.head &&&
-        (s <) . slEpochSlot . Vec.last)
+     . ((s >) . unEpochSlot . slEpochSlot . Vec.head &&&
+        (s <) . unEpochSlot . slEpochSlot . Vec.last)
    spanLen :: Vector SlotStats -> Int
    spanLen = fromIntegral . unSlotNo . uncurry (-) . (slSlot *** slSlot) . (Vec.last &&& Vec.head)
    resDistProjs     =
@@ -199,6 +135,19 @@ data TimelineAccum
   , aTxsCollectedAt:: Map.Map TId UTCTime
   }
 
+forTAHead :: TimelineAccum -> (SlotStats -> SlotStats) -> TimelineAccum
+forTAHead xs@TimelineAccum{aSlotStats=s:ss} f = xs {aSlotStats=f s:ss}
+
+forTANth :: TimelineAccum -> Int -> (SlotStats -> SlotStats) -> TimelineAccum
+forTANth xs@TimelineAccum{aSlotStats=ss} n f =
+  xs { aSlotStats = mapNth f n ss }
+ where
+   mapNth :: (a -> a) -> Int -> [a] -> [a]
+   mapNth f n xs =
+     case splitAt n xs of
+       (pre, x:post) -> pre <> (f x : post)
+       _ -> error $ "mapNth: couldn't go " <> show n <> "-deep into the timeline"
+
 data RunScalars
   = RunScalars
   { rsElapsed       :: Maybe NominalDiffTime
@@ -206,10 +155,10 @@ data RunScalars
   , rsThreadwiseTps :: Maybe (Vector Float)
   }
 
-timelineFromLogObjects :: ChainInfo -> [LogObject] -> (RunScalars, [SlotStats])
-timelineFromLogObjects ci =
+timelineFromLogObjects :: Run -> [LogObject] -> (RunScalars, [SlotStats])
+timelineFromLogObjects run =
   (aRunScalars &&& reverse . aSlotStats)
-  . foldl (timelineStep ci) zeroTimelineAccum
+  . foldl (timelineStep run) zeroTimelineAccum
  where
    zeroTimelineAccum :: TimelineAccum
    zeroTimelineAccum =
@@ -225,96 +174,143 @@ timelineFromLogObjects ci =
      }
    zeroRunScalars :: RunScalars
    zeroRunScalars = RunScalars Nothing Nothing Nothing
+   zeroSlotStats :: SlotStats
+   zeroSlotStats =
+     SlotStats
+     { slSlot = 0
+     , slEpoch = 0
+     , slEpochSlot = 0
+     , slEpochSafeInt = 0
+     , slStart = SlotStart zeroUTCTime
+     , slCountChecks = 0
+     , slCountLeads = 0
+     , slCountForges = 0
+     , slEarliest = zeroUTCTime
+     , slSpanCheck = realToFrac (0 :: Int)
+     , slSpanLead = realToFrac (0 :: Int)
+     , slSpanForge = realToFrac (0 :: Int)
+     , slMempoolTxs = 0
+     , slTxsMemSpan = Nothing
+     , slTxsCollected = 0
+     , slTxsAccepted = 0
+     , slTxsRejected = 0
+     , slUtxoSize = 0
+     , slDensity = 0
+     , slResources = pure Nothing
+     , slChainDBSnap = 0
+     , slRejectedTx = 0
+     , slBlockNo = 0
+     , slBlockless = 0
+     }
 
-timelineStep :: ChainInfo -> TimelineAccum -> LogObject -> TimelineAccum
-timelineStep ci a@TimelineAccum{aSlotStats=cur:rSLs, ..} = \case
-  lo@LogObject{loAt, loBody=LOTraceStartLeadershipCheck slot _ _} ->
-    if slSlot cur > slot
-    -- Slot log entry for a slot we've supposedly done processing.
-    then a { aSlotStats = cur
-             { slOrderViol = slOrderViol cur + 1
-             } : case (slSlot cur - slot, rSLs) of
-                   -- Limited back-patching:
-                   (1, p1:rest)       ->       onLeadershipCheck loAt p1:rest
-                   (2, p1:p2:rest)    ->    p1:onLeadershipCheck loAt p2:rest
-                   (3, p1:p2:p3:rest) -> p1:p2:onLeadershipCheck loAt p3:rest
-                   _ -> rSLs -- Give up.
-           }
-    else if slSlot cur == slot
-    then a { aSlotStats = onLeadershipCheck loAt cur : rSLs
-           }
-    else if slot - slSlot cur > 1
-    then let gap = unSlotNo $ slot - slSlot cur - 1
+timelineStep :: Run -> TimelineAccum -> LogObject -> TimelineAccum
+timelineStep run@Run{genesis} a@TimelineAccum{aSlotStats=cur:_, ..} = \case
+  LogObject{loAt, loBody=LOTraceStartLeadershipCheck slot utxo density} ->
+    if      slot == slSlot cur     -- L-shipCheck for the current slot.
+    then forTAHead a
+         (registerLeadCheck loAt)
+    else if slot - slSlot cur == 1 -- L-shipCheck for the next slot.
+    then forTAHead (addTimelineSlot run slot loAt 0 utxo density a)
+         (registerLeadCheck loAt)
+    else if slot < slSlot cur      -- L-shipCheck for a slot we've gone by already.
+    then forTANth a (fromIntegral . unSlotNo $ slSlot cur - slot)
+                  (registerLeadCheck loAt)
+         -- L-shipCheck for a further-than-immediate future slot
+    else let gap = unSlotNo $ slot - slSlot cur - 1
              gapStartSlot = slSlot cur + 1 in
-         updateOnNewSlot lo $ -- We have a slot check gap to patch:
          patchSlotCheckGap gap gapStartSlot a
-    else updateOnNewSlot lo a
-  LogObject{loAt, loBody=LOTraceNodeIsLeader _} ->
-    a { aSlotStats = onLeadershipCertainty loAt True cur : rSLs
-      }
-  LogObject{loAt, loBody=LOTraceNodeNotLeader _} ->
-    a { aSlotStats = onLeadershipCertainty loAt False cur : rSLs
-      }
+         & addTimelineSlot run slot loAt 1 utxo density
+   where
+     registerLeadCheck :: UTCTime -> SlotStats -> SlotStats
+     registerLeadCheck now sl@SlotStats{..} =
+       sl { slCountChecks = slCountChecks + 1
+          , slSpanCheck = now `sinceSlot` slStart -- XXX: used to "max 0" this
+          }
+
+     patchSlotCheckGap :: Word64 -> SlotNo -> TimelineAccum -> TimelineAccum
+     patchSlotCheckGap 0 _ a' = a'
+     patchSlotCheckGap gapLen slot a'@TimelineAccum{aSlotStats=cur':_} =
+       patchSlotCheckGap (gapLen - 1) (slot + 1) $
+        addTimelineSlot run slot
+          (unSlotStart $ genesis `slotStart` slot)
+          0 (slUtxoSize cur') (slDensity cur') a'
+  LogObject{loAt, loBody=LOTraceLeadershipDecided slot yesNo} ->
+    if slot /= slSlot cur
+    then error $ "LeadDecided for noncurrent slot=" <> show slot <> " cur=" <> show (slSlot cur)
+    else forTAHead a (onLeadershipCertainty loAt yesNo)
+   where
+     onLeadershipCertainty :: UTCTime -> Bool -> SlotStats -> SlotStats
+     onLeadershipCertainty now lead sl@SlotStats{..} =
+       sl { slCountLeads = slCountLeads + if lead then 1 else 0
+          , slSpanLead   = checkToCertainty
+          }
+      where
+        checkAbsTime = slSpanCheck `Time.addUTCTime` unSlotStart slStart
+        checkToCertainty = now `Time.diffUTCTime` checkAbsTime
+  LogObject{loAt, loBody=LOBlockForged _ _ _ slot} ->
+    if slot /= slSlot cur
+    then error $ "BlockForged for noncurrent slot=" <> show slot <> " cur=" <> show (slSlot cur)
+    else forTAHead a (onBlockForge loAt)
+   where
+     onBlockForge :: UTCTime -> SlotStats -> SlotStats
+     onBlockForge now sl@SlotStats{..} =
+       sl { slCountForges = slCountForges + 1
+          , slSpanForge   = certaintyToForge
+          }
+      where
+        certaintyAbsTime = slSpanLead `Time.addUTCTime` (slSpanCheck `Time.addUTCTime` unSlotStart slStart)
+        certaintyToForge = now `Time.diffUTCTime` certaintyAbsTime
   LogObject{loAt, loBody=LOResources rs} ->
     -- Update resource stats accumulators & record values current slot.
-    a { aResAccums = accs
-      , aResTimestamp = loAt
-      , aSlotStats = cur { slResources = Just <$> extractResAccums accs
-                     } : rSLs
-      }
+    (forTAHead a
+      \s-> s { slResources = Just <$> extractResAccums accs })
+    { aResAccums = accs, aResTimestamp = loAt }
    where accs = updateResAccums loAt rs aResAccums
   LogObject{loBody=LOMempoolTxs txCount} ->
-    a { aMempoolTxs     = txCount
-      , aSlotStats      = cur { slMempoolTxs = txCount
-                          } : rSLs
-      }
+    (forTAHead a
+      \s-> s { slMempoolTxs = txCount })
+    { aMempoolTxs     = txCount }
   LogObject{loBody=LOBlockContext blockNo} ->
-    let newBlock = aBlockNo /= blockNo in
-    a { aBlockNo        = blockNo
-      , aLastBlockSlot  = if newBlock
-                          then slSlot cur
-                          else aLastBlockSlot
-      , aSlotStats      = cur { slBlockNo = blockNo
-                              , slBlockless = if newBlock
-                                              then 0
-                                              else slBlockless cur
-                              } : rSLs
-      }
+    (forTAHead a
+      \s-> s { slBlockNo = blockNo
+             , slBlockless = if newBlock then 0 else slBlockless cur
+             })
+    { aBlockNo        = blockNo
+    , aLastBlockSlot  = if newBlock
+                        then slSlot cur
+                        else aLastBlockSlot
+    }
+   where
+     newBlock = aBlockNo /= blockNo
   LogObject{loBody=LOLedgerTookSnapshot} ->
-    a { aSlotStats      = cur { slChainDBSnap = slChainDBSnap cur + 1
-                              } : rSLs
-      }
+    forTAHead a
+      \s-> s { slChainDBSnap = slChainDBSnap cur + 1 }
   LogObject{loBody=LOMempoolRejectedTx} ->
-    a { aSlotStats      = cur { slRejectedTx = slRejectedTx cur + 1
-                              } : rSLs
-      }
+    forTAHead a
+      \s-> s { slRejectedTx = slRejectedTx cur + 1 }
   LogObject{loBody=LOGeneratorSummary _noFails sent elapsed threadwiseTps} ->
-    a { aRunScalars       =
-        aRunScalars
+    a { aRunScalars = aRunScalars
         { rsThreadwiseTps = Just threadwiseTps
         , rsElapsed       = Just elapsed
         , rsSubmitted     = Just sent
         }
       }
   LogObject{loBody=LOTxsCollected coll, loTid, loAt} ->
-    a { aTxsCollectedAt =
-        aTxsCollectedAt &
-        (\case
-            Just{} -> Just loAt
-            --   error $ mconcat
-            --   ["Duplicate LOTxsCollected for tid ", show tid, " at ", show loAt]
-            Nothing -> Just loAt)
-        `Map.alter` loTid
-      , aSlotStats      =
-        cur
-        { slTxsCollected = slTxsCollected cur + max 0 (fromIntegral coll)
-        } : rSLs
-      }
+    (forTAHead a
+      \s-> s { slTxsCollected = slTxsCollected cur + max 0 (fromIntegral coll) })
+    { aTxsCollectedAt =
+      aTxsCollectedAt &
+      (\case
+          Just{} -> Just loAt
+          --   error $ mconcat
+          --   ["Duplicate LOTxsCollected for tid ", show tid, " at ", show loAt]
+          Nothing -> Just loAt)
+      `Map.alter` loTid
+    }
   LogObject{loBody=LOTxsProcessed acc rej, loTid, loAt} ->
-    a { aTxsCollectedAt = loTid `Map.delete` aTxsCollectedAt
-      , aSlotStats      =
-        cur
-        { slTxsMemSpan =
+    (forTAHead a
+      \s@SlotStats{..}-> s
+      { slTxsMemSpan =
           case loTid `Map.lookup` aTxsCollectedAt of
             Nothing ->
               -- error $ mconcat
@@ -322,63 +318,40 @@ timelineStep ci a@TimelineAccum{aSlotStats=cur:rSLs, ..} = \case
               Just $
               1.0
               +
-              fromMaybe 0 (slTxsMemSpan cur)
+              fromMaybe 0 slTxsMemSpan
             Just base ->
               Just $
               (loAt `Time.diffUTCTime` base)
               +
-              fromMaybe 0 (slTxsMemSpan cur)
-        , slTxsAccepted = slTxsAccepted cur + acc
-        , slTxsRejected = slTxsRejected cur + max 0 (fromIntegral rej)
-        } : rSLs
-      }
+              fromMaybe 0 slTxsMemSpan
+      , slTxsAccepted = slTxsAccepted + acc
+      , slTxsRejected = slTxsRejected + max 0 (fromIntegral rej)
+      })
+    { aTxsCollectedAt = loTid `Map.delete` aTxsCollectedAt
+    }
   _ -> a
- where
-   updateOnNewSlot :: LogObject -> TimelineAccum -> TimelineAccum
-   updateOnNewSlot LogObject{loAt, loBody=LOTraceStartLeadershipCheck slot utxo density} a' =
-     extendTimelineAccum ci slot loAt 1 utxo density a'
-   updateOnNewSlot _ _ =
-     error "Internal invariant violated: updateSlot called for a non-LOTraceStartLeadershipCheck LogObject."
-
-   onLeadershipCheck :: UTCTime -> SlotStats -> SlotStats
-   onLeadershipCheck now sl@SlotStats{..} =
-     sl { slCountChecks = slCountChecks + 1
-        , slSpanCheck = max 0 $ now `sinceSlot` slStart
-        }
-
-   onLeadershipCertainty :: UTCTime -> Bool -> SlotStats -> SlotStats
-   onLeadershipCertainty now lead sl@SlotStats{..} =
-     sl { slCountLeads = slCountLeads + if lead then 1 else 0
-        , slSpanLead  = max 0 $ now `Time.diffUTCTime` (slSpanCheck `Time.addUTCTime` unSlotStart slStart)
-        }
-
-   patchSlotCheckGap :: Word64 -> SlotNo -> TimelineAccum -> TimelineAccum
-   patchSlotCheckGap 0 _ a' = a'
-   patchSlotCheckGap n slot a'@TimelineAccum{aSlotStats=cur':_} =
-     patchSlotCheckGap (n - 1) (slot + 1) $
-     extendTimelineAccum ci slot (unSlotStart $ slotStart ci slot) 0 (slUtxoSize cur') (slDensity cur') a'
-   patchSlotCheckGap _ _ _ =
-     error "Internal invariant violated: patchSlotCheckGap called with empty TimelineAccum chain."
 timelineStep _ a = const a
 
-extendTimelineAccum ::
-     ChainInfo
+addTimelineSlot ::
+     Run
   -> SlotNo -> UTCTime -> Word64 -> Word64 -> Float
   -> TimelineAccum -> TimelineAccum
-extendTimelineAccum ci@CInfo{..} slot time checks utxo density a@TimelineAccum{..} =
-  let (epoch, epochSlot) = unSlotNo slot `divMod` epoch_length gsis in
+addTimelineSlot Run{genesis} slot time checks utxo density a@TimelineAccum{..} =
+  let (epoch, epochSlot) = genesis `unsafeParseSlot` slot in
     a { aSlotStats = SlotStats
         { slSlot        = slot
         , slEpoch       = epoch
         , slEpochSlot   = epochSlot
+        , slEpochSafeInt= slotEpochSafeInt genesis epochSlot
         , slStart       = slStart
         , slEarliest    = time
-        , slOrderViol   = 0
           -- Updated as we see repeats:
         , slCountChecks = checks
         , slCountLeads  = 0
-        , slSpanCheck   = max 0 $ time `sinceSlot` slStart
+        , slCountForges = 0
+        , slSpanCheck   = time `sinceSlot` slStart
         , slSpanLead    = 0
+        , slSpanForge   = 0
         , slTxsMemSpan  = Nothing
         , slTxsCollected= 0
         , slTxsAccepted = 0
@@ -392,13 +365,13 @@ extendTimelineAccum ci@CInfo{..} slot time checks utxo density a@TimelineAccum{.
         , slBlockless   = unSlotNo $ slot - aLastBlockSlot
         , slResources   = maybeDiscard
                           <$> discardObsoleteValues
-                          <*> extractResAccums aResAccums
-        } : aSlotStats
+                          <*> extractResAccums aResAccums}
+        : aSlotStats
       }
     where maybeDiscard :: (Word64 -> Maybe Word64) -> Word64 -> Maybe Word64
           maybeDiscard f = f
 
-          slStart = slotStart ci slot
+          slStart = slotStart genesis slot
 
 data DerivedSlot
   = DerivedSlot

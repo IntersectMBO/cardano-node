@@ -2,36 +2,36 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
+{-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# OPTIONS_GHC -Wno-partial-fields -Wno-orphans #-}
 
 module Cardano.Unlog.LogObject (module Cardano.Unlog.LogObject) where
 
-import           Prelude (String, error, id)
-import qualified Prelude
-import           Cardano.Prelude hiding (Text)
+import Prelude (String, error, head, id, show)
+import Cardano.Prelude hiding (Text, head, show)
 
-import           Control.Monad (fail)
-import           Data.Aeson (FromJSON(..), ToJSON(..), Value(..), Object, (.:))
-import           Data.Aeson.Types (Parser)
-import qualified Data.Aeson as AE
-import qualified Data.Aeson.Types as AE
-import qualified Data.ByteString.Lazy as LBS
-import qualified Data.HashMap.Strict as HM
-import qualified Data.Text as LText
-import qualified Data.Text.Short as Text
-import           Data.Text.Short (ShortText, fromText, toText)
-import           Data.Time.Clock (NominalDiffTime, UTCTime)
-import qualified Data.Map as Map
-import           Data.Vector (Vector)
-import           Quiet (Quiet (..))
+import Control.Monad (fail)
+import Data.Aeson (FromJSON(..), ToJSON(..), Value(..), Object, (.:), (.:?))
+import Data.Aeson.Types (Parser)
+import Data.Aeson qualified as AE
+import Data.Aeson.Types qualified as AE
+import Data.ByteString.Lazy qualified as LBS
+import Data.HashMap.Strict qualified as HM
+import Data.Text qualified as LText
+import Data.Text.Short qualified as Text
+import Data.Text.Short (ShortText, fromText, toText)
+import Data.Time.Clock (NominalDiffTime, UTCTime)
+import Data.Map qualified as Map
+import Data.Vector (Vector)
+import Quiet (Quiet (..))
 
-import           Ouroboros.Network.Block (BlockNo(..), SlotNo(..))
+import Ouroboros.Network.Block (BlockNo(..), SlotNo(..))
 
-import           Cardano.BM.Stats.Resources
+import Cardano.Logging.Resources.Types
 
-import           Data.Accum (zeroUTCTime)
+import Data.Accum (zeroUTCTime)
 
 
 type Text = ShortText
@@ -51,6 +51,10 @@ newtype JsonRunMetafile
 
 newtype JsonGenesisFile
   = JsonGenesisFile { unJsonGenesisFile :: FilePath }
+  deriving (Show, Eq)
+
+newtype JsonSelectorFile
+  = JsonSelectorFile { unJsonSelectorFile :: FilePath }
   deriving (Show, Eq)
 
 newtype JsonLogfile
@@ -137,20 +141,22 @@ interpreters = Map.fromList
   [ (,) "TraceStartLeadershipCheck" $
     \v -> LOTraceStartLeadershipCheck
             <$> v .: "slot"
-            <*> v .: "utxoSize"
-            <*> v .: "chainDensity"
+            <*> (v .:? "utxoSize"     <&> fromMaybe 0)
+            <*> (v .:? "chainDensity" <&> fromMaybe 0)
 
   , (,) "TraceBlockContext" $
     \v -> LOBlockContext
             <$> v .: "tipBlockNo"
 
   , (,) "TraceNodeIsLeader" $
-    \v -> LOTraceNodeIsLeader
+    \v -> LOTraceLeadershipDecided
             <$> v .: "slot"
+            <*> pure True
 
   , (,) "TraceNodeNotLeader" $
-    \v -> LOTraceNodeNotLeader
+    \v -> LOTraceLeadershipDecided
             <$> v .: "slot"
+            <*> pure False
 
   , (,) "TraceMempoolAddedTx" $
     \v -> do
@@ -203,9 +209,9 @@ interpreters = Map.fromList
     \v -> LOBlockAddedToCurrentChain
             <$> ((v .: "newtip")     <&> hashFromPoint)
             <*> pure Nothing
-            <*> (v AE..:? "chainLengthDelta"
+            <*> (v .:? "chainLengthDelta"
                 -- Compat for node versions 1.27 and older:
-                 & fmap (fromMaybe 1))
+                 <&> fromMaybe 1)
   -- TODO: we should clarify the distinction between the two cases (^ and v).
   , (,) "TraceAdoptedBlock" $
     \v -> LOBlockAddedToCurrentChain
@@ -248,8 +254,7 @@ logObjectStreamInterpreterKeys = Map.keys interpreters
 
 data LOBody
   = LOTraceStartLeadershipCheck !SlotNo !Word64 !Float
-  | LOTraceNodeIsLeader !SlotNo
-  | LOTraceNodeNotLeader !SlotNo
+  | LOTraceLeadershipDecided    !SlotNo !Bool
   | LOResources !ResourceStats
   | LOMempoolTxs !Word64
   | LOMempoolRejectedTx
@@ -313,10 +318,10 @@ instance FromJSON LogObject where
    where
      unwrap :: Text -> Text -> Object -> Parser (Object, Text)
      unwrap wrappedKeyPred unwrapKey v = do
-       kind <- (fromText <$>) <$> v AE..:? "kind"
+       kind <- (fromText <$>) <$> v .:? "kind"
        wrapped   :: Maybe Text <-
-         (fromText <$>) <$> v AE..:? toText wrappedKeyPred
-       unwrapped :: Maybe Object <- v AE..:? toText unwrapKey
+         (fromText <$>) <$> v .:? toText wrappedKeyPred
+       unwrapped :: Maybe Object <- v .:? toText unwrapKey
        case (kind, wrapped, unwrapped) of
          (Nothing, Just _, Just x) -> (,) <$> pure x <*> (fromText <$> x .: "kind")
          (Just kind0, _, _) -> pure (v, kind0)
@@ -338,7 +343,7 @@ parsePartialResourceStates =
       <*> o .: "GcsMinor"
       <*> o .: "Alloc"
       <*> o .: "Live"
-      <*> (o AE..:? "Heap" & fmap (fromMaybe 0))
+      <*> (o .:? "Heap" <&> fromMaybe 0)
       <*> o .: "RSS"
       <*> o .: "CentiBlkIO"
       <*> o .: "Threads"
