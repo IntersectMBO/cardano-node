@@ -90,7 +90,7 @@ cardano-cli transaction submit --tx-file  tx --testnet-magic 42
 
 ```bash
 cardano-cli transaction build-raw \
-            --mary-era \
+            --alonzo-era \
             --fee 0 \
             --tx-in $TXIN \
             --tx-out $TXOUT\

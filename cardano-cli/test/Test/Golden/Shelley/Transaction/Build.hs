@@ -34,6 +34,7 @@ golden_shelleyTransactionBuild =
 
     void $ execCardanoCLI
       [ "transaction","build-raw"
+      , "--mary-era"
       , "--tx-in", txIn
       , "--tx-out", txOut
       , "--fee", "12"
@@ -55,6 +56,7 @@ golden_shelleyTransactionBuild_CertificateScriptWitnessed =
 
     void $ execCardanoCLI
       [ "transaction","build-raw"
+      , "--mary-era"
       , "--tx-in", txIn
       , "--tx-out", txOut
       , "--certificate-file", deregcert, "--certificate-script-file", scriptWit
@@ -86,6 +88,7 @@ golden_shelleyTransactionBuild_Minting =
 
     void $ execCardanoCLI
       [ "transaction","build-raw"
+      , "--mary-era"
       , "--tx-in", txIn
       , "--tx-out", txOut ++ "+" ++ dummyMA, "--minting-script-file", scriptWit
       , "--mint", dummyMA
@@ -109,6 +112,7 @@ golden_shelleyTransactionBuild_WithdrawalScriptWitnessed =
 
     void $ execCardanoCLI
       [ "transaction","build-raw"
+      , "--mary-era"
       , "--tx-in", txIn
       , "--tx-out", txOut
       , "--withdrawal", withdrawal, "--withdrawal-script-file", scriptWit
@@ -129,6 +133,7 @@ golden_shelleyTransactionBuild_TxInScriptWitnessed =
 
     void $ execCardanoCLI
       [ "transaction","build-raw"
+      , "--mary-era"
       , "--tx-in", txIn, "--txin-script-file", scriptWit
       , "--tx-out", txOut
       , "--fee", "12"

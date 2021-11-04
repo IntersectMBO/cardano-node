@@ -1445,7 +1445,8 @@ Available options:
   --byron-era              Specify the Byron era
   --shelley-era            Specify the Shelley era
   --allegra-era            Specify the Allegra era
-  --mary-era               Specify the Mary era (default)
+  --mary-era               Specify the Mary era
+  --alonzo-era             Specify the Alonzo era (default)
   --tx-in TX-IN            TxId#TxIx
   --txin-script-file FILE  Filepath of the spending script witness
   --tx-out TX-OUT          The transaction output as Address+Lovelace where
