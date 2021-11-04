@@ -263,3 +263,17 @@ options:
 hasPrometheus:
   - 127.0.0.1
   - 12798
+
+# Set or unset the mempool capacity override in number of bytes.
+#
+# This is intended for testing, and for low-resource machines to run with a smaller mempool.
+# Please note that running with a large mempool is NOT recommended. The mempool is a
+# just a network communication buffer and all the advice on "buffer bloat" applies, see:
+# https://en.wikipedia.org/wiki/Bufferbloat
+# The default size is two blocks, which is generally enough to ensure full blocks.
+#
+# MempoolCapacityBytesOverride: Integer | NoOverride
+#
+# Examples:
+#   MempoolCapacityBytesOverride: 1000000 (1MB)
+#   MempoolCapacityBytesOverride: NoOverride (default)
