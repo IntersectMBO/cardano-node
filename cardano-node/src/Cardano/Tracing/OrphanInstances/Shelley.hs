@@ -213,10 +213,6 @@ instance Core.Crypto crypto => ToObject (ChainTransitionError crypto) where
              ]
 
 instance ( ShelleyBasedEra era
-         , ToObject (PredicateFailure (Core.EraRule "UTXOW" era))
-         , ToObject (PredicateFailure (Core.EraRule "BBODY" era))
-         , ToObject (PredicateFailure (Core.EraRule "TICK" era))
-         , ToObject (PredicateFailure (Core.EraRule "TICKN" era))
          ) => ToObject (ChainPredicateFailure era) where
   toObject _verb (HeaderSizeTooLargeCHAIN hdrSz maxHdrSz) =
     mkObject [ "kind" .= String "HeaderSizeTooLarge"
