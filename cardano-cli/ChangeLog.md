@@ -4,7 +4,7 @@
 
 - Restore support for deserialising transactions built by pre-1.27.0 node
   versions. (#3226)
-- Various internal refactorings ang improvements. (#3234)
+- Various internal refactorings and improvements. (#3234)
 - Use the new `GetChainBlockNo` and `GetChainPoint` queries in the query tip
   command. There is a fallback to the older method using the full chain sync
   query. (#3179)
