@@ -21,6 +21,7 @@ module Cardano.Api.SerialiseTextEnvelope
   , writeFileTextEnvelopeWithOwnerPermissions
   , readTextEnvelopeFromFile
   , readTextEnvelopeOfTypeFromFile
+  , textEnvelopeToJSON
 
     -- * Reading one of several key types
   , FromSomeType(..)
