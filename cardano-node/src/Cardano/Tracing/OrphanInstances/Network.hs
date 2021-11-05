@@ -465,7 +465,8 @@ instance HasSeverityAnnotation (ConnectionManagerTrace addr (ConnectionHandlerTr
       TrConnectionTimeWaitDone {}             -> Info
       TrConnectionManagerCounters {}          -> Info
       TrState {}                              -> Info
-      TrUnexpectedlyMissingConnectionState {} -> Error
+      TrCMUnexpectedlyFalseAssertion {}       -> Error
+
 
 instance HasPrivacyAnnotation (ServerTrace addr)
 instance HasSeverityAnnotation (ServerTrace addr) where
@@ -496,6 +497,7 @@ instance HasSeverityAnnotation (InboundGovernorTrace addr) where
       InboundGovernor.TrMuxErrored {}              -> Info
       InboundGovernor.TrInboundGovernorCounters {} -> Info
       InboundGovernor.TrRemoteState {}             -> Debug
+      InboundGovernor.TrIGUnexpectedlyFalseAssertion {} -> Error
 
 --
 -- | instances of @Transformable@
@@ -1881,11 +1883,12 @@ instance (Show addr, Show versionNumber, Show agreedOptions, ToObject addr,
                                            ])
                                        (Map.toList cmState)
           ]
-      TrUnexpectedlyMissingConnectionState connId ->
+      TrCMUnexpectedlyFalseAssertion aev ->
         mkObject
-          [ "kind" .= String "UnexpectedlyMissingConnectionState"
-          , "connectionId" .= toJSON connId
+          [ "kind" .= String "ConnectionManagerUnexpectedlyFalseAssertion"
+          , "assertionLocation" .= show aev
           ]
+
 
 instance (Show addr, ToObject addr, ToJSON addr)
       => ToObject (ServerTrace addr) where
@@ -1964,7 +1967,7 @@ instance ToObject NtC.LocalConnectionId where
         mkObject [ "local" .= toObject verb l
                  , "remote" .= toObject verb r
                  ]
-instance ToJSON addr
+instance (Show addr, ToJSON addr)
       => ToObject (InboundGovernorTrace addr) where
   toObject _verb (TrNewConnection p connId)            =
     mkObject [ "kind" .= String "NewConnection"
@@ -2034,4 +2037,8 @@ instance ToJSON addr
   toObject _verb (TrRemoteState st) =
     mkObject [ "kind" .= String "RemoteState"
              , "remoteSt" .= toJSON st
+             ]
+  toObject _verb (TrIGUnexpectedlyFalseAssertion al) =
+    mkObject [ "kind" .= String "UnexpectedlyFalseAssertion"
+             , "assertLocation" .= show al -- XXX hack
              ]
