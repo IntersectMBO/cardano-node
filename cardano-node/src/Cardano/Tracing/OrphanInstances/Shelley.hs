@@ -213,10 +213,6 @@ instance Core.Crypto crypto => ToObject (ChainTransitionError crypto) where
              ]
 
 instance ( ShelleyBasedEra era
-         , ToObject (PredicateFailure (Core.EraRule "UTXOW" era))
-         , ToObject (PredicateFailure (Core.EraRule "BBODY" era))
-         , ToObject (PredicateFailure (Core.EraRule "TICK" era))
-         , ToObject (PredicateFailure (Core.EraRule "TICKN" era))
          ) => ToObject (ChainPredicateFailure era) where
   toObject _verb (HeaderSizeTooLargeCHAIN hdrSz maxHdrSz) =
     mkObject [ "kind" .= String "HeaderSizeTooLarge"
@@ -354,7 +350,8 @@ renderScriptPurpose (Alonzo.Rewarding rwdAcct) =
 renderScriptPurpose (Alonzo.Certifying cert) =
   Aeson.object [ "certifying" .= toJSON (Api.textEnvelopeDefaultDescr $ Api.fromShelleyCertificate cert)]
 
-instance ( ShelleyBasedEra era
+instance ( Ledger.Crypto era ~ StandardCrypto
+         , ShelleyBasedEra era
          , ToObject (PredicateFailure (UTXO era))
          , ToObject (PredicateFailure (Core.EraRule "UTXO" era))
          ) => ToObject (UtxowPredicateFailure era) where
@@ -394,6 +391,10 @@ instance ( ShelleyBasedEra era
              ]
   toObject _verb InvalidMetadata =
     mkObject [ "kind" .= String "InvalidMetadata"
+             ]
+  toObject _verb (ExtraneousScriptWitnessesUTXOW shashes) =
+    mkObject [ "kind" .= String "ExtraneousScriptWitnessesUTXOW"
+             , "scriptHashes" .= Set.map Api.fromShelleyScriptHash shashes
              ]
 
 instance ( ShelleyBasedEra era
