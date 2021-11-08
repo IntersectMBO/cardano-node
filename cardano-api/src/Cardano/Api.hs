@@ -245,7 +245,6 @@ module Cardano.Api (
     -- ** Script execution units
     evaluateTransactionExecutionUnits,
     ScriptExecutionError(..),
-    TransactionValidityIntervalError(..),
 
     -- ** Transaction balance
     evaluateTransactionBalance,

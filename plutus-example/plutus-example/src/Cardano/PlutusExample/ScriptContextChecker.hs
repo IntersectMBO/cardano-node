@@ -228,6 +228,9 @@ dummyPOSIXTimeRange = Plutus.from $ Plutus.POSIXTime 42
 dummyScriptPurpose :: Maybe Plutus.ScriptPurpose
 dummyScriptPurpose = Nothing
 
+newtype TransactionValidityIntervalError
+ = TransactionValidityIntervalError Consensus.PastHorizonException deriving Show
+
 data ScriptContextError = NoScriptsInByronEra
                         | NoScriptsInEra
                         | ReadTxBodyError (FileError TextEnvelopeError)
