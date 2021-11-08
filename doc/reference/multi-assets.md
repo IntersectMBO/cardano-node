@@ -9,7 +9,7 @@ Multi-assets are user-defined, custom tokens. They are supported natively, which
 An asset is uniquely identified by an *asset ID*, which is a pair of both the *policy ID* and an *asset name*:
 
 + *PolicyID* - the unique identifier that is associated with a minting policy (hash of the minting policy).
-+ *Asset name* - an (immutable) property of an asset that is used to distinguish different assets within the same policy. Unlike the policyID, the asset name does not refer to any code or set of rules, and can be represented as common words, eg. ‘couttscoin’.
++ *Asset name* - an (immutable) property of an asset that is used to distinguish different assets within the same policy. Unlike the policyID, the asset name does not refer to any code or set of rules. It is an arbitrary sequence of bytes. In simplest case it is an ASCII-encoded common word, eg. ‘couttscoin’. In this document we use asset name `"636f75747473636f696e" = hex("couttscoin")` as an example.
 
 Tokens that have the same asset ID have the property of being fungible with each other, and are not fungible with tokens that have a different asset ID.
 
@@ -57,8 +57,8 @@ cardano-cli transaction build-raw \
             --mary-era \
             --fee 0 \
             --tx-in $TXIN \
-            --tx-out "$ADDR + 5 $POLICYID.couttscoin" \
-            --mint "5 $POLICYID.yourassetname" \
+            --tx-out "$ADDR + 5 $POLICYID.636f75747473636f696e" \
+            --mint "5 $POLICYID.$YOUR_ASSET_NAME" \
             --minting-script-file $SCRIPT \
             --out-file txbody
 ```
@@ -94,7 +94,7 @@ cardano-cli transaction build-raw \
             --fee 0 \
             --tx-in $TXIN \
             --tx-out $TXOUT\
-            --mint -5 $POLICYID.couttscoin \
+            --mint "-5 $POLICYID.636f75747473636f696e" \
             --minting-script-file $SCRIPT \
             --out-file txbodyburn
 ```
