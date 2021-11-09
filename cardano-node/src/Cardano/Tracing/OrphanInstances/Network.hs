@@ -1,8 +1,10 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuantifiedConstraints #-}
+{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -17,12 +19,16 @@ import           Prelude (String, show)
 
 import           Control.Monad.Class.MonadTime (DiffTime, Time (..))
 import           Data.Aeson (Value (..))
+import qualified Data.Aeson as Aeson
 import qualified Data.IP as IP
 import           Data.Text (pack)
 
+import           Network.TypedProtocol.Codec (AnyMessageAndAgency (..))
+import           Network.TypedProtocol.Core (ClientHasAgency,
+                     PeerHasAgency (..), ServerHasAgency)
+
 import           Network.Mux (MuxTrace (..), WithMuxBearer (..))
 import           Network.Socket (SockAddr (..))
-import           Network.TypedProtocol.Codec (AnyMessageAndAgency (..), PeerHasAgency (..))
 
 import           Cardano.Tracing.ConvertTxId (ConvertTxId)
 import           Cardano.Tracing.OrphanInstances.Common
@@ -40,21 +46,23 @@ import           Ouroboros.Network.BlockFetch.ClientState (TraceFetchClientState
                    TraceLabelPeer (..))
 import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
 import           Ouroboros.Network.BlockFetch.Decision (FetchDecision, FetchDecline (..))
+import           Ouroboros.Network.ConnectionId (ConnectionId (..))
 import           Ouroboros.Network.DeltaQ (GSV (..), PeerGSV (..))
 import           Ouroboros.Network.KeepAlive (TraceKeepAliveClient (..))
 import qualified Ouroboros.Network.NodeToClient as NtC
 import           Ouroboros.Network.NodeToNode (ErrorPolicyTrace (..), TraceSendRecv (..),
                    WithAddr (..))
 import qualified Ouroboros.Network.NodeToNode as NtN
+import           Ouroboros.Network.PeerSelection.LedgerPeers (RelayAccessPoint (..))
 import           Ouroboros.Network.Protocol.BlockFetch.Type (BlockFetch, Message (..))
 import           Ouroboros.Network.Protocol.ChainSync.Type (ChainSync)
 import qualified Ouroboros.Network.Protocol.ChainSync.Type as ChainSync
+import           Ouroboros.Network.Protocol.Trans.Hello.Type (Hello)
+import qualified Ouroboros.Network.Protocol.Trans.Hello.Type as Hello
 import           Ouroboros.Network.Protocol.LocalStateQuery.Type (LocalStateQuery)
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as LocalStateQuery
 import           Ouroboros.Network.Protocol.LocalTxSubmission.Type (LocalTxSubmission)
 import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Type as LocalTxSub
-import           Ouroboros.Network.Protocol.Trans.Hello.Type (ClientHasAgency (..), Message (..),
-                   ServerHasAgency (..))
 import           Ouroboros.Network.Protocol.TxSubmission.Type (Message (..), TxSubmission)
 import           Ouroboros.Network.Protocol.TxSubmission2.Type (TxSubmission2)
 import           Ouroboros.Network.Snocket (LocalAddress (..))
@@ -304,11 +312,11 @@ instance HasSeverityAnnotation (WithMuxBearer peer MuxTrace) where
     MuxTraceRecvDeltaQSample {} -> Debug
     MuxTraceSDUReadTimeoutException -> Notice
     MuxTraceSDUWriteTimeoutException -> Notice
-    MuxTraceStartEagerly _ _ -> Debug
-    MuxTraceStartOnDemand _ _ -> Debug
-    MuxTraceStartedOnDemand _ _ -> Debug
-    MuxTraceTerminating {} -> Debug
+    MuxTraceStartEagerly _ _ -> Info
+    MuxTraceStartOnDemand _ _ -> Info
+    MuxTraceStartedOnDemand _ _ -> Info
     MuxTraceShutdown -> Debug
+    MuxTraceTerminating {} -> Debug
 
 --
 -- | instances of @Transformable@
@@ -409,7 +417,8 @@ instance (Show tx, Show txid)
   formatText a _ = pack (show a)
 
 
-instance Show remotePeer => Transformable Text IO (TraceKeepAliveClient remotePeer) where
+instance Show addr
+      => Transformable Text IO (TraceKeepAliveClient addr) where
   trTransformer = trStructuredText
 instance Show addr
       => HasTextFormatter (TraceKeepAliveClient addr) where
@@ -440,7 +449,7 @@ instance HasTextFormatter (WithIPList (SubscriptionTrace SockAddr)) where
   formatText a _ = pack (show a)
 
 
-instance (Show peer)
+instance (Show peer, ToObject peer)
       => Transformable Text IO (WithMuxBearer peer MuxTrace) where
   trTransformer = trStructuredText
 instance (Show peer)
@@ -498,6 +507,32 @@ instance ( ConvertTxId blk
     mkObject [ "kind" .= String "MsgClientDone"
              , "agency" .= String (pack $ show stok)
              ]
+
+instance ( ToObject (AnyMessageAndAgency ps)
+         , forall (st :: ps). Show (ClientHasAgency st)
+         , forall (st :: ps). Show (ServerHasAgency st)
+         )
+      => ToObject (AnyMessageAndAgency (Hello ps stIdle)) where
+  toObject verb (AnyMessageAndAgency stok msg) =
+    case (stok, msg) of
+      (_, Hello.MsgHello) ->
+        mkObject [ "kind" .= String "MsgHello"
+                 , "agency" .= String (pack $ show stok)
+                 ]
+      ( ClientAgency (Hello.TokClientTalk tok)
+        , Hello.MsgTalk msg' ) ->
+        mkObject [ "kind" .= String "MsgTalk"
+                 , "message" .=
+                     toObject verb
+                       (AnyMessageAndAgency (ClientAgency tok) msg')
+                 ]
+      ( ServerAgency (Hello.TokServerTalk tok)
+        , Hello.MsgTalk msg' ) ->
+        mkObject [ "kind" .= String "MsgTalk"
+                 , "message" .=
+                     toObject verb
+                       (AnyMessageAndAgency (ServerAgency tok) msg')
+                 ]
 
 instance (forall result. Show (query result))
       => ToObject (AnyMessageAndAgency (LocalStateQuery blk pt query)) where
@@ -616,25 +651,11 @@ instance (Show txid, Show tx)
       , "agency" .= String (pack $ show stok)
       ]
 
-instance (Show txid, Show tx)
-      => ToObject (AnyMessageAndAgency (TxSubmission2 txid tx)) where
-  toObject _verb (AnyMessageAndAgency
-                   -- we need this pattern match for GHC to recognise this
-                   -- function as total.
-                   stok@(ClientAgency TokHello)
-                   MsgHello) =
-    mkObject
-      [ "kind" .= String "MsgHello"
-      , "agency" .= String (pack $ show stok)
-      ]
-  toObject verb (AnyMessageAndAgency
-                  (ClientAgency (TokClientTalk stok))
-                  (MsgTalk msg)) =
-    toObject verb (AnyMessageAndAgency (ClientAgency stok) msg)
-  toObject verb (AnyMessageAndAgency
-                  (ServerAgency (TokServerTalk stok))
-                  (MsgTalk msg)) =
-    toObject verb (AnyMessageAndAgency (ServerAgency stok) msg)
+instance ToJSON peerAddr => ToJSON (ConnectionId peerAddr) where
+  toJSON ConnectionId { localAddress, remoteAddress } =
+    Aeson.object [ "localAddress"  .= toJSON localAddress
+                 , "remoteAddress" .= toJSON remoteAddress
+                 ]
 
 
 instance ToObject (FetchDecision [Point header]) where
@@ -726,6 +747,10 @@ instance ToObject NtN.HandshakeTr where
              , "bearer" .= show b
              , "event" .= show ev ]
 
+instance ToJSON LocalAddress where
+    toJSON (LocalAddress path) = String (pack path)
+
+instance Aeson.ToJSONKey LocalAddress where
 
 instance ToObject NtN.AcceptConnectionsPolicyTrace where
   toObject _verb (NtN.ServerTraceAcceptConnectionRateLimiting delay numOfConnections) =
@@ -798,8 +823,10 @@ instance (HasHeader header, ConvertRawHash header)
     mkObject [ "kind" .= String "StartedFetchBatch" ]
   toObject _verb BlockFetch.RejectedFetchBatch {} =
     mkObject [ "kind" .= String "RejectedFetchBatch" ]
-  toObject _verb BlockFetch.ClientTerminating {} =
-    mkObject [ "kind" .= String "ClientTerminating" ]
+  toObject _verb (BlockFetch.ClientTerminating outstanding) =
+    mkObject [ "kind" .= String "ClientTerminating"
+             , "outstanding" .= outstanding
+             ]
 
 
 instance (ToObject peer)
@@ -827,61 +854,79 @@ instance ToObject (AnyMessageAndAgency ps)
 instance ToObject (TraceTxSubmissionInbound txid tx) where
   toObject _verb (TraceTxSubmissionCollected count) =
     mkObject
-      [ "kind" .= String "TraceTxSubmissionCollected"
+      [ "kind" .= String "TxSubmissionCollected"
       , "count" .= toJSON count
       ]
   toObject _verb (TraceTxSubmissionProcessed processed) =
     mkObject
-      [ "kind" .= String "TraceTxSubmissionProcessed"
+      [ "kind" .= String "TxSubmissionProcessed"
       , "accepted" .= toJSON (ptxcAccepted processed)
       , "rejected" .= toJSON (ptxcRejected processed)
       ]
   toObject _verb TraceTxInboundTerminated =
     mkObject
-      [ "kind" .= String "TraceTxInboundTerminated"
+      [ "kind" .= String "TxInboundTerminated"
       ]
   toObject _verb (TraceTxInboundCanRequestMoreTxs count) =
     mkObject
-      [ "kind" .= String "TraceTxInboundCanRequestMoreTxs"
+      [ "kind" .= String "TxInboundCanRequestMoreTxs"
       , "count" .= toJSON count
       ]
   toObject _verb (TraceTxInboundCannotRequestMoreTxs count) =
     mkObject
-      [ "kind" .= String "TraceTxInboundCannotRequestMoreTxs"
+      [ "kind" .= String "TxInboundCannotRequestMoreTxs"
       , "count" .= toJSON count
       ]
 
 
+instance Aeson.ToJSONKey SockAddr where
+
+instance Aeson.ToJSON SockAddr where
+    toJSON (SockAddrInet port addr) =
+        let ip = IP.fromHostAddress addr in
+        Aeson.object [ "address" .= toJSON ip
+                     , "port" .= show port
+                     ]
+    toJSON (SockAddrInet6 port _ addr _) =
+        let ip = IP.fromHostAddress6 addr in
+        Aeson.object [ "address" .= toJSON ip
+                     , "port" .= show port
+                     ]
+    toJSON (SockAddrUnix path) =
+        Aeson.object [ "socketPath" .= show path ]
+
+-- TODO: use the json encoding of transactions
 instance (Show txid, Show tx)
       => ToObject (TraceTxSubmissionOutbound txid tx) where
   toObject MaximalVerbosity (TraceTxSubmissionOutboundRecvMsgRequestTxs txids) =
     mkObject
-      [ "kind" .= String "TraceTxSubmissionOutboundRecvMsgRequestTxs"
+      [ "kind" .= String "TxSubmissionOutboundRecvMsgRequestTxs"
       , "txIds" .= String (pack $ show txids)
       ]
   toObject _verb (TraceTxSubmissionOutboundRecvMsgRequestTxs _txids) =
     mkObject
-      [ "kind" .= String "TraceTxSubmissionOutboundRecvMsgRequestTxs"
+      [ "kind" .= String "TxSubmissionOutboundRecvMsgRequestTxs"
       ]
   toObject MaximalVerbosity (TraceTxSubmissionOutboundSendMsgReplyTxs txs) =
     mkObject
-      [ "kind" .= String "TraceTxSubmissionOutboundSendMsgReplyTxs"
+      [ "kind" .= String "TxSubmissionOutboundSendMsgReplyTxs"
       , "txs" .= String (pack $ show txs)
       ]
   toObject _verb (TraceTxSubmissionOutboundSendMsgReplyTxs _txs) =
     mkObject
-      [ "kind" .= String "TraceTxSubmissionOutboundSendMsgReplyTxs"
+      [ "kind" .= String "TxSubmissionOutboundSendMsgReplyTxs"
       ]
-  toObject _verb (TraceControlMessage _msg) =
+  toObject _verb (TraceControlMessage controlMessage) =
     mkObject
-      [ "kind" .= String "TraceControlMessage"
+      [ "kind" .= String "ControlMessage"
+      , "controlMessage" .= String (pack $ show controlMessage)
       ]
 
 
 instance Show remotePeer => ToObject (TraceKeepAliveClient remotePeer) where
   toObject _verb (AddSample peer rtt pgsv) =
     mkObject
-      [ "kind" .= String "TraceKeepAliveClient AddSample"
+      [ "kind" .= String "KeepAliveClient AddSample"
       , "address" .= show peer
       , "rtt" .= rtt
       , "sampleTime" .= show (dTime $ sampleTime pgsv)
@@ -894,6 +939,7 @@ instance Show remotePeer => ToObject (TraceKeepAliveClient remotePeer) where
 
       dTime :: Time -> Double
       dTime (Time d) = realToFrac d
+
 
 instance Show addr => ToObject (WithAddr addr ErrorPolicyTrace) where
   toObject _verb (WithAddr addr ev) =
@@ -924,12 +970,13 @@ instance ToObject (WithDomainName (SubscriptionTrace SockAddr)) where
              , "event" .= show ev ]
 
 
-instance (Show peer) => ToObject (WithMuxBearer peer MuxTrace) where
-  toObject _verb (WithMuxBearer b ev) =
+instance ToObject peer => ToObject (WithMuxBearer peer MuxTrace) where
+  toObject verb (WithMuxBearer b ev) =
     mkObject [ "kind" .= String "MuxTrace"
-             , "bearer" .= show b
+             , "bearer" .= toObject verb b
              , "event" .= show ev ]
 
+instance Aeson.ToJSONKey RelayAccessPoint where
 instance ToObject NtN.RemoteAddress where
     toObject _verb (SockAddrInet port addr) =
         let ip = IP.fromHostAddress addr in
