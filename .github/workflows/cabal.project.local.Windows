@@ -5,4 +5,4 @@ write-ghc-environment-files: always
 
 ignore-project: False
 
-reorder-goals: True
+reorder-goals: False
