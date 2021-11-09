@@ -1,6 +1,7 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE KindSignatures #-}
@@ -21,7 +22,8 @@ module Cardano.Tracing.Tracers
   ( Tracers (..)
   , TraceOptions
   , mkTracers
-  , nullTracers
+  , nullTracersP2P
+  , nullTracersNonP2P
   , traceCounter
   ) where
 
@@ -42,9 +44,6 @@ import qualified System.Metrics.Counter as Counter
 import qualified System.Metrics.Gauge as Gauge
 import qualified System.Metrics.Label as Label
 import qualified System.Remote.Monitoring as EKG
-
-import           Network.Mux (MuxTrace, WithMuxBearer)
-import qualified Network.Socket as Socket (SockAddr)
 
 import           Control.Tracer
 import           Control.Tracer.Transformers
@@ -73,6 +72,7 @@ import           Ouroboros.Consensus.Ledger.SupportsProtocol (LedgerSupportsProt
 import           Ouroboros.Consensus.Mempool.API (MempoolSize (..), TraceEventMempool (..))
 import qualified Ouroboros.Consensus.Network.NodeToClient as NodeToClient
 import qualified Ouroboros.Consensus.Network.NodeToNode as NodeToNode
+import           Ouroboros.Consensus.Node (NetworkP2PMode (..))
 import qualified Ouroboros.Consensus.Node.Run as Consensus (RunNode)
 import qualified Ouroboros.Consensus.Node.Tracers as Consensus
 import           Ouroboros.Consensus.Protocol.Abstract (ValidationErr)
@@ -81,13 +81,22 @@ import qualified Ouroboros.Consensus.Shelley.Protocol.HotKey as HotKey
 import qualified Ouroboros.Network.AnchoredFragment as AF
 import           Ouroboros.Network.Block (BlockNo (..), HasHeader (..), Point, StandardHash,
                    blockNo, pointSlot, unBlockNo)
-import           Ouroboros.Network.BlockFetch.ClientState (TraceLabelPeer (..), TraceFetchClientState(..))
+import           Ouroboros.Network.BlockFetch.ClientState (TraceLabelPeer (..), TraceFetchClientState (..))
 import           Ouroboros.Network.BlockFetch.Decision (FetchDecision, FetchDecline (..))
-import qualified Ouroboros.Network.NodeToClient as NtC
-import qualified Ouroboros.Network.NodeToNode as NtN
+import           Ouroboros.Network.ConnectionId (ConnectionId)
 import           Ouroboros.Network.Point (fromWithOrigin, withOrigin)
 import           Ouroboros.Network.Protocol.LocalStateQuery.Type (ShowQuery)
-import           Ouroboros.Network.Subscription
+import           Ouroboros.Network.InboundGovernor.State (InboundGovernorCounters(..))
+import           Ouroboros.Network.InboundGovernor (InboundGovernorTrace(..))
+import           Ouroboros.Network.PeerSelection.Governor (PeerSelectionCounters(..))
+
+import           Ouroboros.Network.ConnectionManager.Types (ConnectionManagerTrace(..)
+                     , ConnectionManagerCounters(..))
+import qualified Ouroboros.Network.Diffusion as Diffusion
+import qualified Ouroboros.Network.Diffusion.P2P as P2P
+import qualified Ouroboros.Network.Diffusion.NonP2P as NonP2P
+import           Ouroboros.Network.NodeToNode (NodeToNodeVersion, RemoteAddress)
+import           Ouroboros.Network.NodeToClient (LocalAddress, NodeToClientVersion)
 
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 import qualified Ouroboros.Consensus.Storage.LedgerDB.OnDisk as LedgerDB
@@ -109,14 +118,13 @@ import           Ouroboros.Network.TxSubmission.Inbound
 
 import qualified Cardano.Node.STM as STM
 import qualified Control.Concurrent.STM as STM
-import qualified Ouroboros.Network.Diffusion as ND
 
 import           Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 
 {- HLINT ignore "Redundant bracket" -}
 {- HLINT ignore "Use record patterns" -}
 
-data Tracers peer localPeer blk = Tracers
+data Tracers peer localPeer blk p2p = Tracers
   { -- | Trace the ChainDB
     chainDBTracer :: Tracer IO (ChainDB.TraceEvent blk)
     -- | Consensus-specific tracers.
@@ -126,23 +134,11 @@ data Tracers peer localPeer blk = Tracers
     --, serialisedBlockTracer :: NodeToNode.SerialisedTracer IO peer blk (SerialisedBlockTrace)
     -- | Tracers for the node-to-client protocols
   , nodeToClientTracers :: NodeToClient.Tracers IO localPeer blk DeserialiseFailure
-    -- | Trace the IP subscription manager
-  , ipSubscriptionTracer :: Tracer IO (WithIPList (SubscriptionTrace Socket.SockAddr))
-    -- | Trace the DNS subscription manager
-  , dnsSubscriptionTracer :: Tracer IO (WithDomainName (SubscriptionTrace Socket.SockAddr))
-    -- | Trace the DNS resolver
-  , dnsResolverTracer :: Tracer IO (WithDomainName DnsTrace)
-    -- | Trace error policy resolution
-  , errorPolicyTracer :: Tracer IO (NtN.WithAddr Socket.SockAddr NtN.ErrorPolicyTrace)
-    -- | Trace local error policy resolution
-  , localErrorPolicyTracer :: Tracer IO (NtN.WithAddr NtC.LocalAddress NtN.ErrorPolicyTrace)
-  , acceptPolicyTracer :: Tracer IO NtN.AcceptConnectionsPolicyTrace
-    -- | Trace the Mux
-  , muxTracer :: Tracer IO (WithMuxBearer peer MuxTrace)
-  , muxLocalTracer :: Tracer IO (WithMuxBearer localPeer MuxTrace)
-  , handshakeTracer :: Tracer IO NtN.HandshakeTr
-  , localHandshakeTracer :: Tracer IO NtC.HandshakeTr
-  , diffusionInitializationTracer :: Tracer IO ND.DiffusionInitializationTracer
+    -- | Diffusion tracers
+  , diffusionTracers :: Diffusion.Tracers RemoteAddress      NodeToNodeVersion
+                                          LocalAddress NodeToClientVersion
+                                          IO
+  , diffusionTracersExtra :: Diffusion.ExtraTracers p2p
   }
 
 data ForgeTracers = ForgeTracers
@@ -160,25 +156,25 @@ data ForgeTracers = ForgeTracers
   , ftTraceNodeIsLeader :: Trace IO Text
   }
 
-nullTracers :: Tracers peer localPeer blk
-nullTracers = Tracers
+nullTracersP2P :: Tracers peer localPeer blk 'Diffusion.P2P
+nullTracersP2P = Tracers
   { chainDBTracer = nullTracer
   , consensusTracers = Consensus.nullTracers
   , nodeToClientTracers = NodeToClient.nullTracers
   , nodeToNodeTracers = NodeToNode.nullTracers
-  , ipSubscriptionTracer = nullTracer
-  , dnsSubscriptionTracer = nullTracer
-  , dnsResolverTracer = nullTracer
-  , errorPolicyTracer = nullTracer
-  , localErrorPolicyTracer = nullTracer
-  , acceptPolicyTracer = nullTracer
-  , muxTracer = nullTracer
-  , muxLocalTracer = nullTracer
-  , handshakeTracer = nullTracer
-  , localHandshakeTracer = nullTracer
-  , diffusionInitializationTracer = nullTracer
+  , diffusionTracers = Diffusion.nullTracers
+  , diffusionTracersExtra = Diffusion.P2PTracers P2P.nullTracers
   }
 
+nullTracersNonP2P :: Tracers peer localPeer blk Diffusion.NonP2P
+nullTracersNonP2P = Tracers
+  { chainDBTracer = nullTracer
+  , consensusTracers = Consensus.nullTracers
+  , nodeToClientTracers = NodeToClient.nullTracers
+  , nodeToNodeTracers = NodeToNode.nullTracers
+  , diffusionTracers = Diffusion.nullTracers
+  , diffusionTracersExtra = Diffusion.NonP2PTracers NonP2P.nullTracers
+  }
 
 indexGCType :: ChainDB.TraceGCEvent a -> Int
 indexGCType ChainDB.ScheduledGC{} = 1
@@ -278,21 +274,20 @@ instance (StandardHash header, Eq peer) => ElidingTracer
 -- | Tracers for all system components.
 --
 mkTracers
-  :: forall peer localPeer blk.
+  :: forall blk p2p.
      ( Consensus.RunNode blk
      , HasKESMetricsData blk
      , HasKESInfo blk
      , TraceConstraints blk
-     , Show peer, Eq peer, ToObject peer
-     , Show localPeer, ToObject localPeer
      )
   => BlockConfig blk
   -> TraceOptions
   -> Trace IO Text
   -> NodeKernelData blk
   -> Maybe EKGDirect
-  -> IO (Tracers peer localPeer blk)
-mkTracers blockConfig tOpts@(TracingOn trSel) tr nodeKern ekgDirect = do
+  -> NetworkP2PMode p2p
+  -> IO (Tracers (ConnectionId RemoteAddress) (ConnectionId LocalAddress) blk p2p)
+mkTracers blockConfig tOpts@(TracingOn trSel) tr nodeKern ekgDirect enableP2P = do
   fStats <- mkForgingStats
   consensusTracers <- mkConsensusTracers ekgDirect trSel verb tr nodeKern fStats
   elidedChainDB <- newstate  -- for eliding messages in ChainDB tracer
@@ -311,23 +306,102 @@ mkTracers blockConfig tOpts@(TracingOn trSel) tr nodeKern ekgDirect = do
     , consensusTracers = consensusTracers
     , nodeToClientTracers = nodeToClientTracers' trSel verb tr
     , nodeToNodeTracers = nodeToNodeTracers' trSel verb tr
-    , ipSubscriptionTracer = tracerOnOff (traceIpSubscription trSel) verb "IpSubscription" tr
-    , dnsSubscriptionTracer =  tracerOnOff (traceDnsSubscription trSel) verb "DnsSubscription" tr
-    , dnsResolverTracer = tracerOnOff (traceDnsResolver trSel) verb "DnsResolver" tr
-    , errorPolicyTracer = tracerOnOff (traceErrorPolicy trSel) verb "ErrorPolicy" tr
-    , localErrorPolicyTracer = tracerOnOff (traceLocalErrorPolicy trSel) verb "LocalErrorPolicy" tr
-    , acceptPolicyTracer = tracerOnOff (traceAcceptPolicy trSel) verb "AcceptPolicy" tr
-    , muxTracer = tracerOnOff (traceMux trSel) verb "Mux" tr
-    , muxLocalTracer = tracerOnOff (traceLocalMux trSel) verb "MuxLocal" tr
-    , handshakeTracer = tracerOnOff (traceHandshake trSel) verb "Handshake" tr
-    , localHandshakeTracer = tracerOnOff (traceLocalHandshake trSel) verb "LocalHandshake" tr
-    , diffusionInitializationTracer = tracerOnOff (traceDiffusionInitialization trSel) verb "DiffusionInitializationTracer" tr
+    , diffusionTracers
+    , diffusionTracersExtra = diffusionTracersExtra' enableP2P
     }
  where
+   diffusionTracers = Diffusion.Tracers
+     { Diffusion.dtMuxTracer                     = muxTracer
+     , Diffusion.dtHandshakeTracer               = handshakeTracer
+     , Diffusion.dtLocalMuxTracer                = localMuxTracer
+     , Diffusion.dtLocalHandshakeTracer          = localHandshakeTracer
+     , Diffusion.dtDiffusionInitializationTracer = initializationTracer
+     , Diffusion.dtLedgerPeersTracer             = ledgerPeersTracer
+     }
+   diffusionTracersExtra' enP2P =
+     case enP2P of
+       EnabledP2PMode ->
+         Diffusion.P2PTracers P2P.TracersExtra
+           { P2P.dtTraceLocalRootPeersTracer =
+               tracerOnOff (traceLocalRootPeers trSel)
+                            verb "LocalRootPeers" tr
+           , P2P.dtTracePublicRootPeersTracer =
+               tracerOnOff (tracePublicRootPeers trSel)
+                            verb "PublicRootPeers" tr
+           , P2P.dtTracePeerSelectionTracer =
+               tracerOnOff (tracePeerSelection trSel)
+                            verb "PeerSelection" tr
+           , P2P.dtDebugPeerSelectionInitiatorTracer =
+               tracerOnOff (traceDebugPeerSelectionInitiatorTracer trSel)
+                            verb "DebugPeerSelection" tr
+           , P2P.dtDebugPeerSelectionInitiatorResponderTracer =
+             tracerOnOff (traceDebugPeerSelectionInitiatorResponderTracer trSel)
+                          verb "DebugPeerSelection" tr
+           , P2P.dtTracePeerSelectionCounters =
+                 tracePeerSelectionCountersMetrics
+                   (tracePeerSelectionCounters trSel)
+                   ekgDirect
+              <> tracerOnOff (tracePeerSelection trSel)
+                             verb "PeerSelection" tr
+           , P2P.dtPeerSelectionActionsTracer =
+               tracerOnOff (tracePeerSelectionActions trSel)
+                            verb "PeerSelectionActions" tr
+           , P2P.dtConnectionManagerTracer =
+                 traceConnectionManagerTraceMetrics
+                    (traceConnectionManagerCounters trSel)
+                    ekgDirect
+              <> tracerOnOff (traceConnectionManager trSel)
+                              verb "ConnectionManager" tr
+           , P2P.dtServerTracer =
+               tracerOnOff (traceServer trSel) verb "Server" tr
+           , P2P.dtInboundGovernorTracer =
+                 traceInboundGovernorCountersMetrics
+                   (traceInboundGovernorCounters trSel)
+                   ekgDirect
+              <> tracerOnOff (traceInboundGovernor trSel)
+                              verb "InboundGovernor" tr
+           , P2P.dtLocalConnectionManagerTracer =
+               tracerOnOff (traceLocalConnectionManager trSel)
+                            verb "LocalConnectionManager" tr
+           , P2P.dtLocalServerTracer =
+               tracerOnOff (traceLocalServer trSel)
+                            verb "LocalServer" tr
+           , P2P.dtLocalInboundGovernorTracer =
+               tracerOnOff (traceLocalInboundGovernor trSel)
+                            verb "LocalInboundGovernor" tr 
+           }
+       DisabledP2PMode ->
+         Diffusion.NonP2PTracers NonP2P.TracersExtra
+           { NonP2P.dtIpSubscriptionTracer =
+               tracerOnOff (traceIpSubscription trSel) verb "IpSubscription" tr 
+           , NonP2P.dtDnsSubscriptionTracer =
+               tracerOnOff (traceDnsSubscription trSel) verb "DnsSubscription" tr
+           , NonP2P.dtDnsResolverTracer =
+               tracerOnOff (traceDnsResolver trSel) verb "DnsResolver" tr
+           , NonP2P.dtErrorPolicyTracer =
+               tracerOnOff (traceErrorPolicy trSel) verb "ErrorPolicy" tr
+           , NonP2P.dtLocalErrorPolicyTracer =
+               tracerOnOff (traceLocalErrorPolicy trSel) verb "LocalErrorPolicy" tr
+           , NonP2P.dtAcceptPolicyTracer =
+               tracerOnOff (traceAcceptPolicy trSel) verb "AcceptPolicy" tr
+           }
    verb :: TracingVerbosity
    verb = traceVerbosity trSel
+   muxTracer =
+     tracerOnOff (traceMux trSel) verb "Mux" tr
+   localMuxTracer =
+     tracerOnOff (traceLocalMux trSel) verb "MuxLocal" tr
+   localHandshakeTracer =
+     tracerOnOff (traceLocalHandshake trSel) verb "LocalHandshake" tr
+   handshakeTracer =
+     tracerOnOff (traceHandshake trSel) verb "Handshake" tr
+   ledgerPeersTracer =
+     tracerOnOff (traceLedgerPeers trSel) verb "LedgerPeers" tr
+   initializationTracer =
+     tracerOnOff (traceDiffusionInitialization trSel) verb
+       "DiffusionInitializationTracer" tr
 
-mkTracers _ TracingOff _ _ _ =
+mkTracers _ TracingOff _ _ _ enableP2P =
   pure Tracers
     { chainDBTracer = nullTracer
     , consensusTracers = Consensus.Tracers
@@ -337,6 +411,7 @@ mkTracers _ TracingOff _ _ _ =
       , Consensus.blockFetchDecisionTracer = nullTracer
       , Consensus.blockFetchClientTracer = nullTracer
       , Consensus.blockFetchServerTracer = nullTracer
+      , Consensus.keepAliveClientTracer = nullTracer
       , Consensus.forgeStateInfoTracer = nullTracer
       , Consensus.txInboundTracer = nullTracer
       , Consensus.txOutboundTracer = nullTracer
@@ -344,7 +419,6 @@ mkTracers _ TracingOff _ _ _ =
       , Consensus.mempoolTracer = nullTracer
       , Consensus.forgeTracer = nullTracer
       , Consensus.blockchainTimeTracer = nullTracer
-      , Consensus.keepAliveClientTracer = nullTracer
       }
     , nodeToClientTracers = NodeToClient.Tracers
       { NodeToClient.tChainSyncTracer = nullTracer
@@ -359,17 +433,11 @@ mkTracers _ TracingOff _ _ _ =
       , NodeToNode.tTxSubmissionTracer = nullTracer
       , NodeToNode.tTxSubmission2Tracer = nullTracer
       }
-    , ipSubscriptionTracer = nullTracer
-    , dnsSubscriptionTracer= nullTracer
-    , dnsResolverTracer = nullTracer
-    , errorPolicyTracer = nullTracer
-    , localErrorPolicyTracer = nullTracer
-    , acceptPolicyTracer = nullTracer
-    , muxTracer = nullTracer
-    , muxLocalTracer = nullTracer
-    , handshakeTracer = nullTracer
-    , localHandshakeTracer = nullTracer
-    , diffusionInitializationTracer = nullTracer
+    , diffusionTracers = Diffusion.nullTracers
+    , diffusionTracersExtra =
+        case enableP2P of
+          EnabledP2PMode  -> Diffusion.P2PTracers P2P.nullTracers
+          DisabledP2PMode -> Diffusion.NonP2PTracers NonP2P.nullTracers
     }
 
 --------------------------------------------------------------------------------
@@ -565,6 +633,7 @@ mkConsensusTracers mbEKGDirect trSel verb tr nodeKern fStats = do
             tracerOnOff (traceBlockFetchClient trSel) verb "BlockFetchClient" tr
     , Consensus.blockFetchServerTracer = traceBlockFetchServerMetrics trmet meta tBlocksServed
         tLocalUp tMaxSlotNo $ tracerOnOff (traceBlockFetchServer trSel) verb "BlockFetchServer" tr
+    , Consensus.keepAliveClientTracer = tracerOnOff (traceKeepAliveClient trSel) verb "KeepAliveClient" tr
     , Consensus.forgeStateInfoTracer = tracerOnOff' (traceForgeStateInfo trSel) $
         forgeStateInfoTracer (Proxy @ blk) trSel tr
     , Consensus.txInboundTracer = tracerOnOff' (traceTxInbound trSel) $
@@ -597,7 +666,6 @@ mkConsensusTracers mbEKGDirect trSel verb tr nodeKern fStats = do
     , Consensus.blockchainTimeTracer = tracerOnOff' (traceBlockchainTime trSel) $
         Tracer $ \ev ->
           traceWith (toLogObject tr) (readableTraceBlockchainTimeEvent ev)
-    , Consensus.keepAliveClientTracer = tracerOnOff (traceKeepAliveClient trSel) verb "KeepAliveClient" tr
     }
  where
    mkForgeTracers :: IO ForgeTracers
@@ -623,7 +691,9 @@ mkConsensusTracers mbEKGDirect trSel verb tr nodeKern fStats = do
    traceServedCount Nothing _ = pure ()
    traceServedCount (Just ekgDirect) ev =
      when (isRollForward ev) $
-       sendEKGDirectCounter ekgDirect "cardano.node.metrics.served.header.counter.int"
+       sendEKGDirectCounter ekgDirect
+                            "cardano.node.metrics.served.header.counter.int"
+
 
 traceBlockFetchServerMetrics
   :: forall blk. ()
@@ -678,8 +748,8 @@ cdfCounter v !size !step tCdf= do
     when (v < lim) $
         STM.modifyTVar' tCdf (\(CdfCounter c) -> CdfCounter $ c + step)
 
-    CdfCounter cdf <- STM.readTVar tCdf
-    return $! fromIntegral cdf / fromIntegral size
+    (CdfCounter cdf) <- STM.readTVar tCdf
+    return $! (fromIntegral cdf / fromIntegral size)
 
   where
     lim :: a
@@ -1136,11 +1206,14 @@ nodeToClientTracers'
 nodeToClientTracers' trSel verb tr =
   NodeToClient.Tracers
   { NodeToClient.tChainSyncTracer =
-    tracerOnOff (traceLocalChainSyncProtocol trSel) verb "LocalChainSyncProtocol" tr
+      tracerOnOff (traceLocalChainSyncProtocol trSel)
+                  verb "LocalChainSyncProtocol" tr
   , NodeToClient.tTxSubmissionTracer =
-    tracerOnOff (traceLocalTxSubmissionProtocol trSel) verb "LocalTxSubmissionProtocol" tr
+      tracerOnOff (traceLocalTxSubmissionProtocol trSel)
+                  verb "LocalTxSubmissionProtocol" tr
   , NodeToClient.tStateQueryTracer =
-    tracerOnOff (traceLocalStateQueryProtocol trSel) verb "LocalStateQueryProtocol" tr
+      tracerOnOff (traceLocalStateQueryProtocol trSel)
+                  verb "LocalStateQueryProtocol" tr
   }
 
 --------------------------------------------------------------------------------
@@ -1160,12 +1233,24 @@ nodeToNodeTracers'
   -> NodeToNode.Tracers' peer blk DeserialiseFailure (Tracer IO)
 nodeToNodeTracers' trSel verb tr =
   NodeToNode.Tracers
-  { NodeToNode.tChainSyncTracer = tracerOnOff (traceChainSyncProtocol trSel) verb "ChainSyncProtocol" tr
-  , NodeToNode.tChainSyncSerialisedTracer = showOnOff (traceChainSyncProtocol trSel) "ChainSyncProtocolSerialised" tr
-  , NodeToNode.tBlockFetchTracer = tracerOnOff (traceBlockFetchProtocol trSel) verb "BlockFetchProtocol" tr
-  , NodeToNode.tBlockFetchSerialisedTracer = showOnOff (traceBlockFetchProtocolSerialised trSel) "BlockFetchProtocolSerialised" tr
-  , NodeToNode.tTxSubmissionTracer = tracerOnOff (traceTxSubmissionProtocol trSel) verb "TxSubmissionProtocol" tr
-  , NodeToNode.tTxSubmission2Tracer = tracerOnOff (traceTxSubmission2Protocol trSel) verb "TxSubmission2Protocol" tr
+  { NodeToNode.tChainSyncTracer =
+      tracerOnOff (traceChainSyncProtocol trSel)
+                  verb "ChainSyncProtocol" tr
+  , NodeToNode.tChainSyncSerialisedTracer =
+      showOnOff (traceChainSyncProtocol trSel)
+                "ChainSyncProtocolSerialised" tr
+  , NodeToNode.tBlockFetchTracer =
+      tracerOnOff (traceBlockFetchProtocol trSel)
+                  verb "BlockFetchProtocol" tr
+  , NodeToNode.tBlockFetchSerialisedTracer =
+      showOnOff (traceBlockFetchProtocolSerialised trSel)
+                "BlockFetchProtocolSerialised" tr
+  , NodeToNode.tTxSubmissionTracer =
+      tracerOnOff (traceTxSubmissionProtocol trSel)
+                  verb "TxSubmissionProtocol" tr
+  , NodeToNode.tTxSubmission2Tracer =
+      tracerOnOff (traceTxSubmissionProtocol trSel)
+                  verb "TxSubmissionProtocol" tr
   }
 
 teeTraceBlockFetchDecision
@@ -1205,6 +1290,83 @@ teeTraceBlockFetchDecisionElide
     -> Trace IO Text
     -> Tracer IO (WithSeverity [TraceLabelPeer peer (FetchDecision [Point (Header blk)])])
 teeTraceBlockFetchDecisionElide = elideToLogObject
+
+--------------------------------------------------------------------------------
+-- PeerSelection Tracers
+--------------------------------------------------------------------------------
+
+traceConnectionManagerTraceMetrics
+    :: OnOff TraceConnectionManagerCounters
+    -> Maybe EKGDirect
+    -> Tracer IO (ConnectionManagerTrace peerAddr handlerTrace)
+traceConnectionManagerTraceMetrics _             Nothing         = nullTracer
+traceConnectionManagerTraceMetrics (OnOff False) _               = nullTracer
+traceConnectionManagerTraceMetrics (OnOff True) (Just ekgDirect) = cmtTracer
+  where
+    cmtTracer :: Tracer IO (ConnectionManagerTrace peerAddr handlerTrace)
+    cmtTracer = Tracer $ \case
+      (TrConnectionManagerCounters
+                (ConnectionManagerCounters
+                  prunableConns
+                  duplexConns
+                  unidirectionalConns
+                  incomingConns
+                  outgoingConns
+                )
+              ) -> do
+        sendEKGDirectInt ekgDirect
+                         "cardano.node.metrics.connectionManager.prunableConns"
+                         prunableConns
+        sendEKGDirectInt ekgDirect
+                         "cardano.node.metrics.connectionManager.duplexConns"
+                         duplexConns
+        sendEKGDirectInt ekgDirect
+                         "cardano.node.metrics.connectionManager.unidirectionalConns"
+                         unidirectionalConns
+        sendEKGDirectInt ekgDirect
+                         "cardano.node.metrics.connectionManager.incomingConns"
+                         incomingConns
+        sendEKGDirectInt ekgDirect
+                         "cardano.node.metrics.connectionManager.outgoingConns"
+                         outgoingConns
+      _ -> return ()
+
+
+tracePeerSelectionCountersMetrics
+    :: OnOff TracePeerSelectionCounters
+    -> Maybe EKGDirect
+    -> Tracer IO PeerSelectionCounters
+tracePeerSelectionCountersMetrics _             Nothing          = nullTracer
+tracePeerSelectionCountersMetrics (OnOff False) _                = nullTracer
+tracePeerSelectionCountersMetrics (OnOff True)  (Just ekgDirect) = pscTracer
+  where
+    pscTracer :: Tracer IO PeerSelectionCounters
+    pscTracer = Tracer $ \(PeerSelectionCounters cold warm hot) -> do
+      sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.cold" cold
+      sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.warm" warm
+      sendEKGDirectInt ekgDirect "cardano.node.metrics.peerSelection.hot"  hot
+
+
+traceInboundGovernorCountersMetrics
+    :: forall addr.
+       OnOff TraceInboundGovernorCounters
+    -> Maybe EKGDirect
+    -> Tracer IO (InboundGovernorTrace addr)
+traceInboundGovernorCountersMetrics _             Nothing         = nullTracer
+traceInboundGovernorCountersMetrics (OnOff False) _               = nullTracer
+traceInboundGovernorCountersMetrics (OnOff True) (Just ekgDirect) = ipgcTracer
+  where
+    ipgcTracer :: Tracer IO (InboundGovernorTrace addr)
+    ipgcTracer = Tracer $ \case
+      (TrInboundGovernorCounters InboundGovernorCounters {
+          warmPeersRemote,
+          hotPeersRemote
+        }) -> do
+          sendEKGDirectInt ekgDirect "cardano.node.metrics.inbound-governor.warm"
+                                     warmPeersRemote
+          sendEKGDirectInt ekgDirect "cardano.node.metrics.inbound-governor.hot"
+                                     hotPeersRemote
+      _ -> return ()
 
 
 -- | get information about a chain fragment
