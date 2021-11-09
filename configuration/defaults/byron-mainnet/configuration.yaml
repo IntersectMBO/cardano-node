@@ -200,6 +200,34 @@ TraceHandshake: False
 # Trace IP Subscription messages.
 TraceIpSubscription: True
 
+# Trace local root peers
+TraceLocalRootPeers: True
+
+# Trace public root peers
+TracePublicRootPeers: True 
+
+# Trace peer selection
+TracePeerSelection: True
+
+# Debug peer selection
+TraceDebugPeerSelection: False
+
+# Trace peer selection actions (demotion / protmotion between cold / warm and
+# hot peers).
+TracePeerSelectionActions: True
+
+# Trace connection manager
+TraceConnectionManager: True
+
+# Trace server
+TraceServer: True
+
+# Trace local connection manager
+TraceLocalConnectionManager: False
+
+# Trace local server
+TraceLocalServer: False
+
 # Trace local ChainSync protocol messages.
 TraceLocalChainSyncProtocol: False
 
