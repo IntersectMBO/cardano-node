@@ -15,6 +15,7 @@ import           Cardano.Tracing.Config (TraceOptions (..))
 import           Ouroboros.Network.Block (MaxSlotNo (..), SlotNo (..))
 import           Ouroboros.Network.NodeToNode (DiffusionMode (InitiatorAndResponderDiffusionMode))
 import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (SnapshotInterval (..))
+import qualified Ouroboros.Consensus.Node as Consensus ( NetworkP2PMode (..) )
 
 import           Hedgehog (Property, discover, withTests, (===))
 import qualified Hedgehog
@@ -66,6 +67,13 @@ testPartialYamlConfig =
     , pncShutdownIPC = mempty
     , pncShutdownOnSlotSynced = mempty
     , pncMaybeMempoolCapacityOverride = mempty
+    , pncProtocolIdleTimeout = mempty
+    , pncTimeWaitTimeout = mempty
+    , pncTargetNumberOfRootPeers = mempty
+    , pncTargetNumberOfKnownPeers = mempty
+    , pncTargetNumberOfEstablishedPeers = mempty
+    , pncTargetNumberOfActivePeers = mempty
+    , pncEnableP2P = Last (Just DisabledP2PMode)
     }
 
 -- | Example partial configuration theoretically created
@@ -94,6 +102,13 @@ testPartialCliConfig =
     , pncLogMetrics = mempty
     , pncTraceConfig = mempty
     , pncMaybeMempoolCapacityOverride = mempty
+    , pncProtocolIdleTimeout = mempty
+    , pncTimeWaitTimeout = mempty
+    , pncTargetNumberOfRootPeers = mempty
+    , pncTargetNumberOfKnownPeers = mempty
+    , pncTargetNumberOfEstablishedPeers = mempty
+    , pncTargetNumberOfActivePeers = mempty
+    , pncEnableP2P = Last (Just DisabledP2PMode)
     }
 
 -- | Expected final NodeConfiguration
@@ -123,6 +138,13 @@ expectedConfig =
     , ncLogMetrics = True
     , ncTraceConfig = TracingOff
     , ncMaybeMempoolCapacityOverride = Nothing
+    , ncProtocolIdleTimeout = 5
+    , ncTimeWaitTimeout = 60
+    , ncTargetNumberOfRootPeers = 100
+    , ncTargetNumberOfKnownPeers = 100
+    , ncTargetNumberOfEstablishedPeers = 50
+    , ncTargetNumberOfActivePeers = 20
+    , ncEnableP2P = SomeNetworkP2PMode Consensus.DisabledP2PMode
     }
 
 -- -----------------------------------------------------------------------------
