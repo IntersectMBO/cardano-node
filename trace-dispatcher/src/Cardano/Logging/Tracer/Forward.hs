@@ -29,7 +29,7 @@ import           Ouroboros.Network.Mux (MiniProtocol (..),
                      RunMiniProtocol (..), miniProtocolLimits, miniProtocolNum,
                      miniProtocolRun)
 import           Ouroboros.Network.Protocol.Handshake.Codec
-                     (cborTermVersionDataCodec, noTimeLimitsHandshake)
+                     (noTimeLimitsHandshake)
 import           Ouroboros.Network.Protocol.Handshake.Type (Handshake)
 import           Ouroboros.Network.Protocol.Handshake.Unversioned
                      (UnversionedProtocol (..), UnversionedProtocolData (..),
@@ -152,7 +152,7 @@ doListenToAcceptor snocket address timeLimits (ekgConfig, tfConfig) sink store =
             address
             unversionedHandshakeCodec
             timeLimits
-            (cborTermVersionDataCodec unversionedProtocolDataCodec)
+            unversionedProtocolDataCodec
             acceptableVersion
             (simpleSingletonVersions
               UnversionedProtocol
