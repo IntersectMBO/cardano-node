@@ -248,7 +248,10 @@ handleSimpleNode scp runP p2pMode trace nodeTracers nc onKernel = do
 
   traceNamedObject
           (appendName "p2p-mode" trace)
-          (meta, LogMessage (Text.pack "Enabled"))
+          (meta, LogMessage $ Text.pack
+                            (  "P2P MODE: unsupported and unverified version of "
+                            <> "`cardano-node` which enables p2p networking"
+                            ))
 
   let pInfo = Protocol.protocolInfo runP
       tracer = toLogObject trace
