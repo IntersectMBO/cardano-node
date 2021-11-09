@@ -18,11 +18,17 @@ module Test.Cardano.Node.Gen
 
 import           Cardano.Prelude
 
-import           Cardano.Node.Configuration.Topology (NetworkTopology (..), NodeSetup (..),
-                     RemoteAddress (..))
+import           Cardano.Node.Configuration.TopologyP2P (NetworkTopology (..), PublicRootPeers (..),
+                   LocalRootPeersGroups (..), LocalRootPeersGroup (..), RootConfig (..),
+                   NodeSetup (..), PeerAdvertise (..), UseLedger (..))
 import           Cardano.Node.Types (NodeAddress' (..), NodeHostIPAddress (..),
                    NodeHostIPv4Address (..), NodeHostIPv6Address (..),
                    NodeIPAddress, NodeIPv4Address, NodeIPv6Address)
+import           Cardano.Slotting.Slot (SlotNo (..))
+import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter (..))
+import           Ouroboros.Network.PeerSelection.RelayAccessPoint (
+                   DomainAccessPoint (..), RelayAccessPoint (..))
+
 
 import qualified Data.IP as IP
 
@@ -35,8 +41,9 @@ import qualified Hedgehog.Range as Range
 genNetworkTopology :: Gen NetworkTopology
 genNetworkTopology =
   Gen.choice
-    [ MockNodeTopology <$> Gen.list (Range.linear 0 10) genNodeSetup
-    , RealNodeTopology <$> Gen.list (Range.linear 0 10) genRemoteAddress
+    [ RealNodeTopology <$> genLocalRootPeersGroups
+                       <*> Gen.list (Range.linear 0 10) genPublicRootPeers
+                       <*> genUseLedger
     ]
 
 genNodeAddress' :: Gen addr -> Gen (NodeAddress' addr)
@@ -83,12 +90,51 @@ genNodeSetup =
     <$> Gen.word64 (Range.linear 0 10000)
     <*> Gen.maybe (genNodeAddress' genNodeHostIPv4Address)
     <*> Gen.maybe (genNodeAddress' genNodeHostIPv6Address)
-    <*> Gen.list (Range.linear 0 6) genRemoteAddress
+    <*> Gen.list (Range.linear 0 6) genRootConfig
+    <*> genUseLedger
 
-genRemoteAddress :: Gen RemoteAddress
-genRemoteAddress =
-  RemoteAddress
+genDomainAddress :: Gen DomainAccessPoint
+genDomainAddress =
+  DomainAccessPoint
     <$> Gen.element cooking
-    <*> fmap fromIntegral (Gen.word16 $ Range.linear 100 20000)
-    <*> Gen.int (Range.linear 0 100)
+    <*> (fromIntegral <$> Gen.int (Range.linear 1000 9000))
 
+genRelayAddress :: Gen RelayAccessPoint
+genRelayAddress = do
+  isDomain <- Gen.bool
+  if isDomain
+    then RelayDomainAccessPoint <$> genDomainAddress
+    else RelayAccessAddress
+          <$> Gen.choice
+                [ IP.IPv4 . unNodeHostIPv4Address <$> genNodeHostIPv4Address
+                , IP.IPv6 . unNodeHostIPv6Address <$> genNodeHostIPv6Address
+                ]
+          <*> (fromIntegral <$> Gen.int (Range.linear 1000 9000))
+
+genRootConfig :: Gen RootConfig
+genRootConfig = do
+  RootConfig
+    <$> Gen.list (Range.linear 0 6) genRelayAddress
+    <*> Gen.element [DoAdvertisePeer, DoNotAdvertisePeer]
+
+genLocalRootPeersGroup :: Gen LocalRootPeersGroup
+genLocalRootPeersGroup = do
+    ra <- genRootConfig
+    val <- Gen.int (Range.linear 0 (length (rootAccessPoints ra)))
+    return (LocalRootPeersGroup ra val)
+
+genLocalRootPeersGroups :: Gen LocalRootPeersGroups
+genLocalRootPeersGroups =
+  LocalRootPeersGroups
+    <$> Gen.list (Range.linear 0 6) genLocalRootPeersGroup
+
+genPublicRootPeers :: Gen PublicRootPeers
+genPublicRootPeers =
+  PublicRootPeers
+    <$> genRootConfig
+
+genUseLedger :: Gen UseLedger
+genUseLedger = do
+    slot <- Gen.integral (Range.linear (-1) 10) :: Gen Integer
+    if slot >= 0 then return $ UseLedger $ UseLedgerAfter $ SlotNo $ fromIntegral slot
+                 else return $ UseLedger   DontUseLedger
