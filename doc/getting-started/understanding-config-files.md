@@ -21,6 +21,86 @@ Tells your node to which nodes in the network it should talk to. A minimal versi
 
 Your __block-producing__ node must __ONLY__ talk to your __relay nodes__, and the relay node should talk to other relay nodes in the network. Go to our telegram channel to find out IP addresses and ports of peers.
 
+#### The P2P topology.json file
+
+The P2P topology file specifies how to obtain the _root peers_ (or _bootstrapping
+peers_).  These are root peers for the gossip which is a future enhancement of
+`ouroboros-network`.
+
+* _local roots_:  the node will try, in a best effort way, to have specified
+  number of hot connections towards each local root peer group (by hot we mean
+  connections taking active role in the consensus algorithm).   Local roots
+  should include local relays or local block producer node, all any other peers
+  with which the node shall keep a connection;
+* _public roots_: additional bootstrapping nodes.  They are either read from
+  the configuration file directly, or from the chain.   The configured ones
+  will be used to pass a recent snapshot of peers need before the node caches up
+  with the recent enough chain to construct root peers by itself.
+
+The node does not guarantee to have a connection with each public root or,
+unlike for local ones, but by being present in the set it gets a chance to have
+an outbound connection towards that peer.
+
+A minimal version of this file looks like this:
+
+```json
+{
+  "LocalRoots": {
+    "groups": [
+      {
+        "localRoots": {
+          "accessPoints": [
+            {
+              "address": "x.x.x.x",
+              "port": 3001
+            }
+          ],
+          "advertise": false
+        },
+        "valency": 1
+      }
+    ]
+  },
+  "PublicRoots": [
+    {
+      "publicRoots" : {
+        "accessPoints": [
+          {
+            "address": "y.y.y.y",
+            "port": 3002
+          }
+        ],
+        "advertise": false
+      }
+    }
+  ],
+  "useLedgerAfterSlot": 0
+}
+```
+
+* The main difference between `LocalRoots` and `PublicRoots` is that with the former
+    you can specify different groups with different valencies. That can be useful to
+    inform your node of different targets withing a group to achieve. `LocalRoots`
+    is for peers which the node always should have as hot, such as their own block producer.
+    `PublicRoots` represent a source of fallback peers, a source of peers to be used if peers
+    from the ledger (`useLedgerAfterSlot`) is disabled or unavailable.
+
+* This means that your node will contact node at ip `x.x.x.x` on `port 3001`, and resolve
+    dns domain `y.y.y.y` (assuming they are), and try to maintain a connection with at least `1` of the
+    resolved ips.
+
+* `valency` tells the node how many connections your node should try to pick
+  from the given group. If a dns address is given, valency governs to how many
+  resolved ip addresses should we maintain active (hot) connection.
+
+* Local roots groups shall be non-overlapping.
+
+Your __block-producing__ node must __ONLY__ talk to your __relay nodes__, and the relay node should talk to other relay nodes in the network.
+
+You __can__ tell the node that the topology configuration file changed by sending a SIGHUP
+signal to the `cardano-node` process, e.g. `pkill -HUP cardano-node`. After receiving the
+signal, `cardano-node` will re-read the file and restart all dns resolution. Please
+**note** that this only applies to the topology configuration file!
 
 #### The genesis.json file
 
