@@ -140,10 +140,10 @@ expectedConfig =
     , ncMaybeMempoolCapacityOverride = Nothing
     , ncProtocolIdleTimeout = 5
     , ncTimeWaitTimeout = 60
-    , ncTargetNumberOfRootPeers = 5
-    , ncTargetNumberOfKnownPeers = 5
-    , ncTargetNumberOfEstablishedPeers = 2
-    , ncTargetNumberOfActivePeers = 1
+    , ncTargetNumberOfRootPeers = 100
+    , ncTargetNumberOfKnownPeers = 100
+    , ncTargetNumberOfEstablishedPeers = 50
+    , ncTargetNumberOfActivePeers = 20
     , ncEnableP2P = SomeNetworkP2PMode Consensus.DisabledP2PMode
     }
 

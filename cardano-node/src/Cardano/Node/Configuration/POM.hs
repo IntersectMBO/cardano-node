@@ -420,10 +420,10 @@ defaultPartialNodeConfiguration =
     , pncMaybeMempoolCapacityOverride = mempty
     , pncProtocolIdleTimeout   = Last (Just 5)
     , pncTimeWaitTimeout       = Last (Just 60)
-    , pncTargetNumberOfRootPeers        = Last (Just 5)
-    , pncTargetNumberOfKnownPeers       = Last (Just 5)
-    , pncTargetNumberOfEstablishedPeers = Last (Just 2)
-    , pncTargetNumberOfActivePeers      = Last (Just 1)
+    , pncTargetNumberOfRootPeers        = Last (Just 100)
+    , pncTargetNumberOfKnownPeers       = Last (Just 100)
+    , pncTargetNumberOfEstablishedPeers = Last (Just 50)
+    , pncTargetNumberOfActivePeers      = Last (Just 20)
     , pncEnableP2P                      = Last (Just DisabledP2PMode)
     }
 
