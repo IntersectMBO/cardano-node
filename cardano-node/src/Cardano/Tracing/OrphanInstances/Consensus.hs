@@ -1013,8 +1013,9 @@ instance (ConvertRawHash blk, LedgerSupportsProtocol blk)
                , "exception" .= String (pack $ show exc) ]
     TraceFoundIntersection _ _ _ ->
       mkObject [ "kind" .= String "ChainSyncClientEvent.TraceFoundIntersection" ]
-    TraceTermination _ ->
-      mkObject [ "kind" .= String "ChainSyncClientEvent.TraceTermination" ]
+    TraceTermination reason ->
+      mkObject [ "kind" .= String "ChainSyncClientEvent.TraceTermination"
+               , "reason" .= String (pack $ show reason) ]
 
 instance ConvertRawHash blk
       => ToObject (TraceChainSyncServerEvent blk) where
