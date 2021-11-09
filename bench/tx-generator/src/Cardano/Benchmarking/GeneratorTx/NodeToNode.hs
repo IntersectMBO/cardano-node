@@ -36,7 +36,9 @@ import           Ouroboros.Network.DeltaQ (defaultGSV)
 import           Ouroboros.Network.Driver (runPeerWithLimits)
 import           Ouroboros.Network.KeepAlive
 import           Ouroboros.Network.Magic
-import           Ouroboros.Network.Mux (MuxPeer (..), RunMiniProtocol (..), continueForever)
+import           Ouroboros.Network.Mux (MuxPeer (..), OuroborosApplication (..),
+                                        OuroborosBundle, RunMiniProtocol (..),
+                                        continueForever)
 import           Ouroboros.Network.NodeToClient (chainSyncPeerNull, IOManager)
 import           Ouroboros.Network.NodeToNode (NetworkConnectTracers (..))
 import qualified Ouroboros.Network.NodeToNode as NtN
@@ -80,6 +82,12 @@ benchmarkConnectTxSubmit ioManager handshakeTracer submissionTracer codecConfig 
     (addrAddress <$> Nothing)
     (addrAddress remoteAddr)
  where
+  mkApp :: OuroborosBundle      mode addr bs m a b
+        -> OuroborosApplication mode addr bs m a b
+  mkApp bundle =
+    OuroborosApplication $ \connId controlMessageSTM ->
+      foldMap (\p -> p connId controlMessageSTM) bundle
+
   n2nVer :: NodeToNodeVersion
   n2nVer = NodeToNodeV_7
   blkN2nVer :: BlockNodeToNodeVersion blk
@@ -96,6 +104,7 @@ benchmarkConnectTxSubmit ioManager handshakeTracer submissionTracer codecConfig 
        { NtN.networkMagic = networkMagic
        , NtN.diffusionMode = NtN.InitiatorOnlyDiffusionMode
        }) $
+      mkApp $
       NtN.nodeToNodeProtocols NtN.defaultMiniProtocolParameters ( \them _ ->
         NtN.NodeToNodeProtocols
           { NtN.chainSyncProtocol = InitiatorProtocolOnly $
