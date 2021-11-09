@@ -17,15 +17,16 @@ module Testnet.Shelley
   ) where
 
 #ifdef UNIX
-import           Prelude (Integer, map)
+import           Prelude (Integer, map, Bool(..), (-))
 #else
-import           Prelude (Integer)
+import           Prelude (Integer, Bool(..), (-))
 #endif
 
 import           Control.Monad
 import           Control.Monad.IO.Class
 import           Control.Monad.Trans.Resource
 import           Data.Aeson
+import           Data.ByteString.Lazy (ByteString)
 import           Data.Eq
 import           Data.Function
 import           Data.Functor
@@ -34,13 +35,19 @@ import           Data.List ((\\))
 import           Data.Maybe
 import           Data.Ord
 import           Data.Semigroup
-import           Data.String (String)
+import           Data.String (String, fromString)
 import           Data.Time.Clock
 import           GHC.Float
+import           GHC.Real
 import           Hedgehog.Extras.Stock.Aeson
 import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket (..))
 import           System.FilePath.Posix ((</>))
 import           Text.Show
+
+import qualified Cardano.Node.Configuration.Topology    as NonP2P
+import qualified Cardano.Node.Configuration.TopologyP2P as P2P
+import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
+import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter (..))
 
 import qualified Control.Concurrent as IO
 import qualified Data.Aeson as J
@@ -82,6 +89,7 @@ data TestnetOptions = TestnetOptions
   , epochLength :: Int
   , slotLength :: Double
   , maxLovelaceSupply :: Integer
+  , enableP2P :: Bool
   } deriving (Eq, Show)
 
 defaultTestnetOptions :: TestnetOptions
@@ -93,7 +101,14 @@ defaultTestnetOptions = TestnetOptions
   , epochLength = 1000
   , slotLength = 0.2
   , maxLovelaceSupply = 1000000000
+  , enableP2P = False
   }
+
+-- | Rewrite a line in the configuration file
+rewriteConfiguration :: Bool -> String -> String
+rewriteConfiguration True "EnableP2P: False" = "EnableP2P: True"
+rewriteConfiguration False "EnableP2P: True" = "EnableP2P: False"
+rewriteConfiguration _ s                     = s
 
 ifaceAddress :: String
 ifaceAddress = "127.0.0.1"
@@ -116,6 +131,45 @@ rewriteGenesisSpec testnetOptions startTime =
 startTimeOffsetSeconds :: DTC.NominalDiffTime
 startTimeOffsetSeconds = if OS.isWin32 then 90 else 15
 
+
+mkTopologyConfig :: Int -> [Int] -> Int
+                 -> Bool -- ^ if true use p2p topology configuration
+                 -> ByteString
+mkTopologyConfig numPraosNodes allPorts port False = J.encode topologyNonP2P
+  where
+    topologyNonP2P :: NonP2P.NetworkTopology
+    topologyNonP2P =
+      NonP2P.RealNodeTopology
+        [ NonP2P.RemoteAddress (fromString ifaceAddress)
+                               (fromIntegral peerPort)
+                               (numPraosNodes - 1)
+        | peerPort <- allPorts \\ [port]
+        ]
+mkTopologyConfig numPraosNodes allPorts port True = J.encode topologyP2P
+  where
+    rootConfig :: P2P.RootConfig
+    rootConfig =
+      P2P.RootConfig
+        [ RelayAccessAddress (fromString ifaceAddress)
+                             (fromIntegral peerPort)
+        | peerPort <- allPorts \\ [port]
+        ]
+        P2P.DoNotAdvertisePeer
+
+    localRootPeerGroups :: P2P.LocalRootPeersGroups
+    localRootPeerGroups =
+      P2P.LocalRootPeersGroups
+        [ P2P.LocalRootPeersGroup rootConfig
+                                  (numPraosNodes - 1)
+        ]
+
+    topologyP2P :: P2P.NetworkTopology
+    topologyP2P =
+      P2P.RealNodeTopology
+        localRootPeerGroups
+        []
+        (P2P.UseLedger DontUseLedger)
+
 testnet :: TestnetOptions -> H.Conf -> H.Integration [String]
 testnet testnetOptions H.Conf {..} = do
   void $ H.note OS.os
@@ -136,10 +190,6 @@ testnet testnetOptions H.Conf {..} = do
   let userAddrs = ("user" <>) <$> userPoolN
   let poolAddrs = ("pool-owner" <>) <$> poolNodesN
   let addrs = userAddrs <> poolAddrs
-
-  H.copyFile
-    (base </> "configuration/chairman/shelley-only/configuration.yaml")
-    (tempAbsPath </> "configuration.yaml")
 
   -- Set up our template
   void $ H.execCli
@@ -225,17 +275,9 @@ testnet testnetOptions H.Conf {..} = do
   -- Make topology files
   forM_ allNodes $ \node -> do
     let port = fromJust $ M.lookup node nodeToPort
-    H.lbsWriteFile (tempAbsPath </> node </> "topology.json") $ J.encode $
-      J.object
-      [ "Producers" .= J.toJSON
-        [ J.object
-          [ "addr" .= J.toJSON @String ifaceAddress
-          , "port" .= J.toJSON @Int peerPort
-          , "valency" .= J.toJSON @Int 1
-          ]
-        | peerPort <- allPorts \\ [port]
-        ]
-      ]
+    H.lbsWriteFile (tempAbsPath </> node </> "topology.json") $
+      mkTopologyConfig numPraosNodes allPorts port (enableP2P testnetOptions)
+
     H.writeFile (tempAbsPath </> node </> "port") (show port)
 
   -- Generated node operator keys (cold, hot) and operational certs
@@ -376,6 +418,10 @@ testnet testnetOptions H.Conf {..} = do
   -- Launch cluster of three nodes
 
   H.createDirectoryIfMissing logDir
+
+  H.readFile (base </> "configuration/chairman/shelley-only/configuration.yaml")
+    <&> L.unlines . fmap (rewriteConfiguration (enableP2P testnetOptions)) . L.lines
+    >>= H.writeFile (tempAbsPath </> "configuration.yaml")
 
   forM_ allNodes $ \node -> do
     dbDir <- H.noteShow $ tempAbsPath </> "db/" <> node
