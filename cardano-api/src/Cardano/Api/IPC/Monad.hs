@@ -5,7 +5,6 @@
 module Cardano.Api.IPC.Monad
   ( LocalStateQueryExpr
   , executeLocalStateQueryExpr
-  , executeLocalStateQueryExprWithChainSync
   , queryExpr
   , determineEraExpr
   ) where
@@ -25,7 +24,6 @@ import Data.Maybe
 import Cardano.Ledger.Shelley.Scripts ()
 import System.IO
 
-import qualified Ouroboros.Network.Protocol.ChainSync.Client as Net.Sync
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Client as Net.Query
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as Net.Query
 
@@ -68,74 +66,6 @@ executeLocalStateQueryExpr connectInfo mpoint f = do
     )
 
   atomically waitResult
-
--- | Execute a local state query expression concurrently with a chain sync.
-executeLocalStateQueryExprWithChainSync
-  :: LocalNodeConnectInfo mode
-  -> Maybe ChainPoint
-  -> (NodeToClientVersion -> LocalStateQueryExpr (BlockInMode mode) ChainPoint (QueryInMode mode) () IO a)
-  -> IO (ChainTip, Either AcquireFailure a)
-executeLocalStateQueryExprWithChainSync connectInfo mpoint f = do
-  tmvResultChainTip <- newEmptyTMVarIO
-
-  let readChainTip = readTMVar tmvResultChainTip
-
-  connectToLocalNodeWithVersion
-    connectInfo
-    (\_ntcVersion ->
-      LocalNodeClientProtocols
-      { localChainSyncClient    = LocalChainSyncClient $ chainSyncGetCurrentTip readChainTip tmvResultChainTip
-      , localStateQueryClient   = Nothing
-      , localTxSubmissionClient = Nothing
-      }
-    )
-
-  chainTip <- atomically readChainTip
-
-  tmvResultLocalState <- newEmptyTMVarIO
-
-  let readLocalState = readTMVar tmvResultLocalState
-
-  connectToLocalNodeWithVersion
-    connectInfo
-    (\ntcVersion ->
-      LocalNodeClientProtocols
-      { localChainSyncClient    = NoLocalChainSyncClient
-      , localStateQueryClient   = Just $ setupLocalStateQueryExpr readLocalState mpoint tmvResultLocalState (f ntcVersion)
-      , localTxSubmissionClient = Nothing
-      }
-    )
-
-  localState <- atomically readLocalState
-
-  return (chainTip, localState)
-
-  where
-    chainSyncGetCurrentTip
-      :: STM b
-      -- ^ An STM expression that only returns when all protocols are complete.
-      -- Protocols must wait until 'waitDone' returns because premature exit will
-      -- cause other incomplete protocols to abort which may lead to deadlock.
-      -> TMVar ChainTip
-      -> ChainSyncClient (BlockInMode mode) ChainPoint ChainTip IO ()
-    chainSyncGetCurrentTip waitDone tipVar =
-      ChainSyncClient $ pure clientStIdle
-      where
-        clientStIdle :: Net.Sync.ClientStIdle (BlockInMode mode) ChainPoint ChainTip IO ()
-        clientStIdle =
-          Net.Sync.SendMsgRequestNext clientStNext (pure clientStNext)
-
-        clientStNext :: Net.Sync.ClientStNext (BlockInMode mode) ChainPoint ChainTip IO ()
-        clientStNext = Net.Sync.ClientStNext
-          { Net.Sync.recvMsgRollForward = \_block tip -> ChainSyncClient $ do
-              void . atomically $ putTMVar tipVar tip
-              void $ atomically waitDone -- Wait for all protocols to complete before exiting.
-              pure $ Net.Sync.SendMsgDone ()
-          , Net.Sync.recvMsgRollBackward = \_point tip -> ChainSyncClient $ do
-              void . atomically $ putTMVar tipVar tip
-              void $ atomically waitDone -- Wait for all protocols to complete before exiting.
-              pure $ Net.Sync.SendMsgDone ()
-          }
 
 -- | Use 'queryExpr' in a do block to construct monadic local state queries.
 setupLocalStateQueryExpr ::
