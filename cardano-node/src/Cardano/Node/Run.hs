@@ -38,12 +38,18 @@ import           System.Environment (lookupEnv)
 #ifdef UNIX
 import           System.Posix.Files
 import           System.Posix.Types (FileMode)
+import qualified System.Posix.Signals as Signals
 #else
 import           System.Win32.File
 #endif
 
+#ifdef UNIX
 import           Cardano.BM.Data.LogItem (LOContent (..), LogObject (..), PrivacyAnnotation (..),
-                   mkLOMeta)
+                     mkLOMeta, LOMeta)
+#else
+import           Cardano.BM.Data.LogItem (LOContent (..), LogObject (..), PrivacyAnnotation (..),
+                     mkLOMeta)
+#endif
 import           Cardano.BM.Data.Tracer (ToLogObject (..), TracingVerbosity (..))
 import           Cardano.BM.Data.Transformers (setHostname)
 import           Cardano.BM.Trace
@@ -343,6 +349,15 @@ handleSimpleNode scp runP p2pMode trace nodeTracers nc onKernel = do
         (localRootsVar :: StrictTVar IO [(Int, Map RelayAccessPoint PeerAdvertise)])  <- newTVarIO localRoots
         publicRootsVar <- newTVarIO publicRoots
         useLedgerVar   <- newTVarIO (useLedgerAfterSlot nt)
+#ifdef UNIX
+        _ <- Signals.installHandler
+              Signals.sigHUP
+              (updateVars meta localRootsVar publicRootsVar useLedgerVar)
+              Nothing
+        traceNamedObject
+                (appendName "signal-handler" trace)
+                (meta, LogMessage (Text.pack "Installed signal handler"))
+#endif
         void $
           Node.run
             nodeArgs
@@ -419,6 +434,48 @@ handleSimpleNode scp runP p2pMode trace nodeTracers nc onKernel = do
   traceNodeBasicInfo tr basicInfoItems =
     forM_ basicInfoItems $ \(LogObject nm mt content) ->
       traceNamedObject (appendName nm tr) (mt, content)
+
+#ifdef UNIX
+  updateVars :: LOMeta
+             -> StrictTVar IO [(Int, Map RelayAccessPoint PeerAdvertise)]
+             -> StrictTVar IO [RelayAccessPoint]
+             -> StrictTVar IO UseLedgerAfter
+             -> Signals.Handler
+  updateVars meta localRootsVar publicRootsVar useLedgerVar =
+    Signals.Catch $ do
+      traceNamedObject
+          (appendName "signal-handler" trace)
+          (meta, LogMessage (Text.pack "SIGHUP signal received - Performing topology configuration update"))
+
+      result <- try $ readTopologyFileOrError nc
+
+      case result of
+        Left (FatalError err) ->
+          traceNamedObject
+              (appendName "topology-file" trace)
+              (meta, LogMessage (Text.pack "Error reading topology configuration file:" <> err))
+        Right nt -> do
+          traceNamedObject
+              (appendName "topology-file" trace)
+              (meta, LogMessage (Text.pack "Successfully read topology configuration file"))
+
+          let (localRoots, publicRoots) = producerAddresses nt
+
+          atomically $ do
+            writeTVar localRootsVar localRoots
+            writeTVar publicRootsVar publicRoots
+            writeTVar useLedgerVar (useLedgerAfterSlot nt)
+
+          traceNamedObject
+            (appendName "local-roots" trace)
+            (meta, LogMessage . Text.pack . show $ localRoots)
+          traceNamedObject
+            (appendName "public-roots" trace)
+            (meta, LogMessage . Text.pack . show $ publicRoots)
+          traceNamedObject
+            (appendName "use-ledger-after-slot" trace)
+            (meta, LogMessage . Text.pack . show $ useLedgerAfterSlot nt)
+#endif
 
 --------------------------------------------------------------------------------
 -- Helper functions
