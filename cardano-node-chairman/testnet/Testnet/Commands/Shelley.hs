@@ -5,6 +5,7 @@ module Testnet.Commands.Shelley
   ) where
 
 
+import           Data.Bool
 import           Data.Eq
 import           Data.Function
 import           Data.Int
@@ -74,6 +75,7 @@ optsTestnet = TestnetOptions
       <>  OA.showDefault
       <>  OA.value (maxLovelaceSupply defaultTestnetOptions)
       )
+  <*> pure False
 
 optsShelley :: Parser ShelleyOptions
 optsShelley = ShelleyOptions
