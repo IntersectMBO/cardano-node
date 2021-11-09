@@ -16,19 +16,23 @@ module Cardano.Node.Run
   , checkVRFFilePermissions
   ) where
 
-import           Cardano.Prelude hiding (ByteString, atomically, take, trace)
+import           Cardano.Prelude hiding (ByteString, atomically, take, trace, STM)
 import           Prelude (String)
+import           Data.IP (toSockAddr)
 
 import qualified Control.Concurrent.Async as Async
 import           Control.Monad.Trans.Except.Extra (left)
+import           Control.Monad.Class.MonadSTM.Strict
 import           Control.Tracer
+import qualified Data.Map.Strict as Map
 import           Data.Text (breakOn, pack, take)
 import qualified Data.Text as Text
+import qualified Data.Text.Encoding as Text
 import           Data.Time.Clock (getCurrentTime)
 import           Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import           Data.Version (showVersion)
 import           Network.HostName (getHostName)
-import           Network.Socket (AddrInfo, Socket)
+import           Network.Socket (Socket)
 import           System.Directory (canonicalizePath, createDirectoryIfMissing, makeAbsolute)
 import           System.Environment (lookupEnv)
 #ifdef UNIX
@@ -39,7 +43,7 @@ import           System.Win32.File
 #endif
 
 import           Cardano.BM.Data.LogItem (LOContent (..), LogObject (..), PrivacyAnnotation (..),
-                   mkLOMeta)
+                   mkLOMeta, LOMeta)
 import           Cardano.BM.Data.Tracer (ToLogObject (..), TracingVerbosity (..))
 import           Cardano.BM.Data.Transformers (setHostname)
 import           Cardano.BM.Trace
@@ -50,29 +54,43 @@ import qualified Cardano.Crypto.Libsodium as Crypto
 import           Cardano.Node.Configuration.Logging (LoggingLayer (..), Severity (..),
                    createLoggingLayer, nodeBasicInfo, shutdownLoggingLayer)
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..),
-                   PartialNodeConfiguration (..), defaultPartialNodeConfiguration,
-                   makeNodeConfiguration, parseNodeConfigurationFP)
+                   PartialNodeConfiguration (..), SomeNetworkP2PMode (..),
+                   defaultPartialNodeConfiguration, makeNodeConfiguration,
+                   parseNodeConfigurationFP)
 import           Cardano.Node.Types
 import           Cardano.Tracing.Config (TraceOptions (..), TraceSelection (..))
 import           Cardano.Tracing.Constraints (TraceConstraints)
 import           Cardano.Tracing.Metrics (HasKESInfo (..), HasKESMetricsData (..))
 
 import qualified Ouroboros.Consensus.Config as Consensus
-import           Ouroboros.Consensus.Config.SupportsNode (getNetworkMagic)
-import           Ouroboros.Consensus.Node (DiffusionArguments (..), DiffusionTracers (..),
-                   DnsSubscriptionTarget (..), IPSubscriptionTarget (..), RunNode, RunNodeArgs (..),
-                   StdRunNodeArgs (..))
+import           Ouroboros.Consensus.Config.SupportsNode (ConfigSupportsNode (..), getNetworkMagic)
+import           Ouroboros.Consensus.Node (RunNode, RunNodeArgs (..)
+                   , StdRunNodeArgs (..), NetworkP2PMode (..))
 import qualified Ouroboros.Consensus.Node as Node (getChainDB, run)
 import           Ouroboros.Consensus.Node.ProtocolInfo
+import           Ouroboros.Consensus.Node.NetworkProtocolVersion
 import           Ouroboros.Consensus.Util.Orphans ()
-import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..), DiffusionMode)
+import           Ouroboros.Network.Subscription
+                   ( DnsSubscriptionTarget (..)
+                   , IPSubscriptionTarget (..)
+                   )
+import qualified Ouroboros.Network.Diffusion as Diffusion
+import qualified Ouroboros.Network.Diffusion.P2P as P2P
+import qualified Ouroboros.Network.Diffusion.NonP2P as NonP2P
+import           Ouroboros.Network.NodeToClient (LocalAddress (..), LocalSocket (..))
+import           Ouroboros.Network.NodeToNode (RemoteAddress,
+                   AcceptedConnectionsLimit (..), PeerSelectionTargets (..))
+import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter (..))
+import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
 
 import           Cardano.Api
 import qualified Cardano.Api.Protocol.Types as Protocol
 
 import           Cardano.Node.Configuration.Socket (SocketOrSocketInfo (..),
-                   gatherConfiguredSockets, getSocketOrSocketInfoAddr, renderSocketConfigError)
-import           Cardano.Node.Configuration.Topology
+                     gatherConfiguredSockets, getSocketOrSocketInfoAddr, renderSocketConfigError)
+import qualified Cardano.Node.Configuration.TopologyP2P as TopologyP2P
+import           Cardano.Node.Configuration.TopologyP2P
+import qualified Cardano.Node.Configuration.Topology as TopologyNonP2P
 import           Cardano.Node.Handlers.Shutdown
 import           Cardano.Node.Protocol (mkConsensusProtocol)
 import           Cardano.Node.Protocol.Types
@@ -140,19 +158,23 @@ runNode cmdPc = do
           -- Used for ledger queries and peer connection status.
           nodeKernelData <- mkNodeKernelData
           let ProtocolInfo { pInfoConfig = cfg } = Protocol.protocolInfo runP
-          tracers <- mkTracers
-                       (Consensus.configBlock cfg)
-                       (ncTraceConfig nc)
-                       trace
-                       nodeKernelData
-                       (llEKGDirect loggingLayer)
-          Async.withAsync (handlePeersListSimple trace nodeKernelData)
-              $ \_peerLogingThread ->
-                -- We ignore peer loging thread if it dies, but it will be killed
-                -- when 'handleSimpleNode' terminates.
-                handleSimpleNode p runP trace tracers nc (setNodeKernel nodeKernelData)
-                `finally`
-                shutdownLoggingLayer loggingLayer
+          case ncEnableP2P nc of
+            SomeNetworkP2PMode p2pMode -> do
+              tracers <- mkTracers
+                          (Consensus.configBlock cfg)
+                          (ncTraceConfig nc)
+                          trace
+                          nodeKernelData
+                          (llEKGDirect loggingLayer)
+                          p2pMode
+              Async.withAsync (handlePeersListSimple trace nodeKernelData)
+                  $ \_peerLogingThread ->
+                    -- We ignore peer loging thread if it dies, but it will be killed
+                    -- when 'handleSimpleNode' terminates.
+                        handleSimpleNode p runP p2pMode trace tracers nc
+                                        (setNodeKernel nodeKernelData)
+                        `finally`
+                        shutdownLoggingLayer loggingLayer
 
     case p of
       SomeConsensusProtocol _ runP -> handleNodeWithTracers runP
@@ -194,27 +216,30 @@ handlePeersListSimple tr nodeKern = forever $ do
   getCurrentPeers nodeKern >>= tracePeers tr
   threadDelay 2000000 -- 2 seconds.
 
+
 -- | Sets up a simple node, which will run the chain sync protocol and block
 -- fetch protocol, and, if core, will also look at the mempool when trying to
 -- create a new block.
 
 handleSimpleNode
-  :: forall blk
+  :: forall blk p2p
   . ( RunNode blk
     , Protocol.Protocol IO blk
     )
   => SomeConsensusProtocol
   -> Protocol.ProtocolInfoArgs IO blk
+  -> NetworkP2PMode p2p
   -> Trace IO Text
-  -> Tracers RemoteConnectionId LocalConnectionId blk
+  -> Tracers RemoteConnectionId LocalConnectionId blk p2p
   -> NodeConfiguration
   -> (NodeKernel IO RemoteConnectionId LocalConnectionId blk -> IO ())
   -- ^ Called on the 'NodeKernel' after creating it, but before the network
   -- layer is initialised.  This implies this function must not block,
   -- otherwise the node won't actually start.
   -> IO ()
-handleSimpleNode scp runP trace nodeTracers nc onKernel = do
+handleSimpleNode scp runP p2pMode trace nodeTracers nc onKernel = do
   meta <- mkLOMeta Notice Public
+  logP2PWarning meta
 
   let pInfo = Protocol.protocolInfo runP
       tracer = toLogObject trace
@@ -233,29 +258,33 @@ handleSimpleNode scp runP trace nodeTracers nc onKernel = do
 
   dbPath <- canonDbPath nc
 
-  eitherTopology <- readTopologyFile nc
-  nt <- either (\err -> panic $ "Cardano.Node.Run.handleSimpleNode.readTopologyFile: " <> err) pure eitherTopology
-
-  let diffusionTracers :: DiffusionTracers
-      diffusionTracers = createDiffusionTracers nodeTracers
-
-      (ipProducerAddrs, dnsProducerAddrs) = producerAddresses nt
-
-      dnsProducers :: [DnsSubscriptionTarget]
-      dnsProducers = uncurry dnsSubscriptionTarget `map` dnsProducerAddrs
-
-      ipProducers :: IPSubscriptionTarget
-      ipProducers = ipSubscriptionTargets ipProducerAddrs
-
-      diffusionArguments :: DiffusionArguments
+  let diffusionArguments :: Diffusion.Arguments Socket      RemoteAddress
+                                                LocalSocket LocalAddress
       diffusionArguments =
-        createDiffusionArguments
-          publicIPv4SocketOrAddr
-          publicIPv6SocketOrAddr
-          localSocketOrPath
-          (ncDiffusionMode nc)
-          ipProducers
-          dnsProducers
+        Diffusion.Arguments {
+            Diffusion.daIPv4Address  =
+              case publicIPv4SocketOrAddr of
+                Just (ActualSocket socket) -> Just (Left socket)
+                Just (SocketInfo addr)     -> Just (Right addr)
+                Nothing                    -> Nothing
+          , Diffusion.daIPv6Address  =
+              case publicIPv6SocketOrAddr of
+                Just (ActualSocket socket) -> Just (Left socket)
+                Just (SocketInfo addr)     -> Just (Right addr)
+                Nothing                    -> Nothing
+          , Diffusion.daLocalAddress =
+              case localSocketOrPath of  -- TODO allow expressing the Nothing case in the config
+                Just (ActualSocket localSocket)  -> Just (Left  localSocket)
+                Just (SocketInfo localAddr)      -> Just (Right localAddr)
+                Nothing                          -> Nothing
+          , Diffusion.daAcceptedConnectionsLimit =
+              AcceptedConnectionsLimit
+                { acceptedConnectionsHardLimit = 512
+                , acceptedConnectionsSoftLimit = 384
+                , acceptedConnectionsDelay     = 5
+                }
+          , Diffusion.daMode = ncDiffusionMode nc
+          }
 
   ipv4 <- traverse getSocketOrSocketInfoAddr publicIPv4SocketOrAddr
   ipv6 <- traverse getSocketOrSocketInfoAddr publicIPv6SocketOrAddr
@@ -267,53 +296,111 @@ handleSimpleNode scp runP trace nodeTracers nc onKernel = do
     (appendName "diffusion-mode" trace)
     (meta, LogMessage . Text.pack . show . ncDiffusionMode $ nc)
   traceNamedObject
-    (appendName "dns-producers" trace)
-    (meta, LogMessage . Text.pack . show $ dnsProducers)
+    (appendName "local-socket" trace)
+    (meta, LogMessage . Text.pack . show $ localSocketOrPath)
   traceNamedObject
-    (appendName "ip-producers" trace)
-    (meta, LogMessage . Text.pack . show $ ipProducers)
+    (appendName "node-to-node-versions" trace)
+    (meta, LogMessage . Text.pack . show . supportedNodeToNodeVersions $ Proxy @blk)
+  traceNamedObject
+    (appendName "node-to-client-versions" trace)
+    (meta, LogMessage . Text.pack . show . supportedNodeToClientVersions $ Proxy @blk)
+
 
   withShutdownHandling nc trace $ \sfds ->
-   Node.run
-     RunNodeArgs
-       { rnTraceConsensus = consensusTracers nodeTracers
-       , rnTraceNTN       = nodeToNodeTracers nodeTracers
-       , rnTraceNTC       = nodeToClientTracers nodeTracers
-       , rnProtocolInfo   = pInfo
-       , rnNodeKernelHook = \registry nodeKernel -> do
-           maybeSpawnOnSlotSyncedShutdownHandler nc sfds trace registry
-             (Node.getChainDB nodeKernel)
-           onKernel nodeKernel
-       }
-     StdRunNodeArgs
-       { srnBfcMaxConcurrencyBulkSync    = unMaxConcurrencyBulkSync <$> ncMaxConcurrencyBulkSync nc
-       , srnBfcMaxConcurrencyDeadline    = unMaxConcurrencyDeadline <$> ncMaxConcurrencyDeadline nc
-       , srnChainDbValidateOverride      = ncValidateDB nc
-       , srnSnapshotInterval             = ncSnapshotInterval nc
-       , srnDatabasePath                 = dbPath
-       , srnDiffusionArguments           = diffusionArguments
-       , srnDiffusionTracers             = diffusionTracers
-       , srnEnableInDevelopmentVersions  = ncTestEnableDevelopmentNetworkProtocols nc
-       , srnTraceChainDB                 = chainDBTracer nodeTracers
-       , srnMaybeMempoolCapacityOverride = ncMaybeMempoolCapacityOverride nc
-       }
+    let nodeArgs = RunNodeArgs
+          { rnTraceConsensus = consensusTracers nodeTracers
+          , rnTraceNTN       = nodeToNodeTracers nodeTracers
+          , rnTraceNTC       = nodeToClientTracers nodeTracers
+          , rnProtocolInfo   = pInfo
+          , rnNodeKernelHook = \registry nodeKernel -> do
+              maybeSpawnOnSlotSyncedShutdownHandler nc sfds trace registry
+                (Node.getChainDB nodeKernel)
+              onKernel nodeKernel
+          , rnEnableP2P      = p2pMode
+          }
+    in case p2pMode of
+      EnabledP2PMode -> do
+        nt <- TopologyP2P.readTopologyFileOrError nc
+        let (localRoots, publicRoots) = producerAddresses nt
+        traceNamedObject
+                (appendName "topology-file" trace)
+                (meta, LogMessage (Text.pack "Successfully read topology configuration file"))
+        traceNamedObject
+          (appendName "local-roots" trace)
+          (meta, LogMessage . Text.pack . show $ localRoots)
+        traceNamedObject
+          (appendName "public-roots" trace)
+          (meta, LogMessage . Text.pack . show $ publicRoots)
+        traceNamedObject
+          (appendName "use-ledger-after-slot" trace)
+          (meta, LogMessage . Text.pack . show $ useLedgerAfterSlot nt)
+        (localRootsVar :: StrictTVar IO [(Int, Map RelayAccessPoint PeerAdvertise)])  <- newTVarIO localRoots
+        publicRootsVar <- newTVarIO publicRoots
+        useLedgerVar   <- newTVarIO (useLedgerAfterSlot nt)
+        void $
+          Node.run
+            nodeArgs
+            StdRunNodeArgs
+              { srnBfcMaxConcurrencyBulkSync   = unMaxConcurrencyBulkSync <$> ncMaxConcurrencyBulkSync nc
+              , srnBfcMaxConcurrencyDeadline   = unMaxConcurrencyDeadline <$> ncMaxConcurrencyDeadline nc
+              , srnChainDbValidateOverride     = ncValidateDB nc
+              , srnSnapshotInterval            = ncSnapshotInterval nc
+              , srnDatabasePath                = dbPath
+              , srnDiffusionArguments          = diffusionArguments
+              , srnDiffusionArgumentsExtra     = mkP2PArguments nc (readTVar localRootsVar)
+              (readTVar publicRootsVar)
+              (readTVar useLedgerVar)
+              , srnDiffusionTracers            = diffusionTracers nodeTracers
+              , srnDiffusionTracersExtra       = diffusionTracersExtra nodeTracers
+              , srnEnableInDevelopmentVersions = ncTestEnableDevelopmentNetworkProtocols nc
+              , srnTraceChainDB                = chainDBTracer nodeTracers
+              , srnMaybeMempoolCapacityOverride = ncMaybeMempoolCapacityOverride nc
+              }
+      DisabledP2PMode -> do
+        eitherTopology <- TopologyNonP2P.readTopologyFile nc
+        nt <- either (\err -> panic $ "Cardano.Node.Run.handleSimpleNodeNonP2P.readTopologyFile: " <> err) pure eitherTopology
+        let (ipProducerAddrs, dnsProducerAddrs) = producerAddressesNonP2P nt
+
+            dnsProducers :: [DnsSubscriptionTarget]
+            dnsProducers = [ DnsSubscriptionTarget (Text.encodeUtf8 addr) port v
+                           | (NodeAddress (NodeHostDnsAddress addr) port, v) <- dnsProducerAddrs
+                           ]
+
+            ipProducers :: IPSubscriptionTarget
+            ipProducers = IPSubscriptionTarget
+                           [ toSockAddr (addr, port)
+                           | (NodeAddress (NodeHostIPAddress addr) port) <- ipProducerAddrs
+                           ]
+                           (length ipProducerAddrs)
+        void $
+          Node.run
+            nodeArgs
+            StdRunNodeArgs
+              { srnBfcMaxConcurrencyBulkSync   = unMaxConcurrencyBulkSync <$> ncMaxConcurrencyBulkSync nc
+              , srnBfcMaxConcurrencyDeadline   = unMaxConcurrencyDeadline <$> ncMaxConcurrencyDeadline nc
+              , srnChainDbValidateOverride     = ncValidateDB nc
+              , srnSnapshotInterval            = ncSnapshotInterval nc
+              , srnDatabasePath                = dbPath
+              , srnDiffusionArguments          = diffusionArguments
+              , srnDiffusionArgumentsExtra     = mkNonP2PArguments ipProducers dnsProducers
+              , srnDiffusionTracers            = diffusionTracers nodeTracers
+              , srnDiffusionTracersExtra       = diffusionTracersExtra nodeTracers
+              , srnEnableInDevelopmentVersions = ncTestEnableDevelopmentNetworkProtocols nc
+              , srnTraceChainDB                = chainDBTracer nodeTracers
+              , srnMaybeMempoolCapacityOverride = ncMaybeMempoolCapacityOverride nc
+              }
  where
-  createDiffusionTracers :: Tracers RemoteConnectionId LocalConnectionId blk
-                         -> DiffusionTracers
-  createDiffusionTracers nodeTracers' = DiffusionTracers
-    { dtIpSubscriptionTracer = ipSubscriptionTracer nodeTracers'
-    , dtDnsSubscriptionTracer = dnsSubscriptionTracer nodeTracers'
-    , dtDnsResolverTracer = dnsResolverTracer nodeTracers'
-    , dtErrorPolicyTracer = errorPolicyTracer nodeTracers'
-    , dtLocalErrorPolicyTracer = localErrorPolicyTracer nodeTracers'
-    , dtAcceptPolicyTracer = acceptPolicyTracer nodeTracers'
-    , dtMuxTracer = muxTracer nodeTracers'
-    , dtMuxLocalTracer = muxLocalTracer nodeTracers'
-    , dtHandshakeTracer = handshakeTracer nodeTracers'
-    , dtHandshakeLocalTracer = localHandshakeTracer nodeTracers'
-    , dtDiffusionInitializationTracer = diffusionInitializationTracer nodeTracers'
-    , dtLedgerPeersTracer = nullTracer -- TODO network team
-    }
+  logP2PWarning :: LOMeta -> IO ()
+  logP2PWarning meta =
+    case p2pMode of
+      DisabledP2PMode -> return ()
+      EnabledP2PMode  ->
+        traceNamedObject
+          (appendName "p2p-mode" trace)
+          (meta, LogMessage $ Text.pack
+                            (  "P2P MODE: unsupported and unverified version of "
+                            <> "`cardano-node` which enables p2p networking"
+                            ))
 
   createTracers
     :: NodeConfiguration
@@ -387,76 +474,87 @@ checkVRFFilePermissions vrfPrivKey = do
   hasPermission fModeA fModeB = fModeA .&. fModeB /= gENERIC_NONE
 #endif
 
-createDiffusionArguments
-  :: Maybe (SocketOrSocketInfo Socket AddrInfo)
-   -- ^ Either a socket bound to IPv4 address provided by systemd or IPv4
-   -- address to bind to for NodeToNode communication.
-  -> Maybe (SocketOrSocketInfo Socket AddrInfo)
-   -- ^ Either a socket bound to IPv6 address provided by systemd or IPv6
-   -- address to bind to for NodeToNode communication.
-  -> Maybe (SocketOrSocketInfo Socket SocketPath)
-  -- ^ Either a SOCKET_UNIX socket provided by systemd or a path for
-  -- NodeToClient communication.
-  -> DiffusionMode
-  -> IPSubscriptionTarget
-  -> [DnsSubscriptionTarget]
-  -> DiffusionArguments
-createDiffusionArguments publicIPv4SocketsOrAddrs
-                         publicIPv6SocketsOrAddrs
-                         mLocalSocketOrPath
-                         diffusionMode
-                         ipProducers dnsProducers
-                         =
-  DiffusionArguments
-    -- This is not elegant, but it will change once `coot/connection-manager` is
-    -- merged into `ouroboros-networ`.
-    { daIPv4Address = eitherSocketOrSocketInfo <$> publicIPv4SocketsOrAddrs
-    , daIPv6Address = eitherSocketOrSocketInfo <$> publicIPv6SocketsOrAddrs
-    , daLocalAddress = mLocalSocketOrPath >>= return . fmap unSocketPath
-                                                     . eitherSocketOrSocketInfo
-    , daIpProducers  = ipProducers
-    , daDnsProducers = dnsProducers
-    -- TODO: these limits are arbitrary at the moment;
-    -- issue: https://github.com/input-output-hk/ouroboros-network/issues/1836
-    , daAcceptedConnectionsLimit = AcceptedConnectionsLimit {
-        acceptedConnectionsHardLimit = 512
-      , acceptedConnectionsSoftLimit = 384
-      , acceptedConnectionsDelay     = 5
+
+mkP2PArguments
+  :: NodeConfiguration
+  -> STM IO [(Int, Map RelayAccessPoint PeerAdvertise)]
+     -- ^ non-overlapping local root peers groups; the 'Int' denotes the
+     -- valency of its group.
+  -> STM IO [RelayAccessPoint]
+  -> STM IO UseLedgerAfter
+  -> Diffusion.ExtraArguments 'Diffusion.P2P IO
+mkP2PArguments NodeConfiguration {
+                 ncTargetNumberOfRootPeers,
+                 ncTargetNumberOfKnownPeers,
+                 ncTargetNumberOfEstablishedPeers,
+                 ncTargetNumberOfActivePeers,
+                 ncProtocolIdleTimeout,
+                 ncTimeWaitTimeout
+               }
+               daReadLocalRootPeers
+               daReadPublicRootPeers
+               daReadUseLedgerAfter =
+    Diffusion.P2PArguments P2P.ArgumentsExtra
+      { P2P.daPeerSelectionTargets
+      , P2P.daReadLocalRootPeers
+      , P2P.daReadPublicRootPeers
+      , P2P.daReadUseLedgerAfter
+      , P2P.daProtocolIdleTimeout = ncProtocolIdleTimeout
+      , P2P.daTimeWaitTimeout     = ncTimeWaitTimeout
       }
-    , daDiffusionMode = diffusionMode
-    }
   where
-    eitherSocketOrSocketInfo :: SocketOrSocketInfo a b -> Either a b
-    eitherSocketOrSocketInfo (ActualSocket a) = Left a
-    eitherSocketOrSocketInfo (SocketInfo b)   = Right b
+    daPeerSelectionTargets = PeerSelectionTargets {
+        targetNumberOfRootPeers        = ncTargetNumberOfRootPeers,
+        targetNumberOfKnownPeers       = ncTargetNumberOfKnownPeers,
+        targetNumberOfEstablishedPeers = ncTargetNumberOfEstablishedPeers,
+        targetNumberOfActivePeers      = ncTargetNumberOfActivePeers
+    }
 
-dnsSubscriptionTarget :: NodeDnsAddress -> Int -> DnsSubscriptionTarget
-dnsSubscriptionTarget na valency =
-  DnsSubscriptionTarget { dstDomain  = nodeHostDnsAddressToDomain (naHostAddress na)
-                        , dstPort    = naPort na
-                        , dstValency = valency
-                        }
+mkNonP2PArguments
+  :: IPSubscriptionTarget
+  -> [DnsSubscriptionTarget]
+  -> Diffusion.ExtraArguments 'Diffusion.NonP2P m
+mkNonP2PArguments daIpProducers daDnsProducers =
+    Diffusion.NonP2PArguments NonP2P.ArgumentsExtra
+      { NonP2P.daIpProducers
+      , NonP2P.daDnsProducers
+      }
 
-ipSubscriptionTargets :: [NodeIPAddress] -> IPSubscriptionTarget
-ipSubscriptionTargets ipProdAddrs =
-  let ips = nodeAddressToSockAddr <$> ipProdAddrs
-  in IPSubscriptionTarget { ispIps = ips
-                          , ispValency = length ips
-                          }
-
+-- | TODO: Only needed for enabling P2P switch
+--
+producerAddressesNonP2P
+  :: TopologyNonP2P.NetworkTopology
+  -> ( [NodeIPAddress]
+     , [(NodeDnsAddress, Int)])
+producerAddressesNonP2P nt =
+  case nt of
+    TopologyNonP2P.RealNodeTopology producers' ->
+        partitionEithers
+      . mapMaybe TopologyNonP2P.remoteAddressToNodeAddress
+      $ producers'
+    TopologyNonP2P.MockNodeTopology nodeSetup ->
+        partitionEithers
+      . mapMaybe TopologyNonP2P.remoteAddressToNodeAddress
+      . concatMap TopologyNonP2P.producers
+      $ nodeSetup
 
 producerAddresses
   :: NetworkTopology
-  -> ( [NodeIPAddress]
-     , [(NodeDnsAddress, Int)])
+  -> ([(Int, Map RelayAccessPoint PeerAdvertise)], [RelayAccessPoint])
 producerAddresses nt =
   case nt of
-    RealNodeTopology producers' ->
-        partitionEithers
-      . mapMaybe remoteAddressToNodeAddress
-      $ producers'
-    MockNodeTopology nodeSetup ->
-        partitionEithers
-      . mapMaybe remoteAddressToNodeAddress
-      . concatMap producers
-      $ nodeSetup
+    RealNodeTopology lrpg prp _ ->
+      ( map (\lrp -> ( valency lrp
+                     , Map.fromList $ rootConfigToRelayAccessPoint
+                                    $ localRoots lrp
+                     )
+            )
+            (groups lrpg)
+      , concatMap (map fst . rootConfigToRelayAccessPoint)
+                  (map publicRoots prp)
+      )
+
+useLedgerAfterSlot
+  :: NetworkTopology
+  -> UseLedgerAfter
+useLedgerAfterSlot (RealNodeTopology _ _ (UseLedger ul)) = ul

@@ -98,7 +98,7 @@ doListenToForwarder snocket address timeLimits app = do
             address
             unversionedHandshakeCodec
             timeLimits
-            (cborTermVersionDataCodec unversionedProtocolDataCodec)
+            unversionedProtocolDataCodec
             acceptableVersion
             (simpleSingletonVersions
               UnversionedProtocol
