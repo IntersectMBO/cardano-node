@@ -49,10 +49,12 @@ import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
 import           Ouroboros.Network.BlockFetch.Decision (FetchDecision, FetchDecline (..))
 import           Ouroboros.Network.ConnectionId (ConnectionId (..))
 import           Ouroboros.Network.DeltaQ (GSV (..), PeerGSV (..))
+import           Ouroboros.Network.Driver.Limits (ProtocolLimitFailure (..))
 import           Ouroboros.Network.KeepAlive (TraceKeepAliveClient (..))
+import           Ouroboros.Network.NodeToClient (NodeToClientVersionData(..), NodeToClientVersion)
 import qualified Ouroboros.Network.NodeToClient as NtC
 import           Ouroboros.Network.NodeToNode (ErrorPolicyTrace (..), TraceSendRecv (..),
-                   WithAddr (..))
+                     WithAddr (..), NodeToNodeVersionData (..), NodeToNodeVersion)
 import qualified Ouroboros.Network.NodeToNode as NtN
 import           Ouroboros.Network.PeerSelection.Governor ( PeerSelectionState (..),
                      PeerSelectionTargets (..), DebugPeerSelection (..),
@@ -82,6 +84,9 @@ import           Ouroboros.Network.Subscription (ConnectResult (..), DnsTrace (.
 import           Ouroboros.Network.TxSubmission.Inbound (ProcessedTxCount (..),
                    TraceTxSubmissionInbound (..))
 import           Ouroboros.Network.TxSubmission.Outbound (TraceTxSubmissionOutbound (..))
+import           Ouroboros.Network.Magic (NetworkMagic(..))
+import           Ouroboros.Network.Protocol.Handshake (HandshakeException(..),
+                   HandshakeProtocolError (..), RefuseReason (..))
 
 import qualified Ouroboros.Network.Diffusion as ND
 
@@ -1381,6 +1386,88 @@ instance Show peerConn => ToObject (DebugPeerSelection SockAddr peerConn) where
              , "wakeupAfter" .= String (pack $ show wakeupAfter)
              , "peerSelectionState" .= String (pack $ show ev)
              ]
+instance (Show (ClientHasAgency st), Show (ServerHasAgency st))
+  => ToJSON (PeerHasAgency pr st) where
+  toJSON (ClientAgency cha) =
+    Aeson.object [ "kind" .= String "ClientAgency"
+                 , "agency" .= show cha
+                 ]
+  toJSON (ServerAgency sha) =
+    Aeson.object [ "kind" .= String "ServerAgency"
+                 , "agency" .= show sha
+                 ]
+
+instance ToJSON ProtocolLimitFailure where
+  toJSON (ExceededSizeLimit tok) =
+    Aeson.object [ "kind" .= String "ProtocolLimitFailure"
+                 , "agency" .= toJSON tok
+                 ]
+  toJSON (ExceededTimeLimit tok) =
+    Aeson.object [ "kind" .= String "ProtocolLimitFailure"
+                 , "agency" .= toJSON tok
+                 ]
+
+instance Show vNumber => ToJSON (RefuseReason vNumber) where
+  toJSON (VersionMismatch vNumber tags) =
+    Aeson.object [ "kind" .= String "VersionMismatch"
+                 , "versionNumber" .= show vNumber
+                 , "tags" .= Aeson.toJSONList tags
+                 ]
+  toJSON (HandshakeDecodeError vNumber t) =
+    Aeson.object [ "kind" .= String "HandshakeDecodeError"
+                 , "versionNumber" .= show vNumber
+                 , "text" .= String (pack $ show t)
+                 ]
+  toJSON (Refused vNumber t) =
+    Aeson.object [ "kind" .= String "Refused"
+                 , "versionNumber" .= show vNumber
+                 , "text" .= String (pack $ show t)
+                 ]
+
+instance Show vNumber => ToJSON (HandshakeProtocolError vNumber) where
+  toJSON (HandshakeError rvNumber) =
+    Aeson.object [ "kind" .= String "HandshakeError"
+                 , "reason" .= toJSON rvNumber
+                 ]
+  toJSON (NotRecognisedVersion vNumber) =
+    Aeson.object [ "kind" .= String "NotRecognisedVersion"
+                 , "versionNumber" .= show vNumber
+                 ]
+  toJSON (InvalidServerSelection vNumber t) =
+    Aeson.object [ "kind" .= String "InvalidServerSelection"
+                 , "versionNumber" .= show vNumber
+                 , "reason" .= String (pack $ show t)
+                 ]
+
+instance Show vNumber => ToJSON (HandshakeException vNumber) where
+  toJSON (HandshakeProtocolLimit plf) =
+    Aeson.object [ "kind" .= String "HandshakeProtocolLimit"
+                 , "handshakeProtocolLimit" .= toJSON plf
+                 ]
+  toJSON (HandshakeProtocolError err) =
+    Aeson.object [ "kind" .= String "HandshakeProtocolError"
+                 , "reason" .= show err
+                 ]
+
+instance ToJSON NodeToNodeVersion where
+  toJSON x = String (pack $ show x)
+
+instance ToJSON NodeToClientVersion where
+  toJSON x = String (pack $ show x)
+
+instance ToJSON NodeToNodeVersionData where
+  toJSON (NodeToNodeVersionData (NetworkMagic m) dm) =
+    Aeson.object [ "kind" .= String "NodeToNodeVersionData"
+                 , "networkMagic" .= toJSON m
+                 , "diffusionMode" .= show dm
+                 ]
+
+instance ToJSON NodeToClientVersionData where
+  toJSON (NodeToClientVersionData (NetworkMagic m)) =
+    Aeson.object [ "kind" .= String "NodeToClientVersionData"
+                 , "networkMagic" .= toJSON m
+                 ]
+
 instance ToObject NtN.RemoteAddress where
     toObject _verb (SockAddrInet port addr) =
         let ip = IP.fromHostAddress addr in
