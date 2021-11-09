@@ -23,7 +23,9 @@ module Testnet.Cardano
   ) where
 
 #ifdef UNIX
-import           Prelude (map)
+import           Prelude (map, Bool(..))
+#else
+import           Prelude (Bool (..))
 #endif
 
 import           Control.Applicative (pure)
@@ -31,6 +33,7 @@ import           Control.Monad
 import           Control.Monad.IO.Class (liftIO)
 import           Data.Aeson (Value, (.=))
 import           Data.Bool
+import           Data.ByteString.Lazy (ByteString)
 import           Data.Either
 import           Data.Eq
 import           Data.Function
@@ -55,6 +58,11 @@ import           Text.Show
 #ifdef UNIX
 import           System.Posix.Files
 #endif
+
+import qualified Cardano.Node.Configuration.Topology    as NonP2P
+import qualified Cardano.Node.Configuration.TopologyP2P as P2P
+import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
+import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter (..))
 
 import qualified Data.Aeson as J
 import qualified Data.HashMap.Lazy as HM
@@ -102,6 +110,7 @@ data TestnetOptions = TestnetOptions
   , epochLength :: Int
   , slotLength :: Double
   , activeSlotsCoeff :: Double
+  , enableP2P :: Bool
   } deriving (Eq, Show)
 
 defaultTestnetOptions :: TestnetOptions
@@ -112,6 +121,7 @@ defaultTestnetOptions = TestnetOptions
   , epochLength = 1500
   , slotLength = 0.2
   , activeSlotsCoeff = 0.2
+  , enableP2P = False
   }
 
 data TestnetRuntime = TestnetRuntime
@@ -134,6 +144,44 @@ ifaceAddress = "127.0.0.1"
 -- MacOS.  We need to allow a lot more time to set up a testnet.
 startTimeOffsetSeconds :: DTC.NominalDiffTime
 startTimeOffsetSeconds = if OS.isWin32 then 90 else 15
+
+
+mkTopologyConfig :: Int -> [Int] -> Int -> Bool -> ByteString
+mkTopologyConfig numNodes allPorts port False = J.encode topologyNonP2P
+  where
+    topologyNonP2P :: NonP2P.NetworkTopology
+    topologyNonP2P =
+      NonP2P.RealNodeTopology
+        [ NonP2P.RemoteAddress (fromString ifaceAddress)
+                               (fromIntegral peerPort)
+                               (numNodes - 1)
+        | peerPort <- allPorts \\ [port]
+        ]
+mkTopologyConfig numNodes allPorts port True = J.encode topologyP2P
+  where
+    rootConfig :: P2P.RootConfig
+    rootConfig =
+      P2P.RootConfig
+        [ RelayAccessAddress (fromString ifaceAddress)
+                             (fromIntegral peerPort)
+        | peerPort <- allPorts \\ [port]
+        ]
+        P2P.DoNotAdvertisePeer
+
+    localRootPeerGroups :: P2P.LocalRootPeersGroups
+    localRootPeerGroups =
+      P2P.LocalRootPeersGroups
+        [ P2P.LocalRootPeersGroup rootConfig
+                                  (numNodes - 1)
+        ]
+
+    topologyP2P :: P2P.NetworkTopology
+    topologyP2P =
+      P2P.RealNodeTopology
+        localRootPeerGroups
+        []
+        (P2P.UseLedger DontUseLedger)
+
 
 testnet :: TestnetOptions -> H.Conf -> H.Integration TestnetRuntime
 testnet testnetOptions H.Conf {..} = do
@@ -209,6 +257,7 @@ testnet testnetOptions H.Conf {..} = do
     . HM.delete "GenesisFile"
     . HM.insert "TestEnableDevelopmentHardForkEras" (J.toJSON @Bool True)
     . HM.insert "TestEnableDevelopmentNetworkProtocols" (J.toJSON @Bool True)
+    . HM.insert "EnableP2P" (J.toJSON @Bool (enableP2P testnetOptions))
     . forkOptions
 
   forM_ allNodes $ \node -> do
@@ -219,17 +268,9 @@ testnet testnetOptions H.Conf {..} = do
   -- Make topology files
   forM_ allNodes $ \node -> do
     let port = fromJust $ M.lookup node nodeToPort
-    H.lbsWriteFile (tempAbsPath </> node </> "topology.json") $ J.encode $
-      J.object
-      [ "Producers" .= J.toJSON
-        [ J.object
-          [ "addr" .= J.toJSON @String ifaceAddress
-          , "port" .= J.toJSON @Int peerPort
-          , "valency" .= J.toJSON @Int 1
-          ]
-        | peerPort <- allPorts \\ [port]
-        ]
-      ]
+    H.lbsWriteFile (tempAbsPath </> node </> "topology.json") $
+      mkTopologyConfig (numBftNodes testnetOptions + numPoolNodes testnetOptions) allPorts port (enableP2P testnetOptions)
+
     H.writeFile (tempAbsPath </> node </> "port") (show port)
 
   H.lbsWriteFile (tempAbsPath </> "byron.genesis.spec.json") . J.encode $ J.object
