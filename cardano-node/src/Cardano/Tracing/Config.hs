@@ -131,6 +131,7 @@ data TraceSelection
   , traceLocalErrorPolicy :: OnOff TraceLocalErrorPolicy
   , traceLocalHandshake :: OnOff TraceLocalHandshake
   , traceLocalInboundGovernor :: OnOff TraceLocalInboundGovernor
+  , traceLocalMux :: OnOff TraceLocalMux
   , traceLocalRootPeers :: OnOff TraceLocalRootPeers
   , traceLocalServer :: OnOff TraceLocalServer
   , traceLocalStateQueryProtocol :: OnOff TraceLocalStateQueryProtocol
@@ -138,7 +139,6 @@ data TraceSelection
   , traceLocalTxSubmissionServer :: OnOff TraceLocalTxSubmissionServer
   , traceMempool :: OnOff TraceMempool
   , traceMux :: OnOff TraceMux
-  , traceLocalMux :: OnOff TraceLocalMux
   , tracePeerSelection :: OnOff TracePeerSelection
   , tracePeerSelectionCounters :: OnOff TracePeerSelectionCounters
   , tracePeerSelectionActions :: OnOff TracePeerSelectionActions
@@ -206,8 +206,6 @@ traceConfigParser v =
       inboundGovernorCounters = OnOff True
       ipSubscription :: OnOff TraceIpSubscription
       ipSubscription = OnOff True
-      localErrorPolicy :: OnOff TraceLocalErrorPolicy
-      localErrorPolicy = OnOff True
       keepAliveClient :: OnOff TraceKeepAliveClient
       keepAliveClient = OnOff False
       ledgerPeers :: OnOff TraceLedgerPeers
@@ -216,10 +214,14 @@ traceConfigParser v =
       localChainSyncProtocol = OnOff False
       localConnectionManager :: OnOff TraceLocalConnectionManager
       localConnectionManager = OnOff False
+      localErrorPolicy :: OnOff TraceLocalErrorPolicy
+      localErrorPolicy = OnOff True
       localHandshake :: OnOff TraceLocalHandshake
       localHandshake = OnOff False
       localInboundGovernor :: OnOff TraceLocalInboundGovernor
       localInboundGovernor = OnOff False
+      localMux :: OnOff TraceLocalMux
+      localMux = OnOff False
       localRootPeers :: OnOff TraceLocalRootPeers
       localRootPeers = OnOff False
       localServer :: OnOff TraceLocalServer
@@ -234,8 +236,6 @@ traceConfigParser v =
       mempool = OnOff True
       mux :: OnOff TraceMux
       mux = OnOff True
-      localMux :: OnOff TraceLocalMux
-      localMux = OnOff False
       peerSelection :: OnOff TracePeerSelection
       peerSelection = OnOff False
       peerSelectionCounters :: OnOff TracePeerSelectionCounters
@@ -293,6 +293,7 @@ traceConfigParser v =
     <*> v .:? getName localErrorPolicy .!= localErrorPolicy
     <*> v .:? getName localHandshake .!= localHandshake
     <*> v .:? getName localInboundGovernor .!= localInboundGovernor
+    <*> v .:? getName localMux .!= localMux
     <*> v .:? getName localRootPeers .!= localRootPeers
     <*> v .:? getName localServer .!= localServer
     <*> v .:? getName localStateQueryProtocol .!= localStateQueryProtocol
@@ -300,7 +301,6 @@ traceConfigParser v =
     <*> v .:? getName localTxSubmissionServer .!= localTxSubmissionServer
     <*> v .:? getName mempool .!= mempool
     <*> v .:? getName mux .!= mux
-    <*> v .:? getName localMux .!= localMux
     <*> v .:? getName peerSelection .!= peerSelection
     <*> v .:? getName peerSelectionCounters .!= peerSelectionCounters
     <*> v .:? getName peerSelectionActions .!= peerSelectionActions
