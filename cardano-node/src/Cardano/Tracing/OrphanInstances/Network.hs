@@ -456,9 +456,9 @@ instance HasSeverityAnnotation (ConnectionManagerTrace addr (ConnectionHandlerTr
       TrForbiddenOperation {}                 -> Info
 
       TrPruneConnections {}                   -> Notice
-      TrConnectionCleanup {}                  -> Info
-      TrConnectionTimeWait {}                 -> Info
-      TrConnectionTimeWaitDone {}             -> Info
+      TrConnectionCleanup {}                  -> Debug
+      TrConnectionTimeWait {}                 -> Debug
+      TrConnectionTimeWaitDone {}             -> Debug
       TrConnectionManagerCounters {}          -> Info
       TrState {}                              -> Info
       TrUnexpectedlyMissingConnectionState {} -> Error
