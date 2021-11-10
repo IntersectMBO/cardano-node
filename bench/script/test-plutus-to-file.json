@@ -45,7 +45,7 @@
       , "spendMode": {
 	  "SpendScript": [
 	      "bench/script/sum1ToN.plutus",
-	      { "memory": 700000000, "steps": 700000000 },
+              { "PreExecuteScript" : [] },
 	      3,
 	      6
 	  ]

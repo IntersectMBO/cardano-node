@@ -69,6 +69,7 @@ library
                      , cardano-cli
                      , cardano-crypto-class
                      , cardano-crypto-wrapper
+                     , cardano-ledger-alonzo
                      , cardano-ledger-byron
                      , cardano-node
                      , cardano-prelude
@@ -95,6 +96,7 @@ library
                      , ouroboros-consensus-shelley
                      , ouroboros-network
                      , ouroboros-network-framework
+                     , plutus-ledger-api
                      , random
                      , serialise
                      , cardano-ledger-shelley

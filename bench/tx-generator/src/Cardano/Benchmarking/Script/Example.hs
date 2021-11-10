@@ -63,7 +63,7 @@ testScript =
   , Reserved []
   ]
  where
-  scriptDef = SpendScript "filePath" (ExecutionUnits 70000000 70000000) (ScriptDataNumber 3) (ScriptDataNumber 6)
+  scriptDef = SpendScript "filePath" (StaticScriptBudget $ ExecutionUnits 70000000 70000000) (ScriptDataNumber 3) (ScriptDataNumber 6)
   passPartout = KeyName "pass-partout"
   genFund = FundName "genFund"
   outputFunds = map FundName ["fund1", "fund2", "fund3", "fund4"]

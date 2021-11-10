@@ -85,6 +85,12 @@ instance ToJSON SpendMode where
 instance FromJSON SpendMode where
   parseJSON = genericParseJSON jsonOptionsUnTaggedSum
 
+instance ToJSON ScriptBudget where
+  toJSON     = genericToJSON jsonOptionsUnTaggedSum
+  toEncoding = genericToEncoding jsonOptionsUnTaggedSum
+instance FromJSON ScriptBudget where
+  parseJSON = genericParseJSON jsonOptionsUnTaggedSum
+
 instance ToJSON (DSum Tag Identity) where
   toEncoding = error "DSum Tag Identity"
   toJSON = error "DSum Tag Identity"
