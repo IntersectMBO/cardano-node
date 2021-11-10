@@ -442,7 +442,7 @@ instance HasSeverityAnnotation (ConnectionManagerTrace addr (ConnectionHandlerTr
       TrConnectionHandler _ ev'     ->
         case ev' of
           TrHandshakeSuccess {}               -> Info
-          TrHandshakeClientError {}           -> Error
+          TrHandshakeClientError {}           -> Notice
           TrHandshakeServerError {}           -> Info
           TrError _ _ ShutdownNode            -> Critical
           TrError _ _ ShutdownPeer            -> Info
