@@ -292,7 +292,7 @@ handleSimpleNode scp runP p2pMode trace nodeTracers nc onKernel = do
                 , acceptedConnectionsSoftLimit = 384
                 , acceptedConnectionsDelay     = 5
                 }
-          , Diffusion.daDiffusionMode = ncDiffusionMode nc
+          , Diffusion.daMode = ncDiffusionMode nc
           }
 
   ipv4 <- traverse getSocketOrSocketInfoAddr publicIPv4SocketOrAddr
