@@ -930,15 +930,8 @@ makeTransactionBodyAutoBalance eraInMode systemstart history pparams
         case valueToLovelace v of
           -- There are multi-assets present in the value
           Nothing -> do
-            let txoutBal = TxOut changeaddr balance TxOutDatumHashNone
-            case calculateMinimumUTxO era txoutBal pparams of
-              Left err -> Left $ TxBodyErrorMinUTxOMissingPParams err
-              Right minReqUTxO ->
-                if selectLovelace v >= selectLovelace minReqUTxO
-                then Right ()
-                else Left $ TxBodyErrorMinUTxONotMet
-                              (txOutInAnyEra txoutBal)
-                              (selectLovelace minReqUTxO)
+            let txoutBal = TxOut changeaddr balance TxOutDatumNone
+            checkMinUTxOValue txoutBal pparams
 
           Just _ -> balanceCheck balance
 
@@ -988,7 +981,7 @@ makeTransactionBodyAutoBalance eraInMode systemstart history pparams
             Left $ TxBodyErrorAdaBalanceTooSmall txOutAny minUTxO (txOutValueToLovelace balance)
           Left err -> Left err
           Right _ -> Right ()
-   -- TODO: Replace with calculateMinimumUTxO
+
    checkMinUTxOValue
      :: TxOut CtxTx era
      -> ProtocolParameters
