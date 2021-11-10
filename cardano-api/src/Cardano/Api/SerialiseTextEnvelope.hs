@@ -21,6 +21,7 @@ module Cardano.Api.SerialiseTextEnvelope
   , writeFileTextEnvelopeWithOwnerPermissions
   , readTextEnvelopeFromFile
   , readTextEnvelopeOfTypeFromFile
+  , textEnvelopeToJSON
 
     -- * Reading one of several key types
   , FromSomeType(..)
@@ -218,7 +219,7 @@ deserialiseFromTextEnvelopeAnyOf types te =
 
 writeFileWithOwnerPermissions
   :: FilePath
-  -> ByteString
+  -> LBS.ByteString
   -> IO (Either (FileError ()) ())
 writeFileWithOwnerPermissions targetPath a =
     bracketOnError
@@ -227,7 +228,7 @@ writeFileWithOwnerPermissions targetPath a =
         hClose fHandle >> removeFile tmpPath
         return . Left $ FileErrorTempFile targetPath tmpPath fHandle)
       (\(tmpPath, fHandle) -> do
-          BS.hPut fHandle a
+          LBS.hPut fHandle a
           hClose fHandle
           renameFile tmpPath targetPath
           return $ Right ())
@@ -241,7 +242,7 @@ writeFileTextEnvelope :: HasTextEnvelope a
                       -> IO (Either (FileError ()) ())
 writeFileTextEnvelope path mbDescr a =
     runExceptT $ do
-      handleIOExceptT (FileIOError path) $ BS.writeFile path content
+      handleIOExceptT (FileIOError path) $ LBS.writeFile path content
   where
     content = textEnvelopeToJSON mbDescr a
 
@@ -258,11 +259,9 @@ writeFileTextEnvelopeWithOwnerPermissions targetPath mbDescr a =
   content = textEnvelopeToJSON mbDescr a
 
 
-textEnvelopeToJSON :: HasTextEnvelope a =>  Maybe TextEnvelopeDescr -> a -> ByteString
+textEnvelopeToJSON :: HasTextEnvelope a =>  Maybe TextEnvelopeDescr -> a -> LBS.ByteString
 textEnvelopeToJSON mbDescr a  =
-  LBS.toStrict $ encodePretty' textEnvelopeJSONConfig
-                               (serialiseToTextEnvelope mbDescr a)
-              <> "\n"
+  encodePretty' textEnvelopeJSONConfig (serialiseToTextEnvelope mbDescr a) <> "\n"
 
 
 readFileTextEnvelope :: HasTextEnvelope a
