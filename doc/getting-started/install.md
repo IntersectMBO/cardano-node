@@ -27,7 +27,7 @@ To download the source code and build it, you need the following packages and to
 * developer libraries for `ncurses`,
 * `ncurses` compatibility libraries,
 * the Haskell build tool `cabal`,
-* the GHC Haskell compiler (version `8.10.4` or above).
+* the GHC Haskell compiler (version `8.10.7` or above).
 
 In Redhat, Fedora, and Centos:
 
@@ -72,7 +72,7 @@ Confirm that you installed cabal version `3.4.0.0`:
 
 #### Downloading and installing the GHC compiler:
 
-Download and install version `8.10.4` of GHC.  The easiest way to do this is to use [ghcup](https://www.haskell.org/ghcup/).
+Download and install version `8.10.7` of GHC.  The easiest way to do this is to use [ghcup](https://www.haskell.org/ghcup/).
 
 ```bash
 $ curl --proto '=https' --tlsv1.2 -sSf https://get-ghcup.haskell.org | sh
@@ -81,9 +81,9 @@ $ curl --proto '=https' --tlsv1.2 -sSf https://get-ghcup.haskell.org | sh
 Then open a new terminal (to get an updated environment) and run:
 
 ```bash
-$ ghcup install ghc 8.10.4
+$ ghcup install ghc 8.10.7
 $ ghcup install cabal 3.4.0.0
-$ ghcup set ghc 8.10.4
+$ ghcup set ghc 8.10.7
 $ ghcup set cabal 3.4.0.0
 ```
 
@@ -142,7 +142,7 @@ Check out the latest version of cardano-node (choose the tag with the highest ve
 
 We explicitly use the GHC version that we installed earlier.  This avoids defaulting to a system version of GHC that might be older than the one you have installed.
 
-    cabal configure --with-compiler=ghc-8.10.4
+    cabal configure --with-compiler=ghc-8.10.7
 
 Note, that for a development build you can avoid installing the custom `libsodium` library and add the following lines to the local project file:
 
