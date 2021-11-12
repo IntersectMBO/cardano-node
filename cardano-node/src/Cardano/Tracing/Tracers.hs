@@ -691,7 +691,8 @@ mkConsensusTracers mbEKGDirect trSel verb tr nodeKern fStats = do
    traceServedCount Nothing _ = pure ()
    traceServedCount (Just ekgDirect) ev =
      when (isRollForward ev) $
-       sendEKGDirectCounter ekgDirect "cardano.node.metrics.served.header.counter.int"
+       sendEKGDirectCounter ekgDirect
+                            "cardano.node.metrics.served.header.counter.int"
 
 
 traceBlockFetchServerMetrics
@@ -1205,11 +1206,14 @@ nodeToClientTracers'
 nodeToClientTracers' trSel verb tr =
   NodeToClient.Tracers
   { NodeToClient.tChainSyncTracer =
-    tracerOnOff (traceLocalChainSyncProtocol trSel) verb "LocalChainSyncProtocol" tr
+      tracerOnOff (traceLocalChainSyncProtocol trSel)
+                  verb "LocalChainSyncProtocol" tr
   , NodeToClient.tTxSubmissionTracer =
-    tracerOnOff (traceLocalTxSubmissionProtocol trSel) verb "LocalTxSubmissionProtocol" tr
+      tracerOnOff (traceLocalTxSubmissionProtocol trSel)
+                  verb "LocalTxSubmissionProtocol" tr
   , NodeToClient.tStateQueryTracer =
-    tracerOnOff (traceLocalStateQueryProtocol trSel) verb "LocalStateQueryProtocol" tr
+      tracerOnOff (traceLocalStateQueryProtocol trSel)
+                  verb "LocalStateQueryProtocol" tr
   }
 
 --------------------------------------------------------------------------------
@@ -1229,12 +1233,24 @@ nodeToNodeTracers'
   -> NodeToNode.Tracers' peer blk DeserialiseFailure (Tracer IO)
 nodeToNodeTracers' trSel verb tr =
   NodeToNode.Tracers
-  { NodeToNode.tChainSyncTracer = tracerOnOff (traceChainSyncProtocol trSel) verb "ChainSyncProtocol" tr
-  , NodeToNode.tChainSyncSerialisedTracer = showOnOff (traceChainSyncProtocol trSel) "ChainSyncProtocolSerialised" tr
-  , NodeToNode.tBlockFetchTracer = tracerOnOff (traceBlockFetchProtocol trSel) verb "BlockFetchProtocol" tr
-  , NodeToNode.tBlockFetchSerialisedTracer = showOnOff (traceBlockFetchProtocolSerialised trSel) "BlockFetchProtocolSerialised" tr
-  , NodeToNode.tTxSubmissionTracer = tracerOnOff (traceTxSubmissionProtocol trSel) verb "TxSubmissionProtocol" tr
-  , NodeToNode.tTxSubmission2Tracer = tracerOnOff (traceTxSubmission2Protocol trSel) verb "TxSubmission2Protocol" tr
+  { NodeToNode.tChainSyncTracer =
+      tracerOnOff (traceChainSyncProtocol trSel)
+                  verb "ChainSyncProtocol" tr
+  , NodeToNode.tChainSyncSerialisedTracer =
+      showOnOff (traceChainSyncProtocol trSel)
+                "ChainSyncProtocolSerialised" tr
+  , NodeToNode.tBlockFetchTracer =
+      tracerOnOff (traceBlockFetchProtocol trSel)
+                  verb "BlockFetchProtocol" tr
+  , NodeToNode.tBlockFetchSerialisedTracer =
+      showOnOff (traceBlockFetchProtocolSerialised trSel)
+                "BlockFetchProtocolSerialised" tr
+  , NodeToNode.tTxSubmissionTracer =
+      tracerOnOff (traceTxSubmissionProtocol trSel)
+                  verb "TxSubmissionProtocol" tr
+  , NodeToNode.tTxSubmission2Tracer =
+      tracerOnOff (traceTxSubmissionProtocol trSel)
+                  verb "TxSubmissionProtocol" tr
   }
 
 teeTraceBlockFetchDecision
