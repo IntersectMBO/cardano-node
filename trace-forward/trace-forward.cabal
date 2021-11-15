@@ -1,8 +1,9 @@
 cabal-version:       2.4
 name:                trace-forward
 version:             0.1.0
-synopsis:            See README for more info
-description:         See README for more info
+synopsis:            The forwarding protocols library for cardano node.
+description:         The library providing typed protocols for forwarding different
+                     information from the cardano node to an external application.
 license:             Apache-2.0
 license-file:        LICENSE
 copyright:           2021 Input Output (Hong Kong) Ltd.
@@ -31,29 +32,38 @@ library
   import:              base, project-config
   hs-source-dirs:      src
 
-  exposed-modules:     Trace.Forward.Acceptor
-                       Trace.Forward.Configuration
-                       Trace.Forward.Forwarder
-                       Trace.Forward.Queue
-                       Trace.Forward.Utils
+  exposed-modules:     Trace.Forward.Protocol.DataPoint.Acceptor
+                       Trace.Forward.Protocol.DataPoint.Codec
+                       Trace.Forward.Protocol.DataPoint.Forwarder
+                       Trace.Forward.Protocol.DataPoint.Type
+                       Trace.Forward.Protocol.TraceObject.Acceptor
+                       Trace.Forward.Protocol.TraceObject.Codec
+                       Trace.Forward.Protocol.TraceObject.Forwarder
+                       Trace.Forward.Protocol.TraceObject.Type
 
-                       Trace.Forward.Network.Acceptor
-                       Trace.Forward.Network.Forwarder
+                       Trace.Forward.Run.DataPoint.Acceptor
+                       Trace.Forward.Run.DataPoint.Forwarder
+                       Trace.Forward.Run.TraceObject.Acceptor
+                       Trace.Forward.Run.TraceObject.Forwarder
 
-                       Trace.Forward.Protocol.Acceptor
-                       Trace.Forward.Protocol.Codec
-                       Trace.Forward.Protocol.Forwarder
-                       Trace.Forward.Protocol.Type
+                       Trace.Forward.Configuration.DataPoint
+                       Trace.Forward.Configuration.TraceObject
 
-  build-depends:         async
+                       Trace.Forward.Utils.DataPoint
+                       Trace.Forward.Utils.TraceObject
+
+  build-depends:         aeson
+                       , async
                        , bytestring
                        , cborg
+                       , containers
                        , contra-tracer
                        , extra
                        , io-classes
                        , ouroboros-network-framework
                        , serialise
                        , stm
+                       , text
                        , typed-protocols
                        , typed-protocols-cborg
 
@@ -63,17 +73,25 @@ test-suite test
   main-is:             Main.hs
   hs-source-dirs:      test
 
-  other-modules:       Test.Trace.Forward.Protocol.Codec
-                       Test.Trace.Forward.Protocol.Tests
-                       Test.Trace.Forward.Protocol.TraceItem
-                       Test.Trace.Forward.Demo.Configs
-                       Test.Trace.Forward.Demo.Tests
+  other-modules:       Test.Trace.Forward.Protocol.TraceObject.Codec
+                       Test.Trace.Forward.Protocol.TraceObject.Direct
+                       Test.Trace.Forward.Protocol.TraceObject.Examples
+                       Test.Trace.Forward.Protocol.TraceObject.Item
+                       Test.Trace.Forward.Protocol.TraceObject.Tests
 
-  build-depends:         async
+                       Test.Trace.Forward.Protocol.DataPoint.Codec
+                       Test.Trace.Forward.Protocol.DataPoint.Direct
+                       Test.Trace.Forward.Protocol.DataPoint.Examples
+                       Test.Trace.Forward.Protocol.DataPoint.Item
+                       Test.Trace.Forward.Protocol.DataPoint.Tests
+
+                       Test.Trace.Forward.Protocol.Common
+
+  build-depends:         aeson
+                       , bytestring
                        , contra-tracer
-                       , directory
-                       , extra
-                       , filepath
+                       , io-classes
+                       , io-sim
                        , ouroboros-network-framework
                        , trace-forward
                        , QuickCheck
@@ -82,7 +100,6 @@ test-suite test
                        , tasty-quickcheck
                        , typed-protocols
                        , text
-                       , time
 
   ghc-options:         -rtsopts
                        -threaded

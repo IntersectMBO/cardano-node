@@ -13,8 +13,8 @@ packages:
     bench/tx-generator
     plutus-example/plutus-example
     trace-dispatcher
-    trace-forward
     trace-resources
+    trace-forward
 
 package cardano-api
   ghc-options: -Werror
