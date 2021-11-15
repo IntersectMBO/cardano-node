@@ -5,6 +5,7 @@
 import           Cardano.Api
 import           Cardano.Api.Shelley
 import           Cardano.Ledger.Address (getRewardAcnt)
+import qualified Cardano.Ledger.Compactible as L
 import qualified Cardano.Ledger.Shelley.API as L
 import qualified Cardano.Ledger.Shelley.Rewards as L
 import qualified Cardano.Ledger.Shelley.RewardUpdate as L
@@ -15,6 +16,7 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Base16 as Base16
 import           Data.Char (ord)
+import qualified Data.Compact.VMap as VMap
 import           Data.Foldable (toList)
 import           Data.List (intercalate)
 import qualified Data.Map.Strict as Map
@@ -265,7 +267,7 @@ main = do
              case shelleyState of
                Just (L.SJust (L.Complete ru), goSnap, _) -> do
 
-                 es <- rewardStartEvent (lastRewStartEpoch state) epochNo slotNo goSnap    targetCred
+                 es <- rewardStartEvent (lastRewStartEpoch state) epochNo slotNo (Map.map L.fromCompact $ VMap.toMap goSnap) targetCred
                  ee <- rewardEndEvent   (lastRewEndEpoch   state) epochNo slotNo (L.rs ru) targetCred
                  return $ state { lastCheckpoint = lastcheck
                                 , lastRewStartEpoch = es

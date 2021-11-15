@@ -24,53 +24,54 @@ module Cardano.CLI.Shelley.Run.Query
 import           Cardano.Api
 import           Cardano.Api.Byron
 import           Cardano.Api.Shelley
-
 import           Cardano.Binary (decodeFull)
 import           Cardano.CLI.Environment (EnvSocketError, readEnvSocketPath, renderEnvSocketError)
 import           Cardano.CLI.Helpers (HelpersError (..), hushM, pPrintCBOR, renderHelpersError)
 import           Cardano.CLI.Shelley.Orphans ()
+import qualified Cardano.CLI.Shelley.Output as O
 import           Cardano.CLI.Shelley.Parsers (OutputFile (..), QueryCmd (..))
 import           Cardano.CLI.Types
 import           Cardano.Crypto.Hash (hashToBytesAsHex)
 import           Cardano.Ledger.Coin
+import qualified Cardano.Ledger.Compactible as Ledger
 import           Cardano.Ledger.Crypto (StandardCrypto)
+import qualified Cardano.Ledger.Crypto as Crypto
+import qualified Cardano.Ledger.Era as Era
 import           Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
+import qualified Cardano.Ledger.Shelley.API.Protocol as Ledger
+import qualified Cardano.Ledger.Shelley.Constraints as Ledger
+import           Cardano.Ledger.Shelley.EpochBoundary
+import           Cardano.Ledger.Shelley.LedgerState hiding (_delegations)
+import           Cardano.Ledger.Shelley.Scripts ()
 import           Cardano.Prelude hiding (atomically)
 import           Control.Monad.Trans.Except (except)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistMaybe, left)
 import           Data.Aeson (ToJSON (..), (.=))
-import           Data.Aeson.Encode.Pretty (encodePretty)
-import           Data.List (nub)
-import           Data.Time.Clock
-import           Numeric (showEFloat)
-import           Ouroboros.Consensus.BlockchainTime.WallClock.Types (RelativeTime (..),
-                   SystemStart (..), toRelativeTime)
-import           Ouroboros.Consensus.Cardano.Block as Consensus (EraMismatch (..))
-import           Ouroboros.Network.Block (Serialised (..))
-import           Ouroboros.Network.Protocol.LocalStateQuery.Type (AcquireFailure (..))
-import           Prelude (String, id)
-import           Cardano.Ledger.Shelley.EpochBoundary
-import           Cardano.Ledger.Shelley.LedgerState hiding (_delegations)
-import           Cardano.Ledger.Shelley.Scripts ()
-import           Text.Printf (printf)
-
-import qualified Cardano.CLI.Shelley.Output as O
-import qualified Cardano.Ledger.Crypto as Crypto
-import qualified Cardano.Ledger.Era as Era
-import qualified Cardano.Ledger.Shelley.Constraints as Ledger
 import qualified Data.Aeson as Aeson
+import           Data.Aeson.Encode.Pretty (encodePretty)
 import qualified Data.ByteString.Lazy.Char8 as LBS
+import qualified Data.Compact.VMap as VMap
+import           Data.List (nub)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import qualified Data.Text.IO as T
 import qualified Data.Text.IO as Text
+import           Data.Time.Clock
 import qualified Data.Vector as Vector
+import           Numeric (showEFloat)
+import           Ouroboros.Consensus.BlockchainTime.WallClock.Types (RelativeTime (..),
+                   SystemStart (..), toRelativeTime)
+import           Ouroboros.Consensus.Cardano.Block as Consensus (EraMismatch (..))
 import qualified Ouroboros.Consensus.HardFork.History.Qry as Qry
+import           Ouroboros.Network.Block (Serialised (..))
+import           Ouroboros.Network.Protocol.LocalStateQuery.Type (AcquireFailure (..))
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as LocalStateQuery
-import qualified Cardano.Ledger.Shelley.API.Protocol as Ledger
+import           Prelude (String, id)
 import qualified System.IO as IO
+import           Text.Printf (printf)
+
 
 {- HLINT ignore "Reduce duplication" -}
 {- HLINT ignore "Use const" -}
@@ -548,14 +549,14 @@ writeStakeSnapshot (StakePoolKeyHash hk) qState =
 getPoolStake :: KeyHash Cardano.Ledger.Keys.StakePool crypto -> SnapShot crypto -> Integer
 getPoolStake hash ss = pStake
   where
-    Coin pStake = fold s
-    (Stake s) = poolStake hash (_delegations ss) (_stake ss)
+    Coin pStake = fold (Map.map Ledger.fromCompact $ VMap.toMap s)
+    Stake s = poolStake hash (_delegations ss) (_stake ss)
 
 -- | Sum the active stake from a snapshot
 getAllStake :: SnapShot crypto -> Integer
 getAllStake (SnapShot stake _ _) = activeStake
   where
-    Coin activeStake = fold . unStake $ stake
+    Coin activeStake = sumAllStake stake
 
 -- | This function obtains the pool parameters, equivalent to the following jq query on the output of query ledger-state
 --   .nesEs.esLState._delegationState._pstate._pParams.<pool_id>
