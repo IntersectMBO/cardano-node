@@ -102,6 +102,7 @@ executable stake-credential-history
                        cardano-ledger-core,
                        cardano-ledger-shelley,
                        cardano-slotting,
+                       compact-map,
                        containers,
                        optparse-applicative,
                        ouroboros-consensus-shelley,
