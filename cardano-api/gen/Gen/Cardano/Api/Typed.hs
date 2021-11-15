@@ -1,6 +1,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
@@ -380,7 +381,7 @@ genTxId :: Gen TxId
 genTxId = TxId <$> genShelleyHash
 
 genTxIndex :: Gen TxIx
-genTxIndex = TxIx <$> Gen.word (Range.constantFrom 0 0 65535)
+genTxIndex = TxIx . fromIntegral <$> Gen.word32 Range.constantBounded
 
 genTxOutValue :: CardanoEra era -> Gen (TxOutValue era)
 genTxOutValue era =
@@ -707,33 +708,33 @@ genProtocolParameters =
     <*> Gen.maybe genNat
 
 genProtocolParametersUpdate :: Gen ProtocolParametersUpdate
-genProtocolParametersUpdate =
-  ProtocolParametersUpdate
-    <$> Gen.maybe ((,) <$> genNat <*> genNat)
-    <*> Gen.maybe genRational
-    <*> Gen.maybe genMaybePraosNonce
-    <*> Gen.maybe genNat
-    <*> Gen.maybe genNat
-    <*> Gen.maybe genNat
-    <*> Gen.maybe genNat
-    <*> Gen.maybe genNat
-    <*> Gen.maybe genLovelace
-    <*> Gen.maybe genLovelace
-    <*> Gen.maybe genLovelace
-    <*> Gen.maybe genLovelace
-    <*> Gen.maybe genEpochNo
-    <*> Gen.maybe genNat
-    <*> Gen.maybe genRationalInt64
-    <*> Gen.maybe genRational
-    <*> Gen.maybe genRational
-    <*> Gen.maybe genLovelace
-    <*> genCostModels
-    <*> Gen.maybe genExecutionUnitPrices
-    <*> Gen.maybe genExecutionUnits
-    <*> Gen.maybe genExecutionUnits
-    <*> Gen.maybe genNat
-    <*> Gen.maybe genNat
-    <*> Gen.maybe genNat
+genProtocolParametersUpdate = do
+  protocolUpdateProtocolVersion     <- Gen.maybe ((,) <$> genNat <*> genNat)
+  protocolUpdateDecentralization    <- Gen.maybe genRational
+  protocolUpdateExtraPraosEntropy   <- Gen.maybe genMaybePraosNonce
+  protocolUpdateMaxBlockHeaderSize  <- Gen.maybe genNat
+  protocolUpdateMaxBlockBodySize    <- Gen.maybe genNat
+  protocolUpdateMaxTxSize           <- Gen.maybe genNat
+  protocolUpdateTxFeeFixed          <- Gen.maybe genNat
+  protocolUpdateTxFeePerByte        <- Gen.maybe genNat
+  protocolUpdateMinUTxOValue        <- Gen.maybe genLovelace
+  protocolUpdateStakeAddressDeposit <- Gen.maybe genLovelace
+  protocolUpdateStakePoolDeposit    <- Gen.maybe genLovelace
+  protocolUpdateMinPoolCost         <- Gen.maybe genLovelace
+  protocolUpdatePoolRetireMaxEpoch  <- Gen.maybe genEpochNo
+  protocolUpdateStakePoolTargetNum  <- Gen.maybe genNat
+  protocolUpdatePoolPledgeInfluence <- Gen.maybe genRationalInt64
+  protocolUpdateMonetaryExpansion   <- Gen.maybe genRational
+  protocolUpdateTreasuryCut         <- Gen.maybe genRational
+  protocolUpdateUTxOCostPerWord     <- Gen.maybe genLovelace
+  protocolUpdateCostModels          <- genCostModels
+  protocolUpdatePrices              <- Gen.maybe genExecutionUnitPrices
+  protocolUpdateMaxTxExUnits        <- Gen.maybe genExecutionUnits
+  protocolUpdateMaxBlockExUnits     <- Gen.maybe genExecutionUnits
+  protocolUpdateMaxValueSize        <- Gen.maybe genNat
+  protocolUpdateCollateralPercent   <- Gen.maybe genNat
+  protocolUpdateMaxCollateralInputs <- Gen.maybe genNat
+  pure ProtocolParametersUpdate{..}
 
 
 genUpdateProposal :: Gen UpdateProposal
