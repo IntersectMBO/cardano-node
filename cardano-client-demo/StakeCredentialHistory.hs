@@ -236,6 +236,7 @@ main = do
          startingState
          (\_env
            !ledgerState
+           _
            (BlockInMode
              (Block (BlockHeader slotNo _blockHeaderHash (BlockNo _blockNoI)) transactions)
              _era)

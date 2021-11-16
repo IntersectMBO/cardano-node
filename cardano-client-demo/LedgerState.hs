@@ -38,6 +38,7 @@ main = do
     (0 :: Int) -- We just use a count of the blocks as the current state
     (\_env
       !ledgerState
+      _
       (BlockInMode (Block (BlockHeader _slotNo _blockHeaderHash (BlockNo blockNoI)) _transactions) _era)
       blockCount -> do
         case ledgerState of

@@ -105,21 +105,21 @@ instance All ConvertLedgerEvent xs => ConvertLedgerEvent (HardForkBlock xs) wher
 --   are inverse; a transfer of 100 ADA in either direction will result in a net
 --   movement of 0, but we include both directions for assistance in debugging.
 data MIRDistributionDetails = MIRDistributionDetails
-  { reservePayouts :: Map StakeCredential Lovelace,
-    treasuryPayouts :: Map StakeCredential Lovelace,
-    reservesToTreasury :: Lovelace,
-    treasuryToReserves :: Lovelace
+  { mirddReservePayouts :: Map StakeCredential Lovelace,
+    mirddTreasuryPayouts :: Map StakeCredential Lovelace,
+    mirddReservesToTreasury :: Lovelace,
+    mirddTreasuryToReserves :: Lovelace
   }
 
 data PoolReapDetails = PoolReapDetails
-  { epochNo :: EpochNo,
+  { prdEpochNo :: EpochNo,
     -- | Refunded deposits. The pools referenced are now retired, and the
     --   'StakeCredential' accounts are credited with the deposits.
-    refunded :: Map StakeCredential (Map (Hash StakePoolKey) Lovelace),
+    prdRefunded :: Map StakeCredential (Map (Hash StakePoolKey) Lovelace),
     -- | Unclaimed deposits. The 'StakeCredential' referenced in this map is not
     -- actively registered at the time of the pool reaping, and as such the
     -- funds are returned to the treasury.
-    unclaimed :: Map StakeCredential (Map (Hash StakePoolKey) Lovelace)
+    prdUnclaimed :: Map StakeCredential (Map (Hash StakePoolKey) Lovelace)
   }
 
 --------------------------------------------------------------------------------
