@@ -1,7 +1,7 @@
 #!/bin/sh
 
 if [ $# -eq 0 ]; then
-  echo "Usage: ./run-ssh-forward-demo.sh PASS FMODE, where PASS is your ssh password and FMODE is forwarder's mode, Responder or Initiator."
+  echo "Usage: ./run.sh PASS FMODE, where PASS is your ssh password and FMODE is forwarder's mode, Responder or Initiator."
   exit 1
 fi
 

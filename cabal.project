@@ -73,6 +73,9 @@ package cardano-submit-api
 package cardano-testnet
   tests: True
 
+package cardano-tracer
+  tests: True
+
 package plutus-examples
   tests: True
 
@@ -273,8 +276,14 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ekg-forward
-  tag: d9e8fd302fa6ba41c07183d371e6777286d37bc2
-  --sha256: 0s8cblhq3i528jj7r7yd4v82nqzafj8vrgf0y80l7saxc3a5f2lk
+  tag: b50b215651822fa0d5f5dd2fc28b57ca2b33baa4
+  --sha256: 1dlknw83cmya9z8s2iwi35ymhv1yip5wvdh8p3jhmx9yv89apkq2
+
+source-repository-package
+  type: git
+  location: https://github.com/HeinrichApfelmus/threepenny-gui
+  tag: e3bb8283fc7d2e8aa374eea29426002e8dcd67a8
+  --sha256: 0nf836b552asgpwn2gxwl7yd7ssdhb1wkvdqz6s4dpzqnlpyivx9
 
 source-repository-package
   type: git

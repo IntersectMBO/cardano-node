@@ -6,9 +6,8 @@ import           Cardano.Tracer.Run (runCardanoTracer)
 import           Paths_cardano_tracer (version)
 
 main :: IO ()
-main = do
-  tracerParams <- customExecParser (prefs showHelpOnEmpty) tracerInfo
-  runCardanoTracer tracerParams
+main =
+  runCardanoTracer =<< customExecParser (prefs showHelpOnEmpty) tracerInfo
  where
   tracerInfo :: ParserInfo TracerParams
   tracerInfo = info

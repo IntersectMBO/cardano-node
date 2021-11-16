@@ -8,6 +8,7 @@ module Trace.Forward.Run.DataPoint.Acceptor
   ) where
 
 import qualified Codec.Serialise as CBOR
+import           Control.Exception (finally)
 import           Control.Monad.Extra (ifM)
 import           Control.Monad.STM (atomically, check)
 import           Control.Concurrent.STM.TVar (modifyTVar', readTVar, readTVarIO)
@@ -26,22 +27,25 @@ import           Trace.Forward.Utils.DataPoint (DataPointAsker (..))
 acceptDataPointsInit
   :: AcceptorConfiguration
   -> IO DataPointAsker
+  -> IO ()
   -> RunMiniProtocol 'InitiatorMode LBS.ByteString IO () Void
-acceptDataPointsInit config mkDPAsker =
-  InitiatorProtocolOnly $ runPeerWithAsker config mkDPAsker
+acceptDataPointsInit config mkDPAsker peerErrorHandler =
+  InitiatorProtocolOnly $ runPeerWithAsker config mkDPAsker peerErrorHandler
 
 acceptDataPointsResp
   :: AcceptorConfiguration
   -> IO DataPointAsker
+  -> IO ()
   -> RunMiniProtocol 'ResponderMode LBS.ByteString IO Void ()
-acceptDataPointsResp config mkDPAsker =
-  ResponderProtocolOnly $ runPeerWithAsker config mkDPAsker
+acceptDataPointsResp config mkDPAsker peerErrorHandler =
+  ResponderProtocolOnly $ runPeerWithAsker config mkDPAsker peerErrorHandler
 
 runPeerWithAsker
   :: AcceptorConfiguration
   -> IO DataPointAsker
+  -> IO ()
   -> MuxPeer LBS.ByteString IO ()
-runPeerWithAsker config mkDPAsker = 
+runPeerWithAsker config mkDPAsker peerErrorHandler = 
   MuxPeerRaw $ \channel -> do
     dpAsker <- mkDPAsker
     runPeer
@@ -50,6 +54,7 @@ runPeerWithAsker config mkDPAsker =
                                       CBOR.encode CBOR.decode)
       channel
       (Acceptor.dataPointAcceptorPeer $ acceptorActions config dpAsker [])
+    `finally` peerErrorHandler
 
 acceptorActions
   :: AcceptorConfiguration

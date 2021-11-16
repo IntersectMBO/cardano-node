@@ -1,6 +1,5 @@
-{-# LANGUAGE CPP #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards #-}
 
 module Cardano.Tracer.Handlers.Logs.File
   ( writeTraceObjectsToFile
@@ -14,31 +13,32 @@ import qualified Data.ByteString.Lazy as LBS
 import           Data.Char (isDigit)
 import           Data.Maybe (mapMaybe)
 import qualified Data.Text as T
-import           Data.Text (Text)
 import qualified Data.Text.Lazy as TL
 import           Data.Text.Lazy.Encoding (encodeUtf8)
 import           Data.Time.Clock (UTCTime)
 import           Data.Time.Format (defaultTimeLocale, formatTime)
 import           System.Directory (doesFileExist, createDirectoryIfMissing, removeFile)
 import           System.FilePath ((</>))
+import           System.Info.Extra (isWindows)
 
-import           Cardano.Logging
+import           Cardano.Logging (Namespace, TraceObject (..))
 
-import           Cardano.Tracer.Configuration
-import           Cardano.Tracer.Handlers.Logs.Utils
-import           Cardano.Tracer.Types
+import           Cardano.Tracer.Configuration (LogFormat (..))
+import           Cardano.Tracer.Handlers.Logs.Utils (createLogAndSymLink,
+                   doesSymLinkValid, symLinkName)
+import           Cardano.Tracer.Types (NodeId (..))
 
+-- | Append the list of 'TraceObject's to the latest log via symbolic link.
 writeTraceObjectsToFile
   :: NodeId
-  -> Text
   -> FilePath
   -> LogFormat
   -> [TraceObject]
   -> IO ()
-writeTraceObjectsToFile _ _ _ _ [] = return ()
-writeTraceObjectsToFile nodeId nodeName rootDir format traceObjects = do
-  pathToCurrentLog <- prepareLogsStructure nodeId nodeName rootDir format
-  unless (null itemsToWrite) $
+writeTraceObjectsToFile _ _ _ [] = return ()
+writeTraceObjectsToFile nodeId rootDir format traceObjects =
+  unless (null itemsToWrite) $ do
+    pathToCurrentLog <- prepareLogsStructure nodeId rootDir format
     LBS.appendFile pathToCurrentLog . encodeUtf8 . TL.concat $ itemsToWrite
  where
   itemsToWrite =
@@ -46,14 +46,24 @@ writeTraceObjectsToFile nodeId nodeName rootDir format traceObjects = do
       ForHuman   -> mapMaybe traceObjectToText traceObjects
       ForMachine -> mapMaybe traceObjectToJSON traceObjects
 
+-- | Prepare the structure for the log files:
+--
+--   /rootDir
+--     /subDirForNode1
+--       logs from node 1
+--     /subDirForNode2
+--       logs from node 2
+--     ...
+--     /subDirForNodeN
+--       logs from node N
+--
 prepareLogsStructure
   :: NodeId
-  -> Text
   -> FilePath
   -> LogFormat
   -> IO FilePath
-prepareLogsStructure nodeId nodeName rootDir format = do
-  -- Root directory (as a parent for subDirForLogs) will be created as well if needed.
+prepareLogsStructure (NodeId anId) rootDir format = do
+  -- The root directory (as a parent for subDirForLogs) will be created as well if needed.
   createDirectoryIfMissing True subDirForLogs
   ifM (doesFileExist pathToCurrentLog)
     (unlessM (doesSymLinkValid pathToCurrentLog) $ do
@@ -62,20 +72,15 @@ prepareLogsStructure nodeId nodeName rootDir format = do
     (createLogAndSymLink subDirForLogs format)
   return pathToCurrentLog
  where
-  subDirForLogs = rootDir </> nodeFullId
-  nodeFullId = T.unpack $ printNodeFullId nodeName nodeId
+  subDirForLogs = rootDir </> T.unpack anId
   -- This is a symlink to the current log file, please see rotation parameters.
   pathToCurrentLog = subDirForLogs </> symLinkName format
 
 nl :: TL.Text
-#if defined(mingw32_HOST_OS)
-nl = "\r\n"
-#else
-nl = "\n"
-#endif
+nl = if isWindows then "\r\n" else "\n"
 
 traceObjectToText :: TraceObject -> Maybe TL.Text
-traceObjectToText TraceObject{..} =
+traceObjectToText TraceObject{toHuman, toHostname, toNamespace, toSeverity, toThreadId, toTimestamp} =
   case toHuman of
     Nothing -> Nothing
     Just msgForHuman -> Just $
@@ -93,6 +98,7 @@ mkName :: Namespace -> TL.Text
 mkName []    = "noname"
 mkName names = TL.fromStrict $ T.intercalate "." names
 
+-- | The type for converting 'TraceObject' to JSON.
 data TraceObjectForJSON = TraceObjectForJSON
   { jAt   :: !UTCTime
   , jNS   :: !T.Text
@@ -103,17 +109,17 @@ data TraceObjectForJSON = TraceObjectForJSON
   }
 
 instance ToJSON TraceObjectForJSON where
-  toJSON TraceObjectForJSON{..} =
-    object [ "at"     .= formatTime defaultTimeLocale "%FT%T%2Q%Z" jAt
-           , "ns"     .= jNS
-           , "data"   .= jData
-           , "host"   .= jHost
-           , "sev"    .= jSev
-           , "thread" .= jTId
-           ]
+  toJSON toJ = object
+    [ "at"     .= formatTime defaultTimeLocale "%FT%T%2Q%Z" (jAt toJ)
+    , "ns"     .= jNS toJ
+    , "data"   .= jData toJ
+    , "host"   .= jHost toJ
+    , "sev"    .= jSev toJ
+    , "thread" .= jTId toJ
+    ]
 
 traceObjectToJSON :: TraceObject -> Maybe TL.Text
-traceObjectToJSON TraceObject{..} =
+traceObjectToJSON TraceObject{toMachine, toTimestamp, toNamespace, toHostname, toSeverity, toThreadId} =
   case toMachine of
     Nothing -> Nothing
     Just msgForMachine -> Just . TL.append nl . encodeToLazyText $

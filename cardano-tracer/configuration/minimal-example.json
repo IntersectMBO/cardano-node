@@ -3,18 +3,11 @@
     "tag": "ConnectTo",
     "contents": ["/tmp/forwarder.sock"]
   },
-  "hasEKG": null,
-  "hasPrometheus": null,
   "logging": [
     {
       "logRoot": "/tmp/cardano-tracer-logs",
       "logMode": "FileMode",
       "logFormat": "ForMachine"
     }
-  ],
-  "rotation": {
-    "rpKeepFilesNum": 1,
-    "rpLogLimitBytes": 50000,
-    "rpMaxAgeHours": 1
-  }
+  ]
 }

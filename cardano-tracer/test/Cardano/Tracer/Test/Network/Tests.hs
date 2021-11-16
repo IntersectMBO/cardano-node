@@ -1,5 +1,3 @@
-{-# LANGUAGE CPP #-}
-
 module Cardano.Tracer.Test.Network.Tests
   ( tests
   ) where
@@ -13,6 +11,7 @@ import           System.Time.Extra (sleep)
 
 import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.Run
+import           Cardano.Tracer.Utils
 
 import           Cardano.Tracer.Test.Forwarder
 import           Cardano.Tracer.Test.Utils
@@ -28,18 +27,19 @@ tests = localOption (QuickCheckTests 1) $ testGroup "Test.Network"
 
 propNetwork :: SideToRestart -> FilePath -> FilePath -> IO Property
 propNetwork whichSide rootDir localSock = do
+  protocolsBrake <- initProtocolsBrake
   case whichSide of
     First ->
       propNetwork'
         rootDir
-        ( runCardanoTracerWithConfig (config Initiate rootDir localSock)
+        ( doRunCardanoTracer (config Initiate rootDir localSock) protocolsBrake
         , launchForwardersSimple Responder localSock 1000 10000
         )
     Second ->
       propNetwork'
         rootDir
         ( launchForwardersSimple Initiator localSock 1000 10000
-        , runCardanoTracerWithConfig (config Response rootDir localSock)
+        , doRunCardanoTracer (config Response rootDir localSock) protocolsBrake
         )
 
 propNetwork' :: FilePath -> (IO (), IO ()) -> IO Property
@@ -51,7 +51,7 @@ propNetwork' rootDir (fstSide, sndSide) = do
   -- Forcibly stop the first side (like killing the process in the real world).
   uninterruptibleCancel f
   -- Now the second side is working without the first one, and tries to re-connect.
-  sleep 4.0
+  sleep 3.0
   removeDirectoryContent rootDir -- To check it later.
   -- Restart the first side, now the connection should be re-established.
   f' <- asyncBound fstSide
@@ -73,7 +73,7 @@ config
   -> FilePath
   -> TracerConfig
 config mode root p = TracerConfig
-  { network        = case mode of 
+  { network        = case mode of
                        Initiate -> ConnectTo $ NE.fromList [LocalSocket p]
                        Response -> AcceptAt $ LocalSocket p
   , loRequestNum   = Just 1
@@ -82,4 +82,5 @@ config mode root p = TracerConfig
   , hasPrometheus  = Nothing
   , logging        = NE.fromList [LoggingParams root FileMode ForMachine]
   , rotation       = Nothing
+  , verbosity      = Just Minimum
   }

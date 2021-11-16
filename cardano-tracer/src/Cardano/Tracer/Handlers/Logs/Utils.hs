@@ -16,10 +16,12 @@ import           Data.Maybe (isJust)
 import           Data.Time (UTCTime, getCurrentTime)
 import           Data.Time.Format (defaultTimeLocale, formatTime, parseTimeM)
 import qualified Data.Text as T
-import           System.Directory
-import           System.FilePath
+import           System.Directory (createFileLink, doesFileExist, getSymbolicLinkTarget,
+                   pathIsSymbolicLink, renamePath, removeFile)
+import           System.FilePath ((<.>), (</>), takeBaseName, takeExtension,
+                   takeDirectory, takeFileName)
 
-import           Cardano.Tracer.Configuration
+import           Cardano.Tracer.Configuration (LogFormat (..))
 
 logPrefix :: String
 logPrefix = "node-"
@@ -34,10 +36,7 @@ symLinkName format = "node" <.> logExtension format
 symLinkNameTmp :: LogFormat -> FilePath
 symLinkNameTmp format = symLinkName format <.> "tmp"
 
-isItSymLink
-  :: LogFormat
-  -> FilePath
-  -> IO Bool
+isItSymLink :: LogFormat -> FilePath -> IO Bool
 isItSymLink format fileName =
   if takeFileName fileName == symLinkName format
     then pathIsSymbolicLink fileName
@@ -68,7 +67,7 @@ isItLog format pathToLog = hasProperPrefix && hasTimestamp && hasProperExt
 -- | Create a new log file and a symlink to it, from scratch.
 createLogAndSymLink :: FilePath -> LogFormat -> IO ()
 createLogAndSymLink subDirForLogs format =
-  createLog subDirForLogs format >>= flip createFileLink symLink
+  createEmptyLog subDirForLogs format >>= flip createFileLink symLink
  where
   symLink = subDirForLogs </> symLinkName format
 
@@ -76,25 +75,25 @@ createLogAndSymLink subDirForLogs format =
 -- from the old log file to the new one.
 createLogAndUpdateSymLink :: FilePath -> LogFormat -> IO ()
 createLogAndUpdateSymLink subDirForLogs format = do
-  newLog <- createLog subDirForLogs format
+  newLog <- createEmptyLog subDirForLogs format
   whenM (doesFileExist tmpSymLink) $
     removeFile tmpSymLink
   createFileLink newLog tmpSymLink
-  renamePath tmpSymLink realSymLink -- Atomic operation, uses POSIX.rename.
+  -- Atomic operation, uses POSIX.rename function.
+  renamePath tmpSymLink realSymLink
  where
   tmpSymLink  = subDirForLogs </> symLinkNameTmp format
   realSymLink = subDirForLogs </> symLinkName format
 
-createLog :: FilePath -> LogFormat -> IO FilePath
-createLog subDirForLogs format = do
+-- | Create an empty log file (with current timestamp in the name).
+createEmptyLog :: FilePath -> LogFormat -> IO FilePath
+createEmptyLog subDirForLogs format = do
   ts <- formatTime defaultTimeLocale timeStampFormat <$> getCurrentTime
   let logName = logPrefix <> ts <.> logExtension format
       pathToLog = subDirForLogs </> logName
-  LBS.writeFile pathToLog LBS.empty -- Create an empty log file.
+  LBS.writeFile pathToLog LBS.empty
   return pathToLog
 
--- | This function is applied to the log we already checked,
--- so we definitely know it contains timestamp.
 getTimeStampFromLog :: FilePath -> Maybe UTCTime
 getTimeStampFromLog pathToLog =
   parseTimeM True defaultTimeLocale timeStampFormat timeStamp

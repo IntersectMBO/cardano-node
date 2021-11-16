@@ -5,11 +5,12 @@ module Cardano.Tracer.CLI
 
 import           Options.Applicative
 
--- | Type for CLI parameters required for the 'cardano-tracer'.
+-- | CLI parameters required for the tracer.
 newtype TracerParams = TracerParams
   { tracerConfig :: FilePath
   }
 
+-- | Parse CLI parameters for the tracer.
 parseTracerParams :: Parser TracerParams
 parseTracerParams = TracerParams <$>
   strOption

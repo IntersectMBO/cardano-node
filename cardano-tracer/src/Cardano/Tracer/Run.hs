@@ -2,47 +2,39 @@
 
 -- | This top-level module is used by 'cardano-tracer' app.
 module Cardano.Tracer.Run
-  ( runCardanoTracer
-  -- | For testing purposes.
-  , runCardanoTracerWithConfig
-  , runCardanoTracerWithConfigBrake
+  ( doRunCardanoTracer
+  , runCardanoTracer
   ) where
 
-import           Control.Concurrent.STM.TVar (TVar)
+import           Control.Concurrent.Async.Extra (sequenceConcurrently)
+import           Control.Monad (void)
 
-import           Cardano.Tracer.Acceptors.Run (runAcceptors, runAcceptorsWithBrake)
+import           Cardano.Tracer.Acceptors.Run (runAcceptors)
 import           Cardano.Tracer.CLI (TracerParams (..))
 import           Cardano.Tracer.Configuration (TracerConfig, readTracerConfig)
 import           Cardano.Tracer.Handlers.Logs.Rotator (runLogsRotator)
 import           Cardano.Tracer.Handlers.Metrics.Servers (runMetricsServers)
-import           Cardano.Tracer.Types
-import           Cardano.Tracer.Utils
+import           Cardano.Tracer.Types (ProtocolsBrake)
+import           Cardano.Tracer.Utils (initAcceptedMetrics, initConnectedNodes,
+                   initDataPointAskers, initProtocolsBrake)
 
+-- | Top-level run function, called by 'cardano-tracer' app.
 runCardanoTracer :: TracerParams -> IO ()
-runCardanoTracer TracerParams{tracerConfig} =
-  readTracerConfig tracerConfig >>= runCardanoTracerWithConfig
+runCardanoTracer TracerParams{tracerConfig} = do
+  config <- readTracerConfig tracerConfig
+  doRunCardanoTracer config =<< initProtocolsBrake
 
-runCardanoTracerWithConfig
-  :: TracerConfig
+-- | Runs all internal services of the tracer.
+doRunCardanoTracer
+  :: TracerConfig   -- ^ Tracer's configuration.
+  -> ProtocolsBrake -- ^ The flag we use to stop all the protocols.
   -> IO ()
-runCardanoTracerWithConfig config = do
+doRunCardanoTracer config protocolsBrake = do
+  connectedNodes <- initConnectedNodes
   acceptedMetrics <- initAcceptedMetrics
-  acceptedNodeInfo <- initAcceptedNodeInfo
   dpAskers <- initDataPointAskers
-  concurrently3
-    (runLogsRotator config)
-    (runMetricsServers config acceptedMetrics acceptedNodeInfo)
-    (runAcceptors config acceptedMetrics acceptedNodeInfo dpAskers)
-
-runCardanoTracerWithConfigBrake
-  :: TracerConfig
-  -> TVar Bool
-  -> IO ()
-runCardanoTracerWithConfigBrake config protocolsBrake = do
-  acceptedMetrics <- initAcceptedMetrics
-  acceptedNodeInfo <- initAcceptedNodeInfo
-  dpAskers <- initDataPointAskers
-  concurrently3
-    (runLogsRotator config)
-    (runMetricsServers config acceptedMetrics acceptedNodeInfo)
-    (runAcceptorsWithBrake config acceptedMetrics acceptedNodeInfo dpAskers protocolsBrake)
+  void . sequenceConcurrently $
+    [ runLogsRotator    config
+    , runMetricsServers config connectedNodes acceptedMetrics
+    , runAcceptors      config connectedNodes acceptedMetrics dpAskers protocolsBrake
+    ]

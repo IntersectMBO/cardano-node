@@ -8,45 +8,40 @@ import           Codec.CBOR.Term (Term)
 import           Control.Concurrent.Async (race_, wait)
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Void (Void)
+
+import           Cardano.Logging (TraceObject)
 import           Ouroboros.Network.Mux (MiniProtocol (..), MiniProtocolLimits (..),
-                                        MiniProtocolNum (..), MuxMode (..),
-                                        OuroborosApplication (..),
-                                        RunMiniProtocol (..),
-                                        miniProtocolLimits, miniProtocolNum, miniProtocolRun)
+                   MiniProtocolNum (..), MuxMode (..), OuroborosApplication (..),
+                   RunMiniProtocol (..), miniProtocolLimits, miniProtocolNum, miniProtocolRun)
 import           Ouroboros.Network.Driver.Limits (ProtocolTimeLimits)
 import           Ouroboros.Network.ErrorPolicy (nullErrorPolicies)
 import           Ouroboros.Network.IOManager (withIOManager)
 import           Ouroboros.Network.Snocket (Snocket, localAddressFromPath, localSnocket)
 import           Ouroboros.Network.Socket (AcceptedConnectionsLimit (..), ConnectionId (..),
-                                           SomeResponderApplication (..),
-                                           cleanNetworkMutableState,
-                                           newNetworkMutableState, nullNetworkServerTracers,
-                                           withServerNode)
+                   SomeResponderApplication (..), cleanNetworkMutableState,
+                   newNetworkMutableState, nullNetworkServerTracers, withServerNode)
 import           Ouroboros.Network.Protocol.Handshake.Codec (cborTermVersionDataCodec,
-                                                             noTimeLimitsHandshake)
+                   noTimeLimitsHandshake)
 import           Ouroboros.Network.Protocol.Handshake.Unversioned (UnversionedProtocol (..),
-                                                                   UnversionedProtocolData (..),
-                                                                   unversionedHandshakeCodec,
-                                                                   unversionedProtocolDataCodec)
+                   UnversionedProtocolData (..), unversionedHandshakeCodec,
+                   unversionedProtocolDataCodec)
 import           Ouroboros.Network.Protocol.Handshake.Type (Handshake)
 import           Ouroboros.Network.Protocol.Handshake.Version (acceptableVersion,
-                                                               simpleSingletonVersions)
-import           System.IO.Unsafe (unsafePerformIO)
-
-import           Cardano.Logging (TraceObject)
+                   simpleSingletonVersions)
+import qualified System.Metrics.Configuration as EKGF
+import           System.Metrics.Network.Acceptor (acceptEKGMetricsResp)
 
 import qualified Trace.Forward.Configuration.DataPoint as DPF
 import qualified Trace.Forward.Configuration.TraceObject as TF
 import           Trace.Forward.Run.DataPoint.Acceptor (acceptDataPointsResp)
 import           Trace.Forward.Run.TraceObject.Acceptor (acceptTraceObjectsResp)
 
-import qualified System.Metrics.Configuration as EKGF
-import           System.Metrics.Network.Acceptor (acceptEKGMetrics)
-
-import           Cardano.Tracer.Acceptors.Utils
+import           Cardano.Tracer.Acceptors.Utils (prepareDataPointAsker,
+                   prepareMetricsStores, removeDisconnectedNode)
 import           Cardano.Tracer.Configuration
-import           Cardano.Tracer.Handlers.Logs.TraceObjects
-import           Cardano.Tracer.Types
+import           Cardano.Tracer.Handlers.Logs.TraceObjects (traceObjectsHandler)
+import           Cardano.Tracer.Types (AcceptedMetrics, ConnectedNodes, DataPointAskers)
+import           Cardano.Tracer.Utils (connIdToNodeId)
 
 runAcceptorsServer
   :: TracerConfig
@@ -55,28 +50,31 @@ runAcceptorsServer
      , TF.AcceptorConfiguration TraceObject
      , DPF.AcceptorConfiguration
      )
+  -> ConnectedNodes
   -> AcceptedMetrics
-  -> AcceptedNodeInfo
   -> DataPointAskers
   -> IO ()
-runAcceptorsServer config p (ekgConfig, tfConfig, dpfConfig) acceptedMetrics acceptedNodeInfo dpAskers =
-  withIOManager $ \iocp -> do
-    doListenToForwarder (localSnocket iocp) (localAddressFromPath p) noTimeLimitsHandshake $
-      appResponder
-        [ (runEKGAcceptor ekgConfig acceptedMetrics, 1)
-        , (runTraceObjectsAcceptor config tfConfig acceptedNodeInfo, 2)
-        , (runDataPointsAcceptor dpfConfig dpAskers, 3)
-        ]
+runAcceptorsServer config p (ekgConfig, tfConfig, dpfConfig)
+                   connectedNodes acceptedMetrics dpAskers = withIOManager $ \iocp ->
+  doListenToForwarder (localSnocket iocp) (localAddressFromPath p) noTimeLimitsHandshake $
+    -- Please note that we always run all the supported protocols,
+    -- there is no mechanism to disable some of them.
+    appResponder
+      [ (runEKGAcceptor ekgConfig connectedNodes acceptedMetrics errorHandler, 1)
+      , (runTraceObjectsAcceptor config tfConfig                 errorHandler, 2)
+      , (runDataPointsAcceptor dpfConfig connectedNodes dpAskers errorHandler, 3)
+      ]
  where
-  appResponder protocols =
+  appResponder protocolsWithNums =
     OuroborosApplication $ \connectionId _shouldStopSTM ->
       [ MiniProtocol
          { miniProtocolNum    = MiniProtocolNum num
          , miniProtocolLimits = MiniProtocolLimits { maximumIngressQueue = maxBound }
          , miniProtocolRun    = protocol connectionId
          }
-      | (protocol, num) <- protocols
+      | (protocol, num) <- protocolsWithNums
       ]
+  errorHandler = removeDisconnectedNode connectedNodes acceptedMetrics dpAskers
 
 doListenToForwarder
   :: Ord addr
@@ -104,34 +102,45 @@ doListenToForwarder snocket address timeLimits app = do
               (SomeResponderApplication app)
             )
             nullErrorPolicies
-            $ \_ serverAsync -> do
-              wait serverAsync -- Block until async exception.
+            $ \_ serverAsync -> wait serverAsync -- Block until async exception.
 
 runEKGAcceptor
   :: Show addr
   => EKGF.AcceptorConfiguration
+  -> ConnectedNodes
   -> AcceptedMetrics
+  -> (ConnectionId addr -> IO ())
   -> ConnectionId addr
   -> RunMiniProtocol 'ResponderMode LBS.ByteString IO Void ()
-runEKGAcceptor ekgConfig acceptedMetrics connId = do
-  let (ekgStore, localStore) = unsafePerformIO $ prepareMetricsStores acceptedMetrics connId
-  acceptEKGMetrics ekgConfig ekgStore localStore
+runEKGAcceptor ekgConfig connectedNodes acceptedMetrics errorHandler connId =
+  acceptEKGMetricsResp
+    ekgConfig
+    (prepareMetricsStores connectedNodes acceptedMetrics connId)
+    (errorHandler connId)
 
 runTraceObjectsAcceptor
   :: Show addr
   => TracerConfig
   -> TF.AcceptorConfiguration TraceObject
-  -> AcceptedNodeInfo
+  -> (ConnectionId addr -> IO ())
   -> ConnectionId addr
   -> RunMiniProtocol 'ResponderMode LBS.ByteString IO Void ()
-runTraceObjectsAcceptor config tfConfig acceptedNodeInfo connId =
-  acceptTraceObjectsResp tfConfig $ traceObjectsHandler config (connIdToNodeId connId) acceptedNodeInfo
+runTraceObjectsAcceptor config tfConfig errorHandler connId =
+  acceptTraceObjectsResp
+    tfConfig
+    (traceObjectsHandler config (connIdToNodeId connId))
+    (errorHandler connId)
 
 runDataPointsAcceptor
   :: Show addr
   => DPF.AcceptorConfiguration
+  -> ConnectedNodes
   -> DataPointAskers
+  -> (ConnectionId addr -> IO ())
   -> ConnectionId addr
   -> RunMiniProtocol 'ResponderMode LBS.ByteString IO Void ()
-runDataPointsAcceptor dpfConfig dpAskers connId =
-  acceptDataPointsResp dpfConfig $ prepareDataPointAsker dpAskers connId
+runDataPointsAcceptor dpfConfig connectedNodes dpAskers errorHandler connId =
+  acceptDataPointsResp
+    dpfConfig
+    (prepareDataPointAsker connectedNodes dpAskers connId)
+    (errorHandler connId)

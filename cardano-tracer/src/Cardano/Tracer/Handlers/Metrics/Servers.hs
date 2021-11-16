@@ -4,26 +4,25 @@ module Cardano.Tracer.Handlers.Metrics.Servers
   ( runMetricsServers
   ) where
 
+import           Control.Concurrent.Async.Extra (sequenceConcurrently)
+import           Control.Monad (void)
+
 import           Cardano.Tracer.Configuration (TracerConfig (..))
 import           Cardano.Tracer.Handlers.Metrics.Monitoring (runMonitoringServer)
 import           Cardano.Tracer.Handlers.Metrics.Prometheus (runPrometheusServer)
-import           Cardano.Tracer.Types
-import           Cardano.Tracer.Utils
+import           Cardano.Tracer.Types (ConnectedNodes, AcceptedMetrics)
 
 runMetricsServers
   :: TracerConfig
+  -> ConnectedNodes
   -> AcceptedMetrics
-  -> AcceptedNodeInfo
   -> IO ()
-runMetricsServers TracerConfig{hasEKG, hasPrometheus} acceptedMetrics acceptedNodeInfo =
+runMetricsServers TracerConfig{hasEKG, hasPrometheus} connectedNodes acceptedMetrics =
   case (hasEKG, hasPrometheus) of
-    (Nothing, Nothing) ->
-      return ()
-    (Nothing, Just prom) ->
-      runPrometheusServer prom acceptedMetrics acceptedNodeInfo
-    (Just ekg, Nothing) ->
-      runMonitoringServer ekg acceptedMetrics
-    (Just ekg, Just prom) ->
-      concurrently2
-        (runPrometheusServer prom acceptedMetrics acceptedNodeInfo)
-        (runMonitoringServer ekg acceptedMetrics)
+    (Nothing,  Nothing)   -> return ()
+    (Nothing,  Just prom) -> runPrometheusServer prom connectedNodes acceptedMetrics
+    (Just ekg, Nothing)   -> runMonitoringServer ekg  connectedNodes acceptedMetrics
+    (Just ekg, Just prom) -> void . sequenceConcurrently $
+                               [ runPrometheusServer prom connectedNodes acceptedMetrics
+                               , runMonitoringServer ekg  connectedNodes acceptedMetrics
+                               ]

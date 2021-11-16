@@ -1,5 +1,4 @@
 {-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -12,77 +11,76 @@ import           Control.Concurrent.STM.TVar (readTVarIO)
 import           Control.Monad (forM, forever)
 import           Control.Monad.IO.Class (liftIO)
 import qualified Data.ByteString as BS
-import qualified Data.ByteString.Char8 as BSC
-import           Data.List (find)
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Map.Strict as M
+import qualified Data.Set as S
 import           Data.String (IsString (..))
 import           Data.Text (Text)
 import qualified Data.Text as T
-import           Data.Text.Encoding (decodeUtf8)
+import           Data.Text.Encoding (decodeUtf8, encodeUtf8)
 import           Snap.Blaze (blaze)
 import           Snap.Core (Snap, getRequest, route, rqParams, writeText)
 import           Snap.Http.Server (Config, ConfigLog (..), defaultConfig, setAccessLog,
-                                   setBind, setErrorLog, setPort, simpleHttpServe)
+                   setBind, setErrorLog, setPort, simpleHttpServe)
 import           System.Metrics (Sample, Value (..), sampleAll)
-import           Text.Blaze.Html
+import           System.Time.Extra (sleep)
 import           Text.Blaze.Html5 hiding (map)
 import           Text.Blaze.Html5.Attributes hiding (title)
 
-import           Cardano.Tracer.Configuration
-import           Cardano.Tracer.Types
+import           Cardano.Tracer.Configuration (Endpoint (..))
+import           Cardano.Tracer.Types (AcceptedMetrics, ConnectedNodes, NodeId (..))
 
 runPrometheusServer
   :: Endpoint
+  -> ConnectedNodes
   -> AcceptedMetrics
-  -> AcceptedNodeInfo
   -> IO ()
-runPrometheusServer (Endpoint host port) acceptedMetrics acceptedNodeInfo = forever $
+runPrometheusServer (Endpoint host port) connectedNodes acceptedMetrics = forever $ do
   -- If everything is okay, the function 'simpleHttpServe' never returns.
   -- But if there is some problem, it never throws an exception, but just stops.
   -- So if it stopped - it will be re-started.
   simpleHttpServe config $
-    route [ ("metrics", renderListOfNodes)
-          , ("metrics/:nodefullid", renderMetricsFromNode)
+    route [ ("/",        renderListOfConnectedNodes)
+          , ("/:nodeid", renderMetricsFromNode)
           ]
+  sleep 1.0
  where
   config :: Config Snap ()
   config =
       setPort port
-    . setBind (BSC.pack host)
+    . setBind (encodeUtf8 . T.pack $ host)
     . setAccessLog ConfigNoLog
     . setErrorLog ConfigNoLog
     $ defaultConfig
 
-  renderListOfNodes :: Snap ()
-  renderListOfNodes =
-    M.toList <$> liftIO (readTVarIO acceptedNodeInfo) >>= \case
-      [] -> writeText "There are no connected nodes yet."
-      ni -> blaze =<< liftIO (mkListOfHrefs ni)
+  renderListOfConnectedNodes :: Snap ()
+  renderListOfConnectedNodes = do
+    nodes <- liftIO $ readTVarIO connectedNodes
+    case S.toList nodes of
+      []   -> writeText "There are no connected nodes yet."
+      nIds -> blaze =<< liftIO (mkListOfHrefs nIds)
 
-  mkListOfHrefs :: [(NodeId, NodeInfo)] -> IO Html
-  mkListOfHrefs ni = do
-    nodeHrefs <- forM ni $ \(nodeId, NodeInfo{niName}) -> do
-      let nodeFullId = T.unpack $ printNodeFullId niName nodeId
-      return $ a ! href (mkURL nodeFullId) $ toHtml nodeFullId
+  mkListOfHrefs :: [NodeId] -> IO Html
+  mkListOfHrefs nIds = do
+    nodeHrefs <- forM nIds $ \(NodeId anId) -> do
+      let anId' = T.unpack anId
+      return $ a ! href (mkURL anId') $ toHtml anId'
     return $ mkPage nodeHrefs
 
   mkURL :: String -> AttributeValue
-  mkURL nodeFullId = fromString $
-    "http://" <> host <> ":" <> show port <> "/metrics/" <> nodeFullId
+  mkURL anId' = fromString $
+    "http://" <> host <> ":" <> show port <> "/" <> anId'
 
   mkPage :: [Html] -> Html
   mkPage hrefs = html $ do
     head $ title "Prometheus metrics"
-    body $ ol $ mapM_ li hrefs
+    body $ ul $ mapM_ li hrefs
 
   renderMetricsFromNode :: Snap ()
   renderMetricsFromNode =
-    getRequest >>= return . M.lookup "nodefullid" . rqParams >>= \case
-      Nothing ->
-        writeText "No such a node!"
-      Just nodeFullId ->
-        writeText =<< liftIO (getMetricsFromNode nodeFullId acceptedMetrics)
+    getRequest >>= return . M.lookup "nodeid" . rqParams >>= \case
+      Nothing   -> writeText "No such a node!"
+      Just anId -> writeText =<< liftIO (getMetricsFromNode anId acceptedMetrics)
 
 type MetricName  = Text
 type MetricValue = Text
@@ -93,20 +91,15 @@ getMetricsFromNode
   -> AcceptedMetrics
   -> IO Text
 getMetricsFromNode [] _ = return "No such a node!"
-getMetricsFromNode (nodeFullId':_) acceptedMetrics = do
+getMetricsFromNode (anId':_) acceptedMetrics = do
   metrics <- readTVarIO acceptedMetrics
-  if M.null metrics
-    then return "No such a node!"
-    else do
-      case find nodeIdWeNeed $ M.keys metrics of
-        Nothing -> return "No such a node!"
-        Just nodeId -> do
-          let (ekgStore, _) = metrics M.! nodeId
-          sampleAll ekgStore >>= return . renderListOfMetrics . getListOfMetrics
+  case metrics M.!? nodeId of
+    Nothing ->
+      return "No such a node!"
+    Just (ekgStore, _) ->
+      sampleAll ekgStore >>= return . renderListOfMetrics . getListOfMetrics
  where
-  -- For example, "run-user-1000-core.sock" is suffix of "core-1--run-user-1000-core.sock"
-  nodeIdWeNeed nodeId = T.pack (show nodeId) `T.isSuffixOf` nodeFullId
-  nodeFullId = decodeUtf8 nodeFullId'
+  nodeId = NodeId $ decodeUtf8 anId'
 
   getListOfMetrics :: Sample -> MetricsList
   getListOfMetrics = filter (not . T.null . fst) . map metricsWeNeed . HM.toList
@@ -116,7 +109,7 @@ getMetricsFromNode (nodeFullId':_) acceptedMetrics = do
       Counter c -> (mName, T.pack $ show c)
       Gauge g   -> (mName, T.pack $ show g)
       Label l   -> (mName, l)
-      _         -> ("",    "") -- ekg-forward doesn't support 'Distribution' yet.
+      _         -> ("",    "") -- 'ekg-forward' doesn't support 'Distribution' yet.
 
   renderListOfMetrics :: MetricsList -> Text
   renderListOfMetrics [] = "No metrics were received from this node."

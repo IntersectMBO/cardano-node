@@ -1,63 +1,48 @@
-{-# LANGUAGE CPP #-}
-{-# LANGUAGE MultiWayIf #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
-
-#if defined(linux_HOST_OS)
-#define LINUX
-#endif
 
 module Cardano.Tracer.Handlers.Logs.Journal
   ( writeTraceObjectsToJournal
   ) where
 
-#if defined(LINUX)
+import           Control.Monad (unless)
 import qualified Data.HashMap.Strict as HM
-import           Data.Maybe (fromMaybe)
 import qualified Data.Text as T
 import           Data.Text (Text)
 import           Data.Text.Encoding (encodeUtf8)
 import           Data.Time.Clock (UTCTime)
 import           Data.Time.Format (defaultTimeLocale, formatTime)
-import           Systemd.Journal (Priority (..), message, mkJournalField,
-                                  priority, sendJournalFields, syslogIdentifier)
+import           System.Info.Extra (isMac, isWindows)
+import           Systemd.Journal (Priority (..), message, mkJournalField, priority,
+                   sendJournalFields, syslogIdentifier)
 
 import           Cardano.Logging (TraceObject (..))
 import qualified Cardano.Logging as L
 
-import           Cardano.Tracer.Types
-#else
-import           System.IO (hPutStrLn, stderr)
+import           Cardano.Tracer.Types (NodeId (..))
 
-import           Cardano.Logging
-
-import           Cardano.Tracer.Types
-#endif
-
-#if defined(LINUX)
-writeTraceObjectsToJournal
-  :: NodeId
-  -> Text
-  -> [TraceObject]
-  -> IO ()
-writeTraceObjectsToJournal _ _ [] = return ()
-writeTraceObjectsToJournal nodeId nodeName traceObjects =
-  mapM_ (sendJournalFields . mkJournalFields) traceObjects
+-- | Store 'TraceObject's in Linux systemd's journal service.
+writeTraceObjectsToJournal :: NodeId -> [TraceObject] -> IO ()
+writeTraceObjectsToJournal _ [] = return ()
+writeTraceObjectsToJournal nodeId traceObjects =
+  unless (isWindows || isMac) $
+    mapM_ (sendJournalFields . mkJournalFields) traceObjects
  where
-  mkJournalFields trOb =
-    let msgForHuman   = fromMaybe "" $ L.toHuman trOb
-        msgForMachine = fromMaybe "" $ L.toMachine trOb
-    in if | not . T.null $ msgForHuman   -> mkJournalFields' trOb msgForHuman
-          | not . T.null $ msgForMachine -> mkJournalFields' trOb msgForMachine
-          | otherwise                    -> HM.empty -- Both messages are empty!
+  mkJournalFields trOb@TraceObject{toHuman, toMachine} =
+    case (toHuman, toMachine) of
+      (Just msgForHuman, Nothing)            -> mkJournalFields' trOb msgForHuman
+      (Nothing,          Just msgForMachine) -> mkJournalFields' trOb msgForMachine
+      (Just _,           Just msgForMachine) -> mkJournalFields' trOb msgForMachine
+      (Nothing,          Nothing)            -> HM.empty
 
-  mkJournalFields' trOb msg =
-       syslogIdentifier (nodeName <> T.pack (show nodeId))
+  mkJournalFields' TraceObject{toSeverity, toNamespace, toThreadId, toTimestamp} msg =
+       syslogIdentifier (T.pack (show nodeId))
     <> message msg
-    <> priority (mkPriority $ L.toSeverity trOb)
+    <> priority (mkPriority toSeverity)
     <> HM.fromList
-         [ (namespace, encodeUtf8 (mkName $ L.toNamespace trOb))
-         , (thread,    encodeUtf8 $ L.toThreadId trOb)
-         , (time,      encodeUtf8 . formatAsIso8601 $ L.toTimestamp trOb)
+         [ (namespace, encodeUtf8 $ mkName toNamespace)
+         , (thread,    encodeUtf8 toThreadId)
+         , (time,      encodeUtf8 $ formatAsIso8601 toTimestamp)
          ]
 
   mkName [] = "noname"
@@ -79,12 +64,3 @@ mkPriority L.Error     = Error
 mkPriority L.Critical  = Critical
 mkPriority L.Alert     = Alert
 mkPriority L.Emergency = Emergency
-#else
-writeTraceObjectsToJournal
-  :: NodeId
-  -> NodeName
-  -> [TraceObject]
-  -> IO ()
-writeTraceObjectsToJournal _ _ _ =
-  hPutStrLn stderr "Writing to systemd's journal is available on Linux only."
-#endif

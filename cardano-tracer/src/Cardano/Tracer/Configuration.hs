@@ -4,20 +4,21 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Cardano.Tracer.Configuration
-  ( Host
-  , Port
-  , Address (..)
+  ( Address (..)
   , Endpoint (..)
-  , RotationParams (..)
-  , LogMode (..)
+  , Host
   , LogFormat (..)
+  , LogMode (..)
   , LoggingParams (..)
   , Network (..)
+  , Port
+  , RotationParams (..)
   , TracerConfig (..)
+  , Verbosity (..)
   , readTracerConfig
   ) where
 
-import           Data.Aeson (FromJSON, ToJSON, eitherDecodeFileStrict')
+import           Data.Aeson (FromJSON, eitherDecodeFileStrict')
 import           Data.Fixed (Pico)
 import           Data.List.NonEmpty
 import           Data.Word (Word16, Word64)
@@ -27,56 +28,69 @@ import           System.Exit (die)
 type Host = String
 type Port = Int
 
--- | Only local socket is supported.
+-- | Only local socket is supported, to avoid unauthorized connections.
 newtype Address = LocalSocket FilePath
-  deriving (Eq, Generic, FromJSON, Show, ToJSON)
+  deriving (Eq, Generic, FromJSON, Show)
 
 -- | Endpoint for internal services.
-data Endpoint = Endpoint !Host !Port
-  deriving (Eq, Generic, FromJSON, Show, ToJSON)
+data Endpoint = Endpoint
+  { epHost :: !Host
+  , epPort :: !Port
+  } deriving (Eq, Generic, FromJSON, Show)
 
+-- | Parameters of rotation mechanism for logs.
 data RotationParams = RotationParams
-  { rpLogLimitBytes :: !Word64  -- ^ Max size of file in bytes
-  , rpMaxAgeHours   :: !Word    -- ^ Hours
-  , rpKeepFilesNum  :: !Word    -- ^ Number of files to keep
-  } deriving (Eq, Generic, FromJSON, Show, ToJSON)
+  { rpFrequencySecs :: !Word    -- ^ Rotation period, in seconds.
+  , rpLogLimitBytes :: !Word64  -- ^ Max size of log file in bytes.
+  , rpMaxAgeHours   :: !Word    -- ^ Max age of log file in hours.
+  , rpKeepFilesNum  :: !Word    -- ^ Number of log files to keep in any case.
+  } deriving (Eq, Generic, FromJSON, Show)
 
--- | Log mode: in the file or in Linux journal service.
+-- | Logging mode.
 data LogMode
-  = FileMode
-  | JournalMode
-  deriving (Eq, Generic, FromJSON, Show, ToJSON)
+  = FileMode    -- ^ Store items in log file.
+  | JournalMode -- ^ Store items in Linux journal service.
+  deriving (Eq, Generic, FromJSON, Show)
 
--- | Format of log file: for human (text) or for machine (json).
+-- | Format of log files.
 data LogFormat
-  = ForHuman
-  | ForMachine
-  deriving (Eq, Generic, FromJSON, Show, ToJSON)
+  = ForHuman   -- ^ For human (text)
+  | ForMachine -- ^ For machine (JSON)
+  deriving (Eq, Generic, FromJSON, Show)
 
 -- | Logging parameters.
 data LoggingParams = LoggingParams
-  { logRoot   :: !FilePath  -- ^ Root directory where all subdirs with logs will be created.
+  { logRoot   :: !FilePath  -- ^ Root directory where all subdirs with logs are created.
   , logMode   :: !LogMode   -- ^ Log mode.
   , logFormat :: !LogFormat -- ^ Log format.
-  } deriving (Eq, Generic, FromJSON, Show, ToJSON)
+  } deriving (Eq, Generic, FromJSON, Show)
 
+-- | Connection mode.
 data Network
-  = AcceptAt  !Address
-  | ConnectTo !(NonEmpty Address)
-  deriving (Eq, Generic, FromJSON, Show, ToJSON)
+  = AcceptAt  !Address            -- ^ Server mode: accepts connections.
+  | ConnectTo !(NonEmpty Address) -- ^ Client mode: initiates connections.
+  deriving (Eq, Generic, FromJSON, Show)
 
--- | Complete configuration.
+-- | Tracer's verbosity.
+data Verbosity
+  = Minimum    -- ^ Display minimum of messages.
+  | ErrorsOnly -- ^ Display errors only.
+  | Maximum    -- ^ Display all the messages (protocols tracing, errors).
+  deriving (Eq, Generic, FromJSON, Show)
+
+-- | Tracer configuration.
 data TracerConfig = TracerConfig
-  { network        :: !Network                  -- ^ How cardano-tracer will be connected to node(s).
-  , loRequestNum   :: !(Maybe Word16)           -- ^ How many 'TraceObject's will be asked in each request.
-  , ekgRequestFreq :: !(Maybe Pico)             -- ^ How often to request for EKG-metrics, in seconds.
-  , hasEKG         :: !(Maybe Endpoint)         -- ^ Endpoint for EKG web-page.
-  , hasPrometheus  :: !(Maybe Endpoint)         -- ^ Endpoint for Promeheus web-page.
-  , logging        :: !(NonEmpty LoggingParams) -- ^ Logging parameters.
-  , rotation       :: !(Maybe RotationParams)   -- ^ Rotation parameters.
-  } deriving (Eq, Generic, FromJSON, Show, ToJSON)
+  { network        :: !Network                      -- ^ How cardano-tracer will be connected to node(s).
+  , loRequestNum   :: !(Maybe Word16)               -- ^ How many 'TraceObject's will be asked in each request.
+  , ekgRequestFreq :: !(Maybe Pico)                 -- ^ How often to request for EKG-metrics, in seconds.
+  , hasEKG         :: !(Maybe (Endpoint, Endpoint)) -- ^ Endpoint for EKG web-page (list of nodes, monitoring).
+  , hasPrometheus  :: !(Maybe Endpoint)             -- ^ Endpoint for Promeheus web-page.
+  , logging        :: !(NonEmpty LoggingParams)     -- ^ Logging parameters.
+  , rotation       :: !(Maybe RotationParams)       -- ^ Rotation parameters.
+  , verbosity      :: !(Maybe Verbosity)            -- ^ Verbosity of the tracer itself.
+  } deriving (Eq, Generic, FromJSON, Show)
 
--- | Read the tracer's configuration file (path is passed via '--config' CLI option).
+-- | Read the tracer's configuration file.
 readTracerConfig :: FilePath -> IO TracerConfig
 readTracerConfig pathToConfig =
   eitherDecodeFileStrict' pathToConfig >>= \case

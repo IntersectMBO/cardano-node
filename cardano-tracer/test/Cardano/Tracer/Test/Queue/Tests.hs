@@ -12,7 +12,7 @@ import qualified Data.Text.IO as TIO
 import           Test.Tasty
 import           Test.Tasty.QuickCheck
 import           System.IO
-import           System.IO.Extra
+import           System.IO.Extra (withTempFile)
 import           System.Time.Extra (sleep)
 
 import           Cardano.Tracer.Test.Forwarder

@@ -1,48 +1,52 @@
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PackageImports #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
--- | This top-level module is used by 'cardano-tracer' app.
 module Cardano.Tracer.Utils
-  ( concurrently2
-  , concurrently3
+  ( applyBrake
+  , connIdToNodeId
+  , initAcceptedMetrics
+  , initConnectedNodes
+  , initDataPointAskers
+  , initProtocolsBrake
   , runInLoop
   , showProblemIfAny
   ) where
 
-import           Control.Concurrent.Async (concurrently_, withAsync, wait)
-import           Control.Exception (IOException, SomeAsyncException (..),
-                                    fromException, try, tryJust)
-import           Control.Monad (void)
-import "contra-tracer" Control.Tracer (showTracing, stdoutTracer, traceWith)
+import           Control.Concurrent.STM (atomically)
+import           Control.Concurrent.STM.TVar (modifyTVar', newTVarIO)
+import           Control.Exception (SomeException, SomeAsyncException (..),
+                   fromException, try, tryJust)
+import           "contra-tracer" Control.Tracer (showTracing, stdoutTracer, traceWith)
+import qualified Data.Map.Strict as M
+import qualified Data.Set as S
+import qualified Data.Text as T
 import           System.Time.Extra (sleep)
 
-concurrently2 :: IO () -> IO () -> IO ()
-concurrently2 = concurrently_
+import           Ouroboros.Network.Socket (ConnectionId (..))
 
-concurrently3 :: IO () -> IO () -> IO () -> IO ()
-concurrently3 action1 action2 action3 =
-  withAsync action1 $ \a1 ->
-    withAsync action2 $ \a2 ->
-      withAsync action3 $ \a3 -> do
-        void $ wait a1
-        void $ wait a2
-        void $ wait a3
+import           Cardano.Tracer.Configuration (Verbosity (..))
+import           Cardano.Tracer.Types (AcceptedMetrics, ConnectedNodes,
+                   DataPointAskers, NodeId (..), ProtocolsBrake)
 
--- | Run monadic action in a loop. If there's an exception, it will re-run
---   the action again, after pause that grows.
+-- | Run monadic action in a loop. If there's an exception,
+--   it will re-run the action again, after pause that grows.
 runInLoop
   :: IO ()
+  -> Maybe Verbosity
   -> FilePath
   -> Word
   -> IO ()
-runInLoop action localSocket prevDelay =
+runInLoop action verb localSocket prevDelay =
   tryJust excludeAsyncExceptions action >>= \case
     Left e -> do
-      logTrace $ "cardano-tracer, connection with " <> show localSocket <> " failed: " <> show e
+      case verb of
+        Just Minimum -> return ()
+        _ -> logTrace $ "cardano-tracer, connection with " <> show localSocket <> " failed: " <> show e
       sleep $ fromIntegral currentDelay
-      runInLoop action localSocket currentDelay
+      runInLoop action verb localSocket currentDelay
     Right _ -> return ()
  where
   excludeAsyncExceptions e =
@@ -57,10 +61,47 @@ runInLoop action localSocket prevDelay =
       then prevDelay * 2
       else 60 -- After we reached 60+ secs delay, repeat an attempt every minute.
 
-showProblemIfAny :: IO () -> IO ()
-showProblemIfAny action =
+showProblemIfAny
+  :: Maybe Verbosity
+  -> IO ()
+  -> IO ()
+showProblemIfAny verb action =
   try action >>= \case
-    Left (e :: IOException) -> logTrace $ "cardano-tracer, cannot write trace objects: " <> show e
-    Right _ -> return ()
+    Left (e :: SomeException) ->
+      case verb of
+        Just Minimum -> return ()
+        _ -> logTrace $ "cardano-tracer, the problem: " <> show e
+    Right _ ->
+      return ()
  where
   logTrace = traceWith $ showTracing stdoutTracer
+
+connIdToNodeId :: Show addr => ConnectionId addr -> NodeId
+connIdToNodeId ConnectionId{remoteAddress} = NodeId preparedAddress
+ where
+  -- We have to remove "wrong" symbols from 'NodeId',
+  -- to make it appropriate for the name of the subdirectory.
+  preparedAddress =
+      T.replace "\\\\.\\pipe\\" "" -- For Windows.
+    . T.replace "--" ""
+    . T.replace "LocalAddress" "" -- There are only local addresses by design.
+    . T.replace " " "-"
+    . T.replace "\"" ""
+    . T.replace "/" "-"
+    . T.pack
+    $ show remoteAddress
+
+initConnectedNodes :: IO ConnectedNodes
+initConnectedNodes = newTVarIO S.empty
+
+initAcceptedMetrics :: IO AcceptedMetrics
+initAcceptedMetrics = newTVarIO M.empty
+
+initDataPointAskers :: IO DataPointAskers
+initDataPointAskers = newTVarIO M.empty
+
+initProtocolsBrake :: IO ProtocolsBrake
+initProtocolsBrake = newTVarIO False
+
+applyBrake :: ProtocolsBrake -> IO ()
+applyBrake stopProtocols = atomically $ modifyTVar' stopProtocols . const $ True

@@ -5,34 +5,30 @@ module Cardano.Tracer.Handlers.Logs.TraceObjects
   ) where
 
 import           Control.Concurrent.Async (forConcurrently_)
-import           Control.Concurrent.STM.TVar (readTVarIO)
-import           Data.Map.Strict ((!?))
 import qualified Data.List.NonEmpty as NE
 
 import           Cardano.Logging (TraceObject)
 
 import           Cardano.Tracer.Configuration
-import           Cardano.Tracer.Handlers.Logs.File
-import           Cardano.Tracer.Handlers.Logs.Journal
-import           Cardano.Tracer.Types
-import           Cardano.Tracer.Utils
+import           Cardano.Tracer.Handlers.Logs.File (writeTraceObjectsToFile)
+import           Cardano.Tracer.Handlers.Logs.Journal (writeTraceObjectsToJournal)
+import           Cardano.Tracer.Types (NodeId)
+import           Cardano.Tracer.Utils (showProblemIfAny)
 
+-- | This handler is called periodically by 'TraceObjectForward' protocol
+--   from 'trace-forward' library.
 traceObjectsHandler
-  :: TracerConfig
-  -> NodeId
-  -> AcceptedNodeInfo
-  -> [TraceObject]
+  :: TracerConfig  -- ^ Tracer configuration.
+  -> NodeId        -- ^ An id of the node 'TraceObject's were received from.
+  -> [TraceObject] -- ^ The list of received 'TraceObject's (may be empty).
   -> IO ()
-traceObjectsHandler _ _ _ [] = return ()
-traceObjectsHandler TracerConfig{logging} nodeId acceptedNodeInfo traceObjects = do
-  nodesInfo <- readTVarIO acceptedNodeInfo
-  case nodesInfo !? nodeId of
-    Nothing -> return ()
-    Just ni -> do
-      let NodeInfo{niName} = ni
-      forConcurrently_ (NE.nub logging) $ \LoggingParams{logMode, logRoot, logFormat} ->
-        case logMode of
-          FileMode ->
-            showProblemIfAny $ writeTraceObjectsToFile nodeId niName logRoot logFormat traceObjects
-          JournalMode ->
-            showProblemIfAny $ writeTraceObjectsToJournal nodeId niName traceObjects
+traceObjectsHandler _ _ [] = return ()
+traceObjectsHandler TracerConfig{logging, verbosity} nodeId traceObjects =
+  forConcurrently_ (NE.nub logging) $ \LoggingParams{logMode, logRoot, logFormat} ->
+    case logMode of
+      FileMode ->
+        showProblemIfAny verbosity $
+          writeTraceObjectsToFile nodeId logRoot logFormat traceObjects
+      JournalMode ->
+        showProblemIfAny verbosity $
+          writeTraceObjectsToJournal nodeId traceObjects

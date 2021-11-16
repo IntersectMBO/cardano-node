@@ -1,72 +1,73 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE PackageImports #-}
-{-# LANGUAGE ScopedTypeVariables #-}
 
 module Cardano.Tracer.Handlers.Logs.Rotator
   ( runLogsRotator
   ) where
 
-import           Control.Exception (SomeException, try)
 import           Control.Concurrent.Async (forConcurrently_)
 import           Control.Monad (forM_, forever, unless, when)
 import           Control.Monad.Extra (whenJust, whenM)
-import "contra-tracer" Control.Tracer (showTracing, stdoutTracer, traceWith)
 import           Data.List (nub, sort)
 import           Data.List.Extra (dropEnd)
 import qualified Data.List.NonEmpty as NE
 import           Data.Time (diffUTCTime, getCurrentTime)
 import           Data.Word (Word64)
-import           System.Directory
+import           System.Directory (doesDirectoryExist, getFileSize, removeFile)
 import           System.Directory.Extra (listDirectories, listFiles)
 import           System.FilePath ((</>), takeDirectory)
 import           System.Time.Extra (sleep)
 
 import           Cardano.Tracer.Configuration
-import           Cardano.Tracer.Handlers.Logs.Utils
+import           Cardano.Tracer.Handlers.Logs.Utils (createLogAndUpdateSymLink,
+                   getTimeStampFromLog, isItLog)
+import           Cardano.Tracer.Utils (showProblemIfAny)
 
+-- | Runs rotation mechanism for the log files.
 runLogsRotator :: TracerConfig -> IO ()
-runLogsRotator TracerConfig{rotation, logging} =
-  whenJust rotation $
-    launchRotator loggingParamsForFiles
+runLogsRotator TracerConfig{rotation, logging, verbosity} =
+  whenJust rotation $ \rotParams ->
+    launchRotator loggingParamsForFiles rotParams verbosity
  where
   loggingParamsForFiles = nub . NE.filter filesOnly $ logging
   filesOnly LoggingParams{logMode} = logMode == FileMode
 
--- | All the logs with 'TraceObject's received from particular node
--- will be stored in a separate directory, so they can be checked
--- concurrently.
 launchRotator
   :: [LoggingParams]
   -> RotationParams
+  -> Maybe Verbosity
   -> IO ()
-launchRotator [] _ = return ()
-launchRotator loggingParamsForFiles rotParams = forever $ do
-  try (forM_ loggingParamsForFiles $ checkRootDir rotParams) >>= \case
-    Left (e :: SomeException) ->
-      logTrace $ "cardano-tracer, problem with logs rotation: " <> show e
-    Right _ -> return ()
-  sleep 15.0
- where
-  logTrace = traceWith $ showTracing stdoutTracer
+launchRotator [] _ _ = return ()
+launchRotator loggingParamsForFiles rotParams@RotationParams{rpFrequencySecs} verb = forever $ do
+  showProblemIfAny verb $
+    forM_ loggingParamsForFiles $ checkRootDir rotParams
+  sleep $ fromIntegral rpFrequencySecs
 
+-- | All the logs with 'TraceObject's received from particular node
+--   will be stored in a separate subdirectory in the root directory.
+--
+--   Each subdirectory contains a symbolic link, we use it to write
+--   log items to the latest log file. When we create the new log file,
+--   this symbolic link is switched to it.
 checkRootDir
   :: RotationParams
   -> LoggingParams
   -> IO ()
 checkRootDir rotParams LoggingParams{logRoot, logFormat} =
   whenM (doesDirectoryExist logRoot) $
-    -- All the logs received from particular node will be stored in corresponding subdir.
     listDirectories logRoot >>= \case
       [] ->
         -- There are no nodes' subdirs yet (or they were deleted),
         -- so no rotation can be performed for now.
         return ()
-      nodesSubDirs -> do
-        let fullPathsToSubDirs = map (logRoot </>) nodesSubDirs  
+      logsSubDirs -> do
+        let fullPathsToSubDirs = map (logRoot </>) logsSubDirs
         forConcurrently_ fullPathsToSubDirs $ checkLogs rotParams logFormat
 
+-- | We check the log files:
+--   1. If there are too big log files.
+--   2. If there are too old log files.
 checkLogs
   :: RotationParams
   -> LogFormat
@@ -77,6 +78,8 @@ checkLogs RotationParams{rpLogLimitBytes, rpMaxAgeHours, rpKeepFilesNum} format 
   checkIfCurrentLogIsFull logs format rpLogLimitBytes
   checkIfThereAreOldLogs logs rpMaxAgeHours rpKeepFilesNum
 
+-- | If the current log file is full (it's size is too big),
+--   the new log will be created.
 checkIfCurrentLogIsFull
   :: [FilePath]
   -> LogFormat
@@ -94,14 +97,19 @@ checkIfCurrentLogIsFull logs format maxSizeInBytes =
   -- or current log (i.e. the log we write 'TraceObject's in).
   pathToCurrentLog = maximum logs
 
+-- | If there are too old log files - they will be removed.
+--   Please note that some number of log files can be kept in any case.
 checkIfThereAreOldLogs
   :: [FilePath]
   -> Word
   -> Word
   -> IO ()
 checkIfThereAreOldLogs [] _ _ = return ()
+-- If there is one single log file, we assume that it's a current log,
+-- so we cannot remove it even if it's too old.
+checkIfThereAreOldLogs [_] _ _ = return ()
 checkIfThereAreOldLogs logs maxAgeInHours keepFilesNum = do
-  -- Logs' names contain timestamp, so we can sort them.  
+  -- Logs' names contain timestamp, so we can sort them.
   let fromOldestToNewest = sort logs
       -- N ('keepFilesNum') newest files have to be kept in any case.
       logsWeHaveToCheck = dropEnd (fromIntegral keepFilesNum) fromOldestToNewest

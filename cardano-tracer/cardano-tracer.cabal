@@ -1,7 +1,7 @@
 cabal-version:       2.4
 name:                cardano-tracer
 version:             0.1.0
-synopsis:            See README for more info
+synopsis:            A service for logging and monitoring over Cardano node.
 description:         See README for more info
 license:             Apache-2.0
 license-file:        LICENSE
@@ -35,11 +35,6 @@ library
                        Cardano.Tracer.Acceptors.Run
                        Cardano.Tracer.Acceptors.Server
                        Cardano.Tracer.Acceptors.Utils
-                       Cardano.Tracer.CLI
-                       Cardano.Tracer.Configuration
-                       Cardano.Tracer.Run
-                       Cardano.Tracer.Types
-                       Cardano.Tracer.Utils
 
                        Cardano.Tracer.Handlers.Logs.File
                        Cardano.Tracer.Handlers.Logs.Journal
@@ -51,10 +46,17 @@ library
                        Cardano.Tracer.Handlers.Metrics.Prometheus
                        Cardano.Tracer.Handlers.Metrics.Servers
 
+                       Cardano.Tracer.CLI
+                       Cardano.Tracer.Configuration
+                       Cardano.Tracer.Run
+                       Cardano.Tracer.Types
+                       Cardano.Tracer.Utils
+
   other-modules:       Paths_cardano_tracer
 
   build-depends:         aeson
                        , async
+                       , async-extras
                        , blaze-html
                        , blaze-markup
                        , bytestring
@@ -74,6 +76,7 @@ library
                        , snap-server
                        , stm
                        , text
+                       , threepenny-gui
                        , time
                        , trace-dispatcher
                        , trace-forward
@@ -120,7 +123,7 @@ library demo-forwarder-lib
 executable demo-forwarder
   import:              base, project-config
 
-  hs-source-dirs:      demo
+  hs-source-dirs:      demo/ssh
 
   main-is:             forwarder.hs
 
@@ -142,7 +145,6 @@ test-suite cardano-tracer-test
                        Cardano.Tracer.Test.Logs.Tests
                        Cardano.Tracer.Test.Network.Tests
                        Cardano.Tracer.Test.Queue.Tests
-
                        Cardano.Tracer.Test.Utils
 
   build-depends:         async
@@ -158,7 +160,6 @@ test-suite cardano-tracer-test
                        , filepath
                        , ouroboros-network-framework
                        , QuickCheck
-                       , stm
                        , tasty
                        , tasty-quickcheck
                        , text
