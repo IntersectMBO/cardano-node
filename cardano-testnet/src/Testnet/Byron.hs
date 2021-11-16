@@ -13,6 +13,8 @@ module Testnet.Byron
 
 import           Control.Monad
 import           Data.Aeson (Value, (.=))
+import           Data.Bool (Bool(..))
+import           Data.ByteString.Lazy (ByteString)
 import           Data.Eq
 import           Data.Function
 import           Data.Functor
@@ -22,11 +24,17 @@ import           Data.Ord
 import           Data.Semigroup
 import           Data.String
 import           GHC.Num
+import           GHC.Real
 import           Hedgehog.Extras.Stock.Aeson (rewriteObject)
 import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket (..))
 import           Hedgehog.Extras.Stock.Time
 import           System.FilePath.Posix ((</>))
 import           Text.Show
+
+import qualified Cardano.Node.Configuration.Topology    as NonP2P
+import qualified Cardano.Node.Configuration.TopologyP2P as P2P
+import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
+import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter (..))
 
 import qualified Data.Aeson as J
 import qualified Data.HashMap.Lazy as HM
@@ -60,6 +68,7 @@ data TestnetOptions = TestnetOptions
   , securityParam :: Int
   , nPoorAddresses :: Int
   , totalBalance :: Int
+  , enableP2P :: Bool
   } deriving (Eq, Show)
 
 defaultTestnetOptions :: TestnetOptions
@@ -69,6 +78,7 @@ defaultTestnetOptions = TestnetOptions
   , securityParam = 10
   , nPoorAddresses = 128
   , totalBalance = 8000000000000000
+  , enableP2P = False
   }
 
 replaceNodeLog :: Int -> String -> String
@@ -76,14 +86,54 @@ replaceNodeLog n s = T.unpack (T.replace "logs/node-0.log" replacement (T.pack s
   where replacement = T.pack ("logs/node-" <> show @Int n <> ".log")
 
 -- | Rewrite a line in the configuration file
-rewriteConfiguration :: Int -> String -> String
-rewriteConfiguration _ "TraceBlockchainTime: False" = "TraceBlockchainTime: True"
-rewriteConfiguration n s | "logs/node-0.log" `L.isInfixOf` s = replaceNodeLog n s
-rewriteConfiguration _ s = s
+rewriteConfiguration :: Bool -> Int -> String -> String
+rewriteConfiguration _ _ "TraceBlockchainTime: False"          = "TraceBlockchainTime: True"
+rewriteConfiguration _ n s | "logs/node-0.log" `L.isInfixOf` s = replaceNodeLog n s
+rewriteConfiguration True _ "EnableP2P: False"                 = "EnableP2P: True"
+rewriteConfiguration False _ "EnableP2P: True"                 = "EnableP2P: False"
+rewriteConfiguration _ _ s                                     = s
 
 rewriteParams :: TestnetOptions -> Value -> Value
 rewriteParams testnetOptions = rewriteObject
   $ HM.insert "slotDuration" (J.toJSON @String (show @Int (slotDuration testnetOptions)))
+
+mkTopologyConfig :: Int -> Int -> [Int]
+                 -> Bool -- ^ if true use p2p topology configuration
+                 -> ByteString
+mkTopologyConfig i numBftNodes allPorts False = J.encode topologyNonP2P
+  where
+    topologyNonP2P :: NonP2P.NetworkTopology
+    topologyNonP2P =
+      NonP2P.RealNodeTopology
+        $ flip fmap ([0 .. numBftNodes - 1] L.\\ [i])
+        $ \j -> NonP2P.RemoteAddress "127.0.0.1"
+                                    (fromIntegral $ allPorts L.!! j)
+                                    1
+mkTopologyConfig i numBftNodes allPorts True = J.encode topologyP2P
+  where
+    rootConfig :: P2P.RootConfig
+    rootConfig =
+      P2P.RootConfig
+        (flip fmap ([0 .. numBftNodes - 1] L.\\ [i])
+        $ \j -> RelayAccessAddress "127.0.0.1"
+                            (fromIntegral $ allPorts L.!! j)
+        )
+        P2P.DoNotAdvertisePeer
+
+    localRootPeerGroups :: P2P.LocalRootPeersGroups
+    localRootPeerGroups =
+      P2P.LocalRootPeersGroups
+        [ P2P.LocalRootPeersGroup rootConfig
+                                  (numBftNodes - 1)
+        ]
+
+    topologyP2P :: P2P.NetworkTopology
+    topologyP2P =
+      P2P.RealNodeTopology
+        localRootPeerGroups
+        []
+        (P2P.UseLedger DontUseLedger)
+
 
 testnet :: TestnetOptions -> H.Conf -> H.Integration [String]
 testnet testnetOptions H.Conf {..} = do
@@ -128,7 +178,7 @@ testnet testnetOptions H.Conf {..} = do
 
   H.createDirectoryIfMissing logDir
 
-  -- Launch cluster of three nodes
+  -- Launch cluster of three nodes in P2P Mode
   forM_ nodeIndexes $ \i -> do
     si <- H.noteShow $ show @Int i
     dbDir <- H.noteShow $ tempAbsPath </> "db/node-" <> si
@@ -144,20 +194,10 @@ testnet testnetOptions H.Conf {..} = do
     H.createDirectoryIfMissing dbDir
     H.createDirectoryIfMissing $ tempBaseAbsPath </> "" <> socketDir
 
-    otherPorts <- H.noteShow $ L.dropNth i allPorts
+    H.lbsWriteFile (tempAbsPath </> "topology-node-" <> si <> ".json") $
+      mkTopologyConfig i (numBftNodes testnetOptions) allPorts (enableP2P testnetOptions)
 
-    H.lbsWriteFile (tempAbsPath </> "topology-node-" <> si <> ".json") $ J.encode $
-      J.object
-      [ ( "Producers"
-        , J.toJSON $ flip fmap [0 .. numBftNodes testnetOptions - 2] $ \j -> J.object
-          [ ("addr", "127.0.0.1")
-          , ("valency", J.toJSON @Int 1)
-          , ("port", J.toJSON (otherPorts L.!! j))
-          ]
-        )
-      ]
-
-    H.writeFile (tempAbsPath </> "config-" <> si <> ".yaml") . L.unlines . fmap (rewriteConfiguration i) . L.lines =<<
+    H.writeFile (tempAbsPath </> "config-" <> si <> ".yaml") . L.unlines . fmap (rewriteConfiguration (enableP2P testnetOptions) i) . L.lines =<<
       H.readFile (baseConfig </> "config-0.yaml")
 
     hNodeStdout <- H.openFile nodeStdoutFile IO.WriteMode

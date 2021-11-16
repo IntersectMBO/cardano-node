@@ -10,6 +10,11 @@ module Cardano.Tracing.Config
   , TraceSelection (..)
   , traceConfigParser
   , OnOff (..)
+
+  -- * Trace symbols
+  , TraceConnectionManagerCounters
+  , TracePeerSelectionCounters
+  , TraceInboundGovernorCounters
   ) where
 
 import           Cardano.Prelude
@@ -40,6 +45,10 @@ type TraceChainSyncClient = ("TraceChainSyncClient" :: Symbol)
 type TraceChainSyncBlockServer = ("TraceChainSyncBlockServer" :: Symbol)
 type TraceChainSyncHeaderServer = ("TraceChainSyncHeaderServer" :: Symbol)
 type TraceChainSyncProtocol = ("TraceChainSyncProtocol" :: Symbol)
+type TraceConnectionManager = ("TraceConnectionManager" :: Symbol)
+type TraceConnectionManagerCounters = ("TraceConnectionManagerCounters" :: Symbol)
+type DebugPeerSelectionInitiator = ("DebugPeerSelectionInitiator" :: Symbol)
+type DebugPeerSelectionInitiatorResponder = ("DebugPeerSelectionInitiatorResponder" :: Symbol)
 type TraceDiffusionInitialization = ("TraceDiffusionInitialization" :: Symbol)
 type TraceDnsResolver = ("TraceDnsResolver" :: Symbol)
 type TraceDnsSubscription = ("TraceDnsSubscription" :: Symbol)
@@ -49,15 +58,27 @@ type TraceForgeStateInfo = ("TraceForgeStateInfo" :: Symbol)
 type TraceHandshake = ("TraceHandshake" :: Symbol)
 type TraceIpSubscription = ("TraceIpSubscription" :: Symbol)
 type TraceKeepAliveClient = ("TraceKeepAliveClient" :: Symbol)
+type TraceLedgerPeers = ("TraceLedgerPeers" :: Symbol)
 type TraceLocalChainSyncProtocol = ("TraceLocalChainSyncProtocol" :: Symbol)
+type TraceLocalConnectionManager = ("TraceLocalConnectionManager" :: Symbol)
 type TraceLocalErrorPolicy = ("TraceLocalErrorPolicy" :: Symbol)
 type TraceLocalHandshake = ("TraceLocalHandshake" :: Symbol)
+type TraceLocalInboundGovernor = ("TraceLocalInboundGovernor" :: Symbol)
+type TraceLocalRootPeers = ("TraceLocalRootPeers" :: Symbol)
+type TraceLocalServer = ("TraceLocalServer" :: Symbol)
+type TraceLocalStateQueryProtocol = ("TraceLocalStateQueryProtocol" :: Symbol)
 type TraceLocalTxSubmissionProtocol = ("TraceLocalTxSubmissionProtocol" :: Symbol)
 type TraceLocalTxSubmissionServer = ("TraceLocalTxSubmissionServer" :: Symbol)
-type TraceLocalStateQueryProtocol = ("TraceLocalStateQueryProtocol" :: Symbol)
 type TraceMempool = ("TraceMempool" :: Symbol)
 type TraceMux = ("TraceMux" :: Symbol)
 type TraceLocalMux = ("TraceLocalMux" :: Symbol)
+type TracePeerSelection = ("TracePeerSelection" :: Symbol)
+type TracePeerSelectionCounters = ("TracePeerSelectionCounters" :: Symbol)
+type TracePeerSelectionActions = ("TracePeerSelectionActions" :: Symbol)
+type TracePublicRootPeers = ("TracePublicRootPeers" :: Symbol)
+type TraceServer = ("TraceServer" :: Symbol)
+type TraceInboundGovernor = ("TraceInboundGovernor" :: Symbol)
+type TraceInboundGovernorCounters = ("TraceInboundGovernorCounters" :: Symbol)
 type TraceTxInbound = ("TraceTxInbound" :: Symbol)
 type TraceTxOutbound = ("TraceTxOutbound" :: Symbol)
 type TraceTxSubmissionProtocol = ("TraceTxSubmissionProtocol" :: Symbol)
@@ -89,6 +110,10 @@ data TraceSelection
   , traceChainSyncClient :: OnOff TraceChainSyncClient
   , traceChainSyncHeaderServer :: OnOff TraceChainSyncHeaderServer
   , traceChainSyncProtocol :: OnOff TraceChainSyncProtocol
+  , traceConnectionManager :: OnOff TraceConnectionManager
+  , traceConnectionManagerCounters :: OnOff TraceConnectionManagerCounters
+  , traceDebugPeerSelectionInitiatorTracer :: OnOff DebugPeerSelectionInitiator
+  , traceDebugPeerSelectionInitiatorResponderTracer :: OnOff DebugPeerSelectionInitiatorResponder
   , traceDiffusionInitialization :: OnOff TraceDiffusionInitialization
   , traceDnsResolver :: OnOff TraceDnsResolver
   , traceDnsSubscription :: OnOff TraceDnsSubscription
@@ -96,17 +121,29 @@ data TraceSelection
   , traceForge :: OnOff TraceForge
   , traceForgeStateInfo :: OnOff TraceForgeStateInfo
   , traceHandshake :: OnOff TraceHandshake
+  , traceInboundGovernor :: OnOff TraceInboundGovernor
+  , traceInboundGovernorCounters :: OnOff TraceInboundGovernorCounters
   , traceIpSubscription :: OnOff TraceIpSubscription
   , traceKeepAliveClient :: OnOff TraceKeepAliveClient
+  , traceLedgerPeers :: OnOff TraceLedgerPeers
   , traceLocalChainSyncProtocol :: OnOff TraceLocalChainSyncProtocol
+  , traceLocalConnectionManager :: OnOff TraceLocalConnectionManager
   , traceLocalErrorPolicy :: OnOff TraceLocalErrorPolicy
   , traceLocalHandshake :: OnOff TraceLocalHandshake
+  , traceLocalInboundGovernor :: OnOff TraceLocalInboundGovernor
+  , traceLocalMux :: OnOff TraceLocalMux
+  , traceLocalRootPeers :: OnOff TraceLocalRootPeers
+  , traceLocalServer :: OnOff TraceLocalServer
   , traceLocalStateQueryProtocol :: OnOff TraceLocalStateQueryProtocol
   , traceLocalTxSubmissionProtocol :: OnOff TraceLocalTxSubmissionProtocol
   , traceLocalTxSubmissionServer :: OnOff TraceLocalTxSubmissionServer
   , traceMempool :: OnOff TraceMempool
   , traceMux :: OnOff TraceMux
-  , traceLocalMux :: OnOff TraceLocalMux
+  , tracePeerSelection :: OnOff TracePeerSelection
+  , tracePeerSelectionCounters :: OnOff TracePeerSelectionCounters
+  , tracePeerSelectionActions :: OnOff TracePeerSelectionActions
+  , tracePublicRootPeers :: OnOff TracePublicRootPeers
+  , traceServer :: OnOff TraceServer
   , traceTxInbound :: OnOff TraceTxInbound
   , traceTxOutbound :: OnOff TraceTxOutbound
   , traceTxSubmissionProtocol :: OnOff TraceTxSubmissionProtocol
@@ -116,6 +153,7 @@ data TraceSelection
 
 traceConfigParser :: Object -> Parser TraceOptions
 traceConfigParser v =
+  -- TODO: By using 'TypeApplication' we can cut half of the lines below!
   let acceptPolicy :: OnOff TraceAcceptPolicy
       acceptPolicy = OnOff False
       blockFetchClient :: OnOff TraceBlockFetchClient
@@ -140,6 +178,14 @@ traceConfigParser v =
       chainSyncHeaderServer = OnOff False
       chainSyncProtocol :: OnOff TraceChainSyncProtocol
       chainSyncProtocol = OnOff False
+      connectionManager :: OnOff TraceConnectionManager
+      connectionManager = OnOff False
+      connectionManagerCounters :: OnOff TraceConnectionManagerCounters
+      connectionManagerCounters = OnOff True
+      debugPeerSelectionInitiator :: OnOff DebugPeerSelectionInitiator
+      debugPeerSelectionInitiator = OnOff False
+      debugPeerSelectionInitiatorResponder :: OnOff DebugPeerSelectionInitiatorResponder
+      debugPeerSelectionInitiatorResponder = OnOff False
       diffusionInitialization :: OnOff TraceDiffusionInitialization
       diffusionInitialization = OnOff False
       dnsResolver :: OnOff TraceDnsResolver
@@ -154,16 +200,32 @@ traceConfigParser v =
       forgeStateInfo = OnOff True
       handshake :: OnOff TraceHandshake
       handshake = OnOff False
+      inboundGovernor :: OnOff TraceInboundGovernor
+      inboundGovernor = OnOff False
+      inboundGovernorCounters :: OnOff TraceInboundGovernorCounters
+      inboundGovernorCounters = OnOff True
       ipSubscription :: OnOff TraceIpSubscription
       ipSubscription = OnOff True
       keepAliveClient :: OnOff TraceKeepAliveClient
       keepAliveClient = OnOff False
+      ledgerPeers :: OnOff TraceLedgerPeers
+      ledgerPeers = OnOff False
       localChainSyncProtocol :: OnOff TraceLocalChainSyncProtocol
       localChainSyncProtocol = OnOff False
+      localConnectionManager :: OnOff TraceLocalConnectionManager
+      localConnectionManager = OnOff False
       localErrorPolicy :: OnOff TraceLocalErrorPolicy
       localErrorPolicy = OnOff True
       localHandshake :: OnOff TraceLocalHandshake
       localHandshake = OnOff False
+      localInboundGovernor :: OnOff TraceLocalInboundGovernor
+      localInboundGovernor = OnOff False
+      localMux :: OnOff TraceLocalMux
+      localMux = OnOff False
+      localRootPeers :: OnOff TraceLocalRootPeers
+      localRootPeers = OnOff False
+      localServer :: OnOff TraceLocalServer
+      localServer = OnOff False
       localStateQueryProtocol :: OnOff TraceLocalStateQueryProtocol
       localStateQueryProtocol = OnOff False
       localTxSubmissionProtocol :: OnOff TraceLocalTxSubmissionProtocol
@@ -174,8 +236,16 @@ traceConfigParser v =
       mempool = OnOff True
       mux :: OnOff TraceMux
       mux = OnOff True
-      localMux :: OnOff TraceLocalMux
-      localMux = OnOff False
+      peerSelection :: OnOff TracePeerSelection
+      peerSelection = OnOff False
+      peerSelectionCounters :: OnOff TracePeerSelectionCounters
+      peerSelectionCounters = OnOff True
+      peerSelectionActions :: OnOff TracePeerSelectionActions
+      peerSelectionActions = OnOff False
+      publicRootPeers :: OnOff TracePublicRootPeers
+      publicRootPeers = OnOff False
+      server :: OnOff TraceServer
+      server = OnOff False
       txInbound :: OnOff TraceTxInbound
       txInbound = OnOff False
       txOutbound :: OnOff TraceTxOutbound
@@ -200,6 +270,12 @@ traceConfigParser v =
     <*> v .:? getName chainSyncClient .!= chainSyncClient
     <*> v .:? getName chainSyncHeaderServer .!= chainSyncHeaderServer
     <*> v .:? getName chainSyncProtocol .!= chainSyncProtocol
+    <*> v .:? getName connectionManager .!= connectionManager
+    <*> v .:? getName connectionManagerCounters .!= connectionManagerCounters
+    <*> v .:? getName debugPeerSelectionInitiator
+                       .!= debugPeerSelectionInitiator
+    <*> v .:? getName debugPeerSelectionInitiatorResponder
+                       .!= debugPeerSelectionInitiatorResponder
     <*> v .:? getName diffusionInitialization .!= diffusionInitialization
     <*> v .:? getName dnsResolver .!= dnsResolver
     <*> v .:? getName dnsSubscription .!= dnsSubscription
@@ -207,17 +283,29 @@ traceConfigParser v =
     <*> v .:? getName forge .!= forge
     <*> v .:? getName forgeStateInfo .!= forgeStateInfo
     <*> v .:? getName handshake .!= handshake
+    <*> v .:? getName inboundGovernor .!= inboundGovernor
+    <*> v .:? getName inboundGovernorCounters .!= inboundGovernorCounters
     <*> v .:? getName ipSubscription .!= ipSubscription
     <*> v .:? getName keepAliveClient .!= keepAliveClient
+    <*> v .:? getName ledgerPeers .!= ledgerPeers
     <*> v .:? getName localChainSyncProtocol .!= localChainSyncProtocol
+    <*> v .:? getName localConnectionManager .!= localConnectionManager
     <*> v .:? getName localErrorPolicy .!= localErrorPolicy
     <*> v .:? getName localHandshake .!= localHandshake
+    <*> v .:? getName localInboundGovernor .!= localInboundGovernor
+    <*> v .:? getName localMux .!= localMux
+    <*> v .:? getName localRootPeers .!= localRootPeers
+    <*> v .:? getName localServer .!= localServer
     <*> v .:? getName localStateQueryProtocol .!= localStateQueryProtocol
     <*> v .:? getName localTxSubmissionProtocol .!= localTxSubmissionProtocol
     <*> v .:? getName localTxSubmissionServer .!= localTxSubmissionServer
     <*> v .:? getName mempool .!= mempool
     <*> v .:? getName mux .!= mux
-    <*> v .:? getName localMux .!= localMux
+    <*> v .:? getName peerSelection .!= peerSelection
+    <*> v .:? getName peerSelectionCounters .!= peerSelectionCounters
+    <*> v .:? getName peerSelectionActions .!= peerSelectionActions
+    <*> v .:? getName publicRootPeers .!= publicRootPeers
+    <*> v .:? getName server .!= server
     <*> v .:? getName txInbound .!= txInbound
     <*> v .:? getName txOutbound .!= txOutbound
     <*> v .:? getName txSubmissionProtocol .!= txSubmissionProtocol
