@@ -5,11 +5,7 @@ module Cardano.Tracer.Acceptors.Client
   ) where
 
 import           Codec.CBOR.Term (Term)
-import           Control.Concurrent.STM (atomically)
-import           Control.Concurrent.STM.TVar (modifyTVar', readTVarIO)
 import qualified Data.ByteString.Lazy as LBS
-import qualified Data.Map.Strict as M
-import           Data.Map.Strict ((!))
 import           Data.Void (Void)
 import           Ouroboros.Network.Mux (MiniProtocol (..), MiniProtocolLimits (..),
                                         MiniProtocolNum (..), MuxMode (..),
@@ -38,11 +34,11 @@ import qualified Trace.Forward.Configuration.DataPoint as DPF
 import qualified Trace.Forward.Configuration.TraceObject as TF
 import           Trace.Forward.Run.DataPoint.Acceptor (acceptDataPointsInit)
 import           Trace.Forward.Run.TraceObject.Acceptor (acceptTraceObjectsInit)
-import           Trace.Forward.Utils.DataPoint (initDataPointAsker)
 
 import qualified System.Metrics.Configuration as EKGF
 import           System.Metrics.Network.Acceptor (acceptEKGMetricsInit)
 
+import           Cardano.Tracer.Acceptors.Utils
 import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.Handlers.Logs.TraceObjects
 import           Cardano.Tracer.Types
@@ -105,14 +101,8 @@ runEKGAcceptorInit
   -> ConnectionId addr
   -> RunMiniProtocol 'InitiatorMode LBS.ByteString IO () Void
 runEKGAcceptorInit ekgConfig acceptedMetrics connId = do
-  let (ekgStore, localStore) = unsafePerformIO prepareMetricsStores
+  let (ekgStore, localStore) = unsafePerformIO $ prepareMetricsStores acceptedMetrics connId
   acceptEKGMetricsInit ekgConfig ekgStore localStore
- where
-  prepareMetricsStores = do
-    let nodeId = connIdToNodeId connId
-    prepareAcceptedMetrics nodeId acceptedMetrics
-    metrics <- readTVarIO acceptedMetrics
-    return $ metrics ! nodeId
 
 runTraceObjectsAcceptorInit
   :: Show addr
@@ -130,15 +120,5 @@ runDataPointsAcceptorInit
   -> DataPointAskers
   -> ConnectionId addr
   -> RunMiniProtocol 'InitiatorMode LBS.ByteString IO () Void
-runDataPointsAcceptorInit dpfConfig dpAskers connId = do
-  let dpAsker = unsafePerformIO prepareDataPointAsker
-  acceptDataPointsInit dpfConfig dpAsker
- where
-  prepareDataPointAsker = do
-    let nodeId = connIdToNodeId connId
-    dpAsker <- initDataPointAsker
-    atomically $ modifyTVar' dpAskers $ \askers ->
-      if nodeId `M.member` askers
-        then M.adjust (const dpAsker) nodeId askers
-        else M.insert nodeId dpAsker askers
-    return dpAsker
+runDataPointsAcceptorInit dpfConfig dpAskers connId =
+  acceptDataPointsInit dpfConfig $ prepareDataPointAsker dpAskers connId

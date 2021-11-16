@@ -6,11 +6,7 @@ module Cardano.Tracer.Acceptors.Server
 
 import           Codec.CBOR.Term (Term)
 import           Control.Concurrent.Async (race_, wait)
-import           Control.Concurrent.STM (atomically)
-import           Control.Concurrent.STM.TVar (modifyTVar', readTVarIO)
 import qualified Data.ByteString.Lazy as LBS
-import qualified Data.Map.Strict as M
-import           Data.Map.Strict ((!))
 import           Data.Void (Void)
 import           Ouroboros.Network.Mux (MiniProtocol (..), MiniProtocolLimits (..),
                                         MiniProtocolNum (..), MuxMode (..),
@@ -43,11 +39,11 @@ import qualified Trace.Forward.Configuration.DataPoint as DPF
 import qualified Trace.Forward.Configuration.TraceObject as TF
 import           Trace.Forward.Run.DataPoint.Acceptor (acceptDataPointsResp)
 import           Trace.Forward.Run.TraceObject.Acceptor (acceptTraceObjectsResp)
-import           Trace.Forward.Utils.DataPoint (initDataPointAsker)
 
 import qualified System.Metrics.Configuration as EKGF
 import           System.Metrics.Network.Acceptor (acceptEKGMetrics)
 
+import           Cardano.Tracer.Acceptors.Utils
 import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.Handlers.Logs.TraceObjects
 import           Cardano.Tracer.Types
@@ -118,14 +114,8 @@ runEKGAcceptor
   -> ConnectionId addr
   -> RunMiniProtocol 'ResponderMode LBS.ByteString IO Void ()
 runEKGAcceptor ekgConfig acceptedMetrics connId = do
-  let (ekgStore, localStore) = unsafePerformIO prepareMetricsStores
+  let (ekgStore, localStore) = unsafePerformIO $ prepareMetricsStores acceptedMetrics connId
   acceptEKGMetrics ekgConfig ekgStore localStore
- where
-  prepareMetricsStores = do
-    let nodeId = connIdToNodeId connId
-    prepareAcceptedMetrics nodeId acceptedMetrics
-    metrics <- readTVarIO acceptedMetrics
-    return $ metrics ! nodeId
 
 runTraceObjectsAcceptor
   :: Show addr
@@ -143,15 +133,5 @@ runDataPointsAcceptor
   -> DataPointAskers
   -> ConnectionId addr
   -> RunMiniProtocol 'ResponderMode LBS.ByteString IO Void ()
-runDataPointsAcceptor dpfConfig dpAskers connId = do
-  let dpAsker = unsafePerformIO prepareDataPointAsker
-  acceptDataPointsResp dpfConfig dpAsker
- where
-  prepareDataPointAsker = do
-    let nodeId = connIdToNodeId connId
-    dpAsker <- initDataPointAsker
-    atomically $ modifyTVar' dpAskers $ \askers ->
-      if nodeId `M.member` askers
-        then M.adjust (const dpAsker) nodeId askers
-        else M.insert nodeId dpAsker askers
-    return dpAsker
+runDataPointsAcceptor dpfConfig dpAskers connId =
+  acceptDataPointsResp dpfConfig $ prepareDataPointAsker dpAskers connId

@@ -12,13 +12,10 @@ module Cardano.Tracer.Types
   , initAcceptedMetrics
   , initAcceptedNodeInfo
   , initDataPointAskers
-  , prepareAcceptedMetrics
   , printNodeFullId
   ) where
 
-import           Control.Concurrent.STM (atomically)
-import           Control.Concurrent.STM.TVar (TVar, modifyTVar', newTVarIO, readTVarIO)
-import           Control.Monad (unless)
+import           Control.Concurrent.STM.TVar (TVar, newTVarIO)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
 import           Data.Text (Text)
@@ -30,7 +27,7 @@ import           Ouroboros.Network.Socket (ConnectionId (..))
 
 import           Trace.Forward.Utils.DataPoint (DataPointAsker)
 
-import           System.Metrics.Store.Acceptor (MetricsLocalStore, emptyMetricsLocalStore)
+import           System.Metrics.Store.Acceptor (MetricsLocalStore)
 
 -- | Unique identifier of the node, based on 'remoteAddress' from 'ConnectionId',
 --   please see 'ouroboros-network'.
@@ -92,15 +89,3 @@ initAcceptedNodeInfo = newTVarIO M.empty
 
 initDataPointAskers :: IO DataPointAskers
 initDataPointAskers = newTVarIO M.empty
-
-prepareAcceptedMetrics
-  :: NodeId
-  -> AcceptedMetrics
-  -> IO ()
-prepareAcceptedMetrics nodeId acceptedMetrics = do
-  metrics <- readTVarIO acceptedMetrics
-  unless (nodeId `M.member` metrics) $ do
-    storesForNewNode <-
-      (,) <$> EKG.newStore
-          <*> newTVarIO emptyMetricsLocalStore
-    atomically $ modifyTVar' acceptedMetrics $ M.insert nodeId storesForNewNode

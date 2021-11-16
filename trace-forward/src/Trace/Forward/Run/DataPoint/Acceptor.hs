@@ -25,30 +25,31 @@ import           Trace.Forward.Utils.DataPoint (DataPointAsker (..))
 
 acceptDataPointsInit
   :: AcceptorConfiguration
-  -> DataPointAsker
+  -> IO DataPointAsker
   -> RunMiniProtocol 'InitiatorMode LBS.ByteString IO () Void
-acceptDataPointsInit config dpAsker =
-  InitiatorProtocolOnly $ runPeerWithAsker config dpAsker
+acceptDataPointsInit config mkDPAsker =
+  InitiatorProtocolOnly $ runPeerWithAsker config mkDPAsker
 
 acceptDataPointsResp
   :: AcceptorConfiguration
-  -> DataPointAsker
+  -> IO DataPointAsker
   -> RunMiniProtocol 'ResponderMode LBS.ByteString IO Void ()
-acceptDataPointsResp config dpAsker =
-  ResponderProtocolOnly $ runPeerWithAsker config dpAsker
+acceptDataPointsResp config mkDPAsker =
+  ResponderProtocolOnly $ runPeerWithAsker config mkDPAsker
 
 runPeerWithAsker
   :: AcceptorConfiguration
-  -> DataPointAsker
+  -> IO DataPointAsker
   -> MuxPeer LBS.ByteString IO ()
-runPeerWithAsker config dpAsker = 
-  MuxPeerRaw $ \channel ->
-      runPeer
-        (acceptorTracer config)
-        (Acceptor.codecDataPointForward CBOR.encode CBOR.decode
-                                        CBOR.encode CBOR.decode)
-        channel
-        (Acceptor.dataPointAcceptorPeer $ acceptorActions config dpAsker [])
+runPeerWithAsker config mkDPAsker = 
+  MuxPeerRaw $ \channel -> do
+    dpAsker <- mkDPAsker
+    runPeer
+      (acceptorTracer config)
+      (Acceptor.codecDataPointForward CBOR.encode CBOR.decode
+                                      CBOR.encode CBOR.decode)
+      channel
+      (Acceptor.dataPointAcceptorPeer $ acceptorActions config dpAsker [])
 
 acceptorActions
   :: AcceptorConfiguration

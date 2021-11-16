@@ -34,6 +34,7 @@ library
   exposed-modules:     Cardano.Tracer.Acceptors.Client
                        Cardano.Tracer.Acceptors.Run
                        Cardano.Tracer.Acceptors.Server
+                       Cardano.Tracer.Acceptors.Utils
                        Cardano.Tracer.CLI
                        Cardano.Tracer.Configuration
                        Cardano.Tracer.Run
