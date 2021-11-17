@@ -1,10 +1,20 @@
 # Changelog for cardano-api
 
-## 1.31 -- October 2021
+## 1.32.0 -- November 2021
+
+- Asset names are now rendered in a more consistent fashion in JSON output.
+  Previously names which happened to be valid ASCII were rendered as such, and
+  ones which were not resulted in unprintable characters. Now all names are
+  rendered as hex. Future clients may choose to additionally render ASCII names
+  if plausible to do so. (#3211)
+- Various testing improvements. (#3361)
+- Expose ledger events via the ledger state API. (#3374)
+
+## 1.31.0 -- October 2021
 
 - Various internal improvements and refactorings. (#3163, #3253, #3288)
 
-## 1.30 -- September 2021
+## 1.30.0 -- September 2021
 
 - Improvements to the ledger state API. (#3143)
 - Make it easier to use monadic queries. (#3151)
@@ -18,7 +28,7 @@
   input using a Plutus script. (#3187)
 
 
-## 1.29 -- August 2021
+## 1.29.0 -- August 2021
 
 - Support for automated Tx building. (#2953)
 - A few additional exports for API consumers. (#3001, #3055)
@@ -30,7 +40,7 @@
 - Add support for querying the Alonzo ledger state. (#2974)
 - Update the API documentation.
 
-## 1.28 -- July 2021
+## 1.28.0 -- July 2021
 
 - Support for the upcoming Alonzo era, including protocol parameters, Plutus
   scripts and collateral inputs. (#2784, #2798, #2808, #2810, #2815, #2818,
@@ -59,7 +69,7 @@
   (#2906)
 - Miscellaneous internal improvements. (#2836, #2840)
 
-## 1.27 -- April 2021
+## 1.27.0 -- April 2021
 
 - Add initial support for the ledger state and folding over blocks to the API.
   (#2633)

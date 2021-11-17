@@ -1,6 +1,35 @@
 # Changelog for cardano-node
 
-## 1.31 -- October 2021
+## 1.32.0 -- November 2021
+
+### node changes
+
+- Miscellaneous documentation updates. (#3138, #3286, #3323, #3342, #3343,
+  #3348)
+- Various internal refactorings and improvements. (#3337, #3354, #3355, #3359,
+  #3384, #3391, #3398, #3411, #3415)
+- Update a bunch of scripts to use the $NETWORK_MAGIC environment variable.
+  (#3148)
+- Integrate p2p networking functionality. (#3363)
+- Add additional logging to node startup. (#3380)
+- Block delay counters are now not collected until the node has finished
+  starting. Statistics collected during node startup would only add noise to the
+  delay CDF. (#3386)
+- Fix the rendering of `RemoteConnectionId` in trace messages. (#3199)
+
+### consensus changes
+
+- Add per-miniprotocol byte limits, for things like how big a block arriving
+  from the network may be. (#3409)
+- Various documentation updates. (#3435, #3461, #3446)
+
+### network changes
+
+- Early, unverified and unsupported p2p networking capabilities.  Do NOT use in
+  production. (#3467)
+- Various internal improvements. (#3479, #3488)
+
+## 1.31.0 -- October 2021
 
 ### node changes
 
@@ -83,7 +112,7 @@
   to allow db-sync some time to insert the rewards distributed this epoch (which
   may be substantial) into its database before the end of the epoch. (#2521)
 
-## 1.30 -- September 2021
+## 1.30.0 -- September 2021
 
 ### node changes
 
@@ -128,7 +157,7 @@
 - Providing more information about the reward calculation inside of the reward
   provenance. (#2433)
 
-## 1.29 -- August 2021
+## 1.29.0 -- August 2021
 
 ### node changes
 
@@ -196,7 +225,7 @@
   have to continue to allow this in pre-Alonzo eras since it has been observed
   on the public testnet. (#2419, #2432)
 
-## 1.28 -- July 2
+## 1.28.0 -- July 2
 
 ### node changes
 
@@ -287,7 +316,7 @@
 - Miscellaneous testing and infrastructure work. (#2288, #2310)
 - Continued updates to the Alonzo formal specification. (#2258, #2271, #2341)
 - Restrict the pool metadata hash to the correct size for such a hash. (#2358)
-## 1.27 -- April 2021
+## 1.27.0 -- April 2021
 
 ### node changes
 
