@@ -1,6 +1,44 @@
 # Changelog for cardano-node
 
-## 1.31 -- October 2021
+## 1.32.0 -- November 2021
+
+### node changes
+
+- Miscellaneous documentation updates. (#3138, #3286, #3323, #3342, #3343,
+  #3348)
+- Various internal refactorings. (#3337, #3354, #3355)
+- Update a bunch of scripts to use the $NETWORK_MAGIC environment variable.
+  (#3148)
+- Integrate p2p networking functionality. (#3363)
+
+### consensus changes
+
+- Add per-miniprotocol byte limits, for things like how big a block arriving
+  from the network may be. (#3409)
+- Various documentation updates. (#3435, #3461, #3446)
+
+### network changes
+
+- Final PR adding p2p networking support. (#3467)
+- Various internal improvements. (#3479, #3488)
+
+### ledger changes
+
+- Preparatory work factoring out the transitional Praos protocol in preparation
+  for the introduction of a new protocol in the Babbage release. (#2524)
+- Provide more information in the case of extraneous script witnesses being
+  provided. (#2527)
+- Various work to improve memory usage for the in-memory ledger state. (#2520,
+  #2530, #2534, #2540)
+- Add a new tool to benchmark the ledger state. (#2532, #2535)
+- Remove the amount of state stored in the reward pulser. This change will
+  require a rebuild of the ledger state (e.g. replay from genesis). (#2533)
+- Add an additional check when evaluating an (unsubmitted) transaction to
+  determine the amount of ExUnits to specify. (#2522)
+- Distinguish between rewards earned as a pool member and as a pool operator in
+  the ledger events. (#2536, #2549)
+- Miscellaneous fixes. (#2539, #2541, #2543, #2550)
+## 1.31.0 -- October 2021
 
 ### node changes
 
@@ -83,7 +121,7 @@
   to allow db-sync some time to insert the rewards distributed this epoch (which
   may be substantial) into its database before the end of the epoch. (#2521)
 
-## 1.30 -- September 2021
+## 1.30.0 -- September 2021
 
 ### node changes
 
@@ -128,7 +166,7 @@
 - Providing more information about the reward calculation inside of the reward
   provenance. (#2433)
 
-## 1.29 -- August 2021
+## 1.29.0 -- August 2021
 
 ### node changes
 
@@ -196,7 +234,7 @@
   have to continue to allow this in pre-Alonzo eras since it has been observed
   on the public testnet. (#2419, #2432)
 
-## 1.28 -- July 2
+## 1.28.0 -- July 2
 
 ### node changes
 
@@ -287,7 +325,7 @@
 - Miscellaneous testing and infrastructure work. (#2288, #2310)
 - Continued updates to the Alonzo formal specification. (#2258, #2271, #2341)
 - Restrict the pool metadata hash to the correct size for such a hash. (#2358)
-## 1.27 -- April 2021
+## 1.27.0 -- April 2021
 
 ### node changes
 
