@@ -19,7 +19,7 @@
 
 ### network changes
 
-- Final PR adding p2p networking support. (#3467)
+- Early, unverified and unsupported p2p networking capabilities.  Do NOT use in production.  (#3467)
 - Various internal improvements. (#3479, #3488)
 
 ### ledger changes
