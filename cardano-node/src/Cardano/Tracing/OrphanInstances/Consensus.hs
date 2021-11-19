@@ -22,6 +22,10 @@ import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 
 import           Cardano.Slotting.Slot (fromWithOrigin)
+import           Control.Tracer (Tracer (..), traceWith)
+
+import qualified Control.Monad.Class.MonadTime as MonadTime
+
 import           Cardano.Tracing.OrphanInstances.Common
 import           Cardano.Tracing.OrphanInstances.Network ()
 import           Cardano.Tracing.Render (renderChainHash, renderChunkNo, renderHeaderHash,
@@ -368,14 +372,24 @@ instance ( ConvertRawHash blk
          , ToObject (Header blk)
          , ToObject (LedgerEvent blk))
       => Transformable Text IO (ChainDB.TraceEvent blk) where
-  trTransformer = trStructuredText
+  trTransformer verb tr = Tracer $ \ev -> do
+    wallNow <- MonadTime.getCurrentTime
+    tNow    <- MonadTime.getMonotonicTime
+    traceWith (trStructuredText verb tr) (WithNowCoordinate tNow wallNow ev)
+
+data WithNowCoordinate a = WithNowCoordinate !MonadTime.Time !MonadTime.UTCTime a
+
+instance HasPrivacyAnnotation a => HasPrivacyAnnotation (WithNowCoordinate a) where
+  getPrivacyAnnotation (WithNowCoordinate _ _ a) = getPrivacyAnnotation a
+instance HasSeverityAnnotation a => HasSeverityAnnotation (WithNowCoordinate a) where
+  getSeverityAnnotation (WithNowCoordinate _ _ a) = getSeverityAnnotation a
 
 instance ( ConvertRawHash blk
          , LedgerSupportsProtocol blk
          , SerialiseNodeToNodeConstraints blk
          , InspectLedger blk)
-      => HasTextFormatter (ChainDB.TraceEvent blk) where
-    formatText tev _obj = case tev of
+      => HasTextFormatter (WithNowCoordinate (ChainDB.TraceEvent blk)) where
+    formatText (WithNowCoordinate tNow wallNow tev) _obj = case tev of
       ChainDB.TraceAddBlockEvent ev -> case ev of
         ChainDB.IgnoreBlockOlderThanK pt ->
           "Ignoring block older than K: " <> renderRealPointAsPhrase pt
@@ -418,10 +432,26 @@ instance ( ConvertRawHash blk
           "Chain added block " <> renderRealPointAsPhrase pt
         ChainDB.ChainSelectionForFutureBlock pt ->
           "Chain selection run for block previously from future: " <> renderRealPointAsPhrase pt
-        ChainDB.DoneAddingBlock pt (ChainDB.Ignorable b) forgeDelay delay tip -> "DoneAddingBlock block " <>
+        ChainDB.DoneAddingBlock dabev -> "DoneAddingBlock block " <>
           renderRealPointAsPhrase pt <> " tip " <> renderPointAsPhrase tip <>
           " forgeDelay " <> showT forgeDelay <> " delay " <> showT delay <> " size " <>
           showT (estimateBlockSize (getHeader b))
+          where
+            ChainDB.TraceDoneAddingBlockEvent {
+                ChainDB.addedBlockPoint        = pt
+              , ChainDB.addedBlock             = ChainDB.Ignorable b
+              , ChainDB.addedBlockSlotStart
+              , ChainDB.addedBlockReception
+              , ChainDB.addedBlockDoneAdding   = (tDone, wallDone)
+              , ChainDB.addedBlockNewSelection = tip
+              } = ChainDB.situateTraceDoneAddingBlockEvent (tNow, wallNow) dabev
+
+            delay      = MonadTime.diffTime tDone addedBlockReception
+            forgeDelay =
+              either
+                Left
+                (Right . MonadTime.diffUTCTime wallDone . snd)
+                addedBlockSlotStart
       ChainDB.TraceLedgerReplayEvent ev -> case ev of
         LedgerDB.ReplayFromGenesis _replayTo ->
           "Replaying ledger from genesis"
@@ -652,8 +682,8 @@ instance ( ConvertRawHash blk
          , ToObject (Header blk)
          , ToObject (LedgerEvent blk)
          , SerialiseNodeToNodeConstraints blk)
-      => ToObject (ChainDB.TraceEvent blk) where
-  toObject verb (ChainDB.TraceAddBlockEvent ev) = case ev of
+      => ToObject (WithNowCoordinate (ChainDB.TraceEvent blk)) where
+  toObject verb (WithNowCoordinate tNow wallNow (ChainDB.TraceAddBlockEvent ev)) = case ev of
     ChainDB.IgnoreBlockOlderThanK pt ->
       mkObject [ "kind" .= String "TraceAddBlockEvent.IgnoreBlockOlderThanK"
                , "block" .= toObject verb pt ]
@@ -729,7 +759,7 @@ instance ( ConvertRawHash blk
     ChainDB.ChainSelectionForFutureBlock pt ->
       mkObject [ "kind" .= String "TraceAddBlockEvent.ChainSelectionForFutureBlock"
                , "block" .= toObject verb pt ]
-    ChainDB.DoneAddingBlock pt (ChainDB.Ignorable b) forgeDelay delay tip ->
+    ChainDB.DoneAddingBlock dabev ->
       mkObject [ "kind" .= String "TraceAddBlockEven.DoneAddingBlock"
                , "block" .= renderRealPointAsPhrase pt
                , "tip " .= renderPointAsPhrase tip
@@ -737,6 +767,22 @@ instance ( ConvertRawHash blk
                , "delay" .= show delay
                , "size" .= estimateBlockSize (getHeader b)
                ]
+      where
+        ChainDB.TraceDoneAddingBlockEvent {
+            ChainDB.addedBlockPoint        = pt
+          , ChainDB.addedBlock             = ChainDB.Ignorable b
+          , ChainDB.addedBlockSlotStart
+          , ChainDB.addedBlockReception
+          , ChainDB.addedBlockDoneAdding   = (tDone, wallDone)
+          , ChainDB.addedBlockNewSelection = tip
+          } = ChainDB.situateTraceDoneAddingBlockEvent (tNow, wallNow) dabev
+
+        delay      = MonadTime.diffTime tDone addedBlockReception
+        forgeDelay =
+          either
+            Left
+            (Right . MonadTime.diffUTCTime wallDone . snd)
+            addedBlockSlotStart
    where
      addedHdrsNewChain
        :: AF.AnchoredFragment (Header blk)
@@ -749,8 +795,8 @@ instance ( ConvertRawHash blk
          Nothing -> [] -- No sense to do validation here.
      chainLengthΔ :: AF.AnchoredFragment (Header blk) -> AF.AnchoredFragment (Header blk) -> Int
      chainLengthΔ = on (-) (fromWithOrigin (-1) . fmap (fromIntegral . unBlockNo) . AF.headBlockNo)
-  toObject MinimalVerbosity (ChainDB.TraceLedgerReplayEvent _ev) = emptyObject -- no output
-  toObject verb (ChainDB.TraceLedgerReplayEvent ev) = case ev of
+  toObject MinimalVerbosity (WithNowCoordinate _ _ (ChainDB.TraceLedgerReplayEvent _ev)) = emptyObject -- no output
+  toObject verb (WithNowCoordinate _ _ (ChainDB.TraceLedgerReplayEvent ev)) = case ev of
     LedgerDB.ReplayFromGenesis _replayTo ->
       mkObject [ "kind" .= String "TraceLedgerReplayEvent.ReplayFromGenesis" ]
     LedgerDB.ReplayFromSnapshot snap tip' _replayTo ->
@@ -762,8 +808,8 @@ instance ( ConvertRawHash blk
                , "slot" .= unSlotNo (realPointSlot pt)
                , "tip"  .= withOrigin 0 unSlotNo (pointSlot replayTo) ]
 
-  toObject MinimalVerbosity (ChainDB.TraceLedgerEvent _ev) = emptyObject -- no output
-  toObject verb (ChainDB.TraceLedgerEvent ev) = case ev of
+  toObject MinimalVerbosity (WithNowCoordinate _ _ (ChainDB.TraceLedgerEvent _ev)) = emptyObject -- no output
+  toObject verb (WithNowCoordinate _ _ (ChainDB.TraceLedgerEvent ev)) = case ev of
     LedgerDB.TookSnapshot snap pt ->
       mkObject [ "kind" .= String "TraceLedgerEvent.TookSnapshot"
                , "snapshot" .= toObject verb snap
@@ -776,14 +822,14 @@ instance ( ConvertRawHash blk
                , "snapshot" .= toObject verb snap
                , "failure" .= show failure ]
 
-  toObject verb (ChainDB.TraceCopyToImmutableDBEvent ev) = case ev of
+  toObject verb (WithNowCoordinate _ _ (ChainDB.TraceCopyToImmutableDBEvent ev)) = case ev of
     ChainDB.CopiedBlockToImmutableDB pt ->
       mkObject [ "kind" .= String "TraceCopyToImmutableDBEvent.CopiedBlockToImmutableDB"
                , "slot" .= toObject verb pt ]
     ChainDB.NoBlocksToCopyToImmutableDB ->
       mkObject [ "kind" .= String "TraceCopyToImmutableDBEvent.NoBlocksToCopyToImmutableDB" ]
 
-  toObject verb (ChainDB.TraceGCEvent ev) = case ev of
+  toObject verb (WithNowCoordinate _ _ (ChainDB.TraceGCEvent ev)) = case ev of
     ChainDB.PerformedGC slot ->
       mkObject [ "kind" .= String "TraceGCEvent.PerformedGC"
                , "slot" .= toObject verb slot ]
@@ -792,7 +838,7 @@ instance ( ConvertRawHash blk
                  , "slot" .= toObject verb slot ] <>
                  [ "difft" .= String ((pack . show) difft) | verb >= MaximalVerbosity]
 
-  toObject verb (ChainDB.TraceOpenEvent ev) = case ev of
+  toObject verb (WithNowCoordinate _ _ (ChainDB.TraceOpenEvent ev)) = case ev of
     ChainDB.OpenedDB immTip tip' ->
       mkObject [ "kind" .= String "TraceOpenEvent.OpenedDB"
                , "immtip" .= toObject verb immTip
@@ -810,7 +856,7 @@ instance ( ConvertRawHash blk
     ChainDB.OpenedLgrDB ->
       mkObject [ "kind" .= String "TraceOpenEvent.OpenedLgrDB" ]
 
-  toObject _verb (ChainDB.TraceFollowerEvent ev) = case ev of
+  toObject _verb (WithNowCoordinate _ _ (ChainDB.TraceFollowerEvent ev)) = case ev of
     ChainDB.NewFollower ->
       mkObject [ "kind" .= String "TraceFollowerEvent.NewFollower" ]
     ChainDB.FollowerNoLongerInMem _ ->
@@ -819,7 +865,7 @@ instance ( ConvertRawHash blk
       mkObject [ "kind" .= String "TraceFollowerEvent.FollowerSwitchToMem" ]
     ChainDB.FollowerNewImmIterator _ _ ->
       mkObject [ "kind" .= String "TraceFollowerEvent.FollowerNewImmIterator" ]
-  toObject verb (ChainDB.TraceInitChainSelEvent ev) = case ev of
+  toObject verb (WithNowCoordinate _ _ (ChainDB.TraceInitChainSelEvent ev)) = case ev of
     ChainDB.InitChainSelValidation ev' -> case ev' of
       ChainDB.InvalidBlock err pt ->
          mkObject [ "kind" .= String "TraceInitChainSelEvent.InvalidBlock"
@@ -839,7 +885,7 @@ instance ( ConvertRawHash blk
         mkObject [ "kind" .= String "TraceInitChainSelEvent.CandidateContainsFutureBlocksExceedingClockSkew"
                  , "block"   .= renderPointForVerbosity verb (AF.headPoint c)
                  , "headers" .= map (renderPointForVerbosity verb . headerPoint) hdrs ]
-  toObject _verb (ChainDB.TraceIteratorEvent ev) = case ev of
+  toObject _verb (WithNowCoordinate _ _ (ChainDB.TraceIteratorEvent ev)) = case ev of
     ChainDB.UnknownRangeRequested unkRange ->
       mkObject [ "kind" .= String "TraceIteratorEvent.UnknownRangeRequested"
                , "range" .= String (showT unkRange)
@@ -876,7 +922,7 @@ instance ( ConvertRawHash blk
     ChainDB.SwitchBackToVolatileDB ->
       mkObject ["kind" .= String "TraceIteratorEvent.SwitchBackToVolatileDB"
                ]
-  toObject verb (ChainDB.TraceImmutableDBEvent ev) = case ev of
+  toObject verb (WithNowCoordinate _ _ (ChainDB.TraceImmutableDBEvent ev)) = case ev of
     ImmDB.NoValidLastLocation -> mkObject [ "kind" .= String "TraceImmutableDBEvent.NoValidLastLocation" ]
     ImmDB.ValidatedLastLocation chunkNo immTip ->
       mkObject [ "kind" .= String "TraceImmutableDBEvent.ValidatedLastLocation"
@@ -975,7 +1021,7 @@ instance ( ConvertRawHash blk
                    , "chunkNos" .= String (Text.pack . show $ map renderChunkNo chunkNos)
                    , "noPastChunks" .= String (showT nbPastChunksInCache)
                    ]
-  toObject _verb (ChainDB.TraceVolatileDBEvent ev) = case ev of
+  toObject _verb (WithNowCoordinate _ _ (ChainDB.TraceVolatileDBEvent ev)) = case ev of
     VolDb.DBAlreadyClosed -> mkObject [ "kind" .= String "TraceVolatileDbEvent.DBAlreadyClosed"]
     VolDb.DBAlreadyOpen -> mkObject [ "kind" .= String "TraceVolatileDbEvent.DBAlreadyOpen"]
     VolDb.BlockAlreadyHere blockId ->
