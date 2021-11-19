@@ -73,16 +73,15 @@ library
                        Cardano.Node.Protocol.Shelley
                        Cardano.Node.Protocol.Types
                        Cardano.Node.Parsers
+                       Cardano.Node.Queries
                        Cardano.Node.Run
                        Cardano.Node.STM
                        Cardano.Node.Types
                        Cardano.Tracing.Config
                        Cardano.Tracing.Constraints
-                       Cardano.Tracing.ConvertTxId
                        Cardano.Tracing.Kernel
                        Cardano.Tracing.Metrics
                        Cardano.Tracing.Peer
-                       Cardano.Tracing.Queries
                        Cardano.Tracing.Render
                        Cardano.Tracing.Tracers
                        Cardano.Tracing.OrphanInstances.Byron

@@ -102,15 +102,14 @@ import qualified Ouroboros.Consensus.Storage.LedgerDB.OnDisk as LedgerDB
 
 import           Cardano.Tracing.Config
 import           Cardano.Tracing.Constraints (TraceConstraints)
-import           Cardano.Tracing.ConvertTxId (ConvertTxId)
 import           Cardano.Tracing.Kernel
 import           Cardano.Tracing.Metrics
-import           Cardano.Tracing.Queries
 
 import           Cardano.Node.Configuration.Logging
 -- For tracing instances
 import           Cardano.Node.Protocol.Byron ()
 import           Cardano.Node.Protocol.Shelley ()
+import           Cardano.Node.Queries
 import           Ouroboros.Consensus.MiniProtocol.BlockFetch.Server
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Server
 import           Ouroboros.Network.TxSubmission.Inbound

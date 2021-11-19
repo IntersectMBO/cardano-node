@@ -10,8 +10,7 @@ import           Prelude (Show)
 import           Data.Aeson
 
 import           Cardano.BM.Tracing (ToObject)
-import           Cardano.Tracing.ConvertTxId (ConvertTxId)
-import           Cardano.Tracing.Queries (LedgerQueries)
+import           Cardano.Node.Queries (ConvertTxId, LedgerQueries)
 
 import           Cardano.Ledger.Alonzo (AlonzoEra)
 import           Cardano.Ledger.Alonzo.PParams (PParamsUpdate)

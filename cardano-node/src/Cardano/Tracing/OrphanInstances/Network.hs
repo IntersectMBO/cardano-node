@@ -35,10 +35,10 @@ import           Network.TypedProtocol.Core (ClientHasAgency,
 import           Network.Mux (MuxTrace (..), WithMuxBearer (..), MiniProtocolNum (..))
 import           Network.Socket (SockAddr (..))
 
-import           Cardano.Tracing.ConvertTxId (ConvertTxId)
 import           Cardano.Tracing.OrphanInstances.Common
 import           Cardano.Tracing.Render
 import           Cardano.Node.Configuration.TopologyP2P (UseLedger (..))
+import           Cardano.Node.Queries (ConvertTxId)
 
 import           Ouroboros.Consensus.Block (ConvertRawHash (..), Header, getHeader)
 import           Ouroboros.Consensus.Ledger.Query (BlockQuery, Query)
