@@ -77,7 +77,6 @@ import qualified Ouroboros.Consensus.Node.Tracers as Consensus
 import           Ouroboros.Consensus.Protocol.Abstract (ValidationErr)
 import           Ouroboros.Consensus.Node.Run (SerialiseNodeToNodeConstraints)
 import qualified Ouroboros.Consensus.Protocol.Ledger.HotKey as HotKey
-import qualified Ouroboros.Consensus.Shelley.Protocol.HotKey as HotKey
 
 import qualified Ouroboros.Network.AnchoredFragment as AF
 import           Ouroboros.Network.Block (BlockNo (..), HasHeader (..), Point, StandardHash,
