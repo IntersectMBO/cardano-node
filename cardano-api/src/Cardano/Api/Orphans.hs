@@ -48,6 +48,7 @@ import qualified Cardano.Ledger.Alonzo.PParams as Alonzo
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo
 import qualified Cardano.Ledger.Coin as Shelley
+import qualified Cardano.Ledger.Compactible as Ledger
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Core as Ledger
 import qualified Cardano.Ledger.Crypto as Crypto
@@ -262,12 +263,12 @@ instance Crypto.Crypto crypto => ToJSON (Shelley.SnapShots crypto) where
 
 instance Crypto.Crypto crypto => ToJSON (Shelley.SnapShot crypto) where
   toJSON ss = object [ "stake" .= Shelley._stake ss
-                     , "delegations" .= ShelleyEpoch._delegations ss
-                     , "poolParams" .= Shelley._poolParams ss
+                     , "delegations" .= VMap.toMap (ShelleyEpoch._delegations ss)
+                     , "poolParams" .= VMap.toMap (Shelley._poolParams ss)
                      ]
 
 instance Crypto.Crypto crypto => ToJSON (Shelley.Stake crypto) where
-  toJSON (Shelley.Stake s) = toJSON s
+  toJSON (Shelley.Stake s) = toJSON $ Map.map Ledger.fromCompact (VMap.toMap s)
 
 instance (VMap.Vector vp a, VMap.Vector vb k, ToJSON k, ToJSON a, ToJSONKey k)
         => ToJSON (VMap vb vp k a) where

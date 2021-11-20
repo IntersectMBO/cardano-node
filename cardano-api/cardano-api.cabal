@@ -118,6 +118,7 @@ library
                       , compact-map
                       , contra-tracer
                       , containers
+                      , compact-map
                       , cryptonite
                       , deepseq
                       , directory
