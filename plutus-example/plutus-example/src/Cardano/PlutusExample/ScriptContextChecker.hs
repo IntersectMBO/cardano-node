@@ -333,12 +333,12 @@ readCustomRedeemerFromTx fp (AnyConsensusModeParams cModeParams) network = do
                    (ConsensusModeMismatch (AnyConsensusMode CardanoMode) (AnyCardanoEra cEra))
                    $ toEraInMode cEra CardanoMode
 
-      eResult <- liftIO $ executeLocalStateQueryExpr localNodeConnInfo Nothing $ do
-        (EraHistory _ interpreter) <- queryExpr $ QueryEraHistory CardanoModeIsMultiEra
-        mSystemStart <- maybeQueryExpr QuerySystemStart
+      eResult <- liftIO $ executeLocalStateQueryExpr localNodeConnInfo Nothing $ runExceptT $ do
+        (EraHistory _ interpreter) <- ExceptT $ queryExpr $ QueryEraHistory CardanoModeIsMultiEra
+        mSystemStart <- ExceptT $ maybeQueryExpr QuerySystemStart
         let eInfo = hoistEpochInfo (first TransactionValidityIntervalError . runExcept)
                       $ Consensus.interpreterToEpochInfo interpreter
-        ppResult <- queryExpr $ QueryInEra eInMode $ QueryInShelleyBasedEra sbe QueryProtocolParameters
+        ppResult <- ExceptT $ queryExpr $ QueryInEra eInMode $ QueryInShelleyBasedEra sbe QueryProtocolParameters
         return (eInfo, mSystemStart, ppResult)
 
       (eInfo, mSystemStart, ePParams) <- firstExceptT queryErrorToScriptContextError $ hoistEither eResult

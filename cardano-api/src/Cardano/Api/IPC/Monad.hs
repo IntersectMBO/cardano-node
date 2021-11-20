@@ -59,7 +59,7 @@ executeLocalStateQueryExpr
   :: forall e mode a .
      LocalNodeConnectInfo mode
   -> Maybe ChainPoint
-  -> ExceptT (QueryError e) (LocalStateQueryExpr (BlockInMode mode) ChainPoint (QueryInMode mode) () IO) a
+  -> LocalStateQueryExpr (BlockInMode mode) ChainPoint (QueryInMode mode) () IO (Either (QueryError e) a)
   -> IO (Either (QueryError e) a)
 executeLocalStateQueryExpr connectInfo mpoint f = do
   tmvResultLocalState <- newEmptyTMVarIO
@@ -86,12 +86,12 @@ setupLocalStateQueryExpr ::
   -> Maybe ChainPoint
   -> TMVar (Either (QueryError e) a)
   -> NodeToClientVersion
-  -> ExceptT (QueryError e) (LocalStateQueryExpr (BlockInMode mode) ChainPoint (QueryInMode mode) () IO) a
+  -> LocalStateQueryExpr (BlockInMode mode) ChainPoint (QueryInMode mode) () IO (Either (QueryError e) a)
   -> Net.Query.LocalStateQueryClient (BlockInMode mode) ChainPoint (QueryInMode mode) IO ()
 setupLocalStateQueryExpr waitDone mPointVar' resultVar' ntcVersion f =
   LocalStateQueryClient . pure . Net.Query.SendMsgAcquire mPointVar' $
     Net.Query.ClientStAcquiring
-    { Net.Query.recvMsgAcquired = runContT (runReaderT (runLocalStateQueryExpr (runExceptT f)) ntcVersion) $ \result -> do
+    { Net.Query.recvMsgAcquired = runContT (runReaderT (runLocalStateQueryExpr f) ntcVersion) $ \result -> do
         atomically $ putTMVar resultVar' result
         void $ atomically waitDone -- Wait for all protocols to complete before exiting.
         pure $ Net.Query.SendMsgRelease $ pure $ Net.Query.SendMsgDone ()
@@ -103,15 +103,15 @@ setupLocalStateQueryExpr waitDone mPointVar' resultVar' ntcVersion f =
     }
 
 -- | Get the node server's Node-to-Client version.
-getNtcVersion :: ExceptT (QueryError e) (LocalStateQueryExpr block point (QueryInMode mode) r IO) NodeToClientVersion
-getNtcVersion =  lift $ LocalStateQueryExpr $ ReaderT pure
+getNtcVersion :: LocalStateQueryExpr block point (QueryInMode mode) r IO (Either (QueryError e) NodeToClientVersion)
+getNtcVersion =  LocalStateQueryExpr . ReaderT $ pure . Right
 
 -- | Lift a query value into a monadic query expression.
 -- Use 'queryExpr' in a do block to construct monadic local state queries.
-queryExpr :: QueryInMode mode a -> ExceptT (QueryError e) (LocalStateQueryExpr block point (QueryInMode mode) r IO) a
-queryExpr q = do
+queryExpr :: QueryInMode mode a -> LocalStateQueryExpr block point (QueryInMode mode) r IO (Either (QueryError e) a)
+queryExpr q = runExceptT $ do
   let minNtcVersion = ntcVersionOf q
-  ntcVersion <- getNtcVersion
+  ntcVersion <- ExceptT getNtcVersion
   if ntcVersion >= minNtcVersion
     then lift
       $ LocalStateQueryExpr $ ReaderT $ \_ -> ContT $ \f -> pure $
@@ -124,8 +124,8 @@ queryExpr q = do
 -- | Lift a query value into a monadic query expression returning Maybe of a result.
 -- This is the same as 'queryExpr' except if the query is not supported by the server, will return Nothing instead
 -- of throwing an error.
-maybeQueryExpr :: QueryInMode mode a -> ExceptT (QueryError e) (LocalStateQueryExpr block point (QueryInMode mode) r IO) (Maybe a)
-maybeQueryExpr q = catchE (Just <$> queryExpr q) $ \e ->
+maybeQueryExpr :: QueryInMode mode a -> LocalStateQueryExpr block point (QueryInMode mode) r IO (Either (QueryError e) (Maybe a))
+maybeQueryExpr q = runExceptT $ catchE (Just <$> ExceptT (queryExpr q)) $ \e ->
   case e of
     QueryErrorUnsupportedVersion _ _ -> return Nothing
     _ -> throwE e
@@ -133,9 +133,9 @@ maybeQueryExpr q = catchE (Just <$> queryExpr q) $ \e ->
 -- | A monadic expresion that determines what era the node is in.
 determineEraExpr ::
      ConsensusModeParams mode
-  -> ExceptT (QueryError a) (LocalStateQueryExpr block point (QueryInMode mode) r IO) AnyCardanoEra
-determineEraExpr cModeParams =
+  -> LocalStateQueryExpr block point (QueryInMode mode) r IO (Either (QueryError a) AnyCardanoEra)
+determineEraExpr cModeParams = runExceptT $
   case consensusModeOnly cModeParams of
     ByronMode -> return $ AnyCardanoEra ByronEra
     ShelleyMode -> return $ AnyCardanoEra ShelleyEra
-    CardanoMode -> queryExpr $ QueryCurrentEra CardanoModeIsMultiEra
+    CardanoMode -> ExceptT . queryExpr $ QueryCurrentEra CardanoModeIsMultiEra

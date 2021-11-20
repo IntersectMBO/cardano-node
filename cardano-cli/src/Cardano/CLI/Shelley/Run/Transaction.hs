@@ -454,28 +454,29 @@ runTxBuild (AnyCardanoEra era) (AnyConsensusModeParams cModeParams) networkId mS
 
       (utxo, pparams, eraHistory, systemStart, stakePools) <-
         newExceptT . fmap (join . first queryErrorToShelleyTxCmdError) $
-          executeLocalStateQueryExpr localNodeConnInfo Nothing $ runExceptT $ do
+          executeLocalStateQueryExpr localNodeConnInfo Nothing $ runExceptT $ runExceptT $ do
             unless (null txinsc) $ do
-              collateralUtxo <- firstExceptT ShelleyTxCmdTxSubmitErrorEraMismatch . newExceptT . queryExpr
+              collateralUtxo <- firstExceptT ShelleyTxCmdTxSubmitErrorEraMismatch . newExceptT . ExceptT $ queryExpr
                 $ QueryInEra eInMode
                 $ QueryInShelleyBasedEra sbe (QueryUTxO . QueryUTxOByTxIn $ Set.fromList txinsc)
               txinsExist txinsc collateralUtxo
               notScriptLockedTxIns collateralUtxo
 
-            utxo <- firstExceptT ShelleyTxCmdTxSubmitErrorEraMismatch . newExceptT . queryExpr
+
+            utxo <- firstExceptT ShelleyTxCmdTxSubmitErrorEraMismatch . newExceptT . ExceptT $ queryExpr
               $ QueryInEra eInMode $ QueryInShelleyBasedEra sbe
               $ QueryUTxO (QueryUTxOByTxIn (Set.fromList onlyInputs))
 
             txinsExist onlyInputs utxo
 
-            pparams <- firstExceptT ShelleyTxCmdTxSubmitErrorEraMismatch . newExceptT . queryExpr
+            pparams <- firstExceptT ShelleyTxCmdTxSubmitErrorEraMismatch . newExceptT . ExceptT . queryExpr
               $ QueryInEra eInMode $ QueryInShelleyBasedEra sbe QueryProtocolParameters
 
-            eraHistory <- lift . queryExpr $ QueryEraHistory CardanoModeIsMultiEra
+            eraHistory <- lift . ExceptT $ queryExpr $ QueryEraHistory CardanoModeIsMultiEra
 
-            systemStart <- lift $ queryExpr QuerySystemStart
+            systemStart <- lift . ExceptT $ queryExpr QuerySystemStart
 
-            stakePools <- firstExceptT ShelleyTxCmdTxSubmitErrorEraMismatch . ExceptT $
+            stakePools <- firstExceptT ShelleyTxCmdTxSubmitErrorEraMismatch . ExceptT . ExceptT $
               queryExpr . QueryInEra eInMode . QueryInShelleyBasedEra sbe $ QueryStakePools
 
             return (utxo, pparams, eraHistory, systemStart, stakePools)

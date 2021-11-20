@@ -162,8 +162,8 @@ runQueryProtocolParameters (AnyConsensusModeParams cModeParams) network mOutFile
                            readEnvSocketPath
   let localNodeConnInfo = LocalNodeConnectInfo cModeParams network sockPath
 
-  result <- liftIO $ executeLocalStateQueryExpr localNodeConnInfo Nothing $ do
-    anyE@(AnyCardanoEra era) <- determineEraExpr cModeParams
+  result <- liftIO $ executeLocalStateQueryExpr localNodeConnInfo Nothing $ runExceptT $ do
+    anyE@(AnyCardanoEra era) <- ExceptT $ determineEraExpr cModeParams
 
     case cardanoEraStyle era of
       LegacyByronEra -> left (QueryErrorOf ShelleyQueryCmdByronEra)
@@ -173,7 +173,7 @@ runQueryProtocolParameters (AnyConsensusModeParams cModeParams) network mOutFile
         eInMode <- toEraInMode era cMode
           & hoistMaybe (QueryErrorOf (ShelleyQueryCmdEraConsensusModeMismatch (AnyConsensusMode cMode) anyE))
 
-        ppResult <- queryExpr $ QueryInEra eInMode $ QueryInShelleyBasedEra sbe QueryProtocolParameters
+        ppResult <- ExceptT . queryExpr $ QueryInEra eInMode $ QueryInShelleyBasedEra sbe QueryProtocolParameters
 
         except ppResult & firstExceptT (QueryErrorOf . ShelleyQueryCmdEraMismatch)
 
@@ -236,12 +236,12 @@ runQueryTip (AnyConsensusModeParams cModeParams) network mOutFile = do
     CardanoMode -> do
       let localNodeConnInfo = LocalNodeConnectInfo cModeParams network sockPath
 
-      eLocalState <- liftIO $ executeLocalStateQueryExpr localNodeConnInfo Nothing $ do
-        era <-  queryExpr (QueryCurrentEra CardanoModeIsMultiEra)
-        eraHistory <- queryExpr (QueryEraHistory CardanoModeIsMultiEra)
-        mChainBlockNo <- maybeQueryExpr QueryChainBlockNo
-        mChainPoint <- maybeQueryExpr (QueryChainPoint CardanoMode)
-        mSystemStart <- maybeQueryExpr QuerySystemStart
+      eLocalState <- liftIO $ executeLocalStateQueryExpr localNodeConnInfo Nothing $ runExceptT $ do
+        era <-  ExceptT $ queryExpr (QueryCurrentEra CardanoModeIsMultiEra)
+        eraHistory <- ExceptT $ queryExpr (QueryEraHistory CardanoModeIsMultiEra)
+        mChainBlockNo <- ExceptT $ maybeQueryExpr QueryChainBlockNo
+        mChainPoint <- ExceptT $ maybeQueryExpr (QueryChainPoint CardanoMode)
+        mSystemStart <- ExceptT $ maybeQueryExpr QuerySystemStart
 
         return O.QueryTipLocalState
           { O.era = era
@@ -716,20 +716,20 @@ runQueryStakePools (AnyConsensusModeParams cModeParams)
   let localNodeConnInfo = LocalNodeConnectInfo cModeParams network sockPath
 
   result <- ExceptT . fmap (join . first queryErrorToShelleyQueryCmdError) $
-    executeLocalStateQueryExpr localNodeConnInfo Nothing $ do
+    executeLocalStateQueryExpr localNodeConnInfo Nothing $ runExceptT $ do
       anyE@(AnyCardanoEra era) <- case consensusModeOnly cModeParams of
         ByronMode -> return $ AnyCardanoEra ByronEra
         ShelleyMode -> return $ AnyCardanoEra ShelleyEra
-        CardanoMode -> queryExpr $ QueryCurrentEra CardanoModeIsMultiEra
+        CardanoMode -> ExceptT $ queryExpr $ QueryCurrentEra CardanoModeIsMultiEra
 
       let cMode = consensusModeOnly cModeParams
 
       case toEraInMode era cMode of
         Just eInMode -> do
-          sbe <- getSbeInQuery $ cardanoEraStyle era
+          sbe <- ExceptT $ getSbeInQuery $ cardanoEraStyle era
 
           fmap (first ShelleyQueryCmdEraMismatch) $
-            queryExpr . QueryInEra eInMode . QueryInShelleyBasedEra sbe $ QueryStakePools
+            ExceptT $ queryExpr . QueryInEra eInMode . QueryInShelleyBasedEra sbe $ QueryStakePools
 
         Nothing -> left $ QueryErrorOf $ ShelleyQueryCmdEraConsensusModeMismatch (AnyConsensusMode cMode) anyE
 
@@ -879,9 +879,9 @@ getSbe LegacyByronEra = left ShelleyQueryCmdByronEra
 getSbe (ShelleyBasedEra sbe) = return sbe
 
 
-getSbeInQuery :: Monad m => CardanoEraStyle era -> ExceptT (QueryError ShelleyQueryCmdError) m (ShelleyBasedEra era)
-getSbeInQuery LegacyByronEra = left (QueryErrorOf ShelleyQueryCmdByronEra)
-getSbeInQuery (ShelleyBasedEra sbe) = return sbe
+getSbeInQuery :: Monad m => CardanoEraStyle era -> m (Either (QueryError ShelleyQueryCmdError) (ShelleyBasedEra era))
+getSbeInQuery LegacyByronEra = return (Left (QueryErrorOf ShelleyQueryCmdByronEra))
+getSbeInQuery (ShelleyBasedEra sbe) = return (Right sbe)
 
 queryResult
   :: Either (QueryError ShelleyQueryCmdError) (Either EraMismatch a)
