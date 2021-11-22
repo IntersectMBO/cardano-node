@@ -104,7 +104,6 @@ library
                       , base16-bytestring >= 1.0
                       , cardano-api
                       , cardano-binary
-                      , cardano-config
                       , cardano-crypto
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
@@ -136,7 +135,6 @@ library
                       , prettyprinter
                       , cardano-ledger-shelley
                       , small-steps
-                      , split
                       , strict-containers
                       , text
                       , time
