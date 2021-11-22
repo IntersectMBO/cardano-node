@@ -17,7 +17,7 @@ module Cardano.Node.Run
   ) where
 
 import           Cardano.Prelude hiding (ByteString, atomically, take, trace, STM)
-import           Prelude (String)
+import           Prelude (String, id)
 import           Data.IP (toSockAddr)
 
 import qualified Control.Concurrent.Async as Async
@@ -43,8 +43,7 @@ import qualified System.Posix.Signals as Signals
 import           System.Win32.File
 #endif
 
-import           Cardano.BM.Data.LogItem (LOContent (..), LogObject (..), PrivacyAnnotation (..),
-                   mkLOMeta, LOMeta)
+import           Cardano.BM.Data.LogItem (LogObject (..))
 import           Cardano.BM.Data.Tracer (ToLogObject (..), TracingVerbosity (..))
 import           Cardano.BM.Data.Transformers (setHostname)
 import           Cardano.BM.Trace
@@ -52,7 +51,7 @@ import           Paths_cardano_node (version)
 
 import qualified Cardano.Crypto.Libsodium as Crypto
 
-import           Cardano.Node.Configuration.Logging (LoggingLayer (..), Severity (..),
+import           Cardano.Node.Configuration.Logging (LoggingLayer (..),
                    createLoggingLayer, nodeBasicInfo, shutdownLoggingLayer)
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..),
                    PartialNodeConfiguration (..), SomeNetworkP2PMode (..),
@@ -62,9 +61,9 @@ import           Cardano.Node.Queries (HasKESInfo (..), HasKESMetricsData (..))
 import           Cardano.Node.Types
 import           Cardano.Tracing.Config (TraceOptions (..), TraceSelection (..))
 import           Cardano.Tracing.Constraints (TraceConstraints)
+import           Cardano.Tracing.Startup
 
 import qualified Ouroboros.Consensus.Config as Consensus
-import           Ouroboros.Consensus.Config.SupportsNode (ConfigSupportsNode (..), getNetworkMagic)
 import           Ouroboros.Consensus.Node (RunNode, RunNodeArgs (..)
                    , StdRunNodeArgs (..), NetworkP2PMode (..))
 import qualified Ouroboros.Consensus.Node as Node (getChainDB, run)
@@ -88,7 +87,7 @@ import           Cardano.Api
 import qualified Cardano.Api.Protocol.Types as Protocol
 
 import           Cardano.Node.Configuration.Socket (SocketOrSocketInfo (..),
-                     gatherConfiguredSockets, getSocketOrSocketInfoAddr, renderSocketConfigError)
+                     gatherConfiguredSockets, getSocketOrSocketInfoAddr)
 import qualified Cardano.Node.Configuration.TopologyP2P as TopologyP2P
 import           Cardano.Node.Configuration.TopologyP2P
 import qualified Cardano.Node.Configuration.Topology as TopologyNonP2P
@@ -239,8 +238,7 @@ handleSimpleNode
   -- otherwise the node won't actually start.
   -> IO ()
 handleSimpleNode scp runP p2pMode trace nodeTracers nc onKernel = do
-  meta <- mkLOMeta Notice Public
-  logP2PWarning meta
+  logStartupWarnings
 
   let pInfo = Protocol.protocolInfo runP
       tracer = toLogObject trace
@@ -252,9 +250,8 @@ handleSimpleNode scp runP p2pMode trace nodeTracers nc onKernel = do
     case result of
       Right triplet -> return triplet
       Left error -> do
-        traceNamedObject
-          (appendName "error" trace)
-          (meta, LogMessage (Text.pack (renderSocketConfigError error)))
+        traceWith (startupTracer nodeTracers)
+                $ StartupSocketConfigError error
         throwIO error
 
   dbPath <- canonDbPath nc
@@ -290,22 +287,17 @@ handleSimpleNode scp runP p2pMode trace nodeTracers nc onKernel = do
   ipv4 <- traverse getSocketOrSocketInfoAddr publicIPv4SocketOrAddr
   ipv6 <- traverse getSocketOrSocketInfoAddr publicIPv6SocketOrAddr
 
-  traceNamedObject
-    (appendName "addresses" trace)
-    (meta, LogMessage . Text.pack . show $ catMaybes [ipv4, ipv6])
-  traceNamedObject
-    (appendName "diffusion-mode" trace)
-    (meta, LogMessage . Text.pack . show . ncDiffusionMode $ nc)
-  traceNamedObject
-    (appendName "local-socket" trace)
-    (meta, LogMessage . Text.pack . show $ localSocketOrPath)
-  traceNamedObject
-    (appendName "node-to-node-versions" trace)
-    (meta, LogMessage . Text.pack . show . supportedNodeToNodeVersions $ Proxy @blk)
-  traceNamedObject
-    (appendName "node-to-client-versions" trace)
-    (meta, LogMessage . Text.pack . show . supportedNodeToClientVersions $ Proxy @blk)
-
+  traceWith (startupTracer nodeTracers)
+            (StartupInfo (catMaybes [ipv4, ipv6])
+                         localSocketOrPath
+                         ( limitToLatestReleasedVersion fst
+                         . supportedNodeToNodeVersions
+                         $ Proxy @blk
+                         )
+                         ( limitToLatestReleasedVersion snd
+                         . supportedNodeToClientVersions
+                         $ Proxy @blk
+                         ))
 
   withShutdownHandling nc trace $ \sfds ->
     let nodeArgs = RunNodeArgs
@@ -321,31 +313,22 @@ handleSimpleNode scp runP p2pMode trace nodeTracers nc onKernel = do
           }
     in case p2pMode of
       EnabledP2PMode -> do
+        traceWith (startupTracer nodeTracers)
+                  (StartupP2PInfo (ncDiffusionMode nc))
         nt <- TopologyP2P.readTopologyFileOrError nc
         let (localRoots, publicRoots) = producerAddresses nt
-        traceNamedObject
-                (appendName "topology-file" trace)
-                (meta, LogMessage (Text.pack "Successfully read topology configuration file"))
-        traceNamedObject
-          (appendName "local-roots" trace)
-          (meta, LogMessage . Text.pack . show $ localRoots)
-        traceNamedObject
-          (appendName "public-roots" trace)
-          (meta, LogMessage . Text.pack . show $ publicRoots)
-        traceNamedObject
-          (appendName "use-ledger-after-slot" trace)
-          (meta, LogMessage . Text.pack . show $ useLedgerAfterSlot nt)
+        traceWith (startupTracer nodeTracers)
+                $ NetworkConfig localRoots
+                                publicRoots
+                                (useLedgerAfterSlot nt)
         (localRootsVar :: StrictTVar IO [(Int, Map RelayAccessPoint PeerAdvertise)])  <- newTVarIO localRoots
         publicRootsVar <- newTVarIO publicRoots
         useLedgerVar   <- newTVarIO (useLedgerAfterSlot nt)
 #ifdef UNIX
         _ <- Signals.installHandler
               Signals.sigHUP
-              (updateTopologyConfiguration meta localRootsVar publicRootsVar useLedgerVar)
+              (updateTopologyConfiguration localRootsVar publicRootsVar useLedgerVar)
               Nothing
-        traceNamedObject
-                (appendName "signal-handler" trace)
-                (meta, LogMessage (Text.pack "Installed signal handler"))
 #endif
         void $
           Node.run
@@ -400,17 +383,15 @@ handleSimpleNode scp runP p2pMode trace nodeTracers nc onKernel = do
               , srnMaybeMempoolCapacityOverride = ncMaybeMempoolCapacityOverride nc
               }
  where
-  logP2PWarning :: LOMeta -> IO ()
-  logP2PWarning meta =
+  logStartupWarnings :: IO ()
+  logStartupWarnings =
     case p2pMode of
       DisabledP2PMode -> return ()
-      EnabledP2PMode  ->
-        traceNamedObject
-          (appendName "p2p-mode" trace)
-          (meta, LogMessage $ Text.pack
-                            (  "P2P MODE: unsupported and unverified version of "
-                            <> "`cardano-node` which enables p2p networking"
-                            ))
+      EnabledP2PMode  -> do
+        traceWith (startupTracer nodeTracers) P2PWarning
+        when (not $ ncTestEnableDevelopmentNetworkProtocols nc)
+          $ traceWith (startupTracer nodeTracers)
+                      P2PWarningDevelopementNetworkProtocols
 
   createTracers
     :: NodeConfiguration
@@ -419,12 +400,6 @@ handleSimpleNode scp runP p2pMode trace nodeTracers nc onKernel = do
     -> IO ()
   createTracers NodeConfiguration { ncValidateDB }
                 tr tracer = do
-    let ProtocolInfo{ pInfoConfig = cfg } = Protocol.protocolInfo runP
-
-    meta <- mkLOMeta Notice Public
-    traceNamedObject (appendName "networkMagic" tr)
-                     (meta, LogMessage ("NetworkMagic " <> show (unNetworkMagic . getNetworkMagic $ Consensus.configBlock cfg)))
-
     startTime <- getCurrentTime
     traceNodeBasicInfo tr =<< nodeBasicInfo nc scp startTime
     traceCounter "nodeStartTime" tr (ceiling $ utcTimeToPOSIXSeconds startTime)
@@ -437,46 +412,40 @@ handleSimpleNode scp runP p2pMode trace nodeTracers nc onKernel = do
       traceNamedObject (appendName nm tr) (mt, content)
 
 #ifdef UNIX
-  updateTopologyConfiguration :: LOMeta
-                              -> StrictTVar IO [(Int, Map RelayAccessPoint PeerAdvertise)]
+  updateTopologyConfiguration :: StrictTVar IO [(Int, Map RelayAccessPoint PeerAdvertise)]
                               -> StrictTVar IO [RelayAccessPoint]
                               -> StrictTVar IO UseLedgerAfter
                               -> Signals.Handler
-  updateTopologyConfiguration meta localRootsVar publicRootsVar useLedgerVar =
+  updateTopologyConfiguration localRootsVar publicRootsVar useLedgerVar =
     Signals.Catch $ do
-      traceNamedObject
-          (appendName "signal-handler" trace)
-          (meta, LogMessage (Text.pack "SIGHUP signal received - Performing topology configuration update"))
-
+      traceWith (startupTracer nodeTracers) NetworkConfigUpdate
       result <- try $ readTopologyFileOrError nc
-
       case result of
         Left (FatalError err) ->
-          traceNamedObject
-              (appendName "topology-file" trace)
-              (meta, LogMessage (Text.pack "Error reading topology configuration file:" <> err))
+          traceWith (startupTracer nodeTracers)
+                  $ NetworkConfigUpdateError
+                  $ pack "Error reading topology configuration file:" <> err
         Right nt -> do
-          traceNamedObject
-              (appendName "topology-file" trace)
-              (meta, LogMessage (Text.pack "Successfully read topology configuration file"))
-
           let (localRoots, publicRoots) = producerAddresses nt
-
+          traceWith (startupTracer nodeTracers)
+                  $ NetworkConfig localRoots publicRoots (useLedgerAfterSlot nt)
           atomically $ do
             writeTVar localRootsVar localRoots
             writeTVar publicRootsVar publicRoots
             writeTVar useLedgerVar (useLedgerAfterSlot nt)
-
-          traceNamedObject
-            (appendName "local-roots" trace)
-            (meta, LogMessage . Text.pack . show $ localRoots)
-          traceNamedObject
-            (appendName "public-roots" trace)
-            (meta, LogMessage . Text.pack . show $ publicRoots)
-          traceNamedObject
-            (appendName "use-ledger-after-slot" trace)
-            (meta, LogMessage . Text.pack . show $ useLedgerAfterSlot nt)
 #endif
+
+  limitToLatestReleasedVersion :: forall k v.
+       Ord k
+    => ((Maybe NodeToNodeVersion, Maybe NodeToClientVersion) -> Maybe k)
+    -> Map k v
+    -> Map k v
+  limitToLatestReleasedVersion prj =
+      if ncTestEnableDevelopmentNetworkProtocols nc then id
+      else
+      case prj $ latestReleasedNodeVersion (Proxy @blk) of
+        Nothing       -> id
+        Just version_ -> Map.takeWhileAntitone (<= version_)
 
 --------------------------------------------------------------------------------
 -- Helper functions
