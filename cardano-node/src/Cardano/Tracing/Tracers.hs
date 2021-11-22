@@ -106,6 +106,7 @@ import           Cardano.Tracing.ConvertTxId (ConvertTxId)
 import           Cardano.Tracing.Kernel
 import           Cardano.Tracing.Metrics
 import           Cardano.Tracing.Queries
+import           Cardano.Tracing.Startup
 
 import           Cardano.Node.Configuration.Logging
 -- For tracing instances
@@ -138,6 +139,7 @@ data Tracers peer localPeer blk p2p = Tracers
                                           LocalAddress NodeToClientVersion
                                           IO
   , diffusionTracersExtra :: Diffusion.ExtraTracers p2p
+  , startupTracer :: Tracer IO (StartupTrace blk)
   }
 
 data ForgeTracers = ForgeTracers
@@ -163,6 +165,7 @@ nullTracersP2P = Tracers
   , nodeToNodeTracers = NodeToNode.nullTracers
   , diffusionTracers = Diffusion.nullTracers
   , diffusionTracersExtra = Diffusion.P2PTracers P2P.nullTracers
+  , startupTracer = nullTracer
   }
 
 nullTracersNonP2P :: Tracers peer localPeer blk Diffusion.NonP2P
@@ -173,6 +176,7 @@ nullTracersNonP2P = Tracers
   , nodeToNodeTracers = NodeToNode.nullTracers
   , diffusionTracers = Diffusion.nullTracers
   , diffusionTracersExtra = Diffusion.NonP2PTracers NonP2P.nullTracers
+  , startupTracer = nullTracer
   }
 
 indexGCType :: ChainDB.TraceGCEvent a -> Int
@@ -307,6 +311,9 @@ mkTracers blockConfig tOpts@(TracingOn trSel) tr nodeKern ekgDirect enableP2P = 
     , nodeToNodeTracers = nodeToNodeTracers' trSel verb tr
     , diffusionTracers
     , diffusionTracersExtra = diffusionTracersExtra' enableP2P
+    -- TODO: startupTracer should ignore severity level (i.e. it should always
+    -- be printed)!
+    , startupTracer = toLogObject' verb $ appendName "nodeconfig" tr
     }
  where
    diffusionTracers = Diffusion.Tracers
@@ -437,6 +444,7 @@ mkTracers _ TracingOff _ _ _ enableP2P =
         case enableP2P of
           EnabledP2PMode  -> Diffusion.P2PTracers P2P.nullTracers
           DisabledP2PMode -> Diffusion.NonP2PTracers NonP2P.nullTracers
+    , startupTracer = nullTracer
     }
 
 --------------------------------------------------------------------------------
