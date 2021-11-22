@@ -29,7 +29,6 @@ import           Data.Text (breakOn, pack, take)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import           Data.Time.Clock (getCurrentTime)
-import           Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import           Data.Version (showVersion)
 import           Network.HostName (getHostName)
 import           Network.Socket (Socket)
@@ -241,9 +240,8 @@ handleSimpleNode scp runP p2pMode trace nodeTracers nc onKernel = do
   logStartupWarnings
 
   let pInfo = Protocol.protocolInfo runP
-      tracer = toLogObject trace
 
-  createTracers nc trace tracer
+  createTracers nc trace
 
   (publicIPv4SocketOrAddr, publicIPv6SocketOrAddr, localSocketOrPath) <- do
     result <- runExceptT (gatherConfiguredSockets nc)
@@ -396,15 +394,14 @@ handleSimpleNode scp runP p2pMode trace nodeTracers nc onKernel = do
   createTracers
     :: NodeConfiguration
     -> Trace IO Text
-    -> Tracer IO Text
     -> IO ()
   createTracers NodeConfiguration { ncValidateDB }
-                tr tracer = do
+                tr = do
     startTime <- getCurrentTime
     traceNodeBasicInfo tr =<< nodeBasicInfo nc scp startTime
-    traceCounter "nodeStartTime" tr (ceiling $ utcTimeToPOSIXSeconds startTime)
-
-    when ncValidateDB $ traceWith tracer "Performing DB validation"
+    traceWith (startupTracer nodeTracers)
+            $ StartupTime startTime
+    when ncValidateDB $ traceWith (startupTracer nodeTracers) StartupDBValidation
 
   traceNodeBasicInfo :: Trace IO Text -> [LogObject Text] -> IO ()
   traceNodeBasicInfo tr basicInfoItems =

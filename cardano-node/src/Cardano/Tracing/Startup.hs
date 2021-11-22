@@ -13,6 +13,8 @@ import           Data.Map (Map)
 import qualified Data.Map as Map
 import           Data.Text (Text)
 import qualified Data.Text as Text
+import           Data.Time.Clock (UTCTime)
+import           Data.Time.Clock.POSIX (POSIXTime, utcTimeToPOSIXSeconds)
 
 import           Cardano.Slotting.Slot (SlotNo (..))
 import           Cardano.Node.Configuration.TopologyP2P (UseLedger (..))
@@ -55,11 +57,14 @@ data StartupTrace blk =
 
   -- | Log peer-to-peer diffusion mode
   | StartupP2PInfo DiffusionMode
+    
+  | StartupTime UTCTime
 
   | StartupNetworkMagic NetworkMagic
 
   | StartupSocketConfigError SocketConfigError
 
+  | StartupDBValidation
 
   -- | Log that the network configuration is being updated.
   --
@@ -122,11 +127,21 @@ instance ( Show (BlockNodeToNodeVersion blk)
         ]
     toObject _verb (StartupP2PInfo diffusionMode)
       = mkObject [ "diffusionMode" .= String (Text.pack . show $ diffusionMode) ]
+    toObject _verb (StartupTime time) =
+      mkObject [ "startupTime" .= String ( Text.pack
+                                         . show
+                                         . (ceiling :: POSIXTime -> Int)
+                                         . utcTimeToPOSIXSeconds
+                                         $ time
+                                         )
+               ]
     toObject _verb (StartupNetworkMagic networkMagic) =
       mkObject [ "networkMagic" .= String ( Text.pack . show . unNetworkMagic
                                           $ networkMagic) ]
     toObject _verb (StartupSocketConfigError err) =
       mkObject [ "error" .= String (Text.pack . show $ err) ]
+    toObject _verb StartupDBValidation =
+      mkObject [ "message" .= String "start db validation" ]
     toObject _verb NetworkConfigUpdate =
       mkObject [ "message" .= String "ntework configuration update" ]
     toObject _verb (NetworkConfigUpdateError err) =
@@ -175,11 +190,20 @@ ppStartupInfoTrace (StartupP2PInfo diffusionMode) =
           InitiatorAndResponderDiffusionMode -> "initiator and responder diffusion mode"
           InitiatorOnlyDiffusionMode         -> "initaitor only diffusion mode"
 
+ppStartupInfoTrace (StartupTime time) =
+    Text.pack $ "startup time: "
+           ++ ( show
+              . (ceiling :: POSIXTime -> Int)
+              . utcTimeToPOSIXSeconds
+              $ time
+              )
 ppStartupInfoTrace (StartupNetworkMagic networkMagic) =
     "network magic: " <> Text.pack (show $ unNetworkMagic networkMagic)
 
 ppStartupInfoTrace (StartupSocketConfigError err) =
     Text.pack $ renderSocketConfigError err
+
+ppStartupInfoTrace StartupDBValidation = "Performing DB validation"
 
 ppStartupInfoTrace NetworkConfigUpdate = "Performing topology configuration update"
 ppStartupInfoTrace (NetworkConfigUpdateError err) = err
