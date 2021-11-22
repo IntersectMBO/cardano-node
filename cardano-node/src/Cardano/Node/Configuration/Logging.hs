@@ -305,6 +305,9 @@ shutdownLoggingLayer = shutdown . llSwitchboard
 -- The node provides the basic node's information for TraceForwarderBK.
 -- It will be sent once TraceForwarderBK is connected to an external process
 -- (for example, RTView).
+--
+-- TODO: it should return 'StartupTrace' rather than raw 'LogObject's.
+--
 nodeBasicInfo :: NodeConfiguration
               -> SomeConsensusProtocol
               -> UTCTime
