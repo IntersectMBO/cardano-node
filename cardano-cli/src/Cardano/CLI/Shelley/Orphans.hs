@@ -36,7 +36,6 @@ import           Cardano.Protocol.TPraos.BHeader (HashHeader (..))
 
 import qualified Cardano.Ledger.Credential as Ledger
 import qualified Cardano.Ledger.Shelley.API.Protocol as Ledger
-import qualified Cardano.Ledger.Shelley.EpochBoundary as Ledger
 import qualified Cardano.Ledger.Shelley.Rewards as Ledger
 import qualified Cardano.Protocol.TPraos.Rules.Prtcl as Ledger
 import qualified Cardano.Protocol.TPraos.Rules.Tickn as Ledger
@@ -79,8 +78,6 @@ deriving newtype instance CC.Crypto crypto => ToJSON (HashHeader crypto)
 deriving newtype instance ToJSON (AuxiliaryDataHash StandardCrypto)
 deriving newtype instance ToJSON Ledger.LogWeight
 deriving newtype instance ToJSON (PoolDistr StandardCrypto)
-
-deriving newtype instance ToJSON (Ledger.Stake StandardCrypto)
 
 deriving instance ToJSON (Ledger.StakeReference StandardCrypto)
 
