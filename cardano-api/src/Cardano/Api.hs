@@ -178,7 +178,7 @@ module Cardano.Api (
     txOutValueToLovelace,
     txOutValueToValue,
     TxOutDatum(..),
-    parseHashScriptData,
+    parseHash,
 
     -- ** Other transaction body types
     TxInsCollateral(..),

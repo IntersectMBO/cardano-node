@@ -52,8 +52,8 @@ import qualified Cardano.Ledger.Keys as Shelley
 
 import           Cardano.Ledger.Crypto (StandardCrypto)
 
-import           Cardano.Api.Hash
 import           Cardano.Api.HasTypeProxy
+import           Cardano.Api.Hash
 import           Cardano.Api.Key
 import           Cardano.Api.SerialiseBech32
 import           Cardano.Api.SerialiseCBOR

@@ -56,7 +56,7 @@ module Cardano.Api.TxBody (
     prettyRenderTxOut,
     txOutValueToLovelace,
     txOutValueToValue,
-    parseHashScriptData,
+    parseHash,
     TxOutInAnyEra(..),
     txOutInAnyEra,
 
@@ -520,14 +520,14 @@ instance (IsShelleyBasedEra era, IsCardanoEra era)
               (Nothing, Nothing) ->
                 pure $ TxOut addr val TxOutDatumNone
               (Nothing, Just (Aeson.String dHashTxt))  -> do
-                dh <- runParsecParser parseHashScriptData dHashTxt
+                dh <- runParsecParser (parseHash $ AsHash AsScriptData) dHashTxt
                 pure $ TxOut addr val $ TxOutDatumHash supported dh
               (Just sDataVal, Just (Aeson.String dHashTxt)) ->
                 case scriptDataFromJson ScriptDataJsonDetailedSchema sDataVal of
                   Left err ->
                     fail $ "Error parsing TxOut JSON: " <> displayError err
                   Right sData -> do
-                    dHash <- runParsecParser parseHashScriptData dHashTxt
+                    dHash <- runParsecParser (parseHash $ AsHash AsScriptData) dHashTxt
                     pure . TxOut addr val $ TxOutDatum' supported dHash sData
               (mDatVal, wrongDatumHashFormat) ->
                 fail $ "Error parsing TxOut's datum hash/data: " <>
@@ -548,7 +548,7 @@ instance (IsShelleyBasedEra era, IsCardanoEra era)
               Nothing ->
                 pure $ TxOut addr val TxOutDatumNone
               Just (Aeson.String dHashTxt)  -> do
-                dh <- runParsecParser parseHashScriptData dHashTxt
+                dh <- runParsecParser (parseHash $ AsHash AsScriptData) dHashTxt
                 pure $ TxOut addr val $ TxOutDatumHash supported dh
               Just wrongDatumHashFormat ->
                 fail $ "Error parsing TxOut's datum hash: " <>
@@ -1156,12 +1156,12 @@ pattern TxOutDatum s d  <- TxOutDatum' s _ d
 {-# COMPLETE TxOutDatumNone, TxOutDatumHash, TxOutDatum  #-}
 
 
-parseHashScriptData :: Parsec.Parser (Hash ScriptData)
-parseHashScriptData = do
-  str <- Parsec.many1 Parsec.hexDigit Parsec.<?> "script data hash"
-  case deserialiseFromRawBytesHex (AsHash AsScriptData) (BSC.pack str) of
+parseHash :: SerialiseAsRawBytes (Hash a) => AsType (Hash a) -> Parsec.Parser (Hash a)
+parseHash asType = do
+  str <- Parsec.many1 Parsec.hexDigit Parsec.<?> "hash"
+  case deserialiseFromRawBytesHex asType (BSC.pack str) of
     Just sdh -> return sdh
-    Nothing  -> fail $ "Invalid datum hash: " ++ show str
+    Nothing  -> fail $ "Failed to parse hash: " ++ show str
 
 -- ----------------------------------------------------------------------------
 -- Transaction fees
