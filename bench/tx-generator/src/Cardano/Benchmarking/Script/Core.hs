@@ -26,7 +26,7 @@ import           Control.Tracer (traceWith, nullTracer)
 
 import           Ouroboros.Network.Protocol.LocalTxSubmission.Type (SubmitResult (..))
 import           Cardano.Api
-import           Cardano.Api.Shelley ( ProtocolParameters, protocolParamPrices)
+import           Cardano.Api.Shelley ( ProtocolParameters, protocolParamMaxTxExUnits, protocolParamPrices)
 
 import qualified Cardano.Benchmarking.FundSet as FundSet
 import           Cardano.Benchmarking.FundSet (FundInEra(..), Validity(..), Variant(..), liftAnyEra )
@@ -52,6 +52,7 @@ import           Cardano.Benchmarking.Types as Core
                    (NumberOfInputsPerTx(..), NumberOfOutputsPerTx(..),NumberOfTxs(..), SubmissionErrorPolicy(..)
                    , TPSRate, TxAdditionalSize(..))
 import           Cardano.Benchmarking.Wallet as Wallet hiding (keyAddress)
+import           Cardano.Benchmarking.FundSet as FundSet (getFundTxIn)
 import           Cardano.Benchmarking.ListBufferedSelector
 
 import           Cardano.Benchmarking.Script.Env
@@ -319,7 +320,7 @@ runBenchmark submitMode spendMode threadName txCount tps
       SpendOutput -> withEra $ runBenchmarkInEra submitMode threadName txCount tps
       SpendScript scriptFile scriptBudget scriptData scriptRedeemer
         -> runPlutusBenchmark submitMode scriptFile scriptBudget scriptData scriptRedeemer threadName txCount tps
-
+      SpendAutoScript scriptFile -> spendAutoScript submitMode scriptFile threadName txCount tps
 
 runBenchmarkInEra :: forall era. IsShelleyBasedEra era => SubmitMode -> ThreadName -> NumberOfTxs -> TPSRate -> AsType era -> ActionM ()
 runBenchmarkInEra submitMode (ThreadName threadName) txCount tps era = do
@@ -331,6 +332,7 @@ runBenchmarkInEra submitMode (ThreadName threadName) txCount tps era = do
   (NumberOfOutputsPerTx numOutputs) <- getUser TNumberOfOutputsPerTx
   fee <- getUser TFee
   minValuePerUTxO <- getUser TMinValuePerUTxO
+  protocolParameters <- queryProtocolParameters
   walletRef <- get GlobalWallet
   metadata <- makeMetadata
   connectClient <- getConnectClient
@@ -357,7 +359,7 @@ runBenchmarkInEra submitMode (ThreadName threadName) txCount tps era = do
     inToOut :: [Lovelace] -> [Lovelace]
     inToOut = FundSet.inputsToOutputsWithFee fee numOutputs
 
-    txGenerator = genTx (mkFee fee) metadata
+    txGenerator = genTx protocolParameters TxInsCollateralNone (mkFee fee) metadata (KeyWitness KeyWitnessForSpending)
 
     toUTxO :: FundSet.Target -> FundSet.SeqNumber -> ToUTxO era
     toUTxO target seqNumber = Wallet.mkUTxO networkId fundKey (InFlight target seqNumber)
@@ -395,7 +397,7 @@ runPlutusBenchmark submitMode scriptFile scriptBudget scriptData scriptRedeemer 
   script <- liftIO $ PlutusExample.readScript scriptFile
   -- This does not remove the collateral from the wallet, i.e. same collateral is uses for everything.
   -- This is fine unless a script ever fails.
-  collateral <- liftIO ( askWalletRef walletRef (FundSet.selectCollateral . walletFunds)) >>= \case
+  collateralFunds <- liftIO ( askWalletRef walletRef (FundSet.selectCollateral . walletFunds)) >>= \case
     Right c -> return c
     Left err -> throwE $ WalletError err
   baseFee <- getUser TFee
@@ -467,7 +469,8 @@ runPlutusBenchmark submitMode scriptFile scriptBudget scriptData scriptRedeemer 
                           scriptRedeemer
                           executionUnits
 
-    txGenerator = genTxPlutusSpend protocolParameters collateral scriptWitness (mkFee totalFee) metadata
+    collateral = TxInsCollateral CollateralInAlonzoEra $  map getFundTxIn collateralFunds
+    txGenerator = genTx protocolParameters collateral (mkFee totalFee) metadata (ScriptWitness ScriptWitnessForSpending scriptWitness)
 
     fundToStore = mkWalletFundStore walletRef
 
@@ -532,7 +535,7 @@ initGlobalWallet networkId key ((txIn, outVal), skey) = do
   mkFund = liftAnyEra $ \value -> FundInEra {
     _fundTxIn = txIn
   , _fundVal = value
-  , _fundSigningKey = skey
+  , _fundSigningKey = Just skey
   , _fundValidity = Confirmed
   , _fundVariant = PlainOldFund
   }
@@ -549,7 +552,8 @@ createChangeScriptFunds :: SubmitMode -> FilePath -> ScriptData -> Lovelace -> I
 createChangeScriptFunds submitMode scriptFile scriptData value count = do
   walletRef <- get GlobalWallet
   networkId <- get NetworkId
-  fundKey <- getName $ KeyName "pass-partout"
+  protocolParameters <- queryProtocolParameters
+  _fundKey <- getName $ KeyName "pass-partout"
   fee <- getUser TFee  
   script <- liftIO $ PlutusExample.readScript scriptFile --TODO: this should throw a file-not-found-error !
   let
@@ -559,10 +563,13 @@ createChangeScriptFunds submitMode scriptFile scriptData value count = do
 --        selector = mkWalletFundSource walletRef $ FundSet.selectMinValue $ sum coins + fee
         inOut :: [Lovelace] -> [Lovelace]
         inOut = Wallet.includeChange fee coins
-        toUTxO = PlutusExample.mkUtxoScript networkId fundKey (scriptFile, script, scriptData) Confirmed
+        toUTxO = PlutusExample.mkUtxoScript networkId (scriptFile, script, scriptData) Confirmed
         fundToStore = mkWalletFundStore walletRef
 
-      tx <- liftIO $ sourceToStoreTransaction (genTx (mkFee fee) TxMetadataNone) fundSource inOut toUTxO fundToStore
+      tx <- liftIO $ sourceToStoreTransaction
+                                      (genTx protocolParameters TxInsCollateralNone
+                                       (mkFee fee) TxMetadataNone (KeyWitness KeyWitnessForSpending))
+                                      fundSource inOut toUTxO fundToStore
       return $ fmap txInModeCardano tx
     addressMsg =  Text.unpack $ serialiseAddress $ makeShelleyAddress networkId (PaymentCredentialByScript $ hashScript script) NoStakeAddress
   createChangeGeneric submitMode createCoins addressMsg value count
@@ -572,6 +579,7 @@ createChangeInEra submitMode variant value count _proxy = do
   networkId <- get NetworkId
   fee <- getUser TFee
   walletRef <- get GlobalWallet
+  protocolParameters <- queryProtocolParameters
   fundKey <- getName $ KeyName "pass-partout"
   let
     createCoins :: FundSet.FundSource -> [Lovelace] -> ActionM (Either String (TxInMode CardanoMode))
@@ -584,7 +592,10 @@ createChangeInEra submitMode variant value count _proxy = do
         toUTxO = Wallet.mkUTxOVariant variant networkId fundKey Confirmed
         fundToStore = mkWalletFundStore walletRef
 
-      (tx :: Either String (Tx era)) <- liftIO $ sourceToStoreTransaction (genTx (mkFee fee) TxMetadataNone) fundSource inOut toUTxO fundToStore
+      (tx :: Either String (Tx era)) <- liftIO $ sourceToStoreTransaction
+                                                  (genTx protocolParameters TxInsCollateralNone
+                                                   (mkFee fee) TxMetadataNone (KeyWitness KeyWitnessForSpending))
+                                                  fundSource inOut toUTxO fundToStore
       return $ fmap txInModeCardano tx
     addressMsg = Text.unpack $ serialiseAddress $ keyAddress @ era networkId fundKey
   createChangeGeneric submitMode createCoins addressMsg value count
@@ -631,6 +642,37 @@ createChangeGeneric submitMode createCoins addressMsg value count = do
   chunkList :: Int -> [a] -> [[a]]
   chunkList _ [] = []
   chunkList n xs = as : chunkList n bs where (as,bs) = splitAt n xs
+
+spendAutoScript :: SubmitMode -> FilePath -> ThreadName -> NumberOfTxs -> TPSRate -> ActionM ()
+spendAutoScript submitMode scriptFile threadName txCount tps = do
+  protocolParameters <- queryProtocolParameters
+  budget <- case protocolParamMaxTxExUnits protocolParameters of
+    Nothing -> throwE $ ApiError "cannot determine protocolParamMaxTxExUnits"
+    Just b -> return b
+  script <- liftIO $ readScript scriptFile
+  let
+    costFn :: Integer -> Either String Bool
+    costFn n = case preExecuteScript protocolParameters script (ScriptDataNumber 0) (ScriptDataNumber $ n + 1000000) of
+      Left err -> Left err
+      Right use -> Right $ (executionSteps use <= executionSteps budget) && (executionMemory use <= executionMemory budget)
+
+  redeemer <- case startSearch costFn 0 100000 of
+    Left err -> throwE $ ApiError $ "cannot find fitting redeemer :" ++ err
+    Right x -> return $ ScriptDataNumber $ x + 1000000
+  runPlutusBenchmark submitMode scriptFile PreExecuteScript (ScriptDataNumber 0) redeemer threadName txCount tps
+  where
+    startSearch f a b = do
+       l <- f a
+       h <- f b
+       if not l || h
+          then Left $ "binary search: bad inital bounds : " ++ show (a,b)
+          else search f a b
+    search f a b
+      = if a + 1 == b then Right a
+           else do
+             let m = (a + b) `div` 2
+             test <- f m
+             if test then search f m b else search f a m
 
 {-
 This is for dirty hacking and testing and quick-fixes.
