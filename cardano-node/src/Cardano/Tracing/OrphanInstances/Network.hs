@@ -1924,6 +1924,10 @@ instance ToObject NtN.RemoteAddress where
         mkObject [ "path" .= show path ]
 
 
+instance ToJSON IP.IP where
+    toJSON ip = Aeson.object ["ip" .= show ip]
+
+
 instance ToObject NtN.RemoteConnectionId where
     toObject verb (NtN.ConnectionId l r) =
         mkObject [ "local" .= toObject verb l
