@@ -382,14 +382,36 @@ handleSimpleNode scp runP p2pMode trace nodeTracers nc onKernel = do
               }
  where
   logStartupWarnings :: IO ()
-  logStartupWarnings =
-    case p2pMode of
+  logStartupWarnings = do
+    (case p2pMode of
       DisabledP2PMode -> return ()
       EnabledP2PMode  -> do
         traceWith (startupTracer nodeTracers) P2PWarning
         when (not $ ncTestEnableDevelopmentNetworkProtocols nc)
           $ traceWith (startupTracer nodeTracers)
                       P2PWarningDevelopementNetworkProtocols
+      ) :: IO () -- annoying, but unavoidable for GADT type inference
+
+    let developmentNtnVersions =
+          case latestReleasedNodeVersion (Proxy @blk) of
+            (Just ntnVersion, _) -> filter (> ntnVersion)
+                                  . Map.keys
+                                  $ supportedNodeToNodeVersions (Proxy @blk)
+            (Nothing, _)         -> Map.keys
+                                  $ supportedNodeToNodeVersions (Proxy @blk)
+        developmentNtcVersions =
+          case latestReleasedNodeVersion (Proxy @blk) of
+            (_, Just ntcVersion) -> filter (> ntcVersion)
+                                  . Map.keys
+                                  $ supportedNodeToClientVersions (Proxy @blk)
+            (_, Nothing)         -> Map.keys
+                                  $ supportedNodeToClientVersions (Proxy @blk)
+    when (  ncTestEnableDevelopmentNetworkProtocols nc
+         && (not (null developmentNtnVersions) || not (null developmentNtcVersions)) )
+       $ traceWith (startupTracer nodeTracers)
+                   (WarningDevelopmentNetworkProtocols
+                     developmentNtnVersions
+                     developmentNtcVersions)
 
   createTracers
     :: NodeConfiguration

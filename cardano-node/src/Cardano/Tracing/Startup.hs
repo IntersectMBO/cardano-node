@@ -89,12 +89,17 @@ data StartupTrace blk =
   --
   | P2PWarningDevelopementNetworkProtocols
 
+  -- | Warn when 'TestEnableDevelopmentNetworkProtocols' is set.
+  --
+  | WarningDevelopmentNetworkProtocols [NodeToNodeVersion] [NodeToClientVersion]
+
 
 instance HasSeverityAnnotation (StartupTrace blk) where
     getSeverityAnnotation (StartupSocketConfigError _) = Error
     getSeverityAnnotation (NetworkConfigUpdateError _) = Error
     getSeverityAnnotation P2PWarning = Warning
     getSeverityAnnotation P2PWarningDevelopementNetworkProtocols = Warning
+    getSeverityAnnotation WarningDevelopmentNetworkProtocols {} = Warning
     getSeverityAnnotation _ = Info
 instance HasPrivacyAnnotation  (StartupTrace blk) where
 instance ( Show (BlockNodeToNodeVersion blk)
@@ -155,6 +160,11 @@ instance ( Show (BlockNodeToNodeVersion blk)
       mkObject [ "message" .= String p2pWarningMessage ]
     toObject _verb P2PWarningDevelopementNetworkProtocols =
       mkObject [ "message" .= String p2pWarningDevelopmentNetworkProtocolsMessage ]
+    toObject _ver (WarningDevelopmentNetworkProtocols ntnVersions ntcVersions) =
+      mkObject [ "message" .= String "enabled development network protocols"
+               , "nodeToNodeDevelopmentVersions" .= String (Text.pack . show $ ntnVersions)
+               , "nodeToClientDevelopmentVersions" .= String (Text.pack . show $ ntcVersions)
+               ]
 
 
 
@@ -226,6 +236,12 @@ ppStartupInfoTrace P2PWarning = p2pWarningMessage
 ppStartupInfoTrace P2PWarningDevelopementNetworkProtocols =
     p2pWarningDevelopmentNetworkProtocolsMessage
 
+ppStartupInfoTrace (WarningDevelopmentNetworkProtocols ntnVersions ntcVersions) =
+     "enabled development network protocols: "
+  <> (Text.pack . show $ ntnVersions)
+  <> " "
+  <> (Text.pack . show $ ntcVersions)
+
 
 p2pWarningMessage :: Text
 p2pWarningMessage =
@@ -235,7 +251,6 @@ p2pWarningMessage =
 p2pWarningDevelopmentNetworkProtocolsMessage :: Text
 p2pWarningDevelopmentNetworkProtocolsMessage =
     "peer-to-peer requires TestEnableDevelopmentNetworkProtocols to be set to True"
-
 
 --
 -- Utils
