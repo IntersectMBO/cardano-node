@@ -167,7 +167,7 @@ data TransactionCmd
       -- ^ Transaction inputs with optional spending scripts
       [TxIn]
       -- ^ Transaction inputs for collateral, only key witnesses, no scripts.
-      [WitnessSigningData]
+      [RequiredSigner]
       -- ^ Required signers
       [TxOutAnyEra]
       (Maybe (Value, [ScriptWitnessFiles WitCtxMint]))
@@ -199,7 +199,7 @@ data TransactionCmd
       -- ^ Override the required number of tx witnesses
       [(TxIn, Maybe (ScriptWitnessFiles WitCtxTxIn))]
       -- ^ Required signers
-      [WitnessSigningData]
+      [RequiredSigner]
       -- ^ Transaction inputs with optional spending scripts
       [TxIn]
       -- ^ Transaction inputs for collateral, only key witnesses, no scripts.

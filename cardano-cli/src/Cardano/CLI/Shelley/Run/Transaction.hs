@@ -67,6 +67,8 @@ data ShelleyTxCmdError
   | ShelleyTxCmdScriptFileError (FileError ScriptDecodeError)
   | ShelleyTxCmdReadTextViewFileError !(FileError TextEnvelopeError)
   | ShelleyTxCmdReadWitnessSigningDataError !ReadWitnessSigningDataError
+  | ShelleyTxCmdReadRequiredSignerError !(FileError InputDecodeError)
+  | ShelleyTxCmdRequiredSignerByronKeyError !SigningKeyFile
   | ShelleyTxCmdWriteFileError !(FileError ())
   | ShelleyTxCmdEraConsensusModeMismatch
       !(Maybe FilePath)
@@ -124,6 +126,10 @@ renderShelleyTxCmdError err =
     ShelleyTxCmdScriptFileError fileErr -> Text.pack (displayError fileErr)
     ShelleyTxCmdReadWitnessSigningDataError witSignDataErr ->
       renderReadWitnessSigningDataError witSignDataErr
+    ShelleyTxCmdReadRequiredSignerError fileErr ->
+      "Error reading required signer: " <> Text.pack (displayError fileErr)
+    ShelleyTxCmdRequiredSignerByronKeyError (SigningKeyFile fp) ->
+      "Byron key witness was used as a required signer: " <> show fp
     ShelleyTxCmdWriteFileError fileErr -> Text.pack (displayError fileErr)
     ShelleyTxCmdMetadataJsonParseError fp jsonErr ->
        "Invalid JSON format in file: " <> show fp
@@ -329,7 +335,7 @@ runTxBuildRaw
   -> [(CertificateFile, Maybe (ScriptWitnessFiles WitCtxStake))]
   -- ^ Certificate with potential script witness
   -> [(StakeAddress, Lovelace, Maybe (ScriptWitnessFiles WitCtxStake))]
-  -> [WitnessSigningData]
+  -> [RequiredSigner]
   -- ^ Required signers
   -> TxMetadataJsonSchema
   -> [ScriptFile]
@@ -395,7 +401,7 @@ runTxBuild
   -> [(CertificateFile, Maybe (ScriptWitnessFiles WitCtxStake))]
   -- ^ Certificate with potential script witness
   -> [(StakeAddress, Lovelace, Maybe (ScriptWitnessFiles WitCtxStake))]
-  -> [WitnessSigningData]
+  -> [RequiredSigner]
   -- ^ Required signers
   -> TxMetadataJsonSchema
   -> [ScriptFile]
@@ -701,27 +707,16 @@ validateTxAuxScripts era files =
       return $ TxAuxScripts supported scripts
 
 validateRequiredSigners :: CardanoEra era
-                        -> [WitnessSigningData]
+                        -> [RequiredSigner]
                         -> ExceptT ShelleyTxCmdError IO (TxExtraKeyWitnesses era)
 validateRequiredSigners _ [] = return TxExtraKeyWitnessesNone
 validateRequiredSigners era reqSigs =
   case extraKeyWitnessesSupportedInEra era of
     Nothing -> txFeatureMismatch era TxFeatureExtraKeyWits
     Just supported -> do
-      keyWits <- firstExceptT ShelleyTxCmdReadWitnessSigningDataError
-                   $ mapM readWitnessSigningData reqSigs
-      let (_sksByron, sksShelley) = partitionSomeWitnesses $ map categoriseSomeWitness keyWits
-          shelleySigningKeys = map toShelleySigningKey sksShelley
-          paymentKeyHashes = map getHash shelleySigningKeys
-      return $ TxExtraKeyWitnesses supported paymentKeyHashes
- where
-  getHash :: ShelleySigningKey -> Hash PaymentKey
-  getHash (ShelleyExtendedSigningKey sk) =
-    let extSKey = PaymentExtendedSigningKey sk
-        payVKey = castVerificationKey $ getVerificationKey extSKey
-    in verificationKeyHash payVKey
-  getHash (ShelleyNormalSigningKey sk) =
-    verificationKeyHash . getVerificationKey $ PaymentSigningKey sk
+      rSignerHashes <- mapM readRequiredSigner reqSigs
+      return $ TxExtraKeyWitnesses supported rSignerHashes
+
 
 validateTxWithdrawals
   :: forall era.
@@ -1428,6 +1423,34 @@ readFileInAnyCardanoEra asThing file =
       , FromSomeType (asThing AsAlonzoEra)  (InAnyCardanoEra AlonzoEra)
       ]
       file
+
+readRequiredSigner :: RequiredSigner -> ExceptT ShelleyTxCmdError IO (Hash PaymentKey)
+readRequiredSigner (RequiredSignerHash h) = return h
+readRequiredSigner (RequiredSignerSkeyFile skFile) = do
+  keyWit <- firstExceptT ShelleyTxCmdReadRequiredSignerError
+              . newExceptT
+              $ readSigningKeyFileAnyOf bech32FileTypes textEnvFileTypes skFile
+  case categoriseSomeWitness keyWit of
+    AByronWitness _ ->
+      left $ ShelleyTxCmdRequiredSignerByronKeyError skFile
+    AShelleyKeyWitness skey ->
+      return . getHash $ toShelleySigningKey skey
+ where
+   textEnvFileTypes =
+     [ FromSomeType (AsSigningKey AsPaymentKey) APaymentSigningKey
+     , FromSomeType (AsSigningKey AsPaymentExtendedKey)
+                          APaymentExtendedSigningKey
+     ]
+   bech32FileTypes = []
+
+   getHash :: ShelleySigningKey -> Hash PaymentKey
+   getHash (ShelleyExtendedSigningKey sk) =
+     let extSKey = PaymentExtendedSigningKey sk
+         payVKey = castVerificationKey $ getVerificationKey extSKey
+     in verificationKeyHash payVKey
+   getHash (ShelleyNormalSigningKey sk) =
+     verificationKeyHash . getVerificationKey $ PaymentSigningKey sk
+
 
 -- | Constrain the era to be Shelley based. Fail for the Byron era.
 --

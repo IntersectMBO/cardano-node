@@ -25,6 +25,7 @@ module Cardano.CLI.Types
   , VerificationKeyFile (..)
   , Stakes (..)
   , Params (..)
+  , RequiredSigner (..)
   ) where
 
 import           Cardano.Prelude
@@ -215,3 +216,9 @@ newtype TxOutChangeAddress = TxOutChangeAddress AddressAny
 -- | A flag that differentiates between automatically
 -- and manually balancing a tx.
 data BalanceTxExecUnits = AutoBalance | ManualBalance
+
+-- | Plutus script required signers
+data RequiredSigner
+ = RequiredSignerSkeyFile SigningKeyFile
+ | RequiredSignerHash (Hash PaymentKey)
+ deriving Show
