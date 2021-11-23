@@ -399,7 +399,10 @@ instance ToJSONKey TxIn where
   toJSONKey = toJSONKeyText renderTxIn
 
 instance FromJSON TxIn where
-  parseJSON = withText "TxIn" $ \txinStr -> runParsecParser parseTxIn txinStr
+  parseJSON = withText "TxIn" $ runParsecParser parseTxIn
+
+instance FromJSONKey TxIn where
+  fromJSONKey = Aeson.FromJSONKeyTextParser $ runParsecParser parseTxIn
 
 parseTxId :: Parsec.Parser TxId
 parseTxId = do
