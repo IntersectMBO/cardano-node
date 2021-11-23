@@ -44,6 +44,7 @@ import qualified System.Metrics.Gauge as Gauge
 import qualified System.Metrics.Label as Label
 import qualified System.Remote.Monitoring as EKG
 
+import qualified Control.Monad.Class.MonadTime as MonadTime
 import           Control.Tracer
 import           Control.Tracer.Transformers
 
@@ -57,7 +58,7 @@ import           Cardano.BM.Trace (traceNamedObject)
 import           Cardano.BM.Tracing
 
 import           Ouroboros.Consensus.Block (BlockConfig, BlockProtocol, CannotForge,
-                   ForgeStateInfo, ForgeStateUpdateError, Header, realPointSlot)
+                   GetHeader (..), ForgeStateInfo, ForgeStateUpdateError, Header, getHeader, realPointSlot)
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..),
                    TraceBlockchainTimeEvent (..))
 import           Ouroboros.Consensus.HeaderValidation (OtherHeaderEnvelopeError)
@@ -75,7 +76,7 @@ import           Ouroboros.Consensus.Node (NetworkP2PMode (..))
 import qualified Ouroboros.Consensus.Node.Run as Consensus (RunNode)
 import qualified Ouroboros.Consensus.Node.Tracers as Consensus
 import           Ouroboros.Consensus.Protocol.Abstract (ValidationErr)
-import           Ouroboros.Consensus.Node.Run (SerialiseNodeToNodeConstraints)
+import           Ouroboros.Consensus.Node.Run (estimateBlockSize, SerialiseNodeToNodeConstraints)
 import qualified Ouroboros.Consensus.Protocol.Ledger.HotKey as HotKey
 
 import qualified Ouroboros.Network.AnchoredFragment as AF
@@ -315,6 +316,10 @@ mkTracers blockConfig tOpts@(TracingOn trSel) tr nodeKern ekgDirect enableP2P = 
   consensusTracers <- mkConsensusTracers ekgDirect trSel verb tr nodeKern fStats
   elidedChainDB <- newstate  -- for eliding messages in ChainDB tracer
   tForks <- STM.newTVarIO 0
+  tBlockDelayM <- STM.newTVarIO Pq.empty
+  tBlockDelayCDF1s <- STM.newTVarIO $ CdfCounter 0
+  tBlockDelayCDF3s <- STM.newTVarIO $ CdfCounter 0
+  tBlockDelayCDF5s <- STM.newTVarIO $ CdfCounter 0
 
   pure Tracers
     { chainDBTracer = tracerOnOff' (traceChainDB trSel) $
@@ -324,6 +329,10 @@ mkTracers blockConfig tOpts@(TracingOn trSel) tr nodeKern ekgDirect enableP2P = 
                              tOpts elidedChainDB
                              ekgDirect
                              tForks
+                             tBlockDelayM
+                             tBlockDelayCDF1s
+                             tBlockDelayCDF3s
+                             tBlockDelayCDF5s
                              (appendName "ChainDB" tr)
                              (appendName "metrics" tr)
     , consensusTracers = consensusTracers
@@ -486,14 +495,21 @@ teeTraceChainTip
   -> MVar (Maybe (WithSeverity (ChainDB.TraceEvent blk)), Integer)
   -> Maybe EKGDirect
   -> STM.TVar Word64
+  -> STM.TVar (IntPSQ Word64 NominalDiffTime)
+  -> STM.TVar (CdfCounter 1)
+  -> STM.TVar (CdfCounter 3)
+  -> STM.TVar (CdfCounter 5)
   -> Trace IO Text
   -> Trace IO Text
   -> Tracer IO (WithSeverity (ChainDB.TraceEvent blk))
-teeTraceChainTip _ _ TracingOff _ _ _ _ _ = nullTracer
-teeTraceChainTip blockConfig fStats (TracingOn trSel) elided ekgDirect tFork trTrc trMet =
+teeTraceChainTip _ _ TracingOff _ _ _ _ _ _ _ _ _ = nullTracer
+teeTraceChainTip blockConfig fStats (TracingOn trSel) elided ekgDirect tFork slotMapVar cdf1sVar
+    cdf3sVar cdf5sVar trTrc trMet =
   Tracer $ \ev -> do
     traceWith (teeTraceChainTipElide (traceVerbosity trSel) elided trTrc) ev
     traceWith (ignoringSeverity (traceChainMetrics ekgDirect tFork blockConfig fStats trMet)) ev
+    traceWith (ignoringSeverity (traceBlockAdoption ekgDirect slotMapVar cdf1sVar cdf3sVar
+               cdf5sVar trMet)) ev
 
 teeTraceChainTipElide
   :: ( LedgerSupportsProtocol blk
@@ -512,6 +528,66 @@ teeTraceChainTipElide = elideToLogObject
 ignoringSeverity :: Tracer IO a -> Tracer IO (WithSeverity a)
 ignoringSeverity tr = Tracer $ \(WithSeverity _ ev) -> traceWith tr ev
 {-# INLINE ignoringSeverity #-}
+
+
+
+traceBlockAdoption
+  :: forall blk. (
+       SerialiseNodeToNodeConstraints blk
+     , GetHeader blk
+     )
+  => Maybe EKGDirect
+  -> STM.TVar (IntPSQ Word64 NominalDiffTime)
+  -> STM.TVar (CdfCounter 1)
+  -> STM.TVar (CdfCounter 3)
+  -> STM.TVar (CdfCounter 5)
+  -> Trace IO Text
+  -> Tracer IO (ChainDB.TraceEvent blk)
+traceBlockAdoption Nothing _ _ _ _ _ = nullTracer
+traceBlockAdoption (Just _ekgDirect) slotMapVar cdf1sVar cdf3sVar cdf5sVar tr =  Tracer bfTracer
+
+  where
+    bfTracer :: ChainDB.TraceEvent blk -> IO ()
+    bfTracer (ChainDB.TraceAddBlockEvent (ChainDB.DoneAddingBlock dabev)) = do
+        !tNow <- MonadTime.getMonotonicTime
+        !wallNow <- MonadTime.getCurrentTime
+        let ChainDB.TraceDoneAddingBlockEvent {
+                ChainDB.addedBlockPoint        = pt
+              , ChainDB.addedBlock             = ChainDB.Ignorable b
+              , ChainDB.addedBlockSlotStart
+              , ChainDB.addedBlockReception
+              , ChainDB.addedBlockDoneAdding   = (tDone, wallDone)
+              , ChainDB.addedBlockNewSelection = _tip
+              } = ChainDB.situateTraceDoneAddingBlockEvent (tNow, wallNow) dabev
+            delay      = MonadTime.diffTime tDone addedBlockReception
+            forgeDelay_e = either
+                           Left
+                          (Right . MonadTime.diffUTCTime wallDone . snd)
+                            addedBlockSlotStart
+            slotNo = unSlotNo $ realPointSlot pt
+
+        case forgeDelay_e of
+             Left _ -> return ()
+             Right forgeDelay -> do
+                 (fresh, cdf1s, cdf3s, cdf5s) <- atomically $
+                     cdf135Counters slotMapVar cdf1sVar cdf3sVar cdf5sVar slotNo forgeDelay
+                 when fresh $ do
+                   meta <- mkLOMeta Critical Public
+                   let size = estimateBlockSize (getHeader b)
+
+                   traceD tr meta "blockadoption.forgeDelay" $ realToFrac forgeDelay
+                   traceI tr meta "blockadoption.size" size
+                   traceD tr meta "blockadoption.delay" $ realToFrac delay
+                   when (cdf1s >= 0) $
+                     traceD tr meta "blockadoption.cdfOne"   cdf1s
+                   when (cdf3s >= 0) $
+                     traceD tr meta "blockadoption.cdfThree" cdf3s
+                   when (cdf5s >= 0) $
+                     traceD tr meta "blockadoption.cdfFive"  cdf5s
+
+
+    bfTracer _ = return ()
+
 
 traceChainMetrics
   :: forall blk. ()
