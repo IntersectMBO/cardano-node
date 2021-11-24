@@ -895,27 +895,6 @@ instance (Show txid, Show tx)
       , "agency" .= String (pack $ show stok)
       ]
 
-instance ToJSON peerAddr => ToJSON (ConnectionId peerAddr) where
-  toJSON ConnectionId { localAddress, remoteAddress } =
-    Aeson.object [ "localAddress"  .= toJSON localAddress
-                 , "remoteAddress" .= toJSON remoteAddress
-                 ]
-
-instance Aeson.ToJSON ConnectionManagerCounters where
-  toJSON ConnectionManagerCounters { prunableConns
-                                   , duplexConns
-                                   , uniConns
-                                   , incomingConns
-                                   , outgoingConns
-                                   } =
-    Aeson.object [ "kind"           .= String "ConnectionManagerCounters"
-                 , "prunable"       .= toJSON prunableConns
-                 , "duplex"         .= toJSON duplexConns
-                 , "unidirectional" .= toJSON uniConns
-                 , "incoming"       .= incomingConns
-                 , "outgoing"       .= outgoingConns
-                 ]
-
 instance ToObject (FetchDecision [Point header]) where
   toObject _verb (Left decline) =
     mkObject [ "kind" .= String "FetchDecision declined"
@@ -1005,11 +984,6 @@ instance ToObject (NtN.HandshakeTr RemoteAddress NodeToNodeVersion) where
     mkObject [ "kind" .= String "HandshakeTrace"
              , "bearer" .= show b
              , "event" .= show ev ]
-
-instance ToJSON LocalAddress where
-    toJSON (LocalAddress path) = String (pack path)
-
-instance Aeson.ToJSONKey LocalAddress where
 
 instance ToObject NtN.AcceptConnectionsPolicyTrace where
   toObject _verb (NtN.ServerTraceAcceptConnectionRateLimiting delay numOfConnections) =
@@ -1136,23 +1110,6 @@ instance ToObject (TraceTxSubmissionInbound txid tx) where
       [ "kind" .= String "TxInboundCannotRequestMoreTxs"
       , "count" .= toJSON count
       ]
-
-
-instance Aeson.ToJSONKey SockAddr where
-
-instance Aeson.ToJSON SockAddr where
-    toJSON (SockAddrInet port addr) =
-        let ip = IP.fromHostAddress addr in
-        Aeson.object [ "address" .= toJSON ip
-                     , "port" .= show port
-                     ]
-    toJSON (SockAddrInet6 port _ addr _) =
-        let ip = IP.fromHostAddress6 addr in
-        Aeson.object [ "address" .= toJSON ip
-                     , "port" .= show port
-                     ]
-    toJSON (SockAddrUnix path) =
-        Aeson.object [ "socketPath" .= show path ]
 
 -- TODO: use the json encoding of transactions
 instance (Show txid, Show tx)
@@ -1284,11 +1241,6 @@ instance ToObject peer => ToObject (WithMuxBearer peer MuxTrace) where
              , "bearer" .= toObject verb b
              , "event" .= show ev ]
 
-instance Aeson.ToJSONKey RelayAccessPoint where
-
-instance Aeson.ToJSON IP where
-    toJSON ip = String (pack . show $ ip)
-
 instance Show exception => ToObject (TraceLocalRootPeers RemoteAddress exception) where
   toObject _verb (TraceLocalRootDomains groups) =
     mkObject [ "kind" .= String "LocalRootDomains"
@@ -1338,31 +1290,6 @@ instance ToObject TracePublicRootPeers where
              , "domain" .= show b
              , "reason" .= show d
              ]
-
-instance ToJSON PeerStatus where
-  toJSON = String . pack . show
-
-instance (Aeson.ToJSONKey peerAddr, ToJSON peerAddr, Show peerAddr)
-  => ToJSON (LocalRootPeers peerAddr) where
-  toJSON lrp =
-    Aeson.object [ "kind" .= String "LocalRootPeers"
-                 , "state" .= toJSON (toMap lrp)
-                 , "groups" .= Aeson.toJSONList (toGroupSets lrp)
-                 ]
-
-instance ToJSON PeerSelectionTargets where
-  toJSON (PeerSelectionTargets
-            nRootPeers
-            nKnownPeers
-            nEstablishedPeers
-            nActivePeers
-         ) =
-    Aeson.object [ "kind" .= String "PeerSelectionTargets"
-                 , "targetRootPeers" .= nRootPeers
-                 , "targetKnownPeers" .= nKnownPeers
-                 , "targetEstablishedPeers" .= nEstablishedPeers
-                 , "targetActivePeers" .= nActivePeers
-                 ]
 
 instance ToObject (TracePeerSelection SockAddr) where
   toObject _verb (TraceLocalRootPeersChanged lrp lrp') =
@@ -1517,44 +1444,6 @@ instance ToObject (TracePeerSelection SockAddr) where
     mkObject [ "kind" .= String "ChurnMode"
              , "event" .= show c ]
 
--- Connection manager abstract state.  For explanation of each state see
--- <https://hydra.iohk.io/job/Cardano/ouroboros-network/native.network-docs.x86_64-linux/latest/download/2>
-instance Aeson.ToJSON AbstractState where
-    toJSON UnknownConnectionSt =
-      Aeson.object [ "kind" .= String "UnknownConnectionSt" ]
-    toJSON ReservedOutboundSt =
-      Aeson.object [ "kind" .= String "ReservedOutboundSt" ]
-    toJSON (UnnegotiatedSt provenance) =
-      Aeson.object [ "kind" .= String "UnnegotiatedSt"
-                   , "provenance" .= String (pack . show $ provenance)
-                   ]
-    toJSON (InboundIdleSt dataFlow) =
-      Aeson.object [ "kind" .= String "InboundIdleSt"
-                   , "dataFlow" .= String (pack . show $ dataFlow)
-                   ]
-    toJSON (InboundSt dataFlow) =
-      Aeson.object [ "kind" .= String "InboundSt"
-                   , "dataFlow" .= String (pack . show $ dataFlow)
-                   ]
-    toJSON OutboundUniSt =
-      Aeson.object [ "kind" .= String "OutboundUniSt" ]
-    toJSON (OutboundDupSt timeoutExpired) =
-      Aeson.object [ "kind" .= String "OutboundDupSt"
-                   , "timeoutState" .= String (pack . show $ timeoutExpired)
-                   ]
-    toJSON (OutboundIdleSt dataFlow) =
-      Aeson.object [ "kind" .= String "OutboundIdleSt"
-                   , "dataFlow" .= String (pack . show $ dataFlow)
-                   ]
-    toJSON DuplexSt =
-      Aeson.object [ "kind" .= String "DuplexSt" ]
-    toJSON WaitRemoteIdleSt =
-      Aeson.object [ "kind" .= String "WaitRemoteIdleSt" ]
-    toJSON TerminatingSt =
-      Aeson.object [ "kind" .= String "TerminatingSt" ]
-    toJSON TerminatedSt =
-      Aeson.object [ "kind" .= String "TerminatedSt" ]
-
 
 peerSelectionTargetsToObject :: PeerSelectionTargets -> Value
 peerSelectionTargetsToObject
@@ -1620,88 +1509,6 @@ instance ToObject PeerSelectionCounters where
              , "warmPeers" .= warmPeers ev
              , "hotPeers" .= hotPeers ev
              ]
-
-instance (Show (ClientHasAgency st), Show (ServerHasAgency st))
-  => ToJSON (PeerHasAgency pr st) where
-  toJSON (ClientAgency cha) =
-    Aeson.object [ "kind" .= String "ClientAgency"
-                 , "agency" .= show cha
-                 ]
-  toJSON (ServerAgency sha) =
-    Aeson.object [ "kind" .= String "ServerAgency"
-                 , "agency" .= show sha
-                 ]
-
-instance ToJSON ProtocolLimitFailure where
-  toJSON (ExceededSizeLimit tok) =
-    Aeson.object [ "kind" .= String "ProtocolLimitFailure"
-                 , "agency" .= toJSON tok
-                 ]
-  toJSON (ExceededTimeLimit tok) =
-    Aeson.object [ "kind" .= String "ProtocolLimitFailure"
-                 , "agency" .= toJSON tok
-                 ]
-
-instance Show vNumber => ToJSON (RefuseReason vNumber) where
-  toJSON (VersionMismatch vNumber tags) =
-    Aeson.object [ "kind" .= String "VersionMismatch"
-                 , "versionNumber" .= show vNumber
-                 , "tags" .= Aeson.toJSONList tags
-                 ]
-  toJSON (HandshakeDecodeError vNumber t) =
-    Aeson.object [ "kind" .= String "HandshakeDecodeError"
-                 , "versionNumber" .= show vNumber
-                 , "text" .= String (pack $ show t)
-                 ]
-  toJSON (Refused vNumber t) =
-    Aeson.object [ "kind" .= String "Refused"
-                 , "versionNumber" .= show vNumber
-                 , "text" .= String (pack $ show t)
-                 ]
-
-instance Show vNumber => ToJSON (HandshakeProtocolError vNumber) where
-  toJSON (HandshakeError rvNumber) =
-    Aeson.object [ "kind" .= String "HandshakeError"
-                 , "reason" .= toJSON rvNumber
-                 ]
-  toJSON (NotRecognisedVersion vNumber) =
-    Aeson.object [ "kind" .= String "NotRecognisedVersion"
-                 , "versionNumber" .= show vNumber
-                 ]
-  toJSON (InvalidServerSelection vNumber t) =
-    Aeson.object [ "kind" .= String "InvalidServerSelection"
-                 , "versionNumber" .= show vNumber
-                 , "reason" .= String (pack $ show t)
-                 ]
-
-instance Show vNumber => ToJSON (HandshakeException vNumber) where
-  toJSON (HandshakeProtocolLimit plf) =
-    Aeson.object [ "kind" .= String "HandshakeProtocolLimit"
-                 , "handshakeProtocolLimit" .= toJSON plf
-                 ]
-  toJSON (HandshakeProtocolError err) =
-    Aeson.object [ "kind" .= String "HandshakeProtocolError"
-                 , "reason" .= show err
-                 ]
-
-instance ToJSON NodeToNodeVersion where
-  toJSON x = String (pack $ show x)
-
-instance ToJSON NodeToClientVersion where
-  toJSON x = String (pack $ show x)
-
-instance ToJSON NodeToNodeVersionData where
-  toJSON (NodeToNodeVersionData (NetworkMagic m) dm) =
-    Aeson.object [ "kind" .= String "NodeToNodeVersionData"
-                 , "networkMagic" .= toJSON m
-                 , "diffusionMode" .= show dm
-                 ]
-
-instance ToJSON NodeToClientVersionData where
-  toJSON (NodeToClientVersionData (NetworkMagic m)) =
-    Aeson.object [ "kind" .= String "NodeToClientVersionData"
-                 , "networkMagic" .= toJSON m
-                 ]
 
 instance (Show versionNumber, ToJSON versionNumber, ToJSON agreedOptions)
   => ToObject (ConnectionHandlerTrace versionNumber agreedOptions) where
@@ -1893,27 +1700,6 @@ instance (Show addr, ToObject addr, ToJSON addr)
              , "reason" .= show exception
              ]
 
-instance ToJSON MiniProtocolNum where
-  toJSON (MiniProtocolNum w) =
-    Aeson.object [ "kind" .= String "MiniProtocolNum"
-                 , "num" .= w
-                 ]
-
-instance ToJSON addr => ToJSON (OperationResult addr) where
-  toJSON (UnsupportedState as) =
-    Aeson.object [ "kind" .= String "UnsupportedState"
-                 , "unsupportedState" .= toJSON as
-                 ]
-  toJSON (OperationSuccess addr) =
-    Aeson.object [ "kind" .= String "OperationSuccess"
-                 , "operationSuccess" .= toJSON addr
-                 ]
-
-instance ToJSON RemoteSt where
-  toJSON = String . pack . show
-
-instance ToJSON addr => Aeson.ToJSONKey (ConnectionId addr) where
-
 instance ToObject NtN.RemoteAddress where
     toObject _verb (SockAddrInet port addr) =
         let ip = IP.fromHostAddress addr in
@@ -1944,6 +1730,7 @@ instance ToObject NtC.LocalConnectionId where
         mkObject [ "local" .= toObject verb l
                  , "remote" .= toObject verb r
                  ]
+
 instance (ToJSON addr, Show addr)
       => ToObject (InboundGovernorTrace addr) where
   toObject _verb (TrNewConnection p connId)            =
@@ -2019,3 +1806,225 @@ instance (ToJSON addr, Show addr)
     mkObject [ "kind" .= String "UnexpectedlyFalseAssertion"
              , "remoteSt" .= String (pack . show $ info)
              ]
+
+
+--
+-- Supporting `ToJSON` instances
+--
+
+instance ToJSON peerAddr => ToJSON (ConnectionId peerAddr) where
+  toJSON ConnectionId { localAddress, remoteAddress } =
+    Aeson.object [ "localAddress"  .= toJSON localAddress
+                 , "remoteAddress" .= toJSON remoteAddress
+                 ]
+
+instance ToJSON addr => Aeson.ToJSONKey (ConnectionId addr) where
+
+
+instance ToJSON LocalAddress where
+    toJSON (LocalAddress path) = String (pack path)
+
+
+instance Aeson.ToJSONKey LocalAddress where
+
+instance ToJSON SockAddr where
+    toJSON (SockAddrInet port addr) =
+        let ip = IP.fromHostAddress addr in
+        Aeson.object [ "address" .= toJSON ip
+                     , "port" .= show port
+                     ]
+    toJSON (SockAddrInet6 port _ addr _) =
+        let ip = IP.fromHostAddress6 addr in
+        Aeson.object [ "address" .= toJSON ip
+                     , "port" .= show port
+                     ]
+    toJSON (SockAddrUnix path) =
+        Aeson.object [ "socketPath" .= show path ]
+
+instance Aeson.ToJSONKey SockAddr where
+
+-- ToJSON RelayAccessPoint instance lives in `ouroboros-network`
+
+instance Aeson.ToJSONKey RelayAccessPoint where
+
+instance ToJSON IP where
+    toJSON ip = String (pack . show $ ip)
+
+instance ToJSON ConnectionManagerCounters where
+    toJSON ConnectionManagerCounters { prunableConns
+                                     , duplexConns
+                                     , uniConns
+                                     , incomingConns
+                                     , outgoingConns
+                                     } =
+      Aeson.object [ "kind"           .= String "ConnectionManagerCounters"
+                   , "prunable"       .= toJSON prunableConns
+                   , "duplex"         .= toJSON duplexConns
+                   , "unidirectional" .= toJSON uniConns
+                   , "incoming"       .= incomingConns
+                   , "outgoing"       .= outgoingConns
+                   ]
+
+instance ToJSON PeerStatus where
+    toJSON = String . pack . show
+
+instance (Aeson.ToJSONKey peerAddr, ToJSON peerAddr, Show peerAddr)
+    => ToJSON (LocalRootPeers peerAddr) where
+    toJSON lrp =
+      Aeson.object [ "kind" .= String "LocalRootPeers"
+                   , "state" .= toJSON (toMap lrp)
+                   , "groups" .= Aeson.toJSONList (toGroupSets lrp)
+                   ]
+
+instance ToJSON PeerSelectionTargets where
+    toJSON (PeerSelectionTargets
+              nRootPeers
+              nKnownPeers
+              nEstablishedPeers
+              nActivePeers
+           ) =
+      Aeson.object [ "kind" .= String "PeerSelectionTargets"
+                   , "targetRootPeers" .= nRootPeers
+                   , "targetKnownPeers" .= nKnownPeers
+                   , "targetEstablishedPeers" .= nEstablishedPeers
+                   , "targetActivePeers" .= nActivePeers
+                   ]
+
+-- Connection manager abstract state.  For explanation of each state see
+-- <https://hydra.iohk.io/job/Cardano/ouroboros-network/native.network-docs.x86_64-linux/latest/download/2>
+instance ToJSON AbstractState where
+    toJSON UnknownConnectionSt =
+      Aeson.object [ "kind" .= String "UnknownConnectionSt" ]
+    toJSON ReservedOutboundSt =
+      Aeson.object [ "kind" .= String "ReservedOutboundSt" ]
+    toJSON (UnnegotiatedSt provenance) =
+      Aeson.object [ "kind" .= String "UnnegotiatedSt"
+                   , "provenance" .= String (pack . show $ provenance)
+                   ]
+    toJSON (InboundIdleSt dataFlow) =
+      Aeson.object [ "kind" .= String "InboundIdleSt"
+                   , "dataFlow" .= String (pack . show $ dataFlow)
+                   ]
+    toJSON (InboundSt dataFlow) =
+      Aeson.object [ "kind" .= String "InboundSt"
+                   , "dataFlow" .= String (pack . show $ dataFlow)
+                   ]
+    toJSON OutboundUniSt =
+      Aeson.object [ "kind" .= String "OutboundUniSt" ]
+    toJSON (OutboundDupSt timeoutExpired) =
+      Aeson.object [ "kind" .= String "OutboundDupSt"
+                   , "timeoutState" .= String (pack . show $ timeoutExpired)
+                   ]
+    toJSON (OutboundIdleSt dataFlow) =
+      Aeson.object [ "kind" .= String "OutboundIdleSt"
+                   , "dataFlow" .= String (pack . show $ dataFlow)
+                   ]
+    toJSON DuplexSt =
+      Aeson.object [ "kind" .= String "DuplexSt" ]
+    toJSON WaitRemoteIdleSt =
+      Aeson.object [ "kind" .= String "WaitRemoteIdleSt" ]
+    toJSON TerminatingSt =
+      Aeson.object [ "kind" .= String "TerminatingSt" ]
+    toJSON TerminatedSt =
+      Aeson.object [ "kind" .= String "TerminatedSt" ]
+
+instance (Show (ClientHasAgency st), Show (ServerHasAgency st))
+  => ToJSON (PeerHasAgency pr st) where
+  toJSON (ClientAgency cha) =
+    Aeson.object [ "kind" .= String "ClientAgency"
+                 , "agency" .= show cha
+                 ]
+  toJSON (ServerAgency sha) =
+    Aeson.object [ "kind" .= String "ServerAgency"
+                 , "agency" .= show sha
+                 ]
+
+instance ToJSON ProtocolLimitFailure where
+  toJSON (ExceededSizeLimit tok) =
+    Aeson.object [ "kind" .= String "ProtocolLimitFailure"
+                 , "agency" .= toJSON tok
+                 ]
+  toJSON (ExceededTimeLimit tok) =
+    Aeson.object [ "kind" .= String "ProtocolLimitFailure"
+                 , "agency" .= toJSON tok
+                 ]
+
+instance Show vNumber => ToJSON (RefuseReason vNumber) where
+  toJSON (VersionMismatch vNumber tags) =
+    Aeson.object [ "kind" .= String "VersionMismatch"
+                 , "versionNumber" .= show vNumber
+                 , "tags" .= Aeson.toJSONList tags
+                 ]
+  toJSON (HandshakeDecodeError vNumber t) =
+    Aeson.object [ "kind" .= String "HandshakeDecodeError"
+                 , "versionNumber" .= show vNumber
+                 , "text" .= String (pack $ show t)
+                 ]
+  toJSON (Refused vNumber t) =
+    Aeson.object [ "kind" .= String "Refused"
+                 , "versionNumber" .= show vNumber
+                 , "text" .= String (pack $ show t)
+                 ]
+
+instance Show vNumber => ToJSON (HandshakeProtocolError vNumber) where
+  toJSON (HandshakeError rvNumber) =
+    Aeson.object [ "kind" .= String "HandshakeError"
+                 , "reason" .= toJSON rvNumber
+                 ]
+  toJSON (NotRecognisedVersion vNumber) =
+    Aeson.object [ "kind" .= String "NotRecognisedVersion"
+                 , "versionNumber" .= show vNumber
+                 ]
+  toJSON (InvalidServerSelection vNumber t) =
+    Aeson.object [ "kind" .= String "InvalidServerSelection"
+                 , "versionNumber" .= show vNumber
+                 , "reason" .= String (pack $ show t)
+                 ]
+
+instance Show vNumber => ToJSON (HandshakeException vNumber) where
+  toJSON (HandshakeProtocolLimit plf) =
+    Aeson.object [ "kind" .= String "HandshakeProtocolLimit"
+                 , "handshakeProtocolLimit" .= toJSON plf
+                 ]
+  toJSON (HandshakeProtocolError err) =
+    Aeson.object [ "kind" .= String "HandshakeProtocolError"
+                 , "reason" .= show err
+                 ]
+
+instance ToJSON NodeToNodeVersion where
+  toJSON x = String (pack $ show x)
+
+instance ToJSON NodeToClientVersion where
+  toJSON x = String (pack $ show x)
+
+instance ToJSON NodeToNodeVersionData where
+  toJSON (NodeToNodeVersionData (NetworkMagic m) dm) =
+    Aeson.object [ "kind" .= String "NodeToNodeVersionData"
+                 , "networkMagic" .= toJSON m
+                 , "diffusionMode" .= show dm
+                 ]
+
+instance ToJSON NodeToClientVersionData where
+  toJSON (NodeToClientVersionData (NetworkMagic m)) =
+    Aeson.object [ "kind" .= String "NodeToClientVersionData"
+                 , "networkMagic" .= toJSON m
+                 ]
+
+instance ToJSON MiniProtocolNum where
+  toJSON (MiniProtocolNum w) =
+    Aeson.object [ "kind" .= String "MiniProtocolNum"
+                 , "num" .= w
+                 ]
+
+instance ToJSON addr => ToJSON (OperationResult addr) where
+  toJSON (UnsupportedState as) =
+    Aeson.object [ "kind" .= String "UnsupportedState"
+                 , "unsupportedState" .= toJSON as
+                 ]
+  toJSON (OperationSuccess addr) =
+    Aeson.object [ "kind" .= String "OperationSuccess"
+                 , "operationSuccess" .= toJSON addr
+                 ]
+
+instance ToJSON RemoteSt where
+  toJSON = String . pack . show
