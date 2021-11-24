@@ -901,20 +901,20 @@ instance ToJSON peerAddr => ToJSON (ConnectionId peerAddr) where
                  , "remoteAddress" .= toJSON remoteAddress
                  ]
 
-instance Aeson.ToJSON ConnectionManagerCounters where
-  toJSON ConnectionManagerCounters { prunableConns
-                                   , duplexConns
-                                   , uniConns
-                                   , incomingConns
-                                   , outgoingConns
-                                   } =
-    Aeson.object [ "kind"           .= String "ConnectionManagerCounters"
-                 , "prunable"       .= toJSON prunableConns
-                 , "duplex"         .= toJSON duplexConns
-                 , "unidirectional" .= toJSON uniConns
-                 , "incoming"       .= incomingConns
-                 , "outgoing"       .= outgoingConns
-                 ]
+instance ToJSON ConnectionManagerCounters where
+    toJSON ConnectionManagerCounters { fullDuplexConns
+                                     , duplexConns
+                                     , unidirectionalConns
+                                     , inboundConns
+                                     , outboundConns
+                                     } =
+      Aeson.object [ "kind"           .= String "ConnectionManagerCounters"
+                   , "fullDuplex"     .= toJSON fullDuplexConns
+                   , "duplex"         .= toJSON duplexConns
+                   , "unidirectional" .= toJSON unidirectionalConns
+                   , "inbound"        .= inboundConns
+                   , "outbound"       .= outboundConns
+                   ]
 
 instance ToObject (FetchDecision [Point header]) where
   toObject _verb (Left decline) =
@@ -1285,6 +1285,9 @@ instance ToObject peer => ToObject (WithMuxBearer peer MuxTrace) where
              , "event" .= show ev ]
 
 instance Aeson.ToJSONKey RelayAccessPoint where
+
+instance Aeson.ToJSON IP where
+    toJSON ip = String (pack . show $ ip)
 
 instance Show exception => ToObject (TraceLocalRootPeers RemoteAddress exception) where
   toObject _verb (TraceLocalRootDomains groups) =
@@ -1821,10 +1824,12 @@ instance (Show addr, Show versionNumber, Show agreedOptions, ToObject addr,
           , "remoteAddress" .= toObject verb remoteAddress
           , "connectionState" .= toJSON connState
           ]
-      TrPruneConnections peers ->
+      TrPruneConnections pruningSet numberToPrune choiceSet->
         mkObject
           [ "kind" .= String "PruneConnections"
-          , "peers" .= toJSON (toObject verb `map` peers)
+          , "pruningSet" .= toJSON (toObject verb `Set.map` pruningSet)
+          , "numberToPrune" .= numberToPrune
+          , "choiceSet" .= toJSON (toObject verb `Set.map` choiceSet)
           ]
       TrConnectionCleanup connId ->
         mkObject
