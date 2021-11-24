@@ -35,10 +35,10 @@ import           Network.TypedProtocol.Core (ClientHasAgency,
 import           Network.Mux (MuxTrace (..), WithMuxBearer (..), MiniProtocolNum (..))
 import           Network.Socket (SockAddr (..))
 
+import           Cardano.Tracing.ConvertTxId (ConvertTxId)
 import           Cardano.Tracing.OrphanInstances.Common
 import           Cardano.Tracing.Render
 import           Cardano.Node.Configuration.TopologyP2P (UseLedger (..))
-import           Cardano.Node.Queries (ConvertTxId)
 
 import           Ouroboros.Consensus.Block (ConvertRawHash (..), Header, getHeader)
 import           Ouroboros.Consensus.Ledger.Query (BlockQuery, Query)
@@ -1286,6 +1286,9 @@ instance ToObject peer => ToObject (WithMuxBearer peer MuxTrace) where
 
 instance Aeson.ToJSONKey RelayAccessPoint where
 
+instance Aeson.ToJSON IP where
+    toJSON ip = String (pack . show $ ip)
+
 instance Show exception => ToObject (TraceLocalRootPeers RemoteAddress exception) where
   toObject _verb (TraceLocalRootDomains groups) =
     mkObject [ "kind" .= String "LocalRootDomains"
@@ -1821,10 +1824,12 @@ instance (Show addr, Show versionNumber, Show agreedOptions, ToObject addr,
           , "remoteAddress" .= toObject verb remoteAddress
           , "connectionState" .= toJSON connState
           ]
-      TrPruneConnections peers ->
+      TrPruneConnections pruningSet numberToPrune choiceSet->
         mkObject
           [ "kind" .= String "PruneConnections"
-          , "peers" .= toJSON (toObject verb `map` peers)
+          , "pruningSet" .= toJSON (toObject verb `Set.map` pruningSet)
+          , "numberToPrune" .= numberToPrune
+          , "choiceSet" .= toJSON (toObject verb `Set.map` choiceSet)
           ]
       TrConnectionCleanup connId ->
         mkObject
