@@ -378,10 +378,9 @@ runTxBuildRaw (AnyCardanoEra era)
     firstExceptT ShelleyTxCmdWriteFileError . newExceptT $
       writeFileTextEnvelope fpath Nothing txBody
 
-queryErrorToShelleyTxCmdError :: QueryError ShelleyTxCmdError -> ShelleyTxCmdError
-queryErrorToShelleyTxCmdError (QueryErrorOf e) = e
-queryErrorToShelleyTxCmdError (QueryErrorAcquireFailure a) = ShelleyTxCmdAcquireFailure a
-queryErrorToShelleyTxCmdError (QueryErrorUnsupportedVersion minNtcVersion mtcVersion) = ShelleyTxCmdUnsupportedVersion minNtcVersion mtcVersion
+mapQueryError :: QueryError -> ShelleyTxCmdError
+mapQueryError (QueryErrorAcquireFailure a) = ShelleyTxCmdAcquireFailure a
+mapQueryError (QueryErrorUnsupportedVersion minNtcVersion mtcVersion) = ShelleyTxCmdUnsupportedVersion minNtcVersion mtcVersion
 
 runTxBuild
   :: AnyCardanoEra
@@ -452,32 +451,37 @@ runTxBuild (AnyCardanoEra era) (AnyConsensusModeParams cModeParams) networkId mS
                      left (ShelleyTxCmdEraConsensusModeMismatchTxBalance outBody
                             (AnyConsensusMode CardanoMode) (AnyCardanoEra era))
 
-      (utxo, pparams, eraHistory, systemStart, stakePools) <-
-        newExceptT . fmap (join . first queryErrorToShelleyTxCmdError) $
-          executeLocalStateQueryExpr localNodeConnInfo Nothing $ runExceptT $ runExceptT $ do
+      (utxo, pparams, eraHistory, systemStart, stakePools) <- ExceptT $
+          executeLocalStateQueryExpr localNodeConnInfo Nothing mapQueryError $ runExceptT $ do
             unless (null txinsc) $ do
-              collateralUtxo <- firstExceptT ShelleyTxCmdTxSubmitErrorEraMismatch . newExceptT . ExceptT $ queryExpr
+              collateralUtxoResult <- firstExceptT mapQueryError . ExceptT $ queryExpr
                 $ QueryInEra eInMode
                 $ QueryInShelleyBasedEra sbe (QueryUTxO . QueryUTxOByTxIn $ Set.fromList txinsc)
+              collateralUtxo <- hoistEither (first ShelleyTxCmdTxSubmitErrorEraMismatch collateralUtxoResult)
               txinsExist txinsc collateralUtxo
               notScriptLockedTxIns collateralUtxo
 
-
-            utxo <- firstExceptT ShelleyTxCmdTxSubmitErrorEraMismatch . newExceptT . ExceptT $ queryExpr
+            utxoResult <- firstExceptT mapQueryError . ExceptT $ queryExpr
               $ QueryInEra eInMode $ QueryInShelleyBasedEra sbe
               $ QueryUTxO (QueryUTxOByTxIn (Set.fromList onlyInputs))
 
+            utxo <- hoistEither (first ShelleyTxCmdTxSubmitErrorEraMismatch utxoResult)
+
             txinsExist onlyInputs utxo
 
-            pparams <- firstExceptT ShelleyTxCmdTxSubmitErrorEraMismatch . newExceptT . ExceptT . queryExpr
+            pparamsResult <- firstExceptT mapQueryError . ExceptT . queryExpr
               $ QueryInEra eInMode $ QueryInShelleyBasedEra sbe QueryProtocolParameters
 
-            eraHistory <- lift . ExceptT $ queryExpr $ QueryEraHistory CardanoModeIsMultiEra
+            pparams <- hoistEither (first ShelleyTxCmdTxSubmitErrorEraMismatch pparamsResult)
 
-            systemStart <- lift . ExceptT $ queryExpr QuerySystemStart
+            eraHistory <- firstExceptT mapQueryError . ExceptT $ queryExpr $ QueryEraHistory CardanoModeIsMultiEra
 
-            stakePools <- firstExceptT ShelleyTxCmdTxSubmitErrorEraMismatch . ExceptT . ExceptT $
+            systemStart <- firstExceptT mapQueryError . ExceptT $ queryExpr QuerySystemStart
+
+            stakePoolsResult <- firstExceptT mapQueryError . ExceptT $
               queryExpr . QueryInEra eInMode . QueryInShelleyBasedEra sbe $ QueryStakePools
+
+            stakePools <- hoistEither (first ShelleyTxCmdTxSubmitErrorEraMismatch stakePoolsResult)
 
             return (utxo, pparams, eraHistory, systemStart, stakePools)
 

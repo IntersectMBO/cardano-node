@@ -305,10 +305,9 @@ obtainLedgerEraClassConstraints ShelleyBasedEraAlonzo  f = f
 testScriptContextToScriptData :: MyCustomRedeemer -> ScriptData
 testScriptContextToScriptData = fromPlutusData . PlutusTx.builtinDataToData . toBuiltinData
 
-queryErrorToScriptContextError :: QueryError ScriptContextError -> ScriptContextError
-queryErrorToScriptContextError (QueryErrorOf e) = e
-queryErrorToScriptContextError (QueryErrorAcquireFailure a) = AcquireFail a
-queryErrorToScriptContextError (QueryErrorUnsupportedVersion minNtcVersion mtcVersion) = ScriptContextUnsupportedVersion minNtcVersion mtcVersion
+mapQueryError :: QueryError -> ScriptContextError
+mapQueryError (QueryErrorAcquireFailure a) = AcquireFail a
+mapQueryError (QueryErrorUnsupportedVersion minNtcVersion mtcVersion) = ScriptContextUnsupportedVersion minNtcVersion mtcVersion
 
 readCustomRedeemerFromTx
   :: FilePath
@@ -333,7 +332,7 @@ readCustomRedeemerFromTx fp (AnyConsensusModeParams cModeParams) network = do
                    (ConsensusModeMismatch (AnyConsensusMode CardanoMode) (AnyCardanoEra cEra))
                    $ toEraInMode cEra CardanoMode
 
-      eResult <- liftIO $ executeLocalStateQueryExpr localNodeConnInfo Nothing $ runExceptT $ do
+      eResult <- liftIO $ executeLocalStateQueryExpr localNodeConnInfo Nothing Prelude.id $ runExceptT $ do
         (EraHistory _ interpreter) <- ExceptT $ queryExpr $ QueryEraHistory CardanoModeIsMultiEra
         mSystemStart <- ExceptT $ maybeQueryExpr QuerySystemStart
         let eInfo = hoistEpochInfo (first TransactionValidityIntervalError . runExcept)
@@ -341,7 +340,7 @@ readCustomRedeemerFromTx fp (AnyConsensusModeParams cModeParams) network = do
         ppResult <- ExceptT $ queryExpr $ QueryInEra eInMode $ QueryInShelleyBasedEra sbe QueryProtocolParameters
         return (eInfo, mSystemStart, ppResult)
 
-      (eInfo, mSystemStart, ePParams) <- firstExceptT queryErrorToScriptContextError $ hoistEither eResult
+      (eInfo, mSystemStart, ePParams) <- firstExceptT mapQueryError $ hoistEither eResult
       pparams <- firstExceptT EraMismatch $ hoistEither ePParams
       sStart <- hoistMaybe NoSystemStartTimeError mSystemStart
 

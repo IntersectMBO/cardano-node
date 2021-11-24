@@ -59,9 +59,10 @@ executeLocalStateQueryExpr
   :: forall e mode a .
      LocalNodeConnectInfo mode
   -> Maybe ChainPoint
-  -> LocalStateQueryExpr (BlockInMode mode) ChainPoint (QueryInMode mode) () IO (Either (QueryError e) a)
-  -> IO (Either (QueryError e) a)
-executeLocalStateQueryExpr connectInfo mpoint f = do
+  -> (QueryError -> e)
+  -> LocalStateQueryExpr (BlockInMode mode) ChainPoint (QueryInMode mode) () IO (Either e a)
+  -> IO (Either e a)
+executeLocalStateQueryExpr connectInfo mpoint mapQueryError f = do
   tmvResultLocalState <- newEmptyTMVarIO
   let waitResult = readTMVar tmvResultLocalState
 
@@ -70,7 +71,7 @@ executeLocalStateQueryExpr connectInfo mpoint f = do
     (\ntcVersion ->
       LocalNodeClientProtocols
       { localChainSyncClient    = NoLocalChainSyncClient
-      , localStateQueryClient   = Just $ setupLocalStateQueryExpr waitResult mpoint tmvResultLocalState ntcVersion f
+      , localStateQueryClient   = Just $ setupLocalStateQueryExpr waitResult mpoint tmvResultLocalState ntcVersion mapQueryError f
       , localTxSubmissionClient = Nothing
       }
     )
@@ -84,11 +85,12 @@ setupLocalStateQueryExpr ::
      -- Protocols must wait until 'waitDone' returns because premature exit will
      -- cause other incomplete protocols to abort which may lead to deadlock.
   -> Maybe ChainPoint
-  -> TMVar (Either (QueryError e) a)
+  -> TMVar (Either e a)
   -> NodeToClientVersion
-  -> LocalStateQueryExpr (BlockInMode mode) ChainPoint (QueryInMode mode) () IO (Either (QueryError e) a)
+  -> (QueryError -> e)
+  -> LocalStateQueryExpr (BlockInMode mode) ChainPoint (QueryInMode mode) () IO (Either e a)
   -> Net.Query.LocalStateQueryClient (BlockInMode mode) ChainPoint (QueryInMode mode) IO ()
-setupLocalStateQueryExpr waitDone mPointVar' resultVar' ntcVersion f =
+setupLocalStateQueryExpr waitDone mPointVar' resultVar' ntcVersion mapQueryError f =
   LocalStateQueryClient . pure . Net.Query.SendMsgAcquire mPointVar' $
     Net.Query.ClientStAcquiring
     { Net.Query.recvMsgAcquired = runContT (runReaderT (runLocalStateQueryExpr f) ntcVersion) $ \result -> do
@@ -97,18 +99,20 @@ setupLocalStateQueryExpr waitDone mPointVar' resultVar' ntcVersion f =
         pure $ Net.Query.SendMsgRelease $ pure $ Net.Query.SendMsgDone ()
 
     , Net.Query.recvMsgFailure = \failure -> do
-        atomically $ putTMVar resultVar' (Left (QueryErrorAcquireFailure failure))
+        atomically $ putTMVar resultVar' (Left (mapQueryError (QueryErrorAcquireFailure failure)))
         void $ atomically waitDone -- Wait for all protocols to complete before exiting.
         pure $ Net.Query.SendMsgDone ()
     }
 
 -- | Get the node server's Node-to-Client version.
-getNtcVersion :: LocalStateQueryExpr block point (QueryInMode mode) r IO (Either (QueryError e) NodeToClientVersion)
-getNtcVersion =  LocalStateQueryExpr . ReaderT $ pure . Right
+getNtcVersion :: LocalStateQueryExpr block point (QueryInMode mode) r IO (Either QueryError NodeToClientVersion)
+getNtcVersion =  LocalStateQueryExpr $ do
+  v <- ask
+  pure $ Right v
 
 -- | Lift a query value into a monadic query expression.
 -- Use 'queryExpr' in a do block to construct monadic local state queries.
-queryExpr :: QueryInMode mode a -> LocalStateQueryExpr block point (QueryInMode mode) r IO (Either (QueryError e) a)
+queryExpr :: QueryInMode mode a -> LocalStateQueryExpr block point (QueryInMode mode) r IO (Either QueryError a)
 queryExpr q = runExceptT $ do
   let minNtcVersion = ntcVersionOf q
   ntcVersion <- ExceptT getNtcVersion
@@ -124,7 +128,7 @@ queryExpr q = runExceptT $ do
 -- | Lift a query value into a monadic query expression returning Maybe of a result.
 -- This is the same as 'queryExpr' except if the query is not supported by the server, will return Nothing instead
 -- of throwing an error.
-maybeQueryExpr :: QueryInMode mode a -> LocalStateQueryExpr block point (QueryInMode mode) r IO (Either (QueryError e) (Maybe a))
+maybeQueryExpr :: QueryInMode mode a -> LocalStateQueryExpr block point (QueryInMode mode) r IO (Either QueryError (Maybe a))
 maybeQueryExpr q = runExceptT $ catchE (Just <$> ExceptT (queryExpr q)) $ \e ->
   case e of
     QueryErrorUnsupportedVersion _ _ -> return Nothing
@@ -133,7 +137,7 @@ maybeQueryExpr q = runExceptT $ catchE (Just <$> ExceptT (queryExpr q)) $ \e ->
 -- | A monadic expresion that determines what era the node is in.
 determineEraExpr ::
      ConsensusModeParams mode
-  -> LocalStateQueryExpr block point (QueryInMode mode) r IO (Either (QueryError a) AnyCardanoEra)
+  -> LocalStateQueryExpr block point (QueryInMode mode) r IO (Either QueryError AnyCardanoEra)
 determineEraExpr cModeParams = runExceptT $
   case consensusModeOnly cModeParams of
     ByronMode -> return $ AnyCardanoEra ByronEra

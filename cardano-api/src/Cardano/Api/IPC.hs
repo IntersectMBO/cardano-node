@@ -75,6 +75,7 @@ module Cardano.Api.IPC (
 
 import           Prelude
 
+import           Data.Bifunctor (first)
 import           Data.Void (Void)
 
 import qualified Data.ByteString.Lazy as LBS
@@ -165,10 +166,9 @@ data LocalNodeConnectInfo mode =
 
 type MinNodeToClientVersion = NodeToClientVersion
 
-data QueryError a
+data QueryError
   = QueryErrorAcquireFailure !Net.Query.AcquireFailure
   | QueryErrorUnsupportedVersion !MinNodeToClientVersion !NodeToClientVersion
-  | QueryErrorOf a
   deriving (Eq, Show)
 
 localConsensusMode :: LocalNodeConnectInfo mode -> ConsensusMode mode
@@ -489,9 +489,10 @@ convLocalStateQueryClient mode =
 queryNodeLocalState :: forall e mode result.
                        LocalNodeConnectInfo mode
                     -> Maybe ChainPoint
+                    -> (QueryError -> e)
                     -> QueryInMode mode result
-                    -> IO (Either (QueryError e) result)
-queryNodeLocalState connctInfo mpoint query = do
+                    -> IO (Either e result)
+queryNodeLocalState connctInfo mpoint mapQueryError query = do
     resultVar <- newEmptyTMVarIO
     connectToLocalNode
       connctInfo
@@ -500,11 +501,11 @@ queryNodeLocalState connctInfo mpoint query = do
       , localStateQueryClient   = Just (singleQuery mpoint resultVar)
       , localTxSubmissionClient = Nothing
       }
-    atomically (takeTMVar resultVar)
+    atomically (first mapQueryError <$> takeTMVar resultVar)
   where
     singleQuery
       :: Maybe ChainPoint
-      -> TMVar (Either (QueryError e) result)
+      -> TMVar (Either QueryError result)
       -> Net.Query.LocalStateQueryClient (BlockInMode mode) ChainPoint
                                          (QueryInMode mode) IO ()
     singleQuery mPointVar' resultVar' =
