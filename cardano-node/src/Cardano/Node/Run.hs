@@ -58,10 +58,10 @@ import           Cardano.Node.Configuration.POM (NodeConfiguration (..),
                    PartialNodeConfiguration (..), SomeNetworkP2PMode (..),
                    defaultPartialNodeConfiguration, makeNodeConfiguration,
                    parseNodeConfigurationFP)
+import           Cardano.Node.Queries (HasKESInfo (..), HasKESMetricsData (..))
 import           Cardano.Node.Types
 import           Cardano.Tracing.Config (TraceOptions (..), TraceSelection (..))
 import           Cardano.Tracing.Constraints (TraceConstraints)
-import           Cardano.Tracing.Metrics (HasKESInfo (..), HasKESMetricsData (..))
 
 import qualified Ouroboros.Consensus.Config as Consensus
 import           Ouroboros.Consensus.Config.SupportsNode (ConfigSupportsNode (..), getNetworkMagic)
