@@ -61,7 +61,7 @@ import           Cardano.Benchmarking.GeneratorTx.SubmissionClient
 import           Cardano.Benchmarking.GeneratorTx.Tx
 import           Cardano.Benchmarking.Tracer
 import           Cardano.Benchmarking.Types
-import           Cardano.Benchmarking.Wallet
+import           Cardano.Benchmarking.Wallet (WalletScript)
 
 import           Cardano.Ledger.Shelley.API (ShelleyGenesis)
 import           Ouroboros.Network.Protocol.LocalTxSubmission.Type (SubmitResult (..))

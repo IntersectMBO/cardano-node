@@ -40,12 +40,12 @@
       , "submitMode": { "LocalSocket": [] }
       , "payMode": { "PayToScript": [ "bench/script/sum1ToN.plutus", 3] }
     },
-    { "runBenchmark": "spendPlutus", "txCount": 500, "tps": 10
+    { "runBenchmark": "spendPlutus", "txCount": 10, "tps": 10
       , "submitMode": { "NodeToNode": [] }
       , "spendMode": {
 	  "SpendScript": [
 	      "bench/script/sum1ToN.plutus",
-	      { "memory": 700000000, "steps": 700000000 },
+              { "StaticScriptBudget": { "memory": 700000000, "steps": 700000000 } },
               3,
 	      6
 	  ]

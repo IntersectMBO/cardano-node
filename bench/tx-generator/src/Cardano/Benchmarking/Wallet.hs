@@ -12,7 +12,6 @@ import           Control.Concurrent.MVar
 import           Cardano.Api
 
 import           Cardano.Benchmarking.FundSet as FundSet
-import           Cardano.Benchmarking.GeneratorTx.Tx as Tx hiding (Fund)
 import           Cardano.Benchmarking.Types (NumberOfTxs (..))
 
 type WalletRef = MVar Wallet
@@ -125,7 +124,7 @@ mkUTxOVariant variant networkId key validity values
     , newFunds
     )
  where
-  mkTxOut v = TxOut (Tx.keyAddress @ era networkId key) (mkTxOutValueAdaOnly v) TxOutDatumNone
+  mkTxOut v = TxOut (keyAddress @ era networkId key) (mkTxOutValueAdaOnly v) TxOutDatumNone
 
   newFunds txId = zipWith (mkNewFund txId) [TxIx 0 ..] values
 
@@ -218,3 +217,17 @@ limitSteps ::
   -> WalletScript era
   -> WalletScript era
 limitSteps = undefined
+
+keyAddress :: forall era. IsShelleyBasedEra era => NetworkId -> SigningKey PaymentKey -> AddressInEra era
+keyAddress networkId k
+  = makeShelleyAddressInEra
+      networkId
+      (PaymentCredentialByKey $ verificationKeyHash $ getVerificationKey k)
+      NoStakeAddress
+
+mkTxOutValueAdaOnly :: forall era . IsShelleyBasedEra era => Lovelace -> TxOutValue era
+mkTxOutValueAdaOnly l = case shelleyBasedEra @ era of
+  ShelleyBasedEraShelley -> TxOutAdaOnly AdaOnlyInShelleyEra l
+  ShelleyBasedEraAllegra -> TxOutAdaOnly AdaOnlyInAllegraEra l
+  ShelleyBasedEraMary    -> TxOutValue MultiAssetInMaryEra $ lovelaceToValue l
+  ShelleyBasedEraAlonzo  -> TxOutValue MultiAssetInAlonzoEra $ lovelaceToValue l

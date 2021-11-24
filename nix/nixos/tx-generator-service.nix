@@ -30,7 +30,8 @@ let
     ++
     ( let
         ## hard-code mainnet cost model
-        scriptFees = executionMemory * 577 / 10000 + executionSteps  * 721 / 10000000;
+        ## scriptFees = executionMemory * 577 / 10000 + executionSteps  * 721 / 10000000;
+        scriptFees = 5000000;
         collateralPercentage = 200;
 
         totalFee = if plutusMode
@@ -44,6 +45,11 @@ let
           then createChangeRecursive cfg minValuePerInput (tx_count * inputs_per_tx)
         else
           [
+          # this is a hack !
+          # PayToCollateral will create outputs which are interally tagged as collateral and not available for splitting etc.
+          # If PayToCollateral returns a change value that value will also be tagged as collateral and lost.
+          # Therefor this first creates a matching regular output
+          # and turns that into a collateral right in the next step.
           { createChange = safeCollateral + tx_fee; count = 1;
             submitMode.LocalSocket = []; payMode.PayToAddr = [];
           }
@@ -64,7 +70,12 @@ let
         spendMode = if plutusMode
                     then { SpendScript = [
                              (plutusScript cfg)
-                             {memory = executionMemory; steps = executionSteps; }
+                             ( if debugMode
+                               then { CheckScriptBudget = { memory = executionMemory; steps = executionSteps; }; }
+                               else if plutusAutoCosts
+                               then { PreExecuteScript = []; }
+                               else { StaticScriptBudget = { memory = executionMemory; steps = executionSteps; }; }
+                             )
                              plutusData
                              plutusRedeemer
                            ]; }
@@ -142,10 +153,11 @@ in pkgs.commonLib.defServiceModule
 
         ## TODO: the defaults should be externalised to a file.
         ##
-        plutusMode      = opt bool false     "Whether to benchmark Plutus scripts";
-        plutusScript    = opt str  "sum.plutus" "Path to the Plutus script";
+        plutusMode      = opt bool false     "Whether to benchmark Plutus scripts.";
+        plutusScript    = opt str  "sum.plutus" "Path to the Plutus script.";
         plutusData      = opt int          3 "Data passed to the Plutus script (for now only an int).";
         plutusRedeemer  = opt int          6 "Redeemer data passed to the Plutus script (for now only an int).";
+        plutusAutoCosts = opt bool false     "Whether to determine Plutus budget by pre exection of the script";
         executionMemory = opt int    1000000 "Max memory available for the Plutus script";
         executionSteps  = opt int  700000000 "Max execution steps available for the Plutus script";
 

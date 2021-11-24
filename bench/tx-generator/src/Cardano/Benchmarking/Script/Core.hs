@@ -17,6 +17,7 @@ where
 
 import           Prelude
 import           Data.Ratio ((%))
+import qualified Data.Text as Text (unpack)
 import           Control.Monad
 import           Control.Monad.Trans.Except
 import           Control.Monad.IO.Class
@@ -50,7 +51,7 @@ import           Cardano.Benchmarking.Tracer as Core
 import           Cardano.Benchmarking.Types as Core
                    (NumberOfInputsPerTx(..), NumberOfOutputsPerTx(..),NumberOfTxs(..), SubmissionErrorPolicy(..)
                    , TPSRate, TxAdditionalSize(..))
-import           Cardano.Benchmarking.Wallet as Wallet
+import           Cardano.Benchmarking.Wallet as Wallet hiding (keyAddress)
 import           Cardano.Benchmarking.ListBufferedSelector
 
 import           Cardano.Benchmarking.Script.Env
@@ -316,8 +317,8 @@ runBenchmark :: SubmitMode -> SpendMode -> ThreadName -> NumberOfTxs -> TPSRate 
 runBenchmark submitMode spendMode threadName txCount tps
   = case spendMode of
       SpendOutput -> withEra $ runBenchmarkInEra submitMode threadName txCount tps
-      SpendScript scriptFile executionUnits scriptData scriptRedeemer
-        -> runPlutusBenchmark submitMode scriptFile executionUnits scriptData scriptRedeemer threadName txCount tps
+      SpendScript scriptFile scriptBudget scriptData scriptRedeemer
+        -> runPlutusBenchmark submitMode scriptFile scriptBudget scriptData scriptRedeemer threadName txCount tps
 
 
 runBenchmarkInEra :: forall era. IsShelleyBasedEra era => SubmitMode -> ThreadName -> NumberOfTxs -> TPSRate -> AsType era -> ActionM ()
@@ -377,8 +378,8 @@ runBenchmarkInEra submitMode (ThreadName threadName) txCount tps era = do
         Right ctl -> setName (ThreadName threadName) ctl
     _otherwise -> runWalletScriptInMode submitMode $ walletScript $ FundSet.Target "alternate-submit-mode"
 
-runPlutusBenchmark :: SubmitMode -> FilePath -> ExecutionUnits -> ScriptData -> ScriptRedeemer -> ThreadName -> NumberOfTxs -> TPSRate -> ActionM ()
-runPlutusBenchmark submitMode scriptFile executionUnits scriptData scriptRedeemer (ThreadName threadName) txCount tps = do
+runPlutusBenchmark :: SubmitMode -> FilePath -> ScriptBudget -> ScriptData -> ScriptRedeemer -> ThreadName -> NumberOfTxs -> TPSRate -> ActionM ()
+runPlutusBenchmark submitMode scriptFile scriptBudget scriptData scriptRedeemer (ThreadName threadName) txCount tps = do
   tracers  <- get BenchTracers
   targets  <- getUser TTargets
   (NumberOfInputsPerTx   numInputs) <- getUser TNumberOfInputsPerTx
@@ -391,7 +392,7 @@ runPlutusBenchmark submitMode scriptFile executionUnits scriptData scriptRedeeme
     Nothing -> throwE $ WalletError "unexpected protocolParamPrices == Nothing in runPlutusBenchmark"
   walletRef <- get GlobalWallet
   fundKey <- getName $ KeyName "pass-partout"
-  (PlutusScript PlutusScriptV1 script) <- liftIO $ PlutusExample.readScript scriptFile
+  script <- liftIO $ PlutusExample.readScript scriptFile
   -- This does not remove the collateral from the wallet, i.e. same collateral is uses for everything.
   -- This is fine unless a script ever fails.
   collateral <- liftIO ( askWalletRef walletRef (FundSet.selectCollateral . walletFunds)) >>= \case
@@ -402,7 +403,29 @@ runPlutusBenchmark submitMode scriptFile executionUnits scriptData scriptRedeeme
   metadata <- makeMetadata
   connectClient <- getConnectClient
 
+  let costsPreRun = preExecuteScript protocolParameters script scriptData scriptRedeemer
+  executionUnits <- case (scriptBudget, costsPreRun) of
+    (_, Left err) -> throwE $ WalletError ("Cannot pre-execute Plutus script." ++ err)
+    (StaticScriptBudget exUnits, _)  -> return exUnits
+    (PreExecuteScript, Right preRun) -> return preRun
+    (CheckScriptBudget want, Right preRun)
+      -> if want == preRun then return preRun
+                           else throwE $ WalletError $ concat [
+        " Stated execution Units do not match result of pre execution. "
+      , " Stated value : ", show want
+      , " PreExecution result : ", show preRun
+      ]
+
+  let msg = mconcat [ "Plutus Benchmark :"
+                  , " Script: ", scriptFile
+                  , ", Datum: ", show scriptData
+                  , ", Redeemer: ", show scriptRedeemer
+                  , ", StatedBudget: ", show executionUnits
+                  ]
+  liftIO $ traceWith (btTxSubmit_ tracers) $ TraceBenchTxSubDebug msg
+
   let
+    -- TODO --    Cardano.Ledger.Alonzo.Scripts.txscriptfee :: Prices -> ExUnits -> Coin
     scriptFee = quantityToLovelace $ Quantity $ ceiling f
        where
          f :: Rational
@@ -434,11 +457,12 @@ runPlutusBenchmark submitMode scriptFile executionUnits scriptData scriptRedeeme
     inToOut = FundSet.inputsToOutputsWithFee totalFee numOutputs
 --    inToOut = FundSet.inputsToOutputsWithFee totalFee 1
 
+    PlutusScript PlutusScriptV1 script' = script
     scriptWitness :: ScriptWitness WitCtxTxIn AlonzoEra
     scriptWitness = PlutusScriptWitness
                           PlutusScriptV1InAlonzo
                           PlutusScriptV1
-                          script
+                          script'
                           (ScriptDatumForTxIn scriptData)
                           scriptRedeemer
                           executionUnits
@@ -540,7 +564,8 @@ createChangeScriptFunds submitMode scriptFile scriptData value count = do
 
       tx <- liftIO $ sourceToStoreTransaction (genTx (mkFee fee) TxMetadataNone) fundSource inOut toUTxO fundToStore
       return $ fmap txInModeCardano tx
-  createChangeGeneric submitMode createCoins value count
+    addressMsg =  Text.unpack $ serialiseAddress $ makeShelleyAddress networkId (PaymentCredentialByScript $ hashScript script) NoStakeAddress
+  createChangeGeneric submitMode createCoins addressMsg value count
 
 createChangeInEra :: forall era. IsShelleyBasedEra era => SubmitMode -> Variant -> Lovelace -> Int -> AsType era -> ActionM ()
 createChangeInEra submitMode variant value count _proxy = do
@@ -561,15 +586,17 @@ createChangeInEra submitMode variant value count _proxy = do
 
       (tx :: Either String (Tx era)) <- liftIO $ sourceToStoreTransaction (genTx (mkFee fee) TxMetadataNone) fundSource inOut toUTxO fundToStore
       return $ fmap txInModeCardano tx
-  createChangeGeneric submitMode createCoins value count
+    addressMsg = Text.unpack $ serialiseAddress $ keyAddress @ era networkId fundKey
+  createChangeGeneric submitMode createCoins addressMsg value count
 
 createChangeGeneric ::
      SubmitMode
-  ->(FundSet.FundSource -> [Lovelace] -> ActionM (Either String (TxInMode CardanoMode)))
+  -> (FundSet.FundSource -> [Lovelace] -> ActionM (Either String (TxInMode CardanoMode)))
+  -> String
   -> Lovelace
   -> Int
   -> ActionM ()
-createChangeGeneric submitMode createCoins value count = do
+createChangeGeneric submitMode createCoins addressMsg value count = do
   submitTracer <- btTxSubmit_ <$> get BenchTracers
   fee <- getUser TFee
   walletRef <- get GlobalWallet
@@ -582,6 +609,7 @@ createChangeGeneric submitMode createCoins value count = do
     msg = mconcat [ "createChangeGeneric: outputs: ", show count
                   , " value: ", show value
                   , " number of txs: ", show txCount
+                  , " address: ", addressMsg
                   ]
   liftIO $ traceWith submitTracer $ TraceBenchTxSubDebug msg
   fundSource <- liftIO (mkBufferedSource walletRef txCount txValue PlainOldFund 1) >>= \case
