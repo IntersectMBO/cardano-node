@@ -83,6 +83,7 @@ library
                        Cardano.Tracing.Metrics
                        Cardano.Tracing.Peer
                        Cardano.Tracing.Render
+                       Cardano.Tracing.Startup
                        Cardano.Tracing.Tracers
                        Cardano.Tracing.OrphanInstances.Byron
                        Cardano.Tracing.OrphanInstances.Common
