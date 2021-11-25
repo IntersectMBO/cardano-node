@@ -728,9 +728,9 @@ cdf135Counters slotMapVar cdf1sVar cdf3sVar cdf5sVar slotNo forgeDelay = do
                   else do
                       (cdf1s, cdf3s, cdf5s) <- incCdfs forgeDelay (Pq.size slotMap')
                       STM.writeTVar slotMapVar slotMap'
-                      -- Wait until we have at least 30 samples before we start providing
+                      -- Wait until we have at least 45 samples before we start providing
                       -- cdf estimates.
-                      if Pq.size slotMap >= 30
+                      if Pq.size slotMap >= 45
                          then return (True, cdf1s, cdf3s, cdf5s)
                          else return (True, -1, -1, -1)
 
