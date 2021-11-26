@@ -77,6 +77,16 @@ final: prev: with final;
     inherit (cardanoNodeProject) index-state;
   };
 
+  ghcid = haskell-nix.tool compiler-nix-name "ghcid" {
+    version = "0.8.7";
+    inherit (cardanoNodeProject) index-state;
+  };
+
+  haskell-language-server = haskell-nix.tool compiler-nix-name "haskell-language-server" {
+    version = "latest";
+    inherit (cardanoNodeProject) index-state;
+  };
+
   haskellBuildUtils = prev.haskellBuildUtils.override {
     inherit compiler-nix-name;
     inherit (cardanoNodeProject) index-state;

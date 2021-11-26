@@ -200,6 +200,7 @@ let
       (collectJobs jobs.linux.native.exes)
       (collectJobs jobs.linux.native.shell)
       (collectJobs jobs.linux.native.devopsShell)
+      (collectJobs jobs.linux.native.devShell)
       [ jobs.cardano-node-linux ]
     ]))
     # macOS builds:

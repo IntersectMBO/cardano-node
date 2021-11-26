@@ -62,7 +62,7 @@
 
         inherit (pkgs.commonLib) eachEnv environments;
 
-        devShell = import ./shell.nix { inherit pkgs; };
+        devShell = (import ./shell.nix { inherit pkgs; }).dev;
 
         flake = pkgs.cardanoNodeProject.flake {
           crossPlatforms = p: with p; [
