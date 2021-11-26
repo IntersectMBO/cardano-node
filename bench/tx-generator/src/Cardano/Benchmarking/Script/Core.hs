@@ -643,30 +643,38 @@ createChangeGeneric submitMode createCoins addressMsg value count = do
   chunkList _ [] = []
   chunkList n xs = as : chunkList n bs where (as,bs) = splitAt n xs
 
+{-
+Use a binary search to find a loop counter that maxes out the available per transaction Plutus budget.
+It is intended to be used with the the loop script from cardano-node/plutus-examples/...
+loopScriptFile is the FilePath to the Plutus script that implements the delay loop. (for example in /nix/store/).
+spendAutoScript relies on a particular calling convention of the loop script.
+-}
 spendAutoScript :: SubmitMode -> FilePath -> ThreadName -> NumberOfTxs -> TPSRate -> ActionM ()
-spendAutoScript submitMode scriptFile threadName txCount tps = do
+spendAutoScript submitMode loopScriptFile threadName txCount tps = do
   protocolParameters <- queryProtocolParameters
   budget <- case protocolParamMaxTxExUnits protocolParameters of
     Nothing -> throwE $ ApiError "cannot determine protocolParamMaxTxExUnits"
     Just b -> return b
-  script <- liftIO $ readScript scriptFile
+  script <- liftIO $ readScript loopScriptFile
   let
-    costFn :: Integer -> Either String Bool
-    costFn n = case preExecuteScript protocolParameters script (ScriptDataNumber 0) (ScriptDataNumber $ n + 1000000) of
+    isInLimits :: Integer -> Either String Bool
+    isInLimits n = case preExecuteScript protocolParameters script (ScriptDataNumber 0) (toLoopArgument n) of
       Left err -> Left err
       Right use -> Right $ (executionSteps use <= executionSteps budget) && (executionMemory use <= executionMemory budget)
-
-  redeemer <- case startSearch costFn 0 100000 of
+    searchUpperBound = 100000 -- The highest loop count that is tried. (This is about 50 times the current mainnet limit.)
+  redeemer <- case startSearch isInLimits 0 searchUpperBound of
     Left err -> throwE $ ApiError $ "cannot find fitting redeemer :" ++ err
-    Right x -> return $ ScriptDataNumber $ x + 1000000
-  runPlutusBenchmark submitMode scriptFile PreExecuteScript (ScriptDataNumber 0) redeemer threadName txCount tps
+    Right n -> return $ toLoopArgument n
+  runPlutusBenchmark submitMode loopScriptFile PreExecuteScript (ScriptDataNumber 0) redeemer threadName txCount tps
   where
+    -- This is the hardcoded calling convention of the loop.plutus script.
+    -- To loop n times one has to pass n + 1_000_000 as redeemer.
+    toLoopArgument n = ScriptDataNumber $ n + 1000000
     startSearch f a b = do
-       l <- f a
-       h <- f b
-       if not l || h
-          then Left $ "binary search: bad inital bounds : " ++ show (a,b)
-          else search f a b
+      l <- f a
+      h <- f b
+      if l && not h then search f a b
+        else Left $ "Binary search: Bad inital bounds : " ++ show (a,l,b,h)
     search f a b
       = if a + 1 == b then Right a
            else do
