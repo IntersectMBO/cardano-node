@@ -50,7 +50,7 @@ instance FromJSON InitCooldown where parseJSON = genericParseJSON myJsonOptions
 
 newtype NumberOfInputsPerTx =
   NumberOfInputsPerTx Int
-  deriving newtype (Eq, Ord, Num, Show)
+  deriving newtype (Eq, Ord, Enum, Real, Num, Integral, Show)
 deriving stock instance Generic NumberOfInputsPerTx
 instance ToJSON NumberOfInputsPerTx where
   toJSON     = genericToJSON myJsonOptions

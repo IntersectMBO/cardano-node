@@ -40,9 +40,8 @@
       , "submitMode": { "LocalSocket": [] }
       , "payMode": { "PayToScript": [ "bench/script/loop.plutus", 0] }
     },
-    { "runBenchmark": "spendPlutus", "txCount": 10, "tps": 10
-      , "submitMode": { "NodeToNode": [] }
+    { "runBenchmark": "spendPlutus", "txCount": 100, "tps": 10
+      , "submitMode": { "LocalSocket": [] }
       , "spendMode": { "SpendAutoScript": "bench/script/loop.plutus" }
-    },
-    { "waitBenchmark": "spendPlutus" }
+    }
 ]

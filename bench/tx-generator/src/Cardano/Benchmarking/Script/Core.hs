@@ -22,7 +22,7 @@ import           Control.Monad
 import           Control.Monad.Trans.Except
 import           Control.Monad.IO.Class
 import           Control.Concurrent (threadDelay)
-import           Control.Tracer (traceWith, nullTracer)
+import           Control.Tracer (nullTracer)
 
 import           Ouroboros.Network.Protocol.LocalTxSubmission.Type (SubmitResult (..))
 import           Cardano.Api
@@ -46,8 +46,7 @@ import           Cardano.Benchmarking.OuroborosImports as Core
                    , getGenesis, protocolToNetworkId, protocolToCodecConfig, makeLocalConnectInfo)
 import           Cardano.Benchmarking.PlutusExample as PlutusExample
 import           Cardano.Benchmarking.Tracer as Core
-                   ( TraceBenchTxSubmit (..)
-                   , createTracers, btTxSubmit_, btN2N_, btConnect_, btSubmission2_)
+                   ( createTracers, btTxSubmit_, btN2N_, btConnect_, btSubmission2_)
 import           Cardano.Benchmarking.Types as Core
                    (NumberOfInputsPerTx(..), NumberOfOutputsPerTx(..),NumberOfTxs(..), SubmissionErrorPolicy(..)
                    , TPSRate, TxAdditionalSize(..))
@@ -297,13 +296,11 @@ runWalletScriptInMode submitMode s = do
 
 localSubmitTx :: TxInMode CardanoMode -> ActionM (SubmitResult (TxValidationErrorInMode CardanoMode))
 localSubmitTx tx = do
-  submitTracer <- btTxSubmit_ <$> get BenchTracers
   submit <- getLocalSubmitTx
   ret <- liftIO $ submit tx
   case ret of
     SubmitSuccess -> return ()
-    SubmitFail e -> liftIO $ traceWith submitTracer $
-                      TraceBenchTxSubDebug $ mconcat
+    SubmitFail e -> traceDebug $ concat
                         [ "local submit failed: " , show e , " (" , show tx , ")"]
   return ret
 
@@ -359,7 +356,7 @@ runBenchmarkInEra submitMode (ThreadName threadName) txCount tps era = do
     inToOut :: [Lovelace] -> [Lovelace]
     inToOut = FundSet.inputsToOutputsWithFee fee numOutputs
 
-    txGenerator = genTx protocolParameters TxInsCollateralNone (mkFee fee) metadata (KeyWitness KeyWitnessForSpending)
+    txGenerator = genTx protocolParameters (TxInsCollateralNone, []) (mkFee fee) metadata (KeyWitness KeyWitnessForSpending)
 
     toUTxO :: FundSet.Target -> FundSet.SeqNumber -> ToUTxO era
     toUTxO target seqNumber = Wallet.mkUTxO networkId fundKey (InFlight target seqNumber)
@@ -424,7 +421,7 @@ runPlutusBenchmark submitMode scriptFile scriptBudget scriptData scriptRedeemer 
                   , ", Redeemer: ", show scriptRedeemer
                   , ", StatedBudget: ", show executionUnits
                   ]
-  liftIO $ traceWith (btTxSubmit_ tracers) $ TraceBenchTxSubDebug msg
+  traceDebug msg
 
   let
     -- TODO --    Cardano.Ledger.Alonzo.Scripts.txscriptfee :: Prices -> ExUnits -> Coin
@@ -469,7 +466,7 @@ runPlutusBenchmark submitMode scriptFile scriptBudget scriptData scriptRedeemer 
                           scriptRedeemer
                           executionUnits
 
-    collateral = TxInsCollateral CollateralInAlonzoEra $  map getFundTxIn collateralFunds
+    collateral = (TxInsCollateral CollateralInAlonzoEra $  map getFundTxIn collateralFunds, collateralFunds)
     txGenerator = genTx protocolParameters collateral (mkFee totalFee) metadata (ScriptWitness ScriptWitnessForSpending scriptWitness)
 
     fundToStore = mkWalletFundStore walletRef
@@ -567,7 +564,7 @@ createChangeScriptFunds submitMode scriptFile scriptData value count = do
         fundToStore = mkWalletFundStore walletRef
 
       tx <- liftIO $ sourceToStoreTransaction
-                                      (genTx protocolParameters TxInsCollateralNone
+                                      (genTx protocolParameters (TxInsCollateralNone, [])
                                        (mkFee fee) TxMetadataNone (KeyWitness KeyWitnessForSpending))
                                       fundSource inOut toUTxO fundToStore
       return $ fmap txInModeCardano tx
@@ -593,7 +590,7 @@ createChangeInEra submitMode variant value count _proxy = do
         fundToStore = mkWalletFundStore walletRef
 
       (tx :: Either String (Tx era)) <- liftIO $ sourceToStoreTransaction
-                                                  (genTx protocolParameters TxInsCollateralNone
+                                                  (genTx protocolParameters (TxInsCollateralNone, [])
                                                    (mkFee fee) TxMetadataNone (KeyWitness KeyWitnessForSpending))
                                                   fundSource inOut toUTxO fundToStore
       return $ fmap txInModeCardano tx
@@ -608,7 +605,6 @@ createChangeGeneric ::
   -> Int
   -> ActionM ()
 createChangeGeneric submitMode createCoins addressMsg value count = do
-  submitTracer <- btTxSubmit_ <$> get BenchTracers
   fee <- getUser TFee
   walletRef <- get GlobalWallet
   let
@@ -622,7 +618,7 @@ createChangeGeneric submitMode createCoins addressMsg value count = do
                   , " number of txs: ", show txCount
                   , " address: ", addressMsg
                   ]
-  liftIO $ traceWith submitTracer $ TraceBenchTxSubDebug msg
+  traceDebug msg
   fundSource <- liftIO (mkBufferedSource walletRef txCount txValue PlainOldFund 1) >>= \case
     Right a  -> return a
     Left err -> throwE $ WalletError err
@@ -637,7 +633,7 @@ createChangeGeneric submitMode createCoins addressMsg value count = do
         DumpToFile filePath -> dumpToFile filePath tx
         DiscardTX -> return ()
 
-  liftIO $ traceWith submitTracer $ TraceBenchTxSubDebug "createChangeGeneric: splitting done"
+  traceDebug "createChangeGeneric: splitting done"
  where
   chunkList :: Int -> [a] -> [[a]]
   chunkList _ [] = []
@@ -652,9 +648,17 @@ spendAutoScript relies on a particular calling convention of the loop script.
 spendAutoScript :: SubmitMode -> FilePath -> ThreadName -> NumberOfTxs -> TPSRate -> ActionM ()
 spendAutoScript submitMode loopScriptFile threadName txCount tps = do
   protocolParameters <- queryProtocolParameters
-  budget <- case protocolParamMaxTxExUnits protocolParameters of
-    Nothing -> throwE $ ApiError "cannot determine protocolParamMaxTxExUnits"
+  perTxBudget <- case protocolParamMaxTxExUnits protocolParameters of
+    Nothing -> throwE $ ApiError "Cannot determine protocolParamMaxTxExUnits"
     Just b -> return b
+  traceDebug $ "Plutus auto mode : Available budget per TX: " ++ show perTxBudget
+
+  numInputs <- fromIntegral <$> getUser TNumberOfInputsPerTx
+  let budget = ExecutionUnits
+                 (executionSteps perTxBudget `div` numInputs)
+                 (executionMemory perTxBudget `div` numInputs)
+  traceDebug $ "Plutus auto mode : Available budget per script run: " ++ show budget
+
   script <- liftIO $ readScript loopScriptFile
   let
     isInLimits :: Integer -> Either String Bool
