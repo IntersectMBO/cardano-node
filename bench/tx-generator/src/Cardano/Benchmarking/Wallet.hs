@@ -7,13 +7,14 @@ module Cardano.Benchmarking.Wallet
 where
 import           Prelude
 
+import           Data.Maybe
 import           Control.Concurrent.MVar
 
 import           Cardano.Api
 
 import           Cardano.Benchmarking.FundSet as FundSet
 import           Cardano.Benchmarking.Types (NumberOfTxs (..))
-
+import           Cardano.Api.Shelley (ProtocolParameters)
 type WalletRef = MVar Wallet
 
 type TxGenerator era = [Fund] -> [TxOut CtxTx era] -> Either String (Tx era, TxId)
@@ -132,32 +133,36 @@ mkUTxOVariant variant networkId key validity values
   mkNewFund txId txIx val = Fund $ InAnyCardanoEra (cardanoEra @ era) $ FundInEra {
       _fundTxIn = TxIn txId txIx
     , _fundVal = mkTxOutValueAdaOnly val
-    , _fundSigningKey = key
+    , _fundSigningKey = Just key
     , _fundValidity = validity
     , _fundVariant = variant
     }
 
-genTx :: forall era. IsShelleyBasedEra era
-  => TxFee era
+genTx :: forall era. IsShelleyBasedEra era =>
+     ProtocolParameters
+  -> TxInsCollateral era
+  -> TxFee era
   -> TxMetadataInEra era
+  -> Witness WitCtxTxIn era
   -> TxGenerator era
-genTx fee metadata inFunds outputs
+genTx protocolParameters collateral fee metadata witness inFunds outputs
   = case makeTransactionBody txBodyContent of
       Left err -> error $ show err
-      Right b -> Right ( signShelleyTransaction b (map (WitnessPaymentKey . getFundKey) inFunds)
+      Right b -> Right ( signShelleyTransaction b $ map WitnessPaymentKey allKeys
                        , getTxId b
                        )
  where
+  allKeys = mapMaybe getFundKey inFunds
   txBodyContent = TxBodyContent {
-      txIns = map (\f -> (getFundTxIn f, BuildTxWith $ KeyWitness KeyWitnessForSpending)) inFunds
-    , txInsCollateral = TxInsCollateralNone
+      txIns = map (\f -> (getFundTxIn f, BuildTxWith witness)) inFunds
+    , txInsCollateral = collateral
     , txOuts = outputs
     , txFee = fee
     , txValidityRange = (TxValidityNoLowerBound, upperBound)
     , txMetadata = metadata
     , txAuxScripts = TxAuxScriptsNone
     , txExtraKeyWits = TxExtraKeyWitnessesNone
-    , txProtocolParams = BuildTxWith Nothing
+    , txProtocolParams = BuildTxWith $ Just protocolParameters
     , txWithdrawals = TxWithdrawalsNone
     , txCertificates = TxCertificatesNone
     , txUpdateProposal = TxUpdateProposalNone

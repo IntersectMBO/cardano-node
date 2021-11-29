@@ -22,7 +22,7 @@ import           Cardano.Api as Api
 data FundInEra era = FundInEra {
     _fundTxIn :: !TxIn
   , _fundVal  :: !(TxOutValue era)
-  , _fundSigningKey :: !(SigningKey PaymentKey)
+  , _fundSigningKey :: !(Maybe (SigningKey PaymentKey))
   , _fundVariant :: !Variant
   , _fundValidity :: !Validity
   } deriving (Show)
@@ -55,7 +55,7 @@ getFundVariant (Fund (InAnyCardanoEra _ a)) = _fundVariant a
 getFundTxIn :: Fund -> TxIn
 getFundTxIn (Fund (InAnyCardanoEra _ a)) = _fundTxIn a
 
-getFundKey :: Fund -> SigningKey PaymentKey
+getFundKey :: Fund -> Maybe (SigningKey PaymentKey)
 getFundKey (Fund (InAnyCardanoEra _ a)) = _fundSigningKey a
 
 getFundValidity :: Fund -> Validity

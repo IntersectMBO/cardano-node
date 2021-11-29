@@ -67,13 +67,13 @@ let
         submitMode = if !debugMode
                      then { NodeToNode = []; }
                      else { LocalSocket = []; };
-        spendMode = if plutusMode
+        spendMode = if plutusAutoMode
+                    then { SpendAutoScript = [ plutusScriptFile cfg "loop.plutus" ]; }
+                    else if plutusMode
                     then { SpendScript = [
                              (plutusScript cfg)
                              ( if debugMode
                                then { CheckScriptBudget = { memory = executionMemory; steps = executionSteps; }; }
-                               else if plutusAutoCosts
-                               then { PreExecuteScript = []; }
                                else { StaticScriptBudget = { memory = executionMemory; steps = executionSteps; }; }
                              )
                              plutusData
@@ -118,7 +118,10 @@ let
     [ { createChange = value;
         count = count;
         submitMode.LocalSocket = [];
-        payMode = { PayToScript = [ (plutusScript cfg) cfg.plutusData ]; };
+        payMode = { PayToScript = if cfg.plutusAutoMode
+                                  then [ (plutusScriptFile cfg "loop.plutus") 0 ]
+                                  else [ (plutusScript cfg) cfg.plutusData ];
+                  };
       }
       { delay = cfg.init_cooldown; }
     ];
@@ -131,7 +134,8 @@ let
     then createChangeScriptPlutus cfg value count
     else createChangeRecursive cfg (value * 30 + cfg.tx_fee) (count / 30 + 1) ++ createChangeScriptPlutus cfg value count;
 
-  plutusScript = cfg: "${pkgs.plutus-scripts}/generated-plutus-scripts/${cfg.plutusScript}";
+  plutusScript = cfg: plutusScriptFile cfg cfg.plutusScript;
+  plutusScriptFile = cfg: filename: "${pkgs.plutus-scripts}/generated-plutus-scripts/${filename}";
   
 in pkgs.commonLib.defServiceModule
   (lib: with lib;
@@ -157,11 +161,11 @@ in pkgs.commonLib.defServiceModule
         plutusScript    = opt str  "sum.plutus" "Path to the Plutus script.";
         plutusData      = opt int          3 "Data passed to the Plutus script (for now only an int).";
         plutusRedeemer  = opt int          6 "Redeemer data passed to the Plutus script (for now only an int).";
-        plutusAutoCosts = opt bool false     "Whether to determine Plutus budget by pre exection of the script";
-        executionMemory = opt int    1000000 "Max memory available for the Plutus script";
-        executionSteps  = opt int  700000000 "Max execution steps available for the Plutus script";
+        plutusAutoMode  = opt bool false     "Choose all Plutus settings to max out per Tx script budget.";
+        executionMemory = opt int    1000000 "Max memory available for the Plutus script.";
+        executionSteps  = opt int  700000000 "Max execution steps available for the Plutus script.";
 
-        debugMode       = opt bool false     "Set debug mode: Redirect benchmarkting txs to localhost";
+        debugMode       = opt bool false     "Set debug mode: Redirect benchmarkting txs to localhost.";
 
         tx_count        = opt int 1000       "How many Txs to send, total.";
         add_tx_size     = opt int 100        "Extra Tx payload, in bytes.";

@@ -22,11 +22,10 @@ import           Plutus.V1.Ledger.Contexts (ScriptContext(..), ScriptPurpose(..)
 
 mkUtxoScript ::
      NetworkId
-  -> SigningKey PaymentKey
   -> (FilePath, Script PlutusScriptV1, ScriptData)
   -> Validity
   -> ToUTxO AlonzoEra
-mkUtxoScript networkId key (scriptFile, script, txOutDatum) validity values
+mkUtxoScript networkId (scriptFile, script, txOutDatum) validity values
   = ( map mkTxOut values
     , newFunds
     )
@@ -44,7 +43,7 @@ mkUtxoScript networkId key (scriptFile, script, txOutDatum) validity values
   mkNewFund txId txIx val = Fund $ InAnyCardanoEra AlonzoEra $ FundInEra {
       _fundTxIn = TxIn txId txIx
     , _fundVal = mkTxOutValueAdaOnly val
-    , _fundSigningKey = key
+    , _fundSigningKey = Nothing
     , _fundValidity = validity
     , _fundVariant = PlutusScriptFund scriptFile txOutDatum
     }
@@ -65,37 +64,6 @@ toScriptHash str
   = case deserialiseFromRawBytesHex (AsHash AsScriptData) (BSC.pack str) of
     Just x -> x
     Nothing  -> error $ "Invalid datum hash: " ++ show str
-
-genTxPlutusSpend ::
-     ProtocolParameters
-  -> [Fund]
-  -> ScriptWitness WitCtxTxIn AlonzoEra
-  -> TxFee AlonzoEra
-  -> TxMetadataInEra AlonzoEra
-  -> TxGenerator AlonzoEra
-genTxPlutusSpend protocolParameters collateral scriptWitness fee metadata inFunds outputs
-  = case makeTransactionBody txBodyContent of
-      Left err -> error $ show err
-      Right b -> Right ( signShelleyTransaction b (map (WitnessPaymentKey . getFundKey) inFunds)
-                       , getTxId b
-                       )
- where
-  txBodyContent = TxBodyContent {
-      txIns = map (\f -> (getFundTxIn f, BuildTxWith $ ScriptWitness ScriptWitnessForSpending scriptWitness )) inFunds
-    , txInsCollateral = TxInsCollateral CollateralInAlonzoEra $  map getFundTxIn collateral
-    , txOuts = outputs
-    , txFee = fee
-    , txValidityRange = (TxValidityNoLowerBound, TxValidityNoUpperBound ValidityNoUpperBoundInAlonzoEra)
-    , txMetadata = metadata
-    , txAuxScripts = TxAuxScriptsNone
-    , txExtraKeyWits = TxExtraKeyWitnessesNone
-    , txProtocolParams = BuildTxWith $ Just protocolParameters
-    , txWithdrawals = TxWithdrawalsNone
-    , txCertificates = TxCertificatesNone
-    , txUpdateProposal = TxUpdateProposalNone
-    , txMintValue = TxMintNone
-    , txScriptValidity = TxScriptValidityNone
-    }
 
 preExecuteScript ::
      ProtocolParameters
