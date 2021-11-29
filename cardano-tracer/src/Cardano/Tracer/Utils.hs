@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -34,10 +35,10 @@ import           Cardano.Tracer.Types (AcceptedMetrics, ConnectedNodes,
 -- | Run monadic action in a loop. If there's an exception,
 --   it will re-run the action again, after pause that grows.
 runInLoop
-  :: IO ()
-  -> Maybe Verbosity
-  -> FilePath
-  -> Word
+  :: IO ()           -- ^ An IO-action that can throw an exception.
+  -> Maybe Verbosity -- ^ Tracer's verbosity.
+  -> FilePath        -- ^ Local socket.
+  -> Word            -- ^ Current delay, in seconds.
   -> IO ()
 runInLoop action verb localSocket prevDelay =
   tryJust excludeAsyncExceptions action >>= \case
@@ -54,16 +55,14 @@ runInLoop action verb localSocket prevDelay =
       Just SomeAsyncException {} -> Nothing
       _ -> Just e
 
-  logTrace = traceWith $ showTracing stdoutTracer
-
-  currentDelay =
+  !currentDelay =
     if prevDelay < 60
       then prevDelay * 2
       else 60 -- After we reached 60+ secs delay, repeat an attempt every minute.
 
 showProblemIfAny
-  :: Maybe Verbosity
-  -> IO ()
+  :: Maybe Verbosity -- ^ Tracer's verbosity.
+  -> IO ()           -- ^ An IO-action that can throw an exception.
   -> IO ()
 showProblemIfAny verb action =
   try action >>= \case
@@ -73,8 +72,9 @@ showProblemIfAny verb action =
         _ -> logTrace $ "cardano-tracer, the problem: " <> show e
     Right _ ->
       return ()
- where
-  logTrace = traceWith $ showTracing stdoutTracer
+
+logTrace :: String -> IO ()
+logTrace = traceWith $ showTracing stdoutTracer
 
 connIdToNodeId :: Show addr => ConnectionId addr -> NodeId
 connIdToNodeId ConnectionId{remoteAddress} = NodeId preparedAddress

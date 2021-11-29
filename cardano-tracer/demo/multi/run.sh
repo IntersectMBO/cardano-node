@@ -1,7 +1,7 @@
 #!/bin/sh
 
 if [ $# -eq 0 ]; then
-  echo "Usage: ./run.sh FMODE DELAY, where FMODE is forwarder's mode, Responder or Initiator, and DELAY is a working time in seconds."
+  echo "Usage: ./run.sh FMODE, where FMODE is forwarders' mode, Responder or Initiator."
   exit 1
 fi
 
@@ -43,15 +43,4 @@ then
 else
   TRACER_CONFIG=passive-tracer-config.json
 fi
-./cardano-tracer --config ${TRACER_CONFIG}
-
-#echo "Wait for ${DELAY_IN_SECS} seconds..."
-#sleep ${DELAY_IN_SECS}
-
-#echo "Stop..."
-#kill ${FORWARDER_1_PID}
-#kill ${FORWARDER_2_PID}
-#kill ${FORWARDER_3_PID}
-#kill ${TRACER_PID}
-
-#rm -rf cardano-tracer demo-forwarder
+./cardano-tracer --config ${TRACER_CONFIG} +RTS -M8m -RTS

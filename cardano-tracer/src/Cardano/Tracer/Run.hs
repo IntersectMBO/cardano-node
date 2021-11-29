@@ -7,6 +7,7 @@ module Cardano.Tracer.Run
   ) where
 
 import           Control.Concurrent.Async.Extra (sequenceConcurrently)
+import           Control.Concurrent.Extra (newLock)
 import           Control.Monad (void)
 
 import           Cardano.Tracer.Acceptors.Run (runAcceptors)
@@ -33,8 +34,9 @@ doRunCardanoTracer config protocolsBrake = do
   connectedNodes <- initConnectedNodes
   acceptedMetrics <- initAcceptedMetrics
   dpAskers <- initDataPointAskers
+  currentLogLock <- newLock
   void . sequenceConcurrently $
-    [ runLogsRotator    config
+    [ runLogsRotator    config currentLogLock
     , runMetricsServers config connectedNodes acceptedMetrics
-    , runAcceptors      config connectedNodes acceptedMetrics dpAskers protocolsBrake
+    , runAcceptors      config connectedNodes acceptedMetrics dpAskers protocolsBrake currentLogLock
     ]

@@ -9,5 +9,5 @@ main = defaultMain $
   testGroup "cardano-tracer"
     [ Logs.tests
     , Network.tests
-    -- , Queue.tests
+    , Queue.tests
     ]

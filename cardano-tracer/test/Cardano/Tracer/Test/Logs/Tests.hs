@@ -6,6 +6,7 @@ module Cardano.Tracer.Test.Logs.Tests
 
 import           Control.Concurrent.Async (withAsync)
 import           Control.Monad (filterM)
+import           Data.List.Extra (notNull)
 import qualified Data.List.NonEmpty as NE
 import           Test.Tasty
 import           Test.Tasty.QuickCheck
@@ -145,7 +146,7 @@ checkMultiResults rootDir =
             -- ... with *.log-files inside...
             subDir1list <- listDirectory subDir1
             subDir2list <- listDirectory subDir2
-            let bothNotEmpty = (not $ null subDir1list) && (not $ null subDir2list)
+            let bothNotEmpty = notNull subDir1list && notNull subDir2list
             return $ property bothNotEmpty
         _ -> false "root dir contains not 2 subdirs"
     False -> false "root dir doesn't exist"

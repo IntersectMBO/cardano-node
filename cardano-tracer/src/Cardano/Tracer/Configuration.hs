@@ -6,12 +6,10 @@
 module Cardano.Tracer.Configuration
   ( Address (..)
   , Endpoint (..)
-  , Host
   , LogFormat (..)
   , LogMode (..)
   , LoggingParams (..)
   , Network (..)
-  , Port
   , RotationParams (..)
   , TracerConfig (..)
   , Verbosity (..)
@@ -25,17 +23,14 @@ import           Data.Word (Word16, Word64)
 import           GHC.Generics (Generic)
 import           System.Exit (die)
 
-type Host = String
-type Port = Int
-
 -- | Only local socket is supported, to avoid unauthorized connections.
 newtype Address = LocalSocket FilePath
   deriving (Eq, Generic, FromJSON, Show)
 
 -- | Endpoint for internal services.
 data Endpoint = Endpoint
-  { epHost :: !Host
-  , epPort :: !Port
+  { epHost :: !String
+  , epPort :: !Word16
   } deriving (Eq, Generic, FromJSON, Show)
 
 -- | Parameters of rotation mechanism for logs.

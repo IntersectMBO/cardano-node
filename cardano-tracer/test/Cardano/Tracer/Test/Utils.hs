@@ -48,4 +48,4 @@ removeDirectoryContent :: FilePath -> IO ()
 removeDirectoryContent dir = listContents dir >>= mapM_ removePathForcibly
 
 doesDirectoryEmpty :: FilePath -> IO Bool
-doesDirectoryEmpty dir = listContents dir >>= return . null
+doesDirectoryEmpty = fmap null . listContents

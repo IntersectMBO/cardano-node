@@ -148,7 +148,6 @@ test-suite cardano-tracer-test
                        Cardano.Tracer.Test.Utils
 
   build-depends:         async
-                       , base
                        , bytestring
                        , cardano-tracer
                        , cborg
@@ -166,6 +165,26 @@ test-suite cardano-tracer-test
                        , time
                        , trace-dispatcher
                        , trace-forward
+
+  ghc-options:         -threaded
+                       -rtsopts
+                       -with-rtsopts=-N
+
+benchmark cardano-tracer-bench
+  import:              base, project-config
+  type:                exitcode-stdio-1.0
+
+  hs-source-dirs:      bench
+
+  main-is:             cardano-tracer-bench.hs
+
+  build-depends:         cardano-tracer
+                       , criterion
+                       , directory
+                       , extra
+                       , filepath
+                       , time
+                       , trace-dispatcher
 
   ghc-options:         -threaded
                        -rtsopts
