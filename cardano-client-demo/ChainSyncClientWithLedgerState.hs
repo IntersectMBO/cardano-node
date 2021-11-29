@@ -86,7 +86,7 @@ main = do
 -- | Defines the client side of the chain sync protocol.
 chainSyncClient
   :: ChainSyncClient
-        (BlockInMode CardanoMode, Either Text (LedgerState, [LedgerEvent]))
+        (BlockInMode CardanoMode, Either LedgerStateError (LedgerState, [LedgerEvent]))
         ChainPoint
         ChainTip
         IO
@@ -94,13 +94,13 @@ chainSyncClient
 chainSyncClient = ChainSyncClient $ do
   startTime <- getCurrentTime
   let
-    clientStIdle :: ClientStIdle (BlockInMode CardanoMode, Either Text (LedgerState, [LedgerEvent]))
+    clientStIdle :: ClientStIdle (BlockInMode CardanoMode, Either LedgerStateError (LedgerState, [LedgerEvent]))
                                  ChainPoint ChainTip IO ()
     clientStIdle = SendMsgRequestNext
         clientStNext
         (pure clientStNext)
 
-    clientStNext :: ClientStNext (BlockInMode CardanoMode, Either Text (LedgerState, [LedgerEvent]))
+    clientStNext :: ClientStNext (BlockInMode CardanoMode, Either LedgerStateError (LedgerState, [LedgerEvent]))
                                  ChainPoint ChainTip IO ()
     clientStNext =
       ClientStNext {
@@ -111,7 +111,7 @@ chainSyncClient = ChainSyncClient $ do
              _tip ->
               ChainSyncClient $ case ledgerStateE of
                 Left err -> do
-                  putStrLn $ "Ledger state error: " <> T.unpack err
+                  putStrLn $ "Ledger state error: " <> T.unpack (renderLedgerStateError err)
                   return (SendMsgDone ())
                 Right (LedgerState (C.HardForkLedgerState (C.HardForkState ledgerState)), _) -> do
                   when (blockNo `mod` 1000 == 0) $ do
