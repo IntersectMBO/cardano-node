@@ -27,5 +27,11 @@
       "logMode": "FileMode",
       "logFormat": "ForMachine"
     }
-  ]
+  ],
+  "rotation": {
+    "rpFrequencySecs": 15,
+    "rpKeepFilesNum": 5,
+    "rpLogLimitBytes": 5000,
+    "rpMaxAgeHours": 1
+  }
 }

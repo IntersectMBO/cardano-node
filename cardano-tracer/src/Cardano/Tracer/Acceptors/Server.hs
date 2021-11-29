@@ -6,6 +6,7 @@ module Cardano.Tracer.Acceptors.Server
 
 import           Codec.CBOR.Term (Term)
 import           Control.Concurrent.Async (race_, wait)
+import           Control.Concurrent.Extra (Lock)
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Void (Void)
 
@@ -16,7 +17,8 @@ import           Ouroboros.Network.Mux (MiniProtocol (..), MiniProtocolLimits (.
 import           Ouroboros.Network.Driver.Limits (ProtocolTimeLimits)
 import           Ouroboros.Network.ErrorPolicy (nullErrorPolicies)
 import           Ouroboros.Network.IOManager (withIOManager)
-import           Ouroboros.Network.Snocket (Snocket, localAddressFromPath, localSnocket)
+import           Ouroboros.Network.Snocket (LocalAddress, LocalSocket, Snocket,
+                   localAddressFromPath, localSnocket)
 import           Ouroboros.Network.Socket (AcceptedConnectionsLimit (..), ConnectionId (..),
                    SomeResponderApplication (..), cleanNetworkMutableState,
                    newNetworkMutableState, nullNetworkServerTracers, withServerNode)
@@ -53,15 +55,16 @@ runAcceptorsServer
   -> ConnectedNodes
   -> AcceptedMetrics
   -> DataPointAskers
+  -> Lock
   -> IO ()
 runAcceptorsServer config p (ekgConfig, tfConfig, dpfConfig)
-                   connectedNodes acceptedMetrics dpAskers = withIOManager $ \iocp ->
+                   connectedNodes acceptedMetrics dpAskers currentLogLock = withIOManager $ \iocp ->
   doListenToForwarder (localSnocket iocp) (localAddressFromPath p) noTimeLimitsHandshake $
     -- Please note that we always run all the supported protocols,
     -- there is no mechanism to disable some of them.
     appResponder
       [ (runEKGAcceptor ekgConfig connectedNodes acceptedMetrics errorHandler, 1)
-      , (runTraceObjectsAcceptor config tfConfig                 errorHandler, 2)
+      , (runTraceObjectsAcceptor config tfConfig currentLogLock  errorHandler, 2)
       , (runDataPointsAcceptor dpfConfig connectedNodes dpAskers errorHandler, 3)
       ]
  where
@@ -77,11 +80,10 @@ runAcceptorsServer config p (ekgConfig, tfConfig, dpfConfig)
   errorHandler = removeDisconnectedNode connectedNodes acceptedMetrics dpAskers
 
 doListenToForwarder
-  :: Ord addr
-  => Snocket IO fd addr
-  -> addr
+  :: Snocket IO LocalSocket LocalAddress
+  -> LocalAddress
   -> ProtocolTimeLimits (Handshake UnversionedProtocol Term)
-  -> OuroborosApplication 'ResponderMode addr LBS.ByteString IO Void ()
+  -> OuroborosApplication 'ResponderMode LocalAddress LBS.ByteString IO Void ()
   -> IO ()
 doListenToForwarder snocket address timeLimits app = do
   networkState <- newNetworkMutableState
@@ -105,12 +107,11 @@ doListenToForwarder snocket address timeLimits app = do
             $ \_ serverAsync -> wait serverAsync -- Block until async exception.
 
 runEKGAcceptor
-  :: Show addr
-  => EKGF.AcceptorConfiguration
+  :: EKGF.AcceptorConfiguration
   -> ConnectedNodes
   -> AcceptedMetrics
-  -> (ConnectionId addr -> IO ())
-  -> ConnectionId addr
+  -> (ConnectionId LocalAddress -> IO ())
+  -> ConnectionId LocalAddress
   -> RunMiniProtocol 'ResponderMode LBS.ByteString IO Void ()
 runEKGAcceptor ekgConfig connectedNodes acceptedMetrics errorHandler connId =
   acceptEKGMetricsResp
@@ -119,25 +120,24 @@ runEKGAcceptor ekgConfig connectedNodes acceptedMetrics errorHandler connId =
     (errorHandler connId)
 
 runTraceObjectsAcceptor
-  :: Show addr
-  => TracerConfig
+  :: TracerConfig
   -> TF.AcceptorConfiguration TraceObject
-  -> (ConnectionId addr -> IO ())
-  -> ConnectionId addr
+  -> Lock
+  -> (ConnectionId LocalAddress -> IO ())
+  -> ConnectionId LocalAddress
   -> RunMiniProtocol 'ResponderMode LBS.ByteString IO Void ()
-runTraceObjectsAcceptor config tfConfig errorHandler connId =
+runTraceObjectsAcceptor config tfConfig currentLogLock errorHandler connId =
   acceptTraceObjectsResp
     tfConfig
-    (traceObjectsHandler config (connIdToNodeId connId))
+    (traceObjectsHandler config (connIdToNodeId connId) currentLogLock)
     (errorHandler connId)
 
 runDataPointsAcceptor
-  :: Show addr
-  => DPF.AcceptorConfiguration
+  :: DPF.AcceptorConfiguration
   -> ConnectedNodes
   -> DataPointAskers
-  -> (ConnectionId addr -> IO ())
-  -> ConnectionId addr
+  -> (ConnectionId LocalAddress -> IO ())
+  -> ConnectionId LocalAddress
   -> RunMiniProtocol 'ResponderMode LBS.ByteString IO Void ()
 runDataPointsAcceptor dpfConfig connectedNodes dpAskers errorHandler connId =
   acceptDataPointsResp

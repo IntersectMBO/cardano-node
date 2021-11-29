@@ -1,4 +1,3 @@
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -7,6 +6,7 @@ module Cardano.Tracer.Handlers.Metrics.Prometheus
   ) where
 
 import           Prelude hiding (head)
+
 import           Control.Concurrent.STM.TVar (readTVarIO)
 import           Control.Monad (forM, forever)
 import           Control.Monad.IO.Class (liftIO)
@@ -47,7 +47,7 @@ runPrometheusServer (Endpoint host port) connectedNodes acceptedMetrics = foreve
  where
   config :: Config Snap ()
   config =
-      setPort port
+      setPort (fromIntegral port)
     . setBind (encodeUtf8 . T.pack $ host)
     . setAccessLog ConfigNoLog
     . setErrorLog ConfigNoLog
@@ -77,8 +77,9 @@ runPrometheusServer (Endpoint host port) connectedNodes acceptedMetrics = foreve
     body $ ul $ mapM_ li hrefs
 
   renderMetricsFromNode :: Snap ()
-  renderMetricsFromNode =
-    getRequest >>= return . M.lookup "nodeid" . rqParams >>= \case
+  renderMetricsFromNode = do
+    reqParams <- rqParams <$> getRequest
+    case M.lookup "nodeid" reqParams of
       Nothing   -> writeText "No such a node!"
       Just anId -> writeText =<< liftIO (getMetricsFromNode anId acceptedMetrics)
 
@@ -96,8 +97,9 @@ getMetricsFromNode (anId':_) acceptedMetrics = do
   case metrics M.!? nodeId of
     Nothing ->
       return "No such a node!"
-    Just (ekgStore, _) ->
-      sampleAll ekgStore >>= return . renderListOfMetrics . getListOfMetrics
+    Just (ekgStore, _) -> do
+      allMetrics <- sampleAll ekgStore
+      return . renderListOfMetrics . getListOfMetrics $ allMetrics
  where
   nodeId = NodeId $ decodeUtf8 anId'
 

@@ -69,7 +69,7 @@ The way how to configure `cardano-tracer` depends on your requirements. There ar
 1. **Distributed** scenario, when `cardano-tracer` is working on one machine, and your nodes are working on another machine(s).
 2. **Local** scenario, when `cardano-tracer` and your nodes are working on the same machine.
 
-Distributed scenario is for real-world case: for example, you have `N` nodes working on `N` different AWS-instances, and you want to collect all the logging/monitoring information from these nodes using one `cardano-tracer` process working on your machine. So, by default you should consider using distributed scenario.
+Distributed scenario is for real-world case: for example, you have `N` nodes working on `N` different AWS-instances, and you want to collect all the logging/monitoring information from these nodes using one `cardano-tracer` process working on your machine.
 
 Local scenario is for testing case: for example, you want to try your new infrastructure from scratch, so you run `N` nodes and one `cardano-tracer` process on your machine.
 
@@ -188,7 +188,27 @@ Run the same command on machines `B` and `C` to connect corresponding nodes with
 
 ## Local Scenario
 
-As was mentioned above, local scenario is for testing only, when your nodes and `cardano-tracer` are working on the same machine. In this case all these processes can see the same local sockets directly, so we don't need `ssh`. The configuration file for 3 local nodes would look like this:
+As was mentioned above, local scenario is for testing, when your nodes and `cardano-tracer` are working on the same machine. In this case all these processes can see the same local sockets directly, so we don't need `ssh`. The configuration file for 3 local nodes would look like this:
+
+```
+{
+  "network": {
+    "tag": "AcceptAt",
+    "contents": "/tmp/cardano-tracer.sock"
+  },
+  "logging": [
+    {
+      "logRoot": "/tmp/cardano-tracer-logs",
+      "logMode": "FileMode",
+      "logFormat": "ForMachine"
+    }
+  ]
+}
+```
+
+As you see, it is the same configuration file: the `cardano-tracer` works as a server: it _accepts_ network connections by listening the local socket `/tmp/cardano-tracer.sock`. And your local nodes work as clients: they _initiate_ network connections using the _same_ local socket `/tmp/cardano-tracer.sock`.
+
+There is another way to connect `cardano-tracer` with your nodes: the `cardano-tracer` can work as _initiator_ as well, this is an example of configuration file:
 
 ```
 {
@@ -210,7 +230,9 @@ As was mentioned above, local scenario is for testing only, when your nodes and 
 }
 ```
 
-As you see, the tag is `ConnectTo` now, which means that `cardano-tracer` works as a client: it _establishes_ network connections with the node via the local sockets `/tmp/cardano-node-*.sock`. Please make sure your 3 local nodes are listening corresponding sockets.
+As you see, the tag in `network` field is `ConnectTo` now, which means that `cardano-tracer` works as a client: it _establishes_ network connections with your local nodes via the local sockets `/tmp/cardano-node-*.sock`. In this case each socket is used by a particular node.
+
+Please use `ConnectTo`-based scenario only if you really need it. Otherwise, it is **highly recommended** to use `AcceptAt`-based scenario.
 
 ## Requests
 
@@ -245,7 +267,7 @@ This is an example of log structure:
 
 In this example, `subdirForNode0` is a subdirectory containing log files with items received from the node `0`. And `node-2021-11-25T10-06-52.json` is the _current_ log: it means that currently `cardano-tracer` is writing items in this log file, via symbolic link `node.json`.
 
-The field `logMode` specifies logging mode. There are two possible modes: `FileMode` and `JournalMode`. `FileMode` is for storing logs to the files, `JournalMode` is for storing them in `systemd`'s journal.
+The field `logMode` specifies logging mode. There are two possible modes: `FileMode` and `JournalMode`. `FileMode` is for storing logs to the files, `JournalMode` is for storing them in `systemd`'s journal. Please note that if you choose `JournalMode`, the field `logRoot` will be ignored.
 
 The field `logFormat` specifies the format of logs. There are two possible modes: `ForMachine` and `ForHuman`. `ForMachine` is for JSON format, `ForHuman` is for human-friendly text format.
 

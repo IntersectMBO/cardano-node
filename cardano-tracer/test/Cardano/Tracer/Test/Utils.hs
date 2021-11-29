@@ -7,8 +7,8 @@ module Cardano.Tracer.Test.Utils
   ) where
 
 import           Control.Exception (finally)
-import           System.Directory.Extra (getTemporaryDirectory, listContents,
-                   removeFile, removePathForcibly)
+import           System.Directory.Extra (getTemporaryDirectory,
+                   listDirectories, removeFile, removePathForcibly)
 import           System.FilePath (dropDrive)
 import           System.IO.Extra (newTempDirWithin, newTempFileWithin)
 import           System.Info.Extra (isWindows)
@@ -45,7 +45,7 @@ forWindows :: FilePath -> FilePath
 forWindows localSock = "\\\\.\\pipe\\" <> dropDrive localSock
 
 removeDirectoryContent :: FilePath -> IO ()
-removeDirectoryContent dir = listContents dir >>= mapM_ removePathForcibly
+removeDirectoryContent dir = listDirectories dir >>= mapM_ removePathForcibly
 
 doesDirectoryEmpty :: FilePath -> IO Bool
-doesDirectoryEmpty dir = listContents dir >>= return . null
+doesDirectoryEmpty = fmap null . listDirectories

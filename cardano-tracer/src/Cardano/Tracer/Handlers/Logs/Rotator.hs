@@ -7,6 +7,7 @@ module Cardano.Tracer.Handlers.Logs.Rotator
   ) where
 
 import           Control.Concurrent.Async (forConcurrently_)
+import           Control.Concurrent.Extra (Lock)
 import           Control.Monad (forM_, forever, unless, when)
 import           Control.Monad.Extra (whenJust, whenM)
 import           Data.List (nub, sort)
@@ -25,10 +26,13 @@ import           Cardano.Tracer.Handlers.Logs.Utils (createLogAndUpdateSymLink,
 import           Cardano.Tracer.Utils (showProblemIfAny)
 
 -- | Runs rotation mechanism for the log files.
-runLogsRotator :: TracerConfig -> IO ()
-runLogsRotator TracerConfig{rotation, logging, verbosity} =
+runLogsRotator
+  :: TracerConfig
+  -> Lock
+  -> IO ()
+runLogsRotator TracerConfig{rotation, logging, verbosity} currentLogLock =
   whenJust rotation $ \rotParams ->
-    launchRotator loggingParamsForFiles rotParams verbosity
+    launchRotator loggingParamsForFiles rotParams verbosity currentLogLock
  where
   loggingParamsForFiles = nub . NE.filter filesOnly $ logging
   filesOnly LoggingParams{logMode} = logMode == FileMode
@@ -37,11 +41,13 @@ launchRotator
   :: [LoggingParams]
   -> RotationParams
   -> Maybe Verbosity
+  -> Lock
   -> IO ()
-launchRotator [] _ _ = return ()
-launchRotator loggingParamsForFiles rotParams@RotationParams{rpFrequencySecs} verb = forever $ do
+launchRotator [] _ _ _ = return ()
+launchRotator loggingParamsForFiles
+              rotParams@RotationParams{rpFrequencySecs} verb currentLogLock = forever $ do
   showProblemIfAny verb $
-    forM_ loggingParamsForFiles $ checkRootDir rotParams
+    forM_ loggingParamsForFiles $ checkRootDir currentLogLock rotParams
   sleep $ fromIntegral rpFrequencySecs
 
 -- | All the logs with 'TraceObject's received from particular node
@@ -51,10 +57,11 @@ launchRotator loggingParamsForFiles rotParams@RotationParams{rpFrequencySecs} ve
 --   log items to the latest log file. When we create the new log file,
 --   this symbolic link is switched to it.
 checkRootDir
-  :: RotationParams
+  :: Lock
+  -> RotationParams
   -> LoggingParams
   -> IO ()
-checkRootDir rotParams LoggingParams{logRoot, logFormat} =
+checkRootDir currentLogLock rotParams LoggingParams{logRoot, logFormat} =
   whenM (doesDirectoryExist logRoot) $
     listDirectories logRoot >>= \case
       [] ->
@@ -63,39 +70,45 @@ checkRootDir rotParams LoggingParams{logRoot, logFormat} =
         return ()
       logsSubDirs -> do
         let fullPathsToSubDirs = map (logRoot </>) logsSubDirs
-        forConcurrently_ fullPathsToSubDirs $ checkLogs rotParams logFormat
+        forConcurrently_ fullPathsToSubDirs $ checkLogs currentLogLock rotParams logFormat
 
 -- | We check the log files:
 --   1. If there are too big log files.
 --   2. If there are too old log files.
 checkLogs
-  :: RotationParams
+  :: Lock
+  -> RotationParams
   -> LogFormat
   -> FilePath
   -> IO ()
-checkLogs RotationParams{rpLogLimitBytes, rpMaxAgeHours, rpKeepFilesNum} format subDirForLogs = do
+checkLogs currentLogLock
+          RotationParams{rpLogLimitBytes, rpMaxAgeHours, rpKeepFilesNum} format subDirForLogs = do
   logs <- map (subDirForLogs </>) . filter (isItLog format) <$> listFiles subDirForLogs
-  checkIfCurrentLogIsFull logs format rpLogLimitBytes
-  checkIfThereAreOldLogs logs rpMaxAgeHours rpKeepFilesNum
+  unless (null logs) $ do
+    -- Since logs' names contain timestamps, we can sort them: the maximum one is the latest log,
+    -- and this is the current log (i.e. the log we're writing 'TraceObject's in).
+    let fromOldestToNewest = sort logs
+        -- Usage of partial function 'last' is safe here (we already checked the list isn't empty).
+        currentLog = last fromOldestToNewest
+        -- Only previous logs should be checked if they are outdated.
+        allOtherLogs = dropEnd 1 fromOldestToNewest
+    checkIfCurrentLogIsFull currentLogLock currentLog format rpLogLimitBytes
+    checkIfThereAreOldLogs allOtherLogs rpMaxAgeHours rpKeepFilesNum
 
--- | If the current log file is full (it's size is too big),
---   the new log will be created.
+-- | If the current log file is full (it's size is too big), the new log will be created.
 checkIfCurrentLogIsFull
-  :: [FilePath]
+  :: Lock
+  -> FilePath
   -> LogFormat
   -> Word64
   -> IO ()
-checkIfCurrentLogIsFull [] _ _ = return ()
-checkIfCurrentLogIsFull logs format maxSizeInBytes =
-  whenM (logIsFull pathToCurrentLog) $
-    createLogAndUpdateSymLink (takeDirectory pathToCurrentLog) format
+checkIfCurrentLogIsFull currentLogLock pathToCurrentLog format maxSizeInBytes =
+  whenM logIsFull $
+    createLogAndUpdateSymLink currentLogLock (takeDirectory pathToCurrentLog) format
  where
-  logIsFull logName = do
-    size <- getFileSize logName
+  logIsFull = do
+    size <- getFileSize pathToCurrentLog
     return $ fromIntegral size >= maxSizeInBytes
-  -- Since logs' names contain timestamps, the maximum one is the latest log,
-  -- or current log (i.e. the log we write 'TraceObject's in).
-  pathToCurrentLog = maximum logs
 
 -- | If there are too old log files - they will be removed.
 --   Please note that some number of log files can be kept in any case.
@@ -105,14 +118,9 @@ checkIfThereAreOldLogs
   -> Word
   -> IO ()
 checkIfThereAreOldLogs [] _ _ = return ()
--- If there is one single log file, we assume that it's a current log,
--- so we cannot remove it even if it's too old.
-checkIfThereAreOldLogs [_] _ _ = return ()
-checkIfThereAreOldLogs logs maxAgeInHours keepFilesNum = do
-  -- Logs' names contain timestamp, so we can sort them.
-  let fromOldestToNewest = sort logs
-      -- N ('keepFilesNum') newest files have to be kept in any case.
-      logsWeHaveToCheck = dropEnd (fromIntegral keepFilesNum) fromOldestToNewest
+checkIfThereAreOldLogs fromOldestToNewest maxAgeInHours keepFilesNum = do
+  -- N ('keepFilesNum') newest files have to be kept in any case.
+  let logsWeHaveToCheck = dropEnd (fromIntegral keepFilesNum) fromOldestToNewest
   unless (null logsWeHaveToCheck) $ do
     now <- getCurrentTime
     checkOldLogs now logsWeHaveToCheck

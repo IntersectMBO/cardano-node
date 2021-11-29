@@ -16,31 +16,25 @@ import           Cardano.Tracer.Utils
 import           Cardano.Tracer.Test.Forwarder
 import           Cardano.Tracer.Test.Utils
 
-data SideToRestart = First | Second
 data Mode = Initiate | Response
 
 tests :: TestTree
 tests = localOption (QuickCheckTests 1) $ testGroup "Test.Network"
-  [ testProperty "restart forwarder" $ propRunInLogsStructure (propNetwork First)
-  , testProperty "restart acceptor"  $ propRunInLogsStructure (propNetwork Second)
+  [ testProperty "restart tracer"    $ propRunInLogsStructure propNetworkTracer
+  , testProperty "restart forwarder" $ propRunInLogsStructure propNetworkForwarder
   ]
 
-propNetwork :: SideToRestart -> FilePath -> FilePath -> IO Property
-propNetwork whichSide rootDir localSock = do
-  protocolsBrake <- initProtocolsBrake
-  case whichSide of
-    First ->
-      propNetwork'
-        rootDir
-        ( doRunCardanoTracer (config Initiate rootDir localSock) protocolsBrake
-        , launchForwardersSimple Responder localSock 1000 10000
-        )
-    Second ->
-      propNetwork'
-        rootDir
-        ( launchForwardersSimple Initiator localSock 1000 10000
-        , doRunCardanoTracer (config Response rootDir localSock) protocolsBrake
-        )
+propNetworkTracer, propNetworkForwarder :: FilePath -> FilePath -> IO Property
+propNetworkTracer rootDir localSock =
+  propNetwork' rootDir
+    ( doRunCardanoTracer (mkConfig Initiate rootDir localSock) =<< initProtocolsBrake
+    , launchForwardersSimple Responder localSock 1000 10000
+    )
+propNetworkForwarder rootDir localSock =
+  propNetwork' rootDir
+    ( launchForwardersSimple Initiator localSock 1000 10000
+    , doRunCardanoTracer (mkConfig Response rootDir localSock) =<< initProtocolsBrake
+    )
 
 propNetwork' :: FilePath -> (IO (), IO ()) -> IO Property
 propNetwork' rootDir (fstSide, sndSide) = do
@@ -48,31 +42,37 @@ propNetwork' rootDir (fstSide, sndSide) = do
   s <- asyncBound sndSide
   -- Now sides should be connected and do some work.
   sleep 3.0
-  -- Forcibly stop the first side (like killing the process in the real world).
-  uninterruptibleCancel f
-  -- Now the second side is working without the first one, and tries to re-connect.
-  sleep 3.0
-  removeDirectoryContent rootDir -- To check it later.
-  -- Restart the first side, now the connection should be re-established.
-  f' <- asyncBound fstSide
-  -- Now it should be connected to the second side again,
-  -- and, if so, the root dir should be re-created.
-  sleep 3.0
-  -- Forcibly kill both sides.
-  uninterruptibleCancel s
-  uninterruptibleCancel f'
-  -- Check if the root directory isn't empty, which means that the connection
-  -- between parts was re-established and some work was performed.
+  -- Check if the root dir contains subdir, which is a proof that interaction
+  -- between sides already occurred.
   ifM (doesDirectoryEmpty rootDir)
-    (false "root dir is empty")
-    (return $ property True)
+    (false "root dir is empty after the first start")
+    $ do
+      -- Forcibly stop the first side (like killing the process in the real world).
+      uninterruptibleCancel f
+      -- Now the second side is working without the first one, and tries to re-connect.
+      sleep 3.0
+      -- Remove rootDir's content, to make sure it will be re-created later.
+      removeDirectoryContent rootDir
+      -- Start the first side again, soon the connection should be re-established.
+      f' <- asyncBound fstSide
+      -- Now it should be connected to the second side again,
+      -- and, if so, the subdir in the rootDir should be re-created.
+      sleep 3.0
+      -- Forcibly kill both sides.
+      uninterruptibleCancel s
+      uninterruptibleCancel f'
+      -- Check if the root directory isn't empty, which means that the connection
+      -- between sides was re-established and some work was performed again.
+      ifM (doesDirectoryEmpty rootDir)
+        (false "root dir is empty after restart")
+        (return $ property True)
 
-config
+mkConfig
   :: Mode
   -> FilePath
   -> FilePath
   -> TracerConfig
-config mode root p = TracerConfig
+mkConfig mode root p = TracerConfig
   { network        = case mode of
                        Initiate -> ConnectTo $ NE.fromList [LocalSocket p]
                        Response -> AcceptAt $ LocalSocket p

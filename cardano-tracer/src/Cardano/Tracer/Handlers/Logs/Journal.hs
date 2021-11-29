@@ -1,18 +1,21 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+
+#if !defined(mingw32_HOST_OS)
+#define UNIX
+#endif
 
 module Cardano.Tracer.Handlers.Logs.Journal
   ( writeTraceObjectsToJournal
   ) where
 
-import           Control.Monad (unless)
+#ifdef UNIX
+import           Data.Char (isDigit)
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as T
-import           Data.Text (Text)
 import           Data.Text.Encoding (encodeUtf8)
-import           Data.Time.Clock (UTCTime)
 import           Data.Time.Format (defaultTimeLocale, formatTime)
-import           System.Info.Extra (isMac, isWindows)
 import           Systemd.Journal (Priority (..), message, mkJournalField, priority,
                    sendJournalFields, syslogIdentifier)
 
@@ -20,13 +23,16 @@ import           Cardano.Logging (TraceObject (..))
 import qualified Cardano.Logging as L
 
 import           Cardano.Tracer.Types (NodeId (..))
+#else
+import           Cardano.Logging (TraceObject)
 
+import           Cardano.Tracer.Types (NodeId)
+#endif
+
+#ifdef UNIX
 -- | Store 'TraceObject's in Linux systemd's journal service.
 writeTraceObjectsToJournal :: NodeId -> [TraceObject] -> IO ()
-writeTraceObjectsToJournal _ [] = return ()
-writeTraceObjectsToJournal nodeId traceObjects =
-  unless (isWindows || isMac) $
-    mapM_ (sendJournalFields . mkJournalFields) traceObjects
+writeTraceObjectsToJournal (NodeId anId) = mapM_ (sendJournalFields . mkJournalFields)
  where
   mkJournalFields trOb@TraceObject{toHuman, toMachine} =
     case (toHuman, toMachine) of
@@ -36,12 +42,12 @@ writeTraceObjectsToJournal nodeId traceObjects =
       (Nothing,          Nothing)            -> HM.empty
 
   mkJournalFields' TraceObject{toSeverity, toNamespace, toThreadId, toTimestamp} msg =
-       syslogIdentifier (T.pack (show nodeId))
+       syslogIdentifier anId
     <> message msg
     <> priority (mkPriority toSeverity)
     <> HM.fromList
          [ (namespace, encodeUtf8 $ mkName toNamespace)
-         , (thread,    encodeUtf8 toThreadId)
+         , (thread,    encodeUtf8 $ T.filter isDigit toThreadId)
          , (time,      encodeUtf8 $ formatAsIso8601 toTimestamp)
          ]
 
@@ -52,15 +58,18 @@ writeTraceObjectsToJournal nodeId traceObjects =
   thread    = mkJournalField "thread"
   time      = mkJournalField "time"
 
-formatAsIso8601 :: UTCTime -> Text
-formatAsIso8601 = T.pack . formatTime defaultTimeLocale "%F %T%12QZ"
+  formatAsIso8601 = T.pack . formatTime defaultTimeLocale "%F %T%12QZ"
 
-mkPriority :: L.SeverityS -> Priority
-mkPriority L.Debug     = Debug
-mkPriority L.Info      = Info
-mkPriority L.Notice    = Notice
-mkPriority L.Warning   = Warning
-mkPriority L.Error     = Error
-mkPriority L.Critical  = Critical
-mkPriority L.Alert     = Alert
-mkPriority L.Emergency = Emergency
+  mkPriority L.Debug     = Debug
+  mkPriority L.Info      = Info
+  mkPriority L.Notice    = Notice
+  mkPriority L.Warning   = Warning
+  mkPriority L.Error     = Error
+  mkPriority L.Critical  = Critical
+  mkPriority L.Alert     = Alert
+  mkPriority L.Emergency = Emergency
+#else
+-- It cannot work on Windows.
+writeTraceObjectsToJournal :: NodeId -> [TraceObject] -> IO ()
+writeTraceObjectsToJournal _ _ = return ()
+#endif

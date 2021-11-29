@@ -5,6 +5,7 @@ module Cardano.Tracer.Handlers.Logs.TraceObjects
   ) where
 
 import           Control.Concurrent.Async (forConcurrently_)
+import           Control.Concurrent.Extra (Lock)
 import qualified Data.List.NonEmpty as NE
 
 import           Cardano.Logging (TraceObject)
@@ -20,15 +21,13 @@ import           Cardano.Tracer.Utils (showProblemIfAny)
 traceObjectsHandler
   :: TracerConfig  -- ^ Tracer configuration.
   -> NodeId        -- ^ An id of the node 'TraceObject's were received from.
+  -> Lock          -- ^ The lock we use for single-threaded access to the current log.
   -> [TraceObject] -- ^ The list of received 'TraceObject's (may be empty).
   -> IO ()
-traceObjectsHandler _ _ [] = return ()
-traceObjectsHandler TracerConfig{logging, verbosity} nodeId traceObjects =
+traceObjectsHandler _ _ _ [] = return ()
+traceObjectsHandler TracerConfig{logging, verbosity} nodeId currentLogLock traceObjects =
   forConcurrently_ (NE.nub logging) $ \LoggingParams{logMode, logRoot, logFormat} ->
-    case logMode of
-      FileMode ->
-        showProblemIfAny verbosity $
-          writeTraceObjectsToFile nodeId logRoot logFormat traceObjects
-      JournalMode ->
-        showProblemIfAny verbosity $
-          writeTraceObjectsToJournal nodeId traceObjects
+    showProblemIfAny verbosity $
+      case logMode of
+        FileMode    -> writeTraceObjectsToFile nodeId currentLogLock logRoot logFormat traceObjects
+        JournalMode -> writeTraceObjectsToJournal nodeId traceObjects

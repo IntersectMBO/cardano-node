@@ -21,7 +21,7 @@ import qualified Graphics.UI.Threepenny as UI
 import           Graphics.UI.Threepenny.Core (UI, Element, liftIO, set, (#), (#+))
 import           System.Remote.Monitoring (forkServerWith, serverThreadId)
 
-import           Cardano.Tracer.Configuration (Endpoint (..), Host, Port)
+import           Cardano.Tracer.Configuration (Endpoint (..))
 import           Cardano.Tracer.Types (AcceptedMetrics, ConnectedNodes, NodeId (..))
 
 -- | 'ekg' package allows to run only one EKG server, to display only one web page
@@ -36,8 +36,8 @@ import           Cardano.Tracer.Types (AcceptedMetrics, ConnectedNodes, NodeId (
 --   received from that node.
 runMonitoringServer
   :: (Endpoint, Endpoint) -- ^ (web page with list of connected nodes, EKG web page).
-  -> ConnectedNodes       -- ^ The list of connected nodes.
-  -> AcceptedMetrics      -- ^ The stores with the metrics from all nodes.
+  -> ConnectedNodes
+  -> AcceptedMetrics
   -> IO ()
 runMonitoringServer (Endpoint listHost listPort, monitorEP) connectedNodes acceptedMetrics =
   UI.startGUI config $ \window -> do
@@ -45,7 +45,7 @@ runMonitoringServer (Endpoint listHost listPort, monitorEP) connectedNodes accep
     void $ mkPageBody window connectedNodes monitorEP acceptedMetrics
  where
   config = UI.defaultConfig
-    { UI.jsPort = Just listPort
+    { UI.jsPort = Just . fromIntegral $ listPort
     , UI.jsAddr = Just . encodeUtf8 . T.pack $ listHost
     }
 
@@ -60,7 +60,7 @@ mkPageBody
   -> Endpoint
   -> AcceptedMetrics
   -> UI Element
-mkPageBody window connectedNodes (Endpoint monitorHost monitorPort) acceptedMetrics = do
+mkPageBody window connectedNodes mEP@(Endpoint monitorHost monitorPort) acceptedMetrics = do
   nodes <- liftIO $ S.toList <$> readTVarIO connectedNodes
   nodesHrefs <-
     if null nodes
@@ -77,7 +77,7 @@ mkPageBody window connectedNodes (Endpoint monitorHost monitorPort) acceptedMetr
                             # set UI.text (T.unpack anId)
                 ]
             void $ UI.on UI.click nodeLink $ const $
-              restartEKGServer nodeId acceptedMetrics monitorHost monitorPort currentServer
+              restartEKGServer nodeId acceptedMetrics mEP currentServer
             return $ UI.element nodeLink
         UI.ul #+ nodesLinks
   UI.getBody window #+ [ UI.element nodesHrefs ]
@@ -88,11 +88,11 @@ mkPageBody window connectedNodes (Endpoint monitorHost monitorPort) acceptedMetr
 restartEKGServer
   :: NodeId
   -> AcceptedMetrics
-  -> Host
-  -> Port
+  -> Endpoint
   -> CurrentEKGServer
   -> UI ()
-restartEKGServer newNodeId acceptedMetrics monitorHost monitorPort currentServer = liftIO $ do
+restartEKGServer newNodeId acceptedMetrics
+                 (Endpoint monitorHost monitorPort) currentServer = liftIO $ do
   metrics <- readTVarIO acceptedMetrics
   whenJust (metrics M.!? newNodeId) $ \(storeForSelectedNode, _) ->
     atomically (tryReadTMVar currentServer) >>= \case
@@ -108,5 +108,7 @@ restartEKGServer newNodeId acceptedMetrics monitorHost monitorPort currentServer
         runEKGAndSave storeForSelectedNode
  where
   runEKGAndSave store = do
-    ekgServer <- forkServerWith store (encodeUtf8 . T.pack $ monitorHost) monitorPort
+    ekgServer <- forkServerWith store
+                   (encodeUtf8 . T.pack $ monitorHost)
+                   (fromIntegral monitorPort)
     atomically $ putTMVar currentServer (newNodeId, serverThreadId ekgServer)
