@@ -1,3 +1,5 @@
+{-# LANGUAGE LambdaCase #-}
+
 module Cardano.CLI.Shelley.Run.StakeAddress
   ( ShelleyStakeAddressCmdError(ShelleyStakeAddressCmdReadKeyFileError)
   , renderShelleyStakeAddressCmdError
@@ -89,50 +91,23 @@ runStakeAddressBuild
   -> NetworkId
   -> Maybe OutputFile
   -> ExceptT ShelleyStakeAddressCmdError IO ()
-runStakeAddressBuild stakeVerifier network mOutputFp =
-  case stakeVerifier of
-    StakeVerifierScriptFile (ScriptFile sFile) -> do
-      ScriptInAnyLang _ script <- firstExceptT ShelleyStakeAddressCmdReadScriptFileError
-                                    $ readFileScriptInAnyLang sFile
-      let stakeCred = StakeCredentialByScript $ hashScript script
-          stakeAddr = makeStakeAddress network stakeCred
-          stakeAddrText = serialiseAddress stakeAddr
-
-      case mOutputFp of
-        Just (OutputFile fpath) -> liftIO $ Text.writeFile fpath stakeAddrText
-        Nothing -> liftIO $ Text.putStrLn stakeAddrText
-
-    StakeVerifierKey stakeVerKeyOrFile -> do
-      stakeVerKey <- firstExceptT ShelleyStakeAddressCmdReadKeyFileError
-                       . newExceptT
-                       $ readVerificationKeyOrFile AsStakeKey stakeVerKeyOrFile
-
-      let stakeCred = StakeCredentialByKey (verificationKeyHash stakeVerKey)
-          stakeAddr = makeStakeAddress network stakeCred
-          stakeAddrText = serialiseAddress stakeAddr
-
-      case mOutputFp of
-        Just (OutputFile fpath) -> liftIO $ Text.writeFile fpath stakeAddrText
-        Nothing -> liftIO $ Text.putStrLn stakeAddrText
+runStakeAddressBuild stakeVerifier network mOutputFp = do
+  stakeAddr <- getStakeAddressFromVerifier network stakeVerifier
+  let stakeAddrText = serialiseAddress stakeAddr
+  liftIO $
+    case mOutputFp of
+      Just (OutputFile fpath) -> Text.writeFile fpath stakeAddrText
+      Nothing -> Text.putStrLn stakeAddrText
 
 
 runStakeCredentialRegistrationCert
   :: StakeVerifier
   -> OutputFile
   -> ExceptT ShelleyStakeAddressCmdError IO ()
-runStakeCredentialRegistrationCert stakeVerifier (OutputFile oFp) =
-  case stakeVerifier of
-    StakeVerifierScriptFile (ScriptFile sFile) -> do
-      ScriptInAnyLang _ script <- firstExceptT ShelleyStakeAddressCmdReadScriptFileError
-                                    $ readFileScriptInAnyLang sFile
-      let stakeCred = StakeCredentialByScript $ hashScript script
-      writeRegistrationCert stakeCred
-    StakeVerifierKey stakeVerKeyOrFile -> do
-      stakeVerKey <- firstExceptT ShelleyStakeAddressCmdReadKeyFileError
-        . newExceptT
-        $ readVerificationKeyOrFile AsStakeKey stakeVerKeyOrFile
-      let stakeCred = StakeCredentialByKey (verificationKeyHash stakeVerKey)
-      writeRegistrationCert stakeCred
+runStakeCredentialRegistrationCert stakeVerifier (OutputFile oFp) = do
+  stakeCred <- getStakeCredentialFromVerifier stakeVerifier
+  writeRegistrationCert stakeCred
+
  where
   writeRegistrationCert
     :: StakeCredential
@@ -160,19 +135,9 @@ runStakeCredentialDelegationCert stakeVerifier poolVKeyOrHashOrFile (OutputFile 
     firstExceptT
       ShelleyStakeAddressCmdReadKeyFileError
       (newExceptT $ readVerificationKeyOrHashOrFile AsStakePoolKey poolVKeyOrHashOrFile)
+  stakeCred <- getStakeCredentialFromVerifier stakeVerifier
+  writeDelegationCert stakeCred poolStakeVKeyHash
 
-  case stakeVerifier of
-    StakeVerifierScriptFile (ScriptFile sFile) -> do
-      ScriptInAnyLang _ script <- firstExceptT ShelleyStakeAddressCmdReadScriptFileError
-                                    $ readFileScriptInAnyLang sFile
-      let stakeCred = StakeCredentialByScript $ hashScript script
-      writeDelegationCert stakeCred poolStakeVKeyHash
-    StakeVerifierKey stakeVerKeyOrFile -> do
-      stakeVkey <- firstExceptT ShelleyStakeAddressCmdReadKeyFileError
-        . newExceptT
-        $ readVerificationKeyOrFile AsStakeKey stakeVerKeyOrFile
-      let stakeCred = StakeCredentialByKey (verificationKeyHash stakeVkey)
-      writeDelegationCert stakeCred poolStakeVKeyHash
   where
     writeDelegationCert
       :: StakeCredential
@@ -192,19 +157,10 @@ runStakeCredentialDeRegistrationCert
   :: StakeVerifier
   -> OutputFile
   -> ExceptT ShelleyStakeAddressCmdError IO ()
-runStakeCredentialDeRegistrationCert stakeVerifier (OutputFile oFp) =
-  case stakeVerifier of
-    StakeVerifierScriptFile (ScriptFile sFile) -> do
-      ScriptInAnyLang _ script <- firstExceptT ShelleyStakeAddressCmdReadScriptFileError
-                                    $ readFileScriptInAnyLang sFile
-      let stakeCred = StakeCredentialByScript $ hashScript script
-      writeDeregistrationCert stakeCred
-    StakeVerifierKey stakeVerKeyOrFile -> do
-      stakeVkey <- firstExceptT ShelleyStakeAddressCmdReadKeyFileError
-        . newExceptT
-        $ readVerificationKeyOrFile AsStakeKey stakeVerKeyOrFile
-      let stakeCred = StakeCredentialByKey (verificationKeyHash stakeVkey)
-      writeDeregistrationCert stakeCred
+runStakeCredentialDeRegistrationCert stakeVerifier (OutputFile oFp) = do
+  stakeCred <- getStakeCredentialFromVerifier stakeVerifier
+  writeDeregistrationCert stakeCred
+
   where
     writeDeregistrationCert
       :: StakeCredential
@@ -217,3 +173,31 @@ runStakeCredentialDeRegistrationCert stakeVerifier (OutputFile oFp) =
 
     deregCertDesc :: TextEnvelopeDescr
     deregCertDesc = "Stake Address Deregistration Certificate"
+
+
+getStakeCredentialFromVerifier
+  :: StakeVerifier -> ExceptT ShelleyStakeAddressCmdError IO StakeCredential
+getStakeCredentialFromVerifier = \case
+  StakeVerifierScriptFile (ScriptFile sFile) -> do
+    ScriptInAnyLang _ script <-
+      firstExceptT ShelleyStakeAddressCmdReadScriptFileError $
+        readFileScriptInAnyLang sFile
+    pure $ StakeCredentialByScript $ hashScript script
+
+  StakeVerifierKey stakeVerKeyOrFile -> do
+    stakeVerKey <-
+      firstExceptT ShelleyStakeAddressCmdReadKeyFileError
+        . newExceptT
+        $ readVerificationKeyOrFile AsStakeKey stakeVerKeyOrFile
+    pure $ StakeCredentialByKey $ verificationKeyHash stakeVerKey
+
+  StakeVerifierAddress stakeAddr -> pure $ stakeAddressCredential stakeAddr
+
+getStakeAddressFromVerifier
+  :: NetworkId
+  -> StakeVerifier
+  -> ExceptT ShelleyStakeAddressCmdError IO StakeAddress
+getStakeAddressFromVerifier networkId = \case
+  StakeVerifierAddress stakeAddr -> pure stakeAddr
+  stakeVerifier ->
+    makeStakeAddress networkId <$> getStakeCredentialFromVerifier stakeVerifier

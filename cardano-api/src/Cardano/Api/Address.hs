@@ -719,6 +719,7 @@ fromShelleyStakeReference (Shelley.StakeRefPtr ptr) =
 fromShelleyStakeReference Shelley.StakeRefNull =
   NoStakeAddress
 
--- | Get credential from a stake address. This drops the network information.
+-- | Get a stake credential from a stake address.
+-- This drops the network information.
 stakeAddressCredential :: StakeAddress -> StakeCredential
 stakeAddressCredential (StakeAddress _ scred) = fromShelleyStakeCredential scred

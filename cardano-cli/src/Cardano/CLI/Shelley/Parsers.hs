@@ -178,6 +178,7 @@ pStakeVerifier =
     <|> StakeVerifierScriptFile <$>
           pScriptFor "stake-script-file" Nothing
                      "Filepath of the staking script."
+    <|> StakeVerifierAddress <$> pStakeAddress
 
 pPaymentVerificationKeyTextOrFile :: Parser VerificationKeyTextOrFile
 pPaymentVerificationKeyTextOrFile =
