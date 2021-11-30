@@ -35,19 +35,39 @@ lovelaceattxindiv2=$(expr $lovelaceattxin / 2)
 changeaddr=addr_test1qpmxr8d8jcl25kyz2tz9a9sxv7jxglhddyf475045y8j3zxjcg9vquzkljyfn3rasfwwlkwu7hhm59gzxmsyxf3w9dps8832xh
 targetaddr=addr_test1vpqgspvmh6m2m5pwangvdg499srfzre2dd96qq57nlnw6yctpasy4
 
+mkdir -p $WORK/ma
+cardano-cli address key-gen \
+            --verification-key-file $WORK/ma/policy.vkey \
+            --signing-key-file $WORK/ma/policy.skey
+
+KEYHASH=$(cardano-cli address key-hash --payment-verification-key-file $WORK/ma/policy.vkey)
+
+SCRIPT=$WORK/ma/policy.script
+rm -f $SCRIPT
+echo "{" >> $SCRIPT
+echo "  \"keyHash\": \"${KEYHASH}\"," >> $SCRIPT
+echo "  \"type\": \"sig\"" >> $SCRIPT
+echo "}" >> $SCRIPT
+POLICYID=$(cardano-cli transaction policyid --script-file $WORK/ma/policy.script)
+
+
 $CARDANO_CLI transaction build \
   --alonzo-era \
   --cardano-mode \
   --testnet-magic "$TESTNET_MAGIC" \
   --change-address "$changeaddr" \
+  --witness-override 2 \
   --tx-in $txin \
-  --tx-out "$targetaddr+10000000" \
+  --tx-out "$targetaddr+10000000+5 $POLICYID.6d696c6c6172636f696e" \
+  --mint="5 $POLICYID.6d696c6c6172636f696e" \
+  --mint-script-file "$SCRIPT"\
   --out-file $WORK/build.body
 
 $CARDANO_CLI transaction sign \
   --tx-body-file $WORK/build.body \
   --testnet-magic "$TESTNET_MAGIC" \
   --signing-key-file $UTXO_SKEY \
+  --signing-key-file $WORK/ma/policy.skey \
   --out-file $WORK/build.tx
 
 # SUBMIT
