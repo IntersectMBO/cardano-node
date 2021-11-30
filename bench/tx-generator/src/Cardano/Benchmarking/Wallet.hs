@@ -140,19 +140,19 @@ mkUTxOVariant variant networkId key validity values
 
 genTx :: forall era. IsShelleyBasedEra era =>
      ProtocolParameters
-  -> TxInsCollateral era
+  -> (TxInsCollateral era, [Fund])
   -> TxFee era
   -> TxMetadataInEra era
   -> Witness WitCtxTxIn era
   -> TxGenerator era
-genTx protocolParameters collateral fee metadata witness inFunds outputs
+genTx protocolParameters (collateral, collFunds) fee metadata witness inFunds outputs
   = case makeTransactionBody txBodyContent of
       Left err -> error $ show err
       Right b -> Right ( signShelleyTransaction b $ map WitnessPaymentKey allKeys
                        , getTxId b
                        )
  where
-  allKeys = mapMaybe getFundKey inFunds
+  allKeys = mapMaybe getFundKey $ inFunds ++ collFunds
   txBodyContent = TxBodyContent {
       txIns = map (\f -> (getFundTxIn f, BuildTxWith witness)) inFunds
     , txInsCollateral = collateral

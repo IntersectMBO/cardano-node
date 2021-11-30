@@ -68,7 +68,7 @@ let
                      then { NodeToNode = []; }
                      else { LocalSocket = []; };
         spendMode = if plutusAutoMode
-                    then { SpendAutoScript = [ plutusScriptFile cfg "loop.plutus" ]; }
+                    then { SpendAutoScript = plutusScriptFile cfg "loop.plutus"; }
                     else if plutusMode
                     then { SpendScript = [
                              (plutusScript cfg)
