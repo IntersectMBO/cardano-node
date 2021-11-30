@@ -1154,6 +1154,10 @@ instance Aeson.ToJSON SockAddr where
     toJSON (SockAddrUnix path) =
         Aeson.object [ "socketPath" .= show path ]
 
+instance Aeson.ToJSON IP where
+    toJSON ip = Aeson.object ["ip" .= show ip]
+
+
 -- TODO: use the json encoding of transactions
 instance (Show txid, Show tx)
       => ToObject (TraceTxSubmissionOutbound txid tx) where
