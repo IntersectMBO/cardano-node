@@ -1,0 +1,127 @@
+cabal-version: 3.0
+
+name:                   plutus-example
+version:                1.31.0
+description:            End to end examples of creating and executing Plutus scripts.
+author:                 IOHK
+maintainer:             operations@iohk.io
+license:                Apache-2.0
+build-type:             Simple
+extra-source-files:     README.md
+
+Flag unexpected_thunks
+  Description:   Turn on unexpected thunks checks
+  Default:       False
+
+common base
+  build-depends: base >= 4.14 && < 4.15
+
+common project-config
+  default-language:     Haskell2010
+
+  default-extensions:   NoImplicitPrelude
+                        OverloadedStrings
+
+  ghc-options:          -Wall
+                        -Wcompat
+                        -Wincomplete-record-updates
+                        -Wincomplete-uni-patterns
+                        -Wpartial-fields
+                        -Wredundant-constraints
+                        -Wunused-packages
+                        -fobject-code
+                        -fno-ignore-interface-pragmas
+                        -fno-omit-interface-pragmas
+
+common maybe-Win32
+  if os(windows)
+     build-depends:     Win32
+
+library
+  import:               base, project-config
+                      , maybe-Win32
+
+  if flag(unexpected_thunks)
+    cpp-options: -DUNEXPECTED_THUNKS
+
+  hs-source-dirs:       src
+
+  exposed-modules:      Cardano.PlutusExample.AlwaysFails
+                        Cardano.PlutusExample.AlwaysSucceeds
+                        Cardano.PlutusExample.CustomDatumRedeemerGuess
+                        Cardano.PlutusExample.DatumRedeemerGuess
+                        Cardano.PlutusExample.MintingScript
+                        Cardano.PlutusExample.ScriptContextChecker
+                        Cardano.PlutusExample.Sum
+                        Cardano.PlutusExample.Loop
+
+  build-depends:        aeson
+                      , bytestring
+                      , cardano-api
+                      , cardano-cli
+                      , cardano-ledger-alonzo
+                      , cardano-ledger-core
+                      , cardano-slotting
+                      , containers
+                      , ouroboros-consensus
+                      , ouroboros-network
+                      , plutus-ledger
+                      , plutus-ledger-api
+                      , plutus-tx
+                      , plutus-tx-plugin
+                      , serialise
+                      , strict-containers
+                      , transformers
+                      , transformers-except
+
+
+executable plutus-example
+  import:               base, project-config
+  hs-source-dirs:       app
+  main-is:              plutus-example.hs
+  ghc-options:          -threaded -rtsopts "-with-rtsopts=-T"
+
+  build-depends:        cardano-api
+                      , directory
+                      , filepath
+                      , plutus-example
+
+
+executable create-script-context
+  import:               base, project-config
+  hs-source-dirs:       app
+  main-is:              create-script-context.hs
+  ghc-options:          -threaded -rtsopts "-with-rtsopts=-T"
+
+  build-depends:        bytestring
+                      , cardano-api
+                      , optparse-applicative
+                      , plutus-example
+                      , transformers
+
+test-suite plutus-example-test
+  import:               base, project-config
+
+  hs-source-dirs:       test
+  main-is:              plutus-example-test.hs
+  type:                 exitcode-stdio-1.0
+
+  build-depends:        cardano-prelude
+                      , aeson
+                      , cardano-api
+                      , cardano-api:gen
+                      , cardano-ledger-alonzo
+                      , cardano-ledger-core
+                      , containers
+                      , hedgehog
+                      , plutus-example
+                      , plutus-ledger
+                      , plutus-ledger-api
+                      , cardano-ledger-shelley
+
+
+  other-modules:        Test.PlutusExample.Gen
+                        Test.PlutusExample.Plutus
+                        Test.PlutusExample.ScriptData
+
+  ghc-options:          -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
