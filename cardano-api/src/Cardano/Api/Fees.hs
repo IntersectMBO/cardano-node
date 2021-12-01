@@ -501,8 +501,7 @@ evaluateTransactionExecutionUnits _eraInMode systemstart history pparams utxo tx
              systemstart
              (toAlonzoCostModels (protocolParamCostModels pparams))
         of Left  err   -> Left err
-           Right (Left err) -> Left $ BasicValidationFailure err
-           Right (Right exmap) -> Right (fromLedgerScriptExUnitsMap exmap)
+           Right exmap -> Right (fromLedgerScriptExUnitsMap exmap)
 
     toLedgerEpochInfo :: EraHistory mode
                       -> EpochInfo (Either EvalTxExecUnitsError)

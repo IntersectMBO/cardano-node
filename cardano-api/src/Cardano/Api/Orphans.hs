@@ -235,7 +235,7 @@ instance Crypto.Crypto crypto => ToJSON (Shelley.TxIn crypto) where
 instance Crypto.Crypto crypto => ToJSONKey (Shelley.TxIn crypto) where
   toJSONKey = toJSONKeyText txInToText
 
-txInToText :: Shelley.TxIn crypto -> Text
+txInToText :: Crypto.Crypto crypto => Shelley.TxIn crypto -> Text
 txInToText (Shelley.TxIn (Shelley.TxId txidHash) ix) =
   hashToText (SafeHash.extractHash txidHash)
     <> Text.pack "#"

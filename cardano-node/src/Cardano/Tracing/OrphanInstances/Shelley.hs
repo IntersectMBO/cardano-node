@@ -392,10 +392,6 @@ instance ( Ledger.Crypto era ~ StandardCrypto
   toObject _verb InvalidMetadata =
     mkObject [ "kind" .= String "InvalidMetadata"
              ]
-  toObject _verb (ExtraneousScriptWitnessesUTXOW shashes) =
-    mkObject [ "kind" .= String "ExtraneousScriptWitnessesUTXOW"
-             , "scriptHashes" .= Set.map Api.fromShelleyScriptHash shashes
-             ]
 
 instance ( ShelleyBasedEra era
          , ToJSON (Core.Value era)
