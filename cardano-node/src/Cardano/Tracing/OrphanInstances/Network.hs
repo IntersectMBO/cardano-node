@@ -904,11 +904,11 @@ instance Aeson.ToJSON ConnectionManagerCounters where
                                    , outboundConns
                                    } =
     Aeson.object [ "kind"           .= String "ConnectionManagerCounters"
-                 , "prunable"       .= toJSON fullDuplexConns
+                 , "fullDuplex"     .= toJSON fullDuplexConns
                  , "duplex"         .= toJSON duplexConns
                  , "unidirectional" .= toJSON unidirectionalConns
-                 , "incoming"       .= inboundConns
-                 , "outgoing"       .= outboundConns
+                 , "inbound"        .= inboundConns
+                 , "outbound"       .= outboundConns
                  ]
 
 instance ToObject (FetchDecision [Point header]) where
@@ -1294,7 +1294,7 @@ instance Show exception => ToObject (TraceLocalRootPeers RemoteAddress exception
   toObject _verb (TraceLocalRootResult d res) =
     mkObject [ "kind" .= String "LocalRootResult"
              , "domainAddress" .= toJSON d
-             , "result" .= show (map (\(ip,ttl) -> (show ip, toJSON ttl)) res)
+             , "result" .= Aeson.toJSONList res
              ]
   toObject _verb (TraceLocalRootGroups groups) =
     mkObject [ "kind" .= String "LocalRootGroups"
@@ -1311,6 +1311,9 @@ instance Show exception => ToObject (TraceLocalRootPeers RemoteAddress exception
              , "reason" .= show dexception
              ]
 
+instance ToJSON IP where
+  toJSON ip = Aeson.object ["ip" .= String (pack . show $ ip)]
+
 instance ToObject TracePublicRootPeers where
   toObject _verb (TracePublicRootRelayAccessPoint relays) =
     mkObject [ "kind" .= String "PublicRootRelayAddresses"
@@ -1323,7 +1326,7 @@ instance ToObject TracePublicRootPeers where
   toObject _verb (TracePublicRootResult b res) =
     mkObject [ "kind" .= String "PublicRootResult"
              , "domain" .= show b
-             , "result" .= show (map (\(ip,ttl) -> (show ip, toJSON ttl)) res)
+             , "result" .= Aeson.toJSONList res
              ]
   toObject _verb (TracePublicRootFailure b d) =
     mkObject [ "kind" .= String "PublicRootFailure"
@@ -1819,9 +1822,9 @@ instance (Show addr, Show versionNumber, Show agreedOptions, ToObject addr,
       TrPruneConnections pruningSet numberPruned chosenPeers ->
         mkObject
           [ "kind" .= String "PruneConnections"
-          , "possiblePeers" .= toJSON pruningSet
+          , "prunedPeers" .= toJSON pruningSet
           , "numberPrunedPeers" .= toJSON numberPruned
-          , "chosenPeers" .= toJSON (toObject verb `Set.map` chosenPeers)
+          , "choiceSet" .= toJSON (toObject verb `Set.map` chosenPeers)
           ]
       TrConnectionCleanup connId ->
         mkObject
