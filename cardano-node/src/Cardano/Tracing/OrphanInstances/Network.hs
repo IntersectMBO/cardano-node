@@ -1851,18 +1851,18 @@ instance ToJSON IP where
     toJSON ip = String (pack . show $ ip)
 
 instance ToJSON ConnectionManagerCounters where
-    toJSON ConnectionManagerCounters { prunableConns
+    toJSON ConnectionManagerCounters { fullDuplexConns
                                      , duplexConns
-                                     , uniConns
-                                     , incomingConns
-                                     , outgoingConns
+                                     , unidirectionalConns
+                                     , inboundConns
+                                     , outboundConns
                                      } =
       Aeson.object [ "kind"           .= String "ConnectionManagerCounters"
-                   , "prunable"       .= toJSON prunableConns
+                   , "fullDuplex"     .= toJSON fullDuplexConns
                    , "duplex"         .= toJSON duplexConns
-                   , "unidirectional" .= toJSON uniConns
-                   , "incoming"       .= incomingConns
-                   , "outgoing"       .= outgoingConns
+                   , "unidirectional" .= toJSON unidirectionalConns
+                   , "inbound"        .= inboundConns
+                   , "outbound"       .= outboundConns
                    ]
 
 instance ToJSON PeerStatus where
