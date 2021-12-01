@@ -28,7 +28,7 @@ import qualified Data.Text.Encoding as Text
 import           Data.Word (Word64)
 
 import           Control.Applicative
-import           Control.Iterate.SetAlgebra (BiMap (..), Bimap)
+import           Control.Iterate.BiMap (BiMap (MkBiMap), Bimap)
 
 import           Cardano.Api.Json
 import           Cardano.Ledger.BaseTypes (StrictMaybe (..), strictMaybeToMaybe)
@@ -52,14 +52,14 @@ import qualified Cardano.Ledger.Era as Ledger
 import qualified Cardano.Ledger.Mary.Value as Mary
 import qualified Cardano.Ledger.PoolDistr as Ledger
 import qualified Cardano.Ledger.SafeHash as SafeHash
-import qualified Cardano.Ledger.Shelley.Constraints as Shelley
-import qualified Ouroboros.Consensus.Shelley.Eras as Consensus
 import qualified Cardano.Ledger.Shelley.API as Shelley
+import qualified Cardano.Ledger.Shelley.Constraints as Shelley
 import qualified Cardano.Ledger.Shelley.EpochBoundary as ShelleyEpoch
 import qualified Cardano.Ledger.Shelley.LedgerState as ShelleyLedger
 import           Cardano.Ledger.Shelley.PParams (PParamsUpdate)
 import qualified Cardano.Ledger.Shelley.RewardUpdate as Shelley
 import qualified Cardano.Ledger.Shelley.Rewards as Shelley
+import qualified Ouroboros.Consensus.Shelley.Eras as Consensus
 
 import           Plutus.V1.Ledger.Api (defaultCostModelParams)
 
