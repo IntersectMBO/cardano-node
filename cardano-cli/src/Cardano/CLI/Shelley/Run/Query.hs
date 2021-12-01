@@ -39,7 +39,6 @@ import qualified Cardano.Ledger.Crypto as Crypto
 import qualified Cardano.Ledger.Era as Era
 import           Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import qualified Cardano.Ledger.Shelley.API.Protocol as Ledger
-import qualified Cardano.Ledger.Shelley.Constraints as Ledger
 import           Cardano.Ledger.Shelley.EpochBoundary
 import           Cardano.Ledger.Shelley.LedgerState hiding (_delegations)
 import           Cardano.Ledger.Shelley.Scripts ()
