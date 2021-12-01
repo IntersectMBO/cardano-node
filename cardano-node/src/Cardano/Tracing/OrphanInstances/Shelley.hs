@@ -350,8 +350,7 @@ renderScriptPurpose (Alonzo.Rewarding rwdAcct) =
 renderScriptPurpose (Alonzo.Certifying cert) =
   Aeson.object [ "certifying" .= toJSON (Api.textEnvelopeDefaultDescr $ Api.fromShelleyCertificate cert)]
 
-instance ( Ledger.Crypto era ~ StandardCrypto
-         , ShelleyBasedEra era
+instance ( ShelleyBasedEra era
          , ToObject (PredicateFailure (UTXO era))
          , ToObject (PredicateFailure (Core.EraRule "UTXO" era))
          ) => ToObject (UtxowPredicateFailure era) where
