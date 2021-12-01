@@ -11,7 +11,7 @@ packages:
     bench/cardano-topology
     bench/locli
     bench/tx-generator
-    plutus-example/plutus-example
+    plutus-example
     trace-dispatcher
     trace-resources
     trace-forward
