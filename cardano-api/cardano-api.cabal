@@ -115,7 +115,6 @@ library
                       , cardano-protocol-tpraos
                       , cardano-slotting
                       , cborg
-                      , compact-map
                       , contra-tracer
                       , containers
                       , cryptonite

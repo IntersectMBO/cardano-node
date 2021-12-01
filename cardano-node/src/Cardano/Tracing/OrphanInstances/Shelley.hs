@@ -350,8 +350,7 @@ renderScriptPurpose (Alonzo.Rewarding rwdAcct) =
 renderScriptPurpose (Alonzo.Certifying cert) =
   Aeson.object [ "certifying" .= toJSON (Api.textEnvelopeDefaultDescr $ Api.fromShelleyCertificate cert)]
 
-instance ( Ledger.Crypto era ~ StandardCrypto
-         , ShelleyBasedEra era
+instance ( ShelleyBasedEra era
          , ToObject (PredicateFailure (UTXO era))
          , ToObject (PredicateFailure (Core.EraRule "UTXO" era))
          ) => ToObject (UtxowPredicateFailure era) where
@@ -391,10 +390,6 @@ instance ( Ledger.Crypto era ~ StandardCrypto
              ]
   toObject _verb InvalidMetadata =
     mkObject [ "kind" .= String "InvalidMetadata"
-             ]
-  toObject _verb (ExtraneousScriptWitnessesUTXOW shashes) =
-    mkObject [ "kind" .= String "ExtraneousScriptWitnessesUTXOW"
-             , "scriptHashes" .= Set.map Api.fromShelleyScriptHash shashes
              ]
 
 instance ( ShelleyBasedEra era
