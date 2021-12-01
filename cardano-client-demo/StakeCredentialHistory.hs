@@ -1,12 +1,17 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 import           Cardano.Api
 import           Cardano.Api.Shelley
 import           Cardano.Ledger.Address (getRewardAcnt)
+import           Cardano.Ledger.Alonzo.PParams (PParams' (..))
+import qualified Cardano.Ledger.BaseTypes as L
 import           Cardano.Ledger.Compactible (Compactible (..))
+import qualified Cardano.Ledger.Core as LC
 import qualified Cardano.Ledger.Shelley.API as L
 import qualified Cardano.Ledger.Shelley.Rewards as L
 import qualified Cardano.Ledger.Shelley.RewardUpdate as L
@@ -24,6 +29,7 @@ import qualified Data.Map.Strict as Map
 import           Data.Maybe (mapMaybe)
 import           Data.Set (Set)
 import qualified Data.Text as T
+import           GHC.Records (HasField (..))
 import           Options.Applicative (Parser, (<|>), (<**>))
 import qualified Options.Applicative as Opt
 import           Ouroboros.Consensus.Shelley.Eras (StandardCrypto)
@@ -35,6 +41,7 @@ data State = State
   , lastRewStartEpoch :: EpochNo
   , lastRewEndEpoch   :: EpochNo
   , lastEra           :: String
+  , lastProtocolVer   :: L.ProtVer
   }
 
 startingState :: State
@@ -44,6 +51,7 @@ startingState = State
   , lastRewStartEpoch = EpochNo 0
   , lastRewEndEpoch   = EpochNo 0
   , lastEra           = "byron"
+  , lastProtocolVer   = L.ProtVer 0 0
   }
 
 data IsOwner = IsOwnerYes | IsOwnerNo
@@ -55,6 +63,7 @@ data IsPoolRewardAccount = IsPoolRewardAccountYes | IsPoolRewardAccountNo
 data Event c
   = CheckPointEvent SlotNo
   | NewEraEvent EpochNo SlotNo String
+  | NewPVEvent EpochNo SlotNo L.ProtVer
   | StakeRegistrationEvent EpochNo SlotNo
   | StakeDeRegistrationEvent EpochNo SlotNo
   | DelegationEvent SlotNo (Hash StakePoolKey)
@@ -71,13 +80,18 @@ msg ev = putStrLn (message ev)
   where
     message :: Event c -> String
     message (CheckPointEvent slotNo)       =
-      "CHECKPOINT ------- "
+      "CHECKPOINT -------- "
         <> show slotNo
     message (NewEraEvent e slotNo name)    =
       "NEW-ERA ----------- "
         <> show e      <> ", "
         <> show slotNo <> ", "
         <> name
+    message (NewPVEvent e slotNo pv)    =
+      "NEW-PROTOCOL-VER-- "
+        <> show e      <> ", "
+        <> show slotNo <> ", "
+        <> show (L.pvMajor pv) <> "," <> show (L.pvMinor pv)
     message (StakeRegistrationEvent epochNo slotNo)       =
       "REGISTRATION ------ "
         <> show epochNo <> ", "
@@ -243,7 +257,11 @@ main = do
              _era)
            state -> do
              let getGoSnapshot = L.unStake . L._stake . L._pstakeGo . L.esSnapshots . L.nesEs
-             let getBalances = L._rewards . L._dstate . L._delegationState . L.esLState . L.nesEs
+                 getBalances = L._rewards . L._dstate . L._delegationState . L.esLState . L.nesEs
+                 getPV :: HasField "_protocolVersion" (LC.PParams era) L.ProtVer =>
+                   L.NewEpochState era -> L.ProtVer
+                 getPV = getField @"_protocolVersion" . L.esPp . L.nesEs
+
 
              -- in non-byron eras, get the necessary components of the ledger state
              let (name, epochNo, shelleyState) =
@@ -251,13 +269,13 @@ main = do
                      LedgerStateByron _                                     ->
                        ("byron",   EpochNo 0, Nothing)
                      LedgerStateShelley (Shelley.ShelleyLedgerState _ ls _) ->
-                       ("shelley", L.nesEL ls, Just (L.nesRu ls, getGoSnapshot ls, getBalances ls))
+                       ("shelley", L.nesEL ls, Just (L.nesRu ls, getGoSnapshot ls, getBalances ls, getPV ls))
                      LedgerStateAllegra (Shelley.ShelleyLedgerState _ ls _) ->
-                       ("allegra", L.nesEL ls, Just (L.nesRu ls, getGoSnapshot ls, getBalances ls))
+                       ("allegra", L.nesEL ls, Just (L.nesRu ls, getGoSnapshot ls, getBalances ls, getPV ls))
                      LedgerStateMary    (Shelley.ShelleyLedgerState _ ls _) ->
-                       ("mary",    L.nesEL ls, Just (L.nesRu ls, getGoSnapshot ls, getBalances ls))
+                       ("mary",    L.nesEL ls, Just (L.nesRu ls, getGoSnapshot ls, getBalances ls, getPV ls))
                      LedgerStateAlonzo    (Shelley.ShelleyLedgerState _ ls _) ->
-                       ("alonzo",  L.nesEL ls, Just (L.nesRu ls, getGoSnapshot ls, getBalances ls))
+                       ("alonzo",  L.nesEL ls, Just (L.nesRu ls, getGoSnapshot ls, getBalances ls, getPV ls))
 
              let txBodyComponents = map ( (\(TxBody txbc) -> txbc) . getTxBody ) transactions
 
@@ -267,7 +285,7 @@ main = do
              lastcheck <- displayCheckpoint slotNo (lastCheckpoint state) (checkpoint args)
 
              case shelleyState of
-               Just (L.SJust (L.Complete ru), goSnap, _) -> do
+               Just (L.SJust (L.Complete ru), goSnap, _, _) -> do
 
                  es <- rewardStartEvent (lastRewStartEpoch state) epochNo slotNo (fmap fromCompact (VMap.toMap goSnap)) targetCred
                  ee <- rewardEndEvent   (lastRewEndEpoch   state) epochNo slotNo (L.rs ru)                              targetCred
@@ -275,12 +293,14 @@ main = do
                                 , lastRewStartEpoch = es
                                 , lastRewEndEpoch = ee
                                 }
-               Just (_, _, balances) -> do
+               Just (_, _, balances, cpv) -> do
                  eb  <- rewardBalance (lastBalanceCheck  state) epochNo slotNo balances targetCred
                  era <- newEraEvent name epochNo slotNo (lastEra state)
+                 pv <- newProtocolVersion cpv epochNo slotNo (lastProtocolVer state)
                  return $ state { lastCheckpoint = lastcheck
                                 , lastBalanceCheck = eb
                                 , lastEra = era
+                                , lastProtocolVer = pv
                                 }
                _ -> return $ state {lastCheckpoint = lastcheck}
     )
@@ -301,6 +321,12 @@ main = do
       if name /= eraLast
         then msg (NewEraEvent epochNo slotNo name) >> return name
         else return eraLast
+
+    -- New PV --
+    newProtocolVersion pv epochNo slotNo pvLast =
+      if pv /= pvLast
+        then msg (NewPVEvent epochNo slotNo pv) >> return pv
+        else return pvLast
 
     -- Delegation Events --
     delegationEvents :: StakeCredential -> EpochNo -> SlotNo -> TxBodyContent ViewTx era -> IO ()
