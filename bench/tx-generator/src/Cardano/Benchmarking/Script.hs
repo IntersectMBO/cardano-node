@@ -3,7 +3,8 @@
 module Cardano.Benchmarking.Script
   ( Script
   , runScript
-  , parseScriptFile
+  , parseScriptFileAeson
+  , parseScriptFileLegacy  
   )
 where
 
@@ -17,7 +18,8 @@ import           Ouroboros.Network.NodeToClient (IOManager)
 import           Cardano.Node.Configuration.Logging (shutdownLoggingLayer)
 
 import           Cardano.Benchmarking.Script.Action
-import           Cardano.Benchmarking.Script.Aeson (parseScriptFile)
+import           Cardano.Benchmarking.Script.Aeson (parseScriptFileAeson)
+import           Cardano.Benchmarking.Script.AesonLegacy (parseScriptFileLegacy)
 import           Cardano.Benchmarking.Script.Env
 import           Cardano.Benchmarking.Script.Store
 import           Cardano.Benchmarking.Script.Types
