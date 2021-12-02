@@ -14,12 +14,13 @@
 module Cardano.Tracing.OrphanInstances.Consensus () where
 
 import           Cardano.Prelude hiding (show)
-import           Prelude (show)
+import           Prelude (id, show)
 
 import           Data.Aeson (Value (..))
 import           Data.Text (pack)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
+import           Numeric (showFFloat)
 
 import           Cardano.Slotting.Slot (fromWithOrigin)
 import           Cardano.Tracing.OrphanInstances.Common
@@ -53,7 +54,8 @@ import qualified Ouroboros.Consensus.Node.Tracers as Consensus
 import           Ouroboros.Consensus.Protocol.Abstract
 import qualified Ouroboros.Consensus.Protocol.BFT as BFT
 import qualified Ouroboros.Consensus.Protocol.PBFT as PBFT
-import           Ouroboros.Consensus.Storage.ImmutableDB.Chunks.Internal (ChunkNo (..))
+import           Ouroboros.Consensus.Storage.ImmutableDB.Chunks.Internal (ChunkNo (..),
+                   chunkNoToInt)
 import qualified Ouroboros.Consensus.Storage.VolatileDB.Impl as VolDb
 import           Ouroboros.Network.BlockFetch.ClientState (TraceLabelPeer (..))
 
@@ -426,7 +428,9 @@ instance ( ConvertRawHash blk
           "Replaying ledger from snapshot " <> showT snap <> " at " <>
             renderRealPointAsPhrase tip'
         LedgerDB.ReplayedBlock pt _ledgerEvents replayTo ->
-          "Replayed block: slot " <> showT (realPointSlot pt) <> " of " <> showT (pointSlot replayTo)
+          "Replayed block: slot " <> showT (unSlotNo $ realPointSlot pt)
+                                  <> " out of "
+                                  <> showT (withOrigin 0 Prelude.id $ unSlotNo <$> pointSlot replayTo)
       ChainDB.TraceLedgerEvent ev -> case ev of
         LedgerDB.TookSnapshot snap pt ->
           "Took ledger snapshot " <> showT snap <>
@@ -499,9 +503,20 @@ instance ( ConvertRawHash blk
           "This block no longer in the VolatileDB and isn't in the ImmutableDB\
           \ either; it wasn't part of the current chain. Block: " <> renderRealPoint pt
         ChainDB.SwitchBackToVolatileDB ->  "SwitchBackToVolatileDB"
-      ChainDB.TraceImmutableDBEvent _ev ->  "TraceImmutableDBEvent"
+      ChainDB.TraceImmutableDBEvent ev -> case ev of
+        ImmDB.ChunkValidationEvent e -> case e of
+          ImmDB.StartedValidatingChunk chunkNo outOf ->
+               "Validating chunk no. " <> showT chunkNo <> " out of " <> showT outOf
+            <> ". Progress: " <> showProgressT (max (chunkNoToInt chunkNo - 1) 0) (chunkNoToInt outOf) <> "%"
+          ImmDB.ValidatedChunk chunkNo outOf ->
+               "Validated chunk no. " <> showT chunkNo <> " out of " <> showT outOf
+            <> ". Progress: " <> showProgressT (chunkNoToInt chunkNo) (chunkNoToInt outOf) <> "%"
+          _other -> "TraceImmutableDBEvent"
+        _other -> "TraceImmutableDBEvent"
       ChainDB.TraceVolatileDBEvent _ev ->  "TraceVolatileDBEvent"
-
+     where showProgressT :: Int -> Int -> Text
+           showProgressT chunkNo outOf =
+             pack (showFFloat (Just 2) (100 * fromIntegral chunkNo / fromIntegral outOf :: Float) mempty)
 
 --
 -- | instances of @ToObject@
