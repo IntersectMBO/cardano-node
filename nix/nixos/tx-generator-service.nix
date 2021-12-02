@@ -214,7 +214,7 @@ in pkgs.commonLib.defServiceModule
                   if runScriptFile != null then runScriptFile
                   else "${pkgs.writeText "generator-config-run-script.json"
                                          (decideRunScript cfg)}";
-            in ["json" jsonFile]
+            in ["legacy-json" jsonFile]
           else
           (["cliArguments"
 
