@@ -88,14 +88,14 @@ checkLogs currentLogLock
     -- Since logs' names contain timestamps, we can sort them: the maximum one is the latest log,
     -- and this is the current log (i.e. the log we're writing 'TraceObject's in).
     let fromOldestToNewest = sort logs
+        -- Usage of partial function 'last' is safe here (we already checked the list isn't empty).
         currentLog = last fromOldestToNewest
         -- Only previous logs should be checked if they are outdated.
         allOtherLogs = dropEnd 1 fromOldestToNewest
     checkIfCurrentLogIsFull currentLogLock currentLog format rpLogLimitBytes
     checkIfThereAreOldLogs allOtherLogs rpMaxAgeHours rpKeepFilesNum
 
--- | If the current log file is full (it's size is too big),
---   the new log will be created.
+-- | If the current log file is full (it's size is too big), the new log will be created.
 checkIfCurrentLogIsFull
   :: Lock
   -> FilePath
@@ -103,11 +103,11 @@ checkIfCurrentLogIsFull
   -> Word64
   -> IO ()
 checkIfCurrentLogIsFull currentLogLock pathToCurrentLog format maxSizeInBytes =
-  whenM (logIsFull pathToCurrentLog) $
+  whenM logIsFull $
     createLogAndUpdateSymLink currentLogLock (takeDirectory pathToCurrentLog) format
  where
-  logIsFull logName = do
-    size <- getFileSize logName
+  logIsFull = do
+    size <- getFileSize pathToCurrentLog
     return $ fromIntegral size >= maxSizeInBytes
 
 -- | If there are too old log files - they will be removed.
@@ -118,7 +118,7 @@ checkIfThereAreOldLogs
   -> Word
   -> IO ()
 checkIfThereAreOldLogs [] _ _ = return ()
-checkIfThereAreOldLogs fromOldestToNewest maxAgeInHours keepFilesNum = do 
+checkIfThereAreOldLogs fromOldestToNewest maxAgeInHours keepFilesNum = do
   -- N ('keepFilesNum') newest files have to be kept in any case.
   let logsWeHaveToCheck = dropEnd (fromIntegral keepFilesNum) fromOldestToNewest
   unless (null logsWeHaveToCheck) $ do
