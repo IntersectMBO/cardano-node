@@ -131,6 +131,7 @@ library
                       , ouroboros-consensus
                       , ouroboros-consensus-byron
                       , ouroboros-consensus-cardano
+                      , ouroboros-consensus-protocol
                       , ouroboros-consensus-shelley
                       , ouroboros-network
                       , ouroboros-network-framework
@@ -140,7 +141,6 @@ library
                       , scientific
                       , small-steps
                       , cardano-ledger-shelley
-                      , set-algebra
                       , small-steps
                       , stm
                       , strict-containers

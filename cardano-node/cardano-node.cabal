@@ -143,6 +143,7 @@ library
                       , psqueues
                       , safe-exceptions
                       , scientific
+                      , strict-stm
                       , cardano-ledger-shelley
                       , small-steps
                       , stm

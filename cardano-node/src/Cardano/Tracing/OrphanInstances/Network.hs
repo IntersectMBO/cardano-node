@@ -483,6 +483,7 @@ instance HasSeverityAnnotation (InboundGovernorTrace addr) where
       InboundGovernor.TrPromotedToWarmRemote {}    -> Info
       InboundGovernor.TrPromotedToHotRemote {}     -> Info
       InboundGovernor.TrDemotedToColdRemote {}     -> Info
+      InboundGovernor.TrDemotedToWarmRemote {}     -> Info
       InboundGovernor.TrWaitIdleRemote {}          -> Debug
       InboundGovernor.TrMuxCleanExit {}            -> Debug
       InboundGovernor.TrMuxErrored {}              -> Info
@@ -1990,6 +1991,10 @@ instance (ToJSON addr, Show addr)
     mkObject [ "kind" .= String "DemotedToColdRemote"
              , "connectionId" .= toJSON connId
              , "result" .= show od
+             ]
+  toObject _verb (TrDemotedToWarmRemote connId)     =
+    mkObject [ "kind" .= String "DemotedToWarmRemote"
+             , "connectionId" .= toJSON connId
              ]
   toObject _verb (TrWaitIdleRemote connId opRes) =
     mkObject [ "kind" .= String "WaitIdleRemote"
