@@ -70,8 +70,8 @@ taggedToSum x = case x of
   (TEra                  :=> v) -> SEra                  <$> v
   (TTargets              :=> v) -> STargets              <$> v
 
-sumToTaggged :: Applicative f => Sum -> DSum Tag f
-sumToTaggged x = case x of
+sumToTagged :: Applicative f => Sum -> DSum Tag f
+sumToTagged x = case x of
   SNumberOfInputsPerTx  v -> TNumberOfInputsPerTx  ==> v
   SNumberOfOutputsPerTx v -> TNumberOfOutputsPerTx ==> v
   SNumberOfTxs          v -> TNumberOfTxs          ==> v

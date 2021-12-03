@@ -88,14 +88,15 @@ instance FromJSON ScriptBudget where
   parseJSON = genericParseJSON jsonOptionsUnTaggedSum
 
 instance ToJSON (DSum Tag Identity) where
-  toEncoding = error "DSum Tag Identity"
-  toJSON = error "DSum Tag Identity"
+  toJSON     = toJSON . taggedToSum
 instance FromJSON (DSum Tag Identity) where
-  parseJSON = error "fromJSON"
+  parseJSON a = sumToTagged <$> parseJSON a
 
 instance ToJSON Sum where
-  toEncoding = genericToEncoding defaultOptions
-instance FromJSON Sum
+  toJSON     = genericToJSON jsonOptionsUnTaggedSum
+  toEncoding = genericToEncoding jsonOptionsUnTaggedSum
+instance FromJSON Sum where
+  parseJSON = genericParseJSON jsonOptionsUnTaggedSum
 
 instance ToJSON Action where
   toJSON     = genericToJSON jsonOptionsUnTaggedSum
@@ -129,15 +130,15 @@ scanScriptFile filePath = do
 --          ]
     Atto.Done _ value -> return value
 
-parseScriptFile :: (Value -> Result [Action]) -> FilePath -> IO [Action]
-parseScriptFile parser filePath = do
+parseJSONFile :: (Value -> Result x) -> FilePath -> IO x
+parseJSONFile parser filePath = do
   value <- scanScriptFile filePath
   case parser value of
     Error err -> die err
     Success script -> return script
 
 parseScriptFileAeson :: FilePath -> IO [Action]
-parseScriptFileAeson = parseScriptFile fromJSON
+parseScriptFileAeson = parseJSONFile fromJSON
 
 instance ToJSON KeyName         where toJSON (KeyName a) = toJSON a
 instance ToJSON FundName        where toJSON (FundName a) = toJSON a
