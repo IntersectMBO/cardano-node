@@ -464,6 +464,10 @@ instance HasSeverityAnnotation (ConnectionManagerTrace addr (ConnectionHandlerTr
       TrState {}                              -> Info
       ConnMgr.TrUnexpectedlyFalseAssertion {} -> Error
 
+instance HasPrivacyAnnotation (ConnMgr.AbstractTransitionTrace addr)
+instance HasSeverityAnnotation (ConnMgr.AbstractTransitionTrace addr) where
+  getSeverityAnnotation _ = Debug
+
 instance HasPrivacyAnnotation (ServerTrace addr)
 instance HasSeverityAnnotation (ServerTrace addr) where
   getSeverityAnnotation ev =
@@ -683,10 +687,19 @@ instance (Show addr, Show versionNumber, Show agreedOptions, ToObject addr,
                                  addr
                                  (ConnectionHandlerTrace versionNumber agreedOptions)) where
   trTransformer = trStructuredText
+
+instance (Show addr, ToObject (ConnMgr.AbstractTransitionTrace addr))
+      => Transformable Text IO (ConnMgr.AbstractTransitionTrace addr) where
+  trTransformer = trStructuredText
+
 instance (Show addr, Show versionNumber, Show agreedOptions)
       => HasTextFormatter (ConnectionManagerTrace
                             addr
                             (ConnectionHandlerTrace versionNumber agreedOptions)) where
+  formatText a _ = pack (show a)
+
+instance (Show addr)
+      => HasTextFormatter (ConnMgr.AbstractTransitionTrace addr) where
   formatText a _ = pack (show a)
 
 instance (Show addr, ToObject addr, ToJSON addr)
@@ -1867,6 +1880,13 @@ instance (Show addr, Show versionNumber, Show agreedOptions, ToObject addr,
           [ "kind" .= String "UnexpectedlyFalseAssertion"
           , "info" .= String (pack . show $ info)
           ]
+
+instance (Show addr, ToObject addr, ToJSON addr)
+      => ToObject (ConnMgr.AbstractTransitionTrace addr) where
+  toObject verb (ConnMgr.TransitionTrace peerAddr tr) =
+    mkObject [ "address" .= toObject verb peerAddr
+             , "transition" .= String (pack . show $ tr)
+             ]
 
 instance (Show addr, ToObject addr, ToJSON addr)
       => ToObject (ServerTrace addr) where

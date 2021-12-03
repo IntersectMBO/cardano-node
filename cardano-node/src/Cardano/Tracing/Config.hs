@@ -46,6 +46,7 @@ type TraceChainSyncBlockServer = ("TraceChainSyncBlockServer" :: Symbol)
 type TraceChainSyncHeaderServer = ("TraceChainSyncHeaderServer" :: Symbol)
 type TraceChainSyncProtocol = ("TraceChainSyncProtocol" :: Symbol)
 type TraceConnectionManager = ("TraceConnectionManager" :: Symbol)
+type TraceConnectionManagerTransitions = ("TraceConnectionManagerTransitions" :: Symbol)
 type TraceConnectionManagerCounters = ("TraceConnectionManagerCounters" :: Symbol)
 type DebugPeerSelectionInitiator = ("DebugPeerSelectionInitiator" :: Symbol)
 type DebugPeerSelectionInitiatorResponder = ("DebugPeerSelectionInitiatorResponder" :: Symbol)
@@ -111,6 +112,7 @@ data TraceSelection
   , traceChainSyncHeaderServer :: OnOff TraceChainSyncHeaderServer
   , traceChainSyncProtocol :: OnOff TraceChainSyncProtocol
   , traceConnectionManager :: OnOff TraceConnectionManager
+  , traceConnectionManagerTransitions :: OnOff TraceConnectionManagerTransitions
   , traceConnectionManagerCounters :: OnOff TraceConnectionManagerCounters
   , traceDebugPeerSelectionInitiatorTracer :: OnOff DebugPeerSelectionInitiator
   , traceDebugPeerSelectionInitiatorResponderTracer :: OnOff DebugPeerSelectionInitiatorResponder
@@ -180,6 +182,8 @@ traceConfigParser v =
       chainSyncProtocol = OnOff False
       connectionManager :: OnOff TraceConnectionManager
       connectionManager = OnOff False
+      connectionManagerTransitions :: OnOff TraceConnectionManagerTransitions
+      connectionManagerTransitions = OnOff False
       connectionManagerCounters :: OnOff TraceConnectionManagerCounters
       connectionManagerCounters = OnOff True
       debugPeerSelectionInitiator :: OnOff DebugPeerSelectionInitiator
@@ -271,6 +275,7 @@ traceConfigParser v =
     <*> v .:? getName chainSyncHeaderServer .!= chainSyncHeaderServer
     <*> v .:? getName chainSyncProtocol .!= chainSyncProtocol
     <*> v .:? getName connectionManager .!= connectionManager
+    <*> v .:? getName connectionManagerTransitions .!= connectionManagerTransitions
     <*> v .:? getName connectionManagerCounters .!= connectionManagerCounters
     <*> v .:? getName debugPeerSelectionInitiator
                        .!= debugPeerSelectionInitiator

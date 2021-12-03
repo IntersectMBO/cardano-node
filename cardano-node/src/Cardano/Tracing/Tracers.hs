@@ -358,6 +358,9 @@ mkTracers blockConfig tOpts@(TracingOn trSel) tr nodeKern ekgDirect enableP2P = 
                     ekgDirect
               <> tracerOnOff (traceConnectionManager trSel)
                               verb "ConnectionManager" tr
+           , P2P.dtConnectionManagerTransitionTracer =
+                 tracerOnOff (traceConnectionManagerTransitions trSel)
+                             verb "ConnectionManagerTransitions" tr
            , P2P.dtServerTracer =
                tracerOnOff (traceServer trSel) verb "Server" tr
            , P2P.dtInboundGovernorTracer =
