@@ -18,7 +18,7 @@ import           Data.Aeson.Types
 
 import           Cardano.CLI.Types (SigningKeyFile(..))
 
-import           Cardano.Benchmarking.Script.Aeson (parseScriptFile)
+import           Cardano.Benchmarking.Script.Aeson (parseJSONFile)
 import           Cardano.Benchmarking.Script.Env
 import           Cardano.Benchmarking.Script.Setters
 import           Cardano.Benchmarking.Script.Store
@@ -26,7 +26,7 @@ import           Cardano.Benchmarking.Script.Types
 import           Cardano.Benchmarking.Types (NumberOfTxs(..), TPSRate(..))
 
 parseScriptFileLegacy :: FilePath -> IO [Action]
-parseScriptFileLegacy = parseScriptFile (parse $ listParser jsonToAction)
+parseScriptFileLegacy = parseJSONFile (parse $ listParser jsonToAction)
 
 actionToJSON :: Action -> Value
 actionToJSON a = case a of
@@ -96,9 +96,11 @@ objectToAction obj = case obj of
  where
   parseSetter k v = case k of
     (Text.stripPrefix "set" -> Just tag) -> do
-        s <- parseJSON $ object [ "tag" .= ("S" <> tag), "contents" .= v]
-        return $ Set $ sumToTaggged s
+        s <- tagParser $ object [ "tag" .= ("S" <> tag), "contents" .= v]
+        return $ Set $ sumToTagged s
     _ -> parseFail $ "Error: cannot parse action Object with key " <> Text.unpack k
+    where
+      tagParser = genericParseJSON defaultOptions
 
   parseKey f = KeyName <$> parseField obj f
   parseFund f = FundName <$> parseField obj f
