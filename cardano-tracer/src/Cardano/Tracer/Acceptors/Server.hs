@@ -42,6 +42,7 @@ import           Cardano.Tracer.Acceptors.Utils (prepareDataPointAsker,
                    prepareMetricsStores, removeDisconnectedNode)
 import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.Handlers.Logs.TraceObjects (traceObjectsHandler)
+import           Cardano.Tracer.Handlers.RTView.Run (SavedTraceObjects)
 import           Cardano.Tracer.Types (AcceptedMetrics, ConnectedNodes, DataPointAskers)
 import           Cardano.Tracer.Utils (connIdToNodeId)
 
@@ -56,15 +57,16 @@ runAcceptorsServer
   -> AcceptedMetrics
   -> DataPointAskers
   -> Lock
+  -> SavedTraceObjects
   -> IO ()
-runAcceptorsServer config p (ekgConfig, tfConfig, dpfConfig)
-                   connectedNodes acceptedMetrics dpAskers currentLogLock = withIOManager $ \iocp ->
+runAcceptorsServer config p (ekgConfig, tfConfig, dpfConfig) connectedNodes
+                   acceptedMetrics dpAskers currentLogLock savedTO = withIOManager $ \iocp ->
   doListenToForwarder (localSnocket iocp) (localAddressFromPath p) noTimeLimitsHandshake $
     -- Please note that we always run all the supported protocols,
     -- there is no mechanism to disable some of them.
     appResponder
       [ (runEKGAcceptor ekgConfig connectedNodes acceptedMetrics errorHandler, 1)
-      , (runTraceObjectsAcceptor config tfConfig currentLogLock  errorHandler, 2)
+      , (runTraceObjectsAcceptor config tfConfig currentLogLock savedTO errorHandler, 2)
       , (runDataPointsAcceptor dpfConfig connectedNodes dpAskers errorHandler, 3)
       ]
  where
@@ -77,7 +79,7 @@ runAcceptorsServer config p (ekgConfig, tfConfig, dpfConfig)
          }
       | (protocol, num) <- protocolsWithNums
       ]
-  errorHandler = removeDisconnectedNode connectedNodes acceptedMetrics dpAskers
+  errorHandler = removeDisconnectedNode connectedNodes acceptedMetrics dpAskers savedTO
 
 doListenToForwarder
   :: Snocket IO LocalSocket LocalAddress
@@ -123,13 +125,14 @@ runTraceObjectsAcceptor
   :: TracerConfig
   -> TF.AcceptorConfiguration TraceObject
   -> Lock
+  -> SavedTraceObjects
   -> (ConnectionId LocalAddress -> IO ())
   -> ConnectionId LocalAddress
   -> RunMiniProtocol 'ResponderMode LBS.ByteString IO Void ()
-runTraceObjectsAcceptor config tfConfig currentLogLock errorHandler connId =
+runTraceObjectsAcceptor config tfConfig currentLogLock savedTO errorHandler connId =
   acceptTraceObjectsResp
     tfConfig
-    (traceObjectsHandler config (connIdToNodeId connId) currentLogLock)
+    (traceObjectsHandler config (connIdToNodeId connId) currentLogLock savedTO)
     (errorHandler connId)
 
 runDataPointsAcceptor

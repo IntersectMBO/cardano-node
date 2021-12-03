@@ -80,6 +80,7 @@ data TracerConfig = TracerConfig
   , ekgRequestFreq :: !(Maybe Pico)                 -- ^ How often to request for EKG-metrics, in seconds.
   , hasEKG         :: !(Maybe (Endpoint, Endpoint)) -- ^ Endpoint for EKG web-page (list of nodes, monitoring).
   , hasPrometheus  :: !(Maybe Endpoint)             -- ^ Endpoint for Promeheus web-page.
+  , hasRTView      :: !(Maybe Endpoint)             -- ^ Endpoint for RTView web-page.
   , logging        :: !(NonEmpty LoggingParams)     -- ^ Logging parameters.
   , rotation       :: !(Maybe RotationParams)       -- ^ Rotation parameters.
   , verbosity      :: !(Maybe Verbosity)            -- ^ Verbosity of the tracer itself.

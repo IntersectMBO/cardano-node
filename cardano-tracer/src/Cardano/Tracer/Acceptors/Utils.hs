@@ -15,6 +15,7 @@ import           Ouroboros.Network.Socket (ConnectionId (..))
 import           System.Metrics.Store.Acceptor (MetricsLocalStore, emptyMetricsLocalStore)
 import           Trace.Forward.Utils.DataPoint (DataPointAsker, initDataPointAsker)
 
+import           Cardano.Tracer.Handlers.RTView.State.TraceObjects (SavedTraceObjects)
 import           Cardano.Tracer.Types (AcceptedMetrics, ConnectedNodes, DataPointAskers)
 import           Cardano.Tracer.Utils (connIdToNodeId)
 
@@ -56,12 +57,14 @@ removeDisconnectedNode
   :: ConnectedNodes
   -> AcceptedMetrics
   -> DataPointAskers
+  -> SavedTraceObjects
   -> ConnectionId LocalAddress
   -> IO ()
-removeDisconnectedNode connectedNodes acceptedMetrics dpAskers connId = atomically $ do
-  -- Remove all the stuff related to disconnected node.
+removeDisconnectedNode connectedNodes acceptedMetrics dpAskers savedTO connId = atomically $ do
+  -- Remove all the data related to disconnected node.
   modifyTVar' connectedNodes  $ S.delete nodeId
   modifyTVar' acceptedMetrics $ M.delete nodeId
   modifyTVar' dpAskers        $ M.delete nodeId
+  modifyTVar' savedTO         $ M.delete nodeId
  where
   nodeId = connIdToNodeId connId

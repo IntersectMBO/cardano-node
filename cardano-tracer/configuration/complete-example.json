@@ -19,6 +19,10 @@
     "epHost": "127.0.0.1",
     "epPort": 3000
   },
+  "hasRTView": {
+    "epHost": "127.0.0.1",
+    "epPort": 3200
+  },
   "logging": [
     {
       "logRoot": "/tmp/cardano-tracer-h-logs",

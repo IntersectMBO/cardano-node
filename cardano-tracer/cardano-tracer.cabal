@@ -1,16 +1,16 @@
-cabal-version:       2.4
-name:                cardano-tracer
-version:             0.1.0
-synopsis:            A service for logging and monitoring over Cardano node.
-description:         See README for more info
-license:             Apache-2.0
-license-file:        LICENSE
-copyright:           2021 Input Output (Hong Kong) Ltd.
-author:              IOHK
-maintainer:          operations@iohk.io
-build-type:          Simple
-extra-doc-files:     README.md
-                     CHANGELOG.md
+cabal-version:         2.4
+name:                  cardano-tracer
+version:               0.1.0
+synopsis:              A service for logging and monitoring over Cardano node.
+description:           See README for more info
+license:               Apache-2.0
+license-file:          LICENSE
+copyright:             2021 Input Output (Hong Kong) Ltd.
+author:                IOHK
+maintainer:            operations@iohk.io
+build-type:            Simple
+extra-doc-files:       README.md
+                       CHANGELOG.md
 
 common base            { build-depends: base >= 4.14 && < 4.15 }
 
@@ -46,6 +46,36 @@ library
                        Cardano.Tracer.Handlers.Metrics.Prometheus
                        Cardano.Tracer.Handlers.Metrics.Servers
 
+                       Cardano.Tracer.Handlers.RTView.Run
+                       Cardano.Tracer.Handlers.RTView.State.DataPoint
+                       Cardano.Tracer.Handlers.RTView.State.Displayed
+                       Cardano.Tracer.Handlers.RTView.State.TraceObjects
+                       Cardano.Tracer.Handlers.RTView.UI.CSS.Bulma
+                       Cardano.Tracer.Handlers.RTView.UI.CSS.Own
+                       Cardano.Tracer.Handlers.RTView.UI.HTML.NodePanel.Add
+                       --Cardano.Tracer.Handlers.RTView.UI.HTML.NodePanel.BugsTab
+                       --Cardano.Tracer.Handlers.RTView.UI.HTML.NodePanel.ChainTab
+                       --Cardano.Tracer.Handlers.RTView.UI.HTML.NodePanel.GCTab
+                       Cardano.Tracer.Handlers.RTView.UI.HTML.NodePanel.Heading
+                       Cardano.Tracer.Handlers.RTView.UI.HTML.NodePanel.HealthTab
+                       --Cardano.Tracer.Handlers.RTView.UI.HTML.NodePanel.KESTab
+                       --Cardano.Tracer.Handlers.RTView.UI.HTML.NodePanel.MetricsTab
+                       --Cardano.Tracer.Handlers.RTView.UI.HTML.NodePanel.NodeTab
+                       Cardano.Tracer.Handlers.RTView.UI.HTML.NodePanel.PeersTab
+                       Cardano.Tracer.Handlers.RTView.UI.HTML.NodePanel.Tabs
+                       --Cardano.Tracer.Handlers.RTView.UI.HTML.NodePanel.TxTab
+                       --Cardano.Tracer.Handlers.RTView.UI.HTML.Notifications
+                       Cardano.Tracer.Handlers.RTView.UI.HTML.OwnInfo
+                       Cardano.Tracer.Handlers.RTView.UI.HTML.PageBody
+                       Cardano.Tracer.Handlers.RTView.UI.Img.Icons
+                       --Cardano.Tracer.Handlers.RTView.UI.JS.ChartJS
+                       --Cardano.Tracer.Handlers.RTView.UI.JS.Charts
+                       --Cardano.Tracer.Handlers.RTView.UI.JS.Utils
+                       --Cardano.Tracer.Handlers.RTView.UI.Elements
+                       Cardano.Tracer.Handlers.RTView.UI.NodeInfo
+                       Cardano.Tracer.Handlers.RTView.UI.Updater
+                       Cardano.Tracer.Handlers.RTView.UI.Utils
+
                        Cardano.Tracer.CLI
                        Cardano.Tracer.Configuration
                        Cardano.Tracer.Run
@@ -60,6 +90,7 @@ library
                        , blaze-html
                        , blaze-markup
                        , bytestring
+                       , cardano-config
                        , cborg
                        , containers
                        , contra-tracer
@@ -75,6 +106,7 @@ library
                        , snap-core
                        , snap-server
                        , stm
+                       , string-qq
                        , text
                        , threepenny-gui
                        , time
