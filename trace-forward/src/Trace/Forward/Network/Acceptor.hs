@@ -35,8 +35,7 @@ import           Ouroboros.Network.Socket (AcceptedConnectionsLimit (..),
                                            SomeResponderApplication (..),
                                            cleanNetworkMutableState, newNetworkMutableState,
                                            nullNetworkServerTracers, withServerNode)
-import           Ouroboros.Network.Protocol.Handshake.Codec (cborTermVersionDataCodec,
-                                                             noTimeLimitsHandshake)
+import           Ouroboros.Network.Protocol.Handshake.Codec (noTimeLimitsHandshake)
 import           Ouroboros.Network.Protocol.Handshake.Unversioned (UnversionedProtocol (..),
                                                                    UnversionedProtocolData (..),
                                                                    unversionedHandshakeCodec,

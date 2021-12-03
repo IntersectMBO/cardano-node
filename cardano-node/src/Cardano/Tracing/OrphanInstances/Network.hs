@@ -902,18 +902,18 @@ instance ToJSON peerAddr => ToJSON (ConnectionId peerAddr) where
                  ]
 
 instance Aeson.ToJSON ConnectionManagerCounters where
-  toJSON ConnectionManagerCounters { prunableConns
+  toJSON ConnectionManagerCounters { fullDuplexConns
                                    , duplexConns
-                                   , uniConns
-                                   , incomingConns
-                                   , outgoingConns
+                                   , unidirectionalConns
+                                   , inboundConns
+                                   , outboundConns
                                    } =
     Aeson.object [ "kind"           .= String "ConnectionManagerCounters"
-                 , "prunable"       .= toJSON prunableConns
                  , "duplex"         .= toJSON duplexConns
-                 , "unidirectional" .= toJSON uniConns
-                 , "incoming"       .= incomingConns
-                 , "outgoing"       .= outgoingConns
+                 , "fullduplex"     .= toJSON fullDuplexConns
+                 , "unidirectional" .= toJSON unidirectionalConns
+                 , "inbound"        .= inboundConns
+                 , "outbound"       .= outboundConns
                  ]
 
 instance ToObject (FetchDecision [Point header]) where
@@ -1825,10 +1825,12 @@ instance (Show addr, Show versionNumber, Show agreedOptions, ToObject addr,
           , "remoteAddress" .= toObject verb remoteAddress
           , "connectionState" .= toJSON connState
           ]
-      TrPruneConnections peers ->
+      TrPruneConnections pruningSet cnt choiceSet ->
         mkObject
           [ "kind" .= String "PruneConnections"
-          , "peers" .= toJSON (toObject verb `map` peers)
+          , "pruningSet" .= toJSON (toObject verb `map` (Set.toList pruningSet))
+          , "choiceSet"  .= toJSON (toObject verb `map` (Set.toList choiceSet))
+          , "count"      .= toJSON cnt
           ]
       TrConnectionCleanup connId ->
         mkObject
@@ -1906,6 +1908,10 @@ instance ToJSON addr => ToJSON (OperationResult addr) where
   toJSON (OperationSuccess addr) =
     Aeson.object [ "kind" .= String "OperationSuccess"
                  , "operationSuccess" .= toJSON addr
+                 ]
+  toJSON (TerminatedConnection addr) =
+    Aeson.object [ "kind" .= String "TerminatedConnection"
+                 , "terminatedConnection" .= toJSON addr
                  ]
 
 instance ToJSON RemoteSt where
