@@ -74,25 +74,19 @@ Confirm that you installed cabal version `3.4.0.0`:
 
 Download and install version `8.10.7` of GHC.  The easiest way to do this is to use [ghcup](https://www.haskell.org/ghcup/).
 
-```bash
-$ curl --proto '=https' --tlsv1.2 -sSf https://get-ghcup.haskell.org | sh
-```
+    curl --proto '=https' --tlsv1.2 -sSf https://get-ghcup.haskell.org | sh
 
 Then open a new terminal (to get an updated environment) and run:
 
-```bash
-$ ghcup install ghc 8.10.7
-$ ghcup install cabal 3.4.0.0
-$ ghcup set ghc 8.10.7
-$ ghcup set cabal 3.4.0.0
-```
+    ghcup install ghc 8.10.7
+    ghcup install cabal 3.4.0.0
+    ghcup set ghc 8.10.7
+    ghcup set cabal 3.4.0.0
 
 Create a working directory for your builds:
 
-```bash
-$ mkdir -p ~/src
-$ cd ~/src
-```
+    mkdir -p ~/src
+    cd ~/src
 
 #### Installing Libsodium
 
@@ -157,6 +151,7 @@ Build the node and CLI with `cabal`:
 
 Install the newly built node and CLI commands to the `~/.local/bin` directory:
 
+    mkdir -p ~/.local/bin
     cp -p "$(./scripts/bin-path.sh cardano-node)" ~/.local/bin/
     cp -p "$(./scripts/bin-path.sh cardano-cli)" ~/.local/bin/
 
