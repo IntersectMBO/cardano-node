@@ -1,4 +1,4 @@
-index-state: 2021-09-15T00:00:00Z
+index-state: 2021-12-03T06:07:23Z
 
 packages:
     cardano-api
@@ -170,7 +170,7 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger
-  tag: 70cfbf9be79533a6d1b2ff446567f5b78bf945aa
+  tag: e7ac999e3e18239289334d0a84e89637869ae8fb
   --sha256: 03jnfz1zgd1r64va60nx2q6q7v7sdc2c7vhy5lm7kcjgakci27x1
   subdir:
     eras/alonzo/impl
