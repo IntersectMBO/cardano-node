@@ -38,6 +38,8 @@ let
 
     devopsShell = shell.devops;
 
+    devShell = shell.dev;
+
     nixosTests = recRecurseIntoAttrs nixosTests;
 
     # so that eval time gc roots are cached (nix-tools stuff)
