@@ -47,6 +47,9 @@ module Cardano.Api.Address (
     StakeKey,
     StakeExtendedKey,
 
+    -- * Conversion functions
+    shelleyPayAddrToPlutusPubKHash,
+
     -- * Internal conversion functions
     toShelleyAddr,
     toShelleyStakeAddr,
@@ -82,6 +85,14 @@ import qualified Text.Parsec.String as Parsec
 
 import           Control.Applicative
 
+import qualified Cardano.Chain.Common as Byron
+import qualified Cardano.Ledger.Address as Shelley
+import qualified Cardano.Ledger.Alonzo.TxInfo as Alonzo
+import qualified Cardano.Ledger.BaseTypes as Shelley
+import qualified Cardano.Ledger.Credential as Shelley
+import           Cardano.Ledger.Crypto (StandardCrypto)
+import qualified Plutus.V1.Ledger.Api as Plutus
+
 import           Cardano.Api.Eras
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Hash
@@ -93,11 +104,8 @@ import           Cardano.Api.Script
 import           Cardano.Api.SerialiseBech32
 import           Cardano.Api.SerialiseRaw
 import           Cardano.Api.Utils
-import qualified Cardano.Chain.Common as Byron
-import qualified Cardano.Ledger.Address as Shelley
-import qualified Cardano.Ledger.BaseTypes as Shelley
-import qualified Cardano.Ledger.Credential as Shelley
-import           Cardano.Ledger.Crypto (StandardCrypto)
+
+
 
 -- ----------------------------------------------------------------------------
 -- Address Serialisation
@@ -528,6 +536,12 @@ isKeyAddress (AddressInEra (ShelleyAddressInEra _) (ShelleyAddress _ pCred _)) =
     PaymentCredentialByKey _ -> True
     PaymentCredentialByScript _ -> False
 
+-- | Converts a Shelley payment address to a Plutus public key hash.
+shelleyPayAddrToPlutusPubKHash :: Address ShelleyAddr -> Maybe Plutus.PubKeyHash
+shelleyPayAddrToPlutusPubKHash (ShelleyAddress _ payCred _) =
+  case payCred of
+    Shelley.ScriptHashObj _ -> Nothing
+    Shelley.KeyHashObj kHash -> Just $ Alonzo.transKeyHash kHash
 
 -- ----------------------------------------------------------------------------
 -- Internal conversion functions
