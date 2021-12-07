@@ -58,6 +58,7 @@ import           Ouroboros.Network.ConnectionManager.Types ( AbstractState(..),
                     AbstractState(..) , ConnectionManagerCounters(..) , OperationResult(..))
 import qualified Ouroboros.Network.ConnectionManager.Types as ConnMgr
 import           Ouroboros.Network.ConnectionHandler (ConnectionHandlerTrace(..))
+import qualified Ouroboros.Network.ConnectionHandler as Connection
 import           Ouroboros.Network.DeltaQ (GSV (..), PeerGSV (..))
 import           Ouroboros.Network.Driver.Limits (ProtocolLimitFailure (..))
 import           Ouroboros.Network.KeepAlive (TraceKeepAliveClient (..))
@@ -445,8 +446,8 @@ instance HasSeverityAnnotation (ConnectionManagerTrace addr (ConnectionHandlerTr
           TrHandshakeSuccess {}               -> Info
           TrHandshakeClientError {}           -> Notice
           TrHandshakeServerError {}           -> Info
-          TrError _ _ ShutdownNode            -> Critical
-          TrError _ _ ShutdownPeer            -> Info
+          Connection.TrError _ _ ShutdownNode -> Critical
+          Connection.TrError _ _ ShutdownPeer -> Info
 
       TrShutdown                              -> Info
       TrConnectionExists {}                   -> Info
@@ -499,6 +500,7 @@ instance HasSeverityAnnotation (InboundGovernorTrace addr) where
       InboundGovernor.TrRemoteState {}             -> Debug
       InboundGovernor.TrUnexpectedlyFalseAssertion {}
                                                    -> Error
+      InboundGovernor.TrError {}                   -> Error
 
 --
 -- | instances of @Transformable@
@@ -1735,7 +1737,7 @@ instance (Show versionNumber, ToJSON versionNumber, ToJSON agreedOptions)
       [ "kind" .= String "HandshakeServerError"
       , "reason" .= toJSON err
       ]
-  toObject _verb (TrError e err cerr) =
+  toObject _verb (Connection.TrError e err cerr) =
     mkObject
       [ "kind" .= String "Error"
       , "context" .= show e
@@ -2044,3 +2046,8 @@ instance (ToJSON addr, Show addr)
     mkObject [ "kind" .= String "UnexpectedlyFalseAssertion"
              , "remoteSt" .= String (pack . show $ info)
              ]
+  toObject _verb (InboundGovernor.TrError err) =
+    mkObject [ "kind" .= String "Error"
+             , "reason" .= String (pack . show $ err)
+             ]
+
