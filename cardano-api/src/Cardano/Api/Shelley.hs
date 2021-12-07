@@ -182,6 +182,7 @@ module Cardano.Api.Shelley
     UTxO(..),
 
     -- ** Conversions
+    shelleyPayAddrToPlutusPubKHash,
     --TODO: arrange not to export these
     toShelleyNetwork,
     fromShelleyPParams,
