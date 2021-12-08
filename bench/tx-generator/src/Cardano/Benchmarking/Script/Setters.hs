@@ -19,7 +19,7 @@ import           Data.GADT.Compare.TH (deriveGCompare, deriveGEq)
 import           Data.GADT.Show.TH (deriveGShow)
 import           Data.List.NonEmpty
 
-import           Cardano.Api (Lovelace, SlotNo, AnyCardanoEra(..))
+import           Cardano.Api (AnyCardanoEra(..), SlotNo, Lovelace, NetworkId)
 
 import           Cardano.Benchmarking.Types
 
@@ -35,6 +35,7 @@ data Tag v where
   TLocalSocket          :: Tag String
   TEra                  :: Tag AnyCardanoEra
   TTargets              :: Tag (NonEmpty NodeIPv4Address)
+  TNetworkId            :: Tag NetworkId
 
 deriveGEq ''Tag
 deriveGCompare ''Tag
@@ -55,6 +56,7 @@ data Sum where
   SLocalSocket          :: !String               -> Sum
   SEra                  :: !AnyCardanoEra        -> Sum
   STargets              :: !(NonEmpty NodeIPv4Address) -> Sum
+  SNetworkId            :: !NetworkId            -> Sum
   deriving (Eq, Show, Generic)
 
 taggedToSum :: Applicative f => DSum Tag f -> f Sum
@@ -69,6 +71,7 @@ taggedToSum x = case x of
   (TLocalSocket          :=> v) -> SLocalSocket          <$> v
   (TEra                  :=> v) -> SEra                  <$> v
   (TTargets              :=> v) -> STargets              <$> v
+  (TNetworkId            :=> v) -> SNetworkId            <$> v
 
 sumToTagged :: Applicative f => Sum -> DSum Tag f
 sumToTagged x = case x of
@@ -82,3 +85,4 @@ sumToTagged x = case x of
   SLocalSocket          v -> TLocalSocket          ==> v
   SEra                  v -> TEra                  ==> v
   STargets              v -> TTargets              ==> v
+  SNetworkId            v -> TNetworkId            ==> v

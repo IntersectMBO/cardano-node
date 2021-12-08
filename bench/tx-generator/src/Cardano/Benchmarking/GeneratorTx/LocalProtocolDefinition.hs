@@ -107,7 +107,7 @@ runBenchmarkScriptWith ::
 runBenchmarkScriptWith iocp logConfigFile socketFile script = do
   (loggingLayer, ptcl) <- startProtocol logConfigFile
   let tracers :: BenchTracers
-      tracers = createTracers loggingLayer
+      tracers = createLoggingLayerTracers loggingLayer
       dslSet :: MonoDSLs
       dslSet = mangleLocalProtocolDefinition ptcl iocp socketFile tracers
   res <- firstExceptT BenchmarkRunnerError $ script (tracers, dslSet)

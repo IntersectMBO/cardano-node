@@ -39,8 +39,15 @@ data Action where
   CancelBenchmark    :: !ThreadName -> Action
   Reserved           :: [String] -> Action
   WaitForEra         :: !AnyCardanoEra -> Action
+  SetProtocolParameters :: ProtocolParametersSource -> Action
   deriving (Show, Eq)
 deriving instance Generic Action
+
+data ProtocolParametersSource where
+  QueryLocalNode :: ProtocolParametersSource
+  UseLocalProtocolFile :: !FilePath -> ProtocolParametersSource
+  deriving (Show, Eq)
+deriving instance Generic ProtocolParametersSource
 
 data SubmitMode where
   LocalSocket :: SubmitMode
@@ -70,4 +77,3 @@ data ScriptBudget where
   CheckScriptBudget  :: !ExecutionUnits -> ScriptBudget
   deriving (Show, Eq)
 deriving instance Generic ScriptBudget
-

@@ -21,17 +21,13 @@ type TxGenerator era = [Fund] -> [TxOut CtxTx era] -> Either String (Tx era, TxI
 type ToUTxO era = [Lovelace] -> ([TxOut CtxTx era], TxId -> [Fund])
 
 data Wallet = Wallet {
-    walletNetworkId :: !NetworkId
-  , walletKey :: !(SigningKey PaymentKey)
-  , walletSeqNumber :: !SeqNumber
+    walletSeqNumber :: !SeqNumber
   , walletFunds :: !FundSet
   }
 
-initWallet :: NetworkId -> SigningKey PaymentKey -> IO (MVar Wallet)
-initWallet network key = newMVar $ Wallet {
-    walletNetworkId = network
-  , walletKey = key
-  , walletSeqNumber = SeqNumber 1
+initWallet :: IO (MVar Wallet)
+initWallet = newMVar $ Wallet {
+    walletSeqNumber = SeqNumber 1
   , walletFunds = emptyFunds
   }
 
