@@ -4,8 +4,8 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE ImportQualifiedPost #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -22,38 +22,39 @@ module Cardano.Node.Queries
   , LedgerQueries(..)
   ) where
 
-import Cardano.Prelude hiding (All, (:.:))
+import           Cardano.Prelude hiding (All, (:.:))
 
-import Data.Map.Strict qualified as Map
-import Data.SOP.Strict
+import qualified Data.Map.Strict as Map
+import           Data.SOP.Strict
 
-import Cardano.Crypto.KES.Class (Period)
-import Cardano.Protocol.TPraos.OCert (KESPeriod (..))
-import Cardano.Chain.Block qualified as Byron
-import Cardano.Chain.UTxO qualified as Byron
-import Cardano.Crypto.Hash qualified as Crypto
-import Cardano.Crypto.Hashing qualified as Byron.Crypto
-import Cardano.Ledger.SafeHash qualified as Ledger
-import Cardano.Ledger.Shelley.LedgerState qualified as Shelley
-import Cardano.Ledger.Shelley.UTxO qualified as Shelley
-import Cardano.Ledger.TxIn qualified as Ledger
+import qualified Cardano.Chain.Block as Byron
+import qualified Cardano.Chain.UTxO as Byron
+import qualified Cardano.Crypto.Hash as Crypto
+import qualified Cardano.Crypto.Hashing as Byron.Crypto
+import           Cardano.Crypto.KES.Class (Period)
+import qualified Cardano.Ledger.SafeHash as Ledger
+import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
+import qualified Cardano.Ledger.Shelley.UTxO as Shelley
+import qualified Cardano.Ledger.TxIn as Ledger
+import           Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 
-import Ouroboros.Consensus.HardFork.Combinator.Embed.Unary
-import Ouroboros.Consensus.Byron.Ledger.Block qualified as Byron
-import Ouroboros.Consensus.Byron.Ledger.Ledger qualified as Byron
-import Ouroboros.Consensus.Shelley.Ledger qualified as Shelley
-import Ouroboros.Consensus.Cardano qualified as Cardano
-import Ouroboros.Consensus.Cardano.Block qualified as Cardano
-import Ouroboros.Consensus.Block (ForgeStateInfo, ForgeStateUpdateError)
-import Ouroboros.Consensus.Byron.Ledger.Block (ByronBlock)
-import Ouroboros.Consensus.Byron.Ledger.Mempool (TxId (..))
-import Ouroboros.Consensus.HardFork.Combinator
-import Ouroboros.Consensus.HardFork.Combinator.AcrossEras (OneEraForgeStateInfo (..), OneEraForgeStateUpdateError (..))
-import Ouroboros.Consensus.Shelley.Ledger.Block (ShelleyBlock)
-import Ouroboros.Consensus.Shelley.Ledger.Mempool (TxId (..))
-import Ouroboros.Consensus.Shelley.Node ()
-import Ouroboros.Consensus.Shelley.Protocol.HotKey qualified as HotKey
-import Ouroboros.Consensus.TypeFamilyWrappers
+import           Ouroboros.Consensus.Block (ForgeStateInfo, ForgeStateUpdateError)
+import           Ouroboros.Consensus.Byron.Ledger.Block (ByronBlock)
+import qualified Ouroboros.Consensus.Byron.Ledger.Block as Byron
+import qualified Ouroboros.Consensus.Byron.Ledger.Ledger as Byron
+import           Ouroboros.Consensus.Byron.Ledger.Mempool (TxId (..))
+import qualified Ouroboros.Consensus.Cardano as Cardano
+import qualified Ouroboros.Consensus.Cardano.Block as Cardano
+import           Ouroboros.Consensus.HardFork.Combinator
+import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (OneEraForgeStateInfo (..),
+                   OneEraForgeStateUpdateError (..))
+import           Ouroboros.Consensus.HardFork.Combinator.Embed.Unary
+import qualified Ouroboros.Consensus.Protocol.Ledger.HotKey as HotKey
+import qualified Ouroboros.Consensus.Shelley.Ledger as Shelley
+import           Ouroboros.Consensus.Shelley.Ledger.Block (ShelleyBlock)
+import           Ouroboros.Consensus.Shelley.Ledger.Mempool (TxId (..))
+import           Ouroboros.Consensus.Shelley.Node ()
+import           Ouroboros.Consensus.TypeFamilyWrappers
 
 --
 -- * TxId -> ByteString projection
