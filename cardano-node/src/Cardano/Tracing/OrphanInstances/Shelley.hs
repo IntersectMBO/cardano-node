@@ -43,8 +43,8 @@ import           Ouroboros.Network.Point (WithOrigin, withOriginToMaybe)
 
 import           Ouroboros.Consensus.Shelley.Ledger hiding (TxId)
 import           Ouroboros.Consensus.Shelley.Ledger.Inspect
-import           Ouroboros.Consensus.Shelley.Protocol (TPraosCannotForge (..))
-import qualified Ouroboros.Consensus.Shelley.Protocol.HotKey as HotKey
+import           Ouroboros.Consensus.Protocol.TPraos (TPraosCannotForge (..))
+import qualified Ouroboros.Consensus.Protocol.Ledger.HotKey as HotKey
 
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import           Cardano.Ledger.Alonzo as Alonzo

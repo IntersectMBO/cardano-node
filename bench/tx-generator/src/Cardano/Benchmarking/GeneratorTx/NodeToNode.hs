@@ -29,7 +29,7 @@ import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTxId)
 import           Ouroboros.Consensus.Network.NodeToNode (Codecs (..), defaultCodecs)
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
 import           Ouroboros.Consensus.Node.Run (RunNode)
-import           Ouroboros.Consensus.Shelley.Protocol (StandardCrypto)
+import           Ouroboros.Consensus.Shelley.Eras (StandardCrypto)
 
 import           Ouroboros.Network.Channel (Channel (..))
 import           Ouroboros.Network.DeltaQ (defaultGSV)

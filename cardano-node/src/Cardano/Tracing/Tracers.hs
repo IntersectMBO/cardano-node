@@ -75,7 +75,7 @@ import           Ouroboros.Consensus.Node (NetworkP2PMode (..))
 import qualified Ouroboros.Consensus.Node.Run as Consensus (RunNode)
 import qualified Ouroboros.Consensus.Node.Tracers as Consensus
 import           Ouroboros.Consensus.Protocol.Abstract (ValidationErr)
-import qualified Ouroboros.Consensus.Shelley.Protocol.HotKey as HotKey
+import qualified Ouroboros.Consensus.Protocol.Ledger.HotKey as HotKey
 
 import qualified Ouroboros.Network.AnchoredFragment as AF
 import           Ouroboros.Network.Block (BlockNo (..), HasHeader (..), Point, StandardHash,
@@ -186,6 +186,7 @@ indexReplType :: ChainDB.TraceLedgerReplayEvent a -> Int
 indexReplType LedgerDB.ReplayFromGenesis{} = 1
 indexReplType LedgerDB.ReplayFromSnapshot{} = 2
 indexReplType LedgerDB.ReplayedBlock{} = 3
+indexReplType LedgerDB.UpdateLedgerDbTraceEvent{} = 4 -- TODO is this the right number to choose?
 
 instance ElidingTracer (WithSeverity (ChainDB.TraceEvent blk)) where
   -- equivalent by type and severity

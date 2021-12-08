@@ -38,7 +38,7 @@ import qualified Ouroboros.Consensus.Mempool.TxLimits as TxLimits
 import           Ouroboros.Consensus.Shelley.Eras (StandardShelley)
 import           Ouroboros.Consensus.Shelley.Node (Nonce (..), ProtocolParamsShelley (..),
                    ProtocolParamsShelleyBased (..), TPraosLeaderCredentials (..))
-import           Ouroboros.Consensus.Shelley.Protocol (TPraosCanBeLeader (..))
+import           Ouroboros.Consensus.Protocol.TPraos (TPraosCanBeLeader (..))
 
 import           Cardano.Ledger.BaseTypes (ProtVer (..))
 import qualified Cardano.Ledger.Shelley.Genesis as Shelley
