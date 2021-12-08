@@ -4,8 +4,8 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE ImportQualifiedPost #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -54,6 +54,7 @@ import Ouroboros.Consensus.Shelley.Ledger.Block (ShelleyBlock)
 import Ouroboros.Consensus.Shelley.Ledger.Mempool (TxId (..))
 import Ouroboros.Consensus.Shelley.Node ()
 import Ouroboros.Consensus.TypeFamilyWrappers
+
 
 --
 -- * TxId -> ByteString projection
