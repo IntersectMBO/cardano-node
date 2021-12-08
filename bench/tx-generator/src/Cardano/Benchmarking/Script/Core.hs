@@ -98,6 +98,40 @@ readSigningKey name filePath =
     Left err -> liftTxGenError err
     Right key -> setName name key
 
+defineSigningKey :: KeyName -> TextEnvelope -> ActionM ()
+defineSigningKey name descr
+  = case deserialiseFromTextEnvelopeAnyOf types descr of
+    Right key -> setName name key
+    Left err -> throwE $ ApiError $ show err
+  where
+    types :: [FromSomeType HasTextEnvelope (SigningKey PaymentKey)]
+    types =
+      [ FromSomeType (AsSigningKey AsGenesisUTxOKey) castSigningKey
+      , FromSomeType (AsSigningKey AsPaymentKey) id
+      ]
+
+addFund :: TxIn -> Lovelace -> KeyName -> ActionM ()
+addFund txIn lovelace keyName = do
+  fundKey  <- getName keyName
+  let
+    mkOutValue :: forall era. IsShelleyBasedEra era => AsType era -> ActionM (InAnyCardanoEra TxOutValue)
+    mkOutValue = \_ -> return $ InAnyCardanoEra (cardanoEra @ era) (mkTxOutValueAdaOnly lovelace)
+  outValue <- withEra mkOutValue
+  addFundToWallet txIn outValue fundKey
+
+addFundToWallet :: TxIn -> InAnyCardanoEra TxOutValue -> SigningKey PaymentKey -> ActionM ()
+addFundToWallet txIn outVal skey = do
+  wallet <- get GlobalWallet
+  liftIO (walletRefInsertFund wallet (FundSet.Fund $ mkFund outVal))
+  where
+    mkFund = liftAnyEra $ \value -> FundInEra {
+           _fundTxIn = txIn
+         , _fundVal = value
+         , _fundSigningKey = Just skey
+         , _fundValidity = Confirmed
+         , _fundVariant = PlainOldFund
+         }
+
 getLocalSubmitTx :: ActionM LocalSubmitTx
 getLocalSubmitTx = submitTxToNodeLocal <$> getLocalConnectInfo
 
@@ -507,8 +541,6 @@ dumpToFile filePath tx = liftIO $ dumpToFileIO filePath tx
 dumpToFileIO :: FilePath -> TxInMode CardanoMode -> IO ()
 dumpToFileIO filePath tx = appendFile filePath ('\n' : show tx)
 
--- Todo: make it possible to import several funds
--- (Split init and import)
 importGenesisFund
    :: SubmitMode
    -> KeyName
@@ -536,20 +568,8 @@ importGenesisFund submitMode genesisKeyName destKey = do
   result <- liftCoreWithEra coreCall
   case result of 
     Left err -> liftTxGenError err
-    Right fund -> addToWallet fund
-  where
-    addToWallet ((txIn, outVal), skey) = do
-      let
-        mkFund = liftAnyEra $ \value -> FundInEra {
-           _fundTxIn = txIn
-         , _fundVal = value
-         , _fundSigningKey = Just skey
-         , _fundValidity = Confirmed
-         , _fundVariant = PlainOldFund
-         }
-      wallet <- get GlobalWallet
-      liftIO (walletRefInsertFund wallet (FundSet.Fund $ mkFund outVal))
-
+    Right ((txIn, outVal), skey) -> addFundToWallet txIn outVal skey
+  
 initGlobalWallet :: ActionM ()
 initGlobalWallet = liftIO initWallet >>= set GlobalWallet
 

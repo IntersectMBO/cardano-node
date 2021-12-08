@@ -15,7 +15,7 @@ import           Prelude
 import           GHC.Generics
 
 import           Cardano.Benchmarking.OuroborosImports (SigningKeyFile)
-import           Cardano.Api (AnyCardanoEra, ExecutionUnits, Lovelace, ScriptData, ScriptRedeemer)
+import           Cardano.Api (AnyCardanoEra, ExecutionUnits, Lovelace, ScriptData, ScriptRedeemer, TextEnvelope, TxIn)
 
 import           Cardano.Benchmarking.Script.Env
 import           Cardano.Benchmarking.Script.Store
@@ -27,6 +27,8 @@ data Action where
   StartProtocol      :: !FilePath -> Action
   Delay              :: !Double -> Action
   ReadSigningKey     :: !KeyName -> !SigningKeyFile -> Action
+  DefineSigningKey   :: !KeyName -> !TextEnvelope -> Action
+  AddFund            :: !TxIn -> !Lovelace -> !KeyName -> Action
   SecureGenesisFund  :: !FundName -> !KeyName -> !KeyName -> Action
   SplitFund          :: [FundName] -> !KeyName -> !FundName -> Action
   SplitFundToList    :: !FundListName -> !KeyName -> !FundName -> Action
