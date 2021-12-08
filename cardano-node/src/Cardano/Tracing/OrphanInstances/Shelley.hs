@@ -32,6 +32,7 @@ import qualified Cardano.Api.Shelley as Api
 import           Cardano.Ledger.Crypto (StandardCrypto)
 
 import           Cardano.Slotting.Block (BlockNo (..))
+import           Cardano.Tracing.Render (renderTxId)
 import           Cardano.Tracing.OrphanInstances.Common
 import           Cardano.Tracing.OrphanInstances.Consensus ()
 
@@ -103,13 +104,10 @@ import           Cardano.Ledger.Shelley.Rules.Utxow
 -- NOTE: this list is sorted in roughly topological order.
 
 instance ShelleyBasedEra era => ToObject (GenTx (ShelleyBlock era)) where
-  toObject verb tx =
-    mkObject $
-        [ "txid" .= txId tx ]
-     ++ [ "tx"   .= condense tx | verb == MaximalVerbosity ]
+  toObject _ tx = mkObject [ "txid" .= Text.take 8 (renderTxId (txId tx)) ]
 
 instance ToJSON (SupportsMempool.TxId (GenTx (ShelleyBlock era))) where
-  toJSON i = toJSON (condense i)
+  toJSON = String . Text.take 8 . renderTxId
 
 instance ShelleyBasedEra era => ToObject (Header (ShelleyBlock era)) where
   toObject _verb b = mkObject
