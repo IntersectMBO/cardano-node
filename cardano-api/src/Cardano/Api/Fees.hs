@@ -23,7 +23,6 @@ module Cardano.Api.Fees (
     -- * Script execution units
     evaluateTransactionExecutionUnits,
     ScriptExecutionError(..),
-    TransactionValidityIntervalError(..),
 
     -- * Transaction balance
     evaluateTransactionBalance,
@@ -404,28 +403,29 @@ instance Error ScriptExecutionError where
   displayError (ScriptErrorMissingCostModel language) =
       "No cost model was found for language " <> show language
 
--- | The transaction validity interval is too far into the future.
---
--- Transactions with Plutus scripts need to have a validity interval that is
--- not so far in the future that we cannot reliably determine the UTC time
--- corresponding to the validity interval expressed in slot numbers.
---
--- This is because the Plutus scripts get given the transaction validity
--- interval in UTC time, so that they are not sensitive to slot lengths.
---
--- If either end of the validity interval is beyond the so called \"time
--- horizon\" then the consensus algorithm is not able to reliably determine
--- the relationship between slots and time. This is this situation in which
--- this error is reported. For the Cardano mainnet the time horizon is 36
--- hours beyond the current time. This effectively means we cannot submit
--- check or submit transactions that use Plutus scripts that have the end
--- of their validity interval more than 36 hours into the future.
---
-newtype TransactionValidityIntervalError =
+
+data TransactionExecutionUnitsError =
+          -- | The transaction validity interval is too far into the future.
+          --
+          -- Transactions with Plutus scripts need to have a validity interval that is
+          -- not so far in the future that we cannot reliably determine the UTC time
+          -- corresponding to the validity interval expressed in slot numbers.
+          --
+          -- This is because the Plutus scripts get given the transaction validity
+          -- interval in UTC time, so that they are not sensitive to slot lengths.
+          --
+          -- If either end of the validity interval is beyond the so called \"time
+          -- horizon\" then the consensus algorithm is not able to reliably determine
+          -- the relationship between slots and time. This is this situation in which
+          -- this error is reported. For the Cardano mainnet the time horizon is 36
+          -- hours beyond the current time. This effectively means we cannot submit
+          -- check or submit transactions that use Plutus scripts that have the end
+          -- of their validity interval more than 36 hours into the future.
+          --
           TransactionValidityIntervalError Consensus.PastHorizonException
   deriving Show
 
-instance Error TransactionValidityIntervalError where
+instance Error TransactionExecutionUnitsError where
   displayError (TransactionValidityIntervalError pastTimeHorizon) =
       "The transaction validity interval is too far in the future. "
    ++ "For this network it must not be more than "
@@ -460,7 +460,7 @@ evaluateTransactionExecutionUnits
   -> ProtocolParameters
   -> UTxO era
   -> TxBody era
-  -> Either TransactionValidityIntervalError
+  -> Either TransactionExecutionUnitsError
             (Map ScriptWitnessIndex (Either ScriptExecutionError ExecutionUnits))
 evaluateTransactionExecutionUnits _eraInMode systemstart history pparams utxo txbody =
     case makeSignedTransaction [] txbody of
@@ -473,7 +473,7 @@ evaluateTransactionExecutionUnits _eraInMode systemstart history pparams utxo tx
           ShelleyBasedEraAlonzo  -> evalAlonzo era tx'
   where
     -- Pre-Alonzo eras do not support languages with execution unit accounting.
-    evalPreAlonzo :: Either TransactionValidityIntervalError
+    evalPreAlonzo :: Either TransactionExecutionUnitsError
                             (Map ScriptWitnessIndex
                                  (Either ScriptExecutionError ExecutionUnits))
     evalPreAlonzo = Right Map.empty
@@ -484,7 +484,7 @@ evaluateTransactionExecutionUnits _eraInMode systemstart history pparams utxo tx
                => LedgerEraConstraints ledgerera
                => ShelleyBasedEra era
                -> Ledger.Tx ledgerera
-               -> Either TransactionValidityIntervalError
+               -> Either TransactionExecutionUnitsError
                          (Map ScriptWitnessIndex
                               (Either ScriptExecutionError ExecutionUnits))
     evalAlonzo era tx =
@@ -496,10 +496,11 @@ evaluateTransactionExecutionUnits _eraInMode systemstart history pparams utxo tx
              systemstart
              (toAlonzoCostModels (protocolParamCostModels pparams))
         of Left  err   -> Left err
-           Right exmap -> Right (fromLedgerScriptExUnitsMap exmap)
+           Right (Right exmap) -> Right (fromLedgerScriptExUnitsMap exmap)
+           Right (Left _) -> error ""
 
     toLedgerEpochInfo :: EraHistory mode
-                      -> EpochInfo (Either TransactionValidityIntervalError)
+                      -> EpochInfo (Either TransactionExecutionUnitsError)
     toLedgerEpochInfo (EraHistory _ interpreter) =
         hoistEpochInfo (first TransactionValidityIntervalError . runExcept) $
           Consensus.interpreterToEpochInfo interpreter
@@ -709,9 +710,7 @@ data TxBodyErrorAutoBalance =
        -- word parameter, for eras that use this parameter.
      | TxBodyErrorMissingParamCostPerWord
 
-       -- | The transaction validity interval is too far into the future.
-       -- See 'TransactionValidityIntervalError' for details.
-     | TxBodyErrorValidityInterval TransactionValidityIntervalError
+     | TxBodyErrorExecutionUnits TransactionExecutionUnitsError
 
        -- | The minimum spendable UTxO threshold has not been met.
      | TxBodyErrorMinUTxONotMet
@@ -766,7 +765,7 @@ instance Error TxBodyErrorAutoBalance where
   displayError TxBodyErrorMissingParamCostPerWord =
       "The utxoCostPerWord protocol parameter is required but missing"
 
-  displayError (TxBodyErrorValidityInterval err) =
+  displayError (TxBodyErrorExecutionUnits err) =
       displayError err
 
   displayError (TxBodyErrorMinUTxONotMet txout minUTxO) =
@@ -861,7 +860,7 @@ makeTransactionBodyAutoBalance eraInMode systemstart history pparams
             -- 1,2,4 or 8 bytes?
         }
 
-    exUnitsMap <- first TxBodyErrorValidityInterval $
+    exUnitsMap <- first TxBodyErrorExecutionUnits $
                     evaluateTransactionExecutionUnits
                       eraInMode
                       systemstart history

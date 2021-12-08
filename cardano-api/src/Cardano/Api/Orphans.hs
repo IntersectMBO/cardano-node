@@ -21,6 +21,7 @@ import           Data.Aeson (FromJSON (..), ToJSON (..), object, (.!=), (.:), (.
 import qualified Data.Aeson as Aeson
 import           Data.Aeson.Types (FromJSONKey (..), ToJSONKey (..), toJSONKeyText)
 import qualified Data.ByteString.Base16 as B16
+import           Data.Compact.VMap
 import qualified Data.Map.Strict as Map
 import           Data.Text (Text)
 import qualified Data.Text as Text
@@ -232,7 +233,7 @@ instance Crypto.Crypto crypto => ToJSON (Shelley.TxIn crypto) where
 instance Crypto.Crypto crypto => ToJSONKey (Shelley.TxIn crypto) where
   toJSONKey = toJSONKeyText txInToText
 
-txInToText :: Crypto.Crypto crypto => Shelley.TxIn crypto -> Text
+txInToText :: Shelley.TxIn crypto -> Text
 txInToText (Shelley.TxIn (Shelley.TxId txidHash) ix) =
   hashToText (SafeHash.extractHash txidHash)
     <> Text.pack "#"
@@ -501,3 +502,16 @@ deriving instance Show Alonzo.AlonzoGenesis
 
 deriving newtype instance ToJSON SystemStart
 deriving newtype instance FromJSON SystemStart
+
+
+instance Crypto.Crypto crypto =>
+  ToJSON (VMap VB VP (Shelley.Credential 'Shelley.Staking crypto) (Shelley.CompactForm Shelley.Coin)) where
+    toJSON = error ""
+
+instance Crypto.Crypto crypto =>
+  ToJSON (VMap VB VB (Shelley.Credential 'Shelley.Staking crypto) (Shelley.KeyHash Shelley.StakePool crypto)) where
+    toJSON = error ""
+
+instance Crypto.Crypto crypto =>
+  ToJSON (VMap VB VB (Shelley.KeyHash 'Shelley.StakePool crypto) (Shelley.PoolParams crypto)) where
+    toJSON = error ""

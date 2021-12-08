@@ -65,6 +65,7 @@ import           Data.Maybe (mapMaybe)
 import           Data.SOP.Strict (SListI)
 import           Data.Set (Set)
 import qualified Data.Set as Set
+import           Data.Sharing (FromSharedCBOR, Interns, Share)
 import           Data.Text (Text)
 import           Data.Typeable
 import           Prelude
@@ -281,8 +282,13 @@ newtype SerialisedDebugLedgerState era
 data DebugLedgerState era where
   DebugLedgerState :: ShelleyLedgerEra era ~ ledgerera => Shelley.NewEpochState ledgerera -> DebugLedgerState era
 
-instance (Typeable era, Shelley.TransLedgerState FromCBOR (ShelleyLedgerEra era)) => FromCBOR (DebugLedgerState era) where
-  fromCBOR = DebugLedgerState <$> (fromCBOR :: Decoder s (Shelley.NewEpochState (ShelleyLedgerEra era)))
+instance
+    ( Typeable era
+    , Shelley.TransLedgerState FromCBOR (ShelleyLedgerEra era)
+    , Share (Core.TxOut (ShelleyLedgerEra era)) ~ Interns (Shelley.Credential 'Shelley.Staking (Ledger.Crypto (ShelleyLedgerEra era)))
+    , FromSharedCBOR (Core.TxOut (ShelleyLedgerEra era))
+    ) => FromCBOR (DebugLedgerState era) where
+           fromCBOR = DebugLedgerState <$> (fromCBOR :: Decoder s (Shelley.NewEpochState (ShelleyLedgerEra era)))
 
 -- TODO: Shelley based era class!
 instance ( IsShelleyBasedEra era
