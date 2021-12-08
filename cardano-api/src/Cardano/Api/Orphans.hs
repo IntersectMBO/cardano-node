@@ -21,8 +21,6 @@ import           Data.Aeson (FromJSON (..), ToJSON (..), object, (.!=), (.:), (.
 import qualified Data.Aeson as Aeson
 import           Data.Aeson.Types (FromJSONKey (..), ToJSONKey (..), toJSONKeyText)
 import qualified Data.ByteString.Base16 as B16
-import           Data.Compact.VMap (VMap)
-import qualified Data.Compact.VMap as VMap
 import qualified Data.Map.Strict as Map
 import           Data.Text (Text)
 import qualified Data.Text as Text
@@ -35,7 +33,6 @@ import           Control.Iterate.SetAlgebra (BiMap (..), Bimap)
 import           Cardano.Api.Json
 import           Cardano.Ledger.BaseTypes (StrictMaybe (..), strictMaybeToMaybe)
 import qualified Cardano.Ledger.BaseTypes as Ledger
-import qualified Cardano.Ledger.Compactible as Ledger
 import           Cardano.Ledger.Crypto (StandardCrypto)
 import           Cardano.Slotting.Slot (SlotNo (..))
 import           Cardano.Slotting.Time (SystemStart (..))
@@ -235,7 +232,7 @@ instance Crypto.Crypto crypto => ToJSON (Shelley.TxIn crypto) where
 instance Crypto.Crypto crypto => ToJSONKey (Shelley.TxIn crypto) where
   toJSONKey = toJSONKeyText txInToText
 
-txInToText :: Shelley.TxIn crypto -> Text
+txInToText :: Crypto.Crypto crypto => Shelley.TxIn crypto -> Text
 txInToText (Shelley.TxIn (Shelley.TxId txidHash) ix) =
   hashToText (SafeHash.extractHash txidHash)
     <> Text.pack "#"
@@ -268,13 +265,6 @@ instance Crypto.Crypto crypto => ToJSON (Shelley.SnapShot crypto) where
 
 instance Crypto.Crypto crypto => ToJSON (Shelley.Stake crypto) where
   toJSON (Shelley.Stake s) = toJSON s
-
-instance (VMap.Vector vp a, VMap.Vector vb k, ToJSON k, ToJSON a, ToJSONKey k)
-        => ToJSON (VMap vb vp k a) where
-  toJSON vm = toJSON (VMap.toMap vm)
-
-instance ToJSON (Shelley.CompactForm Shelley.Coin) where
-  toJSON cc = toJSON (Ledger.fromCompact cc)
 
 instance Crypto.Crypto crypto => ToJSON (Shelley.RewardUpdate crypto) where
   toJSON rUpdate = object [ "deltaT" .= Shelley.deltaT rUpdate

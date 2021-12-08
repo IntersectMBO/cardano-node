@@ -29,6 +29,7 @@ import           Data.Text (breakOn, pack, take)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import           Data.Time.Clock (getCurrentTime)
+import           Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import           Data.Version (showVersion)
 import           Network.HostName (getHostName)
 import           Network.Socket (Socket)
@@ -421,6 +422,7 @@ handleSimpleNode scp runP p2pMode trace nodeTracers nc onKernel = do
                 tr = do
     startTime <- getCurrentTime
     traceNodeBasicInfo tr =<< nodeBasicInfo nc scp startTime
+    traceCounter "nodeStartTime" tr (ceiling $ utcTimeToPOSIXSeconds startTime)
     traceWith (startupTracer nodeTracers)
             $ StartupTime startTime
     when ncValidateDB $ traceWith (startupTracer nodeTracers) StartupDBValidation

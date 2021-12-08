@@ -1,19 +1,26 @@
 # Changelog for cardano-cli
 
-## 1.31 -- October 2021
+## 1.32.1 -- November 2021
 
-- Restore support for deserialising transactions built by pre-1.27.0 node
+- Default CLI commands to the Alonzo era. (#3339)
+- Add defaults for building the Alonzo genesis. (#3346)
+
+## 1.31.0 -- October 2021
+
+- Restore support for deserialising transactions built by pre-1.27.0.0 node
   versions. (#3226)
 - Various internal refactorings and improvements. (#3234)
 - Use the new `GetChainBlockNo` and `GetChainPoint` queries in the query tip
   command. There is a fallback to the older method using the full chain sync
   query. (#3179)
-- Allow provision of optional datums to a transaction using the CLI option `--tx-out-datum-embed-value`. This mechanism
-  can for example be used to provide the actual script locking an output, for use when spending it. (#3171)
+- Allow provision of optional datums to a transaction using the CLI option
+  `--tx-out-datum-embed-value`. This mechanism can for example be used to
+  provide the actual script locking an output, for use when spending it. (#3171)
 - Fix the use of withdrawls using the `transaction build` command. (#3317)
-- Allow extended payment keys to be specified as a Plutus required signer. (#3319)
+- Allow extended payment keys to be specified as a Plutus required signer.
+  (#3319)
 
-## 1.30 -- September 2021
+## 1.30.0 -- September 2021
 
 - Allow the user to specify a signature as required when spending from a
   multisig/timelock script using the `build` or `build-raw` commands. Required
@@ -33,7 +40,7 @@
 - Allow the `tx build` command to spend the entirety of a UTxO and create no
   change output. (#3188)
 - Add withdrawls to the `tx view` command. (#2613)
-## 1.29 -- August 2021
+## 1.29.0 -- August 2021
 
 - Add a "tx build" command to the CLI. This command takes care of calculating
   the appropriate fee for a transaction, and balancing the transaction
@@ -49,10 +56,12 @@
 - Make the CLI help text more nicely formatted. (#2945)
 - Introduce the `--script-valid` and `--script-invalid` flags. The latter can be
   used to mark a script as being known invalid, such that the node will allow it
-  to be submitted anyway (whereas under normal operation it would reject such a transaction in order to avoid loss of collateral). This flag is only likely to be of use in testing.
-  The `--script-valid` flag is set as a default. (#3050, #3091, #3093)
+  to be submitted anyway (whereas under normal operation it would reject such a
+  transaction in order to avoid loss of collateral). This flag is only likely to
+  be of use in testing. The `--script-valid` flag is set as a default. (#3050,
+  #3091, #3093)
 - Add colours to the CLI output. (#3023)
-## 1.28 -- July 2021
+## 1.28.0 -- July 2021
 
 - The query tip command is now tidier and shows various additional pieces of
   information:
@@ -76,7 +85,7 @@
 - The parser for rational units (as used in for example execution unit prices)
   now supports rational syntax (e.g. 1/2). (#2922)
 
-## 1.27 -- April 2021
+## 1.27.0 -- April 2021
 
 - The query tip now also returns the era (e.g. Shelley, Allegra, Alonzo).
   (#2561, #2562, #2598)
