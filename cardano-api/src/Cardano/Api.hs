@@ -508,9 +508,11 @@ module Cardano.Api (
     chainSyncClientPipelinedWithLedgerState,
 
     -- *** Errors
+    LedgerStateError(..),
     FoldBlocksError(..),
     GenesisConfigError(..),
     InitialLedgerStateError(..),
+    renderLedgerStateError,
     renderFoldBlocksError,
     renderGenesisConfigError,
     renderInitialLedgerStateError,
