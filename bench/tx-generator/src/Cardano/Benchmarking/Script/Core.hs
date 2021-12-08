@@ -555,10 +555,10 @@ initGlobalWallet = liftIO initWallet >>= set GlobalWallet
 
 createChange :: SubmitMode -> PayMode -> Lovelace -> Int -> ActionM ()
 createChange submitMode payMode value count = case payMode of
-  PayToAddr -> withEra $ createChangeInEra submitMode PlainOldFund value count
+  PayToAddr keyName -> withEra $ createChangeInEra submitMode PlainOldFund keyName value count
   -- Problem here: PayToCollateral will create an output marked as collateral
   -- and also return any change to a collateral, which makes the returned change unusable.
-  PayToCollateral -> withEra $ createChangeInEra submitMode CollateralFund value count
+  PayToCollateral keyName -> withEra $ createChangeInEra submitMode CollateralFund keyName value count
   PayToScript scriptFile scriptData -> createChangeScriptFunds submitMode scriptFile scriptData value count
 
 createChangeScriptFunds :: SubmitMode -> FilePath -> ScriptData -> Lovelace -> Int -> ActionM ()
@@ -587,13 +587,13 @@ createChangeScriptFunds submitMode scriptFile scriptData value count = do
     addressMsg =  Text.unpack $ serialiseAddress $ makeShelleyAddress networkId (PaymentCredentialByScript $ hashScript script) NoStakeAddress
   createChangeGeneric submitMode createCoins addressMsg value count
 
-createChangeInEra :: forall era. IsShelleyBasedEra era => SubmitMode -> Variant -> Lovelace -> Int -> AsType era -> ActionM ()
-createChangeInEra submitMode variant value count _proxy = do
+createChangeInEra :: forall era. IsShelleyBasedEra era => SubmitMode -> Variant -> KeyName -> Lovelace -> Int -> AsType era -> ActionM ()
+createChangeInEra submitMode variant keyName value count _proxy = do
   networkId <- getUser TNetworkId
   fee <- getUser TFee
   walletRef <- get GlobalWallet
   protocolParameters <- getProtocolParameters
-  fundKey <- getName $ KeyName "pass-partout"
+  fundKey <- getName keyName
   let
     createCoins :: FundSet.FundSource -> [Lovelace] -> ActionM (Either String (TxInMode CardanoMode))
     createCoins fundSource coins = do

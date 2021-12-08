@@ -58,8 +58,8 @@ data SubmitMode where
 deriving instance Generic SubmitMode
 
 data PayMode where
-  PayToAddr :: PayMode
-  PayToCollateral :: PayMode  
+  PayToAddr :: !KeyName -> PayMode
+  PayToCollateral :: !KeyName  -> PayMode
   PayToScript :: !FilePath -> !ScriptData -> PayMode
   deriving (Show, Eq)
 deriving instance Generic PayMode
