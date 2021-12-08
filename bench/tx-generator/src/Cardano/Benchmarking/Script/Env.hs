@@ -50,7 +50,7 @@ runActionMEnv env action iom = RWS.runRWST (runExceptT action) iom env
 type SetKeyVal = DSum Setters.Tag Identity
 
 data Error where
-  LookupError :: !(Store v)    -> Error
+  LookupError :: !(Store v)  -> Error
   TxGenError  :: !TxGenError -> Error
   CliError    :: !CliError   -> Error
   ApiError    :: !String     -> Error

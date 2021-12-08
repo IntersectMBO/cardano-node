@@ -20,29 +20,32 @@ module Cardano.Benchmarking.Tracer
   , SubmissionSummary(..)
   , TraceBenchTxSubmit(..)
   , TraceLowLevelSubmit(..)
-  , createTracers
+  , createLoggingLayerTracers
+  , createDebugTracers
   ) where
 
+
 import           Prelude (Show(..), String)
-
-import           Cardano.Prelude hiding (TypeError, show)
-
-import qualified Codec.CBOR.Term as CBOR
-import           Cardano.BM.Tracing
-import           Data.Aeson (ToJSON (..), (.=))
+import           Data.Aeson (ToJSON (..), (.=), encode)
 import qualified Data.Aeson as A
+import qualified Data.ByteString.Lazy.Char8 as BSL (unpack)
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as T
 import           Data.Time.Clock (DiffTime, NominalDiffTime, getCurrentTime)
 
--- Mode-agnostic imports.
-import           Cardano.BM.Data.Tracer
-                   (emptyObject, mkObject, trStructured)
-import           Network.Mux (WithMuxBearer(..))
--- Node API imports.
+import           Control.Tracer (debugTracer)
+
+import qualified Codec.CBOR.Term as CBOR
 import           Cardano.Api
 
--- Node imports.
+import           Cardano.Prelude hiding (TypeError, show)
+
+
+import           Cardano.BM.Tracing
+import           Cardano.BM.Data.Tracer (emptyObject, mkObject, trStructured)
+import           Network.Mux (WithMuxBearer(..))
+
+
 import           Cardano.Node.Configuration.Logging (LOContent(..), LoggingLayer (..))
 import           Cardano.Tracing.OrphanInstances.Byron()
 import           Cardano.Tracing.OrphanInstances.Common()
@@ -70,8 +73,20 @@ data BenchTracers =
   , btN2N_        :: Tracer IO NodeToNodeSubmissionTrace
   }
 
-createTracers :: LoggingLayer -> BenchTracers
-createTracers loggingLayer =
+createDebugTracers :: BenchTracers
+createDebugTracers = initTracers tr tr
+  where
+    tr = contramap (\(_,t) -> BSL.unpack $ encode t) debugTracer
+
+createLoggingLayerTracers :: LoggingLayer -> BenchTracers
+createLoggingLayerTracers loggingLayer
+  = initTracers baseTrace tr
+   where
+     baseTrace = llBasicTrace loggingLayer
+     tr = llAppendName loggingLayer "cli" baseTrace
+
+initTracers :: Trace IO Text -> Trace IO Text -> BenchTracers
+initTracers baseTrace tr =
   BenchTracers
     baseTrace
     benchTracer
@@ -80,12 +95,6 @@ createTracers loggingLayer =
     lowLevelSubmitTracer
     n2nSubmitTracer
  where
-  baseTrace :: Trace IO Text
-  baseTrace = llBasicTrace loggingLayer
-
-  tr :: Trace IO Text
-  tr = llAppendName loggingLayer "cli" baseTrace
-
   tr' :: Trace IO Text
   tr' = appendName "generate-txs" tr
 

@@ -1,0 +1,54 @@
+[
+    { "SetProtocolParameters": { "UseLocalProtocolFile": "/tmp/t2.json" } },    
+    { "Set": { "SNumberOfInputsPerTx": 2 } },
+    { "Set": { "SNumberOfOutputsPerTx": 2 } },
+    { "Set": { "STxAdditionalSize": 39 } },
+    { "Set": { "SFee": 212345 } },
+    { "Set": { "SMinValuePerUTxO": 1000000 } },
+    { "Set": { "STTL": 1000000 } },
+    { "Set": { "SEra": "Allegra" } },
+    { "Set": { "SNetworkId": "Mainnet" } },    
+    { "ReadSigningKey": [ "pass-partout", "run/current/genesis/utxo-keys/utxo1.skey" ] },
+    { "CreateChange": [
+            { "DumpToFile": "/tmp/script-txs.txt" },
+            { "PayToAddr": [] },
+            149200212345,
+            1
+        ] },
+    { "CreateChange": [
+            { "DumpToFile": "/tmp/script-txs.txt" },
+            { "PayToCollateral": [] },
+            149200000000,
+            1
+        ] },
+    { "CreateChange": [
+            { "DumpToFile": "/tmp/split-txs.txt" },
+            { "PayToAddr": [] },
+            2200000000000,
+            10
+        ] },
+    { "CreateChange": [
+            { "DumpToFile": "/tmp/split-txs.txt" },
+            { "PayToAddr": [] },
+            70000000000,
+            300
+        ] },
+    { "CreateChange": [
+            { "DumpToFile": "/tmp/script-txs.txt" },
+            { "PayToScript": [ "bench/script/sum1ToN.plutus", 3 ] },
+            2300000000,
+            9000
+        ] },
+    { "RunBenchmark": [
+            { "DumpToFile": "/tmp/submit-txs.txt" },
+            { "SpendScript": [
+                    "bench/script/sum1ToN.plutus",
+                    { "PreExecuteScript": [] },
+                    3,
+                    6
+                ] },
+            "walletBasedBenchmark",
+            4000,
+            10
+        ] }
+]

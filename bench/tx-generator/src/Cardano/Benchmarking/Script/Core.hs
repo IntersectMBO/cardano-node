@@ -26,7 +26,7 @@ import           Control.Tracer (nullTracer)
 
 import           Ouroboros.Network.Protocol.LocalTxSubmission.Type (SubmitResult (..))
 import           Cardano.Api
-import           Cardano.Api.Shelley ( ProtocolParameters, protocolParamMaxTxExUnits, protocolParamPrices)
+import           Cardano.Api.Shelley (ProtocolParameters, protocolParamMaxTxExUnits, protocolParamPrices)
 
 import qualified Cardano.Benchmarking.FundSet as FundSet
 import           Cardano.Benchmarking.FundSet (FundInEra(..), Validity(..), Variant(..), liftAnyEra )
@@ -46,7 +46,7 @@ import           Cardano.Benchmarking.OuroborosImports as Core
                    , getGenesis, protocolToNetworkId, protocolToCodecConfig, makeLocalConnectInfo)
 import           Cardano.Benchmarking.PlutusExample as PlutusExample
 import           Cardano.Benchmarking.Tracer as Core
-                   ( createTracers, btTxSubmit_, btN2N_, btConnect_, btSubmission2_)
+                   ( createLoggingLayerTracers, btTxSubmit_, btN2N_, btConnect_, btSubmission2_)
 import           Cardano.Benchmarking.Types as Core
                    (NumberOfInputsPerTx(..), NumberOfOutputsPerTx(..),NumberOfTxs(..), SubmissionErrorPolicy(..)
                    , TPSRate, TxAdditionalSize(..))
@@ -54,6 +54,7 @@ import           Cardano.Benchmarking.Wallet as Wallet hiding (keyAddress)
 import           Cardano.Benchmarking.FundSet as FundSet (getFundTxIn)
 import           Cardano.Benchmarking.ListBufferedSelector
 
+import           Cardano.Benchmarking.Script.Aeson (readProtocolParametersFile)
 import           Cardano.Benchmarking.Script.Env
 import           Cardano.Benchmarking.Script.Setters
 import           Cardano.Benchmarking.Script.Store as Store
@@ -72,6 +73,14 @@ withEra action = do
     AnyCardanoEra ShelleyEra -> action AsShelleyEra
     AnyCardanoEra ByronEra   -> error "byron not supported"
 
+setProtocolParameters :: ProtocolParametersSource -> ActionM ()
+setProtocolParameters s = case s of
+  QueryLocalNode -> do
+    set ProtocolParameterMode ProtocolParameterQuery
+  UseLocalProtocolFile file -> do
+    protocolParameters <- liftIO $ readProtocolParametersFile file
+    set ProtocolParameterMode $ ProtocolParameterLocal protocolParameters
+
 startProtocol :: FilePath -> ActionM ()
 startProtocol filePath = do
   liftIO (runExceptT $ Core.startProtocol filePath) >>= \case
@@ -79,9 +88,9 @@ startProtocol filePath = do
     Right (loggingLayer, protocol) -> do
       set LoggingLayer loggingLayer
       set Protocol protocol
-      set BenchTracers $ Core.createTracers loggingLayer
+      set BenchTracers $ Core.createLoggingLayerTracers loggingLayer
       set Genesis $ Core.getGenesis protocol
-      set NetworkId $ protocolToNetworkId protocol
+      set (User TNetworkId) $ protocolToNetworkId protocol
 
 readSigningKey :: KeyName -> SigningKeyFile -> ActionM ()
 readSigningKey name filePath =
@@ -101,7 +110,7 @@ secureGenesisFund
 secureGenesisFund fundName destKey genesisKeyName = do
   tracer <- btTxSubmit_ <$> get BenchTracers
   localSubmit <- getLocalSubmitTx
-  networkId <- get NetworkId
+  networkId <- getUser TNetworkId
   genesis  <- get Genesis
   fee      <- getUser TFee
   ttl      <- getUser TTTL
@@ -127,7 +136,7 @@ splitFundN
 splitFundN count destKeyName sourceFund = do
   tracer <- btTxSubmit_ <$> get BenchTracers
   localSubmit <- getLocalSubmitTx
-  networkId <- get NetworkId
+  networkId <- getUser TNetworkId
   fee      <- getUser TFee
   destKey  <- getName destKeyName
   (fund, fundKey) <- consumeName sourceFund
@@ -171,7 +180,7 @@ prepareTxList
    -> ActionM ()
 prepareTxList name destKey srcFundName = do
   tracer   <- btTxSubmit_ <$> get BenchTracers
-  networkId <- get NetworkId
+  networkId <- getUser TNetworkId
   fee      <- getUser TFee
   fundList <- consumeName srcFundName
   key      <- getName destKey
@@ -199,7 +208,7 @@ waitBenchmarkCore ctl = do
 getConnectClient :: ActionM ConnectClient
 getConnectClient = do
   tracers  <- get BenchTracers
-  (Testnet networkMagic) <- get NetworkId
+  (Testnet networkMagic) <- getUser TNetworkId
   protocol <- get Protocol
   void $ return $(btSubmission2_ tracers)
   ioManager <- askIOManager
@@ -244,7 +253,7 @@ cancelBenchmark n = do
   waitBenchmarkCore ctl
 
 getLocalConnectInfo :: ActionM  (LocalNodeConnectInfo CardanoMode)
-getLocalConnectInfo = makeLocalConnectInfo <$> get NetworkId <*> getUser TLocalSocket
+getLocalConnectInfo = makeLocalConnectInfo <$> getUser TNetworkId <*> getUser TLocalSocket
 
 queryEra :: ActionM AnyCardanoEra
 queryEra = do
@@ -255,8 +264,8 @@ queryEra = do
     Right era -> return era
     Left err -> throwE $ ApiError $ show err
 
-queryProtocolParameters :: ActionM ProtocolParameters
-queryProtocolParameters = do
+queryRemoteProtocolParameters :: ActionM ProtocolParameters
+queryRemoteProtocolParameters = do
   localNodeConnectInfo <- getLocalConnectInfo
   chainTip  <- liftIO $ getLocalChainTip localNodeConnectInfo
   ret <- liftIO $ queryNodeLocalState localNodeConnectInfo (Just $ chainTipToChainPoint chainTip)
@@ -265,6 +274,12 @@ queryProtocolParameters = do
     Right (Right pp) -> return pp
     Right (Left err) -> throwE $ ApiError $ show err
     Left err -> throwE $ ApiError $ show err
+
+getProtocolParameters :: ActionM ProtocolParameters
+getProtocolParameters = do
+  get ProtocolParameterMode  >>= \case
+    ProtocolParameterQuery -> queryRemoteProtocolParameters
+    ProtocolParameterLocal parameters -> return parameters
 
 waitForEra :: AnyCardanoEra -> ActionM ()
 waitForEra era = do
@@ -322,14 +337,14 @@ runBenchmark submitMode spendMode threadName txCount tps
 runBenchmarkInEra :: forall era. IsShelleyBasedEra era => SubmitMode -> ThreadName -> NumberOfTxs -> TPSRate -> AsType era -> ActionM ()
 runBenchmarkInEra submitMode (ThreadName threadName) txCount tps era = do
   tracers  <- get BenchTracers
-  networkId <- get NetworkId
+  networkId <- getUser TNetworkId
   fundKey <- getName $ KeyName "pass-partout" -- should be walletkey
   targets  <- getUser TTargets
   (NumberOfInputsPerTx   numInputs) <- getUser TNumberOfInputsPerTx
   (NumberOfOutputsPerTx numOutputs) <- getUser TNumberOfOutputsPerTx
   fee <- getUser TFee
   minValuePerUTxO <- getUser TMinValuePerUTxO
-  protocolParameters <- queryProtocolParameters
+  protocolParameters <- getProtocolParameters
   walletRef <- get GlobalWallet
   metadata <- makeMetadata
   connectClient <- getConnectClient
@@ -383,9 +398,9 @@ runPlutusBenchmark submitMode scriptFile scriptBudget scriptData scriptRedeemer 
   targets  <- getUser TTargets
   (NumberOfInputsPerTx   numInputs) <- getUser TNumberOfInputsPerTx
   (NumberOfOutputsPerTx numOutputs) <- getUser TNumberOfOutputsPerTx
-  networkId <- get NetworkId
+  networkId <- getUser TNetworkId
   minValuePerUTxO <- getUser TMinValuePerUTxO
-  protocolParameters <- queryProtocolParameters
+  protocolParameters <- getProtocolParameters
   executionUnitPrices <- case protocolParamPrices protocolParameters of
     Just x -> return x
     Nothing -> throwE $ WalletError "unexpected protocolParamPrices == Nothing in runPlutusBenchmark"
@@ -506,7 +521,7 @@ importGenesisFund submitMode genesisKeyName destKey = do
     NodeToNode -> throwE $ WalletError "NodeToNode mode not supported in importGenesisFund"
     DumpToFile filePath -> return $ \tx -> dumpToFileIO filePath tx >> return SubmitSuccess
     DiscardTX -> return $ \_ -> return SubmitSuccess
-  networkId <- get NetworkId
+  networkId <- getUser TNetworkId
   genesis  <- get Genesis
   fee      <- getUser TFee
   ttl      <- getUser TTTL
@@ -518,24 +533,25 @@ importGenesisFund submitMode genesisKeyName destKey = do
       let addr = Core.keyAddress @ era networkId fundKey
       f <- GeneratorTx.secureGenesisFund tracer localSubmit networkId genesis fee ttl genesisKey addr
       return (f, fundKey)
-  liftCoreWithEra coreCall >>= \case
+  result <- liftCoreWithEra coreCall
+  case result of 
     Left err -> liftTxGenError err
-    Right fund -> initGlobalWallet networkId fundKey fund
+    Right fund -> addToWallet fund
+  where
+    addToWallet ((txIn, outVal), skey) = do
+      let
+        mkFund = liftAnyEra $ \value -> FundInEra {
+           _fundTxIn = txIn
+         , _fundVal = value
+         , _fundSigningKey = Just skey
+         , _fundValidity = Confirmed
+         , _fundVariant = PlainOldFund
+         }
+      wallet <- get GlobalWallet
+      liftIO (walletRefInsertFund wallet (FundSet.Fund $ mkFund outVal))
 
--- Todo split init and import of funds
-initGlobalWallet :: NetworkId -> SigningKey PaymentKey -> Fund -> ActionM ()
-initGlobalWallet networkId key ((txIn, outVal), skey) = do
-  wallet <- liftIO $ initWallet networkId key
-  liftIO (walletRefInsertFund wallet (FundSet.Fund $ mkFund outVal))
-  set GlobalWallet wallet
- where
-  mkFund = liftAnyEra $ \value -> FundInEra {
-    _fundTxIn = txIn
-  , _fundVal = value
-  , _fundSigningKey = Just skey
-  , _fundValidity = Confirmed
-  , _fundVariant = PlainOldFund
-  }
+initGlobalWallet :: ActionM ()
+initGlobalWallet = liftIO initWallet >>= set GlobalWallet
 
 createChange :: SubmitMode -> PayMode -> Lovelace -> Int -> ActionM ()
 createChange submitMode payMode value count = case payMode of
@@ -548,8 +564,8 @@ createChange submitMode payMode value count = case payMode of
 createChangeScriptFunds :: SubmitMode -> FilePath -> ScriptData -> Lovelace -> Int -> ActionM ()
 createChangeScriptFunds submitMode scriptFile scriptData value count = do
   walletRef <- get GlobalWallet
-  networkId <- get NetworkId
-  protocolParameters <- queryProtocolParameters
+  networkId <- getUser TNetworkId
+  protocolParameters <- getProtocolParameters
   _fundKey <- getName $ KeyName "pass-partout"
   fee <- getUser TFee  
   script <- liftIO $ PlutusExample.readScript scriptFile --TODO: this should throw a file-not-found-error !
@@ -573,10 +589,10 @@ createChangeScriptFunds submitMode scriptFile scriptData value count = do
 
 createChangeInEra :: forall era. IsShelleyBasedEra era => SubmitMode -> Variant -> Lovelace -> Int -> AsType era -> ActionM ()
 createChangeInEra submitMode variant value count _proxy = do
-  networkId <- get NetworkId
+  networkId <- getUser TNetworkId
   fee <- getUser TFee
   walletRef <- get GlobalWallet
-  protocolParameters <- queryProtocolParameters
+  protocolParameters <- getProtocolParameters
   fundKey <- getName $ KeyName "pass-partout"
   let
     createCoins :: FundSet.FundSource -> [Lovelace] -> ActionM (Either String (TxInMode CardanoMode))
@@ -647,7 +663,7 @@ spendAutoScript relies on a particular calling convention of the loop script.
 -}
 spendAutoScript :: SubmitMode -> FilePath -> ThreadName -> NumberOfTxs -> TPSRate -> ActionM ()
 spendAutoScript submitMode loopScriptFile threadName txCount tps = do
-  protocolParameters <- queryProtocolParameters
+  protocolParameters <- getProtocolParameters
   perTxBudget <- case protocolParamMaxTxExUnits protocolParameters of
     Nothing -> throwE $ ApiError "Cannot determine protocolParamMaxTxExUnits"
     Just b -> return b

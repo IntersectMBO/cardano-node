@@ -56,6 +56,7 @@ actionToJSON a = case a of
   CancelBenchmark (ThreadName t) ->  singleton "cancelBenchmark" t
   WaitForEra era -> singleton "waitForEra" era
   Reserved l -> singleton "reserved" l
+  other -> error $ "Action not supported in legacy JSON mode : " ++ show other
  where
   singleton k v = object [ k .= v ]
 

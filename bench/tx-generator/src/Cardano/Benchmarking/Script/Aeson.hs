@@ -20,7 +20,10 @@ import           Data.Aeson.Types
 import           Data.Aeson.Encode.Pretty
 import qualified Data.Attoparsec.ByteString as Atto
 
-import           Cardano.Api (AnyCardanoEra(..), CardanoEra(..), ScriptData, ScriptDataJsonSchema(..), scriptDataFromJson, scriptDataToJson)
+import qualified Ouroboros.Network.Magic as Ouroboros (NetworkMagic(..))
+import           Cardano.Api (AnyCardanoEra(..), CardanoEra(..), ScriptData, ScriptDataJsonSchema(..), NetworkId(..)
+                              , scriptDataFromJson, scriptDataToJson)
+import           Cardano.Api.Shelley (ProtocolParameters)
 import           Cardano.CLI.Types (SigningKeyFile(..))
 
 import           Cardano.Benchmarking.Script.Setters
@@ -54,6 +57,12 @@ instance FromJSON AnyCardanoEra where
 
 jsonOptionsUnTaggedSum :: Options
 jsonOptionsUnTaggedSum = defaultOptions { sumEncoding = ObjectWithSingleField }
+
+instance ToJSON ProtocolParametersSource where
+  toJSON     = genericToJSON jsonOptionsUnTaggedSum
+  toEncoding = genericToEncoding jsonOptionsUnTaggedSum
+instance FromJSON ProtocolParametersSource where
+  parseJSON = genericParseJSON jsonOptionsUnTaggedSum
 
 -- Orphan instance used in the tx-generator
 instance ToJSON ScriptData where
@@ -140,6 +149,9 @@ parseJSONFile parser filePath = do
 parseScriptFileAeson :: FilePath -> IO [Action]
 parseScriptFileAeson = parseJSONFile fromJSON
 
+readProtocolParametersFile :: FilePath -> IO ProtocolParameters
+readProtocolParametersFile = parseJSONFile fromJSON
+
 instance ToJSON KeyName         where toJSON (KeyName a) = toJSON a
 instance ToJSON FundName        where toJSON (FundName a) = toJSON a
 instance ToJSON FundListName    where toJSON (FundListName a) = toJSON a
@@ -153,3 +165,17 @@ instance FromJSON FundListName    where parseJSON a = FundListName <$> parseJSON
 instance FromJSON TxListName      where parseJSON a = TxListName <$> parseJSON a
 instance FromJSON ThreadName      where parseJSON a = ThreadName <$> parseJSON a
 instance FromJSON SigningKeyFile  where parseJSON a = SigningKeyFile <$> parseJSON a
+
+instance ToJSON NetworkId where
+  toJSON Mainnet = "Mainnet"
+  toJSON (Testnet (Ouroboros.NetworkMagic t)) = object ["Testnet" .= t]
+  
+instance FromJSON NetworkId where
+  parseJSON j = case j of
+    (String "Mainnet") -> return Mainnet
+    (Object v) -> v .:? "Testnet" >>= \case
+      Nothing -> failed
+      Just w -> return $ Testnet $ Ouroboros.NetworkMagic w
+    _invalid -> failed
+    where
+      failed = fail $ "Parsing of NetworkId failed: " <> show j
