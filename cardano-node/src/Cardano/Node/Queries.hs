@@ -49,10 +49,10 @@ import Ouroboros.Consensus.Byron.Ledger.Block (ByronBlock)
 import Ouroboros.Consensus.Byron.Ledger.Mempool (TxId (..))
 import Ouroboros.Consensus.HardFork.Combinator
 import Ouroboros.Consensus.HardFork.Combinator.AcrossEras (OneEraForgeStateInfo (..), OneEraForgeStateUpdateError (..))
+import Ouroboros.Consensus.Protocol.Ledger.HotKey qualified as HotKey
 import Ouroboros.Consensus.Shelley.Ledger.Block (ShelleyBlock)
 import Ouroboros.Consensus.Shelley.Ledger.Mempool (TxId (..))
 import Ouroboros.Consensus.Shelley.Node ()
-import Ouroboros.Consensus.Shelley.Protocol.HotKey qualified as HotKey
 import Ouroboros.Consensus.TypeFamilyWrappers
 
 --

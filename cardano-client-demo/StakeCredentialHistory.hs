@@ -21,7 +21,6 @@ import           Data.Foldable (toList)
 import           Data.List (intercalate)
 import qualified Data.Compact.VMap as VMap
 import qualified Data.Map.Strict as Map
-import           Data.Map.Strict (Map)
 import           Data.Maybe (mapMaybe)
 import           Data.Set (Set)
 import qualified Data.Text as T
