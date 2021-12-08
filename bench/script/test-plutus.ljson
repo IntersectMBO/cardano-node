@@ -18,23 +18,23 @@
     { "readSigningKey": "pass-partout", "filePath": "run/current/genesis/utxo-keys/utxo1.skey" },
     { "importGenesisFund": "pass-partout", "fundKey": "pass-partout"
       , "submitMode": { "LocalSocket": [] }
-      , "payMode": { "PayToAddr": [] }
+      , "payMode": { "PayToAddr": "pass-partout" }
     },
     { "createChange" :   149200212345, "count" :     1
       , "submitMode": { "LocalSocket": [] }
-      , "payMode": { "PayToAddr": [] }
+      , "payMode": { "PayToAddr": "pass-partout" }
     },
     { "createChange" :   149200000000, "count" :     1
       , "submitMode": { "LocalSocket": [] }
-      , "payMode": { "PayToCollateral": [] }
+      , "payMode": { "PayToCollateral": "pass-partout" }
     },
     { "createChange" : 2200000000000, "count" :       10
       , "submitMode": { "LocalSocket": [] }
-      , "payMode": { "PayToAddr": [] }
+      , "payMode": { "PayToAddr": "pass-partout" }
     },
     { "createChange" :   70000000000, "count" :      300
       , "submitMode": { "LocalSocket": [] }
-      , "payMode": { "PayToAddr": [] }
+      , "payMode": { "PayToAddr": "pass-partout" }
     },
     { "createChange" :    2300000000, "count" :     1000
       , "submitMode": { "LocalSocket": [] }

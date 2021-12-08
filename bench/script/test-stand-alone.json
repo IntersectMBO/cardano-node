@@ -11,25 +11,25 @@
     { "ReadSigningKey": [ "pass-partout", "run/current/genesis/utxo-keys/utxo1.skey" ] },
     { "CreateChange": [
             { "DumpToFile": "/tmp/script-txs.txt" },
-            { "PayToAddr": [] },
+            { "PayToAddr": "pass-partout" },
             149200212345,
             1
         ] },
     { "CreateChange": [
             { "DumpToFile": "/tmp/script-txs.txt" },
-            { "PayToCollateral": [] },
+            { "PayToCollateral": "pass-partout" },
             149200000000,
             1
         ] },
     { "CreateChange": [
             { "DumpToFile": "/tmp/split-txs.txt" },
-            { "PayToAddr": [] },
+            { "PayToAddr": "pass-partout" },
             2200000000000,
             10
         ] },
     { "CreateChange": [
             { "DumpToFile": "/tmp/split-txs.txt" },
-            { "PayToAddr": [] },
+            { "PayToAddr": "pass-partout" },
             70000000000,
             300
         ] },

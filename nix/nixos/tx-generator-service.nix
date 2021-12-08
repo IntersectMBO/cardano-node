@@ -51,10 +51,10 @@ let
           # Therefor this first creates a matching regular output
           # and turns that into a collateral right in the next step.
           { createChange = safeCollateral + tx_fee; count = 1;
-            submitMode.LocalSocket = []; payMode.PayToAddr = [];
+            submitMode.LocalSocket = []; payMode.PayToAddr = "pass-partout";
           }
           { createChange = safeCollateral; count = 1;
-            submitMode.LocalSocket = []; payMode.PayToCollateral = [];
+            submitMode.LocalSocket = []; payMode.PayToCollateral = "pass-partout";
           }
           ]
           ++ createChangePlutus cfg minValuePerInput (tx_count * inputs_per_tx)
@@ -109,7 +109,7 @@ let
     [ { createChange = value;
         count = count;
         submitMode.LocalSocket = [];
-        payMode.PayToAddr = [];
+        payMode.PayToAddr = "pass-partout";
       }
       { delay = cfg.init_cooldown; }
     ];
