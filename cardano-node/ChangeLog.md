@@ -1,6 +1,6 @@
 # Changelog for cardano-node
 
-## 1.32.0 -- November 2021
+## 1.32.1 -- November 2021
 
 ### node changes
 
@@ -11,7 +11,28 @@
 - Update a bunch of scripts to use the $NETWORK_MAGIC environment variable.
   (#3148)
 - Integrate p2p networking functionality. (#3363)
-- Add additional logging to node startup. (#3380)
+- Add additional logging to node startup. Note that the existing "nodeStartTime"
+  counter still exists, but will ultimately be deprecated. The startup time is
+  now logged in the following format:
+  ```
+  {
+    "thread": "5",
+    "sev": "Notice",
+    "data": {
+      "startupTime": "1638866965"
+    },
+    "loc": null,
+    "env": "1.31.0:be123",
+    "msg": "",
+    "app": [],
+    "host": "waldorf",
+    "at": "2021-12-07T08:49:24.22Z",
+    "ns": [
+      "cardano.node.nodeconfig"
+    ],
+    "pid": "33952"
+  }
+  ``` (#3380)
 - Block delay counters are now not collected until the node has finished
   starting. Statistics collected during node startup would only add noise to the
   delay CDF. (#3386)

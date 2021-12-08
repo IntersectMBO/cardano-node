@@ -1,6 +1,6 @@
 # Changelog for cardano-api
 
-## 1.32.0 -- November 2021
+## 1.32.1 -- November 2021
 
 - Asset names are now rendered in a more consistent fashion in JSON output.
   Previously names which happened to be valid ASCII were rendered as such, and
