@@ -33,6 +33,7 @@ import           Cardano.CLI.Shelley.Parsers (OutputFile (..), QueryCmd (..))
 import           Cardano.CLI.Types
 import           Cardano.Crypto.Hash (hashToBytesAsHex)
 import           Cardano.Ledger.Coin
+import           Cardano.Ledger.Compactible
 import           Cardano.Ledger.Crypto (StandardCrypto)
 import qualified Cardano.Ledger.Crypto as Crypto
 import qualified Cardano.Ledger.Era as Era
@@ -48,6 +49,7 @@ import           Data.Aeson (ToJSON (..), (.=))
 import qualified Data.Aeson as Aeson
 import           Data.Aeson.Encode.Pretty (encodePretty)
 import qualified Data.ByteString.Lazy.Char8 as LBS
+import           Data.Compact.VMap (toMap)
 import           Data.List (nub)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
@@ -546,14 +548,14 @@ writeStakeSnapshot (StakePoolKeyHash hk) qState =
 getPoolStake :: KeyHash Cardano.Ledger.Keys.StakePool crypto -> SnapShot crypto -> Integer
 getPoolStake hash ss = pStake
   where
-    Coin pStake = fold s
+    Coin pStake = fold $ Map.map fromCompact (toMap s)
     (Stake s) = poolStake hash (_delegations ss) (_stake ss)
 
 -- | Sum the active stake from a snapshot
 getAllStake :: SnapShot crypto -> Integer
 getAllStake (SnapShot stake _ _) = activeStake
   where
-    Coin activeStake = fold . unStake $ stake
+    Coin activeStake = fold $ Map.map fromCompact $ toMap $ unStake stake
 
 -- | This function obtains the pool parameters, equivalent to the following jq query on the output of query ledger-state
 --   .nesEs.esLState._delegationState._pstate._pParams.<pool_id>
