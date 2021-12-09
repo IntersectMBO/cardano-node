@@ -7,8 +7,19 @@
     { "Set": { "SMinValuePerUTxO": 1000000 } },
     { "Set": { "STTL": 1000000 } },
     { "Set": { "SEra": "Allegra" } },
-    { "Set": { "SNetworkId": "Mainnet" } },    
-    { "ReadSigningKey": [ "pass-partout", "run/current/genesis/utxo-keys/utxo1.skey" ] },
+    { "Set": { "SNetworkId": { "Testnet": 42 } } },
+    { "DefineSigningKey":
+      [ "pass-partout"
+      , {
+          "type": "GenesisUTxOSigningKey_ed25519",
+          "description": "Genesis Initial UTxO Signing Key",
+          "cborHex": "58200b6c317eb6c9762898fa41ca9d683003f86899ab0f2f6dbaf244e415b62826a2"
+      } ] },
+    { "AddFund":
+      [ "900fc5da77a0747da53f7675cbb7d149d46779346dea2f879ab811ccc72a2162#0"
+      , 90000000000000
+      , "pass-partout"
+      ] },
     { "CreateChange": [
             { "DumpToFile": "/tmp/script-txs.txt" },
             { "PayToAddr": "pass-partout" },
