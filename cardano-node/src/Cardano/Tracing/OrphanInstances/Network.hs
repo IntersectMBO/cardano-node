@@ -1843,8 +1843,8 @@ instance (Show addr, Show versionNumber, Show agreedOptions, ToObject addr,
       TrPruneConnections pruningSet cnt choiceSet ->
         mkObject
           [ "kind" .= String "PruneConnections"
-          , "pruningSet" .= toJSON (toObject verb `map` (Set.toList pruningSet))
-          , "choiceSet"  .= toJSON (toObject verb `map` (Set.toList choiceSet))
+          , "pruningSet" .= toJSON (toObject verb `map` Set.toList pruningSet)
+          , "choiceSet"  .= toJSON (toObject verb `map` Set.toList choiceSet)
           , "count"      .= toJSON cnt
           ]
       TrConnectionCleanup connId ->
