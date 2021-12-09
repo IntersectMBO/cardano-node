@@ -21,6 +21,8 @@ import           Data.Aeson (FromJSON (..), ToJSON (..), object, (.!=), (.:), (.
 import qualified Data.Aeson as Aeson
 import           Data.Aeson.Types (FromJSONKey (..), ToJSONKey (..), toJSONKeyText)
 import qualified Data.ByteString.Base16 as B16
+import           Data.Compact.VMap (VMap, VB, VP)
+import qualified Data.Compact.VMap as VMap
 import qualified Data.Map.Strict as Map
 import           Data.Text (Text)
 import qualified Data.Text as Text
@@ -28,11 +30,12 @@ import qualified Data.Text.Encoding as Text
 import           Data.Word (Word64)
 
 import           Control.Applicative
-import           Control.Iterate.SetAlgebra (BiMap (..), Bimap)
+import           Control.Iterate.BiMap (BiMap (..), Bimap)
 
 import           Cardano.Api.Json
 import           Cardano.Ledger.BaseTypes (StrictMaybe (..), strictMaybeToMaybe)
 import qualified Cardano.Ledger.BaseTypes as Ledger
+import           Cardano.Ledger.Compactible (Compactible(fromCompact))
 import           Cardano.Ledger.Crypto (StandardCrypto)
 import           Cardano.Slotting.Slot (SlotNo (..))
 import           Cardano.Slotting.Time (SystemStart (..))
@@ -232,7 +235,7 @@ instance Crypto.Crypto crypto => ToJSON (Shelley.TxIn crypto) where
 instance Crypto.Crypto crypto => ToJSONKey (Shelley.TxIn crypto) where
   toJSONKey = toJSONKeyText txInToText
 
-txInToText :: Crypto.Crypto crypto => Shelley.TxIn crypto -> Text
+txInToText :: Shelley.TxIn crypto -> Text
 txInToText (Shelley.TxIn (Shelley.TxId txidHash) ix) =
   hashToText (SafeHash.extractHash txidHash)
     <> Text.pack "#"
@@ -501,3 +504,13 @@ deriving instance Show Alonzo.AlonzoGenesis
 
 deriving newtype instance ToJSON SystemStart
 deriving newtype instance FromJSON SystemStart
+
+
+instance Crypto.Crypto crypto => ToJSON (VMap VB VB (Shelley.Credential 'Shelley.Staking crypto) (Shelley.KeyHash 'Shelley.StakePool crypto)) where
+  toJSON = toJSON . VMap.toMap
+
+instance Crypto.Crypto crypto => ToJSON (VMap VB VB (Shelley.KeyHash    'Shelley.StakePool crypto) (Shelley.PoolParams crypto)) where
+  toJSON = toJSON . VMap.toMap
+
+instance Crypto.Crypto crypto => ToJSON (VMap VB VP (Shelley.Credential 'Shelley.Staking   crypto) (Shelley.CompactForm Shelley.Coin)) where
+  toJSON = toJSON . fmap fromCompact . VMap.toMap

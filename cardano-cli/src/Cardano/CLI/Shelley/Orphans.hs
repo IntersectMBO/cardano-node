@@ -44,6 +44,8 @@ import           Cardano.Ledger.TxIn (TxId (..))
 
 import qualified Cardano.Ledger.Mary.Value as Ledger.Mary
 
+import qualified Data.Compact.VMap as VMap
+
 instance ToJSON (OneEraHash xs) where
   toJSON = toJSON
          . Text.decodeLatin1

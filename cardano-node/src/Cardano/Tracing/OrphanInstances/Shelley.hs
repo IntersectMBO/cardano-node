@@ -392,6 +392,12 @@ instance ( ShelleyBasedEra era
     mkObject [ "kind" .= String "InvalidMetadata"
              ]
 
+  toObject _verb (ExtraneousScriptWitnessesUTXOW extraneousScripts) =
+    mkObject [ "kind" .= String "ExtraneousScriptWitnessesUTXOW"
+             , "extraneousScripts" .= extraneousScripts
+             ]
+
+
 instance ( ShelleyBasedEra era
          , ToJSON (Core.Value era)
          , ToJSON (Core.TxOut era)
@@ -447,6 +453,7 @@ instance ( ShelleyBasedEra era
              , "network" .= network
              , "addrs"   .= addrs
              ]
+
 
 instance ToJSON MA.ValidityInterval where
   toJSON vi =

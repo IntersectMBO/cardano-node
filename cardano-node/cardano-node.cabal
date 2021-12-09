@@ -111,8 +111,9 @@ library
                       , cardano-prelude
                       , cardano-protocol-tpraos
                       , cardano-slotting
-                      , contra-tracer
                       , cborg >= 0.2.4 && < 0.3
+                      , contra-tracer
+                      , compact-map
                       , containers
                       , directory
                       , dns

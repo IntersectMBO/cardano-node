@@ -48,7 +48,7 @@ library
                       , text
                       , time
                       , trace-forward
-                      , unagi-chan
+                      , unagi-chan >= 0.4.1.4
                       , unliftio
                       , unliftio-core
                       , unordered-containers
@@ -93,7 +93,7 @@ executable trace-dispatcher-examples
                       , text
                       , trace-dispatcher
                       , time
-                      , unagi-chan
+                      , unagi-chan >= 0.4.1.4
                       , unliftio
                       , unliftio-core
                       , stm
@@ -131,7 +131,7 @@ test-suite trace-dispatcher-test
                       , text
                       , trace-dispatcher
                       , time
-                      , unagi-chan
+                      , unagi-chan >= 0.4.1.4
                       , unliftio
                       , unliftio-core
                       , stm
