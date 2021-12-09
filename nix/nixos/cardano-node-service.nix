@@ -509,7 +509,7 @@ in {
 
       rtsArgs = mkOption {
         type = types.listOf types.str;
-        default = [ "-N2" "-A16m" "-qg" "-qb" "--disable-delayed-os-memory-return" ];
+        default = [ "-N2" "-I0" "-A16m" "-qg" "-qb" "--disable-delayed-os-memory-return" ];
         apply = args: if (args != [] || cfg.profilingArgs != []) then
           ["+RTS"] ++ cfg.profilingArgs ++ args ++ ["-RTS"]
           else [];
