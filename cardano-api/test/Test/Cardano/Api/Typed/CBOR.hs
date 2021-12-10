@@ -215,12 +215,12 @@ tests = testGroup "Test.Cardano.Api.Typed.CBOR"
   , testPropertyNamed "roundtrip script SimpleScriptV2 CBOR"                 "roundtrip script SimpleScriptV2 CBOR"                 prop_roundtrip_script_SimpleScriptV2_CBOR
   , testPropertyNamed "roundtrip script PlutusScriptV1 CBOR"                 "roundtrip script PlutusScriptV1 CBOR"                 prop_roundtrip_script_PlutusScriptV1_CBOR
   , testPropertyNamed "roundtrip script PlutusScriptV2 CBOR"                 "roundtrip script PlutusScriptV2 CBOR"                 prop_roundtrip_script_PlutusScriptV2_CBOR
-  , testPropertyNamed "roundtrip UpdateProposal CBOR"                        "roundtrip UpdateProposal CBOR"                        prop_roundtrip_UpdateProposal_CBOR
   , testPropertyNamed "roundtrip ScriptData CBOR"                            "roundtrip ScriptData CBOR"                            prop_roundtrip_ScriptData_CBOR
   , testPropertyNamed "roundtrip txbody CBOR"                                "roundtrip txbody CBOR"                                prop_roundtrip_txbody_CBOR
   , testPropertyNamed "roundtrip Tx Cddl"                                    "roundtrip Tx Cddl"                                    prop_roundtrip_Tx_Cddl
   , testPropertyNamed "roundtrip TxWitness Cddl"                             "roundtrip TxWitness Cddl"                             prop_roundtrip_TxWitness_Cddl
   , testPropertyNamed "roundtrip tx CBOR"                                    "roundtrip tx CBOR"                                    prop_roundtrip_tx_CBOR
+  , testPropertyNamed "roundtrip UpdateProposal"                             "roundtrip UpdateProposal"                             prop_roundtrip_UpdateProposal_CBOR
   , testPropertyNamed "roundtrip GovernancePoll CBOR"                        "roundtrip GovernancePoll CBOR"                        prop_roundtrip_GovernancePoll_CBOR
   , testPropertyNamed "roundtrip GovernancePollAnswer CBOR"                  "roundtrip GovernancePollAnswer CBOR"                  prop_roundtrip_GovernancePollAnswer_CBOR
   , testPropertyNamed "roundtrip GovernancePollWitness CBOR"                 "roundtrip GovernancePollWitness CBOR"                 prop_roundtrip_GovernancePollWitness_CBOR

@@ -913,7 +913,7 @@ genProtocolParametersUpdate era = do
   protocolUpdateMaxTxSize           <- Gen.maybe genNat
   protocolUpdateTxFeeFixed          <- Gen.maybe genLovelace
   protocolUpdateTxFeePerByte        <- Gen.maybe genLovelace
-  protocolUpdateMinUTxOValue        <- Gen.maybe genLovelace
+  protocolUpdateMinUTxOValue        <- preAlonzoParam era genLovelace
   protocolUpdateStakeAddressDeposit <- Gen.maybe genLovelace
   protocolUpdateStakePoolDeposit    <- Gen.maybe genLovelace
   protocolUpdateMinPoolCost         <- Gen.maybe genLovelace
@@ -923,15 +923,13 @@ genProtocolParametersUpdate era = do
   protocolUpdateMonetaryExpansion   <- Gen.maybe genRational
   protocolUpdateTreasuryCut         <- Gen.maybe genRational
   protocolUpdateUTxOCostPerWord     <- sequence $ protocolUTxOCostPerWordSupportedInEra era $> genLovelace
-  let protocolUpdateCostModels = mempty -- genCostModels
-  --TODO: Babbage figure out how to deal with
-  -- asymmetric cost model JSON instances
-  protocolUpdatePrices              <- Gen.maybe genExecutionUnitPrices
-  protocolUpdateMaxTxExUnits        <- Gen.maybe genExecutionUnits
-  protocolUpdateMaxBlockExUnits     <- Gen.maybe genExecutionUnits
-  protocolUpdateMaxValueSize        <- Gen.maybe genNat
-  protocolUpdateCollateralPercent   <- Gen.maybe genNat
-  protocolUpdateMaxCollateralInputs <- Gen.maybe genNat
+  protocolUpdateCostModels          <- genCostModels era
+  protocolUpdatePrices              <- alonzoParam era genExecutionUnitPrices
+  protocolUpdateMaxTxExUnits        <- alonzoParam era genExecutionUnits
+  protocolUpdateMaxBlockExUnits     <- alonzoParam era genExecutionUnits
+  protocolUpdateMaxValueSize        <- alonzoParam era genNat
+  protocolUpdateCollateralPercent   <- alonzoParam era genNat
+  protocolUpdateMaxCollateralInputs <- alonzoParam era genNat
   protocolUpdateUTxOCostPerByte     <- sequence $ protocolUTxOCostPerByteSupportedInEra era $> genLovelace
 
   pure ProtocolParametersUpdate{..}
@@ -958,11 +956,14 @@ genCostModel = do
 genPlutusLanguage :: Gen Language
 genPlutusLanguage = Gen.element [PlutusV1, PlutusV2]
 
-_genCostModels :: Gen (Map AnyPlutusScriptVersion CostModel)
-_genCostModels =
-    Gen.map (Range.linear 0 (List.length plutusScriptVersions))
-            ((,) <$> Gen.element plutusScriptVersions
-                 <*> (Api.fromAlonzoCostModel <$> genCostModel))
+genCostModels :: CardanoEra era -> Gen (Map AnyPlutusScriptVersion CostModel)
+genCostModels era
+  | anyCardanoEra era >= anyCardanoEra AlonzoEra =
+      Gen.map (Range.linear 0 (List.length plutusScriptVersions)) $
+        (,)
+          <$> Gen.element plutusScriptVersions
+          <*> (Api.fromAlonzoCostModel <$> genCostModel)
+  | otherwise = pure Map.empty
   where
     plutusScriptVersions :: [AnyPlutusScriptVersion]
     plutusScriptVersions = [minBound..maxBound]
@@ -970,6 +971,18 @@ _genCostModels =
 genExecutionUnits :: Gen ExecutionUnits
 genExecutionUnits = ExecutionUnits <$> Gen.integral (Range.constant 0 1000)
                                    <*> Gen.integral (Range.constant 0 1000)
+
+-- | Gen for Alonzo-specific parameters
+alonzoParam :: CardanoEra era -> Gen a -> Gen (Maybe a)
+alonzoParam era gen
+  | anyCardanoEra era >= anyCardanoEra AlonzoEra = Just <$> gen
+  | otherwise = pure Nothing
+
+-- | 'Gen.maybe' but with condition if era is not Alonzo-based
+preAlonzoParam :: CardanoEra era -> Gen a -> Gen (Maybe a)
+preAlonzoParam era gen
+  | anyCardanoEra era >= anyCardanoEra AlonzoEra = pure Nothing
+  | otherwise = Gen.maybe gen
 
 genExecutionUnitPrices :: Gen ExecutionUnitPrices
 genExecutionUnitPrices = ExecutionUnitPrices <$> genRational <*> genRational
