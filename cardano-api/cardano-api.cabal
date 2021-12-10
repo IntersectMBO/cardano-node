@@ -217,6 +217,7 @@ test-suite cardano-api-test
                       , bytestring
                       , cardano-api
                       , cardano-api:gen
+                      , cardano-binary
                       , cardano-crypto
                       , cardano-crypto-class ^>= 2.1
                       , cardano-crypto-test ^>= 1.5
@@ -226,6 +227,7 @@ test-suite cardano-api-test
                       , cardano-ledger-core:{cardano-ledger-core, testlib} >= 1.1
                       , cardano-ledger-shelley-test >= 1.1
                       , cardano-slotting ^>= 0.1
+                      , cardano-strict-containers ^>= 0.1
                       , containers
                       , hedgehog
                       , hedgehog-extras ^>= 0.4.1
@@ -246,6 +248,7 @@ test-suite cardano-api-test
                         Test.Cardano.Api.KeysByron
                         Test.Cardano.Api.Ledger
                         Test.Cardano.Api.Metadata
+                        Test.Cardano.Api.TxBody
                         Test.Cardano.Api.Typed.Address
                         Test.Cardano.Api.Typed.Bech32
                         Test.Cardano.Api.Typed.CBOR
