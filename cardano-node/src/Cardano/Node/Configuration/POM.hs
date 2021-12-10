@@ -44,7 +44,7 @@ import           Cardano.Tracing.Config
 import           Ouroboros.Consensus.Mempool.API (MempoolCapacityBytesOverride (..), MempoolCapacityBytes (..))
 import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (SnapshotInterval (..))
 import           Ouroboros.Network.Block (MaxSlotNo (..))
-import           Ouroboros.Network.NodeToNode (DiffusionMode (..))
+import           Ouroboros.Network.NodeToNode (DiffusionMode (..), AcceptedConnectionsLimit (..))
 import qualified Ouroboros.Consensus.Node as Consensus ( NetworkP2PMode (..) )
 
 data NetworkP2PMode = EnabledP2PMode | DisabledP2PMode
@@ -127,6 +127,9 @@ data NodeConfiguration
          --
        , ncTimeWaitTimeout       :: DiffTime
 
+         -- | Node AcceptedConnectionsLimit
+       , ncAcceptedConnectionsLimit :: !AcceptedConnectionsLimit
+
          -- P2P governor targets
        , ncTargetNumberOfRootPeers        :: Int
        , ncTargetNumberOfKnownPeers       :: Int
@@ -178,6 +181,9 @@ data PartialNodeConfiguration
          -- Network timeouts
        , pncProtocolIdleTimeout   :: !(Last DiffTime)
        , pncTimeWaitTimeout       :: !(Last DiffTime)
+
+         -- AcceptedConnectionsLimit
+       , pncAcceptedConnectionsLimit :: !(Last AcceptedConnectionsLimit)
 
          -- P2P governor targets
        , pncTargetNumberOfRootPeers        :: !(Last Int)
@@ -241,6 +247,11 @@ instance FromJSON PartialNodeConfiguration where
       pncProtocolIdleTimeout   <- Last <$> v .:? "ProtocolIdleTimeout"
       pncTimeWaitTimeout       <- Last <$> v .:? "TimeWaitTimeout"
 
+
+      -- AcceptedConnectionsLimit
+      pncAcceptedConnectionsLimit
+        <- Last <$> v .:? "AcceptedConnectionsLimit"
+
       -- P2P Governor parameters, with conservative defaults.
       pncTargetNumberOfRootPeers        <- Last <$> v .:? "TargetNumberOfRootPeers"
       pncTargetNumberOfKnownPeers       <- Last <$> v .:? "TargetNumberOfKnownPeers"
@@ -279,6 +290,7 @@ instance FromJSON PartialNodeConfiguration where
            , pncMaybeMempoolCapacityOverride
            , pncProtocolIdleTimeout
            , pncTimeWaitTimeout
+           , pncAcceptedConnectionsLimit
            , pncTargetNumberOfRootPeers
            , pncTargetNumberOfKnownPeers
            , pncTargetNumberOfEstablishedPeers
@@ -420,6 +432,14 @@ defaultPartialNodeConfiguration =
     , pncMaybeMempoolCapacityOverride = mempty
     , pncProtocolIdleTimeout   = Last (Just 5)
     , pncTimeWaitTimeout       = Last (Just 60)
+    , pncAcceptedConnectionsLimit =
+        Last
+      $ Just
+      $ AcceptedConnectionsLimit
+        { acceptedConnectionsHardLimit = 512
+        , acceptedConnectionsSoftLimit = 384
+        , acceptedConnectionsDelay     = 5
+        }
     , pncTargetNumberOfRootPeers        = Last (Just 100)
     , pncTargetNumberOfKnownPeers       = Last (Just 100)
     , pncTargetNumberOfEstablishedPeers = Last (Just 50)
@@ -467,6 +487,9 @@ makeNodeConfiguration pnc = do
   ncTimeWaitTimeout <-
     lastToEither "Missing TimeWaitTimeout"
     $ pncTimeWaitTimeout pnc
+  ncAcceptedConnectionsLimit <-
+    lastToEither "Missing AcceptedConnectionsLimit" $
+      pncAcceptedConnectionsLimit pnc
   enableP2P <-
     lastToEither "Missing EnableP2P"
     $ pncEnableP2P pnc
@@ -499,6 +522,7 @@ makeNodeConfiguration pnc = do
              , ncMaybeMempoolCapacityOverride = getLast $ pncMaybeMempoolCapacityOverride pnc
              , ncProtocolIdleTimeout
              , ncTimeWaitTimeout
+             , ncAcceptedConnectionsLimit
              , ncTargetNumberOfRootPeers
              , ncTargetNumberOfKnownPeers
              , ncTargetNumberOfEstablishedPeers

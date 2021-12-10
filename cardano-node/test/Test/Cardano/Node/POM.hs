@@ -13,7 +13,8 @@ import           Cardano.Node.Configuration.POM
 import           Cardano.Node.Types
 import           Cardano.Tracing.Config (TraceOptions (..))
 import           Ouroboros.Network.Block (MaxSlotNo (..), SlotNo (..))
-import           Ouroboros.Network.NodeToNode (DiffusionMode (InitiatorAndResponderDiffusionMode))
+import           Ouroboros.Network.NodeToNode (DiffusionMode (InitiatorAndResponderDiffusionMode),
+                   AcceptedConnectionsLimit(..))
 import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (SnapshotInterval (..))
 import qualified Ouroboros.Consensus.Node as Consensus ( NetworkP2PMode (..) )
 
@@ -69,6 +70,7 @@ testPartialYamlConfig =
     , pncMaybeMempoolCapacityOverride = mempty
     , pncProtocolIdleTimeout = mempty
     , pncTimeWaitTimeout = mempty
+    , pncAcceptedConnectionsLimit = mempty
     , pncTargetNumberOfRootPeers = mempty
     , pncTargetNumberOfKnownPeers = mempty
     , pncTargetNumberOfEstablishedPeers = mempty
@@ -104,6 +106,7 @@ testPartialCliConfig =
     , pncMaybeMempoolCapacityOverride = mempty
     , pncProtocolIdleTimeout = mempty
     , pncTimeWaitTimeout = mempty
+    , pncAcceptedConnectionsLimit = mempty
     , pncTargetNumberOfRootPeers = mempty
     , pncTargetNumberOfKnownPeers = mempty
     , pncTargetNumberOfEstablishedPeers = mempty
@@ -140,6 +143,12 @@ expectedConfig =
     , ncMaybeMempoolCapacityOverride = Nothing
     , ncProtocolIdleTimeout = 5
     , ncTimeWaitTimeout = 60
+    , ncAcceptedConnectionsLimit =
+        AcceptedConnectionsLimit
+          { acceptedConnectionsHardLimit = 512
+          , acceptedConnectionsSoftLimit = 384
+          , acceptedConnectionsDelay     = 5
+          }
     , ncTargetNumberOfRootPeers = 100
     , ncTargetNumberOfKnownPeers = 100
     , ncTargetNumberOfEstablishedPeers = 50

@@ -1,5 +1,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE NamedFieldPuns #-}
 
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -17,6 +18,7 @@ import           Cardano.BM.Data.Tracer (TracingVerbosity (..))
 import qualified Cardano.Chain.Update as Update
 import           Cardano.Ledger.Crypto (StandardCrypto)
 import qualified Cardano.Ledger.Shelley.CompactAddr as Shelley
+import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..))
 
 instance FromJSON TracingVerbosity where
   parseJSON (String str) = case str of
@@ -42,3 +44,26 @@ instance FromJSON Update.ApplicationName where
   parseJSON invalid  =
     fail $ "Parsing of application name failed due to type mismatch. "
     <> "Encountered: " <> show invalid
+
+instance ToJSON AcceptedConnectionsLimit where
+  toJSON AcceptedConnectionsLimit
+          { acceptedConnectionsHardLimit
+          , acceptedConnectionsSoftLimit
+          , acceptedConnectionsDelay
+          } =
+    object [ "AcceptedConnectionsLimit" .=
+      object [ "hardLimit" .=
+                  toJSON acceptedConnectionsHardLimit
+             , "softLimit" .=
+                  toJSON acceptedConnectionsSoftLimit
+             , "delay" .=
+                  toJSON acceptedConnectionsDelay
+             ]
+           ]
+
+instance FromJSON AcceptedConnectionsLimit where
+  parseJSON = withObject "AcceptedConnectionsLimit" $ \v ->
+    AcceptedConnectionsLimit
+      <$> v .: "hardLimit"
+      <*> v .: "softLimit"
+      <*> v .: "delay"
