@@ -29,8 +29,7 @@ import           Ouroboros.Consensus.Config (TopLevelConfig, configBlock, config
 import           Ouroboros.Consensus.Config.SupportsNode
                  (ConfigSupportsNode(..), getNetworkMagic)
 import           Ouroboros.Consensus.Node (ProtocolInfo(..))
-import           Ouroboros.Consensus.Shelley.Protocol (StandardCrypto)
-import           Ouroboros.Consensus.Shelley.Eras (StandardShelley)
+import           Ouroboros.Consensus.Shelley.Eras (StandardCrypto, StandardShelley)
 import           Ouroboros.Network.Protocol.LocalTxSubmission.Type (SubmitResult (..))
 
 import           Cardano.Node.Configuration.Logging (LoggingLayer)

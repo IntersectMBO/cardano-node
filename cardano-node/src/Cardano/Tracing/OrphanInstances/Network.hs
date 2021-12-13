@@ -4,8 +4,8 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE PolyKinds #-}
+{-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -16,29 +16,28 @@
 module Cardano.Tracing.OrphanInstances.Network () where
 
 import           Cardano.Prelude hiding (group, show)
-import           Prelude (String, show, id)
+import           Prelude (String, id, show)
 
 import           Control.Monad.Class.MonadTime (DiffTime, Time (..))
 import           Data.Aeson (Value (..))
-import           Data.Aeson.Types (listValue)
 import qualified Data.Aeson as Aeson
+import           Data.Aeson.Types (listValue)
 import qualified Data.IP as IP
-import qualified Data.Set as Set
 import qualified Data.Map.Strict as Map
+import qualified Data.Set as Set
 import           Data.Text (pack)
 
 import           Network.TypedProtocol.Codec (AnyMessageAndAgency (..))
-import           Network.TypedProtocol.Core (ClientHasAgency,
-                     PeerHasAgency (..), ServerHasAgency)
+import           Network.TypedProtocol.Core (ClientHasAgency, PeerHasAgency (..), ServerHasAgency)
 
 
-import           Network.Mux (MuxTrace (..), WithMuxBearer (..), MiniProtocolNum (..))
+import           Network.Mux (MiniProtocolNum (..), MuxTrace (..), WithMuxBearer (..))
 import           Network.Socket (SockAddr (..))
 
-import           Cardano.Tracing.OrphanInstances.Common
-import           Cardano.Tracing.Render
 import           Cardano.Node.Configuration.TopologyP2P (UseLedger (..))
 import           Cardano.Node.Queries (ConvertTxId)
+import           Cardano.Tracing.OrphanInstances.Common
+import           Cardano.Tracing.Render
 
 import           Ouroboros.Consensus.Block (ConvertRawHash (..), Header, getHeader)
 import           Ouroboros.Consensus.Ledger.Query (BlockQuery, Query)
@@ -52,45 +51,51 @@ import           Ouroboros.Network.BlockFetch.ClientState (TraceFetchClientState
                    TraceLabelPeer (..))
 import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
 import           Ouroboros.Network.BlockFetch.Decision (FetchDecision, FetchDecline (..))
+import           Ouroboros.Network.ConnectionHandler (ConnectionHandlerTrace (..))
 import           Ouroboros.Network.ConnectionId (ConnectionId (..))
-import           Ouroboros.Network.ConnectionManager.Types ( AbstractState(..),
-                    ConnectionManagerTrace(..) , ConnectionManagerCounters(..),
-                    AbstractState(..) , ConnectionManagerCounters(..) , OperationResult(..))
+import           Ouroboros.Network.ConnectionManager.Types (AbstractState (..),
+                   ConnectionManagerCounters (..), ConnectionManagerTrace (..),
+                   OperationResult (..))
 import qualified Ouroboros.Network.ConnectionManager.Types as ConnMgr
-import           Ouroboros.Network.ConnectionHandler (ConnectionHandlerTrace(..))
 import           Ouroboros.Network.DeltaQ (GSV (..), PeerGSV (..))
 import           Ouroboros.Network.Driver.Limits (ProtocolLimitFailure (..))
+import           Ouroboros.Network.InboundGovernor (InboundGovernorTrace (..), RemoteSt (..))
+import qualified Ouroboros.Network.InboundGovernor as InboundGovernor
+import           Ouroboros.Network.InboundGovernor.State (InboundGovernorCounters (..))
 import           Ouroboros.Network.KeepAlive (TraceKeepAliveClient (..))
-import           Ouroboros.Network.NodeToClient (NodeToClientVersionData(..), NodeToClientVersion)
+import           Ouroboros.Network.Magic (NetworkMagic (..))
+import           Ouroboros.Network.NodeToClient (NodeToClientVersion, NodeToClientVersionData (..))
 import qualified Ouroboros.Network.NodeToClient as NtC
-import           Ouroboros.Network.NodeToNode (ErrorPolicyTrace (..), TraceSendRecv (..),
-                     WithAddr (..), NodeToNodeVersionData (..), NodeToNodeVersion,
-                     RemoteAddress)
+import           Ouroboros.Network.NodeToNode (ErrorPolicyTrace (..), NodeToNodeVersion,
+                   NodeToNodeVersionData (..), RemoteAddress, TraceSendRecv (..), WithAddr (..))
 import qualified Ouroboros.Network.NodeToNode as NtN
-import           Ouroboros.Network.PeerSelection.Governor ( PeerSelectionState (..),
-                     PeerSelectionTargets (..), DebugPeerSelection (..),
-                     TracePeerSelection(..), PeerSelectionCounters(..))
+import qualified Ouroboros.Network.PeerSelection.EstablishedPeers as EstablishedPeers
+import           Ouroboros.Network.PeerSelection.Governor (DebugPeerSelection (..),
+                   PeerSelectionCounters (..), PeerSelectionState (..), PeerSelectionTargets (..),
+                   TracePeerSelection (..))
 import qualified Ouroboros.Network.PeerSelection.KnownPeers as KnownPeers
 import           Ouroboros.Network.PeerSelection.LedgerPeers
-import           Ouroboros.Network.PeerSelection.LocalRootPeers (toMap, toGroupSets, LocalRootPeers)
-import qualified Ouroboros.Network.PeerSelection.EstablishedPeers as EstablishedPeers
-import           Ouroboros.Network.PeerSelection.RootPeersDNS ( TraceLocalRootPeers(..),
-                     TracePublicRootPeers(..))
-import           Ouroboros.Network.PeerSelection.PeerStateActions
-                     ( PeerSelectionActionsTrace(..)
-                     )
+import           Ouroboros.Network.PeerSelection.LocalRootPeers (LocalRootPeers, toGroupSets, toMap)
+import           Ouroboros.Network.PeerSelection.PeerStateActions (PeerSelectionActionsTrace (..))
+import           Ouroboros.Network.PeerSelection.RootPeersDNS (TraceLocalRootPeers (..),
+                   TracePublicRootPeers (..))
 import           Ouroboros.Network.PeerSelection.Types (PeerStatus (..))
 import           Ouroboros.Network.Protocol.BlockFetch.Type (BlockFetch, Message (..))
 import           Ouroboros.Network.Protocol.ChainSync.Type (ChainSync)
 import qualified Ouroboros.Network.Protocol.ChainSync.Type as ChainSync
-import           Ouroboros.Network.Protocol.Trans.Hello.Type (Hello)
-import qualified Ouroboros.Network.Protocol.Trans.Hello.Type as Hello
+import           Ouroboros.Network.Protocol.Handshake (HandshakeException (..),
+                   HandshakeProtocolError (..), RefuseReason (..))
 import           Ouroboros.Network.Protocol.LocalStateQuery.Type (LocalStateQuery)
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as LocalStateQuery
 import           Ouroboros.Network.Protocol.LocalTxSubmission.Type (LocalTxSubmission)
 import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Type as LocalTxSub
+import           Ouroboros.Network.Protocol.Trans.Hello.Type (Hello)
+import qualified Ouroboros.Network.Protocol.Trans.Hello.Type as Hello
 import           Ouroboros.Network.Protocol.TxSubmission.Type (Message (..), TxSubmission)
 import           Ouroboros.Network.Protocol.TxSubmission2.Type (TxSubmission2)
+import           Ouroboros.Network.RethrowPolicy (ErrorCommand (..))
+import           Ouroboros.Network.Server2 (ServerTrace (..))
+import qualified Ouroboros.Network.Server2 as Server
 import           Ouroboros.Network.Snocket (LocalAddress (..))
 import           Ouroboros.Network.Subscription (ConnectResult (..), DnsTrace (..),
                    SubscriberError (..), SubscriptionTrace (..), WithDomainName (..),
@@ -98,16 +103,6 @@ import           Ouroboros.Network.Subscription (ConnectResult (..), DnsTrace (.
 import           Ouroboros.Network.TxSubmission.Inbound (ProcessedTxCount (..),
                    TraceTxSubmissionInbound (..))
 import           Ouroboros.Network.TxSubmission.Outbound (TraceTxSubmissionOutbound (..))
-import Ouroboros.Network.Server2 ( ServerTrace, ServerTrace(..) )
-import           Ouroboros.Network.Magic (NetworkMagic(..))
-import qualified Ouroboros.Network.Server2 as Server
-import           Ouroboros.Network.InboundGovernor (InboundGovernorTrace(..),
-                     RemoteSt(..))
-import qualified Ouroboros.Network.InboundGovernor as InboundGovernor
-import           Ouroboros.Network.InboundGovernor.State (InboundGovernorCounters(..))
-import           Ouroboros.Network.Protocol.Handshake (HandshakeException(..),
-                   HandshakeProtocolError (..), RefuseReason (..))
-import           Ouroboros.Network.RethrowPolicy (ErrorCommand (..))
 
 import qualified Ouroboros.Network.Diffusion as ND
 
@@ -902,18 +897,18 @@ instance ToJSON peerAddr => ToJSON (ConnectionId peerAddr) where
                  ]
 
 instance Aeson.ToJSON ConnectionManagerCounters where
-  toJSON ConnectionManagerCounters { prunableConns
+  toJSON ConnectionManagerCounters { fullDuplexConns
                                    , duplexConns
-                                   , uniConns
-                                   , incomingConns
-                                   , outgoingConns
+                                   , unidirectionalConns
+                                   , inboundConns
+                                   , outboundConns
                                    } =
     Aeson.object [ "kind"           .= String "ConnectionManagerCounters"
-                 , "prunable"       .= toJSON prunableConns
+                 , "fullDuplex"     .= toJSON fullDuplexConns
                  , "duplex"         .= toJSON duplexConns
-                 , "unidirectional" .= toJSON uniConns
-                 , "incoming"       .= incomingConns
-                 , "outgoing"       .= outgoingConns
+                 , "unidirectional" .= toJSON unidirectionalConns
+                 , "inbound"        .= inboundConns
+                 , "outbound"       .= outboundConns
                  ]
 
 instance ToObject (FetchDecision [Point header]) where
@@ -1315,6 +1310,9 @@ instance Show exception => ToObject (TraceLocalRootPeers RemoteAddress exception
              , "domainAddress" .= toJSON d
              , "reason" .= show dexception
              ]
+
+instance ToJSON IP where
+  toJSON ip = Aeson.object ["ip" .= String (pack . show $ ip)]
 
 instance ToObject TracePublicRootPeers where
   toObject _verb (TracePublicRootRelayAccessPoint relays) =
@@ -1821,10 +1819,12 @@ instance (Show addr, Show versionNumber, Show agreedOptions, ToObject addr,
           , "remoteAddress" .= toObject verb remoteAddress
           , "connectionState" .= toJSON connState
           ]
-      TrPruneConnections peers ->
+      TrPruneConnections pruningSet numberPruned chosenPeers ->
         mkObject
           [ "kind" .= String "PruneConnections"
-          , "peers" .= toJSON (toObject verb `map` peers)
+          , "prunedPeers" .= toJSON pruningSet
+          , "numberPrunedPeers" .= toJSON numberPruned
+          , "choiceSet" .= toJSON (toObject verb `Set.map` chosenPeers)
           ]
       TrConnectionCleanup connId ->
         mkObject
@@ -1902,6 +1902,10 @@ instance ToJSON addr => ToJSON (OperationResult addr) where
   toJSON (OperationSuccess addr) =
     Aeson.object [ "kind" .= String "OperationSuccess"
                  , "operationSuccess" .= toJSON addr
+                 ]
+  toJSON (TerminatedConnection as) =
+    Aeson.object [ "kind" .= String "TerminatedConnection"
+                 , "terminatedConnection" .= toJSON as
                  ]
 
 instance ToJSON RemoteSt where

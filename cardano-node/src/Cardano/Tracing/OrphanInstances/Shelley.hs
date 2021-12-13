@@ -41,10 +41,10 @@ import           Ouroboros.Consensus.Util.Condense (condense)
 import           Ouroboros.Network.Block (SlotNo (..), blockHash, blockNo, blockSlot)
 import           Ouroboros.Network.Point (WithOrigin, withOriginToMaybe)
 
+import qualified Ouroboros.Consensus.Protocol.Ledger.HotKey as HotKey
+import           Ouroboros.Consensus.Protocol.TPraos (TPraosCannotForge (..))
 import           Ouroboros.Consensus.Shelley.Ledger hiding (TxId)
 import           Ouroboros.Consensus.Shelley.Ledger.Inspect
-import           Ouroboros.Consensus.Shelley.Protocol (TPraosCannotForge (..))
-import qualified Ouroboros.Consensus.Shelley.Protocol.HotKey as HotKey
 
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import           Cardano.Ledger.Alonzo as Alonzo
@@ -354,6 +354,10 @@ instance ( ShelleyBasedEra era
          , ToObject (PredicateFailure (UTXO era))
          , ToObject (PredicateFailure (Core.EraRule "UTXO" era))
          ) => ToObject (UtxowPredicateFailure era) where
+  toObject _verb (ExtraneousScriptWitnessesUTXOW extraneousScripts) =
+    mkObject [ "kind" .= String "InvalidWitnessesUTXOW"
+             , "extraneousScripts" .= extraneousScripts
+             ]
   toObject _verb (InvalidWitnessesUTXOW wits') =
     mkObject [ "kind" .= String "InvalidWitnessesUTXOW"
              , "invalidWitnesses" .= map textShow wits'
@@ -447,6 +451,7 @@ instance ( ShelleyBasedEra era
              , "network" .= network
              , "addrs"   .= addrs
              ]
+
 
 instance ToJSON MA.ValidityInterval where
   toJSON vi =

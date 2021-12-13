@@ -111,8 +111,8 @@ library
                       , cardano-prelude
                       , cardano-protocol-tpraos
                       , cardano-slotting
-                      , contra-tracer
                       , cborg >= 0.2.4 && < 0.3
+                      , contra-tracer
                       , containers
                       , directory
                       , dns
@@ -135,6 +135,7 @@ library
                       , ouroboros-consensus
                       , ouroboros-consensus-byron
                       , ouroboros-consensus-cardano
+                      , ouroboros-consensus-protocol
                       , ouroboros-consensus-shelley
                       , ouroboros-network
                       , ouroboros-network-framework

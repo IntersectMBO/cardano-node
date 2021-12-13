@@ -115,6 +115,8 @@ module Cardano.Api.Shelley
     fromAlonzoExUnits,
     toAlonzoRdmrPtr,
     fromAlonzoRdmrPtr,
+    scriptDataFromJsonDetailedSchema,
+    scriptDataToJsonDetailedSchema,
 
     -- * Certificates
     Certificate (..),
@@ -201,6 +203,7 @@ import           Cardano.Api.OperationalCertificate
 import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.Query
 import           Cardano.Api.Script
+import           Cardano.Api.ScriptData
 import           Cardano.Api.Shelley.Genesis
 import           Cardano.Api.StakePoolMetadata
 import           Cardano.Api.Tx

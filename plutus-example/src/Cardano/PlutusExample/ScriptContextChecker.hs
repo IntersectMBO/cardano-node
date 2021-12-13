@@ -231,7 +231,7 @@ dummyScriptPurpose = Nothing
 data ScriptContextError = NoScriptsInByronEra
                         | NoScriptsInEra
                         | ReadTxBodyError (FileError TextEnvelopeError)
-                        | IntervalConvError TransactionValidityIntervalError
+                        | IntervalConvError TransactionValidityError
                         | AcquireFail AcquireFailure
                         | NoTipLocalStateError
                         | NoSystemStartTimeError
@@ -246,7 +246,7 @@ txToCustomRedeemer
   :: ShelleyBasedEra era
   -> ProtocolParameters
   -> UTxO era
-  -> EpochInfo (Either TransactionValidityIntervalError)
+  -> EpochInfo (Either TransactionValidityError)
   -> SystemStart
   -> Api.Tx era
   -> Either ScriptContextError MyCustomRedeemer

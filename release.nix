@@ -98,7 +98,7 @@ let
   };
 
   # Environments we want to build scripts for on hydra
-  environments = [ "mainnet" "testnet" "staging" "shelley_qa" "alonzo-blue" "alonzo-white" ];
+  environments = [ "mainnet" "testnet" "staging" "shelley_qa" ];
 
   extraBuilds = {
     # Environments listed in Network Configuration page
@@ -132,10 +132,11 @@ let
   ];
   # Paths or prefix of paths for which cross-builds (mingwW64, musl64) are disabled:
   noCrossBuild = [
-    ["shell"] ["devopsShell"] ["cardano-ping"] ["roots"]
+    ["shell"] ["devShell"] ["devopsShell"] ["cardano-ping"] ["roots"]
     [ "haskellPackages" "cardano-testnet" ]
     [ "checks" "tests" "cardano-testnet" ]
     [ "tests" "cardano-testnet" ]
+    [ "plutus-scripts" ]
     [ "exes" "plutus-example" ] [ "haskellPackages" "plutus-example" ] [ "tests" "plutus-example" ] [ "checks" "tests" "plutus-example"]
   ] ++ onlyBuildOnDefaultSystem;
   noMusl64Build = [ ["checks"] ["tests"] ["benchmarks"] ["haskellPackages"] ["plan-nix"]]

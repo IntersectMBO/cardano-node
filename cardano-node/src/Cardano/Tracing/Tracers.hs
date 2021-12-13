@@ -1,9 +1,9 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE GADTs #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -34,11 +34,11 @@ import           GHC.Clock (getMonotonicTimeNSec)
 import           Codec.CBOR.Read (DeserialiseFailure)
 import           Data.Aeson (ToJSON (..), Value (..))
 import qualified Data.HashMap.Strict as Map
-import qualified Data.IntPSQ as Pq
 import           Data.IntPSQ (IntPSQ)
+import qualified Data.IntPSQ as Pq
 import qualified Data.Map.Strict as SMap
 import qualified Data.Text as Text
-import           Data.Time (UTCTime, NominalDiffTime)
+import           Data.Time (NominalDiffTime, UTCTime)
 import qualified System.Metrics.Counter as Counter
 import qualified System.Metrics.Gauge as Gauge
 import qualified System.Metrics.Label as Label
@@ -75,27 +75,28 @@ import           Ouroboros.Consensus.Node (NetworkP2PMode (..))
 import qualified Ouroboros.Consensus.Node.Run as Consensus (RunNode)
 import qualified Ouroboros.Consensus.Node.Tracers as Consensus
 import           Ouroboros.Consensus.Protocol.Abstract (ValidationErr)
-import qualified Ouroboros.Consensus.Shelley.Protocol.HotKey as HotKey
+import qualified Ouroboros.Consensus.Protocol.Ledger.HotKey as HotKey
 
 import qualified Ouroboros.Network.AnchoredFragment as AF
 import           Ouroboros.Network.Block (BlockNo (..), HasHeader (..), Point, StandardHash,
                    blockNo, pointSlot, unBlockNo)
-import           Ouroboros.Network.BlockFetch.ClientState (TraceLabelPeer (..), TraceFetchClientState (..))
+import           Ouroboros.Network.BlockFetch.ClientState (TraceFetchClientState (..),
+                   TraceLabelPeer (..))
 import           Ouroboros.Network.BlockFetch.Decision (FetchDecision, FetchDecline (..))
 import           Ouroboros.Network.ConnectionId (ConnectionId)
+import           Ouroboros.Network.InboundGovernor (InboundGovernorTrace (..))
+import           Ouroboros.Network.InboundGovernor.State (InboundGovernorCounters (..))
+import           Ouroboros.Network.PeerSelection.Governor (PeerSelectionCounters (..))
 import           Ouroboros.Network.Point (fromWithOrigin, withOrigin)
 import           Ouroboros.Network.Protocol.LocalStateQuery.Type (ShowQuery)
-import           Ouroboros.Network.InboundGovernor.State (InboundGovernorCounters(..))
-import           Ouroboros.Network.InboundGovernor (InboundGovernorTrace(..))
-import           Ouroboros.Network.PeerSelection.Governor (PeerSelectionCounters(..))
 
-import           Ouroboros.Network.ConnectionManager.Types (ConnectionManagerTrace(..)
-                     , ConnectionManagerCounters(..))
+import           Ouroboros.Network.ConnectionManager.Types (ConnectionManagerCounters (..),
+                   ConnectionManagerTrace (..))
 import qualified Ouroboros.Network.Diffusion as Diffusion
-import qualified Ouroboros.Network.Diffusion.P2P as P2P
 import qualified Ouroboros.Network.Diffusion.NonP2P as NonP2P
-import           Ouroboros.Network.NodeToNode (NodeToNodeVersion, RemoteAddress)
+import qualified Ouroboros.Network.Diffusion.P2P as P2P
 import           Ouroboros.Network.NodeToClient (LocalAddress, NodeToClientVersion)
+import           Ouroboros.Network.NodeToNode (NodeToNodeVersion, RemoteAddress)
 
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 import qualified Ouroboros.Consensus.Storage.LedgerDB.OnDisk as LedgerDB
@@ -186,6 +187,7 @@ indexReplType :: ChainDB.TraceLedgerReplayEvent a -> Int
 indexReplType LedgerDB.ReplayFromGenesis{} = 1
 indexReplType LedgerDB.ReplayFromSnapshot{} = 2
 indexReplType LedgerDB.ReplayedBlock{} = 3
+indexReplType LedgerDB.UpdateLedgerDbTraceEvent{} = 4
 
 instance ElidingTracer (WithSeverity (ChainDB.TraceEvent blk)) where
   -- equivalent by type and severity
@@ -373,12 +375,12 @@ mkTracers blockConfig tOpts@(TracingOn trSel) tr nodeKern ekgDirect enableP2P = 
                             verb "LocalServer" tr
            , P2P.dtLocalInboundGovernorTracer =
                tracerOnOff (traceLocalInboundGovernor trSel)
-                            verb "LocalInboundGovernor" tr 
+                            verb "LocalInboundGovernor" tr
            }
        DisabledP2PMode ->
          Diffusion.NonP2PTracers NonP2P.TracersExtra
            { NonP2P.dtIpSubscriptionTracer =
-               tracerOnOff (traceIpSubscription trSel) verb "IpSubscription" tr 
+               tracerOnOff (traceIpSubscription trSel) verb "IpSubscription" tr
            , NonP2P.dtDnsSubscriptionTracer =
                tracerOnOff (traceDnsSubscription trSel) verb "DnsSubscription" tr
            , NonP2P.dtDnsResolverTracer =

@@ -115,6 +115,7 @@ library
                       , cardano-protocol-tpraos
                       , cardano-slotting
                       , cborg
+                      , compact-map
                       , contra-tracer
                       , containers
                       , cryptonite
@@ -136,6 +137,7 @@ library
                       , plutus-ledger-api
                       , prettyprinter
                       , scientific
+                      , small-steps
                       , cardano-ledger-shelley
                       , small-steps
                       , stm

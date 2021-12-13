@@ -429,8 +429,12 @@ getTxBody (ShelleyTx era tx) =
   where
     getShelleyTxBody :: forall ledgerera.
                         ShelleyLedgerEra era ~ ledgerera
+                     => Shelley.UsesValue ledgerera
+                     => ToCBOR (Ledger.AuxiliaryData ledgerera)
+                     => ToCBOR (Ledger.TxBody ledgerera)
+                     => ToCBOR (Ledger.Script ledgerera)
+                     => FromCBOR (CBOR.Annotator (Ledger.Script ledgerera))
                      => Ledger.Witnesses ledgerera ~ Shelley.WitnessSetHKD Identity ledgerera
-                     => Shelley.ShelleyBased ledgerera
                      => Shelley.Tx ledgerera
                      -> TxBody era
     getShelleyTxBody Shelley.Tx {
@@ -487,10 +491,14 @@ getTxWitnesses (ShelleyTx era tx) =
       ShelleyBasedEraAlonzo  -> getAlonzoTxWitnesses  tx
   where
     getShelleyTxWitnesses :: forall ledgerera.
-                             Ledger.Crypto ledgerera ~ StandardCrypto
+                             ToCBOR (Ledger.AuxiliaryData ledgerera)
+                          => ToCBOR (Ledger.TxBody ledgerera)
+                          => ToCBOR (Ledger.Script ledgerera)
+                          => FromCBOR (CBOR.Annotator (Ledger.Script ledgerera))
+                          => Ledger.Crypto ledgerera ~ StandardCrypto
                           => Ledger.Witnesses ledgerera ~ Shelley.WitnessSetHKD Identity ledgerera
                           => ToCBOR (Ledger.Witnesses ledgerera)
-                          => Shelley.ShelleyBased ledgerera
+                          => Shelley.UsesValue ledgerera
                           => Shelley.Tx ledgerera
                           -> [KeyWitness era]
     getShelleyTxWitnesses Shelley.Tx {
@@ -545,11 +553,15 @@ makeSignedTransaction witnesses (ShelleyTxBody era txbody
     makeShelleySignedTransaction
       :: forall ledgerera.
          ShelleyLedgerEra era ~ ledgerera
+      => ToCBOR (Ledger.AuxiliaryData ledgerera)
+      => ToCBOR (Ledger.TxBody ledgerera)
+      => ToCBOR (Ledger.Script ledgerera)
+      => FromCBOR (CBOR.Annotator (Ledger.Script ledgerera))
       => Ledger.Crypto ledgerera ~ StandardCrypto
       => Ledger.Witnesses ledgerera ~ Shelley.WitnessSetHKD Identity ledgerera
       => Ledger.Tx ledgerera ~ Shelley.Tx ledgerera
       => ToCBOR (Ledger.Witnesses ledgerera)
-      => Shelley.ShelleyBased ledgerera
+      => Shelley.UsesValue ledgerera
       => Shelley.ValidateScript ledgerera
       => Ledger.TxBody ledgerera
       -> Tx era
@@ -570,7 +582,7 @@ makeSignedTransaction witnesses (ShelleyTxBody era txbody
       => Ledger.Crypto ledgerera ~ StandardCrypto
       => Ledger.Tx ledgerera ~ Alonzo.ValidatedTx ledgerera
       => Ledger.Script ledgerera ~ Alonzo.Script ledgerera
-      => Shelley.ShelleyBased ledgerera
+      => Shelley.UsesValue ledgerera
       => Shelley.ValidateScript ledgerera
       => Ledger.TxBody ledgerera
       -> Tx era
@@ -770,9 +782,8 @@ makeShelleyKeyWitness (ShelleyTxBody era txbody _ _ _ _) =
       ShelleyBasedEraMary    -> makeShelleyBasedKeyWitness txbody
       ShelleyBasedEraAlonzo  -> makeShelleyBasedKeyWitness txbody
   where
-    makeShelleyBasedKeyWitness :: Shelley.ShelleyBased (ShelleyLedgerEra era)
-                               => Ledger.Crypto (ShelleyLedgerEra era)
-                                    ~ StandardCrypto
+    makeShelleyBasedKeyWitness :: Shelley.UsesValue (ShelleyLedgerEra era)
+                               => Ledger.Crypto (ShelleyLedgerEra era) ~ StandardCrypto
                                => Ledger.TxBody (ShelleyLedgerEra era)
                                -> ShelleyWitnessSigningKey
                                -> KeyWitness era
