@@ -424,7 +424,7 @@ data TransactionValidityError where
     -- of their validity interval more than 36 hours into the future.
     TransactionValidityIntervalError :: Consensus.PastHorizonException -> TransactionValidityError
 
-    TransactionValidityBasicFailure :: Alonzo.BasicFailure c -> TransactionValidityError
+    TransactionValidityBasicFailure :: Alonzo.BasicFailure Ledger.StandardCrypto -> TransactionValidityError
 
 deriving instance Show TransactionValidityError
 
@@ -447,7 +447,9 @@ instance Error TransactionValidityError where
 
         | otherwise
         = 0 -- This should be impossible.
-  displayError (TransactionValidityBasicFailure (Alonzo.UnknownTxIns _)) = "Unknown txins present" -- TODO More information error message
+  displayError (TransactionValidityBasicFailure (Alonzo.UnknownTxIns txins)) =
+    "The transaction contains inputs that are not present in the UTxO: "
+    <> show (map (renderTxIn . fromShelleyTxIn) $ Set.toList txins)
 
 
 -- | Compute the 'ExecutionUnits' needed for each script in the transaction.
