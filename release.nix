@@ -132,7 +132,7 @@ let
   ];
   # Paths or prefix of paths for which cross-builds (mingwW64, musl64) are disabled:
   noCrossBuild = [
-    ["shell"] ["devopsShell"] ["cardano-ping"] ["roots"]
+    ["shell"] ["devShell"] ["devopsShell"] ["cardano-ping"] ["roots"]
     [ "haskellPackages" "cardano-testnet" ]
     [ "checks" "tests" "cardano-testnet" ]
     [ "tests" "cardano-testnet" ]
