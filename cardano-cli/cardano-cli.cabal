@@ -115,6 +115,7 @@ library
                       , cardano-prelude
                       , cardano-protocol-tpraos
                       , cardano-slotting
+                      , compact-map
                       , contra-tracer
                       , cborg >= 0.2.4 && < 0.3
                       , containers
@@ -131,7 +132,6 @@ library
                       , ouroboros-consensus-shelley
                       , ouroboros-network
                       , parsec
-                      , plutus-ledger-api
                       , prettyprinter
                       , cardano-ledger-shelley
                       , small-steps

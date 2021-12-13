@@ -32,13 +32,14 @@ import qualified Cardano.CLI.Shelley.Output as O
 import           Cardano.CLI.Shelley.Parsers (OutputFile (..), QueryCmd (..))
 import           Cardano.CLI.Types
 import           Cardano.Crypto.Hash (hashToBytesAsHex)
+import           Cardano.Ledger.Compactible
 import           Cardano.Ledger.Coin
 import           Cardano.Ledger.Crypto (StandardCrypto)
 import qualified Cardano.Ledger.Crypto as Crypto
 import qualified Cardano.Ledger.Era as Era
 import           Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import qualified Cardano.Ledger.Shelley.API.Protocol as Ledger
-import qualified Cardano.Ledger.Shelley.Constraints as Ledger
+import           Cardano.Ledger.Shelley.Constraints (UsesValue)
 import           Cardano.Ledger.Shelley.EpochBoundary
 import           Cardano.Ledger.Shelley.LedgerState hiding (_delegations)
 import           Cardano.Ledger.Shelley.Scripts ()
@@ -51,6 +52,7 @@ import           Data.Aeson.Encode.Pretty (encodePretty)
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import           Data.List (nub)
 import qualified Data.Map.Strict as Map
+import qualified Data.Compact.VMap as VMap
 import qualified Data.Set as Set
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
@@ -547,14 +549,14 @@ writeStakeSnapshot (StakePoolKeyHash hk) qState =
 getPoolStake :: KeyHash Cardano.Ledger.Keys.StakePool crypto -> SnapShot crypto -> Integer
 getPoolStake hash ss = pStake
   where
-    Coin pStake = fold s
-    (Stake s) = poolStake hash (_delegations ss) (_stake ss)
+    Coin pStake = fold (Map.map fromCompact $ VMap.toMap s)
+    Stake s = poolStake hash (_delegations ss) (_stake ss)
 
 -- | Sum the active stake from a snapshot
 getAllStake :: SnapShot crypto -> Integer
 getAllStake (SnapShot stake _ _) = activeStake
   where
-    Coin activeStake = fold . unStake $ stake
+    Coin activeStake = fold (fmap fromCompact (VMap.toMap (unStake stake)))
 
 -- | This function obtains the pool parameters, equivalent to the following jq query on the output of query ledger-state
 --   .nesEs.esLState._delegationState._pstate._pParams.<pool_id>
@@ -883,7 +885,7 @@ queryResult eAcq =
 obtainLedgerEraClassConstraints
   :: ShelleyLedgerEra era ~ ledgerera
   => ShelleyBasedEra era
-  -> ((Ledger.ShelleyBased ledgerera
+  -> (( UsesValue ledgerera
       , ToJSON (DebugLedgerState era)
       , FromCBOR (DebugLedgerState era)
       , Era.Crypto ledgerera ~ StandardCrypto
