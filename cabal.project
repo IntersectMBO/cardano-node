@@ -1,4 +1,4 @@
-index-state: 2021-09-15T00:00:00Z
+index-state: 2021-12-07T00:00:00Z
 
 packages:
     cardano-api
@@ -11,7 +11,7 @@ packages:
     bench/cardano-topology
     bench/locli
     bench/tx-generator
-    plutus-example/plutus-example
+    plutus-example
     trace-dispatcher
     trace-resources
     trace-forward
@@ -88,6 +88,9 @@ package trace-forward
 package byron-spec-ledger
   tests: False
 
+package compact-map
+  ghc-options: -Werror
+
 package iohk-monitoring
   tests: False
 
@@ -147,8 +150,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: 654f5b7c76f7cc57900b4ddc664a82fc3b925fb0
-  --sha256: 0j4x9zbx5dkww82sqi086h39p456iq5xr476ylmrnpwcpfb4xai4
+  tag: 41545ba3ac6b3095966316a99883d678b5ab8da8
+  --sha256: 0icq9y3nnl42fz536da84414av36g37894qnyw4rk3qkalksqwir
   subdir:
     base-deriving-via
     binary
@@ -170,8 +173,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger
-  tag: bf008ce028751cae9fb0b53c3bef20f07c06e333
-  --sha256: 0my3801w1vinc0kf5yh9lxl6saqxgwm6ccg0vvzi104pafcwwcqx
+  tag: 4595b73a693d0a78f05ecbcbf631caa568dde5d8
+  --sha256: 022yarx7bqys5fdbnm3wkzrsc3g9hn7pghf53p8bx3xbwx86n47f
   subdir:
     eras/alonzo/impl
     eras/alonzo/test-suite
@@ -188,12 +191,10 @@ source-repository-package
     libs/cardano-ledger-core
     libs/cardano-ledger-pretty
     libs/cardano-protocol-tpraos
+    libs/compact-map
     libs/small-steps
     libs/small-steps-test
     libs/non-integral
-    eras/shelley/chain-and-ledger/executable-spec
-    eras/shelley/chain-and-ledger/shelley-spec-ledger-test
-    eras/shelley/chain-and-ledger/dependencies/non-integer
 
 source-repository-package
   type: git
@@ -234,8 +235,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: d613de3d872ec8b4a5da0c98afb443f322dc4dab
-  --sha256: 0lfbipfdrzay8v1pcazx0qgkda3d1j0505yig9jrml9j7991rmhl
+  tag: 67b7c9e7a684e97ad5a5ed7fe85e2b900e8bba11
+  --sha256: 1cjwqpwfdl61pg847pc5h2sm2k1rac7i1f1rv89snmnbzy8s42hj
   subdir:
     io-sim
     io-classes
@@ -244,6 +245,7 @@ source-repository-package
     ouroboros-consensus
     ouroboros-consensus-byron
     ouroboros-consensus-cardano
+    ouroboros-consensus-protocol
     ouroboros-consensus-shelley
     ouroboros-network
     ouroboros-network-framework
