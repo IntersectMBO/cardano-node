@@ -101,6 +101,7 @@ executable stake-credential-history
                        cardano-api,
                        cardano-ledger-core,
                        cardano-ledger-shelley,
+                       compact-map,
                        cardano-slotting,
                        containers,
                        optparse-applicative,

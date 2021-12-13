@@ -1,10 +1,12 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 import           Cardano.Api
 import           Cardano.Api.Shelley
 import           Cardano.Ledger.Address (getRewardAcnt)
+import           Cardano.Ledger.Compactible (Compactible (..))
 import qualified Cardano.Ledger.Shelley.API as L
 import qualified Cardano.Ledger.Shelley.Rewards as L
 import qualified Cardano.Ledger.Shelley.RewardUpdate as L
@@ -17,6 +19,7 @@ import qualified Data.ByteString.Base16 as Base16
 import           Data.Char (ord)
 import           Data.Foldable (toList)
 import           Data.List (intercalate)
+import qualified Data.Compact.VMap as VMap
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (mapMaybe)
 import           Data.Set (Set)
@@ -266,8 +269,8 @@ main = do
              case shelleyState of
                Just (L.SJust (L.Complete ru), goSnap, _) -> do
 
-                 es <- rewardStartEvent (lastRewStartEpoch state) epochNo slotNo goSnap    targetCred
-                 ee <- rewardEndEvent   (lastRewEndEpoch   state) epochNo slotNo (L.rs ru) targetCred
+                 es <- rewardStartEvent (lastRewStartEpoch state) epochNo slotNo (fmap fromCompact (VMap.toMap goSnap)) targetCred
+                 ee <- rewardEndEvent   (lastRewEndEpoch   state) epochNo slotNo (L.rs ru)                              targetCred
                  return $ state { lastCheckpoint = lastcheck
                                 , lastRewStartEpoch = es
                                 , lastRewEndEpoch = ee
@@ -286,6 +289,7 @@ main = do
   where
 
     -- CheckPoints --
+    displayCheckpoint :: SlotNo -> SlotNo -> CheckPoint -> IO SlotNo
     displayCheckpoint _ lastcheck CheckPointOff = return lastcheck
     displayCheckpoint slot lastcheck (CheckPointSize checkpointSize) =
       if slot - lastcheck >= checkpointSize
@@ -340,7 +344,6 @@ main = do
         _           -> Just . Error $ "MIR keys should be unique: " <> show mir
 
     -- Withdrawal Events --
-    withdrawalEvents :: StakeCredential -> EpochNo -> SlotNo -> TxBodyContent ViewTx era -> IO ()
     withdrawalEvents t epochNo slotNo txbc = case txWithdrawals txbc of
       TxWithdrawalsNone  -> return ()
       TxWithdrawals _ ws -> mapM_ (withdrawalEvent epochNo slotNo) $ filter (targetWithdrawal t) ws
