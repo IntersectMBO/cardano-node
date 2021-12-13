@@ -20,6 +20,8 @@ module Cardano.Api.ScriptData (
     scriptDataToJson,
     ScriptDataJsonError (..),
     ScriptDataJsonSchemaError (..),
+    scriptDataFromJsonDetailedSchema,
+    scriptDataToJsonDetailedSchema,
 
     -- * Internal conversion functions
     toPlutusData,
@@ -464,7 +466,7 @@ scriptDataFromJsonDetailedSchema = conv
     conv :: Aeson.Value
          -> Either ScriptDataJsonSchemaError ScriptData
     conv (Aeson.Object m) =
-      case HashMap.toList m of
+      case List.sort $ HashMap.toList m of
         [("int", Aeson.Number d)] ->
           case Scientific.floatingOrInteger d :: Either Double Integer of
             Left  n -> Left (ScriptDataJsonNumberNotInteger n)

@@ -21,17 +21,26 @@ import           Cardano.Api.Block (EpochNo)
 import           Cardano.Api.Certificate (Certificate)
 import           Cardano.Api.KeysShelley (Hash (StakePoolKeyHash), StakePoolKey)
 import           Cardano.Api.Value (Lovelace, fromShelleyDeltaLovelace, fromShelleyLovelace)
-import qualified Cardano.Ledger.Coin
+import qualified Cardano.Ledger.Coin as Ledger
 import qualified Cardano.Ledger.Core as Ledger.Core
-import qualified Cardano.Ledger.Credential
+import qualified Cardano.Ledger.Credential as Ledger
 import           Cardano.Ledger.Crypto (StandardCrypto)
 import           Cardano.Ledger.Era (Crypto)
-import qualified Cardano.Ledger.Keys
+import qualified Cardano.Ledger.Keys as Ledger
+import           Cardano.Ledger.Shelley.API (InstantaneousRewards (InstantaneousRewards))
+import           Cardano.Ledger.Shelley.Rewards
+import           Cardano.Ledger.Shelley.Rules.Epoch (EpochEvent (PoolReapEvent))
+import           Cardano.Ledger.Shelley.Rules.Mir (MirEvent (..))
+import           Cardano.Ledger.Shelley.Rules.NewEpoch
+                   (NewEpochEvent (EpochEvent, MirEvent, RewardEvent))
+import           Cardano.Ledger.Shelley.Rules.PoolReap (PoolreapEvent (RetiredPools))
+import           Cardano.Ledger.Shelley.Rules.Tick (TickEvent (NewEpochEvent))
 import           Control.State.Transition (Event)
 import           Data.Function (($), (.))
 import           Data.Functor (fmap)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import           Data.Set (Set)
 import           Data.Maybe (Maybe (Just, Nothing))
 import           Data.SOP.Strict
 import           Ouroboros.Consensus.Byron.Ledger.Block (ByronBlock)
@@ -42,12 +51,6 @@ import           Ouroboros.Consensus.Ledger.Basics (AuxLedgerEvent)
 import           Ouroboros.Consensus.Shelley.Ledger (ShelleyBlock,
                    ShelleyLedgerEvent (ShelleyLedgerEventTICK))
 import           Ouroboros.Consensus.TypeFamilyWrappers
-import           Cardano.Ledger.Shelley.API (InstantaneousRewards (InstantaneousRewards))
-import           Cardano.Ledger.Shelley.Rules.Epoch (EpochEvent (PoolReapEvent))
-import           Cardano.Ledger.Shelley.Rules.Mir (MirEvent (..))
-import           Cardano.Ledger.Shelley.Rules.NewEpoch (NewEpochEvent (EpochEvent, MirEvent, SumRewards))
-import           Cardano.Ledger.Shelley.Rules.PoolReap (PoolreapEvent (RetiredPools))
-import           Cardano.Ledger.Shelley.Rules.Tick (TickEvent (NewEpochEvent))
 
 data LedgerEvent
   = -- | The given pool is being registered for the first time on chain.
@@ -55,7 +58,7 @@ data LedgerEvent
   | -- | The given pool already exists and is being re-registered.
     PoolReRegistration Certificate
   | -- | Rewards are being distributed.
-    RewardsDistribution EpochNo (Map StakeCredential Lovelace)
+    RewardsDistribution EpochNo (Map StakeCredential (Set (Reward StandardCrypto)))
   | -- | MIR are being distributed.
     MIRDistribution MIRDistributionDetails
   | -- | Pools have been reaped and deposits refunded.
@@ -78,7 +81,7 @@ instance
   ConvertLedgerEvent (ShelleyBlock ledgerera)
   where
   toLedgerEvent evt = case unwrapLedgerEvent evt of
-    LESumRewards e m -> Just $ RewardsDistribution e m
+    LERewardEvent e m -> Just $ RewardsDistribution e m
     LEMirTransfer rp rt rtt ttr ->
       Just $
         MIRDistribution $
@@ -124,17 +127,17 @@ data PoolReapDetails = PoolReapDetails
 -- Patterns for event access
 --------------------------------------------------------------------------------
 
-pattern LESumRewards ::
+pattern LERewardEvent ::
   ( Crypto ledgerera ~ StandardCrypto,
     Event (Ledger.Core.EraRule "TICK" ledgerera) ~ TickEvent ledgerera,
     Event (Ledger.Core.EraRule "NEWEPOCH" ledgerera) ~ NewEpochEvent ledgerera
   ) =>
   EpochNo ->
-  Map StakeCredential Lovelace ->
+  Map StakeCredential (Set (Reward StandardCrypto)) ->
   AuxLedgerEvent (LedgerState (ShelleyBlock ledgerera))
-pattern LESumRewards e m <-
+pattern LERewardEvent e m <-
   ShelleyLedgerEventTICK
-    (NewEpochEvent (SumRewards e (convertSumRewardsMap -> m)))
+    (NewEpochEvent (RewardEvent e (Map.mapKeys fromShelleyStakeCredential -> m)))
 
 pattern LEMirTransfer ::
   ( Crypto ledgerera ~ StandardCrypto,
@@ -153,24 +156,14 @@ pattern LEMirTransfer rp tp rtt ttr <-
         ( MirEvent
             ( MirTransfer
                 ( InstantaneousRewards
-                    (convertSumRewardsMap -> rp)
-                    (convertSumRewardsMap -> tp)
+                    (Map.mapKeys fromShelleyStakeCredential . fmap fromShelleyLovelace -> rp)
+                    (Map.mapKeys fromShelleyStakeCredential . fmap fromShelleyLovelace -> tp)
                     (fromShelleyDeltaLovelace -> rtt)
                     (fromShelleyDeltaLovelace -> ttr)
                   )
               )
           )
       )
-
-convertSumRewardsMap ::
-  Map
-    ( Cardano.Ledger.Credential.StakeCredential
-        Cardano.Ledger.Crypto.StandardCrypto
-    )
-    Cardano.Ledger.Coin.Coin ->
-  Map StakeCredential Lovelace
-convertSumRewardsMap =
-  Map.mapKeys fromShelleyStakeCredential . fmap fromShelleyLovelace
 
 pattern LERetiredPools ::
   ( Crypto ledgerera ~ StandardCrypto,
@@ -198,15 +191,8 @@ pattern LERetiredPools r u e <-
       )
 
 convertRetiredPoolsMap ::
-  Map
-    ( Cardano.Ledger.Credential.StakeCredential
-        Cardano.Ledger.Crypto.StandardCrypto
-    )
-    ( Map
-        (Cardano.Ledger.Keys.KeyHash Cardano.Ledger.Keys.StakePool StandardCrypto)
-        Cardano.Ledger.Coin.Coin
-    ) ->
-  Map StakeCredential (Map (Hash StakePoolKey) Lovelace)
+     Map (Ledger.StakeCredential StandardCrypto) (Map (Ledger.KeyHash Ledger.StakePool StandardCrypto) Ledger.Coin)
+  -> Map StakeCredential (Map (Hash StakePoolKey) Lovelace)
 convertRetiredPoolsMap =
   Map.mapKeys fromShelleyStakeCredential
     . fmap (Map.mapKeys StakePoolKeyHash . fmap fromShelleyLovelace)
