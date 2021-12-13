@@ -23,7 +23,7 @@ import           Cardano.Tracing.OrphanInstances.Network ()
 
 import           Cardano.BM.Tracing (HasPrivacyAnnotation (..),
                    HasSeverityAnnotation (..), Severity (..), ToObject (..),
-                   Transformable (..))
+                   TracingVerbosity (..), Transformable (..))
 import           Cardano.BM.Data.Tracer (HasTextFormatter (..), mkObject,
                    trStructuredText)
 
@@ -116,20 +116,34 @@ instance ( Show (BlockNodeToNodeVersion blk)
          , Show (BlockNodeToClientVersion blk)
          )
         => ToObject (StartupTrace blk) where
-    toObject _verb (StartupInfo addresses
-                                 localSocket
-                                 supportedNodeToNodeVersions
-                                 supportedNodeToClientVersions)
-      = mkObject
-        [ "nodeAddresses" .= Aeson.toJSON (map ppN2NSocketInfo addresses)
-        , "localSocket" .= case localSocket of
-              Nothing -> Aeson.Null
-              Just a  -> String (Text.pack . ppN2CSocketInfo $ a)
-        , "nodeToNodeVersions" .=
-            Aeson.toJSON (map show . Map.assocs $ supportedNodeToNodeVersions)
-        , "nodeToClientVersions" .=
-            Aeson.toJSON (map show . Map.assocs $ supportedNodeToClientVersions)
-        ]
+    toObject verb (StartupInfo addresses
+                                localSocket
+                                supportedNodeToNodeVersions
+                                supportedNodeToClientVersions)
+      = mkObject $
+          [ "nodeAddresses" .= Aeson.toJSON (map ppN2NSocketInfo addresses)
+          , "localSocket" .= case localSocket of
+                Nothing -> Aeson.Null
+                Just a  -> String (Text.pack . ppN2CSocketInfo $ a)
+          ]
+          ++
+          case verb of
+            MaximalVerbosity ->
+              [ "nodeToNodeVersions" .=
+                  Aeson.toJSON (map show . Map.assocs $ supportedNodeToNodeVersions)
+              , "nodeToClientVersions" .=
+                  Aeson.toJSON (map show . Map.assocs $ supportedNodeToClientVersions)
+              ]
+            _ ->
+              [ "maxNodeToNodeVersion" .=
+                  case Map.maxViewWithKey supportedNodeToNodeVersions of
+                    Nothing     -> String "no-supported-version"
+                    Just (v, _) -> String (Text.pack . show $ v)
+              , "maxNodeToClientVersion" .=
+                  case Map.maxViewWithKey supportedNodeToClientVersions of
+                    Nothing     -> String "no-supported-version"
+                    Just (v, _) -> String (Text.pack . show $ v)
+              ]
     toObject _verb (StartupP2PInfo diffusionMode)
       = mkObject [ "diffusionMode" .= String (Text.pack . show $ diffusionMode) ]
     toObject _verb (StartupTime time) =
