@@ -46,7 +46,7 @@ import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTx, GenTxId, txI
 import qualified Ouroboros.Consensus.Ledger.SupportsMempool as Mempool
 import           Ouroboros.Consensus.Shelley.Ledger.Mempool (mkShelleyTx)
 import qualified Ouroboros.Consensus.Shelley.Ledger.Mempool as Mempool (TxId(ShelleyTxId))
-import           Ouroboros.Consensus.Shelley.Protocol (StandardCrypto)
+import           Ouroboros.Consensus.Shelley.Eras (StandardCrypto)
 
 import           Ouroboros.Consensus.Cardano.Block (GenTx (GenTxAllegra, GenTxAlonzo, GenTxShelley, GenTxMary))
 import qualified Ouroboros.Consensus.Cardano.Block as Block (TxId(GenTxIdShelley, GenTxIdAllegra, GenTxIdAlonzo, GenTxIdMary))
