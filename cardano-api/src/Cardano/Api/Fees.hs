@@ -405,7 +405,7 @@ instance Error ScriptExecutionError where
   displayError (ScriptErrorMissingCostModel language) =
       "No cost model was found for language " <> show language
 
-data TransactionValidityError where
+data TransactionValidityError =
     -- | The transaction validity interval is too far into the future.
     --
     -- Transactions with Plutus scripts need to have a validity interval that is
@@ -422,9 +422,9 @@ data TransactionValidityError where
     -- hours beyond the current time. This effectively means we cannot submit
     -- check or submit transactions that use Plutus scripts that have the end
     -- of their validity interval more than 36 hours into the future.
-    TransactionValidityIntervalError :: Consensus.PastHorizonException -> TransactionValidityError
+    TransactionValidityIntervalError Consensus.PastHorizonException
 
-    TransactionValidityBasicFailure :: Alonzo.BasicFailure Ledger.StandardCrypto -> TransactionValidityError
+  | TransactionValidityBasicFailure (Alonzo.BasicFailure Ledger.StandardCrypto)
 
 deriving instance Show TransactionValidityError
 
