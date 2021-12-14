@@ -97,6 +97,7 @@ nodeRunParser = do
            , pncMaybeMempoolCapacityOverride = maybeMempoolCapacityOverride
            , pncProtocolIdleTimeout = mempty
            , pncTimeWaitTimeout = mempty
+           , pncAcceptedConnectionsLimit = mempty
            , pncTargetNumberOfRootPeers = mempty
            , pncTargetNumberOfKnownPeers = mempty
            , pncTargetNumberOfEstablishedPeers = mempty
