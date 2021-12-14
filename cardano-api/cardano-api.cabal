@@ -107,6 +107,7 @@ library
                       , cardano-crypto
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
+                      , cardano-data
                       , cardano-ledger-alonzo
                       , cardano-ledger-byron
                       , cardano-ledger-core
@@ -139,6 +140,7 @@ library
                       , scientific
                       , small-steps
                       , cardano-ledger-shelley
+                      , set-algebra
                       , small-steps
                       , stm
                       , strict-containers

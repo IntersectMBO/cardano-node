@@ -134,6 +134,7 @@ library
                       , parsec
                       , prettyprinter
                       , cardano-ledger-shelley
+                      , set-algebra
                       , small-steps
                       , split
                       , strict-containers
