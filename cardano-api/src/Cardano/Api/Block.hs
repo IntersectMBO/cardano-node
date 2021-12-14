@@ -77,6 +77,7 @@ import qualified Cardano.Protocol.TPraos.BHeader as TPraos
 import           Cardano.Api.Eras
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Hash
+import           Cardano.Api.KeysShelley
 import           Cardano.Api.Modes
 import           Cardano.Api.SerialiseRaw
 import           Cardano.Api.SerialiseUsing
