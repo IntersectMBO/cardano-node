@@ -1,5 +1,88 @@
 # Changelog for cardano-node
 
+## 1.33.0 -- December 2021
+
+### node changes
+
+- Improvements to the `tx-generator` internal testing infrastructure. (#3425,
+  #3426, #3427, #3436, #3444)
+- Disable idle GC in the default NixOS service. This matches options we have set
+  by default in other deployments. (#3349)
+- Change the default verbosity of the startup tracer - normal verbosity now
+  shows only maximal supported note-to-node and node-to-client versions
+  (previously it showed all supported verions). (#3434)
+- Enrich the ledger replay tracers to show significantly more information.
+  (#3412)
+- Support for using `TxIn` as a key in JSON maps. (#3438)
+- Allow configuring the number of connections to accept. (#3435)
+
+### consensus changes
+
+- Move the transitional praos protocol into its own package, in preparation for
+  introducing a new version of the protocol in Babbage. (#3513)
+- Improve logging during node startup/chainDB initialisation. (#3505, #3506,
+  #3518)
+- Various changes to the initialisation of the ChainDB. The intent of these
+  changes is to handle the situation when the node receives a shutdown
+  instruction during initialisation. Before these changes, the node would either
+  fail to respond to the signal until initialisation was complete, or a
+  supervisor process would notice this and send SIGKILL, resulting in an unclean
+  shutdown. Following these changes, the node should gracefully handle signals
+  sent during DB initialisation. (#3452, #3514)
+- Various improvements to the `db-analyser` tool. (#3471)
+- Expose an additional query for information relevant to reward processing. This
+  offers current-epoch information to help clients make delegation preferences.
+  (#3423)
+
+### network changes
+
+- Don't block when unregistering expired connections. (#3526)
+- Fix the rendering of cardano-ping messages. (#3529)
+- Various testing improvements. (#3417, #3455, #3482, #3493)
+- Various improvements to the pruning policy. (#3495, #3499)
+- Consider speed of block provision (in addition to speed of header provision)
+  when ranking peers. (#3500)
+- DNS support for IPv6. (#3489)
+- Various internal refactoring. (#3503, #3508)
+
+### ledger changes
+
+- Preparatory work factoring out the transitional Praos protocol in preparation
+  for the introduction of a new protocol in the Babbage release. (#2524)
+- Provide more information in the case of extraneous script witnesses being
+  provided. (#2527)
+- Significant work to improve memory usage for the in-memory ledger state.
+  (#2520, #2530, #2534, #2540, #2552, #2553, #2557, #2567, #2573, #2577, #2580,
+  #2583)
+- Add a new tool to benchmark the ledger state. (#2532, #2535)
+- Remove the amount of state stored in the reward pulser. This change will
+  require a rebuild of the ledger state (e.g. replay from genesis). (#2533)
+- Add an additional check when evaluating an (unsubmitted) transaction to
+  determine the amount of ExUnits to specify. (#2522)
+- Distinguish between rewards earned as a pool member and as a pool operator in
+  the ledger events. (#2536, #2549)
+- Miscellaneous fixes. (#2529, #2539, #2541, #2543, #2550, #2555, #2563, #2564,
+  #2565, #2566, #2571, #2582, #2586)
+- From protocol version 7, we no longer exclude from rewards those who are not
+  registered at the start of the reward calculation. Those not registered when
+  the rewards are paid out are still filtered, naturally. (#2569)
+- Add a stricter function for decoding addresses, which disallows extra bytes.
+  These functions are provided for use by downstream tools. (#2556)
+- The reward calculation (which adds significant work to the middle portion of
+  the epoch) is now computed incrementally by stake credential. Previously this
+  was done by stake pool, but this had a couple of issues: it didn't allow the
+  computation to be spread across the full range of slots, and it was
+  significantly non-uniform: some stake pools are much bigger than others. This
+  new computation should be more uniform and saturate the full slot range,
+  resulting in more predictable and consistent resource usage. (#2542, #2585)
+- Add benchmarking to CI. (#2561, #2568)
+- Add tracing to Plutus script execution. (#2554)
+- Add the first draft of the Babbage formal spec. (#2559)
+- Document the construction of the script integrity hash. (#2576)
+- Compute the stake aggregation incrementally. Previously this was computed when
+  a snapshot was taken, which resulted in a CPU spike. It is now continually
+  maintained as transactions are processed. (#2538)
+
 ## 1.32.1 -- November 2021
 
 ### node changes

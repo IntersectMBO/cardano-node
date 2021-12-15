@@ -2,7 +2,7 @@ version: "3.5"
 
 services:
   cardano-node:
-    image: inputoutput/cardano-node:${CARDANO_NODE_VERSION:-1.32.1}
+    image: inputoutput/cardano-node:${CARDANO_NODE_VERSION:-1.33.0}
     environment:
       - NETWORK=${NETWORK:-mainnet}
     volumes:
@@ -15,7 +15,7 @@ services:
         max-file: "10"
 
   cardano-submit-api:
-    image: inputoutput/cardano-submit-api:${CARDANO_SUBMIT_API_VERSION:-1.32.1}
+    image: inputoutput/cardano-submit-api:${CARDANO_SUBMIT_API_VERSION:-1.33.0}
     environment:
       - NETWORK=${NETWORK:-mainnet}
     depends_on:
