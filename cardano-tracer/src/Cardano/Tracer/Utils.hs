@@ -70,8 +70,7 @@ showProblemIfAny verb action =
       case verb of
         Just Minimum -> return ()
         _ -> logTrace $ "cardano-tracer, the problem: " <> show e
-    Right _ ->
-      return ()
+    Right _ -> return ()
 
 logTrace :: String -> IO ()
 logTrace = traceWith $ showTracing stdoutTracer
@@ -103,5 +102,7 @@ initDataPointAskers = newTVarIO M.empty
 initProtocolsBrake :: IO ProtocolsBrake
 initProtocolsBrake = newTVarIO False
 
+-- | Stop the protocols. As a result, 'MsgDone' will be sent and interaction
+--   between acceptor's part and forwarder's part will be finished.
 applyBrake :: ProtocolsBrake -> IO ()
 applyBrake stopProtocols = atomically $ modifyTVar' stopProtocols . const $ True

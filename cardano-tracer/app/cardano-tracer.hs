@@ -12,7 +12,7 @@ main =
   tracerInfo :: ParserInfo TracerParams
   tracerInfo = info
     (parseTracerParams <**> helper <**> versionOption)
-    (fullDesc <> header "cardano-tracer - the logging/monitoring service for Cardano node.")
+    (fullDesc <> header "cardano-tracer - the logging and monitoring service for Cardano nodes.")
   versionOption = infoOption
     (showVersion version)
     (long "version" <>

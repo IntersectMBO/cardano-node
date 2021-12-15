@@ -29,13 +29,16 @@ main = do
 
   defaultMain
     [ bgroup "cardano-tracer"
-        [ bench "Handle TraceObjects LOG,  10"   $ whnfIO $ traceObjectsHandler c1 nId lock to10
-        , bench "Handle TraceObjects JSON, 10"   $ whnfIO $ traceObjectsHandler c2 nId lock to10
-        , bench "Handle TraceObjects LOG,  100"  $ whnfIO $ traceObjectsHandler c1 nId lock to100
-        , bench "Handle TraceObjects JSON, 100"  $ whnfIO $ traceObjectsHandler c2 nId lock to100
-        , bench "Handle TraceObjects LOG,  1000" $ whnfIO $ traceObjectsHandler c1 nId lock to1000
-        , bench "Handle TraceObjects JSON, 1000" $ whnfIO $ traceObjectsHandler c2 nId lock to1000
-        ]
+      [ -- 10 'TraceObject's per request.
+        bench "Handle TraceObjects LOG,  10"   $ whnfIO $ traceObjectsHandler c1 nId lock to10
+      , bench "Handle TraceObjects JSON, 10"   $ whnfIO $ traceObjectsHandler c2 nId lock to10
+        -- 100 'TraceObject's per request.
+      , bench "Handle TraceObjects LOG,  100"  $ whnfIO $ traceObjectsHandler c1 nId lock to100
+      , bench "Handle TraceObjects JSON, 100"  $ whnfIO $ traceObjectsHandler c2 nId lock to100
+        -- 1000 'TraceObject's per request.
+      , bench "Handle TraceObjects LOG,  1000" $ whnfIO $ traceObjectsHandler c1 nId lock to1000
+      , bench "Handle TraceObjects JSON, 1000" $ whnfIO $ traceObjectsHandler c2 nId lock to1000
+      ]
     ]
  where
   nId = NodeId "run-user-1000-cardano-tracer-demo.sock@0"

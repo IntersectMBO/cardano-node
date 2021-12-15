@@ -1,3 +1,4 @@
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -8,10 +9,11 @@ module Cardano.Tracer.Handlers.Metrics.Prometheus
 import           Prelude hiding (head)
 
 import           Control.Concurrent.STM.TVar (readTVarIO)
-import           Control.Monad (forM, forever)
+import           Control.Monad (forever)
 import           Control.Monad.IO.Class (liftIO)
 import qualified Data.ByteString as BS
 import qualified Data.HashMap.Strict as HM
+import           Data.Functor ((<&>))
 import qualified Data.Map.Strict as M
 import qualified Data.Set as S
 import           Data.String (IsString (..))
@@ -30,6 +32,23 @@ import           Text.Blaze.Html5.Attributes hiding (title)
 import           Cardano.Tracer.Configuration (Endpoint (..))
 import           Cardano.Tracer.Types (AcceptedMetrics, ConnectedNodes, NodeId (..))
 
+-- | Runs simple HTTP server that listens host and port and returns
+--   the list of currently connected nodes in such a format:
+--
+--   * tmp-forwarder.sock@0
+--   * tmp-forwarder.sock@1
+--   * tmp-forwarder.sock@2
+--
+--  Each of list items is a href. By clicking on it, the user will be
+--  redirected to the page with the list of metrics received from that node,
+--  in such a format:
+--
+--  rts_gc_par_tot_bytes_copied 0
+--  rts_gc_num_gcs 17
+--  rts_gc_max_bytes_slop 15888
+--  rts_gc_bytes_copied 165952
+--  ekg_server_timestamp_ms 1639569439623
+--
 runPrometheusServer
   :: Endpoint
   -> ConnectedNodes
@@ -54,27 +73,20 @@ runPrometheusServer (Endpoint host port) connectedNodes acceptedMetrics = foreve
     $ defaultConfig
 
   renderListOfConnectedNodes :: Snap ()
-  renderListOfConnectedNodes = do
-    nodes <- liftIO $ readTVarIO connectedNodes
-    case S.toList nodes of
+  renderListOfConnectedNodes =
+    liftIO (readTVarIO connectedNodes <&> S.toList) >>= \case
       []   -> writeText "There are no connected nodes yet."
-      nIds -> blaze =<< liftIO (mkListOfHrefs nIds)
+      nIds -> blaze . mkPage . map mkHref $ nIds
 
-  mkListOfHrefs :: [NodeId] -> IO Html
-  mkListOfHrefs nIds = do
-    nodeHrefs <- forM nIds $ \(NodeId anId) -> do
-      let anId' = T.unpack anId
-      return $ a ! href (mkURL anId') $ toHtml anId'
-    return $ mkPage nodeHrefs
-
-  mkURL :: String -> AttributeValue
-  mkURL anId' = fromString $
-    "http://" <> host <> ":" <> show port <> "/" <> anId'
-
-  mkPage :: [Html] -> Html
   mkPage hrefs = html $ do
-    head $ title "Prometheus metrics"
-    body $ ul $ mapM_ li hrefs
+    head . title $ "Prometheus metrics"
+    body . ul $ mapM_ li hrefs
+
+  mkHref (NodeId anId) =
+    a ! href (fromString $ "http://" <> host <> ":" <> show port <> "/" <> anId')
+      $ toHtml anId'
+   where
+     anId' = T.unpack anId
 
   renderMetricsFromNode :: Snap ()
   renderMetricsFromNode = do
@@ -92,14 +104,12 @@ getMetricsFromNode
   -> AcceptedMetrics
   -> IO Text
 getMetricsFromNode [] _ = return "No such a node!"
-getMetricsFromNode (anId':_) acceptedMetrics = do
-  metrics <- readTVarIO acceptedMetrics
-  case metrics M.!? nodeId of
+getMetricsFromNode (anId':_) acceptedMetrics =
+  readTVarIO acceptedMetrics <&> M.lookup nodeId >>= \case
     Nothing ->
       return "No such a node!"
-    Just (ekgStore, _) -> do
-      allMetrics <- sampleAll ekgStore
-      return . renderListOfMetrics . getListOfMetrics $ allMetrics
+    Just (ekgStore, _) ->
+      sampleAll ekgStore <&> renderListOfMetrics . getListOfMetrics
  where
   nodeId = NodeId $ decodeUtf8 anId'
 

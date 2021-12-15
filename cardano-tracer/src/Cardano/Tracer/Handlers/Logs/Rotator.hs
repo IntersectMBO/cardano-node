@@ -70,7 +70,8 @@ checkRootDir currentLogLock rotParams LoggingParams{logRoot, logFormat} =
         return ()
       logsSubDirs -> do
         let fullPathsToSubDirs = map (logRoot </>) logsSubDirs
-        forConcurrently_ fullPathsToSubDirs $ checkLogs currentLogLock rotParams logFormat
+        forConcurrently_ fullPathsToSubDirs $
+          checkLogs currentLogLock rotParams logFormat
 
 -- | We check the log files:
 --   1. If there are too big log files.
@@ -121,23 +122,22 @@ checkIfThereAreOldLogs [] _ _ = return ()
 checkIfThereAreOldLogs fromOldestToNewest maxAgeInHours keepFilesNum = do
   -- N ('keepFilesNum') newest files have to be kept in any case.
   let logsWeHaveToCheck = dropEnd (fromIntegral keepFilesNum) fromOldestToNewest
-  unless (null logsWeHaveToCheck) $ do
-    now <- getCurrentTime
-    checkOldLogs now logsWeHaveToCheck
+  unless (null logsWeHaveToCheck) $
+    checkOldLogs logsWeHaveToCheck =<< getCurrentTime
  where
-  checkOldLogs _ [] = return ()
-  checkOldLogs now' (oldestLog:otherLogs) =
+  checkOldLogs [] _ = return ()
+  checkOldLogs (oldestLog:otherLogs) now' =
     case getTimeStampFromLog oldestLog of
       Just ts -> do
         let oldestLogAge = toSeconds $ now' `diffUTCTime` ts
         when (oldestLogAge >= maxAgeInSecs) $ do
           removeFile oldestLog
-          checkOldLogs now' otherLogs
+          checkOldLogs otherLogs now'
         -- If 'oldestLog' isn't outdated (yet), other logs aren't
         -- outdated too (because they are newer), so we shouldn't check them.
       Nothing ->
         -- Something is wrong with log's name, continue.
-        checkOldLogs now' otherLogs
+        checkOldLogs otherLogs now'
 
   maxAgeInSecs = fromIntegral maxAgeInHours * 3600
   toSeconds age = fromEnum age `div` 1000000000000

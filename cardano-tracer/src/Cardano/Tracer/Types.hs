@@ -31,7 +31,7 @@ type DataPointAskers = TVar (Map NodeId DataPointAsker)
 
 -- | This set contains ids of currently connected nodes.
 --   When the node is connected, its id will be added to this set,
---   and when it is disconnected, it's id will be deleted from this set.
+--   and when it is disconnected, its id will be deleted from this set.
 --   So, 'ConnectedNodes' is used as a "source of truth" about currently
 --   connected nodes.
 type ConnectedNodes = TVar (Set NodeId)

@@ -12,6 +12,11 @@ import           Cardano.Tracer.Handlers.Metrics.Monitoring (runMonitoringServer
 import           Cardano.Tracer.Handlers.Metrics.Prometheus (runPrometheusServer)
 import           Cardano.Tracer.Types (ConnectedNodes, AcceptedMetrics)
 
+-- | Runs metrics servers if needed:
+--
+--   1. Prometheus exporter.
+--   2. EKG monitoring web-page.
+--
 runMetricsServers
   :: TracerConfig
   -> ConnectedNodes

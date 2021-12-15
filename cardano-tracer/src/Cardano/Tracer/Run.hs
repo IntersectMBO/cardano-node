@@ -38,5 +38,6 @@ doRunCardanoTracer config protocolsBrake = do
   void . sequenceConcurrently $
     [ runLogsRotator    config currentLogLock
     , runMetricsServers config connectedNodes acceptedMetrics
-    , runAcceptors      config connectedNodes acceptedMetrics dpAskers protocolsBrake currentLogLock
+    , runAcceptors      config connectedNodes acceptedMetrics
+                        dpAskers protocolsBrake currentLogLock
     ]
