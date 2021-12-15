@@ -368,6 +368,7 @@ module Cardano.Api (
     Witness(..),
     KeyWitnessInCtx(..),
     ScriptWitnessInCtx(..),
+    IsScriptWitnessInCtx(..),
     ScriptDatum(..),
     ScriptRedeemer,
     scriptWitnessScript,
