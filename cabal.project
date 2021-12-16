@@ -252,6 +252,7 @@ source-repository-package
     ouroboros-network
     ouroboros-network-framework
     ouroboros-network-testing
+    strict-stm
     typed-protocols
     typed-protocols-cborg
     typed-protocols-examples
