@@ -116,7 +116,7 @@ newtype Acked tx = Acked [tx]
 newtype Ack = Ack Int deriving newtype (Enum, Eq, Integral, Num, Ord, Real)
 
 -- | Peer requested this many txids to add to the outstanding window.
-newtype Req = Req Int deriving newtype (Enum, Eq, Integral, Num, Ord, Real)
+newtype Req = Req Int deriving newtype (Enum, Eq, Integral, Num, Ord, Real, Show)
 
 -- | This many Txs sent to peer.
 newtype Sent = Sent Int deriving newtype (Enum, Eq, Integral, Num, Ord, Real, Show)
