@@ -12,10 +12,13 @@ module Cardano.Tracer.Utils
   , initConnectedNodes
   , initDataPointAskers
   , initProtocolsBrake
+  , lift2M
+  , lift3M
   , runInLoop
   , showProblemIfAny
   ) where
 
+import           Control.Applicative (liftA2, liftA3)
 import           Control.Concurrent.STM (atomically)
 import           Control.Concurrent.STM.TVar (modifyTVar', newTVarIO)
 import           Control.Exception (SomeException, SomeAsyncException (..),
@@ -24,6 +27,7 @@ import           "contra-tracer" Control.Tracer (showTracing, stdoutTracer, trac
 import qualified Data.Map.Strict as M
 import qualified Data.Set as S
 import qualified Data.Text as T
+import           Data.Tuple.Extra (uncurry3)
 import           System.Time.Extra (sleep)
 
 import           Ouroboros.Network.Socket (ConnectionId (..))
@@ -106,3 +110,11 @@ initProtocolsBrake = newTVarIO False
 --   between acceptor's part and forwarder's part will be finished.
 applyBrake :: ProtocolsBrake -> IO ()
 applyBrake stopProtocols = atomically $ modifyTVar' stopProtocols . const $ True
+
+-- | Like 'liftM2', but for monadic function.
+lift2M :: Monad m => (a -> b -> m c) -> m a -> m b -> m c
+lift2M f x y = liftA2 (,) x y >>= uncurry f
+
+-- | Like 'liftM3', but for monadic function.
+lift3M :: Monad m => (a -> b -> c -> m d) -> m a -> m b -> m c -> m d
+lift3M f x y z = liftA3 (,,) x y z >>= uncurry3 f

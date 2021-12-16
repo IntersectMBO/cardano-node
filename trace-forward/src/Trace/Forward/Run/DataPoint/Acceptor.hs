@@ -9,6 +9,7 @@ module Trace.Forward.Run.DataPoint.Acceptor
 
 import qualified Codec.Serialise as CBOR
 import           Control.Exception (finally)
+import           Control.Monad (unless)
 import           Control.Monad.Extra (ifM)
 import           Control.Monad.STM (atomically, check)
 import           Control.Concurrent.STM.TVar (modifyTVar', readTVar, readTVarIO)
@@ -66,7 +67,8 @@ acceptorActions config@AcceptorConfiguration{shouldWeStop}
                 dpNames =
   Acceptor.SendMsgDataPointsRequest dpNames $ \replyWithDataPoints -> do
     -- Ok, reply with 'DataPoint's is already here, update the asker.
-    atomically $ do
+    unless (null replyWithDataPoints) $ atomically $ do
+      -- Store the reply for acceptor's external context.
       putTMVar dataPointsReply replyWithDataPoints
       -- To prevent new automatic request.
       modifyTVar' askDataPoints $ const False

@@ -27,13 +27,17 @@ tests = localOption (QuickCheckTests 1) $ testGroup "Test.Network"
 propNetworkTracer, propNetworkForwarder :: FilePath -> FilePath -> IO Property
 propNetworkTracer rootDir localSock =
   propNetwork' rootDir
-    ( doRunCardanoTracer (mkConfig Initiate rootDir localSock) =<< initProtocolsBrake
+    ( lift3M doRunCardanoTracer (return $ mkConfig Initiate rootDir localSock)
+                                initProtocolsBrake
+                                initDataPointAskers
     , launchForwardersSimple Responder localSock 1000 10000
     )
 propNetworkForwarder rootDir localSock =
   propNetwork' rootDir
     ( launchForwardersSimple Initiator localSock 1000 10000
-    , doRunCardanoTracer (mkConfig Response rootDir localSock) =<< initProtocolsBrake
+    , lift3M doRunCardanoTracer (return $ mkConfig Response rootDir localSock)
+                                initProtocolsBrake
+                                initDataPointAskers
     )
 
 propNetwork' :: FilePath -> (IO (), IO ()) -> IO Property

@@ -17,7 +17,7 @@ import           System.Time.Extra
 import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.Handlers.Logs.Utils (isItLog, isItSymLink)
 import           Cardano.Tracer.Run (doRunCardanoTracer)
-import           Cardano.Tracer.Utils (applyBrake, initProtocolsBrake)
+import           Cardano.Tracer.Utils (applyBrake, initProtocolsBrake, initDataPointAskers)
 
 import           Cardano.Tracer.Test.Forwarder
 import           Cardano.Tracer.Test.Utils
@@ -33,8 +33,9 @@ tests = localOption (QuickCheckTests 1) $ testGroup "Test.Logs"
 propLogs :: LogFormat -> FilePath -> FilePath -> IO Property
 propLogs format rootDir localSock = do
   stopProtocols <- initProtocolsBrake
-  withAsync (doRunCardanoTracer (config rootDir localSock) stopProtocols) $ \_ ->
-    withAsync (launchForwardersSimple Responder localSock 1000 10000) $ \_ -> do
+  dpAskers <- initDataPointAskers
+  withAsync (doRunCardanoTracer (config rootDir localSock) stopProtocols dpAskers) . const $
+    withAsync (launchForwardersSimple Responder localSock 1000 10000) . const $ do
       sleep 7.0 -- Wait till some rotation is done.
       applyBrake stopProtocols
       sleep 0.5
@@ -90,13 +91,13 @@ propLogs format rootDir localSock = do
 propMultiInit :: LogFormat -> FilePath -> FilePath -> FilePath -> IO Property
 propMultiInit format rootDir localSock1 localSock2 = do
   stopProtocols <- initProtocolsBrake
-  withAsync (doRunCardanoTracer (config rootDir localSock1 localSock2) stopProtocols) $ \_ ->
-    withAsync (launchForwardersSimple Responder localSock1 1000 10000) $ \_ ->
-      withAsync (launchForwardersSimple Responder localSock2 1000 10000) $ \_ -> do
+  dpAskers <- initDataPointAskers
+  withAsync (doRunCardanoTracer (config rootDir localSock1 localSock2) stopProtocols dpAskers) . const $
+    withAsync (launchForwardersSimple Responder localSock1 1000 10000) . const $
+      withAsync (launchForwardersSimple Responder localSock2 1000 10000) . const $ do
         sleep 3.0 -- Wait till some work is done.
         applyBrake stopProtocols
         sleep 0.5
-
   checkMultiResults rootDir
  where
   config root p1 p2 = TracerConfig
@@ -113,9 +114,10 @@ propMultiInit format rootDir localSock1 localSock2 = do
 propMultiResp :: LogFormat -> FilePath -> FilePath -> IO Property
 propMultiResp format rootDir localSock = do
   stopProtocols <- initProtocolsBrake
-  withAsync (doRunCardanoTracer (config rootDir localSock) stopProtocols) $ \_ ->
-    withAsync (launchForwardersSimple Initiator localSock 1000 10000) $ \_ ->
-      withAsync (launchForwardersSimple Initiator localSock 1000 10000) $ \_ -> do
+  dpAskers <- initDataPointAskers
+  withAsync (doRunCardanoTracer (config rootDir localSock) stopProtocols dpAskers) . const $
+    withAsync (launchForwardersSimple Initiator localSock 1000 10000) . const $
+      withAsync (launchForwardersSimple Initiator localSock 1000 10000) . const $ do
         sleep 3.0 -- Wait till some work is done.
         applyBrake stopProtocols
         sleep 0.5
@@ -146,7 +148,6 @@ checkMultiResults rootDir =
             -- ... with *.log-files inside...
             subDir1list <- listDirectory subDir1
             subDir2list <- listDirectory subDir2
-            let bothNotEmpty = notNull subDir1list && notNull subDir2list
-            return $ property bothNotEmpty
+            return . property $ notNull subDir1list && notNull subDir2list
         _ -> false "root dir contains not 2 subdirs"
     False -> false "root dir doesn't exist"

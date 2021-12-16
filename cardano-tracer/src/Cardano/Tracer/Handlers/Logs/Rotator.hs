@@ -14,7 +14,7 @@ import           Data.List (nub, sort)
 import           Data.List.Extra (dropEnd)
 import qualified Data.List.NonEmpty as NE
 import           Data.Time (diffUTCTime, getCurrentTime)
-import           Data.Word (Word64)
+import           Data.Word (Word16, Word32, Word64)
 import           System.Directory (doesDirectoryExist, getFileSize, removeFile)
 import           System.Directory.Extra (listDirectories, listFiles)
 import           System.FilePath ((</>), takeDirectory)
@@ -115,8 +115,8 @@ checkIfCurrentLogIsFull currentLogLock pathToCurrentLog format maxSizeInBytes =
 --   Please note that some number of log files can be kept in any case.
 checkIfThereAreOldLogs
   :: [FilePath]
-  -> Word
-  -> Word
+  -> Word16
+  -> Word32
   -> IO ()
 checkIfThereAreOldLogs [] _ _ = return ()
 checkIfThereAreOldLogs fromOldestToNewest maxAgeInHours keepFilesNum = do

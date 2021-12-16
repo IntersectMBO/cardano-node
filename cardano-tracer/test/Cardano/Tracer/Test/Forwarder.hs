@@ -1,10 +1,14 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PackageImports #-}
 
 module Cardano.Tracer.Test.Forwarder
   ( ForwardersMode (..)
+  , TestDataPoint (..)
   , launchForwardersSimple
+  , mkTestDataPoint
   ) where
 
 import           Codec.CBOR.Term (Term)
@@ -12,10 +16,12 @@ import           Control.Concurrent (threadDelay)
 import           Control.Concurrent.Async
 import           Control.Monad (forever)
 import           "contra-tracer" Control.Tracer (nullTracer)
+import           Data.Aeson (FromJSON, ToJSON)
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Time.Clock (getCurrentTime)
 import           Data.Void (Void)
 import           Data.Word (Word16)
+import           GHC.Generics
 import qualified System.Metrics as EKG
 
 import           Cardano.Logging (DetailLevel (..), SeverityS (..), TraceObject (..))
@@ -52,6 +58,19 @@ import           Cardano.Tracer.Configuration (Verbosity (..))
 import           Cardano.Tracer.Utils
 
 data ForwardersMode = Initiator | Responder
+
+data TestDataPoint = TestDataPoint
+  { tdpName    :: !String
+  , tdpCommit  :: !String
+  , tdpVersion :: !Int
+  } deriving (Generic, Eq, FromJSON, ToJSON)
+
+mkTestDataPoint :: TestDataPoint
+mkTestDataPoint = TestDataPoint
+  { tdpName    = "tdpName for Tests"
+  , tdpCommit  = "ab23c45"
+  , tdpVersion = 32
+  }
 
 launchForwardersSimple
   :: ForwardersMode
@@ -123,6 +142,7 @@ doConnectToAcceptor snocket address timeLimits (ekgConfig, tfConfig, dpfConfig) 
   EKG.registerGcMetrics store
   sink <- initForwardSink tfConfig
   dpStore <- initDataPointStore
+  writeToStore dpStore "test.data.point" $ DataPoint mkTestDataPoint
   withAsync (traceObjectsWriter sink) $ \_ -> do
     connectToNode
       snocket
@@ -171,6 +191,7 @@ doListenToAcceptor snocket address timeLimits (ekgConfig, tfConfig, dpfConfig) =
   EKG.registerGcMetrics store
   sink <- initForwardSink tfConfig
   dpStore <- initDataPointStore
+  writeToStore dpStore "test.data.point" $ DataPoint mkTestDataPoint
   withAsync (traceObjectsWriter sink) $ \_ -> do
     networkState <- newNetworkMutableState
     race_ (cleanNetworkMutableState networkState)

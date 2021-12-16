@@ -108,7 +108,8 @@ library demo-forwarder-lib
 
   exposed-modules:     Cardano.Tracer.Test.Forwarder
 
-  build-depends:         async
+  build-depends:         aeson
+                       , async
                        , bytestring
                        , cborg
                        , cardano-tracer
@@ -142,15 +143,18 @@ test-suite cardano-tracer-test
   main-is:             cardano-tracer-test.hs
 
   other-modules:       Cardano.Tracer.Test.Forwarder
+                       Cardano.Tracer.Test.DataPoint.Tests
                        Cardano.Tracer.Test.Logs.Tests
                        Cardano.Tracer.Test.Network.Tests
                        Cardano.Tracer.Test.Queue.Tests
                        Cardano.Tracer.Test.Utils
 
-  build-depends:         async
+  build-depends:         aeson
+                       , async
                        , bytestring
                        , cardano-tracer
                        , cborg
+                       , containers
                        , contra-tracer
                        , directory
                        , ekg-core
@@ -159,6 +163,7 @@ test-suite cardano-tracer-test
                        , filepath
                        , ouroboros-network-framework
                        , QuickCheck
+                       , stm
                        , tasty
                        , tasty-quickcheck
                        , text

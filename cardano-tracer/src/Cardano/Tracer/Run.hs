@@ -15,25 +15,26 @@ import           Cardano.Tracer.CLI (TracerParams (..))
 import           Cardano.Tracer.Configuration (TracerConfig, readTracerConfig)
 import           Cardano.Tracer.Handlers.Logs.Rotator (runLogsRotator)
 import           Cardano.Tracer.Handlers.Metrics.Servers (runMetricsServers)
-import           Cardano.Tracer.Types (ProtocolsBrake)
+import           Cardano.Tracer.Types (DataPointAskers, ProtocolsBrake)
 import           Cardano.Tracer.Utils (initAcceptedMetrics, initConnectedNodes,
-                   initDataPointAskers, initProtocolsBrake)
+                   initDataPointAskers, initProtocolsBrake, lift3M)
 
 -- | Top-level run function, called by 'cardano-tracer' app.
 runCardanoTracer :: TracerParams -> IO ()
-runCardanoTracer TracerParams{tracerConfig} = do
-  config <- readTracerConfig tracerConfig
-  doRunCardanoTracer config =<< initProtocolsBrake
+runCardanoTracer TracerParams{tracerConfig} = lift3M
+  doRunCardanoTracer (readTracerConfig tracerConfig)
+                     initProtocolsBrake
+                     initDataPointAskers
 
 -- | Runs all internal services of the tracer.
 doRunCardanoTracer
-  :: TracerConfig   -- ^ Tracer's configuration.
-  -> ProtocolsBrake -- ^ The flag we use to stop all the protocols.
+  :: TracerConfig    -- ^ Tracer's configuration.
+  -> ProtocolsBrake  -- ^ The flag we use to stop all the protocols.
+  -> DataPointAskers -- ^ The DataPointAskers to ask 'DataPoint's.
   -> IO ()
-doRunCardanoTracer config protocolsBrake = do
+doRunCardanoTracer config protocolsBrake dpAskers = do
   connectedNodes <- initConnectedNodes
   acceptedMetrics <- initAcceptedMetrics
-  dpAskers <- initDataPointAskers
   currentLogLock <- newLock
   void . sequenceConcurrently $
     [ runLogsRotator    config currentLogLock

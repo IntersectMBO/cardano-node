@@ -1,4 +1,3 @@
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Cardano.Tracer.Test.Queue.Tests
@@ -32,9 +31,10 @@ propQueue rootDir localSock =
     -- "flexible queue" and periodically flush them to stdout.
     withAsyncBound (launchForwardersSimple Responder localSock connSize disconnSize) $ \_ -> do
       content <- getStdout rootDir
-      let traceObjectsNum = T.count "TraceObject" content
-      return $ traceObjectsNum === fromIntegral disconnSize
+      let flushedTraceObjectsNum = T.count "TraceObject" content
+      return $ flushedTraceObjectsNum === fromIntegral disconnSize
 
+-- | Temporarily redirect stdout to file, get its content and redirect it back.
 getStdout :: FilePath -> IO T.Text
 getStdout dir = do
   (tmpPath, tmpHdl) <- openTempFile dir "cardano-tracer-tmp-stdout"
