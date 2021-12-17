@@ -20,7 +20,7 @@ module Cardano.Logging.Configuration
   , getBackends
   ) where
 
-import           Control.Exception (throwIO)
+import           Control.Exception (throwIO, SomeException, catch)
 import           Control.Monad.IO.Class (MonadIO, liftIO)
 import           Control.Monad.IO.Unlift (MonadUnliftIO)
 import qualified Control.Tracer as T
@@ -53,17 +53,27 @@ defaultConfig = emptyTraceConfig {
   }
 
 -- | Call this function at initialisation, and later for reconfiguration
-configureTracers :: Monad m => TraceConfig -> Documented a -> [Trace m a]-> m ()
-configureTracers config (Documented documented) tracers = do
-    mapM_ (configureTrace Reset) tracers
-    mapM_ (configureAllTrace (Config config)) tracers
-    mapM_ (configureTrace Optimize) tracers
-  where
+configureTracers :: forall a.
+     TraceConfig
+  -> Documented a
+  -> [Trace IO a]
+  -> IO ()
+configureTracers config (Documented documented) tracers =
+    catch
+      (do
+        mapM_ (configureTrace Reset) tracers
+        mapM_ (configureAllTrace (Config config)) tracers
+        mapM_ (configureTrace Optimize) tracers)
+      (\ (ex :: SomeException) -> print (show ex ++ " " ++ show (head documented)))
+    where
     configureTrace control (Trace tr) =
       T.traceWith tr (emptyLoggingContext, Just control, dmPrototype (head documented))
     configureAllTrace control (Trace tr) =
       mapM
-        ((\ m -> T.traceWith tr (emptyLoggingContext, Just control, m)) . dmPrototype)
+        (\d ->
+          catch
+            (((\ m -> T.traceWith tr (emptyLoggingContext, Just control, m)) . dmPrototype) d)
+            (\ (ex :: SomeException) -> print (show ex ++ " " ++ show d)))
         documented
 
 -- | Take a selector function called 'extract'.
@@ -362,7 +372,7 @@ parseRepresentation bs = transform (decodeEither' bs)
     transform (Left e)   = Left e
     transform (Right rl) = Right $ transform' emptyTraceConfig rl
     transform' :: TraceConfig -> ConfigRepresentation -> TraceConfig
-    transform' (TraceConfig tc _fc _fcc) cr =
+    transform' TraceConfig {tcOptions=tc} cr =
       let tc'  = foldl' (\ tci (TraceOptionSeverity ns severity') ->
                           let ns' = split (=='.') ns
                               ns'' = if ns' == [""] then [] else ns'
@@ -390,7 +400,9 @@ parseRepresentation bs = transform (decodeEither' bs)
       in TraceConfig
           tc''''
           (traceOptionForwarder cr)
-          (traceOptionForwardQueueSize cr)
+          (traceOptionNodeName cr)
+          (traceOptionPeerFreqency cr)
+          (traceOptionResourceFreqency cr)
 
 data TraceOptionSeverity = TraceOptionSeverity {
       nsS      :: Text
@@ -456,13 +468,17 @@ instance AE.FromJSON TraceOptionLimiter where
                            <*> obj .: "limiterName"
                            <*> obj .: "limiterFrequency"
 
+
+
 data ConfigRepresentation = ConfigRepresentation {
     traceOptionSeverity         :: [TraceOptionSeverity]
   , traceOptionDetail           :: [TraceOptionDetail]
   , traceOptionBackend          :: [TraceOptionBackend]
   , traceOptionLimiter          :: [TraceOptionLimiter]
-  , traceOptionForwarder        :: ForwarderAddr
-  , traceOptionForwardQueueSize :: Int
+  , traceOptionForwarder        :: TraceOptionForwarder
+  , traceOptionNodeName         :: Maybe Text
+  , traceOptionPeerFreqency     :: Maybe Int
+  , traceOptionResourceFreqency :: Maybe Int
   }
   deriving (Eq, Ord, Show)
 
@@ -473,4 +489,6 @@ instance AE.FromJSON ConfigRepresentation where
                            <*> obj .: "TraceOptionBackend"
                            <*> obj .: "TraceOptionLimiter"
                            <*> obj .: "TraceOptionForwarder"
-                           <*> obj .: "TraceOptionForwardQueueSize"
+                           <*> obj .:? "TraceOptionNodeName"
+                           <*> obj .:? "TraceOptionPeerFreqency"
+                           <*> obj .:? "TraceOptionResourceFreqency"
