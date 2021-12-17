@@ -25,7 +25,7 @@ import           Cardano.Logging
 import qualified Data.Aeson as AE
 import qualified Data.HashMap.Strict as HM
 import           Data.Kind (Type)
-import           Data.Text (Text, pack)
+import           Data.Text (pack)
 import           Data.Word (Word64)
 import           GHC.Generics
 import           Text.Printf (printf)
@@ -94,9 +94,6 @@ newtype LogHash = LogHash { unLogHash :: Word64 }
 instance AE.ToJSON LogHash where
     toEncoding = AE.genericToEncoding AE.defaultOptions
 
-showT :: Show a => a -> Text
-showT = pack . show
-
 -- The actual test trace messages
 data TraceForgeEvent blk
   = TraceStartLeadershipCheck SlotNo
@@ -142,11 +139,11 @@ instance LogFormatting (TraceForgeEvent LogBlock) where
       ]
 
   asMetrics (TraceStartLeadershipCheck slotNo) =
-    [IntM "aboutToLeadSlotLast" (fromIntegral $ unSlotNo slotNo)]
+    [IntM "cardano.node.aboutToLeadSlotLast" (fromIntegral $ unSlotNo slotNo)]
   asMetrics (TraceSlotIsImmutable slot _tipPoint _tipBlkNo) =
-    [IntM "slotIsImmutable" (fromIntegral $ unSlotNo slot)]
+    [IntM "cardano.node.slotIsImmutable" (fromIntegral $ unSlotNo slot)]
   asMetrics (TraceBlockFromFuture slot _slotNo) =
-    [IntM "blockFromFuture" (fromIntegral $ unSlotNo slot)]
+    [IntM "cardano.node.blockFromFuture" (fromIntegral $ unSlotNo slot)]
 
 traceForgeEventDocu :: Documented (TraceForgeEvent LogBlock)
 traceForgeEventDocu = Documented

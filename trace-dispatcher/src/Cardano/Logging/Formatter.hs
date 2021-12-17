@@ -50,11 +50,10 @@ metricsFormatter application (Trace tr) =
           in T.traceWith tr (lc { lcNamespace = application : lcNamespace lc}
                             , Nothing
                             , FormattedMetrics metrics)
-        (lc, Just ctrl, v) ->
-          let metrics = asMetrics v
-          in T.traceWith tr (lc { lcNamespace = application : lcNamespace lc}
+        (lc, Just ctrl, _v) ->
+          T.traceWith tr (lc { lcNamespace = application : lcNamespace lc}
                             , Just ctrl
-                            , FormattedMetrics metrics)
+                            , FormattedMetrics [])
 
 -- | Format this trace as TraceObject for the trace forwarder
 forwardFormatter
@@ -211,11 +210,12 @@ formatContextMachine hostname application LoggingContext {..} obj = do
   let severity = (pack . show) (fromMaybe Info lcSeverity)
       tid      = fromMaybe ((pack . show) thid)
                     ((stripPrefix "ThreadId " . pack . show) thid)
-      ns       = application : lcNamespace
+      ns       = mconcat (intersperse (singleton '.')
+                        (map fromText (application : lcNamespace)))
       ts       = pack $ formatTime defaultTimeLocale "%F %H:%M:%S%4Q" time
   pure $ AE.pairs $    "at"      .= ts
-                    <> "ns"      .= ns
-                    <> "message" .= obj
+                    <> "ns"      .= toStrict (toLazyText ns)
+                    <> "data"    .= obj
                     <> "sev"     .= severity
                     <> "thread"  .= tid
                     <> "host"    .= hostname

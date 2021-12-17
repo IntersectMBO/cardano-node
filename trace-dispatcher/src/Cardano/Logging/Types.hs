@@ -23,6 +23,8 @@ module Cardano.Logging.Types (
   , ConfigOption(..)
   , ForwarderAddr(..)
   , FormatLogging(..)
+  , ForwarderMode(..)
+  , TraceOptionForwarder(..)
   , TraceConfig(..)
   , emptyTraceConfig
   , FormattedMessage(..)
@@ -47,7 +49,9 @@ import qualified Data.HashMap.Strict as HM
 import           Data.IORef
 import           Data.Map (Map)
 import qualified Data.Map as Map
-import           Data.Text (Text, pack)
+import qualified Data.Map.Strict as SMap
+
+import           Data.Text (Text, pack, unpack)
 import           Data.Text.Lazy (toStrict)
 import           Data.Time (UTCTime)
 import           GHC.Generics
@@ -128,7 +132,10 @@ data DocMsg a = DocMsg {
     dmPrototype :: a
   , dmMetricsMD :: [(Text, Text)]
   , dmMarkdown  :: Text
-} deriving (Show)
+}
+
+instance Show (DocMsg a) where
+  show (DocMsg _ _ md) = unpack md
 
 -- | Context any log message carries
 data LoggingContext = LoggingContext {
@@ -196,7 +203,9 @@ instance AE.FromJSON SeverityF where
     parseJSON (AE.String "Critical")  = pure (SeverityF (Just Critical))
     parseJSON (AE.String "Alert")     = pure (SeverityF (Just Alert))
     parseJSON (AE.String "Emergency") = pure (SeverityF (Just Emergency))
-    parseJSON (AE.String "Scilence")  = pure (SeverityF Nothing)
+    parseJSON (AE.String "Silence")  = pure (SeverityF Nothing)
+    parseJSON invalid = fail $ "Parsing of filter Severity failed."
+                          <> "Unknown severity: " <> show invalid
 
 instance Ord SeverityF where
   compare (SeverityF (Just s1)) (SeverityF (Just s2)) = compare s1 s2
@@ -237,22 +246,26 @@ data BackendConfig =
     Forwarder
   | Stdout FormatLogging
   | EKGBackend
+  | DatapointBackend
   deriving (Eq, Ord, Show, Generic)
 
 instance AE.ToJSON BackendConfig where
   toJSON Forwarder  = AE.String "Forwarder"
+  toJSON DatapointBackend = AE.String "DatapointBackend"
   toJSON EKGBackend = AE.String "EKGBackend"
   toJSON (Stdout f) = AE.String $ "Stdout " <> (pack . show) f
 
 instance AE.FromJSON BackendConfig where
   parseJSON (AE.String "Forwarder")            = pure Forwarder
   parseJSON (AE.String "EKGBackend")           = pure EKGBackend
+  parseJSON (AE.String "DatapointBackend")     = pure DatapointBackend
   parseJSON (AE.String "Stdout HumanFormatColoured")
                                                = pure $ Stdout HumanFormatColoured
   parseJSON (AE.String "Stdout HumanFormatUncoloured")
                                                = pure $ Stdout HumanFormatUncoloured
   parseJSON (AE.String "Stdout MachineFormat") = pure $ Stdout MachineFormat
-  parseJSON other                              = error (show other)
+  parseJSON other                              = fail $ "Parsing of backend config failed."
+                        <> "Unknown config: " <> show other
 
 data FormatLogging =
     HumanFormatColoured
@@ -262,7 +275,7 @@ data FormatLogging =
 
 -- Configuration options for individual namespace elements
 data ConfigOption =
-    -- | Severity level for a filter (default is WarningF)
+    -- | Severity level for a filter (default is Warning)
     ConfSeverity SeverityF
     -- | Detail level (default is DNormal)
   | ConfDetail DetailLevel
@@ -281,19 +294,65 @@ newtype ForwarderAddr
 instance AE.FromJSON ForwarderAddr where
   parseJSON = AE.withObject "ForwarderAddr" $ \o -> LocalSocket <$> o AE..: "filePath"
 
+data ForwarderMode =
+    -- | Forwarder works as a client: it initiates network connection with
+    -- 'cardano-tracer' and/or another Haskell acceptor application.
+    Initiator
+    -- | Forwarder works as a server: it accepts network connection from
+    -- 'cardano-tracer' and/or another Haskell acceptor application.
+  | Responder
+  deriving (Eq, Ord, Show, Generic)
+
+data TraceOptionForwarder = TraceOptionForwarder {
+    tofAddress          :: ForwarderAddr
+  , tofMode             :: ForwarderMode
+  , tofConnQueueSize    :: Word
+  , tofDisconnQueueSize :: Word
+} deriving (Eq, Ord, Show)
+
+instance AE.FromJSON TraceOptionForwarder where
+    parseJSON (AE.Object obj) =
+      TraceOptionForwarder
+        <$> obj AE..: "address"
+        <*> obj AE..: "mode"
+        <*> obj AE..:? "connQueueSize"    AE..!= 2000
+        <*> obj AE..:? "disconnQueueSize" AE..!= 200000
+
+defaultForwarder :: TraceOptionForwarder
+defaultForwarder = TraceOptionForwarder {
+    tofAddress = LocalSocket "forwarder.sock"
+  , tofMode = Responder
+  , tofConnQueueSize = 2000
+  , tofDisconnQueueSize = 200000
+}
+
+instance AE.FromJSON ForwarderMode where
+  parseJSON (AE.String "Initiator") = pure Initiator
+  parseJSON (AE.String "Responder") = pure Responder
+  parseJSON other                   = fail $ "Parsing of ForwarderMode failed."
+                        <> "Unknown ForwarderMode: " <> show other
+
 data TraceConfig = TraceConfig {
      -- | Options specific to a certain namespace
-    tcOptions            :: Map.Map Namespace [ConfigOption]
-  , tcForwarder          :: ForwarderAddr
-  , tcForwarderQueueSize :: Int
+    tcOptions   :: Map.Map Namespace [ConfigOption]
+     -- | Options for the forwarder
+  , tcForwarder :: TraceOptionForwarder
+    -- | Optional human-readable name of the node.
+  , tcNodeName  :: Maybe Text
+    -- | Optional peer trace frequency in milliseconds.
+  , tcPeerFreqency  :: Maybe Int
+    -- | Optional resource trace frequency in milliseconds.
+  , tcResourceFreqency :: Maybe Int
 }
   deriving (Eq, Ord, Show)
 
 emptyTraceConfig :: TraceConfig
 emptyTraceConfig = TraceConfig {
     tcOptions = Map.empty
-  , tcForwarder = LocalSocket "forwarder.log"
-  , tcForwarderQueueSize = 1500
+  , tcForwarder = defaultForwarder
+  , tcNodeName = Nothing
+  , tcPeerFreqency = Just 2000 -- Every 2 seconds
+  , tcResourceFreqency = Just 1000 -- Every second
   }
 
 ---------------------------------------------------------------------------
@@ -311,15 +370,15 @@ data TraceControl where
 newtype DocCollector = DocCollector (IORef (Map Int LogDoc))
 
 data LogDoc = LogDoc {
-    ldDoc        :: Text
-  , ldMetricsDoc :: Map Text Text
-  , ldNamespace  :: [Namespace]
-  , ldSeverity   :: [SeverityS]
-  , ldPrivacy    :: [Privacy]
-  , ldDetails    :: [DetailLevel]
-  , ldBackends   :: [(BackendConfig, FormattedMessage)]
-  , ldFiltered   :: [SeverityF]
-  , ldLimiter    :: [(Text, Double)]
+    ldDoc        :: ! Text
+  , ldMetricsDoc :: ! (SMap.Map Text Text)
+  , ldNamespace  :: ! [Namespace]
+  , ldSeverity   :: ! [SeverityS]
+  , ldPrivacy    :: ! [Privacy]
+  , ldDetails    :: ! [DetailLevel]
+  , ldBackends   :: ! [(BackendConfig, FormattedMessage)]
+  , ldFiltered   :: ! [SeverityF]
+  , ldLimiter    :: ! [(Text, Double)]
 } deriving(Eq, Show)
 
 emptyLogDoc :: Text -> [(Text, Text)] -> LogDoc
@@ -357,17 +416,17 @@ instance LogFormatting b => LogFormatting (Folding a b) where
 
 instance LogFormatting Double where
   forMachine _dtal d = mkObject [ "val" .= AE.String ((pack . show) d)]
-  forHuman d         = (pack . show) d
+  forHuman           = pack . show
   asMetrics d        = [DoubleM "" d]
 
 instance LogFormatting Int where
   forMachine _dtal i = mkObject [ "val" .= AE.String ((pack . show) i)]
-  forHuman i         = (pack . show) i
+  forHuman           = pack . show
   asMetrics i        = [IntM "" (fromIntegral i)]
 
 instance LogFormatting Integer where
   forMachine _dtal i = mkObject [ "val" .= AE.String ((pack . show) i)]
-  forHuman i         = (pack . show) i
+  forHuman           = pack . show
   asMetrics i        = [IntM "" i]
 
 ---------------------------------------------------------------------------
