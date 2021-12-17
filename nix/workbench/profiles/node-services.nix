@@ -51,24 +51,45 @@ let
                Protocol             = "Cardano";
                RequiresNetworkMagic = "RequiresMagic";
 
-               TracingVerbosity     = "NormalVerbosity";
-               minSeverity          = "Debug";
+               UseTraceDispatcher   = true;
 
-               TraceMempool         = true;
-               TraceTxInbound       = true;
-
-               defaultScribes = [
-                 [ "StdoutSK" "stdout" ]
+               TraceOptionSeverity  = [
+                 { ns = "";                                    severity = "Debug";   }
+                 { ns = "Node.Resources";                      severity = "Debug";   }
+                 { ns = "Node.ChainDB";                        severity = "Debug";   }
+                 # { ns = "Node.Mempool";                        severity = "Debug";   }
+                 # { ns = "Node.ChainDB.ImmutableDBEvent";       severity = "Warning"; }
                ];
-               setupScribes =
-                 [{
-                   scKind     = "StdoutSK";
-                   scName     = "stdout";
-                   scFormat   = "ScJson";
-                 }];
-               options = {
-                 mapBackends = {
-                   "cardano.node.resources" = [ "KatipBK" ];
+
+               TraceOptionDetail = [
+                 { ns = "";                                    detail = "DNormal";   }
+                 { ns = "Node.BlockFetchClient";               detail = "DMinimal";  }
+               ];
+
+               TraceOptionBackend = [
+                 { ns = "";
+                   backends = [
+                     "Stdout MachineFormat"
+                     "EKGBackend"
+                     "Forwarder"
+                   ];
+                 }
+                 # { ns = "Node.ChainDB";
+                 #   backends = ["Stdout HumanFormatColoured"];
+                 # }
+               ];
+
+               TraceOptionLimiter = [
+                 { ns = "Node.ChainDB.OpenEvent";
+                   limiterName = "ChainDB open limiter";
+                   limiterFrequency = 0.1;
+                 }
+               ];
+
+               TraceOptionForwarder = {
+                 mode = "Initiator";
+                 address = {
+                   filePath = "/tmp/forwarder-${toString i}.sock";
                  };
                };
 
