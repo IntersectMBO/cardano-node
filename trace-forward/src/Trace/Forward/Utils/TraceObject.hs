@@ -71,8 +71,18 @@ writeToSink ForwardSink{forwardQueue, disconnectedSize, connectedSize, wasUsed} 
   maybeFlushQueueToStdout q = do
     qLen <- atomically $ lengthTBQueue q
     if fromIntegral qLen == connectedSize
-      then atomically $ switchQueue disconnectedSize
-      else atomically (flushTBQueue q) >>= mapM_ print >> hFlush stdout
+      then atomically $ do
+        -- The small queue is full, so we have to switch to a big one and
+        -- then flush collected items from the small queue and store them in
+        -- a big one.
+        acceptedItems <- flushTBQueue q
+        switchQueue disconnectedSize
+        bigQ <- readTVar forwardQueue
+        mapM_ (writeTBQueue bigQ) acceptedItems
+      else do
+        -- The big queue is full, we have to flush it to stdout.
+        atomically (flushTBQueue q) >>= mapM_ print
+        hFlush stdout
 
   checkIfSinkWasUsed q = atomically $
     whenM (readTVar wasUsed) $ switchToAnotherQueue q
