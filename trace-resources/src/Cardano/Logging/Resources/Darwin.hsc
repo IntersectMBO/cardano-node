@@ -72,14 +72,14 @@ instance Storable MachTaskBasicInfo where
                 <*> (#peek struct mach_task_basic_info, suspend_count) ptr
   poke _ _    = pure ()
 
-foreign import ccall unsafe c_get_process_memory_info :: Ptr MachTaskBasicInfo -> CInt -> IO CInt
+foreign import ccall unsafe c_get_process_memory_info2 :: Ptr MachTaskBasicInfo -> CInt -> IO CInt
 
 
 getMemoryInfo :: ProcessID -> IO MachTaskBasicInfo
 getMemoryInfo pid =
     allocaBytes 128 $ \ptr -> do
-      throwIfNeg_ (\res -> "c_get_process_memory_info: failure returned: " ++ show (pred res))
-                    (succ <$> c_get_process_memory_info ptr (fromIntegral pid))
+      throwIfNeg_ (\res -> "c_get_process_memory_info2: failure returned: " ++ show (pred res))
+                    (succ <$> c_get_process_memory_info2 ptr (fromIntegral pid))
       peek ptr
 
 readRessoureStatsInternal :: IO (Maybe ResourceStats)
