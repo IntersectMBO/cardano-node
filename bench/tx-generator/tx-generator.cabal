@@ -72,6 +72,7 @@ library
                      , cardano-crypto-wrapper
                      , cardano-ledger-alonzo
                      , cardano-ledger-byron
+                     , cardano-ledger-shelley
                      , cardano-node
                      , cardano-prelude
                      , contra-tracer
@@ -100,7 +101,7 @@ library
                      , plutus-ledger-api
                      , random
                      , serialise
-                     , cardano-ledger-shelley
+                     , strict-stm
                      , stm
                      , text
                      , time

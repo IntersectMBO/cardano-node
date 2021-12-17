@@ -183,11 +183,10 @@ indexGCType :: ChainDB.TraceGCEvent a -> Int
 indexGCType ChainDB.ScheduledGC{} = 1
 indexGCType ChainDB.PerformedGC{} = 2
 
-indexReplType :: ChainDB.TraceLedgerReplayEvent a -> Int
+indexReplType :: ChainDB.TraceReplayEvent blk -> Int
 indexReplType LedgerDB.ReplayFromGenesis{} = 1
 indexReplType LedgerDB.ReplayFromSnapshot{} = 2
 indexReplType LedgerDB.ReplayedBlock{} = 3
-indexReplType LedgerDB.UpdateLedgerDbTraceEvent{} = 4
 
 instance ElidingTracer (WithSeverity (ChainDB.TraceEvent blk)) where
   -- equivalent by type and severity
@@ -224,7 +223,6 @@ instance ElidingTracer (WithSeverity (ChainDB.TraceEvent blk)) where
   doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.TrySwitchToAFork _ _))) = False
   doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.SwitchedToAFork{}))) = False
   doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.AddBlockValidation (ChainDB.InvalidBlock _ _)))) = False
-  doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.AddBlockValidation (ChainDB.InvalidCandidate _)))) = False
   doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.AddBlockValidation ChainDB.CandidateContainsFutureBlocksExceedingClockSkew{}))) = False
   doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.AddedToCurrentChain events _ _  _))) = null events
   doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent _)) = True
@@ -245,7 +243,8 @@ instance ElidingTracer (WithSeverity (ChainDB.TraceEvent blk)) where
       return (Just ev, count)
   conteliding _tverb _tr ev@(WithSeverity _ (ChainDB.TraceGCEvent _)) (_old, count) =
       return (Just ev, count)
-  conteliding _tverb tr ev@(WithSeverity _ (ChainDB.TraceLedgerReplayEvent (LedgerDB.ReplayedBlock pt [] replayTo))) (_old, count) = do
+                                                                                                                              -- TODO should this be used?
+  conteliding _tverb tr ev@(WithSeverity _ (ChainDB.TraceLedgerReplayEvent (LedgerDB.ReplayedBlock pt [] (LedgerDB.ReplayStart _replayFrom) (LedgerDB.ReplayGoal replayTo)))) (_old, count) = do
       let slotno = toInteger $ unSlotNo (realPointSlot pt)
           endslot = toInteger $ withOrigin 0 unSlotNo (pointSlot replayTo)
           startslot = if count == 0 then slotno else toInteger count

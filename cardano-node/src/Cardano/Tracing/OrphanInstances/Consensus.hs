@@ -105,7 +105,6 @@ instance HasSeverityAnnotation (ChainDB.TraceEvent blk) where
       maximumDef Notice (map getSeverityAnnotation events)
     ChainDB.AddBlockValidation ev' -> case ev' of
       ChainDB.InvalidBlock {} -> Error
-      ChainDB.InvalidCandidate {} -> Error
       ChainDB.ValidCandidate {} -> Info
       ChainDB.CandidateContainsFutureBlocks{} -> Debug
       ChainDB.CandidateContainsFutureBlocksExceedingClockSkew{} -> Error
@@ -116,7 +115,6 @@ instance HasSeverityAnnotation (ChainDB.TraceEvent blk) where
     LedgerDB.ReplayFromGenesis {} -> Info
     LedgerDB.ReplayFromSnapshot {} -> Info
     LedgerDB.ReplayedBlock {} -> Info
-    LedgerDB.UpdateLedgerDbTraceEvent {} -> Debug
 
   getSeverityAnnotation (ChainDB.TraceLedgerEvent ev) = case ev of
     LedgerDB.TookSnapshot {} -> Info
@@ -410,8 +408,6 @@ instance ( ConvertRawHash blk
         ChainDB.AddBlockValidation ev' -> case ev' of
           ChainDB.InvalidBlock err pt ->
             "Invalid block " <> renderRealPointAsPhrase pt <> ": " <> showT err
-          ChainDB.InvalidCandidate c ->
-            "Invalid candidate " <> renderPointAsPhrase (AF.headPoint c)
           ChainDB.ValidCandidate c ->
             "Valid candidate " <> renderPointAsPhrase (AF.headPoint c)
           ChainDB.CandidateContainsFutureBlocks c hdrs ->
@@ -423,9 +419,11 @@ instance ( ConvertRawHash blk
             renderPointAsPhrase (AF.headPoint c) <> ", slots " <>
             Text.intercalate ", " (map (renderPoint . headerPoint) hdrs)
           ChainDB.UpdateLedgerDbTraceEvent
-            (StartedPushingBlockToTheLedgerDb (Pushing currentBlock) (PushGoal pushGoal)) ->
+            (StartedPushingBlockToTheLedgerDb (PushStart pushOrigin) (PushGoal pushGoal) (Pushing currentBlock)) ->
             "About to push " <> renderRealPoint currentBlock <>
-            " to ledger DB. Attempting to push blocks until " <> renderRealPoint pushGoal
+            " to ledger DB. Attempting to push blocks" <>
+            " from " <> renderRealPoint pushOrigin <>
+            " until " <> renderRealPoint pushGoal
         ChainDB.AddedBlockToVolatileDB pt _ _ ->
           "Chain added block " <> renderRealPointAsPhrase pt
         ChainDB.ChainSelectionForFutureBlock pt ->
@@ -433,16 +431,19 @@ instance ( ConvertRawHash blk
       ChainDB.TraceLedgerReplayEvent ev -> case ev of
         LedgerDB.ReplayFromGenesis _replayTo ->
           "Replaying ledger from genesis"
-        LedgerDB.ReplayFromSnapshot snap tip' _replayTo ->
+        LedgerDB.ReplayFromSnapshot snap tip' (LedgerDB.ReplayStart replayFrom) (LedgerDB.ReplayGoal replayTo) ->
           "Replaying ledger from snapshot " <> showT snap <> " at " <>
-            renderRealPointAsPhrase tip'
-        LedgerDB.ReplayedBlock pt _ledgerEvents replayTo ->
-          "Replayed block: slot " <> showT (unSlotNo $ realPointSlot pt)
-                                  <> " out of "
+            renderRealPointAsPhrase tip' <> ".  Pushing"
+                                  <> " from "
+                                  <> showT (withOrigin 0 Prelude.id $ unSlotNo <$> pointSlot replayFrom)
+                                  <> " to "
                                   <> showT (withOrigin 0 Prelude.id $ unSlotNo <$> pointSlot replayTo)
-        LedgerDB.UpdateLedgerDbTraceEvent (StartedPushingBlockToTheLedgerDb (Pushing currentBlock) (PushGoal pushGoal)) ->
-            "About to push " <> renderRealPoint currentBlock <>
-            " to ledger DB. Attempting to push blocks until " <> renderRealPoint pushGoal
+        LedgerDB.ReplayedBlock pt _ledgerEvents (LedgerDB.ReplayStart replayFrom) (LedgerDB.ReplayGoal replayTo) ->
+          "Replayed block: slot " <> showT (unSlotNo $ realPointSlot pt)
+                                  <> " from "
+                                  <> showT (withOrigin 0 Prelude.id $ unSlotNo <$> pointSlot replayFrom)
+                                  <> " to "
+                                  <> showT (withOrigin 0 Prelude.id $ unSlotNo <$> pointSlot replayTo)
       ChainDB.TraceLedgerEvent ev -> case ev of
         LedgerDB.TookSnapshot snap pt ->
           "Took ledger snapshot " <> showT snap <>
@@ -736,9 +737,6 @@ instance ( ConvertRawHash blk
         mkObject [ "kind" .= String "TraceAddBlockEvent.AddBlockValidation.InvalidBlock"
                  , "block" .= toObject verb pt
                  , "error" .= show err ]
-      ChainDB.InvalidCandidate c ->
-        mkObject [ "kind" .= String "TraceAddBlockEvent.AddBlockValidation.InvalidCandidate"
-                 , "block" .= renderPointForVerbosity verb (AF.headPoint c) ]
       ChainDB.ValidCandidate c ->
         mkObject [ "kind" .= String "TraceAddBlockEvent.AddBlockValidation.ValidCandidate"
                  , "block" .= renderPointForVerbosity verb (AF.headPoint c) ]
@@ -751,9 +749,10 @@ instance ( ConvertRawHash blk
                  , "block"   .= renderPointForVerbosity verb (AF.headPoint c)
                  , "headers" .= map (renderPointForVerbosity verb . headerPoint) hdrs ]
       ChainDB.UpdateLedgerDbTraceEvent
-        (StartedPushingBlockToTheLedgerDb (Pushing currentBlock) (PushGoal pushGoal)) ->
+        (StartedPushingBlockToTheLedgerDb (PushStart pushStart) (PushGoal pushGoal) (Pushing currentBlock)) ->
           mkObject [ "kind" .= String "TraceAddBlockEvent.AddBlockValidation.UpdateLedgerDbTraceEvent.StartedPushingBlockToTheLedgerDb"
                    , "currentBlock" .= renderRealPoint currentBlock
+                   , "sourceBlock" .= renderRealPoint pushStart
                    , "targetBlock" .= renderRealPoint pushGoal
                    ]
     ChainDB.AddedBlockToVolatileDB pt (BlockNo bn) _ ->
@@ -779,20 +778,17 @@ instance ( ConvertRawHash blk
   toObject verb (ChainDB.TraceLedgerReplayEvent ev) = case ev of
     LedgerDB.ReplayFromGenesis _replayTo ->
       mkObject [ "kind" .= String "TraceLedgerReplayEvent.ReplayFromGenesis" ]
-    LedgerDB.ReplayFromSnapshot snap tip' _replayTo ->
+    LedgerDB.ReplayFromSnapshot snap tip' (LedgerDB.ReplayStart replayStart) (LedgerDB.ReplayGoal replayGoal) ->
       mkObject [ "kind" .= String "TraceLedgerReplayEvent.ReplayFromSnapshot"
                , "snapshot" .= toObject verb snap
+               , "replayStart" .= toObject verb replayStart
+               , "replayGoal" .= toObject verb replayGoal
                , "tip" .= show tip' ]
-    LedgerDB.ReplayedBlock pt _ledgerEvents replayTo ->
+    LedgerDB.ReplayedBlock pt _ledgerEvents (LedgerDB.ReplayStart replayStart) (LedgerDB.ReplayGoal replayGoal) ->
       mkObject [ "kind" .= String "TraceLedgerReplayEvent.ReplayedBlock"
                , "slot" .= unSlotNo (realPointSlot pt)
-               , "tip"  .= withOrigin 0 unSlotNo (pointSlot replayTo) ]
-    LedgerDB.UpdateLedgerDbTraceEvent
-      (StartedPushingBlockToTheLedgerDb (Pushing currentBlock) (PushGoal pushGoal)) ->
-        mkObject [ "kind" .= String "TraceAddBlockEvent.AddBlockValidation.UpdateLedgerDbTraceEvent.StartedPushingBlockToTheLedgerDb"
-                 , "currentBlock" .= renderRealPoint currentBlock
-                 , "targetBlock" .= renderRealPoint pushGoal
-                 ]
+               , "replayStart" .= toObject verb replayStart
+               , "replayGoal"  .= toObject verb replayGoal ]
   toObject MinimalVerbosity (ChainDB.TraceLedgerEvent _ev) = emptyObject -- no output
   toObject verb (ChainDB.TraceLedgerEvent ev) = case ev of
     LedgerDB.TookSnapshot snap pt ->
@@ -868,9 +864,6 @@ instance ( ConvertRawHash blk
          mkObject [ "kind" .= String "TraceInitChainSelEvent.InvalidBlock"
                   , "block" .= toObject verb pt
                   , "error" .= show err ]
-      ChainDB.InvalidCandidate c ->
-        mkObject [ "kind" .= String "TraceInitChainSelEvent.InvalidCandidate"
-                 , "block" .= renderPointForVerbosity verb (AF.headPoint c) ]
       ChainDB.ValidCandidate c ->
         mkObject [ "kind" .= String "TraceInitChainSelEvent.ValidCandidate"
                  , "block" .= renderPointForVerbosity verb (AF.headPoint c) ]
@@ -883,9 +876,10 @@ instance ( ConvertRawHash blk
                  , "block"   .= renderPointForVerbosity verb (AF.headPoint c)
                  , "headers" .= map (renderPointForVerbosity verb . headerPoint) hdrs ]
       ChainDB.UpdateLedgerDbTraceEvent
-        (StartedPushingBlockToTheLedgerDb (Pushing currentBlock) (PushGoal pushGoal)) ->
+        (StartedPushingBlockToTheLedgerDb (PushStart pushStart) (PushGoal pushGoal) (Pushing currentBlock)) ->
           mkObject [ "kind" .= String "TraceAddBlockEvent.AddBlockValidation.UpdateLedgerDbTraceEvent.StartedPushingBlockToTheLedgerDb"
                    , "currentBlock" .= renderRealPoint currentBlock
+                   , "sourceBlock" .= renderRealPoint pushStart
                    , "targetBlock" .= renderRealPoint pushGoal
                    ]
   toObject _verb (ChainDB.TraceIteratorEvent ev) = case ev of
@@ -980,14 +974,9 @@ instance ( ConvertRawHash blk
                    ]
   toObject _verb (ChainDB.TraceVolatileDBEvent ev) = case ev of
     VolDb.DBAlreadyClosed -> mkObject [ "kind" .= String "TraceVolatileDbEvent.DBAlreadyClosed"]
-    VolDb.DBAlreadyOpen -> mkObject [ "kind" .= String "TraceVolatileDbEvent.DBAlreadyOpen"]
     VolDb.BlockAlreadyHere blockId ->
       mkObject [ "kind" .= String "TraceVolatileDbEvent.BlockAlreadyHere"
                , "blockId" .= String (showT blockId)
-               ]
-    VolDb.TruncateCurrentFile fsPath ->
-      mkObject [ "kind" .= String "TraceVolatileDbEvent.TruncateCurrentFile"
-               , "file" .= String (showT fsPath)
                ]
     VolDb.Truncate pErr fsPath blockOffset ->
       mkObject [ "kind" .= String "TraceVolatileDbEvent.Truncate"

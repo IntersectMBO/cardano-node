@@ -52,6 +52,7 @@ executable cardano-node-chairman
                       , ouroboros-consensus
                       , ouroboros-network
                       , ouroboros-network-framework
+                      , strict-stm
                       , text
                       , time
 
