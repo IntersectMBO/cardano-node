@@ -1,9 +1,13 @@
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Cardano.Node.Configuration.Socket
-  ( gatherConfiguredSockets
+  ( SocketConfig (..)
+  , PartialSocketConfig (..)
+  , gatherConfiguredSockets
   , SocketOrSocketInfo(..)
   , getSocketOrSocketInfoAddr
   , SocketConfigError(..)
@@ -16,12 +20,13 @@ import           Prelude (String)
 import qualified Prelude
 
 import           Control.Monad.Trans.Except.Extra (handleIOExceptT)
+import           Generic.Data (gmappend)
+import           Generic.Data.Orphans ()
 import           Network.Socket (AddrInfo (..), AddrInfoFlag (..), Family (AF_INET, AF_INET6),
                    SockAddr, Socket, SocketType (..))
 import qualified Network.Socket as Socket
 
-import           Cardano.Node.Configuration.POM (NodeConfiguration (..))
-import           Cardano.Node.Types
+import           Cardano.Node.NodeAddress
 
 import           Ouroboros.Network.NodeToClient (LocalAddress (..), LocalSocket (..))
 
@@ -100,6 +105,26 @@ renderSocketConfigError (GetAddrInfoError addr port ex) =
     "Failure while getting address information for the public listening "
  <> "address: " <> show addr <> " " <> show port <> " : " <> displayException ex
 
+data SocketConfig
+  = SocketConfig
+    { ncNodeIPv4Addr    :: !(Maybe NodeHostIPv4Address)
+    , ncNodeIPv6Addr    :: !(Maybe NodeHostIPv6Address)
+    , ncNodePortNumber  :: !(Maybe PortNumber)
+    , ncSocketPath      :: !(Maybe SocketPath)
+    }
+    deriving (Eq, Show)
+
+data PartialSocketConfig
+  = PartialSocketConfig
+    { pncNodeIPv4Addr   :: !(Last NodeHostIPv4Address)
+    , pncNodeIPv6Addr   :: !(Last NodeHostIPv6Address)
+    , pncNodePortNumber :: !(Last PortNumber)
+    , pncSocketPath     :: !(Last SocketPath)
+    }
+    deriving (Generic, Eq, Show)
+
+instance Semigroup PartialSocketConfig where
+  (<>) = gmappend
 
 -- | Gather from the various sources of configuration which sockets we will use
 -- for the public node-to-node and the local node-to-client IPC.  It returns
@@ -111,15 +136,15 @@ renderSocketConfigError (GetAddrInfoError addr port ex) =
 -- * node cli
 -- * systemd socket activation
 --
-gatherConfiguredSockets :: NodeConfiguration
+gatherConfiguredSockets :: SocketConfig
                         -> ExceptT SocketConfigError IO
                                    (Maybe (SocketOrSocketInfo Socket      SockAddr),
                                     Maybe (SocketOrSocketInfo Socket      SockAddr),
                                     Maybe (SocketOrSocketInfo LocalSocket LocalAddress))
-gatherConfiguredSockets NodeConfiguration { ncNodeIPv4Addr,
-                                            ncNodeIPv6Addr,
-                                            ncNodePortNumber,
-                                            ncSocketPath } = do
+gatherConfiguredSockets SocketConfig { ncNodeIPv4Addr,
+                                       ncNodeIPv6Addr,
+                                       ncNodePortNumber,
+                                       ncSocketPath } = do
 
     systemDSockets <- liftIO getSystemdSockets
 

@@ -5,12 +5,15 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE MonoLocalBinds #-}
 
 module Cardano.Node.Protocol.Types
   ( Protocol(..)
   , SomeConsensusProtocol(..)
+  , protocolName
   ) where
 
+import           Prelude (String)
 import           Cardano.Prelude
 
 import           Control.Monad.Fail (fail)
@@ -21,7 +24,8 @@ import qualified Cardano.Api.Protocol.Types as Cardano
 
 import           Cardano.Node.Orphans ()
 import           Cardano.Node.Queries (HasKESInfo, HasKESMetricsData)
-import           Cardano.Tracing.Constraints (TraceConstraints)
+import           Cardano.Node.TraceConstraints (TraceConstraints)
+
 
 data Protocol = ByronProtocol
               | ShelleyProtocol
@@ -47,8 +51,6 @@ instance FromJSON Protocol where
       _ -> fail $ "Parsing of Protocol failed. "
                 <> show str <> " is not a valid protocol"
 
-
-
 data SomeConsensusProtocol where
 
      SomeConsensusProtocol :: forall blk. ( Cardano.Protocol IO blk
@@ -59,3 +61,10 @@ data SomeConsensusProtocol where
                            => Cardano.BlockType blk
                            -> Cardano.ProtocolInfoArgs IO blk
                            -> SomeConsensusProtocol
+
+-- | A human readable name for the protocol
+--
+protocolName :: Protocol -> String
+protocolName ByronProtocol   = "Byron"
+protocolName ShelleyProtocol = "Shelley"
+protocolName CardanoProtocol = "Byron; Shelley"

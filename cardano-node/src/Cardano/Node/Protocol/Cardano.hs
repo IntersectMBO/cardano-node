@@ -1,7 +1,7 @@
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE FlexibleContexts    #-}
+{-# LANGUAGE FlexibleInstances   #-}
+{-# LANGUAGE GADTs               #-}
+{-# LANGUAGE NamedFieldPuns      #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 {-# OPTIONS_GHC -Wno-orphans  #-}
@@ -39,7 +39,6 @@ import           Cardano.Tracing.OrphanInstances.Shelley ()
 import qualified Cardano.Node.Protocol.Alonzo as Alonzo
 import qualified Cardano.Node.Protocol.Byron as Byron
 import qualified Cardano.Node.Protocol.Shelley as Shelley
-
 import           Cardano.Node.Protocol.Types
 
 ------------------------------------------------------------------------------
@@ -58,8 +57,8 @@ import           Cardano.Node.Protocol.Types
 -- This also serves a purpose as a sanity check that we have all the necessary
 -- type class instances available.
 --
-mkSomeConsensusProtocolCardano
-  :: NodeByronProtocolConfiguration
+mkSomeConsensusProtocolCardano ::
+     NodeByronProtocolConfiguration
   -> NodeShelleyProtocolConfiguration
   -> NodeAlonzoProtocolConfiguration
   -> NodeHardForkProtocolConfiguration
