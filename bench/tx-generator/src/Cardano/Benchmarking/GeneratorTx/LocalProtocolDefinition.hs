@@ -28,6 +28,7 @@ import           Ouroboros.Network.NodeToClient (IOManager)
 import           Ouroboros.Network.Block (MaxSlotNo(..))
 
 import           Cardano.Api
+import           Cardano.Tracing.Config (TraceOptions(..))
 
 import qualified Cardano.Chain.Genesis as Genesis
 
@@ -127,14 +128,14 @@ startProtocol logConfigFile = do
     NodeProtocolConfigurationCardano byronConfig shelleyConfig alonzoConfig hardforkConfig -> do
         ptcl :: SomeConsensusProtocol <- firstExceptT (ProtocolInstantiationError . pack . show) $
                   mkSomeConsensusProtocolCardano byronConfig shelleyConfig alonzoConfig hardforkConfig Nothing
-        
+
         loggingLayer <- mkLoggingLayer nc ptcl
         return (loggingLayer, ptcl)
  where
   mkLoggingLayer :: NodeConfiguration -> SomeConsensusProtocol -> ExceptT CliError IO LoggingLayer
   mkLoggingLayer nc ptcl =
     firstExceptT (\(ConfigErrorFileNotFound fp) -> ConfigNotFoundError fp) $
-    createLoggingLayer (pack $ showVersion version) nc ptcl
+    createLoggingLayer TracingOff (pack $ showVersion version) nc ptcl
 
   mkNodeConfig :: FilePath -> IO NodeConfiguration
   mkNodeConfig logConfig = do
