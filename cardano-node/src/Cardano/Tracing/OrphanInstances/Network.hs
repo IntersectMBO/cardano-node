@@ -2012,6 +2012,8 @@ instance (ToJSON addr, Show addr)
              ]
   toObject _verb (TrInboundGovernorCounters counters) =
     mkObject [ "kind" .= String "InboundGovernorCounters"
+             , "idlePeers" .= idlePeersRemote counters
+             , "coldPeers" .= coldPeersRemote counters
              , "warmPeers" .= warmPeersRemote counters
              , "hotPeers" .= hotPeersRemote counters
              ]
