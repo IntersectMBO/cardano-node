@@ -78,7 +78,7 @@ instance Storable ProcessMemoryCounters where
                 <*> (#peek PROCESS_MEMORY_COUNTERS, PeakPagefileUsage) ptr
   poke _ _    = pure ()
 
-foreign import ccall unsafe c_get_process_memory_info :: Ptr ProcessMemoryCounters -> CInt -> IO CInt
+foreign import ccall unsafe c_get_process_memory_info2 :: Ptr ProcessMemoryCounters -> CInt -> IO CInt
 
 {- I/O counters -}
 {- https://docs.microsoft.com/de-de/windows/win32/api/winnt/ns-winnt-io_counters
@@ -127,14 +127,14 @@ instance Storable CpuTimes where
                 <*> (#peek CPU_TIMES, idletime) ptr
   poke _ _    = pure ()
 
-foreign import ccall unsafe c_get_proc_cpu_times :: Ptr CpuTimes -> CInt -> IO CInt
+foreign import ccall unsafe c_get_proc_cpu_times2 :: Ptr CpuTimes -> CInt -> IO CInt
 
 
 getMemoryInfo :: ProcessId -> IO ProcessMemoryCounters
 getMemoryInfo pid =
     allocaBytes 128 $ \ptr -> do
-      throwIfNeg_ (\res -> "c_get_process_memory_info: failure returned: " ++ show res)
-                    (c_get_process_memory_info ptr (fromIntegral pid))
+      throwIfNeg_ (\res -> "c_get_process_memory_info2: failure returned: " ++ show res)
+                    (c_get_process_memory_info2 ptr (fromIntegral pid))
       peek ptr
 
 readRessoureStatsInternal :: IO (Maybe ResourceStats)
@@ -166,10 +166,10 @@ readRessoureStatsInternal = getCurrentProcessId >>= \pid -> do
 getCpuTimes :: ProcessId -> IO CpuTimes
 getCpuTimes pid =
   allocaBytes 128 $ \ptr -> do
-    res <- c_get_proc_cpu_times ptr (fromIntegral pid)
+    res <- c_get_proc_cpu_times2 ptr (fromIntegral pid)
     if res <= 0
       then do
-        putStrLn $ "c_get_proc_cpu_times: failure returned: " ++ (show res)
+        putStrLn $ "c_get_proc_cpu_times2: failure returned: " ++ (show res)
         return $ CpuTimes 0 0 0
       else
         peek ptr

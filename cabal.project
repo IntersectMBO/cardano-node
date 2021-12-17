@@ -84,6 +84,9 @@ package trace-dispatcher
 package trace-forward
   tests: True
 
+package trace-resources
+  tests: True
+
 -- The following is needed because Nix is doing something crazy.
 package byron-spec-ledger
   tests: False
