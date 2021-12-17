@@ -83,9 +83,9 @@ occurences  mid (fmsg : rest) = if isMessageWithId mid fmsg
                                   then 1 + occurences mid rest
                                   else occurences mid rest
 
--- | Returns true if the given message has this id, otherwise fals
+-- | Returns true if the given message has this id, otherwise false
 isMessageWithId :: MessageID -> FormattedMessage -> Bool
-isMessageWithId mid (FormattedMetrics [IntM _ idm])
+isMessageWithId mid (FormattedMetrics (IntM _ idm : _))
                                         = fromIntegral idm == mid
 isMessageWithId _   (FormattedMetrics [])   = False
 isMessageWithId mid (FormattedHuman _ txt)  = idInText mid txt

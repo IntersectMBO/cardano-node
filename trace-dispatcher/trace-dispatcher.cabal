@@ -19,12 +19,15 @@ library
                       Cardano.Logging.Configuration
                       Cardano.Logging.DocuGenerator
                       Cardano.Logging.Formatter
+                      Cardano.Logging.Forwarding
                       Cardano.Logging.FrequencyLimiter
+                      Cardano.Logging.Tracer.DataPoint
                       Cardano.Logging.Tracer.EKG
                       Cardano.Logging.Tracer.Standard
                       Cardano.Logging.Tracer.Forward
                       Cardano.Logging.Tracer.Composed
                       Cardano.Logging.Utils
+                      Cardano.Logging.Version
                       Control.Tracer.Arrow
                       Control.Tracer
 
@@ -42,6 +45,7 @@ library
                       , ekg-forward
                       , hostname
                       , network
+                      , ouroboros-network
                       , ouroboros-network-framework
                       , serialise
                       , stm
@@ -78,6 +82,7 @@ executable trace-dispatcher-examples
                       Examples.Routing
                       Examples.EKG
                       Examples.Configuration
+                      Examples.DataPoint
                       Examples.FrequencyLimiting
                       Examples.Documentation
     hs-source-dirs:   examples
@@ -90,14 +95,16 @@ executable trace-dispatcher-examples
                       , ekg
                       , ekg-core
                       , hostname
+                      , stm
                       , text
                       , trace-dispatcher
+                      , trace-forward
                       , time
                       , unagi-chan >= 0.4.1.4
                       , unliftio
                       , unliftio-core
-                      , stm
                       , unordered-containers
+                      , utf8-string
                       , yaml
   ghc-options:         -Wall
                        -Wcompat
@@ -129,17 +136,17 @@ test-suite trace-dispatcher-test
                       , ekg-core
                       , hostname
                       , text
-                      , trace-dispatcher
+                      , stm
+                      , tasty
+                      , tasty-quickcheck
                       , time
+                      , trace-dispatcher
                       , unagi-chan >= 0.4.1.4
                       , unliftio
                       , unliftio-core
-                      , stm
                       , unordered-containers
                       , yaml
                       , QuickCheck
-                      , tasty
-                      , tasty-quickcheck
 
   ghc-options:         -Wall
                        -Wcompat
@@ -150,3 +157,25 @@ test-suite trace-dispatcher-test
                        -Wredundant-constraints
                        -Wmissing-export-lists
                        -Wno-incomplete-patterns
+
+benchmark trace-dispatcher-bench
+  type:                exitcode-stdio-1.0
+  hs-source-dirs:      bench, test
+  main-is:             trace-dispatcher-bench.hs
+  default-language:    Haskell2010
+  default-extensions:  OverloadedStrings
+  other-modules:       Cardano.Logging.Test.Types
+                       Cardano.Logging.Test.Oracles
+                       Cardano.Logging.Test.Config
+                       Cardano.Logging.Test.Tracer
+                       Cardano.Logging.Test.Messages
+                       Cardano.Logging.Test.Script
+  build-depends:       base >=4.12 && <5
+                       , aeson
+                       , containers
+                       , criterion
+                       , ekg
+                       , text
+                       , time
+                       , trace-dispatcher
+                       , QuickCheck

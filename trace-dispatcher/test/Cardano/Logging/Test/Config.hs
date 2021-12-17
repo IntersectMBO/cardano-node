@@ -1,6 +1,10 @@
 {-# OPTIONS_GHC -Wno-orphans  #-}
 
 module Cardano.Logging.Test.Config (
+    config1
+  , config2
+  , config3
+  , config4
   ) where
 
 import           Data.Map (fromList)
@@ -38,6 +42,41 @@ config2 = emptyTraceConfig {
          [ ConfSeverity (SeverityF (Just Error))
          , ConfDetail DMinimal
          , ConfBackend [Forwarder, EKGBackend]
+         ])
+    ]
+  }
+
+
+config3 :: TraceConfig
+config3 = emptyTraceConfig {
+  tcOptions = fromList
+    [ ([] :: Namespace,
+         [ ConfSeverity (SeverityF (Just Debug))
+         , ConfDetail DNormal
+         , ConfBackend [Stdout HumanFormatColoured, Forwarder, EKGBackend]
+         ])
+    , (["Node", "Test", "Message1"],
+         [ ConfSeverity (SeverityF (Just Debug))
+         , ConfDetail DNormal
+         , ConfBackend [Stdout HumanFormatColoured, EKGBackend]
+         , ConfLimiter "message1 limiter 100" 100
+         ])
+    , (["Node", "Test", "Message2"],
+         [ ConfSeverity (SeverityF (Just Error))
+         , ConfDetail DMinimal
+         , ConfBackend [Forwarder, EKGBackend]
+         ])
+    ]
+  }
+
+-- | different configurations for testing
+config4 :: TraceConfig
+config4 = emptyTraceConfig {
+  tcOptions = fromList
+    [([] :: Namespace,
+         [ ConfSeverity (SeverityF (Just Debug))
+         , ConfDetail DNormal
+         , ConfBackend [EKGBackend]
          ])
     ]
   }

@@ -19,4 +19,4 @@ docTracers = do
                 (appendName "node" t2')
   bl <- documentMarkdown traceForgeEventDocu [t1, t2]
   res <- buildersToText bl emptyTraceConfig
-  T.writeFile "/home/yupanqui/IOHK/Testdocu.md" res
+  T.writeFile "/tmp/Testdocu.md" res

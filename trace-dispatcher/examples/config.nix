@@ -1,9 +1,9 @@
 To add in node-services.nix
 
                TraceOptionSeverity  = [
-                 {ns = ""; severity = "InfoF";}
-                 {ns = "Cardano.Node.AcceptPolicy"; severity = "SilenceF";}
-                 {ns = "Cardano.Node.ChainDB"; severity = "DebugF";}
+                 {ns = ""; severity = "Info";}
+                 {ns = "Cardano.Node.AcceptPolicy"; severity = "Silence";}
+                 {ns = "Cardano.Node.ChainDB"; severity = "Debug";}
                ];
 
                 TraceOptionDetail = [
