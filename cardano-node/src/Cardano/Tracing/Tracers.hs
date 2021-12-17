@@ -1417,12 +1417,18 @@ traceInboundGovernorCountersMetrics (OnOff True) (Just ekgDirect) = ipgcTracer
     ipgcTracer :: Tracer IO (InboundGovernorTrace addr)
     ipgcTracer = Tracer $ \case
       (TrInboundGovernorCounters InboundGovernorCounters {
+          idlePeersRemote,
+          coldPeersRemote,
           warmPeersRemote,
           hotPeersRemote
         }) -> do
-          sendEKGDirectInt ekgDirect "cardano.node.metrics.inbound-governor.warm"
+          sendEKGDirectInt ekgDirect "cardano.node.metrics.inboundGovernor.idle"
+                                     idlePeersRemote
+          sendEKGDirectInt ekgDirect "cardano.node.metrics.inboundGovernor.cold"
+                                     coldPeersRemote
+          sendEKGDirectInt ekgDirect "cardano.node.metrics.inboundGovernor.warm"
                                      warmPeersRemote
-          sendEKGDirectInt ekgDirect "cardano.node.metrics.inbound-governor.hot"
+          sendEKGDirectInt ekgDirect "cardano.node.metrics.inboundGovernor.hot"
                                      hotPeersRemote
       _ -> return ()
 
