@@ -376,7 +376,9 @@ mkTracers blockConfig tOpts@(TracingOn trSel) tr nodeKern ekgDirect enableP2P = 
                     ekgDirect
               <> tracerOnOff (traceConnectionManager trSel)
                               verb "ConnectionManager" tr
-           , P2P.dtConnectionManagerTransitionTracer = nullTracer -- TODO
+           , P2P.dtConnectionManagerTransitionTracer =
+               tracerOnOff (traceConnectionManagerTransitions trSel)
+                           verb "ConnectionManagerTransitions" tr
            , P2P.dtServerTracer =
                tracerOnOff (traceServer trSel) verb "Server" tr
            , P2P.dtInboundGovernorTracer =
@@ -385,7 +387,9 @@ mkTracers blockConfig tOpts@(TracingOn trSel) tr nodeKern ekgDirect enableP2P = 
                    ekgDirect
               <> tracerOnOff (traceInboundGovernor trSel)
                               verb "InboundGovernor" tr
-           , P2P.dtInboundGovernorTransitionTracer = nullTracer -- TODO
+           , P2P.dtInboundGovernorTransitionTracer =
+               tracerOnOff (traceInboundGovernorTransitions trSel)
+                           verb "InboundGovernorTransitions" tr
            , P2P.dtLocalConnectionManagerTracer =
                tracerOnOff (traceLocalConnectionManager trSel)
                             verb "LocalConnectionManager" tr
