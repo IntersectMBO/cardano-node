@@ -7,8 +7,7 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Cardano.Benchmarking.Types
-  (
-    Ack(..)
+  ( Ack(..)
   , NodeIPv4Address
   , NumberOfInputsPerTx(..)
   , NumberOfOutputsPerTx(..)
@@ -29,7 +28,7 @@ import           Data.Word
 import           GHC.Generics
 import           Data.Aeson
 
-import           Cardano.Node.Types (NodeIPv4Address)
+import           Cardano.Node.Configuration.NodeAddress
 
 myJsonOptions :: Options
 myJsonOptions = defaultOptions {
