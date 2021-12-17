@@ -1,5 +1,5 @@
 name:                  tx-generator
-version:               1.32
+version:               2.0
 description:           The transaction generator for cardano node
 author:                IOHK
 maintainer:            operations@iohk.io
@@ -24,12 +24,9 @@ library
                         -Wwarn=deprecations
 
   exposed-modules:
-                       Cardano.Benchmarking.CliArgsScript
                        Cardano.Benchmarking.Command
-                       Cardano.Benchmarking.DSL
                        Cardano.Benchmarking.FundSet
                        Cardano.Benchmarking.GeneratorTx
-                       Cardano.Benchmarking.GeneratorTx.Benchmark
                        Cardano.Benchmarking.GeneratorTx.Error
                        Cardano.Benchmarking.GeneratorTx.LocalProtocolDefinition
                        Cardano.Benchmarking.GeneratorTx.Genesis
@@ -39,7 +36,6 @@ library
                        Cardano.Benchmarking.GeneratorTx.Tx.Byron
                        Cardano.Benchmarking.GeneratorTx.Submission
                        Cardano.Benchmarking.GeneratorTx.SubmissionClient
-                       Cardano.Benchmarking.GeneratorTx.CLI.Parsers
                        Cardano.Benchmarking.OuroborosImports
                        Cardano.Benchmarking.Script
                        Cardano.Benchmarking.Script.Action
@@ -143,11 +139,7 @@ test-suite tx-generator-test
   type:                 exitcode-stdio-1.0
 
   build-depends:        base >=4.12 && <5
-                      , hedgehog
-                      , heredoc
-                      , optparse-applicative-fork
                       , tasty
-                      , tasty-hedgehog
                       , tasty-hunit
                       , tx-generator
 

@@ -7,9 +7,8 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Cardano.Benchmarking.Types
-  ( Ack(..)
-  , Acked(..)
-  , InitCooldown(..)   
+  (
+    Ack(..)
   , NodeIPv4Address
   , NumberOfInputsPerTx(..)
   , NumberOfOutputsPerTx(..)
@@ -36,17 +35,6 @@ myJsonOptions :: Options
 myJsonOptions = defaultOptions {
   unwrapUnaryRecords = True
   }
-
--- | How long wait before starting the main submission phase,
---   after the init Tx batch was submitted.
-newtype InitCooldown =
-  InitCooldown Int
-  deriving newtype (Eq, Ord, Num, Show)
-deriving stock instance Generic InitCooldown
-instance ToJSON InitCooldown where
-  toJSON     = genericToJSON myJsonOptions
-  toEncoding = genericToEncoding myJsonOptions
-instance FromJSON InitCooldown where parseJSON = genericParseJSON myJsonOptions
 
 newtype NumberOfInputsPerTx =
   NumberOfInputsPerTx Int
@@ -108,9 +96,6 @@ newtype ToAnnce tx = ToAnnce [tx]
 
 -- | Transactions announced, yet unacked by peer.
 newtype UnAcked tx = UnAcked [tx]
-
--- | Transactions acked by peer.
-newtype Acked tx = Acked [tx]
 
 -- | Peer acknowledged this many txids of the outstanding window.
 newtype Ack = Ack Int deriving newtype (Enum, Eq, Integral, Num, Ord, Real)

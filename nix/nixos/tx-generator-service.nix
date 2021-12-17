@@ -152,7 +152,6 @@ in pkgs.commonLib.defServiceModule
       exeName = "tx-generator";
 
       extraOptionDecls = {
-        scriptMode      = opt bool true      "Whether to use the modern script parametrisation mode of the generator.";
         continuousMode  = opt bool false     "Whether to use continuous generation, without the full UTxO pre-splitting phase.";
 
         ## TODO: the defaults should be externalised to a file.
@@ -208,36 +207,11 @@ in pkgs.commonLib.defServiceModule
 
       configExeArgsFn =
         cfg: with cfg;
-          if scriptMode
-          then
             let jsonFile =
                   if runScriptFile != null then runScriptFile
                   else "${pkgs.writeText "generator-config-run-script.json"
                                          (decideRunScript cfg)}";
-            in ["legacy-json" jsonFile]
-          else
-          (["cliArguments"
-
-            "--config"                 nodeConfigFile
-
-            "--socket-path"            localNodeSocketPath
-
-            ## XXX
-            "--${if era == "alonzo" then "mary" else era}"
-
-            "--num-of-txs"             tx_count
-            "--add-tx-size"            add_tx_size
-            "--inputs-per-tx"          inputs_per_tx
-            "--outputs-per-tx"         outputs_per_tx
-            "--tx-fee"                 tx_fee
-            "--tps"                    tps
-            "--init-cooldown"          init_cooldown
-
-            "--genesis-funds-key"      sigKey
-          ] ++
-          __attrValues
-            (__mapAttrs (name: { ip, port }: "--target-node '(\"${ip}\",${toString port})'")
-              targetNodes));
+            in ["legacy-json" jsonFile];
 
       configSystemdExtraConfig = _: {};
 

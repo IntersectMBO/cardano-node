@@ -34,18 +34,7 @@ actionToJSON a = case a of
   StartProtocol filePath -> singleton "startProtocol" filePath
   ReadSigningKey (KeyName name) (SigningKeyFile filePath)
     -> object ["readSigningKey" .= name, "filePath" .= filePath]
-  SecureGenesisFund (FundName fundName) (KeyName fundKey) (KeyName genesisKey)
-    -> object ["secureGenesisFund" .= fundName, "fundKey" .= fundKey, "genesisKey" .= genesisKey ]
-  SplitFund newFunds (KeyName newKey) (FundName sourceFund)
-    -> object ["splitFund" .= names, "newKey" .= newKey, "sourceFund" .= sourceFund]
-    where names = [n | FundName n <- newFunds]
-  SplitFundToList (FundListName fundList) (KeyName destKey) (FundName sourceFund)
-    -> object ["splitFundToList" .= fundList, "newKey" .= destKey, "sourceFund" .= sourceFund ]
   Delay t -> object ["delay" .= t ]
-  PrepareTxList (TxListName name) (KeyName key) (FundListName fund)
-    -> object ["prepareTxList" .= name, "newKey" .= key, "fundList" .= fund ]
-  AsyncBenchmark (ThreadName t) (TxListName txs) (TPSRate tps) 
-    -> object ["asyncBenchmark" .= t, "txList" .= txs, "tps" .= tps]
   ImportGenesisFund submitMode (KeyName genesisKey) (KeyName fundKey)
     -> object ["importGenesisFund" .= genesisKey, "submitMode" .= submitMode, "fundKey" .= fundKey ]
   CreateChange submitMode payMode value count
@@ -79,12 +68,7 @@ objectToAction obj = case obj of
   (HashMap.lookup "startProtocol"     -> Just v)
     -> (withText "Error parsing startProtocol" $ \t -> return $ StartProtocol $ Text.unpack t) v
   (HashMap.lookup "readSigningKey"    -> Just v) -> parseReadSigningKey v
-  (HashMap.lookup "secureGenesisFund" -> Just v) -> parseSecureGenesisFund v
-  (HashMap.lookup "splitFund"         -> Just v) -> parseSplitFund v
-  (HashMap.lookup "splitFundToList"   -> Just v) -> parseSplitFundToList v
   (HashMap.lookup "delay"             -> Just v) -> Delay <$> parseJSON v
-  (HashMap.lookup "prepareTxList"     -> Just v) -> parsePrepareTxList v
-  (HashMap.lookup "asyncBenchmark"    -> Just v) -> parseAsyncBenchmark v
   (HashMap.lookup "importGenesisFund" -> Just v) -> parseImportGenesisFund v
   (HashMap.lookup "createChange"      -> Just v) -> parseCreateChange v
   (HashMap.lookup "runBenchmark"      -> Just v) -> parseRunBenchmark v
@@ -104,39 +88,12 @@ objectToAction obj = case obj of
       tagParser = genericParseJSON defaultOptions
 
   parseKey f = KeyName <$> parseField obj f
-  parseFund f = FundName <$> parseField obj f
   parseThreadName
     = withText "Error parsing ThreadName" $ \t -> return $ ThreadName $ Text.unpack t
 
   parseReadSigningKey v = ReadSigningKey
     <$> ( KeyName <$> parseJSON v )
     <*> ( SigningKeyFile <$> parseField obj "filePath" )
-
-  parseSecureGenesisFund v = SecureGenesisFund
-    <$> ( FundName <$> parseJSON v )
-    <*> parseKey "fundKey"
-    <*> parseKey "genesisKey"
-
-  parseSplitFund v  = do
-    l <- parseJSON v
-    k <- parseKey "newKey"
-    f <- parseFund "sourceFund"
-    return $ SplitFund (map FundName l) k f
-
-  parseSplitFundToList v = SplitFundToList
-    <$> ( FundListName <$> parseJSON v )
-    <*> parseKey "newKey"
-    <*> parseFund "sourceFund"
-
-  parsePrepareTxList v = PrepareTxList
-    <$> ( TxListName <$> parseJSON v )
-    <*> parseKey "newKey"
-    <*> ( FundListName <$>parseField obj "fundList" )
-
-  parseAsyncBenchmark v = AsyncBenchmark
-    <$> ( ThreadName <$> parseJSON v )
-    <*> ( TxListName <$> parseField obj "txList" )
-    <*> ( TPSRate <$> parseField obj "tps" )   
 
   parseRunBenchmark v = RunBenchmark
     <$> parseField obj "submitMode"
