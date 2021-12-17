@@ -61,10 +61,12 @@ library
 
   exposed-modules:     Cardano.Node.Configuration.Logging
                        Cardano.Node.Configuration.POM
+                       Cardano.Node.Configuration.Socket
                        Cardano.Node.Configuration.Topology
                        Cardano.Node.Configuration.TopologyP2P
                        Cardano.Node.Handlers.Shutdown
                        Cardano.Node.Handlers.TopLevel
+                       Cardano.Node.NodeAddress
                        Cardano.Node.Orphans
                        Cardano.Node.Protocol
                        Cardano.Node.Protocol.Alonzo
@@ -76,14 +78,40 @@ library
                        Cardano.Node.Queries
                        Cardano.Node.Run
                        Cardano.Node.STM
+                       Cardano.Node.Startup
+                       Cardano.Node.TraceConstraints
+                       Cardano.Node.Tracing
                        Cardano.Node.Types
+                       Cardano.TraceDispatcher.API
+                       Cardano.TraceDispatcher.Compat
+                       Cardano.TraceDispatcher.Documentation
+                       Cardano.TraceDispatcher.Era.Byron
+                       Cardano.TraceDispatcher.Era.HardFork
+                       Cardano.TraceDispatcher.Era.Shelley
+                       Cardano.TraceDispatcher.Tracers
+                       Cardano.TraceDispatcher.Tracers.BlockReplayProgress
+                       Cardano.TraceDispatcher.Tracers.ChainDB
+                       Cardano.TraceDispatcher.Tracers.Consensus
+                       Cardano.TraceDispatcher.Tracers.Diffusion
+                       Cardano.TraceDispatcher.Tracers.KESInfo
+                       Cardano.TraceDispatcher.Tracers.StartLeadershipCheck
+                       Cardano.TraceDispatcher.Tracers.ForgingThreadStats
+                       Cardano.TraceDispatcher.Tracers.Resources
+                       Cardano.TraceDispatcher.Tracers.Peer
+                       Cardano.TraceDispatcher.Tracers.Startup
+                       Cardano.TraceDispatcher.Tracers.Shutdown
+                       Cardano.TraceDispatcher.Tracers.P2P
+                       Cardano.TraceDispatcher.Tracers.NonP2P
+                       Cardano.TraceDispatcher.Tracers.NodeToClient
+                       Cardano.TraceDispatcher.Tracers.NodeToNode
+                       Cardano.TraceDispatcher.Formatting
+                       Cardano.TraceDispatcher.Render
                        Cardano.Tracing.Config
-                       Cardano.Tracing.Constraints
-                       Cardano.Tracing.Kernel
                        Cardano.Tracing.Metrics
                        Cardano.Tracing.Peer
                        Cardano.Tracing.Render
                        Cardano.Tracing.Startup
+                       Cardano.Tracing.Shutdown
                        Cardano.Tracing.Tracers
                        Cardano.Tracing.OrphanInstances.Byron
                        Cardano.Tracing.OrphanInstances.Common
@@ -93,7 +121,6 @@ library
                        Cardano.Tracing.OrphanInstances.Shelley
 
   other-modules:       Paths_cardano_node
-                       Cardano.Node.Configuration.Socket
 
   build-depends:        aeson             >= 1.5.6.0
                       , async
@@ -150,6 +177,9 @@ library
                       , text
                       , time
                       , tracer-transformers
+                      , trace-dispatcher
+                      , trace-forward
+                      , trace-resources
                       , transformers
                       , transformers-except
                       , typed-protocols

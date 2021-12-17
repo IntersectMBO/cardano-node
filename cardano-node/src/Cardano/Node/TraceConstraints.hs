@@ -1,16 +1,16 @@
-{-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE ConstraintKinds  #-}
+{-# LANGUAGE DataKinds        #-}
 {-# LANGUAGE FlexibleContexts #-}
-
-module Cardano.Tracing.Constraints
-  ( TraceConstraints
-  ) where
+module Cardano.Node.TraceConstraints (TraceConstraints) where
 
 import           Prelude (Show)
 
 import           Data.Aeson
 
 import           Cardano.BM.Tracing (ToObject)
-import           Cardano.Node.Queries (ConvertTxId, LedgerQueries)
+import           Cardano.Logging (LogFormatting)
+import           Cardano.Node.Queries (ConvertTxId, GetKESInfo (..),
+                     HasKESInfo (..), HasKESMetricsData (..), LedgerQueries)
 
 import           Cardano.Ledger.Alonzo (AlonzoEra)
 import           Cardano.Ledger.Alonzo.PParams (PParamsUpdate)
@@ -19,14 +19,18 @@ import           Cardano.Ledger.Alonzo.Rules.Utxo (UtxoPredicateFailure)
 import           Cardano.Ledger.Alonzo.Rules.Utxow (AlonzoPredFail)
 import           Cardano.Ledger.Alonzo.TxBody (TxOut)
 import           Cardano.Ledger.Crypto (StandardCrypto)
-import           Ouroboros.Consensus.Block (BlockProtocol, CannotForge, ForgeStateUpdateError,
-                   Header)
+
+import           Ouroboros.Consensus.Block (BlockProtocol, CannotForge,
+                     ConvertRawHash, ForgeStateUpdateError, Header)
 import           Ouroboros.Consensus.HeaderValidation (OtherHeaderEnvelopeError)
 import           Ouroboros.Consensus.Ledger.Abstract (LedgerError)
-import           Ouroboros.Consensus.Ledger.Inspect (LedgerEvent)
-import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, HasTxId, HasTxs (..))
+import           Ouroboros.Consensus.Ledger.Inspect (LedgerEvent, LedgerUpdate,
+                     LedgerWarning)
+import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr,
+                     HasTxId, HasTxs (..))
 import           Ouroboros.Consensus.Protocol.Abstract (ValidationErr)
 import           Ouroboros.Consensus.Shelley.Ledger.Mempool (GenTx, TxId)
+
 
 -- | Tracing-related constraints for monitoring purposes.
 type TraceConstraints blk =
@@ -37,6 +41,13 @@ type TraceConstraints blk =
     , ToJSON   (TxId (GenTx blk))
     , ToJSON   (TxOut (AlonzoEra StandardCrypto))
     , ToJSON   (PParamsUpdate (AlonzoEra StandardCrypto))
+    , HasKESMetricsData blk
+    , HasKESInfo blk
+    , ConvertRawHash blk
+    , GetKESInfo blk
+    , Show blk
+    , Show (Header blk)
+
     , ToObject (ApplyTxErr blk)
     , ToObject (GenTx blk)
     , ToObject (Header blk)
@@ -49,6 +60,18 @@ type TraceConstraints blk =
     , ToObject (UtxoPredicateFailure (AlonzoEra StandardCrypto))
     , ToObject (AlonzoBbodyPredFail (AlonzoEra StandardCrypto))
     , ToObject (AlonzoPredFail (AlonzoEra StandardCrypto))
-    , Show blk
-    , Show (Header blk)
+
+    , LogFormatting (LedgerUpdate blk)
+    , LogFormatting (LedgerWarning blk)
+    , LogFormatting (ApplyTxErr blk)
+    , LogFormatting (GenTx blk)
+    , LogFormatting (Header blk)
+    , LogFormatting (LedgerError blk)
+    , LogFormatting (OtherHeaderEnvelopeError blk)
+    , LogFormatting (ValidationErr (BlockProtocol blk))
+    , LogFormatting (CannotForge blk)
+    , LogFormatting (ForgeStateUpdateError blk)
+    , LogFormatting (UtxoPredicateFailure (AlonzoEra StandardCrypto))
+    , LogFormatting (AlonzoBbodyPredFail (AlonzoEra StandardCrypto))
+    , LogFormatting (AlonzoPredFail (AlonzoEra StandardCrypto))
     )

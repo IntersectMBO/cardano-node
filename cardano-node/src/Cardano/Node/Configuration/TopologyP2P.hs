@@ -33,6 +33,7 @@ import qualified Data.Text as Text
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..))
 import           Cardano.Slotting.Slot (SlotNo (..))
 
+import           Cardano.Node.NodeAddress
 import           Cardano.Node.Types
 import           Cardano.Node.Configuration.Topology (TopologyError (..))
 

@@ -21,7 +21,7 @@ import           Cardano.Prelude
 import           Cardano.Node.Configuration.TopologyP2P (NetworkTopology (..), PublicRootPeers (..),
                    LocalRootPeersGroups (..), LocalRootPeersGroup (..), RootConfig (..),
                    NodeSetup (..), PeerAdvertise (..), UseLedger (..))
-import           Cardano.Node.Types (NodeAddress' (..), NodeHostIPAddress (..),
+import           Cardano.Node.NodeAddress (NodeAddress' (..), NodeHostIPAddress (..),
                    NodeHostIPv4Address (..), NodeHostIPv6Address (..),
                    NodeIPAddress, NodeIPv4Address, NodeIPv6Address)
 import           Cardano.Slotting.Slot (SlotNo (..))
@@ -54,7 +54,7 @@ genNodeAddress' genAddr =
 
 genNodeHostIPv4Address :: Gen NodeHostIPv4Address
 genNodeHostIPv4Address =
-    NodeHostIPv4Address . IP.toIPv4w <$> Gen.enumBounded
+  NodeHostIPv4Address . IP.toIPv4w <$> Gen.enumBounded
 
 genNodeHostIPv6Address :: Gen NodeHostIPv6Address
 genNodeHostIPv6Address =
