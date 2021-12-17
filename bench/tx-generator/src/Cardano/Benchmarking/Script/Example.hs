@@ -10,7 +10,7 @@ import           Data.Dependent.Sum ((==>) )
 
 import           Cardano.Api (AnyCardanoEra(..), CardanoEra(..), Quantity(..), ScriptData(..), SlotNo(..), quantityToLovelace )
 import           Cardano.Api.Shelley (ExecutionUnits(..))
-import           Cardano.Node.Types
+import           Cardano.Node.NodeAddress
 import           Ouroboros.Network.NodeToClient (withIOManager)
 
 import           Cardano.Benchmarking.Types
@@ -59,7 +59,7 @@ testScript =
   , ImportGenesisFund DiscardTX passPartout passPartout
   , CreateChange LocalSocket (PayToAddr passPartout) (quantityToLovelace 10000) 1000
   , RunBenchmark (DumpToFile "/tmp/tx-list.txt") SpendOutput (ThreadName "walletThread") (NumberOfTxs 1000) (TPSRate 10)
-  , RunBenchmark (DumpToFile "/tmp/tx-list.txt") scriptDef (ThreadName "walletThread") (NumberOfTxs 1000) (TPSRate 10)  
+  , RunBenchmark (DumpToFile "/tmp/tx-list.txt") scriptDef (ThreadName "walletThread") (NumberOfTxs 1000) (TPSRate 10)
   , Reserved []
   ]
  where

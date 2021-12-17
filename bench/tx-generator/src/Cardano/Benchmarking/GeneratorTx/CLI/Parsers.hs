@@ -8,7 +8,7 @@ import           Prelude (String)
 
 import           Cardano.Api hiding (lexPlausibleAddressString, parseAddressAny)
 import           Cardano.CLI.Types (SigningKeyFile (..))
-import           Cardano.Node.Types
+import           Cardano.Node.NodeAddress
 import qualified Control.Arrow as Arr
 import           Control.Monad (fail)
 import qualified Data.Attoparsec.ByteString.Char8 as Atto

@@ -28,7 +28,7 @@ import           Cardano.Api
 import           Cardano.CLI.Types (SigningKeyFile (..))
 
 -- Node imports
-import           Cardano.Node.Types
+import           Cardano.Node.NodeAddress
 import           Cardano.Tracing.OrphanInstances.Byron ()
 import           Cardano.Tracing.OrphanInstances.Common ()
 import           Cardano.Tracing.OrphanInstances.Consensus ()

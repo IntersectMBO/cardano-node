@@ -9,7 +9,7 @@
 module Cardano.Benchmarking.Types
   ( Ack(..)
   , Acked(..)
-  , InitCooldown(..)   
+  , InitCooldown(..)
   , NodeIPv4Address
   , NumberOfInputsPerTx(..)
   , NumberOfOutputsPerTx(..)
@@ -30,7 +30,7 @@ import           Data.Word
 import           GHC.Generics
 import           Data.Aeson
 
-import           Cardano.Node.Types (NodeIPv4Address)
+import           Cardano.Node.NodeAddress
 
 myJsonOptions :: Options
 myJsonOptions = defaultOptions {

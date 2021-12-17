@@ -34,8 +34,10 @@ import qualified Cardano.Chain.Genesis as Genesis
 
 import           Cardano.Node.Configuration.Logging
 import           Cardano.Node.Configuration.POM
+import           Cardano.Node.Handlers.Shutdown
 import           Cardano.Node.Protocol.Cardano
 import           Cardano.Node.Protocol.Types (SomeConsensusProtocol)
+import           Cardano.Node.NodeAddress
 import           Cardano.Node.Types
 
 import           Cardano.Benchmarking.DSL
@@ -151,8 +153,11 @@ startProtocol logConfigFile = do
                    , shelleyBulkCredsFile = Just ""
                    }
                  , pncValidateDB = Last $ Just False
-                 , pncShutdownIPC = Last $ Just Nothing
-                 , pncShutdownOnSlotSynced = Last $ Just NoMaxSlotNo
+                 , pncShutdownConfig =
+                   PartialShutdownConfig
+                   { pscIPC = Last $ Just Nothing
+                   , pscOnSlotSynced = Last $ Just NoMaxSlotNo
+                   }
                  , pncConfigFile = Last $ Just configFp
                  }
    configYamlPc <- parseNodeConfigurationFP . Just $ configFp

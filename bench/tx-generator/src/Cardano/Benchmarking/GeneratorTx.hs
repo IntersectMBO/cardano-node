@@ -45,7 +45,7 @@ import           Network.Socket (AddrInfo (..), AddrInfoFlag (..), Family (..), 
                    addrFamily, addrFlags, addrSocketType, defaultHints, getAddrInfo)
 
 import           Cardano.CLI.Types (SigningKeyFile (..))
-import           Cardano.Node.Types
+import           Cardano.Node.NodeAddress
 
 import           Ouroboros.Consensus.Shelley.Eras (StandardShelley)
 
