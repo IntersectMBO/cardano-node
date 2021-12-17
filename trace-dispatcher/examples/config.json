@@ -2,15 +2,15 @@
   "TraceOptionSeverity": [
     {
       "ns": "",
-      "severity": "InfoF"
+      "severity": "Info"
     },
     {
       "ns": "Cardano.Node.AcceptPolicy",
-      "severity": "SilenceF"
+      "severity": "Silence"
     },
     {
       "ns": "Cardano.Node.ChainDB",
-      "severity": "DebugF"
+      "severity": "Debug"
     }
   ],
   "TraceOptionDetail": [
@@ -42,7 +42,7 @@
   "TraceOptionForwarder": {
     "filePath": "/tmp/forwarder.sock"
   },
-  "TraceOptionForwardQueueSize": 1000,  
+  "TraceOptionForwardQueueSize": 1000,
   "TraceOptionLimiter": [
 
   ]
