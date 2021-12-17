@@ -903,8 +903,7 @@ instance Aeson.ToJSON ConnectionManagerCounters where
                                    , inboundConns
                                    , outboundConns
                                    } =
-    Aeson.object [ "kind"           .= String "ConnectionManagerCounters"
-                 , "fullDuplex"     .= toJSON fullDuplexConns
+    Aeson.object [ "fullDuplex"     .= toJSON fullDuplexConns
                  , "duplex"         .= toJSON duplexConns
                  , "unidirectional" .= toJSON unidirectionalConns
                  , "inbound"        .= inboundConns
