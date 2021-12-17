@@ -92,10 +92,115 @@
   ],
   "setupScribes": [
     {
-      "scFormat": "ScText",
+      "scFormat": "ScJson",
       "scKind": "StdoutSK",
       "scName": "stdout",
       "scRotation": null
     }
-  ]
+  ],
+
+  "UseTraceDispatcher": false,
+  "TraceOptionSeverity": [
+    {
+      "ns": "",
+      "severity": "Notice"
+    },
+    {
+      "ns": "Node.ChainDB",
+      "severity": "Info"
+    },
+    {
+      "ns": "Node.AcceptPolicy",
+      "severity": "Info"
+    },
+    {
+      "ns": "Node.DNSResolver",
+      "severity": "Info"
+    },
+    {
+      "ns": "Node.DNSSubscription",
+      "severity": "Info"
+    },
+    {
+      "ns": "Node.DiffusionInit",
+      "severity": "Info"
+    },
+    {
+      "ns": "Node.ErrorPolicy",
+      "severity": "Info"
+    },
+    {
+      "ns": "Node.Forge",
+      "severity": "Info"
+    },
+    {
+      "ns": "Node.IpSubscription",
+      "severity": "Info"
+    },
+    {
+      "ns": "Node.LocalErrorPolicy",
+      "severity": "Info"
+    },
+    {
+      "ns": "Node.Mempool",
+      "severity": "Info"
+    },
+    {
+      "ns": "Node.Resources",
+      "severity": "Info"
+    }
+  ],
+  "TraceOptionDetail": [
+    {
+      "ns": "",
+      "detail": "DNormal"
+    }
+  ],
+  "TraceOptionBackend": [
+    {
+      "ns": "",
+      "backends": [
+        "Stdout MachineFormat",
+        "EKGBackend"
+      ]
+    }
+  ],
+  "TraceOptionLimiter": [
+    {
+      "ns": "Node.ChainDB.AddBlockEvent.AddedBlockToQueue",
+      "limiterName": "AddedBlockToQueueLimiter",
+      "limiterFrequency": 2.0
+    },
+    {
+      "ns": "Node.ChainDB.AddBlockEvent.AddedBlockToVolatileDB",
+      "limiterName": "AddedBlockToVolatileDBLimiter",
+      "limiterFrequency": 2.0
+    },
+    {
+      "ns": "Node.ChainDB.CopyToImmutableDBEvent.CopiedBlockToImmutableDB",
+      "limiterName": "CopiedBlockToImmutableDBLimiter",
+      "limiterFrequency": 2.0
+    },
+    {
+      "ns": "Node.ChainDB.AddBlockEvent.AddBlockValidation.ValidCandidate",
+      "limiterName": "ValidCandidateLimiter",
+      "limiterFrequency": 2.0
+    },
+    {
+      "ns": "Node.BlockFetchClient.CompletedBlockFetch",
+      "limiterName": "CompletedBlockFetchLimiter",
+      "limiterFrequency": 2.0
+    }
+  ],
+
+  "TraceOptionForwarder": {
+    "address": {"filePath": "/tmp/forwarder.sock"},
+    "mode" : "Responder",
+    "queueSize" : 1000
+  },
+
+  "TraceOptionPeerFreqency": 2000,
+
+  "TraceOptionResourceFreqency": 5000
+
 }
