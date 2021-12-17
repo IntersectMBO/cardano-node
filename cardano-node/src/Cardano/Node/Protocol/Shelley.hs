@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -54,6 +55,10 @@ import           Cardano.Node.Types
 import           Cardano.Tracing.OrphanInstances.HardFork ()
 import           Cardano.Tracing.OrphanInstances.Shelley ()
 
+import           Cardano.Node.Tracing.Era.HardFork ()
+import           Cardano.Node.Tracing.Era.Shelley ()
+import           Cardano.Node.Tracing.Formatting ()
+
 import           Cardano.Node.Protocol.Types
 
 ------------------------------------------------------------------------------
@@ -66,8 +71,8 @@ import           Cardano.Node.Protocol.Types
 --
 -- This also serves a purpose as a sanity check that we have all the necessary
 -- type class instances available.
-mkSomeConsensusProtocolShelley
-  :: NodeShelleyProtocolConfiguration
+mkSomeConsensusProtocolShelley ::
+  NodeShelleyProtocolConfiguration
   -> Maybe ProtocolFilepaths
   -> ExceptT ShelleyProtocolInstantiationError IO SomeConsensusProtocol
 mkSomeConsensusProtocolShelley NodeShelleyProtocolConfiguration {
@@ -257,8 +262,8 @@ data ShelleyProtocolInstantiationError =
   deriving Show
 
 instance Error ShelleyProtocolInstantiationError where
-  displayError (GenesisReadError err) = displayError err
-  displayError (GenesisValidationError err) = displayError err
+  displayError (GenesisReadError err)            = displayError err
+  displayError (GenesisValidationError err)      = displayError err
   displayError (PraosLeaderCredentialsError err) = displayError err
 
 

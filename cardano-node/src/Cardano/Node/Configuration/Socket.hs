@@ -3,7 +3,8 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Cardano.Node.Configuration.Socket
-  ( gatherConfiguredSockets
+  ( SocketConfig (..)
+  , gatherConfiguredSockets
   , SocketOrSocketInfo(..)
   , getSocketOrSocketInfoAddr
   , SocketConfigError(..)
@@ -16,12 +17,12 @@ import           Prelude (String)
 import qualified Prelude
 
 import           Control.Monad.Trans.Except.Extra (handleIOExceptT)
+import           Generic.Data.Orphans ()
 import           Network.Socket (AddrInfo (..), AddrInfoFlag (..), Family (AF_INET, AF_INET6),
                    SockAddr, Socket, SocketType (..))
 import qualified Network.Socket as Socket
 
-import           Cardano.Node.Configuration.POM (NodeConfiguration (..))
-import           Cardano.Node.Types
+import           Cardano.Node.Configuration.NodeAddress
 
 import           Ouroboros.Network.NodeToClient (LocalAddress (..), LocalSocket (..))
 
@@ -100,6 +101,14 @@ renderSocketConfigError (GetAddrInfoError addr port ex) =
     "Failure while getting address information for the public listening "
  <> "address: " <> show addr <> " " <> show port <> " : " <> displayException ex
 
+data SocketConfig
+  = SocketConfig
+    { ncNodeIPv4Addr    :: !(Last NodeHostIPv4Address)
+    , ncNodeIPv6Addr    :: !(Last NodeHostIPv6Address)
+    , ncNodePortNumber  :: !(Last PortNumber)
+    , ncSocketPath      :: !(Last SocketPath)
+    }
+    deriving (Eq, Show)
 
 -- | Gather from the various sources of configuration which sockets we will use
 -- for the public node-to-node and the local node-to-client IPC.  It returns
@@ -111,15 +120,15 @@ renderSocketConfigError (GetAddrInfoError addr port ex) =
 -- * node cli
 -- * systemd socket activation
 --
-gatherConfiguredSockets :: NodeConfiguration
+gatherConfiguredSockets :: SocketConfig
                         -> ExceptT SocketConfigError IO
                                    (Maybe (SocketOrSocketInfo Socket      SockAddr),
                                     Maybe (SocketOrSocketInfo Socket      SockAddr),
                                     Maybe (SocketOrSocketInfo LocalSocket LocalAddress))
-gatherConfiguredSockets NodeConfiguration { ncNodeIPv4Addr,
-                                            ncNodeIPv6Addr,
-                                            ncNodePortNumber,
-                                            ncSocketPath } = do
+gatherConfiguredSockets SocketConfig { ncNodeIPv4Addr,
+                                       ncNodeIPv6Addr,
+                                       ncNodePortNumber,
+                                       ncSocketPath } = do
 
     systemDSockets <- liftIO getSystemdSockets
 
@@ -135,7 +144,7 @@ gatherConfiguredSockets NodeConfiguration { ncNodeIPv4Addr,
 
     -- only when 'ncNodeIPv4Addr' is specified or an ipv4 socket is passed
     -- through socket activation
-    ipv4 <- case (ncNodeIPv4Addr, firstIpv4Socket) of
+    ipv4 <- case (getLast ncNodeIPv4Addr, firstIpv4Socket) of
       (Nothing, Nothing)    -> pure Nothing
       (Nothing, Just sock)  -> return (Just (ActualSocket sock))
       (Just _, Just _)      -> throwError ClashingPublicIpv4SocketGiven
@@ -143,11 +152,11 @@ gatherConfiguredSockets NodeConfiguration { ncNodeIPv4Addr,
             fmap (SocketInfo . addrAddress) . head
         <$> nodeAddressInfo
               (Just $ nodeHostIPv4AddressToIPAddress addr)
-              ncNodePortNumber
+              (getLast ncNodePortNumber)
 
     -- only when 'ncNodeIPv6Addr' is specified or an ipv6 socket is passed
     -- through socket activation
-    ipv6 <- case (ncNodeIPv6Addr, firstIpv6Socket) of
+    ipv6 <- case (getLast ncNodeIPv6Addr, firstIpv6Socket) of
       (Nothing, Nothing)    -> pure Nothing
       (Nothing, Just sock)  -> return (Just (ActualSocket sock))
       (Just _, Just _)      -> throwError ClashingPublicIpv6SocketGiven
@@ -155,7 +164,7 @@ gatherConfiguredSockets NodeConfiguration { ncNodeIPv4Addr,
               fmap (SocketInfo . addrAddress) . head
           <$> nodeAddressInfo
                 (Just $ nodeHostIPv6AddressToIPAddress addr)
-                ncNodePortNumber
+                (getLast ncNodePortNumber)
 
     -- When none of the addresses was given. We try resolve address passing
     -- only 'ncNodePortNumber'.
@@ -163,7 +172,7 @@ gatherConfiguredSockets NodeConfiguration { ncNodeIPv4Addr,
       <- case (ipv4, ipv6) of
             (Nothing, Nothing) -> do
 
-              info <- nodeAddressInfo Nothing ncNodePortNumber
+              info <- nodeAddressInfo Nothing $ getLast ncNodePortNumber
               let ipv4' = SocketInfo . addrAddress
                       <$> find ((== AF_INET)  . addrFamily) info
                   ipv6' = SocketInfo . addrAddress
@@ -183,7 +192,7 @@ gatherConfiguredSockets NodeConfiguration { ncNodeIPv4Addr,
 
     -- only when 'ncSocketpath' is specified or a unix socket is passed through
     -- socket activation
-    local <- case (ncSocketPath, firstUnixSocket) of
+    local <- case (getLast ncSocketPath, firstUnixSocket) of
       (Nothing, Nothing)    -> return Nothing
       (Just _, Just _)      -> throwError ClashingLocalSocketGiven
       (Nothing, Just sock)  -> return . Just $ ActualSocket sock

@@ -1,34 +1,32 @@
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PackageImports #-}
 
-module Cardano.Tracing.Peer
-  ( Peer (..)
-  , getCurrentPeers
+module Cardano.Node.Tracing.Tracers.Peer
+  ( PeerT (..)
+  , startPeerTracer
+  , namesForPeers
+  , severityPeers
+  , docPeers
   , ppPeer
-  , tracePeers
   ) where
 
 import           Cardano.Prelude hiding (atomically)
 import           Prelude (String)
 
 import qualified Control.Monad.Class.MonadSTM.Strict as STM
+import           "contra-tracer" Control.Tracer
+
 import           Data.Aeson (ToJSON (..), Value (..), toJSON, (.=))
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import qualified Data.Text as Text
-import           NoThunks.Class (AllowThunk (..), NoThunks)
 import           Text.Printf (printf)
 
-import           Cardano.BM.Data.LogItem (LOContent (..))
-import           Cardano.BM.Data.Tracer (emptyObject, mkObject)
-import           Cardano.BM.Trace (traceNamedObject)
-import           Cardano.BM.Tracing
-
 import           Ouroboros.Consensus.Block (Header)
-import           Ouroboros.Network.ConnectionId (remoteAddress)
 import           Ouroboros.Consensus.Util.Orphans ()
+import           Ouroboros.Network.ConnectionId (remoteAddress)
 
 import qualified Ouroboros.Network.AnchoredFragment as Net
 import           Ouroboros.Network.Block (unSlotNo)
@@ -37,26 +35,37 @@ import qualified Ouroboros.Network.BlockFetch.ClientRegistry as Net
 import           Ouroboros.Network.BlockFetch.ClientState (PeerFetchInFlight (..),
                    PeerFetchStatus (..), readFetchClientState)
 
+import           Cardano.Logging hiding (traceWith)
 import           Cardano.Node.Queries
 
-data Peer blk =
-  Peer
-  !RemoteConnectionId
-  !(Net.AnchoredFragment (Header blk))
-  !(PeerFetchStatus (Header blk))
-  !(PeerFetchInFlight (Header blk))
-  deriving (Generic)
-  deriving NoThunks via AllowThunk (Peer blk)
+startPeerTracer ::
+     Tracer IO [PeerT blk]
+  -> NodeKernelData blk
+  -> Int
+  -> IO ()
+startPeerTracer tr nodeKern delayMilliseconds = do
+    as <- async peersThread
+    link as
+  where
+    peersThread :: IO ()
+    peersThread = forever $ do
+          peers <- getCurrentPeers nodeKern
+          traceWith tr peers
+          threadDelay (delayMilliseconds * 1000)
 
-instance NFData (Peer blk) where
-    rnf _ = ()
+data PeerT blk = PeerT
+    RemoteConnectionId
+    (Net.AnchoredFragment (Header blk))
+    (PeerFetchStatus (Header blk))
+    (PeerFetchInFlight (Header blk))
 
-ppPeer :: Peer blk -> Text
-ppPeer (Peer cid _af status inflight) =
+
+ppPeer :: PeerT blk -> Text
+ppPeer (PeerT cid _af status inflight) =
   Text.pack $ printf "%-15s %-8s %s" (ppCid cid) (ppStatus status) (ppInFlight inflight)
 
 ppCid :: RemoteConnectionId -> String
-ppCid = show . remoteAddress
+ppCid = takeWhile (/= ':') . show . remoteAddress
 
 ppInFlight :: PeerFetchInFlight header -> String
 ppInFlight f = printf
@@ -67,7 +76,7 @@ ppInFlight f = printf
  (peerFetchBytesInFlight f)
 
 ppMaxSlotNo :: Net.MaxSlotNo -> String
-ppMaxSlotNo Net.NoMaxSlotNo = "???"
+ppMaxSlotNo Net.NoMaxSlotNo   = "???"
 ppMaxSlotNo (Net.MaxSlotNo x) = show (unSlotNo x)
 
 ppStatus :: PeerFetchStatus header -> String
@@ -78,7 +87,7 @@ ppStatus PeerFetchStatusReady {} = "ready"
 
 getCurrentPeers
   :: NodeKernelData blk
-  -> IO [Peer blk]
+  -> IO [PeerT blk]
 getCurrentPeers nkd = mapNodeKernelDataIO extractPeers nkd
                       <&> fromSMaybe mempty
  where
@@ -91,7 +100,7 @@ getCurrentPeers nkd = mapNodeKernelDataIO extractPeers nkd
   getCandidates var = STM.readTVar var >>= traverse STM.readTVar
 
   extractPeers :: NodeKernel IO RemoteConnectionId LocalConnectionId blk
-                -> IO [Peer blk]
+                -> IO [PeerT blk]
   extractPeers kernel = do
     peerStates <- fmap tuple3pop <$> (   STM.atomically
                                        . (>>= traverse readFetchClientState)
@@ -102,35 +111,32 @@ getCurrentPeers nkd = mapNodeKernelDataIO extractPeers nkd
 
     let peers = flip Map.mapMaybeWithKey candidates $ \cid af ->
                   maybe Nothing
-                        (\(status, inflight) -> Just $ Peer cid af status inflight)
+                        (\(status, inflight) -> Just $ PeerT cid af status inflight)
                         $ Map.lookup cid peerStates
     pure . Map.elems $ peers
 
--- | Trace peers list, it will be forwarded to an external process
---   (for example, to RTView service).
-tracePeers
-  :: Trace IO Text
-  -> [Peer blk]
-  -> IO ()
-tracePeers tr peers = do
-  let tr' = appendName "metrics" tr
-  let tr'' = appendName "peersFromNodeKernel" tr'
-  meta <- mkLOMeta Notice Public
-  traceNamedObject tr'' (meta, LogStructured $ toObject MaximalVerbosity peers)
+--------------------------------------------------------------------------------
+-- Peers Tracer
+--------------------------------------------------------------------------------
 
--- | Instances for converting [Peer blk] to Object.
+namesForPeers :: [PeerT blk] -> [Text]
+namesForPeers _ = []
 
-instance ToObject [Peer blk] where
-  toObject MinimalVerbosity _ = emptyObject
-  toObject _ [] = emptyObject
-  toObject verb xs = mkObject
+severityPeers :: [PeerT blk] -> SeverityS
+severityPeers _ = Notice
+
+instance LogFormatting [PeerT blk] where
+  forMachine DMinimal _ = mkObject [ "kind"  .= String "NodeKernelPeers"]
+  forMachine _ []       = mkObject [ "kind"  .= String "NodeKernelPeers"]
+  forMachine dtal xs    = mkObject
     [ "kind"  .= String "NodeKernelPeers"
-    , "peers" .= toJSON
-      (foldl' (\acc x -> toObject verb x : acc) [] xs)
+    , "peers" .= toJSON (foldl' (\acc x -> forMachine dtal x : acc) [] xs)
     ]
+  forHuman peers = Text.concat $ intersperse ", " (map ppPeer peers)
+  asMetrics peers = [IntM "peersFromNodeKernel" (fromIntegral (length peers))]
 
-instance ToObject (Peer blk) where
-  toObject _verb (Peer cid _af status inflight) =
+instance LogFormatting (PeerT blk) where
+  forMachine _dtal (PeerT cid _af status inflight) =
     mkObject [ "peerAddress"   .= String (Text.pack . show . remoteAddress $ cid)
              , "peerStatus"    .= String (Text.pack . ppStatus $ status)
              , "peerSlotNo"    .= String (Text.pack . ppMaxSlotNo . peerFetchMaxSlotNo $ inflight)
@@ -138,3 +144,11 @@ instance ToObject (Peer blk) where
              , "peerBlocksInF" .= String (show . Set.size . peerFetchBlocksInFlight $ inflight)
              , "peerBytesInF"  .= String (show . peerFetchBytesInFlight $ inflight)
              ]
+
+docPeers :: Documented [PeerT blk]
+docPeers = Documented [
+      DocMsg
+        []
+        [("peersFromNodeKernel","TODO Doc")]
+        "TODO Doc"
+    ]

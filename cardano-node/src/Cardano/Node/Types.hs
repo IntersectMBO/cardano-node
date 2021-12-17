@@ -1,7 +1,7 @@
-{-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
+{-# LANGUAGE MonoLocalBinds #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 
@@ -16,26 +16,7 @@ module Cardano.Node.Types
   , GenesisHash(..)
   , MaxConcurrencyBulkSync(..)
   , MaxConcurrencyDeadline(..)
-    -- * Node addresses
-  , NodeAddress'(..)
-  , NodeIPAddress
-  , nodeAddressToSockAddr
-  , NodeIPv4Address
-  , NodeIPv6Address
-  , NodeDnsAddress
-  , nodeIPv4ToIPAddress
-  , nodeIPv6ToIPAddress
-  , nodeDnsAddressToDomainAddress
-  , NodeHostIPAddress (..)
-  , nodeHostIPAddressToSockAddr
-  , NodeHostIPv4Address (..)
-  , NodeHostIPv6Address (..)
-  , nodeHostIPv4AddressToIPAddress
-  , nodeHostIPv6AddressToIPAddress
-  , NodeHostDnsAddress (..)
-  , nodeHostDnsAddressToDomain
-  , PortNumber
-  , SocketPath(..)
+    -- * Networking
   , TopologyFile(..)
   , NodeDiffusionMode (..)
     -- * Consensus protocol configuration
@@ -45,34 +26,30 @@ module Cardano.Node.Types
   , NodeShelleyProtocolConfiguration(..)
   , NodeAlonzoProtocolConfiguration(..)
   , VRFPrivateKeyFilePermissionError(..)
-  , protocolName
   , renderVRFPrivateKeyFilePermissionError
   ) where
 
 import           Cardano.Prelude
-import           Prelude (String, fail)
+import           Prelude (fail)
 
 import           Data.Aeson
-import           Data.IP (IP (..), IPv4, IPv6)
-import qualified Data.IP as IP
 import qualified Data.Text as Text
-import qualified Data.Text.Encoding as Text
-import qualified Network.DNS as DNS (Domain)
-import           Network.Socket (PortNumber, SockAddr (..))
 
 import           Cardano.Api
 import qualified Cardano.Chain.Update as Byron
 import           Cardano.Crypto (RequiresNetworkMagic (..))
 import qualified Cardano.Crypto.Hash as Crypto
-import           Cardano.Node.Protocol.Types (Protocol (..))
-import           Ouroboros.Network.PeerSelection.RootPeersDNS (DomainAccessPoint (..))
+import           Cardano.Node.Configuration.NodeAddress
+import           Cardano.Node.Configuration.Socket (SocketConfig (..))
 
 --TODO: things will probably be clearer if we don't use these newtype wrappers and instead
 -- use records with named fields in the CLI code.
 import           Ouroboros.Network.NodeToNode (DiffusionMode (..))
 
 -- | Errors for the cardano-config module.
-newtype ConfigError = ConfigErrorFileNotFound FilePath
+data ConfigError =
+    ConfigErrorFileNotFound FilePath
+  | ConfigErrorNoEKG
     deriving Show
 
 -- | Filepath of the configuration yaml file. This file determines
@@ -105,123 +82,6 @@ newtype MaxConcurrencyDeadline = MaxConcurrencyDeadline
   { unMaxConcurrencyDeadline :: Word }
   deriving stock (Eq, Ord)
   deriving newtype (FromJSON, Show)
-
-
--- | IPv4 or IPv6 address with a port number.
-data NodeAddress' addr = NodeAddress
-  { naHostAddress :: !addr
-  , naPort :: !PortNumber
-  } deriving (Eq, Ord, Show, Functor)
-
-type NodeIPAddress   = NodeAddress' NodeHostIPAddress
-type NodeIPv4Address = NodeAddress' NodeHostIPv4Address
-type NodeIPv6Address = NodeAddress' NodeHostIPv6Address
-type NodeDnsAddress  = NodeAddress' NodeHostDnsAddress
-
-
-instance FromJSON addr => FromJSON (NodeAddress' addr) where
-  parseJSON = withObject "NodeAddress" $ \v -> do
-    NodeAddress
-      <$> v .: "addr"
-      <*> ((fromIntegral :: Int -> PortNumber) <$> v .: "port")
-
-instance ToJSON addr => ToJSON (NodeAddress' addr) where
-  toJSON na =
-    object
-      [ "addr" .= toJSON (naHostAddress na)
-      , "port" .= (fromIntegral (naPort na) :: Int)
-      ]
-
-
-nodeIPv4ToIPAddress :: NodeIPv4Address -> NodeIPAddress
-nodeIPv4ToIPAddress = fmap nodeHostIPv4AddressToIPAddress
-
-nodeIPv6ToIPAddress :: NodeIPv6Address -> NodeIPAddress
-nodeIPv6ToIPAddress = fmap nodeHostIPv6AddressToIPAddress
-
-nodeDnsAddressToDomainAddress :: NodeDnsAddress -> DomainAccessPoint
-nodeDnsAddressToDomainAddress NodeAddress { naHostAddress = NodeHostDnsAddress dns, naPort }
-  = DomainAccessPoint (Text.encodeUtf8 dns) naPort
-
-nodeAddressToSockAddr :: NodeIPAddress -> SockAddr
-nodeAddressToSockAddr (NodeAddress addr port) =
-  case unNodeHostIPAddress addr of
-    IP.IPv4 ipv4 -> SockAddrInet  port   (IP.toHostAddress ipv4)
-    IP.IPv6 ipv6 -> SockAddrInet6 port 0 (IP.toHostAddress6 ipv6) 0
-
-nodeHostIPAddressToSockAddr :: NodeIPAddress -> SockAddr
-nodeHostIPAddressToSockAddr NodeAddress { naHostAddress = NodeHostIPAddress ip, naPort } =
-    case ip of
-      IPv4 ipv4 -> SockAddrInet  (fromIntegral naPort)   (IP.toHostAddress ipv4)
-      IPv6 ipv6 -> SockAddrInet6 (fromIntegral naPort) 0 (IP.toHostAddress6 ipv6) 0
-
-
-newtype NodeHostIPv4Address
-  = NodeHostIPv4Address { unNodeHostIPv4Address :: IPv4 }
-  deriving newtype Show
-  deriving (Eq, Ord)
-
-instance FromJSON NodeHostIPv4Address where
-  parseJSON (String ipStr) =
-    case readMaybe $ Text.unpack ipStr of
-      Just ip -> pure $ NodeHostIPv4Address ip
-      Nothing -> fail $ "Parsing of IPv4 failed: " <> Text.unpack ipStr
-  parseJSON invalid = fail $ "Parsing of IPv4 failed due to type mismatch. "
-                           <> "Encountered: " <> show invalid <> "\n"
-
-instance ToJSON NodeHostIPv4Address where
-  toJSON (NodeHostIPv4Address ip) = String (Text.pack $ show ip)
-
-
-newtype NodeHostIPv6Address
-  = NodeHostIPv6Address { unNodeHostIPv6Address :: IPv6 }
-  deriving newtype Show
-  deriving (Eq, Ord)
-
-instance FromJSON NodeHostIPv6Address where
-  parseJSON (String ipStr) =
-    case readMaybe $ Text.unpack ipStr of
-      Just ip -> pure $ NodeHostIPv6Address ip
-      Nothing -> fail $ "Parsing of IPv6 failed: " <> Text.unpack ipStr
-  parseJSON invalid = fail $ "Parsing of IPv6 failed due to type mismatch. "
-                          <> "Encountered: " <> show invalid <> "\n"
-instance ToJSON NodeHostIPv6Address where
-  toJSON (NodeHostIPv6Address ip) = String (Text.pack $ show ip)
-
-
-newtype NodeHostIPAddress
-  = NodeHostIPAddress { unNodeHostIPAddress :: IP }
-  deriving newtype Show
-  deriving (Eq, Ord)
-
-instance FromJSON NodeHostIPAddress where
-  parseJSON (String ipStr) =
-    case readMaybe $ Text.unpack ipStr of
-      Just ip -> pure $ NodeHostIPAddress ip
-      Nothing -> fail $ "Parsing of IP failed: " <> Text.unpack ipStr
-  parseJSON invalid = fail $ "Parsing of IP failed due to type mismatch. "
-                          <> "Encountered: " <> show invalid <> "\n"
-
-instance ToJSON NodeHostIPAddress where
-  toJSON (NodeHostIPAddress ip) = String (Text.pack $ show ip)
-
-
-nodeHostIPv6AddressToIPAddress :: NodeHostIPv6Address -> NodeHostIPAddress
-nodeHostIPv6AddressToIPAddress (NodeHostIPv6Address ip) = NodeHostIPAddress (IPv6 ip)
-
-nodeHostIPv4AddressToIPAddress :: NodeHostIPv4Address -> NodeHostIPAddress
-nodeHostIPv4AddressToIPAddress (NodeHostIPv4Address ip) = NodeHostIPAddress (IPv4 ip)
-
-
--- | Domain name.
---
-newtype NodeHostDnsAddress
-  = NodeHostDnsAddress { unNodeHostDnsAddress :: Text }
-  deriving newtype Show
-  deriving (Eq, Ord)
-
-nodeHostDnsAddressToDomain :: NodeHostDnsAddress -> DNS.Domain
-nodeHostDnsAddressToDomain = Text.encodeUtf8 . unNodeHostDnsAddress
 
 
 -- | Newtype wrapper which provides 'FromJSON' instance for 'DiffusionMode'.
@@ -282,17 +142,17 @@ data NodeAlonzoProtocolConfiguration =
 
 data NodeByronProtocolConfiguration =
      NodeByronProtocolConfiguration {
-       npcByronGenesisFile         :: !GenesisFile
-     , npcByronGenesisFileHash     :: !(Maybe GenesisHash)
-     , npcByronReqNetworkMagic     :: !RequiresNetworkMagic
-     , npcByronPbftSignatureThresh :: !(Maybe Double)
+       npcByronGenesisFile                   :: !GenesisFile
+     , npcByronGenesisFileHash               :: !(Maybe GenesisHash)
+     , npcByronReqNetworkMagic               :: !RequiresNetworkMagic
+     , npcByronPbftSignatureThresh           :: !(Maybe Double)
 
        --TODO: eliminate these two: it can be hard-coded
        -- | Update application name.
-     , npcByronApplicationName     :: !Byron.ApplicationName
+     , npcByronApplicationName               :: !Byron.ApplicationName
 
        -- | Application (ie software) version.
-     , npcByronApplicationVersion  :: !Byron.NumSoftwareVersion
+     , npcByronApplicationVersion            :: !Byron.NumSoftwareVersion
 
        --TODO: eliminate these: it can be done automatically in consensus
        -- | These declare the version of the protocol that the node is prepared
@@ -336,7 +196,7 @@ data NodeHardForkProtocolConfiguration =
        -- Obviously if this is used, all the nodes in the test cluster must be
        -- configured the same, or they will disagree.
        --
-     , npcTestShelleyHardForkAtEpoch :: Maybe EpochNo
+     , npcTestShelleyHardForkAtEpoch        :: Maybe EpochNo
 
        -- | For testing purposes we support specifying that the hard fork
        -- happens at a given major protocol version. For example this can be
@@ -347,7 +207,7 @@ data NodeHardForkProtocolConfiguration =
        -- Obviously if this is used, all the nodes in the test cluster must be
        -- configured the same, or they will disagree.
        --
-     , npcTestShelleyHardForkAtVersion :: Maybe Word
+     , npcTestShelleyHardForkAtVersion      :: Maybe Word
 
        -- | For testing purposes we support specifying that the hard fork
        -- happens at an exact epoch number (ie the first epoch of the new era).
@@ -355,7 +215,7 @@ data NodeHardForkProtocolConfiguration =
        -- Obviously if this is used, all the nodes in the test cluster must be
        -- configured the same, or they will disagree.
        --
-     , npcTestAllegraHardForkAtEpoch :: Maybe EpochNo
+     , npcTestAllegraHardForkAtEpoch        :: Maybe EpochNo
 
        -- | For testing purposes we support specifying that the hard fork
        -- happens at a given major protocol version.
@@ -363,7 +223,7 @@ data NodeHardForkProtocolConfiguration =
        -- Obviously if this is used, all the nodes in the test cluster must be
        -- configured the same, or they will disagree.
        --
-     , npcTestAllegraHardForkAtVersion :: Maybe Word
+     , npcTestAllegraHardForkAtVersion      :: Maybe Word
 
        -- | For testing purposes we support specifying that the hard fork
        -- happens at an exact epoch number (ie the first epoch of the new era).
@@ -371,7 +231,7 @@ data NodeHardForkProtocolConfiguration =
        -- Obviously if this is used, all the nodes in the test cluster must be
        -- configured the same, or they will disagree.
        --
-     , npcTestMaryHardForkAtEpoch :: Maybe EpochNo
+     , npcTestMaryHardForkAtEpoch           :: Maybe EpochNo
 
        -- | For testing purposes we support specifying that the hard fork
        -- happens at a given major protocol version.
@@ -380,7 +240,7 @@ data NodeHardForkProtocolConfiguration =
        -- configured the same, or they will disagree.
        --
        --
-     , npcTestMaryHardForkAtVersion :: Maybe Word
+     , npcTestMaryHardForkAtVersion         :: Maybe Word
 
        -- | For testing purposes we support specifying that the hard fork
        -- happens at an exact epoch number (ie the first epoch of the new era).
@@ -388,7 +248,7 @@ data NodeHardForkProtocolConfiguration =
        -- Obviously if this is used, all the nodes in the test cluster must be
        -- configured the same, or they will disagree.
        --
-     , npcTestAlonzoHardForkAtEpoch :: Maybe EpochNo
+     , npcTestAlonzoHardForkAtEpoch         :: Maybe EpochNo
 
        -- | For testing purposes we support specifying that the hard fork
        -- happens at a given major protocol version.
@@ -396,14 +256,9 @@ data NodeHardForkProtocolConfiguration =
        -- Obviously if this is used, all the nodes in the test cluster must be
        -- configured the same, or they will disagree.
        --
-     , npcTestAlonzoHardForkAtVersion :: Maybe Word
+     , npcTestAlonzoHardForkAtVersion       :: Maybe Word
      }
   deriving (Eq, Show)
-
-newtype SocketPath = SocketPath
-  { unSocketPath :: FilePath }
-  deriving stock (Eq, Ord)
-  deriving newtype (FromJSON, IsString, Show)
 
 newtype TopologyFile = TopologyFile
   { unTopology :: FilePath }
@@ -441,6 +296,10 @@ instance AdjustFilePaths NodeAlonzoProtocolConfiguration where
                       } =
     x { npcAlonzoGenesisFile = adjustFilePaths f npcAlonzoGenesisFile }
 
+instance AdjustFilePaths SocketConfig where
+  adjustFilePaths f x@SocketConfig{ncSocketPath} =
+    x { ncSocketPath = adjustFilePaths f ncSocketPath }
+
 instance AdjustFilePaths SocketPath where
   adjustFilePaths f (SocketPath p) = SocketPath (f p)
 
@@ -450,25 +309,8 @@ instance AdjustFilePaths GenesisFile where
 instance AdjustFilePaths a => AdjustFilePaths (Maybe a) where
   adjustFilePaths f = fmap (adjustFilePaths f)
 
-
-instance AdjustFilePaths (Last NodeProtocolConfiguration) where
-
-  adjustFilePaths f (Last (Just npc)) =
-    Last . Just $ adjustFilePaths f npc
-
-  adjustFilePaths _ (Last Nothing) = Last Nothing
-
-instance AdjustFilePaths (Last SocketPath) where
-  adjustFilePaths f (Last (Just (SocketPath p))) = Last . Just $ SocketPath (f p)
-  adjustFilePaths _ (Last Nothing) = Last Nothing
-
--- | A human readable name for the protocol
---
-protocolName :: Protocol -> String
-protocolName ByronProtocol   = "Byron"
-protocolName ShelleyProtocol = "Shelley"
-protocolName CardanoProtocol = "Byron; Shelley"
-
+instance AdjustFilePaths a => AdjustFilePaths (Last a) where
+  adjustFilePaths f = fmap (adjustFilePaths f)
 
 data VRFPrivateKeyFilePermissionError
   = OtherPermissionsExist FilePath

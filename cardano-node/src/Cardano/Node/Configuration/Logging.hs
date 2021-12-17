@@ -1,15 +1,15 @@
-{-# LANGUAGE CPP #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE Rank2Types #-}
+{-# LANGUAGE CPP                 #-}
+{-# LANGUAGE FlexibleContexts    #-}
+{-# LANGUAGE GADTs               #-}
+{-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE PackageImports      #-}
+{-# LANGUAGE Rank2Types          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Cardano.Node.Configuration.Logging
   ( LoggingLayer (..)
   , EKGDirect(..)
   , createLoggingLayer
-  , nodeBasicInfo
   , shutdownLoggingLayer
   , traceCounter
   -- re-exports
@@ -24,10 +24,11 @@ module Cardano.Node.Configuration.Logging
 
 import           Cardano.Prelude hiding (trace)
 
+import qualified Control.Concurrent as Conc
 import qualified Control.Concurrent.Async as Async
 import           Control.Exception.Safe (MonadCatch)
 import           Control.Monad.Trans.Except.Extra (catchIOExceptT)
-import           Control.Tracer
+import           "contra-tracer" Control.Tracer
 import           Data.List (nub)
 import qualified Data.Map as Map
 import           Data.Text (pack)
@@ -49,7 +50,8 @@ import qualified Cardano.BM.Configuration as Config
 import qualified Cardano.BM.Configuration.Model as Config
 import           Cardano.BM.Data.Aggregated (Measurable (..))
 import           Cardano.BM.Data.Backend (Backend, BackendKind (..))
-import           Cardano.BM.Data.LogItem (LOContent (..), LOMeta (..), LoggerName)
+import           Cardano.BM.Data.LogItem (LOContent (..), LOMeta (..),
+                     LoggerName)
 import qualified Cardano.BM.Observer.Monadic as Monadic
 import qualified Cardano.BM.Observer.STM as Stm
 import           Cardano.BM.Plugin (loadPlugin)
@@ -63,23 +65,26 @@ import qualified Cardano.BM.Trace as Trace
 import           Cardano.BM.Tracing
 
 import qualified Cardano.Chain.Genesis as Gen
-import           Cardano.Slotting.Slot (EpochSize (..))
+import qualified Cardano.Ledger.Shelley.API as SL
 import qualified Ouroboros.Consensus.BlockchainTime.WallClock.Types as WCT
 import           Ouroboros.Consensus.Byron.Ledger.Conversions
 import           Ouroboros.Consensus.Cardano.Block
 import           Ouroboros.Consensus.Cardano.CanHardFork
 import qualified Ouroboros.Consensus.Config as Consensus
-import           Ouroboros.Consensus.Config.SupportsNode (ConfigSupportsNode (..))
+import           Ouroboros.Consensus.Config.SupportsNode
+                     (ConfigSupportsNode (..))
 import           Ouroboros.Consensus.HardFork.Combinator.Degenerate
 import           Ouroboros.Consensus.Node.ProtocolInfo
 import           Ouroboros.Consensus.Shelley.Ledger.Ledger
-import qualified Cardano.Ledger.Shelley.API as SL
 
 import           Cardano.Api.Protocol.Types (BlockType (..), protocolInfo)
 import           Cardano.Config.Git.Rev (gitRev)
-import           Cardano.Node.Configuration.POM (NodeConfiguration (..), ncProtocol)
+import           Cardano.Node.Configuration.POM (NodeConfiguration (..),
+                     ncProtocol)
 import           Cardano.Node.Protocol.Types (SomeConsensusProtocol (..))
 import           Cardano.Node.Types
+import           Cardano.Slotting.Slot (EpochSize (..))
+import           Cardano.Tracing.Config (TraceOptions (..))
 import           Cardano.Tracing.OrphanInstances.Common ()
 import           Paths_cardano_node (version)
 
@@ -153,7 +158,6 @@ createLoggingLayer
   -> SomeConsensusProtocol
   -> ExceptT ConfigError IO LoggingLayer
 createLoggingLayer ver nodeConfig' p = do
-
   logConfig <- loggingCLIConfiguration $
     if ncLoggingSwitch nodeConfig'
     -- Re-interpret node config again, as logging 'Configuration':
@@ -165,21 +169,21 @@ createLoggingLayer ver nodeConfig' p = do
     Config.setTextOption logConfig "appversion" ver
     Config.setTextOption logConfig "appcommit" gitRev
 
-  (baseTrace, switchBoard) <- liftIO $ setupTrace_ logConfig "cardano"
+  (baseTrace', switchBoard) <- liftIO $ setupTrace_ logConfig "cardano"
 
   let loggingEnabled :: Bool
       loggingEnabled = ncLoggingSwitch nodeConfig'
       trace :: Trace IO Text
       trace = if loggingEnabled
-              then baseTrace
+              then baseTrace'
               else Trace.nullTracer
 
   when loggingEnabled $ liftIO $
     loggingPreInit nodeConfig' logConfig switchBoard trace
 
-  mEKGServer <- liftIO $ Switchboard.getSbEKGServer switchBoard
+  mbEKGServer <- liftIO $ Switchboard.getSbEKGServer switchBoard
 
-  mbEkgDirect <- case mEKGServer of
+  mbEkgDirect <- case mbEKGServer of
                   Nothing -> pure Nothing
                   Just sv -> do
                     refGauge   <- liftIO $ newMVar Map.empty
@@ -244,7 +248,7 @@ createLoggingLayer ver nodeConfig' p = do
 
      when (ncLogMetrics nodeConfig) $
        -- Record node metrics, if configured
-       startCapturingMetrics trace
+       startCapturingMetrics (ncTraceConfig nodeConfig) trace
 
    mkLogLayer :: Configuration -> Switchboard Text -> Maybe EKGDirect -> Trace IO Text -> LoggingLayer
    mkLogLayer logConfig switchBoard mbEkgDirect trace =
@@ -267,14 +271,20 @@ createLoggingLayer ver nodeConfig' p = do
        , llEKGDirect = mbEkgDirect
        }
 
-   startCapturingMetrics :: Trace IO Text -> IO ()
-   startCapturingMetrics tr = do
+   startCapturingMetrics :: TraceOptions
+    -> Trace IO Text
+    -> IO ()
+   startCapturingMetrics (TraceDispatcher _) _tr = do
+      pure ()
+
+   startCapturingMetrics _ tr = do
      void . Async.async . forever $ do
        readResourceStats
          >>= maybe (pure ())
                    (traceResourceStats
                       (appendName "node" tr))
-       threadDelay 1000000 -- TODO:  make configurable
+       Conc.threadDelay 1000000 -- TODO:  make configurable
+
    traceResourceStats :: Trace IO Text -> ResourceStats -> IO ()
    traceResourceStats tr rs = do
      traceWith (toLogObject' NormalVerbosity $ appendName "resources" tr) rs
@@ -331,7 +341,7 @@ nodeBasicInfo nc (SomeConsensusProtocol whichP pForInfo) nodeStartTime' = do
                ++ getGenesisValues "Mary"    cfgMary
                ++ getGenesisValues "Alonzo"  cfgAlonzo
       items = nub $
-        [ ("protocol",      pack . protocolName $ ncProtocol nc)
+        [ ("protocol",      pack . show $ ncProtocol nc)
         , ("version",       pack . showVersion $ version)
         , ("commit",        gitRev)
         , ("nodeStartTime", show nodeStartTime')

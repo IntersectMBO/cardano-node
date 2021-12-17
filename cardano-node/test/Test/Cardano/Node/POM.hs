@@ -10,6 +10,8 @@ import           Cardano.Prelude
 import           Data.Time.Clock (secondsToDiffTime)
 
 import           Cardano.Node.Configuration.POM
+import           Cardano.Node.Configuration.Socket
+import           Cardano.Node.Handlers.Shutdown
 import           Cardano.Node.Types
 import           Cardano.Tracing.Config (TraceOptions (..))
 import qualified Ouroboros.Consensus.Node as Consensus (NetworkP2PMode (..))
@@ -48,7 +50,8 @@ testPartialYamlConfig =
                         . NodeProtocolConfigurationShelley
                         $ NodeShelleyProtocolConfiguration
                             (GenesisFile "dummmy-genesis-file") Nothing
-    , pncSocketPath = Last Nothing
+    , pncSocketConfig = Last . Just $ SocketConfig (Last Nothing) mempty mempty mempty
+    , pncShutdownConfig = Last Nothing
     , pncDiffusionMode = Last Nothing
     , pncSnapshotInterval = mempty
     , pncTestEnableDevelopmentNetworkProtocols = Last Nothing
@@ -57,16 +60,11 @@ testPartialYamlConfig =
     , pncLoggingSwitch = Last $ Just True
     , pncLogMetrics = Last $ Just True
     , pncTraceConfig = Last $ Just TracingOff
-    , pncNodeIPv4Addr = mempty
-    , pncNodeIPv6Addr = mempty
-    , pncNodePortNumber = mempty
     , pncConfigFile = mempty
     , pncTopologyFile = mempty
     , pncDatabaseFile = mempty
     , pncProtocolFiles = mempty
     , pncValidateDB = mempty
-    , pncShutdownIPC = mempty
-    , pncShutdownOnSlotSynced = mempty
     , pncMaybeMempoolCapacityOverride = mempty
     , pncProtocolIdleTimeout = mempty
     , pncTimeWaitTimeout = mempty
@@ -83,20 +81,16 @@ testPartialYamlConfig =
 testPartialCliConfig :: PartialNodeConfiguration
 testPartialCliConfig =
   PartialNodeConfiguration
-    { pncNodeIPv4Addr = mempty
-    , pncNodeIPv6Addr = mempty
-    , pncNodePortNumber = mempty
+    { pncSocketConfig = Last . Just $ SocketConfig mempty mempty mempty mempty
+    , pncShutdownConfig = Last . Just $ ShutdownConfig Nothing (Just . MaxSlotNo $ SlotNo 42)
     , pncConfigFile   = mempty
     , pncTopologyFile = mempty
     , pncDatabaseFile = mempty
-    , pncSocketPath   = mempty
     , pncDiffusionMode = mempty
     , pncSnapshotInterval = Last . Just . RequestedSnapshotInterval $ secondsToDiffTime 100
     , pncTestEnableDevelopmentNetworkProtocols = Last $ Just True
     , pncProtocolFiles = Last . Just $ ProtocolFilepaths Nothing Nothing Nothing Nothing Nothing Nothing
     , pncValidateDB = Last $ Just True
-    , pncShutdownIPC = Last Nothing
-    , pncShutdownOnSlotSynced = Last . Just . MaxSlotNo $ SlotNo 42
     , pncProtocolConfig = mempty
     , pncMaxConcurrencyBulkSync = mempty
     , pncMaxConcurrencyDeadline = mempty
@@ -118,20 +112,16 @@ testPartialCliConfig =
 expectedConfig :: NodeConfiguration
 expectedConfig =
   NodeConfiguration
-    { ncNodeIPv4Addr = Nothing
-    , ncNodeIPv6Addr = Nothing
-    , ncNodePortNumber = Nothing
+    { ncSocketConfig = SocketConfig mempty mempty mempty mempty
+    , ncShutdownConfig = ShutdownConfig Nothing (Just . MaxSlotNo $ SlotNo 42)
     , ncConfigFile = ConfigYamlFilePath "configuration/cardano/mainnet-config.json"
     , ncTopologyFile = TopologyFile "configuration/cardano/mainnet-topology.json"
     , ncDatabaseFile = DbFile "mainnet/db/"
     , ncProtocolFiles = ProtocolFilepaths Nothing Nothing Nothing Nothing Nothing Nothing
     , ncValidateDB = True
-    , ncShutdownIPC = Nothing
-    , ncShutdownOnSlotSynced = MaxSlotNo $ SlotNo 42
     , ncProtocolConfig = NodeProtocolConfigurationShelley
                            $ NodeShelleyProtocolConfiguration
                              (GenesisFile "dummmy-genesis-file") Nothing
-    , ncSocketPath = Nothing
     , ncDiffusionMode = InitiatorAndResponderDiffusionMode
     , ncSnapshotInterval = RequestedSnapshotInterval $ secondsToDiffTime 100
     , ncTestEnableDevelopmentNetworkProtocols = True
