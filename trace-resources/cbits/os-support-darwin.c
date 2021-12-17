@@ -32,7 +32,7 @@
 
 /* c_get_process_memory_info */
 
-int c_get_process_memory_info(struct mach_task_basic_info *counters, int pid)
+int c_get_process_memory_info2(struct mach_task_basic_info *counters, int pid)
 {
     task_t task = MACH_PORT_NULL;
     if (task_for_pid(current_task(), pid, &task) != KERN_SUCCESS) {
@@ -49,7 +49,7 @@ int c_get_process_memory_info(struct mach_task_basic_info *counters, int pid)
 
 /* c_get_host_info */
 /* currently this is not used
-int c_get_host_info(struct host_basic_info *counters)
+int c_get_host_info2(struct host_basic_info *counters)
 {
     mach_msg_type_number_t count = HOST_BASIC_INFO_COUNT;
     mach_port_t host_port = mach_host_self();
@@ -63,7 +63,7 @@ int c_get_host_info(struct host_basic_info *counters)
 
 /* c_get_boot_time */
 
-long c_get_boot_time()
+long c_get_boot_time2()
 {
     // copied from psutil
     // fetch sysctl "kern.boottime"
@@ -79,7 +79,7 @@ long c_get_boot_time()
 }
 
 /* c_get_sys_cpu_times */
-int c_get_sys_cpu_times(CPU_TIMES *counters)
+int c_get_sys_cpu_times2(CPU_TIMES *counters)
 {
     mach_msg_type_number_t count = HOST_CPU_LOAD_INFO_COUNT;
     host_cpu_load_info_data_t r_load;
@@ -103,7 +103,7 @@ int c_get_sys_cpu_times(CPU_TIMES *counters)
 
 /* c_get_sys_disk_io_counters */
 /* adapted from psutil */
-int c_get_sys_disk_io_counters(DISK_COUNTERS *counters) {
+int c_get_sys_disk_io_counters2(DISK_COUNTERS *counters) {
     counters->ndsks = 0;
     // uncomment the following to extract disk I/O metrics
     // requires to include the right headers (see top of this file)
@@ -221,7 +221,7 @@ int c_get_sys_disk_io_counters(DISK_COUNTERS *counters) {
 
 /* c_get_sys_network_io_counters */
 /* adapted from psutil */
-int c_get_sys_network_io_counters(NET_IO *counters) {
+int c_get_sys_network_io_counters2(NET_IO *counters) {
     counters->nifs = 0;
     int noutput = 0;
     char *msghdrbuf = NULL, *end_of_list, *next;
