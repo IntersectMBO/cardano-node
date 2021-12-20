@@ -135,7 +135,6 @@ Change the working directory to the downloaded source code folder:
 Check out the latest version of cardano-node (choose the tag with the highest version number: ``TAGGED-VERSION``):
 
     git fetch --all --recurse-submodules --tags
-    git tag
     git checkout $(curl -s https://api.github.com/repos/input-output-hk/cardano-node/releases/latest | jq -r .tag_name)
 
 #### Configuring the build options
