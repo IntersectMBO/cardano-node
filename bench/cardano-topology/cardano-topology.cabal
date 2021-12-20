@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name:                  cardano-topology
-version:               1.32.1
+version:               1.33.0
 description:           A cardano topology generator
 author:                IOHK
 maintainer:            operations@iohk.io

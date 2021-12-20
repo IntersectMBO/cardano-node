@@ -1,5 +1,6 @@
 # Changelog for cardano-cli
 
+## 1.33.0 -- December 2021
 ## 1.32.1 -- November 2021
 
 - Default CLI commands to the Alonzo era. (#3339)
