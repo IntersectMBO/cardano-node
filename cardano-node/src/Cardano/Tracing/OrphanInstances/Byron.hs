@@ -16,6 +16,7 @@ import           Data.Aeson (Value (..))
 import qualified Data.Set as Set
 import qualified Data.Text as Text
 
+import           Cardano.Tracing.Render (renderTxId)
 import           Cardano.Tracing.OrphanInstances.Common
 import           Cardano.Tracing.OrphanInstances.Consensus ()
 
@@ -114,17 +115,11 @@ instance ToObject UpdateState where
           ]
 
 instance ToObject (GenTx ByronBlock) where
-  toObject verb tx =
-    mkObject $
-        [ "txid" .= txId tx ]
-     ++ [ "tx"   .= condense tx | verb == MaximalVerbosity ]
+  toObject _ tx = mkObject [ "txid" .= Text.take 8 (renderTxId (txId tx)) ]
 
 
 instance ToJSON (TxId (GenTx ByronBlock)) where
-  toJSON (ByronTxId             i) = toJSON (condense i)
-  toJSON (ByronDlgId            i) = toJSON (condense i)
-  toJSON (ByronUpdateProposalId i) = toJSON (condense i)
-  toJSON (ByronUpdateVoteId     i) = toJSON (condense i)
+  toJSON = String . Text.take 8 . renderTxId
 
 
 instance ToObject ChainValidationError where
