@@ -11,6 +11,7 @@ module Cardano.CLI.Shelley.Output
 import           Cardano.Api
 import           Prelude
 
+import           Data.Aeson
 import           Data.Text (Text)
 import           Data.Time.Clock (UTCTime)
 import           Data.Word
