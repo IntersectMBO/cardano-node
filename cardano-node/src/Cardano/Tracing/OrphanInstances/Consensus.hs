@@ -59,6 +59,7 @@ import           Ouroboros.Consensus.Storage.ImmutableDB.Chunks.Internal (ChunkN
 import           Ouroboros.Consensus.Storage.LedgerDB.Types
 import qualified Ouroboros.Consensus.Storage.VolatileDB.Impl as VolDb
 import           Ouroboros.Network.BlockFetch.ClientState (TraceLabelPeer (..))
+import qualified Ouroboros.Consensus.Storage.LedgerDB.Types as LedgerDB
 
 import           Ouroboros.Consensus.Util.Condense
 import           Ouroboros.Consensus.Util.Orphans ()
@@ -71,6 +72,7 @@ import           Ouroboros.Network.Point (withOrigin)
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 -- TODO: 'TraceCacheEvent' should be exported by the 'Impl' module
 import qualified Ouroboros.Consensus.Storage.ImmutableDB.Impl.Types as ImmDB
+import qualified Ouroboros.Consensus.Storage.ImmutableDB.API as ImmDB
 import qualified Ouroboros.Consensus.Storage.LedgerDB.OnDisk as LedgerDB
 
 
@@ -105,7 +107,6 @@ instance HasSeverityAnnotation (ChainDB.TraceEvent blk) where
       maximumDef Notice (map getSeverityAnnotation events)
     ChainDB.AddBlockValidation ev' -> case ev' of
       ChainDB.InvalidBlock {} -> Error
-      ChainDB.InvalidCandidate {} -> Error
       ChainDB.ValidCandidate {} -> Info
       ChainDB.CandidateContainsFutureBlocks{} -> Debug
       ChainDB.CandidateContainsFutureBlocksExceedingClockSkew{} -> Error
@@ -116,7 +117,6 @@ instance HasSeverityAnnotation (ChainDB.TraceEvent blk) where
     LedgerDB.ReplayFromGenesis {} -> Info
     LedgerDB.ReplayFromSnapshot {} -> Info
     LedgerDB.ReplayedBlock {} -> Info
-    LedgerDB.UpdateLedgerDbTraceEvent {} -> Debug
 
   getSeverityAnnotation (ChainDB.TraceLedgerEvent ev) = case ev of
     LedgerDB.TookSnapshot {} -> Info
@@ -148,14 +148,43 @@ instance HasSeverityAnnotation (ChainDB.TraceEvent blk) where
     ChainDB.FollowerSwitchToMem {} -> Debug
     ChainDB.FollowerNewImmIterator {} -> Debug
   getSeverityAnnotation (ChainDB.TraceInitChainSelEvent ev) = case ev of
-    ChainDB.InitChainSelValidation {} -> Debug
-    ChainDB.StartedInitChainSelection {} -> Debug
-    ChainDB.InitalChainSelected {} -> Debug
+    ChainDB.StartedInitChainSelection{} -> Info
+    ChainDB.InitalChainSelected{} -> Info
+    ChainDB.InitChainSelValidation ev' -> case ev' of
+      ChainDB.InvalidBlock{} -> Debug
+      ChainDB.ValidCandidate {} -> Info
+      ChainDB.CandidateContainsFutureBlocks {} -> Debug
+      ChainDB.CandidateContainsFutureBlocksExceedingClockSkew {} -> Debug
+      ChainDB.UpdateLedgerDbTraceEvent {} -> Info
+
   getSeverityAnnotation (ChainDB.TraceIteratorEvent ev) = case ev of
     ChainDB.StreamFromVolatileDB {} -> Debug
     _ -> Debug
-  getSeverityAnnotation (ChainDB.TraceImmutableDBEvent _ev) = Debug
-  getSeverityAnnotation (ChainDB.TraceVolatileDBEvent _ev) = Debug
+  getSeverityAnnotation (ChainDB.TraceImmutableDBEvent ev) = case ev of
+    ImmDB.NoValidLastLocation {} -> Info
+    ImmDB.ValidatedLastLocation {} -> Info
+    ImmDB.ChunkValidationEvent ev' -> case ev' of
+      ImmDB.StartedValidatingChunk{} -> Info
+      ImmDB.ValidatedChunk{}         -> Info
+      ImmDB.MissingChunkFile{}       -> Warning
+      ImmDB.InvalidChunkFile {}      -> Warning
+      ImmDB.MissingPrimaryIndex{}    -> Warning
+      ImmDB.MissingSecondaryIndex{}  -> Warning
+      ImmDB.InvalidPrimaryIndex{}    -> Warning
+      ImmDB.InvalidSecondaryIndex{}  -> Warning
+      ImmDB.RewritePrimaryIndex{}    -> Warning
+      ImmDB.RewriteSecondaryIndex{}  -> Warning
+    ImmDB.ChunkFileDoesntFit{} -> Warning
+    ImmDB.Migrating{}          -> Debug
+    ImmDB.DeletingAfter{}      -> Debug
+    ImmDB.DBAlreadyClosed{}    -> Error
+    ImmDB.DBClosed{}           -> Info
+    ImmDB.TraceCacheEvent{}    -> Debug
+  getSeverityAnnotation (ChainDB.TraceVolatileDBEvent ev) = case ev of
+    VolDb.DBAlreadyClosed{}     -> Error
+    VolDb.BlockAlreadyHere{}    -> Debug
+    VolDb.Truncate{}            -> Error
+    VolDb.InvalidFileNames{}    -> Warning
 
 instance HasSeverityAnnotation (LedgerEvent blk) where
   getSeverityAnnotation (LedgerUpdate _)  = Notice
@@ -410,8 +439,6 @@ instance ( ConvertRawHash blk
         ChainDB.AddBlockValidation ev' -> case ev' of
           ChainDB.InvalidBlock err pt ->
             "Invalid block " <> renderRealPointAsPhrase pt <> ": " <> showT err
-          ChainDB.InvalidCandidate c ->
-            "Invalid candidate " <> renderPointAsPhrase (AF.headPoint c)
           ChainDB.ValidCandidate c ->
             "Valid candidate " <> renderPointAsPhrase (AF.headPoint c)
           ChainDB.CandidateContainsFutureBlocks c hdrs ->
@@ -422,10 +449,15 @@ instance ( ConvertRawHash blk
             "Candidate contains blocks from future exceeding clock skew limit: " <>
             renderPointAsPhrase (AF.headPoint c) <> ", slots " <>
             Text.intercalate ", " (map (renderPoint . headerPoint) hdrs)
-          ChainDB.UpdateLedgerDbTraceEvent
-            (StartedPushingBlockToTheLedgerDb (Pushing currentBlock) (PushGoal pushGoal)) ->
-            "About to push " <> renderRealPoint currentBlock <>
-            " to ledger DB. Attempting to push blocks until " <> renderRealPoint pushGoal
+          ChainDB.UpdateLedgerDbTraceEvent (LedgerDB.StartedPushingBlockToTheLedgerDb  (LedgerDB.PushStart start) (LedgerDB.PushGoal goal) (LedgerDB.Pushing curr)) ->
+            let fromSlot = unSlotNo $ realPointSlot start
+                atSlot   = unSlotNo $ realPointSlot curr
+                atDiff   = atSlot - fromSlot
+                toSlot   = unSlotNo $ realPointSlot goal
+                toDiff   = toSlot - fromSlot
+            in
+              "Pushing ledger state for block " <> renderRealPointAsPhrase curr <> ". Progress: " <>
+              showProgressT (fromIntegral atDiff) (fromIntegral toDiff) <> "%"
         ChainDB.AddedBlockToVolatileDB pt _ _ ->
           "Chain added block " <> renderRealPointAsPhrase pt
         ChainDB.ChainSelectionForFutureBlock pt ->
@@ -433,24 +465,31 @@ instance ( ConvertRawHash blk
       ChainDB.TraceLedgerReplayEvent ev -> case ev of
         LedgerDB.ReplayFromGenesis _replayTo ->
           "Replaying ledger from genesis"
-        LedgerDB.ReplayFromSnapshot snap tip' _replayTo ->
-          "Replaying ledger from snapshot " <> showT snap <> " at " <>
+        LedgerDB.ReplayFromSnapshot _ tip' _ _ ->
+          "Replaying ledger from snapshot at " <>
             renderRealPointAsPhrase tip'
-        LedgerDB.ReplayedBlock pt _ledgerEvents replayTo ->
-          "Replayed block: slot " <> showT (unSlotNo $ realPointSlot pt)
-                                  <> " out of "
-                                  <> showT (withOrigin 0 Prelude.id $ unSlotNo <$> pointSlot replayTo)
-        LedgerDB.UpdateLedgerDbTraceEvent (StartedPushingBlockToTheLedgerDb (Pushing currentBlock) (PushGoal pushGoal)) ->
-            "About to push " <> renderRealPoint currentBlock <>
-            " to ledger DB. Attempting to push blocks until " <> renderRealPoint pushGoal
+        LedgerDB.ReplayedBlock pt _ledgerEvents (LedgerDB.ReplayStart replayFrom) (LedgerDB.ReplayGoal replayTo) ->
+          let fromSlot = withOrigin 0 Prelude.id $ unSlotNo <$> pointSlot replayFrom
+              atSlot   = unSlotNo $ realPointSlot pt
+              atDiff   = atSlot - fromSlot
+              toSlot   = withOrigin 0 Prelude.id $ unSlotNo <$> pointSlot replayTo
+              toDiff   = toSlot - fromSlot
+          in
+             "Replayed block: slot "
+          <> showT atSlot
+          <> " out of "
+          <> showT toSlot
+          <> ". Progress: "
+          <> showProgressT (fromIntegral atDiff) (fromIntegral toDiff)
+          <> "%"
       ChainDB.TraceLedgerEvent ev -> case ev of
+        LedgerDB.InvalidSnapshot snap failure ->
+          "Invalid snapshot " <> showT snap <> showT failure
         LedgerDB.TookSnapshot snap pt ->
           "Took ledger snapshot " <> showT snap <>
           " at " <> renderRealPointAsPhrase pt
         LedgerDB.DeletedSnapshot snap ->
           "Deleted old snapshot " <> showT snap
-        LedgerDB.InvalidSnapshot snap failure ->
-          "Invalid snapshot " <> showT snap <> showT failure
       ChainDB.TraceCopyToImmutableDBEvent ev -> case ev of
         ChainDB.CopiedBlockToImmutableDB pt ->
           "Copied block " <> renderPointAsPhrase pt <> " to the ImmutableDB"
@@ -483,9 +522,22 @@ instance ( ConvertRawHash blk
         ChainDB.FollowerSwitchToMem _ _ ->  "FollowerSwitchToMem"
         ChainDB.FollowerNewImmIterator _ _ ->  "FollowerNewImmIterator"
       ChainDB.TraceInitChainSelEvent ev -> case ev of
-        ChainDB.InitChainSelValidation _ ->  "InitChainSelValidation"
-        ChainDB.InitalChainSelected -> "InitalChainSelected"
-        ChainDB.StartedInitChainSelection -> "StartedInitChainSelection"
+        ChainDB.StartedInitChainSelection -> "Started initial chain selection"
+        ChainDB.InitalChainSelected -> "Initial chain selected"
+        ChainDB.InitChainSelValidation e -> case e of
+          ChainDB.InvalidBlock _err _pt -> "Invalid block found during Initial chain selection, truncating the candidate and retrying to select a best candidate."
+          ChainDB.ValidCandidate af     -> "Valid candidate at tip " <> renderPointAsPhrase (AF.lastPoint af)
+          ChainDB.CandidateContainsFutureBlocks {} -> "Found a candidate containing future blocks during Initial chain selection, truncating the candidate and retrying to select a best candidate."
+          ChainDB.CandidateContainsFutureBlocksExceedingClockSkew {} -> "Found a candidate containing future blocks exceeding clock skew during Initial chain selection, truncating the candidate and retrying to select a best candidate."
+          ChainDB.UpdateLedgerDbTraceEvent (LedgerDB.StartedPushingBlockToTheLedgerDb (LedgerDB.PushStart start) (LedgerDB.PushGoal goal) (LedgerDB.Pushing curr)) ->
+            let fromSlot = unSlotNo $ realPointSlot start
+                atSlot   = unSlotNo $ realPointSlot curr
+                atDiff   = atSlot - fromSlot
+                toSlot   = unSlotNo $ realPointSlot goal
+                toDiff   = toSlot - fromSlot
+            in
+              "Pushing ledger state for block " <> renderRealPointAsPhrase curr <> ". Progress: " <>
+              showProgressT (fromIntegral atDiff) (fromIntegral toDiff) <> "%"
       ChainDB.TraceIteratorEvent ev -> case ev of
         ChainDB.UnknownRangeRequested ev' ->
           case ev' of
@@ -518,6 +570,14 @@ instance ( ConvertRawHash blk
           \ either; it wasn't part of the current chain. Block: " <> renderRealPoint pt
         ChainDB.SwitchBackToVolatileDB ->  "SwitchBackToVolatileDB"
       ChainDB.TraceImmutableDBEvent ev -> case ev of
+        ImmDB.NoValidLastLocation ->
+          "No valid last location was found. Starting from Genesis."
+        ImmDB.ValidatedLastLocation cn t ->
+            "Found a valid last location at chunk "
+          <> showT cn
+          <> " with tip "
+          <> renderRealPoint (ImmDB.tipToRealPoint t)
+          <> "."
         ImmDB.ChunkValidationEvent e -> case e of
           ImmDB.StartedValidatingChunk chunkNo outOf ->
                "Validating chunk no. " <> showT chunkNo <> " out of " <> showT outOf
@@ -525,9 +585,39 @@ instance ( ConvertRawHash blk
           ImmDB.ValidatedChunk chunkNo outOf ->
                "Validated chunk no. " <> showT chunkNo <> " out of " <> showT outOf
             <> ". Progress: " <> showProgressT (chunkNoToInt chunkNo) (chunkNoToInt outOf) <> "%"
-          _other -> "TraceImmutableDBEvent"
-        _other -> "TraceImmutableDBEvent"
-      ChainDB.TraceVolatileDBEvent _ev ->  "TraceVolatileDBEvent"
+          ImmDB.MissingChunkFile cn      ->
+            "The chunk file with number " <> showT cn <> " is missing."
+          ImmDB.InvalidChunkFile cn er    ->
+            "The chunk file with number " <> showT cn <> " is invalid: " <> showT er
+          ImmDB.MissingPrimaryIndex cn   ->
+            "The primary index of the chunk file with number " <> showT cn <> " is missing."
+          ImmDB.MissingSecondaryIndex cn ->
+            "The secondary index of the chunk file with number " <> showT cn <> " is missing."
+          ImmDB.InvalidPrimaryIndex cn   ->
+            "The primary index of the chunk file with number " <> showT cn <> " is invalid."
+          ImmDB.InvalidSecondaryIndex cn ->
+            "The secondary index of the chunk file with number " <> showT cn <> " is invalid."
+          ImmDB.RewritePrimaryIndex cn   ->
+            "Rewriting the primary index for the chunk file with number " <> showT cn <> "."
+          ImmDB.RewriteSecondaryIndex cn ->
+            "Rewriting the secondary index for the chunk file with number " <> showT cn <> "."
+        ImmDB.ChunkFileDoesntFit ch1 ch2 ->
+          "Chunk file doesn't fit. The hash of the block " <> showT ch2 <> " doesn't match the previous hash of the first block in the current epoch: " <> showT ch1 <> "."
+        ImmDB.Migrating t -> "Migrating: " <> t
+        ImmDB.DeletingAfter wot -> "Deleting chunk files after " <> showT wot
+        ImmDB.DBAlreadyClosed {} -> "Immutable DB was already closed. Double closing."
+        ImmDB.DBClosed {} -> "Closed Immutable DB."
+        ImmDB.TraceCacheEvent ev' -> "Cache event: " <> case ev' of
+          ImmDB.TraceCurrentChunkHit   cn   curr -> "Current chunk hit: " <> showT cn <> ", cache size: " <> showT curr
+          ImmDB.TracePastChunkHit      cn   curr -> "Past chunk hit: " <> showT cn <> ", cache size: " <> showT curr
+          ImmDB.TracePastChunkMiss     cn   curr -> "Past chunk miss: " <> showT cn <> ", cache size: " <> showT curr
+          ImmDB.TracePastChunkEvict    cn   curr -> "Past chunk evict: " <> showT cn <> ", cache size: " <> showT curr
+          ImmDB.TracePastChunksExpired cns  curr -> "Past chunks expired: " <> showT cns <> ", cache size: " <> showT curr
+      ChainDB.TraceVolatileDBEvent ev -> case ev of
+        VolDb.DBAlreadyClosed       -> "Volatile DB was already closed. Double closing."
+        VolDb.BlockAlreadyHere bh   -> "Block " <> showT bh <> " was already in the Volatile DB."
+        VolDb.Truncate e pth offs   -> "Truncating the file at " <> showT pth <> " at offset " <> showT offs <> ": " <> showT e
+        VolDb.InvalidFileNames fs   -> "Invalid Volatile DB files: " <> showT fs
      where showProgressT :: Int -> Int -> Text
            showProgressT chunkNo outOf =
              pack (showFFloat (Just 2) (100 * fromIntegral chunkNo / fromIntegral outOf :: Float) mempty)
@@ -736,9 +826,6 @@ instance ( ConvertRawHash blk
         mkObject [ "kind" .= String "TraceAddBlockEvent.AddBlockValidation.InvalidBlock"
                  , "block" .= toObject verb pt
                  , "error" .= show err ]
-      ChainDB.InvalidCandidate c ->
-        mkObject [ "kind" .= String "TraceAddBlockEvent.AddBlockValidation.InvalidCandidate"
-                 , "block" .= renderPointForVerbosity verb (AF.headPoint c) ]
       ChainDB.ValidCandidate c ->
         mkObject [ "kind" .= String "TraceAddBlockEvent.AddBlockValidation.ValidCandidate"
                  , "block" .= renderPointForVerbosity verb (AF.headPoint c) ]
@@ -750,12 +837,13 @@ instance ( ConvertRawHash blk
         mkObject [ "kind" .= String "TraceAddBlockEvent.AddBlockValidation.CandidateContainsFutureBlocksExceedingClockSkew"
                  , "block"   .= renderPointForVerbosity verb (AF.headPoint c)
                  , "headers" .= map (renderPointForVerbosity verb . headerPoint) hdrs ]
-      ChainDB.UpdateLedgerDbTraceEvent
-        (StartedPushingBlockToTheLedgerDb (Pushing currentBlock) (PushGoal pushGoal)) ->
-          mkObject [ "kind" .= String "TraceAddBlockEvent.AddBlockValidation.UpdateLedgerDbTraceEvent.StartedPushingBlockToTheLedgerDb"
-                   , "currentBlock" .= renderRealPoint currentBlock
-                   , "targetBlock" .= renderRealPoint pushGoal
-                   ]
+      ChainDB.UpdateLedgerDbTraceEvent (LedgerDB.StartedPushingBlockToTheLedgerDb (LedgerDB.PushStart start) (LedgerDB.PushGoal goal) (LedgerDB.Pushing curr)) ->
+        mkObject [ "kind" .= String "TraceAddBlockEvent.AddBlockValidation.UpdateLedgerDb"
+                 , "startingBlock" .= renderRealPoint start
+                 , "currentBlock" .= renderRealPoint curr
+                 , "targetBlock" .= renderRealPoint goal
+                 ]
+
     ChainDB.AddedBlockToVolatileDB pt (BlockNo bn) _ ->
       mkObject [ "kind" .= String "TraceAddBlockEvent.AddedBlockToVolatileDB"
                , "block" .= toObject verb pt
@@ -779,20 +867,15 @@ instance ( ConvertRawHash blk
   toObject verb (ChainDB.TraceLedgerReplayEvent ev) = case ev of
     LedgerDB.ReplayFromGenesis _replayTo ->
       mkObject [ "kind" .= String "TraceLedgerReplayEvent.ReplayFromGenesis" ]
-    LedgerDB.ReplayFromSnapshot snap tip' _replayTo ->
+    LedgerDB.ReplayFromSnapshot snap tip' _replayFrom _replayTo ->
       mkObject [ "kind" .= String "TraceLedgerReplayEvent.ReplayFromSnapshot"
                , "snapshot" .= toObject verb snap
                , "tip" .= show tip' ]
-    LedgerDB.ReplayedBlock pt _ledgerEvents replayTo ->
+    LedgerDB.ReplayedBlock pt _ledgerEvents _ (LedgerDB.ReplayGoal replayTo)  ->
       mkObject [ "kind" .= String "TraceLedgerReplayEvent.ReplayedBlock"
                , "slot" .= unSlotNo (realPointSlot pt)
                , "tip"  .= withOrigin 0 unSlotNo (pointSlot replayTo) ]
-    LedgerDB.UpdateLedgerDbTraceEvent
-      (StartedPushingBlockToTheLedgerDb (Pushing currentBlock) (PushGoal pushGoal)) ->
-        mkObject [ "kind" .= String "TraceAddBlockEvent.AddBlockValidation.UpdateLedgerDbTraceEvent.StartedPushingBlockToTheLedgerDb"
-                 , "currentBlock" .= renderRealPoint currentBlock
-                 , "targetBlock" .= renderRealPoint pushGoal
-                 ]
+
   toObject MinimalVerbosity (ChainDB.TraceLedgerEvent _ev) = emptyObject -- no output
   toObject verb (ChainDB.TraceLedgerEvent ev) = case ev of
     LedgerDB.TookSnapshot snap pt ->
@@ -868,9 +951,6 @@ instance ( ConvertRawHash blk
          mkObject [ "kind" .= String "TraceInitChainSelEvent.InvalidBlock"
                   , "block" .= toObject verb pt
                   , "error" .= show err ]
-      ChainDB.InvalidCandidate c ->
-        mkObject [ "kind" .= String "TraceInitChainSelEvent.InvalidCandidate"
-                 , "block" .= renderPointForVerbosity verb (AF.headPoint c) ]
       ChainDB.ValidCandidate c ->
         mkObject [ "kind" .= String "TraceInitChainSelEvent.ValidCandidate"
                  , "block" .= renderPointForVerbosity verb (AF.headPoint c) ]
@@ -883,11 +963,13 @@ instance ( ConvertRawHash blk
                  , "block"   .= renderPointForVerbosity verb (AF.headPoint c)
                  , "headers" .= map (renderPointForVerbosity verb . headerPoint) hdrs ]
       ChainDB.UpdateLedgerDbTraceEvent
-        (StartedPushingBlockToTheLedgerDb (Pushing currentBlock) (PushGoal pushGoal)) ->
+        (StartedPushingBlockToTheLedgerDb (PushStart start) (PushGoal goal) (Pushing curr) ) ->
           mkObject [ "kind" .= String "TraceAddBlockEvent.AddBlockValidation.UpdateLedgerDbTraceEvent.StartedPushingBlockToTheLedgerDb"
-                   , "currentBlock" .= renderRealPoint currentBlock
-                   , "targetBlock" .= renderRealPoint pushGoal
+                   , "startingBlock" .= renderRealPoint start
+                   , "currentBlock" .= renderRealPoint curr
+                   , "targetBlock" .= renderRealPoint goal
                    ]
+
   toObject _verb (ChainDB.TraceIteratorEvent ev) = case ev of
     ChainDB.UnknownRangeRequested unkRange ->
       mkObject [ "kind" .= String "TraceIteratorEvent.UnknownRangeRequested"
@@ -980,14 +1062,9 @@ instance ( ConvertRawHash blk
                    ]
   toObject _verb (ChainDB.TraceVolatileDBEvent ev) = case ev of
     VolDb.DBAlreadyClosed -> mkObject [ "kind" .= String "TraceVolatileDbEvent.DBAlreadyClosed"]
-    VolDb.DBAlreadyOpen -> mkObject [ "kind" .= String "TraceVolatileDbEvent.DBAlreadyOpen"]
     VolDb.BlockAlreadyHere blockId ->
       mkObject [ "kind" .= String "TraceVolatileDbEvent.BlockAlreadyHere"
                , "blockId" .= String (showT blockId)
-               ]
-    VolDb.TruncateCurrentFile fsPath ->
-      mkObject [ "kind" .= String "TraceVolatileDbEvent.TruncateCurrentFile"
-               , "file" .= String (showT fsPath)
                ]
     VolDb.Truncate pErr fsPath blockOffset ->
       mkObject [ "kind" .= String "TraceVolatileDbEvent.Truncate"

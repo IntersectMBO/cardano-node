@@ -87,7 +87,7 @@ import           Ouroboros.Network.ConnectionId (ConnectionId)
 import           Ouroboros.Network.InboundGovernor (InboundGovernorTrace (..))
 import           Ouroboros.Network.InboundGovernor.State (InboundGovernorCounters (..))
 import           Ouroboros.Network.PeerSelection.Governor (PeerSelectionCounters (..))
-import           Ouroboros.Network.Point (fromWithOrigin, withOrigin)
+import           Ouroboros.Network.Point (fromWithOrigin)
 import           Ouroboros.Network.Protocol.LocalStateQuery.Type (ShowQuery)
 
 import           Ouroboros.Network.ConnectionManager.Types (ConnectionManagerCounters (..),
@@ -100,6 +100,7 @@ import           Ouroboros.Network.NodeToNode (NodeToNodeVersion, RemoteAddress)
 
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 import qualified Ouroboros.Consensus.Storage.LedgerDB.OnDisk as LedgerDB
+import qualified Ouroboros.Consensus.Storage.LedgerDB.Types as LedgerDB
 
 import           Cardano.Tracing.Config
 import           Cardano.Tracing.Constraints (TraceConstraints)
@@ -183,11 +184,10 @@ indexGCType :: ChainDB.TraceGCEvent a -> Int
 indexGCType ChainDB.ScheduledGC{} = 1
 indexGCType ChainDB.PerformedGC{} = 2
 
-indexReplType :: ChainDB.TraceLedgerReplayEvent a -> Int
+indexReplType :: ChainDB.TraceReplayEvent a -> Int
 indexReplType LedgerDB.ReplayFromGenesis{} = 1
 indexReplType LedgerDB.ReplayFromSnapshot{} = 2
 indexReplType LedgerDB.ReplayedBlock{} = 3
-indexReplType LedgerDB.UpdateLedgerDbTraceEvent{} = 4
 
 instance ElidingTracer (WithSeverity (ChainDB.TraceEvent blk)) where
   -- equivalent by type and severity
@@ -213,6 +213,16 @@ instance ElidingTracer (WithSeverity (ChainDB.TraceEvent blk)) where
                (WithSeverity _s2 (ChainDB.TraceCopyToImmutableDBEvent _)) = True
   isEquivalent (WithSeverity _s1 (ChainDB.TraceCopyToImmutableDBEvent _))
                (WithSeverity _s2 (ChainDB.TraceCopyToImmutableDBEvent _)) = True
+  isEquivalent (WithSeverity _s1 (ChainDB.TraceInitChainSelEvent ev1))
+               (WithSeverity _s2 (ChainDB.TraceInitChainSelEvent ev2)) =
+    case (ev1, ev2) of
+      (ChainDB.InitChainSelValidation (
+        ChainDB.UpdateLedgerDbTraceEvent (
+            LedgerDB.StartedPushingBlockToTheLedgerDb _ _ _)),
+       ChainDB.InitChainSelValidation (
+        ChainDB.UpdateLedgerDbTraceEvent (
+            LedgerDB.StartedPushingBlockToTheLedgerDb _ _ _))) -> True
+      _ -> False
   isEquivalent _ _ = False
   -- the types to be elided
   doelide (WithSeverity _ (ChainDB.TraceLedgerReplayEvent _)) = True
@@ -224,11 +234,11 @@ instance ElidingTracer (WithSeverity (ChainDB.TraceEvent blk)) where
   doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.TrySwitchToAFork _ _))) = False
   doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.SwitchedToAFork{}))) = False
   doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.AddBlockValidation (ChainDB.InvalidBlock _ _)))) = False
-  doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.AddBlockValidation (ChainDB.InvalidCandidate _)))) = False
   doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.AddBlockValidation ChainDB.CandidateContainsFutureBlocksExceedingClockSkew{}))) = False
   doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.AddedToCurrentChain events _ _  _))) = null events
   doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent _)) = True
   doelide (WithSeverity _ (ChainDB.TraceCopyToImmutableDBEvent _)) = True
+  doelide (WithSeverity _ (ChainDB.TraceInitChainSelEvent (ChainDB.InitChainSelValidation (ChainDB.UpdateLedgerDbTraceEvent{})))) = True
   doelide _ = False
   conteliding _tverb _tr _ (Nothing, _count) = return (Nothing, 0)
   conteliding tverb tr ev@(WithSeverity _ (ChainDB.TraceAddBlockEvent ChainDB.AddedToCurrentChain{})) (_old, oldt) = do
@@ -245,16 +255,23 @@ instance ElidingTracer (WithSeverity (ChainDB.TraceEvent blk)) where
       return (Just ev, count)
   conteliding _tverb _tr ev@(WithSeverity _ (ChainDB.TraceGCEvent _)) (_old, count) =
       return (Just ev, count)
-  conteliding _tverb tr ev@(WithSeverity _ (ChainDB.TraceLedgerReplayEvent (LedgerDB.ReplayedBlock pt [] replayTo))) (_old, count) = do
-      let slotno = toInteger $ unSlotNo (realPointSlot pt)
-          endslot = toInteger $ withOrigin 0 unSlotNo (pointSlot replayTo)
-          startslot = if count == 0 then slotno else toInteger count
-          progress :: Double = (fromInteger slotno * 100.0) / fromInteger (max slotno endslot)
-      when (count > 0 && (slotno - startslot) `mod` 1000 == 0) $ do  -- report every 1000th slot
-          meta <- mkLOMeta (getSeverityAnnotation ev) (getPrivacyAnnotation ev)
-          traceNamedObject tr (meta, LogValue "block replay progress (%)" (PureD (fromInteger (round (progress * 10.0)) / 10.0)))
-      return (Just ev, fromInteger startslot)
+  conteliding _tverb _tr ev@(WithSeverity _ (ChainDB.TraceLedgerReplayEvent (LedgerDB.ReplayedBlock {}))) (_old, count) = do
+      return (Just ev, count)
+  conteliding _tverb _tr ev@(WithSeverity _ (ChainDB.TraceInitChainSelEvent
+                                             (ChainDB.InitChainSelValidation
+                                              (ChainDB.UpdateLedgerDbTraceEvent
+                                               (LedgerDB.StartedPushingBlockToTheLedgerDb
+                                                _ _ (LedgerDB.Pushing curr)))))) (_old, count) = return $
+    let currSlot = fromIntegral $ unSlotNo $ realPointSlot curr in
+      if count == 0
+      then (Just ev, currSlot)
+      else if count + 10000 < currSlot
+           then (Nothing, 0)
+           else (Just ev, count)
   conteliding _ _ _ _ = return (Nothing, 0)
+
+  reportelided _tverb _tr (WithSeverity _ (ChainDB.TraceLedgerReplayEvent (LedgerDB.ReplayedBlock{}))) _count = pure ()
+  reportelided t tr ev count = defaultelidedreporting  t tr ev count
 
 instance (StandardHash header, Eq peer) => ElidingTracer
   (WithSeverity [TraceLabelPeer peer (FetchDecision [Point header])]) where
@@ -359,6 +376,7 @@ mkTracers blockConfig tOpts@(TracingOn trSel) tr nodeKern ekgDirect enableP2P = 
                     ekgDirect
               <> tracerOnOff (traceConnectionManager trSel)
                               verb "ConnectionManager" tr
+           , P2P.dtConnectionManagerTransitionTracer = nullTracer -- TODO
            , P2P.dtServerTracer =
                tracerOnOff (traceServer trSel) verb "Server" tr
            , P2P.dtInboundGovernorTracer =
@@ -367,6 +385,7 @@ mkTracers blockConfig tOpts@(TracingOn trSel) tr nodeKern ekgDirect enableP2P = 
                    ekgDirect
               <> tracerOnOff (traceInboundGovernor trSel)
                               verb "InboundGovernor" tr
+           , P2P.dtInboundGovernorTransitionTracer = nullTracer -- TODO
            , P2P.dtLocalConnectionManagerTracer =
                tracerOnOff (traceLocalConnectionManager trSel)
                             verb "LocalConnectionManager" tr
@@ -1398,12 +1417,18 @@ traceInboundGovernorCountersMetrics (OnOff True) (Just ekgDirect) = ipgcTracer
     ipgcTracer :: Tracer IO (InboundGovernorTrace addr)
     ipgcTracer = Tracer $ \case
       (TrInboundGovernorCounters InboundGovernorCounters {
+          idlePeersRemote,
+          coldPeersRemote,
           warmPeersRemote,
           hotPeersRemote
         }) -> do
-          sendEKGDirectInt ekgDirect "cardano.node.metrics.inbound-governor.warm"
+          sendEKGDirectInt ekgDirect "cardano.node.metrics.inboundGovernor.idle"
+                                     idlePeersRemote
+          sendEKGDirectInt ekgDirect "cardano.node.metrics.inboundGovernor.cold"
+                                     coldPeersRemote
+          sendEKGDirectInt ekgDirect "cardano.node.metrics.inboundGovernor.warm"
                                      warmPeersRemote
-          sendEKGDirectInt ekgDirect "cardano.node.metrics.inbound-governor.hot"
+          sendEKGDirectInt ekgDirect "cardano.node.metrics.inboundGovernor.hot"
                                      hotPeersRemote
       _ -> return ()
 
