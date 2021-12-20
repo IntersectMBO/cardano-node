@@ -87,7 +87,7 @@ runGovernanceMIRCertificatePayStakeAddrs mirPot sAddrs rwdAmts (OutputFile oFp) 
       left $ ShelleyGovernanceCmdMIRCertificateKeyRewardMistmach
                oFp (length sAddrs) (length rwdAmts)
 
-    let sCreds  = map stakeAddrToStakeCredential sAddrs
+    let sCreds  = map stakeAddressCredential sAddrs
         mirCert = makeMIRCertificate mirPot (StakeAddressesMIR $ zip sCreds rwdAmts)
 
     firstExceptT ShelleyGovernanceCmdTextEnvWriteError
@@ -96,11 +96,6 @@ runGovernanceMIRCertificatePayStakeAddrs mirPot sAddrs rwdAmts (OutputFile oFp) 
   where
     mirCertDesc :: TextEnvelopeDescr
     mirCertDesc = "Move Instantaneous Rewards Certificate"
-
-    --TODO: expose a pattern for StakeAddress that give us the StakeCredential
-    stakeAddrToStakeCredential :: StakeAddress -> StakeCredential
-    stakeAddrToStakeCredential (StakeAddress _ scred) =
-      fromShelleyStakeCredential scred
 
 runGovernanceMIRCertificateTransfer
   :: Lovelace
