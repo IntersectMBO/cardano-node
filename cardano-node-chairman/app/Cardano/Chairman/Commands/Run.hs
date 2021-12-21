@@ -14,6 +14,7 @@ import           Cardano.Api.Protocol.Shelley
 import           Cardano.Chairman (chairmanTest)
 import           Cardano.Node.Configuration.POM (parseNodeConfigurationFP, pncProtocol)
 import           Cardano.Node.Protocol.Types (Protocol (..))
+import           Cardano.Node.Configuration.NodeAddress
 import           Cardano.Node.Types
 import           Cardano.Prelude hiding (option)
 import           Control.Monad.Class.MonadTime (DiffTime)

@@ -13,7 +13,7 @@ module Cardano.Chairman (chairmanTest) where
 
 
 import           Cardano.Api.Protocol.Types
-import           Cardano.Node.Types (SocketPath (..))
+import           Cardano.Node.Configuration.NodeAddress (SocketPath (..))
 import           Cardano.Prelude hiding (ByteString, STM, atomically, catch, option, show, throwIO)
 import           Control.Monad.Class.MonadAsync
 import           Control.Monad.Class.MonadST
