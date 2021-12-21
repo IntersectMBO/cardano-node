@@ -41,7 +41,7 @@ data AnalysisCmdError
   = AnalysisCmdError                         !Text
   | RunMetaParseError      !JsonRunMetafile  !Text
   | GenesisParseError      !JsonGenesisFile  !Text
-  | ChainFiltersParseError !JsonSelectorFile !Text
+  | ChainFiltersParseError !JsonFilterFile   !Text
   deriving Show
 
 renderAnalysisCmdError :: AnalysisCommand -> AnalysisCmdError -> Text
@@ -56,7 +56,7 @@ renderAnalysisCmdError cmd err =
     GenesisParseError (JsonGenesisFile fp) err' -> renderError cmd err'
       ("Genesis parse failed: " <> T.pack fp)
       pure
-    ChainFiltersParseError (JsonSelectorFile fp) err' -> renderError cmd err'
+    ChainFiltersParseError (JsonFilterFile fp) err' -> renderError cmd err'
       ("Chain filter list parse failed: " <> T.pack fp)
       pure
  where
@@ -77,10 +77,11 @@ logfileRunIdentifier fp =
  where
    xs = T.split (== '/') fp
 
-textId :: FilePath -> Text
-textId inputfp = mconcat
+textId :: FilePath -> [FilterName] -> Text
+textId inputfp fnames = mconcat
   [ "input: ", logfileRunIdentifier (T.pack inputfp), " "
   , "locli: ", gitRev getVersion
+  , "filters: ", T.intercalate " " (unFilterName <$> fnames)
   ]
 
 --
@@ -100,16 +101,15 @@ runAnalysisCommand (MachineTimelineCmd genesisFile metaFile mChFiltersFile logfi
                 <&> completeRun runPartial
   progress "run"     (J run)
 
-  filters <- fmap mconcat $
-    forM mChFiltersFile $
-      \jf@(JsonSelectorFile f) -> do
-        firstExceptT (ChainFiltersParseError jf . T.pack)
-                     (newExceptT $
-                        AE.eitherDecode @[ChainFilter] <$> LBS.readFile f)
-  progress "filters" (J filters)
+  filters <- forM mChFiltersFile $ \f ->
+               firstExceptT (ChainFiltersParseError f . T.pack)
+                 (readChainFilter f)
+  let (,) justFilters filterNames = unzip filters
 
+  -- progress "inputs"  (L $ unJsonLogfile <$> logfiles)
+  progress "filters" (J $ filterNames <&> unFilterName)
   firstExceptT AnalysisCmdError $
-    runMachineTimeline run logfiles filters oFiles
+    runMachineTimeline run logfiles (mconcat justFilters) filterNames oFiles
 
 runAnalysisCommand (BlockPropagationCmd genesisFile metaFile mChFiltersFile logfiles oFiles) = do
   progress "run"     (Q . T.unpack . logfileRunIdentifier . T.pack . unJsonLogfile $ P.head logfiles)
@@ -124,16 +124,15 @@ runAnalysisCommand (BlockPropagationCmd genesisFile metaFile mChFiltersFile logf
                 <&> completeRun runPartial
   progress "run"     (J run)
 
-  filters <- fmap mconcat $
-    forM mChFiltersFile $
-      \jf@(JsonSelectorFile f) -> do
-        firstExceptT (ChainFiltersParseError jf . T.pack)
-                     (newExceptT $
-                        AE.eitherDecode @[ChainFilter] <$> LBS.readFile f)
-  progress "filters" (J filters)
+  filters <- forM mChFiltersFile $ \f ->
+               firstExceptT (ChainFiltersParseError f . T.pack)
+                 (readChainFilter f)
+  let (,) justFilters filterNames = unzip filters
 
+  -- progress "inputs"  (L $ unJsonLogfile <$> logfiles)
+  progress "filters" (J $ filterNames <&> unFilterName)
   firstExceptT AnalysisCmdError $
-    runBlockPropagation run filters logfiles oFiles
+    runBlockPropagation run (mconcat justFilters) filterNames logfiles oFiles
 
 runAnalysisCommand SubstringKeysCmd =
   liftIO $ mapM_ putStrLn logObjectStreamInterpreterKeys
@@ -151,10 +150,9 @@ runAnalysisCommand (RunInfoCmd genesisFile metaFile) = do
   progress "run"     (J run)
 
 runBlockPropagation ::
-  Run -> [ChainFilter] -> [JsonLogfile] -> BlockPropagationOutputFiles -> ExceptT Text IO ()
-runBlockPropagation run chConds logfiles BlockPropagationOutputFiles{..} = do
+  Run -> [ChainFilter] -> [FilterName] -> [JsonLogfile] -> BlockPropagationOutputFiles -> ExceptT Text IO ()
+runBlockPropagation run filters filterNames logfiles BlockPropagationOutputFiles{..} = do
   liftIO $ do
-    progress "inputs" (L $ unJsonLogfile <$> logfiles)
     -- 0. Recover LogObjects
     objLists :: [(JsonLogfile, [LogObject])] <- flip mapConcurrently logfiles
       (joinT . (pure &&& readLogObjectStream))
@@ -165,13 +163,13 @@ runBlockPropagation run chConds logfiles BlockPropagationOutputFiles{..} = do
             dumpLOStream objs
               (JsonOutputFile $ F.dropExtension f <> ".logobjects.json")
 
-    blockPropagation <- blockProp run chConds objLists
+    blockPropagation <- blockProp run filters objLists
 
     forM_ bpofTimelinePretty $
       \(TextOutputFile f) ->
         withFile f WriteMode $ \hnd -> do
           progress "pretty-timeline" (Q f)
-          hPutStrLn hnd $ textId f
+          hPutStrLn hnd $ textId f filterNames
           mapM_ (T.hPutStrLn hnd)
             (renderDistributions run RenderPretty blockPropagation)
           mapM_ (T.hPutStrLn hnd)
@@ -200,14 +198,12 @@ progress key = putStrLn . T.pack . \case
   J x  -> printf "{ \"%s\": %s }" key (LBS.unpack $ AE.encode x)
 
 runMachineTimeline ::
-  Run -> [JsonLogfile] -> [ChainFilter] -> MachineTimelineOutputFiles -> ExceptT Text IO ()
-runMachineTimeline run@Run{genesis} logfiles filters MachineTimelineOutputFiles{..} = do
+  Run -> [JsonLogfile] -> [ChainFilter] -> [FilterName] -> MachineTimelineOutputFiles -> ExceptT Text IO ()
+runMachineTimeline run@Run{genesis} logfiles filters filterNames MachineTimelineOutputFiles{..} = do
   liftIO $ do
-
     -- 0. Recover LogObjects
-    progress "inputs" (L $ unJsonLogfile <$> logfiles)
     objs :: [LogObject] <- concat <$> mapM readLogObjectStream logfiles
-    forM_ mtofLogObjects
+    forM_ mtofLogObjects $
       (dumpLOStream objs)
 
     -- 1. Derive the basic scalars and vectors
@@ -286,7 +282,7 @@ runMachineTimeline run@Run{genesis} logfiles filters MachineTimelineOutputFiles{
    renderPrettyMachTimeline xs s (TextOutputFile f) =
      withFile f WriteMode $ \hnd -> do
        progress "pretty-timeline" (Q f)
-       hPutStrLn hnd $ textId f
+       hPutStrLn hnd $ textId f filterNames
        mapM_ (T.hPutStrLn hnd)
          (renderDistributions run RenderPretty s)
        mapM_ (T.hPutStrLn hnd)

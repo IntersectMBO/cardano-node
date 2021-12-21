@@ -110,14 +110,15 @@ instance FromJSON PParams
 instance FromJSON RunPartial where
   parseJSON = withObject "Run" $ \v -> do
     meta :: Object <- v .: "meta"
-    profile_content :: Object <- meta .: "profile_content"
+    profile_content <- meta .: "profile_content"
+    generator <- profile_content .: "generator"
     --
     genesisSpec      <- profile_content .: "genesis"
-    generatorProfile <- profile_content .: "generator"
+    generatorProfile <- parseJSON $ Aeson.Object generator
     --
     tag       <- meta .: "tag"
     profile   <- meta .: "profile"
-    era       <- profile_content .: "era"
+    era       <- generator .: "era"
     timestamp <- (meta .: "timestamp" :: Aeson.Parser Integer)
                   <&> Time.posixSecondsToUTCTime . realToFrac
     --

@@ -5,14 +5,25 @@
 {- HLINT ignore "Use head" -}
 module Cardano.Analysis.ChainFilter (module Cardano.Analysis.ChainFilter) where
 
+import Prelude (String)
 import Cardano.Prelude hiding (head)
 
+import Control.Monad.Trans.Except.Extra (newExceptT)
 import Data.Aeson
+import Data.ByteString.Lazy.Char8       qualified as LBS
+import Data.Text                        qualified as T
+import System.FilePath.Posix (takeBaseName)
 
 import Cardano.Slotting.Slot (EpochNo (..),  SlotNo (..))
 
 import Cardano.Analysis.Chain
 
+
+newtype JsonFilterFile
+  = JsonFilterFile { unJsonFilterFile :: FilePath }
+  deriving (Show, Eq)
+
+newtype FilterName = FilterName { unFilterName :: Text }
 
 -- | Conditions for chain subsetting
 data ChainFilter
@@ -55,3 +66,9 @@ catSlotFilters = go [] where
     [] -> reverse acc
     CSlot c:rest -> go (c:acc) rest
     _:rest       -> go    acc  rest
+
+readChainFilter :: JsonFilterFile -> ExceptT String IO ([ChainFilter], FilterName)
+readChainFilter (JsonFilterFile f) =
+  fmap (, FilterName . T.pack $ takeBaseName f)
+    . newExceptT
+    $ eitherDecode @[ChainFilter] <$> LBS.readFile f

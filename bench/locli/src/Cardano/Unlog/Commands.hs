@@ -14,6 +14,7 @@ import Options.Applicative qualified as Opt
 
 import Ouroboros.Network.Block (SlotNo(..))
 
+import Cardano.Analysis.ChainFilter
 import Cardano.Unlog.LogObject hiding (Text)
 
 --
@@ -26,13 +27,13 @@ data AnalysisCommand
   = MachineTimelineCmd
       JsonGenesisFile
       JsonRunMetafile
-      [JsonSelectorFile]
+      [JsonFilterFile]
       [JsonLogfile]
       MachineTimelineOutputFiles
   | BlockPropagationCmd
       JsonGenesisFile
       JsonRunMetafile
-      [JsonSelectorFile]
+      [JsonFilterFile]
       [JsonLogfile]
       BlockPropagationOutputFiles
   | SubstringKeysCmd
@@ -183,9 +184,9 @@ argJsonRunMetafile optname desc =
       <> metavar "RUN-METAFILE"
       <> help desc
 
-argJsonBlockSelectors :: String -> String -> Parser JsonSelectorFile
+argJsonBlockSelectors :: String -> String -> Parser JsonFilterFile
 argJsonBlockSelectors optname desc =
-  fmap JsonSelectorFile $
+  fmap JsonFilterFile $
     Opt.option Opt.str
       $ long optname
       <> metavar "BLOCK-SELECTOR-FILE"

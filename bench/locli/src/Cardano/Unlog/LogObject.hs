@@ -53,10 +53,6 @@ newtype JsonGenesisFile
   = JsonGenesisFile { unJsonGenesisFile :: FilePath }
   deriving (Show, Eq)
 
-newtype JsonSelectorFile
-  = JsonSelectorFile { unJsonSelectorFile :: FilePath }
-  deriving (Show, Eq)
-
 newtype JsonLogfile
   = JsonLogfile { unJsonLogfile :: FilePath }
   deriving (Show, Eq)

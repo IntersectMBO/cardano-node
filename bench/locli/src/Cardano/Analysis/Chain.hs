@@ -17,8 +17,7 @@ import Cardano.Slotting.Slot (EpochNo (..),  SlotNo (..))
 
 newtype EpochSlot = EpochSlot { unEpochSlot :: Word64 }
   deriving stock (Eq, Generic, Ord, Show)
-  deriving anyclass (FromJSON, NFData, ToJSON)
-  deriving newtype (Num)
+  deriving newtype (FromJSON, NFData, ToJSON, Num)
 
 -- | A pretty obvious (and dangerously assumptious) interpretation of an absolute slot number.
 --   This is wrong, if you consider the reasons why epochLength can change.
@@ -29,8 +28,7 @@ unsafeParseSlot Genesis{..} slot =  (EpochNo epoch, EpochSlot epochSlot)
 
 newtype EpochSafeInt = EpochSafeInt { unEpochSafeInt :: Word64 }
   deriving stock (Eq, Generic, Ord, Show)
-  deriving anyclass (FromJSON, NFData, ToJSON)
-  deriving newtype (Num)
+  deriving newtype (FromJSON, NFData, ToJSON, Num)
 
 slotEpochSafeInt :: Genesis -> EpochSlot -> EpochSafeInt
 slotEpochSafeInt Genesis{..} (EpochSlot relSlot) =
