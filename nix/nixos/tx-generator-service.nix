@@ -7,25 +7,25 @@ let
   basicValueTxWorkload =
     cfg: with cfg; with pkgs.lib;
     [
-      { setNumberOfInputsPerTx   = inputs_per_tx; }
-      { setNumberOfOutputsPerTx  = outputs_per_tx; }
-      { setNumberOfTxs           = tx_count; }
-      { setTxAdditionalSize      = add_tx_size; }
-      { setMinValuePerUTxO       = min_utxo_value; }
-      { setFee                   = tx_fee; }
-      { setTTL                   = 1000000; }
-      { startProtocol            = nodeConfigFile; }
-      { setEra                   = capitalise era; }
-      { setTargets =
+      { Set.SNumberOfInputsPerTx   = inputs_per_tx; }
+      { Set.SNumberOfOutputsPerTx  = outputs_per_tx; }
+      { Set.SNumberOfTxs           = tx_count; }
+      { Set.STxAdditionalSize      = add_tx_size; }
+      { Set.SMinValuePerUTxO       = min_utxo_value; }
+      { Set.SFee                   = tx_fee; }
+      { Set.STTL                   = 1000000; }
+      { StartProtocol              = nodeConfigFile; }
+      { Set.SEra                   = capitalise era; }
+      { Set.STargets =
            __attrValues
              (__mapAttrs (name: { ip, port }:
                             { addr = ip; port = port; })
                          targetNodes);
       }
-      { setLocalSocket    = localNodeSocketPath; }
-      { readSigningKey    = "pass-partout"; filePath = sigKey; }
-      { importGenesisFund = "pass-partout"; fundKey  = "pass-partout"; submitMode.LocalSocket = []; }
-      { delay             = init_cooldown; }
+      { Set.SLocalSocket  = localNodeSocketPath; }
+      { ReadSigningKey    = [ "pass-partout" sigKey]; }
+      { ImportGenesisFund = [ { LocalSocket = []; } "pass-partout"  "pass-partout" ]; }
+      { Delay             = init_cooldown; }
     ]
     ++
     ( let
@@ -50,42 +50,54 @@ let
           # If PayToCollateral returns a change value that value will also be tagged as collateral and lost.
           # Therefor this first creates a matching regular output
           # and turns that into a collateral right in the next step.
-          { createChange = safeCollateral + tx_fee; count = 1;
-            submitMode.LocalSocket = []; payMode.PayToAddr = "pass-partout";
-          }
-          { createChange = safeCollateral; count = 1;
-            submitMode.LocalSocket = []; payMode.PayToCollateral = "pass-partout";
-          }
+            { CreateChange = [
+                { LocalSocket = []; }
+                { PayToAddr = "pass-partout"; }
+                (safeCollateral + tx_fee)
+                1
+              ];
+            }
+            { CreateChange = [
+                { LocalSocket = []; }
+                { PayToCollateral = "pass-partout"; }
+                safeCollateral
+                count
+              ];
+            }
           ]
           ++ createChangePlutus cfg minValuePerInput (tx_count * inputs_per_tx)
     )
     ++
     [
-      { runBenchmark = "tx-submit-benchmark";
-        txCount = tx_count;
-        tps = tps;
-        submitMode = if !debugMode
-                     then { NodeToNode = []; }
-                     else { LocalSocket = []; };
-        spendMode = if plutusAutoMode
-                    then { SpendAutoScript = plutusScriptFile cfg "loop.plutus"; }
-                    else if plutusMode
-                    then { SpendScript = [
-                             (plutusScript cfg)
-                             ( if debugMode
-                               then { CheckScriptBudget = { memory = executionMemory; steps = executionSteps; }; }
-                               else { StaticScriptBudget = { memory = executionMemory; steps = executionSteps; }; }
-                             )
-                             plutusData
-                             plutusRedeemer
-                           ]; }
-                    else { SpendOutput = []; };
+      { RunBenchmark = [
+          ( if !debugMode
+            then { NodeToNode = []; }
+            else { LocalSocket = []; }
+          )
+          ( if plutusAutoMode
+            then { SpendAutoScript = plutusScriptFile cfg "loop.plutus"; }
+            else if plutusMode
+            then { SpendScript = [
+                     (plutusScript cfg)
+                     ( if debugMode
+                       then { CheckScriptBudget = { memory = executionMemory; steps = executionSteps; }; }
+                       else { StaticScriptBudget = { memory = executionMemory; steps = executionSteps; }; }
+                     )
+                     plutusData
+                     plutusRedeemer
+                   ]; }
+            else { SpendOutput = []; }
+          )
+          "tx-submit-benchmark"
+          tx_count
+          tps
+        ];
       }
     ]
     ++
     (
       if !debugMode
-      then [ { waitBenchmark = "tx-submit-benchmark"; } ]
+      then [ { WaitBenchmark = "tx-submit-benchmark"; } ]
       else [ ]
     )
     ;
@@ -106,24 +118,28 @@ let
   capitalise = x: (pkgs.lib.toUpper (__substring 0 1 x)) + __substring 1 99999 x;
 
   createChangeScript = cfg: value: count:
-    [ { createChange = value;
-        count = count;
-        submitMode.LocalSocket = [];
-        payMode.PayToAddr = "pass-partout";
+    [ { CreateChange = [
+          { LocalSocket = []; }
+          { PayToAddr = "pass-partout"; }
+          value
+          count
+        ];
       }
-      { delay = cfg.init_cooldown; }
+      { Delay = cfg.init_cooldown; }
     ];
 
   createChangeScriptPlutus = cfg: value: count:
-    [ { createChange = value;
-        count = count;
-        submitMode.LocalSocket = [];
-        payMode = { PayToScript = if cfg.plutusAutoMode
-                                  then [ (plutusScriptFile cfg "loop.plutus") 0 ]
-                                  else [ (plutusScript cfg) cfg.plutusData ];
-                  };
+    [ { CreateChange = [
+          { LocalSocket = []; }
+          { PayToScript = if cfg.plutusAutoMode
+                          then [ (plutusScriptFile cfg "loop.plutus") 0 ]
+                          else [ (plutusScript cfg) cfg.plutusData ];
+          }
+          value
+          count
+        ];
       }
-      { delay = cfg.init_cooldown; }
+      { Delay = cfg.init_cooldown; }
     ];
 
   createChangeRecursive = cfg: value: count: if count <= 30
@@ -211,7 +227,7 @@ in pkgs.commonLib.defServiceModule
                   if runScriptFile != null then runScriptFile
                   else "${pkgs.writeText "generator-config-run-script.json"
                                          (decideRunScript cfg)}";
-            in ["legacy-json" jsonFile];
+            in ["json" jsonFile];
 
       configSystemdExtraConfig = _: {};
 
