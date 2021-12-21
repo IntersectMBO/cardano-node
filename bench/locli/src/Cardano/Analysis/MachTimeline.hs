@@ -158,7 +158,7 @@ data RunScalars
 timelineFromLogObjects :: Run -> [LogObject] -> (RunScalars, [SlotStats])
 timelineFromLogObjects run =
   (aRunScalars &&& reverse . aSlotStats)
-  . foldl (timelineStep run) zeroTimelineAccum
+  . foldl' (timelineStep run) zeroTimelineAccum
  where
    zeroTimelineAccum :: TimelineAccum
    zeroTimelineAccum =

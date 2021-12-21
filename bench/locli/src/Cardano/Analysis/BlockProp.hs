@@ -454,7 +454,7 @@ blockEventMapsFromLogObjects run (f@(unJsonLogfile -> fp), xs) =
          ["No block events in ",fp," : ","LogObject count: ",show (length xs)]
     else view
  where
-   view = foldl (blockPropMachEventsStep run f) initial xs
+   view = foldl' (blockPropMachEventsStep run f) initial xs
    initial =
      MachView
      { mvBlocks  = mempty
