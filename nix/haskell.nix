@@ -83,7 +83,7 @@ let
       packages.cardano-cli.components.tests.cardano-cli-golden.build-tools =
         lib.mkForce (with pkgs.buildPackages; [jq coreutils shellcheck]);
       packages.cardano-testnet.components.tests.cardano-testnet-tests.build-tools =
-        lib.mkForce (with pkgs.buildPackages; [jq coreutils shellcheck]);
+        lib.mkForce (with pkgs.buildPackages; [jq coreutils shellcheck lsof]);
     })
     ({ pkgs, ...}: {
       # Use the VRF fork of libsodium
@@ -145,6 +145,7 @@ let
       ";
       packages.cardano-node-chairman.components.tests.chairman-tests.build-tools =
         lib.mkForce [
+          pkgs.lsof
           config.hsPkgs.cardano-node.components.exes.cardano-node
           config.hsPkgs.cardano-cli.components.exes.cardano-cli
           config.hsPkgs.cardano-node-chairman.components.exes.cardano-node-chairman];
