@@ -1,9 +1,9 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Cardano.Benchmarking.GeneratorTx.LocalProtocolDefinition
   ( CliError (..)
@@ -11,21 +11,19 @@ module Cardano.Benchmarking.GeneratorTx.LocalProtocolDefinition
   , startProtocol
   ) where
 
-import           Prelude (error, show)
 import           Paths_tx_generator (version)
+import           Prelude (error, show)
 
-import           Data.Version (showVersion)
 import           Data.Text (pack)
+import           Data.Version (showVersion)
 
 import           Cardano.Prelude hiding (TypeError, show)
 import           Control.Monad.Trans.Except.Extra (firstExceptT)
 
-import           Ouroboros.Consensus.Config
-                   ( configBlock, configCodec)
-import           Ouroboros.Consensus.Config.SupportsNode
-                   (ConfigSupportsNode(..), getNetworkMagic)
+import           Ouroboros.Consensus.Config (configBlock, configCodec)
+import           Ouroboros.Consensus.Config.SupportsNode (ConfigSupportsNode (..), getNetworkMagic)
+import           Ouroboros.Network.Block (MaxSlotNo (..))
 import           Ouroboros.Network.NodeToClient (IOManager)
-import           Ouroboros.Network.Block (MaxSlotNo(..))
 
 import           Cardano.Api
 
@@ -41,7 +39,8 @@ import           Cardano.Benchmarking.DSL
 import           Cardano.Benchmarking.Tracer
 
 import           Cardano.Benchmarking.GeneratorTx.NodeToNode
-import           Cardano.Benchmarking.OuroborosImports (getGenesis, protocolToTopLevelConfig, protocolToNetworkId)
+import           Cardano.Benchmarking.OuroborosImports (getGenesis, protocolToNetworkId,
+                   protocolToTopLevelConfig)
 
 import qualified Cardano.Benchmarking.GeneratorTx as GeneratorTx
 import qualified Cardano.Benchmarking.GeneratorTx.Tx as GeneratorTx
@@ -127,7 +126,7 @@ startProtocol logConfigFile = do
     NodeProtocolConfigurationCardano byronConfig shelleyConfig alonzoConfig hardforkConfig -> do
         ptcl :: SomeConsensusProtocol <- firstExceptT (ProtocolInstantiationError . pack . show) $
                   mkSomeConsensusProtocolCardano byronConfig shelleyConfig alonzoConfig hardforkConfig Nothing
-        
+
         loggingLayer <- mkLoggingLayer nc ptcl
         return (loggingLayer, ptcl)
  where
@@ -150,7 +149,7 @@ startProtocol logConfigFile = do
                    , shelleyBulkCredsFile = Just ""
                    }
                  , pncValidateDB = Last $ Just False
-                 , pncShutdownIPC = Last $ Just Nothing
+                 , pncShutdownIPC = Last Nothing
                  , pncShutdownOnSlotSynced = Last $ Just NoMaxSlotNo
                  , pncConfigFile = Last $ Just configFp
                  }
