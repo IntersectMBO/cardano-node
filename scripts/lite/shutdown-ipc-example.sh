@@ -2,10 +2,10 @@
 
 # This script connects a node to mainnet
 
-ROOT="$(realpath "$(dirname "$0")/../..")"
+ROOT="$(cd "$(dirname "$0")/../.."; pwd -P)"
 configuration="${ROOT}/configuration/cardano"
 
-data_dir=mainnetsingle
+data_dir=tmp/mainnetsingle
 mkdir -p "${data_dir}"
 db_dir="${data_dir}/db/node"
 mkdir -p "${db_dir}"
