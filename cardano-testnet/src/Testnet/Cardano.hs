@@ -782,7 +782,7 @@ testnet testnetOptions H.Conf {..} = do
       H.onFailure . H.noteIO_ $ IO.readProcess "lsof" ["-iTCP:" <> portString, "-sTCP:LISTEN", "-n", "-P"] ""
 
   now <- H.noteShowIO DTC.getCurrentTime
-  deadline <- H.noteShow $ DTC.addUTCTime 90 now
+  deadline <- H.noteShow $ DTC.addUTCTime 180 now
 
   forM_ allNodes $ \node -> do
     sprocket <- H.noteShow $ Sprocket tempBaseAbsPath (socketDir </> node)
