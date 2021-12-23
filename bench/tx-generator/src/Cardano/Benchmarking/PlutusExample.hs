@@ -65,10 +65,10 @@ readScript fp = do
       error "Wrong script version."
 
 toScriptHash :: String -> Hash ScriptData
-toScriptHash str
-  = case deserialiseFromRawBytesHex (AsHash AsScriptData) (BSC.pack str) of
-    Just x -> x
-    Nothing  -> error $ "Invalid datum hash: " ++ show str
+toScriptHash str =
+  case deserialiseFromRawBytesHex (AsHash AsScriptData) (BSC.pack str) of
+    Right x -> x
+    Left e -> error $ "Invalid datum hash: " ++ displayError e
 
 preExecuteScript ::
      ProtocolParameters

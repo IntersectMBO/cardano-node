@@ -159,6 +159,7 @@ import           Cardano.Api.SerialiseJSON
 import           Cardano.Api.SerialiseRaw
 import           Cardano.Api.SerialiseTextEnvelope
 import           Cardano.Api.SerialiseUsing
+import           Cardano.Api.Utils (failEitherWith)
 
 {- HLINT ignore "Use section" -}
 
@@ -1364,10 +1365,11 @@ parseScriptAfter lang =
         _       -> fail "\"after\" script value not found"
 
 parsePaymentKeyHash :: Text -> Aeson.Parser (Hash PaymentKey)
-parsePaymentKeyHash txt =
-    case deserialiseFromRawBytesHex (AsHash AsPaymentKey) (Text.encodeUtf8 txt) of
-      Just payKeyHash -> return payKeyHash
-      Nothing -> fail $ "Error deserialising payment key hash: " <> Text.unpack txt
+parsePaymentKeyHash =
+  failEitherWith
+    (\e -> "Error deserialising payment key hash: " ++ displayError e)
+  . deserialiseFromRawBytesHex (AsHash AsPaymentKey)
+  . Text.encodeUtf8
 
 
 -- ----------------------------------------------------------------------------
