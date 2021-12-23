@@ -177,6 +177,7 @@ module Cardano.Api (
     TxOutValue(..),
     txOutValueToLovelace,
     txOutValueToValue,
+    lovelaceToTxOutValue,
     TxOutDatum(..),
     parseHash,
 
