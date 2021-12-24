@@ -33,8 +33,10 @@ module Cardano.Api.Query (
     -- * Wrapper types used in queries
     SerialisedDebugLedgerState(..),
     ProtocolState(..),
+    decodeProtocolState,
 
     DebugLedgerState(..),
+    decodeDebugLedgerState,
 
     EraHistory(..),
     SystemStart(..),
@@ -57,7 +59,8 @@ module Cardano.Api.Query (
 import           Data.Aeson (FromJSON (..), ToJSON (..), object, withObject, (.=))
 import qualified Data.Aeson as Aeson
 import           Data.Aeson.Types (Parser)
-import           Data.Bifunctor (bimap)
+import           Data.Bifunctor (bimap, first)
+import qualified Data.ByteString.Lazy as LBS
 import qualified Data.HashMap.Strict as HMS
 import           Data.Map (Map)
 import qualified Data.Map as Map
@@ -85,7 +88,7 @@ import           Ouroboros.Consensus.Cardano.Block (LedgerState (..), StandardCr
 import qualified Ouroboros.Consensus.Cardano.Block as Consensus
 import qualified Ouroboros.Consensus.Ledger.Query as Consensus
 import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
-import           Ouroboros.Network.Block (Serialised)
+import           Ouroboros.Network.Block (Serialised (..))
 
 import           Cardano.Binary
 import           Cardano.Slotting.Slot (WithOrigin (..))
@@ -279,6 +282,13 @@ instance (IsCardanoEra era, IsShelleyBasedEra era, FromJSON (TxOut CtxUTxO era))
 newtype SerialisedDebugLedgerState era
   = SerialisedDebugLedgerState (Serialised (Shelley.NewEpochState (ShelleyLedgerEra era)))
 
+decodeDebugLedgerState :: forall era. ()
+  => FromCBOR (DebugLedgerState era)
+  => SerialisedDebugLedgerState era
+  -> Either LBS.ByteString (DebugLedgerState era)
+decodeDebugLedgerState (SerialisedDebugLedgerState (Serialised ls)) =
+  first (const ls) (decodeFull ls)
+
 data DebugLedgerState era where
   DebugLedgerState :: ShelleyLedgerEra era ~ ledgerera => Shelley.NewEpochState ledgerera -> DebugLedgerState era
 
@@ -309,6 +319,12 @@ instance ( IsShelleyBasedEra era
 
 newtype ProtocolState era
   = ProtocolState (Serialised (Shelley.ChainDepState (Ledger.Crypto (ShelleyLedgerEra era))))
+
+decodeProtocolState
+  :: ProtocolState era
+  -> Either LBS.ByteString (Shelley.ChainDepState StandardCrypto)
+decodeProtocolState (ProtocolState (Serialised pbs)) =
+  first (const pbs) (decodeFull pbs)
 
 toShelleyAddrSet :: CardanoEra era
                  -> Set AddressAny
