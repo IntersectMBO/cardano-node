@@ -44,8 +44,8 @@ import           Cardano.CLI.Environment (EnvSocketError, readEnvSocketPath, ren
 import           Cardano.CLI.Run.Friendly (friendlyTxBodyBS)
 import           Cardano.CLI.Shelley.Key (InputDecodeError, readSigningKeyFileAnyOf)
 import           Cardano.CLI.Shelley.Parsers
-import           Cardano.CLI.Shelley.Run.Genesis (ShelleyGenesisCmdError (..), readShelleyGenesis,
-                   renderShelleyGenesisCmdError)
+import           Cardano.CLI.Shelley.Run.Genesis (ShelleyGenesisCmdError (..),
+                   readShelleyGenesisWithDefault, renderShelleyGenesisCmdError)
 import           Cardano.CLI.Shelley.Run.Query (ShelleyQueryCmdLocalStateQueryError (..),
                    renderLocalStateQueryError)
 import           Cardano.CLI.Shelley.Script
@@ -1088,7 +1088,7 @@ readProtocolParametersSourceSpec :: ProtocolParamsSourceSpec
 readProtocolParametersSourceSpec (ParamsFromGenesis (GenesisFile f)) =
     fromShelleyPParams . sgProtocolParams <$>
       firstExceptT ShelleyTxCmdGenesisCmdError
-        (readShelleyGenesis f identity)
+        (readShelleyGenesisWithDefault f identity)
 readProtocolParametersSourceSpec (ParamsFromFile f) =
     readProtocolParameters f
 
