@@ -1,5 +1,6 @@
 auxiliary scripts: null
 certificates: null
+collateral inputs: null
 era: Shelley
 fee: 32 Lovelace
 inputs:

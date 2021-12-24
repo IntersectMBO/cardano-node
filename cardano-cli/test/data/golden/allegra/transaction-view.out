@@ -1,5 +1,6 @@
 auxiliary scripts: null
 certificates: null
+collateral inputs: null
 era: Allegra
 fee: 100 Lovelace
 inputs:

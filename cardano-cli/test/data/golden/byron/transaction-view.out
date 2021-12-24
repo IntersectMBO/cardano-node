@@ -1,5 +1,6 @@
 auxiliary scripts: null
 certificates: null
+collateral inputs: null
 era: Byron
 fee: implicit
 inputs:
