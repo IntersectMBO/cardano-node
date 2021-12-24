@@ -10,18 +10,16 @@ import           Prelude
 import           System.Exit
 import           Data.Functor.Identity
 import           Data.Text (Text)
-import qualified Data.Text as Text
 import           Data.Dependent.Sum
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BS (lines)
 import           Data.Aeson
-import           Data.Aeson.Types
 import           Data.Aeson.Encode.Pretty
 import qualified Data.Attoparsec.ByteString as Atto
 
 import qualified Ouroboros.Network.Magic as Ouroboros (NetworkMagic(..))
-import           Cardano.Api (AnyCardanoEra(..), CardanoEra(..), ScriptData, ScriptDataJsonSchema(..), NetworkId(..)
+import           Cardano.Api (ScriptData, ScriptDataJsonSchema(..), NetworkId(..)
                               , scriptDataFromJson, scriptDataToJson)
 import           Cardano.Api.Shelley (ProtocolParameters)
 import           Cardano.CLI.Types (SigningKeyFile(..))
@@ -45,15 +43,6 @@ prettyPrint = encodePretty' conf
     , "splitFundToList", "delay", "prepareTxList"
     , "runBenchmark", "asyncBenchmark", "waitBenchmark", "cancelBenchmark"
     , "reserved" ]
-
-instance FromJSON AnyCardanoEra where
-  parseJSON = withText "AnyCardanoEra" $ \case
-    "Byron"   -> return $ AnyCardanoEra ByronEra
-    "Shelley" -> return $ AnyCardanoEra ShelleyEra
-    "Allegra" -> return $ AnyCardanoEra AllegraEra
-    "Mary"    -> return $ AnyCardanoEra MaryEra
-    "Alonzo"    -> return $ AnyCardanoEra AlonzoEra
-    era -> parseFail ("Error: Cannot parse JSON value '" <> Text.unpack era <> "' to AnyCardanoEra.")
 
 jsonOptionsUnTaggedSum :: Options
 jsonOptionsUnTaggedSum = defaultOptions { sumEncoding = ObjectWithSingleField }
@@ -169,7 +158,7 @@ instance FromJSON SigningKeyFile  where parseJSON a = SigningKeyFile <$> parseJS
 instance ToJSON NetworkId where
   toJSON Mainnet = "Mainnet"
   toJSON (Testnet (Ouroboros.NetworkMagic t)) = object ["Testnet" .= t]
-  
+
 instance FromJSON NetworkId where
   parseJSON j = case j of
     (String "Mainnet") -> return Mainnet

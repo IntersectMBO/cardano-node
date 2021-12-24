@@ -254,4 +254,4 @@ hprop_plutus = Test.integration . HE.runFinallies . HE.workspace "chairman" $ \t
 
   HE.note_ $ Text.unpack result
 
-  List.filter (not . Text.null) (Text.splitOn " " (Text.lines result !! 2)) !! 2 === "160000000"
+  List.filter (not . Text.null) (Text.splitOn " " (Text.lines result !! 2)) !! 2 === "299860000000"

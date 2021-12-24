@@ -190,17 +190,16 @@ testnet testnetOptions H.Conf {..} = do
   startTime <- H.noteShow $ DTC.addUTCTime startTimeOffsetSeconds currentTime
   configurationTemplate <- H.noteShow $ base </> "configuration/defaults/byron-mainnet/configuration.yaml"
   configurationFile <- H.noteShow $ tempAbsPath </> "configuration.yaml"
-
   let bftNodesN = [1 .. numBftNodes testnetOptions]
-  let poolNodesN = [1 .. numPoolNodes testnetOptions]
-  let bftNodes = ("node-bft" <>) . show @Int <$> bftNodesN
-  let poolNodes = ("node-pool" <>) . show @Int <$> poolNodesN
-  let allNodes = bftNodes <> poolNodes
-  let initSupply = 1000000000
-  let maxSupply = 1000000000
-  let fundsPerGenesisAddress = initSupply `div` numBftNodes testnetOptions
-  let fundsPerByronAddress = fundsPerGenesisAddress * 9 `div` 10
-  let userPoolN = poolNodesN
+      poolNodesN = [1 .. numPoolNodes testnetOptions]
+      bftNodes = ("node-bft" <>) . show @Int <$> bftNodesN
+      poolNodes = ("node-pool" <>) . show @Int <$> poolNodesN
+      allNodes = bftNodes <> poolNodes
+      maxByronSupply = 10020000000
+      fundsPerGenesisAddress = maxByronSupply `div` numBftNodes testnetOptions
+      fundsPerByronAddress = fundsPerGenesisAddress - 100000000
+      userPoolN = poolNodesN
+      maxShelleySupply = 1000000000000
 
   allPorts <- H.noteShowIO $ IO.allocateRandomPorts (L.length allNodes)
   nodeToPort <- H.noteShow (M.fromList (L.zip allNodes allPorts))
@@ -307,7 +306,7 @@ testnet testnetOptions H.Conf {..} = do
     , "--k", show @Int securityParam
     , "--n-poor-addresses", "0"
     , "--n-delegate-addresses", show @Int (numBftNodes testnetOptions)
-    , "--total-balance", show @Int initSupply
+    , "--total-balance", show @Int maxByronSupply
     , "--delegate-share", "1"
     , "--avvm-entry-count", "0"
     , "--avvm-entry-balance", "0"
@@ -357,7 +356,7 @@ testnet testnetOptions H.Conf {..} = do
       , "--tx", tempAbsPath </> "tx0.tx"
       , "--wallet-key", tempAbsPath </> "byron/delegate-keys.000.key"
       , "--rich-addr-from", richAddrFrom
-      , "--txout", show @(String, Int) (txAddr, fundsPerGenesisAddress)
+      , "--txout", show @(String, Int) (txAddr, fundsPerByronAddress)
       ]
 
   -- Update Proposal and votes
@@ -428,14 +427,16 @@ testnet testnetOptions H.Conf {..} = do
   -- and K=10, but we'll keep long KES periods so we don't have to bother
   -- cycling KES keys
   H.rewriteJsonFile (tempAbsPath </> "shelley/genesis.spec.json") . J.rewriteObject
-    $ HM.insert "slotLength" (J.toJSON @Double 0.2)
-    . HM.insert "activeSlotsCoeff" (J.toJSON @Double (activeSlotsCoeff testnetOptions))
+    $ HM.insert "activeSlotsCoeff" (J.toJSON @Double (activeSlotsCoeff testnetOptions))
     . HM.insert "securityParam" (J.toJSON @Int 10)
     . HM.insert "epochLength" (J.toJSON @Int (epochLength testnetOptions))
-    . HM.insert "slotLength" (J.toJSON @Double 0.2)
-    . HM.insert "maxLovelaceSupply" (J.toJSON @Int maxSupply)
+    . HM.insert "slotLength" (J.toJSON @Double (slotLength testnetOptions))
+    . HM.insert "maxLovelaceSupply" (J.toJSON @Int maxShelleySupply)
     . flip HM.adjust "protocolParams"
-      ( J.rewriteObject (HM.insert "decentralisationParam" (J.toJSON @Double 0.7))
+      ( J.rewriteObject ( HM.insert "decentralisationParam" (J.toJSON @Double 0.7)
+                        . HM.insert "rho" (J.toJSON @Double 0.1)
+                        . HM.insert "tau" (J.toJSON @Double 0.1)
+                        )
       )
 
   -- Now generate for real:
@@ -455,7 +456,7 @@ testnet testnetOptions H.Conf {..} = do
     $ flip HM.adjust "protocolParams"
       ( J.rewriteObject
         ( flip HM.adjust "protocolVersion"
-          ( J.rewriteObject (HM.insert "major" (J.toJSON @Int 2))
+          ( J.rewriteObject (HM.insert "major" (J.toJSON @Int 6))
           )
         )
       )
@@ -518,8 +519,9 @@ testnet testnetOptions H.Conf {..} = do
   -- pool-owner1..n: will be the owner of the pools and we'll use their reward
   --                 account for pool rewards
   let userAddrs = ("user" <>) . show @Int <$> userPoolN
-  let poolAddrs = ("pool-owner" <>) . show @Int <$> poolNodesN
-  let addrs = userAddrs <> poolAddrs
+      poolAddrs = ("pool-owner" <>) . show @Int <$> poolNodesN
+      addrs = userAddrs <> poolAddrs
+
 
   H.createDirectoryIfMissing $ tempAbsPath </> "addresses"
 
@@ -534,11 +536,28 @@ testnet testnetOptions H.Conf {..} = do
       , "--signing-key-file", paymentSKey
       ]
 
-    -- Stake address keys
+    void $ H.execCli
+      [ "address", "key-gen"
+      , "--verification-key-file", tempAbsPath </> "shelley/utxo-keys/utxo2.vkey"
+      , "--signing-key-file", tempAbsPath </> "shelley/utxo-keys/utxo2.skey"
+      ]
+
     void $ H.execCli
       [ "stake-address", "key-gen"
       , "--verification-key-file", tempAbsPath </> "addresses/" <> addr <> "-stake.vkey"
       , "--signing-key-file", tempAbsPath </> "addresses/" <> addr <> "-stake.skey"
+      ]
+
+    void $ H.execCli
+      [ "stake-address", "key-gen"
+      , "--verification-key-file", tempAbsPath </> "shelley/utxo-keys/utxo-stake.vkey"
+      , "--signing-key-file", tempAbsPath </> "shelley/utxo-keys/utxo-stake.skey"
+      ]
+
+    void $ H.execCli
+      [ "stake-address", "key-gen"
+      , "--verification-key-file", tempAbsPath </> "shelley/utxo-keys/utxo2-stake.vkey"
+      , "--signing-key-file", tempAbsPath </> "shelley/utxo-keys/utxo2-stake.skey"
       ]
 
     -- Payment addresses
@@ -628,7 +647,7 @@ testnet testnetOptions H.Conf {..} = do
       , "--invalid-hereafter", "1000"
       , "--fee", "0"
       , "--tx-in", txIn
-      , "--tx-out",  user1Addr <> "+" <> show @Int maxSupply
+      , "--tx-out",  user1Addr <> "+" <> show @Int maxShelleySupply
       , "--certificate-file", tempAbsPath </> "addresses/pool-owner1-stake.reg.cert"
       , "--certificate-file", tempAbsPath </> "node-pool1/registration.cert"
       , "--certificate-file", tempAbsPath </> "addresses/user1-stake.reg.cert"

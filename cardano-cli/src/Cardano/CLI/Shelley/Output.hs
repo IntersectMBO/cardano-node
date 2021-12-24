@@ -7,17 +7,15 @@ module Cardano.CLI.Shelley.Output
   ) where
 
 import           Cardano.Api
+import           Prelude
+
+import           Data.Aeson (FromJSON (..), KeyValue, ToJSON (..), object, pairs, withObject, (.:?),
+                   (.=))
+import           Data.Text (Text)
 
 import           Cardano.CLI.Shelley.Orphans ()
-import           Cardano.Prelude (Text)
-import           Cardano.Slotting.Time (SystemStart (..))
-import           Data.Aeson (KeyValue, ToJSON (..), (.=))
-import           Data.Function (id, ($), (.))
-import           Data.Maybe ( Maybe(..) )
-import           Data.Monoid (mconcat)
 import           Cardano.Ledger.Shelley.Scripts ()
-
-import qualified Data.Aeson as J
+import           Cardano.Slotting.Time (SystemStart (..))
 
 data QueryTipLocalState mode = QueryTipLocalState
   { era :: AnyCardanoEra
@@ -31,7 +29,7 @@ data QueryTipLocalStateOutput = QueryTipLocalStateOutput
   , mEra :: Maybe AnyCardanoEra
   , mEpoch :: Maybe EpochNo
   , mSyncProgress :: Maybe Text
-  }
+  } deriving Show
 
 -- | A key-value pair difference list for encoding a JSON object.
 (..=) :: (KeyValue kv, ToJSON v) => Text -> v -> [kv] -> [kv]
@@ -46,13 +44,13 @@ data QueryTipLocalStateOutput = QueryTipLocalStateOutput
 instance ToJSON QueryTipLocalStateOutput where
   toJSON a = case localStateChainTip a of
     ChainTipAtGenesis ->
-      J.object $
+      object $
         ( ("era" ..=? mEra a)
         . ("epoch" ..=? mEpoch a)
         . ("syncProgress" ..=? mSyncProgress a)
         ) []
     ChainTip slotNo blockHeader blockNo ->
-      J.object $
+      object $
         ( ("slot" ..= slotNo)
         . ("hash" ..= serialiseToRawBytesHexText blockHeader)
         . ("block" ..= blockNo)
@@ -62,13 +60,13 @@ instance ToJSON QueryTipLocalStateOutput where
         ) []
   toEncoding a = case localStateChainTip a of
     ChainTipAtGenesis ->
-      J.pairs $ mconcat $
+      pairs $ mconcat $
         ( ("era" ..=? mEra a)
         . ("epoch" ..=? mEpoch a)
         . ("syncProgress" ..=? mSyncProgress a)
         ) []
     ChainTip slotNo blockHeader blockNo ->
-      J.pairs $ mconcat $
+      pairs $ mconcat $
         ( ("slot" ..= slotNo)
         . ("hash" ..= serialiseToRawBytesHexText blockHeader)
         . ("block" ..= blockNo)
@@ -76,3 +74,31 @@ instance ToJSON QueryTipLocalStateOutput where
         . ("epoch" ..=? mEpoch a)
         . ("syncProgress" ..=? mSyncProgress a)
         ) []
+
+instance FromJSON QueryTipLocalStateOutput where
+  parseJSON = withObject "QueryTipLocalStateOutput" $ \o -> do
+    mEra' <- o .:? "era"
+    mEpoch' <- o .:? "epoch"
+    mSyncProgress' <- o .:? "syncProgress"
+
+    mSlot <- o .:? "slot"
+    mHash <- o .:? "hash"
+    mBlock <- o .:? "block"
+    case (mSlot, mHash, mBlock) of
+      (Nothing, Nothing, Nothing) ->
+        pure $ QueryTipLocalStateOutput
+                 ChainTipAtGenesis
+                 mEra'
+                 mEpoch'
+                 mSyncProgress'
+      (Just slot, Just hash, Just block) ->
+        pure $ QueryTipLocalStateOutput
+                 (ChainTip slot hash block)
+                 mEra'
+                 mEpoch'
+                 mSyncProgress'
+      (_,_,_) -> fail "QueryTipLocalStateOutput was incorrectly JSON encoded.\
+                      \ Expected slot, header hash and block number (ChainTip)\
+                      \ or none (ChainTipAtGenesis)"
+
+
