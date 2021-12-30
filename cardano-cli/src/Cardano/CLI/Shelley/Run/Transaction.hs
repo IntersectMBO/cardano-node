@@ -45,7 +45,7 @@ import           Cardano.CLI.Run.Friendly (friendlyTxBodyBS)
 import           Cardano.CLI.Shelley.Key (InputDecodeError, readSigningKeyFileAnyOf)
 import           Cardano.CLI.Shelley.Parsers
 import           Cardano.CLI.Shelley.Run.Genesis (ShelleyGenesisCmdError (..),
-                   readShelleyGenesisWithDefault, renderShelleyGenesisCmdError)
+                   readShelleyGenesisWithDefault)
 import           Cardano.CLI.Shelley.Run.Query (ShelleyQueryCmdLocalStateQueryError (..),
                    renderLocalStateQueryError)
 import           Cardano.CLI.Shelley.Script
@@ -216,7 +216,7 @@ renderShelleyTxCmdError err =
     ShelleyTxCmdEraConsensusModeMismatch fp mode era ->
        "Submitting " <> renderEra era <> " era transaction (" <> show fp <>
        ") is not supported in the " <> renderMode mode <> " consensus mode."
-    ShelleyTxCmdGenesisCmdError e -> renderShelleyGenesisCmdError e
+    ShelleyTxCmdGenesisCmdError e -> Text.pack $ displayError e
     ShelleyTxCmdPolicyIdsMissing policyids ->
       "The \"--mint\" flag specifies an asset with a policy Id, but no \
       \corresponding monetary policy script has been provided as a witness \

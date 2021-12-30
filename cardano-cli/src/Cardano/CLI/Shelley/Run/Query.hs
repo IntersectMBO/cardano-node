@@ -23,37 +23,49 @@ module Cardano.CLI.Shelley.Run.Query
   , executeQuery
   ) where
 
+import           Cardano.Prelude
 import           Prelude (String, id)
 
 import           Cardano.Api
 import           Cardano.Api.Byron
 import           Cardano.Api.Shelley
-
-import           Cardano.Binary (decodeFull)
 import           Cardano.CLI.Environment (EnvSocketError, readEnvSocketPath, renderEnvSocketError)
 import           Cardano.CLI.Helpers (HelpersError (..), hushM, pPrintCBOR, renderHelpersError)
+import           Cardano.CLI.Shelley.Commands
+import           Cardano.CLI.Shelley.Key
 import           Cardano.CLI.Shelley.Orphans ()
 import qualified Cardano.CLI.Shelley.Output as O
-import           Cardano.CLI.Shelley.Parsers (OutputFile (..), QueryCmd (..))
+import           Cardano.CLI.Shelley.Run.Genesis (ShelleyGenesisCmdError,
+                   readAndDecodeShelleyGenesis)
 import           Cardano.CLI.Types
 import           Cardano.Crypto.Hash (hashToBytesAsHex)
-import           Cardano.Ledger.Compactible
+import qualified Cardano.Crypto.VRF as Crypto
+import qualified Cardano.Ledger.Alonzo.PParams as Alonzo
+import           Cardano.Ledger.BaseTypes (Seed, UnitInterval)
 import           Cardano.Ledger.Coin
+import           Cardano.Ledger.Compactible
+import qualified Cardano.Ledger.Core as Core
+import qualified Cardano.Ledger.Credential as Ledger
 import           Cardano.Ledger.Crypto (StandardCrypto)
 import qualified Cardano.Ledger.Crypto as Crypto
 import qualified Cardano.Ledger.Era as Era
+import qualified Cardano.Ledger.Era as Ledger
 import           Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
-import qualified Cardano.Ledger.Shelley.API.Protocol as Ledger
 import           Cardano.Ledger.Shelley.Constraints (UsesValue)
 import           Cardano.Ledger.Shelley.EpochBoundary
-import           Cardano.Ledger.Shelley.LedgerState hiding (_delegations)
+import           Cardano.Ledger.Shelley.LedgerState (DPState (_pstate),
+                   EpochState (esLState, esSnapshots), LedgerState (_delegationState),
+                   NewEpochState (nesEs), PState (_fPParams, _pParams, _retiring))
+import qualified Cardano.Ledger.Shelley.PParams as Shelley
 import           Cardano.Ledger.Shelley.Scripts ()
-import           Cardano.Prelude hiding (atomically)
+import           Cardano.Slotting.EpochInfo (EpochInfo (..), epochInfoSlotToUTCTime, hoistEpochInfo)
 import           Control.Monad.Trans.Except (except)
-import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistMaybe, left)
+import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistEither,
+                   hoistMaybe, left, newExceptT)
 import           Data.Aeson.Encode.Pretty (encodePretty)
 import           Data.Aeson.Types as Aeson
 import           Data.List (nub)
+import           Data.Sharing (Interns, Share)
 import           Data.Time.Clock
 import           Numeric (showEFloat)
 import           Ouroboros.Consensus.BlockchainTime.WallClock.Types (RelativeTime (..),
@@ -72,7 +84,7 @@ import qualified Data.Text.Encoding as Text
 import qualified Data.Text.IO as T
 import qualified Data.Text.IO as Text
 import qualified Data.Vector as Vector
-
+import qualified Ouroboros.Consensus.HardFork.History as Consensus
 import qualified Ouroboros.Consensus.HardFork.History.Qry as Qry
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as LocalStateQuery
 import qualified System.IO as IO
@@ -95,6 +107,10 @@ data ShelleyQueryCmdError
   | ShelleyQueryCmdUnsupportedMode !AnyConsensusMode
   | ShelleyQueryCmdPastHorizon !Qry.PastHorizonException
   | ShelleyQueryCmdSystemStartUnavailable
+  | ShelleyQueryCmdGenesisReadError !ShelleyGenesisCmdError
+  | ShelleyQueryCmdLeaderShipError !LeadershipError
+  | ShelleyQueryCmdTextEnvelopeReadError !(FileError TextEnvelopeError)
+  | ShelleyQueryCmdTextReadError !(FileError InputDecodeError )
   deriving Show
 
 renderShelleyQueryCmdError :: ShelleyQueryCmdError -> Text
@@ -116,10 +132,16 @@ renderShelleyQueryCmdError err =
     ShelleyQueryCmdUnsupportedMode mode -> "Unsupported mode: " <> renderMode mode
     ShelleyQueryCmdPastHorizon e -> "Past horizon: " <> show e
     ShelleyQueryCmdSystemStartUnavailable -> "System start unavailable"
+    ShelleyQueryCmdGenesisReadError err' -> Text.pack $ displayError err'
+    ShelleyQueryCmdLeaderShipError e -> Text.pack $ displayError e
+    ShelleyQueryCmdTextEnvelopeReadError e -> Text.pack $ displayError e
+    ShelleyQueryCmdTextReadError e -> Text.pack $ displayError e
 
 runQueryCmd :: QueryCmd -> ExceptT ShelleyQueryCmdError IO ()
 runQueryCmd cmd =
   case cmd of
+    QueryLeadershipSchedule consensusModeParams network shelleyGenFp poolid vrkSkeyFp whichSchedule ->
+      runQueryLeadershipSchedule consensusModeParams network shelleyGenFp poolid vrkSkeyFp whichSchedule
     QueryProtocolParameters' consensusModeParams network mOutFile ->
       runQueryProtocolParameters consensusModeParams network mOutFile
     QueryTip consensusModeParams network mOutFile ->
@@ -514,7 +536,7 @@ writeLedgerState :: forall era ledgerera.
                  -> ExceptT ShelleyQueryCmdError IO ()
 writeLedgerState mOutFile qState@(SerialisedDebugLedgerState serLedgerState) =
   case mOutFile of
-    Nothing -> case decodeLedgerState qState of
+    Nothing -> case decodeDebugLedgerState qState of
                  Left bs -> firstExceptT ShelleyQueryCmdHelpersError $ pPrintCBOR bs
                  Right ledgerState -> liftIO . LBS.putStrLn $ encodePretty ledgerState
     Just (OutputFile fpath) ->
@@ -529,7 +551,7 @@ writeStakeSnapshot :: forall era ledgerera. ()
   -> SerialisedDebugLedgerState era
   -> ExceptT ShelleyQueryCmdError IO ()
 writeStakeSnapshot (StakePoolKeyHash hk) qState =
-  case decodeLedgerState qState of
+  case decodeDebugLedgerState qState of
     -- In the event of decode failure print the CBOR instead
     Left bs -> firstExceptT ShelleyQueryCmdHelpersError $ pPrintCBOR bs
 
@@ -574,7 +596,7 @@ writePoolParams :: forall era ledgerera. ()
   -> SerialisedDebugLedgerState era
   -> ExceptT ShelleyQueryCmdError IO ()
 writePoolParams (StakePoolKeyHash hk) qState =
-  case decodeLedgerState qState of
+  case decodeDebugLedgerState qState of
     -- In the event of decode failure print the CBOR instead
     Left bs -> firstExceptT ShelleyQueryCmdHelpersError $ pPrintCBOR bs
 
@@ -589,14 +611,7 @@ writePoolParams (StakePoolKeyHash hk) qState =
 
       liftIO . LBS.putStrLn $ encodePretty $ Params poolParams fPoolParams retiring
 
-decodeLedgerState :: forall era. ()
-  => FromCBOR (DebugLedgerState era)
-  => SerialisedDebugLedgerState era
-  -> Either LBS.ByteString (DebugLedgerState era)
-decodeLedgerState (SerialisedDebugLedgerState (Serialised ls)) = first (const ls) (decodeFull ls)
-
-writeProtocolState :: Crypto.Crypto StandardCrypto
-                   => Maybe OutputFile
+writeProtocolState :: Maybe OutputFile
                    -> ProtocolState era
                    -> ExceptT ShelleyQueryCmdError IO ()
 writeProtocolState mOutFile ps@(ProtocolState pstate) =
@@ -607,12 +622,6 @@ writeProtocolState mOutFile ps@(ProtocolState pstate) =
     Just (OutputFile fpath) ->
       handleIOExceptT (ShelleyQueryCmdWriteFileError . FileIOError fpath)
         . LBS.writeFile fpath $ unSerialised pstate
- where
-  decodeProtocolState
-    :: ProtocolState era
-    -> Either LBS.ByteString (Ledger.ChainDepState StandardCrypto)
-  decodeProtocolState (ProtocolState (Serialised pbs)) =
-    first (const pbs) (decodeFull pbs)
 
 writeFilteredUTxOs :: ShelleyBasedEra era
                    -> Maybe OutputFile
@@ -862,6 +871,103 @@ instance FromJSON DelegationsAndRewards where
        rewardAccountBalance <- o .:? "rewardAccountBalance"
        pure (address, rewardAccountBalance, delegation)
 
+runQueryLeadershipSchedule
+  :: AnyConsensusModeParams
+  -> NetworkId
+  -> GenesisFile -- ^ Shelley genesis
+  -> VerificationKeyOrHashOrFile StakePoolKey
+  -> SigningKeyFile -- ^ VRF signing key
+  -> EpochLeadershipSchedule
+  -> ExceptT ShelleyQueryCmdError IO ()
+runQueryLeadershipSchedule (AnyConsensusModeParams cModeParams) network
+                           (GenesisFile genFile) coldVerKeyFile (SigningKeyFile vrfSkeyFp)
+                           whichSchedule = do
+  SocketPath sockPath <- firstExceptT ShelleyQueryCmdEnvVarSocketErr readEnvSocketPath
+  let localNodeConnInfo = LocalNodeConnectInfo cModeParams network sockPath
+
+  anyE@(AnyCardanoEra era) <- determineEra cModeParams localNodeConnInfo
+  sbe <- getSbe $ cardanoEraStyle era
+  let cMode = consensusModeOnly cModeParams
+
+  poolid <- firstExceptT ShelleyQueryCmdTextReadError
+              . newExceptT $ readVerificationKeyOrHashOrFile AsStakePoolKey coldVerKeyFile
+
+  vrkSkey <- firstExceptT ShelleyQueryCmdTextEnvelopeReadError . newExceptT
+               $ readFileTextEnvelope (AsSigningKey AsVrfKey) vrfSkeyFp
+  shelleyGenesis <- firstExceptT ShelleyQueryCmdGenesisReadError $
+                          newExceptT $ readAndDecodeShelleyGenesis genFile
+  case cMode of
+    CardanoMode -> do
+      eInMode <- toEraInMode era cMode
+          & hoistMaybe (ShelleyQueryCmdEraConsensusModeMismatch (AnyConsensusMode cMode) anyE)
+
+      let pparamsQuery = QueryInEra eInMode $ QueryInShelleyBasedEra sbe QueryProtocolParameters
+          serDebugLedgerStateQuery = QueryInEra eInMode . QueryInShelleyBasedEra sbe $ QueryDebugLedgerState
+          ptclStateQuery = QueryInEra eInMode . QueryInShelleyBasedEra sbe $ QueryProtocolState
+          eraHistoryQuery = QueryEraHistory CardanoModeIsMultiEra
+
+      pparams <- executeQuery era cModeParams localNodeConnInfo pparamsQuery
+      serDebugLedState <- executeQuery era cModeParams localNodeConnInfo serDebugLedgerStateQuery
+      ptclState <- executeQuery era cModeParams localNodeConnInfo ptclStateQuery
+      eraHistory <- firstExceptT ShelleyQueryCmdAcquireFailure . newExceptT $ queryNodeLocalState localNodeConnInfo Nothing eraHistoryQuery
+      let eInfo = toEpochInfo eraHistory
+
+      schedule :: Set SlotNo
+        <- case whichSchedule of
+             CurrentEpoch ->
+               firstExceptT ShelleyQueryCmdLeaderShipError $ hoistEither
+                 $ eligibleLeaderSlotsConstaints sbe
+                 $ currentEpochEligibleLeadershipSlots sbe shelleyGenesis eInfo
+                                           pparams serDebugLedState ptclState poolid vrkSkey
+
+      liftIO $ printLeadershipSchedule schedule eInfo (SystemStart $ sgSystemStart shelleyGenesis)
+    mode -> left . ShelleyQueryCmdUnsupportedMode $ AnyConsensusMode mode
+ where
+  toEpochInfo :: EraHistory CardanoMode -> EpochInfo (Either Text)
+  toEpochInfo (EraHistory _ interpreter) =
+    hoistEpochInfo (first (Text.pack . show ) . runExcept)
+      $ Consensus.interpreterToEpochInfo interpreter
+
+  printLeadershipSchedule
+    :: Set SlotNo
+    -> EpochInfo (Either Text)
+    -> SystemStart
+    -> IO ()
+  printLeadershipSchedule leadershipSlots eInfo sStart = do
+    Text.putStrLn title
+    putStrLn $ replicate (Text.length title + 2) '-'
+    sequence_
+      [ putStrLn $ showLeadershipSlot slot eInfo sStart
+      | slot <- Set.toList leadershipSlots ]
+   where
+     title :: Text
+     title =
+       "     SlotNo                          UTC Time              "
+
+     showLeadershipSlot
+       :: SlotNo
+       -> EpochInfo (Either Text)
+       -> SystemStart
+       -> String
+     showLeadershipSlot lSlot@(SlotNo sn) eInfo' sStart' =
+       case epochInfoSlotToUTCTime eInfo' sStart' lSlot of
+         Right slotTime ->
+          concat
+           [ "     "
+           , show sn
+           , "                   "
+           , show slotTime
+           ]
+         Left err ->
+          concat
+           [ "     "
+           , show sn
+           , "                   "
+           , Text.unpack err
+           ]
+
+
+
 -- Helpers
 
 calcEraInMode
@@ -929,3 +1035,23 @@ obtainLedgerEraClassConstraints ShelleyBasedEraShelley f = f
 obtainLedgerEraClassConstraints ShelleyBasedEraAllegra f = f
 obtainLedgerEraClassConstraints ShelleyBasedEraMary    f = f
 obtainLedgerEraClassConstraints ShelleyBasedEraAlonzo  f = f
+
+
+eligibleLeaderSlotsConstaints
+  :: ShelleyLedgerEra era ~ ledgerera
+  => ShelleyBasedEra era
+  -> (( ShelleyLedgerEra era ~ ledgerera
+      , Ledger.Crypto ledgerera ~ StandardCrypto
+      , FromCBOR (DebugLedgerState era)
+      , Era.Era ledgerera
+      , HasField "_d" (Core.PParams (ShelleyLedgerEra era)) UnitInterval
+      , Crypto.Signable (Crypto.VRF (Ledger.Crypto ledgerera)) Seed
+      , Share (Core.TxOut (ShelleyLedgerEra era)) ~ Interns (Ledger.Credential 'Staking StandardCrypto)
+      ) => a
+     )
+  -> a
+eligibleLeaderSlotsConstaints ShelleyBasedEraShelley f = f
+eligibleLeaderSlotsConstaints ShelleyBasedEraAllegra f = f
+eligibleLeaderSlotsConstaints ShelleyBasedEraMary    f = f
+eligibleLeaderSlotsConstaints ShelleyBasedEraAlonzo  f = f
+

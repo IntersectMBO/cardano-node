@@ -338,7 +338,14 @@ renderPoolCmd cmd =
     PoolMetadataHash {} -> "stake-pool metadata-hash"
 
 data QueryCmd =
-    QueryProtocolParameters' AnyConsensusModeParams NetworkId (Maybe OutputFile)
+    QueryLeadershipSchedule
+      AnyConsensusModeParams
+      NetworkId
+      GenesisFile
+      (VerificationKeyOrHashOrFile StakePoolKey)
+      SigningKeyFile
+      EpochLeadershipSchedule
+  | QueryProtocolParameters' AnyConsensusModeParams NetworkId (Maybe OutputFile)
   | QueryTip AnyConsensusModeParams NetworkId (Maybe OutputFile)
   | QueryStakePools' AnyConsensusModeParams NetworkId (Maybe OutputFile)
   | QueryStakeDistribution' AnyConsensusModeParams NetworkId (Maybe OutputFile)
@@ -353,6 +360,7 @@ data QueryCmd =
 renderQueryCmd :: QueryCmd -> Text
 renderQueryCmd cmd =
   case cmd of
+    QueryLeadershipSchedule {} -> "query leadership-schedule"
     QueryProtocolParameters' {} -> "query protocol-parameters "
     QueryTip {} -> "query tip"
     QueryStakePools' {} -> "query stake-pools"

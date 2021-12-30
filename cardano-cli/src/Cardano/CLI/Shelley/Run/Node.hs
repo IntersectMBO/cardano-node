@@ -6,6 +6,7 @@ module Cardano.CLI.Shelley.Run.Node
   , runNodeKeyGenCold
   , runNodeKeyGenKES
   , runNodeKeyGenVRF
+  , readColdVerificationKeyOrFile
   ) where
 
 import           Cardano.Prelude hiding ((<.>))
@@ -22,7 +23,7 @@ import           Cardano.Api.Shelley
 
 import           Cardano.CLI.Shelley.Commands
 import           Cardano.CLI.Shelley.Key (InputDecodeError, VerificationKeyOrFile,
-                     readSigningKeyFileAnyOf, readVerificationKeyOrFile)
+                   readSigningKeyFileAnyOf, readVerificationKeyOrFile)
 import           Cardano.CLI.Types (SigningKeyFile (..), VerificationKeyFile (..))
 
 {- HLINT ignore "Reduce duplication" -}
