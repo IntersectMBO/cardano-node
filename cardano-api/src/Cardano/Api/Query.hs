@@ -38,6 +38,10 @@ module Cardano.Api.Query (
     DebugLedgerState(..),
     decodeDebugLedgerState,
 
+    SerialisedCurrentEpochState(..),
+    CurrentEpochState(..),
+    decodeCurrentEpochState,
+
     EraHistory(..),
     SystemStart(..),
 
@@ -97,6 +101,7 @@ import           Cardano.Slotting.Time (SystemStart (..))
 import qualified Cardano.Chain.Update.Validation.Interface as Byron.Update
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Era as Ledger
+import qualified Control.State.Transition.Extended as Ledger
 
 import qualified Cardano.Ledger.Shelley.API as Shelley
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
@@ -224,6 +229,9 @@ data QueryInShelleyBasedEra era result where
      QueryProtocolState
        :: QueryInShelleyBasedEra era (ProtocolState era)
 
+     QueryCurrentEpochState
+       :: QueryInShelleyBasedEra era (SerialisedCurrentEpochState era)
+
 deriving instance Show (QueryInShelleyBasedEra era result)
 
 
@@ -325,6 +333,24 @@ decodeProtocolState
   -> Either LBS.ByteString (Shelley.ChainDepState StandardCrypto)
 decodeProtocolState (ProtocolState (Serialised pbs)) =
   first (const pbs) (decodeFull pbs)
+
+newtype SerialisedCurrentEpochState era
+  = SerialisedCurrentEpochState (Serialised (Shelley.EpochState (ShelleyLedgerEra era)))
+
+newtype CurrentEpochState era = CurrentEpochState (Shelley.EpochState (ShelleyLedgerEra era))
+
+decodeCurrentEpochState
+  :: forall era. Ledger.Era (ShelleyLedgerEra era)
+  => Share (Core.TxOut (ShelleyLedgerEra era)) ~ Interns (Shelley.Credential 'Shelley.Staking (Ledger.Crypto (ShelleyLedgerEra era)))
+  => FromSharedCBOR (Core.TxOut (ShelleyLedgerEra era))
+  => Share (Core.TxOut (ShelleyLedgerEra era)) ~ Interns (Shelley.Credential 'Shelley.Staking (Ledger.Crypto (ShelleyLedgerEra era)))
+  => FromCBOR (Core.PParams (ShelleyLedgerEra era))
+  => FromCBOR (Core.Value (ShelleyLedgerEra era))
+  => FromCBOR (Ledger.State (Core.EraRule "PPUP" (ShelleyLedgerEra era)))
+  => SerialisedCurrentEpochState era
+  -> Either LBS.ByteString (CurrentEpochState era)
+decodeCurrentEpochState (SerialisedCurrentEpochState (Serialised ls)) =
+  CurrentEpochState <$> first (const ls) (decodeFull ls)
 
 toShelleyAddrSet :: CardanoEra era
                  -> Set AddressAny
@@ -500,6 +526,10 @@ toConsensusQueryShelleyBased erainmode QueryDebugLedgerState =
 
 toConsensusQueryShelleyBased erainmode QueryProtocolState =
     Some (consensusQueryInEraInMode erainmode (Consensus.GetCBOR Consensus.DebugChainDepState))
+
+toConsensusQueryShelleyBased erainmode QueryCurrentEpochState =
+    Some (consensusQueryInEraInMode erainmode (Consensus.GetCBOR Consensus.DebugEpochState))
+
 
 consensusQueryInEraInMode
   :: forall era mode erablock modeblock result result' xs.
@@ -713,6 +743,11 @@ fromConsensusQueryResultShelleyBased _ QueryProtocolState q' r' =
     case q' of
       Consensus.GetCBOR Consensus.DebugChainDepState -> ProtocolState r'
       _                                              -> fromConsensusQueryResultMismatch
+
+fromConsensusQueryResultShelleyBased _ QueryCurrentEpochState q' r' =
+  case q' of
+    Consensus.GetCBOR Consensus.DebugEpochState -> SerialisedCurrentEpochState r'
+    _                                           -> fromConsensusQueryResultMismatch
 
 -- | This should /only/ happen if we messed up the mapping in 'toConsensusQuery'
 -- and 'fromConsensusQueryResult' so they are inconsistent with each other.
