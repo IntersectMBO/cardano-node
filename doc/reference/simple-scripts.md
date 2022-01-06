@@ -10,7 +10,7 @@ version of a script language).
 The Shelley era supports a single, simple script language, which can be
 used for multi-signature addresses. The Allegra era (token locking) extends the simple script
 language with a feature to make scripts conditional on time. This can be used
-to make addresss with so-called "time locks", where the funds cannot be
+to make address with so-called "time locks", where the funds cannot be
 withdrawn until after a certain point in time.
 
 The Alonzo era will add support for a whole new script language:
