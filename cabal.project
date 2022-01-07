@@ -282,8 +282,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-config
-  tag: e9de7a2cf70796f6ff26eac9f9540184ded0e4e6
-  --sha256: 1wm1c99r5zvz22pdl8nhkp13falvqmj8dgkm8fxskwa9ydqz01ld
+  tag: fe7855e981072d392513f9cf3994e0b6eba40d7d
+  --sha256: 1q9vscnx0i2xfajymzssj9id2w3qs5ssjlrl00f78jqi0zwmgq7z
 
 
 -- Drops an instance breaking our code. Should be released to Hackage eventually.
