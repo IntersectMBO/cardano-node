@@ -412,6 +412,7 @@ instance HasSeverityAnnotation (TracePeerSelection addr) where
       TraceGovernorWakeup        {} -> Info
       TraceChurnWait             {} -> Info
       TraceChurnMode             {} -> Info
+      TracePeerNess              {} -> Info
 
 instance HasPrivacyAnnotation (DebugPeerSelection addr conn)
 instance HasSeverityAnnotation (DebugPeerSelection addr conn) where
@@ -1530,6 +1531,21 @@ instance ToObject (TracePeerSelection SockAddr) where
   toObject _verb (TraceChurnMode c) =
     mkObject [ "kind" .= String "ChurnMode"
              , "event" .= show c ]
+  toObject _verb (TracePeerNess hn (hsd, hqd, hmin, hmax, hmd) bn (bsd, bqd, bmin, bmax, bmd)) =
+    mkObject [ "kind" .= String "PeerNess"
+             , "headerPeers"  .= toJSON hn
+             , "headerStd"    .= toJSON hsd
+             , "headerQD"     .= toJSON hqd
+             , "headerMin"    .= toJSON hmin
+             , "headerMax"    .= toJSON hmax
+             , "headerMedian" .= toJSON hmd
+             , "blockPeers"   .= toJSON bn
+             , "blockStd"     .= toJSON bsd
+             , "blockQD"      .= toJSON bqd
+             , "blockMin"     .= toJSON bmin
+             , "blockMax"     .= toJSON bmax
+             , "blockMedian"  .= toJSON bmd
+             ]
 
 -- Connection manager abstract state.  For explanation of each state see
 -- <https://hydra.iohk.io/job/Cardano/ouroboros-network/native.network-docs.x86_64-linux/latest/download/2>

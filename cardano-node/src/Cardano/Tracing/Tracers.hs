@@ -87,7 +87,7 @@ import           Ouroboros.Network.Point (fromWithOrigin, withOrigin)
 import           Ouroboros.Network.Protocol.LocalStateQuery.Type (ShowQuery)
 import           Ouroboros.Network.InboundGovernor.State (InboundGovernorCounters(..))
 import           Ouroboros.Network.InboundGovernor (InboundGovernorTrace(..))
-import           Ouroboros.Network.PeerSelection.Governor (PeerSelectionCounters(..))
+import           Ouroboros.Network.PeerSelection.Governor (TracePeerSelection (..), PeerSelectionCounters(..))
 
 import           Ouroboros.Network.ConnectionManager.Types (ConnectionManagerTrace(..)
                      , ConnectionManagerCounters(..))
@@ -335,7 +335,8 @@ mkTracers blockConfig tOpts@(TracingOn trSel) tr nodeKern ekgDirect enableP2P = 
                tracerOnOff (tracePublicRootPeers trSel)
                             verb "PublicRootPeers" tr
            , P2P.dtTracePeerSelectionTracer =
-               tracerOnOff (tracePeerSelection trSel)
+                 tracePeerSelectionMetric ekgDirect
+               $ tracerOnOff (tracePeerSelection trSel)
                             verb "PeerSelection" tr
            , P2P.dtDebugPeerSelectionInitiatorTracer =
                tracerOnOff (traceDebugPeerSelectionInitiatorTracer trSel)
@@ -830,6 +831,34 @@ cdf135Counters slotMapVar cdf1sVar cdf3sVar cdf5sVar slotNo forgeDelay = do
        >> decCdfCounter delay size cdf3sVar
        >> decCdfCounter delay size cdf5sVar
        >> return ()
+
+tracePeerSelectionMetric
+  :: forall remotePeer.
+     ( )
+  => Maybe EKGDirect
+  -> Tracer IO (TracePeerSelection remotePeer)
+  -> Tracer IO (TracePeerSelection remotePeer)
+tracePeerSelectionMetric Nothing tracer = tracer
+tracePeerSelectionMetric (Just ekgDirect) tracer = Tracer psTracer
+  where
+    psTracer :: TracePeerSelection remotePeer -> IO ()
+    psTracer e@(TracePeerNess hn (hsd, hqd, hmin, hmax, hmd) bn (bsd, bqd, bmin, bmax, bmd)) = do
+        traceWith tracer e
+
+        sendEKGDirectInt    ekgDirect "cardano.node.metrics.peerranking.headers.peers"  hn
+        sendEKGDirectDouble ekgDirect "cardano.node.metrics.peerranking.headers.stddev" hsd
+        sendEKGDirectDouble ekgDirect "cardano.node.metrics.peerranking.headers.qd"     hqd
+        sendEKGDirectDouble ekgDirect "cardano.node.metrics.peerranking.headers.min"    hmin
+        sendEKGDirectDouble ekgDirect "cardano.node.metrics.peerranking.headers.max"    hmax
+        sendEKGDirectDouble ekgDirect "cardano.node.metrics.peerranking.headers.median" hmd
+        sendEKGDirectInt    ekgDirect "cardano.node.metrics.peerranking.blocks.peers"   bn
+        sendEKGDirectDouble ekgDirect "cardano.node.metrics.peerranking.blocks.stddev"  bsd
+        sendEKGDirectDouble ekgDirect "cardano.node.metrics.peerranking.blocks.qd"      bqd
+        sendEKGDirectDouble ekgDirect "cardano.node.metrics.peerranking.blocks.min"     bmin
+        sendEKGDirectDouble ekgDirect "cardano.node.metrics.peerranking.blocks.max"     bmax
+        sendEKGDirectDouble ekgDirect "cardano.node.metrics.peerranking.blocks.median"  bmd
+    psTracer e = traceWith tracer e
+
 
 traceBlockFetchClientMetrics
   :: forall blk remotePeer.
