@@ -4,6 +4,7 @@ packages:
     cardano-api
     cardano-cli
     cardano-client-demo
+    cardano-config
     cardano-node
     cardano-node-capi
     cardano-node-chairman
@@ -21,6 +22,9 @@ package cardano-api
   ghc-options: -Werror
 
 package cardano-cli
+  ghc-options: -Werror
+
+package cardano-config
   ghc-options: -Werror
 
 package cardano-node
@@ -282,13 +286,6 @@ source-repository-package
   location: https://github.com/input-output-hk/ekg-forward
   tag: 297cd9db5074339a2fb2e5ae7d0780debb670c63
   --sha256: 1zcwry3y5rmd9lgxy89wsb3k4kpffqji35dc7ghzbz603y1gy24g
-
-source-repository-package
-  type: git
-  location: https://github.com/input-output-hk/cardano-config
-  tag: fe7855e981072d392513f9cf3994e0b6eba40d7d
-  --sha256: 1q9vscnx0i2xfajymzssj9id2w3qs5ssjlrl00f78jqi0zwmgq7z
-
 
 -- Drops an instance breaking our code. Should be released to Hackage eventually.
 source-repository-package
