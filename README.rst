@@ -386,7 +386,7 @@ Example:
                --filepath my-update-proposal
 
 See the `Byron specification <https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/byronLedgerSpec/latest/download-by-type/doc-pdf/ledger-spec>`_
-for more deatils on update proposals.
+for more details on update proposals.
 
 Update proposal voting
 ======================
@@ -424,7 +424,7 @@ run *ghcid* with: ``ghcid -c "cabal repl exe:cardano-node --reorder-goals"``
 Haskell Language Server
 -----------------------
 
-When using Haskell Langague Server with Visual Studio Code, you may find that
+When using Haskell Language Server with Visual Studio Code, you may find that
 `HLINT annotations are ignored<https://github.com/haskell/haskell-language-server/issues/638>`.
 
 To work around this, you may run the script `./scripts/reconfigure-hlint.sh` to generate a `.hlint.yaml`
