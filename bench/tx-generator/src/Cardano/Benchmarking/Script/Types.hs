@@ -29,11 +29,6 @@ data Action where
   ReadSigningKey     :: !KeyName -> !SigningKeyFile -> Action
   DefineSigningKey   :: !KeyName -> !TextEnvelope -> Action
   AddFund            :: !TxIn -> !Lovelace -> !KeyName -> Action
-  SecureGenesisFund  :: !FundName -> !KeyName -> !KeyName -> Action
-  SplitFund          :: [FundName] -> !KeyName -> !FundName -> Action
-  SplitFundToList    :: !FundListName -> !KeyName -> !FundName -> Action
-  PrepareTxList      :: !TxListName -> !KeyName -> !FundListName -> Action
-  AsyncBenchmark     :: !ThreadName -> !TxListName -> !TPSRate -> Action
   ImportGenesisFund  :: !SubmitMode -> !KeyName -> !KeyName -> Action
   CreateChange       :: !SubmitMode -> !PayMode -> !Lovelace -> !Int -> Action
   RunBenchmark       :: !SubmitMode -> !SpendMode -> !ThreadName -> !NumberOfTxs -> !TPSRate -> Action

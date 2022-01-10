@@ -17,12 +17,7 @@ action a = case a of
   ReadSigningKey name filePath -> readSigningKey name filePath
   DefineSigningKey name descr -> defineSigningKey name descr
   AddFund txIn lovelace keyName -> addFund txIn lovelace keyName
-  SecureGenesisFund fundName fundKey genesisKey -> secureGenesisFund fundName fundKey genesisKey
-  SplitFund newFunds newKey sourceFund -> splitFund  newFunds newKey sourceFund
-  SplitFundToList fundList destKey sourceFund -> splitFundToList fundList destKey sourceFund
   Delay t -> delay t
-  PrepareTxList name key fund -> prepareTxList name key fund
-  AsyncBenchmark thread txs tps -> asyncBenchmark thread txs tps
   ImportGenesisFund submitMode genesisKey fundKey -> importGenesisFund submitMode genesisKey fundKey
   CreateChange payMode submitMode value count -> createChange payMode submitMode value count
   RunBenchmark submitMode spendMode thread count tps -> runBenchmark submitMode spendMode thread count tps

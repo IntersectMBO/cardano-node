@@ -142,16 +142,10 @@ readProtocolParametersFile :: FilePath -> IO ProtocolParameters
 readProtocolParametersFile = parseJSONFile fromJSON
 
 instance ToJSON KeyName         where toJSON (KeyName a) = toJSON a
-instance ToJSON FundName        where toJSON (FundName a) = toJSON a
-instance ToJSON FundListName    where toJSON (FundListName a) = toJSON a
-instance ToJSON TxListName      where toJSON (TxListName a) = toJSON a
 instance ToJSON ThreadName      where toJSON (ThreadName a) = toJSON a
 instance ToJSON SigningKeyFile  where toJSON (SigningKeyFile a) = toJSON a
 
 instance FromJSON KeyName         where parseJSON a = KeyName <$> parseJSON a
-instance FromJSON FundName        where parseJSON a = FundName <$> parseJSON a
-instance FromJSON FundListName    where parseJSON a = FundListName <$> parseJSON a
-instance FromJSON TxListName      where parseJSON a = TxListName <$> parseJSON a
 instance FromJSON ThreadName      where parseJSON a = ThreadName <$> parseJSON a
 instance FromJSON SigningKeyFile  where parseJSON a = SigningKeyFile <$> parseJSON a
 

@@ -18,7 +18,7 @@ import           Data.Constraint.Extras.TH (deriveArgDict)
 import           Data.GADT.Compare.TH (deriveGCompare, deriveGEq)
 import           Data.GADT.Show.TH (deriveGShow)
 
-import           Cardano.Api as Cardano (InAnyCardanoEra(..), Tx)
+import           Cardano.Api as Cardano (Tx)
 import           Cardano.Api.Shelley as Cardano (ProtocolParameters)
 import           Cardano.Node.Protocol.Types (SomeConsensusProtocol)
 
@@ -46,15 +46,9 @@ data Store v where
 
 data Name x where
   KeyName      :: !String -> Name (SigningKey PaymentKey)
-  FundName     :: !String -> Name Fund
-  FundListName :: !String -> Name [Fund]
-  TxListName   :: !String -> Name (InAnyCardanoEra TxList)
   ThreadName   :: !String -> Name AsyncBenchmarkControl
 
 type KeyName      = Name (SigningKey PaymentKey)
-type FundName     = Name Fund
-type FundListName = Name [Fund]
-type TxListName   = Name (InAnyCardanoEra TxList)
 type ThreadName   = Name AsyncBenchmarkControl
 
 newtype TxList era = TxList [Tx era]

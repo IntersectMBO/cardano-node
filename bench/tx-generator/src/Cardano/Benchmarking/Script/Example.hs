@@ -37,6 +37,8 @@ txConfig = map Set [
   , TTTL                  ==> SlotNo 1000000
   ]
 
+-- This is only for testing the Aeson instances.
+-- This script is not functional in any way.
 testScript :: [Action]
 testScript =
   txConfig
@@ -46,14 +48,9 @@ testScript =
   , Set $ TEra ==> AnyCardanoEra MaryEra
   , Set $ TLocalSocket ==> "logs/sockets/1"
   , ReadSigningKey passPartout "configuration/genesis-shelley/utxo-keys/utxo1.skey"
-  , SecureGenesisFund genFund passPartout passPartout
   , Delay 10
-  , SplitFund outputFunds passPartout genFund
   , Delay 10
-  , SplitFundToList fundList passPartout f1
-  , PrepareTxList txList passPartout fundList
   , Set $ TTargets ==> makeTargets [ 3000, 3001, 3002]
-  , AsyncBenchmark threadName txList (TPSRate 10)
   , WaitForEra $ AnyCardanoEra ByronEra
   , CancelBenchmark threadName
   , ImportGenesisFund DiscardTX passPartout passPartout
@@ -65,11 +62,7 @@ testScript =
  where
   scriptDef = SpendScript "filePath" (StaticScriptBudget $ ExecutionUnits 70000000 70000000) (ScriptDataNumber 3) (ScriptDataNumber 6)
   passPartout = KeyName "pass-partout"
-  genFund = FundName "genFund"
-  outputFunds = map FundName ["fund1", "fund2", "fund3", "fund4"]
-  f1= head outputFunds
-  fundList = FundListName "fundList"
-  txList = TxListName "txlist"
+
   threadName = ThreadName "thread1"
   makeTargets = NonEmpty.fromList . map (\p -> makeAddr ("127.0.0.1", p))
 
