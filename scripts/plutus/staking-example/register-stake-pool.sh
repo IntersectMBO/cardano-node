@@ -130,7 +130,7 @@ cardano-cli transaction build \
   --testnet-magic "$TESTNET_MAGIC" \
   --change-address "$utxoaddrwithstaking" \
   --tx-in "$keytxin" \
-  --tx-out "$utxoaddrwithstaking+1000" \
+  --tx-out "$utxoaddrwithstaking+999978" \
   --witness-override 3 \
   --certificate-file "$WORK/stakekey.regcert" \
   --out-file "$WORK/key-registration-cert.txbody"
@@ -194,7 +194,7 @@ cardano-cli transaction build \
   --testnet-magic "$TESTNET_MAGIC" \
   --change-address "$utxoaddr" \
   --tx-in "$txinupdated" \
-  --tx-out "$scriptpaymentaddrwithstakecred+500" \
+  --tx-out "$scriptpaymentaddrwithstakecred+999978" \
   --witness-override 3 \
   --certificate-file "example/node-pool1/registration.cert" \
   --certificate-file "$WORK/pledger.delegcert" \
@@ -262,7 +262,7 @@ cardano-cli transaction build \
   --testnet-magic "$TESTNET_MAGIC" \
   --change-address "$utxoaddrwithstaking" \
   --tx-in "$keytxin2" \
-  --tx-out "$utxoaddrwithstaking+1000" \
+  --tx-out "$utxoaddrwithstaking+999978" \
   --witness-override 3 \
   --certificate-file "$WORK/stakekey.delegcert" \
   --out-file "$WORK/key-deleg-cert.txbody"
@@ -329,7 +329,7 @@ cardano-cli transaction build \
   --testnet-magic "$TESTNET_MAGIC" \
   --change-address "$utxoaddr" \
   --tx-in "$txinupdated2" \
-  --tx-out "$scriptpaymentaddrwithstakecred+500" \
+  --tx-out "$scriptpaymentaddrwithstakecred+999978" \
   --tx-out "$utxoaddr+$lovelaceattxindiv3" \
   --witness-override 3 \
   --certificate-file "$WORK/script.regcert" \
@@ -394,7 +394,7 @@ cardano-cli transaction build \
   --change-address "$utxoaddr" \
   --tx-in "$txinupdated3" \
   --tx-in-collateral "$txincollateral" \
-  --tx-out "$scriptpaymentaddrwithstakecred+500" \
+  --tx-out "$scriptpaymentaddrwithstakecred+999978" \
   --witness-override 3 \
   --certificate-file "$WORK/script.delegcert" \
   --certificate-script-file "scripts/plutus/scripts/guess-42-stake.plutus" \

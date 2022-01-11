@@ -6,7 +6,10 @@ module Cardano.CLI.Shelley.Run
 
 import           Cardano.Prelude
 
+import           Cardano.Api
+
 import           Control.Monad.Trans.Except.Extra (firstExceptT)
+import qualified Data.Text as Text
 
 import           Cardano.CLI.Shelley.Parsers
 
@@ -41,7 +44,7 @@ renderShelleyClientCmdError cmd err =
     ShelleyCmdAddressError addrCmdErr ->
        renderError cmd renderShelleyAddressCmdError addrCmdErr
     ShelleyCmdGenesisError genesisCmdErr ->
-       renderError cmd renderShelleyGenesisCmdError genesisCmdErr
+       renderError cmd (Text.pack . displayError) genesisCmdErr
     ShelleyCmdGovernanceError govCmdErr ->
        renderError cmd renderShelleyGovernanceError govCmdErr
     ShelleyCmdNodeError nodeCmdErr ->

@@ -8,6 +8,7 @@ module Cardano.CLI.Types
   ( BalanceTxExecUnits (..)
   , CBORObject (..)
   , CertificateFile (..)
+  , EpochLeadershipSchedule (..)
   , GenesisFile (..)
   , OutputFormat (..)
   , SigningKeyFile (..)
@@ -222,3 +223,10 @@ data RequiredSigner
  = RequiredSignerSkeyFile SigningKeyFile
  | RequiredSignerHash (Hash PaymentKey)
  deriving Show
+
+-- | Which leadership schedule we are interested in.
+-- TODO: Implement Previous and Next epochs
+data EpochLeadershipSchedule
+  = CurrentEpoch
+  deriving Show
+

@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
@@ -39,6 +40,11 @@ module Cardano.Api.LedgerState
   , renderFoldBlocksError
   , renderGenesisConfigError
   , renderInitialLedgerStateError
+
+  -- * Leadership schedule
+  , LeadershipError(..)
+  , constructGlobals
+  , currentEpochEligibleLeadershipSlots
   )
   where
 
@@ -50,6 +56,7 @@ import           Control.Monad.Trans.Except
 import           Control.Monad.Trans.Except.Extra
 import           Data.Aeson as Aeson
 import qualified Data.Aeson.Types as Data.Aeson.Types.Internal
+import           Data.Bifunctor
 import           Data.ByteArray (ByteArrayAccess)
 import qualified Data.ByteArray
 import           Data.ByteString as BS
@@ -57,25 +64,36 @@ import qualified Data.ByteString.Base16 as Base16
 import           Data.ByteString.Short as BSS
 import           Data.Foldable
 import           Data.IORef
+import           Data.Maybe (mapMaybe)
 import           Data.SOP.Strict (NP (..))
 import           Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
+import           Data.Set (Set)
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import           Data.Word
 import qualified Data.Yaml as Yaml
+import           GHC.Records (HasField (..))
 import           System.FilePath
 
 import           Cardano.Api.Block
+import           Cardano.Api.Certificate
 import           Cardano.Api.Eras
+import           Cardano.Api.Error
 import           Cardano.Api.IPC (ConsensusModeParams (..),
                    LocalChainSyncClient (LocalChainSyncClientPipelined),
                    LocalNodeClientProtocols (..), LocalNodeClientProtocolsInMode,
                    LocalNodeConnectInfo (..), connectToLocalNode)
+import           Cardano.Api.KeysPraos
+import           Cardano.Api.KeysShelley
 import           Cardano.Api.LedgerEvent (LedgerEvent, toLedgerEvent)
 import           Cardano.Api.Modes (CardanoMode, EpochSlots (..))
 import           Cardano.Api.NetworkId (NetworkId (..), NetworkMagic (NetworkMagic))
+import           Cardano.Api.ProtocolParameters
+import           Cardano.Api.Query (DebugLedgerState (..), ProtocolState,
+                   SerialisedDebugLedgerState, decodeDebugLedgerState, decodeProtocolState)
+import           Cardano.Binary (FromCBOR)
 import qualified Cardano.Chain.Genesis
 import qualified Cardano.Chain.Update
 import           Cardano.Crypto (ProtocolMagicId (unProtocolMagicId), RequiresNetworkMagic (..))
@@ -83,14 +101,20 @@ import qualified Cardano.Crypto.Hash.Blake2b
 import qualified Cardano.Crypto.Hash.Class
 import qualified Cardano.Crypto.Hashing
 import qualified Cardano.Crypto.ProtocolMagic
+import qualified Cardano.Crypto.VRF as Crypto
 import           Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
+import           Cardano.Ledger.BaseTypes (Globals (..), UnitInterval)
 import qualified Cardano.Ledger.BaseTypes as Shelley.Spec
+import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Credential as Shelley.Spec
+import qualified Cardano.Ledger.Crypto as Crypto
+import qualified Cardano.Ledger.Era as Ledger
 import qualified Cardano.Ledger.Keys as Shelley.Spec
+import qualified Cardano.Ledger.Shelley.API.Protocol as TPraos
 import qualified Cardano.Ledger.Shelley.Genesis as Shelley.Spec
+import           Cardano.Slotting.EpochInfo (EpochInfo)
 import           Cardano.Slotting.Slot (WithOrigin (At, Origin))
 import qualified Cardano.Slotting.Slot as Slot
-import           Data.Maybe (mapMaybe)
 import           Network.TypedProtocol.Pipelined (Nat (..))
 import qualified Ouroboros.Consensus.Block.Abstract as Consensus
 import qualified Ouroboros.Consensus.Byron.Ledger.Block as Byron
@@ -111,6 +135,7 @@ import qualified Ouroboros.Consensus.Protocol.TPraos as TPraos
 import qualified Ouroboros.Consensus.Shelley.Eras as Shelley
 import qualified Ouroboros.Consensus.Shelley.Ledger.Block as Shelley
 import qualified Ouroboros.Consensus.Shelley.Ledger.Ledger as Shelley
+import           Ouroboros.Consensus.Shelley.Node (ShelleyGenesis (..))
 import           Ouroboros.Consensus.TypeFamilyWrappers (WrapLedgerEvent (WrapLedgerEvent))
 import qualified Ouroboros.Network.Block
 import qualified Ouroboros.Network.Protocol.ChainSync.Client as CS
@@ -295,7 +320,7 @@ foldBlocks nodeConfigFilePath socketPath validationMode state0 accumulate = do
         $ Cardano.Chain.Genesis.gdProtocolMagicId
         $ Cardano.Chain.Genesis.configGenesisData byronConfig
 
-      networkId = case Cardano.Chain.Genesis.configReqNetMagic byronConfig of
+      networkId' = case Cardano.Chain.Genesis.configReqNetMagic byronConfig of
         RequiresNoMagic -> Mainnet
         RequiresMagic -> Testnet networkMagic
 
@@ -306,7 +331,7 @@ foldBlocks nodeConfigFilePath socketPath validationMode state0 accumulate = do
       connectInfo =
           LocalNodeConnectInfo {
             localConsensusModeParams = cardanoModeParams,
-            localNodeNetworkId       = networkId,
+            localNodeNetworkId       = networkId',
             localNodeSocketPath      = socketPath
           }
 
@@ -1212,3 +1237,65 @@ unChainHash ch =
   case ch of
     Ouroboros.Network.Block.GenesisHash -> "genesis"
     Ouroboros.Network.Block.BlockHash bh -> BSS.fromShort (HFC.getOneEraHash bh)
+
+data LeadershipError = LeaderErrDecodeLedgerStateFailure
+                     | LeaderErrDecodeProtocolStateFailure
+                     | LeaderErrDecodeProtocolEpochStateFailure
+                     | LeaderErrGenesisSlot
+                     | LeaderErrStakePoolHasNoStake PoolId
+                     deriving Show
+
+instance Error LeadershipError where
+  displayError LeaderErrDecodeLedgerStateFailure =
+    "Failed to successfully decode ledger state"
+  displayError LeaderErrDecodeProtocolStateFailure =
+    "Failed to successfully decode protocol state"
+  displayError LeaderErrGenesisSlot =
+    "Leadership schedule currently cannot be calculated from genesis"
+  displayError (LeaderErrStakePoolHasNoStake poolId) =
+    "The stake pool: " <> show poolId <> " has no stake"
+  displayError LeaderErrDecodeProtocolEpochStateFailure =
+    "Failed to successfully decode the current epoch state"
+
+-- | Return the slots at which a particular stake pool operator is
+-- expected to mint a block.
+currentEpochEligibleLeadershipSlots
+  :: FromCBOR (DebugLedgerState era)
+  => ShelleyLedgerEra era ~ ledgerera
+  => Ledger.Era ledgerera
+  => HasField "_d" (Core.PParams ledgerera) UnitInterval
+  => Crypto.Signable (Crypto.VRF (Ledger.Crypto ledgerera)) Shelley.Spec.Seed
+  => Ledger.Crypto ledgerera ~ Shelley.StandardCrypto
+  => ShelleyBasedEra era
+  -> ShelleyGenesis Shelley.StandardShelley
+  -> EpochInfo (Either Text)
+  -> ProtocolParameters
+  -> SerialisedDebugLedgerState era
+  -> ProtocolState era
+  -> PoolId
+  -> SigningKey VrfKey
+  -> Either LeadershipError (Set SlotNo)
+currentEpochEligibleLeadershipSlots sbe sGen eInfo pParams serDebugLegState ptclState
+                        (StakePoolKeyHash poolid) (VrfSigningKey vrkSkey) = do
+  DebugLedgerState newEpochState
+    <- first (const LeaderErrDecodeLedgerStateFailure)
+         $ decodeDebugLedgerState serDebugLegState
+
+  chainDepState <- first (const LeaderErrDecodeProtocolStateFailure)
+                     $ decodeProtocolState ptclState
+
+  let ledgerPparams = toLedgerPParams sbe pParams
+  Right $ TPraos.getLeaderSchedule
+            globals newEpochState chainDepState
+            poolid vrkSkey ledgerPparams
+ where
+  globals = constructGlobals sGen eInfo pParams
+
+constructGlobals
+  :: ShelleyGenesis Shelley.StandardShelley
+  -> EpochInfo (Either Text)
+  -> ProtocolParameters
+  -> Globals
+constructGlobals sGen eInfo pParams =
+  let majorPParamsVer = fst $ protocolParamProtocolVersion pParams
+  in Shelley.Spec.mkShelleyGlobals sGen eInfo majorPParamsVer
