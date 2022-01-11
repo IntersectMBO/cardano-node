@@ -920,6 +920,20 @@ runQueryLeadershipSchedule (AnyConsensusModeParams cModeParams) network
                  $ currentEpochEligibleLeadershipSlots sbe shelleyGenesis eInfo
                                            pparams serDebugLedState ptclState poolid vrkSkey
 
+             NextEpoch -> do
+               let currentEpochStateQuery = QueryInEra eInMode $ QueryInShelleyBasedEra sbe QueryCurrentEpochState
+                   currentEpochQuery = QueryInEra eInMode $ QueryInShelleyBasedEra sbe QueryEpoch
+               tip <- liftIO $ getLocalChainTip localNodeConnInfo
+
+               curentEpoch <- executeQuery era cModeParams localNodeConnInfo currentEpochQuery
+               serCurrentEpochState <- executeQuery era cModeParams localNodeConnInfo currentEpochStateQuery
+
+               firstExceptT ShelleyQueryCmdLeaderShipError $ hoistEither
+                 $ eligibleLeaderSlotsConstaints sbe
+                 $ nextEpochEligibleLeadershipSlots sbe shelleyGenesis
+                     serCurrentEpochState ptclState poolid vrkSkey pparams
+                     (tip, curentEpoch)
+
       liftIO $ printLeadershipSchedule schedule eInfo (SystemStart $ sgSystemStart shelleyGenesis)
     mode -> left . ShelleyQueryCmdUnsupportedMode $ AnyConsensusMode mode
  where

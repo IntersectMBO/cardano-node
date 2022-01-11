@@ -39,6 +39,7 @@ module Cardano.Api.ProtocolParameters (
     makeShelleyUpdateProposal,
 
     -- * Internal conversion functions
+    toLedgerNonce,
     toLedgerUpdate,
     fromLedgerUpdate,
     toLedgerProposedPPUpdates,
