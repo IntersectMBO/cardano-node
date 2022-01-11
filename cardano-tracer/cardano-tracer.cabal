@@ -81,6 +81,7 @@ library
                        , trace-dispatcher
                        , trace-forward
                        , unordered-containers
+                       , yaml
 
   if !os(windows)
     build-depends:     libsystemd-journal

@@ -17,7 +17,7 @@ module Cardano.Tracer.Configuration
   , readTracerConfig
   ) where
 
-import           Data.Aeson (FromJSON, eitherDecodeFileStrict')
+import           Data.Aeson (FromJSON)
 import           Data.Fixed (Pico)
 import           Data.List (intercalate)
 import           Data.List.NonEmpty (NonEmpty)
@@ -25,6 +25,7 @@ import qualified Data.List.NonEmpty as NE
 import           Data.List.Extra (notNull)
 import           Data.Maybe (catMaybes)
 import           Data.Word (Word16, Word32, Word64)
+import           Data.Yaml (decodeFileEither)
 import           GHC.Generics (Generic)
 import           System.Exit (die)
 
@@ -93,7 +94,7 @@ data TracerConfig = TracerConfig
 -- | Read the tracer's configuration file.
 readTracerConfig :: FilePath -> IO TracerConfig
 readTracerConfig pathToConfig =
-  eitherDecodeFileStrict' pathToConfig >>= \case
+  decodeFileEither pathToConfig >>= \case
     Left e -> die $ "Invalid tracer's configuration: " <> show e
     Right (config :: TracerConfig) ->
       case checkMeaninglessValues config of
