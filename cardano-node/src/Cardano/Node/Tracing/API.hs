@@ -2,9 +2,10 @@
 {-# LANGUAGE MonoLocalBinds #-}
 {-# LANGUAGE PackageImports #-}
 {-# LANGUAGE RankNTypes #-}
+
 module Cardano.Node.Tracing.API
-  (initTraceDispatcher)
-where
+  ( initTraceDispatcher
+  ) where
 
 import           Prelude
 

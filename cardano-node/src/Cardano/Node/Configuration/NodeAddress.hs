@@ -28,8 +28,7 @@ module Cardano.Node.Configuration.NodeAddress
   , nodeHostDnsAddressToDomain
   , PortNumber
   , SocketPath(..)
-  )
-where
+  ) where
 
 import Cardano.Prelude
 import Prelude (fail)
@@ -89,9 +88,9 @@ nodeAddressToSockAddr (NodeAddress addr port) =
 
 nodeHostIPAddressToSockAddr :: NodeIPAddress -> SockAddr
 nodeHostIPAddressToSockAddr NodeAddress { naHostAddress = NodeHostIPAddress ip, naPort } =
-    case ip of
-      IPv4 ipv4 -> SockAddrInet  (fromIntegral naPort)   (IP.toHostAddress ipv4)
-      IPv6 ipv6 -> SockAddrInet6 (fromIntegral naPort) 0 (IP.toHostAddress6 ipv6) 0
+  case ip of
+    IPv4 ipv4 -> SockAddrInet  (fromIntegral naPort)   (IP.toHostAddress ipv4)
+    IPv6 ipv6 -> SockAddrInet6 (fromIntegral naPort) 0 (IP.toHostAddress6 ipv6) 0
 
 
 newtype NodeHostIPv4Address

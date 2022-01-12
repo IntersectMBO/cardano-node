@@ -8,8 +8,7 @@
 {-# OPTIONS_GHC -Wno-deprecations  #-}
 
 module Cardano.Node.Tracing.Tracers.KESInfo
-  (
-    severityKESInfo
+  ( severityKESInfo
   , namesForKESInfo
   , traceAsKESInfo
   , docForgeKESInfo
@@ -22,11 +21,10 @@ import           Cardano.Prelude hiding (All, Show, show)
 
 import           Cardano.Node.Queries (GetKESInfo (..))
 import           Cardano.Protocol.TPraos.OCert (KESPeriod (..))
+
 import           Ouroboros.Consensus.Block.Forging
 import           Ouroboros.Consensus.Node.Tracers (TraceLabelCreds (..))
 import qualified Ouroboros.Consensus.Protocol.Ledger.HotKey as HotKey
-
-
 
 traceAsKESInfo
   :: forall m blk . (GetKESInfo blk, MonadIO m)

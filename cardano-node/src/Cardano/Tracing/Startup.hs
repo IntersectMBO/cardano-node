@@ -1,10 +1,11 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE UndecidableInstances  #-}
+
 {-# OPTIONS_GHC -Wno-orphans #-}
+
 module Cardano.Tracing.Startup where
 
 import           Prelude
-
 import           Data.Text (Text)
 
 import           Cardano.Logging (LogFormatting (..))

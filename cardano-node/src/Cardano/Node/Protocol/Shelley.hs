@@ -71,8 +71,8 @@ import           Cardano.Node.Protocol.Types
 --
 -- This also serves a purpose as a sanity check that we have all the necessary
 -- type class instances available.
-mkSomeConsensusProtocolShelley ::
-  NodeShelleyProtocolConfiguration
+mkSomeConsensusProtocolShelley
+  :: NodeShelleyProtocolConfiguration
   -> Maybe ProtocolFilepaths
   -> ExceptT ShelleyProtocolInstantiationError IO SomeConsensusProtocol
 mkSomeConsensusProtocolShelley NodeShelleyProtocolConfiguration {
@@ -262,8 +262,8 @@ data ShelleyProtocolInstantiationError =
   deriving Show
 
 instance Error ShelleyProtocolInstantiationError where
-  displayError (GenesisReadError err)            = displayError err
-  displayError (GenesisValidationError err)      = displayError err
+  displayError (GenesisReadError err) = displayError err
+  displayError (GenesisValidationError err) = displayError err
   displayError (PraosLeaderCredentialsError err) = displayError err
 
 

@@ -1,11 +1,10 @@
 {-# LANGUAGE PackageImports #-}
+
 module Cardano.Node.Tracing.Tracers.Resources
-  (
-    startResourceTracer
+  ( startResourceTracer
   , namesForResources
   , severityResources
   ) where
-
 
 import           "contra-tracer" Control.Tracer
 
@@ -13,8 +12,8 @@ import           Cardano.Logging (SeverityS (..))
 import           Cardano.Logging.Resources
 import           Cardano.Prelude hiding (trace)
 
-startResourceTracer ::
-     Tracer IO ResourceStats
+startResourceTracer
+  :: Tracer IO ResourceStats
   -> Int
   -> IO ()
 startResourceTracer tr delayMilliseconds = do

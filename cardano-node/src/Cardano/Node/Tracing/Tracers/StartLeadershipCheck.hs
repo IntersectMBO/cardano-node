@@ -6,8 +6,7 @@
 {-# LANGUAGE PackageImports #-}
 
 module Cardano.Node.Tracing.Tracers.StartLeadershipCheck
-  (
-    TraceStartLeadershipCheckPlus (..)
+  ( TraceStartLeadershipCheckPlus (..)
   , ForgeTracerType
   , forgeTracerTransform
   ) where

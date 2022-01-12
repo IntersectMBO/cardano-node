@@ -3,7 +3,9 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE UndecidableInstances #-}
+
 {-# OPTIONS_GHC -Wno-name-shadowing -Wno-orphans #-}
+
 module Cardano.Node.Tracing.Tracers.Startup
   ( getStartupInfo
   , namesStartupInfo
@@ -59,8 +61,8 @@ import           Cardano.Node.Protocol (SomeConsensusProtocol (..))
 import           Cardano.Node.Startup
 
 
-getStartupInfo ::
-     NodeConfiguration
+getStartupInfo
+  :: NodeConfiguration
   -> SomeConsensusProtocol
   -> FilePath
   -> IO [StartupTrace blk]

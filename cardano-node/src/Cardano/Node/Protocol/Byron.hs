@@ -2,8 +2,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NamedFieldPuns #-}
 
-
-
 module Cardano.Node.Protocol.Byron
   ( mkSomeConsensusProtocolByron
     -- * Errors
@@ -60,8 +58,8 @@ import           Cardano.Node.Tracing.Tracers.ChainDB ()
 -- This also serves a purpose as a sanity check that we have all the necessary
 -- type class instances available.
 --
-mkSomeConsensusProtocolByron ::
-     NodeByronProtocolConfiguration
+mkSomeConsensusProtocolByron
+  :: NodeByronProtocolConfiguration
   -> Maybe ProtocolFilepaths
   -> ExceptT ByronProtocolInstantiationError IO SomeConsensusProtocol
 mkSomeConsensusProtocolByron NodeByronProtocolConfiguration {

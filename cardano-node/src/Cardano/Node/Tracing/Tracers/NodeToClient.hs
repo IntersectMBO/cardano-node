@@ -8,8 +8,7 @@
 {-# OPTIONS_GHC -Wno-orphans  #-}
 
 module Cardano.Node.Tracing.Tracers.NodeToClient
-  (
-    severityTChainSync
+  ( severityTChainSync
   , namesForTChainSync
   , docTChainSync
 
@@ -20,7 +19,6 @@ module Cardano.Node.Tracing.Tracers.NodeToClient
   , severityTStateQuery
   , namesForTStateQuery
   , docTStateQuery
-
   ) where
 
 import           Cardano.Logging

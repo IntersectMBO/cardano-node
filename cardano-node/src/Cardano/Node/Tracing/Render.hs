@@ -3,26 +3,25 @@
 
 
 module Cardano.Node.Tracing.Render
-  (
-       renderChunkNo
-     , renderHeaderHash
-     , renderHeaderHashForDetails
-     , renderChainHash
-     , renderTipBlockNo
-     , renderTipHash
-     , condenseT
-     , showT
-     , renderPoint
-     , renderPointAsPhrase
-     , renderPointForDetails
-     , renderRealPoint
-     , renderRealPointAsPhrase
-     , renderSlotNo
-     , renderTip
-     , renderTipForDetails
-     , renderTxId
-     , renderTxIdForDetails
-     , renderWithOrigin
+  ( renderChunkNo
+  , renderHeaderHash
+  , renderHeaderHashForDetails
+  , renderChainHash
+  , renderTipBlockNo
+  , renderTipHash
+  , condenseT
+  , showT
+  , renderPoint
+  , renderPointAsPhrase
+  , renderPointForDetails
+  , renderRealPoint
+  , renderRealPointAsPhrase
+  , renderSlotNo
+  , renderTip
+  , renderTipForDetails
+  , renderTxId
+  , renderTxIdForDetails
+  , renderWithOrigin
   ) where
 
 import           Cardano.Prelude

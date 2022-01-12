@@ -408,7 +408,6 @@ defaultPartialNodeConfiguration =
     { pncConfigFile = Last . Just $ ConfigYamlFilePath "configuration/cardano/mainnet-config.json"
     , pncDatabaseFile = Last . Just $ DbFile "mainnet/db/"
     , pncLoggingSwitch = Last $ Just True
-    -- TODO: Do we want default values for `SocketConfig`?
     , pncSocketConfig = Last . Just $ SocketConfig mempty mempty mempty mempty
     , pncDiffusionMode = Last $ Just InitiatorAndResponderDiffusionMode
     , pncSnapshotInterval = Last $ Just DefaultSnapshotInterval

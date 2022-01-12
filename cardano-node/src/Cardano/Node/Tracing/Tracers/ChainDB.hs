@@ -55,8 +55,8 @@ import qualified Ouroboros.Network.AnchoredFragment as AF
 
 {-# ANN module ("HLint: ignore Redundant bracket" :: Text) #-}
 
-withAddedToCurrentChainEmptyLimited ::
-     Trace IO (ChainDB.TraceEvent blk)
+withAddedToCurrentChainEmptyLimited
+  :: Trace IO (ChainDB.TraceEvent blk)
   -> IO (Trace IO (ChainDB.TraceEvent blk))
 withAddedToCurrentChainEmptyLimited tr = do
   ltr <- limitFrequency 1.25 "AddedToCurrentChainLimiter" tr mempty

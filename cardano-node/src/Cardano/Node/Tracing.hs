@@ -4,8 +4,7 @@
 {-# LANGUAGE ImportQualifiedPost #-}
 module Cardano.Node.Tracing
   ( Tracers (..)
-  )
-where
+  ) where
 
 import Prelude (IO)
 

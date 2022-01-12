@@ -38,8 +38,8 @@ import           Ouroboros.Network.BlockFetch.ClientState (PeerFetchInFlight (..
 import           Cardano.Logging hiding (traceWith)
 import           Cardano.Node.Queries
 
-startPeerTracer ::
-     Tracer IO [PeerT blk]
+startPeerTracer
+  :: Tracer IO [PeerT blk]
   -> NodeKernelData blk
   -> Int
   -> IO ()
