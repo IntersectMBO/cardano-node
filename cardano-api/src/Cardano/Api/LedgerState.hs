@@ -65,7 +65,6 @@ import           Data.ByteString as BS
 import qualified Data.ByteString.Base16 as Base16
 import           Data.ByteString.Short as BSS
 import           Data.Foldable
-import           Data.Functor.Identity
 import           Data.IORef
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (mapMaybe)
@@ -122,11 +121,10 @@ import qualified Cardano.Ledger.Shelley.API.Protocol as TPraos
 import qualified Cardano.Ledger.Shelley.Genesis as Shelley.Spec
 import qualified Cardano.Protocol.TPraos.BHeader as TPraos
 import qualified Cardano.Protocol.TPraos.Rules.Tickn as Tick
-import           Cardano.Slotting.EpochInfo (EpochInfo, fixedEpochInfo, generalizeEpochInfo)
+import           Cardano.Slotting.EpochInfo (EpochInfo)
 import qualified Cardano.Slotting.EpochInfo.API as Slot
 import           Cardano.Slotting.Slot (WithOrigin (At, Origin))
 import qualified Cardano.Slotting.Slot as Slot
-import           Cardano.Slotting.Time (mkSlotLength)
 import           Control.State.Transition
 import           Network.TypedProtocol.Pipelined (Nat (..))
 import qualified Ouroboros.Consensus.Block.Abstract as Consensus
@@ -1369,26 +1367,15 @@ nextEpochEligibleLeadershipSlots sbe sGen serCurrEpochState ptclState
 
   return $ isLeadingSlots sbe rOfInterest nextEpochsNonce pParams vrfSkey relativeStake f
  where
-  globals = constructGlobals sGen epochInfoConstantEither pParams
-
-
-  -- This allows us to calculate the slot range of the next epoch
-  epochInfoConstant :: EpochInfo Identity
-  epochInfoConstant = fixedEpochInfo (sgEpochLength sGen)
-                                       (mkSlotLength $ sgSlotLength sGen)
-
-
-  epochInfoConstantEither :: EpochInfo (Either Text)
-  epochInfoConstantEither = generalizeEpochInfo epochInfoConstant
-
+  globals = constructGlobals sGen eInfo pParams
 
   f :: Shelley.Spec.ActiveSlotCoeff
   f = activeSlotCoeff globals
 
 
--- | Return slots a given stake pool operator is leading
+-- | Return slots a given stake pool operator is leading.
 -- See Leader Value Calculation in the Shelley ledger specification.
--- We meed the certified natural value from the VRF, active slot coefficient
+-- We need the certified natural value from the VRF, active slot coefficient
 -- and the stake proportion of the stake pool.
 isLeadingSlots
   :: Crypto.Signable v Shelley.Spec.Seed
@@ -1396,8 +1383,8 @@ isLeadingSlots
   => Crypto.ContextVRF v ~ ()
   => HasField "_d" (Core.PParams (ShelleyLedgerEra era)) UnitInterval
   => ShelleyBasedEra era
+  -> (SlotNo, SlotNo) -- ^ Slot range of interest
   -> Consensus.Nonce
-  -> SlotNo   -- ^ Epoch's first slot
   -> ProtocolParameters
   -> Crypto.SignKeyVRF v
   -> Rational -- ^ Stake pool relative stake
@@ -1453,26 +1440,25 @@ obtainDecodeEpochStateConstraints ShelleyBasedEraAlonzo  f = f
 -- | Return the slots at which a particular stake pool operator is
 -- expected to mint a block.
 currentEpochEligibleLeadershipSlots
-  :: FromCBOR (DebugLedgerState era)
-  => ShelleyLedgerEra era ~ ledgerera
+  :: ShelleyLedgerEra era ~ ledgerera
   => Ledger.Era ledgerera
   => HasField "_d" (Core.PParams ledgerera) UnitInterval
   => Crypto.Signable (Crypto.VRF (Ledger.Crypto ledgerera)) Shelley.Spec.Seed
+  => Share (Core.TxOut (ShelleyLedgerEra era)) ~ Interns (Shelley.Spec.Credential 'Shelley.Spec.Staking (Ledger.Crypto (ShelleyLedgerEra era)))
   => Ledger.Crypto ledgerera ~ Shelley.StandardCrypto
   => ShelleyBasedEra era
   -> ShelleyGenesis Shelley.StandardShelley
   -> EpochInfo (Either Text)
   -> ProtocolParameters
-  -> SerialisedDebugLedgerState era
   -> ProtocolState era
   -> PoolId
   -> SigningKey VrfKey
+  -> SerialisedCurrentEpochState era
+  -> EpochNo -- ^ Current EpochInfo
   -> Either LeadershipError (Set SlotNo)
-currentEpochEligibleLeadershipSlots sbe sGen eInfo pParams serDebugLegState ptclState
-                        (StakePoolKeyHash poolid) (VrfSigningKey vrkSkey) = do
-  DebugLedgerState newEpochState
-    <- first (const LeaderErrDecodeLedgerStateFailure)
-         $ decodeDebugLedgerState serDebugLegState
+currentEpochEligibleLeadershipSlots sbe sGen eInfo pParams ptclState
+                        poolid@(StakePoolKeyHash poolHash) (VrfSigningKey vrkSkey)
+                        serCurrEpochState currentEpoch = do
 
   chainDepState <- first (const LeaderErrDecodeProtocolStateFailure)
                      $ decodeProtocolState ptclState
@@ -1503,6 +1489,9 @@ currentEpochEligibleLeadershipSlots sbe sGen eInfo pParams serDebugLegState ptcl
 
  where
   globals = constructGlobals sGen eInfo pParams
+
+  f :: Shelley.Spec.ActiveSlotCoeff
+  f = activeSlotCoeff globals
 
 constructGlobals
   :: ShelleyGenesis Shelley.StandardShelley
