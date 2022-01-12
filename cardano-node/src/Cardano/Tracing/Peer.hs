@@ -37,7 +37,7 @@ import qualified Ouroboros.Network.BlockFetch.ClientRegistry as Net
 import           Ouroboros.Network.BlockFetch.ClientState (PeerFetchInFlight (..),
                    PeerFetchStatus (..), readFetchClientState)
 
-import           Cardano.Tracing.Kernel
+import           Cardano.Node.Queries
 
 data Peer blk =
   Peer

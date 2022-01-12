@@ -1,6 +1,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 module Cardano.Benchmarking.GeneratorTx.LocalProtocolDefinition
@@ -16,12 +17,14 @@ import           Data.Version (showVersion)
 
 import           Cardano.Prelude hiding (TypeError, show)
 import           Control.Monad.Trans.Except.Extra (firstExceptT)
-import           Ouroboros.Network.Block (MaxSlotNo(..))
+
+import           Cardano.Tracing.Config (TraceOptions(..))
 
 import qualified Cardano.Chain.Genesis as Genesis
 
 import           Cardano.Node.Configuration.Logging
 import           Cardano.Node.Configuration.POM
+import           Cardano.Node.Handlers.Shutdown
 import           Cardano.Node.Protocol.Cardano
 import           Cardano.Node.Protocol.Types (SomeConsensusProtocol)
 import           Cardano.Node.Types
@@ -44,8 +47,13 @@ startProtocol logConfigFile = do
  where
   mkLoggingLayer :: NodeConfiguration -> SomeConsensusProtocol -> ExceptT CliError IO LoggingLayer
   mkLoggingLayer nc ptcl =
-    firstExceptT (\(ConfigErrorFileNotFound fp) -> ConfigNotFoundError fp) $
-    createLoggingLayer (pack $ showVersion version) nc ptcl
+    firstExceptT (\ case
+      (ConfigErrorFileNotFound fp) -> ConfigNotFoundError fp
+      ConfigErrorNoEKG -> EKGNotFoundError) $
+        createLoggingLayer
+          (pack $ showVersion version)
+          nc {ncTraceConfig=TracingOff}
+          ptcl
 
   mkNodeConfig :: FilePath -> IO NodeConfiguration
   mkNodeConfig logConfig = do
@@ -61,8 +69,7 @@ startProtocol logConfigFile = do
                    , shelleyBulkCredsFile = Just ""
                    }
                  , pncValidateDB = Last $ Just False
-                 , pncShutdownIPC = Last Nothing
-                 , pncShutdownOnSlotSynced = Last $ Just NoMaxSlotNo
+                 , pncShutdownConfig = Last $ Just $ ShutdownConfig Nothing Nothing
                  , pncConfigFile = Last $ Just configFp
                  }
    configYamlPc <- parseNodeConfigurationFP . Just $ configFp
@@ -74,6 +81,7 @@ data CliError  =
     GenesisReadError !FilePath !Genesis.GenesisDataError
   | FileNotFoundError !FilePath
   | ConfigNotFoundError !FilePath
+  | EKGNotFoundError
   | ProtocolInstantiationError !Text
   | BenchmarkRunnerError !GeneratorTx.TxGenError
   deriving stock Show

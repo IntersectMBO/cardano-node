@@ -60,7 +60,9 @@ library
   hs-source-dirs:      src
 
   exposed-modules:     Cardano.Node.Configuration.Logging
+                       Cardano.Node.Configuration.NodeAddress
                        Cardano.Node.Configuration.POM
+                       Cardano.Node.Configuration.Socket
                        Cardano.Node.Configuration.Topology
                        Cardano.Node.Configuration.TopologyP2P
                        Cardano.Node.Handlers.Shutdown
@@ -76,14 +78,40 @@ library
                        Cardano.Node.Queries
                        Cardano.Node.Run
                        Cardano.Node.STM
+                       Cardano.Node.Startup
+                       Cardano.Node.TraceConstraints
+                       Cardano.Node.Tracing
                        Cardano.Node.Types
+                       Cardano.Node.Tracing.API
+                       Cardano.Node.Tracing.Compat
+                       Cardano.Node.Tracing.Documentation
+                       Cardano.Node.Tracing.Era.Byron
+                       Cardano.Node.Tracing.Era.HardFork
+                       Cardano.Node.Tracing.Era.Shelley
+                       Cardano.Node.Tracing.Tracers
+                       Cardano.Node.Tracing.Tracers.BlockReplayProgress
+                       Cardano.Node.Tracing.Tracers.ChainDB
+                       Cardano.Node.Tracing.Tracers.Consensus
+                       Cardano.Node.Tracing.Tracers.Diffusion
+                       Cardano.Node.Tracing.Tracers.KESInfo
+                       Cardano.Node.Tracing.Tracers.StartLeadershipCheck
+                       Cardano.Node.Tracing.Tracers.ForgingThreadStats
+                       Cardano.Node.Tracing.Tracers.Resources
+                       Cardano.Node.Tracing.Tracers.Peer
+                       Cardano.Node.Tracing.Tracers.Startup
+                       Cardano.Node.Tracing.Tracers.Shutdown
+                       Cardano.Node.Tracing.Tracers.P2P
+                       Cardano.Node.Tracing.Tracers.NonP2P
+                       Cardano.Node.Tracing.Tracers.NodeToClient
+                       Cardano.Node.Tracing.Tracers.NodeToNode
+                       Cardano.Node.Tracing.Formatting
+                       Cardano.Node.Tracing.Render
                        Cardano.Tracing.Config
-                       Cardano.Tracing.Constraints
-                       Cardano.Tracing.Kernel
                        Cardano.Tracing.Metrics
                        Cardano.Tracing.Peer
                        Cardano.Tracing.Render
                        Cardano.Tracing.Startup
+                       Cardano.Tracing.Shutdown
                        Cardano.Tracing.Tracers
                        Cardano.Tracing.OrphanInstances.Byron
                        Cardano.Tracing.OrphanInstances.Common
@@ -93,7 +121,6 @@ library
                        Cardano.Tracing.OrphanInstances.Shelley
 
   other-modules:       Paths_cardano_node
-                       Cardano.Node.Configuration.Socket
 
   build-depends:        aeson             >= 1.5.6.0
                       , async
@@ -149,6 +176,9 @@ library
                       , text
                       , time
                       , tracer-transformers
+                      , trace-dispatcher
+                      , trace-forward
+                      , trace-resources
                       , transformers
                       , transformers-except
                       , typed-protocols

@@ -1,11 +1,13 @@
-{-# LANGUAGE BangPatterns #-}
-{-# LANGUAGE CPP #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE BangPatterns        #-}
+{-# LANGUAGE CPP                 #-}
+{-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE FlexibleContexts    #-}
+{-# LANGUAGE GADTs               #-}
+{-# LANGUAGE NamedFieldPuns      #-}
+{-# LANGUAGE PackageImports      #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TupleSections       #-}
+{-# LANGUAGE TypeApplications    #-}
 
 #if !defined(mingw32_HOST_OS)
 #define UNIX
@@ -17,24 +19,25 @@ module Cardano.Node.Run
   ) where
 
 import           Cardano.Prelude hiding (ByteString, STM, atomically, take, trace)
+import           Prelude (String, error, id)
 import           Data.IP (toSockAddr)
-import           Prelude (String, id)
 
 import qualified Control.Concurrent.Async as Async
 import           Control.Monad.Class.MonadSTM.Strict
 import           Control.Monad.Trans.Except.Extra (left)
-import           Control.Tracer
+import           "contra-tracer" Control.Tracer
 import qualified Data.Map.Strict as Map
 import           Data.Text (breakOn, pack, take)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import           Data.Time.Clock (getCurrentTime)
-import           Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import           Data.Version (showVersion)
 import           Network.HostName (getHostName)
 import           Network.Socket (Socket)
-import           System.Directory (canonicalizePath, createDirectoryIfMissing, makeAbsolute)
+import           System.Directory (canonicalizePath, createDirectoryIfMissing,
+                     makeAbsolute)
 import           System.Environment (lookupEnv)
+
 #ifdef UNIX
 import           System.Posix.Files
 import qualified System.Posix.Signals as Signals
@@ -43,7 +46,6 @@ import           System.Posix.Types (FileMode)
 import           System.Win32.File
 #endif
 
-import           Cardano.BM.Data.LogItem (LogObject (..))
 import           Cardano.BM.Data.Tracer (ToLogObject (..), TracingVerbosity (..))
 import           Cardano.BM.Data.Transformers (setHostname)
 import           Cardano.BM.Trace
@@ -52,17 +54,20 @@ import           Paths_cardano_node (version)
 import qualified Cardano.Crypto.Libsodium as Crypto
 
 import           Cardano.Node.Configuration.Logging (LoggingLayer (..), createLoggingLayer,
-                   nodeBasicInfo, shutdownLoggingLayer)
+                   shutdownLoggingLayer)
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..),
                    PartialNodeConfiguration (..), SomeNetworkP2PMode (..),
                    defaultPartialNodeConfiguration, makeNodeConfiguration, parseNodeConfigurationFP)
-import           Cardano.Node.Queries (HasKESInfo (..), HasKESMetricsData (..))
+import           Cardano.Node.Configuration.NodeAddress
+import           Cardano.Node.Startup
 import           Cardano.Node.Types
+import           Cardano.Node.Tracing.API
+import           Cardano.Node.Tracing.Tracers.Startup (getStartupInfo)
 import           Cardano.Tracing.Config (TraceOptions (..), TraceSelection (..))
-import           Cardano.Tracing.Constraints (TraceConstraints)
-import           Cardano.Tracing.Startup
 
 import qualified Ouroboros.Consensus.Config as Consensus
+import           Ouroboros.Consensus.Config.SupportsNode
+                     (ConfigSupportsNode (..))
 import           Ouroboros.Consensus.Node (NetworkP2PMode (..), RunNode, RunNodeArgs (..),
                    StdRunNodeArgs (..))
 import qualified Ouroboros.Consensus.Node as Node (getChainDB, run)
@@ -91,7 +96,8 @@ import qualified Cardano.Node.Configuration.TopologyP2P as TopologyP2P
 import           Cardano.Node.Handlers.Shutdown
 import           Cardano.Node.Protocol (mkConsensusProtocol)
 import           Cardano.Node.Protocol.Types
-import           Cardano.Tracing.Kernel
+import           Cardano.Node.TraceConstraints (TraceConstraints)
+import           Cardano.Node.Queries
 import           Cardano.Tracing.Peer
 import           Cardano.Tracing.Tracers
 
@@ -126,66 +132,95 @@ runNode cmdPc = do
     p :: SomeConsensusProtocol <-
       case eitherSomeProtocol of
         Left err -> putStrLn (displayError err) >> exitFailure
-        Right p -> pure p
+        Right p  -> pure p
 
-    eLoggingLayer <- runExceptT $ createLoggingLayer
-                     (Text.pack (showVersion version))
-                     nc
-                     p
-
-    loggingLayer <- case eLoggingLayer of
-                      Left err  -> putTextLn (show err) >> exitFailure
-                      Right res -> return res
-
-    !trace <- setupTrace loggingLayer
-    let tracer = contramap pack $ toLogObject trace
-
-    logTracingVerbosity nc tracer
-
-    let handleNodeWithTracers
-          :: ( HasKESMetricsData blk
-             , HasKESInfo blk
-             , TraceConstraints blk
-             , Protocol.Protocol IO blk
-             )
-          => Protocol.ProtocolInfoArgs IO blk
-          -> IO ()
-        handleNodeWithTracers runP = do
-          -- This IORef contains node kernel structure which holds node kernel.
-          -- Used for ledger queries and peer connection status.
-          nodeKernelData <- mkNodeKernelData
-          let ProtocolInfo { pInfoConfig = cfg } = Protocol.protocolInfo runP
-          case ncEnableP2P nc of
-            SomeNetworkP2PMode p2pMode -> do
-              tracers <- mkTracers
-                          (Consensus.configBlock cfg)
-                          (ncTraceConfig nc)
-                          trace
-                          nodeKernelData
-                          (llEKGDirect loggingLayer)
-                          p2pMode
-              Async.withAsync (handlePeersListSimple trace nodeKernelData)
-                  $ \_peerLogingThread ->
-                    -- We ignore peer loging thread if it dies, but it will be killed
-                    -- when 'handleSimpleNode' terminates.
-                        handleSimpleNode p runP p2pMode trace tracers nc
-                                        (setNodeKernel nodeKernelData)
-                        `finally`
-                        shutdownLoggingLayer loggingLayer
+    let networkMagic :: NetworkMagic =
+          case p of
+            SomeConsensusProtocol _ runP ->
+              let ProtocolInfo { pInfoConfig } = Protocol.protocolInfo runP
+              in getNetworkMagic $ Consensus.configBlock pInfoConfig
 
     case p of
-      SomeConsensusProtocol _ runP -> handleNodeWithTracers runP
+      SomeConsensusProtocol _ runP ->
+        handleNodeWithTracers cmdPc nc p networkMagic runP
+
+handleNodeWithTracers
+  :: ( TraceConstraints blk
+     , Protocol.Protocol IO blk
+     )
+  => PartialNodeConfiguration
+  -> NodeConfiguration
+  -> SomeConsensusProtocol
+  -> NetworkMagic
+  -> Protocol.ProtocolInfoArgs IO blk
+  -> IO ()
+handleNodeWithTracers  cmdPc nc p networkMagic runP = do
+  -- This IORef contains node kernel structure which holds node kernel.
+  -- Used for ledger queries and peer connection status.
+  nodeKernelData <- mkNodeKernelData
+  let ProtocolInfo { pInfoConfig = cfg } = Protocol.protocolInfo runP
+  case ncEnableP2P nc of
+    SomeNetworkP2PMode p2pMode -> do
+      let fp = maybe  "No file path found!"
+                      unConfigPath
+                      (getLast (pncConfigFile cmdPc))
+      (tracers, mLoggingLayer) <-
+        case ncTraceConfig nc of
+          TraceDispatcher{} -> do
+            (, Nothing) <$>
+              initTraceDispatcher
+                nc
+                p
+                networkMagic
+                nodeKernelData
+                p2pMode
+          _ -> do
+            eLoggingLayer <- runExceptT $ createLoggingLayer
+              (Text.pack (showVersion version))
+              nc
+              p
+
+            loggingLayer <- case eLoggingLayer of
+              Left err  -> putTextLn (show err) >> exitFailure
+              Right res -> return res
+            !trace <- setupTrace loggingLayer
+            let tracer = contramap pack $ toLogObject trace
+            logTracingVerbosity nc tracer
+
+            (,Just loggingLayer) <$>
+              mkTracers
+                (Consensus.configBlock cfg)
+                (ncTraceConfig nc)
+                trace
+                nodeKernelData
+                (llEKGDirect loggingLayer)
+                p2pMode
+
+      getStartupInfo nc p fp
+        >>= mapM_ (traceWith $ startupTracer tracers)
+
+      Async.withAsync (handlePeersListSimple (error "Implement Tracer IO [Peer blk]") nodeKernelData)
+          $ \_peerLogingThread ->
+            -- We ignore peer loging thread if it dies, but it will be killed
+            -- when 'handleSimpleNode' terminates.
+                handleSimpleNode runP p2pMode tracers nc
+                  (setNodeKernel nodeKernelData)
+                `finally`
+                forM_ mLoggingLayer
+                  shutdownLoggingLayer
+
 
 logTracingVerbosity :: NodeConfiguration -> Tracer IO String -> IO ()
 logTracingVerbosity nc tracer =
   case ncTraceConfig nc of
     TracingOff -> return ()
-    TracingOn traceConf ->
+    TracingOnLegacy traceConf ->
       case traceVerbosity traceConf of
         NormalVerbosity -> traceWith tracer "tracing verbosity = normal verbosity "
         MinimalVerbosity -> traceWith tracer "tracing verbosity = minimal verbosity "
         MaximalVerbosity -> traceWith tracer "tracing verbosity = maximal verbosity "
-
+    TraceDispatcher _traceConf ->
+      pure ()
 -- | Add the application name and unqualified hostname to the logging
 -- layer basic trace.
 --
@@ -213,7 +248,6 @@ handlePeersListSimple tr nodeKern = forever $ do
   getCurrentPeers nodeKern >>= tracePeers tr
   threadDelay 2000000 -- 2 seconds.
 
-
 -- | Sets up a simple node, which will run the chain sync protocol and block
 -- fetch protocol, and, if core, will also look at the mempool when trying to
 -- create a new block.
@@ -223,10 +257,8 @@ handleSimpleNode
   . ( RunNode blk
     , Protocol.Protocol IO blk
     )
-  => SomeConsensusProtocol
-  -> Protocol.ProtocolInfoArgs IO blk
+  => Protocol.ProtocolInfoArgs IO blk
   -> NetworkP2PMode p2p
-  -> Trace IO Text
   -> Tracers RemoteConnectionId LocalConnectionId blk p2p
   -> NodeConfiguration
   -> (NodeKernel IO RemoteConnectionId LocalConnectionId blk -> IO ())
@@ -234,21 +266,26 @@ handleSimpleNode
   -- layer is initialised.  This implies this function must not block,
   -- otherwise the node won't actually start.
   -> IO ()
-handleSimpleNode scp runP p2pMode trace nodeTracers nc onKernel = do
+handleSimpleNode runP p2pMode tracers nc onKernel = do
   logStartupWarnings
+
+  traceWith (startupTracer tracers)
+    =<< StartupTime <$> getCurrentTime
+
+  when (ncValidateDB nc) $
+    traceWith (startupTracer tracers)
+      StartupDBValidation
 
   let pInfo = Protocol.protocolInfo runP
 
-  createTracers nc trace
-
   (publicIPv4SocketOrAddr, publicIPv6SocketOrAddr, localSocketOrPath) <- do
-    result <- runExceptT (gatherConfiguredSockets nc)
+    result <- runExceptT (gatherConfiguredSockets $ ncSocketConfig nc)
     case result of
       Right triplet -> return triplet
-      Left error -> do
-        traceWith (startupTracer nodeTracers)
-                $ StartupSocketConfigError error
-        throwIO error
+      Left err -> do
+        traceWith (startupTracer tracers)
+                $ StartupSocketConfigError err
+        throwIO err
 
   dbPath <- canonDbPath nc
 
@@ -268,9 +305,9 @@ handleSimpleNode scp runP p2pMode trace nodeTracers nc onKernel = do
                 Nothing                    -> Nothing
           , Diffusion.daLocalAddress =
               case localSocketOrPath of  -- TODO allow expressing the Nothing case in the config
-                Just (ActualSocket localSocket)  -> Just (Left  localSocket)
-                Just (SocketInfo localAddr)      -> Just (Right localAddr)
-                Nothing                          -> Nothing
+                Just (ActualSocket localSocket) -> Just (Left  localSocket)
+                Just (SocketInfo localAddr)     -> Just (Right localAddr)
+                Nothing                         -> Nothing
           , Diffusion.daAcceptedConnectionsLimit =
               AcceptedConnectionsLimit
                 { acceptedConnectionsHardLimit = 512
@@ -283,7 +320,7 @@ handleSimpleNode scp runP p2pMode trace nodeTracers nc onKernel = do
   ipv4 <- traverse getSocketOrSocketInfoAddr publicIPv4SocketOrAddr
   ipv6 <- traverse getSocketOrSocketInfoAddr publicIPv6SocketOrAddr
 
-  traceWith (startupTracer nodeTracers)
+  traceWith (startupTracer tracers)
             (StartupInfo (catMaybes [ipv4, ipv6])
                          localSocketOrPath
                          ( limitToLatestReleasedVersion fst
@@ -295,25 +332,28 @@ handleSimpleNode scp runP p2pMode trace nodeTracers nc onKernel = do
                          $ Proxy @blk
                          ))
 
-  withShutdownHandling (ncShutdownIPC nc) trace $
+  withShutdownHandling (ncShutdownConfig nc) (shutdownTracer tracers) $
     let nodeArgs = RunNodeArgs
-          { rnTraceConsensus = consensusTracers nodeTracers
-          , rnTraceNTN       = nodeToNodeTracers nodeTracers
-          , rnTraceNTC       = nodeToClientTracers nodeTracers
+          { rnTraceConsensus = consensusTracers tracers
+          , rnTraceNTN       = nodeToNodeTracers tracers
+          , rnTraceNTC       = nodeToClientTracers tracers
           , rnProtocolInfo   = pInfo
           , rnNodeKernelHook = \registry nodeKernel -> do
-              maybeSpawnOnSlotSyncedShutdownHandler nc trace registry
+              maybeSpawnOnSlotSyncedShutdownHandler
+                (ncShutdownConfig nc)
+                (shutdownTracer tracers)
+                registry
                 (Node.getChainDB nodeKernel)
               onKernel nodeKernel
           , rnEnableP2P      = p2pMode
           }
     in case p2pMode of
       EnabledP2PMode -> do
-        traceWith (startupTracer nodeTracers)
+        traceWith (startupTracer tracers)
                   (StartupP2PInfo (ncDiffusionMode nc))
         nt <- TopologyP2P.readTopologyFileOrError nc
         let (localRoots, publicRoots) = producerAddresses nt
-        traceWith (startupTracer nodeTracers)
+        traceWith (startupTracer tracers)
                 $ NetworkConfig localRoots
                                 publicRoots
                                 (useLedgerAfterSlot nt)
@@ -339,10 +379,10 @@ handleSimpleNode scp runP p2pMode trace nodeTracers nc onKernel = do
               , srnDiffusionArgumentsExtra     = mkP2PArguments nc (readTVar localRootsVar)
               (readTVar publicRootsVar)
               (readTVar useLedgerVar)
-              , srnDiffusionTracers            = diffusionTracers nodeTracers
-              , srnDiffusionTracersExtra       = diffusionTracersExtra nodeTracers
+              , srnDiffusionTracers            = diffusionTracers tracers
+              , srnDiffusionTracersExtra       = diffusionTracersExtra tracers
               , srnEnableInDevelopmentVersions = ncTestEnableDevelopmentNetworkProtocols nc
-              , srnTraceChainDB                = chainDBTracer nodeTracers
+              , srnTraceChainDB                = chainDBTracer tracers
               , srnMaybeMempoolCapacityOverride = ncMaybeMempoolCapacityOverride nc
               }
       DisabledP2PMode -> do
@@ -372,10 +412,10 @@ handleSimpleNode scp runP p2pMode trace nodeTracers nc onKernel = do
               , srnDatabasePath                = dbPath
               , srnDiffusionArguments          = diffusionArguments
               , srnDiffusionArgumentsExtra     = mkNonP2PArguments ipProducers dnsProducers
-              , srnDiffusionTracers            = diffusionTracers nodeTracers
-              , srnDiffusionTracersExtra       = diffusionTracersExtra nodeTracers
+              , srnDiffusionTracers            = diffusionTracers tracers
+              , srnDiffusionTracersExtra       = diffusionTracersExtra tracers
               , srnEnableInDevelopmentVersions = ncTestEnableDevelopmentNetworkProtocols nc
-              , srnTraceChainDB                = chainDBTracer nodeTracers
+              , srnTraceChainDB                = chainDBTracer tracers
               , srnMaybeMempoolCapacityOverride = ncMaybeMempoolCapacityOverride nc
               }
  where
@@ -384,9 +424,9 @@ handleSimpleNode scp runP p2pMode trace nodeTracers nc onKernel = do
     (case p2pMode of
       DisabledP2PMode -> return ()
       EnabledP2PMode  -> do
-        traceWith (startupTracer nodeTracers) P2PWarning
+        traceWith (startupTracer tracers) P2PWarning
         when (not $ ncTestEnableDevelopmentNetworkProtocols nc)
-          $ traceWith (startupTracer nodeTracers)
+          $ traceWith (startupTracer tracers)
                       P2PWarningDevelopementNetworkProtocols
       ) :: IO () -- annoying, but unavoidable for GADT type inference
 
@@ -406,28 +446,10 @@ handleSimpleNode scp runP p2pMode trace nodeTracers nc onKernel = do
                                   $ supportedNodeToClientVersions (Proxy @blk)
     when (  ncTestEnableDevelopmentNetworkProtocols nc
          && (not (null developmentNtnVersions) || not (null developmentNtcVersions)) )
-       $ traceWith (startupTracer nodeTracers)
+       $ traceWith (startupTracer tracers)
                    (WarningDevelopmentNetworkProtocols
                      developmentNtnVersions
                      developmentNtcVersions)
-
-  createTracers
-    :: NodeConfiguration
-    -> Trace IO Text
-    -> IO ()
-  createTracers NodeConfiguration { ncValidateDB }
-                tr = do
-    startTime <- getCurrentTime
-    traceNodeBasicInfo tr =<< nodeBasicInfo nc scp startTime
-    traceCounter "nodeStartTime" tr (ceiling $ utcTimeToPOSIXSeconds startTime)
-    traceWith (startupTracer nodeTracers)
-            $ StartupTime startTime
-    when ncValidateDB $ traceWith (startupTracer nodeTracers) StartupDBValidation
-
-  traceNodeBasicInfo :: Trace IO Text -> [LogObject Text] -> IO ()
-  traceNodeBasicInfo tr basicInfoItems =
-    forM_ basicInfoItems $ \(LogObject nm mt content) ->
-      traceNamedObject (appendName nm tr) (mt, content)
 
 #ifdef UNIX
   updateTopologyConfiguration :: StrictTVar IO [(Int, Map RelayAccessPoint PeerAdvertise)]
@@ -436,16 +458,16 @@ handleSimpleNode scp runP p2pMode trace nodeTracers nc onKernel = do
                               -> Signals.Handler
   updateTopologyConfiguration localRootsVar publicRootsVar useLedgerVar =
     Signals.Catch $ do
-      traceWith (startupTracer nodeTracers) NetworkConfigUpdate
+      traceWith (startupTracer tracers) NetworkConfigUpdate
       result <- try $ readTopologyFileOrError nc
       case result of
         Left (FatalError err) ->
-          traceWith (startupTracer nodeTracers)
+          traceWith (startupTracer tracers)
                   $ NetworkConfigUpdateError
                   $ pack "Error reading topology configuration file:" <> err
         Right nt -> do
           let (localRoots, publicRoots) = producerAddresses nt
-          traceWith (startupTracer nodeTracers)
+          traceWith (startupTracer tracers)
                   $ NetworkConfig localRoots publicRoots (useLedgerAfterSlot nt)
           atomically $ do
             writeTVar localRootsVar localRoots

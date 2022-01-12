@@ -24,7 +24,10 @@ import           Ouroboros.Consensus.Mempool.API (MempoolCapacityBytes (..),
                    MempoolCapacityBytesOverride (..))
 import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (SnapshotInterval (..))
 
+import           Cardano.Node.Configuration.NodeAddress
 import           Cardano.Node.Configuration.POM (PartialNodeConfiguration (..), lastOption)
+import           Cardano.Node.Configuration.Socket
+import           Cardano.Node.Handlers.Shutdown
 import           Cardano.Node.Types
 
 nodeCLIParser  :: Parser PartialNodeConfiguration
@@ -62,19 +65,20 @@ nodeRunParser = do
 
   validate <- lastOption parseValidateDB
   shutdownIPC <- lastOption parseShutdownIPC
-
-  shutdownOnSlotSynced <- lastOption parseShutdownOnSlotSynced
+  shutdownOnSlot <- lastOption parseShutdownOnSlotSynced
 
   maybeMempoolCapacityOverride <- lastOption parseMempoolCapacityOverride
 
   pure $ PartialNodeConfiguration
-           { pncNodeIPv4Addr = nIPv4Address
-           , pncNodeIPv6Addr = nIPv6Address
-           , pncNodePortNumber = nPortNumber
+           { pncSocketConfig =
+               Last . Just $ SocketConfig
+                 nIPv4Address
+                 nIPv6Address
+                 nPortNumber
+                 socketFp
            , pncConfigFile   = ConfigYamlFilePath <$> nodeConfigFp
            , pncTopologyFile = TopologyFile <$> topFp
            , pncDatabaseFile = DbFile <$> dbFp
-           , pncSocketPath   = socketFp
            , pncDiffusionMode = mempty
            , pncSnapshotInterval = snapshotInterval
            , pncTestEnableDevelopmentNetworkProtocols = mempty
@@ -87,8 +91,8 @@ nodeRunParser = do
              , shelleyBulkCredsFile
              }
            , pncValidateDB = validate
-           , pncShutdownIPC = shutdownIPC
-           , pncShutdownOnSlotSynced = shutdownOnSlotSynced
+           , pncShutdownConfig =
+               Last . Just $ ShutdownConfig (getLast shutdownIPC) (getLast shutdownOnSlot)
            , pncProtocolConfig = mempty
            , pncMaxConcurrencyBulkSync = mempty
            , pncMaxConcurrencyDeadline = mempty

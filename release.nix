@@ -121,12 +121,13 @@ let
   # Paths or prefixes of paths of derivations to build only on the default system (ie. linux on hydra):
   onlyBuildOnDefaultSystem = [
     ["checks" "hlint"] ["dockerImage"] ["submitApiDockerImage"] ["clusterTests"] ["nixosTests"]
-    [ "haskellPackages" "cardano-node-chairman" "checks" ]
-    [ "haskellPackages" "cardano-node-chairman" "coverageReport" ]
+    [ "haskellPackages" "cardano-node-chairman" ]
     [ "cardano-node-profiled" ] [ "cardano-node-eventlogged" ]
     [ "checks" "tests" "cardano-node-chairman" ]
     [ "workbench" ] [ "profiles" ]
+    [ "exes" "tx-generator" ]
     [ "tx-generator" "components" "exes" ]
+    [ "tx-generator" ]
     [ "tx-generator-profiled" ]
     [ "locli-profiled" ]
   ];
@@ -135,6 +136,7 @@ let
     ["shell"] ["devShell"] ["devopsShell"] ["cardano-ping"] ["roots"]
     [ "haskellPackages" "cardano-testnet" ]
     [ "checks" "tests" "cardano-testnet" ]
+    [ "tests" "cardano-node-chairman" ]
     [ "tests" "cardano-testnet" ]
     [ "plutus-scripts" ]
     [ "exes" "plutus-example" ] [ "haskellPackages" "plutus-example" ] [ "tests" "plutus-example" ] [ "checks" "tests" "plutus-example"]

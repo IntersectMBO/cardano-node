@@ -6,6 +6,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -15,45 +16,71 @@ module Cardano.Node.Queries
   -- * KES
   , MaxKESEvolutions (..)
   , OperationalCertStartKESPeriod (..)
+  , GetKESInfo(..)
   , HasKESInfo(..)
   , KESMetricsData (..)
   , HasKESMetricsData (..)
   -- * General ledger
   , LedgerQueries(..)
+  -- * Node kernel
+  , NodeKernelData(..)
+  , nkQueryChain
+  , nkQueryLedger
+  , mapNodeKernelDataIO
+  , setNodeKernel
+  , mkNodeKernelData
+  -- * Re-exports
+  , NodeKernel (..)
+  , LocalConnectionId
+  , RemoteConnectionId
+  , StrictMaybe(..)
+  , fromSMaybe
   ) where
 
 import Cardano.Prelude hiding (All, (:.:))
 
+import Data.IORef (IORef, newIORef, readIORef, writeIORef)
 import Data.Map.Strict qualified as Map
 import Data.SOP.Strict
 
-import Cardano.Crypto.KES.Class (Period)
-import Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 import Cardano.Chain.Block qualified as Byron
 import Cardano.Chain.UTxO qualified as Byron
 import Cardano.Crypto.Hash qualified as Crypto
 import Cardano.Crypto.Hashing qualified as Byron.Crypto
+import Cardano.Crypto.KES.Class (Period)
+import Cardano.Protocol.TPraos.OCert (KESPeriod (..))
+
+import Cardano.Ledger.BaseTypes (StrictMaybe (..), fromSMaybe)
 import Cardano.Ledger.SafeHash qualified as Ledger
 import Cardano.Ledger.Shelley.LedgerState qualified as Shelley
 import Cardano.Ledger.Shelley.UTxO qualified as Shelley
 import Cardano.Ledger.TxIn qualified as Ledger
 
-import Ouroboros.Consensus.HardFork.Combinator.Embed.Unary
-import Ouroboros.Consensus.Byron.Ledger.Block qualified as Byron
-import Ouroboros.Consensus.Byron.Ledger.Ledger qualified as Byron
-import Ouroboros.Consensus.Shelley.Ledger qualified as Shelley
-import Ouroboros.Consensus.Cardano qualified as Cardano
-import Ouroboros.Consensus.Cardano.Block qualified as Cardano
 import Ouroboros.Consensus.Block (ForgeStateInfo, ForgeStateUpdateError)
 import Ouroboros.Consensus.Byron.Ledger.Block (ByronBlock)
+import Ouroboros.Consensus.Byron.Ledger.Block qualified as Byron
+import Ouroboros.Consensus.Byron.Ledger.Ledger qualified as Byron
 import Ouroboros.Consensus.Byron.Ledger.Mempool (TxId (..))
+import Ouroboros.Consensus.Cardano qualified as Cardano
+import Ouroboros.Consensus.Cardano.Block qualified as Cardano
 import Ouroboros.Consensus.HardFork.Combinator
 import Ouroboros.Consensus.HardFork.Combinator.AcrossEras (OneEraForgeStateInfo (..), OneEraForgeStateUpdateError (..))
-import Ouroboros.Consensus.Protocol.Ledger.HotKey qualified as HotKey
+import Ouroboros.Consensus.HardFork.Combinator.Embed.Unary
+import Ouroboros.Consensus.Ledger.Abstract (IsLedger)
+import Ouroboros.Consensus.Ledger.Extended (ExtLedgerState)
+import Ouroboros.Consensus.Node (NodeKernel (..))
+import Ouroboros.Consensus.Shelley.Ledger qualified as Shelley
 import Ouroboros.Consensus.Shelley.Ledger.Block (ShelleyBlock)
 import Ouroboros.Consensus.Shelley.Ledger.Mempool (TxId (..))
 import Ouroboros.Consensus.Shelley.Node ()
+import Ouroboros.Consensus.Protocol.Ledger.HotKey qualified as HotKey
+import Ouroboros.Consensus.Storage.ChainDB qualified as ChainDB
 import Ouroboros.Consensus.TypeFamilyWrappers
+import Ouroboros.Consensus.Util.Orphans ()
+
+import Ouroboros.Network.AnchoredFragment qualified as AF
+import Ouroboros.Network.NodeToClient (LocalConnectionId)
+import Ouroboros.Network.NodeToNode (RemoteConnectionId)
 
 
 --
@@ -174,6 +201,33 @@ instance All HasKESMetricsData xs => HasKESMetricsData (HardForkBlock xs) where
       getOne = K . getKESMetricsData (Proxy @blk) . unwrapForgeStateInfo
 
 --
+-- * GetKESInfo
+--
+class GetKESInfo blk where
+  getKESInfoFromStateInfo :: Proxy blk -> ForgeStateInfo blk -> Maybe HotKey.KESInfo
+  getKESInfoFromStateInfo _ _ = Nothing
+
+instance GetKESInfo (ShelleyBlock era) where
+  getKESInfoFromStateInfo _ = Just
+
+instance GetKESInfo ByronBlock
+
+instance All GetKESInfo xs => GetKESInfo (HardForkBlock xs) where
+  getKESInfoFromStateInfo _ forgeStateInfo =
+      case forgeStateInfo of
+        CurrentEraLacksBlockForging _ -> Nothing
+        CurrentEraForgeStateUpdated currentEraForgeStateInfo ->
+            hcollapse
+          . hcmap (Proxy @GetKESInfo) getOne
+          . getOneEraForgeStateInfo
+          $ currentEraForgeStateInfo
+    where
+      getOne :: forall blk. GetKESInfo blk
+             => WrapForgeStateInfo blk
+             -> K (Maybe HotKey.KESInfo) blk
+      getOne = K . getKESInfoFromStateInfo (Proxy @blk) . unwrapForgeStateInfo
+
+--
 -- * General ledger
 --
 class LedgerQueries blk where
@@ -219,3 +273,42 @@ instance LedgerQueries (Cardano.CardanoBlock c) where
     Cardano.LedgerStateAllegra ledgerAllegra -> ledgerDelegMapSize ledgerAllegra
     Cardano.LedgerStateMary    ledgerMary    -> ledgerDelegMapSize ledgerMary
     Cardano.LedgerStateAlonzo  ledgerAlonzo  -> ledgerDelegMapSize ledgerAlonzo
+
+--
+-- * Node kernel
+--
+newtype NodeKernelData blk =
+  NodeKernelData
+  { unNodeKernelData :: IORef (StrictMaybe (NodeKernel IO RemoteConnectionId LocalConnectionId blk))
+  }
+
+mkNodeKernelData :: IO (NodeKernelData blk)
+mkNodeKernelData = NodeKernelData <$> newIORef SNothing
+
+setNodeKernel :: NodeKernelData blk
+              -> NodeKernel IO RemoteConnectionId LocalConnectionId blk
+              -> IO ()
+setNodeKernel (NodeKernelData ref) nodeKern =
+  writeIORef ref $ SJust nodeKern
+
+mapNodeKernelDataIO ::
+  (NodeKernel IO RemoteConnectionId LocalConnectionId blk -> IO a)
+  -> NodeKernelData blk
+  -> IO (StrictMaybe a)
+mapNodeKernelDataIO f (NodeKernelData ref) =
+  readIORef ref >>= traverse f
+
+nkQueryLedger ::
+     IsLedger (LedgerState blk)
+  => (ExtLedgerState blk -> a)
+  -> NodeKernel IO RemoteConnectionId LocalConnectionId blk
+  -> IO a
+nkQueryLedger f NodeKernel{getChainDB} =
+  f <$> atomically (ChainDB.getCurrentLedger getChainDB)
+
+nkQueryChain ::
+     (AF.AnchoredFragment (Header blk) -> a)
+  -> NodeKernel IO RemoteConnectionId LocalConnectionId blk
+  -> IO a
+nkQueryChain f NodeKernel{getChainDB} =
+  f <$> atomically (ChainDB.getCurrentChain getChainDB)

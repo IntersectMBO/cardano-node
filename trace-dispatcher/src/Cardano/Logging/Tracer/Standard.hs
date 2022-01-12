@@ -7,13 +7,13 @@ module Cardano.Logging.Tracer.Standard (
 
 import           Control.Concurrent.Async
 import           Control.Concurrent.Chan.Unagi.Bounded
+import           Control.Exception (catch, BlockedIndefinitelyOnMVar)
 import           Control.Monad (forever, when)
 import           Control.Monad.IO.Class
-import           Data.IORef (IORef, modifyIORef, newIORef, readIORef)
+import           Data.IORef (IORef, modifyIORef', newIORef, readIORef)
 import           Data.Maybe (isNothing)
 import           Data.Text (Text)
 import qualified Data.Text.IO as TIO
-import           Data.Void (Void)
 import           System.IO (hFlush, stdout)
 
 import           Cardano.Logging.DocuGenerator
@@ -24,7 +24,7 @@ import qualified Control.Tracer as T
 
 -- | The state of a standard tracer
 newtype StandardTracerState =  StandardTracerState {
-    stRunning :: Maybe (InChan Text, OutChan Text, Async Void)
+    stRunning :: Maybe (InChan Text, OutChan Text, Async ())
 }
 
 emptyStandardTracerState :: StandardTracerState
@@ -71,14 +71,16 @@ standardTracer = do
 startStdoutThread :: IORef StandardTracerState -> IO ()
 startStdoutThread stateRef = do
     (inChan, outChan) <- newChan 2048
-    as <- async (stdoutThread outChan)
+    as <- async (catch
+      (stdoutThread outChan)
+      (\(_ :: BlockedIndefinitelyOnMVar) -> pure ()))
     link as
-    modifyIORef stateRef (\ st ->
+    modifyIORef' stateRef (\ st ->
       st {stRunning = Just (inChan, outChan, as)})
 
 -- | The new thread, which does the actual write from the queue.
 -- runs forever, and never returns
-stdoutThread :: OutChan Text -> IO Void
+stdoutThread :: OutChan Text -> IO ()
 stdoutThread outChan = forever $ do
     readChan outChan
       >>= TIO.putStrLn

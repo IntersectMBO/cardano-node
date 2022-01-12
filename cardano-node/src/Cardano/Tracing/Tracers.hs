@@ -9,6 +9,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PackageImports #-}
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections #-}
@@ -44,7 +45,7 @@ import qualified System.Metrics.Gauge as Gauge
 import qualified System.Metrics.Label as Label
 import qualified System.Remote.Monitoring as EKG
 
-import           Control.Tracer
+import "contra-tracer" Control.Tracer
 import           Control.Tracer.Transformers
 
 import           Cardano.Slotting.Slot (EpochNo (..), SlotNo (..), WithOrigin (..))
@@ -95,20 +96,22 @@ import           Ouroboros.Network.ConnectionManager.Types (ConnectionManagerCou
 import qualified Ouroboros.Network.Diffusion as Diffusion
 import qualified Ouroboros.Network.Diffusion.NonP2P as NonP2P
 import qualified Ouroboros.Network.Diffusion.P2P as P2P
-import           Ouroboros.Network.NodeToClient (LocalAddress, NodeToClientVersion)
-import           Ouroboros.Network.NodeToNode (NodeToNodeVersion, RemoteAddress)
+import           Ouroboros.Network.NodeToClient (LocalAddress)
+import           Ouroboros.Network.NodeToNode (RemoteAddress)
 
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 import qualified Ouroboros.Consensus.Storage.LedgerDB.OnDisk as LedgerDB
 import qualified Ouroboros.Consensus.Storage.LedgerDB.Types as LedgerDB
 
 import           Cardano.Tracing.Config
-import           Cardano.Tracing.Constraints (TraceConstraints)
-import           Cardano.Tracing.Kernel
 import           Cardano.Tracing.Metrics
-import           Cardano.Tracing.Startup
+import           Cardano.Tracing.Startup ()
+import           Cardano.Tracing.Shutdown ()
 
 import           Cardano.Node.Configuration.Logging
+import           Cardano.Node.TraceConstraints
+import           Cardano.Node.Tracing
+
 -- For tracing instances
 import           Cardano.Node.Protocol.Byron ()
 import           Cardano.Node.Protocol.Shelley ()
@@ -124,24 +127,6 @@ import           Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 
 {- HLINT ignore "Redundant bracket" -}
 {- HLINT ignore "Use record patterns" -}
-
-data Tracers peer localPeer blk p2p = Tracers
-  { -- | Trace the ChainDB
-    chainDBTracer :: Tracer IO (ChainDB.TraceEvent blk)
-    -- | Consensus-specific tracers.
-  , consensusTracers :: Consensus.Tracers IO peer localPeer blk
-    -- | Tracers for the node-to-node protocols.
-  , nodeToNodeTracers :: NodeToNode.Tracers IO peer blk DeserialiseFailure
-    --, serialisedBlockTracer :: NodeToNode.SerialisedTracer IO peer blk (SerialisedBlockTrace)
-    -- | Tracers for the node-to-client protocols
-  , nodeToClientTracers :: NodeToClient.Tracers IO localPeer blk DeserialiseFailure
-    -- | Diffusion tracers
-  , diffusionTracers :: Diffusion.Tracers RemoteAddress      NodeToNodeVersion
-                                          LocalAddress NodeToClientVersion
-                                          IO
-  , diffusionTracersExtra :: Diffusion.ExtraTracers p2p
-  , startupTracer :: Tracer IO (StartupTrace blk)
-  }
 
 data ForgeTracers = ForgeTracers
   { ftForged :: Trace IO Text
@@ -167,6 +152,10 @@ nullTracersP2P = Tracers
   , diffusionTracers = Diffusion.nullTracers
   , diffusionTracersExtra = Diffusion.P2PTracers P2P.nullTracers
   , startupTracer = nullTracer
+  , shutdownTracer = nullTracer
+  , nodeInfoTracer = nullTracer
+  , resourcesTracer = nullTracer
+  , peersTracer = nullTracer
   }
 
 nullTracersNonP2P :: Tracers peer localPeer blk Diffusion.NonP2P
@@ -178,6 +167,10 @@ nullTracersNonP2P = Tracers
   , diffusionTracers = Diffusion.nullTracers
   , diffusionTracersExtra = Diffusion.NonP2PTracers NonP2P.nullTracers
   , startupTracer = nullTracer
+  , shutdownTracer = nullTracer
+  , nodeInfoTracer = nullTracer
+  , resourcesTracer = nullTracer
+  , peersTracer = nullTracer
   }
 
 indexGCType :: ChainDB.TraceGCEvent a -> Int
@@ -297,8 +290,6 @@ instance (StandardHash header, Eq peer) => ElidingTracer
 mkTracers
   :: forall blk p2p.
      ( Consensus.RunNode blk
-     , HasKESMetricsData blk
-     , HasKESInfo blk
      , TraceConstraints blk
      )
   => BlockConfig blk
@@ -308,7 +299,7 @@ mkTracers
   -> Maybe EKGDirect
   -> NetworkP2PMode p2p
   -> IO (Tracers (ConnectionId RemoteAddress) (ConnectionId LocalAddress) blk p2p)
-mkTracers blockConfig tOpts@(TracingOn trSel) tr nodeKern ekgDirect enableP2P = do
+mkTracers blockConfig tOpts@(TracingOnLegacy trSel) tr nodeKern ekgDirect enableP2P = do
   fStats <- mkForgingStats
   consensusTracers <- mkConsensusTracers ekgDirect trSel verb tr nodeKern fStats
   elidedChainDB <- newstate  -- for eliding messages in ChainDB tracer
@@ -331,7 +322,12 @@ mkTracers blockConfig tOpts@(TracingOn trSel) tr nodeKern ekgDirect enableP2P = 
     , diffusionTracersExtra = diffusionTracersExtra' enableP2P
     -- TODO: startupTracer should ignore severity level (i.e. it should always
     -- be printed)!
-    , startupTracer = toLogObject' verb $ appendName "nodeconfig" tr
+    , startupTracer = toLogObject' verb $ appendName "startup" tr
+    , shutdownTracer = toLogObject' verb $ appendName "shutdown" tr
+    -- The remaining tracers are completely unused by the legacy tracing:
+    , nodeInfoTracer = nullTracer
+    , resourcesTracer = nullTracer
+    , peersTracer = nullTracer
     }
  where
    diffusionTracers = Diffusion.Tracers
@@ -427,7 +423,7 @@ mkTracers blockConfig tOpts@(TracingOn trSel) tr nodeKern ekgDirect enableP2P = 
      tracerOnOff (traceDiffusionInitialization trSel) verb
        "DiffusionInitializationTracer" tr
 
-mkTracers _ TracingOff _ _ _ enableP2P =
+mkTracers _ _ _ _ _ enableP2P =
   pure Tracers
     { chainDBTracer = nullTracer
     , consensusTracers = Consensus.Tracers
@@ -465,6 +461,10 @@ mkTracers _ TracingOff _ _ _ enableP2P =
           EnabledP2PMode  -> Diffusion.P2PTracers P2P.nullTracers
           DisabledP2PMode -> Diffusion.NonP2PTracers NonP2P.nullTracers
     , startupTracer = nullTracer
+    , shutdownTracer = nullTracer
+    , nodeInfoTracer = nullTracer
+    , resourcesTracer = nullTracer
+    , peersTracer = nullTracer
     }
 
 --------------------------------------------------------------------------------
@@ -488,7 +488,8 @@ teeTraceChainTip
   -> Trace IO Text
   -> Tracer IO (WithSeverity (ChainDB.TraceEvent blk))
 teeTraceChainTip _ _ TracingOff _ _ _ _ _ = nullTracer
-teeTraceChainTip blockConfig fStats (TracingOn trSel) elided ekgDirect tFork trTrc trMet =
+teeTraceChainTip _ _ TraceDispatcher{} _ _ _ _ _ = nullTracer
+teeTraceChainTip blockConfig fStats (TracingOnLegacy trSel) elided ekgDirect tFork trTrc trMet =
   Tracer $ \ev -> do
     traceWith (teeTraceChainTipElide (traceVerbosity trSel) elided trTrc) ev
     traceWith (ignoringSeverity (traceChainMetrics ekgDirect tFork blockConfig fStats trMet)) ev

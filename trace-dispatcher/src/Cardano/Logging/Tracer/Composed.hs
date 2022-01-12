@@ -3,19 +3,26 @@
 module Cardano.Logging.Tracer.Composed (
     mkCardanoTracer
   , mkCardanoTracer'
+  , mkDataPointTracer
   , MessageOrLimit(..)
+  , documentTracer
   ) where
 
-import           Data.Maybe                       (fromMaybe)
+import           Control.Exception (catch, SomeException)
+import           Data.Aeson.Types (ToJSON)
+import           Data.Maybe (fromMaybe)
 import           Data.Text
 
+import           Trace.Forward.Utils.DataPoint (DataPoint (..))
+
 import           Cardano.Logging.Configuration
+import           Cardano.Logging.DocuGenerator
 import           Cardano.Logging.Formatter
 import           Cardano.Logging.FrequencyLimiter (LimitingMessage (..))
 import           Cardano.Logging.Trace
 import           Cardano.Logging.Types
 
-import qualified Control.Tracer                   as NT
+import qualified Control.Tracer as NT
 
 data MessageOrLimit m = Message m | Limit LimitingMessage
 
@@ -119,3 +126,33 @@ mkCardanoTracer' trStdout trForward mbTrEkg name namesFor severityFor privacyFor
         case mbEkgTrace <> mbForwardTrace <> mbStdoutTrace of
           Nothing -> pure $ Trace NT.nullTracer
           Just tr -> pure (preFormatted backends tr)
+
+-- A simple dataPointTracer which supports building a namespace and entering a hook
+-- function.
+mkDataPointTracer :: forall dp. ToJSON dp
+  => Trace IO DataPoint
+  -> (dp -> [Text])
+  -> IO (Trace IO dp)
+mkDataPointTracer trDataPoint namesFor = do
+    let tr = NT.contramap DataPoint trDataPoint
+    pure $ withNamesAppended namesFor tr
+
+documentTracer ::
+     TraceConfig
+  -> Trace IO a
+  -> Documented a
+  -> IO [(Namespace, DocuResult)]
+documentTracer trConfig trace trDoc = do
+    res <- catch
+            (do
+              configureTracers trConfig trDoc [trace]
+              pure True)
+            (\(e :: SomeException) -> do
+              putStrLn $ "Configuration exception" <> show e <> show trDoc
+              pure False)
+    if res
+      then  catch (documentMarkdown trDoc [trace])
+              (\(e :: SomeException) -> do
+                putStrLn $ "Documentation exception" <> show e <> show trDoc
+                pure [])
+      else pure []

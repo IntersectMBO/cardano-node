@@ -1,3 +1,5 @@
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NamedFieldPuns #-}
 
 module Cardano.Node.Protocol.Byron
@@ -29,16 +31,20 @@ import qualified Cardano.Chain.UTxO as UTxO
 import qualified Cardano.Chain.Update as Update
 import           Cardano.Crypto.ProtocolMagic (RequiresNetworkMagic)
 
+import           Cardano.Node.Types
 import           Ouroboros.Consensus.Cardano
 import qualified Ouroboros.Consensus.Cardano as Consensus
 import qualified Ouroboros.Consensus.Mempool.TxLimits as TxLimits
-
-import           Cardano.Node.Types
 
 import           Cardano.Node.Protocol.Types
 import           Cardano.Tracing.OrphanInstances.Byron ()
 import           Cardano.Tracing.OrphanInstances.HardFork ()
 import           Cardano.Tracing.OrphanInstances.Shelley ()
+
+import           Cardano.Node.Tracing.Era.Byron ()
+import           Cardano.Node.Tracing.Era.HardFork ()
+import           Cardano.Node.Tracing.Tracers.ChainDB ()
+
 
 
 ------------------------------------------------------------------------------

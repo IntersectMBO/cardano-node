@@ -7,7 +7,7 @@
 
 /* c_get_process_memory_info */
 
-int c_get_process_memory_info (PROCESS_MEMORY_COUNTERS *counters, DWORD pid) {
+int c_get_process_memory_info2 (PROCESS_MEMORY_COUNTERS *counters, DWORD pid) {
     HANDLE hProc;
     hProc = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ,
                         FALSE, pid );
@@ -23,7 +23,7 @@ int c_get_process_memory_info (PROCESS_MEMORY_COUNTERS *counters, DWORD pid) {
 
 /* c_get_io_counters */
 
-int c_get_io_counters (IO_COUNTERS *counters, DWORD pid) {
+int c_get_io_counters2 (IO_COUNTERS *counters, DWORD pid) {
     HANDLE hProc;
     hProc = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION,
                         FALSE, pid );
@@ -39,7 +39,7 @@ int c_get_io_counters (IO_COUNTERS *counters, DWORD pid) {
 //    #define HI_T 429.4967296
 
 /* c_get_sys_cpu_times */
-int c_get_sys_cpu_times (CPU_TIMES *cputimes) {
+int c_get_sys_cpu_times2 (CPU_TIMES *cputimes) {
     FILETIME usert={0,0}, kernelt={0,0}, idlet={0,0};
     if (! GetSystemTimes(&idlet, &kernelt, &usert) ) {
       return -2;
@@ -52,7 +52,7 @@ int c_get_sys_cpu_times (CPU_TIMES *cputimes) {
 }
 
 /* c_get_proc_cpu_times */
-int c_get_proc_cpu_times (CPU_TIMES *cputimes, DWORD pid) {
+int c_get_proc_cpu_times2 (CPU_TIMES *cputimes, DWORD pid) {
     HANDLE hProc;
     hProc = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION,
                         FALSE, pid );
@@ -73,13 +73,13 @@ int c_get_proc_cpu_times (CPU_TIMES *cputimes, DWORD pid) {
 }
 
 /* c_get_system_info */
-int c_get_system_info (SYSTEM_INFO *sysinfo) {
+int c_get_system_info2 (SYSTEM_INFO *sysinfo) {
     GetSystemInfo (sysinfo);
     return 1;
 }
 
 /* c_get_win_bits */
-int c_get_win_bits (DWORD pid) {
+int c_get_win_bits2 (DWORD pid) {
     BOOL res;
     HANDLE hProc;
     hProc = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION,

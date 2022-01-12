@@ -83,7 +83,7 @@ let
       packages.cardano-cli.components.tests.cardano-cli-golden.build-tools =
         lib.mkForce (with pkgs.buildPackages; [jq coreutils shellcheck]);
       packages.cardano-testnet.components.tests.cardano-testnet-tests.build-tools =
-        lib.mkForce (with pkgs.buildPackages; [jq coreutils shellcheck]);
+        lib.mkForce (with pkgs.buildPackages; [jq coreutils shellcheck lsof]);
     })
     ({ pkgs, ...}: {
       # Use the VRF fork of libsodium
@@ -129,13 +129,6 @@ let
       # This is similar to jailbreakCabal, however it
       # does not require any messing with cabal files.
       packages.katip.doExactConfig = true;
-      # we need the following shared libraries for the musl build to succeed
-      # musl on x86_64, can load dynamic libraries, and we need it to use the
-      # shared loader, as the one in GHC is not very stable.
-      packages.cardano-api.components.library.enableShared = true;
-      packages.cardano-config.components.library.enableShared = true;
-      packages.cardano-node.components.library.enableShared = true;
-      packages.cardano-cli.components.library.enableShared = true;
       # split data output for ekg to reduce closure size
       packages.ekg.components.library.enableSeparateDataOutput = true;
       # cardano-cli-test depends on cardano-cli
@@ -145,6 +138,7 @@ let
       ";
       packages.cardano-node-chairman.components.tests.chairman-tests.build-tools =
         lib.mkForce [
+          pkgs.lsof
           config.hsPkgs.cardano-node.components.exes.cardano-node
           config.hsPkgs.cardano-cli.components.exes.cardano-cli
           config.hsPkgs.cardano-node-chairman.components.exes.cardano-node-chairman];
@@ -203,7 +197,7 @@ let
       };
     in
       {
-        packages = lib.genAttrs projectPackages (name: fullyStaticOptions);
+        # packages = lib.genAttrs projectPackages (name: fullyStaticOptions);
         # Haddock not working and not needed for cross builds
         doHaddock = false;
       }

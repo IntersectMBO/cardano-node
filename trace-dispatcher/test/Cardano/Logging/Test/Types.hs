@@ -22,10 +22,6 @@ data Message =
   | Message3 MessageID Double
   deriving (Eq, Ord, Show)
 
-
-showT :: Show a => a -> Text
-showT = pack . show
-
 instance LogFormatting Message where
   forMachine _dtal (Message1 mid i) =
     mkObject [ "kind" .= String "Message1"
@@ -53,7 +49,11 @@ instance LogFormatting Message where
   forHuman (Message3 mid d) =
       "Message3 <" <> showT mid <> "> " <> showT d
   asMetrics (Message1 mid _i) =
-      [IntM "Metrics1" (fromIntegral mid)]
+      [ IntM "Metrics1" (fromIntegral mid)
+      , IntM "Metrics2" (fromIntegral mid)
+      , IntM "Metrics3" (fromIntegral mid)
+      , IntM "Metrics4" (fromIntegral mid)
+      , IntM "Metrics5" (fromIntegral mid)]
   asMetrics _ = []
 
 instance Arbitrary Message where
