@@ -126,7 +126,9 @@ let
     [ "cardano-node-profiled" ] [ "cardano-node-eventlogged" ]
     [ "checks" "tests" "cardano-node-chairman" ]
     [ "workbench" ] [ "profiles" ]
+    [ "exes" "tx-generator" ]
     [ "tx-generator" "components" "exes" ]
+    [ "tx-generator" ]
     [ "tx-generator-profiled" ]
     [ "locli-profiled" ]
   ];
