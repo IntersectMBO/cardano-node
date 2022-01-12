@@ -44,9 +44,9 @@ If you are using a different flavor of Linux, you will need to use the correct p
 
 #### Downloading, unpacking, installing, and updating Cabal:
 
-    Download the relevant `cabal-install` (version 3.4.0.0) binary from https://www.haskell.org/cabal/download.html
-    tar -xf cabal-install-3.4.0.0-xxxxxx.tar.xz
-    rm cabal-install-3.4.0.0-xxxxxx.tar.xz
+    Download the relevant `cabal-install` (version 3.6.2.0) binary from https://www.haskell.org/cabal/download.html
+    tar -xf cabal-install-3.6.2.0-xxxxxx.tar.xz
+    rm cabal-install-3.6.2.0-xxxxxx.tar.xz
     mkdir -p ~/.local/bin
     mv cabal ~/.local/bin/
 
@@ -66,7 +66,7 @@ Update cabal:
 
     cabal update
 
-Confirm that you installed cabal version `3.4.0.0`:
+Confirm that you installed cabal version `3.6.2.0`:
 
     cabal --version
 
@@ -82,9 +82,9 @@ Then open a new terminal (to get an updated environment) and run:
 
 ```bash
 $ ghcup install ghc 8.10.7
-$ ghcup install cabal 3.4.0.0
+$ ghcup install cabal 3.6.2.0
 $ ghcup set ghc 8.10.7
-$ ghcup set cabal 3.4.0.0
+$ ghcup set cabal 3.6.2.0
 ```
 
 Create a working directory for your builds:

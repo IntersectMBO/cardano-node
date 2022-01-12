@@ -70,7 +70,7 @@ Available commands:
 
 ### Cabal
 
-Use [Cabal - Version 3.4.0.0](https://www.haskell.org/cabal/) to build and/or install this project:
+Use [Cabal - Version 3.6.2.0](https://www.haskell.org/cabal/) to build and/or install this project:
 
 ```
 $ cd cardano-cli
