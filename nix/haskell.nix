@@ -197,7 +197,7 @@ let
       };
     in
       {
-        packages = lib.genAttrs projectPackages (name: fullyStaticOptions);
+        # packages = lib.genAttrs projectPackages (name: fullyStaticOptions);
         # Haddock not working and not needed for cross builds
         doHaddock = false;
       }
