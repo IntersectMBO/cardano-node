@@ -1,17 +1,16 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE ImportQualifiedPost #-}
 module Cardano.Analysis.Version
   (Version (..), getVersion)
 where
 
-import Data.Aeson               (ToJSON(..), FromJSON(..))
-import Data.Text                (Text, pack)
-import Data.Version             (showVersion)
-import GHC.Generics             (Generic)
-import Paths_locli              (version)
-import Prelude                  (Show)
-import Cardano.Config.Git.Rev qualified (gitRev)
+import qualified Cardano.Git.Rev (gitRev)
+import           Data.Aeson (FromJSON (..), ToJSON (..))
+import           Data.Text (Text, pack)
+import           Data.Version (showVersion)
+import           GHC.Generics (Generic)
+import           Paths_locli (version)
+import           Prelude (Show)
 
 
 data Version =
@@ -24,5 +23,5 @@ data Version =
 getVersion :: Version
 getVersion =
   Version
-    Cardano.Config.Git.Rev.gitRev
+    Cardano.Git.Rev.gitRev
     (pack (showVersion Paths_locli.version))

@@ -52,7 +52,7 @@ import           Cardano.Logging
 import           Cardano.Api (NetworkMagic (..), SlotNo (..))
 import           Cardano.Api.Protocol.Types (BlockType (..), protocolInfo)
 
-import           Cardano.Config.Git.Rev (gitRev)
+import           Cardano.Git.Rev (gitRev)
 
 import           Cardano.Node.Configuration.POM (NodeConfiguration, ncProtocol)
 import           Cardano.Node.Configuration.Socket

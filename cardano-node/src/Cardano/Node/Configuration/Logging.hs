@@ -1,9 +1,9 @@
-{-# LANGUAGE CPP                 #-}
-{-# LANGUAGE FlexibleContexts    #-}
-{-# LANGUAGE GADTs               #-}
-{-# LANGUAGE OverloadedStrings   #-}
-{-# LANGUAGE PackageImports      #-}
-{-# LANGUAGE Rank2Types          #-}
+{-# LANGUAGE CPP #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PackageImports #-}
+{-# LANGUAGE Rank2Types #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Cardano.Node.Configuration.Logging
@@ -50,8 +50,7 @@ import qualified Cardano.BM.Configuration as Config
 import qualified Cardano.BM.Configuration.Model as Config
 import           Cardano.BM.Data.Aggregated (Measurable (..))
 import           Cardano.BM.Data.Backend (Backend, BackendKind (..))
-import           Cardano.BM.Data.LogItem (LOContent (..), LOMeta (..),
-                     LoggerName)
+import           Cardano.BM.Data.LogItem (LOContent (..), LOMeta (..), LoggerName)
 import qualified Cardano.BM.Observer.Monadic as Monadic
 import qualified Cardano.BM.Observer.STM as Stm
 import           Cardano.BM.Plugin (loadPlugin)
@@ -71,16 +70,15 @@ import           Ouroboros.Consensus.Byron.Ledger.Conversions
 import           Ouroboros.Consensus.Cardano.Block
 import           Ouroboros.Consensus.Cardano.CanHardFork
 import qualified Ouroboros.Consensus.Config as Consensus
-import           Ouroboros.Consensus.Config.SupportsNode
-                     (ConfigSupportsNode (..))
+import           Ouroboros.Consensus.Config.SupportsNode (ConfigSupportsNode (..))
 import           Ouroboros.Consensus.HardFork.Combinator.Degenerate
 import           Ouroboros.Consensus.Node.ProtocolInfo
 import           Ouroboros.Consensus.Shelley.Ledger.Ledger
 
 import           Cardano.Api.Protocol.Types (BlockType (..), protocolInfo)
-import           Cardano.Config.Git.Rev (gitRev)
-import           Cardano.Node.Configuration.POM (NodeConfiguration (..),
-                     ncProtocol)
+
+import           Cardano.Git.Rev (gitRev)
+import           Cardano.Node.Configuration.POM (NodeConfiguration (..), ncProtocol)
 import           Cardano.Node.Protocol.Types (SomeConsensusProtocol (..))
 import           Cardano.Node.Types
 import           Cardano.Slotting.Slot (EpochSize (..))

@@ -186,7 +186,7 @@ let
     }
     ({ pkgs, ... }: lib.mkIf pkgs.stdenv.hostPlatform.isLinux {
       # systemd can't be statically linked
-      packages.cardano-config.flags.systemd = !pkgs.stdenv.hostPlatform.isMusl;
+      packages.cardano-git-rev.flags.systemd = !pkgs.stdenv.hostPlatform.isMusl;
       packages.cardano-node.flags.systemd = !pkgs.stdenv.hostPlatform.isMusl;
     })
     # Musl libc fully static build

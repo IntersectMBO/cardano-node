@@ -1,9 +1,9 @@
-{-# LANGUAGE DeriveAnyClass        #-}
-{-# LANGUAGE DeriveGeneric         #-}
-{-# LANGUAGE FlexibleContexts      #-}
-{-# LANGUAGE GADTs                 #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE UndecidableInstances  #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Node.Startup where
 
@@ -24,33 +24,32 @@ import           Cardano.Ledger.Shelley.Genesis (sgSystemStart)
 
 import qualified Ouroboros.Consensus.BlockchainTime.WallClock.Types as WCT
 import           Ouroboros.Consensus.Cardano.Block
+import           Ouroboros.Consensus.Cardano.CanHardFork (shelleyLedgerConfig)
 import           Ouroboros.Consensus.Config
 import           Ouroboros.Consensus.HardFork.Combinator.Degenerate
 import           Ouroboros.Consensus.Ledger.Query (getSystemStart)
 import           Ouroboros.Consensus.Node (pInfoConfig)
-import           Ouroboros.Consensus.Node.NetworkProtocolVersion
-                   (BlockNodeToClientVersion, BlockNodeToNodeVersion)
-import           Ouroboros.Consensus.Cardano.CanHardFork (shelleyLedgerConfig)
+import           Ouroboros.Consensus.Node.NetworkProtocolVersion (BlockNodeToClientVersion,
+                   BlockNodeToNodeVersion)
 import           Ouroboros.Consensus.Shelley.Ledger.Ledger (shelleyLedgerGenesis)
 
 import           Ouroboros.Network.Magic (NetworkMagic (..))
-import           Ouroboros.Network.NodeToClient (LocalAddress (..),
-                   LocalSocket, NodeToClientVersion)
-import           Ouroboros.Network.NodeToNode (DiffusionMode (..),
-                   NodeToNodeVersion)
+import           Ouroboros.Network.NodeToClient (LocalAddress (..), LocalSocket,
+                   NodeToClientVersion)
+import           Ouroboros.Network.NodeToNode (DiffusionMode (..), NodeToNodeVersion)
 import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter (..))
-import           Ouroboros.Network.PeerSelection.Types (PeerAdvertise)
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint)
+import           Ouroboros.Network.PeerSelection.Types (PeerAdvertise)
 import           Ouroboros.Network.Subscription.Dns (DnsSubscriptionTarget (..))
 import           Ouroboros.Network.Subscription.Ip (IPSubscriptionTarget (..))
 
 import           Cardano.Api.Protocol.Types (BlockType (..), protocolInfo)
+import           Cardano.Logging
 import           Cardano.Node.Configuration.Socket
 import           Cardano.Node.Protocol.Types (Protocol (..), SomeConsensusProtocol (..))
-import           Cardano.Logging
 
+import           Cardano.Git.Rev (gitRev)
 import           Paths_cardano_node (version)
-import           Cardano.Config.Git.Rev (gitRev)
 
 data StartupTrace blk =
   -- | Log startup information.

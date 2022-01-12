@@ -1,6 +1,6 @@
 cabal-version: 3.0
 
-name:                   cardano-config
+name:                   cardano-git-rev
 version:                0.1.0.0
 author:                 IOHK
 maintainer:             operations@iohk.io
@@ -34,8 +34,8 @@ library
 
   hs-source-dirs:       src
 
-  exposed-modules:      Cardano.Config.Git.Rev
-                        Cardano.Config.Git.RevFromGit
+  exposed-modules:      Cardano.Git.Rev
+                        Cardano.Git.RevFromGit
 
   build-depends:        cardano-prelude
                       , file-embed

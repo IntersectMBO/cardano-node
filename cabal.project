@@ -4,7 +4,7 @@ packages:
     cardano-api
     cardano-cli
     cardano-client-demo
-    cardano-config
+    cardano-git-rev
     cardano-node
     cardano-node-capi
     cardano-node-chairman
@@ -24,7 +24,7 @@ package cardano-api
 package cardano-cli
   ghc-options: -Werror
 
-package cardano-config
+package cardano-git-rev
   ghc-options: -Werror
 
 package cardano-node
