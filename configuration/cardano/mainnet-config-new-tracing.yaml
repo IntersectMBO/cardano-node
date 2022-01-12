@@ -39,37 +39,96 @@ ApplicationVersion: 1
 TurnOnLogging: True
 
 ##### New logging model #####
+# Options for new tracing
 
+# Use old tracing as standard for now
 UseTraceDispatcher: True
 
+
 TraceOptionSeverity:
-  - ns: ''
+  # Show messages of Severity Notice or higher as default
+  - ns: ""
+    severity: Notice
+
+  # But modify severity for the following namespaces
+  - ns: Node.ChainDB
     severity: Info
+
   - ns: Node.AcceptPolicy
-    severity: Silence
-  - ns: Node.ChainDB
-    severity: Debug
-TraceOptionDetail:
-  - ns: ''
-    detail: DNormal
-  - ns: Node.BlockFetchClient
-    detail: DMinimal
-TraceOptionBackend:
-  - ns: ''
-    backends:
-    - Stdout HumanFormatColoured
-    - EKGBackend
-  - ns: Node.ChainDB
-    backends:
-    - Forwarder
-TraceOptionLimiter:
+    severity: Info
+
+  - ns: Node.DNSResolver
+    severity: Info
+
+  - ns: Node.DNSSubscription
+    severity: Info
+
+  - ns: Node.DiffusionInit
+    severity: Info
+
+  - ns: Node.ErrorPolicy
+    severity: Info
+
+  - ns: Node.Forge
+    severity: Info
+
+  - ns: Node.IpSubscription
+    severity: Info
+
+  - ns: Node.LocalErrorPolicy
+    severity: Info
+
+  - ns: Node.Mempool
+    severity: Info
+
   - ns: Node.Resources
-    limiterName: ResourceLimiter
-    limiterFrequency: 1.0
+    severity: Info
+
+TraceOptionDetail:
+  # All messages are shown with normal detail level
+  - ns: ""
+    detail: DNormal
+
+TraceOptionBackend:
+  # Use these backends
+  - ns: ""
+    backends:
+      - Stdout MachineFormat
+      - EKGBackend
+  #    - Forwarder
+
+# Limit the frequency of the following messages
+TraceOptionLimiter:
+  - ns: Node.ChainDB.AddBlockEvent.AddedBlockToQueue
+    limiterName: AddedBlockToQueueLimiter
+    limiterFrequency: 2.0
+
+  - ns: Node.ChainDB.AddBlockEvent.AddedBlockToVolatileDB
+    limiterName: AddedBlockToVolatileDBLimiter
+    limiterFrequency: 2.0
+
+  - ns: Node.ChainDB.CopyToImmutableDBEvent.CopiedBlockToImmutableDB
+    limiterName: CopiedBlockToImmutableDBLimiter
+    limiterFrequency: 2.0
+
+  - ns: Node.ChainDB.AddBlockEvent.AddBlockValidation.ValidCandidate
+    limiterName: ValidCandidateLimiter
+    limiterFrequency: 2.0
+
+  - ns: Node.BlockFetchClient.CompletedBlockFetch
+    limiterName: CompletedBlockFetchLimiter
+    limiterFrequency: 2.0
+
+# Options for the trace forwarder
 TraceOptionForwarder:
     address:
-      filePath: /tmp/forwarder-3.sock
+      filePath: /tmp/forwarder.sock
     mode: Initiator
+
+TraceOptionPeerFreqency: 2000
+
+TraceOptionResourceFreqency: 5000
+
 
 ##### Stubs for legacy logging config #####
 
