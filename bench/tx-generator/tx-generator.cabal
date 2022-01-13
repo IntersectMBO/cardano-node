@@ -40,7 +40,6 @@ library
                        Cardano.Benchmarking.Script
                        Cardano.Benchmarking.Script.Action
                        Cardano.Benchmarking.Script.Aeson
-                       Cardano.Benchmarking.Script.AesonLegacy                       
                        Cardano.Benchmarking.Script.Core
                        Cardano.Benchmarking.Script.Env
                        Cardano.Benchmarking.Script.Example
