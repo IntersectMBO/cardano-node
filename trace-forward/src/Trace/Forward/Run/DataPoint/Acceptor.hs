@@ -8,6 +8,8 @@ module Trace.Forward.Run.DataPoint.Acceptor
   ) where
 
 import qualified Codec.Serialise as CBOR
+import           Control.Exception (finally)
+import           Control.Monad (unless)
 import           Control.Monad.Extra (ifM)
 import           Control.Monad.STM (atomically, check)
 import           Control.Concurrent.STM.TVar (modifyTVar', readTVar, readTVarIO)
@@ -21,46 +23,52 @@ import qualified Trace.Forward.Protocol.DataPoint.Acceptor as Acceptor
 import qualified Trace.Forward.Protocol.DataPoint.Codec as Acceptor
 import           Trace.Forward.Protocol.DataPoint.Type (DataPointName)
 import           Trace.Forward.Configuration.DataPoint (AcceptorConfiguration (..))
-import           Trace.Forward.Utils.DataPoint (DataPointAsker (..))
+import           Trace.Forward.Utils.DataPoint (DataPointRequestor (..))
 
 acceptDataPointsInit
   :: AcceptorConfiguration
-  -> DataPointAsker
+  -> IO DataPointRequestor
+  -> IO ()
   -> RunMiniProtocol 'InitiatorMode LBS.ByteString IO () Void
-acceptDataPointsInit config dpAsker =
-  InitiatorProtocolOnly $ runPeerWithAsker config dpAsker
+acceptDataPointsInit config mkDPRequestor peerErrorHandler =
+  InitiatorProtocolOnly $ runPeerWithRequestor config mkDPRequestor peerErrorHandler
 
 acceptDataPointsResp
   :: AcceptorConfiguration
-  -> DataPointAsker
+  -> IO DataPointRequestor
+  -> IO ()
   -> RunMiniProtocol 'ResponderMode LBS.ByteString IO Void ()
-acceptDataPointsResp config dpAsker =
-  ResponderProtocolOnly $ runPeerWithAsker config dpAsker
+acceptDataPointsResp config mkDPRequestor peerErrorHandler =
+  ResponderProtocolOnly $ runPeerWithRequestor config mkDPRequestor peerErrorHandler
 
-runPeerWithAsker
+runPeerWithRequestor
   :: AcceptorConfiguration
-  -> DataPointAsker
+  -> IO DataPointRequestor
+  -> IO ()
   -> MuxPeer LBS.ByteString IO ()
-runPeerWithAsker config dpAsker = 
-  MuxPeerRaw $ \channel ->
-      runPeer
-        (acceptorTracer config)
-        (Acceptor.codecDataPointForward CBOR.encode CBOR.decode
-                                        CBOR.encode CBOR.decode)
-        channel
-        (Acceptor.dataPointAcceptorPeer $ acceptorActions config dpAsker [])
+runPeerWithRequestor config mkDPRequestor peerErrorHandler = 
+  MuxPeerRaw $ \channel -> do
+    dpRequestor <- mkDPRequestor
+    runPeer
+      (acceptorTracer config)
+      (Acceptor.codecDataPointForward CBOR.encode CBOR.decode
+                                      CBOR.encode CBOR.decode)
+      channel
+      (Acceptor.dataPointAcceptorPeer $ acceptorActions config dpRequestor [])
+    `finally` peerErrorHandler
 
 acceptorActions
   :: AcceptorConfiguration
-  -> DataPointAsker
+  -> DataPointRequestor
   -> [DataPointName]
   -> Acceptor.DataPointAcceptor IO ()
 acceptorActions config@AcceptorConfiguration{shouldWeStop}
-                dpAsker@DataPointAsker{askDataPoints, dataPointsNames, dataPointsReply}
+                dpRequestor@DataPointRequestor{askDataPoints, dataPointsNames, dataPointsReply}
                 dpNames =
   Acceptor.SendMsgDataPointsRequest dpNames $ \replyWithDataPoints -> do
-    -- Ok, reply with 'DataPoint's is already here, update the asker.
-    atomically $ do
+    -- Ok, reply with 'DataPoint's is already here, update the requestor.
+    unless (null replyWithDataPoints) $ atomically $ do
+      -- Store the reply for acceptor's external context.
       putTMVar dataPointsReply replyWithDataPoints
       -- To prevent new automatic request.
       modifyTVar' askDataPoints $ const False
@@ -72,4 +80,4 @@ acceptorActions config@AcceptorConfiguration{shouldWeStop}
         -- Ok, external context asked for 'DataPoint's, take their names.
         dpNames' <- readTVarIO dataPointsNames
         -- Ask.
-        return $ acceptorActions config dpAsker dpNames'
+        return $ acceptorActions config dpRequestor dpNames'

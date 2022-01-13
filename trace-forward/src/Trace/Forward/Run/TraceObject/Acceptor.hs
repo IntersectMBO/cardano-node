@@ -13,7 +13,7 @@ import           Control.Concurrent.Async (race)
 import           Control.Monad.Extra (ifM)
 import           Control.Monad.STM (atomically, check)
 import           Control.Concurrent.STM.TVar (TVar, readTVar, readTVarIO, registerDelay)
-import           Control.Exception (Exception, throwIO)
+import           Control.Exception (Exception, finally, throwIO)
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Typeable (Typeable)
 import           Data.Void (Void)
@@ -34,9 +34,10 @@ acceptTraceObjectsInit
       Typeable lo)
   => AcceptorConfiguration lo -- ^ Acceptor's configuration.
   -> ([lo] -> IO ())          -- ^ The handler for accepted 'TraceObject's.
+  -> IO ()                    -- ^ The handler for exceptions from 'runPeer'.
   -> RunMiniProtocol 'InitiatorMode LBS.ByteString IO () Void
-acceptTraceObjectsInit config loHandler =
-  InitiatorProtocolOnly $ runPeerWithHandler config loHandler
+acceptTraceObjectsInit config loHandler peerErrorHandler =
+  InitiatorProtocolOnly $ runPeerWithHandler config loHandler peerErrorHandler
 
 acceptTraceObjectsResp
   :: (CBOR.Serialise lo,
@@ -44,9 +45,10 @@ acceptTraceObjectsResp
       Typeable lo)
   => AcceptorConfiguration lo -- ^ Acceptor's configuration.
   -> ([lo] -> IO ())          -- ^ The handler for accepted 'TraceObject's.
+  -> IO ()                    -- ^ The handler for exceptions from 'runPeer'.
   -> RunMiniProtocol 'ResponderMode LBS.ByteString IO Void ()
-acceptTraceObjectsResp config loHandler =
-  ResponderProtocolOnly $ runPeerWithHandler config loHandler
+acceptTraceObjectsResp config loHandler peerErrorHandler =
+  ResponderProtocolOnly $ runPeerWithHandler config loHandler peerErrorHandler
 
 runPeerWithHandler
   :: (CBOR.Serialise lo,
@@ -54,8 +56,9 @@ runPeerWithHandler
       Typeable lo)
   => AcceptorConfiguration lo
   -> ([lo] -> IO ())
+  -> IO ()
   -> MuxPeer LBS.ByteString IO ()
-runPeerWithHandler config@AcceptorConfiguration{acceptorTracer, shouldWeStop} loHandler =
+runPeerWithHandler config@AcceptorConfiguration{acceptorTracer, shouldWeStop} loHandler peerErrorHandler =
   MuxPeerRaw $ \channel ->
     timeoutWhenStopped
       shouldWeStop
@@ -66,6 +69,7 @@ runPeerWithHandler config@AcceptorConfiguration{acceptorTracer, shouldWeStop} lo
                                             CBOR.encode CBOR.decode)
           channel
           (Acceptor.traceObjectAcceptorPeer $ acceptorActions config loHandler)
+        `finally` peerErrorHandler
 
 acceptorActions
   :: (CBOR.Serialise lo,
@@ -96,7 +100,7 @@ timeoutWhenStopped stopVar delay action =
   either id id <$>
     race action
          ( do atomically (readTVar stopVar >>= check)
-              v <- registerDelay delay    
-              atomically (readTVar v >>= check) 
+              v <- registerDelay delay
+              atomically (readTVar v >>= check)
               throwIO Timeout
          )
