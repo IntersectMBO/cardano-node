@@ -23,7 +23,9 @@ bench/tx-generator                                            @deepfire @MarcFon
 bench                                                         @deepfire @denisshevchenko @jutaro @MarcFontaine
 nix/workbench                                                 @deepfire @denisshevchenko @jutaro @MarcFontaine
 nix/supervisord-cluster                                       @deepfire @denisshevchenko @jutaro @MarcFontaine
+trace-dispatcher                                              @deepfire @denisshevchenko @jutaro
 trace-forward                                                 @deepfire @denisshevchenko @jutaro
+trace-resources                                               @deepfire @denisshevchenko @jutaro
 Makefile                                                      @deepfire
 
 .buildkite                                                    @devops
@@ -38,4 +40,5 @@ docker-compose.yml                                            @devops
 cardano-node/src/Cardano/Tracing/OrphanInstances/Network.hs   @devops @coot @karknu
 cardano-node/src/Cardano/Node/Configuration/Logging.hs        @devops
 cardano-node/src/Cardano/Node/Configuration/Socket.hs         @devops
+cardano-node/src/Cardano/Node/Tracing                         @deepfire @denisshevchenko @jutaro
 cardano-node/src/Cardano/Node/Run.hs                          @devops
