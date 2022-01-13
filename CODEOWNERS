@@ -21,6 +21,7 @@ README.*                                                      @docs-access
 
 bench/tx-generator                                            @deepfire @MarcFontaine
 bench                                                         @deepfire @denisshevchenko @jutaro @MarcFontaine
+cardano-tracer                                                @deepfire @denisshevchenko
 nix/workbench                                                 @deepfire @denisshevchenko @jutaro @MarcFontaine
 nix/supervisord-cluster                                       @deepfire @denisshevchenko @jutaro @MarcFontaine
 trace-dispatcher                                              @deepfire @denisshevchenko @jutaro
