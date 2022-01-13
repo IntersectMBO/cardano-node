@@ -5,9 +5,9 @@
 module Trace.Forward.Utils.DataPoint
   ( DataPoint (..)
   , DataPointStore
-  , DataPointAsker (..)
+  , DataPointRequestor (..)
   , initDataPointStore
-  , initDataPointAsker
+  , initDataPointRequestor
   , writeToStore
   , readFromStore
   , askForDataPoints
@@ -72,7 +72,7 @@ readFromStore dpStore =
 -- | Since 'DataPointForward' protocol does not assume the stream of requests/replies,
 --   we use the 'TVar's to provide to acceptor's side an ability to ask 'DataPoint's
 --   explicitly.
-data DataPointAsker = DataPointAsker
+data DataPointRequestor = DataPointRequestor
   { -- | The "ask flag": we use it to notify that we want 'DataPoint's.
     askDataPoints   :: !(TVar Bool)
     -- | The names of 'DataPoint's we need.
@@ -83,18 +83,18 @@ data DataPointAsker = DataPointAsker
   , dataPointsReply :: !(TMVar DataPointValues)
   }
 
-initDataPointAsker :: IO DataPointAsker
-initDataPointAsker = DataPointAsker
+initDataPointRequestor :: IO DataPointRequestor
+initDataPointRequestor = DataPointRequestor
   <$> newTVarIO False
   <*> newTVarIO []
   <*> newEmptyTMVarIO
 
 askForDataPoints
-  :: DataPointAsker
+  :: DataPointRequestor
   -> [DataPointName]
   -> IO DataPointValues
 askForDataPoints _ [] = return []
-askForDataPoints DataPointAsker{askDataPoints, dataPointsNames, dataPointsReply} dpNames = do
+askForDataPoints DataPointRequestor{askDataPoints, dataPointsNames, dataPointsReply} dpNames = do
   atomically $ do
     modifyTVar' dataPointsNames $ const dpNames -- Fill the names of 'DataPoint's we need.
     modifyTVar' askDataPoints $ const True      -- Ask them! The flag for acceptor's part
