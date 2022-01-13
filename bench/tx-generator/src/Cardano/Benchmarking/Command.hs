@@ -17,11 +17,9 @@ import           Options.Applicative as Opt
 
 import           Ouroboros.Network.NodeToClient (withIOManager)
 
-import           Cardano.Benchmarking.Script (runScript, parseScriptFileAeson, parseScriptFileLegacy)
+import           Cardano.Benchmarking.Script (runScript, parseScriptFileAeson)
 
-data Command
-  = Json !FilePath
-  | LegacyJson !FilePath  
+newtype Command = Json FilePath
 
 runCommand :: IO ()
 runCommand = withIOManager $ \iocp -> do
@@ -32,9 +30,6 @@ runCommand = withIOManager $ \iocp -> do
     Json file     -> do
       script <- parseScriptFileAeson file
       runScript script iocp >>= handleError
-    LegacyJson file     -> do
-      script <- parseScriptFileLegacy file
-      runScript script iocp >>= handleError
   where
   handleError :: Show a => Either a b -> IO ()
   handleError = \case
@@ -43,23 +38,12 @@ runCommand = withIOManager $ \iocp -> do
 
 commandParser :: Parser Command
 commandParser
-  = subparser
-    ( jsonCmd
-      <> legacyJsonCmd
-    )
+  = subparser jsonCmd
  where
   jsonCmd = command "json"
     (Json <$> info (strArgument (metavar "FILEPATH"))
       (  progDesc "tx-generator run JsonScript"
       <> fullDesc
       <> header "tx-generator - run a generic benchmarking script"
-      )
-    )
-
-  legacyJsonCmd = command "legacy-json"
-    (LegacyJson <$> info (strArgument (metavar "FILEPATH"))
-      (  progDesc "tx-generator run JsonScript (legacy format)"
-      <> fullDesc
-      <> header "tx-generator - run a generic benchmarking script (legacy JSON format)"
       )
     )
