@@ -477,12 +477,20 @@ localInitiatorNetworkApplication
               (chainSyncClientPeer $
                   chainSyncClient chairmanTracer sockPath chainsVar securityParam)
 
+      , localTxMonitorProtocol =
+          InitiatorProtocolOnly $
+            MuxPeer
+              nullTracer
+              cTxMonitorCodec
+              localTxMonitorPeerNull
+
       , localTxSubmissionProtocol =
           InitiatorProtocolOnly $
             MuxPeer
               localTxSubmissionTracer
               cTxSubmissionCodec
               localTxSubmissionPeerNull
+
       , localStateQueryProtocol =
           InitiatorProtocolOnly $
             MuxPeer
@@ -493,6 +501,7 @@ localInitiatorNetworkApplication
       where
         Codecs
             { cChainSyncCodec
+            , cTxMonitorCodec
             , cTxSubmissionCodec
             , cStateQueryCodec
             } =

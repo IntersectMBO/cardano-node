@@ -239,6 +239,7 @@ namesForPeerSelection TracePromoteWarmPeers {}      = ["PromoteWarmPeers"]
 namesForPeerSelection TracePromoteWarmLocalPeers {} = ["PromoteWarmLocalPeers"]
 namesForPeerSelection TracePromoteWarmFailed {}     = ["PromoteWarmFailed"]
 namesForPeerSelection TracePromoteWarmDone {}       = ["PromoteWarmDone"]
+namesForPeerSelection TracePromoteWarmAborted {}    = ["PromoteWarmAborted"]
 namesForPeerSelection TraceDemoteWarmPeers {}       = ["DemoteWarmPeers"]
 namesForPeerSelection TraceDemoteWarmFailed {}      = ["DemoteWarmFailed"]
 namesForPeerSelection TraceDemoteWarmDone {}        = ["DemoteWarmDone"]
@@ -269,6 +270,7 @@ severityPeerSelection TracePromoteWarmPeers      {} = Info
 severityPeerSelection TracePromoteWarmLocalPeers {} = Info
 severityPeerSelection TracePromoteWarmFailed     {} = Info
 severityPeerSelection TracePromoteWarmDone       {} = Info
+severityPeerSelection TracePromoteWarmAborted    {} = Info
 severityPeerSelection TraceDemoteWarmPeers       {} = Info
 severityPeerSelection TraceDemoteWarmFailed      {} = Info
 severityPeerSelection TraceDemoteWarmDone        {} = Info
@@ -372,6 +374,12 @@ instance LogFormatting (TracePeerSelection SockAddr) where
              ]
   forMachine _dtal (TracePromoteWarmDone tActive aActive p) =
     mkObject [ "kind" .= String "PromoteWarmDone"
+             , "targetActive" .= tActive
+             , "actualActive" .= aActive
+             , "peer" .= toJSON p
+             ]
+  forMachine _dtal (TracePromoteWarmAborted tActive aActive p) =
+    mkObject [ "kind" .= String "PromoteWarmAborted"
              , "targetActive" .= tActive
              , "actualActive" .= aActive
              , "peer" .= toJSON p
@@ -1372,4 +1380,37 @@ docInboundGovernor peerAddr = Documented
   --     (InboundGovernor.TrUnexpectedlyFalseAssertion protoIGAssertionLocation)
   --     []
   --     ""
+  ]
+
+--------------------------------------------------------------------------------
+-- InboundGovernor Transition Tracer
+--------------------------------------------------------------------------------
+
+namesForInboundGovernorTransition
+  :: InboundGovernor.RemoteTransitionTrace peerAddr -> [Text]
+namesForInboundGovernorTransition _ = ["InboundGovernorTransition"]
+
+severityInboundGovernorTransition
+  :: InboundGovernor.RemoteTransitionTrace peerAddr -> SeverityS
+severityInboundGovernorTransition _ = Debug
+
+instance (Show peerAddr, ToJSON peerAddr)
+      => LogFormatting (InboundGovernor.RemoteTransitionTrace peerAddr) where
+    forMachine _dtal (ConnectionManager.TransitionTrace peerAddr tr) =
+      mkObject $ reverse
+        [ "kind"    .= String "ConnectionManagerTransition"
+        , "address" .= toJSON peerAddr
+        , "from"    .= toJSON (ConnectionManager.fromState tr)
+        , "to"      .= toJSON (ConnectionManager.toState   tr)
+        ]
+    forHuman = pack . show
+    asMetrics _ = []
+
+docInboundGovernorTransition
+  :: Documented (InboundGovernor.RemoteTransitionTrace peerAddr)
+docInboundGovernorTransition = Documented
+  [ DocMsg
+      anyProto
+      []
+      ""
   ]

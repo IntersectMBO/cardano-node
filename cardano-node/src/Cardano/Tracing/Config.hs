@@ -66,6 +66,7 @@ type TraceLocalInboundGovernor = ("TraceLocalInboundGovernor" :: Symbol)
 type TraceLocalRootPeers = ("TraceLocalRootPeers" :: Symbol)
 type TraceLocalServer = ("TraceLocalServer" :: Symbol)
 type TraceLocalStateQueryProtocol = ("TraceLocalStateQueryProtocol" :: Symbol)
+type TraceLocalTxMonitorProtocol = ("TraceLocalTxMonitorProtocol" :: Symbol)
 type TraceLocalTxSubmissionProtocol = ("TraceLocalTxSubmissionProtocol" :: Symbol)
 type TraceLocalTxSubmissionServer = ("TraceLocalTxSubmissionServer" :: Symbol)
 type TraceMempool = ("TraceMempool" :: Symbol)
@@ -134,6 +135,7 @@ data TraceSelection
   , traceLocalRootPeers :: OnOff TraceLocalRootPeers
   , traceLocalServer :: OnOff TraceLocalServer
   , traceLocalStateQueryProtocol :: OnOff TraceLocalStateQueryProtocol
+  , traceLocalTxMonitorProtocol :: OnOff TraceLocalTxMonitorProtocol
   , traceLocalTxSubmissionProtocol :: OnOff TraceLocalTxSubmissionProtocol
   , traceLocalTxSubmissionServer :: OnOff TraceLocalTxSubmissionServer
   , traceMempool :: OnOff TraceMempool
@@ -226,6 +228,8 @@ traceConfigParser v ctor =
       localServer = OnOff False
       localStateQueryProtocol :: OnOff TraceLocalStateQueryProtocol
       localStateQueryProtocol = OnOff False
+      localTxMonitorProtocol :: OnOff TraceLocalTxMonitorProtocol
+      localTxMonitorProtocol = OnOff False
       localTxSubmissionProtocol :: OnOff TraceLocalTxSubmissionProtocol
       localTxSubmissionProtocol = OnOff False
       localTxSubmissionServer :: OnOff TraceLocalTxSubmissionServer
@@ -295,6 +299,7 @@ traceConfigParser v ctor =
     <*> v .:? getName localRootPeers .!= localRootPeers
     <*> v .:? getName localServer .!= localServer
     <*> v .:? getName localStateQueryProtocol .!= localStateQueryProtocol
+    <*> v .:? getName localTxMonitorProtocol .!= localTxMonitorProtocol
     <*> v .:? getName localTxSubmissionProtocol .!= localTxSubmissionProtocol
     <*> v .:? getName localTxSubmissionServer .!= localTxSubmissionServer
     <*> v .:? getName mempool .!= mempool

@@ -363,6 +363,13 @@ mkNodeToClientTracers trBase trForward mbTrEKG _trDataPoint trConfig = do
                 severityTChainSync
                 allPublic
     configureTracers trConfig docTChainSync [chainSyncTr]
+    txMonitorTr  <-  mkCardanoTracer
+                trBase trForward mbTrEKG
+                "TxMonitorClient"
+                namesForTTxMonitor
+                severityTTxMonitor
+                allPublic
+    configureTracers trConfig docTTxMonitor [txMonitorTr]
     txSubmissionTr  <-  mkCardanoTracer
                 trBase trForward mbTrEKG
                 "TxSubmissionClient"
@@ -380,6 +387,8 @@ mkNodeToClientTracers trBase trForward mbTrEKG _trDataPoint trConfig = do
     pure $ NtC.Tracers
       { NtC.tChainSyncTracer = Tracer $
           traceWith chainSyncTr
+      , NtC.tTxMonitorTracer = Tracer $
+          traceWith txMonitorTr
       , NtC.tTxSubmissionTracer = Tracer $
           traceWith txSubmissionTr
       , NtC.tStateQueryTracer = Tracer $
