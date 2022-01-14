@@ -32,6 +32,7 @@ import           Data.Text.Lazy.Builder (Builder, fromString, fromText,
 import           Data.Time (getZonedTime)
 import           Trace.Forward.Utils.DataPoint (DataPoint (..))
 
+
 data DocuResult =
   DocuTracer Builder
   | DocuMetric Builder
@@ -193,30 +194,30 @@ generateTOC traces metrics datapoints =
     <> generateTOCDatapoints
   where
     generateTOCTraces =
-      fromText "\n1.[Trace Messages] (#trace-messages)"
+      fromText "\n1. [Trace Messages](#trace-messages)"
       <> mconcat (zipWith (curry namespaceToToc) traces [(1 :: Int) .. ])
     generateTOCDatapoints =
-      fromText "\n3.[Datapoints] (#datapoints)"
+      fromText "\n3. [Datapoints](#datapoints)"
       <> mconcat (zipWith (curry namespaceToToc) datapoints [(1 :: Int) .. ])
     namespaceToToc (ns, i) =
-      fromText "\n1."
+      fromText "\n1. "
       <> fromText ((pack.show) i)
       <> fromText " ["
       <> namespaceBuilder ns
-      <> fromText "] (#"
+      <> fromText "](#"
       <> namespaceRefBuilder ns
       <> fromText ")"
     namespaceBuilder ns = mconcat (intersperse (singleton '.') (map fromText ns))
     namespaceRefBuilder ns = mconcat (map (fromText . toLower) ns)
     generateTOCMetrics =
-      fromText "\n2.[Metrics] (#metrics)"
+      fromText "\n2. [Metrics](#metrics)"
       <> mconcat (zipWith (curry nameToToc) metrics [(1 :: Int) .. ])
     nameToToc ([name], i) =
-      fromText "\n2."
+      fromText "\n2. "
       <> fromText ((pack.show) i)
       <> fromText " ["
       <> fromText name
-      <> fromText "] (#"
+      <> fromText "](#"
       <> fromText (nameRefBuilder name)
       <> fromText ")"
     nameToToc (list, _i) =
@@ -232,8 +233,8 @@ buildersToText builderList configuration = do
                           (filter (isMetric .snd) builderList)
       datapointBuilders = sortBy (\ (l,_) (r,_) -> compare l r)
                           (filter (isDatapoint . snd) builderList)
-      header  = fromText "# Cardano Trace Documentation"
-      header1  = fromText "# Table Of Contents"
+      header  = fromText "# Cardano Trace Documentation\n"
+      header1  = fromText "# Table Of Contents\n"
       toc      = generateTOC (map fst traceBuilders) (map fst metricsBuilders) (map fst datapointBuilders)
       header2  = fromText "\n\n## Trace Messages\n"
       contentT = mconcat $ intersperse (fromText "\n\n")

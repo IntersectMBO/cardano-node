@@ -3,16 +3,22 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE QuantifiedConstraints #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Cardano.Node.Tracing.Documentation
-  ( docTracers
+  ( TraceDocumentationCmd (..)
+  , parseTraceDocumentationCmd
+  , runTraceDocumentationCmd
+  , docTracers
   ) where
 
 import           Data.Aeson.Types (ToJSON)
 import qualified Data.Text.IO as T
 import           Network.Mux (MuxTrace (..), WithMuxBearer (..))
 import qualified Network.Socket as Socket
+import qualified Options.Applicative as Opt
 
 import           Cardano.Logging
 import           Cardano.Logging.Resources
@@ -39,6 +45,8 @@ import           Cardano.Node.Startup
 import           Cardano.Node.TraceConstraints
 
 import           Ouroboros.Consensus.BlockchainTime.WallClock.Util (TraceBlockchainTimeEvent (..))
+import           Ouroboros.Consensus.Byron.Ledger
+import           Ouroboros.Consensus.Cardano.Block
 import           Ouroboros.Consensus.Ledger.Query (Query)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx, GenTxId, TxId)
 import           Ouroboros.Consensus.Ledger.SupportsProtocol (LedgerSupportsProtocol)
@@ -90,10 +98,48 @@ import           Ouroboros.Network.TxSubmission.Outbound (TraceTxSubmissionOutbo
 
 
 
+data TraceDocumentationCmd
+  = TraceDocumentationCmd
+    { tdcConfigFile :: FilePath
+    , tdcOutput     :: FilePath
+    }
+
+parseTraceDocumentationCmd :: Opt.Parser TraceDocumentationCmd
+parseTraceDocumentationCmd =
+  Opt.subparser
+    (mconcat
+     [ Opt.commandGroup "Miscellaneous commands"
+     , Opt.metavar "trace-documentation"
+     , Opt.hidden
+     , Opt.command "trace-documentation" $
+       Opt.info
+         (TraceDocumentationCmd
+           <$> Opt.strOption
+               ( Opt.long "config"
+                 <> Opt.metavar "NODE-CONFIGURATION"
+                 <> Opt.help "Configuration file for the cardano-node"
+               )
+           <*> Opt.strOption
+               ( Opt.long "output-dir"
+                 <> Opt.metavar "DIR"
+                 <> Opt.help "File to store enerated documentation"
+               )
+           Opt.<**> Opt.helper)
+       $ mconcat [ Opt.progDesc "Generate the trace documentation" ]
+     ]
+    )
+
+runTraceDocumentationCmd :: TraceDocumentationCmd -> IO ()
+runTraceDocumentationCmd TraceDocumentationCmd{..} = do
+  docTracers
+    tdcConfigFile tdcOutput (Proxy @ByronBlock
+                             -- (CardanoBlock StandardCrypto)
+                            )
+
 -- Have to repeat the construction of the tracers here,
 -- as the tracers are behind old tracer interface after construction in mkDispatchTracers.
 -- Can be changed, when old tracers have gone
-docTracers :: forall blk t peer peerConn remotePeer resolverError ntnVersion ntnVersionData.
+docTracers :: forall blk peer peerConn remotePeer resolverError ntnVersion ntnVersionData t.
   ( Show t
   , forall result. Show (Query blk result)
   , TraceConstraints blk
