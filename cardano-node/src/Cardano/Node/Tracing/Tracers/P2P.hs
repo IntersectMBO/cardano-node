@@ -38,6 +38,10 @@ module Cardano.Node.Tracing.Tracers.P2P
   , severityConnectionManager
   , docConnectionManager
 
+  , namesForConnectionManagerTransition
+  , severityConnectionManagerTransition
+  , docConnectionManagerTransition
+
   , namesForServer
   , severityServer
   , docServer
@@ -46,6 +50,10 @@ module Cardano.Node.Tracing.Tracers.P2P
   , severityInboundGovernor
   , docInboundGovernorLocal
   , docInboundGovernorRemote
+
+  , namesForInboundGovernorTransition
+  , severityInboundGovernorTransition
+  , docInboundGovernorTransition
 
   ) where
 
@@ -1056,6 +1064,40 @@ docConnectionManager = Documented
   ]
 
 --------------------------------------------------------------------------------
+-- Connection Manager Transition Tracer
+--------------------------------------------------------------------------------
+
+namesForConnectionManagerTransition
+    :: ConnectionManager.AbstractTransitionTrace peerAddr -> [Text]
+namesForConnectionManagerTransition ConnectionManager.TransitionTrace {} =
+    ["ConnectionManagerTransition" ]
+
+severityConnectionManagerTransition
+  :: ConnectionManager.AbstractTransitionTrace peerAddr -> SeverityS
+severityConnectionManagerTransition _ = Debug
+
+instance (Show peerAddr, ToJSON peerAddr)
+      => LogFormatting (ConnectionManager.AbstractTransitionTrace peerAddr) where
+    forMachine _dtal (ConnectionManager.TransitionTrace peerAddr tr) =
+      mkObject $ reverse
+        [ "kind"    .= String "ConnectionManagerTransition"
+        , "address" .= toJSON peerAddr
+        , "from"    .= toJSON (ConnectionManager.fromState tr)
+        , "to"      .= toJSON (ConnectionManager.toState   tr)
+        ]
+    forHuman = pack . show
+    asMetrics _ = []
+
+docConnectionManagerTransition
+    :: Documented (ConnectionManager.AbstractTransitionTrace peerAddr)
+docConnectionManagerTransition = Documented
+  [ DocMsg
+      (ConnectionManager.TransitionTrace anyProto anyProto)
+      []
+      ""
+  ]
+
+--------------------------------------------------------------------------------
 -- Server Tracer
 --------------------------------------------------------------------------------
 
@@ -1396,7 +1438,7 @@ severityInboundGovernorTransition _ = Debug
 
 instance (Show peerAddr, ToJSON peerAddr)
       => LogFormatting (InboundGovernor.RemoteTransitionTrace peerAddr) where
-    forMachine _dtal (ConnectionManager.TransitionTrace peerAddr tr) =
+    forMachine _dtal (InboundGovernor.TransitionTrace peerAddr tr) =
       mkObject $ reverse
         [ "kind"    .= String "ConnectionManagerTransition"
         , "address" .= toJSON peerAddr

@@ -462,6 +462,10 @@ instance HasSeverityAnnotation (ConnectionManagerTrace addr (ConnectionHandlerTr
       TrState {}                              -> Info
       ConnMgr.TrUnexpectedlyFalseAssertion {} -> Error
 
+instance HasPrivacyAnnotation (ConnMgr.AbstractTransitionTrace addr)
+instance HasSeverityAnnotation (ConnMgr.AbstractTransitionTrace addr) where
+  getSeverityAnnotation _ = Debug
+
 instance HasPrivacyAnnotation (ServerTrace addr)
 instance HasSeverityAnnotation (ServerTrace addr) where
   getSeverityAnnotation ev =
@@ -494,6 +498,10 @@ instance HasSeverityAnnotation (InboundGovernorTrace addr) where
       InboundGovernor.TrRemoteState {}             -> Debug
       InboundGovernor.TrUnexpectedlyFalseAssertion {}
                                                    -> Error
+
+instance HasPrivacyAnnotation (Server.RemoteTransitionTrace addr)
+instance HasSeverityAnnotation (Server.RemoteTransitionTrace addr) where
+  getSeverityAnnotation _ = Debug
 
 --
 -- | instances of @Transformable@
@@ -692,6 +700,13 @@ instance (Show addr, Show versionNumber, Show agreedOptions)
                             (ConnectionHandlerTrace versionNumber agreedOptions)) where
   formatText a _ = pack (show a)
 
+instance (Show addr, ToJSON addr, ToObject addr)
+      => Transformable Text IO (ConnMgr.AbstractTransitionTrace addr) where
+  trTransformer = trStructuredText
+instance Show addr
+      => HasTextFormatter (ConnMgr.AbstractTransitionTrace addr) where
+  formatText a _ = pack (show a)
+
 instance (Show addr, ToObject addr, ToJSON addr)
       => Transformable Text IO (ServerTrace addr) where
   trTransformer = trStructuredText
@@ -704,6 +719,13 @@ instance (ToJSON addr, Show addr)
   trTransformer = trStructuredText
 instance Show addr
       => HasTextFormatter (InboundGovernorTrace addr) where
+  formatText a _ = pack (show a)
+
+instance (Show addr, ToJSON addr)
+      => Transformable Text IO (Server.RemoteTransitionTrace addr) where
+  trTransformer = trStructuredText
+instance Show addr
+      => HasTextFormatter (Server.RemoteTransitionTrace addr) where
   formatText a _ = pack (show a)
 
 --
@@ -1921,6 +1943,31 @@ instance (Show addr, Show versionNumber, Show agreedOptions, ToObject addr,
           , "info" .= String (pack . show $ info)
           ]
 
+instance ToJSON state => ToJSON (ConnMgr.MaybeUnknown state) where
+    toJSON (ConnMgr.Known st) =
+      Aeson.object
+        [ "state" .= toJSON st
+        , "type"  .= String "known"
+        ]
+    toJSON (ConnMgr.Race st) =
+      Aeson.object
+        [ "state" .= toJSON st
+        , "type"  .= String "race"
+        ]
+    toJSON ConnMgr.Unknown =
+      Aeson.object
+        [ "type"  .= String "unknown" ]
+
+
+instance (Show addr, ToObject addr, ToJSON addr)
+      => ToObject (ConnMgr.AbstractTransitionTrace addr) where
+    toObject _verb (ConnMgr.TransitionTrace addr tr) =
+      mkObject [ "kind"    .= String "ConnectionManagerTransition"
+               , "address" .= toJSON addr
+               , "from"    .= toJSON (ConnMgr.fromState tr)
+               , "to"      .= toJSON (ConnMgr.toState   tr)
+               ]
+
 instance (Show addr, ToObject addr, ToJSON addr)
       => ToObject (ServerTrace addr) where
   toObject verb (TrAcceptConnection peerAddr)     =
@@ -2083,3 +2130,12 @@ instance (ToJSON addr, Show addr)
     mkObject [ "kind" .= String "UnexpectedlyFalseAssertion"
              , "remoteSt" .= String (pack . show $ info)
              ]
+
+instance ToJSON addr
+      => ToObject (Server.RemoteTransitionTrace addr) where
+    toObject _verb (ConnMgr.TransitionTrace addr tr) =
+      mkObject [ "kind"    .= String "InboundGovernorTransition"
+               , "address" .= toJSON addr
+               , "from"    .= toJSON (ConnMgr.fromState tr)
+               , "to"      .= toJSON (ConnMgr.toState   tr)
+               ]

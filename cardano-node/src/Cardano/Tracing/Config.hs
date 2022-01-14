@@ -46,6 +46,7 @@ type TraceChainSyncHeaderServer = ("TraceChainSyncHeaderServer" :: Symbol)
 type TraceChainSyncProtocol = ("TraceChainSyncProtocol" :: Symbol)
 type TraceConnectionManager = ("TraceConnectionManager" :: Symbol)
 type TraceConnectionManagerCounters = ("TraceConnectionManagerCounters" :: Symbol)
+type TraceConnectionManagerTransitions = ("TraceConnectionManagerTransitions" :: Symbol)
 type DebugPeerSelectionInitiator = ("DebugPeerSelectionInitiator" :: Symbol)
 type DebugPeerSelectionInitiatorResponder = ("DebugPeerSelectionInitiatorResponder" :: Symbol)
 type TraceDiffusionInitialization = ("TraceDiffusionInitialization" :: Symbol)
@@ -79,6 +80,7 @@ type TracePublicRootPeers = ("TracePublicRootPeers" :: Symbol)
 type TraceServer = ("TraceServer" :: Symbol)
 type TraceInboundGovernor = ("TraceInboundGovernor" :: Symbol)
 type TraceInboundGovernorCounters = ("TraceInboundGovernorCounters" :: Symbol)
+type TraceInboundGovernorTransitions = ("TraceInboundGovernorTransitions" :: Symbol)
 type TraceTxInbound = ("TraceTxInbound" :: Symbol)
 type TraceTxOutbound = ("TraceTxOutbound" :: Symbol)
 type TraceTxSubmissionProtocol = ("TraceTxSubmissionProtocol" :: Symbol)
@@ -112,6 +114,7 @@ data TraceSelection
   , traceChainSyncProtocol :: OnOff TraceChainSyncProtocol
   , traceConnectionManager :: OnOff TraceConnectionManager
   , traceConnectionManagerCounters :: OnOff TraceConnectionManagerCounters
+  , traceConnectionManagerTransitions :: OnOff TraceConnectionManagerTransitions
   , traceDebugPeerSelectionInitiatorTracer :: OnOff DebugPeerSelectionInitiator
   , traceDebugPeerSelectionInitiatorResponderTracer :: OnOff DebugPeerSelectionInitiatorResponder
   , traceDiffusionInitialization :: OnOff TraceDiffusionInitialization
@@ -123,6 +126,7 @@ data TraceSelection
   , traceHandshake :: OnOff TraceHandshake
   , traceInboundGovernor :: OnOff TraceInboundGovernor
   , traceInboundGovernorCounters :: OnOff TraceInboundGovernorCounters
+  , traceInboundGovernorTransitions :: OnOff TraceInboundGovernorTransitions
   , traceIpSubscription :: OnOff TraceIpSubscription
   , traceKeepAliveClient :: OnOff TraceKeepAliveClient
   , traceLedgerPeers :: OnOff TraceLedgerPeers
@@ -182,6 +186,8 @@ traceConfigParser v ctor =
       connectionManager = OnOff True
       connectionManagerCounters :: OnOff TraceConnectionManagerCounters
       connectionManagerCounters = OnOff True
+      connectionManagerTransitions :: OnOff TraceConnectionManagerTransitions
+      connectionManagerTransitions = OnOff False
       debugPeerSelectionInitiator :: OnOff DebugPeerSelectionInitiator
       debugPeerSelectionInitiator = OnOff False
       debugPeerSelectionInitiatorResponder :: OnOff DebugPeerSelectionInitiatorResponder
@@ -204,6 +210,8 @@ traceConfigParser v ctor =
       inboundGovernor = OnOff True
       inboundGovernorCounters :: OnOff TraceInboundGovernorCounters
       inboundGovernorCounters = OnOff True
+      inboundGovernorTransitions :: OnOff TraceInboundGovernorTransitions
+      inboundGovernorTransitions = OnOff False
       ipSubscription :: OnOff TraceIpSubscription
       ipSubscription = OnOff True
       keepAliveClient :: OnOff TraceKeepAliveClient
@@ -274,6 +282,7 @@ traceConfigParser v ctor =
     <*> v .:? getName chainSyncProtocol .!= chainSyncProtocol
     <*> v .:? getName connectionManager .!= connectionManager
     <*> v .:? getName connectionManagerCounters .!= connectionManagerCounters
+    <*> v .:? getName connectionManagerTransitions .!= connectionManagerTransitions
     <*> v .:? getName debugPeerSelectionInitiator
                        .!= debugPeerSelectionInitiator
     <*> v .:? getName debugPeerSelectionInitiatorResponder
@@ -287,6 +296,7 @@ traceConfigParser v ctor =
     <*> v .:? getName handshake .!= handshake
     <*> v .:? getName inboundGovernor .!= inboundGovernor
     <*> v .:? getName inboundGovernorCounters .!= inboundGovernorCounters
+    <*> v .:? getName inboundGovernorTransitions .!= inboundGovernorTransitions
     <*> v .:? getName ipSubscription .!= ipSubscription
     <*> v .:? getName keepAliveClient .!= keepAliveClient
     <*> v .:? getName ledgerPeers .!= ledgerPeers

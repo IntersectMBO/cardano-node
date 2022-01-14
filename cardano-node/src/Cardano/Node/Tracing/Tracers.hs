@@ -593,6 +593,13 @@ mkDiffusionTracersExtra trBase trForward mbTrEKG _trDataPoint trConfig EnabledP2
       severityConnectionManager
       allPublic
     configureTracers trConfig docConnectionManager [connectionManagerTr]
+    connectionManagerTransitionsTr  <-  mkCardanoTracer
+      trBase trForward mbTrEKG
+      "ConnectionManagerTransition"
+      (namesForConnectionManagerTransition @RemoteAddress)
+      severityConnectionManagerTransition
+      allPublic
+    configureTracers trConfig docConnectionManagerTransition [connectionManagerTransitionsTr]
     serverTr  <-  mkCardanoTracer
       trBase trForward mbTrEKG
       "Server"
@@ -605,6 +612,13 @@ mkDiffusionTracersExtra trBase trForward mbTrEKG _trDataPoint trConfig EnabledP2
       "InboundGovernor"
       namesForInboundGovernor
       severityInboundGovernor
+      allPublic
+    configureTracers trConfig docInboundGovernorRemote [inboundGovernorTr]
+    inboundGovernorTransitionsTr  <-  mkCardanoTracer
+      trBase trForward mbTrEKG
+      "InboundGovernorTransition"
+      namesForInboundGovernorTransition
+      severityInboundGovernorTransition
       allPublic
     configureTracers trConfig docInboundGovernorRemote [inboundGovernorTr]
     localConnectionManagerTr  <-  mkCardanoTracer
@@ -645,14 +659,14 @@ mkDiffusionTracersExtra trBase trForward mbTrEKG _trDataPoint trConfig EnabledP2
                  traceWith peerSelectionActionsTr
              , P2P.dtConnectionManagerTracer = Tracer $
                  traceWith connectionManagerTr
-             , P2P.dtConnectionManagerTransitionTracer = mempty
-                --TODO Add transition tracers later
+             , P2P.dtConnectionManagerTransitionTracer = Tracer $
+                 traceWith connectionManagerTransitionsTr
              , P2P.dtServerTracer = Tracer $
                  traceWith serverTr
              , P2P.dtInboundGovernorTracer = Tracer $
                  traceWith inboundGovernorTr
-             , P2P.dtInboundGovernorTransitionTracer = mempty
-                --TODO Add transition tracers later
+             , P2P.dtInboundGovernorTransitionTracer = Tracer $
+                 traceWith inboundGovernorTransitionsTr
              , P2P.dtLocalConnectionManagerTracer =  Tracer $
                  traceWith localConnectionManagerTr
              , P2P.dtLocalServerTracer = Tracer $
