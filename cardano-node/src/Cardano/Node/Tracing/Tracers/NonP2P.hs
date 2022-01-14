@@ -290,7 +290,7 @@ docSubscription = Documented [
     , DocMsg
         (SubscriptionTraceApplicationException anyProto (anyProto :: SomeException))
         []
-        "Application Exception occured."
+        "Application Exception occurred."
     , DocMsg
         (SubscriptionTraceAllocateSocket anyProto)
         []
@@ -342,7 +342,7 @@ docDNSResolver = Documented [
         (WithDomainName anyProto
           (DnsTraceLookupException anyProto))
         []
-        "A DNS lookup exception occured."
+        "A DNS lookup exception occurred."
     , DocMsg
         (WithDomainName anyProto
           (DnsTraceLookupAError anyProto))

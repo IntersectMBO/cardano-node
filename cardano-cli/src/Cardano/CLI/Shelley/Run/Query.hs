@@ -127,7 +127,7 @@ renderShelleyQueryCmdError err =
       "Consensus mode and era mismatch. Consensus mode: " <> show cMode <>
       " Era: " <> show era
     ShelleyQueryCmdEraMismatch (EraMismatch ledgerEra queryEra) ->
-      "\nAn error mismatch occured." <> "\nSpecified query era: " <> queryEra <>
+      "\nAn error mismatch occurred." <> "\nSpecified query era: " <> queryEra <>
       "\nCurrent ledger era: " <> ledgerEra
     ShelleyQueryCmdUnsupportedMode mode -> "Unsupported mode: " <> renderMode mode
     ShelleyQueryCmdPastHorizon e -> "Past horizon: " <> show e

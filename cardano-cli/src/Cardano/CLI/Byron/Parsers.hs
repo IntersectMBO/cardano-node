@@ -507,9 +507,9 @@ parseMpcThd =
 
 parseProtocolVersion :: Parser ProtocolVersion
 parseProtocolVersion =
-  ProtocolVersion <$> (parseWord "protocol-version-major" "Protocol verson major." "WORD16" :: Parser Word16)
-                  <*> (parseWord "protocol-version-minor" "Protocol verson minor." "WORD16" :: Parser Word16)
-                  <*> (parseWord "protocol-version-alt" "Protocol verson alt." "WORD8" :: Parser Word8)
+  ProtocolVersion <$> (parseWord "protocol-version-major" "Protocol version major." "WORD16" :: Parser Word16)
+                  <*> (parseWord "protocol-version-minor" "Protocol version minor." "WORD16" :: Parser Word16)
+                  <*> (parseWord "protocol-version-alt" "Protocol version alt." "WORD8" :: Parser Word8)
 
 parseHeavyDelThd :: Parser Byron.LovelacePortion
 parseHeavyDelThd =
