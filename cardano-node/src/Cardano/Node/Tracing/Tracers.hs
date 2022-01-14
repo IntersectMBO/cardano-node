@@ -51,7 +51,7 @@ import qualified Ouroboros.Consensus.Node.Tracers as Consensus
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 import qualified Ouroboros.Consensus.Storage.LedgerDB.OnDisk as LedgerDB
 
-import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
+import           Network.Mux.Trace (TraceLabelPeer (..))
 import           Ouroboros.Network.ConnectionId (ConnectionId)
 import qualified Ouroboros.Network.Diffusion as Diffusion
 import qualified Ouroboros.Network.Diffusion.NonP2P as NonP2P
@@ -68,7 +68,7 @@ mkDispatchTracers
 
   , LogFormatting (LedgerEvent blk)
   , LogFormatting
-    (BlockFetch.TraceLabelPeer
+    (TraceLabelPeer
       (ConnectionId RemoteAddress) (TraceChainSyncClientEvent blk))
   )
   => NodeKernelData blk
@@ -198,7 +198,7 @@ mkConsensusTracers :: forall blk.
   ( Consensus.RunNode blk
   , LogFormatting (ChainDB.InvalidBlockReason blk)
   , TraceConstraints blk
-  , LogFormatting (BlockFetch.TraceLabelPeer
+  , LogFormatting (TraceLabelPeer
                     (ConnectionId RemoteAddress) (TraceChainSyncClientEvent blk))
   )
   => Trace IO FormattedMessage
