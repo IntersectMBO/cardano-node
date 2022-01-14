@@ -179,7 +179,7 @@ traceConfigParser v ctor =
       chainSyncProtocol :: OnOff TraceChainSyncProtocol
       chainSyncProtocol = OnOff False
       connectionManager :: OnOff TraceConnectionManager
-      connectionManager = OnOff False
+      connectionManager = OnOff True
       connectionManagerCounters :: OnOff TraceConnectionManagerCounters
       connectionManagerCounters = OnOff True
       debugPeerSelectionInitiator :: OnOff DebugPeerSelectionInitiator
@@ -201,7 +201,7 @@ traceConfigParser v ctor =
       handshake :: OnOff TraceHandshake
       handshake = OnOff False
       inboundGovernor :: OnOff TraceInboundGovernor
-      inboundGovernor = OnOff False
+      inboundGovernor = OnOff True
       inboundGovernorCounters :: OnOff TraceInboundGovernorCounters
       inboundGovernorCounters = OnOff True
       ipSubscription :: OnOff TraceIpSubscription
@@ -239,11 +239,11 @@ traceConfigParser v ctor =
       mux :: OnOff TraceMux
       mux = OnOff True
       peerSelection :: OnOff TracePeerSelection
-      peerSelection = OnOff False
+      peerSelection = OnOff True
       peerSelectionCounters :: OnOff TracePeerSelectionCounters
       peerSelectionCounters = OnOff True
       peerSelectionActions :: OnOff TracePeerSelectionActions
-      peerSelectionActions = OnOff False
+      peerSelectionActions = OnOff True
       publicRootPeers :: OnOff TracePublicRootPeers
       publicRootPeers = OnOff False
       server :: OnOff TraceServer
