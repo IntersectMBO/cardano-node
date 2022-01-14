@@ -84,7 +84,7 @@ namesForTChainSync (BlockFetch.TraceLabelPeer _ v) = "NodeToClient" : namesTChai
   where
 
     namesTChainSync (TraceSendMsg msg) = "Send" : namesTChainSync' msg
-    namesTChainSync (TraceRecvMsg msg) = "Recieve" : namesTChainSync' msg
+    namesTChainSync (TraceRecvMsg msg) = "Receive" : namesTChainSync' msg
 
     namesTChainSync' (AnyMessageAndAgency _agency msg) = namesTChainSync'' msg
 
@@ -242,7 +242,7 @@ namesForTTxSubmission :: BlockFetch.TraceLabelPeer peer
 namesForTTxSubmission (BlockFetch.TraceLabelPeer _ v) = namesTTxSubmission v
   where
     namesTTxSubmission (TraceSendMsg msg) = "Send" : namesTTxSubmission' msg
-    namesTTxSubmission (TraceRecvMsg msg) = "Recieve" : namesTTxSubmission' msg
+    namesTTxSubmission (TraceRecvMsg msg) = "Receive" : namesTTxSubmission' msg
 
     namesTTxSubmission' (AnyMessageAndAgency _agency msg) = namesTTxSubmission'' msg
 
