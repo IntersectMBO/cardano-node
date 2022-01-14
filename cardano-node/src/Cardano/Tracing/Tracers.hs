@@ -365,8 +365,8 @@ mkTracers blockConfig tOpts@(TracingOn trSel) tr nodeKern ekgDirect enableP2P = 
                  tracePeerSelectionCountersMetrics
                    (tracePeerSelectionCounters trSel)
                    ekgDirect
-              <> tracerOnOff (tracePeerSelection trSel)
-                             verb "PeerSelection" tr
+              <> tracerOnOff (tracePeerSelectionCounters trSel)
+                             verb "PeerSelectionCounters" tr
            , P2P.dtPeerSelectionActionsTracer =
                tracerOnOff (tracePeerSelectionActions trSel)
                             verb "PeerSelectionActions" tr
