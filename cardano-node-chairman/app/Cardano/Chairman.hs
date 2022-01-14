@@ -483,6 +483,7 @@ localInitiatorNetworkApplication
               localTxSubmissionTracer
               cTxSubmissionCodec
               localTxSubmissionPeerNull
+
       , localStateQueryProtocol =
           InitiatorProtocolOnly $
             MuxPeer

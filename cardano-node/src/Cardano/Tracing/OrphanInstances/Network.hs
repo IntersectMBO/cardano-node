@@ -396,6 +396,7 @@ instance HasSeverityAnnotation (TracePeerSelection addr) where
       TracePromoteWarmLocalPeers {} -> Info
       TracePromoteWarmFailed     {} -> Info
       TracePromoteWarmDone       {} -> Info
+      TracePromoteWarmAborted    {} -> Info
       TraceDemoteWarmPeers       {} -> Info
       TraceDemoteWarmFailed      {} -> Info
       TraceDemoteWarmDone        {} -> Info
@@ -808,6 +809,7 @@ instance (forall result. Show (query result))
     mkObject [ "kind" .= String "MsgDone"
              , "agency" .= String (pack $ show stok)
              ]
+
 
 instance ToObject (AnyMessageAndAgency (LocalTxSubmission tx err)) where
   toObject _verb (AnyMessageAndAgency stok LocalTxSub.MsgSubmitTx{}) =
@@ -1450,6 +1452,12 @@ instance ToObject (TracePeerSelection SockAddr) where
              ]
   toObject _verb (TracePromoteWarmDone tActive aActive p) =
     mkObject [ "kind" .= String "PromoteWarmDone"
+             , "targetActive" .= tActive
+             , "actualActive" .= aActive
+             , "peer" .= toJSON p
+             ]
+  toObject _verb (TracePromoteWarmAborted tActive aActive p) =
+    mkObject [ "kind" .= String "PromoteWarmAborted"
              , "targetActive" .= tActive
              , "actualActive" .= aActive
              , "peer" .= toJSON p
