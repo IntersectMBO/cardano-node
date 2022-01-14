@@ -63,8 +63,28 @@ shell: ## Enter Nix shell, CI mode (workbench run from Nix store)
 cli node:
 	cabal --ghc-options="+RTS -qn8 -A32M -RTS" build cardano-$@
 
-clean:
-	rm -rf dist-newstyle .stack-work $(shell find . -name '*~' -or -name '*.swp')
+trace-documentation:
+	cabal run -- exe:cardano-node trace-documentation --config 'configuration/cardano/mainnet-config-new-tracing.yaml' --output-file 'doc/new-tracing/tracers_doc_generated.md'
+
+BENCH_REPEATS ?= 3
+BENCH_CONFIG ?= both
+BENCH_TAG ?= HEAD
+BENCH_XARGS ?=
+
+profile-chainsync:
+	scripts/mainnet-via-fetcher.sh ${BENCH_XARGS}  --node-config-${BENCH_CONFIG} --repeats ${BENCH_REPEATS} --nix --profile time --tag ${BENCH_TAG}
+
+profile-chainsync-fast: BENCH_XARGS=--skip-prefetch
+profile-chainsync-fast: profile-chainsync
+
+clean-profile proclean:
+	rm -f *.html *.prof *.hp *.stats *.eventlog
+
+clean: clean-profile
+	rm -rf logs/ socket/ cluster.*
+
+full-clean: clean
+	rm -rf db dist-newstyle .stack-work $(shell find . -name '*~' -or -name '*.swp')
 
 cls:
 	echo -en "\ec"

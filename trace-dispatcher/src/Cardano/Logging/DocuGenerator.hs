@@ -194,33 +194,31 @@ generateTOC traces metrics datapoints =
     <> generateTOCDatapoints
   where
     generateTOCTraces =
-      fromText "\n1. [Trace Messages](#trace-messages)"
-      <> mconcat (zipWith (curry namespaceToToc) traces [(1 :: Int) .. ])
+      fromText "\n\n## [Trace Messages](#trace-messages)"
+      <> mconcat (namespaceToToc <$> traces)
+    generateTOCMetrics =
+      fromText "\n\n## [Metrics](#metrics)"
+      <> mconcat (nameToToc <$> metrics)
     generateTOCDatapoints =
-      fromText "\n3. [Datapoints](#datapoints)"
-      <> mconcat (zipWith (curry namespaceToToc) datapoints [(1 :: Int) .. ])
-    namespaceToToc (ns, i) =
+      fromText "\n\n## [Datapoints](#datapoints)"
+      <> mconcat (namespaceToToc <$> datapoints)
+    namespaceToToc ns =
       fromText "\n1. "
-      <> fromText ((pack.show) i)
-      <> fromText " ["
+      <> fromText "["
       <> namespaceBuilder ns
       <> fromText "](#"
       <> namespaceRefBuilder ns
       <> fromText ")"
     namespaceBuilder ns = mconcat (intersperse (singleton '.') (map fromText ns))
     namespaceRefBuilder ns = mconcat (map (fromText . toLower) ns)
-    generateTOCMetrics =
-      fromText "\n2. [Metrics](#metrics)"
-      <> mconcat (zipWith (curry nameToToc) metrics [(1 :: Int) .. ])
-    nameToToc ([name], i) =
-      fromText "\n2. "
-      <> fromText ((pack.show) i)
-      <> fromText " ["
+    nameToToc [name] =
+      fromText "\n1. "
+      <> fromText "["
       <> fromText name
       <> fromText "](#"
       <> fromText (nameRefBuilder name)
       <> fromText ")"
-    nameToToc (list, _i) =
+    nameToToc list =
       fromText "unexpected" <> fromText ((pack . show) list)
     nameRefBuilder name = toLower $ T.filter (/= '.') name
 

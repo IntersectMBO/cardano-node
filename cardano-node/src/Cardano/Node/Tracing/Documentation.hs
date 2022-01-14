@@ -1,11 +1,14 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Node.Tracing.Documentation
   ( TraceDocumentationCmd (..)
@@ -46,7 +49,7 @@ import           Cardano.Node.TraceConstraints
 
 import           Ouroboros.Consensus.BlockchainTime.WallClock.Types (RelativeTime)
 import           Ouroboros.Consensus.BlockchainTime.WallClock.Util (TraceBlockchainTimeEvent (..))
-import           Ouroboros.Consensus.Byron.Ledger
+import           Ouroboros.Consensus.Cardano.Block
 import           Ouroboros.Consensus.Ledger.Query (Query)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTxId)
 import           Ouroboros.Consensus.Ledger.SupportsProtocol (LedgerSupportsProtocol)
@@ -83,8 +86,8 @@ import           Ouroboros.Network.PeerSelection.RootPeersDNS (TraceLocalRootPee
                    TracePublicRootPeers (..))
 import           Ouroboros.Network.Protocol.BlockFetch.Type (BlockFetch)
 import           Ouroboros.Network.Protocol.ChainSync.Type (ChainSync)
-import           Ouroboros.Network.Protocol.Handshake.Unversioned (UnversionedProtocolData,
-                   UnversionedProtocol)
+import           Ouroboros.Network.Protocol.Handshake.Unversioned (UnversionedProtocolData (..),
+                   UnversionedProtocol (..))
 import           Ouroboros.Network.Protocol.LocalStateQuery.Type (LocalStateQuery)
 import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Type as LTS
 import           Ouroboros.Network.Protocol.TxSubmission.Type (TxSubmission)
@@ -121,25 +124,27 @@ parseTraceDocumentationCmd =
                  <> Opt.help "Configuration file for the cardano-node"
                )
            <*> Opt.strOption
-               ( Opt.long "output-dir"
-                 <> Opt.metavar "DIR"
-                 <> Opt.help "File to store enerated documentation"
+               ( Opt.long "output-file"
+                 <> Opt.metavar "FILE"
+                 <> Opt.help "Generated documentation output file"
                )
            Opt.<**> Opt.helper)
        $ mconcat [ Opt.progDesc "Generate the trace documentation" ]
      ]
     )
 
+deriving instance Generic UnversionedProtocol
+deriving instance Generic UnversionedProtocolData
+
+instance ToJSON UnversionedProtocol
+instance ToJSON UnversionedProtocolData
+
 runTraceDocumentationCmd
-  :: (ToJSON UnversionedProtocol
-  ,  ToJSON UnversionedProtocolData)
-  => TraceDocumentationCmd
+  :: TraceDocumentationCmd
   -> IO ()
 runTraceDocumentationCmd TraceDocumentationCmd{..} = do
   docTracers
-    tdcConfigFile tdcOutput (Proxy @ByronBlock
-                             -- (CardanoBlock StandardCrypto)
-                            )
+    tdcConfigFile tdcOutput (Proxy @(CardanoBlock StandardCrypto))
                             (Proxy @(NtN.ConnectionId LocalAddress))
                             (Proxy @(NtN.ConnectionId NtN.RemoteAddress))
 
@@ -156,8 +161,6 @@ docTracers :: forall blk peer remotePeer.
   , LogFormatting remotePeer
   , Show remotePeer
   , Show peer
-  , ToJSON UnversionedProtocol
-  , ToJSON UnversionedProtocolData
   )
   => FilePath
   -> FilePath

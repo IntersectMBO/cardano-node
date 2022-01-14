@@ -17,10 +17,11 @@ import           System.Info (arch, compilerName, compilerVersion, os)
 
 import           Cardano.Node.Configuration.POM (PartialNodeConfiguration)
 import           Cardano.Node.Handlers.TopLevel
-import           Cardano.Node.Parsers (nodeCLIParser, parseConfigFile, parserHelpHeader, parserHelpOptions,
+import           Cardano.Node.Parsers (nodeCLIParser, parserHelpHeader, parserHelpOptions,
                    renderHelpDoc)
 import           Cardano.Node.Run (runNode)
-import           Cardano.Node.Tracing.Documentation (parseTraceDocumentationCmd, runTraceDocumentationCmd)
+import           Cardano.Node.Tracing.Documentation (TraceDocumentationCmd (..),
+                   parseTraceDocumentationCmd, runTraceDocumentationCmd)
 
 main :: IO ()
 main = toplevelExceptionHandler $ do
