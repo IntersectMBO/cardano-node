@@ -149,7 +149,7 @@ parseNodeHostIPv6Address str =
   maybe
     (Left $
       "Failed to parse IPv6 address: " ++ str ++
-      ". If you want to specify an IPv4 adddress, use --host-addr option.")
+      ". If you want to specify an IPv4 address, use --host-addr option.")
     (Right . NodeHostIPv6Address)
     (readMaybe str)
 

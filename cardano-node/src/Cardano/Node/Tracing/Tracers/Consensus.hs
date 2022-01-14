@@ -298,7 +298,7 @@ docChainSyncServerEvent = Documented [
     DocMsg
       (TraceChainSyncServerRead anyProto anyProto)
       []
-      "A server read has occured, either for an add block or a rollback"
+      "A server read has occurred, either for an add block or a rollback"
     , DocMsg
       (TraceChainSyncServerReadBlocked anyProto anyProto)
       []

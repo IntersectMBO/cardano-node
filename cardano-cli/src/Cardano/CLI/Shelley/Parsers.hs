@@ -1992,7 +1992,7 @@ pMintMultiAsset balanceExecUnits =
                )
  where
    helpText = "Mint multi-asset value(s) with the multi-asset cli syntax. \
-               \You must specifiy a script witness."
+               \You must specify a script witness."
 
 pInvalidBefore :: Parser SlotNo
 pInvalidBefore =
