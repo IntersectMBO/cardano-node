@@ -20,7 +20,7 @@ EOF
 }
 
 analyse() {
-local dump_logobjects= force_prefilter= prefilter_jq= self_args=() locli_args=() filters=()
+local dump_logobjects= force_prefilter= prefilter_jq= self_args=() locli_args=() filters=() aws=
 while test $# -gt 0
 do case "$1" in
        --dump-logobjects )  dump_logobjects='true';  self_args+=($1);;
@@ -35,7 +35,18 @@ do case "$1" in
                                     fail "no such filter: $f"; done
                             locli_args+=(${filter_files[*]/#/--filter })
                             self_args+=($1 $2); shift;;
+       --rts )              self_args+=($1 $2); locli_args+=(+RTS $2         -RTS); shift;;
        * ) break;; esac; shift; done
+
+if ! curl http://169.254.169.254/latest/meta-data 2>&1 | grep --quiet 404
+then aws='true'; fi
+
+## Work around the odd parallelism bug killing performance on AWS:
+if test -n "$aws"
+then locli_args+=(+RTS -N1 -A128M -RTS)
+     echo "{ \"aws\": true }"
+else echo "{ \"aws\": false }"
+fi
 
 local op=${1:-$(usage_analyse)}; shift
 
@@ -142,15 +153,15 @@ case "$op" in
            (
            ## 1. enumerate logs, filter by keyfile & consolidate
                local logs=($(ls "$dir"/$mach/node-*.json 2>/dev/null))
-               local consolidated="$adir"/logs-$mach.json
+               local consolidated="$adir"/logs-$mach.flt.json
 
            test -n "${logs[*]}" ||
                fail "no logs for $mach in run $name"
 
-           local prefilter=$(test "$force_prefilter" = 'true' -o -z "$(ls "$adir"/logs-node-*.flt.json 2>/dev/null)" && echo 'yes')
+           local prefilter=$(test "$force_prefilter" = 'true' -o -z "$(ls "$adir"/logs-node-*.flt.json 2>/dev/null)" && echo 'true' || echo 'false')
 
            echo "{ \"prefilter\": $prefilter }"
-           if test -n "$prefilter"
+           if test x$prefilter = 'xtrue'
            then grep -hFf "$keyfile" "${logs[@]}"  > "$consolidated"; fi
 
            locli_args+=(

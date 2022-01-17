@@ -34,7 +34,7 @@ function locli() {
     cabal -v0 build exe:locli
     set-git-rev \
         $(git rev-parse HEAD) \
-        $(find ./dist-newstyle/build/ -type f -name locli)
+        $(find ./dist-newstyle/build/ -type f -name locli) || true
     cabal -v0 exec      locli -- "$@"
 }
 
