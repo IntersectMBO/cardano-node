@@ -204,7 +204,7 @@ runMachineTimeline run@Run{genesis} logfiles filters filterNames MachineTimeline
     -- 0. Recover LogObjects
     objs :: [LogObject] <- concat <$> mapM readLogObjectStream logfiles
     forM_ mtofLogObjects $
-      (dumpLOStream objs)
+      dumpLOStream objs
 
     -- 1. Derive the basic scalars and vectors
     let (,) runStats noisySlotStats = timelineFromLogObjects run objs

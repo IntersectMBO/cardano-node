@@ -1,4 +1,3 @@
-{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving#-}
 {-# OPTIONS_GHC -Wno-deprecations -Wno-orphans #-}

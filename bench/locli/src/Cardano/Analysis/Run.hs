@@ -1,7 +1,5 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving#-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE StrictData #-}
 {-# OPTIONS_GHC -Wno-incomplete-patterns -Wno-name-shadowing #-}
 module Cardano.Analysis.Run (module Cardano.Analysis.Run) where
@@ -122,8 +120,8 @@ instance FromJSON RunPartial where
     timestamp <- (meta .: "timestamp" :: Aeson.Parser Integer)
                   <&> Time.posixSecondsToUTCTime . realToFrac
     --
-    metadata         <- pure Metadata{..}
-    genesis          <- pure ()
+    let metadata = Metadata{..}
+        genesis  = ()
     pure Run{..}
 
 optUTCTime :: String -> String -> Parser UTCTime

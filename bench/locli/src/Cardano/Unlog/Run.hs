@@ -7,7 +7,6 @@ module Cardano.Unlog.Run
   , runCommand
   -- * Re-exports
   , gitRev
-  , 
   ) where
 
 import Cardano.Prelude
@@ -23,7 +22,7 @@ import Cardano.Unlog.Commands (AnalysisCommand)
 import Cardano.Analysis.Version
 
 -- | Sub-commands of 'locli'.
-data Command =
+newtype Command =
 
   -- | Analysis commands
     AnalysisCommand AnalysisCommand

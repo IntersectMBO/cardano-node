@@ -110,7 +110,7 @@ executable locli
   ghc-options:         -threaded
                        -Wall
                        -rtsopts
-                       "-with-rtsopts=-T -N4 -A8m"
+                       "-with-rtsopts=-T -N7 -A2m -qb -H64m"
   build-depends:       base
                      , cardano-prelude
                      , locli
