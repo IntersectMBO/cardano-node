@@ -79,6 +79,7 @@ library
                         Cardano.Api.SerialiseBech32
                         Cardano.Api.SerialiseCBOR
                         Cardano.Api.SerialiseJSON
+                        Cardano.Api.SerialiseLedgerCddl
                         Cardano.Api.SerialiseRaw
                         Cardano.Api.SerialiseTextEnvelope
                         Cardano.Api.SerialiseUsing

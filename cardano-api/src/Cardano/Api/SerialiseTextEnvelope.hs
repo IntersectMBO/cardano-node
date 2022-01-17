@@ -35,27 +35,24 @@ module Cardano.Api.SerialiseTextEnvelope
 import           Prelude
 
 import           Data.Bifunctor (first)
+import           Data.ByteString (ByteString)
+import qualified Data.ByteString as BS
+import qualified Data.ByteString.Base16 as Base16
+import qualified Data.ByteString.Lazy as LBS
+import qualified Data.List as List
 import           Data.Maybe (fromMaybe)
 import           Data.String (IsString)
-import qualified Data.ByteString as BS
-import           Data.ByteString (ByteString)
-import qualified Data.ByteString.Lazy as LBS
-import qualified Data.ByteString.Base16 as Base16
-import qualified Data.List as List
 import           Data.Text (Text)
 import qualified Data.Text.Encoding as Text
 
+import           Data.Aeson (FromJSON (..), ToJSON (..), object, withObject, (.:), (.=))
 import qualified Data.Aeson as Aeson
-import           Data.Aeson
-                   (FromJSON (..), ToJSON (..), object, withObject, (.:), (.=))
-import           Data.Aeson.Encode.Pretty
-                   (Config (..), encodePretty', defConfig, keyOrder)
+import           Data.Aeson.Encode.Pretty (Config (..), defConfig, encodePretty', keyOrder)
 
-import           Control.Monad (unless)
 import           Control.Exception (bracketOnError)
-import           Control.Monad.Trans.Except (ExceptT(..), runExceptT)
-import           Control.Monad.Trans.Except.Extra
-                   (hoistEither, firstExceptT, handleIOExceptT)
+import           Control.Monad (unless)
+import           Control.Monad.Trans.Except (ExceptT (..), runExceptT)
+import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistEither)
 
 import           System.Directory (removeFile, renameFile)
 import           System.FilePath (splitFileName, (<.>))
