@@ -105,11 +105,13 @@ getMetricsFromNode
   -> IO Text
 getMetricsFromNode [] _ = return "No such a node!"
 getMetricsFromNode (anId':_) acceptedMetrics =
-  readTVarIO acceptedMetrics <&> M.lookup nodeId >>= \case
-    Nothing ->
-      return "No such a node!"
-    Just (ekgStore, _) ->
-      sampleAll ekgStore <&> renderListOfMetrics . getListOfMetrics
+  readTVarIO acceptedMetrics >>=
+    (\case
+        Nothing ->
+          return "No such a node!"
+        Just (ekgStore, _) ->
+          sampleAll ekgStore <&> renderListOfMetrics . getListOfMetrics
+    ) . M.lookup nodeId
  where
   nodeId = NodeId $ decodeUtf8 anId'
 

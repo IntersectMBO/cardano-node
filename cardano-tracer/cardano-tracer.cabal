@@ -148,7 +148,7 @@ test-suite cardano-tracer-test
   other-modules:       Cardano.Tracer.Test.Forwarder
                        Cardano.Tracer.Test.DataPoint.Tests
                        Cardano.Tracer.Test.Logs.Tests
-                       Cardano.Tracer.Test.Network.Tests
+                       Cardano.Tracer.Test.Restart.Tests
                        Cardano.Tracer.Test.Queue.Tests
                        Cardano.Tracer.Test.Utils
 

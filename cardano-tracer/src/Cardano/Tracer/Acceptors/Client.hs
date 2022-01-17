@@ -56,19 +56,20 @@ runAcceptorsClient
   -> Lock
   -> IO ()
 runAcceptorsClient config p (ekgConfig, tfConfig, dpfConfig)
-                   connectedNodes acceptedMetrics dpRequestors currentLogLock = withIOManager $ \iocp ->
-  doConnectToForwarder
-    (localSnocket iocp)
-    (localAddressFromPath p)
-    (TC.networkMagic config)
-    noTimeLimitsHandshake $
-    -- Please note that we always run all the supported protocols,
-    -- there is no mechanism to disable some of them.
-    appInitiator
-      [ (runEKGAcceptorInit ekgConfig connectedNodes acceptedMetrics errorHandler, 1)
-      , (runTraceObjectsAcceptorInit config tfConfig currentLogLock  errorHandler, 2)
-      , (runDataPointsAcceptorInit dpfConfig connectedNodes dpRequestors errorHandler, 3)
-      ]
+                   connectedNodes acceptedMetrics dpRequestors currentLogLock =
+  withIOManager $ \iocp ->
+    doConnectToForwarder
+      (localSnocket iocp)
+      (localAddressFromPath p)
+      (TC.networkMagic config)
+      noTimeLimitsHandshake $
+      -- Please note that we always run all the supported protocols,
+      -- there is no mechanism to disable some of them.
+      appInitiator
+        [ (runEKGAcceptorInit ekgConfig connectedNodes acceptedMetrics errorHandler, 1)
+        , (runTraceObjectsAcceptorInit config tfConfig currentLogLock  errorHandler, 2)
+        , (runDataPointsAcceptorInit dpfConfig connectedNodes dpRequestors errorHandler, 3)
+        ]
  where
   appInitiator protocolsWithNums =
     OuroborosApplication $ \connectionId _shouldStopSTM ->

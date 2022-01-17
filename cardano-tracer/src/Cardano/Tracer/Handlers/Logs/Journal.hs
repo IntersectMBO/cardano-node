@@ -1,9 +1,12 @@
 {-# LANGUAGE CPP #-}
-{-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE OverloadedStrings #-}
 
 #if defined(linux_HOST_OS)
 #define LINUX
+#endif
+
+#ifdef LINUX
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedStrings #-}
 #endif
 
 module Cardano.Tracer.Handlers.Logs.Journal

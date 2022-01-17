@@ -24,6 +24,7 @@ import           Control.Concurrent.STM.TVar (modifyTVar', newTVarIO)
 import           Control.Exception (SomeException, SomeAsyncException (..),
                    fromException, try, tryJust)
 import           "contra-tracer" Control.Tracer (showTracing, stdoutTracer, traceWith)
+import           Data.List.Extra (dropPrefix, dropSuffix, replace)
 import qualified Data.Map.Strict as M
 import qualified Data.Set as S
 import qualified Data.Text as T
@@ -85,13 +86,17 @@ connIdToNodeId ConnectionId{remoteAddress} = NodeId preparedAddress
   -- We have to remove "wrong" symbols from 'NodeId',
   -- to make it appropriate for the name of the subdirectory.
   preparedAddress =
-      T.replace "\\\\.\\pipe\\" "" -- For Windows.
-    . T.replace "--" ""
-    . T.replace "LocalAddress" "" -- There are only local addresses by design.
-    . T.replace " " "-"
-    . T.replace "\"" ""
-    . T.replace "/" "-"
-    . T.pack
+      T.pack
+    . dropPrefix "-"
+    . dropSuffix "-"
+    . replace "--" ""
+    . replace " " "-"
+    . replace "\"" "-"
+    . replace "/" "-"
+    . replace "\\" "-"
+    . replace "pipe" "" -- For Windows.
+    . replace "." "" -- For Windows.
+    . replace "LocalAddress" "" -- There are only local addresses by design.
     $ show remoteAddress
 
 initConnectedNodes :: IO ConnectedNodes

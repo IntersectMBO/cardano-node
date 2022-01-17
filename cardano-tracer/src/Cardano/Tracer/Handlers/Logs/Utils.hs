@@ -62,9 +62,12 @@ isItLog format pathToLog = hasProperPrefix && hasTimestamp && hasProperExt
   maybeTimestamp = T.drop (length logPrefix) . T.pack . takeBaseName $ fileName
 
 -- | Create a new log file and a symlink to it, from scratch.
-createLogAndSymLink :: FilePath -> LogFormat -> IO ()
-createLogAndSymLink subDirForLogs format =
-  createEmptyLog subDirForLogs format >>= flip createFileLink symLink
+createLogAndSymLink :: FilePath -> LogFormat -> IO FilePath
+createLogAndSymLink subDirForLogs format = do
+  pathToNewLog <- createEmptyLog subDirForLogs format
+  whenM (doesFileExist symLink) $ removeFile symLink
+  createFileLink pathToNewLog symLink
+  return pathToNewLog
  where
   symLink = subDirForLogs </> symLinkName format
 

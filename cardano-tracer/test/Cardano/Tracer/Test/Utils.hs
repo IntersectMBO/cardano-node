@@ -3,15 +3,12 @@ module Cardano.Tracer.Test.Utils
   , false
   , propRunInLogsStructure
   , propRunInLogsStructure2
-  , removeDirectoryContent
   ) where
 
-import           Control.Exception (finally)
-import           System.Directory.Extra (getTemporaryDirectory,
-                   listDirectories, removeFile, removePathForcibly)
-import           System.FilePath (dropDrive)
-import           System.IO.Extra (newTempDirWithin, newTempFileWithin)
-import           System.Info.Extra (isWindows)
+import           System.Directory.Extra (listDirectories)
+import           System.FilePath ((</>), (<.>), dropDrive, takeBaseName)
+import           System.IO.Extra (newTempDir, newTempFile)
+import           System.Info.Extra (isMac, isWindows)
 import           Test.Tasty.QuickCheck
 
 false :: String -> IO Property
@@ -21,31 +18,27 @@ propRunInLogsStructure
   :: (FilePath -> FilePath -> IO Property)
   -> Property
 propRunInLogsStructure testAction = ioProperty $ do
-  tmpDir <- getTemporaryDirectory
-  (rootDir, deleteDir) <- newTempDirWithin tmpDir
-  (localSock, _) <- newTempFileWithin tmpDir
-  let preparedLocalSock = if isWindows then forWindows localSock else localSock
-  testAction rootDir preparedLocalSock
-    `finally` (removeFile preparedLocalSock >> deleteDir)
+  (rootDir, _)   <- newTempDir
+  (localSock, _) <- newTempFile
+  testAction rootDir (prepareLocalSock localSock)
 
 propRunInLogsStructure2
   :: (FilePath -> FilePath -> FilePath -> IO Property)
   -> Property
 propRunInLogsStructure2 testAction = ioProperty $ do
-  tmpDir <- getTemporaryDirectory
-  (rootDir, deleteDir) <- newTempDirWithin tmpDir
-  (localSock1, _) <- newTempFileWithin tmpDir
-  (localSock2, _) <- newTempFileWithin tmpDir
-  let preparedLocalSock1 = if isWindows then forWindows localSock1 else localSock1
-      preparedLocalSock2 = if isWindows then forWindows localSock2 else localSock2
-  testAction rootDir preparedLocalSock1 preparedLocalSock2
-    `finally` (removeFile preparedLocalSock1 >> removeFile preparedLocalSock2 >> deleteDir)
+  (rootDir, _)    <- newTempDir
+  (localSock1, _) <- newTempFile
+  (localSock2, _) <- newTempFile
+  testAction rootDir (prepareLocalSock localSock1) (prepareLocalSock localSock2)
 
-forWindows :: FilePath -> FilePath
-forWindows localSock = "\\\\.\\pipe\\" <> dropDrive localSock
-
-removeDirectoryContent :: FilePath -> IO ()
-removeDirectoryContent dir = listDirectories dir >>= mapM_ removePathForcibly
+prepareLocalSock :: FilePath -> FilePath
+prepareLocalSock localSock
+  | isWindows = pipeForWindows
+  | isMac     = sockForMac
+  | otherwise = localSock
+ where
+  pipeForWindows = "\\\\.\\pipe\\" <> dropDrive localSock
+  sockForMac = "/tmp" </> takeBaseName localSock <.> "pipe"
 
 doesDirectoryEmpty :: FilePath -> IO Bool
 doesDirectoryEmpty = fmap null . listDirectories

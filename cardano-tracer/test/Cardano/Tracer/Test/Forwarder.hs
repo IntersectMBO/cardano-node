@@ -15,7 +15,7 @@ import           Codec.CBOR.Term (Term)
 import           Control.Concurrent (threadDelay)
 import           Control.Concurrent.Async
 import           Control.Monad (forever)
-import           "contra-tracer" Control.Tracer (nullTracer)
+import           "contra-tracer" Control.Tracer (nullTracer, contramap, stdoutTracer)
 import           Data.Aeson (FromJSON, ToJSON)
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Time.Clock (getCurrentTime)
@@ -106,7 +106,7 @@ launchForwardersSimple' iomgr mode p connSize disconnSize =
   ekgConfig :: EKGF.ForwarderConfiguration
   ekgConfig =
     EKGF.ForwarderConfiguration
-      { EKGF.forwarderTracer = nullTracer
+      { EKGF.forwarderTracer = nullTracer -- contramap show stdoutTracer -- nullTracer
       , EKGF.acceptorEndpoint = EKGF.LocalPipe p
       , EKGF.reConnectFrequency = 1.0
       , EKGF.actionOnRequest = const $ return ()
@@ -115,7 +115,7 @@ launchForwardersSimple' iomgr mode p connSize disconnSize =
   tfConfig :: TOF.ForwarderConfiguration TraceObject
   tfConfig =
     TOF.ForwarderConfiguration
-      { TOF.forwarderTracer = nullTracer
+      { TOF.forwarderTracer = nullTracer -- contramap show stdoutTracer -- nullTracer
       , TOF.acceptorEndpoint = p
       , TOF.disconnectedQueueSize = disconnSize
       , TOF.connectedQueueSize = connSize
@@ -124,7 +124,7 @@ launchForwardersSimple' iomgr mode p connSize disconnSize =
   dpfConfig :: DPF.ForwarderConfiguration
   dpfConfig =
     DPF.ForwarderConfiguration
-      { DPF.forwarderTracer = nullTracer
+      { DPF.forwarderTracer = contramap show stdoutTracer -- nullTracer
       , DPF.acceptorEndpoint = p
       }
 
@@ -234,11 +234,11 @@ doListenToAcceptor snocket address timeLimits (ekgConfig, tfConfig, dpfConfig) =
 traceObjectsWriter :: ForwardSink TraceObject -> IO ()
 traceObjectsWriter sink = forever $ do
   writeToSink sink . mkTraceObject =<< getCurrentTime
-  threadDelay 50000
+  threadDelay 40000
  where
   mkTraceObject now = TraceObject
-    { toHuman     = Just "Human Message"
-    , toMachine   = Just "{\"msg\": \"forMachine\"}"
+    { toHuman     = Just "Human Message for testing if our mechanism works as we expect"
+    , toMachine   = Just "{\"msg\": \"Very big message forMachine because we have to check if it works\"}"
     , toNamespace = ["demoNamespace"]
     , toSeverity  = Info
     , toDetails   = DNormal

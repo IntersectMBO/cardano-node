@@ -53,7 +53,7 @@ launchRotator loggingParamsForFiles
 -- | All the logs with 'TraceObject's received from particular node
 --   will be stored in a separate subdirectory in the root directory.
 --
---   Each subdirectory contains a symbolic link, we use it to write
+--   Each subdirectory contains a symbolic link, we can use it to write
 --   log items to the latest log file. When we create the new log file,
 --   this symbolic link is switched to it.
 checkRootDir
