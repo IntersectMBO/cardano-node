@@ -1,5 +1,15 @@
 # Changelog for cardano-node
 
+## 1.33.1 -- January 2022
+
+### ledger changes
+
+- Improve the performance of the "query-utxo-by-address" command. Note that this
+  should be considered a temporary fix - this functionality will be removed from
+  the node at some future point. If you are using a more robust solution (such
+  as db-sync or an external indexer), we advise you continue to rely on that.
+  (#2616)
+
 ## 1.33.0 -- December 2021
 
 ### node changes
