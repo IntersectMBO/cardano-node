@@ -10,7 +10,7 @@ Two queries are available for querying your stakepool:
 
 The stake snapshot returns information about the mark, set, go ledger snapshots for a pool, plus
 the total active stake for each snapshot that can be used in a 'sigma' calculation:
-
+ 
 ```bash
 $ cardano-cli query stake-snapshot \
     --stake-pool-id 00beef0a9be2f6d897ed24a613cf547bb20cd282a04edfc53d477114 \
