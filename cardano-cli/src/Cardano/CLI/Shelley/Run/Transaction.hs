@@ -289,10 +289,10 @@ runTransactionCmd cmd =
                  metadataFiles mpparams mUpProp out mOverrideWits
     TxBuildRaw era mScriptValidity txins txinsc reqSigners txouts mValue mLowBound mUpperBound
                fee certs wdrls metadataSchema scriptFiles
-               metadataFiles mpparams mUpProp out ->
+               metadataFiles mpparams mUpProp outputFormat out ->
       runTxBuildRaw era mScriptValidity txins txinsc txouts mLowBound mUpperBound
                     fee mValue certs wdrls reqSigners metadataSchema
-                    scriptFiles metadataFiles mpparams mUpProp out
+                    scriptFiles metadataFiles mpparams mUpProp outputFormat out
     TxSign txinfile skfiles network txoutfile ->
       runTxSign txinfile skfiles network txoutfile
     TxSubmit anyConensusModeParams network txFp ->
@@ -342,6 +342,7 @@ runTxBuildRaw
   -> [MetadataFile]
   -> Maybe ProtocolParamsSourceSpec
   -> Maybe UpdateProposalFile
+  -> OutputSerialisation
   -> TxBodyFile
   -> ExceptT ShelleyTxCmdError IO ()
 runTxBuildRaw (AnyCardanoEra era)
@@ -351,6 +352,7 @@ runTxBuildRaw (AnyCardanoEra era)
               certFiles withdrawals reqSigners
               metadataSchema scriptFiles
               metadataFiles mpparams mUpdatePropFile
+              outputFormat
               (TxBodyFile fpath) = do
     txBodyContent <-
       TxBodyContent
@@ -374,9 +376,15 @@ runTxBuildRaw (AnyCardanoEra era)
     txBody <-
       firstExceptT ShelleyTxCmdTxBodyError . hoistEither $
         makeTransactionBody txBodyContent
+    case outputFormat of
+      OutputCliSerialisation ->
+        firstExceptT ShelleyTxCmdWriteFileError . newExceptT $
+          writeFileTextEnvelope fpath Nothing txBody
+      OutputLedgerCDDLSerialisation ->
+        let noWitTx = makeSignedTransaction [] txBody
+        in firstExceptT ShelleyTxCmdWriteFileError . newExceptT $
+             writeTxFileTextEnvelopeCddl fpath noWitTx
 
-    firstExceptT ShelleyTxCmdWriteFileError . newExceptT $
-      writeFileTextEnvelope fpath Nothing txBody
 
 runTxBuild
   :: AnyCardanoEra

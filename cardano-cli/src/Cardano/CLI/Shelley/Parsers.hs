@@ -719,6 +719,7 @@ pTransaction =
                <*> many pMetadataFile
                <*> optional pProtocolParamsSourceSpec
                <*> optional pUpdateProposalFile
+               <*> pOutputSerialisation
                <*> pTxBodyFile Output
 
   pTransactionSign  :: Parser TransactionCmd
@@ -1597,6 +1598,16 @@ pOutputFormat =
     <> Opt.value OutputFormatBech32
     )
 
+pOutputSerialisation :: Parser OutputSerialisation
+pOutputSerialisation =
+  Opt.flag' OutputLedgerCDDLSerialisation
+    (  Opt.long "cddl-format"
+    <> Opt.help "Serialise in the ledger CDDL specified CBOR format."
+    ) <|>
+  Opt.flag OutputCliSerialisation OutputCliSerialisation
+    (  Opt.long "cli-format"
+    <> Opt.help "Serialise in the cardano-cli CBOR format."
+    )
 
 pMaybeOutputFile :: Parser (Maybe OutputFile)
 pMaybeOutputFile =

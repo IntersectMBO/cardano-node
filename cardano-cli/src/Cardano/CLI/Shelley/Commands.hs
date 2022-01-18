@@ -186,6 +186,7 @@ data TransactionCmd
       [MetadataFile]
       (Maybe ProtocolParamsSourceSpec)
       (Maybe UpdateProposalFile)
+      OutputSerialisation
       TxBodyFile
 
     -- | Like 'TxBuildRaw' but without the fee, and with a change output.
