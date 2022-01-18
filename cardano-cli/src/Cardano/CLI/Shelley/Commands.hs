@@ -223,6 +223,7 @@ data TransactionCmd
       [MetadataFile]
       (Maybe ProtocolParamsSourceSpec)
       (Maybe UpdateProposalFile)
+      OutputSerialisation
       TxBodyFile
   | TxSign TxBodyFile [WitnessSigningData] (Maybe NetworkId) TxFile
   | TxCreateWitness TxBodyFile WitnessSigningData (Maybe NetworkId) OutputFile

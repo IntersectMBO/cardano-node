@@ -283,10 +283,10 @@ runTransactionCmd cmd =
   case cmd of
     TxBuild era consensusModeParams nid mScriptValidity mOverrideWits txins reqSigners
             txinsc txouts changeAddr mValue mLowBound mUpperBound certs wdrls metadataSchema
-            scriptFiles metadataFiles mpparams mUpProp out ->
+            scriptFiles metadataFiles mpparams mUpProp outputFormat out ->
       runTxBuild era consensusModeParams nid mScriptValidity txins txinsc txouts changeAddr mValue mLowBound
                  mUpperBound certs wdrls reqSigners metadataSchema scriptFiles
-                 metadataFiles mpparams mUpProp out mOverrideWits
+                 metadataFiles mpparams mUpProp outputFormat out mOverrideWits
     TxBuildRaw era mScriptValidity txins txinsc reqSigners txouts mValue mLowBound mUpperBound
                fee certs wdrls metadataSchema scriptFiles
                metadataFiles mpparams mUpProp outputFormat out ->
@@ -416,13 +416,14 @@ runTxBuild
   -> [MetadataFile]
   -> Maybe ProtocolParamsSourceSpec
   -> Maybe UpdateProposalFile
+  -> OutputSerialisation
   -> TxBodyFile
   -> Maybe Word
   -> ExceptT ShelleyTxCmdError IO ()
-runTxBuild (AnyCardanoEra era) (AnyConsensusModeParams cModeParams) networkId mScriptValidity txins txinsc txouts
-           (TxOutChangeAddress changeAddr) mValue mLowerBound mUpperBound certFiles withdrawals reqSigners
-           metadataSchema scriptFiles metadataFiles mpparams mUpdatePropFile outBody@(TxBodyFile fpath)
-           mOverrideWits = do
+runTxBuild (AnyCardanoEra era) (AnyConsensusModeParams cModeParams) networkId mScriptValidity
+           txins txinsc txouts (TxOutChangeAddress changeAddr) mValue mLowerBound mUpperBound
+           certFiles withdrawals reqSigners metadataSchema scriptFiles metadataFiles mpparams
+           mUpdatePropFile outputFormat outBody@(TxBodyFile fpath) mOverrideWits = do
   SocketPath sockPath <- firstExceptT ShelleyTxCmdSocketEnvError readEnvSocketPath
   let localNodeConnInfo = LocalNodeConnectInfo cModeParams networkId sockPath
       consensusMode = consensusModeOnly cModeParams
@@ -497,8 +498,14 @@ runTxBuild (AnyCardanoEra era) (AnyConsensusModeParams cModeParams) networkId mS
 
       putStrLn $ "Estimated transaction fee: " <> (show fee :: String)
 
-      firstExceptT ShelleyTxCmdWriteFileError . newExceptT
-        $ writeFileTextEnvelope fpath Nothing balancedTxBody
+      case outputFormat of
+        OutputCliSerialisation ->
+          firstExceptT ShelleyTxCmdWriteFileError . newExceptT $
+            writeFileTextEnvelope fpath Nothing balancedTxBody
+        OutputLedgerCDDLSerialisation ->
+          let noWitTx = makeSignedTransaction [] balancedTxBody
+          in firstExceptT ShelleyTxCmdWriteFileError . newExceptT $
+               writeTxFileTextEnvelopeCddl fpath noWitTx
 
     (CardanoMode, LegacyByronEra) -> left ShelleyTxCmdByronEra
 
