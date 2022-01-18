@@ -14,7 +14,28 @@ outputs:
   payment credential:
     key hash: bce78cb90f6da9ee778ef07ca881b489c38a188993e6870bd5a9ef77
   stake reference: null
-update proposal: null
+update proposal:
+  epoch: 64
+  updates:
+  - genesis key hash: 1bafa294233a5a7ffbf539ae798da0943aa83d2a19398c2d0e5af114
+    update:
+      decentralization parameter: 63/64
+      extra entropy: 88f04f011dcded879039ae4b9b20219d9448e5c7b42c2d1f638fb8740e0ab8be
+      key registration deposit: 71 Lovelace
+      max block body size: 72
+      max block header size: 73
+      max transaction size: 74
+      min UTxO value: 78 Lovelace
+      min pool cost: 77 Lovelace
+      monetary expansion: 79/80
+      number of pools: 80
+      pool influence: 82/83
+      pool registration deposit: 83 Lovelace
+      pool retirement epoch boundary: 84
+      protocol version: '85.86'
+      transaction fee constant: 75
+      transaction fee linear per byte: 76
+      treasury expansion: 87/88
 validity range:
   time to live: 33
 withdrawals:

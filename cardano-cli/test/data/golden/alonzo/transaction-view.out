@@ -1,0 +1,31 @@
+auxiliary scripts: null
+certificates: null
+era: Alonzo
+fee: 213 Lovelace
+inputs:
+- ed7c8f68c194cc763ee65ad22ef0973e26481be058c65005fd39fb93f9c43a20#212
+metadata: null
+mint: null
+outputs: []
+update proposal:
+  epoch: 190
+  updates:
+  - genesis key hash: 1bafa294233a5a7ffbf539ae798da0943aa83d2a19398c2d0e5af114
+    update:
+      UTxO storage cost per unit: 194 Lovelace
+      collateral inputs share: 200%
+      execution prices:
+        memory: 196/197
+        steps: 195/196
+      max block execution units:
+        memory: 199
+        steps: 198
+      max collateral inputs: 201
+      max transaction execution units:
+        memory: 198
+        steps: 197
+      max value size: 199
+validity range:
+  lower bound: null
+  upper bound: null
+withdrawals: null
