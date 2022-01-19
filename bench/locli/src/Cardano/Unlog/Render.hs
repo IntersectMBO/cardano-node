@@ -17,7 +17,7 @@ import Text.Printf              (printf)
 
 import Data.Distribution
 
-import Cardano.Analysis.Profile
+import Cardano.Analysis.Run
 
 
 data RenderMode
@@ -26,10 +26,10 @@ data RenderMode
   deriving (Eq, Show)
 
 class Show a => RenderDistributions a where
-  rdFields :: Profile -> [DField a]
+  rdFields :: Run -> [DField a]
 
 class Show a => RenderTimeline a where
-  rtFields     :: Profile -> [IField a]
+  rtFields     :: Run -> [IField a]
   rtCommentary :: a -> [Text]
   rtCommentary _ = []
 
@@ -67,8 +67,8 @@ mapSomeFieldDistribution f a = \case
   DFloat  s -> f (s a)
   DDeltaT s -> f (s a)
 
-renderTimeline :: forall a. RenderTimeline a => Profile -> [a] -> [Text]
-renderTimeline p xs =
+renderTimeline :: forall a. RenderTimeline a => Run -> [a] -> [Text]
+renderTimeline run xs =
   concatMap (uncurry fLine) $ zip xs [(0 :: Int)..]
  where
    fLine :: a -> Int -> [Text]
@@ -86,7 +86,7 @@ renderTimeline p xs =
          IText   (($v)->x) -> T.take fWidth . T.dropWhileEnd (== 's') $ x
 
    fields :: [IField a]
-   fields = rtFields p
+   fields = rtFields run
 
    head1, head2 :: Maybe Text
    head1 = if all ((== 0) . T.length . fHead1) fields then Nothing
@@ -103,8 +103,8 @@ renderTimeline p xs =
    renderLine' lpfn wfn rfn = renderField lpfn wfn rfn <$> fields
    renderField lpfn wfn rfn f = T.replicate (lpfn f) " " <> T.center (wfn f) ' ' (rfn f)
 
-renderDistributions :: forall a. RenderDistributions a => Profile -> RenderMode -> a -> [Text]
-renderDistributions p mode x =
+renderDistributions :: forall a. RenderDistributions a => Run -> RenderMode -> a -> [Text]
+renderDistributions run mode x =
   case mode of
     RenderPretty -> catMaybes [head1, head2] <> pLines <> sizeAvg
     RenderCsv    -> headCsv : pLines
@@ -166,13 +166,13 @@ renderDistributions p mode x =
    renderField lpfn wfn rfn f = T.replicate (lpfn f) " " <> T.center (wfn f) ' ' (rfn f)
 
    fields :: [DField a]
-   fields = percField : rdFields p
+   fields = percField : rdFields run
 
    percField :: DField a
    percField = Field 6 0 "%tile" "" "%tile" (DFloat $ const percsDistrib)
    nPercs = length $ dPercentiles percsDistrib
    percsDistrib = mapSomeFieldDistribution
-                    distribPercsAsDistrib x (fSelect $ head (rdFields p))
+                    distribPercsAsDistrib x (fSelect $ head (rdFields run))
 
 -- * Auxiliaries
 --

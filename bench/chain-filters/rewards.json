@@ -1,0 +1,13 @@
+[ { "tag": "CSlot"
+  , "contents":
+    { "tag": "EpochSafeIntGEq"
+    , "contents": 4
+    }
+  }
+, { "tag": "CSlot"
+  , "contents":
+    { "tag": "EpochSafeIntLEq"
+    , "contents": 7
+    }
+  }
+]

@@ -4,11 +4,6 @@
 ## The backend is an attrset of AWS/supervisord-specific methods and parameters.
 , backend
 
-## Environmental settings:
-##   - either affect semantics on all backends equally,
-##   - or have no semantic effect
-, environment
-
 , profile
 }:
 
@@ -50,26 +45,7 @@ let
           localNodeConf = exemplarNode.serviceConfig.value;
 
           ## The nodeConfig of the Tx generator itself.
-          nodeConfig =
-            backend.finaliseGeneratorConfig
-            (recursiveUpdate generatorNodeConfigDefault
-            {
-              minSeverity = "Debug";
-              TracingVerbosity = "MaximalVerbosity";
-              defaultScribes = [
-                [ "StdoutSK" "stdout" ]
-                [ "FileSK"   "logs/generator.json" ]
-              ];
-              setupScribes = [
-                { scKind = "StdoutSK"; scName = "stdout"; scFormat = "ScJson"; }
-                { scKind = "FileSK"; scName = "logs/generator.json"; scFormat = "ScJson";
-                  scRotation = {
-                    rpLogLimitBytes = 300000000;
-                    rpMaxAgeHours   = 24;
-                    rpKeepFilesNum  = 20;
-                  }; }
-              ];
-            });
+          nodeConfig = backend.finaliseGeneratorConfig generatorNodeConfigDefault;
 
           dsmPassthrough = {
             # rtsOpts = ["-xc"];

@@ -2,7 +2,7 @@
   "LastKnownBlockVersion-Alt": 0,
   "LastKnownBlockVersion-Major": 0,
   "LastKnownBlockVersion-Minor": 2,
-  "Protocol": "RealPBFT",
+  "Protocol": "Cardano",
   "RequiresNetworkMagic": "RequiresMagic",
 
   "TurnOnLogging": true,
@@ -14,13 +14,17 @@
     {
       "scFormat": "ScJson",
       "scKind": "FileSK",
-      "scName": "logs/generator.json"
+      "scName": "logs/generator.json",
+      "scRotation": {
+        "rpLogLimitBytes": 300000000,
+        "rpMaxAgeHours":   24,
+        "rpKeepFilesNum":  20
+      }
     },
     {
-      "scFormat": "ScText",
+      "scFormat": "ScJson",
       "scKind": "StdoutSK",
-      "scName": "stdout",
-      "scRotation": null
+      "scName": "stdout"
     }
   ],
   "defaultBackends": [
@@ -38,6 +42,7 @@
   ],
 
   "minSeverity": "Debug",
+  "TracingVerbosity": "MaximalVerbosity",
 
   "TraceBlockFetchClient": true,
   "TraceBlockFetchDecisions": false,

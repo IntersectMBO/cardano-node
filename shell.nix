@@ -5,16 +5,14 @@ in
 { config ? {}
 , sourcesOverride ? {}
 , withHoogle ? defaultCustomConfig.withHoogle
-, clusterProfile ? defaultCustomConfig.localCluster.profileName
+, profileName ? defaultCustomConfig.localCluster.profileName
 , autoStartCluster ? defaultCustomConfig.localCluster.autoStartCluster
 , autoStartClusterArgs ? ""
 , workbenchDevMode ? defaultCustomConfig.localCluster.workbenchDevMode
-, withR ? false
 , customConfig ? {
     inherit withHoogle;
     localCluster =  {
-      inherit autoStartCluster workbenchDevMode;
-      profileName = clusterProfile;
+      inherit autoStartCluster profileName workbenchDevMode;
     };
   }
 , pkgs ? import ./nix {
@@ -24,8 +22,8 @@ in
 with pkgs;
 let
   inherit (pkgs) customConfig;
-  inherit (customConfig) withHoogle localCluster withR;
-  inherit (localCluster) autoStartCluster workbenchDevMode;
+  inherit (customConfig) withHoogle localCluster;
+  inherit (localCluster) autoStartCluster profileName workbenchDevMode;
   commandHelp =
     ''
       echo "
@@ -51,24 +49,11 @@ let
 
   haveGlibcLocales = pkgs.glibcLocales != null && stdenv.hostPlatform.libc == "glibc";
 
-  # This provides a development environment that can be used with nix-shell or
-  # lorri. See https://input-output-hk.github.io/haskell.nix/user-guide/development/
-  # NOTE: due to some cabal limitation,
-  #  you have to remove all `source-repository-package` entries from cabal.project
-  #  after entering nix-shell for cabal to use nix provided dependencies for them.
-  mkCluster =
-    { useCabalRun, profileName ? localCluster.profileName }:
-    callPackage ./nix/supervisord-cluster
-      { inherit profileName useCabalRun;
-        workbench = pkgs.callPackage ./nix/workbench { inherit useCabalRun; };
-      };
-
-  rstudio = pkgs.rstudioWrapper.override {
-    packages = with pkgs.rPackages; [ car dplyr ggplot2 reshape2 ];
-  };
-
   shell =
-    let cluster = mkCluster { useCabalRun = true; };
+    let cluster = pkgs.commonLib.mkSupervisordCluster
+      { inherit profileName;
+        useCabalRun = true;
+      };
     in cardanoNodeProject.shellFor {
     name = "cluster-shell";
 
@@ -88,6 +73,8 @@ let
       cardano-ping
       cabalWrapped
       ghcid
+      haskellBuildUtils
+      pkgs.graphviz
       weeder
       nixWrapped
       pkgconfig
@@ -106,10 +93,6 @@ let
     [
       cluster.workbench.workbench
     ]
-    ++ lib.optionals withR
-    [
-      rstudio
-    ]
     ## Local cluster not available on Darwin,
     ## because psmisc fails to build on Big Sur.
     ++ lib.optionals (!stdenv.isDarwin)
@@ -125,7 +108,7 @@ let
     exactDeps = true;
 
     shellHook = ''
-      echo 'nix-shell options & flags:  withHoogle=${toString withHoogle} clusterProfile=${clusterProfile} autoStartCluster=${toString autoStartCluster} workbenchDevMode=${toString workbenchDevMode}'
+      echo 'nix-shell options & flags:  withHoogle=${toString withHoogle} profileName=${profileName} autoStartCluster=${toString autoStartCluster} workbenchDevMode=${toString workbenchDevMode}'
 
       ${cluster.workbench.shellHook}
 
@@ -138,7 +121,6 @@ let
       }
       trap atexit EXIT
       ''}
-      unset NIX_ENFORCE_PURITY
 
       ${setLocale}
 
@@ -154,7 +136,10 @@ let
   };
 
   devops =
-    let cluster = mkCluster { useCabalRun = false; profileName = "devops-alzo"; };
+    let cluster = pkgs.commonLib.mkSupervisordCluster
+      { profileName = "devops-alzo";
+        useCabalRun = false;
+      };
     in cardanoNodeProject.shellFor {
     name = "devops-shell";
 
@@ -166,6 +151,7 @@ let
       bech32
       cardano-ping
       cardano-node
+      pkgs.graphviz
       python3Packages.supervisor
       python3Packages.ipython
       cluster.start

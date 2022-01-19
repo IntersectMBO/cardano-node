@@ -1,59 +1,96 @@
 usage_analyse() {
      usage "analyse" "Analyse cluster runs" <<EOF
-    block-propagation RUN-NAME
+    standard RUN-NAME..   Standard batch of analyses: block-propagation, and
+                            machine-timeline
+
+    block-propagation RUN-NAME..
                           Block propagation analysis for the entire cluster.
 
-    machine-timeline RUN-NAME MACH-NAME
-                          Produce a general performance timeline for MACH-NAME
+    machine-timeline RUN-NAME [MACH-NAME=node-1]
+                          Performance timeline for MACH-NAME.
+
+    chaininfo RUN-NAME    Print basic parameters of a run, as seen by locli.
 
     Options of 'analyse' command:
 
-       --reanalyse        Skip the preparatory steps and launch 'locli' directly
-       --block-fullness-above F
-                          Ignore blocks with fullness below (0 <= F <= 1.0)
-       --since-slot SLOT  Ignore data before given slot
-       --until-slot SLOT  Ignore data past given slot
+       --filters F,F,F..  Comma-separated list of named chain filters:  see bench/chain-filters
+                            Note: filter names have no .json suffix
+       --dump-logobjects  Dump the intermediate data: lifted log objects
 EOF
 }
 
 analyse() {
-local skip_preparation= time= dump_logobjects= self_args=() locli_args=() since_slot= until_slot= fullness_above=
+local dump_logobjects= force_prefilter= prefilter_jq= self_args=() locli_args=() filters=() aws=
 while test $# -gt 0
 do case "$1" in
-       --reanalyse | --re ) skip_preparation='true'; self_args+=($1);;
        --dump-logobjects )  dump_logobjects='true';  self_args+=($1);;
-       --block-fullness-above )
-                      locli_args+=($1 $2); self_args+=($1 $2); fullness_above=$2; shift;;
-       --since-slot ) locli_args+=($1 $2); self_args+=($1 $2); since_slot=$2; shift;;
-       --until-slot ) locli_args+=($1 $2); self_args+=($1 $2); until_slot=$2; shift;;
+       --force-prefilter )  force_prefilter='true';  self_args+=($1);;
+       --prefilter-jq )     prefilter_jq='true';     self_args+=($1);;
+       --filters )          local filter_names=('base')
+                            filter_names+=($(echo $2 | sed 's_,_ _'))
+                            local filter_paths=(${filter_names[*]/#/"bench/chain-filters/"})
+                            local filter_files=(${filter_paths[*]/%/.json})
+                            for f in ${filter_files[*]}
+                            do test -f "$f" ||
+                                    fail "no such filter: $f"; done
+                            locli_args+=(${filter_files[*]/#/--filter })
+                            self_args+=($1 $2); shift;;
+       --rts )              self_args+=($1 $2); locli_args+=(+RTS $2         -RTS); shift;;
        * ) break;; esac; shift; done
+
+if ! curl http://169.254.169.254/latest/meta-data 2>&1 | grep --quiet 404
+then aws='true'; fi
+
+## Work around the odd parallelism bug killing performance on AWS:
+if test -n "$aws"
+then locli_args+=(+RTS -N1 -A128M -RTS)
+     echo "{ \"aws\": true }"
+else echo "{ \"aws\": false }"
+fi
 
 local op=${1:-$(usage_analyse)}; shift
 
 case "$op" in
+    chaininfo | ci )
+        local name=${1:-current}; shift
+        local dir=$(run get "$name")
+
+        locli_args+=(
+            --genesis         "$dir"/genesis-shelley.json
+            --run-metafile    "$dir"/meta.json
+        )
+
+        time locli 'analyse' 'chaininfo' "${locli_args[@]}"
+        ;;
+    standard | std )
+        for r in $*
+        do analyse ${self_args[*]} block-propagation $r
+           analyse ${self_args[*]} machine-timeline  $r
+        done
+        ;;
     block-propagation | bp )
         local usage="USAGE: wb analyse $op [RUN-NAME=current].."
 
         local name=${1:-current}; shift
         local dir=$(run get "$name")
-        local adir=$dir/analysis
-        if test -z "$dir"
-        then fail "malformed run: $name"; fi
+        test -n "$dir" || fail "malformed run: $name"
 
-        msg "analysing run $(jq .meta.tag "$dir"/meta.json --raw-output)"
+        local adir=$dir/analysis
         mkdir -p "$adir"
 
         ## 0. subset what we care about into the keyfile
-        local keyfile=$adir/substring-keys
-        locli analyse substring-keys | grep -v 'Temporary modify' > "$keyfile"
+        local keyfile="$adir"/substring-keys
+        locli analyse substring-keys > "$keyfile"
 
         ## 1. enumerate logs, filter by keyfile & consolidate
-        local logdirs=($(ls -d "$dir"/node-*/ 2>/dev/null) $(ls -d "$dir"/analysis/node-*/ 2>/dev/null))
-        # "$dir"/node-*/ "$dir"/analysis/node-*/
+        local logdirs=($(ls -d "$dir"/node-*/ 2>/dev/null))
+        local logfiles=($(ls "$adir"/logs-node-*.flt.json 2>/dev/null))
+        # echo logfiles: _${logfiles[*]}_
+        local prefilter=$(test "$force_prefilter" = 'true' -o -z "${logfiles[*]}" && echo 'true' || echo 'false')
 
-        if test -z "$skip_preparation" -o -z "$(ls "$adir"/logs-node-*.flt.json 2>/dev/null)"
+        echo "{ \"prefilter\": $prefilter }"
+        if test x$prefilter = xtrue
         then
-            msg "filtering logs in: $dir/node-* "
             local jq_args=(
                 --sort-keys
                 --compact-output
@@ -68,85 +105,44 @@ case "$op" in
                then msg "no logs in $d, skipping.."; fi
                local output="$adir"/logs-$(basename "$d").flt.json
                grep -hFf "$keyfile" $logfiles |
-               jq "${jq_args[@]}" --arg dirHostname "$(basename "$d")" \
-                 > "$output" &
+                   if test "$prefilter_jq" = 'true'
+                   then jq "${jq_args[@]}" --arg dirHostname "$(basename "$d")"
+                   else cat
+                   fi > "$output" &
             done
             wait
-            msg "analysis block-propagation:  All done."
         fi
 
-        msg "log sizes:  (files: $(ls "$adir"/*.flt.json 2>/dev/null | wc -l), lines: $(cat "$adir"/*.flt.json | wc -l))"
-
-        msg "analysing.."
         locli_args+=(
-            --genesis         "$dir"/genesis.json
+            --genesis         "$dir"/genesis-shelley.json
             --run-metafile    "$dir"/meta.json
-            ## ->
-            --blocks-unitary-chain-delta
             ## ->
             --timeline-pretty "$adir"/block-propagation.txt
             --analysis-json   "$adir"/block-propagation.json
+            $(if test -n "$dump_logobjects"
+              then echo --logobjects-json "$adir"/logs-cluster.logobjects.json; fi)
         )
-        if test -n "$dump_logobjects"; then
-            locli_args+=(--logobjects-json "$adir"/logs-cluster.logobjects.json); fi
-        if test -n "$fullness_above"; then
-            locli_arge+=(--block-fullness-above $fullness_above); fi
-        if test -n "$since_slot"; then
-            locli_args+=(--since-slot $since_slot); fi
-        if test -n "$until_slot"; then
-            locli_args+=(--until-slot $until_slot); fi
 
         time locli 'analyse' 'block-propagation' \
              "${locli_args[@]}" "$adir"/*.flt.json
 
         ## More than one run passed?
-        test $# -gt 0 && analyse ${self_args[*]} block-propagation "$@";;
-
-    grep-filtered-logs | grep | g )
-        local usage="USAGE: wb analyse $op BLOCK [MACHSPEC=*] [RUN-NAME=current]"
-        local expr=$1
-        local mach=${2:-*}
-        local name=${3:-current}
-        local dir=$(run get "$name")
-        local adir=$dir/analysis
-
-        grep -h "$expr" "$adir"/logs-$mach.flt.json;;
-
-    list-blocks | blocks | bs )
-        local usage="USAGE: wb analyse $op [RUN-NAME=current]"
-        local name=${1:-current}
-        local dir=$(run get "$name")
-        local adir=$dir/analysis
-
-        fgrep -h "TraceForgedBlock" "$adir"/*.flt.json |
-            jq '{ at: .at, host: .host } * .data | del(.peer) | del(.slot)' -c |
-            sort | uniq;;
-
-    block-propagation-block | bpb )
-        local usage="USAGE: wb analyse $op BLOCK [RUN-NAME=current]"
-        local block=$1
-        local name=${2:-current}
-        local dir=$(run get "$name")
-        local adir=$dir/analysis
-
-        grep -h "$block" "$adir"/*.flt.json |
-            grep 'AddBlock\|TraceForgedBlock\|AddedToCurrentChain' |
-            jq '{ at: .at, host: .host } * .data | del(.peer) | del(.slot)' -c |
-            sort --stable | uniq;;
+        if test $# -gt 0
+        then analyse ${self_args[*]} block-propagation "$@"; fi;;
 
     machine-timeline | machine | mt )
         local usage="USAGE: wb analyse $op [RUN-NAME=current] [MACH-NAME=node-1]"
         local name=${1:-current}
         local mach=${2:-node-1}
         local dir=$(run get "$name")
-        local adir=$dir/analysis
+        test -n "$dir" || fail "malformed run: $name"
 
-        msg "analysing run $(jq .meta.tag "$dir"/meta.json --raw-output)"
+        local adir=$dir/analysis
         mkdir -p "$adir"
 
         ## 0. subset what we care about into the keyfile
         local keyfile=$adir/substring-keys
-        locli analyse substring-keys | grep -v 'Temporary modify' > "$keyfile"
+        locli analyse substring-keys > "$keyfile"
 
         if test "$mach" = 'all'
         then local machs=($(run list-hosts $name))
@@ -156,17 +152,20 @@ case "$op" in
         do throttle_shell_job_spawns
            (
            ## 1. enumerate logs, filter by keyfile & consolidate
-           local logs=($(ls "$dir"/$mach/stdout* 2>/dev/null | tac) $(ls "$dir"/$mach/node-*.json 2>/dev/null) $(ls "$dir"/analysis/$mach/node-*.json 2>/dev/null)) consolidated="$adir"/logs-$mach.json
+               local logs=($(ls "$dir"/$mach/node-*.json 2>/dev/null))
+               local consolidated="$adir"/logs-$mach.flt.json
 
-           if test -z "${logs[*]}"
-           then msg "no logs for $mach in run $name"; continue; fi
+           test -n "${logs[*]}" ||
+               fail "no logs for $mach in run $name"
 
-           if test -z "$skip_preparation" -o -z "$(ls "$adir"/logs-$mach.json 2>/dev/null)"
+           local prefilter=$(test "$force_prefilter" = 'true' -o -z "$(ls "$adir"/logs-node-*.flt.json 2>/dev/null)" && echo 'true' || echo 'false')
+
+           echo "{ \"prefilter\": $prefilter }"
+           if test x$prefilter = 'xtrue'
            then grep -hFf "$keyfile" "${logs[@]}"  > "$consolidated"; fi
 
-           msg "analysing logs of:  $mach  (lines: $(wc -l "$consolidated"))"
            locli_args+=(
-               --genesis         "$dir"/genesis.json
+               --genesis         "$dir"/genesis-shelley.json
                --run-metafile    "$dir"/meta.json
                ## ->
                --timeline-pretty "$adir"/logs-$mach.timeline.txt
@@ -185,9 +184,7 @@ case "$op" in
                 "${locli_args[@]}" "$consolidated"
            ) &
         done
-
-        wait
-        msg "analysis machine-timeline:  All done.";;
+        wait;;
 
     * ) usage_analyse;; esac
 }

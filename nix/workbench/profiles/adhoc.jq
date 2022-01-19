@@ -1,5 +1,9 @@
 def adhoc_profiles:
-[ { name: "short"
+[ { name: "default"
+  , desc: "Default profile, as per nix/workbench/profiles/defaults.jq"
+  }
+
+, { name: "short"
   , generator: { tx_count: 10000, inputs_per_tx: 1, outputs_per_tx: 1,  tps: 100 }
   , genesis: { genesis_future_offset: "3 minutes" }
   }
@@ -35,13 +39,6 @@ def adhoc_profiles:
     }
   }
 
-, { name: "default"
-  , genesis:
-    { genesis_future_offset: "1 seconds"
-    , utxo:                  0
-    }
-  }
-
 , { name: "devops"
   , genesis:
     { slot_duration:         0.2
@@ -51,8 +48,7 @@ def adhoc_profiles:
     , genesis_future_offset: "10 seconds"
     , utxo:                  0
 
-    ## For the rare options that don't serve
-    , verbatim:
+    , shelley:
       { updateQuorum: 1
       , initialFunds:
         # genesis-utxo (used for pool owner funds and paying fees for startup scripts)

@@ -1,16 +1,17 @@
+{-# LANGUAGE ImportQualifiedPost #-}
 module Cardano.Unlog.Parsers
   ( opts
   , pref
   ) where
 
-import           Cardano.Prelude
-import           Prelude (String)
+import Cardano.Prelude
+import Prelude (String)
 
-import           Options.Applicative
-import qualified Options.Applicative as Opt
+import Options.Applicative
+import Options.Applicative qualified as Opt
 
-import           Cardano.Unlog.Commands
-import           Cardano.Unlog.Run (Command (..))
+import Cardano.Unlog.Commands
+import Cardano.Unlog.Run (Command (..))
 
 command' :: String -> String -> Parser a -> Mod CommandFields a
 command' c descr p =
@@ -32,7 +33,6 @@ parseCommand :: Parser Command
 parseCommand =
   asum
     [ parseAnalysis
-    , parseDisplayVersion
     ]
 
 parseAnalysis :: Parser Command
@@ -46,21 +46,3 @@ parseAnalysis =
         "Log analysis"
          parseAnalysisCommands
     ]
-
-parseDisplayVersion :: Parser Command
-parseDisplayVersion =
-      subparser
-        (mconcat
-         [ commandGroup "Miscellaneous commands"
-         , metavar "Miscellaneous commands"
-         , command'
-           "version"
-           "Show the locli version"
-           (pure DisplayVersion)
-         ]
-        )
-  <|> flag' DisplayVersion
-        (  long "version"
-        <> help "Show the locli version"
-        <> hidden
-        )

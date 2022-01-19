@@ -13,13 +13,13 @@ module Cardano.Unlog.Resources
   , Resources(..)
   ) where
 
-import           Cardano.Prelude
+import Cardano.Prelude
 
-import           Data.Accum
-import           Data.Distribution
-import           Data.Time.Clock (UTCTime)
+import Data.Accum
+import Data.Distribution
+import Data.Time.Clock (UTCTime)
 
-import           Cardano.BM.Stats.Resources
+import Cardano.Logging.Resources.Types
 
 -- | Resouce accumulators
 type ResAccums = Resources (Accum Word64 Word64)
