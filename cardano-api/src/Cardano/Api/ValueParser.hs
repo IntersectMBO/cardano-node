@@ -156,7 +156,7 @@ assetId =
     fullAssetId :: PolicyId -> Parser AssetId
     fullAssetId polId = do
       _ <- period
-      aName <- assetName <?> "alphanumeric asset name"
+      aName <- assetName <?> "hexadecimal asset name"
       pure (AssetId polId aName)
 
     -- Parse a multi-asset ID that specifies a policy ID, but no asset name.
