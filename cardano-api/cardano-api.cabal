@@ -139,7 +139,6 @@ library
                       , plutus-ledger-api
                       , prettyprinter
                       , scientific
-                      , small-steps
                       , cardano-ledger-shelley
                       , small-steps
                       , stm
