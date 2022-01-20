@@ -47,12 +47,15 @@ import           Cardano.Node.Handlers.Shutdown (ShutdownTrace)
 import           Cardano.Node.Startup
 import           Cardano.Node.TraceConstraints
 
+import           Ouroboros.Consensus.Block.Forging
 import           Ouroboros.Consensus.BlockchainTime.WallClock.Types (RelativeTime)
 import           Ouroboros.Consensus.BlockchainTime.WallClock.Util (TraceBlockchainTimeEvent (..))
 import           Ouroboros.Consensus.Cardano.Block
-import           Ouroboros.Consensus.Ledger.Query (Query)
-import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTxId)
-import           Ouroboros.Consensus.Ledger.SupportsProtocol (LedgerSupportsProtocol)
+import           Ouroboros.Consensus.Ledger.Inspect
+import           Ouroboros.Consensus.Ledger.Query (Query, ShowQuery)
+import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTxId,
+                   LedgerSupportsMempool)
+import           Ouroboros.Consensus.Ledger.SupportsProtocol
 import           Ouroboros.Consensus.Mempool.API (TraceEventMempool (..))
 import           Ouroboros.Consensus.MiniProtocol.BlockFetch.Server
                    (TraceBlockFetchServerEvent (..))
@@ -60,6 +63,7 @@ import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client (TraceChainSy
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Server (TraceChainSyncServerEvent)
 import           Ouroboros.Consensus.MiniProtocol.LocalTxSubmission.Server
                    (TraceLocalTxSubmissionServerEvent (..))
+import           Ouroboros.Consensus.Node.NetworkProtocolVersion
 import qualified Ouroboros.Consensus.Node.Run as Consensus
 import qualified Ouroboros.Consensus.Node.Tracers as Consensus
 import qualified Ouroboros.Consensus.Protocol.Ledger.HotKey as HotKey
@@ -86,8 +90,8 @@ import           Ouroboros.Network.PeerSelection.RootPeersDNS (TraceLocalRootPee
                    TracePublicRootPeers (..))
 import           Ouroboros.Network.Protocol.BlockFetch.Type (BlockFetch)
 import           Ouroboros.Network.Protocol.ChainSync.Type (ChainSync)
-import           Ouroboros.Network.Protocol.Handshake.Unversioned (UnversionedProtocolData (..),
-                   UnversionedProtocol (..))
+import           Ouroboros.Network.Protocol.Handshake.Unversioned (UnversionedProtocol (..),
+                   UnversionedProtocolData (..))
 import           Ouroboros.Network.Protocol.LocalStateQuery.Type (LocalStateQuery)
 import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Type as LTS
 import           Ouroboros.Network.Protocol.TxSubmission.Type (TxSubmission)
@@ -152,15 +156,20 @@ runTraceDocumentationCmd TraceDocumentationCmd{..} = do
 -- as the tracers are behind old tracer interface after construction in mkDispatchTracers.
 -- Can be changed, when old tracers have gone
 docTracers :: forall blk peer remotePeer.
-  (forall result. Show (Query blk result)
-  , TraceConstraints blk
-  , LogFormatting (ChainDB.InvalidBlockReason blk)
+  ( TraceConstraints blk
+  , InspectLedger blk
+  , LedgerSupportsMempool blk
   , LedgerSupportsProtocol blk
-  , Consensus.RunNode blk
+  , Consensus.SerialiseNodeToNodeConstraints blk
   , LogFormatting peer
   , LogFormatting remotePeer
+  , Show (BlockNodeToClientVersion blk)
+  , Show (BlockNodeToNodeVersion blk)
   , Show remotePeer
   , Show peer
+  , Show (ForgeStateUpdateError blk)
+  , Show (CannotForge blk)
+  , ShowQuery (BlockQuery blk)
   )
   => FilePath
   -> FilePath
