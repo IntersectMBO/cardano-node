@@ -28,9 +28,11 @@
     #   };
     # };
     customConfig.url = "github:input-output-hk/empty-flake";
+
+    cardano-mainnet-mirror.url = "github:input-output-hk/cardano-mainnet-mirror/nix";
   };
 
-  outputs = { self, nixpkgs, utils, haskellNix, iohkNix, customConfig, membench }:
+  outputs = { self, nixpkgs, utils, haskellNix, iohkNix, customConfig, membench, cardano-mainnet-mirror }:
     let
       inherit (nixpkgs) lib;
       inherit (lib) head systems mapAttrs recursiveUpdate mkDefault
@@ -58,6 +60,9 @@
             // import ./nix/svclib.nix { inherit (final) pkgs; };
         })
         (import ./nix/pkgs.nix)
+        (self: super: {
+          mainnet-chain = cardano-mainnet-mirror.defaultPackage.x86_64-linux;
+        })
       ];
 
     in eachSystem supportedSystems (system:
