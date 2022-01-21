@@ -95,7 +95,7 @@ hprop_shutdown = H.integration . H.runFinallies . H.workspace "chairman" $ \temp
 
   forM_ mStdin $ \hStdin -> H.evalIO $ IO.hClose hStdin
 
-  H.threadDelay $ 1 * 1000000
+  H.threadDelay $ 1 * 10000000
 
   mExitCode <- H.evalIO $ IO.getProcessExitCode pHandle
 
