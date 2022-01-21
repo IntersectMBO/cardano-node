@@ -356,33 +356,37 @@ mkNodeToClientTracers :: forall blk.
   -> TraceConfig
   -> IO (NodeToClient.Tracers IO (ConnectionId LocalAddress) blk DeserialiseFailure)
 mkNodeToClientTracers trBase trForward mbTrEKG _trDataPoint trConfig = do
-    chainSyncTr  <-  mkCardanoTracer
-                trBase trForward mbTrEKG
-                "ChainSyncClient"
-                namesForTChainSync
-                severityTChainSync
-                allPublic
+    chainSyncTr <-
+      mkCardanoTracer
+        trBase trForward mbTrEKG
+        "ChainSyncClient"
+        namesForTChainSync
+        severityTChainSync
+        allPublic
     configureTracers trConfig docTChainSync [chainSyncTr]
-    txMonitorTr  <-  mkCardanoTracer
-                trBase trForward mbTrEKG
-                "TxMonitorClient"
-                namesForTTxMonitor
-                severityTTxMonitor
-                allPublic
+    txMonitorTr <-
+      mkCardanoTracer
+        trBase trForward mbTrEKG
+        "TxMonitorClient"
+        namesForTTxMonitor
+        severityTTxMonitor
+        allPublic
     configureTracers trConfig docTTxMonitor [txMonitorTr]
-    txSubmissionTr  <-  mkCardanoTracer
-                trBase trForward mbTrEKG
-                "TxSubmissionClient"
-                namesForTTxSubmission
-                severityTTxSubmission
-                allPublic
+    txSubmissionTr <-
+      mkCardanoTracer
+        trBase trForward mbTrEKG
+        "TxSubmissionClient"
+        namesForTTxSubmission
+        severityTTxSubmission
+        allPublic
     configureTracers trConfig docTTxSubmission [txSubmissionTr]
-    stateQueryTr  <-  mkCardanoTracer
-                trBase trForward mbTrEKG
-                "StateQueryClient"
-                namesForTStateQuery
-                severityTStateQuery
-                allPublic
+    stateQueryTr <-
+      mkCardanoTracer
+        trBase trForward mbTrEKG
+        "StateQueryClient"
+        namesForTStateQuery
+        severityTStateQuery
+        allPublic
     configureTracers trConfig docTStateQuery [stateQueryTr]
     pure $ NtC.Tracers
       { NtC.tChainSyncTracer = Tracer $
