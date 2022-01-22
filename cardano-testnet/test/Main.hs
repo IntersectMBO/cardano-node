@@ -19,6 +19,7 @@ import qualified Spec.Plutus.Direct.ScriptContextEqualityMint
 import qualified Spec.Plutus.Direct.TxInLockingPlutus
 import qualified Spec.Plutus.Script.TxInLockingPlutus
 import qualified Spec.Plutus.SubmitApi.TxInLockingPlutus
+import qualified Spec.Shutdown
 
 tests :: IO TestTree
 tests = do
@@ -30,6 +31,8 @@ tests = do
       , H.testProperty "Spec.Plutus.SubmitApi.TxInLockingPlutus" Spec.Plutus.SubmitApi.TxInLockingPlutus.hprop_plutus
       , ignoreOnWindows "Spec.Plutus.Direct.ScriptContextEquality"  Spec.Plutus.Direct.ScriptContextEquality.hprop_plutus_script_context_equality
       , ignoreOnWindows "Spec.Plutus.Direct.ScriptContextEqualityMint" Spec.Plutus.Direct.ScriptContextEqualityMint.hprop_plutus_script_context_mint_equality
+        -- There is a blocking call on Windows that prevents graceful shutdown and we currently aren't testing the shutdown IPC flag.
+      , H.testProperty "Spec.Shutdown" Spec.Shutdown.hprop_shutdown
       ]
     ]
 
