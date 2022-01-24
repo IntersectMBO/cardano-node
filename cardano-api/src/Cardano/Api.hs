@@ -482,6 +482,10 @@ module Cardano.Api (
     readFileTextEnvelopeCddlAnyOf,
     writeTxFileTextEnvelopeCddl,
     writeTxWitnessFileTextEnvelopeCddl,
+    serialiseTxLedgerCddl,
+    deserialiseTxLedgerCddl,
+    serialiseWitnessLedgerCddl,
+    deserialiseWitnessLedgerCddl,
     TextEnvelopeCddlError(..),
 
     -- *** Reading one of several key types

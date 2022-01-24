@@ -16,6 +16,7 @@ module Gen.Cardano.Api.Typed
   , genValueNestedRep
   , genValueNestedBundle
   , genByronKeyWitness
+  , genShelleyKeyWitness
 
   , genTxId
   , genTxIn

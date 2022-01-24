@@ -18,6 +18,12 @@ module Cardano.Api.SerialiseLedgerCddl
 
   , writeTxFileTextEnvelopeCddl
   , writeTxWitnessFileTextEnvelopeCddl
+
+  -- Exported for testing
+  , serialiseTxLedgerCddl
+  , deserialiseTxLedgerCddl
+  , serialiseWitnessLedgerCddl
+  , deserialiseWitnessLedgerCddl
   )
   where
 
@@ -94,7 +100,7 @@ data TextEnvelopeCddlError
       Text   -- ^ Actual types
   | TextEnvelopeCddlErrUnknownType Text
   | TextEnvelopeCddlErrByronKeyWitnessUnsupported
-  deriving Show
+  deriving (Show, Eq)
 
 instance Error TextEnvelopeCddlError where
   displayError (TextEnvelopeCddlErrCBORDecodingError decoderError) =
@@ -190,11 +196,11 @@ deserialiseWitnessLedgerCddl
 deserialiseWitnessLedgerCddl era TextEnvelopeCddl{teCddlRawCBOR,teCddlDescription} =
   --TODO: Parse these into types
   case teCddlDescription of
-    "Key BootstrapWitness Shelley" -> do
+    "Key BootstrapWitness ShelleyEra" -> do
       w <- first TextEnvelopeCddlErrCBORDecodingError
              $ CBOR.decodeAnnotator "Shelley Witness" fromCBOR (LBS.fromStrict teCddlRawCBOR)
       Right $ ShelleyBootstrapWitness era w
-    "Key Witness Shelley" -> do
+    "Key Witness ShelleyEra" -> do
       w <- first TextEnvelopeCddlErrCBORDecodingError
              $ CBOR.decodeAnnotator"Shelley Witness" fromCBOR (LBS.fromStrict teCddlRawCBOR)
       Right $ ShelleyKeyWitness era w
