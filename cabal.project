@@ -5,6 +5,7 @@ packages:
     cardano-cli
     cardano-client-demo
     cardano-node
+    cardano-node-capi
     cardano-node-chairman
     cardano-submit-api
     cardano-testnet
