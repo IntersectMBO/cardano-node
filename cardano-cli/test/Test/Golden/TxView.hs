@@ -3,6 +3,7 @@
 module Test.Golden.TxView (txViewTests) where
 
 import           Cardano.Prelude
+import           Prelude (String)
 
 import           Hedgehog (Group (..), Property, checkSequential)
 import           Hedgehog.Extras (Integration, moduleWorkspace, note_, propertyOnce)
@@ -229,8 +230,8 @@ golden_view_mary =
         ["transaction", "view", "--tx-body-file", transactionBodyFile]
     diffVsGoldenFile result "test/data/golden/mary/transaction-view.out"
 
-createAlonzoTxBody :: Maybe FilePath -> FilePath -> Integration ()
-createAlonzoTxBody mUpdateProposalFile transactionBodyFile = do
+createAlonzoTxBody :: [String] -> FilePath -> Integration ()
+createAlonzoTxBody extraArgs transactionBodyFile = do
   void $
     execCardanoCLI
       (   [ "transaction", "build-raw"
@@ -248,9 +249,7 @@ createAlonzoTxBody mUpdateProposalFile transactionBodyFile = do
           ,   "fafaaac8681b5050a8987f95bce4a7f99362f189879258fdbf733fa4"
           , "--out-file", transactionBodyFile
           ]
-      ++  [ "--update-proposal-file=" <> updateProposalFile
-          | Just updateProposalFile <- [mUpdateProposalFile]
-          ]
+      ++  extraArgs
       )
 
 golden_view_alonzo :: Property
@@ -282,7 +281,17 @@ golden_view_alonzo =
           , "--out-file", updateProposalFile
           ]
 
-      createAlonzoTxBody (Just updateProposalFile) transactionBodyFile
+      createAlonzoTxBody
+        [ "--tx-out=\
+          \addr_test1vrwglspepcvyn7zaf6vst0ev5wlusry2j3qfavlw2y9alnggckeje+256"
+        , "--tx-out-datum-hash=\
+          \78752ade4be75bc291c8635495846591b6140be6544252d7874ad62e83ce838c"
+        , "--tx-out=\
+          \addr_test1vrwglspepcvyn7zaf6vst0ev5wlusry2j3qfavlw2y9alnggckeje+256"
+        , "--tx-out-datum-embed-value={\"random name\": \"Vincent Ford\"}"
+        , "--update-proposal-file=" <> updateProposalFile
+        ]
+        transactionBodyFile
 
       -- View transaction body
       result <-
@@ -299,7 +308,7 @@ golden_view_alonzo_signed =
       transactionBodyFile <- noteTempFile tempDir "transaction-body"
       transactionFile <- noteTempFile tempDir "transaction"
 
-      createAlonzoTxBody Nothing transactionBodyFile
+      createAlonzoTxBody [] transactionBodyFile
 
       -- Sign
       void $
