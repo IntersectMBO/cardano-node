@@ -1,6 +1,7 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module Cardano.Api.ScriptData (
@@ -72,18 +73,23 @@ import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Hash
 import           Cardano.Api.KeysShelley
 import           Cardano.Api.SerialiseJSON
+import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseRaw
+import qualified Cardano.Binary as CBOR
+
 import           Cardano.Api.SerialiseUsing
 import           Cardano.Api.TxMetadata (pBytes, pSigned, parseAll)
-
+import           Codec.Serialise.Class (Serialise(..))
 
 -- ----------------------------------------------------------------------------
 -- Script data
 --
 
-data ScriptData = ScriptDataConstructor Integer [ScriptData]
-                | ScriptDataMap         [(ScriptData, ScriptData)]
-                | ScriptDataList        [ScriptData]
+data ScriptData = ScriptDataConstructor
+                                        Integer                     -- ^ Tag for the constructor
+                                        [ScriptData]                -- ^ Constructor arguments
+                | ScriptDataMap         [(ScriptData, ScriptData)]  -- ^ Key value pairs
+                | ScriptDataList        [ScriptData]                -- ^ Elements
                 | ScriptDataNumber      Integer
                 | ScriptDataBytes       BS.ByteString
   deriving (Eq, Ord, Show)
@@ -113,6 +119,16 @@ instance SerialiseAsRawBytes (Hash ScriptData) where
     deserialiseFromRawBytes (AsHash AsScriptData) bs =
       ScriptDataHash . Ledger.unsafeMakeSafeHash <$> Crypto.hashFromBytes bs
 
+instance SerialiseAsCBOR ScriptData where
+    serialiseToCBOR = CBOR.serialize'
+    deserialiseFromCBOR AsScriptData bs = CBOR.decodeFullDecoder "ScriptData" fromCBOR (LBS.fromStrict bs) :: Either CBOR.DecoderError ScriptData
+
+
+instance ToCBOR ScriptData where
+  toCBOR = encode @Plutus.Data . toPlutusData
+
+instance FromCBOR ScriptData where
+  fromCBOR = fromPlutusData <$> decode @Plutus.Data
 
 hashScriptData :: ScriptData -> Hash ScriptData
 hashScriptData = ScriptDataHash

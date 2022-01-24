@@ -939,20 +939,23 @@ readScriptRedeemerOrFile = readScriptDataOrFile
 readScriptDataOrFile :: ScriptDataOrFile
                      -> ExceptT ShelleyTxCmdError IO ScriptData
 readScriptDataOrFile (ScriptDataValue d) = return d
-readScriptDataOrFile (ScriptDataFile fp) = do
-    bs <- handleIOExceptT (ShelleyTxCmdReadFileError . FileIOError fp) $
-            LBS.readFile fp
-    v  <- firstExceptT (ShelleyTxCmdScriptDataJsonParseError fp) $
-            hoistEither $
-              Aeson.eitherDecode' bs
-    sd <- firstExceptT (ShelleyTxCmdScriptDataConversionError fp) $
-            hoistEither $
-              scriptDataFromJson ScriptDataJsonDetailedSchema v
-    firstExceptT (ShelleyTxCmdScriptDataValidationError fp) $
-      hoistEither $
-        validateScriptData sd
-    return sd
-
+readScriptDataOrFile (ScriptDataJsonFile fp) = do
+  bs <- handleIOExceptT (ShelleyTxCmdReadFileError . FileIOError fp) $ LBS.readFile fp
+  v  <- firstExceptT (ShelleyTxCmdScriptDataJsonParseError fp)
+          $ hoistEither $ Aeson.eitherDecode' bs
+  sd <- firstExceptT (ShelleyTxCmdScriptDataConversionError fp)
+          $ hoistEither $ scriptDataFromJson ScriptDataJsonDetailedSchema v
+  firstExceptT (ShelleyTxCmdScriptDataValidationError fp)
+          $ hoistEither $ validateScriptData sd
+  return sd
+readScriptDataOrFile (ScriptDataCborFile fp) = do
+  bs <- handleIOExceptT (ShelleyTxCmdReadFileError . FileIOError fp)
+          $ BS.readFile fp
+  sd <- firstExceptT (ShelleyTxCmdMetaDecodeError fp)
+          $ hoistEither $ deserialiseFromCBOR AsScriptData bs
+  firstExceptT (ShelleyTxCmdScriptDataValidationError fp)
+          $ hoistEither $ validateScriptData sd
+  return sd
 
 -- ----------------------------------------------------------------------------
 -- Transaction signing

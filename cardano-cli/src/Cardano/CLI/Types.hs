@@ -149,8 +149,9 @@ newtype VerificationKeyFile
 newtype ScriptFile = ScriptFile { unScriptFile :: FilePath }
                      deriving (Eq, Show)
 
-data ScriptDataOrFile = ScriptDataFile  FilePath   -- ^ By reference to a file
-                      | ScriptDataValue ScriptData -- ^ By value
+data ScriptDataOrFile = ScriptDataCborFile  FilePath   -- ^ By reference to a CBOR file
+                      | ScriptDataJsonFile  FilePath   -- ^ By reference to a JSON file
+                      | ScriptDataValue     ScriptData -- ^ By value
   deriving (Eq, Show)
 
 type ScriptRedeemerOrFile = ScriptDataOrFile
