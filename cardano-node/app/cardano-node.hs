@@ -20,6 +20,8 @@ import           Cardano.Node.Handlers.TopLevel
 import           Cardano.Node.Parsers (nodeCLIParser, parserHelpHeader, parserHelpOptions,
                    renderHelpDoc)
 import           Cardano.Node.Run (runNode)
+import           Cardano.Node.Tracing.Documentation (TraceDocumentationCmd (..),
+                   parseTraceDocumentationCmd, runTraceDocumentationCmd)
 
 main :: IO ()
 main = toplevelExceptionHandler $ do
@@ -28,6 +30,7 @@ main = toplevelExceptionHandler $ do
 
     case cmd of
       RunCmd args -> runRunCommand args
+      TraceDocumentation tdc -> runTraceDocumentationCmd tdc
       VersionCmd  -> runVersionCommand
 
     where
@@ -35,8 +38,10 @@ main = toplevelExceptionHandler $ do
 
       opts :: Opt.ParserInfo Command
       opts =
-        Opt.info (fmap RunCmd nodeCLIParser <|> parseVersionCmd
-                    <**> helperBrief "help" "Show this help text" nodeCliHelpMain)
+        Opt.info (fmap RunCmd nodeCLIParser
+                  <|> fmap TraceDocumentation parseTraceDocumentationCmd
+                  <|> parseVersionCmd
+                  <**> helperBrief "help" "Show this help text" nodeCliHelpMain)
 
           ( Opt.fullDesc <>
             Opt.progDesc "Start node of the Cardano blockchain."
@@ -55,6 +60,7 @@ main = toplevelExceptionHandler $ do
 
 
 data Command = RunCmd PartialNodeConfiguration
+             | TraceDocumentation TraceDocumentationCmd
              | VersionCmd
 
 -- Yes! A --version flag or version command. Either guess is right!

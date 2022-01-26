@@ -58,7 +58,7 @@ describe next.
       # Only show a maximum of 2 of these messages per second
       - ns: Node.ChainDB.AddBlockEvent.AddedBlockToQueue
         limiterName: AddedBlockToQueueLimiter
-        limiterFrequency: 2.0        
+        limiterFrequency: 2.0
     ~~~
 
     The activity of limiters will be written in the traces as well.
@@ -76,8 +76,8 @@ describe next.
   ~~~
 
   These are all the backends currently supported. With Stdout you have the
-  options MachineFormat or HumanFormat. If messages don't support representation
-  in HumanFormat they are shown in MachineFormat anyway.
+  options MachineFormat or HumanFormatColoured/HumanFormatUncoloured.
+  If messages don't support representation in HumanFormat* they are shown in MachineFormat anyway.
 
   Forwarder means that messages are send to cardano-tracer
 

@@ -196,7 +196,6 @@ mkDispatchTracers nodeKernel trBase trForward mbTrEKG trDataPoint trConfig enabl
 
 mkConsensusTracers :: forall blk.
   ( Consensus.RunNode blk
-  , LogFormatting (ChainDB.InvalidBlockReason blk)
   , TraceConstraints blk
   , LogFormatting (BlockFetch.TraceLabelPeer
                     (ConnectionId RemoteAddress) (TraceChainSyncClientEvent blk))

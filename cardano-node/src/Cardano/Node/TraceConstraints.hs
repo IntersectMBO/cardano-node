@@ -30,6 +30,8 @@ import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr,
                      HasTxId, HasTxs (..))
 import           Ouroboros.Consensus.Protocol.Abstract (ValidationErr)
 import           Ouroboros.Consensus.Shelley.Ledger.Mempool (GenTx, TxId)
+import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
+import           Ouroboros.Network.Block (StandardHash)
 
 
 -- | Tracing-related constraints for monitoring purposes.
@@ -38,6 +40,7 @@ type TraceConstraints blk =
     , HasTxs blk
     , HasTxId (GenTx blk)
     , LedgerQueries blk
+    , StandardHash blk
     , ToJSON   (TxId (GenTx blk))
     , ToJSON   (TxOut (AlonzoEra StandardCrypto))
     , ToJSON   (PParamsUpdate (AlonzoEra StandardCrypto))
@@ -66,6 +69,7 @@ type TraceConstraints blk =
     , LogFormatting (ApplyTxErr blk)
     , LogFormatting (GenTx blk)
     , LogFormatting (Header blk)
+    , LogFormatting (ChainDB.InvalidBlockReason blk)
     , LogFormatting (LedgerError blk)
     , LogFormatting (OtherHeaderEnvelopeError blk)
     , LogFormatting (ValidationErr (BlockProtocol blk))

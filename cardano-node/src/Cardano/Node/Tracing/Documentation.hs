@@ -1,18 +1,27 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE QuantifiedConstraints #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Node.Tracing.Documentation
-  ( docTracers
+  ( TraceDocumentationCmd (..)
+  , parseTraceDocumentationCmd
+  , runTraceDocumentationCmd
+  , docTracers
   ) where
 
 import           Data.Aeson.Types (ToJSON)
 import qualified Data.Text.IO as T
 import           Network.Mux (MuxTrace (..), WithMuxBearer (..))
 import qualified Network.Socket as Socket
+import qualified Options.Applicative as Opt
 
 import           Cardano.Logging
 import           Cardano.Logging.Resources
@@ -38,10 +47,15 @@ import           Cardano.Node.Handlers.Shutdown (ShutdownTrace)
 import           Cardano.Node.Startup
 import           Cardano.Node.TraceConstraints
 
+import           Ouroboros.Consensus.Block.Forging
+import           Ouroboros.Consensus.BlockchainTime.WallClock.Types (RelativeTime)
 import           Ouroboros.Consensus.BlockchainTime.WallClock.Util (TraceBlockchainTimeEvent (..))
-import           Ouroboros.Consensus.Ledger.Query (Query)
-import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx, GenTxId, TxId)
-import           Ouroboros.Consensus.Ledger.SupportsProtocol (LedgerSupportsProtocol)
+import           Ouroboros.Consensus.Cardano.Block
+import           Ouroboros.Consensus.Ledger.Inspect
+import           Ouroboros.Consensus.Ledger.Query (Query, ShowQuery)
+import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTxId,
+                   LedgerSupportsMempool)
+import           Ouroboros.Consensus.Ledger.SupportsProtocol
 import           Ouroboros.Consensus.Mempool.API (TraceEventMempool (..))
 import           Ouroboros.Consensus.MiniProtocol.BlockFetch.Server
                    (TraceBlockFetchServerEvent (..))
@@ -49,10 +63,10 @@ import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client (TraceChainSy
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Server (TraceChainSyncServerEvent)
 import           Ouroboros.Consensus.MiniProtocol.LocalTxSubmission.Server
                    (TraceLocalTxSubmissionServerEvent (..))
+import           Ouroboros.Consensus.Node.NetworkProtocolVersion
 import qualified Ouroboros.Consensus.Node.Run as Consensus
 import qualified Ouroboros.Consensus.Node.Tracers as Consensus
 import qualified Ouroboros.Consensus.Protocol.Ledger.HotKey as HotKey
-import           Ouroboros.Consensus.Shelley.Ledger.Block
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 
 import           Ouroboros.Network.Block (Point (..), Tip)
@@ -76,6 +90,8 @@ import           Ouroboros.Network.PeerSelection.RootPeersDNS (TraceLocalRootPee
                    TracePublicRootPeers (..))
 import           Ouroboros.Network.Protocol.BlockFetch.Type (BlockFetch)
 import           Ouroboros.Network.Protocol.ChainSync.Type (ChainSync)
+import           Ouroboros.Network.Protocol.Handshake.Unversioned (UnversionedProtocol (..),
+                   UnversionedProtocolData (..))
 import           Ouroboros.Network.Protocol.LocalStateQuery.Type (LocalStateQuery)
 import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Type as LTS
 import           Ouroboros.Network.Protocol.TxSubmission.Type (TxSubmission)
@@ -90,32 +106,78 @@ import           Ouroboros.Network.TxSubmission.Outbound (TraceTxSubmissionOutbo
 
 
 
+data TraceDocumentationCmd
+  = TraceDocumentationCmd
+    { tdcConfigFile :: FilePath
+    , tdcOutput     :: FilePath
+    }
+
+parseTraceDocumentationCmd :: Opt.Parser TraceDocumentationCmd
+parseTraceDocumentationCmd =
+  Opt.subparser
+    (mconcat
+     [ Opt.commandGroup "Miscellaneous commands"
+     , Opt.metavar "trace-documentation"
+     , Opt.hidden
+     , Opt.command "trace-documentation" $
+       Opt.info
+         (TraceDocumentationCmd
+           <$> Opt.strOption
+               ( Opt.long "config"
+                 <> Opt.metavar "NODE-CONFIGURATION"
+                 <> Opt.help "Configuration file for the cardano-node"
+               )
+           <*> Opt.strOption
+               ( Opt.long "output-file"
+                 <> Opt.metavar "FILE"
+                 <> Opt.help "Generated documentation output file"
+               )
+           Opt.<**> Opt.helper)
+       $ mconcat [ Opt.progDesc "Generate the trace documentation" ]
+     ]
+    )
+
+deriving instance Generic UnversionedProtocol
+deriving instance Generic UnversionedProtocolData
+
+instance ToJSON UnversionedProtocol
+instance ToJSON UnversionedProtocolData
+
+runTraceDocumentationCmd
+  :: TraceDocumentationCmd
+  -> IO ()
+runTraceDocumentationCmd TraceDocumentationCmd{..} = do
+  docTracers
+    tdcConfigFile tdcOutput (Proxy @(CardanoBlock StandardCrypto))
+                            (Proxy @(NtN.ConnectionId LocalAddress))
+                            (Proxy @(NtN.ConnectionId NtN.RemoteAddress))
+
 -- Have to repeat the construction of the tracers here,
 -- as the tracers are behind old tracer interface after construction in mkDispatchTracers.
 -- Can be changed, when old tracers have gone
-docTracers :: forall blk t peer peerConn remotePeer resolverError ntnVersion ntnVersionData.
-  ( Show t
-  , forall result. Show (Query blk result)
-  , TraceConstraints blk
-  , LogFormatting (ChainDB.InvalidBlockReason blk)
+docTracers :: forall blk peer remotePeer.
+  ( TraceConstraints blk
+  , InspectLedger blk
+  , LedgerSupportsMempool blk
   , LedgerSupportsProtocol blk
-  , Consensus.RunNode blk
+  , Consensus.SerialiseNodeToNodeConstraints blk
   , LogFormatting peer
   , LogFormatting remotePeer
+  , Show (BlockNodeToClientVersion blk)
+  , Show (BlockNodeToNodeVersion blk)
   , Show remotePeer
   , Show peer
-  , Show resolverError
-  , Show peerConn
-  , Show ntnVersion
-  , ToJSON ntnVersion
-  , Show ntnVersionData
-  , ToJSON ntnVersionData
+  , Show (ForgeStateUpdateError blk)
+  , Show (CannotForge blk)
+  , ShowQuery (BlockQuery blk)
   )
   => FilePath
   -> FilePath
   -> Proxy blk
+  -> Proxy peer
+  -> Proxy remotePeer
   -> IO ()
-docTracers configFileName outputFileName _ = do
+docTracers configFileName outputFileName _ _ _ = do
     trConfig      <- readConfiguration configFileName
     let trBase    :: Trace IO FormattedMessage = docTracer (Stdout MachineFormat)
         trForward :: Trace IO FormattedMessage = docTracer Forwarder
@@ -161,7 +223,8 @@ docTracers configFileName outputFileName _ = do
     shutdownTrDoc <- documentTracer trConfig shutdownTr
       (docShutdown :: Documented ShutdownTrace)
 
-    -- Peers tracer
+--  Peers tracer
+
     peersTr   <- mkCardanoTracer
                 trBase trForward mbTrEKG
                 "Peers"
@@ -194,7 +257,7 @@ docTracers configFileName outputFileName _ = do
     replayBlockTrDoc <- documentTracer trConfig replayBlockTr
       (docReplayedBlock :: Documented ReplayBlockStats)
 
----- Consensus tracers
+-- Consensus tracers
 
     chainSyncClientTr  <- mkCardanoTracer
                 trBase trForward mbTrEKG
@@ -346,7 +409,7 @@ docTracers configFileName outputFileName _ = do
                 allPublic
     configureTracers trConfig docBlockchainTime [blockchainTimeTr]
     blockchainTimeTrDoc <- documentTracer trConfig blockchainTimeTr
-      (docBlockchainTime :: Documented (TraceBlockchainTimeEvent t))
+      (docBlockchainTime :: Documented (TraceBlockchainTimeEvent RelativeTime))
 
 -- Node to client
 
@@ -477,7 +540,7 @@ docTracers configFileName outputFileName _ = do
           (TraceSendRecv
             (TxSubmission2 (GenTxId blk) (GenTx blk)))))
 
--- -- Diffusion
+-- Diffusion
     dtMuxTr   <-  mkCardanoTracer
                 trBase trForward mbTrEKG
                 "Mux"
@@ -542,6 +605,7 @@ docTracers configFileName outputFileName _ = do
       (docLedgerPeers :: Documented TraceLedgerPeers)
 
 -- DiffusionTracersExtra P2P
+
     localRootPeersTr  <-  mkCardanoTracer
       trBase trForward mbTrEKG
       "LocalRootPeers"
@@ -550,7 +614,7 @@ docTracers configFileName outputFileName _ = do
       allPublic
     configureTracers trConfig docLocalRootPeers [localRootPeersTr]
     localRootPeersTrDoc <- documentTracer trConfig localRootPeersTr
-      (docLocalRootPeers :: Documented (TraceLocalRootPeers RemoteAddress resolverError))
+      (docLocalRootPeers :: Documented (TraceLocalRootPeers RemoteAddress SomeException))
 
     publicRootPeersTr  <-  mkCardanoTracer
       trBase trForward mbTrEKG
@@ -580,7 +644,7 @@ docTracers configFileName outputFileName _ = do
       allPublic
     configureTracers trConfig docDebugPeerSelection [debugPeerSelectionTr]
     debugPeerSelectionTrDoc <- documentTracer trConfig debugPeerSelectionTr
-      (docDebugPeerSelection :: Documented (DebugPeerSelection Socket.SockAddr peerConn))
+      (docDebugPeerSelection :: Documented (DebugPeerSelection Socket.SockAddr peer))
 
     debugPeerSelectionResponderTr  <-  mkCardanoTracer
       trBase trForward mbTrEKG
@@ -590,7 +654,7 @@ docTracers configFileName outputFileName _ = do
       allPublic
     configureTracers trConfig docDebugPeerSelection [debugPeerSelectionResponderTr]
     debugPeerSelectionResponderTrDoc <- documentTracer trConfig debugPeerSelectionResponderTr
-      (docDebugPeerSelection :: Documented (DebugPeerSelection Socket.SockAddr peerConn))
+      (docDebugPeerSelection :: Documented (DebugPeerSelection Socket.SockAddr peer))
 
     peerSelectionCountersTr  <-  mkCardanoTracer
       trBase trForward mbTrEKG
@@ -624,7 +688,7 @@ docTracers configFileName outputFileName _ = do
       (docConnectionManager :: Documented
         (ConnectionManagerTrace
           Socket.SockAddr
-          (ConnectionHandlerTrace ntnVersion ntnVersionData)))
+          (ConnectionHandlerTrace UnversionedProtocol UnversionedProtocolData)))
 
     serverTr  <-  mkCardanoTracer
       trBase trForward mbTrEKG
@@ -658,8 +722,8 @@ docTracers configFileName outputFileName _ = do
         (ConnectionManagerTrace
           Socket.SockAddr
           (ConnectionHandlerTrace
-            ntnVersion
-            ntnVersionData)))
+            UnversionedProtocol
+            UnversionedProtocolData)))
 
     localServerTr  <-  mkCardanoTracer
       trBase trForward mbTrEKG

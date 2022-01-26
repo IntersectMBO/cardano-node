@@ -4,6 +4,7 @@
 
 module Cardano.Node.Parsers
   ( nodeCLIParser
+  , parseConfigFile
   , parserHelpHeader
   , parserHelpOptions
   , renderHelpDoc
