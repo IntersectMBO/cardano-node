@@ -28,5 +28,10 @@ cd cardano-node
 nix-build -A scripts.mainnet.node -o mainnet-node-local
 ./mainnet-node-local/bin/cardano-node-mainnet
 ```
+If you want to build the cardano-cli, then run the following command:
+```
+nix-build -A cardano-cli -o cardano-cli-mainnet
+```
+This will create a symbolic link in the current directory called cardano-cli-mainnet
 
 [nix]: https://nixos.org/nix/
