@@ -705,6 +705,8 @@ hprop_plutus_certifying_withdrawing = H.integration . H.runFinallies . H.workspa
 
   H.cat $ work </> "utxo-plutus-staking-payment-address-2.json"
 
+  H.threadDelay 2000000
+
   utxoPlutusPaymentAddrJson2 <- H.leftFailM . H.readJsonFile $ work </> "utxo-plutus-staking-payment-address-2.json"
   UTxO utxoPlutus2 <- H.noteShowM $ H.jsonErrorFail $ J.fromJSON @(UTxO AlonzoEra) utxoPlutusPaymentAddrJson2
   -- Get total lovelace at plutus script address
