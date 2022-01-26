@@ -79,6 +79,7 @@ library
                        Cardano.Node.Run
                        Cardano.Node.STM
                        Cardano.Node.Startup
+                       Cardano.Node.StateRep
                        Cardano.Node.TraceConstraints
                        Cardano.Node.Tracing
                        Cardano.Node.Types
