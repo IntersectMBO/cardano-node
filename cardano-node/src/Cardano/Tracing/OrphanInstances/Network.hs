@@ -367,6 +367,7 @@ instance HasSeverityAnnotation (WithMuxBearer peer MuxTrace) where
     MuxTraceStartedOnDemand _ _ -> Info
     MuxTraceShutdown -> Debug
     MuxTraceTerminating {} -> Debug
+    MuxTraceTCPInfo {} -> Info
 
 instance HasPrivacyAnnotation (TraceLocalRootPeers RemoteAddress exception)
 instance HasSeverityAnnotation (TraceLocalRootPeers RemoteAddress exception) where
