@@ -28,5 +28,10 @@ cd cardano-node
 nix-build -A scripts.mainnet.node -o mainnet-node-local
 ./mainnet-node-local/bin/cardano-node-mainnet
 ```
+To build the cardano-cli executable, follow the steps below:
+```
+nix-build -A cardano-cli -o cardano-cli-build
+./cardano-cli-build/bin/cardano-cli
+```
 
 [nix]: https://nixos.org/nix/
