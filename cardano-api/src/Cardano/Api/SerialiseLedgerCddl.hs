@@ -112,8 +112,7 @@ instance Error TextEnvelopeCddlError where
   displayError (TextEnvelopeCddlTypeError expTypes actType) =
     "TextEnvelopeCddl type error: "
        <> " Expected one of: "
-       <> List.intercalate ", "
-            [Text.unpack expType | expType <- expTypes]
+       <> List.intercalate ", " (map Text.unpack expTypes)
        <> " Actual: " <> Text.unpack actType
   displayError (TextEnvelopeCddlErrUnknownType unknownType) =
     "Unknown TextEnvelopeCddl type:" <> Text.unpack unknownType
@@ -194,7 +193,9 @@ deserialiseWitnessLedgerCddl
   -> TextEnvelopeCddl
   -> Either TextEnvelopeCddlError (KeyWitness era)
 deserialiseWitnessLedgerCddl era TextEnvelopeCddl{teCddlRawCBOR,teCddlDescription} =
-  --TODO: Parse these into types
+  --TODO: Parse these into types because this will increase code readability and
+  -- will make it easier to keep track of the different Cddl descriptions via
+  -- a single sum data type.
   case teCddlDescription of
     "Key BootstrapWitness ShelleyEra" -> do
       w <- first TextEnvelopeCddlErrCBORDecodingError
@@ -236,7 +237,7 @@ textEnvelopeCddlJSONKeyOrder :: Text -> Text -> Ordering
 textEnvelopeCddlJSONKeyOrder = keyOrder ["type", "description", "cborHex"]
 
 -- | This GADT allows us to deserialise a tx or key witness without
---having to provide the era.
+-- having to provide the era.
 data FromSomeTypeCDDL c b where
   FromCDDLTx
     :: Text -- ^ CDDL type that we want
@@ -278,8 +279,9 @@ deserialiseFromTextEnvelopeCddlAnyOf types teCddl =
    matching (FromCDDLTx ttoken _f) = actualType == ttoken
    matching (FromCDDLWitness ttoken _f)  = actualType == ttoken
 
--- TODO: This is atrocious but the plan is to parse the 'teCddlType'
--- field in the future.
+-- Parse the text into types because this will increase code readability and
+-- will make it easier to keep track of the different Cddl descriptions via
+-- a single sum data type.
 cddlTypeToEra :: Text -> Either TextEnvelopeCddlError AnyCardanoEra
 cddlTypeToEra "Witnessed Tx ByronEra" = return $ AnyCardanoEra ByronEra
 cddlTypeToEra "Witnessed Tx ShelleyEra" = return $ AnyCardanoEra ShelleyEra

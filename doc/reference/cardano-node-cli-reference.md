@@ -28,6 +28,7 @@ The `address` command contains the following sub commands:
 The `stake-address` command contains the following sub commands:
 * `key-gen`: creates a single address key pair
 * `build`: builds a stake address
+* `key-hash`: prints the hash of a stake verification key
 * `registration-certificate`: creates a registration certificate
 * `delegation-certificate`: creates a stake address delegation certificate
 * `deregistration-certificate`: creates a de-registration certificate
@@ -35,13 +36,17 @@ The `stake-address` command contains the following sub commands:
 *cardano-cli transaction*
 The `transaction` command contains the following sub commands:
 * `build-raw`: builds a low-level transaction (uses the `--cardano-mode`, `--byron-mode`, `--shelley-mode` flags)
+* `build`: builds an automatically balanced transaction (automatically calculates fees)
 * `sign`: signs the transaction
 * `assemble` : combines and assembles the transaction witness(es) with a transaction body to create a transaction
 * `witness`: witnesses a transaction
 * `submit`: submits the transaction to the local node whose Unix domain socket is obtained from the CARANO_NODE_SOCKET_PATH environment variable (uses the `--cardano-mode`, `--byron-mode`, `--shelley-mode` flags)
 * `calculate-min-fee`: calculates the minimum fee for the transaction
+* `calculate-min-required-utxo`: calculates the minimum reqired ADA for a transaction output
+* `hash-script-data`: calulates the hash of script data (datums)
 * `txid`: retrieves the transaction ID
 * `policyid`: retrieves the policy ID
+* `view`: pretty prints a transaction
 
 *cardano-cli node*
 The `node` command contains the following sub commands:
@@ -63,12 +68,15 @@ The `stake-pool` command contains the following sub commands:
 The `query` command contains the following sub commands:
 * `protocol-parameters` (advanced): retrieves the node’s current pool parameters (a raw dump of `Ledger.ChainDepState`).
 * `tip`: gets the node’s current tip (slot number, hash, and block number)
+* `stake-pools`: gets the node's current set of stake pool ids
 * `utxo`: retrieves the node’s current UTxO, filtered by address
-* `ledger-state` (advanced):  dumps the current state of the node (a raw dump of `Ledger.NewEpochState`)
-* `stake-address-info`: Get the current delegations and reward accounts filtered by stake address.
-* `stake-distribution`: Get the node's current aggregated stake distribution
-* `stake-snapshot` (advanced): Get the stake snapshot information for a stake pool
-* `pool-params` (advanced): Get the current and future parameters for a stake pool
+* `ledger-state` (advanced):  dumps the current state of the node (a raw dump of `Ledger.NewEpochState`)* `stake-distribution`: gets the node's current set of stake pool ids
+* `protocol-state` (advanced): dumps the node's current protocol state
+* `stake-address-info`: gets the current delegations and reward accounts filtered by stake address.
+* `stake-distribution`: gets the node's current aggregated stake distribution
+* `stake-snapshot` (advanced): gets the stake snapshot information for a stake pool
+* `pool-params` (advanced): gets the current and future parameters for a stake pool
+* `leadership-schedule`: gets the slots the node is slot leader in for the current epoch
 
 *cardano-cli governance*
 The `governance` command contains the following sub commands:

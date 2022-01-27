@@ -74,8 +74,8 @@ data OutputFormat
   | OutputFormatBech32
   deriving (Eq, Show)
 
--- | Specify whether to serialise  a value according to the ledger's CDDL spec
--- or the cli' intermediate format. Note the intermediate format is defined
+-- | Specify whether to serialise a value according to the ledger's CDDL spec
+-- or the cli's intermediate format. Note the intermediate format is defined
 -- within SerialiseAsCBOR instances. The plan is to merge TextEnvelope with
 -- SerialiseAsCBOR.
 data OutputSerialisation

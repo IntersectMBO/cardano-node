@@ -901,7 +901,7 @@ pQueryCmd =
     , subParser "pool-params"
         (Opt.info pQueryPoolParams $ Opt.progDesc "Dump the pool parameters (Ledger.NewEpochState.esLState._delegationState._pState._pParams -- advanced command)")
     , subParser "leadership-schedule"
-        (Opt.info pLeadershipSchedule $ Opt.progDesc "Get the slots the node is expected to mint a block in (advanced command")
+        (Opt.info pLeadershipSchedule $ Opt.progDesc "Get the slots the node is the slot leader of (advanced command)")
     ]
   where
     pQueryProtocolParameters :: Parser QueryCmd

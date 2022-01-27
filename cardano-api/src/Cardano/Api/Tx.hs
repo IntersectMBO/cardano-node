@@ -349,8 +349,8 @@ pattern AsShelleyWitness :: AsType (KeyWitness ShelleyEra)
 pattern AsShelleyWitness = AsKeyWitness AsShelleyEra
 {-# COMPLETE AsShelleyWitness #-}
 
--- We implement a custom serialization instance that differs from
--- cardano-ledger because we want to be able to tell the difference between
+-- This custom instance differs from cardano-ledger
+-- because we want to be able to tell the difference between
 -- on disk witnesses for the cli's 'assemble' command.
 instance IsCardanoEra era => SerialiseAsCBOR (KeyWitness era) where
     serialiseToCBOR (ByronKeyWitness wit) = CBOR.serialize' wit
