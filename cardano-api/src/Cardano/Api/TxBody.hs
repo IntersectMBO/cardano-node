@@ -606,7 +606,7 @@ fromShelleyTxOut :: ShelleyLedgerEra era ~ ledgerera
 fromShelleyTxOut era ledgerTxOut =
   case era of
     ShelleyBasedEraShelley ->
-        TxOut (fromShelleyAddr addr)
+        TxOut (fromShelleyAddr era addr)
               (TxOutAdaOnly AdaOnlyInShelleyEra
                             (fromShelleyLovelace value))
                TxOutDatumNone
@@ -614,7 +614,7 @@ fromShelleyTxOut era ledgerTxOut =
         Shelley.TxOut addr value = ledgerTxOut
 
     ShelleyBasedEraAllegra ->
-        TxOut (fromShelleyAddr addr)
+        TxOut (fromShelleyAddr era addr)
               (TxOutAdaOnly AdaOnlyInAllegraEra
                             (fromShelleyLovelace value))
                TxOutDatumNone
@@ -622,7 +622,7 @@ fromShelleyTxOut era ledgerTxOut =
         Shelley.TxOut addr value = ledgerTxOut
 
     ShelleyBasedEraMary ->
-        TxOut (fromShelleyAddr addr)
+        TxOut (fromShelleyAddr era addr)
               (TxOutValue MultiAssetInMaryEra
                           (fromMaryValue value))
                TxOutDatumNone
@@ -630,7 +630,7 @@ fromShelleyTxOut era ledgerTxOut =
         Shelley.TxOut addr value = ledgerTxOut
 
     ShelleyBasedEraAlonzo ->
-       TxOut (fromShelleyAddr addr)
+       TxOut (fromShelleyAddr era addr)
              (TxOutValue MultiAssetInAlonzoEra
                          (fromMaryValue value))
              (fromAlonzoTxOutDataHash ScriptDataInAlonzoEra datahash)
@@ -1880,7 +1880,7 @@ fromAlonzoTxOut :: forall era ledgerera.
                 -> TxOut CtxTx era
 fromAlonzoTxOut multiAssetInEra scriptDataInEra txdatums
                 (Alonzo.TxOut addr value datahash) =
-   TxOut (fromShelleyAddr addr)
+   TxOut (fromShelleyAddr shelleyBasedEra addr)
          (TxOutValue multiAssetInEra (fromMaryValue value))
          (fromAlonzoTxOutDatum scriptDataInEra datahash)
   where

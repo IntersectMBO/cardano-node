@@ -594,14 +594,16 @@ toShelleyStakeReference  NoStakeAddress =
     Shelley.StakeRefNull
 
 
-fromShelleyAddr :: IsShelleyBasedEra era
-                => Shelley.Addr StandardCrypto -> AddressInEra era
-fromShelleyAddr (Shelley.AddrBootstrap (Shelley.BootstrapAddress addr)) =
+fromShelleyAddr
+  :: ShelleyBasedEra era
+  -> Shelley.Addr StandardCrypto
+  -> AddressInEra era
+fromShelleyAddr _ (Shelley.AddrBootstrap (Shelley.BootstrapAddress addr)) =
     AddressInEra ByronAddressInAnyEra (ByronAddress addr)
 
-fromShelleyAddr (Shelley.Addr nw pc scr) =
+fromShelleyAddr sBasedEra (Shelley.Addr nw pc scr) =
     AddressInEra
-      (ShelleyAddressInEra shelleyBasedEra)
+      (ShelleyAddressInEra sBasedEra)
       (ShelleyAddress nw pc scr)
 
 fromShelleyStakeAddr :: Shelley.RewardAcnt StandardCrypto -> StakeAddress
