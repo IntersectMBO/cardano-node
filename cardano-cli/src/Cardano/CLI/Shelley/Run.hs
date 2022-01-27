@@ -36,7 +36,6 @@ data ShelleyClientCmdError
   | ShelleyCmdTransactionError !ShelleyTxCmdError
   | ShelleyCmdQueryError !ShelleyQueryCmdError
   | ShelleyCmdKeyError !ShelleyKeyCmdError
-  deriving Show
 
 renderShelleyClientCmdError :: ShelleyCommand -> ShelleyClientCmdError -> Text
 renderShelleyClientCmdError cmd err =

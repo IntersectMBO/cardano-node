@@ -473,6 +473,21 @@ module Cardano.Api (
     writeFileTextEnvelopeWithOwnerPermissions,
     readTextEnvelopeFromFile,
     readTextEnvelopeOfTypeFromFile,
+
+    -- ** Text envelope CDDL
+    -- | Support for serialising values in the ledger's CDDL format.
+    -- Note, this will be deprecated in the future in favour of a
+    -- single API.
+    FromSomeTypeCDDL(..),
+    readFileTextEnvelopeCddlAnyOf,
+    writeTxFileTextEnvelopeCddl,
+    writeTxWitnessFileTextEnvelopeCddl,
+    serialiseTxLedgerCddl,
+    deserialiseTxLedgerCddl,
+    serialiseWitnessLedgerCddl,
+    deserialiseWitnessLedgerCddl,
+    TextEnvelopeCddlError(..),
+
     -- *** Reading one of several key types
     FromSomeType(..),
     deserialiseFromTextEnvelopeAnyOf,
@@ -672,3 +687,4 @@ import           Cardano.Api.Value
 import           Cardano.Api.ValueParser
 --TODO: Remove after updating cardano-node-chairman with new IPC
 import           Cardano.Api.Protocol.Types
+import           Cardano.Api.SerialiseLedgerCddl

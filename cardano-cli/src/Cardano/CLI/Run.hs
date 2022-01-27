@@ -26,10 +26,11 @@ import           Cardano.CLI.Render (customRenderHelp)
 
 import           Cardano.Config.Git.Rev (gitRev)
 import           Data.Version (showVersion)
+import           Options.Applicative.Help.Core
+import           Options.Applicative.Types (OptReader (..), Option (..), Parser (..),
+                   ParserInfo (..), ParserPrefs (..))
 import           Paths_cardano_cli (version)
 import           System.Info (arch, compilerName, compilerVersion, os)
-import           Options.Applicative.Types (Option (..), OptReader (..), Parser (..), ParserInfo (..), ParserPrefs (..))
-import           Options.Applicative.Help.Core
 
 import qualified Data.List as L
 import qualified System.IO as IO
@@ -53,7 +54,6 @@ data ClientCommand =
 data ClientCommandErrors
   = ByronClientError ByronClientCmdError
   | ShelleyClientError ShelleyCommand ShelleyClientCmdError
-  deriving Show
 
 runClientCommand :: ClientCommand -> ExceptT ClientCommandErrors IO ()
 runClientCommand (ByronCommand c) = firstExceptT ByronClientError $ runByronClientCommand c
@@ -114,7 +114,7 @@ helpAll pprefs progn rnames parserInfo = do
           OptP optP -> case optMain optP of
             CmdReader _ cs f -> do
               forM_ cs $ \c ->
-                forM_ (f c) $ \subParserInfo -> 
+                forM_ (f c) $ \subParserInfo ->
                   helpAll pprefs progn (c:rnames) subParserInfo
             _ -> return ()
           AltP pa pb -> go pa >> go pb

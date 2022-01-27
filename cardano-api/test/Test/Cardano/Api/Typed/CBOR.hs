@@ -1,4 +1,7 @@
+{-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module Test.Cardano.Api.Typed.CBOR
@@ -7,16 +10,16 @@ module Test.Cardano.Api.Typed.CBOR
 
 import           Cardano.Prelude
 
-import           Hedgehog (Property)
+import           Hedgehog (Property, forAll, property, success, tripping)
 import           Test.Tasty (TestTree, testGroup)
 import           Test.Tasty.Hedgehog (testProperty)
 import           Test.Tasty.TH (testGroupGenerator)
 
 import           Cardano.Api
 
-import           Test.Cardano.Api.Typed.Orphans ()
 import           Gen.Cardano.Api.Typed
 import           Gen.Hedgehog.Roundtrip.CBOR (roundtrip_CBOR)
+import           Test.Cardano.Api.Typed.Orphans ()
 
 {- HLINT ignore "Use camelCase" -}
 
@@ -151,6 +154,39 @@ prop_roundtrip_script_PlutusScriptV2_CBOR =
 prop_roundtrip_UpdateProposal_CBOR :: Property
 prop_roundtrip_UpdateProposal_CBOR =
   roundtrip_CBOR AsUpdateProposal genUpdateProposal
+
+
+test_roundtrip_Tx_Cddl :: [TestTree]
+test_roundtrip_Tx_Cddl =
+  [ testProperty (show era) $ roundtrip_Tx_Cddl anyEra
+  | anyEra@(AnyCardanoEra era) <- [minBound..]
+  ]
+
+test_roundtrip_TxWitness_Cddl :: [TestTree]
+test_roundtrip_TxWitness_Cddl =
+  [ testProperty (show era) $ roundtrip_TxWitness_Cddl era
+  | AnyCardanoEra era <- [minBound..]
+  , AnyCardanoEra era /= AnyCardanoEra ByronEra
+  ]
+
+roundtrip_TxWitness_Cddl :: CardanoEra era -> Property
+roundtrip_TxWitness_Cddl era =
+  property $
+    case cardanoEraStyle era of
+      LegacyByronEra -> success
+      ShelleyBasedEra sbe -> do
+        keyWit <- forAll $ genShelleyKeyWitness era
+        tripping keyWit
+          (serialiseWitnessLedgerCddl sbe)
+          (deserialiseWitnessLedgerCddl sbe)
+
+roundtrip_Tx_Cddl :: AnyCardanoEra -> Property
+roundtrip_Tx_Cddl (AnyCardanoEra era) =
+  property $ do
+   tx <- forAll $ genTx era
+   tripping tx
+     serialiseTxLedgerCddl
+     (deserialiseTxLedgerCddl era)
 
 -- -----------------------------------------------------------------------------
 

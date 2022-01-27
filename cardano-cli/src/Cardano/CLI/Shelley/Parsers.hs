@@ -686,6 +686,7 @@ pTransaction =
             <*> many pMetadataFile
             <*> optional pProtocolParamsSourceSpec
             <*> optional pUpdateProposalFile
+            <*> pOutputSerialisation
             <*> pTxBodyFile Output
 
   pChangeAddress :: Parser TxOutChangeAddress
@@ -719,6 +720,7 @@ pTransaction =
                <*> many pMetadataFile
                <*> optional pProtocolParamsSourceSpec
                <*> optional pUpdateProposalFile
+               <*> pOutputSerialisation
                <*> pTxBodyFile Output
 
   pTransactionSign  :: Parser TransactionCmd
@@ -899,7 +901,7 @@ pQueryCmd =
     , subParser "pool-params"
         (Opt.info pQueryPoolParams $ Opt.progDesc "Dump the pool parameters (Ledger.NewEpochState.esLState._delegationState._pState._pParams -- advanced command)")
     , subParser "leadership-schedule"
-        (Opt.info pLeadershipSchedule $ Opt.progDesc "Get the slots the node is expected to mint a block in (advanced command")
+        (Opt.info pLeadershipSchedule $ Opt.progDesc "Get the slots the node is the slot leader of (advanced command)")
     ]
   where
     pQueryProtocolParameters :: Parser QueryCmd
@@ -1597,6 +1599,16 @@ pOutputFormat =
     <> Opt.value OutputFormatBech32
     )
 
+pOutputSerialisation :: Parser OutputSerialisation
+pOutputSerialisation =
+  Opt.flag' OutputLedgerCDDLSerialisation
+    (  Opt.long "cddl-format"
+    <> Opt.help "Serialise in the ledger CDDL specified CBOR format."
+    ) <|>
+  Opt.flag OutputCliSerialisation OutputCliSerialisation
+    (  Opt.long "cli-format"
+    <> Opt.help "Serialise in the cardano-cli CBOR format."
+    )
 
 pMaybeOutputFile :: Parser (Maybe OutputFile)
 pMaybeOutputFile =
