@@ -603,7 +603,7 @@ testnet testnetOptions H.Conf {..} = do
     H.createFileLink (tempAbsPath </> "addresses/pool-owner" <> show @Int n <> "-stake.skey") (tempAbsPath </> "node-pool" <> show @Int n </> "owner.skey")
 
   -- Generated payment address keys, stake address keys,
-  -- stake address regitration certs, and stake address delegatation certs
+  -- stake address registration certs, and stake address delegation certs
   H.noteEachM_ . H.listDirectory $ tempAbsPath </> "addresses"
 
   -- Next is to make the stake pool registration cert
@@ -691,7 +691,7 @@ testnet testnetOptions H.Conf {..} = do
 
   -- So we'll need to sign this with a bunch of keys:
   -- 1. the initial utxo spending key, for the funds
-  -- 2. the user1 stake address key, due to the delegatation cert
+  -- 2. the user1 stake address key, due to the delegation cert
   -- 3. the pool1 owner key, due to the pool registration cert
   -- 3. the pool1 operator key, due to the pool registration cert
   void $ H.execCli

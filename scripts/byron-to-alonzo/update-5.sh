@@ -6,7 +6,7 @@ set -e
 # This script will initiate the transition to protocol version 5 (Alonzo).
 
 # You need to provide the current epoch as a positional argument (the Shelley
-# update system requires this to be includded in the update proposal).
+# update system requires this to be included in the update proposal).
 
 
 # In order for this to be successful, you need to already be in protocol version

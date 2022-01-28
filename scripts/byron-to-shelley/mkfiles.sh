@@ -462,7 +462,7 @@ for N in ${USER_POOL_N}; do
 done
 
 echo "Generated payment address keys, stake address keys,"
-echo "stake address regitration certs, and stake address delegatation certs"
+echo "stake address registration certs, and stake address delegation certs"
 echo
 ls -1 addresses/
 echo "====================================================================="
@@ -522,7 +522,7 @@ cardano-cli transaction build-raw \
 
 # So we'll need to sign this with a bunch of keys:
 # 1. the initial utxo spending key, for the funds
-# 2. the user1 stake address key, due to the delegatation cert
+# 2. the user1 stake address key, due to the delegation cert
 # 3. the pool1 owner key, due to the pool registration cert
 # 3. the pool1 operator key, due to the pool registration cert
 

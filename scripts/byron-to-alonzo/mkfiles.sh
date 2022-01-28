@@ -479,7 +479,7 @@ for N in ${USER_POOL_N}; do
 done
 
 echo "Generated payment address keys, stake address keys,"
-echo "stake address regitration certs, and stake address delegatation certs"
+echo "stake address registration certs, and stake address delegation certs"
 echo
 ls -1 addresses/
 echo "====================================================================="
