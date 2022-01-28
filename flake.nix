@@ -143,7 +143,8 @@
     ) // {
       overlay = import ./overlay.nix self;
       hydraJobs.x86_64-linux = {
-        membenches = membench.outputs.packages.x86_64-linux.batch;
+        membenches = membench.outputs.packages.x86_64-linux.batch-hydra-report;
+        snapshot = membench.outputs.packages.x86_64-linux.snapshot;
       };
       nixosModules = {
         cardano-node = { pkgs, lib, ... }: {
