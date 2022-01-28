@@ -936,20 +936,13 @@ writeFilteredUTxOs :: Api.ShelleyBasedEra era
                    -> UTxO era
                    -> ExceptT ShelleyQueryCmdError IO ()
 writeFilteredUTxOs shelleyBasedEra' mOutFile utxo =
-    case mOutFile of
-      Nothing -> liftIO $ printFilteredUTxOs shelleyBasedEra' utxo
-      Just (OutputFile fpath) ->
-        case shelleyBasedEra' of
-          ShelleyBasedEraShelley -> writeUTxo fpath utxo
-          ShelleyBasedEraAllegra -> writeUTxo fpath utxo
-          ShelleyBasedEraMary -> writeUTxo fpath utxo
-          ShelleyBasedEraAlonzo -> writeUTxo fpath utxo
-          ShelleyBasedEraBabbage -> writeUTxo fpath utxo
-          ShelleyBasedEraConway -> writeUTxo fpath utxo
- where
-   writeUTxo fpath utxo' =
-     handleIOExceptT (ShelleyQueryCmdWriteFileError . FileIOError fpath)
-       $ LBS.writeFile fpath (encodePretty utxo')
+  case mOutFile of
+    Nothing -> liftIO $ printFilteredUTxOs shelleyBasedEra' utxo
+    Just (OutputFile fpath) ->
+      handleIOExceptT (ShelleyQueryCmdWriteFileError . FileIOError fpath)
+        $ LBS.writeFile fpath
+        $ getIsCardanoEraConstraint (shelleyBasedToCardanoEra shelleyBasedEra')
+        $ encodePretty utxo
 
 printFilteredUTxOs :: Api.ShelleyBasedEra era -> UTxO era -> IO ()
 printFilteredUTxOs shelleyBasedEra' (UTxO utxo) = do
