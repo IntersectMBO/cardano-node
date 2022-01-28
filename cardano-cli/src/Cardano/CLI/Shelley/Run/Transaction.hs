@@ -995,7 +995,7 @@ runTxSign (TxBodyFile txbodyFile) witSigningData mnw (TxFile txFile) = do
   unwitnessed <- readFileTxBody txbodyFile
 
   case unwitnessed of
-    UnwitnessedTx anyTx -> do
+    IncompleteCddlFormattedTx anyTx -> do
      InAnyShelleyBasedEra _era unwitTx <-
        onlyInShelleyBasedEras "sign for Byron era transactions" anyTx
 
@@ -1012,7 +1012,7 @@ runTxSign (TxBodyFile txbodyFile) witSigningData mnw (TxFile txFile) = do
      firstExceptT ShelleyTxCmdWriteFileError . newExceptT $
                   writeTxFileTextEnvelopeCddl txFile tx
 
-    UnwitnessedTxBody anyTxbody -> do
+    UnwitnessedCliFormattedTxBody anyTxbody -> do
       InAnyShelleyBasedEra _era txbody <-
         --TODO: in principle we should be able to support Byron era txs too
         onlyInShelleyBasedEras "sign for Byron era transactions" anyTxbody
@@ -1083,7 +1083,7 @@ runTxCalculateMinFee (TxBodyFile txbodyFile) nw protocolParamsSourceSpec
     unwitnessed <- readFileTxBody txbodyFile
     pparams <- readProtocolParametersSourceSpec protocolParamsSourceSpec
     case unwitnessed of
-      UnwitnessedTx anyTx -> do
+      IncompleteCddlFormattedTx anyTx -> do
         InAnyShelleyBasedEra _era unwitTx <-
           onlyInShelleyBasedEras "sign for Byron era transactions" anyTx
         let txbody =  getTxBody unwitTx
@@ -1098,7 +1098,7 @@ runTxCalculateMinFee (TxBodyFile txbodyFile) nw protocolParamsSourceSpec
 
         liftIO $ putStrLn $ (show fee :: String) <> " Lovelace"
 
-      UnwitnessedTxBody anyTxBody -> do
+      UnwitnessedCliFormattedTxBody anyTxBody -> do
         InAnyShelleyBasedEra _era txbody <-
               --TODO: in principle we should be able to support Byron era txs too
               onlyInShelleyBasedEras "calculate-min-fee for Byron era transactions" anyTxBody
@@ -1361,8 +1361,8 @@ runTxGetTxId txfile = do
         InputTxBodyFile (TxBodyFile txbodyFile) -> do
           unwitnessed <- readFileTxBody txbodyFile
           case unwitnessed of
-            UnwitnessedTxBody anyTxBody -> return anyTxBody
-            UnwitnessedTx (InAnyCardanoEra era tx) ->
+            UnwitnessedCliFormattedTxBody anyTxBody -> return anyTxBody
+            IncompleteCddlFormattedTx (InAnyCardanoEra era tx) ->
               return (InAnyCardanoEra era (getTxBody tx))
 
         InputTxFile (TxFile txFile) -> do
@@ -1378,8 +1378,8 @@ runTxView txfile = do
       InputTxBodyFile (TxBodyFile txbodyFile) -> do
         unwitnessed <- readFileTxBody txbodyFile
         case unwitnessed of
-          UnwitnessedTxBody anyTxBody -> return anyTxBody
-          UnwitnessedTx (InAnyCardanoEra era tx) ->
+          UnwitnessedCliFormattedTxBody anyTxBody -> return anyTxBody
+          IncompleteCddlFormattedTx (InAnyCardanoEra era tx) ->
             return (InAnyCardanoEra era (getTxBody tx))
       InputTxFile (TxFile txFile) -> do
         InAnyCardanoEra era tx <- readFileTx txFile
@@ -1400,7 +1400,7 @@ runTxCreateWitness
 runTxCreateWitness (TxBodyFile txbodyFile) witSignData mbNw (OutputFile oFile) = do
   unwitnessed <- readFileTxBody txbodyFile
   case unwitnessed of
-    UnwitnessedTx anyTx -> do
+    IncompleteCddlFormattedTx anyTx -> do
      InAnyShelleyBasedEra sbe cddlTx <-
        onlyInShelleyBasedEras "sign for Byron era transactions" anyTx
 
@@ -1422,7 +1422,7 @@ runTxCreateWitness (TxBodyFile txbodyFile) witSignData mbNw (OutputFile oFile) =
      firstExceptT ShelleyTxCmdWriteFileError . newExceptT
        $ writeTxWitnessFileTextEnvelopeCddl sbe oFile witness
 
-    UnwitnessedTxBody anyTxbody -> do
+    UnwitnessedCliFormattedTxBody anyTxbody -> do
       InAnyShelleyBasedEra _era txbody <-
         onlyInShelleyBasedEras "sign for Byron era transactions" anyTxbody
 
@@ -1453,7 +1453,7 @@ runTxSignWitness
 runTxSignWitness (TxBodyFile txbodyFile) witnessFiles (OutputFile oFp) = do
     unwitnessed <- readFileTxBody txbodyFile
     case unwitnessed of
-      UnwitnessedTxBody (InAnyCardanoEra era txbody) -> do
+      UnwitnessedCliFormattedTxBody (InAnyCardanoEra era txbody) -> do
         witnesses <-
           sequence
             [ do InAnyCardanoEra era' witness <- readFileWitness file
@@ -1471,7 +1471,7 @@ runTxSignWitness (TxBodyFile txbodyFile) witnessFiles (OutputFile oFp) = do
           . newExceptT
           $ writeFileTextEnvelope oFp Nothing tx
 
-      UnwitnessedTx (InAnyCardanoEra era anyTx) -> do
+      IncompleteCddlFormattedTx (InAnyCardanoEra era anyTx) -> do
         let txbody = getTxBody anyTx
 
         witnesses <-
@@ -1537,16 +1537,19 @@ readFileWitness fp =
     (\e -> unCddlWitness <$> acceptKeyWitnessCDDLSerialisation e)
     (readFileInAnyCardanoEra AsKeyWitness fp)
 
--- UnwitnessedTx is an unwitnessed CDDL formatted tx while
--- UnwitnessedTxBody is CLI formatted tx body.
-data UnwitnessedTx = UnwitnessedTxBody (InAnyCardanoEra TxBody)
-                   | UnwitnessedTx (InAnyCardanoEra Tx)
+-- IncompleteCddlFormattedTx is an CDDL formatted tx or partial tx
+-- (respectively needs additional witnesses or totally unwitnessed)
+-- while UnwitnessedCliFormattedTxBody is CLI formatted TxBody and
+-- needs to be key witnessed.
+data IncompleteTx
+  = UnwitnessedCliFormattedTxBody (InAnyCardanoEra TxBody)
+  | IncompleteCddlFormattedTx (InAnyCardanoEra Tx)
 
-readFileTxBody :: FilePath -> ExceptT ShelleyTxCmdError IO UnwitnessedTx
+readFileTxBody :: FilePath -> ExceptT ShelleyTxCmdError IO IncompleteTx
 readFileTxBody fp =
   handleLeftT
-    (\e -> UnwitnessedTx . unCddlTx <$> acceptTxCDDLSerialisation e)
-    (UnwitnessedTxBody <$> readFileInAnyCardanoEra AsTxBody fp)
+    (\e -> IncompleteCddlFormattedTx . unCddlTx <$> acceptTxCDDLSerialisation e)
+    (UnwitnessedCliFormattedTxBody <$> readFileInAnyCardanoEra AsTxBody fp)
 
 acceptTxCDDLSerialisation
   :: ShelleyTxCmdError
