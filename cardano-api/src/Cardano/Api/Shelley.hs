@@ -81,6 +81,7 @@ module Cardano.Api.Shelley
       ),
     ShelleySigningKey(..),
     getShelleyKeyWitnessVerificationKey,
+    getTxBodyAndWitnesses,
     makeShelleySignature,
     toShelleySigningKey,
 

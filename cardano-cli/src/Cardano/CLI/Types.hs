@@ -7,6 +7,7 @@
 module Cardano.CLI.Types
   ( BalanceTxExecUnits (..)
   , CBORObject (..)
+  , CddlTx (..)
   , CertificateFile (..)
   , EpochLeadershipSchedule (..)
   , GenesisFile (..)
@@ -20,9 +21,12 @@ module Cardano.CLI.Types
   , ScriptWitnessFiles (..)
   , ScriptDatumOrFile (..)
   , TransferDirection(..)
+  , TxBodyFile (..)
+  , TxBodyOrTxFile (..)
   , TxOutAnyEra (..)
   , TxOutChangeAddress (..)
   , TxOutDatumAnyEra (..)
+  , TxFile (..)
   , UpdateProposalFile (..)
   , VerificationKeyFile (..)
   , Stakes (..)
@@ -52,6 +56,8 @@ data CBORObject = CBORBlockByron Byron.EpochSlots
                 | CBORUpdateProposalByron
                 | CBORVoteByron
                 deriving Show
+
+newtype CddlTx = CddlTx {unCddlTx :: InAnyCardanoEra Tx}
 
 -- Encompasses stake certificates, stake pool certificates,
 -- genesis delegate certificates and MIR certificates.
@@ -241,4 +247,16 @@ data EpochLeadershipSchedule
   = CurrentEpoch
   | NextEpoch
   deriving Show
+
+newtype TxBodyFile
+  = TxBodyFile FilePath
+  deriving Show
+
+newtype TxFile
+  = TxFile FilePath
+  deriving Show
+
+data TxBodyOrTxFile
+  = TxBodyFp TxBodyFile
+  | TxFp TxFile
 

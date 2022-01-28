@@ -724,7 +724,9 @@ pTransaction =
                <*> pTxBodyFile Output
 
   pTransactionSign  :: Parser TransactionCmd
-  pTransactionSign = TxSign <$> pTxBodyFile Input
+  pTransactionSign = TxSign <$> ( TxBodyFp <$> pTxBodyFile Input <|>
+                                  TxFp <$> pTxFile Input
+                                )
                             <*> pSomeWitnessSigningData
                             <*> optional pNetworkId
                             <*> pTxFile Output

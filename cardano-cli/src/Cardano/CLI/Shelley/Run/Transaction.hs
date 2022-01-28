@@ -981,52 +981,73 @@ readScriptDataOrFile (ScriptDataCborFile fp) = do
 -- Transaction signing
 --
 
-runTxSign :: TxBodyFile
+runTxSign :: TxBodyOrTxFile
           -> [WitnessSigningData]
           -> Maybe NetworkId
           -> TxFile
           -> ExceptT ShelleyTxCmdError IO ()
-runTxSign (TxBodyFile txbodyFile) witSigningData mnw (TxFile txFile) = do
+runTxSign txOrTxBody witSigningData mnw (TxFile outTxFile) = do
   sks <- firstExceptT ShelleyTxCmdReadWitnessSigningDataError $
             mapM readWitnessSigningData witSigningData
 
   let (sksByron, sksShelley) = partitionSomeWitnesses $ map categoriseSomeWitness sks
 
-  unwitnessed <- readFileTxBody txbodyFile
+  case txOrTxBody of
+    (TxFp (TxFile inputTxFile)) -> do
+      anyTx <- readFileTx inputTxFile
 
-  case unwitnessed of
-    IncompleteCddlFormattedTx anyTx -> do
-     InAnyShelleyBasedEra _era unwitTx <-
-       onlyInShelleyBasedEras "sign for Byron era transactions" anyTx
+      InAnyShelleyBasedEra _era tx <-
+          onlyInShelleyBasedEras "sign for Byron era transactions" anyTx
 
-     let txbody = getTxBody unwitTx
-     -- Byron witnesses require the network ID. This can either be provided
-     -- directly or derived from a provided Byron address.
-     byronWitnesses <- firstExceptT ShelleyTxCmdBootstrapWitnessError
-       . hoistEither
-       $ mkShelleyBootstrapWitnesses mnw txbody sksByron
+      let (txbody, existingTxKeyWits) = getTxBodyAndWitnesses tx
 
-     let shelleyKeyWitnesses = map (makeShelleyKeyWitness txbody) sksShelley
-         tx = makeSignedTransaction (byronWitnesses ++ shelleyKeyWitnesses) txbody
-
-     firstExceptT ShelleyTxCmdWriteFileError . newExceptT $
-                  writeTxFileTextEnvelopeCddl txFile tx
-
-    UnwitnessedCliFormattedTxBody anyTxbody -> do
-      InAnyShelleyBasedEra _era txbody <-
-        --TODO: in principle we should be able to support Byron era txs too
-        onlyInShelleyBasedEras "sign for Byron era transactions" anyTxbody
-      -- Byron witnesses require the network ID. This can either be provided
-      -- directly or derived from a provided Byron address.
       byronWitnesses <- firstExceptT ShelleyTxCmdBootstrapWitnessError
-        . hoistEither
-        $ mkShelleyBootstrapWitnesses mnw txbody sksByron
+                          . hoistEither
+                          $ mkShelleyBootstrapWitnesses mnw txbody sksByron
 
-      let shelleyKeyWitnesses = map (makeShelleyKeyWitness txbody) sksShelley
-          tx = makeSignedTransaction (byronWitnesses ++ shelleyKeyWitnesses) txbody
+      let newShelleyKeyWits = map (makeShelleyKeyWitness txbody) sksShelley
+          allKeyWits = existingTxKeyWits ++ newShelleyKeyWits ++ byronWitnesses
+          signedTx = makeSignedTransaction allKeyWits txbody
 
       firstExceptT ShelleyTxCmdWriteFileError . newExceptT $
-        writeFileTextEnvelope txFile Nothing tx
+        writeFileTextEnvelope outTxFile Nothing signedTx
+
+    (TxBodyFp (TxBodyFile txbodyFile)) -> do
+      unwitnessed <- readFileTxBody txbodyFile
+
+      case unwitnessed of
+        IncompleteCddlFormattedTx anyTx -> do
+         InAnyShelleyBasedEra _era unwitTx <-
+           onlyInShelleyBasedEras "sign for Byron era transactions" anyTx
+
+         let txbody = getTxBody unwitTx
+         -- Byron witnesses require the network ID. This can either be provided
+         -- directly or derived from a provided Byron address.
+         byronWitnesses <- firstExceptT ShelleyTxCmdBootstrapWitnessError
+           . hoistEither
+           $ mkShelleyBootstrapWitnesses mnw txbody sksByron
+
+         let shelleyKeyWitnesses = map (makeShelleyKeyWitness txbody) sksShelley
+             tx = makeSignedTransaction (byronWitnesses ++ shelleyKeyWitnesses) txbody
+
+         firstExceptT ShelleyTxCmdWriteFileError . newExceptT $
+                      writeTxFileTextEnvelopeCddl outTxFile tx
+
+        UnwitnessedCliFormattedTxBody anyTxbody -> do
+          InAnyShelleyBasedEra _era txbody <-
+            --TODO: in principle we should be able to support Byron era txs too
+            onlyInShelleyBasedEras "sign for Byron era transactions" anyTxbody
+          -- Byron witnesses require the network ID. This can either be provided
+          -- directly or derived from a provided Byron address.
+          byronWitnesses <- firstExceptT ShelleyTxCmdBootstrapWitnessError
+            . hoistEither
+            $ mkShelleyBootstrapWitnesses mnw txbody sksByron
+
+          let shelleyKeyWitnesses = map (makeShelleyKeyWitness txbody) sksShelley
+              tx = makeSignedTransaction (byronWitnesses ++ shelleyKeyWitnesses) txbody
+
+          firstExceptT ShelleyTxCmdWriteFileError . newExceptT $
+            writeFileTextEnvelope outTxFile Nothing tx
 
 
 -- ----------------------------------------------------------------------------
@@ -1442,8 +1463,6 @@ runTxCreateWitness (TxBodyFile txbodyFile) witSignData mbNw (OutputFile oFile) =
 
       firstExceptT ShelleyTxCmdWriteFileError . newExceptT
         $ writeFileTextEnvelope oFile Nothing witness
-
-newtype CddlTx = CddlTx {unCddlTx :: InAnyCardanoEra Tx}
 
 runTxSignWitness
   :: TxBodyFile
