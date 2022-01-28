@@ -40,10 +40,10 @@ The output is the transaction fee in lovelace:
 
 Registering the stake address, not only pay transaction fees, but also includes a _deposit_ (which you get back when deregister the key) as stated in the protocol parameters:
 
-The deposit amount can be found in the `protocol.json` under `keyDeposit`, for example in Shelley Mainnet:
+The deposit amount can be found in the `protocol.json` under `stakeAddressDeposit`, for example in Shelley Mainnet:
 
     ...
-    "keyDeposit": 2000000,
+    "stakeAddressDeposit": 2000000,
     ...
 
 Query the UTXO of the address that pays for the transaction and deposit:
