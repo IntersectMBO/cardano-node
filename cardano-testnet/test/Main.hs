@@ -36,7 +36,7 @@ tests = do
       , ignoreOnWindows "Spec.Plutus.Direct.ScriptContextEquality"  Spec.Plutus.Direct.ScriptContextEquality.hprop_plutus_script_context_equality
       , ignoreOnWindows "Spec.Plutus.Direct.ScriptContextEqualityMint" Spec.Plutus.Direct.ScriptContextEqualityMint.hprop_plutus_script_context_mint_equality
         -- There is a blocking call on Windows that prevents graceful shutdown and we currently aren't testing the shutdown IPC flag.
-      , ignoreOnWindows "Spec.Shutdown" Spec.Shutdown.hprop_shutdown
+      , H.testProperty "Spec.Shutdown" Spec.Shutdown.hprop_shutdown
       ]
     ]
 
