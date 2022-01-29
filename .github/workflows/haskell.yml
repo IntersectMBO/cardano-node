@@ -29,7 +29,12 @@ jobs:
         ghcup set     ghc   ${{ matrix.ghc   }}
         ghcup install cabal ${{ matrix.cabal }}
         ghcup set     cabal ${{ matrix.cabal }}
-        echo "CABAL_DIR=$HOME/.cabal" >> $GITHUB_ENV
+
+    - name: Setup CABAL_DIR for Windows
+      if: matrix.os == 'windows-latest'
+      run: |
+        export CABAL_DIR="$(cygpath -w $HOME)/.cabal"
+        echo "CABAL_DIR=$CABAL_DIR" >> $GITHUB_ENV
 
     - name: Set cache version
       run: echo "CACHE_VERSION=grFfw8r" >> $GITHUB_ENV
