@@ -121,6 +121,7 @@ test-suite cardano-testnet-tests
                       , tasty
                       , tasty-hedgehog
                       , text
+                      , unix
                       , unordered-containers
 
   other-modules:        Spec.Plutus.Direct.CertifyingAndWithdrawingPlutus

@@ -34,6 +34,7 @@ import qualified System.Process as IO
 import qualified Test.Base as H
 import qualified Test.Process as H
 import qualified Testnet.Conf as H
+import qualified System.Posix.IO as POSIX
 
 {- HLINT ignore "Redundant <&>" -}
 {- HLINT ignore "Redundant return" -}
@@ -60,8 +61,10 @@ hprop_shutdown = H.integration . H.runFinallies . H.workspace "chairman" $ \temp
   hNodeStdout <- H.openFile nodeStdoutFile IO.WriteMode
   hNodeStderr <- H.openFile nodeStderrFile IO.WriteMode
 
+  (fdRead, fdWrite) <- H.evalIO POSIX.createPipe
+
   -- Run cardano-node with pipe as stdin.  Use 0 file descriptor as shutdown-ipc
-  (mStdin, _mStdout, _mStderr, pHandle, _releaseKey) <- H.createProcess =<<
+  (_mStdin, _mStdout, _mStderr, pHandle, _releaseKey) <- H.createProcess =<<
     ( H.procNode
       [ "run"
       , "--config", projectBase </> "configuration/cardano/mainnet-config.json"
@@ -70,16 +73,18 @@ hprop_shutdown = H.integration . H.runFinallies . H.workspace "chairman" $ \temp
       , "--socket-path", IO.sprocketArgumentName sprocket
       , "--host-addr", "127.0.0.1"
       , "--port", show @Int port
-      , "--shutdown-ipc", "0"
+      , "--shutdown-ipc", show fdRead
       ] <&>
       ( \cp -> cp
-        { IO.std_in = IO.CreatePipe
+        { IO.std_in = IO.Inherit
         , IO.std_out = IO.UseHandle hNodeStdout
         , IO.std_err = IO.UseHandle hNodeStderr
         , IO.cwd = Just tempBaseAbsPath
         }
       )
     )
+
+  void . H.evalIO $ POSIX.closeFd fdRead
 
   H.threadDelay $ 10 * 1000000
 
@@ -93,7 +98,7 @@ hprop_shutdown = H.integration . H.runFinallies . H.workspace "chairman" $ \temp
 
   mExitCodeRunning === Nothing
 
-  forM_ mStdin $ \hStdin -> H.evalIO $ IO.hClose hStdin
+  void . H.evalIO $ POSIX.closeFd fdWrite
 
   H.threadDelay $ 1 * 1000000
 
