@@ -15,6 +15,7 @@ jobs:
       matrix:
         ghc: ["8.10.7"]
         os: [ubuntu-latest]
+        cabal: ["3.6.2.0"]
 
     env:
       # current ref from: 27.02.2022
@@ -29,11 +30,18 @@ jobs:
     - name: Add build script path
       run: echo "$(pwd)/.github/bin" >> $GITHUB_PATH
 
-    - uses: haskell/actions/setup@v1
-      id: setup-haskell
-      with:
-        ghc-version: ${{ matrix.ghc }}
-        cabal-version: 3.6.2.0
+    - name: Home
+      run: echo "${{ env.HOME }}"
+
+    - name: Install Haskell tooling
+      run: |
+        ghcup install ghc   ${{ matrix.ghc   }}
+        ghcup set     ghc   ${{ matrix.ghc   }}
+        ghcup install cabal ${{ matrix.cabal }}
+        ghcup set     cabal ${{ matrix.cabal }}
+        export CABAL_DIR="$(cygpath -w $HOME/.cabal 2> /dev/null || echo $HOME/.cabal)"
+        echo "CABAL_DIR=$CABAL_DIR"
+        echo "CABAL_DIR=$CABAL_DIR" >> $GITHUB_ENV
 
     - name: Haskell versions
       run: |

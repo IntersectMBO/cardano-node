@@ -27,6 +27,7 @@ jobs:
       matrix:
         ghc: ["8.10.7"]
         os: [ubuntu-latest, macos-latest, windows-latest]
+        cabal: ["3.6.2.0"]
 
     env:
       # current ref from: 27.02.2022
@@ -42,11 +43,22 @@ jobs:
       run: |
         echo "BASH_PATH=$(cd $(dirname $(which bash)); pwd -W)/bash.exe" >> $GITHUB_ENV
 
-    - uses: haskell/actions/setup@v1
-      id: setup-haskell
-      with:
-        ghc-version: ${{ matrix.ghc }}
-        cabal-version: 3.6.2.0
+    - name: Install Haskell tooling
+      run: |
+        ghcup install ghc   ${{ matrix.ghc   }}
+        ghcup set     ghc   ${{ matrix.ghc   }}
+        ghcup install cabal ${{ matrix.cabal }}
+        ghcup set     cabal ${{ matrix.cabal }}
+        export CABAL_DIR="$(cygpath -w $HOME/.cabal 2> /dev/null || echo $HOME/.cabal)"
+        echo "CABAL_DIR=$CABAL_DIR"
+        echo "CABAL_DIR=$CABAL_DIR" >> $GITHUB_ENV
+
+    - name: Fix CABAL_DIR on Windows
+      if: runner.os == 'Windows'
+      run: echo "CABAL_DIR=C:/sr" >> $GITHUB_ENV
+
+    - name: Environment
+      run: env
 
     - name: Set cache version
       run: echo "CACHE_VERSION=grFfw8r" >> $GITHUB_ENV
@@ -243,6 +255,9 @@ jobs:
     - name: Cabal update
       run: retry 2 cabal update
 
+    - name: Cabal directory
+      run: ls -al ${{ env.CABAL_DIR }}
+
     - name: Configure build
       run: |
         if [ "${{github.event.inputs.tests}}" == "all" ]; then
@@ -265,7 +280,7 @@ jobs:
     - uses: actions/cache@v2
       name: Cache cabal store
       with:
-        path: ${{ steps.setup-haskell.outputs.cabal-store }}
+        path: ${{ env.CABAL_DIR }}
         key: cache-${{ env.CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}-${{ hashFiles('dependencies.txt') }}-${{ hashFiles('date.txt') }}
         restore-keys: |
           cache-${{ env.CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}-${{ hashFiles('dependencies.txt') }}-${{ hashFiles('date.txt') }}
