@@ -128,7 +128,7 @@ library
                       , bytestring
                       , deepseq
                       , cardano-api
-                      , cardano-config
+                      , cardano-git-rev
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
                       , cardano-ledger-alonzo
@@ -199,7 +199,7 @@ executable cardano-node
 
   other-modules:        Paths_cardano_node
 
-  build-depends:        cardano-config
+  build-depends:        cardano-git-rev
                       , cardano-node
                       , cardano-prelude
                       , optparse-applicative-fork

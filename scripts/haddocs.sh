@@ -55,7 +55,7 @@ if [ ${REGENERATE} == "true" ]; then
   cabal haddock "${HADDOCK_OPTS[@]}" \
     cardano-api \
     cardano-cli \
-    cardano-config \
+    cardano-git-rev \
     cardano-node \
     hedgehog-extras \
     exe:cardano-cli \

@@ -44,7 +44,7 @@ library
                      , attoparsec
                      , attoparsec-iso8601
                      , bytestring
-                     , cardano-config
+                     , cardano-git-rev
                      , cardano-prelude
                      , iohk-monitoring
                      , cardano-slotting

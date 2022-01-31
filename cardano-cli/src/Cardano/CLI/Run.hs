@@ -24,7 +24,7 @@ import           Cardano.CLI.Shelley.Run (ShelleyClientCmdError, renderShelleyCl
 
 import           Cardano.CLI.Render (customRenderHelp)
 
-import           Cardano.Config.Git.Rev (gitRev)
+import           Cardano.Git.Rev (gitRev)
 import           Data.Version (showVersion)
 import           Options.Applicative.Help.Core
 import           Options.Applicative.Types (OptReader (..), Option (..), Parser (..),

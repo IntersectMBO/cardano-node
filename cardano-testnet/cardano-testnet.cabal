@@ -76,7 +76,7 @@ executable cardano-testnet
   main-is:              Main.hs
 
   build-depends:        ansi-terminal
-                      , cardano-config
+                      , cardano-git-rev
                       , cardano-testnet
                       , hedgehog
                       , hedgehog-extras

@@ -1,4 +1,3 @@
-{-# LANGUAGE ImportQualifiedPost #-}
 -- | Dispatch for running all the CLI commands
 module Cardano.Unlog.Run
   ( Command(..)
@@ -9,17 +8,16 @@ module Cardano.Unlog.Run
   , gitRev
   ) where
 
-import Cardano.Prelude
+import           Cardano.Prelude
 
-import Control.Monad.Trans.Except.Extra (firstExceptT)
-import Data.Aeson                 qualified as AE
-import Data.ByteString.Lazy.Char8 qualified as LBS
+import           Control.Monad.Trans.Except.Extra (firstExceptT)
+import qualified Data.Aeson as AE
+import qualified Data.ByteString.Lazy.Char8 as LBS
 
-import Cardano.Analysis.Driver (AnalysisCmdError, renderAnalysisCmdError,
-           runAnalysisCommand)
-import Cardano.Unlog.Commands (AnalysisCommand)
-
-import Cardano.Analysis.Version
+import           Cardano.Analysis.Driver (AnalysisCmdError, renderAnalysisCmdError,
+                   runAnalysisCommand)
+import           Cardano.Analysis.Version (getVersion, gitRev)
+import           Cardano.Unlog.Commands (AnalysisCommand)
 
 -- | Sub-commands of 'locli'.
 newtype Command =
