@@ -585,7 +585,7 @@ hprop_plutus_certifying_withdrawing = H.integration . H.runFinallies . H.workspa
         H.failMessage callStack "cardano-cli query tip returned Nothing for EpochNo"
       Just currEpoch -> return currEpoch
 
-  let rewardsEpoch = currEpoch + 4
+  let rewardsEpoch = currEpoch + 5
   waitedEpoch <- waitUntilEpoch
                    (work </> "current-tip.json")
                    testnetMagic
