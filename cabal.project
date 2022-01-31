@@ -148,7 +148,7 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/hedgehog-extras
-  tag: f49a17cf2bde61f119ff2f85803716a74b03062a
+  tag: d9b96b58e9216b14a831830b2ddc99644f805d73
   --sha256: 0d0jyzg7a8pcmxhhr409krlh9qsxh58aaqd45fn90ki4wjiq5w66
 
 source-repository-package
