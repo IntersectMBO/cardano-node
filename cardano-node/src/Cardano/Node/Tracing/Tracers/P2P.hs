@@ -728,6 +728,8 @@ namesForConnectionManager TrConnectionManagerCounters {} = ["ConnectionManagerCo
 namesForConnectionManager TrState {} = ["State"]
 namesForConnectionManager ConnectionManager.TrUnexpectedlyFalseAssertion {} =
                             ["UnexpectedlyFalseAssertion"]
+namesForConnectionManager ConnectionManager.TrInboundGovernorError {} =
+                            ["InboundGovernorError"]
 
 severityConnectionManager ::
   ConnectionManagerTrace addr
@@ -761,6 +763,8 @@ severityConnectionManager TrConnectionTimeWaitDone {}             = Debug
 severityConnectionManager TrConnectionManagerCounters {}          = Info
 severityConnectionManager TrState {}                              = Info
 severityConnectionManager ConnectionManager.TrUnexpectedlyFalseAssertion {} =
+                            Error
+severityConnectionManager ConnectionManager.TrInboundGovernorError {} =
                             Error
 
 instance (Show addr, Show versionNumber, Show agreedOptions, LogFormatting addr,
@@ -897,6 +901,11 @@ instance (Show addr, Show versionNumber, Show agreedOptions, LogFormatting addr,
         mkObject
           [ "kind" .= String "UnexpectedlyFalseAssertion"
           , "info" .= String (pack . show $ info)
+          ]
+    forMachine _dtal (ConnectionManager.TrInboundGovernorError err) =
+        mkObject
+          [ "kind" .= String "InboundGovernorError"
+          , "info" .= String (pack . show $ err)
           ]
     forHuman = pack . show
     asMetrics (TrConnectionManagerCounters ConnectionManagerCounters {..}) =
@@ -1045,6 +1054,10 @@ docConnectionManager = Documented
       (ConnectionManager.TrUnexpectedlyFalseAssertion anyProto)
       []
       ""
+  ,  DocMsg
+      (ConnectionManager.TrInboundGovernorError anyProto)
+      []
+      ""
   ]
 
 --------------------------------------------------------------------------------
@@ -1144,6 +1157,8 @@ namesForInboundGovernor TrInboundGovernorCounters {} = ["InboundGovernorCounters
 namesForInboundGovernor TrRemoteState {}           = ["RemoteState"]
 namesForInboundGovernor InboundGovernor.TrUnexpectedlyFalseAssertion {} =
                             ["UnexpectedlyFalseAssertion"]
+namesForInboundGovernor InboundGovernor.TrInboundGovernorError {} =
+                            ["InboundGovernorError"]
 
 severityInboundGovernor :: InboundGovernorTrace peerAddr -> SeverityS
 severityInboundGovernor TrNewConnection {}                              = Debug
@@ -1162,6 +1177,7 @@ severityInboundGovernor TrMuxErrored {}                                 = Info
 severityInboundGovernor TrInboundGovernorCounters {}                    = Info
 severityInboundGovernor TrRemoteState {}                                = Debug
 severityInboundGovernor InboundGovernor.TrUnexpectedlyFalseAssertion {} = Error
+severityInboundGovernor InboundGovernor.TrInboundGovernorError {}       = Error
 
 instance (ToJSON addr, Show addr)
       => LogFormatting (InboundGovernorTrace addr) where
@@ -1243,6 +1259,10 @@ instance (ToJSON addr, Show addr)
   forMachine _dtal (InboundGovernor.TrUnexpectedlyFalseAssertion info) =
     mkObject [ "kind" .= String "UnexpectedlyFalseAssertion"
              , "remoteSt" .= String (pack . show $ info)
+             ]
+  forMachine _dtal (InboundGovernor.TrInboundGovernorError err) =
+    mkObject [ "kind" .= String "InboundGovernorError"
+             , "remoteSt" .= String (pack . show $ err)
              ]
   forHuman = pack . show
   asMetrics (TrInboundGovernorCounters InboundGovernorCounters {..}) =
@@ -1368,8 +1388,12 @@ docInboundGovernor peerAddr = Documented
       (TrRemoteState Map.empty)
       []
       ""
-  -- ,  DocMsg
-  --     (InboundGovernor.TrUnexpectedlyFalseAssertion protoIGAssertionLocation)
-  --     []
-  --     ""
+  ,  DocMsg
+      (TrUnexpectedlyFalseAssertion protoIGAssertionLocation)
+      []
+      ""
+  ,  DocMsg
+      (TrInboundGovernorError protoIGAssertionLocation)
+      []
+      ""
   ]

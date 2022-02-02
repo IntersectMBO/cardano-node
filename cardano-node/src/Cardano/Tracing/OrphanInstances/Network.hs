@@ -458,6 +458,7 @@ instance HasSeverityAnnotation (ConnectionManagerTrace addr (ConnectionHandlerTr
       TrConnectionManagerCounters {}          -> Info
       TrState {}                              -> Info
       ConnMgr.TrUnexpectedlyFalseAssertion {} -> Error
+      ConnMgr.TrInboundGovernorError {}       -> Error
 
 instance HasPrivacyAnnotation (ServerTrace addr)
 instance HasSeverityAnnotation (ServerTrace addr) where
@@ -491,6 +492,7 @@ instance HasSeverityAnnotation (InboundGovernorTrace addr) where
       InboundGovernor.TrRemoteState {}             -> Debug
       InboundGovernor.TrUnexpectedlyFalseAssertion {}
                                                    -> Error
+      InboundGovernor.TrInboundGovernorError {}    -> Error
 
 --
 -- | instances of @Transformable@
@@ -1861,6 +1863,11 @@ instance (Show addr, Show versionNumber, Show agreedOptions, ToObject addr,
           [ "kind" .= String "UnexpectedlyFalseAssertion"
           , "info" .= String (pack . show $ info)
           ]
+      ConnMgr.TrInboundGovernorError err ->
+        mkObject
+          [ "kind" .= String "InboundGovernorError"
+          , "info" .= String (pack . show $ err)
+          ]
 
 instance (Show addr, ToObject addr, ToJSON addr)
       => ToObject (ServerTrace addr) where
@@ -2023,4 +2030,8 @@ instance (ToJSON addr, Show addr)
   toObject _verb (InboundGovernor.TrUnexpectedlyFalseAssertion info) =
     mkObject [ "kind" .= String "UnexpectedlyFalseAssertion"
              , "remoteSt" .= String (pack . show $ info)
+             ]
+  toObject _verb (InboundGovernor.TrInboundGovernorError err) =
+    mkObject [ "kind" .= String "InboundGovernorError"
+             , "remoteSt" .= String (pack . show $ err)
              ]
