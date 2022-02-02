@@ -10,6 +10,7 @@ packages:
     cardano-node-chairman
     cardano-submit-api
     cardano-testnet
+    cardano-tracer
     bench/cardano-topology
     bench/locli
     bench/tx-generator
@@ -40,6 +41,9 @@ package trace-dispatcher
   ghc-options: -Werror
 
 package trace-resources
+  ghc-options: -Werror
+
+package cardano-tracer
   ghc-options: -Werror
 
 package plutus-examples
@@ -87,6 +91,9 @@ package trace-dispatcher
   tests: True
 
 package trace-forward
+  tests: True
+
+package cardano-tracer
   tests: True
 
 package trace-resources
@@ -286,6 +293,12 @@ source-repository-package
   location: https://github.com/input-output-hk/ekg-forward
   tag: 297cd9db5074339a2fb2e5ae7d0780debb670c63
   --sha256: 1zcwry3y5rmd9lgxy89wsb3k4kpffqji35dc7ghzbz603y1gy24g
+
+source-repository-package
+  type: git
+  location: https://github.com/HeinrichApfelmus/threepenny-gui
+  tag: e3bb8283fc7d2e8aa374eea29426002e8dcd67a8
+  --sha256: 0nf836b552asgpwn2gxwl7yd7ssdhb1wkvdqz6s4dpzqnlpyivx9
 
 -- Drops an instance breaking our code. Should be released to Hackage eventually.
 source-repository-package

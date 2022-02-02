@@ -1,0 +1,14 @@
+{
+  "networkMagic": 764824073,
+  "network": {
+    "tag": "AcceptAt",
+    "contents": "/run/user/1000/cardano-tracer-demo.sock"
+  },
+  "logging": [
+    {
+      "logRoot": "/run/user/1000/cardano-tracer-demo-logs",
+      "logMode": "FileMode",
+      "logFormat": "ForMachine"
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+---
+networkMagic: 764824073
+network:
+  tag: AcceptAt
+  contents: "/tmp/forwarder.sock"
+loRequestNum: 100
+ekgRequestFreq: 2
+hasEKG:
+- epHost: 127.0.0.1
+  epPort: 3100
+- epHost: 127.0.0.1
+  epPort: 3101
+hasPrometheus:
+  epHost: 127.0.0.1
+  epPort: 3000
+logging:
+- logRoot: "/tmp/cardano-tracer-h-logs"
+  logMode: FileMode
+  logFormat: ForHuman
+- logRoot: "/tmp/cardano-tracer-m-logs"
+  logMode: FileMode
+  logFormat: ForMachine
+rotation:
+  rpFrequencySecs: 15
+  rpKeepFilesNum: 1
+  rpLogLimitBytes: 50000
+  rpMaxAgeHours: 1
+verbosity: ErrorsOnly

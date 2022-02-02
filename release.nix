@@ -141,8 +141,10 @@ let
     [ "plutus-scripts" ]
     [ "exes" "plutus-example" ] [ "haskellPackages" "plutus-example" ] [ "tests" "plutus-example" ] [ "checks" "tests" "plutus-example"]
   ] ++ onlyBuildOnDefaultSystem;
-  noMusl64Build = [ ["checks"] ["tests"] ["benchmarks"] ["haskellPackages"] ["plan-nix"]]
-    ++ noCrossBuild;
+  noMusl64Build = [
+    ["checks"] ["tests"] ["benchmarks"] ["haskellPackages"] ["plan-nix"]
+    [ "haskellPackages" "cardano-tracer" ] [ "tests" "cardano-tracer" ] [ "exes" "cardano-tracer" ]
+  ] ++ noCrossBuild;
 
   # Remove build jobs for which cross compiling does not make sense.
   filterProject = noBuildList: project: mapAttrsRecursiveCond (a: !(isDerivation a)) (path: value:
