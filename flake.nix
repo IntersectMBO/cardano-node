@@ -13,13 +13,6 @@
       url = "github:input-output-hk/iohk-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    membench = {
-      url = "github:input-output-hk/cardano-memory-benchmark";
-      inputs.cardano-node-measured.follows = "/";
-      #inputs.cardano-node-snapshot.url = "github:input-output-hk/cardano-node/release/1.33";
-      inputs.cardano-node-process.follows = "/";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
     # Custom user config (default: empty), eg.:
     # { outputs = {...}: {
     #   # Cutomize listeming port of node scripts:
@@ -30,7 +23,7 @@
     customConfig.url = "github:input-output-hk/empty-flake";
   };
 
-  outputs = { self, nixpkgs, utils, haskellNix, iohkNix, customConfig, membench }:
+  outputs = { self, nixpkgs, utils, haskellNix, iohkNix, customConfig }:
     let
       inherit (nixpkgs) lib;
       inherit (lib) head systems mapAttrs recursiveUpdate mkDefault
@@ -143,8 +136,6 @@
     ) // {
       overlay = import ./overlay.nix self;
       hydraJobs.x86_64-linux = {
-        membenches = membench.outputs.packages.x86_64-linux.batch-hydra-report;
-        snapshot = membench.outputs.packages.x86_64-linux.snapshot;
       };
       nixosModules = {
         cardano-node = { pkgs, lib, ... }: {
