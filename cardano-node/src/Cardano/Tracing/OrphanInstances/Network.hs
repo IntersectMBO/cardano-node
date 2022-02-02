@@ -498,6 +498,7 @@ instance HasSeverityAnnotation (InboundGovernorTrace addr) where
       InboundGovernor.TrRemoteState {}             -> Debug
       InboundGovernor.TrUnexpectedlyFalseAssertion {}
                                                    -> Error
+      InboundGovernor.TrInboundGovernorError {}    -> Error
 
 instance HasPrivacyAnnotation (Server.RemoteTransitionTrace addr)
 instance HasSeverityAnnotation (Server.RemoteTransitionTrace addr) where
@@ -2129,6 +2130,10 @@ instance (ToJSON addr, Show addr)
   toObject _verb (InboundGovernor.TrUnexpectedlyFalseAssertion info) =
     mkObject [ "kind" .= String "UnexpectedlyFalseAssertion"
              , "remoteSt" .= String (pack . show $ info)
+             ]
+  toObject _verb (InboundGovernor.TrInboundGovernorError err) =
+    mkObject [ "kind" .= String "InboundGovernorError"
+             , "remoteSt" .= String (pack . show $ err)
              ]
 
 instance ToJSON addr

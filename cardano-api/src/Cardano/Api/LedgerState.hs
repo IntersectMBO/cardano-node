@@ -120,8 +120,6 @@ import qualified Cardano.Protocol.TPraos.API as TPraos
 import qualified Cardano.Ledger.Shelley.Genesis as Shelley.Spec
 import qualified Cardano.Protocol.TPraos.BHeader as TPraos
 import qualified Cardano.Protocol.TPraos.Rules.Tickn as Tick
-import qualified Cardano.Ledger.Shelley.Genesis as Shelley.Spec
-import qualified Cardano.Protocol.TPraos.API as TPraos
 import           Cardano.Slotting.EpochInfo (EpochInfo)
 import qualified Cardano.Slotting.EpochInfo.API as Slot
 import           Cardano.Slotting.Slot (WithOrigin (At, Origin))
