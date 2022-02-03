@@ -12,6 +12,10 @@ module Cardano.Node.Tracing.Tracers.NodeToClient
   , namesForTChainSync
   , docTChainSync
 
+  , severityTTxMonitor
+  , namesForTTxMonitor
+  , docTTxMonitor
+
   , severityTTxSubmission
   , namesForTTxSubmission
   , docTTxSubmission
@@ -28,14 +32,19 @@ import           Data.Text (pack)
 import           Network.TypedProtocol.Codec (AnyMessageAndAgency (..))
 import           Text.Show
 
+import           Cardano.Slotting.Slot (SlotNo)
+
+import           Network.Mux.Trace (TraceLabelPeer (..))
+
 import           Ouroboros.Consensus.Ledger.Query (Query)
-import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx)
+import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx, GenTxId)
 
 import           Ouroboros.Network.Block (Point, Serialised, Tip)
 import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
 import           Ouroboros.Network.Driver.Simple (TraceSendRecv (..))
 import           Ouroboros.Network.Protocol.ChainSync.Type as ChainSync
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as LSQ
+import qualified Ouroboros.Network.Protocol.LocalTxMonitor.Type as LTM
 import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Type as LTS
 
 
@@ -84,7 +93,7 @@ namesForTChainSync (BlockFetch.TraceLabelPeer _ v) = "NodeToClient" : namesTChai
   where
 
     namesTChainSync (TraceSendMsg msg) = "Send" : namesTChainSync' msg
-    namesTChainSync (TraceRecvMsg msg) = "Recieve" : namesTChainSync' msg
+    namesTChainSync (TraceRecvMsg msg) = "Receive" : namesTChainSync' msg
 
     namesTChainSync' (AnyMessageAndAgency _agency msg) = namesTChainSync'' msg
 
@@ -214,6 +223,152 @@ docTChainSync = Documented [
   ]
 
 --------------------------------------------------------------------------------
+-- LocalTxMonitor Tracer
+--------------------------------------------------------------------------------
+
+severityTTxMonitor
+  :: TraceLabelPeer peer
+       (TraceSendRecv (LTM.LocalTxMonitor (GenTxId blk) (GenTx blk) SlotNo))
+  -> SeverityS
+severityTTxMonitor _ = Info
+
+namesForTTxMonitor
+  :: TraceLabelPeer peer
+       (TraceSendRecv (LTM.LocalTxMonitor (GenTxId blk) (GenTx blk) SlotNo))
+  -> [Text]
+namesForTTxMonitor (TraceLabelPeer _ v) = namesForTTxMonitor' v
+  where
+    namesForTTxMonitor' (TraceSendMsg msg) = "Send"    : namesForTTxMonitor'' msg
+    namesForTTxMonitor' (TraceRecvMsg msg) = "Receive" : namesForTTxMonitor'' msg
+
+    namesForTTxMonitor'' (AnyMessageAndAgency _agency msg) = namesForTTxMonitor''' msg
+
+    namesForTTxMonitor''' :: Message (LTM.LocalTxMonitor (GenTxId blk) (GenTx blk) SlotNo)
+                                     from to
+                          -> [Text]
+    namesForTTxMonitor''' LTM.MsgAcquire {} = ["Acquire"]
+    namesForTTxMonitor''' LTM.MsgAcquired {} = ["Acquired"]
+    namesForTTxMonitor''' LTM.MsgAwaitAcquire {} = ["AwaitAcquire"]
+    namesForTTxMonitor''' LTM.MsgNextTx {} = ["NextTx"]
+    namesForTTxMonitor''' LTM.MsgReplyNextTx {} = ["ReplyNextTx"]
+    namesForTTxMonitor''' LTM.MsgHasTx {} = ["HasTx"]
+    namesForTTxMonitor''' LTM.MsgReplyHasTx {} = ["ReplyHasTx"]
+    namesForTTxMonitor''' LTM.MsgGetSizes {} = ["GetSizes"]
+    namesForTTxMonitor''' LTM.MsgReplyGetSizes {} = ["ReplyGetSizes"]
+    namesForTTxMonitor''' LTM.MsgRelease {} = ["Release"]
+    namesForTTxMonitor''' LTM.MsgDone {} = ["Done"]
+
+instance LogFormatting (AnyMessageAndAgency (LTM.LocalTxMonitor txid tx slotNo)) where
+  forMachine _dtal (AnyMessageAndAgency stok LTM.MsgAcquire {}) =
+    mkObject [ "kind" .= String "MsgAcquire"
+             , "agency" .= String (pack $ show stok)
+             ]
+  forMachine _dtal (AnyMessageAndAgency stok LTM.MsgAcquired {}) =
+    mkObject [ "kind" .= String "MsgAcquired"
+             , "agency" .= String (pack $ show stok)
+             ]
+  forMachine _dtal (AnyMessageAndAgency stok LTM.MsgAwaitAcquire {}) =
+    mkObject [ "kind" .= String "MsgAwaitAcquire"
+             , "agency" .= String (pack $ show stok)
+             ]
+  forMachine _dtal (AnyMessageAndAgency stok LTM.MsgNextTx {}) =
+    mkObject [ "kind" .= String "MsgNextTx"
+             , "agency" .= String (pack $ show stok)
+             ]
+  forMachine _dtal (AnyMessageAndAgency stok LTM.MsgReplyNextTx {}) =
+    mkObject [ "kind" .= String "MsgReplyNextTx"
+             , "agency" .= String (pack $ show stok)
+             ]
+  forMachine _dtal (AnyMessageAndAgency stok LTM.MsgHasTx {}) =
+    mkObject [ "kind" .= String "MsgHasTx"
+             , "agency" .= String (pack $ show stok)
+             ]
+  forMachine _dtal (AnyMessageAndAgency stok LTM.MsgReplyHasTx {}) =
+    mkObject [ "kind" .= String "MsgReplyHasTx"
+             , "agency" .= String (pack $ show stok)
+             ]
+  forMachine _dtal (AnyMessageAndAgency stok LTM.MsgGetSizes {}) =
+    mkObject [ "kind" .= String "MsgGetSizes"
+             , "agency" .= String (pack $ show stok)
+             ]
+  forMachine _dtal (AnyMessageAndAgency stok LTM.MsgReplyGetSizes {}) =
+    mkObject [ "kind" .= String "MsgReplyGetSizes"
+             , "agency" .= String (pack $ show stok)
+             ]
+  forMachine _dtal (AnyMessageAndAgency stok LTM.MsgRelease {}) =
+    mkObject [ "kind" .= String "MsgRelease"
+             , "agency" .= String (pack $ show stok)
+             ]
+  forMachine _dtal (AnyMessageAndAgency stok LTM.MsgDone {}) =
+    mkObject [ "kind" .= String "MsgDone"
+             , "agency" .= String (pack $ show stok)
+             ]
+
+docTTxMonitor :: Documented
+   (TraceLabelPeer
+      localPeer
+      (TraceSendRecv
+         (LTM.LocalTxMonitor
+            (GenTxId blk) (GenTx blk) SlotNo)))
+docTTxMonitor = Documented
+    [ DocMsg
+        (TraceLabelPeer anyProto
+          (TraceSendMsg (AnyMessageAndAgency anyProto LTM.MsgAcquire)))
+        []
+        ""
+    , DocMsg
+        (TraceLabelPeer anyProto
+          (TraceSendMsg (AnyMessageAndAgency anyProto (LTM.MsgAcquired anyProto))))
+        []
+        ""
+    , DocMsg
+        (TraceLabelPeer anyProto
+          (TraceSendMsg (AnyMessageAndAgency anyProto LTM.MsgAwaitAcquire)))
+        []
+        ""
+    , DocMsg
+        (TraceLabelPeer anyProto
+          (TraceSendMsg (AnyMessageAndAgency anyProto LTM.MsgNextTx)))
+        []
+        ""
+    , DocMsg
+        (TraceLabelPeer anyProto
+          (TraceSendMsg (AnyMessageAndAgency anyProto (LTM.MsgReplyNextTx anyProto))))
+        []
+        ""
+    , DocMsg
+        (TraceLabelPeer anyProto
+          (TraceSendMsg (AnyMessageAndAgency anyProto (LTM.MsgHasTx anyProto))))
+        []
+        ""
+    , DocMsg
+        (TraceLabelPeer anyProto
+          (TraceSendMsg (AnyMessageAndAgency anyProto (LTM.MsgReplyHasTx anyProto))))
+        []
+        ""
+    , DocMsg
+        (TraceLabelPeer anyProto
+          (TraceSendMsg (AnyMessageAndAgency anyProto LTM.MsgGetSizes)))
+        []
+        ""
+    , DocMsg
+        (TraceLabelPeer anyProto
+          (TraceSendMsg (AnyMessageAndAgency anyProto (LTM.MsgReplyGetSizes anyProto))))
+        []
+        ""
+    , DocMsg
+        (TraceLabelPeer anyProto
+          (TraceSendMsg (AnyMessageAndAgency anyProto LTM.MsgRelease)))
+        []
+        ""
+    , DocMsg
+        (TraceLabelPeer anyProto
+          (TraceSendMsg (AnyMessageAndAgency anyProto LTM.MsgDone)))
+        []
+        ""
+    ]
+
+--------------------------------------------------------------------------------
 -- LocalTxSubmission Tracer
 --------------------------------------------------------------------------------
 
@@ -242,7 +397,7 @@ namesForTTxSubmission :: BlockFetch.TraceLabelPeer peer
 namesForTTxSubmission (BlockFetch.TraceLabelPeer _ v) = namesTTxSubmission v
   where
     namesTTxSubmission (TraceSendMsg msg) = "Send" : namesTTxSubmission' msg
-    namesTTxSubmission (TraceRecvMsg msg) = "Recieve" : namesTTxSubmission' msg
+    namesTTxSubmission (TraceRecvMsg msg) = "Receive" : namesTTxSubmission' msg
 
     namesTTxSubmission' (AnyMessageAndAgency _agency msg) = namesTTxSubmission'' msg
 

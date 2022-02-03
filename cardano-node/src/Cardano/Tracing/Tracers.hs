@@ -361,8 +361,8 @@ mkTracers blockConfig tOpts@(TracingOnLegacy trSel) tr nodeKern ekgDirect enable
                  tracePeerSelectionCountersMetrics
                    (tracePeerSelectionCounters trSel)
                    ekgDirect
-              <> tracerOnOff (tracePeerSelection trSel)
-                             verb "PeerSelection" tr
+              <> tracerOnOff (tracePeerSelectionCounters trSel)
+                             verb "PeerSelectionCounters" tr
            , P2P.dtPeerSelectionActionsTracer =
                tracerOnOff (tracePeerSelectionActions trSel)
                             verb "PeerSelectionActions" tr
@@ -372,7 +372,9 @@ mkTracers blockConfig tOpts@(TracingOnLegacy trSel) tr nodeKern ekgDirect enable
                     ekgDirect
               <> tracerOnOff (traceConnectionManager trSel)
                               verb "ConnectionManager" tr
-           , P2P.dtConnectionManagerTransitionTracer = nullTracer -- TODO
+           , P2P.dtConnectionManagerTransitionTracer =
+               tracerOnOff (traceConnectionManagerTransitions trSel)
+                           verb "ConnectionManagerTransition" tr
            , P2P.dtServerTracer =
                tracerOnOff (traceServer trSel) verb "Server" tr
            , P2P.dtInboundGovernorTracer =
@@ -381,7 +383,9 @@ mkTracers blockConfig tOpts@(TracingOnLegacy trSel) tr nodeKern ekgDirect enable
                    ekgDirect
               <> tracerOnOff (traceInboundGovernor trSel)
                               verb "InboundGovernor" tr
-           , P2P.dtInboundGovernorTransitionTracer = nullTracer -- TODO
+           , P2P.dtInboundGovernorTransitionTracer =
+               tracerOnOff (traceInboundGovernorTransitions trSel)
+                           verb "InboundGovernorTransition" tr
            , P2P.dtLocalConnectionManagerTracer =
                tracerOnOff (traceLocalConnectionManager trSel)
                             verb "LocalConnectionManager" tr
@@ -444,6 +448,7 @@ mkTracers _ _ _ _ _ enableP2P =
       }
     , nodeToClientTracers = NodeToClient.Tracers
       { NodeToClient.tChainSyncTracer = nullTracer
+      , NodeToClient.tTxMonitorTracer = nullTracer
       , NodeToClient.tTxSubmissionTracer = nullTracer
       , NodeToClient.tStateQueryTracer = nullTracer
       }
@@ -1267,6 +1272,9 @@ nodeToClientTracers' trSel verb tr =
   { NodeToClient.tChainSyncTracer =
       tracerOnOff (traceLocalChainSyncProtocol trSel)
                   verb "LocalChainSyncProtocol" tr
+  , NodeToClient.tTxMonitorTracer =
+      tracerOnOff (traceLocalTxMonitorProtocol trSel)
+                  verb "LocalTxMonitorProtocol" tr
   , NodeToClient.tTxSubmissionTracer =
       tracerOnOff (traceLocalTxSubmissionProtocol trSel)
                   verb "LocalTxSubmissionProtocol" tr

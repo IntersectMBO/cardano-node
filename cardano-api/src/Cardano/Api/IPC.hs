@@ -291,10 +291,17 @@ mkVersionedProtocols networkid ptcl unversionedClients =
                 (maybe Net.localStateQueryPeerNull
                        Net.Query.localStateQueryClientPeer
                        localStateQueryClientForBlock)
+        , localTxMonitorProtocol =
+            Net.InitiatorProtocolOnly $
+              Net.MuxPeer
+                nullTracer
+                cTxMonitorCodec
+                Net.localTxMonitorPeerNull
         }
       where
         Consensus.Codecs {
           Consensus.cChainSyncCodec,
+          Consensus.cTxMonitorCodec,
           Consensus.cTxSubmissionCodec,
           Consensus.cStateQueryCodec
         } = Consensus.clientCodecs codecConfig ptclBlockVersion ptclVersion

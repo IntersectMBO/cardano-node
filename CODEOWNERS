@@ -42,4 +42,10 @@ cardano-node/src/Cardano/Tracing/OrphanInstances/Network.hs   @devops @coot @kar
 cardano-node/src/Cardano/Node/Configuration/Logging.hs        @devops
 cardano-node/src/Cardano/Node/Configuration/Socket.hs         @devops
 cardano-node/src/Cardano/Node/Tracing                         @deepfire @denisshevchenko @jutaro
+cardano-node/src/Cardano/Node/Tracing/Tracers/Diffusion.hs    @deepfire @denisshevchenko @jutaro @coot @karknu
+cardano-node/src/Cardano/Node/Tracing/Tracers/NodeToClient.hs @deepfire @denisshevchenko @jutaro @coot @karknu
+cardano-node/src/Cardano/Node/Tracing/Tracers/NodeToServer.hs @deepfire @denisshevchenko @jutaro @coot @karknu
+cardano-node/src/Cardano/Node/Tracing/Tracers/NonP2P.hs       @deepfire @denisshevchenko @jutaro @coot @karknu
+cardano-node/src/Cardano/Node/Tracing/Tracers/P2P.hs          @deepfire @denisshevchenko @jutaro @coot @karknu
+cardano-node/src/Cardano/Node/Tracing/Tracers/Peer.hs         @deepfire @denisshevchenko @jutaro @coot @karknu
 cardano-node/src/Cardano/Node/Run.hs                          @devops
