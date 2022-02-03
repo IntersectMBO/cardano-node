@@ -69,6 +69,7 @@ final: prev: with final;
   # expose the db-converter and cardano-ping from the ouroboros-network we depend on
   inherit (cardanoNodeHaskellPackages.ouroboros-consensus-byron.components.exes) db-converter;
   inherit (cardanoNodeHaskellPackages.network-mux.components.exes) cardano-ping;
+  inherit (cardanoNodeHaskellPackages.ouroboros-consensus-cardano.components.exes) db-analyser;
 
   cabal = haskell-nix.tool compiler-nix-name "cabal" {
     version = "latest";
