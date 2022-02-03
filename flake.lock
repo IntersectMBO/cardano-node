@@ -67,6 +67,25 @@
         "type": "github"
       }
     },
+    "cardano-mainnet-mirror": {
+      "inputs": {
+        "nixpkgs": "nixpkgs"
+      },
+      "locked": {
+        "lastModified": 1642701714,
+        "narHash": "sha256-SR3luE+ePX6U193EKE/KSEuVzWAW0YsyPYDC4hOvALs=",
+        "owner": "input-output-hk",
+        "repo": "cardano-mainnet-mirror",
+        "rev": "819488be9eabbba6aaa7c931559bc584d8071e3d",
+        "type": "github"
+      },
+      "original": {
+        "owner": "input-output-hk",
+        "ref": "nix",
+        "repo": "cardano-mainnet-mirror",
+        "type": "github"
+      }
+    },
     "cardano-shell": {
       "flake": false,
       "locked": {
@@ -218,6 +237,31 @@
         "type": "github"
       }
     },
+    "membench": {
+      "inputs": {
+        "cardano-mainnet-mirror": "cardano-mainnet-mirror",
+        "cardano-node-measured": [],
+        "cardano-node-process": [],
+        "cardano-node-snapshot": [],
+        "nixpkgs": [
+          "nixpkgs"
+        ],
+        "ouroboros-network": "ouroboros-network"
+      },
+      "locked": {
+        "lastModified": 1643874957,
+        "narHash": "sha256-r+Jae6pSXjlLXKVdyHYszhOMaCsXTWN28j7EXkmrEug=",
+        "owner": "input-output-hk",
+        "repo": "cardano-memory-benchmark",
+        "rev": "0857a1ce3467b44227272e90abe0346601b9dc42",
+        "type": "github"
+      },
+      "original": {
+        "owner": "input-output-hk",
+        "repo": "cardano-memory-benchmark",
+        "type": "github"
+      }
+    },
     "nix-tools": {
       "flake": false,
       "locked": {
@@ -232,6 +276,20 @@
         "owner": "input-output-hk",
         "repo": "nix-tools",
         "type": "github"
+      }
+    },
+    "nixpkgs": {
+      "locked": {
+        "lastModified": 1642336556,
+        "narHash": "sha256-QSPPbFEwy0T0DrIuSzAACkaANPQaR1lZR/nHZGz9z04=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "f3d9d4bd898cca7d04af2ae4f6ef01f2219df3d6",
+        "type": "github"
+      },
+      "original": {
+        "id": "nixpkgs",
+        "type": "indirect"
       }
     },
     "nixpkgs-2003": {
@@ -315,11 +373,28 @@
         "type": "github"
       }
     },
+    "ouroboros-network": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1643385024,
+        "narHash": "sha256-9R4Z1jBsTcEgBHxhzjCJnroEcdfMsTjf8kwg6uPue+Q=",
+        "owner": "input-output-hk",
+        "repo": "ouroboros-network",
+        "rev": "8e97076176d465f5f4f86d5b5596220272630649",
+        "type": "github"
+      },
+      "original": {
+        "owner": "input-output-hk",
+        "repo": "ouroboros-network",
+        "type": "github"
+      }
+    },
     "root": {
       "inputs": {
         "customConfig": "customConfig",
         "haskellNix": "haskellNix",
         "iohkNix": "iohkNix",
+        "membench": "membench",
         "nixpkgs": [
           "haskellNix",
           "nixpkgs-2105"
