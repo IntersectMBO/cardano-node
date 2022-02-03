@@ -32,11 +32,15 @@ main() {
         collect )    op_collect "$@";;
         process )    op_process;;
         render )     op_render;;
+        render-html )
+                     op_render_html;;
+        render-hydra-charts )
+                     op_render_hydra_charts "$@";;
 
         report )     op_collect "$@" | op_process | op_render;;
 
         call )       eval "$@";;
-        * ) echo "ERROR:  operation must be one of:  collect process render report" >&2; exit 1;; esac
+        * ) echo "ERROR:  operation must be one of:  collect process render render-hydra-charts report" >&2; exit 1;; esac
 }
 
 hardcoded_branch='membench'
@@ -112,6 +116,25 @@ function op_render() {
     jq 'include "render";
 
         render('"$header_footer"')
+       ' --raw-output
+}
+
+function op_render_html() {
+    jq 'include "render";
+
+        render_html
+       ' --raw-output
+}
+
+function op_render_hydra_charts() {
+    local config='baseline'
+    while test $# -ge 1
+    do case "$1" in
+        --config )          config=$2; shift;;
+        * )                 break;; esac; shift; done
+    jq 'include "render";
+
+        render_hydra_charts_for_config ("'$config'")
        ' --raw-output
 }
 

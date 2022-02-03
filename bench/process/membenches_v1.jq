@@ -11,29 +11,37 @@ def format_specs:
      # , post: not
      }]
 , result_specs:
-    [{ key: "RssAvg",  header: "Avg RSS, MB"
-     , path: ["RSS",  "avg"], round: true
+    [{ key: "Average-RSS",      header: "Average RSS",      unit: "MB"
+     , path: ["RSS",  "avg"]
+     , round: true
      }
-    ,{ key: "RssMax",  header: "Max RSS, MB"
-     , path: ["RSS",  "max"], round: true
+    ,{ key: "Peak-RSS",         header: "Peak RSS",         unit: "MB"
+     , path: ["RSS",  "max"]
+     , round: true
      }
-    ,{ key: "HeapAvg", header: "Avg heap, MB"
-     , path: ["Heap", "avg"], round: true
+    ,{ key: "Average-RTS-heap", header: "Average RTS heap", unit: "MB"
+     , path: ["Heap", "avg"]
+     , round: true
      }
-    ,{ key: "HeapMax", header: "Max heap, MB"
-     , path: ["Heap", "max"], round: true
+    ,{ key: "Peak-RTS-heap",    header: "Peak RTS heap",    unit: "MB"
+     , path: ["Heap", "max"]
+     , round: true
      }
-    ,{ key: "WallSec", header: "Wall, s"
-     , path: ["totaltime"], round: true
+    ,{ key: "Wall-clock-time",  header: "Wall clock time",  unit: "s"
+     , path: ["totaltime"]
+     , round: true
      }
-    ,{ key: "CpuMax",  header: "OS CPU, s"
-     , path: ["CentiCpuMax"], scale: 100, round: true
+    ,{ key: "OS-CPU-time",      header: "OS CPU time",      unit: "s"
+     , path: ["CentiCpuMax"]
+     , round: true, scale: 100
      }
-    ,{ key: "MutMax",  header: "Mutator, s"
-     , path: ["CentiMutMax"], scale: 100, round: true
+    ,{ key: "RTS-mutator-time", header: "RTS mutator time", unit: "s"
+     , path: ["CentiMutMax"]
+     , round: true, scale: 100
      }
-    ,{ key: "GCSec",   header: "GC time, s"
-     , path: ["SecGC"], round: true
+    ,{ key: "RTS-GC-time",      header: "RTS GC time",      unit: "s"
+     , path: ["SecGC"]
+     , round: true
      }
     ]
 };

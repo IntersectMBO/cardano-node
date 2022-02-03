@@ -17,6 +17,120 @@ def var(fname; f):
     .[fname] as $val
   | "\($val.mean | f) | \("\($val.relstddev)" | .[:4])";
 
+def render_value(spec; val):
+  (val.mean / (spec.scale // 1))
+  | if spec.round
+    then ceil
+    else . end
+  | tostring;
+
+def render_value_at_index(spec; val; ix):
+  (val.raw[ix] / (spec.scale // 1))
+  | if spec.round
+    then ceil
+    else . end
+  | tostring;
+
+def render_value_relstddev(spec; val):
+  (val.relstddev / (spec.scale // 1) * 100)
+  | tostring
+  | .[:5];
+
+def render_config_hydra_charts (res):
+    . as $x
+  | (res
+      | map(. as $spec
+             | $x[$spec.key] as $val
+             # For each value, produce two Hydra metrics:
+             #  - (id,     value, unit)
+             #  - (id-CoV, CoV,   %)
+             | [ $spec.key
+               , render_value($spec; $val)
+               , $spec.unit
+               , $spec.key + "-coeff-variation"
+               , render_value_relstddev($spec; $val)
+               , "%"
+               ]
+            | join(" ")))
+    as $properties
+
+  | ($properties | join("\n"));
+
+def render_html_config_runs(cf; res; count):
+  [ "<table border=1>\n"
+  , "<caption>Per-run raw data for config '\(.config)'</caption>"
+  , "<tr><th>"
+  , ((cf + res)
+      | map(if .unit != null
+            then [ .header + ", " + .unit ]
+            else [ .header ] end)
+      | add
+      | join("</th><th>"))
+  , "</th></tr>\n"
+  , . as $x
+    |
+    ( [range(count)]
+    | map( . as $ix
+         | cf + res
+         | map(. as $spec
+                | $x[$spec.key] as $val
+                | if .unit != null
+                  then render_value_at_index($spec; $val; $ix)
+                  else $val | tostring end
+                | "<td>" + . + "</td>")
+           | add
+           | ("<tr>" + . + "</tr>\n"))
+    | add)
+  , "\n</table>"
+  ]
+  | add;
+
+def render_html_summary(cf; res):
+  [ "<table border=1>\n"
+  , "<caption>Summary stats for run</caption>"
+  , "<tr><th>"
+  , ((cf + res)
+      | map(if .unit != null
+            then [ .header + ", " + .unit
+                 , .header + ", " + "σ/μ"
+                 ]
+            else [ .header ] end)
+      | add
+      | join("</th><th>"))
+  , "</th></tr>\n"
+  , (.configs
+    | map( . as $x
+         | cf + res
+         | map(. as $spec
+                | $x[$spec.key] as $val
+                | if .unit != null
+                  then [ render_value($spec; $val)
+                       , "</td><td>"
+                       , render_value_relstddev($spec; $val) ]
+                  else [ $val | tostring ] end
+                | ["<td>"] + . + ["</td>"]
+                | add)
+           | add
+           | ("<tr>" + . + "</tr>\n"))
+    | add)
+  , "\n</table>"
+  ]
+  | add;
+
+def render_html:
+    .config_specs as $cf
+  | .result_specs as $res
+  | .runs         as $runs
+
+  | [render_html_summary($cf; $res)]
+    + (.configs
+        | map( . as $config
+               | render_html_config_runs($cf; $res;
+                                         $runs
+                                          | map(select(.config_name == $config.config))
+                                          | length)))
+  | join("\n<hr>\n");
+
 def render_config (format; cf; res):
     . as $x
   | (if format != "csv" then [null] else [] end
@@ -27,9 +141,8 @@ def render_config (format; cf; res):
      (res
       | map(. as $spec
             | $x[$spec.key] as $val
-            | [(($val.mean / ($val.scale // 1))
-               | if $spec.round then ceil else . end)
-              , ($val.relstddev | tostring | .[:5])])
+            | [ render_value($spec; $val)
+              , render_value_relstddev($spec; $val)])
       | add))
     as $columns
 
@@ -88,3 +201,14 @@ def render(header_footer):
     else . end
 | join("\n");
 
+def render_hydra_charts_for_config(config_name):
+  .result_specs as $result_specs
+| .configs
+| map(select(.config == config_name))
+| if . == null or . == []
+  then error ("render_hydra_charts_for_config: unknown config \(config_name)")
+  else .[0]
+  end
+| render_config_hydra_charts ($result_specs)
+# | join("\n")
+;
