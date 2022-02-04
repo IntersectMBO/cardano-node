@@ -28,6 +28,7 @@ import           Prelude (String)
 import           Control.Monad (fail)
 import           Data.Aeson
 import qualified Data.Aeson.Types as Aeson
+import qualified Data.Text as Text
 import           Data.Time.Clock (DiffTime)
 import           Data.Yaml (decodeFileThrow)
 import           Generic.Data (gmappend)
@@ -166,7 +167,7 @@ data PartialNodeConfiguration
          -- Logging parameters:
        , pncLoggingSwitch  :: !(Last Bool)
        , pncLogMetrics     :: !(Last Bool)
-       , pncTraceConfig    :: !(Last TraceOptions)
+       , pncTraceConfig    :: !(Last PartialTraceOptions)
 
          -- Configuration for testing purposes
        , pncMaybeMempoolCapacityOverride :: !(Last MempoolCapacityBytesOverride)
@@ -218,13 +219,13 @@ instance FromJSON PartialNodeConfiguration where
       pncLoggingSwitch'  <-                 v .:? "TurnOnLogging" .!= True
       pncLogMetrics      <- Last        <$> v .:? "TurnOnLogMetrics"
       useTraceDispatcher <-                 v .:? "UseTraceDispatcher" .!= False
-      pncTraceConfig     <- Last . Just <$> if pncLoggingSwitch'
-                                            then
-                                                 traceConfigParser v
-                                                 (if useTraceDispatcher
-                                                  then TraceDispatcher
-                                                  else TracingOnLegacy)
-                                            else pure TracingOff
+      pncTraceConfig     <-  if pncLoggingSwitch'
+                             then do
+                               partialTraceSelection <- parseJSON $ Object v
+                               if useTraceDispatcher
+                               then Last . Just <$> return (PartialTraceDispatcher partialTraceSelection)
+                               else Last . Just <$> return (PartialTracingOnLegacy partialTraceSelection)
+                             else Last . Just <$> return PartialTracingOff
 
       -- Protocol parameters
       protocol <-  v .:? "Protocol" .!= ByronProtocol
@@ -442,9 +443,6 @@ defaultPartialNodeConfiguration =
 lastOption :: Parser a -> Parser (Last a)
 lastOption = fmap Last . optional
 
-lastToEither :: String -> Last a -> Either String a
-lastToEither errMsg (Last x) = maybe (Left errMsg) Right x
-
 makeNodeConfiguration :: PartialNodeConfiguration -> Either String NodeConfiguration
 makeNodeConfiguration pnc = do
   configFile <- lastToEither "Missing YAML config file" $ pncConfigFile pnc
@@ -455,7 +453,7 @@ makeNodeConfiguration pnc = do
   protocolConfig <- lastToEither "Missing ProtocolConfig" $ pncProtocolConfig pnc
   loggingSwitch <- lastToEither "Missing LoggingSwitch" $ pncLoggingSwitch pnc
   logMetrics <- lastToEither "Missing LogMetrics" $ pncLogMetrics pnc
-  traceConfig <- lastToEither "Missing TraceConfig" $ pncTraceConfig pnc
+  traceConfig <- first Text.unpack $ partialTraceSelectionToEither $ pncTraceConfig pnc
   diffusionMode <- lastToEither "Missing DiffusionMode" $ pncDiffusionMode pnc
   snapshotInterval <- lastToEither "Missing SnapshotInterval" $ pncSnapshotInterval pnc
   shutdownConfig <- lastToEither "Missing ShutdownConfig" $ pncShutdownConfig pnc
