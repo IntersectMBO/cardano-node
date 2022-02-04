@@ -1293,7 +1293,7 @@ deriving instance Show (TxCertificates build era)
 
 
 -- ----------------------------------------------------------------------------
--- Transaction metadata (era-dependent)
+-- Transaction update proposal (era-dependent)
 --
 
 data TxUpdateProposal era where
