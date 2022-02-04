@@ -44,6 +44,7 @@ import           Testnet.Cardano (TestnetOptions (..), TestnetRuntime (..), defa
 import qualified Testnet.Cardano as TC
 import qualified Testnet.Conf as H
 import           Testnet.Utils (waitUntilEpoch)
+import qualified System.Info as SYS
 
 
 {-
@@ -60,6 +61,7 @@ isLinux = os == "linux"
 
 hprop_plutus_certifying_withdrawing :: Property
 hprop_plutus_certifying_withdrawing = H.integration . H.runFinallies . H.workspace "chairman" $ \tempAbsBasePath' -> do
+  H.note_ SYS.os
   projectBase <- H.note =<< H.noteIO . IO.canonicalizePath =<< H.getProjectBase
   conf@H.Conf { H.tempBaseAbsPath, H.tempAbsPath } <- H.noteShowM $ H.mkConf tempAbsBasePath' Nothing
 
