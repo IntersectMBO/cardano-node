@@ -34,6 +34,7 @@ import           Cardano.Node.Tracing
 import           Cardano.Node.Types
 
 import           Cardano.Logging hiding (traceWith)
+import           Cardano.Node.Tracing.StateRep (NodeState (..))
 import           Cardano.Node.Tracing.Tracers
 import           Cardano.Node.Tracing.Tracers.Peer (startPeerTracer)
 import           Cardano.Node.Tracing.Tracers.Resources (startResourceTracer)
@@ -76,6 +77,8 @@ initTraceDispatcher nc p networkMagic nodeKernel p2pMode = do
       (dataPointTracer dpStore)
       trConfig
       p2pMode
+
+  traceWith (nodeStateTracer tracers) NodeTracingOnlineConfiguring
 
   startResourceTracer
     (resourcesTracer tracers)
