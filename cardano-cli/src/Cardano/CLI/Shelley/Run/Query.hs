@@ -53,7 +53,6 @@ import qualified Cardano.Ledger.Crypto as Crypto
 import qualified Cardano.Ledger.Era as Era
 import qualified Cardano.Ledger.Era as Ledger
 import           Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
-import qualified Cardano.Protocol.TPraos.API as Ledger
 import           Cardano.Ledger.Shelley.Constraints
 import           Cardano.Ledger.Shelley.EpochBoundary
 import           Cardano.Ledger.Shelley.LedgerState (DPState (_pstate),
@@ -61,6 +60,7 @@ import           Cardano.Ledger.Shelley.LedgerState (DPState (_pstate),
                    NewEpochState (nesEs), PState (_fPParams, _pParams, _retiring))
 import qualified Cardano.Ledger.Shelley.PParams as Shelley
 import           Cardano.Ledger.Shelley.Scripts ()
+import qualified Cardano.Protocol.TPraos.API as Ledger
 import           Cardano.Slotting.EpochInfo (EpochInfo (..), epochInfoSlotToUTCTime, hoistEpochInfo)
 import           Control.Monad.Trans.Except (except)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistEither,
@@ -428,7 +428,7 @@ runQueryKesPeriodInfo (AnyConsensusModeParams cModeParams) network nodeOpCertFil
       ptclState <- executeQuery era cModeParams localNodeConnInfo ptclStateQinMode
       (opCertCounter, ptclStateCounter, opCertCounterStateDiag) <- opCertCounterStateCheck ptclState opCert
 
-      let diagnoses = opCertCounterStateDiag ++  [periodCheckDiag]
+      let diagnoses = opCertCounterStateDiag ++ [periodCheckDiag]
 
       if any anyFailureDiagnostic diagnoses
       then
@@ -624,6 +624,7 @@ data KesOpCertDiagnostic = SuccessDiagnostic SuccessDiagnostic
 anyFailureDiagnostic :: KesOpCertDiagnostic -> Bool
 anyFailureDiagnostic FailureDiagnostic{} = True
 anyFailureDiagnostic SuccessDiagnostic{} = False
+
 data SuccessDiagnostic
   = OpCertCounterMoreThanOrEqualToNodeState
   | OpCertCounterMoreThanOrEqualToZero
