@@ -9,6 +9,9 @@ module Cardano.Api.OperationalCertificate (
     OperationalCertificateIssueCounter(..),
     Shelley.KESPeriod(..),
     OperationalCertIssueError(..),
+    getHotKey,
+    getKesPeriod,
+    getOpCertCount,
     issueOperationalCertificate,
 
     -- * Data family instances
@@ -51,8 +54,9 @@ data OperationalCertificate =
 
 data OperationalCertificateIssueCounter =
      OperationalCertificateIssueCounter
-       !Word64
-       !(VerificationKey StakePoolKey) -- For consistency checking
+       { opCertIssueCount :: !Word64
+       , opCertIssueColdKey :: !(VerificationKey StakePoolKey) -- For consistency checking
+       }
   deriving (Eq, Show)
   deriving anyclass SerialiseAsCBOR
 
@@ -152,3 +156,12 @@ issueOperationalCertificate (KesVerificationKey kesVKey)
                     ShelleyNormalSigningKey poolSKey
                   Right (GenesisDelegateExtendedSigningKey delegSKey) ->
                     ShelleyExtendedSigningKey delegSKey
+
+getHotKey :: OperationalCertificate -> VerificationKey KesKey
+getHotKey (OperationalCertificate cert _) = KesVerificationKey $ Shelley.ocertVkHot cert
+
+getKesPeriod :: OperationalCertificate -> Word
+getKesPeriod (OperationalCertificate cert _) = Shelley.unKESPeriod $ Shelley.ocertKESPeriod cert
+
+getOpCertCount :: OperationalCertificate -> Word64
+getOpCertCount (OperationalCertificate cert _) = Shelley.ocertN cert

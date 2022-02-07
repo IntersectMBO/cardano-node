@@ -1,21 +1,67 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE NamedFieldPuns #-}
 
 module Cardano.CLI.Shelley.Output
-  ( QueryTipLocalState(..)
+  ( QueryKesPeriodInfoOutput (..)
+  , QueryTipLocalState(..)
   , QueryTipLocalStateOutput(..)
   ) where
 
 import           Cardano.Api
 import           Prelude
 
-import           Data.Aeson (FromJSON (..), KeyValue, ToJSON (..), object, pairs, withObject, (.:?),
-                   (.=))
+import           Data.Aeson
 import           Data.Text (Text)
+import           Data.Time.Clock (UTCTime)
+import           Data.Word
 
 import           Cardano.CLI.Shelley.Orphans ()
 import           Cardano.Ledger.Shelley.Scripts ()
 import           Cardano.Slotting.Time (SystemStart (..))
+
+data QueryKesPeriodInfoOutput =
+  QueryKesPeriodInfoOutput
+    { qKesInfoCurrentKESPeriod :: Word64
+    -- ^ Current KES period.
+    , qKesInfoStartKesInterval :: Word64
+    -- ^ Beginning of the Kes validity interval.
+    , qKesInfoStartEndInterval :: Word64
+    -- ^ End of the Kes validity interval.
+    , qKesInfoRemainingSlotsInPeriod :: Word64
+    -- ^ Remaining slots in current KESPeriod.
+    , qKesInfoKesKeyExpiry :: UTCTime
+    -- ^ Date of KES key expiry.
+    , qKesInfoNodeStateOperationalCertNo :: Word64
+    -- ^ The lastest operational certificate number in the node's state
+    -- i.e how many times a new KES key has been generated.
+    , qKesInfoOnDiskOperationalCertNo :: Word64
+    -- ^ The on disk operational certificate number.
+    , qKesInfoMaxKesKeyEvolutions :: Word64
+    -- ^ The maximum number of KES key evolutions permitted per KESPeriod.
+    , qKesInfoSlotsPerKesPeriod :: Word64
+    }
+
+instance ToJSON QueryKesPeriodInfoOutput where
+  toJSON QueryKesPeriodInfoOutput { qKesInfoCurrentKESPeriod
+                                  , qKesInfoStartKesInterval
+                                  , qKesInfoStartEndInterval
+                                  , qKesInfoRemainingSlotsInPeriod
+                                  , qKesInfoKesKeyExpiry
+                                  , qKesInfoNodeStateOperationalCertNo
+                                  , qKesInfoOnDiskOperationalCertNo
+                                  , qKesInfoMaxKesKeyEvolutions
+                                  , qKesInfoSlotsPerKesPeriod} =
+    object [ "qKesCurrentKesPeriod" .= qKesInfoCurrentKESPeriod
+           , "qKesStartKesInterval" .= qKesInfoStartKesInterval
+           , "qKesEndKesInterval" .= qKesInfoStartEndInterval
+           , "qKesRemainingSlotsInKesPeriod" .= qKesInfoRemainingSlotsInPeriod
+           , "qKesOnDiskOperationalCertificateNumber" .= qKesInfoOnDiskOperationalCertNo
+           , "qKesNodeStateOperationalCertificateNumber" .= qKesInfoNodeStateOperationalCertNo
+           , "qKesMaxKESEvolutions" .= qKesInfoMaxKesKeyEvolutions
+           , "qKesSlotsPerKesPeriod" .= qKesInfoSlotsPerKesPeriod
+           , "qKesKesKeyExpiry" .= qKesInfoKesKeyExpiry
+           ]
 
 data QueryTipLocalState mode = QueryTipLocalState
   { era :: AnyCardanoEra

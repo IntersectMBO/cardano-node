@@ -125,7 +125,7 @@ module Cardano.Api.Shelley
 
     -- ** Operational certificates
     OperationalCertificate(OperationalCertificate),
-    OperationalCertificateIssueCounter(OperationalCertificateIssueCounter),
+    OperationalCertificateIssueCounter(..),
     OperationalCertIssueError(..),
 
     -- * Stake Pool

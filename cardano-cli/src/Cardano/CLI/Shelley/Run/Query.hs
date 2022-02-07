@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -27,6 +28,7 @@ import           Cardano.Prelude
 import           Prelude (String, id)
 
 import           Cardano.Api
+import qualified Cardano.Api as Api
 import           Cardano.Api.Byron
 import           Cardano.Api.Shelley
 import           Cardano.CLI.Environment (EnvSocketError, readEnvSocketPath, renderEnvSocketError)
@@ -51,7 +53,8 @@ import qualified Cardano.Ledger.Crypto as Crypto
 import qualified Cardano.Ledger.Era as Era
 import qualified Cardano.Ledger.Era as Ledger
 import           Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
-import           Cardano.Ledger.Shelley.Constraints (UsesValue)
+import qualified Cardano.Ledger.Shelley.API.Protocol as Ledger
+import           Cardano.Ledger.Shelley.Constraints
 import           Cardano.Ledger.Shelley.EpochBoundary
 import           Cardano.Ledger.Shelley.LedgerState (DPState (_pstate),
                    EpochState (esLState, esSnapshots), LedgerState (_delegationState),
@@ -64,10 +67,10 @@ import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT
                    hoistMaybe, left, newExceptT)
 import           Data.Aeson.Encode.Pretty (encodePretty)
 import           Data.Aeson.Types as Aeson
+import           Data.Coerce (coerce)
 import           Data.List (nub)
 import           Data.Sharing (Interns, Share)
 import           Data.Time.Clock
-import           Numeric (showEFloat)
 import           Ouroboros.Consensus.BlockchainTime.WallClock.Types (RelativeTime (..),
                    SystemStart (..), toRelativeTime)
 import           Ouroboros.Consensus.Cardano.Block as Consensus (EraMismatch (..))
@@ -75,6 +78,7 @@ import           Ouroboros.Network.Block (Serialised (..))
 import           Ouroboros.Network.Protocol.LocalStateQuery.Type (AcquireFailure (..))
 import           Text.Printf (printf)
 
+import           Cardano.Protocol.TPraos.Rules.Prtcl
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import qualified Data.Compact.VMap as VMap
 import qualified Data.Map.Strict as Map
@@ -84,7 +88,9 @@ import qualified Data.Text.Encoding as Text
 import qualified Data.Text.IO as T
 import qualified Data.Text.IO as Text
 import qualified Data.Vector as Vector
+import           Numeric (showEFloat)
 import qualified Ouroboros.Consensus.HardFork.History as Consensus
+
 import qualified Ouroboros.Consensus.HardFork.History.Qry as Qry
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as LocalStateQuery
 import qualified System.IO as IO
@@ -111,6 +117,14 @@ data ShelleyQueryCmdError
   | ShelleyQueryCmdLeaderShipError !LeadershipError
   | ShelleyQueryCmdTextEnvelopeReadError !(FileError TextEnvelopeError)
   | ShelleyQueryCmdTextReadError !(FileError InputDecodeError )
+  | ShelleyQueryCmdColdKeyReadFileError !(FileError InputDecodeError)
+  | ShelleyQueryCmdOpCertCounterReadError !(FileError TextEnvelopeError)
+  | ShelleyQueryCmdProtocolStateDecodeFailure
+  | ShelleyQueryCmdSlotToUtcError Text
+  | ShelleyQueryCmdNodeUnknownStakePool
+      FilePath
+      -- ^ Operational certificate of the unknown stake pool.
+
   deriving Show
 
 renderShelleyQueryCmdError :: ShelleyQueryCmdError -> Text
@@ -135,7 +149,16 @@ renderShelleyQueryCmdError err =
     ShelleyQueryCmdGenesisReadError err' -> Text.pack $ displayError err'
     ShelleyQueryCmdLeaderShipError e -> Text.pack $ displayError e
     ShelleyQueryCmdTextEnvelopeReadError e -> Text.pack $ displayError e
+    ShelleyQueryCmdSlotToUtcError e -> "Failed to convert slot to UTC time: " <> e
     ShelleyQueryCmdTextReadError e -> Text.pack $ displayError e
+    ShelleyQueryCmdColdKeyReadFileError e -> Text.pack $ displayError e
+    ShelleyQueryCmdOpCertCounterReadError e -> Text.pack $ displayError e
+    ShelleyQueryCmdProtocolStateDecodeFailure -> "Failed to decode the protocol state."
+    ShelleyQueryCmdNodeUnknownStakePool nodeOpCert ->
+      Text.pack $ "The stake pool associated with: " <> nodeOpCert <> " was not found. Ensure the correct KES key has been " <>
+                  "specified and that the stake pool is registered. If you have submitted a stake pool registration certificate " <>
+                  "in the current epoch, you must wait until the following epoch for the registration to take place."
+
 
 runQueryCmd :: QueryCmd -> ExceptT ShelleyQueryCmdError IO ()
 runQueryCmd cmd =
@@ -162,6 +185,8 @@ runQueryCmd cmd =
       runQueryProtocolState consensusModeParams network mOutFile
     QueryUTxO' consensusModeParams qFilter networkId mOutFile ->
       runQueryUTxO consensusModeParams qFilter networkId mOutFile
+    QueryKesPeriodInfo consensusModeParams network nodeOpCert nodeOpCertCounter mOutFile ->
+      runQueryKesPeriodInfo consensusModeParams network nodeOpCert nodeOpCertCounter mOutFile
 
 runQueryProtocolParameters
   :: AnyConsensusModeParams
@@ -353,10 +378,301 @@ runQueryUTxO (AnyConsensusModeParams cModeParams)
     Nothing -> left $ ShelleyQueryCmdEraConsensusModeMismatch (AnyConsensusMode cMode) anyE
 
 
+runQueryKesPeriodInfo
+  :: AnyConsensusModeParams
+  -> NetworkId
+  -> FilePath
+  -> OpCertCounterFile
+  -> Maybe OutputFile
+  -> ExceptT ShelleyQueryCmdError IO ()
+runQueryKesPeriodInfo (AnyConsensusModeParams cModeParams) network nodeOpCertFile
+                       oCIssueCounter@(OpCertCounterFile opCertCountFile) mOutFile = do
+
+  opCert <- firstExceptT ShelleyQueryCmdOpCertCounterReadError
+              . newExceptT $ readFileTextEnvelope AsOperationalCertificate nodeOpCertFile
+
+  SocketPath sockPath <- firstExceptT ShelleyQueryCmdEnvVarSocketErr readEnvSocketPath
+  let localNodeConnInfo = LocalNodeConnectInfo cModeParams network sockPath
+
+  anyE@(AnyCardanoEra era) <- determineEra cModeParams localNodeConnInfo
+  let cMode = consensusModeOnly cModeParams
+  sbe <- getSbe $ cardanoEraStyle era
+  case cMode of
+    CardanoMode -> do
+      eInMode <- toEraInMode era cMode
+        & hoistMaybe (ShelleyQueryCmdEraConsensusModeMismatch (AnyConsensusMode cMode) anyE)
+
+      -- We check that the KES period specified in the operational certificate is correct
+      -- based on the KES period defined in the genesis parameters and the current slot number
+      let genesisQinMode = QueryInEra eInMode . QueryInShelleyBasedEra sbe $ QueryGenesisParameters
+          eraHistoryQuery = QueryEraHistory CardanoModeIsMultiEra
+      gParams@GenesisParameters{protocolParamMaxKESEvolutions, protocolParamSystemStart, protocolParamSlotsPerKESPeriod}
+        <- executeQuery era cModeParams localNodeConnInfo genesisQinMode
+
+      chainTip <- liftIO $ getLocalChainTip localNodeConnInfo
+
+      (slotsTillNewKesKey, currentKesPeriod, kesIntervalStart, kesIntervalEnd, periodCheckDiag)
+        <- opCertKesPeriodCheck opCert chainTip gParams
+      eraHistory <- firstExceptT ShelleyQueryCmdAcquireFailure . newExceptT $ queryNodeLocalState localNodeConnInfo Nothing eraHistoryQuery
+
+      let eInfo = toEpochInfo eraHistory
+
+      kesKeyExpirySlotUtc <- firstExceptT ShelleyQueryCmdSlotToUtcError . hoistEither
+                               $ epochInfoSlotToUTCTime
+                                 eInfo
+                                 (SystemStart protocolParamSystemStart)
+                                 (fromIntegral $ kesIntervalEnd * fromIntegral protocolParamSlotsPerKESPeriod)
+      -- We get the operational certificate counter from the protocol state and check that
+      -- it is equivalent to what we have on disk.
+
+      let ptclStateQinMode = QueryInEra eInMode . QueryInShelleyBasedEra sbe $ QueryProtocolState
+      ptclState <- executeQuery era cModeParams localNodeConnInfo ptclStateQinMode
+      (opCertCounter, ptclStateCounter, opCertCounterStateDiag) <- opCertCounterStateCheck ptclState opCert
+
+      let diagnoses = opCertCounterStateDiag ++  [periodCheckDiag]
+
+      if any anyFailureDiagnostic diagnoses
+      then
+        case mOutFile of
+          Just (OutputFile _) -> liftIO $ mapM_ kesOpCertDiagnosticsRender diagnoses
+          Nothing -> liftIO $ mapM_ kesOpCertDiagnosticsRender diagnoses
+      else do
+        let kesPeriodInfo = O.QueryKesPeriodInfoOutput
+                              { O.qKesInfoCurrentKESPeriod = currentKesPeriod
+                              , O.qKesInfoStartKesInterval = kesIntervalStart
+                              , O.qKesInfoStartEndInterval = kesIntervalEnd
+                              , O.qKesInfoRemainingSlotsInPeriod = slotsTillNewKesKey
+                              , O.qKesInfoNodeStateOperationalCertNo = ptclStateCounter
+                              , O.qKesInfoOnDiskOperationalCertNo = opCertCounter
+                              , O.qKesInfoMaxKesKeyEvolutions = fromIntegral protocolParamMaxKESEvolutions
+                              , O.qKesInfoSlotsPerKesPeriod = fromIntegral protocolParamSlotsPerKESPeriod
+                              , O.qKesInfoKesKeyExpiry = kesKeyExpirySlotUtc
+                              }
+            kesPeriodInfoJSON = encodePretty kesPeriodInfo
+
+        liftIO $ mapM_ kesOpCertDiagnosticsRender diagnoses
+
+        case mOutFile of
+          Just (OutputFile oFp) ->
+            handleIOExceptT (ShelleyQueryCmdWriteFileError . FileIOError oFp)
+              $ LBS.writeFile oFp kesPeriodInfoJSON
+          Nothing -> liftIO $ LBS.putStrLn kesPeriodInfoJSON
+
+    mode -> left . ShelleyQueryCmdUnsupportedMode $ AnyConsensusMode mode
+ where
+   -- We first check the operational certificate issue counter's count is
+   -- equal to the count in the operational certificate (on disk)
+   opCertCounterOndiskCheck
+     :: OperationalCertificate
+     -> ExceptT ShelleyQueryCmdError IO ( Word64 -- Operational certificate count
+                                        , KesOpCertDiagnostic)
+   opCertCounterOndiskCheck opCert = do
+     opCertCounter
+       <- firstExceptT ShelleyQueryCmdOpCertCounterReadError
+            . newExceptT $ readFileTextEnvelope AsOperationalCertificateIssueCounter opCertCountFile
+
+     let currentOpCertCount = getOpCertCount opCert
+         -- Why 'pred'? Because the op cert issue counter tells us what the next
+         -- count should be.
+         currentOpCertIssueCount = pred $ opCertIssueCount opCertCounter
+     if currentOpCertCount == currentOpCertIssueCount
+     then
+       let sd = SuccessDiagnostic OpCertCountersAreEqual
+       in return (currentOpCertCount, sd)
+     else
+       let fd = FailureDiagnostic $ CountersNotEqual
+                                      (nodeOpCertFile, currentOpCertCount)
+                                      (oCIssueCounter, currentOpCertIssueCount)
+       in return (currentOpCertCount, fd)
+
+   -- Returns the number of slots left until KES key rotation and the KES period.
+   -- We check the calculated current KES period based on the current slot and
+   -- protocolParamSlotsPerKESPeriod matches what is specified in the 'OperationalCertificate'.
+   opCertKesPeriodCheck
+     :: OperationalCertificate
+     -> ChainTip
+     -> GenesisParameters
+     -> ExceptT ShelleyQueryCmdError IO ( Word64 -- Slots until we need to generate a new KES key
+                                        , Word64 -- Current Kes period
+                                        , Word64 -- Kes period interval start
+                                        , Word64 -- Kes period interval end
+                                        , KesOpCertDiagnostic)
+   opCertKesPeriodCheck opCert ChainTipAtGenesis
+                          GenesisParameters{protocolParamSlotsPerKESPeriod, protocolParamMaxKESEvolutions} = do
+     let opCertKesPeriod = fromIntegral $ getKesPeriod opCert
+         slotsPerKesPeriod = fromIntegral protocolParamSlotsPerKESPeriod
+         maxKesEvolutions  = fromIntegral protocolParamMaxKESEvolutions
+         currentKesPeriod = 0 -- We are at genesis
+         kesPeriodIntervalStart = 0 -- We are at genesis
+         kesPeriodIntervalEnd = maxKesEvolutions
+         slotsTillNewKesKey = kesPeriodIntervalEnd * slotsPerKesPeriod
+
+     if fromIntegral protocolParamSlotsPerKESPeriod == opCertKesPeriod
+     then
+       return ( slotsTillNewKesKey
+              , currentKesPeriod
+              , kesPeriodIntervalStart
+              , kesPeriodIntervalEnd
+              , SuccessDiagnostic OpCertCurrentKesPeriodWithinInterval
+              )
+     else return ( slotsPerKesPeriod
+                 , currentKesPeriod
+                 , kesPeriodIntervalStart
+                 , kesPeriodIntervalEnd
+                 , FailureDiagnostic
+                     $ OpCertKesPeriodOutsideOfCurrentInterval
+                         (nodeOpCertFile, opCertKesPeriod)
+                         kesPeriodIntervalStart
+                         kesPeriodIntervalEnd
+                 )
+   opCertKesPeriodCheck opCert (ChainTip currSlot _ _)
+                        GenesisParameters{ protocolParamSlotsPerKESPeriod
+                                         , protocolParamMaxKESEvolutions} = do
+     -- We need to check that the KES period of the operational certificate falls
+     -- within the current KES period interval. We can calculate the start of
+     -- current KES period interval we are in by dividing the current KES period
+     -- by protocolParamMaxKESEvolutions. Once we determine the interval we must check
+     -- our KES starting period is within that interval.
+
+     let slotsPerKesPeriod = fromIntegral protocolParamSlotsPerKESPeriod
+         maxKesEvolutions  = fromIntegral protocolParamMaxKESEvolutions
+         currentKesPeriod = unSlotNo currSlot `div` slotsPerKesPeriod
+
+         kesPeriodIntervalStart = (currentKesPeriod `div` maxKesEvolutions) * maxKesEvolutions
+         kesPeriodIntervalEnd = kesPeriodIntervalStart + maxKesEvolutions
+
+         opCertKesPeriod = fromIntegral $ getKesPeriod opCert
+
+         kesPeriodIntervalEndInSlots = kesPeriodIntervalEnd * slotsPerKesPeriod
+
+         slotsTillNewKesKey = kesPeriodIntervalEndInSlots - unSlotNo currSlot
+
+        -- See OCERT rule in ledger specs
+     if kesPeriodIntervalStart <= opCertKesPeriod &&
+        -- Checks if op cert KES period is less than the interval start
+        opCertKesPeriod < kesPeriodIntervalEnd
+        -- Checks if op cert KES period is less than the interval end
+     then
+       return ( slotsTillNewKesKey
+              , currentKesPeriod
+              , kesPeriodIntervalStart
+              , kesPeriodIntervalEnd
+              , SuccessDiagnostic OpCertCurrentKesPeriodWithinInterval
+              )
+     else do
+       let fd = FailureDiagnostic $ OpCertKesPeriodOutsideOfCurrentInterval
+                                      (nodeOpCertFile, opCertKesPeriod)
+                                      kesPeriodIntervalStart
+                                      kesPeriodIntervalEnd
+       return ( 0
+              , currentKesPeriod
+              , kesPeriodIntervalStart
+              , kesPeriodIntervalEnd
+              , fd
+              )
+
+   -- We get the operational certificate counter from the protocol state and check that
+   -- it is equivalent to what we have on disk.
+   opCertCounterStateCheck
+     :: ProtocolState era
+     -> OperationalCertificate
+     -> ExceptT ShelleyQueryCmdError IO ( Word64 -- Operational certificate count
+                                        , Word64 -- Ptcl state counter
+                                        , [KesOpCertDiagnostic])
+   opCertCounterStateCheck ptclState opCert@(OperationalCertificate _ stakePoolVKey) = do
+    (onDiskOpCertCount,  counterOnDiskDiag) <- opCertCounterOndiskCheck opCert
+    case decodeProtocolState ptclState of
+      Left _ -> left ShelleyQueryCmdProtocolStateDecodeFailure
+      Right chainDepState -> do
+        -- We need the stake pool id to determine what the counter of our SPO
+        -- should be.
+        let PrtclState opCertCounterMap _ _ = Ledger.csProtocol chainDepState
+            StakePoolKeyHash blockIssuerHash = verificationKeyHash stakePoolVKey
+
+        case Map.lookup (coerce blockIssuerHash) opCertCounterMap of
+          Just ptclStateCounter ->
+            if ptclStateCounter /= onDiskOpCertCount
+            then
+              let fd = FailureDiagnostic $ NodeStateCounterDifferent
+                                             ptclStateCounter
+                                             onDiskOpCertCount
+                                             nodeOpCertFile
+              in return (onDiskOpCertCount, ptclStateCounter, [fd,counterOnDiskDiag])
+            else
+              let sd = SuccessDiagnostic OpCertCounterMatchesNodeState
+              in return (onDiskOpCertCount, ptclStateCounter, [sd, counterOnDiskDiag])
+          Nothing -> left $ ShelleyQueryCmdNodeUnknownStakePool nodeOpCertFile
+
+   kesOpCertDiagnosticsRender :: KesOpCertDiagnostic -> IO ()
+   kesOpCertDiagnosticsRender diag =
+     case diag of
+       SuccessDiagnostic sd ->
+          let successString :: String = case sd of
+                OpCertCounterMatchesNodeState ->
+                  "The counters match what is in the node's protocol state"
+                OpCertCurrentKesPeriodWithinInterval -> "Operational certificate's kes period is within the correct KES period interval"
+                OpCertCountersAreEqual -> "The counters in the operational certificate and operational certificate issue counter file are the same"
+          in putStrLn $ "✓ " <> successString
+
+       FailureDiagnostic fd ->
+          let failureString :: String = case fd of
+                NodeStateCounterDifferent ptclStateCounter onDiskOpCertCount nodeOpCertFile' ->
+                 "The protocol state counter for the operational certificate at: " <> nodeOpCertFile' <>
+                 " does not agree with the ondisk counter. On disk count: " <> show onDiskOpCertCount <>
+                 " Protocol state count: " <> show ptclStateCounter
+
+                OpCertKesPeriodOutsideOfCurrentInterval (nodeOpCertFile', opCertKesPeriod) intervalStart intervalEnd ->
+                  "Node operational certificate at: " <> nodeOpCertFile' <> " has an incorrectly specified KES period. " <> "\n" <>
+                  "The operational certificate's specified KES period is outside of the current KES period interval." <> "\n" <>
+                  "KES period interval start: " <> show intervalStart <> "\n" <>
+                  "KES period interval end: " <> show intervalEnd <> "\n" <>
+                  "Operational certificate's specified KES period: " <> show opCertKesPeriod
+
+                CountersNotEqual (opCertFp, certCount) (OpCertCounterFile counterFp, counterFileCount) ->
+                  "Counters in the node operational certificate at: " <> opCertFp <>
+                  " Count: " <> show certCount <>
+                  " and the node operational certificate counter file at: " <> counterFp <>
+                  " Count: " <> show counterFileCount <>
+                  " are not the same."
+
+          in putStrLn $ "✗ " <> failureString
+
+data KesOpCertDiagnostic = SuccessDiagnostic SuccessDiagnostic
+                         | FailureDiagnostic FailureDiagnostic
+
+
+anyFailureDiagnostic :: KesOpCertDiagnostic -> Bool
+anyFailureDiagnostic FailureDiagnostic{} = True
+anyFailureDiagnostic SuccessDiagnostic{} = False
+data SuccessDiagnostic
+  = OpCertCounterMatchesNodeState
+  | OpCertCurrentKesPeriodWithinInterval
+  | OpCertCountersAreEqual
+
+data FailureDiagnostic
+  = NodeStateCounterDifferent
+      Word64
+      -- ^ Operational certificate counter in the protocol state
+      Word64
+      -- ^ Operational certificate counter on disk
+      FilePath
+      -- ^ Operational certificate
+  | OpCertKesPeriodOutsideOfCurrentInterval
+      !(FilePath, Word64)
+      -- ^ Operational certificate filepath with its KES period
+      !Word64
+      -- ^ Kes Period interval start
+      !Word64
+      -- ^ Kes Period interval end
+  | CountersNotEqual
+      !(FilePath, Word64)
+      -- ^ Operational certificate filepath and current count
+      !(OpCertCounterFile, Word64)
+      -- ^ Operational certificate counter filepath and current count
+
 -- | Query the current and future parameters for a stake pool, including the retirement date.
 -- Any of these may be empty (in which case a null will be displayed).
 --
-
 runQueryPoolParams
   :: AnyConsensusModeParams
   -> NetworkId
@@ -623,7 +939,7 @@ writeProtocolState mOutFile ps@(ProtocolState pstate) =
       handleIOExceptT (ShelleyQueryCmdWriteFileError . FileIOError fpath)
         . LBS.writeFile fpath $ unSerialised pstate
 
-writeFilteredUTxOs :: ShelleyBasedEra era
+writeFilteredUTxOs :: Api.ShelleyBasedEra era
                    -> Maybe OutputFile
                    -> UTxO era
                    -> ExceptT ShelleyQueryCmdError IO ()
@@ -641,7 +957,7 @@ writeFilteredUTxOs shelleyBasedEra' mOutFile utxo =
      handleIOExceptT (ShelleyQueryCmdWriteFileError . FileIOError fpath)
        $ LBS.writeFile fpath (encodePretty utxo')
 
-printFilteredUTxOs :: ShelleyBasedEra era -> UTxO era -> IO ()
+printFilteredUTxOs :: Api.ShelleyBasedEra era -> UTxO era -> IO ()
 printFilteredUTxOs shelleyBasedEra' (UTxO utxo) = do
   Text.putStrLn title
   putStrLn $ replicate (Text.length title + 2) '-'
@@ -660,7 +976,7 @@ printFilteredUTxOs shelleyBasedEra' (UTxO utxo) = do
      "                           TxHash                                 TxIx        Amount"
 
 printUtxo
-  :: ShelleyBasedEra era
+  :: Api.ShelleyBasedEra era
   -> (TxIn, TxOut CtxUTxO era)
   -> IO ()
 printUtxo shelleyBasedEra' txInOutTuple =
@@ -923,11 +1239,6 @@ runQueryLeadershipSchedule (AnyConsensusModeParams cModeParams) network
       liftIO $ printLeadershipSchedule schedule eInfo (SystemStart $ sgSystemStart shelleyGenesis)
     mode -> left . ShelleyQueryCmdUnsupportedMode $ AnyConsensusMode mode
  where
-  toEpochInfo :: EraHistory CardanoMode -> EpochInfo (Either Text)
-  toEpochInfo (EraHistory _ interpreter) =
-    hoistEpochInfo (first (Text.pack . show ) . runExcept)
-      $ Consensus.interpreterToEpochInfo interpreter
-
   printLeadershipSchedule
     :: Set SlotNo
     -> EpochInfo (Either Text)
@@ -1008,9 +1319,9 @@ executeQuery era cModeP localNodeConnInfo q = do
    execQuery :: IO (Either AcquireFailure (Either EraMismatch result))
    execQuery = queryNodeLocalState localNodeConnInfo Nothing q
 
-getSbe :: Monad m => CardanoEraStyle era -> ExceptT ShelleyQueryCmdError m (ShelleyBasedEra era)
+getSbe :: Monad m => CardanoEraStyle era -> ExceptT ShelleyQueryCmdError m (Api.ShelleyBasedEra era)
 getSbe LegacyByronEra = left ShelleyQueryCmdByronEra
-getSbe (ShelleyBasedEra sbe) = return sbe
+getSbe (Api.ShelleyBasedEra sbe) = return sbe
 
 queryResult
   :: Either AcquireFailure (Either EraMismatch a)
@@ -1023,9 +1334,14 @@ queryResult eAcq =
         Left err -> left . ShelleyQueryCmdLocalStateQueryError $ EraMismatchError err
         Right result -> return result
 
+toEpochInfo :: EraHistory CardanoMode -> EpochInfo (Either Text)
+toEpochInfo (EraHistory _ interpreter) =
+  hoistEpochInfo (first (Text.pack . show ) . runExcept)
+    $ Consensus.interpreterToEpochInfo interpreter
+
 obtainLedgerEraClassConstraints
   :: ShelleyLedgerEra era ~ ledgerera
-  => ShelleyBasedEra era
+  => Api.ShelleyBasedEra era
   -> (( UsesValue ledgerera
       , ToJSON (DebugLedgerState era)
       , FromCBOR (DebugLedgerState era)
