@@ -7,14 +7,11 @@ packages:
     cardano-git-rev
     cardano-node
     cardano-node-capi
-    cardano-node-chairman
     cardano-submit-api
-    cardano-testnet
     cardano-tracer
     bench/cardano-topology
     bench/locli
     bench/tx-generator
-    plutus-example
     trace-dispatcher
     trace-resources
     trace-forward
@@ -191,8 +188,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger
-  tag: 1a9ec4ae9e0b09d54e49b2a40c4ead37edadcce5
-  --sha256: 0avzyiqq0m8njd41ck9kpn992yq676b1az9xs77977h7cf85y4wm
+  tag: 3df3ca8db4d52952cb750e8859b71f0a371323af
+  --sha256: 0jacfhqnj76cyjwdxz05h7rqmdasgxp9skd01f5y61xraz746x21
   subdir:
     eras/alonzo/impl
     eras/alonzo/test-suite
@@ -255,8 +252,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: 4fac197b6f0d2ff60dc3486c593b68dc00969fbf
-  --sha256: 1b43vbdsr9m3ry1kgag2p2ixpv54gw7a4vvmndxl6knqg8qbsb8b
+  tag: 48e498cfea694b89f99fd92ae7a86b9fcd5f29f0
+  --sha256: 1klgvlfcd1kxgjicws964k2xkxr79xf3vvgkbx4x7cyn4xfng166
   subdir:
     io-sim
     io-classes
@@ -278,12 +275,10 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/plutus
-  tag: 1efbb276ef1a10ca6961d0fd32e6141e9798bd11
-  --sha256: 1jicyk4hr8p0xksj4048gdxndrb42jz4wsnkhc3ymxbm5v6snalf
+  tag: fc5fe94d3d9525d032bcbc79ff0e1ebcfd8ef143
+  --sha256: 1gnzhns44rzvf9cw84jaqajqqbi9xdcpyy2sapa890vwf796nigv
   subdir:
-    freer-extras
     plutus-core
-    plutus-ledger
     plutus-ledger-api
     plutus-tx
     plutus-tx-plugin
