@@ -33,21 +33,15 @@ library
 
   exposed-modules:      Cardano.Api
                         Cardano.Api.Byron
-                        Cardano.Api.Crypto.Ed25519Bip32
-                        Cardano.Api.Shelley
                         Cardano.Api.ChainSync.Client
                         Cardano.Api.ChainSync.ClientPipelined
-
+                        Cardano.Api.Crypto.Ed25519Bip32
+                        Cardano.Api.Protocol.Types
+                        Cardano.Api.Shelley
                         -- TODO: Eliminate in the future when
                         -- we create wrapper types for the ledger types
-                        -- in this modulde
+                        -- in this module
                         Cardano.Api.Orphans
-                        --TODO: Remove all Cardano.Api.Protocol.x
-                        -- when new IPC is integrated with cardano-node-chairman
-                        Cardano.Api.Protocol.Byron
-                        Cardano.Api.Protocol.Cardano
-                        Cardano.Api.Protocol.Shelley
-                        Cardano.Api.Protocol.Types
 
   other-modules:
                         -- Splitting up the big Typed module:

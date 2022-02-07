@@ -84,6 +84,14 @@ module Cardano.Api.Shelley
     makeShelleySignature,
     toShelleySigningKey,
 
+    -- * Blocks
+    fromConsensusBlock,
+    toConsensusBlock,
+    fromConsensusTip,
+    fromConsensusPointInMode,
+    toConsensusPointInMode,
+    toConsensusPointHF,
+
     -- * Transaction metadata
     -- | Embedding additional structured data within transactions.
     toShelleyMetadata,
@@ -201,6 +209,7 @@ module Cardano.Api.Shelley
 
 import           Cardano.Api
 import           Cardano.Api.Address
+import           Cardano.Api.Block
 import           Cardano.Api.Certificate
 import           Cardano.Api.Eras
 import           Cardano.Api.IPC
