@@ -209,6 +209,31 @@ source-repository-package
     libs/small-steps-test
     libs/non-integral
 
+-- -O2 By default
+
+package byron-spec-chain
+  optimization: 2
+package cardano-data
+  optimization: 2
+package cardano-ledger-alonzo
+  optimization: 2
+package cardano-ledger-core
+  optimization: 2
+package cardano-ledger-shelley
+  optimization: 2
+package cardano-ledger-shelley-ma
+  optimization: 2
+package cardano-protocol-tpraos
+  optimization: 2
+package compact-map
+  optimization: 2
+package non-integral
+  optimization: 2
+package set-algebra
+  optimization: 2
+package small-steps
+  optimization: 2
+
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-prelude
@@ -267,6 +292,36 @@ source-repository-package
     typed-protocols
     typed-protocols-cborg
     typed-protocols-examples
+
+-- -O2 by default
+package io-sim
+  optimization: 2
+package io-classes
+  optimization: 2
+package monoidal-synchronisation
+  optimization: 2
+package network-mux
+  optimization: 2
+package ouroboros-consensus
+  optimization: 2
+package ouroboros-consensus-byron
+  optimization: 2
+package ouroboros-consensus-cardano
+  optimization: 2
+package ouroboros-consensus-protocol
+  optimization: 2
+package ouroboros-consensus-shelley
+  optimization: 2
+package ouroboros-network
+  optimization: 2
+package ouroboros-network-framework
+  optimization: 2
+package strict-stm
+  optimization: 2
+package typed-protocols
+  optimization: 2
+package typed-protocols-cborg
+  optimization: 2
 
 source-repository-package
   type: git
