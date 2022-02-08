@@ -1,22 +1,22 @@
 # Transaction Generator
 
 The transaction generator stresses a cluster of Cardano nodes with a simmulated work load of transaction.
-It works in two phases:
-
-* Phase 1: Secure a genesis fund and prepare a set of initial UTxOs via the local protocol.
-* Phase 2: Connect to a set of nodes via the node-to-node protocol and offer/transmit a number of transaction at a certain rate limit.
 
 ## Running the tx-generator
-Either provide the configuration via a number of CLI arguments or run a JSON based benchmarking script.
+The tx-generator executes JSON based tx-generator scripts.
 An example script is in `bench/tx-generator/test/script.json`.
 
-```
-Usage: tx-generator COMMAND
+The benchmarking infrastructure runs the tx-generator as an systemd service.
+This service is defined as a NIXOS service definition.
+The service definition has a set of "high-level" configuration options
+and generates the corresponding "low-level" tx-generator script based on that options.
 
-Available commands:
-  cliArguments             tx-generator with CLI arguments
-  eraTransition            tx-generator demo era transition
-  json                     tx-generator run JsonScript
+```
+Usage:
+tx-generator json FILE
 ```
 
 Current maintainers: Marc and Serge
+
+## Hacking the tx-generator
+See Internals.md
