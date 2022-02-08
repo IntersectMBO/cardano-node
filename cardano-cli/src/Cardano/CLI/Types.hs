@@ -239,5 +239,6 @@ data RequiredSigner
 -- TODO: Implement Previous and Next epochs
 data EpochLeadershipSchedule
   = CurrentEpoch
+  | NextEpoch
   deriving Show
 

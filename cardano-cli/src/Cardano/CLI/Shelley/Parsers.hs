@@ -1494,13 +1494,20 @@ pVrfSigningKeyFile =
       )
 
 pWhichLeadershipSchedule :: Parser EpochLeadershipSchedule
-pWhichLeadershipSchedule = pCurrent
+pWhichLeadershipSchedule = pCurrent <|> pNext
  where
    pCurrent :: Parser EpochLeadershipSchedule
    pCurrent =
      Opt.flag' CurrentEpoch
        (  Opt.long "current"
        <> Opt.help "Get the leadership schedule for the current epoch."
+       )
+
+   pNext :: Parser EpochLeadershipSchedule
+   pNext =
+     Opt.flag' NextEpoch
+       (  Opt.long "next"
+       <> Opt.help "Get the leadership schedule for the following epoch."
        )
 
 pSomeWitnessSigningData :: Parser [WitnessSigningData]
