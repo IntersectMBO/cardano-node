@@ -60,8 +60,6 @@ chairmanOver timeoutSeconds requiredProgress H.Conf {..} allNodes = do
       ( H.procChairman
         ( [ "--timeout", show @Int timeoutSeconds
           , "--config", tempAbsPath </> "configuration.yaml"
-          , "--security-parameter", "2160"
-          , "--testnet-magic", show @Int testnetMagic
           , "--require-progress", show @Int requiredProgress
           ]
         <> (sprockets >>= (\sprocket -> ["--socket-path", IO.sprocketArgumentName sprocket]))
@@ -74,7 +72,6 @@ chairmanOver timeoutSeconds requiredProgress H.Conf {..} allNodes = do
           }
         )
       )
-
     chairmanResult <- H.waitSecondsForProcess (timeoutSeconds + 60) hProcess
 
     case chairmanResult of
