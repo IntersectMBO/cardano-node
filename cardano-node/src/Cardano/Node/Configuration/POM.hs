@@ -306,7 +306,6 @@ instance FromJSON PartialNodeConfiguration where
                     "Invalid value for 'MempoolCapacityBytesOverride'.  \
                     \Expecting byte count or NoOverride.  Value was: " <> show invalid
               Nothing -> return Nothing
-
       parseByronProtocol v = do
         primary   <- v .:? "ByronGenesisFile"
         secondary <- v .:? "GenesisFile"
@@ -448,7 +447,6 @@ makeNodeConfiguration pnc = do
   configFile <- lastToEither "Missing YAML config file" $ pncConfigFile pnc
   topologyFile <- lastToEither "Missing TopologyFile" $ pncTopologyFile pnc
   databaseFile <- lastToEither "Missing DatabaseFile" $ pncDatabaseFile pnc
-  protocolFiles <- lastToEither "Missing ProtocolFiles" $ pncProtocolFiles pnc
   validateDB <- lastToEither "Missing ValidateDB" $ pncValidateDB pnc
   protocolConfig <- lastToEither "Missing ProtocolConfig" $ pncProtocolConfig pnc
   loggingSwitch <- lastToEither "Missing LoggingSwitch" $ pncLoggingSwitch pnc
@@ -491,7 +489,13 @@ makeNodeConfiguration pnc = do
              { ncConfigFile = configFile
              , ncTopologyFile = topologyFile
              , ncDatabaseFile = databaseFile
-             , ncProtocolFiles = protocolFiles
+             , ncProtocolFiles =
+                 -- TODO: ncProtocolFiles should be Maybe ProtocolFiles
+                 -- as relay nodes don't need the protocol files because
+                 -- they are not minting blocks.
+                 case getLast $ pncProtocolFiles pnc of
+                   Just pFiles -> pFiles
+                   Nothing -> ProtocolFilepaths Nothing Nothing Nothing Nothing Nothing Nothing
              , ncValidateDB = validateDB
              , ncShutdownConfig = shutdownConfig
              , ncProtocolConfig = protocolConfig
