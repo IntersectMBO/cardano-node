@@ -34,6 +34,9 @@ package cardano-node
 package cardano-node-chairman
   ghc-options: -Werror
 
+package cardano-testnet
+  ghc-options: -Werror
+
 package tx-generator
   ghc-options: -Werror
 
