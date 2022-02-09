@@ -177,7 +177,8 @@ module Cardano.Api.Shelley
     LocalNodeConnectInfo(LocalNodeConnectInfo),
     ShelleyMode,
     ConsensusMode
-      ( ShelleyMode
+      ( ByronMode
+      , ShelleyMode
       ),
     LocalNodeClientProtocols(LocalNodeClientProtocols),
 
