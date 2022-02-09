@@ -20,7 +20,7 @@ doc                                                           @docs-access
 README.*                                                      @docs-access
 
 bench/tx-generator                                            @deepfire @MarcFontaine
-bench                                                         @deepfire @denisshevchenko @jutaro @MarcFontaine
+bench                                                         @deepfire @denisshevchenko @jutaro @MarcFontaine @cleverca22
 cardano-tracer                                                @deepfire @denisshevchenko
 nix/workbench                                                 @deepfire @denisshevchenko @jutaro @MarcFontaine
 nix/supervisord-cluster                                       @deepfire @denisshevchenko @jutaro @MarcFontaine
