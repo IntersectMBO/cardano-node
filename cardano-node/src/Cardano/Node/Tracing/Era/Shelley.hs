@@ -87,6 +87,12 @@ import           Cardano.Ledger.Shelley.Rules.Upec
 import           Cardano.Ledger.Shelley.Rules.Utxo
 import           Cardano.Ledger.Shelley.Rules.Utxow
 
+import           Cardano.Protocol.TPraos.API (ChainTransitionError (ChainTransitionError))
+import           Cardano.Protocol.TPraos.OCert (KESPeriod (KESPeriod))
+import           Cardano.Protocol.TPraos.Rules.Prtcl
+                   (PrtclPredicateFailure (OverlayFailure, UpdnFailure),
+                   PrtlSeqFailure (WrongBlockNoPrtclSeq, WrongBlockSequencePrtclSeq, WrongSlotIntervalPrtclSeq))
+import           Cardano.Protocol.TPraos.Rules.Tickn (TicknPredicateFailure)
 import           Cardano.Tracing.OrphanInstances.Shelley ()
 
 {- HLINT ignore "Use :" -}
@@ -263,8 +269,7 @@ instance Core.Crypto crypto => LogFormatting (ChainTransitionError crypto) where
              , "failures" .= map (forMachine dtal) fs
              ]
 
-instance ( ShelleyBasedEra era
-         ) => LogFormatting (ChainPredicateFailure era) where
+instance LogFormatting ChainPredicateFailure where
   forMachine _dtal (HeaderSizeTooLargeCHAIN hdrSz maxHdrSz) =
     mkObject [ "kind" .= String "HeaderSizeTooLarge"
              , "headerSize" .= hdrSz
@@ -689,6 +694,13 @@ instance     Crypto.HashAlgorithm (Core.HASH (Ledger.Crypto era))
              ]
   forMachine _dtal MIRProducesNegativeUpdate =
     mkObject [ "kind" .= String "MIRProducesNegativeUpdate"
+             ]
+  forMachine _dtal (MIRNegativeTransfer mirpot coin) =
+    mkObject [ "kind" .= String "MIRProducesNegativeUpdate"
+             , "pot" .= String (case mirpot of
+                                  ReservesMIR -> "Reserves"
+                                  TreasuryMIR -> "Treasury")
+             , "coin" .= coin
              ]
 
 instance LogFormatting (PoolPredicateFailure era) where

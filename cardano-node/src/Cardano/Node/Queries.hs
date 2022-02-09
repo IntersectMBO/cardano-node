@@ -42,6 +42,8 @@ import Cardano.Prelude hiding (All, (:.:))
 import Data.IORef (IORef, newIORef, readIORef, writeIORef)
 import Data.Map.Strict qualified as Map
 import Data.SOP.Strict
+import qualified Data.Compact.SplitMap as SplitMap
+import qualified Data.UMap as UM
 
 import Cardano.Chain.Block qualified as Byron
 import Cardano.Chain.UTxO qualified as Byron
@@ -81,7 +83,6 @@ import Ouroboros.Consensus.Util.Orphans ()
 import Ouroboros.Network.AnchoredFragment qualified as AF
 import Ouroboros.Network.NodeToClient (LocalConnectionId)
 import Ouroboros.Network.NodeToNode (RemoteConnectionId)
-
 
 --
 -- * TxId -> ByteString projection
@@ -240,15 +241,16 @@ instance LedgerQueries Byron.ByronBlock where
 
 instance LedgerQueries (Shelley.ShelleyBlock era) where
   ledgerUtxoSize =
-      (\(Shelley.UTxO xs)-> Map.size xs)
+      (\(Shelley.UTxO xs)-> SplitMap.size xs)
     . Shelley._utxo
     . Shelley._utxoState
     . Shelley.esLState
     . Shelley.nesEs
     . Shelley.shelleyLedgerState
   ledgerDelegMapSize =
-      Map.size
-    . Shelley._delegations
+      UM.size
+    . UM.Delegations
+    . Shelley._unified
     . Shelley._dstate
     . Shelley._delegationState
     . Shelley.esLState

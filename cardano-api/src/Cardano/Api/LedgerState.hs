@@ -116,10 +116,12 @@ import qualified Cardano.Ledger.Crypto as Crypto
 import qualified Cardano.Ledger.Era as Ledger
 import qualified Cardano.Ledger.Keys as Shelley.Spec
 import qualified Cardano.Ledger.Shelley.API as ShelleyAPI
-import qualified Cardano.Ledger.Shelley.API.Protocol as TPraos
+import qualified Cardano.Protocol.TPraos.API as TPraos
 import qualified Cardano.Ledger.Shelley.Genesis as Shelley.Spec
 import qualified Cardano.Protocol.TPraos.BHeader as TPraos
 import qualified Cardano.Protocol.TPraos.Rules.Tickn as Tick
+import qualified Cardano.Ledger.Shelley.Genesis as Shelley.Spec
+import qualified Cardano.Protocol.TPraos.API as TPraos
 import           Cardano.Slotting.EpochInfo (EpochInfo)
 import qualified Cardano.Slotting.EpochInfo.API as Slot
 import           Cardano.Slotting.Slot (WithOrigin (At, Origin))
@@ -151,6 +153,7 @@ import qualified Ouroboros.Network.Block
 import qualified Ouroboros.Network.Protocol.ChainSync.Client as CS
 import qualified Ouroboros.Network.Protocol.ChainSync.ClientPipelined as CSP
 import           Ouroboros.Network.Protocol.ChainSync.PipelineDecision
+import qualified Cardano.Protocol.TPraos.Rules.Prtcl as TPraos
 
 data InitialLedgerStateError
   = ILSEConfigFile Text
@@ -1341,7 +1344,7 @@ nextEpochEligibleLeadershipSlots sbe sGen serCurrEpochState ptclState
   -- We need the candidate nonce, the previous epoch's last block header hash
   -- and the extra entropy from the protocol parameters. We then need to combine them
   -- with the (⭒) operator.
-  let ShelleyAPI.PrtclState _ evolvingNonce candidateNonce = TPraos.csProtocol chainDepState
+  let TPraos.PrtclState _ evolvingNonce candidateNonce = TPraos.csProtocol chainDepState
 
   when (evolvingNonce == candidateNonce)
    $ Left LeaderErrCandidateNonceStillEvolving

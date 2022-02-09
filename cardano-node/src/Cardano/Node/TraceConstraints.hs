@@ -13,11 +13,9 @@ import           Cardano.Node.Queries (ConvertTxId, GetKESInfo (..),
                      HasKESInfo (..), HasKESMetricsData (..), LedgerQueries)
 
 import           Cardano.Ledger.Alonzo (AlonzoEra)
-import           Cardano.Ledger.Alonzo.PParams (PParamsUpdate)
 import           Cardano.Ledger.Alonzo.Rules.Bbody (AlonzoBbodyPredFail)
 import           Cardano.Ledger.Alonzo.Rules.Utxo (UtxoPredicateFailure)
 import           Cardano.Ledger.Alonzo.Rules.Utxow (AlonzoPredFail)
-import           Cardano.Ledger.Alonzo.TxBody (TxOut)
 import           Cardano.Ledger.Crypto (StandardCrypto)
 
 import           Ouroboros.Consensus.Block (BlockProtocol, CannotForge,
@@ -42,8 +40,6 @@ type TraceConstraints blk =
     , LedgerQueries blk
     , StandardHash blk
     , ToJSON   (TxId (GenTx blk))
-    , ToJSON   (TxOut (AlonzoEra StandardCrypto))
-    , ToJSON   (PParamsUpdate (AlonzoEra StandardCrypto))
     , HasKESMetricsData blk
     , HasKESInfo blk
     , ConvertRawHash blk

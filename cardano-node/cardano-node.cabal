@@ -129,6 +129,7 @@ library
                       , bytestring
                       , deepseq
                       , cardano-api
+                      , cardano-data
                       , cardano-git-rev
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
@@ -140,6 +141,7 @@ library
                       , cardano-protocol-tpraos
                       , cardano-slotting
                       , cborg >= 0.2.4 && < 0.3
+                      , compact-map
                       , contra-tracer
                       , containers
                       , directory

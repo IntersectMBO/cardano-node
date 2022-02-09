@@ -450,7 +450,8 @@ instance Error TransactionValidityError where
   displayError (TransactionValidityBasicFailure (Alonzo.UnknownTxIns txins)) =
     "The transaction contains inputs that are not present in the UTxO: "
     <> show (map (renderTxIn . fromShelleyTxIn) $ Set.toList txins)
-
+  displayError (TransactionValidityBasicFailure (Alonzo.BadTranslation errmsg)) =
+    "Error translating the transaction context: " <> show errmsg
 
 -- | Compute the 'ExecutionUnits' needed for each script in the transaction.
 --

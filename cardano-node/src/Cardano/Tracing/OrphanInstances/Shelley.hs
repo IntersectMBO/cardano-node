@@ -32,9 +32,9 @@ import qualified Cardano.Api.Shelley as Api
 import           Cardano.Ledger.Crypto (StandardCrypto)
 
 import           Cardano.Slotting.Block (BlockNo (..))
-import           Cardano.Tracing.Render (renderTxId)
 import           Cardano.Tracing.OrphanInstances.Common
 import           Cardano.Tracing.OrphanInstances.Consensus ()
+import           Cardano.Tracing.Render (renderTxId)
 
 import           Ouroboros.Consensus.Ledger.SupportsMempool (txId)
 import qualified Ouroboros.Consensus.Ledger.SupportsMempool as SupportsMempool
@@ -94,6 +94,9 @@ import           Cardano.Ledger.Shelley.Rules.Tick
 import           Cardano.Ledger.Shelley.Rules.Upec
 import           Cardano.Ledger.Shelley.Rules.Utxo
 import           Cardano.Ledger.Shelley.Rules.Utxow
+import           Cardano.Protocol.TPraos.API (ChainTransitionError (ChainTransitionError))
+import           Cardano.Protocol.TPraos.OCert (KESPeriod (KESPeriod))
+import           Cardano.Protocol.TPraos.Rules.Prtcl
 
 
 {- HLINT ignore "Use :" -}
@@ -210,8 +213,7 @@ instance Core.Crypto crypto => ToObject (ChainTransitionError crypto) where
              , "failures" .= map (toObject verb) fs
              ]
 
-instance ( ShelleyBasedEra era
-         ) => ToObject (ChainPredicateFailure era) where
+instance ToObject ChainPredicateFailure where
   toObject _verb (HeaderSizeTooLargeCHAIN hdrSz maxHdrSz) =
     mkObject [ "kind" .= String "HeaderSizeTooLarge"
              , "headerSize" .= hdrSz
@@ -637,7 +639,14 @@ instance Ledger.Era era => ToObject (DelegPredicateFailure era) where
   toObject _verb MIRProducesNegativeUpdate =
     mkObject [ "kind" .= String "MIRProducesNegativeUpdate"
              ]
-
+  toObject _verb (MIRNegativeTransfer pot coin) =
+    mkObject [ "kind" .= String "MIRNegativeTransfer"
+             , "error" .= String "Attempt to transfer a negative amount from a pot."
+             , "pot" .= String (case pot of
+                                  ReservesMIR -> "Reserves"
+                                  TreasuryMIR -> "Treasury")
+             , "amount" .= coin
+             ]
 
 instance ToObject (PoolPredicateFailure era) where
   toObject _verb (StakePoolNotRegisteredOnKeyPOOL (KeyHash unregStakePool)) =
@@ -986,6 +995,15 @@ instance ToJSON (Alonzo.CollectError StandardCrypto) where
           [ "kind" .= String "CollectError"
           , "error" .= String "NoCostModel"
           , "language" .= toJSON lang
+          ]
+      Alonzo.BadTranslation err ->
+        object
+          [ "kind" .= String "PlutusTranslationError"
+          , "error" .= case err of
+              Alonzo.ByronInputInContext -> String "Byron input in the presence of a plutus script"
+              Alonzo.ByronOutputInContext -> String "Byron output in the presence of a plutus script"
+              Alonzo.TranslationLogicErrorInput -> String "Logic error translating inputs"
+              Alonzo.TranslationLogicErrorRedeemer -> String "Logic error translating redeemers"
           ]
 
 instance ToJSON Alonzo.TagMismatchDescription where

@@ -17,7 +17,7 @@ import qualified Data.Text as Text
 import           Cardano.BM.Data.Tracer (TracingVerbosity (..))
 import qualified Cardano.Chain.Update as Update
 import           Cardano.Ledger.Crypto (StandardCrypto)
-import qualified Cardano.Ledger.Shelley.CompactAddr as Shelley
+import qualified Cardano.Ledger.CompactAddress as Ledger
 import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..))
 
 instance FromJSON TracingVerbosity where
@@ -32,8 +32,8 @@ instance FromJSON TracingVerbosity where
 
 deriving instance Show TracingVerbosity
 
-instance ToJSON (Shelley.CompactAddr StandardCrypto) where
-  toJSON = toJSON . Shelley.decompactAddr
+instance ToJSON (Ledger.CompactAddr StandardCrypto) where
+  toJSON = toJSON . Ledger.decompactAddr
 
 --Not currently needed, but if we do need it, this is the general instance.
 --instance (ToJSON a, Ledger.Compactible a) => ToJSON (Ledger.CompactForm a) where
