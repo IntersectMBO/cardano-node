@@ -1,14 +1,20 @@
-{-# LANGUAGE DataKinds         #-}
-{-# LANGUAGE KindSignatures      #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications    #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Cardano.Tracing.Config
   ( TraceOptions (..)
   , TraceSelection (..)
-  , traceConfigParser
   , OnOff (..)
+  , PartialTraceOptions (..)
+  , PartialTraceSelection (..)
+  , partialTraceSelectionToEither
+  , defaultPartialTraceConfiguration
+  , lastToEither
 
   -- * Trace symbols
   , TraceConnectionManagerCounters
@@ -17,10 +23,11 @@ module Cardano.Tracing.Config
   ) where
 
 import           Cardano.Prelude
+import           Prelude (String)
 
 import           Data.Aeson
-import           Data.Aeson.Types (Parser)
-import           Data.Text (pack)
+import qualified Data.Text as Text
+import           Generic.Data (gmappend)
 
 import           Cardano.BM.Tracing (TracingVerbosity (..))
 import           Cardano.Node.Orphans ()
@@ -31,6 +38,28 @@ data TraceOptions
   | TracingOnLegacy TraceSelection
   | TraceDispatcher TraceSelection
   deriving (Eq, Show)
+
+data PartialTraceOptions
+  = PartialTracingOff
+  | PartialTracingOnLegacy PartialTraceSelection
+  | PartialTraceDispatcher PartialTraceSelection
+  deriving (Eq, Show)
+
+instance Monoid PartialTraceOptions where
+  mempty = PartialTracingOff
+
+-- Mimics Last's semantics
+instance Semigroup PartialTraceOptions where
+
+  tracingA <> tracingB =
+    case (tracingA, tracingB) of
+      (PartialTracingOnLegacy ptsA, PartialTracingOnLegacy ptsB) ->
+        PartialTracingOnLegacy (ptsA <> ptsB)
+
+      (PartialTraceDispatcher ptsA, PartialTraceDispatcher ptsB) ->
+        PartialTraceDispatcher (ptsA <> ptsB)
+
+      (_, tracing) -> tracing
 
 type TraceAcceptPolicy = ("TraceAcceptPolicy" :: Symbol)
 type TraceBlockchainTime = ("TraceBlockchainTime" :: Symbol)
@@ -92,8 +121,8 @@ instance FromJSON (OnOff a) where
     parseJSON (Data.Aeson.Bool b)= return $ OnOff b
     parseJSON _ = mzero
 
-getName :: forall name. KnownSymbol name => OnOff name -> Text
-getName _ = pack (symbolVal (Proxy @name))
+proxyName :: KnownSymbol name => Proxy name -> Text
+proxyName p = Text.pack (symbolVal p)
 
 data TraceSelection
   = TraceSelection
@@ -156,170 +185,426 @@ data TraceSelection
   } deriving (Eq, Show)
 
 
-traceConfigParser :: Object -> (TraceSelection -> TraceOptions) -> Parser TraceOptions
-traceConfigParser v ctor =
-  let acceptPolicy :: OnOff TraceAcceptPolicy
-      acceptPolicy = OnOff False
-      blockFetchClient :: OnOff TraceBlockFetchClient
-      blockFetchClient = OnOff False
-      blockFetchDecisions :: OnOff TraceBlockFetchDecisions
-      blockFetchDecisions = OnOff True
-      blockFetchProtocol :: OnOff TraceBlockFetchProtocol
-      blockFetchProtocol = OnOff False
-      blockFetchProtocolSerialised :: OnOff TraceBlockFetchProtocolSerialised
-      blockFetchProtocolSerialised = OnOff False
-      blockFetchServer :: OnOff TraceBlockFetchServer
-      blockFetchServer = OnOff False
-      blockchainTime :: OnOff TraceBlockchainTime
-      blockchainTime = OnOff False
-      chainDB :: OnOff TraceChainDB
-      chainDB = OnOff True
-      chainSyncBlockServer :: OnOff TraceChainSyncBlockServer
-      chainSyncBlockServer = OnOff False
-      chainSyncClient :: OnOff TraceChainSyncClient
-      chainSyncClient = OnOff True
-      chainSyncHeaderServer :: OnOff TraceChainSyncHeaderServer
-      chainSyncHeaderServer = OnOff False
-      chainSyncProtocol :: OnOff TraceChainSyncProtocol
-      chainSyncProtocol = OnOff False
-      connectionManager :: OnOff TraceConnectionManager
-      connectionManager = OnOff True
-      connectionManagerCounters :: OnOff TraceConnectionManagerCounters
-      connectionManagerCounters = OnOff True
-      connectionManagerTransitions :: OnOff TraceConnectionManagerTransitions
-      connectionManagerTransitions = OnOff False
-      debugPeerSelectionInitiator :: OnOff DebugPeerSelectionInitiator
-      debugPeerSelectionInitiator = OnOff False
-      debugPeerSelectionInitiatorResponder :: OnOff DebugPeerSelectionInitiatorResponder
-      debugPeerSelectionInitiatorResponder = OnOff False
-      diffusionInitialization :: OnOff TraceDiffusionInitialization
-      diffusionInitialization = OnOff False
-      dnsResolver :: OnOff TraceDnsResolver
-      dnsResolver = OnOff False
-      dnsSubscription :: OnOff TraceDnsSubscription
-      dnsSubscription = OnOff True
-      errorPolicy :: OnOff TraceErrorPolicy
-      errorPolicy = OnOff True
-      forge :: OnOff TraceForge
-      forge = OnOff True
-      forgeStateInfo :: OnOff TraceForgeStateInfo
-      forgeStateInfo = OnOff True
-      handshake :: OnOff TraceHandshake
-      handshake = OnOff False
-      inboundGovernor :: OnOff TraceInboundGovernor
-      inboundGovernor = OnOff True
-      inboundGovernorCounters :: OnOff TraceInboundGovernorCounters
-      inboundGovernorCounters = OnOff True
-      inboundGovernorTransitions :: OnOff TraceInboundGovernorTransitions
-      inboundGovernorTransitions = OnOff False
-      ipSubscription :: OnOff TraceIpSubscription
-      ipSubscription = OnOff True
-      keepAliveClient :: OnOff TraceKeepAliveClient
-      keepAliveClient = OnOff False
-      ledgerPeers :: OnOff TraceLedgerPeers
-      ledgerPeers = OnOff False
-      localChainSyncProtocol :: OnOff TraceLocalChainSyncProtocol
-      localChainSyncProtocol = OnOff False
-      localConnectionManager :: OnOff TraceLocalConnectionManager
-      localConnectionManager = OnOff False
-      localErrorPolicy :: OnOff TraceLocalErrorPolicy
-      localErrorPolicy = OnOff True
-      localHandshake :: OnOff TraceLocalHandshake
-      localHandshake = OnOff False
-      localInboundGovernor :: OnOff TraceLocalInboundGovernor
-      localInboundGovernor = OnOff False
-      localMux :: OnOff TraceLocalMux
-      localMux = OnOff False
-      localRootPeers :: OnOff TraceLocalRootPeers
-      localRootPeers = OnOff False
-      localServer :: OnOff TraceLocalServer
-      localServer = OnOff False
-      localStateQueryProtocol :: OnOff TraceLocalStateQueryProtocol
-      localStateQueryProtocol = OnOff False
-      localTxMonitorProtocol :: OnOff TraceLocalTxMonitorProtocol
-      localTxMonitorProtocol = OnOff False
-      localTxSubmissionProtocol :: OnOff TraceLocalTxSubmissionProtocol
-      localTxSubmissionProtocol = OnOff False
-      localTxSubmissionServer :: OnOff TraceLocalTxSubmissionServer
-      localTxSubmissionServer = OnOff False
-      mempool :: OnOff TraceMempool
-      mempool = OnOff True
-      mux :: OnOff TraceMux
-      mux = OnOff True
-      peerSelection :: OnOff TracePeerSelection
-      peerSelection = OnOff True
-      peerSelectionCounters :: OnOff TracePeerSelectionCounters
-      peerSelectionCounters = OnOff True
-      peerSelectionActions :: OnOff TracePeerSelectionActions
-      peerSelectionActions = OnOff True
-      publicRootPeers :: OnOff TracePublicRootPeers
-      publicRootPeers = OnOff False
-      server :: OnOff TraceServer
-      server = OnOff False
-      txInbound :: OnOff TraceTxInbound
-      txInbound = OnOff False
-      txOutbound :: OnOff TraceTxOutbound
-      txOutbound = OnOff False
-      txSubmissionProtocol :: OnOff TraceTxSubmissionProtocol
-      txSubmissionProtocol = OnOff False
-      txSubmission2Protocol :: OnOff TraceTxSubmission2Protocol
-      txSubmission2Protocol = OnOff False in
 
-  ctor <$> (TraceSelection
-    <$> v .:? "TracingVerbosity" .!= NormalVerbosity
+data PartialTraceSelection
+  = PartialTraceSelection
+      { pTraceVerbosity :: !(Last TracingVerbosity)
+
+      -- Per-trace toggles, alpha-sorted.
+      , pTraceAcceptPolicy :: Last (OnOff TraceAcceptPolicy)
+      , pTraceBlockchainTime :: Last (OnOff TraceBlockchainTime)
+      , pTraceBlockFetchClient :: Last (OnOff TraceBlockFetchClient)
+      , pTraceBlockFetchDecisions :: Last (OnOff TraceBlockFetchDecisions)
+      , pTraceBlockFetchProtocol :: Last (OnOff TraceBlockFetchProtocol)
+      , pTraceBlockFetchProtocolSerialised :: Last (OnOff TraceBlockFetchProtocolSerialised)
+      , pTraceBlockFetchServer :: Last (OnOff TraceBlockFetchServer)
+      , pTraceChainDB :: Last (OnOff TraceChainDB)
+      , pTraceChainSyncBlockServer :: Last (OnOff TraceChainSyncBlockServer)
+      , pTraceChainSyncClient :: Last (OnOff TraceChainSyncClient)
+      , pTraceChainSyncHeaderServer :: Last (OnOff TraceChainSyncHeaderServer)
+      , pTraceChainSyncProtocol :: Last (OnOff TraceChainSyncProtocol)
+      , pTraceConnectionManager :: Last (OnOff TraceConnectionManager)
+      , pTraceConnectionManagerCounters :: Last (OnOff TraceConnectionManagerCounters)
+      , pTraceConnectionManagerTransitions :: Last (OnOff TraceConnectionManagerTransitions)
+      , pTraceDebugPeerSelectionInitiatorTracer :: Last (OnOff DebugPeerSelectionInitiator)
+      , pTraceDiffusionInitialization :: Last (OnOff TraceDiffusionInitialization)
+      , pTraceDebugPeerSelectionInitiatorResponderTracer :: Last (OnOff DebugPeerSelectionInitiatorResponder)
+      , pTraceDnsResolver :: Last (OnOff TraceDnsResolver)
+      , pTraceDnsSubscription :: Last (OnOff TraceDnsSubscription)
+      , pTraceErrorPolicy :: Last (OnOff TraceErrorPolicy)
+      , pTraceForge :: Last (OnOff TraceForge)
+      , pTraceForgeStateInfo :: Last (OnOff TraceForgeStateInfo)
+      , pTraceHandshake :: Last (OnOff TraceHandshake)
+      , pTraceInboundGovernor :: Last (OnOff TraceInboundGovernor)
+      , pTraceInboundGovernorCounters :: Last (OnOff TraceInboundGovernorCounters)
+      , pTraceInboundGovernorTransitions :: Last (OnOff TraceInboundGovernorTransitions)
+      , pTraceIpSubscription :: Last (OnOff TraceIpSubscription)
+      , pTraceKeepAliveClient :: Last (OnOff TraceKeepAliveClient)
+      , pTraceLedgerPeers :: Last (OnOff TraceLedgerPeers)
+      , pTraceLocalChainSyncProtocol :: Last (OnOff TraceLocalChainSyncProtocol)
+      , pTraceLocalConnectionManager :: Last (OnOff TraceLocalConnectionManager)
+      , pTraceLocalErrorPolicy :: Last (OnOff TraceLocalErrorPolicy)
+      , pTraceLocalHandshake :: Last (OnOff TraceLocalHandshake)
+      , pTraceLocalInboundGovernor :: Last (OnOff TraceLocalInboundGovernor)
+      , pTraceLocalMux :: Last (OnOff TraceLocalMux)
+      , pTraceLocalRootPeers :: Last (OnOff TraceLocalRootPeers)
+      , pTraceLocalServer :: Last (OnOff TraceLocalServer)
+      , pTraceLocalStateQueryProtocol :: Last (OnOff TraceLocalStateQueryProtocol)
+      , pTraceLocalTxMonitorProtocol :: Last (OnOff TraceLocalTxMonitorProtocol)
+      , pTraceLocalTxSubmissionProtocol :: Last (OnOff TraceLocalTxSubmissionProtocol)
+      , pTraceLocalTxSubmissionServer :: Last (OnOff TraceLocalTxSubmissionServer)
+      , pTraceMempool :: Last (OnOff TraceMempool)
+      , pTraceMux :: Last (OnOff TraceMux)
+      , pTracePeerSelection :: Last (OnOff TracePeerSelection)
+      , pTracePeerSelectionCounters :: Last (OnOff TracePeerSelectionCounters)
+      , pTracePeerSelectionActions :: Last (OnOff TracePeerSelectionActions)
+      , pTracePublicRootPeers :: Last (OnOff TracePublicRootPeers)
+      , pTraceServer :: Last (OnOff TraceServer)
+      , pTraceTxInbound :: Last (OnOff TraceTxInbound)
+      , pTraceTxOutbound :: Last (OnOff TraceTxOutbound)
+      , pTraceTxSubmissionProtocol :: Last (OnOff TraceTxSubmissionProtocol)
+      , pTraceTxSubmission2Protocol :: Last (OnOff TraceTxSubmission2Protocol)
+      } deriving (Eq, Generic, Show)
+
+
+instance Semigroup PartialTraceSelection where
+  (<>) = gmappend
+
+instance FromJSON PartialTraceSelection where
+  parseJSON = withObject "PartialTraceSelection" $ \v -> do
+    PartialTraceSelection
+        <$> Last <$> v .:? "TracingVerbosity"
+        -- Per-trace toggles, alpha-sorted.
+        <*> (Last <$> v .:? proxyName (Proxy @TraceAcceptPolicy))
+        <*> (Last <$> v .:? proxyName (Proxy @TraceBlockchainTime))
+        <*> (Last <$> v .:? proxyName (Proxy @TraceBlockFetchClient))
+        <*> (Last <$> v .:? proxyName (Proxy @TraceBlockFetchDecisions))
+        <*> (Last <$> v .:? proxyName (Proxy @TraceBlockFetchProtocol))
+        <*> (Last <$> v .:? proxyName (Proxy @TraceBlockFetchProtocolSerialised))
+        <*> (Last <$> v .:? proxyName (Proxy @TraceBlockFetchServer))
+        <*> (Last <$> v .:? proxyName (Proxy @TraceChainDB))
+        <*> (Last <$> v .:? proxyName (Proxy @TraceChainSyncBlockServer))
+        <*> (Last <$> v .:? proxyName (Proxy @TraceChainSyncClient))
+        <*> (Last <$> v .:? proxyName (Proxy @TraceChainSyncHeaderServer))
+        <*> (Last <$> v .:? proxyName (Proxy @TraceChainSyncProtocol))
+        <*> (Last <$> v .:? proxyName (Proxy @TraceConnectionManager))
+        <*> (Last <$> v .:? proxyName (Proxy @TraceConnectionManagerCounters))
+        <*> (Last <$> v .:? proxyName (Proxy @TraceConnectionManagerTransitions))
+        <*> (Last <$> v .:? proxyName (Proxy @DebugPeerSelectionInitiator))
+        <*> (Last <$> v .:? proxyName (Proxy @DebugPeerSelectionInitiatorResponder))
+        <*> (Last <$> v .:? proxyName (Proxy @TraceDiffusionInitialization))
+        <*> (Last <$> v .:? proxyName (Proxy @TraceDnsResolver))
+        <*> (Last <$> v .:? proxyName (Proxy @TraceDnsSubscription))
+        <*> (Last <$> v .:? proxyName (Proxy @TraceErrorPolicy))
+        <*> (Last <$> v .:? proxyName (Proxy @TraceForge))
+        <*> (Last <$> v .:? proxyName (Proxy @TraceForgeStateInfo))
+        <*> (Last <$> v .:? proxyName (Proxy @TraceHandshake))
+        <*> (Last <$> v .:? proxyName (Proxy @TraceIpSubscription))
+        <*> (Last <$> v .:? proxyName (Proxy @TraceKeepAliveClient))
+        <*> (Last <$> v .:? proxyName (Proxy @TraceInboundGovernorTransitions))
+        <*> (Last <$> v .:? proxyName (Proxy @TraceLedgerPeers))
+        <*> (Last <$> v .:? proxyName (Proxy @TraceLocalChainSyncProtocol))
+        <*> (Last <$> v .:? proxyName (Proxy @TraceLocalConnectionManager))
+        <*> (Last <$> v .:? proxyName (Proxy @TraceLocalErrorPolicy))
+        <*> (Last <$> v .:? proxyName (Proxy @TraceLocalHandshake))
+        <*> (Last <$> v .:? proxyName (Proxy @TraceLocalInboundGovernor))
+        <*> (Last <$> v .:? proxyName (Proxy @TraceLocalRootPeers))
+        <*> (Last <$> v .:? proxyName (Proxy @TraceLocalServer))
+        <*> (Last <$> v .:? proxyName (Proxy @TraceLocalStateQueryProtocol))
+        <*> (Last <$> v .:? proxyName (Proxy @TraceLocalTxMonitorProtocol))
+        <*> (Last <$> v .:? proxyName (Proxy @TraceLocalTxSubmissionProtocol))
+        <*> (Last <$> v .:? proxyName (Proxy @TraceLocalTxSubmissionServer))
+        <*> (Last <$> v .:? proxyName (Proxy @TraceMempool))
+        <*> (Last <$> v .:? proxyName (Proxy @TraceMux))
+        <*> (Last <$> v .:? proxyName (Proxy @TraceLocalMux))
+        <*> (Last <$> v .:? proxyName (Proxy @TracePeerSelection))
+        <*> (Last <$> v .:? proxyName (Proxy @TracePeerSelectionCounters))
+        <*> (Last <$> v .:? proxyName (Proxy @TracePeerSelectionActions))
+        <*> (Last <$> v .:? proxyName (Proxy @TracePublicRootPeers))
+        <*> (Last <$> v .:? proxyName (Proxy @TraceServer))
+        <*> (Last <$> v .:? proxyName (Proxy @TraceInboundGovernor))
+        <*> (Last <$> v .:? proxyName (Proxy @TraceInboundGovernorCounters))
+        <*> (Last <$> v .:? proxyName (Proxy @TraceTxInbound))
+        <*> (Last <$> v .:? proxyName (Proxy @TraceTxOutbound))
+        <*> (Last <$> v .:? proxyName (Proxy @TraceTxSubmissionProtocol))
+        <*> (Last <$> v .:? proxyName (Proxy @TraceTxSubmission2Protocol))
+
+
+defaultPartialTraceConfiguration :: PartialTraceSelection
+defaultPartialTraceConfiguration =
+  PartialTraceSelection
+    { pTraceVerbosity = Last $ Just NormalVerbosity
     -- Per-trace toggles, alpha-sorted.
-    <*> v .:? getName acceptPolicy .!= acceptPolicy
-    <*> v .:? getName blockFetchClient .!=  blockFetchClient
-    <*> v .:? getName blockFetchDecisions .!= blockFetchDecisions
-    <*> v .:? getName blockFetchProtocol .!= blockFetchProtocol
-    <*> v .:? getName blockFetchProtocolSerialised .!= blockFetchProtocolSerialised
-    <*> v .:? getName blockFetchServer .!= blockFetchServer
-    <*> v .:? getName blockchainTime .!= blockchainTime
-    <*> v .:? getName chainDB .!=  chainDB
-    <*> v .:? getName chainSyncBlockServer .!= chainSyncBlockServer
-    <*> v .:? getName chainSyncClient .!= chainSyncClient
-    <*> v .:? getName chainSyncHeaderServer .!= chainSyncHeaderServer
-    <*> v .:? getName chainSyncProtocol .!= chainSyncProtocol
-    <*> v .:? getName connectionManager .!= connectionManager
-    <*> v .:? getName connectionManagerCounters .!= connectionManagerCounters
-    <*> v .:? getName connectionManagerTransitions .!= connectionManagerTransitions
-    <*> v .:? getName debugPeerSelectionInitiator
-                       .!= debugPeerSelectionInitiator
-    <*> v .:? getName debugPeerSelectionInitiatorResponder
-                       .!= debugPeerSelectionInitiatorResponder
-    <*> v .:? getName diffusionInitialization .!= diffusionInitialization
-    <*> v .:? getName dnsResolver .!= dnsResolver
-    <*> v .:? getName dnsSubscription .!= dnsSubscription
-    <*> v .:? getName errorPolicy .!=  errorPolicy
-    <*> v .:? getName forge .!= forge
-    <*> v .:? getName forgeStateInfo .!= forgeStateInfo
-    <*> v .:? getName handshake .!= handshake
-    <*> v .:? getName inboundGovernor .!= inboundGovernor
-    <*> v .:? getName inboundGovernorCounters .!= inboundGovernorCounters
-    <*> v .:? getName inboundGovernorTransitions .!= inboundGovernorTransitions
-    <*> v .:? getName ipSubscription .!= ipSubscription
-    <*> v .:? getName keepAliveClient .!= keepAliveClient
-    <*> v .:? getName ledgerPeers .!= ledgerPeers
-    <*> v .:? getName localChainSyncProtocol .!= localChainSyncProtocol
-    <*> v .:? getName localConnectionManager .!= localConnectionManager
-    <*> v .:? getName localErrorPolicy .!= localErrorPolicy
-    <*> v .:? getName localHandshake .!= localHandshake
-    <*> v .:? getName localInboundGovernor .!= localInboundGovernor
-    <*> v .:? getName localMux .!= localMux
-    <*> v .:? getName localRootPeers .!= localRootPeers
-    <*> v .:? getName localServer .!= localServer
-    <*> v .:? getName localStateQueryProtocol .!= localStateQueryProtocol
-    <*> v .:? getName localTxMonitorProtocol .!= localTxMonitorProtocol
-    <*> v .:? getName localTxSubmissionProtocol .!= localTxSubmissionProtocol
-    <*> v .:? getName localTxSubmissionServer .!= localTxSubmissionServer
-    <*> v .:? getName mempool .!= mempool
-    <*> v .:? getName mux .!= mux
-    <*> v .:? getName peerSelection .!= peerSelection
-    <*> v .:? getName peerSelectionCounters .!= peerSelectionCounters
-    <*> v .:? getName peerSelectionActions .!= peerSelectionActions
-    <*> v .:? getName publicRootPeers .!= publicRootPeers
-    <*> v .:? getName server .!= server
-    <*> v .:? getName txInbound .!= txInbound
-    <*> v .:? getName txOutbound .!= txOutbound
-    <*> v .:? getName txSubmissionProtocol .!= txSubmissionProtocol
-    <*> v .:? getName txSubmission2Protocol .!= txSubmission2Protocol)
+    , pTraceAcceptPolicy = pure $ OnOff False
+    , pTraceBlockchainTime = pure $ OnOff False
+    , pTraceBlockFetchClient = pure $ OnOff False
+    , pTraceBlockFetchDecisions = pure $ OnOff True
+    , pTraceBlockFetchProtocol = pure $ OnOff False
+    , pTraceBlockFetchProtocolSerialised = pure $ OnOff False
+    , pTraceBlockFetchServer = pure $ OnOff False
+    , pTraceChainDB = pure $ OnOff True
+    , pTraceChainSyncBlockServer = pure $ OnOff False
+    , pTraceChainSyncClient = pure $ OnOff True
+    , pTraceChainSyncHeaderServer = pure $ OnOff False
+    , pTraceChainSyncProtocol = pure $ OnOff False
+    , pTraceConnectionManager = pure $ OnOff True
+    , pTraceConnectionManagerCounters = pure $ OnOff True
+    , pTraceConnectionManagerTransitions = pure $ OnOff False
+    , pTraceDebugPeerSelectionInitiatorTracer = pure $ OnOff False
+    , pTraceDebugPeerSelectionInitiatorResponderTracer = pure $ OnOff False
+    , pTraceDiffusionInitialization = pure $ OnOff False
+    , pTraceDnsResolver = pure $ OnOff False
+    , pTraceDnsSubscription = pure $ OnOff True
+    , pTraceErrorPolicy = pure $ OnOff True
+    , pTraceForge = pure $ OnOff True
+    , pTraceForgeStateInfo = pure $ OnOff True
+    , pTraceHandshake = pure $ OnOff False
+    , pTraceInboundGovernor = pure $ OnOff True
+    , pTraceInboundGovernorCounters = pure $ OnOff True
+    , pTraceInboundGovernorTransitions = pure $ OnOff True
+    , pTraceIpSubscription = pure $ OnOff True
+    , pTraceKeepAliveClient = pure $ OnOff False
+    , pTraceLedgerPeers = pure $ OnOff False
+    , pTraceLocalChainSyncProtocol = pure $ OnOff False
+    , pTraceLocalConnectionManager = pure $ OnOff False
+    , pTraceLocalErrorPolicy = pure $ OnOff True
+    , pTraceLocalHandshake = pure $ OnOff False
+    , pTraceLocalInboundGovernor = pure $ OnOff False
+    , pTraceLocalMux = pure $ OnOff False
+    , pTraceLocalTxMonitorProtocol = pure $ OnOff False
+    , pTraceLocalRootPeers = pure $ OnOff False
+    , pTraceLocalServer = pure $ OnOff False
+    , pTraceLocalStateQueryProtocol = pure $ OnOff False
+    , pTraceLocalTxSubmissionProtocol = pure $ OnOff False
+    , pTraceLocalTxSubmissionServer = pure $ OnOff False
+    , pTraceMempool = pure $ OnOff True
+    , pTraceMux = pure $ OnOff True
+    , pTracePeerSelection = pure $ OnOff True
+    , pTracePeerSelectionCounters = pure $ OnOff True
+    , pTracePeerSelectionActions = pure $ OnOff True
+    , pTracePublicRootPeers = pure $ OnOff False
+    , pTraceServer = pure $ OnOff False
+    , pTraceTxInbound = pure $ OnOff False
+    , pTraceTxOutbound = pure $ OnOff False
+    , pTraceTxSubmissionProtocol = pure $ OnOff False
+    , pTraceTxSubmission2Protocol = pure $ OnOff False
+    }
+
+
+partialTraceSelectionToEither :: Last PartialTraceOptions -> Either Text TraceOptions
+partialTraceSelectionToEither (Last Nothing) = Right TracingOff
+partialTraceSelectionToEither  (Last (Just PartialTracingOff)) = Right TracingOff
+partialTraceSelectionToEither (Last (Just (PartialTraceDispatcher pTraceSelection))) = do
+   let PartialTraceSelection {..} = defaultPartialTraceConfiguration <> pTraceSelection
+   traceVerbosity <- first Text.pack $ lastToEither "Default value not specified for TracingVerbosity" pTraceVerbosity
+   traceAcceptPolicy <- proxyLastToEither (Proxy @TraceAcceptPolicy) pTraceAcceptPolicy
+   traceBlockchainTime <- proxyLastToEither (Proxy @TraceBlockchainTime) pTraceBlockchainTime
+   traceBlockFetchClient <- proxyLastToEither (Proxy @TraceBlockFetchClient) pTraceBlockFetchClient
+   traceBlockFetchDecisions <- proxyLastToEither (Proxy @TraceBlockFetchDecisions) pTraceBlockFetchDecisions
+   traceBlockFetchProtocol <- proxyLastToEither (Proxy @TraceBlockFetchProtocol) pTraceBlockFetchProtocol
+   traceBlockFetchProtocolSerialised <- proxyLastToEither (Proxy @TraceBlockFetchProtocolSerialised) pTraceBlockFetchProtocolSerialised
+   traceBlockFetchServer <- proxyLastToEither (Proxy @TraceBlockFetchServer) pTraceBlockFetchServer
+   traceChainDB <- proxyLastToEither (Proxy @TraceChainDB) pTraceChainDB
+   traceChainSyncClient <- proxyLastToEither (Proxy @TraceChainSyncClient) pTraceChainSyncClient
+   traceChainSyncBlockServer <- proxyLastToEither (Proxy @TraceChainSyncBlockServer) pTraceChainSyncBlockServer
+   traceChainSyncHeaderServer <- proxyLastToEither (Proxy @TraceChainSyncHeaderServer) pTraceChainSyncHeaderServer
+   traceChainSyncProtocol <- proxyLastToEither (Proxy @TraceChainSyncProtocol) pTraceChainSyncProtocol
+   traceConnectionManager <- proxyLastToEither (Proxy @TraceConnectionManager) pTraceConnectionManager
+   traceConnectionManagerCounters <- proxyLastToEither (Proxy @TraceConnectionManagerCounters) pTraceConnectionManagerCounters
+   traceConnectionManagerTransitions <- proxyLastToEither (Proxy @TraceConnectionManagerTransitions) pTraceConnectionManagerTransitions
+   traceDebugPeerSelectionInitiatorTracer <- proxyLastToEither (Proxy @DebugPeerSelectionInitiator) pTraceDebugPeerSelectionInitiatorTracer
+   traceDebugPeerSelectionInitiatorResponderTracer <- proxyLastToEither (Proxy @DebugPeerSelectionInitiatorResponder) pTraceDebugPeerSelectionInitiatorResponderTracer
+   traceDiffusionInitialization <- proxyLastToEither (Proxy @TraceDiffusionInitialization) pTraceDiffusionInitialization
+   traceDnsResolver <- proxyLastToEither (Proxy @TraceDnsResolver) pTraceDnsResolver
+   traceDnsSubscription <- proxyLastToEither (Proxy @TraceDnsSubscription) pTraceDnsSubscription
+   traceErrorPolicy <- proxyLastToEither (Proxy @TraceErrorPolicy) pTraceErrorPolicy
+   traceForge <- proxyLastToEither (Proxy @TraceForge) pTraceForge
+   traceForgeStateInfo <- proxyLastToEither (Proxy @TraceForgeStateInfo) pTraceForgeStateInfo
+   traceHandshake <- proxyLastToEither (Proxy @TraceHandshake) pTraceHandshake
+   traceInboundGovernor <- proxyLastToEither (Proxy @TraceIpSubscription) pTraceInboundGovernor
+   traceInboundGovernorCounters <- proxyLastToEither (Proxy @TraceKeepAliveClient) pTraceInboundGovernorCounters
+   traceInboundGovernorTransitions <- proxyLastToEither (Proxy @TraceInboundGovernorTransitions) pTraceInboundGovernorTransitions
+   traceIpSubscription <- proxyLastToEither (Proxy @TraceLedgerPeers) pTraceIpSubscription
+   traceKeepAliveClient <- proxyLastToEither (Proxy @TraceLocalChainSyncProtocol) pTraceKeepAliveClient
+   traceLedgerPeers <- proxyLastToEither (Proxy @TraceLocalConnectionManager) pTraceLedgerPeers
+   traceLocalChainSyncProtocol <- proxyLastToEither (Proxy @TraceLocalErrorPolicy) pTraceLocalChainSyncProtocol
+   traceLocalConnectionManager <- proxyLastToEither (Proxy @TraceLocalHandshake) pTraceLocalConnectionManager
+   traceLocalErrorPolicy <- proxyLastToEither (Proxy @TraceLocalInboundGovernor) pTraceLocalErrorPolicy
+   traceLocalHandshake <- proxyLastToEither (Proxy @TraceLocalRootPeers) pTraceLocalHandshake
+   traceLocalInboundGovernor <- proxyLastToEither (Proxy @TraceLocalServer) pTraceLocalInboundGovernor
+   traceLocalMux <- proxyLastToEither (Proxy @TraceLocalStateQueryProtocol) pTraceLocalMux
+   traceLocalTxMonitorProtocol <- proxyLastToEither (Proxy @TraceLocalTxMonitorProtocol) pTraceLocalTxMonitorProtocol
+   traceLocalRootPeers <- proxyLastToEither (Proxy @TraceLocalTxSubmissionProtocol) pTraceLocalRootPeers
+   traceLocalServer <- proxyLastToEither (Proxy @TraceLocalTxSubmissionServer) pTraceLocalServer
+   traceLocalStateQueryProtocol <- proxyLastToEither (Proxy @TraceMempool) pTraceLocalStateQueryProtocol
+   traceLocalTxSubmissionProtocol <- proxyLastToEither (Proxy @TraceMux) pTraceLocalTxSubmissionProtocol
+   traceLocalTxSubmissionServer <- proxyLastToEither (Proxy @TraceLocalMux) pTraceLocalTxSubmissionServer
+   traceMempool <- proxyLastToEither (Proxy @TracePeerSelection) pTraceMempool
+   traceMux <- proxyLastToEither (Proxy @TracePeerSelectionCounters) pTraceMux
+   tracePeerSelection <- proxyLastToEither (Proxy @TracePeerSelectionActions) pTracePeerSelection
+   tracePeerSelectionCounters <- proxyLastToEither (Proxy @TracePublicRootPeers) pTracePeerSelectionCounters
+   tracePeerSelectionActions <- proxyLastToEither (Proxy @TraceServer) pTracePeerSelectionActions
+   tracePublicRootPeers <- proxyLastToEither (Proxy @TraceInboundGovernor) pTracePublicRootPeers
+   traceServer <- proxyLastToEither (Proxy @TraceInboundGovernorCounters) pTraceServer
+   traceTxInbound <- proxyLastToEither (Proxy @TraceTxInbound) pTraceTxInbound
+   traceTxOutbound <- proxyLastToEither (Proxy @TraceTxOutbound) pTraceTxOutbound
+   traceTxSubmissionProtocol <- proxyLastToEither (Proxy @TraceTxSubmissionProtocol) pTraceTxSubmissionProtocol
+   traceTxSubmission2Protocol <- proxyLastToEither (Proxy @TraceTxSubmission2Protocol) pTraceTxSubmission2Protocol
+   Right $ TracingOnLegacy $ TraceSelection
+             { traceVerbosity = traceVerbosity
+             , traceAcceptPolicy = traceAcceptPolicy
+             , traceBlockFetchClient = traceBlockFetchClient
+             , traceBlockFetchDecisions = traceBlockFetchDecisions
+             , traceBlockFetchProtocol = traceBlockFetchProtocol
+             , traceBlockFetchProtocolSerialised = traceBlockFetchProtocolSerialised
+             , traceBlockFetchServer = traceBlockFetchServer
+             , traceBlockchainTime = traceBlockchainTime
+             , traceChainDB = traceChainDB
+             , traceChainSyncBlockServer = traceChainSyncBlockServer
+             , traceChainSyncClient = traceChainSyncClient
+             , traceChainSyncHeaderServer = traceChainSyncHeaderServer
+             , traceChainSyncProtocol = traceChainSyncProtocol
+             , traceConnectionManager = traceConnectionManager
+             , traceConnectionManagerCounters = traceConnectionManagerCounters
+             , traceConnectionManagerTransitions = traceConnectionManagerTransitions
+             , traceDebugPeerSelectionInitiatorTracer = traceDebugPeerSelectionInitiatorTracer
+             , traceDebugPeerSelectionInitiatorResponderTracer = traceDebugPeerSelectionInitiatorResponderTracer
+             , traceDiffusionInitialization = traceDiffusionInitialization
+             , traceDnsResolver = traceDnsResolver
+             , traceDnsSubscription = traceDnsSubscription
+             , traceErrorPolicy = traceErrorPolicy
+             , traceForge = traceForge
+             , traceForgeStateInfo = traceForgeStateInfo
+             , traceHandshake = traceHandshake
+             , traceInboundGovernor = traceInboundGovernor
+             , traceInboundGovernorCounters = traceInboundGovernorCounters
+             , traceInboundGovernorTransitions = traceInboundGovernorTransitions
+             , traceIpSubscription = traceIpSubscription
+             , traceKeepAliveClient = traceKeepAliveClient
+             , traceLedgerPeers = traceLedgerPeers
+             , traceLocalChainSyncProtocol = traceLocalChainSyncProtocol
+             , traceLocalConnectionManager = traceLocalConnectionManager
+             , traceLocalErrorPolicy = traceLocalErrorPolicy
+             , traceLocalHandshake = traceLocalHandshake
+             , traceLocalInboundGovernor = traceLocalInboundGovernor
+             , traceLocalMux = traceLocalMux
+             , traceLocalTxMonitorProtocol = traceLocalTxMonitorProtocol
+             , traceLocalRootPeers = traceLocalRootPeers
+             , traceLocalServer = traceLocalServer
+             , traceLocalStateQueryProtocol = traceLocalStateQueryProtocol
+             , traceLocalTxSubmissionProtocol = traceLocalTxSubmissionProtocol
+             , traceLocalTxSubmissionServer = traceLocalTxSubmissionServer
+             , traceMempool = traceMempool
+             , traceMux = traceMux
+             , tracePeerSelection = tracePeerSelection
+             , tracePeerSelectionCounters = tracePeerSelectionCounters
+             , tracePeerSelectionActions = tracePeerSelectionActions
+             , tracePublicRootPeers = tracePublicRootPeers
+             , traceServer = traceServer
+             , traceTxInbound = traceTxInbound
+             , traceTxOutbound = traceTxOutbound
+             , traceTxSubmissionProtocol = traceTxSubmissionProtocol
+             , traceTxSubmission2Protocol = traceTxSubmission2Protocol
+             }
+
+partialTraceSelectionToEither (Last (Just (PartialTracingOnLegacy pTraceSelection))) = do
+  -- This will be removed once the old tracing system is deprecated.
+  let PartialTraceSelection {..} = defaultPartialTraceConfiguration <> pTraceSelection
+  traceVerbosity <- first Text.pack $ lastToEither "Default value not specified for TracingVerbosity" pTraceVerbosity
+  traceAcceptPolicy <- proxyLastToEither (Proxy @TraceAcceptPolicy) pTraceAcceptPolicy
+  traceBlockchainTime <- proxyLastToEither (Proxy @TraceBlockchainTime) pTraceBlockchainTime
+  traceBlockFetchClient <- proxyLastToEither (Proxy @TraceBlockFetchClient) pTraceBlockFetchClient
+  traceBlockFetchDecisions <- proxyLastToEither (Proxy @TraceBlockFetchDecisions) pTraceBlockFetchDecisions
+  traceBlockFetchProtocol <- proxyLastToEither (Proxy @TraceBlockFetchProtocol) pTraceBlockFetchProtocol
+  traceBlockFetchProtocolSerialised <- proxyLastToEither (Proxy @TraceBlockFetchProtocolSerialised) pTraceBlockFetchProtocolSerialised
+  traceBlockFetchServer <- proxyLastToEither (Proxy @TraceBlockFetchServer) pTraceBlockFetchServer
+  traceChainDB <- proxyLastToEither (Proxy @TraceChainDB) pTraceChainDB
+  traceChainSyncBlockServer <- proxyLastToEither (Proxy @TraceChainSyncBlockServer) pTraceChainSyncBlockServer
+  traceChainSyncClient <- proxyLastToEither (Proxy @TraceChainSyncClient) pTraceChainSyncClient
+  traceChainSyncHeaderServer <- proxyLastToEither (Proxy @TraceChainSyncHeaderServer) pTraceChainSyncHeaderServer
+  traceChainSyncProtocol <- proxyLastToEither (Proxy @TraceChainSyncProtocol) pTraceChainSyncProtocol
+  traceConnectionManager <- proxyLastToEither (Proxy @TraceConnectionManager) pTraceConnectionManager
+  traceConnectionManagerCounters <- proxyLastToEither (Proxy @TraceConnectionManagerCounters) pTraceConnectionManagerCounters
+  traceConnectionManagerTransitions <- proxyLastToEither (Proxy @TraceConnectionManagerTransitions) pTraceConnectionManagerTransitions
+  traceDebugPeerSelectionInitiatorTracer <- proxyLastToEither (Proxy @DebugPeerSelectionInitiator) pTraceDebugPeerSelectionInitiatorTracer
+  traceDebugPeerSelectionInitiatorResponderTracer <- proxyLastToEither (Proxy @DebugPeerSelectionInitiatorResponder) pTraceDebugPeerSelectionInitiatorResponderTracer
+  traceDiffusionInitialization <- proxyLastToEither (Proxy @TraceDiffusionInitialization) pTraceDiffusionInitialization
+  traceDnsResolver <- proxyLastToEither (Proxy @TraceDnsResolver) pTraceDnsResolver
+  traceDnsSubscription <- proxyLastToEither (Proxy @TraceDnsSubscription) pTraceDnsSubscription
+  traceErrorPolicy <- proxyLastToEither (Proxy @TraceErrorPolicy) pTraceErrorPolicy
+  traceForge <- proxyLastToEither (Proxy @TraceForge) pTraceForge
+  traceForgeStateInfo <- proxyLastToEither (Proxy @TraceForgeStateInfo) pTraceForgeStateInfo
+  traceHandshake <- proxyLastToEither (Proxy @TraceHandshake) pTraceHandshake
+  traceInboundGovernor <- proxyLastToEither (Proxy @TraceIpSubscription) pTraceInboundGovernor
+  traceInboundGovernorCounters <- proxyLastToEither (Proxy @TraceKeepAliveClient) pTraceInboundGovernorCounters
+  traceInboundGovernorTransitions <- proxyLastToEither (Proxy @TraceInboundGovernorTransitions) pTraceInboundGovernorTransitions
+  traceIpSubscription <- proxyLastToEither (Proxy @TraceLedgerPeers) pTraceIpSubscription
+  traceKeepAliveClient <- proxyLastToEither (Proxy @TraceLocalChainSyncProtocol) pTraceKeepAliveClient
+  traceLedgerPeers <- proxyLastToEither (Proxy @TraceLocalConnectionManager) pTraceLedgerPeers
+  traceLocalChainSyncProtocol <- proxyLastToEither (Proxy @TraceLocalErrorPolicy) pTraceLocalChainSyncProtocol
+  traceLocalConnectionManager <- proxyLastToEither (Proxy @TraceLocalHandshake) pTraceLocalConnectionManager
+  traceLocalErrorPolicy <- proxyLastToEither (Proxy @TraceLocalInboundGovernor) pTraceLocalErrorPolicy
+  traceLocalHandshake <- proxyLastToEither (Proxy @TraceLocalRootPeers) pTraceLocalHandshake
+  traceLocalInboundGovernor <- proxyLastToEither (Proxy @TraceLocalServer) pTraceLocalInboundGovernor
+  traceLocalMux <- proxyLastToEither (Proxy @TraceLocalStateQueryProtocol) pTraceLocalMux
+  traceLocalRootPeers <- proxyLastToEither (Proxy @TraceLocalTxSubmissionProtocol) pTraceLocalRootPeers
+  traceLocalServer <- proxyLastToEither (Proxy @TraceLocalTxSubmissionServer) pTraceLocalServer
+  traceLocalTxMonitorProtocol <- proxyLastToEither (Proxy @TraceLocalTxMonitorProtocol) pTraceLocalTxMonitorProtocol
+  traceLocalStateQueryProtocol <- proxyLastToEither (Proxy @TraceMempool) pTraceLocalStateQueryProtocol
+  traceLocalTxSubmissionProtocol <- proxyLastToEither (Proxy @TraceMux) pTraceLocalTxSubmissionProtocol
+  traceLocalTxSubmissionServer <- proxyLastToEither (Proxy @TraceLocalMux) pTraceLocalTxSubmissionServer
+  traceMempool <- proxyLastToEither (Proxy @TracePeerSelection) pTraceMempool
+  traceMux <- proxyLastToEither (Proxy @TracePeerSelectionCounters) pTraceMux
+  tracePeerSelection <- proxyLastToEither (Proxy @TracePeerSelectionActions) pTracePeerSelection
+  tracePeerSelectionCounters <- proxyLastToEither (Proxy @TracePublicRootPeers) pTracePeerSelectionCounters
+  tracePeerSelectionActions <- proxyLastToEither (Proxy @TraceServer) pTracePeerSelectionActions
+  tracePublicRootPeers <- proxyLastToEither (Proxy @TraceInboundGovernor) pTracePublicRootPeers
+  traceServer <- proxyLastToEither (Proxy @TraceInboundGovernorCounters) pTraceServer
+  traceTxInbound <- proxyLastToEither (Proxy @TraceTxInbound) pTraceTxInbound
+  traceTxOutbound <- proxyLastToEither (Proxy @TraceTxOutbound) pTraceTxOutbound
+  traceTxSubmissionProtocol <- proxyLastToEither (Proxy @TraceTxSubmissionProtocol) pTraceTxSubmissionProtocol
+  traceTxSubmission2Protocol <- proxyLastToEither (Proxy @TraceTxSubmission2Protocol) pTraceTxSubmission2Protocol
+  Right $ TracingOnLegacy $ TraceSelection
+            { traceVerbosity = traceVerbosity
+            , traceAcceptPolicy = traceAcceptPolicy
+            , traceBlockFetchClient = traceBlockFetchClient
+            , traceBlockFetchDecisions = traceBlockFetchDecisions
+            , traceBlockFetchProtocol = traceBlockFetchProtocol
+            , traceBlockFetchProtocolSerialised = traceBlockFetchProtocolSerialised
+            , traceBlockFetchServer = traceBlockFetchServer
+            , traceBlockchainTime = traceBlockchainTime
+            , traceChainDB = traceChainDB
+            , traceChainSyncBlockServer = traceChainSyncBlockServer
+            , traceChainSyncClient = traceChainSyncClient
+            , traceChainSyncHeaderServer = traceChainSyncHeaderServer
+            , traceChainSyncProtocol = traceChainSyncProtocol
+            , traceConnectionManager = traceConnectionManager
+            , traceConnectionManagerCounters = traceConnectionManagerCounters
+            , traceConnectionManagerTransitions = traceConnectionManagerTransitions
+            , traceDebugPeerSelectionInitiatorTracer = traceDebugPeerSelectionInitiatorTracer
+            , traceDebugPeerSelectionInitiatorResponderTracer = traceDebugPeerSelectionInitiatorResponderTracer
+            , traceDiffusionInitialization = traceDiffusionInitialization
+            , traceDnsResolver = traceDnsResolver
+            , traceDnsSubscription = traceDnsSubscription
+            , traceErrorPolicy = traceErrorPolicy
+            , traceForge = traceForge
+            , traceForgeStateInfo = traceForgeStateInfo
+            , traceHandshake = traceHandshake
+            , traceInboundGovernor = traceInboundGovernor
+            , traceInboundGovernorCounters = traceInboundGovernorCounters
+            , traceInboundGovernorTransitions = traceInboundGovernorTransitions
+            , traceIpSubscription = traceIpSubscription
+            , traceKeepAliveClient = traceKeepAliveClient
+            , traceLedgerPeers = traceLedgerPeers
+            , traceLocalChainSyncProtocol = traceLocalChainSyncProtocol
+            , traceLocalConnectionManager = traceLocalConnectionManager
+            , traceLocalErrorPolicy = traceLocalErrorPolicy
+            , traceLocalHandshake = traceLocalHandshake
+            , traceLocalInboundGovernor = traceLocalInboundGovernor
+            , traceLocalMux = traceLocalMux
+            , traceLocalRootPeers = traceLocalRootPeers
+            , traceLocalServer = traceLocalServer
+            , traceLocalStateQueryProtocol = traceLocalStateQueryProtocol
+            , traceLocalTxMonitorProtocol = traceLocalTxMonitorProtocol
+            , traceLocalTxSubmissionProtocol = traceLocalTxSubmissionProtocol
+            , traceLocalTxSubmissionServer = traceLocalTxSubmissionServer
+            , traceMempool = traceMempool
+            , traceMux = traceMux
+            , tracePeerSelection = tracePeerSelection
+            , tracePeerSelectionCounters = tracePeerSelectionCounters
+            , tracePeerSelectionActions = tracePeerSelectionActions
+            , tracePublicRootPeers = tracePublicRootPeers
+            , traceServer = traceServer
+            , traceTxInbound = traceTxInbound
+            , traceTxOutbound = traceTxOutbound
+            , traceTxSubmissionProtocol = traceTxSubmissionProtocol
+            , traceTxSubmission2Protocol = traceTxSubmission2Protocol
+            }
+
+proxyLastToEither :: KnownSymbol name => Proxy name -> Last a -> Either Text a
+proxyLastToEither name (Last x) =
+  maybe (Left $ "Default value not specified for " <> proxyName name) Right x
+
+lastToEither :: String -> Last a -> Either String a
+lastToEither errMsg (Last x) = maybe (Left errMsg) Right x
+

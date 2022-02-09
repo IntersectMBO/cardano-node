@@ -17,9 +17,9 @@ module Testnet.Shelley
   ) where
 
 #ifdef UNIX
-import           Prelude (Integer, map, Bool(..), (-))
+import           Prelude (Bool (..), Integer, map, (-))
 #else
-import           Prelude (Integer, Bool(..), (-))
+import           Prelude (Bool (..), Integer, (-))
 #endif
 
 import           Control.Monad
@@ -44,10 +44,10 @@ import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket (..))
 import           System.FilePath.Posix ((</>))
 import           Text.Show
 
-import qualified Cardano.Node.Configuration.Topology    as NonP2P
+import qualified Cardano.Node.Configuration.Topology as NonP2P
 import qualified Cardano.Node.Configuration.TopologyP2P as P2P
-import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
 import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter (..))
+import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
 
 import qualified Control.Concurrent as IO
 import qualified Data.Aeson as J
@@ -59,8 +59,8 @@ import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Stock.IO.File as IO
 import qualified Hedgehog.Extras.Stock.IO.Network.Socket as IO
 import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
-import qualified Hedgehog.Extras.Stock.String as S
 import qualified Hedgehog.Extras.Stock.OS as OS
+import qualified Hedgehog.Extras.Stock.String as S
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
 import qualified Hedgehog.Extras.Test.Network as H
@@ -104,6 +104,8 @@ defaultTestnetOptions = TestnetOptions
   , enableP2P = False
   }
 
+-- TODO: We need to refactor this to directly check the parsed configuration
+-- and fail with a suitable error message.
 -- | Rewrite a line in the configuration file
 rewriteConfiguration :: Bool -> String -> String
 rewriteConfiguration True "EnableP2P: False" = "EnableP2P: True"
@@ -474,8 +476,8 @@ testnet testnetOptions H.Conf {..} = do
 
   forM_ allNodes $ \node -> do
     nodeStdoutFile <- H.noteTempFile logDir $ node <> ".stdout.log"
-    H.assertByDeadlineIO deadline $ IO.fileContains "until genesis start time at" nodeStdoutFile
-    H.assertByDeadlineIO deadline $ IO.fileContains "Chain extended, new tip" nodeStdoutFile
+    H.assertByDeadlineIOCustom "stdout does not contain \"until genesis start time\"" deadline $ IO.fileContains "until genesis start time at" nodeStdoutFile
+    H.assertByDeadlineIOCustom "stdout does not contain \"Chain extended\"" deadline $ IO.fileContains "Chain extended, new tip" nodeStdoutFile
 
   H.noteShowIO_ DTC.getCurrentTime
 

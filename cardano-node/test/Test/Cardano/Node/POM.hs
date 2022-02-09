@@ -13,7 +13,8 @@ import           Cardano.Node.Configuration.POM
 import           Cardano.Node.Configuration.Socket
 import           Cardano.Node.Handlers.Shutdown
 import           Cardano.Node.Types
-import           Cardano.Tracing.Config (TraceOptions (..))
+import           Cardano.Tracing.Config (PartialTraceOptions (..), defaultPartialTraceConfiguration,
+                   partialTraceSelectionToEither)
 import qualified Ouroboros.Consensus.Node as Consensus (NetworkP2PMode (..))
 import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (SnapshotInterval (..))
 import           Ouroboros.Network.Block (MaxSlotNo (..), SlotNo (..))
@@ -22,7 +23,7 @@ import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..),
 
 import           Hedgehog (Property, discover, withTests, (===))
 import qualified Hedgehog
-import           Hedgehog.Internal.Property (failWith)
+import           Hedgehog.Internal.Property (evalEither, failWith)
 
 
 -- This is a simple test to check that the POM technique is working as intended.
@@ -37,6 +38,7 @@ prop_sanityCheck_POM =
                              <> testPartialYamlConfig
                              <> testPartialCliConfig
         nc = makeNodeConfiguration combinedPartials
+    expectedConfig <- evalEither eExpectedConfig
     case nc of
       Left err -> failWith Nothing $ "Partial Options Monoid sanity check failure: " <> err
       Right config -> config === expectedConfig
@@ -59,7 +61,7 @@ testPartialYamlConfig =
     , pncMaxConcurrencyDeadline = Last Nothing
     , pncLoggingSwitch = Last $ Just True
     , pncLogMetrics = Last $ Just True
-    , pncTraceConfig = Last $ Just TracingOff
+    , pncTraceConfig = Last (Just $ PartialTracingOnLegacy defaultPartialTraceConfiguration)
     , pncConfigFile = mempty
     , pncTopologyFile = mempty
     , pncDatabaseFile = mempty
@@ -96,7 +98,7 @@ testPartialCliConfig =
     , pncMaxConcurrencyDeadline = mempty
     , pncLoggingSwitch = mempty
     , pncLogMetrics = mempty
-    , pncTraceConfig = mempty
+    , pncTraceConfig = Last (Just $ PartialTracingOnLegacy defaultPartialTraceConfiguration)
     , pncMaybeMempoolCapacityOverride = mempty
     , pncProtocolIdleTimeout = mempty
     , pncTimeWaitTimeout = mempty
@@ -109,9 +111,11 @@ testPartialCliConfig =
     }
 
 -- | Expected final NodeConfiguration
-expectedConfig :: NodeConfiguration
-expectedConfig =
-  NodeConfiguration
+eExpectedConfig :: Either Text NodeConfiguration
+eExpectedConfig = do
+  traceOptions <- partialTraceSelectionToEither
+                    (return $ PartialTracingOnLegacy defaultPartialTraceConfiguration)
+  return $ NodeConfiguration
     { ncSocketConfig = SocketConfig mempty mempty mempty mempty
     , ncShutdownConfig = ShutdownConfig Nothing (Just . MaxSlotNo $ SlotNo 42)
     , ncConfigFile = ConfigYamlFilePath "configuration/cardano/mainnet-config.json"
@@ -129,7 +133,7 @@ expectedConfig =
     , ncMaxConcurrencyDeadline = Nothing
     , ncLoggingSwitch = True
     , ncLogMetrics = True
-    , ncTraceConfig = TracingOff
+    , ncTraceConfig = traceOptions
     , ncMaybeMempoolCapacityOverride = Nothing
     , ncProtocolIdleTimeout = 5
     , ncTimeWaitTimeout = 60

@@ -4,17 +4,17 @@ module Main
   ( main
   ) where
 
-import Prelude
+import           Prelude
 
 import qualified System.Environment as E
 import qualified Test.Tasty as T
-import qualified Test.Tasty.Ingredients as T
 import qualified Test.Tasty.Hedgehog as H
+import qualified Test.Tasty.Ingredients as T
 
-import qualified Spec.Network
 import qualified Spec.Chairman.Byron
 import qualified Spec.Chairman.Cardano
 import qualified Spec.Chairman.Shelley
+import qualified Spec.Network
 
 tests :: IO T.TestTree
 tests = do

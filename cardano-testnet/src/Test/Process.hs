@@ -1,5 +1,6 @@
 module Test.Process
-  ( bashPath
+  ( assertByDeadlineIOCustom
+  , bashPath
   , execCli
   , execCli'
   , execCreateScriptContext
@@ -10,20 +11,23 @@ module Test.Process
   , procChairman
   ) where
 
-import           Control.Monad (return)
+import           Prelude
+
+import qualified Control.Concurrent as IO
+import           Control.Monad
 import           Control.Monad.Catch (MonadCatch)
-import           Control.Monad.IO.Class (MonadIO)
-import           Data.Function
-import           Data.Maybe
-import           Data.String
+import           Control.Monad.IO.Class
+import           Data.Time.Clock (UTCTime)
+import qualified Data.Time.Clock as DTC
 import           GHC.Stack (HasCallStack)
 import           Hedgehog (MonadTest)
 import           Hedgehog.Extras.Test.Process (ExecConfig)
-import           System.IO (FilePath)
 import           System.Process (CreateProcess)
 
 import qualified GHC.Stack as GHC
+import           Hedgehog.Extras.Test.Base
 import qualified Hedgehog.Extras.Test.Process as H
+import qualified Hedgehog.Internal.Property as H
 import qualified System.Environment as IO
 import qualified System.IO.Unsafe as IO
 
@@ -111,3 +115,18 @@ procChairman
   -> m CreateProcess
   -- ^ Captured stdout
 procChairman = GHC.withFrozenCallStack $ H.procFlex "cardano-node-chairman" "CARDANO_NODE_CHAIRMAN" . ("run":)
+
+assertByDeadlineIOCustom
+  :: (MonadTest m, MonadIO m, HasCallStack)
+  => String -> UTCTime -> IO Bool -> m ()
+assertByDeadlineIOCustom str deadline f = GHC.withFrozenCallStack $ do
+  success <- liftIO f
+  unless success $ do
+    currentTime <- liftIO DTC.getCurrentTime
+    if currentTime < deadline
+      then do
+        liftIO $ IO.threadDelay 1000000
+        assertByDeadlineIOCustom str deadline f
+      else do
+        H.annotateShow currentTime
+        failMessage GHC.callStack $ "Condition not met by deadline: " <> str

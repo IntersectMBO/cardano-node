@@ -13,7 +13,7 @@ module Testnet.Byron
 
 import           Control.Monad
 import           Data.Aeson (Value, (.=))
-import           Data.Bool (Bool(..))
+import           Data.Bool (Bool (..))
 import           Data.ByteString.Lazy (ByteString)
 import           Data.Eq
 import           Data.Function
@@ -31,10 +31,10 @@ import           Hedgehog.Extras.Stock.Time
 import           System.FilePath.Posix ((</>))
 import           Text.Show
 
-import qualified Cardano.Node.Configuration.Topology    as NonP2P
+import qualified Cardano.Node.Configuration.Topology as NonP2P
 import qualified Cardano.Node.Configuration.TopologyP2P as P2P
-import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
 import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter (..))
+import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
 
 import qualified Data.Aeson as J
 import qualified Data.HashMap.Lazy as HM
@@ -50,8 +50,8 @@ import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
 import qualified Hedgehog.Extras.Test.Network as H
 import qualified Hedgehog.Extras.Test.Process as H
-import qualified System.Info as OS
 import qualified System.IO as IO
+import qualified System.Info as OS
 import qualified System.Process as IO
 import qualified Test.Process as H
 import qualified Testnet.Conf as H
@@ -85,6 +85,8 @@ replaceNodeLog :: Int -> String -> String
 replaceNodeLog n s = T.unpack (T.replace "logs/node-0.log" replacement (T.pack s))
   where replacement = T.pack ("logs/node-" <> show @Int n <> ".log")
 
+-- TODO: We need to refactor this to directly check the parsed configuration
+-- and fail with a suitable error message.
 -- | Rewrite a line in the configuration file
 rewriteConfiguration :: Bool -> Int -> String -> String
 rewriteConfiguration _ _ "TraceBlockchainTime: False"          = "TraceBlockchainTime: True"
@@ -236,12 +238,13 @@ testnet testnetOptions H.Conf {..} = do
     si <- H.noteShow $ show @Int i
     sprocket <- H.noteShow $ Sprocket tempBaseAbsPath (socketDir </> "node-" <> si)
     _spocketSystemNameFile <- H.noteShow $ IO.sprocketSystemName sprocket
+    -- TODO: Better error message need to indicate a sprocket was not created
     H.waitByDeadlineM deadline $ H.doesSprocketExist sprocket
 
   forM_ nodeIndexes $ \i -> do
     si <- H.noteShow $ show @Int i
     nodeStdoutFile <- H.noteTempFile tempAbsPath $ "cardano-node-" <> si <> ".stdout.log"
-    H.assertByDeadlineIO deadline $ IO.fileContains "until genesis start time at" nodeStdoutFile
+    H.assertByDeadlineIOCustom "stdout does not contain \"until genesis start time\"" deadline $ IO.fileContains "until genesis start time at" nodeStdoutFile
 
   H.copyFile (tempAbsPath </> "config-1.yaml") (tempAbsPath </> "configuration.yaml")
 
