@@ -18,9 +18,9 @@ module Cardano.Node.Run
   , checkVRFFilePermissions
   ) where
 
-import           Cardano.Prelude hiding (ByteString, STM, atomically, putStrLn, show, take, trace)
+import           Cardano.Prelude hiding (ByteString, STM, atomically, show, take, trace)
 import           Data.IP (toSockAddr)
-import           Prelude (String, error, id, putStrLn, show)
+import           Prelude (String, error, id, show)
 
 import qualified Control.Concurrent.Async as Async
 import           Control.Monad.Class.MonadSTM.Strict
@@ -125,7 +125,11 @@ runNode cmdPc = do
                            pure ()
       Nothing -> pure ()
 
-    eitherSomeProtocol <- runExceptT $ mkConsensusProtocol nc
+    eitherSomeProtocol <- runExceptT $ mkConsensusProtocol
+                                         (ncProtocolConfig nc)
+                                         -- TODO: Convert ncProtocolFiles to Maybe as relay nodes
+                                         -- don't need these.
+                                         (Just $ ncProtocolFiles nc)
 
     p :: SomeConsensusProtocol <-
       case eitherSomeProtocol of
