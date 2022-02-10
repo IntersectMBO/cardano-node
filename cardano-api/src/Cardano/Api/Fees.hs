@@ -366,6 +366,9 @@ data ScriptExecutionError =
        -- with a script witness.
      | ScriptErrorNotPlutusWitnessedTxIn ScriptWitnessIndex
 
+       -- | A redeemer pointer points to a script that does not exist.
+     | ScriptErrorMissingScript Alonzo.RdmrPtr
+
        -- | A cost model was missing for a language which was used.
      | ScriptErrorMissingCostModel Alonzo.Language
   deriving Show
@@ -401,6 +404,10 @@ instance Error ScriptExecutionError where
   displayError (ScriptErrorNotPlutusWitnessedTxIn scriptWitness) =
       renderScriptWitnessIndex scriptWitness <> " is not a Plutus script \
       \witnessed tx input and cannot be spent using a Plutus script witness."
+
+  displayError (ScriptErrorMissingScript rdmrPtr) =
+     "The redeemer pointer: " <> show rdmrPtr <> " points to a Plutus \
+     \script that does not exist."
 
   displayError (ScriptErrorMissingCostModel language) =
       "No cost model was found for language " <> show language
@@ -548,14 +555,12 @@ evaluateTransactionExecutionUnits _eraInMode systemstart history pparams utxo tx
         -- script witness.
         Alonzo.RedeemerNotNeeded rdmrPtr ->
           ScriptErrorNotPlutusWitnessedTxIn $ fromAlonzoRdmrPtr rdmrPtr
-        -- Some of the errors are impossible by construction, given the way we
-        -- build transactions in the API:
-        Alonzo.MissingScript rdmrPtr ->
-          impossible ("MissingScript " ++ show (fromAlonzoRdmrPtr rdmrPtr))
-        Alonzo.NoCostModel l -> ScriptErrorMissingCostModel l
+        -- This should not occur while using cardano-cli because we zip together
+        -- the Plutus script and the use site (txin, certificate etc). Therefore
+        -- the redeemer pointer will always point to a Plutus script.
+        Alonzo.MissingScript rdmrPtr -> ScriptErrorMissingScript rdmrPtr
 
-    impossible detail = error $ "evaluateTransactionExecutionUnits: "
-                             ++ "the impossible happened: " ++ detail
+        Alonzo.NoCostModel l -> ScriptErrorMissingCostModel l
 
 
 -- ----------------------------------------------------------------------------
