@@ -44,7 +44,7 @@ Please make sure you have [Nix installed](https://nixos.org/guides/install-nix.h
 First of all, go to Nix shell using the following command (from the root of `cardano-node` repository):
 
 ```
-nix-shell
+nix develop
 ```
 
 Now build and install `cardano-tracer` using the following command:

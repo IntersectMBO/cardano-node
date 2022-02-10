@@ -7,8 +7,8 @@ Cardano-node nix build depends primarily on [haskell.nix](https://github.com/inp
 Both can be updated from within a cardano-node `nix-shell` with:
 
 ```
-nix flake update --update-input haskellNix
-nix flake update --update-input iohkNix
+nix flake lock --update-input haskellNix
+nix flake lock --update-input iohkNix
 ```
 
 Or from outside the `nix-shell` with the scripts:

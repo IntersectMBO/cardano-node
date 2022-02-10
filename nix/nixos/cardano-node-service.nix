@@ -6,7 +6,6 @@
 with lib; with builtins;
 let
   cfg = config.services.cardano-node;
-  inherit (cfg.cardanoNodePkgs) commonLib cardano-node cardano-node-profiled cardano-node-eventlogged cardano-node-asserted;
   envConfig = cfg.environments.${cfg.environment};
   runtimeDir = if cfg.runtimeDir == null then cfg.stateDir else "/run/${cfg.runtimeDir}";
   mkScript = cfg:
@@ -153,10 +152,10 @@ in {
         '';
       };
 
-      cardanoNodePkgs = mkOption {
+      cardanoNodePackages = mkOption {
         type = types.attrs;
-        default = import ../. {};
-        defaultText = "cardano-node pkgs";
+        default = pkgs.cardanoNodePackages or (import ../. {}).cardanoNodePackages;
+        defaultText = "cardano-node packages";
         description = ''
           The cardano-node packages and library that should be used.
           Main usage is sharing optimization:
@@ -167,10 +166,10 @@ in {
       package = mkOption {
         type = types.package;
         default = if (cfg.profiling != "none")
-          then cardano-node-profiled
-          else if cfg.eventlog then cardano-node-eventlogged
-          else if cfg.asserts then cardano-node-asserted
-          else cardano-node;
+          then cfg.cardanoNodePackages.cardano-node.profiled
+          else if cfg.eventlog then cfg.cardanoNodePackages.cardano-node.eventlogged
+          else if cfg.asserts then cfg.cardanoNodePackages.cardano-node.asserted
+          else cfg.cardanoNodePackages.cardano-node;
         defaultText = "cardano-node";
         description = ''
           The cardano-node package that should be used
@@ -188,7 +187,7 @@ in {
 
       environments = mkOption {
         type = types.attrs;
-        default = commonLib.environments;
+        default = cfg.cardanoNodePackages.cardanoLib.environments;
         description = ''
           environment node will connect to
         '';

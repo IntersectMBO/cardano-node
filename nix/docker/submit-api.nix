@@ -3,7 +3,7 @@
 #
 # To build and load into the Docker engine:
 #
-#   docker load -i $(nix-build -A submitApiDockerImage --no-out-link)
+#   nix run .#DockerImage/submit-api/load
 #
 # cardano-submit-api
 #   To launch with provided mainnet configuration

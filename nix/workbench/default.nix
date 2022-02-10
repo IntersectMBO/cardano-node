@@ -8,9 +8,7 @@
 , makeWrapper
 , runCommand
 , customConfig
-, cardano-cli
-, cardano-topology
-, locli
+, cardanoNodePackages
 
 , useCabalRun
 }:
@@ -50,7 +48,7 @@ let
       dontStrip = true;
     };
 
-  workbench = workbench'
+  workbench = with cardanoNodePackages; workbench'
     [ git graphviz
       jq
       moreutils

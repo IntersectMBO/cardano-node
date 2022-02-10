@@ -4,7 +4,8 @@ set -e
 
 OUT=$(dirname $(realpath $0))
 ROOT=$(realpath ${OUT}/../..)
-SRC=$(nix-build ${ROOT}/release.nix -A cardano-deployment)
+nix build "${ROOT}"#cardano-deployment
+SRC="${ROOT}/result"
 
 copyFile() {
   echo $1

@@ -25,13 +25,22 @@ Once Nix is installed, log out and then log back in then:
 ```
 git clone https://github.com/input-output-hk/cardano-node
 cd cardano-node
-nix-build -A scripts.mainnet.node -o mainnet-node-local
+nix build .#mainnet/node -o mainnet-node-local
 ./mainnet-node-local/bin/cardano-node-mainnet
 ```
+or run in in one go:
+```
+nix run github:input-output-hk/cardano-node#mainnet/node
+```
+
 To build the cardano-cli executable, follow the steps below:
 ```
-nix-build -A cardano-cli -o cardano-cli-build
+nix build .#cardano-cli -o cardano-cli-build
 ./cardano-cli-build/bin/cardano-cli
+```
+Or run directly, eg.:
+```
+nix run .#cardano-cli -- version
 ```
 
 [nix]: https://nixos.org/nix/

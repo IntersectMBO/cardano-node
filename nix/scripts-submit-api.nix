@@ -12,7 +12,6 @@ let
         {
           services.cardano-submit-api = {
             network = mkDefault envConfig.name;
-            cardanoNodePkgs = mkDefault pkgs;
           };
         }
       ];

@@ -73,7 +73,7 @@ run_quiet()
            --build-extra )    bld_extra=$2; shift;;
            * ) break;; esac; shift; done
         case ${mode} in
-                nix )               bld_extra="--no-build-output --quiet ${bld_extra}";;
+                nix )               bld_extra="--quiet ${bld_extra}";;
                 cabal )             bld_extra="-v0 ${bld_extra}";;
                 stack | stack-nix ) bld_extra="--silent ${bld_extra}";; esac;
 

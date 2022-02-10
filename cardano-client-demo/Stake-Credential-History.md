@@ -17,7 +17,7 @@ cabal build stake-credential-history
 In order to run the stake credential history tool, you must have a running cardano-node.
 You must provide the tool with three things:
 * The cardano node configuration file. For example, the mainnet configuration is located in the cardano-node repo at `cardano-node/configuration/cardano/mainnet-config.json`.
-* The socket for the running node. For example, if a mainnet node was built with `nix-build -A scripts.mainnet`, the socket will be located at `cardano-node/state-node-mainnet/node.socket`.
+* The socket for the running node. For example, if a mainnet node was built with `nix build .#mainnet/node`, the socket will be located at `cardano-node/state-node-mainnet/node.socket`.
 * Either the hex-encoded stake address (58 hex digits, corresponding to a 28 byte hash and a 1 byte address header) or the bech32-encoded stake address. For example, the hex-encoded stake credential `0123456789abcdef0123456789abcdef0123456789abcdef01234567` could be converted to a [bech32](https://github.com/input-output-hk/bech32) mainnet  address with:
     ```
     $ bech32 stake <<< e10123456789abcdef0123456789abcdef0123456789abcdef01234567

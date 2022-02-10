@@ -14,7 +14,6 @@ let
             hostAddr = mkDefault "0.0.0.0";
             environment = mkDefault envConfig.name;
             nodeConfig = cfg.environments.${cfg.environment}.nodeConfig;
-            cardanoNodePkgs = mkDefault pkgs;
             stateDir = mkDefault "state-node-${cfg.environment}";
             runtimeDir = mkDefault null;
           } // optionalAttrs (envConfig ? topology) {
@@ -32,27 +31,6 @@ let
     ${service.script} $@
   '';
 
-  debugDeps = with pkgs; [
-    coreutils
-    findutils
-    gnugrep
-    gnused
-    postgresql
-    strace
-    lsof
-    dnsutils
-    bashInteractive
-    iproute
-    curl
-    netcat
-    bat
-    tree
-  ];
-
 in forEnvironments (environment: recurseIntoAttrs rec {
   node = mkScript environment;
-  node-debug = pkgs.symlinkJoin {
-    inherit (node) name;
-    paths = [ node ] ++ debugDeps;
-  };
 })
