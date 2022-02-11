@@ -7,7 +7,9 @@ packages:
     cardano-git-rev
     cardano-node
     cardano-node-capi
+    cardano-node-chairman
     cardano-submit-api
+    cardano-testnet
     cardano-tracer
     bench/cardano-topology
     bench/locli
