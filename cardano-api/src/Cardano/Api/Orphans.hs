@@ -118,6 +118,11 @@ instance ( Consensus.ShelleyBasedEra era
                          , "delegationState" .= Shelley._delegationState lState
                          ]
 
+instance Crypto.Crypto crypto => ToJSON (ShelleyLedger.IncrementalStake crypto) where
+  toJSON iStake = object [ "credentials" .= Map.toList (ShelleyLedger.credMap iStake)
+                         , "pointers" .= Map.toList (ShelleyLedger.ptrMap iStake)
+                         ]
+
 instance ( Consensus.ShelleyBasedEra era
          , ToJSON (Core.TxOut era)
          , ToJSON (Core.PParamsDelta era)
@@ -126,6 +131,7 @@ instance ( Consensus.ShelleyBasedEra era
                             , "deposited" .= Shelley._deposited utxoState
                             , "fees" .= Shelley._fees utxoState
                             , "ppups" .= Shelley._ppups utxoState
+                            , "stake" .= Shelley._stakeDistro utxoState
                             ]
 
 instance ( ToJSON (Core.PParamsDelta era)
