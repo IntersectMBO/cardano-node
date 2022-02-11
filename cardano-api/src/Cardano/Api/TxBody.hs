@@ -133,6 +133,9 @@ module Cardano.Api.TxBody (
     fromLedgerTxOuts,
     renderTxIn,
 
+    -- * Misc helpers
+    calculateExecutionUnitsLovelace,
+
     -- * Data family instances
     AsType(AsTxId, AsTxBody, AsByronTxBody, AsShelleyTxBody, AsMaryTxBody),
   ) where
@@ -2980,3 +2983,10 @@ genesisUTxOPseudoTxIn nw (GenesisUTxOKeyHash kh) =
              (toShelleyNetwork nw)
              (Shelley.KeyHashObj kh)
              Shelley.StakeRefNull
+
+calculateExecutionUnitsLovelace :: ExecutionUnitPrices -> ExecutionUnits -> Maybe Lovelace
+calculateExecutionUnitsLovelace euPrices eUnits =
+  case toAlonzoPrices euPrices of
+    Nothing -> Nothing
+    Just prices ->
+      return . fromShelleyLovelace $ Alonzo.txscriptfee prices (toAlonzoExUnits eUnits)

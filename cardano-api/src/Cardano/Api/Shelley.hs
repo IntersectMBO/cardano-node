@@ -128,6 +128,7 @@ module Cardano.Api.Shelley
     fromAlonzoRdmrPtr,
     scriptDataFromJsonDetailedSchema,
     scriptDataToJsonDetailedSchema,
+    calculateExecutionUnitsLovelace,
 
     -- * Certificates
     Certificate (..),

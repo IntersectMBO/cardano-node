@@ -687,7 +687,7 @@ pTransaction =
             <*> optional pProtocolParamsSourceSpec
             <*> optional pUpdateProposalFile
             <*> pOutputSerialisation
-            <*> pTxBodyFile Output
+            <*> (OutputTxBodyOnly <$> pTxBodyFile Output <|> pCalculatePlutusScriptCost)
 
   pChangeAddress :: Parser TxOutChangeAddress
   pChangeAddress =
@@ -1318,6 +1318,15 @@ pProtocolParamsFile =
       <> Opt.help "Filepath of the JSON-encoded protocol parameters file"
       <> Opt.completer (Opt.bashCompleter "file")
       )
+
+pCalculatePlutusScriptCost :: Parser TxBuildOutputOptions
+pCalculatePlutusScriptCost =
+  OutputScriptCostOnly <$> Opt.strOption
+   ( Opt.long "calculate-plutus-script-cost" <>
+     Opt.metavar "FILE" <>
+     Opt.help "Output filepath of the script cost information." <>
+     Opt.completer (Opt.bashCompleter "file")
+   )
 
 pCertificateFile
   :: BalanceTxExecUnits

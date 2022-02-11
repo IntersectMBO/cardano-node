@@ -17,6 +17,7 @@ import           Cardano.Prelude hiding (All, Any)
 import           Prelude (String, error)
 
 import qualified Data.Aeson as Aeson
+import           Data.Aeson.Encode.Pretty (encodePretty)
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import           Data.List (intersect, (\\))
@@ -27,6 +28,8 @@ import           Data.Type.Equality (TestEquality (..))
 
 import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, handleLeftT,
                    hoistEither, hoistMaybe, left, newExceptT)
+
+import           Cardano.CLI.Shelley.Output
 
 import           Cardano.Api
 import           Cardano.Api.Byron hiding (SomeByronSigningKey (..))
@@ -104,7 +107,7 @@ data ShelleyTxCmdError
   | ShelleyTxCmdUnsupportedMode !AnyConsensusMode
   | ShelleyTxCmdByronEra
   | ShelleyTxCmdEraConsensusModeMismatchTxBalance
-      !TxBodyFile
+      !TxBuildOutputOptions
       !AnyConsensusMode
       !AnyCardanoEra
   | ShelleyTxCmdBalanceTxBody !TxBodyErrorAutoBalance
@@ -118,6 +121,9 @@ data ShelleyTxCmdError
   | ShelleyTxCmdTextEnvCddlError
       !(FileError TextEnvelopeError)
       !(FileError TextEnvelopeCddlError)
+  | ShelleyTxCmdTxExecUnitsErr !TransactionValidityError
+  | ShelleyTxCmdPlutusScriptCostErr !PlutusScriptCostError
+  | ShelleyTxCmdPParamExecutionUnitsNotAvailable
 
 renderShelleyTxCmdError :: ShelleyTxCmdError -> Text
 renderShelleyTxCmdError err =
@@ -254,6 +260,11 @@ renderShelleyTxCmdError err =
       "Failed to decode neither the cli's serialisation format nor the ledger's \
       \CDDL serialisation format. TextEnvelope error: " <> Text.pack (displayError textEnvErr) <> "\n" <>
       "TextEnvelopeCddl error: " <> Text.pack (displayError cddlErr)
+    ShelleyTxCmdTxExecUnitsErr err' ->  Text.pack $ displayError err'
+    ShelleyTxCmdPlutusScriptCostErr err'-> Text.pack $ displayError err'
+    ShelleyTxCmdPParamExecutionUnitsNotAvailable ->
+      "Execution units not available in the protocol parameters. This is \
+      \likely due to not being in the Alonzo era"
 
 renderEra :: AnyCardanoEra -> Text
 renderEra (AnyCardanoEra ByronEra)   = "Byron"
@@ -288,10 +299,10 @@ runTransactionCmd cmd =
   case cmd of
     TxBuild era consensusModeParams nid mScriptValidity mOverrideWits txins reqSigners
             txinsc txouts changeAddr mValue mLowBound mUpperBound certs wdrls metadataSchema
-            scriptFiles metadataFiles mpparams mUpProp outputFormat out ->
+            scriptFiles metadataFiles mpparams mUpProp outputFormat ouput ->
       runTxBuild era consensusModeParams nid mScriptValidity txins txinsc txouts changeAddr mValue mLowBound
                  mUpperBound certs wdrls reqSigners metadataSchema scriptFiles
-                 metadataFiles mpparams mUpProp outputFormat out mOverrideWits
+                 metadataFiles mpparams mUpProp outputFormat mOverrideWits ouput
     TxBuildRaw era mScriptValidity txins txinsc reqSigners txouts mValue mLowBound mUpperBound
                fee certs wdrls metadataSchema scriptFiles
                metadataFiles mpparams mUpProp outputFormat out ->
@@ -422,13 +433,13 @@ runTxBuild
   -> Maybe ProtocolParamsSourceSpec
   -> Maybe UpdateProposalFile
   -> OutputSerialisation
-  -> TxBodyFile
   -> Maybe Word
+  -> TxBuildOutputOptions
   -> ExceptT ShelleyTxCmdError IO ()
 runTxBuild (AnyCardanoEra era) (AnyConsensusModeParams cModeParams) networkId mScriptValidity
            txins txinsc txouts (TxOutChangeAddress changeAddr) mValue mLowerBound mUpperBound
            certFiles withdrawals reqSigners metadataSchema scriptFiles metadataFiles mpparams
-           mUpdatePropFile outputFormat outBody@(TxBodyFile fpath) mOverrideWits = do
+           mUpdatePropFile outputFormat mOverrideWits outputOptions = do
   SocketPath sockPath <- firstExceptT ShelleyTxCmdSocketEnvError readEnvSocketPath
   let localNodeConnInfo = LocalNodeConnectInfo cModeParams networkId sockPath
       consensusMode = consensusModeOnly cModeParams
@@ -458,7 +469,7 @@ runTxBuild (AnyCardanoEra era) (AnyConsensusModeParams cModeParams) networkId mS
       eInMode <- case toEraInMode era CardanoMode of
                    Just result -> return result
                    Nothing ->
-                     left (ShelleyTxCmdEraConsensusModeMismatchTxBalance outBody
+                     left (ShelleyTxCmdEraConsensusModeMismatchTxBalance outputOptions
                             (AnyConsensusMode CardanoMode) (AnyCardanoEra era))
 
       (utxo, pparams, eraHistory, systemStart, stakePools) <-
@@ -502,15 +513,31 @@ runTxBuild (AnyCardanoEra era) (AnyConsensusModeParams cModeParams) networkId mS
                                            cAddr mOverrideWits
 
       putStrLn $ "Estimated transaction fee: " <> (show fee :: String)
+      case outputOptions of
+        OutputScriptCostOnly fp -> do
+          case protocolParamPrices pparams of
+            Just executionUnitPrices -> do
+              scriptExecUnitsMap <- firstExceptT ShelleyTxCmdTxExecUnitsErr $ hoistEither
+                                      $ evaluateTransactionExecutionUnits
+                                          eInMode systemStart eraHistory
+                                          pparams utxo balancedTxBody
+              scriptCostOutput <- firstExceptT ShelleyTxCmdPlutusScriptCostErr $ hoistEither
+                                    $ renderScriptCosts
+                                        executionUnitPrices
+                                        (collectTxBodyScriptWitnesses txBodyContent)
+                                        scriptExecUnitsMap
+              liftIO $ LBS.writeFile fp $ encodePretty scriptCostOutput
 
-      case outputFormat of
-        OutputCliSerialisation ->
-          firstExceptT ShelleyTxCmdWriteFileError . newExceptT $
-            writeFileTextEnvelope fpath Nothing balancedTxBody
-        OutputLedgerCDDLSerialisation ->
-          let noWitTx = makeSignedTransaction [] balancedTxBody
-          in firstExceptT ShelleyTxCmdWriteFileError . newExceptT $
-               writeTxFileTextEnvelopeCddl fpath noWitTx
+            Nothing -> left ShelleyTxCmdPParamExecutionUnitsNotAvailable
+        OutputTxBodyOnly (TxBodyFile fpath)  ->
+          case outputFormat of
+            OutputCliSerialisation ->
+              firstExceptT ShelleyTxCmdWriteFileError . newExceptT $
+                writeFileTextEnvelope fpath Nothing balancedTxBody
+            OutputLedgerCDDLSerialisation ->
+              let noWitTx = makeSignedTransaction [] balancedTxBody
+              in firstExceptT ShelleyTxCmdWriteFileError . newExceptT $
+                   writeTxFileTextEnvelopeCddl fpath noWitTx
 
     (CardanoMode, LegacyByronEra) -> left ShelleyTxCmdByronEra
 
@@ -1710,3 +1737,4 @@ readFileTxMetadata _ (MetadataFileCBOR fp) = do
     firstExceptT (ShelleyTxCmdMetaValidationError fp) $ hoistEither $ do
         validateTxMetadata txMetadata
         return txMetadata
+

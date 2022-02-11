@@ -222,7 +222,7 @@ data TransactionCmd
       (Maybe ProtocolParamsSourceSpec)
       (Maybe UpdateProposalFile)
       OutputSerialisation
-      TxBodyFile
+      TxBuildOutputOptions
   | TxSign InputTxBodyOrTxFile [WitnessSigningData] (Maybe NetworkId) TxFile
   | TxCreateWitness TxBodyFile WitnessSigningData (Maybe NetworkId) OutputFile
   | TxAssembleTxBodyWitness TxBodyFile [WitnessFile] OutputFile
