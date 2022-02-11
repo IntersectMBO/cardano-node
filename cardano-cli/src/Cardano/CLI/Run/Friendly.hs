@@ -41,6 +41,7 @@ friendlyTxBody
       , txCertificates
       , txFee
       , txIns
+      , txInsCollateral
       , txMetadata
       , txMintValue
       , txOuts
@@ -51,6 +52,7 @@ friendlyTxBody
   object
     [ "auxiliary scripts" .= friendlyAuxScripts txAuxScripts
     , "certificates" .= friendlyCertificates txCertificates
+    , "collateral inputs" .= friendlyCollateralInputs txInsCollateral
     , "era" .= era
     , "fee" .= friendlyFee txFee
     , "inputs" .= friendlyInputs txIns
@@ -316,3 +318,8 @@ friendlyAuxScripts = \case
 
 friendlyInputs :: [(TxIn, build)] -> Aeson.Value
 friendlyInputs = toJSON . map fst
+
+friendlyCollateralInputs :: TxInsCollateral era -> Aeson.Value
+friendlyCollateralInputs = \case
+  TxInsCollateralNone -> Null
+  TxInsCollateral _ txins -> toJSON txins

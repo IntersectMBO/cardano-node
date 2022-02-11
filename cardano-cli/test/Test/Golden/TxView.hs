@@ -251,6 +251,9 @@ golden_view_alonzo =
           , "--tx-in"
           ,   "ed7c8f68c194cc763ee65ad22ef0973e26481be058c65005fd39fb93f9c43a20\
               \#212"
+          , "--tx-in-collateral"
+          ,   "c9765d7d0e3955be8920e6d7a38e1f3f2032eac48c7c59b0b9193caa87727e7e\
+              \#256"
           , "--fee", "213"
           , "--update-proposal-file", updateProposalFile
           , "--out-file", transactionBodyFile

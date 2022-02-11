@@ -1,5 +1,7 @@
 auxiliary scripts: null
 certificates: null
+collateral inputs:
+- c9765d7d0e3955be8920e6d7a38e1f3f2032eac48c7c59b0b9193caa87727e7e#256
 era: Alonzo
 fee: 213 Lovelace
 inputs:
