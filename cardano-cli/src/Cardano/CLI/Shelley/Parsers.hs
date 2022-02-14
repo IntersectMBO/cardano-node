@@ -987,7 +987,6 @@ pQueryCmd =
       <$> pConsensusModeParams
       <*> pNetworkId
       <*> pOperationalCertificateFile
-      <*> pOperatorCertIssueCounterFile
       <*> pMaybeOutputFile
 
 pGovernanceCmd :: Parser GovernanceCmd
