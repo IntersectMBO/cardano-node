@@ -981,7 +981,7 @@ readScriptDataOrFile (ScriptDataCborFile fp) = do
 -- Transaction signing
 --
 
-runTxSign :: TxBodyOrTxFile
+runTxSign :: InputTxBodyOrTxFile
           -> [WitnessSigningData]
           -> Maybe NetworkId
           -> TxFile
@@ -993,7 +993,7 @@ runTxSign txOrTxBody witSigningData mnw (TxFile outTxFile) = do
   let (sksByron, sksShelley) = partitionSomeWitnesses $ map categoriseSomeWitness sks
 
   case txOrTxBody of
-    (TxFp (TxFile inputTxFile)) -> do
+    (InputTxFile (TxFile inputTxFile)) -> do
       anyTx <- readFileTx inputTxFile
 
       InAnyShelleyBasedEra _era tx <-
@@ -1012,7 +1012,7 @@ runTxSign txOrTxBody witSigningData mnw (TxFile outTxFile) = do
       firstExceptT ShelleyTxCmdWriteFileError . newExceptT $
         writeFileTextEnvelope outTxFile Nothing signedTx
 
-    (TxBodyFp (TxBodyFile txbodyFile)) -> do
+    (InputTxBodyFile (TxBodyFile txbodyFile)) -> do
       unwitnessed <- readFileTxBody txbodyFile
 
       case unwitnessed of
@@ -1375,7 +1375,7 @@ runTxHashScriptData scriptDataOrFile = do
     d <- readScriptDataOrFile scriptDataOrFile
     liftIO $ BS.putStrLn $ serialiseToRawBytesHex (hashScriptData d)
 
-runTxGetTxId :: InputTxFile -> ExceptT ShelleyTxCmdError IO ()
+runTxGetTxId :: InputTxBodyOrTxFile -> ExceptT ShelleyTxCmdError IO ()
 runTxGetTxId txfile = do
     InAnyCardanoEra _era txbody <-
       case txfile of
@@ -1392,7 +1392,7 @@ runTxGetTxId txfile = do
 
     liftIO $ BS.putStrLn $ serialiseToRawBytesHex (getTxId txbody)
 
-runTxView :: InputTxFile -> ExceptT ShelleyTxCmdError IO ()
+runTxView :: InputTxBodyOrTxFile -> ExceptT ShelleyTxCmdError IO ()
 runTxView txfile = do
   InAnyCardanoEra era txbody <-
     case txfile of

@@ -22,7 +22,6 @@ module Cardano.CLI.Types
   , ScriptDatumOrFile (..)
   , TransferDirection(..)
   , TxBodyFile (..)
-  , TxBodyOrTxFile (..)
   , TxOutAnyEra (..)
   , TxOutChangeAddress (..)
   , TxOutDatumAnyEra (..)
@@ -256,7 +255,4 @@ newtype TxFile
   = TxFile FilePath
   deriving Show
 
-data TxBodyOrTxFile
-  = TxBodyFp TxBodyFile
-  | TxFp TxFile
 
