@@ -68,7 +68,7 @@ The download includes cardano-node.exe and a .dll. To run the node with cardano-
 
 .. code-block:: console
 
-    cardano-node.exe run --topology ./mainnet-topology.json --database-path ./state --port 3001 --config ./configuration-mainnet.yaml --socket-path \\.\pipe\cardano-node
+    cardano-node.exe run --topology ./configuration/cardano/mainnet-topology.json --database-path ./state --port 3001 --config ./configuration/cardano/mainnet-config.yaml  --socket-path \\.\pipe\cardano-node
 
 Docker image
 ============
