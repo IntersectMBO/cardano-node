@@ -127,13 +127,13 @@ consensusCondition cMode chains securityParam =
           Just ((peerid1, peerid2), (intersection, tip1, tip2)) ->do
             let apiTip1 = fromConsensusTip cMode $ AF.anchorToTip tip1
                 apiTip2 = fromConsensusTip cMode $ AF.anchorToTip tip2
-                interSectChainPt = fromAnchor intersection
+                intersectChainPt = fromAnchor intersection
 
             Left $
               ConsensusFailure
                 (peerid1, apiTip1)
                 (peerid2, apiTip2)
-                interSectChainPt
+                intersectChainPt
                 securityParam
           Nothing ->
             Right $
@@ -276,7 +276,7 @@ runChairman tracer networkId runningTime socketPaths cModeParams secParam = do
                           , localNodeNetworkId = networkId
                           , localNodeSocketPath = unSocketPath sockPath
                           }
-              chairmanChainSyncClient = LocalChainSyncChairman $ chainSyncClient (showTracing tracer) sockPath chainsVar cModeParams secParam
+              chairmanChainSyncClient = LocalChainSyncClient $ chainSyncClient (showTracing tracer) sockPath chainsVar cModeParams secParam
               protocolsInMode = LocalNodeClientProtocols
                 { localChainSyncClient = chairmanChainSyncClient
                 , localTxSubmissionClient = Nothing
