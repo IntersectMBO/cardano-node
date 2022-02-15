@@ -55,6 +55,7 @@ module Cardano.Api.Address (
     toShelleyStakeAddr,
     toShelleyStakeCredential,
     fromShelleyAddr,
+    fromShelleyAddrIsSbe,
     fromShelleyPaymentCredential,
     fromShelleyStakeAddr,
     fromShelleyStakeCredential,
@@ -593,6 +594,15 @@ toShelleyStakeReference (StakeAddressByPointer ptr) =
 toShelleyStakeReference  NoStakeAddress =
     Shelley.StakeRefNull
 
+fromShelleyAddrIsSbe :: IsShelleyBasedEra era
+                     => Shelley.Addr StandardCrypto -> AddressInEra era
+fromShelleyAddrIsSbe (Shelley.AddrBootstrap (Shelley.BootstrapAddress addr)) =
+  AddressInEra ByronAddressInAnyEra (ByronAddress addr)
+
+fromShelleyAddrIsSbe (Shelley.Addr nw pc scr) =
+  AddressInEra
+    (ShelleyAddressInEra shelleyBasedEra)
+    (ShelleyAddress nw pc scr)
 
 fromShelleyAddr
   :: ShelleyBasedEra era
