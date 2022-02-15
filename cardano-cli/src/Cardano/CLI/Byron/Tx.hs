@@ -46,7 +46,7 @@ import           Cardano.Api.Byron
 import           Cardano.CLI.Byron.Key (byronWitnessToVerKey)
 import           Cardano.CLI.Environment
 import           Cardano.CLI.Helpers (textShow)
-import           Cardano.CLI.Types (SocketPath (..))
+import           Cardano.CLI.Types (SocketPath (..), TxFile (..))
 import           Ouroboros.Consensus.Byron.Ledger (ByronBlock, GenTx (..))
 import qualified Ouroboros.Consensus.Byron.Ledger as Byron
 import           Ouroboros.Consensus.Cardano.Block (EraMismatch (..))
@@ -70,11 +70,6 @@ renderByronTxError err =
     TxDeserialisationFailed txFp decErr ->
       "Transaction deserialisation failed at " <> textShow txFp <> " Error: " <> textShow decErr
     EnvSocketError envSockErr -> renderEnvSocketError envSockErr
-
-
-newtype TxFile =
-  TxFile FilePath
-  deriving (Eq, Ord, Show, IsString)
 
 newtype NewTxFile =
   NewTxFile FilePath

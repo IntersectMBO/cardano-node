@@ -981,52 +981,73 @@ readScriptDataOrFile (ScriptDataCborFile fp) = do
 -- Transaction signing
 --
 
-runTxSign :: TxBodyFile
+runTxSign :: InputTxBodyOrTxFile
           -> [WitnessSigningData]
           -> Maybe NetworkId
           -> TxFile
           -> ExceptT ShelleyTxCmdError IO ()
-runTxSign (TxBodyFile txbodyFile) witSigningData mnw (TxFile txFile) = do
+runTxSign txOrTxBody witSigningData mnw (TxFile outTxFile) = do
   sks <- firstExceptT ShelleyTxCmdReadWitnessSigningDataError $
             mapM readWitnessSigningData witSigningData
 
   let (sksByron, sksShelley) = partitionSomeWitnesses $ map categoriseSomeWitness sks
 
-  unwitnessed <- readFileTxBody txbodyFile
+  case txOrTxBody of
+    (InputTxFile (TxFile inputTxFile)) -> do
+      anyTx <- readFileTx inputTxFile
 
-  case unwitnessed of
-    UnwitnessedTx anyTx -> do
-     InAnyShelleyBasedEra _era unwitTx <-
-       onlyInShelleyBasedEras "sign for Byron era transactions" anyTx
+      InAnyShelleyBasedEra _era tx <-
+          onlyInShelleyBasedEras "sign for Byron era transactions" anyTx
 
-     let txbody = getTxBody unwitTx
-     -- Byron witnesses require the network ID. This can either be provided
-     -- directly or derived from a provided Byron address.
-     byronWitnesses <- firstExceptT ShelleyTxCmdBootstrapWitnessError
-       . hoistEither
-       $ mkShelleyBootstrapWitnesses mnw txbody sksByron
+      let (txbody, existingTxKeyWits) = getTxBodyAndWitnesses tx
 
-     let shelleyKeyWitnesses = map (makeShelleyKeyWitness txbody) sksShelley
-         tx = makeSignedTransaction (byronWitnesses ++ shelleyKeyWitnesses) txbody
-
-     firstExceptT ShelleyTxCmdWriteFileError . newExceptT $
-                  writeTxFileTextEnvelopeCddl txFile tx
-
-    UnwitnessedTxBody anyTxbody -> do
-      InAnyShelleyBasedEra _era txbody <-
-        --TODO: in principle we should be able to support Byron era txs too
-        onlyInShelleyBasedEras "sign for Byron era transactions" anyTxbody
-      -- Byron witnesses require the network ID. This can either be provided
-      -- directly or derived from a provided Byron address.
       byronWitnesses <- firstExceptT ShelleyTxCmdBootstrapWitnessError
-        . hoistEither
-        $ mkShelleyBootstrapWitnesses mnw txbody sksByron
+                          . hoistEither
+                          $ mkShelleyBootstrapWitnesses mnw txbody sksByron
 
-      let shelleyKeyWitnesses = map (makeShelleyKeyWitness txbody) sksShelley
-          tx = makeSignedTransaction (byronWitnesses ++ shelleyKeyWitnesses) txbody
+      let newShelleyKeyWits = map (makeShelleyKeyWitness txbody) sksShelley
+          allKeyWits = existingTxKeyWits ++ newShelleyKeyWits ++ byronWitnesses
+          signedTx = makeSignedTransaction allKeyWits txbody
 
       firstExceptT ShelleyTxCmdWriteFileError . newExceptT $
-        writeFileTextEnvelope txFile Nothing tx
+        writeFileTextEnvelope outTxFile Nothing signedTx
+
+    (InputTxBodyFile (TxBodyFile txbodyFile)) -> do
+      unwitnessed <- readFileTxBody txbodyFile
+
+      case unwitnessed of
+        IncompleteCddlFormattedTx anyTx -> do
+         InAnyShelleyBasedEra _era unwitTx <-
+           onlyInShelleyBasedEras "sign for Byron era transactions" anyTx
+
+         let txbody = getTxBody unwitTx
+         -- Byron witnesses require the network ID. This can either be provided
+         -- directly or derived from a provided Byron address.
+         byronWitnesses <- firstExceptT ShelleyTxCmdBootstrapWitnessError
+           . hoistEither
+           $ mkShelleyBootstrapWitnesses mnw txbody sksByron
+
+         let shelleyKeyWitnesses = map (makeShelleyKeyWitness txbody) sksShelley
+             tx = makeSignedTransaction (byronWitnesses ++ shelleyKeyWitnesses) txbody
+
+         firstExceptT ShelleyTxCmdWriteFileError . newExceptT $
+                      writeTxFileTextEnvelopeCddl outTxFile tx
+
+        UnwitnessedCliFormattedTxBody anyTxbody -> do
+          InAnyShelleyBasedEra _era txbody <-
+            --TODO: in principle we should be able to support Byron era txs too
+            onlyInShelleyBasedEras "sign for Byron era transactions" anyTxbody
+          -- Byron witnesses require the network ID. This can either be provided
+          -- directly or derived from a provided Byron address.
+          byronWitnesses <- firstExceptT ShelleyTxCmdBootstrapWitnessError
+            . hoistEither
+            $ mkShelleyBootstrapWitnesses mnw txbody sksByron
+
+          let shelleyKeyWitnesses = map (makeShelleyKeyWitness txbody) sksShelley
+              tx = makeSignedTransaction (byronWitnesses ++ shelleyKeyWitnesses) txbody
+
+          firstExceptT ShelleyTxCmdWriteFileError . newExceptT $
+            writeFileTextEnvelope outTxFile Nothing tx
 
 
 -- ----------------------------------------------------------------------------
@@ -1083,7 +1104,7 @@ runTxCalculateMinFee (TxBodyFile txbodyFile) nw protocolParamsSourceSpec
     unwitnessed <- readFileTxBody txbodyFile
     pparams <- readProtocolParametersSourceSpec protocolParamsSourceSpec
     case unwitnessed of
-      UnwitnessedTx anyTx -> do
+      IncompleteCddlFormattedTx anyTx -> do
         InAnyShelleyBasedEra _era unwitTx <-
           onlyInShelleyBasedEras "sign for Byron era transactions" anyTx
         let txbody =  getTxBody unwitTx
@@ -1098,7 +1119,7 @@ runTxCalculateMinFee (TxBodyFile txbodyFile) nw protocolParamsSourceSpec
 
         liftIO $ putStrLn $ (show fee :: String) <> " Lovelace"
 
-      UnwitnessedTxBody anyTxBody -> do
+      UnwitnessedCliFormattedTxBody anyTxBody -> do
         InAnyShelleyBasedEra _era txbody <-
               --TODO: in principle we should be able to support Byron era txs too
               onlyInShelleyBasedEras "calculate-min-fee for Byron era transactions" anyTxBody
@@ -1354,15 +1375,15 @@ runTxHashScriptData scriptDataOrFile = do
     d <- readScriptDataOrFile scriptDataOrFile
     liftIO $ BS.putStrLn $ serialiseToRawBytesHex (hashScriptData d)
 
-runTxGetTxId :: InputTxFile -> ExceptT ShelleyTxCmdError IO ()
+runTxGetTxId :: InputTxBodyOrTxFile -> ExceptT ShelleyTxCmdError IO ()
 runTxGetTxId txfile = do
     InAnyCardanoEra _era txbody <-
       case txfile of
         InputTxBodyFile (TxBodyFile txbodyFile) -> do
           unwitnessed <- readFileTxBody txbodyFile
           case unwitnessed of
-            UnwitnessedTxBody anyTxBody -> return anyTxBody
-            UnwitnessedTx (InAnyCardanoEra era tx) ->
+            UnwitnessedCliFormattedTxBody anyTxBody -> return anyTxBody
+            IncompleteCddlFormattedTx (InAnyCardanoEra era tx) ->
               return (InAnyCardanoEra era (getTxBody tx))
 
         InputTxFile (TxFile txFile) -> do
@@ -1371,15 +1392,15 @@ runTxGetTxId txfile = do
 
     liftIO $ BS.putStrLn $ serialiseToRawBytesHex (getTxId txbody)
 
-runTxView :: InputTxFile -> ExceptT ShelleyTxCmdError IO ()
+runTxView :: InputTxBodyOrTxFile -> ExceptT ShelleyTxCmdError IO ()
 runTxView txfile = do
   InAnyCardanoEra era txbody <-
     case txfile of
       InputTxBodyFile (TxBodyFile txbodyFile) -> do
         unwitnessed <- readFileTxBody txbodyFile
         case unwitnessed of
-          UnwitnessedTxBody anyTxBody -> return anyTxBody
-          UnwitnessedTx (InAnyCardanoEra era tx) ->
+          UnwitnessedCliFormattedTxBody anyTxBody -> return anyTxBody
+          IncompleteCddlFormattedTx (InAnyCardanoEra era tx) ->
             return (InAnyCardanoEra era (getTxBody tx))
       InputTxFile (TxFile txFile) -> do
         InAnyCardanoEra era tx <- readFileTx txFile
@@ -1400,7 +1421,7 @@ runTxCreateWitness
 runTxCreateWitness (TxBodyFile txbodyFile) witSignData mbNw (OutputFile oFile) = do
   unwitnessed <- readFileTxBody txbodyFile
   case unwitnessed of
-    UnwitnessedTx anyTx -> do
+    IncompleteCddlFormattedTx anyTx -> do
      InAnyShelleyBasedEra sbe cddlTx <-
        onlyInShelleyBasedEras "sign for Byron era transactions" anyTx
 
@@ -1422,7 +1443,7 @@ runTxCreateWitness (TxBodyFile txbodyFile) witSignData mbNw (OutputFile oFile) =
      firstExceptT ShelleyTxCmdWriteFileError . newExceptT
        $ writeTxWitnessFileTextEnvelopeCddl sbe oFile witness
 
-    UnwitnessedTxBody anyTxbody -> do
+    UnwitnessedCliFormattedTxBody anyTxbody -> do
       InAnyShelleyBasedEra _era txbody <-
         onlyInShelleyBasedEras "sign for Byron era transactions" anyTxbody
 
@@ -1443,8 +1464,6 @@ runTxCreateWitness (TxBodyFile txbodyFile) witSignData mbNw (OutputFile oFile) =
       firstExceptT ShelleyTxCmdWriteFileError . newExceptT
         $ writeFileTextEnvelope oFile Nothing witness
 
-newtype CddlTx = CddlTx {unCddlTx :: InAnyCardanoEra Tx}
-
 runTxSignWitness
   :: TxBodyFile
   -> [WitnessFile]
@@ -1453,7 +1472,7 @@ runTxSignWitness
 runTxSignWitness (TxBodyFile txbodyFile) witnessFiles (OutputFile oFp) = do
     unwitnessed <- readFileTxBody txbodyFile
     case unwitnessed of
-      UnwitnessedTxBody (InAnyCardanoEra era txbody) -> do
+      UnwitnessedCliFormattedTxBody (InAnyCardanoEra era txbody) -> do
         witnesses <-
           sequence
             [ do InAnyCardanoEra era' witness <- readFileWitness file
@@ -1471,7 +1490,7 @@ runTxSignWitness (TxBodyFile txbodyFile) witnessFiles (OutputFile oFp) = do
           . newExceptT
           $ writeFileTextEnvelope oFp Nothing tx
 
-      UnwitnessedTx (InAnyCardanoEra era anyTx) -> do
+      IncompleteCddlFormattedTx (InAnyCardanoEra era anyTx) -> do
         let txbody = getTxBody anyTx
 
         witnesses <-
@@ -1537,16 +1556,19 @@ readFileWitness fp =
     (\e -> unCddlWitness <$> acceptKeyWitnessCDDLSerialisation e)
     (readFileInAnyCardanoEra AsKeyWitness fp)
 
--- UnwitnessedTx is an unwitnessed CDDL formatted tx while
--- UnwitnessedTxBody is CLI formatted tx body.
-data UnwitnessedTx = UnwitnessedTxBody (InAnyCardanoEra TxBody)
-                   | UnwitnessedTx (InAnyCardanoEra Tx)
+-- IncompleteCddlFormattedTx is an CDDL formatted tx or partial tx
+-- (respectively needs additional witnesses or totally unwitnessed)
+-- while UnwitnessedCliFormattedTxBody is CLI formatted TxBody and
+-- needs to be key witnessed.
+data IncompleteTx
+  = UnwitnessedCliFormattedTxBody (InAnyCardanoEra TxBody)
+  | IncompleteCddlFormattedTx (InAnyCardanoEra Tx)
 
-readFileTxBody :: FilePath -> ExceptT ShelleyTxCmdError IO UnwitnessedTx
+readFileTxBody :: FilePath -> ExceptT ShelleyTxCmdError IO IncompleteTx
 readFileTxBody fp =
   handleLeftT
-    (\e -> UnwitnessedTx . unCddlTx <$> acceptTxCDDLSerialisation e)
-    (UnwitnessedTxBody <$> readFileInAnyCardanoEra AsTxBody fp)
+    (\e -> IncompleteCddlFormattedTx . unCddlTx <$> acceptTxCDDLSerialisation e)
+    (UnwitnessedCliFormattedTxBody <$> readFileInAnyCardanoEra AsTxBody fp)
 
 acceptTxCDDLSerialisation
   :: ShelleyTxCmdError

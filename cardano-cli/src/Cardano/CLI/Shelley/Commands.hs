@@ -33,9 +33,8 @@ module Cardano.CLI.Shelley.Commands
   , ProtocolParamsFile (..)
   , ProtocolParamsSourceSpec (..)
   , WitnessFile (..)
-  , TxBodyFile (..)
   , TxFile (..)
-  , InputTxFile (..)
+  , InputTxBodyOrTxFile (..)
   , VerificationKeyBase64 (..)
   , GenesisKeyFile (..)
   , MetadataFile (..)
@@ -75,7 +74,6 @@ data ShelleyCommand
   | GovernanceCmd   GovernanceCmd
   | GenesisCmd      GenesisCmd
   | TextViewCmd     TextViewCmd
-  deriving Show
 
 renderShelleyCommand :: ShelleyCommand -> Text
 renderShelleyCommand sc =
@@ -225,7 +223,7 @@ data TransactionCmd
       (Maybe UpdateProposalFile)
       OutputSerialisation
       TxBodyFile
-  | TxSign TxBodyFile [WitnessSigningData] (Maybe NetworkId) TxFile
+  | TxSign InputTxBodyOrTxFile [WitnessSigningData] (Maybe NetworkId) TxFile
   | TxCreateWitness TxBodyFile WitnessSigningData (Maybe NetworkId) OutputFile
   | TxAssembleTxBodyWitness TxBodyFile [WitnessFile] OutputFile
   | TxSubmit AnyConsensusModeParams NetworkId FilePath
@@ -244,11 +242,10 @@ data TransactionCmd
       TxOutAnyEra
   | TxHashScriptData
       ScriptDataOrFile
-  | TxGetTxId InputTxFile
-  | TxView InputTxFile
-  deriving Show
+  | TxGetTxId InputTxBodyOrTxFile
+  | TxView InputTxBodyOrTxFile
 
-data InputTxFile = InputTxBodyFile TxBodyFile | InputTxFile TxFile
+data InputTxBodyOrTxFile = InputTxBodyFile TxBodyFile | InputTxFile TxFile
   deriving Show
 
 data ProtocolParamsSourceSpec
@@ -535,14 +532,6 @@ newtype PrivKeyFile
 
 newtype WitnessFile
   = WitnessFile FilePath
-  deriving Show
-
-newtype TxBodyFile
-  = TxBodyFile FilePath
-  deriving Show
-
-newtype TxFile
-  = TxFile FilePath
   deriving Show
 
 -- | A raw verification key given in Base64, and decoded into a ByteString.

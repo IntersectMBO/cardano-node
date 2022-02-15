@@ -724,7 +724,7 @@ pTransaction =
                <*> pTxBodyFile Output
 
   pTransactionSign  :: Parser TransactionCmd
-  pTransactionSign = TxSign <$> pTxBodyFile Input
+  pTransactionSign = TxSign <$> pInputTxOrTxBodyFile
                             <*> pSomeWitnessSigningData
                             <*> optional pNetworkId
                             <*> pTxFile Output
@@ -783,10 +783,10 @@ pTransaction =
                           "The script data, in the given JSON file."
 
   pTransactionId  :: Parser TransactionCmd
-  pTransactionId = TxGetTxId <$> pInputTxFile
+  pTransactionId = TxGetTxId <$> pInputTxOrTxBodyFile
 
   pTransactionView :: Parser TransactionCmd
-  pTransactionView = TxView <$> pInputTxFile
+  pTransactionView = TxView <$> pInputTxOrTxBodyFile
 
 pNodeCmd :: Parser NodeCmd
 pNodeCmd =
@@ -2144,8 +2144,8 @@ pTxFile fdir =
         Input -> "tx-file"
         Output -> "out-file"
 
-pInputTxFile :: Parser InputTxFile
-pInputTxFile =
+pInputTxOrTxBodyFile :: Parser InputTxBodyOrTxFile
+pInputTxOrTxBodyFile =
   InputTxBodyFile <$> pTxBodyFile Input <|> InputTxFile <$> pTxFile Input
 
 pTxInCount :: Parser TxInCount
