@@ -24,6 +24,7 @@ module Cardano.Api.Shelley
     Address(ShelleyAddress),
     toShelleyAddr,
     fromShelleyAddr,
+    fromShelleyAddrIsSbe,
     toShelleyStakeCredential,
     fromShelleyStakeCredential,
     NetworkId(Mainnet, Testnet),
