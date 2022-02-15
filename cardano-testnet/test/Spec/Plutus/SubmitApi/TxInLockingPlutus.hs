@@ -65,7 +65,11 @@ hprop_plutus = Test.integration . HE.runFinallies . HE.workspace "chairman" $ \t
   projectBase <- HE.note =<< HE.noteIO . IO.canonicalizePath =<< HE.getProjectBase
   conf@TN.Conf { TN.tempBaseAbsPath, TN.tempAbsPath } <- HE.noteShowM $ TN.mkConf tempAbsBasePath' Nothing
 
-  TN.TestnetRuntime { TN.configurationFile, TN.bftSprockets, TN.testnetMagic } <- TN.testnet TN.defaultTestnetOptions conf
+  TN.TestnetRuntime { TN.configurationFile, TN.bftSprockets, TN.testnetMagic } <- TN.testnet
+    TN.defaultTestnetOptions
+    { TN.numBftNodes = 1  
+    }
+    conf
 
   env <- H.evalIO IO.getEnvironment
 
