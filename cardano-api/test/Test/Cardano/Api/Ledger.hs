@@ -8,6 +8,8 @@ module Test.Cardano.Api.Ledger
 
 import           Cardano.Prelude
 
+import           Cardano.Api.Shelley
+
 import           Hedgehog (Property)
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Aeson as H
@@ -18,7 +20,8 @@ import           Test.Tasty.TH (testGroupGenerator)
 import           Cardano.Ledger.Address (deserialiseAddr, serialiseAddr)
 import           Ouroboros.Consensus.Shelley.Eras (StandardCrypto)
 import           Test.Cardano.Api.Genesis
-import           Test.Cardano.Ledger.Shelley.Serialisation.Generators.Genesis (genAddress)
+import           Test.Cardano.Ledger.Shelley.Serialisation.Generators.Genesis (genAddress,
+                   genShelleyGenesis)
 
 prop_golden_ShelleyGenesis :: Property
 prop_golden_ShelleyGenesis = H.goldenTestJsonValuePretty exampleShelleyGenesis "test/Golden/ShelleyGenesis"
@@ -31,6 +34,11 @@ prop_roundtrip_Address_CBOR = H.property $ do
   -- If this fails, FundPair and ShelleyGenesis can also fail.
   addr <- H.forAll (genAddress @StandardCrypto)
   H.tripping addr serialiseAddr deserialiseAddr
+
+prop_roundtrip_toFromShelleyGenesis :: Property
+prop_roundtrip_toFromShelleyGenesis = H.property $ do
+  sGen <- H.forAll genShelleyGenesis
+  H.tripping sGen toShelleyGenesis fromShelleyGenesis
 
 -- -----------------------------------------------------------------------------
 

@@ -47,6 +47,7 @@ module Cardano.Api.ProtocolParameters (
     toLedgerPParams,
     fromLedgerPParams,
     fromShelleyPParams,
+    toShelleyPParams,
     toAlonzoPrices,
     fromAlonzoPrices,
     toAlonzoScriptLanguage,

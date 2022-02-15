@@ -13,6 +13,7 @@ module Cardano.Api.GenesisParameters (
 
     -- * Internal conversion functions
     fromShelleyGenesis,
+    toShelleyGenesis,
 
   ) where
 
@@ -101,6 +102,14 @@ data GenesisParameters =
 -- Conversion functions
 --
 
+-- | GenesisParameters is obtained via the 'QueryGenesisParameters' query and is
+-- constructed via 'getCompactGenesis' which lives in ouroboros-network. The following
+-- fields are ignored for the following reasons:
+--   The 'sgInitialFunds' field is erased. It is only used to set up the initial
+--   UTxO in tests and testnets.
+--
+--   The 'sgStaking' field is erased. It is only used to register initial stake
+--   pools in tests and benchmarks.
 fromShelleyGenesis :: Shelley.ShelleyGenesis era -> GenesisParameters
 fromShelleyGenesis
     Shelley.ShelleyGenesis {
@@ -137,3 +146,27 @@ fromShelleyGenesis
     , protocolInitialUpdateableProtocolParameters = fromShelleyPParams
                                                       sgProtocolParams
     }
+
+toShelleyGenesis :: GenesisParameters -> Either String (Shelley.ShelleyGenesis era)
+toShelleyGenesis gParams = do
+   case Ledger.boundRational $ protocolParamActiveSlotsCoefficient gParams of
+     Nothing -> Left $ "Active slot coefficient is not within the bounds: " <> show (protocolParamActiveSlotsCoefficient gParams)
+     Just aSlotCoeff ->
+      Right $ Shelley.ShelleyGenesis {
+                 Shelley.sgSystemStart = protocolParamSystemStart gParams
+               , Shelley.sgNetworkMagic = unNetworkMagic . toNetworkMagic $ protocolParamNetworkId gParams
+               , Shelley.sgNetworkId = toShelleyNetwork $ protocolParamNetworkId gParams
+               , Shelley.sgActiveSlotsCoeff = aSlotCoeff
+               , Shelley.sgSecurityParam = fromIntegral $ protocolParamSecurity gParams
+               , Shelley.sgEpochLength = protocolParamEpochLength gParams
+               , Shelley.sgSlotsPerKESPeriod = fromIntegral $ protocolParamSlotsPerKESPeriod gParams
+               , Shelley.sgMaxKESEvolutions = fromIntegral $ protocolParamMaxKESEvolutions gParams
+               , Shelley.sgSlotLength = protocolParamSlotLength gParams
+               , Shelley.sgUpdateQuorum = fromIntegral $ protocolParamUpdateQuorum gParams
+               , Shelley.sgMaxLovelaceSupply = let Lovelace i = protocolParamMaxLovelaceSupply gParams
+                                               in fromIntegral i
+               , Shelley.sgProtocolParams = toShelleyPParams . protocolInitialUpdateableProtocolParameters $ gParams
+               , Shelley.sgGenDelegs    = mempty
+               , Shelley.sgInitialFunds = mempty
+               , Shelley.sgStaking      = Shelley.ShelleyGenesisStaking mempty mempty
+                }

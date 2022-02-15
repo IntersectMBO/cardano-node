@@ -6,21 +6,26 @@
 module Gen.Cardano.Api
   ( genMetadata
   , genAlonzoGenesis
+  , genShelleyGenesis
   ) where
 
 import           Cardano.Prelude
-import           Control.Monad (MonadFail(fail))
+
+import           Cardano.Api.Shelley
+
+import           Control.Monad (MonadFail (fail))
 import qualified Data.Map.Strict as Map
 
 --TODO: why do we have this odd split? We can get rid of the old name "typed"
 import           Gen.Cardano.Api.Typed (genRational)
 
-import           Cardano.Ledger.Shelley.Metadata (Metadata (..), Metadatum (..))
 import qualified Cardano.Ledger.Alonzo.Genesis as Alonzo
 import qualified Cardano.Ledger.Alonzo.Language as Alonzo
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 import qualified Cardano.Ledger.BaseTypes as Ledger
 import qualified Cardano.Ledger.Coin as Ledger
+import           Cardano.Ledger.Shelley.Metadata (Metadata (..), Metadatum (..))
+import           Ouroboros.Consensus.Shelley.Eras (StandardShelley)
 
 import           Hedgehog (Gen, Range)
 import qualified Hedgehog.Gen as Gen
@@ -113,3 +118,6 @@ genAlonzoGenesis = do
     , Alonzo.collateralPercentage = collateralPercentage'
     , Alonzo.maxCollateralInputs = maxCollateralInputs'
     }
+
+genShelleyGenesis :: Gen (ShelleyGenesis StandardShelley)
+genShelleyGenesis = panic ""

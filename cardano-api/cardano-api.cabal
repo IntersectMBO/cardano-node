@@ -173,11 +173,12 @@ library gen
                       , cardano-ledger-alonzo
                       , cardano-ledger-byron-test
                       , cardano-ledger-core
+                      , cardano-ledger-shelley
                       , cardano-prelude
                       , containers
                       , hedgehog
+                      , ouroboros-consensus-shelley
                       , plutus-ledger-api
-                      , cardano-ledger-shelley
                       , text
 
 test-suite cardano-api-test
