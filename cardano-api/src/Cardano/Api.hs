@@ -140,6 +140,7 @@ module Cardano.Api (
     -- ** Blocks in the context of an era
     Block(Block),
     BlockHeader(..),
+    getBlockHeader,
 
     -- ** Points on the chain
     ChainPoint(..),
@@ -545,9 +546,13 @@ module Cardano.Api (
     ConsensusModeIsMultiEra(..),
     AnyConsensusModeParams(..),
     ConsensusModeParams(..),
+    ConsensusBlockForMode,
+    ConsensusBlockForEra,
     EraInMode(..),
     toEraInMode,
     LocalNodeClientProtocols(..),
+    LocalNodeClientParams(..),
+    mkLocalNodeClientParams,
     LocalChainSyncClient(..),
     CardanoMode,
 --  connectToRemoteNode,
@@ -627,11 +632,10 @@ module Cardano.Api (
     fromLedgerPParams,
     toCtxUTxOTxOut,
     --TODO: arrange not to export these
+    fromNetworkMagic,
     toNetworkMagic,
     fromLedgerTxOuts,
     toLedgerUTxO,
-    --TODO: Remove after updating cardano-node-chairman with new IPC
-    SomeNodeClientProtocol(..),
     runParsecParser,
 
     SlotsInEpoch(..),
@@ -679,6 +683,7 @@ import           Cardano.Api.ScriptData
 import           Cardano.Api.SerialiseBech32
 import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseJSON
+import           Cardano.Api.SerialiseLedgerCddl
 import           Cardano.Api.SerialiseRaw
 import           Cardano.Api.SerialiseTextEnvelope
 import           Cardano.Api.StakePoolMetadata
@@ -688,6 +693,3 @@ import           Cardano.Api.TxMetadata
 import           Cardano.Api.Utils
 import           Cardano.Api.Value
 import           Cardano.Api.ValueParser
---TODO: Remove after updating cardano-node-chairman with new IPC
-import           Cardano.Api.Protocol.Types
-import           Cardano.Api.SerialiseLedgerCddl

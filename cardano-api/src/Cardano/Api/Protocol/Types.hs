@@ -13,7 +13,6 @@ module Cardano.Api.Protocol.Types
   , ProtocolInfoArgs(..)
   , ProtocolClient(..)
   , ProtocolClientInfoArgs(..)
-  , SomeNodeClientProtocol(..)
   ) where
 
 import           Cardano.Prelude
@@ -119,9 +118,3 @@ data BlockType blk where
 deriving instance Eq (BlockType blk)
 deriving instance Show (BlockType blk)
 
-data SomeNodeClientProtocol where
-
-     SomeNodeClientProtocol
-       :: (RunNode blk, ProtocolClient blk)
-       => ProtocolClientInfoArgs blk
-       -> SomeNodeClientProtocol

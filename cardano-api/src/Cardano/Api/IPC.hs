@@ -21,6 +21,8 @@ module Cardano.Api.IPC (
     connectToLocalNodeWithVersion,
     LocalNodeConnectInfo(..),
     localConsensusMode,
+    LocalNodeClientParams(..),
+    mkLocalNodeClientParams,
     LocalNodeClientProtocols(..),
     LocalChainSyncClient(..),
     LocalNodeClientProtocolsInMode,

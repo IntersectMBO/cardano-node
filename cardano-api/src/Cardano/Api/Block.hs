@@ -17,10 +17,12 @@ module Cardano.Api.Block (
     -- * Blocks in the context of an era
     Block(.., Block),
     BlockHeader(..),
+    getBlockHeader,
 
     -- ** Blocks in the context of a consensus mode
     BlockInMode(..),
     fromConsensusBlock,
+    toConsensusBlock,
 
     -- * Points on the chain
     ChainPoint(..),
@@ -30,6 +32,7 @@ module Cardano.Api.Block (
     fromConsensusPoint,
     toConsensusPointInMode,
     fromConsensusPointInMode,
+    toConsensusPointHF,
 
     -- * Tip of the chain
     ChainTip(..),
@@ -192,7 +195,6 @@ data BlockInMode mode where
 
 deriving instance Show (BlockInMode mode)
 
-
 fromConsensusBlock :: ConsensusBlockForMode mode ~ block
                    => ConsensusMode mode -> block -> BlockInMode mode
 fromConsensusBlock ByronMode =
@@ -226,6 +228,22 @@ fromConsensusBlock CardanoMode =
       Consensus.BlockAlonzo b' ->
         BlockInMode (ShelleyBlock ShelleyBasedEraAlonzo b')
                      AlonzoEraInCardanoMode
+
+toConsensusBlock :: ConsensusBlockForMode mode ~ block => BlockInMode mode -> block
+toConsensusBlock bInMode =
+  case bInMode of
+    -- Byron mode
+    BlockInMode (ByronBlock b') ByronEraInByronMode -> Consensus.DegenBlock b'
+
+    -- Shelley mode
+    BlockInMode (ShelleyBlock ShelleyBasedEraShelley b') ShelleyEraInShelleyMode -> Consensus.DegenBlock b'
+
+    -- Cardano mode
+    BlockInMode (ByronBlock b') ByronEraInCardanoMode -> Consensus.BlockByron b'
+    BlockInMode (ShelleyBlock ShelleyBasedEraShelley b') ShelleyEraInCardanoMode -> Consensus.BlockShelley b'
+    BlockInMode (ShelleyBlock ShelleyBasedEraAllegra b') AllegraEraInCardanoMode -> Consensus.BlockAllegra b'
+    BlockInMode (ShelleyBlock ShelleyBasedEraMary b') MaryEraInCardanoMode -> Consensus.BlockMary b'
+    BlockInMode (ShelleyBlock ShelleyBasedEraAlonzo b') AlonzoEraInCardanoMode -> Consensus.BlockAlonzo b'
 
 -- ----------------------------------------------------------------------------
 -- Block headers

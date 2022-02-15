@@ -38,8 +38,7 @@ executable cardano-node-chairman
   ghc-options:          -threaded
                         -rtsopts
                         "-with-rtsopts=-T"
-  build-depends:        bytestring
-                      , cardano-api
+  build-depends:        cardano-api
                       , cardano-git-rev
                       , cardano-ledger-byron
                       , cardano-node
@@ -47,11 +46,9 @@ executable cardano-node-chairman
                       , containers
                       , contra-tracer
                       , io-classes
-                      , network-mux
                       , optparse-applicative-fork
                       , ouroboros-consensus
                       , ouroboros-network
-                      , ouroboros-network-framework
                       , strict-stm
                       , text
                       , time
