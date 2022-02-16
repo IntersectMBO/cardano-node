@@ -94,9 +94,9 @@ data TestnetOptions = TestnetOptions
 
 defaultTestnetOptions :: TestnetOptions
 defaultTestnetOptions = TestnetOptions
-  { numPraosNodes = 2
+  { numPraosNodes = 1
   , numPoolNodes = 1
-  , activeSlotsCoeff = 0.1
+  , activeSlotsCoeff = 0.2
   , securityParam = 10
   , epochLength = 1000
   , slotLength = 0.2
