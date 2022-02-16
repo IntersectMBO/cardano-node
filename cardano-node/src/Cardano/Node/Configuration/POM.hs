@@ -40,6 +40,7 @@ import qualified Cardano.Chain.Update as Byron
 import           Cardano.Crypto (RequiresNetworkMagic (..))
 import           Cardano.Logging.Types
 import           Cardano.Node.Configuration.NodeAddress (SocketPath)
+import           Cardano.Node.Configuration.LedgerDB
 import           Cardano.Node.Configuration.Socket (SocketConfig (..))
 import           Cardano.Node.Handlers.Shutdown
 import           Cardano.Node.Protocol.Types (Protocol (..))
@@ -119,6 +120,9 @@ data NodeConfiguration
 
        , ncMaybeMempoolCapacityOverride :: !(Maybe MempoolCapacityBytesOverride)
 
+         -- UTxO-HD configuration
+       , ncLedgerDBBackend :: !BackingStoreSelectorFlag
+
          -- | Protocol idleness timeout, see
          -- 'Ouroboros.Network.Diffusion.daProtocolIdleTimeout'.
          --
@@ -175,6 +179,9 @@ data PartialNodeConfiguration
 
          -- Configuration for testing purposes
        , pncMaybeMempoolCapacityOverride :: !(Last MempoolCapacityBytesOverride)
+
+         -- UTxO-HD configuration
+       , pncLedgerDBBackend :: !(Last BackingStoreSelectorFlag)
 
          -- Network timeouts
        , pncProtocolIdleTimeout   :: !(Last DiffTime)
@@ -248,6 +255,8 @@ instance FromJSON PartialNodeConfiguration where
                                                                <*> parseHardForkProtocol v)
       pncMaybeMempoolCapacityOverride <- Last <$> parseMempoolCapacityBytesOverride v
 
+      pncLedgerDBBackend <- Last <$> parseLedgerDBBackend v
+
       -- Network timeouts
       pncProtocolIdleTimeout   <- Last <$> v .:? "ProtocolIdleTimeout"
       pncTimeWaitTimeout       <- Last <$> v .:? "TimeWaitTimeout"
@@ -290,6 +299,7 @@ instance FromJSON PartialNodeConfiguration where
            , pncValidateDB = mempty
            , pncShutdownConfig = mempty
            , pncMaybeMempoolCapacityOverride
+           , pncLedgerDBBackend
            , pncProtocolIdleTimeout
            , pncTimeWaitTimeout
            , pncAcceptedConnectionsLimit
@@ -311,6 +321,17 @@ instance FromJSON PartialNodeConfiguration where
                     "Invalid value for 'MempoolCapacityBytesOverride'.  \
                     \Expecting byte count or NoOverride.  Value was: " <> show invalid
               Nothing -> return Nothing
+
+      parseLedgerDBBackend v = do
+        maybeString :: Maybe String <- v .:? "LedgerDBBackend"
+        case maybeString of
+           Just "InMemory" -> return $ Just InMemory
+           Just "LMDB"     -> do
+             mapSize :: Maybe Gigabytes <- v .:? "LMDBMapSize"
+             return . Just . LMDB $ mapSize
+           Nothing         -> return Nothing
+           Just whatever   -> fail $ "Malformed LedgerDBBackend" <> whatever
+
       parseByronProtocol v = do
         primary   <- v .:? "ByronGenesisFile"
         secondary <- v .:? "GenesisFile"
@@ -434,6 +455,7 @@ defaultPartialNodeConfiguration =
     , pncTraceConfig = mempty
     , pncTraceForwardSocket = mempty
     , pncMaybeMempoolCapacityOverride = mempty
+    , pncLedgerDBBackend = Last . Just $ InMemory
     , pncProtocolIdleTimeout   = Last (Just 5)
     , pncTimeWaitTimeout       = Last (Just 60)
     , pncAcceptedConnectionsLimit =
@@ -490,6 +512,9 @@ makeNodeConfiguration pnc = do
   ncAcceptedConnectionsLimit <-
     lastToEither "Missing AcceptedConnectionsLimit" $
       pncAcceptedConnectionsLimit pnc
+  ncLedgerDBBackend <-
+    lastToEither "Missing LedgerDBBackend"
+    $ pncLedgerDBBackend pnc
   enableP2P <-
     lastToEither "Missing EnableP2P"
     $ pncEnableP2P pnc
@@ -524,6 +549,7 @@ makeNodeConfiguration pnc = do
                                                 else TracingOff
              , ncTraceForwardSocket = getLast $ pncTraceForwardSocket pnc
              , ncMaybeMempoolCapacityOverride = getLast $ pncMaybeMempoolCapacityOverride pnc
+             , ncLedgerDBBackend
              , ncProtocolIdleTimeout
              , ncTimeWaitTimeout
              , ncAcceptedConnectionsLimit

@@ -765,6 +765,9 @@ testnet testnetOptions H.Conf {..} = do
         , "--port",  portString
         , "--delegation-certificate",  tempAbsPath </> node </> "byron/delegate.cert"
         , "--signing-key", tempAbsPath </> node </> "byron/delegate.key"
+        -- UTxO-HD configurations
+        , "--lmdb-ledger-db-backend"
+        , "--lmdb-mapsize", "2Gi"
         ] <> extraNodeCliArgs nodeOpts) <&>
         ( \cp -> cp
           { IO.std_in = IO.CreatePipe

@@ -12,6 +12,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE DataKinds #-}
 
 module Cardano.Benchmarking.Script.Core
 where
@@ -25,10 +26,11 @@ import           Data.Ratio ((%))
 import qualified Data.Text as Text (unpack)
 import           Prelude
 
+import           Ouroboros.Network.Protocol.LocalStateQuery.Type
+import           Ouroboros.Network.Protocol.LocalTxSubmission.Type (SubmitResult (..))
 import           Cardano.Api
 import           Cardano.Api.Shelley (PlutusScriptOrReferenceInput (..), ProtocolParameters,
                    protocolParamMaxTxExUnits, protocolParamPrices)
-import           Ouroboros.Network.Protocol.LocalTxSubmission.Type (SubmitResult (..))
 
 import           Cardano.Benchmarking.FundSet (FundInEra (..), Validity (..), Variant (..),
                    liftAnyEra)
@@ -174,7 +176,7 @@ queryRemoteProtocolParameters = do
   chainTip  <- liftIO $ getLocalChainTip localNodeConnectInfo
   era <- queryEra
   let
-    callQuery :: forall a. Show a => QueryInMode CardanoMode (Either a ProtocolParameters) -> ActionM ProtocolParameters
+    callQuery :: forall a. Show a => QueryInMode CardanoMode SmallL (Either a ProtocolParameters) -> ActionM ProtocolParameters
     callQuery query = do
       res <- liftIO $ queryNodeLocalState localNodeConnectInfo (Just $ chainTipToChainPoint chainTip) query
       case res of
