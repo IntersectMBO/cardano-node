@@ -1192,6 +1192,7 @@ sevTraceLedgerEvent :: LedgerDB.TraceEvent blk -> SeverityS
 sevTraceLedgerEvent LedgerDB.TookSnapshot {}    = Info
 sevTraceLedgerEvent LedgerDB.DeletedSnapshot {} = Debug
 sevTraceLedgerEvent LedgerDB.InvalidSnapshot {} = Error
+sevTraceLedgerEvent LedgerDB.LMDBEvent {}       = Debug
 
 namesForChainDBLedgerEvent :: LedgerDB.TraceEvent blk -> [Text]
 namesForChainDBLedgerEvent (LedgerDB.InvalidSnapshot {}) =
@@ -1200,6 +1201,8 @@ namesForChainDBLedgerEvent (LedgerDB.TookSnapshot {}) =
       ["TookSnapshot"]
 namesForChainDBLedgerEvent (LedgerDB.DeletedSnapshot {}) =
       ["DeletedSnapshot"]
+namesForChainDBLedgerEvent (LedgerDB.LMDBEvent {}) =
+      ["LMDBEvent"]
 
 instance ( StandardHash blk
          , ConvertRawHash blk)
@@ -1211,6 +1214,8 @@ instance ( StandardHash blk
       "Deleted old snapshot " <> showT snap
   forHuman (LedgerDB.InvalidSnapshot snap failure) =
       "Invalid snapshot " <> showT snap <> showT failure
+  forHuman (LedgerDB.LMDBEvent ev) =
+      "LMDB event: " <> showT ev
 
   forMachine dtals (LedgerDB.TookSnapshot snap pt) =
     mconcat [ "kind" .= String "TookSnapshot"
@@ -1223,6 +1228,10 @@ instance ( StandardHash blk
     mconcat [ "kind" .= String "InvalidSnapshot"
              , "snapshot" .= forMachine dtals snap
              , "failure" .= show failure ]
+
+  forMachine _ (LedgerDB.LMDBEvent ev) =
+    mconcat [ "kind" .= String "LMDBEvent"
+             , "event" .= show ev ]
 
 docChainDBLedgerEvent :: Documented (LedgerDB.TraceEvent blk)
 docChainDBLedgerEvent = Documented [

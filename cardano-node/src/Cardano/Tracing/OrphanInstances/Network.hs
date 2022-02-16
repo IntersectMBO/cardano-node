@@ -576,7 +576,7 @@ instance (applyTxErr ~ ApplyTxErr blk, ToObject localPeer)
      => Transformable Text IO (TraceLabelPeer localPeer (NtN.TraceSendRecv (LocalTxSubmission (GenTx blk) applyTxErr))) where
   trTransformer = trStructured
 
-instance (LocalStateQuery.ShowQuery (BlockQuery blk), ToObject localPeer)
+instance (StandardHash blk, LocalStateQuery.ShowQuery (BlockQuery blk), ToObject localPeer)
      => Transformable Text IO (TraceLabelPeer localPeer (NtN.TraceSendRecv (LocalStateQuery blk (Point blk) (Query blk)))) where
   trTransformer = trStructured
 
@@ -773,7 +773,7 @@ instance ( ConvertTxId blk
              , "agency" .= String (pack $ show stok)
              ]
 
-instance (forall result. Show (query result))
+instance LocalStateQuery.ShowQuery query
       => ToObject (AnyMessageAndAgency (LocalStateQuery blk pt query)) where
   toObject _verb (AnyMessageAndAgency stok LocalStateQuery.MsgAcquire{}) =
     mconcat [ "kind" .= String "MsgAcquire"
