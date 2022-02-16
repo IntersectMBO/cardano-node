@@ -131,6 +131,7 @@ instance HasSeverityAnnotation (ChainDB.TraceEvent blk) where
     LedgerDB.TookSnapshot {} -> Info
     LedgerDB.DeletedSnapshot {} -> Debug
     LedgerDB.InvalidSnapshot {} -> Error
+    LedgerDB.LMDBEvent{} -> Debug
 
   getSeverityAnnotation (ChainDB.TraceCopyToImmutableDBEvent ev) = case ev of
     ChainDB.CopiedBlockToImmutableDB {} -> Debug
@@ -541,6 +542,7 @@ instance ( ConvertRawHash blk
           " at " <> renderRealPointAsPhrase pt
         LedgerDB.DeletedSnapshot snap ->
           "Deleted old snapshot " <> showT snap
+        LedgerDB.LMDBEvent{} -> "LMDB"
       ChainDB.TraceCopyToImmutableDBEvent ev -> case ev of
         ChainDB.CopiedBlockToImmutableDB pt ->
           "Copied block " <> renderPointAsPhrase pt <> " to the ImmutableDB"
@@ -964,6 +966,7 @@ instance ( ConvertRawHash blk
       mconcat [ "kind" .= String "TraceLedgerEvent.InvalidSnapshot"
                , "snapshot" .= toObject verb snap
                , "failure" .= show failure ]
+    LedgerDB.LMDBEvent{} -> mconcat [ "kind" .= String "LMDB" ]
 
   toObject verb (ChainDB.TraceCopyToImmutableDBEvent ev) = case ev of
     ChainDB.CopiedBlockToImmutableDB pt ->
