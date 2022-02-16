@@ -398,7 +398,7 @@ instance HasSeverityAnnotation (TracePeerSelection addr) where
       TracePromoteWarmLocalPeers {} -> Info
       TracePromoteWarmFailed     {} -> Info
       TracePromoteWarmDone       {} -> Info
-      TracePromoteWarmAborted    {} -> Info
+--      TracePromoteWarmAborted    {} -> Info
       TraceDemoteWarmPeers       {} -> Info
       TraceDemoteWarmFailed      {} -> Info
       TraceDemoteWarmDone        {} -> Info
@@ -576,7 +576,7 @@ instance (applyTxErr ~ ApplyTxErr blk, ToObject localPeer)
      => Transformable Text IO (TraceLabelPeer localPeer (NtN.TraceSendRecv (LocalTxSubmission (GenTx blk) applyTxErr))) where
   trTransformer = trStructured
 
-instance (LocalStateQuery.ShowQuery (BlockQuery blk), ToObject localPeer)
+instance (StandardHash blk, LocalStateQuery.ShowQuery (BlockQuery blk), ToObject localPeer)
      => Transformable Text IO (TraceLabelPeer localPeer (NtN.TraceSendRecv (LocalStateQuery blk (Point blk) (Query blk)))) where
   trTransformer = trStructured
 
@@ -803,7 +803,7 @@ instance ( ToObject (AnyMessageAndAgency ps)
                        (AnyMessageAndAgency (ServerAgency tok) msg')
                  ]
 
-instance (forall result. Show (query result))
+instance LocalStateQuery.ShowQuery query
       => ToObject (AnyMessageAndAgency (LocalStateQuery blk pt query)) where
   toObject _verb (AnyMessageAndAgency stok LocalStateQuery.MsgAcquire{}) =
     mkObject [ "kind" .= String "MsgAcquire"
@@ -1529,12 +1529,14 @@ instance ToObject (TracePeerSelection SockAddr) where
              , "actualActive" .= aActive
              , "peer" .= toJSON p
              ]
+{-
   toObject _verb (TracePromoteWarmAborted tActive aActive p) =
     mkObject [ "kind" .= String "PromoteWarmAborted"
              , "targetActive" .= tActive
              , "actualActive" .= aActive
              , "peer" .= toJSON p
              ]
+-}
   toObject _verb (TraceDemoteWarmPeers tEst aEst sp) =
     mkObject [ "kind" .= String "DemoteWarmPeers"
              , "targetEstablished" .= tEst

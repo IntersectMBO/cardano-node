@@ -66,7 +66,9 @@ import Ouroboros.Consensus.Cardano.Block qualified as Cardano
 import Ouroboros.Consensus.HardFork.Combinator
 import Ouroboros.Consensus.HardFork.Combinator.AcrossEras (OneEraForgeStateInfo (..), OneEraForgeStateUpdateError (..))
 import Ouroboros.Consensus.HardFork.Combinator.Embed.Unary
+import Ouroboros.Consensus.HardFork.Combinator.Util.Functors (Flip (..))
 import Ouroboros.Consensus.Ledger.Abstract (IsLedger)
+import Ouroboros.Consensus.Ledger.Basics (MapKind (EmptyMK))
 import Ouroboros.Consensus.Ledger.Extended (ExtLedgerState)
 import Ouroboros.Consensus.Node (NodeKernel (..))
 import Ouroboros.Consensus.Shelley.Ledger qualified as Shelley
@@ -231,8 +233,8 @@ instance All GetKESInfo xs => GetKESInfo (HardForkBlock xs) where
 -- * General ledger
 --
 class LedgerQueries blk where
-  ledgerUtxoSize     :: LedgerState blk -> Int
-  ledgerDelegMapSize :: LedgerState blk -> Int
+  ledgerUtxoSize     :: LedgerState blk 'EmptyMK -> Int
+  ledgerDelegMapSize :: LedgerState blk 'EmptyMK -> Int
 
 instance LedgerQueries Byron.ByronBlock where
   ledgerUtxoSize = Map.size . Byron.unUTxO . Byron.cvsUtxo . Byron.byronLedgerState
@@ -257,8 +259,8 @@ instance LedgerQueries (Shelley.ShelleyBlock era) where
 
 instance (LedgerQueries x, NoHardForks x)
       => LedgerQueries (HardForkBlock '[x]) where
-  ledgerUtxoSize = ledgerUtxoSize . project
-  ledgerDelegMapSize = ledgerDelegMapSize . project
+  ledgerUtxoSize = ledgerUtxoSize . unFlip . project . Flip
+  ledgerDelegMapSize = ledgerDelegMapSize . unFlip . project . Flip
 
 instance LedgerQueries (Cardano.CardanoBlock c) where
   ledgerUtxoSize = \case
@@ -300,7 +302,7 @@ mapNodeKernelDataIO f (NodeKernelData ref) =
 
 nkQueryLedger ::
      IsLedger (LedgerState blk)
-  => (ExtLedgerState blk -> a)
+  => (ExtLedgerState blk 'EmptyMK -> a)
   -> NodeKernel IO RemoteConnectionId LocalConnectionId blk
   -> IO a
 nkQueryLedger f NodeKernel{getChainDB} =
