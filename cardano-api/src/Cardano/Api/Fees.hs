@@ -23,6 +23,7 @@ module Cardano.Api.Fees (
 
     -- * Script execution units
     evaluateTransactionExecutionUnits,
+    toLedgerEpochInfo,
     ScriptExecutionError(..),
     TransactionValidityError(..),
 
@@ -506,12 +507,6 @@ evaluateTransactionExecutionUnits _eraInMode systemstart history pparams utxo tx
                Left err -> Left (TransactionValidityBasicFailure err)
                Right exmap -> Right (fromLedgerScriptExUnitsMap exmap)
 
-    toLedgerEpochInfo :: EraHistory mode
-                      -> EpochInfo (Either TransactionValidityError)
-    toLedgerEpochInfo (EraHistory _ interpreter) =
-        hoistEpochInfo (first TransactionValidityIntervalError . runExcept) $
-          Consensus.interpreterToEpochInfo interpreter
-
     toAlonzoCostModels :: Map AnyPlutusScriptVersion CostModel
                        -> Array.Array Alonzo.Language Alonzo.CostModel
     toAlonzoCostModels costmodels =
@@ -557,6 +552,12 @@ evaluateTransactionExecutionUnits _eraInMode systemstart history pparams utxo tx
     impossible detail = error $ "evaluateTransactionExecutionUnits: "
                              ++ "the impossible happened: " ++ detail
 
+toLedgerEpochInfo
+  :: EraHistory mode
+  -> EpochInfo (Either TransactionValidityError)
+toLedgerEpochInfo (EraHistory _ interpreter) =
+    hoistEpochInfo (first TransactionValidityIntervalError . runExcept) $
+      Consensus.interpreterToEpochInfo interpreter
 
 -- ----------------------------------------------------------------------------
 -- Transaction balance

@@ -244,6 +244,7 @@ module Cardano.Api (
 
     -- ** Script execution units
     evaluateTransactionExecutionUnits,
+    toLedgerEpochInfo,
     ScriptExecutionError(..),
     TransactionValidityError(..),
 
