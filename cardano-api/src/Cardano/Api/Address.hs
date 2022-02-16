@@ -56,6 +56,7 @@ module Cardano.Api.Address (
     toShelleyStakeCredential,
     fromShelleyAddr,
     fromShelleyAddrIsSbe,
+    fromShelleyAddrToAny,
     fromShelleyPaymentCredential,
     fromShelleyStakeAddr,
     fromShelleyStakeCredential,
@@ -315,6 +316,12 @@ instance SerialiseAddress AddressAny where
           (AddressByron   <$> deserialiseAddress (AsAddress AsByronAddr)   t)
       <|> (AddressShelley <$> deserialiseAddress (AsAddress AsShelleyAddr) t)
 
+
+fromShelleyAddrToAny :: Shelley.Addr StandardCrypto -> AddressAny
+fromShelleyAddrToAny (Shelley.AddrBootstrap (Shelley.BootstrapAddress addr)) =
+  AddressByron $ ByronAddress addr
+fromShelleyAddrToAny (Shelley.Addr nw pc scr) =
+  AddressShelley $ ShelleyAddress nw pc scr
 
 -- ----------------------------------------------------------------------------
 -- Addresses in the context of a ledger era
