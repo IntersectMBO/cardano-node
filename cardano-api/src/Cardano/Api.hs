@@ -511,8 +511,10 @@ module Cardano.Api (
     envSecurityParam,
     LedgerState(..),
     initialLedgerState,
+{-
     applyBlock,
     ValidationMode(..),
+-}
 
     -- *** Ledger Events
     LedgerEvent(..),
@@ -520,10 +522,12 @@ module Cardano.Api (
     PoolReapDetails(..),
     toLedgerEvent,
 
+{-
     -- *** Traversing the block chain
     foldBlocks,
     chainSyncClientWithLedgerState,
     chainSyncClientPipelinedWithLedgerState,
+-}
 
     -- *** Errors
     LedgerStateError(..),

@@ -10,6 +10,7 @@
 {-# LANGUAGE TypeApplications #-}
 
 {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
+{-# OPTIONS_GHC -Wno-unused-top-binds -Wno-unused-imports #-}
 
 module Cardano.Api.LedgerState
   ( -- * Initialization / Accumulation
@@ -24,6 +25,7 @@ module Cardano.Api.LedgerState
       , LedgerStateAlonzo
       )
   , initialLedgerState
+{-
   , applyBlock
   , ValidationMode(..)
   , applyBlockWithEvents
@@ -32,7 +34,7 @@ module Cardano.Api.LedgerState
   , foldBlocks
   , chainSyncClientWithLedgerState
   , chainSyncClientPipelinedWithLedgerState
-
+-}
    -- * Errors
   , LedgerStateError(..)
   , FoldBlocksError(..)
@@ -214,6 +216,7 @@ initialLedgerState networkConfigFile = do
   let ledgerState = initLedgerStateVar genesisConfig
   return (env, ledgerState)
 
+{-
 -- | Apply a single block to the current ledger state.
 applyBlock
   :: Env
@@ -233,6 +236,7 @@ applyBlock env oldState validationMode block
         ShelleyBasedEraAllegra -> Consensus.BlockAllegra shelleyBlock
         ShelleyBasedEraMary    -> Consensus.BlockMary shelleyBlock
         ShelleyBasedEraAlonzo  -> Consensus.BlockAlonzo shelleyBlock
+-}
 
 pattern LedgerStateByron
   :: Ledger.LedgerState Byron.ByronBlock EmptyMK
@@ -274,6 +278,7 @@ renderFoldBlocksError fbe = case fbe of
   FoldBlocksInitialLedgerStateError err -> renderInitialLedgerStateError err
   FoldBlocksApplyBlockError err -> "Failed when applying a block: " <> renderLedgerStateError err
 
+{-
 -- | Monadic fold over all blocks and ledger states. Stopping @k@ blocks before
 -- the node's tip where @k@ is the security parameter.
 foldBlocks
@@ -647,6 +652,7 @@ chainSyncClientPipelinedWithLedgerState env ledgerState0 validationMode (CSP.Cha
     initialLedgerStateHistory = Seq.singleton (0, Right (ledgerState0, []), Origin)
 
 {- HLINT ignore chainSyncClientPipelinedWithLedgerState "Use fmap" -}
+-}
 
 -- | A history of k (security parameter) recent ledger states. The head is the
 -- most recent item. Elements are:
@@ -1156,6 +1162,7 @@ data ValidationMode
   -- the ledger state.
   | QuickValidation
 
+{-
 -- The function 'tickThenReapply' does zero validation, so add minimal
 -- validation ('blockPrevHash' matches the tip hash of the 'LedgerState'). This
 -- was originally for debugging but the check is cheap enough to keep.
@@ -1222,7 +1229,9 @@ tickThenReapplyCheckHash cfg block lsb =
                       $ Ouroboros.Network.Block.blockHash block
                   , "."
                   ]
+-}
 
+{-
 -- Like 'Consensus.tickThenReapply' but also checks that the previous hash from
 -- the block matches the head hash of the ledger state.
 tickThenApply
@@ -1240,6 +1249,7 @@ tickThenApply cfg block lsb
 
 utxohdStopGap :: l EmptyMK -> l ValuesMK
 utxohdStopGap = error "UTXO HD"
+-}
 
 renderByteArray :: ByteArrayAccess bin => bin -> Text
 renderByteArray =
