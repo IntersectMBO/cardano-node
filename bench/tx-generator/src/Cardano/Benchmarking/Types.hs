@@ -24,7 +24,6 @@ module Cardano.Benchmarking.Types
 
 
 import           Prelude
-import           Data.Word
 import           GHC.Generics
 import           Data.Aeson
 
@@ -55,7 +54,7 @@ instance ToJSON NumberOfOutputsPerTx where
 instance FromJSON NumberOfOutputsPerTx where parseJSON = genericParseJSON myJsonOptions
 
 newtype NumberOfTxs =
-  NumberOfTxs { unNumberOfTxs :: Word64 }
+  NumberOfTxs { unNumberOfTxs :: Int }
   deriving newtype (Eq, Ord, Num, Show)
 deriving stock instance Generic NumberOfTxs
 instance ToJSON NumberOfTxs where
