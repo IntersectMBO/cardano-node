@@ -461,7 +461,7 @@ namesForTStateQuery (BlockFetch.TraceLabelPeer _ v) = namesForTStateQuery' v
     namesForTStateQuery''' LSQ.MsgReAcquire {} = ["ReAcquire"]
     namesForTStateQuery''' LSQ.MsgDone {}      = ["Done"]
 
-instance (forall result. Show (Query blk result))
+instance LSQ.ShowQuery (Query blk)
       => LogFormatting (AnyMessageAndAgency (LSQ.LocalStateQuery blk pt (Query blk))) where
   forMachine _dtal (AnyMessageAndAgency stok LSQ.MsgAcquire{}) =
     mconcat [ "kind" .= String "MsgAcquire"

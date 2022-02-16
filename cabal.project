@@ -263,8 +263,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: 69b748ea07ffbaf9c7868645f9f8ca9b58f658b5
-  --sha256: 0yfici9p5gbj7gzpbk19izwsksagzc8fjls3cax291128jyvpi7w
+  tag: 47588c5379f8bd05d4d72cdb877b5d4575901e19
+  --sha256: 1jgmm2yh8bnzd9qlwi00dzz0l3w8igi1pgij9kbp41lyy5ppifan
   subdir:
     monoidal-synchronisation
     network-mux
@@ -335,6 +335,15 @@ source-repository-package
   location: https://github.com/input-output-hk/aeson
   tag: be4774468e651d1d512edad278cca7276e978034
   --sha256: 12fr5xnr3ax0r5gzwbf4v49yirppgprmvzlfj1ldx4zhcrdf5j7j
+  location: https://github.com/input-output-hk/haskell-lmdb
+  tag: d9ba8e382161aec999de12ae46e98c0eb83096b9
+  --sha256: 173dbqpn9czyjib6lnqa8f7ai66n3r4k44h5hvyl321ljychn5fm
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/lmdb-simple
+  tag: 5b2c622c1cf43deca081139b2d1d1eb9fc991064
+  --sha256: 0n96rzj4901y0q2l1fb6ffjp1kvgqchliig9id6jaq05xn4v386s
 
 constraints:
     hedgehog >= 1.0
