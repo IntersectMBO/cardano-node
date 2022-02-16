@@ -1,10 +1,36 @@
 pkgs:
 let
+  cleanNixServiceOptions = cfg: with cfg;
+    {
+                  plutusScript = cfg.plutusScript;
+                  targetNodes = targetNodesList cfg.targetNodes;
+                  era = capitalise cfg.era;
+                  plutusLoopScript = plutusScriptFile cfg "loop.plutus";
+                  inherit                 
+                  plutusMode
+                  plutusData
+                  plutusRedeemer
+                  plutusAutoMode
+                  executionMemory
+                  executionSteps
+                  debugMode
+                  tx_count
+                  add_tx_size
+                  inputs_per_tx
+                  outputs_per_tx
+                  tx_fee
+                  tps
+                  init_cooldown
+                  sigKey  
+                  min_utxo_value
+                  nodeConfigFile
+                  localNodeSocketPath;
+     };
   ## Standard, simplest possible value transaction workload.
   ##
   ## For definitions of the cfg attributes referred here,
   ## please see the 'defServiceModule.extraOptionDecls' attrset below.
-  basicValueTxWorkload =
+  lowLevelTxGenScript =
     cfg: with cfg; with pkgs.lib;
     [
       { Set.SNumberOfInputsPerTx   = inputs_per_tx; }
@@ -16,12 +42,7 @@ let
       { Set.STTL                   = 1000000; }
       { StartProtocol              = nodeConfigFile; }
       { Set.SEra                   = capitalise era; }
-      { Set.STargets =
-           __attrValues
-             (__mapAttrs (name: { ip, port }:
-                            { addr = ip; port = port; })
-                         targetNodes);
-      }
+      { Set.STargets               = targetNodesList cfg.targetNodes;}
       { Set.SLocalSocket  = localNodeSocketPath; }
       { ReadSigningKey    = [ "pass-partout" sigKey]; }
       { ImportGenesisFund = [ { LocalSocket = []; } "pass-partout"  "pass-partout" ]; }
@@ -101,9 +122,7 @@ let
       else [ ]
     )
     ;
-
-  defaultGeneratorScriptFn = basicValueTxWorkload;
-
+  defaultGeneratorScriptFn = lowLevelTxGenScript;
   ## The standard decision procedure for the run script:
   ##
   ##  - if the config explicitly specifies a script, take that,
@@ -114,7 +133,7 @@ let
         (if runScript != null
          then runScript
          else runScriptFn cfg);
-
+    
   capitalise = x: (pkgs.lib.toUpper (__substring 0 1 x)) + __substring 1 99999 x;
 
   createChangeScript = cfg: value: count:
@@ -152,7 +171,9 @@ let
 
   plutusScript = cfg: plutusScriptFile cfg cfg.plutusScript;
   plutusScriptFile = cfg: filename: "${pkgs.plutus-scripts}/generated-plutus-scripts/${filename}";
-
+  targetNodesList = targets: __attrValues (__mapAttrs
+                                       (name: { ip, port }: { addr = ip; port = port; })
+                                       targets);
 in pkgs.commonLib.defServiceModule
   (lib: with lib;
     { svcName = "tx-generator";
@@ -168,6 +189,7 @@ in pkgs.commonLib.defServiceModule
       exeName = "tx-generator";
 
       extraOptionDecls = {
+        highLevelConfig = opt bool false     "Pass high-level config to the tx-generator";
         continuousMode  = opt bool false     "Whether to use continuous generation, without the full UTxO pre-splitting phase.";
 
         ## TODO: the defaults should be externalised to a file.
@@ -190,11 +212,11 @@ in pkgs.commonLib.defServiceModule
         tps             = opt int 100        "Strength of generated load, in TPS.";
         init_cooldown   = opt int 50         "Delay between init and main submissions.";
         min_utxo_value  = opt int 10000000   "Minimum value allowed per UTxO entry";
-
         runScriptFn     = opt (functionTo (listOf attrs)) defaultGeneratorScriptFn
           "Function accepting this service config and producing the generator run script (a list of command attrsets).  Takes effect unless runScript or runScriptFile are specified.";
         runScript       = mayOpt (listOf attrs)
           "Generator run script (a list of command attrsets).  Takes effect unless runScriptFile is specified.";
+        # runScriptFile is used in the workbench, it is broken
         runScriptFile   = mayOpt str         "Generator config script file.";
 
         nodeConfigFile  = mayOpt str         "Node-style config file path.";
@@ -215,19 +237,22 @@ in pkgs.commonLib.defServiceModule
                                     ])
                               "mary"
                               "Cardano era to generate transactions for.";
-
         ## Internals: not user-serviceable.
+        ## broken/ignored options !!
         decideRunScript = opt (functionTo str) defaultDecideRunScript
           "Decision procedure for the run script content.";
       };
-
-      configExeArgsFn =
-        cfg: with cfg;
-            let jsonFile =
-                  if runScriptFile != null then runScriptFile
-                  else "${pkgs.writeText "generator-config-run-script.json"
-                                         (decideRunScript cfg)}";
-            in ["json" jsonFile];
+      
+      configExeArgsFn = cfg:
+        if cfg.highLevelConfig
+        then [
+          "json_highlevel"
+          "${pkgs.writeText "tx-gen-config.json" (__toJSON (cleanNixServiceOptions cfg))}"
+        ]
+        else [
+          "json"
+          "${pkgs.writeText "lowLevelTxGenScript.json" (__toJSON (lowLevelTxGenScript cfg))}"
+        ];
 
       configSystemdExtraConfig = _: {};
 
