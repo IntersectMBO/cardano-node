@@ -216,6 +216,9 @@ testnet testnetOptions H.Conf {..} = do
         , "--signing-key", signingKeyFile
         , "--delegation-certificate", delegationCertificateFile
         , "--shutdown-ipc", "0"
+        -- UTxO-HD configurations
+        , "--lmdb-ledger-db-backend"
+        , "--lmdb-mapsize", "2Gi"
         ] <&>
         ( \cp -> cp
           { IO.std_in = IO.CreatePipe

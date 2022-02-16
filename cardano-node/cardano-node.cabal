@@ -62,7 +62,8 @@ library
 
   hs-source-dirs:       src
 
-  exposed-modules:      Cardano.Node.Configuration.Logging
+  exposed-modules:      Cardano.Node.Configuration.LedgerDB
+                        Cardano.Node.Configuration.Logging
                         Cardano.Node.Configuration.NodeAddress
                         Cardano.Node.Configuration.POM
                         Cardano.Node.Configuration.Socket

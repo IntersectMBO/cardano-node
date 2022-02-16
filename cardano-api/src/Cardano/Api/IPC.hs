@@ -571,7 +571,6 @@ mapLocalTxMonitoringClient convTxid convTx ltxmc =
 -- | Establish a connection to a node and execute a single query using the
 -- local state query protocol.
 --
-
 data AcquiringFailure = AFPointTooOld
                       | AFPointNotOnChain
                       deriving Show
@@ -580,10 +579,10 @@ toAcquiringFailure :: Net.Query.AcquireFailure -> AcquiringFailure
 toAcquiringFailure AcquireFailurePointTooOld = AFPointTooOld
 toAcquiringFailure AcquireFailurePointNotOnChain = AFPointNotOnChain
 
-queryNodeLocalState :: forall mode result.
+queryNodeLocalState :: forall mode fp result.
                        LocalNodeConnectInfo mode
                     -> Maybe ChainPoint
-                    -> QueryInMode mode result
+                    -> QueryInMode mode fp result
                     -> IO (Either AcquiringFailure result)
 queryNodeLocalState connctInfo mpoint query = do
     resultVar <- newEmptyTMVarIO

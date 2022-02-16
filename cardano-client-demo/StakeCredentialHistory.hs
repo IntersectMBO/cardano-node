@@ -270,13 +270,13 @@ main = do
                    case ledgerState of
                      LedgerStateByron _                                     ->
                        ("byron",   EpochNo 0, Nothing)
-                     LedgerStateShelley (Shelley.ShelleyLedgerState _ ls _) ->
+                     LedgerStateShelley (Shelley.ShelleyLedgerState _ ls _ _) ->
                        ("shelley", L.nesEL ls, Just (L.nesRu ls, getGoSnapshot ls, getBalances ls, getPV ls))
-                     LedgerStateAllegra (Shelley.ShelleyLedgerState _ ls _) ->
+                     LedgerStateAllegra (Shelley.ShelleyLedgerState _ ls _ _) ->
                        ("allegra", L.nesEL ls, Just (L.nesRu ls, getGoSnapshot ls, getBalances ls, getPV ls))
-                     LedgerStateMary    (Shelley.ShelleyLedgerState _ ls _) ->
+                     LedgerStateMary    (Shelley.ShelleyLedgerState _ ls _ _) ->
                        ("mary",    L.nesEL ls, Just (L.nesRu ls, getGoSnapshot ls, getBalances ls, getPV ls))
-                     LedgerStateAlonzo    (Shelley.ShelleyLedgerState _ ls _) ->
+                     LedgerStateAlonzo    (Shelley.ShelleyLedgerState _ ls _ _) ->
                        ("alonzo",  L.nesEL ls, Just (L.nesRu ls, getGoSnapshot ls, getBalances ls, getPV ls))
 
              let txBodyComponents = map ( (\(TxBody txbc) -> txbc) . getTxBody ) transactions

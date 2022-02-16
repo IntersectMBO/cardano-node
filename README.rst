@@ -97,6 +97,10 @@ The general synopsis is as follows:
                            [--host-ipv6-addr IPV6-ADDRESS]
                            [--port PORT]
                            [--config NODE-CONFIGURATION] [--validate-db]
+                           [ --in-memory-ledger-db-backend
+                           | --lmdb-ledger-db-backend [--lmdb-mapsize NR_GIGABYTES]
+                           ]
+
      Run the node.
 
 * ``--topology`` - Filepath to a topology file describing which peers the node should connect to.
@@ -126,6 +130,25 @@ The general synopsis is as follows:
 * ``--config`` - Specify the filepath to the config ``.yaml`` file. This file is responsible for all the other node's required settings. See examples in ``configuration`` (e.g. `config-0.yaml <configuration/defaults/simpleview/config-0.yaml>`_).
 
 * ``--validate-db`` - Flag to revalidate all on-disk database files
+
+
+* ``--in-memory-ledger-db-backend`` - Use the in-memory backend to store the
+  UTxO portion of the ledger state in memory. As a result, the whole ledger
+  state will be stored in memory. Incompatible with
+  ``--lmdb-ledger-db-backend``. The node uses the in-memory backend by default
+  if no ``--*-db-backend`` flags are set.
+* ``--lmdb-ledger-db-backend`` - Use the LMDB backend to store the UTxO portion
+  of the ledger state on disk. The remainder of the ledger state will still be
+  stored in memory. Incompatible with ``--in-memory-ledger-db-backend``.
+
+  * ``--lmdb-mapsize`` - Set the maximum database size (mapsize) for the LMDB
+    backend. By default, the mapsize of the backend is set to 16 Gigabytes.
+    Warning: if the database size exceeds the given mapsize, the node will
+    abort. Therefore, the mapsize should be set to a value high enough to
+    guarantee that the maximum database size will not be reached during the
+    expected node uptime. The current default value is sufficient to offer this
+    guarantee, and setting the mapsize to anything less is therefore not
+    recommended.
 
 Configuration
 ====

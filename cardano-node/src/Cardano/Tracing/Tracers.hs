@@ -1283,6 +1283,7 @@ forgeStateInfoTracer p _ts tracer = Tracer $ \ev -> do
 nodeToClientTracers'
   :: ( ToObject localPeer
      , ShowQuery (BlockQuery blk)
+     , StandardHash blk
      )
   => TraceSelection
   -> TracingVerbosity

@@ -190,7 +190,9 @@ runQueryCmd cmd =
       runQueryStakeSnapshot consensusModeParams network allOrOnlyPoolIds mOutFile
     QueryProtocolState' consensusModeParams network mOutFile ->
       runQueryProtocolState consensusModeParams network mOutFile
-    QueryUTxO' consensusModeParams qFilter networkId mOutFile ->
+    QueryUTxOWhole' consensusModeParams qFilter networkId mOutFile ->
+      runQueryUTxO consensusModeParams qFilter networkId mOutFile
+    QueryUTxOLarge' consensusModeParams qFilter networkId mOutFile ->
       runQueryUTxO consensusModeParams qFilter networkId mOutFile
     QueryKesPeriodInfo consensusModeParams network nodeOpCert mOutFile ->
       runQueryKesPeriodInfo consensusModeParams network nodeOpCert mOutFile
@@ -364,7 +366,7 @@ runQueryTip (AnyConsensusModeParams cModeParams) network mOutFile = do
 
 runQueryUTxO
   :: AnyConsensusModeParams
-  -> QueryUTxOFilter
+  -> QueryUTxOFilter fp
   -> NetworkId
   -> Maybe OutputFile
   -> ExceptT ShelleyQueryCmdError IO ()
@@ -1330,10 +1332,10 @@ calcEraInMode era mode=
                    $ toEraInMode era mode
 
 executeQuery
-  :: forall result era mode. CardanoEra era
+  :: forall result era mode fp . CardanoEra era
   -> ConsensusModeParams mode
   -> LocalNodeConnectInfo mode
-  -> QueryInMode mode (Either EraMismatch result)
+  -> QueryInMode mode fp (Either EraMismatch result)
   -> ExceptT ShelleyQueryCmdError IO result
 executeQuery era cModeP localNodeConnInfo q = do
   eraInMode <- calcEraInMode era $ consensusModeOnly cModeP

@@ -126,4 +126,14 @@ final: prev: with final; {
       });
     };
   };
+
+  # for LMDB cross compilation
+  # remove once our nixpkgs pin contains https://github.com/NixOS/nixpkgs/pull/171686
+  lmdb = prev.lmdb.overrideAttrs (oldAttrs:
+    lib.optionalAttrs prev.stdenv.hostPlatform.isWindows{
+      makeFlags = oldAttrs.makeFlags ++ [ "SOEXT=.dll" "BINEXT=.exe" ];
+      buildInputs = [ prev.windows.pthreads ];
+      patches = [ ./lmdb-mingw.patch ];
+    }
+  );
 }

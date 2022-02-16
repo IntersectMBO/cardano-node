@@ -27,6 +27,8 @@ To download the source code and build it, you need the following packages and to
 * developer libraries for `systemd`,
 * developer libraries for `ncurses`,
 * `ncurses` compatibility libraries,
+* developer libraries for `openssl`,
+* developer libraries for `lmdb`,
 * the Haskell build tool `cabal`,
 * the GHC Haskell compiler (version `8.10.7` or above).
 
@@ -35,7 +37,7 @@ In Redhat, Fedora, and Centos:
 ```bash
 sudo yum update -y
 sudo yum install git gcc gcc-c++ tmux gmp-devel make tar xz wget zlib-devel libtool autoconf -y
-sudo install systemd-devel ncurses-devel ncurses-compat-libs which jq openssl-devel lmdb-devel -y
+sudo yum install systemd-devel ncurses-devel ncurses-compat-libs which jq openssl-devel lmdb-devel -y
 ```
 
 For Debian/Ubuntu, use the following instead:

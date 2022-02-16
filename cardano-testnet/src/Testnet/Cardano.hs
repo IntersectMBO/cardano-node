@@ -737,6 +737,9 @@ cardanoTestnet testnetOptions H.Conf {..} = do
         , "--shelley-operational-certificate", tempAbsPath </> node </> "shelley/node.cert"
         , "--delegation-certificate",  tempAbsPath </> node </> "byron/delegate.cert"
         , "--signing-key", tempAbsPath </> node </> "byron/delegate.key"
+        -- UTxO-HD configurations
+        , "--lmdb-ledger-db-backend"
+        , "--lmdb-mapsize", "2Gi"
         ] <> extraNodeCliArgs nodeOpts)
 
   H.threadDelay 100000

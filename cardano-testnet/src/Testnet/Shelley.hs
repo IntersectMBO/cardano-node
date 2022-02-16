@@ -409,6 +409,9 @@ shelleyTestnet testnetOptions H.Conf {..} = do
         , "--shelley-vrf-key", tempAbsPath </> node </> "vrf.skey"
         , "--shelley-operational-certificate" , tempAbsPath </> node </> "node.cert"
         , "--host-addr", ifaceAddress
+        -- UTxO-HD configurations
+        , "--lmdb-ledger-db-backend"
+        , "--lmdb-mapsize", "2Gi"
         ]
 
   now <- H.noteShowIO DTC.getCurrentTime

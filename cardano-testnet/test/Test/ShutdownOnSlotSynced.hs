@@ -49,7 +49,7 @@ hprop_shutdownOnSlotSynced = integration . H.runFinallies . H.workspace "chairma
 
   -- Wait for the node to exit
   let timeout :: Int
-      timeout = round (40 + (fromIntegral maxSlot * slotLen))
+      timeout = round (40 + (fromIntegral maxSlot * slotLen) + 40)
   mExitCodeRunning <- H.waitSecondsForProcess timeout (nodeProcessHandle node)
 
   -- Check results

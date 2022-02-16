@@ -2,6 +2,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE DataKinds #-}
 
 module Cardano.CLI.Shelley.Parsers
   ( -- * CLI command parser
@@ -44,6 +45,8 @@ import qualified Text.Parsec.Token as Parsec
 
 import qualified Cardano.Ledger.BaseTypes as Shelley
 import qualified Cardano.Ledger.Shelley.TxBody as Shelley
+import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
+import           Ouroboros.Network.Protocol.LocalStateQuery.Type
 
 import           Cardano.Api
 import           Cardano.Api.Shelley
@@ -949,10 +952,21 @@ pQueryCmd =
                   <*> pMaybeOutputFile
 
     pQueryUTxO :: Parser QueryCmd
-    pQueryUTxO =
-      QueryUTxO'
+    pQueryUTxO = pQueryUTxOWhole <|> pQueryUTxOLarge
+
+    pQueryUTxOWhole :: Parser QueryCmd
+    pQueryUTxOWhole =
+      QueryUTxOWhole'
         <$> pConsensusModeParams
-        <*> pQueryUTxOFilter
+        <*> pQueryUTxOFilterWhole
+        <*> pNetworkId
+        <*> pMaybeOutputFile
+
+    pQueryUTxOLarge :: Parser QueryCmd
+    pQueryUTxOLarge =
+      QueryUTxOLarge'
+        <$> pConsensusModeParams
+        <*> pQueryUTxOFilterLarge
         <*> pNetworkId
         <*> pMaybeOutputFile
 
@@ -2458,11 +2472,10 @@ pTxByronWitnessCount =
       <> Opt.value 0
       )
 
-pQueryUTxOFilter :: Parser QueryUTxOFilter
-pQueryUTxOFilter =
+pQueryUTxOFilterWhole :: Parser (QueryUTxOFilter 'WholeL)
+pQueryUTxOFilterWhole =
       pQueryUTxOWhole
   <|> pQueryUTxOByAddress
-  <|> pQueryUTxOByTxIn
   where
     pQueryUTxOWhole =
       Opt.flag' QueryUTxOWhole
@@ -2470,7 +2483,7 @@ pQueryUTxOFilter =
         <> Opt.help "Return the whole UTxO (only appropriate on small testnets)."
         )
 
-    pQueryUTxOByAddress :: Parser QueryUTxOFilter
+    pQueryUTxOByAddress :: Parser (QueryUTxOFilter 'WholeL)
     pQueryUTxOByAddress = QueryUTxOByAddress . Set.fromList <$> some pByAddress
 
     pByAddress :: Parser AddressAny
@@ -2481,7 +2494,11 @@ pQueryUTxOFilter =
           <> Opt.help "Filter by Cardano address(es) (Bech32-encoded)."
           )
 
-    pQueryUTxOByTxIn :: Parser QueryUTxOFilter
+pQueryUTxOFilterLarge :: Parser (QueryUTxOFilter 'LargeL)
+pQueryUTxOFilterLarge =
+      pQueryUTxOByTxIn
+  where
+    pQueryUTxOByTxIn :: Parser (QueryUTxOFilter 'LargeL)
     pQueryUTxOByTxIn = QueryUTxOByTxIn . Set.fromList <$> some pByTxIn
 
     pByTxIn :: Parser TxIn
@@ -2491,6 +2508,7 @@ pQueryUTxOFilter =
         <> Opt.metavar "TX-IN"
         <> Opt.help "Filter by transaction input (TxId#TxIx)."
         )
+
 
 pFilterByStakeAddress :: Parser StakeAddress
 pFilterByStakeAddress =
