@@ -55,6 +55,7 @@ import qualified Data.Aeson as Aeson
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Short as SBS
 import           Data.Foldable (Foldable (toList))
+import           Data.String (IsString)
 
 import           Cardano.Slotting.Block (BlockNo)
 import           Cardano.Slotting.Slot (EpochNo, SlotNo, WithOrigin (..))
@@ -257,9 +258,8 @@ data BlockHeader = BlockHeader !SlotNo
 -- The different eras do use different types, but it's all the same underlying
 -- representation.
 newtype instance Hash BlockHeader = HeaderHash SBS.ShortByteString
-  deriving (Eq, Ord, Show)
-  deriving (ToJSON, FromJSON) via UsingRawBytesHex (Hash BlockHeader)
-
+  deriving (Eq, Ord)
+  deriving (Show, IsString, ToJSON, FromJSON) via UsingRawBytesHex (Hash BlockHeader)
 
 
 instance SerialiseAsRawBytes (Hash BlockHeader) where
