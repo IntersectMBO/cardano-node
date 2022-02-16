@@ -17,7 +17,7 @@
       url = "github:input-output-hk/cardano-memory-benchmark";
       inputs.cardano-node-measured.follows = "/";
       inputs.cardano-node-process.follows = "/";
-      inputs.cardano-node-snapshot.url = "github:input-output-hk/cardano-node";
+      inputs.cardano-node-snapshot.url = "github:input-output-hk/cardano-node/membench-snapshot-pin";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     # Custom user config (default: empty), eg.:
