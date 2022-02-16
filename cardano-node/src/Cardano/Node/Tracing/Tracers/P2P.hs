@@ -251,7 +251,7 @@ namesForPeerSelection TracePromoteWarmPeers {}      = ["PromoteWarmPeers"]
 namesForPeerSelection TracePromoteWarmLocalPeers {} = ["PromoteWarmLocalPeers"]
 namesForPeerSelection TracePromoteWarmFailed {}     = ["PromoteWarmFailed"]
 namesForPeerSelection TracePromoteWarmDone {}       = ["PromoteWarmDone"]
-namesForPeerSelection TracePromoteWarmAborted {}    = ["PromoteWarmAborted"]
+-- namesForPeerSelection TracePromoteWarmAborted {}    = ["PromoteWarmAborted"]
 namesForPeerSelection TraceDemoteWarmPeers {}       = ["DemoteWarmPeers"]
 namesForPeerSelection TraceDemoteWarmFailed {}      = ["DemoteWarmFailed"]
 namesForPeerSelection TraceDemoteWarmDone {}        = ["DemoteWarmDone"]
@@ -282,7 +282,7 @@ severityPeerSelection TracePromoteWarmPeers      {} = Info
 severityPeerSelection TracePromoteWarmLocalPeers {} = Info
 severityPeerSelection TracePromoteWarmFailed     {} = Info
 severityPeerSelection TracePromoteWarmDone       {} = Info
-severityPeerSelection TracePromoteWarmAborted    {} = Info
+-- severityPeerSelection TracePromoteWarmAborted    {} = Info
 severityPeerSelection TraceDemoteWarmPeers       {} = Info
 severityPeerSelection TraceDemoteWarmFailed      {} = Info
 severityPeerSelection TraceDemoteWarmDone        {} = Info
@@ -390,12 +390,14 @@ instance LogFormatting (TracePeerSelection SockAddr) where
              , "actualActive" .= aActive
              , "peer" .= toJSON p
              ]
+{-
   forMachine _dtal (TracePromoteWarmAborted tActive aActive p) =
     mconcat [ "kind" .= String "PromoteWarmAborted"
              , "targetActive" .= tActive
              , "actualActive" .= aActive
              , "peer" .= toJSON p
              ]
+-}
   forMachine _dtal (TraceDemoteWarmPeers tEst aEst sp) =
     mconcat [ "kind" .= String "DemoteWarmPeers"
              , "targetEstablished" .= tEst

@@ -44,45 +44,46 @@ import qualified Data.Map.Strict as Map
 import           Data.SOP.Strict
 import qualified Data.UMap as UM
 
-import qualified Cardano.Chain.Block as Byron
-import qualified Cardano.Chain.UTxO as Byron
-import qualified Cardano.Crypto.Hash as Crypto
-import qualified Cardano.Crypto.Hashing as Byron.Crypto
-import           Cardano.Crypto.KES.Class (Period)
-import           Cardano.Protocol.TPraos.OCert (KESPeriod (..))
+import Cardano.Chain.Block qualified as Byron
+import Cardano.Chain.UTxO qualified as Byron
+import Cardano.Crypto.Hash qualified as Crypto
+import Cardano.Crypto.Hashing qualified as Byron.Crypto
+import Cardano.Crypto.KES.Class (Period)
+import Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 
-import           Cardano.Ledger.BaseTypes (StrictMaybe (..), fromSMaybe)
-import qualified Cardano.Ledger.SafeHash as Ledger
-import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
-import qualified Cardano.Ledger.Shelley.UTxO as Shelley
-import qualified Cardano.Ledger.TxIn as Ledger
+import Cardano.Ledger.BaseTypes (StrictMaybe (..), fromSMaybe)
+import Cardano.Ledger.SafeHash qualified as Ledger
+import Cardano.Ledger.Shelley.LedgerState qualified as Shelley
+import Cardano.Ledger.Shelley.UTxO qualified as Shelley
+import Cardano.Ledger.TxIn qualified as Ledger
 
-import           Ouroboros.Consensus.Block (ForgeStateInfo, ForgeStateUpdateError)
-import           Ouroboros.Consensus.Byron.Ledger.Block (ByronBlock)
-import qualified Ouroboros.Consensus.Byron.Ledger.Block as Byron
-import qualified Ouroboros.Consensus.Byron.Ledger.Ledger as Byron
-import           Ouroboros.Consensus.Byron.Ledger.Mempool (TxId (..))
-import qualified Ouroboros.Consensus.Cardano as Cardano
-import qualified Ouroboros.Consensus.Cardano.Block as Cardano
-import           Ouroboros.Consensus.HardFork.Combinator
-import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (OneEraForgeStateInfo (..),
-                   OneEraForgeStateUpdateError (..))
-import           Ouroboros.Consensus.HardFork.Combinator.Embed.Unary
-import           Ouroboros.Consensus.Ledger.Abstract (IsLedger)
-import           Ouroboros.Consensus.Ledger.Extended (ExtLedgerState)
-import           Ouroboros.Consensus.Node (NodeKernel (..))
-import qualified Ouroboros.Consensus.Protocol.Ledger.HotKey as HotKey
-import qualified Ouroboros.Consensus.Shelley.Ledger as Shelley
-import           Ouroboros.Consensus.Shelley.Ledger.Block (ShelleyBlock)
-import           Ouroboros.Consensus.Shelley.Ledger.Mempool (TxId (..))
-import           Ouroboros.Consensus.Shelley.Node ()
-import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
-import           Ouroboros.Consensus.TypeFamilyWrappers
-import           Ouroboros.Consensus.Util.Orphans ()
+import Ouroboros.Consensus.Block (ForgeStateInfo, ForgeStateUpdateError)
+import Ouroboros.Consensus.Byron.Ledger.Block (ByronBlock)
+import Ouroboros.Consensus.Byron.Ledger.Block qualified as Byron
+import Ouroboros.Consensus.Byron.Ledger.Ledger qualified as Byron
+import Ouroboros.Consensus.Byron.Ledger.Mempool (TxId (..))
+import Ouroboros.Consensus.Cardano qualified as Cardano
+import Ouroboros.Consensus.Cardano.Block qualified as Cardano
+import Ouroboros.Consensus.HardFork.Combinator
+import Ouroboros.Consensus.HardFork.Combinator.AcrossEras (OneEraForgeStateInfo (..), OneEraForgeStateUpdateError (..))
+import Ouroboros.Consensus.HardFork.Combinator.Embed.Unary
+import Ouroboros.Consensus.HardFork.Combinator.Util.Functors (Flip (..))
+import Ouroboros.Consensus.Ledger.Abstract (IsLedger)
+import Ouroboros.Consensus.Ledger.Basics (EmptyMK)
+import Ouroboros.Consensus.Ledger.Extended (ExtLedgerState)
+import Ouroboros.Consensus.Node (NodeKernel (..))
+import Ouroboros.Consensus.Shelley.Ledger qualified as Shelley
+import Ouroboros.Consensus.Shelley.Ledger.Block (ShelleyBlock)
+import Ouroboros.Consensus.Shelley.Ledger.Mempool (TxId (..))
+import Ouroboros.Consensus.Shelley.Node ()
+import Ouroboros.Consensus.Protocol.Ledger.HotKey qualified as HotKey
+import Ouroboros.Consensus.Storage.ChainDB qualified as ChainDB
+import Ouroboros.Consensus.TypeFamilyWrappers
+import Ouroboros.Consensus.Util.Orphans ()
 
-import qualified Ouroboros.Network.AnchoredFragment as AF
-import           Ouroboros.Network.NodeToClient (LocalConnectionId)
-import           Ouroboros.Network.NodeToNode (RemoteConnectionId)
+import Ouroboros.Network.AnchoredFragment qualified as AF
+import Ouroboros.Network.NodeToClient (LocalConnectionId)
+import Ouroboros.Network.NodeToNode (RemoteConnectionId)
 
 --
 -- * TxId -> ByteString projection
@@ -232,8 +233,8 @@ instance All GetKESInfo xs => GetKESInfo (HardForkBlock xs) where
 -- * General ledger
 --
 class LedgerQueries blk where
-  ledgerUtxoSize     :: LedgerState blk -> Int
-  ledgerDelegMapSize :: LedgerState blk -> Int
+  ledgerUtxoSize     :: LedgerState blk EmptyMK -> Int
+  ledgerDelegMapSize :: LedgerState blk EmptyMK -> Int
 
 instance LedgerQueries Byron.ByronBlock where
   ledgerUtxoSize = Map.size . Byron.unUTxO . Byron.cvsUtxo . Byron.byronLedgerState
@@ -259,8 +260,8 @@ instance LedgerQueries (Shelley.ShelleyBlock era) where
 
 instance (LedgerQueries x, NoHardForks x)
       => LedgerQueries (HardForkBlock '[x]) where
-  ledgerUtxoSize = ledgerUtxoSize . project
-  ledgerDelegMapSize = ledgerDelegMapSize . project
+  ledgerUtxoSize = ledgerUtxoSize . unFlip . project . Flip
+  ledgerDelegMapSize = ledgerDelegMapSize . unFlip . project . Flip
 
 instance LedgerQueries (Cardano.CardanoBlock c) where
   ledgerUtxoSize = \case
@@ -302,7 +303,7 @@ mapNodeKernelDataIO f (NodeKernelData ref) =
 
 nkQueryLedger ::
      IsLedger (LedgerState blk)
-  => (ExtLedgerState blk -> a)
+  => (ExtLedgerState blk EmptyMK -> a)
   -> NodeKernel IO RemoteConnectionId LocalConnectionId blk
   -> IO a
 nkQueryLedger f NodeKernel{getChainDB} =
