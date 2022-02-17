@@ -611,7 +611,7 @@ hprop_plutus_certifying_withdrawing = H.integration . H.runFinallies . H.workspa
 
   let minrequtxo = 999978
 
-  pr <- H.byDurationM 3 60 $ do
+  pr <- H.noteShowM . H.byDurationM 3 60 $ do
     void $ H.execCli' execConfig
       [ "query",  "stake-address-info"
       , "--address", plutusStakingAddr
