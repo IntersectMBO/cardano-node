@@ -179,8 +179,6 @@
         "iohkNix": "iohkNix_2",
         "membench": "membench_2",
         "nixpkgs": [
-          "membench",
-          "cardano-node-snapshot",
           "haskellNix",
           "nixpkgs-2105"
         ],
@@ -519,11 +517,11 @@
         "ouroboros-network": "ouroboros-network_2"
       },
       "locked": {
-        "lastModified": 1645060566,
-        "narHash": "sha256-0wzNaBiAei/7VCnwUuUwFrue6b64+KaCYyXVdquAfvw=",
+        "lastModified": 1645070579,
+        "narHash": "sha256-AxL6tCOnzYnE6OquoFzj+X1bLDr1PQx3d8/vXm+rbfA=",
         "owner": "input-output-hk",
         "repo": "cardano-memory-benchmark",
-        "rev": "31f324dfad5058e60e62f9d07d3b8c388753d184",
+        "rev": "65643e000186de1335e24ec89159db8ba85e1c1a",
         "type": "github"
       },
       "original": {
