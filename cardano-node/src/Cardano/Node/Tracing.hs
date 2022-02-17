@@ -24,8 +24,8 @@ import Cardano.Node.Handlers.Shutdown (ShutdownTrace)
 import Cardano.Node.Startup           (NodeInfo, StartupTrace)
 
 import Cardano.Logging.Resources
+import Cardano.Node.Tracing.StateRep (NodeState)
 import Cardano.Node.Tracing.Tracers.Peer (PeerT)
-
 
 data Tracers peer localPeer blk p2p = Tracers
   { -- | Trace the ChainDB
@@ -46,6 +46,7 @@ data Tracers peer localPeer blk p2p = Tracers
   , startupTracer         :: Tracer IO (StartupTrace blk)
   , shutdownTracer        :: Tracer IO ShutdownTrace
   , nodeInfoTracer        :: Tracer IO NodeInfo
+  , nodeStateTracer       :: Tracer IO (NodeState blk)
   , resourcesTracer       :: Tracer IO ResourceStats
   , peersTracer           :: Tracer IO [PeerT blk]
   }

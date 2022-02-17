@@ -137,6 +137,35 @@ executable demo-forwarder
                        -rtsopts
                        -with-rtsopts=-T
 
+library demo-acceptor-lib
+  import:              base, project-config
+
+  hs-source-dirs:      test
+
+  exposed-modules:     Cardano.Tracer.Test.Acceptor
+
+  build-depends:         async-extras
+                       , bytestring
+                       , cardano-tracer
+                       , containers
+                       , extra
+                       , stm
+                       , text
+                       , trace-forward
+
+executable demo-acceptor
+  import:              base, project-config
+
+  hs-source-dirs:      demo
+
+  main-is:             acceptor.hs
+
+  build-depends:       demo-acceptor-lib
+
+  ghc-options:         -threaded
+                       -rtsopts
+                       -with-rtsopts=-T
+
 test-suite cardano-tracer-test
   import:              base, project-config
   type:                exitcode-stdio-1.0

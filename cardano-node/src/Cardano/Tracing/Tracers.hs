@@ -154,6 +154,7 @@ nullTracersP2P = Tracers
   , startupTracer = nullTracer
   , shutdownTracer = nullTracer
   , nodeInfoTracer = nullTracer
+  , nodeStateTracer = nullTracer
   , resourcesTracer = nullTracer
   , peersTracer = nullTracer
   }
@@ -169,6 +170,7 @@ nullTracersNonP2P = Tracers
   , startupTracer = nullTracer
   , shutdownTracer = nullTracer
   , nodeInfoTracer = nullTracer
+  , nodeStateTracer = nullTracer
   , resourcesTracer = nullTracer
   , peersTracer = nullTracer
   }
@@ -326,6 +328,7 @@ mkTracers blockConfig tOpts@(TracingOnLegacy trSel) tr nodeKern ekgDirect enable
     , shutdownTracer = toLogObject' verb $ appendName "shutdown" tr
     -- The remaining tracers are completely unused by the legacy tracing:
     , nodeInfoTracer = nullTracer
+    , nodeStateTracer = nullTracer
     , resourcesTracer = nullTracer
     , peersTracer = nullTracer
     }
@@ -468,6 +471,7 @@ mkTracers _ _ _ _ _ enableP2P =
     , startupTracer = nullTracer
     , shutdownTracer = nullTracer
     , nodeInfoTracer = nullTracer
+    , nodeStateTracer = nullTracer
     , resourcesTracer = nullTracer
     , peersTracer = nullTracer
     }
