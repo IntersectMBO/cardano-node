@@ -249,11 +249,11 @@
         "ouroboros-network": "ouroboros-network"
       },
       "locked": {
-        "lastModified": 1645048562,
-        "narHash": "sha256-7vEj5wXaEJR6i8XbMZMA5lZSf7McG/V+3+X1jUco578=",
+        "lastModified": 1645060566,
+        "narHash": "sha256-0wzNaBiAei/7VCnwUuUwFrue6b64+KaCYyXVdquAfvw=",
         "owner": "input-output-hk",
         "repo": "cardano-memory-benchmark",
-        "rev": "381afc3d5571eb431c8d4017acd6f3d802a1cd33",
+        "rev": "31f324dfad5058e60e62f9d07d3b8c388753d184",
         "type": "github"
       },
       "original": {
