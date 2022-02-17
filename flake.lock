@@ -229,6 +229,8 @@
         "iohkNix": "iohkNix_2",
         "membench": "membench_2",
         "nixpkgs": [
+          "membench",
+          "cardano-node-snapshot",
           "haskellNix",
           "nixpkgs-2105"
         ],
