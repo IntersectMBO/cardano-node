@@ -209,6 +209,10 @@ let
 
     packages = ps: lib.attrValues (haskell-nix.haskellLib.selectProjectPackages ps);
 
+    shellHook = ''
+      ${setLocale}
+    '';
+
     # These programs will be available inside the nix-shell.
     nativeBuildInputs = [
       nix-prefetch-git
