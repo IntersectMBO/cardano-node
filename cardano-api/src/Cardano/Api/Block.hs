@@ -164,7 +164,7 @@ getShelleyBlockTxs :: forall era ledgerera.
                       ledgerera ~ ShelleyLedgerEra era
                    => Consensus.ShelleyBasedEra ledgerera
                    => ShelleyBasedEra era
-                   -> Ledger.Block TPraos.BHeader ledgerera
+                   -> Ledger.Block (TPraos.BHeader (Ledger.Crypto ledgerera)) ledgerera
                    -> [Tx era]
 getShelleyBlockTxs era (Ledger.Block _header txs) =
   [ ShelleyTx era txinblock

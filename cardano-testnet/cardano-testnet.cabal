@@ -106,13 +106,7 @@ test-suite cardano-testnet-tests
 
   type:                 exitcode-stdio-1.0
 
-  build-depends:        aeson
-                      , base16-bytestring
-                      , bytestring
-                      , cardano-api
-                      , cardano-cli
-                      , cardano-testnet
-                      , containers
+  build-depends:        cardano-testnet
                       , directory
                       , hedgehog
                       , hedgehog-extras
@@ -121,15 +115,15 @@ test-suite cardano-testnet-tests
                       , tasty
                       , tasty-expected-failure
                       , tasty-hedgehog
-                      , text
-                      , unordered-containers
 
-  other-modules:        Spec.Plutus.Direct.CertifyingAndWithdrawingPlutus
-                        Spec.Plutus.Direct.ScriptContextEquality
-                        Spec.Plutus.Direct.ScriptContextEqualityMint
-                        Spec.Plutus.Direct.TxInLockingPlutus
-                        Spec.Plutus.Script.TxInLockingPlutus
-                        Spec.Plutus.SubmitApi.TxInLockingPlutus
+  other-modules:
+                        -- TODO: Move to plutus-apps
+                        -- Spec.Plutus.Direct.CertifyingAndWithdrawingPlutus
+                        -- Spec.Plutus.Direct.ScriptContextEquality
+                        -- Spec.Plutus.Direct.ScriptContextEqualityMint
+                        -- Spec.Plutus.Direct.TxInLockingPlutus
+                        -- Spec.Plutus.Script.TxInLockingPlutus
+                        -- Spec.Plutus.SubmitApi.TxInLockingPlutus
                         Spec.Shutdown
                         Test.Util
 
@@ -138,4 +132,5 @@ test-suite cardano-testnet-tests
   build-tool-depends:   cardano-node:cardano-node
                       , cardano-cli:cardano-cli
                       , cardano-submit-api:cardano-submit-api
-                      , plutus-example:create-script-context
+                      -- TODO: Move to plutus-apps
+                      --  , plutus-example:create-script-context

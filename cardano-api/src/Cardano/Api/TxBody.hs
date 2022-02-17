@@ -12,6 +12,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE ViewPatterns #-}
 
@@ -167,7 +168,7 @@ import           Data.String
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Data.Type.Equality (TestEquality (..), (:~:) (Refl))
-import           Data.Word (Word32, Word64)
+import           Data.Word (Word16, Word32, Word64)
 import           GHC.Generics
 import qualified Text.Parsec as Parsec
 import qualified Text.Parsec.Language as Parsec
@@ -211,6 +212,7 @@ import           Cardano.Ledger.Val (isZero)
 import qualified Cardano.Ledger.Alonzo as Alonzo
 import qualified Cardano.Ledger.Alonzo.Data as Alonzo
 import qualified Cardano.Ledger.Alonzo.Language as Alonzo
+import qualified Cardano.Ledger.Alonzo.PParams as Alonzo
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
 import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo
@@ -240,6 +242,7 @@ import           Cardano.Api.TxMetadata
 import           Cardano.Api.Utils
 import           Cardano.Api.Value
 import           Cardano.Api.ValueParser
+import qualified Cardano.Ledger.BaseTypes as Ledger
 import           Cardano.Ledger.Crypto (StandardCrypto)
 
 {- HLINT ignore "Redundant flip" -}
@@ -446,12 +449,14 @@ toByronTxIn :: TxIn -> Byron.TxIn
 toByronTxIn (TxIn txid (TxIx txix)) =
     Byron.TxInUtxo (toByronTxId txid) (fromIntegral txix)
 
+-- | This function may overflow on the transaction index. Call sites must ensure
+-- that all uses of this function are appropriately guarded.
 toShelleyTxIn :: TxIn -> Ledger.TxIn StandardCrypto
 toShelleyTxIn (TxIn txid (TxIx txix)) =
-    Ledger.TxIn (toShelleyTxId txid) (fromIntegral txix)
+    Ledger.TxIn (toShelleyTxId txid) (Ledger.TxIx $ fromIntegral txix)
 
 fromShelleyTxIn :: Ledger.TxIn StandardCrypto -> TxIn
-fromShelleyTxIn (Ledger.TxIn txid txix) =
+fromShelleyTxIn (Ledger.TxIn txid (Ledger.TxIx txix)) =
     TxIn (fromShelleyTxId txid) (TxIx (fromIntegral txix))
 
 
@@ -2186,7 +2191,7 @@ makeByronTransactionBody :: TxBodyContent BuildTx ByronEra
 makeByronTransactionBody TxBodyContent { txIns, txOuts } = do
     ins' <- NonEmpty.nonEmpty (map fst txIns) ?! TxBodyEmptyTxIns
     for_ ins' $ \txin@(TxIn _ (TxIx txix)) ->
-      guard (txix <= maxByronTxInIx) ?! TxBodyInIxOverflow txin
+      guard (fromIntegral txix <= maxByronTxInIx) ?! TxBodyInIxOverflow txin
     let ins'' = fmap toByronTxIn ins'
 
     outs'  <- NonEmpty.nonEmpty txOuts    ?! TxBodyEmptyTxOuts
@@ -2265,6 +2270,8 @@ makeShelleyTransactionBody era@ShelleyBasedEraShelley
                                                   (txOutInAnyEra txout)
            guard (v <= maxTxOut) ?! TxBodyOutputOverflow (lovelaceToQuantity v)
                                                          (txOutInAnyEra txout)
+           for_ txIns $ \(txin@(TxIn _ (TxIx txix)), _) ->
+              guard (fromIntegral txix <= maxShelleyTxInIx) ?! TxBodyInIxOverflow txin
       | let maxTxOut = fromIntegral (maxBound :: Word64) :: Lovelace
       , txout@(TxOut _ (TxOutAdaOnly AdaOnlyInShelleyEra v) _) <- txOuts ]
     case txMetadata of
@@ -2298,6 +2305,10 @@ makeShelleyTransactionBody era@ShelleyBasedEraShelley
         txAuxData
         TxScriptValidityNone
   where
+
+    maxShelleyTxInIx :: Word
+    maxShelleyTxInIx = fromIntegral $ maxBound @Word16
+
     scripts :: [Ledger.Script StandardShelley]
     scripts =
       [ toShelleyScript (scriptWitnessScript scriptwitness)
@@ -2333,6 +2344,8 @@ makeShelleyTransactionBody era@ShelleyBasedEraAllegra
                                                   (txOutInAnyEra txout)
            guard (v <= maxTxOut) ?! TxBodyOutputOverflow (lovelaceToQuantity v)
                                                          (txOutInAnyEra txout)
+           for_ txIns $ \(txin@(TxIn _ (TxIx txix)), _) ->
+              guard (fromIntegral txix <= maxShelleyTxInIx) ?! TxBodyInIxOverflow txin
       | let maxTxOut = fromIntegral (maxBound :: Word64) :: Lovelace
       , txout@(TxOut _ (TxOutAdaOnly AdaOnlyInAllegraEra v) _) <- txOuts
       ]
@@ -2373,6 +2386,10 @@ makeShelleyTransactionBody era@ShelleyBasedEraAllegra
         txAuxData
         TxScriptValidityNone
   where
+
+    maxShelleyTxInIx :: Word
+    maxShelleyTxInIx = fromIntegral $ maxBound @Word16
+
     scripts :: [Ledger.Script StandardAllegra]
     scripts =
       [ toShelleyScript (scriptWitnessScript scriptwitness)
@@ -2411,6 +2428,8 @@ makeShelleyTransactionBody era@ShelleyBasedEraMary
     sequence_
       [ do allPositive
            allWithinMaxBound
+           for_ txIns $ \(txin@(TxIn _ (TxIx txix)), _) ->
+              guard (fromIntegral txix <= maxShelleyTxInIx) ?! TxBodyInIxOverflow txin
       | let maxTxOut = fromIntegral (maxBound :: Word64) :: Quantity
       , txout@(TxOut _ (TxOutValue MultiAssetInMaryEra v) _) <- txOuts
       , let allPositive =
@@ -2464,6 +2483,10 @@ makeShelleyTransactionBody era@ShelleyBasedEraMary
         txAuxData
         TxScriptValidityNone
   where
+
+    maxShelleyTxInIx :: Word
+    maxShelleyTxInIx = fromIntegral $ maxBound @Word16
+
     scripts :: [Ledger.Script StandardMary]
     scripts =
       [ toShelleyScript (scriptWitnessScript scriptwitness)
@@ -2506,6 +2529,8 @@ makeShelleyTransactionBody era@ShelleyBasedEraAlonzo
     sequence_
       [ do allPositive
            allWithinMaxBound
+           for_ txIns $ \(txin@(TxIn _ (TxIx txix)), _) ->
+              guard (fromIntegral txix <= maxShelleyTxInIx) ?! TxBodyInIxOverflow txin
       | let maxTxOut = fromIntegral (maxBound :: Word64) :: Quantity
       , txout@(TxOut _ (TxOutValue MultiAssetInAlonzoEra v) _) <- txOuts
       , let allPositive =
@@ -2585,6 +2610,10 @@ makeShelleyTransactionBody era@ShelleyBasedEraAlonzo
         txAuxData
         txScriptValidity
   where
+
+    maxShelleyTxInIx :: Word
+    maxShelleyTxInIx = fromIntegral $ maxBound @Word16
+
     witnesses :: [(ScriptWitnessIndex, AnyScriptWitness AlonzoEra)]
     witnesses = collectTxBodyScriptWitnesses txbodycontent
 

@@ -35,9 +35,8 @@ import           Cardano.Ledger.PoolDistr (PoolDistr (..))
 import           Cardano.Protocol.TPraos.BHeader (HashHeader (..))
 
 import qualified Cardano.Ledger.Credential as Ledger
-import qualified Cardano.Ledger.Shelley.API.Protocol as Ledger
+import qualified Cardano.Protocol.TPraos.API as Ledger
 import qualified Cardano.Ledger.Shelley.EpochBoundary as Ledger
-import qualified Cardano.Ledger.Shelley.Rewards as Ledger
 import           Cardano.Ledger.TxIn (TxId (..))
 import qualified Cardano.Protocol.TPraos.Rules.Prtcl as Ledger
 import qualified Cardano.Protocol.TPraos.Rules.Tickn as Ledger
@@ -45,6 +44,7 @@ import qualified Cardano.Protocol.TPraos.Rules.Tickn as Ledger
 import qualified Cardano.Ledger.Mary.Value as Ledger.Mary
 
 import qualified Data.Compact.VMap as VMap
+import qualified Cardano.Ledger.Shelley.PoolRank as Ledger
 
 instance ToJSON (OneEraHash xs) where
   toJSON = toJSON
@@ -89,8 +89,6 @@ deriving instance ToJSON (Ledger.StakeReference StandardCrypto)
 deriving instance ToJSON (Ledger.PrtclState StandardCrypto)
 deriving instance ToJSON Ledger.TicknState
 deriving instance ToJSON (Ledger.ChainDepState StandardCrypto)
-
-deriving instance ToJSONKey Ledger.Ptr
 
 deriving newtype  instance ToJSON    (Ledger.Mary.PolicyID StandardCrypto)
 

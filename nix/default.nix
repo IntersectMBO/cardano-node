@@ -16,6 +16,7 @@ let
   in {
     "haskell.nix" = compat flakeLock.haskellNix;
     "iohk-nix" = compat flakeLock.iohkNix;
+    "plutus-example" = compat flakeLock.plutus-example;
   };
   sources = flakeSources // sourcesOverride;
   haskellNix = import sources."haskell.nix" { inherit system sourcesOverride; };
@@ -48,6 +49,10 @@ let
           // import ./svclib.nix { inherit pkgs; }
           # also expose our sources, nixpkgs and overlays
           // { inherit overlays sources nixpkgs; };
+        inherit ((import sources.plutus-example {
+          inherit system;
+          gitrev = sources.plutus-example.rev;
+        }).haskellPackages.plutus-example.components.exes) plutus-example;
       })
       # And, of course, our haskell-nix-ified cabal project:
       (import ./pkgs.nix)

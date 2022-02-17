@@ -13,24 +13,26 @@ import qualified Cardano.Ledger.BaseTypes as L
 import           Cardano.Ledger.Compactible (Compactible (..))
 import qualified Cardano.Ledger.Core as LC
 import qualified Cardano.Ledger.Shelley.API as L
-import qualified Cardano.Ledger.Shelley.Rewards as L
 import qualified Cardano.Ledger.Shelley.RewardUpdate as L
+import qualified Cardano.Ledger.Shelley.Rewards as L
+import qualified Cardano.Ledger.UnifiedMap as UM
 import qualified Codec.Binary.Bech32 as Bech32
 import           Control.Monad.Trans.Except (runExceptT)
 import qualified Data.Binary.Get as B
 import qualified Data.ByteString as BS
-import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Base16 as Base16
+import qualified Data.ByteString.Lazy as BSL
 import           Data.Char (ord)
+import qualified Data.Compact.VMap as VMap
 import           Data.Foldable (toList)
 import           Data.List (intercalate)
-import qualified Data.Compact.VMap as VMap
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (mapMaybe)
 import           Data.Set (Set)
 import qualified Data.Text as T
+import qualified Data.UMap as UM
 import           GHC.Records (HasField (..))
-import           Options.Applicative (Parser, (<|>), (<**>))
+import           Options.Applicative (Parser, (<**>), (<|>))
 import qualified Options.Applicative as Opt
 import           Ouroboros.Consensus.Shelley.Eras (StandardCrypto)
 import qualified Ouroboros.Consensus.Shelley.Ledger as Shelley
@@ -257,7 +259,7 @@ main = do
              _era)
            state -> do
              let getGoSnapshot = L.unStake . L._stake . L._pstakeGo . L.esSnapshots . L.nesEs
-                 getBalances = L._rewards . L._dstate . L._delegationState . L.esLState . L.nesEs
+                 getBalances = UM.unUnify . UM.Rewards . L._unified . L._dstate . L._delegationState . L.esLState . L.nesEs
                  getPV :: HasField "_protocolVersion" (LC.PParams era) L.ProtVer =>
                    L.NewEpochState era -> L.ProtVer
                  getPV = getField @"_protocolVersion" . L.esPp . L.nesEs

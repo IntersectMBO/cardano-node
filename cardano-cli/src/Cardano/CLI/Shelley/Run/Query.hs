@@ -53,7 +53,7 @@ import qualified Cardano.Ledger.Crypto as Crypto
 import qualified Cardano.Ledger.Era as Era
 import qualified Cardano.Ledger.Era as Ledger
 import           Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
-import qualified Cardano.Ledger.Shelley.API.Protocol as Ledger
+import qualified Cardano.Protocol.TPraos.API as Ledger
 import           Cardano.Ledger.Shelley.Constraints
 import           Cardano.Ledger.Shelley.EpochBoundary
 import           Cardano.Ledger.Shelley.LedgerState (DPState (_pstate),
@@ -1372,4 +1372,3 @@ eligibleLeaderSlotsConstaints ShelleyBasedEraShelley f = f
 eligibleLeaderSlotsConstaints ShelleyBasedEraAllegra f = f
 eligibleLeaderSlotsConstaints ShelleyBasedEraMary    f = f
 eligibleLeaderSlotsConstaints ShelleyBasedEraAlonzo  f = f
-

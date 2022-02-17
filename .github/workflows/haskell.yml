@@ -135,7 +135,7 @@ jobs:
           cache-${{ env.CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}
 
     - name: Build
-      run: retry 2 cabal build cardano-node cardano-cli cardano-node-chairman cardano-submit-api plutus-example
+      run: retry 2 cabal build cardano-node cardano-cli cardano-node-chairman cardano-submit-api
 
     - name: Run tests
       run: |
