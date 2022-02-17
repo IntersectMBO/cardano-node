@@ -13,6 +13,7 @@ module Cardano.CLI.Types
   , GenesisFile (..)
   , OutputFormat (..)
   , OutputSerialisation (..)
+  , TxBuildOutputOptions(..)
   , SigningKeyFile (..)
   , SocketPath (..)
   , ScriptFile (..)
@@ -46,6 +47,13 @@ import           Cardano.Api
 import qualified Cardano.Ledger.Crypto as Crypto
 
 import           Cardano.Ledger.Shelley.TxBody (PoolParams (..))
+
+-- | Specify whether to render the script cost as JSON
+-- in the cli's build command.
+data TxBuildOutputOptions = OutputScriptCostOnly FilePath
+                          | OutputTxBodyOnly TxBodyFile
+                          deriving Show
+
 
 -- | Specify what the CBOR file is
 -- i.e a block, a tx, etc

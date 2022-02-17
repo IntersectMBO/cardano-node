@@ -3,15 +3,22 @@
 {-# LANGUAGE NamedFieldPuns #-}
 
 module Cardano.CLI.Shelley.Output
-  ( QueryKesPeriodInfoOutput (..)
+  ( PlutusScriptCostError
+  , QueryKesPeriodInfoOutput (..)
   , QueryTipLocalState(..)
   , QueryTipLocalStateOutput(..)
+  , ScriptCostOutput (..)
+  , renderScriptCosts
   ) where
 
 import           Cardano.Api
+import           Cardano.Api.Shelley
 import           Prelude
 
 import           Data.Aeson
+import qualified Data.List as List
+import           Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
 import           Data.Text (Text)
 import           Data.Time.Clock (UTCTime)
 import           Data.Word
@@ -147,4 +154,64 @@ instance FromJSON QueryTipLocalStateOutput where
                       \ Expected slot, header hash and block number (ChainTip)\
                       \ or none (ChainTipAtGenesis)"
 
+data ScriptCostOutput =
+  ScriptCostOutput
+    { scScriptHash :: ScriptHash
+    , scExecutionUnits :: ExecutionUnits
+    , scAda :: Lovelace
+    }
+
+instance ToJSON ScriptCostOutput where
+  toJSON (ScriptCostOutput sHash execUnits llCost) =
+    object [ "scriptHash" .= sHash
+           , "executionUnits" .= execUnits
+           , "lovelaceCost" .= llCost
+           ]
+
+data PlutusScriptCostError
+  = PlutusScriptCostErrPlutusScriptNotFound ScriptWitnessIndex
+  | PlutusScriptCostErrExecError ScriptWitnessIndex ScriptHash ScriptExecutionError
+  | PlutusScriptCostErrRationalExceedsBound ExecutionUnitPrices  ExecutionUnits
+  deriving Show
+
+
+instance Error PlutusScriptCostError where
+  displayError (PlutusScriptCostErrPlutusScriptNotFound sWitIndex) =
+    "No Plutus script was found at: " <> show sWitIndex
+  displayError (PlutusScriptCostErrExecError sWitIndex sHash sExecErro) =
+    "Plutus script at: " <> show sWitIndex <> " with hash: " <> show sHash <>
+    " errored with: " <> displayError sExecErro
+  displayError (PlutusScriptCostErrRationalExceedsBound eUnitPrices eUnits) =
+    "Either the execution unit prices: " <> show eUnitPrices <> " or the execution units: " <>
+    show eUnits <> " or both are either too precise or not within bounds"
+
+renderScriptCosts
+  :: ExecutionUnitPrices
+  -> [(ScriptWitnessIndex, AnyScriptWitness era)]
+  -- ^ Initial mapping of script witness index to actual script.
+  -- We need this in order to know which script corresponds to the
+  -- calculated execution units.
+  -> Map ScriptWitnessIndex (Either ScriptExecutionError ExecutionUnits)
+  -- ^ Post execution cost calculation mapping of script witness
+  -- index to execution units.
+  -> Either PlutusScriptCostError [ScriptCostOutput]
+renderScriptCosts eUnitPrices scriptMapping executionCostMapping =
+  sequenceA $ Map.foldlWithKey
+    (\accum sWitInd eExecUnits -> do
+      case List.lookup sWitInd scriptMapping of
+        Just (AnyScriptWitness SimpleScriptWitness{}) ->  accum
+        Just (AnyScriptWitness (PlutusScriptWitness _ pVer pScript _ _ _)) -> do
+          let scriptHash = hashScript $ PlutusScript pVer pScript
+          case eExecUnits of
+            Right execUnits ->
+              case calculateExecutionUnitsLovelace eUnitPrices execUnits of
+                Just llCost ->
+                  Right (ScriptCostOutput scriptHash execUnits llCost)
+                    : accum
+                Nothing ->
+                  Left (PlutusScriptCostErrRationalExceedsBound eUnitPrices execUnits)
+                    : accum
+            Left err -> Left (PlutusScriptCostErrExecError sWitInd scriptHash err) : accum
+        Nothing -> Left (PlutusScriptCostErrPlutusScriptNotFound sWitInd) : accum
+    ) [] executionCostMapping
 
