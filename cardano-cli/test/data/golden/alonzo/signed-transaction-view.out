@@ -12,25 +12,11 @@ outputs: []
 required signers (payment key hashes needed for scripts):
 - 98717eaba8105a50a2a71831267552e337dfdc893bef5e40b8676d27
 - fafaaac8681b5050a8987f95bce4a7f99362f189879258fdbf733fa4
-update proposal:
-  epoch: 190
-  updates:
-  - genesis key hash: 1bafa294233a5a7ffbf539ae798da0943aa83d2a19398c2d0e5af114
-    update:
-      UTxO storage cost per unit: 194 Lovelace
-      collateral inputs share: 200%
-      execution prices:
-        memory: 196/197
-        steps: 195/196
-      max block execution units:
-        memory: 199
-        steps: 198
-      max collateral inputs: 201
-      max transaction execution units:
-        memory: 198
-        steps: 197
-      max value size: 199
+update proposal: null
 validity range:
   lower bound: null
   upper bound: null
 withdrawals: null
+witnesses:
+- key: VKey (VerKeyEd25519DSIGN "84ce03e08b05533685d593c14cd6ca5c7485824156ca11fb303ddac9dd3ef41c")
+  signature: SignedDSIGN (SigEd25519DSIGN "f6aae8023de4858244c6aac4b1ca7428f669a142731fe7354021059887b5366f24abba49355e14d435dbc7726df66dfeafe269e2752a7a6f752529600d1e9a00")

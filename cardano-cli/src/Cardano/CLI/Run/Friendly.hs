@@ -8,7 +8,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 -- | User-friendly pretty-printing for textual user interfaces (TUI)
-module Cardano.CLI.Run.Friendly (friendlyTxBodyBS) where
+module Cardano.CLI.Run.Friendly (friendlyTxBS, friendlyTxBodyBS) where
 
 import           Cardano.Prelude
 
@@ -19,26 +19,50 @@ import qualified Data.ByteString.Char8 as BSC
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
 import           Data.Yaml (array)
-import           Data.Yaml.Pretty (defConfig, encodePretty, setConfCompare)
+import           Data.Yaml.Pretty (setConfCompare)
+import qualified Data.Yaml.Pretty as Yaml
 
 import           Cardano.Api as Api
-import           Cardano.Api.Shelley (Address (ShelleyAddress), StakeAddress (..))
+import           Cardano.Api.Byron (KeyWitness (ByronKeyWitness))
+import           Cardano.Api.Shelley (Address (ShelleyAddress),
+                   KeyWitness (ShelleyBootstrapWitness, ShelleyKeyWitness), StakeAddress (..))
 import           Cardano.Ledger.Crypto (Crypto)
 import qualified Cardano.Ledger.Shelley.API as Shelley
 
 import           Cardano.CLI.Helpers (textShow)
 
+yamlConfig :: Yaml.Config
+yamlConfig = Yaml.defConfig & setConfCompare compare
+
+friendlyTxBS :: CardanoEra era -> Tx era -> ByteString
+friendlyTxBS era = Yaml.encodePretty yamlConfig . object . friendlyTx era
+
+friendlyTx :: CardanoEra era -> Tx era -> [Aeson.Pair]
+friendlyTx era (Tx body witnesses) =
+  ("witnesses" .= map friendlyKeyWitness witnesses) : friendlyTxBody era body
+
+friendlyKeyWitness :: KeyWitness era -> Aeson.Value
+friendlyKeyWitness =
+  object
+  . \case
+      ByronKeyWitness txInWitness -> ["Byron witness" .= textShow txInWitness]
+      ShelleyBootstrapWitness _era bootstrapWitness ->
+        ["bootstrap witness" .= textShow bootstrapWitness]
+      ShelleyKeyWitness _era (Shelley.WitVKey key signature) ->
+        ["key" .= textShow key, "signature" .= textShow signature]
+
 friendlyTxBodyBS :: CardanoEra era -> TxBody era -> ByteString
 friendlyTxBodyBS era =
-  encodePretty (setConfCompare compare defConfig) . friendlyTxBody era
+  Yaml.encodePretty yamlConfig . object . friendlyTxBody era
 
-friendlyTxBody :: CardanoEra era -> TxBody era -> Aeson.Value
+friendlyTxBody :: CardanoEra era -> TxBody era -> [Aeson.Pair]
 friendlyTxBody
   era
   (TxBody
     TxBodyContent
       { txAuxScripts
       , txCertificates
+      , txExtraKeyWits
       , txFee
       , txIns
       , txInsCollateral
@@ -49,7 +73,6 @@ friendlyTxBody
       , txValidityRange
       , txWithdrawals
       }) =
-  object
     [ "auxiliary scripts" .= friendlyAuxScripts txAuxScripts
     , "certificates" .= friendlyCertificates txCertificates
     , "collateral inputs" .= friendlyCollateralInputs txInsCollateral
@@ -59,10 +82,18 @@ friendlyTxBody
     , "metadata" .= friendlyMetadata txMetadata
     , "mint" .= friendlyMintValue txMintValue
     , "outputs" .= map friendlyTxOut txOuts
+    , "required signers (payment key hashes needed for scripts)" .=
+        friendlyExtraKeyWits txExtraKeyWits
     , "update proposal" .= friendlyUpdateProposal txUpdateProposal
     , "validity range" .= friendlyValidityRange era txValidityRange
     , "withdrawals" .= friendlyWithdrawals txWithdrawals
     ]
+
+friendlyExtraKeyWits :: TxExtraKeyWitnesses era -> Aeson.Value
+friendlyExtraKeyWits = \case
+  TxExtraKeyWitnessesNone -> Null
+  TxExtraKeyWitnesses _supported paymentKeyHashes ->
+    toJSON $ map serialiseToRawBytesHexText paymentKeyHashes
 
 -- | Special case of validity range:
 -- in Shelley, upper bound is TTL, and no lower bound

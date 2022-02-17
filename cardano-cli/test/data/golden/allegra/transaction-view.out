@@ -16,6 +16,7 @@ outputs:
     key hash: f2998eb67942c4674d01e2cd435e1f17919e095eec43807bb0010313
   stake reference:
     key hash: c0a060899d6806f810547e2cb66f92d5c817a16af2a20f269e258ee0
+required signers (payment key hashes needed for scripts): null
 update proposal: null
 validity range:
   lower bound: null

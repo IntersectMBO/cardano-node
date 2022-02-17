@@ -11,6 +11,7 @@ outputs:
 - address: 5oP9ib6ym3XfwXuy3ksXZzgtBzXSArXAACQVXKqcPhiLnHVYjXJNu2T6Zomh8LAWLV
   address era: Byron
   amount: 68 Lovelace
+required signers (payment key hashes needed for scripts): null
 update proposal: null
 validity range: null
 withdrawals: null

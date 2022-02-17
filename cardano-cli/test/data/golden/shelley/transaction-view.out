@@ -15,6 +15,7 @@ outputs:
   payment credential:
     key hash: bce78cb90f6da9ee778ef07ca881b489c38a188993e6870bd5a9ef77
   stake reference: null
+required signers (payment key hashes needed for scripts): null
 update proposal:
   epoch: 64
   updates:
