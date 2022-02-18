@@ -23,6 +23,7 @@ module Cardano.Api.TxBody (
     -- * Transaction bodies
     TxBody(.., TxBody),
     makeTransactionBody,
+    getTxBodyContent,
     TxBodyContent(..),
     TxBodyError(..),
     TxBodyScriptData(..),
@@ -51,6 +52,7 @@ module Cardano.Api.TxBody (
     TxOut(..),
     TxOutValue(..),
     TxOutDatum(TxOutDatumNone, TxOutDatumHash, TxOutDatum),
+    fromByronTxOut,
     toCtxUTxOTxOut,
     lovelaceToTxOutValue,
     prettyRenderTxOut,
@@ -130,7 +132,10 @@ module Cardano.Api.TxBody (
     toAlonzoRdmrPtr,
     fromAlonzoRdmrPtr,
     fromByronTxIn,
+    fromLedgerTxBody,
     fromLedgerTxOuts,
+    fromLedgerTxUpdateProposal,
+    fromLedgerTxValidityRange,
     renderTxIn,
 
     -- * Data family instances
