@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -21,6 +22,21 @@ module Cardano.Api.Tx (
     -- | Creating transaction witnesses one by one, or all in one go.
     Tx(.., Tx),
     getTxBody,
+    getTxCertificates,
+    getTxCollateralTxIns,
+    getTxExtraKeyWitnesses,
+    getTxFee,
+    getTxHash,
+    getTxIns,
+    getTxMetadata,
+    getTxMint,
+    getTxOuts,
+   -- getTxPlutusScriptWitnesses,
+    getTxScriptExecutionUnits,
+    getTxSize,
+    getTxUpdateProposal,
+    getTxValidityInterval,
+    getTxWithdrawals,
     getTxWitnesses,
     ScriptValidity(..),
 
@@ -54,10 +70,14 @@ import           Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 
+import           Data.Foldable (toList)
 import           Data.Functor.Identity (Identity)
+import qualified Data.List.NonEmpty as NonEmpty
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
+import           Data.Sequence.Strict (StrictSeq (..))
 import qualified Data.Vector as Vector
+import           GHC.Records (HasField (..))
 --
 -- Common types, consensus, network
 --
@@ -69,6 +89,7 @@ import qualified Cardano.Prelude as CBOR (cborError)
 -- Crypto API used by consensus and Shelley (and should be used by Byron)
 --
 import qualified Cardano.Crypto.DSIGN.Class as Crypto
+import qualified Cardano.Crypto.Hash.Class as Crypto
 import qualified Cardano.Crypto.Util as Crypto
 import qualified Cardano.Crypto.Wallet as Crypto.HD
 
@@ -87,30 +108,47 @@ import qualified Cardano.Crypto.Signing as Byron
 import           Cardano.Ledger.BaseTypes (maybeToStrictMaybe, strictMaybeToMaybe)
 import           Cardano.Ledger.Crypto (StandardCrypto)
 
+import qualified Cardano.Ledger.Coin as Ledger
 import qualified Cardano.Ledger.Core as Ledger
 import qualified Cardano.Ledger.Era as Ledger
+import qualified Cardano.Ledger.Hashes as Ledger
 import qualified Cardano.Ledger.Keys as Shelley
 import qualified Cardano.Ledger.SafeHash as Ledger
 import qualified Cardano.Ledger.Shelley.Address.Bootstrap as Shelley
 import qualified Cardano.Ledger.Shelley.Constraints as Shelley
 import qualified Cardano.Ledger.Shelley.Tx as Shelley
-import qualified Cardano.Ledger.Shelley.TxBody as Ledger (EraIndependentTxBody)
+-- import qualified Cardano.Ledger.Shelley.TxBody as Ledger (EraIndependentTxBody)
+import qualified Cardano.Ledger.TxIn as Ledger
 
 import qualified Cardano.Ledger.Alonzo as Alonzo
+--import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
 import qualified Cardano.Ledger.Alonzo.TxWitness as Alonzo
 
 import           Cardano.Api.Address
 import           Cardano.Api.Certificate
-import           Cardano.Api.Eras
+import Cardano.Api.Eras
+    ( IsShelleyBasedEra(..),
+      CardanoEra(..),
+      IsCardanoEra(..),
+      AlonzoEra,
+      AllegraEra,
+      MaryEra,
+      ShelleyEra,
+      ByronEra,
+      ShelleyLedgerEra,
+      ShelleyBasedEra(..) )
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Key
 import           Cardano.Api.KeysByron
 import           Cardano.Api.KeysShelley
 import           Cardano.Api.NetworkId
+import           Cardano.Api.Script
 import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseTextEnvelope
 import           Cardano.Api.TxBody
+import           Cardano.Api.TxMetadata
+import           Cardano.Api.Value
 
 -- ----------------------------------------------------------------------------
 -- Signed transactions
@@ -245,6 +283,197 @@ instance IsCardanoEra era => HasTextEnvelope (Tx era) where
         AllegraEra -> "Tx AllegraEra"
         MaryEra    -> "Tx MaryEra"
         AlonzoEra  -> "Tx AlonzoEra"
+
+getTxCertificates :: Tx era -> TxCertificates ViewTx era
+getTxCertificates tx = txCertificates . getTxBodyContent $ getTxBody tx
+
+getTxExtraKeyWitnesses :: Tx era -> TxExtraKeyWitnesses era
+getTxExtraKeyWitnesses tx = txExtraKeyWits . getTxBodyContent $ getTxBody tx
+
+-- Byron era fees are implicit i.e the difference between
+-- tx inputs and tx outputs. Therefore we need access to the
+-- UTxO in order to calculate the tx fee in the Byron era.
+getTxFee :: ShelleyBasedEra era -> Tx era -> Lovelace
+getTxFee _ (ShelleyTx era tx) =
+   getTxFee' tx
+ where
+  getTxFee' tx' =
+    obtainHasFieldContraints era
+      $ fromShelleyLovelace $ getField @"txfee" $ getField @"body" tx'
+  obtainHasFieldContraints
+    :: ShelleyLedgerEra era ~ ledgerera
+    => ShelleyBasedEra era
+    -> ((HasField "txfee" (Ledger.TxBody ledgerera) Ledger.Coin,
+         HasField "body" (Ledger.Tx ledgerera) (Ledger.TxBody ledgerera)
+        ) => a
+        )
+    -> a
+  obtainHasFieldContraints ShelleyBasedEraShelley f = f
+  obtainHasFieldContraints ShelleyBasedEraAllegra f = f
+  obtainHasFieldContraints ShelleyBasedEraMary f = f
+  obtainHasFieldContraints ShelleyBasedEraAlonzo f = f
+
+getTxHash :: Tx era -> ByteString
+getTxHash (ByronTx Byron.ATxAux { Byron.aTaTx = txbody }) =
+  Byron.hashToBytes $ Byron.hashDecoded txbody
+getTxHash (ShelleyTx era tx) =
+  obtainTxHashConstraints era $ getShelleyTxHash tx
+ where
+  getShelleyTxHash tx' =
+    let annotatedHash = Ledger.hashAnnotated $ getField @"body" tx'
+        txBodyHash = Ledger.extractHash  annotatedHash
+    in Crypto.hashToBytes txBodyHash
+
+  obtainTxHashConstraints
+    :: ShelleyLedgerEra era ~ ledgerera
+    => ShelleyBasedEra era
+    -> ( ( HasField "body" (Ledger.Tx ledgerera) (Ledger.TxBody ledgerera)
+         , Ledger.HashAnnotated (Ledger.TxBody ledgerera)
+                                 Ledger.EraIndependentTxBody StandardCrypto
+         ) => a
+       )
+    -> a
+  obtainTxHashConstraints ShelleyBasedEraShelley f = f
+  obtainTxHashConstraints ShelleyBasedEraAllegra f = f
+  obtainTxHashConstraints ShelleyBasedEraMary f = f
+  obtainTxHashConstraints ShelleyBasedEraAlonzo f = f
+
+
+-- TODO: These won't compile because ledger recently instantiated the ShelleyEra
+
+getTxCollateralTxIns :: ShelleyBasedEra era -> Tx era -> [TxIn]
+getTxCollateralTxIns _ (ShelleyTx sbe tx) =
+  case sbe of
+    ShelleyBasedEraShelley -> []
+    ShelleyBasedEraAllegra -> []
+    ShelleyBasedEraMary -> []
+    ShelleyBasedEraAlonzo ->
+      obtainHasFieldConstraintAlonzo $ getTxCollateralTxIns' tx
+ where
+   getTxCollateralTxIns' tx' =
+     map fromShelleyTxIn $ Set.toList $ getField @"collateral" $ getField @"body" tx'
+
+   obtainHasFieldConstraintAlonzo
+    :: ShelleyLedgerEra AlonzoEra ~ ledgerera
+    => (( HasField "body" (Ledger.Tx ledgerera) (Ledger.TxBody ledgerera)
+        , HasField "collateral" (Ledger.TxBody ledgerera)
+                                (Set.Set (Ledger.TxIn (Ledger.Crypto ledgerera)))
+        ) => a)
+    -> a
+   obtainHasFieldConstraintAlonzo f = f
+
+
+getTxIns :: Tx era -> [TxIn]
+getTxIns (ByronTx (Byron.ATxAux aTx _ _)) =
+  map fromByronTxIn $ NonEmpty.toList $ Byron.txInputs $ unAnnotated aTx
+getTxIns (ShelleyTx sbe tx) =
+  obtainHasFieldConstraint sbe $ getTxIns' tx
+ where
+  getTxIns' tx' =
+    map fromShelleyTxIn . Set.toList . getField @"inputs" $ getField @"body" tx'
+
+  obtainHasFieldConstraint
+    :: ShelleyBasedEra era
+    -> (( HasField "inputs" (Ledger.TxBody (ShelleyLedgerEra era)) (Set.Set (Ledger.TxIn StandardCrypto))
+        , HasField "body" (Ledger.Tx (ShelleyLedgerEra era)) (Ledger.TxBody (ShelleyLedgerEra era))
+        ) => a)
+    -> a
+  obtainHasFieldConstraint ShelleyBasedEraShelley f = f
+  obtainHasFieldConstraint ShelleyBasedEraAllegra f = f
+  obtainHasFieldConstraint ShelleyBasedEraMary f = f
+  obtainHasFieldConstraint ShelleyBasedEraAlonzo f = f
+
+getTxMint :: Tx era -> TxMintValue ViewTx era
+getTxMint tx =
+  txMintValue $ getTxBodyContent $ getTxBody tx
+
+getTxMetadata :: Tx era -> TxMetadata
+getTxMetadata t =
+  case txMetadata $ getTxBodyContent $ getTxBody t of
+    TxMetadataNone -> TxMetadata mempty
+    TxMetadataInEra _ txMetadata' -> txMetadata'
+
+getTxValidityInterval
+  :: ShelleyBasedEra era -> Tx era -> (TxValidityLowerBound era, TxValidityUpperBound era)
+getTxValidityInterval sbe t =
+  case getTxBody t of
+    ByronTxBody _ -> case sbe :: ShelleyBasedEra ByronEra of {}
+    ShelleyTxBody _ txbody _ _ _ _ -> fromLedgerTxValidityRange sbe txbody
+
+getTxOuts :: Tx era -> [TxOut CtxTx era]
+getTxOuts (ByronTx (Byron.ATxAux aTx _ _)) =
+  map fromByronTxOut $ NonEmpty.toList $ Byron.txOutputs $ unAnnotated aTx
+getTxOuts (ShelleyTx era tx) =
+  let body = obtainHasFieldConstraint era $ getField @"body" tx
+      outsStrictSeq = obtainHasFieldConstraint era $ getField @"outputs" body
+      outsList = toList $ fromStrict outsStrictSeq
+  in  map (fromShelleyTxOut era) outsList
+ where
+  obtainHasFieldConstraint
+    :: ShelleyBasedEra era
+    -> ( (HasField "body" (Ledger.Tx (ShelleyLedgerEra era))
+                          (Ledger.TxBody (ShelleyLedgerEra era))
+        , HasField "outputs" (Ledger.TxBody (ShelleyLedgerEra era))
+                             (StrictSeq (Ledger.TxOut (ShelleyLedgerEra era)))
+        ) => a)
+    -> a
+  obtainHasFieldConstraint ShelleyBasedEraShelley f = f
+  obtainHasFieldConstraint ShelleyBasedEraAllegra f = f
+  obtainHasFieldConstraint ShelleyBasedEraMary f = f
+  obtainHasFieldConstraint ShelleyBasedEraAlonzo f = f
+
+
+getTxPlutusScriptWitnesses
+  :: HasField "txscripts" (Ledger.Witnesses (ShelleyLedgerEra era)) (Map.Map (Ledger.ScriptHash (ShelleyLedgerEra era)) (Script (ShelleyLedgerEra era)))
+  => HasField "wits" (Ledger.Tx era) (Ledger.Witnesses era)
+  => forall era lang. ShelleyBasedEra era -> Tx era -> [PlutusScript lang]
+getTxPlutusScriptWitnesses sbe tx =
+  case sbe of
+    ShelleyBasedEraShelley -> []
+    ShelleyBasedEraAllegra -> []
+    ShelleyBasedEraMary -> []
+    ShelleyBasedEraAlonzo -> getTxPlutusScriptWitnesses' sbe tx
+ where
+   getTxPlutusScriptWitnesses' :: ShelleyBasedEra era -> Tx era -> [PlutusScript lang]
+   getTxPlutusScriptWitnesses' ShelleyBasedEraAlonzo tx' =
+      [PlutusScriptSerialised sbs | Alonzo.PlutusScript _ sbs <- Map.elems $ getField @"txscripts" $ getField @"wits" tx']
+   getTxPlutusScriptWitnesses _ _ = []
+
+   getConstraints :: ShelleyBasedEra era -> ( (HasField "wits" (Ledger.Tx era) (Ledger.Witnesses era), HasField "txscripts" (Ledger.Witnesses (ShelleyLedgerEra era)) (Map.Map (Ledger.ScriptHash (ShelleyLedgerEra era)) (Script (ShelleyLedgerEra era)))) => a) -> a
+   getConstraints ShelleyBasedEraShelley f = f
+   getConstraints ShelleyBasedEraAllegra f = f
+   getConstraints ShelleyBasedEraMary f = f
+   getConstraints ShelleyBasedEraAlonzo f = f
+
+
+getTxScriptExecutionUnits
+  :: ShelleyBasedEra era -> Tx era -> Maybe ExecutionUnits
+getTxScriptExecutionUnits sbe (ShelleyTx _ tx) =
+  case sbe of
+    ShelleyBasedEraShelley -> Nothing
+    ShelleyBasedEraAllegra -> Nothing
+    ShelleyBasedEraMary -> Nothing
+    ShelleyBasedEraAlonzo ->
+      Just . fromAlonzoExUnits
+        . foldMap snd . Map.elems . Alonzo.unRedeemers
+        . getField @"txrdmrs" $ getField @"wits" tx
+
+-- | Get the transaction size in bytes
+getTxSize :: Tx era -> Integer
+getTxSize (ByronTx (Byron.ATxAux _ _ txBytes)) =
+  fromIntegral $ BS.length txBytes
+getTxSize (ShelleyTx sbe tx) = obtainTxSizeContraint sbe $ getTxSize' tx
+ where
+  getTxSize' tx' = getField @"txsize" tx'
+
+  obtainTxSizeContraint
+    :: ShelleyBasedEra era
+    -> (HasField "txsize" (Ledger.Tx (ShelleyLedgerEra era)) Integer => a)
+    -> a
+  obtainTxSizeContraint ShelleyBasedEraShelley f = f
+  obtainTxSizeContraint ShelleyBasedEraAllegra f = f
+  obtainTxSizeContraint ShelleyBasedEraMary f = f
+  obtainTxSizeContraint ShelleyBasedEraAlonzo f = f
 
 
 data KeyWitness era where
@@ -477,6 +706,20 @@ getTxBody (ShelleyTx era tx) =
                     (TxBodyScriptData scriptDataInEra txdats redeemers)
                     (strictMaybeToMaybe auxiliaryData)
                     (TxScriptValidity txScriptValidityInEra (isValidToScriptValidity isValid))
+
+getTxUpdateProposal :: ShelleyBasedEra era -> Tx era -> TxUpdateProposal era
+getTxUpdateProposal era tx =
+  case getTxBody tx of
+    ByronTxBody _ -> case era :: ShelleyBasedEra ByronEra of {}
+    ShelleyTxBody _ txbody _ _ _ _ -> fromLedgerTxUpdateProposal era txbody
+
+getTxWithdrawals :: ShelleyBasedEra era -> Tx era -> TxWithdrawals ViewTx era
+getTxWithdrawals sbe tx =
+  case getTxBody tx of
+    ByronTxBody _ -> case sbe :: ShelleyBasedEra ByronEra of {}
+    ShelleyTxBody _ txbody _ _ _ _ ->
+      txWithdrawals $ fromLedgerTxBody sbe TxScriptValidityNone txbody TxBodyNoScriptData Nothing
+
 
 getTxWitnesses :: forall era. Tx era -> [KeyWitness era]
 getTxWitnesses (ByronTx Byron.ATxAux { Byron.aTaWitness = witnesses }) =

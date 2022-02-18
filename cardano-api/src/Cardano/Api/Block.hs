@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -7,8 +8,11 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE ViewPatterns #-}
+
+{-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
 
 -- | Blocks in the blockchain
 --
@@ -17,7 +21,17 @@ module Cardano.Api.Block (
     -- * Blocks in the context of an era
     Block(.., Block),
     BlockHeader(..),
+    blockToAnyCardanoEra,
     getBlockHeader,
+    getBlockHeaderAndTxs,
+    getBlockIssuer,
+    getBlockOpCertCounter,
+    getBlockOpCertKesHotKey,
+    getBlockProtocolVersion,
+    getBlockSize,
+    getBlockTxs,
+    getBlockVrfVerificationKey,
+    previousBlockHeaderHash,
 
     -- ** Blocks in the context of a consensus mode
     BlockInMode(..),
@@ -54,7 +68,9 @@ import           Data.Aeson (FromJSON (..), ToJSON (..), object, (.=))
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Short as SBS
+import           Data.Coerce (coerce)
 import           Data.Foldable (Foldable (toList))
+import           Data.Word
 
 import           Cardano.Slotting.Block (BlockNo)
 import           Cardano.Slotting.Slot (EpochNo, SlotNo, WithOrigin (..))
@@ -62,6 +78,7 @@ import           Cardano.Slotting.Slot (EpochNo, SlotNo, WithOrigin (..))
 import qualified Cardano.Crypto.Hash.Class
 import qualified Cardano.Crypto.Hashing
 import qualified Ouroboros.Consensus.Block as Consensus
+import qualified Ouroboros.Consensus.Block as ConsensusBlock
 import qualified Ouroboros.Consensus.Byron.Ledger as Consensus
 import qualified Ouroboros.Consensus.Cardano.Block as Consensus
 import qualified Ouroboros.Consensus.Cardano.ByronHFC as Consensus
@@ -75,11 +92,15 @@ import qualified Cardano.Chain.Block as Byron
 import qualified Cardano.Chain.UTxO as Byron
 import qualified Cardano.Ledger.Block as Ledger
 import qualified Cardano.Ledger.Era as Ledger
+import qualified Cardano.Ledger.Serialization as Ledger
+import qualified Cardano.Ledger.Shelley.API as SL
+import qualified Cardano.Ledger.Shelley.BlockChain as SL
 import qualified Cardano.Protocol.TPraos.BHeader as TPraos
 
 import           Cardano.Api.Eras
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Hash
+import qualified Cardano.Api.KeysPraos as ApiPraos
 import           Cardano.Api.KeysShelley
 import           Cardano.Api.Modes
 import           Cardano.Api.SerialiseRaw
@@ -114,6 +135,134 @@ pattern Block header txs <- (getBlockHeaderAndTxs -> (header, txs))
 getBlockHeaderAndTxs :: Block era -> (BlockHeader, [Tx era])
 getBlockHeaderAndTxs block = (getBlockHeader block, getBlockTxs block)
 
+blockToAnyCardanoEra :: Block era -> AnyCardanoEra
+blockToAnyCardanoEra ByronBlock{} = AnyCardanoEra ByronEra
+blockToAnyCardanoEra (ShelleyBlock sbe _) =
+   obtainIsCardanoEra sbe $ AnyCardanoEra $ shelleyBasedToCardanoEra sbe
+  where
+   obtainIsCardanoEra
+     :: ShelleyBasedEra era -> (IsCardanoEra era => a) -> a
+   obtainIsCardanoEra ShelleyBasedEraShelley f = f
+   obtainIsCardanoEra ShelleyBasedEraAllegra f = f
+   obtainIsCardanoEra ShelleyBasedEraMary f = f
+   obtainIsCardanoEra ShelleyBasedEraAlonzo f = f
+
+previousBlockHeaderHash :: forall era. Block era -> Maybe (Hash BlockHeader)
+previousBlockHeaderHash (ByronBlock blk) =
+  case ConsensusBlock.blockPrevHash blk of
+    ConsensusBlock.GenesisHash -> Nothing
+    ConsensusBlock.BlockHash headerHash ->
+      Just . HeaderHash
+        $ ConsensusBlock.toShortRawHash (Proxy @Consensus.ByronBlock) headerHash
+
+previousBlockHeaderHash b@(ShelleyBlock sbe _) =
+  obtainConsensusShelleyBasedEra sbe $ shelleyBlockPrevHash sbe b
+ where
+  shelleyBlockPrevHash
+    :: Consensus.ShelleyBasedEra (ShelleyLedgerEra era)
+    => ShelleyBasedEra era
+    -> Block era
+    -> Maybe (Hash BlockHeader)
+  shelleyBlockPrevHash _ (ShelleyBlock _ blk) =
+     case ConsensusBlock.blockPrevHash blk of
+      ConsensusBlock.GenesisHash -> Nothing
+      ConsensusBlock.BlockHash headerHash ->
+        Just . HeaderHash
+          $ ConsensusBlock.toShortRawHash
+              (Proxy @(Consensus.ShelleyBlock (ShelleyLedgerEra era)))
+              headerHash
+
+-- TODO: Update to handle Byron era blocks
+getBlockIssuer :: ShelleyBasedEra era -> Block era -> Hash StakePoolKey
+getBlockIssuer sbe' b = obtainBlockConstraints sbe' $ getBlockIssuer' sbe' b
+ where
+  getBlockIssuer'
+    :: Ledger.Era (ShelleyLedgerEra era)
+    => Ledger.Crypto (ShelleyLedgerEra era) ~ Consensus.StandardCrypto
+    => Ledger.ToCBORGroup (Ledger.TxSeq (ShelleyLedgerEra era))
+    => ShelleyBasedEra era -> Block era -> Hash StakePoolKey
+  getBlockIssuer' _ (ShelleyBlock _ blk) =
+      let sBlockRaw = Consensus.shelleyBlockRaw blk
+          SL.Block bHeader _ = sBlockRaw
+          TPraos.BHeader bhBody _ = bHeader
+          stakePoolKeyHash = TPraos.issuerIDfromBHBody bhBody
+      in StakePoolKeyHash . coerce $ stakePoolKeyHash
+
+obtainBlockConstraints
+  :: ShelleyBasedEra era
+  -> (  Ledger.Era (ShelleyLedgerEra era)
+     => Ledger.Crypto (ShelleyLedgerEra era) ~ Consensus.StandardCrypto
+     => Ledger.ToCBORGroup (Ledger.TxSeq (ShelleyLedgerEra era))
+     => a)
+  -> a
+obtainBlockConstraints ShelleyBasedEraShelley f = f
+obtainBlockConstraints ShelleyBasedEraAllegra f = f
+obtainBlockConstraints ShelleyBasedEraMary  f = f
+obtainBlockConstraints ShelleyBasedEraAlonzo f = f
+
+getBlockOpCertKesHotKey
+  :: ShelleyBasedEra era -> Block era -> VerificationKey ApiPraos.KesKey
+getBlockOpCertKesHotKey sbe (ShelleyBlock _ b) =
+  obtainBlockConstraints sbe $ getBlockOperationalCertificate' b
+ where
+  getBlockOperationalCertificate' b' =
+    let sBlockRaw = Consensus.shelleyBlockRaw b'
+        SL.Block bHeader _ = sBlockRaw
+        TPraos.BHeader bhBody _ = bHeader
+        oCert = SL.bheaderOCert bhBody
+    in ApiPraos.KesVerificationKey $ SL.ocertVkHot oCert
+
+getBlockOpCertCounter
+  :: ShelleyBasedEra era -> Block era -> Word64
+getBlockOpCertCounter sbe (ShelleyBlock _ b) =
+  obtainBlockConstraints sbe $ getBlockOperationalCertificate' b
+ where
+  getBlockOperationalCertificate' b' =
+    let sBlockRaw = Consensus.shelleyBlockRaw b'
+        SL.Block bHeader _ = sBlockRaw
+        TPraos.BHeader bhBody _ = bHeader
+        oCert = SL.bheaderOCert bhBody
+    in SL.ocertN oCert
+
+
+getBlockProtocolVersion :: ShelleyBasedEra era -> Block era -> SL.ProtVer
+getBlockProtocolVersion sbe (ShelleyBlock _ blk) =
+  obtainBlockConstraints sbe $ getBlockProtocolVersion' blk
+ where
+  getBlockProtocolVersion' blk' =
+    let sBlockRaw = Consensus.shelleyBlockRaw blk'
+        SL.Block bHeader _ = sBlockRaw
+        TPraos.BHeader bhBody _ = bHeader
+    in SL.bprotver bhBody
+
+getBlockSize :: Block era -> Word64
+getBlockSize (ByronBlock blk) =
+  case Consensus.byronBlockRaw blk of
+    Byron.ABOBBlock bBlk ->
+      fromIntegral $ Byron.blockLength bBlk
+    Byron.ABOBBoundary bBoundaryBlk ->
+      fromIntegral $ Byron.boundaryBlockLength bBoundaryBlk
+getBlockSize (ShelleyBlock sbe blk) =
+  obtainBlockConstraints sbe $ getBlockSize' blk
+ where
+  getBlockSize' b' =
+    let SL.Block _ txs = Consensus.shelleyBlockRaw b'
+    in fromIntegral $ SL.bBodySize txs
+
+
+
+getBlockVrfVerificationKey
+  :: ShelleyBasedEra era -> Block era -> VerificationKey ApiPraos.VrfKey
+getBlockVrfVerificationKey sbe (ShelleyBlock _ b) =
+  obtainBlockConstraints sbe $ getBlockVrfVerificationKey' b
+  where
+    getBlockVrfVerificationKey' blk' =
+       let sBlockRaw = Consensus.shelleyBlockRaw blk'
+           SL.Block bHeader _ = sBlockRaw
+           TPraos.BHeader bhBody _ = bHeader
+       in ApiPraos.VrfVerificationKey $ SL.bheaderVrfVk bhBody
+
+
 -- The GADT in the ShelleyBlock case requires a custom instance
 instance Show (Block era) where
     showsPrec p (ByronBlock block) =
@@ -146,7 +295,7 @@ instance Show (Block era) where
         . showsPrec 11 block
         )
 
-getBlockTxs :: forall era . Block era -> [Tx era]
+getBlockTxs :: Block era -> [Tx era]
 getBlockTxs (ByronBlock Consensus.ByronBlock { Consensus.byronBlockRaw }) =
     case byronBlockRaw of
       Byron.ABOBBoundary{} -> [] -- no txs in EBBs
