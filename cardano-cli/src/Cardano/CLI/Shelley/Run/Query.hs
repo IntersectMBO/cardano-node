@@ -568,7 +568,7 @@ runQueryKesPeriodInfo (AnyConsensusModeParams cModeParams) network nodeOpCertFil
           -- so our ondisk op cert counter must be greater than or
           -- equal to what is in the node state
           Just ptclStateCounter ->
-            if onDiskOpCertCount <= ptclStateCounter
+            if onDiskOpCertCount < ptclStateCounter
             then
               let fd = FailureDiagnostic $ OpCertCounterLessThanPtclCounter
                                              ptclStateCounter
