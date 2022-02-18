@@ -55,6 +55,7 @@ import qualified Data.Aeson as Aeson
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Short as SBS
 import           Data.Foldable (Foldable (toList))
+import           Data.String (IsString)
 
 import           Cardano.Slotting.Block (BlockNo)
 import           Cardano.Slotting.Slot (EpochNo, SlotNo, WithOrigin (..))
@@ -259,6 +260,7 @@ data BlockHeader = BlockHeader !SlotNo
 newtype instance Hash BlockHeader = HeaderHash SBS.ShortByteString
   deriving (Eq, Ord, Show)
   deriving (ToJSON, FromJSON) via UsingRawBytesHex (Hash BlockHeader)
+  deriving IsString via UsingRawBytesHex (Hash BlockHeader)
 
 
 
