@@ -138,9 +138,19 @@ module Cardano.Api (
     -- * Blocks
 
     -- ** Blocks in the context of an era
-    Block(Block),
+    Block(..),
+    blockToAnyCardanoEra,
     BlockHeader(..),
     getBlockHeader,
+    getBlockHeaderAndTxs,
+    getBlockIssuer,
+    getBlockOpCertCounter,
+    getBlockOpCertKesHotKey,
+    getBlockProtocolVersion,
+    getBlockSize,
+    getBlockTxs,
+    getBlockVrfVerificationKey,
+    previousBlockHeaderHash,
 
     -- ** Points on the chain
     ChainPoint(..),
@@ -267,6 +277,19 @@ module Cardano.Api (
     -- | Creating transaction witnesses one by one, or all in one go.
     Tx(Tx),
     getTxBody,
+    getTxCertificates,
+    getTxExtraKeyWitnesses,
+    getTxFee,
+    getTxHash,
+    getTxIns,
+    getTxMetadata,
+    getTxMint,
+    getTxOuts,
+    getTxScriptExecutionUnits,
+    getTxSize,
+    getTxUpdateProposal,
+    getTxValidityInterval,
+    getTxWithdrawals,
     getTxWitnesses,
 
     -- ** Signing in one go
