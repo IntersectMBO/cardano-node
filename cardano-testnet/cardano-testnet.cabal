@@ -124,6 +124,7 @@ test-suite cardano-testnet-tests
                       , hedgehog-extras
                       , process
                       , tasty
+                      , tasty-hedgehog
                       , text
                       , time
                       , transformers

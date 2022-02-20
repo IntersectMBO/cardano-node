@@ -9,9 +9,9 @@ import           Test.Tasty (TestTree)
 
 import qualified System.Environment as E
 import qualified Test.Tasty as T
+import qualified Test.Tasty.Hedgehog as H
 import qualified Test.Tasty.Ingredients as T
 
---import qualified Test.Cli.Alonzo.LeadershipSchedule
 import qualified Test.Cli.Babbage.LeadershipSchedule
 import qualified Test.Cli.KesPeriodInfo
 import qualified Test.FoldBlocks
@@ -22,7 +22,7 @@ import qualified Util.Ignore as H
 tests :: IO TestTree
 tests = pure $ T.testGroup "test/Spec.hs"
   [ T.testGroup "Spec"
-    [ H.ignoreOnWindows "Shutdown" Test.Node.Shutdown.hprop_shutdown
+    [ H.testProperty "Shutdown" Test.Node.Shutdown.hprop_shutdown
     , H.ignoreOnWindows "ShutdownOnSlotSynced" Test.ShutdownOnSlotSynced.hprop_shutdownOnSlotSynced
     -- TODO: This is failing. Disabling until we can figure out why
     -- , T.testGroup "Alonzo"
