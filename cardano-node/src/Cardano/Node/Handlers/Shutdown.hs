@@ -77,16 +77,22 @@ withShutdownHandling ShutdownConfig{scIPC = Just fd} tr action = do
  where
    waitForEOF :: Fd -> IO ()
    waitForEOF (Fd fileDesc) = do
+     IO.putStrLn ">>>>>> waitForEOF"
      hnd <- IO.fdToHandle fileDesc
+     IO.putStrLn ">>>>>> Got handle"
      r <- try $ IO.hGetChar hnd
+     IO.putStrLn ">>>>>> Got char"
      case r of
        Left e
-         | IO.isEOFError e ->
+         | IO.isEOFError e -> do
+             IO.putStrLn ">>>>>> Got EOF"
              traceWith tr ShutdownRequested
          | otherwise -> do
+             IO.putStrLn $ ">>>>>> Got error: " <> show e
              traceWith tr AbnormalShutdown
              throwIO e
-       Right inp  ->
+       Right inp -> do
+         IO.putStrLn $ ">>>>>> Got input: " <> show inp
          traceWith tr (ShutdownUnexpectedInput . pack $ show inp)
 
 -- | Spawn a thread that would cause node to shutdown upon ChainDB reaching the
