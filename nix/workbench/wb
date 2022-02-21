@@ -68,7 +68,7 @@ Usage:
 
    Flags:
 
-      --batch-name NAME               Override the batch name (default: ${batchName})
+      --batch-name NAME               Override the batch name (default: ${batchName:-default})
       --no-generator | --no-gen       Don't auto-start the tx-generator
 
       --cabal                         'cabal run' mode for cardano-* executables

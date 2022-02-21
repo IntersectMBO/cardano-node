@@ -38,7 +38,7 @@ let
     {
       "program:generator" = {
         directory      = "${stateDir}/generator";
-        command        = "${stateDir}/generator/start.sh";
+        command        = "sh start.sh";
         stdout_logfile = "${stateDir}/generator/stdout";
         stderr_logfile = "${stateDir}/generator/stderr";
         autostart      = false;

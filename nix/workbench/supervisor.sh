@@ -116,8 +116,16 @@ EOF
         fi
 
         echo -n "workbench:  supervisor:  waiting for $CARDANO_NODE_SOCKET_PATH to appear: " >&2
+        local patience=20 i=0
         while test ! -S $CARDANO_NODE_SOCKET_PATH
         do echo -n '.'; sleep 1
+           i=$((i+1))
+           if test $i -ge $patience
+           then echo
+                msg "FATAL:  workbench:  supervisor:  patience ran out after ${patience}s"
+                backend-supervisor stop-cluster "$dir"
+                fatal "node startup did not succeed:  check logs in $dir/node-0"
+           fi
         done >&2
         echo >&2
 

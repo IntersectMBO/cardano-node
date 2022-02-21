@@ -55,7 +55,7 @@ let
       finaliseNodeConfig =
         { port, ... }: cfg: recursiveUpdate cfg
           ({
-            AlonzoGenesisFile    = "../genesis-alonzo.json";
+            AlonzoGenesisFile    = "../genesis.alonzo.json";
             ShelleyGenesisFile   = "../genesis-shelley.json";
             ByronGenesisFile     = "../genesis/byron/genesis.json";
           } // optionalAttrs enableEKG {
@@ -79,7 +79,7 @@ let
       finaliseGeneratorConfig =
         cfg: recursiveUpdate cfg
           ({
-            AlonzoGenesisFile    = "../genesis-alonzo.json";
+            AlonzoGenesisFile    = "../genesis.alonzo.json";
             ShelleyGenesisFile   = "../genesis-shelley.json";
             ByronGenesisFile     = "../genesis/byron/genesis.json";
           });
@@ -152,6 +152,7 @@ let
 
     export PATH=$PATH:${path}
 
+    set -x
     wb start \
         --batch-name   ${batchName} \
         --profile-name ${profileName} \

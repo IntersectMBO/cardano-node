@@ -102,14 +102,13 @@ let
       $WORKBENCH_CARDANO_NODE_REPO_ROOT/nix/workbench/wb --set-mode ${checkoutWbMode} $WORKBENCH_EXTRA_FLAGS "$@"
     }
     export -f wb
+    ''}
 
     ${optionalString
       useCabalRun
       ''
       . nix/workbench/lib-cabal.sh
       ''}
-
-    ''}
 
     export CARDANO_NODE_SOCKET_PATH=run/current/node-0/node.socket
     '';

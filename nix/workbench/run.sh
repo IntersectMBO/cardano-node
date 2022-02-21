@@ -71,8 +71,7 @@ case "$op" in
 
         if test ! -f "$dir"/genesis-shelley.json
         then msg "fixing up genesis naming in:  $dir"
-             mv "$dir"/genesis.json "$dir"/genesis-shelley.json
-             ln -s genesis-shelley.json "$dir"/genesis.json; fi
+             mv "$dir"/genesis.json "$dir"/genesis-shelley.json; fi
 
         if test -z "$(ls -d "$dir"/node-* 2>/dev/null)"
         then msg "fixing up a legacy cardano-ops run in:  $dir"
@@ -315,6 +314,22 @@ case "$op" in
 
         topology make    "$dir"/profile.json "$dir"/topology
 
+        local cacheDir=$(jq -r .cacheDir "$global_envjson")
+        test "$cacheDir" != 'null' -a -d "$cacheDir" ||
+            fatal "invalid global env JSON"
+
+        local genesis_args=(
+            ## Positionals:
+            "$cacheDir"/genesis "$dir"/profile.json
+            "$dir"/topology
+            "$dir"/genesis
+        )
+        genesis prepare "${genesis_args[@]}"
+
+        ## Record geneses
+        cp "$dir"/genesis/genesis-shelley.json "$dir"/genesis-shelley.json
+        cp "$dir"/genesis/genesis.alonzo.json  "$dir"/genesis.alonzo.json
+
         local svcs=$profileOut/node-services.json
         for node in $(jq_tolist 'keys' "$dir"/node-specs.json)
         do local node_dir="$dir"/$node
@@ -340,7 +355,7 @@ case "$op" in
 
         run  set-current "$tag"
 
-        msg "current run is:  $tag / $dir"
+        msg "current run is:  $(with_color yellow $tag) @ $dir"
         ;;
 
     list-hosts | hosts )
@@ -450,23 +465,10 @@ EOF
 
         local tag=${1:-?$usage}; shift
         local dir=$(run get "$tag")
+        test -d "$dir" ||
+            fatal "invalid run tag: $tag"
 
         run set-current "$tag"
-        local cacheDir=$(jq -r .cacheDir "$global_envjson")
-        if test "$cacheDir" = 'null'
-        then fatal "invalid meta.json in current run:  $dir/meta.json"; fi
-
-        local genesis_args=(
-            ## Positionals:
-            "$cacheDir"/genesis "$dir"/profile.json
-            "$dir"/topology
-            "$dir"/genesis
-        )
-        genesis prepare "${genesis_args[@]}"
-
-        ## Record geneses
-        cp "$dir"/genesis/genesis-shelley.json "$dir"/genesis-shelley.json
-        cp "$dir"/genesis/genesis-alonzo.json  "$dir"/genesis-alonzo.json
 
         ## Execute the scenario
         local scenario=${scenario_override:-$(jq -r .scenario "$dir"/profile.json)}
@@ -490,7 +492,7 @@ EOF
         local dir=$(run get "$tag")
 
         test -d "$dir" ||
-            fail "no valid current run to restart:  please set run/current appropriately"
+            fatal "no valid current run to restart:  please set run/current appropriately"
 
         msg "restarting cluster in the same run directory: $dir"
 

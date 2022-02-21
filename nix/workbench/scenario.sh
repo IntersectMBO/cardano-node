@@ -22,7 +22,7 @@ local op=${1:---help}; shift
 local usage="USAGE: wb scenario SCENARIO-OP OP-ARGS.."
 local dir=${1:?$usage}; shift
 
-msg "starting scenario: $(with_color blue $op)"
+msg "starting scenario:  $(with_color blue $op)"
 case "$op" in
     idle | default )
         backend start-cluster "$dir"
