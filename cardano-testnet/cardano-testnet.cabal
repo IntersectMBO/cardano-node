@@ -23,7 +23,6 @@ common project-config
                         -Wno-unticked-promoted-constructors
                         -Wpartial-fields
                         -Wredundant-constraints
-                        -Wunused-packages
 
 common maybe-unix
   if !os(windows)

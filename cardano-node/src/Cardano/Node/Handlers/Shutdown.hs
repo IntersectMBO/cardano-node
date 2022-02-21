@@ -16,6 +16,9 @@ module Cardano.Node.Handlers.Shutdown
   -- * Watch ChainDB for passing a configured slot sync limit threshold,
   --   translating it to a graceful shutdown.
   , maybeSpawnOnSlotSyncedShutdownHandler
+
+  , hOut
+  , hPut
   )
 where
 
@@ -41,6 +44,7 @@ import           Ouroboros.Consensus.Util.ResourceRegistry (ResourceRegistry)
 import           Ouroboros.Consensus.Util.STM (Watcher (..), forkLinkedWatcher)
 import           Ouroboros.Network.Block (MaxSlotNo (..), SlotNo, pointSlot)
 
+import qualified System.IO.Unsafe as IO
 
 data ShutdownTrace
   = ShutdownRequested
@@ -62,6 +66,17 @@ data ShutdownConfig
     }
     deriving (Eq, Show)
 
+hOut :: IO.Handle
+hOut = IO.unsafePerformIO $ do
+  IO.openFile "C:/Users/newho/out.log" IO.WriteMode
+{-# NOINLINE hOut #-}
+
+
+hPut :: IO.Handle -> String -> IO ()
+hPut h s = do
+  IO.hPutStrLn h s
+  IO.hFlush h
+
 -- | We provide an optional cross-platform method to politely request shut down.
 -- The parent process passes us the file descriptor number of the read end of a pipe,
 -- via the CLI with @--shutdown-ipc FD@
@@ -74,25 +89,26 @@ withShutdownHandling
 withShutdownHandling ShutdownConfig{scIPC = Nothing} _ action = action
 withShutdownHandling ShutdownConfig{scIPC = Just fd} tr action = do
   race_ (waitForEOF fd) action
+  hPut hOut ">>>>>> done"
  where
    waitForEOF :: Fd -> IO ()
    waitForEOF (Fd fileDesc) = do
-     IO.putStrLn ">>>>>> waitForEOF"
+     hPut hOut ">>>>>> waitForEOF"
      hnd <- IO.fdToHandle fileDesc
-     IO.putStrLn ">>>>>> Got handle"
+     hPut hOut ">>>>>> Got handle"
      r <- try $ IO.hGetChar hnd
-     IO.putStrLn ">>>>>> Got char"
+     hPut hOut ">>>>>> Got char"
      case r of
        Left e
          | IO.isEOFError e -> do
-             IO.putStrLn ">>>>>> Got EOF"
+             hPut hOut ">>>>>> Got EOF"
              traceWith tr ShutdownRequested
          | otherwise -> do
-             IO.putStrLn $ ">>>>>> Got error: " <> show e
+             hPut hOut $ ">>>>>> Got error: " <> show e
              traceWith tr AbnormalShutdown
              throwIO e
        Right inp -> do
-         IO.putStrLn $ ">>>>>> Got input: " <> show inp
+         hPut hOut $ ">>>>>> Got input: " <> show inp
          traceWith tr (ShutdownUnexpectedInput . pack $ show inp)
 
 -- | Spawn a thread that would cause node to shutdown upon ChainDB reaching the

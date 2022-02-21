@@ -57,7 +57,6 @@ common project-config
                         -Wno-missing-import-lists
                         -Wno-safe
                         -Wno-unsafe
-                        -Wunused-packages
 
                         -XNoImplicitPrelude
 

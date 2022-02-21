@@ -93,7 +93,6 @@ executable stake-credential-history
                       -Wincomplete-uni-patterns
                       -Wpartial-fields
                       -Wredundant-constraints
-                      -Wunused-packages
   build-depends:       base16-bytestring,
                        binary,
                        bech32,

@@ -28,7 +28,6 @@ common project-config
                         -Wincomplete-uni-patterns
                         -Wpartial-fields
                         -Wredundant-constraints
-                        -Wunused-packages
                         -fobject-code
                         -fno-ignore-interface-pragmas
                         -fno-omit-interface-pragmas

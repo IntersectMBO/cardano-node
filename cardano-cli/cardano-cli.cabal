@@ -30,7 +30,6 @@ common project-config
                         -Wincomplete-uni-patterns
                         -Wpartial-fields
                         -Wredundant-constraints
-                        -Wunused-packages
 
 common maybe-unix
   if !os(windows)

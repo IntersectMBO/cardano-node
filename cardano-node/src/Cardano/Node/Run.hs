@@ -205,11 +205,10 @@ handleNodeWithTracers  cmdPc nc p networkMagic runP = do
           $ \_peerLogingThread ->
             -- We ignore peer loging thread if it dies, but it will be killed
             -- when 'handleSimpleNode' terminates.
-                handleSimpleNode runP p2pMode tracers nc
-                  (setNodeKernel nodeKernelData)
-                `finally`
-                forM_ mLoggingLayer
-                  shutdownLoggingLayer
+                flip finally (forM_ mLoggingLayer shutdownLoggingLayer) $ do
+                  handleSimpleNode runP p2pMode tracers nc (setNodeKernel nodeKernelData)
+                  hPut hOut ">>>>>> done handle simple node"
+  hPut hOut ">>>>>> done handleNodeWithTracers"
 
 
 logTracingVerbosity :: NodeConfiguration -> Tracer IO String -> IO ()

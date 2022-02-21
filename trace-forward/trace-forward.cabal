@@ -26,7 +26,6 @@ common project-config
                        -Wno-orphans
                        -Wpartial-fields
                        -Wredundant-constraints
-                       -Wunused-packages
 
 library
   import:              base, project-config

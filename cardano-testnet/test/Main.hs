@@ -19,7 +19,8 @@ import qualified Spec.Shutdown
 import qualified System.Environment as E
 import qualified Test.Tasty as T
 import qualified Test.Tasty.Ingredients as T
-import qualified Test.Util as H
+-- import qualified Test.Util as H
+import qualified Test.Tasty.Hedgehog as H
 
 tests :: IO TestTree
 tests = do
@@ -35,7 +36,7 @@ tests = do
      --  , H.ignoreOnWindows "Plutus.Direct.ScriptContextEquality"  Spec.Plutus.Direct.ScriptContextEquality.hprop_plutus_script_context_equality
      --  , H.ignoreOnWindows "Plutus.Direct.ScriptContextEqualityMint" Spec.Plutus.Direct.ScriptContextEqualityMint.hprop_plutus_script_context_mint_equality
         -- There is a blocking call on Windows that prevents graceful shutdown and we currently aren't testing the shutdown IPC flag.
-        H.ignoreOnWindows "Shutdown" Spec.Shutdown.hprop_shutdown
+        H.testProperty "Shutdown" Spec.Shutdown.hprop_shutdown
       ]
     ]
 
