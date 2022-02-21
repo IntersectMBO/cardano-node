@@ -132,5 +132,3 @@ test-suite cardano-testnet-tests
   build-tool-depends:   cardano-node:cardano-node
                       , cardano-cli:cardano-cli
                       , cardano-submit-api:cardano-submit-api
-                      -- TODO: Move to plutus-apps
-                      --  , plutus-example:create-script-context
