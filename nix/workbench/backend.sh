@@ -20,6 +20,8 @@ usage_backend() {
                      Start generator
     cleanup-cluster RUNDIR
                      Wipe cluster state to pristine
+    wait-pools-stopped RUNDIR
+                     Wait until all pools are stopped
     stop-cluster RUNDIR
 
     lostream-fixup-jqargs RUNDIR
@@ -44,6 +46,7 @@ case "${op}" in
     start-cluster )              backend_$WORKBENCH_BACKEND "$@";;
     start-generator )            backend_$WORKBENCH_BACKEND "$@";;
     cleanup-cluster )            backend_$WORKBENCH_BACKEND "$@";;
+    wait-pools-stopped )         backend_$WORKBENCH_BACKEND "$@";;
     stop-cluster )               backend_$WORKBENCH_BACKEND "$@";;
     lostream-fixup-jqargs )      backend_$WORKBENCH_BACKEND "$@";;
     lostream-fixup-jqexpr )      backend_$WORKBENCH_BACKEND "$@";;

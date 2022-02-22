@@ -42,6 +42,7 @@ let
         stdout_logfile = "${stateDir}/generator/stdout";
         stderr_logfile = "${stateDir}/generator/stderr";
         autostart      = false;
+        startretries   = 0;
       };
     }
     //
@@ -58,6 +59,8 @@ let
       command        = "sh start.sh";
       stdout_logfile = "${service.value.stateDir}/stdout";
       stderr_logfile = "${service.value.stateDir}/stderr";
+      startretries   = 0;
+      autorestart    = false;
     };
 
 in

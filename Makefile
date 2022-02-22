@@ -51,11 +51,15 @@ cluster-shell: ## Enter Nix shell and start the workbench cluster
 	nix-shell --max-jobs 8 --cores 0 --show-trace --argstr profileName ${PROFILE} --arg 'autoStartCluster' true
 
 shell-dev:               ARGS += --arg 'workbenchDevMode' true ## Enter Nix shell, dev mode (workbench run from checkout)
-cluster-shell:           ARGS += --arg 'autoStartCluster' true --arg 'workbenchDevMode' true ## Enter Nix shell, and start workbench cluster
+cluster-shell:           ARGS += --arg 'autoStartCluster' true ## Enter Nix shell, and start workbench cluster
 cluster-shell-dev:       ARGS += --arg 'autoStartCluster' true --arg 'workbenchDevMode' true ## Enter Nix shell, dev mode, and start workbench cluster
 cluster-shell-trace:     ARGS += --arg 'autoStartCluster' true --argstr 'autoStartClusterArgs' '--trace --trace-workbench' ## Enter Nix shell, start workbench cluster, with shell tracing
 cluster-shell-dev-trace: ARGS += --arg 'autoStartCluster' true --arg 'workbenchDevMode' true --argstr 'autoStartClusterArgs' '--trace --trace-workbench' ## Enter Nix shell, dev mode, start workbench cluster, with shell tracing
-shell-dev cluster-shell-dev cluster-shell-trace cluster-shell-dev-trace: shell
+fixed:                   ARGS += --arg 'autoStartCluster' true
+fixed:                   PROFILE = fixed-alzo
+smoke:                   ARGS += --arg 'autoStartCluster' true --run "grep TraceOpenEvent.ClosedDB run/current/node-0/stdout >/dev/null && echo 'Smoke test:  PASS' || echo 'Smoke test:  FAIL'"
+smoke:                   PROFILE = smoke-alzo
+shell-dev cluster-shell-dev cluster-shell-trace cluster-shell-dev-trace fixed smoke: shell
 
 shell: ## Enter Nix shell, CI mode (workbench run from Nix store)
 	nix-shell --max-jobs 8 --cores 0 --show-trace --argstr profileName ${PROFILE} ${ARGS}

@@ -137,13 +137,20 @@ let
 
       ## For the definition of 'nodeConfigBits', please see below.
       nodeConfig =
-       backend.finaliseNodeConfig nodeSpec
-         (recursiveUpdate
-           nodeConfigBits.base
-           (if __hasAttr "preset" profile.value
-            then readJSONMay (./presets + "/${profile.value.preset}/config.json")
-            else nodeConfigBits.era_setup_hardforks //
-                 nodeConfigBits.tracing.${profile.value.node.tracing_backend}));
+        backend.finaliseNodeConfig nodeSpec
+          (recursiveUpdate
+            nodeConfigBits.base
+            (if __hasAttr "preset" profile.value
+             then readJSONMay (./presets + "/${profile.value.preset}/config.json")
+             else nodeConfigBits.era_setup_hardforks //
+                  nodeConfigBits.tracing.${profile.value.node.tracing_backend}));
+
+      extraArgs =
+        let shutdownSlot = profile.value.node.shutdown_on_slot_synced;
+        in backend.finaliseNodeArgs nodeSpec
+          (if shutdownSlot != null
+           then ["--shutdown-on-slot-synced" (toString shutdownSlot)]
+           else []);
     };
 
   ## Given an env config, evaluate it and produce the node service.

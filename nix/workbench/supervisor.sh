@@ -18,6 +18,7 @@ usage_supervisor() {
     start-cluster RUN-DIR
     start-generator RUN-DIR
     cleanup-cluster RUN-DIR
+    wait-pools-stopped RUNDIR
     stop-cluster RUN-DIR
 
     Supervisor-specific:
@@ -115,19 +116,20 @@ EOF
         then export  CARDANO_NODE_SOCKET_PATH=$(backend_supervisor get-node-socket-path "$dir")
         fi
 
-        echo -n "workbench:  supervisor:  waiting for $CARDANO_NODE_SOCKET_PATH to appear: " >&2
-        local patience=20 i=0
+        local patience=$(jq .tolerances.cluster_startup_overhead_s $dir/profile.json) i=0
+        echo -n "workbench:  supervisor:  waiting ${patience}s for $CARDANO_NODE_SOCKET_PATH to appear: " >&2
         while test ! -S $CARDANO_NODE_SOCKET_PATH
-        do echo -n '.'; sleep 1
+        do printf "%3d" $i; sleep 1
            i=$((i+1))
            if test $i -ge $patience
            then echo
                 msg "FATAL:  workbench:  supervisor:  patience ran out after ${patience}s"
-                backend-supervisor stop-cluster "$dir"
+                backend_supervisor stop-cluster "$dir"
                 fatal "node startup did not succeed:  check logs in $dir/node-0"
            fi
+           echo -ne "\b\b\b"
         done >&2
-        echo >&2
+        echo " node-0 online after $i seconds" >&2
 
         backend_supervisor save-pids "$dir";;
 
@@ -149,6 +151,18 @@ EOF
         msg "supervisor:  resetting cluster state in:  $dir"
         rm -f $dir/*/std{out,err} $dir/node-*/*.socket $dir/*/logs/* 2>/dev/null || true
         rm -fr $dir/node-*/state-cluster/;;
+
+    wait-pools-stopped )
+        local usage="USAGE: wb supervisor $op RUN-DIR"
+        local dir=${1:?$usage}; shift
+
+        local i=0 pools=$(jq .composition.n_pool_hosts $dir/profile.json)
+        msg_ne "supervisor:  waiting until all nodes are stopped: 00000"
+        for ((pool_ix=0; pool_ix < $pools; pool_ix++))
+        do while supervisorctl status node-${pool_ix} > /dev/null
+           do echo -ne "\b\b\b\b\b\b"; printf "%6d" $i >&2; i=$((i+1)); sleep 1; done
+           done
+        echo " done." >&2;;
 
     stop-cluster )
         local usage="USAGE: wb supervisor $op RUN-DIR"

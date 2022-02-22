@@ -28,6 +28,12 @@ case "$op" in
         backend start-cluster "$dir"
         ;;
 
+    fixed )
+        backend start-cluster      "$dir"
+        backend wait-pools-stopped "$dir"
+        backend stop-cluster       "$dir"
+        ;;
+
     loaded )
         backend start-cluster   "$dir"
         backend start-generator "$dir"

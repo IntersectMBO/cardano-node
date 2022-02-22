@@ -66,6 +66,9 @@ let
             ];
           });
 
+      finaliseNodeArgs =
+        { port, ... }: cfg: cfg;
+
       finaliseGeneratorService =
         svc: recursiveUpdate svc
           ({

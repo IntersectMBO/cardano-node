@@ -107,6 +107,7 @@ let
     ${optionalString
       useCabalRun
       ''
+      . nix/workbench/lib.sh
       . nix/workbench/lib-cabal.sh
       ''}
 

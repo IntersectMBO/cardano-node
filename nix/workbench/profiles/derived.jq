@@ -125,6 +125,11 @@ def add_derived_params:
          }
      , tolerances:
          { minimum_chain_density: ($gsis.active_slots_coeff * 0.5)
+         , cluster_startup_overhead_s:
+                (($gsis.utxo + $gsis.delegators) as $dataset_size
+                | if $dataset_size < 10000 then 20
+                  else $dataset_size / 25000
+                  end)
          }
      }
    }
@@ -166,4 +171,9 @@ def profile_pretty_describe($p):
   , "  - delegators:         \($p.genesis.delegators)"
   , ""
   ]
+  | . + if $p.node.shutdown_on_slot_synced == null then []
+        else [
+    "  - terminate at slot:  \($p.node.shutdown_on_slot_synced)"
+        ] end
+  | . + [""]
   | join("\n");
