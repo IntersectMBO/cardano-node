@@ -57,6 +57,8 @@ let
     in cardanoNodeProject.shellFor {
     name = "cluster-shell";
 
+    enableDWARF = true;
+
     inherit withHoogle;
 
     packages = lib.attrVals cardanoNodeProject.projectPackages;

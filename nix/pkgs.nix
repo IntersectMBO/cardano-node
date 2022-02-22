@@ -51,7 +51,9 @@ final: prev: with final;
   }).hsPkgs;
 
   #Grab the executable component of our package.
-  inherit (cardanoNodeHaskellPackages.cardano-node.components.exes) cardano-node;
+  cardano-node =
+    cardanoNodeHaskellPackages.cardano-node.components.exes.cardano-node.override
+      { enableDWARF = true; };
   inherit (cardanoNodeHaskellPackages.cardano-cli.components.exes) cardano-cli;
   inherit (cardanoNodeHaskellPackages.cardano-topology.components.exes) cardano-topology;
   inherit (cardanoNodeHaskellPackages.tx-generator.components.exes) tx-generator;
@@ -59,7 +61,7 @@ final: prev: with final;
   inherit (cardanoNodeHaskellPackages.bech32.components.exes) bech32;
   inherit (cardanoNodeHaskellPackages.cardano-submit-api.components.exes) cardano-submit-api;
   cardano-node-profiled = cardanoNodeProfiledHaskellPackages.cardano-node.components.exes.cardano-node;
-  cardano-node-eventlogged = cardanoNodeEventlogHaskellPackages.cardano-node.components.exes.cardano-node;
+  cardano-node-eventlogged = cardanoNodeEventlogHaskellPackages.cardano-node.components.exes.cardano-node.override { enableDWARF = true; };
   cardano-node-asserted = cardanoNodeAssertedHaskellPackages.cardano-node.components.exes.cardano-node;
   tx-generator-profiled = cardanoNodeProfiledHaskellPackages.tx-generator.components.exes.tx-generator;
   plutus-scripts = callPackage ./plutus-scripts.nix { plutus-builder = plutus-example; };
