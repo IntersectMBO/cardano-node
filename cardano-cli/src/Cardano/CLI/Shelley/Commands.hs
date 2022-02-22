@@ -1,5 +1,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE DataKinds #-}
 
 -- | Shelley CLI command types
 module Cardano.CLI.Shelley.Commands
@@ -349,7 +350,7 @@ data QueryCmd =
   | QueryStakePools' AnyConsensusModeParams NetworkId (Maybe OutputFile)
   | QueryStakeDistribution' AnyConsensusModeParams NetworkId (Maybe OutputFile)
   | QueryStakeAddressInfo AnyConsensusModeParams StakeAddress NetworkId (Maybe OutputFile)
-  | QueryUTxO' AnyConsensusModeParams QueryUTxOFilter NetworkId (Maybe OutputFile)
+  | QueryUTxO' AnyConsensusModeParams SomeQueryUTxOFilter NetworkId (Maybe OutputFile) 
   | QueryDebugLedgerState' AnyConsensusModeParams NetworkId (Maybe OutputFile)
   | QueryProtocolState' AnyConsensusModeParams NetworkId (Maybe OutputFile)
   | QueryStakeSnapshot' AnyConsensusModeParams NetworkId (Hash StakePoolKey)

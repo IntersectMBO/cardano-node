@@ -2,6 +2,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE DataKinds #-}
 
 module Cardano.CLI.Shelley.Parsers
   ( -- * CLI command parser
@@ -2185,20 +2186,20 @@ pTxByronWitnessCount =
       <> Opt.value 0
       )
 
-pQueryUTxOFilter :: Parser QueryUTxOFilter
+pQueryUTxOFilter :: Parser (SomeQueryUTxOFilter)
 pQueryUTxOFilter =
       pQueryUTxOWhole
   <|> pQueryUTxOByAddress
   <|> pQueryUTxOByTxIn
   where
     pQueryUTxOWhole =
-      Opt.flag' QueryUTxOWhole
+      Opt.flag' (SomeQueryUTxOFilter QueryUTxOWhole)
         (  Opt.long "whole-utxo"
         <> Opt.help "Return the whole UTxO (only appropriate on small testnets)."
         )
 
-    pQueryUTxOByAddress :: Parser QueryUTxOFilter
-    pQueryUTxOByAddress = QueryUTxOByAddress . Set.fromList <$> some pByAddress
+    pQueryUTxOByAddress :: Parser SomeQueryUTxOFilter
+    pQueryUTxOByAddress = SomeQueryUTxOFilter . QueryUTxOByAddress . Set.fromList <$> some pByAddress
 
     pByAddress :: Parser AddressAny
     pByAddress =
@@ -2208,8 +2209,8 @@ pQueryUTxOFilter =
           <> Opt.help "Filter by Cardano address(es) (Bech32-encoded)."
           )
 
-    pQueryUTxOByTxIn :: Parser QueryUTxOFilter
-    pQueryUTxOByTxIn = QueryUTxOByTxIn . Set.fromList <$> some pByTxIn
+    pQueryUTxOByTxIn :: Parser SomeQueryUTxOFilter
+    pQueryUTxOByTxIn = SomeQueryUTxOFilter . QueryUTxOByTxIn . Set.fromList <$> some pByTxIn
 
     pByTxIn :: Parser TxIn
     pByTxIn =

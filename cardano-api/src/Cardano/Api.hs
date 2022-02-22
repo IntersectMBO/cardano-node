@@ -582,6 +582,8 @@ module Cardano.Api (
     QueryInEra(..),
     QueryInShelleyBasedEra(..),
     QueryUTxOFilter(..),
+    SomeQueryUTxOFilter(..),
+    FootprintL(..),
     UTxO(..),
     queryNodeLocalState,
 

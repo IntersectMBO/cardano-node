@@ -82,6 +82,8 @@ import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter (..
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
 import           Ouroboros.Network.Subscription (DnsSubscriptionTarget (..),
                    IPSubscriptionTarget (..))
+import qualified Ouroboros.Consensus.Storage.LedgerDB.HD.LMDB as TECHDEBT(defaultLMDBLimits)
+import qualified Ouroboros.Consensus.Storage.LedgerDB.OnDisk as TECHDEBT(BackingStoreSelector(..))
 
 import           Cardano.Api
 import qualified Cardano.Api.Protocol.Types as Protocol
@@ -348,6 +350,8 @@ handleSimpleNode runP p2pMode tracers nc onKernel = do
                 (Node.getChainDB nodeKernel)
               onKernel nodeKernel
           , rnEnableP2P      = p2pMode
+          , rnBackingStoreSelector = TECHDEBT.LMDBBackingStore TECHDEBT.defaultLMDBLimits
+
           }
     in case p2pMode of
       EnabledP2PMode -> do

@@ -25,6 +25,8 @@ module Cardano.Api.Query (
     QueryInEra(..),
     QueryInShelleyBasedEra(..),
     QueryUTxOFilter(..),
+    SomeQueryUTxOFilter(..),
+    FootprintL(..),
     UTxO(..),
     UTxOInAnyEra(..),
 
@@ -264,6 +266,10 @@ instance Show (QueryUTxOFilter fp) where
      QueryUTxOByAddress addrs -> showParen (p > 11) $ showString "QueryUTxOByAddress " . shows addrs
      QueryUTxOByTxIn    txins -> showParen (p > 11) $ showString "QueryUTxOByTxIn "    . shows txins
 
+data SomeQueryUTxOFilter where
+  SomeQueryUTxOFilter :: forall fp.  QueryUTxOFilter fp -> SomeQueryUTxOFilter
+  
+deriving instance Show SomeQueryUTxOFilter
 --TODO: provide appropriate instances for these types as needed, e.g. JSON
 
 newtype ByronUpdateState = ByronUpdateState Byron.Update.State

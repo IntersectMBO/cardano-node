@@ -1090,6 +1090,7 @@ sevTraceLedgerEvent :: LedgerDB.TraceEvent blk -> SeverityS
 sevTraceLedgerEvent LedgerDB.TookSnapshot {}    = Info
 sevTraceLedgerEvent LedgerDB.DeletedSnapshot {} = Debug
 sevTraceLedgerEvent LedgerDB.InvalidSnapshot {} = Error
+sevTraceLedgerEvent LedgerDB.LMDBEvent {} = Debug
 
 namesForChainDBLedgerEvent :: LedgerDB.TraceEvent blk -> [Text]
 namesForChainDBLedgerEvent (LedgerDB.InvalidSnapshot {}) =
@@ -1098,6 +1099,8 @@ namesForChainDBLedgerEvent (LedgerDB.TookSnapshot {}) =
       ["TookSnapshot"]
 namesForChainDBLedgerEvent (LedgerDB.DeletedSnapshot {}) =
       ["DeletedSnapshot"]
+namesForChainDBLedgerEvent (LedgerDB.LMDBEvent {}) =
+      ["LMDBEvent"]
 
 instance ( StandardHash blk
          , ConvertRawHash blk)
@@ -1109,6 +1112,8 @@ instance ( StandardHash blk
       "Deleted old snapshot " <> showT snap
   forHuman (LedgerDB.InvalidSnapshot snap failure) =
       "Invalid snapshot " <> showT snap <> showT failure
+  forHuman (LedgerDB.LMDBEvent e) =
+      "LMDBEvent: " <> showT e
 
   forMachine dtals (LedgerDB.TookSnapshot snap pt) =
     mkObject [ "kind" .= String "TookSnapshot"
@@ -1121,6 +1126,7 @@ instance ( StandardHash blk
     mkObject [ "kind" .= String "TraceLedgerEvent.InvalidSnapshot"
              , "snapshot" .= forMachine dtals snap
              , "failure" .= show failure ]
+  forMachine _dtals LedgerDB.LMDBEvent {} = emptyObject
 
 docChainDBLedgerEvent :: [DocMsg (LedgerDB.TraceEvent blk)]
 docChainDBLedgerEvent = [
