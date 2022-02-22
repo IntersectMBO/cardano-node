@@ -24,6 +24,7 @@ module Cardano.Logging.Types (
   , ForwarderAddr(..)
   , FormatLogging(..)
   , ForwarderMode(..)
+  , Verbosity(..)
   , TraceOptionForwarder(..)
   , TraceConfig(..)
   , emptyTraceConfig
@@ -303,11 +304,25 @@ data ForwarderMode =
   | Responder
   deriving (Eq, Ord, Show, Generic)
 
+data Verbosity =
+    -- | Maximum verbosity for all tracers in the forwarding protocols.
+    Maximum
+    -- | Minimum verbosity, the forwarding will work as silently as possible.
+  | Minimum
+  deriving (Eq, Ord, Show, Generic)
+
+instance AE.FromJSON Verbosity where
+  parseJSON (AE.String "Maximum") = pure Maximum
+  parseJSON (AE.String "Minimum") = pure Minimum
+  parseJSON other                 = fail $ "Parsing of Verbosity failed."
+                                    <> "Unknown Verbosity: " <> show other
+
 data TraceOptionForwarder = TraceOptionForwarder {
     tofAddress          :: ForwarderAddr
   , tofMode             :: ForwarderMode
   , tofConnQueueSize    :: Word
   , tofDisconnQueueSize :: Word
+  , tofVerbosity        :: Verbosity
 } deriving (Eq, Ord, Show)
 
 instance AE.FromJSON TraceOptionForwarder where
@@ -317,6 +332,7 @@ instance AE.FromJSON TraceOptionForwarder where
         <*> obj AE..: "mode"
         <*> obj AE..:? "connQueueSize"    AE..!= 2000
         <*> obj AE..:? "disconnQueueSize" AE..!= 200000
+        <*> obj AE..:? "verbosity"        AE..!= Minimum
 
 defaultForwarder :: TraceOptionForwarder
 defaultForwarder = TraceOptionForwarder {
@@ -324,6 +340,7 @@ defaultForwarder = TraceOptionForwarder {
   , tofMode = Responder
   , tofConnQueueSize = 2000
   , tofDisconnQueueSize = 200000
+  , tofVerbosity = Minimum
 }
 
 instance AE.FromJSON ForwarderMode where
