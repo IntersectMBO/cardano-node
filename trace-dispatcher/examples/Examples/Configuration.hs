@@ -50,6 +50,7 @@ config1 = TraceConfig {
       , tofMode = Responder
       , tofConnQueueSize = 100
       , tofDisconnQueueSize = 1000
+      , tofVerbosity = Minimum
       }
     , tcNodeName = Nothing
     , tcPeerFreqency = Nothing
@@ -68,6 +69,7 @@ config2 = TraceConfig {
       , tofMode = Responder
       , tofConnQueueSize = 100
       , tofDisconnQueueSize = 1000
+      , tofVerbosity = Minimum
       }
     , tcNodeName = Just "node-1"
     , tcPeerFreqency = Nothing

@@ -15,7 +15,8 @@ import           Control.Concurrent.Async (async, race_, wait)
 import           Control.Monad (void)
 import           Control.Monad.IO.Class
 
-import           "contra-tracer" Control.Tracer (contramap, stdoutTracer)
+import           "contra-tracer" Control.Tracer (Tracer, contramap, nullTracer,
+                     stdoutTracer)
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Void (Void)
 import           Data.Word (Word16)
@@ -79,11 +80,12 @@ initForwarding iomgr config networkMagic ekgStore = liftIO $ do
   LocalSocket p = tofAddress $ tcForwarder config
   connSize = tofConnQueueSize $ tcForwarder config
   disconnSize = tofDisconnQueueSize $ tcForwarder config
+  verbosity = tofVerbosity $ tcForwarder config
 
   ekgConfig :: EKGF.ForwarderConfiguration
   ekgConfig =
     EKGF.ForwarderConfiguration
-      { EKGF.forwarderTracer    = contramap show stdoutTracer
+      { EKGF.forwarderTracer    = mkTracer verbosity
       , EKGF.acceptorEndpoint   = EKGF.LocalPipe p
       , EKGF.reConnectFrequency = 1.0
       , EKGF.actionOnRequest    = const $ pure ()
@@ -92,7 +94,7 @@ initForwarding iomgr config networkMagic ekgStore = liftIO $ do
   tfConfig :: TF.ForwarderConfiguration TraceObject
   tfConfig =
     TF.ForwarderConfiguration
-      { TF.forwarderTracer       = contramap show stdoutTracer
+      { TF.forwarderTracer       = mkTracer verbosity
       , TF.acceptorEndpoint      = p
       , TF.disconnectedQueueSize = disconnSize
       , TF.connectedQueueSize    = connSize
@@ -101,9 +103,13 @@ initForwarding iomgr config networkMagic ekgStore = liftIO $ do
   dpfConfig :: DPF.ForwarderConfiguration
   dpfConfig =
     DPF.ForwarderConfiguration
-      { DPF.forwarderTracer  = contramap show stdoutTracer
+      { DPF.forwarderTracer  = mkTracer verbosity
       , DPF.acceptorEndpoint = p
       }
+
+  mkTracer :: Show a => Verbosity -> Tracer IO a
+  mkTracer Maximum = contramap show stdoutTracer
+  mkTracer Minimum = nullTracer
 
 launchForwarders
   :: IOManager
