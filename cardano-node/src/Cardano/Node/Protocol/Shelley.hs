@@ -163,13 +163,12 @@ readLeaderCredentialsSingleton
   ProtocolFilepaths { shelleyCertFile = Just opCertFile,
                       shelleyVRFFile = Just vrfFile,
                       shelleyKESFile = Just kesFile
-                    } = do
-    vrfSKey <-
-      firstExceptT FileError (newExceptT $ readFileTextEnvelope (AsSigningKey AsVrfKey) vrfFile)
-
-    (opCert, kesSKey) <- opCertKesKeyCheck kesFile opCertFile
-
-    return [mkPraosLeaderCredentials opCert vrfSKey kesSKey]
+                    } =
+  fmap (:[]) $
+  mkPraosLeaderCredentials
+    <$> firstExceptT FileError (newExceptT $ readFileTextEnvelope AsOperationalCertificate opCertFile)
+    <*> firstExceptT FileError (newExceptT $ readFileTextEnvelope (AsSigningKey AsVrfKey) vrfFile)
+    <*> firstExceptT FileError (newExceptT $ readFileTextEnvelope (AsSigningKey AsKesKey) kesFile)
 
 -- But not OK to supply some of the files without the others.
 readLeaderCredentialsSingleton ProtocolFilepaths {shelleyCertFile = Nothing} =
@@ -178,25 +177,6 @@ readLeaderCredentialsSingleton ProtocolFilepaths {shelleyVRFFile = Nothing} =
      left VRFKeyNotSpecified
 readLeaderCredentialsSingleton ProtocolFilepaths {shelleyKESFile = Nothing} =
      left KESKeyNotSpecified
-
-opCertKesKeyCheck
-  :: FilePath
-  -- ^ KES key
-  -> FilePath
-  -- ^ Operational certificate
-  -> ExceptT PraosLeaderCredentialsError IO (OperationalCertificate, SigningKey KesKey)
-opCertKesKeyCheck kesFile certFile = do
-  opCert <-
-    firstExceptT FileError (newExceptT $ readFileTextEnvelope AsOperationalCertificate certFile)
-  kesSKey <-
-    firstExceptT FileError (newExceptT $ readFileTextEnvelope (AsSigningKey AsKesKey) kesFile)
-  let opCertSpecifiedKesKeyhash = verificationKeyHash $ getHotKey opCert
-      suppliedKesKeyHash = verificationKeyHash $ getVerificationKey kesSKey
-  -- Specified KES key in operational certificate should match the one
-  -- supplied to the node.
-  if suppliedKesKeyHash /= opCertSpecifiedKesKeyhash
-  then left $ MismatchedKesKey kesFile certFile
-  else return (opCert, kesSKey)
 
 data ShelleyCredentials
   = ShelleyCredentials
@@ -323,11 +303,6 @@ data PraosLeaderCredentialsError =
      | OCertNotSpecified
      | VRFKeyNotSpecified
      | KESKeyNotSpecified
-     | MismatchedKesKey
-         FilePath
-         -- KES signing key
-         FilePath
-         -- Operational certificate
   deriving Show
 
 instance Error PraosLeaderCredentialsError where
@@ -340,9 +315,6 @@ instance Error PraosLeaderCredentialsError where
      <> toS fp <> " Error: " <> show err
 
   displayError (FileError fileErr) = displayError fileErr
-  displayError (MismatchedKesKey kesFp certFp) =
-       "The KES key provided at: " <> show kesFp
-    <> " does not match the KES key specified in the operational certificate at: " <> show certFp
   displayError OCertNotSpecified  = missingFlagMessage "shelley-operational-certificate"
   displayError VRFKeyNotSpecified = missingFlagMessage "shelley-vrf-key"
   displayError KESKeyNotSpecified = missingFlagMessage "shelley-kes-key"
