@@ -127,7 +127,7 @@ def add_derived_params:
          { minimum_chain_density: ($gsis.active_slots_coeff * 0.5)
          , cluster_startup_overhead_s:
                 (($gsis.utxo + $gsis.delegators) as $dataset_size
-                | if $dataset_size < 10000 then 20
+                | if $dataset_size < 10000 then 5
                   else $dataset_size / 25000
                   end)
          }

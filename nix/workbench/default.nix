@@ -88,13 +88,12 @@ let
     else "nix-exes+checkout-wb";
 
   shellHook = ''
+    echo 'workbench shellHook:  workbenchDevMode=${toString workbenchDevMode} useCabalRun=${toString useCabalRun}'
     export WORKBENCH_BACKEND=supervisor
 
     ${optionalString
       workbenchDevMode
     ''
-    echo 'workbench:  dev mode enabled, calling wb directly from checkout (instead of using Nix store)' >&2
-
     export WORKBENCH_CARDANO_NODE_REPO_ROOT=$(git rev-parse --show-toplevel)
     export WORKBENCH_EXTRA_FLAGS=
 

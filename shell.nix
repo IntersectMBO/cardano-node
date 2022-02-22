@@ -108,7 +108,7 @@ let
     exactDeps = true;
 
     shellHook = ''
-      echo 'nix-shell options & flags:  withHoogle=${toString withHoogle} profileName=${profileName} autoStartCluster=${toString autoStartCluster} workbenchDevMode=${toString workbenchDevMode}'
+      echo 'nix-shell top-level shellHook:  withHoogle=${toString withHoogle} profileName=${profileName} autoStartCluster=${toString autoStartCluster} workbenchDevMode=${toString workbenchDevMode}'
 
       ${cluster.workbench.shellHook}
 

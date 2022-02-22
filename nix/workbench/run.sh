@@ -347,6 +347,7 @@ case "$op" in
         cp $(jq '."run-script"'     -r $gtor) "$gen_dir"/run-script.json
         cp $(jq '."service-config"' -r $gtor) "$gen_dir"/service-config.json
         cp $(jq '."start"'          -r $gtor) "$gen_dir"/start.sh
+        ln -s          ../node-0/config.json  "$gen_dir"
 
         backend allocate-run "$dir"
 

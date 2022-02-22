@@ -59,7 +59,9 @@ fixed:                   ARGS += --arg 'autoStartCluster' true
 fixed:                   PROFILE = fixed-alzo
 smoke:                   ARGS += --arg 'autoStartCluster' true --run "grep TraceOpenEvent.ClosedDB run/current/node-0/stdout >/dev/null && echo 'Smoke test:  PASS' || echo 'Smoke test:  FAIL'"
 smoke:                   PROFILE = smoke-alzo
-shell-dev cluster-shell-dev cluster-shell-trace cluster-shell-dev-trace fixed smoke: shell
+smoke-loaded:            ARGS += --arg 'autoStartCluster' true --run "grep TraceOpenEvent.ClosedDB run/current/node-0/stdout >/dev/null && echo 'Smoke test:  PASS' || echo 'Smoke test:  FAIL'"
+smoke-loaded:            PROFILE = smoke-loaded-alzo
+shell-dev cluster-shell-dev cluster-shell-trace cluster-shell-dev-trace fixed smoke smoke-loaded: shell
 
 shell: ## Enter Nix shell, CI mode (workbench run from Nix store)
 	nix-shell --max-jobs 8 --cores 0 --show-trace --argstr profileName ${PROFILE} ${ARGS}
