@@ -181,7 +181,8 @@ let
           profile profileOut;
     in
     pkgs.runCommand "workbench-test-${profileName}"
-      { nativeBuildInputs = with haskellPackages; with pkgs; [
+      { requiredSystemFeatures = [ "benchmark" ];
+        nativeBuildInputs = with haskellPackages; with pkgs; [
           bash
           bech32
           coreutils

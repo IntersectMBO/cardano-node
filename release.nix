@@ -206,8 +206,8 @@ let
       (collectJobs jobs.linux.native.shell)
       (collectJobs jobs.linux.native.devopsShell)
       (collectJobs jobs.linux.native.devShell)
+      (collectJobs jobs.linux.native.workbench-smoke-test)
       [ jobs.cardano-node-linux ]
-      [ jobs.workbench-smoke-test ]
     ]))
     # macOS builds:
     (optionals macosBuild (concatLists [

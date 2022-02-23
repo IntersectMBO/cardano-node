@@ -50,8 +50,8 @@ let
   haveGlibcLocales = pkgs.glibcLocales != null && stdenv.hostPlatform.libc == "glibc";
 
   shell =
-    let cluster = pkgs.commonLib.workbench-supervisord
-      { inherit profileName;
+    let cluster = pkgs.workbench-supervisord
+      { inherit haskellPackages profileName;
         useCabalRun = true;
       };
     in cardanoNodeProject.shellFor {
@@ -136,8 +136,9 @@ let
   };
 
   devops =
-    let cluster = pkgs.commonLib.workbench-supervisord
-      { profileName = "devops-alzo";
+    let cluster = pkgs.workbench-supervisord
+      { inherit haskellPackages;
+        profileName = "devops-alzo";
         useCabalRun = false;
       };
     in cardanoNodeProject.shellFor {
