@@ -53,6 +53,7 @@ import qualified Cardano.Ledger.Crypto as Crypto
 import qualified Cardano.Ledger.Era as Era
 import qualified Cardano.Ledger.Era as Ledger
 import           Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
+import qualified Cardano.Ledger.Shelley.API.Protocol as Ledger
 import           Cardano.Ledger.Shelley.Constraints
 import           Cardano.Ledger.Shelley.EpochBoundary
 import           Cardano.Ledger.Shelley.LedgerState (DPState (_pstate),
@@ -60,7 +61,6 @@ import           Cardano.Ledger.Shelley.LedgerState (DPState (_pstate),
                    NewEpochState (nesEs), PState (_fPParams, _pParams, _retiring))
 import qualified Cardano.Ledger.Shelley.PParams as Shelley
 import           Cardano.Ledger.Shelley.Scripts ()
-import qualified Cardano.Protocol.TPraos.API as Ledger
 import           Cardano.Slotting.EpochInfo (EpochInfo (..), epochInfoSlotToUTCTime, hoistEpochInfo)
 import           Control.Monad.Trans.Except (except)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistEither,

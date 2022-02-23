@@ -100,7 +100,6 @@ executable stake-credential-history
                        bytestring,
                        cardano-ledger-alonzo,
                        cardano-api,
-                       cardano-data,
                        cardano-ledger-core,
                        cardano-ledger-shelley,
                        compact-map,

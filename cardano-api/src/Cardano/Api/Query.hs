@@ -120,8 +120,6 @@ import           Cardano.Api.TxBody
 import           Cardano.Api.Value
 
 import           Data.Word (Word64)
-import qualified Cardano.Protocol.TPraos.API as TPraos
-import qualified Data.Compact.SplitMap as SplitMap
 
 -- ----------------------------------------------------------------------------
 -- Queries
@@ -328,11 +326,11 @@ instance ( IsShelleyBasedEra era
                                           ]
 
 newtype ProtocolState era
-  = ProtocolState (Serialised (TPraos.ChainDepState (Ledger.Crypto (ShelleyLedgerEra era))))
+  = ProtocolState (Serialised (Shelley.ChainDepState (Ledger.Crypto (ShelleyLedgerEra era))))
 
 decodeProtocolState
   :: ProtocolState era
-  -> Either LBS.ByteString (TPraos.ChainDepState StandardCrypto)
+  -> Either LBS.ByteString (Shelley.ChainDepState StandardCrypto)
 decodeProtocolState (ProtocolState (Serialised pbs)) =
   first (const pbs) (decodeFull pbs)
 
@@ -374,7 +372,7 @@ toLedgerUTxO :: ShelleyLedgerEra era ~ ledgerera
              -> Shelley.UTxO ledgerera
 toLedgerUTxO era (UTxO utxo) =
     Shelley.UTxO
-  . SplitMap.fromList
+  . Map.fromList
   . map (bimap toShelleyTxIn (toShelleyTxOut era))
   . Map.toList
   $ utxo
@@ -388,7 +386,7 @@ fromLedgerUTxO era (Shelley.UTxO utxo) =
     UTxO
   . Map.fromList
   . map (bimap fromShelleyTxIn (fromShelleyTxOut era))
-  . SplitMap.toList
+  . Map.toList
   $ utxo
 
 fromShelleyPoolDistr :: Shelley.PoolDistr StandardCrypto
