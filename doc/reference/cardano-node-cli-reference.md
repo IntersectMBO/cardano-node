@@ -112,9 +112,8 @@ The `text-view` command contains the following subcommand:
 - Does the KES key period specified in your operational certificate fall within the current KES key period?
 We essentially check the predicates of the OCERT rule in the cardano-ledger specification, and we print additional diagnostic information as follows:
 ```
-✓ The counters match what is in the node's protocol state
+✓ The operational certificate counter agrees with the node protocol state counter
 ✓ Operational certificate's kes period is within the correct KES period interval
-✓ Operational certificate's KES period is within the correct KES period interval
 {
     "qKesNodeStateOperationalCertificateNumber": 6,
     "qKesCurrentKesPeriod": 404,
@@ -140,4 +139,19 @@ We essentially check the predicates of the OCERT rule in the cardano-ledger spec
      4376                   2021-12-29 17:27:25.298001755 UTC
      4423                   2021-12-29 17:27:29.998001755 UTC
      4433                   2021-12-29 17:27:30.998001755 UTC
+```
+
+
+`transaction build ... --calculate-plutus-script-cost`: Using the `--calculate-plutus-script-cost` flag with the `transaction build` command will calculate the cost of the Plutus script(s) within the transaction body and output it as JSON.
+```
+[
+    {
+        "executionUnits": {
+            "memory": 1700,
+            "steps": 476468
+        },
+        "lovelaceCost": 133,
+        "scriptHash": "67f33146617a5e61936081db3b2117cbf59bd2123748f58ac9678656"
+    }
+]
 ```
