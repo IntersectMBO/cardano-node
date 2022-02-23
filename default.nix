@@ -45,16 +45,18 @@ let
     withHoogle = true;
   };
 
+  clusterCabal = workbench-supervisord { inherit profileName haskellPackages; useCabalRun = true; };
+  clusterNix   = workbench-supervisord { inherit profileName haskellPackages; useCabalRun = false; };
+  workbench-smoke-test = clusterNix.smoke-test { profileName = "smoke-loaded-alzo"; };
+
   packages = {
     inherit haskellPackages shell
       cardano-node cardano-node-profiled cardano-node-eventlogged
       cardano-cli db-converter cardano-ping
       locli locli-profiled
       tx-generator tx-generator-profiled
-      scripts environments dockerImage submitApiDockerImage bech32;
-
-    clusterCabal = mkSupervisordCluster { inherit profileName; useCabalRun = true; };
-    clusterNix   = mkSupervisordCluster { inherit profileName; useCabalRun = false; };
+      scripts environments dockerImage submitApiDockerImage bech32
+      clusterNix clusterCabal workbench-smoke-test;
 
     devopsShell = shell.devops;
 

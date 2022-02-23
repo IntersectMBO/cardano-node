@@ -8,10 +8,10 @@ function workbench-prebuild-executables()
     git --no-pager log -n1 --alternate-refs --pretty=format:"%Cred%cr %Cblue%h %Cgreen%D %Cblue%s%Creset" --color
     echo
 
-    echo -n "workbench:  prebuilding executables (because of useCabalRun): "
+    echo "workbench:  prebuilding executables (because of useCabalRun)"
     unset NIX_ENFORCE_PURITY
-    for exe in cardano-cli cardano-node cardano-topology
-    do echo -n "$exe "
+    for exe in cardano-node cardano-cli cardano-topology
+    do echo "workbench:    $(with_color blue prebuilding) $(with_color red $exe)"
        cabal -v0 build -- exe:$exe 2>&1 >/dev/null |
            { grep -v 'Temporary modify'; true; } || return 1
     done

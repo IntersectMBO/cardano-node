@@ -11,7 +11,8 @@ usage_scenario() {
                             1. start the preset-defined proxy node,
                                using its respective connected topology mode,
                                fetching the chain up to the specified slot
-                            2. restart the proxy with a disconnected topogy mode,                                   effectively making it an idle chaindb server
+                            2. restart the proxy with a disconnected topogy mode,
+                               effectively making it an idle chaindb server
                             3. start the fetcher node, connected to the proxy
 
 EOF
@@ -22,15 +23,28 @@ local op=${1:---help}; shift
 local usage="USAGE: wb scenario SCENARIO-OP OP-ARGS.."
 local dir=${1:?$usage}; shift
 
-msg "starting scenario: $(with_color blue $op)"
+msg "starting scenario:  $(with_color blue $op)"
 case "$op" in
     idle | default )
         backend start-cluster "$dir"
         ;;
 
+    fixed )
+        backend start-cluster      "$dir"
+        backend wait-pools-stopped "$dir"
+        backend stop-cluster       "$dir"
+        ;;
+
     loaded )
         backend start-cluster   "$dir"
         backend start-generator "$dir"
+        ;;
+
+    fixed-loaded )
+        backend start-cluster      "$dir"
+        backend start-generator    "$dir"
+        backend wait-pools-stopped "$dir"
+        backend stop-cluster       "$dir"
         ;;
 
     chainsync )

@@ -13,12 +13,12 @@ def adhoc_profiles:
   , tolerances: { finish_patience: 4 }
   , genesis: { genesis_future_offset: "3 minutes" }
   }
-, { name: "smoke"
-  , generator: { tx_count: 100,   add_tx_size: 0, inputs_per_tx: 1, outputs_per_tx: 1,  tps: 100
-               , init_cooldown: 25 }
-  , tolerances: { finish_patience: 4 }
-  , genesis: { genesis_future_offset: "3 minutes" }
-  }
+# , { name: "smoke"
+#   , generator: { tx_count: 100,   add_tx_size: 0, inputs_per_tx: 1, outputs_per_tx: 1,  tps: 100
+#                , init_cooldown: 25 }
+#   , tolerances: { finish_patience: 4 }
+#   , genesis: { genesis_future_offset: "3 minutes", delegators: 4 }
+#   }
 , { name: "smoke-plutus"
   , generator: { tx_count: 100,   add_tx_size: 0, inputs_per_tx: 1, outputs_per_tx: 1,  tps: 100
                , init_cooldown: 25

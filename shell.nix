@@ -50,8 +50,8 @@ let
   haveGlibcLocales = pkgs.glibcLocales != null && stdenv.hostPlatform.libc == "glibc";
 
   shell =
-    let cluster = pkgs.commonLib.mkSupervisordCluster
-      { inherit profileName;
+    let cluster = pkgs.workbench-supervisord
+      { inherit haskellPackages profileName;
         useCabalRun = true;
       };
     in cardanoNodeProject.shellFor {
@@ -108,7 +108,7 @@ let
     exactDeps = true;
 
     shellHook = ''
-      echo 'nix-shell options & flags:  withHoogle=${toString withHoogle} profileName=${profileName} autoStartCluster=${toString autoStartCluster} workbenchDevMode=${toString workbenchDevMode}'
+      echo 'nix-shell top-level shellHook:  withHoogle=${toString withHoogle} profileName=${profileName} autoStartCluster=${toString autoStartCluster} workbenchDevMode=${toString workbenchDevMode}'
 
       ${cluster.workbench.shellHook}
 
@@ -136,8 +136,9 @@ let
   };
 
   devops =
-    let cluster = pkgs.commonLib.mkSupervisordCluster
-      { profileName = "devops-alzo";
+    let cluster = pkgs.workbench-supervisord
+      { inherit haskellPackages;
+        profileName = "devops-alzo";
         useCabalRun = false;
       };
     in cardanoNodeProject.shellFor {

@@ -37,6 +37,29 @@ def genesis_profile_variants:
   , { genesis: { utxo: 2000000, delegators:  500000, max_block_size: 2048000 }
     , generator: { tps: 256 } }
 
+  ## Fixed
+  , { name: "fixed"
+    , scenario: "fixed"
+    , genesis: { utxo: 4000000, delegators: 1000000 }
+    , node:
+      { shutdown_on_slot_synced: 150
+      }
+    }
+  , { name: "smoke"
+    , scenario: "fixed"
+    , genesis: { utxo: 100, delegators: 9 }
+    , node:
+      { shutdown_on_slot_synced: 150
+      }
+    }
+  , { name: "smoke-loaded"
+    , scenario: "fixed-loaded"
+    , genesis: { utxo: 100, delegators: 9 }
+    , node:
+      { shutdown_on_slot_synced: 150
+      }
+    , generator: { tps: 10 }
+    }
 
   ## Chainsync:
   , { name: "chainsync"

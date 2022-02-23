@@ -88,13 +88,12 @@ let
     else "nix-exes+checkout-wb";
 
   shellHook = ''
+    echo 'workbench shellHook:  workbenchDevMode=${toString workbenchDevMode} useCabalRun=${toString useCabalRun}'
     export WORKBENCH_BACKEND=supervisor
 
     ${optionalString
       workbenchDevMode
     ''
-    echo 'workbench:  dev mode enabled, calling wb directly from checkout (instead of using Nix store)' >&2
-
     export WORKBENCH_CARDANO_NODE_REPO_ROOT=$(git rev-parse --show-toplevel)
     export WORKBENCH_EXTRA_FLAGS=
 
@@ -102,14 +101,14 @@ let
       $WORKBENCH_CARDANO_NODE_REPO_ROOT/nix/workbench/wb --set-mode ${checkoutWbMode} $WORKBENCH_EXTRA_FLAGS "$@"
     }
     export -f wb
+    ''}
 
     ${optionalString
       useCabalRun
       ''
+      . nix/workbench/lib.sh
       . nix/workbench/lib-cabal.sh
       ''}
-
-    ''}
 
     export CARDANO_NODE_SOCKET_PATH=run/current/node-0/node.socket
     '';
@@ -197,9 +196,26 @@ let
       cp    $nodeServicesPath          $out/node-services.json
       cp    $generatorServicePath      $out/generator-service.json
       '';
+
+  with-workbench-profile =
+    { pkgs, backend, envArgs, profileName }:
+    let
+      workbenchProfiles = generateProfiles
+        { inherit pkgs backend envArgs; };
+
+      profile = workbenchProfiles.profiles."${profileName}"
+        or (throw "No such profile: ${profileName};  Known profiles: ${toString (__attrNames workbenchProfiles.profiles)}");
+
+      profileOut = profileOutput
+        { inherit profile;
+          backendProfileOutput =
+            backend.profileOutput { inherit profile; };
+        };
+    in { inherit profile profileOut; };
+
 in
 {
-  inherit workbench runWorkbench runJq;
+  inherit workbench runWorkbench runJq with-workbench-profile;
 
   inherit generateProfiles profileOutput shellHook;
 }

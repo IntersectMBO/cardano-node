@@ -5,6 +5,7 @@ let
   profileNameDefault = "default-alzo";
 in
 { pkgs
+, haskellPackages
 , workbench
 , lib
 , bech32
@@ -55,7 +56,7 @@ let
       finaliseNodeConfig =
         { port, ... }: cfg: recursiveUpdate cfg
           ({
-            AlonzoGenesisFile    = "../genesis-alonzo.json";
+            AlonzoGenesisFile    = "../genesis.alonzo.json";
             ShelleyGenesisFile   = "../genesis-shelley.json";
             ByronGenesisFile     = "../genesis/byron/genesis.json";
           } // optionalAttrs enableEKG {
@@ -65,6 +66,9 @@ let
               "EKGViewBK"
             ];
           });
+
+      finaliseNodeArgs =
+        { port, ... }: cfg: cfg;
 
       finaliseGeneratorService =
         svc: recursiveUpdate svc
@@ -79,7 +83,7 @@ let
       finaliseGeneratorConfig =
         cfg: recursiveUpdate cfg
           ({
-            AlonzoGenesisFile    = "../genesis-alonzo.json";
+            AlonzoGenesisFile    = "../genesis.alonzo.json";
             ShelleyGenesisFile   = "../genesis-shelley.json";
             ByronGenesisFile     = "../genesis/byron/genesis.json";
           });
@@ -114,28 +118,22 @@ let
         };
     };
 
-  ## IMPORTANT:  keep in sync with envArgs in 'workbench/default.nix/generateProfiles/environment'.
-  envArgs =
-    {
-      inherit (pkgs) cardanoLib;
-      inherit
-        stateDir
-        cacheDir basePort;
-      staggerPorts = true;
-    };
+  inherit
+    (workbench.with-workbench-profile
+      { inherit pkgs backend profileName;
 
-  workbenchProfiles = workbench.generateProfiles
-    { inherit pkgs backend envArgs; };
+        ## IMPORTANT:  keep in sync with envArgs in 'workbench/default.nix/generateProfiles/environment'.
+        envArgs =
+          {
+            inherit (pkgs) cardanoLib;
+            inherit stateDir cacheDir basePort;
+            staggerPorts = true;
+          };
+      })
+    profile profileOut;
 in
 
 let
-  profile = workbenchProfiles.profiles."${profileName}"
-    or (throw "No such profile: ${profileName};  Known profiles: ${toString (__attrNames workbenchProfiles.profiles)}");
-
-  profileOut = workbench.profileOutput { inherit profile;
-                                         backendProfileOutput =
-                                           backend.profileOutput { inherit profile; };
-                                       };
 
   inherit (profile.value) era composition monetary;
 
@@ -152,6 +150,7 @@ let
 
     export PATH=$PATH:${path}
 
+    set -x
     wb start \
         --batch-name   ${batchName} \
         --profile-name ${profileName} \
@@ -162,6 +161,67 @@ let
         "$@" &&
         echo 'workbench:  cluster started. Run `stop-cluster` to stop' >&2
   '';
+
+  smoke-test =
+    { profileName }:
+    let inherit
+          (workbench.with-workbench-profile
+            { inherit pkgs backend profileName;
+
+              ## IMPORTANT:  keep in sync with envArgs in 'workbench/default.nix/generateProfiles/environment'.
+              envArgs =
+                {
+                  inherit (pkgs) cardanoLib;
+                  inherit basePort;
+                  cacheDir = "./cache";
+                  stateDir = "./";
+                  staggerPorts = true;
+                };
+            })
+          profile profileOut;
+    in
+    pkgs.runCommand "workbench-test-${profileName}"
+      { requiredSystemFeatures = [ "benchmark" ];
+        nativeBuildInputs = with haskellPackages; with pkgs; [
+          bash
+          bech32
+          coreutils
+          gnused
+          jq
+          moreutils
+          nixWrapped
+          psmisc
+          python3Packages.supervisor
+          workbench.workbench
+        ];
+      }
+      ''
+      mkdir -p $out/cache
+      cd       $out
+
+      ${workbench.shellHook}
+
+      export CARDANO_NODE_SOCKET_PATH=$(wb backend get-node-socket-path ${stateDir})
+
+      wb start \
+          --batch-name   smoke-test           \
+          --profile-name ${profileName}       \
+          --profile-out  ${profileOut}        \
+          --cache-dir    ./cache              \
+          --base-port    ${toString basePort} \
+
+      ## Cleanup:
+      rm -rf cache
+      rm -f run/{current,-current} genesis
+      mv    run/env.json .
+
+      tag=$(cd run; ls)
+      echo "workbench-test:  completed run $tag"
+
+      mv       run/$tag/*   .
+      rmdir    run/$tag run
+      rm -f             node-*/node.socket
+      '';
 
   stop = pkgs.writeScriptBin "stop-cluster" ''
     set -euo pipefail
@@ -175,10 +235,10 @@ let
     wb run restart "$@" && \
         echo "workbench:  alternate command for this action:  wb run restart" >&2
   '';
-
 in
 {
   inherit workbench;
   inherit (workbenchProfiles) profilesJSON;
   inherit profile stateDir start stop restart;
+  inherit smoke-test;
 }

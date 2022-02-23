@@ -12,8 +12,8 @@ def era_defaults($era):
   ## Cluster topology and composition:
   , composition:
     { locations:                      ["LO"]
-    , n_bft_hosts:                    1
-    , n_singular_hosts:               1
+    , n_bft_hosts:                    0
+    , n_singular_hosts:               2
     , n_dense_hosts:                  1
     , dense_pool_density:             1
     , with_proxy:                     false
@@ -71,11 +71,12 @@ def era_defaults($era):
 
   , node:
     { rts_flags_override:             []
+    , shutdown_on_slot_synced:        null
     , tracing_backend:                "iohk-monitoring"  ## or "trace-dispatcher"
     }
 
   , tolerances:
-    { cluster_startup_overhead_s:     60
+    { cluster_startup_overhead_s:     10
     , start_log_spread_s:             120
     , last_log_spread_s:              120
     , silence_since_last_block_s:     120

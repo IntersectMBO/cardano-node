@@ -64,6 +64,10 @@ msg() {
     echo "workbench:  $*" >&2
 }
 
+msg_ne() {
+    echo -ne "workbench:  $*" >&2
+}
+
 fail() {
     msg "$*"
     exit 1

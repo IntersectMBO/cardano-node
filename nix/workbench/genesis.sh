@@ -3,7 +3,7 @@ global_genesis_format_version=September-10-2021
 usage_genesis() {
      usage "genesis" "Genesis" <<EOF
     prepare [--force] CACHEDIR PROFILE-JSON TOPO-DIR OUTDIR
-                     Prepare a genesis cache entry profile.
+                     Prepare a genesis cache entry for the specified profile.
                        Cache entry regeneration can be --force 'd
 
     profile-cache-key-input PROFILE-JSON
@@ -40,8 +40,14 @@ case "$op" in
         local outdir=${4:?$usage}
 
         local cache_key_input=$(genesis profile-cache-key-input "$profile_json")
+        if test -z "$cache_key_input"
+        then fatal "no valid profile JSON in $profile_json"
+        fi
         local cache_key=$(genesis profile-cache-key "$profile_json")
         local cache_path=$cachedir/$cache_key
+        if test "$(realpath $cachedir)" = "$(realpath $cache_path)"
+        then fatal "no valid genesis cache key associated with profile in $profile_json"
+        fi
 
         if genesis cache-test "$cache_path"
         then cache_hit=t; cache_hit_desc='hit'
@@ -57,7 +63,7 @@ case "$op" in
         if test -n "${regenesis_causes[*]}"
         then msg "genesis: generating due to ${regenesis_causes[*]}:  $cache_key @$cache_path"
              jqtest .genesis.single_shot "$profile_json" ||
-                 fail "Incremental (non single-shot) genesis is not suppored."
+                 fatal "Incremental (non single-shot) genesis is not suppored."
 
              if profile has-preset "$profile_json"
              then local preset=$(jq .preset "$profile_json" -r)
@@ -155,7 +161,7 @@ case "$op" in
         local fs=(
             byron/genesis.json
             genesis-shelley.json
-            genesis-alonzo.json
+            genesis.alonzo.json
         )
         for f in ${fs[*]}
         do cp -f "$(profile preset-get-file $preset 'genesis file' genesis/$f)" "$dir/$f"
@@ -187,6 +193,8 @@ case "$op" in
                 $(jq '.cli_args.createFinalBulk | join(" ")' "$profile_json" --raw-output)
                )
         cardano-cli genesis create-staked "${params[@]}"
+        mv "$dir"/genesis.json "$dir"/genesis-shelley.json
+        mv "$dir"/genesis.spec.json "$dir"/genesis-shelley.spec.json
 
         ## TODO: try to get rid of this step:
         Massage_the_key_file_layout_to_match_AWS "$profile_json" "$topo_dir" "$dir";;
@@ -218,8 +226,8 @@ case "$op" in
         jq ' $prof[0] as $p
            | . * ($p.genesis.alonzo // {})
            ' --slurpfile prof       "$profile_json"  \
-           "$global_basedir"/../../configuration/cardano/mainnet-alonzo-genesis.json \
-           >   "$dir"/genesis-alonzo.json;;
+           "$global_basedir"/profiles/presets/mainnet/genesis/genesis-alonzo.json \
+           >   "$dir"/genesis.alonzo.json;;
 
     * ) usage_genesis;; esac
 }
@@ -289,14 +297,14 @@ key_depl() {
             none )     suffix=;;
             sig )      suffix='.skey';;
             ver )      suffix='.vkey';;
-            * )        fail "key_depl: unknown key kind: '$kind'";; esac
+            * )        fatal "key_depl: unknown key kind: '$kind'";; esac
     case "$type" in
             bulk )     stem=node-keys/bulk$id;;
             cold )     stem=node-keys/cold/operator$id;;
             opcert )   stem=node-keys/node$id.opcert;;
             KES )      stem=node-keys/node-kes$id;;
             VRF )      stem=node-keys/node-vrf$id;;
-            * )        fail "key_depl: unknown key type: '$type'";; esac
+            * )        fatal "key_depl: unknown key type: '$type'";; esac
     echo "$__KEY_ROOT"/$stem$suffix
 }
 
@@ -309,7 +317,7 @@ key_genesis() {
             none )     suffix=;;
             sig )      suffix='.skey';;
             ver )      suffix='.vkey';;
-            * )        fail "key_genesis: unknown key kind: '$kind'";; esac
+            * )        fatal "key_genesis: unknown key kind: '$kind'";; esac
     case "$type" in
             bulk )     stem=pools/bulk$id;;
             cold )     stem=pools/cold$id;;
@@ -320,7 +328,7 @@ key_genesis() {
             delegCert )stem=delegate-keys/opcert$id;;
             delegKES ) stem=delegate-keys/delegate$id.kes;;
             delegVRF ) stem=delegate-keys/delegate$id.vrf;;
-            * )        fail "key_genesis: unknown key type: '$type'";; esac
+            * )        fatal "key_genesis: unknown key type: '$type'";; esac
     echo "$__KEY_ROOT"/$stem$suffix
 }
 
