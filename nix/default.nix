@@ -53,6 +53,16 @@ let
           inherit system;
           gitrev = sources.plutus-example.rev;
         }).haskellPackages.plutus-example.components.exes) plutus-example;
+
+        # This provides a supervisord-backed instance of a the workbench development environment
+        # that can be used with nix-shell or lorri.
+        # See https://input-output-hk.github.io/haskell.nix/user-guide/development/
+        workbench-supervisord =
+          { useCabalRun, profileName, haskellPackages }:
+          pkgs.callPackage ./supervisord-cluster
+            { inherit profileName useCabalRun haskellPackages;
+              workbench = pkgs.callPackage ./workbench { inherit useCabalRun; };
+            };
       })
       # And, of course, our haskell-nix-ified cabal project:
       (import ./pkgs.nix)

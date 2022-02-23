@@ -196,9 +196,26 @@ let
       cp    $nodeServicesPath          $out/node-services.json
       cp    $generatorServicePath      $out/generator-service.json
       '';
+
+  with-workbench-profile =
+    { pkgs, backend, envArgs, profileName }:
+    let
+      workbenchProfiles = generateProfiles
+        { inherit pkgs backend envArgs; };
+
+      profile = workbenchProfiles.profiles."${profileName}"
+        or (throw "No such profile: ${profileName};  Known profiles: ${toString (__attrNames workbenchProfiles.profiles)}");
+
+      profileOut = profileOutput
+        { inherit profile;
+          backendProfileOutput =
+            backend.profileOutput { inherit profile; };
+        };
+    in { inherit profile profileOut; };
+
 in
 {
-  inherit workbench runWorkbench runJq;
+  inherit workbench runWorkbench runJq with-workbench-profile;
 
   inherit generateProfiles profileOutput shellHook;
 }

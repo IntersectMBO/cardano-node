@@ -50,7 +50,7 @@ let
   haveGlibcLocales = pkgs.glibcLocales != null && stdenv.hostPlatform.libc == "glibc";
 
   shell =
-    let cluster = pkgs.commonLib.mkSupervisordCluster
+    let cluster = pkgs.commonLib.workbench-supervisord
       { inherit profileName;
         useCabalRun = true;
       };
@@ -136,7 +136,7 @@ let
   };
 
   devops =
-    let cluster = pkgs.commonLib.mkSupervisordCluster
+    let cluster = pkgs.commonLib.workbench-supervisord
       { profileName = "devops-alzo";
         useCabalRun = false;
       };

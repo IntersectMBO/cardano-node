@@ -157,11 +157,12 @@ EOF
         local dir=${1:?$usage}; shift
 
         local i=0 pools=$(jq .composition.n_pool_hosts $dir/profile.json)
-        msg_ne "supervisor:  waiting until all nodes are stopped: 00000"
+        msg_ne "supervisor:  waiting until all pool nodes are stopped: 000000"
         for ((pool_ix=0; pool_ix < $pools; pool_ix++))
         do while supervisorctl status node-${pool_ix} > /dev/null
-           do echo -ne "\b\b\b\b\b\b"; printf "%6d" $i >&2; i=$((i+1)); sleep 1; done
-           done
+           do echo -ne "\b\b\b\b\b\b"; printf "%6d" $i;          i=$((i+1)); sleep 1; done
+              echo -ne "\b\b\b\b\b\b"; echo -n "node-${pool_ix} 000000"
+           done >&2
         echo " done." >&2;;
 
     stop-cluster )
