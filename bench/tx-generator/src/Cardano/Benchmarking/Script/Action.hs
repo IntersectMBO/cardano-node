@@ -12,15 +12,16 @@ import           Cardano.Benchmarking.Script.Types
 action :: Action -> ActionM ()
 action a = case a of
   Set (key :=> (Identity val)) -> set (User key) val
+  InitWallet name -> initWallet name
   SetProtocolParameters p -> setProtocolParameters p
   StartProtocol filePath -> startProtocol filePath
   ReadSigningKey name filePath -> readSigningKey name filePath
   DefineSigningKey name descr -> defineSigningKey name descr
-  AddFund txIn lovelace keyName -> addFund txIn lovelace keyName
+  AddFund wallet txIn lovelace keyName -> addFund wallet txIn lovelace keyName
   Delay t -> delay t
-  ImportGenesisFund submitMode genesisKey fundKey -> importGenesisFund submitMode genesisKey fundKey
-  CreateChange payMode submitMode value count -> createChange payMode submitMode value count
-  RunBenchmark submitMode spendMode thread count tps -> runBenchmark submitMode spendMode thread count tps
+  ImportGenesisFund wallet submitMode genesisKey fundKey -> importGenesisFund wallet submitMode genesisKey fundKey
+  CreateChange sourceWallet dstWallet payMode submitMode value count -> createChange sourceWallet dstWallet payMode submitMode value count
+  RunBenchmark sourceWallet submitMode spendMode thread count tps -> runBenchmark sourceWallet submitMode spendMode thread count tps
   WaitBenchmark thread -> waitBenchmark thread
   CancelBenchmark thread -> cancelBenchmark thread
   WaitForEra era -> waitForEra era

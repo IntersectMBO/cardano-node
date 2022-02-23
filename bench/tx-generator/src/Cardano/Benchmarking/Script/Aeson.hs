@@ -143,10 +143,12 @@ readProtocolParametersFile = parseJSONFile fromJSON
 
 instance ToJSON KeyName         where toJSON (KeyName a) = toJSON a
 instance ToJSON ThreadName      where toJSON (ThreadName a) = toJSON a
+instance ToJSON WalletName      where toJSON (WalletName a) = toJSON a
 instance ToJSON SigningKeyFile  where toJSON (SigningKeyFile a) = toJSON a
 
 instance FromJSON KeyName         where parseJSON a = KeyName <$> parseJSON a
 instance FromJSON ThreadName      where parseJSON a = ThreadName <$> parseJSON a
+instance FromJSON WalletName      where parseJSON a = WalletName <$> parseJSON a
 instance FromJSON SigningKeyFile  where parseJSON a = SigningKeyFile <$> parseJSON a
 
 instance ToJSON NetworkId where

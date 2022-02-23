@@ -33,6 +33,7 @@ let
   lowLevelTxGenScript =
     cfg: with cfg; with pkgs.lib;
     [
+      { InitWallet = defaultWallet; }
       { Set.SNumberOfInputsPerTx   = inputs_per_tx; }
       { Set.SNumberOfOutputsPerTx  = outputs_per_tx; }
       { Set.SNumberOfTxs           = tx_count; }
@@ -45,7 +46,7 @@ let
       { Set.STargets               = targetNodesList cfg.targetNodes;}
       { Set.SLocalSocket  = localNodeSocketPath; }
       { ReadSigningKey    = [ "pass-partout" sigKey]; }
-      { ImportGenesisFund = [ { LocalSocket = []; } "pass-partout"  "pass-partout" ]; }
+      { ImportGenesisFund = [ defaultWallet { LocalSocket = []; } "pass-partout"  "pass-partout" ]; }
       { Delay             = init_cooldown; }
     ]
     ++
@@ -72,6 +73,8 @@ let
           # Therefore this first creates a matching regular output
           # and turns that into a collateral right in the next step.
             { CreateChange = [
+                defaultWallet
+                defaultWallet
                 { LocalSocket = []; }
                 { PayToAddr = "pass-partout"; }
                 (safeCollateral + tx_fee)
@@ -79,10 +82,12 @@ let
               ];
             }
             { CreateChange = [
+                defaultWallet
+                defaultWallet
                 { LocalSocket = []; }
                 { PayToCollateral = "pass-partout"; }
                 safeCollateral
-                count
+                1
               ];
             }
           ]
@@ -91,6 +96,7 @@ let
     ++
     [
       { RunBenchmark = [
+          defaultWallet
           ( if !debugMode
             then { NodeToNode = []; }
             else { LocalSocket = []; }
@@ -121,7 +127,8 @@ let
       then [ { WaitBenchmark = "tx-submit-benchmark"; } ]
       else [ ]
     )
-    ;
+  ;
+  defaultWallet = "defaultWallet";
   defaultGeneratorScriptFn = lowLevelTxGenScript;
   ## The standard decision procedure for the run script:
   ##
@@ -138,6 +145,8 @@ let
 
   createChangeScript = cfg: value: count:
     [ { CreateChange = [
+          defaultWallet
+          defaultWallet
           { LocalSocket = []; }
           { PayToAddr = "pass-partout"; }
           value
@@ -149,6 +158,8 @@ let
 
   createChangeScriptPlutus = cfg: value: count:
     [ { CreateChange = [
+          defaultWallet
+          defaultWallet
           { LocalSocket = []; }
           { PayToScript = if cfg.plutusAutoMode
                           then [ (plutusScriptFile cfg "loop.plutus") 0 ]
