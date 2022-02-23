@@ -166,6 +166,10 @@ let
       packages.plutus-core.components.library.ghcOptions = [ "-fexternal-interpreter" ];
     })
     {
+      # Enable harder optimisations globally.
+      ghcOptions = [ "-O2" ];
+    }
+    {
       packages = lib.genAttrs projectPackages
         (name: { configureFlags = [ "--ghc-option=-Werror" ]; });
     }
