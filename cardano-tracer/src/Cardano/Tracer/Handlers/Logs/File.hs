@@ -13,17 +13,14 @@ module Cardano.Tracer.Handlers.Logs.File
 import           Control.Concurrent.Extra (Lock, withLock)
 import           Control.Monad (unless)
 import           Control.Monad.Extra (ifM)
-import           Data.Aeson (ToJSON, (.=), object, toJSON)
-import           Data.Aeson.Text (encodeToLazyText)
+import           Data.Aeson ((.=), pairs)
+import           Data.Aeson.Encoding (encodingToLazyByteString)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Char (isDigit)
 import           Data.Maybe (mapMaybe)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
-import qualified Data.Text.Lazy as TL
-import qualified Data.Text.Lazy.Encoding as TLE
-import           Data.Time.Clock (UTCTime)
 import           Data.Time.Format (defaultTimeLocale, formatTime)
 import           System.Directory
 import           System.Directory.Extra (listFiles)
@@ -60,9 +57,9 @@ writeTraceObjectsToFile nodeId currentLogLock rootDir ForMachine traceObjects = 
   let itemsToWrite = mapMaybe traceObjectToJSON traceObjects
   unless (null itemsToWrite) $ do
     pathToCurrentLog <- getPathToCurrentlog nodeId rootDir ForMachine
-    let preparedLine = TLE.encodeUtf8 $ TL.concat itemsToWrite
+    let preparedLine = TE.encodeUtf8 $ T.concat itemsToWrite
     withLock currentLogLock $
-      LBS.appendFile pathToCurrentLog preparedLine
+      BS.appendFile pathToCurrentLog preparedLine
 
 -- | Returns the path to the current log. Prepares the structure for the log files if needed:
 --
@@ -124,36 +121,27 @@ mkName :: Namespace -> T.Text
 mkName []    = "noname"
 mkName names = T.intercalate "." names
 
--- | The type for converting 'TraceObject' to JSON.
-data TraceObjectForJSON = TraceObjectForJSON
-  { jAt   :: !UTCTime
-  , jNS   :: !T.Text
-  , jData :: !T.Text
-  , jHost :: !T.Text
-  , jSev  :: !T.Text
-  , jTId  :: !T.Text
-  }
-
-instance ToJSON TraceObjectForJSON where
-  toJSON toJ = object
-    [ "at"     .= formatTime defaultTimeLocale "%FT%T%2Q%Z" (jAt toJ)
-    , "ns"     .= jNS toJ
-    , "data"   .= jData toJ
-    , "host"   .= jHost toJ
-    , "sev"    .= jSev toJ
-    , "thread" .= jTId toJ
-    ]
-
-traceObjectToJSON :: TraceObject -> Maybe TL.Text
+traceObjectToJSON :: TraceObject -> Maybe T.Text
 traceObjectToJSON TraceObject{toMachine, toTimestamp, toNamespace, toHostname, toSeverity, toThreadId} =
   case toMachine of
     Nothing -> Nothing
-    Just msgForMachine -> Just . TL.append (TL.fromStrict nl) . encodeToLazyText $
-      TraceObjectForJSON
-        { jAt   = toTimestamp
-        , jNS   = mkName toNamespace
-        , jData = msgForMachine
-        , jHost = T.pack toHostname
-        , jSev  = T.pack $ show toSeverity
-        , jTId  = T.filter isDigit toThreadId
-        }
+    Just msgForMachine -> Just
+      . T.append nl
+      . prepareData
+      . TE.decodeUtf8
+      . LBS.toStrict
+      . encodingToLazyByteString
+      . pairs $    "at"     .= formatTime defaultTimeLocale "%FT%T%2Q%Z" toTimestamp
+                <> "ns"     .= mkName toNamespace
+                <> "data"   .= msgForMachine
+                <> "sev"    .= T.pack (show toSeverity)
+                <> "thread" .= T.filter isDigit toThreadId
+                <> "host"   .= T.pack toHostname
+ where
+  -- 'msgForMachine' is a text, but we definitely know that it contains JSON.
+  -- By default it would be added to result JSON-object as a text with '\\'.
+  -- To avoid this, remove unnecessary backslashes and double quotes.
+  prepareData =
+      T.replace "}\",\"sev\""  "},\"sev\""
+    . T.replace "\"data\":\"{" "\"data\":{"
+    . T.replace "\\"           ""
