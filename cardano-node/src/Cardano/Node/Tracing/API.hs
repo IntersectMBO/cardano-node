@@ -10,6 +10,8 @@ module Cardano.Node.Tracing.API
 import           Prelude
 
 import           "contra-tracer" Control.Tracer (traceWith)
+import           "trace-dispatcher" Control.Tracer (nullTracer)
+import qualified Data.Map as Map
 import           Data.Maybe (fromMaybe)
 import           Data.Time.Clock (getCurrentTime)
 
@@ -43,7 +45,6 @@ initTraceDispatcher ::
   forall blk p2p.
   ( RunNode blk
   , TraceConstraints blk
-
   , LogFormatting (LedgerEvent blk)
   , LogFormatting
     (TraceLabelPeer (ConnectionId RemoteAddress) (TraceChainSyncClientEvent blk))
@@ -58,25 +59,7 @@ initTraceDispatcher nc p networkMagic nodeKernel p2pMode = do
   trConfig <- readConfiguration (unConfigPath $ ncConfigFile nc)
 --  trace ("TraceConfig " <> show trConfig) $ pure ()
 
-  ekgStore <- EKG.newStore
-  ekgTrace <- ekgTracer (Left ekgStore)
-
-  -- TODO: check if this is the correct way to use withIOManager
-  (forwardSink, dpStore) <-
-    withIOManager $ \iomgr ->
-      initForwarding iomgr trConfig networkMagic ekgStore
-
-  stdoutTrace <- standardTracer
-
-  tracers <-
-    mkDispatchTracers
-      nodeKernel
-      stdoutTrace
-      (forwardTracer forwardSink)
-      (Just ekgTrace)
-      (dataPointTracer dpStore)
-      trConfig
-      p2pMode
+  tracers <- mkTracers trConfig
 
   traceWith (nodeStateTracer tracers) NodeTracingOnlineConfiguring
 
@@ -94,3 +77,38 @@ initTraceDispatcher nc p networkMagic nodeKernel p2pMode = do
     >>= traceWith (nodeInfoTracer tracers)
 
   pure tracers
+ where
+  mkTracers trConfig = do
+    ekgStore <- EKG.newStore
+    ekgTrace <- ekgTracer (Left ekgStore)
+
+    stdoutTrace <- standardTracer
+
+    -- We should initialize forwarding only if 'Forwarder' backend
+    -- is presented in the node's configuration.
+    (fwdTracer, dpTracer) <-
+      if forwarderBackendEnabled
+        then do
+          -- TODO: check if this is the correct way to use withIOManager
+          (forwardSink, dpStore) <- withIOManager $ \iomgr ->
+            initForwarding iomgr trConfig networkMagic ekgStore
+          pure (forwardTracer forwardSink, dataPointTracer dpStore)
+        else
+          -- Since 'Forwarder' backend isn't enabled, there is no forwarding.
+          -- So we use nullTracers to ignore 'TraceObject's and 'DataPoint's.
+          pure (Trace nullTracer, Trace nullTracer)
+
+    mkDispatchTracers
+      nodeKernel
+      stdoutTrace
+      fwdTracer
+      (Just ekgTrace)
+      dpTracer
+      trConfig
+      p2pMode
+   where
+    forwarderBackendEnabled =
+      any checkForwarder . concat . Map.elems $ tcOptions trConfig
+
+    checkForwarder (ConfBackend backends) = Forwarder `elem` backends
+    checkForwarder _ = False
