@@ -46,17 +46,9 @@ def genesis_profile_variants:
       }
     }
   , { name: "smoke"
-    , scenario: "fixed"
-    , genesis: { utxo: 100, delegators: 9 }
-    , node:
-      { shutdown_on_slot_synced: 150
-      }
-    }
-  , { name: "smoke-loaded"
     , scenario: "fixed-loaded"
-    , genesis: { utxo: 100, delegators: 9 }
     , node:
-      { shutdown_on_slot_synced: 150
+      { shutdown_on_slot_synced: 50
       }
     , generator: { tps: 10 }
     }

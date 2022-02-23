@@ -214,7 +214,9 @@
             "dockerImage/submit-api" = pkgs.submitApiDockerImage;
             membenches = membench.outputs.packages.x86_64-linux.batch-report;
             snapshot = membench.outputs.packages.x86_64-linux.snapshot;
-            workbench-smoke-test = pkgs.clusterNix.smoke-test { profileName = "smoke-loaded-alzo"; };
+            workbench-smoke-test     = pkgs.clusterNix.profile-run-supervisord { profileName = "smoke-alzo"; };
+            workbench-smoke-analysis = pkgs.clusterNix.workbench.run-analysis
+              { inherit pkgs; run = workbench-smoke-test; trace = true; };
           }
             # Add checks to be able to build them individually
             // (prefixNamesWith "checks/" checks);

@@ -210,7 +210,7 @@ let
           --cache-dir    ./cache              \
           --base-port    ${toString basePort} \
 
-      ## Cleanup:
+      ## Convert structure from $out/run/RUN-ID/* to $out/*:
       rm -rf cache
       rm -f run/{current,-current} genesis
       mv    run/env.json .

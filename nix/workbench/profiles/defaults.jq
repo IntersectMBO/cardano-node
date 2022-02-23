@@ -13,11 +13,12 @@ def era_defaults($era):
   , composition:
     { locations:                      ["LO"]
     , n_bft_hosts:                    0
-    , n_singular_hosts:               2
+    , n_singular_hosts:               5
     , n_dense_hosts:                  1
     , dense_pool_density:             1
     , with_proxy:                     false
-    , with_observer:                  true
+    , with_observer:                  false
+    , topology:                       "line"
     }
 
   , genesis:
