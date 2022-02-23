@@ -1194,8 +1194,6 @@ namesForInboundGovernor TrInboundGovernorCounters {} = ["InboundGovernorCounters
 namesForInboundGovernor TrRemoteState {}           = ["RemoteState"]
 namesForInboundGovernor InboundGovernor.TrUnexpectedlyFalseAssertion {} =
                             ["UnexpectedlyFalseAssertion"]
-namesForInboundGovernor InboundGovernor.TrInboundGovernorError {} =
-                            ["InboundGovernorError"]
 
 severityInboundGovernor :: InboundGovernorTrace peerAddr -> SeverityS
 severityInboundGovernor TrNewConnection {}                              = Debug
@@ -1214,7 +1212,6 @@ severityInboundGovernor TrMuxErrored {}                                 = Info
 severityInboundGovernor TrInboundGovernorCounters {}                    = Info
 severityInboundGovernor TrRemoteState {}                                = Debug
 severityInboundGovernor InboundGovernor.TrUnexpectedlyFalseAssertion {} = Error
-severityInboundGovernor InboundGovernor.TrInboundGovernorError {}       = Error
 
 instance (ToJSON addr, Show addr)
       => LogFormatting (InboundGovernorTrace addr) where
@@ -1297,10 +1294,6 @@ instance (ToJSON addr, Show addr)
     mkObject [ "kind" .= String "UnexpectedlyFalseAssertion"
              , "remoteSt" .= String (pack . show $ info)
              ]
-  forMachine _dtal (InboundGovernor.TrInboundGovernorError err) =
-    mkObject [ "kind" .= String "InboundGovernorError"
-             , "remoteSt" .= String (pack . show $ err)
-             ]
   forHuman = pack . show
   asMetrics (TrInboundGovernorCounters InboundGovernorCounters {..}) =
             [ IntM
@@ -1341,9 +1334,6 @@ protoRemoteAddr = SockAddrUnix "loopback"
 
 protoLocalAddress :: LocalAddress
 protoLocalAddress = LocalAddress "loopback"
-
--- protoIGAssertionLocation :: peerAddr -> IGAssertionLocation peerAddr
--- protoIGAssertionLocation pa = InboundGovernorLoop Nothing protoAbstractState
 
 
 -- Not possible to prvide such prototype,
@@ -1430,10 +1420,6 @@ docInboundGovernor peerAddr = Documented
       ""
   -- ,  DocMsg
   --     (InboundGovernor.TrUnexpectedlyFalseAssertion protoIGAssertionLocation)
-  --     []
-  --     ""
-  -- ,  DocMsg
-  --     (InboundGovernor.TrInboundGovernorError protoSomeException)
   --     []
   --     ""
   ]

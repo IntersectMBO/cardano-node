@@ -28,10 +28,9 @@
     #   };
     # };
     customConfig.url = "github:input-output-hk/empty-flake";
-    plutus-example.url = "github:input-output-hk/cardano-node/814df2c146f5d56f8c35a681fe75e85b905aed5d";
   };
 
-  outputs = { self, nixpkgs, utils, haskellNix, iohkNix, customConfig, membench, plutus-example }:
+  outputs = { self, nixpkgs, utils, haskellNix, iohkNix, customConfig, membench }:
     let
       inherit (nixpkgs) lib;
       inherit (lib) head systems mapAttrs recursiveUpdate mkDefault
@@ -57,7 +56,6 @@
             // iohkNix.lib
             // final.cardanoLib
             // import ./nix/svclib.nix { inherit (final) pkgs; };
-          inherit (plutus-example.packages.${final.system}) plutus-example;
         })
         (import ./nix/pkgs.nix)
       ];

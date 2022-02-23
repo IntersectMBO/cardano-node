@@ -140,6 +140,7 @@ let
     [ "tests" "cardano-node-chairman" ]
     [ "tests" "cardano-testnet" ]
     [ "plutus-scripts" ]
+    [ "exes" "plutus-example" ] [ "haskellPackages" "plutus-example" ] [ "tests" "plutus-example" ] [ "checks" "tests" "plutus-example"]
   ] ++ onlyBuildOnDefaultSystem;
   noMusl64Build = [
     ["checks"] ["tests"] ["benchmarks"] ["haskellPackages"] ["plan-nix"]
