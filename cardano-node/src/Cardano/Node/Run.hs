@@ -38,6 +38,7 @@ import           System.Directory (canonicalizePath, createDirectoryIfMissing, m
 import           System.Environment (lookupEnv)
 
 #ifdef UNIX
+import           GHC.Weak (deRefWeak)
 import           System.Posix.Files
 import qualified System.Posix.Signals as Signals
 import           System.Posix.Types (FileMode)
@@ -105,6 +106,8 @@ runNode
   :: PartialNodeConfiguration
   -> IO ()
 runNode cmdPc = do
+    installSigTermHandler
+
     -- TODO: Remove sodiumInit: https://github.com/input-output-hk/cardano-base/issues/175
     Crypto.sodiumInit
 
@@ -145,6 +148,26 @@ runNode cmdPc = do
     case p of
       SomeConsensusProtocol _ runP ->
         handleNodeWithTracers cmdPc nc p networkMagic runP
+
+-- | Workaround to ensure that the main thread throws an async exception on
+-- receiving a SIGTERM signal.
+installSigTermHandler :: IO ()
+installSigTermHandler = do
+#ifdef UNIX
+  -- Similar implementation to the RTS's handling of SIGINT (see GHC's
+  -- https://gitlab.haskell.org/ghc/ghc/-/blob/master/libraries/base/GHC/TopHandler.hs).
+  runThreadIdWk <- mkWeakThreadId =<< myThreadId
+  _ <- Signals.installHandler
+    Signals.sigTERM
+    (Signals.CatchOnce $ do
+      runThreadIdMay <- deRefWeak runThreadIdWk
+      case runThreadIdMay of
+        Nothing -> return ()
+        Just runThreadId -> killThread runThreadId
+    )
+    Nothing
+#endif
+  return ()
 
 handleNodeWithTracers
   :: ( TraceConstraints blk
