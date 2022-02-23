@@ -26,7 +26,7 @@ module Cardano.Api.Modes (
     AnyEraInMode(..),
     toEraInMode,
 
-    -- * Connection paramaters for each mode
+    -- * Connection parameters for each mode
     ConsensusModeParams(..),
     AnyConsensusModeParams(..),
     Byron.EpochSlots(..),
@@ -122,8 +122,8 @@ renderMode (AnyConsensusMode ShelleyMode) = "ShelleyMode"
 renderMode (AnyConsensusMode CardanoMode) = "CardanoMode"
 
 -- | The subset of consensus modes that consist of multiple eras. Some features
--- are not supported in single-era modes (for exact compatibility with not
--- using the hard fork combinatior at all).
+-- are not supported in single-era modes (for exact compatibility without
+-- using the hard fork combination at all).
 --
 data ConsensusModeIsMultiEra mode where
      CardanoModeIsMultiEra :: ConsensusModeIsMultiEra CardanoMode

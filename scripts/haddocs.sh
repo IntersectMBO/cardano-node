@@ -7,7 +7,7 @@
 # $1 - where to put the generated pages, this directory contents will be wiped
 #      out (so don't pass `/` or `./` - the latter will delete your 'dist-newstyle')
 #      (the default is './haddocks')
-# $2 - weahter to re-build haddocjs with `cabal haddock` command or a component name
+# $2 - whether to re-build haddocjs with `cabal haddock` command or a component name
 #      (the default is true)
 # $3 - cabal build directory
 #      (the default is "dist-newstyle")
@@ -34,7 +34,7 @@ fi
 # * `doc-index.json` and `doc-index.html` per package
 # * we can generate top level `doc-index.json` (which will only work at the top
 #   level).
-# * we could ammend package level `doc-index.json` files, but it's enough ...
+# * we could amend package level `doc-index.json` files, but it's enough ...
 #   this should be fixed upstream.
 HADDOCK_OPTS=(
     --builddir "${BUILD_DIR}"

@@ -63,7 +63,7 @@ case "$op" in
         if test -n "${regenesis_causes[*]}"
         then msg "genesis: generating due to ${regenesis_causes[*]}:  $cache_key @$cache_path"
              jqtest .genesis.single_shot "$profile_json" ||
-                 fatal "Incremental (non single-shot) genesis is not suppored."
+                 fatal "Incremental (non single-shot) genesis is not supported."
 
              if profile has-preset "$profile_json"
              then local preset=$(jq .preset "$profile_json" -r)

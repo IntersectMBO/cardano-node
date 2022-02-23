@@ -3,7 +3,7 @@
 
 module Cardano.Logging.Test.Oracles (
     oracleMessages
-  , occurences
+  , occurrences
   ) where
 
 import qualified Data.Text as T
@@ -70,18 +70,18 @@ hasStdoutBackend (_ : rest)     = hasStdoutBackend rest
 includedExactlyOnce :: Message -> [FormattedMessage] -> Bool
 includedExactlyOnce msg list =
     let msgID = getMessageID msg
-    in case occurences msgID list of
+    in case occurrences msgID list of
           1 -> True
           0 -> False
-          _ -> error $ "Multiple occurences of message " <> show msgID
+          _ -> error $ "Multiple occurrences of message " <> show msgID
 
 -- | How often does the message with this id appears in the list of
--- formatted messsages?
-occurences :: MessageID -> [FormattedMessage] -> Int
-occurences _mid [] = 0
-occurences  mid (fmsg : rest) = if isMessageWithId mid fmsg
-                                  then 1 + occurences mid rest
-                                  else occurences mid rest
+-- formatted messages?
+occurrences :: MessageID -> [FormattedMessage] -> Int
+occurrences _mid [] = 0
+occurrences  mid (fmsg : rest) = if isMessageWithId mid fmsg
+                                  then 1 + occurrences mid rest
+                                  else occurrences mid rest
 
 -- | Returns true if the given message has this id, otherwise false
 isMessageWithId :: MessageID -> FormattedMessage -> Bool
@@ -104,7 +104,7 @@ idInText mid txt =
     Nothing -> False
     Just i  -> i == mid
 
--- | Extract a messageID from a text. It is always fumnd in the form '<?..>'
+-- | Extract a messageID from a text. It is always found in the form '<?..>'
 extractId :: T.Text -> Maybe Int
 extractId txt =
   let ntxt = T.takeWhile (/= '>')

@@ -202,8 +202,8 @@ handleNodeWithTracers  cmdPc nc p networkMagic runP = do
         >>= mapM_ (traceWith $ startupTracer tracers)
 
       Async.withAsync (handlePeersListSimple (error "Implement Tracer IO [Peer blk]") nodeKernelData)
-          $ \_peerLogingThread ->
-            -- We ignore peer loging thread if it dies, but it will be killed
+          $ \_peerLoggingThread ->
+            -- We ignore peer logging thread if it dies, but it will be killed
             -- when 'handleSimpleNode' terminates.
                 handleSimpleNode runP p2pMode tracers nc
                   (setNodeKernel nodeKernelData)

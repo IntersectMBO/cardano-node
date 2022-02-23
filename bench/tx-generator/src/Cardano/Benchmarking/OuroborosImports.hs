@@ -50,7 +50,7 @@ type CardanoBlock = Consensus.CardanoBlock StandardCrypto
 
 toProtocolInfo :: SomeConsensusProtocol -> ProtocolInfo IO CardanoBlock
 toProtocolInfo (SomeConsensusProtocol CardanoBlockType info) = protocolInfo info
-toProtocolInfo _ = error "toProtocolInfo unkown protocol"
+toProtocolInfo _ = error "toProtocolInfo unknown protocol"
 
 getGenesis :: SomeConsensusProtocol -> ShelleyGenesis StandardShelley
 getGenesis (SomeConsensusProtocol CardanoBlockType info) = shelleyBasedGenesis

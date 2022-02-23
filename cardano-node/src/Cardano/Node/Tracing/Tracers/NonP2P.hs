@@ -498,18 +498,18 @@ docErrorPolicy' adr = Documented [
         (WithAddr adr
           (ErrorPolicyUnhandledApplicationException anyProto))
         []
-        "An application throwed an exception, which was not handled."
+        "An application threw an exception, which was not handled."
     , DocMsg
         (WithAddr adr
           (ErrorPolicyUnhandledConnectionException anyProto))
         []
-        "'connect' throwed an exception, which was not handled by any\
+        "'connect' threw an exception, which was not handled by any\
         \ 'ErrorPolicy'."
     , DocMsg
         (WithAddr adr
           (ErrorPolicyAcceptException anyProto))
         []
-        "'accept' throwed an exception."
+        "'accept' threw an exception."
     ]
 
 --------------------------------------------------------------------------------
@@ -524,7 +524,7 @@ severityAcceptPolicy NtN.ServerTraceAcceptConnectionResume {}       = Info
 
 namesForAcceptPolicy :: NtN.AcceptConnectionsPolicyTrace -> [Text]
 namesForAcceptPolicy NtN.ServerTraceAcceptConnectionRateLimiting {} =
-    ["ConectionRateLimiting"]
+    ["ConnectionRateLimiting"]
 namesForAcceptPolicy NtN.ServerTraceAcceptConnectionHardLimit {} =
     ["ConnectionHardLimit"]
 namesForAcceptPolicy NtN.ServerTraceAcceptConnectionResume {} =

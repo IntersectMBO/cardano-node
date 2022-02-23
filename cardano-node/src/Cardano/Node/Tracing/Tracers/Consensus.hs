@@ -119,7 +119,7 @@ instance LogFormatting a => LogFormatting (TraceLabelCreds a) where
     mkObject [ "credentials" .= toJSON creds
              , "val"         .= forMachine dtal a
             ]
--- TODO Trace lable creds as well
+-- TODO Trace label creds as well
   forHuman (TraceLabelCreds _t a)         = forHuman a
   asMetrics (TraceLabelCreds _t a)        = asMetrics a
 

@@ -90,7 +90,7 @@ namesForTChainSyncNode (BlockFetch.TraceLabelPeer _ v) = "NodeToNode" : namesTCh
   where
 
     namesTChainSync (TraceSendMsg msg) = "Send" : namesTChainSync' msg
-    namesTChainSync (TraceRecvMsg msg) = "Recieve" : namesTChainSync' msg
+    namesTChainSync (TraceRecvMsg msg) = "Receive" : namesTChainSync' msg
 
     namesTChainSync' (AnyMessageAndAgency _agency msg) = namesTChainSync'' msg
 
@@ -136,7 +136,7 @@ namesForTChainSyncSerialised (BlockFetch.TraceLabelPeer _ v) =
   "NodeToNode" : namesTChainSync v
   where
     namesTChainSync (TraceSendMsg msg) = "Send" : namesTChainSync' msg
-    namesTChainSync (TraceRecvMsg msg) = "Recieve" : namesTChainSync' msg
+    namesTChainSync (TraceRecvMsg msg) = "Receive" : namesTChainSync' msg
 
     namesTChainSync' (AnyMessageAndAgency _agency msg) = namesTChainSync'' msg
 
@@ -179,7 +179,7 @@ namesForTBlockFetch (BlockFetch.TraceLabelPeer _ v) =
   "NodeToNode" : namesTBlockFetch v
   where
     namesTBlockFetch (TraceSendMsg msg) = "Send" : namesTBlockFetch' msg
-    namesTBlockFetch (TraceRecvMsg msg) = "Recieve" : namesTBlockFetch' msg
+    namesTBlockFetch (TraceRecvMsg msg) = "Receive" : namesTBlockFetch' msg
 
     namesTBlockFetch' (AnyMessageAndAgency _agency msg) = namesTBlockFetch'' msg
 
@@ -318,7 +318,7 @@ namesForTBlockFetchSerialised (BlockFetch.TraceLabelPeer _ v) =
   "NodeToNode" : namesTBlockFetch v
   where
     namesTBlockFetch (TraceSendMsg msg) = "Send" : namesTBlockFetch' msg
-    namesTBlockFetch (TraceRecvMsg msg) = "Recieve" : namesTBlockFetch' msg
+    namesTBlockFetch (TraceRecvMsg msg) = "Receive" : namesTBlockFetch' msg
 
     namesTBlockFetch' (AnyMessageAndAgency _agency msg) = namesTBlockFetch'' msg
 
@@ -414,7 +414,7 @@ namesForTxSubmissionNode (BlockFetch.TraceLabelPeer _ v) =
   "NodeToNode" : namesTxSubNode v
   where
     namesTxSubNode (TraceSendMsg msg) = "Send" : namesTxSubNode' msg
-    namesTxSubNode (TraceRecvMsg msg) = "Recieve" : namesTxSubNode' msg
+    namesTxSubNode (TraceRecvMsg msg) = "Receive" : namesTxSubNode' msg
 
     namesTxSubNode' (AnyMessageAndAgency _agency msg) = namesTxSubNode'' msg
 
@@ -606,7 +606,7 @@ namesForTxSubmission2Node (BlockFetch.TraceLabelPeer _ v) =
   "NodeToNode" : namesTxSubNode v
   where
     namesTxSubNode (TraceSendMsg msg) = "Send" : namesTxSubNode' msg
-    namesTxSubNode (TraceRecvMsg msg) = "Recieve" : namesTxSubNode' msg
+    namesTxSubNode (TraceRecvMsg msg) = "Receive" : namesTxSubNode' msg
 
     namesTxSubNode' (AnyMessageAndAgency _agency msg) = namesTxSubNode'' msg
 

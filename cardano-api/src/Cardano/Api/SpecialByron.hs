@@ -109,7 +109,7 @@ data ByronProtocolParametersUpdate =
     , bPpuMaxHeaderSize     :: !(Maybe Natural)
       -- ^ Maximum block header size in bytes.
     , bPpuMaxTxSize         :: !(Maybe Natural)
-      -- ^ Maxiumum transaction size in bytes.
+      -- ^ Maximum transaction size in bytes.
     , bPpuMaxProposalSize   :: !(Maybe Natural)
       -- ^ Maximum update proposal size in bytes.
     , bPpuMpcThd            :: !(Maybe LovelacePortion)

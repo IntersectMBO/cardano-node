@@ -25,7 +25,7 @@ In this example we will use the [AlwaysSucceeds](../../../plutus-example/plutus-
 
 #### Creating the `AlwaysSucceeds` Plutus spending script
 
-The plutus-example executable will automagically generate several Plutus scripts in the CLI-compatiable text envelope format.
+The plutus-example executable will automagically generate several Plutus scripts in the CLI-compatible text envelope format.
 
 Run the following commands:
 
@@ -53,7 +53,7 @@ Follow the instructions displayed in the terminal to start your Alonzo cluster.
 
 #### Sending ADA to the script address
 
-In order to require a Plutus script to validate the spending of a tx ouput, we must put the tx output at the script address of the said Plutus script. However, before we do that, we must create a datum hash:
+In order to require a Plutus script to validate the spending of a tx output, we must put the tx output at the script address of the said Plutus script. However, before we do that, we must create a datum hash:
 
 ```bash
 > cardano-cli transaction hash-script-data --script-data-value 42

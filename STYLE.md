@@ -236,7 +236,7 @@ Some clarifications:
 
 1. Use 2 spaces indentation for export list.
 2. You can split export list into sections or just write all as single section.
-3. It is strongly adviced to sort each section alpabetically. However,
+3. It is strongly advised to sort each section alphabetically. However,
    classes, data types and type aliases should be written before
    functions.
 

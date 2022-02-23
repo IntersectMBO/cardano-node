@@ -32,7 +32,7 @@ assume_cbor_properties
     && prop_bsCostsAlonzo
 
 -- The cost of map entries in metadata follows a step function.
--- This assums the map indecies are [0..n].
+-- This assumes the map indices are [0..n].
 prop_mapCostsShelley :: Bool
 prop_mapCostsAllegra :: Bool
 prop_mapCostsMary    :: Bool

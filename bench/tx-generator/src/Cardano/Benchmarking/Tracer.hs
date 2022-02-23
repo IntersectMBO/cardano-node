@@ -126,7 +126,7 @@ data TraceBenchTxSubmit txid
   | TraceBenchTxSubServAnn [txid]
   -- ^ Announcing txids in response for server's request.
   | TraceBenchTxSubServReq [txid]
-  -- ^ Request for @tx@ recieved from `TxSubmission` protocol
+  -- ^ Request for @tx@ received from `TxSubmission` protocol
   --   peer.
   | TraceBenchTxSubServAck [txid]
   -- ^ An ack (window moved over) received for these transactions.
@@ -141,7 +141,7 @@ data TraceBenchTxSubmit txid
   | TraceBenchTxSubServCons [txid]
   -- ^ Transactions consumed by a submitter.
   | TraceBenchTxSubIdle
-  -- ^ Remote peer requested new transasctions but none were
+  -- ^ Remote peer requested new transactions but none were
   --   available, generator not keeping up?
   | TraceBenchTxSubRateLimit DiffTime
   -- ^ Rate limiter bit, this much delay inserted to keep within
@@ -216,7 +216,7 @@ instance Transformable Text IO NodeToNodeSubmissionTrace where
   trTransformer = trStructured
 
 {-------------------------------------------------------------------------------
-  Low-tevel tracer
+  Low-level tracer
 -------------------------------------------------------------------------------}
 data TraceLowLevelSubmit
   = TraceLowLevelSubmitting

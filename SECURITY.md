@@ -9,9 +9,9 @@ as possible.
 Please provide a clear and concise description of the vulnerability, including:
 
 * the affected version(s) of cardano-node,
-* steps that can be followed to excercise the vulnerability,
-* any workarounds or mitigatations
+* steps that can be followed to exercise the vulnerability,
+* any workarounds or mitigations
 
 If you have developed any code or utilities that can help demonstrate the suspected
-vulberability, please mention them in your email but ***DO NOT*** attempt to include them as
+vulnerability, please mention them in your email but ***DO NOT*** attempt to include them as
 attachments as this may cause your Email to be blocked by spam filters.

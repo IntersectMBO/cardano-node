@@ -100,7 +100,7 @@ queryExpr q =
       { Net.Query.recvMsgResult = f
       }
 
--- | A monad expresion that determines what era the node is in.
+-- | A monad expression that determines what era the node is in.
 determineEraExpr ::
      ConsensusModeParams mode
   -> LocalStateQueryExpr block point (QueryInMode mode) r IO AnyCardanoEra

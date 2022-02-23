@@ -34,7 +34,7 @@ baseStatsDocumented :: Documented Double
 baseStatsDocumented =
   Documented
   [ DocMsg 0.0 [] "This is the value of the measurement"
-  , DocMsg 0.0 [] "This is the sum of all measurments so far"
+  , DocMsg 0.0 [] "This is the sum of all measurements so far"
   ]
 
 emptyStats :: BaseStats

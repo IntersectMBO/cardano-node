@@ -15,7 +15,7 @@ module Cardano.Api.ScriptData (
     validateScriptData,
     ScriptDataRangeError (..),
 
-    -- * Converstion to\/from JSON
+    -- * Conversion to\/from JSON
     ScriptDataJsonSchema (..),
     scriptDataFromJson,
     scriptDataToJson,
@@ -383,7 +383,7 @@ scriptDataToJsonNoSchema = conv
 
 
     -- Script data allows any value as a key, not just string as JSON does.
-    -- For simple types we just convert them to string dirctly.
+    -- For simple types we just convert them to string directly.
     -- For structured keys we render them as JSON and use that as the string.
     convKey :: ScriptData -> Text
     convKey (ScriptDataNumber n) = Text.pack (show n)

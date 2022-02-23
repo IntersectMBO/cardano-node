@@ -3,7 +3,7 @@ let
   ## Standard, simplest possible value transaction workload.
   ##
   ## For definitions of the cfg attributes referred here,
-  ## please see the 'defServiceModule.extraOptionDecls' attset below.
+  ## please see the 'defServiceModule.extraOptionDecls' attrset below.
   basicValueTxWorkload =
     cfg: with cfg; with pkgs.lib;
     [
@@ -46,9 +46,9 @@ let
         else
           [
           # this is a hack !
-          # PayToCollateral will create outputs which are interally tagged as collateral and not available for splitting etc.
+          # PayToCollateral will create outputs which are internally tagged as collateral and not available for splitting etc.
           # If PayToCollateral returns a change value that value will also be tagged as collateral and lost.
-          # Therefor this first creates a matching regular output
+          # Therefore this first creates a matching regular output
           # and turns that into a collateral right in the next step.
           { createChange = safeCollateral + tx_fee; count = 1;
             submitMode.LocalSocket = []; payMode.PayToAddr = "pass-partout";
@@ -164,7 +164,7 @@ in pkgs.commonLib.defServiceModule
         executionMemory = opt int    1000000 "Max memory available for the Plutus script.";
         executionSteps  = opt int  700000000 "Max execution steps available for the Plutus script.";
 
-        debugMode       = opt bool false     "Set debug mode: Redirect benchmarkting txs to localhost.";
+        debugMode       = opt bool false     "Set debug mode: Redirect benchmarking txs to localhost.";
 
         tx_count        = opt int 1000       "How many Txs to send, total.";
         add_tx_size     = opt int 100        "Extra Tx payload, in bytes.";

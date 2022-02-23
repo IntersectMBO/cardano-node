@@ -48,7 +48,7 @@ initForwardSink ForwarderConfiguration{disconnectedQueueSize, connectedQueueSize
     }
 
 -- | There are 4 possible cases when we try to write tracing item:
---   1. The queue is __still__ empty (no tracing items were writen in it).
+--   1. The queue is __still__ empty (no tracing items were written in it).
 --   2. The queue is __already__ empty (all previously written items were taken from it).
 --   3. The queue is full. In this case flush all tracing items to stdout and continue.
 --   4. The queue isn't empty and isn't full. Just continue writing.

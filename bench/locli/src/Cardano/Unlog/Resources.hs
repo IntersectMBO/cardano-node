@@ -21,7 +21,7 @@ import Data.Time.Clock (UTCTime)
 
 import Cardano.Logging.Resources.Types
 
--- | Resouce accumulators
+-- | Resource accumulators
 type ResAccums = Resources (Accum Word64 Word64)
 
 mkResAccums :: ResAccums

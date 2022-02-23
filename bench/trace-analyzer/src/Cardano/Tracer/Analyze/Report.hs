@@ -139,8 +139,8 @@ reportCommonEntry fdbm1 fdbm2 (kindName, kindNameCanonicalized) =
         case Map.lookup kindNameCanonicalized (fdbKindMap fdbm2) of
           Just valuelist2 -> do
             putStrLn $ "\n\nReporting on " <> unpack kindName
-                          <> " old occurences " <> show (length valuelist1)
-                          <> " new occurences " <> show (length valuelist2)
+                          <> " old occurrences " <> show (length valuelist1)
+                          <> " new occurrences " <> show (length valuelist2)
             when (kindName /= kindNameCanonicalized) $
               putStrLn $ "\nCanonicalized as " <> unpack kindNameCanonicalized
             let oldNamespaces = nub $ map (extractNamespace . snd) valuelist1

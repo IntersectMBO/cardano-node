@@ -149,7 +149,7 @@ data AllowRecycle
 -- The problematic case is the reuse of an UTxO/Tx that is not yet confirmed
 -- and still waits in the mempool of an other target-node.
   | ReuseAny
-  | ConfirmedBeforeReuse -- usefull for testing
+  | ConfirmedBeforeReuse -- useful for testing
   deriving (Eq, Ord, Enum, Show)
 
 -- There are many possible heuristics to implement the selectInputs function.
@@ -171,11 +171,11 @@ selectInputs allowRecycle count minTotalValue variant targetNode fs
   where
   selectConfirmed = selectConfirmedSmallValue <|> selectConfirmedBigValue
 
-  isSufficiantCoins coins = length coins == count && sum (map getFundLovelace coins) >= minTotalValue
+  isSufficientCoins coins = length coins == count && sum (map getFundLovelace coins) >= minTotalValue
 
   checkCoins :: String -> [Fund] -> Either String [Fund]
   checkCoins err coins
-    = if isSufficiantCoins coins then Right coins else Left err
+    = if isSufficientCoins coins then Right coins else Left err
 
   -- Share intermediate results for variantIxSet confirmedIxSet and targetIxSet
   -- TODO: it unclear if this helps on the complexity or it it is even harmful.
@@ -188,24 +188,24 @@ selectInputs allowRecycle count minTotalValue variant targetNode fs
 
   selectConfirmedSmallValue
     = checkCoins
-        "selectConfirmedSmall: not enought coins available"
+        "selectConfirmedSmall: not enough coins available"
         (take count $ toAscList (Proxy :: Proxy Lovelace) confirmedIxSet)
 
   selectConfirmedBigValue
     = checkCoins
-        "selectConfirmedSmall: not enought coins available"
+        "selectConfirmedSmall: not enough coins available"
         (take count confirmedBigValueList)
 
   -- reuseSameTargetStrict is problematic: It fails if the coins in the queues are too small. But it will never consume the small coins.
   -- therefore: (reuseSameTargetStrict <|> reuseSameTargetWithBackup)
   reuseSameTargetStrict
     = checkCoins
-        "reuseSameTargetStrict: not enought coins available"
+        "reuseSameTargetStrict: not enough coins available"
         (take count sameTargetList)
 
   -- reuseSameTargetWithBackup can collect some dust.
-  -- reuseSameTargetWithBackup works fine if there is at least one sufficiant confirmed UTxO available.
-  reuseSameTargetWithBackup = checkCoins "reuseSameTargetWithBackup: not enought coins available" (backupCoin ++ targetCoins)
+  -- reuseSameTargetWithBackup works fine if there is at least one sufficient confirmed UTxO available.
+  reuseSameTargetWithBackup = checkCoins "reuseSameTargetWithBackup: not enough coins available" (backupCoin ++ targetCoins)
     where
       -- targetCoins and backupCoins must be disjoint.
       -- This is case because IsConfirmed \= InFlight target.
@@ -217,7 +217,7 @@ selectInputs allowRecycle count minTotalValue variant targetNode fs
   -- reuseAnyCoin is the last resort !
   reuseAnyCoin
     = checkCoins
-        "reuseAnyTarget: not enought coins available"
+        "reuseAnyTarget: not enough coins available"
         (take count $ confirmedBigValueList ++ inFlightCoins)
     where
       -- inFlightCoins and confirmedCoins are disjoint
@@ -240,7 +240,7 @@ selectToBuffer count minValue variant fs
  where
   coins = take count $ toAscList ( Proxy :: Proxy Lovelace) (fs @=variant @= IsConfirmed @>= minValue)
 
--- Todo: check sufficant funds and minimumValuePerUtxo
+-- Todo: check sufficient funds and minimumValuePerUtxo
 inputsToOutputsWithFee :: Lovelace -> Int -> [Lovelace] -> [Lovelace]
 inputsToOutputsWithFee fee count inputs = map (quantityToLovelace . Quantity) outputs
   where

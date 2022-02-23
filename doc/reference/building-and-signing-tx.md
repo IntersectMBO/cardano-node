@@ -80,7 +80,7 @@ Therefore, if N = 200 slots
 
 **Build the transaction**
 
-This time we include all the paramenters:
+This time we include all the parameters:
 
     cardano-cli transaction build-raw \
     --tx-in 4e3a6e7fdcb0d0efa17bf79c13aed2b4cb9baf37fb1aa2e39553d5bd720c5c99#4 \

@@ -11,7 +11,7 @@ To retire a pool we need to:
 6. When the pool is effectively retired, the pool deposit is sent back to the rewards account.
 7. **Wait for any pending rewards to be paid.**
 8. Withdraw any rewards and pool deposit from the rewards account.
-9. **Once you have successfullly withdrawn your rewards and deposit, de-register the stake key**
+9. **Once you have successfully withdrawn your rewards and deposit, de-register the stake key**
 
 **IMPORTANT:**
 **Do NOT deregister your stake key before the pool deposit is paid back to your rewards account or your pool deposit will have no place to go and will be sent to the treasury.**

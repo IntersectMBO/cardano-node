@@ -14,7 +14,7 @@ import           Cardano.Node.Parsers (nodeCLIParser, parserHelpHeader, parserHe
 
 -- | @crunNode@ is an exported C entry point to start a node.
 -- We parese the same arguments as the node CLI, but allow to
--- pass the argumnets as @char *argv[]@ from C.
+-- pass the arguments as @char *argv[]@ from C.
 foreign export ccall "runNode" crunNode :: Int -> Ptr CString -> IO ()
 crunNode :: Int -> Ptr CString -> IO ()
 crunNode argc argv = peekArray argc argv >>= mapM peekCString >>= \args ->
