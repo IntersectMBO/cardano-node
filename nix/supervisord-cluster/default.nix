@@ -145,7 +145,7 @@ let
     ++ optionals (!workbenchDevMode)
     [ workbench.workbench ];
 
-  start = pkgs.writeScriptBin "start-cluster" ''
+  interactive-start = pkgs.writeScriptBin "start-cluster" ''
     set -euo pipefail
 
     export PATH=$PATH:${path}
@@ -162,7 +162,20 @@ let
         echo 'workbench:  cluster started. Run `stop-cluster` to stop' >&2
   '';
 
-  smoke-test =
+  interactive-stop = pkgs.writeScriptBin "stop-cluster" ''
+    set -euo pipefail
+
+    wb finish "$@"
+  '';
+
+  interactive-restart = pkgs.writeScriptBin "restart-cluster" ''
+    set -euo pipefail
+
+    wb run restart "$@" && \
+        echo "workbench:  alternate command for this action:  wb run restart" >&2
+  '';
+
+  profile-run-supervisord =
     { profileName }:
     let inherit
           (workbench.with-workbench-profile
@@ -180,7 +193,7 @@ let
             })
           profile profileOut;
     in
-    pkgs.runCommand "workbench-test-${profileName}"
+    pkgs.runCommand "workbench-run-supervisord-${profileName}"
       { requiredSystemFeatures = [ "benchmark" ];
         nativeBuildInputs = with cardanoNodePackages; with pkgs; [
           bash
@@ -212,7 +225,7 @@ let
 
       ## Convert structure from $out/run/RUN-ID/* to $out/*:
       rm -rf cache
-      rm -f run/{current,-current} genesis
+      rm -f run/{current,-current}
       mv    run/env.json .
 
       tag=$(cd run; ls)
@@ -220,25 +233,13 @@ let
 
       mv       run/$tag/*   .
       rmdir    run/$tag run
-      rm -f             node-*/node.socket
+      rm -f    genesis  node-*/node.socket
       '';
-
-  stop = pkgs.writeScriptBin "stop-cluster" ''
-    set -euo pipefail
-
-    wb finish "$@"
-  '';
-
-  restart = pkgs.writeScriptBin "restart-cluster" ''
-    set -euo pipefail
-
-    wb run restart "$@" && \
-        echo "workbench:  alternate command for this action:  wb run restart" >&2
-  '';
 in
 {
   inherit workbench;
   inherit (workbenchProfiles) profilesJSON;
-  inherit profile stateDir start stop restart;
-  inherit smoke-test;
+  inherit profile stateDir;
+  inherit interactive-start interactive-stop interactive-restart;
+  inherit profile-run-supervisord;
 }
