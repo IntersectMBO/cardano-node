@@ -130,6 +130,7 @@ let
     [ "tx-generator" ]
     [ "tx-generator-profiled" ]
     [ "locli-profiled" ]
+    [ "workbench-smoke-test" ]
   ];
   # Paths or prefix of paths for which cross-builds (mingwW64, musl64) are disabled:
   noCrossBuild = [
@@ -206,6 +207,7 @@ let
       (collectJobs jobs.linux.native.devopsShell)
       (collectJobs jobs.linux.native.devShell)
       [ jobs.cardano-node-linux ]
+      [ jobs.workbench-smoke-test ]
     ]))
     # macOS builds:
     (optionals macosBuild (concatLists [
