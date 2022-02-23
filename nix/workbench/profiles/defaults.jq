@@ -29,8 +29,8 @@ def era_defaults($era):
     , single_shot:                    true
 
     ## UTxO & delegation
-    , total_balance:                  900000000000000
-    , pools_balance:                  800000000000000
+    , per_pool_balance:               1000000000000000
+    , funds_balance:                  10000000000000
     , utxo:                           0
     , decentralisation_param:         0
 
