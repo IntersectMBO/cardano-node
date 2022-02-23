@@ -44,6 +44,7 @@ import           Ouroboros.Consensus.Util.ResourceRegistry (ResourceRegistry)
 import           Ouroboros.Consensus.Util.STM (Watcher (..), forkLinkedWatcher)
 import           Ouroboros.Network.Block (MaxSlotNo (..), SlotNo, pointSlot)
 
+import qualified System.Environment as IO
 import qualified System.IO.Unsafe as IO
 
 data ShutdownTrace
@@ -68,7 +69,8 @@ data ShutdownConfig
 
 hOut :: IO.Handle
 hOut = IO.unsafePerformIO $ do
-  IO.openFile "C:/Users/newho/out.log" IO.WriteMode
+  Just home <- IO.lookupEnv "HOME"
+  IO.openFile (home <> "/output.cardano-node.log") IO.WriteMode
 {-# NOINLINE hOut #-}
 
 
