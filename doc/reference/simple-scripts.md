@@ -169,7 +169,7 @@ With this in mind, we can understand the interpretation of the new expressions:
 + RequireTimeBefore: has a slot number X.
 
   This expression evaluates to `true` if (and only if) the upper bound of the
-  transaction validity interval is a slot number Y, and X <= Y.
+  transaction validity interval is a slot number Y, and Y < X.
 
   This condition guarantees that the actual slot number in which the transaction
   is included is (strictly) less than slot number X.
@@ -177,7 +177,7 @@ With this in mind, we can understand the interpretation of the new expressions:
 + RequireTimeAfter: has a slot number X.
 
   This expression evaluates to `true` if (and only if) the lower bound of the
-  transaction validity interval is a slot number Y, and Y <= X.
+  transaction validity interval is a slot number Y, and Y >= X.
 
   This condition guarantees that the actual slot number in which the transaction
   is included is greater than or equal to slot number X.
