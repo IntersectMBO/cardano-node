@@ -1,5 +1,19 @@
 # Changelog for cardano-api
 
+## 1.34.0 -- February 2022
+
+- Expose `lovelaceToTxOutValue`. (#3381)
+- Implement two functions: `currentEpochEligibleLeadershipSlots` and
+  `nextEpochEligibleLeadershipSlots` to get the leadership slots for the
+  current/next epoch respectively. (#3464, #3494)
+- Various small intenral fixes. (#3466)
+- Add a `capi` library to support using the cardano node as a C library in other
+  software. (#3501)
+- `fromShelleyAddr` now takes an explicit `ShelleyBasedEra` parameter to
+  determine the era. The previous behaviour (with an implicit
+  `IsShelleyBasedEra` constraint) can be obtained with `fromShelleyAddrIsSbe`.
+  (#2253, #3606)
+
 ## 1.33.0 -- December 2021
 ## 1.32.1 -- November 2021
 

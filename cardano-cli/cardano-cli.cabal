@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name:                   cardano-cli
-version:                1.33.0
+version:                1.34.0
 description:            The Cardano command-line interface.
 author:                 IOHK
 maintainer:             operations@iohk.io

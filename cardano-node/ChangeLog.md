@@ -1,5 +1,37 @@
 # Changelog for cardano-node
 
+## 1.34.0 -- February 2022
+
+### node changes
+
+- Separate the logic for shutdown via IPC and shutdown on reaching a specified
+  slot. (#3320, #3508)
+- Tests for certifying and withdrawing Plutus scripts. (#3318)
+- Improvements to the `tx-generator` internal testing infrastructure. (#3448)
+- Various documentation updates. (#2875, #2884, #2839, #2904, #3476, #3482,
+  #3486, #3500, #3502, #3542, #3553, #3573, #3603)
+- Integrate the new tracing system in `cardano-node`. (#3450, #3496, #3497,
+  #3498, #3570)
+- The stake credential history tool now additionally displays the protocol
+  version. (#3409)
+
+### network changes
+
+- Add a new mini-protocol to query the local mempool. (#3404)
+- Additional testing coverage. (#3517)
+- Stop the MUX in case of miniprotocol timeout. This can happen if a peer is
+  demoted to cold, and could result in lingering miniprotocols in an unknown
+  state if the peer is again promoted. (#3575, #3580)
+- Avoid ordering peers based upon peerid in block fetch. Ordering based on
+  peerid would often result in all nodes choosing the same second, third choice
+  peers etc. These are now based on a node-local random ordering. (#3535)
+- Fix a spurious assertion failure that could be seen with regards to demoted
+  hot peers. (#3588)
+
+### consensus changes
+
+- Various internal improvements. (#3557, #3560)
+
 ## 1.33.0 -- December 2021
 
 ### node changes
