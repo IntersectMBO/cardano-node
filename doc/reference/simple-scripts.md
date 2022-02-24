@@ -244,7 +244,7 @@ sub-expressions could be any script type, not just type "sig".
 
 ### Type "any"
 
-This corresponds to the "RequireAllOf" expression above. It specifies the type
+This corresponds to the "RequireAnyOf" expression above. It specifies the type
 "any" and a list of scripts as the sub-expressions.
 
 This example requires signatures from any of three keys, but remember that the
