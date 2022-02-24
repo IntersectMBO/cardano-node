@@ -62,7 +62,10 @@ case "$op" in
                  sort || true);;
 
     compute-path )
-        echo -n "$global_rundir/$1";;
+        if test -f "$1/meta.json"
+        then echo -n "$1"
+        else echo -n "$global_rundir/$1"
+        fi;;
 
     fix-legacy-run-structure | fix-legacy )
         local usage="USAGE: wb run $op TAG"
@@ -99,9 +102,6 @@ case "$op" in
         local usage="USAGE: wb run $op TAG"
         local tag=${1:?$usage}
         local dir=$(run compute-path "$tag")
-
-        test "$(tr -d / <<<$tag)" = "$tag" ||
-            fatal "run tag has slashes:  $tag"
 
         jq_check_json "$dir"/meta.json ||
             fatal "run $tag (at $dir) missing a file:  meta.json"

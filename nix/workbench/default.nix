@@ -42,7 +42,7 @@ let
 
       installPhase = ''
         mkdir -p         $out/bin
-        cp -a wb profiles *.sh *.jq $out/bin
+        cp -a wb chain-filters profiles *.sh *.jq $out/bin
       '';
 
       dontStrip = true;
@@ -160,40 +160,7 @@ let
         runWorkbenchJqOnly "all-profiles.json" "profiles generate-all";
     };
 
-  ## ## This allows forwarding of Nix-expressed computation results to bash-land.
-  profileOutput =
-    { profile
-    , backendProfileOutput ## Backend-specific results for forwarding
-    }:
-    runCommand "workbench-profile-outputs-${profile.name}"
-      { buildInputs = [];
-        nodeServices =
-          __toJSON
-          (flip mapAttrs profile.node-services
-            (name: svc:
-              with svc;
-              { inherit name;
-                service-config = serviceConfig.JSON;
-                start          = startupScript;
-                config         = nodeConfig.JSON;
-                topology       = topology.JSON;
-              }));
-        generatorService =
-          with profile.generator-service;
-          __toJSON
-          { name           = "generator";
-            service-config = serviceConfig.JSON;
-            start          = startupScript;
-            run-script     = runScript.JSON;
-          };
-        passAsFile = [ "nodeServices" "generatorService" ];
-      }
-      ''
-      mkdir $out
-      cp    ${backendProfileOutput}/*  $out
-      cp    $nodeServicesPath          $out/node-services.json
-      cp    $generatorServicePath      $out/generator-service.json
-      '';
+  materialise-profile = import ./profile.nix { inherit pkgs lib; };
 
   with-workbench-profile =
     { pkgs, backend, envArgs, profileName }:
@@ -204,16 +171,18 @@ let
       profile = workbenchProfiles.profiles."${profileName}"
         or (throw "No such profile: ${profileName};  Known profiles: ${toString (__attrNames workbenchProfiles.profiles)}");
 
-      profileOut = profileOutput
+      profileOut = materialise-profile
         { inherit profile;
           backendProfileOutput =
-            backend.profileOutput { inherit profile; };
+            backend.materialise-profile { inherit profile; };
         };
     in { inherit profile profileOut; };
 
+  run-analysis = import ./analyse.nix { inherit profile workbench; };
 in
-{
-  inherit workbench runWorkbench runJq with-workbench-profile;
 
-  inherit generateProfiles profileOutput shellHook;
+{
+  inherit workbench runWorkbench runJq with-workbench-profile run-analysis;
+
+  inherit generateProfiles materialise-profile shellHook;
 }

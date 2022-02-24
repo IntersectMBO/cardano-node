@@ -88,7 +88,7 @@ let
             ByronGenesisFile     = "../genesis/byron/genesis.json";
           });
 
-      profileOutput =
+      materialise-profile =
         { profile }:
         pkgs.runCommand "workbench-profile-outputs-${profile.name}-supervisord" {}
           ''

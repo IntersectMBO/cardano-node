@@ -217,6 +217,9 @@
             workbench-smoke-test     = pkgs.clusterNix.profile-run-supervisord { profileName = "smoke-alzo"; };
             workbench-smoke-analysis = pkgs.clusterNix.workbench.run-analysis
               { inherit pkgs; run = workbench-smoke-test; trace = true; };
+            workbench-ci-test     = pkgs.clusterNix.profile-run-supervisord { profileName = "ci-light-alzo"; };
+            workbench-ci-analysis = pkgs.clusterNix.workbench.run-analysis
+              { inherit pkgs; run = workbench-ci-test; trace = true; };
           }
             # Add checks to be able to build them individually
             // (prefixNamesWith "checks/" checks);

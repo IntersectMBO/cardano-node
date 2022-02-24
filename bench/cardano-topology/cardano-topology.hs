@@ -194,35 +194,35 @@ main = do
               <> metavar "OUTFILE" ))
 
    topoParamsParser =
-     (command "torus" $
-      info
+     command "torus"
+     (info
        (Torus
-         <$> parseSize
-         <*> some parseLocation
-         <*> parseRoleSelector)
+        <$> parseSize
+        <*> some parseLocation
+        <*> parseRoleSelector)
        (progDesc "Toroidal mesh"
-         <> fullDesc
-         <> header "Generate a toroidal mesh topology"))
+                 <> fullDesc
+                 <> header "Generate a toroidal mesh topology"))
      <>
-     (command "line" $
-      info
-       (Line
-         <$> parseSize
-         <*> parseLocation
-         <*> parseRoleSelector)
-       (progDesc "Line"
-         <> fullDesc
-         <> header "Generate a line topology"))
+     command "line"
+     (info
+      (Line
+       <$> parseSize
+       <*> parseLocation
+       <*> parseRoleSelector)
+      (progDesc "Line"
+                <> fullDesc
+                <> header "Generate a line topology"))
      <>
-     (command "uni-circle" $
-      info
+     command "uni-circle"
+     (info
        (UniCircle
-         <$> parseSize
-         <*> parseLocation
-         <*> parseRoleSelector)
+        <$> parseSize
+        <*> parseLocation
+        <*> parseRoleSelector)
        (progDesc "Unidirectional circle"
-         <> fullDesc
-         <> header "Generate a unidirectional circle topology"))
+                 <> fullDesc
+                 <> header "Generate a unidirectional circle topology"))
 
    parseSize =
      option auto

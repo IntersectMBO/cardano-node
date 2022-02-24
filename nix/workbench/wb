@@ -3,6 +3,8 @@
 
 set -euo pipefail
 
+export LANG=C.UTF-8
+
 global_basedir=${global_basedir:-$(realpath "$(dirname "$0")")}
 global_mode='unknown'
 

@@ -52,6 +52,14 @@ def genesis_profile_variants:
       }
     , generator: { tps: 10 }
     }
+  , { name: "ci-light"
+    , scenario: "fixed-loaded"
+    , genesis: { utxo: 1000000, delegators: 100000 }
+    , node:
+      { shutdown_on_slot_synced: 600
+      }
+    , generator: { tps: 10 }
+    }
 
   ## Chainsync:
   , { name: "chainsync"
