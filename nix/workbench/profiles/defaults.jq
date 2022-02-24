@@ -18,7 +18,7 @@ def era_defaults($era):
     , dense_pool_density:             1
     , with_proxy:                     false
     , with_observer:                  false
-    , topology:                       "line"
+    , topology:                       "uni-circle"
     }
 
   , genesis:

@@ -33,6 +33,11 @@ data TopoParams
     , tpLocation  :: Location
     , tpIdPools   :: Int -> Maybe Int
     }
+  | UniCircle
+    { tpSize      :: Int
+    , tpLocation  :: Location
+    , tpIdPools   :: Int -> Maybe Int
+    }
 
 data Spec = Spec
   { id     :: Int
@@ -50,6 +55,9 @@ mkTopology :: TopoParams -> [Spec]
 mkTopology Torus{..} =
   concat phase3
  where
+   specIds = [0..(tpSize - 1)]
+   specLocs = take tpSize $ cycle tpLocations
+
    -- Assign locations and pool counts;  set initial links.
    phase0 = zipWith mkInitial specIds specLocs
    -- Split into per-location lists.
@@ -57,7 +65,7 @@ mkTopology Torus{..} =
             | l <- tpLocations ]
             & filter (not . null)
    -- Establish intra-location connections.
-   phase2 = intraConnectRing (tpSize < 6) <$> phase1
+   phase2 = intraConnectRing (tpSize < 6) True <$> phase1
    -- Establish inter-location connections.
    phase3 = if length phase2 > 1
             then interConnect phase2
@@ -85,18 +93,15 @@ mkTopology Torus{..} =
      Spec{ links = []
          , mpools = tpIdPools id
          , ..}
-   specIds = [0..(tpSize - 1)]
-   specLocs = take tpSize $ cycle tpLocations
 
 mkTopology Line{..} =
-  breakLoop phase1
+  breakLoop tpSize phase1
  where
+   specIds = [0..(tpSize - 1)]
    -- Assign locations and pool counts;  set initial links.
    phase0 = mkInitial <$> specIds
    -- Connect into a ring
-   phase1 = intraConnectRing False phase0
-   --
-   specIds = [0..(tpSize - 1)]
+   phase1 = intraConnectRing False True phase0
 
    mkInitial :: Int -> Spec
    mkInitial id =
@@ -105,30 +110,48 @@ mkTopology Line{..} =
          , loc = tpLocation
          , ..}
 
-   breakLoop :: [Spec] -> [Spec]
-   breakLoop
-     = updateHead (filterLinks (/= tpSize - 1))
-     . updateLast (filterLinks (/= 0))
+mkTopology UniCircle{..} =
+  phase1
+ where
+   specIds = [0..(tpSize - 1)]
+   -- Assign locations and pool counts;  set initial links.
+   phase0 = mkInitial <$> specIds
+   -- Connect into a ring
+   phase1 = intraConnectRing False False phase0
 
-   filterLinks :: (Int -> Bool) -> Spec -> Spec
-   filterLinks f s@Spec{..} = s { links = filter f links }
+   mkInitial :: Int -> Spec
+   mkInitial id =
+     Spec{ links = []
+         , mpools = tpIdPools id
+         , loc = tpLocation
+         , ..}
 
-intraConnectRing :: Bool -> [Spec] -> [Spec]
-intraConnectRing withChords specs =
+breakLoop :: Int -> [Spec] -> [Spec]
+breakLoop tpSize
+  = updateHead (filterLinks (/= tpSize - 1))
+  . updateLast (filterLinks (/= 0))
+
+filterLinks :: (Int -> Bool) -> Spec -> Spec
+filterLinks f s@Spec{..} = s { links = filter f links }
+
+intraConnectRing :: Bool -> Bool -> [Spec] -> [Spec]
+intraConnectRing withChords bidirectional specs =
   case len of
     0 -> []
     1 -> specs
     2 -> connect 1
          specs
     _ -> connect 1                             -- next
-       $ connect (len - 1)                     -- prev
-       $ if not withChords
+       $ if not bidirectional
          then specs
-         else connect (len `div` 3)            -- chord 1
-            $ if len < 9
-              then specs
-              else connect ((len * 2) `div` 3) -- chord 2
-                   specs
+         else connect (len - 1)                -- prev
+              $ if not withChords
+                then specs
+                else connect (len `div` 3)     -- chord 1
+                     $ if len < 9
+                       then specs
+                       else connect ((len * 2) `div` 3) -- chord 2
+                            specs
  where
    len = length specs
    connect :: Int -> [Spec] -> [Spec]
@@ -190,6 +213,16 @@ main = do
        (progDesc "Line"
          <> fullDesc
          <> header "Generate a line topology"))
+     <>
+     (command "uni-circle" $
+      info
+       (UniCircle
+         <$> parseSize
+         <*> parseLocation
+         <*> parseRoleSelector)
+       (progDesc "Unidirectional circle"
+         <> fullDesc
+         <> header "Generate a unidirectional circle topology"))
 
    parseSize =
      option auto
