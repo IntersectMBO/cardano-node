@@ -289,6 +289,16 @@ in {
         description = ''Local communication socket path.'';
       };
 
+      socketGroup = mkOption {
+        type = types.str;
+        default = "cardano-node";
+        description = ''
+          systemd socket group owner.
+          Note: only applies to sockets created by systemd
+          (ie. when `systemdSocketActivation` is turned on).
+        '';
+      };
+
       systemdSocketActivation = mkOption {
         type = types.bool;
         default = false;
@@ -594,7 +604,7 @@ in {
           ReusePort = "yes";
           SocketMode = "0660";
           SocketUser = "cardano-node";
-          SocketGroup = "cardano-node";
+          SocketGroup = cfg.socketGroup;
           FreeBind = "yes";
         };
       } (cfg.extraSocketConfig i)));
