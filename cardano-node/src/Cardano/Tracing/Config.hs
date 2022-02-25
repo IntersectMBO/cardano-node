@@ -430,7 +430,7 @@ partialTraceSelectionToEither (Last (Just (PartialTraceDispatcher pTraceSelectio
    traceTxOutbound <- proxyLastToEither (Proxy @TraceTxOutbound) pTraceTxOutbound
    traceTxSubmissionProtocol <- proxyLastToEither (Proxy @TraceTxSubmissionProtocol) pTraceTxSubmissionProtocol
    traceTxSubmission2Protocol <- proxyLastToEither (Proxy @TraceTxSubmission2Protocol) pTraceTxSubmission2Protocol
-   Right $ TracingOnLegacy $ TraceSelection
+   Right $ TraceDispatcher $ TraceSelection
              { traceVerbosity = traceVerbosity
              , traceAcceptPolicy = traceAcceptPolicy
              , traceBlockFetchClient = traceBlockFetchClient
