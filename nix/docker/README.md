@@ -1,7 +1,7 @@
 
 ## Build Cardano Node + Image
 
-https://docs.cardano.org/projects/cardano-node/en/latest/getting-started/building-the-node-using-nix.html
+https://github.com/input-output-hk/cardano-node/blob/master/doc/getting-started/building-the-node-using-nix.md/
 
 ```
 # Build + Install the cardano node
