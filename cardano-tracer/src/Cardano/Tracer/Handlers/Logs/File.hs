@@ -1,6 +1,7 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 #if !defined(mingw32_HOST_OS)
 #define UNIX
@@ -13,7 +14,7 @@ module Cardano.Tracer.Handlers.Logs.File
 import           Control.Concurrent.Extra (Lock, withLock)
 import           Control.Monad (unless)
 import           Control.Monad.Extra (ifM)
-import           Data.Aeson ((.=), pairs)
+import           Data.Aeson (Value, (.=), decodeStrict', pairs)
 import           Data.Aeson.Encoding (encodingToLazyByteString)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
@@ -127,21 +128,14 @@ traceObjectToJSON TraceObject{toMachine, toTimestamp, toNamespace, toHostname, t
     Nothing -> Nothing
     Just msgForMachine -> Just
       . T.append nl
-      . prepareData
       . TE.decodeUtf8
       . LBS.toStrict
       . encodingToLazyByteString
       . pairs $    "at"     .= formatTime defaultTimeLocale "%FT%T%2Q%Z" toTimestamp
                 <> "ns"     .= mkName toNamespace
-                <> "data"   .= msgForMachine
+                <> "data"   .= case decodeStrict' $ TE.encodeUtf8 msgForMachine of
+                                 Just (v :: Value) -> v
+                                 Nothing -> ""
                 <> "sev"    .= T.pack (show toSeverity)
                 <> "thread" .= T.filter isDigit toThreadId
                 <> "host"   .= T.pack toHostname
- where
-  -- 'msgForMachine' is a text, but we definitely know that it contains JSON.
-  -- By default it would be added to result JSON-object as a text with '\\'.
-  -- To avoid this, remove unnecessary backslashes and double quotes.
-  prepareData =
-      T.replace "}\",\"sev\""  "},\"sev\""
-    . T.replace "\"data\":\"{" "\"data\":{"
-    . T.replace "\\"           ""
