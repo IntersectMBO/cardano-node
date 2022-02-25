@@ -106,6 +106,7 @@ initTraceDispatcher nc p networkMagic nodeKernel p2pMode = do
       dpTracer
       trConfig
       p2pMode
+      p
    where
     forwarderBackendEnabled =
       any checkForwarder . concat . Map.elems $ tcOptions trConfig

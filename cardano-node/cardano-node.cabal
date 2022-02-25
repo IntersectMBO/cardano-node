@@ -88,6 +88,7 @@ library
                        Cardano.Node.Tracing.Era.Byron
                        Cardano.Node.Tracing.Era.HardFork
                        Cardano.Node.Tracing.Era.Shelley
+                       Cardano.Node.Tracing.Peers
                        Cardano.Node.Tracing.StateRep
                        Cardano.Node.Tracing.Tracers
                        Cardano.Node.Tracing.Tracers.BlockReplayProgress
