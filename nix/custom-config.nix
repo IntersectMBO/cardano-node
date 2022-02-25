@@ -6,8 +6,11 @@ self: {
     profileName = "default-alzo";
     basePort    = 30000;
     autoStartCluster = false;
+    autoStartClusterArgs = "";
     enableEKG        = true;
     workbenchDevMode = false;
     extraSupervisorConfig = {};
   };
+  # optional extra haskell.nix module
+  haskellNix = {};
 }

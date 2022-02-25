@@ -15,7 +15,7 @@ Usage:
   Common flags:
 
     Method to run executables:
-    --nix               nix-build default.nix -A haskellPackages.blah....
+    --nix               nix build .# ....
                           This is the default mode, unless -- read on:
     --cabal             cabal v2-run exe:...
                           Default _iff_ ./dist-newstyle exists.
@@ -98,13 +98,22 @@ setup_executables() {
 setup_nix() {
         if test -z "${profile}"
         then defaultnix_config=''
-        else defaultnix_config='{haskellNix={profiling=true;};}'
+        else defaultnix_config='{haskellNix={
+            modules = [{
+              enableLibraryProfiling = true;
+              packages.cardano-node.components.exes.cardano-node.enableProfiling = true;
+              packages.tx-generator.components.exes.tx-generator.enableProfiling = true;
+              packages.locli.components.exes.locli.enableProfiling = true;
+            }];
+          };}'
+          mkdir -p ${__COMMON_SRCROOT}/config
+          echo "{  outputs = _: $defaultnix_config; }"  > "${__COMMON_SRCROOT}"/config/flake.nix
         fi
         dprint "default.nix config: ${defaultnix_config}"
 
-        defaultnix_args="--argstr gitrev $(git rev-parse HEAD)"
+        defaultnix_args=""
         if test -n "${defaultnix_config}"
-        then defaultnix_args+=" --arg config ${defaultnix_config}"
+        then defaultnix_args+=" --override-input customConfig path:\"${__COMMON_SRCROOT}\"/config"
         fi
 }
 

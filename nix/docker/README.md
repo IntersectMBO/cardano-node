@@ -5,10 +5,10 @@ https://docs.cardano.org/projects/cardano-node/en/latest/getting-started/buildin
 
 ```
 # Build + Install the cardano node
-nix-build -A scripts.mainnet.node -o ~/bin/cardano-node
+nix build .#mainnet/node -o ~/bin/cardano-node
 
 # Build + Install the cardano Docker image
-docker load -i $(nix-build -A dockerImage --no-out-link) \
+nix run .#dockerImage/node/load \
   && GITHASH=`git log -n1 --pretty='%H'` \
   && docker tag inputoutput/cardano-node:$GITHASH inputoutput/cardano-node:dev \
   && docker rmi inputoutput/cardano-node:$GITHASH

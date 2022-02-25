@@ -136,7 +136,7 @@ let
 
   plutusScript = cfg: plutusScriptFile cfg cfg.plutusScript;
   plutusScriptFile = cfg: filename: "${pkgs.plutus-scripts}/generated-plutus-scripts/${filename}";
-  
+
 in pkgs.commonLib.defServiceModule
   (lib: with lib;
     { svcName = "tx-generator";
@@ -144,7 +144,7 @@ in pkgs.commonLib.defServiceModule
 
       svcPackageSelector =
         pkgs: ## Local:
-              pkgs.cardanoNodeHaskellPackages.tx-generator
+              pkgs.cardanoNodePackages.tx-generator
               ## Imported by another repo, that adds an overlay:
                 or pkgs.tx-generator;
               ## TODO:  that's actually a bit ugly and could be improved.

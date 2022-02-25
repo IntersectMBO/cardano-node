@@ -5,7 +5,7 @@ let
   profileNameDefault = "default-alzo";
 in
 { pkgs
-, haskellPackages
+, cardanoNodePackages
 , workbench
 , lib
 , bech32
@@ -182,7 +182,7 @@ let
     in
     pkgs.runCommand "workbench-test-${profileName}"
       { requiredSystemFeatures = [ "benchmark" ];
-        nativeBuildInputs = with haskellPackages; with pkgs; [
+        nativeBuildInputs = with cardanoNodePackages; with pkgs; [
           bash
           bech32
           coreutils

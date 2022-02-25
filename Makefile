@@ -20,7 +20,7 @@ stylish-haskell: ## Apply stylish-haskell on all *.hs files
 	@find . -type f -name "*.hs" -not -path '.git' -not -path '*.stack-work*' -print0 | xargs -0 stylish-haskell -i
 
 cabal-hashes:
-	$$(nix-build ./nix -A iohkNix.checkCabalProject --no-out-link)
+	nix run .#checkCabalProject
 
 ghci: ## Run repl
 	@stack ghci $(PROJECT_NAME):lib --haddock-deps --ghci-options=-fobject-code --nix
@@ -47,6 +47,7 @@ bench-chainsync: cluster-shell-dev ## Enter Nix shell and start the chainsync be
 cluster-profiles: ## List available workbench profiles (for PROFILE=)
 	@./nix/workbench/wb profile list
 
+## TODO: migrate to `nix develop`
 cluster-shell: ## Enter Nix shell and start the workbench cluster
 	nix-shell --max-jobs 8 --cores 0 --show-trace --argstr profileName ${PROFILE} --arg 'autoStartCluster' true
 

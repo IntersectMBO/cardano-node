@@ -2,28 +2,25 @@ let defaultCustomConfig = import ./nix/custom-config.nix defaultCustomConfig;
 # This file is used by nix-shell.
 # It just takes the shell attribute from default.nix.
 in
-{ config ? {}
-, sourcesOverride ? {}
-, withHoogle ? defaultCustomConfig.withHoogle
+{ withHoogle ? defaultCustomConfig.withHoogle
 , profileName ? defaultCustomConfig.localCluster.profileName
 , autoStartCluster ? defaultCustomConfig.localCluster.autoStartCluster
-, autoStartClusterArgs ? ""
+, autoStartClusterArgs ? defaultCustomConfig.localCluster.autoStartClusterArgs
 , workbenchDevMode ? defaultCustomConfig.localCluster.workbenchDevMode
 , customConfig ? {
     inherit withHoogle;
     localCluster =  {
-      inherit autoStartCluster profileName workbenchDevMode;
+      inherit autoStartCluster autoStartClusterArgs profileName workbenchDevMode;
     };
   }
-, pkgs ? import ./nix {
-    inherit config sourcesOverride customConfig;
-  }
+, pkgs ? import ./nix customConfig
 }:
 with pkgs;
 let
   inherit (pkgs) customConfig;
   inherit (customConfig) withHoogle localCluster;
-  inherit (localCluster) autoStartCluster profileName workbenchDevMode;
+  inherit (localCluster) autoStartCluster autoStartClusterArgs profileName workbenchDevMode;
+  inherit (pkgs.haskell-nix) haskellLib;
   commandHelp =
     ''
       echo "
@@ -51,7 +48,7 @@ let
 
   shell =
     let cluster = pkgs.workbench-supervisord
-      { inherit haskellPackages profileName;
+      { inherit profileName;
         useCabalRun = true;
       };
     in cardanoNodeProject.shellFor {
@@ -59,7 +56,7 @@ let
 
     inherit withHoogle;
 
-    packages = lib.attrVals cardanoNodeProject.projectPackages;
+    packages = ps: builtins.attrValues (haskellLib.selectProjectPackages ps);
 
     tools = {
       haskell-language-server = {
@@ -69,7 +66,7 @@ let
     };
 
     # These programs will be available inside the nix-shell.
-    nativeBuildInputs = with haskellPackages; [
+    nativeBuildInputs = with haskellPackages; with cardanoNodePackages; [
       cardano-ping
       cabalWrapped
       ghcid
@@ -137,8 +134,7 @@ let
 
   devops =
     let cluster = pkgs.workbench-supervisord
-      { inherit haskellPackages;
-        profileName = "devops-alzo";
+      { profileName = "devops-alzo";
         useCabalRun = false;
       };
     in cardanoNodeProject.shellFor {
@@ -146,7 +142,7 @@ let
 
     packages = _: [];
 
-    nativeBuildInputs = [
+    nativeBuildInputs = with cardanoNodePackages; [
       nixWrapped
       cardano-cli
       bech32
@@ -205,29 +201,7 @@ let
     '';
   };
 
-  dev = cardanoNodeProject.shellFor {
-    name = "cabal-dev-shell";
-
-    packages = ps: lib.attrValues (haskell-nix.haskellLib.selectProjectPackages ps);
-
-    # These programs will be available inside the nix-shell.
-    nativeBuildInputs = [
-      nix-prefetch-git
-      pkg-config
-      hlint
-      ghcid
-      haskell-language-server
-      cabalWrapped
-      # we also add cabal (even if cabalWrapped will be used by default) for shell completion:
-      cabal
-    ];
-
-    # Prevents cabal from choosing alternate plans, so that
-    # *all* dependencies are provided by Nix.
-    exactDeps = true;
-
-    inherit withHoogle;
-  };
+  dev = cardanoNodeProject.shell;
 
 in
 
