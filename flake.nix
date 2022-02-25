@@ -63,7 +63,7 @@
         iohkNix.overlays.utils
         (final: prev: {
           inherit customConfig;
-          gitrev = self.rev or "0000000000000000000000000000000000000000";
+          gitrev = final.customConfig.gitrev or self.rev or "0000000000000000000000000000000000000000";
           commonLib = lib
             // iohkNix.lib
             // final.cardanoLib
