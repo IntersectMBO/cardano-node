@@ -44,14 +44,14 @@ How to build
 
 Documentation for building the node can be found `here <https://docs.cardano.org/getting-started/installing-the-cardano-node>`_.
 
-Linux Executable
-==================
+Executables
+===========
 
 You can download the latest version of ``cardano-node`` and ``cardano-cli``:
 
-* `linux <https://hydra.iohk.io/job/Cardano/cardano-node/cardano-node-linux/latest-finished>`_
-* `win64 <https://hydra.iohk.io/job/Cardano/cardano-node/cardano-node-win64/latest-finished>`_
-* `macos <https://hydra.iohk.io/job/Cardano/cardano-node/cardano-node-macos/latest-finished>`_
+* `linux <https://hydra.iohk.io/job/Cardano/cardano-node/linux.musl.cardano-node-linux/latest-finished>`_
+* `win64 <https://hydra.iohk.io/job/Cardano/cardano-node/linux.windows.cardano-node-win64/latest-finished>`_
+* `macos <https://hydra.iohk.io/job/Cardano/cardano-node/macos.cardano-node-macos/latest-finished>`_
 
 Windows Executable
 ==================
@@ -59,7 +59,7 @@ Windows Executable
 Download
 --------
 
-You can download `here <https://hydra.iohk.io/job/Cardano/cardano-node/cardano-node-win64/latest-finished>`_.
+You can download `here <https://hydra.iohk.io/job/Cardano/cardano-node/linux.windows.cardano-node-win64/latest-finished>`_.
 
 Instructions
 ------------
@@ -459,7 +459,7 @@ You can validate Byron era blocks, delegation certificates, txs and update propo
 ``cabal exec cardano-cli -- validate-cbor --byron-block 21600 --filepath CBOREncodedByronBlockFile``
 
 
-Native Tokens 
+Native Tokens
 =======================================
 
 Native tokens is a new feature that enables the transacting of multi-assets on Cardano. Native tokens are now supported on mainnet and users can transact with ada, and an unlimited number of user-defined (custom) tokens natively.
