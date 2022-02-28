@@ -131,7 +131,7 @@ traceObjectToJSON TraceObject{toMachine, toTimestamp, toNamespace, toHostname, t
       . TE.decodeUtf8
       . LBS.toStrict
       . encodingToLazyByteString
-      . pairs $    "at"     .= formatTime defaultTimeLocale "%FT%T%2Q%Z" toTimestamp
+      . pairs $    "at"     .= formatTime defaultTimeLocale "%F %H:%M:%S%4QZ" toTimestamp
                 <> "ns"     .= mkName toNamespace
                 <> "data"   .= case decodeStrict' $ TE.encodeUtf8 msgForMachine of
                                  Just (v :: Value) -> v
