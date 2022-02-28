@@ -1,0 +1,10 @@
+---
+networkMagic: 764824073
+network:
+  tag: AcceptAt
+  contents: "/tmp/forwarder.sock"
+logging:
+- logRoot: "/home/yupanqui/IOG/docs"
+  logMode: FileMode
+  logFormat: ForMachine
+verbosity: Minimum
