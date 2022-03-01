@@ -401,31 +401,31 @@ partialTraceSelectionToEither (Last (Just (PartialTraceDispatcher pTraceSelectio
    traceForge <- proxyLastToEither (Proxy @TraceForge) pTraceForge
    traceForgeStateInfo <- proxyLastToEither (Proxy @TraceForgeStateInfo) pTraceForgeStateInfo
    traceHandshake <- proxyLastToEither (Proxy @TraceHandshake) pTraceHandshake
-   traceInboundGovernor <- proxyLastToEither (Proxy @TraceIpSubscription) pTraceInboundGovernor
-   traceInboundGovernorCounters <- proxyLastToEither (Proxy @TraceKeepAliveClient) pTraceInboundGovernorCounters
+   traceInboundGovernor <- proxyLastToEither (Proxy @TraceInboundGovernor) pTraceInboundGovernor
+   traceInboundGovernorCounters <- proxyLastToEither (Proxy @TraceInboundGovernorCounters) pTraceInboundGovernorCounters
    traceInboundGovernorTransitions <- proxyLastToEither (Proxy @TraceInboundGovernorTransitions) pTraceInboundGovernorTransitions
-   traceIpSubscription <- proxyLastToEither (Proxy @TraceLedgerPeers) pTraceIpSubscription
-   traceKeepAliveClient <- proxyLastToEither (Proxy @TraceLocalChainSyncProtocol) pTraceKeepAliveClient
-   traceLedgerPeers <- proxyLastToEither (Proxy @TraceLocalConnectionManager) pTraceLedgerPeers
-   traceLocalChainSyncProtocol <- proxyLastToEither (Proxy @TraceLocalErrorPolicy) pTraceLocalChainSyncProtocol
-   traceLocalConnectionManager <- proxyLastToEither (Proxy @TraceLocalHandshake) pTraceLocalConnectionManager
-   traceLocalErrorPolicy <- proxyLastToEither (Proxy @TraceLocalInboundGovernor) pTraceLocalErrorPolicy
-   traceLocalHandshake <- proxyLastToEither (Proxy @TraceLocalRootPeers) pTraceLocalHandshake
-   traceLocalInboundGovernor <- proxyLastToEither (Proxy @TraceLocalServer) pTraceLocalInboundGovernor
-   traceLocalMux <- proxyLastToEither (Proxy @TraceLocalStateQueryProtocol) pTraceLocalMux
+   traceIpSubscription <- proxyLastToEither (Proxy @TraceIpSubscription) pTraceIpSubscription
+   traceKeepAliveClient <- proxyLastToEither (Proxy @TraceKeepAliveClient) pTraceKeepAliveClient
+   traceLedgerPeers <- proxyLastToEither (Proxy @TraceLedgerPeers) pTraceLedgerPeers
+   traceLocalChainSyncProtocol <- proxyLastToEither (Proxy @TraceLocalChainSyncProtocol) pTraceLocalChainSyncProtocol
+   traceLocalConnectionManager <- proxyLastToEither (Proxy @TraceLocalConnectionManager) pTraceLocalConnectionManager
+   traceLocalErrorPolicy <- proxyLastToEither (Proxy @TraceLocalErrorPolicy) pTraceLocalErrorPolicy
+   traceLocalHandshake <- proxyLastToEither (Proxy @TraceLocalHandshake) pTraceLocalHandshake
+   traceLocalInboundGovernor <- proxyLastToEither (Proxy @TraceLocalInboundGovernor) pTraceLocalInboundGovernor
+   traceLocalMux <- proxyLastToEither (Proxy @TraceLocalMux) pTraceLocalMux
    traceLocalTxMonitorProtocol <- proxyLastToEither (Proxy @TraceLocalTxMonitorProtocol) pTraceLocalTxMonitorProtocol
-   traceLocalRootPeers <- proxyLastToEither (Proxy @TraceLocalTxSubmissionProtocol) pTraceLocalRootPeers
-   traceLocalServer <- proxyLastToEither (Proxy @TraceLocalTxSubmissionServer) pTraceLocalServer
-   traceLocalStateQueryProtocol <- proxyLastToEither (Proxy @TraceMempool) pTraceLocalStateQueryProtocol
-   traceLocalTxSubmissionProtocol <- proxyLastToEither (Proxy @TraceMux) pTraceLocalTxSubmissionProtocol
-   traceLocalTxSubmissionServer <- proxyLastToEither (Proxy @TraceLocalMux) pTraceLocalTxSubmissionServer
-   traceMempool <- proxyLastToEither (Proxy @TracePeerSelection) pTraceMempool
-   traceMux <- proxyLastToEither (Proxy @TracePeerSelectionCounters) pTraceMux
-   tracePeerSelection <- proxyLastToEither (Proxy @TracePeerSelectionActions) pTracePeerSelection
-   tracePeerSelectionCounters <- proxyLastToEither (Proxy @TracePublicRootPeers) pTracePeerSelectionCounters
-   tracePeerSelectionActions <- proxyLastToEither (Proxy @TraceServer) pTracePeerSelectionActions
-   tracePublicRootPeers <- proxyLastToEither (Proxy @TraceInboundGovernor) pTracePublicRootPeers
-   traceServer <- proxyLastToEither (Proxy @TraceInboundGovernorCounters) pTraceServer
+   traceLocalRootPeers <- proxyLastToEither (Proxy @TraceLocalRootPeers) pTraceLocalRootPeers
+   traceLocalServer <- proxyLastToEither (Proxy @TraceLocalServer) pTraceLocalServer
+   traceLocalStateQueryProtocol <- proxyLastToEither (Proxy @TraceLocalStateQueryProtocol) pTraceLocalStateQueryProtocol
+   traceLocalTxSubmissionProtocol <- proxyLastToEither (Proxy @TraceLocalTxSubmissionProtocol) pTraceLocalTxSubmissionProtocol
+   traceLocalTxSubmissionServer <- proxyLastToEither (Proxy @TraceLocalTxSubmissionServer) pTraceLocalTxSubmissionServer
+   traceMempool <- proxyLastToEither (Proxy @TraceMempool) pTraceMempool
+   traceMux <- proxyLastToEither (Proxy @TraceMux) pTraceMux
+   tracePeerSelection <- proxyLastToEither (Proxy @TracePeerSelection) pTracePeerSelection
+   tracePeerSelectionCounters <- proxyLastToEither (Proxy @TracePeerSelectionCounters) pTracePeerSelectionCounters
+   tracePeerSelectionActions <- proxyLastToEither (Proxy @TracePeerSelectionActions) pTracePeerSelectionActions
+   tracePublicRootPeers <- proxyLastToEither (Proxy @TracePublicRootPeers) pTracePublicRootPeers
+   traceServer <- proxyLastToEither (Proxy @TraceServer) pTraceServer
    traceTxInbound <- proxyLastToEither (Proxy @TraceTxInbound) pTraceTxInbound
    traceTxOutbound <- proxyLastToEither (Proxy @TraceTxOutbound) pTraceTxOutbound
    traceTxSubmissionProtocol <- proxyLastToEither (Proxy @TraceTxSubmissionProtocol) pTraceTxSubmissionProtocol
@@ -515,31 +515,31 @@ partialTraceSelectionToEither (Last (Just (PartialTracingOnLegacy pTraceSelectio
   traceForge <- proxyLastToEither (Proxy @TraceForge) pTraceForge
   traceForgeStateInfo <- proxyLastToEither (Proxy @TraceForgeStateInfo) pTraceForgeStateInfo
   traceHandshake <- proxyLastToEither (Proxy @TraceHandshake) pTraceHandshake
-  traceInboundGovernor <- proxyLastToEither (Proxy @TraceIpSubscription) pTraceInboundGovernor
-  traceInboundGovernorCounters <- proxyLastToEither (Proxy @TraceKeepAliveClient) pTraceInboundGovernorCounters
+  traceInboundGovernor <- proxyLastToEither (Proxy @TraceInboundGovernor) pTraceInboundGovernor
+  traceInboundGovernorCounters <- proxyLastToEither (Proxy @TraceInboundGovernorCounters) pTraceInboundGovernorCounters
   traceInboundGovernorTransitions <- proxyLastToEither (Proxy @TraceInboundGovernorTransitions) pTraceInboundGovernorTransitions
-  traceIpSubscription <- proxyLastToEither (Proxy @TraceLedgerPeers) pTraceIpSubscription
-  traceKeepAliveClient <- proxyLastToEither (Proxy @TraceLocalChainSyncProtocol) pTraceKeepAliveClient
-  traceLedgerPeers <- proxyLastToEither (Proxy @TraceLocalConnectionManager) pTraceLedgerPeers
-  traceLocalChainSyncProtocol <- proxyLastToEither (Proxy @TraceLocalErrorPolicy) pTraceLocalChainSyncProtocol
-  traceLocalConnectionManager <- proxyLastToEither (Proxy @TraceLocalHandshake) pTraceLocalConnectionManager
-  traceLocalErrorPolicy <- proxyLastToEither (Proxy @TraceLocalInboundGovernor) pTraceLocalErrorPolicy
-  traceLocalHandshake <- proxyLastToEither (Proxy @TraceLocalRootPeers) pTraceLocalHandshake
-  traceLocalInboundGovernor <- proxyLastToEither (Proxy @TraceLocalServer) pTraceLocalInboundGovernor
-  traceLocalMux <- proxyLastToEither (Proxy @TraceLocalStateQueryProtocol) pTraceLocalMux
-  traceLocalRootPeers <- proxyLastToEither (Proxy @TraceLocalTxSubmissionProtocol) pTraceLocalRootPeers
-  traceLocalServer <- proxyLastToEither (Proxy @TraceLocalTxSubmissionServer) pTraceLocalServer
+  traceIpSubscription <- proxyLastToEither (Proxy @TraceIpSubscription) pTraceIpSubscription
+  traceKeepAliveClient <- proxyLastToEither (Proxy @TraceKeepAliveClient) pTraceKeepAliveClient
+  traceLedgerPeers <- proxyLastToEither (Proxy @TraceLedgerPeers) pTraceLedgerPeers
+  traceLocalChainSyncProtocol <- proxyLastToEither (Proxy @TraceLocalChainSyncProtocol) pTraceLocalChainSyncProtocol
+  traceLocalConnectionManager <- proxyLastToEither (Proxy @TraceLocalConnectionManager) pTraceLocalConnectionManager
+  traceLocalErrorPolicy <- proxyLastToEither (Proxy @TraceLocalErrorPolicy) pTraceLocalErrorPolicy
+  traceLocalHandshake <- proxyLastToEither (Proxy @TraceLocalHandshake) pTraceLocalHandshake
+  traceLocalInboundGovernor <- proxyLastToEither (Proxy @TraceLocalInboundGovernor) pTraceLocalInboundGovernor
+  traceLocalMux <- proxyLastToEither (Proxy @TraceLocalMux) pTraceLocalMux
+  traceLocalRootPeers <- proxyLastToEither (Proxy @TraceLocalRootPeers) pTraceLocalRootPeers
+  traceLocalServer <- proxyLastToEither (Proxy @TraceLocalServer) pTraceLocalServer
   traceLocalTxMonitorProtocol <- proxyLastToEither (Proxy @TraceLocalTxMonitorProtocol) pTraceLocalTxMonitorProtocol
-  traceLocalStateQueryProtocol <- proxyLastToEither (Proxy @TraceMempool) pTraceLocalStateQueryProtocol
-  traceLocalTxSubmissionProtocol <- proxyLastToEither (Proxy @TraceMux) pTraceLocalTxSubmissionProtocol
-  traceLocalTxSubmissionServer <- proxyLastToEither (Proxy @TraceLocalMux) pTraceLocalTxSubmissionServer
-  traceMempool <- proxyLastToEither (Proxy @TracePeerSelection) pTraceMempool
-  traceMux <- proxyLastToEither (Proxy @TracePeerSelectionCounters) pTraceMux
-  tracePeerSelection <- proxyLastToEither (Proxy @TracePeerSelectionActions) pTracePeerSelection
-  tracePeerSelectionCounters <- proxyLastToEither (Proxy @TracePublicRootPeers) pTracePeerSelectionCounters
-  tracePeerSelectionActions <- proxyLastToEither (Proxy @TraceServer) pTracePeerSelectionActions
-  tracePublicRootPeers <- proxyLastToEither (Proxy @TraceInboundGovernor) pTracePublicRootPeers
-  traceServer <- proxyLastToEither (Proxy @TraceInboundGovernorCounters) pTraceServer
+  traceLocalStateQueryProtocol <- proxyLastToEither (Proxy @TraceLocalStateQueryProtocol) pTraceLocalStateQueryProtocol
+  traceLocalTxSubmissionProtocol <- proxyLastToEither (Proxy @TraceLocalTxSubmissionProtocol) pTraceLocalTxSubmissionProtocol
+  traceLocalTxSubmissionServer <- proxyLastToEither (Proxy @TraceLocalTxSubmissionServer) pTraceLocalTxSubmissionServer
+  traceMempool <- proxyLastToEither (Proxy @TraceMempool) pTraceMempool
+  traceMux <- proxyLastToEither (Proxy @TraceMux) pTraceMux
+  tracePeerSelection <- proxyLastToEither (Proxy @TracePeerSelection) pTracePeerSelection
+  tracePeerSelectionCounters <- proxyLastToEither (Proxy @TracePeerSelectionCounters) pTracePeerSelectionCounters
+  tracePeerSelectionActions <- proxyLastToEither (Proxy @TracePeerSelectionActions) pTracePeerSelectionActions
+  tracePublicRootPeers <- proxyLastToEither (Proxy @TracePublicRootPeers) pTracePublicRootPeers
+  traceServer <- proxyLastToEither (Proxy @TraceServer) pTraceServer
   traceTxInbound <- proxyLastToEither (Proxy @TraceTxInbound) pTraceTxInbound
   traceTxOutbound <- proxyLastToEither (Proxy @TraceTxOutbound) pTraceTxOutbound
   traceTxSubmissionProtocol <- proxyLastToEither (Proxy @TraceTxSubmissionProtocol) pTraceTxSubmissionProtocol
@@ -607,4 +607,3 @@ proxyLastToEither name (Last x) =
 
 lastToEither :: String -> Last a -> Either String a
 lastToEither errMsg (Last x) = maybe (Left errMsg) Right x
-
