@@ -191,7 +191,7 @@ obtainConsensusShelleyBasedEra ShelleyBasedEraAlonzo  f = f
 -- different block types for all the eras. It is used in the ChainSync protocol.
 --
 data BlockInMode mode where
-     BlockInMode :: Block era -> EraInMode era mode -> BlockInMode mode
+     BlockInMode :: IsCardanoEra era => Block era -> EraInMode era mode -> BlockInMode mode
 
 deriving instance Show (BlockInMode mode)
 
