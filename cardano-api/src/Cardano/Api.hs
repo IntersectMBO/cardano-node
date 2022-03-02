@@ -285,6 +285,7 @@ module Cardano.Api (
     getTxMetadata,
     getTxMint,
     getTxOuts,
+    getTxScripts,
     getTxScriptExecutionUnits,
     getTxSize,
     getTxUpdateProposal,

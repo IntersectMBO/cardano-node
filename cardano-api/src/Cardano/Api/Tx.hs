@@ -31,7 +31,7 @@ module Cardano.Api.Tx (
     getTxMetadata,
     getTxMint,
     getTxOuts,
-   -- getTxPlutusScriptWitnesses,
+    getTxScripts,
     getTxScriptExecutionUnits,
     getTxSize,
     getTxUpdateProposal,
@@ -121,7 +121,6 @@ import qualified Cardano.Ledger.Shelley.Tx as Shelley
 import qualified Cardano.Ledger.TxIn as Ledger
 
 import qualified Cardano.Ledger.Alonzo as Alonzo
---import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
 import qualified Cardano.Ledger.Alonzo.TxWitness as Alonzo
 
@@ -422,28 +421,46 @@ getTxOuts (ShelleyTx era tx) =
   obtainHasFieldConstraint ShelleyBasedEraMary f = f
   obtainHasFieldConstraint ShelleyBasedEraAlonzo f = f
 
-
-getTxPlutusScriptWitnesses
-  :: HasField "txscripts" (Ledger.Witnesses (ShelleyLedgerEra era)) (Map.Map (Ledger.ScriptHash (ShelleyLedgerEra era)) (Script (ShelleyLedgerEra era)))
-  => HasField "wits" (Ledger.Tx era) (Ledger.Witnesses era)
-  => forall era lang. ShelleyBasedEra era -> Tx era -> [PlutusScript lang]
-getTxPlutusScriptWitnesses sbe tx =
-  case sbe of
-    ShelleyBasedEraShelley -> []
-    ShelleyBasedEraAllegra -> []
-    ShelleyBasedEraMary -> []
-    ShelleyBasedEraAlonzo -> getTxPlutusScriptWitnesses' sbe tx
+getTxScripts :: ShelleyBasedEra era -> Tx era -> [ScriptInAnyLang]
+getTxScripts sbe (ShelleyTx _ tx) =
+  let wits = obtainHasFieldConstraint sbe $ getField @"wits" tx
+  in map toScriptInAnyLang' $ getTxScripts' sbe wits
  where
-   getTxPlutusScriptWitnesses' :: ShelleyBasedEra era -> Tx era -> [PlutusScript lang]
-   getTxPlutusScriptWitnesses' ShelleyBasedEraAlonzo tx' =
-      [PlutusScriptSerialised sbs | Alonzo.PlutusScript _ sbs <- Map.elems $ getField @"txscripts" $ getField @"wits" tx']
-   getTxPlutusScriptWitnesses _ _ = []
+   obtainHasFieldConstraint
+     :: ShelleyLedgerEra era ~ ledgerera
+     => ShelleyBasedEra era
+     -> (HasField "wits" (Ledger.Tx ledgerera) (Ledger.Witnesses ledgerera) => a)
+     -> a
+   obtainHasFieldConstraint ShelleyBasedEraShelley f = f
+   obtainHasFieldConstraint ShelleyBasedEraAllegra f = f
+   obtainHasFieldConstraint ShelleyBasedEraMary f = f
+   obtainHasFieldConstraint ShelleyBasedEraAlonzo f = f
 
-   getConstraints :: ShelleyBasedEra era -> ( (HasField "wits" (Ledger.Tx era) (Ledger.Witnesses era), HasField "txscripts" (Ledger.Witnesses (ShelleyLedgerEra era)) (Map.Map (Ledger.ScriptHash (ShelleyLedgerEra era)) (Script (ShelleyLedgerEra era)))) => a) -> a
-   getConstraints ShelleyBasedEraShelley f = f
-   getConstraints ShelleyBasedEraAllegra f = f
-   getConstraints ShelleyBasedEraMary f = f
-   getConstraints ShelleyBasedEraAlonzo f = f
+   getTxScripts'
+     :: ShelleyBasedEra era -> Ledger.Witnesses (ShelleyLedgerEra era) -> [ScriptInEra era]
+   getTxScripts' sbe' wits =
+     case sbe' of
+       ShelleyBasedEraShelley ->
+         let Shelley.WitnessSet _ scriptWits _ = wits
+             allScriptsInEra = map (fromShelleyBasedScript sbe') $ Map.elems scriptWits
+         in allScriptsInEra
+       ShelleyBasedEraAllegra ->
+         let Shelley.WitnessSet _ scriptWits _ = wits
+             allScriptsInEra = map (fromShelleyBasedScript sbe') $ Map.elems scriptWits
+         in allScriptsInEra
+       ShelleyBasedEraMary ->
+         let Shelley.WitnessSet _ scriptWits _ = wits
+             allScriptsInEra = map (fromShelleyBasedScript sbe') $ Map.elems scriptWits
+         in allScriptsInEra
+       ShelleyBasedEraAlonzo ->
+         let Alonzo.TxWitness' _ _ scriptWits _  _= wits
+             allScriptsInEra = map (fromShelleyBasedScript sbe') $ Map.elems scriptWits
+         in allScriptsInEra
+
+   toScriptInAnyLang' :: ScriptInEra era -> ScriptInAnyLang
+   toScriptInAnyLang' (ScriptInEra l s) =
+      ScriptInAnyLang (languageOfScriptLanguageInEra l) s
+
 
 
 getTxScriptExecutionUnits
