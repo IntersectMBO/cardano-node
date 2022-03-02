@@ -21,7 +21,7 @@ import qualified Data.ByteString.Lazy as BS
 import           Data.Functor.Contravariant
 import           Data.List (intersperse)
 import           Data.Maybe (fromMaybe)
-import           Data.Text (Text, pack, stripPrefix)
+import           Data.Text (Text, pack, stripPrefix, replace)
 import           Data.Text.Encoding (decodeUtf8)
 import           Data.Text.Lazy (toStrict)
 import           Data.Text.Lazy.Builder as TB
@@ -78,7 +78,9 @@ forwardFormatter application (Trace tr) = do
               to = TraceObject {
                       toHuman     = if fh == "" then Nothing else Just fh
                     , toMachine   = if fm == mempty then Nothing else
-                                    Just $ decodeUtf8 (BS.toStrict (AE.encode fm))
+                                    Just
+                                      $ replace "\\" "\\\\"
+                                      $ decodeUtf8 (BS.toStrict (AE.encode fm))
                     , toNamespace = lcNamespace nlc
                     , toSeverity  = fromMaybe Info (lcSeverity lc)
                     , toDetails   = fromMaybe DNormal (lcDetails lc)
