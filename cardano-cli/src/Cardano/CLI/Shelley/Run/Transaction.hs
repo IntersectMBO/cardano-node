@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -44,7 +45,7 @@ import           Cardano.Ledger.Shelley.Scripts ()
 import           Cardano.Ledger.ShelleyMA.TxBody ()
 
 import           Cardano.CLI.Environment (EnvSocketError, readEnvSocketPath, renderEnvSocketError)
-import           Cardano.CLI.Run.Friendly (friendlyTxBodyBS)
+import           Cardano.CLI.Run.Friendly (friendlyTxBS, friendlyTxBodyBS)
 import           Cardano.CLI.Shelley.Key (InputDecodeError, readSigningKeyFileAnyOf)
 import           Cardano.CLI.Shelley.Parsers
 import           Cardano.CLI.Shelley.Run.Genesis (ShelleyGenesisCmdError (..),
@@ -1420,19 +1421,18 @@ runTxGetTxId txfile = do
     liftIO $ BS.putStrLn $ serialiseToRawBytesHex (getTxId txbody)
 
 runTxView :: InputTxBodyOrTxFile -> ExceptT ShelleyTxCmdError IO ()
-runTxView txfile = do
-  InAnyCardanoEra era txbody <-
-    case txfile of
-      InputTxBodyFile (TxBodyFile txbodyFile) -> do
-        unwitnessed <- readFileTxBody txbodyFile
-        case unwitnessed of
-          UnwitnessedCliFormattedTxBody anyTxBody -> return anyTxBody
-          IncompleteCddlFormattedTx (InAnyCardanoEra era tx) ->
-            return (InAnyCardanoEra era (getTxBody tx))
-      InputTxFile (TxFile txFile) -> do
-        InAnyCardanoEra era tx <- readFileTx txFile
-        return . InAnyCardanoEra era $ getTxBody tx
-  liftIO $ BS.putStr $ friendlyTxBodyBS era txbody
+runTxView = \case
+  InputTxBodyFile (TxBodyFile txbodyFile) -> do
+    unwitnessed <- readFileTxBody txbodyFile
+    InAnyCardanoEra era txbody <-
+      case unwitnessed of
+        UnwitnessedCliFormattedTxBody anyTxBody -> pure anyTxBody
+        IncompleteCddlFormattedTx (InAnyCardanoEra era tx) ->
+          pure $ InAnyCardanoEra era (getTxBody tx)
+    liftIO $ BS.putStr $ friendlyTxBodyBS era txbody
+  InputTxFile (TxFile txFile) -> do
+    InAnyCardanoEra era tx <- readFileTx txFile
+    liftIO $ BS.putStr $ friendlyTxBS era tx
 
 
 -- ----------------------------------------------------------------------------
