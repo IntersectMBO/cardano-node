@@ -10,6 +10,7 @@ module Cardano.Node.Configuration.Logging
   ( LoggingLayer (..)
   , EKGDirect(..)
   , createLoggingLayer
+  , nodeBasicInfo
   , shutdownLoggingLayer
   , traceCounter
   -- re-exports

@@ -31,6 +31,7 @@ import           Data.Text (breakOn, pack, take)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import           Data.Time.Clock (getCurrentTime)
+import           Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import           Data.Version (showVersion)
 import           Network.HostName (getHostName)
 import           Network.Socket (Socket)
@@ -45,6 +46,7 @@ import           System.Posix.Types (FileMode)
 import           System.Win32.File
 #endif
 
+import           Cardano.BM.Data.LogItem (LogObject (..))
 import           Cardano.BM.Data.Tracer (ToLogObject (..), TracingVerbosity (..))
 import           Cardano.BM.Data.Transformers (setHostname)
 import           Cardano.BM.Trace
@@ -53,7 +55,7 @@ import           Paths_cardano_node (version)
 import qualified Cardano.Crypto.Libsodium as Crypto
 
 import           Cardano.Node.Configuration.Logging (LoggingLayer (..), createLoggingLayer,
-                   shutdownLoggingLayer)
+                   nodeBasicInfo, shutdownLoggingLayer)
 import           Cardano.Node.Configuration.NodeAddress
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..),
                    PartialNodeConfiguration (..), SomeNetworkP2PMode (..),
@@ -188,6 +190,13 @@ handleNodeWithTracers  cmdPc nc p networkMagic runP = do
             !trace <- setupTrace loggingLayer
             let tracer = contramap pack $ toLogObject trace
             logTracingVerbosity nc tracer
+
+            -- Legacy logging infrastructure must trace 'nodeStartTime' and 'nodeBasicInfo'.
+            startTime <- getCurrentTime
+            traceCounter "nodeStartTime" trace (ceiling $ utcTimeToPOSIXSeconds startTime)
+            nbi <- nodeBasicInfo nc p startTime
+            forM_ nbi $ \(LogObject nm mt content) ->
+              traceNamedObject (appendName nm trace) (mt, content)
 
             (,Just loggingLayer) <$>
               mkTracers
