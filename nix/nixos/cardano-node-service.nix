@@ -577,7 +577,6 @@ in {
           NonBlocking = lib.mkIf cfg.systemdSocketActivation true;
           # time to sleep before restarting a service
           RestartSec = 1;
-          KillSignal = "SIGINT";
         };
       } (cfg.extraServiceConfig i));
 
