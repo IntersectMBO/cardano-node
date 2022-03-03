@@ -135,6 +135,5 @@ in
     '';
     config = {
       EntryPoint = [ "entrypoint" ];
-      StopSignal = "SIGINT";
     };
   }
