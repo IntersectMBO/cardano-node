@@ -221,7 +221,7 @@ applyBlock
   -> ValidationMode
   -> Block era
   -- ^ Some block to apply
-  -> Either LedgerStateError LedgerStateEvents
+  -> Either LedgerStateError (LedgerState, [LedgerEvent])
   -- ^ The new ledger state (or an error).
 applyBlock env oldState validationMode block
   = applyBlock' env oldState validationMode $ case block of
@@ -381,7 +381,7 @@ foldBlocks nodeConfigFilePath socketPath validationMode state0 accumulate = do
     chainSyncClient pipelineSize stateIORef errorIORef env ledgerState0
       = CSP.ChainSyncClientPipelined $ pure $ clientIdle_RequestMoreN Origin Origin Zero initialLedgerStateHistory
       where
-          initialLedgerStateHistory = Seq.singleton (0, LedgerStateEvents ledgerState0 [], Origin)
+          initialLedgerStateHistory = Seq.singleton (0, (ledgerState0, []), Origin)
 
           clientIdle_RequestMoreN
             :: WithOrigin BlockNo
@@ -406,7 +406,7 @@ foldBlocks nodeConfigFilePath socketPath validationMode state0 accumulate = do
                         env
                         (maybe
                           (error "Impossible! Missing Ledger state")
-                          (\(_,x,_) -> lseState x)
+                          (\(_,(ledgerState, _),_) -> ledgerState)
                           (Seq.lookup 0 knownLedgerStates)
                         )
                         validationMode
@@ -417,13 +417,13 @@ foldBlocks nodeConfigFilePath socketPath validationMode state0 accumulate = do
                       let (knownLedgerStates', committedStates) = pushLedgerState env knownLedgerStates slotNo newLedgerState blockInMode
                           newClientTip = At currBlockNo
                           newServerTip = fromChainTip serverChainTip
-                      forM_ committedStates $ \(_, currLedgerState, currBlockMay) -> case currBlockMay of
+                      forM_ committedStates $ \(_, (ledgerState, ledgerEvents), currBlockMay) -> case currBlockMay of
                           Origin -> return ()
                           At currBlock -> do
                             newState <- accumulate
                               env
-                              (lseState currLedgerState)
-                              (lseEvents currLedgerState)
+                              ledgerState
+                              ledgerEvents
                               currBlock
                               =<< readIORef stateIORef
                             writeIORef stateIORef newState
@@ -521,14 +521,14 @@ chainSyncClientWithLedgerState env ledgerState0 validationMode (CS.ChainSyncClie
           newLedgerStateE = case Seq.lookup 0 history of
             Nothing -> error "Impossilbe! History should always be non-empty"
             Just (_, Left err, _) -> Left err
-            Just (_, Right oldLedgerState, _) -> applyBlock
+            Just (_, Right (oldLedgerState, _), _) -> applyBlock
                   env
-                  (lseState oldLedgerState)
+                  oldLedgerState
                   validationMode
                   blk
           (history', _) = pushLedgerState env history slotNo newLedgerStateE blkInMode
           in goClientStIdle (Right history') <$> CS.runChainSyncClient
-                (recvMsgRollForward (blkInMode, viewLedgerStateEvents <$> newLedgerStateE) tip)
+                (recvMsgRollForward (blkInMode, newLedgerStateE) tip)
       )
       (\point tip -> let
           oldestSlot = case history of
@@ -552,7 +552,7 @@ chainSyncClientWithLedgerState env ledgerState0 validationMode (CS.ChainSyncClie
       (\tip -> CS.ChainSyncClient (goClientStIdle history <$> CS.runChainSyncClient (recvMsgIntersectNotFound tip)))
 
     initialLedgerStateHistory :: History (Either LedgerStateError LedgerStateEvents)
-    initialLedgerStateHistory = Seq.singleton (0, Right (LedgerStateEvents ledgerState0 []), Origin)
+    initialLedgerStateHistory = Seq.singleton (0, Right (ledgerState0, []), Origin)
 
 -- | See 'chainSyncClientWithLedgerState'.
 chainSyncClientPipelinedWithLedgerState
@@ -609,14 +609,14 @@ chainSyncClientPipelinedWithLedgerState env ledgerState0 validationMode (CSP.Cha
           newLedgerStateE = case Seq.lookup 0 history of
             Nothing -> error "Impossilbe! History should always be non-empty"
             Just (_, Left err, _) -> Left err
-            Just (_, Right oldLedgerState, _) -> applyBlock
+            Just (_, Right (oldLedgerState, _), _) -> applyBlock
                   env
-                  (lseState oldLedgerState)
+                  oldLedgerState
                   validationMode
                   blk
           (history', _) = pushLedgerState env history slotNo newLedgerStateE blkInMode
         in goClientPipelinedStIdle (Right history') n <$> recvMsgRollForward
-              (blkInMode, viewLedgerStateEvents <$> newLedgerStateE) tip
+              (blkInMode, newLedgerStateE) tip
       )
       (\point tip -> let
           oldestSlot = case history of
@@ -641,7 +641,7 @@ chainSyncClientPipelinedWithLedgerState env ledgerState0 validationMode (CSP.Cha
       (\tip -> goClientPipelinedStIdle history Zero <$> recvMsgIntersectNotFound tip)
 
     initialLedgerStateHistory :: History (Either LedgerStateError LedgerStateEvents)
-    initialLedgerStateHistory = Seq.singleton (0, Right (LedgerStateEvents ledgerState0 []), Origin)
+    initialLedgerStateHistory = Seq.singleton (0, Right (ledgerState0, []), Origin)
 
 {- HLINT ignore chainSyncClientPipelinedWithLedgerState "Use fmap" -}
 
@@ -838,13 +838,7 @@ newtype LedgerState = LedgerState
                     (Consensus.CardanoEras Consensus.StandardCrypto))
   }
 
-data LedgerStateEvents = LedgerStateEvents
-  { lseState :: LedgerState,
-    lseEvents :: [LedgerEvent]
-  }
-
-viewLedgerStateEvents :: LedgerStateEvents -> (LedgerState, [LedgerEvent])
-viewLedgerStateEvents (LedgerStateEvents st es) = (st, es)
+type LedgerStateEvents = (LedgerState, [LedgerEvent])
 
 toLedgerStateEvents ::
   LedgerResult
@@ -855,12 +849,13 @@ toLedgerStateEvents ::
         (HFC.HardForkBlock (Consensus.CardanoEras Shelley.StandardCrypto))
     ) ->
   LedgerStateEvents
-toLedgerStateEvents lr = LedgerStateEvents
-  { lseState = LedgerState (lrResult lr)
-  , lseEvents = mapMaybe (toLedgerEvent
+toLedgerStateEvents lr = (ledgerState, ledgerEvents)
+  where
+    ledgerState = LedgerState (lrResult lr)
+    ledgerEvents = mapMaybe (toLedgerEvent
       . WrapLedgerEvent @(HFC.HardForkBlock (Consensus.CardanoEras Shelley.StandardCrypto)))
       $ lrEvents lr
-  }
+
 
 -- Usually only one constructor, but may have two when we are preparing for a HFC event.
 data GenesisConfig
