@@ -54,6 +54,12 @@ TraceOptionSeverity:
   - ns: Node.ChainDB
     severity: Info
 
+  - ns: Node.ChainDB.AddBlockEvent.AddBlockValidation.ValidCandidate
+    severity: Silence
+
+  - ns: Node.ChainDB.InitChainSelEvent.UpdateLedgerDb
+    severity: Silence
+
   - ns: Node.ConnectionManager
     severity: Info
 
@@ -106,7 +112,7 @@ TraceOptionSeverity:
     severity: Info
 
   - ns: Node.Resources
-    severity: Info
+    severity: Silence
 
 TraceOptionDetail:
   # All messages are shown with normal detail level
