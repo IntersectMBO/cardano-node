@@ -823,6 +823,19 @@ docChainDBInitChainSel = [
       []
       "Candidate contains headers from the future which exceed the\
       \ clock skew, making them invalid."
+    , DocMsg
+      (ChainDB.InitChainSelValidation
+          (ChainDB.UpdateLedgerDbTraceEvent anyProto))
+      []
+      "UpdateLedgerDb"
+   ,  DocMsg
+        ChainDB.StartedInitChainSelection
+      []
+      "StartedInitChainSelection"
+   ,  DocMsg
+        ChainDB.InitalChainSelected
+      []
+      "InitalChainSelected"
   ]
 
 --------------------------------------------------------------------------------
