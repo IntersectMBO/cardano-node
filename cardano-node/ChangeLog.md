@@ -1,5 +1,11 @@
 # Changelog for cardano-node
 
+## 1.34.1 -- March 2022
+
+### node changes
+- Fix tracer config mismatches #3668
+- Fix #3664: Restore legacy metrics #3676
+
 ## 1.34.0 -- February 2022
 
 ### node changes
