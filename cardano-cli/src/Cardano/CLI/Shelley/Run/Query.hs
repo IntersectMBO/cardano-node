@@ -429,33 +429,25 @@ runQueryKesPeriodInfo (AnyConsensusModeParams cModeParams) network nodeOpCertFil
       (opCertCounter, ptclStateCounter, opCertCounterStateDiag) <- opCertCounterStateCheck ptclState opCert
 
       let diagnoses = opCertCounterStateDiag ++ [periodCheckDiag]
+      liftIO $ mapM_ kesOpCertDiagnosticsRender diagnoses
 
-      if any anyFailureDiagnostic diagnoses
-      then
-        case mOutFile of
-          Just (OutputFile _) -> liftIO $ mapM_ kesOpCertDiagnosticsRender diagnoses
-          Nothing -> liftIO $ mapM_ kesOpCertDiagnosticsRender diagnoses
-      else do
-        let kesPeriodInfo = O.QueryKesPeriodInfoOutput
-                              { O.qKesInfoCurrentKESPeriod = currentKesPeriod
-                              , O.qKesInfoStartKesInterval = kesIntervalStart
-                              , O.qKesInfoStartEndInterval = kesIntervalEnd
-                              , O.qKesInfoRemainingSlotsInPeriod = slotsTillNewKesKey
-                              , O.qKesInfoNodeStateOperationalCertNo = ptclStateCounter
-                              , O.qKesInfoOnDiskOperationalCertNo = opCertCounter
-                              , O.qKesInfoMaxKesKeyEvolutions = fromIntegral protocolParamMaxKESEvolutions
-                              , O.qKesInfoSlotsPerKesPeriod = fromIntegral protocolParamSlotsPerKESPeriod
-                              , O.qKesInfoKesKeyExpiry = kesKeyExpirySlotUtc
-                              }
-            kesPeriodInfoJSON = encodePretty kesPeriodInfo
-
-        liftIO $ mapM_ kesOpCertDiagnosticsRender diagnoses
-
-        case mOutFile of
-          Just (OutputFile oFp) ->
-            handleIOExceptT (ShelleyQueryCmdWriteFileError . FileIOError oFp)
-              $ LBS.writeFile oFp kesPeriodInfoJSON
-          Nothing -> liftIO $ LBS.putStrLn kesPeriodInfoJSON
+      let kesPeriodInfo = O.QueryKesPeriodInfoOutput
+                            { O.qKesInfoCurrentKESPeriod = currentKesPeriod
+                            , O.qKesInfoStartKesInterval = kesIntervalStart
+                            , O.qKesInfoStartEndInterval = kesIntervalEnd
+                            , O.qKesInfoRemainingSlotsInPeriod = slotsTillNewKesKey
+                            , O.qKesInfoNodeStateOperationalCertNo = ptclStateCounter
+                            , O.qKesInfoOnDiskOperationalCertNo = opCertCounter
+                            , O.qKesInfoMaxKesKeyEvolutions = fromIntegral protocolParamMaxKESEvolutions
+                            , O.qKesInfoSlotsPerKesPeriod = fromIntegral protocolParamSlotsPerKESPeriod
+                            , O.qKesInfoKesKeyExpiry = kesKeyExpirySlotUtc
+                            }
+          kesPeriodInfoJSON = encodePretty kesPeriodInfo
+      case mOutFile of
+        Just (OutputFile oFp) ->
+          handleIOExceptT (ShelleyQueryCmdWriteFileError . FileIOError oFp)
+            $ LBS.writeFile oFp kesPeriodInfoJSON
+        Nothing -> liftIO $ LBS.putStrLn kesPeriodInfoJSON
 
     mode -> left . ShelleyQueryCmdUnsupportedMode $ AnyConsensusMode mode
  where
@@ -620,10 +612,6 @@ runQueryKesPeriodInfo (AnyConsensusModeParams cModeParams) network nodeOpCertFil
 data KesOpCertDiagnostic = SuccessDiagnostic SuccessDiagnostic
                          | FailureDiagnostic FailureDiagnostic
 
-
-anyFailureDiagnostic :: KesOpCertDiagnostic -> Bool
-anyFailureDiagnostic FailureDiagnostic{} = True
-anyFailureDiagnostic SuccessDiagnostic{} = False
 
 data SuccessDiagnostic
   = OpCertCounterMoreThanOrEqualToNodeState
