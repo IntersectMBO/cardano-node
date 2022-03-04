@@ -268,7 +268,8 @@ Semantically, this is corresponds to a randomly-fair suppression of messages wit
 
 The __frequency limiter__ itself emits a __suppression summary__ message under the following conditions:
 
-* when it message suppression begins, and
+* when it message suppression begins,
+* when limiting is active every 10 seconds -- adding the number of suppressed messages
 * when message suppression stops -- adding the number of suppressed messages.
 
 __Frequency limiters__ are given a name to identify its activity.
