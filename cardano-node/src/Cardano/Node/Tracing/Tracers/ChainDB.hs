@@ -784,7 +784,7 @@ instance (ConvertRawHash blk, LedgerSupportsProtocol blk)
   => LogFormatting (ChainDB.TraceInitChainSelEvent blk) where
     forHuman (ChainDB.InitChainSelValidation v) = forHuman v
     forHuman (ChainDB.InitalChainSelected {}) =
-        "Inital chain selected"
+        "Initial chain selected"
     forHuman (ChainDB.StartedInitChainSelection {}) =
         "Started initial chain selection"
 

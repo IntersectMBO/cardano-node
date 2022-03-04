@@ -584,7 +584,7 @@ runQueryKesPeriodInfo (AnyConsensusModeParams cModeParams) network nodeOpCertFil
               let sd = SuccessDiagnostic OpCertCounterMoreThanOrEqualToZero
               in return (onDiskOpCertCount, 0, [sd])
             else
-              -- Should't be possible
+              -- Shouldn't be possible
               let fd = FailureDiagnostic OpCertCounterNegative
               in return (onDiskOpCertCount, 0, [fd])
 

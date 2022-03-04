@@ -109,9 +109,9 @@ hprop_plutus_script_context_equality = H.integration . H.runFinallies . H.worksp
   typedDatumFile <- H.note $ base </> "scripts/plutus/data/typed-42.datum"
 
 
-  -- Step 1: Create a tx ouput with a datum hash at the script address. In order for a tx ouput to be locked
+  -- Step 1: Create a tx output with a datum hash at the script address. In order for a tx output to be locked
   -- by a plutus script, it must have a datahash. We also need collateral tx inputs so we split the utxo
-  -- in order to accomodate this.
+  -- in order to accommodate this.
 
   plutusScriptAddr <- H.execCli
     [ "address", "build"

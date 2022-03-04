@@ -15,7 +15,7 @@ module Cardano.Api.TxMetadata (
     validateTxMetadata,
     TxMetadataRangeError (..),
 
-    -- * Converstion to\/from JSON
+    -- * Conversion to\/from JSON
     TxMetadataJsonSchema (..),
     metadataFromJson,
     metadataToJson,
@@ -411,7 +411,7 @@ metadataValueToJsonNoSchema = conv
                               | (k, v) <- kvs ]
 
     -- Metadata allows any value as a key, not just string as JSON does.
-    -- For simple types we just convert them to string dirctly.
+    -- For simple types we just convert them to string directly.
     -- For structured keys we render them as JSON and use that as the string.
     convKey :: TxMetadataValue -> Text
     convKey (TxMetaNumber n) = Text.pack (show n)

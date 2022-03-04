@@ -3,7 +3,7 @@
 
 
 ## [Trace Messages](#trace-messages)
-1. [Cardano.Node.AcceptPolicy.ConectionRateLimiting](#cardanonodeacceptpolicyconectionratelimiting)
+1. [Cardano.Node.AcceptPolicy.ConnectionRateLimiting](#cardanonodeacceptpolicyconnectionratelimiting)
 1. [Cardano.Node.AcceptPolicy.ConnectionHardLimit](#cardanonodeacceptpolicyconnectionhardlimit)
 1. [Cardano.Node.BlockFetch.NodeToNode.Send.BatchDone](#cardanonodeblockfetchnodetonodesendbatchdone)
 1. [Cardano.Node.BlockFetch.NodeToNode.Send.Block](#cardanonodeblockfetchnodetonodesendblock)
@@ -558,7 +558,7 @@
 1. [NodeInfo](#nodeinfo)
 
 ## Trace Messages
-### Cardano.Node.AcceptPolicy.ConectionRateLimiting
+### Cardano.Node.AcceptPolicy.ConnectionRateLimiting
 
 
 ***
@@ -2354,7 +2354,7 @@ Filtered: `Visible` because the filter level is `Notice`
 
 
 ***
-Acknowledge the request but require the consumer to wait for the nextupdate. This means that the consumer is synced with the producer, andthe producer is waiting for its own chain state to change.
+Acknowledge the request but require the consumer to wait for the nextupdate. This means that the consumer is synced with the producer, and the producer is waiting for its own chain state to change.
 ***
 
 
@@ -2522,7 +2522,7 @@ Filtered: `Invisible` because the filter level is `Notice`
 
 
 ***
-Acknowledge the request but require the consumer to wait for the nextupdate. This means that the consumer is synced with the producer, andthe producer is waiting for its own chain state to change.
+Acknowledge the request but require the consumer to wait for the nextupdate. This means that the consumer is synced with the producer, and the producer is waiting for its own chain state to change.
 ***
 
 
@@ -2690,7 +2690,7 @@ Filtered: `Invisible` because the filter level is `Notice`
 
 
 ***
-Acknowledge the request but require the consumer to wait for the nextupdate. This means that the consumer is synced with the producer, andthe producer is waiting for its own chain state to change.
+Acknowledge the request but require the consumer to wait for the nextupdate. This means that the consumer is synced with the producer, and the producer is waiting for its own chain state to change.
 ***
 
 
@@ -2894,7 +2894,7 @@ Filtered: `Invisible` because the filter level is `Notice`
 
 
 ***
-A server read has occured, either for an add block or a rollback
+A server read has occurred, either for an add block or a rollback
 ***
 
 
@@ -2966,7 +2966,7 @@ Filtered: `Invisible` because the filter level is `Notice`
 
 
 ***
-A server read has occured, either for an add block or a rollback
+A server read has occurred, either for an add block or a rollback
 ***
 
 
@@ -3452,7 +3452,7 @@ Filtered: `Invisible` because the filter level is `Info`
 
 
 ***
-A DNS lookup exception occured.
+A DNS lookup exception occurred.
 ***
 
 
@@ -3542,7 +3542,7 @@ Filtered: `Invisible` because the filter level is `Info`
 
 
 ***
-DNS Subscription: Application Exception occured.
+DNS Subscription: Application Exception occurred.
 ***
 
 
@@ -4154,7 +4154,7 @@ Filtered: `Visible` because the filter level is `Info`
 
 
 ***
-'accept' throwed an exception.
+'accept' threw an exception.
 ***
 
 
@@ -4298,7 +4298,7 @@ Filtered: `Visible` because the filter level is `Info`
 
 
 ***
-An application throwed an exception, which was not handled.
+An application threw an exception, which was not handled.
 ***
 
 
@@ -4316,7 +4316,7 @@ Filtered: `Visible` because the filter level is `Info`
 
 
 ***
-'connect' throwed an exception, which was not handled by any 'ErrorPolicy'.
+'connect' threw an exception, which was not handled by any 'ErrorPolicy'.
 ***
 
 
@@ -5008,7 +5008,7 @@ Filtered: `Invisible` because the filter level is `Info`
 
 
 ***
-IP Subscription: Application Exception occured.
+IP Subscription: Application Exception occurred.
 ***
 
 
@@ -5890,7 +5890,7 @@ Filtered: `Invisible` because the filter level is `Notice`
 
 
 ***
-'accept' throwed an exception.
+'accept' threw an exception.
 ***
 
 
@@ -6034,7 +6034,7 @@ Filtered: `Visible` because the filter level is `Info`
 
 
 ***
-An application throwed an exception, which was not handled.
+An application threw an exception, which was not handled.
 ***
 
 
@@ -6052,7 +6052,7 @@ Filtered: `Visible` because the filter level is `Info`
 
 
 ***
-'connect' throwed an exception, which was not handled by any 'ErrorPolicy'.
+'connect' threw an exception, which was not handled by any 'ErrorPolicy'.
 ***
 
 
@@ -8639,7 +8639,7 @@ Filtered: `Visible` because the filter level is `Notice`
 
 
 ***
-The client requests that the state as of a particular recent point onthe server's chain (within K of the tip) be made available to query,and waits for confirmation or failure.
+The client requests that the state as of a particular recent point on the server's chain (within K of the tip) be made available to query, and waits for confirmation or failure.
 From 'NodeToClient_V8' onwards if the point is not specified, current tipwill be acquired.  For previous versions of the protocol 'point' must begiven.
 ***
 

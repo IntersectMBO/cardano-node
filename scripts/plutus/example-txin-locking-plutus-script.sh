@@ -40,9 +40,9 @@ elif [ "$1" == "" ]; then
 fi
 
 
-# Step 1: Create a tx ouput with a datum hash at the script address. In order for a tx ouput to be locked
+# Step 1: Create a tx output with a datum hash at the script address. In order for a tx output to be locked
 # by a plutus script, it must have a datahash. We also need collateral tx inputs so we split the utxo
-# in order to accomodate this.
+# in order to accommodate this.
 
 
 plutusscriptaddr=$($CARDANO_CLI address build --payment-script-file "$plutusscriptinuse"  --testnet-magic "$TESTNET_MAGIC")

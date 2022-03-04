@@ -18,7 +18,7 @@ import           GHC.Generics
 import           Cardano.Logging.Trace
 import           Cardano.Logging.Types
 
--- | Treshold for starting and stopping of the limiter
+-- | Threshold for starting and stopping of the limiter
 budgetLimit :: Double
 budgetLimit = 30.0
 
@@ -75,7 +75,7 @@ data FrequencyRec a = FrequencyRec {
   , frLastTime :: Double    -- ^ The time since the last message did arrive in seconds
   , frLastRem  :: Double    -- ^ The time since the last limiting remainder was send
   , frBudget   :: Double    -- ^ A budget which is used to decide when to start limiting
-                              --   and stop limiting. When messages arrive in shorter frquency then
+                              --   and stop limiting. When messages arrive in shorter frequency then
                               --   by the given thresholdFrequency budget is earned, and if they
                               --   arrive in a longer period budget is spend.
   , frActive   :: Maybe (Int, Double)
@@ -87,10 +87,10 @@ data FrequencyRec a = FrequencyRec {
 --
 -- If the limiter detects more messages, it traces randomly selected
 -- messages with the given frequency on the 'vtracer' until the
--- frequency falls under the treshold long enough.(see below)
+-- frequency falls under the threshold long enough.(see below)
 --
 -- Before this the 'ltracer' gets a 'StartLimiting' message.
--- Inbetween you receive 'ContinueLimiting' messages on the 'ltracer'
+-- In-between you receive 'ContinueLimiting' messages on the 'ltracer'
 -- every 'reminderPeriod' seconds, with the number of suppressed messages.
 -- Finally it sends a 'StopLimiting' message on the 'ltracer' and traces all
 -- messages on the 'vtracer' again.
@@ -106,9 +106,9 @@ data FrequencyRec a = FrequencyRec {
 
 -- The budget is calculated by 'thresholdPeriod' / 'elapsedTime', which says how
 -- many times too quick the message arrives. A value less then 1.0 means the message is
--- arriving slower then treshold. This value gets then normalized, so that
--- (0.0-10.0) means message arrive quicker then treshold and (0.0..-10.0)
--- means that messages arrive slower then treshold.
+-- arriving slower then threshold. This value gets then normalized, so that
+-- (0.0-10.0) means message arrive quicker then threshold and (0.0..-10.0)
+-- means that messages arrive slower then threshold.
 
 
 limitFrequency
@@ -142,7 +142,7 @@ limitFrequency thresholdFrequency limiterName vtracer ltracer = do
       let elapsedTime      = timeNow - frLastTime
       -- How many times too quick does the message arrive (thresholdPeriod / elapsedTime)
       -- A value less then 1.0 means the message is
-      -- arriving slower then treshold
+      -- arriving slower then threshold
       let rawSpendReward   = if elapsedTime == 0.0
                                 then 10.0
                                 else thresholdPeriod / elapsedTime
@@ -150,9 +150,9 @@ limitFrequency thresholdFrequency limiterName vtracer ltracer = do
                                 then - ((1.0 / rawSpendReward) - 1.0)
                                 else rawSpendReward - 1.0
       -- Normalize so that (0.0-10.0) means message
-      -- arrive quicker then treshold
+      -- arrive quicker then threshold
       -- and (0.0..-10.0) means that messages arrive
-      -- slower then treshold
+      -- slower then threshold
       let normaSpendReward = min 10.0 (max (-10.0) spendReward)
       let newBudget        = min budgetLimit (max (-budgetLimit)
                                   (normaSpendReward + frBudget))

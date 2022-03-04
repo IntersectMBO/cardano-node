@@ -519,7 +519,7 @@ chainSyncClientWithLedgerState env ledgerState0 validationMode (CS.ChainSyncClie
     goClientStNext (Right history) (CS.ClientStNext recvMsgRollForward recvMsgRollBackward) = CS.ClientStNext
       (\blkInMode@(BlockInMode blk@(Block (BlockHeader slotNo _ _) _) _) tip -> CS.ChainSyncClient $ let
           newLedgerStateE = case Seq.lookup 0 history of
-            Nothing -> error "Impossilbe! History should always be non-empty"
+            Nothing -> error "Impossible! History should always be non-empty"
             Just (_, Left err, _) -> Left err
             Just (_, Right oldLedgerState, _) -> applyBlock
                   env
@@ -533,7 +533,7 @@ chainSyncClientWithLedgerState env ledgerState0 validationMode (CS.ChainSyncClie
       (\point tip -> let
           oldestSlot = case history of
             _ Seq.:|> (s, _, _) -> s
-            Seq.Empty -> error "Impossilbe! History should always be non-empty"
+            Seq.Empty -> error "Impossible! History should always be non-empty"
           history' = (\h -> if Seq.null h
                               then Left (InvalidRollback oldestSlot point)
                               else Right h)
@@ -607,7 +607,7 @@ chainSyncClientPipelinedWithLedgerState env ledgerState0 validationMode (CSP.Cha
     goClientStNext (Right history) n (CSP.ClientStNext recvMsgRollForward recvMsgRollBackward) = CSP.ClientStNext
       (\blkInMode@(BlockInMode blk@(Block (BlockHeader slotNo _ _) _) _) tip -> let
           newLedgerStateE = case Seq.lookup 0 history of
-            Nothing -> error "Impossilbe! History should always be non-empty"
+            Nothing -> error "Impossible! History should always be non-empty"
             Just (_, Left err, _) -> Left err
             Just (_, Right oldLedgerState, _) -> applyBlock
                   env
@@ -621,7 +621,7 @@ chainSyncClientPipelinedWithLedgerState env ledgerState0 validationMode (CSP.Cha
       (\point tip -> let
           oldestSlot = case history of
             _ Seq.:|> (s, _, _) -> s
-            Seq.Empty -> error "Impossilbe! History should always be non-empty"
+            Seq.Empty -> error "Impossible! History should always be non-empty"
           history' = (\h -> if Seq.null h
                               then Left (InvalidRollback oldestSlot point)
                               else Right h)
@@ -657,7 +657,7 @@ type History a = Seq (SlotNo, a, WithOrigin (BlockInMode CardanoMode))
 
 -- | Add a new ledger state to the history
 pushLedgerState
-  :: Env                -- ^ Environement used to get the security param, k.
+  :: Env                -- ^ Environment used to get the security param, k.
   -> History a          -- ^ History of k items.
   -> SlotNo             -- ^ Slot number of the new item.
   -> a                  -- ^ New item to add to the history
@@ -666,7 +666,7 @@ pushLedgerState
                         -- item) resulted in the new item.
   -> (History a, History a)
   -- ^ ( The new history with the new item appended
-  --   , Any exisiting items that are now past the security parameter
+  --   , Any existing items that are now past the security parameter
   --      and hence can no longer be rolled back.
   --   )
 pushLedgerState env hist ix st block

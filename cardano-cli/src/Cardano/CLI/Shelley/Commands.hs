@@ -181,7 +181,7 @@ data TransactionCmd
       [(StakeAddress, Lovelace, Maybe (ScriptWitnessFiles WitCtxStake))]
       TxMetadataJsonSchema
       [ScriptFile]
-      -- ^ Auxillary scripts
+      -- ^ Auxiliary scripts
       [MetadataFile]
       (Maybe ProtocolParamsSourceSpec)
       (Maybe UpdateProposalFile)
@@ -218,7 +218,7 @@ data TransactionCmd
       -- ^ Withdrawals with potential script witness
       TxMetadataJsonSchema
       [ScriptFile]
-      -- ^ Auxillary scripts
+      -- ^ Auxiliary scripts
       [MetadataFile]
       (Maybe ProtocolParamsSourceSpec)
       (Maybe UpdateProposalFile)

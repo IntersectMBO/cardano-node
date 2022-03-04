@@ -90,10 +90,10 @@ data Timeout = Timeout
 
 instance Exception Timeout where
 
--- | Timeout shutdown of an action. It can run only for specified miliseconds
+-- | Timeout shutdown of an action. It can run only for specified milliseconds
 --   once the 'TVar' is set to 'True'.
 timeoutWhenStopped :: TVar Bool
-                   -> Int -- ^ Timeout, in miliseconds.
+                   -> Int -- ^ Timeout, in milliseconds.
                    -> IO a
                    -> IO a
 timeoutWhenStopped stopVar delay action =

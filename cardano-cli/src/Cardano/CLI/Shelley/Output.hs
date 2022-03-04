@@ -40,7 +40,7 @@ data QueryKesPeriodInfoOutput =
     , qKesInfoKesKeyExpiry :: UTCTime
     -- ^ Date of KES key expiry.
     , qKesInfoNodeStateOperationalCertNo :: Word64
-    -- ^ The lastest operational certificate number in the node's state
+    -- ^ The latest operational certificate number in the node's state
     -- i.e how many times a new KES key has been generated.
     , qKesInfoOnDiskOperationalCertNo :: Word64
     -- ^ The on disk operational certificate number.

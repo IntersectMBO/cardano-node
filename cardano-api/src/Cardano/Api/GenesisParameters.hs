@@ -7,7 +7,7 @@
 --
 module Cardano.Api.GenesisParameters (
 
-    -- * Protocol paramaters fixed in the genesis file
+    -- * Protocol parameters fixed in the genesis file
     GenesisParameters(..),
     EpochSize(..),
 
@@ -52,7 +52,7 @@ data GenesisParameters =
        --
        protocolParamActiveSlotsCoefficient :: Rational,
 
-       -- | The Ouroboros security paramaters, aka @k@. This is the maximum
+       -- | The Ouroboros security parameters, aka @k@. This is the maximum
        -- number of blocks the node would ever be prepared to roll back by.
        --
        -- Clients of the node following the chain should be prepared to handle

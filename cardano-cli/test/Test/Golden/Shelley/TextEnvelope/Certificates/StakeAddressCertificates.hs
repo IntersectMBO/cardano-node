@@ -62,7 +62,7 @@ golden_shelleyStakeAddressCertificates = propertyOnce . H.moduleWorkspace "tmp" 
   -- golden files
   checkTextEnvelopeFormat registrationCertificateType referenceDeregistrationCertificate deregistrationCertificate
 
--- TODO: After delegation-certificate command is fixed to take a hash instead of a verfication key
+-- TODO: After delegation-certificate command is fixed to take a hash instead of a verification key
 {-
   -- Create stake address delegation certificate
   void $ execCardanoCLI

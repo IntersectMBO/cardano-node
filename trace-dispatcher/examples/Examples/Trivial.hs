@@ -9,7 +9,7 @@ import           Cardano.Logging
 import           Examples.TestObjects
 
 
--- | Make shure the function append name is only called once
+-- | Make sure the function append name is only called once
 --   for every path element
 test1 :: IO ()
 test1 = do

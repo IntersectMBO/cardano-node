@@ -593,7 +593,7 @@ spendAutoScript submitMode loopScriptFile threadName txCount tps = do
       l <- f a
       h <- f b
       if l && not h then search f a b
-        else Left $ "Binary search: Bad inital bounds : " ++ show (a,l,b,h)
+        else Left $ "Binary search: Bad initial bounds : " ++ show (a,l,b,h)
     search f a b
       = if a + 1 == b then Right a
            else do

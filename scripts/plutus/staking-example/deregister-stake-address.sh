@@ -72,7 +72,7 @@ cardano-cli transaction submit \
   --tx-file "$WORK/script-deregistration-cert.tx" \
   --testnet-magic "$TESTNET_MAGIC"
 
-echo "Staking script adress"
+echo "Staking script address"
 echo "$stakingscriptaddr"
 echo "Waiting 5 seconds..."
 sleep 5

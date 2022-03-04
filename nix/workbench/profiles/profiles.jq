@@ -16,10 +16,10 @@
 ##  - era-dependent defaults for the aforementioned sections:
 ##    - profiles/defaults.jq
 ##
-##  - overlayed with generated profile variants + ad-hoc profiles:
+##  - overlaid with generated profile variants + ad-hoc profiles:
 ##    - profiles/variants.jq and profiles/adhoc.jq
 ##
-##  - each then further overlayed with derived parameters, computed from the above:
+##  - each then further overlaid with derived parameters, computed from the above:
 ##    - profiles/derived.jq
 ##
 ## Profiles variants are generated as a cartesian product of variations

@@ -228,7 +228,7 @@ If the combinators are applied multiple times to a single trace, only the outerm
 traceWith (setSeverity Warning trAddBlock) (IgnoreBlockOlderThanK b)
 ```
 
-In addition, the __severity context__ of a particular trace can be further overriden by configuration, at the __tracer namespace__ granularity -- which allows to put them above or below the __global severity cutoff__, effectively either enabling or disabling them.
+In addition, the __severity context__ of a particular trace can be further overridden by configuration, at the __tracer namespace__ granularity -- which allows to put them above or below the __global severity cutoff__, effectively either enabling or disabling them.
 
 `Info` is the default __severity__, in the absence of trace context or configured severity overrides.
 
@@ -555,7 +555,7 @@ The per- __message__ `DocMsg` objects combine:
 * __message prototypes__ -- an example __message__,
 * message documentation text, in Markdown format,
 
-*Because it is not enforced by the type system, it is very important that each trace provides a complete list of `DocMsg` entries for all message contructors, as these prototypes are also used for configuration*.
+*Because it is not enforced by the type system, it is very important that each trace provides a complete list of `DocMsg` entries for all message constructors, as these prototypes are also used for configuration*.
 
 ```haskell
 newtype Documented a = Documented {undoc :: [DocMsg a]}

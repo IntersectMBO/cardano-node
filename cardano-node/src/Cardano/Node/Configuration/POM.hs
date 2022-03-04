@@ -121,7 +121,7 @@ data NodeConfiguration
          --
        , ncProtocolIdleTimeout   :: DiffTime
          -- | Wait time timeout, see
-         -- 'Ouroboros.Netowrk.Diffusion.daTimeWaitTimeout'.
+         -- 'Ouroboros.Network.Diffusion.daTimeWaitTimeout'.
          --
        , ncTimeWaitTimeout       :: DiffTime
 

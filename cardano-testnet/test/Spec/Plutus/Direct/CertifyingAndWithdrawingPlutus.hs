@@ -48,7 +48,7 @@ import qualified System.Info as SYS
 
 
 {-
-The aim is to test a Plutus certifying and rewarding script. Certifying in the sense of validating a certifiate
+The aim is to test a Plutus certifying and rewarding script. Certifying in the sense of validating a certificate
 e.g in this case a delegating certificate and rewarding in the sense of validating a rewards withdrawal.
 In this test, we delegate a Plutus script staking address to our stake pool. We must:
   1. Create a stake pool

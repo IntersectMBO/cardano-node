@@ -83,7 +83,7 @@ parseShelleyCommands =
           (Opt.info (QueryCmd <$> pQueryCmd) . Opt.progDesc $
              mconcat
                [ "Node query commands. Will query the local node whose Unix domain socket "
-               , "is obtained from the CARDANO_NODE_SOCKET_PATH enviromnent variable."
+               , "is obtained from the CARDANO_NODE_SOCKET_PATH environment variable."
                ]
             )
       , Opt.command "genesis"
@@ -606,7 +606,7 @@ pTransaction =
         (Opt.info pTransactionSubmit . Opt.progDesc $
            mconcat
              [ "Submit a transaction to the local node whose Unix domain socket "
-             , "is obtained from the CARDANO_NODE_SOCKET_PATH enviromnent variable."
+             , "is obtained from the CARDANO_NODE_SOCKET_PATH environment variable."
              ]
           )
     , subParser "policyid"

@@ -47,12 +47,12 @@ data ForgeThreadStats = ForgeThreadStats
   , ftsBlocksForgedNum           :: !Int
   , ftsSlotsMissedNum            :: !Int
     -- ^ Potentially missed slots.  Note that this is not the same as the number
-    -- of missed blocks, since this includes all occurences of not reaching a
+    -- of missed blocks, since this includes all occurrences of not reaching a
     -- leadership check decision, whether or not leadership was possible or not.
     --
     -- Also note that when the aggregate total for this metric is reported in the
     -- multi-pool case, it can be much larger than the actual number of slots
-    -- occuring since node start, for it is a sum total for all threads.
+    -- occurring since node start, for it is a sum total for all threads.
   , ftsLastSlot                  :: !Int
   }
 

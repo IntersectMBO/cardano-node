@@ -156,7 +156,7 @@ consensusCondition cMode chains securityParam =
          )
     chainForkPoints chain1 chain2 =
       case AF.intersect chain1 chain2 of
-        -- chains are anochored at the genesis, so their intersection is never
+        -- chains are anchored at the genesis, so their intersection is never
         -- empty
         Nothing -> error "chainChains: invariant violation"
 
@@ -225,7 +225,7 @@ instance Exception ProgressFailure where
     concat
       [ "progress failure:\n"
       , "the node at ", show peerid, " has chain tip ", show tip, "\n"
-      , "while the mininum expected block number is ", show minBlockNo
+      , "while the minimum expected block number is ", show minBlockNo
       ]
 
 

@@ -12,7 +12,7 @@ or a testnet that you've set up yourself.  We will assume these files are in a d
 * `user-1-payment.vkey` - User 1 verification key.
 * `user-2-payment.addr` - User 2 payment address.
 * `magic.flag` - The network magic flag.  This will be `--testnet-magic <magic>` or `--mainnet`
-  dependening on the network you are using.
+  depending on the network you are using.
 * `node.socket` - The socket file for your network, or a symlink to that socket file.  If you
   have a node running (for example, `mainnet` or `testnet` Daedalus), you can find the socket file
   by running the command `ps aux | grep cardano-node` and looking for the `--node-socket` option.
@@ -21,13 +21,13 @@ You will also need to have `yj` installed.  This can be done via `brew`, `apt-ge
 
 ### Install and run the cardano-submit-api
 
-Install the `cardani-submit-api`:
+Install the `cardano-submit-api`:
 
 ```bash
 cardano-node $ cabal install cardano-submit-api --overwrite-policy=always
 ```
 
-Install the `cardani-cli`:
+Install the `cardano-cli`:
 
 ```bash
 cardano-node $ cabal install cardano-cli --overwrite-policy=always
@@ -43,7 +43,7 @@ EnableLogging: True
 EOF
 ```
 
-Then run the `cardani-submit-api` against your network:
+Then run the `cardano-submit-api` against your network:
 
 ```bash
 playground $ cardano-submit-api --config submit-api-config.yaml --socket-path node.socket --port 8090 $(cat magic.flag)

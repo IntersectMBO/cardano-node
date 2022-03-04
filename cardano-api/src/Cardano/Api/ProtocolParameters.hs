@@ -9,19 +9,19 @@
 
 -- | The various Cardano protocol parameters, including:
 --
--- * the current values of updateable protocol parameters: 'ProtocolParameters'
+-- * the current values of updatable protocol parameters: 'ProtocolParameters'
 -- * updates to protocol parameters: 'ProtocolParametersUpdate'
 -- * update proposals that can be embedded in transactions: 'UpdateProposal'
 -- * parameters fixed in the genesis file: 'GenesisParameters'
 --
 module Cardano.Api.ProtocolParameters (
-    -- * The updateable protocol paramaters
+    -- * The updatable protocol parameters
     ProtocolParameters(..),
     checkProtocolParameters,
     ProtocolParametersError(..),
     EpochNo,
 
-    -- * Updates to the protocol paramaters
+    -- * Updates to the protocol parameters
     ProtocolParametersUpdate(..),
 
     -- * PraosNonce
@@ -34,7 +34,7 @@ module Cardano.Api.ProtocolParameters (
     CostModel(..),
     validateCostModel,
 
-    -- * Update proposals to change the protocol paramaters
+    -- * Update proposals to change the protocol parameters
     UpdateProposal(..),
     makeShelleyUpdateProposal,
 
@@ -113,16 +113,16 @@ import           Cardano.Api.Utils
 import           Cardano.Api.Value
 
 
--- | The values of the set of /updateable/ protocol paramaters. At any
--- particular point on the chain there is a current set of paramaters in use.
+-- | The values of the set of /updatable/ protocol parameters. At any
+-- particular point on the chain there is a current set of parameters in use.
 --
--- These paramaters can be updated (at epoch boundaries) via an
+-- These parameters can be updated (at epoch boundaries) via an
 -- 'UpdateProposal', which contains a 'ProtocolParametersUpdate'.
 --
 -- The 'ProtocolParametersUpdate' is essentially a diff for the
 -- 'ProtocolParameters'.
 --
--- There are also paramaters fixed in the Genesis file. See 'GenesisParameters'.
+-- There are also parameters fixed in the Genesis file. See 'GenesisParameters'.
 --
 data ProtocolParameters =
      ProtocolParameters {
@@ -262,7 +262,7 @@ data ProtocolParameters =
        -- /Introduced in Alonzo/
        protocolParamMaxBlockExUnits :: Maybe ExecutionUnits,
 
-       -- | Max size of a Value in a tx ouput.
+       -- | Max size of a Value in a tx output.
        --
        -- /Introduced in Alonzo/
        protocolParamMaxValueSize :: Maybe Natural,
@@ -345,7 +345,7 @@ instance ToJSON ProtocolParameters where
 
 
 -- ----------------------------------------------------------------------------
--- Updates to the protocol paramaters
+-- Updates to the protocol parameters
 --
 
 -- | The representation of a change in the 'ProtocolParameters'.
@@ -528,7 +528,7 @@ instance Semigroup ProtocolParametersUpdate where
       , protocolUpdatePoolPledgeInfluence = merge protocolUpdatePoolPledgeInfluence
       , protocolUpdateMonetaryExpansion   = merge protocolUpdateMonetaryExpansion
       , protocolUpdateTreasuryCut         = merge protocolUpdateTreasuryCut
-      -- Intoduced in Alonzo below.
+      -- Introduced in Alonzo below.
       , protocolUpdateUTxOCostPerWord     = merge protocolUpdateUTxOCostPerWord
       , protocolUpdateCostModels          = mergeMap protocolUpdateCostModels
       , protocolUpdatePrices              = merge protocolUpdatePrices
@@ -1166,7 +1166,7 @@ fromAlonzoPParamsUpdate
 
 
 -- ----------------------------------------------------------------------------
--- Conversion functions: protocol paramaters to ledger types
+-- Conversion functions: protocol parameters to ledger types
 --
 
 --TODO: this has to be a Maybe or Either for some of the parameter validation.
@@ -1317,7 +1317,7 @@ toAlonzoPParams ProtocolParameters { protocolParamMaxCollateralInputs = Nothing 
 
 
 -- ----------------------------------------------------------------------------
--- Conversion functions: protocol paramaters from ledger types
+-- Conversion functions: protocol parameters from ledger types
 --
 
 fromLedgerPParams

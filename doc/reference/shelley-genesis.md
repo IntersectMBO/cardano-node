@@ -37,7 +37,7 @@ Era based commands
   stake-pool               Stake pool commands
   query                    Node query commands. Will query the local node whose
                            Unix domain socket is obtained from the
-                           CARDANO_NODE_SOCKET_PATH enviromnent variable.
+                           CARDANO_NODE_SOCKET_PATH environment variable.
   genesis                  Genesis block commands
   governance               Governance commands
   text-view                Commands for dealing with Shelley TextView files.
@@ -1453,7 +1453,7 @@ Available options:
                            Address is the Bech32-encoded address followed by the
                            amount in Lovelace.
   --mint VALUE             Mint multi-asset value(s) with the multi-asset cli
-                           syntax. You must specifiy a script witness.
+                           syntax. You must specify a script witness.
   --minting-script-file FILE
                            Filepath of the multi-asset witness script.
   --invalid-before SLOT    Time that transaction is valid from (in slots).
@@ -1577,7 +1577,7 @@ Usage: cardano-cli transaction submit [--shelley-mode | --byron-mode
                                       (--mainnet | --testnet-magic NATURAL)
                                       --tx-file FILE
   Submit a transaction to the local node whose Unix domain socket is obtained
-  from the CARDANO_NODE_SOCKET_PATH enviromnent variable.
+  from the CARDANO_NODE_SOCKET_PATH environment variable.
 
 Available options:
   --shelley-mode           For talking to a node running in Shelley-only mode.

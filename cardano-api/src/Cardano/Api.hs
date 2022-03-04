@@ -293,7 +293,7 @@ module Cardano.Api (
     validateTxMetadata,
     TxMetadataRangeError (..),
 
-    -- ** Converstion to\/from JSON
+    -- ** Conversion to\/from JSON
     TxMetadataJsonSchema (..),
     metadataFromJson,
     metadataToJson,
@@ -608,7 +608,7 @@ module Cardano.Api (
     GenesisUTxOKey,
     genesisUTxOPseudoTxIn,
 
-    -- ** Genesis paramaters
+    -- ** Genesis parameters
     GenesisParameters(..),
 
     -- * Special transactions

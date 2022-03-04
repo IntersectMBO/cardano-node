@@ -111,9 +111,9 @@ hprop_plutus = Test.integration . HE.runFinallies . HE.workspace "chairman" $ \t
   -- Always succeeds Plutus script in use. Any datum and redeemer combination will succeed.
   -- Script at: $plutusscriptinuse
 
-  -- Step 1: Create a tx ouput with a datum hash at the script address. In order for a tx ouput to be locked
+  -- Step 1: Create a tx output with a datum hash at the script address. In order for a tx output to be locked
   -- by a plutus script, it must have a datahash. We also need collateral tx inputs so we split the utxo
-  -- in order to accomodate this.
+  -- in order to accommodate this.
 
   plutusScriptAddr <- Test.execCli
     [ "address", "build"
@@ -182,7 +182,7 @@ hprop_plutus = Test.integration . HE.runFinallies . HE.workspace "chairman" $ \t
 
   HE.threadDelay 5000000
 
-  -- With the tx ouput at the script address we can now attempt to spend it.
+  -- With the tx output at the script address we can now attempt to spend it.
 
   void $ Test.execCli' execConfig
     [ "query", "utxo"
