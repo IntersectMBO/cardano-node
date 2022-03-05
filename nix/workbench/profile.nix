@@ -1,14 +1,14 @@
 { pkgs, lib }:
 with lib;
 
-{ profile
-, backendProfileOutput ## Backend-specific results for forwarding
+{ profileNix
+, backendProfile ## Backend-specific results for forwarding
 }:
-pkgs.runCommand "workbench-profile-outputs-${profile.name}"
+pkgs.runCommand "workbench-profile-output-${profileNix.name}"
   { buildInputs = [];
     nodeServices =
       __toJSON
-      (flip mapAttrs profile.node-services
+      (flip mapAttrs profileNix.node-services
         (name: svc:
           with svc;
           { inherit name;
@@ -18,7 +18,7 @@ pkgs.runCommand "workbench-profile-outputs-${profile.name}"
             topology       = topology.JSON;
           }));
     generatorService =
-      with profile.generator-service;
+      with profileNix.generator-service;
       __toJSON
       { name           = "generator";
         service-config = serviceConfig.JSON;
@@ -29,7 +29,7 @@ pkgs.runCommand "workbench-profile-outputs-${profile.name}"
   }
   ''
   mkdir $out
-  cp    ${backendProfileOutput}/*  $out
+  cp    ${backendProfile}/*  $out
   cp    $nodeServicesPath          $out/node-services.json
   cp    $generatorServicePath      $out/generator-service.json
   ''

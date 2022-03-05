@@ -89,11 +89,11 @@ let
           });
 
       materialise-profile =
-        { profile }:
-        pkgs.runCommand "workbench-profile-outputs-${profile.name}-supervisord" {}
+        { profileNix }:
+        pkgs.runCommand "workbench-profile-outputs-${profileNix.name}-supervisord" {}
           ''
           mkdir $out
-          cp ${supervisord.mkSupervisorConf profile} $out/supervisor.conf
+          cp ${supervisord.mkSupervisorConf profileNix} $out/supervisor.conf
           '';
 
       ## Backend-specific Nix bits:
@@ -118,8 +118,9 @@ let
         };
     };
 
-  inherit
-    (workbench.with-workbench-profile
+  with-supervisord-profile =
+    { pkgs, profileName, envArgsOverride ? {} }:
+    workbench.with-profile
       { inherit pkgs backend profileName;
 
         ## IMPORTANT:  keep in sync with envArgs in 'workbench/default.nix/generateProfiles/environment'.
@@ -128,9 +129,13 @@ let
             inherit (pkgs) cardanoLib;
             inherit stateDir cacheDir basePort;
             staggerPorts = true;
-          };
-      })
-    profile profileOut;
+          }
+          // envArgsOverride;
+      };
+
+  inherit
+    (with-supervisord-profile { inherit pkgs profileName; })
+    profile profile-output topology-output genesis-output;
 in
 
 let
@@ -154,7 +159,7 @@ let
     wb start \
         --batch-name   ${batchName} \
         --profile-name ${profileName} \
-        --profile-out  ${profileOut} \
+        --profile      ${profile} \
         --cache-dir    ${cacheDir} \
         --base-port    ${toString basePort} \
         ''${WORKBENCH_CABAL_MODE:+--cabal} \
@@ -177,69 +182,62 @@ let
 
   profile-run-supervisord =
     { profileName }:
-    let inherit
-          (workbench.with-workbench-profile
-            { inherit pkgs backend profileName;
+    let
+      inherit
+        (with-supervisord-profile
+          { inherit pkgs profileName; envArgsOverride = { cacheDir = "./cache"; stateDir = "./"; }; })
+        profileNix profile topology genesis;
 
-              ## IMPORTANT:  keep in sync with envArgs in 'workbench/default.nix/generateProfiles/environment'.
-              envArgs =
-                {
-                  inherit (pkgs) cardanoLib;
-                  inherit basePort;
-                  cacheDir = "./cache";
-                  stateDir = "./";
-                  staggerPorts = true;
-                };
-            })
-          profile profileOut;
+      run = pkgs.runCommand "workbench-run-supervisord-${profileName}"
+        { requiredSystemFeatures = [ "benchmark" ];
+          nativeBuildInputs = with cardanoNodePackages; with pkgs; [
+            bash
+            bech32
+            coreutils
+            gnused
+            jq
+            moreutils
+            nixWrapped
+            psmisc
+            python3Packages.supervisor
+            workbench.workbench
+          ];
+        }
+          ''
+          mkdir -p $out/cache
+          cd       $out
+
+          ${workbench.shellHook}
+
+          export CARDANO_NODE_SOCKET_PATH=$(wb backend get-node-socket-path ${stateDir})
+
+          wb start \
+              --batch-name   smoke-test           \
+              --profile-name ${profileName}       \
+              --profile      ${profile}           \
+              --cache-dir    ./cache              \
+              --base-port    ${toString basePort} \
+
+          ## Convert structure from $out/run/RUN-ID/* to $out/*:
+          rm -rf cache
+          rm -f run/{current,-current}
+          mv    run/env.json .
+
+          tag=$(cd run; ls)
+          echo "workbench-test:  completed run $tag"
+
+          mv       run/$tag/*   .
+          rmdir    run/$tag run
+          rm -f    genesis  node-*/node.socket
+          '';
     in
-    pkgs.runCommand "workbench-run-supervisord-${profileName}"
-      { requiredSystemFeatures = [ "benchmark" ];
-        nativeBuildInputs = with cardanoNodePackages; with pkgs; [
-          bash
-          bech32
-          coreutils
-          gnused
-          jq
-          moreutils
-          nixWrapped
-          psmisc
-          python3Packages.supervisor
-          workbench.workbench
-        ];
-      }
-      ''
-      mkdir -p $out/cache
-      cd       $out
-
-      ${workbench.shellHook}
-
-      export CARDANO_NODE_SOCKET_PATH=$(wb backend get-node-socket-path ${stateDir})
-
-      wb start \
-          --batch-name   smoke-test           \
-          --profile-name ${profileName}       \
-          --profile-out  ${profileOut}        \
-          --cache-dir    ./cache              \
-          --base-port    ${toString basePort} \
-
-      ## Convert structure from $out/run/RUN-ID/* to $out/*:
-      rm -rf cache
-      rm -f run/{current,-current}
-      mv    run/env.json .
-
-      tag=$(cd run; ls)
-      echo "workbench-test:  completed run $tag"
-
-      mv       run/$tag/*   .
-      rmdir    run/$tag run
-      rm -f    genesis  node-*/node.socket
-      '';
+      run // {
+        analysis = workbench.run-analysis { inherit pkgs workbench profileNix run; };
+      };
 in
 {
   inherit workbench;
-  inherit (workbenchProfiles) profilesJSON;
   inherit profile stateDir;
   inherit interactive-start interactive-stop interactive-restart;
-  inherit profile-run-supervisord;
+  inherit with-supervisord-profile profile-run-supervisord;
 }

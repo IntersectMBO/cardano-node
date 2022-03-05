@@ -1,25 +1,13 @@
-{ profile
+{ pkgs
 , workbench
-}:
+, profileNix
+, run
+, trace ? false }:
 
-{ pkgs, run, trace ? false }:
-
-let profile = { name = "stub"; }; #__fromJSON (__readFile "${run}/profile.json");
-in
-pkgs.runCommand "workbench-run-analysis-${profile.name}"
+pkgs.runCommand "workbench-run-analysis-${profileNix.name}"
   { requiredSystemFeatures = [ "benchmark" ];
-    nativeBuildInputs = with pkgs.haskellPackages; with pkgs; [
-      bash
-      bech32
-      coreutils
-      gnused
-      jq
-      moreutils
-      nixWrapped
-      psmisc
-      python3Packages.supervisor
-      workbench
-    ];
+    nativeBuildInputs = with pkgs.haskellPackages; with pkgs;
+      [ bash coreutils gnused jq moreutils nixWrapped workbench.workbench ];
   }
   ''
   echo "analysing run:  ${run}"

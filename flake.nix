@@ -207,6 +207,8 @@
             benchmarks = collectComponents' "benchmarks" projectPackages;
           });
 
+          workbench = pkgs.clusterNix.workbench;
+
           packages = exes
             # Linux only packages:
             // optionalAttrs (system == "x86_64-linux") rec {
@@ -215,11 +217,9 @@
             membenches = membench.outputs.packages.x86_64-linux.batch-report;
             snapshot = membench.outputs.packages.x86_64-linux.snapshot;
             workbench-smoke-test     = pkgs.clusterNix.profile-run-supervisord { profileName = "smoke-alzo"; };
-            workbench-smoke-analysis = pkgs.clusterNix.workbench.run-analysis
-              { inherit pkgs; run = workbench-smoke-test; trace = true; };
-            workbench-ci-test     = pkgs.clusterNix.profile-run-supervisord { profileName = "ci-light-alzo"; };
-            workbench-ci-analysis = pkgs.clusterNix.workbench.run-analysis
-              { inherit pkgs; run = workbench-ci-test; trace = true; };
+            workbench-smoke-analysis = workbench-smoke-test.analysis;
+            workbench-ci-test        = pkgs.clusterNix.profile-run-supervisord { profileName = "ci-light-alzo"; };
+            workbench-ci-analysis    = workbench-ci-test.analysis;
           }
             # Add checks to be able to build them individually
             // (prefixNamesWith "checks/" checks);

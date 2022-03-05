@@ -240,7 +240,7 @@ case "$op" in
         local cacheDir=$default_cacheDir basePort=$default_basePort staggerPorts='false'
         while test $# -gt 0
         do case "$1" in
-               --profile-out )   profileOut=$2; shift;;
+               --profile )       profile=$2; shift;;
                --cache-dir )     cacheDir=$2; shift;;
                --base-port )     basePort=$2; shift;;
                --stagger-ports ) staggerPorts=true;;
@@ -330,7 +330,7 @@ case "$op" in
         cp "$dir"/genesis/genesis-shelley.json "$dir"/genesis-shelley.json
         cp "$dir"/genesis/genesis.alonzo.json  "$dir"/genesis.alonzo.json
 
-        local svcs=$profileOut/node-services.json
+        local svcs=$profile/node-services.json
         for node in $(jq_tolist 'keys' "$dir"/node-specs.json)
         do local node_dir="$dir"/$node
            mkdir -p                                          "$node_dir"
@@ -341,7 +341,7 @@ case "$op" in
            cp $(jq '."'"$node"'"."topology"'       -r $svcs) "$node_dir"/topology.json
         done
 
-        local gtor=$profileOut/generator-service.json
+        local gtor=$profile/generator-service.json
         gen_dir="$dir"/generator
         mkdir -p                              "$gen_dir"
         cp $(jq '."run-script"'     -r $gtor) "$gen_dir"/run-script.json

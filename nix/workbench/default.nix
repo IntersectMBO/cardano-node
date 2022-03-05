@@ -160,29 +160,43 @@ let
         runWorkbenchJqOnly "all-profiles.json" "profiles generate-all";
     };
 
-  materialise-profile = import ./profile.nix { inherit pkgs lib; };
+  ## materialise-profile :: ProfileNix -> BackendProfile -> Profile
+  materialise-profile      = import ./profile.nix  { inherit pkgs lib; };
+  ## profile-topology :: ProfileNix -> Topology
+  profile-topology         = import ./topology.nix { inherit pkgs; };
+  ## profile-topology :: ProfileNix -> Topology -> Genesis
+  profile-topology-genesis = import ./genesis.nix  { inherit pkgs; };
 
-  with-workbench-profile =
+  with-profile =
     { pkgs, backend, envArgs, profileName }:
     let
-      workbenchProfiles = generateProfiles
+      ps = generateProfiles
         { inherit pkgs backend envArgs; };
 
-      profile = workbenchProfiles.profiles."${profileName}"
-        or (throw "No such profile: ${profileName};  Known profiles: ${toString (__attrNames workbenchProfiles.profiles)}");
+      profileNix = ps.profiles."${profileName}"
+        or (throw "No such profile: ${profileName};  Known profiles: ${toString (__attrNames ps.profiles)}");
 
-      profileOut = materialise-profile
-        { inherit profile;
-          backendProfileOutput =
-            backend.materialise-profile { inherit profile; };
+      profile = materialise-profile
+        { inherit profileNix;
+          backendProfile =
+            backend.materialise-profile { inherit profileNix; };
         };
-    in { inherit profile profileOut; };
 
-  run-analysis = import ./analyse.nix { inherit profile workbench; };
+      topology = profile-topology { inherit profileNix; };
+
+      genesis = profile-topology-genesis { inherit profileNix topology; };
+    in {
+      inherit
+        profileNix profile
+        topology
+        genesis;
+    };
+
+  run-analysis = import ./analyse.nix;
 in
 
 {
-  inherit workbench runWorkbench runJq with-workbench-profile run-analysis;
+  inherit workbench runWorkbench runJq with-profile run-analysis;
 
-  inherit generateProfiles materialise-profile shellHook;
+  inherit generateProfiles shellHook;
 }

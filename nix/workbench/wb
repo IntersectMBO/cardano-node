@@ -87,7 +87,7 @@ start()
     local batch_name= profile_name=
     local backend=supervisor
     local cabal_mode=
-    local profile_out=
+    local profile=
     local run_start_flags=()
     local base_port=30000
     local cache_dir=$HOME/.cache/cardano-workbench
@@ -99,7 +99,7 @@ start()
         --cabal-mode | --cabal )         cabal_mode=t;;
 
         --profile-name )                 profile_name=$2; shift;;
-        --profile-out )                  profile_out=$2; shift;;
+        --profile )                      profile=$2; shift;;
 
         --no-generator | --no-gen )      run_start_flags+=($1);;
 
@@ -124,14 +124,14 @@ start()
     wb backend assert-stopped
 
     wb_run_allocate_args=(
-        --profile-out          "$profile_out"
+        --profile              "$profile"
         --cache-dir            "$cache_dir"
         --base-port             $base_port
         --stagger-ports
         --
         --port-shift-ekg        100
         --port-shift-prometheus 200
-        --supervisor-conf      "$profile_out"/supervisor.conf
+        --supervisor-conf      "$profile"/supervisor.conf
       )
     wb run allocate $batch_name $profile_name ${wb_run_allocate_args[@]}
 
