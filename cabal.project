@@ -319,3 +319,204 @@ package cardano-ledger-alonzo-test
 allow-newer:
   monoidal-containers:aeson,
   size-based:template-haskell
+
+package aeson
+  profiling: True
+
+package aeson-pretty
+  profiling: True
+
+package ansi-terminal
+  profiling: True
+
+package array
+  profiling: True
+
+package attoparsec
+  profiling: True
+
+package base16-bytestring
+  profiling: True
+
+package base58-bytestring
+  profiling: True
+
+package bech32
+  profiling: True
+
+package binary
+  profiling: True
+
+package bytestring
+  profiling: True
+
+package cardano-api
+  profiling: True
+
+package cardano-binary
+  profiling: True
+
+package cardano-cli
+  profiling: True
+
+package cardano-crypto
+  profiling: True
+
+package cardano-crypto-class
+  profiling: True
+
+package cardano-crypto-wrapper
+  profiling: True
+
+package cardano-data
+  profiling: True
+
+package cardano-git-rev
+  profiling: True
+
+package cardano-ledger-alonzo
+  profiling: True
+
+package cardano-ledger-byron
+  profiling: True
+
+package cardano-ledger-core
+  profiling: True
+
+package cardano-ledger-shelley
+  profiling: True
+
+package cardano-ledger-shelley-ma
+  profiling: True
+
+package cardano-prelude
+  profiling: True
+
+package cardano-protocol-tpraos
+  profiling: True
+
+package cardano-slotting
+  profiling: True
+
+package cborg
+  profiling: True
+
+package compact-map
+  profiling: True
+
+package containers
+  profiling: True
+
+package contra-tracer
+  profiling: True
+
+package cryptonite
+  profiling: True
+
+package deepseq
+  profiling: True
+
+package directory
+  profiling: True
+
+package filepath
+  profiling: True
+
+package formatting
+  profiling: True
+
+package iproute
+  profiling: True
+
+package memory
+  profiling: True
+
+package network
+  profiling: True
+
+package nothunks
+  profiling: True
+
+package optparse-applicative-fork
+  profiling: True
+
+package ouroboros-consensus
+  profiling: True
+
+package ouroboros-consensus-byron
+  profiling: True
+
+package ouroboros-consensus-cardano
+  profiling: True
+
+package ouroboros-consensus-protocol
+  profiling: True
+
+package ouroboros-consensus-shelley
+  profiling: True
+
+package ouroboros-network
+  profiling: True
+
+package ouroboros-network-framework
+  profiling: True
+
+package parsec
+  profiling: True
+
+package plutus-core
+  profiling: True
+
+package prettyprinter
+  profiling: True
+
+package scientific
+  profiling: True
+
+package serialise
+  profiling: True
+
+package set-algebra
+  profiling: True
+
+package small-steps
+  profiling: True
+
+package split
+  profiling: True
+
+package stm
+  profiling: True
+
+package strict-containers
+  profiling: True
+
+package text
+  profiling: True
+
+package time
+  profiling: True
+
+package transformers
+  profiling: True
+
+package transformers-except
+  profiling: True
+
+package typed-protocols
+  profiling: True
+
+package unordered-containers
+  profiling: True
+
+package utf8-string
+  profiling: True
+
+package vector
+  profiling: True
+
+package yaml
+  profiling: True
+
+package plutus-core
+  ghc-options: -fexternal-interpreter
