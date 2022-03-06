@@ -361,7 +361,9 @@ getTxCollateralTxIns _ (ShelleyTx sbe tx) =
     -> a
    obtainHasFieldConstraintAlonzo f = f
 
-
+-- TODO: We need to enforce the ledger ordering at the tx body construction
+-- level for txins and withdrawals. Therefore these getters will be correctly
+-- ordered by default
 getTxIns :: Tx era -> [TxIn]
 getTxIns (ByronTx (Byron.ATxAux aTx _ _)) =
   map fromByronTxIn $ NonEmpty.toList $ Byron.txInputs $ unAnnotated aTx

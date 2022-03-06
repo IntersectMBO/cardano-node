@@ -361,6 +361,8 @@ runTxBuildRaw (AnyCardanoEra era)
               (TxBodyFile fpath) = do
     txBodyContent <-
       TxBodyContent
+      -- TODO: This is where you impose the ordering of the potential
+      -- script inputs (txins, withdrawals etc)
         <$> validateTxIns  era inputsAndScripts
         <*> validateTxInsCollateral
                            era inputsCollateral
