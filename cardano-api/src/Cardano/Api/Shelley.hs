@@ -116,6 +116,7 @@ module Cardano.Api.Shelley
     toShelleyScriptHash,
     fromShelleyScriptHash,
     PlutusScript(..),
+    getScriptSize,
     toPlutusData,
     fromPlutusData,
     toAlonzoData,
@@ -206,6 +207,8 @@ module Cardano.Api.Shelley
     -- ** Conversions
     shelleyPayAddrToPlutusPubKHash,
     --TODO: arrange not to export these
+    toAlonzoCostModels,
+    toLedgerNonce,
     toShelleyNetwork,
     fromShelleyPParams,
 

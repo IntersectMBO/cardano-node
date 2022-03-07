@@ -499,7 +499,7 @@ evaluateTransactionExecutionUnits _eraInMode systemstart history pparams utxo tx
              (toLedgerUTxO era utxo)
              (toLedgerEpochInfo history)
              systemstart
-             (toAlonzoCostModels (protocolParamCostModels pparams))
+             (toAlonzoCostModels' (protocolParamCostModels pparams))
         of Left  err   -> Left err
            Right exmapResult ->
              case exmapResult of
@@ -512,9 +512,9 @@ evaluateTransactionExecutionUnits _eraInMode systemstart history pparams utxo tx
         hoistEpochInfo (first TransactionValidityIntervalError . runExcept) $
           Consensus.interpreterToEpochInfo interpreter
 
-    toAlonzoCostModels :: Map AnyPlutusScriptVersion CostModel
+    toAlonzoCostModels' :: Map AnyPlutusScriptVersion CostModel
                        -> Array.Array Alonzo.Language Alonzo.CostModel
-    toAlonzoCostModels costmodels =
+    toAlonzoCostModels' costmodels =
       Array.array
         (minBound, maxBound)
         [ (toAlonzoLanguage lang, toAlonzoCostModel costmodel)

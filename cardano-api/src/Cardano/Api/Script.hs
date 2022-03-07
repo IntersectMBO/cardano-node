@@ -59,6 +59,7 @@ module Cardano.Api.Script (
 
     -- * The Plutus script language
     PlutusScript(..),
+    getScriptSize,
     examplePlutusScriptAlwaysSucceeds,
     examplePlutusScriptAlwaysFails,
 
@@ -1005,6 +1006,9 @@ instance (IsPlutusScriptLanguage lang, Typeable lang) =>
         PlutusScriptV1 -> "PlutusScriptV1"
         PlutusScriptV2 -> "PlutusScriptV2"
 
+
+getScriptSize :: PlutusScript lang -> Int
+getScriptSize (PlutusScriptSerialised sbs) = SBS.length sbs
 
 -- | An example Plutus script that always succeeds, irrespective of inputs.
 --

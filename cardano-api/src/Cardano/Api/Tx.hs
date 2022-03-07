@@ -31,6 +31,7 @@ module Cardano.Api.Tx (
     getTxMetadata,
     getTxMint,
     getTxOuts,
+    getTxRedeemers,
     getTxScripts,
     getTxScriptExecutionUnits,
     getTxSize,
@@ -401,7 +402,7 @@ getTxValidityInterval sbe t =
     ByronTxBody _ -> case sbe :: ShelleyBasedEra ByronEra of {}
     ShelleyTxBody _ txbody _ _ _ _ -> fromLedgerTxValidityRange sbe txbody
 
-getTxOuts :: Tx era -> [TxOut CtxTx era]
+getTxOuts :: Tx era -> [TxOut ctx era]
 getTxOuts (ByronTx (Byron.ATxAux aTx _ _)) =
   map fromByronTxOut $ NonEmpty.toList $ Byron.txOutputs $ unAnnotated aTx
 getTxOuts (ShelleyTx era tx) =
@@ -790,6 +791,19 @@ getTxWitnesses (ShelleyTx era tx) =
                          } =
         map (ShelleyBootstrapWitness era) (Set.elems bootWits)
      ++ map (ShelleyKeyWitness       era) (Set.elems addrWits)
+
+getTxRedeemers :: Tx era -> [(ScriptWitnessIndex, (ScriptData, ExecutionUnits))]
+getTxRedeemers ByronTx{} = []
+getTxRedeemers (ShelleyTx sbe lTx) =
+  case sbe of
+    ShelleyBasedEraShelley -> mempty
+    ShelleyBasedEraAllegra -> mempty
+    ShelleyBasedEraMary -> mempty
+    ShelleyBasedEraAlonzo ->
+      let Alonzo.Redeemers' rmap = getField @"txrdmrs" $ getField @"wits" lTx
+      in [ (fromAlonzoRdmrPtr rdmrPtr, (fromAlonzoData datum, fromAlonzoExUnits execUnits))
+         | (rdmrPtr, (datum, execUnits)) <- Map.toList rmap
+         ]
 
 makeSignedTransaction :: forall era.
      [KeyWitness era]
