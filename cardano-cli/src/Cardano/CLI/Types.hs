@@ -11,7 +11,7 @@ module Cardano.CLI.Types
   , CertificateFile (..)
   , EpochLeadershipSchedule (..)
   , GenesisFile (..)
-  , OutputFormat (..)
+  , KeyOutputFormat (..)
   , OutputSerialisation (..)
   , TxBuildOutputOptions(..)
   , SigningKeyFile (..)
@@ -82,9 +82,9 @@ instance FromJSON GenesisFile where
                            <> "Encountered: " <> Text.pack (show invalid)
 
 -- | The desired output format.
-data OutputFormat
-  = OutputFormatHex
-  | OutputFormatBech32
+data KeyOutputFormat
+  = KeyOutputFormatHex
+  | KeyOutputFormatBech32
   deriving (Eq, Show)
 
 -- | Specify whether to serialise a value according to the ledger's CDDL spec

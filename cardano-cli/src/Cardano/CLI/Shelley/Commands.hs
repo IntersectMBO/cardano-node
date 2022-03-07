@@ -325,7 +325,7 @@ data PoolCmd
       EpochNo
       -- ^ Epoch in which to retire the stake pool.
       OutputFile
-  | PoolGetId (VerificationKeyOrFile StakePoolKey) OutputFormat
+  | PoolGetId (VerificationKeyOrFile StakePoolKey) KeyOutputFormat
   | PoolMetadataHash PoolMetadataFile (Maybe OutputFile)
   deriving Show
 

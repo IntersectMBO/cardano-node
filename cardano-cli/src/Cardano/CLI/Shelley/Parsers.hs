@@ -868,7 +868,7 @@ pPoolCmd =
       ]
   where
     pId :: Parser PoolCmd
-    pId = PoolGetId <$> pStakePoolVerificationKeyOrFile <*> pOutputFormat
+    pId = PoolGetId <$> pStakePoolVerificationKeyOrFile <*> pKeyOutputFormat
 
     pPoolMetadataHashSubCmd :: Parser PoolCmd
     pPoolMetadataHashSubCmd = PoolMetadataHash <$> pPoolMetadataFile <*> pMaybeOutputFile
@@ -1622,14 +1622,14 @@ pOperationalCertificateFile =
     <> Opt.completer (Opt.bashCompleter "file")
     )
 
-pOutputFormat :: Parser OutputFormat
-pOutputFormat =
-  Opt.option readOutputFormat
-    (  Opt.long "output-format"
+pKeyOutputFormat :: Parser KeyOutputFormat
+pKeyOutputFormat =
+  Opt.option readKeyOutputFormat
+    (  Opt.long "key-output-format"
     <> Opt.metavar "STRING"
-    <> Opt.help "Optional output format. Accepted output formats are \"hex\" \
+    <> Opt.help "Optional key output format. Accepted key output formats are \"hex\" \
                 \and \"bech32\" (default is \"bech32\")."
-    <> Opt.value OutputFormatBech32
+    <> Opt.value KeyOutputFormatBech32
     )
 
 pOutputSerialisation :: Parser OutputSerialisation
@@ -2966,12 +2966,12 @@ readVerificationKey asType =
       first (Text.unpack . renderInputDecodeError) $
         deserialiseInput (AsVerificationKey asType) keyFormats (BSC.pack str)
 
-readOutputFormat :: Opt.ReadM OutputFormat
-readOutputFormat = do
+readKeyOutputFormat :: Opt.ReadM KeyOutputFormat
+readKeyOutputFormat = do
   s <- Opt.str
   case s of
-    "hex" -> pure OutputFormatHex
-    "bech32" -> pure OutputFormatBech32
+    "hex" -> pure KeyOutputFormatHex
+    "bech32" -> pure KeyOutputFormatBech32
     _ ->
       fail $ "Invalid output format: \""
         <> s
