@@ -33,6 +33,7 @@ import           Cardano.Api.Byron
 import           Cardano.Api.Shelley
 import           Cardano.CLI.Environment (EnvSocketError, readEnvSocketPath, renderEnvSocketError)
 import           Cardano.CLI.Helpers (HelpersError (..), hushM, pPrintCBOR, renderHelpersError)
+import           Cardano.CLI.Output
 import           Cardano.CLI.Shelley.Commands
 import           Cardano.CLI.Shelley.Key
 import           Cardano.CLI.Shelley.Orphans ()
@@ -163,8 +164,8 @@ renderShelleyQueryCmdError err =
 runQueryCmd :: QueryCmd -> ExceptT ShelleyQueryCmdError IO ()
 runQueryCmd cmd =
   case cmd of
-    QueryLeadershipSchedule consensusModeParams network shelleyGenFp poolid vrkSkeyFp whichSchedule ->
-      runQueryLeadershipSchedule consensusModeParams network shelleyGenFp poolid vrkSkeyFp whichSchedule
+    QueryLeadershipSchedule consensusModeParams network shelleyGenFp poolid vrkSkeyFp whichSchedule outputAs ->
+      runQueryLeadershipSchedule consensusModeParams network shelleyGenFp poolid vrkSkeyFp whichSchedule outputAs
     QueryProtocolParameters' consensusModeParams network mOutFile ->
       runQueryProtocolParameters consensusModeParams network mOutFile
     QueryTip consensusModeParams network mOutFile ->
@@ -1172,10 +1173,11 @@ runQueryLeadershipSchedule
   -> VerificationKeyOrHashOrFile StakePoolKey
   -> SigningKeyFile -- ^ VRF signing key
   -> EpochLeadershipSchedule
+  -> OutputAs
   -> ExceptT ShelleyQueryCmdError IO ()
 runQueryLeadershipSchedule (AnyConsensusModeParams cModeParams) network
                            (GenesisFile genFile) coldVerKeyFile (SigningKeyFile vrfSkeyFp)
-                           whichSchedule = do
+                           whichSchedule outputAs = do
   SocketPath sockPath <- firstExceptT ShelleyQueryCmdEnvVarSocketErr readEnvSocketPath
   let localNodeConnInfo = LocalNodeConnectInfo cModeParams network sockPath
 
@@ -1239,15 +1241,17 @@ runQueryLeadershipSchedule (AnyConsensusModeParams cModeParams) network
                      serCurrentEpochState ptclState poolid vrkSkey pparams
                      eInfo (tip, curentEpoch)
 
-      liftIO $ printLeadershipSchedule schedule eInfo (SystemStart $ sgSystemStart shelleyGenesis)
+      case outputAs of
+        OutputAsText -> liftIO $ printLeadershipScheduleAsText schedule eInfo (SystemStart $ sgSystemStart shelleyGenesis)
+        OutputAsJson -> liftIO $ printLeadershipScheduleAsJson schedule eInfo (SystemStart $ sgSystemStart shelleyGenesis)
     mode -> left . ShelleyQueryCmdUnsupportedMode $ AnyConsensusMode mode
  where
-  printLeadershipSchedule
+  printLeadershipScheduleAsText
     :: Set SlotNo
     -> EpochInfo (Either Text)
     -> SystemStart
     -> IO ()
-  printLeadershipSchedule leadershipSlots eInfo sStart = do
+  printLeadershipScheduleAsText leadershipSlots eInfo sStart = do
     Text.putStrLn title
     putStrLn $ replicate (Text.length title + 2) '-'
     sequence_
@@ -1279,7 +1283,27 @@ runQueryLeadershipSchedule (AnyConsensusModeParams cModeParams) network
            , "                   "
            , Text.unpack err
            ]
-
+  printLeadershipScheduleAsJson
+    :: Set SlotNo
+    -> EpochInfo (Either Text)
+    -> SystemStart
+    -> IO ()
+  printLeadershipScheduleAsJson leadershipSlots eInfo sStart = do
+    LBS.putStrLn $ encodePretty $ showLeadershipSlot <$> sort (Set.toList leadershipSlots)
+    where
+      showLeadershipSlot :: SlotNo -> Aeson.Value
+      showLeadershipSlot lSlot@(SlotNo sn) =
+        case epochInfoSlotToUTCTime eInfo sStart lSlot of
+          Right slotTime ->
+            Aeson.object
+              [ "slotNumber" Aeson..= sn
+              , "slotTime" Aeson..= slotTime
+              ]
+          Left err ->
+            Aeson.object
+              [ "slotNumber" Aeson..= sn
+              , "error" Aeson..= Text.unpack err
+              ]
 
 
 -- Helpers

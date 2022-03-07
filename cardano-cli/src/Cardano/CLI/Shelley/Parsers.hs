@@ -20,6 +20,7 @@ import           Prelude (String)
 import           Cardano.Api
 import           Cardano.Api.Shelley
 
+import           Cardano.CLI.Output
 import           Cardano.CLI.Shelley.Commands
 import           Cardano.CLI.Shelley.Key (InputFormat (..), PaymentVerifier (..),
                    StakeVerifier (..), VerificationKeyOrFile (..), VerificationKeyOrHashOrFile (..),
@@ -981,6 +982,7 @@ pQueryCmd =
       <*> pStakePoolVerificationKeyOrHashOrFile
       <*> pVrfSigningKeyFile
       <*> pWhichLeadershipSchedule
+      <*> pOutputAs
 
     pKesPeriodInfo :: Parser QueryCmd
     pKesPeriodInfo = QueryKesPeriodInfo
@@ -988,6 +990,22 @@ pQueryCmd =
       <*> pNetworkId
       <*> pOperationalCertificateFile
       <*> pMaybeOutputFile
+
+pOutputAs :: Parser OutputAs
+pOutputAs = Opt.option readerOutputAs
+  (  Opt.long "output-as"
+  <> Opt.metavar "OUTPUT_TYPE"
+  <> Opt.help "Output type.  One of 'json' or 'text'."
+  <> Opt.value OutputAsText
+  )
+  where
+    readerOutputAs :: ReadM OutputAs
+    readerOutputAs = do
+      v <- Opt.str @Text
+      case v of
+        "json" -> return OutputAsJson
+        "text" -> return OutputAsText
+        other -> fail $ "Unrecognised output as type: " <> show other
 
 pGovernanceCmd :: Parser GovernanceCmd
 pGovernanceCmd =
