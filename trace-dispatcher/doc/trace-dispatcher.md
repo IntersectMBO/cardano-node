@@ -31,37 +31,10 @@
    2. [Trace-outs](#Trace-outs)
    3. [Explicit trace filtering](#Explicit-trace-filtering)
    4. [Confidentiality and privacy filtering implementation](#Confidentiality-and-privacy-filtering-implementation)
-   5. [Documentation generation](#Documentation-generation)
+   5. [Cardano tracer](#Cardano-tracer)
+   6. [Documentation generation](#Documentation-generation)
 5. [Appendix](#Appendix)
-   1. [Decisions](#Decisions)
-   2. [Future work](#Future-work)
-
-# Document status
-
-Work in progress.
-
-To do list:
-
-* [x] Finish editing.
-* [x] [Decide inline trace type annotation with trace function](#Decide-inline-trace-type-annotation-with-trace-function)
-* [x] [Decide tracer definedness](#Decide-tracer-definedness)
-* [x] [Decide tracer name definition](#Decide-tracer-name-definition)
-* [x] [Decide inline trace type annotation with trace function 2](#Decide-inline-trace-type-annotation-with-trace-function-2)
-* [x] [Decide on explicit trace filtering](#Decide-on-explicit-trace-filtering)
-* [x] [Decide on privately combinator](#Decide-on-privately-combinator)
-* [x] [Decide extra privacy tagging](#Decide-extra-privacy-tagging)
-* [x] [Decide on type errors instead of silent dropping of messages](#Decide-on-type-errors-instead-of-silent-dropping-of-messages)
-* [ ] [Decide on more direct interface to EKG metrics](#Decide-on-more-direct-interface-to-ekg-metrics)
-* [x] [Decide on dispatcher detail level control](#Decide-on-dispatcher-detail-level-control)
-* [x] [Decide namespace-aware configuration](#Decide-namespace-aware-configuration)
-* [ ] [Discuss impact of missing documentation entries](#Discuss-impact-of-missing-documentation-entries)
-* [x] [Decide missing configuration](#Decide-missing-configuration)
-* [x] [Decide complete configuration](#Decide-complete-configuration)
-* [ ] [Discuss possibility of pure, thread-safe aggregation](#Discuss-possibility-of-pure-thread-safe-aggregation)
-* [ ] [Decide trace-outs types](#Decide-trace-outs-types)
-* [ ] Agree on editing.
-* [ ] Final proofreading.
-* [ ] Feedback.
+   1. [Future work](#Future-work)
 
 # Introduction
 
@@ -232,7 +205,7 @@ In addition, the __severity context__ of a particular trace can be further overr
 
 `Info` is the default __severity__, in the absence of trace context or configured severity overrides.
 
-NOTE: as en extension to the filtering severity type (`SeverityF`), a `Silence` constructor is defined, which encodes unconditional silencing of a particular trace -- and therefore serves as a semantic expression of the `nullTracer` functionality.
+NOTE: as en extension to the filtering severity type (`SeverityF`), a `Silence` constructor is defined, which encodes unconditional silencing of a particular trace -- and therefore serves as a semantic expression of the disabling tracers functionality of the old framework.
 
 ### Privacy
 
@@ -357,9 +330,6 @@ metricsFormatter :: (LogFormatting a, MonadIO m)
 
 The __detail level__ can be configured globally, and also per-trace, by referring to a particular __tracer name__.
 
-#### Decide on more direct interface to EKG metrics
-
-> One problem with the `asMetrics` interface, is that it forces an intermediate representation on the metrics flow -- an it also doesn't express all possibilities that EKG store provides.
 
 ### Detail level
 
@@ -378,13 +348,13 @@ If aggregated information from multiple consecutive messages is needed the follo
 
 ```haskell
 -- | Folds the function with state acc over messages a in the trace.
-foldTraceM :: MonadIO m
+foldTraceM :: MonadUnliftIO m
   => (acc -> LoggingContext -> Maybe TraceControl -> a -> acc)
   -> acc
   -> Trace m (Folding a acc)
   -> m (Trace m a)
 
-foldMTraceM :: forall a acc m . MonadIO m
+foldMTraceM :: MonadUnliftIO m
   => (acc -> LoggingContext -> Maybe TraceControl -> a -> m acc)
   -> acc
   -> Trace m (Folding a acc)
@@ -415,10 +385,6 @@ following way, and it will output the Stats:
   traceWith 1.1 aggroTracer -- measure: 1.1 sum: 1.1
   traceWith 2.0 aggroTracer -- measure: 2.0 sum: 3.1
 ```
-
-### Discuss possibility of pure aggregation
-
-> I would like to find a function `foldTrace`, that omits the MVar and can thus be called pure.  Help is appreciated.
 
 ## Dispatcher routing toolkit
 
@@ -492,12 +458,12 @@ data ConfigOption =
 data BackendConfig =
     Forwarder
   | Stdout FormatLogging
-  | EKGBackend  
+  | EKGBackend
 
 data TraceConfig = TraceConfig {
      -- | Options specific to a certain namespace
     tcOptions            :: Map.Map Namespace [ConfigOption]
-     -- | Options for trace-forwarder    
+     -- | Options for trace-forwarder
   , tcForwarder          :: ForwarderAddr
   , tcForwarderQueueSize :: Int
 }
@@ -529,9 +495,9 @@ TraceOptionSeverity:
   - ns: ''
     severity: Info
   - ns: Node.ChainDB
-    severity: Debug    
+    severity: Debug
   - ns: Node.AcceptPolicy
-    severity: SilentF    
+    severity: SilentF
 ```
 
 As another example, if you don't want to see more then 1 BlockFetchClient
@@ -541,7 +507,7 @@ message per second, then add this to your configuration file:
 TraceOptionLimiter:
   - ns: Node.BlockFetchClient
     limiterName: BlockFetchLimiter
-    limiterFrequency: 1.0   
+    limiterFrequency: 1.0
 ```
 
 ## Documentation
@@ -556,7 +522,15 @@ The per- __message__ `DocMsg` objects combine:
 * __message prototypes__ -- an example __message__,
 * message documentation text, in Markdown format,
 
-*Because it is not enforced by the type system, it is very important that each trace provides a complete list of `DocMsg` entries for all message constructors, as these prototypes are also used for configuration*.
+*As type families often make it difficult to write prototypes, we provide the `anyProto :: a`
+function, which is a synonym for undefined. It can't be used, when the tracers use strictness annotations in their data types. This anyhow is not considered good style, as trace messages
+are either discarded or converted to a representation quickly. As the discarded case happens frequently and trace messages are never stored, strictness annotations are of no use, and
+can only make the runtime behavior worse.
+
+*Because it is not enforced by the type system, it is very important that each trace provides a complete list of `DocMsg` entries for all message contructors, as these prototypes are also used for configuration*.
+
+If a documentation entry is missing, the configuration system will not work as expected.
+In a future release we want to enhance the library, so that the completeness will be checked by the Haskell type checker.
 
 ```haskell
 newtype Documented a = Documented {undoc :: [DocMsg a]}
@@ -567,12 +541,6 @@ data DocMsg a = DocMsg {
   , dmMarkdown  :: Text
 }
 ```
-
-### Discuss impact of missing documentation entries
-
-What is the worst case impact of a missing `DocMsg`?
-
-How can we reduce that impact?
 
 # Integration and implementation in the node
 ## Overall tracing setup
@@ -591,26 +559,26 @@ Because all these tracers are defined as part of the __dispatcher__ definition, 
 
 __Trace-outs__, as mentioned before, are final destinations of all __traces__, after they have undergone __trace interpretation__ into __metrics__ and __messages__.
 
-There are exactly two __trace-outs__ defined for the system:
+There are three __trace-outs__ defined for the system:
 
 1. `stdout`, the basic standard output destination.  It is notable in that it can also accept `Confidential` traces.
 2. `trace-forward`, a purely network-only sink that forwards __messages__ using a combination of dedicated protocols over TCP or local sockets.  Only capable of forwarding `Public` traces.
 
 `forwardingTracer` is intended to be used as a __message__ source for `RTView` and `cardano-logger`.
 
-`ekgTracer` submits metrics to a local EKG store, which can then export messages further.
+`ekgTracer` submits metrics to a local EKG store, which can then forwards messages further.
 
 ```haskell
 stdoutTracer :: MonadIO m
   => Maybe FilePath
   -> m (Trace m FormattedMessage)
 
-forwardingTracer :: MonadIO m
-  => ForwardTarget
-  -> m (Trace m FormattedMessage)
+forwardTracer :: MonadIO m
+  => ForwardSink TraceObject
+  -> Trace m FormattedMessage
 
 ekgTracer :: MonadIO m
-  => Ekg.Store
+  => Either Metrics.Store Server
   -> m (Trace m FormattedMessage)
 ```
 
@@ -618,13 +586,6 @@ Configuring a __trace-out__ to output human-readable text (and therefore to use 
 
     [deus-x-machina:cardano.general.middle.specific](Info.379)
 
-### Decide trace-outs types
-
-> We shouldn't implement file-based tracing, unless we intend to implement it properly, i.e. with log rotation.
->
-> One reason why writing to a file in the stdout backend is somewhat undesirable, is because it weakens the security property we assign to this backend -- the Confidential-ity enforcement.
->
-> We should consider that we already have a dedicated `cardano-logger` component for file logging.
 
 ### Explicit trace filtering
 
@@ -673,6 +634,26 @@ __Trace filtering__ is affected by the __privacy context__ as follows:
 
 In effect, it is impossible to leak the `Confidential` traces due to logging misconfiguration -- a leak can only happen if the user explicitly allows network access to the standard output of the traced program.
 
+## Cardano tracer
+
+We provide a standard interface to construct a tracer to be used within cardano node.
+The tracer gets as arguments the backends: 'trStdout', 'trForward' and 'mbTrEkg'.
+The tracer gets as argument a 'name', which is appended to its namespace. The tracer gets as
+arguments 'namesFor', 'severityFor' and 'privacyFor' functions, to set the logging context accordingly. The returned tracer need to be configured with a configuration for the specification of filtering, detailLevel, frequencyLimiting and backends with a configuration before use.
+
+```haskell
+mkCardanoTracer :: forall evt.
+     LogFormatting evt
+  => Trace IO FormattedMessage
+  -> Trace IO FormattedMessage
+  -> Maybe (Trace IO FormattedMessage)
+  -> Text
+  -> (evt -> [Text])
+  -> (evt -> SeverityS)
+  -> (evt -> Privacy)
+  -> IO (Trace IO evt)
+```
+
 ## Documentation generation
 
 To generate the documentation, first call `documentMarkdown` with the `Documented` type and all the tracers that are called. Do this for all message types you need, and then call `buildersToText` with the appended lists.
@@ -711,98 +692,21 @@ The generated documentation for a simple message my look like this:
 >   We record the current slot number.
 >   ***
 
+The node can be called with the `trace-documentation` command, which takes the arguments
+`config` and `output-file`, which are both path's to files. The first one points to a
+valid configuration, and the second one depicts the generated output file.
+
+A periodically generated documentation of the tracers can be found in the cardano-node repository in the path `cardano-node/doc/new-tracing/tracers_doc_generated.md`
+
+
 # Appendix
-
-## Decisions
-
-### Decide inline trace type annotation with trace function
-
-__DECISION: move `traceNamed` to the dispatcher API__
-
-> Alternatively, to trace that value, while extending the name of the trace inside the program (as opposed to deferring that to the dispatcher), the __trace__ function can be used:
->
-> ```haskell
-> traceNamed trAddBlock "ignoreBlock" (IgnoreBlockOlderThanK p)
-> ```
-
-### Decide tracer definedness
-
-DECISION: Every __message__ has to have a unique tracer name.
-
-DECISION: Therefore, each __tracer__ has a __namespace__ assigned to it, which is, conceptually, a potentially empty list of `Text` identifiers.
-
-### Decide tracer name definition
-
-> We could have used the (`Type` * `Constructor`) pair, which is a more technical approach.  Problems with that:
-> 1. __synthetic traces__ exist.
-> 2. Developer-provided type/constructor names are not necessarily ideal from user standpoint.
-
-DECISION: there is value in maintaining a user-friendly trace message namespace.
-
-### Decide inline trace type annotation with trace function 2
-
-DECISION: we use `traceWith` in the library code and `traceNamed` in the dispatcher.
-
-> Since we require that every message has its unique name we encourage the use of the already introduced convenience function:
->
-> ```haskell
-> traceNamed exampleTracer "ignoreBlock" (IgnoreBlockOlderThanK b)
-> -- instead of:
-> traceWith (appendName "ignoreBlock" exampleTracer) (IgnoreBlockOlderThanK b)
-> ```
-
-### Decide on explicit trace filtering
-
-DECISION:  move to [Integration and implementation in the node](#Integration-and-implementation-in-the-node).
-
-### Decide on privately combinator
-
-> Instead of the `setPrivacy` combinator, we could save the trouble of passing the privacy argument, by relying on the fact that default privacy is `Public`, and introduce instead a `privately` combinator:
->
-> ```haskell
-> privately :: Trace m a -> Trace m a
-> ```
-> This combinator potentially entirely replaces `setPrivacy` and `withPrivacy`.
-
-DECISION: we agree to add `privately` to the API.
-
-### Decide on dispatcher detail level control
-
-It doesn't seem to make sense to decide on detail level inside the dispatcher -- so seems to be a purely configuration+`LogFormatting`-defined mechanism.
-
-DECISION: Move to the implementation API.
-
-### Decide namespace-aware configuration
-
-> It doesn't make a lot of sense to configure Privacy.
->
-> It could make sense to configure frequency limits.
-
-DECISION: Move to the implementation API.  Privacy should not be configurable.  Frequency limits should be configurable, at least globally -- maybe not per-namespace.
-
-### Decide missing configuration
-
-DECISION:
-
-* Global severity cutoff + per namespace.
-* Global detail level + per namespace.
-* Global *trace-out* configuration: stdout, trace forwarder.
-
-#### Decide on type errors instead of silent dropping of messages
-
-> We cannot allow silent dropping of messages, which is relevant in light of the above:
->
-> > It's default implementation assumes no machine representation.
-
-DECISION:  forMachine is a required method.
-
-#### Decide extra privacy tagging
-
-DECISION:  to further prevent occasional leaks of `Confidential` traces, all output from those traces is tagged with the `CONFIDENTIAL` keyword.
 
 ## Future work
 
 There is a number of topics that were discussed, but deferred to a latter iteration of design/implementation:
 
 1. Lightweight documentation references, GHC style -- this would allow us to refer to named pieces of documentation in source code, as opposed to copy-pasting them into trace documentation.
+
 2. Change of human-oriented presentation machinery.
+
+3. We want to enhance the library, so that the completeness of `Documented` will be checked by the Haskell type checker.
