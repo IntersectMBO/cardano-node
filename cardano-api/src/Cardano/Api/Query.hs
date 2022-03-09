@@ -350,9 +350,8 @@ decodeCurrentEpochState
   => FromCBOR (Core.Value (ShelleyLedgerEra era))
   => FromCBOR (Ledger.State (Core.EraRule "PPUP" (ShelleyLedgerEra era)))
   => SerialisedCurrentEpochState era
-  -> Either LBS.ByteString (CurrentEpochState era)
-decodeCurrentEpochState (SerialisedCurrentEpochState (Serialised ls)) =
-  CurrentEpochState <$> first (const ls) (decodeFull ls)
+  -> Either DecoderError (CurrentEpochState era)
+decodeCurrentEpochState (SerialisedCurrentEpochState (Serialised ls)) = CurrentEpochState <$> decodeFull ls
 
 toShelleyAddrSet :: CardanoEra era
                  -> Set AddressAny

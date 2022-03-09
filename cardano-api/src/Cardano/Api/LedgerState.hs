@@ -97,7 +97,7 @@ import           Cardano.Api.NetworkId (NetworkId (..), NetworkMagic (NetworkMag
 import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.Query (CurrentEpochState (..), ProtocolState,
                    SerialisedCurrentEpochState (..), decodeCurrentEpochState, decodeProtocolState)
-import           Cardano.Binary (FromCBOR)
+import           Cardano.Binary (DecoderError, FromCBOR)
 import qualified Cardano.Chain.Genesis
 import qualified Cardano.Chain.Update
 import           Cardano.Crypto (ProtocolMagicId (unProtocolMagicId), RequiresNetworkMagic (..))
@@ -1246,7 +1246,7 @@ unChainHash ch =
 
 data LeadershipError = LeaderErrDecodeLedgerStateFailure
                      | LeaderErrDecodeProtocolStateFailure
-                     | LeaderErrDecodeProtocolEpochStateFailure
+                     | LeaderErrDecodeProtocolEpochStateFailure DecoderError
                      | LeaderErrGenesisSlot
                      | LeaderErrStakePoolHasNoStake PoolId
                      | LeaderErrStakeDistribUnstable
@@ -1271,8 +1271,8 @@ instance Error LeadershipError where
     "Leadership schedule currently cannot be calculated from genesis"
   displayError (LeaderErrStakePoolHasNoStake poolId) =
     "The stake pool: " <> show poolId <> " has no stake"
-  displayError LeaderErrDecodeProtocolEpochStateFailure =
-    "Failed to successfully decode the current epoch state"
+  displayError (LeaderErrDecodeProtocolEpochStateFailure decoderError) =
+    "Failed to successfully decode the current epoch state: " <> show decoderError
   displayError (LeaderErrStakeDistribUnstable curSlot stableAfterSlot stabWindow predictedLastSlot) =
     "The current stake distribution is currently unstable and therefore we cannot predict " <>
     "the following epoch's leadership schedule. Please wait until : " <> show stableAfterSlot <>
@@ -1349,7 +1349,7 @@ nextEpochEligibleLeadershipSlots sbe sGen serCurrEpochState ptclState
 
   -- Then we get the "mark" snapshot. This snapshot will be used for the next
   -- epoch's leadership schedule.
-  CurrentEpochState cEstate <- first (const LeaderErrDecodeProtocolEpochStateFailure)
+  CurrentEpochState cEstate <- first LeaderErrDecodeProtocolEpochStateFailure
                                  $ obtainDecodeEpochStateConstraints sbe
                                  $ decodeCurrentEpochState serCurrEpochState
 
@@ -1466,7 +1466,7 @@ currentEpochEligibleLeadershipSlots sbe sGen eInfo pParams ptclState
   currentEpochRange <- first LeaderErrSlotRangeCalculationFailure
                          $ Slot.epochInfoRange eInfo currentEpoch
 
-  CurrentEpochState cEstate <- first (const LeaderErrDecodeProtocolEpochStateFailure)
+  CurrentEpochState cEstate <- first LeaderErrDecodeProtocolEpochStateFailure
                                  $ obtainDecodeEpochStateConstraints sbe
                                  $ decodeCurrentEpochState serCurrEpochState
 
