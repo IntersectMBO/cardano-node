@@ -56,7 +56,26 @@ let
 
     inherit withHoogle;
 
-    packages = ps: builtins.attrValues (haskellLib.selectProjectPackages ps);
+    packages = ps: builtins.attrValues (haskellLib.selectProjectPackages ps)
+                   ++
+                   (with ps; [
+                     io-sim
+                     io-classes
+                     monoidal-synchronisation
+                     network-mux
+                     ouroboros-consensus
+                     ouroboros-consensus-byron
+                     ouroboros-consensus-cardano
+                     ouroboros-consensus-protocol
+                     ouroboros-consensus-shelley
+                     ouroboros-network
+                     ouroboros-network-framework
+                     ouroboros-network-testing
+                     strict-stm
+                     typed-protocols
+                     typed-protocols-cborg
+                     typed-protocols-examples
+                   ]);
 
     tools = {
       haskell-language-server = {
