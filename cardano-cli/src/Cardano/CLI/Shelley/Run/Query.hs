@@ -512,7 +512,7 @@ runQueryKesPeriodInfo (AnyConsensusModeParams cModeParams) network nodeOpCertFil
          maxKesEvolutions  = fromIntegral protocolParamMaxKESEvolutions
          currentKesPeriod = unSlotNo currSlot `div` slotsPerKesPeriod
 
-         kesPeriodIntervalStart = (currentKesPeriod `div` maxKesEvolutions) * maxKesEvolutions
+         kesPeriodIntervalStart = opCertKesPeriod
          kesPeriodIntervalEnd = kesPeriodIntervalStart + maxKesEvolutions
 
          opCertKesPeriod = fromIntegral $ getKesPeriod opCert
@@ -522,10 +522,11 @@ runQueryKesPeriodInfo (AnyConsensusModeParams cModeParams) network nodeOpCertFil
          slotsTillNewKesKey = kesPeriodIntervalEndInSlots - unSlotNo currSlot
 
         -- See OCERT rule in ledger specs
-     if kesPeriodIntervalStart <= opCertKesPeriod &&
-        -- Checks if op cert KES period is less than the interval start
-        opCertKesPeriod < kesPeriodIntervalEnd
-        -- Checks if op cert KES period is less than the interval end
+     if kesPeriodIntervalStart <= currentKesPeriod &&
+        -- Check that the current KES period is less than the KES period start in the certificate
+        currentKesPeriod < kesPeriodIntervalEnd
+        -- Check that the current KES period is greater than or equal to the KES period
+        -- end (start + MaxKESEvo) in the certificate
      then
        return ( slotsTillNewKesKey
               , currentKesPeriod
@@ -610,7 +611,8 @@ runQueryKesPeriodInfo (AnyConsensusModeParams cModeParams) network nodeOpCertFil
 
                 OpCertKesPeriodOutsideOfCurrentInterval (nodeOpCertFile', opCertKesPeriod) intervalStart intervalEnd ->
                   "Node operational certificate at: " <> nodeOpCertFile' <> " has an incorrectly specified KES period. " <> "\n" <>
-                  "The operational certificate's specified KES period is outside of the current KES period interval." <> "\n" <>
+                  "The operational certificate's specified KES period is either before the current KES period or more than \
+                  \ max KES evolutions past the current KES period." <> "\n" <>
                   "KES period interval start: " <> show intervalStart <> "\n" <>
                   "KES period interval end: " <> show intervalEnd <> "\n" <>
                   "Operational certificate's specified KES period: " <> show opCertKesPeriod
