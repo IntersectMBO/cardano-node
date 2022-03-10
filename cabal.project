@@ -17,6 +17,23 @@ packages:
     trace-dispatcher
     trace-resources
     trace-forward
+    ../ekg-forward
+    ../ouroboros-network/io-sim
+    ../ouroboros-network/io-classes
+    ../ouroboros-network/monoidal-synchronisation
+    ../ouroboros-network/network-mux
+    ../ouroboros-network/ouroboros-consensus
+    ../ouroboros-network/ouroboros-consensus-byron
+    ../ouroboros-network/ouroboros-consensus-cardano
+    ../ouroboros-network/ouroboros-consensus-protocol
+    ../ouroboros-network/ouroboros-consensus-shelley
+    ../ouroboros-network/ouroboros-network
+    ../ouroboros-network/ouroboros-network-framework
+    ../ouroboros-network/ouroboros-network-testing
+    ../ouroboros-network/strict-stm
+    ../ouroboros-network/typed-protocols
+    ../ouroboros-network/typed-protocols-cborg
+    ../ouroboros-network/typed-protocols-examples
 
 package cardano-api
   ghc-options: -Werror
@@ -245,28 +262,28 @@ source-repository-package
   tag: 3825d3abf75f83f406c1f7161883c438dac7277d
   --sha256: 19wahfv726fa3mqajpqdqhnl9ica3xmf68i254q45iyjcpj1psqx
 
-source-repository-package
-  type: git
-  location: https://github.com/input-output-hk/ouroboros-network
-  tag: 48e498cfea694b89f99fd92ae7a86b9fcd5f29f0
-  --sha256: 1klgvlfcd1kxgjicws964k2xkxr79xf3vvgkbx4x7cyn4xfng166
-  subdir:
-    io-sim
-    io-classes
-    monoidal-synchronisation
-    network-mux
-    ouroboros-consensus
-    ouroboros-consensus-byron
-    ouroboros-consensus-cardano
-    ouroboros-consensus-protocol
-    ouroboros-consensus-shelley
-    ouroboros-network
-    ouroboros-network-framework
-    ouroboros-network-testing
-    strict-stm
-    typed-protocols
-    typed-protocols-cborg
-    typed-protocols-examples
+-- source-repository-package
+--   type: git
+--   location: https://github.com/input-output-hk/ouroboros-network
+--   tag: 48e498cfea694b89f99fd92ae7a86b9fcd5f29f0
+--   --sha256: 1klgvlfcd1kxgjicws964k2xkxr79xf3vvgkbx4x7cyn4xfng166
+--   subdir:
+--     io-sim
+--     io-classes
+--     monoidal-synchronisation
+--     network-mux
+--     ouroboros-consensus
+--     ouroboros-consensus-byron
+--     ouroboros-consensus-cardano
+--     ouroboros-consensus-protocol
+--     ouroboros-consensus-shelley
+--     ouroboros-network
+--     ouroboros-network-framework
+--     ouroboros-network-testing
+--     strict-stm
+--     typed-protocols
+--     typed-protocols-cborg
+--     typed-protocols-examples
 
 source-repository-package
   type: git
