@@ -504,7 +504,7 @@ runQueryKesPeriodInfo (AnyConsensusModeParams cModeParams) network nodeOpCertFil
          maxKesEvolutions  = fromIntegral protocolParamMaxKESEvolutions
          currentKesPeriod = unSlotNo currSlot `div` slotsPerKesPeriod
 
-         kesPeriodIntervalStart = (currentKesPeriod `div` maxKesEvolutions) * maxKesEvolutions
+         kesPeriodIntervalStart = opCertKesPeriod
          kesPeriodIntervalEnd = kesPeriodIntervalStart + maxKesEvolutions
 
          opCertKesPeriod = fromIntegral $ getKesPeriod opCert
@@ -514,10 +514,11 @@ runQueryKesPeriodInfo (AnyConsensusModeParams cModeParams) network nodeOpCertFil
          slotsTillNewKesKey = kesPeriodIntervalEndInSlots - unSlotNo currSlot
 
         -- See OCERT rule in ledger specs
-     if kesPeriodIntervalStart <= opCertKesPeriod &&
-        -- Checks if op cert KES period is less than the interval start
-        opCertKesPeriod < kesPeriodIntervalEnd
-        -- Checks if op cert KES period is less than the interval end
+     if kesPeriodIntervalStart <= currentKesPeriod &&
+        -- Check that the current KES period is less than the KES period start in the certificate
+        currentKesPeriod < kesPeriodIntervalEnd
+        -- Check that the current KES period is greater than or equal to the KES period
+        -- end (start + MaxKESEvo) in the certificate
      then
        return ( slotsTillNewKesKey
               , currentKesPeriod
