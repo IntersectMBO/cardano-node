@@ -6,11 +6,16 @@
 -- | Transactions in the context of a consensus mode, and other types used in
 -- the transaction submission protocol.
 --
-module Cardano.Api.TxInMode (
+module Cardano.Api.InMode (
 
     -- * Transaction in a consensus mode
     TxInMode(..),
+    fromConsensusGenTx,
     toConsensusGenTx,
+
+    -- * Transaction id in a consensus mode
+    TxIdInMode(..),
+    toConsensusTxId,
 
     -- * Transaction validation errors
     TxValidationError(..),
@@ -29,10 +34,12 @@ import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (EraMismatch
 import qualified Ouroboros.Consensus.HardFork.Combinator.Degenerate as Consensus
 import qualified Ouroboros.Consensus.Ledger.SupportsMempool as Consensus
 import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
+import qualified Ouroboros.Consensus.TypeFamilyWrappers as Consensus
 
 import           Cardano.Api.Eras
 import           Cardano.Api.Modes
 import           Cardano.Api.Tx
+import           Cardano.Api.TxBody
 
 
 -- ----------------------------------------------------------------------------
@@ -60,6 +67,34 @@ data TxInMode mode where
 
 deriving instance Show (TxInMode mode)
 
+fromConsensusGenTx
+  :: ConsensusBlockForMode mode ~ block
+  => ConsensusMode mode -> Consensus.GenTx block -> TxInMode mode
+fromConsensusGenTx ByronMode (Consensus.HardForkGenTx (Consensus.OneEraGenTx (Z tx'))) =
+  TxInByronSpecial tx' ByronEraInByronMode
+
+fromConsensusGenTx ShelleyMode (Consensus.HardForkGenTx (Consensus.OneEraGenTx (Z tx'))) =
+  let Consensus.ShelleyTx _txid shelleyEraTx = tx'
+  in TxInMode (ShelleyTx ShelleyBasedEraShelley shelleyEraTx) ShelleyEraInShelleyMode
+
+fromConsensusGenTx CardanoMode (Consensus.HardForkGenTx (Consensus.OneEraGenTx (Z tx'))) =
+  TxInByronSpecial tx' ByronEraInCardanoMode
+
+fromConsensusGenTx CardanoMode (Consensus.HardForkGenTx (Consensus.OneEraGenTx (S (Z tx')))) =
+  let Consensus.ShelleyTx _txid shelleyEraTx = tx'
+  in TxInMode (ShelleyTx ShelleyBasedEraShelley shelleyEraTx) ShelleyEraInCardanoMode
+
+fromConsensusGenTx CardanoMode (Consensus.HardForkGenTx (Consensus.OneEraGenTx (S (S (Z tx'))))) =
+  let Consensus.ShelleyTx _txid shelleyEraTx = tx'
+  in TxInMode (ShelleyTx ShelleyBasedEraAllegra shelleyEraTx) AllegraEraInCardanoMode
+
+fromConsensusGenTx CardanoMode (Consensus.HardForkGenTx (Consensus.OneEraGenTx (S (S (S (Z tx')))))) =
+  let Consensus.ShelleyTx _txid shelleyEraTx = tx'
+  in TxInMode (ShelleyTx ShelleyBasedEraMary shelleyEraTx) MaryEraInCardanoMode
+
+fromConsensusGenTx CardanoMode (Consensus.HardForkGenTx (Consensus.OneEraGenTx (S (S (S (S (Z tx'))))))) =
+  let Consensus.ShelleyTx _txid shelleyEraTx = tx'
+  in TxInMode (ShelleyTx ShelleyBasedEraAlonzo shelleyEraTx) AlonzoEraInCardanoMode
 
 toConsensusGenTx :: ConsensusBlockForMode mode ~ block
                  => TxInMode mode
@@ -107,7 +142,64 @@ toConsensusGenTx (TxInMode (ShelleyTx _ tx) AlonzoEraInCardanoMode) =
   where
     tx' = Consensus.mkShelleyTx tx
 
+-- ----------------------------------------------------------------------------
+-- Transaction ids in the context of a consensus mode
+--
 
+-- | A 'TxId' in one of the eras supported by a given protocol mode.
+--
+-- For multi-era modes such as the 'CardanoMode' this type is a sum of the
+-- different transaction types for all the eras. It is used in the
+-- LocalTxMonitoring protocol.
+--
+
+data TxIdInMode mode where
+  TxIdInMode :: TxId -> EraInMode era mode -> TxIdInMode mode
+
+toConsensusTxId
+  :: ConsensusBlockForMode mode ~ block
+  => TxIdInMode mode -> Consensus.TxId  (Consensus.GenTx block)
+toConsensusTxId (TxIdInMode txid ByronEraInByronMode) =
+  Consensus.HardForkGenTxId . Consensus.OneEraGenTxId . Z $ Consensus.WrapGenTxId txid'
+ where
+  txid' :: Consensus.TxId (Consensus.GenTx Consensus.ByronBlock)
+  txid' = Consensus.ByronTxId $ toByronTxId txid
+
+toConsensusTxId (TxIdInMode t ShelleyEraInShelleyMode) =
+  Consensus.HardForkGenTxId $ Consensus.OneEraGenTxId  $ Z  (Consensus.WrapGenTxId txid')
+ where
+  txid' :: Consensus.TxId (Consensus.GenTx (Consensus.ShelleyBlock Consensus.StandardShelley))
+  txid' = Consensus.ShelleyTxId $ toShelleyTxId t
+
+toConsensusTxId (TxIdInMode txid ByronEraInCardanoMode) =
+  Consensus.HardForkGenTxId . Consensus.OneEraGenTxId . Z $ Consensus.WrapGenTxId txid'
+ where
+  txid' :: Consensus.TxId (Consensus.GenTx Consensus.ByronBlock)
+  txid' = Consensus.ByronTxId $ toByronTxId txid
+
+toConsensusTxId (TxIdInMode txid ShelleyEraInCardanoMode) =
+  Consensus.HardForkGenTxId (Consensus.OneEraGenTxId (S (Z (Consensus.WrapGenTxId txid'))))
+ where
+  txid' :: Consensus.TxId (Consensus.GenTx (Consensus.ShelleyBlock Consensus.StandardShelley))
+  txid' = Consensus.ShelleyTxId $ toShelleyTxId txid
+
+toConsensusTxId (TxIdInMode txid AllegraEraInCardanoMode) =
+  Consensus.HardForkGenTxId (Consensus.OneEraGenTxId (S (S (Z (Consensus.WrapGenTxId txid')))))
+ where
+  txid' :: Consensus.TxId (Consensus.GenTx (Consensus.ShelleyBlock Consensus.StandardAllegra))
+  txid' = Consensus.ShelleyTxId $ toShelleyTxId txid
+
+toConsensusTxId (TxIdInMode txid MaryEraInCardanoMode) =
+  Consensus.HardForkGenTxId (Consensus.OneEraGenTxId (S (S (S (Z (Consensus.WrapGenTxId txid'))))))
+ where
+  txid' :: Consensus.TxId (Consensus.GenTx (Consensus.ShelleyBlock Consensus.StandardMary))
+  txid' = Consensus.ShelleyTxId $ toShelleyTxId txid
+
+toConsensusTxId (TxIdInMode txid AlonzoEraInCardanoMode) =
+  Consensus.HardForkGenTxId (Consensus.OneEraGenTxId (S (S (S (S (Z (Consensus.WrapGenTxId txid')))))))
+ where
+  txid' :: Consensus.TxId (Consensus.GenTx (Consensus.ShelleyBlock Consensus.StandardAlonzo))
+  txid' = Consensus.ShelleyTxId $ toShelleyTxId txid
 
 -- ----------------------------------------------------------------------------
 -- Transaction validation errors in the context of eras and consensus modes

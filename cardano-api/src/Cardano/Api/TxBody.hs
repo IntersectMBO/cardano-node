@@ -121,6 +121,7 @@ module Cardano.Api.TxBody (
     mapTxScriptWitnesses,
 
     -- * Internal conversion functions & types
+    toByronTxId,
     toShelleyTxId,
     toShelleyTxIn,
     toShelleyTxOut,
@@ -188,9 +189,11 @@ import qualified Cardano.Crypto.Hashing as Byron
 import qualified Cardano.Ledger.Address as Shelley
 import qualified Cardano.Ledger.AuxiliaryData as Ledger (hashAuxiliaryData)
 import           Cardano.Ledger.BaseTypes (StrictMaybe (..), maybeToStrictMaybe)
+import qualified Cardano.Ledger.BaseTypes as Ledger
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Core as Ledger
 import qualified Cardano.Ledger.Credential as Shelley
+import           Cardano.Ledger.Crypto (StandardCrypto)
 import qualified Cardano.Ledger.Era as Ledger
 import qualified Cardano.Ledger.Keys as Shelley
 import qualified Cardano.Ledger.SafeHash as SafeHash
@@ -242,8 +245,7 @@ import           Cardano.Api.TxMetadata
 import           Cardano.Api.Utils
 import           Cardano.Api.Value
 import           Cardano.Api.ValueParser
-import qualified Cardano.Ledger.BaseTypes as Ledger
-import           Cardano.Ledger.Crypto (StandardCrypto)
+
 
 {- HLINT ignore "Redundant flip" -}
 {- HLINT ignore "Use section" -}

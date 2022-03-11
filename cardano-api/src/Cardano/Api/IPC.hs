@@ -79,7 +79,8 @@ import           Data.Void (Void)
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Map.Strict as Map
 
-import           Control.Concurrent.STM
+import           Control.Concurrent.STM (TMVar, atomically, newEmptyTMVarIO, putTMVar, takeTMVar,
+                   tryPutTMVar)
 import           Control.Monad (void)
 import           Control.Tracer (nullTracer)
 
@@ -95,6 +96,9 @@ import           Ouroboros.Network.Protocol.LocalStateQuery.Client (LocalStateQu
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Client as Net.Query
 import           Ouroboros.Network.Protocol.LocalStateQuery.Type (AcquireFailure (..))
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as Net.Query
+import           Ouroboros.Network.Protocol.LocalTxMonitor.Client (LocalTxMonitorClient (..),
+                   localTxMonitorClientPeer)
+import qualified Ouroboros.Network.Protocol.LocalTxMonitor.Client as CTxMon
 import           Ouroboros.Network.Protocol.LocalTxSubmission.Client (LocalTxSubmissionClient (..),
                    SubmitResult (..))
 import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Client as Net.Tx
@@ -110,11 +114,11 @@ import qualified Ouroboros.Consensus.Node.Run as Consensus
 
 import           Cardano.Api.Block
 import           Cardano.Api.HasTypeProxy
+import           Cardano.Api.InMode
 import           Cardano.Api.Modes
 import           Cardano.Api.NetworkId
 import           Cardano.Api.Protocol.Types
 import           Cardano.Api.Query
-import           Cardano.Api.TxInMode
 
 -- ----------------------------------------------------------------------------
 -- The types for the client side of the node-to-client IPC protocols
@@ -127,7 +131,7 @@ import           Cardano.Api.TxInMode
 -- to\/from the types used by the underlying wire formats is handled by
 -- 'connectToLocalNode'.
 --
-data LocalNodeClientProtocols block point tip tx txerr query m =
+data LocalNodeClientProtocols block point tip slot tx txid txerr query m =
      LocalNodeClientProtocols {
        localChainSyncClient
          :: LocalChainSyncClient block point tip m
@@ -137,6 +141,9 @@ data LocalNodeClientProtocols block point tip tx txerr query m =
 
      , localStateQueryClient
          :: Maybe (LocalStateQueryClient   block point query m ())
+
+     , localTxMonitoringClient
+         :: Maybe (LocalTxMonitorClient txid tx slot m ())
      }
 
 data LocalChainSyncClient block point tip m
@@ -150,7 +157,9 @@ type LocalNodeClientProtocolsInMode mode =
          (BlockInMode mode)
          ChainPoint
          ChainTip
+         SlotNo
          (TxInMode mode)
+         (TxIdInMode mode)
          (TxValidationErrorInMode mode)
          (QueryInMode mode)
          IO
@@ -256,7 +265,8 @@ mkVersionedProtocols networkid ptcl unversionedClients =
       LocalNodeClientProtocolsForBlock {
         localChainSyncClientForBlock,
         localTxSubmissionClientForBlock,
-        localStateQueryClientForBlock
+        localStateQueryClientForBlock,
+        localTxMonitoringClientForBlock
       }
       ptclBlockVersion
       ptclVersion =
@@ -298,7 +308,9 @@ mkVersionedProtocols networkid ptcl unversionedClients =
               Net.MuxPeer
                 nullTracer
                 cTxMonitorCodec
-                Net.localTxMonitorPeerNull
+                (maybe Net.localTxMonitorPeerNull
+                       localTxMonitorClientPeer
+                       localTxMonitoringClientForBlock)
         }
       where
         Consensus.Codecs {
@@ -355,6 +367,10 @@ data LocalNodeClientProtocolsForBlock block =
          :: Maybe (LocalTxSubmissionClient (Consensus.GenTx      block)
                                            (Consensus.ApplyTxErr block)
                                             IO ())
+     , localTxMonitoringClientForBlock
+         :: Maybe (LocalTxMonitorClient (Consensus.TxId  (Consensus.GenTx block))
+                                        (Consensus.GenTx block)
+                                        SlotNo IO ())
      }
 
 
@@ -404,7 +420,8 @@ convLocalNodeClientProtocols
     LocalNodeClientProtocols {
       localChainSyncClient,
       localTxSubmissionClient,
-      localStateQueryClient
+      localStateQueryClient,
+      localTxMonitoringClient
     } =
     LocalNodeClientProtocolsForBlock {
       localChainSyncClientForBlock    = case localChainSyncClient of
@@ -416,9 +433,23 @@ convLocalNodeClientProtocols
                                           localTxSubmissionClient,
 
       localStateQueryClientForBlock   = convLocalStateQueryClient mode <$>
-                                          localStateQueryClient
+                                          localStateQueryClient,
+
+      localTxMonitoringClientForBlock = convLocalTxMonitoringClient mode <$>
+                                          localTxMonitoringClient
+
     }
 
+convLocalTxMonitoringClient
+  :: forall mode block m a. ConsensusBlockForMode mode ~ block
+  => Functor m
+  => ConsensusMode mode
+  -> LocalTxMonitorClient (TxIdInMode mode)  (TxInMode mode) SlotNo m a
+  -> LocalTxMonitorClient (Consensus.TxId (Consensus.GenTx block)) (Consensus.GenTx block) SlotNo m a
+convLocalTxMonitoringClient mode =
+  mapLocalTxMonitoringClient
+    toConsensusTxId
+    (fromConsensusGenTx mode)
 
 convLocalChainSyncClient
   :: forall mode block m a.
@@ -473,6 +504,38 @@ convLocalStateQueryClient mode =
       fromConsensusQueryResult
 
 
+--TODO: Move to consensus
+mapLocalTxMonitoringClient
+  :: forall txid txid' tx tx' m a. Functor m
+  => (txid -> txid')
+  -> (tx'-> tx)
+  -> LocalTxMonitorClient txid tx SlotNo m a
+  -> LocalTxMonitorClient txid' tx' SlotNo m a
+mapLocalTxMonitoringClient convTxid convTx ltxmc =
+  let LocalTxMonitorClient idleEff = ltxmc
+  in LocalTxMonitorClient (fmap convClientStateIdle idleEff)
+ where
+   convClientStateIdle
+     :: CTxMon.ClientStIdle txid  tx  SlotNo m a
+     -> CTxMon.ClientStIdle txid' tx' SlotNo m a
+   convClientStateIdle (CTxMon.SendMsgAcquire f) =
+     CTxMon.SendMsgAcquire $ (fmap . fmap) convClientStateAcquired f
+   convClientStateIdle (CTxMon.SendMsgDone a) = CTxMon.SendMsgDone a
+
+   convClientStateAcquired
+     :: CTxMon.ClientStAcquired txid  tx  SlotNo m a
+     -> CTxMon.ClientStAcquired txid' tx' SlotNo m a
+   convClientStateAcquired (CTxMon.SendMsgNextTx f) =
+     CTxMon.SendMsgNextTx (\mTx -> convClientStateAcquired <$> f (convTx <$> mTx))
+   convClientStateAcquired (CTxMon.SendMsgHasTx txid f)=
+     CTxMon.SendMsgHasTx (convTxid txid) ((fmap . fmap) convClientStateAcquired f)
+   convClientStateAcquired (CTxMon.SendMsgGetSizes f) =
+     CTxMon.SendMsgGetSizes $ (fmap . fmap) convClientStateAcquired f
+   convClientStateAcquired (CTxMon.SendMsgAwaitAcquire f) =
+     CTxMon.SendMsgAwaitAcquire $ (fmap . fmap ) convClientStateAcquired f
+   convClientStateAcquired (CTxMon.SendMsgRelease eff) =
+     CTxMon.SendMsgRelease (convClientStateIdle <$> eff)
+
 -- ----------------------------------------------------------------------------
 -- Wrappers for specific protocol use-cases
 --
@@ -496,7 +559,8 @@ queryNodeLocalState connctInfo mpoint query = do
       LocalNodeClientProtocols {
         localChainSyncClient    = NoLocalChainSyncClient,
         localStateQueryClient   = Just (singleQuery mpoint resultVar),
-        localTxSubmissionClient = Nothing
+        localTxSubmissionClient = Nothing,
+        localTxMonitoringClient = Nothing
       }
     atomically (takeTMVar resultVar)
   where
@@ -535,7 +599,8 @@ submitTxToNodeLocal connctInfo tx = do
       LocalNodeClientProtocols {
         localChainSyncClient    = NoLocalChainSyncClient,
         localTxSubmissionClient = Just (localTxSubmissionClientSingle resultVar),
-        localStateQueryClient   = Nothing
+        localStateQueryClient   = Nothing,
+        localTxMonitoringClient = Nothing
       }
     atomically (takeTMVar resultVar)
   where
@@ -554,7 +619,6 @@ submitTxToNodeLocal connctInfo tx = do
 -- Get tip as 'ChainPoint'
 --
 
-
 getLocalChainTip :: LocalNodeConnectInfo mode -> IO ChainTip
 getLocalChainTip localNodeConInfo = do
     resultVar <- newEmptyTMVarIO
@@ -564,6 +628,7 @@ getLocalChainTip localNodeConInfo = do
         { localChainSyncClient = LocalChainSyncClient $ chainSyncGetCurrentTip resultVar
         , localTxSubmissionClient = Nothing
         , localStateQueryClient = Nothing
+        , localTxMonitoringClient = Nothing
         }
     atomically $ takeTMVar resultVar
 
