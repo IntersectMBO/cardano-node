@@ -5,7 +5,7 @@ The command line interface (CLI) provides a collection of tools for generating k
 This section provides a reference of the core `cardano-cli` commands and their associated subcommands:
 
 *cardano-cli*
-The set of `cardano-cli` commands include:
+The set of `cardano-cli` commands includes:
 * `address`: payment address commands
 * `stake-address`: stake address commands
 * `transaction`: transaction commands
@@ -41,7 +41,7 @@ The `transaction` command contains the following subcommands:
 * `witness`: witnesses a transaction
 * `submit`: submits the transaction to the local node whose Unix domain socket is obtained from the CARDANO_NODE_SOCKET_PATH environment variable (uses the `--cardano-mode`, `--byron-mode`, `--shelley-mode` flags)
 * `calculate-min-fee`: calculates the minimum fee for the transaction
-* `calculate-min-required-utxo`: calculates the minimum required ADA for a transaction output
+* `calculate-min-required-utxo`: calculates the minimum required ada for a transaction output
 * `hash-script-data`: calculates the hash of script data (datums)
 * `txid`: retrieves the transaction ID
 * `policyid`: retrieves the policy ID
@@ -112,7 +112,7 @@ The `text-view` command contains the following subcommand:
 - Do the counters of the issue counter and operational certificate match?
 - Do the counters match what is currently in the node state?
 - Does the KES key period specified in your operational certificate fall within the current KES key period?
-We essentially check the predicates of the OCERT rule in the cardano-ledger specification, and we print additional diagnostic information as follows:
+The Cardano node will check the predicates of the OCERT rule in the cardano-ledger specification, and print additional diagnostic information as follows:
 ```
 ✓ The operational certificate counter agrees with the node protocol state counter
 ✓ Operational certificate's kes period is within the correct KES period interval
