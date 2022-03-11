@@ -715,7 +715,9 @@
           "hackageNix"
         ],
         "hpc-coveralls": "hpc-coveralls",
-        "nix-tools": "nix-tools",
+        "nix-tools": [
+          "nixTools"
+        ],
         "nixpkgs": [
           "nixpkgs"
         ],
@@ -751,7 +753,7 @@
         "ghc-8.6.5-iohk": "ghc-8.6.5-iohk_2",
         "hackage": "hackage",
         "hpc-coveralls": "hpc-coveralls_2",
-        "nix-tools": "nix-tools_2",
+        "nix-tools": "nix-tools",
         "nixpkgs": [
           "membench",
           "cardano-node-snapshot",
@@ -789,7 +791,7 @@
         "ghc-8.6.5-iohk": "ghc-8.6.5-iohk_3",
         "hackage": "hackage_2",
         "hpc-coveralls": "hpc-coveralls_3",
-        "nix-tools": "nix-tools_3",
+        "nix-tools": "nix-tools_2",
         "nixpkgs": [
           "membench",
           "cardano-node-snapshot",
@@ -828,7 +830,7 @@
         "ghc-8.6.5-iohk": "ghc-8.6.5-iohk_4",
         "hackage": "hackage_3",
         "hpc-coveralls": "hpc-coveralls_4",
-        "nix-tools": "nix-tools_4",
+        "nix-tools": "nix-tools_3",
         "nixpkgs": [
           "membench",
           "cardano-node-snapshot",
@@ -1159,14 +1161,14 @@
         "type": "github"
       }
     },
-    "nix-tools_4": {
+    "nixTools": {
       "flake": false,
       "locked": {
-        "lastModified": 1636018067,
-        "narHash": "sha256-ng306fkuwr6V/malWtt3979iAC4yMVDDH2ViwYB6sQE=",
+        "lastModified": 1644395812,
+        "narHash": "sha256-BVFk/BEsTLq5MMZvdy3ZYHKfaS3dHrsKh4+tb5t5b58=",
         "owner": "input-output-hk",
         "repo": "nix-tools",
-        "rev": "ed5bd7215292deba55d6ab7a4e8c21f8b1564dda",
+        "rev": "d847c63b99bbec78bf83be2a61dc9f09b8a9ccc1",
         "type": "github"
       },
       "original": {
@@ -1661,6 +1663,7 @@
         ],
         "iohkNix": "iohkNix",
         "membench": "membench",
+        "nixTools": "nixTools",
         "nixpkgs": "nixpkgs_4",
         "plutus-example": "plutus-example_2",
         "utils": "utils_4"

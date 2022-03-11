@@ -9,13 +9,17 @@
     hostNixpkgs.follows = "nixpkgs";
     hackageNix = {
       url = "github:input-output-hk/hackage.nix";
-      inputs.nixpkgs.follows = "nixpkgs";
       flake = false;
     };
+    nixTools = {
+        url = "github:input-output-hk/nix-tools";
+        flake = false;
+      };
     haskellNix = {
       url = "github:input-output-hk/haskell.nix";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.hackage.follows = "hackageNix";
+      inputs.nix-tools.follows = "nixTools";
     };
     utils.url = "github:numtide/flake-utils";
     iohkNix = {
