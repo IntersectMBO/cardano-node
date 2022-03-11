@@ -36,7 +36,6 @@ type Fund = (Core.Fund, SigningKey PaymentKey)
 
 data Store v where
   User         :: Setters.Tag x -> Store x
-  GlobalWallet :: Store WalletRef
   LoggingLayer :: Store LoggingLayer
   Protocol     :: Store SomeConsensusProtocol
   BenchTracers :: Store Core.BenchTracers
@@ -47,9 +46,11 @@ data Store v where
 data Name x where
   KeyName      :: !String -> Name (SigningKey PaymentKey)
   ThreadName   :: !String -> Name AsyncBenchmarkControl
+  WalletName   :: !String -> Name WalletRef
 
 type KeyName      = Name (SigningKey PaymentKey)
 type ThreadName   = Name AsyncBenchmarkControl
+type WalletName   = Name WalletRef
 
 newtype TxList era = TxList [Tx era]
 

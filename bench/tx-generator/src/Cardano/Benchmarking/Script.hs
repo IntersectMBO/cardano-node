@@ -4,7 +4,6 @@ module Cardano.Benchmarking.Script
   ( Script
   , runScript
   , parseScriptFileAeson
-  , parseScriptFileLegacy  
   )
 where
 
@@ -20,8 +19,7 @@ import           Cardano.Node.Configuration.Logging (shutdownLoggingLayer)
 import           Cardano.Benchmarking.Tracer (createDebugTracers)
 import           Cardano.Benchmarking.Script.Action
 import           Cardano.Benchmarking.Script.Aeson (parseScriptFileAeson)
-import           Cardano.Benchmarking.Script.AesonLegacy (parseScriptFileLegacy)
-import           Cardano.Benchmarking.Script.Core (initGlobalWallet, setProtocolParameters)
+import           Cardano.Benchmarking.Script.Core (setProtocolParameters)
 import           Cardano.Benchmarking.Script.Env
 import           Cardano.Benchmarking.Script.Store
 import           Cardano.Benchmarking.Script.Types
@@ -42,7 +40,6 @@ runScript script iom = runActionM execScript iom >>= \case
   cleanup s a = void $ runActionMEnv s a iom
   execScript = do
     set BenchTracers createDebugTracers
-    initGlobalWallet
     setProtocolParameters QueryLocalNode
     forM_ script action
 

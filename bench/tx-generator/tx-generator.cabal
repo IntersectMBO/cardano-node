@@ -25,6 +25,7 @@ library
 
   exposed-modules:
                        Cardano.Benchmarking.Command
+                       Cardano.Benchmarking.Compiler                       
                        Cardano.Benchmarking.FundSet
                        Cardano.Benchmarking.GeneratorTx
                        Cardano.Benchmarking.GeneratorTx.Error
@@ -36,11 +37,11 @@ library
                        Cardano.Benchmarking.GeneratorTx.Tx.Byron
                        Cardano.Benchmarking.GeneratorTx.Submission
                        Cardano.Benchmarking.GeneratorTx.SubmissionClient
+                       Cardano.Benchmarking.NixOptions
                        Cardano.Benchmarking.OuroborosImports
                        Cardano.Benchmarking.Script
                        Cardano.Benchmarking.Script.Action
                        Cardano.Benchmarking.Script.Aeson
-                       Cardano.Benchmarking.Script.AesonLegacy                       
                        Cardano.Benchmarking.Script.Core
                        Cardano.Benchmarking.Script.Env
                        Cardano.Benchmarking.Script.Example
@@ -77,6 +78,7 @@ library
                      , dependent-map
                      , dependent-sum
                      , dependent-sum-template
+                     , dlist
                      , extra
                      , formatting
                      , generic-monoid
