@@ -24,24 +24,24 @@ data Message =
 
 instance LogFormatting Message where
   forMachine _dtal (Message1 mid i) =
-    mkObject [ "kind" .= String "Message1"
-             , "mid" .= ("<" <> showT mid <> ">")
-             , "workload" .= String (showT i)
-             ]
+    mconcat [ "kind" .= String "Message1"
+            , "mid" .= ("<" <> showT mid <> ">")
+            , "workload" .= String (showT i)
+            ]
   forMachine DMinimal (Message2 mid _s) =
-    mkObject [ "mid" .= ("<" <> showT mid <> ">")
-             , "kind" .= String "Message2"
-             ]
+    mconcat [ "mid" .= ("<" <> showT mid <> ">")
+            , "kind" .= String "Message2"
+            ]
   forMachine _dtal (Message2 mid s) =
-    mkObject [ "kind" .= String "Message2"
-             , "mid" .= String ("<" <> showT mid <> ">")
-             , "workload" .= String s
-             ]
+    mconcat [ "kind" .= String "Message2"
+            , "mid" .= String ("<" <> showT mid <> ">")
+            , "workload" .= String s
+            ]
   forMachine _dtal (Message3 mid d) =
-    mkObject [ "kind" .= String "Message3"
-             , "mid" .= String (showT mid)
-             , "workload" .= String (showT d)
-             ]
+    mconcat [ "kind" .= String "Message3"
+            , "mid" .= String (showT mid)
+            , "workload" .= String (showT d)
+            ]
   forHuman (Message1 mid i) =
       "Message1 <" <> showT mid <> "> " <> showT i
   forHuman (Message2 mid s) =

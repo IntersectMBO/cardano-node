@@ -41,8 +41,6 @@ data BlockCond
   | BSizeLEq           Word64
   deriving (FromJSON, Generic, NFData, Show, ToJSON)
 
-deriving instance NFData EpochNo
-
 data SlotCond
   = SlotGEq         SlotNo
   | SlotLEq         SlotNo

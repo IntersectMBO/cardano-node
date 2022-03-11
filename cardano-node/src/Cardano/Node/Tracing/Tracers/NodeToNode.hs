@@ -203,14 +203,14 @@ instance ( ConvertTxId blk
          )
       => LogFormatting (AnyMessageAndAgency (BlockFetch blk (Point blk))) where
   forMachine DMinimal (AnyMessageAndAgency stok (MsgBlock blk)) =
-    mkObject [ "kind" .= String "MsgBlock"
+    mconcat [ "kind" .= String "MsgBlock"
              , "agency" .= String (pack $ show stok)
              , "blockHash" .= renderHeaderHash (Proxy @blk) (blockHash blk)
              , "blockSize" .= toJSON (estimateBlockSize (getHeader blk))
              ]
 
   forMachine dtal (AnyMessageAndAgency stok (MsgBlock blk)) =
-    mkObject [ "kind" .= String "MsgBlock"
+    mconcat [ "kind" .= String "MsgBlock"
              , "agency" .= String (pack $ show stok)
              , "blockHash" .= renderHeaderHash (Proxy @blk) (blockHash blk)
              , "blockSize" .= toJSON (estimateBlockSize (getHeader blk))
@@ -221,23 +221,23 @@ instance ( ConvertTxId blk
         presentTx =  String . renderTxIdForDetails dtal . txId
 
   forMachine _v (AnyMessageAndAgency stok MsgRequestRange{}) =
-    mkObject [ "kind" .= String "MsgRequestRange"
+    mconcat [ "kind" .= String "MsgRequestRange"
              , "agency" .= String (pack $ show stok)
              ]
   forMachine _v (AnyMessageAndAgency stok MsgStartBatch{}) =
-    mkObject [ "kind" .= String "MsgStartBatch"
+    mconcat [ "kind" .= String "MsgStartBatch"
              , "agency" .= String (pack $ show stok)
              ]
   forMachine _v (AnyMessageAndAgency stok MsgNoBlocks{}) =
-    mkObject [ "kind" .= String "MsgNoBlocks"
+    mconcat [ "kind" .= String "MsgNoBlocks"
              , "agency" .= String (pack $ show stok)
              ]
   forMachine _v (AnyMessageAndAgency stok MsgBatchDone{}) =
-    mkObject [ "kind" .= String "MsgBatchDone"
+    mconcat [ "kind" .= String "MsgBatchDone"
              , "agency" .= String (pack $ show stok)
              ]
   forMachine _v (AnyMessageAndAgency stok MsgClientDone{}) =
-    mkObject [ "kind" .= String "MsgClientDone"
+    mconcat [ "kind" .= String "MsgClientDone"
              , "agency" .= String (pack $ show stok)
              ]
 
@@ -341,14 +341,14 @@ instance ( ConvertTxId blk
          )
       => LogFormatting (AnyMessageAndAgency (BlockFetch (Serialised blk) (Point blk))) where
   forMachine DMinimal (AnyMessageAndAgency stok (MsgBlock _blk)) =
-    mkObject [ "kind" .= String "MsgBlock"
+    mconcat [ "kind" .= String "MsgBlock"
              , "agency" .= String (pack $ show stok)
             -- , "blockHash" .= renderHeaderHash (Proxy @blk) (blockHash blk)
             -- , "blockSize" .= toJSON (estimateBlockSize (getHeader blk))
              ]
 
   forMachine _dtal (AnyMessageAndAgency stok (MsgBlock _blk)) =
-    mkObject [ "kind" .= String "MsgBlock"
+    mconcat [ "kind" .= String "MsgBlock"
              , "agency" .= String (pack $ show stok)
           -- , "blockHash" .= renderHeaderHash (Proxy @blk) (blockHash blk)
           --  , "blockSize" .= toJSON (estimateBlockSize (getHeader blk))
@@ -359,23 +359,23 @@ instance ( ConvertTxId blk
       --   presentTx =  String . renderTxIdForDetails dtal . txId
 
   forMachine _v (AnyMessageAndAgency stok MsgRequestRange{}) =
-    mkObject [ "kind" .= String "MsgRequestRange"
+    mconcat [ "kind" .= String "MsgRequestRange"
              , "agency" .= String (pack $ show stok)
              ]
   forMachine _v (AnyMessageAndAgency stok MsgStartBatch{}) =
-    mkObject [ "kind" .= String "MsgStartBatch"
+    mconcat [ "kind" .= String "MsgStartBatch"
              , "agency" .= String (pack $ show stok)
              ]
   forMachine _v (AnyMessageAndAgency stok MsgNoBlocks{}) =
-    mkObject [ "kind" .= String "MsgNoBlocks"
+    mconcat [ "kind" .= String "MsgNoBlocks"
              , "agency" .= String (pack $ show stok)
              ]
   forMachine _v (AnyMessageAndAgency stok MsgBatchDone{}) =
-    mkObject [ "kind" .= String "MsgBatchDone"
+    mconcat [ "kind" .= String "MsgBatchDone"
              , "agency" .= String (pack $ show stok)
              ]
   forMachine _v (AnyMessageAndAgency stok MsgClientDone{}) =
-    mkObject [ "kind" .= String "MsgClientDone"
+    mconcat [ "kind" .= String "MsgClientDone"
              , "agency" .= String (pack $ show stok)
              ]
 
@@ -434,29 +434,29 @@ namesForTxSubmissionNode (BlockFetch.TraceLabelPeer _ v) =
 instance (Show txid, Show tx)
       => LogFormatting (AnyMessageAndAgency (STX.TxSubmission txid tx)) where
   forMachine _dtal (AnyMessageAndAgency stok (STX.MsgRequestTxs txids)) =
-    mkObject
+    mconcat
       [ "kind" .= String "MsgRequestTxs"
       , "agency" .= String (pack $ show stok)
       , "txIds" .= String (pack $ show txids)
       ]
   forMachine _dtal (AnyMessageAndAgency stok (STX.MsgReplyTxs txs)) =
-    mkObject
+    mconcat
       [ "kind" .= String "MsgReplyTxs"
       , "agency" .= String (pack $ show stok)
       , "txs" .= String (pack $ show txs)
       ]
   forMachine _dtal (AnyMessageAndAgency stok STX.MsgRequestTxIds {}) =
-    mkObject
+    mconcat
       [ "kind" .= String "MsgRequestTxIds"
       , "agency" .= String (pack $ show stok)
       ]
   forMachine _dtal (AnyMessageAndAgency stok (STX.MsgReplyTxIds _)) =
-    mkObject
+    mconcat
       [ "kind" .= String "MsgReplyTxIds"
       , "agency" .= String (pack $ show stok)
       ]
   forMachine _dtal (AnyMessageAndAgency stok STX.MsgDone) =
-    mkObject
+    mconcat
       [ "kind" .= String "MsgDone"
       , "agency" .= String (pack $ show stok)
       ]
@@ -631,7 +631,7 @@ instance (Show txid, Show tx)
                    -- function as total.
                    stok@(ClientAgency TokHello)
                    MsgHello) =
-    mkObject
+    mconcat
       [ "kind" .= String "MsgHello"
       , "agency" .= String (pack $ show stok)
       ]

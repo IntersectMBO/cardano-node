@@ -10,10 +10,17 @@
 -- | User-friendly pretty-printing for textual user interfaces (TUI)
 module Cardano.CLI.Run.Friendly (friendlyTxBS, friendlyTxBodyBS) where
 
+import           Cardano.Api as Api
+import           Cardano.Api.Byron (KeyWitness (ByronKeyWitness))
+import           Cardano.Api.Shelley (Address (ShelleyAddress),
+                   KeyWitness (ShelleyBootstrapWitness, ShelleyKeyWitness), StakeAddress (..))
+import           Cardano.CLI.Helpers (textShow)
+import           Cardano.Ledger.Crypto (Crypto)
+import qualified Cardano.Ledger.Shelley.API as Shelley
 import           Cardano.Prelude
-
 import           Data.Aeson (Value (..), object, toJSON, (.=))
 import qualified Data.Aeson as Aeson
+import qualified Data.Aeson.Key as Aeson
 import qualified Data.Aeson.Types as Aeson
 import qualified Data.ByteString.Char8 as BSC
 import qualified Data.Map.Strict as Map
@@ -21,15 +28,6 @@ import qualified Data.Text as Text
 import           Data.Yaml (array)
 import           Data.Yaml.Pretty (setConfCompare)
 import qualified Data.Yaml.Pretty as Yaml
-
-import           Cardano.Api as Api
-import           Cardano.Api.Byron (KeyWitness (ByronKeyWitness))
-import           Cardano.Api.Shelley (Address (ShelleyAddress),
-                   KeyWitness (ShelleyBootstrapWitness, ShelleyKeyWitness), StakeAddress (..))
-import           Cardano.Ledger.Crypto (Crypto)
-import qualified Cardano.Ledger.Shelley.API as Shelley
-
-import           Cardano.CLI.Helpers (textShow)
 
 yamlConfig :: Yaml.Config
 yamlConfig = Yaml.defConfig & setConfCompare compare
@@ -305,7 +303,7 @@ friendlyValue v =
     [ case bundle of
         ValueNestedBundleAda q -> "lovelace" .= q
         ValueNestedBundle policy assets ->
-          friendlyPolicyId policy .= friendlyAssets assets
+          Aeson.fromText (friendlyPolicyId policy) .= friendlyAssets assets
     | bundle <- bundles
     ]
   where

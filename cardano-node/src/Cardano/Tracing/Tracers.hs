@@ -34,7 +34,6 @@ import           GHC.Clock (getMonotonicTimeNSec)
 
 import           Codec.CBOR.Read (DeserialiseFailure)
 import           Data.Aeson (ToJSON (..), Value (..))
-import qualified Data.HashMap.Strict as Map
 import           Data.IntPSQ (IntPSQ)
 import qualified Data.IntPSQ as Pq
 import qualified Data.Map.Strict as SMap
@@ -45,7 +44,7 @@ import qualified System.Metrics.Gauge as Gauge
 import qualified System.Metrics.Label as Label
 import qualified System.Remote.Monitoring as EKG
 
-import "contra-tracer" Control.Tracer
+import           "contra-tracer" Control.Tracer
 import           Control.Tracer.Transformers
 
 import           Cardano.Slotting.Slot (EpochNo (..), SlotNo (..), WithOrigin (..))
@@ -105,8 +104,8 @@ import qualified Ouroboros.Consensus.Storage.LedgerDB.Types as LedgerDB
 
 import           Cardano.Tracing.Config
 import           Cardano.Tracing.Metrics
-import           Cardano.Tracing.Startup ()
 import           Cardano.Tracing.Shutdown ()
+import           Cardano.Tracing.Startup ()
 
 import           Cardano.Node.Configuration.Logging
 import           Cardano.Node.TraceConstraints
@@ -124,6 +123,7 @@ import qualified Cardano.Node.STM as STM
 import qualified Control.Concurrent.STM as STM
 
 import           Cardano.Protocol.TPraos.OCert (KESPeriod (..))
+import qualified Data.Aeson.KeyMap as KeyMap
 
 {- HLINT ignore "Redundant bracket" -}
 {- HLINT ignore "Use record patterns" -}
@@ -940,7 +940,7 @@ traceLeadershipChecks _ft nodeKern _tverb tr = Tracer $
                 traceCounter "delegMapSize" tr delegMapSize
         traceNamedObject (appendName "LeadershipCheck" tr)
           ( meta
-          , LogStructured $ Map.fromList $
+          , LogStructured $ KeyMap.fromList $
             [("kind", String "TraceStartLeadershipCheck")
             ,("credentials", String creds)
             ,("slot", toJSON $ unSlotNo slot)]

@@ -56,31 +56,31 @@ import           Ouroboros.Network.Subscription.Worker (ConnectResult (..), Subs
 instance LogFormatting NtN.RemoteAddress where
     forMachine _dtal (Socket.SockAddrInet port addr) =
         let ip = IP.fromHostAddress addr in
-        mkObject [ "addr" .= show ip
+        mconcat [ "addr" .= show ip
                  , "port" .= show port
                  ]
     forMachine _dtal (Socket.SockAddrInet6 port _ addr _) =
         let ip = IP.fromHostAddress6 addr in
-        mkObject [ "addr" .= show ip
+        mconcat [ "addr" .= show ip
                  , "port" .= show port
                  ]
     forMachine _dtal (Socket.SockAddrUnix path) =
-        mkObject [ "path" .= show path ]
+        mconcat [ "path" .= show path ]
 
 
 instance LogFormatting NtN.RemoteConnectionId where
     forMachine dtal (NtN.ConnectionId l r) =
-        mkObject [ "local" .= forMachine dtal l
+        mconcat [ "local" .= forMachine dtal l
                  , "remote" .= forMachine dtal r
                  ]
 
 instance LogFormatting LocalAddress where
     forMachine _dtal (LocalAddress path) =
-        mkObject ["path" .= path]
+        mconcat ["path" .= path]
 
 instance LogFormatting NtC.LocalConnectionId where
     forMachine dtal (NtC.ConnectionId l r) =
-        mkObject [ "local" .= forMachine dtal l
+        mconcat [ "local" .= forMachine dtal l
                  , "remote" .= forMachine dtal r
                  ]
 
@@ -149,7 +149,7 @@ namesForIPSubscription(WithIPList _ _ e) = "IP" : namesForSubscription e
 
 instance LogFormatting (WithIPList (SubscriptionTrace Socket.SockAddr)) where
   forMachine _dtal (WithIPList localAddresses dests ev) =
-    mkObject [ "kind" .= String "IP SubscriptionTrace"
+    mconcat [ "kind" .= String "IP SubscriptionTrace"
              , "localAddresses" .= String (pack $ show localAddresses)
              , "dests" .= String (pack $ show dests)
              , "event" .= String (pack $ show ev)]
@@ -208,7 +208,7 @@ severityDNSSubscription NtN.WithDomainName {..} = case wdnEvent of
 
 instance LogFormatting (WithDomainName (SubscriptionTrace Socket.SockAddr)) where
   forMachine _dtal (WithDomainName dom ev) =
-    mkObject [ "kind" .= String "DNS SubscriptionTrace"
+    mconcat [ "kind" .= String "DNS SubscriptionTrace"
              , "domain" .= String (pack $ show dom)
              , "event" .= String (pack $ show ev)]
   forHuman (WithDomainName dom ev) =
@@ -327,7 +327,7 @@ namesForDNSResolver (NtN.WithDomainName _ ev) = case ev of
 
 instance LogFormatting (WithDomainName DnsTrace) where
   forMachine _dtal (WithDomainName dom ev) =
-    mkObject [ "kind" .= String "DnsTrace"
+    mconcat [ "kind" .= String "DnsTrace"
              , "domain" .= String (pack $ show dom)
              , "event" .= String (pack $ show ev)]
   forHuman (WithDomainName dom ev) =
@@ -412,7 +412,7 @@ namesForErrorPolicy (WithAddr _ ev) = case ev of
 
 instance Show addr => LogFormatting (NtN.WithAddr addr NtN.ErrorPolicyTrace) where
     forMachine _dtal (NtN.WithAddr addr ev) =
-      mkObject [ "kind" .= String "ErrorPolicyTrace"
+      mconcat [ "kind" .= String "ErrorPolicyTrace"
                , "address" .= show addr
                , "event" .= show ev ]
     forHuman (NtN.WithAddr addr ev) = "With address " <> showT addr <> ". " <> showT ev
@@ -532,16 +532,16 @@ namesForAcceptPolicy NtN.ServerTraceAcceptConnectionResume {} =
 
 instance LogFormatting NtN.AcceptConnectionsPolicyTrace where
     forMachine _dtal (NtN.ServerTraceAcceptConnectionRateLimiting delay numOfConnections) =
-      mkObject [ "kind" .= String "ServerTraceAcceptConnectionRateLimiting"
+      mconcat [ "kind" .= String "ServerTraceAcceptConnectionRateLimiting"
                , "delay" .= show delay
                , "numberOfConnection" .= show numOfConnections
                ]
     forMachine _dtal (NtN.ServerTraceAcceptConnectionHardLimit softLimit) =
-      mkObject [ "kind" .= String "ServerTraceAcceptConnectionHardLimit"
+      mconcat [ "kind" .= String "ServerTraceAcceptConnectionHardLimit"
                , "softLimit" .= show softLimit
                ]
     forMachine _dtal (NtN.ServerTraceAcceptConnectionResume numOfConnections) =
-      mkObject [ "kind" .= String "ServerTraceAcceptConnectionResume"
+      mconcat [ "kind" .= String "ServerTraceAcceptConnectionResume"
                , "numberOfConnection" .= show numOfConnections
                ]
     forHuman   = showT

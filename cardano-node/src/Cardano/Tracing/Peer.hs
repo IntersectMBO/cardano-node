@@ -22,13 +22,12 @@ import           NoThunks.Class (AllowThunk (..), NoThunks)
 import           Text.Printf (printf)
 
 import           Cardano.BM.Data.LogItem (LOContent (..))
-import           Cardano.BM.Data.Tracer (emptyObject, mkObject)
 import           Cardano.BM.Trace (traceNamedObject)
 import           Cardano.BM.Tracing
 
 import           Ouroboros.Consensus.Block (Header)
-import           Ouroboros.Network.ConnectionId (remoteAddress)
 import           Ouroboros.Consensus.Util.Orphans ()
+import           Ouroboros.Network.ConnectionId (remoteAddress)
 
 import qualified Ouroboros.Network.AnchoredFragment as Net
 import           Ouroboros.Network.Block (unSlotNo)
@@ -121,9 +120,9 @@ tracePeers tr peers = do
 -- | Instances for converting [Peer blk] to Object.
 
 instance ToObject [Peer blk] where
-  toObject MinimalVerbosity _ = emptyObject
-  toObject _ [] = emptyObject
-  toObject verb xs = mkObject
+  toObject MinimalVerbosity _ = mempty
+  toObject _ [] = mempty
+  toObject verb xs = mconcat
     [ "kind"  .= String "NodeKernelPeers"
     , "peers" .= toJSON
       (foldl' (\acc x -> toObject verb x : acc) [] xs)
@@ -131,10 +130,10 @@ instance ToObject [Peer blk] where
 
 instance ToObject (Peer blk) where
   toObject _verb (Peer cid _af status inflight) =
-    mkObject [ "peerAddress"   .= String (Text.pack . show . remoteAddress $ cid)
-             , "peerStatus"    .= String (Text.pack . ppStatus $ status)
-             , "peerSlotNo"    .= String (Text.pack . ppMaxSlotNo . peerFetchMaxSlotNo $ inflight)
-             , "peerReqsInF"   .= String (show . peerFetchReqsInFlight $ inflight)
-             , "peerBlocksInF" .= String (show . Set.size . peerFetchBlocksInFlight $ inflight)
-             , "peerBytesInF"  .= String (show . peerFetchBytesInFlight $ inflight)
-             ]
+    mconcat [ "peerAddress"   .= String (Text.pack . show . remoteAddress $ cid)
+            , "peerStatus"    .= String (Text.pack . ppStatus $ status)
+            , "peerSlotNo"    .= String (Text.pack . ppMaxSlotNo . peerFetchMaxSlotNo $ inflight)
+            , "peerReqsInF"   .= String (show . peerFetchReqsInFlight $ inflight)
+            , "peerBlocksInF" .= String (show . Set.size . peerFetchBlocksInFlight $ inflight)
+            , "peerBytesInF"  .= String (show . peerFetchBytesInFlight $ inflight)
+            ]

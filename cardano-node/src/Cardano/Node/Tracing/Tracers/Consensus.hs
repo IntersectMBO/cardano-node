@@ -83,22 +83,23 @@ import           Cardano.Prelude hiding (All, Show, show)
 
 import           Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 
+import           Ouroboros.Network.Block hiding (blockPrevHash)
 import           Ouroboros.Network.BlockFetch.ClientState (TraceLabelPeer (..))
 import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
-import           Ouroboros.Network.KeepAlive (TraceKeepAliveClient (..))
-import           Ouroboros.Network.TxSubmission.Inbound hiding(txId)
-import           Ouroboros.Network.TxSubmission.Outbound
-import           Ouroboros.Network.Block hiding (blockPrevHash)
 import           Ouroboros.Network.BlockFetch.Decision
 import           Ouroboros.Network.DeltaQ (GSV (..), PeerGSV (..))
+import           Ouroboros.Network.KeepAlive (TraceKeepAliveClient (..))
+import           Ouroboros.Network.TxSubmission.Inbound hiding (txId)
+import           Ouroboros.Network.TxSubmission.Outbound
 
+import qualified Data.Aeson as Aeson
 import           Ouroboros.Consensus.Block
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
 import           Ouroboros.Consensus.BlockchainTime.WallClock.Util (TraceBlockchainTimeEvent (..))
 import           Ouroboros.Consensus.Cardano.Block
 import           Ouroboros.Consensus.Ledger.Inspect (LedgerEvent (..), LedgerUpdate, LedgerWarning)
-import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTxId,
-                   LedgerSupportsMempool, txForgetValidated, txId, HasTxId)
+import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTxId, HasTxId,
+                   LedgerSupportsMempool, txForgetValidated, txId)
 import           Ouroboros.Consensus.Ledger.SupportsProtocol
 import           Ouroboros.Consensus.Mempool.API (MempoolSize (..), TraceEventMempool (..))
 import           Ouroboros.Consensus.MiniProtocol.BlockFetch.Server
@@ -116,7 +117,7 @@ import qualified Ouroboros.Consensus.Protocol.Ledger.HotKey as HotKey
 
 instance LogFormatting a => LogFormatting (TraceLabelCreds a) where
   forMachine dtal (TraceLabelCreds creds a)  =
-    mkObject [ "credentials" .= toJSON creds
+    mconcat [ "credentials" .= toJSON creds
              , "val"         .= forMachine dtal a
             ]
 -- TODO Trace label creds as well
@@ -130,14 +131,14 @@ instance (LogFormatting (LedgerUpdate blk), LogFormatting (LedgerWarning blk))
     LedgerUpdate  update  -> forMachine dtal update
     LedgerWarning warning -> forMachine dtal warning
 
-tipToObject :: forall blk. ConvertRawHash blk => Tip blk -> [(Text, Value)]
+tipToObject :: forall blk. ConvertRawHash blk => Tip blk -> Aeson.Object
 tipToObject = \case
-  TipGenesis ->
+  TipGenesis -> mconcat
     [ "slot"    .= toJSON (0 :: Int)
     , "block"   .= String "genesis"
     , "blockNo" .= toJSON ((-1) :: Int)
     ]
-  Tip slot hash blockno ->
+  Tip slot hash blockno -> mconcat
     [ "slot"    .= slot
     , "block"   .= String (renderHeaderHash (Proxy @blk) hash)
     , "blockNo" .= blockno
@@ -194,19 +195,19 @@ instance (Show (Header blk), ConvertRawHash blk, LedgerSupportsProtocol blk)
       "The client has terminated. " <> showT res
 
   forMachine _dtal (TraceDownloadedHeader h) =
-      mkObject $
-               [ "kind" .= String "DownloadedHeader"
-               ] <> tipToObject (tipFromHeader h)
+      mconcat [ "kind" .= String "DownloadedHeader"
+              , tipToObject (tipFromHeader h)
+              ]
   forMachine dtal (TraceRolledBack tip) =
-      mkObject [ "kind" .= String "RolledBack"
+      mconcat [ "kind" .= String "RolledBack"
                , "tip" .= forMachine dtal tip ]
   forMachine _dtal (TraceException exc) =
-      mkObject [ "kind" .= String "Exception"
+      mconcat [ "kind" .= String "Exception"
                , "exception" .= String (Text.pack $ show exc) ]
   forMachine _dtal TraceFoundIntersection {} =
-      mkObject [ "kind" .= String "FoundIntersection" ]
+      mconcat [ "kind" .= String "FoundIntersection" ]
   forMachine _dtal (TraceTermination reason) =
-      mkObject [ "kind" .= String "Termination"
+      mconcat [ "kind" .= String "Termination"
                , "reason" .= String (Text.pack $ show reason) ]
 
 docChainSyncClientEvent ::
@@ -264,29 +265,33 @@ namesForChainSyncServerEvent TraceChainSyncRollBackward      {} =
 instance ConvertRawHash blk
       => LogFormatting (TraceChainSyncServerEvent blk) where
   forMachine _dtal (TraceChainSyncServerRead tip (AddBlock _hdr)) =
-      mkObject $
+      mconcat
                [ "kind" .= String "ChainSyncServerRead.AddBlock"
-               ] <> tipToObject tip
+               , tipToObject tip
+               ]
   forMachine _dtal (TraceChainSyncServerRead tip (RollBack _pt)) =
-      mkObject $
+      mconcat
                [ "kind" .= String "ChainSyncServerRead.RollBack"
-               ] <> tipToObject tip
+               , tipToObject tip
+               ]
   forMachine _dtal (TraceChainSyncServerReadBlocked tip (AddBlock _hdr)) =
-      mkObject $
+      mconcat
                [ "kind" .= String "ChainSyncServerReadBlocked.AddBlock"
-               ] <> tipToObject tip
+               , tipToObject tip
+               ]
   forMachine _dtal (TraceChainSyncServerReadBlocked tip (RollBack _pt)) =
-      mkObject $
+      mconcat
                [ "kind" .= String "ChainSyncServerReadBlocked.RollBack"
-               ] <> tipToObject tip
+               , tipToObject tip
+               ]
   forMachine dtal (TraceChainSyncRollForward point) =
-      mkObject [ "kind" .= String "ChainSyncServerRead.RollForward"
-               , "point" .= forMachine dtal point
-               ]
+      mconcat [ "kind" .= String "ChainSyncServerRead.RollForward"
+              , "point" .= forMachine dtal point
+              ]
   forMachine dtal (TraceChainSyncRollBackward point) =
-      mkObject [ "kind" .= String "ChainSyncServerRead.ChainSyncRollBackward"
-               , "point" .= forMachine dtal point
-               ]
+      mconcat [ "kind" .= String "ChainSyncServerRead.ChainSyncRollBackward"
+              , "point" .= forMachine dtal point
+              ]
 
   asMetrics (TraceChainSyncRollForward _point) =
       [CounterM "cardano.node.chainSync.rollForward" Nothing]
@@ -347,10 +352,10 @@ namesForBlockFetchDecision _ = []
 
 instance (LogFormatting peer, Show peer) =>
     LogFormatting [TraceLabelPeer peer (FetchDecision [Point header])] where
-  forMachine DMinimal _ = emptyObject
-  forMachine _ []       = mkObject
+  forMachine DMinimal _ = mempty
+  forMachine _ []       = mconcat
     [ "kind"  .= String "EmptyPeersFetch"]
-  forMachine _ xs       = mkObject
+  forMachine _ xs       = mconcat
     [ "kind"  .= String "PeersFetch"
     , "peers" .= toJSON
       (foldl' (\acc x -> forMachine DDetailed x : acc) [] xs) ]
@@ -360,18 +365,18 @@ instance (LogFormatting peer, Show peer) =>
 instance (LogFormatting peer, Show peer, LogFormatting a)
   => LogFormatting (TraceLabelPeer peer a) where
   forMachine dtal (TraceLabelPeer peerid a) =
-    mkObject [ "peer" .= forMachine dtal peerid ] <> forMachine dtal a
+    mconcat [ "peer" .= forMachine dtal peerid ] <> forMachine dtal a
   forHuman (TraceLabelPeer peerid a) = "Peer is " <> showT peerid
                                         <> ". " <> forHuman a
   asMetrics (TraceLabelPeer _peerid a) = asMetrics a
 
 instance LogFormatting (FetchDecision [Point header]) where
   forMachine _dtal (Left decline) =
-    mkObject [ "kind" .= String "FetchDecision declined"
+    mconcat [ "kind" .= String "FetchDecision declined"
              , "declined" .= String (showT decline)
              ]
   forMachine _dtal (Right results) =
-    mkObject [ "kind" .= String "FetchDecision results"
+    mconcat [ "kind" .= String "FetchDecision results"
              , "length" .= String (showT $ length results)
              ]
 
@@ -434,21 +439,21 @@ namesForBlockFetchClient' BlockFetch.ClientTerminating {} =
 
 instance LogFormatting (BlockFetch.TraceFetchClientState header) where
   forMachine _dtal BlockFetch.AddedFetchRequest {} =
-    mkObject [ "kind" .= String "AddedFetchRequest" ]
+    mconcat [ "kind" .= String "AddedFetchRequest" ]
   forMachine _dtal BlockFetch.AcknowledgedFetchRequest {} =
-    mkObject [ "kind" .= String "AcknowledgedFetchRequest" ]
+    mconcat [ "kind" .= String "AcknowledgedFetchRequest" ]
   forMachine _dtal BlockFetch.SendFetchRequest {} =
-    mkObject [ "kind" .= String "SendFetchRequest" ]
+    mconcat [ "kind" .= String "SendFetchRequest" ]
   forMachine _dtal BlockFetch.CompletedBlockFetch {} =
-    mkObject [ "kind" .= String "CompletedBlockFetch" ]
+    mconcat [ "kind" .= String "CompletedBlockFetch" ]
   forMachine _dtal BlockFetch.CompletedFetchBatch {} =
-    mkObject [ "kind" .= String "CompletedFetchBatch" ]
+    mconcat [ "kind" .= String "CompletedFetchBatch" ]
   forMachine _dtal BlockFetch.StartedFetchBatch {} =
-    mkObject [ "kind" .= String "StartedFetchBatch" ]
+    mconcat [ "kind" .= String "StartedFetchBatch" ]
   forMachine _dtal BlockFetch.RejectedFetchBatch {} =
-    mkObject [ "kind" .= String "RejectedFetchBatch" ]
+    mconcat [ "kind" .= String "RejectedFetchBatch" ]
   forMachine _dtal BlockFetch.ClientTerminating {} =
-    mkObject [ "kind" .= String "ClientTerminating" ]
+    mconcat [ "kind" .= String "ClientTerminating" ]
 
 docBlockFetchClient ::
   Documented (BlockFetch.TraceLabelPeer remotePeer (BlockFetch.TraceFetchClientState (Header blk)))
@@ -530,7 +535,7 @@ namesForBlockFetchServer TraceBlockFetchServerSendBlock {} = ["SendBlock"]
 
 instance ConvertRawHash blk => LogFormatting (TraceBlockFetchServerEvent blk) where
   forMachine _dtal (TraceBlockFetchServerSendBlock blk) =
-    mkObject [ "kind" .= String "BlockFetchServer"
+    mconcat [ "kind" .= String "BlockFetchServer"
              , "block" .= String (renderChainHash
                                     @blk
                                     (renderHeaderHash (Proxy @blk))
@@ -588,27 +593,27 @@ namesForTxInbound' TraceTxInboundCannotRequestMoreTxs {} =
 
 instance LogFormatting (TraceTxSubmissionInbound txid tx) where
   forMachine _dtal (TraceTxSubmissionCollected count) =
-    mkObject
+    mconcat
       [ "kind" .= String "TraceTxSubmissionCollected"
       , "count" .= toJSON count
       ]
   forMachine _dtal (TraceTxSubmissionProcessed processed) =
-    mkObject
+    mconcat
       [ "kind" .= String "TraceTxSubmissionProcessed"
       , "accepted" .= toJSON (ptxcAccepted processed)
       , "rejected" .= toJSON (ptxcRejected processed)
       ]
   forMachine _dtal TraceTxInboundTerminated =
-    mkObject
+    mconcat
       [ "kind" .= String "TraceTxInboundTerminated"
       ]
   forMachine _dtal (TraceTxInboundCanRequestMoreTxs count) =
-    mkObject
+    mconcat
       [ "kind" .= String "TraceTxInboundCanRequestMoreTxs"
       , "count" .= toJSON count
       ]
   forMachine _dtal (TraceTxInboundCannotRequestMoreTxs count) =
-    mkObject
+    mconcat
       [ "kind" .= String "TraceTxInboundCannotRequestMoreTxs"
       , "count" .= toJSON count
       ]
@@ -692,25 +697,25 @@ namesForTxOutbound' TraceControlMessage {} =
 instance (Show txid, Show tx)
       => LogFormatting (TraceTxSubmissionOutbound txid tx) where
   forMachine DDetailed (TraceTxSubmissionOutboundRecvMsgRequestTxs txids) =
-    mkObject
+    mconcat
       [ "kind" .= String "TraceTxSubmissionOutboundRecvMsgRequestTxs"
       , "txIds" .= String (Text.pack $ show txids)
       ]
   forMachine _dtal (TraceTxSubmissionOutboundRecvMsgRequestTxs _txids) =
-    mkObject
+    mconcat
       [ "kind" .= String "TraceTxSubmissionOutboundRecvMsgRequestTxs"
       ]
   forMachine DDetailed (TraceTxSubmissionOutboundSendMsgReplyTxs txs) =
-    mkObject
+    mconcat
       [ "kind" .= String "TraceTxSubmissionOutboundSendMsgReplyTxs"
       , "txs" .= String (Text.pack $ show txs)
       ]
   forMachine _dtal (TraceTxSubmissionOutboundSendMsgReplyTxs _txs) =
-    mkObject
+    mconcat
       [ "kind" .= String "TraceTxSubmissionOutboundSendMsgReplyTxs"
       ]
   forMachine _dtal (TraceControlMessage _msg) =
-    mkObject
+    mconcat
       [ "kind" .= String "TraceControlMessage"
       ]
 
@@ -753,7 +758,7 @@ namesForLocalTxSubmissionServer TraceReceivedTx {} = ["ReceivedTx"]
 
 instance LogFormatting (TraceLocalTxSubmissionServerEvent blk) where
   forMachine _dtal (TraceReceivedTx _gtx) =
-    mkObject [ "kind" .= String "ReceivedTx" ]
+    mconcat [ "kind" .= String "ReceivedTx" ]
 
 docLocalTxSubmissionServer :: Documented (TraceLocalTxSubmissionServerEvent blk)
 docLocalTxSubmissionServer = Documented [
@@ -786,26 +791,26 @@ instance
   , LedgerSupportsMempool blk
   ) => LogFormatting (TraceEventMempool blk) where
   forMachine dtal (TraceMempoolAddedTx tx _mpSzBefore mpSzAfter) =
-    mkObject
+    mconcat
       [ "kind" .= String "TraceMempoolAddedTx"
       , "tx" .= forMachine dtal (txForgetValidated tx)
       , "mempoolSize" .= forMachine dtal mpSzAfter
       ]
   forMachine dtal (TraceMempoolRejectedTx tx txApplyErr mpSz) =
-    mkObject
+    mconcat
       [ "kind" .= String "TraceMempoolRejectedTx"
       , "err" .= forMachine dtal txApplyErr
       , "tx" .= forMachine dtal tx
       , "mempoolSize" .= forMachine dtal mpSz
       ]
   forMachine dtal (TraceMempoolRemoveTxs txs mpSz) =
-    mkObject
+    mconcat
       [ "kind" .= String "TraceMempoolRemoveTxs"
       , "txs" .= map (forMachine dtal . txForgetValidated) txs
       , "mempoolSize" .= forMachine dtal mpSz
       ]
   forMachine dtal (TraceMempoolManuallyRemovedTxs txs0 txs1 mpSz) =
-    mkObject
+    mconcat
       [ "kind" .= String "TraceMempoolManuallyRemovedTxs"
       , "txsRemoved" .= txs0
       , "txsInvalidated" .= map (forMachine dtal . txForgetValidated) txs1
@@ -836,7 +841,7 @@ instance
 
 instance LogFormatting MempoolSize where
   forMachine _dtal MempoolSize{msNumTxs, msNumBytes} =
-    mkObject
+    mconcat
       [ "numTxs" .= msNumTxs
       , "bytes" .= msNumBytes
       ]
@@ -953,74 +958,74 @@ instance ( tx ~ GenTx blk
          , LogFormatting (ForgeStateUpdateError blk))
       => LogFormatting (TraceForgeEvent blk) where
   forMachine _dtal (TraceStartLeadershipCheck slotNo) =
-    mkObject
+    mconcat
       [ "kind" .= String "TraceStartLeadershipCheck"
       , "slot" .= toJSON (unSlotNo slotNo)
       ]
   forMachine dtal (TraceSlotIsImmutable slotNo tipPoint tipBlkNo) =
-    mkObject
+    mconcat
       [ "kind" .= String "TraceSlotIsImmutable"
       , "slot" .= toJSON (unSlotNo slotNo)
       , "tip" .= renderPointForDetails dtal tipPoint
       , "tipBlockNo" .= toJSON (unBlockNo tipBlkNo)
       ]
   forMachine _dtal (TraceBlockFromFuture currentSlot tip) =
-    mkObject
+    mconcat
       [ "kind" .= String "TraceBlockFromFuture"
       , "current slot" .= toJSON (unSlotNo currentSlot)
       , "tip" .= toJSON (unSlotNo tip)
       ]
   forMachine dtal (TraceBlockContext currentSlot tipBlkNo tipPoint) =
-    mkObject
+    mconcat
       [ "kind" .= String "TraceBlockContext"
       , "current slot" .= toJSON (unSlotNo currentSlot)
       , "tip" .= renderPointForDetails dtal tipPoint
       , "tipBlockNo" .= toJSON (unBlockNo tipBlkNo)
       ]
   forMachine _dtal (TraceNoLedgerState slotNo _pt) =
-    mkObject
+    mconcat
       [ "kind" .= String "TraceNoLedgerState"
       , "slot" .= toJSON (unSlotNo slotNo)
       ]
   forMachine _dtal (TraceLedgerState slotNo _pt) =
-    mkObject
+    mconcat
       [ "kind" .= String "TraceLedgerState"
       , "slot" .= toJSON (unSlotNo slotNo)
       ]
   forMachine _dtal (TraceNoLedgerView slotNo _) =
-    mkObject
+    mconcat
       [ "kind" .= String "TraceNoLedgerView"
       , "slot" .= toJSON (unSlotNo slotNo)
       ]
   forMachine _dtal (TraceLedgerView slotNo) =
-    mkObject
+    mconcat
       [ "kind" .= String "TraceLedgerView"
       , "slot" .= toJSON (unSlotNo slotNo)
       ]
   forMachine dtal (TraceForgeStateUpdateError slotNo reason) =
-    mkObject
+    mconcat
       [ "kind" .= String "TraceForgeStateUpdateError"
       , "slot" .= toJSON (unSlotNo slotNo)
       , "reason" .= forMachine dtal reason
       ]
   forMachine dtal (TraceNodeCannotForge slotNo reason) =
-    mkObject
+    mconcat
       [ "kind" .= String "TraceNodeCannotForge"
       , "slot" .= toJSON (unSlotNo slotNo)
       , "reason" .= forMachine dtal reason
       ]
   forMachine _dtal (TraceNodeNotLeader slotNo) =
-    mkObject
+    mconcat
       [ "kind" .= String "TraceNodeNotLeader"
       , "slot" .= toJSON (unSlotNo slotNo)
       ]
   forMachine _dtal (TraceNodeIsLeader slotNo) =
-    mkObject
+    mconcat
       [ "kind" .= String "TraceNodeIsLeader"
       , "slot" .= toJSON (unSlotNo slotNo)
       ]
   forMachine _dtal (TraceForgedBlock slotNo _ blk _) =
-    mkObject
+    mconcat
       [ "kind" .= String "TraceForgedBlock"
       , "slot" .= toJSON (unSlotNo slotNo)
       , "block"     .= String (renderHeaderHash (Proxy @blk) $ blockHash blk)
@@ -1031,18 +1036,18 @@ instance ( tx ~ GenTx blk
                                 $ blockPrevHash blk)
       ]
   forMachine _dtal (TraceDidntAdoptBlock slotNo _) =
-    mkObject
+    mconcat
       [ "kind" .= String "TraceDidntAdoptBlock"
       , "slot" .= toJSON (unSlotNo slotNo)
       ]
   forMachine dtal (TraceForgedInvalidBlock slotNo _ reason) =
-    mkObject
+    mconcat
       [ "kind" .= String "TraceForgedInvalidBlock"
       , "slot" .= toJSON (unSlotNo slotNo)
       , "reason" .= forMachine dtal reason
       ]
   forMachine DDetailed (TraceAdoptedBlock slotNo blk txs) =
-    mkObject
+    mconcat
       [ "kind" .= String "TraceAdoptedBlock"
       , "slot" .= toJSON (unSlotNo slotNo)
       , "blockHash" .= renderHeaderHashForDetails
@@ -1053,7 +1058,7 @@ instance ( tx ~ GenTx blk
       , "txIds" .= toJSON (map (show . txId . txForgetValidated) txs)
       ]
   forMachine dtal (TraceAdoptedBlock slotNo blk _txs) =
-    mkObject
+    mconcat
       [ "kind" .= String "TraceAdoptedBlock"
       , "slot" .= toJSON (unSlotNo slotNo)
       , "blockHash" .= renderHeaderHashForDetails
@@ -1174,7 +1179,7 @@ instance ( tx ~ GenTx blk
 
 instance LogFormatting TraceStartLeadershipCheckPlus where
   forMachine _dtal TraceStartLeadershipCheckPlus {..} =
-        mkObject [ "kind" .= String "TraceStartLeadershipCheckPlus"
+        mconcat [ "kind" .= String "TraceStartLeadershipCheckPlus"
                  , "slotNo" .= toJSON (unSlotNo tsSlotNo)
                  , "utxoSize" .= Number (fromIntegral tsUtxoSize)
                  , "delegMapSize" .= Number (fromIntegral tsUtxoSize)
@@ -1415,16 +1420,16 @@ severityBlockchainTime TraceSystemClockMovedBack {} = Warning
 
 instance Show t => LogFormatting (TraceBlockchainTimeEvent t) where
     forMachine _dtal (TraceStartTimeInTheFuture (SystemStart start) toWait) =
-        mkObject [ "kind" .= String "TStartTimeInTheFuture"
+        mconcat [ "kind" .= String "TStartTimeInTheFuture"
                  , "systemStart" .= String (showT start)
                  , "toWait" .= String (showT toWait)
                  ]
     forMachine _dtal (TraceCurrentSlotUnknown time _) =
-        mkObject [ "kind" .= String "CurrentSlotUnknown"
+        mconcat [ "kind" .= String "CurrentSlotUnknown"
                  , "time" .= String (showT time)
                  ]
     forMachine _dtal (TraceSystemClockMovedBack prevTime newTime) =
-        mkObject [ "kind" .= String "SystemClockMovedBack"
+        mconcat [ "kind" .= String "SystemClockMovedBack"
                  , "prevTime" .= String (showT prevTime)
                  , "newTime" .= String (showT newTime)
                  ]
@@ -1496,7 +1501,7 @@ severityKeepAliveClient _ = Info
 
 instance Show remotePeer => LogFormatting (TraceKeepAliveClient remotePeer) where
     forMachine _dtal (AddSample peer rtt pgsv) =
-        mkObject
+        mconcat
           [ "kind" .= String "AddSample"
           , "address" .= show peer
           , "rtt" .= rtt

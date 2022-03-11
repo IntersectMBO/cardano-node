@@ -103,6 +103,7 @@ severityMux' MuxTraceStartOnDemand {}         = Debug
 severityMux' MuxTraceStartedOnDemand {}       = Debug
 severityMux' MuxTraceTerminating {}           = Debug
 severityMux' MuxTraceShutdown {}              = Debug
+severityMux' MuxTraceTCPInfo {}               = Debug
 
 namesForMux :: WithMuxBearer peer MuxTrace -> [Text]
 namesForMux (WithMuxBearer _ mt) = namesForMux' mt
@@ -135,13 +136,14 @@ namesForMux' MuxTraceStartOnDemand {}         = ["StartOnDemand"]
 namesForMux' MuxTraceStartedOnDemand {}       = ["StartedOnDemand"]
 namesForMux' MuxTraceTerminating {}           = ["Terminating"]
 namesForMux' MuxTraceShutdown {}              = ["Shutdown"]
+namesForMux' MuxTraceTCPInfo {}               = ["TCPInfo"]
 
 
 
 instance (LogFormatting peer, Show peer) =>
     LogFormatting (WithMuxBearer peer MuxTrace) where
   forMachine dtal (WithMuxBearer b ev) =
-    mkObject [ "kind" .= String "MuxTrace"
+    mconcat [ "kind" .= String "MuxTrace"
              , "bearer" .= forMachine dtal b
              , "event" .= showT ev ]
   forHuman (WithMuxBearer b ev) = "With mux bearer " <> showT b
@@ -332,7 +334,7 @@ namesForHandshake''' HS.MsgRefuse {}          = ["Refuse"]
 
 instance LogFormatting (NtN.HandshakeTr NtN.RemoteAddress NtN.NodeToNodeVersion) where
   forMachine _dtal (WithMuxBearer b ev) =
-    mkObject [ "kind" .= String "HandshakeTrace"
+    mconcat [ "kind" .= String "HandshakeTrace"
              , "bearer" .= show b
              , "event" .= show ev ]
   forHuman (WithMuxBearer b ev) = "With mux bearer " <> showT b
@@ -407,7 +409,7 @@ namesForLocalHandshake''' HS.MsgRefuse {}          = ["Refuse"]
 
 instance LogFormatting (NtC.HandshakeTr NtC.LocalAddress NtC.NodeToClientVersion) where
   forMachine _dtal (WithMuxBearer b ev) =
-    mkObject [ "kind" .= String "LocalHandshakeTrace"
+    mconcat [ "kind" .= String "LocalHandshakeTrace"
              , "bearer" .= show b
              , "event" .= show ev ]
   forHuman (WithMuxBearer b ev) = "With mux bearer " <> showT b
@@ -495,67 +497,67 @@ namesForDiffusionInit  ND.DiffusionErrored {}                  =
 
 instance (Show ntnAddr, Show ntcAddr) =>
   LogFormatting (ND.InitializationTracer ntnAddr ntcAddr)  where
-  forMachine _dtal (ND.RunServer sockAddr) = mkObject
+  forMachine _dtal (ND.RunServer sockAddr) = mconcat
     [ "kind" .= String "RunServer"
     , "socketAddress" .= String (pack (show sockAddr))
     ]
 
-  forMachine _dtal (ND.RunLocalServer localAddress) = mkObject
+  forMachine _dtal (ND.RunLocalServer localAddress) = mconcat
     [ "kind" .= String "RunLocalServer"
     , "localAddress" .= String (pack (show localAddress))
     ]
-  forMachine _dtal (ND.UsingSystemdSocket localAddress) = mkObject
+  forMachine _dtal (ND.UsingSystemdSocket localAddress) = mconcat
     [ "kind" .= String "UsingSystemdSocket"
     , "path" .= String (pack . show $ localAddress)
     ]
 
-  forMachine _dtal (ND.CreateSystemdSocketForSnocketPath localAddress) = mkObject
+  forMachine _dtal (ND.CreateSystemdSocketForSnocketPath localAddress) = mconcat
     [ "kind" .= String "CreateSystemdSocketForSnocketPath"
     , "path" .= String (pack . show $ localAddress)
     ]
-  forMachine _dtal (ND.CreatedLocalSocket localAddress) = mkObject
+  forMachine _dtal (ND.CreatedLocalSocket localAddress) = mconcat
     [ "kind" .= String "CreatedLocalSocket"
     , "path" .= String (pack . show $ localAddress)
     ]
-  forMachine _dtal (ND.ConfiguringLocalSocket localAddress socket) = mkObject
+  forMachine _dtal (ND.ConfiguringLocalSocket localAddress socket) = mconcat
     [ "kind" .= String "ConfiguringLocalSocket"
     , "path" .= String (pack . show $ localAddress)
     , "socket" .= String (pack (show socket))
     ]
-  forMachine _dtal (ND.ListeningLocalSocket localAddress socket) = mkObject
+  forMachine _dtal (ND.ListeningLocalSocket localAddress socket) = mconcat
     [ "kind" .= String "ListeningLocalSocket"
     , "path" .=  String (pack . show $ localAddress)
     , "socket" .= String (pack (show socket))
     ]
-  forMachine _dtal (ND.LocalSocketUp localAddress fd) = mkObject
+  forMachine _dtal (ND.LocalSocketUp localAddress fd) = mconcat
     [ "kind" .= String "LocalSocketUp"
     , "path" .= String (pack . show $ localAddress)
     , "socket" .= String (pack (show fd))
     ]
-  forMachine _dtal (ND.CreatingServerSocket socket) = mkObject
+  forMachine _dtal (ND.CreatingServerSocket socket) = mconcat
     [ "kind" .= String "CreatingServerSocket"
     , "socket" .= String (pack (show socket))
     ]
-  forMachine _dtal (ND.ListeningServerSocket socket) = mkObject
+  forMachine _dtal (ND.ListeningServerSocket socket) = mconcat
     [ "kind" .= String "ListeningServerSocket"
     , "socket" .= String (pack (show socket))
     ]
-  forMachine _dtal (ND.ServerSocketUp socket) = mkObject
+  forMachine _dtal (ND.ServerSocketUp socket) = mconcat
     [ "kind" .= String "ServerSocketUp"
     , "socket" .= String (pack (show socket))
     ]
-  forMachine _dtal (ND.ConfiguringServerSocket socket) = mkObject
+  forMachine _dtal (ND.ConfiguringServerSocket socket) = mconcat
     [ "kind" .= String "ConfiguringServerSocket"
     , "socket" .= String (pack (show socket))
     ]
-  forMachine _dtal (ND.UnsupportedLocalSystemdSocket path) = mkObject
+  forMachine _dtal (ND.UnsupportedLocalSystemdSocket path) = mconcat
     [ "kind" .= String "UnsupportedLocalSystemdSocket"
     , "path" .= String (pack (show path))
     ]
-  forMachine _dtal ND.UnsupportedReadySocketCase = mkObject
+  forMachine _dtal ND.UnsupportedReadySocketCase = mconcat
     [ "kind" .= String "UnsupportedReadySocketCase"
     ]
-  forMachine _dtal (ND.DiffusionErrored exception) = mkObject
+  forMachine _dtal (ND.DiffusionErrored exception) = mconcat
     [ "kind" .= String "DiffusionErrored"
     , "path" .= String (pack (show exception))
     ]
@@ -653,49 +655,49 @@ namesForLedgerPeers FallingBackToBootstrapPeers {} = ["FallingBackToBootstrapPee
 
 instance LogFormatting TraceLedgerPeers where
   forMachine _dtal (PickedPeer addr _ackStake stake) =
-    mkObject
+    mconcat
       [ "kind" .= String "PickedPeer"
       , "address" .= show addr
       , "relativeStake" .= (realToFrac (unPoolStake stake) :: Double)
       ]
   forMachine _dtal (PickedPeers (NumberOfPeers n) addrs) =
-    mkObject
+    mconcat
       [ "kind" .= String "PickedPeers"
       , "desiredCount" .= n
       , "count" .= length addrs
       , "addresses" .= show addrs
       ]
   forMachine _dtal (FetchingNewLedgerState cnt) =
-    mkObject
+    mconcat
       [ "kind" .= String "FetchingNewLedgerState"
       , "numberOfPools" .= cnt
       ]
   forMachine _dtal DisabledLedgerPeers =
-    mkObject
+    mconcat
       [ "kind" .= String "DisabledLedgerPeers"
       ]
   forMachine _dtal (TraceUseLedgerAfter ula) =
-    mkObject
+    mconcat
       [ "kind" .= String "UseLedgerAfter"
       , "useLedgerAfter" .= UseLedger ula
       ]
   forMachine _dtal WaitingOnRequest =
-    mkObject
+    mconcat
       [ "kind" .= String "WaitingOnRequest"
       ]
   forMachine _dtal (RequestForPeers (NumberOfPeers np)) =
-    mkObject
+    mconcat
       [ "kind" .= String "RequestForPeers"
       , "numberOfPeers" .= np
       ]
   forMachine _dtal (ReusingLedgerState cnt age) =
-    mkObject
+    mconcat
       [ "kind" .= String "ReusingLedgerState"
       , "numberOfPools" .= cnt
       , "ledgerStateAge" .= age
       ]
   forMachine _dtal FallingBackToBootstrapPeers =
-    mkObject
+    mconcat
       [ "kind" .= String "FallingBackToBootstrapPeers"
       ]
 

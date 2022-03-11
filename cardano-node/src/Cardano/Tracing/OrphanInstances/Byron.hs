@@ -16,9 +16,9 @@ import           Data.Aeson (Value (..))
 import qualified Data.Set as Set
 import qualified Data.Text as Text
 
-import           Cardano.Tracing.Render (renderTxId)
 import           Cardano.Tracing.OrphanInstances.Common
 import           Cardano.Tracing.OrphanInstances.Consensus ()
+import           Cardano.Tracing.Render (renderTxId)
 
 import           Ouroboros.Consensus.Block (Header)
 import           Ouroboros.Network.Block (blockHash, blockNo, blockSlot)
@@ -45,36 +45,36 @@ import           Cardano.Crypto.Signing (VerificationKey)
 
 instance ToObject ApplyMempoolPayloadErr where
   toObject _verb (MempoolTxErr utxoValidationErr) =
-    mkObject
+    mconcat
       [ "kind" .= String "MempoolTxErr"
       , "error" .= String (show utxoValidationErr)
       ]
   toObject _verb (MempoolDlgErr delegScheduleError) =
-    mkObject
+    mconcat
       [ "kind" .= String "MempoolDlgErr"
       , "error" .= String (show delegScheduleError)
       ]
   toObject _verb (MempoolUpdateProposalErr iFaceErr) =
-    mkObject
+    mconcat
       [ "kind" .= String "MempoolUpdateProposalErr"
       , "error" .= String (show iFaceErr)
       ]
   toObject _verb (MempoolUpdateVoteErr iFaceErrr) =
-    mkObject
+    mconcat
       [ "kind" .= String "MempoolUpdateVoteErr"
       , "error" .= String (show iFaceErrr)
       ]
 
 instance ToObject ByronLedgerUpdate where
   toObject verb (ByronUpdatedProtocolUpdates protocolUpdates) =
-    mkObject
+    mconcat
       [ "kind"            .= String "ByronUpdatedProtocolUpdates"
       , "protocolUpdates" .= map (toObject verb) protocolUpdates
       ]
 
 instance ToObject ProtocolUpdate where
   toObject verb (ProtocolUpdate updateVersion updateState) =
-    mkObject
+    mconcat
       [ "kind"                  .= String "ProtocolUpdate"
       , "protocolUpdateVersion" .= updateVersion
       , "protocolUpdateState"   .= toObject verb updateState
@@ -83,39 +83,39 @@ instance ToObject ProtocolUpdate where
 instance ToObject UpdateState where
   toObject _verb updateState = case updateState of
       UpdateRegistered slot ->
-        mkObject
+        mconcat
           [ "kind" .= String "UpdateRegistered"
           , "slot" .= slot
           ]
       UpdateActive votes ->
-        mkObject
+        mconcat
           [ "kind"  .= String "UpdateActive"
           , "votes" .= map (Text.pack . show) (Set.toList votes)
           ]
       UpdateConfirmed slot ->
-        mkObject
+        mconcat
           [ "kind" .= String "UpdateConfirmed"
           , "slot" .= slot
           ]
       UpdateStablyConfirmed endorsements ->
-        mkObject
+        mconcat
           [ "kind"         .= String "UpdateStablyConfirmed"
           , "endorsements" .= map (Text.pack . show) (Set.toList endorsements)
           ]
       UpdateCandidate slot epoch ->
-        mkObject
+        mconcat
           [ "kind" .= String "UpdateCandidate"
           , "slot" .= slot
           , "epoch" .= epoch
           ]
       UpdateStableCandidate transitionEpoch ->
-        mkObject
+        mconcat
           [ "kind"            .= String "UpdateStableCandidate"
           , "transitionEpoch" .= transitionEpoch
           ]
 
 instance ToObject (GenTx ByronBlock) where
-  toObject _ tx = mkObject [ "txid" .= Text.take 8 (renderTxId (txId tx)) ]
+  toObject _ tx = mconcat [ "txid" .= Text.take 8 (renderTxId (txId tx)) ]
 
 
 instance ToJSON (TxId (GenTx ByronBlock)) where
@@ -124,73 +124,73 @@ instance ToJSON (TxId (GenTx ByronBlock)) where
 
 instance ToObject ChainValidationError where
   toObject _verb ChainValidationBoundaryTooLarge =
-    mkObject
+    mconcat
       [ "kind" .= String "ChainValidationBoundaryTooLarge" ]
   toObject _verb ChainValidationBlockAttributesTooLarge =
-    mkObject
+    mconcat
       [ "kind" .= String "ChainValidationBlockAttributesTooLarge" ]
   toObject _verb (ChainValidationBlockTooLarge _ _) =
-    mkObject
+    mconcat
       [ "kind" .= String "ChainValidationBlockTooLarge" ]
   toObject _verb ChainValidationHeaderAttributesTooLarge =
-    mkObject
+    mconcat
       [ "kind" .= String "ChainValidationHeaderAttributesTooLarge" ]
   toObject _verb (ChainValidationHeaderTooLarge _ _) =
-    mkObject
+    mconcat
       [ "kind" .= String "ChainValidationHeaderTooLarge" ]
   toObject _verb (ChainValidationDelegationPayloadError err) =
-    mkObject
+    mconcat
       [ "kind" .= String err ]
   toObject _verb (ChainValidationInvalidDelegation _ _) =
-    mkObject
+    mconcat
       [ "kind" .= String "ChainValidationInvalidDelegation" ]
   toObject _verb (ChainValidationGenesisHashMismatch _ _) =
-    mkObject
+    mconcat
       [ "kind" .= String "ChainValidationGenesisHashMismatch" ]
   toObject _verb (ChainValidationExpectedGenesisHash _ _) =
-    mkObject
+    mconcat
       [ "kind" .= String "ChainValidationExpectedGenesisHash" ]
   toObject _verb (ChainValidationExpectedHeaderHash _ _) =
-    mkObject
+    mconcat
       [ "kind" .= String "ChainValidationExpectedHeaderHash" ]
   toObject _verb (ChainValidationInvalidHash _ _) =
-    mkObject
+    mconcat
       [ "kind" .= String "ChainValidationInvalidHash" ]
   toObject _verb (ChainValidationMissingHash _) =
-    mkObject
+    mconcat
       [ "kind" .= String "ChainValidationMissingHash" ]
   toObject _verb (ChainValidationUnexpectedGenesisHash _) =
-    mkObject
+    mconcat
       [ "kind" .= String "ChainValidationUnexpectedGenesisHash" ]
   toObject _verb (ChainValidationInvalidSignature _) =
-    mkObject
+    mconcat
       [ "kind" .= String "ChainValidationInvalidSignature" ]
   toObject _verb (ChainValidationDelegationSchedulingError _) =
-    mkObject
+    mconcat
       [ "kind" .= String "ChainValidationDelegationSchedulingError" ]
   toObject _verb (ChainValidationProtocolMagicMismatch _ _) =
-    mkObject
+    mconcat
       [ "kind" .= String "ChainValidationProtocolMagicMismatch" ]
   toObject _verb ChainValidationSignatureLight =
-    mkObject
+    mconcat
       [ "kind" .= String "ChainValidationSignatureLight" ]
   toObject _verb (ChainValidationTooManyDelegations _) =
-    mkObject
+    mconcat
       [ "kind" .= String "ChainValidationTooManyDelegations" ]
   toObject _verb (ChainValidationUpdateError _ _) =
-    mkObject
+    mconcat
       [ "kind" .= String "ChainValidationUpdateError" ]
   toObject _verb (ChainValidationUTxOValidationError _) =
-    mkObject
+    mconcat
       [ "kind" .= String "ChainValidationUTxOValidationError" ]
   toObject _verb (ChainValidationProofValidationError _) =
-    mkObject
+    mconcat
       [ "kind" .= String "ChainValidationProofValidationError" ]
 
 
 instance ToObject (Header ByronBlock) where
   toObject _verb b =
-    mkObject $
+    mconcat $
         [ "kind" .= String "ByronBlock"
         , "hash" .= condense (blockHash b)
         , "slotNo" .= condense (blockSlot b)
@@ -208,7 +208,7 @@ instance ToObject (Header ByronBlock) where
 
 instance ToObject ByronOtherHeaderEnvelopeError where
   toObject _verb (UnexpectedEBBInSlot slot) =
-    mkObject
+    mconcat
       [ "kind" .= String "UnexpectedEBBInSlot"
       , "slot" .= slot
       ]

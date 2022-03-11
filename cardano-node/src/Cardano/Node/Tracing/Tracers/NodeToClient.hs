@@ -50,9 +50,9 @@ import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Type as LTS
 
 instance LogFormatting (AnyMessageAndAgency ps)
       => LogFormatting (TraceSendRecv ps) where
-  forMachine dtal (TraceSendMsg m) = mkObject
+  forMachine dtal (TraceSendMsg m) = mconcat
     [ "kind" .= String "Send" , "msg" .= forMachine dtal m ]
-  forMachine dtal (TraceRecvMsg m) = mkObject
+  forMachine dtal (TraceRecvMsg m) = mconcat
     [ "kind" .= String "Recv" , "msg" .= forMachine dtal m ]
 
   forHuman (TraceSendMsg m) = "Send: " <> forHuman m
@@ -111,35 +111,35 @@ namesForTChainSync (BlockFetch.TraceLabelPeer _ v) = "NodeToClient" : namesTChai
 
 instance LogFormatting (AnyMessageAndAgency (ChainSync blk pt tip)) where
    forMachine _dtal (AnyMessageAndAgency stok ChainSync.MsgRequestNext{}) =
-     mkObject [ "kind" .= String "MsgRequestNext"
+     mconcat [ "kind" .= String "MsgRequestNext"
               , "agency" .= String (pack $ show stok)
               ]
    forMachine _dtal (AnyMessageAndAgency stok ChainSync.MsgAwaitReply{}) =
-     mkObject [ "kind" .= String "MsgAwaitReply"
+     mconcat [ "kind" .= String "MsgAwaitReply"
               , "agency" .= String (pack $ show stok)
               ]
    forMachine _dtal (AnyMessageAndAgency stok ChainSync.MsgRollForward{}) =
-     mkObject [ "kind" .= String "MsgRollForward"
+     mconcat [ "kind" .= String "MsgRollForward"
               , "agency" .= String (pack $ show stok)
               ]
    forMachine _dtal (AnyMessageAndAgency stok ChainSync.MsgRollBackward{}) =
-     mkObject [ "kind" .= String "MsgRollBackward"
+     mconcat [ "kind" .= String "MsgRollBackward"
               , "agency" .= String (pack $ show stok)
               ]
    forMachine _dtal (AnyMessageAndAgency stok ChainSync.MsgFindIntersect{}) =
-     mkObject [ "kind" .= String "MsgFindIntersect"
+     mconcat [ "kind" .= String "MsgFindIntersect"
               , "agency" .= String (pack $ show stok)
               ]
    forMachine _dtal (AnyMessageAndAgency stok ChainSync.MsgIntersectFound{}) =
-     mkObject [ "kind" .= String "MsgIntersectFound"
+     mconcat [ "kind" .= String "MsgIntersectFound"
               , "agency" .= String (pack $ show stok)
               ]
    forMachine _dtal (AnyMessageAndAgency stok ChainSync.MsgIntersectNotFound{}) =
-     mkObject [ "kind" .= String "MsgIntersectNotFound"
+     mconcat [ "kind" .= String "MsgIntersectNotFound"
               , "agency" .= String (pack $ show stok)
               ]
    forMachine _dtal (AnyMessageAndAgency stok ChainSync.MsgDone{}) =
-     mkObject [ "kind" .= String "MsgDone"
+     mconcat [ "kind" .= String "MsgDone"
               , "agency" .= String (pack $ show stok)
               ]
 
@@ -260,47 +260,47 @@ namesForTTxMonitor (TraceLabelPeer _ v) = namesForTTxMonitor' v
 
 instance LogFormatting (AnyMessageAndAgency (LTM.LocalTxMonitor txid tx slotNo)) where
   forMachine _dtal (AnyMessageAndAgency stok LTM.MsgAcquire {}) =
-    mkObject [ "kind" .= String "MsgAcquire"
+    mconcat [ "kind" .= String "MsgAcquire"
              , "agency" .= String (pack $ show stok)
              ]
   forMachine _dtal (AnyMessageAndAgency stok LTM.MsgAcquired {}) =
-    mkObject [ "kind" .= String "MsgAcquired"
+    mconcat [ "kind" .= String "MsgAcquired"
              , "agency" .= String (pack $ show stok)
              ]
   forMachine _dtal (AnyMessageAndAgency stok LTM.MsgAwaitAcquire {}) =
-    mkObject [ "kind" .= String "MsgAwaitAcquire"
+    mconcat [ "kind" .= String "MsgAwaitAcquire"
              , "agency" .= String (pack $ show stok)
              ]
   forMachine _dtal (AnyMessageAndAgency stok LTM.MsgNextTx {}) =
-    mkObject [ "kind" .= String "MsgNextTx"
+    mconcat [ "kind" .= String "MsgNextTx"
              , "agency" .= String (pack $ show stok)
              ]
   forMachine _dtal (AnyMessageAndAgency stok LTM.MsgReplyNextTx {}) =
-    mkObject [ "kind" .= String "MsgReplyNextTx"
+    mconcat [ "kind" .= String "MsgReplyNextTx"
              , "agency" .= String (pack $ show stok)
              ]
   forMachine _dtal (AnyMessageAndAgency stok LTM.MsgHasTx {}) =
-    mkObject [ "kind" .= String "MsgHasTx"
+    mconcat [ "kind" .= String "MsgHasTx"
              , "agency" .= String (pack $ show stok)
              ]
   forMachine _dtal (AnyMessageAndAgency stok LTM.MsgReplyHasTx {}) =
-    mkObject [ "kind" .= String "MsgReplyHasTx"
+    mconcat [ "kind" .= String "MsgReplyHasTx"
              , "agency" .= String (pack $ show stok)
              ]
   forMachine _dtal (AnyMessageAndAgency stok LTM.MsgGetSizes {}) =
-    mkObject [ "kind" .= String "MsgGetSizes"
+    mconcat [ "kind" .= String "MsgGetSizes"
              , "agency" .= String (pack $ show stok)
              ]
   forMachine _dtal (AnyMessageAndAgency stok LTM.MsgReplyGetSizes {}) =
-    mkObject [ "kind" .= String "MsgReplyGetSizes"
+    mconcat [ "kind" .= String "MsgReplyGetSizes"
              , "agency" .= String (pack $ show stok)
              ]
   forMachine _dtal (AnyMessageAndAgency stok LTM.MsgRelease {}) =
-    mkObject [ "kind" .= String "MsgRelease"
+    mconcat [ "kind" .= String "MsgRelease"
              , "agency" .= String (pack $ show stok)
              ]
   forMachine _dtal (AnyMessageAndAgency stok LTM.MsgDone {}) =
-    mkObject [ "kind" .= String "MsgDone"
+    mconcat [ "kind" .= String "MsgDone"
              , "agency" .= String (pack $ show stok)
              ]
 
@@ -412,19 +412,19 @@ namesForTTxSubmission (BlockFetch.TraceLabelPeer _ v) = namesTTxSubmission v
 
 instance LogFormatting (AnyMessageAndAgency (LTS.LocalTxSubmission tx err)) where
   forMachine _dtal (AnyMessageAndAgency stok LTS.MsgSubmitTx{}) =
-    mkObject [ "kind" .= String "MsgSubmitTx"
+    mconcat [ "kind" .= String "MsgSubmitTx"
              , "agency" .= String (pack $ show stok)
              ]
   forMachine _dtal (AnyMessageAndAgency stok LTS.MsgAcceptTx{}) =
-    mkObject [ "kind" .= String "MsgAcceptTx"
+    mconcat [ "kind" .= String "MsgAcceptTx"
              , "agency" .= String (pack $ show stok)
              ]
   forMachine _dtal (AnyMessageAndAgency stok LTS.MsgRejectTx{}) =
-    mkObject [ "kind" .= String "MsgRejectTx"
+    mconcat [ "kind" .= String "MsgRejectTx"
              , "agency" .= String (pack $ show stok)
              ]
   forMachine _dtal (AnyMessageAndAgency stok LTS.MsgDone{}) =
-    mkObject [ "kind" .= String "MsgDone"
+    mconcat [ "kind" .= String "MsgDone"
              , "agency" .= String (pack $ show stok)
              ]
 
@@ -511,35 +511,35 @@ namesForTStateQuery (BlockFetch.TraceLabelPeer _ v) = namesForTStateQuery' v
 instance (forall result. Show (Query blk result))
       => LogFormatting (AnyMessageAndAgency (LSQ.LocalStateQuery blk pt (Query blk))) where
   forMachine _dtal (AnyMessageAndAgency stok LSQ.MsgAcquire{}) =
-    mkObject [ "kind" .= String "MsgAcquire"
+    mconcat [ "kind" .= String "MsgAcquire"
              , "agency" .= String (pack $ show stok)
              ]
   forMachine _dtal (AnyMessageAndAgency stok LSQ.MsgAcquired{}) =
-    mkObject [ "kind" .= String "MsgAcquired"
+    mconcat [ "kind" .= String "MsgAcquired"
              , "agency" .= String (pack $ show stok)
              ]
   forMachine _dtal (AnyMessageAndAgency stok LSQ.MsgFailure{}) =
-    mkObject [ "kind" .= String "MsgFailure"
+    mconcat [ "kind" .= String "MsgFailure"
              , "agency" .= String (pack $ show stok)
              ]
   forMachine _dtal (AnyMessageAndAgency stok LSQ.MsgQuery{}) =
-    mkObject [ "kind" .= String "MsgQuery"
+    mconcat [ "kind" .= String "MsgQuery"
              , "agency" .= String (pack $ show stok)
              ]
   forMachine _dtal (AnyMessageAndAgency stok LSQ.MsgResult{}) =
-    mkObject [ "kind" .= String "MsgResult"
+    mconcat [ "kind" .= String "MsgResult"
              , "agency" .= String (pack $ show stok)
              ]
   forMachine _dtal (AnyMessageAndAgency stok LSQ.MsgRelease{}) =
-    mkObject [ "kind" .= String "MsgRelease"
+    mconcat [ "kind" .= String "MsgRelease"
              , "agency" .= String (pack $ show stok)
              ]
   forMachine _dtal (AnyMessageAndAgency stok LSQ.MsgReAcquire{}) =
-    mkObject [ "kind" .= String "MsgReAcquire"
+    mconcat [ "kind" .= String "MsgReAcquire"
              , "agency" .= String (pack $ show stok)
              ]
   forMachine _dtal (AnyMessageAndAgency stok LSQ.MsgDone{}) =
-    mkObject [ "kind" .= String "MsgDone"
+    mconcat [ "kind" .= String "MsgDone"
              , "agency" .= String (pack $ show stok)
              ]
 

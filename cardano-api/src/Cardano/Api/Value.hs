@@ -4,6 +4,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE ViewPatterns #-}
 
 -- | Currency values
 --
@@ -58,11 +59,12 @@ import           Prelude
 
 import           Data.Aeson (FromJSON, FromJSONKey, ToJSON, object, parseJSON, toJSON, withObject)
 import qualified Data.Aeson as Aeson
+import qualified Data.Aeson.Key as Aeson
+import qualified Data.Aeson.KeyMap as KeyMap
 import           Data.Aeson.Types (Parser, ToJSONKey)
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BSC
-import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Map.Merge.Strict as Map
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -345,19 +347,19 @@ valueFromNestedRep (ValueNestedRep bundles) =
 instance ToJSON ValueNestedRep where
   toJSON (ValueNestedRep bundles) = object $ map toPair bundles
     where
-     toPair :: ValueNestedBundle -> (Text, Aeson.Value)
+     toPair :: ValueNestedBundle -> (Aeson.Key, Aeson.Value)
      toPair (ValueNestedBundleAda q) = ("lovelace", toJSON q)
-     toPair (ValueNestedBundle pid assets) = (renderPolicyId pid, toJSON assets)
+     toPair (ValueNestedBundle pid assets) = (Aeson.fromText $ renderPolicyId pid, toJSON assets)
 
 instance FromJSON ValueNestedRep where
   parseJSON =
       withObject "ValueNestedRep" $ \obj ->
         ValueNestedRep <$> sequenceA [ parsePid keyValTuple
-                                   | keyValTuple <- HashMap.toList obj ]
+                                   | keyValTuple <- KeyMap.toList obj ]
     where
-      parsePid :: (Text, Aeson.Value) -> Parser ValueNestedBundle
+      parsePid :: (Aeson.Key, Aeson.Value) -> Parser ValueNestedBundle
       parsePid ("lovelace", q) = ValueNestedBundleAda <$> parseJSON q
-      parsePid (pid, quantityBundleJson) = do
+      parsePid (Aeson.toText -> pid, quantityBundleJson) = do
         sHash <-
           note ("Expected hex encoded PolicyId but got: " <> Text.unpack pid) $
           deserialiseFromRawBytesHex AsScriptHash $ Text.encodeUtf8 pid

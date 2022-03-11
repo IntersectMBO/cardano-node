@@ -26,6 +26,7 @@ import           Cardano.Prelude
 import           Prelude (String)
 
 import           Data.Aeson
+import qualified Data.Aeson.Key as Aeson
 import           Data.Aeson.Types
 import qualified Data.Text as Text
 import           Generic.Data (gmappend)
@@ -606,7 +607,7 @@ proxyLastToEither name (Last x) =
   maybe (Left $ "Default value not specified for " <> proxyName name) Right x
 
 parseTracer :: KnownSymbol name => Proxy name -> Object -> Parser (Last (OnOff name))
-parseTracer p obj = Last <$> obj .:? proxyName p
+parseTracer p obj = Last <$> obj .:? Aeson.fromText (proxyName p)
 
 lastToEither :: String -> Last a -> Either String a
 lastToEither errMsg (Last x) = maybe (Left errMsg) Right x

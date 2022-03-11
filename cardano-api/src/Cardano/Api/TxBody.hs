@@ -146,6 +146,8 @@ import           Prelude
 import           Control.Monad (guard)
 import           Data.Aeson (object, withObject, withText, (.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
+import qualified Data.Aeson.Key as Aeson
+import qualified Data.Aeson.KeyMap as KeyMap
 import           Data.Aeson.Types (ToJSONKey (..), toJSONKeyText)
 import qualified Data.Aeson.Types as Aeson
 import           Data.Bifunctor (first)
@@ -154,7 +156,6 @@ import qualified Data.ByteString.Char8 as BSC
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Foldable (for_, toList)
 import           Data.Function (on)
-import qualified Data.HashMap.Strict as HMS
 import           Data.List (intercalate, sortBy)
 import qualified Data.List.NonEmpty as NonEmpty
 import           Data.Map.Strict (Map)
@@ -1072,13 +1073,13 @@ instance IsCardanoEra era => FromJSON (TxOutValue era) where
         ll <- o .: "lovelace"
         pure $ TxOutAdaOnly onlyAda $ selectLovelace ll
       Right maSupported -> do
-        let l = HMS.toList o
+        let l = KeyMap.toList o
         vals <- mapM decodeAssetId l
         pure $ TxOutValue maSupported $ mconcat vals
     where
-     decodeAssetId :: (Text, Aeson.Value) -> Aeson.Parser Value
+     decodeAssetId :: (Aeson.Key, Aeson.Value) -> Aeson.Parser Value
      decodeAssetId (polid, Aeson.Object assetNameHm) = do
-       let polId = fromString $ Text.unpack polid
+       let polId = fromString . Text.unpack $ Aeson.toText polid
        aNameQuantity <- decodeAssets assetNameHm
        pure . valueFromList
          $ map (first $ AssetId polId) aNameQuantity
@@ -1093,11 +1094,11 @@ instance IsCardanoEra era => FromJSON (TxOutValue era) where
 
      decodeAssets :: Aeson.Object -> Aeson.Parser [(AssetName, Quantity)]
      decodeAssets assetNameHm =
-       let l = HMS.toList assetNameHm
+       let l = KeyMap.toList assetNameHm
        in mapM (\(aName, q) -> (,) <$> parseAssetName aName <*> decodeQuantity q) l
 
-     parseAssetName :: Text -> Aeson.Parser AssetName
-     parseAssetName aName = runParsecParser assetName aName
+     parseAssetName :: Aeson.Key -> Aeson.Parser AssetName
+     parseAssetName aName = runParsecParser assetName (Aeson.toText aName)
 
      decodeQuantity :: Aeson.Value -> Aeson.Parser Quantity
      decodeQuantity (Aeson.Number sci) =

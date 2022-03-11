@@ -17,7 +17,6 @@ module Cardano.Node.Tracing.Tracers.ChainDB
 
 import           Data.Aeson (Value (String), toJSON, (.=))
 import qualified Data.Aeson as A
-import           Data.HashMap.Strict (insertWith)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import           Numeric (showFFloat)
@@ -51,6 +50,7 @@ import qualified Ouroboros.Consensus.Storage.VolatileDB as VolDB
 import qualified Ouroboros.Consensus.Storage.VolatileDB.Impl as VolDb
 import           Ouroboros.Consensus.Util.Condense (condense)
 
+import qualified Data.Aeson.KeyMap as KeyMap
 import qualified Ouroboros.Network.AnchoredFragment as AF
 
 {-# ANN module ("HLint: ignore Redundant bracket" :: Text) #-}
@@ -71,11 +71,11 @@ withAddedToCurrentChainEmptyLimited tr = do
     selecting _ _ = pure tr
 
 kindContext :: Text -> A.Object -> A.Object
-kindContext toAdd = insertWith f "kind" (String toAdd)
+kindContext toAdd = runIdentity . KeyMap.alterF f "kind"
   where
-    f (String new) (String old) = String (new <> "." <> old)
-    f (String new) _            = String new
-    f _ o                       = o
+    f Nothing = Identity $ Just (String toAdd)
+    f (Just (String old)) = Identity $ Just (String (toAdd <> "." <> old))
+    f _ = Identity Nothing
 
 --------------------------------------------------------------------------------
 -- ChainDB Tracer
@@ -299,34 +299,34 @@ instance ( LogFormatting (Header blk)
       "Chain selection run for block previously from future: " <> renderRealPointAsPhrase pt
 
   forMachine dtal (ChainDB.IgnoreBlockOlderThanK pt) =
-      mkObject [ "kind" .= String "IgnoreBlockOlderThanK"
+      mconcat [ "kind" .= String "IgnoreBlockOlderThanK"
                , "block" .= forMachine dtal pt ]
   forMachine dtal (ChainDB.IgnoreBlockAlreadyInVolatileDB pt) =
-      mkObject [ "kind" .= String "IgnoreBlockAlreadyInVolatileDB"
+      mconcat [ "kind" .= String "IgnoreBlockAlreadyInVolatileDB"
                , "block" .= forMachine dtal pt ]
   forMachine dtal (ChainDB.IgnoreInvalidBlock pt reason) =
-      mkObject [ "kind" .= String "IgnoreInvalidBlock"
+      mconcat [ "kind" .= String "IgnoreInvalidBlock"
                , "block" .= forMachine dtal pt
                , "reason" .= showT reason ]
   forMachine dtal (ChainDB.AddedBlockToQueue pt sz) =
-      mkObject [ "kind" .= String "AddedBlockToQueue"
+      mconcat [ "kind" .= String "AddedBlockToQueue"
                , "block" .= forMachine dtal pt
                , "queueSize" .= toJSON sz ]
   forMachine dtal (ChainDB.BlockInTheFuture pt slot) =
-      mkObject [ "kind" .= String "BlockInTheFuture"
+      mconcat [ "kind" .= String "BlockInTheFuture"
                , "block" .= forMachine dtal pt
                , "slot" .= forMachine dtal slot ]
   forMachine dtal (ChainDB.StoreButDontChange pt) =
-      mkObject [ "kind" .= String "StoreButDontChange"
+      mconcat [ "kind" .= String "StoreButDontChange"
                , "block" .= forMachine dtal pt ]
   forMachine dtal (ChainDB.TryAddToCurrentChain pt) =
-      mkObject [ "kind" .= String "TryAddToCurrentChain"
+      mconcat [ "kind" .= String "TryAddToCurrentChain"
                , "block" .= forMachine dtal pt ]
   forMachine dtal (ChainDB.TrySwitchToAFork pt _) =
-      mkObject [ "kind" .= String "TraceAddBlockEvent.TrySwitchToAFork"
+      mconcat [ "kind" .= String "TraceAddBlockEvent.TrySwitchToAFork"
                , "block" .= forMachine dtal pt ]
   forMachine dtal (ChainDB.AddedToCurrentChain events _ base extended) =
-      mkObject $
+      mconcat $
                [ "kind" .=  String "AddedToCurrentChain"
                , "newtip" .= renderPointForDetails dtal (AF.headPoint extended)
                ]
@@ -335,7 +335,7 @@ instance ( LogFormatting (Header blk)
             ++ [ "events" .= toJSON (map (forMachine dtal) events)
                | not (null events) ]
   forMachine dtal (ChainDB.SwitchedToAFork events _ old new) =
-      mkObject $
+      mconcat $
                [ "kind" .= String "TraceAddBlockEvent.SwitchedToAFork"
                , "newtip" .= renderPointForDetails dtal (AF.headPoint new)
                ]
@@ -346,11 +346,11 @@ instance ( LogFormatting (Header blk)
   forMachine dtal (ChainDB.AddBlockValidation ev') =
     kindContext "AddBlockEvent" $ forMachine dtal ev'
   forMachine dtal (ChainDB.AddedBlockToVolatileDB pt (BlockNo bn) _) =
-      mkObject [ "kind" .= String "AddedBlockToVolatileDB"
+      mconcat [ "kind" .= String "AddedBlockToVolatileDB"
                , "block" .= forMachine dtal pt
                , "blockNo" .= showT bn ]
   forMachine dtal (ChainDB.ChainSelectionForFutureBlock pt) =
-      mkObject [ "kind" .= String "TChainSelectionForFutureBlock"
+      mconcat [ "kind" .= String "TChainSelectionForFutureBlock"
                , "block" .= forMachine dtal pt ]
 
   asMetrics (ChainDB.SwitchedToAFork _warnings newTipInfo _oldChain newChain) =
@@ -416,18 +416,18 @@ instance ( HasHeader (Header blk)
               showProgressT (fromIntegral atDiff) (fromIntegral toDiff) <> "%"
 
     forMachine dtal  (ChainDB.InvalidBlock err pt) =
-            mkObject [ "kind" .= String "InvalidBlock"
+            mconcat [ "kind" .= String "InvalidBlock"
                      , "block" .= forMachine dtal pt
                      , "error" .= showT err ]
     forMachine dtal  (ChainDB.ValidCandidate c) =
-            mkObject [ "kind" .= String "ValidCandidate"
+            mconcat [ "kind" .= String "ValidCandidate"
                      , "block" .= renderPointForDetails dtal (AF.headPoint c) ]
     forMachine dtal  (ChainDB.CandidateContainsFutureBlocks c hdrs) =
-            mkObject [ "kind" .= String "CandidateContainsFutureBlocks"
+            mconcat [ "kind" .= String "CandidateContainsFutureBlocks"
                      , "block"   .= renderPointForDetails dtal (AF.headPoint c)
                      , "headers" .= map (renderPointForDetails dtal . headerPoint) hdrs ]
     forMachine dtal  (ChainDB.CandidateContainsFutureBlocksExceedingClockSkew c hdrs) =
-            mkObject [ "kind" .= String "CandidateContainsFutureBlocksExceedingClockSkew"
+            mconcat [ "kind" .= String "CandidateContainsFutureBlocksExceedingClockSkew"
                      , "block"   .= renderPointForDetails dtal (AF.headPoint c)
                      , "headers" .= map (renderPointForDetails dtal . headerPoint) hdrs ]
     forMachine _dtal (ChainDB.UpdateLedgerDbTraceEvent
@@ -435,7 +435,7 @@ instance ( HasHeader (Header blk)
                           (LedgerDB.PushStart start)
                           (LedgerDB.PushGoal goal)
                           (LedgerDB.Pushing curr))) =
-            mkObject [ "kind" .= String "UpdateLedgerDbTraceEvent.StartedPushingBlockToTheLedgerDb"
+            mconcat [ "kind" .= String "UpdateLedgerDbTraceEvent.StartedPushingBlockToTheLedgerDb"
                      , "startingBlock" .= renderRealPoint start
                      , "currentBlock" .= renderRealPoint curr
                      , "targetBlock" .= renderRealPoint goal
@@ -687,10 +687,10 @@ instance ConvertRawHash blk
       "There are no blocks to copy to the ImmDB"
 
   forMachine dtals (ChainDB.CopiedBlockToImmutableDB pt) =
-      mkObject [ "kind" .= String "CopiedBlockToImmutableDB"
+      mconcat [ "kind" .= String "CopiedBlockToImmutableDB"
                , "slot" .= forMachine dtals pt ]
   forMachine _dtals ChainDB.NoBlocksToCopyToImmutableDB =
-      mkObject [ "kind" .= String "NoBlocksToCopyToImmutableDB" ]
+      mconcat [ "kind" .= String "NoBlocksToCopyToImmutableDB" ]
 
 docChainDBImmtable :: [DocMsg (ChainDB.TraceCopyToImmutableDBEvent blk)]
 docChainDBImmtable = [
@@ -725,10 +725,10 @@ instance LogFormatting (ChainDB.TraceGCEvent blk) where
       "Scheduled a garbage collection for " <> condenseT slot
 
   forMachine dtals (ChainDB.PerformedGC slot) =
-      mkObject [ "kind" .= String "PerformedGC"
+      mconcat [ "kind" .= String "PerformedGC"
                , "slot" .= forMachine dtals slot ]
   forMachine dtals (ChainDB.ScheduledGC slot difft) =
-      mkObject $ [ "kind" .= String "ScheduledGC"
+      mconcat $ [ "kind" .= String "ScheduledGC"
                  , "slot" .= forMachine dtals slot ] <>
                  [ "difft" .= String ((Text.pack . show) difft) | dtals >= DDetailed]
 
@@ -790,9 +790,9 @@ instance (ConvertRawHash blk, LedgerSupportsProtocol blk)
 
     forMachine dtal (ChainDB.InitChainSelValidation v) = forMachine dtal v
     forMachine _dtal ChainDB.InitalChainSelected =
-      mkObject ["kind" .= String "Follower.InitalChainSelected"]
+      mconcat ["kind" .= String "Follower.InitalChainSelected"]
     forMachine _dtal ChainDB.StartedInitChainSelection =
-      mkObject ["kind" .= String "Follower.StartedInitChainSelection"]
+      mconcat ["kind" .= String "Follower.StartedInitChainSelection"]
 
     asMetrics (ChainDB.InitChainSelValidation v) = asMetrics v
     asMetrics ChainDB.InitalChainSelected        = []
@@ -893,29 +893,29 @@ instance ConvertRawHash blk
   forHuman ChainDB.StartedOpeningLgrDB = "Started opening Ledger DB"
 
   forMachine dtal (ChainDB.OpenedDB immTip tip')=
-    mkObject [ "kind" .= String "OpenedDB"
+    mconcat [ "kind" .= String "OpenedDB"
              , "immtip" .= forMachine dtal immTip
              , "tip" .= forMachine dtal tip' ]
   forMachine dtal (ChainDB.ClosedDB immTip tip') =
-    mkObject [ "kind" .= String "TraceOpenEvent.ClosedDB"
+    mconcat [ "kind" .= String "TraceOpenEvent.ClosedDB"
              , "immtip" .= forMachine dtal immTip
              , "tip" .= forMachine dtal tip' ]
   forMachine dtal (ChainDB.OpenedImmutableDB immTip epoch) =
-    mkObject [ "kind" .= String "OpenedImmutableDB"
+    mconcat [ "kind" .= String "OpenedImmutableDB"
              , "immtip" .= forMachine dtal immTip
              , "epoch" .= String ((Text.pack . show) epoch) ]
   forMachine _dtal ChainDB.OpenedVolatileDB =
-      mkObject [ "kind" .= String "OpenedVolatileDB" ]
+      mconcat [ "kind" .= String "OpenedVolatileDB" ]
   forMachine _dtal ChainDB.OpenedLgrDB =
-      mkObject [ "kind" .= String "OpenedLgrDB" ]
+      mconcat [ "kind" .= String "OpenedLgrDB" ]
   forMachine _dtal ChainDB.StartedOpeningDB =
-      mkObject ["kind" .= String "StartedOpeningDB"]
+      mconcat ["kind" .= String "StartedOpeningDB"]
   forMachine _dtal ChainDB.StartedOpeningImmutableDB =
-      mkObject ["kind" .= String "StartedOpeningImmutableDB"]
+      mconcat ["kind" .= String "StartedOpeningImmutableDB"]
   forMachine _dtal ChainDB.StartedOpeningVolatileDB =
-      mkObject ["kind" .= String "StartedOpeningVolatileDB"]
+      mconcat ["kind" .= String "StartedOpeningVolatileDB"]
   forMachine _dtal ChainDB.StartedOpeningLgrDB =
-      mkObject ["kind" .= String "StartedOpeningLgrDB"]
+      mconcat ["kind" .= String "StartedOpeningLgrDB"]
 
 
 docChainDBOpenEvent :: [DocMsg (ChainDB.TraceOpenEvent blk)]
@@ -996,40 +996,40 @@ instance  ( StandardHash blk
   forHuman ChainDB.SwitchBackToVolatileDB = "SwitchBackToVolatileDB"
 
   forMachine _dtal (ChainDB.UnknownRangeRequested unkRange) =
-    mkObject [ "kind" .= String "UnknownRangeRequested"
+    mconcat [ "kind" .= String "UnknownRangeRequested"
              , "range" .= String (showT unkRange)
              ]
   forMachine _dtal (ChainDB.StreamFromVolatileDB streamFrom streamTo realPt) =
-    mkObject [ "kind" .= String "StreamFromVolatileDB"
+    mconcat [ "kind" .= String "StreamFromVolatileDB"
              , "from" .= String (showT streamFrom)
              , "to" .= String (showT streamTo)
              , "point" .= String (Text.pack . show $ map renderRealPoint realPt)
              ]
   forMachine _dtal (ChainDB.StreamFromImmutableDB streamFrom streamTo) =
-    mkObject [ "kind" .= String "StreamFromImmutableDB"
+    mconcat [ "kind" .= String "StreamFromImmutableDB"
              , "from" .= String (showT streamFrom)
              , "to" .= String (showT streamTo)
              ]
   forMachine _dtal (ChainDB.StreamFromBoth streamFrom streamTo realPt) =
-    mkObject [ "kind" .= String "StreamFromBoth"
+    mconcat [ "kind" .= String "StreamFromBoth"
              , "from" .= String (showT streamFrom)
              , "to" .= String (showT streamTo)
              , "point" .= String (Text.pack . show $ map renderRealPoint realPt)
              ]
   forMachine _dtal (ChainDB.BlockMissingFromVolatileDB realPt) =
-    mkObject [ "kind" .= String "BlockMissingFromVolatileDB"
+    mconcat [ "kind" .= String "BlockMissingFromVolatileDB"
              , "point" .= String (renderRealPoint realPt)
              ]
   forMachine _dtal (ChainDB.BlockWasCopiedToImmutableDB realPt) =
-    mkObject [ "kind" .= String "BlockWasCopiedToImmutableDB"
+    mconcat [ "kind" .= String "BlockWasCopiedToImmutableDB"
              , "point" .= String (renderRealPoint realPt)
              ]
   forMachine _dtal (ChainDB.BlockGCedFromVolatileDB realPt) =
-    mkObject [ "kind" .= String "BlockGCedFromVolatileDB"
+    mconcat [ "kind" .= String "BlockGCedFromVolatileDB"
              , "point" .= String (renderRealPoint realPt)
              ]
   forMachine _dtal ChainDB.SwitchBackToVolatileDB =
-    mkObject ["kind" .= String "SwitchBackToVolatileDB"
+    mconcat ["kind" .= String "SwitchBackToVolatileDB"
              ]
 
 instance  ( StandardHash blk
@@ -1043,11 +1043,11 @@ instance  ( StandardHash blk
         <> showT streamFrom
 
   forMachine _dtal (ChainDB.MissingBlock realPt) =
-    mkObject [ "kind"  .= String "MissingBlock"
+    mconcat [ "kind"  .= String "MissingBlock"
              , "point" .= String (renderRealPoint realPt)
              ]
   forMachine _dtal (ChainDB.ForkTooOld streamFrom) =
-    mkObject [ "kind" .= String "ForkTooOld"
+    mconcat [ "kind" .= String "ForkTooOld"
              , "from" .= String (showT streamFrom)
              ]
 
@@ -1124,14 +1124,14 @@ instance ( StandardHash blk
       "Invalid snapshot " <> showT snap <> showT failure
 
   forMachine dtals (LedgerDB.TookSnapshot snap pt) =
-    mkObject [ "kind" .= String "TookSnapshot"
+    mconcat [ "kind" .= String "TookSnapshot"
              , "snapshot" .= forMachine dtals snap
              , "tip" .= show pt ]
   forMachine dtals (LedgerDB.DeletedSnapshot snap) =
-    mkObject [ "kind" .= String "DeletedSnapshot"
+    mconcat [ "kind" .= String "DeletedSnapshot"
              , "snapshot" .= forMachine dtals snap ]
   forMachine dtals (LedgerDB.InvalidSnapshot snap failure) =
-    mkObject [ "kind" .= String "TraceLedgerEvent.InvalidSnapshot"
+    mconcat [ "kind" .= String "TraceLedgerEvent.InvalidSnapshot"
              , "snapshot" .= forMachine dtals snap
              , "failure" .= show failure ]
 
@@ -1195,9 +1195,9 @@ instance (StandardHash blk, ConvertRawHash blk)
           <> "%"
 
   forMachine _dtal (LedgerDB.ReplayFromGenesis _replayTo) =
-      mkObject [ "kind" .= String "ReplayFromGenesis" ]
+      mconcat [ "kind" .= String "ReplayFromGenesis" ]
   forMachine dtal (LedgerDB.ReplayFromSnapshot snap tip' _ _) =
-      mkObject [ "kind" .= String "ReplayFromSnapshot"
+      mconcat [ "kind" .= String "ReplayFromSnapshot"
                , "snapshot" .= forMachine dtal snap
                , "tip" .= show tip' ]
   forMachine _dtal (LedgerDB.ReplayedBlock
@@ -1205,7 +1205,7 @@ instance (StandardHash blk, ConvertRawHash blk)
                       _ledgerEvents
                       _
                       (LedgerDB.ReplayGoal replayTo)) =
-      mkObject [ "kind" .= String "ReplayedBlock"
+      mconcat [ "kind" .= String "ReplayedBlock"
                , "slot" .= unSlotNo (realPointSlot pt)
                , "tip"  .= withOrigin 0 unSlotNo (pointSlot replayTo) ]
 
@@ -1324,9 +1324,9 @@ namesForChainDBImmutableDBCacheEvent (ImmDB.TracePastChunksExpired {}) =
 instance (ConvertRawHash blk, StandardHash blk)
   => LogFormatting (ImmDB.TraceEvent blk) where
     forMachine _dtal ImmDB.NoValidLastLocation =
-      mkObject [ "kind" .= String "NoValidLastLocation" ]
+      mconcat [ "kind" .= String "NoValidLastLocation" ]
     forMachine _dtal (ImmDB.ValidatedLastLocation chunkNo immTip) =
-      mkObject [ "kind" .= String "ValidatedLastLocation"
+      mconcat [ "kind" .= String "ValidatedLastLocation"
                , "chunkNo" .= String (renderChunkNo chunkNo)
                , "immTip" .= String (renderTipHash immTip)
                , "blockNo" .= String (renderTipBlockNo immTip)
@@ -1334,25 +1334,25 @@ instance (ConvertRawHash blk, StandardHash blk)
     forMachine dtal (ImmDB.ChunkValidationEvent traceChunkValidation) =
       forMachine dtal traceChunkValidation
     forMachine _dtal (ImmDB.DeletingAfter immTipWithInfo) =
-      mkObject [ "kind" .= String "DeletingAfter"
+      mconcat [ "kind" .= String "DeletingAfter"
                , "immTipHash" .= String (renderWithOrigin renderTipHash immTipWithInfo)
                , "immTipBlockNo" .= String (renderWithOrigin renderTipBlockNo immTipWithInfo)
                ]
     forMachine _dtal ImmDB.DBAlreadyClosed =
-      mkObject [ "kind" .= String "DBAlreadyClosed" ]
+      mconcat [ "kind" .= String "DBAlreadyClosed" ]
     forMachine _dtal ImmDB.DBClosed =
-      mkObject [ "kind" .= String "DBClosed" ]
+      mconcat [ "kind" .= String "DBClosed" ]
     forMachine dtal (ImmDB.TraceCacheEvent cacheEv) =
       kindContext "TraceCacheEvent" $ forMachine dtal cacheEv
     forMachine _dtal (ImmDB.ChunkFileDoesntFit expectPrevHash actualPrevHash) =
-      mkObject [ "kind" .= String "ChunkFileDoesntFit"
+      mconcat [ "kind" .= String "ChunkFileDoesntFit"
                , "expectedPrevHash" .= String (renderChainHash (Text.decodeLatin1 .
                                               toRawHash (Proxy @blk)) expectPrevHash)
                , "actualPrevHash" .= String (renderChainHash (Text.decodeLatin1 .
                                               toRawHash (Proxy @blk)) actualPrevHash)
                ]
     forMachine _dtal (ImmDB.Migrating txt) =
-      mkObject [ "kind" .= String "Migrating"
+      mconcat [ "kind" .= String "Migrating"
                , "info" .= String txt
                ]
 
@@ -1402,83 +1402,83 @@ instance (ConvertRawHash blk, StandardHash blk)
 
 instance ConvertRawHash blk => LogFormatting (ImmDB.TraceChunkValidation blk ImmDB.ChunkNo) where
     forMachine _dtal (ImmDB.RewriteSecondaryIndex chunkNo) =
-        mkObject [ "kind" .= String "TraceImmutableDBEvent.RewriteSecondaryIndex"
+        mconcat [ "kind" .= String "TraceImmutableDBEvent.RewriteSecondaryIndex"
                  , "chunkNo" .= String (renderChunkNo chunkNo)
                  ]
     forMachine _dtal (ImmDB.RewritePrimaryIndex chunkNo) =
-        mkObject [ "kind" .= String "TraceImmutableDBEvent.RewritePrimaryIndex"
+        mconcat [ "kind" .= String "TraceImmutableDBEvent.RewritePrimaryIndex"
                  , "chunkNo" .= String (renderChunkNo chunkNo)
                  ]
     forMachine _dtal (ImmDB.MissingPrimaryIndex chunkNo) =
-        mkObject [ "kind" .= String "TraceImmutableDBEvent.MissingPrimaryIndex"
+        mconcat [ "kind" .= String "TraceImmutableDBEvent.MissingPrimaryIndex"
                  , "chunkNo" .= String (renderChunkNo chunkNo)
                  ]
     forMachine _dtal (ImmDB.MissingSecondaryIndex chunkNo) =
-        mkObject [ "kind" .= String "TraceImmutableDBEvent.MissingSecondaryIndex"
+        mconcat [ "kind" .= String "TraceImmutableDBEvent.MissingSecondaryIndex"
                  , "chunkNo" .= String (renderChunkNo chunkNo)
                  ]
     forMachine _dtal (ImmDB.InvalidPrimaryIndex chunkNo) =
-        mkObject [ "kind" .= String "TraceImmutableDBEvent.InvalidPrimaryIndex"
+        mconcat [ "kind" .= String "TraceImmutableDBEvent.InvalidPrimaryIndex"
                  , "chunkNo" .= String (renderChunkNo chunkNo)
                  ]
     forMachine _dtal (ImmDB.InvalidSecondaryIndex chunkNo) =
-        mkObject [ "kind" .= String "TraceImmutableDBEvent.InvalidSecondaryIndex"
+        mconcat [ "kind" .= String "TraceImmutableDBEvent.InvalidSecondaryIndex"
                  , "chunkNo" .= String (renderChunkNo chunkNo)
                  ]
     forMachine _dtal (ImmDB.InvalidChunkFile chunkNo
                       (ImmDB.ChunkErrHashMismatch hashPrevBlock prevHashOfBlock)) =
-        mkObject [ "kind" .= String "TraceImmutableDBEvent.InvalidChunkFile.ChunkErrHashMismatch"
+        mconcat [ "kind" .= String "TraceImmutableDBEvent.InvalidChunkFile.ChunkErrHashMismatch"
                  , "chunkNo" .= String (renderChunkNo chunkNo)
                  , "hashPrevBlock" .= String (Text.decodeLatin1 . toRawHash (Proxy @blk) $ hashPrevBlock)
                  , "prevHashOfBlock" .= String (renderChainHash (Text.decodeLatin1 . toRawHash (Proxy @blk)) prevHashOfBlock)
                  ]
     forMachine dtal (ImmDB.InvalidChunkFile chunkNo (ImmDB.ChunkErrCorrupt pt)) =
-        mkObject [ "kind" .= String "TraceImmutableDBEvent.InvalidChunkFile.ChunkErrCorrupt"
+        mconcat [ "kind" .= String "TraceImmutableDBEvent.InvalidChunkFile.ChunkErrCorrupt"
                  , "chunkNo" .= String (renderChunkNo chunkNo)
                  , "block" .= String (renderPointForDetails dtal pt)
                  ]
     forMachine _dtal (ImmDB.ValidatedChunk chunkNo _) =
-        mkObject [ "kind" .= String "TraceImmutableDBEvent.ValidatedChunk"
+        mconcat [ "kind" .= String "TraceImmutableDBEvent.ValidatedChunk"
                  , "chunkNo" .= String (renderChunkNo chunkNo)
                  ]
     forMachine _dtal (ImmDB.MissingChunkFile chunkNo) =
-        mkObject [ "kind" .= String "TraceImmutableDBEvent.MissingChunkFile"
+        mconcat [ "kind" .= String "TraceImmutableDBEvent.MissingChunkFile"
                  , "chunkNo" .= String (renderChunkNo chunkNo)
                  ]
     forMachine _dtal (ImmDB.InvalidChunkFile chunkNo (ImmDB.ChunkErrRead readIncErr)) =
-        mkObject [ "kind" .= String "TraceImmutableDBEvent.InvalidChunkFile.ChunkErrRead"
+        mconcat [ "kind" .= String "TraceImmutableDBEvent.InvalidChunkFile.ChunkErrRead"
                  , "chunkNo" .= String (renderChunkNo chunkNo)
                  , "error" .= String (showT readIncErr)
                  ]
     forMachine _dtal (ImmDB.StartedValidatingChunk initialChunk finalChunk) =
-        mkObject [ "kind" .= String "TraceImmutableDBEvent.StartedValidatingChunk"
+        mconcat [ "kind" .= String "TraceImmutableDBEvent.StartedValidatingChunk"
                  , "initialChunk" .= renderChunkNo initialChunk
                  , "finalChunk" .= renderChunkNo finalChunk
                  ]
 
 instance LogFormatting ImmDB.TraceCacheEvent where
     forMachine _dtal (ImmDB.TraceCurrentChunkHit chunkNo nbPastChunksInCache) =
-          mkObject [ "kind" .= String "TraceCurrentChunkHit"
+          mconcat [ "kind" .= String "TraceCurrentChunkHit"
                    , "chunkNo" .= String (renderChunkNo chunkNo)
                    , "noPastChunks" .= String (showT nbPastChunksInCache)
                    ]
     forMachine _dtal (ImmDB.TracePastChunkHit chunkNo nbPastChunksInCache) =
-          mkObject [ "kind" .= String "TracePastChunkHit"
+          mconcat [ "kind" .= String "TracePastChunkHit"
                    , "chunkNo" .= String (renderChunkNo chunkNo)
                    , "noPastChunks" .= String (showT nbPastChunksInCache)
                    ]
     forMachine _dtal (ImmDB.TracePastChunkMiss chunkNo nbPastChunksInCache) =
-          mkObject [ "kind" .= String "TracePastChunkMiss"
+          mconcat [ "kind" .= String "TracePastChunkMiss"
                    , "chunkNo" .= String (renderChunkNo chunkNo)
                    , "noPastChunks" .= String (showT nbPastChunksInCache)
                    ]
     forMachine _dtal (ImmDB.TracePastChunkEvict chunkNo nbPastChunksInCache) =
-          mkObject [ "kind" .= String "TracePastChunkEvict"
+          mconcat [ "kind" .= String "TracePastChunkEvict"
                    , "chunkNo" .= String (renderChunkNo chunkNo)
                    , "noPastChunks" .= String (showT nbPastChunksInCache)
                    ]
     forMachine _dtal (ImmDB.TracePastChunksExpired chunkNos nbPastChunksInCache) =
-          mkObject [ "kind" .= String "TracePastChunksExpired"
+          mconcat [ "kind" .= String "TracePastChunksExpired"
                    , "chunkNos" .= String (Text.pack . show $ map renderChunkNo chunkNos)
                    , "noPastChunks" .= String (showT nbPastChunksInCache)
                    ]
@@ -1592,19 +1592,19 @@ namesForChainDBVolatileDBEvent (VolDb.BlockAlreadyHere {}) =
 
 instance StandardHash blk => LogFormatting (VolDB.TraceEvent blk) where
     forMachine _dtal VolDB.DBAlreadyClosed =
-      mkObject [ "kind" .= String "DBAlreadyClosed"]
+      mconcat [ "kind" .= String "DBAlreadyClosed"]
     forMachine _dtal (VolDB.BlockAlreadyHere blockId) =
-      mkObject [ "kind" .= String "BlockAlreadyHere"
+      mconcat [ "kind" .= String "BlockAlreadyHere"
                , "blockId" .= String (showT blockId)
                ]
     forMachine _dtal (VolDB.Truncate pErr fsPath blockOffset) =
-      mkObject [ "kind" .= String "Truncate"
+      mconcat [ "kind" .= String "Truncate"
                , "parserError" .= String (showT pErr)
                , "file" .= String (showT fsPath)
                , "blockOffset" .= String (showT blockOffset)
                ]
     forMachine _dtal (VolDB.InvalidFileNames fsPaths) =
-      mkObject [ "kind" .= String "InvalidFileNames"
+      mconcat [ "kind" .= String "InvalidFileNames"
                , "files" .= String (Text.pack . show $ map show fsPaths)
                ]
 
@@ -1638,12 +1638,12 @@ instance ( StandardHash blk
          )
       => LogFormatting (HeaderError blk) where
   forMachine dtal (HeaderProtocolError err) =
-    mkObject
+    mconcat
       [ "kind" .= String "HeaderProtocolError"
       , "error" .= forMachine dtal err
       ]
   forMachine dtal (HeaderEnvelopeError err) =
-    mkObject
+    mconcat
       [ "kind" .= String "HeaderEnvelopeError"
       , "error" .= forMachine dtal err
       ]
@@ -1653,19 +1653,19 @@ instance ( StandardHash blk
          )
       => LogFormatting (HeaderEnvelopeError blk) where
   forMachine _dtal (UnexpectedBlockNo expect act) =
-    mkObject
+    mconcat
       [ "kind" .= String "UnexpectedBlockNo"
       , "expected" .= condense expect
       , "actual" .= condense act
       ]
   forMachine _dtal (UnexpectedSlotNo expect act) =
-    mkObject
+    mconcat
       [ "kind" .= String "UnexpectedSlotNo"
       , "expected" .= condense expect
       , "actual" .= condense act
       ]
   forMachine _dtal (UnexpectedPrevHash expect act) =
-    mkObject
+    mconcat
       [ "kind" .= String "UnexpectedPrevHash"
       , "expected" .= String (Text.pack $ show expect)
       , "actual" .= String (Text.pack $ show act)
@@ -1688,44 +1688,44 @@ instance (   LogFormatting (LedgerError blk)
 
 instance LogFormatting LedgerDB.DiskSnapshot where
   forMachine DDetailed snap =
-    mkObject [ "kind" .= String "snapshot"
+    mconcat [ "kind" .= String "snapshot"
              , "snapshot" .= String (Text.pack $ show snap) ]
-  forMachine _ _snap = mkObject [ "kind" .= String "snapshot" ]
+  forMachine _ _snap = mconcat [ "kind" .= String "snapshot" ]
 
 
 
 instance (Show (PBFT.PBftVerKeyHash c))
       => LogFormatting (PBFT.PBftValidationErr c) where
   forMachine _dtal (PBFT.PBftInvalidSignature text) =
-    mkObject
+    mconcat
       [ "kind" .= String "PBftInvalidSignature"
       , "error" .= String text
       ]
   forMachine _dtal (PBFT.PBftNotGenesisDelegate vkhash _ledgerView) =
-    mkObject
+    mconcat
       [ "kind" .= String "PBftNotGenesisDelegate"
       , "vk" .= String (Text.pack $ show vkhash)
       ]
   forMachine _dtal (PBFT.PBftExceededSignThreshold vkhash numForged) =
-    mkObject
+    mconcat
       [ "kind" .= String "PBftExceededSignThreshold"
       , "vk" .= String (Text.pack $ show vkhash)
       , "numForged" .= String (Text.pack (show numForged))
       ]
   forMachine _dtal PBFT.PBftInvalidSlot =
-    mkObject
+    mconcat
       [ "kind" .= String "PBftInvalidSlot"
       ]
 
 instance (Show (PBFT.PBftVerKeyHash c))
       => LogFormatting (PBFT.PBftCannotForge c) where
   forMachine _dtal (PBFT.PBftCannotForgeInvalidDelegation vkhash) =
-    mkObject
+    mconcat
       [ "kind" .= String "PBftCannotForgeInvalidDelegation"
       , "vk" .= String (Text.pack $ show vkhash)
       ]
   forMachine _dtal (PBFT.PBftCannotForgeThresholdExceeded numForged) =
-    mkObject
+    mconcat
       [ "kind" .= String "PBftCannotForgeThresholdExceeded"
       , "numForged" .= numForged
       ]
@@ -1745,13 +1745,13 @@ instance (ConvertRawHash blk, StandardHash blk) => LogFormatting (ChainDB.TraceF
     \ stream these blocks too. Point: " <> showT point <> " slot: " <> showT slot
 
   forMachine _dtal ChainDB.NewFollower =
-      mkObject [ "kind" .= String "NewFollower" ]
+      mconcat [ "kind" .= String "NewFollower" ]
   forMachine _dtal (ChainDB.FollowerNoLongerInMem _) =
-      mkObject [ "kind" .= String "FollowerNoLongerInMem" ]
+      mconcat [ "kind" .= String "FollowerNoLongerInMem" ]
   forMachine _dtal (ChainDB.FollowerSwitchToMem _ _) =
-      mkObject [ "kind" .= String "FollowerSwitchToMem" ]
+      mconcat [ "kind" .= String "FollowerSwitchToMem" ]
   forMachine _dtal (ChainDB.FollowerNewImmIterator _ _) =
-      mkObject [ "kind" .= String "FollowerNewImmIterator" ]
+      mconcat [ "kind" .= String "FollowerNewImmIterator" ]
 
 instance ( ConvertRawHash blk
          , StandardHash blk
@@ -1763,12 +1763,12 @@ instance ( ConvertRawHash blk
          )
       => LogFormatting (ChainDB.InvalidBlockReason blk) where
   forMachine dtal (ChainDB.ValidationError extvalerr) =
-    mkObject
+    mconcat
       [ "kind" .= String "ValidationError"
       , "error" .= forMachine dtal extvalerr
       ]
   forMachine dtal (ChainDB.InFutureExceedsClockSkew point) =
-    mkObject
+    mconcat
       [ "kind" .= String "InFutureExceedsClockSkew"
       , "point" .= forMachine dtal point
       ]

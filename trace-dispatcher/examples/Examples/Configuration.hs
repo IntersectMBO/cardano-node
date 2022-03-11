@@ -7,7 +7,7 @@ module Examples.Configuration (
 
 import           Control.Monad.IO.Class
 import qualified Data.Aeson as AE
-import qualified Data.HashMap.Strict as HM
+import qualified Data.Aeson.KeyMap as KeyMap
 import qualified Data.Map as Map
 import           Data.Text (Text)
 
@@ -19,7 +19,7 @@ newtype TestMessage = TestMessage Text
 instance LogFormatting TestMessage where
   forHuman (TestMessage text)         = text
   forMachine _verb (TestMessage text) =
-         HM.fromList
+         KeyMap.fromList
            [ "kind" AE..= AE.String "TestMessage"
            , "text" AE..= AE.String text
            ]
