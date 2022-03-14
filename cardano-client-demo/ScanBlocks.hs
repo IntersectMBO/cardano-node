@@ -48,7 +48,8 @@ main = do
       LocalNodeClientProtocols {
         localChainSyncClient    = LocalChainSyncClient chainSyncClient,
         localTxSubmissionClient = Nothing,
-        localStateQueryClient   = Nothing
+        localStateQueryClient   = Nothing,
+        localTxMonitoringClient = Nothing
       }
 
 -- | Defines the client side of the chain sync protocol.

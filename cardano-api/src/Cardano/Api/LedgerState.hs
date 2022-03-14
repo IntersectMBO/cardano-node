@@ -116,9 +116,10 @@ import qualified Cardano.Ledger.Crypto as Crypto
 import qualified Cardano.Ledger.Era as Ledger
 import qualified Cardano.Ledger.Keys as Shelley.Spec
 import qualified Cardano.Ledger.Shelley.API as ShelleyAPI
-import qualified Cardano.Protocol.TPraos.API as TPraos
 import qualified Cardano.Ledger.Shelley.Genesis as Shelley.Spec
+import qualified Cardano.Protocol.TPraos.API as TPraos
 import qualified Cardano.Protocol.TPraos.BHeader as TPraos
+import qualified Cardano.Protocol.TPraos.Rules.Prtcl as TPraos
 import qualified Cardano.Protocol.TPraos.Rules.Tickn as Tick
 import           Cardano.Slotting.EpochInfo (EpochInfo)
 import qualified Cardano.Slotting.EpochInfo.API as Slot
@@ -151,7 +152,6 @@ import qualified Ouroboros.Network.Block
 import qualified Ouroboros.Network.Protocol.ChainSync.Client as CS
 import qualified Ouroboros.Network.Protocol.ChainSync.ClientPipelined as CSP
 import           Ouroboros.Network.Protocol.ChainSync.PipelineDecision
-import qualified Cardano.Protocol.TPraos.Rules.Prtcl as TPraos
 
 data InitialLedgerStateError
   = ILSEConfigFile Text
@@ -360,7 +360,8 @@ foldBlocks nodeConfigFilePath socketPath validationMode state0 accumulate = do
         LocalNodeClientProtocols {
           localChainSyncClient    = LocalChainSyncClientPipelined (chainSyncClient 50 stateIORef errorIORef env ledgerState),
           localTxSubmissionClient = Nothing,
-          localStateQueryClient   = Nothing
+          localStateQueryClient   = Nothing,
+          localTxMonitoringClient = Nothing
         }
 
     -- | Defines the client side of the chain sync protocol.

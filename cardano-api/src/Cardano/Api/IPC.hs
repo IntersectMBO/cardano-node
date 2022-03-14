@@ -58,6 +58,13 @@ module Cardano.Api.IPC (
     QueryInShelleyBasedEra(..),
     queryNodeLocalState,
 
+    -- *** Local tx monitoring
+    LocalTxMonitorClient(..),
+    LocalTxMonitoringQuery(..),
+    LocalTxMonitoringResult(..),
+    Consensus.MempoolSizeAndCapacity(..),
+    queryTxMonitoringLocal,
+
     EraHistory(..),
     getProgress,
 
@@ -99,6 +106,7 @@ import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as Net.Query
 import           Ouroboros.Network.Protocol.LocalTxMonitor.Client (LocalTxMonitorClient (..),
                    localTxMonitorClientPeer)
 import qualified Ouroboros.Network.Protocol.LocalTxMonitor.Client as CTxMon
+import qualified Ouroboros.Network.Protocol.LocalTxMonitor.Type as Consensus
 import           Ouroboros.Network.Protocol.LocalTxSubmission.Client (LocalTxSubmissionClient (..),
                    SubmitResult (..))
 import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Client as Net.Tx
@@ -119,6 +127,7 @@ import           Cardano.Api.Modes
 import           Cardano.Api.NetworkId
 import           Cardano.Api.Protocol.Types
 import           Cardano.Api.Query
+import           Cardano.Api.TxBody
 
 -- ----------------------------------------------------------------------------
 -- The types for the client side of the node-to-client IPC protocols
@@ -614,6 +623,94 @@ submitTxToNodeLocal connctInfo tx = do
         pure $ Net.Tx.SendMsgSubmitTx tx $ \result -> do
         atomically $ putTMVar resultVar result
         pure (Net.Tx.SendMsgDone ())
+
+
+data LocalTxMonitoringResult mode
+  = LocalTxMonitoringTxExists
+      TxId
+      SlotNo -- ^ Slot number at which the mempool snapshot was taken
+  | LocalTxMonitoringTxDoesNotExist
+      TxId
+      SlotNo -- ^ Slot number at which the mempool snapshot was taken
+  | LocalTxMonitoringNextTx
+      (Maybe (TxInMode mode))
+      SlotNo -- ^ Slot number at which the mempool snapshot was taken
+  | LocalTxMonitoringMempoolSizeAndCapacity
+      Consensus.MempoolSizeAndCapacity
+      SlotNo -- ^ Slot number at which the mempool snapshot was taken
+
+data LocalTxMonitoringQuery mode
+  -- | Query if a particular tx exists in the mempool. Note that, the absence
+  -- of a transaction does not imply anything about how the transaction was
+  -- processed: it may have been dropped, or inserted in a block.
+  = LocalTxMonitoringQueryTx (TxIdInMode mode)
+  -- | The mempool is modeled as an ordered list of transactions and thus, can
+  -- be traversed linearly. 'LocalTxMonitoringSendNextTx' requests the next transaction from the
+  -- current list. This must be a transaction that was not previously sent to
+  -- the client for this particular snapshot.
+  | LocalTxMonitoringSendNextTx
+  -- | Ask the server about the current mempool's capacity and sizes. This is
+  -- fixed in a given snapshot.
+  | LocalTxMonitoringMempoolInformation
+
+
+queryTxMonitoringLocal
+  :: forall mode. LocalNodeConnectInfo mode
+  -> LocalTxMonitoringQuery mode
+  -> IO (LocalTxMonitoringResult mode)
+queryTxMonitoringLocal connectInfo localTxMonitoringQuery = do
+  resultVar <- newEmptyTMVarIO
+
+  let client = case localTxMonitoringQuery of
+                 LocalTxMonitoringQueryTx txidInMode ->
+                   localTxMonitorClientTxExists txidInMode resultVar
+                 LocalTxMonitoringSendNextTx ->
+                   localTxMonitorNextTx resultVar
+                 LocalTxMonitoringMempoolInformation ->
+                   localTxMonitorMempoolInfo resultVar
+
+  connectToLocalNode
+    connectInfo
+    LocalNodeClientProtocols {
+      localChainSyncClient    = NoLocalChainSyncClient,
+      localTxSubmissionClient = Nothing,
+      localStateQueryClient   = Nothing,
+      localTxMonitoringClient = Just client
+    }
+  atomically (takeTMVar resultVar)
+ where
+  localTxMonitorClientTxExists
+    :: TxIdInMode mode
+    -> TMVar (LocalTxMonitoringResult mode)
+    -> LocalTxMonitorClient (TxIdInMode mode) (TxInMode mode) SlotNo IO ()
+  localTxMonitorClientTxExists tIdInMode@(TxIdInMode txid _) resultVar = do
+    LocalTxMonitorClient $ return $
+      CTxMon.SendMsgAcquire $ \slt -> do
+         return $ CTxMon.SendMsgHasTx tIdInMode $ \txPresentBool -> do
+           if txPresentBool
+           then atomically . putTMVar resultVar $ LocalTxMonitoringTxExists txid slt
+           else atomically . putTMVar resultVar $ LocalTxMonitoringTxDoesNotExist txid slt
+           return $ CTxMon.SendMsgRelease $ return $ CTxMon.SendMsgDone ()
+
+  localTxMonitorNextTx
+    :: TMVar (LocalTxMonitoringResult mode)
+    -> LocalTxMonitorClient (TxIdInMode mode) (TxInMode mode) SlotNo IO ()
+  localTxMonitorNextTx resultVar =
+    LocalTxMonitorClient $ return $ do
+      CTxMon.SendMsgAcquire $ \slt -> do
+        return $ CTxMon.SendMsgNextTx $ \mTx -> do
+          atomically $ putTMVar resultVar $ LocalTxMonitoringNextTx mTx slt
+          return $ CTxMon.SendMsgRelease $ return $ CTxMon.SendMsgDone ()
+
+  localTxMonitorMempoolInfo
+    :: TMVar (LocalTxMonitoringResult mode)
+    -> LocalTxMonitorClient (TxIdInMode mode) (TxInMode mode) SlotNo IO ()
+  localTxMonitorMempoolInfo resultVar =
+     LocalTxMonitorClient $ return $ do
+      CTxMon.SendMsgAcquire $ \slt -> do
+        return$ CTxMon.SendMsgGetSizes $ \mempoolCapacity -> do
+          atomically $ putTMVar resultVar $ LocalTxMonitoringMempoolSizeAndCapacity mempoolCapacity slt
+          return $ CTxMon.SendMsgRelease $ return $ CTxMon.SendMsgDone ()
 
 -- ----------------------------------------------------------------------------
 -- Get tip as 'ChainPoint'

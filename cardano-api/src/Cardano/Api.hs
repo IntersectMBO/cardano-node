@@ -581,6 +581,13 @@ module Cardano.Api (
     UTxO(..),
     queryNodeLocalState,
 
+    -- *** Local tx monitoring
+    LocalTxMonitorClient(..),
+    LocalTxMonitoringQuery(..),
+    LocalTxMonitoringResult(..),
+    MempoolSizeAndCapacity(..),
+    queryTxMonitoringLocal,
+
     EraHistory(..),
     getProgress,
 
