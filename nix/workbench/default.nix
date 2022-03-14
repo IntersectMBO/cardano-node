@@ -1,43 +1,27 @@
-{ lib
-, stdenv
-, pkgs
-, git
-, graphviz
-, jq
-, moreutils
-, makeWrapper
-, runCommand
-, customConfig
+{ pkgs
+, lib, jq, runCommand
 , cardanoNodePackages
-
-, useCabalRun
 }:
 
-with lib; with customConfig.localCluster;
+with lib;
 
 let
-  nixWbMode =
-    if useCabalRun
-    then "cabal-exes+nix-wb"
-    else "nix-exes+nix-wb";
-
   workbench' = tools:
-    stdenv.mkDerivation {
+    pkgs.stdenv.mkDerivation {
       pname = "workbench";
 
       version = "0.1";
 
       src = ./.;
 
-      buildInputs = [ jq makeWrapper ];
+      buildInputs = with pkgs; [ jq makeWrapper ];
 
       buildPhase = ''
         patchShebangs .
       '';
 
       postFixup = ''
-        wrapProgram "$out/bin/wb" --argv0 wb --add-flags "--set-mode ${nixWbMode}" \
-        --prefix PATH ":" ${pkgs.lib.makeBinPath tools}
+        wrapProgram "$out/bin/wb" --argv0 wb --prefix PATH ":" ${makeBinPath tools}
       '';
 
       installPhase = ''
@@ -48,7 +32,7 @@ let
       dontStrip = true;
     };
 
-  workbench = with cardanoNodePackages; workbench'
+  workbench = with cardanoNodePackages; with pkgs; workbench'
     [ git graphviz
       jq
       moreutils
@@ -67,7 +51,7 @@ let
   runWorkbenchJqOnly =
     name: command:
     runCommand name {} ''
-      ${workbench' [jq moreutils]}/bin/wb ${command} > $out
+      ${workbench' (with pkgs; [jq moreutils])}/bin/wb ${command} > $out
     '';
 
   runJq =
@@ -77,45 +61,9 @@ let
       ${jq}/bin/jq '${query}' "''${args[@]}" > $out
     '';
 
-  exeCabalOp = op: exe:
-    toString [ "cabal" "-v0" op "--" "exe:${exe}"];
-
-  checkoutWbMode =
-    if useCabalRun
-    then "cabal-exes+checkout-wb"
-    else "nix-exes+checkout-wb";
-
-  shellHook = ''
-    echo 'workbench shellHook:  workbenchDevMode=${toString workbenchDevMode} useCabalRun=${toString useCabalRun}'
-    export WORKBENCH_BACKEND=supervisor
-
-    ${optionalString
-      workbenchDevMode
-    ''
-    export WORKBENCH_CARDANO_NODE_REPO_ROOT=$(git rev-parse --show-toplevel)
-    export WORKBENCH_EXTRA_FLAGS=
-
-    function wb() {
-      $WORKBENCH_CARDANO_NODE_REPO_ROOT/nix/workbench/wb --set-mode ${checkoutWbMode} $WORKBENCH_EXTRA_FLAGS "$@"
-    }
-    export -f wb
-    ''}
-
-    ${optionalString
-      useCabalRun
-      ''
-      . nix/workbench/lib.sh
-      . nix/workbench/lib-cabal.sh
-      ''}
-
-    export CARDANO_NODE_SOCKET_PATH=run/current/node-0/node.socket
-    '';
-
   generateProfiles =
-    { pkgs
-
     ## The backend is an attrset of AWS/supervisord-specific methods and parameters.
-    , backend
+    { backend
 
     ## Environment arguments:
     ##   - either affect semantics on all backends equally,
@@ -140,9 +88,6 @@ let
           };
 
       profiles = genAttrs profile-names mkProfile;
-
-      profilesJSON =
-        runWorkbenchJqOnly "all-profiles.json" "profiles generate-all";
     };
 
   ## materialise-profile :: ProfileNix -> BackendProfile -> Profile
@@ -153,10 +98,10 @@ let
   profile-topology-genesis = import ./genesis.nix  { inherit pkgs; };
 
   with-profile =
-    { pkgs, backend, envArgs, profileName }:
+    { backend, envArgs, profileName }:
     let
       ps = generateProfiles
-        { inherit pkgs backend envArgs; };
+        { inherit backend envArgs; };
 
       profileNix = ps.profiles."${profileName}"
         or (throw "No such profile: ${profileName};  Known profiles: ${toString (__attrNames ps.profiles)}");
@@ -167,9 +112,9 @@ let
             backend.materialise-profile { inherit profileNix; };
         };
 
-      topology = profile-topology { inherit profileNix profile workbench; };
+      topology = profile-topology { inherit profileNix profile; };
 
-      genesis = profile-topology-genesis { inherit profileNix profile topology workbench; };
+      genesis = profile-topology-genesis { inherit profileNix profile topology; };
     in {
       inherit
         profileNix profile
@@ -178,10 +123,13 @@ let
     };
 
   run-analysis = import ./analyse.nix;
-in
 
-{
-  inherit workbench runWorkbench runJq with-profile run-analysis;
+in {
+  inherit runJq;
 
-  inherit generateProfiles shellHook;
+  inherit workbench' workbench runWorkbench runWorkbenchJqOnly;
+
+  inherit with-profile;
+
+  inherit run-analysis;
 }

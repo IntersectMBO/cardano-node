@@ -120,9 +120,9 @@ let
     };
 
   with-supervisord-profile =
-    { pkgs, profileName, envArgsOverride ? {} }:
+    { envArgsOverride ? {} }:
     workbench.with-profile
-      { inherit pkgs backend profileName;
+      { inherit backend profileName;
 
         ## IMPORTANT:  keep in sync with envArgs in 'workbench/default.nix/generateProfiles/environment'.
         envArgs =
@@ -135,7 +135,7 @@ let
       };
 
   inherit
-    (with-supervisord-profile { inherit pkgs profileName; })
+    (with-supervisord-profile {})
     profile profile-output topology-output genesis-output;
 in
 
@@ -185,13 +185,12 @@ let
     name:
     "report ${name}.log $out ${name}/stdout";
 
-  profile-run-supervisord =
-    { profileName
-    , trace ? false }:
+  profile-run =
+    { trace ? false }:
     let
       inherit
         (with-supervisord-profile
-          { inherit pkgs profileName; envArgsOverride = { cacheDir = "./cache"; stateDir = "./"; }; })
+          { envArgsOverride = { cacheDir = "./cache"; stateDir = "./"; }; })
         profileNix profile topology genesis;
 
       run = pkgs.runCommand "workbench-run-supervisord-${profileName}"
@@ -260,5 +259,5 @@ in
   inherit workbench;
   inherit profile stateDir;
   inherit interactive-start interactive-stop interactive-restart;
-  inherit with-supervisord-profile profile-run-supervisord;
+  inherit profile-run;
 }

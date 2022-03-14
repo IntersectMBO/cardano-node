@@ -1,6 +1,6 @@
 ## Testable with:
 ##
-##   jq -n 'include "defaults" { search: "nix/supervisord-cluster/profiles" }; era_defaults("alonzo")'
+##   jq -n 'include "defaults" { search: "nix/workbench/profiles" }; era_defaults("alonzo")'
 ##
 def era_defaults($era):
 { common:

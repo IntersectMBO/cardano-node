@@ -39,7 +39,7 @@ final: prev: with final; {
   scripts = lib.recursiveUpdate (import ./scripts.nix { inherit pkgs; })
     (import ./scripts-submit-api.nix { inherit pkgs; });
 
-  clusterTests = import ./supervisord-cluster/tests { inherit pkgs; };
+  clusterTests = import ./workbench/tests { inherit pkgs; };
 
   plutus-scripts = callPackage ./plutus-scripts.nix { plutus-builder = plutus-example; };
 
@@ -76,21 +76,20 @@ final: prev: with final; {
       script = "submit-api";
     };
 
-  # This provides a supervisord-backed instance of a the workbench development environment
+  # A generic, parameteric version of the workbench development environment.
+  workbench = pkgs.callPackage ./workbench {};
+
+  # An instance of the workbench, specialised to the supervisord backend and a profile,
   # that can be used with nix-shell or lorri.
   # See https://input-output-hk.github.io/haskell.nix/user-guide/development/
-  workbench-supervisord =
-    { useCabalRun, profileName ? customConfig.localCluster.profileName }:
-    pkgs.callPackages ./supervisord-cluster
+  supervisord-workbench-for-profile =
+    { useCabalRun ? false
+    , profileName ? customConfig.localCluster.profileName
+    , workbench   ? pkgs.workbench }:
+    pkgs.callPackage ./workbench/supervisor.nix
       {
-        inherit profileName useCabalRun;
-        workbench = pkgs.callPackage ./workbench { inherit useCabalRun; };
+        inherit profileName useCabalRun workbench;
       };
-
-  clusterCabal = pkgs.workbench-supervisord {
-    useCabalRun = true;
-  };
-  clusterNix = pkgs.workbench-supervisord { useCabalRun = false; };
 
   # Disable failing python uvloop tests
   python38 = prev.python38.override {

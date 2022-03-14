@@ -4,7 +4,7 @@
 ##
 ## Testable with:
 ##
-##   jq -n 'include "composition" { search: "nix/supervisord-cluster/profiles" }; topology_composition({ coreNodes: { bft1: { pools: 0 } } })'
+##   jq -n 'include "composition" { search: "nix/workbench/profiles" }; topology_composition({ coreNodes: { bft1: { pools: 0 } } })'
 ##
 def topology_composition($topo):
     $topo

@@ -37,13 +37,13 @@
       url = "github:input-output-hk/cardano-node/1.33.0";
       flake = false;
     };
-    workbench-genesis-node = {
-      url = "github:input-output-hk/cardano-node/workbench-genesis-0";
+    cardano-node-workbench = {
+      url = "github:input-output-hk/cardano-node/workbench-genesis";
       flake = false;
     };
   };
 
-  outputs = { self, nixpkgs, hostNixpkgs, utils, haskellNix, iohkNix, membench, plutus-example, workbench-genesis-node, ... }@input:
+  outputs = { self, nixpkgs, hostNixpkgs, utils, haskellNix, iohkNix, membench, plutus-example, cardano-node-workbench, ... }@input:
     let
       inherit (nixpkgs) lib;
       inherit (lib) head systems mapAttrs recursiveUpdate mkDefault
@@ -115,9 +115,9 @@
             inherit (project.pkgs) system;
             gitrev = plutus-example.rev;
           }).haskellPackages.plutus-example.components.exes) plutus-example;
-          workbench-genesis-node = import workbench-genesis-node {
+          cardano-node-workbench = import cardano-node-workbench {
             inherit (project.pkgs) system;
-            gitrev = plutus-example.rev;
+            gitrev = cardano-node-workbench.rev;
           };
           hsPkgsWithPassthru = lib.mapAttrsRecursiveCond (v: !(lib.isDerivation v))
             (path: value:
@@ -135,6 +135,7 @@
         in
         {
           inherit projectPackages profiledProject assertedProject eventloggedProject;
+          inherit cardano-node-workbench;
           projectExes = flatten (haskellLib.collectComponents' "exes" projectPackages) // (with hsPkgsWithPassthru; {
             inherit (ouroboros-consensus-byron.components.exes) db-converter;
             inherit (ouroboros-consensus-cardano.components.exes) db-analyser;
@@ -168,7 +169,7 @@
             eventlogged = eventloggedProject;
           };
 
-          inherit (mkPackages project) projectPackages projectExes profiledProject assertedProject eventloggedProject;
+          inherit (mkPackages project) projectPackages projectExes profiledProject assertedProject eventloggedProject cardano-node-workbench;
 
           shell = import ./shell.nix { inherit pkgs customConfig; };
           devShells = {
@@ -215,7 +216,7 @@
             benchmarks = collectComponents' "benchmarks" projectPackages;
           });
 
-          workbench = pkgs.clusterNix.workbench;
+          inherit (pkgs) workbench supervisord-workbench-for-profile;
 
           packages = exes
             # Linux only packages:
@@ -224,9 +225,17 @@
             "dockerImage/submit-api" = pkgs.submitApiDockerImage;
             membenches = membench.outputs.packages.x86_64-linux.batch-report;
             snapshot = membench.outputs.packages.x86_64-linux.snapshot;
-            workbench-smoke-test     = pkgs.clusterNix.profile-run-supervisord { profileName = "smoke-alzo";trace = true; };
+            workbench-smoke-test =
+              (pkgs.supervisord-workbench-for-profile
+                { # workbench = cardano-node-workbench.workbench;
+                  profileName = "smoke-alzo"; }
+              ).profile-run { trace = true; };
+            workbench-ci-test =
+              (pkgs.supervisord-workbench-for-profile
+                { # workbench = cardano-node-workbench.workbench;
+                  profileName = "ci-light-alzo"; }
+              ).profile-run {};
             workbench-smoke-analysis = workbench-smoke-test.analysis;
-            workbench-ci-test        = pkgs.clusterNix.profile-run-supervisord { profileName = "ci-light-alzo"; };
             workbench-ci-analysis    = workbench-ci-test.analysis;
           }
             # Add checks to be able to build them individually
