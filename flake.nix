@@ -37,9 +37,13 @@
       url = "github:input-output-hk/cardano-node/1.33.0";
       flake = false;
     };
+    workbench-genesis-node = {
+      url = "github:input-output-hk/cardano-node/workbench-genesis-0";
+      flake = false;
+    };
   };
 
-  outputs = { self, nixpkgs, hostNixpkgs, utils, haskellNix, iohkNix, membench, plutus-example, ... }@input:
+  outputs = { self, nixpkgs, hostNixpkgs, utils, haskellNix, iohkNix, membench, plutus-example, workbench-genesis-node, ... }@input:
     let
       inherit (nixpkgs) lib;
       inherit (lib) head systems mapAttrs recursiveUpdate mkDefault
@@ -111,6 +115,10 @@
             inherit (project.pkgs) system;
             gitrev = plutus-example.rev;
           }).haskellPackages.plutus-example.components.exes) plutus-example;
+          workbench-genesis-node = import workbench-genesis-node {
+            inherit (project.pkgs) system;
+            gitrev = plutus-example.rev;
+          };
           hsPkgsWithPassthru = lib.mapAttrsRecursiveCond (v: !(lib.isDerivation v))
             (path: value:
               if (lib.isAttrs value) then
