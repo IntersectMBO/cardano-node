@@ -3,6 +3,8 @@
 
 set -euo pipefail
 
+export LANG=C.UTF-8
+
 global_basedir=${global_basedir:-$(realpath "$(dirname "$0")")}
 global_mode='unknown'
 
@@ -82,61 +84,58 @@ EOF
 
 start()
 {
-    local batch_name= profile_name=
+    local batch_name=
+    local profile_name= profile=
     local backend=supervisor
     local cabal_mode=
-    local profile_out=
-    local run_start_flags=()
-    local base_port=30000
-    local cache_dir=$HOME/.cache/cardano-workbench
+    local genesis_cache_entry_dir=
+    local topology_dir=
     local verbose=
 
+    local run_args=()
+    local run_allocate_args=()
+    local run_start_args=()
     while test $# -gt 0
     do case "$1" in
-        --batch-name )                   batch_name=$2; shift;;
-        --cabal-mode | --cabal )         cabal_mode=t;;
-
+        --batch-name )                   batch_name=$2;   shift;;
         --profile-name )                 profile_name=$2; shift;;
-        --profile-out )                  profile_out=$2; shift;;
+        --cache-dir )                    setenvjqstr 'cacheDir' $2; shift;;
+        --base-port )                    setenvjq    'basePort' $2; shift;;
 
-        --no-generator | --no-gen )      run_start_flags+=($1);;
+        --profile )                      run_allocate_args+=($1 $2); profile=$2; shift;;
+        --genesis-cache-entry )          run_allocate_args+=($1 $2); shift;;
+        --topology )                     run_allocate_args+=($1 $2); shift;;
 
+        --no-generator | --no-gen )      run_start_args+=($1);;
+
+        --cabal-mode | --cabal )         cabal_mode=t;;
         --supervisor | --backend-supervisor )
                                          backend=supervisor;;
 
-        --base-port )                    base_port=$2; shift;;
-        --cache-dir )                    cache_dir=$2; shift;;
-
         --verbose )                      export verbose=t;;
-        --trace | --debug )              set -x;;
-        --trace-wb | --trace-workbench ) export WORKBENCH_EXTRA_FLAGS=--trace;;
+        --trace | --debug )              run_args+=($1); set -x;;
+        --trace-wb | --trace-workbench ) run_args+=($1); export WORKBENCH_EXTRA_FLAGS=--trace;;
         --help )                         usage_start
                                          exit 1;;
-        * ) break;; esac; shift; done
+        * ) fatal "while parsing remaining 'wb start' args:  $*";;
+       esac; shift; done
 
     if test -n "$cabal_mode"
     then . $(dirname "$0")/lib-cabal.sh
     fi
 
-    wb backend assert-is $backend
-    wb backend assert-stopped
+    backend assert-is $backend
+    backend assert-stopped
 
-    wb_run_allocate_args=(
-        --profile-out          "$profile_out"
-        --cache-dir            "$cache_dir"
-        --base-port             $base_port
-        --stagger-ports
-        --
-        --port-shift-ekg        100
-        --port-shift-prometheus 200
-        --supervisor-conf      "$profile_out"/supervisor.conf
-      )
-    wb run allocate $batch_name $profile_name ${wb_run_allocate_args[@]}
+    setenvjq    'port_shift_ekg'        100
+    setenvjq    'port_shift_prometheus' 200
+    setenvjqstr 'supervisor_conf'      "$profile"/supervisor.conf
+    run ${run_args[@]} allocate $batch_name $profile_name ${run_allocate_args[@]}
 
     current_run_path=$(run current-path)
     mkdir -p "$current_run_path"
 
-    wb run start "$@" $(run current-tag)
+    run ${run_args[@]} start ${run_start_args[@]} $(run current-tag)
 }
 
 finish()

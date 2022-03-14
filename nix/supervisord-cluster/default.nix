@@ -25,7 +25,8 @@ with lib;
 let
   backend =
     rec
-    { ## Generic Nix bits:
+    { name = "supervisor";
+      ## Generic Nix bits:
       topologyForNodeSpec =
         { profile, nodeSpec }:
         let inherit (nodeSpec) name i; in
@@ -88,12 +89,12 @@ let
             ByronGenesisFile     = "../genesis/byron/genesis.json";
           });
 
-      profileOutput =
-        { profile }:
-        pkgs.runCommand "workbench-profile-outputs-${profile.name}-supervisord" {}
+      materialise-profile =
+        { profileNix }:
+        pkgs.runCommand "workbench-profile-outputs-${profileNix.name}-supervisord" {}
           ''
           mkdir $out
-          cp ${supervisord.mkSupervisorConf profile} $out/supervisor.conf
+          cp ${supervisord.mkSupervisorConf profileNix} $out/supervisor.conf
           '';
 
       ## Backend-specific Nix bits:
@@ -118,8 +119,9 @@ let
         };
     };
 
-  inherit
-    (workbench.with-workbench-profile
+  with-supervisord-profile =
+    { pkgs, profileName, envArgsOverride ? {} }:
+    workbench.with-profile
       { inherit pkgs backend profileName;
 
         ## IMPORTANT:  keep in sync with envArgs in 'workbench/default.nix/generateProfiles/environment'.
@@ -128,9 +130,13 @@ let
             inherit (pkgs) cardanoLib;
             inherit stateDir cacheDir basePort;
             staggerPorts = true;
-          };
-      })
-    profile profileOut;
+          }
+          // envArgsOverride;
+      };
+
+  inherit
+    (with-supervisord-profile { inherit pkgs profileName; })
+    profile profile-output topology-output genesis-output;
 in
 
 let
@@ -145,7 +151,7 @@ let
     ++ optionals (!workbenchDevMode)
     [ workbench.workbench ];
 
-  start = pkgs.writeScriptBin "start-cluster" ''
+  interactive-start = pkgs.writeScriptBin "start-cluster" ''
     set -euo pipefail
 
     export PATH=$PATH:${path}
@@ -154,7 +160,7 @@ let
     wb start \
         --batch-name   ${batchName} \
         --profile-name ${profileName} \
-        --profile-out  ${profileOut} \
+        --profile      ${profile} \
         --cache-dir    ${cacheDir} \
         --base-port    ${toString basePort} \
         ''${WORKBENCH_CABAL_MODE:+--cabal} \
@@ -162,83 +168,97 @@ let
         echo 'workbench:  cluster started. Run `stop-cluster` to stop' >&2
   '';
 
-  smoke-test =
-    { profileName }:
-    let inherit
-          (workbench.with-workbench-profile
-            { inherit pkgs backend profileName;
-
-              ## IMPORTANT:  keep in sync with envArgs in 'workbench/default.nix/generateProfiles/environment'.
-              envArgs =
-                {
-                  inherit (pkgs) cardanoLib;
-                  inherit basePort;
-                  cacheDir = "./cache";
-                  stateDir = "./";
-                  staggerPorts = true;
-                };
-            })
-          profile profileOut;
-    in
-    pkgs.runCommand "workbench-test-${profileName}"
-      { requiredSystemFeatures = [ "benchmark" ];
-        nativeBuildInputs = with cardanoNodePackages; with pkgs; [
-          bash
-          bech32
-          coreutils
-          gnused
-          jq
-          moreutils
-          nixWrapped
-          psmisc
-          python3Packages.supervisor
-          workbench.workbench
-        ];
-      }
-      ''
-      mkdir -p $out/cache
-      cd       $out
-
-      ${workbench.shellHook}
-
-      export CARDANO_NODE_SOCKET_PATH=$(wb backend get-node-socket-path ${stateDir})
-
-      wb start \
-          --batch-name   smoke-test           \
-          --profile-name ${profileName}       \
-          --profile-out  ${profileOut}        \
-          --cache-dir    ./cache              \
-          --base-port    ${toString basePort} \
-
-      ## Cleanup:
-      rm -rf cache
-      rm -f run/{current,-current} genesis
-      mv    run/env.json .
-
-      tag=$(cd run; ls)
-      echo "workbench-test:  completed run $tag"
-
-      mv       run/$tag/*   .
-      rmdir    run/$tag run
-      rm -f             node-*/node.socket
-      '';
-
-  stop = pkgs.writeScriptBin "stop-cluster" ''
+  interactive-stop = pkgs.writeScriptBin "stop-cluster" ''
     set -euo pipefail
 
     wb finish "$@"
   '';
 
-  restart = pkgs.writeScriptBin "restart-cluster" ''
+  interactive-restart = pkgs.writeScriptBin "restart-cluster" ''
     set -euo pipefail
 
     wb run restart "$@" && \
         echo "workbench:  alternate command for this action:  wb run restart" >&2
   '';
+
+  nodeBuildProducts =
+    name:
+    "report ${name}.log $out ${name}/stdout";
+
+  profile-run-supervisord =
+    { profileName
+    , trace ? false }:
+    let
+      inherit
+        (with-supervisord-profile
+          { inherit pkgs profileName; envArgsOverride = { cacheDir = "./cache"; stateDir = "./"; }; })
+        profileNix profile topology genesis;
+
+      run = pkgs.runCommand "workbench-run-supervisord-${profileName}"
+        { requiredSystemFeatures = [ "benchmark" ];
+          nativeBuildInputs = with cardanoNodePackages; with pkgs; [
+            bash
+            bech32
+            coreutils
+            gnused
+            jq
+            moreutils
+            nixWrapped
+            psmisc
+            python3Packages.supervisor
+            workbench.workbench
+          ];
+        }
+          ''
+          mkdir -p $out/{cache,nix-support}
+          cd       $out
+
+          export WORKBENCH_BACKEND=supervisor
+          export CARDANO_NODE_SOCKET_PATH=$(wb backend get-node-socket-path ${stateDir})
+
+          cmd=(
+              wb
+              ${pkgs.lib.optionalString trace "--trace"}
+              start
+              --profile-name        ${profileName}
+              --profile             ${profile}
+              --topology            ${topology}
+              --genesis-cache-entry ${genesis}
+              --batch-name          smoke-test
+              --base-port           ${toString basePort}
+              --cache-dir           ./cache
+          )
+          echo "''${cmd[*]}" > $out/wb-start.sh
+
+          time "''${cmd[@]}" 2>&1 |
+              tee $out/wb-start.log
+
+          ## Convert structure from $out/run/RUN-ID/* to $out/*:
+          rm -rf cache
+          rm -f run/{current,-current}
+          tag=$(cd run; ls)
+          mv       run/$tag/*   .
+          rmdir    run/$tag run
+          rm -f    node-*/node.socket
+
+          cat > $out/nix-support/hydra-build-products <<EOF
+          report workbench.log $out wb-start.log
+          report meta.json     $out meta.json
+          ${pkgs.lib.concatStringsSep "\n"
+            (map nodeBuildProducts (__attrNames profileNix.node-specs.value))}
+          report node-0        $out meta.json
+          EOF
+
+          echo "workbench-test:  completed run $tag"
+          '';
+    in
+      run // {
+        analysis = workbench.run-analysis { inherit pkgs workbench profileNix run; };
+      };
 in
 {
   inherit workbench;
-  inherit (workbenchProfiles) profilesJSON;
-  inherit profile stateDir start stop restart;
-  inherit smoke-test;
+  inherit profile stateDir;
+  inherit interactive-start interactive-stop interactive-restart;
+  inherit with-supervisord-profile profile-run-supervisord;
 }

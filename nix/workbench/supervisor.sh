@@ -6,13 +6,6 @@ usage_supervisor() {
                      Given a state dir, print the default node socket path
                        for 'cardano-cli'
 
-    record-extended-env-config ENV-JSON [ENV-CONFIG-OPTS..]
-                     Extend the env JSON with the backend-specific
-                       environment config options:
-                         --port-shift-ekg INT
-                         --port-shift-prometheus INT
-                         --supervisor-conf FILE
-
     describe-run RUN-DIR
     allocate-run RUN-DIR
     start-cluster RUN-DIR
@@ -44,46 +37,13 @@ case "$op" in
         echo -n $state_dir/node-0/node.socket
         ;;
 
-    record-extended-env-config )
-        local usage="USAGE: wb supervisor $op ENV-JSON [ENV-CONFIG-OPTS..]"
-        local env_json=${1:?$usage}; shift
-
-        local port_shift_ekg=200
-        local port_shift_prometheus=300
-        local supervisor_conf=
-        while test $# -gt 0
-        do case "$1" in
-               --port-shift-ekg )        port_shift_ekg=$2; shift;;
-               --port-shift-prometheus ) port_shift_prometheus=$2; shift;;
-               --supervisor-conf )       supervisor_conf=$2; shift;;
-               --* ) msg "FATAL:  unknown flag '$1'"; usage_supervisor;;
-               * ) break;; esac; shift; done
-
-        test -r "$supervisor_conf" ||
-            fatal "supervisor record-extended-env-config requires the --supervisor-conf FILE option to point to a readable file, but it was:  $supervisor_conf"
-
-        local env_json="$env_json"
-        local args=(
-            --argjson port_shift_ekg        "$port_shift_ekg"
-            --argjson port_shift_prometheus "$port_shift_prometheus"
-            --arg     supervisor_conf       "$supervisor_conf"
-        )
-        jq_fmutate "$env_json" '. *
-          { type:                  "supervisor"
-          , port_shift_ekg:        $port_shift_ekg
-          , port_shift_prometheus: $port_shift_prometheus
-          , supervisor_conf:       $supervisor_conf
-          }
-        ' "${args[@]}"
-        ;;
-
     describe-run )
         local usage="USAGE: wb supervisor $op RUN-DIR"
         local dir=${1:?$usage}
 
-        local basePort=$(jq .basePort "$dir"/env.json)
-        local port_ekg=$((       basePort+$(jq .port_shift_ekg        "$dir"/env.json)))
-        local port_prometheus=$((basePort+$(jq .port_shift_prometheus "$dir"/env.json)))
+        local basePort=$(                   envjq 'basePort')
+        local port_ekg=$((       basePort+$(envjq 'port_shift_ekg')))
+        local port_prometheus=$((basePort+$(envjq 'port_shift_prometheus')))
 
         cat <<EOF
   - EKG URL (node-0):        http://localhost:$port_ekg/
@@ -100,7 +60,7 @@ EOF
                --* ) msg "FATAL:  unknown flag '$1'"; usage_supervisor;;
                * ) break;; esac; shift; done
 
-        local supervisor_conf=$(jq -r .supervisor_conf "$dir"/env.json)
+        local supervisor_conf=$(envjqr 'supervisor_conf')
 
         mkdir -p               "$dir"/supervisor
         cp -f $supervisor_conf "$dir"/supervisor/supervisord.conf
@@ -125,7 +85,7 @@ EOF
            then echo
                 msg "FATAL:  workbench:  supervisor:  patience ran out after ${patience}s"
                 backend_supervisor stop-cluster "$dir"
-                fatal "node startup did not succeed:  check logs in $dir/node-0"
+                fatal "node startup did not succeed:  check logs in $dir/node-0/stdout"
            fi
            echo -ne "\b\b\b"
         done >&2

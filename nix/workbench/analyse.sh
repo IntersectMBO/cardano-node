@@ -20,7 +20,7 @@ EOF
 }
 
 analyse() {
-local dump_logobjects= force_prefilter= prefilter_jq= self_args=() locli_args=() filters=() aws=
+local dump_logobjects= force_prefilter= prefilter_jq= self_args=() locli_args=() filters=() aws= outdir=
 while test $# -gt 0
 do case "$1" in
        --dump-logobjects )  dump_logobjects='true';  self_args+=($1);;
@@ -28,7 +28,7 @@ do case "$1" in
        --prefilter-jq )     prefilter_jq='true';     self_args+=($1);;
        --filters )          local filter_names=('base')
                             filter_names+=($(echo $2 | sed 's_,_ _'))
-                            local filter_paths=(${filter_names[*]/#/"bench/chain-filters/"})
+                            local filter_paths=(${filter_names[*]/#/"$global_basedir/chain-filters/"})
                             local filter_files=(${filter_paths[*]/%/.json})
                             for f in ${filter_files[*]}
                             do test -f "$f" ||
@@ -36,9 +36,10 @@ do case "$1" in
                             locli_args+=(${filter_files[*]/#/--filter })
                             self_args+=($1 $2); shift;;
        --rts )              self_args+=($1 $2); locli_args+=(+RTS $2         -RTS); shift;;
+       --outdir )           self_args+=($1 "$2"); outdir=$2; shift;;
        * ) break;; esac; shift; done
 
-if ! curl http://169.254.169.254/latest/meta-data 2>&1 | grep --quiet 404
+if ! curl --connect-timeout=0.5 http://169.254.169.254/latest/meta-data 2>&1 | grep --quiet 404
 then aws='true'; fi
 
 ## Work around the odd parallelism bug killing performance on AWS:
@@ -75,7 +76,7 @@ case "$op" in
         local dir=$(run get "$name")
         test -n "$dir" || fail "malformed run: $name"
 
-        local adir=$dir/analysis
+        local adir=${outdir:-$dir/analysis}
         mkdir -p "$adir"
 
         ## 0. subset what we care about into the keyfile
@@ -137,7 +138,7 @@ case "$op" in
         local dir=$(run get "$name")
         test -n "$dir" || fail "malformed run: $name"
 
-        local adir=$dir/analysis
+        local adir=${outdir:-$dir/analysis}
         mkdir -p "$adir"
 
         ## 0. subset what we care about into the keyfile

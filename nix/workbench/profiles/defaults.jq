@@ -13,11 +13,12 @@ def era_defaults($era):
   , composition:
     { locations:                      ["LO"]
     , n_bft_hosts:                    0
-    , n_singular_hosts:               2
+    , n_singular_hosts:               5
     , n_dense_hosts:                  1
     , dense_pool_density:             1
     , with_proxy:                     false
-    , with_observer:                  true
+    , with_observer:                  false
+    , topology:                       "uni-circle"
     }
 
   , genesis:
@@ -28,8 +29,8 @@ def era_defaults($era):
     , single_shot:                    true
 
     ## UTxO & delegation
-    , total_balance:                  900000000000000
-    , pools_balance:                  800000000000000
+    , per_pool_balance:               1000000000000000
+    , funds_balance:                  10000000000000
     , utxo:                           0
     , decentralisation_param:         0
 

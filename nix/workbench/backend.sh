@@ -8,10 +8,6 @@ usage_backend() {
                      Given a run directory, print the node socket path
                        for 'cardano-cli'
 
-    record-extended-env-config ENV-JSON [ENV-CONFIG-OPTS..]
-                     Extend the environment JSON file with backend-specific
-                       environment config
-
     allocate-run RUNDIR
     describe-run RUNDIR
     start-cluster RUNDIR

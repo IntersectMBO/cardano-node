@@ -54,8 +54,9 @@ case "${op}" in
         mkdir -p                 "$outdir"
         args=( --topology-output "$outdir"/topology-nixops.json
                --dot-output      "$outdir"/topology.dot
+               $(jq '.composition.topology
+                    ' --raw-output "$profile_json")
                --size             $n_hosts
-
                $(jq '.composition.locations
                     | map("--loc " + .)
                     | join(" ")
@@ -117,7 +118,7 @@ case "${op}" in
         local topo_dir=${4:?$usage}
         local basePort=${5:?$usage}
 
-        local prof=$(profile get $profile)
+        local prof=$(profile json-by-name $profile)
 
         case "$role" in
         local-bft | local-pool )

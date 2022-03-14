@@ -1,13 +1,8 @@
-{ pkgs
+{ pkgs, cardanoLib
 , runCommand, runWorkbenchJqOnly, runJq, workbench, writeText
 
 ## The backend is an attrset of AWS/supervisord-specific methods and parameters.
 , backend
-
-## Environmental settings:
-##   - either affect semantics on all backends equally,
-##   - or have no semantic effect
-, environment
 
 , profileName
 , profileOverride ? {}
@@ -15,7 +10,7 @@
 
 let
   baseJSON = runWorkbenchJqOnly "profile-${profileName}.json"
-                          "profile get ${profileName}";
+    "profile json-by-name ${profileName}";
   JSON =
     if profileOverride == {}
     then baseJSON
@@ -43,7 +38,7 @@ let
         rec {
           JSON = runWorkbenchJqOnly
             "node-specs-${profile.name}.json"
-            "profile node-specs ${profile.JSON} ${environment.JSON}";
+            "profile node-specs ${profile.JSON}";
 
           value = __fromJSON (__readFile JSON);
         };
@@ -51,7 +46,7 @@ let
       inherit (pkgs.callPackage
                ./node-services.nix
                { inherit runJq backend profile;
-                 baseNodeConfig = environment.cardanoLib.environments.testnet.nodeConfig;
+                 baseNodeConfig = cardanoLib.environments.testnet.nodeConfig;
                })
         node-services;
 

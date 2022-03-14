@@ -48,8 +48,6 @@ do case "$1" in
        --rundir ) global_rundir=$2; shift;;
        * ) break;; esac; shift; done
 
-global_envjson=$global_rundir/env.json
-
 local op=${1:-list}; test $# -gt 0 && shift
 
 case "$op" in
@@ -62,7 +60,10 @@ case "$op" in
                  sort || true);;
 
     compute-path )
-        echo -n "$global_rundir/$1";;
+        if test -f "$1/meta.json"
+        then echo -n "$1"
+        else echo -n "$global_rundir/$1"
+        fi;;
 
     fix-legacy-run-structure | fix-legacy )
         local usage="USAGE: wb run $op TAG"
@@ -87,21 +88,12 @@ case "$op" in
                      mv "$logdir" "$dir"/$logs_less; done; fi
         else msg "fixing up a cardano-ops run in:  $dir"; fi
 
-        jq '.meta.profile_content' "$dir"/meta.json > "$dir"/profile.json
-
-        jq_fmutate "$dir"/env.json '. *
-          { type:         "legacy"
-          , staggerPorts: false
-          }
-        ';;
+        jq '.meta.profile_content' "$dir"/meta.json > "$dir"/profile.json;;
 
     check )
         local usage="USAGE: wb run $op TAG"
         local tag=${1:?$usage}
         local dir=$(run compute-path "$tag")
-
-        test "$(tr -d / <<<$tag)" = "$tag" ||
-            fatal "run tag has slashes:  $tag"
 
         jq_check_json "$dir"/meta.json ||
             fatal "run $tag (at $dir) missing a file:  meta.json"
@@ -235,57 +227,48 @@ case "$op" in
     allocate )
         local usage="USAGE: wb run $op BATCH-NAME PROFILE-NAME [ENV-CONFIG-OPTS..] [-- BACKEND-ARGS-AND-ENV-CONFIG-OPTS..]"
         local batch=${1:?$usage}; shift
-        local  prof=${1:?$usage}; shift
+        local profile_name=${1:?$usage}; shift
 
-        local cacheDir=$default_cacheDir basePort=$default_basePort staggerPorts='false'
+        local profile= topology= genesis_cache_entry=
         while test $# -gt 0
         do case "$1" in
-               --profile-out )   profileOut=$2; shift;;
-               --cache-dir )     cacheDir=$2; shift;;
-               --base-port )     basePort=$2; shift;;
-               --stagger-ports ) staggerPorts=true;;
+               --profile )             profile=$2; shift;;
+               --topology )            topology=$2; shift;;
+               --genesis-cache-entry ) genesis_cache_entry=$2; shift;;
                -- ) shift; break;;
                --* ) msg "FATAL:  unknown flag '$1'"; usage_run;;
                * ) break;; esac; shift; done
 
         local timestamp=$(date +'%s' --utc)
         local date=$(date +'%Y'-'%m'-'%d'-'%H.%M' --date=@$timestamp --utc)
-        local tag=$date.$batch.$prof
+        local tag=$date.$batch.$profile_name
         local dir=$global_rundir/$tag
         local realdir=$(realpath --canonicalize-missing "$dir")
+        local cacheDir=$(envjqr 'cacheDir')
 
-        if test "$(dirname "$realdir")" != "$(realpath "$global_rundir")"
-        then fatal "bad tag/run dir:  $tag @ $dir"; fi
-
-        if test -e "$dir"
-        then fatal "tag busy:  $tag @ $dir"; fi
-
-        if ! profile has-profile          "$prof"
-        then fatal      "no such profile:  $prof"; fi
-
+        test "$(dirname "$realdir")" = "$(realpath "$global_rundir")" ||
+            fatal "profile | allocate bad tag/run dir:  $tag @ $dir"
+        test ! -e "$dir" ||
+            fatal "profile | allocate tag busy:  $tag @ $dir"
         mkdir -p "$cacheDir" && test -w "$cacheDir" ||
-            fatal "failed to create writable cache directory:  $cacheDir"
-
+            fatal "profile | allocate failed to create writable cache directory:  $cacheDir"
         mkdir -p "$dir" && test -w "$dir" ||
-            fatal "failed to create writable run directory:  $dir"
+            fatal "profile | allocate failed to create writable run directory:  $dir"
 
-        local args=(
-            --null-input
-            --arg     cacheDir    "$cacheDir"
-            --argjson basePort     $basePort
-            --argjson staggerPorts $staggerPorts
-        )
-        jq_fmutate "$global_envjson" '
-          { cacheDir:     $cacheDir
-          , basePort:     $basePort
-          , staggerPorts: $staggerPorts
-          }
-        ' "${args[@]}"
-        backend record-extended-env-config "$global_envjson" "$@"
-        cp "$global_envjson" "$dir"/env.json
+        if test -n "$profile"
+        then
+            test "$(jq -r .name $profile/profile.json)" = "$profile_name" ||
+                fatal "profile | allocate incoherence:  --profile $profile/profile.json mismatches '$profile_name'"
+            ln -s "$profile"              "$dir"/profile
+            cp    "$profile"/profile.json "$dir"/profile.json
+        else
+            profile has-profile          "$profile_name" ||
+                fatal  "no such profile:  $profile_name"
+            profile json-by-name         "$profile_name" > "$dir"/profile.json
+        fi
+        msg "run | allocate | profile:  $(if test -n "$profile"; then echo pre-supplied; else echo computed; fi)"
 
-        profile get "$prof" > "$dir"/profile.json
-        profile node-specs    "$dir"/profile.json "$global_envjson" > "$dir"/node-specs.json
+        profile node-specs "$dir"/profile.json > "$dir"/node-specs.json
 
         ## TODO:  AWS
         local node_commit_desc=$(git_repo_commit_description '.')
@@ -293,7 +276,7 @@ case "$op" in
         local args=(
             --arg       tag              "$tag"
             --arg       batch            "$batch"
-            --arg       profile          "$prof"
+            --arg       profile_name     "$profile_name"
             --argjson   timestamp        "$timestamp"
             --arg       date             "$date"
             --arg       node_commit_desc "$node_commit_desc"
@@ -303,7 +286,7 @@ case "$op" in
            { meta:
              { tag:              $tag
              , batch:            $batch
-             , profile:          $profile
+             , profile:          $profile_name
              , timestamp:        $timestamp
              , date:             $date
              , node_commit_desc: $node_commit_desc
@@ -312,25 +295,34 @@ case "$op" in
            }
            ' "${args[@]}"
 
-        topology make    "$dir"/profile.json "$dir"/topology
+        msg "run | allocate | topology:  $(if test -n "$topology"; then echo pre-supplied; else echo computed; fi)"
+        if test -n "$topology"
+        then ln -s "$topology"                    "$dir"/topology
+        else topology make    "$dir"/profile.json "$dir"/topology
+        fi
 
-        local cacheDir=$(jq -r .cacheDir "$global_envjson")
-        test "$cacheDir" != 'null' -a -d "$cacheDir" ||
-            fatal "invalid global env JSON"
-
-        local genesis_args=(
-            ## Positionals:
-            "$cacheDir"/genesis "$dir"/profile.json
-            "$dir"/topology
-            "$dir"/genesis
-        )
-        genesis prepare "${genesis_args[@]}"
+        msg "run | allocate | genesis:  $(if test -n "$genesis_cache_entry"; then echo pre-supplied; else echo computed; fi)"
+        if test   -n "$genesis_cache_entry"
+        then genesis derive-from-cache      \
+                     "$profile"             \
+                     "$genesis_cache_entry" \
+                     "$dir"/genesis
+        else
+             local genesis_args=(
+                 ## Positionals:
+                 "$cacheDir"/genesis
+                 "$dir"/profile.json
+                 "$dir"/topology
+                 "$dir"/genesis
+             )
+             genesis prepare "${genesis_args[@]}"
+        fi
 
         ## Record geneses
         cp "$dir"/genesis/genesis-shelley.json "$dir"/genesis-shelley.json
         cp "$dir"/genesis/genesis.alonzo.json  "$dir"/genesis.alonzo.json
 
-        local svcs=$profileOut/node-services.json
+        local svcs=$profile/node-services.json
         for node in $(jq_tolist 'keys' "$dir"/node-specs.json)
         do local node_dir="$dir"/$node
            mkdir -p                                          "$node_dir"
@@ -341,7 +333,7 @@ case "$op" in
            cp $(jq '."'"$node"'"."topology"'       -r $svcs) "$node_dir"/topology.json
         done
 
-        local gtor=$profileOut/generator-service.json
+        local gtor=$profile/generator-service.json
         gen_dir="$dir"/generator
         mkdir -p                              "$gen_dir"
         cp $(jq '."run-script"'     -r $gtor) "$gen_dir"/run-script.json
@@ -424,7 +416,7 @@ workbench:  run $(with_color yellow $tag) params:
   - profile JSON:    $dir/profile.json
   - node specs:      $dir/node-specs.json
   - topology:        $dir/topology/topology-nixops.json $dir/topology/topology.pdf
-  - node base port:  $(jq .basePort "$global_envjson")
+  - node base port:  $(envjq 'basePort')
 EOF
         backend describe-run "$dir"
         ;;
@@ -434,9 +426,6 @@ EOF
         local tag=${1:?$usage}
         local dir=$(run get "$tag")
 
-        local compat_args=(
-            --rawfile genesis_cache_key "$dir/genesis/cache.key"
-        )
         jq_fmutate "$dir"/meta.json '
            def compat_fixups:
              { genesis:
@@ -449,9 +438,8 @@ EOF
              };
            . * { meta:
                  { profile_content:   (.meta.profile_content | compat_fixups)
-                 , genesis_cache_id:  $genesis_cache_key
                  }
-               }' "${compat_args[@]}";;
+               }';;
 
     start )
         local usage="USAGE: wb run $op [--no-generator] [--scenario NAME] TAG"

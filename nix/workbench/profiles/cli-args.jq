@@ -1,14 +1,15 @@
 def profile_cli_args($p):
+($p.genesis.per_pool_balance * $p.composition.n_pools) as $pools_balance
+|
 { common:
   { createSpec:
-    [ "--supply",                  $p.genesis.total_balance
+    [ "--supply",                  ($pools_balance + $p.genesis.funds_balance)
     , "--testnet-magic",           $p.genesis.network_magic
     , "--gen-genesis-keys",        $p.composition.n_bft_hosts
     , "--gen-utxo-keys",           1
     ]
  , createFinalIncremental:
-    ([ "--supply",                 ($p.genesis.total_balance -
-                                    $p.genesis.pools_balance)
+    ([ "--supply",                 ($p.genesis.funds_balance)
      , "--gen-utxo-keys",          1
      ] +
      if $p.composition.dense_pool_density != 1
@@ -16,11 +17,10 @@ def profile_cli_args($p):
      [  ]
      else [] end)
   , createFinalBulk:
-    ([ "--supply",                 ($p.genesis.total_balance -
-                                    $p.genesis.pools_balance)
+    ([ "--supply",                 ($p.genesis.funds_balance)
      , "--gen-utxo-keys",          1
      , "--gen-genesis-keys",       $p.composition.n_bft_hosts
-     , "--supply-delegated",       $p.genesis.pools_balance
+     , "--supply-delegated",       $pools_balance
      , "--gen-pools",              $p.composition.n_pools
      , "--gen-stake-delegs",       ([ $p.composition.n_pools
                                     , $p.genesis.delegators ]

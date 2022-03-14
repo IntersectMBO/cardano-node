@@ -95,9 +95,9 @@ let
     ++ lib.optionals (!stdenv.isDarwin)
     [
       pkgs.psmisc
-      cluster.start
-      cluster.stop
-      cluster.restart
+      cluster.interactive-start
+      cluster.interactive-stop
+      cluster.interactive-restart
     ];
 
     # Prevents cabal from choosing alternate plans, so that
@@ -151,9 +151,9 @@ let
       pkgs.graphviz
       python3Packages.supervisor
       python3Packages.ipython
-      cluster.start
-      cluster.stop
-      cluster.restart
+      cluster.interactive-start
+      cluster.interactive-stop
+      cluster.interactive-restart
       cardanolib-py
       cluster.workbench.workbench
     ] ++ (lib.optionals (!stdenv.isDarwin) [

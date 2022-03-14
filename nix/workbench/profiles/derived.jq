@@ -100,7 +100,7 @@ def add_derived_params:
          { genesis_future_offset: $future_offset
          , delegators:            ($gsis.delegators // $n_pools)
          , pool_coin:             (if $n_pools == 0 then 0
-                                   else $gsis.pools_balance / $n_pools | floor end)
+                                   else $gsis.per_pool_balance end)
          , shelley:
            ({ protocolParams:
               { activeSlotsCoeff:           $gsis.active_slots_coeff
@@ -139,8 +139,7 @@ def add_derived_params:
      { genesis:
        ## Depends on computed delegators:
        { delegator_coin:   (if .common.genesis.delegators == 0 then 0
-                            else $gsis.pools_balance / .common.genesis.delegators
-                                 | floor
+                            else $gsis.per_pool_balance
                             end)
        }
      }

@@ -1,4 +1,4 @@
-global_genesis_format_version=September-10-2021
+global_genesis_format_version=March-14-2022
 
 usage_genesis() {
      usage "genesis" "Genesis" <<EOF
@@ -68,12 +68,8 @@ case "$op" in
              if profile has-preset "$profile_json"
              then local preset=$(jq .preset "$profile_json" -r)
                   genesis genesis-from-preset "$preset" "$cache_path"
-             else genesis actually-genesis "$profile_json" "$topo_dir" "$cache_path"
+             else genesis actually-genesis "$profile_json" "$topo_dir" "$cache_path" "$cache_key_input" "$cache_key"
              fi
-
-             cat <<<$cache_key_input > "$cache_path"/cache.key.input
-             cat <<<$cache_key       > "$cache_path"/cache.key
-             cat <<<$global_genesis_format_version > "$cache_path"/layout.version
         fi
 
         genesis finalise-cache-entry "$profile_json" "$cache_path"
@@ -172,6 +168,8 @@ case "$op" in
         local profile_json=${1:?$usage}
         local topo_dir=${2:?$usage}
         local dir=${3:?$usage}
+        local cache_key_input=$4
+        local cache_key=$5
 
         rm -rf   "$dir"/{*-keys,byron,pools,nodes,*.json,*.params,*.version}
         mkdir -p "$dir"
@@ -196,8 +194,45 @@ case "$op" in
         mv "$dir"/genesis.json "$dir"/genesis-shelley.json
         mv "$dir"/genesis.spec.json "$dir"/genesis-shelley.spec.json
 
+        cat <<<$cache_key_input               > "$dir"/cache.key.input
+        cat <<<$cache_key                     > "$dir"/cache.key
+        cat <<<$global_genesis_format_version > "$dir"/layout.version
+
         ## TODO: try to get rid of this step:
         Massage_the_key_file_layout_to_match_AWS "$profile_json" "$topo_dir" "$dir";;
+
+    derive-from-cache )
+        local usage="USAGE:  wb genesis $op PROFILE-OUT CACHE-ENTRY-DIR OUTDIR"
+        local profile=${1:?$usage}
+        local cache_entry=${2:?$usage}
+        local outdir=${3:?$usage}
+
+        msg "genesis | derive-from-cache:  $cache_entry -> $outdir"
+        ls -l $cache_entry
+
+        mkdir -p "$outdir"
+        ( cd $outdir
+          ln -s $profile   ./profile
+          ln -s $cache_entry cache-entry
+          ln -s $cache_entry/cache.key
+          ln -s $cache_entry/cache.key.input
+          ln -s $cache_entry/layout.version
+          ## keys
+          ln -s $cache_entry/delegate-keys
+          ln -s $cache_entry/genesis-keys
+          cp    $cache_entry/node-keys . -a
+          chmod -R    go-rwx node-keys
+          ln -s $cache_entry/pools
+          ln -s $cache_entry/stake-delegator-keys
+          ln -s $cache_entry/utxo-keys
+          ## JSON
+          cp -v $cache_entry/genesis*.json .
+          chmod u+w          genesis*.json
+        )
+        genesis finalise-cache-entry $profile/profile.json $outdir
+
+        ls -l $outdir/node-keys
+        ;;
 
     finalise-cache-entry )
         local usage="USAGE:  wb genesis $op PROFILE-JSON DIR"
