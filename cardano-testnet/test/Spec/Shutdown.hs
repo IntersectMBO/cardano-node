@@ -102,6 +102,4 @@ hprop_shutdown = H.integration . H.runFinallies . H.workspace "chairman" $ \temp
 
   mExitCode === Just IO.ExitSuccess
 
-  True === False
-
   return ()
