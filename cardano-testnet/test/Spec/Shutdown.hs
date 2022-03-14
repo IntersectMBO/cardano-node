@@ -9,6 +9,7 @@ module Spec.Shutdown
   ) where
 
 import           Control.Monad
+import           Data.Bool (Bool(..))
 import           Data.Ord
 import           Data.Function
 import           Data.Functor ((<&>))
@@ -100,5 +101,7 @@ hprop_shutdown = H.integration . H.runFinallies . H.workspace "chairman" $ \temp
   mExitCode <- H.evalIO $ IO.getProcessExitCode pHandle
 
   mExitCode === Just IO.ExitSuccess
+
+  True === False
 
   return ()

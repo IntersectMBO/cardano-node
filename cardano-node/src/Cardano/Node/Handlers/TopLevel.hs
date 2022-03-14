@@ -46,6 +46,7 @@ module Cardano.Node.Handlers.TopLevel
 
 import           Prelude
 
+import           Cardano.Node.Output
 import           Control.Exception
 
 import           System.Environment
@@ -64,6 +65,7 @@ import           System.IO
 --
 toplevelExceptionHandler :: IO a -> IO a
 toplevelExceptionHandler prog = do
+    outPutStrLn "Starting"
     -- Use line buffering in case we have to print big error messages, because
     -- by default stderr to a terminal device is NoBuffering which is slow.
     hSetBuffering stderr LineBuffering
@@ -76,16 +78,21 @@ toplevelExceptionHandler prog = do
     -- Let async exceptions rise to the top for the default GHC top-handler.
     -- This includes things like CTRL-C.
     rethrowAsyncExceptions :: SomeAsyncException -> IO a
-    rethrowAsyncExceptions = throwIO
+    rethrowAsyncExceptions e = do
+      outPutStrLn $ "Async exception: " <> show e
+      throwIO e
 
     -- We don't want to print ExitCode, and it should be handled by the default
     -- top handler because that sets the actual OS process exit code.
     rethrowExitCode :: ExitCode -> IO a
-    rethrowExitCode = throwIO
+    rethrowExitCode e = do
+      outPutStrLn $ "Exit code: " <> show e
+      throwIO e
 
     -- Print all other exceptions
     handleSomeException :: SomeException -> IO a
     handleSomeException e = do
+      outPutStrLn $ "Some exception: " <> show e
       hFlush stdout
       progname <- getProgName
       hPutStr stderr (renderSomeException progname e)

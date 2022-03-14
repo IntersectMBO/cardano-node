@@ -68,6 +68,7 @@ library
                        Cardano.Node.Handlers.Shutdown
                        Cardano.Node.Handlers.TopLevel
                        Cardano.Node.Orphans
+                       Cardano.Node.Output
                        Cardano.Node.Protocol
                        Cardano.Node.Protocol.Alonzo
                        Cardano.Node.Protocol.Byron
