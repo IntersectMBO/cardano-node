@@ -315,6 +315,8 @@
         "iohkNix": "iohkNix_2",
         "membench": "membench_2",
         "nixpkgs": [
+          "membench",
+          "cardano-node-snapshot",
           "haskellNix",
           "nixpkgs-2105"
         ],
@@ -343,6 +345,10 @@
         "iohkNix": "iohkNix_3",
         "membench": "membench_3",
         "nixpkgs": [
+          "membench",
+          "cardano-node-snapshot",
+          "membench",
+          "cardano-node-snapshot",
           "haskellNix",
           "nixpkgs-2105"
         ],
@@ -1587,6 +1593,9 @@
         "haskellNix": "haskellNix_4",
         "iohkNix": "iohkNix_4",
         "nixpkgs": [
+          "membench",
+          "cardano-node-snapshot",
+          "plutus-example",
           "haskellNix",
           "nixpkgs-2105"
         ],
