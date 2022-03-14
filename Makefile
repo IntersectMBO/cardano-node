@@ -65,9 +65,9 @@ smoke:
 	nix build -f 'default.nix' 'workbench-smoke-test'     --out-link result-smoke-run      --cores 0
 test-analysis: smoke-analysis ## Build the 'workbench-smoke-analysis', same as the Hydra job
 smoke-analysis:
-	nix build -f 'default.nix' 'workbench-smoke-analysis' --out-link result-smoke-analysis --cores 0
+	nix build -f 'default.nix' 'workbench-smoke-analysis' --out-link result-smoke-analysis --cores 0 --show-trace
 ci-analysis:
-	nix build -f 'default.nix' 'workbench-ci-analysis'    --out-link result-ci-analysis    --cores 0
+	nix build -f 'default.nix' 'workbench-ci-analysis'    --out-link result-ci-analysis    --cores 0 --show-trace
 
 shell: ## Enter Nix shell, CI mode (workbench run from Nix store)
 	nix-shell --max-jobs 8 --cores 0 --show-trace --argstr profileName ${PROFILE} ${ARGS}

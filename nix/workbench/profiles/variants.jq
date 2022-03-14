@@ -48,7 +48,7 @@ def genesis_profile_variants:
   , { name: "smoke"
     , scenario: "fixed-loaded"
     , node:
-      { shutdown_on_slot_synced: 50
+      { shutdown_on_slot_synced: 60
       }
     , generator: { tps: 10 }
     }

@@ -1,6 +1,6 @@
 { pkgs }:
 
-{ profileNix, topology }:
+{ profileNix, profile, topology, workbench }:
 pkgs.runCommand "workbench-profile-genesis-cache-${profileNix.name}"
   { requiredSystemFeatures = [ "benchmark" ];
     nativeBuildInputs = with pkgs.haskellPackages; with pkgs;
@@ -8,11 +8,17 @@ pkgs.runCommand "workbench-profile-genesis-cache-${profileNix.name}"
   }
   ''
   mkdir $out
+
+  cache_key_input=$(wb genesis profile-cache-key-input ${profileNix.JSON})
+  cache_key=$(wb genesis profile-cache-key ${profileNix.JSON})
+
   args=(
      genesis actually-genesis
      ${profileNix.JSON}
      ${topology}
-     ${out}
+     $out
+     "$cache_key_input"
+     "$cache_key"
   )
   time wb ''${args[@]}
 

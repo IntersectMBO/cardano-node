@@ -118,7 +118,7 @@ case "${op}" in
         local topo_dir=${4:?$usage}
         local basePort=${5:?$usage}
 
-        local prof=$(profile get $profile)
+        local prof=$(profile json-by-name $profile)
 
         case "$role" in
         local-bft | local-pool )

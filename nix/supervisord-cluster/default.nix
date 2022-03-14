@@ -25,7 +25,8 @@ with lib;
 let
   backend =
     rec
-    { ## Generic Nix bits:
+    { name = "supervisor";
+      ## Generic Nix bits:
       topologyForNodeSpec =
         { profile, nodeSpec }:
         let inherit (nodeSpec) name i; in
@@ -180,8 +181,13 @@ let
         echo "workbench:  alternate command for this action:  wb run restart" >&2
   '';
 
+  nodeBuildProducts =
+    name:
+    "report ${name}.log $out ${name}/stdout";
+
   profile-run-supervisord =
-    { profileName }:
+    { profileName
+    , trace ? false }:
     let
       inherit
         (with-supervisord-profile
@@ -204,31 +210,46 @@ let
           ];
         }
           ''
-          mkdir -p $out/cache
+          mkdir -p $out/{cache,nix-support}
           cd       $out
 
-          ${workbench.shellHook}
-
+          export WORKBENCH_BACKEND=supervisor
           export CARDANO_NODE_SOCKET_PATH=$(wb backend get-node-socket-path ${stateDir})
 
-          wb start \
-              --batch-name   smoke-test           \
-              --profile-name ${profileName}       \
-              --profile      ${profile}           \
-              --cache-dir    ./cache              \
-              --base-port    ${toString basePort} \
+          cmd=(
+              wb
+              ${pkgs.lib.optionalString trace "--trace"}
+              start
+              --profile-name        ${profileName}
+              --profile             ${profile}
+              --topology            ${topology}
+              --genesis-cache-entry ${genesis}
+              --batch-name          smoke-test
+              --base-port           ${toString basePort}
+              --cache-dir           ./cache
+          )
+          echo "''${cmd[*]}" > $out/wb-start.sh
+
+          time "''${cmd[@]}" 2>&1 |
+              tee $out/wb-start.log
 
           ## Convert structure from $out/run/RUN-ID/* to $out/*:
           rm -rf cache
           rm -f run/{current,-current}
-          mv    run/env.json .
-
           tag=$(cd run; ls)
-          echo "workbench-test:  completed run $tag"
-
           mv       run/$tag/*   .
           rmdir    run/$tag run
-          rm -f    genesis  node-*/node.socket
+          rm -f    node-*/node.socket
+
+          cat > $out/nix-support/hydra-build-products <<EOF
+          report workbench.log $out wb-start.log
+          report meta.json     $out meta.json
+          ${pkgs.lib.concatStringsSep "\n"
+            (map nodeBuildProducts (__attrNames profileNix.node-specs.value))}
+          report node-0        $out meta.json
+          EOF
+
+          echo "workbench-test:  completed run $tag"
           '';
     in
       run // {

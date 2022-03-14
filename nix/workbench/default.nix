@@ -129,20 +129,6 @@ let
       profile-names =
         __fromJSON (__readFile profile-names-json);
 
-      environment =
-        ## IMPORTANT:  keep in sync with envArgs in 'supervisord-cluster/default.nix/envArgs'.
-        with envArgs; rec {
-          inherit cardanoLib stateDir;
-
-          JSON = runWorkbenchJqOnly "environment.json"
-          ''env compute-config \
-            --cache-dir "${cacheDir}" \
-            --base-port ${toString basePort} \
-            ${optionalString staggerPorts "--stagger-ports"} \
-          '';
-          value = __fromJSON (__readFile JSON);
-        };
-
       mkProfile =
         profileName:
         pkgs.callPackage ./profiles
@@ -150,7 +136,6 @@ let
               pkgs
               runWorkbenchJqOnly runJq workbench
               backend
-              environment
               profileName;
           };
 
@@ -177,14 +162,14 @@ let
         or (throw "No such profile: ${profileName};  Known profiles: ${toString (__attrNames ps.profiles)}");
 
       profile = materialise-profile
-        { inherit profileNix;
+        { inherit profileNix workbench;
           backendProfile =
             backend.materialise-profile { inherit profileNix; };
         };
 
-      topology = profile-topology { inherit profileNix; };
+      topology = profile-topology { inherit profileNix profile workbench; };
 
-      genesis = profile-topology-genesis { inherit profileNix topology; };
+      genesis = profile-topology-genesis { inherit profileNix profile topology workbench; };
     in {
       inherit
         profileNix profile

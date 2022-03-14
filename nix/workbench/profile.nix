@@ -3,9 +3,10 @@ with lib;
 
 { profileNix
 , backendProfile ## Backend-specific results for forwarding
+, workbench
 }:
 pkgs.runCommand "workbench-profile-output-${profileNix.name}"
-  { buildInputs = [];
+  { buildInputs = with pkgs; [ jq workbench ];
     nodeServices =
       __toJSON
       (flip mapAttrs profileNix.node-services
@@ -29,7 +30,10 @@ pkgs.runCommand "workbench-profile-output-${profileNix.name}"
   }
   ''
   mkdir $out
-  cp    ${backendProfile}/*  $out
+  cp    ${profileNix.JSON}         $out/profile.json
+  cp    ${backendProfile}/*        $out
   cp    $nodeServicesPath          $out/node-services.json
   cp    $generatorServicePath      $out/generator-service.json
+
+  wb profile node-specs $out/profile.json > $out/node-specs.json
   ''

@@ -216,7 +216,7 @@
             "dockerImage/submit-api" = pkgs.submitApiDockerImage;
             membenches = membench.outputs.packages.x86_64-linux.batch-report;
             snapshot = membench.outputs.packages.x86_64-linux.snapshot;
-            workbench-smoke-test     = pkgs.clusterNix.profile-run-supervisord { profileName = "smoke-alzo"; };
+            workbench-smoke-test     = pkgs.clusterNix.profile-run-supervisord { profileName = "smoke-alzo";trace = true; };
             workbench-smoke-analysis = workbench-smoke-test.analysis;
             workbench-ci-test        = pkgs.clusterNix.profile-run-supervisord { profileName = "ci-light-alzo"; };
             workbench-ci-analysis    = workbench-ci-test.analysis;

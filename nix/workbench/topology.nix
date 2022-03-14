@@ -1,6 +1,6 @@
 { pkgs }:
 
-{ profileNix }:
+{ profileNix, profile, workbench }:
 pkgs.runCommand "workbench-topology-${profileNix.name}"
   { requiredSystemFeatures = [ "benchmark" ];
     nativeBuildInputs = with pkgs.haskellPackages; with pkgs;
@@ -11,9 +11,9 @@ pkgs.runCommand "workbench-topology-${profileNix.name}"
   args=(
      topology make
      ${profileNix.JSON}
-     ${out}
+     $out
   )
   time wb ''${args[@]}
 
-  ln -s ${profileNix.JSON} $out/profile
+  ln -s ${profile} $out/profile
   ''
