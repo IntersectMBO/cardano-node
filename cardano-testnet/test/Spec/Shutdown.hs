@@ -9,7 +9,6 @@ module Spec.Shutdown
   ) where
 
 import           Control.Monad
-import           Data.Bool (Bool(..))
 import           Data.Ord
 import           Data.Function
 import           Data.Functor ((<&>))
