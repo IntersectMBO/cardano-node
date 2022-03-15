@@ -12,6 +12,12 @@ pkgs.runCommand "workbench-profile-genesis-cache-${profileNix.name}"
   cache_key_input=$(wb genesis profile-cache-key-input ${profileNix.JSON})
   cache_key=$(wb genesis profile-cache-key ${profileNix.JSON})
 
+  keepalive() {
+      while test ! -e $out/profile; do echo 'keepalive for Hydra'; sleep 60s; done
+      echo 'keepalive done'
+  }
+  keepalive &
+
   args=(
      genesis actually-genesis
      ${profileNix.JSON}
@@ -21,6 +27,8 @@ pkgs.runCommand "workbench-profile-genesis-cache-${profileNix.name}"
      "$cache_key"
   )
   time wb ''${args[@]}
+
+  touch done
 
   ln -s ${profile} $out/profile
   ''

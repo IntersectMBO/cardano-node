@@ -44,9 +44,6 @@ test-ghcid-nix: ## Run ghcid on test suites with Nix
 bench-chainsync: PROFILE=chainsync-${ERA}
 bench-chainsync: cluster-shell-dev ## Enter Nix shell and start the chainsync benchmark
 
-cluster-profiles: ## List available workbench profiles (for PROFILE=)
-	@./nix/workbench/wb profile list
-
 ## TODO: migrate to `nix develop`
 cluster-shell: ## Enter Nix shell and start the workbench cluster
 	nix-shell --max-jobs 8 --cores 0 --show-trace --argstr profileName ${PROFILE} --arg 'autoStartCluster' true
@@ -68,6 +65,11 @@ smoke-analysis:
 	nix build -f 'default.nix' 'workbench-smoke-analysis' --out-link result-smoke-analysis --cores 0 --show-trace
 ci-analysis:
 	nix build -f 'default.nix' 'workbench-ci-analysis'    --out-link result-ci-analysis    --cores 0 --show-trace
+list-profiles: ## List workbench profiles
+	nix build .#workbench.profile-names-json --json | jq '.[0].outputs.out' -r | xargs jq .
+ps: list-profiles
+bump-cardano-node-workbench: ## Update the cardano-node-workbench flake input
+	nix flake lock --update-input cardano-node-workbench
 
 shell: ## Enter Nix shell, CI mode (workbench run from Nix store)
 	nix-shell --max-jobs 8 --cores 0 --show-trace --argstr profileName ${PROFILE} ${ARGS}

@@ -61,6 +61,12 @@ let
       ${jq}/bin/jq '${query}' "''${args[@]}" > $out
     '';
 
+  profile-names-json =
+    runWorkbenchJqOnly "profile-names.json" "profiles list";
+
+  profile-names =
+    __fromJSON (__readFile profile-names-json);
+
   generateProfiles =
     ## The backend is an attrset of AWS/supervisord-specific methods and parameters.
     { backend
@@ -71,12 +77,6 @@ let
     , envArgs
     }:
     rec {
-      profile-names-json =
-        runWorkbenchJqOnly "profile-names.json" "profiles list";
-
-      profile-names =
-        __fromJSON (__readFile profile-names-json);
-
       mkProfile =
         profileName:
         pkgs.callPackage ./profiles
@@ -129,7 +129,7 @@ in {
 
   inherit workbench' workbench runWorkbench runWorkbenchJqOnly;
 
-  inherit with-profile;
+  inherit profile-names profile-names-json with-profile;
 
   inherit run-analysis;
 }
