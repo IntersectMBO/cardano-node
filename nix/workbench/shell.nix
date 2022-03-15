@@ -1,4 +1,5 @@
-{ workbenchDevMode ? false
+{ lib
+, workbenchDevMode ? false
 , useCabalRun ? false
 , checkoutWbMode ? "unknown"
 }:

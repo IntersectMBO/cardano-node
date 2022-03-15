@@ -233,7 +233,7 @@
             workbench-ci-test =
               (pkgs.supervisord-workbench-for-profile
                 { workbench   = pinned-workbench;
-                  profileName = "ci-alzo"; }
+                  profileName = "k6-600slots-1000kU-1000kD-64kbs-10tps-fixed-loaded-alzo"; }
               ).profile-run {};
             workbench-smoke-analysis = workbench-smoke-test.analysis;
             workbench-ci-analysis    = workbench-ci-test.analysis;

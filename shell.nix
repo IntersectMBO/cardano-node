@@ -47,7 +47,7 @@ let
   haveGlibcLocales = pkgs.glibcLocales != null && stdenv.hostPlatform.libc == "glibc";
 
   shell =
-    let cluster = pkgs.workbench-supervisord
+    let cluster = pkgs.supervisord-workbench-for-profile
       { inherit profileName;
         useCabalRun = true;
       };
@@ -102,7 +102,8 @@ let
     shellHook = ''
       echo 'nix-shell top-level shellHook:  withHoogle=${toString withHoogle} profileName=${profileName} autoStartCluster=${toString autoStartCluster} workbenchDevMode=${toString workbenchDevMode}'
 
-      ${(import ./nix/workbench/shell.nix { inherit workbenchDevMode useCabalRun; }).shellHook}
+      ${with customConfig.localCluster;
+        (import ./nix/workbench/shell.nix { inherit lib workbenchDevMode; useCabalRun = true; }).shellHook}
 
       ${lib.optionalString autoStartCluster ''
       function atexit() {
@@ -128,7 +129,7 @@ let
   };
 
   devops =
-    let cluster = pkgs.workbench-supervisord
+    let cluster = pkgs.supervisord-workbench-for-profile
       { profileName = "devops-alzo";
         useCabalRun = false;
       };
@@ -165,7 +166,8 @@ let
 
       wb explain-mode
 
-      ${(import ./nix/workbench/shell.nix { inherit workbenchDevMode useCabalRun; }).shellHook}
+      ${with customConfig.localCluster;
+        (import ./nix/workbench/shell.nix { inherit lib workbenchDevMode; useCabalRun = false; }).shellHook}
 
       # Socket path default to first node launched by "start-cluster":
       export CARDANO_NODE_SOCKET_PATH=$(wb backend get-node-socket-path ${cluster.stateDir})

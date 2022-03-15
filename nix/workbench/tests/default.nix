@@ -1,9 +1,9 @@
 { pkgs
 }: let
-  inherit (pkgs) workbench-supervisord cardano-cli cardanolib-py cardano-node;
+  inherit (pkgs) supervisord-workbench-for-profile cardano-cli cardanolib-py cardano-node;
   stateDir = "./state-cluster-test";
   # We want a really short duration for tests
-  cluster' = workbench-supervisord {
+  cluster' = supervisord-workbench-for-profile {
     genesisParams = {
       slotLength = 0.1;
       decentralisationParam = 0.8;
