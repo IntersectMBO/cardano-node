@@ -1,13 +1,13 @@
-{-# LANGUAGE DeriveAnyClass             #-}
-{-# LANGUAGE DeriveGeneric              #-}
-{-# LANGUAGE DerivingVia                #-}
-{-# LANGUAGE FlexibleContexts           #-}
-{-# LANGUAGE FlexibleInstances          #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE LambdaCase                 #-}
-{-# LANGUAGE OverloadedStrings          #-}
-{-# LANGUAGE StandaloneDeriving         #-}
-{-# LANGUAGE TypeFamilies               #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Examples.TestObjects (
     traceForgeEventDocu
@@ -23,7 +23,7 @@ module Examples.TestObjects (
 
 import           Cardano.Logging
 import qualified Data.Aeson as AE
-import qualified Data.HashMap.Strict as HM
+import qualified Data.Aeson.KeyMap as KeyMap
 import           Data.Kind (Type)
 import           Data.Text (pack)
 import           Data.Word (Word64)
@@ -120,19 +120,19 @@ instance LogFormatting (TraceForgeEvent LogBlock) where
       (unSlotNo currentSlot)
 
   forMachine _verb (TraceStartLeadershipCheck slotNo) =
-    HM.fromList
+    KeyMap.fromList
       [ "kind" AE..= AE.String "TraceStartLeadershipCheck"
       , "slot" AE..= AE.toJSON (unSlotNo slotNo)
       ]
   forMachine _verb (TraceSlotIsImmutable slotNo tipPoint tipBlkNo) =
-    HM.fromList
+    KeyMap.fromList
       [ "kind" AE..= AE.String "TraceSlotIsImmutable"
       , "slot" AE..= AE.toJSON (unSlotNo slotNo)
       , "tip" AE..= showT tipPoint
       , "tipBlockNo" AE..= AE.toJSON (unBlockNo tipBlkNo)
       ]
   forMachine _verb (TraceBlockFromFuture currentSlot tip) =
-    HM.fromList
+    KeyMap.fromList
       [ "kind" AE..= AE.String "TraceBlockFromFuture"
       , "current slot" AE..= AE.toJSON (unSlotNo currentSlot)
       , "tip" AE..= AE.toJSON (unSlotNo tip)

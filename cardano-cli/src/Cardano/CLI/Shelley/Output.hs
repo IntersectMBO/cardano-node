@@ -26,6 +26,7 @@ import           Data.Word
 import           Cardano.CLI.Shelley.Orphans ()
 import           Cardano.Ledger.Shelley.Scripts ()
 import           Cardano.Slotting.Time (SystemStart (..))
+import qualified Data.Aeson.Key as Aeson
 
 data QueryKesPeriodInfoOutput =
   QueryKesPeriodInfoOutput
@@ -85,11 +86,11 @@ data QueryTipLocalStateOutput = QueryTipLocalStateOutput
   } deriving Show
 
 -- | A key-value pair difference list for encoding a JSON object.
-(..=) :: (KeyValue kv, ToJSON v) => Text -> v -> [kv] -> [kv]
+(..=) :: (KeyValue kv, ToJSON v) => Aeson.Key -> v -> [kv] -> [kv]
 (..=) n v = (n .= v:)
 
 -- | A key-value pair difference list for encoding a JSON object where Nothing encodes absence of the key-value pair.
-(..=?) :: (KeyValue kv, ToJSON v) => Text -> Maybe v -> [kv] -> [kv]
+(..=?) :: (KeyValue kv, ToJSON v) => Aeson.Key -> Maybe v -> [kv] -> [kv]
 (..=?) n mv = case mv of
   Just v -> (n .= v:)
   Nothing -> id
@@ -214,4 +215,3 @@ renderScriptCosts eUnitPrices scriptMapping executionCostMapping =
             Left err -> Left (PlutusScriptCostErrExecError sWitInd scriptHash err) : accum
         Nothing -> Left (PlutusScriptCostErrPlutusScriptNotFound sWitInd) : accum
     ) [] executionCostMapping
-

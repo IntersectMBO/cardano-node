@@ -239,7 +239,7 @@ testnet testnetOptions H.Conf {..} = do
     sprocket <- H.noteShow $ Sprocket tempBaseAbsPath (socketDir </> "node-" <> si)
     _spocketSystemNameFile <- H.noteShow $ IO.sprocketSystemName sprocket
     -- TODO: Better error message need to indicate a sprocket was not created
-    H.waitByDeadlineM deadline $ H.doesSprocketExist sprocket
+    H.assertByDeadlineM deadline $ H.doesSprocketExist sprocket
 
   forM_ nodeIndexes $ \i -> do
     si <- H.noteShow $ show @Int i

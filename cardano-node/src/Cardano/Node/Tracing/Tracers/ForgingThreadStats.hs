@@ -47,7 +47,7 @@ instance LogFormatting ForgeThreadStats where
     <> " slots missed "   <> showT ftsSlotsMissedNum
     <> " last slot "      <> showT ftsLastSlot
   forMachine _dtal ForgeThreadStats {..} =
-    mkObject [ "kind" .= String "ForgeThreadStats"
+    mconcat [ "kind" .= String "ForgeThreadStats"
              , "nodeCannotForgeNum" .= String (show ftsNodeCannotForgeNum)
              , "nodeIsLeaderNum"    .= String (show ftsNodeIsLeaderNum)
              , "blocksForgedNum"    .= String (show ftsBlocksForgedNum)
@@ -107,7 +107,7 @@ instance LogFormatting ForgingStats where
     <> " blocks forged "  <> showT fsBlocksForgedNum
     <> " slots missed "   <> showT fsSlotsMissedNum
   forMachine _dtal ForgingStats {..} =
-    mkObject [ "kind" .= String "ForgingStats"
+    mconcat [ "kind" .= String "ForgingStats"
              , "nodeCannotForgeNum" .= String (show fsNodeCannotForgeNum)
              , "nodeIsLeaderNum"    .= String (show fsNodeIsLeaderNum)
              , "blocksForgedNum"    .= String (show fsBlocksForgedNum)

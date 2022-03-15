@@ -30,6 +30,7 @@ import           Cardano.Ledger.Crypto (Crypto)
 import qualified Cardano.Ledger.Shelley.API as Shelley
 
 import           Cardano.CLI.Helpers (textShow)
+import qualified Data.Aeson.Key as Aeson
 
 yamlConfig :: Yaml.Config
 yamlConfig = Yaml.defConfig & setConfCompare compare
@@ -305,7 +306,7 @@ friendlyValue v =
     [ case bundle of
         ValueNestedBundleAda q -> "lovelace" .= q
         ValueNestedBundle policy assets ->
-          friendlyPolicyId policy .= friendlyAssets assets
+          Aeson.fromText (friendlyPolicyId policy) .= friendlyAssets assets
     | bundle <- bundles
     ]
   where

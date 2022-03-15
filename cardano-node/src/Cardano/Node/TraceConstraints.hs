@@ -15,7 +15,7 @@ import           Cardano.Node.Queries (ConvertTxId, GetKESInfo (..),
 import           Cardano.Ledger.Alonzo (AlonzoEra)
 import           Cardano.Ledger.Alonzo.Rules.Bbody (AlonzoBbodyPredFail)
 import           Cardano.Ledger.Alonzo.Rules.Utxo (UtxoPredicateFailure)
-import           Cardano.Ledger.Alonzo.Rules.Utxow (AlonzoPredFail)
+import           Cardano.Ledger.Alonzo.Rules.Utxow (UtxowPredicateFail)
 import           Cardano.Ledger.Crypto (StandardCrypto)
 
 import           Ouroboros.Consensus.Block (BlockProtocol, CannotForge,
@@ -58,7 +58,7 @@ type TraceConstraints blk =
     , ToObject (ForgeStateUpdateError blk)
     , ToObject (UtxoPredicateFailure (AlonzoEra StandardCrypto))
     , ToObject (AlonzoBbodyPredFail (AlonzoEra StandardCrypto))
-    , ToObject (AlonzoPredFail (AlonzoEra StandardCrypto))
+    , ToObject (UtxowPredicateFail (AlonzoEra StandardCrypto))
 
     , LogFormatting (LedgerUpdate blk)
     , LogFormatting (LedgerWarning blk)
@@ -73,5 +73,5 @@ type TraceConstraints blk =
     , LogFormatting (ForgeStateUpdateError blk)
     , LogFormatting (UtxoPredicateFailure (AlonzoEra StandardCrypto))
     , LogFormatting (AlonzoBbodyPredFail (AlonzoEra StandardCrypto))
-    , LogFormatting (AlonzoPredFail (AlonzoEra StandardCrypto))
+    , LogFormatting (UtxowPredicateFail (AlonzoEra StandardCrypto))
     )

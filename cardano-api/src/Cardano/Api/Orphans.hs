@@ -19,8 +19,6 @@ import qualified Data.Aeson as Aeson
 import           Data.Aeson.Types (ToJSONKey (..), toJSONKeyText)
 import           Data.BiMap (BiMap (..), Bimap)
 import qualified Data.ByteString.Base16 as B16
-import           Data.Compact.SplitMap
-import qualified Data.Compact.SplitMap as SplitMap
 import           Data.Compact.VMap (VB, VMap, VP)
 import qualified Data.Compact.VMap as VMap
 import qualified Data.Map.Strict as Map
@@ -222,8 +220,6 @@ instance Crypto.Crypto crypto => ToJSON (Shelley.PState crypto) where
                          , "fPParams pState" .= Shelley._fPParams pState
                          , "retiring pState" .= Shelley._retiring pState
                          ]
-instance (Ord k, ToJSONKey k, ToJSON v) =>  ToJSON (SplitMap k v) where
-  toJSON = toJSON . SplitMap.toMap
 
 instance ( Consensus.ShelleyBasedEra era
          , ToJSON (Core.TxOut era)

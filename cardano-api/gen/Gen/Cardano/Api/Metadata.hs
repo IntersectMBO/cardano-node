@@ -20,6 +20,7 @@ import qualified Data.Text.Encoding as Text
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Internal.Gen as Gen
 import qualified Hedgehog.Range as Range
+import qualified Data.Aeson.Key as Aeson
 
 -- ----------------------------------------------------------------------------
 -- Generators
@@ -30,7 +31,7 @@ genJsonForTxMetadata mapping =
     Gen.sized $ \sz ->
       Aeson.object <$>
       Gen.list (Range.linear 0 (fromIntegral sz))
-               ((,) <$> (Text.pack . show <$> Gen.word64 Range.constantBounded)
+               ((,) <$> (Aeson.fromString . show <$> Gen.word64 Range.constantBounded)
                     <*> genJsonForTxMetadataValue mapping)
 
 genJsonForTxMetadataValue :: TxMetadataJsonSchema -> Gen Aeson.Value
@@ -76,10 +77,13 @@ genJsonForTxMetadataValue TxMetadataJsonNoSchema = genJsonValue
     genJsonList = Gen.sized $ \sz ->
                     Gen.list (Range.linear 0 (fromIntegral sz)) genJsonValue
 
-    genJsonMap :: Gen [(Text, Aeson.Value)]
+    genJsonKey :: Gen Aeson.Key
+    genJsonKey = fmap Aeson.fromText genJsonText
+
+    genJsonMap :: Gen [(Aeson.Key, Aeson.Value)]
     genJsonMap = Gen.sized $ \sz ->
                    Gen.list (Range.linear 0 (fromIntegral sz)) $
-                     (,) <$> genJsonText <*> genJsonValue
+                     (,) <$> genJsonKey <*> genJsonValue
 
 
 genJsonForTxMetadataValue TxMetadataJsonDetailedSchema = genJsonValue

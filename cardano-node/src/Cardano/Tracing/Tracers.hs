@@ -124,6 +124,7 @@ import qualified Cardano.Node.STM as STM
 import qualified Control.Concurrent.STM as STM
 
 import           Cardano.Protocol.TPraos.OCert (KESPeriod (..))
+import qualified Data.Aeson.KeyMap as KeyMap
 
 {- HLINT ignore "Redundant bracket" -}
 {- HLINT ignore "Use record patterns" -}
@@ -940,7 +941,7 @@ traceLeadershipChecks _ft nodeKern _tverb tr = Tracer $
                 traceCounter "delegMapSize" tr delegMapSize
         traceNamedObject (appendName "LeadershipCheck" tr)
           ( meta
-          , LogStructured $ Map.fromList $
+          , LogStructured $ KeyMap.fromList $
             [("kind", String "TraceStartLeadershipCheck")
             ,("credentials", String creds)
             ,("slot", toJSON $ unSlotNo slot)]

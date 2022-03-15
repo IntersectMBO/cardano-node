@@ -42,7 +42,7 @@ severityReplayBlockStats _ = Info
 
 instance LogFormatting ReplayBlockStats where
   forMachine _dtal ReplayBlockStats {..} =
-    mkObject
+    mconcat
       [ "kind" .= String "ReplayBlockStats"
       , "progress" .= String (pack $ show rpsProgress)
       ]
