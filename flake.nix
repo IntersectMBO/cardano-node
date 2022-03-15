@@ -37,8 +37,10 @@
       url = "github:input-output-hk/cardano-node/1.33.0";
       flake = false;
     };
+
+    ## This pin is to prevent workbench-produced geneses being regenerated each time the node is bumped.
     cardano-node-workbench = {
-      url = "github:input-output-hk/cardano-node/workbench-genesis";
+      url = "github:input-output-hk/cardano-node/ae35d4c7ae6482397c8444566f25ef0fabb03b18";
       flake = false;
     };
   };
@@ -116,7 +118,7 @@
             gitrev = plutus-example.rev;
           }).haskellPackages.plutus-example.components.exes) plutus-example;
           pinned-workbench =
-            (import cardano-node-workbench {}).workbench;
+            (import cardano-node-workbench {}).workbench.x86_64-linux;
           hsPkgsWithPassthru = lib.mapAttrsRecursiveCond (v: !(lib.isDerivation v))
             (path: value:
               if (lib.isAttrs value) then
@@ -225,12 +227,12 @@
             snapshot = membench.outputs.packages.x86_64-linux.snapshot;
             workbench-smoke-test =
               (pkgs.supervisord-workbench-for-profile
-                { # workbench   = pinned-workbench;
+                { workbench   = pinned-workbench;
                   profileName = "smoke-alzo"; }
               ).profile-run { trace = true; };
             workbench-ci-test =
               (pkgs.supervisord-workbench-for-profile
-                { # workbench   = pinned-workbench;
+                { workbench   = pinned-workbench;
                   profileName = "ci-alzo"; }
               ).profile-run {};
             workbench-smoke-analysis = workbench-smoke-test.analysis;

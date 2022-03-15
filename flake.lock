@@ -315,6 +315,8 @@
         "iohkNix": "iohkNix_2",
         "membench": "membench_2",
         "nixpkgs": [
+          "membench",
+          "cardano-node-snapshot",
           "haskellNix",
           "nixpkgs-2105"
         ],
@@ -343,6 +345,10 @@
         "iohkNix": "iohkNix_3",
         "membench": "membench_3",
         "nixpkgs": [
+          "membench",
+          "cardano-node-snapshot",
+          "membench",
+          "cardano-node-snapshot",
           "haskellNix",
           "nixpkgs-2105"
         ],
@@ -366,17 +372,17 @@
     "cardano-node-workbench": {
       "flake": false,
       "locked": {
-        "lastModified": 1647276204,
-        "narHash": "sha256-m3Tx4Jk16opPbz3ndjIoyHF3emEc7t51huollBVtM/g=",
+        "lastModified": 1647438923,
+        "narHash": "sha256-jw9OrQ8LeYHri2GJDtfZO+Lh/YvVNbfto56WIxd+rB0=",
         "owner": "input-output-hk",
         "repo": "cardano-node",
-        "rev": "d75c30d270f0763eedf95f4456ffe8f1689ce001",
+        "rev": "ae35d4c7ae6482397c8444566f25ef0fabb03b18",
         "type": "github"
       },
       "original": {
         "owner": "input-output-hk",
-        "ref": "workbench-genesis",
         "repo": "cardano-node",
+        "rev": "ae35d4c7ae6482397c8444566f25ef0fabb03b18",
         "type": "github"
       }
     },
