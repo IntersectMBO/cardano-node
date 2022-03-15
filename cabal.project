@@ -1,3 +1,4 @@
+-- run `nix flake lock --update-input hackageNix` after updating index-state.
 index-state: 2022-02-18T00:00:00Z
 
 packages:

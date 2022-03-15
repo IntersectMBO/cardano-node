@@ -3,9 +3,7 @@
 
   inputs = {
     # IMPORTANT: report any change to nixpkgs channel in nix/default.nix:
-    nixpkgs = {
-      url = "github:nixos/nixpkgs.nix";
-    };
+    nixpkgs.follows = "haskellNix/nixpkgs-unstable";
     hostNixpkgs.follows = "nixpkgs";
     hackageNix = {
       url = "github:input-output-hk/hackage.nix";
@@ -19,7 +17,6 @@
       url = "github:input-output-hk/haskell.nix";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.hackage.follows = "hackageNix";
-      inputs.nix-tools.follows = "nixTools";
     };
     utils.url = "github:numtide/flake-utils";
     iohkNix = {
