@@ -34,6 +34,7 @@ import           Cardano.Ledger.Crypto (StandardCrypto)
 import           Cardano.Slotting.Block (BlockNo (..))
 import           Cardano.Tracing.OrphanInstances.Common
 import           Cardano.Tracing.OrphanInstances.Consensus ()
+import           Cardano.Tracing.Render (renderTxId)
 
 import           Ouroboros.Consensus.Ledger.SupportsMempool (txId)
 import qualified Ouroboros.Consensus.Ledger.SupportsMempool as SupportsMempool
@@ -41,10 +42,10 @@ import           Ouroboros.Consensus.Util.Condense (condense)
 import           Ouroboros.Network.Block (SlotNo (..), blockHash, blockNo, blockSlot)
 import           Ouroboros.Network.Point (WithOrigin, withOriginToMaybe)
 
+import qualified Ouroboros.Consensus.Protocol.Ledger.HotKey as HotKey
+import           Ouroboros.Consensus.Protocol.TPraos (TPraosCannotForge (..))
 import           Ouroboros.Consensus.Shelley.Ledger hiding (TxId)
 import           Ouroboros.Consensus.Shelley.Ledger.Inspect
-import           Ouroboros.Consensus.Shelley.Protocol (TPraosCannotForge (..))
-import qualified Ouroboros.Consensus.Shelley.Protocol.HotKey as HotKey
 
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import           Cardano.Ledger.Alonzo as Alonzo
@@ -54,43 +55,49 @@ import qualified Cardano.Ledger.Alonzo.Rules.Utxo as Alonzo
 import qualified Cardano.Ledger.Alonzo.Rules.Utxos as Alonzo
 import           Cardano.Ledger.Alonzo.Rules.Utxow (AlonzoPredFail (..))
 import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
+import qualified Cardano.Ledger.Alonzo.TxInfo as Alonzo
 import qualified Cardano.Ledger.AuxiliaryData as Core
 import           Cardano.Ledger.BaseTypes (strictMaybeToMaybe)
+import           Cardano.Ledger.Chain
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Core as Ledger
 import qualified Cardano.Ledger.Crypto as Core
+import qualified Cardano.Ledger.Era as Ledger
 import qualified Cardano.Ledger.SafeHash as SafeHash
 import qualified Cardano.Ledger.ShelleyMA.Rules.Utxo as MA
 import qualified Cardano.Ledger.ShelleyMA.Timelocks as MA
-
+import           Cardano.Protocol.TPraos.BHeader (LastAppliedBlock, labBlockNo)
+import           Cardano.Protocol.TPraos.Rules.OCert
+import           Cardano.Protocol.TPraos.Rules.Overlay
+import           Cardano.Protocol.TPraos.Rules.Tickn
+import           Cardano.Protocol.TPraos.Rules.Updn
 
 -- TODO: this should be exposed via Cardano.Api
-import           Shelley.Spec.Ledger.API hiding (ShelleyBasedEra)
-import           Shelley.Spec.Ledger.BlockChain (LastAppliedBlock (..))
+import           Cardano.Ledger.Shelley.API hiding (ShelleyBasedEra)
 
-import           Shelley.Spec.Ledger.STS.Bbody
-import           Shelley.Spec.Ledger.STS.Chain
-import           Shelley.Spec.Ledger.STS.Deleg
-import           Shelley.Spec.Ledger.STS.Delegs
-import           Shelley.Spec.Ledger.STS.Delpl
-import           Shelley.Spec.Ledger.STS.Epoch
-import           Shelley.Spec.Ledger.STS.Ledger
-import           Shelley.Spec.Ledger.STS.Ledgers
-import           Shelley.Spec.Ledger.STS.Mir
-import           Shelley.Spec.Ledger.STS.NewEpoch
-import           Shelley.Spec.Ledger.STS.Newpp
-import           Shelley.Spec.Ledger.STS.Ocert
-import           Shelley.Spec.Ledger.STS.Overlay
-import           Shelley.Spec.Ledger.STS.Pool
-import           Shelley.Spec.Ledger.STS.PoolReap
-import           Shelley.Spec.Ledger.STS.Ppup
-import           Shelley.Spec.Ledger.STS.Rupd
-import           Shelley.Spec.Ledger.STS.Snap
-import           Shelley.Spec.Ledger.STS.Tick
-import           Shelley.Spec.Ledger.STS.Updn
-import           Shelley.Spec.Ledger.STS.Upec
-import           Shelley.Spec.Ledger.STS.Utxo
-import           Shelley.Spec.Ledger.STS.Utxow
+import           Cardano.Ledger.Shelley.Rules.Bbody
+import           Cardano.Ledger.Shelley.Rules.Deleg
+import           Cardano.Ledger.Shelley.Rules.Delegs
+import           Cardano.Ledger.Shelley.Rules.Delpl
+import           Cardano.Ledger.Shelley.Rules.Epoch
+import           Cardano.Ledger.Shelley.Rules.Ledger
+import           Cardano.Ledger.Shelley.Rules.Ledgers
+import           Cardano.Ledger.Shelley.Rules.Mir
+import           Cardano.Ledger.Shelley.Rules.NewEpoch
+import           Cardano.Ledger.Shelley.Rules.Newpp
+import           Cardano.Ledger.Shelley.Rules.Pool
+import           Cardano.Ledger.Shelley.Rules.PoolReap
+import           Cardano.Ledger.Shelley.Rules.Ppup
+import           Cardano.Ledger.Shelley.Rules.Rupd
+import           Cardano.Ledger.Shelley.Rules.Snap
+import           Cardano.Ledger.Shelley.Rules.Tick
+import           Cardano.Ledger.Shelley.Rules.Upec
+import           Cardano.Ledger.Shelley.Rules.Utxo
+import           Cardano.Ledger.Shelley.Rules.Utxow
+import           Cardano.Protocol.TPraos.API (ChainTransitionError (ChainTransitionError))
+import           Cardano.Protocol.TPraos.OCert (KESPeriod (KESPeriod))
+import           Cardano.Protocol.TPraos.Rules.Prtcl
+
 
 {- HLINT ignore "Use :" -}
 
@@ -100,13 +107,10 @@ import           Shelley.Spec.Ledger.STS.Utxow
 -- NOTE: this list is sorted in roughly topological order.
 
 instance ShelleyBasedEra era => ToObject (GenTx (ShelleyBlock era)) where
-  toObject verb tx =
-    mkObject $
-        [ "txid" .= txId tx ]
-     ++ [ "tx"   .= condense tx | verb == MaximalVerbosity ]
+  toObject _ tx = mkObject [ "txid" .= Text.take 8 (renderTxId (txId tx)) ]
 
 instance ToJSON (SupportsMempool.TxId (GenTx (ShelleyBlock era))) where
-  toJSON i = toJSON (condense i)
+  toJSON = String . Text.take 8 . renderTxId
 
 instance ShelleyBasedEra era => ToObject (Header (ShelleyBlock era)) where
   toObject _verb b = mkObject
@@ -125,7 +129,7 @@ instance ( ShelleyBasedEra era
   toObject verb (ApplyTxError predicateFailures) =
     HMS.unions $ map (toObject verb) predicateFailures
 
-instance ToObject (TPraosCannotForge era) where
+instance Core.Crypto crypto => ToObject (TPraosCannotForge crypto) where
   toObject _verb (TPraosCannotForgeKeyNotUsableYet wallClockPeriod keyStartPeriod) =
     mkObject
       [ "kind" .= String "TPraosCannotForgeKeyNotUsableYet"
@@ -182,7 +186,7 @@ instance ( ShelleyBasedEra era
              , "updates" .= map (toObject verb) updates
              ]
 
-instance ToJSON (Ledger.PParamsDelta era)
+instance (Ledger.Era era, ToJSON (Ledger.PParamsDelta era))
          => ToObject (ProtocolUpdate era) where
   toObject verb ProtocolUpdate{protocolUpdateProposal, protocolUpdateState} =
     mkObject [ "proposal" .= toObject verb protocolUpdateProposal
@@ -197,7 +201,7 @@ instance ToJSON (Ledger.PParamsDelta era)
              , "epoch"   .= proposalEpoch
              ]
 
-instance ToObject (UpdateState crypto) where
+instance Core.Crypto crypto => ToObject (UpdateState crypto) where
   toObject _verb UpdateState{proposalVotes, proposalReachedQuorum} =
     mkObject [ "proposal"      .= proposalVotes
              , "reachedQuorum" .= proposalReachedQuorum
@@ -209,12 +213,7 @@ instance Core.Crypto crypto => ToObject (ChainTransitionError crypto) where
              , "failures" .= map (toObject verb) fs
              ]
 
-instance ( ShelleyBasedEra era
-         , ToObject (PredicateFailure (Core.EraRule "UTXOW" era))
-         , ToObject (PredicateFailure (Core.EraRule "BBODY" era))
-         , ToObject (PredicateFailure (Core.EraRule "TICK" era))
-         , ToObject (PredicateFailure (Core.EraRule "TICKN" era))
-         ) => ToObject (ChainPredicateFailure era) where
+instance ToObject ChainPredicateFailure where
   toObject _verb (HeaderSizeTooLargeCHAIN hdrSz maxHdrSz) =
     mkObject [ "kind" .= String "HeaderSizeTooLarge"
              , "headerSize" .= hdrSz
@@ -236,11 +235,6 @@ instance ( ShelleyBasedEra era
                       \understand the new major protocol version. This node \
                       \must be upgraded before it can continue with the new \
                       \protocol version."
-  toObject verb (BbodyFailure f) = toObject verb f
-  toObject verb (TickFailure  f) = toObject verb f
-  toObject verb (TicknFailure  f) = toObject verb f
-  toObject verb (PrtclFailure f) = toObject verb f
-  toObject verb (PrtclSeqFailure f) = toObject verb f
 
 instance ToObject (PrtlSeqFailure crypto) where
   toObject _verb (WrongSlotIntervalPrtclSeq (SlotNo lastSlot) (SlotNo currSlot)) =
@@ -298,9 +292,9 @@ instance ( ShelleyBasedEra era
 instance ToObject (AlonzoPredFail (Alonzo.AlonzoEra StandardCrypto)) where
   toObject v (WrappedShelleyEraFailure utxoPredFail) =
     toObject v utxoPredFail
-  toObject _ (UnRedeemableScripts scripts) =
-    mkObject [ "kind" .= String "UnRedeemableScripts"
-             , "scripts" .= renderUnredeemableScripts scripts
+  toObject _ (MissingRedeemers scripts) =
+    mkObject [ "kind" .= String "MissingRedeemers"
+             , "scripts" .= renderMissingRedeemers scripts
              ]
   toObject _ (MissingRequiredDatums required received) =
     mkObject [ "kind" .= String "MissingRequiredDatums"
@@ -311,8 +305,8 @@ instance ToObject (AlonzoPredFail (Alonzo.AlonzoEra StandardCrypto)) where
              ]
   toObject _ (PPViewHashesDontMatch ppHashInTxBody ppHashFromPParams) =
     mkObject [ "kind" .= String "PPViewHashesDontMatch"
-             , "fromTxBody" .= renderWitnessPPDataHash (strictMaybeToMaybe ppHashInTxBody)
-             , "fromPParams" .= renderWitnessPPDataHash (strictMaybeToMaybe ppHashFromPParams)
+             , "fromTxBody" .= renderScriptIntegrityHash (strictMaybeToMaybe ppHashInTxBody)
+             , "fromPParams" .= renderScriptIntegrityHash (strictMaybeToMaybe ppHashFromPParams)
              ]
   toObject _ (MissingRequiredSigners missingKeyWitnesses) =
     mkObject [ "kind" .= String "MissingRequiredSigners"
@@ -322,17 +316,26 @@ instance ToObject (AlonzoPredFail (Alonzo.AlonzoEra StandardCrypto)) where
     mkObject [ "kind" .= String "MissingRequiredSigners"
              , "txins" .= Set.toList txins
              ]
+  toObject _ (NonOutputSupplimentaryDatums disallowed acceptable) =
+    mkObject [ "kind" .= String "NonOutputSupplimentaryDatums"
+             , "disallowed" .= Set.toList disallowed
+             , "acceptable" .= Set.toList acceptable
+             ]
+  toObject _ (ExtraRedeemers rdmrs) =
+    mkObject [ "kind" .= String "ExtraRedeemers"
+             , "rdmrs" .= map (Api.renderScriptWitnessIndex . Api.fromAlonzoRdmrPtr) rdmrs
+             ]
 
-renderWitnessPPDataHash :: Maybe (Alonzo.WitnessPPDataHash StandardCrypto) -> Aeson.Value
-renderWitnessPPDataHash (Just witPPDataHash) =
+renderScriptIntegrityHash :: Maybe (Alonzo.ScriptIntegrityHash StandardCrypto) -> Aeson.Value
+renderScriptIntegrityHash (Just witPPDataHash) =
   Aeson.String . Crypto.hashToTextAsHex $ SafeHash.extractHash witPPDataHash
-renderWitnessPPDataHash Nothing = Aeson.Null
+renderScriptIntegrityHash Nothing = Aeson.Null
 
 renderScriptHash :: ScriptHash StandardCrypto -> Text
 renderScriptHash = Api.serialiseToRawBytesHexText . Api.fromShelleyScriptHash
 
-renderUnredeemableScripts :: [(Alonzo.ScriptPurpose StandardCrypto, ScriptHash StandardCrypto)] -> Aeson.Value
-renderUnredeemableScripts scripts = Aeson.object $ map renderTuple  scripts
+renderMissingRedeemers :: [(Alonzo.ScriptPurpose StandardCrypto, ScriptHash StandardCrypto)] -> Aeson.Value
+renderMissingRedeemers scripts = Aeson.object $ map renderTuple  scripts
  where
   renderTuple :: (Alonzo.ScriptPurpose StandardCrypto, ScriptHash StandardCrypto) -> Aeson.Pair
   renderTuple (scriptPurpose, sHash) =  renderScriptHash sHash .= renderScriptPurpose scriptPurpose
@@ -351,6 +354,10 @@ instance ( ShelleyBasedEra era
          , ToObject (PredicateFailure (UTXO era))
          , ToObject (PredicateFailure (Core.EraRule "UTXO" era))
          ) => ToObject (UtxowPredicateFailure era) where
+  toObject _verb (ExtraneousScriptWitnessesUTXOW extraneousScripts) =
+    mkObject [ "kind" .= String "InvalidWitnessesUTXOW"
+             , "extraneousScripts" .= extraneousScripts
+             ]
   toObject _verb (InvalidWitnessesUTXOW wits') =
     mkObject [ "kind" .= String "InvalidWitnessesUTXOW"
              , "invalidWitnesses" .= map textShow wits'
@@ -445,6 +452,7 @@ instance ( ShelleyBasedEra era
              , "addrs"   .= addrs
              ]
 
+
 instance ToJSON MA.ValidityInterval where
   toJSON vi =
     Aeson.object $
@@ -524,7 +532,7 @@ renderValueNotConservedErr :: Show val => val -> val -> Aeson.Value
 renderValueNotConservedErr consumed produced = String $
     "This transaction consumed " <> show consumed <> " but produced " <> show produced
 
-instance ToObject (PpupPredicateFailure era) where
+instance Ledger.Era era => ToObject (PpupPredicateFailure era) where
   toObject _verb (NonGenesisUpdatePPUP proposalKeys genesisKeys) =
     mkObject [ "kind" .= String "NonGenesisUpdatePPUP"
              , "keys" .= proposalKeys Set.\\ genesisKeys ]
@@ -560,7 +568,7 @@ instance ( ToObject (PredicateFailure (Core.EraRule "POOL" era))
   toObject verb (PoolFailure f) = toObject verb f
   toObject verb (DelegFailure f) = toObject verb f
 
-instance ToObject (DelegPredicateFailure era) where
+instance Ledger.Era era => ToObject (DelegPredicateFailure era) where
   toObject _verb (StakeKeyAlreadyRegisteredDELEG alreadyRegistered) =
     mkObject [ "kind" .= String "StakeKeyAlreadyRegisteredDELEG"
              , "credential" .= String (textShow alreadyRegistered)
@@ -631,7 +639,14 @@ instance ToObject (DelegPredicateFailure era) where
   toObject _verb MIRProducesNegativeUpdate =
     mkObject [ "kind" .= String "MIRProducesNegativeUpdate"
              ]
-
+  toObject _verb (MIRNegativeTransfer pot coin) =
+    mkObject [ "kind" .= String "MIRNegativeTransfer"
+             , "error" .= String "Attempt to transfer a negative amount from a pot."
+             , "pot" .= String (case pot of
+                                  ReservesMIR -> "Reserves"
+                                  TreasuryMIR -> "Treasury")
+             , "amount" .= coin
+             ]
 
 instance ToObject (PoolPredicateFailure era) where
   toObject _verb (StakePoolNotRegisteredOnKeyPOOL (KeyHash unregStakePool)) =
@@ -650,6 +665,12 @@ instance ToObject (PoolPredicateFailure era) where
              , "certificateCost" .= String (textShow certCost)
              , "protocolParCost" .= String (textShow protCost)
              , "error" .= String "The stake pool cost is too low"
+             ]
+  toObject _verb (PoolMedataHashTooBig poolID hashSize) =
+    mkObject [ "kind" .= String "PoolMedataHashTooBig"
+             , "poolID" .= String (textShow poolID)
+             , "hashSize" .= String (textShow hashSize)
+             , "error" .= String "The stake pool metadata hash is too large"
              ]
 
 -- Apparently this should never happen according to the Shelley exec spec
@@ -940,9 +961,10 @@ instance ToObject (Alonzo.UtxoPredicateFailure (Alonzo.AlonzoEra StandardCrypto)
     mkObject [ "kind" .= String "NoCollateralInputs" ]
 
 instance ToObject (Alonzo.UtxosPredicateFailure (AlonzoEra StandardCrypto)) where
-  toObject _ (Alonzo.ValidationTagMismatch isValidating) =
+  toObject _ (Alonzo.ValidationTagMismatch isValidating reason) =
     mkObject [ "kind" .= String "ValidationTagMismatch"
              , "isvalidating" .= isValidating
+             , "reason" .= reason
              ]
   toObject _ (Alonzo.CollectErrors errors) =
     mkObject [ "kind" .= String "CollectErrors"
@@ -951,7 +973,7 @@ instance ToObject (Alonzo.UtxosPredicateFailure (AlonzoEra StandardCrypto)) wher
   toObject verb (Alonzo.UpdateFailure pFailure) =
     toObject verb pFailure
 
-deriving newtype instance ToJSON Alonzo.IsValidating
+deriving newtype instance ToJSON Alonzo.IsValid
 
 instance ToJSON (Alonzo.CollectError StandardCrypto) where
   toJSON cError =
@@ -974,6 +996,45 @@ instance ToJSON (Alonzo.CollectError StandardCrypto) where
           , "error" .= String "NoCostModel"
           , "language" .= toJSON lang
           ]
+      Alonzo.BadTranslation err ->
+        object
+          [ "kind" .= String "PlutusTranslationError"
+          , "error" .= case err of
+              Alonzo.ByronInputInContext -> String "Byron input in the presence of a plutus script"
+              Alonzo.ByronOutputInContext -> String "Byron output in the presence of a plutus script"
+              Alonzo.TranslationLogicErrorInput -> String "Logic error translating inputs"
+              Alonzo.TranslationLogicErrorRedeemer -> String "Logic error translating redeemers"
+          ]
+
+instance ToJSON Alonzo.TagMismatchDescription where
+  toJSON tmd = case tmd of
+    Alonzo.PassedUnexpectedly ->
+      object
+        [ "kind" .= String "TagMismatchDescription"
+        , "error" .= String "PassedUnexpectedly"
+        ]
+    Alonzo.FailedUnexpectedly forReasons ->
+      object
+        [ "kind" .= String "TagMismatchDescription"
+        , "error" .= String "FailedUnexpectedly"
+        , "reconstruction" .= forReasons
+        ]
+
+instance ToJSON Alonzo.FailureDescription where
+  toJSON f = case f of
+    Alonzo.OnePhaseFailure t ->
+      object
+        [ "kind" .= String "FailureDescription"
+        , "error" .= String "OnePhaseFailure"
+        , "description" .= t
+        ]
+    Alonzo.PlutusFailure t bs ->
+      object
+        [ "kind" .= String "FailureDescription"
+        , "error" .= String "PlutusFailure"
+        , "description" .= t
+        , "reconstructionDetail" .= bs
+        ]
 
 instance ToObject (AlonzoBbodyPredFail (Alonzo.AlonzoEra StandardCrypto)) where
   toObject _ err = mkObject [ "kind" .= String "AlonzoBbodyPredFail"
@@ -996,4 +1057,4 @@ showLastAppBlockNo wOblk =  case withOriginToMaybe wOblk of
 
 deriving newtype instance Core.Crypto crypto => ToJSON (Core.AuxiliaryDataHash crypto)
 
-deriving newtype instance ToJSON (TxId crypto)
+deriving newtype instance Core.Crypto crypto => ToJSON (TxId crypto)

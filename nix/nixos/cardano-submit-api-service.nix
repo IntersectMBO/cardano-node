@@ -4,7 +4,7 @@
 # this service exposes an http port, and connects to a cardano-node over a UNIX socket
 let
   cfg = config.services.cardano-submit-api;
-  inherit (cfg.cardanoNodePkgs) commonLib;
+  inherit (cfg.cardanoNodePackages) cardanoLib;
   envConfig = cfg.environment;
 in {
   options = {
@@ -16,7 +16,7 @@ in {
       };
       package = lib.mkOption {
         type = lib.types.package;
-        default = cfg.cardanoNodePkgs.cardanoNodeHaskellPackages.cardano-submit-api.components.exes.cardano-submit-api;
+        default = cfg.cardanoNodePackages.cardano-submit-api;
       };
       port = lib.mkOption {
         type = lib.types.port;
@@ -29,10 +29,15 @@ in {
       socketPath = lib.mkOption {
         type = lib.types.nullOr lib.types.path;
         default = null;
+        description = ''
+          cardano node socket path. If set, the entrypoint
+          takes this value over CARDANO_NODE_SOCKET_PATH env
+          variable.
+        '';
       };
       config = lib.mkOption {
         type = lib.types.nullOr lib.types.attrs;
-        default = commonLib.defaultExplorerLogConfig;
+        default = cardanoLib.defaultExplorerLogConfig;
       };
       network = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
@@ -41,12 +46,12 @@ in {
       };
       environment = lib.mkOption {
         type = lib.types.nullOr lib.types.attrs;
-        default = commonLib.environments.${cfg.network};
+        default = cfg.cardanoNodePackages.cardanoLib.environments.${cfg.network};
       };
-      cardanoNodePkgs = lib.mkOption {
+      cardanoNodePackages = lib.mkOption {
         type = lib.types.attrs;
-        default = import ../. {};
-        defaultText = "cardano-node pkgs";
+        default = pkgs.cardanoNodePackages or (import ../. {}).cardanoNodePackages;
+        defaultText = "cardano-node packages";
         description = ''
           The cardano-node packages and library that should be used.
           Main usage is sharing optimization:

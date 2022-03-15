@@ -1,0 +1,47 @@
+[
+    { "setNumberOfInputsPerTx": 2 },
+    { "setNumberOfOutputsPerTx": 2 },
+    { "setNumberOfTxs": 3000 },
+    { "setTxAdditionalSize": 39 },
+    { "setFee": 212345 },
+    { "setMinValuePerUTxO": 1000000 },
+    { "setTTL": 1000000 },
+    { "startProtocol": "run/current/node-0/config.json" },
+    { "setEra": "Allegra" },
+    {
+        "setTargets": [
+            { "addr": "127.0.0.1", "port": 30000 },
+            { "addr": "127.0.0.1", "port": 30001 },
+            { "addr": "127.0.0.1", "port": 30002 }
+        ] },
+    { "setLocalSocket": "run/current/node-0/node.socket" },
+    { "readSigningKey": "pass-partout", "filePath": "run/current/genesis/utxo-keys/utxo1.skey" },
+    { "importGenesisFund": "pass-partout", "fundKey": "pass-partout"
+      , "submitMode": { "DumpToFile": "/tmp/tx-list.txt" }
+      , "payMode": { "PayToAddr": "pass-partout" }
+    },
+    { "createChange" : 2200000000000, "count" :       10
+      , "submitMode": { "DumpToFile": "/tmp/tx-list.txt" }
+      , "payMode": { "PayToAddr": "pass-partout" }
+    },
+    { "createChange" :   70000000000, "count" :      300
+      , "submitMode": { "DumpToFile": "/tmp/tx-list.txt" }
+      , "payMode": { "PayToAddr": "pass-partout" }
+    },
+    { "createChange" :    2200000000, "count" :     9000
+      , "submitMode": { "DumpToFile": "/tmp/tx-list.txt" }
+      , "payMode": { "PayToAddr": "pass-partout" }
+    },
+    { "createChange" :      70000000, "count" :   270000
+      , "submitMode": { "DumpToFile": "/tmp/tx-list.txt" }
+      , "payMode": { "PayToAddr": "pass-partout" }
+    },
+    { "createChange" :       2300000, "count" :  8100000
+      , "submitMode": { "DumpToFile": "/tmp/tx-list.txt" }
+      , "payMode": { "PayToAddr": "pass-partout" }
+    },
+    { "runBenchmark": "walletBasedBenchmark", "txCount": 1000000, "tps": 100
+      , "submitMode": { "DumpToFile": "/tmp/submit-list.txt" }
+      , "spendMode" : { "SpendOutput": [] }
+    }
+]

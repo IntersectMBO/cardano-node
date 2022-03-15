@@ -1,8 +1,11 @@
+{-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE RecordWildCards #-}
 
 module Testnet.Conf
   ( Conf(..)
   , mkConf
+
+  , SubmitApiConfig(..)
   ) where
 
 import           Control.Monad
@@ -10,6 +13,7 @@ import           Data.Eq
 import           Data.Function
 import           Data.Int
 import           Data.Maybe
+import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket (..))
 import           System.FilePath.Posix ((</>))
 import           System.IO (FilePath)
 import           Text.Show
@@ -36,6 +40,16 @@ mkConf tempAbsPath maybeMagic = do
   tempRelPath <- H.noteShow $ FP.makeRelative tempBaseAbsPath tempAbsPath
   base <- H.noteShowM H.getProjectBase
   socketDir <- H.noteShow $ tempRelPath </> "socket"
-  logDir <- H.noteTempFile tempAbsPath "/logs"
+  logDir <- H.noteTempFile tempAbsPath "logs"
 
   return $ Conf {..}
+
+data SubmitApiConfig = SubmitApiConfig
+  { tempBaseAbsPath :: FilePath
+  , base :: FilePath
+  , configFile :: FilePath
+  , sprocket  :: Sprocket
+  , testnetMagic :: Int
+  , stdoutFile :: FilePath
+  , stderrFile :: FilePath
+  } deriving (Eq, Show)

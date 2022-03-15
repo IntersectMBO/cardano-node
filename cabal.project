@@ -1,16 +1,22 @@
-index-state: 2021-04-30T00:00:00Z
+index-state: 2021-12-07T00:00:00Z
 
 packages:
     cardano-api
     cardano-cli
     cardano-client-demo
-    cardano-config
+    cardano-git-rev
     cardano-node
+    cardano-node-capi
     cardano-node-chairman
     cardano-submit-api
     cardano-testnet
-    nix/workbench/cardano-topology
+    cardano-tracer
+    bench/cardano-topology
+    bench/locli
     bench/tx-generator
+    trace-dispatcher
+    trace-resources
+    trace-forward
 
 package cardano-api
   ghc-options: -Werror
@@ -18,7 +24,7 @@ package cardano-api
 package cardano-cli
   ghc-options: -Werror
 
-package cardano-config
+package cardano-git-rev
   ghc-options: -Werror
 
 package cardano-node
@@ -27,7 +33,19 @@ package cardano-node
 package cardano-node-chairman
   ghc-options: -Werror
 
+package cardano-testnet
+  ghc-options: -Werror
+
 package tx-generator
+  ghc-options: -Werror
+
+package trace-dispatcher
+  ghc-options: -Werror
+
+package trace-resources
+  ghc-options: -Werror
+
+package cardano-tracer
   ghc-options: -Werror
 
 package cryptonite
@@ -56,9 +74,33 @@ package cardano-node
 package cardano-node-chairman
   tests: True
 
+package cardano-submit-api
+  tests: True
+
+package cardano-testnet
+  tests: True
+
+package trace-resources
+  tests: True
+
+package trace-dispatcher
+  tests: True
+
+package trace-forward
+  tests: True
+
+package cardano-tracer
+  tests: True
+
+package trace-resources
+  tests: True
+
 -- The following is needed because Nix is doing something crazy.
 package byron-spec-ledger
   tests: False
+
+package compact-map
+  ghc-options: -Werror
 
 package iohk-monitoring
   tests: False
@@ -90,7 +132,7 @@ package small-steps-test
 package goblins
   tests: False
 
-package io-sim-classes
+package io-classes
   tests: False
 
 package cardano-ledger-alonzo-test
@@ -103,61 +145,75 @@ package cardano-ledger-alonzo-test
 -- --------------------------- 8< --------------------------
 -- Please do not put any `source-repository-package` clause above this line.
 
+-- Using a fork until our patches can be merged upstream
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/optparse-applicative
+  tag: 7497a29cb998721a9068d5725d49461f2bba0e7a
+  --sha256: 1gvsrg925vynwgqwplgjmp53vj953qyh3wbdf34pw21c8r47w35r
+
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/hedgehog-extras
-  tag: ccb5648ad3c93744f67e244706a7a3e36dcfbab0
-  --sha256: 0p9jgpj9cjkg184y1rswz90sw0nq13rld80fa5s59xcyvsa31p7y
+  tag: edf6945007177a638fbeb8802397f3a6f4e47c14
+  --sha256: 0wc7qzkc7j4ns2rz562h6qrx2f8xyq7yjcb7zidnj7f6j0pcd0i9
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: 27f93e64a7d6aa78bfcd1072f0f5c088c79c99fe
-  --sha256: 0pblaq2jxcacd0iwm36l18kndzgbyb2587d7370ixqc5fv67qb39
+  tag: 41545ba3ac6b3095966316a99883d678b5ab8da8
+  --sha256: 0icq9y3nnl42fz536da84414av36g37894qnyw4rk3qkalksqwir
   subdir:
+    base-deriving-via
     binary
     binary/test
     cardano-crypto-class
     cardano-crypto-praos
     cardano-crypto-tests
+    measures
+    orphans-deriving-via
     slotting
     strict-containers
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-crypto
-  tag: 07397f0e50da97eaa0575d93bee7ac4b2b2576ec
-  --sha256: 06sdx5ndn2g722jhpicmg96vsrys89fl81k8290b3lr6b1b0w4m3
+  tag: f73079303f663e028288f9f4a9e08bcca39a923e
+  --sha256: 1n87i15x54s0cjkh3nsxs4r1x016cdw1fypwmr68936n3xxsjn6q
 
 source-repository-package
   type: git
-  location: https://github.com/input-output-hk/cardano-ledger-specs
-  tag: 60a47ae42b7d465160a310d5d7f125f73d19c705
-  --sha256: 1gvl7a5h8rrspnwa1vk42fy1ns94y8llfsxahxz0ykdap7w6kwmm
+  location: https://github.com/input-output-hk/cardano-ledger
+  tag: 3df3ca8db4d52952cb750e8859b71f0a371323af
+  --sha256: 0jacfhqnj76cyjwdxz05h7rqmdasgxp9skd01f5y61xraz746x21
   subdir:
-    alonzo/impl
-    byron/chain/executable-spec
-    byron/crypto
-    byron/crypto/test
-    byron/ledger/executable-spec
-    byron/ledger/impl
-    byron/ledger/impl/test
-    cardano-ledger-core
-    semantics/executable-spec
-    semantics/small-steps-test
-    shelley/chain-and-ledger/dependencies/non-integer
-    shelley/chain-and-ledger/executable-spec
-    shelley/chain-and-ledger/shelley-spec-ledger-test
-    shelley-ma/impl
-    shelley-ma/shelley-ma-test
---TODO: disabled until it drops its dep on plutus-tx-plugin
---  alonzo/test
+    eras/alonzo/impl
+    eras/alonzo/test-suite
+    eras/byron/chain/executable-spec
+    eras/byron/crypto
+    eras/byron/crypto/test
+    eras/byron/ledger/executable-spec
+    eras/byron/ledger/impl
+    eras/byron/ledger/impl/test
+    eras/shelley/impl
+    eras/shelley/test-suite
+    eras/shelley-ma/impl
+    eras/shelley-ma/test-suite
+    libs/cardano-ledger-core
+    libs/cardano-ledger-pretty
+    libs/cardano-protocol-tpraos
+    libs/cardano-data
+    libs/compact-map
+    libs/set-algebra
+    libs/small-steps
+    libs/small-steps-test
+    libs/non-integral
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-prelude
-  tag: fd773f7a58412131512b9f694ab95653ac430852
-  --sha256: 02jddik1yw0222wd6q0vv10f7y8rdgrlqaiy83ph002f9kjx7mh6
+  tag: bb4ed71ba8e587f672d06edf9d2e376f4b055555
+  --sha256: 00h10l5mmiza9819p9v5q5749nb9pzgi20vpzpy1d34zmh6gf1cj
   subdir:
     cardano-prelude
     cardano-prelude-test
@@ -186,46 +242,64 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/Win32-network
-  tag: 5b3d08c454f425da5cf045fe7865950d7c806691
-  --sha256: 0npyihbaqlih9abdbaj451lm1h0kl5braczy8vn41s3ivbbnvpcw
+  tag: 3825d3abf75f83f406c1f7161883c438dac7277d
+  --sha256: 19wahfv726fa3mqajpqdqhnl9ica3xmf68i254q45iyjcpj1psqx
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: 8a0ff387541a612b787a6e6b6f02baa9ac8d4c71
-  --sha256: 1k1cc5sqq9h6jrr5psi4vzs1ay3wafj42gpfv8b67cpnxfivj4m6
+  tag: 48e498cfea694b89f99fd92ae7a86b9fcd5f29f0
+  --sha256: 1klgvlfcd1kxgjicws964k2xkxr79xf3vvgkbx4x7cyn4xfng166
   subdir:
     io-sim
-    io-sim-classes
+    io-classes
     monoidal-synchronisation
     network-mux
     ouroboros-consensus
     ouroboros-consensus-byron
     ouroboros-consensus-cardano
+    ouroboros-consensus-protocol
     ouroboros-consensus-shelley
     ouroboros-network
     ouroboros-network-framework
     ouroboros-network-testing
+    strict-stm
     typed-protocols
+    typed-protocols-cborg
     typed-protocols-examples
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/plutus
-  tag: c89e13e66c5bef628a1f7ea3a3732951be8be8ba
-  --sha256: 0hdck39i4yv656phxjy5ppqgzrq7x3q4b5rf8vj7hrzcs0aggl8r
+  tag: fc5fe94d3d9525d032bcbc79ff0e1ebcfd8ef143
+  --sha256: 1gnzhns44rzvf9cw84jaqajqqbi9xdcpyy2sapa890vwf796nigv
   subdir:
     plutus-core
     plutus-ledger-api
     plutus-tx
+    plutus-tx-plugin
     prettyprinter-configurable
+    stubs/plutus-ghc-stub
+    word-array
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/ekg-forward
+  tag: 297cd9db5074339a2fb2e5ae7d0780debb670c63
+  --sha256: 1zcwry3y5rmd9lgxy89wsb3k4kpffqji35dc7ghzbz603y1gy24g
+
+source-repository-package
+  type: git
+  location: https://github.com/HeinrichApfelmus/threepenny-gui
+  tag: e3bb8283fc7d2e8aa374eea29426002e8dcd67a8
+  --sha256: 0nf836b552asgpwn2gxwl7yd7ssdhb1wkvdqz6s4dpzqnlpyivx9
 
 -- Drops an instance breaking our code. Should be released to Hackage eventually.
 source-repository-package
   type: git
-  location: https://github.com/Quid2/flat.git
-  tag: 95e5d7488451e43062ca84d5376b3adcc465f1cd
-  --sha256: 06l31x3y93rjpryvlxnpsyq2zyxvb0z6lik6yq2fvh36i5zwvwa3
+  location: https://github.com/input-output-hk/flat
+  tag: ee59880f47ab835dbd73bea0847dab7869fc20d8
+  --sha256: 1lrzknw765pz2j97nvv9ip3l1mcpf2zr4n56hwlz0rk7wq7ls4cm
 
 constraints:
     hedgehog >= 1.0

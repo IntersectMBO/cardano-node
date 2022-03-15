@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name:                   cardano-testnet
-version:                1.27.0
+version:                1.33.0
 description:            The cardano full node
 author:                 IOHK
 maintainer:             operations@iohk.io
@@ -34,15 +34,24 @@ library
                       , maybe-unix
 
   build-depends:        aeson
+                      , base16-bytestring
+                      , bytestring
+                      , cardano-api
+                      , cardano-cli
+                      , cardano-node
                       , containers
                       , directory
                       , exceptions
                       , filepath
                       , hedgehog
                       , hedgehog-extras
+                      , http-client
+                      , http-types
+                      , ouroboros-network
                       , process
                       , random
                       , resourcet
+                      , safe-exceptions
                       , text
                       , time
                       , unordered-containers
@@ -56,6 +65,8 @@ library
                         Testnet.Conf
                         Testnet.List
                         Testnet.Shelley
+                        Testnet.SubmitApi
+                        Testnet.Utils
 
 executable cardano-testnet
   import:               base, project-config
@@ -65,15 +76,14 @@ executable cardano-testnet
   main-is:              Main.hs
 
   build-depends:        ansi-terminal
-                      , cardano-config
+                      , cardano-git-rev
                       , cardano-testnet
                       , hedgehog
                       , hedgehog-extras
-                      , optparse-applicative
+                      , optparse-applicative-fork
                       , resourcet
                       , stm
                       , text
-
 
   other-modules:        Paths_cardano_testnet
                         Testnet.Commands
@@ -86,3 +96,41 @@ executable cardano-testnet
   autogen-modules:      Paths_cardano_testnet
 
   ghc-options:          -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
+
+test-suite cardano-testnet-tests
+  import:               base, project-config
+
+  hs-source-dirs:       test
+
+  main-is:              Main.hs
+
+  type:                 exitcode-stdio-1.0
+
+  build-depends:        cardano-testnet
+                      , directory
+                      , hedgehog
+                      , hedgehog-extras
+                      , filepath
+                      , process
+                      , tasty
+                      , tasty-expected-failure
+                      , tasty-hedgehog
+
+  other-modules:
+                        -- TODO: Move to plutus-apps
+                        -- Spec.Plutus.Direct.CertifyingAndWithdrawingPlutus
+                        -- Spec.Plutus.Direct.ScriptContextEquality
+                        -- Spec.Plutus.Direct.ScriptContextEqualityMint
+                        -- Spec.Plutus.Direct.TxInLockingPlutus
+                        -- Spec.Plutus.Script.TxInLockingPlutus
+                        -- Spec.Plutus.SubmitApi.TxInLockingPlutus
+                        Spec.Shutdown
+                        Test.Util
+
+  ghc-options:          -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
+
+  build-tool-depends:   cardano-node:cardano-node
+                      , cardano-cli:cardano-cli
+                      , cardano-submit-api:cardano-submit-api
+                      -- TODO: Move to plutus-apps
+                      --  , plutus-example:create-script-context

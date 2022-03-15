@@ -17,7 +17,7 @@ mkdir -p $work
 # Step 1 - Send ADA to token script owner
 
 export CARDANO_NODE_SOCKET_PATH="${CARDANO_NODE_SOCKET_PATH:-example/node-bft1/node.sock}"
-plutusscriptinuse=plutus-example/example-scripts/minting.plutus
+plutusscriptinuse=scripts/plutus/scripts/anyone-can-mint.plutus
 
 utxovkey=example/shelley/utxo-keys/utxo1.vkey
 utxoskey=example/shelley/utxo-keys/utxo1.skey
@@ -26,7 +26,7 @@ cardano-cli query utxo --address $utxoaddr --cardano-mode --testnet-magic 42 --o
 txin=$(jq -r 'keys[]' utxo.json)
 
 lovelaceattxin=$(jq -r ".[\"$txin\"].value.lovelace" utxo.json)
-lovelaceattxindiv2=$(expr $lovelaceattxin / 2)
+lovelaceattxindiv3=$(expr $lovelaceattxin / 3)
 
 cardano-cli address key-gen \
   --normal-key \
@@ -37,12 +37,17 @@ targetvkey="$work/minting.vkey"
 targetskey="$work/minting.skey"
 targetaddr=$(cardano-cli address build --testnet-magic 42 --payment-verification-key-file $targetvkey)
 
-cardano-cli transaction build-raw \
+cardano-cli query protocol-parameters --testnet-magic 42 --out-file example/pparams.json
+
+cardano-cli transaction build \
   --alonzo-era \
-  --fee 0 \
+  --cardano-mode \
+  --testnet-magic 42 \
+  --change-address "$utxoaddr" \
   --tx-in "$txin" \
-  --tx-out "$targetaddr+$lovelaceattxindiv2" \
-  --tx-out "$targetaddr+$lovelaceattxindiv2" \
+  --tx-out "$targetaddr+$lovelaceattxindiv3" \
+  --tx-out "$targetaddr+$lovelaceattxindiv3" \
+  --protocol-params-file example/pparams.json \
   --out-file "$work/fund-script-owner.body"
 
 cardano-cli transaction sign \
@@ -68,28 +73,21 @@ policyid=$(cardano-cli transaction policyid --script-file $plutusscriptinuse)
 redeemer=scripts/plutus/data/42.redeemer
 lovelaceatplutusscriptaddr=$(jq -r ".[\"$scriptownertxin\"].value.lovelace" "$work/updatedutxo.json")
 
-cardano-cli query protocol-parameters --testnet-magic 42 --out-file example/pparams.json
-
-plutusrequiredspace=700000000
-plutusrequiredtime=700000000
 dummyaddress=addr_test1vpqgspvmh6m2m5pwangvdg499srfzre2dd96qq57nlnw6yctpasy4
-txfee=$(expr $plutusrequiredspace + $plutusrequiredtime)
-spendable=$(expr $lovelaceatplutusscriptaddr - $plutusrequiredspace - $plutusrequiredtime)
 
 echo "Lovelace at address: $lovelaceatplutusscriptaddr"
-echo "Spendable:           $spendable"
-echo "Fee:                 $txfee"
 
 
-cardano-cli transaction build-raw \
+cardano-cli transaction build \
   --alonzo-era \
-  --fee "$txfee" \
+  --cardano-mode \
+  --testnet-magic 42 \
+  --change-address "$utxoaddr" \
   --tx-in "$scriptownertxin" \
   --tx-in-collateral "$scriptownerCollateral" \
   --mint-script-file "$plutusscriptinuse" \
   --mint-redeemer-file "$redeemer" \
-  --mint-execution-units "($plutusrequiredspace, $plutusrequiredtime)" \
-  --tx-out "$dummyaddress+$spendable + 5 $policyid.MillarCoin" \
+  --tx-out "$dummyaddress+1000000 + 5 $policyid.MillarCoin" \
   --mint "5 $policyid.MillarCoin" \
   --protocol-params-file example/pparams.json \
   --out-file "$work/plutusmint.body"

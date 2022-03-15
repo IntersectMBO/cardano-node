@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name:                   cardano-node-chairman
-version:                1.27.0
+version:                1.33.0
 description:            The cardano full node
 author:                 IOHK
 maintainer:             operations@iohk.io
@@ -38,20 +38,18 @@ executable cardano-node-chairman
   ghc-options:          -threaded
                         -rtsopts
                         "-with-rtsopts=-T"
-  build-depends:        bytestring
-                      , cardano-api
-                      , cardano-config
+  build-depends:        cardano-api
+                      , cardano-git-rev
                       , cardano-ledger-byron
                       , cardano-node
                       , cardano-prelude
                       , containers
                       , contra-tracer
-                      , io-sim-classes
-                      , network-mux
-                      , optparse-applicative
+                      , io-classes
+                      , optparse-applicative-fork
                       , ouroboros-consensus
                       , ouroboros-network
-                      , ouroboros-network-framework
+                      , strict-stm
                       , text
                       , time
 

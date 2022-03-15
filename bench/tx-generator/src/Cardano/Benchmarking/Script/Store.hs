@@ -18,13 +18,14 @@ import           Data.Constraint.Extras.TH (deriveArgDict)
 import           Data.GADT.Compare.TH (deriveGCompare, deriveGEq)
 import           Data.GADT.Show.TH (deriveGShow)
 
-import           Cardano.Api as Cardano (InAnyCardanoEra(..), Tx)
+import           Cardano.Api as Cardano (Tx)
+import           Cardano.Api.Shelley as Cardano (ProtocolParameters)
 import           Cardano.Node.Protocol.Types (SomeConsensusProtocol)
 
 import           Cardano.Benchmarking.Script.Setters as Setters
 import           Cardano.Benchmarking.OuroborosImports as Cardano
                     ( LoggingLayer, ShelleyGenesis, StandardShelley
-                    , NetworkId, SigningKey, PaymentKey)
+                    , SigningKey, PaymentKey)
 
 import           Cardano.Benchmarking.GeneratorTx as Core (AsyncBenchmarkControl)
 import qualified Cardano.Benchmarking.GeneratorTx.Tx as Core (Fund)
@@ -35,28 +36,27 @@ type Fund = (Core.Fund, SigningKey PaymentKey)
 
 data Store v where
   User         :: Setters.Tag x -> Store x
-  GlobalWallet :: Store WalletRef
   LoggingLayer :: Store LoggingLayer
   Protocol     :: Store SomeConsensusProtocol
   BenchTracers :: Store Core.BenchTracers
-  NetworkId    :: Store Cardano.NetworkId -- could be in Setters (just need JSON instance)
   Genesis      :: Store (ShelleyGenesis StandardShelley)
   Named        :: Name x -> Store x
+  ProtocolParameterMode :: Store ProtocolParameterMode
 
 data Name x where
   KeyName      :: !String -> Name (SigningKey PaymentKey)
-  FundName     :: !String -> Name Fund
-  FundListName :: !String -> Name [Fund]
-  TxListName   :: !String -> Name (InAnyCardanoEra TxList)
   ThreadName   :: !String -> Name AsyncBenchmarkControl
+  WalletName   :: !String -> Name WalletRef
 
 type KeyName      = Name (SigningKey PaymentKey)
-type FundName     = Name Fund
-type FundListName = Name [Fund]
-type TxListName   = Name (InAnyCardanoEra TxList)
 type ThreadName   = Name AsyncBenchmarkControl
+type WalletName   = Name WalletRef
 
 newtype TxList era = TxList [Tx era]
+
+data ProtocolParameterMode where
+  ProtocolParameterQuery :: ProtocolParameterMode
+  ProtocolParameterLocal :: ProtocolParameters -> ProtocolParameterMode
 
 -- Remember when debugging at 4:00AM :
 -- TH-Haskell is imperative: It breaks up Main into smaller binding groups!

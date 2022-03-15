@@ -50,11 +50,13 @@ runActionMEnv env action iom = RWS.runRWST (runExceptT action) iom env
 type SetKeyVal = DSum Setters.Tag Identity
 
 data Error where
-  LookupError :: !(Store v)    -> Error
+  LookupError :: !(Store v)  -> Error
   TxGenError  :: !TxGenError -> Error
   CliError    :: !CliError   -> Error
   ApiError    :: !String     -> Error
   UserError   :: !String     -> Error
+  WalletError :: !String     -> Error
+  MetadataError :: !String   -> Error
 
 deriving instance Show Error
 
@@ -91,7 +93,13 @@ consumeName n = do
   unSet $ Named n
   return v
 
-traceError :: String -> ActionM ()
-traceError err = do
+traceBenchTxSubmit :: (forall txId. x -> Tracer.TraceBenchTxSubmit txId) -> x -> ActionM ()
+traceBenchTxSubmit tag msg = do
   tracers  <- get BenchTracers
-  liftIO $ traceWith (Tracer.btTxSubmit_ tracers) $ Tracer.TraceBenchTxSubError $ Text.pack $ show err
+  liftIO $ traceWith (Tracer.btTxSubmit_ tracers) $ tag msg
+
+traceError :: String -> ActionM ()
+traceError = traceBenchTxSubmit (Tracer.TraceBenchTxSubError . Text.pack)
+
+traceDebug :: String -> ActionM ()
+traceDebug = traceBenchTxSubmit Tracer.TraceBenchTxSubDebug

@@ -7,7 +7,7 @@
 --
 module Cardano.Api.GenesisParameters (
 
-    -- * Protocol paramaters fixed in the genesis file
+    -- * Protocol parameters fixed in the genesis file
     GenesisParameters(..),
     EpochSize(..),
 
@@ -22,7 +22,8 @@ import           Data.Time (NominalDiffTime, UTCTime)
 
 import           Cardano.Slotting.Slot (EpochSize (..))
 
-import qualified Shelley.Spec.Ledger.Genesis as Shelley
+import qualified Cardano.Ledger.BaseTypes as Ledger
+import qualified Cardano.Ledger.Shelley.Genesis as Shelley
 
 import           Cardano.Api.NetworkId
 import           Cardano.Api.ProtocolParameters
@@ -51,7 +52,7 @@ data GenesisParameters =
        --
        protocolParamActiveSlotsCoefficient :: Rational,
 
-       -- | The Ouroboros security paramaters, aka @k@. This is the maximum
+       -- | The Ouroboros security parameters, aka @k@. This is the maximum
        -- number of blocks the node would ever be prepared to roll back by.
        --
        -- Clients of the node following the chain should be prepared to handle
@@ -123,7 +124,8 @@ fromShelleyGenesis
       protocolParamSystemStart            = sgSystemStart
     , protocolParamNetworkId              = fromShelleyNetwork sgNetworkId
                                               (NetworkMagic sgNetworkMagic)
-    , protocolParamActiveSlotsCoefficient = sgActiveSlotsCoeff
+    , protocolParamActiveSlotsCoefficient = Ledger.unboundRational
+                                              sgActiveSlotsCoeff
     , protocolParamSecurity               = fromIntegral sgSecurityParam
     , protocolParamEpochLength            = sgEpochLength
     , protocolParamSlotLength             = sgSlotLength
@@ -135,4 +137,3 @@ fromShelleyGenesis
     , protocolInitialUpdateableProtocolParameters = fromShelleyPParams
                                                       sgProtocolParams
     }
-

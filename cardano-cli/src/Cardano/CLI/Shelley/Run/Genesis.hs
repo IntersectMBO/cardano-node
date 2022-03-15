@@ -1,7 +1,6 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
@@ -10,14 +9,14 @@
 
 module Cardano.CLI.Shelley.Run.Genesis
   ( ShelleyGenesisCmdError(..)
-  , readShelleyGenesis
+  , readShelleyGenesisWithDefault
+  , readAndDecodeShelleyGenesis
   , readAlonzoGenesis
-  , renderShelleyGenesisCmdError
   , runGenesisCmd
   ) where
 
-import           Cardano.Prelude
-import           Prelude (id)
+import           Cardano.Prelude hiding (unlines)
+import           Prelude (id, unlines)
 
 import           Data.Aeson
 import qualified Data.Aeson as Aeson
@@ -60,13 +59,11 @@ import           Ouroboros.Consensus.Shelley.Eras (StandardShelley)
 import           Ouroboros.Consensus.Shelley.Node (ShelleyGenesisStaking (..))
 
 import qualified Cardano.Ledger.Alonzo.Genesis as Alonzo
-import qualified Cardano.Ledger.Alonzo.Language as Alonzo
-import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 import qualified Cardano.Ledger.BaseTypes as Ledger
 import           Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Keys as Ledger
-import qualified Shelley.Spec.Ledger.API as Ledger
-import qualified Shelley.Spec.Ledger.PParams as Shelley
+import qualified Cardano.Ledger.Shelley.API as Ledger
+import qualified Cardano.Ledger.Shelley.PParams as Shelley
 
 import           Cardano.Ledger.Crypto (ADDRHASH, Crypto, StandardCrypto)
 import           Cardano.Ledger.Era ()
@@ -75,7 +72,6 @@ import           Cardano.CLI.Helpers (textShow)
 import           Cardano.CLI.Shelley.Commands
 import           Cardano.CLI.Shelley.Key
 import           Cardano.CLI.Shelley.Orphans ()
-import           Cardano.CLI.Shelley.Parsers (renderTxIn)
 import           Cardano.CLI.Shelley.Run.Address
 import           Cardano.CLI.Shelley.Run.Node (ShelleyNodeCmdError (..), renderShelleyNodeCmdError,
                    runNodeIssueOpCert, runNodeKeyGenCold, runNodeKeyGenKES, runNodeKeyGenVRF)
@@ -88,6 +84,8 @@ import           Cardano.CLI.Types
 
 data ShelleyGenesisCmdError
   = ShelleyGenesisCmdAesonDecodeError !FilePath !Text
+  | ShelleyGenesisCmdGenesisFileReadError !(FileError IOException)
+  | ShelleyGenesisCmdGenesisFileDecodeError !FilePath !Text
   | ShelleyGenesisCmdGenesisFileError !(FileError ())
   | ShelleyGenesisCmdFileError !(FileError ())
   | ShelleyGenesisCmdMismatchedGenesisKeyFiles [Int] [Int] [Int]
@@ -103,40 +101,43 @@ data ShelleyGenesisCmdError
   | ShelleyGenesisCmdCostModelsError !FilePath
   deriving Show
 
-renderShelleyGenesisCmdError :: ShelleyGenesisCmdError -> Text
-renderShelleyGenesisCmdError err =
-  case err of
-    ShelleyGenesisCmdAesonDecodeError fp decErr ->
-      "Error while decoding Shelley genesis at: " <> textShow fp <> " Error: " <> textShow decErr
-    ShelleyGenesisCmdGenesisFileError fe -> Text.pack $ displayError fe
-    ShelleyGenesisCmdFileError fe -> Text.pack $ displayError fe
-    ShelleyGenesisCmdMismatchedGenesisKeyFiles gfiles dfiles vfiles ->
-      "Mismatch between the files found:\n"
-        <> "Genesis key file indexes:      " <> textShow gfiles <> "\n"
-        <> "Delegate key file indexes:     " <> textShow dfiles <> "\n"
-        <> "Delegate VRF key file indexes: " <> textShow vfiles
-    ShelleyGenesisCmdFilesNoIndex files ->
-      "The genesis keys files are expected to have a numeric index but these do not:\n"
-        <> Text.unlines (map Text.pack files)
-    ShelleyGenesisCmdFilesDupIndex files ->
-      "The genesis keys files are expected to have a unique numeric index but these do not:\n"
-        <> Text.unlines (map Text.pack files)
-    ShelleyGenesisCmdTextEnvReadFileError fileErr -> Text.pack $ displayError fileErr
-    ShelleyGenesisCmdUnexpectedAddressVerificationKey (VerificationKeyFile file) expect got -> mconcat
-      [ "Unexpected address verification key type in file ", Text.pack file
-      , ", expected: ", expect, ", got: ", textShow got
-      ]
-    ShelleyGenesisCmdTooFewPoolsForBulkCreds pools files perPool -> mconcat
-      [ "Number of pools requested for generation (", textShow pools
-      , ") is insufficient to fill ", textShow files
-      , " bulk files, with ", textShow perPool, " pools per file."
-      ]
-    ShelleyGenesisCmdAddressCmdError e -> renderShelleyAddressCmdError e
-    ShelleyGenesisCmdNodeCmdError e -> renderShelleyNodeCmdError e
-    ShelleyGenesisCmdPoolCmdError e -> renderShelleyPoolCmdError e
-    ShelleyGenesisCmdStakeAddressCmdError e -> renderShelleyStakeAddressCmdError e
-    ShelleyGenesisCmdCostModelsError fp ->
-      "Cost model is invalid: " <> Text.pack fp
+instance Error ShelleyGenesisCmdError where
+  displayError err =
+    case err of
+      ShelleyGenesisCmdAesonDecodeError fp decErr ->
+        "Error while decoding Shelley genesis at: " <> fp <> " Error: " <> Text.unpack decErr
+      ShelleyGenesisCmdGenesisFileError fe -> displayError fe
+      ShelleyGenesisCmdFileError fe -> displayError fe
+      ShelleyGenesisCmdMismatchedGenesisKeyFiles gfiles dfiles vfiles ->
+        "Mismatch between the files found:\n"
+          <> "Genesis key file indexes:      " <> show gfiles <> "\n"
+          <> "Delegate key file indexes:     " <> show dfiles <> "\n"
+          <> "Delegate VRF key file indexes: " <> show vfiles
+      ShelleyGenesisCmdFilesNoIndex files ->
+        "The genesis keys files are expected to have a numeric index but these do not:\n"
+          <> unlines files
+      ShelleyGenesisCmdFilesDupIndex files ->
+        "The genesis keys files are expected to have a unique numeric index but these do not:\n"
+          <> unlines files
+      ShelleyGenesisCmdTextEnvReadFileError fileErr -> displayError fileErr
+      ShelleyGenesisCmdUnexpectedAddressVerificationKey (VerificationKeyFile file) expect got -> mconcat
+        [ "Unexpected address verification key type in file ", file
+        , ", expected: ", Text.unpack expect, ", got: ", show got
+        ]
+      ShelleyGenesisCmdTooFewPoolsForBulkCreds pools files perPool -> mconcat
+        [ "Number of pools requested for generation (", show pools
+        , ") is insufficient to fill ", show files
+        , " bulk files, with ", show perPool, " pools per file."
+        ]
+      ShelleyGenesisCmdAddressCmdError e -> Text.unpack $ renderShelleyAddressCmdError e
+      ShelleyGenesisCmdNodeCmdError e -> Text.unpack $ renderShelleyNodeCmdError e
+      ShelleyGenesisCmdPoolCmdError e -> Text.unpack $ renderShelleyPoolCmdError e
+      ShelleyGenesisCmdStakeAddressCmdError e -> Text.unpack $ renderShelleyStakeAddressCmdError e
+      ShelleyGenesisCmdCostModelsError fp -> "Cost model is invalid: " <> fp
+      ShelleyGenesisCmdGenesisFileDecodeError fp e ->
+       "Error while decoding Shelley genesis at: " <> fp <>
+       " Error: " <>  Text.unpack e
+      ShelleyGenesisCmdGenesisFileReadError e -> displayError e
 
 runGenesisCmd :: GenesisCmd -> ExceptT ShelleyGenesisCmdError IO ()
 runGenesisCmd (GenesisKeyGenGenesis vk sk) = runGenesisKeyGenGenesis vk sk
@@ -340,7 +341,8 @@ runGenesisCreate (GenesisDir rootdir)
     createDirectoryIfMissing False deldir
     createDirectoryIfMissing False utxodir
 
-  template <- readShelleyGenesis (rootdir </> "genesis.spec.json") adjustTemplate
+  template <- readShelleyGenesisWithDefault (rootdir </> "genesis.spec.json") adjustTemplate
+  alonzoGenesis <- readAlonzoGenesis (rootdir </> "genesis.alonzo.spec.json")
 
   forM_ [ 1 .. genNumGenesisKeys ] $ \index -> do
     createGenesisKeys  gendir  index
@@ -353,19 +355,10 @@ runGenesisCreate (GenesisDir rootdir)
   utxoAddrs <- readInitialFundAddresses utxodir network
   start <- maybe (SystemStart <$> getCurrentTimePlus30) pure mStart
 
-  let (shelleyGenesis, alonzoGenesis) =
+  let shelleyGenesis =
         updateTemplate
           -- Shelley genesis parameters
           start genDlgs mAmount utxoAddrs mempty (Lovelace 0) [] [] template
-          -- Alonzo genesis parameters
-          -- TODO alonzo: parameterize these, don't just use defaults
-          alonzoGenesisDefaultLovelacePerUtxoWord
-          alonzoGenesisDefaultExecutionPrices
-          alonzoGenesisDefaultMaxTxExecutionUnits
-          alonzoGenesisDefaultMaxBlockExecutionUnits
-          alonzoGenesisDefaultMaxValueSize
-          alonzoGenesisDefaultCollateralPercent
-          alonzoGenesisDefaultMaxCollateralInputs
 
   writeFileGenesis (rootdir </> "genesis.json")        shelleyGenesis
   writeFileGenesis (rootdir </> "genesis.alonzo.json") alonzoGenesis
@@ -402,7 +395,8 @@ runGenesisCreateStaked (GenesisDir rootdir)
     createDirectoryIfMissing False stdeldir
     createDirectoryIfMissing False utxodir
 
-  template <- readShelleyGenesis (rootdir </> "genesis.spec.json") adjustTemplate
+  template <- readShelleyGenesisWithDefault (rootdir </> "genesis.spec.json") adjustTemplate
+  alonzoGenesis <- readAlonzoGenesis (rootdir </> "genesis.alonzo.spec.json")
 
   forM_ [ 1 .. genNumGenesisKeys ] $ \index -> do
     createGenesisKeys  gendir  index
@@ -450,20 +444,11 @@ runGenesisCreateStaked (GenesisDir rootdir)
   let poolMap :: Map (Ledger.KeyHash Ledger.Staking StandardCrypto) (Ledger.PoolParams StandardCrypto)
       poolMap = Map.fromList $ mkDelegationMapEntry <$> delegations
       delegAddrs = dInitialUtxoAddr <$> delegations
-      (shelleyGenesis, alonzoGenesis) =
+      shelleyGenesis =
         updateTemplate
           -- Shelley genesis parameters
           start genDlgs mNonDlgAmount nonDelegAddrs poolMap
           stDlgAmount delegAddrs stuffedUtxoAddrs template
-          -- Alonzo genesis parameters
-          -- TODO alonzo: parameterize these, don't just use defaults
-          alonzoGenesisDefaultLovelacePerUtxoWord
-          alonzoGenesisDefaultExecutionPrices
-          alonzoGenesisDefaultMaxTxExecutionUnits
-          alonzoGenesisDefaultMaxBlockExecutionUnits
-          alonzoGenesisDefaultMaxValueSize
-          alonzoGenesisDefaultCollateralPercent
-          alonzoGenesisDefaultMaxCollateralInputs
 
   writeFileGenesis (rootdir </> "genesis.json")        shelleyGenesis
   writeFileGenesis (rootdir </> "genesis.alonzo.json") alonzoGenesis
@@ -636,7 +621,7 @@ buildPool nw dir index = do
       , Ledger._poolVrf    = Ledger.hashVerKeyVRF poolVrfVK
       , Ledger._poolPledge = Ledger.Coin 0
       , Ledger._poolCost   = Ledger.Coin 0
-      , Ledger._poolMargin = Ledger.truncateUnitInterval 0
+      , Ledger._poolMargin = minBound
       , Ledger._poolRAcnt  =
           toShelleyStakeAddr $ makeStakeAddress nw $ StakeCredentialByKey (verificationKeyHash rewardsSVK)
       , Ledger._poolOwners = mempty
@@ -709,24 +694,20 @@ getCurrentTimePlus30 =
     plus30sec :: UTCTime -> UTCTime
     plus30sec = addUTCTime (30 :: NominalDiffTime)
 
-
-readShelleyGenesis
+-- | Attempts to read Shelley genesis from disk
+-- and if not found creates a default Shelley genesis.
+readShelleyGenesisWithDefault
   :: FilePath
   -> (ShelleyGenesis StandardShelley -> ShelleyGenesis StandardShelley)
   -> ExceptT ShelleyGenesisCmdError IO (ShelleyGenesis StandardShelley)
-readShelleyGenesis fpath adjustDefaults = do
-    readAndDecode
+readShelleyGenesisWithDefault fpath adjustDefaults = do
+    newExceptT (readAndDecodeShelleyGenesis fpath)
       `catchError` \err ->
         case err of
-          ShelleyGenesisCmdGenesisFileError (FileIOError _ ioe)
+          ShelleyGenesisCmdGenesisFileReadError (FileIOError _ ioe)
             | isDoesNotExistError ioe -> writeDefault
           _                           -> left err
   where
-    readAndDecode = do
-      lbs <- handleIOExceptT (ShelleyGenesisCmdGenesisFileError . FileIOError fpath) $ LBS.readFile fpath
-      firstExceptT (ShelleyGenesisCmdAesonDecodeError fpath . Text.pack)
-        . hoistEither $ Aeson.eitherDecode' lbs
-
     defaults :: ShelleyGenesis StandardShelley
     defaults = adjustDefaults shelleyGenesisDefaults
 
@@ -735,6 +716,13 @@ readShelleyGenesis fpath adjustDefaults = do
         LBS.writeFile fpath (encodePretty defaults)
       return defaults
 
+readAndDecodeShelleyGenesis
+  :: FilePath
+  -> IO (Either ShelleyGenesisCmdError (ShelleyGenesis StandardShelley))
+readAndDecodeShelleyGenesis fpath = runExceptT $ do
+  lbs <- handleIOExceptT (ShelleyGenesisCmdGenesisFileReadError . FileIOError fpath) $ LBS.readFile fpath
+  firstExceptT (ShelleyGenesisCmdGenesisFileDecodeError fpath . Text.pack)
+    . hoistEither $ Aeson.eitherDecode' lbs
 
 updateTemplate
     :: SystemStart
@@ -749,30 +737,22 @@ updateTemplate
     -> [AddressInEra ShelleyEra]
     -> [AddressInEra ShelleyEra]
     -> ShelleyGenesis StandardShelley
-    -- Alonzo genesis parameters
-    -> Lovelace            -- ^ Ada per UTxO word
-    -> ExecutionUnitPrices -- ^ Execution prices (memory, steps)
-    -> ExecutionUnits      -- ^ Max Tx execution units
-    -> ExecutionUnits      -- ^ Max block execution units
-    -> Natural             -- ^ Max value size
-    -> Natural             -- ^ Collateral percentage
-    -> Natural             -- ^ Max collateral inputs
-    -> (ShelleyGenesis StandardShelley, Alonzo.AlonzoGenesis)
+    -> ShelleyGenesis StandardShelley
 updateTemplate (SystemStart start)
                genDelegMap mAmountNonDeleg utxoAddrsNonDeleg
                poolSpecs (Lovelace amountDeleg) utxoAddrsDeleg stuffedUtxoAddrs
-               template coinsPerUTxOWord prices maxTxExUnits maxBlockExUnits
-               maxValueSize collateralPercentage maxCollateralInputs = do
+               template = do
 
-    let shelleyGenesis = template
+    let pparamsFromTemplate = sgProtocolParams template
+        shelleyGenesis = template
           { sgSystemStart = start
           , sgMaxLovelaceSupply = fromIntegral $ nonDelegCoin + delegCoin
           , sgGenDelegs = shelleyDelKeys
           , sgInitialFunds = Map.fromList
                               [ (toShelleyAddr addr, toShelleyLovelace v)
                               | (addr, v) <-
-                                distribute nonDelegCoin utxoAddrsNonDeleg ++
-                                distribute delegCoin    utxoAddrsDeleg ++
+                                distribute (nonDelegCoin - subtractForTreasury) utxoAddrsNonDeleg ++
+                                distribute (delegCoin - subtractForTreasury)    utxoAddrsDeleg ++
                                 mkStuffedUtxo stuffedUtxoAddrs ]
           , sgStaking =
             ShelleyGenesisStaking
@@ -781,28 +761,17 @@ updateTemplate (SystemStart start)
                             | poolParams <- Map.elems poolSpecs ]
               , sgsStake = Ledger._poolId <$> poolSpecs
               }
+          , sgProtocolParams = pparamsFromTemplate
           }
-        cModel = case Alonzo.defaultCostModel of
-                   Just (Alonzo.CostModel m) ->
-                     if Alonzo.validateCostModelParams m
-                     then Map.singleton Alonzo.PlutusV1 (Alonzo.CostModel m)
-                     else panic "updateTemplate: defaultCostModel is invalid"
-
-                   Nothing -> panic "updateTemplate: Could not extract cost model params from defaultCostModel"
-        alonzoGenesis = Alonzo.AlonzoGenesis
-          { Alonzo.coinsPerUTxOWord     = toShelleyLovelace coinsPerUTxOWord
-          , Alonzo.costmdls             = cModel
-          , Alonzo.prices               = toAlonzoPrices prices
-          , Alonzo.maxTxExUnits         = toAlonzoExUnits maxTxExUnits
-          , Alonzo.maxBlockExUnits      = toAlonzoExUnits maxBlockExUnits
-          , Alonzo.maxValSize           = maxValueSize
-          , Alonzo.collateralPercentage = collateralPercentage
-          , Alonzo.maxCollateralInputs  = maxCollateralInputs
-          }
-    (shelleyGenesis, alonzoGenesis)
+    shelleyGenesis
   where
+    maximumLovelaceSupply :: Word64
+    maximumLovelaceSupply = sgMaxLovelaceSupply template
+    -- If the initial funds are equal to the maximum funds, rewards cannot be created.
+    subtractForTreasury :: Integer
+    subtractForTreasury = nonDelegCoin `quot` 10
     nonDelegCoin, delegCoin :: Integer
-    nonDelegCoin = fromIntegral $ fromMaybe (sgMaxLovelaceSupply template) (unLovelace <$> mAmountNonDeleg)
+    nonDelegCoin = fromIntegral (fromMaybe maximumLovelaceSupply (unLovelace <$> mAmountNonDeleg))
     delegCoin = fromIntegral amountDeleg
 
     distribute :: Integer -> [AddressInEra ShelleyEra] -> [(AddressInEra ShelleyEra, Lovelace)]
@@ -989,45 +958,6 @@ runGenesisHashFile (GenesisFile fpath) = do
        gh = Crypto.hashWith id content
    liftIO $ Text.putStrLn (Crypto.hashToTextAsHex gh)
 
---
--- Alonzo genesis
---
-
-
-alonzoGenesisDefaultLovelacePerUtxoWord :: Lovelace
-alonzoGenesisDefaultLovelacePerUtxoWord = Lovelace 1
-
-alonzoGenesisDefaultExecutionPrices :: ExecutionUnitPrices
-alonzoGenesisDefaultExecutionPrices =
-    ExecutionUnitPrices {
-       priceExecutionSteps  = 1,
-       priceExecutionMemory = 1
-    }
-
-alonzoGenesisDefaultMaxTxExecutionUnits :: ExecutionUnits
-alonzoGenesisDefaultMaxTxExecutionUnits =
-    ExecutionUnits {
-      executionSteps  = 500_000_000_000,
-      executionMemory = 500_000_000_000
-    }
-
-alonzoGenesisDefaultMaxBlockExecutionUnits :: ExecutionUnits
-alonzoGenesisDefaultMaxBlockExecutionUnits =
-    ExecutionUnits {
-      executionSteps  = 500_000_000_000,
-      executionMemory = 500_000_000_000
-    }
-
-alonzoGenesisDefaultMaxValueSize :: Natural
-alonzoGenesisDefaultMaxValueSize = 4000
-
-alonzoGenesisDefaultCollateralPercent :: Natural
-alonzoGenesisDefaultCollateralPercent = 1 --TODO change to 100%
-
-alonzoGenesisDefaultMaxCollateralInputs :: Natural
-alonzoGenesisDefaultMaxCollateralInputs = 5
-
-
 readAlonzoGenesis
   :: FilePath
   -> ExceptT ShelleyGenesisCmdError IO Alonzo.AlonzoGenesis
@@ -1036,10 +966,18 @@ readAlonzoGenesis fpath = do
     `catchError` \err ->
       case err of
         ShelleyGenesisCmdGenesisFileError (FileIOError _ ioe)
-          | isDoesNotExistError ioe -> panic "Shelley genesis file not found."
+          | isDoesNotExistError ioe -> writeDefault
         _                           -> left err
 
  where
+  defaults :: Alonzo.AlonzoGenesis
+  defaults = alonzoGenesisDefaults
+
+  writeDefault = do
+    handleIOExceptT (ShelleyGenesisCmdGenesisFileError . FileIOError fpath) $
+      LBS.writeFile fpath (encodePretty defaults)
+    return defaults
+
   readAndDecode :: ExceptT ShelleyGenesisCmdError IO Alonzo.AlonzoGenesis
   readAndDecode = do
       lbs <- handleIOExceptT (ShelleyGenesisCmdGenesisFileError . FileIOError fpath) $ LBS.readFile fpath

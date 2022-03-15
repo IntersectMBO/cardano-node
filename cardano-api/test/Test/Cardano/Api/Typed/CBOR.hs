@@ -1,62 +1,43 @@
+{-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module Test.Cardano.Api.Typed.CBOR
   ( tests
   ) where
 
+import           Cardano.Prelude
+
+import           Hedgehog (Property, forAll, property, success, tripping)
+import           Test.Tasty (TestTree, testGroup)
+import           Test.Tasty.Hedgehog (testProperty)
+import           Test.Tasty.TH (testGroupGenerator)
+
 import           Cardano.Api
+
 import           Gen.Cardano.Api.Typed
 import           Gen.Hedgehog.Roundtrip.CBOR (roundtrip_CBOR)
-import           Gen.Tasty.Hedgehog.Group (fromGroup)
-import           Hedgehog (Property, discover)
 import           Test.Cardano.Api.Typed.Orphans ()
-import           Test.Tasty (TestTree)
 
 {- HLINT ignore "Use camelCase" -}
 
 -- TODO: Need to add PaymentExtendedKey roundtrip tests however
 -- we can't derive an Eq instance for Crypto.HD.XPrv
 
-prop_roundtrip_txbody_byron_CBOR :: Property
-prop_roundtrip_txbody_byron_CBOR =
-  roundtrip_CBOR (AsTxBody AsByronEra) (genTxBody ByronEra)
+test_roundtrip_txbody_CBOR :: [TestTree]
+test_roundtrip_txbody_CBOR =
+  [ testProperty (show era) $
+    roundtrip_CBOR (proxyToAsType Proxy) (genTxBody era)
+  | AnyCardanoEra era <- [minBound..]
+  ]
 
-prop_roundtrip_txbody_shelley_CBOR :: Property
-prop_roundtrip_txbody_shelley_CBOR =
-  roundtrip_CBOR (AsTxBody AsShelleyEra) (genTxBody ShelleyEra)
-
-prop_roundtrip_txbody_allegra_CBOR :: Property
-prop_roundtrip_txbody_allegra_CBOR =
-  roundtrip_CBOR (AsTxBody AsAllegraEra) (genTxBody AllegraEra)
-
-prop_roundtrip_txbody_mary_CBOR :: Property
-prop_roundtrip_txbody_mary_CBOR =
-  roundtrip_CBOR (AsTxBody AsMaryEra) (genTxBody MaryEra)
-
-prop_roundtrip_txbody_alonzo_CBOR :: Property
-prop_roundtrip_txbody_alonzo_CBOR =
-  roundtrip_CBOR (AsTxBody AsAlonzoEra) (genTxBody AlonzoEra)
-
-prop_roundtrip_tx_byron_CBOR :: Property
-prop_roundtrip_tx_byron_CBOR =
-  roundtrip_CBOR (AsTx AsByronEra) (genTx ByronEra)
-
-prop_roundtrip_tx_shelley_CBOR :: Property
-prop_roundtrip_tx_shelley_CBOR =
-  roundtrip_CBOR (AsTx AsShelleyEra) (genTx ShelleyEra)
-
-prop_roundtrip_tx_allegra_CBOR :: Property
-prop_roundtrip_tx_allegra_CBOR =
-  roundtrip_CBOR (AsTx AsAllegraEra) (genTx AllegraEra)
-
-prop_roundtrip_tx_mary_CBOR :: Property
-prop_roundtrip_tx_mary_CBOR =
-  roundtrip_CBOR (AsTx AsMaryEra) (genTx MaryEra)
-
-prop_roundtrip_tx_alonzo_CBOR :: Property
-prop_roundtrip_tx_alonzo_CBOR =
-  roundtrip_CBOR (AsTx AsAlonzoEra) (genTx AlonzoEra)
+test_roundtrip_tx_CBOR :: [TestTree]
+test_roundtrip_tx_CBOR =
+  [ testProperty (show era) $ roundtrip_CBOR (proxyToAsType Proxy) (genTx era)
+  | AnyCardanoEra era <- [minBound..]
+  ]
 
 prop_roundtrip_witness_byron_CBOR :: Property
 prop_roundtrip_witness_byron_CBOR =
@@ -165,11 +146,49 @@ prop_roundtrip_script_PlutusScriptV1_CBOR =
   roundtrip_CBOR (AsScript AsPlutusScriptV1)
                  (genScript (PlutusScriptLanguage PlutusScriptV1))
 
+prop_roundtrip_script_PlutusScriptV2_CBOR :: Property
+prop_roundtrip_script_PlutusScriptV2_CBOR =
+  roundtrip_CBOR (AsScript AsPlutusScriptV2)
+                 (genScript (PlutusScriptLanguage PlutusScriptV2))
+
 prop_roundtrip_UpdateProposal_CBOR :: Property
 prop_roundtrip_UpdateProposal_CBOR =
   roundtrip_CBOR AsUpdateProposal genUpdateProposal
 
+
+test_roundtrip_Tx_Cddl :: [TestTree]
+test_roundtrip_Tx_Cddl =
+  [ testProperty (show era) $ roundtrip_Tx_Cddl anyEra
+  | anyEra@(AnyCardanoEra era) <- [minBound..]
+  ]
+
+test_roundtrip_TxWitness_Cddl :: [TestTree]
+test_roundtrip_TxWitness_Cddl =
+  [ testProperty (show era) $ roundtrip_TxWitness_Cddl era
+  | AnyCardanoEra era <- [minBound..]
+  , AnyCardanoEra era /= AnyCardanoEra ByronEra
+  ]
+
+roundtrip_TxWitness_Cddl :: CardanoEra era -> Property
+roundtrip_TxWitness_Cddl era =
+  property $
+    case cardanoEraStyle era of
+      LegacyByronEra -> success
+      ShelleyBasedEra sbe -> do
+        keyWit <- forAll $ genShelleyKeyWitness era
+        tripping keyWit
+          (serialiseWitnessLedgerCddl sbe)
+          (deserialiseWitnessLedgerCddl sbe)
+
+roundtrip_Tx_Cddl :: AnyCardanoEra -> Property
+roundtrip_Tx_Cddl (AnyCardanoEra era) =
+  property $ do
+   tx <- forAll $ genTx era
+   tripping tx
+     serialiseTxLedgerCddl
+     (deserialiseTxLedgerCddl era)
+
 -- -----------------------------------------------------------------------------
 
 tests :: TestTree
-tests = fromGroup $$discover
+tests = $testGroupGenerator

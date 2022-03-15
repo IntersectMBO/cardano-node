@@ -6,16 +6,18 @@ module Test.Cardano.Api.Metadata
   , genTxMetadataValue
   ) where
 
-import           Cardano.Api
 import           Cardano.Prelude
-import           Gen.Cardano.Api.Metadata
-import           Gen.Tasty.Hedgehog.Group (fromGroup)
-import           Hedgehog (Property, discover, property, (===))
-import           Test.Tasty (TestTree)
 
 import qualified Data.Aeson as Aeson
 import qualified Data.Map.Strict as Map
+import           Hedgehog (Property, property, (===))
 import qualified Hedgehog
+import           Test.Tasty (TestTree)
+import           Test.Tasty.Hedgehog (testProperty)
+import           Test.Tasty.TH (testGroupGenerator)
+
+import           Cardano.Api
+import           Gen.Cardano.Api.Metadata
 
 -- ----------------------------------------------------------------------------
 -- Golden / unit tests
@@ -121,4 +123,4 @@ prop_metadata_roundtrip_via_schema_json = Hedgehog.property $ do
 --
 
 tests :: TestTree
-tests = fromGroup $$discover
+tests = $testGroupGenerator

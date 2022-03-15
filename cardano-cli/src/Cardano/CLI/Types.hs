@@ -5,10 +5,15 @@
 {-# LANGUAGE StandaloneDeriving #-}
 
 module Cardano.CLI.Types
-  ( CBORObject (..)
+  ( BalanceTxExecUnits (..)
+  , CBORObject (..)
+  , CddlTx (..)
   , CertificateFile (..)
+  , EpochLeadershipSchedule (..)
   , GenesisFile (..)
   , OutputFormat (..)
+  , OutputSerialisation (..)
+  , TxBuildOutputOptions(..)
   , SigningKeyFile (..)
   , SocketPath (..)
   , ScriptFile (..)
@@ -17,11 +22,16 @@ module Cardano.CLI.Types
   , ScriptWitnessFiles (..)
   , ScriptDatumOrFile (..)
   , TransferDirection(..)
+  , TxBodyFile (..)
   , TxOutAnyEra (..)
+  , TxOutChangeAddress (..)
+  , TxOutDatumAnyEra (..)
+  , TxFile (..)
   , UpdateProposalFile (..)
   , VerificationKeyFile (..)
   , Stakes (..)
   , Params (..)
+  , RequiredSigner (..)
   ) where
 
 import           Cardano.Prelude
@@ -36,7 +46,14 @@ import           Cardano.Api
 
 import qualified Cardano.Ledger.Crypto as Crypto
 
-import           Shelley.Spec.Ledger.TxBody (PoolParams (..))
+import           Cardano.Ledger.Shelley.TxBody (PoolParams (..))
+
+-- | Specify whether to render the script cost as JSON
+-- in the cli's build command.
+data TxBuildOutputOptions = OutputScriptCostOnly FilePath
+                          | OutputTxBodyOnly TxBodyFile
+                          deriving Show
+
 
 -- | Specify what the CBOR file is
 -- i.e a block, a tx, etc
@@ -46,6 +63,8 @@ data CBORObject = CBORBlockByron Byron.EpochSlots
                 | CBORUpdateProposalByron
                 | CBORVoteByron
                 deriving Show
+
+newtype CddlTx = CddlTx {unCddlTx :: InAnyCardanoEra Tx}
 
 -- Encompasses stake certificates, stake pool certificates,
 -- genesis delegate certificates and MIR certificates.
@@ -67,6 +86,15 @@ data OutputFormat
   = OutputFormatHex
   | OutputFormatBech32
   deriving (Eq, Show)
+
+-- | Specify whether to serialise a value according to the ledger's CDDL spec
+-- or the cli's intermediate format. Note the intermediate format is defined
+-- within SerialiseAsCBOR instances. The plan is to merge TextEnvelope with
+-- SerialiseAsCBOR.
+data OutputSerialisation
+  = OutputLedgerCDDLSerialisation
+  | OutputCliSerialisation
+  deriving Show
 
 -- | This data structure is used to allow nicely formatted output within the query stake-snapshot command.
 --
@@ -144,8 +172,9 @@ newtype VerificationKeyFile
 newtype ScriptFile = ScriptFile { unScriptFile :: FilePath }
                      deriving (Eq, Show)
 
-data ScriptDataOrFile = ScriptDataFile  FilePath   -- ^ By reference to a file
-                      | ScriptDataValue ScriptData -- ^ By value
+data ScriptDataOrFile = ScriptDataCborFile  FilePath   -- ^ By reference to a CBOR file
+                      | ScriptDataJsonFile  FilePath   -- ^ By reference to a JSON file
+                      | ScriptDataValue     ScriptData -- ^ By value
   deriving (Eq, Show)
 
 type ScriptRedeemerOrFile = ScriptDataOrFile
@@ -189,6 +218,49 @@ data TransferDirection = TransferToReserves | TransferToTreasury
 data TxOutAnyEra = TxOutAnyEra
                      AddressAny
                      Value
-                     (Maybe (Hash ScriptData))
+                     TxOutDatumAnyEra
   deriving (Eq, Show)
+
+data TxOutDatumAnyEra = TxOutDatumByHashOnly (Hash ScriptData)
+                      | TxOutDatumByHashOf    ScriptDataOrFile
+                      | TxOutDatumByValue     ScriptDataOrFile
+                      | TxOutDatumByNone
+  deriving (Eq, Show)
+
+-- | A partially-specified transaction output indented to use as a change
+-- output.
+--
+-- It does not specify a value, since this will be worked out automatically.
+--
+-- It does not use any script data hash, since that's generally not used for
+-- change outputs.
+--
+newtype TxOutChangeAddress = TxOutChangeAddress AddressAny
+  deriving (Eq, Show)
+
+-- | A flag that differentiates between automatically
+-- and manually balancing a tx.
+data BalanceTxExecUnits = AutoBalance | ManualBalance
+
+-- | Plutus script required signers
+data RequiredSigner
+ = RequiredSignerSkeyFile SigningKeyFile
+ | RequiredSignerHash (Hash PaymentKey)
+ deriving Show
+
+-- | Which leadership schedule we are interested in.
+-- TODO: Implement Previous and Next epochs
+data EpochLeadershipSchedule
+  = CurrentEpoch
+  | NextEpoch
+  deriving Show
+
+newtype TxBodyFile
+  = TxBodyFile FilePath
+  deriving Show
+
+newtype TxFile
+  = TxFile FilePath
+  deriving Show
+
 

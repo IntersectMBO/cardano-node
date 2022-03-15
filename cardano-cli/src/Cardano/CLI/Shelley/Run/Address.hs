@@ -13,26 +13,24 @@ module Cardano.CLI.Shelley.Run.Address
 
 import           Cardano.Prelude hiding (putStrLn)
 
-import           System.Console.ANSI
 
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.Text as Text
 import qualified Data.Text.IO as Text
-import qualified System.Console.ANSI as ANSI
-import qualified System.IO as IO
 
 import           Control.Monad.Trans.Except.Extra (firstExceptT, newExceptT)
 
 import           Cardano.Api
 import           Cardano.Api.Shelley
 
+import           Cardano.CLI.Helpers
 import           Cardano.CLI.Shelley.Key (InputDecodeError, PaymentVerifier (..),
                    StakeVerifier (..), VerificationKeyTextOrFile,
                    VerificationKeyTextOrFileError (..), readVerificationKeyOrFile,
                    readVerificationKeyTextOrFileAnyOf, renderVerificationKeyTextOrFileError)
-import           Cardano.CLI.Shelley.Script
 import           Cardano.CLI.Shelley.Parsers (AddressCmd (..), AddressKeyType (..), OutputFile (..))
 import           Cardano.CLI.Shelley.Run.Address.Info (ShelleyAddressInfoError, runAddressInfo)
+import           Cardano.CLI.Shelley.Script
 import           Cardano.CLI.Types
 
 data ShelleyAddressCmdError
@@ -232,11 +230,6 @@ runAddressBuildScript
   -> Maybe OutputFile
   -> ExceptT ShelleyAddressCmdError IO ()
 runAddressBuildScript scriptFile networkId mOutputFile = do
-  liftIO deprecationWarning
+  liftIO $ deprecationWarning "'address build'"
   runAddressBuild (PaymentVerifierScriptFile scriptFile) Nothing networkId mOutputFile
 
-deprecationWarning :: IO ()
-deprecationWarning = do
-  ANSI.hSetSGR IO.stderr [SetColor Foreground Vivid Yellow]
-  IO.hPutStrLn IO.stderr "WARNING: This CLI command is deprecated.  Please use 'address build' command instead."
-  ANSI.hSetSGR IO.stderr [Reset]

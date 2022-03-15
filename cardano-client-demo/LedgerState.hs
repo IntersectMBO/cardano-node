@@ -30,15 +30,15 @@ import           System.Environment (getArgs)
 main :: IO ()
 main = do
   -- Get socket path from CLI argument.
-  configFilePath : socketPath : _ <- getArgs
+  configFilePath : socketPath : xs <- getArgs
   blockCount <- fmap (either (error . T.unpack . renderFoldBlocksError) id) $ runExceptT $ foldBlocks
     configFilePath
     socketPath
-    Mainnet
-    True -- enable validation?
+    FullValidation
     (0 :: Int) -- We just use a count of the blocks as the current state
     (\_env
       !ledgerState
+      _
       (BlockInMode (Block (BlockHeader _slotNo _blockHeaderHash (BlockNo blockNoI)) _transactions) _era)
       blockCount -> do
         case ledgerState of

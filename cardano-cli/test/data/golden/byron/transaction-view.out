@@ -1,0 +1,17 @@
+auxiliary scripts: null
+certificates: null
+collateral inputs: null
+era: Byron
+fee: implicit
+inputs:
+- f8ec302d19e3c8251c30b1434349bf2e949a1dbf14a4ebc3d512918d2d4d5c56#88
+metadata: null
+mint: null
+outputs:
+- address: 5oP9ib6ym3XfwXuy3ksXZzgtBzXSArXAACQVXKqcPhiLnHVYjXJNu2T6Zomh8LAWLV
+  address era: Byron
+  amount: 68 Lovelace
+required signers (payment key hashes needed for scripts): null
+update proposal: null
+validity range: null
+withdrawals: null

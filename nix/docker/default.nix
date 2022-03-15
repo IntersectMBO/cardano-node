@@ -3,7 +3,7 @@
 #
 # To build and load into the Docker engine:
 #
-#   docker load -i $(nix-build -A dockerImage --no-out-link)
+#   nix run .#dockerImage/node/load
 #
 # To launch with pre-loaded configuration, using the NETWORK env.
 # An example using a docker volume to persist state:
@@ -102,10 +102,10 @@ let
   # The Docker context with static content
   context = ./context;
 
-  # Mainnet configuration files used by the 'run' option
-  mainnetConfigs = builtins.filterSource
-    (path: type: type == "regular" && lib.hasPrefix "mainnet-" (baseNameOf path))
-    ../../configuration/cardano;
+  # Mainnet configuration used by the 'run' option
+  mainnetConfigFile = builtins.toFile "mainnet-config.json"
+    (builtins.toJSON commonLib.environments.mainnet.nodeConfig);
+  mainnetTopologyFile = commonLib.mkEdgeTopology { edgeNodes = [ commonLib.environments.mainnet.relaysNew ]; valency = 2; };
 
 in
   dockerTools.buildImage {
@@ -126,7 +126,8 @@ in
       mkdir -p opt/cardano/ipc
       mkdir -p opt/cardano/logs
       mkdir -p usr/local/bin
-      cp ${mainnetConfigs}/* opt/cardano/config
+      ln -s ${mainnetConfigFile} opt/cardano/config/mainnet-config.json
+      ln -s ${mainnetTopologyFile} opt/cardano/config/mainnet-topology.json
       cp ${runNetwork}/bin/* usr/local/bin
       cp ${context}/bin/* usr/local/bin
       ln -s ${cardano-node}/bin/cardano-node usr/local/bin/cardano-node
@@ -134,6 +135,5 @@ in
     '';
     config = {
       EntryPoint = [ "entrypoint" ];
-      StopSignal = "SIGINT";
     };
   }

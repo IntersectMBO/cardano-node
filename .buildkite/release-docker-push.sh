@@ -3,6 +3,5 @@
 if ! { [ "${BUILDKITE_BRANCH:-}" == "master" ] || [[ "${BUILDKITE_BRANCH:-}" = release* ]]; }; then
   exit 0;
 else
-  nix-build .buildkite/docker-build-push.nix --argstr dockerHubRepoName inputoutput/cardano-node -o docker-build-push
-  ./docker-build-push
+  nix run .\#dockerImages/push --override-input hostNixpkgs "path:$(nix eval --impure -I $NIX_PATH --expr '(import <nixpkgs> {}).path')"
 fi

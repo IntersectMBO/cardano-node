@@ -1,6 +1,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Cardano.CLI.Shelley.Parsers
   ( -- * CLI command parser
@@ -11,7 +12,6 @@ module Cardano.CLI.Shelley.Parsers
 
     -- * Field parser and renderers
   , parseTxIn
-  , renderTxIn
   ) where
 
 import           Cardano.Prelude hiding (All, Any, option)
@@ -20,7 +20,6 @@ import           Prelude (String)
 import           Cardano.Api
 import           Cardano.Api.Shelley
 
-import           Cardano.CLI.Mary.ValueParser (parseValue)
 import           Cardano.CLI.Shelley.Commands
 import           Cardano.CLI.Shelley.Key (InputFormat (..), PaymentVerifier (..),
                    StakeVerifier (..), VerificationKeyOrFile (..), VerificationKeyOrHashOrFile (..),
@@ -33,6 +32,7 @@ import           Data.Time.Format (defaultTimeLocale, iso8601DateFormat, parseTi
 import           Network.Socket (PortNumber)
 import           Options.Applicative hiding (help, str)
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
+import           Prettyprinter (line, pretty)
 
 import qualified Data.ByteString.Base16 as B16
 import qualified Data.ByteString.Char8 as BSC
@@ -46,13 +46,14 @@ import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Parser as Aeson.Parser
 import qualified Data.Attoparsec.ByteString.Char8 as Atto
 import qualified Options.Applicative as Opt
+import qualified Options.Applicative.Help as H
 import qualified Text.Parsec as Parsec
 import qualified Text.Parsec.Error as Parsec
-import qualified Text.Parsec.String as Parsec
 import qualified Text.Parsec.Language as Parsec
+import qualified Text.Parsec.String as Parsec
 import qualified Text.Parsec.Token as Parsec
 
-import qualified Shelley.Spec.Ledger.TxBody as Shelley
+import qualified Cardano.Ledger.Shelley.TxBody as Shelley
 
 {- HLINT ignore "Use <$>" -}
 
@@ -82,7 +83,7 @@ parseShelleyCommands =
           (Opt.info (QueryCmd <$> pQueryCmd) . Opt.progDesc $
              mconcat
                [ "Node query commands. Will query the local node whose Unix domain socket "
-               , "is obtained from the CARDANO_NODE_SOCKET_PATH enviromnent variable."
+               , "is obtained from the CARDANO_NODE_SOCKET_PATH environment variable."
                ]
             )
       , Opt.command "genesis"
@@ -229,18 +230,22 @@ pScriptFor name (Just deprecated) help =
 
 pScriptWitnessFiles :: forall witctx.
                        WitCtx witctx
+                    -> BalanceTxExecUnits -- ^ Use the @execution-units@ flag.
                     -> String
                     -> Maybe String
                     -> String
                     -> Parser (ScriptWitnessFiles witctx)
-pScriptWitnessFiles witctx scriptFlagPrefix scriptFlagPrefixDeprecated help =
+pScriptWitnessFiles witctx autoBalanceExecUnits scriptFlagPrefix scriptFlagPrefixDeprecated help =
     toScriptWitnessFiles
       <$> pScriptFor (scriptFlagPrefix ++ "-script-file")
                      ((++ "-script-file") <$> scriptFlagPrefixDeprecated)
                      ("The file containing the script to witness " ++ help)
       <*> optional ((,,) <$> pScriptDatumOrFile
                          <*> pScriptRedeemerOrFile
-                         <*> pExecutionUnits)
+                         <*> (case autoBalanceExecUnits of
+                               AutoBalance -> pure (ExecutionUnits 0 0)
+                               ManualBalance -> pExecutionUnits)
+                   )
   where
     toScriptWitnessFiles :: ScriptFile
                          -> Maybe (ScriptDatumOrFile witctx,
@@ -248,45 +253,63 @@ pScriptWitnessFiles witctx scriptFlagPrefix scriptFlagPrefixDeprecated help =
                                    ExecutionUnits)
                          -> ScriptWitnessFiles witctx
     toScriptWitnessFiles sf Nothing        = SimpleScriptWitnessFile  sf
-    toScriptWitnessFiles sf (Just (d,r,e)) = PlutusScriptWitnessFiles sf d r e
+    toScriptWitnessFiles sf (Just (d,r, e)) = PlutusScriptWitnessFiles sf d r e
 
     pScriptDatumOrFile :: Parser (ScriptDatumOrFile witctx)
     pScriptDatumOrFile =
       case witctx of
         WitCtxTxIn  -> ScriptDatumOrFileForTxIn <$>
-                         pScriptDataOrFile (scriptFlagPrefix ++ "-datum")
+                         pScriptDataOrFile
+                           (scriptFlagPrefix ++ "-datum")
+                           "The script datum, in JSON syntax."
+                           "The script datum, in the given JSON file."
         WitCtxMint  -> pure NoScriptDatumOrFileForMint
         WitCtxStake -> pure NoScriptDatumOrFileForStake
 
     pScriptRedeemerOrFile :: Parser ScriptDataOrFile
     pScriptRedeemerOrFile = pScriptDataOrFile (scriptFlagPrefix ++ "-redeemer")
+                           "The script redeemer, in JSON syntax."
+                           "The script redeemer, in the given JSON file."
 
     pExecutionUnits :: Parser ExecutionUnits
     pExecutionUnits =
       uncurry ExecutionUnits <$>
-      Opt.option Opt.auto
-        (  Opt.long (scriptFlagPrefix ++ "-execution-units")
-        <> Opt.metavar "(INT, INT)"
-        <> Opt.help "The time and space units needed by the script."
+        Opt.option Opt.auto
+          (  Opt.long (scriptFlagPrefix ++ "-execution-units")
+          <> Opt.metavar "(INT, INT)"
+          <> Opt.help "The time and space units needed by the script."
+          )
+
+
+pScriptDataOrFile :: String -> String -> String -> Parser ScriptDataOrFile
+pScriptDataOrFile dataFlagPrefix helpTextForValue helpTextForFile =
+      pScriptDataCborFile
+  <|> pScriptDataFile
+  <|> pScriptDataValue
+  where
+    pScriptDataCborFile = ScriptDataCborFile <$>
+      Opt.strOption
+        (  Opt.long (dataFlagPrefix ++ "-cbor-file")
+        <> Opt.metavar "CBOR FILE"
+        <> Opt.help (helpTextForFile ++ " The file must follow the special \
+                                         \JSON schema for script data.")
         )
 
-pScriptDataOrFile :: String -> Parser ScriptDataOrFile
-pScriptDataOrFile dataFlagPrefix =
-      ScriptDataFile  <$> pScriptDataFile
-  <|> ScriptDataValue <$> pScriptDataValue
-  where
-    pScriptDataFile =
+    pScriptDataFile = ScriptDataJsonFile <$>
       Opt.strOption
         (  Opt.long (dataFlagPrefix ++ "-file")
-        <> Opt.metavar "FILE"
-        <> Opt.help "The JSON file containing the script data."
+        <> Opt.metavar "JSON FILE"
+        <> Opt.help (helpTextForFile ++ " The file must follow the special \
+                                         \JSON schema for script data.")
         )
 
-    pScriptDataValue =
+    pScriptDataValue = ScriptDataValue <$>
       Opt.option readerScriptData
         (  Opt.long (dataFlagPrefix ++ "-value")
         <> Opt.metavar "JSON VALUE"
-        <> Opt.help "The JSON value for the script data. Supported JSON data types: string, number, object & array."
+        <> Opt.help (helpTextForValue ++ " There is no schema: (almost) any \
+                                         \JSON value is supported, including \
+                                         \top-level strings and numbers.")
         )
 
     readerScriptData = do
@@ -294,7 +317,6 @@ pScriptDataOrFile dataFlagPrefix =
       case scriptDataFromJson ScriptDataJsonNoSchema v of
         Left err -> fail (displayError err)
         Right sd -> return sd
-
 
 pStakeAddressCmd :: Parser StakeAddressCmd
 pStakeAddressCmd =
@@ -322,23 +344,23 @@ pStakeAddressCmd =
     pStakeAddressKeyHash = StakeAddressKeyHash <$> pStakeVerificationKeyOrFile <*> pMaybeOutputFile
 
     pStakeAddressBuild :: Parser StakeAddressCmd
-    pStakeAddressBuild = StakeAddressBuild <$> pStakeVerificationKeyOrFile
+    pStakeAddressBuild = StakeAddressBuild <$> pStakeVerifier
                                            <*> pNetworkId
                                            <*> pMaybeOutputFile
 
     pStakeAddressRegistrationCert :: Parser StakeAddressCmd
-    pStakeAddressRegistrationCert = StakeKeyRegistrationCert
-                                      <$> pStakeVerificationKeyOrFile
+    pStakeAddressRegistrationCert = StakeRegistrationCert
+                                      <$> pStakeVerifier
                                       <*> pOutputFile
 
     pStakeAddressDeregistrationCert :: Parser StakeAddressCmd
-    pStakeAddressDeregistrationCert = StakeKeyDeRegistrationCert
-                                        <$> pStakeVerificationKeyOrFile
+    pStakeAddressDeregistrationCert = StakeCredentialDeRegistrationCert
+                                        <$> pStakeVerifier
                                         <*> pOutputFile
 
     pStakeAddressDelegationCert :: Parser StakeAddressCmd
-    pStakeAddressDelegationCert = StakeKeyDelegationCert
-                                    <$> pStakeVerificationKeyOrFile
+    pStakeAddressDelegationCert = StakeCredentialDelegationCert
+                                    <$> pStakeVerifier
                                     <*> pStakePoolVerificationKeyOrHashOrFile
                                     <*> pOutputFile
 
@@ -551,7 +573,27 @@ pTransaction :: Parser TransactionCmd
 pTransaction =
   asum
     [ subParser "build-raw"
-        (Opt.info pTransactionBuild $ Opt.progDesc "Build a transaction (low-level, inconvenient)")
+        $ Opt.info pTransactionBuildRaw $ Opt.progDescDoc $ Just $ mconcat
+          [ pretty @String "Build a transaction (low-level, inconvenient)"
+          , line
+          , line
+          , H.yellow $ mconcat
+            [ "Please note the order of some cmd options is crucial. If used incorrectly may produce "
+            , "undesired tx body. See nested [] notation above for details."
+            ]
+          ]
+    , subParser "build"
+        $ Opt.info pTransactionBuild $ Opt.progDescDoc $ Just $ mconcat
+          [ pretty @String "Build a balanced transaction (automatically calculates fees)"
+          , line
+          , line
+          , H.yellow $ mconcat
+            [ "Please note "
+            , H.underline "the order"
+            , " of some cmd options is crucial. If used incorrectly may produce "
+            , "undesired tx body. See nested [] notation above for details."
+            ]
+          ]
     , subParser "sign"
         (Opt.info pTransactionSign $ Opt.progDesc "Sign a transaction")
     , subParser "witness"
@@ -564,24 +606,35 @@ pTransaction =
         (Opt.info pTransactionSubmit . Opt.progDesc $
            mconcat
              [ "Submit a transaction to the local node whose Unix domain socket "
-             , "is obtained from the CARDANO_NODE_SOCKET_PATH enviromnent variable."
+             , "is obtained from the CARDANO_NODE_SOCKET_PATH environment variable."
              ]
           )
     , subParser "policyid"
         (Opt.info pTransactionPolicyId $ Opt.progDesc "Calculate the PolicyId from the monetary policy script.")
     , subParser "calculate-min-fee"
-        (Opt.info pTransactionCalculateMinFee $ Opt.progDesc "Calculate the minimum fee for a transaction")
-    , subParser "calculate-min-value"
-        (Opt.info pTransactionCalculateMinValue $ Opt.progDesc "Calculate the minimum value for a transaction")
-
+        (Opt.info pTransactionCalculateMinFee $ Opt.progDesc "Calculate the minimum fee for a transaction.")
+    , subParser "calculate-min-required-utxo"
+        (Opt.info pTransactionCalculateMinReqUTxO $ Opt.progDesc "Calculate the minimum required UTxO for a transaction output.")
+    , pCalculateMinRequiredUtxoBackwardCompatible
     , subParser "hash-script-data"
-        (Opt.info pTxHashScriptData $ Opt.progDesc "Calculate the hash of script data")
+        (Opt.info pTxHashScriptData $ Opt.progDesc "Calculate the hash of script data.")
     , subParser "txid"
-        (Opt.info pTransactionId $ Opt.progDesc "Print a transaction identifier")
+        (Opt.info pTransactionId $ Opt.progDesc "Print a transaction identifier.")
     , subParser "view" $
-        Opt.info pTransactionView $ Opt.progDesc "Print a transaction"
+        Opt.info pTransactionView $ Opt.progDesc "Print a transaction."
     ]
  where
+  -- Backwards compatible parsers
+  calcMinValueInfo :: ParserInfo TransactionCmd
+  calcMinValueInfo =
+    Opt.info pTransactionCalculateMinReqUTxO
+      $ Opt.progDesc "DEPRECATED: Use 'calculate-min-required-utxo' instead."
+
+  pCalculateMinRequiredUtxoBackwardCompatible :: Parser TransactionCmd
+  pCalculateMinRequiredUtxoBackwardCompatible =
+    Opt.subparser
+      $ Opt.command "calculate-min-value" calcMinValueInfo <> Opt.internal
+
   assembleInfo :: ParserInfo TransactionCmd
   assembleInfo =
     Opt.info pTransactionAssembleTxBodyWit
@@ -592,29 +645,86 @@ pTransaction =
     Opt.subparser
       $ Opt.command "sign-witness" assembleInfo <> Opt.internal
 
+  pScriptValidity :: Parser ScriptValidity
+  pScriptValidity = asum
+    [ Opt.flag' ScriptValid $ mconcat
+      [ Opt.long "script-valid"
+      , Opt.help "Assertion that the script is valid. (default)"
+      ]
+    , Opt.flag' ScriptInvalid $ mconcat
+      [ Opt.long "script-invalid"
+      , Opt.help $ mconcat
+        [ "Assertion that the script is invalid.  "
+        , "If a transaction is submitted with such a script, "
+        , "the script will fail and the collateral taken"
+        ]
+      ]
+    ]
+
   pTransactionBuild :: Parser TransactionCmd
-  pTransactionBuild = TxBuildRaw <$> pCardanoEra
-                                 <*> some pTxIn
-                                 <*> many pTxInCollateral
-                                 <*> many pTxOut
-                                 <*> optional pMintMultiAsset
-                                 <*> optional pInvalidBefore
-                                 <*> optional pInvalidHereafter
-                                 <*> optional pTxFee
-                                 <*> many pCertificateFile
-                                 <*> many pWithdrawal
-                                 <*> pTxMetadataJsonSchema
-                                 <*> many (pScriptFor
-                                             "auxiliary-script-file"
-                                             Nothing
-                                             "Filepath of auxiliary script(s)")
-                                 <*> many pMetadataFile
-                                 <*> optional pProtocolParamsSourceSpec
-                                 <*> optional pUpdateProposalFile
-                                 <*> pTxBodyFile Output
+  pTransactionBuild =
+    TxBuild <$> pCardanoEra
+            <*> pConsensusModeParams
+            <*> pNetworkId
+            <*> optional pScriptValidity
+            <*> optional pWitnessOverride
+            <*> some (pTxIn AutoBalance)
+            <*> many pRequiredSigner
+            <*> many pTxInCollateral
+            <*> many pTxOut
+            <*> pChangeAddress
+            <*> optional (pMintMultiAsset AutoBalance)
+            <*> optional pInvalidBefore
+            <*> optional pInvalidHereafter
+            <*> many (pCertificateFile AutoBalance)
+            <*> many (pWithdrawal AutoBalance)
+            <*> pTxMetadataJsonSchema
+            <*> many (pScriptFor
+                        "auxiliary-script-file"
+                        Nothing
+                        "Filepath of auxiliary script(s)")
+            <*> many pMetadataFile
+            <*> optional pProtocolParamsSourceSpec
+            <*> optional pUpdateProposalFile
+            <*> pOutputSerialisation
+            <*> (OutputTxBodyOnly <$> pTxBodyFile Output <|> pCalculatePlutusScriptCost)
+
+  pChangeAddress :: Parser TxOutChangeAddress
+  pChangeAddress =
+    TxOutChangeAddress <$>
+      Opt.option (readerFromParsecParser parseAddressAny)
+        (  Opt.long "change-address"
+        <> Opt.metavar "ADDRESS"
+        <> Opt.help "Address where ADA in excess of the tx fee will go to."
+        )
+
+  pTransactionBuildRaw :: Parser TransactionCmd
+  pTransactionBuildRaw =
+    TxBuildRaw <$> pCardanoEra
+               <*> optional pScriptValidity
+               <*> some (pTxIn ManualBalance)
+               <*> many pTxInCollateral
+               <*> many pRequiredSigner
+               <*> many pTxOut
+               <*> optional (pMintMultiAsset ManualBalance)
+               <*> optional pInvalidBefore
+               <*> optional pInvalidHereafter
+               <*> optional pTxFee
+               <*> many (pCertificateFile ManualBalance )
+               <*> many (pWithdrawal ManualBalance)
+               <*> pTxMetadataJsonSchema
+               <*> many (pScriptFor
+                           "auxiliary-script-file"
+                           Nothing
+                           "Filepath of auxiliary script(s)")
+               <*> many pMetadataFile
+               <*> optional pProtocolParamsSourceSpec
+               <*> optional pUpdateProposalFile
+               <*> pOutputSerialisation
+               <*> pTxBodyFile Output
 
   pTransactionSign  :: Parser TransactionCmd
-  pTransactionSign = TxSign <$> pTxBodyFile Input
+  pTransactionSign = TxSign <$> pInputTxOrTxBodyFile
                             <*> pSomeWitnessSigningData
                             <*> optional pNetworkId
                             <*> pTxFile Output
@@ -651,10 +761,11 @@ pTransaction =
       <*> pTxShelleyWitnessCount
       <*> pTxByronWitnessCount
 
-  pTransactionCalculateMinValue :: Parser TransactionCmd
-  pTransactionCalculateMinValue = TxCalculateMinValue
-    <$> pProtocolParamsSourceSpec
-    <*> pMultiAsset
+  pTransactionCalculateMinReqUTxO :: Parser TransactionCmd
+  pTransactionCalculateMinReqUTxO = TxCalculateMinRequiredUTxO
+    <$> pCardanoEra
+    <*> pProtocolParamsSourceSpec
+    <*> pTxOut
 
   pProtocolParamsSourceSpec :: Parser ProtocolParamsSourceSpec
   pProtocolParamsSourceSpec =
@@ -665,13 +776,17 @@ pTransaction =
     ParamsFromFile <$> pProtocolParamsFile
 
   pTxHashScriptData :: Parser TransactionCmd
-  pTxHashScriptData = TxHashScriptData <$> pScriptDataOrFile "script-data"
+  pTxHashScriptData = TxHashScriptData <$>
+                        pScriptDataOrFile
+                          "script-data"
+                          "The script data, in JSON syntax."
+                          "The script data, in the given JSON file."
 
   pTransactionId  :: Parser TransactionCmd
-  pTransactionId = TxGetTxId <$> pInputTxFile
+  pTransactionId = TxGetTxId <$> pInputTxOrTxBodyFile
 
   pTransactionView :: Parser TransactionCmd
-  pTransactionView = TxView <$> pInputTxFile
+  pTransactionView = TxView <$> pInputTxOrTxBodyFile
 
 pNodeCmd :: Parser NodeCmd
 pNodeCmd =
@@ -766,6 +881,8 @@ pQueryCmd =
         (Opt.info pQueryProtocolParameters $ Opt.progDesc "Get the node's current protocol parameters")
     , subParser "tip"
         (Opt.info pQueryTip $ Opt.progDesc "Get the node's current tip (slot no, hash, block no)")
+    , subParser "stake-pools"
+        (Opt.info pQueryStakePools $ Opt.progDesc "Get the node's current set of stake pool ids")
     , subParser "stake-distribution"
         (Opt.info pQueryStakeDistribution $ Opt.progDesc "Get the node's current aggregated stake distribution")
     , subParser "stake-address-info"
@@ -783,6 +900,10 @@ pQueryCmd =
         (Opt.info pQueryStakeSnapshot $ Opt.progDesc "Obtain the three stake snapshots for a pool, plus the total active stake (advanced command)")
     , subParser "pool-params"
         (Opt.info pQueryPoolParams $ Opt.progDesc "Dump the pool parameters (Ledger.NewEpochState.esLState._delegationState._pState._pParams -- advanced command)")
+    , subParser "leadership-schedule"
+        (Opt.info pLeadershipSchedule $ Opt.progDesc "Get the slots the node is expected to mint a block in (advanced command)")
+    , subParser "kes-period-info"
+        (Opt.info pKesPeriodInfo $ Opt.progDesc "Get information about the current KES period and your node's operational certificate.")
     ]
   where
     pQueryProtocolParameters :: Parser QueryCmd
@@ -803,6 +924,13 @@ pQueryCmd =
       QueryUTxO'
         <$> pConsensusModeParams
         <*> pQueryUTxOFilter
+        <*> pNetworkId
+        <*> pMaybeOutputFile
+
+    pQueryStakePools :: Parser QueryCmd
+    pQueryStakePools =
+      QueryStakePools'
+        <$> pConsensusModeParams
         <*> pNetworkId
         <*> pMaybeOutputFile
 
@@ -845,6 +973,21 @@ pQueryCmd =
       <*> pNetworkId
       <*> pStakePoolVerificationKeyHash
 
+    pLeadershipSchedule :: Parser QueryCmd
+    pLeadershipSchedule = QueryLeadershipSchedule
+      <$> pConsensusModeParams
+      <*> pNetworkId
+      <*> pGenesisFile "Shelley genesis filepath"
+      <*> pStakePoolVerificationKeyOrHashOrFile
+      <*> pVrfSigningKeyFile
+      <*> pWhichLeadershipSchedule
+
+    pKesPeriodInfo :: Parser QueryCmd
+    pKesPeriodInfo = QueryKesPeriodInfo
+      <$> pConsensusModeParams
+      <*> pNetworkId
+      <*> pOperationalCertificateFile
+      <*> pMaybeOutputFile
 
 pGovernanceCmd :: Parser GovernanceCmd
 pGovernanceCmd =
@@ -1175,9 +1318,19 @@ pProtocolParamsFile =
       <> Opt.completer (Opt.bashCompleter "file")
       )
 
-pCertificateFile :: Parser (CertificateFile,
-                            Maybe (ScriptWitnessFiles WitCtxStake))
-pCertificateFile =
+pCalculatePlutusScriptCost :: Parser TxBuildOutputOptions
+pCalculatePlutusScriptCost =
+  OutputScriptCostOnly <$> Opt.strOption
+   ( Opt.long "calculate-plutus-script-cost" <>
+     Opt.metavar "FILE" <>
+     Opt.help "Output filepath of the script cost information." <>
+     Opt.completer (Opt.bashCompleter "file")
+   )
+
+pCertificateFile
+  :: BalanceTxExecUnits
+  -> Parser (CertificateFile, Maybe (ScriptWitnessFiles WitCtxStake))
+pCertificateFile balanceExecUnits =
   (,) <$> (CertificateFile
              <$> (  Opt.strOption
                       (  Opt.long "certificate-file"
@@ -1191,6 +1344,7 @@ pCertificateFile =
           )
       <*> optional (pScriptWitnessFiles
                       WitCtxStake
+                      balanceExecUnits
                       "certificate" Nothing
                       "the use of the certificate.")
  where
@@ -1253,10 +1407,12 @@ pMetadataFile =
           <> Opt.completer (Opt.bashCompleter "file")
           )
 
-pWithdrawal :: Parser (StakeAddress,
-                       Lovelace,
-                       Maybe (ScriptWitnessFiles WitCtxStake))
-pWithdrawal =
+pWithdrawal
+  :: BalanceTxExecUnits
+  -> Parser (StakeAddress,
+            Lovelace,
+            Maybe (ScriptWitnessFiles WitCtxStake))
+pWithdrawal balance =
     (\(stakeAddr,lovelace) maybeScriptFp -> (stakeAddr, lovelace, maybeScriptFp))
       <$> Opt.option (readerFromParsecParser parseWithdrawal)
             (  Opt.long "withdrawal"
@@ -1265,6 +1421,7 @@ pWithdrawal =
             )
       <*> optional (pScriptWitnessFiles
                       WitCtxStake
+                      balance
                       "withdrawal" Nothing
                       "the withdrawal of rewards.")
  where
@@ -1310,6 +1467,56 @@ pColdSigningKeyFile =
       <> Opt.internal
       )
     )
+
+pRequiredSigner :: Parser RequiredSigner
+pRequiredSigner =
+      RequiredSignerSkeyFile <$> sKeyFile
+  <|> RequiredSignerHash <$> sPayKeyHash
+ where
+  sKeyFile :: Parser SigningKeyFile
+  sKeyFile = SigningKeyFile <$>
+    Opt.strOption
+      (  Opt.long "required-signer"
+      <> Opt.metavar "FILE"
+      <> Opt.help "Input filepath of the signing key (zero or more) whose \
+                  \signature is required."
+      <> Opt.completer (Opt.bashCompleter "file")
+      )
+  sPayKeyHash :: Parser (Hash PaymentKey)
+  sPayKeyHash =
+    Opt.option (readerFromParsecParser $ parseHash (AsHash AsPaymentKey))
+      (  Opt.long "required-signer-hash"
+      <> Opt.metavar "HASH"
+      <> Opt.help "Hash of the verification key (zero or more) whose \
+                  \signature is required."
+      )
+
+pVrfSigningKeyFile :: Parser SigningKeyFile
+pVrfSigningKeyFile =
+  SigningKeyFile <$>
+    Opt.strOption
+      (  Opt.long "vrf-signing-key-file"
+      <> Opt.metavar "FILE"
+      <> Opt.help "Input filepath of the VRF signing key."
+      <> Opt.completer (Opt.bashCompleter "file")
+      )
+
+pWhichLeadershipSchedule :: Parser EpochLeadershipSchedule
+pWhichLeadershipSchedule = pCurrent <|> pNext
+ where
+   pCurrent :: Parser EpochLeadershipSchedule
+   pCurrent =
+     Opt.flag' CurrentEpoch
+       (  Opt.long "current"
+       <> Opt.help "Get the leadership schedule for the current epoch."
+       )
+
+   pNext :: Parser EpochLeadershipSchedule
+   pNext =
+     Opt.flag' NextEpoch
+       (  Opt.long "next"
+       <> Opt.help "Get the leadership schedule for the following epoch."
+       )
 
 pSomeWitnessSigningData :: Parser [WitnessSigningData]
 pSomeWitnessSigningData =
@@ -1406,6 +1613,14 @@ pOperatorCertIssueCounterFile =
         )
     )
 
+pOperationalCertificateFile :: Parser FilePath
+pOperationalCertificateFile =
+  Opt.strOption
+    (  Opt.long "op-cert-file"
+    <> Opt.metavar "FILE"
+    <> Opt.help "Filepath of the node's operational certificate."
+    <> Opt.completer (Opt.bashCompleter "file")
+    )
 
 pOutputFormat :: Parser OutputFormat
 pOutputFormat =
@@ -1417,6 +1632,16 @@ pOutputFormat =
     <> Opt.value OutputFormatBech32
     )
 
+pOutputSerialisation :: Parser OutputSerialisation
+pOutputSerialisation =
+  Opt.flag' OutputLedgerCDDLSerialisation
+    (  Opt.long "cddl-format"
+    <> Opt.help "Serialise in the ledger CDDL specified CBOR format."
+    ) <|>
+  Opt.flag OutputCliSerialisation OutputCliSerialisation
+    (  Opt.long "cli-format"
+    <> Opt.help "Serialise in the cardano-cli CBOR format."
+    )
 
 pMaybeOutputFile :: Parser (Maybe OutputFile)
 pMaybeOutputFile =
@@ -1708,11 +1933,12 @@ pCardanoEra = asum
       )
 
     -- Default for now:
-  , pure (AnyCardanoEra MaryEra)
+  , pure (AnyCardanoEra AlonzoEra)
   ]
 
-pTxIn :: Parser (TxIn, Maybe (ScriptWitnessFiles WitCtxTxIn))
-pTxIn =
+pTxIn :: BalanceTxExecUnits
+      -> Parser (TxIn, Maybe (ScriptWitnessFiles WitCtxTxIn))
+pTxIn balance =
      (,) <$> Opt.option (readerFromParsecParser parseTxIn)
                (  Opt.long "tx-in"
                 <> Opt.metavar "TX-IN"
@@ -1720,6 +1946,7 @@ pTxIn =
                )
          <*> optional (pScriptWitnessFiles
                          WitCtxTxIn
+                         balance
                          "tx-in" (Just "txin")
                          "the spending of the transaction input.")
 
@@ -1731,16 +1958,16 @@ pTxInCollateral =
       <> Opt.help "TxId#TxIx"
       )
 
+pWitnessOverride :: Parser Word
+pWitnessOverride = Opt.option Opt.auto
+  (  Opt.long "witness-override"
+  <> Opt.metavar "WORD"
+  <> Opt.help "Specify and override the number of \
+              \witnesses the transaction requires."
+  )
+
 parseTxIn :: Parsec.Parser TxIn
 parseTxIn = TxIn <$> parseTxId <*> (Parsec.char '#' *> parseTxIx)
-
-renderTxIn :: TxIn -> Text
-renderTxIn (TxIn txid (TxIx txix)) =
-  mconcat
-    [ serialiseToRawBytesHexText txid
-    , "#"
-    , Text.pack (show txix)
-    ]
 
 parseTxId :: Parsec.Parser TxId
 parseTxId = do
@@ -1759,41 +1986,51 @@ pTxOut =
           (  Opt.long "tx-out"
           <> Opt.metavar "ADDRESS VALUE"
           -- TODO alonzo: Update the help text to describe the new syntax as well.
-          <> Opt.help "The transaction output as Address+Lovelace where Address is \
-                      \the Bech32-encoded address followed by the amount in \
-                      \Lovelace."
+          <> Opt.help "The transaction output as ADDRESS VALUE where ADDRESS is \
+                      \the Bech32-encoded address followed by the value in \
+                      \the multi-asset syntax (including simply Lovelace)."
           )
-    <*> optional pDatumHash
+    <*> pTxOutDatum
 
 
-pDatumHash :: Parser (Hash ScriptData)
-pDatumHash  =
-  Opt.option (readerFromParsecParser parseHashScriptData)
-    (  Opt.long "tx-out-datum-hash"
-    <> Opt.metavar "HASH"
-    <> Opt.help "Required datum hash for tx inputs intended \
-               \to be utilizied by a Plutus script."
-    )
+pTxOutDatum :: Parser TxOutDatumAnyEra
+pTxOutDatum =
+      pTxOutDatumByHashOnly
+  <|> pTxOutDatumByHashOf
+  <|> pTxOutDatumByValue
+  <|> pure TxOutDatumByNone
   where
-    parseHashScriptData :: Parsec.Parser (Hash ScriptData)
-    parseHashScriptData = do
-      str <- Parsec.many1 Parsec.hexDigit Parsec.<?> "script data hash"
-      case deserialiseFromRawBytesHex (AsHash AsScriptData) (BSC.pack str) of
-        Just sdh -> return sdh
-        Nothing  -> fail $ "Invalid datum hash: " ++ show str
+    pTxOutDatumByHashOnly =
+      TxOutDatumByHashOnly <$>
+        Opt.option (readerFromParsecParser $ parseHash (AsHash AsScriptData))
+          (  Opt.long "tx-out-datum-hash"
+          <> Opt.metavar "HASH"
+          <> Opt.help "The script datum hash for this tx output, as \
+                     \the raw datum hash (in hex)."
+          )
 
+    pTxOutDatumByHashOf =
+      TxOutDatumByHashOf <$>
+        pScriptDataOrFile
+          "tx-out-datum-hash"
+          "The script datum hash for this tx output, by hashing the \
+          \script datum given here in JSON syntax."
+          "The script datum hash for this tx output, by hashing the \
+          \script datum in the given JSON file."
 
-pMultiAsset :: Parser Value
-pMultiAsset =
-  Opt.option
-    (readerFromParsecParser parseValue)
-      (  Opt.long "multi-asset"
-      <> Opt.metavar "VALUE"
-      <> Opt.help "Multi-asset value(s) with the multi-asset cli syntax"
-      )
+    pTxOutDatumByValue =
+      TxOutDatumByValue <$>
+        pScriptDataOrFile
+          "tx-out-datum-embed"
+          "The script datum to embed in the tx for this output, \
+          \given here in JSON syntax."
+          "The script datum to embed in the tx for this output, \
+          \in the given JSON file."
 
-pMintMultiAsset :: Parser (Value, [ScriptWitnessFiles WitCtxMint])
-pMintMultiAsset =
+pMintMultiAsset
+  :: BalanceTxExecUnits
+  -> Parser (Value, [ScriptWitnessFiles WitCtxMint])
+pMintMultiAsset balanceExecUnits =
   (,) <$> Opt.option
             (readerFromParsecParser parseValue)
               (  Opt.long "mint"
@@ -1802,12 +2039,13 @@ pMintMultiAsset =
               )
       <*> some (pScriptWitnessFiles
                   WitCtxMint
+                  balanceExecUnits
                   "mint" (Just "minting")
-                  "the minting of assets for a particular policy Id.")
-
+                  "the minting of assets for a particular policy Id."
+               )
  where
    helpText = "Mint multi-asset value(s) with the multi-asset cli syntax. \
-               \You must specifiy a script witness."
+               \You must specify a script witness."
 
 pInvalidBefore :: Parser SlotNo
 pInvalidBefore =
@@ -1914,8 +2152,8 @@ pTxFile fdir =
         Input -> "tx-file"
         Output -> "out-file"
 
-pInputTxFile :: Parser InputTxFile
-pInputTxFile =
+pInputTxOrTxBodyFile :: Parser InputTxBodyOrTxFile
+pInputTxOrTxBodyFile =
   InputTxBodyFile <$> pTxBodyFile Input <|> InputTxFile <$> pTxFile Input
 
 pTxInCount :: Parser TxInCount
@@ -2246,7 +2484,7 @@ pPoolMargin :: Parser Rational
 pPoolMargin =
     Opt.option readRationalUnitInterval
       (  Opt.long "pool-margin"
-      <> Opt.metavar "DOUBLE"
+      <> Opt.metavar "RATIONAL"
       <> Opt.help "The stake pool's margin."
       )
 
@@ -2498,7 +2736,7 @@ pPoolInfluence :: Parser Rational
 pPoolInfluence =
     Opt.option readRational
       (  Opt.long "pool-influence"
-      <> Opt.metavar "DOUBLE"
+      <> Opt.metavar "RATIONAL"
       <> Opt.help "Pool influence."
       )
 
@@ -2506,7 +2744,7 @@ pTreasuryExpansion :: Parser Rational
 pTreasuryExpansion =
     Opt.option readRationalUnitInterval
       (  Opt.long "treasury-expansion"
-      <> Opt.metavar "DOUBLE"
+      <> Opt.metavar "RATIONAL"
       <> Opt.help "Treasury expansion."
       )
 
@@ -2514,7 +2752,7 @@ pMonetaryExpansion :: Parser Rational
 pMonetaryExpansion =
     Opt.option readRationalUnitInterval
       (  Opt.long "monetary-expansion"
-      <> Opt.metavar "DOUBLE"
+      <> Opt.metavar "RATIONAL"
       <> Opt.help "Monetary expansion."
       )
 
@@ -2522,7 +2760,7 @@ pDecentralParam :: Parser Rational
 pDecentralParam =
     Opt.option readRationalUnitInterval
       (  Opt.long "decentralization-parameter"
-      <> Opt.metavar "DOUBLE"
+      <> Opt.metavar "RATIONAL"
       <> Opt.help "Decentralization parameter."
       )
 
@@ -2531,7 +2769,7 @@ pExtraEntropy =
       Opt.option (Just <$> readerFromParsecParser parsePraosNonce)
         (  Opt.long "extra-entropy"
         <> Opt.metavar "HEX"
-        <> Opt.help "Praos extra entropy, as a hex byte string."
+        <> Opt.help "Praos extra entropy seed, as a hex byte string."
         )
   <|> Opt.flag' Nothing
         (  Opt.long "reset-extra-entropy"
@@ -2556,17 +2794,17 @@ pUTxOCostPerWord =
 
 pExecutionUnitPrices :: Parser ExecutionUnitPrices
 pExecutionUnitPrices = ExecutionUnitPrices
-  <$> Opt.option (readerFromParsecParser parseLovelace)
+  <$> Opt.option readRational
       (  Opt.long "price-execution-steps"
-      <> Opt.metavar "LOVELACE"
+      <> Opt.metavar "RATIONAL"
       <> Opt.help "Step price of execution units for script languages that use \
-                  \them (from Alonzo era)."
+                  \them (from Alonzo era).  (Examples: '1.1', '11/10')"
       )
-  <*> Opt.option (readerFromParsecParser parseLovelace)
+  <*> Opt.option readRational
       (  Opt.long "price-execution-memory"
-      <> Opt.metavar "LOVELACE"
+      <> Opt.metavar "RATIONAL"
       <> Opt.help "Memory price of execution units for script languages that \
-                  \use them (from Alonzo era)."
+                  \use them (from Alonzo era).  (Examples: '1.1', '11/10')"
       )
 
 pMaxTxExecutionUnits :: Parser ExecutionUnits
@@ -2685,12 +2923,6 @@ parseLovelace = do
   then fail $ show i <> " lovelace exceeds the Word64 upper bound"
   else return $ Lovelace i
 
-parseAddressAny :: Parsec.Parser AddressAny
-parseAddressAny = do
-    str <- lexPlausibleAddressString
-    case deserialiseAddress AsAddressAny str of
-      Nothing   -> fail "invalid address"
-      Just addr -> pure addr
 
 parseStakeAddress :: Parsec.Parser StakeAddress
 parseStakeAddress = do
@@ -2699,7 +2931,7 @@ parseStakeAddress = do
       Nothing   -> fail $ "invalid address: " <> Text.unpack str
       Just addr -> pure addr
 
-parseTxOutAnyEra :: Parsec.Parser (Maybe (Hash ScriptData) -> TxOutAnyEra)
+parseTxOutAnyEra :: Parsec.Parser (TxOutDatumAnyEra -> TxOutAnyEra)
 parseTxOutAnyEra = do
     addr <- parseAddressAny
     Parsec.spaces
@@ -2708,17 +2940,6 @@ parseTxOutAnyEra = do
     Parsec.option () (Parsec.char '+' >> Parsec.spaces)
     val <- parseValue
     return (TxOutAnyEra addr val)
-
-lexPlausibleAddressString :: Parsec.Parser Text
-lexPlausibleAddressString =
-    Text.pack <$> Parsec.many1 (Parsec.satisfy isPlausibleAddressChar)
-  where
-    -- Covers both base58 and bech32 (with constrained prefixes)
-    isPlausibleAddressChar c =
-         (c >= 'a' && c <= 'z')
-      || (c >= 'A' && c <= 'Z')
-      || (c >= '0' && c <= '9')
-      || c == '_'
 
 decimal :: Parsec.Parser Integer
 Parsec.TokenParser { Parsec.decimal = decimal } = Parsec.haskell
@@ -2779,8 +3000,15 @@ readRationalUnitInterval = readRational >>= checkUnitInterval
      | q >= 0 && q <= 1 = return q
      | otherwise        = fail "Please enter a value in the range [0,1]"
 
+readFractionAsRational :: Opt.ReadM Rational
+readFractionAsRational = readerFromAttoParser fractionalAsRational
+  where fractionalAsRational :: Atto.Parser Rational
+        fractionalAsRational = (%) <$> (Atto.decimal @Integer <* Atto.char '/') <*> Atto.decimal @Integer
+
 readRational :: Opt.ReadM Rational
-readRational = toRational <$> readerFromAttoParser Atto.scientific
+readRational =
+      (toRational <$> readerFromAttoParser Atto.scientific)
+  <|> readFractionAsRational
 
 readerJSON :: Opt.ReadM Aeson.Value
 readerJSON = readerFromAttoParser Aeson.Parser.json

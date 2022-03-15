@@ -58,7 +58,6 @@ import           Cardano.BM.Stats
 import           Cardano.BM.Tracing (HasPrivacyAnnotation (..), HasSeverityAnnotation (..),
                    Severity (..), ToObject (..), Tracer (..), TracingVerbosity (..),
                    Transformable (..))
-import qualified Cardano.Chain.Update as Update
 import           Cardano.Slotting.Block (BlockNo (..))
 import           Ouroboros.Consensus.Byron.Ledger.Block (ByronHash (..))
 import           Ouroboros.Consensus.HardFork.Combinator (OneEraHash (..))
@@ -89,12 +88,6 @@ instance FromJSON PortNumber where
   parseJSON invalid  = fail $ "Parsing of port number failed due to type mismatch. "
                             <> "Encountered: " <> show invalid
 
-instance FromJSON Update.ApplicationName where
-  parseJSON (String x) = pure $ Update.ApplicationName x
-  parseJSON invalid  =
-    fail $ "Parsing of application name failed due to type mismatch. "
-    <> "Encountered: " <> show invalid
-
 instance ToJSON (HeaderHash blk) => ToJSON (Tip blk) where
   toJSON TipGenesis = object [ "genesis" .= True ]
   toJSON (Tip slotNo headerHash blockNo) =
@@ -122,4 +115,3 @@ instance ToObject ResourceStats where
     case toJSON stats of
       Object x -> x
       _ -> mempty
-

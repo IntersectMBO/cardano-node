@@ -6,35 +6,58 @@
 with lib; with builtins;
 let
   cfg = config.services.cardano-node;
-  inherit (cfg.cardanoNodePkgs) commonLib cardano-node cardano-node-profiled cardano-node-eventlogged cardano-node-asserted;
   envConfig = cfg.environments.${cfg.environment};
   runtimeDir = if cfg.runtimeDir == null then cfg.stateDir else "/run/${cfg.runtimeDir}";
-  mkScript = cfg: i: let
-    instanceConfig =
-      cfg.nodeConfig
-      //
-      (optionalAttrs (cfg.nodeConfig ? hasEKG)
-        {
-          hasEKG = cfg.nodeConfig.hasEKG + i;
-        })
-      //
-      (optionalAttrs (cfg.nodeConfig ? hasPrometheus)
-        {
-          hasPrometheus = map (n: if isInt n then n + i else n) cfg.nodeConfig.hasPrometheus;
-        })
-      //
-      (foldl' (x: y: x // y) {}
-        (mapAttrsToList
-          (era: epoch:
-            { "Test${era}HardForkAtEpoch" = epoch;
-            })
-          cfg.forceHardForks));
+  mkScript = cfg:
+    let baseConfig = recursiveUpdate (cfg.nodeConfig
+      // (mapAttrs' (era: epoch:
+        nameValuePair "Test${era}HardForkAtEpoch" epoch
+      ) cfg.forceHardForks)
+      // (optionalAttrs cfg.useNewTopology {
+        EnableP2P = true;
+        TargetNumberOfRootPeers = cfg.targetNumberOfRootPeers;
+        TargetNumberOfKnownPeers = cfg.targetNumberOfKnownPeers;
+        TargetNumberOfEstablishedPeers = cfg.targetNumberOfEstablishedPeers;
+        TargetNumberOfActivePeers = cfg.targetNumberOfActivePeers;
+      })) cfg.extraNodeConfig;
+    in i: let
+    instanceConfig = recursiveUpdate (baseConfig
+      // (optionalAttrs (baseConfig ? hasEKG) {
+          hasEKG = baseConfig.hasEKG + i;
+      })
+      // (optionalAttrs (baseConfig ? hasPrometheus) {
+          hasPrometheus = map (n: if isInt n then n + i else n) baseConfig.hasPrometheus;
+      })) (cfg.extraNodeInstanceConfig i);
     nodeConfigFile = if (cfg.nodeConfigFile != null) then cfg.nodeConfigFile
       else toFile "config-${toString cfg.nodeId}-${toString i}.json" (toJSON instanceConfig);
-    realNodeConfigFile = nodeConfigFile;
-    topology = if cfg.topology != null then cfg.topology else toFile "topology.yaml" (toJSON {
-      Producers = cfg.producers ++ (cfg.instanceProducers i);
-    });
+    newTopology = {
+      LocalRoots = {
+        groups = map (g: {
+          localRoots = {
+            inherit (g) addrs;
+            advertise = g.advertise or false;
+          };
+          valency = g.valency or (length g.addrs);
+        }) (cfg.producers ++ (cfg.instanceProducers i));
+      };
+      PublicRoots = map (g: {
+        publicRoots = {
+          inherit (g) addrs;
+          advertise = g.advertise or false;
+        };
+      }) (cfg.publicProducers ++ (cfg.instancePublicProducers i));
+    } // optionalAttrs (cfg.usePeersFromLedgerAfterSlot != null) {
+      useLedgerAfterSlot = cfg.usePeersFromLedgerAfterSlot;
+    };
+    oldTopology = {
+      Producers = concatMap (g: map (a: a // { valency = a.valency or 1; }) g.addrs) (
+        cfg.producers ++ (cfg.instanceProducers i) ++ cfg.publicProducers ++ (cfg.instancePublicProducers i)
+      );
+    };
+    topology = if cfg.topology != null then cfg.topology else toFile "topology.yaml" (toJSON (
+      if (cfg.useNewTopology) then newTopology
+      else oldTopology
+    ));
     consensusParams = {
       RealPBFT = [
         "${lib.optionalString (cfg.signingKey != null)
@@ -66,7 +89,7 @@ let
     instanceDbPath = "${cfg.databasePath}${optionalString (i > 0) "-${toString i}"}";
     cmd = builtins.filter (x: x != "") [
       "${cfg.executable} run"
-      "--config ${realNodeConfigFile}"
+      "--config ${nodeConfigFile}"
       "--database-path ${instanceDbPath}"
       "--topology ${topology}"
     ] ++ (lib.optionals (!cfg.systemdSocketActivation) ([
@@ -112,7 +135,7 @@ in {
       };
 
       profiling = mkOption {
-        type = types.enum ["none" "time" "space" "space-module" "space-closure" "space-type" "space-retainer" "space-bio"];
+        type = types.enum ["none" "time" "space" "space-cost" "space-module" "space-closure" "space-type" "space-retainer" "space-bio" "space-heap"];
         default = "none";
       };
 
@@ -129,10 +152,10 @@ in {
         '';
       };
 
-      cardanoNodePkgs = mkOption {
+      cardanoNodePackages = mkOption {
         type = types.attrs;
-        default = import ../. {};
-        defaultText = "cardano-node pkgs";
+        default = pkgs.cardanoNodePackages or (import ../. {}).cardanoNodePackages;
+        defaultText = "cardano-node packages";
         description = ''
           The cardano-node packages and library that should be used.
           Main usage is sharing optimization:
@@ -143,10 +166,10 @@ in {
       package = mkOption {
         type = types.package;
         default = if (cfg.profiling != "none")
-          then cardano-node-profiled
-          else if cfg.eventlog then cardano-node-eventlogged
-          else if cfg.asserts then cardano-node-asserted
-          else cardano-node;
+          then cfg.cardanoNodePackages.cardano-node.profiled
+          else if cfg.eventlog then cfg.cardanoNodePackages.cardano-node.eventlogged
+          else if cfg.asserts then cfg.cardanoNodePackages.cardano-node.asserted
+          else cfg.cardanoNodePackages.cardano-node;
         defaultText = "cardano-node";
         description = ''
           The cardano-node package that should be used
@@ -164,7 +187,7 @@ in {
 
       environments = mkOption {
         type = types.attrs;
-        default = commonLib.environments;
+        default = cfg.cardanoNodePackages.cardanoLib.environments;
         description = ''
           environment node will connect to
         '';
@@ -272,8 +295,7 @@ in {
       };
 
       extraServiceConfig = mkOption {
-        # activate type for nixos-21.03:
-        type = types.unspecified # types.functionTo (types.listOf types.attrs);
+        type = types.functionTo types.attrs
           // {
             merge = loc: foldl' (res: def: i: recursiveUpdate (res i) (def.value i)) (i: {});
           };
@@ -284,8 +306,7 @@ in {
       };
 
       extraSocketConfig = mkOption {
-        # activate type for nixos-21.03:
-        type = types.unspecified # types.functionTo (types.listOf types.attrs);
+        type = types.functionTo types.attrs
           // {
             merge = loc: foldl' (res: def: i: recursiveUpdate (res i) (def.value i)) (i: {});
           };
@@ -341,22 +362,62 @@ in {
         '';
       };
 
-      producers = mkOption {
+      publicProducers = mkOption {
+        type = types.listOf types.attrs;
         default = [{
-          addr = envConfig.relaysNew;
-          port = envConfig.edgePort;
+          addrs = [{
+            addr = envConfig.relaysNew;
+            port = envConfig.edgePort;
+          }];
+          advertise = false;
+        }];
+        description = ''Routes to public peers. Only used if slot < usePeersFromLedgerAfterSlot'';
+      };
+
+      instancePublicProducers = mkOption {
+        # type = types.functionTo (types.listOf types.attrs);
+        default = _: [];
+        description = ''Routes to public peers. Only used if slot < usePeersFromLedgerAfterSlot and specific to a given instance (when multiple instances are used).'';
+      };
+
+      producers = mkOption {
+        type = types.listOf types.attrs;
+        default = [];
+        example = [{
+          addrs = [{
+            addr = "127.0.0.1";
+            port = 3001;
+          }];
+          advertise = false;
           valency = 1;
         }];
-        type = types.listOf types.attrs;
-        description = ''Static routes to peers.'';
+        description = ''Static routes to local peers.'';
       };
 
       instanceProducers = mkOption {
-        # activate type for nixos-21.03:
-        # type = types.functionTo (types.listOf types.attrs);
+        type = types.functionTo (types.listOf types.attrs);
         default = _: [];
         description = ''
-          Static routes to peers, specific to a given instance (when multiple instances are used).
+          Static routes to local peers, specific to a given instance (when multiple instances are used).
+        '';
+      };
+
+      useNewTopology = mkOption {
+        type = types.bool;
+        default = cfg.nodeConfig.EnableP2P or false;
+        description = ''
+          Use new, p2p/ledger peers compatible topology.
+        '';
+      };
+
+      usePeersFromLedgerAfterSlot = mkOption {
+        type = types.nullOr types.int;
+        default = if cfg.kesKey != null then null
+          else envConfig.usePeersFromLedgerAfterSlot or null;
+        description = ''
+          If set, bootstraps from public roots until it reaches given slot,
+          then it switches to using the ledger as a source of peers. It maintains a connection to its local roots.
+          Default to null for block producers.
         '';
       };
 
@@ -376,6 +437,55 @@ in {
         description = ''Internal representation of the config.'';
       };
 
+      targetNumberOfRootPeers = mkOption {
+        type = types.int;
+        default = cfg.nodeConfig.TargetNumberOfRootPeers or 60;
+        description = "Limits the maximum number of root peers the node will know about";
+      };
+
+      targetNumberOfKnownPeers = mkOption {
+        type = types.int;
+        default = cfg.nodeConfig.TargetNumberOfKnownPeers or cfg.targetNumberOfRootPeers;
+        description = ''
+          Target number for known peers (root peers + peers known through gossip).
+          Default to targetNumberOfRootPeers.
+        '';
+      };
+
+      targetNumberOfEstablishedPeers = mkOption {
+        type = types.int;
+        default = cfg.nodeConfig.TargetNumberOfEstablishedPeers
+          or (2 * cfg.targetNumberOfKnownPeers / 3);
+        description = ''Number of peers the node will be connected to, but not necessarily following their chain.
+          Default to 2/3 of targetNumberOfKnownPeers.
+        '';
+      };
+
+      targetNumberOfActivePeers = mkOption {
+        type = types.int;
+        default = cfg.nodeConfig.TargetNumberOfActivePeers or (cfg.targetNumberOfEstablishedPeers / 2);
+        description = ''Number of peers your node is actively downloading headers and blocks from.
+          Default to half of targetNumberOfEstablishedPeers.
+        '';
+      };
+
+      extraNodeConfig = mkOption {
+        type = types.attrs // {
+          merge = loc: foldl' (res: def: recursiveUpdate res def.value) {};
+        };
+        default = {};
+        description = ''Additional node config.'';
+      };
+
+      extraNodeInstanceConfig = mkOption {
+        type = types.functionTo types.attrs
+          // {
+            merge = loc: foldl' (res: def: i: recursiveUpdate (res i) (def.value i)) (i: {});
+          };
+        default = i: {};
+        description = ''Additional node config for a particular instance.'';
+      };
+
       nodeConfigFile = mkOption {
         type = types.nullOr types.str;
         default = null;
@@ -383,7 +493,7 @@ in {
       };
 
       forceHardForks = mkOption {
-        type = types.attrs;
+        type = types.attrsOf types.int;
         default = {};
         description = ''
           A developer-oriented dictionary option to force hard forks for given eras at given epochs.  Maps capitalised era names (Shelley, Allegra, Mary, etc.) to hard fork epoch number.
@@ -398,7 +508,7 @@ in {
 
       rtsArgs = mkOption {
         type = types.listOf types.str;
-        default = [ "-N2" "-A16m" "-qg" "-qb" "--disable-delayed-os-memory-return" ];
+        default = [ "-N2" "-I0" "-A16m" "-qg" "-qb" "--disable-delayed-os-memory-return" ];
         apply = args: if (args != [] || cfg.profilingArgs != []) then
           ["+RTS"] ++ cfg.profilingArgs ++ args ++ ["-RTS"]
           else [];
@@ -411,11 +521,13 @@ in {
           ++ lib.optional (cfg.eventlog) "-l";
           in if cfg.profiling == "time" then ["-P"] ++ commonProfilingArgs
             else if cfg.profiling == "space" then ["-h"] ++ commonProfilingArgs
+            else if cfg.profiling == "space-cost" then ["-hc"] ++ commonProfilingArgs
             else if cfg.profiling == "space-module" then ["-hm"] ++ commonProfilingArgs
             else if cfg.profiling == "space-closure" then ["-hd"] ++ commonProfilingArgs
             else if cfg.profiling == "space-type" then ["-hy"] ++ commonProfilingArgs
             else if cfg.profiling == "space-retainer" then ["-hr"] ++ commonProfilingArgs
             else if cfg.profiling == "space-bio" then ["-hb"] ++ commonProfilingArgs
+            else if cfg.profiling == "space-heap" then ["-hT"] ++ commonProfilingArgs
             else [];
         description = ''RTS profiling options'';
       };
@@ -464,7 +576,6 @@ in {
           NonBlocking = lib.mkIf cfg.systemdSocketActivation true;
           # time to sleep before restarting a service
           RestartSec = 1;
-          KillSignal = "SIGINT";
         };
       } (cfg.extraServiceConfig i));
 

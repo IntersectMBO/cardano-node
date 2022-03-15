@@ -38,7 +38,7 @@ To register your stake pool you will need to:
       "homepage": "https://teststakepool.com"
       }
 
-Store the file in the url you control. For example [https://teststakepool.com/poolMetadata.json](https://git.io/JJWdJ). You can use a GIST in Github to store the definition and git.io to make it short. Ensure that the URL is less than 65 characters long.
+Store the file in the url you control. For example [https://teststakepool.com/poolMetadata.json](https://git.io/JJWdJ). You can use a GIST in Github to store the definition and git.io to make it short. Ensure that the Stake pool metadata consists of at most 512 bytes, with the URL being less than 65 characters long.
 
 Example:
 
@@ -78,7 +78,7 @@ After certificate submission, relay nodes will be added to the topology file ena
     --vrf-verification-key-file vrf.vkey \
     --pool-pledge <AMOUNT TO PLEDGE IN LOVELACE> \
     --pool-cost <POOL COST PER EPOCH IN LOVELACE> \
-    --pool-margin <POOL COST PER EPOCH IN PERCENTAGE> \
+    --pool-margin <POOL OPERATOR MARGIN > \
     --pool-reward-account-verification-key-file stake.vkey \
     --pool-owner-stake-verification-key-file stake.vkey \
     --mainnet \
@@ -96,7 +96,7 @@ After certificate submission, relay nodes will be added to the topology file ena
 | vrf-verification-key-file | verification _VRS_ key |
 | pool-pledge | pledge lovelace |
 | pool-cost | operational costs per epoch lovelace |
-| pool-margin | operator margin |
+| pool-margin | share of total ada rewards that the operator takes, must be from 0 to 1 |
 | pool-reward-account-verification-key-file | verification staking key for the rewards |
 | pool-owner-staking-verification-key-file | verification staking keys for the pool owners |
 | pool-relay-ipv4 | relay node ip address |

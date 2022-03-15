@@ -8,8 +8,6 @@
 
 module Cardano.Benchmarking.Types
   ( Ack(..)
-  , Acked(..)
-  , InitCooldown(..)   
   , NodeIPv4Address
   , NumberOfInputsPerTx(..)
   , NumberOfOutputsPerTx(..)
@@ -26,31 +24,19 @@ module Cardano.Benchmarking.Types
 
 
 import           Prelude
-import           Data.Word
 import           GHC.Generics
 import           Data.Aeson
 
-import           Cardano.Node.Types (NodeIPv4Address)
+import           Cardano.Node.Configuration.NodeAddress
 
 myJsonOptions :: Options
 myJsonOptions = defaultOptions {
   unwrapUnaryRecords = True
   }
 
--- | How long wait before starting the main submission phase,
---   after the init Tx batch was submitted.
-newtype InitCooldown =
-  InitCooldown Int
-  deriving newtype (Eq, Ord, Num, Show)
-deriving stock instance Generic InitCooldown
-instance ToJSON InitCooldown where
-  toJSON     = genericToJSON myJsonOptions
-  toEncoding = genericToEncoding myJsonOptions
-instance FromJSON InitCooldown where parseJSON = genericParseJSON myJsonOptions
-
 newtype NumberOfInputsPerTx =
   NumberOfInputsPerTx Int
-  deriving newtype (Eq, Ord, Num, Show)
+  deriving newtype (Eq, Ord, Enum, Real, Num, Integral, Show)
 deriving stock instance Generic NumberOfInputsPerTx
 instance ToJSON NumberOfInputsPerTx where
   toJSON     = genericToJSON myJsonOptions
@@ -68,7 +54,7 @@ instance ToJSON NumberOfOutputsPerTx where
 instance FromJSON NumberOfOutputsPerTx where parseJSON = genericParseJSON myJsonOptions
 
 newtype NumberOfTxs =
-  NumberOfTxs { unNumberOfTxs :: Word64 }
+  NumberOfTxs { unNumberOfTxs :: Int }
   deriving newtype (Eq, Ord, Num, Show)
 deriving stock instance Generic NumberOfTxs
 instance ToJSON NumberOfTxs where
@@ -76,8 +62,7 @@ instance ToJSON NumberOfTxs where
   toEncoding = genericToEncoding myJsonOptions
 instance FromJSON NumberOfTxs where parseJSON = genericParseJSON myJsonOptions
 
-
-newtype TPSRate =
+newtype TPSRate=
   TPSRate Double
   deriving newtype (Eq, Ord, Num, Show)
 deriving stock instance Generic TPSRate
@@ -110,14 +95,11 @@ newtype ToAnnce tx = ToAnnce [tx]
 -- | Transactions announced, yet unacked by peer.
 newtype UnAcked tx = UnAcked [tx]
 
--- | Transactions acked by peer.
-newtype Acked tx = Acked [tx]
-
 -- | Peer acknowledged this many txids of the outstanding window.
 newtype Ack = Ack Int deriving newtype (Enum, Eq, Integral, Num, Ord, Real)
 
 -- | Peer requested this many txids to add to the outstanding window.
-newtype Req = Req Int deriving newtype (Enum, Eq, Integral, Num, Ord, Real)
+newtype Req = Req Int deriving newtype (Enum, Eq, Integral, Num, Ord, Real, Show)
 
 -- | This many Txs sent to peer.
 newtype Sent = Sent Int deriving newtype (Enum, Eq, Integral, Num, Ord, Real, Show)

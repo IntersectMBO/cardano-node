@@ -1,38 +1,37 @@
-let defaultCustomConfig = import ./custom-config defaultCustomConfig;
+let defaultCustomConfig = import ./nix/custom-config.nix defaultCustomConfig;
 # This file is used by nix-shell.
 # It just takes the shell attribute from default.nix.
 in
-{ config ? {}
-, sourcesOverride ? {}
-, withHoogle ? defaultCustomConfig.withHoogle
-, clusterProfile ? defaultCustomConfig.localCluster.profileName
+{ withHoogle ? defaultCustomConfig.withHoogle
+, profileName ? defaultCustomConfig.localCluster.profileName
 , autoStartCluster ? defaultCustomConfig.localCluster.autoStartCluster
+, autoStartClusterArgs ? defaultCustomConfig.localCluster.autoStartClusterArgs
 , workbenchDevMode ? defaultCustomConfig.localCluster.workbenchDevMode
 , customConfig ? {
     inherit withHoogle;
     localCluster =  {
-      inherit autoStartCluster workbenchDevMode;
-      profileName = clusterProfile;
+      inherit autoStartCluster autoStartClusterArgs profileName workbenchDevMode;
     };
   }
-, pkgs ? import ./nix {
-    inherit config sourcesOverride customConfig;
-  }
+, pkgs ? import ./nix customConfig
 }:
 with pkgs;
 let
   inherit (pkgs) customConfig;
   inherit (customConfig) withHoogle localCluster;
-  inherit (localCluster) autoStartCluster workbenchDevMode;
+  inherit (localCluster) autoStartCluster autoStartClusterArgs profileName workbenchDevMode;
+  inherit (pkgs.haskell-nix) haskellLib;
   commandHelp =
     ''
       echo "
         Commands:
-          * nix flake update --update-input <iohkNix|haskellNix> - update input
+          * nix flake lock --update-input <iohkNix|haskellNix> - update nix build input
           * cardano-cli - used for key generation and other operations tasks
           * wb - cluster workbench
           * start-cluster - start a local development cluster
           * stop-cluster - stop a local development cluster
+          * restart-cluster - restart the last cluster run (in 'run/current')
+                              (WARNING: logs & node DB will be wiped clean)
 
       "
     '';
@@ -45,29 +44,19 @@ let
       export LOCALE_ARCHIVE="${pkgs.glibcLocales}/lib/locale/locale-archive"
     '';
 
-  haveGlibcLocales = pkgs.glibcLocales != null && stdenv.hostPlatform.libc == "glibc";        
-
-  # This provides a development environment that can be used with nix-shell or
-  # lorri. See https://input-output-hk.github.io/haskell.nix/user-guide/development/
-  # NOTE: due to some cabal limitation,
-  #  you have to remove all `source-repository-package` entries from cabal.project
-  #  after entering nix-shell for cabal to use nix provided dependencies for them.
-  mkCluster =
-    { useCabalRun }:
-    callPackage ./nix/supervisord-cluster
-      { inherit useCabalRun;
-        profileName = clusterProfile;
-        workbench = pkgs.callPackage ./nix/workbench { inherit useCabalRun; };
-      };
+  haveGlibcLocales = pkgs.glibcLocales != null && stdenv.hostPlatform.libc == "glibc";
 
   shell =
-    let cluster = mkCluster { useCabalRun = true; };
+    let cluster = pkgs.workbench-supervisord
+      { inherit profileName;
+        useCabalRun = true;
+      };
     in cardanoNodeProject.shellFor {
-    name = "cabal-dev-shell";
+    name = "cluster-shell";
 
     inherit withHoogle;
 
-    packages = lib.attrVals cardanoNodeProject.projectPackages;
+    packages = ps: builtins.attrValues (haskellLib.selectProjectPackages ps);
 
     tools = {
       haskell-language-server = {
@@ -77,10 +66,12 @@ let
     };
 
     # These programs will be available inside the nix-shell.
-    nativeBuildInputs = with haskellPackages; [
+    nativeBuildInputs = with haskellPackages; with cardanoNodePackages; [
       cardano-ping
       cabalWrapped
       ghcid
+      haskellBuildUtils
+      pkgs.graphviz
       weeder
       nixWrapped
       pkgconfig
@@ -92,6 +83,7 @@ let
       tmux
       pkgs.git
       pkgs.hlint
+      pkgs.moreutils
     ] ++ lib.optional haveGlibcLocales pkgs.glibcLocales
     ## Workbench's main script is called directly in dev mode.
     ++ lib.optionals (!workbenchDevMode)
@@ -102,8 +94,10 @@ let
     ## because psmisc fails to build on Big Sur.
     ++ lib.optionals (!stdenv.isDarwin)
     [
-      cluster.start
-      cluster.stop
+      pkgs.psmisc
+      cluster.interactive-start
+      cluster.interactive-stop
+      cluster.interactive-restart
     ];
 
     # Prevents cabal from choosing alternate plans, so that
@@ -111,6 +105,8 @@ let
     exactDeps = true;
 
     shellHook = ''
+      echo 'nix-shell top-level shellHook:  withHoogle=${toString withHoogle} profileName=${profileName} autoStartCluster=${toString autoStartCluster} workbenchDevMode=${toString workbenchDevMode}'
+
       ${cluster.workbench.shellHook}
 
       ${lib.optionalString autoStartCluster ''
@@ -122,13 +118,12 @@ let
       }
       trap atexit EXIT
       ''}
-      unset NIX_ENFORCE_PURITY
 
       ${setLocale}
 
       ${lib.optionalString autoStartCluster ''
       echo "workbench:  starting cluster (because 'autoStartCluster' is true):"
-      start-cluster
+      start-cluster ${autoStartClusterArgs}
       ''}
 
       ${commandHelp}
@@ -138,21 +133,37 @@ let
   };
 
   devops =
-    let cluster = mkCluster { useCabalRun = false; };
-    in stdenv.mkDerivation {
+    let cluster = pkgs.workbench-supervisord
+      { profileName = "devops-alzo";
+        useCabalRun = false;
+      };
+    in cardanoNodeProject.shellFor {
     name = "devops-shell";
-    nativeBuildInputs = [
+
+    packages = _: [];
+
+    nativeBuildInputs = with cardanoNodePackages; [
       nixWrapped
       cardano-cli
       bech32
+      cardano-ping
       cardano-node
+      pkgs.graphviz
       python3Packages.supervisor
       python3Packages.ipython
-      cluster.start
-      cluster.stop
+      cluster.interactive-start
+      cluster.interactive-stop
+      cluster.interactive-restart
       cardanolib-py
       cluster.workbench.workbench
-    ];
+    ] ++ (lib.optionals (!stdenv.isDarwin) [
+      psmisc
+    ]);
+
+    # Prevents cabal from choosing alternate plans, so that
+    # *all* dependencies are provided by Nix.
+    exactDeps = true;
+
     shellHook = ''
       echo "DevOps Tools" \
       | ${figlet}/bin/figlet -f banner -c \
@@ -190,6 +201,8 @@ let
     '';
   };
 
+  dev = cardanoNodeProject.shell;
+
 in
 
- shell // { inherit devops; }
+ shell // { inherit devops; inherit dev;}

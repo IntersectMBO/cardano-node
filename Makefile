@@ -1,6 +1,17 @@
 PROJECT_NAME = cardano-node
 NUM_PROC     = $(nproc --all)
 
+## One of:  shey alra mary alzo
+ERA             ?= alzo
+
+CLUSTER_PROFILE ?= default-${ERA}
+ifneq "${CLUSTER_PROFILE}" "default-${ERA}"
+$(warning DEPRECATED:  CLUSTER_PROFILE is deprecated, please use PROFILE)
+endif
+
+PROFILE ?= ${CLUSTER_PROFILE}
+ARGS    ?=
+
 
 help: ## Print documentation
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
@@ -9,7 +20,7 @@ stylish-haskell: ## Apply stylish-haskell on all *.hs files
 	@find . -type f -name "*.hs" -not -path '.git' -not -path '*.stack-work*' -print0 | xargs -0 stylish-haskell -i
 
 cabal-hashes:
-	$$(nix-build ./nix -A iohkNix.checkCabalProject --no-out-link)
+	nix run .#checkCabalProject
 
 ghci: ## Run repl
 	@stack ghci $(PROJECT_NAME):lib --haddock-deps --ghci-options=-fobject-code --nix
@@ -30,30 +41,42 @@ test-ghcid: ## Run ghcid on test suites
 test-ghcid-nix: ## Run ghcid on test suites with Nix
 	@ghcid --command="stack ghci --test --main-is $(PROJECT_NAME):test:$(PROJECT_NAME)-test --nix -j$(NUM_PROC)"
 
-test-chairmans-cluster:
-	@scripts/chairmans-cluster/cluster-test.sh
+bench-chainsync: PROFILE=chainsync-${ERA}
+bench-chainsync: cluster-shell-dev ## Enter Nix shell and start the chainsync benchmark
 
-profiles:
-	@./nix/workbench/wb dump-profiles
+cluster-profiles: ## List available workbench profiles (for PROFILE=)
+	@./nix/workbench/wb profile list
 
-profile-names:
-	@./nix/workbench/wb profile-names
+## TODO: migrate to `nix develop`
+cluster-shell: ## Enter Nix shell and start the workbench cluster
+	nix-shell --max-jobs 8 --cores 0 --show-trace --argstr profileName ${PROFILE} --arg 'autoStartCluster' true
 
-CLUSTER_PROFILE     = default-alzo
-CLUSTER_ARGS_EXTRA ?=
+shell-dev:               ARGS += --arg 'workbenchDevMode' true ## Enter Nix shell, dev mode (workbench run from checkout)
+cluster-shell:           ARGS += --arg 'autoStartCluster' true ## Enter Nix shell, and start workbench cluster
+cluster-shell-dev:       ARGS += --arg 'autoStartCluster' true --arg 'workbenchDevMode' true ## Enter Nix shell, dev mode, and start workbench cluster
+cluster-shell-trace:     ARGS += --arg 'autoStartCluster' true --argstr 'autoStartClusterArgs' '--trace --trace-workbench' ## Enter Nix shell, start workbench cluster, with shell tracing
+cluster-shell-dev-trace: ARGS += --arg 'autoStartCluster' true --arg 'workbenchDevMode' true --argstr 'autoStartClusterArgs' '--trace --trace-workbench' ## Enter Nix shell, dev mode, start workbench cluster, with shell tracing
+fixed:                   ARGS += --arg 'autoStartCluster' true
+fixed:                   PROFILE = fixed-alzo
+shell-dev cluster-shell-dev cluster-shell-trace cluster-shell-dev-trace fixed: shell
 
-cluster-shell:
-	nix-shell --max-jobs 8 --cores 0 --argstr clusterProfile ${CLUSTER_PROFILE} --arg 'autoStartCluster' true ${CLUSTER_ARGS_EXTRA}
+test-smoke: smoke ## Build the 'workbench-smoke-test', same as the Hydra job
+smoke:
+	nix build -f 'default.nix' 'workbench-smoke-test'     --out-link result-smoke-run      --cores 0
+test-analysis: smoke-analysis ## Build the 'workbench-smoke-analysis', same as the Hydra job
+smoke-analysis:
+	nix build -f 'default.nix' 'workbench-smoke-analysis' --out-link result-smoke-analysis --cores 0 --show-trace
+ci-analysis:
+	nix build -f 'default.nix' 'workbench-ci-analysis'    --out-link result-ci-analysis    --cores 0 --show-trace
 
-cluster-shell-dev:               CLUSTER_ARGS_EXTRA += --arg 'workbenchDevMode' true
-cluster-shell-trace:             CLUSTER_ARGS_EXTRA += --trace
-large-state-cluster-shell-trace: CLUSTER_ARGS_EXTRA += --trace
-large-state-cluster-shell:       CLUSTER_PROFILE = k2-10ep-2000kU-500kD-nobs-mary
-large-state-cluster-shell-trace: CLUSTER_PROFILE = k2-10ep-2000kU-500kD-nobs-mary
-cluster-shell-dev cluster-shell-trace large-state-cluster-shell large-state-cluster-shell-trace: cluster-shell
+shell: ## Enter Nix shell, CI mode (workbench run from Nix store)
+	nix-shell --max-jobs 8 --cores 0 --show-trace --argstr profileName ${PROFILE} ${ARGS}
 
 cli node:
 	cabal --ghc-options="+RTS -qn8 -A32M -RTS" build cardano-$@
+
+trace-documentation:
+	cabal run -- exe:cardano-node trace-documentation --config 'configuration/cardano/mainnet-config-new-tracing.yaml' --output-file 'doc/new-tracing/tracers_doc_generated.md'
 
 BENCH_REPEATS ?= 3
 BENCH_CONFIG ?= both
@@ -78,4 +101,4 @@ full-clean: clean
 cls:
 	echo -en "\ec"
 
-.PHONY: stylish-haskell cabal-hashes ghcid ghcid-test run-test test-ghci test-ghcid help clean clean-profile proclean cls setup restore
+.PHONY: bench-chainsync cabal-hashes clean cli cls cluster-profiles cluster-shell cluster-shell-dev cluster-shell-dev-trace cluster-shell-trace ghci ghcid help node run-test shell shell-dev stylish-haskell test-ghci test-ghcid test-ghcid-nix

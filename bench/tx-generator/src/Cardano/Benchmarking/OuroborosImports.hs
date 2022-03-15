@@ -29,8 +29,7 @@ import           Ouroboros.Consensus.Config (TopLevelConfig, configBlock, config
 import           Ouroboros.Consensus.Config.SupportsNode
                  (ConfigSupportsNode(..), getNetworkMagic)
 import           Ouroboros.Consensus.Node (ProtocolInfo(..))
-import           Ouroboros.Consensus.Shelley.Protocol (StandardCrypto)
-import           Ouroboros.Consensus.Shelley.Eras (StandardShelley)
+import           Ouroboros.Consensus.Shelley.Eras (StandardCrypto, StandardShelley)
 import           Ouroboros.Network.Protocol.LocalTxSubmission.Type (SubmitResult (..))
 
 import           Cardano.Node.Configuration.Logging (LoggingLayer)
@@ -45,13 +44,13 @@ import           Cardano.Api (NetworkId(..), LocalNodeConnectInfo(..), Consensus
                              , submitTxToNodeLocal)
 import           Cardano.Api.Protocol.Types (BlockType(..), ProtocolInfoArgs(..), protocolInfo)
 
-import           Shelley.Spec.Ledger.Genesis (ShelleyGenesis)
+import           Cardano.Ledger.Shelley.Genesis (ShelleyGenesis)
 
 type CardanoBlock = Consensus.CardanoBlock StandardCrypto
 
 toProtocolInfo :: SomeConsensusProtocol -> ProtocolInfo IO CardanoBlock
 toProtocolInfo (SomeConsensusProtocol CardanoBlockType info) = protocolInfo info
-toProtocolInfo _ = error "toProtocolInfo unkown protocol"
+toProtocolInfo _ = error "toProtocolInfo unknown protocol"
 
 getGenesis :: SomeConsensusProtocol -> ShelleyGenesis StandardShelley
 getGenesis (SomeConsensusProtocol CardanoBlockType info) = shelleyBasedGenesis

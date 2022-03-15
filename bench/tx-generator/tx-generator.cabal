@@ -1,5 +1,5 @@
 name:                  tx-generator
-version:               1.27
+version:               2.0
 description:           The transaction generator for cardano node
 author:                IOHK
 maintainer:            operations@iohk.io
@@ -24,12 +24,10 @@ library
                         -Wwarn=deprecations
 
   exposed-modules:
-                       Cardano.Benchmarking.CliArgsScript
                        Cardano.Benchmarking.Command
-                       Cardano.Benchmarking.DSL
+                       Cardano.Benchmarking.Compiler                       
                        Cardano.Benchmarking.FundSet
                        Cardano.Benchmarking.GeneratorTx
-                       Cardano.Benchmarking.GeneratorTx.Benchmark
                        Cardano.Benchmarking.GeneratorTx.Error
                        Cardano.Benchmarking.GeneratorTx.LocalProtocolDefinition
                        Cardano.Benchmarking.GeneratorTx.Genesis
@@ -39,7 +37,7 @@ library
                        Cardano.Benchmarking.GeneratorTx.Tx.Byron
                        Cardano.Benchmarking.GeneratorTx.Submission
                        Cardano.Benchmarking.GeneratorTx.SubmissionClient
-                       Cardano.Benchmarking.GeneratorTx.CLI.Parsers
+                       Cardano.Benchmarking.NixOptions
                        Cardano.Benchmarking.OuroborosImports
                        Cardano.Benchmarking.Script
                        Cardano.Benchmarking.Script.Action
@@ -49,9 +47,12 @@ library
                        Cardano.Benchmarking.Script.Example
                        Cardano.Benchmarking.Script.Setters
                        Cardano.Benchmarking.Script.Store
+                       Cardano.Benchmarking.Script.Types
                        Cardano.Benchmarking.Tracer
                        Cardano.Benchmarking.Types
                        Cardano.Benchmarking.Wallet
+                       Cardano.Benchmarking.ListBufferedSelector
+                       Cardano.Benchmarking.PlutusExample
 
   other-modules:       Paths_tx_generator
 
@@ -66,6 +67,7 @@ library
                      , cardano-cli
                      , cardano-crypto-class
                      , cardano-crypto-wrapper
+                     , cardano-ledger-alonzo
                      , cardano-ledger-byron
                      , cardano-node
                      , cardano-prelude
@@ -76,25 +78,28 @@ library
                      , dependent-map
                      , dependent-sum
                      , dependent-sum-template
+                     , dlist
                      , extra
                      , formatting
                      , generic-monoid
                      , ghc-prim
-                     , io-sim-classes
+                     , io-classes
                      , iohk-monitoring
                      , ixset-typed
                      , network
                      , network-mux
-                     , optparse-applicative
+                     , optparse-applicative-fork
                      , ouroboros-consensus
                      , ouroboros-consensus-byron
                      , ouroboros-consensus-cardano
                      , ouroboros-consensus-shelley
                      , ouroboros-network
                      , ouroboros-network-framework
+                     , plutus-ledger-api
                      , random
                      , serialise
-                     , shelley-spec-ledger
+                     , strict-stm
+                     , cardano-ledger-shelley
                      , stm
                      , text
                      , time
@@ -136,10 +141,8 @@ test-suite tx-generator-test
   type:                 exitcode-stdio-1.0
 
   build-depends:        base >=4.12 && <5
-                      , tasty-hunit
                       , tasty
-                      , heredoc
-                      , optparse-applicative
+                      , tasty-hunit
                       , tx-generator
 
   default-language:     Haskell2010

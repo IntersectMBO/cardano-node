@@ -3,6 +3,7 @@
 
 module Cardano.CLI.Helpers
   ( HelpersError(..)
+  , deprecationWarning
   , ensureNewFile
   , ensureNewFileLBS
   , pPrintCBOR
@@ -10,9 +11,11 @@ module Cardano.CLI.Helpers
   , renderHelpersError
   , textShow
   , validateCBOR
+  , hushM
   ) where
 
 import           Cardano.Prelude
+import           Prelude (String)
 
 import           Codec.CBOR.Pretty (prettyHexEnc)
 import           Codec.CBOR.Read (DeserialiseFailure, deserialiseFromBytes)
@@ -21,15 +24,18 @@ import           Control.Monad.Trans.Except.Extra (handleIOExceptT, left)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.Text as Text
-import           System.Directory (doesPathExist)
+import           System.Console.ANSI
+import qualified System.Console.ANSI as ANSI
+import qualified System.IO as IO
 
 import           Cardano.Binary (Decoder, fromCBOR)
+import           Cardano.CLI.Types
 import           Cardano.Chain.Block (fromCBORABlockOrBoundary)
 import qualified Cardano.Chain.Delegation as Delegation
-import qualified Cardano.Chain.Update as Update
 import qualified Cardano.Chain.UTxO as UTxO
-import           Cardano.CLI.Types
+import qualified Cardano.Chain.Update as Update
 
+import qualified System.Directory as IO
 
 data HelpersError
   = CBORPrettyPrintError !DeserialiseFailure
@@ -55,10 +61,17 @@ decodeCBOR
 decodeCBOR bs decoder =
   first CBORDecodingError $ deserialiseFromBytes decoder bs
 
+deprecationWarning :: String -> IO ()
+deprecationWarning cmd = do
+  ANSI.hSetSGR IO.stderr [SetColor Foreground Vivid Yellow]
+  IO.hPutStrLn IO.stderr $ "WARNING: This CLI command is deprecated.  Please use "
+                         <> cmd <> " command instead."
+  ANSI.hSetSGR IO.stderr [Reset]
+
 -- | Checks if a path exists and throws and error if it does.
 ensureNewFile :: (FilePath -> a -> IO ()) -> FilePath -> a -> ExceptT HelpersError IO ()
 ensureNewFile writer outFile blob = do
-  exists <- liftIO $ doesPathExist outFile
+  exists <- liftIO $ IO.doesPathExist outFile
   when exists $
     left $ OutputMustNotAlreadyExist outFile
   liftIO $ writer outFile blob
@@ -104,6 +117,12 @@ validateCBOR cborObject bs =
       () <$ decodeCBOR bs (fromCBOR :: Decoder s Update.Vote)
       Right "Valid Byron vote."
 
-
 textShow :: Show a => a -> Text
 textShow = Text.pack . show
+
+-- | Convert an Either to a Maybe and execute the supplied handler
+-- in the Left case.
+hushM :: forall e m a. Monad m => Either e a -> (e -> m ()) -> m (Maybe a)
+hushM r f = case r of
+  Right a -> return (Just a)
+  Left e -> f e >> return Nothing

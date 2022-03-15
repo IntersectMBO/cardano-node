@@ -3,6 +3,8 @@
 
 set -euo pipefail
 
+export LANG=C.UTF-8
+
 global_basedir=${global_basedir:-$(realpath "$(dirname "$0")")}
 global_mode='unknown'
 
@@ -12,19 +14,26 @@ global_mode='unknown'
 . "$global_basedir"/genesis.sh
 . "$global_basedir"/topology.sh
 . "$global_basedir"/run.sh
+. "$global_basedir"/scenario.sh
+. "$global_basedir"/analyse.sh
 . "$global_basedir"/explain-mode.sh
 
 . "$global_basedir"/backend.sh
+. "$global_basedir"/supervisor.sh
 
 usage_main() {
     test $# -lt 1 ||
         msg "Unknown op: $1"
      __usage "OP" "Main OPs" <<EOF
+    start        (s)      Start a run of profile chosen at 'nix-shell' entry
+    finish       (f)      Finish the current cluster run
+
+    profile      (p)      Cluster profile ops.  Default op is 'list'
+    analyse      (a)      Analyse cluster runs
+
     env          (e)      Environment configuration
     genesis      (g)      Genesis
     topology     (t)      Topology generation
-    profile      (p)      Cluster profile ops.  Default op is 'list'
-    cluster      (c)      Cluster state ops
     run          (r)      Managing cluster runs.  Default op is 'list'
 
     explain-mode (x)      Explain current mode
@@ -41,6 +50,7 @@ usage_extra() {
     cat >&2 <<EOF
   Other OPs:
 
+    scenario     (s)      Run scenario control
     call ARGS..           Call internal functions with arguments
     mode                  Report mode set by --set-mode
 
@@ -52,6 +62,94 @@ usage_extra() {
 EOF
 }
 
+usage_start()
+{
+    cat <<EOF
+Usage:
+   start-cluster [FLAGS..]
+
+   Flags:
+
+      --batch-name NAME               Override the batch name (default: ${batchName:-default})
+      --no-generator | --no-gen       Don't auto-start the tx-generator
+
+      --cabal                         'cabal run' mode for cardano-* executables
+
+      --trace | --debug               Trace the start-cluster script
+      --trace-wb | --trace-workbench  Trace the workbench script
+      --verbose                       Print more of what's going
+      --help                          This help message
+EOF
+}
+
+start()
+{
+    local batch_name=
+    local profile_name= profile=
+    local backend=supervisor
+    local cabal_mode=
+    local genesis_cache_entry_dir=
+    local topology_dir=
+    local verbose=
+
+    local run_args=()
+    local run_allocate_args=()
+    local run_start_args=()
+    while test $# -gt 0
+    do case "$1" in
+        --batch-name )                   batch_name=$2;   shift;;
+        --profile-name )                 profile_name=$2; shift;;
+        --cache-dir )                    setenvjqstr 'cacheDir' $2; shift;;
+        --base-port )                    setenvjq    'basePort' $2; shift;;
+
+        --profile )                      run_allocate_args+=($1 $2); profile=$2; shift;;
+        --genesis-cache-entry )          run_allocate_args+=($1 $2); shift;;
+        --topology )                     run_allocate_args+=($1 $2); shift;;
+
+        --no-generator | --no-gen )      run_start_args+=($1);;
+
+        --cabal-mode | --cabal )         cabal_mode=t;;
+        --supervisor | --backend-supervisor )
+                                         backend=supervisor;;
+
+        --verbose )                      export verbose=t;;
+        --trace | --debug )              run_args+=($1); set -x;;
+        --trace-wb | --trace-workbench ) run_args+=($1); export WORKBENCH_EXTRA_FLAGS=--trace;;
+        --help )                         usage_start
+                                         exit 1;;
+        * ) fatal "while parsing remaining 'wb start' args:  $*";;
+       esac; shift; done
+
+    if test -n "$cabal_mode"
+    then . $(dirname "$0")/lib-cabal.sh
+    fi
+
+    backend assert-is $backend
+    backend assert-stopped
+
+    setenvjq    'port_shift_ekg'        100
+    setenvjq    'port_shift_prometheus' 200
+    setenvjqstr 'supervisor_conf'      "$profile"/supervisor.conf
+    run ${run_args[@]} allocate $batch_name $profile_name ${run_allocate_args[@]}
+
+    current_run_path=$(run current-path)
+    mkdir -p "$current_run_path"
+
+    run ${run_args[@]} start ${run_start_args[@]} $(run current-tag)
+}
+
+finish()
+{
+    while test $# -gt 0
+    do case "$1" in
+        --trace | --debug )              set -x;;
+        --trace-wb | --trace-workbench ) export WORKBENCH_EXTRA_FLAGS=--trace;;
+        * ) break;; esac; shift; done
+
+    run stop $(run current-tag)
+}
+
+pass_flags=()
 while test $# -gt 0
 do case "$1" in
        --cls )
@@ -70,32 +168,32 @@ main() {
     local op=${1:?$(usage_main)}; shift
 
     case "$op" in
-        ## Public:
+        ## Public, primary:
         #
-        env | e )
-            env "$@";;
-        genesis | g )
-            genesis "$@";;
-        topology | topo | t )
-            topology "$@";;
-        profile | profiles | prof | ps | p )
-            profile "$@";;
-        cluster | c )
-            cluster "$@";;
-        run | runs | r )
-            run "$@";;
+        start        | s )        start               "$@";;
+        finish       | f )        finish              "$@";;
 
-        explain-mode | x )
-            explain-mode $global_mode;;
+        ## Public, secondary:
+        profile      | profiles | prof | ps | p )
+                                  profile             "$@";;
+        analyse      | a )        analyse             "$@";;
+
+        ## Public, internals-y:
+        env          | e )        env                 "$@";;
+        genesis      | g )        genesis             "$@";;
+        topology     | topo | t ) topology            "$@";;
+        run          | runs | r ) run                 "$@";;
+
+        explain-mode | x )        explain-mode $global_mode;;
 
         ## Internals:
         #
-        backend )
-            backend "$@";;
-        call )
-            "$@";;
-        mode )
-            echo -n      $global_mode;;
+        scenario     | s )        scenario            "$@";;
+        backend )                 backend             "$@";;
+        call )                                        "$@";;
+        mode )                    echo -n      $global_mode;;
+
+        ## Bail for help:
         * ) usage_main "$op"; exit 1;; esac
 }
 

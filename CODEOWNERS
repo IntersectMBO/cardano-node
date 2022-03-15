@@ -7,8 +7,8 @@ cardano-cli/README.md                                         @fsancheziohk @nah
 cabal.project                                                 @LaurenceIO
 
 # General reviewers per PR
-#                       David          Duncan   Jordan     Erik   John
-*                       @DavidEichmann @dcoutts @Jimbo4350 @erikd @newhoggy
+#                       David          Duncan   Jordan     Erik   John      Nick Jared
+*                       @DavidEichmann @dcoutts @Jimbo4350 @erikd @newhoggy @nc6 @JaredCorduan
 
 # Specific reviewers for code pieces
 # NB - The last matching pattern takes precedence
@@ -20,9 +20,13 @@ doc                                                           @docs-access
 README.*                                                      @docs-access
 
 bench/tx-generator                                            @deepfire @MarcFontaine
-bench                                                         @deepfire @denisshevchenko @jutaro @MarcFontaine
+bench                                                         @deepfire @denisshevchenko @jutaro @MarcFontaine @cleverca22
+cardano-tracer                                                @deepfire @denisshevchenko
 nix/workbench                                                 @deepfire @denisshevchenko @jutaro @MarcFontaine
 nix/supervisord-cluster                                       @deepfire @denisshevchenko @jutaro @MarcFontaine
+trace-dispatcher                                              @deepfire @denisshevchenko @jutaro
+trace-forward                                                 @deepfire @denisshevchenko @jutaro
+trace-resources                                               @deepfire @denisshevchenko @jutaro
 Makefile                                                      @deepfire
 
 .buildkite                                                    @devops
@@ -33,7 +37,15 @@ nix                                                           @devops
 *.nix                                                         @devops
 flake.lock                                                    @devops
 bors.toml                                                     @devops
-cardano-node/src/Cardano/Tracing/OrphanInstances/Network.hs   @devops @coot @karknu
+docker-compose.yml                                            @devops
+cardano-node/src/Cardano/Tracing/OrphanInstances/Network.hs   @devops @coot
 cardano-node/src/Cardano/Node/Configuration/Logging.hs        @devops
 cardano-node/src/Cardano/Node/Configuration/Socket.hs         @devops
+cardano-node/src/Cardano/Node/Tracing                         @deepfire @denisshevchenko @jutaro
+cardano-node/src/Cardano/Node/Tracing/Tracers/Diffusion.hs    @deepfire @denisshevchenko @jutaro @coot
+cardano-node/src/Cardano/Node/Tracing/Tracers/NodeToClient.hs @deepfire @denisshevchenko @jutaro @coot
+cardano-node/src/Cardano/Node/Tracing/Tracers/NodeToServer.hs @deepfire @denisshevchenko @jutaro @coot
+cardano-node/src/Cardano/Node/Tracing/Tracers/NonP2P.hs       @deepfire @denisshevchenko @jutaro @coot
+cardano-node/src/Cardano/Node/Tracing/Tracers/P2P.hs          @deepfire @denisshevchenko @jutaro @coot
+cardano-node/src/Cardano/Node/Tracing/Tracers/Peer.hs         @deepfire @denisshevchenko @jutaro @coot
 cardano-node/src/Cardano/Node/Run.hs                          @devops

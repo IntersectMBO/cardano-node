@@ -1,10 +1,11 @@
 let
   basePortDefault    = 30000;
   cacheDirDefault    = "${__getEnv "HOME"}/.cache/cardano-workbench";
-  stateDirDefault    = "state-cluster";
+  stateDirDefault    = "run/current";
   profileNameDefault = "default-alzo";
 in
 { pkgs
+, cardanoNodePackages
 , workbench
 , lib
 , bech32
@@ -24,14 +25,18 @@ with lib;
 let
   backend =
     rec
-    { ## Generic Nix bits:
-      topologyForNode =
+    { name = "supervisor";
+      ## Generic Nix bits:
+      topologyForNodeSpec =
         { profile, nodeSpec }:
         let inherit (nodeSpec) name i; in
-        workbench.runWorkbench "topology-${name}.json"
-          (if nodeSpec.isProducer
-           then "topology for-local-node     ${toString i}   ${profile.topology.files} ${toString basePort}"
-           else "topology for-local-observer ${profile.name} ${profile.topology.files} ${toString basePort}");
+        workbench.runWorkbench
+          "topology-${name}.json"
+          "topology projection-for local-${nodeSpec.kind} ${toString i} ${profile.name} ${profile.topology.files} ${toString basePort}";
+
+      nodePublicIP =
+        { i, name, ... }@nodeSpec:
+        "127.0.0.1";
 
       finaliseNodeService =
         { name, i, isProducer, ... }: svc: recursiveUpdate svc
@@ -52,8 +57,8 @@ let
       finaliseNodeConfig =
         { port, ... }: cfg: recursiveUpdate cfg
           ({
-            AlonzoGenesisFile    = "../genesis/alonzo-genesis.json";
-            ShelleyGenesisFile   = "../genesis/genesis.json";
+            AlonzoGenesisFile    = "../genesis.alonzo.json";
+            ShelleyGenesisFile   = "../genesis-shelley.json";
             ByronGenesisFile     = "../genesis/byron/genesis.json";
           } // optionalAttrs enableEKG {
             hasEKG               = port + supervisord.portShiftEkg;
@@ -62,6 +67,35 @@ let
               "EKGViewBK"
             ];
           });
+
+      finaliseNodeArgs =
+        { port, ... }: cfg: cfg;
+
+      finaliseGeneratorService =
+        svc: recursiveUpdate svc
+          ({
+            sigKey         = "../genesis/utxo-keys/utxo1.skey";
+            nodeConfigFile = "config.json";
+            runScriptFile  = "run-script.json";
+          } // optionalAttrs useCabalRun {
+            executable     = "cabal run exe:tx-generator --";
+          });
+
+      finaliseGeneratorConfig =
+        cfg: recursiveUpdate cfg
+          ({
+            AlonzoGenesisFile    = "../genesis.alonzo.json";
+            ShelleyGenesisFile   = "../genesis-shelley.json";
+            ByronGenesisFile     = "../genesis/byron/genesis.json";
+          });
+
+      materialise-profile =
+        { profileNix }:
+        pkgs.runCommand "workbench-profile-outputs-${profileNix.name}-supervisord" {}
+          ''
+          mkdir $out
+          cp ${supervisord.mkSupervisorConf profileNix} $out/supervisor.conf
+          '';
 
       ## Backend-specific Nix bits:
       supervisord =
@@ -72,10 +106,11 @@ let
           portShiftEkg        = 100;
           portShiftPrometheus = 200;
 
+          ## mkSupervisorConf :: Profile -> SupervisorConf
           mkSupervisorConf =
             profile:
             pkgs.callPackage ./supervisor-conf.nix
-            { inherit (profile) node-services;
+            { inherit (profile) node-services generator-service;
               inherit
                 pkgs lib stateDir
                 basePort
@@ -84,23 +119,27 @@ let
         };
     };
 
-  ## IMPORTANT:  keep in sync with envArgs in 'workbench/default.nix/generateProfiles/environment'.
-  envArgs =
-    {
-      inherit (pkgs) cardanoLib;
-      inherit
-        stateDir
-        cacheDir basePort;
-      staggerPorts = true;
-    };
+  with-supervisord-profile =
+    { pkgs, profileName, envArgsOverride ? {} }:
+    workbench.with-profile
+      { inherit pkgs backend profileName;
 
-  workbenchProfiles = workbench.generateProfiles
-    { inherit pkgs backend envArgs; };
+        ## IMPORTANT:  keep in sync with envArgs in 'workbench/default.nix/generateProfiles/environment'.
+        envArgs =
+          {
+            inherit (pkgs) cardanoLib;
+            inherit stateDir cacheDir basePort;
+            staggerPorts = true;
+          }
+          // envArgsOverride;
+      };
+
+  inherit
+    (with-supervisord-profile { inherit pkgs profileName; })
+    profile profile-output topology-output genesis-output;
 in
 
 let
-  profile = workbenchProfiles.profiles."${profileName}"
-    or (throw "No such profile: ${profileName};  Known profiles: ${toString (__attrNames workbenchProfiles.profiles)}");
 
   inherit (profile.value) era composition monetary;
 
@@ -112,71 +151,114 @@ let
     ++ optionals (!workbenchDevMode)
     [ workbench.workbench ];
 
-  start = pkgs.writeScriptBin "start-cluster" ''
+  interactive-start = pkgs.writeScriptBin "start-cluster" ''
     set -euo pipefail
-
-    workbench-prebuild-executables
-
-    batch_name=${batchName}
-
-    while test $# -gt 0
-    do case "$1" in
-        --batch-name ) batch_name=$2; shift;;
-        --trace | --debug ) set -x;;
-        --trace-wb | --trace-workbench ) export WORKBENCH_EXTRA_FLAGS=--trace;;
-        * ) break;; esac; shift; done
 
     export PATH=$PATH:${path}
 
-    wb backend assert-is supervisor
-    wb backend pre-run-hook    "${stateDir}"
-
-    wb_run_allocate_args=(
-        --cache-dir            "${cacheDir}"
-        --base-port             ${toString basePort}
-        --stagger-ports
-        --port-shift-ekg        100
-        --port-shift-prometheus 200
-      )
-    wb run allocate $batch_name ${profile.name} "''${wb_run_allocate_args[@]}"
-    rm -f                      "${stateDir}"
-    ln -sf         run/current "${stateDir}"
-
-    current_run_path=$(wb run current-path)
-    ${workbench.initialiseProfileRunDirShellScript profile "$current_run_path"}
-
-    wb_run_start_args=(
-        --supervisor-conf      "${backend.supervisord.mkSupervisorConf profile}"
-      )
-    wb run start $(wb run current-name) "''${wb_run_start_args[@]}"
-
-    echo 'workbench:  cluster started. Run `stop-cluster` to stop'
+    set -x
+    wb start \
+        --batch-name   ${batchName} \
+        --profile-name ${profileName} \
+        --profile      ${profile} \
+        --cache-dir    ${cacheDir} \
+        --base-port    ${toString basePort} \
+        ''${WORKBENCH_CABAL_MODE:+--cabal} \
+        "$@" &&
+        echo 'workbench:  cluster started. Run `stop-cluster` to stop' >&2
   '';
-  stop = pkgs.writeScriptBin "stop-cluster" ''
+
+  interactive-stop = pkgs.writeScriptBin "stop-cluster" ''
     set -euo pipefail
 
-    while test $# -gt 0
-    do case "$1" in
-        --trace | --debug ) set -x;;
-        * ) break;; esac; shift; done
-
-    ${pkgs.python3Packages.supervisor}/bin/supervisorctl stop all
-    if wb backend is-running
-    then
-      if test -f "${stateDir}/supervisor/cardano-node.pids"
-      then kill $(<${stateDir}/supervisor/supervisord.pid) $(<${stateDir}/supervisor/cardano-node.pids)
-      else pkill supervisord
-      fi
-      echo "workbench:  cluster terminated"
-      rm -f ${stateDir}/supervisor/supervisord.pid ${stateDir}/supervisor/cardano-node.pids
-    else
-      echo "workbench:  cluster is not running"
-    fi
+    wb finish "$@"
   '';
 
+  interactive-restart = pkgs.writeScriptBin "restart-cluster" ''
+    set -euo pipefail
+
+    wb run restart "$@" && \
+        echo "workbench:  alternate command for this action:  wb run restart" >&2
+  '';
+
+  nodeBuildProducts =
+    name:
+    "report ${name}.log $out ${name}/stdout";
+
+  profile-run-supervisord =
+    { profileName
+    , trace ? false }:
+    let
+      inherit
+        (with-supervisord-profile
+          { inherit pkgs profileName; envArgsOverride = { cacheDir = "./cache"; stateDir = "./"; }; })
+        profileNix profile topology genesis;
+
+      run = pkgs.runCommand "workbench-run-supervisord-${profileName}"
+        { requiredSystemFeatures = [ "benchmark" ];
+          nativeBuildInputs = with cardanoNodePackages; with pkgs; [
+            bash
+            bech32
+            coreutils
+            gnused
+            jq
+            moreutils
+            nixWrapped
+            psmisc
+            python3Packages.supervisor
+            workbench.workbench
+          ];
+        }
+          ''
+          mkdir -p $out/{cache,nix-support}
+          cd       $out
+
+          export WORKBENCH_BACKEND=supervisor
+          export CARDANO_NODE_SOCKET_PATH=$(wb backend get-node-socket-path ${stateDir})
+
+          cmd=(
+              wb
+              ${pkgs.lib.optionalString trace "--trace"}
+              start
+              --profile-name        ${profileName}
+              --profile             ${profile}
+              --topology            ${topology}
+              --genesis-cache-entry ${genesis}
+              --batch-name          smoke-test
+              --base-port           ${toString basePort}
+              --cache-dir           ./cache
+          )
+          echo "''${cmd[*]}" > $out/wb-start.sh
+
+          time "''${cmd[@]}" 2>&1 |
+              tee $out/wb-start.log
+
+          ## Convert structure from $out/run/RUN-ID/* to $out/*:
+          rm -rf cache
+          rm -f run/{current,-current}
+          tag=$(cd run; ls)
+          mv       run/$tag/*   .
+          rmdir    run/$tag run
+          rm -f    node-*/node.socket
+
+          cat > $out/nix-support/hydra-build-products <<EOF
+          report workbench.log $out wb-start.log
+          report meta.json     $out meta.json
+          ${pkgs.lib.concatStringsSep "\n"
+            (map nodeBuildProducts (__attrNames profileNix.node-specs.value))}
+          report node-0        $out meta.json
+          EOF
+
+          echo "workbench-test:  completed run $tag"
+          '';
+    in
+      run // {
+        analysis = workbench.run-analysis { inherit pkgs workbench profileNix run; };
+      };
 in
 {
   inherit workbench;
-  inherit (workbenchProfiles) profilesJSON;
-  inherit profile stateDir start stop;
+  inherit profile stateDir;
+  inherit interactive-start interactive-stop interactive-restart;
+  inherit with-supervisord-profile profile-run-supervisord;
 }

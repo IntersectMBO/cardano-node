@@ -1,18 +1,18 @@
 {- HLINT ignore "Use camelCase" -}
 {- HLINT ignore "Use uncurry" -}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 module Cardano.Benchmarking.GeneratorTx.SizedMetadata
 where
 
 import           Prelude
 
+import           Cardano.Api
+import           Cardano.Benchmarking.GeneratorTx.Tx
+import qualified Data.ByteString as BS
 import qualified Data.Map.Strict as Map
 import           Data.Word (Word64)
-import qualified Data.ByteString as BS
-import           Cardano.Benchmarking.GeneratorTx.Tx
-import           Cardano.Api
 
 maxMapSize :: Int
 maxMapSize = 1000
@@ -32,7 +32,7 @@ assume_cbor_properties
     && prop_bsCostsAlonzo
 
 -- The cost of map entries in metadata follows a step function.
--- This assums the map indecies are [0..n].
+-- This assumes the map indices are [0..n].
 prop_mapCostsShelley :: Bool
 prop_mapCostsAllegra :: Bool
 prop_mapCostsMary    :: Bool
@@ -108,13 +108,13 @@ dummyTxSizeInEra metadata = case makeTransactionBody dummyTx of
     , txValidityRange = (TxValidityNoLowerBound, mkValidityUpperBound 0)
     , txMetadata = metadata
     , txAuxScripts = TxAuxScriptsNone
-    , txExtraScriptData = BuildTxWith TxExtraScriptDataNone
     , txExtraKeyWits = TxExtraKeyWitnessesNone
     , txProtocolParams = BuildTxWith Nothing
     , txWithdrawals = TxWithdrawalsNone
     , txCertificates = TxCertificatesNone
     , txUpdateProposal = TxUpdateProposalNone
     , txMintValue = TxMintNone
+    , txScriptValidity = TxScriptValidityNone
     }
 
 dummyTxSize :: forall era . IsShelleyBasedEra era => AsType era -> Maybe TxMetadata -> Int
@@ -139,7 +139,7 @@ mkMetadata size
     ShelleyBasedEraShelley -> 37
     ShelleyBasedEraAllegra -> 39
     ShelleyBasedEraMary    -> 39
-    ShelleyBasedEraAlonzo  -> error "39"
+    ShelleyBasedEraAlonzo  -> 39 -- TODO: check minSize for Alonzo
   nettoSize = size - minSize
 
   -- At 24 the CBOR representation changes.

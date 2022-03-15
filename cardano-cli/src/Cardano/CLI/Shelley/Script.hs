@@ -4,14 +4,13 @@ module Cardano.CLI.Shelley.Script
   , readFileScriptInAnyLang
   ) where
 
-import           Prelude
 import           Cardano.Prelude (ExceptT)
+import           Prelude
 
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as BS
 
-import           Control.Monad.Trans.Except.Extra
-                   (firstExceptT, handleIOExceptT, hoistEither)
+import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistEither)
 
 import           Cardano.Api
 
@@ -42,9 +41,9 @@ readFileScriptInAnyLang :: FilePath
                         -> ExceptT (FileError ScriptDecodeError) IO
                                    ScriptInAnyLang
 readFileScriptInAnyLang file = do
-    scriptBytes <- handleIOExceptT (FileIOError file) $ BS.readFile file
-    firstExceptT (FileError file) $ hoistEither $
-      deserialiseScriptInAnyLang scriptBytes
+  scriptBytes <- handleIOExceptT (FileIOError file) $ BS.readFile file
+  firstExceptT (FileError file) $ hoistEither $
+    deserialiseScriptInAnyLang scriptBytes
 
 
 deserialiseScriptInAnyLang :: ByteString
@@ -68,6 +67,8 @@ deserialiseScriptInAnyLang bs =
           Right script -> Right script
 
   where
+    -- TODO: Think of a way to get type checker to warn when there is a missing
+    -- script version.
     textEnvTypes :: [FromSomeType HasTextEnvelope ScriptInAnyLang]
     textEnvTypes =
       [ FromSomeType (AsScript AsSimpleScriptV1)
@@ -78,6 +79,9 @@ deserialiseScriptInAnyLang bs =
 
       , FromSomeType (AsScript AsPlutusScriptV1)
                      (ScriptInAnyLang (PlutusScriptLanguage PlutusScriptV1))
+
+      , FromSomeType (AsScript AsPlutusScriptV2)
+                     (ScriptInAnyLang (PlutusScriptLanguage PlutusScriptV2))
       ]
 
     toMinimumSimpleScriptVersion :: SimpleScript SimpleScriptV2

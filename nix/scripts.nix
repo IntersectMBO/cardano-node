@@ -10,11 +10,11 @@ let
       modules = [
         ./nixos/cardano-node-service.nix
         ({config, ...}: {
-          services.cardano-node = {
+          services.cardano-node = let cfg = config.services.cardano-node; in {
             hostAddr = mkDefault "0.0.0.0";
             environment = mkDefault envConfig.name;
-            cardanoNodePkgs = mkDefault pkgs;
-            stateDir = mkDefault "state-node-${config.services.cardano-node.environment}";
+            nodeConfig = cfg.environments.${cfg.environment}.nodeConfig;
+            stateDir = mkDefault "state-node-${cfg.environment}";
             runtimeDir = mkDefault null;
           } // optionalAttrs (envConfig ? topology) {
             topology = mkDefault envConfig.topology;
@@ -25,32 +25,12 @@ let
 
   in pkgs.writeScriptBin "cardano-node-${service.environment}" ''
     #!${pkgs.runtimeShell}
+    export PATH=$PATH:${makeBinPath [ pkgs.coreutils ]}
     set -euo pipefail
     mkdir -p "$(dirname "${service.socketPath}")"
     ${service.script} $@
   '';
 
-  debugDeps = with pkgs; [
-    coreutils
-    findutils
-    gnugrep
-    gnused
-    postgresql
-    strace
-    lsof
-    dnsutils
-    bashInteractive
-    iproute
-    curl
-    netcat
-    bat
-    tree
-  ];
-
 in forEnvironments (environment: recurseIntoAttrs rec {
   node = mkScript environment;
-  node-debug = pkgs.symlinkJoin {
-    inherit (node) name;
-    paths = [ node ] ++ debugDeps;
-  };
 })

@@ -18,6 +18,7 @@ For Cardano testnet
     wget https://hydra.iohk.io/job/Cardano/cardano-node/cardano-deployment/latest-finished/download/1/testnet-config.json
     wget https://hydra.iohk.io/job/Cardano/cardano-node/cardano-deployment/latest-finished/download/1/testnet-byron-genesis.json
     wget https://hydra.iohk.io/job/Cardano/cardano-node/cardano-deployment/latest-finished/download/1/testnet-shelley-genesis.json
+    wget https://hydra.iohk.io/job/Cardano/cardano-node/cardano-deployment/latest-finished/download/1/testnet-alonzo-genesis.json
     wget https://hydra.iohk.io/job/Cardano/cardano-node/cardano-deployment/latest-finished/download/1/testnet-topology.json
 
 For Mainnet:
@@ -25,6 +26,7 @@ For Mainnet:
     wget https://hydra.iohk.io/job/Cardano/cardano-node/cardano-deployment/latest-finished/download/1/mainnet-config.json
     wget https://hydra.iohk.io/job/Cardano/cardano-node/cardano-deployment/latest-finished/download/1/mainnet-byron-genesis.json
     wget https://hydra.iohk.io/job/Cardano/cardano-node/cardano-deployment/latest-finished/download/1/mainnet-shelley-genesis.json
+    wget https://hydra.iohk.io/job/Cardano/cardano-node/cardano-deployment/latest-finished/download/1/mainnet-alonzo-genesis.json
     wget https://hydra.iohk.io/job/Cardano/cardano-node/cardano-deployment/latest-finished/download/1/mainnet-topology.json
 
 Starting the node uses the command `cardano-node run` and a set of options.
@@ -44,6 +46,7 @@ Get the complete list of available options with `cardano-node run --help`
   	                                specified slot
     -h,--help                       Show this help text
 
+**Note**: If you do not specify `--host-addr` nor `--host-ipv6-addr`, node will use the default IPv4 and IPv6 addresses (depending which addresses are available).  If one specifies one of them only that address will be used, in particular if you only provide an IPv4 address, the node will not connect over IPv6.
 To start a passive node:
 
      cardano-node run \

@@ -25,6 +25,7 @@ import qualified Data.Text as Text
 
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..))
 import           Cardano.Node.Types
+import           Cardano.Node.Configuration.NodeAddress
 
 import           Ouroboros.Consensus.Util.Condense (Condense (..))
 
@@ -141,4 +142,8 @@ readTopologyFile nc = do
                         ++ displayException e
   handlerJSON :: String -> Text
   handlerJSON err = "Is your topology file formatted correctly? \
-                    \The port and valency fields should be numerical. " <> Text.pack err
+                    \Expecting Non-P2P Topology file format. \
+                    \The port and valency fields should be numerical. \
+                    \If you specified the correct topology file \
+                    \make sure that you correctly setup EnableP2P \
+                    \configuration flag. " <> Text.pack err

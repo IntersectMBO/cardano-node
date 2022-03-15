@@ -1,11 +1,9 @@
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -16,48 +14,45 @@ module Cardano.Api.Orphans () where
 
 import           Prelude
 
+import           Data.Aeson (FromJSON (..), ToJSON (..), object, (.=))
+import qualified Data.Aeson as Aeson
+import           Data.Aeson.Types (ToJSONKey (..), toJSONKeyText)
+import           Data.BiMap (BiMap (..), Bimap)
 import qualified Data.ByteString.Base16 as B16
-import qualified Data.ByteString.Lazy as LBS
+import           Data.Compact.SplitMap
+import qualified Data.Compact.SplitMap as SplitMap
+import           Data.Compact.VMap (VB, VMap, VP)
+import qualified Data.Compact.VMap as VMap
+import qualified Data.Map.Strict as Map
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
-import qualified Data.Map.Strict as Map
-import           Data.Aeson (FromJSON (..), ToJSON (..), object, (.=), (.!=), (.:), (.:?))
-import qualified Data.Aeson as Aeson
-import           Data.Aeson.Types (FromJSONKey (..), ToJSONKey (..), toJSONKeyText)
-import qualified Data.Aeson.Types as Aeson
-import           Data.Scientific (Scientific)
+import           Data.UMap (Trip (Triple), UMap (UnifiedMap))
 
-import           Control.Applicative
-import           Control.Iterate.SetAlgebra (BiMap (..), Bimap)
-
-import           Cardano.Ledger.BaseTypes (StrictMaybe (..), strictMaybeToMaybe)
-import           Cardano.Ledger.Crypto (StandardCrypto)
+import           Cardano.Ledger.BaseTypes (StrictMaybe (..))
+import qualified Cardano.Ledger.BaseTypes as Ledger
+import           Cardano.Ledger.Compactible (Compactible (fromCompact))
+import qualified Cardano.Ledger.Shelley.PoolRank as Shelley
+import           Cardano.Ledger.UnifiedMap (UnifiedMap)
 import           Cardano.Slotting.Slot (SlotNo (..))
+import           Cardano.Slotting.Time (SystemStart (..))
 
 import qualified Cardano.Crypto.Hash.Class as Crypto
-import qualified Cardano.Ledger.Alonzo.Genesis as Alonzo
-import qualified Cardano.Ledger.Alonzo.Language as Alonzo
-import qualified Cardano.Ledger.Alonzo.PParams as Alonzo
-import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
-import qualified Cardano.Ledger.Alonzo as Alonzo
-import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo
 import qualified Cardano.Ledger.Coin as Shelley
 import qualified Cardano.Ledger.Core as Core
-import qualified Cardano.Ledger.Core as Ledger
 import qualified Cardano.Ledger.Crypto as Crypto
-import qualified Cardano.Ledger.Era as Ledger
 import qualified Cardano.Ledger.Mary.Value as Mary
+import qualified Cardano.Ledger.PoolDistr as Ledger
 import qualified Cardano.Ledger.SafeHash as SafeHash
+import qualified Cardano.Ledger.Shelley.API as Shelley
 import qualified Cardano.Ledger.Shelley.Constraints as Shelley
+import qualified Cardano.Ledger.Shelley.EpochBoundary as ShelleyEpoch
+import qualified Cardano.Ledger.Shelley.LedgerState as ShelleyLedger
+import           Cardano.Ledger.Shelley.PParams (PParamsUpdate)
+import qualified Cardano.Ledger.Shelley.RewardUpdate as Shelley
+import qualified Cardano.Ledger.Shelley.Rewards as Shelley
 import qualified Ouroboros.Consensus.Shelley.Eras as Consensus
-import qualified Shelley.Spec.Ledger.API as Shelley
-import qualified Shelley.Spec.Ledger.Delegation.Certificates as Shelley
-import qualified Shelley.Spec.Ledger.EpochBoundary as ShelleyEpoch
-import qualified Shelley.Spec.Ledger.LedgerState as ShelleyLedger
-import           Shelley.Spec.Ledger.PParams (PParamsUpdate)
-import qualified Shelley.Spec.Ledger.Rewards as Shelley
-import qualified Shelley.Spec.Ledger.RewardUpdate as Shelley
+
 
 -- Orphan instances involved in the JSON output of the API queries.
 -- We will remove/replace these as we provide more API wrapper types
@@ -111,6 +106,11 @@ instance ( Consensus.ShelleyBasedEra era
                          , "delegationState" .= Shelley._delegationState lState
                          ]
 
+instance Crypto.Crypto crypto => ToJSON (ShelleyLedger.IncrementalStake crypto) where
+  toJSON iStake = object [ "credentials" .= Map.toList (ShelleyLedger.credMap iStake)
+                         , "pointers" .= Map.toList (ShelleyLedger.ptrMap iStake)
+                         ]
+
 instance ( Consensus.ShelleyBasedEra era
          , ToJSON (Core.TxOut era)
          , ToJSON (Core.PParamsDelta era)
@@ -119,6 +119,7 @@ instance ( Consensus.ShelleyBasedEra era
                             , "deposited" .= Shelley._deposited utxoState
                             , "fees" .= Shelley._fees utxoState
                             , "ppups" .= Shelley._ppups utxoState
+                            , "stake" .= Shelley._stakeDistro utxoState
                             ]
 
 instance ( ToJSON (Core.PParamsDelta era)
@@ -145,8 +146,7 @@ instance ToJSON (PParamsUpdate era) where
      ++ [ "poolDeposit"           .= x | x <- mbfield (Shelley._poolDeposit pp) ]
      ++ [ "eMax"                  .= x | x <- mbfield (Shelley._eMax pp) ]
      ++ [ "nOpt"                  .= x | x <- mbfield (Shelley._nOpt pp) ]
-     ++ [ "a0" .= (fromRational x :: Scientific)
-                                       | x <- mbfield (Shelley._a0 pp) ]
+     ++ [ "a0"                    .= x | x <- mbfield (Shelley._a0 pp) ]
      ++ [ "rho"                   .= x | x <- mbfield (Shelley._rho pp) ]
      ++ [ "tau"                   .= x | x <- mbfield (Shelley._tau pp) ]
      ++ [ "decentralisationParam" .= x | x <- mbfield (Shelley._d pp) ]
@@ -163,16 +163,26 @@ instance Crypto.Crypto crypto => ToJSON (Shelley.DPState crypto) where
                           , "pstate" .= Shelley._pstate dpState
                           ]
 
+instance (ToJSON coin, ToJSON ptr, ToJSON pool) => ToJSON (Trip coin ptr pool) where
+  toJSON (Triple coin ptr pool) = object
+    [ "coin" .= coin
+    , "ptr" .= ptr
+    , "pool" .= pool
+    ]
+instance Crypto.Crypto crypto => ToJSON (UnifiedMap crypto) where
+  toJSON (UnifiedMap m1 m2) = object
+    [ "credentials" .= m1
+    , "pointers" .= m2
+    ]
+
 instance Crypto.Crypto crypto => ToJSON (Shelley.DState crypto) where
-  toJSON dState = object [ "rewards" .= Shelley._rewards dState
-                         , "delegations" .= ShelleyLedger._delegations dState
-                         , "ptrs" .= Shelley._ptrs dState
+  toJSON dState = object [ "unifiedRewards" .= Shelley._unified dState
                          , "fGenDelegs" .= Map.toList (Shelley._fGenDelegs dState)
                          , "genDelegs" .= Shelley._genDelegs dState
                          , "irwd" .= Shelley._irwd dState
                          ]
 
-instance ToJSON (ShelleyLedger.FutureGenDeleg crypto) where
+instance Crypto.Crypto crypto => ToJSON (ShelleyLedger.FutureGenDeleg crypto) where
   toJSON fGenDeleg =
     object [ "fGenDelegSlot" .= ShelleyLedger.fGenDelegSlot fGenDeleg
            , "fGenDelegGenKeyHash" .= ShelleyLedger.fGenDelegGenKeyHash fGenDeleg
@@ -181,22 +191,30 @@ instance ToJSON (ShelleyLedger.FutureGenDeleg crypto) where
 instance Crypto.Crypto crypto => ToJSON (Shelley.GenDelegs crypto) where
   toJSON (Shelley.GenDelegs delegs) = toJSON delegs
 
-instance ToJSON (Shelley.InstantaneousRewards crypto) where
+instance Crypto.Crypto crypto => ToJSON (Shelley.InstantaneousRewards crypto) where
   toJSON iRwds = object [ "iRReserves" .= Shelley.iRReserves iRwds
                         , "iRTreasury" .= Shelley.iRTreasury iRwds
                         ]
 
-instance ToJSON (Bimap Shelley.Ptr (Shelley.Credential Shelley.Staking crypto)) where
+instance
+  Crypto.Crypto crypto =>
+  ToJSON (Bimap Shelley.Ptr (Shelley.Credential Shelley.Staking crypto))
+  where
   toJSON (MkBiMap ptsStakeM stakePtrSetM) =
     object [ "stakedCreds" .= Map.toList ptsStakeM
            , "credPtrR" .= toJSON stakePtrSetM
            ]
+
+deriving newtype instance ToJSON Shelley.CertIx
+deriving newtype instance ToJSON Shelley.TxIx
+
 instance ToJSON Shelley.Ptr where
   toJSON (Shelley.Ptr slotNo txIndex certIndex) =
     object [ "slot" .= unSlotNo slotNo
            , "txIndex" .= txIndex
            , "certIndex" .= certIndex
            ]
+instance ToJSONKey Shelley.Ptr
 
 
 instance Crypto.Crypto crypto => ToJSON (Shelley.PState crypto) where
@@ -204,6 +222,8 @@ instance Crypto.Crypto crypto => ToJSON (Shelley.PState crypto) where
                          , "fPParams pState" .= Shelley._fPParams pState
                          , "retiring pState" .= Shelley._retiring pState
                          ]
+instance (Ord k, ToJSONKey k, ToJSON v) =>  ToJSON (SplitMap k v) where
+  toJSON = toJSON . SplitMap.toMap
 
 instance ( Consensus.ShelleyBasedEra era
          , ToJSON (Core.TxOut era)
@@ -225,7 +245,7 @@ instance Crypto.Crypto crypto => ToJSON (Shelley.TxIn crypto) where
 instance Crypto.Crypto crypto => ToJSONKey (Shelley.TxIn crypto) where
   toJSONKey = toJSONKeyText txInToText
 
-txInToText :: Crypto.Crypto crypto => Shelley.TxIn crypto -> Text
+txInToText :: Shelley.TxIn crypto -> Text
 txInToText (Shelley.TxIn (Shelley.TxId txidHash) ix) =
   hashToText (SafeHash.extractHash txidHash)
     <> Text.pack "#"
@@ -256,7 +276,7 @@ instance Crypto.Crypto crypto => ToJSON (Shelley.SnapShot crypto) where
                      , "poolParams" .= Shelley._poolParams ss
                      ]
 
-instance ToJSON (Shelley.Stake crypto) where
+instance Crypto.Crypto crypto => ToJSON (Shelley.Stake crypto) where
   toJSON (Shelley.Stake s) = toJSON s
 
 instance Crypto.Crypto crypto => ToJSON (Shelley.RewardUpdate crypto) where
@@ -274,16 +294,16 @@ instance Crypto.Crypto crypto => ToJSON (Shelley.PulsingRewUpdate crypto) where
 instance ToJSON Shelley.DeltaCoin where
   toJSON (Shelley.DeltaCoin i) = toJSON i
 
-instance Crypto.Crypto crypto => ToJSON (Shelley.PoolDistr crypto) where
-  toJSON (Shelley.PoolDistr m) = toJSON m
+instance Crypto.Crypto crypto => ToJSON (Ledger.PoolDistr crypto) where
+  toJSON (Ledger.PoolDistr m) = toJSON m
 
-instance ToJSON (Shelley.IndividualPoolStake crypto) where
+instance Crypto.Crypto crypto => ToJSON (Ledger.IndividualPoolStake crypto) where
   toJSON indivPoolStake =
-    object [ "individualPoolStake" .= Shelley.individualPoolStake indivPoolStake
-           , "individualPoolStakeVrf" .= Shelley.individualPoolStakeVrf indivPoolStake
+    object [ "individualPoolStake" .= Ledger.individualPoolStake indivPoolStake
+           , "individualPoolStakeVrf" .= Ledger.individualPoolStakeVrf indivPoolStake
            ]
 
-instance ToJSON (Shelley.Reward crypto) where
+instance Crypto.Crypto crypto => ToJSON (Shelley.Reward crypto) where
   toJSON reward =
      object [ "rewardType" .= Shelley.rewardType reward
             , "rewardPool" .= Shelley.rewardPool reward
@@ -294,164 +314,20 @@ instance ToJSON Shelley.RewardType where
   toJSON Shelley.MemberReward = "MemberReward"
   toJSON Shelley.LeaderReward = "LeaderReward"
 
-instance ToJSON (SafeHash.SafeHash c a) where
+instance Crypto.Crypto c => ToJSON (SafeHash.SafeHash c a) where
   toJSON = toJSON . SafeHash.extractHash
 
 -----
 
-instance ToJSON Alonzo.ExUnits
-deriving instance FromJSON Alonzo.ExUnits
+deriving newtype instance ToJSON SystemStart
+deriving newtype instance FromJSON SystemStart
 
-deriving instance ToJSON Alonzo.Prices
-deriving instance FromJSON Alonzo.Prices
 
-deriving newtype instance FromJSON Alonzo.CostModel
-deriving newtype instance ToJSON Alonzo.CostModel
+instance Crypto.Crypto crypto => ToJSON (VMap VB VB (Shelley.Credential 'Shelley.Staking crypto) (Shelley.KeyHash 'Shelley.StakePool crypto)) where
+  toJSON = toJSON . VMap.toMap
 
-instance FromJSON Alonzo.Language where
-  parseJSON v = case v of
-    Aeson.String "PlutusV1" -> return Alonzo.PlutusV1
-    wrong -> fail $ "Error decoding Language. Expected a JSON string but got: " <> show wrong
-instance ToJSON Alonzo.Language where
-  toJSON Alonzo.PlutusV1 = Aeson.String "PlutusV1"
+instance Crypto.Crypto crypto => ToJSON (VMap VB VB (Shelley.KeyHash    'Shelley.StakePool crypto) (Shelley.PoolParams crypto)) where
+  toJSON = toJSON . VMap.toMap
 
-instance ToJSONKey Alonzo.Language where
-  toJSONKey = toJSONKeyText (Text.decodeLatin1 . LBS.toStrict . Aeson.encode)
-
-instance FromJSONKey Alonzo.Language where
-  fromJSONKey = Aeson.FromJSONKeyTextParser parseLang
-   where
-     parseLang :: Text -> Aeson.Parser Alonzo.Language
-     parseLang lang =
-       case Aeson.eitherDecode $ LBS.fromStrict $ Text.encodeUtf8 lang of
-         Left err -> fail (show err)
-         Right lang' -> return lang'
-
--- We defer parsing of the cost model so that we can
--- read it as a filepath. This is to reduce further pollution
--- of the genesis file.
-instance FromJSON Alonzo.AlonzoGenesis where
-  parseJSON = Aeson.withObject "Alonzo Genesis" $ \o -> do
-    coinsPerUTxOWord     <- o .:  "lovelacePerUTxOWord"
-                        <|> o .:  "adaPerUTxOWord" --TODO: deprecate
-    cModels              <- o .:? "costModels"
-    prices               <- o .:  "executionPrices"
-    maxTxExUnits         <- o .:  "maxTxExUnits"
-    maxBlockExUnits      <- o .:  "maxBlockExUnits"
-    maxValSize           <- o .:  "maxValueSize"
-    collateralPercentage <- o .:  "collateralPercentage"
-    maxCollateralInputs  <- o .:  "maxCollateralInputs"
-    case cModels of
-      Nothing -> case Alonzo.defaultCostModel of
-        Just m -> return Alonzo.AlonzoGenesis
-          { Alonzo.coinsPerUTxOWord
-          , Alonzo.costmdls = Map.singleton Alonzo.PlutusV1 m
-          , Alonzo.prices
-          , Alonzo.maxTxExUnits
-          , Alonzo.maxBlockExUnits
-          , Alonzo.maxValSize
-          , Alonzo.collateralPercentage
-          , Alonzo.maxCollateralInputs
-          }
-        Nothing -> fail "Failed to extract the cost model params from defaultCostModel"
-      Just costmdls -> return Alonzo.AlonzoGenesis
-        { Alonzo.coinsPerUTxOWord
-        , Alonzo.costmdls
-        , Alonzo.prices
-        , Alonzo.maxTxExUnits
-        , Alonzo.maxBlockExUnits
-        , Alonzo.maxValSize
-        , Alonzo.collateralPercentage
-        , Alonzo.maxCollateralInputs
-        }
-
--- We don't render the cost model so that we can
--- render it later in 'AlonzoGenWrapper' as a filepath
--- and keep the cost model (which is chunky) as a separate file.
-instance ToJSON Alonzo.AlonzoGenesis where
-  toJSON v = object
-      [ "lovelacePerUTxOWord" .= Alonzo.coinsPerUTxOWord v
-      , "costModels" .= Alonzo.costmdls v
-      , "executionPrices" .= Alonzo.prices v
-      , "maxTxExUnits" .= Alonzo.maxTxExUnits v
-      , "maxBlockExUnits" .= Alonzo.maxBlockExUnits v
-      , "maxValueSize" .= Alonzo.maxValSize v
-      , "collateralPercentage" .= Alonzo.collateralPercentage v
-      , "maxCollateralInputs" .= Alonzo.maxCollateralInputs v
-      ]
-
-instance ToJSON (Alonzo.PParams era) where
-  toJSON pp =
-    Aeson.object
-      [ "minFeeA" .= Alonzo._minfeeA pp
-      , "minFeeB" .= Alonzo._minfeeB pp
-      , "maxBlockBodySize" .= Alonzo._maxBBSize pp
-      , "maxTxSize" .= Alonzo._maxTxSize pp
-      , "maxBlockHeaderSize" .= Alonzo._maxBHSize pp
-      , "keyDeposit" .= Alonzo._keyDeposit pp
-      , "poolDeposit" .= Alonzo._poolDeposit pp
-      , "eMax" .= Alonzo._eMax pp
-      , "nOpt" .= Alonzo._nOpt pp
-      , "a0" .= (fromRational (Alonzo._a0 pp) :: Scientific)
-      , "rho" .= Alonzo._rho pp
-      , "tau" .= Alonzo._tau pp
-      , "decentralisationParam" .= Alonzo._d pp
-      , "extraEntropy" .= Alonzo._extraEntropy pp
-      , "protocolVersion" .= Alonzo._protocolVersion pp
-      , "minPoolCost" .= Alonzo._minPoolCost pp
-      , "lovelacePerUTxOWord" .= Alonzo._coinsPerUTxOWord pp
-      , "costmdls" .= Alonzo._costmdls pp
-      , "prices" .= Alonzo._prices pp
-      , "maxTxExUnits" .= Alonzo._maxTxExUnits pp
-      , "maxBlockExUnits" .= Alonzo._maxBlockExUnits pp
-      , "maxValSize" .= Alonzo._maxValSize pp
-      , "collateralPercentage" .= Alonzo._collateralPercentage pp
-      , "maxCollateralInputs " .= Alonzo._maxCollateralInputs pp
-      ]
-
-instance FromJSON (Alonzo.PParams era) where
-  parseJSON =
-    Aeson.withObject "PParams" $ \obj ->
-      Alonzo.PParams
-        <$> obj .: "minFeeA"
-        <*> obj .: "minFeeB"
-        <*> obj .: "maxBlockBodySize"
-        <*> obj .: "maxTxSize"
-        <*> obj .: "maxBlockHeaderSize"
-        <*> obj .: "keyDeposit"
-        <*> obj .: "poolDeposit"
-        <*> obj .: "eMax"
-        <*> obj .: "nOpt"
-        <*> ( (toRational :: Scientific -> Rational)
-                <$> obj .: "a0"
-            )
-        <*> obj .: "rho"
-        <*> obj .: "tau"
-        <*> obj .: "decentralisationParam"
-        <*> obj .: "extraEntropy"
-        <*> obj .: "protocolVersion"
-        <*> obj .: "minPoolCost" .!= mempty
-        <*> obj .: "lovelacePerUTxOWord"
-        <*> obj .: "costmdls"
-        <*> obj .: "prices"
-        <*> obj .: "maxTxExUnits"
-        <*> obj .: "maxBlockExUnits"
-        <*> obj .: "maxValSize"
-        <*> obj .: "collateralPercentage"
-        <*> obj .: "maxCollateralInputs"
-
-deriving instance ToJSON (Alonzo.PParamsUpdate (Alonzo.AlonzoEra StandardCrypto))
-
-instance (Ledger.Era era, Show (Ledger.Value era), ToJSON (Ledger.Value era))
-    => ToJSON (Alonzo.TxOut era) where
-  toJSON (Alonzo.TxOut addr v dataHash) =
-    object [ "address" .= toJSON addr
-           , "value" .= toJSON v
-           , "datahash" .= case strictMaybeToMaybe dataHash of
-                             Nothing -> Aeson.Null
-                             Just dHash ->
-                               Aeson.String . Crypto.hashToTextAsHex
-                                 $ SafeHash.extractHash dHash
-           ]
-
-deriving instance Show Alonzo.AlonzoGenesis
+instance Crypto.Crypto crypto => ToJSON (VMap VB VP (Shelley.Credential 'Shelley.Staking   crypto) (Shelley.CompactForm Shelley.Coin)) where
+  toJSON = toJSON . fmap fromCompact . VMap.toMap

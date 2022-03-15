@@ -13,7 +13,6 @@ module Cardano.Api.Protocol.Types
   , ProtocolInfoArgs(..)
   , ProtocolClient(..)
   , ProtocolClientInfoArgs(..)
-  , SomeNodeClientProtocol(..)
   ) where
 
 import           Cardano.Prelude
@@ -54,10 +53,10 @@ instance IOLike m => Protocol m (CardanoBlock StandardCrypto) where
          ProtocolInfoArgsCardano
            ProtocolParamsByron
           (ProtocolParamsShelleyBased StandardShelley)
-           ProtocolParamsShelley
-           ProtocolParamsAllegra
-           ProtocolParamsMary
-           ProtocolParamsAlonzo
+          (ProtocolParamsShelley StandardCrypto)
+          (ProtocolParamsAllegra StandardCrypto)
+          (ProtocolParamsMary StandardCrypto)
+          (ProtocolParamsAlonzo StandardCrypto)
           (ProtocolTransitionParamsShelleyBased StandardShelley)
           (ProtocolTransitionParamsShelleyBased StandardAllegra)
           (ProtocolTransitionParamsShelleyBased StandardMary)
@@ -101,7 +100,7 @@ instance ProtocolClient (CardanoBlock StandardCrypto) where
 instance IOLike m => Protocol m (ShelleyBlockHFC StandardShelley) where
   data ProtocolInfoArgs m (ShelleyBlockHFC StandardShelley) = ProtocolInfoArgsShelley
     (ProtocolParamsShelleyBased StandardShelley)
-    ProtocolParamsShelley
+    (ProtocolParamsShelley StandardCrypto)
   protocolInfo (ProtocolInfoArgsShelley paramsShelleyBased paramsShelley) =
     inject $ protocolInfoShelley paramsShelleyBased paramsShelley
 
@@ -119,9 +118,3 @@ data BlockType blk where
 deriving instance Eq (BlockType blk)
 deriving instance Show (BlockType blk)
 
-data SomeNodeClientProtocol where
-
-     SomeNodeClientProtocol
-       :: (RunNode blk, ProtocolClient blk)
-       => ProtocolClientInfoArgs blk
-       -> SomeNodeClientProtocol

@@ -1,0 +1,14 @@
+{
+  "networkMagic": 764824073,
+  "network": {
+    "tag": "ConnectTo",
+    "contents": ["/tmp/forwarder.sock"]
+  },
+  "logging": [
+    {
+      "logRoot": "/tmp/cardano-tracer-logs",
+      "logMode": "FileMode",
+      "logFormat": "ForMachine"
+    }
+  ]
+}

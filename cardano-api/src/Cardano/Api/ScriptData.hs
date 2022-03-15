@@ -1,6 +1,7 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module Cardano.Api.ScriptData (
@@ -14,12 +15,14 @@ module Cardano.Api.ScriptData (
     validateScriptData,
     ScriptDataRangeError (..),
 
-    -- * Converstion to\/from JSON
+    -- * Conversion to\/from JSON
     ScriptDataJsonSchema (..),
     scriptDataFromJson,
     scriptDataToJson,
     ScriptDataJsonError (..),
     ScriptDataJsonSchemaError (..),
+    scriptDataFromJsonDetailedSchema,
+    scriptDataToJsonDetailedSchema,
 
     -- * Internal conversion functions
     toPlutusData,
@@ -35,22 +38,22 @@ module Cardano.Api.ScriptData (
 import           Prelude
 
 import           Data.Bifunctor (first)
-import           Data.Maybe (fromMaybe)
-import           Data.Word
-import qualified Data.Scientific as Scientific
-import qualified Data.Char as Char
 import qualified Data.ByteString as BS
+import qualified Data.ByteString.Base16 as Base16
 import qualified Data.ByteString.Char8 as BSC
 import qualified Data.ByteString.Lazy.Char8 as LBS
-import qualified Data.ByteString.Base16 as Base16
+import qualified Data.Char as Char
+import qualified Data.HashMap.Strict as HashMap
+import qualified Data.List as List
+import           Data.Maybe (fromMaybe)
+import qualified Data.Scientific as Scientific
 import           Data.String (IsString)
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import qualified Data.Text.Lazy as Text.Lazy
-import qualified Data.HashMap.Strict as HashMap
-import qualified Data.List as List
 import qualified Data.Vector as Vector
+import           Data.Word
 
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Text as Aeson.Text
@@ -59,9 +62,9 @@ import qualified Data.Attoparsec.ByteString.Char8 as Atto
 import           Control.Applicative (Alternative (..))
 
 import qualified Cardano.Crypto.Hash.Class as Crypto
-import qualified Cardano.Ledger.SafeHash as Ledger
-import           Ouroboros.Consensus.Shelley.Eras (StandardCrypto, StandardAlonzo)
 import qualified Cardano.Ledger.Alonzo.Data as Alonzo
+import qualified Cardano.Ledger.SafeHash as Ledger
+import           Ouroboros.Consensus.Shelley.Eras (StandardAlonzo, StandardCrypto)
 import qualified Plutus.V1.Ledger.Api as Plutus
 
 import           Cardano.Api.Eras
@@ -70,18 +73,23 @@ import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Hash
 import           Cardano.Api.KeysShelley
 import           Cardano.Api.SerialiseJSON
+import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseRaw
-import           Cardano.Api.SerialiseUsing
-import           Cardano.Api.TxMetadata (parseAll, pSigned, pBytes)
+import qualified Cardano.Binary as CBOR
 
+import           Cardano.Api.SerialiseUsing
+import           Cardano.Api.TxMetadata (pBytes, pSigned, parseAll)
+import           Codec.Serialise.Class (Serialise(..))
 
 -- ----------------------------------------------------------------------------
 -- Script data
 --
 
-data ScriptData = ScriptDataConstructor Integer [ScriptData]
-                | ScriptDataMap         [(ScriptData, ScriptData)]
-                | ScriptDataList        [ScriptData]
+data ScriptData = ScriptDataConstructor
+                                        Integer                     -- ^ Tag for the constructor
+                                        [ScriptData]                -- ^ Constructor arguments
+                | ScriptDataMap         [(ScriptData, ScriptData)]  -- ^ Key value pairs
+                | ScriptDataList        [ScriptData]                -- ^ Elements
                 | ScriptDataNumber      Integer
                 | ScriptDataBytes       BS.ByteString
   deriving (Eq, Ord, Show)
@@ -92,7 +100,6 @@ data ScriptData = ScriptDataConstructor Integer [ScriptData]
 instance HasTypeProxy ScriptData where
     data AsType ScriptData = AsScriptData
     proxyToAsType _ = AsScriptData
-
 
 -- ----------------------------------------------------------------------------
 -- Script data hash
@@ -112,6 +119,16 @@ instance SerialiseAsRawBytes (Hash ScriptData) where
     deserialiseFromRawBytes (AsHash AsScriptData) bs =
       ScriptDataHash . Ledger.unsafeMakeSafeHash <$> Crypto.hashFromBytes bs
 
+instance SerialiseAsCBOR ScriptData where
+    serialiseToCBOR = CBOR.serialize'
+    deserialiseFromCBOR AsScriptData bs = CBOR.decodeFullDecoder "ScriptData" fromCBOR (LBS.fromStrict bs) :: Either CBOR.DecoderError ScriptData
+
+
+instance ToCBOR ScriptData where
+  toCBOR = encode @Plutus.Data . toPlutusData
+
+instance FromCBOR ScriptData where
+  fromCBOR = fromPlutusData <$> decode @Plutus.Data
 
 hashScriptData :: ScriptData -> Hash ScriptData
 hashScriptData = ScriptDataHash
@@ -366,7 +383,7 @@ scriptDataToJsonNoSchema = conv
 
 
     -- Script data allows any value as a key, not just string as JSON does.
-    -- For simple types we just convert them to string dirctly.
+    -- For simple types we just convert them to string directly.
     -- For structured keys we render them as JSON and use that as the string.
     convKey :: ScriptData -> Text
     convKey (ScriptDataNumber n) = Text.pack (show n)
@@ -465,7 +482,7 @@ scriptDataFromJsonDetailedSchema = conv
     conv :: Aeson.Value
          -> Either ScriptDataJsonSchemaError ScriptData
     conv (Aeson.Object m) =
-      case HashMap.toList m of
+      case List.sort $ HashMap.toList m of
         [("int", Aeson.Number d)] ->
           case Scientific.floatingOrInteger d :: Either Double Integer of
             Left  n -> Left (ScriptDataJsonNumberNotInteger n)

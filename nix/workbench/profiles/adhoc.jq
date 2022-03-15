@@ -1,21 +1,56 @@
 def adhoc_profiles:
-[ { name: "short"
+[ { name: "default"
+  , desc: "Default profile, as per nix/workbench/profiles/defaults.jq"
+  }
+
+, { name: "short"
   , generator: { tx_count: 10000, inputs_per_tx: 1, outputs_per_tx: 1,  tps: 100 }
+  , genesis: { genesis_future_offset: "3 minutes" }
   }
 , { name: "small"
   , generator: { tx_count: 1000,  inputs_per_tx: 1, outputs_per_tx: 1,  tps: 100
                , init_cooldown: 25 }
   , tolerances: { finish_patience: 4 }
+  , genesis: { genesis_future_offset: "3 minutes" }
   }
-, { name: "smoke"
+# , { name: "smoke"
+#   , generator: { tx_count: 100,   add_tx_size: 0, inputs_per_tx: 1, outputs_per_tx: 1,  tps: 100
+#                , init_cooldown: 25 }
+#   , tolerances: { finish_patience: 4 }
+#   , genesis: { genesis_future_offset: "3 minutes", delegators: 4 }
+#   }
+, { name: "smoke-plutus"
   , generator: { tx_count: 100,   add_tx_size: 0, inputs_per_tx: 1, outputs_per_tx: 1,  tps: 100
-               , init_cooldown: 25 }
+               , init_cooldown: 25
+	       , plutusMode: true
+	       , plutusAutoMode: true
+	       , debugMode: false }
   , tolerances: { finish_patience: 4 }
+  , genesis: { genesis_future_offset: "3 minutes" }
   }
-, { name: "default"
+, { name: "10"
+  , composition:
+    { n_singular_hosts:               10
+    , n_dense_hosts:                  0
+    }
   , genesis:
-    { verbatim:
-      { initialFunds:
+    { genesis_future_offset: "10 seconds"
+    , utxo:                  0
+    }
+  }
+
+, { name: "devops"
+  , genesis:
+    { slot_duration:         0.2
+    , parameter_k:           10
+    , epoch_length:          1000
+    , active_slots_coeff:    0.1
+    , genesis_future_offset: "10 seconds"
+    , utxo:                  0
+
+    , shelley:
+      { updateQuorum: 1
+      , initialFunds:
         # genesis-utxo (used for pool owner funds and paying fees for startup scripts)
         { "608634fc2a05c3d7f8dca90321dae19a2172ab3ff146512660721fa15b": 1000000000000000
         # flee three produce crush token where quantum vessel seek include dance reject urge awesome lonely
@@ -25,13 +60,7 @@ def adhoc_profiles:
         , "00b84e9b8980d61ade5167f3e697641acae5e6eec546fcdbc5c03149a02595d4202003415534e919acb2c07132a588827fb8e6b968861b1e5d807b756fe72d6e28": 100000000000000
         , "000b04a2d5dc696f845a7bbe7ead094ac12e8dbbf82eedeabe9cb2fe8c07f1624c2003415534e919acb2c07132a588827fb8e6b968861b1e5d807b756fe72d6e28": 100000000000000
         }
-      , activeSlotsCoeff: 0.1
-      , epochLength: 1000
-      , slotLength: 0.2
-      , securityParam: 10
       }
-      , genesis_future_offset: "10 seconds"
-      , utxo:                  0
     }
   }
 ];

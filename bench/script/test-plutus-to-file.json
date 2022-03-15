@@ -1,0 +1,65 @@
+[
+    { "Set": { "SNumberOfInputsPerTx": 2 } },
+    { "Set": { "SNumberOfOutputsPerTx": 2 } },
+    { "Set": { "SNumberOfTxs": 3000 } },
+    { "Set": { "STxAdditionalSize": 39 } },
+    { "Set": { "SFee": 212345 } },
+    { "Set": { "SMinValuePerUTxO": 1000000 } },
+    { "Set": { "STTL": 1000000 } },
+    { "StartProtocol": "run/current/node-0/config.json" },
+    { "Set": { "SEra": "Allegra" } },
+    { "Set": { "STargets": [
+        { "addr": "127.0.0.1", "port": 30000 },
+        { "addr": "127.0.0.1", "port": 30001 },
+        { "addr": "127.0.0.1", "port": 30002 }
+        ] } },
+    { "Set": { "SLocalSocket": "run/current/node-0/node.socket" } },
+    { "ReadSigningKey": [ "pass-partout", "run/current/genesis/utxo-keys/utxo1.skey" ] },
+    { "ImportGenesisFund": [
+            { "DumpToFile": "/tmp/split-txs.txt" },
+            "pass-partout",
+            "pass-partout"
+        ] },
+    { "CreateChange": [
+            { "DumpToFile": "/tmp/script-txs.txt" },
+            { "PayToAddr": "pass-partout" },
+            149200212345,
+            1
+        ] },
+    { "CreateChange": [
+            { "DumpToFile": "/tmp/script-txs.txt" },
+            { "PayToCollateral": "pass-partout" },
+            149200000000,
+            1
+        ] },
+    { "CreateChange": [
+            { "DumpToFile": "/tmp/split-txs.txt" },
+            { "PayToAddr": "pass-partout" },
+            2200000000000,
+            10
+        ] },
+    { "CreateChange": [
+            { "DumpToFile": "/tmp/split-txs.txt" },
+            { "PayToAddr": "pass-partout" },
+            70000000000,
+            300
+        ] },
+    { "CreateChange": [
+            { "DumpToFile": "/tmp/script-txs.txt" },
+            { "PayToScript": [ "bench/script/sum1ToN.plutus", 3 ] },
+            2300000000,
+            9000
+        ] },
+    { "RunBenchmark": [
+            { "DumpToFile": "/tmp/submit-txs.txt" },
+            { "SpendScript": [
+                    "bench/script/sum1ToN.plutus",
+                    { "PreExecuteScript": [] },
+                    3,
+                    6
+                ] },
+            "walletBasedBenchmark",
+            4000,
+            10
+        ] }
+]

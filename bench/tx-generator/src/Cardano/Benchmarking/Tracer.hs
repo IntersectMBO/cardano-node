@@ -16,33 +16,36 @@ module Cardano.Benchmarking.Tracer
   ( BenchTracers(..)
   , NodeToNodeSubmissionTrace(..)
   , SendRecvConnect
-  , SendRecvTxSubmission
+  , SendRecvTxSubmission2
   , SubmissionSummary(..)
   , TraceBenchTxSubmit(..)
   , TraceLowLevelSubmit(..)
-  , createTracers
+  , createLoggingLayerTracers
+  , createDebugTracers
   ) where
 
+
 import           Prelude (Show(..), String)
-
-import           Cardano.Prelude hiding (TypeError, show)
-
-import qualified Codec.CBOR.Term as CBOR
-import           Cardano.BM.Tracing
-import           Data.Aeson (ToJSON (..), (.=))
+import           Data.Aeson (ToJSON (..), (.=), encode)
 import qualified Data.Aeson as A
+import qualified Data.ByteString.Lazy.Char8 as BSL (unpack)
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as T
 import           Data.Time.Clock (DiffTime, NominalDiffTime, getCurrentTime)
 
--- Mode-agnostic imports.
-import           Cardano.BM.Data.Tracer
-                   (emptyObject, mkObject, trStructured)
-import           Network.Mux (WithMuxBearer(..))
--- Node API imports.
+import           Control.Tracer (debugTracer)
+
+import qualified Codec.CBOR.Term as CBOR
 import           Cardano.Api
 
--- Node imports.
+import           Cardano.Prelude hiding (TypeError, show)
+
+
+import           Cardano.BM.Tracing
+import           Cardano.BM.Data.Tracer (emptyObject, mkObject, trStructured)
+import           Network.Mux (WithMuxBearer(..))
+
+
 import           Cardano.Node.Configuration.Logging (LOContent(..), LoggingLayer (..))
 import           Cardano.Tracing.OrphanInstances.Byron()
 import           Cardano.Tracing.OrphanInstances.Common()
@@ -53,7 +56,7 @@ import           Cardano.Tracing.OrphanInstances.Shelley()
 
 import           Cardano.Benchmarking.OuroborosImports
 import           Ouroboros.Network.Driver (TraceSendRecv (..))
-import           Ouroboros.Network.Protocol.TxSubmission.Type (TxSubmission)
+import           Ouroboros.Network.Protocol.TxSubmission2.Type (TxSubmission2)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTx, GenTxId)
 import           Ouroboros.Network.NodeToNode (RemoteConnectionId, NodeToNodeVersion)
 import           Ouroboros.Network.Protocol.Handshake.Type (Handshake)
@@ -65,27 +68,34 @@ data BenchTracers =
   { btBase_       :: Trace  IO Text
   , btTxSubmit_   :: Tracer IO (TraceBenchTxSubmit TxId)
   , btConnect_    :: Tracer IO SendRecvConnect
-  , btSubmission_ :: Tracer IO SendRecvTxSubmission
+  , btSubmission2_:: Tracer IO SendRecvTxSubmission2
   , btLowLevel_   :: Tracer IO TraceLowLevelSubmit
   , btN2N_        :: Tracer IO NodeToNodeSubmissionTrace
   }
 
-createTracers :: LoggingLayer -> BenchTracers
-createTracers loggingLayer =
+createDebugTracers :: BenchTracers
+createDebugTracers = initTracers tr tr
+  where
+    tr = contramap (\(_,t) -> BSL.unpack $ encode t) debugTracer
+
+createLoggingLayerTracers :: LoggingLayer -> BenchTracers
+createLoggingLayerTracers loggingLayer
+  = initTracers baseTrace tr
+   where
+     baseTrace = llBasicTrace loggingLayer
+     tr = llAppendName loggingLayer "cli" baseTrace
+
+initTracers :: Trace IO Text -> Trace IO Text -> BenchTracers
+initTracers baseTrace tr =
   BenchTracers
-    baseTrace
-    benchTracer
-    connectTracer
-    submitTracer
-    lowLevelSubmitTracer
-    n2nSubmitTracer
+    { btBase_        = baseTrace
+    , btTxSubmit_    = benchTracer
+    , btConnect_     = connectTracer
+    , btSubmission2_ = submitTracer
+    , btLowLevel_    = lowLevelSubmitTracer
+    , btN2N_         = n2nSubmitTracer
+    }
  where
-  baseTrace :: Trace IO Text
-  baseTrace = llBasicTrace loggingLayer
-
-  tr :: Trace IO Text
-  tr = llAppendName loggingLayer "cli" baseTrace
-
   tr' :: Trace IO Text
   tr' = appendName "generate-txs" tr
 
@@ -95,14 +105,14 @@ createTracers loggingLayer =
   connectTracer :: Tracer IO SendRecvConnect
   connectTracer = toLogObjectVerbose (appendName "connect" tr')
 
-  submitTracer :: Tracer IO SendRecvTxSubmission
+  submitTracer :: Tracer IO SendRecvTxSubmission2
   submitTracer = toLogObjectVerbose (appendName "submit" tr')
 
   lowLevelSubmitTracer :: Tracer IO TraceLowLevelSubmit
-  lowLevelSubmitTracer = toLogObjectVerbose (appendName "llSubmit" tr')
+  lowLevelSubmitTracer = toLogObjectMinimal (appendName "llSubmit" tr')
 
   n2nSubmitTracer :: Tracer IO NodeToNodeSubmissionTrace
-  n2nSubmitTracer = toLogObjectVerbose (appendName "submit2" tr')
+  n2nSubmitTracer = toLogObjectMinimal (appendName "submitN2N" tr')
 
 {-------------------------------------------------------------------------------
   Overall benchmarking trace
@@ -116,7 +126,7 @@ data TraceBenchTxSubmit txid
   | TraceBenchTxSubServAnn [txid]
   -- ^ Announcing txids in response for server's request.
   | TraceBenchTxSubServReq [txid]
-  -- ^ Request for @tx@ recieved from `TxSubmission` protocol
+  -- ^ Request for @tx@ received from `TxSubmission` protocol
   --   peer.
   | TraceBenchTxSubServAck [txid]
   -- ^ An ack (window moved over) received for these transactions.
@@ -131,7 +141,7 @@ data TraceBenchTxSubmit txid
   | TraceBenchTxSubServCons [txid]
   -- ^ Transactions consumed by a submitter.
   | TraceBenchTxSubIdle
-  -- ^ Remote peer requested new transasctions but none were
+  -- ^ Remote peer requested new transactions but none were
   --   available, generator not keeping up?
   | TraceBenchTxSubRateLimit DiffTime
   -- ^ Rate limiter bit, this much delay inserted to keep within
@@ -206,7 +216,7 @@ instance Transformable Text IO NodeToNodeSubmissionTrace where
   trTransformer = trStructured
 
 {-------------------------------------------------------------------------------
-  Low-tevel tracer
+  Low-level tracer
 -------------------------------------------------------------------------------}
 data TraceLowLevelSubmit
   = TraceLowLevelSubmitting
@@ -249,9 +259,9 @@ instance (MonadIO m) => Transformable Text m TraceLowLevelSubmit where
 {-------------------------------------------------------------------------------
   SendRecvTxSubmission
 -------------------------------------------------------------------------------}
-type SendRecvTxSubmission = TraceSendRecv (TxSubmission (GenTxId CardanoBlock) (GenTx CardanoBlock))
+type SendRecvTxSubmission2 = TraceSendRecv (TxSubmission2 (GenTxId CardanoBlock) (GenTx CardanoBlock))
 
-instance Transformable Text IO SendRecvTxSubmission where
+instance Transformable Text IO SendRecvTxSubmission2 where
   -- transform to JSON Object
   trTransformer verb tr = Tracer $ \arg -> do
     currentTime <- getCurrentTime

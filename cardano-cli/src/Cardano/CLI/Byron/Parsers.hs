@@ -54,8 +54,8 @@ import           Cardano.Chain.Update (ApplicationName (..), InstallerHash (..),
                    ProtocolVersion (..), SoftforkRule (..), SoftwareVersion (..), SystemTag (..),
                    checkApplicationName, checkSystemTag)
 
-import           Cardano.Api hiding (UpdateProposal, GenesisParameters)
-import           Cardano.Api.Byron (Address (..), ByronProtocolParametersUpdate (..), Lovelace (..),
+import           Cardano.Api hiding (GenesisParameters, UpdateProposal)
+import           Cardano.Api.Byron (Address (..), ByronProtocolParametersUpdate (..),
                    toByronLovelace)
 
 import           Cardano.CLI.Byron.Commands
@@ -284,12 +284,12 @@ parseTxIdAtto = (<?> "Transaction ID (hexadecimal)") $ do
 parseTxIxAtto :: Atto.Parser TxIx
 parseTxIxAtto = toEnum <$> Atto.decimal
 
-parseTxOut :: Parser (TxOut ByronEra)
+parseTxOut :: Parser (TxOut CtxTx ByronEra)
 parseTxOut =
   option
     ( (\(addr, lovelace) -> TxOut (pAddressInEra addr)
                                   (pLovelaceTxOut lovelace)
-                                  TxOutDatumHashNone)
+                                  TxOutDatumNone)
       <$> auto
     )
     $ long "txout"
@@ -507,9 +507,9 @@ parseMpcThd =
 
 parseProtocolVersion :: Parser ProtocolVersion
 parseProtocolVersion =
-  ProtocolVersion <$> (parseWord "protocol-version-major" "Protocol verson major." "WORD16" :: Parser Word16)
-                  <*> (parseWord "protocol-version-minor" "Protocol verson minor." "WORD16" :: Parser Word16)
-                  <*> (parseWord "protocol-version-alt" "Protocol verson alt." "WORD8" :: Parser Word8)
+  ProtocolVersion <$> (parseWord "protocol-version-major" "Protocol version major." "WORD16" :: Parser Word16)
+                  <*> (parseWord "protocol-version-minor" "Protocol version minor." "WORD16" :: Parser Word16)
+                  <*> (parseWord "protocol-version-alt" "Protocol version alt." "WORD8" :: Parser Word8)
 
 parseHeavyDelThd :: Parser Byron.LovelacePortion
 parseHeavyDelThd =

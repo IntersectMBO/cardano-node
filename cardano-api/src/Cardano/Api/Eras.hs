@@ -1,4 +1,5 @@
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -45,13 +46,12 @@ module Cardano.Api.Eras
 
 import           Prelude
 
-import           Data.Aeson (ToJSON, toJSON)
+import           Data.Aeson (FromJSON (..), ToJSON, toJSON, withText)
+import qualified Data.Text as Text
 import           Data.Type.Equality (TestEquality (..), (:~:) (Refl))
 
-import           Cardano.Ledger.Era as Ledger (Crypto)
-
 import           Ouroboros.Consensus.Shelley.Eras as Ledger (StandardAllegra, StandardAlonzo,
-                   StandardCrypto, StandardMary, StandardShelley)
+                   StandardMary, StandardShelley)
 
 import           Cardano.Api.HasTypeProxy
 
@@ -143,6 +143,7 @@ data CardanoEra era where
      AllegraEra :: CardanoEra AllegraEra
      MaryEra    :: CardanoEra MaryEra
      AlonzoEra  :: CardanoEra AlonzoEra
+     -- when you add era here, change `instance Bounded AnyCardanoEra`
 
 deriving instance Eq   (CardanoEra era)
 deriving instance Ord  (CardanoEra era)
@@ -199,8 +200,46 @@ instance Eq AnyCardanoEra where
         Nothing   -> False
         Just Refl -> True -- since no constructors share types
 
+instance Bounded AnyCardanoEra where
+   minBound = AnyCardanoEra ByronEra
+   maxBound = AnyCardanoEra AlonzoEra
+
+instance Enum AnyCardanoEra where
+
+   -- [e..] = [e..maxBound]
+   enumFrom e = enumFromTo e maxBound
+
+   fromEnum = \case
+      AnyCardanoEra ByronEra   -> 0
+      AnyCardanoEra ShelleyEra -> 1
+      AnyCardanoEra AllegraEra -> 2
+      AnyCardanoEra MaryEra    -> 3
+      AnyCardanoEra AlonzoEra  -> 4
+
+   toEnum = \case
+      0 -> AnyCardanoEra ByronEra
+      1 -> AnyCardanoEra ShelleyEra
+      2 -> AnyCardanoEra AllegraEra
+      3 -> AnyCardanoEra MaryEra
+      4 -> AnyCardanoEra AlonzoEra
+      n ->
+         error $
+            "AnyCardanoEra.toEnum: " <> show n
+            <> " does not correspond to any known enumerated era."
+
 instance ToJSON AnyCardanoEra where
    toJSON (AnyCardanoEra era) = toJSON era
+
+instance FromJSON AnyCardanoEra where
+   parseJSON = withText "AnyCardanoEra"
+     $ \case
+        "Byron" -> pure $ AnyCardanoEra ByronEra
+        "Shelley" -> pure $ AnyCardanoEra ShelleyEra
+        "Allegra" -> pure $ AnyCardanoEra AllegraEra
+        "Mary" -> pure $ AnyCardanoEra MaryEra
+        "Alonzo" -> pure $ AnyCardanoEra AlonzoEra
+        wrong -> fail $ "Failed to parse unknown era: " <> Text.unpack wrong
+
 
 -- | Like the 'AnyCardanoEra' constructor but does not demand a 'IsCardanoEra'
 -- class constraint.
@@ -249,8 +288,7 @@ deriving instance Show (ShelleyBasedEra era)
 -- of Shelley-based eras, but also non-uniform by making case distinctions on
 -- the 'ShelleyBasedEra' constructors.
 --
-class (IsCardanoEra era, Ledger.Crypto (ShelleyLedgerEra era) ~ StandardCrypto)
-   => IsShelleyBasedEra era where
+class IsCardanoEra era => IsShelleyBasedEra era where
    shelleyBasedEra :: ShelleyBasedEra era
 
 instance IsShelleyBasedEra ShelleyEra where
@@ -276,6 +314,7 @@ data InAnyShelleyBasedEra thing where
                           -> InAnyShelleyBasedEra thing
 
 
+-- | Converts a 'ShelleyBasedEra' to the broader 'CardanoEra'.
 shelleyBasedToCardanoEra :: ShelleyBasedEra era -> CardanoEra era
 shelleyBasedToCardanoEra ShelleyBasedEraShelley = ShelleyEra
 shelleyBasedToCardanoEra ShelleyBasedEraAllegra = AllegraEra
@@ -332,4 +371,3 @@ type family ShelleyLedgerEra era where
   ShelleyLedgerEra AllegraEra = Ledger.StandardAllegra
   ShelleyLedgerEra MaryEra    = Ledger.StandardMary
   ShelleyLedgerEra AlonzoEra  = Ledger.StandardAlonzo
-

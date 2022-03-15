@@ -36,6 +36,21 @@ executable scan-blocks-pipelined
                       , filepath
                       , time
 
+executable chain-sync-client-with-ledger-state
+  import:               base, project-config
+  main-is:              ChainSyncClientWithLedgerState.hs
+  build-depends:        cardano-api
+                      , cardano-ledger-byron
+                      , cardano-slotting
+                      , ouroboros-consensus
+                      , ouroboros-consensus-cardano
+
+                      , filepath
+                      , sop-core
+                      , text
+                      , time
+                      , transformers
+
 executable ledger-state
   import:              base, project-config
   main-is:             LedgerState.hs
@@ -66,5 +81,32 @@ executable ledger-state
                        ouroboros-consensus-cardano,
                        ouroboros-consensus-byron,
                        ouroboros-consensus-shelley,
-                       shelley-spec-ledger,
+                       cardano-ledger-shelley,
                        typed-protocols,
+
+executable stake-credential-history
+  import:               base, project-config
+  main-is:             StakeCredentialHistory.hs
+  ghc-options:        -Wall
+                      -Wcompat
+                      -Wincomplete-record-updates
+                      -Wincomplete-uni-patterns
+                      -Wpartial-fields
+                      -Wredundant-constraints
+                      -Wunused-packages
+  build-depends:       base16-bytestring,
+                       binary,
+                       bech32,
+                       bytestring,
+                       cardano-ledger-alonzo,
+                       cardano-api,
+                       cardano-data,
+                       cardano-ledger-core,
+                       cardano-ledger-shelley,
+                       compact-map,
+                       cardano-slotting,
+                       containers,
+                       optparse-applicative,
+                       ouroboros-consensus-shelley,
+                       text,
+                       transformers,

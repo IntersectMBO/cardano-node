@@ -17,6 +17,8 @@ module Cardano.CLI.Byron.Tx
     --TODO: remove when they are exported from the ledger
   , fromCborTxAux
   , toCborTxAux
+
+  , ScriptValidity(..)
   )
 where
 
@@ -44,7 +46,7 @@ import           Cardano.Api.Byron
 import           Cardano.CLI.Byron.Key (byronWitnessToVerKey)
 import           Cardano.CLI.Environment
 import           Cardano.CLI.Helpers (textShow)
-import           Cardano.CLI.Types (SocketPath (..))
+import           Cardano.CLI.Types (SocketPath (..), TxFile (..))
 import           Ouroboros.Consensus.Byron.Ledger (ByronBlock, GenTx (..))
 import qualified Ouroboros.Consensus.Byron.Ledger as Byron
 import           Ouroboros.Consensus.Cardano.Block (EraMismatch (..))
@@ -68,11 +70,6 @@ renderByronTxError err =
     TxDeserialisationFailed txFp decErr ->
       "Transaction deserialisation failed at " <> textShow txFp <> " Error: " <> textShow decErr
     EnvSocketError envSockErr -> renderEnvSocketError envSockErr
-
-
-newtype TxFile =
-  TxFile FilePath
-  deriving (Eq, Ord, Show, IsString)
 
 newtype NewTxFile =
   NewTxFile FilePath
@@ -144,7 +141,7 @@ txSpendGenesisUTxOByronPBFT
   -> NetworkId
   -> SomeByronSigningKey
   -> Address ByronAddr
-  -> [TxOut ByronEra]
+  -> [TxOut CtxTx ByronEra]
   -> Tx ByronEra
 txSpendGenesisUTxOByronPBFT gc nId sk (ByronAddress bAddr) outs = do
     let txBodyCont =
@@ -160,15 +157,15 @@ txSpendGenesisUTxOByronPBFT gc nId sk (ByronAddress bAddr) outs = do
             )
             TxMetadataNone
             TxAuxScriptsNone
-            (BuildTxWith TxExtraScriptDataNone)
             TxExtraKeyWitnessesNone
             (BuildTxWith Nothing)
             TxWithdrawalsNone
             TxCertificatesNone
             TxUpdateProposalNone
             TxMintNone
+            TxScriptValidityNone
     case makeTransactionBody txBodyCont of
-      Left err -> error $ "Error occured while creating a Byron genesis based UTxO transaction: " <> show err
+      Left err -> error $ "Error occurred while creating a Byron genesis based UTxO transaction: " <> show err
       Right txBody -> let bWit = fromByronWitness sk nId txBody
                       in makeSignedTransaction [bWit] txBody
   where
@@ -183,7 +180,7 @@ txSpendUTxOByronPBFT
   :: NetworkId
   -> SomeByronSigningKey
   -> [TxIn]
-  -> [TxOut ByronEra]
+  -> [TxOut CtxTx ByronEra]
   -> Tx ByronEra
 txSpendUTxOByronPBFT nId sk txIns outs = do
   let txBodyCont = TxBodyContent
@@ -199,15 +196,15 @@ txSpendUTxOByronPBFT nId sk txIns outs = do
                      )
                      TxMetadataNone
                      TxAuxScriptsNone
-                     (BuildTxWith TxExtraScriptDataNone)
                      TxExtraKeyWitnessesNone
                      (BuildTxWith Nothing)
                      TxWithdrawalsNone
                      TxCertificatesNone
                      TxUpdateProposalNone
                      TxMintNone
+                     TxScriptValidityNone
   case makeTransactionBody txBodyCont of
-    Left err -> error $ "Error occured while creating a Byron genesis based UTxO transaction: " <> show err
+    Left err -> error $ "Error occurred while creating a Byron genesis based UTxO transaction: " <> show err
     Right txBody -> let bWit = fromByronWitness sk nId txBody
                     in makeSignedTransaction [bWit] txBody
 

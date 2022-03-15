@@ -8,7 +8,7 @@ set -e
 # It will also set up a working stake pool (including delegating to it).
 
 # You need to provide the current epoch as a positional argument (the Shelley
-# update system requires this to be includded in the update proposal).
+# update system requires this to be included in the update proposal).
 
 
 # In order for this to be successful, you need to already be in protocol version
@@ -77,7 +77,7 @@ cardano-cli transaction build-raw \
 
 # So we'll need to sign this with a bunch of keys:
 # 1. the initial utxo spending key, for the funds
-# 2. the user1 stake address key, due to the delegatation cert
+# 2. the user1 stake address key, due to the delegation cert
 # 3. the pool1 owner key, due to the pool registration cert
 # 4. the pool1 operator key, due to the pool registration cert
 # 5. the genesis delegate keys, due to the update proposal

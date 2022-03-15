@@ -1,19 +1,24 @@
 ## Testable with:
 ##
-##   jq -n 'include "defaults" { search: "nix/supervisord-cluster/profiles" }; era_defaults("shelley")'
+##   jq -n 'include "defaults" { search: "nix/supervisord-cluster/profiles" }; era_defaults("alonzo")'
 ##
 def era_defaults($era):
 { common:
   { era:                              $era
 
+  ## Choice of a cluster run scenario (wb scenario --help):
+  , scenario:                         "default"
+
   ## Cluster topology and composition:
   , composition:
     { locations:                      ["LO"]
-    , n_bft_hosts:                    1
-    , n_singular_hosts:               1
+    , n_bft_hosts:                    0
+    , n_singular_hosts:               5
     , n_dense_hosts:                  1
     , dense_pool_density:             1
-    , with_observer:                  true
+    , with_proxy:                     false
+    , with_observer:                  false
+    , topology:                       "uni-circle"
     }
 
   , genesis:
@@ -24,9 +29,9 @@ def era_defaults($era):
     , single_shot:                    true
 
     ## UTxO & delegation
-    , total_balance:                  900000000000000
-    , pools_balance:                  800000000000000
-    , utxo:                           1000000
+    , per_pool_balance:               1000000000000000
+    , funds_balance:                  10000000000000
+    , utxo:                           0
     , decentralisation_param:         0
 
     ## Blockchain time & block density
@@ -34,22 +39,23 @@ def era_defaults($era):
     , epoch_length:                   2200   # Ought to be at least (10 * k / f).
     , parameter_k:                    10
     , slot_duration:                  1
+    , genesis_future_offset:          "3 seconds"
 
     ## Block size & contents
     , max_block_size:                 64000
     , max_tx_size:                    16384
 
-    ## Verbatim:
-    , verbatim:
+    ## Verbatim overlay, for all era-specific genesis slices:
+    , shelley:
       { protocolParams:
-        { poolDeposit: 500000000
-        , keyDeposit: 400000
-        , rho: 0.0022
-        , tau: 0.05
-        , a0: 0.3
-        , minFeeA: 44
-        , minFeeB: 155381
-        , decentralisationParam: 0
+        { poolDeposit:                500000000
+        , keyDeposit:                 400000
+        , rho:                        0.0022
+        , tau:                        0.05
+        , a0:                         0.3
+        , minFeeA:                    0
+        , minFeeB:                    0
+        , decentralisationParam:      0
         }
       }
     }
@@ -65,11 +71,13 @@ def era_defaults($era):
     }
 
   , node:
-    {
+    { rts_flags_override:             []
+    , shutdown_on_slot_synced:        null
+    , tracing_backend:                "iohk-monitoring"  ## or "trace-dispatcher"
     }
 
   , tolerances:
-    { cluster_startup_overhead_s:     60
+    { cluster_startup_overhead_s:     10
     , start_log_spread_s:             120
     , last_log_spread_s:              120
     , silence_since_last_block_s:     120

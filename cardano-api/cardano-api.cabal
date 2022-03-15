@@ -1,7 +1,7 @@
 cabal-version: 3.0
 
 name:                   cardano-api
-version:                1.27.0
+version:                1.33.0
 description:            The cardano api
 author:                 IOHK
 maintainer:             operations@iohk.io
@@ -33,21 +33,15 @@ library
 
   exposed-modules:      Cardano.Api
                         Cardano.Api.Byron
-                        Cardano.Api.Crypto.Ed25519Bip32
-                        Cardano.Api.Shelley
                         Cardano.Api.ChainSync.Client
                         Cardano.Api.ChainSync.ClientPipelined
-
+                        Cardano.Api.Crypto.Ed25519Bip32
+                        Cardano.Api.Protocol.Types
+                        Cardano.Api.Shelley
                         -- TODO: Eliminate in the future when
                         -- we create wrapper types for the ledger types
-                        -- in this modulde
+                        -- in this module
                         Cardano.Api.Orphans
-                        --TODO: Remove all Cardano.Api.Protocol.x
-                        -- when new IPC is integrated with cardano-node-chairman
-                        Cardano.Api.Protocol.Byron
-                        Cardano.Api.Protocol.Cardano
-                        Cardano.Api.Protocol.Shelley
-                        Cardano.Api.Protocol.Types
 
   other-modules:
                         -- Splitting up the big Typed module:
@@ -61,10 +55,13 @@ library
                         Cardano.Api.Hash
                         Cardano.Api.HasTypeProxy
                         Cardano.Api.IPC
+                        Cardano.Api.IPC.Monad
+                        Cardano.Api.Json
                         Cardano.Api.Key
                         Cardano.Api.KeysByron
                         Cardano.Api.KeysPraos
                         Cardano.Api.KeysShelley
+                        Cardano.Api.LedgerEvent
                         Cardano.Api.LedgerState
                         Cardano.Api.Modes
                         Cardano.Api.NetworkId
@@ -76,6 +73,7 @@ library
                         Cardano.Api.SerialiseBech32
                         Cardano.Api.SerialiseCBOR
                         Cardano.Api.SerialiseJSON
+                        Cardano.Api.SerialiseLedgerCddl
                         Cardano.Api.SerialiseRaw
                         Cardano.Api.SerialiseTextEnvelope
                         Cardano.Api.SerialiseUsing
@@ -90,10 +88,12 @@ library
                         Cardano.Api.TxSubmit.Types
                         Cardano.Api.Utils
                         Cardano.Api.Value
+                        Cardano.Api.ValueParser
 
   build-depends:        aeson             >= 1.5.6.0
                       , aeson-pretty      >= 0.8.5
                       , attoparsec
+                      , array
                       , base16-bytestring >= 1.0
                       , base58-bytestring
                       , bech32 >= 1.1.0
@@ -102,13 +102,16 @@ library
                       , cardano-crypto
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
+                      , cardano-data
                       , cardano-ledger-alonzo
                       , cardano-ledger-byron
                       , cardano-ledger-core
                       , cardano-ledger-shelley-ma
                       , cardano-prelude
+                      , cardano-protocol-tpraos
                       , cardano-slotting
                       , cborg
+                      , compact-map
                       , contra-tracer
                       , containers
                       , cryptonite
@@ -123,12 +126,17 @@ library
                       , ouroboros-consensus
                       , ouroboros-consensus-byron
                       , ouroboros-consensus-cardano
+                      , ouroboros-consensus-protocol
                       , ouroboros-consensus-shelley
                       , ouroboros-network
                       , ouroboros-network-framework
+                      , parsec
                       , plutus-ledger-api
+                      , prettyprinter
                       , scientific
-                      , shelley-spec-ledger
+                      , serialise
+                      , small-steps
+                      , cardano-ledger-shelley
                       , small-steps
                       , stm
                       , strict-containers
@@ -154,7 +162,6 @@ library gen
                         Gen.Cardano.Crypto.Seed
                         Gen.Hedgehog.Roundtrip.Bech32
                         Gen.Hedgehog.Roundtrip.CBOR
-                        Gen.Tasty.Hedgehog.Group
 
   build-depends:        aeson             >= 1.5.6.0
                       , base16-bytestring
@@ -169,9 +176,8 @@ library gen
                       , cardano-prelude
                       , containers
                       , hedgehog
-                      , shelley-spec-ledger
-                      , tasty
-                      , tasty-hedgehog
+                      , plutus-ledger-api
+                      , cardano-ledger-shelley
                       , text
 
 test-suite cardano-api-test
@@ -198,10 +204,12 @@ test-suite cardano-api-test
                       , ouroboros-consensus
                       , ouroboros-consensus-shelley
                       , QuickCheck
-                      , shelley-spec-ledger
-                      , shelley-spec-ledger-test
+                      , cardano-ledger-shelley
+                      , cardano-ledger-shelley-test
                       , tasty
+                      , tasty-hedgehog
                       , tasty-quickcheck
+                      , tasty-th
                       , time
 
   other-modules:        Test.Cardano.Api.Crypto
@@ -210,6 +218,7 @@ test-suite cardano-api-test
                         Test.Cardano.Api.KeysByron
                         Test.Cardano.Api.Ledger
                         Test.Cardano.Api.Metadata
+                        Test.Cardano.Api.Typed.Address
                         Test.Cardano.Api.Typed.Bech32
                         Test.Cardano.Api.Typed.CBOR
                         Test.Cardano.Api.Typed.Envelope

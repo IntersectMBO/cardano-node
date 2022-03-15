@@ -29,14 +29,16 @@ import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTxId)
 import           Ouroboros.Consensus.Network.NodeToNode (Codecs (..), defaultCodecs)
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
 import           Ouroboros.Consensus.Node.Run (RunNode)
-import           Ouroboros.Consensus.Shelley.Protocol (StandardCrypto)
+import           Ouroboros.Consensus.Shelley.Eras (StandardCrypto)
 
 import           Ouroboros.Network.Channel (Channel (..))
 import           Ouroboros.Network.DeltaQ (defaultGSV)
 import           Ouroboros.Network.Driver (runPeerWithLimits)
 import           Ouroboros.Network.KeepAlive
 import           Ouroboros.Network.Magic
-import           Ouroboros.Network.Mux (MuxPeer (..), RunMiniProtocol (..), continueForever)
+import           Ouroboros.Network.Mux (MuxPeer (..), OuroborosApplication (..),
+                                        OuroborosBundle, RunMiniProtocol (..),
+                                        continueForever)
 import           Ouroboros.Network.NodeToClient (chainSyncPeerNull, IOManager)
 import           Ouroboros.Network.NodeToNode (NetworkConnectTracers (..))
 import qualified Ouroboros.Network.NodeToNode as NtN
@@ -47,9 +49,11 @@ import           Ouroboros.Network.Protocol.KeepAlive.Codec
 import           Ouroboros.Network.Protocol.KeepAlive.Client
 import           Ouroboros.Network.Protocol.TxSubmission.Client (TxSubmissionClient,
                                                                  txSubmissionClientPeer)
+import           Ouroboros.Network.Protocol.Trans.Hello.Util (wrapClientPeer)
+
 import           Ouroboros.Network.Snocket (socketSnocket)
 
-import           Cardano.Benchmarking.Tracer (SendRecvConnect, SendRecvTxSubmission)
+import           Cardano.Benchmarking.Tracer (SendRecvConnect, SendRecvTxSubmission2)
 
 type CardanoBlock    = Consensus.CardanoBlock  StandardCrypto
 type ConnectClient = AddrInfo -> TxSubmissionClient (GenTxId CardanoBlock) (GenTx CardanoBlock) IO () -> IO ()
@@ -58,7 +62,7 @@ benchmarkConnectTxSubmit
   :: forall blk. (blk ~ CardanoBlock, RunNode blk )
   => IOManager
   -> Tracer IO SendRecvConnect
-  -> Tracer IO SendRecvTxSubmission
+  -> Tracer IO SendRecvTxSubmission2
   -> CodecConfig CardanoBlock
   -> NetworkMagic
   -> AddrInfo
@@ -78,8 +82,14 @@ benchmarkConnectTxSubmit ioManager handshakeTracer submissionTracer codecConfig 
     (addrAddress <$> Nothing)
     (addrAddress remoteAddr)
  where
+  mkApp :: OuroborosBundle      mode addr bs m a b
+        -> OuroborosApplication mode addr bs m a b
+  mkApp bundle =
+    OuroborosApplication $ \connId controlMessageSTM ->
+      foldMap (\p -> p connId controlMessageSTM) bundle
+
   n2nVer :: NodeToNodeVersion
-  n2nVer = NodeToNodeV_5
+  n2nVer = NodeToNodeV_7
   blkN2nVer :: BlockNodeToNodeVersion blk
   blkN2nVer = supportedVers Map.! n2nVer
   supportedVers :: Map.Map NodeToNodeVersion (BlockNodeToNodeVersion blk)
@@ -94,6 +104,7 @@ benchmarkConnectTxSubmit ioManager handshakeTracer submissionTracer codecConfig 
        { NtN.networkMagic = networkMagic
        , NtN.diffusionMode = NtN.InitiatorOnlyDiffusionMode
        }) $
+      mkApp $
       NtN.nodeToNodeProtocols NtN.defaultMiniProtocolParameters ( \them _ ->
         NtN.NodeToNodeProtocols
           { NtN.chainSyncProtocol = InitiatorProtocolOnly $
@@ -112,8 +123,8 @@ benchmarkConnectTxSubmit ioManager handshakeTracer submissionTracer codecConfig 
           , NtN.txSubmissionProtocol = InitiatorProtocolOnly $
                                          MuxPeer
                                            submissionTracer
-                                           (cTxSubmissionCodec myCodecs)
-                                           (txSubmissionClientPeer myTxSubClient)
+                                           (cTxSubmission2Codec myCodecs)
+                                           (wrapClientPeer $ txSubmissionClientPeer myTxSubClient)
           } )
         n2nVer
   -- Stolen from: Ouroboros/Consensus/Network/NodeToNode.hs

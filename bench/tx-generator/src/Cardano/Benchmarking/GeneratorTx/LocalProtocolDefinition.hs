@@ -1,120 +1,34 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE RecordWildCards #-}
-
+{-# LANGUAGE ScopedTypeVariables #-}
 module Cardano.Benchmarking.GeneratorTx.LocalProtocolDefinition
   ( CliError (..)
-  , runBenchmarkScriptWith
   , startProtocol
   ) where
 
-import           Prelude (error, show)
 import           Paths_tx_generator (version)
+import           Prelude (error, show)
 
-import           Data.Version (showVersion)
 import           Data.Text (pack)
+import           Data.Version (showVersion)
 
 import           Cardano.Prelude hiding (TypeError, show)
 import           Control.Monad.Trans.Except.Extra (firstExceptT)
 
-import           Ouroboros.Consensus.Config
-                   ( configBlock, configCodec)
-import           Ouroboros.Consensus.Config.SupportsNode
-                   (ConfigSupportsNode(..), getNetworkMagic)
-import           Ouroboros.Network.NodeToClient (IOManager)
-import           Ouroboros.Network.Block (MaxSlotNo(..))
-
-import           Cardano.Api
+import           Cardano.Tracing.Config (TraceOptions(..))
 
 import qualified Cardano.Chain.Genesis as Genesis
 
 import           Cardano.Node.Configuration.Logging
 import           Cardano.Node.Configuration.POM
+import           Cardano.Node.Handlers.Shutdown
 import           Cardano.Node.Protocol.Cardano
 import           Cardano.Node.Protocol.Types (SomeConsensusProtocol)
 import           Cardano.Node.Types
-
-import           Cardano.Benchmarking.DSL
-import           Cardano.Benchmarking.Tracer
-
-import           Cardano.Benchmarking.GeneratorTx.NodeToNode
-import           Cardano.Benchmarking.OuroborosImports (getGenesis, protocolToTopLevelConfig, protocolToNetworkId)
-
 import qualified Cardano.Benchmarking.GeneratorTx as GeneratorTx
-import qualified Cardano.Benchmarking.GeneratorTx.Tx as GeneratorTx
-
-mangleLocalProtocolDefinition ::
-     SomeConsensusProtocol
-  -> IOManager
-  -> SocketPath
-  -> BenchTracers
-  -> MonoDSLs
-mangleLocalProtocolDefinition
-  ptcl
-  iom
-  (SocketPath sock)
-  tracers
-  = (DSL {..}, DSL {..}, DSL {..})
- where
-  topLevelConfig = protocolToTopLevelConfig ptcl
-
-  localConnectInfo :: LocalNodeConnectInfo CardanoMode
-  localConnectInfo = LocalNodeConnectInfo
-     (CardanoModeParams (EpochSlots 21600))        -- TODO: get this from genesis
-     networkId
-     sock
-
-  connectClient :: ConnectClient
-  connectClient  = benchmarkConnectTxSubmit
-                     iom
-                     (btConnect_ tracers)
-                     (btSubmission_ tracers)
-                     (configCodec topLevelConfig)
-                     (getNetworkMagic $ configBlock topLevelConfig)
-
-  networkId = protocolToNetworkId ptcl
-
-  keyAddress :: IsShelleyBasedEra era => KeyAddress era
-  keyAddress = GeneratorTx.keyAddress networkId
-
-  secureGenesisFund :: IsShelleyBasedEra era => SecureGenesisFund era
-  secureGenesisFund = GeneratorTx.secureGenesisFund
-              (btTxSubmit_ tracers)
-              (submitTxToNodeLocal localConnectInfo)
-              networkId
-              (getGenesis ptcl)
-
-  splitFunds :: IsShelleyBasedEra era => SplitFunds era
-  splitFunds = GeneratorTx.splitFunds
-              (btTxSubmit_ tracers)
-              (submitTxToNodeLocal localConnectInfo)
-
-  txGenerator :: IsShelleyBasedEra era => TxGenerator era
-  txGenerator = GeneratorTx.txGenerator (btTxSubmit_ tracers)
-
-  runBenchmark :: IsShelleyBasedEra era => RunBenchmark era
-  runBenchmark = GeneratorTx.runBenchmark (btTxSubmit_ tracers) (btN2N_ tracers) connectClient
-
-runBenchmarkScriptWith ::
-     IOManager
-  -> FilePath
-  -> SocketPath
-  -> BenchmarkScript a
-  -> ExceptT CliError IO a
-runBenchmarkScriptWith iocp logConfigFile socketFile script = do
-  (loggingLayer, ptcl) <- startProtocol logConfigFile
-  let tracers :: BenchTracers
-      tracers = createTracers loggingLayer
-      dslSet :: MonoDSLs
-      dslSet = mangleLocalProtocolDefinition ptcl iocp socketFile tracers
-  res <- firstExceptT BenchmarkRunnerError $ script (tracers, dslSet)
-  liftIO $ do
-          threadDelay (200*1000) -- Let the logging layer print out everything.
-          shutdownLoggingLayer loggingLayer
-  return res
 
 startProtocol
   :: FilePath
@@ -127,14 +41,19 @@ startProtocol logConfigFile = do
     NodeProtocolConfigurationCardano byronConfig shelleyConfig alonzoConfig hardforkConfig -> do
         ptcl :: SomeConsensusProtocol <- firstExceptT (ProtocolInstantiationError . pack . show) $
                   mkSomeConsensusProtocolCardano byronConfig shelleyConfig alonzoConfig hardforkConfig Nothing
-        
+
         loggingLayer <- mkLoggingLayer nc ptcl
         return (loggingLayer, ptcl)
  where
   mkLoggingLayer :: NodeConfiguration -> SomeConsensusProtocol -> ExceptT CliError IO LoggingLayer
   mkLoggingLayer nc ptcl =
-    firstExceptT (\(ConfigErrorFileNotFound fp) -> ConfigNotFoundError fp) $
-    createLoggingLayer (pack $ showVersion version) nc ptcl
+    firstExceptT (\ case
+      (ConfigErrorFileNotFound fp) -> ConfigNotFoundError fp
+      ConfigErrorNoEKG -> EKGNotFoundError) $
+        createLoggingLayer
+          (pack $ showVersion version)
+          nc {ncTraceConfig=TracingOff}
+          ptcl
 
   mkNodeConfig :: FilePath -> IO NodeConfiguration
   mkNodeConfig logConfig = do
@@ -150,8 +69,7 @@ startProtocol logConfigFile = do
                    , shelleyBulkCredsFile = Just ""
                    }
                  , pncValidateDB = Last $ Just False
-                 , pncShutdownIPC = Last $ Just Nothing
-                 , pncShutdownOnSlotSynced = Last $ Just NoMaxSlotNo
+                 , pncShutdownConfig = Last $ Just $ ShutdownConfig Nothing Nothing
                  , pncConfigFile = Last $ Just configFp
                  }
    configYamlPc <- parseNodeConfigurationFP . Just $ configFp
@@ -163,6 +81,7 @@ data CliError  =
     GenesisReadError !FilePath !Genesis.GenesisDataError
   | FileNotFoundError !FilePath
   | ConfigNotFoundError !FilePath
+  | EKGNotFoundError
   | ProtocolInstantiationError !Text
   | BenchmarkRunnerError !GeneratorTx.TxGenError
   deriving stock Show

@@ -1,9 +1,19 @@
 .. raw:: html
 
-   <p align="center">
-     <a href="https://github.com/input-output-hk/cardano-node/releases"><img src="https://img.shields.io/github/release-pre/input-output-hk/cardano-node.svg?style=for-the-badge" /></a>
-     <a href="https://buildkite.com/input-output-hk/cardano-node"><img src="https://img.shields.io/buildkite/a978cbb4def7018be3d0a004127da356f4db32f1c318c1a48a/master?label=BUILD&style=for-the-badge"/></a>
-   </p>
+  <p align="center">
+    <a href="https://github.com/input-output-hk/cardano-node/releases"><img src="https://img.shields.io/github/release-pre/input-output-hk/cardano-node.svg?style=for-the-badge" /></a>
+    <a href="https://buildkite.com/input-output-hk/cardano-node"><img src="https://img.shields.io/buildkite/a978cbb4def7018be3d0a004127da356f4db32f1c318c1a48a/master?label=BUILD&style=for-the-badge"/></a>
+  </p>
+
+  <table align="center">
+    <tr><td colspan="2" align="center">GitHub Actions</td></tr>
+    <tr>
+      <td>
+        <a href="https://github.com/input-output-hk/cardano-node/actions/workflows/haskell.yml"><img alt="GitHub Workflow Status (master)" src="https://img.shields.io/github/workflow/status/input-output-hk/cardano-node/Haskell%20CI/master" /></a>
+        <a href="https://github.com/input-output-hk/cardano-node/actions/workflows/haskell.yml"><img alt="GitHub Workflow Status (branch)" src="https://img.shields.io/github/workflow/status/input-output-hk/cardano-node/Haskell%20CI/nightly?label=nightly" /></a>
+      </td>
+    </tr>
+  </table>
 
 *************************
 ``cardano-node`` Overview
@@ -34,14 +44,14 @@ How to build
 
 Documentation for building the node can be found `here <https://docs.cardano.org/getting-started/installing-the-cardano-node>`_.
 
-Linux Executable
-==================
+Executables
+===========
 
 You can download the latest version of ``cardano-node`` and ``cardano-cli``:
 
-* `linux <https://hydra.iohk.io/job/Cardano/cardano-node/cardano-node-linux/latest-finished>`_
-* `win64 <https://hydra.iohk.io/job/Cardano/cardano-node/cardano-node-win64/latest-finished>`_
-* `macos <https://hydra.iohk.io/job/Cardano/cardano-node/cardano-node-macos/latest-finished>`_
+* `linux <https://hydra.iohk.io/job/Cardano/cardano-node/linux.musl.cardano-node-linux/latest-finished>`_
+* `win64 <https://hydra.iohk.io/job/Cardano/cardano-node/linux.windows.cardano-node-win64/latest-finished>`_
+* `macos <https://hydra.iohk.io/job/Cardano/cardano-node/macos.cardano-node-macos/latest-finished>`_
 
 Windows Executable
 ==================
@@ -49,7 +59,7 @@ Windows Executable
 Download
 --------
 
-You can download `here <https://hydra.iohk.io/job/Cardano/cardano-node/cardano-node-win64/latest-finished>`_.
+You can download `here <https://hydra.iohk.io/job/Cardano/cardano-node/linux.windows.cardano-node-win64/latest-finished>`_.
 
 Instructions
 ------------
@@ -58,7 +68,7 @@ The download includes cardano-node.exe and a .dll. To run the node with cardano-
 
 .. code-block:: console
 
-    cardano-node.exe run --topology ./mainnet-topology.json --database-path ./state --port 3001 --config ./configuration-mainnet.yaml --socket-path \\.\pipe\cardano-node
+    cardano-node.exe run --topology ./configuration/cardano/mainnet-topology.json --database-path ./state --port 3001 --config ./configuration/cardano/mainnet-config.yaml  --socket-path \\.\pipe\cardano-node
 
 Docker image
 ============
@@ -96,7 +106,7 @@ The general synopsis is as follows:
 
 * ``--byron-delegation-certificate`` - Optional path to the Byron delegation certificate. The delegation certificate allows the delegator (the issuer of said certificate) to give his/her own block signing rights to somebody else (the delegatee). The delegatee can then sign blocks on behalf of the delegator.
 
-* ``--byron-signing-key`` - Optional path to the Bryon signing key.
+* ``--byron-signing-key`` - Optional path to the Byron signing key.
 
 * ``--shelley-signing-key`` - Optional path to the Shelley signing key.
 
@@ -376,7 +386,7 @@ Example:
                --filepath my-update-proposal
 
 See the `Byron specification <https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/byronLedgerSpec/latest/download-by-type/doc-pdf/ledger-spec>`_
-for more deatils on update proposals.
+for more details on update proposals.
 
 Update proposal voting
 ======================
@@ -414,7 +424,7 @@ run *ghcid* with: ``ghcid -c "cabal repl exe:cardano-node --reorder-goals"``
 Haskell Language Server
 -----------------------
 
-When using Haskell Langague Server with Visual Studio Code, you may find that
+When using Haskell Language Server with Visual Studio Code, you may find that
 `HLINT annotations are ignored<https://github.com/haskell/haskell-language-server/issues/638>`.
 
 To work around this, you may run the script `./scripts/reconfigure-hlint.sh` to generate a `.hlint.yaml`
@@ -449,19 +459,18 @@ You can validate Byron era blocks, delegation certificates, txs and update propo
 ``cabal exec cardano-cli -- validate-cbor --byron-block 21600 --filepath CBOREncodedByronBlockFile``
 
 
-Native Token Pre-Production Environment
+Native Tokens
 =======================================
 
-Thanks for your interest in building native tokens on Cardano. To help you get started we have compiled a handy list of resources:
+Native tokens is a new feature that enables the transacting of multi-assets on Cardano. Native tokens are now supported on mainnet and users can transact with ada, and an unlimited number of user-defined (custom) tokens natively.
 
-`Cardano Forum discussion forum <https://forum.cardano.org/c/developers/cardano-tokens/150>`_
+To help you get started we have compiled a handy list of resources:
 
-`Developer Documentation for Native Tokens <https://developers.cardano.org/en/development-environments/native-tokens/native-tokens/>`_
+`Cardano Forum discussion <https://forum.cardano.org/c/developers/cardano-tokens/150>`_
 
+`Documentation for native tokens <https://docs.cardano.org/native-tokens/learn>`_
 
-**Please note that over the holiday period, technical support for the pre-production environment and token builder tool will be extremely limited**. Support is unavailable between the dates of 23rd - 27th December and 31 December - 3rd January inclusive. Outside these hours, our technical and community teams will be periodically checking in on the GitHub repo and dedicated Cardano Forum discussion forum, to expedite any urgent queries or requests. We encourage you to draw on community feedback and support as much as possible.
-
-If you require test ada during this period, please `fill out this form <https://input-output.typeform.com/to/KmeBcnDa>`_ and you will be sent your test ada. Note that until the wallet backend is fully integrated, this is an essentially manual process and there may therefore be some delay before the request is processed.  For technical reasons, it may only be possible to fund newly created addresses that have been properly set up on the Pre-Production Environment.  Unfortunately, since the form only records payment addresses, it will not be possible to contact you if the funding attempt fails, or to notify you that it has succeeded. Please check that you have submitted the address correctly, and retry if you need to
+You can also read more about `native tokens and how they compare to ada and ERC20 <https://github.com/input-output-hk/cardano-ledger-specs/blob/master/doc/explanations/features.rst>`_. Browse native tokens created on the Cardano blockchain and see their transactions in an interactive dashboard that allows filtering and searching: nativetokens.da.iogservices.io.
 
 API Documentation
 =================

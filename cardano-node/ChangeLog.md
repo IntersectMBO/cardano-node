@@ -1,6 +1,426 @@
 # Changelog for cardano-node
 
-## 1.27 -- April 2021
+## 1.33.0 -- December 2021
+
+### node changes
+
+- Improvements to the `tx-generator` internal testing infrastructure. (#3425,
+  #3426, #3427, #3436, #3444)
+- Disable idle GC in the default NixOS service. This matches options we have set
+  by default in other deployments. (#3349)
+- Change the default verbosity of the startup tracer - normal verbosity now
+  shows only maximal supported note-to-node and node-to-client versions
+  (previously it showed all supported verions). (#3434)
+- Enrich the ledger replay tracers to show significantly more information.
+  (#3412)
+- Support for using `TxIn` as a key in JSON maps. (#3438)
+- Allow configuring the number of connections to accept. (#3435)
+
+### consensus changes
+
+- Move the transitional praos protocol into its own package, in preparation for
+  introducing a new version of the protocol in Babbage. (#3513)
+- Improve logging during node startup/chainDB initialisation. (#3505, #3506,
+  #3518)
+- Various changes to the initialisation of the ChainDB. The intent of these
+  changes is to handle the situation when the node receives a shutdown
+  instruction during initialisation. Before these changes, the node would either
+  fail to respond to the signal until initialisation was complete, or a
+  supervisor process would notice this and send SIGKILL, resulting in an unclean
+  shutdown. Following these changes, the node should gracefully handle signals
+  sent during DB initialisation. (#3452, #3514)
+- Various improvements to the `db-analyser` tool. (#3471)
+- Expose an additional query for information relevant to reward processing. This
+  offers current-epoch information to help clients make delegation preferences.
+  (#3423)
+
+### network changes
+
+- Don't block when unregistering expired connections. (#3526)
+- Fix the rendering of cardano-ping messages. (#3529)
+- Various testing improvements. (#3417, #3455, #3482, #3493)
+- Various improvements to the pruning policy. (#3495, #3499)
+- Consider speed of block provision (in addition to speed of header provision)
+  when ranking peers. (#3500)
+- DNS support for IPv6. (#3489)
+- Various internal refactoring. (#3503, #3508)
+
+### ledger changes
+
+- Preparatory work factoring out the transitional Praos protocol in preparation
+  for the introduction of a new protocol in the Babbage release. (#2524)
+- Provide more information in the case of extraneous script witnesses being
+  provided. (#2527)
+- Significant work to improve memory usage for the in-memory ledger state.
+  (#2520, #2530, #2534, #2540, #2552, #2553, #2557, #2567, #2573, #2577, #2580,
+  #2583)
+- Add a new tool to benchmark the ledger state. (#2532, #2535)
+- Remove the amount of state stored in the reward pulser. This change will
+  require a rebuild of the ledger state (e.g. replay from genesis). (#2533)
+- Add an additional check when evaluating an (unsubmitted) transaction to
+  determine the amount of ExUnits to specify. (#2522)
+- Distinguish between rewards earned as a pool member and as a pool operator in
+  the ledger events. (#2536, #2549)
+- Miscellaneous fixes. (#2529, #2539, #2541, #2543, #2550, #2555, #2563, #2564,
+  #2565, #2566, #2571, #2582, #2586)
+- From protocol version 7, we no longer exclude from rewards those who are not
+  registered at the start of the reward calculation. Those not registered when
+  the rewards are paid out are still filtered, naturally. (#2569)
+- Add a stricter function for decoding addresses, which disallows extra bytes.
+  These functions are provided for use by downstream tools. (#2556)
+- The reward calculation (which adds significant work to the middle portion of
+  the epoch) is now computed incrementally by stake credential. Previously this
+  was done by stake pool, but this had a couple of issues: it didn't allow the
+  computation to be spread across the full range of slots, and it was
+  significantly non-uniform: some stake pools are much bigger than others. This
+  new computation should be more uniform and saturate the full slot range,
+  resulting in more predictable and consistent resource usage. (#2542, #2585)
+- Add benchmarking to CI. (#2561, #2568)
+- Add tracing to Plutus script execution. (#2554)
+- Add the first draft of the Babbage formal spec. (#2559)
+- Document the construction of the script integrity hash. (#2576)
+- Compute the stake aggregation incrementally. Previously this was computed when
+  a snapshot was taken, which resulted in a CPU spike. It is now continually
+  maintained as transactions are processed. (#2538)
+
+## 1.32.1 -- November 2021
+
+### node changes
+
+- Miscellaneous documentation updates. (#3138, #3286, #3323, #3342, #3343,
+  #3348)
+- Various internal refactorings and improvements. (#3337, #3354, #3355, #3359,
+  #3384, #3391, #3398, #3411, #3415)
+- Update a bunch of scripts to use the $NETWORK_MAGIC environment variable.
+  (#3148)
+- Integrate p2p networking functionality. (#3363)
+- Add additional logging to node startup. Note that the existing "nodeStartTime"
+  counter still exists, but will ultimately be deprecated. The startup time is
+  now logged in the following format:
+  ```
+  {
+    "thread": "5",
+    "sev": "Notice",
+    "data": {
+      "startupTime": "1638866965"
+    },
+    "loc": null,
+    "env": "1.31.0:be123",
+    "msg": "",
+    "app": [],
+    "host": "waldorf",
+    "at": "2021-12-07T08:49:24.22Z",
+    "ns": [
+      "cardano.node.nodeconfig"
+    ],
+    "pid": "33952"
+  }
+  ``` (#3380)
+- Block delay counters are now not collected until the node has finished
+  starting. Statistics collected during node startup would only add noise to the
+  delay CDF. (#3386)
+- Fix the rendering of `RemoteConnectionId` in trace messages. (#3199)
+
+### consensus changes
+
+- Add per-miniprotocol byte limits, for things like how big a block arriving
+  from the network may be. (#3409)
+- Various documentation updates. (#3435, #3461, #3446)
+
+### network changes
+
+- Early, unverified and unsupported p2p networking capabilities.  Do NOT use in
+  production. (#3467)
+- Various internal improvements. (#3479, #3488)
+
+## 1.31.0 -- October 2021
+
+### node changes
+
+- Additional verification for the configuration files:
+  - Added a CI check that the configuration files in git match those produced
+    during the nix build. (#3222)
+  - Add a test that the configuration file is valid. (#3236)
+- Fix the configuration of the `chainSyncServerHeaderTracer`. This fixes a bug
+  which caused logs to be unnecessarily verbose. (#3252)
+- Various documentation updates. (#3191, #3243, #3265, #3284)
+- Various infrastrucutre updates. (#3244, #3223, #3266, #3270, #3277, #3280,
+  #3283 #3284, #3290, #3298, #3308)
+- Introduce the 'trace-dispatcher' library. This is built to replace the
+  existing 'iohk-monitoring-framework'. (#3073)
+- Additional testing. (#3255, #3274)
+- Add an example using a Plutus script as a stake credential. (#3162)
+- Don't inline a call to `maybeToStrictMaybe` during translation of
+  `ProtocolParameters`. This turns out to trigger a GHC bug, resulting in
+  extremely high compilation time. (#3275)
+- Introduce a YAML version of the mainnet configuration file, which can and has
+  been commented to explain the various options. (#3269)
+- Updates to the stake credential history tool. This is an internal tool used to
+  debug the various events that happen with regard to stake credentials and
+  rewards. (#3086, #3311)
+- Add various additional metrics:
+  - About block propagation. (#2476)
+  - Tracking how many tips a node has served to downstream peers. (#3300)
+  - Counting the number of forks seen. (#3305)
+- Add the ability to configure the mempool capacity override. This allows an
+  individual node operator to alter the maximum size of their mempool along
+  various axes (size, execution units). (#3273)
+
+### consensus changes
+
+- Fix a bug that could occur when opening a stored chain DB. (Note that this was
+  only considered a bug because of violating strictly defined operational
+  semantics. It would not have been visible to users.) (#3250)
+- Add additional capabilities in the db-analyser. (#3376, #3379, #3397, #3400,
+  #3414, #3418)
+- Add a new version (10) of the node to client protocol, with two new queries:
+  `GetChainBlockNo` and `GetChainPoint`. (#3346)
+- Expose the ability to override the mempool capacity. (#3413)
+### network changes
+
+- Work around a bug on OS/X calling `accept` on IPv6 sockets. (#3368)
+- Continual gradual merge of p2p functionality. (#3369, #3370, #3371, #3372,
+  #3373, #3374, #3377)
+- Miscallaneous documentation changes. (#3383, #3399)
+- Fix a race condition in the thread tracking set. This could result in a node
+  eventually refusing to accept new connections. (#3398)
+- Various internal refactorings. (#3079, #3416, #3432, #3437)
+
+### ledger changes
+
+- Add a `RetiredPools` event, which gives details about retiring pools and the
+  refund (or not) of the pool deposit. (#2487, #2495)
+- Additional testing in the Alonzo era. (#2434)
+- Fix the CDDL specification for transactions. (#2456, #2507, #2523)
+- Internal refactorings and improvements. (#2497, #2483, #2492, #2498, #2515,
+  #2519)
+- Infrastructure and documentation improvements. (#2499, #2500, #2508)
+- Various work factoring out the definition of the transitional Praos protocol
+  and isolating it from the ledger. This is done in anticipation of introducing
+  a new version of the consensus protocol in the Babbage release. (#2491, #2505,
+  #2510, #2516, #2518)
+- Document the minumum value computation for Alonzo. (#2486)
+- Various changes to compactify the in-memory representation of the Cardano
+  ledger state:
+  - Unpack the TxId in a transaction input. (#2501)
+- Add support for V2 of Plutus (and for multiple Plutus versions in general).
+  (#2485)
+- Expose more information concerning reward computation in the API. This is
+  intended to support revised display of pool rankings in the wallet. (#2511)
+- Document both `Value` and `TxInfo` in the spec. (#2383, #2494)
+- Fix the serialisation of Alonzo transaction witnesses in the case of multiple
+  Plutus versions. (#2525, #2526)
+- When incrementally computing the rewards, we now require this computation to
+  complete by the first block within 2k/f slots of the epoch end. Previously it
+  was required to complete by the end of the epoch. The motivation for this is
+  to allow db-sync some time to insert the rewards distributed this epoch (which
+  may be substantial) into its database before the end of the epoch. (#2521)
+
+## 1.30.0 -- September 2021
+
+### node changes
+
+- Miscellaneous documentation updates. (#3060, #3120, #3142)
+- Fix the verbosity of some log messages, which was causing excess detail in the
+  node logs. (#3046)
+- Various build, testing and infrastructure improvements. (#2821, #3005, #3127,
+  #3157, #3159, #3189, #3194, #3200, #3203)
+
+### consensus changes
+
+- Improved documentation. (#2957, #3279)
+- Removed strictness annotations in traces. (#3244)
+- Exposing the ledger event logger. (#3292)
+- Supporting Alonzo protocol version. (#3347)
+- Overhauling the db analyser tool. This will allow the ledger team to run micro
+  benchmarks without noise from other layers (like networking). (#3337)
+
+### network changes
+
+- Adding more information to trace events. (#3333)
+- Fixed a bug that could cause a node to become unresponsive to new connections.
+  (#3335)
+
+### ledger changes
+
+- Correctly translate time for Plutus (from protocol version 6 onwards). (#2451)
+- Various build, testing and infrastructure improvements. (#2429, #2435, #2440,
+  #2447, #2455, #2481)
+- Changed the computation of the stake distribution to be done incrementally, so
+  as to spread the CPU load over time. Unfortunately, we had to revert this for
+  now, due to a performance regression. Hope to include that in a later update
+  again (#2371, #2484)
+- Additions and corrections in the event logger. (#2441, #2487)
+- Memory optimisations. (#2442)
+- Updates to the Alonzo formal specification. (#2418, #2448)
+- Additional exports needed for db-sync integration. (#2450)
+- Moved protocol related types to a new module, `cardano-protocol-tpraos`.
+  (#2445)
+- Preparatory work for storing the ledger state on disk. (#2449)
+- Updated the CHAINHEAD rule in the Shelley formal spec. (#2313)
+- Providing more information about the reward calculation inside of the reward
+  provenance. (#2433)
+
+## 1.29.0 -- August 2021
+
+### node changes
+
+- Various build, testing and infrastructure improvements. (#2940, #2943, #2947,
+  #2956, #2968, #2979, #2983, #2988, #2991, #2993, #2997, #3004, #3006, #3013,
+  #3029, #3034, #3053, #3058, #3062, #3087, #3098)
+- Add additional capabilities to the tx generator:
+  - Plutus. (#2853)
+  - Fees and UTxO. (#2980)
+  - Miscallaneous bugfixes. (#3015)
+- Update the genesis hash mismatch error for Alonzo. (#3003)
+- Introduce the _trace-forward_ library, which is part of the replacement for
+  the logging infrastructure. (#2960)
+
+### consensus changes
+
+- Allow the node to modify the maximum capacity of the mempool, in terms of
+  various factors (size, execution units). (#3246, #3261, #3266)
+- Enable the Alzono era by default. (#3295)
+- Internal testing improvements. (#3252, #3256)
+- Various internal improvements. (#3268, #3270, #3272, #3275, #3286)
+- Documentation updates. (#3269, #3273)
+- Reject invalid scripts coming from the local wallet. This is a fallback
+  measure which allows the node to protect the user from accidentally losing
+  their collateral.(#3230)
+
+### network changes
+
+- Update the specification document. (#3257)
+- Various internal improvements. (#3278)
+- Monitor exceptions thrown by the accept loop. This addresses an issue where
+  the accept loop could die and the node stop accepting connections. (#3299,
+  #3305)
+### ledger changes
+
+- Fix the version of Plutus to be used in release. (#2369, #2372, #2384, #2420,
+  #2425)
+- Rename the `IsValidating` field in Alonzo to `IsValid`. (#2396)
+- Canonically encode the subset of protocol parameters presented to Plutus
+  scripts. Since this is not user-provided, but instead generated by the node,
+  we need to use the canonical encoding here. (#2357)
+- Various internal testing improvements. (#2377, #2398, #2399, #2402, #2403,
+  #2404)
+- Testing for the Alonzo era. (#2348, #2380, #2390)
+- Various internal improvements. (#2374, #2378, #2387, #2394, #2395, #2412,
+  #2413, #2421, #2422, #2423, #2428)
+- Updates to the Alonzo formal specification. (#2353)
+- Add utilities for computing the transaction fee, for use in the CLI. (#2376)
+- Introduce the event logger. This allows the ledger to emit extra information
+  during normal operation for the use of downstream components. The initial use
+  of this will be for db-sync to validate its computation of rewards. (#2373,
+  #2405, #2417, #2431)
+- Improved error message when collateral fails. (#2409)
+- Update the Alonzo Tx to include the validity flag, which will now be passed by
+  the client and other nodes. (#2379)
+- Add utilities to measure ExUnits in order to allow consensus to apply
+  block-level limits. (#2391)
+- Disallow extra redeemers in the witness set. (#2392, #2393)
+- Allow script stake credentials to earn rewards. (#2400)
+- Add reporting of why Plutus scripts fail, sufficient to locally reproduce the
+  failure. (#2386, #2430)
+- Fix a bug in deserialisation of witnesses. This would allow for somebody to
+  include signatures of something other than the transaction body, which would
+  not be deserialised and hence could persist on the chain. Unfortunately we
+  have to continue to allow this in pre-Alonzo eras since it has been observed
+  on the public testnet. (#2419, #2432)
+
+## 1.28.0 -- July 2
+
+### node changes
+
+- Initial support for running an Alonzo node. (#2642, #2649, #2657, #2738,
+  #2759)
+- Add a separate genesis file for Alonzo. This must be present when forking to
+  the Alonzo era. It provides initial configuration for new parameters required
+  in Alonzo, such as cost models and pricing for Plutus scripts. (#2743, #2765)
+- Added a configuration flag `TestEnableDevelopmentNetworkProtocols` which
+  allows the node to be configured to support in testing development protocols
+  which we do not want standard nodes to negotiate. (#2400)
+- Various documentation updates. (#2681, #2689, #2713, #2837, #2857, #2860,
+  #2870, #2874, #2914, #2933)
+- Various build, testing and benchmarking infrastructure improvements. (#2672,
+  #2676, #2682, #2705, #2719, #2722, #2730, #2737, #2748, #2766, #2768, #2777,
+  #2796, #2812, #2813, #2826, #2827, #2831, #2832, #2833, #2849, #2855, #2861,
+  #2864, #2865, #2866, #2879, #2887, #2888, #2894, #2900, #2902, #2909, #2912)
+- Miscellaneous internal improvements. (#2694, #2698, #2740, #2756, #2760,
+  #2799, #2800, #2804, #2807, #2817, #2819, #2824, #2834, #2867, #2925, #2930,
+  #2935)
+- Add the difference in chain length to the `AddedToCurrentChain` and
+  `SwitchedToAFork` traces. (#2678)
+- Add `cardano-tx-generator`. This is a testing utility. (#2603)
+- Additional block hashes added to `TraceBlockFetchServerSendBlock`,
+  `TraceForgedBlock`, `CompletedBlockFetch` events. (#2710)
+- The various `ChainSync` server traces provide additional fields that help in
+  debugging. Note that this entails a change to the log format. (#2746)
+
+### consensus changes
+
+- Introduce the Alonzo era. (#3131, #3138)
+- Additional testing in the Alonzo era. (#3191, #3210)
+- Allow the EpochInfo provided to the ledger to fail. This is necessary when the
+  ledger may be querying for time conversions outside of the forecast window.
+  (#3098)
+- The mempool now checks bounds on the capacity of execution units allowed when
+  forging a new block. This is needed to avoid trying to create invalid blocks
+  in Alonzo. (#3224)
+- Additionally, support overriding the maximum block capacity (in terms of
+  size/execution units) on a per-node basis. (#3238)
+- Update the mempool design for compatibility with Alonzo, which requires some
+  additional logic to deal with 2-phase validation. (#3066)
+- Miscellaneous internal improvements. (#3116, #3149, #3170, #3184, #3228)
+- Update consensus documentation. (#3071, #3155, #3195)
+- Updates to the io-sim testing infrastructure. (#3076, #3172, #3196, #3222)
+- Node to client queries are now wrapped in a top-level versioned `Query` type,
+  in preparation for adding new queries to the node. (#3106)
+- Support additional queries now exposed through the API/CLI. (#3220)
+
+### network changes
+
+- Work on the network-mux. (#2999, #3100, #3121, #3160, #3166, #3193, #3204)
+- Add an additional tracer to the BlockFetch protocol. (#3190)
+- Update network documentation. (#2887, #3071, #3089, #3126, #3217)
+- Miscellaneous internal improvements. (#3200, #3206, #3207, #3212, #3218,
+  #3219)
+
+### ledger changes
+
+- Work on implementing the Alonzo era. (#2260, #2264, #2265, #2270, #2273,
+  #2274, #2277, #2283, #2287, #2294, #2295, #2296, #2299, #2302, #2303, #2304,
+  #2305, #2306, #2317, #2320, #2322, #2324, #2328, #2329, #2335, #2342, #2345,
+  #2355, #2359)
+- Define the CDDL for Alonzo datatypes. (#2281, #2315, #2337, #2362)
+- Testing work for the Alonzo era. (#2259, #2261, #2263, #2272, #2275, #2279,
+  #2280, #2293, #2311, #2334, #2340, #2361)
+- Additional testing for serialisation of types which are depended on by
+  consensus. (#2298, #2323)
+- Add the ability to query the UTxO by TxIn, which is now used by the CLI.
+  (#2331)
+- Updated the Shelley spec with an image depicting the reward process and the
+  various phases it goes through. (#2282)
+- Add the ability to convert from slot time to UTC time within the forecast
+  window. This will be necessary for Plutus scripts. (#2297)
+- Add an errata to the Shelley spec, which addresses:
+  - Reward calculation & stake addresses registration timing.
+  - Add a note about Byron redeem addresses being returned to the reserves.
+  - Define precisely how reward aggregation works.
+  - A discrepancy in the use of the Stability window between the spec and the
+    implementation.
+  - The use of the incorrect reserve pot when creating the reward update.
+  (#2323)
+- Align the Shelley spec with code. (#2339)
+- Expanded benchmarks for performance critical functions. (#2262)
+- Miscellaneous internal improvements. (#2255, #2267, #2268, #2269, #2276,
+  #2285, #2286, #2290, #2301, #2314, #2318, #2319, #2321, #2336, #2343, #2349,
+  #2351, #2363, #2368)
+- Miscellaneous testing and infrastructure work. (#2288, #2310)
+- Continued updates to the Alonzo formal specification. (#2258, #2271, #2341)
+- Restrict the pool metadata hash to the correct size for such a hash. (#2358)
+## 1.27.0 -- April 2021
 
 ### node changes
 

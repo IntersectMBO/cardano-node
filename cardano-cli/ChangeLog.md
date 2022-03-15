@@ -1,6 +1,92 @@
 # Changelog for cardano-cli
 
-## 1.27 -- April 2021
+## 1.33.0 -- December 2021
+## 1.32.1 -- November 2021
+
+- Default CLI commands to the Alonzo era. (#3339)
+- Add defaults for building the Alonzo genesis. (#3346)
+
+## 1.31.0 -- October 2021
+
+- Restore support for deserialising transactions built by pre-1.27.0.0 node
+  versions. (#3226)
+- Various internal refactorings and improvements. (#3234)
+- Use the new `GetChainBlockNo` and `GetChainPoint` queries in the query tip
+  command. There is a fallback to the older method using the full chain sync
+  query. (#3179)
+- Allow provision of optional datums to a transaction using the CLI option
+  `--tx-out-datum-embed-value`. This mechanism can for example be used to
+  provide the actual script locking an output, for use when spending it. (#3171)
+- Fix the use of withdrawls using the `transaction build` command. (#3317)
+- Allow extended payment keys to be specified as a Plutus required signer.
+  (#3319)
+
+## 1.30.0 -- September 2021
+
+- Allow the user to specify a signature as required when spending from a
+  multisig/timelock script using the `build` or `build-raw` commands. Required
+  signers *must* be present in the witnesses, and only required signers are
+  visible to Plutus scripts. (#3123)
+- Use a separate connection for the `query tip` command. This fixes an
+  occasional bug where the `query tip` command would fail. (#3130)
+- Print the Tx fee when using the `tx build` command. (#3032)
+- The `tx build` command now validates its inputs (ensuring they are in the UTxO
+  and that only basic VKey-locked inputs are used as collateral.) (#3151)
+- Add a new comment to query the stake pools. (#3152)
+- `tx build` now uses the set of existing stake pools to determing if a pool is
+  already registered (and hence whether it must pay a deposit). (#3152)
+- `calculate-min-req-utxo` now requires a transaction output, not just a value
+  as before. This is required in the Alonzo era, and the change is made
+  everywhere for consistency. (#3181)
+- Allow the `tx build` command to spend the entirety of a UTxO and create no
+  change output. (#3188)
+- Add withdrawls to the `tx view` command. (#2613)
+## 1.29.0 -- August 2021
+
+- Add a "tx build" command to the CLI. This command takes care of calculating
+  the appropriate fee for a transaction, and balancing the transaction
+  appropriately. It does not do input selection for fees, so sufficient balance
+  must be available in the inputs to pay the computed fee, and sufficient
+  collateral must also be present when phase-2 validating scripts are used. The
+  tx build command is capable of computing both the fees required from
+  transaction size and the fees incurred by script execution. (#2921, #2953,
+  #2995, #3025)
+- Improve the output format for rational fields in protocol parameters and
+  genesis. When these are simple, we now convert them to decimal format. (#2992)
+- Various internal improvements. (#2932)
+- Make the CLI help text more nicely formatted. (#2945)
+- Introduce the `--script-valid` and `--script-invalid` flags. The latter can be
+  used to mark a script as being known invalid, such that the node will allow it
+  to be submitted anyway (whereas under normal operation it would reject such a
+  transaction in order to avoid loss of collateral). This flag is only likely to
+  be of use in testing. The `--script-valid` flag is set as a default. (#3050,
+  #3091, #3093)
+- Add colours to the CLI output. (#3023)
+## 1.28.0 -- July 2021
+
+- The query tip command is now tidier and shows various additional pieces of
+  information:
+  - The epoch number is now shown during the Byron era.  Previously this worked
+    only in the Shelley and subsequent eras. (#2688)
+  - The sync progress of the node. This will only be available with new network
+    protocols (not yet in this release.) (#2842, #2899)
+  (#2885)
+- Attempting to use an IPv6/IPv4 address where the other is expected will now
+  give a more helpful error message. (#2691)
+- Queries should now work during the Alonzo era. (#2727, #2755)
+- Support for submitting transactions during the Alonzo era. (#2774, #2798,
+  #2806, #2811, #2823, #2863, #2848)
+- `cardano-cli genesis create` now also creates the new Alonzo genesis file.
+  (#2743)
+- The UTxO CLI query now allows an additional `--tx-in` flag which allows
+  filtering the UTxO by TxIn, and requires the addition of the `--whole-utxo`
+  flag to return the complete UTxO set (which was previously the default).
+  Returning the whole UTxO set is an expensive operation only useful in small
+  testnets, so we don't want it as the default option. (#2843, #2854)
+- The parser for rational units (as used in for example execution unit prices)
+  now supports rational syntax (e.g. 1/2). (#2922)
+
+## 1.27.0 -- April 2021
 
 - The query tip now also returns the era (e.g. Shelley, Allegra, Alonzo).
   (#2561, #2562, #2598)
@@ -14,7 +100,7 @@
   - Auxiliary scripts (i.e. those included in the Tx auxiliary data, which are
     not required as transaction signers) must now be included with
     `--auxiliary-script-file` rather than with `--script-file`.
-  - Scripts witnessing txins, certificates, withdrawls and minting must now be
+  - Scripts witnessing txins, certificates, withdrawals and minting must now be
     paired with the thing they are witnessing. E.g.
     ```
     --certificate-file  $certfile --certificate-script-file $scriptfile

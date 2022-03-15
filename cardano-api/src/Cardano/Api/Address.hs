@@ -25,6 +25,8 @@ module Cardano.Api.Address (
 
     -- ** Addresses in any era
     AddressAny(..),
+    lexPlausibleAddressString,
+    parseAddressAny,
 
     -- ** Addresses in specific eras
     AddressInEra(..),
@@ -45,11 +47,16 @@ module Cardano.Api.Address (
     StakeKey,
     StakeExtendedKey,
 
+    -- * Conversion functions
+    shelleyPayAddrToPlutusPubKHash,
+
     -- * Internal conversion functions
     toShelleyAddr,
     toShelleyStakeAddr,
     toShelleyStakeCredential,
     fromShelleyAddr,
+    fromShelleyAddrIsSbe,
+    fromShelleyAddrToAny,
     fromShelleyPaymentCredential,
     fromShelleyStakeAddr,
     fromShelleyStakeCredential,
@@ -60,22 +67,37 @@ module Cardano.Api.Address (
 
     -- * Data family instances
     AsType(AsByronAddr, AsShelleyAddr, AsByronAddress, AsShelleyAddress,
-           AsAddress, AsAddressAny, AsAddressInEra, AsStakeAddress)
+           AsAddress, AsAddressAny, AsAddressInEra, AsStakeAddress),
+
+    -- * Helpers
+    isKeyAddress
   ) where
 
 import           Prelude
 
-import           Data.Aeson (ToJSON (..))
+import           Data.Aeson (FromJSON (..), ToJSON (..), withText)
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Base58 as Base58
+import           Data.Char
 import           Data.Text (Text)
+import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
+import qualified Text.Parsec as Parsec
+import qualified Text.Parsec.String as Parsec
 
 import           Control.Applicative
 
+import qualified Cardano.Chain.Common as Byron
+import qualified Cardano.Ledger.Address as Shelley
+import qualified Cardano.Ledger.Alonzo.TxInfo as Alonzo
+import qualified Cardano.Ledger.BaseTypes as Shelley
+import qualified Cardano.Ledger.Credential as Shelley
+import           Cardano.Ledger.Crypto (StandardCrypto)
+import qualified Plutus.V1.Ledger.Api as Plutus
+
 import           Cardano.Api.Eras
-import           Cardano.Api.Hash
 import           Cardano.Api.HasTypeProxy
+import           Cardano.Api.Hash
 import           Cardano.Api.Key
 import           Cardano.Api.KeysByron
 import           Cardano.Api.KeysShelley
@@ -83,11 +105,9 @@ import           Cardano.Api.NetworkId
 import           Cardano.Api.Script
 import           Cardano.Api.SerialiseBech32
 import           Cardano.Api.SerialiseRaw
-import qualified Cardano.Chain.Common as Byron
-import qualified Cardano.Ledger.Address as Shelley
-import qualified Cardano.Ledger.BaseTypes as Shelley
-import qualified Cardano.Ledger.Credential as Shelley
-import           Cardano.Ledger.Crypto (StandardCrypto)
+import           Cardano.Api.Utils
+
+
 
 -- ----------------------------------------------------------------------------
 -- Address Serialisation
@@ -297,6 +317,12 @@ instance SerialiseAddress AddressAny where
       <|> (AddressShelley <$> deserialiseAddress (AsAddress AsShelleyAddr) t)
 
 
+fromShelleyAddrToAny :: Shelley.Addr StandardCrypto -> AddressAny
+fromShelleyAddrToAny (Shelley.AddrBootstrap (Shelley.BootstrapAddress addr)) =
+  AddressByron $ ByronAddress addr
+fromShelleyAddrToAny (Shelley.Addr nw pc scr) =
+  AddressShelley $ ShelleyAddress nw pc scr
+
 -- ----------------------------------------------------------------------------
 -- Addresses in the context of a ledger era
 --
@@ -313,6 +339,29 @@ data AddressInEra era where
 
 instance IsCardanoEra era => ToJSON (AddressInEra era) where
   toJSON = Aeson.String . serialiseAddress
+
+instance IsShelleyBasedEra era => FromJSON (AddressInEra era) where
+  parseJSON = withText "AddressInEra" $ \txt -> do
+    addressAny <- runParsecParser parseAddressAny txt
+    pure $ anyAddressInShelleyBasedEra addressAny
+
+parseAddressAny :: Parsec.Parser AddressAny
+parseAddressAny = do
+    str <- lexPlausibleAddressString
+    case deserialiseAddress AsAddressAny str of
+      Nothing   -> fail $ "invalid address: " <> Text.unpack str
+      Just addr -> pure addr
+
+lexPlausibleAddressString :: Parsec.Parser Text
+lexPlausibleAddressString =
+    Text.pack <$> Parsec.many1 (Parsec.satisfy isPlausibleAddressChar)
+  where
+    -- Covers both base58 and bech32 (with constrained prefixes)
+    isPlausibleAddressChar c =
+         isAsciiLower c
+      || isAsciiUpper c
+      || isDigit c
+      || c == '_'
 
 instance Eq (AddressInEra era) where
   (==) (AddressInEra ByronAddressInAnyEra addr1)
@@ -474,6 +523,15 @@ instance SerialiseAddress StakeAddress where
       either (const Nothing) Just $
       deserialiseFromBech32 AsStakeAddress t
 
+instance ToJSON StakeAddress where
+  toJSON s = Aeson.String $ serialiseAddress s
+
+instance FromJSON StakeAddress where
+  parseJSON = withText "StakeAddress" $ \str ->
+    case deserialiseAddress AsStakeAddress str of
+      Nothing ->
+        fail $ "Error while deserialising StakeAddress: " <> Text.unpack str
+      Just sAddr -> pure sAddr
 
 makeStakeAddress :: NetworkId
                  -> StakeCredential
@@ -483,6 +541,24 @@ makeStakeAddress nw sc =
       (toShelleyNetwork nw)
       (toShelleyStakeCredential sc)
 
+-- ----------------------------------------------------------------------------
+-- Helpers
+--
+
+-- | Is the UTxO at the address only spendable via a key witness.
+isKeyAddress :: AddressInEra era -> Bool
+isKeyAddress (AddressInEra ByronAddressInAnyEra _) = True
+isKeyAddress (AddressInEra (ShelleyAddressInEra _) (ShelleyAddress _ pCred _)) =
+  case fromShelleyPaymentCredential pCred of
+    PaymentCredentialByKey _ -> True
+    PaymentCredentialByScript _ -> False
+
+-- | Converts a Shelley payment address to a Plutus public key hash.
+shelleyPayAddrToPlutusPubKHash :: Address ShelleyAddr -> Maybe Plutus.PubKeyHash
+shelleyPayAddrToPlutusPubKHash (ShelleyAddress _ payCred _) =
+  case payCred of
+    Shelley.ScriptHashObj _ -> Nothing
+    Shelley.KeyHashObj kHash -> Just $ Alonzo.transKeyHash kHash
 
 -- ----------------------------------------------------------------------------
 -- Internal conversion functions
@@ -525,15 +601,26 @@ toShelleyStakeReference (StakeAddressByPointer ptr) =
 toShelleyStakeReference  NoStakeAddress =
     Shelley.StakeRefNull
 
+fromShelleyAddrIsSbe :: IsShelleyBasedEra era
+                     => Shelley.Addr StandardCrypto -> AddressInEra era
+fromShelleyAddrIsSbe (Shelley.AddrBootstrap (Shelley.BootstrapAddress addr)) =
+  AddressInEra ByronAddressInAnyEra (ByronAddress addr)
 
-fromShelleyAddr :: IsShelleyBasedEra era
-                => Shelley.Addr StandardCrypto -> AddressInEra era
-fromShelleyAddr (Shelley.AddrBootstrap (Shelley.BootstrapAddress addr)) =
+fromShelleyAddrIsSbe (Shelley.Addr nw pc scr) =
+  AddressInEra
+    (ShelleyAddressInEra shelleyBasedEra)
+    (ShelleyAddress nw pc scr)
+
+fromShelleyAddr
+  :: ShelleyBasedEra era
+  -> Shelley.Addr StandardCrypto
+  -> AddressInEra era
+fromShelleyAddr _ (Shelley.AddrBootstrap (Shelley.BootstrapAddress addr)) =
     AddressInEra ByronAddressInAnyEra (ByronAddress addr)
 
-fromShelleyAddr (Shelley.Addr nw pc scr) =
+fromShelleyAddr sBasedEra (Shelley.Addr nw pc scr) =
     AddressInEra
-      (ShelleyAddressInEra shelleyBasedEra)
+      (ShelleyAddressInEra sBasedEra)
       (ShelleyAddress nw pc scr)
 
 fromShelleyStakeAddr :: Shelley.RewardAcnt StandardCrypto -> StakeAddress
@@ -561,3 +648,4 @@ fromShelleyStakeReference (Shelley.StakeRefPtr ptr) =
   StakeAddressByPointer (StakeAddressPointer ptr)
 fromShelleyStakeReference Shelley.StakeRefNull =
   NoStakeAddress
+
