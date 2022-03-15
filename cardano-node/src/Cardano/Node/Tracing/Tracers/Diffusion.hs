@@ -103,6 +103,7 @@ severityMux' MuxTraceStartOnDemand {}         = Debug
 severityMux' MuxTraceStartedOnDemand {}       = Debug
 severityMux' MuxTraceTerminating {}           = Debug
 severityMux' MuxTraceShutdown {}              = Debug
+severityMux' MuxTraceTCPInfo {}               = Debug
 
 namesForMux :: WithMuxBearer peer MuxTrace -> [Text]
 namesForMux (WithMuxBearer _ mt) = namesForMux' mt
@@ -135,6 +136,7 @@ namesForMux' MuxTraceStartOnDemand {}         = ["StartOnDemand"]
 namesForMux' MuxTraceStartedOnDemand {}       = ["StartedOnDemand"]
 namesForMux' MuxTraceTerminating {}           = ["Terminating"]
 namesForMux' MuxTraceShutdown {}              = ["Shutdown"]
+namesForMux' MuxTraceTCPInfo {}               = ["TCPInfo"]
 
 
 

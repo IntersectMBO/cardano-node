@@ -744,6 +744,7 @@ namesForConnectionManager TrConnectionManagerCounters {} = ["ConnectionManagerCo
 namesForConnectionManager TrState {} = ["State"]
 namesForConnectionManager ConnectionManager.TrUnexpectedlyFalseAssertion {} =
                             ["UnexpectedlyFalseAssertion"]
+namesForConnectionManager TrUnknownConnection {} = ["UnknownConnection"]
 
 severityConnectionManager ::
   ConnectionManagerTrace addr
@@ -778,6 +779,7 @@ severityConnectionManager TrConnectionManagerCounters {}          = Info
 severityConnectionManager TrState {}                              = Info
 severityConnectionManager ConnectionManager.TrUnexpectedlyFalseAssertion {} =
                             Error
+severityConnectionManager TrUnknownConnection {}                  = Debug
 
 instance (Show addr, Show versionNumber, Show agreedOptions, LogFormatting addr,
           ToJSON addr, ToJSON versionNumber, ToJSON agreedOptions)
@@ -914,6 +916,11 @@ instance (Show addr, Show versionNumber, Show agreedOptions, LogFormatting addr,
           [ "kind" .= String "UnexpectedlyFalseAssertion"
           , "info" .= String (pack . show $ info)
           ]
+    forMachine _dtal (TrUnknownConnection info) =
+      mconcat
+        [ "kind" .= String "UnknownConnection"
+        , "info" .= String (pack . show $ info)
+        ]
     forHuman = pack . show
     asMetrics (TrConnectionManagerCounters ConnectionManagerCounters {..}) =
           [ IntM

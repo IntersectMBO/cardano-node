@@ -1005,6 +1005,10 @@ instance ToJSON (Alonzo.CollectError StandardCrypto) where
               Alonzo.ByronOutputInContext -> String "Byron output in the presence of a plutus script"
               Alonzo.TranslationLogicErrorInput -> String "Logic error translating inputs"
               Alonzo.TranslationLogicErrorRedeemer -> String "Logic error translating redeemers"
+              Alonzo.TranslationLogicErrorDoubleDatum -> String "Logic error double datum"
+              Alonzo.LanguageNotSupported -> String "Language not supported"
+              Alonzo.InlineDatumsNotSupported -> String "Inline datums not supported"
+              Alonzo.ReferenceScriptsNotSupported -> String "Reference scripts not supported"
           ]
 
 instance ToJSON Alonzo.TagMismatchDescription where

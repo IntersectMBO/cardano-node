@@ -34,7 +34,6 @@ import           GHC.Clock (getMonotonicTimeNSec)
 
 import           Codec.CBOR.Read (DeserialiseFailure)
 import           Data.Aeson (ToJSON (..), Value (..))
-import qualified Data.HashMap.Strict as Map
 import           Data.IntPSQ (IntPSQ)
 import qualified Data.IntPSQ as Pq
 import qualified Data.Map.Strict as SMap
