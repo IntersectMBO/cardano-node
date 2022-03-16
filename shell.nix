@@ -84,20 +84,15 @@ let
       pkgs.git
       pkgs.hlint
       pkgs.moreutils
+      pkgs.pstree
+      cluster.interactive-start
+      cluster.interactive-stop
+      cluster.interactive-restart
     ] ++ lib.optional haveGlibcLocales pkgs.glibcLocales
     ## Workbench's main script is called directly in dev mode.
     ++ lib.optionals (!workbenchDevMode)
     [
       cluster.workbench.workbench
-    ]
-    ## Local cluster not available on Darwin,
-    ## because psmisc fails to build on Big Sur.
-    ++ lib.optionals (!stdenv.isDarwin)
-    [
-      pkgs.psmisc
-      cluster.interactive-start
-      cluster.interactive-stop
-      cluster.interactive-restart
     ];
 
     # Prevents cabal from choosing alternate plans, so that
@@ -156,9 +151,8 @@ let
       cluster.interactive-restart
       cardanolib-py
       cluster.workbench.workbench
-    ] ++ (lib.optionals (!stdenv.isDarwin) [
-      psmisc
-    ]);
+      pstree
+    ];
 
     # Prevents cabal from choosing alternate plans, so that
     # *all* dependencies are provided by Nix.
