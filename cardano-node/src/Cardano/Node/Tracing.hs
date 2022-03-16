@@ -46,7 +46,7 @@ data Tracers peer localPeer blk p2p = Tracers
   , startupTracer         :: Tracer IO (StartupTrace blk)
   , shutdownTracer        :: Tracer IO ShutdownTrace
   , nodeInfoTracer        :: Tracer IO NodeInfo
-  , nodeStateTracer       :: Tracer IO (NodeState blk)
+  , nodeStateTracer       :: Tracer IO NodeState
   , resourcesTracer       :: Tracer IO ResourceStats
   , peersTracer           :: Tracer IO [PeerT blk]
   }
