@@ -110,6 +110,10 @@ test-suite cardano-testnet-tests
   type:                 exitcode-stdio-1.0
 
   build-depends:        cardano-testnet
+                      , aeson
+                      , cardano-api
+                      , cardano-cli
+                      , containers
                       , directory
                       , filepath
                       , hedgehog
@@ -118,6 +122,7 @@ test-suite cardano-testnet-tests
                       , tasty
                       , tasty-expected-failure
                       , tasty-hedgehog
+                      , text
 
   other-modules:
                         -- TODO: Move to plutus-apps
