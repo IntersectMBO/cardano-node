@@ -143,21 +143,22 @@ EOF
 
         local svpid=$dir/supervisor/supervisord.pid pstree=$dir/supervisor/ps.tree
         pstree -p "$(cat "$svpid")" > "$pstree"
-        echo "================================ svpid=$(cat "$svpid")"
-        cat "$pstree"
-        echo "================================"
 
         local pidsfile="$dir"/supervisor/cardano-node.pids
-        grep '\---' "$pstree" |
-            cut -d'-' -f4 | cut -d' ' -f2 \
-                > "$pidsfile"
+        set -x
+        { grep '\\---\|--=' "$pstree" || true; } |
+            sed 's/^.*\\--- \([0-9]*\) .*/\1/; s/^[ ]*[^ ]* \([0-9]+\) .*/\1/
+                ' > "$pidsfile"
 
         local mapn2p="$dir"/supervisor/node2pid.map; echo '{}' > "$mapn2p"
         local mapp2n="$dir"/supervisor/pid2node.map; echo '{}' > "$mapp2n"
         for node in $(jq_tolist keys "$dir"/node-specs.json)
         do local service_pid=$(supervisorctl pid $node)
-           local pid=$(fgrep -e "= $service_pid " -A1 "$pstree" |
-                       tail -n1 | cut -d'-' -f4 | cut -d' ' -f2)
+           if test -z "$(ps h --ppid $service_pid)"
+           then local pid=$service_pid
+           else local pid=$(fgrep -e "= $(printf %05d $service_pid) " -A1 "$pstree" |
+                                tail -n1 | sed 's/^.*\\--- \([0-9]*\) .*/\1/; s/^[ ]*[^ ]* \([0-9]*\) .*/\1/')
+           fi
            jq_fmutate "$mapn2p" '. * { "'$node'": '$pid' }'
            jq_fmutate "$mapp2n" '. * { "'$pid'": "'$node'" }'
         done
