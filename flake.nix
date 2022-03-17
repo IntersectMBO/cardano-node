@@ -34,6 +34,10 @@
       inputs.cardano-node-snapshot.url = "github:input-output-hk/cardano-node/7f00e3ea5a61609e19eeeee4af35241571efdf5c";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    plutus-apps = {
+      url = "github:input-output-hk/plutus-apps";
+      flake = false;
+    };
     # Custom user config (default: empty), eg.:
     # { outputs = {...}: {
     #   # Cutomize listeming port of node scripts:
@@ -42,13 +46,9 @@
     #   };
     # };
     customConfig.url = "github:input-output-hk/empty-flake";
-    plutus-example = {
-      url = "github:input-output-hk/cardano-node/1.33.0";
-      flake = false;
-    };
   };
 
-  outputs = { self, nixpkgs, hostNixpkgs, utils, haskellNix, iohkNix, membench, plutus-example, ... }@input:
+  outputs = { self, nixpkgs, hostNixpkgs, utils, haskellNix, iohkNix, membench, plutus-apps, ... }@input:
     let
       inherit (nixpkgs) lib;
       inherit (lib) head systems mapAttrs recursiveUpdate mkDefault
@@ -116,10 +116,9 @@
                   (name: { configureFlags = [ "--ghc-option=-eventlog" ]; });
               }];
             };
-          inherit ((import plutus-example {
+          inherit ((import plutus-apps  {
             inherit (project.pkgs) system;
-            gitrev = plutus-example.rev;
-          }).haskellPackages.plutus-example.components.exes) plutus-example;
+          }).plutus-apps.haskell.packages.plutus-example.components.exes) plutus-example;
           hsPkgsWithPassthru = lib.mapAttrsRecursiveCond (v: !(lib.isDerivation v))
             (path: value:
               if (lib.isAttrs value) then
@@ -142,6 +141,7 @@
             inherit (bech32.components.exes) bech32;
           } // lib.optionalAttrs hostPlatform.isUnix {
             inherit (network-mux.components.exes) cardano-ping;
+            inherit plutus-example;
           });
         };
 
@@ -354,7 +354,7 @@
       overlay = final: prev: {
         cardanoNodeProject = flake.project.${final.system};
         cardanoNodePackages = mkCardanoNodePackages final.cardanoNodeProject;
-        inherit (final.cardanoNodePackages) cardano-node cardano-cli cardano-submit-api bech32;
+        inherit (final.cardanoNodePackages) cardano-node cardano-cli cardano-submit-api bech32 plutus-example;
       };
       nixosModules = {
         cardano-node = { pkgs, lib, ... }: {
