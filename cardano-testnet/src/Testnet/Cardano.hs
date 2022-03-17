@@ -14,9 +14,14 @@ module Testnet.Cardano
   ( ForkPoint(..)
   , TestnetOptions(..)
   , defaultTestnetOptions
+  , TestnetNodeOptions(..)
+  , defaultTestnetNodeOptions
 
   , Era(..)
   , TestnetRuntime (..)
+  , bftSprockets
+  , allNodes
+  , TestnetNode (..)
   , Wallet(..)
 
   , testnet
@@ -39,7 +44,8 @@ import           Data.Eq
 import           Data.Function
 import           Data.Functor
 import           Data.Int
-import           Data.List ((\\))
+import           Data.List (length, replicate, unzip3, unzip4, unzip5, zip, zipWith4, zipWith5,
+                   zipWith6, (\\))
 import           Data.Maybe
 import           Data.Ord
 import           Data.Semigroup
@@ -104,7 +110,9 @@ data ForkPoint
 data Era = Byron | Shelley | Allegra | Mary | Alonzo deriving (Eq, Enum, Bounded, Read, Show)
 
 data TestnetOptions = TestnetOptions
-  { numBftNodes :: Int
+  { -- | List of node options. Each option will result in a single node being
+    -- created.
+    bftNodeOptions :: [TestnetNodeOptions]
   , numPoolNodes :: Int
   , era :: Era
   , epochLength :: Int
@@ -115,7 +123,7 @@ data TestnetOptions = TestnetOptions
 
 defaultTestnetOptions :: TestnetOptions
 defaultTestnetOptions = TestnetOptions
-  { numBftNodes = 2
+  { bftNodeOptions = replicate 2 defaultTestnetNodeOptions
   , numPoolNodes = 1
   , era = Alonzo
   , epochLength = 1500
@@ -124,13 +132,39 @@ defaultTestnetOptions = TestnetOptions
   , enableP2P = False
   }
 
+newtype TestnetNodeOptions = TestnetNodeOptions
+  { -- | These arguments will be appended to the default set of CLI options when
+    -- starting the node.
+    extraNodeCliArgs :: [String]
+  } deriving (Eq, Show)
+
+defaultTestnetNodeOptions :: TestnetNodeOptions
+defaultTestnetNodeOptions = TestnetNodeOptions
+  { extraNodeCliArgs = []
+  }
+
 data TestnetRuntime = TestnetRuntime
   { configurationFile :: FilePath
   , testnetMagic :: Int
-  , allNodes :: [String]
-  , bftSprockets :: [Sprocket]
+  , bftNodes :: [TestnetNode]
+  , poolNodes :: [TestnetNode]
   , wallets :: [Wallet]
-  } deriving (Eq, Show)
+  }
+
+bftSprockets :: TestnetRuntime -> [Sprocket]
+bftSprockets = fmap nodeSprocket . bftNodes
+
+allNodes :: TestnetRuntime -> [TestnetNode]
+allNodes tr = bftNodes tr <> poolNodes tr
+
+data TestnetNode = TestnetNode
+  { nodeName :: String
+  , nodeSprocket :: Sprocket
+  , nodeStdinHandle :: IO.Handle
+  , nodeStdout :: FilePath
+  , nodeStderr :: FilePath
+  , nodeProcessHandle :: IO.ProcessHandle
+  }
 
 data Wallet = Wallet
   { paymentVKey :: FilePath
@@ -190,19 +224,20 @@ testnet testnetOptions H.Conf {..} = do
   startTime <- H.noteShow $ DTC.addUTCTime startTimeOffsetSeconds currentTime
   configurationTemplate <- H.noteShow $ base </> "configuration/defaults/byron-mainnet/configuration.yaml"
   configurationFile <- H.noteShow $ tempAbsPath </> "configuration.yaml"
-  let bftNodesN = [1 .. numBftNodes testnetOptions]
+  let numBftNodes = length (bftNodeOptions testnetOptions)
+      bftNodesN = [1 .. numBftNodes]
       poolNodesN = [1 .. numPoolNodes testnetOptions]
-      bftNodes = ("node-bft" <>) . show @Int <$> bftNodesN
-      poolNodes = ("node-pool" <>) . show @Int <$> poolNodesN
-      allNodes = bftNodes <> poolNodes
+      bftNodeNames = ("node-bft" <>) . show @Int <$> bftNodesN
+      poolNodeNames = ("node-pool" <>) . show @Int <$> poolNodesN
+      allNodeNames = bftNodeNames <> poolNodeNames
       maxByronSupply = 10020000000
-      fundsPerGenesisAddress = maxByronSupply `div` numBftNodes testnetOptions
+      fundsPerGenesisAddress = maxByronSupply `div` numBftNodes
       fundsPerByronAddress = fundsPerGenesisAddress - 100000000
       userPoolN = poolNodesN
       maxShelleySupply = 1000000000000
 
-  allPorts <- H.noteShowIO $ IO.allocateRandomPorts (L.length allNodes)
-  nodeToPort <- H.noteShow (M.fromList (L.zip allNodes allPorts))
+  allPorts <- H.noteShowIO $ IO.allocateRandomPorts (L.length allNodeNames)
+  nodeToPort <- H.noteShow (M.fromList (L.zip allNodeNames allPorts))
 
   let securityParam = 10
 
@@ -259,16 +294,16 @@ testnet testnetOptions H.Conf {..} = do
     . HM.insert "EnableP2P" (J.toJSON @Bool (enableP2P testnetOptions))
     . forkOptions
 
-  forM_ allNodes $ \node -> do
+  forM_ allNodeNames $ \node -> do
     H.createDirectoryIfMissing $ tempAbsPath </> node
     H.createDirectoryIfMissing $ tempAbsPath </> node </> "byron"
     H.createDirectoryIfMissing $ tempAbsPath </> node </> "shelley"
 
   -- Make topology files
-  forM_ allNodes $ \node -> do
+  forM_ allNodeNames $ \node -> do
     let port = fromJust $ M.lookup node nodeToPort
     H.lbsWriteFile (tempAbsPath </> node </> "topology.json") $
-      mkTopologyConfig (numBftNodes testnetOptions + numPoolNodes testnetOptions) allPorts port (enableP2P testnetOptions)
+      mkTopologyConfig (numBftNodes + numPoolNodes testnetOptions) allPorts port (enableP2P testnetOptions)
 
     H.writeFile (tempAbsPath </> node </> "port") (show port)
 
@@ -305,7 +340,7 @@ testnet testnetOptions H.Conf {..} = do
     , "--start-time", showUTCTimeSeconds startTime
     , "--k", show @Int securityParam
     , "--n-poor-addresses", "0"
-    , "--n-delegate-addresses", show @Int (numBftNodes testnetOptions)
+    , "--n-delegate-addresses", show @Int numBftNodes
     , "--total-balance", show @Int maxByronSupply
     , "--delegate-share", "1"
     , "--avvm-entry-count", "0"
@@ -444,7 +479,7 @@ testnet testnetOptions H.Conf {..} = do
     [ "genesis", "create"
     , "--testnet-magic", show @Int testnetMagic
     , "--genesis-dir", tempAbsPath </> "shelley"
-    , "--gen-genesis-keys", show @Int (numBftNodes testnetOptions)
+    , "--gen-genesis-keys", show @Int numBftNodes
     , "--start-time", formatIso8601 startTime
     , "--gen-utxo-keys", show @Int (numPoolNodes testnetOptions)
     ]
@@ -471,7 +506,7 @@ testnet testnetOptions H.Conf {..} = do
 
   -- Make the pool operator cold keys
   -- This was done already for the BFT nodes as part of the genesis creation
-  forM_ poolNodes $ \node -> do
+  forM_ poolNodeNames $ \node -> do
     void $ H.execCli
       [ "node", "key-gen"
       , "--cold-verification-key-file", tempAbsPath </> node </> "shelley/operator.vkey"
@@ -494,7 +529,7 @@ testnet testnetOptions H.Conf {..} = do
     H.createFileLink (tempAbsPath </> "shelley/delegate-keys/delegate" <> show @Int n <> ".vrf.skey") (tempAbsPath </> "node-bft" <> show @Int n </> "shelley/vrf.skey")
 
   -- Make hot keys and for all nodes
-  forM_ allNodes $ \node -> do
+  forM_ allNodeNames $ \node -> do
     void $ H.execCli
       [ "node", "key-gen-KES"
       , "--verification-key-file", tempAbsPath </> node </> "shelley/kes.vkey"
@@ -511,7 +546,7 @@ testnet testnetOptions H.Conf {..} = do
       ]
 
   -- Generated node operator keys (cold, hot) and operational certs
-  forM_ allNodes $ \node -> H.noteEachM_ . H.listDirectory $ tempAbsPath </> node </> "byron"
+  forM_ allNodeNames $ \node -> H.noteEachM_ . H.listDirectory $ tempAbsPath </> node </> "byron"
 
   -- Make some payment and stake addresses
   -- user1..n:       will own all the funds in the system, we'll set this up from
@@ -607,7 +642,7 @@ testnet testnetOptions H.Conf {..} = do
   H.noteEachM_ . H.listDirectory $ tempAbsPath </> "addresses"
 
   -- Next is to make the stake pool registration cert
-  forM_ poolNodes $ \node -> do
+  forM_ poolNodeNames $ \node -> do
     H.execCli
       [ "stake-pool", "registration-certificate"
       , "--testnet-magic", show @Int testnetMagic
@@ -620,7 +655,7 @@ testnet testnetOptions H.Conf {..} = do
       ]
 
   -- Generated stake pool registration certs
-  forM_ poolNodes $ \node -> H.assertIO . IO.doesFileExist $ tempAbsPath </> node </> "registration.cert"
+  forM_ poolNodeNames $ \node -> H.assertIO . IO.doesFileExist $ tempAbsPath </> node </> "registration.cert"
 
   -- Now we'll construct one whopper of a transaction that does everything
   -- just to show off that we can, and to make the script shorter
@@ -711,7 +746,8 @@ testnet testnetOptions H.Conf {..} = do
   --------------------------------
   -- Launch cluster of three nodes
 
-  bftSprockets <- forM bftNodes $ \node -> do
+  let bftNodeNameAndOpts = zip bftNodeNames (bftNodeOptions testnetOptions)
+  (bftSprockets', bftStdins, bftStdouts, bftStderrs, bftProcessHandles) <- fmap unzip5 . forM bftNodeNameAndOpts $ \(node, nodeOpts) -> do
     dbDir <- H.noteShow $ tempAbsPath </> "db/" <> node
     nodeStdoutFile <- H.noteTempFile logDir $ node <> ".stdout.log"
     nodeStderrFile <- H.noteTempFile logDir $ node <> ".stderr.log"
@@ -727,9 +763,9 @@ testnet testnetOptions H.Conf {..} = do
 
     portString <- fmap S.strip . H.readFile $ tempAbsPath </> node </> "port"
 
-    (_, _, _, hProcess, _) <- H.createProcess =<<
+    (Just stdIn, _, _, hProcess, _) <- H.createProcess =<<
       ( H.procNode
-        [ "run"
+        ([ "run"
         , "--config",  tempAbsPath </> "configuration.yaml"
         , "--topology",  tempAbsPath </> node </> "topology.json"
         , "--database-path", tempAbsPath </> node </> "db"
@@ -740,7 +776,7 @@ testnet testnetOptions H.Conf {..} = do
         , "--port",  portString
         , "--delegation-certificate",  tempAbsPath </> node </> "byron/delegate.cert"
         , "--signing-key", tempAbsPath </> node </> "byron/delegate.key"
-        ] <&>
+        ] <> extraNodeCliArgs nodeOpts) <&>
         ( \cp -> cp
           { IO.std_in = IO.CreatePipe
           , IO.std_out = IO.UseHandle hNodeStdout
@@ -755,11 +791,11 @@ testnet testnetOptions H.Conf {..} = do
     when (OS.os `L.elem` ["darwin", "linux"]) $ do
       H.onFailure . H.noteIO_ $ IO.readProcess "lsof" ["-iTCP:" <> portString, "-sTCP:LISTEN", "-n", "-P"] ""
 
-    pure sprocket
+    pure (sprocket, stdIn, nodeStdoutFile, nodeStderrFile, hProcess)
 
   H.threadDelay 100000
 
-  forM_ poolNodes $ \node -> do
+  (poolSprockets, poolStdins, poolStdouts, poolStderrs, poolProcessHandles) <- fmap unzip5 . forM poolNodeNames $ \node -> do
     dbDir <- H.noteShow $ tempAbsPath </> "db/" <> node
     nodeStdoutFile <- H.noteTempFile logDir $ node <> ".stdout.log"
     nodeStderrFile <- H.noteTempFile logDir $ node <> ".stderr.log"
@@ -775,7 +811,7 @@ testnet testnetOptions H.Conf {..} = do
 
     portString <- fmap S.strip . H.readFile $ tempAbsPath </> node </> "port"
 
-    void $ H.createProcess =<<
+    (Just stdIn, _, _, hProcess, _) <- H.createProcess =<<
       ( H.procNode
         [ "run"
         , "--config", tempAbsPath </> "configuration.yaml"
@@ -800,15 +836,17 @@ testnet testnetOptions H.Conf {..} = do
     when (OS.os `L.elem` ["darwin", "linux"]) $ do
       H.onFailure . H.noteIO_ $ IO.readProcess "lsof" ["-iTCP:" <> portString, "-sTCP:LISTEN", "-n", "-P"] ""
 
+    return (sprocket, stdIn, nodeStdoutFile, nodeStderrFile, hProcess)
+
   now <- H.noteShowIO DTC.getCurrentTime
   deadline <- H.noteShow $ DTC.addUTCTime 90 now
 
-  forM_ allNodes $ \node -> do
+  forM_ allNodeNames $ \node -> do
     sprocket <- H.noteShow $ Sprocket tempBaseAbsPath (socketDir </> node)
     _spocketSystemNameFile <- H.noteShow $ IO.sprocketSystemName sprocket
     H.waitByDeadlineM deadline $ H.doesSprocketExist sprocket
 
-  forM_ allNodes $ \node -> do
+  forM_ allNodeNames $ \node -> do
     nodeStdoutFile <- H.noteTempFile logDir $ node <> ".stdout.log"
     H.assertByDeadlineIOCustom "stdout does not contain \"until genesis start time\"" deadline $ IO.fileContains "until genesis start time at" nodeStdoutFile
     H.assertByDeadlineIOCustom "stdout does not contain \"Chain extended\"" deadline $ IO.fileContains "Chain extended, new tip" nodeStdoutFile
@@ -818,7 +856,19 @@ testnet testnetOptions H.Conf {..} = do
   return TestnetRuntime
     { configurationFile
     , testnetMagic
-    , allNodes
-    , bftSprockets
+    , bftNodes = zipWith6 TestnetNode
+        bftNodeNames
+        bftSprockets'
+        bftStdins
+        bftStdouts
+        bftStderrs
+        bftProcessHandles
+    , poolNodes = zipWith6 TestnetNode
+        poolNodeNames
+        poolSprockets
+        poolStdins
+        poolStdouts
+        poolStderrs
+        poolProcessHandles
     , wallets
     }

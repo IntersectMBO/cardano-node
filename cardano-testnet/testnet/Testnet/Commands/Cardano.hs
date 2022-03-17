@@ -6,12 +6,13 @@ module Testnet.Commands.Cardano
   , runCardanoOptions
   ) where
 
-import           GHC.Enum
 import           Data.Eq
 import           Data.Function
 import           Data.Int
+import           Data.List (replicate)
 import           Data.Maybe
 import           Data.Semigroup
+import           GHC.Enum
 import           Options.Applicative
 import           System.IO (IO)
 import           Testnet.Cardano
@@ -28,12 +29,13 @@ data CardanoOptions = CardanoOptions
 
 optsTestnet :: Parser TestnetOptions
 optsTestnet = TestnetOptions
-  <$> OA.option auto
+  <$> OA.option
+      ((`replicate` defaultTestnetNodeOptions) <$> auto)
       (   OA.long "num-bft-nodes"
       <>  OA.help "Number of BFT nodes"
       <>  OA.metavar "COUNT"
       <>  OA.showDefault
-      <>  OA.value (numBftNodes defaultTestnetOptions)
+      <>  OA.value (bftNodeOptions defaultTestnetOptions)
       )
   <*> OA.option auto
       (   OA.long "num-pool-nodes"
