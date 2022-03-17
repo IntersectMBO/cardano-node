@@ -204,7 +204,7 @@ let
             jq
             moreutils
             nixWrapped
-            psmisc
+            pstree
             python3Packages.supervisor
             workbench.workbench
           ];
