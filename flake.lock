@@ -369,6 +369,23 @@
         "type": "github"
       }
     },
+    "cardano-node-workbench": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1647605822,
+        "narHash": "sha256-bhgSsshidZ7dOPpXdG88pIqhy5VgXWi3LXtR78oDiEo=",
+        "owner": "input-output-hk",
+        "repo": "cardano-node",
+        "rev": "44ac30fb04d02d41ba005ca5228db9b5e9b887d2",
+        "type": "github"
+      },
+      "original": {
+        "owner": "input-output-hk",
+        "repo": "cardano-node",
+        "rev": "44ac30fb04d02d41ba005ca5228db9b5e9b887d2",
+        "type": "github"
+      }
+    },
     "cardano-shell": {
       "flake": false,
       "locked": {
@@ -1635,6 +1652,7 @@
     },
     "root": {
       "inputs": {
+        "cardano-node-workbench": "cardano-node-workbench",
         "customConfig": "customConfig",
         "flake-compat": "flake-compat",
         "haskellNix": "haskellNix",

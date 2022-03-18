@@ -12,15 +12,19 @@ def profile_name($p):
 | era_defaults($p.era).generator   as   $generator_defaults
 | era_defaults($p.era).composition as $composition_defaults
 | era_defaults($p.era).node        as        $node_defaults
+| $p.node.shutdown_on_slot_synced  as                $slots
   ## Genesis
 | [ "k\($p.composition.n_pools)" ]
   + if $p.composition.n_dense_hosts > 0
     then may_attr("dense_pool_density";
                   $p.composition; $composition_defaults; 1; "ppn")
     else [] end
-  + [ ($p.generator.epochs                  | tostring) + "ep"
-    , ($p.generator.tx_count     | . / 1000 | tostring) + "kTx"
-    , ($p.genesis.utxo           | . / 1000 | tostring) + "kU"
+  + if $slots
+    then [($p.node.shutdown_on_slot_synced | tostring) + "slots"]
+    else [ ($p.generator.epochs                  | tostring) + "ep"
+         , ($p.generator.tx_count     | . / 1000 | tostring) + "kTx" ]
+    end
+  + [ ($p.genesis.utxo           | . / 1000 | tostring) + "kU"
     , ($p.genesis.delegators     | . / 1000 | tostring) + "kD"
     , ($p.genesis.max_block_size | . / 1000 | tostring) + "kbs"
     ]
@@ -32,21 +36,19 @@ def profile_name($p):
              $p.generator; $generator_defaults; 1; "i")
   + may_attr("outputs_per_tx";
              $p.generator; $generator_defaults; 1; "o")
-  + if $p.generator.scriptMode
-    then if $p.generator.plutusMode
-         then [ ($p.generator.plutusScript | rtrimstr(".plutus"))
-              , ($p.generator.plutusData | tostring)
-              ]
-         else ["scr"] end
-    else ["cli"] end
+  + if $p.generator.plutusMode | not then []
+    else [ ($p.generator.plutusScript | rtrimstr(".plutus"))
+         , ($p.generator.plutusData | tostring)
+         ] end
   + if $p.node.rts_flags_override == [] then []
     else ["RTS", ($p.node.rts_flags_override | join(""))] end
   + if $p.composition.with_proxy
     then ["prox"]
     else [] end
-  + if $p.composition.with_observer | not
-    then ["nobs"]
+  + if $p.composition.with_observer
+    then ["obsrv"]
     else [] end
+  + if $p.scenario == "default" then [] else [$p.scenario] end
   | join("-");
 
 def profile_name_era_suffix($era):
@@ -128,7 +130,7 @@ def add_derived_params:
          , cluster_startup_overhead_s:
                 (($gsis.utxo + $gsis.delegators) as $dataset_size
                 | if $dataset_size < 10000 then 15
-                  else $dataset_size / 20000
+                  else $dataset_size / 10000
                   end)
          }
      }

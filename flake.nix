@@ -37,9 +37,15 @@
       url = "github:input-output-hk/cardano-node/1.33.0";
       flake = false;
     };
+
+    ## This pin is to prevent workbench-produced geneses being regenerated each time the node is bumped.
+    cardano-node-workbench = {
+      url = "github:input-output-hk/cardano-node/44ac30fb04d02d41ba005ca5228db9b5e9b887d2";
+      flake = false;
+    };
   };
 
-  outputs = { self, nixpkgs, hostNixpkgs, utils, haskellNix, iohkNix, membench, plutus-example, ... }@input:
+  outputs = { self, nixpkgs, hostNixpkgs, utils, haskellNix, iohkNix, membench, plutus-example, cardano-node-workbench, ... }@input:
     let
       inherit (nixpkgs) lib;
       inherit (lib) head systems mapAttrs recursiveUpdate mkDefault
@@ -111,6 +117,8 @@
             inherit (project.pkgs) system;
             gitrev = plutus-example.rev;
           }).haskellPackages.plutus-example.components.exes) plutus-example;
+          pinned-workbench =
+            (import cardano-node-workbench {}).workbench.x86_64-linux;
           hsPkgsWithPassthru = lib.mapAttrsRecursiveCond (v: !(lib.isDerivation v))
             (path: value:
               if (lib.isAttrs value) then
@@ -127,6 +135,7 @@
         in
         {
           inherit projectPackages profiledProject assertedProject eventloggedProject;
+          inherit pinned-workbench;
           projectExes = flatten (haskellLib.collectComponents' "exes" projectPackages) // (with hsPkgsWithPassthru; {
             inherit (ouroboros-consensus-byron.components.exes) db-converter;
             inherit (ouroboros-consensus-cardano.components.exes) db-analyser;
@@ -160,7 +169,7 @@
             eventlogged = eventloggedProject;
           };
 
-          inherit (mkPackages project) projectPackages projectExes profiledProject assertedProject eventloggedProject;
+          inherit (mkPackages project) projectPackages projectExes profiledProject assertedProject eventloggedProject pinned-workbench;
 
           shell = import ./shell.nix { inherit pkgs customConfig; };
           devShells = {
@@ -207,19 +216,33 @@
             benchmarks = collectComponents' "benchmarks" projectPackages;
           });
 
-          workbench = pkgs.clusterNix.workbench;
+          inherit (pkgs) workbench all-profiles-json supervisord-workbench-nix supervisord-workbench-for-profile;
 
-          packages = exes
+          packages =
+            let
+              supervisord-workbench =
+                pkgs.callPackage supervisord-workbench-nix { workbench = pinned-workbench; };
+            in
+            exes
             # Linux only packages:
             // optionalAttrs (system == "x86_64-linux") rec {
             "dockerImage/node" = pkgs.dockerImage;
             "dockerImage/submit-api" = pkgs.submitApiDockerImage;
             membenches = membench.outputs.packages.x86_64-linux.batch-report;
             snapshot = membench.outputs.packages.x86_64-linux.snapshot;
-            workbench-smoke-test     = pkgs.clusterNix.profile-run-supervisord { profileName = "smoke-alzo";trace = true; };
+            workbench-smoke-test =
+              (pkgs.supervisord-workbench-for-profile
+                { inherit supervisord-workbench;
+                  profileName = "smoke-alzo"; }
+              ).profile-run { trace = true; };
+            workbench-ci-test =
+              (pkgs.supervisord-workbench-for-profile
+                { inherit supervisord-workbench;
+                  profileName = "k6-600slots-1000kU-1000kD-64kbs-10tps-fixed-loaded-alzo"; }
+              ).profile-run {};
             workbench-smoke-analysis = workbench-smoke-test.analysis;
-            workbench-ci-test        = pkgs.clusterNix.profile-run-supervisord { profileName = "ci-light-alzo"; };
             workbench-ci-analysis    = workbench-ci-test.analysis;
+            all-profiles-json = pkgs.all-profiles-json;
           }
             # Add checks to be able to build them individually
             // (prefixNamesWith "checks/" checks);
@@ -241,6 +264,9 @@
 
           # This is used by `nix develop .` to open a devShell
           inherit devShell devShells;
+
+          # The parametrisable workbench.
+          inherit workbench;
 
           systemHydraJobs = optionalAttrs (system == "x86_64-linux")
             {

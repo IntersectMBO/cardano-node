@@ -1,10 +1,10 @@
 { pkgs }:
 
-{ profileNix, profile, workbench }:
+{ profileNix, profile }:
 pkgs.runCommand "workbench-topology-${profileNix.name}"
   { requiredSystemFeatures = [ "benchmark" ];
     nativeBuildInputs = with pkgs.haskellPackages; with pkgs;
-      [ bash cardano-cli coreutils gnused jq moreutils workbench ];
+      [ bash cardano-cli coreutils gnused jq moreutils workbench.workbench ];
   }
   ''
   mkdir $out
