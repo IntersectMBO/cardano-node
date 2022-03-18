@@ -40,7 +40,7 @@
 
     ## This pin is to prevent workbench-produced geneses being regenerated each time the node is bumped.
     cardano-node-workbench = {
-      url = "github:input-output-hk/cardano-node/ae35d4c7ae6482397c8444566f25ef0fabb03b18";
+      url = "github:input-output-hk/cardano-node/44ac30fb04d02d41ba005ca5228db9b5e9b887d2";
       flake = false;
     };
   };
