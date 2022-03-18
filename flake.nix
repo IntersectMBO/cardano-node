@@ -216,9 +216,14 @@
             benchmarks = collectComponents' "benchmarks" projectPackages;
           });
 
-          inherit (pkgs) workbench supervisord-workbench-for-profile;
+          inherit (pkgs) workbench all-profiles-json supervisord-workbench-nix supervisord-workbench-for-profile;
 
-          packages = exes
+          packages =
+            let
+              supervisord-workbench =
+                pkgs.callPackage supervisord-workbench-nix { workbench = pinned-workbench; };
+            in
+            exes
             # Linux only packages:
             // optionalAttrs (system == "x86_64-linux") rec {
             "dockerImage/node" = pkgs.dockerImage;
@@ -227,16 +232,17 @@
             snapshot = membench.outputs.packages.x86_64-linux.snapshot;
             workbench-smoke-test =
               (pkgs.supervisord-workbench-for-profile
-                { workbench   = pinned-workbench;
+                { inherit supervisord-workbench;
                   profileName = "smoke-alzo"; }
               ).profile-run { trace = true; };
             workbench-ci-test =
               (pkgs.supervisord-workbench-for-profile
-                { workbench   = pinned-workbench;
+                { inherit supervisord-workbench;
                   profileName = "k6-600slots-1000kU-1000kD-64kbs-10tps-fixed-loaded-alzo"; }
               ).profile-run {};
             workbench-smoke-analysis = workbench-smoke-test.analysis;
             workbench-ci-analysis    = workbench-ci-test.analysis;
+            all-profiles-json = pkgs.all-profiles-json;
           }
             # Add checks to be able to build them individually
             // (prefixNamesWith "checks/" checks);

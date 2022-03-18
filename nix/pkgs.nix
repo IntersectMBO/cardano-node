@@ -79,16 +79,26 @@ final: prev: with final; {
   # A generic, parameteric version of the workbench development environment.
   workbench = pkgs.callPackage ./workbench {};
 
+  supervisord-workbench-cabal =
+    { workbench ? pkgs.workbench, ... }@args: pkgs.callPackage ./workbench/supervisor.nix (args // { useCabalRun = true; });
+  supervisord-workbench-nix =
+    { workbench ? pkgs.workbench, ... }@args: pkgs.callPackage ./workbench/supervisor.nix args;
+
+  all-profiles-json = (pkgs.callPackage ./workbench/supervisor.nix {}).all-profiles.JSON;
+
   # An instance of the workbench, specialised to the supervisord backend and a profile,
   # that can be used with nix-shell or lorri.
   # See https://input-output-hk.github.io/haskell.nix/user-guide/development/
   supervisord-workbench-for-profile =
-    { useCabalRun ? false
-    , profileName ? customConfig.localCluster.profileName
-    , workbench   ? pkgs.workbench }:
-    pkgs.callPackage ./workbench/supervisor.nix
+    { batchName             ? customConfig.localCluster.batchName
+    , profileName           ? customConfig.localCluster.profileName
+    , useCabalRun           ? false
+    , workbenchDevMode      ? false
+    , supervisord-workbench ? pkgs.callPackage ./workbench/supervisor.nix { inherit useCabalRun; }
+    }:
+    pkgs.callPackage ./workbench/supervisor-run.nix
       {
-        inherit profileName useCabalRun workbench;
+        inherit batchName profileName supervisord-workbench;
       };
 
   # Disable failing python uvloop tests

@@ -145,7 +145,6 @@ EOF
         pstree -p "$(cat "$svpid")" > "$pstree"
 
         local pidsfile="$dir"/supervisor/cardano-node.pids
-        set -x
         { grep '\\---\|--=' "$pstree" || true; } |
             sed 's/^.*\\--- \([0-9]*\) .*/\1/; s/^[ ]*[^ ]* \([0-9]+\) .*/\1/
                 ' > "$pidsfile"

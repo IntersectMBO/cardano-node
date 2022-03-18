@@ -67,9 +67,14 @@ ci-analysis:
 	nix build -f 'default.nix' 'workbench-ci-analysis'    --out-link result-ci-analysis    --cores 0 --show-trace
 list-profiles: ## List workbench profiles
 	nix build .#workbench.profile-names-json --json | jq '.[0].outputs.out' -r | xargs jq .
+show-profile: ## NAME=profile-name
+	@test -n "${NAME}" || { echo 'HELP:  to specify profile to show, add NAME=profle-name' && exit 1; }
+	nix build .#all-profiles-json --json --option substitute false | jq '.[0].outputs.out' -r | xargs jq ".\"${NAME}\" | if . == null then error(\"\n###\n### Error:  unknown profile: ${NAME}  Please consult:  make list-profiles\n###\") else . end"
 ps: list-profiles
 bump-cardano-node-workbench: ## Update the cardano-node-workbench flake input
 	nix flake lock --update-input cardano-node-workbench
+bump-cardano-deployment: ## Sync the flake.lock to the CI check
+	nix run nixpkgs#nixUnstable -- build .#hydraJobs.cardano-deployment
 
 shell: ## Enter Nix shell, CI mode (workbench run from Nix store)
 	nix-shell --max-jobs 8 --cores 0 --show-trace --argstr profileName ${PROFILE} ${ARGS}

@@ -130,7 +130,7 @@ def add_derived_params:
          , cluster_startup_overhead_s:
                 (($gsis.utxo + $gsis.delegators) as $dataset_size
                 | if $dataset_size < 10000 then 15
-                  else $dataset_size / 20000
+                  else $dataset_size / 10000
                   end)
          }
      }

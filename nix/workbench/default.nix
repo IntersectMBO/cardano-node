@@ -67,7 +67,7 @@ let
   profile-names =
     __fromJSON (__readFile profile-names-json);
 
-  generateProfiles =
+  all-profiles =
     ## The backend is an attrset of AWS/supervisord-specific methods and parameters.
     { backend
 
@@ -87,7 +87,9 @@ let
               profileName;
           };
 
-      profiles = genAttrs profile-names mkProfile;
+      value = genAttrs profile-names mkProfile;
+
+      JSON = pkgs.writeText "all-profiles.json" (__toJSON (mapAttrs (_: x: x.value) value));
     };
 
   ## materialise-profile :: ProfileNix -> BackendProfile -> Profile
@@ -100,11 +102,10 @@ let
   with-profile =
     { backend, envArgs, profileName }:
     let
-      ps = generateProfiles
-        { inherit backend envArgs; };
+      ps = all-profiles { inherit backend envArgs; };
 
-      profileNix = ps.profiles."${profileName}"
-        or (throw "No such profile: ${profileName};  Known profiles: ${toString (__attrNames ps.profiles)}");
+      profileNix = ps.value."${profileName}"
+        or (throw "No such profile: ${profileName};  Known profiles: ${toString (__attrNames ps.value)}");
 
       profile = materialise-profile
         { inherit profileNix workbench;
@@ -129,7 +130,7 @@ in {
 
   inherit workbench' workbench runWorkbench runWorkbenchJqOnly;
 
-  inherit profile-names profile-names-json with-profile;
+  inherit all-profiles profile-names profile-names-json with-profile;
 
   inherit run-analysis;
 }
