@@ -116,7 +116,7 @@ haskell-nix.cabalProject' ({ pkgs
       })
       ({ pkgs, ... }: {
         packages.tx-generator.package.buildable = with pkgs.stdenv.hostPlatform; isUnix && !isMusl;
-        packages.cardano-tracer.package.buildable = with pkgs.stdenv.hostPlatform; isUnix && !isMusl;
+        packages.cardano-tracer.package.buildable = with pkgs.stdenv.hostPlatform; !isMusl;
         packages.cardano-node-chairman.components.tests.chairman-tests.buildable = lib.mkForce pkgs.stdenv.hostPlatform.isUnix;
         packages.plutus-tx-plugin.components.library.platforms = with lib.platforms; [ linux darwin ];
       })
