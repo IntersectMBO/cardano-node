@@ -25,7 +25,7 @@ Metadata *does not require* any additional fees. It simply contributes to the si
 
 **Binary schema**
 
-The binary schema is based on the Concise Binary Object Representation ([CBOR)](https://tools.ietf.org/html/rfc7049) and Concise Data Definition Language ([CDDL)](https://tools.ietf.org/html/rfc8610) notations, and is presented as follows:
+The binary schema is based on the Concise Binary Object Representation ([CBOR](https://tools.ietf.org/html/rfc7049)) and Concise Data Definition Language ([CDDL](https://tools.ietf.org/html/rfc8610)) notations, and is presented as follows:
 
 ```
 transaction_metadatum =
