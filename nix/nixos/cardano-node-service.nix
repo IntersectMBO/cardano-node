@@ -102,8 +102,8 @@ let
       "--host-addr ${cfg.hostAddr}"
       "--port ${toString (cfg.port + i)}"
       "--socket-path ${cfg.socketPath}"
-    ] ++ lib.optional (cfg.ipv6HostAddr != null)
-      "--host-ipv6-addr ${cfg.ipv6HostAddr}"
+    ] ++ lib.optional (cfg.ipv6HostAddr i != null)
+      "--host-ipv6-addr ${cfg.ipv6HostAddr i}"
     )) ++ consensusParams.${cfg.nodeConfig.Protocol} ++ cfg.extraArgs ++ cfg.rtsArgs;
     in ''
         echo "Starting: ${concatStringsSep "\"\n   echo \"" cmd}"
@@ -259,10 +259,19 @@ in {
       };
 
       ipv6HostAddr = mkOption {
-        type = types.nullOr types.str;
-        default = null;
+        type = types.nullOr (types.either types.str (types.functionTo (types.nullOr types.str)));
+        default = _: null;
+        apply = ip: if (builtins.isFunction ip) then ip else _: ip;
         description = ''
           The ipv6 host address to bind to. Set to null to disable.
+        '';
+      };
+
+      additionalListenStream = mkOption {
+        type = types.functionTo (types.listOf types.str);
+        default = _: [];
+        description = ''
+          List of additional sockets to listen to. Only available with `systemdSocketActivation`.
         '';
       };
 
@@ -351,11 +360,11 @@ in {
 
       shareIpv6port = mkOption {
         type = types.bool;
-        default = false;
+        default = cfg.systemdSocketActivation;
         description = ''
           Should instances on same machine share ipv6 port.
           Only works with systemd socket.
-          Default: false.
+          Default: true if systemd activated socket. Otherwise always false.
           If false use port increments starting from `port`.
         '';
       };
@@ -591,7 +600,8 @@ in {
         partOf = [ "${n}.service" ];
         socketConfig = {
           ListenStream = [ "${cfg.hostAddr}:${toString (if cfg.shareIpv4port then cfg.port else cfg.port + i)}" ]
-            ++ optional (cfg.ipv6HostAddr != null) "[${cfg.ipv6HostAddr}]:${toString (if cfg.shareIpv6port then cfg.port else cfg.port + i)}"
+            ++ optional (cfg.ipv6HostAddr i != null) "[${cfg.ipv6HostAddr i}]:${toString (if cfg.shareIpv6port then cfg.port else cfg.port + i)}"
+            ++ (cfg.additionalListenStream i)
             ++ [(if (i == 0) then cfg.socketPath else "${runtimeDir}-${toString i}/node.socket")];
           RuntimeDirectory = lib.removePrefix runDirBase
             (if (i == 0) then runtimeDir else "${runtimeDir}-${toString i}");
