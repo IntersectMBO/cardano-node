@@ -39,14 +39,35 @@
     # };
     customConfig.url = "github:input-output-hk/empty-flake";
 
+    node-measured = {
+      url = "github:input-output-hk/cardano-node";
+      inputs.nixpkgs.follows = "nixpkgs"; ## WARNING:  update this to match the measured node
+    };
+    node-snapshot = {
+      url = "github:input-output-hk/cardano-node/7f00e3ea5a61609e19eeeee4af35241571efdf5c";
+      # inputs.nixpkgs.follows = "nixpkgs";
+    };
+    node-process = {
+      url = "github:input-output-hk/cardano-node";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     ## This pin is to prevent workbench-produced geneses being regenerated each time the node is bumped.
     cardano-node-workbench = {
       url = "github:input-output-hk/cardano-node/44ac30fb04d02d41ba005ca5228db9b5e9b887d2";
       flake = false;
     };
+
+    cardano-mainnet-mirror.url = "github:input-output-hk/cardano-mainnet-mirror/nix";
+      # TODO, fix this
+      #db-analyser = network.haskellPackages.ouroboros-consensus-cardano.components.exes.db-analyser;
   };
 
-  outputs = { self, nixpkgs, hostNixpkgs, utils, haskellNix, iohkNix, membench, plutus-apps, cardano-node-workbench, ... }@input:
+  outputs = { self, nixpkgs, hostNixpkgs, utils, haskellNix, iohkNix
+            , membench
+            , plutus-apps
+            , cardano-mainnet-mirror
+            , node-snapshot, node-measured, node-process, cardano-node-workbench
+            , ... }@input:
     let
       inherit (nixpkgs) lib;
       inherit (lib) head systems mapAttrs recursiveUpdate mkDefault
@@ -77,6 +98,13 @@
             // import ./nix/svclib.nix { inherit (final) pkgs; };
         })
         (import ./nix/pkgs.nix)
+        (import ./nix/workbench/membench-overlay.nix
+          { inherit
+            input
+            cardano-mainnet-mirror
+            node-snapshot node-measured node-process;
+            customConfig = customConfig.membench;
+          })
         self.overlay
       ];
 
@@ -373,6 +401,9 @@
         cardanoNodeProject = flake.project.${final.system};
         cardanoNodePackages = mkCardanoNodePackages final.cardanoNodeProject;
         inherit (final.cardanoNodePackages) cardano-node cardano-cli cardano-submit-api bech32 plutus-example;
+
+        # TODO, fix this
+        #db-analyser = ouroboros-network-snapshot.haskellPackages.ouroboros-consensus-cardano.components.exes.db-analyser;
       };
       nixosModules = {
         cardano-node = { pkgs, lib, ... }: {
