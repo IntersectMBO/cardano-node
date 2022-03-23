@@ -21,11 +21,6 @@ in
     buildInputs = [ node-measured hexdump jq strace util-linux procps time ];
     inherit currentIteration;
     requiredSystemFeatures = [ "benchmark" ];
-    # succeedOnFailure = true;
-    failureHook = ''
-      cd $out
-      cat stderr >&2
-    '';
   } ''
   mkdir -pv $out/nix-support
   set -x
@@ -79,7 +74,7 @@ in
   ln -s ${node-measured.packages.x86_64-linux.cardano-node}/bin/cardano-node .
 
   command time -f %M -o $out/highwater \
-    ./cardano-node "''${args[@]}" 2>$out/stderr
+    ./cardano-node "''${args[@]}"
 
   pwd
   df -h

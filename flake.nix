@@ -18,13 +18,6 @@
       url = "github:input-output-hk/flake-compat/fixes";
       flake = false;
     };
-    membench = {
-      url = "github:input-output-hk/cardano-memory-benchmark";
-      inputs.cardano-node-measured.follows = "/";
-      inputs.cardano-node-process.follows = "/";
-      inputs.cardano-node-snapshot.url = "github:input-output-hk/cardano-node/7f00e3ea5a61609e19eeeee4af35241571efdf5c";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
     plutus-apps = {
       url = "github:input-output-hk/plutus-apps";
       flake = false;
@@ -63,7 +56,6 @@
   };
 
   outputs = { self, nixpkgs, hostNixpkgs, utils, haskellNix, iohkNix
-            , membench
             , plutus-apps
             , cardano-mainnet-mirror
             , node-snapshot, node-measured, node-process, cardano-node-workbench
@@ -257,8 +249,9 @@
             // optionalAttrs (system == "x86_64-linux") rec {
             "dockerImage/node" = pkgs.dockerImage;
             "dockerImage/submit-api" = pkgs.submitApiDockerImage;
-            membenches = membench.outputs.packages.x86_64-linux.batch-report;
-            snapshot = membench.outputs.packages.x86_64-linux.snapshot;
+            ## TODO: drop external membench, once we bump 'node-snapshot'
+            # snapshot = membench.outputs.packages.x86_64-linux.snapshot;
+            membenches = pkgs.membench-batch-report;
             workbench-smoke-test =
               (pkgs.supervisord-workbench-for-profile
                 { inherit supervisord-workbench;

@@ -37,4 +37,10 @@ self: super: {
 
   ## 6. Report generation
   membench-batch-report = self.callPackage ./membench-batch-report.nix { inherit input; };
+  membench-test-report = self.callPackage ./membench-batch-report.nix
+    rec
+    { inherit input;
+      membench-batch = self.callPackage ./membench-batch.nix { inherit (customConfig) variantTable; inherit input; nIterations = 1; };
+      membench-batch-results = self.callPackage ./membench-batch-process.nix { inherit input membench-batch; };
+    };
 }
