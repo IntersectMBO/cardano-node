@@ -49,8 +49,6 @@
     };
 
     cardano-mainnet-mirror.url = "github:input-output-hk/cardano-mainnet-mirror/nix";
-      # TODO, fix this
-      #db-analyser = network.haskellPackages.ouroboros-consensus-cardano.components.exes.db-analyser;
   };
 
   outputs = { self, nixpkgs, hostNixpkgs, utils, haskellNix, iohkNix

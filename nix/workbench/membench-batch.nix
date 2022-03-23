@@ -10,11 +10,11 @@ let
   ## From the variant table (Map Name RtsFlags), derive variants of the baseline:
   allVariants =
     mapAttrs
-      (name: rtsflags:
+      (name: args:
         membench-run.override
-        { rtsflags = rtsflags;
+        (args // {
           suffix   = "-${name}";
-        })
+        }))
       variantTable;
 
   ## For a given variant, derive its run iterations:
