@@ -4452,7 +4452,9 @@
         "iohkNix": "iohkNix_2",
         "membench": "membench",
         "nixpkgs": [
-          "nixpkgs"
+          "node-measured",
+          "haskellNix",
+          "nixpkgs-2105"
         ],
         "plutus-example": "plutus-example_2",
         "utils": "utils_4"
@@ -4484,7 +4486,9 @@
         "iohkNix": "iohkNix_6",
         "membench": "membench_4",
         "nixpkgs": [
-          "nixpkgs"
+          "node-process",
+          "haskellNix",
+          "nixpkgs-2105"
         ],
         "plutus-example": "plutus-example_4",
         "utils": "utils_8"

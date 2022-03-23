@@ -34,15 +34,13 @@
 
     node-measured = {
       url = "github:input-output-hk/cardano-node";
-      inputs.nixpkgs.follows = "nixpkgs"; ## WARNING:  update this to match the measured node
     };
     node-snapshot = {
       url = "github:input-output-hk/cardano-node/7f00e3ea5a61609e19eeeee4af35241571efdf5c";
-      # inputs.nixpkgs.follows = "nixpkgs";
     };
     node-process = {
       url = "github:input-output-hk/cardano-node";
-      inputs.nixpkgs.follows = "nixpkgs";
+      flake = false;
     };
     ## This pin is to prevent workbench-produced geneses being regenerated each time the node is bumped.
     cardano-node-workbench = {

@@ -74,7 +74,11 @@ in
   ln -s ${node-measured.packages.x86_64-linux.cardano-node}/bin/cardano-node .
 
   command time -f %M -o $out/highwater \
-    ./cardano-node "''${args[@]}"
+    ./cardano-node "''${args[@]}" || true
+  test -f log.json || {
+    echo "FATAL: cardano-node did not create log.json"
+    exit 1
+  }
 
   pwd
   df -h
