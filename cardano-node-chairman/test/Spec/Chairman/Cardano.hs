@@ -1,4 +1,3 @@
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Spec.Chairman.Cardano
@@ -6,6 +5,7 @@ module Spec.Chairman.Cardano
   ) where
 
 import           Data.Function
+import           Data.Functor
 import           Data.Maybe
 import           Spec.Chairman.Chairman (chairmanOver)
 
@@ -23,6 +23,6 @@ hprop_chairman :: H.Property
 hprop_chairman = H.integration . H.runFinallies . H.workspace "chairman" $ \tempAbsPath' -> do
   conf <- H.mkConf tempAbsPath' Nothing
 
-  H.TestnetRuntime { H.allNodes } <- H.testnet H.defaultTestnetOptions conf
+  allNodes <- fmap H.nodeName . H.allNodes <$> H.testnet H.defaultTestnetOptions conf
 
   chairmanOver 120 50 conf allNodes
