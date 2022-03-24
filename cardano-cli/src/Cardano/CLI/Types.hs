@@ -9,8 +9,15 @@ module Cardano.CLI.Types
   , CBORObject (..)
   , CddlTx (..)
   , CertificateFile (..)
+  , CurrentKesPeriod (..)
   , EpochLeadershipSchedule (..)
   , GenesisFile (..)
+  , OpCertEndingKesPeriod (..)
+  , OpCertIntervalInformation (..)
+  , OpCertOnDiskCounter (..)
+  , OpCertNodeAndOnDiskCounterInformation (..)
+  , OpCertNodeStateCounter (..)
+  , OpCertStartingKesPeriod (..)
   , OutputFormat (..)
   , OutputSerialisation (..)
   , TxBuildOutputOptions(..)
@@ -21,6 +28,7 @@ module Cardano.CLI.Types
   , ScriptRedeemerOrFile
   , ScriptWitnessFiles (..)
   , ScriptDatumOrFile (..)
+  , SlotsTillKesKeyExpiry (..)
   , TransferDirection(..)
   , TxBodyFile (..)
   , TxOutAnyEra (..)
@@ -34,15 +42,18 @@ module Cardano.CLI.Types
   , RequiredSigner (..)
   ) where
 
-import           Cardano.Prelude
+import           Cardano.Prelude hiding (Word64)
 
-import           Data.Aeson (ToJSON (..), object, pairs, (.=))
+import           Data.Aeson (FromJSON (..), ToJSON (..), object, pairs, (.=))
 import qualified Data.Aeson as Aeson
 import qualified Data.Text as Text
+import           Data.Word (Word64)
 
 import qualified Cardano.Chain.Slotting as Byron
 
-import           Cardano.Api
+import           Cardano.Api (AddressAny, EpochNo, ExecutionUnits, Hash, InAnyCardanoEra,
+                   PaymentKey, ScriptData, SlotNo (SlotNo), Tx, Value, WitCtxMint, WitCtxStake,
+                   WitCtxTxIn)
 
 import qualified Cardano.Ledger.Crypto as Crypto
 
@@ -71,10 +82,85 @@ newtype CddlTx = CddlTx {unCddlTx :: InAnyCardanoEra Tx}
 newtype CertificateFile = CertificateFile { unCertificateFile :: FilePath }
                           deriving newtype (Eq, Show)
 
+newtype CurrentKesPeriod = CurrentKesPeriod { unCurrentKesPeriod :: Word64 } deriving (Eq, Show)
+
+instance ToJSON CurrentKesPeriod where
+  toJSON (CurrentKesPeriod k) = toJSON k
+
+instance FromJSON CurrentKesPeriod where
+  parseJSON v = CurrentKesPeriod <$> parseJSON v
+
 newtype GenesisFile = GenesisFile
   { unGenesisFile :: FilePath }
   deriving stock (Eq, Ord)
   deriving newtype (IsString, Show)
+
+data OpCertNodeAndOnDiskCounterInformation
+  = OpCertOnDiskCounterMoreThanOrEqualToNodeState
+      OpCertOnDiskCounter
+      OpCertNodeStateCounter
+  | OpCertOnDiskCounterBehindNodeState
+      OpCertOnDiskCounter
+      OpCertNodeStateCounter
+  | OpCertNoBlocksMintedYet
+      OpCertOnDiskCounter
+  deriving (Eq, Show)
+
+newtype OpCertOnDiskCounter = OpCertOnDiskCounter { unOpCertOnDiskCounter :: Word64 }
+                              deriving (Eq, Show)
+
+instance ToJSON OpCertOnDiskCounter where
+  toJSON (OpCertOnDiskCounter k) = toJSON k
+
+instance FromJSON OpCertOnDiskCounter where
+  parseJSON v = OpCertOnDiskCounter <$> parseJSON v
+
+newtype OpCertNodeStateCounter = OpCertNodeStateCounter { unOpCertNodeStateCounter :: Word64 }
+                                 deriving (Eq, Show)
+
+instance ToJSON OpCertNodeStateCounter where
+  toJSON (OpCertNodeStateCounter k) = toJSON k
+
+instance FromJSON OpCertNodeStateCounter where
+  parseJSON v = OpCertNodeStateCounter <$> parseJSON v
+
+newtype OpCertStartingKesPeriod = OpCertStartingKesPeriod { unOpCertStartingKesPeriod :: Word64 }
+                                  deriving (Eq, Show)
+
+instance ToJSON OpCertStartingKesPeriod where
+  toJSON (OpCertStartingKesPeriod k) = toJSON k
+
+instance FromJSON OpCertStartingKesPeriod where
+  parseJSON v = OpCertStartingKesPeriod <$> parseJSON v
+
+newtype OpCertEndingKesPeriod = OpCertEndingKesPeriod { unOpCertEndingKesPeriod :: Word64 }
+                                deriving (Eq, Show)
+
+instance ToJSON OpCertEndingKesPeriod where
+  toJSON (OpCertEndingKesPeriod k) = toJSON k
+
+instance FromJSON OpCertEndingKesPeriod where
+  parseJSON v = OpCertEndingKesPeriod <$> parseJSON v
+
+data OpCertIntervalInformation
+  = OpCertWithinInterval
+      OpCertStartingKesPeriod
+      OpCertEndingKesPeriod
+      CurrentKesPeriod
+      SlotsTillKesKeyExpiry
+  | OpCertStartingKesPeriodIsInTheFuture
+      OpCertStartingKesPeriod
+      OpCertEndingKesPeriod
+      CurrentKesPeriod
+  | OpCertExpired
+      OpCertStartingKesPeriod
+      OpCertEndingKesPeriod
+      CurrentKesPeriod
+  | OpCertSomeOtherError -- ^ Shouldn't be possible
+      OpCertStartingKesPeriod
+      OpCertEndingKesPeriod
+      CurrentKesPeriod
+  deriving (Eq, Show)
 
 instance FromJSON GenesisFile where
   parseJSON (Aeson.String genFp) = pure . GenesisFile $ Text.unpack genFp
@@ -205,6 +291,14 @@ data ScriptDatumOrFile witctx where
 
 deriving instance Show (ScriptDatumOrFile witctx)
 
+newtype SlotsTillKesKeyExpiry = SlotsTillKesKeyExpiry { unSlotsTillKesKeyExpiry :: SlotNo }
+                                deriving (Eq, Show)
+
+instance ToJSON SlotsTillKesKeyExpiry where
+  toJSON (SlotsTillKesKeyExpiry k) = toJSON k
+
+instance FromJSON SlotsTillKesKeyExpiry where
+  parseJSON v = SlotsTillKesKeyExpiry <$> parseJSON v
 
 -- | Determines the direction in which the MIR certificate will transfer ADA.
 data TransferDirection = TransferToReserves | TransferToTreasury

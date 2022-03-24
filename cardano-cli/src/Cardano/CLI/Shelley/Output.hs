@@ -1,6 +1,5 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE NamedFieldPuns #-}
 
 module Cardano.CLI.Shelley.Output
   ( PlutusScriptCostError
@@ -8,13 +7,14 @@ module Cardano.CLI.Shelley.Output
   , QueryTipLocalState(..)
   , QueryTipLocalStateOutput(..)
   , ScriptCostOutput (..)
+  , createOpCertIntervalInfo
   , renderScriptCosts
   ) where
 
+import           Prelude
+
 import           Cardano.Api
 import           Cardano.Api.Shelley
-import           Cardano.CLI.Shelley.Orphans ()
-import           Cardano.Ledger.Shelley.Scripts ()
 import           Cardano.Slotting.Time (SystemStart (..))
 import           Data.Aeson
 import qualified Data.Aeson.Key as Aeson
@@ -24,50 +24,120 @@ import qualified Data.Map.Strict as Map
 import           Data.Text (Text)
 import           Data.Time.Clock (UTCTime)
 import           Data.Word
-import           Prelude
+
+import           Cardano.CLI.Shelley.Orphans ()
+import           Cardano.CLI.Types
+import           Cardano.Ledger.Shelley.Scripts ()
 
 data QueryKesPeriodInfoOutput =
   QueryKesPeriodInfoOutput
-    { qKesInfoCurrentKESPeriod :: Word64
-    -- ^ Current KES period.
-    , qKesInfoStartKesInterval :: Word64
-    -- ^ Beginning of the Kes validity interval.
-    , qKesInfoStartEndInterval :: Word64
-    -- ^ End of the Kes validity interval.
-    , qKesInfoRemainingSlotsInPeriod :: Word64
-    -- ^ Remaining slots in current KESPeriod.
-    , qKesInfoKesKeyExpiry :: UTCTime
-    -- ^ Date of KES key expiry.
-    , qKesInfoNodeStateOperationalCertNo :: Word64
-    -- ^ The latest operational certificate number in the node's state
-    -- i.e how many times a new KES key has been generated.
-    , qKesInfoOnDiskOperationalCertNo :: Word64
-    -- ^ The on disk operational certificate number.
+    { qKesOpCertIntervalInformation :: OpCertIntervalInformation
+      -- | Date of KES key expiry.
+    , qKesInfoKesKeyExpiry :: Maybe UTCTime
+      -- | The latest operational certificate number in the node's state
+      -- i.e how many times a new KES key has been generated.
+    , qKesInfoNodeStateOperationalCertNo :: Maybe OpCertNodeStateCounter
+      -- | The on disk operational certificate number.
+    , qKesInfoOnDiskOperationalCertNo :: OpCertOnDiskCounter
+      -- | The maximum number of KES key evolutions permitted per KES period.
     , qKesInfoMaxKesKeyEvolutions :: Word64
-    -- ^ The maximum number of KES key evolutions permitted per KESPeriod.
     , qKesInfoSlotsPerKesPeriod :: Word64
-    }
+    } deriving (Eq, Show)
 
 instance ToJSON QueryKesPeriodInfoOutput where
-  toJSON QueryKesPeriodInfoOutput { qKesInfoCurrentKESPeriod
-                                  , qKesInfoStartKesInterval
-                                  , qKesInfoStartEndInterval
-                                  , qKesInfoRemainingSlotsInPeriod
-                                  , qKesInfoKesKeyExpiry
-                                  , qKesInfoNodeStateOperationalCertNo
-                                  , qKesInfoOnDiskOperationalCertNo
-                                  , qKesInfoMaxKesKeyEvolutions
-                                  , qKesInfoSlotsPerKesPeriod} =
-    object [ "qKesCurrentKesPeriod" .= qKesInfoCurrentKESPeriod
-           , "qKesStartKesInterval" .= qKesInfoStartKesInterval
-           , "qKesEndKesInterval" .= qKesInfoStartEndInterval
-           , "qKesRemainingSlotsInKesPeriod" .= qKesInfoRemainingSlotsInPeriod
-           , "qKesOnDiskOperationalCertificateNumber" .= qKesInfoOnDiskOperationalCertNo
-           , "qKesNodeStateOperationalCertificateNumber" .= qKesInfoNodeStateOperationalCertNo
-           , "qKesMaxKESEvolutions" .= qKesInfoMaxKesKeyEvolutions
-           , "qKesSlotsPerKesPeriod" .= qKesInfoSlotsPerKesPeriod
-           , "qKesKesKeyExpiry" .= qKesInfoKesKeyExpiry
+  toJSON (QueryKesPeriodInfoOutput opCertIntervalInfo
+                                   kesKeyExpiryTime
+                                   nodeStateOpCertNo
+                                   (OpCertOnDiskCounter onDiskOpCertNo)
+                                   maxKesKeyOps
+                                   slotsPerKesPeriod) = do
+    let (sKes, eKes, cKes, slotsTillExp) =
+          case opCertIntervalInfo of
+            OpCertWithinInterval startKes endKes currKes sUntilExp ->
+                     ( unOpCertStartingKesPeriod startKes
+                     , unOpCertEndingKesPeriod endKes
+                     , unCurrentKesPeriod currKes
+                     , Just sUntilExp
+                     )
+            OpCertStartingKesPeriodIsInTheFuture startKes endKes currKes ->
+                     ( unOpCertStartingKesPeriod startKes
+                     , unOpCertEndingKesPeriod endKes
+                     , unCurrentKesPeriod currKes
+                     , Nothing
+                     )
+            OpCertExpired startKes endKes currKes ->
+                     ( unOpCertStartingKesPeriod startKes
+                     , unOpCertEndingKesPeriod endKes
+                     , unCurrentKesPeriod currKes
+                     , Nothing
+                     )
+            OpCertSomeOtherError startKes endKes currKes ->
+                     ( unOpCertStartingKesPeriod startKes
+                     , unOpCertEndingKesPeriod endKes
+                     , unCurrentKesPeriod currKes
+                     , Nothing
+                     )
+
+    object [ "qKesCurrentKesPeriod" .= cKes
+           , "qKesStartKesInterval" .= sKes
+           , "qKesEndKesInterval" .= eKes
+           , "qKesRemainingSlotsInKesPeriod" .= slotsTillExp
+           , "qKesOnDiskOperationalCertificateNumber" .= onDiskOpCertNo
+           , "qKesNodeStateOperationalCertificateNumber" .=  nodeStateOpCertNo
+           , "qKesMaxKESEvolutions" .= maxKesKeyOps
+           , "qKesSlotsPerKesPeriod" .= slotsPerKesPeriod
+           , "qKesKesKeyExpiry" .= kesKeyExpiryTime
            ]
+
+instance FromJSON QueryKesPeriodInfoOutput where
+  parseJSON = withObject "QueryKesPeriodInfoOutput" $ \o -> do
+    currentKesPeriod <- o .: "qKesCurrentKesPeriod"
+    startKesInterval <- o .: "qKesStartKesInterval"
+    endKesInterval <- o .: "qKesEndKesInterval"
+    remainingSlotsInKesPeriod <- o .: "qKesRemainingSlotsInKesPeriod"
+    onDiskOperationalCertificateNumber <- o .: "qKesOnDiskOperationalCertificateNumber"
+    nodeStateOperationalCertificateNumber <- o .: "qKesNodeStateOperationalCertificateNumber"
+    maxKESEvolutions <- o .: "qKesMaxKESEvolutions"
+    slotsPerKesPeriod <- o .: "qKesSlotsPerKesPeriod"
+    kesKeyExpiry <- o .: "qKesKesKeyExpiry"
+    let opCertIntervalInfo = createOpCertIntervalInfo
+                               currentKesPeriod
+                               startKesInterval
+                               endKesInterval
+                               remainingSlotsInKesPeriod
+    return $  QueryKesPeriodInfoOutput
+         { qKesOpCertIntervalInformation = opCertIntervalInfo
+         , qKesInfoKesKeyExpiry = kesKeyExpiry
+         , qKesInfoNodeStateOperationalCertNo = nodeStateOperationalCertificateNumber
+         , qKesInfoOnDiskOperationalCertNo = onDiskOperationalCertificateNumber
+         , qKesInfoMaxKesKeyEvolutions = maxKESEvolutions
+         , qKesInfoSlotsPerKesPeriod = slotsPerKesPeriod
+         }
+
+
+createOpCertIntervalInfo
+  :: CurrentKesPeriod
+  -> OpCertStartingKesPeriod
+  -> OpCertEndingKesPeriod
+  -> Maybe SlotsTillKesKeyExpiry
+  -> OpCertIntervalInformation
+createOpCertIntervalInfo c@(CurrentKesPeriod cKesPeriod)
+                         s@(OpCertStartingKesPeriod oCertStart)
+                         e@(OpCertEndingKesPeriod oCertEnd)
+                         (Just tillExp)
+  | oCertStart <= cKesPeriod && cKesPeriod < oCertEnd =
+      OpCertWithinInterval s e c tillExp
+  | oCertStart > cKesPeriod = OpCertStartingKesPeriodIsInTheFuture s e c
+  | cKesPeriod >= oCertEnd = OpCertExpired s e c
+  | otherwise = OpCertSomeOtherError s e c
+createOpCertIntervalInfo c@(CurrentKesPeriod cKesPeriod)
+                         s@(OpCertStartingKesPeriod oCertStart)
+                         e@(OpCertEndingKesPeriod oCertEnd)
+                         Nothing
+  | oCertStart > cKesPeriod = OpCertStartingKesPeriodIsInTheFuture s e c
+  | cKesPeriod >= oCertEnd = OpCertExpired s e c
+  | otherwise = OpCertSomeOtherError s e c
+
 
 data QueryTipLocalState mode = QueryTipLocalState
   { era :: AnyCardanoEra
