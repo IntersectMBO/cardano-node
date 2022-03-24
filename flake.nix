@@ -349,7 +349,7 @@
       hydraJobs =
         let
           jobs = lib.foldl' lib.mergeAttrs { } (lib.attrValues flake.systemHydraJobs);
-          nonRequiredPaths = map lib.hasPrefix [ ];
+          nonRequiredPaths = map lib.hasPrefix [ "macos." ];
         in
         jobs // (with self.legacyPackages.${defaultSystem}; rec {
           cardano-deployment = cardanoLib.mkConfigHtml { inherit (cardanoLib.environments) mainnet testnet; };
