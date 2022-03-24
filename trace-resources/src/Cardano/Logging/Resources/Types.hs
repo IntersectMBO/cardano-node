@@ -89,25 +89,31 @@ docResourceStats = Documented [
     ]
 
 instance LogFormatting ResourceStats where
-    forHuman rs = "Resources: CpuTicks " <> (pack . show) (rCentiCpu rs)
-                  <> ", Resident " <> (pack . show) (rRSS rs)
-                  <> ", GcLiveBytes " <> (pack . show) (rLive rs)
-                  <> ", GcMajorNum " <> (pack . show) (rGcsMajor rs)
-                  <> ", GcMinorNum " <> (pack . show) (rGcsMinor rs)
-                  <> ", Gcticks " <> (pack . show) (rCentiGC rs)
-                  <> ", Mutticks " <> (pack . show) (rCentiMut rs)
-                  <> ", Threads " <> (pack . show) (rThreads rs)
+    forHuman rs = "Resources:"
+                  <>  " Cpu Ticks "            <> (pack . show) (rCentiCpu rs)
+                  <> ", GC centiseconds "      <> (pack . show) (rCentiGC rs)
+                  <> ", Mutator centiseconds " <> (pack . show) (rCentiMut rs)
+                  <> ", GCs major "            <> (pack . show) (rGcsMajor rs)
+                  <> ", GCs minor "            <> (pack . show) (rGcsMinor rs)
+                  <> ", Allocated bytes "      <> (pack . show) (rAlloc rs)
+                  <>" , GC live bytes "        <> (pack . show) (rLive rs)
+                  <> ", RTS heap "             <> (pack . show) (rHeap rs)
+                  <> ", RSS "                  <> (pack . show) (rRSS rs)
+                  <> ", Threads "              <> (pack . show) (rThreads rs)
                   <> "."
 
     forMachine _dtal rs = mkObject
       [ "kind"          .= String "ResourceStats"
-      , "Cputicks"      .= Number (fromIntegral $ rCentiCpu rs)
-      , "Resident"      .= Number (fromIntegral $ rRSS rs)
-      , "GcLiveBytes"   .= Number (fromIntegral $ rLive rs)
-      , "GcMajorNum"    .= Number (fromIntegral $ rGcsMajor rs)
-      , "GcMinorNum"    .= Number (fromIntegral $ rGcsMinor rs)
-      , "Gcticks"       .= Number (fromIntegral $ rCentiGC rs)
-      , "Mutticks"      .= Number (fromIntegral $ rCentiMut rs)
+      , "CentiCpu"      .= Number (fromIntegral $ rCentiCpu rs)
+      , "CentiGC"       .= Number (fromIntegral $ rCentiGC rs)
+      , "CentiMut"      .= Number (fromIntegral $ rCentiMut rs)
+      , "GcsMajor"      .= Number (fromIntegral $ rGcsMajor rs)
+      , "GcsMinor"      .= Number (fromIntegral $ rGcsMinor rs)
+      , "Alloc"         .= Number (fromIntegral $ rAlloc rs)
+      , "Live"          .= Number (fromIntegral $ rLive rs)
+      , "Heap"          .= Number (fromIntegral $ rHeap rs)
+      , "RSS"           .= Number (fromIntegral $ rRSS rs)
+      , "CentiBlkIO"    .= Number (fromIntegral $ rCentiBlkIO rs)
       , "Threads"       .= Number (fromIntegral $ rThreads rs)
       ]
 
