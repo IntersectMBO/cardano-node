@@ -52,11 +52,21 @@
     cardano-mainnet-mirror.url = "github:input-output-hk/cardano-mainnet-mirror/nix";
   };
 
-  outputs = { self, nixpkgs, hostNixpkgs, utils, haskellNix, iohkNix
-            , plutus-apps
-            , cardano-mainnet-mirror
-            , node-snapshot, node-measured, node-process, cardano-node-workbench
-            , ... }@input:
+  outputs =
+    { self
+    , nixpkgs
+    , hostNixpkgs
+    , utils
+    , haskellNix
+    , iohkNix
+    , plutus-apps
+    , cardano-mainnet-mirror
+    , node-snapshot
+    , node-measured
+    , node-process
+    , cardano-node-workbench
+    , ...
+    }@input:
     let
       inherit (nixpkgs) lib;
       inherit (lib) head systems mapAttrs recursiveUpdate mkDefault
@@ -88,11 +98,12 @@
         })
         (import ./nix/pkgs.nix)
         (import ./nix/workbench/membench-overlay.nix
-          { inherit
-            lib
-            input
-            cardano-mainnet-mirror
-            node-snapshot node-measured node-process;
+          {
+            inherit
+              lib
+              input
+              cardano-mainnet-mirror
+              node-snapshot node-measured node-process;
             customConfig = customConfig.membench;
           })
         self.overlay
@@ -132,7 +143,7 @@
                   (name: { configureFlags = [ "--ghc-option=-eventlog" ]; });
               }];
             };
-          inherit ((import plutus-apps  {
+          inherit ((import plutus-apps {
             inherit (project.pkgs) system;
           }).plutus-apps.haskell.packages.plutus-example.components.exes) plutus-example;
           pinned-workbench =
@@ -245,25 +256,29 @@
             exes
             # Linux only packages:
             // optionalAttrs (system == "x86_64-linux") rec {
-            "dockerImage/node" = pkgs.dockerImage;
-            "dockerImage/submit-api" = pkgs.submitApiDockerImage;
-            ## TODO: drop external membench, once we bump 'node-snapshot'
-            # snapshot = membench.outputs.packages.x86_64-linux.snapshot;
-            membenches = pkgs.membench-batch-report;
-            workbench-smoke-test =
-              (pkgs.supervisord-workbench-for-profile
-                { inherit supervisord-workbench;
-                  profileName = "smoke-alzo"; }
-              ).profile-run { trace = true; };
-            workbench-ci-test =
-              (pkgs.supervisord-workbench-for-profile
-                { inherit supervisord-workbench;
-                  profileName = "k6-600slots-1000kU-1000kD-64kbs-10tps-fixed-loaded-alzo"; }
-              ).profile-run {};
-            workbench-smoke-analysis = workbench-smoke-test.analysis;
-            workbench-ci-analysis    = workbench-ci-test.analysis;
-            all-profiles-json = pkgs.all-profiles-json;
-          }
+              "dockerImage/node" = pkgs.dockerImage;
+              "dockerImage/submit-api" = pkgs.submitApiDockerImage;
+              ## TODO: drop external membench, once we bump 'node-snapshot'
+              # snapshot = membench.outputs.packages.x86_64-linux.snapshot;
+              membenches = pkgs.membench-batch-report;
+              workbench-smoke-test =
+                (pkgs.supervisord-workbench-for-profile
+                  {
+                    inherit supervisord-workbench;
+                    profileName = "smoke-alzo";
+                  }
+                ).profile-run { trace = true; };
+              workbench-ci-test =
+                (pkgs.supervisord-workbench-for-profile
+                  {
+                    inherit supervisord-workbench;
+                    profileName = "k6-600slots-1000kU-1000kD-64kbs-10tps-fixed-loaded-alzo";
+                  }
+                ).profile-run { };
+              workbench-smoke-analysis = workbench-smoke-test.analysis;
+              workbench-ci-analysis = workbench-ci-test.analysis;
+              all-profiles-json = pkgs.all-profiles-json;
+            }
             # Add checks to be able to build them individually
             // (prefixNamesWith "checks/" checks);
 
