@@ -38,6 +38,7 @@ module Gen.Cardano.Api.Typed
   , genOperationalCertificateIssueCounter
   , genShelleyWitness
   , genSigningKey
+  , genSlotNo
   , genStakeAddress
   , genTx
   , genTxBody

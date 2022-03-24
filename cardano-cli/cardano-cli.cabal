@@ -184,6 +184,7 @@ test-suite cardano-cli-test
                       , hedgehog-extras
                       , parsec
                       , text
+                      , time
                       , transformers
                       , yaml
 
