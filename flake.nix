@@ -378,8 +378,6 @@
         }
       );
 
-    in
-    builtins.removeAttrs flake [ "systemHydraJobs" ] // {
       hydraJobs =
         let
           jobs = lib.foldl' lib.mergeAttrs { } (lib.attrValues flake.systemHydraJobs);
@@ -403,6 +401,24 @@
             ];
           };
         });
+
+      hydraJobsPr =
+        let
+          nonPrJobs = map lib.hasPrefix [
+            "linux.native.workbench-ci-analysis"
+            "linux.native.workbench-ci-test"
+          ];
+        in
+        (lib.mapAttrsRecursiveCond (v: !(lib.isDerivation v))
+          (path: value:
+            let stringPath = lib.concatStringsSep "." path; in if lib.isAttrs value && (lib.any (p: p stringPath) nonPrJobs) then { } else value)
+          hydraJobs);
+
+    in
+    builtins.removeAttrs flake [ "systemHydraJobs" ] // {
+
+      inherit hydraJobs hydraJobsPr;
+
       overlay = final: prev: {
         cardanoNodeProject = flake.project.${final.system};
         cardanoNodePackages = mkCardanoNodePackages final.cardanoNodeProject;
