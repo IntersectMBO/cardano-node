@@ -9,14 +9,14 @@
 self: super: {
   ## Do not let this overlay escape -- exposure to other flakes will break down due to inputs being inherited.
   ## 0. Chain
-  mainnet-chain = cardano-mainnet-mirror.defaultPackage.x86_64-linux;
+  mainnet-chain = cardano-mainnet-mirror.defaultPackage.${self.system};
 
   # TODO, fix this
   #db-analyser = ouroboros-network-snapshot.haskellPackages.ouroboros-consensus-cardano.components.exes.db-analyser;
 
   ## 1. Ledger snapshot
   inherit node-snapshot;
-  db-analyser = node-snapshot.packages.x86_64-linux.db-analyser;
+  db-analyser = node-snapshot.packages.${self.system}.db-analyser;
   snapshot = self.callPackage ./snapshot.nix
     { chain = self.mainnet-chain;
       inherit (customConfig) snapshotSlot finalChunkNo shelleyGenesisHash;

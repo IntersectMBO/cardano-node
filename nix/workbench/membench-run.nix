@@ -1,4 +1,4 @@
-{ runCommand, lib
+{ runCommand, system, lib
 , jq, yq, strace, util-linux, e2fsprogs, gnugrep, procps, time, hexdump
 ## Code
 , input, node-snapshot, node-measured
@@ -83,7 +83,7 @@ in
        )
 
   # so the node wont get GC'd, and you could confirm the source it came from
-  ln -s ${node-measured.packages.x86_64-linux.cardano-node}/bin/cardano-node .
+  ln -s ${node-measured.packages.${system}.cardano-node}/bin/cardano-node .
 
   command time -f %M -o $out/highwater \
     ./cardano-node "''${args[@]}" ${if legacyTracing
