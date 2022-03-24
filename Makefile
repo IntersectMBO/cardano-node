@@ -73,6 +73,8 @@ show-profile: ## NAME=profile-name
 ps: list-profiles
 bump-cardano-node-workbench: ## Update the cardano-node-workbench flake input
 	nix flake lock --update-input cardano-node-workbench
+bump-node-measured: ## Update the node-measured flake input
+	nix flake lock --update-input node-measured
 bump-cardano-deployment: ## Sync the flake.lock to the CI check
 	nix run nixpkgs#nixUnstable -- build .#hydraJobs.cardano-deployment
 test-membench:

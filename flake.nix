@@ -88,6 +88,7 @@
         (import ./nix/pkgs.nix)
         (import ./nix/workbench/membench-overlay.nix
           { inherit
+            lib
             input
             cardano-mainnet-mirror
             node-snapshot node-measured node-process;
@@ -134,7 +135,7 @@
             inherit (project.pkgs) system;
           }).plutus-apps.haskell.packages.plutus-example.components.exes) plutus-example;
           pinned-workbench =
-            (import cardano-node-workbench {}).workbench.x86_64-linux;
+            (import cardano-node-workbench { inherit (project.pkgs) system; }).workbench.x86_64-linux;
           hsPkgsWithPassthru = lib.mapAttrsRecursiveCond (v: !(lib.isDerivation v))
             (path: value:
               if (lib.isAttrs value) then

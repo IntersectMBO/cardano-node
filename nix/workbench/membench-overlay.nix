@@ -4,6 +4,7 @@
 , node-measured
 , node-process
 , customConfig
+, lib
 }:
 self: super: {
   ## Do not let this overlay escape -- exposure to other flakes will break down due to inputs being inherited.

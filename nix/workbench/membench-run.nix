@@ -16,7 +16,7 @@ let
   topology = { Producers = []; };
   topologyPath = builtins.toFile "topology.json" (builtins.toJSON topology);
   inVM = false;
-  ident = "node-${input.node-measured.rev}${suffix}-iter${toString currentIteration}";
+  ident = "node-${input.node-measured.rev or "000dirtytree000dirtytree000dirtytree0000"}${suffix}-iter${toString currentIteration}";
 in
   runCommand "membench-run-${ident}" {
     buildInputs = [ node-measured hexdump jq strace util-linux procps time yq ];
@@ -60,6 +60,7 @@ in
             .defaultScribes + [ [ "FileSK", "log.json" ] ]
         | .options.mapBackends =
             { "cardano.node.resources": [ "KatipBK" ] }
+        | delpaths([["options","mapSubtrace"]])
         ' ${node-measured}/configuration/cardano/mainnet-config.json > config.json
       ''
     else
@@ -98,7 +99,7 @@ in
   df -h
   free -m
 
-  egrep 'cardano\.node\.resources|ReplayFromSnapshot|ReplayedBlock|will terminate|Ringing the node shutdown|TookSnapshot' log.json > $out/summary.json
+  egrep '[Cc]ardano\.[Nn]ode\.[Rr]esources|ReplayFromSnapshot|ReplayedBlock|will terminate|Ringing the node shutdown|TookSnapshot' log.json > $out/summary.json
 
   mv -vi log*json config.json $out/
 
