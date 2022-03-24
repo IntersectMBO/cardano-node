@@ -39,6 +39,7 @@ library
                       , cardano-api
                       , cardano-cli
                       , cardano-node
+                      , cardano-slotting
                       , containers
                       , directory
                       , exceptions
@@ -110,9 +111,9 @@ test-suite cardano-testnet-tests
 
   build-depends:        cardano-testnet
                       , directory
+                      , filepath
                       , hedgehog
                       , hedgehog-extras
-                      , filepath
                       , process
                       , tasty
                       , tasty-expected-failure
@@ -126,8 +127,13 @@ test-suite cardano-testnet-tests
                         -- Spec.Plutus.Direct.TxInLockingPlutus
                         -- Spec.Plutus.Script.TxInLockingPlutus
                         -- Spec.Plutus.SubmitApi.TxInLockingPlutus
-                        Spec.Shutdown
+                        Properties.Cli.KesPeriodInfo
+
+                        Spec.Cli.KesPeriodInfo
+
+                        Spec.Node.Shutdown
                         Spec.ShutdownOnSlotSynced
+
                         Test.Util
 
   ghc-options:          -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
