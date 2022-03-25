@@ -5,6 +5,7 @@ module Cardano.Tracer.Test.Logs.Tests
   ) where
 
 import           Control.Concurrent.Async (withAsync)
+import           Control.Monad (forM)
 import           Data.List.Extra (notNull)
 import qualified Data.List.NonEmpty as NE
 import           Test.Tasty
@@ -12,7 +13,6 @@ import           Test.Tasty.QuickCheck
 import           System.Directory
 import           System.Directory.Extra
 import           System.FilePath
-import           System.Info.Extra
 import           System.Time.Extra
 
 import           Cardano.Tracer.Configuration
@@ -48,33 +48,21 @@ propLogs format rootDir localSock = do
     True ->
       -- ... and contains one node's subdir...
       listDirectories rootDir >>= \case
-        [] ->
-          if isWindows
-            then return . property $ True -- TODO: fix it later.
-            else false "root dir is empty"
+        [] -> false "root dir is empty"
         (subDir:_) -> do
           -- ... with *.log-files inside...
           let pathToSubDir = rootDir </> subDir
           listFiles pathToSubDir >>= \case
-            [] ->
-              if isWindows
-                then return . property $ True -- TODO: fix it later.
-                else false "subdir is empty"
+            [] -> false "subdir is empty"
             logsAndSymLink ->
               case filter (isItLog format) logsAndSymLink of
-                [] ->
-                  if isWindows
-                    then return . property $ True -- TODO: fix it later.
-                    else false "subdir doesn't contain expected logs"
-                [_oneLog] ->
-                  if isWindows
-                    then return . property $ True -- TODO: fix it later.
-                    else false "there is still 1 single log, no rotation"
-                _logs -> return $ property True
+                []        -> false "subdir doesn't contain expected logs"
+                [_oneLog] -> false "there is still 1 single log, no rotation"
+                _logs     -> return $ property True
  where
   config root p = TracerConfig
     { networkMagic   = 764824073
-    , network        = AcceptAt (LocalSocket p) -- ConnectTo $ NE.fromList [LocalSocket p]
+    , network        = AcceptAt (LocalSocket p)
     , loRequestNum   = Just 1
     , ekgRequestFreq = Just 1.0
     , hasEKG         = Nothing
@@ -149,16 +137,7 @@ checkMultiResults rootDir =
     True ->
       -- ... and contains two nodes' subdirs...
       listDirectories rootDir >>= \case
-        [] ->
-          if isWindows
-            then return . property $ True -- TODO: fix it later.
-            else false "root dir is empty"
-        [subDir1, subDir2] -> do
-          -- ... with *.log-files inside...
-          subDir1list <- listFiles $ rootDir </> subDir1
-          subDir2list <- listFiles $ rootDir </> subDir2
-          return . property $ notNull subDir1list && notNull subDir2list
-        _ ->
-          if isWindows
-            then return . property $ True -- TODO: fix it later.
-            else false "root dir contains not 2 subdirs"
+        [] -> false "root dir is empty"
+        subdirs -> do
+          areDirsFull <- forM subdirs $ \sd -> notNull <$> listFiles (rootDir </> sd)
+          return . property $ all (True ==) areDirsFull
