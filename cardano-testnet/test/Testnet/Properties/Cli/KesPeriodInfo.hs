@@ -1,4 +1,4 @@
-module Properties.Cli.KesPeriodInfo where
+module Testnet.Properties.Cli.KesPeriodInfo where
 
 import           Prelude
 
@@ -11,7 +11,7 @@ import           Cardano.CLI.Shelley.Run.Query
 import           Cardano.CLI.Types
 
 import           Hedgehog (success)
-import           Hedgehog.Extras.Test.Base (Integration, failMessage)
+import           Hedgehog.Extras.Test.Base (Integration, failMessage, note_)
 
 -- | This property checks that a given operational certificate has a valid specified KES starting period.
 prop_op_cert_valid_kes_period :: GHC.HasCallStack => FilePath -> QueryKesPeriodInfoOutput -> Integration ()
@@ -41,9 +41,12 @@ prop_node_minted_block nodeLogFp  = do
   -- TODO: Ideally we would parse the node's json logging file via the FromJSON LogObject
   -- instance. This will require all properties that depend on parsing the node's logs to
   -- only parse the JSON logs and not the plain text logs.
-  let allMintingLogs = filter (isInfixOf "TraceForgedBlock") $ lines logs
+  let allLines = lines logs
+      allMintingLogs = filter (isInfixOf "TraceForgedBlock") allLines
   if null allMintingLogs
-  then failMessage GHC.callStack $ "Log file: " <> nodeLogFp <> " had no logs indicating the relevant node has minted blocks."
+  then do
+    note_ $ "Number of log lines: " <> show (length  allLines)
+    failMessage GHC.callStack $ "Log file: " <> nodeLogFp <> " had no logs indicating the relevant node has minted blocks."
   else success
 
 

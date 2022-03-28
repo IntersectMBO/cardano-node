@@ -43,10 +43,11 @@ import qualified Test.Process as H
 import           Testnet.Cardano (TestnetOptions (..), TestnetRuntime (..), defaultTestnetOptions,
                    testnet)
 import qualified Testnet.Cardano as TC
+import           Testnet.Conf (ProjectBase (..), YamlFilePath (..))
 import qualified Testnet.Conf as H
 import           Testnet.Utils (waitUntilEpoch)
 
-import           Properties.Cli.KesPeriodInfo
+import           Testnet.Properties.Cli.KesPeriodInfo
 
 {-
 The aim is to test a Plutus certifying and rewarding script. Certifying in the sense of validating a certificate
@@ -63,8 +64,13 @@ isLinux = os == "linux"
 hprop_kes_period_info :: Property
 hprop_kes_period_info = H.integration . H.runFinallies . H.workspace "chairman" $ \tempAbsBasePath' -> do
   H.note_ SYS.os
-  projectBase <- H.note =<< H.noteIO . IO.canonicalizePath =<< H.getProjectBase
-  conf@H.Conf { H.tempBaseAbsPath, H.tempAbsPath } <- H.noteShowM $ H.mkConf tempAbsBasePath' Nothing
+  base <- H.note =<< H.evalIO . IO.canonicalizePath =<< H.getProjectBase
+  configurationTemplate
+    <- H.noteShow $ base </> "configuration/defaults/byron-mainnet/configuration.yaml"
+
+  conf@H.Conf { H.tempBaseAbsPath, H.tempAbsPath }
+    <- H.noteShowM $ H.mkConf (ProjectBase base) (YamlFilePath configurationTemplate)
+                              tempAbsBasePath' Nothing
 
   let fastTestnetOptions = defaultTestnetOptions
                              { epochLength = 500
@@ -86,7 +92,6 @@ hprop_kes_period_info = H.integration . H.runFinallies . H.workspace "chairman" 
         }
 
   -- First we note all the relevant files
-  _base <- H.note projectBase
   work <- H.note tempAbsPath
 
   -- We get our UTxOs from here

@@ -105,7 +105,7 @@ instance FromJSON QueryKesPeriodInfoOutput where
                                startKesInterval
                                endKesInterval
                                remainingSlotsInKesPeriod
-    return $  QueryKesPeriodInfoOutput
+    return $ QueryKesPeriodInfoOutput
          { qKesOpCertIntervalInformation = opCertIntervalInfo
          , qKesInfoKesKeyExpiry = kesKeyExpiry
          , qKesInfoNodeStateOperationalCertNo = nodeStateOperationalCertificateNumber

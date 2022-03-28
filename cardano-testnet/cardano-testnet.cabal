@@ -132,7 +132,7 @@ test-suite cardano-testnet-tests
                         -- Spec.Plutus.Direct.TxInLockingPlutus
                         -- Spec.Plutus.Script.TxInLockingPlutus
                         -- Spec.Plutus.SubmitApi.TxInLockingPlutus
-                        Properties.Cli.KesPeriodInfo
+                        Testnet.Properties.Cli.KesPeriodInfo
 
                         Spec.Cli.KesPeriodInfo
 

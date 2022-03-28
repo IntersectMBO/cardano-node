@@ -40,7 +40,9 @@ tests = do
         -- There is a blocking call on Windows that prevents graceful shutdown and we currently aren't testing the shutdown IPC flag.
         H.ignoreOnWindows "Shutdown" Spec.Node.Shutdown.hprop_shutdown
       , H.ignoreOnWindows "ShutdownOnSlotSynced" Spec.ShutdownOnSlotSynced.hprop_shutdownOnSlotSynced
-      , H.testProperty "kes-period-info" hprop_kes_period_info
+      -- Ignored on Windows due to <stdout>: commitBuffer: invalid argument (invalid character)
+      -- as a result of the kes-period-info output to stdout.
+      , H.ignoreOnWindows "kes-period-info" hprop_kes_period_info
       ]
     ]
 

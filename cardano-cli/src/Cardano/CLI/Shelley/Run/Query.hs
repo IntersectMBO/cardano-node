@@ -431,19 +431,15 @@ runQueryKesPeriodInfo (AnyConsensusModeParams cModeParams) network nodeOpCertFil
 
       -- Always render diagnostic information
       liftIO . putStrLn $ renderOpCertIntervalInformation nodeOpCertFile opCertIntervalInformation
-      liftIO $ renderOpCertNodeAndOnDiskCounterInformation nodeOpCertFile counterInformation
+      liftIO . putStrLn $ renderOpCertNodeAndOnDiskCounterInformation nodeOpCertFile counterInformation
 
       let qKesInfoOutput = createQueryKesPeriodInfoOutput opCertIntervalInformation counterInformation eInfo gParams
           kesPeriodInfoJSON = encodePretty qKesInfoOutput
-      case mOutFile of
-        Just (OutputFile oFp) -> do
-          liftIO $ LBS.putStrLn kesPeriodInfoJSON
-          handleIOExceptT (ShelleyQueryCmdWriteFileError . FileIOError oFp)
-            $ LBS.writeFile oFp kesPeriodInfoJSON
-        Nothing -> liftIO $ LBS.putStrLn kesPeriodInfoJSON
 
-
-
+      liftIO $ LBS.putStrLn kesPeriodInfoJSON
+      forM_ mOutFile (\(OutputFile oFp) ->
+        handleIOExceptT (ShelleyQueryCmdWriteFileError . FileIOError oFp)
+          $ LBS.writeFile oFp kesPeriodInfoJSON)
     mode -> left . ShelleyQueryCmdUnsupportedMode $ AnyConsensusMode mode
  where
    currentKesPeriod :: ChainTip -> GenesisParameters -> CurrentKesPeriod
@@ -461,7 +457,7 @@ runQueryKesPeriodInfo (AnyConsensusModeParams cModeParams) network nodeOpCertFil
          maxKesEvo = fromIntegral $ protocolParamMaxKESEvolutions gParams
      in OpCertEndingKesPeriod $ start + maxKesEvo
 
-   -- See OCERT rule
+   -- See OCERT rule in Shelley Spec: https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/shelleyLedgerSpec/latest/download-by-type/doc-pdf/ledger-spec
    opCertIntervalInfo
      :: GenesisParameters
      -> ChainTip
@@ -499,18 +495,18 @@ runQueryKesPeriodInfo (AnyConsensusModeParams cModeParams) network nodeOpCertFil
           Left _ -> Nothing
           Right t -> Just t
 
-   renderOpCertNodeAndOnDiskCounterInformation :: FilePath -> OpCertNodeAndOnDiskCounterInformation -> IO ()
+   renderOpCertNodeAndOnDiskCounterInformation :: FilePath -> OpCertNodeAndOnDiskCounterInformation -> String
    renderOpCertNodeAndOnDiskCounterInformation opCertFile opCertCounterInfo =
      case opCertCounterInfo of
       OpCertOnDiskCounterMoreThanOrEqualToNodeState _ _ ->
-        putStrLn @String "✓ The operational certificate counter agrees with the node protocol state counter"
+        "✓ The operational certificate counter agrees with the node protocol state counter"
       OpCertOnDiskCounterBehindNodeState onDiskC nodeStateC ->
-        putStrLn $ "✗ The protocol state counter is greater than the counter in the operational certificate at: " <> opCertFile <> "\n" <>
-                   "On disk operational certificate counter: " <> show (unOpCertOnDiskCounter onDiskC) <> "\n" <>
-                   "Protocol state counter: " <> show (unOpCertNodeStateCounter nodeStateC)
+        "✗ The protocol state counter is greater than the counter in the operational certificate at: " <> opCertFile <> "\n" <>
+        "  On disk operational certificate counter: " <> show (unOpCertOnDiskCounter onDiskC) <> "\n" <>
+        "  Protocol state counter: " <> show (unOpCertNodeStateCounter nodeStateC)
       OpCertNoBlocksMintedYet (OpCertOnDiskCounter onDiskC) ->
-        putStrLn $ "✗ No blocks minted so far with the operational certificate at: " <> opCertFile <> "\n" <>
-                   "On disk operational certificate counter: " <> show onDiskC
+        "✗ No blocks minted so far with the operational certificate at: " <> opCertFile <> "\n" <>
+        "  On disk operational certificate counter: " <> show onDiskC
 
 
    createQueryKesPeriodInfoOutput
@@ -520,15 +516,15 @@ runQueryKesPeriodInfo (AnyConsensusModeParams cModeParams) network nodeOpCertFil
      -> GenesisParameters
      -> O.QueryKesPeriodInfoOutput
    createQueryKesPeriodInfoOutput oCertIntervalInfo oCertCounterInfo eInfo gParams  =
-     let (_s, e, _c, mStillExp) = case oCertIntervalInfo of
-                                  OpCertWithinInterval st end curr sTillExp -> (st, end, curr, Just sTillExp)
-                                  OpCertStartingKesPeriodIsInTheFuture st end curr -> (st, end, curr, Nothing)
-                                  OpCertExpired st end curr -> (st, end, curr, Nothing)
-                                  OpCertSomeOtherError st end curr -> (st, end, curr, Nothing)
+     let (e, mStillExp) = case oCertIntervalInfo of
+                            OpCertWithinInterval _ end _ sTillExp -> (end, Just sTillExp)
+                            OpCertStartingKesPeriodIsInTheFuture _ end _ -> (end, Nothing)
+                            OpCertExpired _ end _ -> (end, Nothing)
+                            OpCertSomeOtherError _ end _ -> (end, Nothing)
          (onDiskCounter, mNodeCounter) = case oCertCounterInfo of
-                                          OpCertOnDiskCounterMoreThanOrEqualToNodeState d n -> (d, Just n)
-                                          OpCertOnDiskCounterBehindNodeState d n -> (d, Just n)
-                                          OpCertNoBlocksMintedYet d -> (d, Nothing)
+                                           OpCertOnDiskCounterMoreThanOrEqualToNodeState d n -> (d, Just n)
+                                           OpCertOnDiskCounterBehindNodeState d n -> (d, Just n)
+                                           OpCertNoBlocksMintedYet d -> (d, Nothing)
 
      in O.QueryKesPeriodInfoOutput
         { O.qKesOpCertIntervalInformation = oCertIntervalInfo
@@ -567,23 +563,24 @@ runQueryKesPeriodInfo (AnyConsensusModeParams cModeParams) network nodeOpCertFil
 
 renderOpCertIntervalInformation :: FilePath -> OpCertIntervalInformation -> String
 renderOpCertIntervalInformation _ (OpCertWithinInterval _start _end _current _stillExp) =
-  "✓ Operational certificate's kes period is within the correct KES period interval"
+  "✓ Operational certificate's KES period is within the correct KES period interval"
 renderOpCertIntervalInformation opCertFile
-  (OpCertStartingKesPeriodIsInTheFuture (OpCertStartingKesPeriod start) (OpCertEndingKesPeriod end) (CurrentKesPeriod current)) =
+  (OpCertStartingKesPeriodIsInTheFuture (OpCertStartingKesPeriod start)
+    (OpCertEndingKesPeriod end) (CurrentKesPeriod current)) =
    "✗ Node operational certificate at: " <> opCertFile <> " has an incorrectly specified starting KES period. " <> "\n" <>
-   "Current KES period: " <> show current <> "\n" <>
-   "Operational certificate's starting KES period: " <> show start <> "\n" <>
-   "Operational certificate's expiry KES period: " <> show end
+   "  Current KES period: " <> show current <> "\n" <>
+   "  Operational certificate's starting KES period: " <> show start <> "\n" <>
+   "  Operational certificate's expiry KES period: " <> show end
 renderOpCertIntervalInformation opCertFile (OpCertExpired _ (OpCertEndingKesPeriod end) (CurrentKesPeriod current)) =
   "✗ Node operational certificate at: " <> opCertFile <> " has expired. " <> "\n" <>
-  "Current KES period: " <> show current <> "\n" <>
-  "Operational certificate's expiry KES period: " <> show end
+  "  Current KES period: " <> show current <> "\n" <>
+  "  Operational certificate's expiry KES period: " <> show end
 renderOpCertIntervalInformation opCertFile
   (OpCertSomeOtherError (OpCertStartingKesPeriod start) (OpCertEndingKesPeriod end) (CurrentKesPeriod current)) =
     "✗ An unknown error occurred with operational certificate at: " <> opCertFile <>
-    "Current KES period: " <> show current <> "\n" <>
-    "Operational certificate's starting KES period: " <> show start <> "\n" <>
-    "Operational certificate's expiry KES period: " <> show end
+    "  Current KES period: " <> show current <> "\n" <>
+    "  Operational certificate's starting KES period: " <> show start <> "\n" <>
+    "  Operational certificate's expiry KES period: " <> show end
 
 -- | Query the current and future parameters for a stake pool, including the retirement date.
 -- Any of these may be empty (in which case a null will be displayed).

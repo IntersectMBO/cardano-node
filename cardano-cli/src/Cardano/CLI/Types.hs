@@ -96,12 +96,24 @@ newtype GenesisFile = GenesisFile
   deriving newtype (IsString, Show)
 
 data OpCertNodeAndOnDiskCounterInformation
+  -- | The on disk operational certificate has a counter
+  -- that is larger than or equal to its corresponding
+  -- counter in the node state. The on disk operational
+  -- certificate therefore has a valid counter.
   = OpCertOnDiskCounterMoreThanOrEqualToNodeState
       OpCertOnDiskCounter
       OpCertNodeStateCounter
+  -- | The on disk operational certificate has a counter
+  -- that is less than the counter in the node state. The
+  -- on disk operational certificate is invalid in this case.
   | OpCertOnDiskCounterBehindNodeState
       OpCertOnDiskCounter
       OpCertNodeStateCounter
+  -- | The corresponding counter for operational certificate
+  -- was not found in the node state. This means the relevant
+  -- stake pool has not minted a block yet. When the stake pool
+  -- has minted a block the corresponding operational certificate's
+  -- counter will be present in the node state.
   | OpCertNoBlocksMintedYet
       OpCertOnDiskCounter
   deriving (Eq, Show)
