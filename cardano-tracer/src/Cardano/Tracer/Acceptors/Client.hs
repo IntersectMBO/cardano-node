@@ -40,6 +40,7 @@ import           Cardano.Tracer.Acceptors.Utils (prepareDataPointRequestor,
                    prepareMetricsStores, removeDisconnectedNode)
 import qualified Cardano.Tracer.Configuration as TC
 import           Cardano.Tracer.Handlers.Logs.TraceObjects (traceObjectsHandler)
+import           Cardano.Tracer.Handlers.RTView.Run (SavedTraceObjects)
 import           Cardano.Tracer.Types (AcceptedMetrics, ConnectedNodes, DataPointRequestors)
 import           Cardano.Tracer.Utils (connIdToNodeId)
 
@@ -52,11 +53,12 @@ runAcceptorsClient
      )
   -> ConnectedNodes
   -> AcceptedMetrics
+  -> SavedTraceObjects
   -> DataPointRequestors
   -> Lock
   -> IO ()
 runAcceptorsClient config p (ekgConfig, tfConfig, dpfConfig)
-                   connectedNodes acceptedMetrics dpRequestors currentLogLock =
+                   connectedNodes acceptedMetrics savedTO dpRequestors currentLogLock =
   withIOManager $ \iocp ->
     doConnectToForwarder
       (localSnocket iocp)
@@ -67,7 +69,7 @@ runAcceptorsClient config p (ekgConfig, tfConfig, dpfConfig)
       -- there is no mechanism to disable some of them.
       appInitiator
         [ (runEKGAcceptorInit ekgConfig connectedNodes acceptedMetrics errorHandler, 1)
-        , (runTraceObjectsAcceptorInit config tfConfig currentLogLock  errorHandler, 2)
+        , (runTraceObjectsAcceptorInit config tfConfig currentLogLock savedTO errorHandler, 2)
         , (runDataPointsAcceptorInit dpfConfig connectedNodes dpRequestors errorHandler, 3)
         ]
  where
@@ -122,13 +124,14 @@ runTraceObjectsAcceptorInit
   :: TC.TracerConfig
   -> TF.AcceptorConfiguration TraceObject
   -> Lock
+  -> SavedTraceObjects
   -> (ConnectionId LocalAddress -> IO ())
   -> ConnectionId LocalAddress
   -> RunMiniProtocol 'InitiatorMode LBS.ByteString IO () Void
-runTraceObjectsAcceptorInit config tfConfig currentLogLock errorHandler connId =
+runTraceObjectsAcceptorInit config tfConfig currentLogLock savedTO errorHandler connId =
   acceptTraceObjectsInit
     tfConfig
-    (traceObjectsHandler config (connIdToNodeId connId) currentLogLock)
+    (traceObjectsHandler config (connIdToNodeId connId) currentLogLock savedTO)
     (errorHandler connId)
 
 runDataPointsAcceptorInit

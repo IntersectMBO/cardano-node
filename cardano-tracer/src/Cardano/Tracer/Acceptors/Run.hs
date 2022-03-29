@@ -23,6 +23,7 @@ import qualified Trace.Forward.Protocol.TraceObject.Type as TOF
 import           Cardano.Tracer.Acceptors.Client (runAcceptorsClient)
 import           Cardano.Tracer.Acceptors.Server (runAcceptorsServer)
 import           Cardano.Tracer.Configuration
+import           Cardano.Tracer.Handlers.RTView.Run (SavedTraceObjects)
 import           Cardano.Tracer.Types (AcceptedMetrics, ConnectedNodes,
                    DataPointRequestors, ProtocolsBrake)
 import           Cardano.Tracer.Utils (runInLoop)
@@ -36,25 +37,26 @@ runAcceptors
   :: TracerConfig
   -> ConnectedNodes
   -> AcceptedMetrics
+  -> SavedTraceObjects
   -> DataPointRequestors
   -> ProtocolsBrake
   -> Lock
   -> IO ()
 runAcceptors c@TracerConfig{network, ekgRequestFreq, loRequestNum, verbosity}
-             connectedNodes acceptedMetrics dpRequestors stopIt currentLogLock =
+             connectedNodes acceptedMetrics savedTO dpRequestors stopIt currentLogLock =
   case network of
     AcceptAt (LocalSocket p) ->
       -- Run one server that accepts connections from the nodes.
       runInLoop
         (runAcceptorsServer c p (acceptorsConfigs p) connectedNodes
-                            acceptedMetrics dpRequestors currentLogLock)
+                            acceptedMetrics savedTO dpRequestors currentLogLock)
         verbosity p 1
     ConnectTo localSocks ->
       -- Run N clients that initiate connections to the nodes.
       forConcurrently_ (NE.nub localSocks) $ \(LocalSocket p) ->
         runInLoop
           (runAcceptorsClient c p (acceptorsConfigs p) connectedNodes
-                              acceptedMetrics dpRequestors currentLogLock)
+                              acceptedMetrics savedTO dpRequestors currentLogLock)
           verbosity p 1
  where
   acceptorsConfigs p =

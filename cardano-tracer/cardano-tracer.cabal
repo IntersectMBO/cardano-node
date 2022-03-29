@@ -45,6 +45,51 @@ library
                        Cardano.Tracer.Handlers.Metrics.Monitoring
                        Cardano.Tracer.Handlers.Metrics.Prometheus
                        Cardano.Tracer.Handlers.Metrics.Servers
+                       Cardano.Tracer.Handlers.Metrics.Utils
+
+                       Cardano.Tracer.Handlers.RTView.Run
+                       Cardano.Tracer.Handlers.RTView.State.Displayed
+                       Cardano.Tracer.Handlers.RTView.State.EraSettings
+                       Cardano.Tracer.Handlers.RTView.State.Errors
+                       Cardano.Tracer.Handlers.RTView.State.Historical
+                       Cardano.Tracer.Handlers.RTView.State.Last
+                       Cardano.Tracer.Handlers.RTView.State.Peers
+                       Cardano.Tracer.Handlers.RTView.State.TraceObjects
+                       Cardano.Tracer.Handlers.RTView.System
+                       Cardano.Tracer.Handlers.RTView.UI.CSS.Bulma
+                       Cardano.Tracer.Handlers.RTView.UI.CSS.Own
+                       Cardano.Tracer.Handlers.RTView.UI.HTML.Node.Column
+                       Cardano.Tracer.Handlers.RTView.UI.HTML.Node.EKG
+                       Cardano.Tracer.Handlers.RTView.UI.HTML.Node.Errors
+                       Cardano.Tracer.Handlers.RTView.UI.HTML.Node.Peers
+                       Cardano.Tracer.Handlers.RTView.UI.HTML.About
+                       Cardano.Tracer.Handlers.RTView.UI.HTML.Body
+                       Cardano.Tracer.Handlers.RTView.UI.HTML.Main
+                       Cardano.Tracer.Handlers.RTView.UI.HTML.NoNodes
+                       Cardano.Tracer.Handlers.RTView.UI.HTML.Notifications
+                       Cardano.Tracer.Handlers.RTView.UI.JS.ChartJS
+                       Cardano.Tracer.Handlers.RTView.UI.JS.Charts
+                       Cardano.Tracer.Handlers.RTView.UI.JS.Utils
+                       Cardano.Tracer.Handlers.RTView.UI.Img.Icons
+                       Cardano.Tracer.Handlers.RTView.UI.Charts
+                       Cardano.Tracer.Handlers.RTView.UI.Theme
+                       Cardano.Tracer.Handlers.RTView.UI.Types
+                       Cardano.Tracer.Handlers.RTView.UI.Utils
+                       Cardano.Tracer.Handlers.RTView.Update.Chain
+                       Cardano.Tracer.Handlers.RTView.Update.EKG
+                       Cardano.Tracer.Handlers.RTView.Update.EraSettings
+                       Cardano.Tracer.Handlers.RTView.Update.Errors
+                       Cardano.Tracer.Handlers.RTView.Update.Historical
+                       Cardano.Tracer.Handlers.RTView.Update.KES
+                       Cardano.Tracer.Handlers.RTView.Update.Leadership
+                       Cardano.Tracer.Handlers.RTView.Update.NodeInfo
+                       Cardano.Tracer.Handlers.RTView.Update.NodeState
+                       Cardano.Tracer.Handlers.RTView.Update.Nodes
+                       Cardano.Tracer.Handlers.RTView.Update.Peers
+                       Cardano.Tracer.Handlers.RTView.Update.Reload
+                       Cardano.Tracer.Handlers.RTView.Update.Resources
+                       Cardano.Tracer.Handlers.RTView.Update.Transactions
+                       Cardano.Tracer.Handlers.RTView.Update.Utils
 
                        Cardano.Tracer.CLI
                        Cardano.Tracer.Configuration
@@ -60,6 +105,8 @@ library
                        , blaze-html
                        , blaze-markup
                        , bytestring
+                       , cardano-git-rev
+                       , cardano-node
                        , cborg
                        , containers
                        , contra-tracer
@@ -76,6 +123,7 @@ library
                        , snap-core
                        , snap-server
                        , stm
+                       , string-qq
                        , text
                        , threepenny-gui
                        , time
@@ -86,6 +134,11 @@ library
 
   if os(linux)
     build-depends:     libsystemd-journal
+
+  if os(windows)
+    build-depends:     Win32
+  else
+    build-depends:     unix
 
 executable cardano-tracer
   import:              base, project-config
