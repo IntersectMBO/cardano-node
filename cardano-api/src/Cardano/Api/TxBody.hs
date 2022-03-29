@@ -1156,6 +1156,12 @@ data TxOutDatum ctx era where
                     -> ScriptData
                     -> TxOutDatum CtxTx era
 
+     -- | A transaction output that specifies the whole datum instead of the
+     -- datum hash.
+     TxOutInlineDatum :: InlineDatumSupportedInEra era
+                      -> ScriptData
+                      -> TxOutDatum ctx era
+
 deriving instance Eq   (TxOutDatum ctx era)
 deriving instance Show (TxOutDatum ctx era)
 
@@ -1169,6 +1175,17 @@ pattern TxOutDatum s d  <- TxOutDatum' s _ d
 {-# COMPLETE TxOutDatumNone, TxOutDatumHash, TxOutDatum' #-}
 {-# COMPLETE TxOutDatumNone, TxOutDatumHash, TxOutDatum  #-}
 
+
+data InlineDatumSupportedInEra era where
+  InlineDatumSupportedInBabbageEra :: InlineDatumSupportedInEra Babbage
+
+inlineDatumSupportedInEra :: CardanoEra era -> Maybe (InlineDatumSupportedInEra era)
+inlineDatumSupportedInEra ByronEra = Nothing
+inlineDatumSupportedInEra ShelleyEra = Nothing
+inlineDatumSupportedInEra AllegraEra = Nothing
+inlineDatumSupportedInEra MaryEra = Nothing
+inlineDatumSupportedInEra AlonzoEra = Nothing
+inlineDatumSupportedInEra BabbageEra = Just InlineDatumSupportedInBabbageEra
 
 parseHash :: SerialiseAsRawBytes (Hash a) => AsType (Hash a) -> Parsec.Parser (Hash a)
 parseHash asType = do
