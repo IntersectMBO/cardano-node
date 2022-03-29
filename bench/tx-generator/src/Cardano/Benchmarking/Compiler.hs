@@ -224,5 +224,3 @@ newWallet n = do
   name <- WalletName <$> newIdentifier n
   emit $ InitWallet name
   return name
-
-  

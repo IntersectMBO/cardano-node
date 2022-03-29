@@ -260,7 +260,6 @@ runBenchmarkInEra sourceWallet submitMode (ThreadName threadName) txCount tps er
   tracers  <- get BenchTracers
   networkId <- getUser TNetworkId
   fundKey <- getName $ KeyName "pass-partout" -- should be walletkey
-  targets  <- getUser TTargets
   (NumberOfInputsPerTx   numInputs) <- getUser TNumberOfInputsPerTx
   (NumberOfOutputsPerTx numOutputs) <- getUser TNumberOfOutputsPerTx
   fee <- getUser TFee
@@ -269,7 +268,6 @@ runBenchmarkInEra sourceWallet submitMode (ThreadName threadName) txCount tps er
   walletRefSrc <- getName sourceWallet
   let walletRefDst = walletRefSrc 
   metadata <- makeMetadata
-  connectClient <- getConnectClient
   let
     (Quantity minValue) = lovelaceToQuantity $ fromIntegral numOutputs * minValuePerUTxO + fee
 
@@ -303,11 +301,14 @@ runBenchmarkInEra sourceWallet submitMode (ThreadName threadName) txCount tps er
     walletScript :: FundSet.Target -> WalletScript era
     walletScript = benchmarkWalletScript walletRefSrc txGenerator txCount (const fundSource) inToOut toUTxO fundToStore
 
-    coreCall :: AsType era -> ExceptT TxGenError IO AsyncBenchmarkControl
-    coreCall eraProxy = GeneratorTx.walletBenchmark (btTxSubmit_ tracers) (btN2N_ tracers) connectClient
-                                               threadName targets tps LogErrors eraProxy txCount walletScript
   case submitMode of
     NodeToNode -> do
+      targets  <- getUser TTargets
+      connectClient <- getConnectClient
+      let
+        coreCall :: AsType era -> ExceptT TxGenError IO AsyncBenchmarkControl
+        coreCall eraProxy = GeneratorTx.walletBenchmark (btTxSubmit_ tracers) (btN2N_ tracers) connectClient
+                                               threadName targets tps LogErrors eraProxy txCount walletScript        
       ret <- liftIO $ runExceptT $ coreCall era
       case ret of
         Left err -> liftTxGenError err
@@ -327,7 +328,6 @@ runPlutusBenchmark ::
   -> ActionM ()
 runPlutusBenchmark sourceWallet submitMode scriptFile scriptBudget scriptData scriptRedeemer (ThreadName threadName) txCount tps = do
   tracers  <- get BenchTracers
-  targets  <- getUser TTargets
   (NumberOfInputsPerTx   numInputs) <- getUser TNumberOfInputsPerTx
   (NumberOfOutputsPerTx numOutputs) <- getUser TNumberOfOutputsPerTx
   networkId <- getUser TNetworkId
@@ -351,7 +351,6 @@ runPlutusBenchmark sourceWallet submitMode scriptFile scriptBudget scriptData sc
   baseFee <- getUser TFee
   _minValuePerUTxO <- getUser TMinValuePerUTxO -- TODO:Fix
   metadata <- makeMetadata
-  connectClient <- getConnectClient
 
   let costsPreRun = preExecuteScript protocolParameters script scriptData scriptRedeemer
   executionUnits <- case (scriptBudget, costsPreRun) of
@@ -430,6 +429,8 @@ runPlutusBenchmark sourceWallet submitMode scriptFile scriptBudget scriptData sc
 
   case submitMode of
     NodeToNode -> do
+      targets  <- getUser TTargets
+      connectClient <- getConnectClient
       ret <- liftIO $ runExceptT $ GeneratorTx.walletBenchmark (btTxSubmit_ tracers) (btN2N_ tracers) connectClient
                                threadName targets tps LogErrors AsAlonzoEra txCount walletScript
       case ret of

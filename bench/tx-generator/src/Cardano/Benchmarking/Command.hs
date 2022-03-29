@@ -22,11 +22,13 @@ import           Cardano.Benchmarking.Compiler (compileOptions)
 import           Cardano.Benchmarking.NixOptions (parseNixServiceOptions)
 import           Cardano.Benchmarking.Script (runScript, parseScriptFileAeson)
 import           Cardano.Benchmarking.Script.Aeson (prettyPrint)
+import           Cardano.Benchmarking.Script.Selftest (runSelftest)
 
 data Command
   = Json FilePath
   | JsonHL FilePath
   | Compile FilePath
+  | Selftest FilePath
 
 runCommand :: IO ()
 runCommand = withIOManager $ \iocp -> do
@@ -47,6 +49,7 @@ runCommand = withIOManager $ \iocp -> do
       case compileOptions o of
         Right script -> BSL.putStr $ prettyPrint script
         err -> handleError err
+    Selftest outFile -> runSelftest iocp (Just outFile) >>= handleError
   where
   handleError :: Show a => Either a b -> IO ()
   handleError = \case
@@ -55,7 +58,7 @@ runCommand = withIOManager $ \iocp -> do
 
 commandParser :: Parser Command
 commandParser
-  = subparser (jsonCmd <> jsonHLCmd <> compileCmd)
+  = subparser (jsonCmd <> jsonHLCmd <> compileCmd <> selfTestCmd)
  where
   jsonCmd = command "json"
     (Json <$> info (strArgument (metavar "FILEPATH"))
@@ -76,5 +79,12 @@ commandParser
       (  progDesc "tx-generator compile Options"
       <> fullDesc
       <> header "tx-generator - compile flat-options to benchmarking script"
+      )
+    )
+  selfTestCmd = command "selftest"
+    (Selftest <$> info (strArgument (metavar "FILEPATH"))
+      (  progDesc "tx-generator selftest"
+      <> fullDesc
+      <> header "tx-generator - run a built-in selftest write txs to a file"
       )
     )
