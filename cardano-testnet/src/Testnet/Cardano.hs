@@ -222,7 +222,6 @@ testnet testnetOptions H.Conf {..} = do
   void $ H.note OS.os
   currentTime <- H.noteShowIO DTC.getCurrentTime
   startTime <- H.noteShow $ DTC.addUTCTime startTimeOffsetSeconds currentTime
-  configurationTemplate <- H.noteShow $ base </> "configuration/defaults/byron-mainnet/configuration.yaml"
   configurationFile <- H.noteShow $ tempAbsPath </> "configuration.yaml"
   let numBftNodes = length (bftNodeOptions testnetOptions)
       bftNodesN = [1 .. numBftNodes]

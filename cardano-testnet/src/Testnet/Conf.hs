@@ -30,6 +30,7 @@ data Conf = Conf
   , logDir :: FilePath
   , base :: FilePath
   , socketDir :: FilePath
+  , configurationTemplate :: FilePath
   , testnetMagic :: Int
   } deriving (Eq, Show)
 
@@ -39,6 +40,7 @@ mkConf tempAbsPath maybeMagic = do
   tempBaseAbsPath <- H.noteShow $ FP.takeDirectory tempAbsPath
   tempRelPath <- H.noteShow $ FP.makeRelative tempBaseAbsPath tempAbsPath
   base <- H.noteShowM H.getProjectBase
+  configurationTemplate <- H.noteShow $ base </> "configuration/defaults/byron-mainnet/configuration.yaml"
   socketDir <- H.noteShow $ tempRelPath </> "socket"
   logDir <- H.noteTempFile tempAbsPath "logs"
 
