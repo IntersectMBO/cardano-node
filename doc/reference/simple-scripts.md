@@ -169,7 +169,7 @@ With this in mind, we can understand the interpretation of the new expressions:
 + RequireTimeBefore: has a slot number X.
 
   This expression evaluates to `true` if (and only if) the upper bound of the
-  transaction validity interval is a slot number Y, and X <= Y.
+  transaction validity interval is a slot number Y, and Y <= X.
 
   This condition guarantees that the actual slot number in which the transaction
   is included is (strictly) less than slot number X.
@@ -177,7 +177,7 @@ With this in mind, we can understand the interpretation of the new expressions:
 + RequireTimeAfter: has a slot number X.
 
   This expression evaluates to `true` if (and only if) the lower bound of the
-  transaction validity interval is a slot number Y, and Y <= X.
+  transaction validity interval is a slot number Y, and Y >= X.
 
   This condition guarantees that the actual slot number in which the transaction
   is included is greater than or equal to slot number X.
@@ -330,7 +330,7 @@ how to do this using the `cardano-cli`.
 
 ### Type "before"
 
-This corresponds to the "RequireTimeAfter" expression above. It specifies the
+This corresponds to the "RequireTimeBefore" expression above. It specifies the
 type "before" and the slot number.
 
 This example allows a signature from one key at any time, or before slot 3000
@@ -365,7 +365,7 @@ key is acceptable, but at slot 3000 and thereafter only one key is acceptable.
 ```
 
 Note that transactions spending from scripts that use type `before` must provide
-the lower bound for the transaction validity interval. See below for examples of
+the upper bound for the transaction validity interval. See below for examples of
 how to do this using the `cardano-cli`.
 
 
@@ -599,7 +599,6 @@ above this means >= 1000.
 
 ```bash
 cardano-cli transaction build-raw \
-    --invalid-hereafter 1000 \
     --invalid-before 1000\
     --fee 0 \
     --tx-in (txin of script address)
@@ -634,11 +633,9 @@ above this means <= 3000:
 
 ```bash
 cardano-cli transaction build-raw \
-    --invalid-hereafter 1000 \
     --invalid-hereafter 3000\
     --fee 0 \
     --tx-in (txin of script address)
     --tx-out yourspecifiedtxout \
     --out-file spendScriptTxBody
 ```
-
