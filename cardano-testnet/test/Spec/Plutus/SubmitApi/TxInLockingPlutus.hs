@@ -62,7 +62,7 @@ instance FromJSON Utxo where
 
 hprop_plutus :: Property
 hprop_plutus = Test.integration . HE.runFinallies . HE.workspace "chairman" $ \tempAbsBasePath' -> do
-  projectBase <- HE.note =<< HE.noteIO . IO.canonicalizePath =<< HE.getProjectBase
+  base <- HE.note =<< HE.noteIO . IO.canonicalizePath =<< HE.getProjectBase
   conf@TN.Conf { TN.tempBaseAbsPath, TN.tempAbsPath } <- HE.noteShowM $ TN.mkConf tempAbsBasePath' Nothing
 
   TN.TestnetRuntime { TN.configurationFile, TN.bftSprockets, TN.testnetMagic } <- TN.testnet TN.defaultTestnetOptions conf
@@ -79,7 +79,6 @@ hprop_plutus = Test.integration . HE.runFinallies . HE.workspace "chairman" $ \t
         , H.execConfigCwd = Last $ Just tempBaseAbsPath
         }
 
-  base <- HE.note projectBase
   work <- HE.note tempAbsPath
   utxoVKeyFile <- HE.note $ tempAbsPath </> "shelley/utxo-keys/utxo1.vkey"
   utxoSKeyFile <- HE.note $ tempAbsPath </> "shelley/utxo-keys/utxo1.skey"

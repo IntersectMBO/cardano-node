@@ -16,6 +16,7 @@ import qualified Control.Concurrent as IO
 import qualified Control.Concurrent.STM as STM
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Test.Base as H
+import qualified Hedgehog.Extras.Test.Process as H
 import qualified System.Console.ANSI as ANSI
 import qualified System.Exit as IO
 import qualified System.IO as IO
@@ -24,7 +25,9 @@ import qualified Testnet.Conf as H
 
 testnetProperty :: Maybe Int -> (H.Conf -> H.Integration ()) -> H.Property
 testnetProperty maybeTestnetMagic tn = H.integration . H.runFinallies . H.workspace "chairman" $ \tempAbsPath' -> do
-  conf <- H.mkConf tempAbsPath' maybeTestnetMagic
+  base <- H.note =<< H.noteIO . IO.canonicalizePath =<< H.getProjectBase
+  configurationTemplate <- H.noteShow $ base </> "configuration/defaults/byron-mainnet/configuration.yaml"
+  conf <- H.mkConf base configurationTemplate  tempAbsPath' maybeTestnetMagic
 
   -- Fork a thread to keep alive indefinitely any resources allocated by testnet.
   void . liftResourceT . resourceForkIO . forever . liftIO $ IO.threadDelay 10000000

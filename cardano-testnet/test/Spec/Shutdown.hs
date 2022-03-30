@@ -41,8 +41,10 @@ import qualified Testnet.Conf as H
 
 hprop_shutdown :: Property
 hprop_shutdown = H.integration . H.runFinallies . H.workspace "chairman" $ \tempAbsBasePath' -> do
-  projectBase <- H.note =<< H.noteIO . IO.canonicalizePath =<< H.getProjectBase
-  H.Conf { H.tempBaseAbsPath, H.tempAbsPath, H.logDir, H.socketDir } <- H.noteShowM $ H.mkConf tempAbsBasePath' Nothing
+  base <- H.note =<< H.noteIO . IO.canonicalizePath =<< H.getProjectBase
+  configurationTemplate <- H.noteShow $ base </> "configuration/defaults/byron-mainnet/configuration.yaml"
+  H.Conf { H.tempBaseAbsPath, H.tempAbsPath, H.logDir, H.socketDir } <- H.noteShowM $
+    H.mkConf base configurationTemplate tempAbsBasePath' Nothing
 
   [port] <- H.noteShowIO $ IO.allocateRandomPorts 1
 
@@ -64,8 +66,8 @@ hprop_shutdown = H.integration . H.runFinallies . H.workspace "chairman" $ \temp
   (mStdin, _mStdout, _mStderr, pHandle, _releaseKey) <- H.createProcess =<<
     ( H.procNode
       [ "run"
-      , "--config", projectBase </> "configuration/cardano/mainnet-config.json"
-      , "--topology", projectBase </> "configuration/cardano/mainnet-topology.json"
+      , "--config", base </> "configuration/cardano/mainnet-config.json"
+      , "--topology", base </> "configuration/cardano/mainnet-topology.json"
       , "--database-path", tempAbsPath </> "db"
       , "--socket-path", IO.sprocketArgumentName sprocket
       , "--host-addr", "127.0.0.1"
