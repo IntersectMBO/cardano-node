@@ -18,13 +18,6 @@
       url = "github:input-output-hk/flake-compat/fixes";
       flake = false;
     };
-    membench = {
-      url = "github:input-output-hk/cardano-memory-benchmark";
-      inputs.cardano-node-measured.follows = "/";
-      inputs.cardano-node-process.follows = "/";
-      inputs.cardano-node-snapshot.url = "github:input-output-hk/cardano-node/7f00e3ea5a61609e19eeeee4af35241571efdf5c";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
     plutus-apps = {
       url = "github:input-output-hk/plutus-apps";
       flake = false;
@@ -39,14 +32,41 @@
     # };
     customConfig.url = "github:input-output-hk/empty-flake";
 
-    ## This pin is to prevent workbench-produced geneses being regenerated each time the node is bumped.
-    cardano-node-workbench = {
-      url = "github:input-output-hk/cardano-node/44ac30fb04d02d41ba005ca5228db9b5e9b887d2";
+    node-measured = {
+      url = "github:input-output-hk/cardano-node";
+    };
+    node-snapshot = {
+      url = "github:input-output-hk/cardano-node/7f00e3ea5a61609e19eeeee4af35241571efdf5c";
+    };
+    node-process = {
+      url = "github:input-output-hk/cardano-node";
       flake = false;
     };
+    ## This pin is to prevent workbench-produced geneses being regenerated each time the node is bumped.
+    cardano-node-workbench = {
+      url = "github:input-output-hk/cardano-node/ed9932c52aaa535b71f72a5b4cc0cecb3344a5a3";
+      # This is to avoid circular import (TODO: remove this workbench pin entirely using materialization):
+      inputs.membench.url = "github:input-output-hk/empty-flake";
+    };
+
+    cardano-mainnet-mirror.url = "github:input-output-hk/cardano-mainnet-mirror/nix";
   };
 
-  outputs = { self, nixpkgs, hostNixpkgs, utils, haskellNix, iohkNix, membench, plutus-apps, cardano-node-workbench, ... }@input:
+  outputs =
+    { self
+    , nixpkgs
+    , hostNixpkgs
+    , utils
+    , haskellNix
+    , iohkNix
+    , plutus-apps
+    , cardano-mainnet-mirror
+    , node-snapshot
+    , node-measured
+    , node-process
+    , cardano-node-workbench
+    , ...
+    }@input:
     let
       inherit (nixpkgs) lib;
       inherit (lib) head systems mapAttrs recursiveUpdate mkDefault
@@ -77,6 +97,15 @@
             // import ./nix/svclib.nix { inherit (final) pkgs; };
         })
         (import ./nix/pkgs.nix)
+        (import ./nix/workbench/membench-overlay.nix
+          {
+            inherit
+              lib
+              input
+              cardano-mainnet-mirror
+              node-snapshot node-measured node-process;
+            customConfig = customConfig.membench;
+          })
         self.overlay
       ];
 
@@ -114,11 +143,11 @@
                   (name: { configureFlags = [ "--ghc-option=-eventlog" ]; });
               }];
             };
-          inherit ((import plutus-apps  {
+          inherit ((import plutus-apps {
             inherit (project.pkgs) system;
           }).plutus-apps.haskell.packages.plutus-example.components.exes) plutus-example;
           pinned-workbench =
-            (import cardano-node-workbench {}).workbench.x86_64-linux;
+            cardano-node-workbench.workbench.${project.pkgs.system};
           hsPkgsWithPassthru = lib.mapAttrsRecursiveCond (v: !(lib.isDerivation v))
             (path: value:
               if (lib.isAttrs value) then
@@ -227,24 +256,29 @@
             exes
             # Linux only packages:
             // optionalAttrs (system == "x86_64-linux") rec {
-            "dockerImage/node" = pkgs.dockerImage;
-            "dockerImage/submit-api" = pkgs.submitApiDockerImage;
-            membenches = membench.outputs.packages.x86_64-linux.batch-report;
-            snapshot = membench.outputs.packages.x86_64-linux.snapshot;
-            workbench-smoke-test =
-              (pkgs.supervisord-workbench-for-profile
-                { inherit supervisord-workbench;
-                  profileName = "smoke-alzo"; }
-              ).profile-run { trace = true; };
-            workbench-ci-test =
-              (pkgs.supervisord-workbench-for-profile
-                { inherit supervisord-workbench;
-                  profileName = "k6-600slots-1000kU-1000kD-64kbs-10tps-fixed-loaded-alzo"; }
-              ).profile-run {};
-            workbench-smoke-analysis = workbench-smoke-test.analysis;
-            workbench-ci-analysis    = workbench-ci-test.analysis;
-            all-profiles-json = pkgs.all-profiles-json;
-          }
+              "dockerImage/node" = pkgs.dockerImage;
+              "dockerImage/submit-api" = pkgs.submitApiDockerImage;
+              ## TODO: drop external membench, once we bump 'node-snapshot'
+              # snapshot = membench.outputs.packages.x86_64-linux.snapshot;
+              membenches = pkgs.membench-node-this-5.batch-report;
+              workbench-smoke-test =
+                (pkgs.supervisord-workbench-for-profile
+                  {
+                    inherit supervisord-workbench;
+                    profileName = "smoke-alzo";
+                  }
+                ).profile-run { trace = true; };
+              workbench-ci-test =
+                (pkgs.supervisord-workbench-for-profile
+                  {
+                    inherit supervisord-workbench;
+                    profileName = "k6-600slots-1000kU-1000kD-64kbs-10tps-fixed-loaded-alzo";
+                  }
+                ).profile-run { };
+              workbench-smoke-analysis = workbench-smoke-test.analysis;
+              workbench-ci-analysis = workbench-ci-test.analysis;
+              all-profiles-json = pkgs.all-profiles-json;
+            }
             # Add checks to be able to build them individually
             // (prefixNamesWith "checks/" checks);
 
@@ -344,8 +378,6 @@
         }
       );
 
-    in
-    builtins.removeAttrs flake [ "systemHydraJobs" ] // {
       hydraJobs =
         let
           jobs = lib.foldl' lib.mergeAttrs { } (lib.attrValues flake.systemHydraJobs);
@@ -369,10 +401,31 @@
             ];
           };
         });
+
+      hydraJobsPr =
+        let
+          nonPrJobs = map lib.hasPrefix [
+            "linux.native.workbench-ci-analysis"
+            "linux.native.workbench-ci-test"
+          ];
+        in
+        (lib.mapAttrsRecursiveCond (v: !(lib.isDerivation v))
+          (path: value:
+            let stringPath = lib.concatStringsSep "." path; in if lib.isAttrs value && (lib.any (p: p stringPath) nonPrJobs) then { } else value)
+          hydraJobs);
+
+    in
+    builtins.removeAttrs flake [ "systemHydraJobs" ] // {
+
+      inherit hydraJobs hydraJobsPr;
+
       overlay = final: prev: {
         cardanoNodeProject = flake.project.${final.system};
         cardanoNodePackages = mkCardanoNodePackages final.cardanoNodeProject;
         inherit (final.cardanoNodePackages) cardano-node cardano-cli cardano-submit-api bech32 plutus-example;
+
+        # TODO, fix this
+        #db-analyser = ouroboros-network-snapshot.haskellPackages.ouroboros-consensus-cardano.components.exes.db-analyser;
       };
       nixosModules = {
         cardano-node = { pkgs, lib, ... }: {
