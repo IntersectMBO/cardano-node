@@ -1,6 +1,5 @@
 { lib, bash, jq, zstd, runCommand
-, input
-, membench-run
+, membench-run, node-measured-rev
 , node-process
 , variantTable, nIterations ? 5
 }:
@@ -31,7 +30,7 @@ let
       (mapAttrs variantIterationsShell allVariants);
 
   nVariants = length (__attrNames variantTable);
-  batch-id  = "${input.node-measured.rev}-${toString nVariants}vars-${toString nIterations}runs";
+  batch-id  = "${node-measured-rev}-${toString nVariants}vars-${toString nIterations}runs";
 
 in runCommand "membench-${batch-id}" {
   requiredSystemFeatures = [ "benchmark" ];

@@ -1,7 +1,7 @@
 { runCommand, system, lib
 , jq, yq, strace, util-linux, e2fsprogs, gnugrep, procps, time, hexdump
 ## Code
-, input, node-snapshot, node-measured
+, input, node-snapshot, node-measured, node-measured-rev
 ## Parameters
 , snapshot
 , rtsflags, rtsMemSize
@@ -16,7 +16,7 @@ let
   topology = { Producers = []; };
   topologyPath = builtins.toFile "topology.json" (builtins.toJSON topology);
   inVM = false;
-  ident = "node-${input.node-measured.rev or "000dirtytree000dirtytree000dirtytree0000"}${suffix}-iter${toString currentIteration}";
+  ident = "node-${node-measured-rev}${suffix}-iter${toString currentIteration}";
 in
   runCommand "membench-run-${ident}" {
     buildInputs = [ node-measured hexdump jq strace util-linux procps time yq ];

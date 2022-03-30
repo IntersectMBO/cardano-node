@@ -10,11 +10,12 @@ $(warning DEPRECATED:  CLUSTER_PROFILE is deprecated, please use PROFILE)
 endif
 
 PROFILE ?= ${CLUSTER_PROFILE}
+REV     ?= master
 ARGS    ?=
 
 
 help: ## Print documentation
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
+	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
 stylish-haskell: ## Apply stylish-haskell on all *.hs files
 	@find . -type f -name "*.hs" -not -path '.git' -not -path '*.stack-work*' -print0 | xargs -0 stylish-haskell -i
@@ -77,12 +78,14 @@ bump-node-measured: ## Update the node-measured flake input
 	nix flake lock --update-input node-measured
 bump-cardano-deployment: ## Sync the flake.lock to the CI check
 	nix run nixpkgs#nixUnstable -- build .#hydraJobs.cardano-deployment
-test-membench:
-	nix build .#membench-test-report  --out-link result-test-report  --override-input node-measured git+file://$$(pwd)
-test-membench-pinned:
-	nix build .#membench-test-report  --out-link result-test-report
-ci-membench:
-	nix build .#membench-batch-report --out-link result-batch-report --override-input node-measured git+file://$$(pwd)
+membench-1:    ## Membench:  one iteration, current commit
+	nix build .#membench-node-this-1.batch-report      --out-link result-batch-1-report
+membench-1-at: ## Membench:  one iteration, set commit by:  make membench-1-at REV=[master]
+	nix build .#membench-node-measured-1.batch-report  --out-link result-batch-1-report --override-input node-measured github:input-output-hk/cardano-node/${REV}
+membench-5:    ## Membench:  5 iterations, current commit
+	nix build .#membench-node-this-5.batch-report      --out-link result-batch-5-report
+membench-5-at: ## Membench:  5 iterations, set commit by:  make membench-5-at REV=[master]
+	nix build .#membench-node-this-5.batch-report      --out-link result-batch-5-report --override-input node-measured github:input-output-hk/cardano-node/${REV}
 
 shell: ## Enter Nix shell, CI mode (workbench run from Nix store)
 	nix-shell --max-jobs 8 --cores 0 --show-trace --argstr profileName ${PROFILE} ${ARGS}

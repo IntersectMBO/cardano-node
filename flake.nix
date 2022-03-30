@@ -260,7 +260,7 @@
               "dockerImage/submit-api" = pkgs.submitApiDockerImage;
               ## TODO: drop external membench, once we bump 'node-snapshot'
               # snapshot = membench.outputs.packages.x86_64-linux.snapshot;
-              membenches = pkgs.membench-batch-report;
+              membenches = pkgs.membench-node-this-5.batch-report;
               workbench-smoke-test =
                 (pkgs.supervisord-workbench-for-profile
                   {
