@@ -78,9 +78,11 @@ bump-node-measured: ## Update the node-measured flake input
 bump-cardano-deployment: ## Sync the flake.lock to the CI check
 	nix run nixpkgs#nixUnstable -- build .#hydraJobs.cardano-deployment
 test-membench:
-	nix build .#membench-test-report --out-link result-test-report
+	nix build .#membench-test-report  --out-link result-test-report  --override-input node-measured git+file://$$(pwd)
+test-membench-pinned:
+	nix build .#membench-test-report  --out-link result-test-report
 ci-membench:
-	nix build .#membench-batch-report --out-link result-batch-report
+	nix build .#membench-batch-report --out-link result-batch-report --override-input node-measured git+file://$$(pwd)
 
 shell: ## Enter Nix shell, CI mode (workbench run from Nix store)
 	nix-shell --max-jobs 8 --cores 0 --show-trace --argstr profileName ${PROFILE} ${ARGS}
