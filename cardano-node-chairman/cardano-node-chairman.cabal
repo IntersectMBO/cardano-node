@@ -63,6 +63,7 @@ test-suite chairman-tests
   type:                 exitcode-stdio-1.0
 
   build-depends:        cardano-testnet
+                      , directory
                       , filepath
                       , hedgehog
                       , hedgehog-extras

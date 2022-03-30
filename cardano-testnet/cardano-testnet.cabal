@@ -78,6 +78,8 @@ executable cardano-testnet
   build-depends:        ansi-terminal
                       , cardano-git-rev
                       , cardano-testnet
+                      , directory
+                      , filepath
                       , hedgehog
                       , hedgehog-extras
                       , optparse-applicative-fork

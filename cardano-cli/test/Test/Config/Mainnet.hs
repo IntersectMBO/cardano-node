@@ -29,20 +29,20 @@ import qualified System.Directory as IO
 
 hprop_configMainnetHash :: Property
 hprop_configMainnetHash = H.propertyOnce $ do
-  projectBase <- H.note =<< H.evalIO . IO.canonicalizePath =<< H.getProjectBase
-  result <- H.evalIO $ runExceptT $ initialLedgerState $ projectBase </> "configuration/cardano/mainnet-config.json"
+  base <- H.note =<< H.evalIO . IO.canonicalizePath =<< H.getProjectBase
+  result <- H.evalIO $ runExceptT $ initialLedgerState $ base </> "configuration/cardano/mainnet-config.json"
   case result of
     Right (_, _) -> return ()
     Left e -> H.failWithCustom GHC.callStack Nothing (T.unpack (renderInitialLedgerStateError e))
 
 hprop_configMainnetYaml :: Property
 hprop_configMainnetYaml = H.propertyOnce $ do
-  projectBase <- H.note =<< H.evalIO . IO.canonicalizePath =<< H.getProjectBase
-  yamlResult <- H.evalIO . Y.decodeFileEither $ projectBase </> "configuration/cardano/mainnet-config.yaml"
+  base <- H.note =<< H.evalIO . IO.canonicalizePath =<< H.getProjectBase
+  yamlResult <- H.evalIO . Y.decodeFileEither $ base </> "configuration/cardano/mainnet-config.yaml"
   yaml :: J.Value <- case yamlResult of
     Right v -> return v
     Left e -> H.failWithCustom GHC.callStack Nothing (Y.prettyPrintParseException e)
-  jsonResult <- H.evalIO . J.eitherDecodeFileStrict $ projectBase </> "configuration/cardano/mainnet-config.json"
+  jsonResult <- H.evalIO . J.eitherDecodeFileStrict $ base </> "configuration/cardano/mainnet-config.json"
   json  :: J.Value <- case jsonResult of
     Right v -> return v
     Left e -> H.failWithCustom GHC.callStack Nothing (show e)

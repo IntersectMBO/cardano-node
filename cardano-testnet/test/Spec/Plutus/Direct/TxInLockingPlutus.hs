@@ -61,8 +61,9 @@ instance FromJSON Utxo where
 
 hprop_plutus :: Property
 hprop_plutus = H.integration . H.runFinallies . H.workspace "chairman" $ \tempAbsBasePath' -> do
-  projectBase <- H.note =<< H.noteIO . IO.canonicalizePath =<< H.getProjectBase
-  conf@H.Conf { H.tempBaseAbsPath, H.tempAbsPath } <- H.noteShowM $ H.mkConf tempAbsBasePath' Nothing
+  base <- H.note =<< H.noteIO . IO.canonicalizePath =<< H.getProjectBase
+  configurationTemplate <- H.noteShow $ base </> "configuration/defaults/byron-mainnet/configuration.yaml"
+  conf@H.Conf { H.tempBaseAbsPath, H.tempAbsPath } <- H.noteShowM $ H.mkConf base configurationTemplate tempAbsBasePath' Nothing
 
   H.TestnetRuntime { H.bftSprockets, H.testnetMagic } <- H.testnet H.defaultTestnetOptions conf
 
@@ -78,7 +79,6 @@ hprop_plutus = H.integration . H.runFinallies . H.workspace "chairman" $ \tempAb
         , H.execConfigCwd = Last $ Just tempBaseAbsPath
         }
 
-  base <- H.note projectBase
   work <- H.note tempAbsPath
   utxoVKeyFile <- H.note $ tempAbsPath </> "shelley/utxo-keys/utxo1.vkey"
   utxoSKeyFile <- H.note $ tempAbsPath </> "shelley/utxo-keys/utxo1.skey"

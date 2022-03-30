@@ -19,12 +19,14 @@ import           GHC.Num
 import           GHC.Stack (callStack)
 import           Hedgehog (Property, assert, (===))
 import           Prelude (fromIntegral, round)
+import           System.FilePath ((</>))
 import           Text.Read (readMaybe)
 import           Text.Show (Show (..))
 
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
 import qualified Hedgehog.Extras.Test.Process as H
+import qualified System.Directory as IO
 import qualified Test.Base as H
 import           Testnet.Cardano (TestnetNode (..), TestnetNodeOptions (TestnetNodeOptions),
                    TestnetOptions (..), TestnetRuntime (..), defaultTestnetNodeOptions,
@@ -35,7 +37,9 @@ import qualified Testnet.Conf as H
 hprop_shutdownOnSlotSynced :: Property
 hprop_shutdownOnSlotSynced = H.integration . H.runFinallies . H.workspace "chairman" $ \tempAbsBasePath' -> do
   -- Start a local test net
-  conf <- H.noteShowM $ H.mkConf tempAbsBasePath' Nothing
+  base <- H.note =<< H.noteIO . IO.canonicalizePath =<< H.getProjectBase
+  configurationTemplate <- H.noteShow $ base </> "configuration/defaults/byron-mainnet/configuration.yaml"
+  conf <- H.noteShowM $ H.mkConf base configurationTemplate tempAbsBasePath' Nothing
   let maxSlot = 1500
       slotLen = 0.01
   let fastTestnetOptions = defaultTestnetOptions
