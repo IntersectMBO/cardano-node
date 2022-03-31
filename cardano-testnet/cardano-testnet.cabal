@@ -126,7 +126,6 @@ test-suite cardano-testnet-tests
 
   other-modules:
                         -- TODO: Move to plutus-apps
-                        -- Spec.Plutus.Direct.CertifyingAndWithdrawingPlutus
                         -- Spec.Plutus.Direct.ScriptContextEquality
                         -- Spec.Plutus.Direct.ScriptContextEqualityMint
                         -- Spec.Plutus.Direct.TxInLockingPlutus
