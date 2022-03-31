@@ -2,7 +2,9 @@
 {-# LANGUAGE RecordWildCards #-}
 
 module Testnet.Conf
-  ( Conf(..)
+  ( ProjectBase(..)
+  , YamlFilePath(..)
+  , Conf(..)
   , mkConf
 
   , SubmitApiConfig(..)
@@ -22,6 +24,14 @@ import qualified Hedgehog.Extras.Test.Base as H
 import qualified System.FilePath.Posix as FP
 import qualified System.Random as IO
 
+newtype ProjectBase = ProjectBase
+  { projectBase :: FilePath
+  } deriving (Eq, Show)
+
+newtype YamlFilePath = YamlFilePath
+  { projectBase :: FilePath
+  } deriving (Eq, Show)
+
 data Conf = Conf
   { tempAbsPath :: FilePath
   , tempRelPath :: FilePath
@@ -33,8 +43,8 @@ data Conf = Conf
   , testnetMagic :: Int
   } deriving (Eq, Show)
 
-mkConf :: FilePath -> FilePath -> FilePath -> Maybe Int -> H.Integration Conf
-mkConf base configurationTemplate tempAbsPath maybeMagic = do
+mkConf :: ProjectBase -> YamlFilePath -> FilePath -> Maybe Int -> H.Integration Conf
+mkConf (ProjectBase base) (YamlFilePath configurationTemplate) tempAbsPath maybeMagic = do
   testnetMagic <- H.noteShowIO $ maybe (IO.randomRIO (1000, 2000)) return maybeMagic
   tempBaseAbsPath <- H.noteShow $ FP.takeDirectory tempAbsPath
   tempRelPath <- H.noteShow $ FP.makeRelative tempBaseAbsPath tempAbsPath

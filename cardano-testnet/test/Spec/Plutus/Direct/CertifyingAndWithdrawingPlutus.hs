@@ -13,7 +13,6 @@ import           Prelude
 
 import           Cardano.Api
 import           Cardano.Api.Shelley
-
 import           Control.Monad (void)
 import qualified Data.Aeson as J
 import qualified Data.Map.Strict as Map
@@ -64,7 +63,8 @@ hprop_plutus_certifying_withdrawing = H.integration . H.runFinallies . H.workspa
   H.note_ SYS.os
   base <- H.note =<< H.noteIO . IO.canonicalizePath =<< H.getProjectBase
   configurationTemplate <- H.noteShow $ base </> "configuration/defaults/byron-mainnet/configuration.yaml"
-  conf@H.Conf { H.tempBaseAbsPath, H.tempAbsPath } <- H.noteShowM $ H.mkConf base configurationTemplate tempAbsBasePath' Nothing
+  conf@H.Conf { H.tempBaseAbsPath, H.tempAbsPath } <- H.noteShowM $
+    H.mkConf (H.ProjectBase base) (H.YamlFilePath configurationTemplate) tempAbsBasePath' Nothing
 
   let fastTestnetOptions = defaultTestnetOptions
                              { epochLength = 500

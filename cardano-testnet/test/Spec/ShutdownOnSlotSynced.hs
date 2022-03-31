@@ -39,7 +39,8 @@ hprop_shutdownOnSlotSynced = H.integration . H.runFinallies . H.workspace "chair
   -- Start a local test net
   base <- H.note =<< H.noteIO . IO.canonicalizePath =<< H.getProjectBase
   configurationTemplate <- H.noteShow $ base </> "configuration/defaults/byron-mainnet/configuration.yaml"
-  conf <- H.noteShowM $ H.mkConf base configurationTemplate tempAbsBasePath' Nothing
+  conf <- H.noteShowM $
+    H.mkConf (H.ProjectBase base) (H.YamlFilePath configurationTemplate) tempAbsBasePath' Nothing
   let maxSlot = 1500
       slotLen = 0.01
   let fastTestnetOptions = defaultTestnetOptions
