@@ -36,8 +36,10 @@ import qualified Testnet.Conf as H
 
 hprop_plutus :: Property
 hprop_plutus = H.integration . H.runFinallies . H.workspace "chairman" $ \tempAbsBasePath' -> do
-  projectBase <- H.note =<< H.evalIO . IO.canonicalizePath =<< H.getProjectBase
-  conf@H.Conf { H.tempBaseAbsPath, H.tempAbsPath } <- H.noteShowM $ H.mkConf tempAbsBasePath' Nothing
+  base <- H.note =<< H.noteIO . IO.canonicalizePath =<< H.getProjectBase
+  configurationTemplate <- H.noteShow $ base </> "configuration/defaults/byron-mainnet/configuration.yaml"
+  conf@H.Conf { H.tempBaseAbsPath, H.tempAbsPath } <- H.noteShowM $
+    H.mkConf (H.ProjectBase base) (H.YamlFilePath configurationTemplate) tempAbsBasePath' Nothing
 
   resultFile <- H.noteTempFile tempAbsPath "result.out"
 
@@ -50,7 +52,7 @@ hprop_plutus = H.integration . H.runFinallies . H.workspace "chairman" $ \tempAb
   let execConfig = H.ExecConfig
         { H.execConfigEnv = Last $ Just
           [ ("CARDANO_CLI", cardanoCli)
-          , ("BASE", projectBase)
+          , ("BASE", base)
           , ("WORK", tempAbsPath)
           , ("UTXO_VKEY", tempAbsPath </> "shelley/utxo-keys/utxo1.vkey")
           , ("UTXO_SKEY", tempAbsPath </> "shelley/utxo-keys/utxo1.skey")
@@ -62,7 +64,7 @@ hprop_plutus = H.integration . H.runFinallies . H.workspace "chairman" $ \tempAb
         , H.execConfigCwd = Last $ Just tempBaseAbsPath
         }
 
-  scriptPath <- H.eval $ projectBase </> "scripts/plutus/example-txin-locking-plutus-script.sh"
+  scriptPath <- H.eval $ base </> "scripts/plutus/example-txin-locking-plutus-script.sh"
 
   H.exec_ execConfig H.bashPath
     [ "-x"

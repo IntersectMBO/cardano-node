@@ -13,7 +13,6 @@ import           Prelude
 
 import           Cardano.Api
 import           Cardano.Api.Shelley
-
 import           Control.Monad (void)
 import qualified Data.Aeson as J
 import qualified Data.Map.Strict as Map
@@ -62,8 +61,10 @@ isLinux = os == "linux"
 hprop_plutus_certifying_withdrawing :: Property
 hprop_plutus_certifying_withdrawing = H.integration . H.runFinallies . H.workspace "chairman" $ \tempAbsBasePath' -> do
   H.note_ SYS.os
-  projectBase <- H.note =<< H.noteIO . IO.canonicalizePath =<< H.getProjectBase
-  conf@H.Conf { H.tempBaseAbsPath, H.tempAbsPath } <- H.noteShowM $ H.mkConf tempAbsBasePath' Nothing
+  base <- H.note =<< H.noteIO . IO.canonicalizePath =<< H.getProjectBase
+  configurationTemplate <- H.noteShow $ base </> "configuration/defaults/byron-mainnet/configuration.yaml"
+  conf@H.Conf { H.tempBaseAbsPath, H.tempAbsPath } <- H.noteShowM $
+    H.mkConf (H.ProjectBase base) (H.YamlFilePath configurationTemplate) tempAbsBasePath' Nothing
 
   let fastTestnetOptions = defaultTestnetOptions
                              { epochLength = 500
@@ -85,7 +86,6 @@ hprop_plutus_certifying_withdrawing = H.integration . H.runFinallies . H.workspa
         }
 
   -- First we note all the relevant files
-  base <- H.note projectBase
   work <- H.note tempAbsPath
 
   -- We get our UTxOs from here

@@ -11,7 +11,6 @@ module Spec.Plutus.Direct.ScriptContextEqualityMint
 import           Prelude
 
 import           Cardano.Api
-
 import           Control.Monad
 import qualified Data.Aeson as J
 import qualified Data.Aeson.Types as Aeson
@@ -48,8 +47,10 @@ millarCoin = BSC.unpack $ Base16.encode "MillarCoin"
 
 hprop_plutus_script_context_mint_equality :: Property
 hprop_plutus_script_context_mint_equality = H.integration . H.runFinallies . H.workspace "chairman" $ \tempAbsBasePath' -> do
-  projectBase <- H.note =<< H.noteIO . IO.canonicalizePath =<< H.getProjectBase
-  conf@H.Conf { H.tempBaseAbsPath, H.tempAbsPath } <- H.noteShowM $ H.mkConf tempAbsBasePath' Nothing
+  base <- H.note =<< H.noteIO . IO.canonicalizePath =<< H.getProjectBase
+  configurationTemplate <- H.noteShow $ base </> "configuration/defaults/byron-mainnet/configuration.yaml"
+  conf@H.Conf { H.tempBaseAbsPath, H.tempAbsPath } <- H.noteShowM $
+    H.mkConf (H.ProjectBase base) (H.YamlFilePath configurationTemplate) tempAbsBasePath' Nothing
 
   TC.TestnetRuntime { bftSprockets, testnetMagic } <- testnet defaultTestnetOptions conf
 
@@ -66,7 +67,6 @@ hprop_plutus_script_context_mint_equality = H.integration . H.runFinallies . H.w
         }
 
   -- First we note all the relevant files
-  base <- H.note projectBase
   work <- H.note tempAbsPath
 
   -- We get our UTxOs from here
