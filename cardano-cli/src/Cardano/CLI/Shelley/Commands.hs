@@ -48,6 +48,7 @@ module Cardano.CLI.Shelley.Commands
 import           Prelude
 
 import           Cardano.Api.Shelley
+import           Cardano.CLI.Output
 
 import           Data.Text (Text)
 
@@ -345,6 +346,7 @@ data QueryCmd =
       (VerificationKeyOrHashOrFile StakePoolKey)
       SigningKeyFile
       EpochLeadershipSchedule
+      OutputAs
   | QueryProtocolParameters' AnyConsensusModeParams NetworkId (Maybe OutputFile)
   | QueryTip AnyConsensusModeParams NetworkId (Maybe OutputFile)
   | QueryStakePools' AnyConsensusModeParams NetworkId (Maybe OutputFile)

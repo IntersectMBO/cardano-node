@@ -20,6 +20,7 @@ import           Prelude (String)
 import           Cardano.Api
 import           Cardano.Api.Shelley
 
+import           Cardano.CLI.Output
 import           Cardano.CLI.Shelley.Commands
 import           Cardano.CLI.Shelley.Key (InputFormat (..), PaymentVerifier (..),
                    StakeVerifier (..), VerificationKeyOrFile (..), VerificationKeyOrHashOrFile (..),
@@ -981,6 +982,7 @@ pQueryCmd =
       <*> pStakePoolVerificationKeyOrHashOrFile
       <*> pVrfSigningKeyFile
       <*> pWhichLeadershipSchedule
+      <*> pOutputAs
 
     pKesPeriodInfo :: Parser QueryCmd
     pKesPeriodInfo = QueryKesPeriodInfo
@@ -988,6 +990,18 @@ pQueryCmd =
       <*> pNetworkId
       <*> pOperationalCertificateFile
       <*> pMaybeOutputFile
+
+pOutputAs :: Parser OutputAs
+pOutputAs = pOutputAsJson <|> pOutputAsText <|> pure OutputAsText
+  where
+    pOutputAsText = Opt.flag' OutputAsText
+      (  Opt.long "output-as-text"
+      <> Opt.help "Output as text (default)"
+      )
+    pOutputAsJson = Opt.flag' OutputAsJson
+      (  Opt.long "output-as-json"
+      <> Opt.help "Output as JSON"
+      )
 
 pGovernanceCmd :: Parser GovernanceCmd
 pGovernanceCmd =
