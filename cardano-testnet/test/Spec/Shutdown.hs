@@ -44,7 +44,7 @@ hprop_shutdown = H.integration . H.runFinallies . H.workspace "chairman" $ \temp
   base <- H.note =<< H.noteIO . IO.canonicalizePath =<< H.getProjectBase
   configurationTemplate <- H.noteShow $ base </> "configuration/defaults/byron-mainnet/configuration.yaml"
   H.Conf { H.tempBaseAbsPath, H.tempAbsPath, H.logDir, H.socketDir } <- H.noteShowM $
-    H.mkConf base configurationTemplate tempAbsBasePath' Nothing
+    H.mkConf (H.ProjectBase base) (H.YamlFilePath configurationTemplate) tempAbsBasePath' Nothing
 
   [port] <- H.noteShowIO $ IO.allocateRandomPorts 1
 

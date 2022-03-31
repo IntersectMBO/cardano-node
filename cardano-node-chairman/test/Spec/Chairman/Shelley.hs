@@ -26,7 +26,7 @@ hprop_chairman :: H.Property
 hprop_chairman = H.integration . H.runFinallies . H.workspace "chairman" $ \tempAbsPath' -> do
   base <- H.note =<< H.noteIO . IO.canonicalizePath =<< H.getProjectBase
   configurationTemplate <- H.noteShow $ base </> "configuration/defaults/byron-mainnet/configuration.yaml"
-  conf <- H.mkConf base configurationTemplate  tempAbsPath' Nothing
+  conf <- H.mkConf (H.ProjectBase base) (H.YamlFilePath configurationTemplate) tempAbsPath' Nothing
 
   allNodes <- H.testnet H.defaultTestnetOptions conf
 
