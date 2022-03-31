@@ -33,7 +33,6 @@ import           Cardano.Api.Byron
 import           Cardano.Api.Shelley
 import           Cardano.CLI.Environment (EnvSocketError, readEnvSocketPath, renderEnvSocketError)
 import           Cardano.CLI.Helpers (HelpersError (..), hushM, pPrintCBOR, renderHelpersError)
-import           Cardano.CLI.Output
 import           Cardano.CLI.Shelley.Commands
 import           Cardano.CLI.Shelley.Key
 import           Cardano.CLI.Shelley.Orphans ()
@@ -1173,11 +1172,11 @@ runQueryLeadershipSchedule
   -> VerificationKeyOrHashOrFile StakePoolKey
   -> SigningKeyFile -- ^ VRF signing key
   -> EpochLeadershipSchedule
-  -> OutputAs
+  -> Maybe OutputFile
   -> ExceptT ShelleyQueryCmdError IO ()
 runQueryLeadershipSchedule (AnyConsensusModeParams cModeParams) network
                            (GenesisFile genFile) coldVerKeyFile (SigningKeyFile vrfSkeyFp)
-                           whichSchedule outputAs = do
+                           whichSchedule mJsonOutputFile = do
   SocketPath sockPath <- firstExceptT ShelleyQueryCmdEnvVarSocketErr readEnvSocketPath
   let localNodeConnInfo = LocalNodeConnectInfo cModeParams network sockPath
 
@@ -1241,9 +1240,11 @@ runQueryLeadershipSchedule (AnyConsensusModeParams cModeParams) network
                      serCurrentEpochState ptclState poolid vrkSkey pparams
                      eInfo (tip, curentEpoch)
 
-      case outputAs of
-        OutputAsText -> liftIO $ printLeadershipScheduleAsText schedule eInfo (SystemStart $ sgSystemStart shelleyGenesis)
-        OutputAsJson -> liftIO $ printLeadershipScheduleAsJson schedule eInfo (SystemStart $ sgSystemStart shelleyGenesis)
+      case mJsonOutputFile of
+        Nothing -> liftIO $ printLeadershipScheduleAsText schedule eInfo (SystemStart $ sgSystemStart shelleyGenesis)
+        Just (OutputFile jsonOutputFile) ->
+          liftIO $ LBS.writeFile jsonOutputFile $
+            printLeadershipScheduleAsJson schedule eInfo (SystemStart $ sgSystemStart shelleyGenesis)
     mode -> left . ShelleyQueryCmdUnsupportedMode $ AnyConsensusMode mode
  where
   printLeadershipScheduleAsText
@@ -1287,9 +1288,9 @@ runQueryLeadershipSchedule (AnyConsensusModeParams cModeParams) network
     :: Set SlotNo
     -> EpochInfo (Either Text)
     -> SystemStart
-    -> IO ()
-  printLeadershipScheduleAsJson leadershipSlots eInfo sStart = do
-    LBS.putStrLn $ encodePretty $ showLeadershipSlot <$> sort (Set.toList leadershipSlots)
+    -> LBS.ByteString
+  printLeadershipScheduleAsJson leadershipSlots eInfo sStart =
+    encodePretty $ showLeadershipSlot <$> sort (Set.toList leadershipSlots)
     where
       showLeadershipSlot :: SlotNo -> Aeson.Value
       showLeadershipSlot lSlot@(SlotNo sn) =

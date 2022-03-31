@@ -51,7 +51,6 @@ library
   hs-source-dirs:       src
 
   exposed-modules:      Cardano.CLI.Helpers
-                        Cardano.CLI.Output
                         Cardano.CLI.Parsers
                         Cardano.CLI.Render
                         Cardano.CLI.Run
