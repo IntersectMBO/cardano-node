@@ -345,6 +345,7 @@ data QueryCmd =
       (VerificationKeyOrHashOrFile StakePoolKey)
       SigningKeyFile
       EpochLeadershipSchedule
+      (Maybe OutputFile)
   | QueryProtocolParameters' AnyConsensusModeParams NetworkId (Maybe OutputFile)
   | QueryTip AnyConsensusModeParams NetworkId (Maybe OutputFile)
   | QueryStakePools' AnyConsensusModeParams NetworkId (Maybe OutputFile)

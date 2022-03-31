@@ -981,6 +981,7 @@ pQueryCmd =
       <*> pStakePoolVerificationKeyOrHashOrFile
       <*> pVrfSigningKeyFile
       <*> pWhichLeadershipSchedule
+      <*> pMaybeOutputFile
 
     pKesPeriodInfo :: Parser QueryCmd
     pKesPeriodInfo = QueryKesPeriodInfo

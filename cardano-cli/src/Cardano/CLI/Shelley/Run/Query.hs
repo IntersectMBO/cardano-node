@@ -163,8 +163,8 @@ renderShelleyQueryCmdError err =
 runQueryCmd :: QueryCmd -> ExceptT ShelleyQueryCmdError IO ()
 runQueryCmd cmd =
   case cmd of
-    QueryLeadershipSchedule consensusModeParams network shelleyGenFp poolid vrkSkeyFp whichSchedule ->
-      runQueryLeadershipSchedule consensusModeParams network shelleyGenFp poolid vrkSkeyFp whichSchedule
+    QueryLeadershipSchedule consensusModeParams network shelleyGenFp poolid vrkSkeyFp whichSchedule outputAs ->
+      runQueryLeadershipSchedule consensusModeParams network shelleyGenFp poolid vrkSkeyFp whichSchedule outputAs
     QueryProtocolParameters' consensusModeParams network mOutFile ->
       runQueryProtocolParameters consensusModeParams network mOutFile
     QueryTip consensusModeParams network mOutFile ->
@@ -1160,10 +1160,11 @@ runQueryLeadershipSchedule
   -> VerificationKeyOrHashOrFile StakePoolKey
   -> SigningKeyFile -- ^ VRF signing key
   -> EpochLeadershipSchedule
+  -> Maybe OutputFile
   -> ExceptT ShelleyQueryCmdError IO ()
 runQueryLeadershipSchedule (AnyConsensusModeParams cModeParams) network
                            (GenesisFile genFile) coldVerKeyFile (SigningKeyFile vrfSkeyFp)
-                           whichSchedule = do
+                           whichSchedule mJsonOutputFile = do
   SocketPath sockPath <- firstExceptT ShelleyQueryCmdEnvVarSocketErr readEnvSocketPath
   let localNodeConnInfo = LocalNodeConnectInfo cModeParams network sockPath
 
@@ -1227,15 +1228,19 @@ runQueryLeadershipSchedule (AnyConsensusModeParams cModeParams) network
                      serCurrentEpochState ptclState poolid vrkSkey pparams
                      eInfo (tip, curentEpoch)
 
-      liftIO $ printLeadershipSchedule schedule eInfo (SystemStart $ sgSystemStart shelleyGenesis)
+      case mJsonOutputFile of
+        Nothing -> liftIO $ printLeadershipScheduleAsText schedule eInfo (SystemStart $ sgSystemStart shelleyGenesis)
+        Just (OutputFile jsonOutputFile) ->
+          liftIO $ LBS.writeFile jsonOutputFile $
+            printLeadershipScheduleAsJson schedule eInfo (SystemStart $ sgSystemStart shelleyGenesis)
     mode -> left . ShelleyQueryCmdUnsupportedMode $ AnyConsensusMode mode
  where
-  printLeadershipSchedule
+  printLeadershipScheduleAsText
     :: Set SlotNo
     -> EpochInfo (Either Text)
     -> SystemStart
     -> IO ()
-  printLeadershipSchedule leadershipSlots eInfo sStart = do
+  printLeadershipScheduleAsText leadershipSlots eInfo sStart = do
     Text.putStrLn title
     putStrLn $ replicate (Text.length title + 2) '-'
     sequence_
@@ -1267,7 +1272,27 @@ runQueryLeadershipSchedule (AnyConsensusModeParams cModeParams) network
            , "                   "
            , Text.unpack err
            ]
-
+  printLeadershipScheduleAsJson
+    :: Set SlotNo
+    -> EpochInfo (Either Text)
+    -> SystemStart
+    -> LBS.ByteString
+  printLeadershipScheduleAsJson leadershipSlots eInfo sStart =
+    encodePretty $ showLeadershipSlot <$> sort (Set.toList leadershipSlots)
+    where
+      showLeadershipSlot :: SlotNo -> Aeson.Value
+      showLeadershipSlot lSlot@(SlotNo sn) =
+        case epochInfoSlotToUTCTime eInfo sStart lSlot of
+          Right slotTime ->
+            Aeson.object
+              [ "slotNumber" Aeson..= sn
+              , "slotTime" Aeson..= slotTime
+              ]
+          Left err ->
+            Aeson.object
+              [ "slotNumber" Aeson..= sn
+              , "error" Aeson..= Text.unpack err
+              ]
 
 
 -- Helpers
