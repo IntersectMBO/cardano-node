@@ -23,8 +23,7 @@ commits () {
   done
 }
 
-cat cabal.project | \
-  grep '\(^source-repository-package\|^ *location:\|^ *tag:\)' | sed 's|^source-repository-package|-|g' | \
+grep '\(^source-repository-package\|^ *location:\|^ *tag:\)' cabal.project | sed 's|^source-repository-package|-|g' | \
   yq eval -P -j \
   > tmp/repositories.json
 
@@ -32,6 +31,9 @@ for row in $(cat tmp/repositories.json | jq -r '.[] | @base64'); do
   json="$(echo "${row}" | base64 --decode | jq -r ${1})"
   location="$(echo "$json" | jq -r .location)"
   tag="$(echo "$json" | jq -r .tag)"
+
+  if fgrep <<<$location -f .github/master-check-exceptions.list > /dev/null
+  then echo "${YELLOW}check-git-dependencies:  skipping location from master check:  ${RED}$location${NC}"; continue; fi
 
   rm -f tmp/tmp-dep-repo-result
   rm -rf tmp/dep-repo
