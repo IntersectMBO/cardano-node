@@ -126,9 +126,9 @@ severityPeers :: [PeerT blk] -> SeverityS
 severityPeers _ = Notice
 
 instance LogFormatting [PeerT blk] where
-  forMachine DMinimal _ = mkObject [ "kind"  .= String "NodeKernelPeers"]
-  forMachine _ []       = mkObject [ "kind"  .= String "NodeKernelPeers"]
-  forMachine dtal xs    = mkObject
+  forMachine DMinimal _ = mconcat [ "kind"  .= String "NodeKernelPeers"]
+  forMachine _ []       = mconcat [ "kind"  .= String "NodeKernelPeers"]
+  forMachine dtal xs    = mconcat
     [ "kind"  .= String "NodeKernelPeers"
     , "peers" .= toJSON (foldl' (\acc x -> forMachine dtal x : acc) [] xs)
     ]
@@ -137,7 +137,7 @@ instance LogFormatting [PeerT blk] where
 
 instance LogFormatting (PeerT blk) where
   forMachine _dtal (PeerT cid _af status inflight) =
-    mkObject [ "peerAddress"   .= String (Text.pack . show . remoteAddress $ cid)
+    mconcat [ "peerAddress"   .= String (Text.pack . show . remoteAddress $ cid)
              , "peerStatus"    .= String (Text.pack . ppStatus $ status)
              , "peerSlotNo"    .= String (Text.pack . ppMaxSlotNo . peerFetchMaxSlotNo $ inflight)
              , "peerReqsInF"   .= String (show . peerFetchReqsInFlight $ inflight)

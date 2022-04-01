@@ -119,9 +119,10 @@ import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.TxBody
 import           Cardano.Api.Value
 
-import           Data.Word (Word64)
 import qualified Cardano.Protocol.TPraos.API as TPraos
+import qualified Data.Aeson.KeyMap as KeyMap
 import qualified Data.Compact.SplitMap as SplitMap
+import           Data.Word (Word64)
 
 -- ----------------------------------------------------------------------------
 -- Queries
@@ -280,7 +281,7 @@ instance IsCardanoEra era => ToJSON (UTxO era) where
 instance (IsCardanoEra era, IsShelleyBasedEra era, FromJSON (TxOut CtxUTxO era))
   => FromJSON (UTxO era) where
     parseJSON = withObject "UTxO" $ \hm -> do
-      let l = HMS.toList hm
+      let l = HMS.toList $ KeyMap.toHashMapText hm
       res <- mapM toTxIn l
       pure . UTxO $ Map.fromList res
      where

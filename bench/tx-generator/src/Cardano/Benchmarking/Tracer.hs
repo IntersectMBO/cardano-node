@@ -1,8 +1,8 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -25,43 +25,43 @@ module Cardano.Benchmarking.Tracer
   ) where
 
 
-import           Prelude (Show(..), String)
-import           Data.Aeson (ToJSON (..), (.=), encode)
+import           Data.Aeson (ToJSON (..), encode, (.=))
 import qualified Data.Aeson as A
 import qualified Data.ByteString.Lazy.Char8 as BSL (unpack)
-import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as T
 import           Data.Time.Clock (DiffTime, NominalDiffTime, getCurrentTime)
+import           Prelude (Show (..), String)
 
 import           Control.Tracer (debugTracer)
 
-import qualified Codec.CBOR.Term as CBOR
 import           Cardano.Api
+import qualified Codec.CBOR.Term as CBOR
 
 import           Cardano.Prelude hiding (TypeError, show)
 
 
+import           Cardano.BM.Data.Tracer (trStructured)
 import           Cardano.BM.Tracing
-import           Cardano.BM.Data.Tracer (emptyObject, mkObject, trStructured)
-import           Network.Mux (WithMuxBearer(..))
+import           Network.Mux (WithMuxBearer (..))
 
 
-import           Cardano.Node.Configuration.Logging (LOContent(..), LoggingLayer (..))
-import           Cardano.Tracing.OrphanInstances.Byron()
-import           Cardano.Tracing.OrphanInstances.Common()
-import           Cardano.Tracing.OrphanInstances.Consensus()
-import           Cardano.Tracing.OrphanInstances.Network()
-import           Cardano.Tracing.OrphanInstances.Shelley()
+import           Cardano.Node.Configuration.Logging (LOContent (..), LoggingLayer (..))
+import           Cardano.Tracing.OrphanInstances.Byron ()
+import           Cardano.Tracing.OrphanInstances.Common ()
+import           Cardano.Tracing.OrphanInstances.Consensus ()
+import           Cardano.Tracing.OrphanInstances.Network ()
+import           Cardano.Tracing.OrphanInstances.Shelley ()
 
 
 import           Cardano.Benchmarking.OuroborosImports
-import           Ouroboros.Network.Driver (TraceSendRecv (..))
-import           Ouroboros.Network.Protocol.TxSubmission2.Type (TxSubmission2)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTx, GenTxId)
-import           Ouroboros.Network.NodeToNode (RemoteConnectionId, NodeToNodeVersion)
+import           Ouroboros.Network.Driver (TraceSendRecv (..))
+import           Ouroboros.Network.NodeToNode (NodeToNodeVersion, RemoteConnectionId)
 import           Ouroboros.Network.Protocol.Handshake.Type (Handshake)
+import           Ouroboros.Network.Protocol.TxSubmission2.Type (TxSubmission2)
 
 import           Cardano.Benchmarking.Types
+import qualified Data.Aeson.KeyMap as KeyMap
 
 data BenchTracers =
   BenchTracers
@@ -189,24 +189,24 @@ data NodeToNodeSubmissionTrace
   | EndOfProtocol
 
 instance ToObject NodeToNodeSubmissionTrace where
-  toObject MinimalVerbosity = const emptyObject -- do not log
+  toObject MinimalVerbosity = const mempty -- do not log
   toObject _ = \case
     ReqIdsBlocking  (Ack ack) (Req req) ->
-                               mkObject [ "kind" .= A.String "ReqIdsBlocking"
+                               mconcat [ "kind" .= A.String "ReqIdsBlocking"
                                         , "ack"  .= A.toJSON ack
                                         , "req"  .= A.toJSON req ]
-    IdsListBlocking sent    -> mkObject [ "kind" .= A.String "IdsListBlocking"
+    IdsListBlocking sent    -> mconcat [ "kind" .= A.String "IdsListBlocking"
                                         , "sent" .= A.toJSON sent ]
     ReqIdsPrompt    (Ack ack) (Req req) ->
-                               mkObject [ "kind" .= A.String "ReqIdsPrompt"
+                               mconcat [ "kind" .= A.String "ReqIdsPrompt"
                                         , "ack"  .= A.toJSON ack
                                         , "req"  .= A.toJSON req ]
-    IdsListPrompt   sent    -> mkObject [ "kind" .= A.String "IdsListPrompt"
+    IdsListPrompt   sent    -> mconcat [ "kind" .= A.String "IdsListPrompt"
                                         , "sent" .= A.toJSON sent ]
-    EndOfProtocol           -> mkObject [ "kind" .= A.String "EndOfProtocol" ]
-    ReqTxs          req     -> mkObject [ "kind" .= A.String "ReqTxs"
+    EndOfProtocol           -> mconcat [ "kind" .= A.String "EndOfProtocol" ]
+    ReqTxs          req     -> mconcat [ "kind" .= A.String "ReqTxs"
                                         , "req"  .= A.toJSON req ]
-    TxList          sent    -> mkObject [ "kind" .= A.String "TxList"
+    TxList          sent    -> mconcat [ "kind" .= A.String "TxList"
                                         , "sent" .= A.toJSON sent ]
 
 
@@ -228,24 +228,24 @@ data TraceLowLevelSubmit
   deriving stock (Show)
 
 instance ToObject TraceLowLevelSubmit where
-  toObject MinimalVerbosity _ = emptyObject -- do not log
+  toObject MinimalVerbosity _ = mempty -- do not log
   toObject NormalVerbosity t =
     case t of
-      TraceLowLevelSubmitting -> mkObject ["kind" .= A.String "TraceLowLevelSubmitting"]
-      TraceLowLevelAccepted   -> mkObject ["kind" .= A.String "TraceLowLevelAccepted"]
-      TraceLowLevelRejected m -> mkObject [ "kind" .= A.String "TraceLowLevelRejected"
+      TraceLowLevelSubmitting -> mconcat ["kind" .= A.String "TraceLowLevelSubmitting"]
+      TraceLowLevelAccepted   -> mconcat ["kind" .= A.String "TraceLowLevelAccepted"]
+      TraceLowLevelRejected m -> mconcat [ "kind" .= A.String "TraceLowLevelRejected"
                                           , "message" .= A.String (T.pack m)
                                           ]
   toObject MaximalVerbosity t =
     case t of
       TraceLowLevelSubmitting ->
-        mkObject [ "kind" .= A.String "TraceLowLevelSubmitting"
+        mconcat [ "kind" .= A.String "TraceLowLevelSubmitting"
                  ]
       TraceLowLevelAccepted ->
-        mkObject [ "kind" .= A.String "TraceLowLevelAccepted"
+        mconcat [ "kind" .= A.String "TraceLowLevelAccepted"
                  ]
       TraceLowLevelRejected errMsg ->
-        mkObject [ "kind"   .= A.String "TraceLowLevelRejected"
+        mconcat [ "kind"   .= A.String "TraceLowLevelRejected"
                  , "errMsg" .= A.String (T.pack errMsg)
                  ]
 
@@ -268,12 +268,12 @@ instance Transformable Text IO SendRecvTxSubmission2 where
     let
       obj = toObject verb arg
       updatedObj =
-        if obj == emptyObject
+        if obj == mempty
           then obj
           else
             -- Add a timestamp in 'ToObject'-representation.
-            HM.insert "time" (A.String (T.pack . show $ currentTime)) obj
-      tracer = if obj == emptyObject then nullTracer else tr
+            KeyMap.insert "time" (A.String (T.pack . show $ currentTime)) obj
+      tracer = if obj == mempty then nullTracer else tr
     meta <- mkLOMeta (getSeverityAnnotation arg) (getPrivacyAnnotation arg)
     traceWith tracer (mempty, LogObject mempty meta (LogStructured updatedObj))
 
@@ -284,9 +284,9 @@ instance HasSeverityAnnotation TxId
 instance HasPrivacyAnnotation  TxId
 
 instance ToObject TxId where
-  toObject MinimalVerbosity _    = emptyObject -- do not log
-  toObject NormalVerbosity _     = mkObject [ "kind" .= A.String "GenTxId"]
-  toObject MaximalVerbosity txid = mkObject [ "kind" .= A.String "GenTxId"
+  toObject MinimalVerbosity _    = mempty -- do not log
+  toObject NormalVerbosity _     = mconcat [ "kind" .= A.String "GenTxId"]
+  toObject MaximalVerbosity txid = mconcat [ "kind" .= A.String "GenTxId"
                                             , "txId" .= toJSON txid
                                             ]
 
@@ -300,83 +300,83 @@ type SendRecvConnect = WithMuxBearer
                                            CBOR.Term))
 
 instance ToObject (TraceBenchTxSubmit TxId) where
-  toObject MinimalVerbosity _ = emptyObject -- do not log
+  toObject MinimalVerbosity _ = mempty -- do not log
   toObject NormalVerbosity t =
     case t of
-      TraceBenchTxSubRecv _      -> mkObject ["kind" .= A.String "TraceBenchTxSubRecv"]
-      TraceBenchTxSubStart _     -> mkObject ["kind" .= A.String "TraceBenchTxSubStart"]
-      TraceBenchTxSubServAnn _   -> mkObject ["kind" .= A.String "TraceBenchTxSubServAnn"]
-      TraceBenchTxSubServReq _   -> mkObject ["kind" .= A.String "TraceBenchTxSubServReq"]
-      TraceBenchTxSubServAck _   -> mkObject ["kind" .= A.String "TraceBenchTxSubServAck"]
-      TraceBenchTxSubServDrop _  -> mkObject ["kind" .= A.String "TraceBenchTxSubServDrop"]
-      TraceBenchTxSubServOuts _  -> mkObject ["kind" .= A.String "TraceBenchTxSubServOuts"]
-      TraceBenchTxSubServUnav _  -> mkObject ["kind" .= A.String "TraceBenchTxSubServUnav"]
-      TraceBenchTxSubServFed _ _ -> mkObject ["kind" .= A.String "TraceBenchTxSubServFed"]
-      TraceBenchTxSubServCons _  -> mkObject ["kind" .= A.String "TraceBenchTxSubServCons"]
-      TraceBenchTxSubIdle        -> mkObject ["kind" .= A.String "TraceBenchTxSubIdle"]
-      TraceBenchTxSubRateLimit _ -> mkObject ["kind" .= A.String "TraceBenchTxSubRateLimit"]
-      TraceBenchTxSubSummary _   -> mkObject ["kind" .= A.String "TraceBenchTxSubSummary"]
-      TraceBenchTxSubDebug _     -> mkObject ["kind" .= A.String "TraceBenchTxSubDebug"]
-      TraceBenchTxSubError _     -> mkObject ["kind" .= A.String "TraceBenchTxSubError"]
+      TraceBenchTxSubRecv _      -> mconcat ["kind" .= A.String "TraceBenchTxSubRecv"]
+      TraceBenchTxSubStart _     -> mconcat ["kind" .= A.String "TraceBenchTxSubStart"]
+      TraceBenchTxSubServAnn _   -> mconcat ["kind" .= A.String "TraceBenchTxSubServAnn"]
+      TraceBenchTxSubServReq _   -> mconcat ["kind" .= A.String "TraceBenchTxSubServReq"]
+      TraceBenchTxSubServAck _   -> mconcat ["kind" .= A.String "TraceBenchTxSubServAck"]
+      TraceBenchTxSubServDrop _  -> mconcat ["kind" .= A.String "TraceBenchTxSubServDrop"]
+      TraceBenchTxSubServOuts _  -> mconcat ["kind" .= A.String "TraceBenchTxSubServOuts"]
+      TraceBenchTxSubServUnav _  -> mconcat ["kind" .= A.String "TraceBenchTxSubServUnav"]
+      TraceBenchTxSubServFed _ _ -> mconcat ["kind" .= A.String "TraceBenchTxSubServFed"]
+      TraceBenchTxSubServCons _  -> mconcat ["kind" .= A.String "TraceBenchTxSubServCons"]
+      TraceBenchTxSubIdle        -> mconcat ["kind" .= A.String "TraceBenchTxSubIdle"]
+      TraceBenchTxSubRateLimit _ -> mconcat ["kind" .= A.String "TraceBenchTxSubRateLimit"]
+      TraceBenchTxSubSummary _   -> mconcat ["kind" .= A.String "TraceBenchTxSubSummary"]
+      TraceBenchTxSubDebug _     -> mconcat ["kind" .= A.String "TraceBenchTxSubDebug"]
+      TraceBenchTxSubError _     -> mconcat ["kind" .= A.String "TraceBenchTxSubError"]
   toObject MaximalVerbosity t =
     case t of
       TraceBenchTxSubRecv txIds ->
-        mkObject [ "kind"  .= A.String "TraceBenchTxSubRecv"
+        mconcat [ "kind"  .= A.String "TraceBenchTxSubRecv"
                  , "txIds" .= toJSON txIds
                  ]
       TraceBenchTxSubStart txIds ->
-        mkObject [ "kind"  .= A.String "TraceBenchTxSubStart"
+        mconcat [ "kind"  .= A.String "TraceBenchTxSubStart"
                  , "txIds" .= toJSON txIds
                  ]
       TraceBenchTxSubServAnn txIds ->
-        mkObject [ "kind"  .= A.String "TraceBenchTxSubServAnn"
+        mconcat [ "kind"  .= A.String "TraceBenchTxSubServAnn"
                  , "txIds" .= toJSON txIds
                  ]
       TraceBenchTxSubServReq txIds ->
-        mkObject [ "kind"  .= A.String "TraceBenchTxSubServReq"
+        mconcat [ "kind"  .= A.String "TraceBenchTxSubServReq"
                  , "txIds" .= toJSON txIds
                  ]
       TraceBenchTxSubServAck txIds ->
-        mkObject [ "kind"  .= A.String "TraceBenchTxSubServAck"
+        mconcat [ "kind"  .= A.String "TraceBenchTxSubServAck"
                  , "txIds" .= toJSON txIds
                  ]
       TraceBenchTxSubServDrop txIds ->
-        mkObject [ "kind"  .= A.String "TraceBenchTxSubServDrop"
+        mconcat [ "kind"  .= A.String "TraceBenchTxSubServDrop"
                  , "txIds" .= toJSON txIds
                  ]
       TraceBenchTxSubServOuts txIds ->
-        mkObject [ "kind"  .= A.String "TraceBenchTxSubServOuts"
+        mconcat [ "kind"  .= A.String "TraceBenchTxSubServOuts"
                  , "txIds" .= toJSON txIds
                  ]
       TraceBenchTxSubServUnav txIds ->
-        mkObject [ "kind"  .= A.String "TraceBenchTxSubServUnav"
+        mconcat [ "kind"  .= A.String "TraceBenchTxSubServUnav"
                  , "txIds" .= toJSON txIds
                  ]
       TraceBenchTxSubServFed txIds ix ->
-        mkObject [ "kind"  .= A.String "TraceBenchTxSubServFed"
+        mconcat [ "kind"  .= A.String "TraceBenchTxSubServFed"
                  , "txIds" .= toJSON txIds
                  , "index" .= toJSON ix
                  ]
       TraceBenchTxSubServCons txIds ->
-        mkObject [ "kind"  .= A.String "TraceBenchTxSubServCons"
+        mconcat [ "kind"  .= A.String "TraceBenchTxSubServCons"
                  , "txIds" .= toJSON txIds
                  ]
       TraceBenchTxSubIdle ->
-        mkObject [ "kind" .= A.String "TraceBenchTxSubIdle"
+        mconcat [ "kind" .= A.String "TraceBenchTxSubIdle"
                  ]
       TraceBenchTxSubRateLimit limit ->
-        mkObject [ "kind"  .= A.String "TraceBenchTxSubRateLimit"
+        mconcat [ "kind"  .= A.String "TraceBenchTxSubRateLimit"
                  , "limit" .= toJSON limit
                  ]
       TraceBenchTxSubSummary summary ->
-        mkObject [ "kind"    .= A.String "TraceBenchTxSubSummary"
+        mconcat [ "kind"    .= A.String "TraceBenchTxSubSummary"
                  , "summary" .= toJSON summary
                  ]
       TraceBenchTxSubDebug s ->
-        mkObject [ "kind" .= A.String "TraceBenchTxSubDebug"
+        mconcat [ "kind" .= A.String "TraceBenchTxSubDebug"
                  , "msg"  .= A.String (T.pack s)
                  ]
       TraceBenchTxSubError s ->
-        mkObject [ "kind" .= A.String "TraceBenchTxSubError"
+        mconcat [ "kind" .= A.String "TraceBenchTxSubError"
                  , "msg"  .= A.String s
                  ]

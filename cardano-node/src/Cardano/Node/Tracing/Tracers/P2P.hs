@@ -115,30 +115,30 @@ severityLocalRootPeers _ = Info
 instance (ToJSONKey ntnAddr, ToJSONKey RelayAccessPoint, Show ntnAddr, Show exception) =>
     LogFormatting (TraceLocalRootPeers ntnAddr exception) where
   forMachine _dtal (TraceLocalRootDomains groups) =
-    mkObject [ "kind" .= String "LocalRootDomains"
+    mconcat [ "kind" .= String "LocalRootDomains"
              , "localRootDomains" .= toJSON groups
              ]
   forMachine _dtal (TraceLocalRootWaiting d dt) =
-    mkObject [ "kind" .= String "LocalRootWaiting"
+    mconcat [ "kind" .= String "LocalRootWaiting"
              , "domainAddress" .= toJSON d
              , "diffTime" .= show dt
              ]
   forMachine _dtal (TraceLocalRootResult d res) =
-    mkObject [ "kind" .= String "LocalRootResult"
+    mconcat [ "kind" .= String "LocalRootResult"
              , "domainAddress" .= toJSON d
              , "result" .= toJSONList res
              ]
   forMachine _dtal (TraceLocalRootGroups groups) =
-    mkObject [ "kind" .= String "LocalRootGroups"
+    mconcat [ "kind" .= String "LocalRootGroups"
              , "localRootGroups" .= toJSON groups
              ]
   forMachine _dtal (TraceLocalRootFailure d exception) =
-    mkObject [ "kind" .= String "LocalRootFailure"
+    mconcat [ "kind" .= String "LocalRootFailure"
              , "domainAddress" .= toJSON d
              , "reason" .= show exception
              ]
   forMachine _dtal (TraceLocalRootError d exception) =
-    mkObject [ "kind" .= String "LocalRootError"
+    mconcat [ "kind" .= String "LocalRootError"
              , "domainAddress" .= toJSON d
              , "reason" .= show exception
              ]
@@ -187,20 +187,20 @@ severityPublicRootPeers _ = Info
 
 instance LogFormatting TracePublicRootPeers where
   forMachine _dtal (TracePublicRootRelayAccessPoint relays) =
-    mkObject [ "kind" .= String "PublicRootRelayAddresses"
+    mconcat [ "kind" .= String "PublicRootRelayAddresses"
              , "relayAddresses" .= toJSONList relays
              ]
   forMachine _dtal (TracePublicRootDomains domains) =
-    mkObject [ "kind" .= String "PublicRootDomains"
+    mconcat [ "kind" .= String "PublicRootDomains"
              , "domainAddresses" .= toJSONList domains
              ]
   forMachine _dtal (TracePublicRootResult b res) =
-    mkObject [ "kind" .= String "PublicRootResult"
+    mconcat [ "kind" .= String "PublicRootResult"
              , "domain" .= show b
              , "result" .= toJSONList res
              ]
   forMachine _dtal (TracePublicRootFailure b d) =
-    mkObject [ "kind" .= String "PublicRootFailure"
+    mconcat [ "kind" .= String "PublicRootFailure"
              , "domain" .= show b
              , "reason" .= show d
              ]
@@ -293,63 +293,63 @@ severityPeerSelection TraceChurnMode             {} = Info
 
 instance LogFormatting (TracePeerSelection SockAddr) where
   forMachine _dtal (TraceLocalRootPeersChanged lrp lrp') =
-    mkObject [ "kind" .= String "LocalRootPeersChanged"
+    mconcat [ "kind" .= String "LocalRootPeersChanged"
              , "previous" .= toJSON lrp
              , "current" .= toJSON lrp'
              ]
   forMachine _dtal (TraceTargetsChanged pst pst') =
-    mkObject [ "kind" .= String "TargetsChanged"
+    mconcat [ "kind" .= String "TargetsChanged"
              , "previous" .= toJSON pst
              , "current" .= toJSON pst'
              ]
   forMachine _dtal (TracePublicRootsRequest tRootPeers nRootPeers) =
-    mkObject [ "kind" .= String "PublicRootsRequest"
+    mconcat [ "kind" .= String "PublicRootsRequest"
              , "targetNumberOfRootPeers" .= tRootPeers
              , "numberOfRootPeers" .= nRootPeers
              ]
   forMachine _dtal (TracePublicRootsResults res group dt) =
-    mkObject [ "kind" .= String "PublicRootsResults"
+    mconcat [ "kind" .= String "PublicRootsResults"
              , "result" .= toJSONList (toList res)
              , "group" .= group
              , "diffTime" .= dt
              ]
   forMachine _dtal (TracePublicRootsFailure err group dt) =
-    mkObject [ "kind" .= String "PublicRootsFailure"
+    mconcat [ "kind" .= String "PublicRootsFailure"
              , "reason" .= show err
              , "group" .= group
              , "diffTime" .= dt
              ]
   forMachine _dtal (TraceGossipRequests targetKnown actualKnown aps sps) =
-    mkObject [ "kind" .= String "GossipRequests"
+    mconcat [ "kind" .= String "GossipRequests"
              , "targetKnown" .= targetKnown
              , "actualKnown" .= actualKnown
              , "availablePeers" .= toJSONList (toList aps)
              , "selectedPeers" .= toJSONList (toList sps)
              ]
   forMachine _dtal (TraceGossipResults res) =
-    mkObject [ "kind" .= String "GossipResults"
+    mconcat [ "kind" .= String "GossipResults"
              , "result" .= toJSONList (map ( bimap show id <$> ) res)
              ]
   forMachine _dtal (TraceForgetColdPeers targetKnown actualKnown sp) =
-    mkObject [ "kind" .= String "ForgeColdPeers"
+    mconcat [ "kind" .= String "ForgeColdPeers"
              , "targetKnown" .= targetKnown
              , "actualKnown" .= actualKnown
              , "selectedPeers" .= toJSONList (toList sp)
              ]
   forMachine _dtal (TracePromoteColdPeers targetKnown actualKnown sp) =
-    mkObject [ "kind" .= String "PromoteColdPeers"
+    mconcat [ "kind" .= String "PromoteColdPeers"
              , "targetEstablished" .= targetKnown
              , "actualEstablished" .= actualKnown
              , "selectedPeers" .= toJSONList (toList sp)
              ]
   forMachine _dtal (TracePromoteColdLocalPeers tLocalEst aLocalEst sp) =
-    mkObject [ "kind" .= String "PromoteColdLocalPeers"
+    mconcat [ "kind" .= String "PromoteColdLocalPeers"
              , "targetLocalEstablished" .= tLocalEst
              , "actualLocalEstablished" .= aLocalEst
              , "selectedPeers" .= toJSONList (toList sp)
              ]
   forMachine _dtal (TracePromoteColdFailed tEst aEst p d err) =
-    mkObject [ "kind" .= String "PromoteColdFailed"
+    mconcat [ "kind" .= String "PromoteColdFailed"
              , "targetEstablished" .= tEst
              , "actualEstablished" .= aEst
              , "peer" .= toJSON p
@@ -357,97 +357,97 @@ instance LogFormatting (TracePeerSelection SockAddr) where
              , "reason" .= show err
              ]
   forMachine _dtal (TracePromoteColdDone tEst aEst p) =
-    mkObject [ "kind" .= String "PromoteColdDone"
+    mconcat [ "kind" .= String "PromoteColdDone"
              , "targetEstablished" .= tEst
              , "actualEstablished" .= aEst
              , "peer" .= toJSON p
              ]
   forMachine _dtal (TracePromoteWarmPeers tActive aActive sp) =
-    mkObject [ "kind" .= String "PromoteWarmPeers"
+    mconcat [ "kind" .= String "PromoteWarmPeers"
              , "targetActive" .= tActive
              , "actualActive" .= aActive
              , "selectedPeers" .= toJSONList (toList sp)
              ]
   forMachine _dtal (TracePromoteWarmLocalPeers taa sp) =
-    mkObject [ "kind" .= String "PromoteWarmLocalPeers"
+    mconcat [ "kind" .= String "PromoteWarmLocalPeers"
              , "targetActualActive" .= toJSONList taa
              , "selectedPeers" .= toJSONList (toList sp)
              ]
   forMachine _dtal (TracePromoteWarmFailed tActive aActive p err) =
-    mkObject [ "kind" .= String "PromoteWarmFailed"
+    mconcat [ "kind" .= String "PromoteWarmFailed"
              , "targetActive" .= tActive
              , "actualActive" .= aActive
              , "peer" .= toJSON p
              , "reason" .= show err
              ]
   forMachine _dtal (TracePromoteWarmDone tActive aActive p) =
-    mkObject [ "kind" .= String "PromoteWarmDone"
+    mconcat [ "kind" .= String "PromoteWarmDone"
              , "targetActive" .= tActive
              , "actualActive" .= aActive
              , "peer" .= toJSON p
              ]
   forMachine _dtal (TracePromoteWarmAborted tActive aActive p) =
-    mkObject [ "kind" .= String "PromoteWarmAborted"
+    mconcat [ "kind" .= String "PromoteWarmAborted"
              , "targetActive" .= tActive
              , "actualActive" .= aActive
              , "peer" .= toJSON p
              ]
   forMachine _dtal (TraceDemoteWarmPeers tEst aEst sp) =
-    mkObject [ "kind" .= String "DemoteWarmPeers"
+    mconcat [ "kind" .= String "DemoteWarmPeers"
              , "targetEstablished" .= tEst
              , "actualEstablished" .= aEst
              , "selectedPeers" .= toJSONList (toList sp)
              ]
   forMachine _dtal (TraceDemoteWarmFailed tEst aEst p err) =
-    mkObject [ "kind" .= String "DemoteWarmFailed"
+    mconcat [ "kind" .= String "DemoteWarmFailed"
              , "targetEstablished" .= tEst
              , "actualEstablished" .= aEst
              , "peer" .= toJSON p
              , "reason" .= show err
              ]
   forMachine _dtal (TraceDemoteWarmDone tEst aEst p) =
-    mkObject [ "kind" .= String "DemoteWarmDone"
+    mconcat [ "kind" .= String "DemoteWarmDone"
              , "targetEstablished" .= tEst
              , "actualEstablished" .= aEst
              , "peer" .= toJSON p
              ]
   forMachine _dtal (TraceDemoteHotPeers tActive aActive sp) =
-    mkObject [ "kind" .= String "DemoteHotPeers"
+    mconcat [ "kind" .= String "DemoteHotPeers"
              , "targetActive" .= tActive
              , "actualActive" .= aActive
              , "selectedPeers" .= toJSONList (toList sp)
              ]
   forMachine _dtal (TraceDemoteLocalHotPeers taa sp) =
-    mkObject [ "kind" .= String "DemoteLocalHotPeers"
+    mconcat [ "kind" .= String "DemoteLocalHotPeers"
              , "targetActualActive" .= toJSONList taa
              , "selectedPeers" .= toJSONList (toList sp)
              ]
   forMachine _dtal (TraceDemoteHotFailed tActive aActive p err) =
-    mkObject [ "kind" .= String "DemoteHotFailed"
+    mconcat [ "kind" .= String "DemoteHotFailed"
              , "targetActive" .= tActive
              , "actualActive" .= aActive
              , "peer" .= toJSON p
              , "reason" .= show err
              ]
   forMachine _dtal (TraceDemoteHotDone tActive aActive p) =
-    mkObject [ "kind" .= String "DemoteHotDone"
+    mconcat [ "kind" .= String "DemoteHotDone"
              , "targetActive" .= tActive
              , "actualActive" .= aActive
              , "peer" .= toJSON p
              ]
   forMachine _dtal (TraceDemoteAsynchronous msp) =
-    mkObject [ "kind" .= String "DemoteAsynchronous"
+    mconcat [ "kind" .= String "DemoteAsynchronous"
              , "state" .= toJSON msp
              ]
   forMachine _dtal TraceGovernorWakeup =
-    mkObject [ "kind" .= String "GovernorWakeup"
+    mconcat [ "kind" .= String "GovernorWakeup"
              ]
   forMachine _dtal (TraceChurnWait dt) =
-    mkObject [ "kind" .= String "ChurnWait"
+    mconcat [ "kind" .= String "ChurnWait"
              , "diffTime" .= toJSON dt
              ]
   forMachine _dtal (TraceChurnMode c) =
-    mkObject [ "kind" .= String "ChurnMode"
+    mconcat [ "kind" .= String "ChurnMode"
              , "event" .= show c ]
   forHuman = pack . show
 
@@ -576,7 +576,7 @@ peerSelectionTargetsToObject
                          targetNumberOfEstablishedPeers,
                          targetNumberOfActivePeers } =
     Object $
-      mkObject [ "roots" .= targetNumberOfRootPeers
+      mconcat [ "roots" .= targetNumberOfRootPeers
                , "knownPeers" .= targetNumberOfKnownPeers
                , "established" .= targetNumberOfEstablishedPeers
                , "active" .= targetNumberOfActivePeers
@@ -595,18 +595,18 @@ severityDebugPeerSelection _ = Debug
 instance Show peerConn => LogFormatting (DebugPeerSelection SockAddr peerConn) where
   forMachine DNormal (TraceGovernorState blockedAt wakeupAfter
                    PeerSelectionState { targets, knownPeers, establishedPeers, activePeers }) =
-    mkObject [ "kind" .= String "DebugPeerSelection"
+    mconcat [ "kind" .= String "DebugPeerSelection"
              , "blockedAt" .= String (pack $ show blockedAt)
              , "wakeupAfter" .= String (pack $ show wakeupAfter)
              , "targets" .= peerSelectionTargetsToObject targets
              , "numberOfPeers" .=
-                 Object (mkObject [ "known" .= KnownPeers.size knownPeers
+                 Object (mconcat [ "known" .= KnownPeers.size knownPeers
                                   , "established" .= EstablishedPeers.size establishedPeers
                                   , "active" .= Set.size activePeers
                                   ])
              ]
   forMachine _ (TraceGovernorState blockedAt wakeupAfter ev) =
-    mkObject [ "kind" .= String "DebugPeerSelection"
+    mconcat [ "kind" .= String "DebugPeerSelection"
              , "blockedAt" .= String (pack $ show blockedAt)
              , "wakeupAfter" .= String (pack $ show wakeupAfter)
              , "peerSelectionState" .= String (pack $ show ev)
@@ -629,7 +629,7 @@ severityPeerSelectionCounters _ = Info
 
 instance LogFormatting PeerSelectionCounters where
   forMachine _dtal ev =
-    mkObject [ "kind" .= String "PeerSelectionCounters"
+    mconcat [ "kind" .= String "PeerSelectionCounters"
              , "coldPeers" .= coldPeers ev
              , "warmPeers" .= warmPeers ev
              , "hotPeers" .= hotPeers ev
@@ -677,21 +677,21 @@ severityPeerSelectionActions PeerMonitoringResult {}    = Debug
 -- For that an export is needed at ouroboros-network
 instance LogFormatting (PeerSelectionActionsTrace SockAddr) where
   forMachine _dtal (PeerStatusChanged ps) =
-    mkObject [ "kind" .= String "PeerStatusChanged"
+    mconcat [ "kind" .= String "PeerStatusChanged"
              , "peerStatusChangeType" .= show ps
              ]
   forMachine _dtal (PeerStatusChangeFailure ps f) =
-    mkObject [ "kind" .= String "PeerStatusChangeFailure"
+    mconcat [ "kind" .= String "PeerStatusChangeFailure"
              , "peerStatusChangeType" .= show ps
              , "reason" .= show f
              ]
   forMachine _dtal (PeerMonitoringError connId s) =
-    mkObject [ "kind" .= String "PeerMonitoridngError"
+    mconcat [ "kind" .= String "PeerMonitoridngError"
              , "connectionId" .= toJSON connId
              , "reason" .= show s
              ]
   forMachine _dtal (PeerMonitoringResult connId wf) =
-    mkObject [ "kind" .= String "PeerMonitoringResult"
+    mconcat [ "kind" .= String "PeerMonitoringResult"
              , "connectionId" .= toJSON connId
              , "withProtocolTemp" .= show wf
              ]
@@ -744,6 +744,7 @@ namesForConnectionManager TrConnectionManagerCounters {} = ["ConnectionManagerCo
 namesForConnectionManager TrState {} = ["State"]
 namesForConnectionManager ConnectionManager.TrUnexpectedlyFalseAssertion {} =
                             ["UnexpectedlyFalseAssertion"]
+namesForConnectionManager TrUnknownConnection {} = ["UnknownConnection"]
 
 severityConnectionManager ::
   ConnectionManagerTrace addr
@@ -778,129 +779,130 @@ severityConnectionManager TrConnectionManagerCounters {}          = Info
 severityConnectionManager TrState {}                              = Info
 severityConnectionManager ConnectionManager.TrUnexpectedlyFalseAssertion {} =
                             Error
+severityConnectionManager TrUnknownConnection {}                  = Debug
 
 instance (Show addr, Show versionNumber, Show agreedOptions, LogFormatting addr,
           ToJSON addr, ToJSON versionNumber, ToJSON agreedOptions)
       => LogFormatting (ConnectionManagerTrace addr (ConnectionHandlerTrace versionNumber agreedOptions)) where
     forMachine dtal (TrIncludeConnection prov peerAddr) =
-        mkObject $ reverse
+        mconcat $ reverse
           [ "kind" .= String "IncludeConnection"
           , "remoteAddress" .= forMachine dtal peerAddr
           , "provenance" .= String (pack . show $ prov)
           ]
     forMachine dtal (TrUnregisterConnection prov peerAddr) =
-        mkObject $ reverse
+        mconcat $ reverse
           [ "kind" .= String "UnregisterConnection"
           , "remoteAddress" .= forMachine dtal peerAddr
           , "provenance" .= String (pack . show $ prov)
           ]
     forMachine _dtal (TrConnect (Just localAddress) remoteAddress) =
-        mkObject
+        mconcat
           [ "kind" .= String "ConnectTo"
           , "connectionId" .= toJSON ConnectionId { localAddress, remoteAddress }
           ]
     forMachine dtal (TrConnect Nothing remoteAddress) =
-        mkObject
+        mconcat
           [ "kind" .= String "ConnectTo"
           , "remoteAddress" .= forMachine dtal remoteAddress
           ]
     forMachine _dtal (TrConnectError (Just localAddress) remoteAddress err) =
-        mkObject
+        mconcat
           [ "kind" .= String "ConnectError"
           , "connectionId" .= toJSON ConnectionId { localAddress, remoteAddress }
           , "reason" .= String (pack . show $ err)
           ]
     forMachine dtal (TrConnectError Nothing remoteAddress err) =
-        mkObject
+        mconcat
           [ "kind" .= String "ConnectError"
           , "remoteAddress" .= forMachine dtal remoteAddress
           , "reason" .= String (pack . show $ err)
           ]
     forMachine _dtal (TrTerminatingConnection prov connId) =
-        mkObject
+        mconcat
           [ "kind" .= String "TerminatingConnection"
           , "provenance" .= String (pack . show $ prov)
           , "connectionId" .= toJSON connId
           ]
     forMachine dtal (TrTerminatedConnection prov remoteAddress) =
-        mkObject
+        mconcat
           [ "kind" .= String "TerminatedConnection"
           , "provenance" .= String (pack . show $ prov)
           , "remoteAddress" .= forMachine dtal remoteAddress
           ]
     forMachine dtal (TrConnectionHandler connId a) =
-        mkObject
+        mconcat
           [ "kind" .= String "ConnectionHandler"
           , "connectionId" .= toJSON connId
           , "connectionHandler" .= forMachine dtal a
           ]
     forMachine _dtal TrShutdown =
-        mkObject
+        mconcat
           [ "kind" .= String "Shutdown"
           ]
     forMachine dtal (TrConnectionExists prov remoteAddress inState) =
-        mkObject
+        mconcat
           [ "kind" .= String "ConnectionExists"
           , "provenance" .= String (pack . show $ prov)
           , "remoteAddress" .= forMachine dtal remoteAddress
           , "state" .= toJSON inState
           ]
     forMachine _dtal (TrForbiddenConnection connId) =
-        mkObject
+        mconcat
           [ "kind" .= String "ForbiddenConnection"
           , "connectionId" .= toJSON connId
           ]
     forMachine _dtal (TrImpossibleConnection connId) =
-        mkObject
+        mconcat
           [ "kind" .= String "ImpossibleConnection"
           , "connectionId" .= toJSON connId
           ]
     forMachine _dtal (TrConnectionFailure connId) =
-        mkObject
+        mconcat
           [ "kind" .= String "ConnectionFailure"
           , "connectionId" .= toJSON connId
           ]
     forMachine dtal (TrConnectionNotFound prov remoteAddress) =
-        mkObject
+        mconcat
           [ "kind" .= String "ConnectionNotFound"
           , "remoteAddress" .= forMachine dtal remoteAddress
           , "provenance" .= String (pack . show $ prov)
           ]
     forMachine dtal (TrForbiddenOperation remoteAddress connState) =
-        mkObject
+        mconcat
           [ "kind" .= String "ForbiddenOperation"
           , "remoteAddress" .= forMachine dtal remoteAddress
           , "connectionState" .= toJSON connState
           ]
     forMachine dtal (TrPruneConnections pruningSet numberPruned chosenPeers) =
-        mkObject
+        mconcat
           [ "kind" .= String "PruneConnections"
           , "prunedPeers" .= toJSON pruningSet
           , "numberPrunedPeers" .= toJSON numberPruned
           , "choiceSet" .= toJSON (forMachine dtal `Set.map` chosenPeers)
           ]
     forMachine _dtal (TrConnectionCleanup connId) =
-        mkObject
+        mconcat
           [ "kind" .= String "ConnectionCleanup"
           , "connectionId" .= toJSON connId
           ]
     forMachine _dtal (TrConnectionTimeWait connId) =
-        mkObject
+        mconcat
           [ "kind" .= String "ConnectionTimeWait"
           , "connectionId" .= toJSON connId
           ]
     forMachine _dtal (TrConnectionTimeWaitDone connId) =
-        mkObject
+        mconcat
           [ "kind" .= String "ConnectionTimeWaitDone"
           , "connectionId" .= toJSON connId
           ]
     forMachine _dtal (TrConnectionManagerCounters cmCounters) =
-        mkObject
+        mconcat
           [ "kind"  .= String "ConnectionManagerCounters"
           , "state" .= toJSON cmCounters
           ]
     forMachine _dtal (TrState cmState) =
-        mkObject
+        mconcat
           [ "kind"  .= String "ConnectionManagerState"
           , "state" .= listValue (\(addr, connState) ->
                                          object
@@ -910,10 +912,15 @@ instance (Show addr, Show versionNumber, Show agreedOptions, LogFormatting addr,
                                        (Map.toList cmState)
           ]
     forMachine _dtal (ConnectionManager.TrUnexpectedlyFalseAssertion info) =
-        mkObject
+        mconcat
           [ "kind" .= String "UnexpectedlyFalseAssertion"
           , "info" .= String (pack . show $ info)
           ]
+    forMachine _dtal (TrUnknownConnection info) =
+      mconcat
+        [ "kind" .= String "UnknownConnection"
+        , "info" .= String (pack . show $ info)
+        ]
     forHuman = pack . show
     asMetrics (TrConnectionManagerCounters ConnectionManagerCounters {..}) =
           [ IntM
@@ -937,23 +944,23 @@ instance (Show addr, Show versionNumber, Show agreedOptions, LogFormatting addr,
 instance (Show versionNumber, ToJSON versionNumber, ToJSON agreedOptions)
   => LogFormatting (ConnectionHandlerTrace versionNumber agreedOptions) where
   forMachine _dtal (TrHandshakeSuccess versionNumber agreedOptions) =
-    mkObject
+    mconcat
       [ "kind" .= String "HandshakeSuccess"
       , "versionNumber" .= toJSON versionNumber
       , "agreedOptions" .= toJSON agreedOptions
       ]
   forMachine _dtal (TrHandshakeClientError err) =
-    mkObject
+    mconcat
       [ "kind" .= String "HandshakeClientError"
       , "reason" .= toJSON err
       ]
   forMachine _dtal (TrHandshakeServerError err) =
-    mkObject
+    mconcat
       [ "kind" .= String "HandshakeServerError"
       , "reason" .= toJSON err
       ]
   forMachine _dtal (TrError e err cerr) =
-    mkObject
+    mconcat
       [ "kind" .= String "Error"
       , "context" .= show e
       , "reason" .= show err
@@ -1079,7 +1086,7 @@ severityConnectionManagerTransition _ = Debug
 instance (Show peerAddr, ToJSON peerAddr)
       => LogFormatting (ConnectionManager.AbstractTransitionTrace peerAddr) where
     forMachine _dtal (ConnectionManager.TransitionTrace peerAddr tr) =
-      mkObject $ reverse
+      mconcat $ reverse
         [ "kind"    .= String "ConnectionManagerTransition"
         , "address" .= toJSON peerAddr
         , "from"    .= toJSON (ConnectionManager.fromState tr)
@@ -1120,26 +1127,26 @@ severityServer TrServerError {}       = Critical
 instance (Show addr, LogFormatting addr, ToJSON addr)
       => LogFormatting (ServerTrace addr) where
   forMachine dtal (TrAcceptConnection peerAddr)     =
-    mkObject [ "kind" .= String "AcceptConnection"
+    mconcat [ "kind" .= String "AcceptConnection"
              , "address" .= forMachine dtal peerAddr
              ]
   forMachine _dtal (TrAcceptError exception)         =
-    mkObject [ "kind" .= String "AcceptErroor"
+    mconcat [ "kind" .= String "AcceptErroor"
              , "reason" .= show exception
              ]
   forMachine dtal (TrAcceptPolicyTrace policyTrace) =
-    mkObject [ "kind" .= String "AcceptPolicyTrace"
+    mconcat [ "kind" .= String "AcceptPolicyTrace"
              , "policy" .= forMachine dtal policyTrace
              ]
   forMachine dtal (TrServerStarted peerAddrs)       =
-    mkObject [ "kind" .= String "AcceptPolicyTrace"
+    mconcat [ "kind" .= String "AcceptPolicyTrace"
              , "addresses" .= toJSON (forMachine dtal `map` peerAddrs)
              ]
   forMachine _dtal TrServerStopped                   =
-    mkObject [ "kind" .= String "ServerStopped"
+    mconcat [ "kind" .= String "ServerStopped"
              ]
   forMachine _dtal (TrServerError exception)         =
-    mkObject [ "kind" .= String "ServerError"
+    mconcat [ "kind" .= String "ServerError"
              , "reason" .= show exception
              ]
   forHuman = pack . show
@@ -1219,86 +1226,86 @@ severityInboundGovernor InboundGovernor.TrInboundGovernorError {}       = Error
 instance (ToJSON addr, Show addr)
       => LogFormatting (InboundGovernorTrace addr) where
   forMachine _dtal (TrNewConnection p connId)            =
-    mkObject [ "kind" .= String "NewConnection"
+    mconcat [ "kind" .= String "NewConnection"
              , "provenance" .= show p
              , "connectionId" .= toJSON connId
              ]
   forMachine _dtal (TrResponderRestarted connId m)       =
-    mkObject [ "kind" .= String "ResponderStarted"
+    mconcat [ "kind" .= String "ResponderStarted"
              , "connectionId" .= toJSON connId
              , "miniProtocolNum" .= toJSON m
              ]
   forMachine _dtal (TrResponderStartFailure connId m s)  =
-    mkObject [ "kind" .= String "ResponderStartFailure"
+    mconcat [ "kind" .= String "ResponderStartFailure"
              , "connectionId" .= toJSON connId
              , "miniProtocolNum" .= toJSON m
              , "reason" .= show s
              ]
   forMachine _dtal (TrResponderErrored connId m s)       =
-    mkObject [ "kind" .= String "ResponderErrored"
+    mconcat [ "kind" .= String "ResponderErrored"
              , "connectionId" .= toJSON connId
              , "miniProtocolNum" .= toJSON m
              , "reason" .= show s
              ]
   forMachine _dtal (TrResponderStarted connId m)         =
-    mkObject [ "kind" .= String "ResponderStarted"
+    mconcat [ "kind" .= String "ResponderStarted"
              , "connectionId" .= toJSON connId
              , "miniProtocolNum" .= toJSON m
              ]
   forMachine _dtal (TrResponderTerminated connId m)      =
-    mkObject [ "kind" .= String "ResponderTerminated"
+    mconcat [ "kind" .= String "ResponderTerminated"
              , "connectionId" .= toJSON connId
              , "miniProtocolNum" .= toJSON m
              ]
   forMachine _dtal (TrPromotedToWarmRemote connId opRes) =
-    mkObject [ "kind" .= String "PromotedToWarmRemote"
+    mconcat [ "kind" .= String "PromotedToWarmRemote"
              , "connectionId" .= toJSON connId
              , "result" .= toJSON opRes
              ]
   forMachine _dtal (TrPromotedToHotRemote connId)        =
-    mkObject [ "kind" .= String "PromotedToHotRemote"
+    mconcat [ "kind" .= String "PromotedToHotRemote"
              , "connectionId" .= toJSON connId
              ]
   forMachine _dtal (TrDemotedToColdRemote connId od)     =
-    mkObject [ "kind" .= String "DemotedToColdRemote"
+    mconcat [ "kind" .= String "DemotedToColdRemote"
              , "connectionId" .= toJSON connId
              , "result" .= show od
              ]
   forMachine _dtal (TrDemotedToWarmRemote connId)     =
-    mkObject [ "kind" .= String "DemotedToWarmRemote"
+    mconcat [ "kind" .= String "DemotedToWarmRemote"
              , "connectionId" .= toJSON connId
              ]
   forMachine _dtal (TrWaitIdleRemote connId opRes) =
-    mkObject [ "kind" .= String "WaitIdleRemote"
+    mconcat [ "kind" .= String "WaitIdleRemote"
              , "connectionId" .= toJSON connId
              , "result" .= toJSON opRes
              ]
   forMachine _dtal (TrMuxCleanExit connId)               =
-    mkObject [ "kind" .= String "MuxCleanExit"
+    mconcat [ "kind" .= String "MuxCleanExit"
              , "connectionId" .= toJSON connId
              ]
   forMachine _dtal (TrMuxErrored connId s)               =
-    mkObject [ "kind" .= String "MuxErrored"
+    mconcat [ "kind" .= String "MuxErrored"
              , "connectionId" .= toJSON connId
              , "reason" .= show s
              ]
   forMachine _dtal (TrInboundGovernorCounters counters) =
-    mkObject [ "kind" .= String "InboundGovernorCounters"
+    mconcat [ "kind" .= String "InboundGovernorCounters"
              , "idlePeers" .= idlePeersRemote counters
              , "coldPeers" .= coldPeersRemote counters
              , "warmPeers" .= warmPeersRemote counters
              , "hotPeers" .= hotPeersRemote counters
              ]
   forMachine _dtal (TrRemoteState st) =
-    mkObject [ "kind" .= String "RemoteState"
+    mconcat [ "kind" .= String "RemoteState"
              , "remoteSt" .= toJSON st
              ]
   forMachine _dtal (InboundGovernor.TrUnexpectedlyFalseAssertion info) =
-    mkObject [ "kind" .= String "UnexpectedlyFalseAssertion"
+    mconcat [ "kind" .= String "UnexpectedlyFalseAssertion"
              , "remoteSt" .= String (pack . show $ info)
              ]
   forMachine _dtal (InboundGovernor.TrInboundGovernorError err) =
-    mkObject [ "kind" .= String "InboundGovernorError"
+    mconcat [ "kind" .= String "InboundGovernorError"
              , "remoteSt" .= String (pack . show $ err)
              ]
   forHuman = pack . show
@@ -1453,7 +1460,7 @@ severityInboundGovernorTransition _ = Debug
 instance (Show peerAddr, ToJSON peerAddr)
       => LogFormatting (InboundGovernor.RemoteTransitionTrace peerAddr) where
     forMachine _dtal (InboundGovernor.TransitionTrace peerAddr tr) =
-      mkObject $ reverse
+      mconcat $ reverse
         [ "kind"    .= String "ConnectionManagerTransition"
         , "address" .= toJSON peerAddr
         , "from"    .= toJSON (ConnectionManager.fromState tr)

@@ -43,7 +43,6 @@ import qualified Data.ByteString.Base16 as Base16
 import qualified Data.ByteString.Char8 as BSC
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import qualified Data.Char as Char
-import qualified Data.HashMap.Strict as HashMap
 import qualified Data.List as List
 import           Data.Maybe (fromMaybe)
 import qualified Data.Scientific as Scientific
@@ -56,6 +55,8 @@ import qualified Data.Vector as Vector
 import           Data.Word
 
 import qualified Data.Aeson as Aeson
+import qualified Data.Aeson.Key as Aeson
+import qualified Data.Aeson.KeyMap as KeyMap
 import qualified Data.Aeson.Text as Aeson.Text
 import qualified Data.Attoparsec.ByteString.Char8 as Atto
 
@@ -72,14 +73,14 @@ import           Cardano.Api.Error
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Hash
 import           Cardano.Api.KeysShelley
-import           Cardano.Api.SerialiseJSON
 import           Cardano.Api.SerialiseCBOR
+import           Cardano.Api.SerialiseJSON
 import           Cardano.Api.SerialiseRaw
 import qualified Cardano.Binary as CBOR
 
 import           Cardano.Api.SerialiseUsing
 import           Cardano.Api.TxMetadata (pBytes, pSigned, parseAll)
-import           Codec.Serialise.Class (Serialise(..))
+import           Codec.Serialise.Class (Serialise (..))
 
 -- ----------------------------------------------------------------------------
 -- Script data
@@ -385,11 +386,12 @@ scriptDataToJsonNoSchema = conv
     -- Script data allows any value as a key, not just string as JSON does.
     -- For simple types we just convert them to string directly.
     -- For structured keys we render them as JSON and use that as the string.
-    convKey :: ScriptData -> Text
-    convKey (ScriptDataNumber n) = Text.pack (show n)
-    convKey (ScriptDataBytes bs) = bytesPrefix
+    convKey :: ScriptData -> Aeson.Key
+    convKey (ScriptDataNumber n) = Aeson.fromText $ Text.pack (show n)
+    convKey (ScriptDataBytes bs) = Aeson.fromText $ bytesPrefix
                                 <> Text.decodeLatin1 (Base16.encode bs)
-    convKey v                    = Text.Lazy.toStrict
+    convKey v                    = Aeson.fromText
+                                 . Text.Lazy.toStrict
                                  . Aeson.Text.encodeToLazyText
                                  . conv
                                  $ v
@@ -428,7 +430,8 @@ scriptDataFromJsonNoSchema = conv
         fmap ScriptDataMap
       . traverse (\(k,v) -> (,) (convKey k) <$> conv v)
       . List.sortOn fst
-      $ HashMap.toList kvs
+      . fmap (first Aeson.toText)
+      $ KeyMap.toList kvs
 
     convKey :: Text -> ScriptData
     convKey s =
@@ -482,7 +485,7 @@ scriptDataFromJsonDetailedSchema = conv
     conv :: Aeson.Value
          -> Either ScriptDataJsonSchemaError ScriptData
     conv (Aeson.Object m) =
-      case List.sort $ HashMap.toList m of
+      case List.sort $ KeyMap.toList m of
         [("int", Aeson.Number d)] ->
           case Scientific.floatingOrInteger d :: Either Double Integer of
             Left  n -> Left (ScriptDataJsonNumberNotInteger n)
@@ -511,9 +514,9 @@ scriptDataFromJsonDetailedSchema = conv
                      $ Vector.toList vs
 
         (key, v):_ | key `elem` ["int", "bytes", "list", "map", "constructor"] ->
-            Left (ScriptDataJsonTypeMismatch key v)
+            Left (ScriptDataJsonTypeMismatch (Aeson.toText key) v)
 
-        kvs -> Left (ScriptDataJsonBadObject kvs)
+        kvs -> Left (ScriptDataJsonBadObject $ first Aeson.toText <$> kvs)
 
     conv v = Left (ScriptDataJsonNotObject v)
 
@@ -521,9 +524,9 @@ scriptDataFromJsonDetailedSchema = conv
                      -> Either ScriptDataJsonSchemaError
                                (ScriptData, ScriptData)
     convKeyValuePair (Aeson.Object m)
-      | HashMap.size m == 2
-      , Just k <- m HashMap.!? "k"
-      , Just v <- m HashMap.!? "v"
+      | KeyMap.size m == 2
+      , Just k <- KeyMap.lookup "k" m
+      , Just v <- KeyMap.lookup "v" m
       = (,) <$> conv k <*> conv v
 
     convKeyValuePair v = Left (ScriptDataJsonBadMapPair v)
@@ -575,7 +578,7 @@ instance Error ScriptDataJsonSchemaError where
         "JSON object does not match the schema.\nExpected a single field named "
      ++ "\"int\", \"bytes\", \"string\", \"list\" or \"map\".\n"
      ++ "Unexpected object field(s): "
-     ++ LBS.unpack (Aeson.encode (Aeson.object v))
+     ++ LBS.unpack (Aeson.encode (KeyMap.fromList $ first Aeson.fromText <$> v))
     displayError (ScriptDataJsonBadMapPair v) =
         "Expected a list of key/value pair { \"k\": ..., \"v\": ... } objects."
      ++ "\nUnexpected value: " ++ LBS.unpack (Aeson.encode v)
@@ -583,4 +586,3 @@ instance Error ScriptDataJsonSchemaError where
         "The value in the field " ++ show k ++ " does not have the type "
      ++ "required by the schema.\nUnexpected value: "
      ++ LBS.unpack (Aeson.encode v)
-

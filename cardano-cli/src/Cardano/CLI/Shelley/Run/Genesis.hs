@@ -18,7 +18,7 @@ module Cardano.CLI.Shelley.Run.Genesis
 import           Cardano.Prelude hiding (unlines)
 import           Prelude (id, unlines)
 
-import           Data.Aeson
+import           Data.Aeson hiding (Key)
 import qualified Data.Aeson as Aeson
 import           Data.Aeson.Encode.Pretty (encodePretty)
 import qualified Data.Binary.Get as Bin

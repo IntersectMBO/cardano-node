@@ -1,8 +1,8 @@
-{-# LANGUAGE DeriveGeneric        #-}
-{-# LANGUAGE GADTs                #-}
-{-# LANGUAGE RankNTypes           #-}
-{-# LANGUAGE RecordWildCards      #-}
-{-# LANGUAGE StandaloneDeriving   #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 
 module Cardano.Logging.Types (
@@ -432,17 +432,17 @@ instance LogFormatting b => LogFormatting (Folding a b) where
   asMetrics (Folding b)    =  asMetrics b
 
 instance LogFormatting Double where
-  forMachine _dtal d = mkObject [ "val" .= AE.String ((pack . show) d)]
+  forMachine _dtal d = "val" .= AE.String ((pack . show) d)
   forHuman           = pack . show
   asMetrics d        = [DoubleM "" d]
 
 instance LogFormatting Int where
-  forMachine _dtal i = mkObject [ "val" .= AE.String ((pack . show) i)]
+  forMachine _dtal i = "val" .= AE.String ((pack . show) i)
   forHuman           = pack . show
   asMetrics i        = [IntM "" (fromIntegral i)]
 
 instance LogFormatting Integer where
-  forMachine _dtal i = mkObject [ "val" .= AE.String ((pack . show) i)]
+  forMachine _dtal i = "val" .= AE.String ((pack . show) i)
   forHuman           = pack . show
   asMetrics i        = [IntM "" i]
 

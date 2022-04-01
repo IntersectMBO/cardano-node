@@ -79,7 +79,7 @@ instance All (Compose LogFormatting GenTx) xs => LogFormatting (GenTx (HardForkB
 instance All (LogFormatting `Compose` WrapApplyTxErr) xs => LogFormatting (HardForkApplyTxErr xs) where
     forMachine dtal (HardForkApplyTxErrFromEra err) = forMachine dtal err
     forMachine _dtal (HardForkApplyTxErrWrongEra mismatch) =
-      mkObject
+      mconcat
         [ "kind"       .= String "HardForkApplyTxErrWrongEra"
         , "currentEra" .= ledgerEraName
         , "txEra"      .= otherEraName
@@ -105,7 +105,7 @@ instance All (LogFormatting `Compose` WrapLedgerErr) xs => LogFormatting (HardFo
     forMachine dtal (HardForkLedgerErrorFromEra err) = forMachine dtal err
 
     forMachine _dtal (HardForkLedgerErrorWrongEra mismatch) =
-      mkObject
+      mconcat
         [ "kind"       .= String "HardForkLedgerErrorWrongEra"
         , "currentEra" .= ledgerEraName
         , "blockEra"   .= otherEraName
@@ -134,7 +134,7 @@ instance ( All (LogFormatting `Compose` WrapLedgerWarning) xs
       HardForkWarningInEra err -> forMachine dtal err
 
       HardForkWarningTransitionMismatch toEra eraParams epoch ->
-        mkObject
+        mconcat
           [ "kind"            .= String "HardForkWarningTransitionMismatch"
           , "toEra"           .= condense toEra
           , "eraParams"       .= forMachine dtal eraParams
@@ -142,20 +142,20 @@ instance ( All (LogFormatting `Compose` WrapLedgerWarning) xs
           ]
 
       HardForkWarningTransitionInFinalEra fromEra epoch ->
-        mkObject
+        mconcat
           [ "kind"            .= String "HardForkWarningTransitionInFinalEra"
           , "fromEra"         .= condense fromEra
           , "transitionEpoch" .= epoch
           ]
 
       HardForkWarningTransitionUnconfirmed toEra ->
-        mkObject
+        mconcat
           [ "kind"  .= String "HardForkWarningTransitionUnconfirmed"
           , "toEra" .= condense toEra
           ]
 
       HardForkWarningTransitionReconfirmed fromEra toEra prevEpoch newEpoch ->
-        mkObject
+        mconcat
           [ "kind"                .= String "HardForkWarningTransitionReconfirmed"
           , "fromEra"             .= condense fromEra
           , "toEra"               .= condense toEra
@@ -174,7 +174,7 @@ instance LogFormatting (LedgerWarning blk) => LogFormatting (WrapLedgerWarning b
 
 instance LogFormatting EraParams where
     forMachine _dtal EraParams{ eraEpochSize, eraSlotLength, eraSafeZone} =
-      mkObject
+      mconcat
         [ "epochSize"  .= unEpochSize eraEpochSize
         , "slotLength" .= getSlotLength eraSlotLength
         , "safeZone"   .= eraSafeZone
@@ -194,7 +194,7 @@ instance ( All (LogFormatting `Compose` WrapLedgerUpdate) xs
       HardForkUpdateInEra err -> forMachine dtal err
 
       HardForkUpdateTransitionConfirmed fromEra toEra epoch ->
-        mkObject
+        mconcat
           [ "kind"            .= String "HardForkUpdateTransitionConfirmed"
           , "fromEra"         .= condense fromEra
           , "toEra"           .= condense toEra
@@ -202,7 +202,7 @@ instance ( All (LogFormatting `Compose` WrapLedgerUpdate) xs
           ]
 
       HardForkUpdateTransitionDone fromEra toEra epoch ->
-        mkObject
+        mconcat
           [ "kind"            .= String "HardForkUpdateTransitionDone"
           , "fromEra"         .= condense fromEra
           , "toEra"           .= condense toEra
@@ -210,7 +210,7 @@ instance ( All (LogFormatting `Compose` WrapLedgerUpdate) xs
           ]
 
       HardForkUpdateTransitionRolledBack fromEra toEra ->
-        mkObject
+        mconcat
           [ "kind"    .= String "HardForkUpdateTransitionRolledBack"
           , "fromEra" .= condense fromEra
           , "toEra"   .= condense toEra
@@ -234,7 +234,7 @@ instance All (LogFormatting `Compose` WrapEnvelopeErr) xs => LogFormatting (Hard
     forMachine dtal (HardForkEnvelopeErrFromEra err) = forMachine dtal err
 
     forMachine _dtal (HardForkEnvelopeErrWrongEra mismatch) =
-      mkObject
+      mconcat
         [ "kind"       .= String "HardForkEnvelopeErrWrongEra"
         , "currentEra" .= ledgerEraName
         , "blockEra"   .= otherEraName
@@ -260,7 +260,7 @@ instance All (LogFormatting `Compose` WrapValidationErr) xs => LogFormatting (Ha
     forMachine dtal (HardForkValidationErrFromEra err) = forMachine dtal err
 
     forMachine _dtal (HardForkValidationErrWrongEra mismatch) =
-      mkObject
+      mconcat
         [ "kind"       .= String "HardForkValidationErrWrongEra"
         , "currentEra" .= ledgerEraName
         , "blockEra"   .= otherEraName
@@ -305,7 +305,7 @@ instance LogFormatting (CannotForge blk) => LogFormatting (WrapCannotForge blk) 
 
 instance All (LogFormatting `Compose` WrapForgeStateInfo) xs => LogFormatting (OneEraForgeStateInfo xs) where
     forMachine dtal forgeStateInfo =
-        mkObject
+        mconcat
           [ "kind" .= String "HardForkForgeStateInfo"
           , "forgeStateInfo" .= toJSON forgeStateInfo'
           ]
@@ -331,7 +331,7 @@ instance LogFormatting (ForgeStateInfo blk) => LogFormatting (WrapForgeStateInfo
 
 instance All (LogFormatting `Compose` WrapForgeStateUpdateError) xs => LogFormatting (OneEraForgeStateUpdateError xs) where
     forMachine dtal forgeStateUpdateError =
-        mkObject
+        mconcat
           [ "kind" .= String "HardForkForgeStateUpdateError"
           , "forgeStateUpdateError" .= toJSON forgeStateUpdateError'
           ]

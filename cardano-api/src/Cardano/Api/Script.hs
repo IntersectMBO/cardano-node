@@ -112,7 +112,6 @@ import           Numeric.Natural (Natural)
 
 import           Data.Aeson (Value (..), object, (.:), (.=))
 import qualified Data.Aeson as Aeson
-import qualified Data.Aeson.Encoding as Aeson
 import qualified Data.Aeson.Types as Aeson
 import qualified Data.Sequence.Strict as Seq
 import           Data.Vector (Vector)
@@ -333,12 +332,11 @@ instance Aeson.FromJSONKey AnyPlutusScriptVersion where
     fromJSONKey = Aeson.FromJSONKeyTextParser parsePlutusScriptVersion
 
 instance Aeson.ToJSONKey AnyPlutusScriptVersion where
-    toJSONKey = Aeson.ToJSONKeyText toText toAesonEncoding
+    toJSONKey = Aeson.toJSONKeyText toText
       where
         toText :: AnyPlutusScriptVersion -> Text
         toText (AnyPlutusScriptVersion PlutusScriptV1) = "PlutusScriptV1"
         toText (AnyPlutusScriptVersion PlutusScriptV2) = "PlutusScriptV2"
-        toAesonEncoding = Aeson.text . toText
 
 toAlonzoLanguage :: AnyPlutusScriptVersion -> Alonzo.Language
 toAlonzoLanguage (AnyPlutusScriptVersion PlutusScriptV1) = Alonzo.PlutusV1

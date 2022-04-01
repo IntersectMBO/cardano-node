@@ -105,6 +105,22 @@ jobs:
         sudo apt-get -y remove --purge software-properties-common
         sudo apt-get -y autoremove
 
+    - name: Install secp256k1 (Linux)
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        sudo apt-get -y install autoconf automake libtool
+        mkdir secp256k1-sources
+        cd secp256k1-sources
+        git clone https://github.com/bitcoin-core/secp256k1.git
+        cd secp256k1
+        git reset --hard $SECP256K1_REF
+        ./autogen.sh
+        ./configure --prefix=/usr --enable-module-schnorrsig --enable-experimental
+        make
+        make check
+        sudo make install
+        cd ../..
+
     - name: Cabal update
       run: retry 2 cabal update
 

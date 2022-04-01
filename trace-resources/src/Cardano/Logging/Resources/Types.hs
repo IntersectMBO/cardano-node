@@ -102,7 +102,7 @@ instance LogFormatting ResourceStats where
                   <> ", Threads "              <> (pack . show) (rThreads rs)
                   <> "."
 
-    forMachine _dtal rs = mkObject
+    forMachine _dtal rs = mconcat
       [ "kind"          .= String "ResourceStats"
       , "CentiCpu"      .= Number (fromIntegral $ rCentiCpu rs)
       , "CentiGC"       .= Number (fromIntegral $ rCentiGC rs)

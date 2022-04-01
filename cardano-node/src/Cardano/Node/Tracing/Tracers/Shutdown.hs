@@ -15,7 +15,7 @@ module Cardano.Node.Tracing.Tracers.Shutdown
 import           Cardano.Logging
 import           Cardano.Node.Handlers.Shutdown
 import           Data.Aeson (ToJSON (..), Value (..), (.=))
-import           Data.Monoid ((<>))
+import           Data.Monoid (mconcat, (<>))
 import           Data.Text (Text, pack)
 import           Prelude (show)
 
@@ -53,17 +53,17 @@ instance LogFormatting ShutdownTrace where
 
   forMachine _ = \case
     ShutdownRequested ->
-          mkObject [ "kind"   .= String "ShutdownRequested" ]
+          mconcat [ "kind"   .= String "ShutdownRequested" ]
     AbnormalShutdown  ->
-          mkObject [ "kind"   .= String "AbnormalShutdown" ]
+          mconcat [ "kind"   .= String "AbnormalShutdown" ]
     ShutdownUnexpectedInput text ->
-          mkObject [ "kind"   .= String "AbnormalShutdown"
+          mconcat [ "kind"   .= String "AbnormalShutdown"
                    , "unexpected" .= String text ]
     RequestingShutdown reason ->
-          mkObject [ "kind"   .= String "RequestingShutdown"
+          mconcat [ "kind"   .= String "RequestingShutdown"
                    , "reason" .= String reason ]
     ShutdownArmedAtSlot slot  ->
-          mkObject [ "kind"   .= String "ShutdownArmedAtSlot"
+          mconcat [ "kind"   .= String "ShutdownArmedAtSlot"
                    , "slot"   .= toJSON slot ]
 
 docShutdown :: Documented ShutdownTrace

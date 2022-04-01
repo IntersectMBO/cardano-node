@@ -1,4 +1,5 @@
-index-state: 2021-12-07T00:00:00Z
+-- run `nix flake lock --update-input hackageNix` after updating index-state.
+index-state: 2022-02-18T00:00:00Z
 
 packages:
     cardano-api
@@ -154,15 +155,21 @@ source-repository-package
 
 source-repository-package
   type: git
+  location: https://github.com/vshabanov/ekg-json
+  tag: 00ebe7211c981686e65730b7144fbf5350462608
+  --sha256: 1zvjm3pb38w0ijig5wk5mdkzcszpmlp5d4zxvks2jk1rkypi8gsm
+
+source-repository-package
+  type: git
   location: https://github.com/input-output-hk/hedgehog-extras
-  tag: edf6945007177a638fbeb8802397f3a6f4e47c14
-  --sha256: 0wc7qzkc7j4ns2rz562h6qrx2f8xyq7yjcb7zidnj7f6j0pcd0i9
+  tag: 967d79533c21e33387d0227a5f6cc185203fe658
+  --sha256: 0rbqb7a64aya1qizlr3im06hdydg9zr6sl3i8bvqqlf7kpa647sd
 
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: 41545ba3ac6b3095966316a99883d678b5ab8da8
-  --sha256: 0icq9y3nnl42fz536da84414av36g37894qnyw4rk3qkalksqwir
+  tag: 20bd513b7ac9dcf0749f0ceb1df3d6b07a1b57c8
+  --sha256: 0pkcd3k2fpk76igfyaf7cqrcglnjs3rs9pka68wpkyp6z7qkixmz
   subdir:
     base-deriving-via
     binary
@@ -184,11 +191,12 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger
-  tag: 3df3ca8db4d52952cb750e8859b71f0a371323af
-  --sha256: 0jacfhqnj76cyjwdxz05h7rqmdasgxp9skd01f5y61xraz746x21
+  tag: 030c3b12f128f22b9d721a31b6b5ae1b75211d68
+  --sha256: 0h9qbdik8fnzv33582pvvhkjyv3wwlnshrwvwalh0yl4mmqdcz8x
   subdir:
     eras/alonzo/impl
     eras/alonzo/test-suite
+    eras/babbage/impl
     eras/byron/chain/executable-spec
     eras/byron/crypto
     eras/byron/crypto/test
@@ -227,8 +235,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/iohk-monitoring-framework
-  tag: 808724ff8a19a33d0ed06f9ef59fbd900b08553c
-  --sha256: 0298dpl29gxzs9as9ha6y0w18hqwc00ipa3hzkxv7nlfrjjz8hmz
+  tag: eb7854d1337637b8672af1227b276aa33a658f47
+  --sha256: 1ll81hlhkhj96f5v6lswjkq2h8f7zcmdrj2azqhi4ylzafn026r3
   subdir:
     contra-tracer
     iohk-monitoring
@@ -248,8 +256,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: 48e498cfea694b89f99fd92ae7a86b9fcd5f29f0
-  --sha256: 1klgvlfcd1kxgjicws964k2xkxr79xf3vvgkbx4x7cyn4xfng166
+  tag: 83744fe3b752fd8200de2ea1416e34c576c74f35
+  --sha256: 0v0a3q7xfz7x6rd1bz0scixixmcd9zvqa92lbdc17vgrbrq3dq58
   subdir:
     io-sim
     io-classes
@@ -271,8 +279,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/plutus
-  tag: fc5fe94d3d9525d032bcbc79ff0e1ebcfd8ef143
-  --sha256: 1gnzhns44rzvf9cw84jaqajqqbi9xdcpyy2sapa890vwf796nigv
+  tag: 4417dfea15746596f51f313ef231fb9ecb1d02fc
+  --sha256: 0nx7jbql3mmd64f0kjxrv9azzyc61b6sm2xh5dil910lw891szwh
   subdir:
     plutus-core
     plutus-ledger-api
@@ -317,5 +325,6 @@ package cardano-ledger-alonzo-test
   tests: False
 
 allow-newer:
+  *:aeson,
   monoidal-containers:aeson,
   size-based:template-haskell

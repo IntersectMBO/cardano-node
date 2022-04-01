@@ -1,4 +1,5 @@
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE ViewPatterns #-}
 
 -- | Metadata embedded in transactions
 --
@@ -41,41 +42,37 @@ module Cardano.Api.TxMetadata (
 
 import           Prelude
 
-import           Data.Bifunctor (first)
-import           Data.Maybe (fromMaybe)
-import           Data.Word
-import qualified Data.Scientific as Scientific
-import           Data.ByteString (ByteString)
-import qualified Data.ByteString as BS
-import qualified Data.ByteString.Char8 as BSC
-import qualified Data.ByteString.Lazy.Char8 as LBS
-import qualified Data.ByteString.Base16 as Base16
-import           Data.Text (Text)
-import qualified Data.Text as Text
-import qualified Data.Text.Encoding as Text
-import qualified Data.Text.Lazy as Text.Lazy
-import qualified Data.Map.Lazy as Map.Lazy
-import           Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map
-import qualified Data.HashMap.Strict as HashMap
-import qualified Data.List as List
-import qualified Data.Vector as Vector
-
-import qualified Data.Aeson as Aeson
-import qualified Data.Aeson.Text as Aeson.Text
-import qualified Data.Attoparsec.ByteString.Char8 as Atto
-
-import           Control.Applicative (Alternative (..))
-import           Control.Monad (guard, when)
-
-import qualified Cardano.Binary as CBOR
-
-import qualified Cardano.Ledger.Shelley.Metadata as Shelley
-
 import           Cardano.Api.Eras
 import           Cardano.Api.Error
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.SerialiseCBOR
+import qualified Cardano.Binary as CBOR
+import qualified Cardano.Ledger.Shelley.Metadata as Shelley
+import           Control.Applicative (Alternative (..))
+import           Control.Monad (guard, when)
+import qualified Data.Aeson as Aeson
+import qualified Data.Aeson.Key as Aeson
+import qualified Data.Aeson.KeyMap as KeyMap
+import qualified Data.Aeson.Text as Aeson.Text
+import qualified Data.Attoparsec.ByteString.Char8 as Atto
+import           Data.Bifunctor (first)
+import           Data.ByteString (ByteString)
+import qualified Data.ByteString as BS
+import qualified Data.ByteString.Base16 as Base16
+import qualified Data.ByteString.Char8 as BSC
+import qualified Data.ByteString.Lazy.Char8 as LBS
+import qualified Data.List as List
+import qualified Data.Map.Lazy as Map.Lazy
+import           Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
+import           Data.Maybe (fromMaybe)
+import qualified Data.Scientific as Scientific
+import           Data.Text (Text)
+import qualified Data.Text as Text
+import qualified Data.Text.Encoding as Text
+import qualified Data.Text.Lazy as Text.Lazy
+import qualified Data.Vector as Vector
+import           Data.Word
 
 {- HLINT ignore "Use lambda-case" -}
 
@@ -333,11 +330,11 @@ metadataFromJson schema =
       Aeson.Object m ->
           fmap (TxMetadata . Map.fromList)
         . mapM (uncurry metadataKeyPairFromJson)
-        $ HashMap.toList m
+        $ KeyMap.toList m
 
       _ -> Left TxMetadataJsonToplevelNotMap
   where
-    metadataKeyPairFromJson :: Text
+    metadataKeyPairFromJson :: Aeson.Key
                             -> Aeson.Value
                             -> Either TxMetadataJsonError
                                       (Word64, TxMetadataValue)
@@ -349,8 +346,8 @@ metadataFromJson schema =
             (validateMetadataValue v')
       return (k', v')
 
-    convTopLevelKey :: Text -> Either TxMetadataJsonError Word64
-    convTopLevelKey k =
+    convTopLevelKey :: Aeson.Key -> Either TxMetadataJsonError Word64
+    convTopLevelKey (Aeson.toText -> k) =
       case parseAll (pUnsigned <* Atto.endOfInput) k of
         Just n | n <= fromIntegral (maxBound :: Word64)
           -> Right (fromIntegral n)
@@ -382,7 +379,7 @@ metadataToJson :: TxMetadataJsonSchema
 metadataToJson schema =
     \(TxMetadata mdMap) ->
     Aeson.object
-      [ (Text.pack (show k), metadataValueToJson v)
+      [ (Aeson.fromString (show k), metadataValueToJson v)
       | (k, v) <- Map.toList mdMap ]
   where
     metadataValueToJson :: TxMetadataValue -> Aeson.Value
@@ -413,12 +410,13 @@ metadataValueToJsonNoSchema = conv
     -- Metadata allows any value as a key, not just string as JSON does.
     -- For simple types we just convert them to string directly.
     -- For structured keys we render them as JSON and use that as the string.
-    convKey :: TxMetadataValue -> Text
-    convKey (TxMetaNumber n) = Text.pack (show n)
-    convKey (TxMetaBytes bs) = bytesPrefix
+    convKey :: TxMetadataValue -> Aeson.Key
+    convKey (TxMetaNumber n) = Aeson.fromString (show n)
+    convKey (TxMetaBytes bs) = Aeson.fromText $ bytesPrefix
                             <> Text.decodeLatin1 (Base16.encode bs)
-    convKey (TxMetaText txt) = txt
-    convKey v                = Text.Lazy.toStrict
+    convKey (TxMetaText txt) = Aeson.fromText txt
+    convKey v                = Aeson.fromText
+                             . Text.Lazy.toStrict
                              . Aeson.Text.encodeToLazyText
                              . conv
                              $ v
@@ -456,7 +454,8 @@ metadataValueFromJsonNoSchema = conv
         fmap TxMetaMap
       . traverse (\(k,v) -> (,) (convKey k) <$> conv v)
       . List.sortOn fst
-      $ HashMap.toList kvs
+      . fmap (first Aeson.toText)
+      $ KeyMap.toList kvs
 
     convKey :: Text -> TxMetadataValue
     convKey s =
@@ -506,7 +505,7 @@ metadataValueFromJsonDetailedSchema = conv
     conv :: Aeson.Value
          -> Either TxMetadataJsonSchemaError TxMetadataValue
     conv (Aeson.Object m) =
-      case HashMap.toList m of
+      case KeyMap.toList m of
         [("int", Aeson.Number d)] ->
           case Scientific.floatingOrInteger d :: Either Double Integer of
             Left  n -> Left (TxMetadataJsonNumberNotInteger n)
@@ -529,9 +528,9 @@ metadataValueFromJsonDetailedSchema = conv
           $ Vector.toList kvs
 
         [(key, v)] | key `elem` ["int", "bytes", "string", "list", "map"] ->
-            Left (TxMetadataJsonTypeMismatch key v)
+            Left (TxMetadataJsonTypeMismatch (Aeson.toText key) v)
 
-        kvs -> Left (TxMetadataJsonBadObject kvs)
+        kvs -> Left (TxMetadataJsonBadObject (first Aeson.toText <$> kvs))
 
     conv v = Left (TxMetadataJsonNotObject v)
 
@@ -539,9 +538,9 @@ metadataValueFromJsonDetailedSchema = conv
                      -> Either TxMetadataJsonSchemaError
                                (TxMetadataValue, TxMetadataValue)
     convKeyValuePair (Aeson.Object m)
-      | HashMap.size m == 2
-      , Just k <- m HashMap.!? "k"
-      , Just v <- m HashMap.!? "v"
+      | KeyMap.size m == 2
+      , Just k <- KeyMap.lookup "k" m
+      , Just v <- KeyMap.lookup "v" m
       = (,) <$> conv k <*> conv v
 
     convKeyValuePair v = Left (TxMetadataJsonBadMapPair v)
@@ -601,7 +600,7 @@ instance Error TxMetadataJsonSchemaError where
         "JSON object does not match the schema.\nExpected a single field named "
      ++ "\"int\", \"bytes\", \"string\", \"list\" or \"map\".\n"
      ++ "Unexpected object field(s): "
-     ++ LBS.unpack (Aeson.encode (Aeson.object v))
+     ++ LBS.unpack (Aeson.encode (Aeson.object $ first Aeson.fromText <$> v))
     displayError (TxMetadataJsonBadMapPair v) =
         "Expected a list of key/value pair { \"k\": ..., \"v\": ... } objects."
      ++ "\nUnexpected value: " ++ LBS.unpack (Aeson.encode v)

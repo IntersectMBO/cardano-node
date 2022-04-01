@@ -18,7 +18,6 @@ import Data.Aeson.Types (Parser)
 import Data.Aeson qualified as AE
 import Data.Aeson.Types qualified as AE
 import Data.ByteString.Lazy qualified as LBS
-import Data.HashMap.Strict qualified as HM
 import Data.Text qualified as LText
 import Data.Text.Short qualified as Text
 import Data.Text.Short (ShortText, fromText, toText)
@@ -32,6 +31,8 @@ import Ouroboros.Network.Block (BlockNo(..), SlotNo(..))
 import Cardano.Logging.Resources.Types
 
 import Data.Accum (zeroUTCTime)
+import qualified Data.Aeson.KeyMap as KeyMap
+import qualified Data.Aeson.Key as Aeson
 
 
 type Text = ShortText
@@ -85,12 +86,6 @@ data LogObject
   deriving anyclass NFData
 
 instance ToJSON LogObject
-
-instance ToJSON ShortText where
-  toJSON = String . toText
-
-instance FromJSON ShortText where
-  parseJSON = AE.withText "String" $ pure . fromText
 
 instance Print ShortText where
   hPutStr   h = hPutStr   h . toText
@@ -316,15 +311,15 @@ instance FromJSON LogObject where
      unwrap wrappedKeyPred unwrapKey v = do
        kind <- (fromText <$>) <$> v .:? "kind"
        wrapped   :: Maybe Text <-
-         (fromText <$>) <$> v .:? toText wrappedKeyPred
-       unwrapped :: Maybe Object <- v .:? toText unwrapKey
+         (fromText <$>) <$> v .:? Aeson.fromText (toText wrappedKeyPred)
+       unwrapped :: Maybe Object <- v .:? Aeson.fromText (toText unwrapKey)
        case (kind, wrapped, unwrapped) of
          (Nothing, Just _, Just x) -> (,) <$> pure x <*> (fromText <$> x .: "kind")
          (Just kind0, _, _) -> pure (v, kind0)
          _ -> fail $ "Unexpected LogObject .data: " <> show v
 
 extendObject :: Text -> Value -> Value -> Value
-extendObject k v (Object hm) = Object $ hm <> HM.singleton (toText k) v
+extendObject k v (Object hm) = Object $ hm <> KeyMap.singleton (Aeson.fromText $ toText k) v
 extendObject k _ _ = error . Text.unpack $ "Summary key '" <> k <> "' does not serialise to an Object."
 
 parsePartialResourceStates :: Value -> Parser (Resources Word64)

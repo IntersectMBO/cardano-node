@@ -47,36 +47,36 @@ import           Cardano.Crypto.Signing (VerificationKey)
 
 instance LogFormatting ApplyMempoolPayloadErr where
   forMachine _dtal (MempoolTxErr utxoValidationErr) =
-    mkObject
+    mconcat
       [ "kind" .= String "MempoolTxErr"
       , "error" .= String (show utxoValidationErr)
       ]
   forMachine _dtal (MempoolDlgErr delegScheduleError) =
-    mkObject
+    mconcat
       [ "kind" .= String "MempoolDlgErr"
       , "error" .= String (show delegScheduleError)
       ]
   forMachine _dtal (MempoolUpdateProposalErr iFaceErr) =
-    mkObject
+    mconcat
       [ "kind" .= String "MempoolUpdateProposalErr"
       , "error" .= String (show iFaceErr)
       ]
   forMachine _dtal (MempoolUpdateVoteErr iFaceErrr) =
-    mkObject
+    mconcat
       [ "kind" .= String "MempoolUpdateVoteErr"
       , "error" .= String (show iFaceErrr)
       ]
 
 instance LogFormatting ByronLedgerUpdate where
   forMachine dtal (ByronUpdatedProtocolUpdates protocolUpdates) =
-    mkObject
+    mconcat
       [ "kind"            .= String "ByronUpdatedProtocolUpdates"
       , "protocolUpdates" .= map (forMachine dtal) protocolUpdates
       ]
 
 instance LogFormatting ProtocolUpdate where
   forMachine dtal (ProtocolUpdate updateVersion updateState) =
-    mkObject
+    mconcat
       [ "kind"                  .= String "ProtocolUpdate"
       , "protocolUpdateVersion" .= updateVersion
       , "protocolUpdateState"   .= forMachine dtal updateState
@@ -85,112 +85,112 @@ instance LogFormatting ProtocolUpdate where
 instance LogFormatting UpdateState where
   forMachine _dtal updateState = case updateState of
       UpdateRegistered slot ->
-        mkObject
+        mconcat
           [ "kind" .= String "UpdateRegistered"
           , "slot" .= slot
           ]
       UpdateActive votes ->
-        mkObject
+        mconcat
           [ "kind"  .= String "UpdateActive"
           , "votes" .= map (Text.pack . show) (Set.toList votes)
           ]
       UpdateConfirmed slot ->
-        mkObject
+        mconcat
           [ "kind" .= String "UpdateConfirmed"
           , "slot" .= slot
           ]
       UpdateStablyConfirmed endorsements ->
-        mkObject
+        mconcat
           [ "kind"         .= String "UpdateStablyConfirmed"
           , "endorsements" .= map (Text.pack . show) (Set.toList endorsements)
           ]
       UpdateCandidate slot epoch ->
-        mkObject
+        mconcat
           [ "kind" .= String "UpdateCandidate"
           , "slot" .= slot
           , "epoch" .= epoch
           ]
       UpdateStableCandidate transitionEpoch ->
-        mkObject
+        mconcat
           [ "kind"            .= String "UpdateStableCandidate"
           , "transitionEpoch" .= transitionEpoch
           ]
 
 instance LogFormatting (GenTx ByronBlock) where
   forMachine dtal tx =
-    mkObject $
+    mconcat $
         ( "txid" .= txId tx )
      :  [ "tx"   .= condense tx | dtal == DDetailed ]
 
 instance LogFormatting ChainValidationError where
   forMachine _dtal ChainValidationBoundaryTooLarge =
-    mkObject
+    mconcat
       [ "kind" .= String "ChainValidationBoundaryTooLarge" ]
   forMachine _dtal ChainValidationBlockAttributesTooLarge =
-    mkObject
+    mconcat
       [ "kind" .= String "ChainValidationBlockAttributesTooLarge" ]
   forMachine _dtal (ChainValidationBlockTooLarge _ _) =
-    mkObject
+    mconcat
       [ "kind" .= String "ChainValidationBlockTooLarge" ]
   forMachine _dtal ChainValidationHeaderAttributesTooLarge =
-    mkObject
+    mconcat
       [ "kind" .= String "ChainValidationHeaderAttributesTooLarge" ]
   forMachine _dtal (ChainValidationHeaderTooLarge _ _) =
-    mkObject
+    mconcat
       [ "kind" .= String "ChainValidationHeaderTooLarge" ]
   forMachine _dtal (ChainValidationDelegationPayloadError err) =
-    mkObject
+    mconcat
       [ "kind" .= String err ]
   forMachine _dtal (ChainValidationInvalidDelegation _ _) =
-    mkObject
+    mconcat
       [ "kind" .= String "ChainValidationInvalidDelegation" ]
   forMachine _dtal (ChainValidationGenesisHashMismatch _ _) =
-    mkObject
+    mconcat
       [ "kind" .= String "ChainValidationGenesisHashMismatch" ]
   forMachine _dtal (ChainValidationExpectedGenesisHash _ _) =
-    mkObject
+    mconcat
       [ "kind" .= String "ChainValidationExpectedGenesisHash" ]
   forMachine _dtal (ChainValidationExpectedHeaderHash _ _) =
-    mkObject
+    mconcat
       [ "kind" .= String "ChainValidationExpectedHeaderHash" ]
   forMachine _dtal (ChainValidationInvalidHash _ _) =
-    mkObject
+    mconcat
       [ "kind" .= String "ChainValidationInvalidHash" ]
   forMachine _dtal (ChainValidationMissingHash _) =
-    mkObject
+    mconcat
       [ "kind" .= String "ChainValidationMissingHash" ]
   forMachine _dtal (ChainValidationUnexpectedGenesisHash _) =
-    mkObject
+    mconcat
       [ "kind" .= String "ChainValidationUnexpectedGenesisHash" ]
   forMachine _dtal (ChainValidationInvalidSignature _) =
-    mkObject
+    mconcat
       [ "kind" .= String "ChainValidationInvalidSignature" ]
   forMachine _dtal (ChainValidationDelegationSchedulingError _) =
-    mkObject
+    mconcat
       [ "kind" .= String "ChainValidationDelegationSchedulingError" ]
   forMachine _dtal (ChainValidationProtocolMagicMismatch _ _) =
-    mkObject
+    mconcat
       [ "kind" .= String "ChainValidationProtocolMagicMismatch" ]
   forMachine _dtal ChainValidationSignatureLight =
-    mkObject
+    mconcat
       [ "kind" .= String "ChainValidationSignatureLight" ]
   forMachine _dtal (ChainValidationTooManyDelegations _) =
-    mkObject
+    mconcat
       [ "kind" .= String "ChainValidationTooManyDelegations" ]
   forMachine _dtal (ChainValidationUpdateError _ _) =
-    mkObject
+    mconcat
       [ "kind" .= String "ChainValidationUpdateError" ]
   forMachine _dtal (ChainValidationUTxOValidationError _) =
-    mkObject
+    mconcat
       [ "kind" .= String "ChainValidationUTxOValidationError" ]
   forMachine _dtal (ChainValidationProofValidationError _) =
-    mkObject
+    mconcat
       [ "kind" .= String "ChainValidationProofValidationError" ]
 
 
 instance LogFormatting (Header ByronBlock) where
   forMachine _dtal b =
-    mkObject $
+    mconcat $
         [ "kind" .= String "ByronBlock"
         , "hash" .= condense (blockHash b)
         , "slotNo" .= condense (blockSlot b)
@@ -208,7 +208,7 @@ instance LogFormatting (Header ByronBlock) where
 
 instance LogFormatting ByronOtherHeaderEnvelopeError where
   forMachine _dtal (UnexpectedEBBInSlot slot) =
-    mkObject
+    mconcat
       [ "kind" .= String "UnexpectedEBBInSlot"
       , "slot" .= slot
       ]

@@ -22,7 +22,6 @@ import           Cardano.Prelude
 import           Data.Aeson (Value (..), object)
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Types as Aeson
-import qualified Data.HashMap.Strict as HMS
 import qualified Data.Set as Set
 import qualified Data.Text as Text
 
@@ -53,7 +52,7 @@ import qualified Cardano.Ledger.Alonzo.PlutusScriptApi as Alonzo
 import           Cardano.Ledger.Alonzo.Rules.Bbody (AlonzoBbodyPredFail)
 import qualified Cardano.Ledger.Alonzo.Rules.Utxo as Alonzo
 import qualified Cardano.Ledger.Alonzo.Rules.Utxos as Alonzo
-import           Cardano.Ledger.Alonzo.Rules.Utxow (AlonzoPredFail (..))
+import           Cardano.Ledger.Alonzo.Rules.Utxow (UtxowPredicateFail (..))
 import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
 import qualified Cardano.Ledger.Alonzo.TxInfo as Alonzo
 import qualified Cardano.Ledger.AuxiliaryData as Core
@@ -97,6 +96,7 @@ import           Cardano.Ledger.Shelley.Rules.Utxow
 import           Cardano.Protocol.TPraos.API (ChainTransitionError (ChainTransitionError))
 import           Cardano.Protocol.TPraos.OCert (KESPeriod (KESPeriod))
 import           Cardano.Protocol.TPraos.Rules.Prtcl
+import qualified Data.Aeson.Key as Aeson
 
 
 {- HLINT ignore "Use :" -}
@@ -107,13 +107,13 @@ import           Cardano.Protocol.TPraos.Rules.Prtcl
 -- NOTE: this list is sorted in roughly topological order.
 
 instance ShelleyBasedEra era => ToObject (GenTx (ShelleyBlock era)) where
-  toObject _ tx = mkObject [ "txid" .= Text.take 8 (renderTxId (txId tx)) ]
+  toObject _ tx = mconcat [ "txid" .= Text.take 8 (renderTxId (txId tx)) ]
 
 instance ToJSON (SupportsMempool.TxId (GenTx (ShelleyBlock era))) where
   toJSON = String . Text.take 8 . renderTxId
 
 instance ShelleyBasedEra era => ToObject (Header (ShelleyBlock era)) where
-  toObject _verb b = mkObject
+  toObject _verb b = mconcat
         [ "kind" .= String "ShelleyBlock"
         , "hash" .= condense (blockHash b)
         , "slotNo" .= condense (blockSlot b)
@@ -127,17 +127,17 @@ instance ( ShelleyBasedEra era
          , ToObject (PredicateFailure (Core.EraRule "LEDGER" era))
          ) => ToObject (ApplyTxError era) where
   toObject verb (ApplyTxError predicateFailures) =
-    HMS.unions $ map (toObject verb) predicateFailures
+    mconcat $ map (toObject verb) predicateFailures
 
 instance Core.Crypto crypto => ToObject (TPraosCannotForge crypto) where
   toObject _verb (TPraosCannotForgeKeyNotUsableYet wallClockPeriod keyStartPeriod) =
-    mkObject
+    mconcat
       [ "kind" .= String "TPraosCannotForgeKeyNotUsableYet"
       , "keyStart" .= keyStartPeriod
       , "wallClock" .= wallClockPeriod
       ]
   toObject _verb (TPraosCannotForgeWrongVRF genDlgVRFHash coreNodeVRFHash) =
-    mkObject
+    mconcat
       [ "kind" .= String "TPraosCannotLeadWrongVRF"
       , "expected" .= genDlgVRFHash
       , "actual" .= coreNodeVRFHash
@@ -147,7 +147,7 @@ deriving newtype instance ToJSON KESPeriod
 
 instance ToObject HotKey.KESInfo where
   toObject _verb HotKey.KESInfo { kesStartPeriod, kesEndPeriod, kesEvolution } =
-    mkObject
+    mconcat
       [ "kind" .= String "KESInfo"
       , "startPeriod" .= kesStartPeriod
       , "endPeriod" .= kesEndPeriod
@@ -156,13 +156,13 @@ instance ToObject HotKey.KESInfo where
 
 instance ToObject HotKey.KESEvolutionError where
   toObject verb (HotKey.KESCouldNotEvolve kesInfo targetPeriod) =
-    mkObject
+    mconcat
       [ "kind" .= String "KESCouldNotEvolve"
       , "kesInfo" .= toObject verb kesInfo
       , "targetPeriod" .= targetPeriod
       ]
   toObject verb (HotKey.KESKeyAlreadyPoisoned kesInfo targetPeriod) =
-    mkObject
+    mconcat
       [ "kind" .= String "KESKeyAlreadyPoisoned"
       , "kesInfo" .= toObject verb kesInfo
       , "targetPeriod" .= targetPeriod
@@ -174,7 +174,7 @@ instance ( ShelleyBasedEra era
          , ToObject (PredicateFailure (Core.EraRule "BBODY" era))
          ) => ToObject (ShelleyLedgerError era) where
   toObject verb (BBodyError (BlockTransitionError fs)) =
-    mkObject [ "kind" .= String "BBodyError"
+    mconcat [ "kind" .= String "BBodyError"
              , "failures" .= map (toObject verb) fs
              ]
 
@@ -182,50 +182,50 @@ instance ( ShelleyBasedEra era
          , ToJSON (Ledger.PParamsDelta era)
          ) => ToObject (ShelleyLedgerUpdate era) where
   toObject verb (ShelleyUpdatedProtocolUpdates updates) =
-    mkObject [ "kind" .= String "ShelleyUpdatedProtocolUpdates"
+    mconcat [ "kind" .= String "ShelleyUpdatedProtocolUpdates"
              , "updates" .= map (toObject verb) updates
              ]
 
 instance (Ledger.Era era, ToJSON (Ledger.PParamsDelta era))
          => ToObject (ProtocolUpdate era) where
   toObject verb ProtocolUpdate{protocolUpdateProposal, protocolUpdateState} =
-    mkObject [ "proposal" .= toObject verb protocolUpdateProposal
+    mconcat [ "proposal" .= toObject verb protocolUpdateProposal
              , "state"    .= toObject verb protocolUpdateState
              ]
 
 instance ToJSON (Ledger.PParamsDelta era)
          => ToObject (UpdateProposal era) where
   toObject _verb UpdateProposal{proposalParams, proposalVersion, proposalEpoch} =
-    mkObject [ "params"  .= proposalParams
+    mconcat [ "params"  .= proposalParams
              , "version" .= proposalVersion
              , "epoch"   .= proposalEpoch
              ]
 
 instance Core.Crypto crypto => ToObject (UpdateState crypto) where
   toObject _verb UpdateState{proposalVotes, proposalReachedQuorum} =
-    mkObject [ "proposal"      .= proposalVotes
+    mconcat [ "proposal"      .= proposalVotes
              , "reachedQuorum" .= proposalReachedQuorum
              ]
 
 instance Core.Crypto crypto => ToObject (ChainTransitionError crypto) where
   toObject verb (ChainTransitionError fs) =
-    mkObject [ "kind" .= String "ChainTransitionError"
+    mconcat [ "kind" .= String "ChainTransitionError"
              , "failures" .= map (toObject verb) fs
              ]
 
 instance ToObject ChainPredicateFailure where
   toObject _verb (HeaderSizeTooLargeCHAIN hdrSz maxHdrSz) =
-    mkObject [ "kind" .= String "HeaderSizeTooLarge"
+    mconcat [ "kind" .= String "HeaderSizeTooLarge"
              , "headerSize" .= hdrSz
              , "maxHeaderSize" .= maxHdrSz
              ]
   toObject _verb (BlockSizeTooLargeCHAIN blkSz maxBlkSz) =
-    mkObject [ "kind" .= String "BlockSizeTooLarge"
+    mconcat [ "kind" .= String "BlockSizeTooLarge"
              , "blockSize" .= blkSz
              , "maxBlockSize" .= maxBlkSz
              ]
   toObject _verb (ObsoleteNodeCHAIN currentPtcl supportedPtcl) =
-    mkObject [ "kind" .= String "ObsoleteNode"
+    mconcat [ "kind" .= String "ObsoleteNode"
              , "explanation" .= String explanation
              , "currentProtocol" .= currentPtcl
              , "supportedProtocol" .= supportedPtcl ]
@@ -238,17 +238,17 @@ instance ToObject ChainPredicateFailure where
 
 instance ToObject (PrtlSeqFailure crypto) where
   toObject _verb (WrongSlotIntervalPrtclSeq (SlotNo lastSlot) (SlotNo currSlot)) =
-    mkObject [ "kind" .= String "WrongSlotInterval"
+    mconcat [ "kind" .= String "WrongSlotInterval"
              , "lastSlot" .= lastSlot
              , "currentSlot" .= currSlot
              ]
   toObject _verb (WrongBlockNoPrtclSeq lab currentBlockNo) =
-    mkObject [ "kind" .= String "WrongBlockNo"
+    mconcat [ "kind" .= String "WrongBlockNo"
              , "lastAppliedBlockNo" .= showLastAppBlockNo lab
              , "currentBlockNo" .= (String . textShow $ unBlockNo currentBlockNo)
              ]
   toObject _verb (WrongBlockSequencePrtclSeq lastAppliedHash currentHash) =
-    mkObject [ "kind" .= String "WrongBlockSequence"
+    mconcat [ "kind" .= String "WrongBlockSequence"
              , "lastAppliedBlockHash" .= String (textShow lastAppliedHash)
              , "currentBlockHash" .= String (textShow currentHash)
              ]
@@ -260,12 +260,12 @@ instance ( ShelleyBasedEra era
          , ToObject (PredicateFailure (Core.EraRule "LEDGERS" era))
          ) => ToObject (BbodyPredicateFailure era) where
   toObject _verb (WrongBlockBodySizeBBODY actualBodySz claimedBodySz) =
-    mkObject [ "kind" .= String "WrongBlockBodySizeBBODY"
+    mconcat [ "kind" .= String "WrongBlockBodySizeBBODY"
              , "actualBlockBodySize" .= actualBodySz
              , "claimedBlockBodySize" .= claimedBodySz
              ]
   toObject _verb (InvalidBodyHashBBODY actualHash claimedHash) =
-    mkObject [ "kind" .= String "InvalidBodyHashBBODY"
+    mconcat [ "kind" .= String "InvalidBodyHashBBODY"
              , "actualBodyHash" .= textShow actualHash
              , "claimedBodyHash" .= textShow claimedHash
              ]
@@ -289,40 +289,40 @@ instance ( ShelleyBasedEra era
   toObject verb (UtxowFailure f) = toObject verb f
   toObject verb (DelegsFailure f) = toObject verb f
 
-instance ToObject (AlonzoPredFail (Alonzo.AlonzoEra StandardCrypto)) where
+instance ToObject (UtxowPredicateFail (Alonzo.AlonzoEra StandardCrypto)) where
   toObject v (WrappedShelleyEraFailure utxoPredFail) =
     toObject v utxoPredFail
   toObject _ (MissingRedeemers scripts) =
-    mkObject [ "kind" .= String "MissingRedeemers"
+    mconcat [ "kind" .= String "MissingRedeemers"
              , "scripts" .= renderMissingRedeemers scripts
              ]
   toObject _ (MissingRequiredDatums required received) =
-    mkObject [ "kind" .= String "MissingRequiredDatums"
+    mconcat [ "kind" .= String "MissingRequiredDatums"
              , "required" .= map (Crypto.hashToTextAsHex . SafeHash.extractHash)
                                  (Set.toList required)
              , "received" .= map (Crypto.hashToTextAsHex . SafeHash.extractHash)
                                  (Set.toList received)
              ]
   toObject _ (PPViewHashesDontMatch ppHashInTxBody ppHashFromPParams) =
-    mkObject [ "kind" .= String "PPViewHashesDontMatch"
+    mconcat [ "kind" .= String "PPViewHashesDontMatch"
              , "fromTxBody" .= renderScriptIntegrityHash (strictMaybeToMaybe ppHashInTxBody)
              , "fromPParams" .= renderScriptIntegrityHash (strictMaybeToMaybe ppHashFromPParams)
              ]
   toObject _ (MissingRequiredSigners missingKeyWitnesses) =
-    mkObject [ "kind" .= String "MissingRequiredSigners"
+    mconcat [ "kind" .= String "MissingRequiredSigners"
              , "witnesses" .= Set.toList missingKeyWitnesses
              ]
   toObject _ (UnspendableUTxONoDatumHash txins) =
-    mkObject [ "kind" .= String "MissingRequiredSigners"
+    mconcat [ "kind" .= String "MissingRequiredSigners"
              , "txins" .= Set.toList txins
              ]
   toObject _ (NonOutputSupplimentaryDatums disallowed acceptable) =
-    mkObject [ "kind" .= String "NonOutputSupplimentaryDatums"
+    mconcat [ "kind" .= String "NonOutputSupplimentaryDatums"
              , "disallowed" .= Set.toList disallowed
              , "acceptable" .= Set.toList acceptable
              ]
   toObject _ (ExtraRedeemers rdmrs) =
-    mkObject [ "kind" .= String "ExtraRedeemers"
+    mconcat [ "kind" .= String "ExtraRedeemers"
              , "rdmrs" .= map (Api.renderScriptWitnessIndex . Api.fromAlonzoRdmrPtr) rdmrs
              ]
 
@@ -338,7 +338,8 @@ renderMissingRedeemers :: [(Alonzo.ScriptPurpose StandardCrypto, ScriptHash Stan
 renderMissingRedeemers scripts = Aeson.object $ map renderTuple  scripts
  where
   renderTuple :: (Alonzo.ScriptPurpose StandardCrypto, ScriptHash StandardCrypto) -> Aeson.Pair
-  renderTuple (scriptPurpose, sHash) =  renderScriptHash sHash .= renderScriptPurpose scriptPurpose
+  renderTuple (scriptPurpose, sHash) =
+    Aeson.fromText (renderScriptHash sHash) .= renderScriptPurpose scriptPurpose
 
 renderScriptPurpose :: Alonzo.ScriptPurpose StandardCrypto -> Aeson.Value
 renderScriptPurpose (Alonzo.Minting pid) =
@@ -355,45 +356,45 @@ instance ( ShelleyBasedEra era
          , ToObject (PredicateFailure (Core.EraRule "UTXO" era))
          ) => ToObject (UtxowPredicateFailure era) where
   toObject _verb (ExtraneousScriptWitnessesUTXOW extraneousScripts) =
-    mkObject [ "kind" .= String "InvalidWitnessesUTXOW"
+    mconcat [ "kind" .= String "InvalidWitnessesUTXOW"
              , "extraneousScripts" .= extraneousScripts
              ]
   toObject _verb (InvalidWitnessesUTXOW wits') =
-    mkObject [ "kind" .= String "InvalidWitnessesUTXOW"
+    mconcat [ "kind" .= String "InvalidWitnessesUTXOW"
              , "invalidWitnesses" .= map textShow wits'
              ]
   toObject _verb (MissingVKeyWitnessesUTXOW (WitHashes wits')) =
-    mkObject [ "kind" .= String "MissingVKeyWitnessesUTXOW"
+    mconcat [ "kind" .= String "MissingVKeyWitnessesUTXOW"
              , "missingWitnesses" .= wits'
              ]
   toObject _verb (MissingScriptWitnessesUTXOW missingScripts) =
-    mkObject [ "kind" .= String "MissingScriptWitnessesUTXOW"
+    mconcat [ "kind" .= String "MissingScriptWitnessesUTXOW"
              , "missingScripts" .= missingScripts
              ]
   toObject _verb (ScriptWitnessNotValidatingUTXOW failedScripts) =
-    mkObject [ "kind" .= String "ScriptWitnessNotValidatingUTXOW"
+    mconcat [ "kind" .= String "ScriptWitnessNotValidatingUTXOW"
              , "failedScripts" .= failedScripts
              ]
   toObject verb (UtxoFailure f) = toObject verb f
   toObject _verb (MIRInsufficientGenesisSigsUTXOW genesisSigs) =
-    mkObject [ "kind" .= String "MIRInsufficientGenesisSigsUTXOW"
+    mconcat [ "kind" .= String "MIRInsufficientGenesisSigsUTXOW"
              , "genesisSigs" .= genesisSigs
              ]
   toObject _verb (MissingTxBodyMetadataHash metadataHash) =
-    mkObject [ "kind" .= String "MissingTxBodyMetadataHash"
+    mconcat [ "kind" .= String "MissingTxBodyMetadataHash"
              , "metadataHash" .= metadataHash
              ]
   toObject _verb (MissingTxMetadata txBodyMetadataHash) =
-    mkObject [ "kind" .= String "MissingTxMetadata"
+    mconcat [ "kind" .= String "MissingTxMetadata"
              , "txBodyMetadataHash" .= txBodyMetadataHash
              ]
   toObject _verb (ConflictingMetadataHash txBodyMetadataHash fullMetadataHash) =
-    mkObject [ "kind" .= String "ConflictingMetadataHash"
+    mconcat [ "kind" .= String "ConflictingMetadataHash"
              , "txBodyMetadataHash" .= txBodyMetadataHash
              , "fullMetadataHash" .= fullMetadataHash
              ]
   toObject _verb InvalidMetadata =
-    mkObject [ "kind" .= String "InvalidMetadata"
+    mconcat [ "kind" .= String "InvalidMetadata"
              ]
 
 instance ( ShelleyBasedEra era
@@ -403,38 +404,38 @@ instance ( ShelleyBasedEra era
          )
       => ToObject (UtxoPredicateFailure era) where
   toObject _verb (BadInputsUTxO badInputs) =
-    mkObject [ "kind" .= String "BadInputsUTxO"
+    mconcat [ "kind" .= String "BadInputsUTxO"
              , "badInputs" .= badInputs
              , "error" .= renderBadInputsUTxOErr badInputs
              ]
   toObject _verb (ExpiredUTxO ttl slot) =
-    mkObject [ "kind" .= String "ExpiredUTxO"
+    mconcat [ "kind" .= String "ExpiredUTxO"
              , "ttl"  .= ttl
              , "slot" .= slot ]
   toObject _verb (MaxTxSizeUTxO txsize maxtxsize) =
-    mkObject [ "kind" .= String "MaxTxSizeUTxO"
+    mconcat [ "kind" .= String "MaxTxSizeUTxO"
              , "size" .= txsize
              , "maxSize" .= maxtxsize ]
   -- TODO: Add the minimum allowed UTxO value to OutputTooSmallUTxO
   toObject _verb (OutputTooSmallUTxO badOutputs) =
-    mkObject [ "kind" .= String "OutputTooSmallUTxO"
+    mconcat [ "kind" .= String "OutputTooSmallUTxO"
              , "outputs" .= badOutputs
              , "error" .= String "The output is smaller than the allow minimum \
                                  \UTxO value defined in the protocol parameters"
              ]
   toObject _verb (OutputBootAddrAttrsTooBig badOutputs) =
-    mkObject [ "kind" .= String "OutputBootAddrAttrsTooBig"
+    mconcat [ "kind" .= String "OutputBootAddrAttrsTooBig"
              , "outputs" .= badOutputs
              , "error" .= String "The Byron address attributes are too big"
              ]
   toObject _verb InputSetEmptyUTxO =
-    mkObject [ "kind" .= String "InputSetEmptyUTxO" ]
+    mconcat [ "kind" .= String "InputSetEmptyUTxO" ]
   toObject _verb (FeeTooSmallUTxO minfee txfee) =
-    mkObject [ "kind" .= String "FeeTooSmallUTxO"
+    mconcat [ "kind" .= String "FeeTooSmallUTxO"
              , "minimum" .= minfee
              , "fee" .= txfee ]
   toObject _verb (ValueNotConservedUTxO consumed produced) =
-    mkObject [ "kind" .= String "ValueNotConservedUTxO"
+    mconcat [ "kind" .= String "ValueNotConservedUTxO"
              , "consumed" .= consumed
              , "produced" .= produced
              , "error" .= renderValueNotConservedErr consumed produced
@@ -442,12 +443,12 @@ instance ( ShelleyBasedEra era
   toObject verb (UpdateFailure f) = toObject verb f
 
   toObject _verb (WrongNetwork network addrs) =
-    mkObject [ "kind" .= String "WrongNetwork"
+    mconcat [ "kind" .= String "WrongNetwork"
              , "network" .= network
              , "addrs"   .= addrs
              ]
   toObject _verb (WrongNetworkWithdrawal network addrs) =
-    mkObject [ "kind" .= String "WrongNetworkWithdrawal"
+    mconcat [ "kind" .= String "WrongNetworkWithdrawal"
              , "network" .= network
              , "addrs"   .= addrs
              ]
@@ -468,57 +469,57 @@ instance ( ShelleyBasedEra era
          , ToObject (PredicateFailure (Core.EraRule "PPUP" era))
          ) => ToObject (MA.UtxoPredicateFailure era) where
   toObject _verb (MA.BadInputsUTxO badInputs) =
-    mkObject [ "kind" .= String "BadInputsUTxO"
+    mconcat [ "kind" .= String "BadInputsUTxO"
              , "badInputs" .= badInputs
              , "error" .= renderBadInputsUTxOErr badInputs
              ]
   toObject _verb (MA.OutsideValidityIntervalUTxO validityInterval slot) =
-    mkObject [ "kind" .= String "ExpiredUTxO"
+    mconcat [ "kind" .= String "ExpiredUTxO"
              , "validityInterval" .= validityInterval
              , "slot" .= slot ]
   toObject _verb (MA.MaxTxSizeUTxO txsize maxtxsize) =
-    mkObject [ "kind" .= String "MaxTxSizeUTxO"
+    mconcat [ "kind" .= String "MaxTxSizeUTxO"
              , "size" .= txsize
              , "maxSize" .= maxtxsize ]
   toObject _verb MA.InputSetEmptyUTxO =
-    mkObject [ "kind" .= String "InputSetEmptyUTxO" ]
+    mconcat [ "kind" .= String "InputSetEmptyUTxO" ]
   toObject _verb (MA.FeeTooSmallUTxO minfee txfee) =
-    mkObject [ "kind" .= String "FeeTooSmallUTxO"
+    mconcat [ "kind" .= String "FeeTooSmallUTxO"
              , "minimum" .= minfee
              , "fee" .= txfee ]
   toObject _verb (MA.ValueNotConservedUTxO consumed produced) =
-    mkObject [ "kind" .= String "ValueNotConservedUTxO"
+    mconcat [ "kind" .= String "ValueNotConservedUTxO"
              , "consumed" .= consumed
              , "produced" .= produced
              , "error" .= renderValueNotConservedErr consumed produced
              ]
   toObject _verb (MA.WrongNetwork network addrs) =
-    mkObject [ "kind" .= String "WrongNetwork"
+    mconcat [ "kind" .= String "WrongNetwork"
              , "network" .= network
              , "addrs"   .= addrs
              ]
   toObject _verb (MA.WrongNetworkWithdrawal network addrs) =
-    mkObject [ "kind" .= String "WrongNetworkWithdrawal"
+    mconcat [ "kind" .= String "WrongNetworkWithdrawal"
              , "network" .= network
              , "addrs"   .= addrs
              ]
   -- TODO: Add the minimum allowed UTxO value to OutputTooSmallUTxO
   toObject _verb (MA.OutputTooSmallUTxO badOutputs) =
-    mkObject [ "kind" .= String "OutputTooSmallUTxO"
+    mconcat [ "kind" .= String "OutputTooSmallUTxO"
              , "outputs" .= badOutputs
              , "error" .= String "The output is smaller than the allow minimum \
                                  \UTxO value defined in the protocol parameters"
              ]
   toObject verb (MA.UpdateFailure f) = toObject verb f
   toObject _verb (MA.OutputBootAddrAttrsTooBig badOutputs) =
-    mkObject [ "kind" .= String "OutputBootAddrAttrsTooBig"
+    mconcat [ "kind" .= String "OutputBootAddrAttrsTooBig"
              , "outputs" .= badOutputs
              , "error" .= String "The Byron address attributes are too big"
              ]
   toObject _verb MA.TriesToForgeADA =
-    mkObject [ "kind" .= String "TriesToForgeADA" ]
+    mconcat [ "kind" .= String "TriesToForgeADA" ]
   toObject _verb (MA.OutputTooBigUTxO badOutputs) =
-    mkObject [ "kind" .= String "OutputTooBigUTxO"
+    mconcat [ "kind" .= String "OutputTooBigUTxO"
              , "outputs" .= badOutputs
              , "error" .= String "Too many asset ids in the tx output"
              ]
@@ -534,16 +535,16 @@ renderValueNotConservedErr consumed produced = String $
 
 instance Ledger.Era era => ToObject (PpupPredicateFailure era) where
   toObject _verb (NonGenesisUpdatePPUP proposalKeys genesisKeys) =
-    mkObject [ "kind" .= String "NonGenesisUpdatePPUP"
+    mconcat [ "kind" .= String "NonGenesisUpdatePPUP"
              , "keys" .= proposalKeys Set.\\ genesisKeys ]
   toObject _verb (PPUpdateWrongEpoch currEpoch intendedEpoch votingPeriod) =
-    mkObject [ "kind" .= String "PPUpdateWrongEpoch"
+    mconcat [ "kind" .= String "PPUpdateWrongEpoch"
              , "currentEpoch" .= currEpoch
              , "intendedEpoch" .= intendedEpoch
              , "votingPeriod"  .= String (show votingPeriod)
              ]
   toObject _verb (PVCannotFollowPPUP badPv) =
-    mkObject [ "kind" .= String "PVCannotFollowPPUP"
+    mconcat [ "kind" .= String "PVCannotFollowPPUP"
              , "badProtocolVersion" .= badPv
              ]
 
@@ -552,11 +553,11 @@ instance ( ShelleyBasedEra era
          , ToObject (PredicateFailure (Core.EraRule "DELPL" era))
          ) => ToObject (DelegsPredicateFailure era) where
   toObject _verb (DelegateeNotRegisteredDELEG targetPool) =
-    mkObject [ "kind" .= String "DelegateeNotRegisteredDELEG"
+    mconcat [ "kind" .= String "DelegateeNotRegisteredDELEG"
              , "targetPool" .= targetPool
              ]
   toObject _verb (WithdrawalsNotInRewardsDELEGS incorrectWithdrawals) =
-    mkObject [ "kind" .= String "WithdrawalsNotInRewardsDELEGS"
+    mconcat [ "kind" .= String "WithdrawalsNotInRewardsDELEGS"
              , "incorrectWithdrawals" .= incorrectWithdrawals
              ]
   toObject verb (DelplFailure f) = toObject verb f
@@ -570,43 +571,43 @@ instance ( ToObject (PredicateFailure (Core.EraRule "POOL" era))
 
 instance Ledger.Era era => ToObject (DelegPredicateFailure era) where
   toObject _verb (StakeKeyAlreadyRegisteredDELEG alreadyRegistered) =
-    mkObject [ "kind" .= String "StakeKeyAlreadyRegisteredDELEG"
+    mconcat [ "kind" .= String "StakeKeyAlreadyRegisteredDELEG"
              , "credential" .= String (textShow alreadyRegistered)
              , "error" .= String "Staking credential already registered"
              ]
   toObject _verb (StakeKeyInRewardsDELEG alreadyRegistered) =
-    mkObject [ "kind" .= String "StakeKeyInRewardsDELEG"
+    mconcat [ "kind" .= String "StakeKeyInRewardsDELEG"
              , "credential" .= String (textShow alreadyRegistered)
              , "error" .= String "Staking credential registered in rewards map"
              ]
   toObject _verb (StakeKeyNotRegisteredDELEG notRegistered) =
-    mkObject [ "kind" .= String "StakeKeyNotRegisteredDELEG"
+    mconcat [ "kind" .= String "StakeKeyNotRegisteredDELEG"
              , "credential" .= String (textShow notRegistered)
              , "error" .= String "Staking credential not registered"
              ]
   toObject _verb (StakeKeyNonZeroAccountBalanceDELEG remBalance) =
-    mkObject [ "kind" .= String "StakeKeyNonZeroAccountBalanceDELEG"
+    mconcat [ "kind" .= String "StakeKeyNonZeroAccountBalanceDELEG"
              , "remainingBalance" .= remBalance
              ]
   toObject _verb (StakeDelegationImpossibleDELEG unregistered) =
-    mkObject [ "kind" .= String "StakeDelegationImpossibleDELEG"
+    mconcat [ "kind" .= String "StakeDelegationImpossibleDELEG"
              , "credential" .= String (textShow unregistered)
              , "error" .= String "Cannot delegate this stake credential because it is not registered"
              ]
   toObject _verb WrongCertificateTypeDELEG =
-    mkObject [ "kind" .= String "WrongCertificateTypeDELEG" ]
+    mconcat [ "kind" .= String "WrongCertificateTypeDELEG" ]
   toObject _verb (GenesisKeyNotInMappingDELEG (KeyHash genesisKeyHash)) =
-    mkObject [ "kind" .= String "GenesisKeyNotInMappingDELEG"
+    mconcat [ "kind" .= String "GenesisKeyNotInMappingDELEG"
              , "unknownKeyHash" .= String (textShow genesisKeyHash)
              , "error" .= String "This genesis key is not in the delegation mapping"
              ]
   toObject _verb (DuplicateGenesisDelegateDELEG (KeyHash genesisKeyHash)) =
-    mkObject [ "kind" .= String "DuplicateGenesisDelegateDELEG"
+    mconcat [ "kind" .= String "DuplicateGenesisDelegateDELEG"
              , "duplicateKeyHash" .= String (textShow genesisKeyHash)
              , "error" .= String "This genesis key has already been delegated to"
              ]
   toObject _verb (InsufficientForInstantaneousRewardsDELEG mirpot neededMirAmount reserves) =
-    mkObject [ "kind" .= String "InsufficientForInstantaneousRewardsDELEG"
+    mconcat [ "kind" .= String "InsufficientForInstantaneousRewardsDELEG"
              , "pot" .= String (case mirpot of
                                   ReservesMIR -> "Reserves"
                                   TreasuryMIR -> "Treasury")
@@ -614,22 +615,22 @@ instance Ledger.Era era => ToObject (DelegPredicateFailure era) where
              , "reserves" .= reserves
              ]
   toObject _verb (MIRCertificateTooLateinEpochDELEG currSlot boundSlotNo) =
-    mkObject [ "kind" .= String "MIRCertificateTooLateinEpochDELEG"
+    mconcat [ "kind" .= String "MIRCertificateTooLateinEpochDELEG"
              , "currentSlotNo" .= currSlot
              , "mustBeSubmittedBeforeSlotNo" .= boundSlotNo
              ]
   toObject _verb (DuplicateGenesisVRFDELEG vrfKeyHash) =
-    mkObject [ "kind" .= String "DuplicateGenesisVRFDELEG"
+    mconcat [ "kind" .= String "DuplicateGenesisVRFDELEG"
              , "keyHash" .= vrfKeyHash
              ]
   toObject _verb MIRTransferNotCurrentlyAllowed =
-    mkObject [ "kind" .= String "MIRTransferNotCurrentlyAllowed"
+    mconcat [ "kind" .= String "MIRTransferNotCurrentlyAllowed"
              ]
   toObject _verb MIRNegativesNotCurrentlyAllowed =
-    mkObject [ "kind" .= String "MIRNegativesNotCurrentlyAllowed"
+    mconcat [ "kind" .= String "MIRNegativesNotCurrentlyAllowed"
              ]
   toObject _verb (InsufficientForTransferDELEG mirpot attempted available) =
-    mkObject [ "kind" .= String "DuplicateGenesisVRFDELEG"
+    mconcat [ "kind" .= String "DuplicateGenesisVRFDELEG"
              , "pot" .= String (case mirpot of
                                   ReservesMIR -> "Reserves"
                                   TreasuryMIR -> "Treasury")
@@ -637,10 +638,10 @@ instance Ledger.Era era => ToObject (DelegPredicateFailure era) where
              , "available" .= available
              ]
   toObject _verb MIRProducesNegativeUpdate =
-    mkObject [ "kind" .= String "MIRProducesNegativeUpdate"
+    mconcat [ "kind" .= String "MIRProducesNegativeUpdate"
              ]
   toObject _verb (MIRNegativeTransfer pot coin) =
-    mkObject [ "kind" .= String "MIRNegativeTransfer"
+    mconcat [ "kind" .= String "MIRNegativeTransfer"
              , "error" .= String "Attempt to transfer a negative amount from a pot."
              , "pot" .= String (case pot of
                                   ReservesMIR -> "Reserves"
@@ -650,24 +651,24 @@ instance Ledger.Era era => ToObject (DelegPredicateFailure era) where
 
 instance ToObject (PoolPredicateFailure era) where
   toObject _verb (StakePoolNotRegisteredOnKeyPOOL (KeyHash unregStakePool)) =
-    mkObject [ "kind" .= String "StakePoolNotRegisteredOnKeyPOOL"
+    mconcat [ "kind" .= String "StakePoolNotRegisteredOnKeyPOOL"
              , "unregisteredKeyHash" .= String (textShow unregStakePool)
              , "error" .= String "This stake pool key hash is unregistered"
              ]
   toObject _verb (StakePoolRetirementWrongEpochPOOL currentEpoch intendedRetireEpoch maxRetireEpoch) =
-    mkObject [ "kind" .= String "StakePoolRetirementWrongEpochPOOL"
+    mconcat [ "kind" .= String "StakePoolRetirementWrongEpochPOOL"
              , "currentEpoch" .= String (textShow currentEpoch)
              , "intendedRetirementEpoch" .= String (textShow intendedRetireEpoch)
              , "maxEpochForRetirement" .= String (textShow maxRetireEpoch)
              ]
   toObject _verb (StakePoolCostTooLowPOOL certCost protCost) =
-    mkObject [ "kind" .= String "StakePoolCostTooLowPOOL"
+    mconcat [ "kind" .= String "StakePoolCostTooLowPOOL"
              , "certificateCost" .= String (textShow certCost)
              , "protocolParCost" .= String (textShow protCost)
              , "error" .= String "The stake pool cost is too low"
              ]
   toObject _verb (PoolMedataHashTooBig poolID hashSize) =
-    mkObject [ "kind" .= String "PoolMedataHashTooBig"
+    mconcat [ "kind" .= String "PoolMedataHashTooBig"
              , "poolID" .= String (textShow poolID)
              , "hashSize" .= String (textShow hashSize)
              , "error" .= String "The stake pool metadata hash is too large"
@@ -676,22 +677,22 @@ instance ToObject (PoolPredicateFailure era) where
 -- Apparently this should never happen according to the Shelley exec spec
   toObject _verb (WrongCertificateTypePOOL index) =
     case index of
-      0 -> mkObject [ "kind" .= String "WrongCertificateTypePOOL"
+      0 -> mconcat [ "kind" .= String "WrongCertificateTypePOOL"
                     , "error" .= String "Wrong certificate type: Delegation certificate"
                     ]
-      1 -> mkObject [ "kind" .= String "WrongCertificateTypePOOL"
+      1 -> mconcat [ "kind" .= String "WrongCertificateTypePOOL"
                     , "error" .= String "Wrong certificate type: MIR certificate"
                     ]
-      2 -> mkObject [ "kind" .= String "WrongCertificateTypePOOL"
+      2 -> mconcat [ "kind" .= String "WrongCertificateTypePOOL"
                     , "error" .= String "Wrong certificate type: Genesis certificate"
                     ]
-      k -> mkObject [ "kind" .= String "WrongCertificateTypePOOL"
+      k -> mconcat [ "kind" .= String "WrongCertificateTypePOOL"
                     , "certificateType" .= k
                     , "error" .= String "Wrong certificate type: Unknown certificate type"
                     ]
 
   toObject _verb (WrongNetworkPOOL networkId listedNetworkId poolId) =
-    mkObject [ "kind" .= String "WrongNetworkPOOL"
+    mconcat [ "kind" .= String "WrongNetworkPOOL"
              , "networkId" .= String (textShow networkId)
              , "listedNetworkId" .= String (textShow listedNetworkId)
              , "poolId" .= String (textShow poolId)
@@ -713,7 +714,7 @@ instance ( ToObject (PredicateFailure (Core.EraRule "EPOCH" era))
   toObject verb (EpochFailure f) = toObject verb f
   toObject verb (MirFailure f) = toObject verb f
   toObject _verb (CorruptRewardUpdate update) =
-    mkObject [ "kind" .= String "CorruptRewardUpdate"
+    mconcat [ "kind" .= String "CorruptRewardUpdate"
              , "update" .= String (show update) ]
 
 
@@ -736,7 +737,7 @@ instance ToObject (SnapPredicateFailure era) where
 -- TODO: Need to elaborate more on this error
 instance ToObject (NewppPredicateFailure era) where
   toObject _verb (UnexpectedDepositPot outstandingDeposits depositPot) =
-    mkObject [ "kind" .= String "UnexpectedDepositPot"
+    mconcat [ "kind" .= String "UnexpectedDepositPot"
              , "outstandingDeposits" .= String (textShow outstandingDeposits)
              , "depositPot" .= String (textShow depositPot)
              ]
@@ -757,51 +758,51 @@ instance Core.Crypto crypto => ToObject (PrtclPredicateFailure crypto) where
 
 instance Core.Crypto crypto => ToObject (OverlayPredicateFailure crypto) where
   toObject _verb (UnknownGenesisKeyOVERLAY (KeyHash genKeyHash)) =
-    mkObject [ "kind" .= String "UnknownGenesisKeyOVERLAY"
+    mconcat [ "kind" .= String "UnknownGenesisKeyOVERLAY"
              , "unknownKeyHash" .= String (textShow genKeyHash)
              ]
   toObject _verb (VRFKeyBadLeaderValue seedNonce (SlotNo currSlotNo) prevHashNonce leaderElecVal) =
-    mkObject [ "kind" .= String "VRFKeyBadLeaderValueOVERLAY"
+    mconcat [ "kind" .= String "VRFKeyBadLeaderValueOVERLAY"
              , "seedNonce" .= String (textShow seedNonce)
              , "currentSlot" .= String (textShow currSlotNo)
              , "previousHashAsNonce" .= String (textShow prevHashNonce)
              , "leaderElectionValue" .= String (textShow leaderElecVal)
              ]
   toObject _verb (VRFKeyBadNonce seedNonce (SlotNo currSlotNo) prevHashNonce blockNonce) =
-    mkObject [ "kind" .= String "VRFKeyBadNonceOVERLAY"
+    mconcat [ "kind" .= String "VRFKeyBadNonceOVERLAY"
              , "seedNonce" .= String (textShow seedNonce)
              , "currentSlot" .= String (textShow currSlotNo)
              , "previousHashAsNonce" .= String (textShow prevHashNonce)
              , "blockNonce" .= String (textShow blockNonce)
              ]
   toObject _verb (VRFKeyWrongVRFKey issuerHash regVRFKeyHash unregVRFKeyHash) =
-    mkObject [ "kind" .= String "VRFKeyWrongVRFKeyOVERLAY"
+    mconcat [ "kind" .= String "VRFKeyWrongVRFKeyOVERLAY"
              , "poolHash" .= textShow issuerHash
              , "registeredVRFKeHash" .= textShow regVRFKeyHash
              , "unregisteredVRFKeyHash" .= textShow unregVRFKeyHash
              ]
   --TODO: Pipe slot number with VRFKeyUnknown
   toObject _verb (VRFKeyUnknown (KeyHash kHash)) =
-    mkObject [ "kind" .= String "VRFKeyUnknownOVERLAY"
+    mconcat [ "kind" .= String "VRFKeyUnknownOVERLAY"
              , "keyHash" .= String (textShow kHash)
              ]
   toObject _verb (VRFLeaderValueTooBig leadElecVal weightOfDelegPool actSlotCoefff) =
-    mkObject [ "kind" .= String "VRFLeaderValueTooBigOVERLAY"
+    mconcat [ "kind" .= String "VRFLeaderValueTooBigOVERLAY"
              , "leaderElectionValue" .= String (textShow leadElecVal)
              , "delegationPoolWeight" .= String (textShow weightOfDelegPool)
              , "activeSlotCoefficient" .= String (textShow actSlotCoefff)
              ]
   toObject _verb (NotActiveSlotOVERLAY notActiveSlotNo) =
     -- TODO: Elaborate on NotActiveSlot error
-    mkObject [ "kind" .= String "NotActiveSlotOVERLAY"
+    mconcat [ "kind" .= String "NotActiveSlotOVERLAY"
              , "slot" .= String (textShow notActiveSlotNo)
              ]
   toObject _verb (WrongGenesisColdKeyOVERLAY actual expected) =
-    mkObject [ "kind" .= String "WrongGenesisColdKeyOVERLAY"
+    mconcat [ "kind" .= String "WrongGenesisColdKeyOVERLAY"
              , "actual" .= actual
              , "expected" .= expected ]
   toObject _verb (WrongGenesisVRFKeyOVERLAY issuer actual expected) =
-    mkObject [ "kind" .= String "WrongGenesisVRFKeyOVERLAY"
+    mconcat [ "kind" .= String "WrongGenesisVRFKeyOVERLAY"
              , "issuer" .= issuer
              , "actual" .= actual
              , "expected" .= expected ]
@@ -810,14 +811,14 @@ instance Core.Crypto crypto => ToObject (OverlayPredicateFailure crypto) where
 
 instance ToObject (OcertPredicateFailure crypto) where
   toObject _verb (KESBeforeStartOCERT (KESPeriod oCertstart) (KESPeriod current)) =
-    mkObject [ "kind" .= String "KESBeforeStartOCERT"
+    mconcat [ "kind" .= String "KESBeforeStartOCERT"
              , "opCertKESStartPeriod" .= String (textShow oCertstart)
              , "currentKESPeriod" .= String (textShow current)
              , "error" .= String "Your operational certificate's KES start period \
                                  \is before the KES current period."
              ]
   toObject _verb (KESAfterEndOCERT (KESPeriod current) (KESPeriod oCertstart) maxKESEvolutions) =
-    mkObject [ "kind" .= String "KESAfterEndOCERT"
+    mconcat [ "kind" .= String "KESAfterEndOCERT"
              , "currentKESPeriod" .= String (textShow current)
              , "opCertKESStartPeriod" .= String (textShow oCertstart)
              , "maxKESEvolutions" .= String  (textShow maxKESEvolutions)
@@ -825,25 +826,25 @@ instance ToObject (OcertPredicateFailure crypto) where
                                  \greater than the max number of KES + the KES current period"
              ]
   toObject _verb (CounterTooSmallOCERT lastKEScounterUsed currentKESCounter) =
-    mkObject [ "kind" .= String "CounterTooSmallOCert"
+    mconcat [ "kind" .= String "CounterTooSmallOCert"
              , "currentKESCounter" .= String (textShow currentKESCounter)
              , "lastKESCounter" .= String (textShow lastKEScounterUsed)
              , "error" .= String "The operational certificate's last KES counter is greater \
                                  \than the current KES counter."
              ]
   toObject _verb (InvalidSignatureOCERT oCertCounter oCertKESStartPeriod) =
-    mkObject [ "kind" .= String "InvalidSignatureOCERT"
+    mconcat [ "kind" .= String "InvalidSignatureOCERT"
              , "opCertKESStartPeriod" .= String (textShow oCertKESStartPeriod)
              , "opCertCounter" .= String (textShow oCertCounter)
              ]
   toObject _verb (InvalidKesSignatureOCERT currKESPeriod startKESPeriod expectedKESEvolutions err) =
-    mkObject [ "kind" .= String "InvalidKesSignatureOCERT"
+    mconcat [ "kind" .= String "InvalidKesSignatureOCERT"
              , "opCertKESStartPeriod" .= String (textShow startKESPeriod)
              , "opCertKESCurrentPeriod" .= String (textShow currKESPeriod)
              , "opCertExpectedKESEvolutions" .= String (textShow expectedKESEvolutions)
              , "error" .= err ]
   toObject _verb (NoCounterForKeyHashOCERT (KeyHash stakePoolKeyHash)) =
-    mkObject [ "kind" .= String "NoCounterForKeyHashOCERT"
+    mconcat [ "kind" .= String "NoCounterForKeyHashOCERT"
              , "stakePoolKeyHash" .= String (textShow stakePoolKeyHash)
              , "error" .= String "A counter was not found for this stake pool key hash"
              ]
@@ -855,7 +856,7 @@ instance ToObject (UpdnPredicateFailure crypto) where
 
 instance ToObject (UpecPredicateFailure era) where
   toObject _verb (NewPpFailure (UnexpectedDepositPot totalOutstanding depositPot)) =
-    mkObject [ "kind" .= String "UnexpectedDepositPot"
+    mconcat [ "kind" .= String "UnexpectedDepositPot"
              , "totalOutstanding" .=  String (textShow totalOutstanding)
              , "depositPot" .= String (textShow depositPot)
              ]
@@ -868,45 +869,45 @@ instance ToObject (UpecPredicateFailure era) where
 
 instance ToObject (Alonzo.UtxoPredicateFailure (Alonzo.AlonzoEra StandardCrypto)) where
   toObject _verb (Alonzo.BadInputsUTxO badInputs) =
-    mkObject [ "kind" .= String "BadInputsUTxO"
+    mconcat [ "kind" .= String "BadInputsUTxO"
              , "badInputs" .= badInputs
              , "error" .= renderBadInputsUTxOErr badInputs
              ]
   toObject _verb (Alonzo.OutsideValidityIntervalUTxO validtyInterval slot) =
-    mkObject [ "kind" .= String "ExpiredUTxO"
+    mconcat [ "kind" .= String "ExpiredUTxO"
              , "validityInterval" .= validtyInterval
              , "slot" .= slot
              ]
   toObject _verb (Alonzo.MaxTxSizeUTxO txsize maxtxsize) =
-    mkObject [ "kind" .= String "MaxTxSizeUTxO"
+    mconcat [ "kind" .= String "MaxTxSizeUTxO"
              , "size" .= txsize
              , "maxSize" .= maxtxsize
              ]
   toObject _verb Alonzo.InputSetEmptyUTxO =
-    mkObject [ "kind" .= String "InputSetEmptyUTxO" ]
+    mconcat [ "kind" .= String "InputSetEmptyUTxO" ]
   toObject _verb (Alonzo.FeeTooSmallUTxO minfee currentFee) =
-    mkObject [ "kind" .= String "FeeTooSmallUTxO"
+    mconcat [ "kind" .= String "FeeTooSmallUTxO"
              , "minimum" .= minfee
              , "fee" .= currentFee
              ]
   toObject _verb (Alonzo.ValueNotConservedUTxO consumed produced) =
-    mkObject [ "kind" .= String "ValueNotConservedUTxO"
+    mconcat [ "kind" .= String "ValueNotConservedUTxO"
              , "consumed" .= consumed
              , "produced" .= produced
              , "error" .= renderValueNotConservedErr consumed produced
              ]
   toObject _verb (Alonzo.WrongNetwork network addrs) =
-    mkObject [ "kind" .= String "WrongNetwork"
+    mconcat [ "kind" .= String "WrongNetwork"
              , "network" .= network
              , "addrs"   .= addrs
              ]
   toObject _verb (Alonzo.WrongNetworkWithdrawal network addrs) =
-    mkObject [ "kind" .= String "WrongNetworkWithdrawal"
+    mconcat [ "kind" .= String "WrongNetworkWithdrawal"
              , "network" .= network
              , "addrs"   .= addrs
              ]
   toObject _verb (Alonzo.OutputTooSmallUTxO badOutputs) =
-    mkObject [ "kind" .= String "OutputTooSmallUTxO"
+    mconcat [ "kind" .= String "OutputTooSmallUTxO"
              , "outputs" .= badOutputs
              , "error" .= String "The output is smaller than the allow minimum \
                                  \UTxO value defined in the protocol parameters"
@@ -914,60 +915,60 @@ instance ToObject (Alonzo.UtxoPredicateFailure (Alonzo.AlonzoEra StandardCrypto)
   toObject verb (Alonzo.UtxosFailure predFailure) =
     toObject verb predFailure
   toObject _verb (Alonzo.OutputBootAddrAttrsTooBig txouts) =
-    mkObject [ "kind" .= String "OutputBootAddrAttrsTooBig"
+    mconcat [ "kind" .= String "OutputBootAddrAttrsTooBig"
              , "outputs" .= txouts
              , "error" .= String "The Byron address attributes are too big"
              ]
   toObject _verb Alonzo.TriesToForgeADA =
-    mkObject [ "kind" .= String "TriesToForgeADA" ]
+    mconcat [ "kind" .= String "TriesToForgeADA" ]
   toObject _verb (Alonzo.OutputTooBigUTxO badOutputs) =
-    mkObject [ "kind" .= String "OutputTooBigUTxO"
+    mconcat [ "kind" .= String "OutputTooBigUTxO"
              , "outputs" .= badOutputs
              , "error" .= String "Too many asset ids in the tx output"
              ]
   toObject _verb (Alonzo.InsufficientCollateral computedBalance suppliedFee) =
-    mkObject [ "kind" .= String "InsufficientCollateral"
+    mconcat [ "kind" .= String "InsufficientCollateral"
              , "balance" .= computedBalance
              , "txfee" .= suppliedFee
              ]
   toObject _verb (Alonzo.ScriptsNotPaidUTxO utxos) =
-    mkObject [ "kind" .= String "ScriptsNotPaidUTxO"
+    mconcat [ "kind" .= String "ScriptsNotPaidUTxO"
              , "utxos" .= utxos
              ]
   toObject _verb (Alonzo.ExUnitsTooBigUTxO pParamsMaxExUnits suppliedExUnits) =
-    mkObject [ "kind" .= String "ExUnitsTooBigUTxO"
+    mconcat [ "kind" .= String "ExUnitsTooBigUTxO"
              , "maxexunits" .= pParamsMaxExUnits
              , "exunits" .= suppliedExUnits
              ]
   toObject _verb (Alonzo.CollateralContainsNonADA inputs) =
-    mkObject [ "kind" .= String "CollateralContainsNonADA"
+    mconcat [ "kind" .= String "CollateralContainsNonADA"
              , "inputs" .= inputs
              ]
   toObject _verb (Alonzo.WrongNetworkInTxBody actualNetworkId netIdInTxBody) =
-    mkObject [ "kind" .= String "WrongNetworkInTxBody"
+    mconcat [ "kind" .= String "WrongNetworkInTxBody"
              , "networkid" .= actualNetworkId
              , "txbodyNetworkId" .= netIdInTxBody
              ]
   toObject _verb (Alonzo.OutsideForecast slotNum) =
-    mkObject [ "kind" .= String "OutsideForecast"
+    mconcat [ "kind" .= String "OutsideForecast"
              , "slot" .= slotNum
              ]
   toObject _verb (Alonzo.TooManyCollateralInputs maxCollateralInputs numberCollateralInputs) =
-    mkObject [ "kind" .= String "TooManyCollateralInputs"
+    mconcat [ "kind" .= String "TooManyCollateralInputs"
              , "max" .= maxCollateralInputs
              , "inputs" .= numberCollateralInputs
              ]
   toObject _verb Alonzo.NoCollateralInputs =
-    mkObject [ "kind" .= String "NoCollateralInputs" ]
+    mconcat [ "kind" .= String "NoCollateralInputs" ]
 
 instance ToObject (Alonzo.UtxosPredicateFailure (AlonzoEra StandardCrypto)) where
   toObject _ (Alonzo.ValidationTagMismatch isValidating reason) =
-    mkObject [ "kind" .= String "ValidationTagMismatch"
+    mconcat [ "kind" .= String "ValidationTagMismatch"
              , "isvalidating" .= isValidating
              , "reason" .= reason
              ]
   toObject _ (Alonzo.CollectErrors errors) =
-    mkObject [ "kind" .= String "CollectErrors"
+    mconcat [ "kind" .= String "CollectErrors"
              , "errors" .= errors
              ]
   toObject verb (Alonzo.UpdateFailure pFailure) =
@@ -1004,6 +1005,10 @@ instance ToJSON (Alonzo.CollectError StandardCrypto) where
               Alonzo.ByronOutputInContext -> String "Byron output in the presence of a plutus script"
               Alonzo.TranslationLogicErrorInput -> String "Logic error translating inputs"
               Alonzo.TranslationLogicErrorRedeemer -> String "Logic error translating redeemers"
+              Alonzo.TranslationLogicErrorDoubleDatum -> String "Logic error double datum"
+              Alonzo.LanguageNotSupported -> String "Language not supported"
+              Alonzo.InlineDatumsNotSupported -> String "Inline datums not supported"
+              Alonzo.ReferenceScriptsNotSupported -> String "Reference scripts not supported"
           ]
 
 instance ToJSON Alonzo.TagMismatchDescription where
@@ -1028,16 +1033,16 @@ instance ToJSON Alonzo.FailureDescription where
         , "error" .= String "OnePhaseFailure"
         , "description" .= t
         ]
-    Alonzo.PlutusFailure t bs ->
+    Alonzo.PlutusFailure t _bs ->
       object
         [ "kind" .= String "FailureDescription"
         , "error" .= String "PlutusFailure"
         , "description" .= t
-        , "reconstructionDetail" .= bs
+        -- , "reconstructionDetail" .= bs
         ]
 
 instance ToObject (AlonzoBbodyPredFail (Alonzo.AlonzoEra StandardCrypto)) where
-  toObject _ err = mkObject [ "kind" .= String "AlonzoBbodyPredFail"
+  toObject _ err = mconcat [ "kind" .= String "AlonzoBbodyPredFail"
                             , "error" .= String (show err)
                             ]
 

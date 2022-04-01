@@ -10,7 +10,7 @@ module Cardano.Node.Tracing.Formatting
 import           Cardano.Prelude ()
 import           Data.Aeson (Value (String), toJSON, (.=))
 
-import           Cardano.Logging (LogFormatting (..), mkObject)
+import           Cardano.Logging (LogFormatting (..))
 import           Cardano.Prelude hiding (Show, show)
 
 import           Cardano.Node.Tracing.Render (renderHeaderHashForDetails)
@@ -31,16 +31,16 @@ instance LogFormatting () where
 
 instance LogFormatting SlotNo where
   forMachine _dtal slot =
-    mkObject [ "kind" .= String "SlotNo"
+    mconcat [ "kind" .= String "SlotNo"
              , "slot" .= toJSON (unSlotNo slot) ]
 
 instance forall blk. ConvertRawHash blk
       => LogFormatting (Point blk) where
   forMachine _dtal GenesisPoint =
-    mkObject
+    mconcat
       [ "kind" .= String "GenesisPoint" ]
   forMachine dtal (BlockPoint slot h) =
-    mkObject
+    mconcat
       [ "kind" .= String "BlockPoint"
       , "slot" .= toJSON (unSlotNo slot)
       , "headerHash" .= renderHeaderHashForDetails (Proxy @blk) dtal h
@@ -48,7 +48,7 @@ instance forall blk. ConvertRawHash blk
 
 instance ConvertRawHash blk
       => LogFormatting (RealPoint blk) where
-  forMachine dtal p = mkObject
+  forMachine dtal p = mconcat
         [ "kind" .= String "Point"
         , "slot" .= unSlotNo (realPointSlot p)
         , "hash" .= renderHeaderHashForDetails (Proxy @blk) dtal (realPointHash p)

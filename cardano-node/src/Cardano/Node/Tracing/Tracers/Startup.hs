@@ -148,7 +148,7 @@ instance ( Show (BlockNodeToNodeVersion blk)
                                  localSocket
                                  supportedNodeToNodeVersions
                                  supportedNodeToClientVersions)
-      = mkObject (
+      = mconcat (
         [ "kind" .= String "StartupInfo"
         , "nodeAddresses" .= toJSON (map ppN2NSocketInfo addresses)
         , "localSocket" .= case localSocket of
@@ -174,10 +174,10 @@ instance ( Show (BlockNodeToNodeVersion blk)
                   Just (v, _) -> String (pack . show $ v)
             ])
   forMachine _dtal (StartupP2PInfo diffusionMode) =
-      mkObject [ "kind" .= String "StartupP2PInfo"
+      mconcat [ "kind" .= String "StartupP2PInfo"
                , "diffusionMode" .= String (showT diffusionMode) ]
   forMachine _dtal (StartupTime time) =
-      mkObject [ "kind" .= String "StartupTime"
+      mconcat [ "kind" .= String "StartupTime"
                , "startupTime" .= String ( showT
                                          . (ceiling :: POSIXTime -> Int)
                                          . utcTimeToPOSIXSeconds
@@ -185,54 +185,54 @@ instance ( Show (BlockNodeToNodeVersion blk)
                                          )
                ]
   forMachine _dtal (StartupNetworkMagic networkMagic) =
-      mkObject [ "kind" .= String "StartupNetworkMagic"
+      mconcat [ "kind" .= String "StartupNetworkMagic"
                , "networkMagic" .= String (showT . unNetworkMagic
                                           $ networkMagic) ]
   forMachine _dtal (StartupSocketConfigError err) =
-      mkObject [ "kind" .= String "StartupSocketConfigError"
+      mconcat [ "kind" .= String "StartupSocketConfigError"
                , "error" .= String (showT err) ]
   forMachine _dtal StartupDBValidation =
-      mkObject [ "kind" .= String "StartupDBValidation"
+      mconcat [ "kind" .= String "StartupDBValidation"
                , "message" .= String "start db validation" ]
   forMachine _dtal NetworkConfigUpdate =
-      mkObject [ "kind" .= String "NetworkConfigUpdate"
+      mconcat [ "kind" .= String "NetworkConfigUpdate"
                , "message" .= String "ntework configuration update" ]
   forMachine _dtal (NetworkConfigUpdateError err) =
-      mkObject [ "kind" .= String "NetworkConfigUpdateError"
+      mconcat [ "kind" .= String "NetworkConfigUpdateError"
                , "error" .= String err ]
   forMachine _dtal (NetworkConfig localRoots publicRoots useLedgerAfter) =
-      mkObject [ "kind" .= String "NetworkConfig"
+      mconcat [ "kind" .= String "NetworkConfig"
                , "localRoots" .= toJSON localRoots
                , "publicRoots" .= toJSON publicRoots
                , "useLedgerAfter" .= UseLedger useLedgerAfter
                ]
   forMachine _dtal P2PWarning =
-      mkObject [ "kind" .= String "P2PWarning"
+      mconcat [ "kind" .= String "P2PWarning"
                , "message" .= String p2pWarningMessage ]
   forMachine _dtal P2PWarningDevelopementNetworkProtocols =
-      mkObject [ "kind" .= String "P2PWarningDevelopementNetworkProtocols"
+      mconcat [ "kind" .= String "P2PWarningDevelopementNetworkProtocols"
                , "message" .= String p2pWarningDevelopmentNetworkProtocolsMessage ]
   forMachine _ver (WarningDevelopmentNetworkProtocols ntnVersions ntcVersions) =
-      mkObject [ "kind" .= String "WarningDevelopmentNetworkProtocols"
+      mconcat [ "kind" .= String "WarningDevelopmentNetworkProtocols"
                , "message" .= String "enabled development network protocols"
                , "nodeToNodeDevelopmentVersions" .= String (showT ntnVersions)
                , "nodeToClientDevelopmentVersions" .= String (showT ntcVersions)
                ]
   forMachine _dtal (BINetwork BasicInfoNetwork {..}) =
-      mkObject [ "kind" .= String "BasicInfoNetwork"
+      mconcat [ "kind" .= String "BasicInfoNetwork"
                , "addresses" .= String (showT niAddresses)
                , "diffusionMode"  .= String (showT niDiffusionMode)
                , "dnsProducers" .= String (showT niDnsProducers)
                , "ipProducers" .= String (showT niIpProducers)
                ]
   forMachine _dtal (BIByron BasicInfoByron {..}) =
-      mkObject [ "kind" .= String "BasicInfoByron"
+      mconcat [ "kind" .= String "BasicInfoByron"
                , "systemStartTime" .= String (showT bibSystemStartTime)
                , "slotLength"  .= String (showT bibSlotLength)
                , "epochLength" .= String (showT bibEpochLength)
                ]
   forMachine _dtal (BIShelley BasicInfoShelleyBased {..}) =
-      mkObject [ "kind" .= String "BasicInfoShelleyBased"
+      mconcat [ "kind" .= String "BasicInfoShelleyBased"
                , "era"  .= String bisEra
                , "systemStartTime" .= String (showT bisSystemStartTime)
                , "slotLength"  .= String (showT bisSlotLength)
@@ -240,7 +240,7 @@ instance ( Show (BlockNodeToNodeVersion blk)
                , "slotsPerKESPeriod" .= String (showT bisSlotsPerKESPeriod)
                ]
   forMachine _dtal (BICommon BasicInfoCommon {..}) =
-      mkObject [ "kind" .= String "BasicInfoCommon"
+      mconcat [ "kind" .= String "BasicInfoCommon"
                , "configPath" .= String (pack biConfigPath)
                , "networkMagic"  .= String (showT biNetworkMagic)
                , "protocol" .= String biProtocol

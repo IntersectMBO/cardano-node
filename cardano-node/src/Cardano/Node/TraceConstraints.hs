@@ -1,5 +1,5 @@
-{-# LANGUAGE ConstraintKinds  #-}
-{-# LANGUAGE DataKinds        #-}
+{-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 module Cardano.Node.TraceConstraints (TraceConstraints) where
 
@@ -9,23 +9,21 @@ import           Data.Aeson
 
 import           Cardano.BM.Tracing (ToObject)
 import           Cardano.Logging (LogFormatting)
-import           Cardano.Node.Queries (ConvertTxId, GetKESInfo (..),
-                     HasKESInfo (..), HasKESMetricsData (..), LedgerQueries)
+import           Cardano.Node.Queries (ConvertTxId, GetKESInfo (..), HasKESInfo (..),
+                   HasKESMetricsData (..), LedgerQueries)
 
 import           Cardano.Ledger.Alonzo (AlonzoEra)
 import           Cardano.Ledger.Alonzo.Rules.Bbody (AlonzoBbodyPredFail)
 import           Cardano.Ledger.Alonzo.Rules.Utxo (UtxoPredicateFailure)
-import           Cardano.Ledger.Alonzo.Rules.Utxow (AlonzoPredFail)
+import           Cardano.Ledger.Alonzo.Rules.Utxow (UtxowPredicateFail)
 import           Cardano.Ledger.Crypto (StandardCrypto)
 
-import           Ouroboros.Consensus.Block (BlockProtocol, CannotForge,
-                     ConvertRawHash, ForgeStateUpdateError, Header)
+import           Ouroboros.Consensus.Block (BlockProtocol, CannotForge, ConvertRawHash,
+                   ForgeStateUpdateError, Header)
 import           Ouroboros.Consensus.HeaderValidation (OtherHeaderEnvelopeError)
 import           Ouroboros.Consensus.Ledger.Abstract (LedgerError)
-import           Ouroboros.Consensus.Ledger.Inspect (LedgerEvent, LedgerUpdate,
-                     LedgerWarning)
-import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr,
-                     HasTxId, HasTxs (..))
+import           Ouroboros.Consensus.Ledger.Inspect (LedgerEvent, LedgerUpdate, LedgerWarning)
+import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, HasTxId, HasTxs (..))
 import           Ouroboros.Consensus.Protocol.Abstract (ValidationErr)
 import           Ouroboros.Consensus.Shelley.Ledger.Mempool (GenTx, TxId)
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
@@ -58,7 +56,7 @@ type TraceConstraints blk =
     , ToObject (ForgeStateUpdateError blk)
     , ToObject (UtxoPredicateFailure (AlonzoEra StandardCrypto))
     , ToObject (AlonzoBbodyPredFail (AlonzoEra StandardCrypto))
-    , ToObject (AlonzoPredFail (AlonzoEra StandardCrypto))
+    , ToObject (UtxowPredicateFail (AlonzoEra StandardCrypto))
 
     , LogFormatting (LedgerUpdate blk)
     , LogFormatting (LedgerWarning blk)
@@ -73,5 +71,5 @@ type TraceConstraints blk =
     , LogFormatting (ForgeStateUpdateError blk)
     , LogFormatting (UtxoPredicateFailure (AlonzoEra StandardCrypto))
     , LogFormatting (AlonzoBbodyPredFail (AlonzoEra StandardCrypto))
-    , LogFormatting (AlonzoPredFail (AlonzoEra StandardCrypto))
+    , LogFormatting (UtxowPredicateFail (AlonzoEra StandardCrypto))
     )
