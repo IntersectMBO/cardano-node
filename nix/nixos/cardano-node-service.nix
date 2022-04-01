@@ -19,6 +19,8 @@ let
         TargetNumberOfKnownPeers = cfg.targetNumberOfKnownPeers;
         TargetNumberOfEstablishedPeers = cfg.targetNumberOfEstablishedPeers;
         TargetNumberOfActivePeers = cfg.targetNumberOfActivePeers;
+        TestEnableDevelopmentNetworkProtocols = true;
+        MaxConcurrencyBulkSync = 2;
       })) cfg.extraNodeConfig;
     in i: let
     instanceConfig = recursiveUpdate (baseConfig
@@ -34,15 +36,15 @@ let
       LocalRoots = {
         groups = map (g: {
           localRoots = {
-            inherit (g) addrs;
+            inherit (g) accessPoints;
             advertise = g.advertise or false;
           };
-          valency = g.valency or (length g.addrs);
+          valency = g.valency or (length g.accessPoints);
         }) (cfg.producers ++ (cfg.instanceProducers i));
       };
       PublicRoots = map (g: {
         publicRoots = {
-          inherit (g) addrs;
+          inherit (g) accessPoints;
           advertise = g.advertise or false;
         };
       }) (cfg.publicProducers ++ (cfg.instancePublicProducers i));
@@ -50,7 +52,11 @@ let
       useLedgerAfterSlot = cfg.usePeersFromLedgerAfterSlot;
     };
     oldTopology = {
-      Producers = concatMap (g: map (a: a // { valency = a.valency or 1; }) g.addrs) (
+      Producers = concatMap (g: map (a: {
+          addr = a.address;
+          inherit (a) port;
+          valency = a.valency or 1;
+        }) g.accessPoints) (
         cfg.producers ++ (cfg.instanceProducers i) ++ cfg.publicProducers ++ (cfg.instancePublicProducers i)
       );
     };
@@ -96,8 +102,8 @@ let
       "--host-addr ${cfg.hostAddr}"
       "--port ${toString (cfg.port + i)}"
       "--socket-path ${cfg.socketPath}"
-    ] ++ lib.optional (cfg.ipv6HostAddr != null)
-      "--host-ipv6-addr ${cfg.ipv6HostAddr}"
+    ] ++ lib.optional (cfg.ipv6HostAddr i != null)
+      "--host-ipv6-addr ${cfg.ipv6HostAddr i}"
     )) ++ consensusParams.${cfg.nodeConfig.Protocol} ++ cfg.extraArgs ++ cfg.rtsArgs;
     in ''
         echo "Starting: ${concatStringsSep "\"\n   echo \"" cmd}"
@@ -253,10 +259,19 @@ in {
       };
 
       ipv6HostAddr = mkOption {
-        type = types.nullOr types.str;
-        default = null;
+        type = types.nullOr (types.either types.str (types.functionTo (types.nullOr types.str)));
+        default = _: null;
+        apply = ip: if (builtins.isFunction ip) then ip else _: ip;
         description = ''
           The ipv6 host address to bind to. Set to null to disable.
+        '';
+      };
+
+      additionalListenStream = mkOption {
+        type = types.functionTo (types.listOf types.str);
+        default = _: [];
+        description = ''
+          List of additional sockets to listen to. Only available with `systemdSocketActivation`.
         '';
       };
 
@@ -345,11 +360,11 @@ in {
 
       shareIpv6port = mkOption {
         type = types.bool;
-        default = false;
+        default = cfg.systemdSocketActivation;
         description = ''
           Should instances on same machine share ipv6 port.
           Only works with systemd socket.
-          Default: false.
+          Default: true if systemd activated socket. Otherwise always false.
           If false use port increments starting from `port`.
         '';
       };
@@ -365,8 +380,8 @@ in {
       publicProducers = mkOption {
         type = types.listOf types.attrs;
         default = [{
-          addrs = [{
-            addr = envConfig.relaysNew;
+          accessPoints = [{
+            address = envConfig.relaysNew;
             port = envConfig.edgePort;
           }];
           advertise = false;
@@ -384,8 +399,8 @@ in {
         type = types.listOf types.attrs;
         default = [];
         example = [{
-          addrs = [{
-            addr = "127.0.0.1";
+          accessPoints = [{
+            address = "127.0.0.1";
             port = 3001;
           }];
           advertise = false;
@@ -439,7 +454,7 @@ in {
 
       targetNumberOfRootPeers = mkOption {
         type = types.int;
-        default = cfg.nodeConfig.TargetNumberOfRootPeers or 60;
+        default = cfg.nodeConfig.TargetNumberOfRootPeers or 100;
         description = "Limits the maximum number of root peers the node will know about";
       };
 
@@ -455,17 +470,17 @@ in {
       targetNumberOfEstablishedPeers = mkOption {
         type = types.int;
         default = cfg.nodeConfig.TargetNumberOfEstablishedPeers
-          or (2 * cfg.targetNumberOfKnownPeers / 3);
+          or (cfg.targetNumberOfKnownPeers / 2);
         description = ''Number of peers the node will be connected to, but not necessarily following their chain.
-          Default to 2/3 of targetNumberOfKnownPeers.
+          Default to half of targetNumberOfKnownPeers.
         '';
       };
 
       targetNumberOfActivePeers = mkOption {
         type = types.int;
-        default = cfg.nodeConfig.TargetNumberOfActivePeers or (cfg.targetNumberOfEstablishedPeers / 2);
+        default = cfg.nodeConfig.TargetNumberOfActivePeers or (2 * cfg.targetNumberOfEstablishedPeers / 5);
         description = ''Number of peers your node is actively downloading headers and blocks from.
-          Default to half of targetNumberOfEstablishedPeers.
+          Default to 2/5 of targetNumberOfEstablishedPeers.
         '';
       };
 
@@ -585,7 +600,8 @@ in {
         partOf = [ "${n}.service" ];
         socketConfig = {
           ListenStream = [ "${cfg.hostAddr}:${toString (if cfg.shareIpv4port then cfg.port else cfg.port + i)}" ]
-            ++ optional (cfg.ipv6HostAddr != null) "[${cfg.ipv6HostAddr}]:${toString (if cfg.shareIpv6port then cfg.port else cfg.port + i)}"
+            ++ optional (cfg.ipv6HostAddr i != null) "[${cfg.ipv6HostAddr i}]:${toString (if cfg.shareIpv6port then cfg.port else cfg.port + i)}"
+            ++ (cfg.additionalListenStream i)
             ++ [(if (i == 0) then cfg.socketPath else "${runtimeDir}-${toString i}/node.socket")];
           RuntimeDirectory = lib.removePrefix runDirBase
             (if (i == 0) then runtimeDir else "${runtimeDir}-${toString i}");
