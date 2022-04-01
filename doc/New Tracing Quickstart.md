@@ -14,6 +14,14 @@ To switch to new tracing set the value `UseTraceDispatcher` to true. If you do t
 config file needs to contain several values for the configuration of new-tracing, as we
 describe next.
 
+The current tracing system has two ways to identify the message, a hierarchical name we
+call it's `Namespace` and the `Kind field` in machine representation. We base our implementation
+on the namespace, and require a one-to-one correspondence between namespaces and messages (bijective mapping).
+
+As we have two mechanisms for the same purpose for historic reasons, we will soon
+__deprecate the Kind field__, and it will disappear in the near future. So we strongly
+advice to use namespaces for any analysis tools of traces!  
+
 ### Configuration of new tracing
 
 1. Specify a filter for the severity of the messages you want to see, e.g.:
@@ -141,8 +149,15 @@ examples in cardano-node under Cardano.Node.Tracing.Tracers.
 
 ### Documentation of trace messages and further documentation
 
-[Trace messages with default config](https://github.com/input-output-hk/cardano-node/blob/master/doc/new-tracing/tracers_doc_generated.md)
+This is a document which is regenerated periodically and documents all trace-messages,  metrics and data-points in cardano-node. It as well displays the handling of these
+messages with the current default configuration:
 
-[Trace-dispatcher documentation](https://github.com/input-output-hk/cardano-node/blob/master/trace-dispatcher/doc/trace-dispatcher.md)
+[Cardano Trace Documentation](https://github.com/input-output-hk/cardano-node/blob/master/doc/new-tracing/tracers_doc_generated.md)
 
-[cardano-tracer documentation](https://github.com/input-output-hk/cardano-node/blob/master/cardano-tracer/docs/cardano-tracer.md)
+This document describes the underlying library trace-dispatcher:
+
+[trace-dispatcher: efficient, simple and flexible program tracing](https://github.com/input-output-hk/cardano-node/blob/master/trace-dispatcher/doc/trace-dispatcher.md)
+
+This document describes a seperate service for logging and monitoring Cardano nodes:
+
+[Cardano Tracer](https://github.com/input-output-hk/cardano-node/blob/master/cardano-tracer/docs/cardano-tracer.md)
