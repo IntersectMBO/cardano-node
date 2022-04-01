@@ -10,7 +10,9 @@
 module Cardano.Node.Tracing.Tracers.NodeToClient
   ( severityTChainSync
   , namesForTChainSync
-  , docTChainSync
+  , docTChainSyncNodeToClient
+  , docTChainSyncNodeToNode
+  , docTChainSyncNodeToNodeSerisalised
 
   , severityTTxMonitor
   , namesForTTxMonitor
@@ -143,77 +145,75 @@ instance LogFormatting (AnyMessageAndAgency (ChainSync blk pt tip)) where
               , "agency" .= String (pack $ show stok)
               ]
 
+docTChainSyncNodeToClient :: Documented (BlockFetch.TraceLabelPeer peer (TraceSendRecv
+    (ChainSync x (Point blk) (Tip blk))))
+docTChainSyncNodeToClient =
+    addDocumentedNamespace  ["NodeToClient", "Send"] docTChainSync
+    `addDocs` addDocumentedNamespace  ["NodeToClient", "Recieve"] docTChainSync
+
+
+docTChainSyncNodeToNode :: Documented (BlockFetch.TraceLabelPeer peer (TraceSendRecv
+    (ChainSync x (Point blk) (Tip blk))))
+docTChainSyncNodeToNode =
+    addDocumentedNamespace  ["NodeToNode", "Send"] docTChainSync
+    `addDocs` addDocumentedNamespace  ["NodeToNode", "Recieve"] docTChainSync
+
+docTChainSyncNodeToNodeSerisalised :: Documented (BlockFetch.TraceLabelPeer peer (TraceSendRecv
+    (ChainSync x (Point blk) (Tip blk))))
+docTChainSyncNodeToNodeSerisalised =
+    addDocumentedNamespace  ["NodeToNode", "Send"] docTChainSync
+    `addDocs` addDocumentedNamespace  ["NodeToNode", "Recieve"] docTChainSync
+
 
 docTChainSync :: Documented (BlockFetch.TraceLabelPeer peer (TraceSendRecv
     (ChainSync x (Point blk) (Tip blk))))
 docTChainSync = Documented [
       DocMsg
-        (BlockFetch.TraceLabelPeer anyProto
-          (TraceSendMsg (AnyMessageAndAgency anyProto MsgRequestNext)))
+        ["RequestNext"]
         []
         "Request the next update from the producer. The response can be a roll\
         \forward, a roll back or wait."
     , DocMsg
-        (BlockFetch.TraceLabelPeer anyProto
-          (TraceSendMsg (AnyMessageAndAgency anyProto MsgAwaitReply)))
+        ["AwaitReply"]
         []
         "Acknowledge the request but require the consumer to wait for the next\
         \update. This means that the consumer is synced with the producer, and\
         \the producer is waiting for its own chain state to change."
     , DocMsg
-        (BlockFetch.TraceLabelPeer anyProto
-          (TraceSendMsg (AnyMessageAndAgency anyProto MsgAwaitReply)))
+        ["RollForward"]
         []
         "Tell the consumer to extend their chain with the given header.\
         \\n\
         \The message also tells the consumer about the head point of the producer."
     , DocMsg
-        (BlockFetch.TraceLabelPeer anyProto
-          (TraceSendMsg (AnyMessageAndAgency anyProto
-            (MsgRollForward anyProto anyProto))))
-        []
-        "Tell the consumer to extend their chain with the given header.\
-        \\n\
-        \The message also tells the consumer about the head point of the producer."
-    , DocMsg
-        (BlockFetch.TraceLabelPeer anyProto
-          (TraceSendMsg (AnyMessageAndAgency anyProto
-            (MsgRollBackward anyProto anyProto))))
+        ["RollBackward"]
         []
         "Tell the consumer to roll back to a given point on their chain.\
         \\n\
         \The message also tells the consumer about the head point of the producer."
     , DocMsg
-        (BlockFetch.TraceLabelPeer anyProto
-          (TraceSendMsg (AnyMessageAndAgency anyProto
-            (MsgFindIntersect [anyProto]))))
+        ["FindIntersect"]
         []
         "Ask the producer to try to find an improved intersection point between\
         \the consumer and producer's chains. The consumer sends a sequence of\
         \points and it is up to the producer to find the first intersection point\
         \on its chain and send it back to the consumer."
     , DocMsg
-        (BlockFetch.TraceLabelPeer anyProto
-          (TraceSendMsg (AnyMessageAndAgency anyProto
-            (MsgIntersectFound anyProto anyProto))))
+        ["IntersectFound"]
         []
         "The reply to the consumer about an intersection found.\
         \The consumer can decide weather to send more points.\
         \\n\
         \The message also tells the consumer about the head point of the producer."
     , DocMsg
-        (BlockFetch.TraceLabelPeer anyProto
-          (TraceSendMsg (AnyMessageAndAgency anyProto
-            (MsgIntersectNotFound anyProto))))
+        ["IntersectNotFound"]
         []
         "The reply to the consumer that no intersection was found: none of the\
         \points the consumer supplied are on the producer chain.\
         \\n\
         \The message also tells the consumer about the head point of the producer."
     , DocMsg
-        (BlockFetch.TraceLabelPeer anyProto
-          (TraceSendMsg (AnyMessageAndAgency anyProto
-            MsgDone)))
+        ["Done"]
         []
         "We have to explain to the framework what our states mean, in terms of\
         \which party has agency in each state.\
@@ -305,68 +305,15 @@ instance LogFormatting (AnyMessageAndAgency (LTM.LocalTxMonitor txid tx slotNo))
              ]
 
 docTTxMonitor :: Documented
-   (TraceLabelPeer
-      localPeer
-      (TraceSendRecv
-         (LTM.LocalTxMonitor
-            (GenTxId blk) (GenTx blk) SlotNo)))
-docTTxMonitor = Documented
-    [ DocMsg
-        (TraceLabelPeer anyProto
-          (TraceSendMsg (AnyMessageAndAgency anyProto LTM.MsgAcquire)))
-        []
-        ""
-    , DocMsg
-        (TraceLabelPeer anyProto
-          (TraceSendMsg (AnyMessageAndAgency anyProto (LTM.MsgAcquired anyProto))))
-        []
-        ""
-    , DocMsg
-        (TraceLabelPeer anyProto
-          (TraceSendMsg (AnyMessageAndAgency anyProto LTM.MsgAwaitAcquire)))
-        []
-        ""
-    , DocMsg
-        (TraceLabelPeer anyProto
-          (TraceSendMsg (AnyMessageAndAgency anyProto LTM.MsgNextTx)))
-        []
-        ""
-    , DocMsg
-        (TraceLabelPeer anyProto
-          (TraceSendMsg (AnyMessageAndAgency anyProto (LTM.MsgReplyNextTx anyProto))))
-        []
-        ""
-    , DocMsg
-        (TraceLabelPeer anyProto
-          (TraceSendMsg (AnyMessageAndAgency anyProto (LTM.MsgHasTx anyProto))))
-        []
-        ""
-    , DocMsg
-        (TraceLabelPeer anyProto
-          (TraceSendMsg (AnyMessageAndAgency anyProto (LTM.MsgReplyHasTx anyProto))))
-        []
-        ""
-    , DocMsg
-        (TraceLabelPeer anyProto
-          (TraceSendMsg (AnyMessageAndAgency anyProto LTM.MsgGetSizes)))
-        []
-        ""
-    , DocMsg
-        (TraceLabelPeer anyProto
-          (TraceSendMsg (AnyMessageAndAgency anyProto (LTM.MsgReplyGetSizes anyProto))))
-        []
-        ""
-    , DocMsg
-        (TraceLabelPeer anyProto
-          (TraceSendMsg (AnyMessageAndAgency anyProto LTM.MsgRelease)))
-        []
-        ""
-    , DocMsg
-        (TraceLabelPeer anyProto
-          (TraceSendMsg (AnyMessageAndAgency anyProto LTM.MsgDone)))
-        []
-        ""
-    ]
+  (TraceLabelPeer
+     localPeer
+     (TraceSendRecv
+        (LTM.LocalTxMonitor
+           (GenTxId blk) (GenTx blk) SlotNo)))
+docTTxMonitor =
+  addDocumentedNamespace  ["Send"] docTState
+   `addDocs` addDocumentedNamespace  ["Recieve"] docTState
+
 
 --------------------------------------------------------------------------------
 -- LocalTxSubmission Tracer
@@ -429,32 +376,38 @@ instance LogFormatting (AnyMessageAndAgency (LTS.LocalTxSubmission tx err)) wher
              ]
 
 docTTxSubmission :: Documented
+  (BlockFetch.TraceLabelPeer
+     localPeer
+     (TraceSendRecv
+        (LTS.LocalTxSubmission
+           (GenTx blk) (ApplyTxErr blk))))
+docTTxSubmission =
+  addDocumentedNamespace  ["Send"] docTTxSubmission'
+   `addDocs` addDocumentedNamespace  ["Recieve"] docTTxSubmission'
+
+docTTxSubmission' :: Documented
    (BlockFetch.TraceLabelPeer
       localPeer
       (TraceSendRecv
          (LTS.LocalTxSubmission
             (GenTx blk) (ApplyTxErr blk))))
-docTTxSubmission = Documented [
+docTTxSubmission' = Documented [
       DocMsg
-        (BlockFetch.TraceLabelPeer anyProto
-          (TraceSendMsg (AnyMessageAndAgency anyProto (LTS.MsgSubmitTx anyProto))))
+        ["SubmitTx"]
         []
         "The client submits a single transaction and waits a reply."
     , DocMsg
-        (BlockFetch.TraceLabelPeer anyProto
-          (TraceSendMsg (AnyMessageAndAgency anyProto LTS.MsgAcceptTx)))
+        ["AcceptTx"]
         []
         "The server can reply to inform the client that it has accepted the\
         \transaction."
     , DocMsg
-        (BlockFetch.TraceLabelPeer anyProto
-          (TraceSendMsg (AnyMessageAndAgency anyProto (LTS.MsgRejectTx anyProto))))
+        ["RejectTx"]
         []
         "The server can reply to inform the client that it has rejected the\
         \transaction. A reason for the rejection is included."
     , DocMsg
-        (BlockFetch.TraceLabelPeer anyProto
-          (TraceSendMsg (AnyMessageAndAgency anyProto LTS.MsgDone)))
+        ["Done"]
         []
         "The client can terminate the protocol."
   ]
@@ -490,8 +443,8 @@ namesForTStateQuery :: BlockFetch.TraceLabelPeer peer
   -> [Text]
 namesForTStateQuery (BlockFetch.TraceLabelPeer _ v) = namesForTStateQuery' v
   where
-    namesForTStateQuery' (TraceSendMsg msg) = namesForTStateQuery'' msg
-    namesForTStateQuery' (TraceRecvMsg msg) = namesForTStateQuery'' msg
+    namesForTStateQuery' (TraceSendMsg msg) = "Send" : namesForTStateQuery'' msg
+    namesForTStateQuery' (TraceRecvMsg msg) = "Receive" : namesForTStateQuery'' msg
 
     namesForTStateQuery'' (AnyMessageAndAgency _agency msg) = namesForTStateQuery''' msg
 
@@ -501,7 +454,7 @@ namesForTStateQuery (BlockFetch.TraceLabelPeer _ v) = namesForTStateQuery' v
 
     namesForTStateQuery''' LSQ.MsgAcquire {}   = ["Acquire"]
     namesForTStateQuery''' LSQ.MsgAcquired {}  = ["Acquired"]
-    namesForTStateQuery''' LSQ.MsgFailure {}   = ["Acquired"]
+    namesForTStateQuery''' LSQ.MsgFailure {}   = ["Failure"]
     namesForTStateQuery''' LSQ.MsgQuery {}     = ["Query"]
     namesForTStateQuery''' LSQ.MsgResult {}    = ["Result"]
     namesForTStateQuery''' LSQ.MsgRelease {}   = ["Release"]
@@ -546,11 +499,18 @@ instance (forall result. Show (Query blk result))
 docTStateQuery :: Documented
       (BlockFetch.TraceLabelPeer peer
        (TraceSendRecv
-         (LSQ.LocalStateQuery blk (Point blk) query)))
-docTStateQuery = Documented [
+       (LSQ.LocalStateQuery blk pt (Query blk))))
+docTStateQuery =
+   addDocumentedNamespace  ["Send"] docTState
+    `addDocs` addDocumentedNamespace  ["Recieve"] docTState
+
+docTState :: Documented
+      (BlockFetch.TraceLabelPeer peer
+       (TraceSendRecv
+         x))
+docTState = Documented [
       DocMsg
-        (BlockFetch.TraceLabelPeer anyProto
-          (TraceSendMsg (AnyMessageAndAgency anyProto (LSQ.MsgAcquire Nothing))))
+        ["Acquire"]
         []
         "The client requests that the state as of a particular recent point on\
         \the server's chain (within K of the tip) be made available to query,\
@@ -560,45 +520,29 @@ docTStateQuery = Documented [
         \will be acquired.  For previous versions of the protocol 'point' must be\
         \given."
     , DocMsg
-        (BlockFetch.TraceLabelPeer anyProto
-          (TraceSendMsg (AnyMessageAndAgency anyProto LSQ.MsgAcquired)))
+        ["Acquired"]
         []
         "The server can confirm that it has the state at the requested point."
     , DocMsg
-        (BlockFetch.TraceLabelPeer anyProto
-          (TraceSendMsg
-            (AnyMessageAndAgency anyProto
-              (LSQ.MsgFailure anyProto))))
+        ["Failure"]
         []
         "The server can report that it cannot obtain the state for the\
         \requested point."
     , DocMsg
-        (BlockFetch.TraceLabelPeer anyProto
-          (TraceSendMsg
-            (AnyMessageAndAgency anyProto
-              (LSQ.MsgQuery anyProto))))
+        ["Query"]
         []
         "The client can perform queries on the current acquired state."
     , DocMsg
-        (BlockFetch.TraceLabelPeer anyProto
-          (TraceSendMsg
-            (AnyMessageAndAgency anyProto
-              (LSQ.MsgResult anyProto anyProto))))
+        ["Result"]
         []
         "The server must reply with the queries."
     , DocMsg
-        (BlockFetch.TraceLabelPeer anyProto
-          (TraceSendMsg
-            (AnyMessageAndAgency anyProto
-              LSQ.MsgRelease)))
+        ["Release"]
         []
         "The client can instruct the server to release the state. This lets\
         \the server free resources."
     , DocMsg
-        (BlockFetch.TraceLabelPeer anyProto
-          (TraceSendMsg
-            (AnyMessageAndAgency anyProto
-              (LSQ.MsgReAcquire Nothing))))
+        ["ReAcquire"]
         []
         "This is like 'MsgAcquire' but for when the client already has a\
         \state. By moveing to another state directly without a 'MsgRelease' it\
@@ -612,10 +556,7 @@ docTStateQuery = Documented [
         \will be acquired.  For previous versions of the protocol 'point' must be\
         \given."
     , DocMsg
-        (BlockFetch.TraceLabelPeer anyProto
-          (TraceSendMsg
-            (AnyMessageAndAgency anyProto
-              LSQ.MsgDone)))
+        ["Done"]
         []
         "The client can terminate the protocol."
   ]

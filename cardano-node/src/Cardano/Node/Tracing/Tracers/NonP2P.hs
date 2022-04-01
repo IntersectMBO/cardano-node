@@ -165,7 +165,10 @@ docIPSubscription :: Documented (WithIPList (SubscriptionTrace Socket.SockAddr))
 docIPSubscription = Documented $ map withIPList (undoc docSubscription)
   where
     withIPList (DocMsg v nl comment) =
-      DocMsg (WithIPList anyProto [] v) nl ("IP Subscription: " <> comment)
+      DocMsg
+        ("IP" : v)
+        nl
+        ("IP Subscription: " <> comment)
 
 --------------------------------------------------------------------------------
 -- DNSSubscription Tracer
@@ -221,82 +224,84 @@ docDNSSubscription :: Documented (WithDomainName (SubscriptionTrace Socket.SockA
 docDNSSubscription = Documented $ map withDomainName (undoc docSubscription)
   where
     withDomainName (DocMsg v nl comment) =
-      DocMsg (WithDomainName anyProto v) nl ("DNS Subscription: " <> comment)
-
+      DocMsg
+        ("DNS" : v)
+        nl
+        ("DNS Subscription: " <> comment)
 
 docSubscription :: Documented (SubscriptionTrace Socket.SockAddr)
 docSubscription = Documented [
       DocMsg
-        (SubscriptionTraceConnectStart anyProto)
+        ["ConnectStart"]
         []
         "Connection Attempt Start with destination."
     , DocMsg
-        (SubscriptionTraceConnectEnd anyProto ConnectSuccess)
+        ["ConnectEnd"]
         []
         "Connection Attempt end with destination and outcome."
     , DocMsg
-        (SubscriptionTraceSocketAllocationException anyProto (anyProto :: SomeException))
+        ["ConnectException"]
         []
         "Socket Allocation Exception with destination and the exception."
     , DocMsg
-        (SubscriptionTraceConnectException anyProto (anyProto :: SomeException))
+        ["SocketAllocationException"]
         []
         "Connection Attempt Exception with destination and exception."
     , DocMsg
-        (SubscriptionTraceTryConnectToPeer anyProto)
+        ["TryConnectToPeer"]
         []
         "Trying to connect to peer with address."
     , DocMsg
-        (SubscriptionTraceSkippingPeer anyProto)
+        ["SkippingPeer"]
         []
         "Skipping peer with address."
     , DocMsg
-        SubscriptionTraceSubscriptionRunning
+        ["SubscriptionRunning"]
         []
         "Required subscriptions started."
     , DocMsg
-        (SubscriptionTraceSubscriptionWaiting 1)
+        ["SubscriptionWaiting"]
         []
         "Waiting on address with active connections."
     , DocMsg
-        SubscriptionTraceSubscriptionFailed
+        ["SubscriptionFailed"]
         []
         "Failed to start all required subscriptions."
     , DocMsg
-        (SubscriptionTraceSubscriptionWaitingNewConnection anyProto)
+        ["SubscriptionWaitingNewConnection"]
         []
         "Waiting delay time before attempting a new connection."
     , DocMsg
-        (SubscriptionTraceStart 1)
+        ["Start"]
         []
         "Starting Subscription Worker with a valency."
     , DocMsg
-        (SubscriptionTraceRestart anyProto 1 2)
+        ["Restart"]
         []
         "Restarting Subscription after duration with desired valency and\
         \ current valency."
     , DocMsg
-        (SubscriptionTraceConnectionExist anyProto)
+        ["ConnectionExist"]
         []
         "Connection exists to destination."
     , DocMsg
-        (SubscriptionTraceUnsupportedRemoteAddr anyProto)
+        ["UnsupportedRemoteAddr"]
         []
         "Unsupported remote target address."
     , DocMsg
-        SubscriptionTraceMissingLocalAddress
+        ["MissingLocalAddress"]
         []
         "Missing local address."
     , DocMsg
-        (SubscriptionTraceApplicationException anyProto (anyProto :: SomeException))
+        ["ApplicationException"]
         []
         "Application Exception occurred."
     , DocMsg
-        (SubscriptionTraceAllocateSocket anyProto)
+        ["AllocateSocket"]
         []
         "Allocate socket to address."
     , DocMsg
-        (SubscriptionTraceCloseSocket anyProto)
+        ["CloseSocket"]
         []
         "Closed socket to address."
   ]
@@ -337,45 +342,36 @@ instance LogFormatting (WithDomainName DnsTrace) where
                   <> "."
 
 docDNSResolver :: Documented (WithDomainName DnsTrace)
-docDNSResolver = Documented [
+docDNSResolver = addDocumentedNamespace  [] docDNSResolver'
+
+docDNSResolver' :: Documented (WithDomainName DnsTrace)
+docDNSResolver' = Documented [
       DocMsg
-        (WithDomainName anyProto
-          (DnsTraceLookupException anyProto))
+        ["LookupException"]
         []
         "A DNS lookup exception occurred."
     , DocMsg
-        (WithDomainName anyProto
-          (DnsTraceLookupAError anyProto))
+        ["LookupAError"]
         []
         "A lookup failed with an error."
     , DocMsg
-        (WithDomainName anyProto
-          (DnsTraceLookupAAAAError anyProto))
+        ["LookupAAAAError"]
         []
         "AAAA lookup failed with an error."
     , DocMsg
-        (WithDomainName anyProto
-          DnsTraceLookupIPv4First)
+        ["LookupIPv6First"]
+        []
+        "Returning IPv6 address first."
+    , DocMsg
+        ["LookupIPv4First"]
         []
         "Returning IPv4 address first."
     , DocMsg
-        (WithDomainName anyProto
-          DnsTraceLookupIPv6First)
-        []
-        "Returning IPv6 address first."
-    , DocMsg
-        (WithDomainName anyProto
-          DnsTraceLookupIPv6First)
-        []
-        "Returning IPv6 address first."
-    , DocMsg
-        (WithDomainName anyProto
-          (DnsTraceLookupAResult [anyProto]))
+        ["LookupAResult"]
         []
         "Lookup A result."
     , DocMsg
-        (WithDomainName anyProto
-          (DnsTraceLookupAAAAResult [anyProto]))
+        ["LookupAAAAResult"]
         []
         "Lookup AAAA result."
     ]
@@ -419,7 +415,7 @@ instance Show addr => LogFormatting (NtN.WithAddr addr NtN.ErrorPolicyTrace) whe
 
 -- WithDomainName has strict constructors
 docErrorPolicy :: Documented (WithAddr Socket.SockAddr ErrorPolicyTrace)
-docErrorPolicy = docErrorPolicy' anyProto
+docErrorPolicy = addDocumentedNamespace  [] docErrorPolicy'
 
 --------------------------------------------------------------------------------
 -- LocalErrorPolicy Tracer
@@ -453,61 +449,51 @@ namesForLocalErrorPolicy (WithAddr _ ev) = case ev of
 
 
 docLocalErrorPolicy :: Documented (WithAddr LocalAddress ErrorPolicyTrace)
-docLocalErrorPolicy = docErrorPolicy' anyProto
+docLocalErrorPolicy = addDocumentedNamespace  [] docErrorPolicy'
 
 -- WithAddr has strict constructors
 
-docErrorPolicy' :: adr -> Documented (WithAddr adr ErrorPolicyTrace)
-docErrorPolicy' adr = Documented [
+docErrorPolicy' :: Documented (WithAddr adr ErrorPolicyTrace)
+docErrorPolicy' = Documented [
       DocMsg
-        (WithAddr adr
-          (ErrorPolicySuspendPeer anyProto anyProto anyProto))
+        ["SuspendPeer"]
         []
         "Suspending peer with a given exception."
     , DocMsg
-        (WithAddr adr
-          (ErrorPolicySuspendConsumer anyProto anyProto))
+        ["SuspendConsumer"]
         []
         "Suspending consumer."
     , DocMsg
-        (WithAddr adr
-          (ErrorPolicyLocalNodeError anyProto))
+        ["LocalNodeError"]
         []
         "caught a local exception."
     , DocMsg
-        (WithAddr adr
-          ErrorPolicyResumePeer)
+        ["ResumePeer"]
         []
         "Resume a peer (both consumer and producer)."
     , DocMsg
-        (WithAddr adr
-          ErrorPolicyKeepSuspended)
+        ["KeepSuspended"]
         []
         "Consumer was suspended until producer will resume."
     , DocMsg
-        (WithAddr adr
-          ErrorPolicyResumeConsumer)
+        ["ResumeConsumer"]
         []
         "Resume consumer."
     , DocMsg
-        (WithAddr adr
-          ErrorPolicyResumeProducer)
+        ["ResumeProducer"]
         []
         "Resume producer."
     , DocMsg
-        (WithAddr adr
-          (ErrorPolicyUnhandledApplicationException anyProto))
+        ["UnhandledApplicationException"]
         []
         "An application threw an exception, which was not handled."
     , DocMsg
-        (WithAddr adr
-          (ErrorPolicyUnhandledConnectionException anyProto))
+        ["UnhandledConnectionException"]
         []
         "'connect' threw an exception, which was not handled by any\
         \ 'ErrorPolicy'."
     , DocMsg
-        (WithAddr adr
-          (ErrorPolicyAcceptException anyProto))
+        ["AcceptException"]
         []
         "'accept' threw an exception."
     ]
@@ -547,15 +533,22 @@ instance LogFormatting NtN.AcceptConnectionsPolicyTrace where
     forHuman   = showT
 
 docAcceptPolicy :: Documented NtN.AcceptConnectionsPolicyTrace
-docAcceptPolicy = Documented [
+docAcceptPolicy = addDocumentedNamespace  [] docAcceptPolicy'
+
+docAcceptPolicy' :: Documented NtN.AcceptConnectionsPolicyTrace
+docAcceptPolicy' = Documented [
       DocMsg
-        (NtN.ServerTraceAcceptConnectionRateLimiting anyProto 2)
+        ["ConnectionRateLimiting"]
         []
         "Rate limiting accepting connections,\
         \ delaying next accept for given time, currently serving n connections."
       , DocMsg
-        (NtN.ServerTraceAcceptConnectionHardLimit 2)
+        ["ConnectionHardLimit"]
         []
         "Hard rate limit reached,\
         \ waiting until the number of connections drops below n."
+      , DocMsg
+        ["ConnectionLimitResume"]
+        []
+        ""
   ]

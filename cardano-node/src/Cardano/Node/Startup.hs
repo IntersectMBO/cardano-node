@@ -149,7 +149,7 @@ data NodeInfo = NodeInfo
 docNodeInfoTraceEvent :: Documented NodeInfo
 docNodeInfoTraceEvent = Documented [
     DocMsg
-      (NodeInfo "" "" "" "" anyProto anyProto)
+      ["NodeInfo"]
         []
         "Basic information about this node collected at startup\
         \\n\

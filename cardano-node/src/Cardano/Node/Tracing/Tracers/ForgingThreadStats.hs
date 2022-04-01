@@ -69,7 +69,7 @@ emptyForgeThreadStats = ForgeThreadStats 0 0 0 0 0
 docForgeStats :: Documented ForgeThreadStats
 docForgeStats = Documented [
     DocMsg
-      emptyForgeThreadStats
+      ["ForgeStats"]
       [("nodeCannotForgeNum",
         "How many times this node could not forge?")
       ,("nodeIsLeaderNum",
@@ -130,17 +130,16 @@ forgeThreadStats = foldMTraceM calculateThreadStats emptyForgingStats
 calculateThreadStats :: MonadIO m
   => ForgingStats
   -> LoggingContext
-  -> Maybe TraceControl
   -> ForgeTracerType blk
   -> m ForgingStats
-calculateThreadStats stats _context _mbCtrl
+calculateThreadStats stats _context
     (Left (TraceLabelCreds _ TraceNodeCannotForge {})) = do
       mapThreadStats
         stats
         (\fts -> (fts { ftsNodeCannotForgeNum = ftsNodeCannotForgeNum fts + 1}
                       , Nothing))
         (\fs _ ->  (fs  { fsNodeCannotForgeNum  = fsNodeCannotForgeNum fs + 1 }))
-calculateThreadStats stats _context _mbCtrl
+calculateThreadStats stats _context
     (Left (TraceLabelCreds _ (TraceNodeIsLeader (SlotNo slot')))) = do
       let slot = fromIntegral slot'
       mapThreadStats
@@ -148,14 +147,14 @@ calculateThreadStats stats _context _mbCtrl
         (\fts -> (fts { ftsNodeIsLeaderNum = ftsNodeIsLeaderNum fts + 1
                    , ftsLastSlot = slot}, Nothing))
         (\fs _ ->  (fs  { fsNodeIsLeaderNum  = fsNodeIsLeaderNum fs + 1 }))
-calculateThreadStats stats _context _mbCtrl
+calculateThreadStats stats _context
     (Left (TraceLabelCreds _ TraceForgedBlock {})) = do
       mapThreadStats
         stats
         (\fts -> (fts { ftsBlocksForgedNum = ftsBlocksForgedNum fts + 1}
                       , Nothing))
         (\fs _ ->  (fs  { fsBlocksForgedNum  = fsBlocksForgedNum fs + 1 }))
-calculateThreadStats stats _context _mbCtrl
+calculateThreadStats stats _context
     (Left (TraceLabelCreds _ (TraceNodeNotLeader (SlotNo slot')))) = do
       let slot = fromIntegral slot'
       mapThreadStats
@@ -172,7 +171,7 @@ calculateThreadStats stats _context _mbCtrl
                             Nothing -> fs
                             Just missed -> (fs { fsSlotsMissedNum =
                               fsSlotsMissedNum fs + missed}))
-calculateThreadStats stats _context _mbCtrl _message = pure stats
+calculateThreadStats stats _context _message = pure stats
 
 mapThreadStats ::
      MonadIO m

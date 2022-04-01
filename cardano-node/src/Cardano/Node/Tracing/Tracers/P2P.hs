@@ -73,12 +73,10 @@ import           Cardano.Tracing.OrphanInstances.Network ()
 import           Cardano.Node.Tracing.Tracers.NodeToNode ()
 import           Cardano.Node.Tracing.Tracers.NonP2P ()
 
-import           Network.Mux (MiniProtocolNum (..))
 import           Ouroboros.Network.ConnectionHandler (ConnectionHandlerTrace (..))
 import           Ouroboros.Network.ConnectionId (ConnectionId (..))
-import           Ouroboros.Network.ConnectionManager.Types (AbstractState (..),
-                   ConnectionManagerCounters (..), ConnectionManagerTrace (..),
-                   DemotedToColdRemoteTr (..), OperationResult (..))
+import           Ouroboros.Network.ConnectionManager.Types (ConnectionManagerCounters (..),
+                   ConnectionManagerTrace (..))
 import qualified Ouroboros.Network.ConnectionManager.Types as ConnectionManager
 import           Ouroboros.Network.InboundGovernor (InboundGovernorTrace (..))
 import qualified Ouroboros.Network.InboundGovernor as InboundGovernor
@@ -145,29 +143,32 @@ instance (ToJSONKey ntnAddr, ToJSONKey RelayAccessPoint, Show ntnAddr, Show exce
   forHuman = pack . show
 
 docLocalRootPeers :: Documented (TraceLocalRootPeers ntnAddr resolverError)
-docLocalRootPeers = Documented [
+docLocalRootPeers =  addDocumentedNamespace  ["LocalRootPeers"] docLocalRootPeers'
+
+docLocalRootPeers' :: Documented (TraceLocalRootPeers ntnAddr resolverError)
+docLocalRootPeers' = Documented [
     DocMsg
-      (TraceLocalRootDomains anyProto)
+      ["LocalRootDomains"]
       []
       ""
   , DocMsg
-      (TraceLocalRootWaiting anyProto anyProto)
+      ["LocalRootWaiting"]
       []
       ""
   , DocMsg
-      (TraceLocalRootResult anyProto anyProto)
+      ["LocalRootResult"]
       []
       ""
   , DocMsg
-      (TraceLocalRootGroups anyProto)
+      ["LocalRootGroups"]
       []
       ""
   , DocMsg
-      (TraceLocalRootFailure anyProto anyProto)
+      ["LocalRootFailure"]
       []
       ""
   , DocMsg
-      (TraceLocalRootError anyProto anyProto)
+      ["LocalRootError"]
       []
       ""
   ]
@@ -207,21 +208,24 @@ instance LogFormatting TracePublicRootPeers where
   forHuman = pack . show
 
 docPublicRootPeers :: Documented TracePublicRootPeers
-docPublicRootPeers = Documented [
+docPublicRootPeers =  addDocumentedNamespace  ["PublicRootPeers"] docPublicRootPeers'
+
+docPublicRootPeers' :: Documented TracePublicRootPeers
+docPublicRootPeers' = Documented [
     DocMsg
-      (TracePublicRootRelayAccessPoint anyProto)
+      ["PublicRootRelayAccessPoint"]
       []
       ""
   , DocMsg
-      (TracePublicRootDomains anyProto)
+      ["PublicRootDomains"]
       []
       ""
   , DocMsg
-      (TracePublicRootResult anyProto anyProto)
+      ["PublicRootResult"]
       []
       ""
   , DocMsg
-      (TracePublicRootFailure anyProto anyProto)
+      ["PublicRootFailure"]
       []
       ""
   ]
@@ -233,7 +237,7 @@ docPublicRootPeers = Documented [
 namesForPeerSelection :: TracePeerSelection peeraddr -> [Text]
 namesForPeerSelection TraceLocalRootPeersChanged {} = ["LocalRootPeersChanged"]
 namesForPeerSelection TraceTargetsChanged {}        = ["TargetsChanged"]
-namesForPeerSelection TracePublicRootsRequest {}    = ["ublicRootsRequest"]
+namesForPeerSelection TracePublicRootsRequest {}    = ["PublicRootsRequest"]
 namesForPeerSelection TracePublicRootsResults {}    = ["PublicRootsResults"]
 namesForPeerSelection TracePublicRootsFailure {}    = ["PublicRootsFailure"]
 namesForPeerSelection TraceGossipRequests {}        = ["GossipRequests"]
@@ -451,120 +455,123 @@ instance LogFormatting (TracePeerSelection SockAddr) where
              , "event" .= show c ]
   forHuman = pack . show
 
-docPeerSelection :: Documented (TracePeerSelection SockAddr)
-docPeerSelection = Documented [
+docPeerSelection ::  Documented (TracePeerSelection SockAddr)
+docPeerSelection =  addDocumentedNamespace  ["PeerSelection"] docPeerSelection'
+
+docPeerSelection' :: Documented (TracePeerSelection SockAddr)
+docPeerSelection' = Documented [
     DocMsg
-      (TraceLocalRootPeersChanged anyProto anyProto)
+      ["LocalRootPeersChanged"]
       []
       ""
   , DocMsg
-      (TraceTargetsChanged anyProto anyProto)
+      ["TargetsChanged"]
       []
       ""
   , DocMsg
-      (TracePublicRootsRequest 1 1)
+      ["PublicRootsRequest"]
       []
       ""
   , DocMsg
-      (TracePublicRootsResults anyProto 1 anyProto)
+      ["PublicRootsResults"]
       []
       ""
   , DocMsg
-      (TracePublicRootsResults anyProto 1 anyProto)
+      ["PublicRootsFailure"]
       []
       ""
   , DocMsg
-      (TraceGossipRequests 1 1 anyProto anyProto)
+      ["GossipRequests"]
       []
       "target known peers, actual known peers, peers available for gossip,\
       \ peers selected for gossip"
   , DocMsg
-      (TraceGossipResults [])
+      ["GossipResults"]
       []
       ""
   , DocMsg
-      (TraceForgetColdPeers 1 1 anyProto)
+      ["ForgetColdPeers"]
       []
       "target known peers, actual known peers, selected peers"
   , DocMsg
-      (TracePromoteColdPeers 1 1 anyProto)
+      ["PromoteColdPeers"]
       []
       "target established, actual established, selected peers"
   , DocMsg
-      (TracePromoteColdLocalPeers 1 1 anyProto)
+      ["PromoteColdLocalPeers"]
       []
       "target local established, actual local established, selected peers"
   , DocMsg
-      (TracePromoteColdFailed 1 1 anyProto anyProto anyProto)
+      ["PromoteColdFailed"]
       []
       "target established, actual established, peer, delay until next\
       \ promotion, reason"
   , DocMsg
-      (TracePromoteColdDone 1 1 anyProto)
+      ["PromoteColdDone"]
       []
       "target active, actual active, selected peers"
   , DocMsg
-      (TracePromoteWarmPeers 1 1 anyProto)
+      ["PromoteWarmPeers"]
       []
       "target active, actual active, selected peers"
   , DocMsg
-      (TracePromoteWarmLocalPeers [] anyProto)
+      ["PromoteWarmLocalPeers"]
       []
       "local per-group (target active, actual active), selected peers"
   , DocMsg
-      (TracePromoteWarmFailed 1 1 anyProto anyProto)
+      ["PromoteWarmFailed"]
       []
       "target active, actual active, peer, reason"
   , DocMsg
-      (TracePromoteWarmDone 1 1 anyProto)
+      ["PromoteWarmDone"]
       []
       "target active, actual active, peer"
   , DocMsg
-      (TraceDemoteWarmPeers 1 1 anyProto)
+      ["PromoteWarmAborted"]
+      []
+      ""
+  , DocMsg
+      ["DemoteWarmPeers"]
       []
       "target established, actual established, selected peers"
   , DocMsg
-      (TraceDemoteWarmFailed 1 1 anyProto anyProto)
+      ["DemoteWarmFailed"]
       []
       "target established, actual established, peer, reason"
   , DocMsg
-      (TraceDemoteWarmDone 1 1 anyProto)
+      ["DemoteWarmDone"]
       []
       "target established, actual established, peer"
   , DocMsg
-      (TraceDemoteHotPeers 1 1 anyProto)
+      ["DemoteHotPeers"]
       []
       "target active, actual active, selected peers"
   , DocMsg
-      (TraceDemoteLocalHotPeers [] anyProto)
+      ["DemoteLocalHotPeers"]
       []
       "local per-group (target active, actual active), selected peers"
   , DocMsg
-      (TraceDemoteHotFailed 1 1 anyProto anyProto)
+      ["DemoteHotFailed"]
       []
       "target active, actual active, peer, reason"
   , DocMsg
-      (TraceDemoteHotFailed 1 1 anyProto anyProto)
-      []
-      "target active, actual active, peer, reason"
-  , DocMsg
-      (TraceDemoteHotDone 1 1 anyProto )
+      ["DemoteHotDone"]
       []
       "target active, actual active, peer"
   , DocMsg
-      (TraceDemoteAsynchronous anyProto )
+      ["DemoteAsynchronous"]
       []
       ""
   , DocMsg
-      TraceGovernorWakeup
+      ["GovernorWakeup"]
       []
       ""
   , DocMsg
-      (TraceChurnWait anyProto)
+      ["ChurnWait"]
       []
       ""
   , DocMsg
-      (TraceChurnMode anyProto)
+      ["ChurnMode"]
       []
       ""
   ]
@@ -616,7 +623,7 @@ instance Show peerConn => LogFormatting (DebugPeerSelection SockAddr peerConn) w
 docDebugPeerSelection :: Documented (DebugPeerSelection SockAddr peerConn)
 docDebugPeerSelection = Documented
   [  DocMsg
-      (TraceGovernorState anyProto anyProto anyProto)
+      ["DebugPeerSelection", "GovernorState"]
       []
       ""
   ]
@@ -650,7 +657,7 @@ instance LogFormatting PeerSelectionCounters where
 docPeerSelectionCounters :: Documented PeerSelectionCounters
 docPeerSelectionCounters = Documented
   [  DocMsg
-      (PeerSelectionCounters 1 1 1)
+      ["PeerSelectionCounters"]
       [ ("cardano.node.peerSelection.cold", "Number of cold peers")
       , ("cardano.node.peerSelection.warm", "Number of warm peers")
       , ("cardano.node.peerSelection.hot", "Number of hot peers") ]
@@ -698,21 +705,25 @@ instance LogFormatting (PeerSelectionActionsTrace SockAddr) where
   forHuman = pack . show
 
 docPeerSelectionActions :: Documented (PeerSelectionActionsTrace ntnAddr)
-docPeerSelectionActions = Documented
+docPeerSelectionActions =
+    addDocumentedNamespace  ["PeerSelectionActions"]  docPeerSelectionActions'
+
+docPeerSelectionActions' :: Documented (PeerSelectionActionsTrace ntnAddr)
+docPeerSelectionActions' = Documented
   [  DocMsg
-      (PeerStatusChanged anyProto)
+      ["StatusChanged"]
       []
       ""
   ,  DocMsg
-      (PeerStatusChangeFailure anyProto anyProto)
+      ["StatusChangeFailure"]
       []
       ""
   ,  DocMsg
-      (PeerMonitoringError anyProto anyProto)
+      ["MonitoringError"]
       []
       ""
   ,  DocMsg
-      (PeerMonitoringResult anyProto anyProto)
+      ["MonitoringResult"]
       []
       ""
   ]
@@ -967,92 +978,95 @@ instance (Show versionNumber, ToJSON versionNumber, ToJSON agreedOptions)
       , "command" .= show cerr
       ]
 
-protoConnectionHandlerTrace :: ConnectionHandlerTrace
-  ntnVersion
-  ntnVersionData
-protoConnectionHandlerTrace = TrHandshakeSuccess anyProto anyProto
-
 docConnectionManager :: Documented
   (ConnectionManagerTrace
     ntnAddr
     (ConnectionHandlerTrace
       ntnVersion
       ntnVersionData))
-docConnectionManager = Documented
+docConnectionManager = addDocumentedNamespace  ["ConnectionManager"] docConnectionManager'
+
+docConnectionManager' :: Documented
+  (ConnectionManagerTrace
+    ntnAddr
+    (ConnectionHandlerTrace
+      ntnVersion
+      ntnVersionData))
+docConnectionManager' = Documented
   [  DocMsg
-      (TrIncludeConnection anyProto anyProto)
+      ["IncludeConnection"]
       []
       ""
   ,  DocMsg
-      (TrUnregisterConnection anyProto anyProto)
+      ["UnregisterConnection"]
       []
       ""
   ,  DocMsg
-      (TrConnect Nothing anyProto)
+      ["Connect"]
       []
       ""
   ,  DocMsg
-      (TrConnectError Nothing anyProto protoSomeException)
+      ["ConnectError"]
       []
       ""
   ,  DocMsg
-      (TrTerminatingConnection anyProto anyProto)
+      ["TerminatingConnection"]
       []
       ""
   ,  DocMsg
-      (TrTerminatedConnection anyProto anyProto)
+      ["TerminatedConnection"]
       []
       ""
   ,  DocMsg
-      (TrConnectionHandler anyProto protoConnectionHandlerTrace)
+      ["ConnectionHandler"]
       []
       ""
   ,  DocMsg
-      TrShutdown
+      ["Shutdown"]
       []
       ""
   ,  DocMsg
-      (TrConnectionExists anyProto anyProto anyProto)
+     ["ConnectionExists"]
       []
       ""
   ,  DocMsg
-      (TrForbiddenConnection anyProto)
+      ["ForbiddenConnection"]
       []
       ""
   ,  DocMsg
-      (TrImpossibleConnection anyProto)
+      ["ImpossibleConnection"]
       []
       ""
   ,  DocMsg
-      (TrConnectionFailure anyProto)
+      ["ConnectionFailure"]
       []
       ""
   ,  DocMsg
-      (TrConnectionNotFound anyProto anyProto)
+      ["ConnectionNotFound"]
       []
       ""
   ,  DocMsg
-      (TrForbiddenOperation anyProto anyProto)
+      ["ForbiddenOperation"]
       []
       ""
   ,  DocMsg
-      (TrPruneConnections anyProto anyProto anyProto)
+      ["PruneConnections"]
       []
       ""
   ,  DocMsg
-      (TrConnectionCleanup anyProto)
+      ["ConnectionCleanup"]
       []
       ""
   ,  DocMsg
-      (TrConnectionTimeWait anyProto)
+      ["ConnectionTimeWait"]
       []
       ""
   ,  DocMsg
-      (TrConnectionTimeWaitDone anyProto)
+      ["ConnectionTimeWaitDone"]
       []
       ""
   ,  DocMsg
-      (TrConnectionManagerCounters anyProto)
+      ["ConnectionManagerCounters"]
       [("cardano.node.connectionManager.fullDuplexConns","")
       ,("cardano.node.connectionManager.duplexConns","")
       ,("cardano.node.connectionManager.unidirectionalConns","")
@@ -1061,11 +1075,15 @@ docConnectionManager = Documented
       ]
       ""
   ,  DocMsg
-      (TrState anyProto)
+      ["State"]
       []
       ""
   ,  DocMsg
-      (ConnectionManager.TrUnexpectedlyFalseAssertion anyProto)
+      ["UnexpectedlyFalseAssertion"]
+      []
+      ""
+  ,  DocMsg
+      ["UnknownConnection"]
       []
       ""
   ]
@@ -1077,7 +1095,7 @@ docConnectionManager = Documented
 namesForConnectionManagerTransition
     :: ConnectionManager.AbstractTransitionTrace peerAddr -> [Text]
 namesForConnectionManagerTransition ConnectionManager.TransitionTrace {} =
-    ["ConnectionManagerTransition" ]
+    []
 
 severityConnectionManagerTransition
   :: ConnectionManager.AbstractTransitionTrace peerAddr -> SeverityS
@@ -1099,7 +1117,7 @@ docConnectionManagerTransition
     :: Documented (ConnectionManager.AbstractTransitionTrace peerAddr)
 docConnectionManagerTransition = Documented
   [ DocMsg
-      (ConnectionManager.TransitionTrace anyProto anyProto)
+      ["ConnectionManagerTransition"]
       []
       ""
   ]
@@ -1151,30 +1169,34 @@ instance (Show addr, LogFormatting addr, ToJSON addr)
              ]
   forHuman = pack . show
 
+
 docServer :: Documented (ServerTrace ntnAddr)
-docServer = Documented
+docServer = addDocumentedNamespace  ["Server"] docServer'
+
+docServer' :: Documented (ServerTrace ntnAddr)
+docServer' = Documented
   [  DocMsg
-      (TrAcceptConnection anyProto)
+      ["AcceptConnection"]
       []
       ""
   ,  DocMsg
-      (TrAcceptError anyProto)
+      ["AcceptError"]
       []
       ""
   ,  DocMsg
-      (TrAcceptPolicyTrace anyProto)
+      ["AcceptPolicy"]
       []
       ""
   ,  DocMsg
-      (TrServerStarted anyProto)
+      ["Started"]
       []
       ""
   ,  DocMsg
-      TrServerStopped
+      ["Stopped"]
       []
       ""
   ,  DocMsg
-      (TrServerError anyProto)
+      ["Error"]
       []
       ""
   ]
@@ -1319,130 +1341,89 @@ instance (ToJSON addr, Show addr)
               ]
   asMetrics _ = []
 
-protoProvenance :: ConnectionManager.Provenance
-protoProvenance = ConnectionManager.Inbound
-
-protoConnectionId :: peerAddr -> ConnectionId peerAddr
-protoConnectionId pa = ConnectionId pa pa
-
-protoMiniProtocolNum :: MiniProtocolNum
-protoMiniProtocolNum = MiniProtocolNum 1
-
-protoSomeException :: SomeException
-protoSomeException = SomeException (AssertionFailed "just fooled")
-
-protoAbstractState :: AbstractState
-protoAbstractState = UnknownConnectionSt
-
-protoOperationResult :: a -> OperationResult a
-protoOperationResult = OperationSuccess
-
-protoDemotedToColdRemoteTr :: DemotedToColdRemoteTr
-protoDemotedToColdRemoteTr = CommitTr
-
-protoInboundGovernorCounters :: InboundGovernorCounters
-protoInboundGovernorCounters = InboundGovernorCounters 1 1 1 1
-
-protoRemoteAddr :: SockAddr
-protoRemoteAddr = SockAddrUnix "loopback"
-
-protoLocalAddress :: LocalAddress
-protoLocalAddress = LocalAddress "loopback"
-
--- protoIGAssertionLocation :: peerAddr -> IGAssertionLocation peerAddr
--- protoIGAssertionLocation pa = InboundGovernorLoop Nothing protoAbstractState
-
-
--- Not possible to prvide such prototype,
--- as type and constructor are not exported
--- protoIGAssertionLocation :: IGAssertionLocation peerAddr
--- protoIGAssertionLocation = InboundGovernorLoop Nothing protoAbstractState
 
 docInboundGovernorLocal ::
    Documented (InboundGovernorTrace LocalAddress)
-docInboundGovernorLocal = docInboundGovernor protoLocalAddress
+docInboundGovernorLocal =
+    addDocumentedNamespace  ["InboundGovernor"] docInboundGovernor
 
 docInboundGovernorRemote ::
    Documented (InboundGovernorTrace SockAddr)
-docInboundGovernorRemote = docInboundGovernor protoRemoteAddr
+docInboundGovernorRemote =
+    addDocumentedNamespace  ["LocalInboundGovernor"] docInboundGovernor
 
-docInboundGovernor :: peerAddr -> Documented (InboundGovernorTrace peerAddr)
-docInboundGovernor peerAddr = Documented
+docInboundGovernor :: Documented (InboundGovernorTrace peerAddr)
+docInboundGovernor = Documented
   [  DocMsg
-      (TrNewConnection protoProvenance (protoConnectionId peerAddr))
+      ["NewConnection"]
       []
       ""
   ,  DocMsg
-      (TrResponderRestarted (protoConnectionId peerAddr) protoMiniProtocolNum)
+      ["ResponderRestarted"]
       []
       ""
   ,  DocMsg
-      (TrResponderStartFailure (protoConnectionId peerAddr) protoMiniProtocolNum
-        protoSomeException)
+      ["ResponderStartFailure"]
       []
       ""
   ,  DocMsg
-      (TrResponderErrored (protoConnectionId peerAddr) protoMiniProtocolNum
-        protoSomeException)
+      ["ResponderErrored"]
       []
       ""
   ,  DocMsg
-      (TrResponderStarted  (protoConnectionId peerAddr) protoMiniProtocolNum)
+      ["ResponderStarted"]
       []
       ""
   ,  DocMsg
-      (TrResponderTerminated  (protoConnectionId peerAddr) protoMiniProtocolNum)
+      ["ResponderTerminated"]
       []
       ""
   ,  DocMsg
-      (TrPromotedToWarmRemote (protoConnectionId peerAddr)
-        (protoOperationResult protoAbstractState))
+      ["PromotedToWarmRemote"]
       []
       ""
   ,  DocMsg
-      (TrPromotedToHotRemote (protoConnectionId peerAddr))
+      ["PromotedToHotRemote"]
       []
       ""
   ,  DocMsg
-      (TrDemotedToColdRemote (protoConnectionId peerAddr)
-        (protoOperationResult protoDemotedToColdRemoteTr))
+      ["DemotedToColdRemote"]
       []
       "All mini-protocols terminated.  The boolean is true if this connection\
       \ was not used by p2p-governor, and thus the connection will be terminated."
   ,  DocMsg
-      (TrDemotedToWarmRemote (protoConnectionId peerAddr))
+      ["DemotedToWarmRemote"]
       []
       "All mini-protocols terminated.  The boolean is true if this connection\
       \ was not used by p2p-governor, and thus the connection will be terminated."
   ,  DocMsg
-      (TrWaitIdleRemote (protoConnectionId peerAddr)
-        (protoOperationResult protoAbstractState))
+      ["WaitIdleRemote"]
       []
       ""
   ,  DocMsg
-      (TrMuxCleanExit (protoConnectionId peerAddr))
+      ["MuxCleanExit"]
       []
       ""
   ,  DocMsg
-      (TrMuxErrored (protoConnectionId peerAddr) protoSomeException)
+      ["MuxErrored"]
       []
       ""
   ,  DocMsg
-      (TrInboundGovernorCounters protoInboundGovernorCounters)
+      ["InboundGovernorCounters"]
       []
       ""
   ,  DocMsg
-      (TrRemoteState Map.empty)
+      ["RemoteState"]
       []
       ""
-  -- ,  DocMsg
-  --     (InboundGovernor.TrUnexpectedlyFalseAssertion protoIGAssertionLocation)
-  --     []
-  --     ""
-  -- ,  DocMsg
-  --     (InboundGovernor.TrInboundGovernorError protoSomeException)
-  --     []
-  --     ""
+  ,  DocMsg
+      ["UnexpectedlyFalseAssertion"]
+      []
+      ""
+  ,  DocMsg
+      ["InboundGovernorError"]
+      []
+      ""
   ]
 
 --------------------------------------------------------------------------------
@@ -1451,7 +1432,7 @@ docInboundGovernor peerAddr = Documented
 
 namesForInboundGovernorTransition
   :: InboundGovernor.RemoteTransitionTrace peerAddr -> [Text]
-namesForInboundGovernorTransition _ = ["InboundGovernorTransition"]
+namesForInboundGovernorTransition _ = []
 
 severityInboundGovernorTransition
   :: InboundGovernor.RemoteTransitionTrace peerAddr -> SeverityS
@@ -1473,7 +1454,7 @@ docInboundGovernorTransition
   :: Documented (InboundGovernor.RemoteTransitionTrace peerAddr)
 docInboundGovernorTransition = Documented
   [ DocMsg
-      anyProto
+      ["InboundGovernorTransition"]
       []
       ""
   ]

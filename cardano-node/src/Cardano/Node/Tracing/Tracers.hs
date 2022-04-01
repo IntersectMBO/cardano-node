@@ -155,9 +155,9 @@ mkDispatchTracers nodeKernel trBase trForward mbTrEKG trDataPoint trConfig enabl
     replayBlockTr' <- withReplayedBlock replayBlockTr
     -- Filter out replayed blocks for this tracer
     let chainDBTr' = filterTrace
-                      (\case (_, Nothing, ChainDB.TraceLedgerReplayEvent
+                      (\case (_, ChainDB.TraceLedgerReplayEvent
                                             LedgerDB.ReplayedBlock {}) -> False
-                             (_, _, _) -> True)
+                             (_, _) -> True)
                       chainDBTr
 
     consensusTr :: Consensus.Tracers
@@ -371,11 +371,11 @@ mkNodeToClientTracers trBase trForward mbTrEKG _trDataPoint trConfig = do
     chainSyncTr <-
       mkCardanoTracer
         trBase trForward mbTrEKG
-        "ChainSyncClient"
+        "ChainSync"
         namesForTChainSync
         severityTChainSync
         allPublic
-    configureTracers trConfig docTChainSync [chainSyncTr]
+    configureTracers trConfig docTChainSyncNodeToClient [chainSyncTr]
     txMonitorTr <-
       mkCardanoTracer
         trBase trForward mbTrEKG
@@ -427,14 +427,14 @@ mkNodeToNodeTracers trBase trForward mbTrEKG _trDataPoint trConfig = do
                 namesForTChainSyncNode
                 severityTChainSyncNode
                 allPublic
-    configureTracers trConfig docTChainSync [chainSyncTracer]
+    configureTracers trConfig docTChainSyncNodeToNode [chainSyncTracer]
     chainSyncSerialisedTr <-  mkCardanoTracer
                 trBase trForward mbTrEKG
                 "ChainSyncSerialised"
                 namesForTChainSyncSerialised
                 severityTChainSyncSerialised
                 allPublic
-    configureTracers trConfig docTChainSync [chainSyncSerialisedTr]
+    configureTracers trConfig docTChainSyncNodeToNodeSerisalised [chainSyncSerialisedTr]
     blockFetchTr  <-  mkCardanoTracer
                 trBase trForward mbTrEKG
                 "BlockFetch"
@@ -636,7 +636,7 @@ mkDiffusionTracersExtra trBase trForward mbTrEKG _trDataPoint trConfig EnabledP2
       namesForInboundGovernorTransition
       severityInboundGovernorTransition
       allPublic
-    configureTracers trConfig docInboundGovernorRemote [inboundGovernorTr]
+    configureTracers trConfig docInboundGovernorTransition [inboundGovernorTransitionsTr]
     localConnectionManagerTr  <-  mkCardanoTracer
       trBase trForward mbTrEKG
       "LocalConnectionManager"

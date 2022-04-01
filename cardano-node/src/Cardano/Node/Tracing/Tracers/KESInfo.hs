@@ -1,5 +1,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -40,10 +41,12 @@ traceAsMaybeKESInfo
   -> Trace m (TraceLabelCreds (ForgeStateInfo blk))
 traceAsMaybeKESInfo pr (Trace tr) = Trace $
   contramap
-        (\(lc, mbC, TraceLabelCreds c e) ->
+        (\case
+          (lc, Right (TraceLabelCreds c e)) ->
             case getKESInfoFromStateInfo pr e of
-              Just kesi -> (lc, mbC, Just (TraceLabelCreds c kesi))
-              Nothing   -> (lc, mbC, Nothing))
+              Just kesi -> (lc, Right (Just (TraceLabelCreds c kesi)))
+              Nothing   -> (lc, Right Nothing)
+          (lc, Left ctrl) -> (lc, Left ctrl))
         tr
 
 --------------------------------------------------------------------------------
@@ -79,7 +82,7 @@ namesForKESInfo' _fsi = []
 docForgeKESInfo :: Documented (TraceLabelCreds HotKey.KESInfo)
 docForgeKESInfo = Documented [
     DocMsg
-      (TraceLabelCreds anyProto (HotKey.KESInfo (KESPeriod 0) (KESPeriod 1) 2))
+      []
       []
       "kesStartPeriod \
       \\nkesEndPeriod is kesStartPeriod + tpraosMaxKESEvo\

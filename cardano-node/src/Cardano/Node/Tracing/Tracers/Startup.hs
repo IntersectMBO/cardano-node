@@ -361,7 +361,55 @@ p2pWarningDevelopmentNetworkProtocolsMessage =
 docStartupInfo :: Documented (StartupTrace blk)
 docStartupInfo = Documented [
     DocMsg
-      (BICommon anyProto)
+      ["StartupInfo"]
+      []
+      ""
+  , DocMsg
+      ["StartupP2PInfo"]
+      []
+      ""
+  , DocMsg
+      ["StartupTime"]
+      []
+      ""
+  , DocMsg
+      ["StartupNetworkMagic"]
+      []
+      ""
+  , DocMsg
+      ["StartupSocketConfigError"]
+      []
+      ""
+  , DocMsg
+      ["StartupDBValidation"]
+      []
+      ""
+  , DocMsg
+      ["NetworkConfigUpdate"]
+      []
+      ""
+  , DocMsg
+      ["NetworkConfigUpdateError"]
+      []
+      ""
+  , DocMsg
+      ["NetworkConfig"]
+      []
+      ""
+  , DocMsg
+      ["P2PWarning"]
+      []
+      ""
+  , DocMsg
+      ["P2PWarningDevelopementNetworkProtocols"]
+      []
+      ""
+  , DocMsg
+      ["WarningDevelopmentNetworkProtocols"]
+      []
+      ""
+  , DocMsg
+      ["Common"]
       []
       "_biConfigPath_: is the path to the config in use. \
       \\n_biProtocol_: is the name of the protocol, e.g. \"Byron\", \"Shelley\" \
@@ -370,7 +418,7 @@ docStartupInfo = Documented [
       \\n_biCommit_: is the commit revision of the software running. \
       \\n_biNodeStartTime_: gives the time this node was started."
   , DocMsg
-      (BIShelley anyProto)
+      ["ShelleyBased"]
       []
       "bisEra is the current era, e.g. \"Shelley\", \"Allegra\", \"Mary\" \
       \or \"Alonzo\". \
@@ -379,13 +427,13 @@ docStartupInfo = Documented [
       \\n_bisEpochLength_: gives the number of slots which forms an epoch. \
       \\n_bisSlotsPerKESPeriod_: gives the slots per KES period."
   , DocMsg
-      (BIByron anyProto)
+      ["Byron"]
       []
       "_bibSystemStartTime_: TODO JNF \
       \\n_bibSlotLength_: gives the length of a slot as time interval. \
       \\n_bibEpochLength_: gives the number of slots which forms an epoch."
   , DocMsg
-      (BINetwork anyProto)
+      ["Network"]
       []
       "_niAddresses_: IPv4 or IPv6 socket ready to accept connections\
       \or diffusion addresses. \

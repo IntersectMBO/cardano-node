@@ -67,25 +67,28 @@ instance LogFormatting ShutdownTrace where
                    , "slot"   .= toJSON slot ]
 
 docShutdown :: Documented ShutdownTrace
-docShutdown = Documented
+docShutdown = addDocumentedNamespace  [] docShutdown'
+
+docShutdown' :: Documented ShutdownTrace
+docShutdown' = Documented
   [ DocMsg
-      ShutdownRequested
+      ["ShutdownRequested"]
       []
       "Node shutdown was requested."
   ,  DocMsg
-      AbnormalShutdown
+      ["AbnormalShutdown"]
       []
       "non-isEOFerror shutdown request"
   ,  DocMsg
-      (ShutdownUnexpectedInput anyProto)
+      ["ShutdownUnexpectedInput"]
       []
       "Received shutdown request but found unexpected input in --shutdown-ipc FD: "
   , DocMsg
-      (RequestingShutdown anyProto)
+      ["RequestingShutdown"]
       []
       "Ringing the node shutdown doorbell"
   , DocMsg
-      (ShutdownArmedAtSlot anyProto)
+      ["ShutdownArmedAtSlot"]
       []
       "Setting up node shutdown at given slot."
   ]

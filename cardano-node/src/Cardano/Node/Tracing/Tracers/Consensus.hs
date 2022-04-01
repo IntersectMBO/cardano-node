@@ -156,7 +156,7 @@ severityChainSyncClientEvent (BlockFetch.TraceLabelPeer _ e) =
 namesForChainSyncClientEvent ::
   BlockFetch.TraceLabelPeer peer (TraceChainSyncClientEvent blk) -> [Text]
 namesForChainSyncClientEvent (BlockFetch.TraceLabelPeer _ e) =
-    namesForChainSyncClientEvent' e
+    "ChainSyncClientEvent" : namesForChainSyncClientEvent' e
 
 severityChainSyncClientEvent' :: TraceChainSyncClientEvent blk -> SeverityS
 severityChainSyncClientEvent' TraceDownloadedHeader {}  = Info
@@ -167,15 +167,15 @@ severityChainSyncClientEvent' TraceTermination {}       = Notice
 
 namesForChainSyncClientEvent' :: TraceChainSyncClientEvent blk -> [Text]
 namesForChainSyncClientEvent' TraceDownloadedHeader {} =
-      ["ChainSyncClientEvent.DownloadedHeader"]
+      ["DownloadedHeader"]
 namesForChainSyncClientEvent' TraceFoundIntersection {} =
-      ["ChainSyncClientEvent.FoundIntersection"]
+      ["FoundIntersection"]
 namesForChainSyncClientEvent' TraceRolledBack {} =
-      ["ChainSyncClientEvent.RolledBack"]
+      ["RolledBack"]
 namesForChainSyncClientEvent' TraceException {} =
-      ["ChainSyncClientEvent.Exception"]
+      ["Exception"]
 namesForChainSyncClientEvent' TraceTermination {} =
-      ["ChainSyncClientEvent.Termination"]
+      ["Termination"]
 
 instance (Show (Header blk), ConvertRawHash blk, LedgerSupportsProtocol blk)
       => LogFormatting (TraceChainSyncClientEvent blk) where
@@ -212,32 +212,34 @@ instance (Show (Header blk), ConvertRawHash blk, LedgerSupportsProtocol blk)
 
 docChainSyncClientEvent ::
   Documented (BlockFetch.TraceLabelPeer peer (TraceChainSyncClientEvent blk))
-docChainSyncClientEvent = Documented [
+docChainSyncClientEvent =
+    addDocumentedNamespace
+      ["ChainSyncClientEvent"]
+      docChainSyncClientEvent'
+
+docChainSyncClientEvent' ::
+  Documented (BlockFetch.TraceLabelPeer peer (TraceChainSyncClientEvent blk))
+docChainSyncClientEvent' = Documented [
     DocMsg
-      (BlockFetch.TraceLabelPeer anyProto
-        (TraceDownloadedHeader anyProto))
+      ["DownloadedHeader"]
       []
       "While following a candidate chain, we rolled forward by downloading a\
       \ header."
   , DocMsg
-      (BlockFetch.TraceLabelPeer anyProto
-        (TraceRolledBack anyProto))
+      ["RolledBack"]
       []
       "While following a candidate chain, we rolled back to the given point."
   , DocMsg
-      (BlockFetch.TraceLabelPeer anyProto
-        (TraceFoundIntersection anyProto anyProto anyProto))
+      ["FoundIntersection"]
       []
       "We found an intersection between our chain fragment and the\
       \ candidate's chain."
   , DocMsg
-      (BlockFetch.TraceLabelPeer anyProto
-        (TraceException anyProto))
+      ["Exception"]
       []
       "An exception was thrown by the Chain Sync Client."
   , DocMsg
-      (BlockFetch.TraceLabelPeer anyProto
-        (TraceTermination anyProto))
+      ["Termination"]
       []
       "The client has terminated."
   ]
@@ -253,14 +255,19 @@ severityChainSyncServerEvent TraceChainSyncRollForward       {} = Info
 severityChainSyncServerEvent TraceChainSyncRollBackward      {} = Info
 
 namesForChainSyncServerEvent :: TraceChainSyncServerEvent blk -> [Text]
-namesForChainSyncServerEvent TraceChainSyncServerRead        {} =
-      ["ChainSyncServerEvent.ServerRead"]
-namesForChainSyncServerEvent TraceChainSyncServerReadBlocked {} =
-      ["ChainSyncServerEvent.ServerReadBlocked"]
-namesForChainSyncServerEvent TraceChainSyncRollForward       {} =
-      ["ChainSyncServerEvent.RollForward"]
-namesForChainSyncServerEvent TraceChainSyncRollBackward      {} =
-      ["ChainSyncServerEvent.RollBackward"]
+namesForChainSyncServerEvent ev =
+    "ChainSyncServerEvent" : namesForChainSyncServerEvent' ev
+
+
+namesForChainSyncServerEvent' :: TraceChainSyncServerEvent blk -> [Text]
+namesForChainSyncServerEvent' TraceChainSyncServerRead        {} =
+      ["ServerRead"]
+namesForChainSyncServerEvent' TraceChainSyncServerReadBlocked {} =
+      ["ServerReadBlocked"]
+namesForChainSyncServerEvent' TraceChainSyncRollForward       {} =
+      ["RollForward"]
+namesForChainSyncServerEvent' TraceChainSyncRollBackward      {} =
+      ["RollBackward"]
 
 instance ConvertRawHash blk
       => LogFormatting (TraceChainSyncServerEvent blk) where
@@ -297,23 +304,28 @@ instance ConvertRawHash blk
       [CounterM "cardano.node.chainSync.rollForward" Nothing]
   asMetrics _ = []
 
-
 docChainSyncServerEvent :: Documented (TraceChainSyncServerEvent blk)
-docChainSyncServerEvent = Documented [
+docChainSyncServerEvent =
+    addDocumentedNamespace
+      ["ChainSyncServerEvent", "ServerRead"]
+      docChainSyncServerEvent'
+
+docChainSyncServerEvent' :: Documented (TraceChainSyncServerEvent blk)
+docChainSyncServerEvent' = Documented [
     DocMsg
-      (TraceChainSyncServerRead anyProto anyProto)
+      ["ServerRead"]
       []
       "A server read has occurred, either for an add block or a rollback"
     , DocMsg
-      (TraceChainSyncServerReadBlocked anyProto anyProto)
+       ["ServerReadBlocked"]
       []
       "A server read has blocked, either for an add block or a rollback"
     , DocMsg
-      (TraceChainSyncRollForward anyProto)
+      ["RollForward"]
       [("cardano.node.chainSync.rollForward", "")]
       "Roll forward to the given point."
     , DocMsg
-      (TraceChainSyncRollBackward anyProto)
+      ["RollBackward"]
       []
       ""
   ]
@@ -384,7 +396,7 @@ docBlockFetchDecision ::
   Documented [BlockFetch.TraceLabelPeer remotePeer (FetchDecision [Point (Header blk)])]
 docBlockFetchDecision = Documented [
     DocMsg
-      [BlockFetch.TraceLabelPeer anyProto (Right anyProto)]
+      []
       [("cardano.node.connectedPeers", "Number of connected peers")]
       "Throughout the decision making process we accumulate reasons to decline\
       \ to fetch any blocks. This message carries the intermediate and final\
@@ -428,14 +440,15 @@ namesForBlockFetchClient' BlockFetch.SendFetchRequest {} =
   ["SendFetchRequest"]
 namesForBlockFetchClient' BlockFetch.StartedFetchBatch {} =
   ["StartedFetchBatch"]
-namesForBlockFetchClient' BlockFetch.CompletedBlockFetch  {} =
-  ["CompletedBlockFetch"]
 namesForBlockFetchClient' BlockFetch.CompletedFetchBatch {} =
   ["CompletedFetchBatch"]
+namesForBlockFetchClient' BlockFetch.CompletedBlockFetch  {} =
+  ["CompletedBlockFetch"]
 namesForBlockFetchClient' BlockFetch.RejectedFetchBatch  {} =
   ["RejectedFetchBatch"]
 namesForBlockFetchClient' BlockFetch.ClientTerminating {} =
   ["ClientTerminating"]
+
 
 instance LogFormatting (BlockFetch.TraceFetchClientState header) where
   forMachine _dtal BlockFetch.AddedFetchRequest {} =
@@ -455,65 +468,58 @@ instance LogFormatting (BlockFetch.TraceFetchClientState header) where
   forMachine _dtal BlockFetch.ClientTerminating {} =
     mconcat [ "kind" .= String "ClientTerminating" ]
 
+
 docBlockFetchClient ::
   Documented (BlockFetch.TraceLabelPeer remotePeer (BlockFetch.TraceFetchClientState (Header blk)))
-docBlockFetchClient = Documented [
+docBlockFetchClient = addDocumentedNamespace [] docBlockFetchClient'
+
+docBlockFetchClient' ::
+  Documented (BlockFetch.TraceLabelPeer remotePeer (BlockFetch.TraceFetchClientState (Header blk)))
+docBlockFetchClient' = Documented [
     DocMsg
-      (BlockFetch.TraceLabelPeer anyProto
-        (BlockFetch.AddedFetchRequest
-          anyProto
-          anyProto
-          anyProto
-          anyProto))
+      ["AddedFetchRequest"]
       []
       "The block fetch decision thread has added a new fetch instruction\
       \ consisting of one or more individual request ranges."
   ,
     DocMsg
-      (BlockFetch.TraceLabelPeer anyProto
-        (BlockFetch.AcknowledgedFetchRequest
-          anyProto))
+      ["AcknowledgedFetchRequest"]
       []
       "Mark the point when the fetch client picks up the request added\
       \ by the block fetch decision thread. Note that this event can happen\
       \ fewer times than the 'AddedFetchRequest' due to fetch request merging."
   ,
     DocMsg
-      (BlockFetch.TraceLabelPeer anyProto
-        (BlockFetch.StartedFetchBatch
-          anyProto
-          anyProto
-          anyProto
-          anyProto))
+      ["SendFetchRequest"]
+      []
+      "Mark the point when fetch request for a fragment is actually sent\
+       \ over the wire."
+  ,
+    DocMsg
+      ["StartedFetchBatch"]
       []
       "Mark the start of receiving a streaming batch of blocks. This will\
       \ be followed by one or more 'CompletedBlockFetch' and a final\
       \ 'CompletedFetchBatch'"
   ,
     DocMsg
-      (BlockFetch.TraceLabelPeer anyProto
-        (BlockFetch.CompletedFetchBatch
-          anyProto
-          anyProto
-          anyProto
-          anyProto))
+      ["CompletedFetchBatch"]
+      []
+      "Mark the successful end of receiving a streaming batch of blocks"
+  ,
+    DocMsg
+      ["CompletedBlockFetch"]
       []
       "Mark the successful end of receiving a streaming batch of blocks."
   ,
     DocMsg
-      (BlockFetch.TraceLabelPeer anyProto
-        (BlockFetch.RejectedFetchBatch
-          anyProto
-          anyProto
-          anyProto
-          anyProto))
+      ["RejectedFetchBatch"]
       []
       "If the other peer rejects our request then we have this event\
       \ instead of 'StartedFetchBatch' and 'CompletedFetchBatch'."
   ,
     DocMsg
-      (BlockFetch.TraceLabelPeer anyProto
-        (BlockFetch.ClientTerminating 1))
+      ["ClientTerminating"]
       []
       "The client is terminating.  Log the number of outstanding\
       \ requests."
@@ -544,11 +550,17 @@ instance ConvertRawHash blk => LogFormatting (TraceBlockFetchServerEvent blk) wh
   asMetrics (TraceBlockFetchServerSendBlock _p) =
     [CounterM "cardano.node.served.block" Nothing]
 
+
 docBlockFetchServer ::
   Documented (TraceBlockFetchServerEvent blk)
-docBlockFetchServer = Documented [
+docBlockFetchServer = addDocumentedNamespace [] docBlockFetchServer'
+
+
+docBlockFetchServer' ::
+  Documented (TraceBlockFetchServerEvent blk)
+docBlockFetchServer' = Documented [
     DocMsg
-      (TraceBlockFetchServerSendBlock GenesisPoint)
+      ["SendBlock"]
       [("cardano.node.served.block", "")]
       "The server sent a block to the peer."
   ]
@@ -631,37 +643,37 @@ instance LogFormatting (TraceTxSubmissionInbound txid tx) where
 docTxInbound ::
   Documented (BlockFetch.TraceLabelPeer remotePeer
     (TraceTxSubmissionInbound txid tx))
-docTxInbound = Documented [
+docTxInbound = addDocumentedNamespace [] docTxInbound'
+
+docTxInbound' ::
+  Documented (BlockFetch.TraceLabelPeer remotePeer
+    (TraceTxSubmissionInbound txid tx))
+docTxInbound' = Documented [
     DocMsg
-    (BlockFetch.TraceLabelPeer anyProto
-      (TraceTxSubmissionCollected 1))
+    ["TxSubmissionCollected"]
     [ ("cardano.node.submissions.submitted", "")]
     "Number of transactions just about to be inserted."
   ,
     DocMsg
-    (BlockFetch.TraceLabelPeer anyProto
-      (TraceTxSubmissionProcessed (ProcessedTxCount 1 2)))
+    ["TxSubmissionProcessed"]
     [ ("cardano.node.submissions.accepted", "")
     , ("cardano.node.submissions.rejected", "")
     ]
     "Just processed transaction pass/fail breakdown."
   ,
     DocMsg
-    (BlockFetch.TraceLabelPeer anyProto
-      TraceTxInboundTerminated)
+    ["TxInboundTerminated"]
     []
     "Server received 'MsgDone'."
   ,
     DocMsg
-    (BlockFetch.TraceLabelPeer anyProto
-      (TraceTxInboundCanRequestMoreTxs 1))
+    ["TxInboundCanRequestMoreTxs"]
     []
     "There are no replies in flight, but we do know some more txs we\
     \ can ask for, so lets ask for them and more txids."
   ,
     DocMsg
-    (BlockFetch.TraceLabelPeer anyProto
-      (TraceTxInboundCannotRequestMoreTxs 1))
+    ["TxInboundCannotRequestMoreTxs"]
     []
     "There's no replies in flight, and we have no more txs we can\
     \ ask for so the only remaining thing to do is to ask for more\
@@ -722,22 +734,24 @@ instance (Show txid, Show tx)
 docTxOutbound :: forall remotePeer txid tx.
   Documented (BlockFetch.TraceLabelPeer remotePeer
     (TraceTxSubmissionOutbound txid tx))
-docTxOutbound = Documented [
+docTxOutbound =  addDocumentedNamespace [] docTxOutbound'
+
+docTxOutbound' :: forall remotePeer txid tx.
+  Documented (BlockFetch.TraceLabelPeer remotePeer
+    (TraceTxSubmissionOutbound txid tx))
+docTxOutbound' = Documented [
     DocMsg
-    (BlockFetch.TraceLabelPeer anyProto
-      (TraceTxSubmissionOutboundRecvMsgRequestTxs anyProto))
+    ["RecvMsgRequest"]
     []
     "The IDs of the transactions requested."
   ,
     DocMsg
-    (BlockFetch.TraceLabelPeer anyProto
-      (TraceTxSubmissionOutboundSendMsgReplyTxs anyProto))
+    ["SendMsgReply"]
     []
     "The transactions to be sent in the response."
   ,
     DocMsg
-    (BlockFetch.TraceLabelPeer anyProto
-      (TraceControlMessage anyProto))
+    ["ControlMessage"]
     []
     ""
   ]
@@ -761,9 +775,13 @@ instance LogFormatting (TraceLocalTxSubmissionServerEvent blk) where
     mconcat [ "kind" .= String "ReceivedTx" ]
 
 docLocalTxSubmissionServer :: Documented (TraceLocalTxSubmissionServerEvent blk)
-docLocalTxSubmissionServer = Documented [
+docLocalTxSubmissionServer =
+    addDocumentedNamespace [] docLocalTxSubmissionServer'
+
+docLocalTxSubmissionServer' :: Documented (TraceLocalTxSubmissionServerEvent blk)
+docLocalTxSubmissionServer' = Documented [
     DocMsg
-    (TraceReceivedTx anyProto)
+    ["ReceivedTx"]
     []
     "A transaction was received."
   ]
@@ -847,22 +865,25 @@ instance LogFormatting MempoolSize where
       ]
 
 docMempool :: forall blk. Documented (TraceEventMempool blk)
-docMempool = Documented [
+docMempool = addDocumentedNamespace [] docMempool'
+
+docMempool' :: forall blk. Documented (TraceEventMempool blk)
+docMempool' = Documented [
     DocMsg
-      (TraceMempoolAddedTx anyProto anyProto anyProto)
+      ["AddedTx"]
       [ ("cardano.node.txsInMempool","Transactions in mempool")
       , ("cardano.node.mempoolBytes", "Byte size of the mempool")
       ]
       "New, valid transaction that was added to the Mempool."
   , DocMsg
-      (TraceMempoolRejectedTx anyProto anyProto anyProto)
+      ["RejectedTx"]
       [ ("cardano.node.txsInMempool","Transactions in mempool")
       , ("cardano.node.mempoolBytes", "Byte size of the mempool")
       ]
       "New, invalid transaction thas was rejected and thus not added to\
       \ the Mempool."
   , DocMsg
-      (TraceMempoolRemoveTxs [anyProto] anyProto)
+      ["RemoveTxs"]
       [ ("cardano.node.txsInMempool","Transactions in mempool")
       , ("cardano.node.mempoolBytes", "Byte size of the mempool")
       ]
@@ -870,7 +891,7 @@ docMempool = Documented [
       \ changes in the ledger state. These transactions have been removed\
       \ from the Mempool."
   , DocMsg
-      (TraceMempoolManuallyRemovedTxs [anyProto] [anyProto] anyProto)
+      ["ManuallyRemovedTxs"]
       [ ("cardano.node.txsInMempool","Transactions in mempool")
       , ("cardano.node.mempoolBytes", "Byte size of the mempool")
       , ("cardano.node.txsProcessedNum", "")
@@ -1193,20 +1214,20 @@ instance LogFormatting TraceStartLeadershipCheckPlus where
   asMetrics TraceStartLeadershipCheckPlus {..} =
     [IntM "cardano.node.utxoSize" (fromIntegral tsUtxoSize),
      IntM "cardano.node.delegMapSize" (fromIntegral tsDelegMapSize)]
-     -- TODO JNF: Why not deleg map size?
-
 
 docForge :: Documented (Either (TraceLabelCreds (TraceForgeEvent blk))
                                (TraceLabelCreds TraceStartLeadershipCheckPlus))
-docForge = Documented [
+docForge = addDocumentedNamespace [] docForge'
+
+docForge' :: Documented (Either (TraceLabelCreds (TraceForgeEvent blk))
+                               (TraceLabelCreds TraceStartLeadershipCheckPlus))
+docForge' = Documented [
     DocMsg
-      (Left (TraceLabelCreds anyProto
-        (TraceStartLeadershipCheck anyProto)))
+      ["StartLeadershipCheck"]
       [("cardano.node.aboutToLeadSlotLast", "")]
       "Start of the leadership check."
   , DocMsg
-      (Left (TraceLabelCreds anyProto
-        (TraceSlotIsImmutable anyProto anyProto anyProto)))
+      ["SlotIsImmutable"]
       [("cardano.node.slotIsImmutable", "")]
       "Leadership check failed: the tip of the ImmutableDB inhabits the\
       \  current slot\
@@ -1226,8 +1247,7 @@ docForge = Documented [
       \ \
       \ See also <https://github.com/input-output-hk/ouroboros-network/issues/1462>"
   , DocMsg
-      (Left (TraceLabelCreds anyProto
-        (TraceBlockFromFuture anyProto anyProto)))
+      ["BlockFromFuture"]
       [("cardano.node.blockFromFuture", "")]
       "Leadership check failed: the current chain contains a block from a slot\
       \  /after/ the current slot\
@@ -1239,8 +1259,7 @@ docForge = Documented [
       \ \
       \  See also <https://github.com/input-output-hk/ouroboros-network/issues/1462>"
   , DocMsg
-      (Left (TraceLabelCreds anyProto
-        (TraceBlockContext anyProto anyProto anyProto)))
+      ["BlockContext"]
       [("cardano.node.blockContext", "")]
       "We found out to which block we are going to connect the block we are about\
       \  to forge.\
@@ -1251,8 +1270,7 @@ docForge = Documented [
       \  Note that block number of the block we will try to forge is one more than\
       \  the recorded block number."
   , DocMsg
-      (Left (TraceLabelCreds anyProto
-        (TraceNoLedgerState anyProto anyProto)))
+      ["NoLedgerState"]
       [("cardano.node.couldNotForgeSlotLast", "")]
       "Leadership check failed: we were unable to get the ledger state for the\
       \  point of the block we want to connect to\
@@ -1266,8 +1284,7 @@ docForge = Documented [
       \  we attempt to connect the new block to (that we requested the ledger\
       \  state for)."
   , DocMsg
-      (Left (TraceLabelCreds anyProto
-        (TraceLedgerState anyProto anyProto)))
+      ["LedgerState"]
       [("cardano.node.ledgerState", "")]
       "We obtained a ledger state for the point of the block we want to\
       \  connect to\
@@ -1276,8 +1293,7 @@ docForge = Documented [
       \  we attempt to connect the new block to (that we requested the ledger\
       \  state for)."
   , DocMsg
-      (Left (TraceLabelCreds anyProto
-        (TraceNoLedgerView anyProto anyProto)))
+      ["NoLedgerView"]
       [("cardano.node.couldNotForgeSlotLast", "")]
       "Leadership check failed: we were unable to get the ledger view for the\
       \  current slot number\
@@ -1287,15 +1303,13 @@ docForge = Documented [
       \ \
       \  We record also the failure returned by 'forecastFor'."
   , DocMsg
-      (Left (TraceLabelCreds anyProto
-        (TraceLedgerView anyProto)))
+      ["LedgerView"]
       [("cardano.node.ledgerView", "")]
       "We obtained a ledger view for the current slot number\
       \ \
       \  We record the current slot number."
   , DocMsg
-      (Left (TraceLabelCreds anyProto
-        (TraceForgeStateUpdateError anyProto anyProto)))
+      ["ForgeStateUpdateError"]
       [ ("cardano.node.operationalCertificateStartKESPeriod", "")
       , ("cardano.node.operationalCertificateExpiryKESPeriod", "")
       , ("cardano.node.currentKESPeriod", "")
@@ -1307,8 +1321,7 @@ docForge = Documented [
       \ \
       \  We record the error returned by 'updateForgeState'."
   , DocMsg
-      (Left (TraceLabelCreds anyProto
-        (TraceNodeCannotForge anyProto anyProto)))
+      ["NodeCannotForge"]
       [("cardano.node.nodeCannotForge", "")]
       "We did the leadership check and concluded that we should lead and forge\
       \  a block, but cannot.\
@@ -1317,23 +1330,20 @@ docForge = Documented [
       \ \
       \  Records why we cannot forge a block."
   , DocMsg
-      (Left (TraceLabelCreds anyProto
-        (TraceNodeNotLeader anyProto)))
+      ["NodeNotLeader"]
       [("cardano.node.nodeNotLeader", "")]
       "We did the leadership check and concluded we are not the leader\
       \ \
       \  We record the current slot number"
   , DocMsg
-      (Left (TraceLabelCreds anyProto
-        (TraceNodeIsLeader anyProto)))
+      ["NodeIsLeader"]
       [("cardano.node.nodeIsLeader", "")]
       "We did the leadership check and concluded we /are/ the leader\
       \\n\
       \  The node will soon forge; it is about to read its transactions from the\
       \  Mempool. This will be followed by ForgedBlock."
   , DocMsg
-      (Left (TraceLabelCreds anyProto
-        (TraceForgedBlock anyProto anyProto anyProto anyProto)))
+      ["ForgedBlock"]
       [("cardano.node.forgedSlotLast", "")]
       "We forged a block.\
       \\n\
@@ -1350,29 +1360,25 @@ docForge = Documented [
       \\n\
       \  * ForgedInvalidBlock (hopefully never -- this would indicate a bug)"
   , DocMsg
-      (Left (TraceLabelCreds anyProto
-        (TraceDidntAdoptBlock anyProto anyProto)))
+      ["DidntAdoptBlock"]
       [("cardano.node.notAdoptedSlotLast", "")]
       "We did not adopt the block we produced, but the block was valid. We\
       \  must have adopted a block that another leader of the same slot produced\
       \  before we got the chance of adopting our own block. This is very rare,\
       \  this warrants a warning."
   , DocMsg
-      (Left (TraceLabelCreds anyProto
-        (TraceForgedInvalidBlock anyProto anyProto anyProto)))
+      ["ForgedInvalidBlock"]
       [("cardano.node.forgedInvalidSlotLast", "")]
       "We forged a block that is invalid according to the ledger in the\
       \  ChainDB. This means there is an inconsistency between the mempool\
       \  validation and the ledger validation. This is a serious error!"
   , DocMsg
-      (Left (TraceLabelCreds anyProto
-        (TraceAdoptedBlock anyProto anyProto [anyProto])))
+      ["AdoptedBlock"]
       [("cardano.node.adoptedSlotLast", "")]
       "We adopted the block we produced, we also trace the transactions\
       \  that were adopted."
   , DocMsg
-      (Right (TraceLabelCreds anyProto
-        (TraceStartLeadershipCheckPlus anyProto 0 0 0.0)))
+      ["StartLeadershipCheckPlus"]
       [ ("cardano.node.aboutToLeadSlotLast", "")
       , ("cardano.node.utxoSize", "")
       , ("cardano.node.delegMapSize", "")
@@ -1448,17 +1454,20 @@ instance Show t => LogFormatting (TraceBlockchainTimeEvent t) where
       <> ". New 'current' time: "
       <> (Text.pack . show) newTime
 
-
 docBlockchainTime :: Documented (TraceBlockchainTimeEvent t)
-docBlockchainTime = Documented [
+docBlockchainTime =
+    addDocumentedNamespace [] docBlockchainTime'
+
+docBlockchainTime' :: Documented (TraceBlockchainTimeEvent t)
+docBlockchainTime' = Documented [
     DocMsg
-      (TraceStartTimeInTheFuture anyProto anyProto)
+      ["StartTimeInTheFuture"]
       []
       "The start time of the blockchain time is in the future\
       \\n\
       \ We have to block (for 'NominalDiffTime') until that time comes."
   , DocMsg
-      (TraceCurrentSlotUnknown anyProto anyProto)
+      ["CurrentSlotUnknown"]
       []
       "Current slot is not yet known\
       \\n\
@@ -1474,7 +1483,7 @@ docBlockchainTime = Documented [
       \ current time and the upper bound should rapidly decrease with consecutive\
       \ 'CurrentSlotUnknown' messages during syncing."
   , DocMsg
-      (TraceSystemClockMovedBack anyProto anyProto)
+      ["SystemClockMovedBack"]
       []
       "The system clock moved back an acceptable time span, e.g., because of\
       \ an NTP sync.\
@@ -1494,7 +1503,7 @@ docBlockchainTime = Documented [
 --------------------------------------------------------------------------------
 
 namesForKeepAliveClient :: TraceKeepAliveClient peer -> [Text]
-namesForKeepAliveClient _ = ["KeepAliveClient"]
+namesForKeepAliveClient _ = []
 
 severityKeepAliveClient :: TraceKeepAliveClient peer -> SeverityS
 severityKeepAliveClient _ = Info
@@ -1521,7 +1530,7 @@ instance Show remotePeer => LogFormatting (TraceKeepAliveClient remotePeer) wher
 docKeepAliveClient :: Documented (TraceKeepAliveClient peer)
 docKeepAliveClient = Documented [
     DocMsg
-      (AddSample anyProto anyProto anyProto)
+      []
       []
       ""
   ]

@@ -46,27 +46,12 @@ import qualified Ouroboros.Network.Diffusion as ND
 import           Ouroboros.Network.Driver.Simple (TraceSendRecv (..))
 import qualified Ouroboros.Network.NodeToClient as NtC
 import qualified Ouroboros.Network.NodeToNode as NtN
-import           Ouroboros.Network.PeerSelection.LedgerPeers (AccPoolStake (..), NumberOfPeers (..),
-                   PoolStake (..), TraceLedgerPeers (..), UseLedgerAfter (..))
-import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
+import           Ouroboros.Network.PeerSelection.LedgerPeers (NumberOfPeers (..),
+                   PoolStake (..), TraceLedgerPeers (..))
 import           Ouroboros.Network.Protocol.BlockFetch.Type (Message (..))
 import qualified Ouroboros.Network.Protocol.Handshake.Type as HS
 import           Ouroboros.Network.Snocket (LocalAddress (..))
 
-protoRemoteAddr :: NtN.RemoteAddress
-protoRemoteAddr = Socket.SockAddrUnix "loopback"
-
-protoLocalAddress :: LocalAddress
-protoLocalAddress = LocalAddress "loopback"
-
-protoSomeException :: SomeException
-protoSomeException = SomeException (AssertionFailed "just fooled")
-
-protoPeerLocal :: NtN.ConnectionId LocalAddress
-protoPeerLocal = NtN.ConnectionId protoLocalAddress protoLocalAddress
-
-protoPeerRemote :: NtN.ConnectionId NtN.RemoteAddress
-protoPeerRemote = NtN.ConnectionId protoRemoteAddr protoRemoteAddr
 
 --------------------------------------------------------------------------------
 -- Mux Tracer
@@ -151,146 +136,127 @@ instance (LogFormatting peer, Show peer) =>
 
 
 docMuxLocal :: Documented (WithMuxBearer (NtN.ConnectionId LocalAddress) MuxTrace)
-docMuxLocal = docMux protoPeerLocal
+docMuxLocal = addDocumentedNamespace  [] docMux'
 
 docMuxRemote :: Documented (WithMuxBearer (NtN.ConnectionId NtN.RemoteAddress) MuxTrace)
-docMuxRemote = docMux protoPeerRemote
+docMuxRemote = addDocumentedNamespace  [] docMux'
 
 
-docMux :: peer -> Documented (WithMuxBearer peer MuxTrace)
-docMux peer = Documented [
+docMux' :: Documented (WithMuxBearer peer MuxTrace)
+docMux' = Documented [
       DocMsg
-        (WithMuxBearer peer
-          MuxTraceRecvHeaderStart)
+        ["RecvHeaderStart"]
         []
         "Bearer receive header start."
     , DocMsg
-        (WithMuxBearer peer
-          (MuxTraceRecvHeaderEnd anyProto))
+        ["RecvHeaderEnd"]
         []
         "Bearer receive header end."
     , DocMsg
-        (WithMuxBearer peer
-          (MuxTraceRecvDeltaQObservation anyProto anyProto))
-        []
-        "Bearer DeltaQ observation."
-    , DocMsg
-        (WithMuxBearer peer
-          (MuxTraceRecvDeltaQSample 1.0 1 1 1.0 1.0 1.0 1.0 ""))
-        []
-        "Bearer DeltaQ sample."
-    , DocMsg
-        (WithMuxBearer peer
-          (MuxTraceRecvStart 1))
+        ["RecvStart"]
         []
         "Bearer receive start."
     , DocMsg
-        (WithMuxBearer peer
-          (MuxTraceRecvEnd 1))
+        ["RecvEnd"]
         []
         "Bearer receive end."
     , DocMsg
-        (WithMuxBearer peer
-          (MuxTraceSendStart anyProto))
+        ["SendStart"]
         []
         "Bearer send start."
     , DocMsg
-        (WithMuxBearer peer
-          MuxTraceSendEnd)
+        ["SendEnd"]
         []
         "Bearer send end."
     , DocMsg
-        (WithMuxBearer peer
-          (MuxTraceState anyProto))
+        ["State"]
         []
         "State."
     , DocMsg
-        (WithMuxBearer peer
-          (MuxTraceCleanExit anyProto anyProto))
+        ["CleanExit"]
         []
         "Miniprotocol terminated cleanly."
     , DocMsg
-        (WithMuxBearer peer
-          (MuxTraceExceptionExit
-              anyProto anyProto anyProto))
+        ["ExceptionExit"]
         []
         "Miniprotocol terminated with exception."
     , DocMsg
-        (WithMuxBearer peer
-          (MuxTraceChannelRecvStart anyProto))
+        ["ChannelRecvStart"]
         []
         "Channel receive start."
     , DocMsg
-        (WithMuxBearer peer
-          (MuxTraceChannelRecvEnd anyProto 1))
+        ["ChannelRecvEnd"]
         []
         "Channel receive end."
     , DocMsg
-        (WithMuxBearer peer
-          (MuxTraceChannelSendStart anyProto 1))
+        ["ChannelSendStart"]
         []
         "Channel send start."
     , DocMsg
-        (WithMuxBearer peer
-          (MuxTraceChannelSendEnd anyProto))
+        ["ChannelSendEnd"]
         []
         "Channel send end."
     , DocMsg
-        (WithMuxBearer peer
-          MuxTraceHandshakeStart)
+        ["HandshakeStart "]
         []
         "Handshake start."
     , DocMsg
-        (WithMuxBearer peer
-          (MuxTraceHandshakeClientEnd anyProto))
+        ["HandshakeClientEnd"]
         []
         "Handshake client end."
     , DocMsg
-        (WithMuxBearer peer
-          (MuxTraceHandshakeClientError protoSomeException anyProto))
+        ["HandshakeServerEnd"]
+        []
+        "Handshake server end."
+    , DocMsg
+        ["HandshakeClientError"]
         []
         "Handshake client error."
     , DocMsg
-        (WithMuxBearer peer
-          (MuxTraceHandshakeServerError protoSomeException))
+        ["HandshakeServerError"]
         []
         "Handshake server error."
     , DocMsg
-        (WithMuxBearer peer
-          MuxTraceSDUReadTimeoutException)
+        ["RecvDeltaQObservation"]
+        []
+        "Bearer DeltaQ observation."
+    , DocMsg
+        ["RecvDeltaQSample"]
+        []
+        "Bearer DeltaQ sample."
+    , DocMsg
+        ["SDUReadTimeoutException"]
         []
         "Timed out reading SDU."
     , DocMsg
-        (WithMuxBearer peer
-          MuxTraceSDUWriteTimeoutException)
+        ["SDUWriteTimeoutException"]
         []
         "Timed out writing SDU."
     , DocMsg
-        (WithMuxBearer peer
-          (MuxTraceStartEagerly anyProto anyProto))
+        ["StartEagerly"]
         []
         "Eagerly started."
     , DocMsg
-        (WithMuxBearer peer
-          (MuxTraceStartOnDemand anyProto anyProto))
+        ["StartOnDemand"]
         []
         "Preparing to start."
     , DocMsg
-        (WithMuxBearer peer
-          (MuxTraceStartedOnDemand anyProto anyProto))
+        ["StartedOnDemand"]
         []
         "Started on demand."
     , DocMsg
-        (WithMuxBearer peer
-          (MuxTraceTerminating anyProto anyProto))
+        ["Terminating"]
         []
         "Terminating."
     , DocMsg
-        (WithMuxBearer peer
-          MuxTraceShutdown)
+        ["Shutdown"]
         []
         "Mux shutdown."
-  ]
+    , DocMsg
+        ["Terminating"]
+        []
+        "Terminating."
+    ]
 
 --------------------------------------------------------------------------------
 -- Handshake Tracer
@@ -320,8 +286,8 @@ namesForHandshake (WithMuxBearer _ e) = namesForHandshake' e
 namesForHandshake' ::
      TraceSendRecv (HS.Handshake nt CBOR.Term)
   -> [Text]
-namesForHandshake' (TraceSendMsg m) = namesForHandshake'' m
-namesForHandshake' (TraceRecvMsg m) = namesForHandshake'' m
+namesForHandshake' (TraceSendMsg m) = "Send" : namesForHandshake'' m
+namesForHandshake' (TraceRecvMsg m) = "Recieve" : namesForHandshake'' m
 
 namesForHandshake'' :: AnyMessageAndAgency (HS.Handshake nt CBOR.Term) -> [Text]
 namesForHandshake'' (AnyMessageAndAgency _agency msg) = namesForHandshake''' msg
@@ -341,28 +307,30 @@ instance LogFormatting (NtN.HandshakeTr NtN.RemoteAddress NtN.NodeToNodeVersion)
                                       <> ". " <> showT ev
 
 docHandshake :: Documented (NtN.HandshakeTr NtN.RemoteAddress ver)
-docHandshake = Documented [
+docHandshake = addDocumentedNamespace  ["Send"] docHandshake'
+               `addDocs` addDocumentedNamespace  ["Receive"] docHandshake'
+
+docHandshake' :: Documented (NtN.HandshakeTr adr ver)
+docHandshake' = Documented [
       DocMsg
-        (WithMuxBearer protoPeerRemote
-          (TraceSendMsg
-            (AnyMessageAndAgency anyProto
-              (HS.MsgProposeVersions anyProto))))
+        ["ProposeVersions"]
         []
         "Propose versions together with version parameters.  It must be\
         \ encoded to a sorted list.."
     , DocMsg
-        (WithMuxBearer protoPeerRemote
-          (TraceSendMsg
-            (AnyMessageAndAgency anyProto
-              (HS.MsgAcceptVersion anyProto anyProto))))
+        ["ReplyVersions"]
+        []
+        "`MsgReplyVersions` received as a response to 'MsgProposeVersions'.  It\
+        \ is not supported to explicitly send this message. It can only be\
+        \ received as a copy of 'MsgProposeVersions' in a simultaneous open\
+        \ scenario."
+    , DocMsg
+        ["AcceptVersion"]
         []
         "The remote end decides which version to use and sends chosen version.\
         \The server is allowed to modify version parameters."
     , DocMsg
-        (WithMuxBearer protoPeerRemote
-          (TraceSendMsg
-            (AnyMessageAndAgency anyProto
-              (HS.MsgRefuse anyProto))))
+        ["Refuse"]
         []
         "It refuses to run any version."
     ]
@@ -395,8 +363,8 @@ namesForLocalHandshake (WithMuxBearer _ e) = namesForLocalHandshake' e
 namesForLocalHandshake' ::
      TraceSendRecv (HS.Handshake nt CBOR.Term)
   -> [Text]
-namesForLocalHandshake' (TraceSendMsg m) = namesForLocalHandshake'' m
-namesForLocalHandshake' (TraceRecvMsg m) = namesForLocalHandshake'' m
+namesForLocalHandshake' (TraceSendMsg m) = "Send" : namesForLocalHandshake'' m
+namesForLocalHandshake' (TraceRecvMsg m) = "Receive" : namesForLocalHandshake'' m
 
 namesForLocalHandshake'' :: AnyMessageAndAgency (HS.Handshake nt CBOR.Term) -> [Text]
 namesForLocalHandshake'' (AnyMessageAndAgency _agency msg) = namesForLocalHandshake''' msg
@@ -416,31 +384,8 @@ instance LogFormatting (NtC.HandshakeTr NtC.LocalAddress NtC.NodeToClientVersion
                                       <> ". " <> showT ev
 
 docLocalHandshake :: Documented (NtC.HandshakeTr LocalAddress ver)
-docLocalHandshake = Documented [
-      DocMsg
-        (WithMuxBearer protoPeerLocal
-          (TraceSendMsg
-            (AnyMessageAndAgency anyProto
-              (HS.MsgProposeVersions anyProto))))
-        []
-        "Propose versions together with version parameters.  It must be\
-        \ encoded to a sorted list.."
-    , DocMsg
-        (WithMuxBearer protoPeerLocal
-          (TraceSendMsg
-            (AnyMessageAndAgency anyProto
-              (HS.MsgAcceptVersion anyProto anyProto))))
-        []
-        "The remote end decides which version to use and sends chosen version.\
-        \The server is allowed to modify version parameters."
-    , DocMsg
-        (WithMuxBearer protoPeerLocal
-          (TraceSendMsg
-            (AnyMessageAndAgency anyProto
-              (HS.MsgRefuse anyProto))))
-        []
-        "It refuses to run any version."
-    ]
+docLocalHandshake = addDocumentedNamespace  ["Send"] docHandshake'
+               `addDocs` addDocumentedNamespace  ["Receive"] docHandshake'
 
 --------------------------------------------------------------------------------
 -- DiffusionInit Tracer
@@ -563,65 +508,68 @@ instance (Show ntnAddr, Show ntcAddr) =>
     ]
 
 docDiffusionInit :: Documented (ND.InitializationTracer Socket.SockAddr NtC.LocalAddress)
-docDiffusionInit = Documented [
+docDiffusionInit =  addDocumentedNamespace  [] docDiffusionInit'
+
+docDiffusionInit' :: Documented (ND.InitializationTracer Socket.SockAddr NtC.LocalAddress)
+docDiffusionInit' = Documented [
     DocMsg
-      (ND.RunServer (pure anyProto))
+      ["RunServer"]
       []
       "RunServer "
   , DocMsg
-      (ND.RunLocalServer anyProto)
+      ["RunLocalServer"]
       []
       "RunLocalServer "
   , DocMsg
-      (ND.UsingSystemdSocket anyProto)
+     ["UsingSystemdSocket"]
       []
       "UsingSystemdSocket "
   , DocMsg
-      (ND.CreateSystemdSocketForSnocketPath anyProto)
+     ["CreateSystemdSocketForSnocketPath"]
       []
       "CreateSystemdSocketForSnocketPath "
   , DocMsg
-      (ND.CreatedLocalSocket anyProto)
+      ["CreatedLocalSocket"]
       []
       "CreatedLocalSocket "
   , DocMsg
-      (ND.ConfiguringLocalSocket anyProto anyProto)
+      ["ConfiguringLocalSocket"]
       []
       "ConfiguringLocalSocket "
   , DocMsg
-      (ND.ListeningLocalSocket anyProto anyProto)
+      ["ListeningLocalSocket"]
       []
       "ListeningLocalSocket "
   , DocMsg
-      (ND.LocalSocketUp anyProto anyProto)
+      ["LocalSocketUp"]
       []
       "LocalSocketUp "
   , DocMsg
-      (ND.CreatingServerSocket anyProto)
+      ["CreatingServerSocket"]
       []
       "CreatingServerSocket "
   , DocMsg
-      (ND.ConfiguringServerSocket anyProto)
+      ["ConfiguringServerSocket"]
       []
       "ConfiguringServerSocket "
   , DocMsg
-      (ND.ListeningServerSocket anyProto)
+      ["ListeningServerSocket"]
       []
       "ListeningServerSocket "
   , DocMsg
-      (ND.ServerSocketUp anyProto)
+      ["ServerSocketUp"]
       []
       "ServerSocketUp "
   , DocMsg
-      (ND.UnsupportedLocalSystemdSocket anyProto)
+      ["UnsupportedLocalSystemdSocket"]
       []
       "UnsupportedLocalSystemdSocket "
   , DocMsg
-      ND.UnsupportedReadySocketCase
+      ["UnsupportedReadySocketCase"]
       []
       "UnsupportedReadySocketCase "
   , DocMsg
-      (ND.DiffusionErrored anyProto)
+      ["DiffusionErrored"]
       []
       "DiffusionErrored "
   ]
@@ -701,51 +649,46 @@ instance LogFormatting TraceLedgerPeers where
       [ "kind" .= String "FallingBackToBootstrapPeers"
       ]
 
-
 docLedgerPeers :: Documented TraceLedgerPeers
-docLedgerPeers = Documented [
+docLedgerPeers =  addDocumentedNamespace  [] docLedgerPeers'
+
+docLedgerPeers' :: Documented TraceLedgerPeers
+docLedgerPeers' = Documented [
     DocMsg
-      (PickedPeer
-        (RelayAccessDomain  anyProto 1)
-        (AccPoolStake 0.5)
-        (PoolStake 0.5))
+      ["PickedPeer"]
       []
       "Trace for a peer picked with accumulated and relative stake of its pool."
   , DocMsg
-      (PickedPeers (NumberOfPeers 1) [])
+      ["PickedPeers"]
       []
       "Trace for the number of peers we wanted to pick and the list of peers picked."
   , DocMsg
-      (FetchingNewLedgerState 1)
+      ["FetchingNewLedgerState"]
       []
       "Trace for fetching a new list of peers from the ledger. Int is the number of peers\
       \ returned."
   , DocMsg
-      DisabledLedgerPeers
+      ["DisabledLedgerPeers"]
       []
       "Trace for when getting peers from the ledger is disabled, that is DontUseLedger."
   , DocMsg
-      DisabledLedgerPeers
-      []
-      "Trace for when getting peers from the ledger is disabled, that is DontUseLedger."
-  , DocMsg
-      (TraceUseLedgerAfter DontUseLedger)
+      ["TraceUseLedgerAfter"]
       []
       "Trace UseLedgerAfter value."
   , DocMsg
-      WaitingOnRequest
+      ["WaitingOnRequest"]
       []
       ""
   , DocMsg
-      WaitingOnRequest
+      ["RequestForPeers"]
       []
       "RequestForPeers (NumberOfPeers 1)"
   , DocMsg
-      (ReusingLedgerState 1 anyProto)
+      ["ReusingLedgerState"]
       []
       ""
   , DocMsg
-      FallingBackToBootstrapPeers
+      ["FallingBackToBootstrapPeers"]
       []
       ""
   ]
