@@ -55,6 +55,6 @@ testTracer :: MonadIO m
 testTracer ioRef = liftIO $ do
     pure $ Trace $ arrow $ emit output'
   where
-    output' (LoggingContext{}, Nothing, msg) = liftIO $ do
+    output' (LoggingContext{}, Right msg) = liftIO $ do
       modifyIORef ioRef (msg :)
-    output' (LoggingContext{}, _, _) = pure ()
+    output' (LoggingContext{}, _) = pure ()
