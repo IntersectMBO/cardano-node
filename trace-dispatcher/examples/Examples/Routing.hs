@@ -27,10 +27,10 @@ testRouting = do
     t <- standardTracer
     tf <- machineFormatter "cardano" t
     let t1 = appendName "tracer1" tf
-    let t2 = appendName "tracer1" tf
+    let t2 = appendName "tracer2" tf
     configureTracers emptyTraceConfig traceForgeEventDocu [t1, t2]
     r1 <- routingTracer1 t1 t2
     r2 <- routingTracer2 t1 t2
+    traceWith r1 message1
     traceWith r1 message2
-    traceWith r2 message2
-    traceWith (t1 <> t2) message3
+    traceWith r2 message3

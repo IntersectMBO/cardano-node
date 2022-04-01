@@ -40,15 +40,15 @@ privacyForMessage Message3 {} = Public
 docMessage :: Documented Message
 docMessage = Documented [
     DocMsg
-      (Message1 1 1)
+      ["Message1"]
       []
       "The first message."
   , DocMsg
-      (Message2 1 "")
+      ["Message2"]
       []
       "The second message."
   , DocMsg
-      (Message3 1 1.0)
+      ["Message3"]
       [("Metrics1", "A number")]
       "The third message."
   ]

@@ -4,8 +4,7 @@
 
 # Contents
 
-0. [Contents](#Contents)
-1. [Document status](#Document-status)
+1. [Contents](#Contents)
 2. [Introduction](#Introduction)
    1. [Motivation](#motivation)
    2. [Design decisions](#Design-decisions)
@@ -19,28 +18,34 @@
       1. [Severity](#Severity)
       2. [Privacy](#Privacy)
       3. [Frequency](#Frequency)
+      4. [Trace filtering](#Trace-filtering)
    6. [Presentation](#Presentation)
       1. [Formatting](#Formatting)
       2. [Detail level](#Detail-level)
-   8. [Fold-based aggregation](#Fold-based-aggregation)
-   9. [Dispatcher routing toolkit](#Dispatcher-routing-toolkit)
-   10. [Configuration](#Configuration)
-   11. [Documentation](#Documentation)
+   7. [Fold-based aggregation](#Fold-based-aggregation)
+   8. [Dispatcher routing](#Dispatcher-routing)
+   9. [Configuration](#Configuration)
+   10. [Documentation](#Documentation)
+   11. [Metrics](#Metrics)
+   10. [DataPoints](#DataPoints)   
 4. [Integration and implementation in the node](#Integration-and-implementation-in-the-node)
    1. [Overall tracing setup](#Overall-tracing-setup)
-   2. [Trace-outs](#Trace-outs)
-   3. [Explicit trace filtering](#Explicit-trace-filtering)
-   4. [Confidentiality and privacy filtering implementation](#Confidentiality-and-privacy-filtering-implementation)
-   5. [Cardano tracer](#Cardano-tracer)
-   6. [Documentation generation](#Documentation-generation)
+   2. [Cardano tracer](#Cardano-tracer)
+   3. [Trace-outs](#Trace-outs)
+   4. [Documentation generation](#Documentation-generation)
 5. [Appendix](#Appendix)
-   1. [Future work](#Future-work)
+   1. [References](#References)
+   2. [Future work](#Future-work)
 
 # Introduction
 
 ## Motivation
 
 `trace-dispatcher` is an attempt to enable design and implementation of simple, efficient __tracing systems__, one that has a reduced footprint in the executed program, has a more pleasant API, and provides self-documenting features.
+
+For a quick start into new tracing see the document
+[New Tracing Quickstart](https://github.com/input-output-hk/cardano-node/blob/master/doc/New%20Tracing%20Quickstart.md)
+
 
 ## Design decisions
 
@@ -77,10 +82,12 @@ __Trace interpretation__ is specified in terms of:
 
 The __trace interpretation__ process requires that for each traced type the __dispatcher__ is provided with:
 
-* instances of the `LogFormatting` typeclass, and
-* __message prototypes__ and __trace documentation__.
+* a function for providing a unique namespace for each message
+* a function for assigning a severity to each message
+* instances of the `LogFormatting` typeclass
+* and a __trace documentation__
 
-__Trace interpretation__ would have been unusably static, if it wasn't allowed to be configured without recompilation -- and therefore the __effective tracing policy__ used by the __dispatcher__ can be partially defined by the externally-supplied __trace configuration__.
+__Trace interpretation__ would have been unusably static, if it wasn't allowed to be configured without recompilation -- and therefore the __effective tracing policy__ used by the __dispatcher__ can be defined by the externally-supplied __trace configuration__.
 
 The __effective tracing policy__ defines for each trace a __trace context__, which is what effectively informs interpretation performed by the __dispatcher__ for that particular trace.
 
@@ -100,6 +107,9 @@ data TraceAddBlockEvent blk =
   | IgnoreBlockAlreadyInVolatileDB (RealPoint blk)
   ...
 ```
+
+Trace messages are either discarded or converted to a representation quickly. As the discarded case happens frequently and trace messages are never stored, strictness annotations are of no use, and
+can only make the runtime behavior worse.
 
 __Traces__ cannot be entered into the tracing system, unless they are accompanied by a matching __Trace__ -- a monadic callback, that expresses the action of tracing of values of that particular type:
 
@@ -132,7 +142,7 @@ The __tracer namespace__ appears in the following contexts:
 
 * __documentation__, where it defines the overall structure of the generated documentation output,
 * __configuration__, where it allows referring to tracers we want to reconfigure in some way, such as changing their severity,
-* __trace-outs__, where the __metrics__ and __messages__ carry the __tracer name__.
+* __trace-outs__, where the __metrics__ and __messages__ carry the __tracer namespace__.
 
 Given a __tracer__ with a particular __tracer name__, we can derive a tracer with an extended __tracer name__:
 
@@ -229,9 +239,51 @@ withPrivacy :: Monad m => (a -> Privacy) -> Trace m a -> Trace m a
 
 Trace privacy cannot be configured.
 
-See [Confidentiality and privacy filtering implementation](#Confidentiality-and-privacy-filtering-implementation) for a more full discussion of semantics.
+__Trace filtering__ is affected by the __privacy context__ as follows:
 
-To further prevent occasional leaks of `Confidential` traces, all output from those traces is tagged with the `CONFIDENTIAL` keyword.
+1. `Confidential` traces can only reach the `stdout` __trace-out__.
+2. `Public` traces reach both the `stdout` and `trace-forwarder` __trace-outs__.
+
+In effect, it is impossible to leak the `Confidential` traces due to logging misconfiguration -- a leak can only happen if the user explicitly allows network access to the standard output of the traced program.
+
+### Trace filtering
+
+__Trace filtering__ is affected by __annotation__ and __configuration__ components of the trace's __severity context__ as follows:
+
+1. The effective __configuration severity__ of a trace is determined as a the __most specific__ configuration-specified __severity__.
+2. The trace is then ignored, if the trace's __annotated severity__ is __less__ than its __configuration severity__.
+
+For the purposes of trace dispatcher implementation, direct trace filtering can be done by `filterTraceBySeverity`, which only processes messages further with a severity equal or greater as the given one. E.g.:
+
+```haskell
+let filteredTracer = filterTraceBySeverity Warning exampleTracer
+```
+
+A more general filter function is offered, which gives access to the object and a `LoggingContext`, which contains the namespace, the severity, the privacy and the detailLevel:
+
+```haskell
+--- | Don't process further if the result of the selector function
+---   is False.
+filterTrace :: (Monad m) =>
+     ((LoggingContext, a) -> Bool)
+  -> Trace m a
+  -> Trace m a
+
+data LoggingContext = LoggingContext {
+    lcNamespace   :: Namespace
+  , lcSeverity    :: Maybe Severity
+  , lcPrivacy     :: Maybe Privacy
+  , lcDetails     :: Maybe DetailLevel
+}
+
+```
+So you can e.g. write a filter function, which only displays _Public_ messages:
+
+```haskell
+filterTrace (\ (c, a) -> case lcPrivacy c of
+                Just s  -> s == Public
+                Nothing -> True)
+```
 
 ### Frequency
 
@@ -349,13 +401,13 @@ If aggregated information from multiple consecutive messages is needed the follo
 ```haskell
 -- | Folds the function with state acc over messages a in the trace.
 foldTraceM :: MonadUnliftIO m
-  => (acc -> LoggingContext -> Maybe TraceControl -> a -> acc)
+  => (acc -> LoggingContext -> a -> acc)
   -> acc
   -> Trace m (Folding a acc)
   -> m (Trace m a)
 
 foldMTraceM :: MonadUnliftIO m
-  => (acc -> LoggingContext -> Maybe TraceControl -> a -> m acc)
+  => (acc -> LoggingContext -> a -> m acc)
   -> acc
   -> Trace m (Folding a acc)
   -> m (Trace m a)
@@ -386,7 +438,7 @@ following way, and it will output the Stats:
   traceWith 2.0 aggroTracer -- measure: 2.0 sum: 3.1
 ```
 
-## Dispatcher routing toolkit
+## Dispatcher routing
 
 During definition of the __trace dispatcher__, it is sometimes useful to have a number of functions to route them.
 
@@ -431,9 +483,9 @@ The configurability of __dispatchers__ this library allows to define is based on
 
 1. __Tracer namespace__-based configurability, down to single __message__ granularity,
 2. Runtime reconfigurability, triggered by invocation of `configureTracers`,
-3. Prototypes for each __message__.
+3. Documentation entries __message__.
 
-Reconfiguration can be triggered at runtime and essentially involves running the entire __dispatcher__ trace network, by doing trace specialisation for each trace that has __prototypes__ defined.
+Reconfiguration can be triggered at runtime and essentially involves running the entire __dispatcher__ trace network, by doing trace specialisation for each trace that has documentation entries defined.
 
 ```haskell
 -- The function configures the traces with the given configuration
@@ -464,8 +516,7 @@ data TraceConfig = TraceConfig {
      -- | Options specific to a certain namespace
     tcOptions            :: Map.Map Namespace [ConfigOption]
      -- | Options for trace-forwarder
-  , tcForwarder          :: ForwarderAddr
-  , tcForwarderQueueSize :: Int
+  , ...
 }
 ```
 
@@ -519,30 +570,74 @@ The self-documentation features of `trace-dispatcher` are provided by a combinat
 
 The per- __message__ `DocMsg` objects combine:
 
-* __message prototypes__ -- an example __message__,
-* message documentation text, in Markdown format,
-
-*As type families often make it difficult to write prototypes, we provide the `anyProto :: a`
-function, which is a synonym for undefined. It can't be used, when the tracers use strictness annotations in their data types. This anyhow is not considered good style, as trace messages
-are either discarded or converted to a representation quickly. As the discarded case happens frequently and trace messages are never stored, strictness annotations are of no use, and
-can only make the runtime behavior worse.
-
-*Because it is not enforced by the type system, it is very important that each trace provides a complete list of `DocMsg` entries for all message contructors, as these prototypes are also used for configuration*.
+* `namespace` of the message
+* Message documentation text, in Markdown format
+* A list of tuples with metrics names and metrics documentation
 
 If a documentation entry is missing, the configuration system will not work as expected.
-In a future release we want to enhance the library, so that the completeness will be checked by the Haskell type checker.
+Because it is not enforced by the type system, it is very important that each trace documentation provides a complete list of `DocMsg` entries for all message contructors, as these entries are also used for configuration. If a message has no DocMsg, it can't be configured individually.
+
+TODO: Add consistency check between configuration and documentation.
+
 
 ```haskell
 newtype Documented a = Documented {undoc :: [DocMsg a]}
 
 data DocMsg a = DocMsg {
-    dmPrototype :: a
+    dmNamespace :: Namespace
   , dmMetricsMD :: [(Text, Text)]
   , dmMarkdown  :: Text
 }
 ```
 
+## Metrics
+
+Metrics are provided by normal trace messages, which implement the `asMetrics` function
+of the `LogFormatting` typeclass. For this reason all the configuration mechanisms for
+filtering and routing can be used with metrics. `ekgTracer`is used as the metrics backend.
+It forwards the metrics to cardano-tracer for further processing.  
+
+## DataPoints
+
+DataPoints gives the ability for processes other then cardano-node to query the provided
+runtime state of a node. DataPoints are equal to metrics, in that they are not written in textual
+form to a log, but in contrast to metrics they have an ADT structure, so they can trace
+any structured information. As a result, they give the ability for external processes
+other then cardano-node to query the provided runtime state of a node (for example,
+node's basic information).
+
+DataPoints are implemented as special tracers, which packs the objects into DataPoint
+constructors and require a ToJSON instance for that objects. The set of DataPoints
+provided by the node is structured using the same namespace as metrics and log messages.
+But otherwise DataPoints work independent of tracing, but are written in a local store,
+so the latest value of a particular DataPoint can be queried on demand.
+
+Also, [there is a document](https://github.com/input-output-hk/cardano-node/wiki/cardano-node-and-DataPoints:-demo)
+describing how to accept DataPoints from an external process.
+
+[`demo-acceptor`](https://github.com/input-output-hk/cardano-node/blob/master/cardano-tracer/demo/acceptor.hs)
+application allows to ask for particular DataPoint by its name and display its value.
+
+```haskell
+-- A simple dataPointTracer which supports building a namespace
+-- `trDataPoint`: shall be the datapoint backend
+-- `namesFor`: shall be a function to produce a namespace for every
+-- datapoint constructor
+mkDataPointTracer :: forall dp. ToJSON dp
+  => Trace IO DataPoint
+  -> (dp -> [Text])
+  -> IO (Trace IO dp)
+mkDataPointTracer trDataPoint namesFor = do
+    let tr = NT.contramap DataPoint trDataPoint
+    pure $ withNamesAppended namesFor tr```
+```
+
+Also, [there is a document](https://github.com/input-output-hk/cardano-node/wiki/cardano-node-and-DataPoints:-demo)
+describing how to accept DataPoints from an external process. [`demo-acceptor`](https://github.com/input-output-hk/cardano-node/blob/master/cardano-tracer/demo/acceptor.hs) application allows to ask for particular DataPoint by its name and display its value.
+
 # Integration and implementation in the node
+
+
 ## Overall tracing setup
 
 As a result of the __trace__ / __tracer__ duality, the program components that wish to emit traces of particular types, must be parametrised with matching tracers.
@@ -554,85 +649,6 @@ Because all these tracers are defined as part of the __dispatcher__ definition, 
 2. As mentioned previously, that dispatcher is generally expressed as a structured value, that defines per-program-component set of __tracers__.
 
 3. This __dispatcher__ (in other words, the set of __tracers__ it is composed of) is given as an argument to the rest of the program, which then distributes them across its components and then begins execution.
-
-## Trace-outs
-
-__Trace-outs__, as mentioned before, are final destinations of all __traces__, after they have undergone __trace interpretation__ into __metrics__ and __messages__.
-
-There are three __trace-outs__ defined for the system:
-
-1. `stdout`, the basic standard output destination.  It is notable in that it can also accept `Confidential` traces.
-2. `trace-forward`, a purely network-only sink that forwards __messages__ using a combination of dedicated protocols over TCP or local sockets.  Only capable of forwarding `Public` traces.
-
-`forwardingTracer` is intended to be used as a __message__ source for `RTView` and `cardano-logger`.
-
-`ekgTracer` submits metrics to a local EKG store, which can then forwards messages further.
-
-```haskell
-stdoutTracer :: MonadIO m
-  => Maybe FilePath
-  -> m (Trace m FormattedMessage)
-
-forwardTracer :: MonadIO m
-  => ForwardSink TraceObject
-  -> Trace m FormattedMessage
-
-ekgTracer :: MonadIO m
-  => Either Metrics.Store Server
-  -> m (Trace m FormattedMessage)
-```
-
-Configuring a __trace-out__ to output human-readable text (and therefore to use the human formatter), produces a presentation of the form `[HOST:NAMESPACE] (SEVERITY.THREADID)`:
-
-    [deus-x-machina:cardano.general.middle.specific](Info.379)
-
-
-### Explicit trace filtering
-
-__Trace filtering__ is affected by __annotation__ and __configuration__ components of the trace's __severity context__ as follows:
-
-1. The effective __configuration severity__ of a trace is determined as a the __most specific__ configuration-specified __severity__.
-2. The trace is then ignored, if the trace's __annotated severity__ is __less__ than its __configuration severity__.
-
-For the purposes of trace dispatcher implementation, direct trace filtering can be done by `filterTraceBySeverity`, which only processes messages further with a severity equal or greater as the given one. E.g.:
-
-```haskell
-let filteredTracer = filterTraceBySeverity Warning exampleTracer
-```
-
-A more general filter function is offered, which gives access to the object and a `LoggingContext`, which contains the namespace, the severity, the privacy and the detailLevel:
-
-```haskell
---- | Don't process further if the result of the selector function
----   is False.
-filterTrace :: (Monad m) =>
-     ((LoggingContext, a) -> Bool)
-  -> Trace m a
-  -> Trace m a
-
-data LoggingContext = LoggingContext {
-    lcNamespace   :: Namespace
-  , lcSeverity    :: Maybe Severity
-  , lcPrivacy     :: Maybe Privacy
-  , lcDetailLevel :: Maybe DetailLevel
-}
-```
-So you can e.g. write a filter function, which only displays _Public_ messages:
-
-```haskell
-filterTrace (\ (c, a) -> case lcPrivacy c of
-                Just s  -> s == Public
-                Nothing -> True)
-```
-
-## Confidentiality and privacy filtering implementation
-
-__Trace filtering__ is affected by the __privacy context__ as follows:
-
-1. `Confidential` traces can only reach the `stdout` __trace-out__.
-2. `Public` traces reach both the `stdout` and `trace-forwarder` __trace-outs__.
-
-In effect, it is impossible to leak the `Confidential` traces due to logging misconfiguration -- a leak can only happen if the user explicitly allows network access to the standard output of the traced program.
 
 ## Cardano tracer
 
@@ -651,8 +667,50 @@ mkCardanoTracer :: forall evt.
   -> (evt -> [Text])
   -> (evt -> SeverityS)
   -> (evt -> Privacy)
-  -> IO (Trace IO evt)
+  -> IO (Trace IO evt)    
+
+-- | Configure this tracer with a configuration, which needs as well the documentation.
+--
+configureTracers :: forall a.
+     TraceConfig
+  -> Documented a
+  -> [Trace IO a]
+  -> IO ()
 ```
+
+
+## Trace-outs
+
+__Trace-outs__, as mentioned before, are final destinations of all __traces__, after they have undergone __trace interpretation__ into __metrics__ and __messages__.
+
+There are three __trace-outs__ defined for the system:
+
+1. `standardTracer`, the basic standard output tracer.  It is notable in that it can also accept `Confidential` traces.
+
+2. `trace-forward`, a purely network-only sink that forwards __messages__ using a combination of dedicated protocols over TCP or local sockets.  Only capable of forwarding `Public` traces. It is used as a __message__ source for `RTView` and `cardano-logger`.
+
+3. `ekgTracer` submits metrics to a local EKG store, which can then forwards messages further.
+
+In addition a `dataPointTracer` is provided, which contains a store to make datapoints
+accessible via queries. This backend should not be used together with the other backends.
+
+```haskell
+stdoutTracer :: MonadIO m
+  => Maybe FilePath
+  -> m (Trace m FormattedMessage)
+
+forwardTracer :: MonadIO m
+  => ForwardSink TraceObject
+  -> Trace m FormattedMessage
+
+ekgTracer :: MonadIO m
+  => Either Metrics.Store Server
+  -> m (Trace m FormattedMessage)
+```
+
+Configuring a __trace-out__ to output human-readable text (and therefore to use the human formatter), produces a presentation of the form `[HOST:NAMESPACE] (SEVERITY.THREADID)`:
+
+    [deus-x-machina:cardano.general.middle.specific](Info.379)
 
 ## Documentation generation
 
@@ -696,10 +754,42 @@ The node can be called with the `trace-documentation` command, which takes the a
 `config` and `output-file`, which are both path's to files. The first one points to a
 valid configuration, and the second one depicts the generated output file.
 
+```haskell
+data TraceDocumentationCmd
+  = TraceDocumentationCmd
+    { tdcConfigFile :: FilePath
+    , tdcOutput     :: FilePath
+    }
+
+runTraceDocumentationCmd
+  :: TraceDocumentationCmd
+  -> IO ()
+```      
+
 A periodically generated documentation of the tracers can be found in the cardano-node repository in the path `cardano-node/doc/new-tracing/tracers_doc_generated.md`
 
 
 # Appendix
+
+## References
+
+This is a document which is regenerated periodically and documents all trace-messages,  metrics and data-points in cardano-node. It as well displays the handling of these
+messages with the current default configuration:
+
+[Gernerated Cardano Trace Documentation](https://github.com/input-output-hk/cardano-node/blob/master/doc/new-tracing/tracers_doc_generated.md)
+
+For a quick start into new tracing see the document:
+
+[New Tracing Quickstart](https://github.com/input-output-hk/cardano-node/blob/master/doc/New%20Tracing%20Quickstart.md)
+
+This document describes a separate service for logging and monitoring Cardano nodes:
+
+[Cardano Tracer](https://github.com/input-output-hk/cardano-node/blob/master/cardano-tracer/docs/cardano-tracer.md)
+
+This document describes how to accept DataPoints from an external process:
+
+[cardano node and DataPoints: demo](https://github.com/input-output-hk/cardano-node/wiki/cardano-node-and-DataPoints:-demo)
+
 
 ## Future work
 
@@ -707,6 +797,4 @@ There is a number of topics that were discussed, but deferred to a latter iterat
 
 1. Lightweight documentation references, GHC style -- this would allow us to refer to named pieces of documentation in source code, as opposed to copy-pasting them into trace documentation.
 
-2. Change of human-oriented presentation machinery.
-
-3. We want to enhance the library, so that the completeness of `Documented` will be checked by the Haskell type checker.
+2. We want to add check code, so that the completeness of `Documented` can be checked.

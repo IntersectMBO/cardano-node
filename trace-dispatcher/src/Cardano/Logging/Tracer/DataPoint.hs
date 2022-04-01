@@ -19,7 +19,6 @@ import           Trace.Forward.Utils.DataPoint (DataPoint (..), DataPointStore, 
 
 -- import           Cardano.Logging.DocuGenerator
 import           Cardano.Logging.Types
-import           Cardano.Logging.Utils (uncurry3)
 
 ---------------------------------------------------------------------------
 
@@ -27,21 +26,20 @@ dataPointTracer :: forall m. MonadIO m
   => DataPointStore
   -> Trace m DataPoint
 dataPointTracer dataPointStore =
-    Trace $ T.arrow $ T.emit $ uncurry3 output
+    Trace $ T.arrow $ T.emit $ uncurry output
   where
     output ::
          LoggingContext
-      -> Maybe TraceControl
-      -> DataPoint
+      -> Either TraceControl DataPoint
       -> m ()
-    output LoggingContext {..} Nothing val =
+    output LoggingContext {..} (Right val) =
       liftIO $ writeToStore dataPointStore (nameSpaceToText lcNamespace) val
-    output LoggingContext {} (Just Reset) _msg = liftIO $ do
+    output LoggingContext {} (Left Reset) = liftIO $ do
       pure ()
-    output _lk (Just _c@Document {}) _val = do
+    output _lk (Left _c@Document {}) = do
       pure ()
       -- TODO docIt DataPoint (lk, Just c, val)
-    output LoggingContext {} _ _a = pure ()
+    output LoggingContext {} _  = pure ()
 
     nameSpaceToText :: Namespace -> Text
     nameSpaceToText namespace = toStrict $ toLazyText $

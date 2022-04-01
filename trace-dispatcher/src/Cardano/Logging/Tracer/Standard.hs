@@ -18,7 +18,6 @@ import           System.IO (hFlush, stdout)
 
 import           Cardano.Logging.DocuGenerator
 import           Cardano.Logging.Types
-import           Cardano.Logging.Utils (uncurry3)
 
 import qualified Control.Tracer as T
 
@@ -34,38 +33,34 @@ standardTracer :: forall m. (MonadIO m)
   => m (Trace m FormattedMessage)
 standardTracer = do
     stateRef <- liftIO $ newIORef emptyStandardTracerState
-    pure $ Trace $ T.arrow $ T.emit $ uncurry3 (output stateRef)
+    pure $ Trace $ T.arrow $ T.emit $ uncurry (output stateRef)
   where
     output ::
          IORef StandardTracerState
       -> LoggingContext
-      -> Maybe TraceControl
-      -> FormattedMessage
+      -> Either TraceControl FormattedMessage
       -> m ()
-    output stateRef LoggingContext {} Nothing (FormattedHuman _c msg) = liftIO $ do
+    output stateRef LoggingContext {} (Right (FormattedHuman _c msg)) = liftIO $ do
       st  <- readIORef stateRef
       case stRunning st of
         Just (inChannel, _, _) -> writeChan inChannel msg
         Nothing                -> pure ()
-    output stateRef LoggingContext {} Nothing (FormattedMachine msg) = liftIO $ do
+    output stateRef LoggingContext {} (Right (FormattedMachine msg)) = liftIO $ do
       st  <- readIORef stateRef
       case stRunning st of
         Just (inChannel, _, _) -> writeChan inChannel msg
         Nothing                -> pure ()
-    output stateRef LoggingContext {} (Just Reset) _msg = liftIO $ do
+    output stateRef LoggingContext {} (Left Reset) = liftIO $ do
       st <- readIORef stateRef
       case stRunning st of
         Nothing -> when (isNothing $ stRunning st) $
                       startStdoutThread stateRef
         Just _  -> pure ()
-    output _ lk (Just c@Document {}) (FormattedHuman co msg) =
+    output _ lk c@(Left Document {}) =
        docIt
-        (Stdout (if co then HumanFormatColoured else HumanFormatUncoloured))
-        (FormattedHuman co "")
-        (lk, Just c, msg)
-    output _ lk (Just c@Document {}) (FormattedMachine msg) =
-       docIt (Stdout MachineFormat) (FormattedMachine "") (lk, Just c, msg)
-    output _stateRef LoggingContext {} _ _a = pure ()
+        (Stdout MachineFormat) -- TODO Find out the right format
+        (lk, c)
+    output _stateRef LoggingContext {} _ = pure ()
 
 -- | Forks a new thread, which writes messages to stdout
 startStdoutThread :: IORef StandardTracerState -> IO ()
