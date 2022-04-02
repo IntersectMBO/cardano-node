@@ -53,11 +53,13 @@ def genesis_profile_variants:
     , generator: { tps: 10 }
     }
   , { scenario: "fixed-loaded"
-    , genesis: { utxo: 1000000, delegators: 1000000 }
+    , genesis: { utxo: 500000, delegators: 500000
+               , max_block_size:  80000
+               }
     , node:
       { shutdown_on_slot_synced: 600
       }
-    , generator: { tps: 10 }
+    , generator: { tps: 11 }
     }
 
   ## Chainsync:

@@ -72,10 +72,12 @@ show-profile: ## NAME=profile-name
 	@test -n "${NAME}" || { echo 'HELP:  to specify profile to show, add NAME=profle-name' && exit 1; }
 	nix build .#all-profiles-json --json --option substitute false | jq '.[0].outputs.out' -r | xargs jq ".\"${NAME}\" | if . == null then error(\"\n###\n### Error:  unknown profile: ${NAME}  Please consult:  make list-profiles\n###\") else . end"
 ps: list-profiles
-bump-cardano-node-workbench: ## Update the cardano-node-workbench flake input
-	nix flake lock --update-input cardano-node-workbench
 bump-node-measured: ## Update the node-measured flake input
 	nix flake lock --update-input node-measured
+bump-node-snapshot: ## Update the node-snapshot flake input
+	nix flake lock --update-input node-snapshot
+bump-node-workbench: ## Update the node-workbench flake input
+	nix flake lock --update-input node-workbench
 bump-cardano-deployment: ## Sync the flake.lock to the CI check
 	nix run nixpkgs#nixUnstable -- build .#hydraJobs.cardano-deployment
 membench-1:    ## Membench:  one iteration, current commit
