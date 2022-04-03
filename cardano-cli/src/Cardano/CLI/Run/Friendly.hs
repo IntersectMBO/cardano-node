@@ -168,6 +168,8 @@ friendlyTxOut (TxOut addr amount mdatum) =
    renderDatum TxOutDatumNone = Aeson.Null
    renderDatum (TxOutDatumHash _ h) =
      Aeson.String $ serialiseToRawBytesHexText h
+   renderDatum (TxOutDatumInline _ sData) =
+     scriptDataToJson ScriptDataJsonDetailedSchema sData
    renderDatum (TxOutDatum _ sData) =
      scriptDataToJson ScriptDataJsonDetailedSchema sData
 

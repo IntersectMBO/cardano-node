@@ -51,7 +51,7 @@ module Cardano.Api.TxBody (
     CtxTx, CtxUTxO,
     TxOut(..),
     TxOutValue(..),
-    TxOutDatum(TxOutDatumNone, TxOutDatumHash, TxOutDatum),
+    TxOutDatum(TxOutDatumNone, TxOutDatumHash, TxOutDatumInline, TxOutDatum),
     toCtxUTxOTxOut,
     lovelaceToTxOutValue,
     prettyRenderTxOut,
@@ -494,12 +494,13 @@ instance Eq TxOutInAnyEra where
 txOutInAnyEra :: IsCardanoEra era => TxOut CtxTx era -> TxOutInAnyEra
 txOutInAnyEra = TxOutInAnyEra cardanoEra
 
-toCtxUTxOTxOut :: TxOut CtxTx  era -> TxOut CtxUTxO era
+toCtxUTxOTxOut :: TxOut CtxTx era -> TxOut CtxUTxO era
 toCtxUTxOTxOut (TxOut addr val d) =
   let dat = case d of
               TxOutDatumNone -> TxOutDatumNone
               TxOutDatumHash s h -> TxOutDatumHash s h
-              TxOutDatum' s h _ -> TxOutDatumHash s h
+              TxOutDatumHash' s h _ -> TxOutDatumHash s h
+              TxOutDatumInline s d' -> TxOutDatumInline s d'
   in TxOut addr val dat
 
 instance IsCardanoEra era => ToJSON (TxOut ctx era) where
@@ -512,10 +513,15 @@ instance IsCardanoEra era => ToJSON (TxOut ctx era) where
            , "value"     .= val
            , "datumhash" .= h
            ]
-  toJSON (TxOut addr val (TxOutDatum' _ h d)) =
+  toJSON (TxOut addr val (TxOutDatumHash' _ h d)) =
     object [ "address"   .= addr
            , "value"     .= val
            , "datumhash" .= h
+           , "datum"     .= scriptDataToJson ScriptDataJsonDetailedSchema d
+           ]
+  toJSON (TxOut addr val (TxOutDatumInline _ d)) =
+    object [ "address"   .= addr
+           , "value"     .= val
            , "datum"     .= scriptDataToJson ScriptDataJsonDetailedSchema d
            ]
 
@@ -540,7 +546,7 @@ instance (IsShelleyBasedEra era, IsCardanoEra era)
                     fail $ "Error parsing TxOut JSON: " <> displayError err
                   Right sData -> do
                     dHash <- runParsecParser (parseHash $ AsHash AsScriptData) dHashTxt
-                    pure . TxOut addr val $ TxOutDatum' supported dHash sData
+                    pure . TxOut addr val $ TxOutDatumHash' supported dHash sData
               (mDatVal, wrongDatumHashFormat) ->
                 fail $ "Error parsing TxOut's datum hash/data: " <>
                        "\nData value:" <> show mDatVal <>
@@ -650,6 +656,7 @@ toAlonzoTxOutDataHash :: TxOutDatum CtxUTxO era
                       -> StrictMaybe (Alonzo.DataHash StandardCrypto)
 toAlonzoTxOutDataHash  TxOutDatumNone                        = SNothing
 toAlonzoTxOutDataHash (TxOutDatumHash _ (ScriptDataHash dh)) = SJust dh
+toAlonzoTxOutDataHash (TxOutDatumInline _ d) = let ScriptDataHash dh = hashScriptData d in SJust dh
 
 fromAlonzoTxOutDataHash :: ScriptDataSupportedInEra era
                         -> StrictMaybe (Alonzo.DataHash StandardCrypto)
@@ -1145,14 +1152,19 @@ data TxOutDatum ctx era where
                     -> Hash ScriptData
                     -> TxOutDatum ctx era
 
-     -- | A transaction output that specifies the whole datum value. This can
-     -- only be used in the context of the transaction body, and does not occur
-     -- in the UTxO. The UTxO only contains the datum hash.
+     -- | A transaction output that only specifies the hash of the datum, but
+     -- with the full datum value in a transaction context.
      --
-     TxOutDatum'    :: ScriptDataSupportedInEra era
-                    -> Hash ScriptData
-                    -> ScriptData
-                    -> TxOutDatum CtxTx era
+     TxOutDatumHash' :: ScriptDataSupportedInEra era
+                     -> Hash ScriptData
+                     -> ScriptData
+                     -> TxOutDatum CtxTx era
+
+     -- | A transaction output that inlines the full datum value.
+     --
+     TxOutDatumInline :: ScriptDataSupportedInEra era
+                      -> ScriptData
+                      -> TxOutDatum ctx era
 
 deriving instance Eq   (TxOutDatum ctx era)
 deriving instance Show (TxOutDatum ctx era)
@@ -1160,12 +1172,12 @@ deriving instance Show (TxOutDatum ctx era)
 pattern TxOutDatum :: ScriptDataSupportedInEra era
                    -> ScriptData
                    -> TxOutDatum CtxTx era
-pattern TxOutDatum s d  <- TxOutDatum' s _ d
+pattern TxOutDatum s d  <- TxOutDatumHash' s _ d
   where
-    TxOutDatum s d = TxOutDatum' s (hashScriptData d) d
+    TxOutDatum s d = TxOutDatumHash' s (hashScriptData d) d
 
-{-# COMPLETE TxOutDatumNone, TxOutDatumHash, TxOutDatum' #-}
-{-# COMPLETE TxOutDatumNone, TxOutDatumHash, TxOutDatum  #-}
+{-# COMPLETE TxOutDatumNone, TxOutDatumHash, TxOutDatumInline, TxOutDatumHash' #-}
+{-# COMPLETE TxOutDatumNone, TxOutDatumHash, TxOutDatumInline, TxOutDatum  #-}
 
 
 parseHash :: SerialiseAsRawBytes (Hash a) => AsType (Hash a) -> Parsec.Parser (Hash a)
@@ -1899,8 +1911,8 @@ fromAlonzoTxOut multiAssetInEra scriptDataInEra txdatums
     fromAlonzoTxOutDatum _          SNothing = TxOutDatumNone
     fromAlonzoTxOutDatum supported (SJust dh)
       | Just d <- Map.lookup dh txdatums
-                  = TxOutDatum'    supported (ScriptDataHash dh)
-                                             (fromAlonzoData d)
+                  = TxOutDatumHash' supported (ScriptDataHash dh)
+                                              (fromAlonzoData d)
       | otherwise = TxOutDatumHash supported (ScriptDataHash dh)
 
 fromLedgerTxFee
@@ -2699,7 +2711,8 @@ toAlonzoTxOutDataHash' :: TxOutDatum ctx era
                       -> StrictMaybe (Alonzo.DataHash StandardCrypto)
 toAlonzoTxOutDataHash'  TxOutDatumNone                          = SNothing
 toAlonzoTxOutDataHash' (TxOutDatumHash _ (ScriptDataHash dh))   = SJust dh
-toAlonzoTxOutDataHash' (TxOutDatum'    _ (ScriptDataHash dh) _) = SJust dh
+toAlonzoTxOutDataHash' (TxOutDatumHash' _ (ScriptDataHash dh) _) = SJust dh
+toAlonzoTxOutDataHash' (TxOutDatumInline _ d) = let ScriptDataHash dh = hashScriptData d in SJust dh
 
 
 -- ----------------------------------------------------------------------------
