@@ -29,7 +29,7 @@ For the transaction draft, --tx.out, --invalid-hereafter and --fee can be set to
     --tx-body-file tx.draft \
     --tx-in-count 1 \
     --tx-out-count 1 \
-    --witness-count 2 \
+    --witness-count 1 \
     --byron-witness-count 0 \
     --mainnet \
     --protocol-params-file protocol.json
@@ -79,7 +79,6 @@ Sign it:
     cardano-cli transaction sign \
     --tx-body-file tx.raw \
     --signing-key-file payment.skey \
-    --signing-key-file stake.skey \
     --mainnet \
     --out-file tx.signed
 
