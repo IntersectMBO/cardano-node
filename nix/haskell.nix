@@ -70,8 +70,6 @@ haskell-nix.cabalProject' ({ pkgs
       # version info. It uses the "gitrev" argument, if set. Otherwise,
       # the revision is sourced from the local git work tree.
       setGitRev = ''${pkgs.buildPackages.haskellBuildUtils}/bin/set-git-rev "${gitrev}" $out/bin/*'';
-      # package with libsodium:
-      setLibSodium = "ln -s ${pkgs.libsodium-vrf}/bin/libsodium-23.dll $out/bin/libsodium-23.dll";
     in
     [
       # Allow reinstallation of Win32
@@ -141,15 +139,8 @@ haskell-nix.cabalProject' ({ pkgs
         # stamp executables with the git revision, add shell completion, strip/rewrite:
         packages = lib.mapAttrs
           (name: exes: {
-            # For checks:
-            postInstall = lib.mkIf pkgs.stdenv.hostPlatform.isWindows ''
-              if [ -d $out/bin ]; then
-                ${setLibSodium}
-              fi
-            '';
             components.exes = lib.genAttrs exes (exe: {
               postInstall = ''
-                ${lib.optionalString pkgs.stdenv.hostPlatform.isWindows setLibSodium}
                 ${setGitRev}
                 ${lib.optionalString (pkgs.stdenv.hostPlatform.isMusl) ''
                   ${pkgs.buildPackages.binutils-unwrapped}/bin/*strip $out/bin/*
