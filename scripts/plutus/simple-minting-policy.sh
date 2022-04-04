@@ -8,8 +8,8 @@ set -o pipefail
 
 # This is an example plutus minting script derived from the validator in
 # Cardano.CLI.Plutus.SimpleMintingScript. Essentially we demand that the
-# script owner is allowed to mint "MillarCoin" and you can only mint
-# a single "MillarCoin" per tx.
+# script owner is allowed to mint "4D696C6C6172436F696E" and you can only mint
+# a single "4D696C6C6172436F696E" per tx.
 
 work=example/minting
 mkdir -p $work
@@ -66,7 +66,7 @@ cardano-cli query utxo --address "$targetaddr" --testnet-magic 42 --out-file "$w
 scriptownertxin=$(jq -r 'keys[0]' "$work/updatedutxo.json")
 scriptownerCollateral=$(jq -r 'keys[1]' "$work/updatedutxo.json")
 
-# Step 2: Mint a single MillarCoin
+# Step 2: Mint a single 4D696C6C6172436F696E
 
 # We need the script policy ID
 policyid=$(cardano-cli transaction policyid --script-file $plutusscriptinuse)
@@ -87,8 +87,8 @@ cardano-cli transaction build \
   --tx-in-collateral "$scriptownerCollateral" \
   --mint-script-file "$plutusscriptinuse" \
   --mint-redeemer-file "$redeemer" \
-  --tx-out "$dummyaddress+1000000 + 5 $policyid.MillarCoin" \
-  --mint "5 $policyid.MillarCoin" \
+  --tx-out "$dummyaddress+1379280 + 5 $policyid.4D696C6C6172436F696E" \
+  --mint "5 $policyid.4D696C6C6172436F696E" \
   --protocol-params-file example/pparams.json \
   --out-file "$work/plutusmint.body"
 
