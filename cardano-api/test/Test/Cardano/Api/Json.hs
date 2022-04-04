@@ -64,6 +64,7 @@ prop_json_roundtrip_eraInMode = H.property $ do
       AllegraEraInCardanoMode -> parseJSON $ toJSON AllegraEraInCardanoMode
       MaryEraInCardanoMode -> parseJSON $ toJSON MaryEraInCardanoMode
       AlonzoEraInCardanoMode -> parseJSON $ toJSON AlonzoEraInCardanoMode
+      BabbageEraInCardanoMode -> panic "TODO: Babbage"
 
 prop_json_roundtrip_scriptdata_detailed_json :: Property
 prop_json_roundtrip_scriptdata_detailed_json = H.property $ do
