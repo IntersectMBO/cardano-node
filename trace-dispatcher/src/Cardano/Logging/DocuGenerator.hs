@@ -1,23 +1,21 @@
-{-# LANGUAGE RecordWildCards     #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Cardano.Logging.DocuGenerator (
-    documentMarkdown
+    addDocumentedNamespace
+  , addDocs
+  , documentMarkdown
   , buildersToText
   , docIt
   , addFiltered
   , addLimiter
   , docTracer
   , docTracerDatapoint
-  , anyProto
   , showT
   , DocuResult
-  , appDoc
-  , mapDoc
 ) where
 
 import           Cardano.Logging.Types
-import           Control.Exception (SomeException, catch)
 import           Control.Monad.IO.Class (MonadIO, liftIO)
 import qualified Control.Tracer as T
 import           Data.IORef (modifyIORef, newIORef, readIORef)
@@ -27,8 +25,7 @@ import           Data.Text (Text, pack, toLower)
 import qualified Data.Text as T
 import           Data.Text.Internal.Builder (toLazyText)
 import           Data.Text.Lazy (toStrict)
-import           Data.Text.Lazy.Builder (Builder, fromString, fromText,
-                     singleton)
+import           Data.Text.Lazy.Builder (Builder, fromString, fromText, singleton)
 import           Data.Time (getZonedTime)
 import           Trace.Forward.Utils.DataPoint (DataPoint (..))
 
@@ -55,42 +52,9 @@ unpackDocu (DocuTracer b)    = b
 unpackDocu (DocuMetric b)    = b
 unpackDocu (DocuDatapoint b) = b
 
-anyProto :: a
-anyProto = undefined
 
-showT :: Show a => a -> Text
-showT = pack . show
-
-appDoc :: (a -> b) -> DocMsg a -> DocMsg b
-appDoc f DocMsg {..} = DocMsg  (f dmPrototype) dmMetricsMD dmMarkdown
-
-mapDoc :: (a -> b) -> [DocMsg a] -> [DocMsg b]
-mapDoc f = map (appDoc f)
-
-docTracer :: MonadIO m
-  => BackendConfig
-  -> Trace m FormattedMessage
-docTracer backendConfig = Trace $ T.arrow $ T.emit output
-  where
-    output p@(_, Just Document {}, FormattedMetrics m) =
-      docIt backendConfig (FormattedMetrics m) p
-    output (lk, Just c@Document {}, FormattedForwarder lo) =
-      docIt backendConfig (FormattedForwarder lo) (lk, Just c, lo)
-    output (lk, Just c@Document {}, FormattedHuman co msg) =
-      docIt backendConfig (FormattedHuman co "") (lk, Just c, msg)
-    output (lk, Just c@Document {}, FormattedMachine msg) =
-      docIt backendConfig (FormattedMachine "") (lk, Just c, msg)
-    output (_, _, _) = pure ()
-
-docTracerDatapoint :: MonadIO m
-  => BackendConfig
-  -> Trace m DataPoint
-docTracerDatapoint backendConfig = Trace $ T.arrow $ T.emit output
-  where
-    output p@(_, Just Document {}, DataPoint m) =
-      docItDatapoint backendConfig (DataPoint m) p
-    output (_, _, _) = pure ()
-
+-- | Calls the tracers in a documetation control mode,
+-- and returns a DocCollector, from which the documentation gets generated
 documentTracers :: Documented a -> [Trace IO a] -> IO DocCollector
 documentTracers (Documented documented) tracers = do
     let docIdx = zip documented [0..]
@@ -98,22 +62,42 @@ documentTracers (Documented documented) tracers = do
     mapM_ (docTrace docIdx coll) tracers
     pure coll
   where
-    docTrace docIdx dc@(DocCollector docColl) (Trace tr) =
+    docTrace docIdx dc (Trace tr) =
       mapM_
-        (\ (DocMsg {..}, idx) -> catch (
-            T.traceWith tr (emptyLoggingContext,
-                            Just (Document idx dmMarkdown dmMetricsMD dc), dmPrototype))
-            (\ (ex :: SomeException) ->
-                modifyIORef docColl
-                  (\ docMap ->
-                    Map.insert
-                      idx
-                      (case Map.lookup idx docMap of
-                        Just e  -> e { ldDoc = ldDoc e <> "Error generating doc" <> (pack . show) ex}
-                        Nothing -> emptyLogDoc ("Error generating doc" <> (pack . show) ex) [])
-                      docMap)))
+        (\ (DocMsg {..}, idx) ->
+            T.traceWith tr (emptyLoggingContext {lcNamespace = dmNamespace},
+                            Left (Document idx dmMarkdown dmMetricsMD dc)))
         docIdx
 
+showT :: Show a => a -> Text
+showT = pack . show
+
+addDocumentedNamespace  :: Namespace -> Documented a -> Documented b
+addDocumentedNamespace  ns (Documented list) =
+  Documented $ map
+    (\ dm@DocMsg {} -> dm {dmNamespace = ns ++ dmNamespace dm})
+    list
+
+addDocs :: Documented a -> Documented a -> Documented a
+addDocs (Documented l) (Documented r) = Documented (l ++ r)
+
+docTracer :: MonadIO m =>
+     BackendConfig
+  -> Trace m FormattedMessage
+docTracer backendConfig = Trace $ T.arrow $ T.emit output
+  where
+    output p@(_, Left Document {}) =
+      docIt backendConfig p
+    output (_, _) = pure ()
+
+docTracerDatapoint :: MonadIO m =>
+     BackendConfig
+  -> Trace m DataPoint
+docTracerDatapoint backendConfig = Trace $ T.arrow $ T.emit output
+  where
+    output p@(_, Left Document {}) =
+      docItDatapoint backendConfig p
+    output (_, _) = pure ()
 
 addFiltered :: MonadIO m => TraceControl -> Maybe SeverityF -> m ()
 addFiltered (Document idx mdText mdMetrics (DocCollector docRef)) (Just sev) = do
@@ -139,52 +123,47 @@ addLimiter (Document idx mdText mdMetrics (DocCollector docRef)) (ln, lf) = do
         docMap)
 addLimiter _ _ = pure ()
 
-docIt :: MonadIO m =>
-     BackendConfig
-  -> FormattedMessage
-  -> (LoggingContext, Maybe TraceControl, a)
+docIt :: MonadIO m
+  => BackendConfig
+  -> (LoggingContext, Either TraceControl a)
   -> m ()
-docIt backend formattedMessage (LoggingContext {..},
-  Just (Document idx mdText mdMetrics (DocCollector docRef)), _msg) = do
-  liftIO $ modifyIORef docRef (\ docMap ->
-      Map.insert
-        idx
-        ((\e -> e { ldBackends  = seq backend (seq formattedMessage
-                                    ((backend, formattedMessage) : ldBackends e))
-                  , ldNamespace = seq lcNamespace
-                                    (lcNamespace : ldNamespace e)
-                  , ldSeverity  = case lcSeverity of
-                                    Nothing -> ldSeverity e
-                                    Just s  -> seq s (s : ldSeverity e)
-                  , ldPrivacy   = case lcPrivacy of
-                                    Nothing -> ldPrivacy e
-                                    Just p  -> seq p (p : ldPrivacy e)
-                  , ldDetails   = case lcDetails of
-                                    Nothing -> ldDetails e
-                                    Just d  -> seq d (d : ldDetails e)
-                  })
-          (case Map.lookup idx docMap of
-                        Just e  -> e
-                        Nothing -> seq mdText (seq mdMetrics (emptyLogDoc mdText mdMetrics))))
-        docMap)
+docIt backend (LoggingContext {..},
+  Left (Document idx mdText mdMetrics (DocCollector docRef))) = do
+    liftIO $ modifyIORef docRef (\ docMap ->
+        Map.insert
+          idx
+          ((\e -> e { ldBackends  = backend : ldBackends e
+                    , ldNamespace = lcNamespace : ldNamespace e
+                    , ldSeverity  = case lcSeverity of
+                                      Nothing -> ldSeverity e
+                                      Just s  -> s : ldSeverity e
+                    , ldPrivacy   = case lcPrivacy of
+                                      Nothing -> ldPrivacy e
+                                      Just p  -> p : ldPrivacy e
+                    , ldDetails   = case lcDetails of
+                                      Nothing -> ldDetails e
+                                      Just d  -> d : ldDetails e
+                    })
+            (case Map.lookup idx docMap of
+                          Just e  -> e
+                          Nothing -> seq mdText (seq mdMetrics (emptyLogDoc mdText mdMetrics))))
+          docMap)
 
 docItDatapoint :: MonadIO m =>
      BackendConfig
-  -> DataPoint
-  -> (LoggingContext, Maybe TraceControl, a)
+  -> (LoggingContext, Either TraceControl a)
   -> m ()
-docItDatapoint _backend _formattedMessage (LoggingContext {..},
-  Just (Document idx mdText _mdMetrics (DocCollector docRef)), _msg) = do
+docItDatapoint _backend (LoggingContext {..},
+  Left (Document idx mdText _mdMetrics (DocCollector docRef))) = do
   liftIO $ modifyIORef docRef (\ docMap ->
       Map.insert
         idx
-        ((\e -> e { ldNamespace = seq lcNamespace
-                                    (lcNamespace : ldNamespace e)
-                  , ldBackends  = [(DatapointBackend, FormattedMachine "")]
+        ((\e -> e { ldNamespace = lcNamespace : ldNamespace e
+                  , ldBackends  = [DatapointBackend]
                   })
           (case Map.lookup idx docMap of
                         Just e  -> e
-                        Nothing -> seq mdText (emptyLogDoc mdText [])))
+                        Nothing -> emptyLogDoc mdText []))
         docMap)
 
 generateTOC :: [Namespace] -> [Namespace] -> [Namespace] -> Builder
@@ -280,7 +259,7 @@ documentMarkdown (Documented documented) tracers = do
     documentItem :: (Int, LogDoc) -> DocuResult
     documentItem (_idx, ld@LogDoc {..}) =
       case ldBackends of
-        [(DatapointBackend, _)] -> DocuDatapoint $
+        [DatapointBackend] -> DocuDatapoint $
                     mconcat $ intersperse (fromText "\n\n")
                       [ namespacesBuilder (nub ldNamespace)
                       , betweenLines (fromText ldDoc)
@@ -359,19 +338,14 @@ documentMarkdown (Documented documented) tracers = do
       <> filteredBuilder (nub ldFiltered) (nub ldSeverity)
       <> limiterBuilder (nub ldLimiter)
 
-    backendsBuilder :: [(BackendConfig, FormattedMessage)] -> Builder
+    backendsBuilder :: [BackendConfig] -> Builder
     backendsBuilder [] = fromText "No backends found"
     backendsBuilder l  = fromText "Backends:\n\t\t\t"
                           <> mconcat (intersperse (fromText ",\n\t\t\t")
                                 (map backendFormatToText l))
 
-    backendFormatToText :: (BackendConfig, FormattedMessage) -> Builder
-    backendFormatToText (be, FormattedMetrics _) = asCode (fromString   (show be))
-
-    backendFormatToText (be, FormattedHuman _c _) = asCode (fromString (show be))
-    backendFormatToText (be, FormattedMachine _) = asCode (fromString (show be))
-    backendFormatToText (be, FormattedForwarder _) = asCode (fromString (show be))
-
+    backendFormatToText :: BackendConfig -> Builder
+    backendFormatToText be = asCode (fromString (show be))
 
     filteredBuilder :: [SeverityF] -> [SeverityS] -> Builder
     filteredBuilder [] _ = mempty

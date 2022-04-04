@@ -127,8 +127,7 @@ mkCardanoTracer' trStdout trForward mbTrEkg name namesFor severityFor privacyFor
           Nothing -> pure $ Trace NT.nullTracer
           Just tr -> pure (preFormatted backends tr)
 
--- A simple dataPointTracer which supports building a namespace and entering a hook
--- function.
+-- A simple dataPointTracer which supports building a namespace.
 mkDataPointTracer :: forall dp. ToJSON dp
   => Trace IO DataPoint
   -> (dp -> [Text])

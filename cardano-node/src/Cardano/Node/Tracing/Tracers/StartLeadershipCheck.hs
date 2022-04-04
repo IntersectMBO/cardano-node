@@ -56,8 +56,8 @@ forgeTracerTransform ::
   -> IO (Trace IO (ForgeTracerType blk))
 forgeTracerTransform nodeKern (Trace tr) = pure $ Trace $ T.arrow $ T.emit $
     \case
-      (lc, Nothing, Left (TraceLabelCreds creds
-                        (TraceStartLeadershipCheck slotNo))) -> do
+      (lc, Right (Left (TraceLabelCreds creds
+                        (TraceStartLeadershipCheck slotNo)))) -> do
         query <- mapNodeKernelDataIO
                     (\nk ->
                        (,,)
@@ -73,11 +73,11 @@ forgeTracerTransform nodeKern (Trace tr) = pure $ Trace $ T.arrow $ T.emit $
                             utxoSize
                             delegMapSize
                             (fromRational chainDensity)
-                in T.traceWith tr (lc, Nothing, Right (TraceLabelCreds creds msg)))
-      (lc, Nothing, a) ->
-          T.traceWith tr (lc, Nothing, a)
-      (lc, Just control, a) ->
-          T.traceWith tr (lc, Just control, a)
+                in T.traceWith tr (lc, Right (Right (TraceLabelCreds creds msg))))
+      (lc, Right a) ->
+          T.traceWith tr (lc, Right a)
+      (lc, Left control) ->
+          T.traceWith tr (lc, Left control)
 
 nkQueryLedger ::
      IsLedger (LedgerState blk)

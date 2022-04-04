@@ -45,15 +45,13 @@ metricsFormatter application (Trace tr) =
  where
     mkTracer = T.emit $
       \ case
-        (lc, Nothing, v) ->
+        (lc, Right v) ->
           let metrics = asMetrics v
           in T.traceWith tr (lc { lcNamespace = application : lcNamespace lc}
-                            , Nothing
-                            , FormattedMetrics metrics)
-        (lc, Just ctrl, _v) ->
+                            , Right (FormattedMetrics metrics))
+        (lc, Left ctrl) ->
           T.traceWith tr (lc { lcNamespace = application : lcNamespace lc}
-                            , Just ctrl
-                            , FormattedMetrics [])
+                            , Left ctrl)
 
 -- | Format this trace as TraceObject for the trace forwarder
 forwardFormatter
@@ -68,7 +66,7 @@ forwardFormatter application (Trace tr) = do
  where
     mkTracer hn = T.emit $
       \ case
-        (lc, Nothing, v) -> do
+        (lc, Right v) -> do
           thid <- liftIO myThreadId
           time <- liftIO getCurrentTime
           let fh = forHuman v
@@ -89,25 +87,10 @@ forwardFormatter application (Trace tr) = do
                     , toThreadId  = (pack . show) thid
                   }
           T.traceWith tr ( nlc
-                         , Nothing
-                         , FormattedForwarder to)
-        (lc, Just ctrl, _v) -> do
-          thid <- liftIO myThreadId
-          time <- liftIO getCurrentTime
-          let nlc = lc { lcNamespace = application : lcNamespace lc}
-              to  = TraceObject {
-                      toHuman     = Nothing
-                    , toMachine   = Nothing
-                    , toNamespace = lcNamespace nlc
-                    , toSeverity  = fromMaybe Info (lcSeverity lc)
-                    , toDetails   = fromMaybe DNormal (lcDetails lc)
-                    , toTimestamp = time
-                    , toHostname  = hn
-                    , toThreadId  = (pack . show) thid
-                  }
-          T.traceWith tr ( nlc
-                         , Just ctrl
-                         , FormattedForwarder to)
+                         , Right (FormattedForwarder to))
+        (lc, Left ctrl) -> do
+          T.traceWith tr ( lc
+                         , Left ctrl)
 
 -- | Format this trace for human readability
 -- The boolean value tells, if this representation is for the console and should be colored
@@ -125,16 +108,14 @@ humanFormatter withColor application (Trace tr) = do
  where
     mkTracer hn = T.emit $
       \ case
-        (lc, Nothing, v) -> do
+        (lc, Right v) -> do
           let fh = forHuman v
           text <- liftIO $ formatContextHuman withColor hn application lc fh
           T.traceWith tr (lc { lcNamespace = application : lcNamespace lc}
-                             , Nothing
-                             , FormattedHuman withColor text)
-        (lc, Just ctrl, _v) -> do
+                             , Right (FormattedHuman withColor text))
+        (lc, Left ctrl) -> do
           T.traceWith tr (lc { lcNamespace = application : lcNamespace lc}
-                             , Just ctrl
-                             , FormattedHuman withColor "")
+                             , Left ctrl)
 
 formatContextHuman ::
      Bool
@@ -188,17 +169,15 @@ machineFormatter application (Trace tr) = do
  where
     mkTracer hn = T.emit $
       \case
-        (lc, Nothing, v) -> do
+        (lc, Right v) -> do
           let detailLevel = fromMaybe DNormal (lcDetails lc)
           obj <- liftIO $ formatContextMachine hn application lc (forMachine detailLevel v)
           T.traceWith tr (lc { lcNamespace = application : lcNamespace lc}
-                         , Nothing
-                         , FormattedMachine (decodeUtf8 (BS.toStrict
-                                (AE.encodingToLazyByteString obj))))
-        (lc, Just c, _v) -> do
+                         , Right (FormattedMachine (decodeUtf8 (BS.toStrict
+                                (AE.encodingToLazyByteString obj)))))
+        (lc, Left c) -> do
           T.traceWith tr (lc { lcNamespace = application : lcNamespace lc}
-                         , Just c
-                         , FormattedMachine "")
+                         , Left c)
 
 formatContextMachine ::
      String
@@ -214,7 +193,7 @@ formatContextMachine hostname application LoggingContext {..} obj = do
                     ((stripPrefix "ThreadId " . pack . show) thid)
       ns       = mconcat (intersperse (singleton '.')
                         (map fromText (application : lcNamespace)))
-      ts       = pack $ formatTime defaultTimeLocale "%F %H:%M:%S%4Q" time
+      ts       = pack $ formatTime defaultTimeLocale "%F %H:%M:%S%4QZ" time
   pure $ AE.pairs $    "at"      .= ts
                     <> "ns"      .= toStrict (toLazyText ns)
                     <> "data"    .= obj
@@ -238,9 +217,12 @@ preFormatted backends tr@(Trace tr')=
       then contramap (\msg -> PreFormatted msg (Just (forHuman msg)) Nothing) tr
       else if Stdout MachineFormat `elem` backends
         then Trace $ T.contramap
-              (\ (lc, mbC, msg) ->
-                let dtal = fromMaybe DNormal (lcDetails lc)
-                in (lc, mbC, PreFormatted msg Nothing (Just (forMachine dtal msg))))
+              (\case
+                  (lc, Right msg) ->
+                    let dtal = fromMaybe DNormal (lcDetails lc)
+                    in (lc, Right (PreFormatted msg Nothing
+                                    (Just (forMachine dtal msg))))
+                  (lc, Left ctrl) -> (lc, Left ctrl))
               tr'
         else contramap (\msg -> PreFormatted msg Nothing Nothing) tr
     else contramap (\msg -> PreFormatted msg Nothing Nothing) tr

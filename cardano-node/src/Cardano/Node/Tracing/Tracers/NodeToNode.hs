@@ -242,50 +242,40 @@ instance ( ConvertTxId blk
              ]
 
 docTBlockFetch :: Documented
+     (BlockFetch.TraceLabelPeer peer
+      (TraceSendRecv
+        (BlockFetch x (Point blk))))
+docTBlockFetch =
+  addDocumentedNamespace  ["NodeToNode", "Send"] docTBlockFetch'
+  `addDocs` addDocumentedNamespace  ["NodeToNode", "Recieve"] docTBlockFetch'
+
+docTBlockFetch' :: Documented
       (BlockFetch.TraceLabelPeer peer
        (TraceSendRecv
          (BlockFetch x (Point blk))))
-docTBlockFetch = Documented [
+docTBlockFetch' = Documented [
       DocMsg
-        (BlockFetch.TraceLabelPeer anyProto
-          (TraceSendMsg
-            (AnyMessageAndAgency anyProto
-              (MsgRequestRange anyProto))))
+        ["RequestRange"]
         []
         "Request range of blocks."
     , DocMsg
-        (BlockFetch.TraceLabelPeer anyProto
-          (TraceSendMsg
-            (AnyMessageAndAgency anyProto
-              MsgStartBatch)))
+        ["StartBatch"]
         []
         "Start block streaming."
     , DocMsg
-        (BlockFetch.TraceLabelPeer anyProto
-          (TraceSendMsg
-            (AnyMessageAndAgency anyProto
-              MsgNoBlocks)))
+        ["NoBlocks"]
         []
         "Respond that there are no blocks."
     , DocMsg
-        (BlockFetch.TraceLabelPeer anyProto
-          (TraceSendMsg
-            (AnyMessageAndAgency anyProto
-              (MsgBlock anyProto))))
+        ["Block"]
         []
         "Stream a single block."
     , DocMsg
-        (BlockFetch.TraceLabelPeer anyProto
-          (TraceSendMsg
-            (AnyMessageAndAgency anyProto
-              MsgBatchDone)))
+        ["BatchDone"]
         []
         "End of block streaming."
     , DocMsg
-        (BlockFetch.TraceLabelPeer anyProto
-          (TraceSendMsg
-            (AnyMessageAndAgency anyProto
-              MsgClientDone)))
+        ["ClientDone"]
         []
         "Client termination message."
   ]
@@ -465,12 +455,17 @@ docTTxSubmissionNode :: Documented
   (BlockFetch.TraceLabelPeer peer
     (TraceSendRecv
       (TXS.TxSubmission (GenTxId blk) (GenTx blk))))
-docTTxSubmissionNode = Documented [
+docTTxSubmissionNode =
+  addDocumentedNamespace  ["NodeToNode", "Send"] docTTxSubmissionNode'
+  `addDocs` addDocumentedNamespace  ["NodeToNode", "Recieve"] docTTxSubmissionNode'
+
+docTTxSubmissionNode' :: Documented
+  (BlockFetch.TraceLabelPeer peer
+    (TraceSendRecv
+      (TXS.TxSubmission (GenTxId blk) (GenTx blk))))
+docTTxSubmissionNode' = Documented [
       DocMsg
-        (BlockFetch.TraceLabelPeer anyProto
-          (TraceSendMsg
-            (AnyMessageAndAgency anyProto
-              (TXS.MsgRequestTxIds anyProto 1 1))))
+        ["RequestTxIds"]
         []
         "Request a non-empty list of transaction identifiers from the client,\
         \and confirm a number of outstanding transaction identifiers.\
@@ -510,10 +505,7 @@ docTTxSubmissionNode = Documented [
         \* The non-blocking case must be used when there are non-zero remaining\
         \  unacknowledged transactions."
     , DocMsg
-        (BlockFetch.TraceLabelPeer anyProto
-          (TraceSendMsg
-            (AnyMessageAndAgency anyProto
-              (TXS.MsgReplyTxIds anyProto))))
+        ["ReplyTxIds"]
         []
         "Reply with a list of transaction identifiers for available\
         \transactions, along with the size of each transaction.\
@@ -530,10 +522,7 @@ docTTxSubmissionNode = Documented [
         \the order in which they are submitted to the mempool, to preserve\
         \dependent transactions."
     , DocMsg
-        (BlockFetch.TraceLabelPeer anyProto
-          (TraceSendMsg
-            (AnyMessageAndAgency anyProto
-              (TXS.MsgRequestTxs [anyProto]))))
+        ["RequestTxs"]
         []
         "Request one or more transactions corresponding to the given \
         \transaction identifiers. \
@@ -548,10 +537,7 @@ docTTxSubmissionNode = Documented [
         \It is an error to ask for transaction identifiers that are not \
         \outstanding or that were already asked for."
     , DocMsg
-        (BlockFetch.TraceLabelPeer anyProto
-          (TraceSendMsg
-            (AnyMessageAndAgency anyProto
-              (TXS.MsgReplyTxs [anyProto]))))
+        ["ReplyTxs"]
         []
         "Reply with the requested transactions, or implicitly discard.\
         \\n\
@@ -564,10 +550,7 @@ docTTxSubmissionNode = Documented [
         \that this is no guarantee that the transaction is invalid, it may still \
         \be valid and available from another peer)."
     , DocMsg
-        (BlockFetch.TraceLabelPeer anyProto
-          (TraceSendMsg
-            (AnyMessageAndAgency anyProto
-              TXS.MsgDone)))
+        ["Done"]
         []
         "Termination message, initiated by the client when the server is \
         \making a blocking call for more transaction identifiers."
@@ -644,24 +627,25 @@ instance (Show txid, Show tx)
                   (MsgTalk msg)) =
     forMachine dtal (AnyMessageAndAgency (ServerAgency stok) msg)
 
-
 docTTxSubmission2Node :: Documented
   (BlockFetch.TraceLabelPeer peer
     (TraceSendRecv
       (TXS.TxSubmission2 (GenTxId blk) (GenTx blk))))
-docTTxSubmission2Node = Documented [
+docTTxSubmission2Node =
+  addDocumentedNamespace  ["NodeToNode", "Send"] docTTxSubmission2Node'
+  `addDocs` addDocumentedNamespace  ["NodeToNode", "Recieve"] docTTxSubmission2Node'
+
+docTTxSubmission2Node' :: Documented
+  (BlockFetch.TraceLabelPeer peer
+    (TraceSendRecv
+      (TXS.TxSubmission2 (GenTxId blk) (GenTx blk))))
+docTTxSubmission2Node' = Documented [
       DocMsg
-        (BlockFetch.TraceLabelPeer anyProto
-          (TraceSendMsg
-            (AnyMessageAndAgency anyProto
-              MsgHello)))
+        ["MsgHello"]
         []
         "Client side hello message."
     , DocMsg
-        (BlockFetch.TraceLabelPeer anyProto
-          (TraceSendMsg
-            (AnyMessageAndAgency anyProto
-              (MsgTalk (TXS.MsgRequestTxIds anyProto 1 1)))))
+        ["RequestTxIds"]
         []
         "Request a non-empty list of transaction identifiers from the client, \
         \and confirm a number of outstanding transaction identifiers. \
@@ -701,10 +685,7 @@ docTTxSubmission2Node = Documented [
         \* The non-blocking case must be used when there are non-zero remaining \
         \  unacknowledged transactions."
     , DocMsg
-        (BlockFetch.TraceLabelPeer anyProto
-          (TraceSendMsg
-            (AnyMessageAndAgency anyProto
-              (MsgTalk (TXS.MsgReplyTxIds anyProto)))))
+        ["ReplyTxIds"]
         []
         "Reply with a list of transaction identifiers for available\
         \transactions, along with the size of each transaction.\
@@ -721,10 +702,7 @@ docTTxSubmission2Node = Documented [
         \the order in which they are submitted to the mempool, to preserve\
         \dependent transactions."
     , DocMsg
-        (BlockFetch.TraceLabelPeer anyProto
-          (TraceSendMsg
-            (AnyMessageAndAgency anyProto
-              (MsgTalk (TXS.MsgRequestTxs [anyProto])))))
+        ["RequestTxs"]
         []
         "Request one or more transactions corresponding to the given \
         \transaction identifiers. \
@@ -739,10 +717,7 @@ docTTxSubmission2Node = Documented [
         \It is an error to ask for transaction identifiers that are not\
         \outstanding or that were already asked for."
     , DocMsg
-        (BlockFetch.TraceLabelPeer anyProto
-          (TraceSendMsg
-            (AnyMessageAndAgency anyProto
-              (MsgTalk (TXS.MsgReplyTxs [anyProto])))))
+        ["ReplyTxs"]
         []
         "Reply with the requested transactions, or implicitly discard.\
         \\n\
@@ -755,10 +730,7 @@ docTTxSubmission2Node = Documented [
         \that this is no guarantee that the transaction is invalid, it may still\
         \be valid and available from another peer)."
     , DocMsg
-        (BlockFetch.TraceLabelPeer anyProto
-          (TraceSendMsg
-            (AnyMessageAndAgency anyProto
-              (MsgTalk TXS.MsgDone))))
+        ["Done"]
         []
         "Termination message, initiated by the client when the server is\
         \making a blocking call for more transaction identifiers."

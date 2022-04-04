@@ -69,15 +69,17 @@ import qualified Ouroboros.Consensus.Node.Tracers as Consensus
 import qualified Ouroboros.Consensus.Protocol.Ledger.HotKey as HotKey
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 
-import           Ouroboros.Network.Block (Point (..), Tip)
+import           Ouroboros.Network.Block (Point (..), SlotNo, Tip)
 import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
 import           Ouroboros.Network.BlockFetch.Decision
 import           Ouroboros.Network.ConnectionHandler (ConnectionHandlerTrace (..))
 import           Ouroboros.Network.ConnectionId (ConnectionId)
 import           Ouroboros.Network.ConnectionManager.Types (ConnectionManagerTrace (..))
+import qualified Ouroboros.Network.ConnectionManager.Types as ConnectionManager
 import qualified Ouroboros.Network.Diffusion as Diffusion
 import           Ouroboros.Network.Driver.Simple (TraceSendRecv)
 import           Ouroboros.Network.InboundGovernor (InboundGovernorTrace)
+import qualified Ouroboros.Network.InboundGovernor as InboundGovernor
 import           Ouroboros.Network.KeepAlive (TraceKeepAliveClient (..))
 import qualified Ouroboros.Network.NodeToClient as NtC
 import           Ouroboros.Network.NodeToNode (ErrorPolicyTrace (..), RemoteAddress, WithAddr (..))
@@ -93,6 +95,7 @@ import           Ouroboros.Network.Protocol.ChainSync.Type (ChainSync)
 import           Ouroboros.Network.Protocol.Handshake.Unversioned (UnversionedProtocol (..),
                    UnversionedProtocolData (..))
 import           Ouroboros.Network.Protocol.LocalStateQuery.Type (LocalStateQuery)
+import qualified Ouroboros.Network.Protocol.LocalTxMonitor.Type as LTM
 import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Type as LTS
 import           Ouroboros.Network.Protocol.TxSubmission.Type (TxSubmission)
 import           Ouroboros.Network.Protocol.TxSubmission2.Type (TxSubmission2)
@@ -103,8 +106,6 @@ import           Ouroboros.Network.Subscription.Ip (WithIPList (..))
 import           Ouroboros.Network.Subscription.Worker (SubscriptionTrace (..))
 import           Ouroboros.Network.TxSubmission.Inbound (TraceTxSubmissionInbound)
 import           Ouroboros.Network.TxSubmission.Outbound (TraceTxSubmissionOutbound)
-
-
 
 data TraceDocumentationCmd
   = TraceDocumentationCmd
@@ -425,15 +426,31 @@ docTracers configFileName outputFileName _ _ _ = do
 
     chainSyncTr  <-  mkCardanoTracer
                 trBase trForward mbTrEKG
-                "ChainSyncClient"
+                "ChainSync"
                 namesForTChainSync
                 severityTChainSync
                 allPublic
-    configureTracers trConfig docTChainSync [chainSyncTr]
+    configureTracers trConfig docTChainSyncNodeToClient [chainSyncTr]
     chainSyncTrDoc <- documentTracer trConfig chainSyncTr
-      (docTChainSync :: Documented
+      (docTChainSyncNodeToClient :: Documented
         (BlockFetch.TraceLabelPeer peer (TraceSendRecv
           (ChainSync x (Point blk) (Tip blk)))))
+
+    txMonitorTr <-
+      mkCardanoTracer
+        trBase trForward mbTrEKG
+        "TxMonitorClient"
+        namesForTTxMonitor
+        severityTTxMonitor
+        allPublic
+    configureTracers trConfig docTTxMonitor [txMonitorTr]
+    txMonitorTrDoc <- documentTracer trConfig txMonitorTr
+      (docTTxMonitor :: Documented
+        (BlockFetch.TraceLabelPeer
+           peer
+           (TraceSendRecv
+              (LTM.LocalTxMonitor
+                 (GenTxId blk) (GenTx blk) SlotNo))))
 
     txSubmissionTr  <-  mkCardanoTracer
                 trBase trForward mbTrEKG
@@ -472,9 +489,9 @@ docTracers configFileName outputFileName _ _ _ = do
                 namesForTChainSyncNode
                 severityTChainSyncNode
                 allPublic
-    configureTracers trConfig docTChainSync [chainSyncNodeTr]
+    configureTracers trConfig docTChainSyncNodeToNode [chainSyncNodeTr]
     chainSyncNodeTrDoc <- documentTracer trConfig chainSyncNodeTr
-      (docTChainSync :: Documented (BlockFetch.TraceLabelPeer peer (TraceSendRecv
+      (docTChainSyncNodeToNode :: Documented (BlockFetch.TraceLabelPeer peer (TraceSendRecv
           (ChainSync x (Point blk) (Tip blk)))))
 
     chainSyncSerialisedTr <-  mkCardanoTracer
@@ -483,9 +500,9 @@ docTracers configFileName outputFileName _ _ _ = do
                 namesForTChainSyncSerialised
                 severityTChainSyncSerialised
                 allPublic
-    configureTracers trConfig docTChainSync [chainSyncSerialisedTr]
+    configureTracers trConfig docTChainSyncNodeToNodeSerisalised [chainSyncSerialisedTr]
     chainSyncSerialisedTrDoc <- documentTracer trConfig chainSyncSerialisedTr
-      (docTChainSync :: Documented (BlockFetch.TraceLabelPeer peer (TraceSendRecv
+      (docTChainSyncNodeToNodeSerisalised :: Documented (BlockFetch.TraceLabelPeer peer (TraceSendRecv
           (ChainSync x (Point blk) (Tip blk)))))
 
     blockFetchTr  <-  mkCardanoTracer
@@ -690,6 +707,18 @@ docTracers configFileName outputFileName _ _ _ = do
           Socket.SockAddr
           (ConnectionHandlerTrace UnversionedProtocol UnversionedProtocolData)))
 
+    connectionManagerTransitionsTr  <-  mkCardanoTracer
+      trBase trForward mbTrEKG
+      "ConnectionManagerTransition"
+      (namesForConnectionManagerTransition @RemoteAddress)
+      severityConnectionManagerTransition
+      allPublic
+    configureTracers trConfig docConnectionManagerTransition [connectionManagerTransitionsTr]
+    connectionManagerTransitionsTrDoc <- documentTracer trConfig connectionManagerTransitionsTr
+      (docConnectionManagerTransition ::
+        Documented (ConnectionManager.AbstractTransitionTrace Socket.SockAddr))
+
+
     serverTr  <-  mkCardanoTracer
       trBase trForward mbTrEKG
       "Server"
@@ -709,6 +738,18 @@ docTracers configFileName outputFileName _ _ _ = do
     configureTracers trConfig docInboundGovernorRemote [inboundGovernorTr]
     inboundGovernorTrDoc <- documentTracer trConfig inboundGovernorTr
       (docInboundGovernorRemote :: Documented (InboundGovernorTrace Socket.SockAddr))
+
+    inboundGovernorTransitionsTr  <-  mkCardanoTracer
+      trBase trForward mbTrEKG
+      "InboundGovernorTransition"
+      namesForInboundGovernorTransition
+      severityInboundGovernorTransition
+      allPublic
+    configureTracers trConfig docInboundGovernorTransition [inboundGovernorTransitionsTr]
+    inboundGovernorTransitionsTrDoc <- documentTracer trConfig inboundGovernorTransitionsTr
+       (docInboundGovernorTransition ::
+        Documented (InboundGovernor.RemoteTransitionTrace Socket.SockAddr))
+
 
     localConnectionManagerTr  <-  mkCardanoTracer
       trBase trForward mbTrEKG
@@ -834,6 +875,7 @@ docTracers configFileName outputFileName _ _ _ = do
 -- NodeToClient
             <> keepAliveClientTrDoc
             <> chainSyncTrDoc
+            <> txMonitorTrDoc
             <> txSubmissionTrDoc
             <> stateQueryTrDoc
 -- Node to Node
@@ -859,8 +901,10 @@ docTracers configFileName outputFileName _ _ _ = do
             <> peerSelectionCountersTrDoc
             <> peerSelectionActionsTrDoc
             <> connectionManagerTrDoc
+            <> connectionManagerTransitionsTrDoc
             <> serverTrDoc
             <> inboundGovernorTrDoc
+            <> inboundGovernorTransitionsTrDoc
             <> localConnectionManagerTrDoc
             <> localServerTrDoc
             <> localInboundGovernorTrDoc

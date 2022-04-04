@@ -1,7 +1,8 @@
-{-# LANGUAGE BangPatterns        #-}
-{-# LANGUAGE DeriveGeneric       #-}
-{-# LANGUAGE DerivingStrategies  #-}
-{-# LANGUAGE LambdaCase          #-}
+{-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 
@@ -20,7 +21,7 @@ module Cardano.Logging.Configuration
   , getBackends
   ) where
 
-import           Control.Exception (throwIO, SomeException, catch)
+import           Control.Exception (throwIO)
 import           Control.Monad.IO.Class (MonadIO, liftIO)
 import           Control.Monad.IO.Unlift (MonadUnliftIO)
 import qualified Control.Tracer as T
@@ -36,8 +37,7 @@ import           Data.Yaml
 import           GHC.Generics
 
 import           Cardano.Logging.DocuGenerator (addFiltered, addLimiter)
-import           Cardano.Logging.FrequencyLimiter (LimitingMessage (..),
-                     limitFrequency)
+import           Cardano.Logging.FrequencyLimiter (LimitingMessage (..), limitFrequency)
 import           Cardano.Logging.Trace (filterTraceBySeverity, setDetails)
 import           Cardano.Logging.Types
 
@@ -58,23 +58,21 @@ configureTracers :: forall a.
   -> Documented a
   -> [Trace IO a]
   -> IO ()
-configureTracers config (Documented documented) tracers =
-    catch
-      (do
-        mapM_ (configureTrace Reset) tracers
-        mapM_ (configureAllTrace (Config config)) tracers
-        mapM_ (configureTrace Optimize) tracers)
-      (\ (ex :: SomeException) -> print (show ex ++ " " ++ show (head documented)))
-    where
+configureTracers config (Documented documented) tracers = do
+    mapM_ (configureTrace Reset) tracers
+    mapM_ (configureAllTrace (Config config)) tracers
+    mapM_ (configureTrace Optimize) tracers
+  where
     configureTrace control (Trace tr) =
-      T.traceWith tr (emptyLoggingContext, Just control, dmPrototype (head documented))
+      T.traceWith tr (emptyLoggingContext, Left control)
     configureAllTrace control (Trace tr) =
       mapM
-        (\d ->
-          catch
-            (((\ m -> T.traceWith tr (emptyLoggingContext, Just control, m)) . dmPrototype) d)
-            (\ (ex :: SomeException) -> print (show ex ++ " " ++ show d)))
+        (\ DocMsg {..} -> T.traceWith tr (
+                              emptyLoggingContext {lcNamespace = dmNamespace}
+                            , Left control))
         documented
+
+
 
 -- | Take a selector function called 'extract'.
 -- Take a function from trace to trace with this config dependent value.
@@ -91,31 +89,31 @@ withNamespaceConfig name extract withConfig tr = do
   where
     mkTrace ::
          IORef (Either (Map.Map Namespace b, Maybe b) b)
-      -> (LoggingContext, Maybe TraceControl, a)
+      -> (LoggingContext, Either TraceControl a)
       -> m ()
-    mkTrace ref (lc, Nothing, a) = do
+    mkTrace ref (lc, Right a) = do
       eitherConf <- liftIO $ readIORef ref
       case eitherConf of
         Right val -> do
           tt <- withConfig (Just val) tr
           T.traceWith
-            (unpackTrace tt) (lc, Nothing, a)
+            (unpackTrace tt) (lc, Right a)
         Left (cmap, Just v) ->
           case Map.lookup (lcNamespace lc) cmap of
                 Just val -> do
                   tt <- withConfig (Just val) tr
-                  T.traceWith (unpackTrace tt) (lc, Nothing, a)
+                  T.traceWith (unpackTrace tt) (lc, Right a)
                 Nothing  -> do
                   tt <- withConfig (Just v) tr
-                  T.traceWith (unpackTrace tt) (lc, Nothing, a)
+                  T.traceWith (unpackTrace tt) (lc, Right a)
         Left (_cmap, Nothing) -> pure ()
         -- This can happen during reconfiguration, so we don't throw an error any more
-    mkTrace ref (lc, Just Reset, a) = do
+    mkTrace ref (lc, Left Reset) = do
       liftIO $ writeIORef ref (Left (Map.empty, Nothing))
       tt <- withConfig Nothing tr
-      T.traceWith (unpackTrace tt) (lc, Just Reset, a)
+      T.traceWith (unpackTrace tt) (lc, Left Reset)
 
-    mkTrace ref (lc, Just (Config c), m) = do
+    mkTrace ref (lc, Left (Config c)) = do
       ! val <- extract c (lcNamespace lc)
       eitherConf <- liftIO $ readIORef ref
       case eitherConf of
@@ -126,12 +124,12 @@ withNamespaceConfig name extract withConfig tr = do
                   $ writeIORef ref
                   $ Left (Map.insert (lcNamespace lc) val cmap, Nothing)
               Trace tt <- withConfig (Just val) tr
-              T.traceWith tt (lc, Just (Config c), m)
+              T.traceWith tt (lc, Left (Config c))
             Just v  -> do
               if v == val
                 then do
                   Trace tt <- withConfig (Just val) tr
-                  T.traceWith tt (lc, Just (Config c), m)
+                  T.traceWith tt (lc, Left (Config c))
                 else error $ "Inconsistent trace configuration with context "
                                   ++ show (lcNamespace lc)
         Right _val -> error $ "Trace not reset before reconfiguration (1)"
@@ -139,7 +137,7 @@ withNamespaceConfig name extract withConfig tr = do
         Left (_cmap, Just _v) -> error $ "Trace not reset before reconfiguration (2)"
                             ++ show (lcNamespace lc)
 
-    mkTrace ref (lc, Just Optimize, m) = do
+    mkTrace ref (lc, Left Optimize) = do
       eitherConf <- liftIO $ readIORef ref
       case eitherConf of
         Left (cmap, Nothing) ->
@@ -148,7 +146,7 @@ withNamespaceConfig name extract withConfig tr = do
             [val]  -> do
                         liftIO $ writeIORef ref $ Right val
                         Trace tt <- withConfig (Just val) tr
-                        T.traceWith tt (lc, Just Optimize, m)
+                        T.traceWith tt (lc, Left Optimize)
             _      -> let decidingDict =
                             foldl
                               (\acc e -> Map.insertWith (+) e (1 :: Int) acc)
@@ -161,27 +159,27 @@ withNamespaceConfig name extract withConfig tr = do
                       in do
                         liftIO $ writeIORef ref (Left (newmap, Just mostCommon))
                         Trace tt <- withConfig Nothing tr
-                        T.traceWith tt (lc, Just Optimize, m)
+                        T.traceWith tt (lc, Left Optimize)
         Right _val -> error $ "Trace not reset before reconfiguration (3)"
                             ++ show (lcNamespace lc)
         Left (_cmap, Just _v) ->
                       error $ "Trace not reset before reconfiguration (4)"
                                   ++ show (lcNamespace lc)
-    mkTrace ref (lc, Just dc@Document {}, a) = do
+    mkTrace ref (lc, Left dc@Document {}) = do
       eitherConf <- liftIO $ readIORef ref
       case eitherConf of
         Right val -> do
           tt <- withConfig (Just val) tr
           T.traceWith
-            (unpackTrace tt) (lc, Just dc, a)
+            (unpackTrace tt) (lc, Left dc)
         Left (cmap, Just v) ->
           case Map.lookup (lcNamespace lc) cmap of
                 Just val -> do
                   tt <- withConfig (Just val) tr
-                  T.traceWith (unpackTrace tt) (lc, Just dc, a)
+                  T.traceWith (unpackTrace tt) (lc, Left dc)
                 Nothing  -> do
                   tt <- withConfig (Just v) tr
-                  T.traceWith (unpackTrace tt) (lc, Just dc, a)
+                  T.traceWith (unpackTrace tt) (lc, Left dc)
         Left (_cmap, Nothing) -> error ("Missing configuration(2) " <> name <> " ns " <> show (lcNamespace lc))
 
 
@@ -196,15 +194,15 @@ filterSeverityFromConfig =
       (\ mbSev (Trace tr) ->
       pure $ Trace $ T.arrow $ T.emit $
         \case
-          (lc, Just c@Document {}, v) -> do
+          (lc, Left c@Document {}) -> do
             addFiltered c mbSev
             T.traceWith
               (unpackTrace (filterTraceBySeverity mbSev (Trace tr)))
-              (lc, Just c, v)
-          (lc, mbC, v) -> do
+              (lc, Left c)
+          (lc, cont) -> do
             T.traceWith
               (unpackTrace (filterTraceBySeverity mbSev (Trace tr)))
-              (lc, mbC, v))
+              (lc, cont))
 
 -- | Set detail level of a trace from the config
 withDetailsFromConfig :: (MonadIO m) =>
@@ -284,13 +282,13 @@ withLimitersFromConfig tr trl = do
     withLimiter (Just (Just (Limiter n d (Trace trli)))) (Trace tr') =
       pure $ Trace $ T.arrow $ T.emit $
         \ case
-          (lc, Nothing, v) ->
-            T.traceWith trli (lc, Nothing, v)
-          (lc, Just c@Document {}, v) -> do
+          (lc, Right v) ->
+            T.traceWith trli (lc, Right v)
+          (lc, Left c@Document {}) -> do
             addLimiter c (n, d)
-            T.traceWith tr' (lc, Just c, v)
-          (lc, Just c, v) ->
-            T.traceWith tr' (lc, Just c, v)
+            T.traceWith tr' (lc, Left c)
+          (lc, Left c) ->
+            T.traceWith tr' (lc, Left c)
 
 --------------------------------------------------------
 
@@ -301,7 +299,7 @@ getSeverity config ns =
   where
     severitySelector :: ConfigOption -> Maybe SeverityF
     severitySelector (ConfSeverity s) = Just s
-    severitySelector _                = Nothing
+    severitySelector _              = Nothing
 
 getSeverity' :: Applicative m => TraceConfig -> Namespace -> m SeverityF
 getSeverity' config ns = pure $ getSeverity config ns
@@ -313,7 +311,7 @@ getDetails config ns =
   where
     detailSelector :: ConfigOption -> Maybe DetailLevel
     detailSelector (ConfDetail d) = Just d
-    detailSelector _              = Nothing
+    detailSelector _            = Nothing
 
 getDetails' :: Applicative m => TraceConfig -> Namespace -> m DetailLevel
 getDetails' config ns = pure $ getDetails config ns
@@ -327,7 +325,7 @@ getBackends config ns =
   where
     backendSelector :: ConfigOption -> Maybe [BackendConfig]
     backendSelector (ConfBackend s) = Just s
-    backendSelector _               = Nothing
+    backendSelector _             = Nothing
 
 getBackends' :: Applicative m => TraceConfig -> Namespace -> m [BackendConfig]
 getBackends' config ns = pure $ getBackends config ns
@@ -338,7 +336,7 @@ getLimiterSpec = getOption limiterSelector
   where
     limiterSelector :: ConfigOption -> Maybe (Text, Double)
     limiterSelector (ConfLimiter n f) = Just (n, f)
-    limiterSelector _                 = Nothing
+    limiterSelector _               = Nothing
 
 
 -- | Searches in the config to find an option

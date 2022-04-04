@@ -1,6 +1,6 @@
-{-# LANGUAGE DeriveGeneric       #-}
-{-# LANGUAGE FlexibleInstances   #-}
-{-# LANGUAGE RecordWildCards     #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 
@@ -8,7 +8,8 @@ module Examples.Aggregation (
   testAggregation
 ) where
 
-import qualified Data.Aeson as A
+import           Data.Aeson (Value (..), (.=))
+import           Data.Text (pack)
 import           GHC.Generics (Generic)
 
 import           Cardano.Logging
@@ -21,27 +22,37 @@ data BaseStats = BaseStats {
     bsSum     :: Double
     } deriving (Eq, Ord, Show, Generic)
 
-instance A.ToJSON BaseStats where
-  toEncoding = A.genericToEncoding A.defaultOptions
 
 instance LogFormatting BaseStats where
-  forMachine = mempty
+  forMachine _dtal BaseStats{..} =
+      mconcat
+        [ "kind" .= Data.Aeson.String "BaseStats"
+        , "bsMeasure" .= String (pack $ show bsMeasure)
+        , "bsMin" .= String (pack $ show bsMin)
+        , "bsMax" .= String (pack $ show bsMax)
+        , "bsCount" .= String (pack $ show bsCount)
+        , "bsSum" .= String (pack $ show bsSum)
+        ]
   asMetrics BaseStats {..} =
     [ DoubleM "measure" bsMeasure
     , DoubleM "sum" bsSum]
 
 baseStatsDocumented :: Documented Double
-baseStatsDocumented =
-  Documented
-  [ DocMsg 0.0 [] "This is the value of the measurement"
-  , DocMsg 0.0 [] "This is the sum of all measurements so far"
+baseStatsDocumented = Documented
+  [
+    DocMsg
+      ["BaseStats"]
+      [ ("measure", "This is the value of a single measurment")
+      , ("sum", "This is the sum of all measurments")
+      ]
+      "Basic statistics"
   ]
 
 emptyStats :: BaseStats
 emptyStats = BaseStats 0.0 100000000.0 (-100000000.0) 0 0.0
 
-calculate :: BaseStats -> LoggingContext -> Maybe TraceControl -> Double -> BaseStats
-calculate BaseStats{..} _ _ val =
+calculate :: BaseStats -> LoggingContext -> Double -> BaseStats
+calculate BaseStats{..} _ val =
     BaseStats
       val
       (min bsMin val)
@@ -52,7 +63,8 @@ calculate BaseStats{..} _ _ val =
 testAggregation :: IO ()
 testAggregation = do
     simpleTracer <- standardTracer
-    formTracer <- humanFormatter True "cardano" simpleTracer
+    formTracer <- fmap (appendName "BaseTrace")
+                      (humanFormatter True "cardano" simpleTracer)
     tracer <- foldTraceM calculate emptyStats formTracer
     configureTracers emptyTraceConfig baseStatsDocumented [tracer]
     traceWith tracer 1.0

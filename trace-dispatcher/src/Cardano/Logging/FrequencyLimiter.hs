@@ -129,15 +129,9 @@ limitFrequency thresholdFrequency limiterName vtracer ltracer = do
          Double
       -> FrequencyRec a
       -> LoggingContext
-      -> Maybe TraceControl
       -> a
       -> m (FrequencyRec a)
-    checkLimiting _thresholdPeriod fs@FrequencyRec{} lc (Just c) message = do
-      T.traceWith
-        (unpackTrace ltracer)
-        (lc, Just c, StartLimiting "configure")
-      pure fs {frMessage = Just message}
-    checkLimiting thresholdPeriod fs@FrequencyRec{..} lc Nothing message = do
+    checkLimiting thresholdPeriod fs@FrequencyRec{..} lc message = do
       timeNow <- liftIO $ systemTimeToSeconds <$> getSystemTime
       let elapsedTime      = timeNow - frLastTime
       -- How many times too quick does the message arrive (thresholdPeriod / elapsedTime)
@@ -214,9 +208,11 @@ limitFrequency thresholdFrequency limiterName vtracer ltracer = do
                              , frActive      = Just (nSuppressed + 1, lastTimeSend)
                              }
     unfoldTrace ::
-         (LoggingContext, Maybe TraceControl, Folding a (FrequencyRec a))
-      -> (LoggingContext, Maybe TraceControl, Maybe a)
-    unfoldTrace (lc, mbC, Folding FrequencyRec {..}) = (lc, mbC, frMessage)
+         (LoggingContext, Either TraceControl (Folding a (FrequencyRec a)))
+      -> (LoggingContext, Either TraceControl (Maybe a))
+    unfoldTrace (lc, Right (Folding FrequencyRec {..})) = (lc, Right frMessage)
+    unfoldTrace (lc, Left ctrl) = (lc, Left ctrl)
+
 
     systemTimeToSeconds :: SystemTime -> Double
     systemTimeToSeconds MkSystemTime {..} =

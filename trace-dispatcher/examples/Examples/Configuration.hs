@@ -26,24 +26,25 @@ instance LogFormatting TestMessage where
 
 testMessageDocumented :: Documented TestMessage
 testMessageDocumented = Documented
-  [ DocMsg (TestMessage "dummy") [] "just a text"
+  [ DocMsg ["TestMessage"] [] "just a text"
   ]
 
-tracers :: MonadIO m => m (Trace m TestMessage, Trace m TestMessage)
+tracers :: MonadIO m => m (Trace m TestMessage, Trace m TestMessage, Trace m TestMessage)
 tracers  = do
-  t <- standardTracer
+  t <-  standardTracer
   t0 <- humanFormatter True "cardano" t
-  t1 <- appendName "tracer1" <$> filterSeverityFromConfig t0
-  t2 <- appendName "tracer2" <$> filterSeverityFromConfig t0
-  pure (t1, t2)
+  t1 <- appendName "TestMessage" . appendName "tracer1" <$> filterSeverityFromConfig t0
+  t2 <- appendName "TestMessage" . appendName "tracer2" <$> filterSeverityFromConfig t0
+  t3 <- appendName "TestMessage" . appendName "tracer3" <$> filterSeverityFromConfig t0
+  pure (t1, t2, t3)
 
 config1 :: TraceConfig
 config1 = TraceConfig {
       tcOptions = Map.fromList
           [ ([], [ConfSeverity (SeverityF Nothing)])
-          , (["tracer1"], [ConfSeverity (SeverityF (Just Error))])
-          , (["tracer2"], [ConfSeverity (SeverityF (Just Critical))])
-          , (["tracer2","bubble"], [ConfSeverity (SeverityF (Just Info))])
+          , (["tracer1","TestMessage"], [ConfSeverity (SeverityF (Just Error))])
+          , (["tracer2","TestMessage"], [ConfSeverity (SeverityF (Just Critical))])
+          , (["tracer3","TestMessage"], [ConfSeverity (SeverityF (Just Info))])
           ]
     , tcForwarder = TraceOptionForwarder {
         tofAddress = LocalSocket "forwarder.log"
@@ -61,8 +62,8 @@ config2 :: TraceConfig
 config2 = TraceConfig {
       tcOptions = Map.fromList
         [ ([], [ConfSeverity (SeverityF (Just Info))])
-        , (["tracer2"], [ConfSeverity (SeverityF (Just Warning))])
-        , (["tracer2","bubble"], [ConfSeverity (SeverityF (Just Debug))])
+        , (["tracer2","TestMessage"], [ConfSeverity (SeverityF (Just Warning))])
+        , (["tracer3","TestMessage"], [ConfSeverity (SeverityF (Just Warning))])
         ]
     , tcForwarder = TraceOptionForwarder {
         tofAddress = LocalSocket "forwarder.log"
@@ -76,10 +77,14 @@ config2 = TraceConfig {
     , tcResourceFreqency = Nothing
     }
 
-testConfig' :: TraceConfig -> Trace IO TestMessage -> Trace IO TestMessage -> IO ()
-testConfig' tc t1 t2 = do
-    let bubbleTracer = appendName "bubble" t2
-    configureTracers tc testMessageDocumented [t1, t2]
+testConfig' ::
+     TraceConfig
+  -> Trace IO TestMessage
+  -> Trace IO TestMessage
+  -> Trace IO TestMessage
+  -> IO ()
+testConfig' tc t1 t2 t3 = do
+    configureTracers tc testMessageDocumented [t1, t2, t3]
     traceWith (setSeverity Critical t1) (TestMessage "Now setting config")
     traceWith
       (setSeverity Error t1)
@@ -88,7 +93,7 @@ testConfig' tc t1 t2 = do
       (setSeverity Info t1)
       (TestMessage "2: show not with config1 but with config2")
     traceWith
-      (setSeverity Notice bubbleTracer)
+      (setSeverity Notice t3)
       (TestMessage "3: show with config1 but not with config2")
     traceWith
       (setSeverity Warning t2)
@@ -99,6 +104,6 @@ testConfig' tc t1 t2 = do
 
 testConfig :: IO ()
 testConfig = do
-  (t1, t2) <- tracers
-  testConfig' config1 t1 t2
-  testConfig' config2 t1 t2
+  (t1, t2, t3) <- tracers
+  testConfig' config1 t1 t2 t3
+  testConfig' config2 t1 t2 t3

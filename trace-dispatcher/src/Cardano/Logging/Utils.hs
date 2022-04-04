@@ -2,8 +2,9 @@
 {-# LANGUAGE PackageImports #-}
 
 module Cardano.Logging.Utils (
-  runInLoop,
-  uncurry3
+    runInLoop
+  , uncurry3
+  , mapSnd
   ) where
 
 import           Control.Concurrent (threadDelay)
@@ -36,3 +37,6 @@ runInLoop action localSocket prevDelayInSecs =
 -- | Converts a curried function to a function on a triple.
 uncurry3 :: (a -> b -> c -> d) -> (a, b, c) -> d
 uncurry3 f (a,b,c) = f a b c
+
+mapSnd :: (a -> b) -> (c, a) -> (c, b)
+mapSnd f (x,y) = (x,f y)
