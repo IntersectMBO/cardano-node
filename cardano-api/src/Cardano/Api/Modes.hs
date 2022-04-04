@@ -150,6 +150,7 @@ data EraInMode era mode where
      AllegraEraInCardanoMode :: EraInMode AllegraEra CardanoMode
      MaryEraInCardanoMode    :: EraInMode MaryEra    CardanoMode
      AlonzoEraInCardanoMode  :: EraInMode AlonzoEra  CardanoMode
+     BabbageEraInCardanoMode :: EraInMode BabbageEra  CardanoMode
 
 deriving instance Show (EraInMode era mode)
 
@@ -217,6 +218,7 @@ instance ToJSON (EraInMode era mode) where
   toJSON AllegraEraInCardanoMode = "AllegraEraInCardanoMode"
   toJSON MaryEraInCardanoMode = "MaryEraInCardanoMode"
   toJSON AlonzoEraInCardanoMode = "AlonzoEraInCardanoMode"
+  toJSON BabbageEraInCardanoMode = "BabbageEraInCardanoMode"
 
 eraInModeToEra :: EraInMode era mode -> CardanoEra era
 eraInModeToEra ByronEraInByronMode     = ByronEra
@@ -226,6 +228,7 @@ eraInModeToEra ShelleyEraInCardanoMode = ShelleyEra
 eraInModeToEra AllegraEraInCardanoMode = AllegraEra
 eraInModeToEra MaryEraInCardanoMode    = MaryEra
 eraInModeToEra AlonzoEraInCardanoMode  = AlonzoEra
+eraInModeToEra BabbageEraInCardanoMode = BabbageEra
 
 
 data AnyEraInMode mode where
@@ -244,6 +247,7 @@ anyEraInModeToAnyEra (AnyEraInMode erainmode) =
     AllegraEraInCardanoMode -> AnyCardanoEra AllegraEra
     MaryEraInCardanoMode    -> AnyCardanoEra MaryEra
     AlonzoEraInCardanoMode  -> AnyCardanoEra AlonzoEra
+    BabbageEraInCardanoMode -> AnyCardanoEra BabbageEra
 
 
 -- | The consensus-mode-specific parameters needed to connect to a local node
@@ -320,6 +324,7 @@ toConsensusEraIndex ShelleyEraInCardanoMode = eraIndex1
 toConsensusEraIndex AllegraEraInCardanoMode = eraIndex2
 toConsensusEraIndex MaryEraInCardanoMode    = eraIndex3
 toConsensusEraIndex AlonzoEraInCardanoMode  = eraIndex4
+toConsensusEraIndex BabbageEraInCardanoMode = error "TODO: Babbage era"
 
 
 fromConsensusEraIndex :: ConsensusBlockForMode mode ~ Consensus.HardForkBlock xs
