@@ -22,14 +22,16 @@ let
         })
       ];
     };
-
-  in pkgs.writeScriptBin "cardano-node-${service.environment}" ''
+  scriptBin = pkgs.writeScriptBin "cardano-node-${service.environment}" ''
     #!${pkgs.runtimeShell}
     export PATH=$PATH:${makeBinPath [ pkgs.coreutils ]}
     set -euo pipefail
     mkdir -p "$(dirname "${service.socketPath}")"
     ${service.script} $@
   '';
+  in scriptBin // {
+    exePath = "${scriptBin}/bin/cardano-node-${service.environment}";
+  };
 
 in forEnvironments (environment: recurseIntoAttrs rec {
   node = mkScript environment;
