@@ -918,6 +918,7 @@ writeFilteredUTxOs shelleyBasedEra' mOutFile utxo =
           ShelleyBasedEraAllegra -> writeUTxo fpath utxo
           ShelleyBasedEraMary -> writeUTxo fpath utxo
           ShelleyBasedEraAlonzo -> writeUTxo fpath utxo
+          ShelleyBasedEraBabbage -> panic "TODO: Babbage"
  where
    writeUTxo fpath utxo' =
      handleIOExceptT (ShelleyQueryCmdWriteFileError . FileIOError fpath)
@@ -936,6 +937,7 @@ printFilteredUTxOs shelleyBasedEra' (UTxO utxo) = do
       mapM_ (printUtxo shelleyBasedEra') $ Map.toList utxo
     ShelleyBasedEraAlonzo ->
       mapM_ (printUtxo shelleyBasedEra') $ Map.toList utxo
+    ShelleyBasedEraBabbage -> panic "TODO: Babbage"
  where
    title :: Text
    title =
@@ -980,6 +982,7 @@ printUtxo shelleyBasedEra' txInOutTuple =
              , textShowN 6 index
              , "        " <> printableValue value <> " + " <> Text.pack (show mDatum)
              ]
+    ShelleyBasedEraBabbage -> panic "TODO: Babbage"
  where
   textShowN :: Show a => Int -> a -> Text
   textShowN len x =
@@ -1367,6 +1370,7 @@ obtainLedgerEraClassConstraints ShelleyBasedEraShelley f = f
 obtainLedgerEraClassConstraints ShelleyBasedEraAllegra f = f
 obtainLedgerEraClassConstraints ShelleyBasedEraMary    f = f
 obtainLedgerEraClassConstraints ShelleyBasedEraAlonzo  f = f
+obtainLedgerEraClassConstraints ShelleyBasedEraBabbage _f = panic "TODO: Babbage"
 
 
 eligibleLeaderSlotsConstaints
@@ -1386,3 +1390,4 @@ eligibleLeaderSlotsConstaints ShelleyBasedEraShelley f = f
 eligibleLeaderSlotsConstaints ShelleyBasedEraAllegra f = f
 eligibleLeaderSlotsConstaints ShelleyBasedEraMary    f = f
 eligibleLeaderSlotsConstaints ShelleyBasedEraAlonzo  f = f
+eligibleLeaderSlotsConstaints ShelleyBasedEraBabbage _f = panic "TODO: Babbage"
