@@ -139,6 +139,7 @@ instance Eq (Tx era) where
         ShelleyBasedEraAllegra -> txA == txB
         ShelleyBasedEraMary    -> txA == txB
         ShelleyBasedEraAlonzo  -> txA == txB
+        ShelleyBasedEraBabbage -> txA == txB
 
     (==) ByronTx{} (ShelleyTx era _) = case era of {}
 
@@ -169,6 +170,10 @@ instance Show (Tx era) where
         showString "ShelleyTx ShelleyBasedEraAlonzo "
       . showsPrec 11 tx
 
+    showsPrec p (ShelleyTx ShelleyBasedEraBabbage tx) =
+      showParen (p >= 11) $
+        showString "ShelleyTx ShelleyBasedEraBabbage "
+      . showsPrec 11 tx
 
 instance HasTypeProxy era => HasTypeProxy (Tx era) where
     data AsType (Tx era) = AsTx (AsType era)
@@ -205,6 +210,7 @@ instance IsCardanoEra era => SerialiseAsCBOR (Tx era) where
         ShelleyBasedEraAllegra -> serialiseShelleyBasedTx tx
         ShelleyBasedEraMary    -> serialiseShelleyBasedTx tx
         ShelleyBasedEraAlonzo  -> serialiseShelleyBasedTx tx
+        ShelleyBasedEraBabbage -> serialiseShelleyBasedTx tx
 
     deserialiseFromCBOR _ bs =
       case cardanoEra :: CardanoEra era of
@@ -222,6 +228,8 @@ instance IsCardanoEra era => SerialiseAsCBOR (Tx era) where
                         (ShelleyTx ShelleyBasedEraMary) bs
         AlonzoEra  -> deserialiseShelleyBasedTx
                         (ShelleyTx ShelleyBasedEraAlonzo) bs
+        BabbageEra -> deserialiseShelleyBasedTx
+                        (ShelleyTx ShelleyBasedEraBabbage) bs
 
 -- | The serialisation format for the different Shelley-based eras are not the
 -- same, but they can be handled generally with one overloaded implementation.
@@ -245,6 +253,7 @@ instance IsCardanoEra era => HasTextEnvelope (Tx era) where
         AllegraEra -> "Tx AllegraEra"
         MaryEra    -> "Tx MaryEra"
         AlonzoEra  -> "Tx AlonzoEra"
+        BabbageEra -> "Tx BabbageEra"
 
 
 data KeyWitness era where
@@ -276,6 +285,7 @@ instance Eq (KeyWitness era) where
         ShelleyBasedEraAllegra -> wA == wB
         ShelleyBasedEraMary    -> wA == wB
         ShelleyBasedEraAlonzo  -> wA == wB
+        ShelleyBasedEraBabbage -> wA == wB
 
     (==) (ShelleyKeyWitness era wA)
          (ShelleyKeyWitness _   wB) =
@@ -284,6 +294,7 @@ instance Eq (KeyWitness era) where
         ShelleyBasedEraAllegra -> wA == wB
         ShelleyBasedEraMary    -> wA == wB
         ShelleyBasedEraAlonzo  -> wA == wB
+        ShelleyBasedEraBabbage -> wA == wB
 
     (==) _ _ = False
 
@@ -316,6 +327,11 @@ instance Show (KeyWitness era) where
         showString "ShelleyBootstrapWitness ShelleyBasedEraAlonzo "
       . showsPrec 11 tx
 
+    showsPrec p (ShelleyBootstrapWitness ShelleyBasedEraBabbage tx) =
+      showParen (p >= 11) $
+        showString "ShelleyBootstrapWitness ShelleyBasedEraBabbage "
+      . showsPrec 11 tx
+
     showsPrec p (ShelleyKeyWitness ShelleyBasedEraShelley tx) =
       showParen (p >= 11) $
         showString "ShelleyKeyWitness ShelleyBasedEraShelley "
@@ -336,6 +352,10 @@ instance Show (KeyWitness era) where
         showString "ShelleyKeyWitness ShelleyBasedEraAlonzo "
       . showsPrec 11 tx
 
+    showsPrec p (ShelleyKeyWitness ShelleyBasedEraBabbage tx) =
+      showParen (p >= 11) $
+        showString "ShelleyKeyWitness ShelleyBasedEraBabbage "
+      . showsPrec 11 tx
 
 instance HasTypeProxy era => HasTypeProxy (KeyWitness era) where
     data AsType (KeyWitness era) = AsKeyWitness (AsType era)
@@ -373,6 +393,7 @@ instance IsCardanoEra era => SerialiseAsCBOR (KeyWitness era) where
         AllegraEra -> decodeShelleyBasedWitness ShelleyBasedEraAllegra bs
         MaryEra    -> decodeShelleyBasedWitness ShelleyBasedEraMary    bs
         AlonzoEra  -> decodeShelleyBasedWitness ShelleyBasedEraAlonzo  bs
+        BabbageEra -> decodeShelleyBasedWitness ShelleyBasedEraBabbage bs
 
 
 encodeShelleyBasedKeyWitness :: ToCBOR w => w -> CBOR.Encoding
@@ -409,6 +430,7 @@ instance IsCardanoEra era => HasTextEnvelope (KeyWitness era) where
         AllegraEra -> "TxWitness AllegraEra"
         MaryEra    -> "TxWitness MaryEra"
         AlonzoEra  -> "TxWitness AlonzoEra"
+        BabbageEra -> "TxWitness BabbageEra"
 
 pattern Tx :: TxBody era -> [KeyWitness era] -> Tx era
 pattern Tx txbody ws <- (getTxBodyAndWitnesses -> (txbody, ws))
@@ -429,6 +451,7 @@ getTxBody (ShelleyTx era tx) =
       ShelleyBasedEraAllegra -> getShelleyTxBody tx
       ShelleyBasedEraMary    -> getShelleyTxBody tx
       ShelleyBasedEraAlonzo  -> getAlonzoTxBody ScriptDataInAlonzoEra TxScriptValiditySupportedInAlonzoEra tx
+      ShelleyBasedEraBabbage -> error "TODO: Babbage"
   where
     getShelleyTxBody :: forall ledgerera.
                         ShelleyLedgerEra era ~ ledgerera
@@ -491,6 +514,7 @@ getTxWitnesses (ShelleyTx era tx) =
       ShelleyBasedEraAllegra -> getShelleyTxWitnesses tx
       ShelleyBasedEraMary    -> getShelleyTxWitnesses tx
       ShelleyBasedEraAlonzo  -> getAlonzoTxWitnesses  tx
+      ShelleyBasedEraBabbage -> error "TODO: Babbage"
   where
     getShelleyTxWitnesses :: forall ledgerera.
                              ToCBOR (Ledger.AuxiliaryData ledgerera)
@@ -551,6 +575,7 @@ makeSignedTransaction witnesses (ShelleyTxBody era txbody
       ShelleyBasedEraAllegra -> makeShelleySignedTransaction txbody
       ShelleyBasedEraMary    -> makeShelleySignedTransaction txbody
       ShelleyBasedEraAlonzo  -> makeAlonzoSignedTransaction  txbody
+      ShelleyBasedEraBabbage -> error "TODO: Babbage era"
   where
     makeShelleySignedTransaction
       :: forall ledgerera.
@@ -674,6 +699,8 @@ makeShelleyBootstrapWitness nwOrAddr (ShelleyTxBody era txbody _ _ _ _) sk =
         makeShelleyBasedBootstrapWitness era nwOrAddr txbody sk
       ShelleyBasedEraAlonzo  ->
         makeShelleyBasedBootstrapWitness era nwOrAddr txbody sk
+      ShelleyBasedEraBabbage -> error "TODO: Babbage"
+
 
 makeShelleyBasedBootstrapWitness :: forall era.
                                     (Ledger.HashAnnotated
@@ -783,6 +810,7 @@ makeShelleyKeyWitness (ShelleyTxBody era txbody _ _ _ _) =
       ShelleyBasedEraAllegra -> makeShelleyBasedKeyWitness txbody
       ShelleyBasedEraMary    -> makeShelleyBasedKeyWitness txbody
       ShelleyBasedEraAlonzo  -> makeShelleyBasedKeyWitness txbody
+      ShelleyBasedEraBabbage -> error "TODO: Babbage"
   where
     makeShelleyBasedKeyWitness :: Shelley.UsesValue (ShelleyLedgerEra era)
                                => Ledger.Crypto (ShelleyLedgerEra era) ~ StandardCrypto
