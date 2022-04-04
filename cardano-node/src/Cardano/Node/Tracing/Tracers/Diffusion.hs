@@ -197,7 +197,7 @@ docMux' = Documented [
         []
         "Channel send end."
     , DocMsg
-        ["HandshakeStart "]
+        ["HandshakeStart"]
         []
         "Handshake start."
     , DocMsg

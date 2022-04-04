@@ -72,12 +72,6 @@ documentTracers (Documented documented) tracers = do
 showT :: Show a => a -> Text
 showT = pack . show
 
--- appDoc :: (Namespace -> Namespace) -> DocMsg a -> DocMsg b
--- appDoc f DocMsg {..} = DocMsg  (f dmNamespace) dmMetricsMD dmMarkdown
---
--- mapDoc :: (Namespace -> Namespace) -> [DocMsg a] -> [DocMsg b]
--- mapDoc f = map (appDoc f)
-
 addDocumentedNamespace  :: Namespace -> Documented a -> Documented b
 addDocumentedNamespace  ns (Documented list) =
   Documented $ map

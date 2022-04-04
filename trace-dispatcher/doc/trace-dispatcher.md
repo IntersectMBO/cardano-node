@@ -629,7 +629,7 @@ mkDataPointTracer :: forall dp. ToJSON dp
   -> IO (Trace IO dp)
 mkDataPointTracer trDataPoint namesFor = do
     let tr = NT.contramap DataPoint trDataPoint
-    pure $ withNamesAppended namesFor tr```
+    pure $ withNamesAppended namesFor tr
 ```
 
 Also, [there is a document](https://github.com/input-output-hk/cardano-node/wiki/cardano-node-and-DataPoints:-demo)
@@ -653,9 +653,9 @@ Because all these tracers are defined as part of the __dispatcher__ definition, 
 ## Cardano tracer
 
 We provide a standard interface to construct a tracer to be used within cardano node.
-The tracer gets as arguments the backends: 'trStdout', 'trForward' and 'mbTrEkg'.
-The tracer gets as argument a 'name', which is appended to its namespace. The tracer gets as
-arguments 'namesFor', 'severityFor' and 'privacyFor' functions, to set the logging context accordingly. The returned tracer need to be configured with a configuration for the specification of filtering, detailLevel, frequencyLimiting and backends with a configuration before use.
+The tracer gets as arguments the backends: `trStdout`, `trForward` and `mbTrEkg`.
+The tracer gets as argument a `name`, which is appended to its namespace. The tracer gets as
+arguments `namesFor`, `severityFor` and `privacyFor` functions, to set the logging context accordingly. The returned tracer need to be configured with a configuration for the specification of filtering, detailLevel, frequencyLimiting and backends with a configuration before use.
 
 ```haskell
 mkCardanoTracer :: forall evt.
