@@ -162,6 +162,7 @@ friendlyTxOut (TxOut addr amount mdatum) =
           datum ShelleyBasedEraAllegra = []
           datum ShelleyBasedEraMary = []
           datum ShelleyBasedEraAlonzo = ["datum" .= renderDatum mdatum]
+          datum ShelleyBasedEraBabbage = panic "TODO: Babbage"
       in object $ preAlonzo ++ datum sbe
   where
    renderDatum :: TxOutDatum CtxTx era -> Aeson.Value
@@ -170,7 +171,7 @@ friendlyTxOut (TxOut addr amount mdatum) =
      Aeson.String $ serialiseToRawBytesHexText h
    renderDatum (TxOutDatum _ sData) =
      scriptDataToJson ScriptDataJsonDetailedSchema sData
-
+   renderDatum (TxOutInlineDatum _ _) = panic "TODO: Babbage"
 
 friendlyStakeReference :: Crypto crypto => Shelley.StakeReference crypto -> Aeson.Value
 friendlyStakeReference = \case
