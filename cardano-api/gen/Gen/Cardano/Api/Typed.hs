@@ -781,7 +781,7 @@ genTxOutDatumHash era = case era of
     AlonzoEra  -> Gen.choice
                     [ pure TxOutDatumNone
                     , TxOutDatumHash ScriptDataInAlonzoEra <$> genHashScriptData
-                    , TxOutDatum     ScriptDataInAlonzoEra <$> genScriptData
+                    , TxOutDatumInTx ScriptDataInAlonzoEra <$> genScriptData
                     ]
     BabbageEra -> pure TxOutDatumNone -- TODO: Babbage Era
 
