@@ -281,6 +281,7 @@ runChairman tracer networkId runningTime socketPaths cModeParams secParam = do
                 { localChainSyncClient = chairmanChainSyncClient
                 , localTxSubmissionClient = Nothing
                 , localStateQueryClient = Nothing
+                , localTxMonitoringClient = Nothing
                 }
           in connectToLocalNode localConnInfo protocolsInMode
 

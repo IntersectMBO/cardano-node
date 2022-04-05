@@ -9,20 +9,20 @@ module Cardano.Api.IPC.Monad
   , determineEraExpr
   ) where
 
-import Cardano.Api.Block
-import Cardano.Api.Eras
-import Cardano.Api.IPC
-import Cardano.Api.Modes
-import Control.Applicative
-import Control.Concurrent.STM
-import Control.Monad
-import Control.Monad.IO.Class
-import Control.Monad.Trans.Cont
-import Data.Either
-import Data.Function
-import Data.Maybe
-import Cardano.Ledger.Shelley.Scripts ()
-import System.IO
+import           Cardano.Api.Block
+import           Cardano.Api.Eras
+import           Cardano.Api.IPC
+import           Cardano.Api.Modes
+import           Cardano.Ledger.Shelley.Scripts ()
+import           Control.Applicative
+import           Control.Concurrent.STM
+import           Control.Monad
+import           Control.Monad.IO.Class
+import           Control.Monad.Trans.Cont
+import           Data.Either
+import           Data.Function
+import           Data.Maybe
+import           System.IO
 
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Client as Net.Query
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as Net.Query
@@ -62,6 +62,7 @@ executeLocalStateQueryExpr connectInfo mpoint f = do
       { localChainSyncClient    = NoLocalChainSyncClient
       , localStateQueryClient   = Just $ setupLocalStateQueryExpr waitResult mpoint tmvResultLocalState (f ntcVersion)
       , localTxSubmissionClient = Nothing
+      , localTxMonitoringClient = Nothing
       }
     )
 

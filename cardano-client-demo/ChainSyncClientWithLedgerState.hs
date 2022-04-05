@@ -66,7 +66,8 @@ main = do
           LocalNodeClientProtocols {
             localChainSyncClient    = LocalChainSyncClient client,
             localTxSubmissionClient = Nothing,
-            localStateQueryClient   = Nothing
+            localStateQueryClient   = Nothing,
+            localTxMonitoringClient = Nothing
           }
 
   -- Connect to the node.
