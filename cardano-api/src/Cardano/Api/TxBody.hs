@@ -51,7 +51,7 @@ module Cardano.Api.TxBody (
     CtxTx, CtxUTxO,
     TxOut(..),
     TxOutValue(..),
-    TxOutDatum(TxOutDatumNone, TxOutDatumHash, TxOutDatum, TxOutInlineDatum),
+    TxOutDatum(TxOutDatumNone, TxOutDatumHash, TxOutDatumInTx, TxOutDatumInline),
     toCtxUTxOTxOut,
     lovelaceToTxOutValue,
     prettyRenderTxOut,
@@ -508,8 +508,8 @@ toCtxUTxOTxOut (TxOut addr val d) =
   let dat = case d of
               TxOutDatumNone -> TxOutDatumNone
               TxOutDatumHash s h -> TxOutDatumHash s h
-              TxOutDatum' s h _ -> TxOutDatumHash s h
-              TxOutInlineDatum s sd -> TxOutInlineDatum s sd
+              TxOutDatumInTx' s h _ -> TxOutDatumHash s h
+              TxOutDatumInline s sd -> TxOutDatumInline s sd
   in TxOut addr val dat
 
 instance IsCardanoEra era => ToJSON (TxOut ctx era) where
@@ -522,13 +522,13 @@ instance IsCardanoEra era => ToJSON (TxOut ctx era) where
            , "value"     .= val
            , "datumhash" .= h
            ]
-  toJSON (TxOut addr val (TxOutDatum' _ h d)) =
+  toJSON (TxOut addr val (TxOutDatumInTx' _ h d)) =
     object [ "address"   .= addr
            , "value"     .= val
            , "datumhash" .= h
            , "datum"     .= scriptDataToJson ScriptDataJsonDetailedSchema d
            ]
-  toJSON (TxOut addr val (TxOutInlineDatum _ d)) =
+  toJSON (TxOut addr val (TxOutDatumInline _ d)) =
     object [ "address"         .= addr
            , "value"           .= val
            , "inlineDatumhash" .= hashScriptData d
@@ -556,7 +556,7 @@ instance (IsShelleyBasedEra era, IsCardanoEra era)
                     fail $ "Error parsing TxOut JSON: " <> displayError err
                   Right sData -> do
                     dHash <- runParsecParser (parseHash $ AsHash AsScriptData) dHashTxt
-                    pure . TxOut addr val $ TxOutDatum' supported dHash sData
+                    pure . TxOut addr val $ TxOutDatumInTx' supported dHash sData
               (mDatVal, wrongDatumHashFormat) ->
                 fail $ "Error parsing TxOut's datum hash/data: " <>
                        "\nData value:" <> show mDatVal <>
@@ -674,7 +674,7 @@ toAlonzoTxOutDataHash :: TxOutDatum CtxUTxO era
                       -> StrictMaybe (Alonzo.DataHash StandardCrypto)
 toAlonzoTxOutDataHash  TxOutDatumNone                        = SNothing
 toAlonzoTxOutDataHash (TxOutDatumHash _ (ScriptDataHash dh)) = SJust dh
-toAlonzoTxOutDataHash (TxOutInlineDatum _ sd) =
+toAlonzoTxOutDataHash (TxOutDatumInline _ sd) =
   let ScriptDataHash alonzoDataHash = hashScriptData sd
   in SJust alonzoDataHash
 
@@ -689,11 +689,11 @@ _toBabbageTxOutDatum
   => TxOutDatum CtxUTxO era -> Babbage.Datum (ShelleyBasedEra era)
 _toBabbageTxOutDatum  TxOutDatumNone                        = Babbage.NoDatum
 _toBabbageTxOutDatum (TxOutDatumHash _ (ScriptDataHash dh)) = Babbage.DatumHash dh
-_toBabbageTxOutDatum (TxOutInlineDatum _ sd) = scriptDataToBinaryData sd
--- TODO: Rename TxOutDatum' to TxOutAddDatumToDatumMap or something similar
+_toBabbageTxOutDatum (TxOutDatumInline _ sd) = scriptDataToBinaryData sd
+-- TODO: Rename TxOutDatumInTx' to TxOutAddDatumToDatumMap or something similar
 -- as we need to distinguish between this feature (which is an Alonzo feature)
 -- and the inline datum feature (which is a Babbage feature).
--- toBabbageTxOutDatum (TxOutDatum' _ (ScriptDataHash dh) _) = Babbage.DatumHash dh
+-- toBabbageTxOutDatum (TxOutDatumInTx' _ (ScriptDataHash dh) _) = Babbage.DatumHash dh
 
 -- ----------------------------------------------------------------------------
 -- Era-dependent transaction body features
@@ -1213,29 +1213,32 @@ data TxOutDatum ctx era where
      -- only be used in the context of the transaction body, and does not occur
      -- in the UTxO. The UTxO only contains the datum hash.
      --
-     TxOutDatum'      :: ScriptDataSupportedInEra era
+     TxOutDatumInTx'  :: ScriptDataSupportedInEra era
                       -> Hash ScriptData
                       -> ScriptData
                       -> TxOutDatum CtxTx era
 
      -- | A transaction output that specifies the whole datum instead of the
-     -- datum hash.
-     TxOutInlineDatum :: InlineDatumSupportedInEra era
+     -- datum hash. Note that the datum map will not be updated with this datum,
+     -- it only exists at the transaction output.
+     --
+     TxOutDatumInline :: InlineDatumSupportedInEra era
                       -> ScriptData
                       -> TxOutDatum ctx era
 
 deriving instance Eq   (TxOutDatum ctx era)
 deriving instance Show (TxOutDatum ctx era)
 
-pattern TxOutDatum :: ScriptDataSupportedInEra era
-                   -> ScriptData
-                   -> TxOutDatum CtxTx era
-pattern TxOutDatum s d  <- TxOutDatum' s _ d
+pattern TxOutDatumInTx
+  :: ScriptDataSupportedInEra era
+  -> ScriptData
+  -> TxOutDatum CtxTx era
+pattern TxOutDatumInTx s d <- TxOutDatumInTx' s _ d
   where
-    TxOutDatum s d = TxOutDatum' s (hashScriptData d) d
+    TxOutDatumInTx s d = TxOutDatumInTx' s (hashScriptData d) d
 
-{-# COMPLETE TxOutDatumNone, TxOutDatumHash, TxOutDatum', TxOutInlineDatum #-}
-{-# COMPLETE TxOutDatumNone, TxOutDatumHash, TxOutDatum , TxOutInlineDatum #-}
+{-# COMPLETE TxOutDatumNone, TxOutDatumHash, TxOutDatumInTx', TxOutDatumInline #-}
+{-# COMPLETE TxOutDatumNone, TxOutDatumHash, TxOutDatumInTx , TxOutDatumInline #-}
 
 
 data InlineDatumSupportedInEra era where
@@ -2020,8 +2023,8 @@ fromAlonzoTxOut multiAssetInEra scriptDataInEra txdatums
     fromAlonzoTxOutDatum _          SNothing = TxOutDatumNone
     fromAlonzoTxOutDatum supported (SJust dh)
       | Just d <- Map.lookup dh txdatums
-                  = TxOutDatum'    supported (ScriptDataHash dh)
-                                             (fromAlonzoData d)
+                  = TxOutDatumInTx' supported (ScriptDataHash dh)
+                                              (fromAlonzoData d)
       | otherwise = TxOutDatumHash supported (ScriptDataHash dh)
 
 fromLedgerTxFee
@@ -2820,7 +2823,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraAlonzo
 
     scriptdata :: [ScriptData]
     scriptdata =
-        [ d | TxOut _ _ (TxOutDatum _ d) <- txOuts ]
+        [ d | TxOut _ _ (TxOutDatumInTx _ d) <- txOuts ]
      ++ [ d | (_, AnyScriptWitness
                     (PlutusScriptWitness
                        _ _ _ (ScriptDatumForTxIn d) _ _)) <- witnesses
@@ -2888,7 +2891,7 @@ toAlonzoTxOutDataHash' :: TxOutDatum ctx era
                       -> StrictMaybe (Alonzo.DataHash StandardCrypto)
 toAlonzoTxOutDataHash'  TxOutDatumNone                          = SNothing
 toAlonzoTxOutDataHash' (TxOutDatumHash _ (ScriptDataHash dh))   = SJust dh
-toAlonzoTxOutDataHash' (TxOutDatum'    _ (ScriptDataHash dh) _) = SJust dh
+toAlonzoTxOutDataHash' (TxOutDatumInTx' _ (ScriptDataHash dh) _) = SJust dh
 toAlonzoTxOutDataHash' _ = error "TODO: Babbage"
 
 
