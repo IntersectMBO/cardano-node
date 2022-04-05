@@ -4521,11 +4521,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1646330344,
-        "narHash": "sha256-EbhMDeneH26wDi+x5kz8nfru/dE9JZ241hJed4a8lz8=",
+        "lastModified": 1648032999,
+        "narHash": "sha256-3uCz+gJppvM7z6CUCkBbFSu60WgIE+e3oXwXiAiGWSY=",
         "owner": "input-output-hk",
         "repo": "iohk-nix",
-        "rev": "0a0126d8fb1bdc61ce1fd2ef61cf396de800fdad",
+        "rev": "5e667b374153327c7bdfdbfab8ef19b1f27d4aac",
         "type": "github"
       },
       "original": {
