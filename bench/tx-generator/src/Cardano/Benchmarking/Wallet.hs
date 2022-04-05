@@ -172,6 +172,7 @@ genTx protocolParameters (collateral, collFunds) fee metadata witness inFunds ou
     ShelleyBasedEraAllegra -> TxValidityNoUpperBound ValidityNoUpperBoundInAllegraEra
     ShelleyBasedEraMary    -> TxValidityNoUpperBound ValidityNoUpperBoundInMaryEra
     ShelleyBasedEraAlonzo  -> TxValidityNoUpperBound ValidityNoUpperBoundInAlonzoEra
+    ShelleyBasedEraBabbage -> TxValidityNoUpperBound ValidityNoUpperBoundInBabbageEra
 
 newtype WalletScript era = WalletScript { runWalletScript :: IO (WalletStep era) }
 
@@ -232,3 +233,4 @@ mkTxOutValueAdaOnly l = case shelleyBasedEra @ era of
   ShelleyBasedEraAllegra -> TxOutAdaOnly AdaOnlyInAllegraEra l
   ShelleyBasedEraMary    -> TxOutValue MultiAssetInMaryEra $ lovelaceToValue l
   ShelleyBasedEraAlonzo  -> TxOutValue MultiAssetInAlonzoEra $ lovelaceToValue l
+  ShelleyBasedEraBabbage -> TxOutValue MultiAssetInBabbageEra $ lovelaceToValue l

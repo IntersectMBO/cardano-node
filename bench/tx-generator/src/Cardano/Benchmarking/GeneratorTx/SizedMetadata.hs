@@ -57,6 +57,7 @@ assumeMapCosts _proxy = stepFunction [
       ShelleyBasedEraMary    -> 39
  -- Unconfirmed ! update when alonzo is runnable.
       ShelleyBasedEraAlonzo  -> error "39"
+      ShelleyBasedEraBabbage -> error "39"
 
 -- Bytestring costs are not LINEAR !!
 -- Costs are piecewise linear for payload sizes [0..23] and [24..64].
@@ -127,6 +128,7 @@ metadataInEra (Just m) = case shelleyBasedEra @ era of
   ShelleyBasedEraAllegra -> TxMetadataInEra TxMetadataInAllegraEra m
   ShelleyBasedEraMary    -> TxMetadataInEra TxMetadataInMaryEra m
   ShelleyBasedEraAlonzo  -> TxMetadataInEra TxMetadataInAlonzoEra m
+  ShelleyBasedEraBabbage -> TxMetadataInEra TxMetadataInBabbageEra m
 
 mkMetadata :: forall era . IsShelleyBasedEra era => Int -> Either String (TxMetadataInEra era)
 mkMetadata 0 = Right $ metadataInEra Nothing
@@ -140,6 +142,7 @@ mkMetadata size
     ShelleyBasedEraAllegra -> 39
     ShelleyBasedEraMary    -> 39
     ShelleyBasedEraAlonzo  -> 39 -- TODO: check minSize for Alonzo
+    ShelleyBasedEraBabbage -> 39 -- TODO: check minSize for Babbage
   nettoSize = size - minSize
 
   -- At 24 the CBOR representation changes.
