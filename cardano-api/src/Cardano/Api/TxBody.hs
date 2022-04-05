@@ -624,10 +624,9 @@ toShelleyTxOut _ (TxOut addr (TxOutValue MultiAssetInAlonzoEra value) txoutdata)
     Alonzo.TxOut (toShelleyAddr addr) (toMaryValue value)
                  (toAlonzoTxOutDataHash txoutdata)
 
-toShelleyTxOut _ (TxOut _addr (TxOutValue MultiAssetInBabbageEra _value) _txoutdata) =
-    error "TODO: Babbage era"
-    --Babbage.TxOut (toShelleyAddr addr) (toMaryValue value)
-    --              (toBabbageTxOutDatum txoutdata) (undefined)
+toShelleyTxOut _ (TxOut addr (TxOutValue MultiAssetInBabbageEra value) txoutdata) =
+    Babbage.TxOut (toShelleyAddr addr) (toMaryValue value)
+                  (toBabbageTxOutDatum txoutdata) (error "TODO: Babbage era")
 
 
 fromShelleyTxOut :: ShelleyLedgerEra era ~ ledgerera
@@ -670,30 +669,30 @@ fromShelleyTxOut era ledgerTxOut =
 
     ShelleyBasedEraBabbage -> error "TODO: Babbage"
 
-toAlonzoTxOutDataHash :: TxOutDatum CtxUTxO era
-                      -> StrictMaybe (Alonzo.DataHash StandardCrypto)
+-- TODO: If ledger creates an open type family for datums
+-- we can consolidate this function with the Babbage version
+toAlonzoTxOutDataHash
+  :: TxOutDatum CtxUTxO AlonzoEra
+  -> StrictMaybe (Alonzo.DataHash StandardCrypto)
 toAlonzoTxOutDataHash  TxOutDatumNone                        = SNothing
 toAlonzoTxOutDataHash (TxOutDatumHash _ (ScriptDataHash dh)) = SJust dh
-toAlonzoTxOutDataHash (TxOutDatumInline _ sd) =
-  let ScriptDataHash alonzoDataHash = hashScriptData sd
-  in SJust alonzoDataHash
+toAlonzoTxOutDataHash (TxOutDatumInline inlineDatumSupp _sd) =
+  case inlineDatumSupp :: InlineDatumSupportedInEra AlonzoEra of {}
 
 fromAlonzoTxOutDataHash :: ScriptDataSupportedInEra era
                         -> StrictMaybe (Alonzo.DataHash StandardCrypto)
                         -> TxOutDatum ctx era
 fromAlonzoTxOutDataHash _    SNothing  = TxOutDatumNone
-fromAlonzoTxOutDataHash era (SJust dh) = TxOutDatumHash era (ScriptDataHash dh)
+fromAlonzoTxOutDataHash s (SJust dh)   = TxOutDatumHash s (ScriptDataHash dh)
 
-_toBabbageTxOutDatum
-  :: Ledger.Crypto (ShelleyBasedEra era) ~ StandardCrypto
-  => TxOutDatum CtxUTxO era -> Babbage.Datum (ShelleyBasedEra era)
-_toBabbageTxOutDatum  TxOutDatumNone                        = Babbage.NoDatum
-_toBabbageTxOutDatum (TxOutDatumHash _ (ScriptDataHash dh)) = Babbage.DatumHash dh
-_toBabbageTxOutDatum (TxOutDatumInline _ sd) = scriptDataToBinaryData sd
--- TODO: Rename TxOutDatumInTx' to TxOutAddDatumToDatumMap or something similar
--- as we need to distinguish between this feature (which is an Alonzo feature)
--- and the inline datum feature (which is a Babbage feature).
--- toBabbageTxOutDatum (TxOutDatumInTx' _ (ScriptDataHash dh) _) = Babbage.DatumHash dh
+-- TODO: If ledger creates an open type family for datums
+-- we can consolidate this function with the Alonzo version
+toBabbageTxOutDatum
+  :: Ledger.Crypto (ShelleyLedgerEra era) ~ StandardCrypto
+  => TxOutDatum CtxUTxO era -> Babbage.Datum (ShelleyLedgerEra era)
+toBabbageTxOutDatum  TxOutDatumNone = Babbage.NoDatum
+toBabbageTxOutDatum (TxOutDatumHash _ (ScriptDataHash dh)) = Babbage.DatumHash dh
+toBabbageTxOutDatum (TxOutDatumInline _ sd) = scriptDataToBinaryData sd
 
 -- ----------------------------------------------------------------------------
 -- Era-dependent transaction body features
@@ -2885,14 +2884,27 @@ toShelleyTxOutAny _ (TxOut addr (TxOutValue MultiAssetInAlonzoEra value) txoutda
     Alonzo.TxOut (toShelleyAddr addr) (toMaryValue value)
                  (toAlonzoTxOutDataHash' txoutdata)
 
-toShelleyTxOutAny ShelleyBasedEraBabbage _ = error "TODO: Babbage"
+toShelleyTxOutAny ShelleyBasedEraBabbage (TxOut addr (TxOutValue MultiAssetInBabbageEra value) txoutdata) =
+    Babbage.TxOut (toShelleyAddr addr) (toMaryValue value)
+                  (toBabbageTxOutDatum' txoutdata) (error "TODO: Babbage era")
 
-toAlonzoTxOutDataHash' :: TxOutDatum ctx era
-                      -> StrictMaybe (Alonzo.DataHash StandardCrypto)
+
+toAlonzoTxOutDataHash' :: TxOutDatum ctx AlonzoEra
+                       -> StrictMaybe (Alonzo.DataHash StandardCrypto)
 toAlonzoTxOutDataHash'  TxOutDatumNone                          = SNothing
 toAlonzoTxOutDataHash' (TxOutDatumHash _ (ScriptDataHash dh))   = SJust dh
 toAlonzoTxOutDataHash' (TxOutDatumInTx' _ (ScriptDataHash dh) _) = SJust dh
-toAlonzoTxOutDataHash' _ = error "TODO: Babbage"
+toAlonzoTxOutDataHash' (TxOutDatumInline inlineDatumSupp _sd) =
+  case inlineDatumSupp :: InlineDatumSupportedInEra AlonzoEra of {}
+
+-- TODO: Consolidate with alonzo function and rename
+toBabbageTxOutDatum'
+  :: Ledger.Crypto (ShelleyLedgerEra era) ~ StandardCrypto
+  => TxOutDatum ctx era -> Babbage.Datum (ShelleyLedgerEra era)
+toBabbageTxOutDatum'  TxOutDatumNone = Babbage.NoDatum
+toBabbageTxOutDatum' (TxOutDatumHash _ (ScriptDataHash dh)) = Babbage.DatumHash dh
+toBabbageTxOutDatum' (TxOutDatumInTx' _ (ScriptDataHash dh) _) = Babbage.DatumHash dh
+toBabbageTxOutDatum' (TxOutDatumInline _ sd) = scriptDataToBinaryData sd
 
 
 -- ----------------------------------------------------------------------------
