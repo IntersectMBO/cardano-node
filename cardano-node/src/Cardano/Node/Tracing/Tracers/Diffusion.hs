@@ -253,9 +253,9 @@ docMux' = Documented [
         []
         "Mux shutdown."
     , DocMsg
-        ["Terminating"]
+        ["TCPInfo"]
         []
-        "Terminating."
+        "TCPInfo."
     ]
 
 --------------------------------------------------------------------------------

@@ -143,7 +143,7 @@ instance (ToJSONKey ntnAddr, ToJSONKey RelayAccessPoint, Show ntnAddr, Show exce
   forHuman = pack . show
 
 docLocalRootPeers :: Documented (TraceLocalRootPeers ntnAddr resolverError)
-docLocalRootPeers =  addDocumentedNamespace  ["LocalRootPeers"] docLocalRootPeers'
+docLocalRootPeers =  addDocumentedNamespace  [] docLocalRootPeers'
 
 docLocalRootPeers' :: Documented (TraceLocalRootPeers ntnAddr resolverError)
 docLocalRootPeers' = Documented [
@@ -456,7 +456,7 @@ instance LogFormatting (TracePeerSelection SockAddr) where
   forHuman = pack . show
 
 docPeerSelection ::  Documented (TracePeerSelection SockAddr)
-docPeerSelection =  addDocumentedNamespace  ["PeerSelection"] docPeerSelection'
+docPeerSelection =  addDocumentedNamespace  [] docPeerSelection'
 
 docPeerSelection' :: Documented (TracePeerSelection SockAddr)
 docPeerSelection' = Documented [
@@ -706,7 +706,7 @@ instance LogFormatting (PeerSelectionActionsTrace SockAddr) where
 
 docPeerSelectionActions :: Documented (PeerSelectionActionsTrace ntnAddr)
 docPeerSelectionActions =
-    addDocumentedNamespace  ["PeerSelectionActions"]  docPeerSelectionActions'
+    addDocumentedNamespace  []  docPeerSelectionActions'
 
 docPeerSelectionActions' :: Documented (PeerSelectionActionsTrace ntnAddr)
 docPeerSelectionActions' = Documented
@@ -984,7 +984,7 @@ docConnectionManager :: Documented
     (ConnectionHandlerTrace
       ntnVersion
       ntnVersionData))
-docConnectionManager = addDocumentedNamespace  ["ConnectionManager"] docConnectionManager'
+docConnectionManager = addDocumentedNamespace  [] docConnectionManager'
 
 docConnectionManager' :: Documented
   (ConnectionManagerTrace
@@ -1171,7 +1171,7 @@ instance (Show addr, LogFormatting addr, ToJSON addr)
 
 
 docServer :: Documented (ServerTrace ntnAddr)
-docServer = addDocumentedNamespace  ["Server"] docServer'
+docServer = addDocumentedNamespace  [] docServer'
 
 docServer' :: Documented (ServerTrace ntnAddr)
 docServer' = Documented
@@ -1345,12 +1345,12 @@ instance (ToJSON addr, Show addr)
 docInboundGovernorLocal ::
    Documented (InboundGovernorTrace LocalAddress)
 docInboundGovernorLocal =
-    addDocumentedNamespace  ["InboundGovernor"] docInboundGovernor
+    addDocumentedNamespace  [] docInboundGovernor
 
 docInboundGovernorRemote ::
    Documented (InboundGovernorTrace SockAddr)
 docInboundGovernorRemote =
-    addDocumentedNamespace  ["LocalInboundGovernor"] docInboundGovernor
+    addDocumentedNamespace  [] docInboundGovernor
 
 docInboundGovernor :: Documented (InboundGovernorTrace peerAddr)
 docInboundGovernor = Documented
