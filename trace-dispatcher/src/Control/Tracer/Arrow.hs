@@ -43,20 +43,24 @@ runTracerA (Squelching     _       ) =           arr (const ())
 -- | Ignore the input and do not emit. The name is intended to lead to clear
 -- and suggestive arrow expressions.
 squelch :: Applicative m => TracerA m a ()
+{-# INLINE squelch #-}
 squelch = compute (const ())
 
 -- | Do an emitting effect. Contrast with 'effect' which does not make the
 -- tracer an emitting tracer.
 emit :: Applicative m => (a -> m ()) -> TracerA m a ()
+{-# INLINE emit #-}
 emit f = Emitting (Kleisli f) (Kleisli (const (pure ())))
 
 -- | Do a non-emitting effect. This effect will only be run if some part of
 -- the tracer downstream emits (see 'emit').
 effect :: (a -> m b) -> TracerA m a b
+{-# INLINE effect #-}
 effect = Squelching . Kleisli
 
 -- | Pure computation in a tracer: no side effects or emits.
 compute :: Applicative m => (a -> b) -> TracerA m a b
+{-# INLINE compute #-}
 compute f = effect (pure . f)
 
 instance Monad m => Category (TracerA m) where

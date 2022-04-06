@@ -12,6 +12,7 @@ module Cardano.Logging.Tracer.Composed (
 import           Control.Exception (catch, SomeException)
 import           Data.Aeson.Types (ToJSON)
 import           Data.Maybe (fromMaybe)
+import           Data.Symbol
 import           Data.Text
 
 import           Trace.Forward.Utils.DataPoint (DataPoint (..))

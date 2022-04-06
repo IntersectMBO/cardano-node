@@ -26,6 +26,7 @@ import           Data.Text.Encoding (decodeUtf8)
 import           Data.Text.Lazy (toStrict)
 import           Data.Text.Lazy.Builder as TB
 import           Data.Time (defaultTimeLocale, formatTime, getCurrentTime)
+import           Data.Symbol
 
 import           Cardano.Logging.Types
 import           Control.Concurrent (myThreadId)
@@ -36,7 +37,7 @@ import           Network.HostName
 -- | Format this trace as metrics
 metricsFormatter
   :: forall a m . (LogFormatting a, MonadIO m)
-  => Text
+  => Symbol
   -> Trace m FormattedMessage
   -> Trace m a
 metricsFormatter application (Trace tr) =
@@ -56,6 +57,7 @@ metricsFormatter application (Trace tr) =
 -- | Format this trace as TraceObject for the trace forwarder
 forwardFormatter
   :: forall a m . (LogFormatting a, MonadIO m)
+  => Symbol
   => Maybe Text
   -> Trace m FormattedMessage
   -> m (Trace m a)
@@ -102,6 +104,7 @@ forwardFormatter condApplication (Trace tr) = do
 humanFormatter
   :: forall a m . (LogFormatting a, MonadIO m)
   => Bool
+  -> Symbol
   -> Maybe Text
   -> Trace m FormattedMessage
   -> m (Trace m a)
@@ -128,6 +131,7 @@ humanFormatter withColor condApplication (Trace tr) = do
 formatContextHuman ::
      Bool
   -> String
+  -> Symbol
   -> Maybe Text
   -> LoggingContext
   -> Text
