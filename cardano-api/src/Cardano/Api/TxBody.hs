@@ -249,6 +249,7 @@ import           Cardano.Api.TxMetadata
 import           Cardano.Api.Utils
 import           Cardano.Api.Value
 import           Cardano.Api.ValueParser
+import           Cardano.Ledger.Mary.Value (Value (Value))
 
 
 {- HLINT ignore "Redundant flip" -}
@@ -479,9 +480,10 @@ data CtxTx
 -- | The context is the UTxO
 data CtxUTxO
 
-data TxOut ctx era = TxOut (AddressInEra   era)
-                           (TxOutValue     era)
-                           (TxOutDatum ctx era)
+data TxOut ctx era = TxOut (AddressInEra    era)
+                           (TxOutValue      era)
+                           (TxOutDatum ctx  era)
+                           (ReferenceScript era)
 
 deriving instance Eq   (TxOut ctx era)
 deriving instance Show (TxOut ctx era)
@@ -504,23 +506,30 @@ txOutInAnyEra :: IsCardanoEra era => TxOut CtxTx era -> TxOutInAnyEra
 txOutInAnyEra = TxOutInAnyEra cardanoEra
 
 toCtxUTxOTxOut :: TxOut CtxTx  era -> TxOut CtxUTxO era
-toCtxUTxOTxOut (TxOut addr val d) =
+toCtxUTxOTxOut (TxOut addr val d refS) =
   let dat = case d of
               TxOutDatumNone -> TxOutDatumNone
               TxOutDatumHash s h -> TxOutDatumHash s h
               TxOutDatumInTx' s h _ -> TxOutDatumHash s h
               TxOutDatumInline s sd -> TxOutDatumInline s sd
-  in TxOut addr val dat
+  in TxOut addr val dat refS
 
 instance IsCardanoEra era => ToJSON (TxOut ctx era) where
-  toJSON (TxOut addr val TxOutDatumNone) =
+  toJSON (TxOut addr val TxOutDatumNone ReferenceScriptNone) =
     object [ "address" .= addr
            , "value"   .= val
+           , "referenceScript" .= Null
            ]
-  toJSON (TxOut addr val (TxOutDatumHash _ h)) =
+  toJSON (TxOut addr val TxOutDatumNone (ReferenceScript _ s)) =
+    object [ "address" .= addr
+           , "value"   .= val
+           , "referenceScript" .= serialiseToTextEnvelope Nothing s
+           ]
+  toJSON (TxOut addr val (TxOutDatumHash _ h) ReferenceScriptNone) =
     object [ "address"   .= addr
            , "value"     .= val
            , "datumhash" .= h
+           , "referenceScript" .= Null
            ]
   toJSON (TxOut addr val (TxOutDatumInTx' _ h d)) =
     object [ "address"   .= addr
@@ -534,6 +543,37 @@ instance IsCardanoEra era => ToJSON (TxOut ctx era) where
            , "inlineDatumhash" .= hashScriptData d
            , "inlineDatum"     .= scriptDataToJson ScriptDataJsonDetailedSchema d
            ]
+
+txOutToJsonValue :: TxOut ctx era -> Aeson.Value
+txOutToJsonValue (TxOut addr val dat refScript) =
+  object [ "address" .= addressJsonValue addr
+         , "value" .= valueJsonValue val
+         , "datumhash" .= datHashJsonVal dat
+         , "datum" .= datJsonVal dat
+         , "inlineDatumhash" .= inlinDatHashJsonVal dat
+         , "inlineDatum" .= inlinDatJsonVal dat
+         , "referenceScript" .= refScriptJsonVal refScript
+         ]
+ where
+   addressJsonValue :: AddressInEra era -> Aeson.Value
+   addressJsonValue = panic ""
+
+   valueJsonValue :: TxOutValue era -> Aeson.Value
+   valueJsonValue = panic ""
+
+   datHashJsonVal :: TxOutDatum ctx era -> Aeson.Value
+   datHashJsonVal = panic ""
+
+   datJsonVal :: TxOutDatum ctx era -> Aeson.Value
+   datJsonVal = panic ""
+
+   inlinDatHashJsonVal :: TxOutDatum ctx era -> Aeson.Value
+   inlinDatHashJsonVal = panic ""
+   inlinDatJsonVal :: TxOutDatum ctx era -> Aeson.Value
+   inlinDatJsonVal = panic ""
+
+   refScriptJsonVal :: ReferenceScript era -> Aeson.Value
+   refScriptJsonVal = panic ""
 
 instance (IsShelleyBasedEra era, IsCardanoEra era)
   => FromJSON (TxOut CtxTx era) where
@@ -2868,25 +2908,25 @@ toShelleyTxOutAny :: forall ctx era ledgerera.
                 => ShelleyBasedEra era
                 -> TxOut ctx era
                 -> Ledger.TxOut ledgerera
-toShelleyTxOutAny era (TxOut _ (TxOutAdaOnly AdaOnlyInByronEra _) _) =
+toShelleyTxOutAny era (TxOut _ (TxOutAdaOnly AdaOnlyInByronEra _) _ _) =
     case era of {}
 
-toShelleyTxOutAny _ (TxOut addr (TxOutAdaOnly AdaOnlyInShelleyEra value) _) =
+toShelleyTxOutAny _ (TxOut addr (TxOutAdaOnly AdaOnlyInShelleyEra value) _ _) =
     Shelley.TxOut (toShelleyAddr addr) (toShelleyLovelace value)
 
-toShelleyTxOutAny _ (TxOut addr (TxOutAdaOnly AdaOnlyInAllegraEra value) _) =
+toShelleyTxOutAny _ (TxOut addr (TxOutAdaOnly AdaOnlyInAllegraEra value) _ _) =
     Shelley.TxOut (toShelleyAddr addr) (toShelleyLovelace value)
 
-toShelleyTxOutAny _ (TxOut addr (TxOutValue MultiAssetInMaryEra value) _) =
+toShelleyTxOutAny _ (TxOut addr (TxOutValue MultiAssetInMaryEra value) _ _) =
     Shelley.TxOut (toShelleyAddr addr) (toMaryValue value)
 
-toShelleyTxOutAny _ (TxOut addr (TxOutValue MultiAssetInAlonzoEra value) txoutdata) =
+toShelleyTxOutAny _ (TxOut addr (TxOutValue MultiAssetInAlonzoEra value) txoutdata _) =
     Alonzo.TxOut (toShelleyAddr addr) (toMaryValue value)
                  (toAlonzoTxOutDataHash' txoutdata)
 
-toShelleyTxOutAny ShelleyBasedEraBabbage (TxOut addr (TxOutValue MultiAssetInBabbageEra value) txoutdata) =
+toShelleyTxOutAny ShelleyBasedEraBabbage (TxOut addr (TxOutValue MultiAssetInBabbageEra value) txoutdata refScript) =
     Babbage.TxOut (toShelleyAddr addr) (toMaryValue value)
-                  (toBabbageTxOutDatum' txoutdata) (error "TODO: Babbage era")
+                  (toBabbageTxOutDatum' txoutdata) (refScriptToShelleyScript refScript)
 
 
 toAlonzoTxOutDataHash' :: TxOutDatum ctx AlonzoEra

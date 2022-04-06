@@ -37,6 +37,7 @@ module Cardano.Api.Script (
     -- * Reference scripts
     ReferenceScript(..),
     ReferenceScriptsSupportedInEra(..),
+    refScriptToShelleyScript,
 
     -- * Use of a script in an era as a witness
     WitCtxTxIn, WitCtxMint, WitCtxStake,
@@ -130,6 +131,7 @@ import qualified Cardano.Crypto.Hash.Class as Crypto
 
 import           Cardano.Slotting.Slot (SlotNo)
 
+import           Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import qualified Cardano.Ledger.Core as Ledger
 import qualified Cardano.Ledger.Era as Ledger
 
@@ -1327,8 +1329,11 @@ data ReferenceScript era where
 
 deriving instance Show (ReferenceScript era)
 
-
 data ReferenceScriptsSupportedInEra era where
     ReferenceScriptsInBabbageEra  :: ReferenceScriptsSupportedInEra BabbageEra
 
 deriving instance Show (ReferenceScriptsSupportedInEra era)
+
+refScriptToShelleyScript :: ReferenceScript era -> StrictMaybe (Ledger.Script (ShelleyLedgerEra era))
+refScriptToShelleyScript (ReferenceScript _ sInEra) = SJust $ toShelleyScript sInEra
+refScriptToShelleyScript ReferenceScriptNone = SNothing
