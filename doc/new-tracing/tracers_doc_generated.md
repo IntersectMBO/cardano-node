@@ -5001,7 +5001,7 @@ Filtered:  because the filter level is `Notice`
 
 
 ***
-ConfiguringLocalSocket 
+ConfiguringLocalSocket
 ***
 
 
@@ -5019,7 +5019,7 @@ Filtered:  because the filter level is `Info`
 
 
 ***
-ConfiguringServerSocket 
+ConfiguringServerSocket
 ***
 
 
@@ -5037,7 +5037,7 @@ Filtered:  because the filter level is `Info`
 
 
 ***
-CreateSystemdSocketForSnocketPath 
+CreateSystemdSocketForSnocketPath
 ***
 
 
@@ -5055,7 +5055,7 @@ Filtered:  because the filter level is `Info`
 
 
 ***
-CreatedLocalSocket 
+CreatedLocalSocket
 ***
 
 
@@ -5073,7 +5073,7 @@ Filtered:  because the filter level is `Info`
 
 
 ***
-CreatingServerSocket 
+CreatingServerSocket
 ***
 
 
@@ -5091,7 +5091,7 @@ Filtered:  because the filter level is `Info`
 
 
 ***
-DiffusionErrored 
+DiffusionErrored
 ***
 
 
@@ -5109,7 +5109,7 @@ Filtered:  because the filter level is `Info`
 
 
 ***
-ListeningLocalSocket 
+ListeningLocalSocket
 ***
 
 
@@ -5127,7 +5127,7 @@ Filtered:  because the filter level is `Info`
 
 
 ***
-ListeningServerSocket 
+ListeningServerSocket
 ***
 
 
@@ -5145,7 +5145,7 @@ Filtered:  because the filter level is `Info`
 
 
 ***
-LocalSocketUp 
+LocalSocketUp
 ***
 
 
@@ -5163,7 +5163,7 @@ Filtered:  because the filter level is `Info`
 
 
 ***
-RunLocalServer 
+RunLocalServer
 ***
 
 
@@ -5181,7 +5181,7 @@ Filtered:  because the filter level is `Info`
 
 
 ***
-RunServer 
+RunServer
 ***
 
 
@@ -5199,7 +5199,7 @@ Filtered:  because the filter level is `Info`
 
 
 ***
-ServerSocketUp 
+ServerSocketUp
 ***
 
 
@@ -5217,7 +5217,7 @@ Filtered:  because the filter level is `Info`
 
 
 ***
-UnsupportedLocalSystemdSocket 
+UnsupportedLocalSystemdSocket
 ***
 
 
@@ -5235,7 +5235,7 @@ Filtered:  because the filter level is `Info`
 
 
 ***
-UnsupportedReadySocketCase 
+UnsupportedReadySocketCase
 ***
 
 
@@ -5253,7 +5253,7 @@ Filtered:  because the filter level is `Info`
 
 
 ***
-UsingSystemdSocket 
+UsingSystemdSocket
 ***
 
 
@@ -5763,7 +5763,7 @@ Filtered:  because the filter level is `Info`
 
 
 ***
-kesStartPeriod 
+kesStartPeriod
 kesEndPeriod is kesStartPeriod + tpraosMaxKESEvo
 kesEvolution is the current evolution or /relative period/.
 ***
@@ -10016,7 +10016,7 @@ Filtered:  because the filter level is `Notice`
 
 
 ***
-Received shutdown request but found unexpected input in --shutdown-ipc FD: 
+Received shutdown request but found unexpected input in --shutdown-ipc FD:
 ***
 
 
@@ -10034,8 +10034,8 @@ Filtered:  because the filter level is `Notice`
 
 
 ***
-_bibSystemStartTime_: TODO JNF 
-_bibSlotLength_: gives the length of a slot as time interval. 
+_bibSystemStartTime_: TODO JNF
+_bibSlotLength_: gives the length of a slot as time interval.
 _bibEpochLength_: gives the number of slots which forms an epoch.
 ***
 
@@ -10054,10 +10054,10 @@ Filtered:  because the filter level is `Notice`
 
 
 ***
-_biConfigPath_: is the path to the config in use. 
-_biProtocol_: is the name of the protocol, e.g. "Byron", "Shelley" or "Byron; Shelley". 
-_biVersion_: is the version of the node software running. 
-_biCommit_: is the commit revision of the software running. 
+_biConfigPath_: is the path to the config in use.
+_biProtocol_: is the name of the protocol, e.g. "Byron", "Shelley" or "Byron; Shelley".
+_biVersion_: is the version of the node software running.
+_biCommit_: is the commit revision of the software running.
 _biNodeStartTime_: gives the time this node was started.
 ***
 
@@ -10076,9 +10076,9 @@ Filtered:  because the filter level is `Notice`
 
 
 ***
-_niAddresses_: IPv4 or IPv6 socket ready to accept connectionsor diffusion addresses. 
-_niDiffusionMode_: shows if the node runs only initiator or bothinitiator or responder node. 
-_niDnsProducers_: shows the list of domain names to subscribe to. 
+_niAddresses_: IPv4 or IPv6 socket ready to accept connectionsor diffusion addresses.
+_niDiffusionMode_: shows if the node runs only initiator or bothinitiator or responder node.
+_niDnsProducers_: shows the list of domain names to subscribe to.
 _niIpProducers_: shows the list of ip subscription addresses.
 ***
 
@@ -10187,10 +10187,10 @@ Filtered:  because the filter level is `Notice`
 
 
 ***
-bisEra is the current era, e.g. "Shelley", "Allegra", "Mary" or "Alonzo". 
-_bisSystemStartTime_: TODO JNF 
-_bisSlotLength_: gives the length of a slot as time interval. 
-_bisEpochLength_: gives the number of slots which forms an epoch. 
+bisEra is the current era, e.g. "Shelley", "Allegra", "Mary" or "Alonzo".
+_bisSystemStartTime_: TODO JNF
+_bisSlotLength_: gives the length of a slot as time interval.
+_bisEpochLength_: gives the number of slots which forms an epoch.
 _bisSlotsPerKESPeriod_: gives the slots per KES period.
 ***
 
@@ -11258,9 +11258,9 @@ Filtered:  because the filter level is `Notice`
 
 
 ***
-Request one or more transactions corresponding to the given transaction identifiers. 
-While it is the responsibility of the replying peer to keep within pipelining in-flight limits, the sender must also cooperate by keeping the total requested across all in-flight requests within the limits. 
-It is an error to ask for transaction identifiers that were not previously announced (via 'MsgReplyTxIds'). 
+Request one or more transactions corresponding to the given transaction identifiers.
+While it is the responsibility of the replying peer to keep within pipelining in-flight limits, the sender must also cooperate by keeping the total requested across all in-flight requests within the limits.
+It is an error to ask for transaction identifiers that were not previously announced (via 'MsgReplyTxIds').
 It is an error to ask for transaction identifiers that are not outstanding or that were already asked for.
 ***
 
@@ -11481,13 +11481,13 @@ Filtered:  because the filter level is `Notice`
 
 
 ***
-Request a non-empty list of transaction identifiers from the client, and confirm a number of outstanding transaction identifiers. 
-With 'TokBlocking' this is a a blocking operation: the response will always have at least one transaction identifier, and it does not expect a prompt response: there is no timeout. This covers the case when there is nothing else to do but wait. For example this covers leaf nodes that rarely, if ever, create and submit a transaction. 
-With 'TokNonBlocking' this is a non-blocking operation: the response may be an empty list and this does expect a prompt response. This covers high throughput use cases where we wish to pipeline, by interleaving requests for additional transaction identifiers with requests for transactions, which requires these requests not block. 
-The request gives the maximum number of transaction identifiers that can be accepted in the response. This must be greater than zero in the 'TokBlocking' case. In the 'TokNonBlocking' case either the numbers acknowledged or the number requested must be non-zero. In either case, the number requested must not put the total outstanding over the fixed protocol limit. 
-The request also gives the number of outstanding transaction identifiers that can now be acknowledged. The actual transactions to acknowledge are known to the peer based on the FIFO order in which they were provided. 
-There is no choice about when to use the blocking case versus the non-blocking case, it depends on whether there are any remaining unacknowledged transactions (after taking into account the ones acknowledged in this message): 
-* The blocking case must be used when there are zero remaining   unacknowledged transactions. 
+Request a non-empty list of transaction identifiers from the client, and confirm a number of outstanding transaction identifiers.
+With 'TokBlocking' this is a a blocking operation: the response will always have at least one transaction identifier, and it does not expect a prompt response: there is no timeout. This covers the case when there is nothing else to do but wait. For example this covers leaf nodes that rarely, if ever, create and submit a transaction.
+With 'TokNonBlocking' this is a non-blocking operation: the response may be an empty list and this does expect a prompt response. This covers high throughput use cases where we wish to pipeline, by interleaving requests for additional transaction identifiers with requests for transactions, which requires these requests not block.
+The request gives the maximum number of transaction identifiers that can be accepted in the response. This must be greater than zero in the 'TokBlocking' case. In the 'TokNonBlocking' case either the numbers acknowledged or the number requested must be non-zero. In either case, the number requested must not put the total outstanding over the fixed protocol limit.
+The request also gives the number of outstanding transaction identifiers that can now be acknowledged. The actual transactions to acknowledge are known to the peer based on the FIFO order in which they were provided.
+There is no choice about when to use the blocking case versus the non-blocking case, it depends on whether there are any remaining unacknowledged transactions (after taking into account the ones acknowledged in this message):
+* The blocking case must be used when there are zero remaining   unacknowledged transactions.
 * The non-blocking case must be used when there are non-zero remaining   unacknowledged transactions.
 ***
 
@@ -11506,7 +11506,7 @@ Filtered:  because the filter level is `Notice`
 
 
 ***
-Request one or more transactions corresponding to the given transaction identifiers. 
+Request one or more transactions corresponding to the given transaction identifiers.
 While it is the responsibility of the replying peer to keep withinpipelining in-flight limits, the sender must also cooperate by keepingthe total requested across all in-flight requests within the limits.
 It is an error to ask for transaction identifiers that were notpreviously announced (via 'MsgReplyTxIds').
 It is an error to ask for transaction identifiers that are notoutstanding or that were already asked for.
@@ -11675,7 +11675,7 @@ Progress in percent
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.ReplayBlock.LedgerReplay
 
 From current configuration:
@@ -11701,7 +11701,7 @@ Filtered:  because the filter level is `Notice`
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.Forge.StartLeadershipCheck
 
 From current configuration:
@@ -11714,7 +11714,7 @@ Filtered:  because the filter level is `Info`
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.Forge.StartLeadershipCheckPlus
 
 From current configuration:
@@ -11727,7 +11727,7 @@ Filtered:  because the filter level is `Info`
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.Forge.AdoptedBlock
 
 From current configuration:
@@ -11740,7 +11740,7 @@ Filtered:  because the filter level is `Info`
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.Forge.BlockContext
 
 From current configuration:
@@ -11753,7 +11753,7 @@ Filtered:  because the filter level is `Info`
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.Forge.BlockFromFuture
 
 From current configuration:
@@ -11766,7 +11766,7 @@ Number of blocks in this chain fragment.
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.ChainDB.AddBlockEvent.AddedToCurrentChain
 
 From current configuration:
@@ -11779,7 +11779,7 @@ Number of blocks in this chain fragment.
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.ChainDB.AddBlockEvent.SwitchedToAFork
 
 From current configuration:
@@ -11818,7 +11818,7 @@ Number of connected peers
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.BlockFetchDecision
 
 From current configuration:
@@ -11831,7 +11831,7 @@ Filtered:  because the filter level is `Notice`
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.ConnectionManager.ConnectionManagerCounters
 
 From current configuration:
@@ -11844,7 +11844,7 @@ Filtered:  because the filter level is `Notice`
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.LocalConnectionManager.ConnectionManagerCounters
 
 From current configuration:
@@ -11857,7 +11857,7 @@ Filtered:  because the filter level is `Notice`
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.ConnectionManager.ConnectionManagerCounters
 
 From current configuration:
@@ -11870,7 +11870,7 @@ Filtered:  because the filter level is `Notice`
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.LocalConnectionManager.ConnectionManagerCounters
 
 From current configuration:
@@ -11883,7 +11883,7 @@ Filtered:  because the filter level is `Notice`
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.ConnectionManager.ConnectionManagerCounters
 
 From current configuration:
@@ -11896,7 +11896,7 @@ Filtered:  because the filter level is `Notice`
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.LocalConnectionManager.ConnectionManagerCounters
 
 From current configuration:
@@ -11909,7 +11909,7 @@ Filtered:  because the filter level is `Notice`
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.ConnectionManager.ConnectionManagerCounters
 
 From current configuration:
@@ -11922,7 +11922,7 @@ Filtered:  because the filter level is `Notice`
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.LocalConnectionManager.ConnectionManagerCounters
 
 From current configuration:
@@ -11935,7 +11935,7 @@ Filtered:  because the filter level is `Notice`
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.ConnectionManager.ConnectionManagerCounters
 
 From current configuration:
@@ -11948,7 +11948,7 @@ Filtered:  because the filter level is `Notice`
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.LocalConnectionManager.ConnectionManagerCounters
 
 From current configuration:
@@ -11961,7 +11961,7 @@ Filtered:  because the filter level is `Notice`
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.Forge.NoLedgerState
 
 From current configuration:
@@ -11974,7 +11974,7 @@ Filtered:  because the filter level is `Info`
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.Forge.NoLedgerView
 
 From current configuration:
@@ -11987,7 +11987,7 @@ Filtered:  because the filter level is `Info`
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.Forge.ForgeStateUpdateError
 
 From current configuration:
@@ -12000,7 +12000,7 @@ Filtered:  because the filter level is `Info`
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.Forge.StartLeadershipCheckPlus
 
 From current configuration:
@@ -12013,7 +12013,7 @@ The actual number of blocks created over the maximum expected number of blocks t
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.ChainDB.AddBlockEvent.AddedToCurrentChain
 
 From current configuration:
@@ -12026,7 +12026,7 @@ The actual number of blocks created over the maximum expected number of blocks t
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.ChainDB.AddBlockEvent.SwitchedToAFork
 
 From current configuration:
@@ -12039,7 +12039,7 @@ In which epoch is the tip of the current chain.
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.ChainDB.AddBlockEvent.AddedToCurrentChain
 
 From current configuration:
@@ -12052,7 +12052,7 @@ In which epoch is the tip of the current chain.
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.ChainDB.AddBlockEvent.SwitchedToAFork
 
 From current configuration:
@@ -12065,7 +12065,7 @@ Filtered:  because the filter level is `Info`
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.Forge.ForgedInvalidBlock
 
 From current configuration:
@@ -12078,7 +12078,7 @@ Filtered:  because the filter level is `Info`
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.Forge.ForgedBlock
 
 From current configuration:
@@ -12091,7 +12091,7 @@ Filtered:  because the filter level is `Info`
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.Forge.LedgerState
 
 From current configuration:
@@ -12104,7 +12104,7 @@ Filtered:  because the filter level is `Info`
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.Forge.LedgerView
 
 From current configuration:
@@ -12117,7 +12117,7 @@ Byte size of the mempool
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.Mempool.AddedTx
 
 From current configuration:
@@ -12130,7 +12130,7 @@ Byte size of the mempool
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.Mempool.ManuallyRemovedTxs
 
 From current configuration:
@@ -12143,7 +12143,7 @@ Byte size of the mempool
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.Mempool.RejectedTx
 
 From current configuration:
@@ -12156,7 +12156,7 @@ Byte size of the mempool
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.Mempool.RemoveTxs
 
 From current configuration:
@@ -12169,7 +12169,7 @@ Filtered:  because the filter level is `Info`
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.Forge.NodeCannotForge
 
 From current configuration:
@@ -12182,7 +12182,7 @@ Filtered:  because the filter level is `Info`
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.Forge.NodeIsLeader
 
 From current configuration:
@@ -12195,7 +12195,7 @@ Filtered:  because the filter level is `Info`
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.Forge.NodeNotLeader
 
 From current configuration:
@@ -12208,7 +12208,7 @@ Filtered:  because the filter level is `Info`
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.Forge.DidntAdoptBlock
 
 From current configuration:
@@ -12221,7 +12221,7 @@ Filtered:  because the filter level is `Info`
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.Forge.ForgeStateUpdateError
 
 From current configuration:
@@ -12234,7 +12234,7 @@ Filtered:  because the filter level is `Info`
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.Forge.ForgeStateUpdateError
 
 From current configuration:
@@ -12286,7 +12286,7 @@ Filtered:  because the filter level is `Notice`
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.Forge.ForgeStateUpdateError
 
 From current configuration:
@@ -12299,7 +12299,7 @@ Filtered:  because the filter level is `Info`
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.BlockFetchServer.SendBlock
 
 From current configuration:
@@ -12312,7 +12312,7 @@ Relative slot number of the tip of the current chain within theepoch..
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.ChainDB.AddBlockEvent.AddedToCurrentChain
 
 From current configuration:
@@ -12325,7 +12325,7 @@ Relative slot number of the tip of the current chain within theepoch..
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.ChainDB.AddBlockEvent.SwitchedToAFork
 
 From current configuration:
@@ -12338,7 +12338,7 @@ Filtered:  because the filter level is `Info`
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.Forge.SlotIsImmutable
 
 From current configuration:
@@ -12351,7 +12351,7 @@ Number of slots in this chain fragment.
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.ChainDB.AddBlockEvent.AddedToCurrentChain
 
 From current configuration:
@@ -12364,7 +12364,7 @@ Number of slots in this chain fragment.
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.ChainDB.AddBlockEvent.SwitchedToAFork
 
 From current configuration:
@@ -12377,7 +12377,7 @@ Filtered:  because the filter level is `Info`
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.TxInbound.TxSubmissionProcessed
 
 From current configuration:
@@ -12390,7 +12390,7 @@ Filtered:  because the filter level is `Notice`
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.TxInbound.TxSubmissionProcessed
 
 From current configuration:
@@ -12403,7 +12403,7 @@ Filtered:  because the filter level is `Notice`
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.TxInbound.TxSubmissionCollected
 
 From current configuration:
@@ -12416,7 +12416,7 @@ Transactions in mempool
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.Mempool.AddedTx
 
 From current configuration:
@@ -12429,7 +12429,7 @@ Transactions in mempool
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.Mempool.ManuallyRemovedTxs
 
 From current configuration:
@@ -12442,7 +12442,7 @@ Transactions in mempool
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.Mempool.RejectedTx
 
 From current configuration:
@@ -12455,7 +12455,7 @@ Transactions in mempool
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.Mempool.RemoveTxs
 
 From current configuration:
@@ -12468,7 +12468,7 @@ Filtered:  because the filter level is `Info`
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.Mempool.ManuallyRemovedTxs
 
 From current configuration:
@@ -12481,7 +12481,7 @@ Filtered:  because the filter level is `Info`
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.Forge.StartLeadershipCheckPlus
 
 From current configuration:
@@ -12494,7 +12494,7 @@ TODO JNF
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.Resources
 
 From current configuration:
@@ -12533,7 +12533,7 @@ TODO Doc
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.Peers
 
 From current configuration:
@@ -12546,7 +12546,7 @@ TODO JNF
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.Resources
 
 From current configuration:
@@ -12559,7 +12559,7 @@ TODO JNF
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.Resources
 
 From current configuration:
@@ -12572,7 +12572,7 @@ TODO JNF
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.Resources
 
 From current configuration:
@@ -12585,7 +12585,7 @@ TODO JNF
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.Resources
 
 From current configuration:
@@ -12598,7 +12598,7 @@ TODO JNF
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.Resources
 
 From current configuration:
@@ -12611,7 +12611,7 @@ TODO JNF
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.Resources
 
 From current configuration:
@@ -12637,7 +12637,7 @@ Reports the CPU ticks, sice the process was started
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.Resources
 
 From current configuration:
@@ -12650,10 +12650,10 @@ Filtered:  because the filter level is `Info`
 ***
 Basic information about this node collected at startup
 
- _niName_: Name of the node. 
- _niProtocol_: Protocol which this nodes uses. 
- _niVersion_: Software version which this node is using. 
- _niStartTime_: Start time of this node. 
+ _niName_: Name of the node.
+ _niProtocol_: Protocol which this nodes uses.
+ _niVersion_: Software version which this node is using.
+ _niStartTime_: Start time of this node.
  _niSystemStartTime_: How long did the start of the node took.
 ***
 
