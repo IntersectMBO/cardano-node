@@ -34,7 +34,7 @@ emptyReplayBlockStats = ReplayBlockStats False 0.0 0.0
 -- ReplayBlockStats Tracer
 --------------------------------------------------------------------------------
 
-namesForReplayBlockStats :: ReplayBlockStats -> Namespace
+namesForReplayBlockStats :: ReplayBlockStats -> [Text]
 namesForReplayBlockStats _ = ["LedgerReplay"]
 
 severityReplayBlockStats :: ReplayBlockStats -> SeverityS
