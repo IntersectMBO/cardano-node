@@ -4,10 +4,22 @@ final: prev: with final; {
   inherit (cardanoNodeProject.args) compiler-nix-name;
 
   # The is used by nix/regenerate.sh to pre-compute package list to avoid double evaluation.
-  genProjectPackages = lib.genAttrs
-    (lib.attrNames (haskell-nix.haskellLib.selectProjectPackages
-      cardanoNodeProject.hsPkgs))
-    (name: lib.attrNames cardanoNodeProject.pkg-set.options.packages.value.${name}.components.exes);
+  genProjectComponents = let
+      cardanoNodeProjectNoMat = (import ./haskell.nix {
+    inherit gitrev haskell-nix;
+    projectComponents = {};
+  }).appendModule {
+    # We disable materialization so that haskell.nix correctly set .isProject on project packages:
+    materialized = lib.mkForce null;
+  };
+  in lib.mapAttrs (n: v: lib.genAttrs [ "exes" "tests" "benchmarks" ] (c:
+      lib.attrNames cardanoNodeProjectNoMat.pkg-set.options.packages.value.${n}.components.${c}
+    )) (haskell-nix.haskellLib.selectProjectPackages
+      cardanoNodeProjectNoMat.hsPkgs);
+
+  inherit (cardanoNodeProject.plan-nix.passthru) generateMaterialized;
+
+  generateMaterializedIohkNixUtils = iohk-nix-utils.plan-nix.passthru.generateMaterialized;
 
   cabal = haskell-nix.tool compiler-nix-name "cabal" {
     version = "latest";
@@ -29,9 +41,16 @@ final: prev: with final; {
     inherit (cardanoNodeProject) index-state;
   };
 
-  haskellBuildUtils = prev.haskellBuildUtils.override {
+  iohk-nix-utils = (prev.haskellBuildUtils.override {
     inherit compiler-nix-name;
     inherit (cardanoNodeProject) index-state;
+  }).mkProject {
+    materialized = lib.mkIf (stdenv.hostPlatform.config == "x86_64-unknown-linux-gnu") ./materialized/x86_64-unknown-linux-gnu/iohk-nix-utils;
+  };
+
+  haskellBuildUtils = symlinkJoin {
+    name = "haskell-build-utils";
+    paths = lib.attrValues iohk-nix-utils.hsPkgs.iohk-nix-utils.components.exes;
   };
 
   cardanolib-py = callPackage ./cardanolib-py { };

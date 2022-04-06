@@ -118,7 +118,7 @@
         self.overlay
       ];
 
-      projectPackagesExes = import ./nix/project-packages-exes.nix;
+      projectComponents = import ./nix/materialized/project-components.nix;
 
       mkPackages = project:
         let
@@ -169,7 +169,7 @@
                     };
                   } else value)
             project.hsPkgs;
-          projectPackages = lib.mapAttrs (n: _: hsPkgsWithPassthru.${n}) projectPackagesExes;
+          projectPackages = lib.mapAttrs (n: _: hsPkgsWithPassthru.${n}) projectComponents;
         in
         {
           inherit projectPackages profiledProject assertedProject eventloggedProject;
@@ -201,7 +201,7 @@
 
           project = (import ./nix/haskell.nix {
             inherit (pkgs) haskell-nix gitrev;
-            inherit projectPackagesExes;
+            inherit projectComponents;
           }).appendModule customConfig.haskellNix // {
             profiled = profiledProject;
             asserted = assertedProject;
@@ -291,7 +291,9 @@
             # Add checks to be able to build them individually
             // (prefixNamesWith "checks/" checks);
 
-          apps = lib.mapAttrs (n: p: { type = "app"; program = p.exePath or (if (p.executable or false) then "${p}" else "${p}/bin/${p.name or n}"); }) exes;
+          apps = lib.mapAttrs (n: p: { type = "app"; program = p.exePath or (if (p.executable or false) then "${p}" else "${p}/bin/${p.name or n}"); }) (exes // {
+            inherit (pkgs) generateMaterialized generateMaterializedIohkNixUtils;
+          });
 
         in
         {
@@ -321,7 +323,8 @@
                   };
                   internal = {
                     roots.project = project.roots;
-                    plan-nix.project = project.plan-nix;
+                    # check materialization:
+                    plan-nix.project = (project.appendModule { checkMaterialization = true; }).plan-nix;
                   };
                   profiled = lib.genAttrs [ "cardano-node" "tx-generator" "locli" ] (n:
                     packages.${n}.passthru.profiled
@@ -342,7 +345,10 @@
                       platform = "linux";
                       exes = lib.collect lib.isDerivation projectExes;
                     };
-                    internal.roots.project = muslProject.roots;
+                    internal = {
+                      roots.project = muslProject.roots;
+                      plan-nix.project = muslProject.plan-nix;
+                    };
                   };
                 windows =
                   let
@@ -360,7 +366,10 @@
                       platform = "win64";
                       exes = lib.collect lib.isDerivation projectExes;
                     };
-                    internal.roots.project = windowsProject.roots;
+                    internal = {
+                      roots.project = windowsProject.roots;
+                      plan-nix.project = windowsProject.plan-nix;
+                    };
                   });
               };
             } // optionalAttrs (system == "x86_64-darwin") {
