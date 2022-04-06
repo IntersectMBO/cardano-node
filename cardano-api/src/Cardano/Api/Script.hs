@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -33,6 +34,12 @@ module Cardano.Api.Script (
     ScriptInEra(..),
     toScriptInEra,
     eraOfScriptInEra,
+
+    -- * Reference scripts
+    ReferenceScript(..),
+    ReferenceScriptsSupportedInEra(..),
+    referenceScriptsSupportedInEra,
+    refScriptToShelleyScript,
 
     -- * Use of a script in an era as a witness
     WitCtxTxIn, WitCtxMint, WitCtxStake,
@@ -126,6 +133,7 @@ import qualified Cardano.Crypto.Hash.Class as Crypto
 
 import           Cardano.Slotting.Slot (SlotNo)
 
+import           Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import qualified Cardano.Ledger.Core as Ledger
 import qualified Cardano.Ledger.Era as Ledger
 
@@ -140,6 +148,7 @@ import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 import qualified Plutus.V1.Ledger.Examples as Plutus
 
 import           Cardano.Api.Eras
+import           Cardano.Api.Error
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Hash
 import           Cardano.Api.KeysShelley
@@ -483,6 +492,28 @@ instance Eq ScriptInAnyLang where
         Nothing   -> False
         Just Refl -> script == script'
 
+instance ToJSON ScriptInAnyLang where
+  toJSON (ScriptInAnyLang l s) =
+    object [ "scriptLanguage" .= show l
+           , "script" .= obtainScriptLangConstraint l
+                           (serialiseToTextEnvelope Nothing s)
+           ]
+      where
+       obtainScriptLangConstraint
+         :: ScriptLanguage lang
+         -> (IsScriptLanguage lang => a)
+         -> a
+       obtainScriptLangConstraint (SimpleScriptLanguage SimpleScriptV1) f = f
+       obtainScriptLangConstraint (SimpleScriptLanguage SimpleScriptV2) f = f
+       obtainScriptLangConstraint (PlutusScriptLanguage PlutusScriptV1) f = f
+       obtainScriptLangConstraint (PlutusScriptLanguage PlutusScriptV2) f = f
+
+instance FromJSON ScriptInAnyLang where
+  parseJSON = Aeson.withObject "ScriptInAnyLang" $ \o -> do
+    textEnvelopeScript <- o .: "script"
+    case textEnvelopeToScript textEnvelopeScript of
+      Left textEnvErr -> fail $ displayError textEnvErr
+      Right (ScriptInAnyLang l s) -> pure $ ScriptInAnyLang l s
 
 -- | Convert a script in a specific statically-known language to a
 -- 'ScriptInAnyLang'.
@@ -538,6 +569,10 @@ data ScriptLanguageInEra lang era where
 
 deriving instance Eq   (ScriptLanguageInEra lang era)
 deriving instance Show (ScriptLanguageInEra lang era)
+
+instance ToJSON (ScriptLanguageInEra lang era) where
+  toJSON sLangInEra = Aeson.String . Text.pack $ show sLangInEra
+
 
 instance HasTypeProxy era => HasTypeProxy (ScriptInEra era) where
     data AsType (ScriptInEra era) = AsScriptInEra (AsType era)
@@ -1304,3 +1339,74 @@ parsePaymentKeyHash txt =
     case deserialiseFromRawBytesHex (AsHash AsPaymentKey) (Text.encodeUtf8 txt) of
       Just payKeyHash -> return payKeyHash
       Nothing -> fail $ "Error deserialising payment key hash: " <> Text.unpack txt
+
+
+-- ----------------------------------------------------------------------------
+-- Reference scripts
+--
+
+-- | A reference scripts is a script that can exist at a transaction output. This greatly
+-- reduces the size of transactions that use scripts as the script no longer
+-- has to be added to the transaction, they can now be referenced via a transaction output.
+
+data ReferenceScript era where
+     ReferenceScript :: ReferenceScriptsSupportedInEra era
+                     -> ScriptInAnyLang
+                     -> ReferenceScript era
+
+     ReferenceScriptNone :: ReferenceScript era
+
+deriving instance Eq (ReferenceScript era)
+deriving instance Show (ReferenceScript era)
+
+instance IsCardanoEra era => ToJSON (ReferenceScript era) where
+  toJSON (ReferenceScript _ s) = object ["referenceScript" .= s]
+  toJSON ReferenceScriptNone = Aeson.Null
+
+instance IsCardanoEra era => FromJSON (ReferenceScript era) where
+  parseJSON = Aeson.withObject "ReferenceScript" $ \o ->
+    case referenceScriptsSupportedInEra (cardanoEra :: CardanoEra era) of
+      Nothing -> pure ReferenceScriptNone
+      Just refSupInEra ->
+        ReferenceScript refSupInEra <$> o .: "referenceScript"
+
+data ReferenceScriptsSupportedInEra era where
+    ReferenceScriptsInBabbageEra  :: ReferenceScriptsSupportedInEra BabbageEra
+
+deriving instance Eq (ReferenceScriptsSupportedInEra era)
+deriving instance Show (ReferenceScriptsSupportedInEra era)
+
+referenceScriptsSupportedInEra :: CardanoEra era -> Maybe (ReferenceScriptsSupportedInEra era)
+referenceScriptsSupportedInEra ByronEra   = Nothing
+referenceScriptsSupportedInEra ShelleyEra = Nothing
+referenceScriptsSupportedInEra AllegraEra = Nothing
+referenceScriptsSupportedInEra MaryEra    = Nothing
+referenceScriptsSupportedInEra AlonzoEra  = Nothing
+referenceScriptsSupportedInEra BabbageEra = Just ReferenceScriptsInBabbageEra
+
+refScriptToShelleyScript
+  :: CardanoEra era
+  -> ReferenceScript era
+  -> StrictMaybe (Ledger.Script (ShelleyLedgerEra era))
+refScriptToShelleyScript era (ReferenceScript _ s) =
+  case toScriptInEra era s of
+    Just sInEra -> SJust $ toShelleyScript sInEra
+    Nothing -> SNothing
+refScriptToShelleyScript _ ReferenceScriptNone = SNothing
+
+-- Helpers
+
+textEnvelopeToScript :: TextEnvelope -> Either TextEnvelopeError ScriptInAnyLang
+textEnvelopeToScript = deserialiseFromTextEnvelopeAnyOf textEnvTypes
+ where
+  textEnvTypes :: [FromSomeType HasTextEnvelope ScriptInAnyLang]
+  textEnvTypes =
+    [ FromSomeType (AsScript AsSimpleScriptV1)
+                   (ScriptInAnyLang (SimpleScriptLanguage SimpleScriptV1))
+    , FromSomeType (AsScript AsSimpleScriptV2)
+                   (ScriptInAnyLang (SimpleScriptLanguage SimpleScriptV2))
+    , FromSomeType (AsScript AsPlutusScriptV1)
+                   (ScriptInAnyLang (PlutusScriptLanguage PlutusScriptV1))
+    , FromSomeType (AsScript AsPlutusScriptV2)
+                   (ScriptInAnyLang (PlutusScriptLanguage PlutusScriptV2))
+    ]
