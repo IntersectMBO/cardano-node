@@ -66,6 +66,7 @@ withEra :: (forall era. IsShelleyBasedEra era => AsType era -> ActionM x) -> Act
 withEra action = do
   era <- get $ User TEra
   case era of
+    AnyCardanoEra BabbageEra -> action AsBabbageEra    
     AnyCardanoEra AlonzoEra  -> action AsAlonzoEra
     AnyCardanoEra MaryEra    -> action AsMaryEra
     AnyCardanoEra AllegraEra -> action AsAllegraEra

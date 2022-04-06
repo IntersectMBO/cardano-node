@@ -868,6 +868,7 @@ toLedgerPParamsDelta ShelleyBasedEraShelley = toShelleyPParamsUpdate
 toLedgerPParamsDelta ShelleyBasedEraAllegra = toShelleyPParamsUpdate
 toLedgerPParamsDelta ShelleyBasedEraMary    = toShelleyPParamsUpdate
 toLedgerPParamsDelta ShelleyBasedEraAlonzo  = toAlonzoPParamsUpdate
+toLedgerPParamsDelta ShelleyBasedEraBabbage = error "TODO: Babbage"
 
 
 --TODO: we should do validation somewhere, not just silently drop changes that
@@ -1031,6 +1032,7 @@ fromLedgerPParamsDelta ShelleyBasedEraShelley = fromShelleyPParamsUpdate
 fromLedgerPParamsDelta ShelleyBasedEraAllegra = fromShelleyPParamsUpdate
 fromLedgerPParamsDelta ShelleyBasedEraMary    = fromShelleyPParamsUpdate
 fromLedgerPParamsDelta ShelleyBasedEraAlonzo  = fromAlonzoPParamsUpdate
+fromLedgerPParamsDelta ShelleyBasedEraBabbage = error "TODO: Babbage"
 
 
 fromShelleyPParamsUpdate :: Shelley.PParamsUpdate ledgerera
@@ -1180,6 +1182,7 @@ toLedgerPParams ShelleyBasedEraShelley = toShelleyPParams
 toLedgerPParams ShelleyBasedEraAllegra = toShelleyPParams
 toLedgerPParams ShelleyBasedEraMary    = toShelleyPParams
 toLedgerPParams ShelleyBasedEraAlonzo  = toAlonzoPParams
+toLedgerPParams ShelleyBasedEraBabbage = error "TODO: Babbage"
 
 toShelleyPParams :: ProtocolParameters -> Shelley.PParams ledgerera
 toShelleyPParams ProtocolParameters {
@@ -1328,6 +1331,7 @@ fromLedgerPParams ShelleyBasedEraShelley = fromShelleyPParams
 fromLedgerPParams ShelleyBasedEraAllegra = fromShelleyPParams
 fromLedgerPParams ShelleyBasedEraMary    = fromShelleyPParams
 fromLedgerPParams ShelleyBasedEraAlonzo  = fromAlonzoPParams
+fromLedgerPParams ShelleyBasedEraBabbage = error "TODO: Babbage"
 
 
 fromShelleyPParams :: Shelley.PParams ledgerera
@@ -1466,6 +1470,7 @@ checkProtocolParameters sbe ProtocolParameters{..} =
     ShelleyBasedEraAllegra -> checkMinUTxOVal
     ShelleyBasedEraMary -> checkMinUTxOVal
     ShelleyBasedEraAlonzo -> checkAlonzoParams
+    ShelleyBasedEraBabbage -> error "TODO: Babbage"
  where
    era :: CardanoEra era
    era = shelleyBasedToCardanoEra sbe

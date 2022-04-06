@@ -30,13 +30,13 @@ test_roundtrip_txbody_CBOR :: [TestTree]
 test_roundtrip_txbody_CBOR =
   [ testProperty (show era) $
     roundtrip_CBOR (proxyToAsType Proxy) (genTxBody era)
-  | AnyCardanoEra era <- [minBound..]
+  | AnyCardanoEra era <- [minBound..(AnyCardanoEra AlonzoEra)] -- TODO: Babbage era
   ]
 
 test_roundtrip_tx_CBOR :: [TestTree]
 test_roundtrip_tx_CBOR =
   [ testProperty (show era) $ roundtrip_CBOR (proxyToAsType Proxy) (genTx era)
-  | AnyCardanoEra era <- [minBound..]
+  | AnyCardanoEra era <- [minBound..(AnyCardanoEra AlonzoEra)] -- TODO: Babbage era
   ]
 
 prop_roundtrip_witness_byron_CBOR :: Property
@@ -159,13 +159,13 @@ prop_roundtrip_UpdateProposal_CBOR =
 test_roundtrip_Tx_Cddl :: [TestTree]
 test_roundtrip_Tx_Cddl =
   [ testProperty (show era) $ roundtrip_Tx_Cddl anyEra
-  | anyEra@(AnyCardanoEra era) <- [minBound..]
+  | anyEra@(AnyCardanoEra era) <- [minBound..(AnyCardanoEra AlonzoEra)] --TODO: Babbage era
   ]
 
 test_roundtrip_TxWitness_Cddl :: [TestTree]
 test_roundtrip_TxWitness_Cddl =
   [ testProperty (show era) $ roundtrip_TxWitness_Cddl era
-  | AnyCardanoEra era <- [minBound..]
+  | AnyCardanoEra era <- [minBound..(AnyCardanoEra AlonzoEra)] --TODO: Babbage era
   , AnyCardanoEra era /= AnyCardanoEra ByronEra
   ]
 

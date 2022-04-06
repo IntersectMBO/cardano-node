@@ -231,6 +231,7 @@ applyBlock env oldState validationMode block
         ShelleyBasedEraAllegra -> Consensus.BlockAllegra shelleyBlock
         ShelleyBasedEraMary    -> Consensus.BlockMary shelleyBlock
         ShelleyBasedEraAlonzo  -> Consensus.BlockAlonzo shelleyBlock
+        ShelleyBasedEraBabbage -> error "TODO: Babbage era"
 
 pattern LedgerStateByron
   :: Ledger.LedgerState Byron.ByronBlock
@@ -1418,6 +1419,7 @@ obtainIsStandardCrypto ShelleyBasedEraShelley f = f
 obtainIsStandardCrypto ShelleyBasedEraAllegra f = f
 obtainIsStandardCrypto ShelleyBasedEraMary    f = f
 obtainIsStandardCrypto ShelleyBasedEraAlonzo  f = f
+obtainIsStandardCrypto ShelleyBasedEraBabbage f = f
 
 
 obtainDecodeEpochStateConstraints
@@ -1432,6 +1434,7 @@ obtainDecodeEpochStateConstraints ShelleyBasedEraShelley f = f
 obtainDecodeEpochStateConstraints ShelleyBasedEraAllegra f = f
 obtainDecodeEpochStateConstraints ShelleyBasedEraMary    f = f
 obtainDecodeEpochStateConstraints ShelleyBasedEraAlonzo  f = f
+obtainDecodeEpochStateConstraints ShelleyBasedEraBabbage f = f
 
 -- | Return the slots at which a particular stake pool operator is
 -- expected to mint a block.

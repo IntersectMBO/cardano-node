@@ -142,6 +142,11 @@ toConsensusGenTx (TxInMode (ShelleyTx _ tx) AlonzoEraInCardanoMode) =
   where
     tx' = Consensus.mkShelleyTx tx
 
+toConsensusGenTx (TxInMode (ShelleyTx _ _tx) BabbageEraInCardanoMode) =
+    Consensus.HardForkGenTx (Consensus.OneEraGenTx (S (S (S (S (Z tx'))))))
+  where
+    tx' = error "TODO: Babbage era" -- Consensus.mkShelleyTx tx
+
 -- ----------------------------------------------------------------------------
 -- Transaction ids in the context of a consensus mode
 --
@@ -201,6 +206,8 @@ toConsensusTxId (TxIdInMode txid AlonzoEraInCardanoMode) =
   txid' :: Consensus.TxId (Consensus.GenTx (Consensus.ShelleyBlock Consensus.StandardAlonzo))
   txid' = Consensus.ShelleyTxId $ toShelleyTxId txid
 
+toConsensusTxId (TxIdInMode _txid BabbageEraInCardanoMode) = error "TODO: Babbage era"
+
 -- ----------------------------------------------------------------------------
 -- Transaction validation errors in the context of eras and consensus modes
 --
@@ -251,6 +258,11 @@ instance Show (TxValidationError era) where
         . showsPrec 11 err
         )
 
+    showsPrec p (ShelleyTxValidationError ShelleyBasedEraBabbage err) =
+      showParen (p >= 11)
+        ( showString "ShelleyTxValidationError ShelleyBasedEraBabbage "
+        . showsPrec 11 err
+        )
 
 -- | A 'TxValidationError' in one of the eras supported by a given protocol
 -- mode.

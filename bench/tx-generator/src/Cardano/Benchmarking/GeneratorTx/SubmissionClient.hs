@@ -196,6 +196,7 @@ txSubmissionClient tr bmtr initialTxSource endOfProtocolCallback =
     (ShelleyBasedEraAllegra, ShelleyTx _ tx') -> GenTxAllegra (mkShelleyTx tx')
     (ShelleyBasedEraMary, ShelleyTx _ tx') -> GenTxMary (mkShelleyTx tx')
     (ShelleyBasedEraAlonzo, ShelleyTx _ tx') -> GenTxAlonzo (mkShelleyTx tx')
+    (ShelleyBasedEraBabbage, ShelleyTx _ _tx') -> error "TODO:Babbage"
 
   fromGenTxId :: GenTxId CardanoBlock -> TxId
   fromGenTxId (Block.GenTxIdShelley (Mempool.ShelleyTxId i)) = fromShelleyTxId i

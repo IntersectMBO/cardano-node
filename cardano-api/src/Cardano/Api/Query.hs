@@ -466,6 +466,7 @@ toConsensusQuery (QueryInEra erainmode (QueryInShelleyBasedEra era q)) =
       AllegraEraInCardanoMode -> toConsensusQueryShelleyBased erainmode q
       MaryEraInCardanoMode    -> toConsensusQueryShelleyBased erainmode q
       AlonzoEraInCardanoMode  -> toConsensusQueryShelleyBased erainmode q
+      BabbageEraInCardanoMode -> error "TODO: Babbage era"
 
 
 toConsensusQueryShelleyBased
@@ -552,6 +553,7 @@ consensusQueryInEraInMode erainmode =
       AllegraEraInCardanoMode -> Consensus.QueryIfCurrentAllegra
       MaryEraInCardanoMode    -> Consensus.QueryIfCurrentMary
       AlonzoEraInCardanoMode  -> Consensus.QueryIfCurrentAlonzo
+      BabbageEraInCardanoMode  -> error "TODO: Babbage era"
 
 -- ----------------------------------------------------------------------------
 -- Conversions of query results from the consensus types.
@@ -664,6 +666,9 @@ fromConsensusQueryResult (QueryInEra AlonzoEraInCardanoMode
                     ShelleyBasedEraAlonzo q q'')
                  r'
       _ -> fromConsensusQueryResultMismatch
+
+fromConsensusQueryResult (QueryInEra BabbageEraInCardanoMode
+                                     (QueryInShelleyBasedEra _era _q)) _q' _r' = error "TODO: Babbage era"
 
 fromConsensusQueryResultShelleyBased
   :: forall era ledgerera result result'.

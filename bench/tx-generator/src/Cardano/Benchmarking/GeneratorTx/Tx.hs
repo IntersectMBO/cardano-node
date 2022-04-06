@@ -86,12 +86,14 @@ mkGenesisTransaction key _payloadSize ttl fee txins txouts
     ShelleyBasedEraAllegra -> TxFeeExplicit TxFeesExplicitInAllegraEra fee
     ShelleyBasedEraMary    -> TxFeeExplicit TxFeesExplicitInMaryEra fee
     ShelleyBasedEraAlonzo  -> TxFeeExplicit TxFeesExplicitInAlonzoEra fee
+    ShelleyBasedEraBabbage -> TxFeeExplicit TxFeesExplicitInBabbageEra fee
   validityUpperBound = case shelleyBasedEra @ era of
     ShelleyBasedEraShelley -> TxValidityUpperBound ValidityUpperBoundInShelleyEra ttl
     ShelleyBasedEraAllegra -> TxValidityUpperBound ValidityUpperBoundInAllegraEra ttl
     ShelleyBasedEraMary    -> TxValidityUpperBound ValidityUpperBoundInMaryEra ttl
     ShelleyBasedEraAlonzo  -> TxValidityUpperBound ValidityUpperBoundInAlonzoEra ttl
-
+    ShelleyBasedEraBabbage -> TxValidityUpperBound ValidityUpperBoundInBabbageEra ttl
+    
 mkTransaction :: forall era .
      IsShelleyBasedEra era
   => SigningKey PaymentKey
@@ -132,6 +134,7 @@ mkFee f = case shelleyBasedEra @ era of
   ShelleyBasedEraAllegra -> TxFeeExplicit TxFeesExplicitInAllegraEra f
   ShelleyBasedEraMary    -> TxFeeExplicit TxFeesExplicitInMaryEra f
   ShelleyBasedEraAlonzo  -> TxFeeExplicit TxFeesExplicitInAlonzoEra f
+  ShelleyBasedEraBabbage -> TxFeeExplicit TxFeesExplicitInBabbageEra f  
 
 mkValidityUpperBound :: forall era .
      IsShelleyBasedEra era
@@ -142,6 +145,7 @@ mkValidityUpperBound ttl = case shelleyBasedEra @ era of
   ShelleyBasedEraAllegra -> TxValidityUpperBound ValidityUpperBoundInAllegraEra ttl
   ShelleyBasedEraMary    -> TxValidityUpperBound ValidityUpperBoundInMaryEra ttl
   ShelleyBasedEraAlonzo  -> TxValidityUpperBound ValidityUpperBoundInAlonzoEra ttl
+  ShelleyBasedEraBabbage -> TxValidityUpperBound ValidityUpperBoundInBabbageEra ttl
 
 mkTransactionGen :: forall era .
      IsShelleyBasedEra era
@@ -206,7 +210,8 @@ mkTxOutValueAdaOnly l = case shelleyBasedEra @ era of
   ShelleyBasedEraAllegra -> TxOutAdaOnly AdaOnlyInAllegraEra l
   ShelleyBasedEraMary    -> TxOutValue MultiAssetInMaryEra $ lovelaceToValue l
   ShelleyBasedEraAlonzo  -> TxOutValue MultiAssetInAlonzoEra $ lovelaceToValue l
-
+  ShelleyBasedEraBabbage -> TxOutValue MultiAssetInBabbageEra $ lovelaceToValue l
+  
 txOutValueToLovelace :: TxOutValue era -> Lovelace
 txOutValueToLovelace = \case
   TxOutAdaOnly AdaOnlyInByronEra   x -> x
@@ -222,3 +227,4 @@ txInModeCardano tx = case shelleyBasedEra @ era of
   ShelleyBasedEraAllegra -> TxInMode tx AllegraEraInCardanoMode
   ShelleyBasedEraMary    -> TxInMode tx MaryEraInCardanoMode
   ShelleyBasedEraAlonzo  -> TxInMode tx AlonzoEraInCardanoMode
+  ShelleyBasedEraBabbage -> TxInMode tx BabbageEraInCardanoMode

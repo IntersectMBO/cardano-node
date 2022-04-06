@@ -1107,6 +1107,7 @@ fromShelleyBasedScript era script =
           ScriptInEra PlutusScriptV2InAlonzo $
           PlutusScript PlutusScriptV2 $
           PlutusScriptSerialised s
+    ShelleyBasedEraBabbage -> error "TODO: Babbage"
 
 
 -- | Conversion for the 'Shelley.MultiSig' language used by the Shelley era.

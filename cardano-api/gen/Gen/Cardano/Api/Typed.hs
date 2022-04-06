@@ -783,6 +783,7 @@ genTxOutDatumHash era = case era of
                     , TxOutDatumHash ScriptDataInAlonzoEra <$> genHashScriptData
                     , TxOutDatum     ScriptDataInAlonzoEra <$> genScriptData
                     ]
+    BabbageEra -> pure TxOutDatumNone -- TODO: Babbage Era
 
 mkDummyHash :: forall h a. CRYPTO.HashAlgorithm h => Int -> CRYPTO.Hash h a
 mkDummyHash = coerce . CRYPTO.hashWithSerialiser @h CBOR.toCBOR

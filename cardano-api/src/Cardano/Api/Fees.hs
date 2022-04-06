@@ -139,6 +139,7 @@ transactionFee txFeeFixed txFeePerByte tx =
   obtainHasField ShelleyBasedEraAllegra f = f
   obtainHasField ShelleyBasedEraMary    f = f
   obtainHasField ShelleyBasedEraAlonzo  f = f
+  obtainHasField ShelleyBasedEraBabbage f = f
 
 {-# DEPRECATED transactionFee "Use 'evaluateTransactionFee' instead" #-}
 
@@ -266,6 +267,7 @@ evaluateTransactionFee pparams txbody keywitcount _byronwitcount =
     withLedgerConstraints ShelleyBasedEraAllegra f = f
     withLedgerConstraints ShelleyBasedEraMary    f = f
     withLedgerConstraints ShelleyBasedEraAlonzo  f = f
+    withLedgerConstraints ShelleyBasedEraBabbage f = f
 
 -- | Give an approximate count of the number of key witnesses (i.e. signatures)
 -- a transaction will need.
@@ -484,6 +486,7 @@ evaluateTransactionExecutionUnits _eraInMode systemstart history pparams utxo tx
           ShelleyBasedEraAllegra -> evalPreAlonzo
           ShelleyBasedEraMary    -> evalPreAlonzo
           ShelleyBasedEraAlonzo  -> evalAlonzo era tx'
+          ShelleyBasedEraBabbage -> error "TODO: Babbage"
   where
     -- Pre-Alonzo eras do not support languages with execution unit accounting.
     evalPreAlonzo :: Either TransactionValidityError
@@ -637,10 +640,11 @@ evaluateTransactionBalance pparams poolids utxo
           => MultiAssetSupportedInEra era
           -> a)
       -> a
-    withLedgerConstraints ShelleyBasedEraShelley f _ = f AdaOnlyInShelleyEra
-    withLedgerConstraints ShelleyBasedEraAllegra f _ = f AdaOnlyInAllegraEra
-    withLedgerConstraints ShelleyBasedEraMary    _ f = f MultiAssetInMaryEra
-    withLedgerConstraints ShelleyBasedEraAlonzo  _ f = f MultiAssetInAlonzoEra
+    withLedgerConstraints ShelleyBasedEraShelley f _  = f AdaOnlyInShelleyEra
+    withLedgerConstraints ShelleyBasedEraAllegra f _  = f AdaOnlyInAllegraEra
+    withLedgerConstraints ShelleyBasedEraMary    _ f  = f MultiAssetInMaryEra
+    withLedgerConstraints ShelleyBasedEraAlonzo  _ f  = f MultiAssetInAlonzoEra
+    withLedgerConstraints ShelleyBasedEraBabbage _ _f = error "TODO: Babbage"
 
 type LedgerEraConstraints ledgerera =
        ( Ledger.Era.Crypto ledgerera ~ Ledger.StandardCrypto
@@ -1031,6 +1035,7 @@ calculateMinimumUTxO era txout@(TxOut _ v _) pparams' =
           Right . lovelaceToValue
             $ Lovelace (Alonzo.utxoEntrySize (toShelleyTxOutAny era txout) * costPerWord)
         Nothing -> Left PParamsUTxOCostPerWordMissing
+    ShelleyBasedEraBabbage -> error "TODO: Babbage"
  where
    calcMinUTxOAllegraMary :: Either MinimumUTxOError Value
    calcMinUTxOAllegraMary = do
