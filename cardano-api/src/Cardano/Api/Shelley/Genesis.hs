@@ -22,7 +22,7 @@ import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 import           Cardano.Ledger.BaseTypes as Ledger
 import           Cardano.Ledger.Shelley.PParams as Ledger (PParams' (..), emptyPParams)
 import           Cardano.Slotting.Slot (EpochSize (..))
-import qualified Plutus.V1.Ledger.Api as Plutus
+import qualified Plutus.V1.Ledger.EvaluationContext as THOU_SHALT_NOT_MERGE_THIS
 
 import           Ouroboros.Consensus.Shelley.Node (ShelleyGenesis (..), emptyGenesisStaking)
 
@@ -86,14 +86,11 @@ shelleyGenesisDefaults =
 -- | Reasonable starting defaults for constructing an 'AlonzoGenesis'.
 alonzoGenesisDefaults :: Alonzo.AlonzoGenesis
 alonzoGenesisDefaults =
-  let cModel = case Alonzo.CostModel <$> Plutus.defaultCostModelParams of
-                 Just (Alonzo.CostModel m) ->
-                   if Alonzo.validateCostModelParams m
-                   then Map.singleton Alonzo.PlutusV1 (Alonzo.CostModel m)
-                   else error "alonzoGenesisDefaults: defaultCostModel is invalid"
-                 Nothing ->
-                   error "alonzoGenesisDefaults: Could not extract cost model \
-                         \params from defaultCostModel"
+  let cModel = case Alonzo.mkCostModel Alonzo.PlutusV1 tHIS_IS_NOT_OK__DO_NOT_MERGE of
+                 Right cm -> Alonzo.CostModels $ Map.singleton Alonzo.PlutusV1 cm
+                 Left err ->
+                   error $ "alonzoGenesisDefaults: Could not extract cost model \
+                           \params from costModelParamsForTesting. " <> err
       --TODO: we need a better validation story. We also ought to wrap the
       -- genesis type in the API properly.
       prices' = case toAlonzoPrices alonzoGenesisDefaultExecutionPrices of
@@ -110,6 +107,24 @@ alonzoGenesisDefaults =
        , Alonzo.maxCollateralInputs  = alonzoGenesisDefaultMaxCollateralInputs
        }
  where
+                {- ================================================ -}
+              {- ==================================================== -}
+            {- ======================================================== -}
+          {- ============================================================ -}
+        {- ================================================================ -}
+      {- ==================================================================== -}
+    {- ======================================================================== -}
+  {- ============================================================================ -}
+  tHIS_IS_NOT_OK__DO_NOT_MERGE = THOU_SHALT_NOT_MERGE_THIS.costModelParamsForTesting
+  {- ============================================================================ -}
+    {- ======================================================================== -}
+      {- ==================================================================== -}
+        {- ================================================================ -}
+          {- ============================================================ -}
+            {- ======================================================== -}
+              {- ==================================================== -}
+                {- ================================================ -}
+
   alonzoGenesisDefaultExecutionPrices :: ExecutionUnitPrices
   alonzoGenesisDefaultExecutionPrices =
       ExecutionUnitPrices {
