@@ -34,7 +34,8 @@ import           Control.Monad (join)
 import           Control.Monad.IO.Unlift
 import qualified Control.Tracer as T
 import           Data.Maybe (isJust)
-import           Data.Text (Text)
+import           Data.Symbol
+import           Data.Text (Text, unpack)
 import           UnliftIO.MVar
 
 import           Cardano.Logging.Types
@@ -46,7 +47,7 @@ traceWith (Trace tr) a =
 
 -- | Convenience function for tracing a message with a name
 --   As the simple name suggest, this should be the standard function
-traceNamed :: Monad m => Trace m a -> Text -> a -> m ()
+traceNamed :: Monad m => Trace m a -> Symbol -> a -> m ()
 traceNamed tr n = traceWith (appendName n tr)
 
 --- | Don't process further if the result of the selector function
@@ -105,7 +106,7 @@ withLoggingContext lc (Trace tr) = Trace $
 -- | Appends a name to the context.
 -- E.g. appendName "specific" $ appendName "middle" $ appendName "general" tracer
 -- give the result: `general.middle.specific`.
-appendName :: Monad m => Text -> Trace m a -> Trace m a
+appendName :: Monad m => Symbol -> Trace m a -> Trace m a
 appendName name (Trace tr) = Trace $
     T.contramap
       (\
@@ -117,7 +118,7 @@ withNamesAppended :: Monad m => (a -> [Text]) -> Trace m a -> Trace m a
 withNamesAppended func (Trace tr) = Trace $
     T.contramap
       (\case
-        (lc, Right e) -> (lc {lcNamespace = func e ++ lcNamespace lc}, Right e)
+        (lc, Right e) -> (lc {lcNamespace = (map (intern . unpack) (func e)) ++ lcNamespace lc}, Right e)
         (lc, Left ctrl) -> (lc, Left ctrl))
       tr
 

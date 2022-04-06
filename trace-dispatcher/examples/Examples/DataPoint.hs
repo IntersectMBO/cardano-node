@@ -11,6 +11,7 @@ module Examples.DataPoint (
 import qualified Data.Aeson as A
 import           Data.ByteString.Lazy.UTF8
 import qualified Data.Map.Strict as M
+import           Data.Text (Text)
 import           Trace.Forward.Utils.DataPoint (DataPoint (..))
 import           GHC.Conc
 import           GHC.Generics (Generic)
@@ -33,7 +34,7 @@ instance A.ToJSON BaseStats where
 instance Show DataPoint where
   show (DataPoint a) = toString $ A.encode a
 
-namesForBaseStats :: BaseStats -> Namespace
+namesForBaseStats :: BaseStats -> [Text]
 namesForBaseStats _ = ["BaseStats"]
 
 emptyStats :: BaseStats

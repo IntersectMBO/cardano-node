@@ -32,6 +32,7 @@ import           Data.IORef (IORef, newIORef, readIORef, writeIORef)
 import           Data.List (foldl', maximumBy, nub)
 import qualified Data.Map as Map
 import           Data.Maybe (fromMaybe, mapMaybe)
+import           Data.Symbol
 import           Data.Text (Text, split, unpack)
 import           Data.Yaml
 import           GHC.Generics
@@ -374,25 +375,25 @@ parseRepresentation bs = transform (decodeEither' bs)
       let tc'  = foldl' (\ tci (TraceOptionSeverity ns severity') ->
                           let ns' = split (=='.') ns
                               ns'' = if ns' == [""] then [] else ns'
-                          in Map.insertWith (++) ns'' [ConfSeverity severity'] tci)
+                          in Map.insertWith (++) (map (intern . unpack) ns'') [ConfSeverity severity'] tci)
                         tc
                         (traceOptionSeverity cr)
           tc'' = foldl' (\ tci (TraceOptionDetail ns detail') ->
                           let ns' = split (=='.') ns
                               ns'' = if ns' == [""] then [] else ns'
-                          in Map.insertWith (++) ns'' [ConfDetail detail'] tci)
+                          in Map.insertWith (++) (map (intern . unpack) ns'') [ConfDetail detail'] tci)
                         tc'
                         (traceOptionDetail cr)
           tc''' = foldl' (\ tci (TraceOptionBackend ns backend') ->
                           let ns' = split (=='.') ns
                               ns'' = if ns' == [""] then [] else ns'
-                          in Map.insertWith (++) ns'' [ConfBackend backend'] tci)
+                          in Map.insertWith (++) (map (intern . unpack) ns'') [ConfBackend backend'] tci)
                         tc''
                         (traceOptionBackend cr)
           tc'''' = foldl' (\ tci (TraceOptionLimiter ns name frequ) ->
                           let ns' = split (=='.') ns
                               ns'' = if ns' == [""] then [] else ns'
-                          in Map.insertWith (++) ns'' [ConfLimiter name frequ] tci)
+                          in Map.insertWith (++) (map (intern . unpack) ns'') [ConfLimiter name frequ] tci)
                         tc'''
                         (traceOptionLimiter cr)
       in TraceConfig

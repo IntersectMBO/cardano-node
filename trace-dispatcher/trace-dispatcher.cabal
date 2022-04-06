@@ -50,6 +50,7 @@ library
                       , ouroboros-network-framework
                       , serialise
                       , stm
+                      , symbol
                       , text
                       , time
                       , trace-forward
@@ -73,6 +74,7 @@ library
                        -Wredundant-constraints
                        -Wmissing-export-lists
                        -Wno-incomplete-patterns
+                       -fprof-auto
 
 
 executable trace-dispatcher-examples
@@ -97,6 +99,7 @@ executable trace-dispatcher-examples
                       , ekg-core
                       , hostname
                       , stm
+                      , symbol
                       , text
                       , trace-dispatcher
                       , trace-forward
@@ -116,6 +119,7 @@ executable trace-dispatcher-examples
                        -Wredundant-constraints
                        -Wmissing-export-lists
                        -Wno-incomplete-patterns
+                       -fprof-auto
 
 test-suite trace-dispatcher-test
   type:                exitcode-stdio-1.0
@@ -138,6 +142,7 @@ test-suite trace-dispatcher-test
                       , hostname
                       , text
                       , stm
+                      , symbol
                       , tasty
                       , tasty-quickcheck
                       , time
@@ -158,6 +163,7 @@ test-suite trace-dispatcher-test
                        -Wredundant-constraints
                        -Wmissing-export-lists
                        -Wno-incomplete-patterns
+                       -fprof-auto
 
 benchmark trace-dispatcher-bench
   type:                exitcode-stdio-1.0
@@ -176,7 +182,19 @@ benchmark trace-dispatcher-bench
                        , containers
                        , criterion
                        , ekg
+                       , symbol                      
                        , text
                        , time
                        , trace-dispatcher
                        , QuickCheck
+
+  ghc-options:         -Wall
+                       -Wcompat
+                       -Wincomplete-uni-patterns
+                       -Wincomplete-record-updates
+                       -Wpartial-fields
+                       -Widentities
+                       -Wredundant-constraints
+                       -Wmissing-export-lists
+                       -Wno-incomplete-patterns
+                       -fprof-auto

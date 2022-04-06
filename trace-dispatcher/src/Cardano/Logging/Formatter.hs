@@ -26,6 +26,7 @@ import           Data.Text.Encoding (decodeUtf8)
 import           Data.Text.Lazy (toStrict)
 import           Data.Text.Lazy.Builder as TB
 import           Data.Time (defaultTimeLocale, formatTime, getCurrentTime)
+import           Data.Symbol
 
 import           Cardano.Logging.Types
 import           Control.Concurrent (myThreadId)
@@ -36,7 +37,7 @@ import           Network.HostName
 -- | Format this trace as metrics
 metricsFormatter
   :: forall a m . (LogFormatting a, MonadIO m)
-  => Text
+  => Symbol
   -> Trace m FormattedMessage
   -> Trace m a
 metricsFormatter application (Trace tr) =
@@ -56,7 +57,7 @@ metricsFormatter application (Trace tr) =
 -- | Format this trace as TraceObject for the trace forwarder
 forwardFormatter
   :: forall a m . (LogFormatting a, MonadIO m)
-  => Text
+  => Symbol
   -> Trace m FormattedMessage
   -> m (Trace m a)
 forwardFormatter application (Trace tr) = do
@@ -98,7 +99,7 @@ forwardFormatter application (Trace tr) = do
 humanFormatter
   :: forall a m . (LogFormatting a, MonadIO m)
   => Bool
-  -> Text
+  -> Symbol
   -> Trace m FormattedMessage
   -> m (Trace m a)
 humanFormatter withColor application (Trace tr) = do
@@ -120,7 +121,7 @@ humanFormatter withColor application (Trace tr) = do
 formatContextHuman ::
      Bool
   -> String
-  -> Text
+  -> Symbol
   -> LoggingContext
   -> Text
   -> IO Text
@@ -137,7 +138,7 @@ formatContextHuman withColor hostname application LoggingContext {..}  txt = do
                     $ fromString hostname
                       <> singleton ':'
                       <> mconcat (intersperse (singleton '.')
-                          (map fromText (application : lcNamespace)))
+                          (map (fromString . unintern) (application : lcNamespace)))
       tadd     = fromText " ("
                   <> fromString (show severity)
                   <> singleton ','
@@ -159,7 +160,7 @@ formatContextHuman withColor hostname application LoggingContext {..}  txt = do
 -- The text argument gives the application name which is prepended to the namespace
 machineFormatter
   :: forall a m . (LogFormatting a, MonadIO m)
-  => Text
+  => Symbol
   -> Trace m FormattedMessage
   -> m (Trace m a)
 machineFormatter application (Trace tr) = do
@@ -181,7 +182,7 @@ machineFormatter application (Trace tr) = do
 
 formatContextMachine ::
      String
-  -> Text
+  -> Symbol
   -> LoggingContext
   -> AE.Object
   -> IO AE.Encoding
@@ -192,7 +193,7 @@ formatContextMachine hostname application LoggingContext {..} obj = do
       tid      = fromMaybe ((pack . show) thid)
                     ((stripPrefix "ThreadId " . pack . show) thid)
       ns       = mconcat (intersperse (singleton '.')
-                        (map fromText (application : lcNamespace)))
+                        (map (fromString . unintern) (application : lcNamespace)))
       ts       = pack $ formatTime defaultTimeLocale "%F %H:%M:%S%4QZ" time
   pure $ AE.pairs $    "at"      .= ts
                     <> "ns"      .= toStrict (toLazyText ns)

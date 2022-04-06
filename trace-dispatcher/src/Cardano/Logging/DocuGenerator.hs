@@ -21,6 +21,7 @@ import qualified Control.Tracer as T
 import           Data.IORef (modifyIORef, newIORef, readIORef)
 import           Data.List (intersperse, nub, sortBy)
 import qualified Data.Map as Map
+import           Data.Symbol
 import           Data.Text (Text, pack, toLower)
 import qualified Data.Text as T
 import           Data.Text.Internal.Builder (toLazyText)
@@ -188,14 +189,14 @@ generateTOC traces metrics datapoints =
       <> fromText "](#"
       <> namespaceRefBuilder ns
       <> fromText ")"
-    namespaceBuilder ns = mconcat (intersperse (singleton '.') (map fromText ns))
-    namespaceRefBuilder ns = mconcat (map (fromText . toLower) ns)
+    namespaceBuilder ns = mconcat (intersperse (singleton '.') (map (fromString . unintern) ns))
+    namespaceRefBuilder ns = mconcat (map (fromText . toLower . pack . unintern) ns)
     nameToToc [name] =
       fromText "\n1. "
       <> fromText "["
-      <> fromText name
+      <> (fromString . unintern) name
       <> fromText "](#"
-      <> fromText (nameRefBuilder name)
+      <> fromText (nameRefBuilder ((pack . unintern) name))
       <> fromText ")"
     nameToToc list =
       fromText "unexpected" <> fromText ((pack . show) list)
@@ -250,7 +251,7 @@ documentMarkdown (Documented documented) tracers = do
                         (\ (_,l) (_,r) -> compare (ldNamespace l) (ldNamespace r))
                         items
     let messageDocs = map (\(i, ld) -> case ldNamespace ld of
-                                []     -> (["No Namespace"], documentItem (i, ld))
+                                []     -> ([intern "No Namespace"], documentItem (i, ld))
                                 (hn:_) -> (hn, documentItem (i, ld))) sortedItems
         metricsItems = filter (not . Map.null . ldMetricsDoc . snd) sortedItems
         metricsDocs = map documentMetrics metricsItems
@@ -272,9 +273,9 @@ documentMarkdown (Documented documented) tracers = do
                       , configBuilder ld
                       ]
 
-    documentMetrics :: (Int, LogDoc) -> [([Text], DocuResult)]
+    documentMetrics :: (Int, LogDoc) -> [([Symbol], DocuResult)]
     documentMetrics (_idx, ld@LogDoc {..}) =
-      map (\(name, builder) -> ([name] , DocuMetric $
+      map (\(name, builder) -> ([(intern . T.unpack) name] , DocuMetric $
           mconcat $ intersperse (fromText "\n\n")
             [ builder
             , namespacesMetricsBuilder (nub ldNamespace)
@@ -290,7 +291,7 @@ documentMarkdown (Documented documented) tracers = do
 
     namespaceBuilder :: Namespace -> Builder
     namespaceBuilder ns = fromText "### " <>
-      mconcat (intersperse (singleton '.') (map fromText ns))
+      mconcat (intersperse (singleton '.') (map (fromString . unintern) ns))
 
     namespacesMetricsBuilder :: [Namespace] -> Builder
     namespacesMetricsBuilder [ns] = fromText "Dispatched by: \n" <> namespaceMetricsBuilder ns
@@ -299,7 +300,7 @@ documentMarkdown (Documented documented) tracers = do
       mconcat (intersperse (singleton '\n')(map namespaceMetricsBuilder nsl))
 
     namespaceMetricsBuilder :: Namespace -> Builder
-    namespaceMetricsBuilder ns = mconcat (intersperse (singleton '.') (map fromText ns))
+    namespaceMetricsBuilder ns = mconcat (intersperse (singleton '.') (map (fromString . unintern) ns))
 
     propertiesBuilder :: LogDoc -> Builder
     propertiesBuilder LogDoc {..} =

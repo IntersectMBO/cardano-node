@@ -6,6 +6,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Cardano.Logging.Types (
     Trace(..)
@@ -52,6 +53,7 @@ import           Data.IORef
 import           Data.Map (Map)
 import qualified Data.Map as Map
 import qualified Data.Map.Strict as SMap
+import           Data.Symbol
 
 import           Data.Text (Text, pack, unpack)
 import           Data.Text.Lazy (toStrict)
@@ -125,7 +127,7 @@ newtype Documented a = Documented {undoc :: [DocMsg a]}
   deriving Show
 
 -- | A unique identifier for every message, composed of text
-type Namespace = [Text]
+type Namespace = [Symbol]
 
 -- | Document a message by giving a prototype, its most special name in the namespace
 -- and a comment in markdown format
@@ -455,6 +457,10 @@ deriving instance Generic Privacy
 deriving instance Generic SeverityS
 deriving instance Generic LoggingContext
 deriving instance Generic TraceObject
+
+instance Serialise Symbol where
+    encode = encode . unintern
+    decode = decode
 
 instance Serialise DetailLevel
 instance Serialise Privacy
