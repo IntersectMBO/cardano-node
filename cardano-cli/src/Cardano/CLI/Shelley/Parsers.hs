@@ -899,7 +899,7 @@ pQueryCmd =
     , subParser "stake-snapshot"
         (Opt.info pQueryStakeSnapshot $ Opt.progDesc "Obtain the three stake snapshots for a pool, plus the total active stake (advanced command)")
     , subParser "pool-params"
-        (Opt.info pQueryPoolParams $ Opt.progDesc "Dump the pool parameters (Ledger.NewEpochState.esLState._delegationState._pState._pParams -- advanced command)")
+        (Opt.info pQueryPoolParams $ Opt.progDesc "Dump the pool parameters (Ledger.NewEpochState.esLState.lsDPState._pState._pParams -- advanced command)")
     , subParser "leadership-schedule"
         (Opt.info pLeadershipSchedule $ Opt.progDesc "Get the slots the node is expected to mint a block in (advanced command)")
     , subParser "kes-period-info"

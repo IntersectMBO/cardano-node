@@ -100,8 +100,8 @@ instance ( Consensus.ShelleyBasedEra era
          , ToJSON (Core.TxOut era)
          , ToJSON (Core.PParamsDelta era)
          ) => ToJSON (Shelley.LedgerState era) where
-  toJSON lState = object [ "utxoState" .= Shelley._utxoState lState
-                         , "delegationState" .= Shelley._delegationState lState
+  toJSON lState = object [ "utxoState" .= Shelley.lsUTxOState lState
+                         , "delegationState" .= Shelley.lsDPState lState
                          ]
 
 instance Crypto.Crypto crypto => ToJSON (ShelleyLedger.IncrementalStake crypto) where
@@ -157,8 +157,8 @@ instance ToJSON (PParamsUpdate era) where
       mbfield (SJust x) = [x]
 
 instance Crypto.Crypto crypto => ToJSON (Shelley.DPState crypto) where
-  toJSON dpState = object [ "dstate" .= Shelley._dstate dpState
-                          , "pstate" .= Shelley._pstate dpState
+  toJSON dpState = object [ "dstate" .= Shelley.dpsDState dpState
+                          , "pstate" .= Shelley.dpsPState dpState
                           ]
 
 instance (ToJSON coin, ToJSON ptr, ToJSON pool) => ToJSON (Trip coin ptr pool) where

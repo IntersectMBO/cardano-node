@@ -55,8 +55,8 @@ import qualified Cardano.Ledger.Era as Ledger
 import           Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import           Cardano.Ledger.Shelley.Constraints
 import           Cardano.Ledger.Shelley.EpochBoundary
-import           Cardano.Ledger.Shelley.LedgerState (DPState (_pstate),
-                   EpochState (esLState, esSnapshots), LedgerState (_delegationState),
+import           Cardano.Ledger.Shelley.LedgerState (DPState (dpsPState),
+                   EpochState (esLState, esSnapshots), LedgerState (lsDPState),
                    NewEpochState (nesEs), PState (_fPParams, _pParams, _retiring))
 import qualified Cardano.Ledger.Shelley.PParams as Shelley
 import           Cardano.Ledger.Shelley.Scripts ()
@@ -868,7 +868,7 @@ getAllStake (SnapShot stake _ _) = activeStake
     Coin activeStake = fold (fmap fromCompact (VMap.toMap (unStake stake)))
 
 -- | This function obtains the pool parameters, equivalent to the following jq query on the output of query ledger-state
---   .nesEs.esLState._delegationState._pstate._pParams.<pool_id>
+--   .nesEs.esLState.lsDPState.dpsPState._pParams.<pool_id>
 writePoolParams :: forall era ledgerera. ()
   => ShelleyLedgerEra era ~ ledgerera
   => FromCBOR (DebugLedgerState era)
@@ -884,7 +884,7 @@ writePoolParams (StakePoolKeyHash hk) qState =
 
     Right ledgerState -> do
       let DebugLedgerState snapshot = ledgerState
-      let poolState = _pstate $ _delegationState $ esLState $ nesEs snapshot
+      let poolState = dpsPState $ lsDPState $ esLState $ nesEs snapshot
 
       -- Pool parameters
       let poolParams = Map.lookup hk $ _pParams poolState

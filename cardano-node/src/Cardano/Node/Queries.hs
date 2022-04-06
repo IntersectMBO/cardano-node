@@ -243,7 +243,7 @@ instance LedgerQueries (Shelley.ShelleyBlock era) where
   ledgerUtxoSize =
       (\(Shelley.UTxO xs)-> SplitMap.size xs)
     . Shelley._utxo
-    . Shelley._utxoState
+    . Shelley.lsUTxOState
     . Shelley.esLState
     . Shelley.nesEs
     . Shelley.shelleyLedgerState
@@ -251,8 +251,8 @@ instance LedgerQueries (Shelley.ShelleyBlock era) where
       UM.size
     . UM.Delegations
     . Shelley._unified
-    . Shelley._dstate
-    . Shelley._delegationState
+    . Shelley.dpsDState
+    . Shelley.lsDPState
     . Shelley.esLState
     . Shelley.nesEs
     . Shelley.shelleyLedgerState
