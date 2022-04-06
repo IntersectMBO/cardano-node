@@ -5,6 +5,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeFamilies #-}
 
 -- | The various Cardano protocol parameters, including:
@@ -65,6 +66,7 @@ import           Data.Aeson (FromJSON (..), ToJSON (..), object, withObject, (.!
                    (.=))
 import           Data.Bifunctor (bimap)
 import           Data.ByteString (ByteString)
+import           Data.Either (fromRight)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (fromMaybe, isJust)
@@ -747,10 +749,10 @@ validateCostModel :: PlutusScriptVersion lang
                   -> CostModel
                   -> Either InvalidCostModel ()
 validateCostModel PlutusScriptV1 (CostModel m)
-  | Alonzo.validateCostModelParams m = Right ()
+  | Alonzo.isCostModelParamsWellFormed m = Right ()
   | otherwise                        = Left (InvalidCostModel (CostModel m))
 validateCostModel PlutusScriptV2 (CostModel m)
-  | Alonzo.validateCostModelParams m = Right ()
+  | Alonzo.isCostModelParamsWellFormed m = Right ()
   | otherwise                        = Left (InvalidCostModel (CostModel m))
 
 -- TODO alonzo: it'd be nice if the library told us what was wrong
@@ -764,19 +766,19 @@ instance Error InvalidCostModel where
 
 toAlonzoCostModels
   :: Map AnyPlutusScriptVersion CostModel
-  -> Map Alonzo.Language Alonzo.CostModel
-toAlonzoCostModels =
-    Map.fromList
-  . map (bimap toAlonzoScriptLanguage toAlonzoCostModel)
-  . Map.toList
+  -> Either String Alonzo.CostModels
+toAlonzoCostModels cms = Alonzo.CostModels . Map.fromList <$> mapM f (Map.toList cms)
+  where
+    f (lang, cmp) = (toAlonzoScriptLanguage lang,) <$> toAlonzoCostModel cmp (toAlonzoScriptLanguage lang)
 
 fromAlonzoCostModels
-  :: Map Alonzo.Language Alonzo.CostModel
+  :: Alonzo.CostModels
   -> Map AnyPlutusScriptVersion CostModel
 fromAlonzoCostModels =
     Map.fromList
   . map (bimap fromAlonzoScriptLanguage fromAlonzoCostModel)
   . Map.toList
+  . Alonzo.unCostModels
 
 toAlonzoScriptLanguage :: AnyPlutusScriptVersion -> Alonzo.Language
 toAlonzoScriptLanguage (AnyPlutusScriptVersion PlutusScriptV1) = Alonzo.PlutusV1
@@ -786,11 +788,11 @@ fromAlonzoScriptLanguage :: Alonzo.Language -> AnyPlutusScriptVersion
 fromAlonzoScriptLanguage Alonzo.PlutusV1 = AnyPlutusScriptVersion PlutusScriptV1
 fromAlonzoScriptLanguage Alonzo.PlutusV2 = AnyPlutusScriptVersion PlutusScriptV2
 
-toAlonzoCostModel :: CostModel -> Alonzo.CostModel
-toAlonzoCostModel (CostModel m) = Alonzo.CostModel m
+toAlonzoCostModel :: CostModel -> Alonzo.Language -> Either String Alonzo.CostModel
+toAlonzoCostModel (CostModel m) lang = Alonzo.mkCostModel lang m
 
 fromAlonzoCostModel :: Alonzo.CostModel -> CostModel
-fromAlonzoCostModel (Alonzo.CostModel m) = CostModel m
+fromAlonzoCostModel = CostModel . Alonzo.getCostModelParams
 
 
 -- ----------------------------------------------------------------------------
@@ -984,8 +986,9 @@ toAlonzoPParamsUpdate
                                   noInlineMaybeToStrictMaybe protocolUpdateUTxOCostPerWord
     , Alonzo._costmdls        = if Map.null protocolUpdateCostModels
                                   then Ledger.SNothing
-                                  else Ledger.SJust
-                                         (toAlonzoCostModels protocolUpdateCostModels)
+                                  else case toAlonzoCostModels protocolUpdateCostModels of
+                                         Right cms -> Ledger.SJust cms
+                                         Left e -> error e
     , Alonzo._prices          = noInlineMaybeToStrictMaybe $
                                   toAlonzoPrices =<< protocolUpdatePrices
     , Alonzo._maxTxExUnits    = toAlonzoExUnits  <$>
@@ -1290,7 +1293,9 @@ toAlonzoPParams ProtocolParameters {
 
       -- New params in Alonzo:
     , Alonzo._coinsPerUTxOWord  = toShelleyLovelace utxoCostPerWord
-    , Alonzo._costmdls        = toAlonzoCostModels protocolParamCostModels
+    , Alonzo._costmdls        = fromRight
+                                  (error "toAlonzoCostModels: invalid cost models")
+                                  (toAlonzoCostModels protocolParamCostModels)
     , Alonzo._prices          = fromMaybe
                                   (error "toAlonzoPParams: invalid Price values")
                                   (toAlonzoPrices prices)

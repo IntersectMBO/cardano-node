@@ -13,6 +13,8 @@ import           Cardano.CLI.Shelley.Script (readFileScriptInAnyLang)
 
 import           Cardano.Api
 import           Cardano.Api.Shelley (ProtocolParameters, PlutusScript(..), fromAlonzoExUnits, protocolParamCostModels, toPlutusData)
+import           Cardano.Ledger.Alonzo.Language (Language (PlutusV1))
+import           Cardano.Ledger.Alonzo.Scripts (getEvaluationContext, mkCostModel)
 import           Cardano.Ledger.Alonzo.TxInfo (exBudgetToExUnits)
 import           Cardano.Benchmarking.FundSet
 import           Cardano.Benchmarking.Wallet
@@ -72,10 +74,12 @@ preExecuteScript ::
   -> ScriptData
   -> Either String ExecutionUnits
 preExecuteScript protocolParameters (PlutusScript _ (PlutusScriptSerialised script)) datum redeemer = do
-  costModel <- case Map.lookup (AnyPlutusScriptVersion PlutusScriptV1) (protocolParamCostModels protocolParameters) of
+  costModelParams <- case Map.lookup (AnyPlutusScriptVersion PlutusScriptV1) (protocolParamCostModels protocolParameters) of
     Just (CostModel x) -> Right x
     Nothing -> Left "costModel unavailable"
-  let (_logout, res) = Plutus.evaluateScriptCounting Plutus.Verbose costModel script
+  costModel <- mkCostModel PlutusV1 costModelParams
+  let evalCtx = getEvaluationContext costModel
+      (_logout, res) = Plutus.evaluateScriptCounting pv Plutus.Verbose evalCtx script
                               [ toPlutusData datum
                               , toPlutusData redeemer
                               , Plutus.toData dummyContext ]
@@ -85,6 +89,9 @@ preExecuteScript protocolParameters (PlutusScript _ (PlutusScriptSerialised scri
        Just x -> Right $ fromAlonzoExUnits x
        Nothing -> Left "exBudgetToExUnits exBudget == Nothing"
   where
+    pv :: Plutus.ProtocolVersion
+    pv = Plutus.ProtocolVersion 6 0
+
     dummyContext :: ScriptContext
     dummyContext = ScriptContext dummyTxInfo (Spending dummyOutRef)
 

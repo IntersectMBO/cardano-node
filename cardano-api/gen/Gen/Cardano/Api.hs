@@ -2,6 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TupleSections #-}
 
 module Gen.Cardano.Api
   ( genMetadata
@@ -11,6 +12,7 @@ module Gen.Cardano.Api
 import           Cardano.Prelude
 import           Control.Monad (MonadFail(fail))
 import qualified Data.Map.Strict as Map
+import qualified Data.Set as Set
 
 --TODO: why do we have this odd split? We can get rid of the old name "typed"
 import           Gen.Cardano.Api.Typed (genRational)
@@ -21,6 +23,9 @@ import qualified Cardano.Ledger.Alonzo.Language as Alonzo
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 import qualified Cardano.Ledger.BaseTypes as Ledger
 import qualified Cardano.Ledger.Coin as Ledger
+
+import qualified Plutus.V1.Ledger.Api as PV1
+import qualified Plutus.V2.Ledger.Api as PV2
 
 import           Hedgehog (Gen, Range)
 import qualified Hedgehog.Gen as Gen
@@ -61,9 +66,6 @@ genPrice = do
     Nothing -> fail "genPrice: genRational should give us a bounded rational"
     Just p -> pure p
 
-genLanguage :: Gen Alonzo.Language
-genLanguage = return Alonzo.PlutusV1
-
 genPrices :: Gen Alonzo.Prices
 genPrices = do
   prMem'   <- genPrice
@@ -83,19 +85,31 @@ genExUnits = do
     , Alonzo.exUnitsSteps = exUnitsSteps'
     }
 
-genCostModel :: Range Int -> Gen Text -> Gen Integer -> Gen Alonzo.CostModel
-genCostModel r gt gi = do
-  map' <- Gen.map r ((,) <$> gt <*> gi)
-  return $ Alonzo.CostModel map'
+genCostModelFromKeys :: Alonzo.Language -> Set Text -> Gen Alonzo.CostModel
+genCostModelFromKeys lang costModelParamNames = do
+  newCMPs <- traverse
+               (const (Gen.integral (Range.linear 0 100)))
+               (mkNullCostModel costModelParamNames)
+  case Alonzo.mkCostModel lang newCMPs of
+    Left e -> fail ("Corrupt cost model: " <> e)
+    Right cm -> pure cm
+  where
+    mkNullCostModel = Map.fromList . fmap (\k -> (k, 0 :: Integer)) . Set.toList
+
+genCostModel :: Alonzo.Language -> Gen (Alonzo.Language, Alonzo.CostModel)
+genCostModel Alonzo.PlutusV1 =
+  (Alonzo.PlutusV1,) <$> genCostModelFromKeys Alonzo.PlutusV1 PV1.costModelParamNames
+genCostModel Alonzo.PlutusV2 =
+  (Alonzo.PlutusV2,) <$> genCostModelFromKeys Alonzo.PlutusV2 PV2.costModelParamNames
+
+genCostModels :: Gen Alonzo.CostModels
+genCostModels = Alonzo.CostModels . Map.fromList
+  <$> (Gen.subsequence Alonzo.nonNativeLanguages >>= mapM genCostModel)
 
 genAlonzoGenesis :: Gen Alonzo.AlonzoGenesis
 genAlonzoGenesis = do
   coinsPerUTxOWord <- genCoin (Range.linear 0 5)
-  costmdls' <- Gen.map (Range.linear 0 5) $ (,)
-    <$> genLanguage
-    <*> genCostModel (Range.linear 0 5)
-          (Gen.text (Range.linear 0 10) Gen.alphaNum)
-          (Gen.integral (Range.linear 0 100))
+  costmdls' <- genCostModels
   prices' <- genPrices
   maxTxExUnits' <- genExUnits
   maxBlockExUnits' <- genExUnits
