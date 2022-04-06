@@ -11,6 +11,7 @@ module Cardano.Logging.Tracer.Composed (
 import           Control.Exception (catch, SomeException)
 import           Data.Aeson.Types (ToJSON)
 import           Data.Maybe (fromMaybe)
+import           Data.Symbol
 import           Data.Text
 
 import           Trace.Forward.Utils.DataPoint (DataPoint (..))
@@ -87,7 +88,7 @@ mkCardanoTracer' trStdout trForward mbTrEkg name namesFor severityFor privacyFor
       tr'  <- withDetailsFromConfig tr
       tr'' <- filterSeverityFromConfig tr'
       pure $ withNamesAppended namesFor
-            $ appendName name
+            $ appendName ((intern . unpack) name)
               $ appendName "Node"
                 $ withSeverity severityFor
                   $ withPrivacy privacyFor

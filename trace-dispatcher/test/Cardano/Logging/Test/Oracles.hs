@@ -9,6 +9,7 @@ module Cardano.Logging.Test.Oracles (
 import qualified Data.Text as T
 import           Test.QuickCheck
 import           Text.Read (readMaybe)
+import           Data.Symbol
 
 import           Cardano.Logging
 import           Cardano.Logging.Test.Messages
@@ -26,8 +27,8 @@ oracleMessages conf ScriptRes {..} =
   where
     oracleMessage :: ScriptedMessage -> Bool
     oracleMessage (ScriptedMessage _t msg) =
-      let filterSeverity = getSeverity conf ("Node" : "Test" : namesForMessage msg)
-          backends = getBackends conf ("Node" : "Test" : namesForMessage msg)
+      let filterSeverity = getSeverity conf (map (intern . T.unpack)("Node" : "Test" : namesForMessage msg))
+          backends = getBackends conf (map (intern . T.unpack)("Node" : "Test" : namesForMessage msg))
           inStdout = hasStdoutBackend backends
                       && fromEnum (severityForMessage msg) >= fromEnum filterSeverity
           isCorrectStdout = includedExactlyOnce msg srStdoutRes == inStdout

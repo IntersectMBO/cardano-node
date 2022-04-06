@@ -4,13 +4,10 @@ import           Data.IORef
 import           Cardano.Logging
 import           Cardano.Logging.Test.Config
 import           Cardano.Logging.Test.Messages
-import           Cardano.Logging.Test.Oracles
-import           Cardano.Logging.Test.Script
 import           Cardano.Logging.Test.Tracer
 import           Cardano.Logging.Test.Types
 import           System.Remote.Monitoring (forkServer)
 
-import           Debug.Trace
 
 -- Can be run with:
 -- cabal bench trace-dispatcher-bench --benchmark-option='-o benchmark-trace.html'
@@ -51,11 +48,11 @@ main = do
               ]
 
 stdoutTracers :: Trace IO FormattedMessage -> IO (Trace IO Message)
-stdoutTracers stdoutTracer = do
+stdoutTracers stdoutTracer' = do
     forwardTrRef    <- newIORef []
     forwardTracer'  <- testTracer forwardTrRef
     tr              <- mkCardanoTracer
-                        stdoutTracer
+                        stdoutTracer'
                         forwardTracer'
                         Nothing
                         "Test"
@@ -66,11 +63,11 @@ stdoutTracers stdoutTracer = do
     pure tr
 
 filterTracers :: Trace IO FormattedMessage -> IO (Trace IO Message)
-filterTracers stdoutTracer = do
+filterTracers stdoutTracer' = do
     forwardTrRef    <- newIORef []
     forwardTracer'  <- testTracer forwardTrRef
     tr              <- mkCardanoTracer
-                        stdoutTracer
+                        stdoutTracer'
                         forwardTracer'
                         Nothing
                         "Test"
@@ -98,11 +95,11 @@ inMemoryTracers = do
     pure tr
 
 timeLimitedTracers :: Trace IO FormattedMessage -> IO (Trace IO Message)
-timeLimitedTracers stdoutTracer = do
+timeLimitedTracers stdoutTracer' = do
     forwardTrRef    <- newIORef []
     forwardTracer'  <- testTracer forwardTrRef
     tr              <- mkCardanoTracer
-                        stdoutTracer
+                        stdoutTracer'
                         forwardTracer'
                         Nothing
                         "Test"
@@ -119,11 +116,11 @@ ekgTracers = do
     forwardTrRef    <- newIORef []
     forwardTracer'  <- testTracer forwardTrRef
     ekgServer       <- forkServer "localhost" 8000
-    ekgTracer       <- ekgTracer (Right ekgServer)
+    ekgTracer'      <- ekgTracer (Right ekgServer)
     tr              <- mkCardanoTracer
                         stdoutTracer'
                         forwardTracer'
-                        Nothing
+                        (Just ekgTracer')
                         "Test"
                         namesForMessage
                         severityForMessage
@@ -137,5 +134,6 @@ timesRepeat n action = do
   action
   timesRepeat (n - 1) action
 
+sendMessage :: Int -> Trace IO Message -> IO ()
 sendMessage n tr =
   timesRepeat n (traceWith tr (Message1 1 1))

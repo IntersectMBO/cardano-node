@@ -12,7 +12,8 @@ import           Control.Monad.IO.Class
 import           Data.List (intersperse)
 import           Data.Text (Text)
 import           Data.Text.Lazy (toStrict)
-import           Data.Text.Lazy.Builder (fromText, singleton, toLazyText)
+import           Data.Text.Lazy.Builder (fromString, singleton, toLazyText)
+import           Data.Symbol
 
 import qualified Control.Tracer as T
 import           Trace.Forward.Utils.DataPoint (DataPoint (..), DataPointStore, writeToStore)
@@ -44,4 +45,4 @@ dataPointTracer dataPointStore =
     nameSpaceToText :: Namespace -> Text
     nameSpaceToText namespace = toStrict $ toLazyText $
       mconcat (intersperse (singleton '.')
-        (map fromText namespace))
+        (map (fromString . unintern) namespace))
