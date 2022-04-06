@@ -34,6 +34,10 @@ module Cardano.Api.Script (
     toScriptInEra,
     eraOfScriptInEra,
 
+    -- * Reference scripts
+    ReferenceScript(..),
+    ReferenceScriptsSupportedInEra(..),
+
     -- * Use of a script in an era as a witness
     WitCtxTxIn, WitCtxMint, WitCtxStake,
     WitCtx(..),
@@ -1304,3 +1308,27 @@ parsePaymentKeyHash txt =
     case deserialiseFromRawBytesHex (AsHash AsPaymentKey) (Text.encodeUtf8 txt) of
       Just payKeyHash -> return payKeyHash
       Nothing -> fail $ "Error deserialising payment key hash: " <> Text.unpack txt
+
+
+-- ----------------------------------------------------------------------------
+-- Reference scripts
+--
+
+-- | A reference scripts is a script that can exist at a transaction output. This greatly
+-- reduces the size of transactions that use scripts as the script no longer
+-- has to be added to the transaction, they can now be referenced via a transaction output.
+
+data ReferenceScript era where
+     ReferenceScript :: ReferenceScriptsSupportedInEra era
+                     -> ScriptInEra era
+                     -> ReferenceScript era
+
+     ReferenceScriptNone :: ReferenceScript era
+
+deriving instance Show (ReferenceScript era)
+
+
+data ReferenceScriptsSupportedInEra era where
+    ReferenceScriptsInBabbageEra  :: ReferenceScriptsSupportedInEra BabbageEra
+
+deriving instance Show (ReferenceScriptsSupportedInEra era)
