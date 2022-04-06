@@ -3,8 +3,15 @@
 
 
 ## [Trace Messages](#trace-messages)
-1. [Cardano.Node.AcceptPolicy.ConnectionRateLimiting](#cardanonodeacceptpolicyconnectionratelimiting)
 1. [Cardano.Node.AcceptPolicy.ConnectionHardLimit](#cardanonodeacceptpolicyconnectionhardlimit)
+1. [Cardano.Node.AcceptPolicy.ConnectionLimitResume](#cardanonodeacceptpolicyconnectionlimitresume)
+1. [Cardano.Node.AcceptPolicy.ConnectionRateLimiting](#cardanonodeacceptpolicyconnectionratelimiting)
+1. [Cardano.Node.BlockFetch.NodeToNode.Recieve.BatchDone](#cardanonodeblockfetchnodetonoderecievebatchdone)
+1. [Cardano.Node.BlockFetch.NodeToNode.Recieve.Block](#cardanonodeblockfetchnodetonoderecieveblock)
+1. [Cardano.Node.BlockFetch.NodeToNode.Recieve.ClientDone](#cardanonodeblockfetchnodetonoderecieveclientdone)
+1. [Cardano.Node.BlockFetch.NodeToNode.Recieve.NoBlocks](#cardanonodeblockfetchnodetonoderecievenoblocks)
+1. [Cardano.Node.BlockFetch.NodeToNode.Recieve.RequestRange](#cardanonodeblockfetchnodetonoderecieverequestrange)
+1. [Cardano.Node.BlockFetch.NodeToNode.Recieve.StartBatch](#cardanonodeblockfetchnodetonoderecievestartbatch)
 1. [Cardano.Node.BlockFetch.NodeToNode.Send.BatchDone](#cardanonodeblockfetchnodetonodesendbatchdone)
 1. [Cardano.Node.BlockFetch.NodeToNode.Send.Block](#cardanonodeblockfetchnodetonodesendblock)
 1. [Cardano.Node.BlockFetch.NodeToNode.Send.ClientDone](#cardanonodeblockfetchnodetonodesendclientdone)
@@ -14,10 +21,18 @@
 1. [Cardano.Node.BlockFetchClient.AcknowledgedFetchRequest](#cardanonodeblockfetchclientacknowledgedfetchrequest)
 1. [Cardano.Node.BlockFetchClient.AddedFetchRequest](#cardanonodeblockfetchclientaddedfetchrequest)
 1. [Cardano.Node.BlockFetchClient.ClientTerminating](#cardanonodeblockfetchclientclientterminating)
+1. [Cardano.Node.BlockFetchClient.CompletedBlockFetch](#cardanonodeblockfetchclientcompletedblockfetch)
 1. [Cardano.Node.BlockFetchClient.CompletedFetchBatch](#cardanonodeblockfetchclientcompletedfetchbatch)
 1. [Cardano.Node.BlockFetchClient.RejectedFetchBatch](#cardanonodeblockfetchclientrejectedfetchbatch)
+1. [Cardano.Node.BlockFetchClient.SendFetchRequest](#cardanonodeblockfetchclientsendfetchrequest)
 1. [Cardano.Node.BlockFetchClient.StartedFetchBatch](#cardanonodeblockfetchclientstartedfetchbatch)
 1. [Cardano.Node.BlockFetchDecision](#cardanonodeblockfetchdecision)
+1. [Cardano.Node.BlockFetchSerialised.NodeToNode.Recieve.BatchDone](#cardanonodeblockfetchserialisednodetonoderecievebatchdone)
+1. [Cardano.Node.BlockFetchSerialised.NodeToNode.Recieve.Block](#cardanonodeblockfetchserialisednodetonoderecieveblock)
+1. [Cardano.Node.BlockFetchSerialised.NodeToNode.Recieve.ClientDone](#cardanonodeblockfetchserialisednodetonoderecieveclientdone)
+1. [Cardano.Node.BlockFetchSerialised.NodeToNode.Recieve.NoBlocks](#cardanonodeblockfetchserialisednodetonoderecievenoblocks)
+1. [Cardano.Node.BlockFetchSerialised.NodeToNode.Recieve.RequestRange](#cardanonodeblockfetchserialisednodetonoderecieverequestrange)
+1. [Cardano.Node.BlockFetchSerialised.NodeToNode.Recieve.StartBatch](#cardanonodeblockfetchserialisednodetonoderecievestartbatch)
 1. [Cardano.Node.BlockFetchSerialised.NodeToNode.Send.BatchDone](#cardanonodeblockfetchserialisednodetonodesendbatchdone)
 1. [Cardano.Node.BlockFetchSerialised.NodeToNode.Send.Block](#cardanonodeblockfetchserialisednodetonodesendblock)
 1. [Cardano.Node.BlockFetchSerialised.NodeToNode.Send.ClientDone](#cardanonodeblockfetchserialisednodetonodesendclientdone)
@@ -38,80 +53,105 @@
 1. [Cardano.Node.ChainDB.AddBlockEvent.BlockInTheFuture](#cardanonodechaindbaddblockeventblockinthefuture)
 1. [Cardano.Node.ChainDB.AddBlockEvent.ChainSelectionForFutureBlock](#cardanonodechaindbaddblockeventchainselectionforfutureblock)
 1. [Cardano.Node.ChainDB.AddBlockEvent.IgnoreBlockAlreadyInVolatileDB](#cardanonodechaindbaddblockeventignoreblockalreadyinvolatiledb)
-1. [Cardano.Node.ChainDB.AddBlockEvent.IgnoreBlockAlreadyInVolatileDB](#cardanonodechaindbaddblockeventignoreblockalreadyinvolatiledb)
 1. [Cardano.Node.ChainDB.AddBlockEvent.IgnoreBlockOlderThanK](#cardanonodechaindbaddblockeventignoreblockolderthank)
+1. [Cardano.Node.ChainDB.AddBlockEvent.IgnoreInvalidBlock](#cardanonodechaindbaddblockeventignoreinvalidblock)
 1. [Cardano.Node.ChainDB.AddBlockEvent.StoreButDontChange](#cardanonodechaindbaddblockeventstorebutdontchange)
 1. [Cardano.Node.ChainDB.AddBlockEvent.SwitchedToAFork](#cardanonodechaindbaddblockeventswitchedtoafork)
 1. [Cardano.Node.ChainDB.AddBlockEvent.TryAddToCurrentChain](#cardanonodechaindbaddblockeventtryaddtocurrentchain)
 1. [Cardano.Node.ChainDB.AddBlockEvent.TrySwitchToAFork](#cardanonodechaindbaddblockeventtryswitchtoafork)
-1. [Cardano.Node.ChainDB.CopyToImmutableDBEvent.CopiedBlockToImmutableDB](#cardanonodechaindbcopytoimmutabledbeventcopiedblocktoimmutabledb)
-1. [Cardano.Node.ChainDB.CopyToImmutableDBEvent.NoBlocksToCopyToImmutableDB](#cardanonodechaindbcopytoimmutabledbeventnoblockstocopytoimmutabledb)
-1. [Cardano.Node.ChainDB.FollowerEvent.FollowerNewImmIterator](#cardanonodechaindbfollowereventfollowernewimmiterator)
-1. [Cardano.Node.ChainDB.FollowerEvent.FollowerNoLongerInMem](#cardanonodechaindbfollowereventfollowernolongerinmem)
-1. [Cardano.Node.ChainDB.FollowerEvent.FollowerSwitchToMem](#cardanonodechaindbfollowereventfollowerswitchtomem)
-1. [Cardano.Node.ChainDB.FollowerEvent.NewFollower](#cardanonodechaindbfollowereventnewfollower)
-1. [Cardano.Node.ChainDB.GCEvent.PerformedGC](#cardanonodechaindbgceventperformedgc)
-1. [Cardano.Node.ChainDB.GCEvent.ScheduledGC](#cardanonodechaindbgceventscheduledgc)
-1. [Cardano.Node.ChainDB.ImmDbEvent.CacheEvent.CurrentChunkHit](#cardanonodechaindbimmdbeventcacheeventcurrentchunkhit)
-1. [Cardano.Node.ChainDB.ImmDbEvent.CacheEvent.PastChunkEvict](#cardanonodechaindbimmdbeventcacheeventpastchunkevict)
-1. [Cardano.Node.ChainDB.ImmDbEvent.CacheEvent.PastChunkExpired](#cardanonodechaindbimmdbeventcacheeventpastchunkexpired)
-1. [Cardano.Node.ChainDB.ImmDbEvent.CacheEvent.PastChunkHit](#cardanonodechaindbimmdbeventcacheeventpastchunkhit)
-1. [Cardano.Node.ChainDB.ImmDbEvent.CacheEvent.PastChunkMiss](#cardanonodechaindbimmdbeventcacheeventpastchunkmiss)
-1. [Cardano.Node.ChainDB.ImmDbEvent.ChunkFileDoesntFit](#cardanonodechaindbimmdbeventchunkfiledoesntfit)
-1. [Cardano.Node.ChainDB.ImmDbEvent.ChunkValidation.InvalidChunkFile](#cardanonodechaindbimmdbeventchunkvalidationinvalidchunkfile)
-1. [Cardano.Node.ChainDB.ImmDbEvent.ChunkValidation.InvalidPrimaryIndex](#cardanonodechaindbimmdbeventchunkvalidationinvalidprimaryindex)
-1. [Cardano.Node.ChainDB.ImmDbEvent.ChunkValidation.InvalidSecondaryIndex](#cardanonodechaindbimmdbeventchunkvalidationinvalidsecondaryindex)
-1. [Cardano.Node.ChainDB.ImmDbEvent.ChunkValidation.MissingChunkFile](#cardanonodechaindbimmdbeventchunkvalidationmissingchunkfile)
-1. [Cardano.Node.ChainDB.ImmDbEvent.ChunkValidation.MissingPrimaryIndex](#cardanonodechaindbimmdbeventchunkvalidationmissingprimaryindex)
-1. [Cardano.Node.ChainDB.ImmDbEvent.ChunkValidation.MissingSecondaryIndex](#cardanonodechaindbimmdbeventchunkvalidationmissingsecondaryindex)
-1. [Cardano.Node.ChainDB.ImmDbEvent.DBAlreadyClosed](#cardanonodechaindbimmdbeventdbalreadyclosed)
-1. [Cardano.Node.ChainDB.ImmDbEvent.DBClosed](#cardanonodechaindbimmdbeventdbclosed)
-1. [Cardano.Node.ChainDB.ImmDbEvent.DeletingAfter](#cardanonodechaindbimmdbeventdeletingafter)
-1. [Cardano.Node.ChainDB.ImmDbEvent.Migrating](#cardanonodechaindbimmdbeventmigrating)
-1. [Cardano.Node.ChainDB.ImmDbEvent.NoValidLastLocation](#cardanonodechaindbimmdbeventnovalidlastlocation)
-1. [Cardano.Node.ChainDB.ImmDbEvent.ValidatedLastLocation](#cardanonodechaindbimmdbeventvalidatedlastlocation)
-1. [Cardano.Node.ChainDB.InitChainSelEvent.CandidateContainsFutureBlocks](#cardanonodechaindbinitchainseleventcandidatecontainsfutureblocks)
-1. [Cardano.Node.ChainDB.InitChainSelEvent.CandidateContainsFutureBlocksExceedingClockSkew](#cardanonodechaindbinitchainseleventcandidatecontainsfutureblocksexceedingclockskew)
-1. [Cardano.Node.ChainDB.InitChainSelEvent.InvalidBlock](#cardanonodechaindbinitchainseleventinvalidblock)
-1. [Cardano.Node.ChainDB.InitChainSelEvent.ValidCandidate](#cardanonodechaindbinitchainseleventvalidcandidate)
-1. [Cardano.Node.ChainDB.IteratorEvent.BlockGCedFromVolatileDB](#cardanonodechaindbiteratoreventblockgcedfromvolatiledb)
-1. [Cardano.Node.ChainDB.IteratorEvent.BlockMissingFromVolatileDB](#cardanonodechaindbiteratoreventblockmissingfromvolatiledb)
-1. [Cardano.Node.ChainDB.IteratorEvent.BlockWasCopiedToImmutableDB](#cardanonodechaindbiteratoreventblockwascopiedtoimmutabledb)
-1. [Cardano.Node.ChainDB.IteratorEvent.StreamFromBoth](#cardanonodechaindbiteratoreventstreamfromboth)
-1. [Cardano.Node.ChainDB.IteratorEvent.StreamFromImmutableDB](#cardanonodechaindbiteratoreventstreamfromimmutabledb)
-1. [Cardano.Node.ChainDB.IteratorEvent.StreamFromVolatileDB](#cardanonodechaindbiteratoreventstreamfromvolatiledb)
-1. [Cardano.Node.ChainDB.IteratorEvent.SwitchBackToVolatileDB](#cardanonodechaindbiteratoreventswitchbacktovolatiledb)
-1. [Cardano.Node.ChainDB.IteratorEvent.UnknownRangeRequested](#cardanonodechaindbiteratoreventunknownrangerequested)
-1. [Cardano.Node.ChainDB.LedgerEvent.DeletedSnapshot](#cardanonodechaindbledgereventdeletedsnapshot)
-1. [Cardano.Node.ChainDB.LedgerEvent.InvalidSnapshot](#cardanonodechaindbledgereventinvalidsnapshot)
-1. [Cardano.Node.ChainDB.LedgerEvent.ReplayFromGenesis](#cardanonodechaindbledgereventreplayfromgenesis)
-1. [Cardano.Node.ChainDB.LedgerEvent.ReplayFromSnapshot](#cardanonodechaindbledgereventreplayfromsnapshot)
-1. [Cardano.Node.ChainDB.LedgerEvent.ReplayedBlock](#cardanonodechaindbledgereventreplayedblock)
-1. [Cardano.Node.ChainDB.LedgerEvent.TookSnapshot](#cardanonodechaindbledgereventtooksnapshot)
-1. [Cardano.Node.ChainDB.OpenEvent.ClosedDB](#cardanonodechaindbopeneventcloseddb)
-1. [Cardano.Node.ChainDB.OpenEvent.OpenedDB](#cardanonodechaindbopeneventopeneddb)
-1. [Cardano.Node.ChainDB.OpenEvent.OpenedImmutableDB](#cardanonodechaindbopeneventopenedimmutabledb)
-1. [Cardano.Node.ChainDB.OpenEvent.OpenedLgrDB](#cardanonodechaindbopeneventopenedlgrdb)
-1. [Cardano.Node.ChainDB.OpenEvent.OpenedVolatileDB](#cardanonodechaindbopeneventopenedvolatiledb)
-1. [Cardano.Node.ChainDB.VolatileDbEvent.BlockAlreadyHere](#cardanonodechaindbvolatiledbeventblockalreadyhere)
-1. [Cardano.Node.ChainDB.VolatileDbEvent.DBAlreadyClosed](#cardanonodechaindbvolatiledbeventdbalreadyclosed)
-1. [Cardano.Node.ChainDB.VolatileDbEvent.InvalidFileNames](#cardanonodechaindbvolatiledbeventinvalidfilenames)
-1. [Cardano.Node.ChainDB.VolatileDbEvent.Truncate](#cardanonodechaindbvolatiledbeventtruncate)
-1. [Cardano.Node.ChainSyncClient.ChainSyncClientEvent.DownloadedHeader](#cardanonodechainsyncclientchainsyncclientevent.downloadedheader)
-1. [Cardano.Node.ChainSyncClient.ChainSyncClientEvent.Exception](#cardanonodechainsyncclientchainsyncclientevent.exception)
-1. [Cardano.Node.ChainSyncClient.ChainSyncClientEvent.FoundIntersection](#cardanonodechainsyncclientchainsyncclientevent.foundintersection)
-1. [Cardano.Node.ChainSyncClient.ChainSyncClientEvent.RolledBack](#cardanonodechainsyncclientchainsyncclientevent.rolledback)
-1. [Cardano.Node.ChainSyncClient.ChainSyncClientEvent.Termination](#cardanonodechainsyncclientchainsyncclientevent.termination)
-1. [Cardano.Node.ChainSyncClient.NodeToClient.Send.AwaitReply](#cardanonodechainsyncclientnodetoclientsendawaitreply)
-1. [Cardano.Node.ChainSyncClient.NodeToClient.Send.AwaitReply](#cardanonodechainsyncclientnodetoclientsendawaitreply)
-1. [Cardano.Node.ChainSyncClient.NodeToClient.Send.Done](#cardanonodechainsyncclientnodetoclientsenddone)
-1. [Cardano.Node.ChainSyncClient.NodeToClient.Send.FindIntersect](#cardanonodechainsyncclientnodetoclientsendfindintersect)
-1. [Cardano.Node.ChainSyncClient.NodeToClient.Send.IntersectFound](#cardanonodechainsyncclientnodetoclientsendintersectfound)
-1. [Cardano.Node.ChainSyncClient.NodeToClient.Send.IntersectNotFound](#cardanonodechainsyncclientnodetoclientsendintersectnotfound)
-1. [Cardano.Node.ChainSyncClient.NodeToClient.Send.RequestNext](#cardanonodechainsyncclientnodetoclientsendrequestnext)
-1. [Cardano.Node.ChainSyncClient.NodeToClient.Send.RollBackward](#cardanonodechainsyncclientnodetoclientsendrollbackward)
-1. [Cardano.Node.ChainSyncClient.NodeToClient.Send.RollForward](#cardanonodechainsyncclientnodetoclientsendrollforward)
-1. [Cardano.Node.ChainSyncNode.NodeToNode.Send.AwaitReply](#cardanonodechainsyncnodenodetonodesendawaitreply)
+1. [Cardano.Node.ChainDB.TraceCopyToImmutableDBEvent.CopiedBlockToImmutableDB](#cardanonodechaindbtracecopytoimmutabledbeventcopiedblocktoimmutabledb)
+1. [Cardano.Node.ChainDB.TraceCopyToImmutableDBEvent.NoBlocksToCopyToImmutableDB](#cardanonodechaindbtracecopytoimmutabledbeventnoblockstocopytoimmutabledb)
+1. [Cardano.Node.ChainDB.TraceFollowerEvent.FollowerNewImmIterator](#cardanonodechaindbtracefollowereventfollowernewimmiterator)
+1. [Cardano.Node.ChainDB.TraceFollowerEvent.FollowerNoLongerInMem](#cardanonodechaindbtracefollowereventfollowernolongerinmem)
+1. [Cardano.Node.ChainDB.TraceFollowerEvent.FollowerSwitchToMem](#cardanonodechaindbtracefollowereventfollowerswitchtomem)
+1. [Cardano.Node.ChainDB.TraceFollowerEvent.NewFollower](#cardanonodechaindbtracefollowereventnewfollower)
+1. [Cardano.Node.ChainDB.TraceGCEvent.PerformedGC](#cardanonodechaindbtracegceventperformedgc)
+1. [Cardano.Node.ChainDB.TraceGCEvent.ScheduledGC](#cardanonodechaindbtracegceventscheduledgc)
+1. [Cardano.Node.ChainDB.TraceImmutableDBEvent.CacheEvent.CurrentChunkHit](#cardanonodechaindbtraceimmutabledbeventcacheeventcurrentchunkhit)
+1. [Cardano.Node.ChainDB.TraceImmutableDBEvent.CacheEvent.PastChunkEvict](#cardanonodechaindbtraceimmutabledbeventcacheeventpastchunkevict)
+1. [Cardano.Node.ChainDB.TraceImmutableDBEvent.CacheEvent.PastChunkExpired](#cardanonodechaindbtraceimmutabledbeventcacheeventpastchunkexpired)
+1. [Cardano.Node.ChainDB.TraceImmutableDBEvent.CacheEvent.PastChunkHit](#cardanonodechaindbtraceimmutabledbeventcacheeventpastchunkhit)
+1. [Cardano.Node.ChainDB.TraceImmutableDBEvent.CacheEvent.PastChunkMiss](#cardanonodechaindbtraceimmutabledbeventcacheeventpastchunkmiss)
+1. [Cardano.Node.ChainDB.TraceImmutableDBEvent.ChunkFileDoesntFit](#cardanonodechaindbtraceimmutabledbeventchunkfiledoesntfit)
+1. [Cardano.Node.ChainDB.TraceImmutableDBEvent.ChunkValidation.InvalidChunkFile](#cardanonodechaindbtraceimmutabledbeventchunkvalidationinvalidchunkfile)
+1. [Cardano.Node.ChainDB.TraceImmutableDBEvent.ChunkValidation.InvalidPrimaryIndex](#cardanonodechaindbtraceimmutabledbeventchunkvalidationinvalidprimaryindex)
+1. [Cardano.Node.ChainDB.TraceImmutableDBEvent.ChunkValidation.InvalidSecondaryIndex](#cardanonodechaindbtraceimmutabledbeventchunkvalidationinvalidsecondaryindex)
+1. [Cardano.Node.ChainDB.TraceImmutableDBEvent.ChunkValidation.MissingChunkFile](#cardanonodechaindbtraceimmutabledbeventchunkvalidationmissingchunkfile)
+1. [Cardano.Node.ChainDB.TraceImmutableDBEvent.ChunkValidation.MissingPrimaryIndex](#cardanonodechaindbtraceimmutabledbeventchunkvalidationmissingprimaryindex)
+1. [Cardano.Node.ChainDB.TraceImmutableDBEvent.ChunkValidation.MissingSecondaryIndex](#cardanonodechaindbtraceimmutabledbeventchunkvalidationmissingsecondaryindex)
+1. [Cardano.Node.ChainDB.TraceImmutableDBEvent.ChunkValidation.RewritePrimaryIndex](#cardanonodechaindbtraceimmutabledbeventchunkvalidationrewriteprimaryindex)
+1. [Cardano.Node.ChainDB.TraceImmutableDBEvent.ChunkValidation.RewriteSecondaryIndex](#cardanonodechaindbtraceimmutabledbeventchunkvalidationrewritesecondaryindex)
+1. [Cardano.Node.ChainDB.TraceImmutableDBEvent.ChunkValidation.StartedValidatingChunk](#cardanonodechaindbtraceimmutabledbeventchunkvalidationstartedvalidatingchunk)
+1. [Cardano.Node.ChainDB.TraceImmutableDBEvent.ChunkValidation.ValidatedChunk](#cardanonodechaindbtraceimmutabledbeventchunkvalidationvalidatedchunk)
+1. [Cardano.Node.ChainDB.TraceImmutableDBEvent.DBAlreadyClosed](#cardanonodechaindbtraceimmutabledbeventdbalreadyclosed)
+1. [Cardano.Node.ChainDB.TraceImmutableDBEvent.DBClosed](#cardanonodechaindbtraceimmutabledbeventdbclosed)
+1. [Cardano.Node.ChainDB.TraceImmutableDBEvent.DeletingAfter](#cardanonodechaindbtraceimmutabledbeventdeletingafter)
+1. [Cardano.Node.ChainDB.TraceImmutableDBEvent.Migrating](#cardanonodechaindbtraceimmutabledbeventmigrating)
+1. [Cardano.Node.ChainDB.TraceImmutableDBEvent.NoValidLastLocation](#cardanonodechaindbtraceimmutabledbeventnovalidlastlocation)
+1. [Cardano.Node.ChainDB.TraceImmutableDBEvent.ValidatedLastLocation](#cardanonodechaindbtraceimmutabledbeventvalidatedlastlocation)
+1. [Cardano.Node.ChainDB.TraceInitChainSelEvent.CandidateContainsFutureBlocks](#cardanonodechaindbtraceinitchainseleventcandidatecontainsfutureblocks)
+1. [Cardano.Node.ChainDB.TraceInitChainSelEvent.CandidateContainsFutureBlocksExceedingClockSkew](#cardanonodechaindbtraceinitchainseleventcandidatecontainsfutureblocksexceedingclockskew)
+1. [Cardano.Node.ChainDB.TraceInitChainSelEvent.InitalChainSelected](#cardanonodechaindbtraceinitchainseleventinitalchainselected)
+1. [Cardano.Node.ChainDB.TraceInitChainSelEvent.InvalidBlock](#cardanonodechaindbtraceinitchainseleventinvalidblock)
+1. [Cardano.Node.ChainDB.TraceInitChainSelEvent.StartedInitChainSelection](#cardanonodechaindbtraceinitchainseleventstartedinitchainselection)
+1. [Cardano.Node.ChainDB.TraceInitChainSelEvent.UpdateLedgerDb](#cardanonodechaindbtraceinitchainseleventupdateledgerdb)
+1. [Cardano.Node.ChainDB.TraceInitChainSelEvent.ValidCandidate](#cardanonodechaindbtraceinitchainseleventvalidcandidate)
+1. [Cardano.Node.ChainDB.TraceIteratorEvent.BlockGCedFromVolatileDB](#cardanonodechaindbtraceiteratoreventblockgcedfromvolatiledb)
+1. [Cardano.Node.ChainDB.TraceIteratorEvent.BlockMissingFromVolatileDB](#cardanonodechaindbtraceiteratoreventblockmissingfromvolatiledb)
+1. [Cardano.Node.ChainDB.TraceIteratorEvent.BlockWasCopiedToImmutableDB](#cardanonodechaindbtraceiteratoreventblockwascopiedtoimmutabledb)
+1. [Cardano.Node.ChainDB.TraceIteratorEvent.StreamFromBoth](#cardanonodechaindbtraceiteratoreventstreamfromboth)
+1. [Cardano.Node.ChainDB.TraceIteratorEvent.StreamFromImmutableDB](#cardanonodechaindbtraceiteratoreventstreamfromimmutabledb)
+1. [Cardano.Node.ChainDB.TraceIteratorEvent.StreamFromVolatileDB](#cardanonodechaindbtraceiteratoreventstreamfromvolatiledb)
+1. [Cardano.Node.ChainDB.TraceIteratorEvent.SwitchBackToVolatileDB](#cardanonodechaindbtraceiteratoreventswitchbacktovolatiledb)
+1. [Cardano.Node.ChainDB.TraceIteratorEvent.UnknownRangeRequested](#cardanonodechaindbtraceiteratoreventunknownrangerequested)
+1. [Cardano.Node.ChainDB.TraceLedgerEvent.DeletedSnapshot](#cardanonodechaindbtraceledgereventdeletedsnapshot)
+1. [Cardano.Node.ChainDB.TraceLedgerEvent.InvalidSnapshot](#cardanonodechaindbtraceledgereventinvalidsnapshot)
+1. [Cardano.Node.ChainDB.TraceLedgerEvent.TookSnapshot](#cardanonodechaindbtraceledgereventtooksnapshot)
+1. [Cardano.Node.ChainDB.TraceLedgerReplayEvent.ReplayFromGenesis](#cardanonodechaindbtraceledgerreplayeventreplayfromgenesis)
+1. [Cardano.Node.ChainDB.TraceLedgerReplayEvent.ReplayFromSnapshot](#cardanonodechaindbtraceledgerreplayeventreplayfromsnapshot)
+1. [Cardano.Node.ChainDB.TraceLedgerReplayEvent.ReplayedBlock](#cardanonodechaindbtraceledgerreplayeventreplayedblock)
+1. [Cardano.Node.ChainDB.TraceOpenEvent.ClosedDB](#cardanonodechaindbtraceopeneventcloseddb)
+1. [Cardano.Node.ChainDB.TraceOpenEvent.OpenedDB](#cardanonodechaindbtraceopeneventopeneddb)
+1. [Cardano.Node.ChainDB.TraceOpenEvent.OpenedImmutableDB](#cardanonodechaindbtraceopeneventopenedimmutabledb)
+1. [Cardano.Node.ChainDB.TraceOpenEvent.OpenedLgrDB](#cardanonodechaindbtraceopeneventopenedlgrdb)
+1. [Cardano.Node.ChainDB.TraceOpenEvent.OpenedVolatileDB](#cardanonodechaindbtraceopeneventopenedvolatiledb)
+1. [Cardano.Node.ChainDB.TraceOpenEvent.StartedOpeningDB](#cardanonodechaindbtraceopeneventstartedopeningdb)
+1. [Cardano.Node.ChainDB.TraceOpenEvent.StartedOpeningImmutableDB](#cardanonodechaindbtraceopeneventstartedopeningimmutabledb)
+1. [Cardano.Node.ChainDB.TraceOpenEvent.StartedOpeningLgrDB](#cardanonodechaindbtraceopeneventstartedopeninglgrdb)
+1. [Cardano.Node.ChainDB.TraceOpenEvent.StartedOpeningVolatileDB](#cardanonodechaindbtraceopeneventstartedopeningvolatiledb)
+1. [Cardano.Node.ChainDB.TraceVolatileDBEvent.BlockAlreadyHere](#cardanonodechaindbtracevolatiledbeventblockalreadyhere)
+1. [Cardano.Node.ChainDB.TraceVolatileDBEvent.DBAlreadyClosed](#cardanonodechaindbtracevolatiledbeventdbalreadyclosed)
+1. [Cardano.Node.ChainDB.TraceVolatileDBEvent.InvalidFileNames](#cardanonodechaindbtracevolatiledbeventinvalidfilenames)
+1. [Cardano.Node.ChainDB.TraceVolatileDBEvent.Truncate](#cardanonodechaindbtracevolatiledbeventtruncate)
+1. [Cardano.Node.ChainSync.NodeToClient.Recieve.AwaitReply](#cardanonodechainsyncnodetoclientrecieveawaitreply)
+1. [Cardano.Node.ChainSync.NodeToClient.Recieve.Done](#cardanonodechainsyncnodetoclientrecievedone)
+1. [Cardano.Node.ChainSync.NodeToClient.Recieve.FindIntersect](#cardanonodechainsyncnodetoclientrecievefindintersect)
+1. [Cardano.Node.ChainSync.NodeToClient.Recieve.IntersectFound](#cardanonodechainsyncnodetoclientrecieveintersectfound)
+1. [Cardano.Node.ChainSync.NodeToClient.Recieve.IntersectNotFound](#cardanonodechainsyncnodetoclientrecieveintersectnotfound)
+1. [Cardano.Node.ChainSync.NodeToClient.Recieve.RequestNext](#cardanonodechainsyncnodetoclientrecieverequestnext)
+1. [Cardano.Node.ChainSync.NodeToClient.Recieve.RollBackward](#cardanonodechainsyncnodetoclientrecieverollbackward)
+1. [Cardano.Node.ChainSync.NodeToClient.Recieve.RollForward](#cardanonodechainsyncnodetoclientrecieverollforward)
+1. [Cardano.Node.ChainSync.NodeToClient.Send.AwaitReply](#cardanonodechainsyncnodetoclientsendawaitreply)
+1. [Cardano.Node.ChainSync.NodeToClient.Send.Done](#cardanonodechainsyncnodetoclientsenddone)
+1. [Cardano.Node.ChainSync.NodeToClient.Send.FindIntersect](#cardanonodechainsyncnodetoclientsendfindintersect)
+1. [Cardano.Node.ChainSync.NodeToClient.Send.IntersectFound](#cardanonodechainsyncnodetoclientsendintersectfound)
+1. [Cardano.Node.ChainSync.NodeToClient.Send.IntersectNotFound](#cardanonodechainsyncnodetoclientsendintersectnotfound)
+1. [Cardano.Node.ChainSync.NodeToClient.Send.RequestNext](#cardanonodechainsyncnodetoclientsendrequestnext)
+1. [Cardano.Node.ChainSync.NodeToClient.Send.RollBackward](#cardanonodechainsyncnodetoclientsendrollbackward)
+1. [Cardano.Node.ChainSync.NodeToClient.Send.RollForward](#cardanonodechainsyncnodetoclientsendrollforward)
+1. [Cardano.Node.ChainSyncClient.ChainSyncClientEvent.DownloadedHeader](#cardanonodechainsyncclientchainsyncclienteventdownloadedheader)
+1. [Cardano.Node.ChainSyncClient.ChainSyncClientEvent.Exception](#cardanonodechainsyncclientchainsyncclienteventexception)
+1. [Cardano.Node.ChainSyncClient.ChainSyncClientEvent.FoundIntersection](#cardanonodechainsyncclientchainsyncclienteventfoundintersection)
+1. [Cardano.Node.ChainSyncClient.ChainSyncClientEvent.RolledBack](#cardanonodechainsyncclientchainsyncclienteventrolledback)
+1. [Cardano.Node.ChainSyncClient.ChainSyncClientEvent.Termination](#cardanonodechainsyncclientchainsyncclienteventtermination)
+1. [Cardano.Node.ChainSyncNode.NodeToNode.Recieve.AwaitReply](#cardanonodechainsyncnodenodetonoderecieveawaitreply)
+1. [Cardano.Node.ChainSyncNode.NodeToNode.Recieve.Done](#cardanonodechainsyncnodenodetonoderecievedone)
+1. [Cardano.Node.ChainSyncNode.NodeToNode.Recieve.FindIntersect](#cardanonodechainsyncnodenodetonoderecievefindintersect)
+1. [Cardano.Node.ChainSyncNode.NodeToNode.Recieve.IntersectFound](#cardanonodechainsyncnodenodetonoderecieveintersectfound)
+1. [Cardano.Node.ChainSyncNode.NodeToNode.Recieve.IntersectNotFound](#cardanonodechainsyncnodenodetonoderecieveintersectnotfound)
+1. [Cardano.Node.ChainSyncNode.NodeToNode.Recieve.RequestNext](#cardanonodechainsyncnodenodetonoderecieverequestnext)
+1. [Cardano.Node.ChainSyncNode.NodeToNode.Recieve.RollBackward](#cardanonodechainsyncnodenodetonoderecieverollbackward)
+1. [Cardano.Node.ChainSyncNode.NodeToNode.Recieve.RollForward](#cardanonodechainsyncnodenodetonoderecieverollforward)
 1. [Cardano.Node.ChainSyncNode.NodeToNode.Send.AwaitReply](#cardanonodechainsyncnodenodetonodesendawaitreply)
 1. [Cardano.Node.ChainSyncNode.NodeToNode.Send.Done](#cardanonodechainsyncnodenodetonodesenddone)
 1. [Cardano.Node.ChainSyncNode.NodeToNode.Send.FindIntersect](#cardanonodechainsyncnodenodetonodesendfindintersect)
@@ -120,7 +160,14 @@
 1. [Cardano.Node.ChainSyncNode.NodeToNode.Send.RequestNext](#cardanonodechainsyncnodenodetonodesendrequestnext)
 1. [Cardano.Node.ChainSyncNode.NodeToNode.Send.RollBackward](#cardanonodechainsyncnodenodetonodesendrollbackward)
 1. [Cardano.Node.ChainSyncNode.NodeToNode.Send.RollForward](#cardanonodechainsyncnodenodetonodesendrollforward)
-1. [Cardano.Node.ChainSyncSerialised.NodeToNode.Send.AwaitReply](#cardanonodechainsyncserialisednodetonodesendawaitreply)
+1. [Cardano.Node.ChainSyncSerialised.NodeToNode.Recieve.AwaitReply](#cardanonodechainsyncserialisednodetonoderecieveawaitreply)
+1. [Cardano.Node.ChainSyncSerialised.NodeToNode.Recieve.Done](#cardanonodechainsyncserialisednodetonoderecievedone)
+1. [Cardano.Node.ChainSyncSerialised.NodeToNode.Recieve.FindIntersect](#cardanonodechainsyncserialisednodetonoderecievefindintersect)
+1. [Cardano.Node.ChainSyncSerialised.NodeToNode.Recieve.IntersectFound](#cardanonodechainsyncserialisednodetonoderecieveintersectfound)
+1. [Cardano.Node.ChainSyncSerialised.NodeToNode.Recieve.IntersectNotFound](#cardanonodechainsyncserialisednodetonoderecieveintersectnotfound)
+1. [Cardano.Node.ChainSyncSerialised.NodeToNode.Recieve.RequestNext](#cardanonodechainsyncserialisednodetonoderecieverequestnext)
+1. [Cardano.Node.ChainSyncSerialised.NodeToNode.Recieve.RollBackward](#cardanonodechainsyncserialisednodetonoderecieverollbackward)
+1. [Cardano.Node.ChainSyncSerialised.NodeToNode.Recieve.RollForward](#cardanonodechainsyncserialisednodetonoderecieverollforward)
 1. [Cardano.Node.ChainSyncSerialised.NodeToNode.Send.AwaitReply](#cardanonodechainsyncserialisednodetonodesendawaitreply)
 1. [Cardano.Node.ChainSyncSerialised.NodeToNode.Send.Done](#cardanonodechainsyncserialisednodetonodesenddone)
 1. [Cardano.Node.ChainSyncSerialised.NodeToNode.Send.FindIntersect](#cardanonodechainsyncserialisednodetonodesendfindintersect)
@@ -129,14 +176,14 @@
 1. [Cardano.Node.ChainSyncSerialised.NodeToNode.Send.RequestNext](#cardanonodechainsyncserialisednodetonodesendrequestnext)
 1. [Cardano.Node.ChainSyncSerialised.NodeToNode.Send.RollBackward](#cardanonodechainsyncserialisednodetonodesendrollbackward)
 1. [Cardano.Node.ChainSyncSerialised.NodeToNode.Send.RollForward](#cardanonodechainsyncserialisednodetonodesendrollforward)
-1. [Cardano.Node.ChainSyncServerBlock.ChainSyncServerEvent.RollBackward](#cardanonodechainsyncserverblockchainsyncserverevent.rollbackward)
-1. [Cardano.Node.ChainSyncServerBlock.ChainSyncServerEvent.RollForward](#cardanonodechainsyncserverblockchainsyncserverevent.rollforward)
-1. [Cardano.Node.ChainSyncServerBlock.ChainSyncServerEvent.ServerRead](#cardanonodechainsyncserverblockchainsyncserverevent.serverread)
-1. [Cardano.Node.ChainSyncServerBlock.ChainSyncServerEvent.ServerReadBlocked](#cardanonodechainsyncserverblockchainsyncserverevent.serverreadblocked)
-1. [Cardano.Node.ChainSyncServerHeader.ChainSyncServerEvent.RollBackward](#cardanonodechainsyncserverheaderchainsyncserverevent.rollbackward)
-1. [Cardano.Node.ChainSyncServerHeader.ChainSyncServerEvent.RollForward](#cardanonodechainsyncserverheaderchainsyncserverevent.rollforward)
-1. [Cardano.Node.ChainSyncServerHeader.ChainSyncServerEvent.ServerRead](#cardanonodechainsyncserverheaderchainsyncserverevent.serverread)
-1. [Cardano.Node.ChainSyncServerHeader.ChainSyncServerEvent.ServerReadBlocked](#cardanonodechainsyncserverheaderchainsyncserverevent.serverreadblocked)
+1. [Cardano.Node.ChainSyncServerBlock.ChainSyncServerEvent.ServerRead.RollBackward](#cardanonodechainsyncserverblockchainsyncservereventserverreadrollbackward)
+1. [Cardano.Node.ChainSyncServerBlock.ChainSyncServerEvent.ServerRead.RollForward](#cardanonodechainsyncserverblockchainsyncservereventserverreadrollforward)
+1. [Cardano.Node.ChainSyncServerBlock.ChainSyncServerEvent.ServerRead.ServerRead](#cardanonodechainsyncserverblockchainsyncservereventserverreadserverread)
+1. [Cardano.Node.ChainSyncServerBlock.ChainSyncServerEvent.ServerRead.ServerReadBlocked](#cardanonodechainsyncserverblockchainsyncservereventserverreadserverreadblocked)
+1. [Cardano.Node.ChainSyncServerHeader.ChainSyncServerEvent.ServerRead.RollBackward](#cardanonodechainsyncserverheaderchainsyncservereventserverreadrollbackward)
+1. [Cardano.Node.ChainSyncServerHeader.ChainSyncServerEvent.ServerRead.RollForward](#cardanonodechainsyncserverheaderchainsyncservereventserverreadrollforward)
+1. [Cardano.Node.ChainSyncServerHeader.ChainSyncServerEvent.ServerRead.ServerRead](#cardanonodechainsyncserverheaderchainsyncservereventserverreadserverread)
+1. [Cardano.Node.ChainSyncServerHeader.ChainSyncServerEvent.ServerRead.ServerReadBlocked](#cardanonodechainsyncserverheaderchainsyncservereventserverreadserverreadblocked)
 1. [Cardano.Node.ConnectionManager.Connect](#cardanonodeconnectionmanagerconnect)
 1. [Cardano.Node.ConnectionManager.ConnectError](#cardanonodeconnectionmanagerconnecterror)
 1. [Cardano.Node.ConnectionManager.ConnectionCleanup](#cardanonodeconnectionmanagerconnectioncleanup)
@@ -157,14 +204,15 @@
 1. [Cardano.Node.ConnectionManager.TerminatedConnection](#cardanonodeconnectionmanagerterminatedconnection)
 1. [Cardano.Node.ConnectionManager.TerminatingConnection](#cardanonodeconnectionmanagerterminatingconnection)
 1. [Cardano.Node.ConnectionManager.UnexpectedlyFalseAssertion](#cardanonodeconnectionmanagerunexpectedlyfalseassertion)
+1. [Cardano.Node.ConnectionManager.UnknownConnection](#cardanonodeconnectionmanagerunknownconnection)
 1. [Cardano.Node.ConnectionManager.UnregisterConnection](#cardanonodeconnectionmanagerunregisterconnection)
+1. [Cardano.Node.ConnectionManagerTransition.ConnectionManagerTransition](#cardanonodeconnectionmanagertransitionconnectionmanagertransition)
 1. [Cardano.Node.DNSResolver.LookupAAAAError](#cardanonodednsresolverlookupaaaaerror)
 1. [Cardano.Node.DNSResolver.LookupAAAAResult](#cardanonodednsresolverlookupaaaaresult)
 1. [Cardano.Node.DNSResolver.LookupAError](#cardanonodednsresolverlookupaerror)
 1. [Cardano.Node.DNSResolver.LookupAResult](#cardanonodednsresolverlookuparesult)
 1. [Cardano.Node.DNSResolver.LookupException](#cardanonodednsresolverlookupexception)
 1. [Cardano.Node.DNSResolver.LookupIPv4First](#cardanonodednsresolverlookupipv4first)
-1. [Cardano.Node.DNSResolver.LookupIPv6First](#cardanonodednsresolverlookupipv6first)
 1. [Cardano.Node.DNSResolver.LookupIPv6First](#cardanonodednsresolverlookupipv6first)
 1. [Cardano.Node.DNSSubscription.DNS.AllocateSocket](#cardanonodednssubscriptiondnsallocatesocket)
 1. [Cardano.Node.DNSSubscription.DNS.ApplicationException](#cardanonodednssubscriptiondnsapplicationexception)
@@ -184,8 +232,8 @@
 1. [Cardano.Node.DNSSubscription.DNS.SubscriptionWaitingNewConnection](#cardanonodednssubscriptiondnssubscriptionwaitingnewconnection)
 1. [Cardano.Node.DNSSubscription.DNS.TryConnectToPeer](#cardanonodednssubscriptiondnstryconnecttopeer)
 1. [Cardano.Node.DNSSubscription.DNS.UnsupportedRemoteAddr](#cardanonodednssubscriptiondnsunsupportedremoteaddr)
-1. [Cardano.Node.DebugPeerSelection.GovernorState](#cardanonodedebugpeerselectiongovernorstate)
-1. [Cardano.Node.DebugPeerSelectionResponder.GovernorState](#cardanonodedebugpeerselectionrespondergovernorstate)
+1. [Cardano.Node.DebugPeerSelection.DebugPeerSelection.GovernorState](#cardanonodedebugpeerselectiondebugpeerselectiongovernorstate)
+1. [Cardano.Node.DebugPeerSelectionResponder.DebugPeerSelection.GovernorState](#cardanonodedebugpeerselectionresponderdebugpeerselectiongovernorstate)
 1. [Cardano.Node.DiffusionInit.ConfiguringLocalSocket](#cardanonodediffusioninitconfiguringlocalsocket)
 1. [Cardano.Node.DiffusionInit.ConfiguringServerSocket](#cardanonodediffusioninitconfiguringserversocket)
 1. [Cardano.Node.DiffusionInit.CreateSystemdSocketForSnocketPath](#cardanonodediffusioninitcreatesystemdsocketforsnocketpath)
@@ -229,12 +277,18 @@
 1. [Cardano.Node.Forge.StartLeadershipCheck](#cardanonodeforgestartleadershipcheck)
 1. [Cardano.Node.Forge.StartLeadershipCheckPlus](#cardanonodeforgestartleadershipcheckplus)
 1. [Cardano.Node.ForgeStateInfo](#cardanonodeforgestateinfo)
-1. [Cardano.Node.Handshake.AcceptVersion](#cardanonodehandshakeacceptversion)
-1. [Cardano.Node.Handshake.ProposeVersions](#cardanonodehandshakeproposeversions)
-1. [Cardano.Node.Handshake.Refuse](#cardanonodehandshakerefuse)
+1. [Cardano.Node.Handshake.Receive.AcceptVersion](#cardanonodehandshakereceiveacceptversion)
+1. [Cardano.Node.Handshake.Receive.ProposeVersions](#cardanonodehandshakereceiveproposeversions)
+1. [Cardano.Node.Handshake.Receive.Refuse](#cardanonodehandshakereceiverefuse)
+1. [Cardano.Node.Handshake.Receive.ReplyVersions](#cardanonodehandshakereceivereplyversions)
+1. [Cardano.Node.Handshake.Send.AcceptVersion](#cardanonodehandshakesendacceptversion)
+1. [Cardano.Node.Handshake.Send.ProposeVersions](#cardanonodehandshakesendproposeversions)
+1. [Cardano.Node.Handshake.Send.Refuse](#cardanonodehandshakesendrefuse)
+1. [Cardano.Node.Handshake.Send.ReplyVersions](#cardanonodehandshakesendreplyversions)
 1. [Cardano.Node.InboundGovernor.DemotedToColdRemote](#cardanonodeinboundgovernordemotedtocoldremote)
 1. [Cardano.Node.InboundGovernor.DemotedToWarmRemote](#cardanonodeinboundgovernordemotedtowarmremote)
 1. [Cardano.Node.InboundGovernor.InboundGovernorCounters](#cardanonodeinboundgovernorinboundgovernorcounters)
+1. [Cardano.Node.InboundGovernor.InboundGovernorError](#cardanonodeinboundgovernorinboundgovernorerror)
 1. [Cardano.Node.InboundGovernor.MuxCleanExit](#cardanonodeinboundgovernormuxcleanexit)
 1. [Cardano.Node.InboundGovernor.MuxErrored](#cardanonodeinboundgovernormuxerrored)
 1. [Cardano.Node.InboundGovernor.NewConnection](#cardanonodeinboundgovernornewconnection)
@@ -246,7 +300,9 @@
 1. [Cardano.Node.InboundGovernor.ResponderStartFailure](#cardanonodeinboundgovernorresponderstartfailure)
 1. [Cardano.Node.InboundGovernor.ResponderStarted](#cardanonodeinboundgovernorresponderstarted)
 1. [Cardano.Node.InboundGovernor.ResponderTerminated](#cardanonodeinboundgovernorresponderterminated)
+1. [Cardano.Node.InboundGovernor.UnexpectedlyFalseAssertion](#cardanonodeinboundgovernorunexpectedlyfalseassertion)
 1. [Cardano.Node.InboundGovernor.WaitIdleRemote](#cardanonodeinboundgovernorwaitidleremote)
+1. [Cardano.Node.InboundGovernorTransition.InboundGovernorTransition](#cardanonodeinboundgovernortransitioninboundgovernortransition)
 1. [Cardano.Node.IpSubscription.IP.AllocateSocket](#cardanonodeipsubscriptionipallocatesocket)
 1. [Cardano.Node.IpSubscription.IP.ApplicationException](#cardanonodeipsubscriptionipapplicationexception)
 1. [Cardano.Node.IpSubscription.IP.CloseSocket](#cardanonodeipsubscriptionipclosesocket)
@@ -265,16 +321,15 @@
 1. [Cardano.Node.IpSubscription.IP.SubscriptionWaitingNewConnection](#cardanonodeipsubscriptionipsubscriptionwaitingnewconnection)
 1. [Cardano.Node.IpSubscription.IP.TryConnectToPeer](#cardanonodeipsubscriptioniptryconnecttopeer)
 1. [Cardano.Node.IpSubscription.IP.UnsupportedRemoteAddr](#cardanonodeipsubscriptionipunsupportedremoteaddr)
-1. [Cardano.Node.KeepAliveClient.KeepAliveClient](#cardanonodekeepaliveclientkeepaliveclient)
-1. [Cardano.Node.LedgerPeers.DisabledLedgerPeers](#cardanonodeledgerpeersdisabledledgerpeers)
+1. [Cardano.Node.KeepAliveClient](#cardanonodekeepaliveclient)
 1. [Cardano.Node.LedgerPeers.DisabledLedgerPeers](#cardanonodeledgerpeersdisabledledgerpeers)
 1. [Cardano.Node.LedgerPeers.FallingBackToBootstrapPeers](#cardanonodeledgerpeersfallingbacktobootstrappeers)
 1. [Cardano.Node.LedgerPeers.FetchingNewLedgerState](#cardanonodeledgerpeersfetchingnewledgerstate)
 1. [Cardano.Node.LedgerPeers.PickedPeer](#cardanonodeledgerpeerspickedpeer)
 1. [Cardano.Node.LedgerPeers.PickedPeers](#cardanonodeledgerpeerspickedpeers)
+1. [Cardano.Node.LedgerPeers.RequestForPeers](#cardanonodeledgerpeersrequestforpeers)
 1. [Cardano.Node.LedgerPeers.ReusingLedgerState](#cardanonodeledgerpeersreusingledgerstate)
 1. [Cardano.Node.LedgerPeers.TraceUseLedgerAfter](#cardanonodeledgerpeerstraceuseledgerafter)
-1. [Cardano.Node.LedgerPeers.WaitingOnRequest](#cardanonodeledgerpeerswaitingonrequest)
 1. [Cardano.Node.LedgerPeers.WaitingOnRequest](#cardanonodeledgerpeerswaitingonrequest)
 1. [Cardano.Node.LocalConnectionManager.Connect](#cardanonodelocalconnectionmanagerconnect)
 1. [Cardano.Node.LocalConnectionManager.ConnectError](#cardanonodelocalconnectionmanagerconnecterror)
@@ -296,6 +351,7 @@
 1. [Cardano.Node.LocalConnectionManager.TerminatedConnection](#cardanonodelocalconnectionmanagerterminatedconnection)
 1. [Cardano.Node.LocalConnectionManager.TerminatingConnection](#cardanonodelocalconnectionmanagerterminatingconnection)
 1. [Cardano.Node.LocalConnectionManager.UnexpectedlyFalseAssertion](#cardanonodelocalconnectionmanagerunexpectedlyfalseassertion)
+1. [Cardano.Node.LocalConnectionManager.UnknownConnection](#cardanonodelocalconnectionmanagerunknownconnection)
 1. [Cardano.Node.LocalConnectionManager.UnregisterConnection](#cardanonodelocalconnectionmanagerunregisterconnection)
 1. [Cardano.Node.LocalErrorPolicy.AcceptException](#cardanonodelocalerrorpolicyacceptexception)
 1. [Cardano.Node.LocalErrorPolicy.KeepSuspended](#cardanonodelocalerrorpolicykeepsuspended)
@@ -307,12 +363,18 @@
 1. [Cardano.Node.LocalErrorPolicy.SuspendPeer](#cardanonodelocalerrorpolicysuspendpeer)
 1. [Cardano.Node.LocalErrorPolicy.UnhandledApplicationException](#cardanonodelocalerrorpolicyunhandledapplicationexception)
 1. [Cardano.Node.LocalErrorPolicy.UnhandledConnectionException](#cardanonodelocalerrorpolicyunhandledconnectionexception)
-1. [Cardano.Node.LocalHandshake.AcceptVersion](#cardanonodelocalhandshakeacceptversion)
-1. [Cardano.Node.LocalHandshake.ProposeVersions](#cardanonodelocalhandshakeproposeversions)
-1. [Cardano.Node.LocalHandshake.Refuse](#cardanonodelocalhandshakerefuse)
+1. [Cardano.Node.LocalHandshake.Receive.AcceptVersion](#cardanonodelocalhandshakereceiveacceptversion)
+1. [Cardano.Node.LocalHandshake.Receive.ProposeVersions](#cardanonodelocalhandshakereceiveproposeversions)
+1. [Cardano.Node.LocalHandshake.Receive.Refuse](#cardanonodelocalhandshakereceiverefuse)
+1. [Cardano.Node.LocalHandshake.Receive.ReplyVersions](#cardanonodelocalhandshakereceivereplyversions)
+1. [Cardano.Node.LocalHandshake.Send.AcceptVersion](#cardanonodelocalhandshakesendacceptversion)
+1. [Cardano.Node.LocalHandshake.Send.ProposeVersions](#cardanonodelocalhandshakesendproposeversions)
+1. [Cardano.Node.LocalHandshake.Send.Refuse](#cardanonodelocalhandshakesendrefuse)
+1. [Cardano.Node.LocalHandshake.Send.ReplyVersions](#cardanonodelocalhandshakesendreplyversions)
 1. [Cardano.Node.LocalInboundGovernor.DemotedToColdRemote](#cardanonodelocalinboundgovernordemotedtocoldremote)
 1. [Cardano.Node.LocalInboundGovernor.DemotedToWarmRemote](#cardanonodelocalinboundgovernordemotedtowarmremote)
 1. [Cardano.Node.LocalInboundGovernor.InboundGovernorCounters](#cardanonodelocalinboundgovernorinboundgovernorcounters)
+1. [Cardano.Node.LocalInboundGovernor.InboundGovernorError](#cardanonodelocalinboundgovernorinboundgovernorerror)
 1. [Cardano.Node.LocalInboundGovernor.MuxCleanExit](#cardanonodelocalinboundgovernormuxcleanexit)
 1. [Cardano.Node.LocalInboundGovernor.MuxErrored](#cardanonodelocalinboundgovernormuxerrored)
 1. [Cardano.Node.LocalInboundGovernor.NewConnection](#cardanonodelocalinboundgovernornewconnection)
@@ -324,6 +386,7 @@
 1. [Cardano.Node.LocalInboundGovernor.ResponderStartFailure](#cardanonodelocalinboundgovernorresponderstartfailure)
 1. [Cardano.Node.LocalInboundGovernor.ResponderStarted](#cardanonodelocalinboundgovernorresponderstarted)
 1. [Cardano.Node.LocalInboundGovernor.ResponderTerminated](#cardanonodelocalinboundgovernorresponderterminated)
+1. [Cardano.Node.LocalInboundGovernor.UnexpectedlyFalseAssertion](#cardanonodelocalinboundgovernorunexpectedlyfalseassertion)
 1. [Cardano.Node.LocalInboundGovernor.WaitIdleRemote](#cardanonodelocalinboundgovernorwaitidleremote)
 1. [Cardano.Node.LocalRootPeers.LocalRootDomains](#cardanonodelocalrootpeerslocalrootdomains)
 1. [Cardano.Node.LocalRootPeers.LocalRootError](#cardanonodelocalrootpeerslocalrooterror)
@@ -350,8 +413,9 @@
 1. [Cardano.Node.Mux.ExceptionExit](#cardanonodemuxexceptionexit)
 1. [Cardano.Node.Mux.HandshakeClientEnd](#cardanonodemuxhandshakeclientend)
 1. [Cardano.Node.Mux.HandshakeClientError](#cardanonodemuxhandshakeclienterror)
+1. [Cardano.Node.Mux.HandshakeServerEnd](#cardanonodemuxhandshakeserverend)
 1. [Cardano.Node.Mux.HandshakeServerError](#cardanonodemuxhandshakeservererror)
-1. [Cardano.Node.Mux.HandshakeStart ](#cardanonodemuxhandshakestart )
+1. [Cardano.Node.Mux.HandshakeStart](#cardanonodemuxhandshakestart)
 1. [Cardano.Node.Mux.RecvDeltaQObservation](#cardanonodemuxrecvdeltaqobservation)
 1. [Cardano.Node.Mux.RecvDeltaQSample](#cardanonodemuxrecvdeltaqsample)
 1. [Cardano.Node.Mux.RecvEnd](#cardanonodemuxrecvend)
@@ -367,6 +431,7 @@
 1. [Cardano.Node.Mux.StartOnDemand](#cardanonodemuxstartondemand)
 1. [Cardano.Node.Mux.StartedOnDemand](#cardanonodemuxstartedondemand)
 1. [Cardano.Node.Mux.State](#cardanonodemuxstate)
+1. [Cardano.Node.Mux.TCPInfo](#cardanonodemuxtcpinfo)
 1. [Cardano.Node.Mux.Terminating](#cardanonodemuxterminating)
 1. [Cardano.Node.MuxLocal.ChannelRecvEnd](#cardanonodemuxlocalchannelrecvend)
 1. [Cardano.Node.MuxLocal.ChannelRecvStart](#cardanonodemuxlocalchannelrecvstart)
@@ -376,8 +441,9 @@
 1. [Cardano.Node.MuxLocal.ExceptionExit](#cardanonodemuxlocalexceptionexit)
 1. [Cardano.Node.MuxLocal.HandshakeClientEnd](#cardanonodemuxlocalhandshakeclientend)
 1. [Cardano.Node.MuxLocal.HandshakeClientError](#cardanonodemuxlocalhandshakeclienterror)
+1. [Cardano.Node.MuxLocal.HandshakeServerEnd](#cardanonodemuxlocalhandshakeserverend)
 1. [Cardano.Node.MuxLocal.HandshakeServerError](#cardanonodemuxlocalhandshakeservererror)
-1. [Cardano.Node.MuxLocal.HandshakeStart ](#cardanonodemuxlocalhandshakestart )
+1. [Cardano.Node.MuxLocal.HandshakeStart](#cardanonodemuxlocalhandshakestart)
 1. [Cardano.Node.MuxLocal.RecvDeltaQObservation](#cardanonodemuxlocalrecvdeltaqobservation)
 1. [Cardano.Node.MuxLocal.RecvDeltaQSample](#cardanonodemuxlocalrecvdeltaqsample)
 1. [Cardano.Node.MuxLocal.RecvEnd](#cardanonodemuxlocalrecvend)
@@ -393,12 +459,12 @@
 1. [Cardano.Node.MuxLocal.StartOnDemand](#cardanonodemuxlocalstartondemand)
 1. [Cardano.Node.MuxLocal.StartedOnDemand](#cardanonodemuxlocalstartedondemand)
 1. [Cardano.Node.MuxLocal.State](#cardanonodemuxlocalstate)
+1. [Cardano.Node.MuxLocal.TCPInfo](#cardanonodemuxlocaltcpinfo)
 1. [Cardano.Node.MuxLocal.Terminating](#cardanonodemuxlocalterminating)
 1. [Cardano.Node.PeerSelection.ChurnMode](#cardanonodepeerselectionchurnmode)
 1. [Cardano.Node.PeerSelection.ChurnWait](#cardanonodepeerselectionchurnwait)
 1. [Cardano.Node.PeerSelection.DemoteAsynchronous](#cardanonodepeerselectiondemoteasynchronous)
 1. [Cardano.Node.PeerSelection.DemoteHotDone](#cardanonodepeerselectiondemotehotdone)
-1. [Cardano.Node.PeerSelection.DemoteHotFailed](#cardanonodepeerselectiondemotehotfailed)
 1. [Cardano.Node.PeerSelection.DemoteHotFailed](#cardanonodepeerselectiondemotehotfailed)
 1. [Cardano.Node.PeerSelection.DemoteHotPeers](#cardanonodepeerselectiondemotehotpeers)
 1. [Cardano.Node.PeerSelection.DemoteLocalHotPeers](#cardanonodepeerselectiondemotelocalhotpeers)
@@ -414,24 +480,25 @@
 1. [Cardano.Node.PeerSelection.PromoteColdFailed](#cardanonodepeerselectionpromotecoldfailed)
 1. [Cardano.Node.PeerSelection.PromoteColdLocalPeers](#cardanonodepeerselectionpromotecoldlocalpeers)
 1. [Cardano.Node.PeerSelection.PromoteColdPeers](#cardanonodepeerselectionpromotecoldpeers)
+1. [Cardano.Node.PeerSelection.PromoteWarmAborted](#cardanonodepeerselectionpromotewarmaborted)
 1. [Cardano.Node.PeerSelection.PromoteWarmDone](#cardanonodepeerselectionpromotewarmdone)
 1. [Cardano.Node.PeerSelection.PromoteWarmFailed](#cardanonodepeerselectionpromotewarmfailed)
 1. [Cardano.Node.PeerSelection.PromoteWarmLocalPeers](#cardanonodepeerselectionpromotewarmlocalpeers)
 1. [Cardano.Node.PeerSelection.PromoteWarmPeers](#cardanonodepeerselectionpromotewarmpeers)
-1. [Cardano.Node.PeerSelection.PublicRootsResults](#cardanonodepeerselectionpublicrootsresults)
+1. [Cardano.Node.PeerSelection.PublicRootsFailure](#cardanonodepeerselectionpublicrootsfailure)
+1. [Cardano.Node.PeerSelection.PublicRootsRequest](#cardanonodepeerselectionpublicrootsrequest)
 1. [Cardano.Node.PeerSelection.PublicRootsResults](#cardanonodepeerselectionpublicrootsresults)
 1. [Cardano.Node.PeerSelection.TargetsChanged](#cardanonodepeerselectiontargetschanged)
-1. [Cardano.Node.PeerSelection.ublicRootsRequest](#cardanonodepeerselectionublicrootsrequest)
 1. [Cardano.Node.PeerSelectionActions.MonitoringError](#cardanonodepeerselectionactionsmonitoringerror)
 1. [Cardano.Node.PeerSelectionActions.MonitoringResult](#cardanonodepeerselectionactionsmonitoringresult)
 1. [Cardano.Node.PeerSelectionActions.StatusChangeFailure](#cardanonodepeerselectionactionsstatuschangefailure)
 1. [Cardano.Node.PeerSelectionActions.StatusChanged](#cardanonodepeerselectionactionsstatuschanged)
-1. [Cardano.Node.PeerSelectionCounters](#cardanonodepeerselectioncounters)
+1. [Cardano.Node.PeerSelectionCounters.PeerSelectionCounters](#cardanonodepeerselectioncounterspeerselectioncounters)
 1. [Cardano.Node.Peers](#cardanonodepeers)
-1. [Cardano.Node.PublicRootPeers.PublicRootDomains](#cardanonodepublicrootpeerspublicrootdomains)
-1. [Cardano.Node.PublicRootPeers.PublicRootFailure](#cardanonodepublicrootpeerspublicrootfailure)
-1. [Cardano.Node.PublicRootPeers.PublicRootRelayAccessPoint](#cardanonodepublicrootpeerspublicrootrelayaccesspoint)
-1. [Cardano.Node.PublicRootPeers.PublicRootResult](#cardanonodepublicrootpeerspublicrootresult)
+1. [Cardano.Node.PublicRootPeers.PublicRootPeers.PublicRootDomains](#cardanonodepublicrootpeerspublicrootpeerspublicrootdomains)
+1. [Cardano.Node.PublicRootPeers.PublicRootPeers.PublicRootFailure](#cardanonodepublicrootpeerspublicrootpeerspublicrootfailure)
+1. [Cardano.Node.PublicRootPeers.PublicRootPeers.PublicRootRelayAccessPoint](#cardanonodepublicrootpeerspublicrootpeerspublicrootrelayaccesspoint)
+1. [Cardano.Node.PublicRootPeers.PublicRootPeers.PublicRootResult](#cardanonodepublicrootpeerspublicrootpeerspublicrootresult)
 1. [Cardano.Node.ReplayBlock.LedgerReplay](#cardanonodereplayblockledgerreplay)
 1. [Cardano.Node.Resources](#cardanonoderesources)
 1. [Cardano.Node.Server.AcceptConnection](#cardanonodeserveracceptconnection)
@@ -448,34 +515,85 @@
 1. [Cardano.Node.Startup.Byron](#cardanonodestartupbyron)
 1. [Cardano.Node.Startup.Common](#cardanonodestartupcommon)
 1. [Cardano.Node.Startup.Network](#cardanonodestartupnetwork)
+1. [Cardano.Node.Startup.NetworkConfig](#cardanonodestartupnetworkconfig)
+1. [Cardano.Node.Startup.NetworkConfigUpdate](#cardanonodestartupnetworkconfigupdate)
+1. [Cardano.Node.Startup.NetworkConfigUpdateError](#cardanonodestartupnetworkconfigupdateerror)
+1. [Cardano.Node.Startup.P2PWarning](#cardanonodestartupp2pwarning)
+1. [Cardano.Node.Startup.P2PWarningDevelopementNetworkProtocols](#cardanonodestartupp2pwarningdevelopementnetworkprotocols)
 1. [Cardano.Node.Startup.ShelleyBased](#cardanonodestartupshelleybased)
-1. [Cardano.Node.StateQueryClient.Acquire](#cardanonodestatequeryclientacquire)
-1. [Cardano.Node.StateQueryClient.Acquired](#cardanonodestatequeryclientacquired)
-1. [Cardano.Node.StateQueryClient.Acquired](#cardanonodestatequeryclientacquired)
-1. [Cardano.Node.StateQueryClient.Done](#cardanonodestatequeryclientdone)
-1. [Cardano.Node.StateQueryClient.Query](#cardanonodestatequeryclientquery)
-1. [Cardano.Node.StateQueryClient.ReAcquire](#cardanonodestatequeryclientreacquire)
-1. [Cardano.Node.StateQueryClient.Release](#cardanonodestatequeryclientrelease)
-1. [Cardano.Node.StateQueryClient.Result](#cardanonodestatequeryclientresult)
+1. [Cardano.Node.Startup.StartupDBValidation](#cardanonodestartupstartupdbvalidation)
+1. [Cardano.Node.Startup.StartupInfo](#cardanonodestartupstartupinfo)
+1. [Cardano.Node.Startup.StartupNetworkMagic](#cardanonodestartupstartupnetworkmagic)
+1. [Cardano.Node.Startup.StartupP2PInfo](#cardanonodestartupstartupp2pinfo)
+1. [Cardano.Node.Startup.StartupSocketConfigError](#cardanonodestartupstartupsocketconfigerror)
+1. [Cardano.Node.Startup.StartupTime](#cardanonodestartupstartuptime)
+1. [Cardano.Node.Startup.WarningDevelopmentNetworkProtocols](#cardanonodestartupwarningdevelopmentnetworkprotocols)
+1. [Cardano.Node.StateQueryClient.Recieve.Acquire](#cardanonodestatequeryclientrecieveacquire)
+1. [Cardano.Node.StateQueryClient.Recieve.Acquired](#cardanonodestatequeryclientrecieveacquired)
+1. [Cardano.Node.StateQueryClient.Recieve.Done](#cardanonodestatequeryclientrecievedone)
+1. [Cardano.Node.StateQueryClient.Recieve.Failure](#cardanonodestatequeryclientrecievefailure)
+1. [Cardano.Node.StateQueryClient.Recieve.Query](#cardanonodestatequeryclientrecievequery)
+1. [Cardano.Node.StateQueryClient.Recieve.ReAcquire](#cardanonodestatequeryclientrecievereacquire)
+1. [Cardano.Node.StateQueryClient.Recieve.Release](#cardanonodestatequeryclientrecieverelease)
+1. [Cardano.Node.StateQueryClient.Recieve.Result](#cardanonodestatequeryclientrecieveresult)
+1. [Cardano.Node.StateQueryClient.Send.Acquire](#cardanonodestatequeryclientsendacquire)
+1. [Cardano.Node.StateQueryClient.Send.Acquired](#cardanonodestatequeryclientsendacquired)
+1. [Cardano.Node.StateQueryClient.Send.Done](#cardanonodestatequeryclientsenddone)
+1. [Cardano.Node.StateQueryClient.Send.Failure](#cardanonodestatequeryclientsendfailure)
+1. [Cardano.Node.StateQueryClient.Send.Query](#cardanonodestatequeryclientsendquery)
+1. [Cardano.Node.StateQueryClient.Send.ReAcquire](#cardanonodestatequeryclientsendreacquire)
+1. [Cardano.Node.StateQueryClient.Send.Release](#cardanonodestatequeryclientsendrelease)
+1. [Cardano.Node.StateQueryClient.Send.Result](#cardanonodestatequeryclientsendresult)
 1. [Cardano.Node.TxInbound.TxInboundCanRequestMoreTxs](#cardanonodetxinboundtxinboundcanrequestmoretxs)
 1. [Cardano.Node.TxInbound.TxInboundCannotRequestMoreTxs](#cardanonodetxinboundtxinboundcannotrequestmoretxs)
 1. [Cardano.Node.TxInbound.TxInboundTerminated](#cardanonodetxinboundtxinboundterminated)
 1. [Cardano.Node.TxInbound.TxSubmissionCollected](#cardanonodetxinboundtxsubmissioncollected)
 1. [Cardano.Node.TxInbound.TxSubmissionProcessed](#cardanonodetxinboundtxsubmissionprocessed)
+1. [Cardano.Node.TxMonitorClient.Recieve.Acquire](#cardanonodetxmonitorclientrecieveacquire)
+1. [Cardano.Node.TxMonitorClient.Recieve.Acquired](#cardanonodetxmonitorclientrecieveacquired)
+1. [Cardano.Node.TxMonitorClient.Recieve.Done](#cardanonodetxmonitorclientrecievedone)
+1. [Cardano.Node.TxMonitorClient.Recieve.Failure](#cardanonodetxmonitorclientrecievefailure)
+1. [Cardano.Node.TxMonitorClient.Recieve.Query](#cardanonodetxmonitorclientrecievequery)
+1. [Cardano.Node.TxMonitorClient.Recieve.ReAcquire](#cardanonodetxmonitorclientrecievereacquire)
+1. [Cardano.Node.TxMonitorClient.Recieve.Release](#cardanonodetxmonitorclientrecieverelease)
+1. [Cardano.Node.TxMonitorClient.Recieve.Result](#cardanonodetxmonitorclientrecieveresult)
+1. [Cardano.Node.TxMonitorClient.Send.Acquire](#cardanonodetxmonitorclientsendacquire)
+1. [Cardano.Node.TxMonitorClient.Send.Acquired](#cardanonodetxmonitorclientsendacquired)
+1. [Cardano.Node.TxMonitorClient.Send.Done](#cardanonodetxmonitorclientsenddone)
+1. [Cardano.Node.TxMonitorClient.Send.Failure](#cardanonodetxmonitorclientsendfailure)
+1. [Cardano.Node.TxMonitorClient.Send.Query](#cardanonodetxmonitorclientsendquery)
+1. [Cardano.Node.TxMonitorClient.Send.ReAcquire](#cardanonodetxmonitorclientsendreacquire)
+1. [Cardano.Node.TxMonitorClient.Send.Release](#cardanonodetxmonitorclientsendrelease)
+1. [Cardano.Node.TxMonitorClient.Send.Result](#cardanonodetxmonitorclientsendresult)
 1. [Cardano.Node.TxOutbound.ControlMessage](#cardanonodetxoutboundcontrolmessage)
-1. [Cardano.Node.TxOutbound.TxSubmissionOutboundRecvMsgRequest](#cardanonodetxoutboundtxsubmissionoutboundrecvmsgrequest)
-1. [Cardano.Node.TxOutbound.TxSubmissionOutboundSendMsgReply](#cardanonodetxoutboundtxsubmissionoutboundsendmsgreply)
+1. [Cardano.Node.TxOutbound.RecvMsgRequest](#cardanonodetxoutboundrecvmsgrequest)
+1. [Cardano.Node.TxOutbound.SendMsgReply](#cardanonodetxoutboundsendmsgreply)
+1. [Cardano.Node.TxSubmission.NodeToNode.Recieve.Done](#cardanonodetxsubmissionnodetonoderecievedone)
+1. [Cardano.Node.TxSubmission.NodeToNode.Recieve.ReplyTxIds](#cardanonodetxsubmissionnodetonoderecievereplytxids)
+1. [Cardano.Node.TxSubmission.NodeToNode.Recieve.ReplyTxs](#cardanonodetxsubmissionnodetonoderecievereplytxs)
+1. [Cardano.Node.TxSubmission.NodeToNode.Recieve.RequestTxIds](#cardanonodetxsubmissionnodetonoderecieverequesttxids)
+1. [Cardano.Node.TxSubmission.NodeToNode.Recieve.RequestTxs](#cardanonodetxsubmissionnodetonoderecieverequesttxs)
 1. [Cardano.Node.TxSubmission.NodeToNode.Send.Done](#cardanonodetxsubmissionnodetonodesenddone)
 1. [Cardano.Node.TxSubmission.NodeToNode.Send.ReplyTxIds](#cardanonodetxsubmissionnodetonodesendreplytxids)
 1. [Cardano.Node.TxSubmission.NodeToNode.Send.ReplyTxs](#cardanonodetxsubmissionnodetonodesendreplytxs)
 1. [Cardano.Node.TxSubmission.NodeToNode.Send.RequestTxIds](#cardanonodetxsubmissionnodetonodesendrequesttxids)
 1. [Cardano.Node.TxSubmission.NodeToNode.Send.RequestTxs](#cardanonodetxsubmissionnodetonodesendrequesttxs)
+1. [Cardano.Node.TxSubmission2.NodeToNode.Recieve.Done](#cardanonodetxsubmission2nodetonoderecievedone)
+1. [Cardano.Node.TxSubmission2.NodeToNode.Recieve.MsgHello](#cardanonodetxsubmission2nodetonoderecievemsghello)
+1. [Cardano.Node.TxSubmission2.NodeToNode.Recieve.ReplyTxIds](#cardanonodetxsubmission2nodetonoderecievereplytxids)
+1. [Cardano.Node.TxSubmission2.NodeToNode.Recieve.ReplyTxs](#cardanonodetxsubmission2nodetonoderecievereplytxs)
+1. [Cardano.Node.TxSubmission2.NodeToNode.Recieve.RequestTxIds](#cardanonodetxsubmission2nodetonoderecieverequesttxids)
+1. [Cardano.Node.TxSubmission2.NodeToNode.Recieve.RequestTxs](#cardanonodetxsubmission2nodetonoderecieverequesttxs)
 1. [Cardano.Node.TxSubmission2.NodeToNode.Send.Done](#cardanonodetxsubmission2nodetonodesenddone)
 1. [Cardano.Node.TxSubmission2.NodeToNode.Send.MsgHello](#cardanonodetxsubmission2nodetonodesendmsghello)
 1. [Cardano.Node.TxSubmission2.NodeToNode.Send.ReplyTxIds](#cardanonodetxsubmission2nodetonodesendreplytxids)
 1. [Cardano.Node.TxSubmission2.NodeToNode.Send.ReplyTxs](#cardanonodetxsubmission2nodetonodesendreplytxs)
 1. [Cardano.Node.TxSubmission2.NodeToNode.Send.RequestTxIds](#cardanonodetxsubmission2nodetonodesendrequesttxids)
 1. [Cardano.Node.TxSubmission2.NodeToNode.Send.RequestTxs](#cardanonodetxsubmission2nodetonodesendrequesttxs)
+1. [Cardano.Node.TxSubmissionClient.Recieve.AcceptTx](#cardanonodetxsubmissionclientrecieveaccepttx)
+1. [Cardano.Node.TxSubmissionClient.Recieve.Done](#cardanonodetxsubmissionclientrecievedone)
+1. [Cardano.Node.TxSubmissionClient.Recieve.RejectTx](#cardanonodetxsubmissionclientrecieverejecttx)
+1. [Cardano.Node.TxSubmissionClient.Recieve.SubmitTx](#cardanonodetxsubmissionclientrecievesubmittx)
 1. [Cardano.Node.TxSubmissionClient.Send.AcceptTx](#cardanonodetxsubmissionclientsendaccepttx)
 1. [Cardano.Node.TxSubmissionClient.Send.Done](#cardanonodetxsubmissionclientsenddone)
 1. [Cardano.Node.TxSubmissionClient.Send.RejectTx](#cardanonodetxsubmissionclientsendrejecttx)
@@ -558,6 +676,42 @@
 1. [NodeInfo](#nodeinfo)
 
 ## Trace Messages
+### Cardano.Node.AcceptPolicy.ConnectionHardLimit
+
+
+***
+Hard rate limit reached, waiting until the number of connections drops below n.
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Info`
+
+### Cardano.Node.AcceptPolicy.ConnectionLimitResume
+
+
+***
+
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Info`
+
 ### Cardano.Node.AcceptPolicy.ConnectionRateLimiting
 
 
@@ -574,17 +728,17 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
-### Cardano.Node.AcceptPolicy.ConnectionHardLimit
+### Cardano.Node.BlockFetch.NodeToNode.Recieve.BatchDone
 
 
 ***
-Hard rate limit reached, waiting until the number of connections drops below n.
+End of block streaming.
 ***
 
 
-> Severity:   `Warning`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -592,7 +746,97 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.BlockFetch.NodeToNode.Recieve.Block
+
+
+***
+Stream a single block.
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.BlockFetch.NodeToNode.Recieve.ClientDone
+
+
+***
+Client termination message.
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.BlockFetch.NodeToNode.Recieve.NoBlocks
+
+
+***
+Respond that there are no blocks.
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.BlockFetch.NodeToNode.Recieve.RequestRange
+
+
+***
+Request range of blocks.
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.BlockFetch.NodeToNode.Recieve.StartBatch
+
+
+***
+Start block streaming.
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.BlockFetch.NodeToNode.Send.BatchDone
 
@@ -610,7 +854,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.BlockFetch.NodeToNode.Send.Block
 
@@ -628,7 +872,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.BlockFetch.NodeToNode.Send.ClientDone
 
@@ -646,7 +890,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.BlockFetch.NodeToNode.Send.NoBlocks
 
@@ -664,7 +908,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.BlockFetch.NodeToNode.Send.RequestRange
 
@@ -682,7 +926,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.BlockFetch.NodeToNode.Send.StartBatch
 
@@ -700,7 +944,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.BlockFetchClient.AcknowledgedFetchRequest
 
@@ -718,7 +962,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.BlockFetchClient.AddedFetchRequest
 
@@ -736,7 +980,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.BlockFetchClient.ClientTerminating
 
@@ -746,7 +990,7 @@ The client is terminating.  Log the number of outstanding requests.
 ***
 
 
-> Severity:   `Notice`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -754,9 +998,9 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
-### Cardano.Node.BlockFetchClient.CompletedFetchBatch
+### Cardano.Node.BlockFetchClient.CompletedBlockFetch
 
 
 ***
@@ -772,7 +1016,26 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
+Limiters: Limiter `CompletedBlockFetchLimiter` with frequency `2.0`
+
+### Cardano.Node.BlockFetchClient.CompletedFetchBatch
+
+
+***
+Mark the successful end of receiving a streaming batch of blocks
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.BlockFetchClient.RejectedFetchBatch
 
@@ -790,7 +1053,25 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.BlockFetchClient.SendFetchRequest
+
+
+***
+Mark the point when fetch request for a fragment is actually sent over the wire.
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.BlockFetchClient.StartedFetchBatch
 
@@ -808,7 +1089,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.BlockFetchDecision
 
@@ -819,14 +1100,122 @@ Throughout the decision making process we accumulate reasons to decline to fetch
 
 
 > Severity:   `Info`
-Privacy:   `Confidential`
+Privacy:   `Public`
 
 From current configuration:
 Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.BlockFetchSerialised.NodeToNode.Recieve.BatchDone
+
+
+***
+End of block streaming.
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.BlockFetchSerialised.NodeToNode.Recieve.Block
+
+
+***
+Stream a single block.
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.BlockFetchSerialised.NodeToNode.Recieve.ClientDone
+
+
+***
+Client termination message.
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.BlockFetchSerialised.NodeToNode.Recieve.NoBlocks
+
+
+***
+Respond that there are no blocks.
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.BlockFetchSerialised.NodeToNode.Recieve.RequestRange
+
+
+***
+Request range of blocks.
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.BlockFetchSerialised.NodeToNode.Recieve.StartBatch
+
+
+***
+Start block streaming.
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.BlockFetchSerialised.NodeToNode.Send.BatchDone
 
@@ -844,7 +1233,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.BlockFetchSerialised.NodeToNode.Send.Block
 
@@ -862,7 +1251,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.BlockFetchSerialised.NodeToNode.Send.ClientDone
 
@@ -880,7 +1269,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.BlockFetchSerialised.NodeToNode.Send.NoBlocks
 
@@ -898,7 +1287,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.BlockFetchSerialised.NodeToNode.Send.RequestRange
 
@@ -916,7 +1305,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.BlockFetchSerialised.NodeToNode.Send.StartBatch
 
@@ -934,7 +1323,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.BlockFetchServer.SendBlock
 
@@ -952,7 +1341,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.BlockchainTime.CurrentSlotUnknown
 
@@ -964,7 +1353,7 @@ Current slot is not yet known
 ***
 
 
-> Severity:   `Warning`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -972,7 +1361,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.BlockchainTime.StartTimeInTheFuture
 
@@ -983,7 +1372,7 @@ The start time of the blockchain time is in the future
 ***
 
 
-> Severity:   `Warning`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -991,7 +1380,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.BlockchainTime.SystemClockMovedBack
 
@@ -1003,7 +1392,7 @@ The system clock moved back an acceptable time span, e.g., because of an NTP syn
 ***
 
 
-> Severity:   `Warning`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -1011,7 +1400,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.ChainDB.AddBlockEvent.AddBlockValidation.CandidateContainsFutureBlocks
 
@@ -1021,7 +1410,7 @@ An event traced during validating performed while adding a block. Candidate cont
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -1029,7 +1418,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.ChainDB.AddBlockEvent.AddBlockValidation.CandidateContainsFutureBlocksExceedingClockSkew
 
@@ -1039,7 +1428,7 @@ An event traced during validating performed while adding a block. Candidate cont
 ***
 
 
-> Severity:   `Error`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -1047,7 +1436,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.ChainDB.AddBlockEvent.AddBlockValidation.InvalidBlock
 
@@ -1057,7 +1446,7 @@ An event traced during validating performed while adding a block. A point was fo
 ***
 
 
-> Severity:   `Error`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -1065,7 +1454,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.ChainDB.AddBlockEvent.AddBlockValidation.ValidCandidate
 
@@ -1083,7 +1472,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 Limiters: Limiter `ValidCandidateLimiter` with frequency `2.0`
 
 ### Cardano.Node.ChainDB.AddBlockEvent.AddedBlockToQueue
@@ -1094,7 +1483,7 @@ The block was added to the queue and will be added to the ChainDB by the backgro
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -1102,7 +1491,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 Limiters: Limiter `AddedBlockToQueueLimiter` with frequency `2.0`
 
 ### Cardano.Node.ChainDB.AddBlockEvent.AddedBlockToVolatileDB
@@ -1113,7 +1502,7 @@ A block was added to the Volatile DB
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -1121,7 +1510,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 Limiters: Limiter `AddedBlockToVolatileDBLimiter` with frequency `2.0`
 
 ### Cardano.Node.ChainDB.AddBlockEvent.AddedToCurrentChain
@@ -1132,7 +1521,7 @@ The new block fits onto the current chain (first fragment) and we have successfu
 ***
 
 
-> Severity:   `Notice`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -1140,7 +1529,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.ChainDB.AddBlockEvent.BlockInTheFuture
 
@@ -1158,7 +1547,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.ChainDB.AddBlockEvent.ChainSelectionForFutureBlock
 
@@ -1168,7 +1557,7 @@ Run chain selection for a block that was previously from the future. This is don
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -1176,7 +1565,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.ChainDB.AddBlockEvent.IgnoreBlockAlreadyInVolatileDB
 
@@ -1194,25 +1583,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
-
-### Cardano.Node.ChainDB.AddBlockEvent.IgnoreBlockAlreadyInVolatileDB
-
-
-***
-A block that is already in the Volatile DB was ignored.
-***
-
-
-> Severity:   `Info`
-Privacy:   `Public`
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`Stdout MachineFormat`,
-			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.ChainDB.AddBlockEvent.IgnoreBlockOlderThanK
 
@@ -1230,7 +1601,25 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
+
+### Cardano.Node.ChainDB.AddBlockEvent.IgnoreInvalidBlock
+
+
+***
+A block that is already in the Volatile DB was ignored.
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.ChainDB.AddBlockEvent.StoreButDontChange
 
@@ -1240,7 +1629,7 @@ The block fits onto some fork, we'll try to switch to that fork (if it is prefer
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -1248,7 +1637,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.ChainDB.AddBlockEvent.SwitchedToAFork
 
@@ -1258,7 +1647,7 @@ The new block fits onto some fork and we have switched to that fork (second frag
 ***
 
 
-> Severity:   `Notice`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -1266,7 +1655,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.ChainDB.AddBlockEvent.TryAddToCurrentChain
 
@@ -1276,7 +1665,7 @@ The block fits onto the current chain, we'll try to use it to extend our chain.
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -1284,7 +1673,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.ChainDB.AddBlockEvent.TrySwitchToAFork
 
@@ -1302,9 +1691,9 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
-### Cardano.Node.ChainDB.CopyToImmutableDBEvent.CopiedBlockToImmutableDB
+### Cardano.Node.ChainDB.TraceCopyToImmutableDBEvent.CopiedBlockToImmutableDB
 
 
 ***
@@ -1312,7 +1701,7 @@ A block was successfully copied to the ImmDB.
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -1320,10 +1709,9 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Info`
-Limiters: Limiter `CopiedBlockToImmutableDBLimiter` with frequency `2.0`
+Filtered:  because the filter level is `Info`
 
-### Cardano.Node.ChainDB.CopyToImmutableDBEvent.NoBlocksToCopyToImmutableDB
+### Cardano.Node.ChainDB.TraceCopyToImmutableDBEvent.NoBlocksToCopyToImmutableDB
 
 
 ***
@@ -1331,7 +1719,7 @@ There are no block to copy to the ImmDB.
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -1339,9 +1727,9 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
-### Cardano.Node.ChainDB.FollowerEvent.FollowerNewImmIterator
+### Cardano.Node.ChainDB.TraceFollowerEvent.FollowerNewImmIterator
 
 
 ***
@@ -1349,7 +1737,7 @@ The follower is in the 'FollowerInImmutableDB' state but the iterator is exhaust
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -1357,9 +1745,9 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
-### Cardano.Node.ChainDB.FollowerEvent.FollowerNoLongerInMem
+### Cardano.Node.ChainDB.TraceFollowerEvent.FollowerNoLongerInMem
 
 
 ***
@@ -1367,7 +1755,7 @@ The follower was in the 'FollowerInImmutableDB' state and is switched to the 'Fo
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -1375,9 +1763,9 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
-### Cardano.Node.ChainDB.FollowerEvent.FollowerSwitchToMem
+### Cardano.Node.ChainDB.TraceFollowerEvent.FollowerSwitchToMem
 
 
 ***
@@ -1385,7 +1773,7 @@ The follower was in the 'FollowerInImmutableDB' state and is switched to the 'Fo
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -1393,9 +1781,9 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
-### Cardano.Node.ChainDB.FollowerEvent.NewFollower
+### Cardano.Node.ChainDB.TraceFollowerEvent.NewFollower
 
 
 ***
@@ -1403,7 +1791,7 @@ A new follower was created.
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -1411,9 +1799,9 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
-### Cardano.Node.ChainDB.GCEvent.PerformedGC
+### Cardano.Node.ChainDB.TraceGCEvent.PerformedGC
 
 
 ***
@@ -1421,7 +1809,7 @@ There are no block to copy to the ImmDB.
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -1429,9 +1817,9 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
-### Cardano.Node.ChainDB.GCEvent.ScheduledGC
+### Cardano.Node.ChainDB.TraceGCEvent.ScheduledGC
 
 
 ***
@@ -1439,7 +1827,7 @@ There are no block to copy to the ImmDB.
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -1447,9 +1835,9 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
-### Cardano.Node.ChainDB.ImmDbEvent.CacheEvent.CurrentChunkHit
+### Cardano.Node.ChainDB.TraceImmutableDBEvent.CacheEvent.CurrentChunkHit
 
 
 ***
@@ -1457,7 +1845,7 @@ Current chunk found in the cache.
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -1465,9 +1853,9 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
-### Cardano.Node.ChainDB.ImmDbEvent.CacheEvent.PastChunkEvict
+### Cardano.Node.ChainDB.TraceImmutableDBEvent.CacheEvent.PastChunkEvict
 
 
 ***
@@ -1475,7 +1863,7 @@ The least recently used past chunk was evicted because the cache was full.
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -1483,9 +1871,9 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
-### Cardano.Node.ChainDB.ImmDbEvent.CacheEvent.PastChunkExpired
+### Cardano.Node.ChainDB.TraceImmutableDBEvent.CacheEvent.PastChunkExpired
 
 
 ***
@@ -1493,7 +1881,7 @@ Filtered: `Invisible` because the filter level is `Info`
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -1501,9 +1889,9 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
-### Cardano.Node.ChainDB.ImmDbEvent.CacheEvent.PastChunkHit
+### Cardano.Node.ChainDB.TraceImmutableDBEvent.CacheEvent.PastChunkHit
 
 
 ***
@@ -1511,7 +1899,7 @@ Past chunk found in the cache
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -1519,9 +1907,9 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
-### Cardano.Node.ChainDB.ImmDbEvent.CacheEvent.PastChunkMiss
+### Cardano.Node.ChainDB.TraceImmutableDBEvent.CacheEvent.PastChunkMiss
 
 
 ***
@@ -1529,7 +1917,7 @@ Past chunk was not found in the cache
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -1537,9 +1925,9 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
-### Cardano.Node.ChainDB.ImmDbEvent.ChunkFileDoesntFit
+### Cardano.Node.ChainDB.TraceImmutableDBEvent.ChunkFileDoesntFit
 
 
 ***
@@ -1547,7 +1935,7 @@ The hash of the last block in the previous epoch doesn't match the previous hash
 ***
 
 
-> Severity:   `Warning`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -1555,9 +1943,9 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
-### Cardano.Node.ChainDB.ImmDbEvent.ChunkValidation.InvalidChunkFile
+### Cardano.Node.ChainDB.TraceImmutableDBEvent.ChunkValidation.InvalidChunkFile
 
 
 ***
@@ -1565,7 +1953,7 @@ Chunk file is invalid
 ***
 
 
-> Severity:   `Warning`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -1573,9 +1961,9 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
-### Cardano.Node.ChainDB.ImmDbEvent.ChunkValidation.InvalidPrimaryIndex
+### Cardano.Node.ChainDB.TraceImmutableDBEvent.ChunkValidation.InvalidPrimaryIndex
 
 
 ***
@@ -1583,7 +1971,7 @@ The primary index is invalid.
 ***
 
 
-> Severity:   `Warning`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -1591,9 +1979,9 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
-### Cardano.Node.ChainDB.ImmDbEvent.ChunkValidation.InvalidSecondaryIndex
+### Cardano.Node.ChainDB.TraceImmutableDBEvent.ChunkValidation.InvalidSecondaryIndex
 
 
 ***
@@ -1601,7 +1989,7 @@ Filtered: `Visible` because the filter level is `Info`
 ***
 
 
-> Severity:   `Warning`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -1609,9 +1997,9 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
-### Cardano.Node.ChainDB.ImmDbEvent.ChunkValidation.MissingChunkFile
+### Cardano.Node.ChainDB.TraceImmutableDBEvent.ChunkValidation.MissingChunkFile
 
 
 ***
@@ -1619,7 +2007,7 @@ Chunk file is missing
 ***
 
 
-> Severity:   `Warning`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -1627,9 +2015,9 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
-### Cardano.Node.ChainDB.ImmDbEvent.ChunkValidation.MissingPrimaryIndex
+### Cardano.Node.ChainDB.TraceImmutableDBEvent.ChunkValidation.MissingPrimaryIndex
 
 
 ***
@@ -1637,7 +2025,7 @@ The primary index is missing.
 ***
 
 
-> Severity:   `Warning`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -1645,9 +2033,9 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
-### Cardano.Node.ChainDB.ImmDbEvent.ChunkValidation.MissingSecondaryIndex
+### Cardano.Node.ChainDB.TraceImmutableDBEvent.ChunkValidation.MissingSecondaryIndex
 
 
 ***
@@ -1655,7 +2043,7 @@ The secondary index is missing.
 ***
 
 
-> Severity:   `Warning`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -1663,9 +2051,81 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
-### Cardano.Node.ChainDB.ImmDbEvent.DBAlreadyClosed
+### Cardano.Node.ChainDB.TraceImmutableDBEvent.ChunkValidation.RewritePrimaryIndex
+
+
+***
+
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Info`
+
+### Cardano.Node.ChainDB.TraceImmutableDBEvent.ChunkValidation.RewriteSecondaryIndex
+
+
+***
+
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Info`
+
+### Cardano.Node.ChainDB.TraceImmutableDBEvent.ChunkValidation.StartedValidatingChunk
+
+
+***
+
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Info`
+
+### Cardano.Node.ChainDB.TraceImmutableDBEvent.ChunkValidation.ValidatedChunk
+
+
+***
+
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Info`
+
+### Cardano.Node.ChainDB.TraceImmutableDBEvent.DBAlreadyClosed
 
 
 ***
@@ -1673,7 +2133,7 @@ The immutable DB is already closed
 ***
 
 
-> Severity:   `Error`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -1681,9 +2141,9 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
-### Cardano.Node.ChainDB.ImmDbEvent.DBClosed
+### Cardano.Node.ChainDB.TraceImmutableDBEvent.DBClosed
 
 
 ***
@@ -1699,9 +2159,9 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
-### Cardano.Node.ChainDB.ImmDbEvent.DeletingAfter
+### Cardano.Node.ChainDB.TraceImmutableDBEvent.DeletingAfter
 
 
 ***
@@ -1709,7 +2169,7 @@ Delete after
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -1717,9 +2177,9 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
-### Cardano.Node.ChainDB.ImmDbEvent.Migrating
+### Cardano.Node.ChainDB.TraceImmutableDBEvent.Migrating
 
 
 ***
@@ -1727,7 +2187,7 @@ Performing a migration of the on-disk files.
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -1735,9 +2195,9 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
-### Cardano.Node.ChainDB.ImmDbEvent.NoValidLastLocation
+### Cardano.Node.ChainDB.TraceImmutableDBEvent.NoValidLastLocation
 
 
 ***
@@ -1753,9 +2213,9 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
-### Cardano.Node.ChainDB.ImmDbEvent.ValidatedLastLocation
+### Cardano.Node.ChainDB.TraceImmutableDBEvent.ValidatedLastLocation
 
 
 ***
@@ -1771,9 +2231,9 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
-### Cardano.Node.ChainDB.InitChainSelEvent.CandidateContainsFutureBlocks
+### Cardano.Node.ChainDB.TraceInitChainSelEvent.CandidateContainsFutureBlocks
 
 
 ***
@@ -1781,7 +2241,7 @@ Candidate contains headers from the future which do not exceed the clock skew.
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -1789,9 +2249,9 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
-### Cardano.Node.ChainDB.InitChainSelEvent.CandidateContainsFutureBlocksExceedingClockSkew
+### Cardano.Node.ChainDB.TraceInitChainSelEvent.CandidateContainsFutureBlocksExceedingClockSkew
 
 
 ***
@@ -1799,7 +2259,7 @@ Candidate contains headers from the future which exceed the clock skew, making t
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -1807,9 +2267,27 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
-### Cardano.Node.ChainDB.InitChainSelEvent.InvalidBlock
+### Cardano.Node.ChainDB.TraceInitChainSelEvent.InitalChainSelected
+
+
+***
+InitalChainSelected
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Info`
+
+### Cardano.Node.ChainDB.TraceInitChainSelEvent.InvalidBlock
 
 
 ***
@@ -1817,7 +2295,7 @@ A point was found to be invalid.
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -1825,9 +2303,45 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
-### Cardano.Node.ChainDB.InitChainSelEvent.ValidCandidate
+### Cardano.Node.ChainDB.TraceInitChainSelEvent.StartedInitChainSelection
+
+
+***
+StartedInitChainSelection
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Info`
+
+### Cardano.Node.ChainDB.TraceInitChainSelEvent.UpdateLedgerDb
+
+
+***
+UpdateLedgerDb
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Info`
+
+### Cardano.Node.ChainDB.TraceInitChainSelEvent.ValidCandidate
 
 
 ***
@@ -1843,9 +2357,9 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
-### Cardano.Node.ChainDB.IteratorEvent.BlockGCedFromVolatileDB
+### Cardano.Node.ChainDB.TraceIteratorEvent.BlockGCedFromVolatileDB
 
 
 ***
@@ -1853,7 +2367,7 @@ A block is no longer in the VolatileDB and isn't in the ImmDB either; it wasn't 
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -1861,9 +2375,9 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
-### Cardano.Node.ChainDB.IteratorEvent.BlockMissingFromVolatileDB
+### Cardano.Node.ChainDB.TraceIteratorEvent.BlockMissingFromVolatileDB
 
 
 ***
@@ -1871,7 +2385,7 @@ A block is no longer in the VolatileDB because it has been garbage collected. It
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -1879,9 +2393,9 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
-### Cardano.Node.ChainDB.IteratorEvent.BlockWasCopiedToImmutableDB
+### Cardano.Node.ChainDB.TraceIteratorEvent.BlockWasCopiedToImmutableDB
 
 
 ***
@@ -1889,7 +2403,7 @@ A block that has been garbage collected from the VolatileDB is now found and str
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -1897,9 +2411,9 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
-### Cardano.Node.ChainDB.IteratorEvent.StreamFromBoth
+### Cardano.Node.ChainDB.TraceIteratorEvent.StreamFromBoth
 
 
 ***
@@ -1907,7 +2421,7 @@ Stream from both the VolatileDB and the ImmDB.
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -1915,9 +2429,9 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
-### Cardano.Node.ChainDB.IteratorEvent.StreamFromImmutableDB
+### Cardano.Node.ChainDB.TraceIteratorEvent.StreamFromImmutableDB
 
 
 ***
@@ -1925,7 +2439,7 @@ Stream only from the ImmDB.
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -1933,9 +2447,9 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
-### Cardano.Node.ChainDB.IteratorEvent.StreamFromVolatileDB
+### Cardano.Node.ChainDB.TraceIteratorEvent.StreamFromVolatileDB
 
 
 ***
@@ -1943,7 +2457,7 @@ Stream only from the VolatileDB.
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -1951,9 +2465,9 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
-### Cardano.Node.ChainDB.IteratorEvent.SwitchBackToVolatileDB
+### Cardano.Node.ChainDB.TraceIteratorEvent.SwitchBackToVolatileDB
 
 
 ***
@@ -1961,7 +2475,7 @@ We have streamed one or more blocks from the ImmDB that were part of the Volatil
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -1969,9 +2483,9 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
-### Cardano.Node.ChainDB.IteratorEvent.UnknownRangeRequested
+### Cardano.Node.ChainDB.TraceIteratorEvent.UnknownRangeRequested
 
 
 ***
@@ -1979,7 +2493,7 @@ An unknown range was requested, see 'UnknownRange'.
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -1987,9 +2501,9 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
-### Cardano.Node.ChainDB.LedgerEvent.DeletedSnapshot
+### Cardano.Node.ChainDB.TraceLedgerEvent.DeletedSnapshot
 
 
 ***
@@ -1997,7 +2511,7 @@ An old or invalid on-disk snapshot was deleted.
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -2005,9 +2519,9 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
-### Cardano.Node.ChainDB.LedgerEvent.InvalidSnapshot
+### Cardano.Node.ChainDB.TraceLedgerEvent.InvalidSnapshot
 
 
 ***
@@ -2015,7 +2529,7 @@ An on disk snapshot was skipped because it was invalid.
 ***
 
 
-> Severity:   `Error`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -2023,9 +2537,27 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
-### Cardano.Node.ChainDB.LedgerEvent.ReplayFromGenesis
+### Cardano.Node.ChainDB.TraceLedgerEvent.TookSnapshot
+
+
+***
+A snapshot was written to disk.
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Info`
+
+### Cardano.Node.ChainDB.TraceLedgerReplayEvent.ReplayFromGenesis
 
 
 ***
@@ -2041,9 +2573,9 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
-### Cardano.Node.ChainDB.LedgerEvent.ReplayFromSnapshot
+### Cardano.Node.ChainDB.TraceLedgerReplayEvent.ReplayFromSnapshot
 
 
 ***
@@ -2059,9 +2591,9 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
-### Cardano.Node.ChainDB.LedgerEvent.ReplayedBlock
+### Cardano.Node.ChainDB.TraceLedgerReplayEvent.ReplayedBlock
 
 
 ***
@@ -2078,27 +2610,9 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
-### Cardano.Node.ChainDB.LedgerEvent.TookSnapshot
-
-
-***
-A snapshot was written to disk.
-***
-
-
-> Severity:   `Info`
-Privacy:   `Public`
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`Stdout MachineFormat`,
-			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
-
-### Cardano.Node.ChainDB.OpenEvent.ClosedDB
+### Cardano.Node.ChainDB.TraceOpenEvent.ClosedDB
 
 
 ***
@@ -2114,9 +2628,9 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
-### Cardano.Node.ChainDB.OpenEvent.OpenedDB
+### Cardano.Node.ChainDB.TraceOpenEvent.OpenedDB
 
 
 ***
@@ -2132,9 +2646,9 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
-### Cardano.Node.ChainDB.OpenEvent.OpenedImmutableDB
+### Cardano.Node.ChainDB.TraceOpenEvent.OpenedImmutableDB
 
 
 ***
@@ -2150,9 +2664,9 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
-### Cardano.Node.ChainDB.OpenEvent.OpenedLgrDB
+### Cardano.Node.ChainDB.TraceOpenEvent.OpenedLgrDB
 
 
 ***
@@ -2168,9 +2682,9 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
-### Cardano.Node.ChainDB.OpenEvent.OpenedVolatileDB
+### Cardano.Node.ChainDB.TraceOpenEvent.OpenedVolatileDB
 
 
 ***
@@ -2186,9 +2700,81 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
-### Cardano.Node.ChainDB.VolatileDbEvent.BlockAlreadyHere
+### Cardano.Node.ChainDB.TraceOpenEvent.StartedOpeningDB
+
+
+***
+
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Info`
+
+### Cardano.Node.ChainDB.TraceOpenEvent.StartedOpeningImmutableDB
+
+
+***
+
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Info`
+
+### Cardano.Node.ChainDB.TraceOpenEvent.StartedOpeningLgrDB
+
+
+***
+The LedgerDB was opened.
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Info`
+
+### Cardano.Node.ChainDB.TraceOpenEvent.StartedOpeningVolatileDB
+
+
+***
+
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Info`
+
+### Cardano.Node.ChainDB.TraceVolatileDBEvent.BlockAlreadyHere
 
 
 ***
@@ -2196,7 +2782,7 @@ A block was found to be already in the DB.
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -2204,9 +2790,9 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
-### Cardano.Node.ChainDB.VolatileDbEvent.DBAlreadyClosed
+### Cardano.Node.ChainDB.TraceVolatileDBEvent.DBAlreadyClosed
 
 
 ***
@@ -2214,7 +2800,7 @@ When closing the DB it was found itis closed already.
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -2222,9 +2808,9 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
-### Cardano.Node.ChainDB.VolatileDbEvent.InvalidFileNames
+### Cardano.Node.ChainDB.TraceVolatileDBEvent.InvalidFileNames
 
 
 ***
@@ -2232,7 +2818,7 @@ Reports a list of invalid file paths.
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -2240,9 +2826,9 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
-### Cardano.Node.ChainDB.VolatileDbEvent.Truncate
+### Cardano.Node.ChainDB.TraceVolatileDBEvent.Truncate
 
 
 ***
@@ -2250,7 +2836,7 @@ Truncates a file up to offset because of the error.
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -2258,7 +2844,305 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
+
+### Cardano.Node.ChainSync.NodeToClient.Recieve.AwaitReply
+
+
+***
+Acknowledge the request but require the consumer to wait for the nextupdate. This means that the consumer is synced with the producer, andthe producer is waiting for its own chain state to change.
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.ChainSync.NodeToClient.Recieve.Done
+
+
+***
+We have to explain to the framework what our states mean, in terms ofwhich party has agency in each state.
+Idle states are where it is for the client to send a message,busy states are where the server is expected to send a reply.
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.ChainSync.NodeToClient.Recieve.FindIntersect
+
+
+***
+Ask the producer to try to find an improved intersection point betweenthe consumer and producer's chains. The consumer sends a sequence ofpoints and it is up to the producer to find the first intersection pointon its chain and send it back to the consumer.
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.ChainSync.NodeToClient.Recieve.IntersectFound
+
+
+***
+The reply to the consumer about an intersection found.The consumer can decide weather to send more points.
+The message also tells the consumer about the head point of the producer.
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.ChainSync.NodeToClient.Recieve.IntersectNotFound
+
+
+***
+The reply to the consumer that no intersection was found: none of thepoints the consumer supplied are on the producer chain.
+The message also tells the consumer about the head point of the producer.
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.ChainSync.NodeToClient.Recieve.RequestNext
+
+
+***
+Request the next update from the producer. The response can be a rollforward, a roll back or wait.
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.ChainSync.NodeToClient.Recieve.RollBackward
+
+
+***
+Tell the consumer to roll back to a given point on their chain.
+The message also tells the consumer about the head point of the producer.
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.ChainSync.NodeToClient.Recieve.RollForward
+
+
+***
+Tell the consumer to extend their chain with the given header.
+The message also tells the consumer about the head point of the producer.
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.ChainSync.NodeToClient.Send.AwaitReply
+
+
+***
+Acknowledge the request but require the consumer to wait for the nextupdate. This means that the consumer is synced with the producer, andthe producer is waiting for its own chain state to change.
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.ChainSync.NodeToClient.Send.Done
+
+
+***
+We have to explain to the framework what our states mean, in terms ofwhich party has agency in each state.
+Idle states are where it is for the client to send a message,busy states are where the server is expected to send a reply.
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.ChainSync.NodeToClient.Send.FindIntersect
+
+
+***
+Ask the producer to try to find an improved intersection point betweenthe consumer and producer's chains. The consumer sends a sequence ofpoints and it is up to the producer to find the first intersection pointon its chain and send it back to the consumer.
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.ChainSync.NodeToClient.Send.IntersectFound
+
+
+***
+The reply to the consumer about an intersection found.The consumer can decide weather to send more points.
+The message also tells the consumer about the head point of the producer.
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.ChainSync.NodeToClient.Send.IntersectNotFound
+
+
+***
+The reply to the consumer that no intersection was found: none of thepoints the consumer supplied are on the producer chain.
+The message also tells the consumer about the head point of the producer.
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.ChainSync.NodeToClient.Send.RequestNext
+
+
+***
+Request the next update from the producer. The response can be a rollforward, a roll back or wait.
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.ChainSync.NodeToClient.Send.RollBackward
+
+
+***
+Tell the consumer to roll back to a given point on their chain.
+The message also tells the consumer about the head point of the producer.
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.ChainSync.NodeToClient.Send.RollForward
+
+
+***
+Tell the consumer to extend their chain with the given header.
+The message also tells the consumer about the head point of the producer.
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.ChainSyncClient.ChainSyncClientEvent.DownloadedHeader
 
@@ -2276,7 +3160,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.ChainSyncClient.ChainSyncClientEvent.Exception
 
@@ -2286,7 +3170,7 @@ An exception was thrown by the Chain Sync Client.
 ***
 
 
-> Severity:   `Warning`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -2294,7 +3178,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.ChainSyncClient.ChainSyncClientEvent.FoundIntersection
 
@@ -2312,7 +3196,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.ChainSyncClient.ChainSyncClientEvent.RolledBack
 
@@ -2322,7 +3206,7 @@ While following a candidate chain, we rolled back to the given point.
 ***
 
 
-> Severity:   `Notice`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -2330,7 +3214,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.ChainSyncClient.ChainSyncClientEvent.Termination
 
@@ -2340,7 +3224,7 @@ The client has terminated.
 ***
 
 
-> Severity:   `Notice`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -2348,13 +3232,13 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
-### Cardano.Node.ChainSyncClient.NodeToClient.Send.AwaitReply
+### Cardano.Node.ChainSyncNode.NodeToNode.Recieve.AwaitReply
 
 
 ***
-Acknowledge the request but require the consumer to wait for the nextupdate. This means that the consumer is synced with the producer, and the producer is waiting for its own chain state to change.
+Acknowledge the request but require the consumer to wait for the nextupdate. This means that the consumer is synced with the producer, andthe producer is waiting for its own chain state to change.
 ***
 
 
@@ -2366,28 +3250,9 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
-### Cardano.Node.ChainSyncClient.NodeToClient.Send.AwaitReply
-
-
-***
-Tell the consumer to extend their chain with the given header.
-The message also tells the consumer about the head point of the producer.
-***
-
-
-> Severity:   `Info`
-Privacy:   `Public`
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`Stdout MachineFormat`,
-			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
-
-### Cardano.Node.ChainSyncClient.NodeToClient.Send.Done
+### Cardano.Node.ChainSyncNode.NodeToNode.Recieve.Done
 
 
 ***
@@ -2404,9 +3269,9 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
-### Cardano.Node.ChainSyncClient.NodeToClient.Send.FindIntersect
+### Cardano.Node.ChainSyncNode.NodeToNode.Recieve.FindIntersect
 
 
 ***
@@ -2422,9 +3287,9 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
-### Cardano.Node.ChainSyncClient.NodeToClient.Send.IntersectFound
+### Cardano.Node.ChainSyncNode.NodeToNode.Recieve.IntersectFound
 
 
 ***
@@ -2441,9 +3306,9 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
-### Cardano.Node.ChainSyncClient.NodeToClient.Send.IntersectNotFound
+### Cardano.Node.ChainSyncNode.NodeToNode.Recieve.IntersectNotFound
 
 
 ***
@@ -2460,9 +3325,9 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
-### Cardano.Node.ChainSyncClient.NodeToClient.Send.RequestNext
+### Cardano.Node.ChainSyncNode.NodeToNode.Recieve.RequestNext
 
 
 ***
@@ -2478,9 +3343,9 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
-### Cardano.Node.ChainSyncClient.NodeToClient.Send.RollBackward
+### Cardano.Node.ChainSyncNode.NodeToNode.Recieve.RollBackward
 
 
 ***
@@ -2497,46 +3362,9 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
-### Cardano.Node.ChainSyncClient.NodeToClient.Send.RollForward
-
-
-***
-Tell the consumer to extend their chain with the given header.
-The message also tells the consumer about the head point of the producer.
-***
-
-
-> Severity:   `Info`
-Privacy:   `Public`
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`Stdout MachineFormat`,
-			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
-
-### Cardano.Node.ChainSyncNode.NodeToNode.Send.AwaitReply
-
-
-***
-Acknowledge the request but require the consumer to wait for the nextupdate. This means that the consumer is synced with the producer, and the producer is waiting for its own chain state to change.
-***
-
-
-> Severity:   `Info`
-Privacy:   `Public`
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`Stdout MachineFormat`,
-			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
-
-### Cardano.Node.ChainSyncNode.NodeToNode.Send.AwaitReply
+### Cardano.Node.ChainSyncNode.NodeToNode.Recieve.RollForward
 
 
 ***
@@ -2553,7 +3381,25 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.ChainSyncNode.NodeToNode.Send.AwaitReply
+
+
+***
+Acknowledge the request but require the consumer to wait for the nextupdate. This means that the consumer is synced with the producer, andthe producer is waiting for its own chain state to change.
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.ChainSyncNode.NodeToNode.Send.Done
 
@@ -2572,7 +3418,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.ChainSyncNode.NodeToNode.Send.FindIntersect
 
@@ -2590,7 +3436,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.ChainSyncNode.NodeToNode.Send.IntersectFound
 
@@ -2609,7 +3455,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.ChainSyncNode.NodeToNode.Send.IntersectNotFound
 
@@ -2628,7 +3474,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.ChainSyncNode.NodeToNode.Send.RequestNext
 
@@ -2646,7 +3492,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.ChainSyncNode.NodeToNode.Send.RollBackward
 
@@ -2665,7 +3511,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.ChainSyncNode.NodeToNode.Send.RollForward
 
@@ -2684,13 +3530,13 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
-### Cardano.Node.ChainSyncSerialised.NodeToNode.Send.AwaitReply
+### Cardano.Node.ChainSyncSerialised.NodeToNode.Recieve.AwaitReply
 
 
 ***
-Acknowledge the request but require the consumer to wait for the nextupdate. This means that the consumer is synced with the producer, and the producer is waiting for its own chain state to change.
+Acknowledge the request but require the consumer to wait for the nextupdate. This means that the consumer is synced with the producer, andthe producer is waiting for its own chain state to change.
 ***
 
 
@@ -2702,9 +3548,121 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
-### Cardano.Node.ChainSyncSerialised.NodeToNode.Send.AwaitReply
+### Cardano.Node.ChainSyncSerialised.NodeToNode.Recieve.Done
+
+
+***
+We have to explain to the framework what our states mean, in terms ofwhich party has agency in each state.
+Idle states are where it is for the client to send a message,busy states are where the server is expected to send a reply.
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.ChainSyncSerialised.NodeToNode.Recieve.FindIntersect
+
+
+***
+Ask the producer to try to find an improved intersection point betweenthe consumer and producer's chains. The consumer sends a sequence ofpoints and it is up to the producer to find the first intersection pointon its chain and send it back to the consumer.
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.ChainSyncSerialised.NodeToNode.Recieve.IntersectFound
+
+
+***
+The reply to the consumer about an intersection found.The consumer can decide weather to send more points.
+The message also tells the consumer about the head point of the producer.
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.ChainSyncSerialised.NodeToNode.Recieve.IntersectNotFound
+
+
+***
+The reply to the consumer that no intersection was found: none of thepoints the consumer supplied are on the producer chain.
+The message also tells the consumer about the head point of the producer.
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.ChainSyncSerialised.NodeToNode.Recieve.RequestNext
+
+
+***
+Request the next update from the producer. The response can be a rollforward, a roll back or wait.
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.ChainSyncSerialised.NodeToNode.Recieve.RollBackward
+
+
+***
+Tell the consumer to roll back to a given point on their chain.
+The message also tells the consumer about the head point of the producer.
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.ChainSyncSerialised.NodeToNode.Recieve.RollForward
 
 
 ***
@@ -2721,7 +3679,25 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.ChainSyncSerialised.NodeToNode.Send.AwaitReply
+
+
+***
+Acknowledge the request but require the consumer to wait for the nextupdate. This means that the consumer is synced with the producer, andthe producer is waiting for its own chain state to change.
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.ChainSyncSerialised.NodeToNode.Send.Done
 
@@ -2740,7 +3716,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.ChainSyncSerialised.NodeToNode.Send.FindIntersect
 
@@ -2758,7 +3734,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.ChainSyncSerialised.NodeToNode.Send.IntersectFound
 
@@ -2777,7 +3753,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.ChainSyncSerialised.NodeToNode.Send.IntersectNotFound
 
@@ -2796,7 +3772,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.ChainSyncSerialised.NodeToNode.Send.RequestNext
 
@@ -2814,7 +3790,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.ChainSyncSerialised.NodeToNode.Send.RollBackward
 
@@ -2833,7 +3809,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.ChainSyncSerialised.NodeToNode.Send.RollForward
 
@@ -2852,9 +3828,9 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
-### Cardano.Node.ChainSyncServerBlock.ChainSyncServerEvent.RollBackward
+### Cardano.Node.ChainSyncServerBlock.ChainSyncServerEvent.ServerRead.RollBackward
 
 
 ***
@@ -2870,9 +3846,9 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
-### Cardano.Node.ChainSyncServerBlock.ChainSyncServerEvent.RollForward
+### Cardano.Node.ChainSyncServerBlock.ChainSyncServerEvent.ServerRead.RollForward
 
 
 ***
@@ -2888,9 +3864,9 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
-### Cardano.Node.ChainSyncServerBlock.ChainSyncServerEvent.ServerRead
+### Cardano.Node.ChainSyncServerBlock.ChainSyncServerEvent.ServerRead.ServerRead
 
 
 ***
@@ -2906,9 +3882,9 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
-### Cardano.Node.ChainSyncServerBlock.ChainSyncServerEvent.ServerReadBlocked
+### Cardano.Node.ChainSyncServerBlock.ChainSyncServerEvent.ServerRead.ServerReadBlocked
 
 
 ***
@@ -2924,9 +3900,9 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
-### Cardano.Node.ChainSyncServerHeader.ChainSyncServerEvent.RollBackward
+### Cardano.Node.ChainSyncServerHeader.ChainSyncServerEvent.ServerRead.RollBackward
 
 
 ***
@@ -2942,9 +3918,9 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
-### Cardano.Node.ChainSyncServerHeader.ChainSyncServerEvent.RollForward
+### Cardano.Node.ChainSyncServerHeader.ChainSyncServerEvent.ServerRead.RollForward
 
 
 ***
@@ -2960,9 +3936,9 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
-### Cardano.Node.ChainSyncServerHeader.ChainSyncServerEvent.ServerRead
+### Cardano.Node.ChainSyncServerHeader.ChainSyncServerEvent.ServerRead.ServerRead
 
 
 ***
@@ -2978,9 +3954,9 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
-### Cardano.Node.ChainSyncServerHeader.ChainSyncServerEvent.ServerReadBlocked
+### Cardano.Node.ChainSyncServerHeader.ChainSyncServerEvent.ServerRead.ServerReadBlocked
 
 
 ***
@@ -2996,7 +3972,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.ConnectionManager.Connect
 
@@ -3006,7 +3982,7 @@ Filtered: `Invisible` because the filter level is `Notice`
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -3014,7 +3990,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.ConnectionManager.ConnectError
 
@@ -3032,7 +4008,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.ConnectionManager.ConnectionCleanup
 
@@ -3042,7 +4018,7 @@ Filtered: `Invisible` because the filter level is `Notice`
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -3050,7 +4026,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.ConnectionManager.ConnectionExists
 
@@ -3068,7 +4044,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.ConnectionManager.ConnectionFailure
 
@@ -3086,7 +4062,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.ConnectionManager.ConnectionHandler
 
@@ -3104,7 +4080,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.ConnectionManager.ConnectionManagerCounters
 
@@ -3122,7 +4098,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.ConnectionManager.ConnectionNotFound
 
@@ -3132,7 +4108,7 @@ Filtered: `Invisible` because the filter level is `Notice`
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -3140,7 +4116,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.ConnectionManager.ConnectionTimeWait
 
@@ -3150,7 +4126,7 @@ Filtered: `Invisible` because the filter level is `Notice`
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -3158,7 +4134,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.ConnectionManager.ConnectionTimeWaitDone
 
@@ -3168,7 +4144,7 @@ Filtered: `Invisible` because the filter level is `Notice`
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -3176,7 +4152,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.ConnectionManager.ForbiddenConnection
 
@@ -3194,7 +4170,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.ConnectionManager.ForbiddenOperation
 
@@ -3212,7 +4188,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.ConnectionManager.ImpossibleConnection
 
@@ -3230,7 +4206,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.ConnectionManager.IncludeConnection
 
@@ -3240,7 +4216,7 @@ Filtered: `Invisible` because the filter level is `Notice`
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -3248,7 +4224,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.ConnectionManager.PruneConnections
 
@@ -3258,7 +4234,7 @@ Filtered: `Invisible` because the filter level is `Notice`
 ***
 
 
-> Severity:   `Notice`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -3266,7 +4242,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.ConnectionManager.Shutdown
 
@@ -3284,7 +4260,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.ConnectionManager.State
 
@@ -3302,7 +4278,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.ConnectionManager.TerminatedConnection
 
@@ -3312,7 +4288,7 @@ Filtered: `Invisible` because the filter level is `Notice`
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -3320,7 +4296,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.ConnectionManager.TerminatingConnection
 
@@ -3330,7 +4306,7 @@ Filtered: `Invisible` because the filter level is `Notice`
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -3338,7 +4314,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.ConnectionManager.UnexpectedlyFalseAssertion
 
@@ -3348,7 +4324,7 @@ Filtered: `Invisible` because the filter level is `Notice`
 ***
 
 
-> Severity:   `Error`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -3356,7 +4332,25 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.ConnectionManager.UnknownConnection
+
+
+***
+
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.ConnectionManager.UnregisterConnection
 
@@ -3366,7 +4360,7 @@ Filtered: `Visible` because the filter level is `Notice`
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -3374,7 +4368,25 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.ConnectionManagerTransition.ConnectionManagerTransition
+
+
+***
+
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.DNSResolver.LookupAAAAError
 
@@ -3384,7 +4396,7 @@ AAAA lookup failed with an error.
 ***
 
 
-> Severity:   `Error`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -3392,7 +4404,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.DNSResolver.LookupAAAAResult
 
@@ -3402,7 +4414,7 @@ Lookup AAAA result.
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -3410,7 +4422,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.DNSResolver.LookupAError
 
@@ -3420,7 +4432,7 @@ A lookup failed with an error.
 ***
 
 
-> Severity:   `Error`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -3428,7 +4440,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.DNSResolver.LookupAResult
 
@@ -3438,7 +4450,7 @@ Lookup A result.
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -3446,7 +4458,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.DNSResolver.LookupException
 
@@ -3456,7 +4468,7 @@ A DNS lookup exception occurred.
 ***
 
 
-> Severity:   `Error`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -3464,7 +4476,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.DNSResolver.LookupIPv4First
 
@@ -3474,7 +4486,7 @@ Returning IPv4 address first.
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -3482,7 +4494,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.DNSResolver.LookupIPv6First
 
@@ -3492,7 +4504,7 @@ Returning IPv6 address first.
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -3500,25 +4512,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Info`
-
-### Cardano.Node.DNSResolver.LookupIPv6First
-
-
-***
-Returning IPv6 address first.
-***
-
-
-> Severity:   `Debug`
-Privacy:   `Public`
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`Stdout MachineFormat`,
-			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.DNSSubscription.DNS.AllocateSocket
 
@@ -3528,7 +4522,7 @@ DNS Subscription: Allocate socket to address.
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -3536,7 +4530,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.DNSSubscription.DNS.ApplicationException
 
@@ -3546,7 +4540,7 @@ DNS Subscription: Application Exception occurred.
 ***
 
 
-> Severity:   `Error`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -3554,7 +4548,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.DNSSubscription.DNS.CloseSocket
 
@@ -3564,7 +4558,7 @@ DNS Subscription: Closed socket to address.
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -3572,7 +4566,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.DNSSubscription.DNS.ConnectEnd
 
@@ -3582,7 +4576,7 @@ DNS Subscription: Connection Attempt end with destination and outcome.
 ***
 
 
-> Severity:   `Notice`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -3590,17 +4584,17 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.DNSSubscription.DNS.ConnectException
 
 
 ***
-DNS Subscription: Connection Attempt Exception with destination and exception.
+DNS Subscription: Socket Allocation Exception with destination and the exception.
 ***
 
 
-> Severity:   `Error`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -3608,7 +4602,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.DNSSubscription.DNS.ConnectStart
 
@@ -3618,7 +4612,7 @@ DNS Subscription: Connection Attempt Start with destination.
 ***
 
 
-> Severity:   `Notice`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -3626,7 +4620,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.DNSSubscription.DNS.ConnectionExist
 
@@ -3644,7 +4638,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.DNSSubscription.DNS.MissingLocalAddress
 
@@ -3654,7 +4648,7 @@ DNS Subscription: Missing local address.
 ***
 
 
-> Severity:   `Warning`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -3662,7 +4656,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.DNSSubscription.DNS.Restart
 
@@ -3672,7 +4666,7 @@ DNS Subscription: Restarting Subscription after duration with desired valency an
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -3680,7 +4674,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.DNSSubscription.DNS.SkippingPeer
 
@@ -3698,17 +4692,17 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.DNSSubscription.DNS.SocketAllocationException
 
 
 ***
-DNS Subscription: Socket Allocation Exception with destination and the exception.
+DNS Subscription: Connection Attempt Exception with destination and exception.
 ***
 
 
-> Severity:   `Error`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -3716,7 +4710,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.DNSSubscription.DNS.Start
 
@@ -3726,7 +4720,7 @@ DNS Subscription: Starting Subscription Worker with a valency.
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -3734,7 +4728,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.DNSSubscription.DNS.SubscriptionFailed
 
@@ -3744,7 +4738,7 @@ DNS Subscription: Failed to start all required subscriptions.
 ***
 
 
-> Severity:   `Warning`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -3752,7 +4746,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.DNSSubscription.DNS.SubscriptionRunning
 
@@ -3762,7 +4756,7 @@ DNS Subscription: Required subscriptions started.
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -3770,7 +4764,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.DNSSubscription.DNS.SubscriptionWaiting
 
@@ -3780,7 +4774,7 @@ DNS Subscription: Waiting on address with active connections.
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -3788,7 +4782,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.DNSSubscription.DNS.SubscriptionWaitingNewConnection
 
@@ -3798,7 +4792,7 @@ DNS Subscription: Waiting delay time before attempting a new connection.
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -3806,7 +4800,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.DNSSubscription.DNS.TryConnectToPeer
 
@@ -3824,7 +4818,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.DNSSubscription.DNS.UnsupportedRemoteAddr
 
@@ -3834,7 +4828,7 @@ DNS Subscription: Unsupported remote target address.
 ***
 
 
-> Severity:   `Warning`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -3842,9 +4836,9 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
-### Cardano.Node.DebugPeerSelection.GovernorState
+### Cardano.Node.DebugPeerSelection.DebugPeerSelection.GovernorState
 
 
 ***
@@ -3852,7 +4846,7 @@ Filtered: `Visible` because the filter level is `Info`
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -3860,9 +4854,9 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
-### Cardano.Node.DebugPeerSelectionResponder.GovernorState
+### Cardano.Node.DebugPeerSelectionResponder.DebugPeerSelection.GovernorState
 
 
 ***
@@ -3870,7 +4864,7 @@ Filtered: `Invisible` because the filter level is `Notice`
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -3878,13 +4872,13 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.DiffusionInit.ConfiguringLocalSocket
 
 
 ***
-ConfiguringLocalSocket 
+ConfiguringLocalSocket
 ***
 
 
@@ -3896,13 +4890,13 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.DiffusionInit.ConfiguringServerSocket
 
 
 ***
-ConfiguringServerSocket 
+ConfiguringServerSocket
 ***
 
 
@@ -3914,13 +4908,13 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.DiffusionInit.CreateSystemdSocketForSnocketPath
 
 
 ***
-CreateSystemdSocketForSnocketPath 
+CreateSystemdSocketForSnocketPath
 ***
 
 
@@ -3932,13 +4926,13 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.DiffusionInit.CreatedLocalSocket
 
 
 ***
-CreatedLocalSocket 
+CreatedLocalSocket
 ***
 
 
@@ -3950,13 +4944,13 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.DiffusionInit.CreatingServerSocket
 
 
 ***
-CreatingServerSocket 
+CreatingServerSocket
 ***
 
 
@@ -3968,13 +4962,13 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.DiffusionInit.DiffusionErrored
 
 
 ***
-DiffusionErrored 
+DiffusionErrored
 ***
 
 
@@ -3986,13 +4980,13 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.DiffusionInit.ListeningLocalSocket
 
 
 ***
-ListeningLocalSocket 
+ListeningLocalSocket
 ***
 
 
@@ -4004,13 +4998,13 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.DiffusionInit.ListeningServerSocket
 
 
 ***
-ListeningServerSocket 
+ListeningServerSocket
 ***
 
 
@@ -4022,13 +5016,13 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.DiffusionInit.LocalSocketUp
 
 
 ***
-LocalSocketUp 
+LocalSocketUp
 ***
 
 
@@ -4040,13 +5034,13 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.DiffusionInit.RunLocalServer
 
 
 ***
-RunLocalServer 
+RunLocalServer
 ***
 
 
@@ -4058,13 +5052,13 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.DiffusionInit.RunServer
 
 
 ***
-RunServer 
+RunServer
 ***
 
 
@@ -4076,13 +5070,13 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.DiffusionInit.ServerSocketUp
 
 
 ***
-ServerSocketUp 
+ServerSocketUp
 ***
 
 
@@ -4094,13 +5088,13 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.DiffusionInit.UnsupportedLocalSystemdSocket
 
 
 ***
-UnsupportedLocalSystemdSocket 
+UnsupportedLocalSystemdSocket
 ***
 
 
@@ -4112,13 +5106,13 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.DiffusionInit.UnsupportedReadySocketCase
 
 
 ***
-UnsupportedReadySocketCase 
+UnsupportedReadySocketCase
 ***
 
 
@@ -4130,13 +5124,13 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.DiffusionInit.UsingSystemdSocket
 
 
 ***
-UsingSystemdSocket 
+UsingSystemdSocket
 ***
 
 
@@ -4148,7 +5142,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.ErrorPolicy.AcceptException
 
@@ -4158,7 +5152,7 @@ Filtered: `Visible` because the filter level is `Info`
 ***
 
 
-> Severity:   `Error`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -4166,7 +5160,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.ErrorPolicy.KeepSuspended
 
@@ -4176,7 +5170,7 @@ Consumer was suspended until producer will resume.
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -4184,7 +5178,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.ErrorPolicy.LocalNodeError
 
@@ -4194,7 +5188,7 @@ caught a local exception.
 ***
 
 
-> Severity:   `Error`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -4202,7 +5196,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.ErrorPolicy.ResumeConsumer
 
@@ -4212,7 +5206,7 @@ Resume consumer.
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -4220,7 +5214,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.ErrorPolicy.ResumePeer
 
@@ -4230,7 +5224,7 @@ Resume a peer (both consumer and producer).
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -4238,7 +5232,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.ErrorPolicy.ResumeProducer
 
@@ -4248,7 +5242,7 @@ Resume producer.
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -4256,7 +5250,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.ErrorPolicy.SuspendConsumer
 
@@ -4266,7 +5260,7 @@ Suspending consumer.
 ***
 
 
-> Severity:   `Notice`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -4274,7 +5268,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.ErrorPolicy.SuspendPeer
 
@@ -4284,7 +5278,7 @@ Suspending peer with a given exception.
 ***
 
 
-> Severity:   `Warning`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -4292,7 +5286,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.ErrorPolicy.UnhandledApplicationException
 
@@ -4302,7 +5296,7 @@ An application threw an exception, which was not handled.
 ***
 
 
-> Severity:   `Error`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -4310,7 +5304,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.ErrorPolicy.UnhandledConnectionException
 
@@ -4320,7 +5314,7 @@ Filtered: `Visible` because the filter level is `Info`
 ***
 
 
-> Severity:   `Error`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -4328,7 +5322,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.Forge.AdoptedBlock
 
@@ -4346,7 +5340,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.Forge.BlockContext
 
@@ -4356,7 +5350,7 @@ We found out to which block we are going to connect the block we are about  to f
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -4364,7 +5358,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.Forge.BlockFromFuture
 
@@ -4374,7 +5368,7 @@ Leadership check failed: the current chain contains a block from a slot  /after/
 ***
 
 
-> Severity:   `Error`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -4382,7 +5376,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.Forge.DidntAdoptBlock
 
@@ -4392,7 +5386,7 @@ We did not adopt the block we produced, but the block was valid. We  must have a
 ***
 
 
-> Severity:   `Error`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -4400,7 +5394,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.Forge.ForgeStateUpdateError
 
@@ -4410,7 +5404,7 @@ Updating the forge state failed.   For example, the KES key could not be evolved
 ***
 
 
-> Severity:   `Error`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -4418,7 +5412,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.Forge.ForgedBlock
 
@@ -4441,7 +5435,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.Forge.ForgedInvalidBlock
 
@@ -4451,7 +5445,7 @@ We forged a block that is invalid according to the ledger in the  ChainDB. This 
 ***
 
 
-> Severity:   `Error`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -4459,7 +5453,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.Forge.LedgerState
 
@@ -4469,7 +5463,7 @@ We obtained a ledger state for the point of the block we want to  connect to   W
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -4477,7 +5471,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.Forge.LedgerView
 
@@ -4487,7 +5481,7 @@ We obtained a ledger view for the current slot number   We record the current sl
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -4495,7 +5489,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.Forge.NoLedgerState
 
@@ -4505,7 +5499,7 @@ Leadership check failed: we were unable to get the ledger state for the  point o
 ***
 
 
-> Severity:   `Error`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -4513,7 +5507,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.Forge.NoLedgerView
 
@@ -4523,7 +5517,7 @@ Leadership check failed: we were unable to get the ledger view for the  current 
 ***
 
 
-> Severity:   `Error`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -4531,7 +5525,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.Forge.NodeCannotForge
 
@@ -4541,7 +5535,7 @@ We did the leadership check and concluded that we should lead and forge  a block
 ***
 
 
-> Severity:   `Error`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -4549,7 +5543,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.Forge.NodeIsLeader
 
@@ -4568,7 +5562,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.Forge.NodeNotLeader
 
@@ -4586,7 +5580,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.Forge.SlotIsImmutable
 
@@ -4596,7 +5590,7 @@ Leadership check failed: the tip of the ImmutableDB inhabits the  current slot  
 ***
 
 
-> Severity:   `Error`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -4604,7 +5598,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.Forge.StartLeadershipCheck
 
@@ -4622,7 +5616,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.Forge.StartLeadershipCheckPlus
 
@@ -4640,13 +5634,13 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.ForgeStateInfo
 
 
 ***
-kesStartPeriod 
+kesStartPeriod
 kesEndPeriod is kesStartPeriod + tpraosMaxKESEvo
 kesEvolution is the current evolution or /relative period/.
 ***
@@ -4660,9 +5654,9 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
-### Cardano.Node.Handshake.AcceptVersion
+### Cardano.Node.Handshake.Receive.AcceptVersion
 
 
 ***
@@ -4678,9 +5672,9 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
-### Cardano.Node.Handshake.ProposeVersions
+### Cardano.Node.Handshake.Receive.ProposeVersions
 
 
 ***
@@ -4696,9 +5690,9 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
-### Cardano.Node.Handshake.Refuse
+### Cardano.Node.Handshake.Receive.Refuse
 
 
 ***
@@ -4714,7 +5708,97 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.Handshake.Receive.ReplyVersions
+
+
+***
+`MsgReplyVersions` received as a response to 'MsgProposeVersions'.  It is not supported to explicitly send this message. It can only be received as a copy of 'MsgProposeVersions' in a simultaneous open scenario.
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.Handshake.Send.AcceptVersion
+
+
+***
+The remote end decides which version to use and sends chosen version.The server is allowed to modify version parameters.
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.Handshake.Send.ProposeVersions
+
+
+***
+Propose versions together with version parameters.  It must be encoded to a sorted list..
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.Handshake.Send.Refuse
+
+
+***
+It refuses to run any version.
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.Handshake.Send.ReplyVersions
+
+
+***
+`MsgReplyVersions` received as a response to 'MsgProposeVersions'.  It is not supported to explicitly send this message. It can only be received as a copy of 'MsgProposeVersions' in a simultaneous open scenario.
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.InboundGovernor.DemotedToColdRemote
 
@@ -4732,7 +5816,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.InboundGovernor.DemotedToWarmRemote
 
@@ -4750,7 +5834,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.InboundGovernor.InboundGovernorCounters
 
@@ -4768,7 +5852,25 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.InboundGovernor.InboundGovernorError
+
+
+***
+
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.InboundGovernor.MuxCleanExit
 
@@ -4778,7 +5880,7 @@ Filtered: `Invisible` because the filter level is `Notice`
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -4786,7 +5888,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.InboundGovernor.MuxErrored
 
@@ -4804,7 +5906,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.InboundGovernor.NewConnection
 
@@ -4814,7 +5916,7 @@ Filtered: `Invisible` because the filter level is `Notice`
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -4822,7 +5924,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.InboundGovernor.PromotedToHotRemote
 
@@ -4840,7 +5942,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.InboundGovernor.PromotedToWarmRemote
 
@@ -4858,7 +5960,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.InboundGovernor.RemoteState
 
@@ -4868,7 +5970,7 @@ Filtered: `Invisible` because the filter level is `Notice`
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -4876,7 +5978,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.InboundGovernor.ResponderErrored
 
@@ -4894,7 +5996,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.InboundGovernor.ResponderRestarted
 
@@ -4904,7 +6006,7 @@ Filtered: `Invisible` because the filter level is `Notice`
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -4912,7 +6014,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.InboundGovernor.ResponderStartFailure
 
@@ -4922,7 +6024,7 @@ Filtered: `Invisible` because the filter level is `Notice`
 ***
 
 
-> Severity:   `Error`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -4930,7 +6032,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.InboundGovernor.ResponderStarted
 
@@ -4940,7 +6042,7 @@ Filtered: `Visible` because the filter level is `Notice`
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -4948,7 +6050,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.InboundGovernor.ResponderTerminated
 
@@ -4958,7 +6060,7 @@ Filtered: `Invisible` because the filter level is `Notice`
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -4966,7 +6068,25 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.InboundGovernor.UnexpectedlyFalseAssertion
+
+
+***
+
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.InboundGovernor.WaitIdleRemote
 
@@ -4976,7 +6096,7 @@ Filtered: `Invisible` because the filter level is `Notice`
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -4984,7 +6104,25 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.InboundGovernorTransition.InboundGovernorTransition
+
+
+***
+
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.IpSubscription.IP.AllocateSocket
 
@@ -4994,7 +6132,7 @@ IP Subscription: Allocate socket to address.
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -5002,7 +6140,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.IpSubscription.IP.ApplicationException
 
@@ -5012,7 +6150,7 @@ IP Subscription: Application Exception occurred.
 ***
 
 
-> Severity:   `Error`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -5020,7 +6158,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.IpSubscription.IP.CloseSocket
 
@@ -5038,7 +6176,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.IpSubscription.IP.ConnectEnd
 
@@ -5056,17 +6194,17 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.IpSubscription.IP.ConnectException
 
 
 ***
-IP Subscription: Connection Attempt Exception with destination and exception.
+IP Subscription: Socket Allocation Exception with destination and the exception.
 ***
 
 
-> Severity:   `Error`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -5074,7 +6212,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.IpSubscription.IP.ConnectStart
 
@@ -5092,7 +6230,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.IpSubscription.IP.ConnectionExist
 
@@ -5102,7 +6240,7 @@ IP Subscription: Connection exists to destination.
 ***
 
 
-> Severity:   `Notice`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -5110,7 +6248,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.IpSubscription.IP.MissingLocalAddress
 
@@ -5120,7 +6258,7 @@ IP Subscription: Missing local address.
 ***
 
 
-> Severity:   `Warning`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -5128,7 +6266,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.IpSubscription.IP.Restart
 
@@ -5146,7 +6284,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.IpSubscription.IP.SkippingPeer
 
@@ -5164,17 +6302,17 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.IpSubscription.IP.SocketAllocationException
 
 
 ***
-IP Subscription: Socket Allocation Exception with destination and the exception.
+IP Subscription: Connection Attempt Exception with destination and exception.
 ***
 
 
-> Severity:   `Error`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -5182,7 +6320,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.IpSubscription.IP.Start
 
@@ -5192,7 +6330,7 @@ IP Subscription: Starting Subscription Worker with a valency.
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -5200,7 +6338,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.IpSubscription.IP.SubscriptionFailed
 
@@ -5210,7 +6348,7 @@ IP Subscription: Failed to start all required subscriptions.
 ***
 
 
-> Severity:   `Error`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -5218,7 +6356,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.IpSubscription.IP.SubscriptionRunning
 
@@ -5228,7 +6366,7 @@ IP Subscription: Required subscriptions started.
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -5236,7 +6374,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.IpSubscription.IP.SubscriptionWaiting
 
@@ -5246,7 +6384,7 @@ IP Subscription: Waiting on address with active connections.
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -5254,7 +6392,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.IpSubscription.IP.SubscriptionWaitingNewConnection
 
@@ -5264,7 +6402,7 @@ IP Subscription: Waiting delay time before attempting a new connection.
 ***
 
 
-> Severity:   `Notice`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -5272,7 +6410,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.IpSubscription.IP.TryConnectToPeer
 
@@ -5290,7 +6428,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.IpSubscription.IP.UnsupportedRemoteAddr
 
@@ -5300,7 +6438,7 @@ IP Subscription: Unsupported remote target address.
 ***
 
 
-> Severity:   `Error`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -5308,9 +6446,9 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
-### Cardano.Node.KeepAliveClient.KeepAliveClient
+### Cardano.Node.KeepAliveClient
 
 
 ***
@@ -5326,7 +6464,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.LedgerPeers.DisabledLedgerPeers
 
@@ -5344,25 +6482,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
-
-### Cardano.Node.LedgerPeers.DisabledLedgerPeers
-
-
-***
-Trace for when getting peers from the ledger is disabled, that is DontUseLedger.
-***
-
-
-> Severity:   `Info`
-Privacy:   `Public`
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`Stdout MachineFormat`,
-			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.LedgerPeers.FallingBackToBootstrapPeers
 
@@ -5380,7 +6500,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.LedgerPeers.FetchingNewLedgerState
 
@@ -5398,7 +6518,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.LedgerPeers.PickedPeer
 
@@ -5408,7 +6528,7 @@ Trace for a peer picked with accumulated and relative stake of its pool.
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -5416,7 +6536,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.LedgerPeers.PickedPeers
 
@@ -5434,7 +6554,25 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.LedgerPeers.RequestForPeers
+
+
+***
+RequestForPeers (NumberOfPeers 1)
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.LedgerPeers.ReusingLedgerState
 
@@ -5444,7 +6582,7 @@ Filtered: `Invisible` because the filter level is `Notice`
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -5452,7 +6590,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.LedgerPeers.TraceUseLedgerAfter
 
@@ -5470,7 +6608,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.LedgerPeers.WaitingOnRequest
 
@@ -5480,7 +6618,7 @@ Filtered: `Invisible` because the filter level is `Notice`
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -5488,25 +6626,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
-
-### Cardano.Node.LedgerPeers.WaitingOnRequest
-
-
-***
-RequestForPeers (NumberOfPeers 1)
-***
-
-
-> Severity:   `Debug`
-Privacy:   `Public`
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`Stdout MachineFormat`,
-			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.LocalConnectionManager.Connect
 
@@ -5516,7 +6636,7 @@ Filtered: `Invisible` because the filter level is `Notice`
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -5524,7 +6644,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.LocalConnectionManager.ConnectError
 
@@ -5542,7 +6662,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.LocalConnectionManager.ConnectionCleanup
 
@@ -5552,7 +6672,7 @@ Filtered: `Invisible` because the filter level is `Notice`
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -5560,7 +6680,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.LocalConnectionManager.ConnectionExists
 
@@ -5578,7 +6698,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.LocalConnectionManager.ConnectionFailure
 
@@ -5596,7 +6716,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.LocalConnectionManager.ConnectionHandler
 
@@ -5614,7 +6734,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.LocalConnectionManager.ConnectionManagerCounters
 
@@ -5632,7 +6752,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.LocalConnectionManager.ConnectionNotFound
 
@@ -5642,7 +6762,7 @@ Filtered: `Invisible` because the filter level is `Notice`
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -5650,7 +6770,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.LocalConnectionManager.ConnectionTimeWait
 
@@ -5660,7 +6780,7 @@ Filtered: `Invisible` because the filter level is `Notice`
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -5668,7 +6788,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.LocalConnectionManager.ConnectionTimeWaitDone
 
@@ -5678,7 +6798,7 @@ Filtered: `Invisible` because the filter level is `Notice`
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -5686,7 +6806,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.LocalConnectionManager.ForbiddenConnection
 
@@ -5704,7 +6824,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.LocalConnectionManager.ForbiddenOperation
 
@@ -5722,7 +6842,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.LocalConnectionManager.ImpossibleConnection
 
@@ -5740,7 +6860,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.LocalConnectionManager.IncludeConnection
 
@@ -5750,7 +6870,7 @@ Filtered: `Invisible` because the filter level is `Notice`
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -5758,7 +6878,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.LocalConnectionManager.PruneConnections
 
@@ -5768,7 +6888,7 @@ Filtered: `Invisible` because the filter level is `Notice`
 ***
 
 
-> Severity:   `Notice`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -5776,7 +6896,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.LocalConnectionManager.Shutdown
 
@@ -5794,7 +6914,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.LocalConnectionManager.State
 
@@ -5812,7 +6932,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.LocalConnectionManager.TerminatedConnection
 
@@ -5822,7 +6942,7 @@ Filtered: `Invisible` because the filter level is `Notice`
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -5830,7 +6950,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.LocalConnectionManager.TerminatingConnection
 
@@ -5840,7 +6960,7 @@ Filtered: `Invisible` because the filter level is `Notice`
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -5848,7 +6968,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.LocalConnectionManager.UnexpectedlyFalseAssertion
 
@@ -5858,7 +6978,7 @@ Filtered: `Invisible` because the filter level is `Notice`
 ***
 
 
-> Severity:   `Error`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -5866,7 +6986,25 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.LocalConnectionManager.UnknownConnection
+
+
+***
+
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.LocalConnectionManager.UnregisterConnection
 
@@ -5876,7 +7014,7 @@ Filtered: `Visible` because the filter level is `Notice`
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -5884,7 +7022,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.LocalErrorPolicy.AcceptException
 
@@ -5894,7 +7032,7 @@ Filtered: `Invisible` because the filter level is `Notice`
 ***
 
 
-> Severity:   `Error`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -5902,7 +7040,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.LocalErrorPolicy.KeepSuspended
 
@@ -5912,7 +7050,7 @@ Consumer was suspended until producer will resume.
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -5920,7 +7058,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.LocalErrorPolicy.LocalNodeError
 
@@ -5930,7 +7068,7 @@ caught a local exception.
 ***
 
 
-> Severity:   `Error`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -5938,7 +7076,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.LocalErrorPolicy.ResumeConsumer
 
@@ -5948,7 +7086,7 @@ Resume consumer.
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -5956,7 +7094,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.LocalErrorPolicy.ResumePeer
 
@@ -5966,7 +7104,7 @@ Resume a peer (both consumer and producer).
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -5974,7 +7112,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.LocalErrorPolicy.ResumeProducer
 
@@ -5984,7 +7122,7 @@ Resume producer.
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -5992,7 +7130,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.LocalErrorPolicy.SuspendConsumer
 
@@ -6002,7 +7140,7 @@ Suspending consumer.
 ***
 
 
-> Severity:   `Notice`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -6010,7 +7148,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.LocalErrorPolicy.SuspendPeer
 
@@ -6020,7 +7158,7 @@ Suspending peer with a given exception.
 ***
 
 
-> Severity:   `Warning`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -6028,7 +7166,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.LocalErrorPolicy.UnhandledApplicationException
 
@@ -6038,7 +7176,7 @@ An application threw an exception, which was not handled.
 ***
 
 
-> Severity:   `Error`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -6046,7 +7184,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.LocalErrorPolicy.UnhandledConnectionException
 
@@ -6056,7 +7194,7 @@ Filtered: `Visible` because the filter level is `Info`
 ***
 
 
-> Severity:   `Error`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -6064,9 +7202,9 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
-### Cardano.Node.LocalHandshake.AcceptVersion
+### Cardano.Node.LocalHandshake.Receive.AcceptVersion
 
 
 ***
@@ -6082,9 +7220,9 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
-### Cardano.Node.LocalHandshake.ProposeVersions
+### Cardano.Node.LocalHandshake.Receive.ProposeVersions
 
 
 ***
@@ -6100,9 +7238,9 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
-### Cardano.Node.LocalHandshake.Refuse
+### Cardano.Node.LocalHandshake.Receive.Refuse
 
 
 ***
@@ -6118,7 +7256,97 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.LocalHandshake.Receive.ReplyVersions
+
+
+***
+`MsgReplyVersions` received as a response to 'MsgProposeVersions'.  It is not supported to explicitly send this message. It can only be received as a copy of 'MsgProposeVersions' in a simultaneous open scenario.
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.LocalHandshake.Send.AcceptVersion
+
+
+***
+The remote end decides which version to use and sends chosen version.The server is allowed to modify version parameters.
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.LocalHandshake.Send.ProposeVersions
+
+
+***
+Propose versions together with version parameters.  It must be encoded to a sorted list..
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.LocalHandshake.Send.Refuse
+
+
+***
+It refuses to run any version.
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.LocalHandshake.Send.ReplyVersions
+
+
+***
+`MsgReplyVersions` received as a response to 'MsgProposeVersions'.  It is not supported to explicitly send this message. It can only be received as a copy of 'MsgProposeVersions' in a simultaneous open scenario.
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.LocalInboundGovernor.DemotedToColdRemote
 
@@ -6136,7 +7364,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.LocalInboundGovernor.DemotedToWarmRemote
 
@@ -6154,7 +7382,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.LocalInboundGovernor.InboundGovernorCounters
 
@@ -6172,7 +7400,25 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.LocalInboundGovernor.InboundGovernorError
+
+
+***
+
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.LocalInboundGovernor.MuxCleanExit
 
@@ -6182,7 +7428,7 @@ Filtered: `Invisible` because the filter level is `Notice`
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -6190,7 +7436,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.LocalInboundGovernor.MuxErrored
 
@@ -6208,7 +7454,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.LocalInboundGovernor.NewConnection
 
@@ -6218,7 +7464,7 @@ Filtered: `Invisible` because the filter level is `Notice`
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -6226,7 +7472,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.LocalInboundGovernor.PromotedToHotRemote
 
@@ -6244,7 +7490,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.LocalInboundGovernor.PromotedToWarmRemote
 
@@ -6262,7 +7508,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.LocalInboundGovernor.RemoteState
 
@@ -6272,7 +7518,7 @@ Filtered: `Invisible` because the filter level is `Notice`
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -6280,7 +7526,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.LocalInboundGovernor.ResponderErrored
 
@@ -6298,7 +7544,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.LocalInboundGovernor.ResponderRestarted
 
@@ -6308,7 +7554,7 @@ Filtered: `Invisible` because the filter level is `Notice`
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -6316,7 +7562,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.LocalInboundGovernor.ResponderStartFailure
 
@@ -6326,7 +7572,7 @@ Filtered: `Invisible` because the filter level is `Notice`
 ***
 
 
-> Severity:   `Error`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -6334,7 +7580,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.LocalInboundGovernor.ResponderStarted
 
@@ -6344,7 +7590,7 @@ Filtered: `Visible` because the filter level is `Notice`
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -6352,7 +7598,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.LocalInboundGovernor.ResponderTerminated
 
@@ -6362,7 +7608,7 @@ Filtered: `Invisible` because the filter level is `Notice`
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -6370,7 +7616,25 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.LocalInboundGovernor.UnexpectedlyFalseAssertion
+
+
+***
+
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.LocalInboundGovernor.WaitIdleRemote
 
@@ -6380,7 +7644,7 @@ Filtered: `Invisible` because the filter level is `Notice`
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -6388,7 +7652,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.LocalRootPeers.LocalRootDomains
 
@@ -6406,7 +7670,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.LocalRootPeers.LocalRootError
 
@@ -6424,7 +7688,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.LocalRootPeers.LocalRootFailure
 
@@ -6442,7 +7706,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.LocalRootPeers.LocalRootGroups
 
@@ -6460,7 +7724,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.LocalRootPeers.LocalRootResult
 
@@ -6478,7 +7742,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.LocalRootPeers.LocalRootWaiting
 
@@ -6496,7 +7760,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.LocalServer.AcceptConnection
 
@@ -6506,7 +7770,7 @@ Filtered: `Invisible` because the filter level is `Notice`
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -6514,7 +7778,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.LocalServer.AcceptError
 
@@ -6524,7 +7788,7 @@ Filtered: `Invisible` because the filter level is `Notice`
 ***
 
 
-> Severity:   `Error`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -6532,7 +7796,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.LocalServer.AcceptPolicy
 
@@ -6542,7 +7806,7 @@ Filtered: `Visible` because the filter level is `Notice`
 ***
 
 
-> Severity:   `Notice`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -6550,7 +7814,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.LocalServer.Error
 
@@ -6560,7 +7824,7 @@ Filtered: `Visible` because the filter level is `Notice`
 ***
 
 
-> Severity:   `Critical`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -6568,7 +7832,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.LocalServer.Started
 
@@ -6578,7 +7842,7 @@ Filtered: `Visible` because the filter level is `Notice`
 ***
 
 
-> Severity:   `Notice`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -6586,7 +7850,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.LocalServer.Stopped
 
@@ -6596,7 +7860,7 @@ Filtered: `Visible` because the filter level is `Notice`
 ***
 
 
-> Severity:   `Notice`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -6604,7 +7868,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.LocalTxSubmissionServer.ReceivedTx
 
@@ -6622,7 +7886,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.Mempool.AddedTx
 
@@ -6640,7 +7904,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.Mempool.ManuallyRemovedTxs
 
@@ -6658,7 +7922,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.Mempool.RejectedTx
 
@@ -6676,7 +7940,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.Mempool.RemoveTxs
 
@@ -6694,7 +7958,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.Mux.ChannelRecvEnd
 
@@ -6704,7 +7968,7 @@ Channel receive end.
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -6712,7 +7976,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.Mux.ChannelRecvStart
 
@@ -6722,7 +7986,7 @@ Channel receive start.
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -6730,7 +7994,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.Mux.ChannelSendEnd
 
@@ -6740,7 +8004,7 @@ Channel send end.
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -6748,7 +8012,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.Mux.ChannelSendStart
 
@@ -6758,7 +8022,7 @@ Channel send start.
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -6766,7 +8030,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.Mux.CleanExit
 
@@ -6776,7 +8040,7 @@ Miniprotocol terminated cleanly.
 ***
 
 
-> Severity:   `Notice`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -6784,7 +8048,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.Mux.ExceptionExit
 
@@ -6794,7 +8058,7 @@ Miniprotocol terminated with exception.
 ***
 
 
-> Severity:   `Notice`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -6802,7 +8066,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.Mux.HandshakeClientEnd
 
@@ -6820,7 +8084,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.Mux.HandshakeClientError
 
@@ -6830,7 +8094,7 @@ Handshake client error.
 ***
 
 
-> Severity:   `Error`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -6838,7 +8102,25 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.Mux.HandshakeServerEnd
+
+
+***
+Handshake server end.
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.Mux.HandshakeServerError
 
@@ -6848,7 +8130,7 @@ Handshake server error.
 ***
 
 
-> Severity:   `Error`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -6856,9 +8138,9 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
-### Cardano.Node.Mux.HandshakeStart 
+### Cardano.Node.Mux.HandshakeStart
 
 
 ***
@@ -6866,7 +8148,7 @@ Handshake start.
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -6874,7 +8156,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.Mux.RecvDeltaQObservation
 
@@ -6884,7 +8166,7 @@ Bearer DeltaQ observation.
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -6892,7 +8174,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.Mux.RecvDeltaQSample
 
@@ -6902,7 +8184,7 @@ Bearer DeltaQ sample.
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -6910,7 +8192,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.Mux.RecvEnd
 
@@ -6920,7 +8202,7 @@ Bearer receive end.
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -6928,7 +8210,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.Mux.RecvHeaderEnd
 
@@ -6938,7 +8220,7 @@ Bearer receive header end.
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -6946,7 +8228,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.Mux.RecvHeaderStart
 
@@ -6956,7 +8238,7 @@ Bearer receive header start.
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -6964,7 +8246,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.Mux.RecvStart
 
@@ -6974,7 +8256,7 @@ Bearer receive start.
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -6982,7 +8264,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.Mux.SDUReadTimeoutException
 
@@ -6992,7 +8274,7 @@ Timed out reading SDU.
 ***
 
 
-> Severity:   `Notice`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -7000,7 +8282,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.Mux.SDUWriteTimeoutException
 
@@ -7010,7 +8292,7 @@ Timed out writing SDU.
 ***
 
 
-> Severity:   `Notice`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -7018,7 +8300,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.Mux.SendEnd
 
@@ -7028,7 +8310,7 @@ Bearer send end.
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -7036,7 +8318,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.Mux.SendStart
 
@@ -7046,7 +8328,7 @@ Bearer send start.
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -7054,7 +8336,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.Mux.Shutdown
 
@@ -7064,7 +8346,7 @@ Mux shutdown.
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -7072,7 +8354,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.Mux.StartEagerly
 
@@ -7082,7 +8364,7 @@ Eagerly started.
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -7090,7 +8372,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.Mux.StartOnDemand
 
@@ -7100,7 +8382,7 @@ Preparing to start.
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -7108,7 +8390,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.Mux.StartedOnDemand
 
@@ -7118,7 +8400,7 @@ Started on demand.
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -7126,7 +8408,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.Mux.State
 
@@ -7144,7 +8426,25 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.Mux.TCPInfo
+
+
+***
+TCPInfo.
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.Mux.Terminating
 
@@ -7154,7 +8454,7 @@ Terminating.
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -7162,7 +8462,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.MuxLocal.ChannelRecvEnd
 
@@ -7172,7 +8472,7 @@ Channel receive end.
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -7180,7 +8480,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.MuxLocal.ChannelRecvStart
 
@@ -7190,7 +8490,7 @@ Channel receive start.
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -7198,7 +8498,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.MuxLocal.ChannelSendEnd
 
@@ -7208,7 +8508,7 @@ Channel send end.
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -7216,7 +8516,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.MuxLocal.ChannelSendStart
 
@@ -7226,7 +8526,7 @@ Channel send start.
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -7234,7 +8534,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.MuxLocal.CleanExit
 
@@ -7244,7 +8544,7 @@ Miniprotocol terminated cleanly.
 ***
 
 
-> Severity:   `Notice`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -7252,7 +8552,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.MuxLocal.ExceptionExit
 
@@ -7262,7 +8562,7 @@ Miniprotocol terminated with exception.
 ***
 
 
-> Severity:   `Notice`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -7270,7 +8570,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.MuxLocal.HandshakeClientEnd
 
@@ -7288,7 +8588,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.MuxLocal.HandshakeClientError
 
@@ -7298,7 +8598,7 @@ Handshake client error.
 ***
 
 
-> Severity:   `Error`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -7306,7 +8606,25 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.MuxLocal.HandshakeServerEnd
+
+
+***
+Handshake server end.
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.MuxLocal.HandshakeServerError
 
@@ -7316,7 +8634,7 @@ Handshake server error.
 ***
 
 
-> Severity:   `Error`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -7324,9 +8642,9 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
-### Cardano.Node.MuxLocal.HandshakeStart 
+### Cardano.Node.MuxLocal.HandshakeStart
 
 
 ***
@@ -7334,7 +8652,7 @@ Handshake start.
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -7342,7 +8660,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.MuxLocal.RecvDeltaQObservation
 
@@ -7352,7 +8670,7 @@ Bearer DeltaQ observation.
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -7360,7 +8678,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.MuxLocal.RecvDeltaQSample
 
@@ -7370,7 +8688,7 @@ Bearer DeltaQ sample.
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -7378,7 +8696,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.MuxLocal.RecvEnd
 
@@ -7388,7 +8706,7 @@ Bearer receive end.
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -7396,7 +8714,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.MuxLocal.RecvHeaderEnd
 
@@ -7406,7 +8724,7 @@ Bearer receive header end.
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -7414,7 +8732,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.MuxLocal.RecvHeaderStart
 
@@ -7424,7 +8742,7 @@ Bearer receive header start.
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -7432,7 +8750,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.MuxLocal.RecvStart
 
@@ -7442,7 +8760,7 @@ Bearer receive start.
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -7450,7 +8768,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.MuxLocal.SDUReadTimeoutException
 
@@ -7460,7 +8778,7 @@ Timed out reading SDU.
 ***
 
 
-> Severity:   `Notice`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -7468,7 +8786,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.MuxLocal.SDUWriteTimeoutException
 
@@ -7478,7 +8796,7 @@ Timed out writing SDU.
 ***
 
 
-> Severity:   `Notice`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -7486,7 +8804,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.MuxLocal.SendEnd
 
@@ -7496,7 +8814,7 @@ Bearer send end.
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -7504,7 +8822,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.MuxLocal.SendStart
 
@@ -7514,7 +8832,7 @@ Bearer send start.
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -7522,7 +8840,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.MuxLocal.Shutdown
 
@@ -7532,7 +8850,7 @@ Mux shutdown.
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -7540,7 +8858,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.MuxLocal.StartEagerly
 
@@ -7550,7 +8868,7 @@ Eagerly started.
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -7558,7 +8876,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.MuxLocal.StartOnDemand
 
@@ -7568,7 +8886,7 @@ Preparing to start.
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -7576,7 +8894,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.MuxLocal.StartedOnDemand
 
@@ -7586,7 +8904,7 @@ Started on demand.
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -7594,7 +8912,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.MuxLocal.State
 
@@ -7612,7 +8930,25 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.MuxLocal.TCPInfo
+
+
+***
+TCPInfo.
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.MuxLocal.Terminating
 
@@ -7622,7 +8958,7 @@ Terminating.
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -7630,7 +8966,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.PeerSelection.ChurnMode
 
@@ -7648,7 +8984,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.PeerSelection.ChurnWait
 
@@ -7666,7 +9002,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.PeerSelection.DemoteAsynchronous
 
@@ -7684,7 +9020,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.PeerSelection.DemoteHotDone
 
@@ -7702,7 +9038,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.PeerSelection.DemoteHotFailed
 
@@ -7720,25 +9056,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
-
-### Cardano.Node.PeerSelection.DemoteHotFailed
-
-
-***
-target active, actual active, peer, reason
-***
-
-
-> Severity:   `Info`
-Privacy:   `Public`
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`Stdout MachineFormat`,
-			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.PeerSelection.DemoteHotPeers
 
@@ -7756,7 +9074,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.PeerSelection.DemoteLocalHotPeers
 
@@ -7774,7 +9092,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.PeerSelection.DemoteWarmDone
 
@@ -7792,7 +9110,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.PeerSelection.DemoteWarmFailed
 
@@ -7810,7 +9128,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.PeerSelection.DemoteWarmPeers
 
@@ -7828,7 +9146,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.PeerSelection.ForgetColdPeers
 
@@ -7846,7 +9164,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.PeerSelection.GossipRequests
 
@@ -7856,7 +9174,7 @@ target known peers, actual known peers, peers available for gossip, peers select
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -7864,7 +9182,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.PeerSelection.GossipResults
 
@@ -7874,7 +9192,7 @@ Filtered: `Invisible` because the filter level is `Notice`
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -7882,7 +9200,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.PeerSelection.GovernorWakeup
 
@@ -7900,7 +9218,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.PeerSelection.LocalRootPeersChanged
 
@@ -7910,7 +9228,7 @@ Filtered: `Invisible` because the filter level is `Notice`
 ***
 
 
-> Severity:   `Notice`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -7918,7 +9236,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.PeerSelection.PromoteColdDone
 
@@ -7936,7 +9254,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.PeerSelection.PromoteColdFailed
 
@@ -7954,7 +9272,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.PeerSelection.PromoteColdLocalPeers
 
@@ -7972,7 +9290,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.PeerSelection.PromoteColdPeers
 
@@ -7990,7 +9308,25 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.PeerSelection.PromoteWarmAborted
+
+
+***
+
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.PeerSelection.PromoteWarmDone
 
@@ -8008,7 +9344,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.PeerSelection.PromoteWarmFailed
 
@@ -8026,7 +9362,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.PeerSelection.PromoteWarmLocalPeers
 
@@ -8044,7 +9380,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.PeerSelection.PromoteWarmPeers
 
@@ -8062,7 +9398,43 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.PeerSelection.PublicRootsFailure
+
+
+***
+
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.PeerSelection.PublicRootsRequest
+
+
+***
+
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.PeerSelection.PublicRootsResults
 
@@ -8080,25 +9452,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
-
-### Cardano.Node.PeerSelection.PublicRootsResults
-
-
-***
-
-***
-
-
-> Severity:   `Info`
-Privacy:   `Public`
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`Stdout MachineFormat`,
-			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.PeerSelection.TargetsChanged
 
@@ -8108,7 +9462,7 @@ Filtered: `Invisible` because the filter level is `Notice`
 ***
 
 
-> Severity:   `Notice`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -8116,9 +9470,9 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
-### Cardano.Node.PeerSelection.ublicRootsRequest
+### Cardano.Node.PeerSelectionActions.MonitoringError
 
 
 ***
@@ -8134,25 +9488,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
-
-### Cardano.Node.PeerSelectionActions.MonitoringError
-
-
-***
-
-***
-
-
-> Severity:   `Error`
-Privacy:   `Public`
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`Stdout MachineFormat`,
-			`EKGBackend`
-Filtered: `Visible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.PeerSelectionActions.MonitoringResult
 
@@ -8162,7 +9498,7 @@ Filtered: `Visible` because the filter level is `Notice`
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -8170,7 +9506,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.PeerSelectionActions.StatusChangeFailure
 
@@ -8180,7 +9516,7 @@ Filtered: `Invisible` because the filter level is `Notice`
 ***
 
 
-> Severity:   `Error`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -8188,7 +9524,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.PeerSelectionActions.StatusChanged
 
@@ -8206,9 +9542,9 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
-### Cardano.Node.PeerSelectionCounters
+### Cardano.Node.PeerSelectionCounters.PeerSelectionCounters
 
 
 ***
@@ -8224,7 +9560,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.Peers
 
@@ -8234,7 +9570,7 @@ TODO Doc
 ***
 
 
-> Severity:   `Notice`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -8242,9 +9578,9 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
-### Cardano.Node.PublicRootPeers.PublicRootDomains
+### Cardano.Node.PublicRootPeers.PublicRootPeers.PublicRootDomains
 
 
 ***
@@ -8260,27 +9596,9 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
-### Cardano.Node.PublicRootPeers.PublicRootFailure
-
-
-***
-
-***
-
-
-> Severity:   `Info`
-Privacy:   `Public`
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`Stdout MachineFormat`,
-			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
-
-### Cardano.Node.PublicRootPeers.PublicRootRelayAccessPoint
+### Cardano.Node.PublicRootPeers.PublicRootPeers.PublicRootFailure
 
 
 ***
@@ -8296,9 +9614,9 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
-### Cardano.Node.PublicRootPeers.PublicRootResult
+### Cardano.Node.PublicRootPeers.PublicRootPeers.PublicRootRelayAccessPoint
 
 
 ***
@@ -8314,7 +9632,25 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.PublicRootPeers.PublicRootPeers.PublicRootResult
+
+
+***
+
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.ReplayBlock.LedgerReplay
 
@@ -8332,7 +9668,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.Resources
 
@@ -8350,7 +9686,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### Cardano.Node.Server.AcceptConnection
 
@@ -8360,7 +9696,7 @@ Filtered: `Visible` because the filter level is `Info`
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -8368,7 +9704,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.Server.AcceptError
 
@@ -8378,7 +9714,7 @@ Filtered: `Invisible` because the filter level is `Notice`
 ***
 
 
-> Severity:   `Error`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -8386,7 +9722,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.Server.AcceptPolicy
 
@@ -8396,7 +9732,7 @@ Filtered: `Visible` because the filter level is `Notice`
 ***
 
 
-> Severity:   `Notice`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -8404,7 +9740,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.Server.Error
 
@@ -8414,7 +9750,7 @@ Filtered: `Visible` because the filter level is `Notice`
 ***
 
 
-> Severity:   `Critical`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -8422,7 +9758,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.Server.Started
 
@@ -8432,7 +9768,7 @@ Filtered: `Visible` because the filter level is `Notice`
 ***
 
 
-> Severity:   `Notice`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -8440,7 +9776,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.Server.Stopped
 
@@ -8450,7 +9786,7 @@ Filtered: `Visible` because the filter level is `Notice`
 ***
 
 
-> Severity:   `Notice`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -8458,7 +9794,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.Shutdown.AbnormalShutdown
 
@@ -8468,7 +9804,7 @@ non-isEOFerror shutdown request
 ***
 
 
-> Severity:   `Error`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -8476,7 +9812,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.Shutdown.RequestingShutdown
 
@@ -8486,7 +9822,7 @@ Ringing the node shutdown doorbell
 ***
 
 
-> Severity:   `Warning`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -8494,7 +9830,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.Shutdown.ShutdownArmedAtSlot
 
@@ -8504,7 +9840,7 @@ Setting up node shutdown at given slot.
 ***
 
 
-> Severity:   `Warning`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -8512,7 +9848,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.Shutdown.ShutdownRequested
 
@@ -8522,7 +9858,7 @@ Node shutdown was requested.
 ***
 
 
-> Severity:   `Warning`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -8530,17 +9866,17 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.Shutdown.ShutdownUnexpectedInput
 
 
 ***
-Received shutdown request but found unexpected input in --shutdown-ipc FD: 
+Received shutdown request but found unexpected input in --shutdown-ipc FD:
 ***
 
 
-> Severity:   `Error`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -8548,19 +9884,19 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.Startup.Byron
 
 
 ***
-_bibSystemStartTime_: TODO JNF 
-_bibSlotLength_: gives the length of a slot as time interval. 
+_bibSystemStartTime_: TODO JNF
+_bibSlotLength_: gives the length of a slot as time interval.
 _bibEpochLength_: gives the number of slots which forms an epoch.
 ***
 
 
-> Severity:   `Notice`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -8568,21 +9904,21 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.Startup.Common
 
 
 ***
-_biConfigPath_: is the path to the config in use. 
-_biProtocol_: is the name of the protocol, e.g. "Byron", "Shelley" or "Byron; Shelley". 
-_biVersion_: is the version of the node software running. 
-_biCommit_: is the commit revision of the software running. 
+_biConfigPath_: is the path to the config in use.
+_biProtocol_: is the name of the protocol, e.g. "Byron", "Shelley" or "Byron; Shelley".
+_biVersion_: is the version of the node software running.
+_biCommit_: is the commit revision of the software running.
 _biNodeStartTime_: gives the time this node was started.
 ***
 
 
-> Severity:   `Notice`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -8590,20 +9926,20 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.Startup.Network
 
 
 ***
-_niAddresses_: IPv4 or IPv6 socket ready to accept connectionsor diffusion addresses. 
-_niDiffusionMode_: shows if the node runs only initiator or bothinitiator or responder node. 
-_niDnsProducers_: shows the list of domain names to subscribe to. 
+_niAddresses_: IPv4 or IPv6 socket ready to accept connectionsor diffusion addresses.
+_niDiffusionMode_: shows if the node runs only initiator or bothinitiator or responder node.
+_niDnsProducers_: shows the list of domain names to subscribe to.
 _niIpProducers_: shows the list of ip subscription addresses.
 ***
 
 
-> Severity:   `Notice`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -8611,21 +9947,111 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.Startup.NetworkConfig
+
+
+***
+
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.Startup.NetworkConfigUpdate
+
+
+***
+
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.Startup.NetworkConfigUpdateError
+
+
+***
+
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.Startup.P2PWarning
+
+
+***
+
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.Startup.P2PWarningDevelopementNetworkProtocols
+
+
+***
+
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.Startup.ShelleyBased
 
 
 ***
-bisEra is the current era, e.g. "Shelley", "Allegra", "Mary" or "Alonzo". 
-_bisSystemStartTime_: TODO JNF 
-_bisSlotLength_: gives the length of a slot as time interval. 
-_bisEpochLength_: gives the number of slots which forms an epoch. 
+bisEra is the current era, e.g. "Shelley", "Allegra", "Mary" or "Alonzo".
+_bisSystemStartTime_: TODO JNF
+_bisSlotLength_: gives the length of a slot as time interval.
+_bisEpochLength_: gives the number of slots which forms an epoch.
 _bisSlotsPerKESPeriod_: gives the slots per KES period.
 ***
 
 
-> Severity:   `Notice`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -8633,13 +10059,139 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
-### Cardano.Node.StateQueryClient.Acquire
+### Cardano.Node.Startup.StartupDBValidation
 
 
 ***
-The client requests that the state as of a particular recent point on the server's chain (within K of the tip) be made available to query, and waits for confirmation or failure.
+
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.Startup.StartupInfo
+
+
+***
+
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.Startup.StartupNetworkMagic
+
+
+***
+
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.Startup.StartupP2PInfo
+
+
+***
+
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.Startup.StartupSocketConfigError
+
+
+***
+
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.Startup.StartupTime
+
+
+***
+
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.Startup.WarningDevelopmentNetworkProtocols
+
+
+***
+
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.StateQueryClient.Recieve.Acquire
+
+
+***
+The client requests that the state as of a particular recent point onthe server's chain (within K of the tip) be made available to query,and waits for confirmation or failure.
 From 'NodeToClient_V8' onwards if the point is not specified, current tipwill be acquired.  For previous versions of the protocol 'point' must begiven.
 ***
 
@@ -8652,9 +10204,9 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
-### Cardano.Node.StateQueryClient.Acquired
+### Cardano.Node.StateQueryClient.Recieve.Acquired
 
 
 ***
@@ -8670,27 +10222,9 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
-### Cardano.Node.StateQueryClient.Acquired
-
-
-***
-The server can report that it cannot obtain the state for therequested point.
-***
-
-
-> Severity:   `Warning`
-Privacy:   `Public`
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`Stdout MachineFormat`,
-			`EKGBackend`
-Filtered: `Visible` because the filter level is `Notice`
-
-### Cardano.Node.StateQueryClient.Done
+### Cardano.Node.StateQueryClient.Recieve.Done
 
 
 ***
@@ -8706,9 +10240,27 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
-### Cardano.Node.StateQueryClient.Query
+### Cardano.Node.StateQueryClient.Recieve.Failure
+
+
+***
+The server can report that it cannot obtain the state for therequested point.
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.StateQueryClient.Recieve.Query
 
 
 ***
@@ -8724,9 +10276,9 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
-### Cardano.Node.StateQueryClient.ReAcquire
+### Cardano.Node.StateQueryClient.Recieve.ReAcquire
 
 
 ***
@@ -8744,9 +10296,9 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
-### Cardano.Node.StateQueryClient.Release
+### Cardano.Node.StateQueryClient.Recieve.Release
 
 
 ***
@@ -8762,9 +10314,9 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
-### Cardano.Node.StateQueryClient.Result
+### Cardano.Node.StateQueryClient.Recieve.Result
 
 
 ***
@@ -8780,7 +10332,154 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.StateQueryClient.Send.Acquire
+
+
+***
+The client requests that the state as of a particular recent point onthe server's chain (within K of the tip) be made available to query,and waits for confirmation or failure.
+From 'NodeToClient_V8' onwards if the point is not specified, current tipwill be acquired.  For previous versions of the protocol 'point' must begiven.
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.StateQueryClient.Send.Acquired
+
+
+***
+The server can confirm that it has the state at the requested point.
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.StateQueryClient.Send.Done
+
+
+***
+The client can terminate the protocol.
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.StateQueryClient.Send.Failure
+
+
+***
+The server can report that it cannot obtain the state for therequested point.
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.StateQueryClient.Send.Query
+
+
+***
+The client can perform queries on the current acquired state.
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.StateQueryClient.Send.ReAcquire
+
+
+***
+This is like 'MsgAcquire' but for when the client already has astate. By moveing to another state directly without a 'MsgRelease' itenables optimisations on the server side (e.g. moving to the state forthe immediate next block).
+Note that failure to re-acquire is equivalent to 'MsgRelease',rather than keeping the exiting acquired state.
+From 'NodeToClient_V8' onwards if the point is not specified, current tipwill be acquired.  For previous versions of the protocol 'point' must begiven.
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.StateQueryClient.Send.Release
+
+
+***
+The client can instruct the server to release the state. This letsthe server free resources.
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.StateQueryClient.Send.Result
+
+
+***
+The server must reply with the queries.
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.TxInbound.TxInboundCanRequestMoreTxs
 
@@ -8790,7 +10489,7 @@ There are no replies in flight, but we do know some more txs we can ask for, so 
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -8798,7 +10497,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.TxInbound.TxInboundCannotRequestMoreTxs
 
@@ -8808,7 +10507,7 @@ There's no replies in flight, and we have no more txs we can ask for so the only
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -8816,7 +10515,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.TxInbound.TxInboundTerminated
 
@@ -8826,7 +10525,7 @@ Server received 'MsgDone'.
 ***
 
 
-> Severity:   `Notice`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -8834,7 +10533,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Visible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.TxInbound.TxSubmissionCollected
 
@@ -8844,7 +10543,7 @@ Number of transactions just about to be inserted.
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -8852,7 +10551,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.TxInbound.TxSubmissionProcessed
 
@@ -8862,7 +10561,7 @@ Just processed transaction pass/fail breakdown.
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -8870,7 +10569,301 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.TxMonitorClient.Recieve.Acquire
+
+
+***
+The client requests that the state as of a particular recent point onthe server's chain (within K of the tip) be made available to query,and waits for confirmation or failure.
+From 'NodeToClient_V8' onwards if the point is not specified, current tipwill be acquired.  For previous versions of the protocol 'point' must begiven.
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.TxMonitorClient.Recieve.Acquired
+
+
+***
+The server can confirm that it has the state at the requested point.
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.TxMonitorClient.Recieve.Done
+
+
+***
+The client can terminate the protocol.
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.TxMonitorClient.Recieve.Failure
+
+
+***
+The server can report that it cannot obtain the state for therequested point.
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.TxMonitorClient.Recieve.Query
+
+
+***
+The client can perform queries on the current acquired state.
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.TxMonitorClient.Recieve.ReAcquire
+
+
+***
+This is like 'MsgAcquire' but for when the client already has astate. By moveing to another state directly without a 'MsgRelease' itenables optimisations on the server side (e.g. moving to the state forthe immediate next block).
+Note that failure to re-acquire is equivalent to 'MsgRelease',rather than keeping the exiting acquired state.
+From 'NodeToClient_V8' onwards if the point is not specified, current tipwill be acquired.  For previous versions of the protocol 'point' must begiven.
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.TxMonitorClient.Recieve.Release
+
+
+***
+The client can instruct the server to release the state. This letsthe server free resources.
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.TxMonitorClient.Recieve.Result
+
+
+***
+The server must reply with the queries.
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.TxMonitorClient.Send.Acquire
+
+
+***
+The client requests that the state as of a particular recent point onthe server's chain (within K of the tip) be made available to query,and waits for confirmation or failure.
+From 'NodeToClient_V8' onwards if the point is not specified, current tipwill be acquired.  For previous versions of the protocol 'point' must begiven.
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.TxMonitorClient.Send.Acquired
+
+
+***
+The server can confirm that it has the state at the requested point.
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.TxMonitorClient.Send.Done
+
+
+***
+The client can terminate the protocol.
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.TxMonitorClient.Send.Failure
+
+
+***
+The server can report that it cannot obtain the state for therequested point.
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.TxMonitorClient.Send.Query
+
+
+***
+The client can perform queries on the current acquired state.
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.TxMonitorClient.Send.ReAcquire
+
+
+***
+This is like 'MsgAcquire' but for when the client already has astate. By moveing to another state directly without a 'MsgRelease' itenables optimisations on the server side (e.g. moving to the state forthe immediate next block).
+Note that failure to re-acquire is equivalent to 'MsgRelease',rather than keeping the exiting acquired state.
+From 'NodeToClient_V8' onwards if the point is not specified, current tipwill be acquired.  For previous versions of the protocol 'point' must begiven.
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.TxMonitorClient.Send.Release
+
+
+***
+The client can instruct the server to release the state. This letsthe server free resources.
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.TxMonitorClient.Send.Result
+
+
+***
+The server must reply with the queries.
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.TxOutbound.ControlMessage
 
@@ -8888,9 +10881,9 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
-### Cardano.Node.TxOutbound.TxSubmissionOutboundRecvMsgRequest
+### Cardano.Node.TxOutbound.RecvMsgRequest
 
 
 ***
@@ -8906,9 +10899,9 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
-### Cardano.Node.TxOutbound.TxSubmissionOutboundSendMsgReply
+### Cardano.Node.TxOutbound.SendMsgReply
 
 
 ***
@@ -8924,7 +10917,113 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.TxSubmission.NodeToNode.Recieve.Done
+
+
+***
+Termination message, initiated by the client when the server is making a blocking call for more transaction identifiers.
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.TxSubmission.NodeToNode.Recieve.ReplyTxIds
+
+
+***
+Reply with a list of transaction identifiers for availabletransactions, along with the size of each transaction.
+The list must not be longer than the maximum number requested.
+In the 'StTxIds' 'StBlocking' state the list must be non-empty whilein the 'StTxIds' 'StNonBlocking' state the list may be empty.
+These transactions are added to the notional FIFO of outstandingtransaction identifiers for the protocol.
+The order in which these transaction identifiers are returned must bethe order in which they are submitted to the mempool, to preservedependent transactions.
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.TxSubmission.NodeToNode.Recieve.ReplyTxs
+
+
+***
+Reply with the requested transactions, or implicitly discard.
+Transactions can become invalid between the time the transaction identifier was sent and the transaction being requested. Invalid (including committed) transactions do not need to be sent.
+Any transaction identifiers requested but not provided in this reply should be considered as if this peer had never announced them. (Note that this is no guarantee that the transaction is invalid, it may still be valid and available from another peer).
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.TxSubmission.NodeToNode.Recieve.RequestTxIds
+
+
+***
+Request a non-empty list of transaction identifiers from the client,and confirm a number of outstanding transaction identifiers.
+With 'TokBlocking' this is a a blocking operation: the response willalways have at least one transaction identifier, and it does not expecta prompt response: there is no timeout. This covers the case when thereis nothing else to do but wait. For example this covers leaf nodes thatrarely, if ever, create and submit a transaction.
+With 'TokNonBlocking' this is a non-blocking operation: the responsemay be an empty list and this does expect a prompt response. Thiscovers high throughput use cases where we wish to pipeline, byinterleaving requests for additional transaction identifiers withrequests for transactions, which requires these requests not block.
+The request gives the maximum number of transaction identifiers thatcan be accepted in the response. This must be greater than zero in the'TokBlocking' case. In the 'TokNonBlocking' case either the numbersacknowledged or the number requested must be non-zero. In either case,the number requested must not put the total outstanding over the fixedprotocol limit.
+The request also gives the number of outstanding transactionidentifiers that can now be acknowledged. The actual transactionsto acknowledge are known to the peer based on the FIFO order in whichthey were provided.
+There is no choice about when to use the blocking case versus thenon-blocking case, it depends on whether there are any remainingunacknowledged transactions (after taking into account the onesacknowledged in this message):
+* The blocking case must be used when there are zero remaining  unacknowledged transactions.
+* The non-blocking case must be used when there are non-zero remaining  unacknowledged transactions.
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.TxSubmission.NodeToNode.Recieve.RequestTxs
+
+
+***
+Request one or more transactions corresponding to the given transaction identifiers.
+While it is the responsibility of the replying peer to keep within pipelining in-flight limits, the sender must also cooperate by keeping the total requested across all in-flight requests within the limits.
+It is an error to ask for transaction identifiers that were not previously announced (via 'MsgReplyTxIds').
+It is an error to ask for transaction identifiers that are not outstanding or that were already asked for.
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.TxSubmission.NodeToNode.Send.Done
 
@@ -8942,7 +11041,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.TxSubmission.NodeToNode.Send.ReplyTxIds
 
@@ -8964,7 +11063,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.TxSubmission.NodeToNode.Send.ReplyTxs
 
@@ -8984,7 +11083,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.TxSubmission.NodeToNode.Send.RequestTxIds
 
@@ -9009,15 +11108,15 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.TxSubmission.NodeToNode.Send.RequestTxs
 
 
 ***
-Request one or more transactions corresponding to the given transaction identifiers. 
-While it is the responsibility of the replying peer to keep within pipelining in-flight limits, the sender must also cooperate by keeping the total requested across all in-flight requests within the limits. 
-It is an error to ask for transaction identifiers that were not previously announced (via 'MsgReplyTxIds'). 
+Request one or more transactions corresponding to the given transaction identifiers.
+While it is the responsibility of the replying peer to keep within pipelining in-flight limits, the sender must also cooperate by keeping the total requested across all in-flight requests within the limits.
+It is an error to ask for transaction identifiers that were not previously announced (via 'MsgReplyTxIds').
 It is an error to ask for transaction identifiers that are not outstanding or that were already asked for.
 ***
 
@@ -9030,7 +11129,131 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.TxSubmission2.NodeToNode.Recieve.Done
+
+
+***
+Termination message, initiated by the client when the server ismaking a blocking call for more transaction identifiers.
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.TxSubmission2.NodeToNode.Recieve.MsgHello
+
+
+***
+Client side hello message.
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.TxSubmission2.NodeToNode.Recieve.ReplyTxIds
+
+
+***
+Reply with a list of transaction identifiers for availabletransactions, along with the size of each transaction.
+The list must not be longer than the maximum number requested.
+In the 'StTxIds' 'StBlocking' state the list must be non-empty whilein the 'StTxIds' 'StNonBlocking' state the list may be empty.
+These transactions are added to the notional FIFO of outstandingtransaction identifiers for the protocol.
+The order in which these transaction identifiers are returned must bethe order in which they are submitted to the mempool, to preservedependent transactions.
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.TxSubmission2.NodeToNode.Recieve.ReplyTxs
+
+
+***
+Reply with the requested transactions, or implicitly discard.
+Transactions can become invalid between the time the transactionidentifier was sent and the transaction being requested. Invalid(including committed) transactions do not need to be sent.
+Any transaction identifiers requested but not provided in this replyshould be considered as if this peer had never announced them. (Notethat this is no guarantee that the transaction is invalid, it may stillbe valid and available from another peer).
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.TxSubmission2.NodeToNode.Recieve.RequestTxIds
+
+
+***
+Request a non-empty list of transaction identifiers from the client, and confirm a number of outstanding transaction identifiers.
+With 'TokBlocking' this is a a blocking operation: the response will always have at least one transaction identifier, and it does not expect a prompt response: there is no timeout. This covers the case when there is nothing else to do but wait. For example this covers leaf nodes that rarely, if ever, create and submit a transaction.
+With 'TokNonBlocking' this is a non-blocking operation: the response may be an empty list and this does expect a prompt response. This covers high throughput use cases where we wish to pipeline, by interleaving requests for additional transaction identifiers with requests for transactions, which requires these requests not block.
+The request gives the maximum number of transaction identifiers that can be accepted in the response. This must be greater than zero in the 'TokBlocking' case. In the 'TokNonBlocking' case either the numbers acknowledged or the number requested must be non-zero. In either case, the number requested must not put the total outstanding over the fixed protocol limit.
+The request also gives the number of outstanding transaction identifiers that can now be acknowledged. The actual transactions to acknowledge are known to the peer based on the FIFO order in which they were provided.
+There is no choice about when to use the blocking case versus the non-blocking case, it depends on whether there are any remaining unacknowledged transactions (after taking into account the ones acknowledged in this message):
+* The blocking case must be used when there are zero remaining   unacknowledged transactions.
+* The non-blocking case must be used when there are non-zero remaining   unacknowledged transactions.
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.TxSubmission2.NodeToNode.Recieve.RequestTxs
+
+
+***
+Request one or more transactions corresponding to the given transaction identifiers.
+While it is the responsibility of the replying peer to keep withinpipelining in-flight limits, the sender must also cooperate by keepingthe total requested across all in-flight requests within the limits.
+It is an error to ask for transaction identifiers that were notpreviously announced (via 'MsgReplyTxIds').
+It is an error to ask for transaction identifiers that are notoutstanding or that were already asked for.
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.TxSubmission2.NodeToNode.Send.Done
 
@@ -9048,7 +11271,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.TxSubmission2.NodeToNode.Send.MsgHello
 
@@ -9058,7 +11281,7 @@ Client side hello message.
 ***
 
 
-> Severity:   `Debug`
+> Severity:   `Info`
 Privacy:   `Public`
 
 From current configuration:
@@ -9066,7 +11289,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.TxSubmission2.NodeToNode.Send.ReplyTxIds
 
@@ -9088,7 +11311,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.TxSubmission2.NodeToNode.Send.ReplyTxs
 
@@ -9108,19 +11331,19 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.TxSubmission2.NodeToNode.Send.RequestTxIds
 
 
 ***
-Request a non-empty list of transaction identifiers from the client, and confirm a number of outstanding transaction identifiers. 
-With 'TokBlocking' this is a a blocking operation: the response will always have at least one transaction identifier, and it does not expect a prompt response: there is no timeout. This covers the case when there is nothing else to do but wait. For example this covers leaf nodes that rarely, if ever, create and submit a transaction. 
-With 'TokNonBlocking' this is a non-blocking operation: the response may be an empty list and this does expect a prompt response. This covers high throughput use cases where we wish to pipeline, by interleaving requests for additional transaction identifiers with requests for transactions, which requires these requests not block. 
-The request gives the maximum number of transaction identifiers that can be accepted in the response. This must be greater than zero in the 'TokBlocking' case. In the 'TokNonBlocking' case either the numbers acknowledged or the number requested must be non-zero. In either case, the number requested must not put the total outstanding over the fixed protocol limit. 
-The request also gives the number of outstanding transaction identifiers that can now be acknowledged. The actual transactions to acknowledge are known to the peer based on the FIFO order in which they were provided. 
-There is no choice about when to use the blocking case versus the non-blocking case, it depends on whether there are any remaining unacknowledged transactions (after taking into account the ones acknowledged in this message): 
-* The blocking case must be used when there are zero remaining   unacknowledged transactions. 
+Request a non-empty list of transaction identifiers from the client, and confirm a number of outstanding transaction identifiers.
+With 'TokBlocking' this is a a blocking operation: the response will always have at least one transaction identifier, and it does not expect a prompt response: there is no timeout. This covers the case when there is nothing else to do but wait. For example this covers leaf nodes that rarely, if ever, create and submit a transaction.
+With 'TokNonBlocking' this is a non-blocking operation: the response may be an empty list and this does expect a prompt response. This covers high throughput use cases where we wish to pipeline, by interleaving requests for additional transaction identifiers with requests for transactions, which requires these requests not block.
+The request gives the maximum number of transaction identifiers that can be accepted in the response. This must be greater than zero in the 'TokBlocking' case. In the 'TokNonBlocking' case either the numbers acknowledged or the number requested must be non-zero. In either case, the number requested must not put the total outstanding over the fixed protocol limit.
+The request also gives the number of outstanding transaction identifiers that can now be acknowledged. The actual transactions to acknowledge are known to the peer based on the FIFO order in which they were provided.
+There is no choice about when to use the blocking case versus the non-blocking case, it depends on whether there are any remaining unacknowledged transactions (after taking into account the ones acknowledged in this message):
+* The blocking case must be used when there are zero remaining   unacknowledged transactions.
 * The non-blocking case must be used when there are non-zero remaining   unacknowledged transactions.
 ***
 
@@ -9133,13 +11356,13 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.TxSubmission2.NodeToNode.Send.RequestTxs
 
 
 ***
-Request one or more transactions corresponding to the given transaction identifiers. 
+Request one or more transactions corresponding to the given transaction identifiers.
 While it is the responsibility of the replying peer to keep withinpipelining in-flight limits, the sender must also cooperate by keepingthe total requested across all in-flight requests within the limits.
 It is an error to ask for transaction identifiers that were notpreviously announced (via 'MsgReplyTxIds').
 It is an error to ask for transaction identifiers that are notoutstanding or that were already asked for.
@@ -9154,7 +11377,79 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.TxSubmissionClient.Recieve.AcceptTx
+
+
+***
+The server can reply to inform the client that it has accepted thetransaction.
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.TxSubmissionClient.Recieve.Done
+
+
+***
+The client can terminate the protocol.
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.TxSubmissionClient.Recieve.RejectTx
+
+
+***
+The server can reply to inform the client that it has rejected thetransaction. A reason for the rejection is included.
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.TxSubmissionClient.Recieve.SubmitTx
+
+
+***
+The client submits a single transaction and waits a reply.
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.TxSubmissionClient.Send.AcceptTx
 
@@ -9172,7 +11467,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.TxSubmissionClient.Send.Done
 
@@ -9190,7 +11485,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.TxSubmissionClient.Send.RejectTx
 
@@ -9208,7 +11503,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### Cardano.Node.TxSubmissionClient.Send.SubmitTx
 
@@ -9226,7 +11521,7 @@ Details:   `DNormal`
 Backends:
 			`Stdout MachineFormat`,
 			`EKGBackend`
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ## Metrics
 ### Block replay progress (%)
@@ -9236,11 +11531,11 @@ Progress in percent
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.ReplayBlock.LedgerReplay
 
 From current configuration:
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### cardano.node.aboutToLeadSlotLast
 
@@ -9249,11 +11544,11 @@ Filtered: `Invisible` because the filter level is `Notice`
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.Forge.StartLeadershipCheck
 
 From current configuration:
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### cardano.node.aboutToLeadSlotLast
 
@@ -9262,11 +11557,11 @@ Filtered: `Visible` because the filter level is `Info`
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.Forge.StartLeadershipCheckPlus
 
 From current configuration:
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### cardano.node.adoptedSlotLast
 
@@ -9275,11 +11570,11 @@ Filtered: `Visible` because the filter level is `Info`
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.Forge.AdoptedBlock
 
 From current configuration:
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### cardano.node.blockContext
 
@@ -9288,11 +11583,11 @@ Filtered: `Visible` because the filter level is `Info`
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.Forge.BlockContext
 
 From current configuration:
-Filtered: `Invisible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### cardano.node.blockFromFuture
 
@@ -9301,11 +11596,11 @@ Filtered: `Invisible` because the filter level is `Info`
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.Forge.BlockFromFuture
 
 From current configuration:
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### cardano.node.blocks
 
@@ -9314,11 +11609,11 @@ Number of blocks in this chain fragment.
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.ChainDB.AddBlockEvent.AddedToCurrentChain
 
 From current configuration:
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### cardano.node.blocks
 
@@ -9327,11 +11622,11 @@ Number of blocks in this chain fragment.
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.ChainDB.AddBlockEvent.SwitchedToAFork
 
 From current configuration:
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### cardano.node.chainSync.rollForward
 
@@ -9340,11 +11635,11 @@ Filtered: `Visible` because the filter level is `Info`
 ***
 
 
-Dispatched by: 
-Cardano.Node.ChainSyncServerHeader.ChainSyncServerEvent.RollForward
+Dispatched by:
+Cardano.Node.ChainSyncServerHeader.ChainSyncServerEvent.ServerRead.RollForward
 
 From current configuration:
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### cardano.node.chainSync.rollForward
 
@@ -9353,11 +11648,11 @@ Filtered: `Invisible` because the filter level is `Notice`
 ***
 
 
-Dispatched by: 
-Cardano.Node.ChainSyncServerBlock.ChainSyncServerEvent.RollForward
+Dispatched by:
+Cardano.Node.ChainSyncServerBlock.ChainSyncServerEvent.ServerRead.RollForward
 
 From current configuration:
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### cardano.node.connectedPeers
 
@@ -9366,11 +11661,11 @@ Number of connected peers
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.BlockFetchDecision
 
 From current configuration:
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### cardano.node.connectionManager.duplexConns
 
@@ -9379,11 +11674,11 @@ Filtered: `Invisible` because the filter level is `Notice`
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.ConnectionManager.ConnectionManagerCounters
 
 From current configuration:
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### cardano.node.connectionManager.duplexConns
 
@@ -9392,11 +11687,11 @@ Filtered: `Invisible` because the filter level is `Notice`
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.LocalConnectionManager.ConnectionManagerCounters
 
 From current configuration:
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### cardano.node.connectionManager.fullDuplexConns
 
@@ -9405,11 +11700,11 @@ Filtered: `Invisible` because the filter level is `Notice`
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.ConnectionManager.ConnectionManagerCounters
 
 From current configuration:
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### cardano.node.connectionManager.fullDuplexConns
 
@@ -9418,11 +11713,11 @@ Filtered: `Invisible` because the filter level is `Notice`
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.LocalConnectionManager.ConnectionManagerCounters
 
 From current configuration:
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### cardano.node.connectionManager.inboundConns
 
@@ -9431,11 +11726,11 @@ Filtered: `Invisible` because the filter level is `Notice`
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.ConnectionManager.ConnectionManagerCounters
 
 From current configuration:
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### cardano.node.connectionManager.inboundConns
 
@@ -9444,11 +11739,11 @@ Filtered: `Invisible` because the filter level is `Notice`
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.LocalConnectionManager.ConnectionManagerCounters
 
 From current configuration:
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### cardano.node.connectionManager.outboundConns
 
@@ -9457,11 +11752,11 @@ Filtered: `Invisible` because the filter level is `Notice`
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.ConnectionManager.ConnectionManagerCounters
 
 From current configuration:
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### cardano.node.connectionManager.outboundConns
 
@@ -9470,11 +11765,11 @@ Filtered: `Invisible` because the filter level is `Notice`
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.LocalConnectionManager.ConnectionManagerCounters
 
 From current configuration:
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### cardano.node.connectionManager.unidirectionalConns
 
@@ -9483,11 +11778,11 @@ Filtered: `Invisible` because the filter level is `Notice`
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.ConnectionManager.ConnectionManagerCounters
 
 From current configuration:
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### cardano.node.connectionManager.unidirectionalConns
 
@@ -9496,11 +11791,11 @@ Filtered: `Invisible` because the filter level is `Notice`
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.LocalConnectionManager.ConnectionManagerCounters
 
 From current configuration:
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### cardano.node.couldNotForgeSlotLast
 
@@ -9509,11 +11804,11 @@ Filtered: `Invisible` because the filter level is `Notice`
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.Forge.NoLedgerState
 
 From current configuration:
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### cardano.node.couldNotForgeSlotLast
 
@@ -9522,11 +11817,11 @@ Filtered: `Visible` because the filter level is `Info`
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.Forge.NoLedgerView
 
 From current configuration:
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### cardano.node.currentKESPeriod
 
@@ -9535,11 +11830,11 @@ Filtered: `Visible` because the filter level is `Info`
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.Forge.ForgeStateUpdateError
 
 From current configuration:
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### cardano.node.delegMapSize
 
@@ -9548,11 +11843,11 @@ Filtered: `Visible` because the filter level is `Info`
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.Forge.StartLeadershipCheckPlus
 
 From current configuration:
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### cardano.node.density
 
@@ -9561,11 +11856,11 @@ The actual number of blocks created over the maximum expected number of blocks t
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.ChainDB.AddBlockEvent.AddedToCurrentChain
 
 From current configuration:
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### cardano.node.density
 
@@ -9574,11 +11869,11 @@ The actual number of blocks created over the maximum expected number of blocks t
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.ChainDB.AddBlockEvent.SwitchedToAFork
 
 From current configuration:
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### cardano.node.epoch
 
@@ -9587,11 +11882,11 @@ In which epoch is the tip of the current chain.
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.ChainDB.AddBlockEvent.AddedToCurrentChain
 
 From current configuration:
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### cardano.node.epoch
 
@@ -9600,11 +11895,11 @@ In which epoch is the tip of the current chain.
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.ChainDB.AddBlockEvent.SwitchedToAFork
 
 From current configuration:
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### cardano.node.forgedInvalidSlotLast
 
@@ -9613,11 +11908,11 @@ Filtered: `Visible` because the filter level is `Info`
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.Forge.ForgedInvalidBlock
 
 From current configuration:
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### cardano.node.forgedSlotLast
 
@@ -9626,11 +11921,11 @@ Filtered: `Visible` because the filter level is `Info`
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.Forge.ForgedBlock
 
 From current configuration:
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### cardano.node.ledgerState
 
@@ -9639,11 +11934,11 @@ Filtered: `Visible` because the filter level is `Info`
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.Forge.LedgerState
 
 From current configuration:
-Filtered: `Invisible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### cardano.node.ledgerView
 
@@ -9652,11 +11947,11 @@ Filtered: `Invisible` because the filter level is `Info`
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.Forge.LedgerView
 
 From current configuration:
-Filtered: `Invisible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### cardano.node.mempoolBytes
 
@@ -9665,11 +11960,11 @@ Byte size of the mempool
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.Mempool.AddedTx
 
 From current configuration:
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### cardano.node.mempoolBytes
 
@@ -9678,11 +11973,11 @@ Byte size of the mempool
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.Mempool.ManuallyRemovedTxs
 
 From current configuration:
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### cardano.node.mempoolBytes
 
@@ -9691,11 +11986,11 @@ Byte size of the mempool
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.Mempool.RejectedTx
 
 From current configuration:
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### cardano.node.mempoolBytes
 
@@ -9704,11 +11999,11 @@ Byte size of the mempool
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.Mempool.RemoveTxs
 
 From current configuration:
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### cardano.node.nodeCannotForge
 
@@ -9717,11 +12012,11 @@ Filtered: `Visible` because the filter level is `Info`
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.Forge.NodeCannotForge
 
 From current configuration:
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### cardano.node.nodeIsLeader
 
@@ -9730,11 +12025,11 @@ Filtered: `Visible` because the filter level is `Info`
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.Forge.NodeIsLeader
 
 From current configuration:
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### cardano.node.nodeNotLeader
 
@@ -9743,11 +12038,11 @@ Filtered: `Visible` because the filter level is `Info`
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.Forge.NodeNotLeader
 
 From current configuration:
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### cardano.node.notAdoptedSlotLast
 
@@ -9756,11 +12051,11 @@ Filtered: `Visible` because the filter level is `Info`
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.Forge.DidntAdoptBlock
 
 From current configuration:
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### cardano.node.operationalCertificateExpiryKESPeriod
 
@@ -9769,11 +12064,11 @@ Filtered: `Visible` because the filter level is `Info`
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.Forge.ForgeStateUpdateError
 
 From current configuration:
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### cardano.node.operationalCertificateStartKESPeriod
 
@@ -9782,11 +12077,11 @@ Filtered: `Visible` because the filter level is `Info`
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.Forge.ForgeStateUpdateError
 
 From current configuration:
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### cardano.node.peerSelection.cold
 
@@ -9795,11 +12090,11 @@ Number of cold peers
 ***
 
 
-Dispatched by: 
-Cardano.Node.PeerSelectionCounters
+Dispatched by:
+Cardano.Node.PeerSelectionCounters.PeerSelectionCounters
 
 From current configuration:
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### cardano.node.peerSelection.hot
 
@@ -9808,11 +12103,11 @@ Number of hot peers
 ***
 
 
-Dispatched by: 
-Cardano.Node.PeerSelectionCounters
+Dispatched by:
+Cardano.Node.PeerSelectionCounters.PeerSelectionCounters
 
 From current configuration:
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### cardano.node.peerSelection.warm
 
@@ -9821,11 +12116,11 @@ Number of warm peers
 ***
 
 
-Dispatched by: 
-Cardano.Node.PeerSelectionCounters
+Dispatched by:
+Cardano.Node.PeerSelectionCounters.PeerSelectionCounters
 
 From current configuration:
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### cardano.node.remainingKESPeriods
 
@@ -9834,11 +12129,11 @@ Filtered: `Invisible` because the filter level is `Notice`
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.Forge.ForgeStateUpdateError
 
 From current configuration:
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### cardano.node.served.block
 
@@ -9847,11 +12142,11 @@ Filtered: `Visible` because the filter level is `Info`
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.BlockFetchServer.SendBlock
 
 From current configuration:
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### cardano.node.slotInEpoch
 
@@ -9860,11 +12155,11 @@ Relative slot number of the tip of the current chain within theepoch..
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.ChainDB.AddBlockEvent.AddedToCurrentChain
 
 From current configuration:
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### cardano.node.slotInEpoch
 
@@ -9873,11 +12168,11 @@ Relative slot number of the tip of the current chain within theepoch..
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.ChainDB.AddBlockEvent.SwitchedToAFork
 
 From current configuration:
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### cardano.node.slotIsImmutable
 
@@ -9886,11 +12181,11 @@ Filtered: `Visible` because the filter level is `Info`
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.Forge.SlotIsImmutable
 
 From current configuration:
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### cardano.node.slots
 
@@ -9899,11 +12194,11 @@ Number of slots in this chain fragment.
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.ChainDB.AddBlockEvent.AddedToCurrentChain
 
 From current configuration:
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### cardano.node.slots
 
@@ -9912,11 +12207,11 @@ Number of slots in this chain fragment.
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.ChainDB.AddBlockEvent.SwitchedToAFork
 
 From current configuration:
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### cardano.node.submissions.accepted
 
@@ -9925,11 +12220,11 @@ Filtered: `Visible` because the filter level is `Info`
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.TxInbound.TxSubmissionProcessed
 
 From current configuration:
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### cardano.node.submissions.rejected
 
@@ -9938,11 +12233,11 @@ Filtered: `Invisible` because the filter level is `Notice`
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.TxInbound.TxSubmissionProcessed
 
 From current configuration:
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### cardano.node.submissions.submitted
 
@@ -9951,11 +12246,11 @@ Filtered: `Invisible` because the filter level is `Notice`
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.TxInbound.TxSubmissionCollected
 
 From current configuration:
-Filtered: `Invisible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### cardano.node.txsInMempool
 
@@ -9964,11 +12259,11 @@ Transactions in mempool
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.Mempool.AddedTx
 
 From current configuration:
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### cardano.node.txsInMempool
 
@@ -9977,11 +12272,11 @@ Transactions in mempool
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.Mempool.ManuallyRemovedTxs
 
 From current configuration:
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### cardano.node.txsInMempool
 
@@ -9990,11 +12285,11 @@ Transactions in mempool
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.Mempool.RejectedTx
 
 From current configuration:
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### cardano.node.txsInMempool
 
@@ -10003,11 +12298,11 @@ Transactions in mempool
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.Mempool.RemoveTxs
 
 From current configuration:
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### cardano.node.txsProcessedNum
 
@@ -10016,11 +12311,11 @@ Filtered: `Visible` because the filter level is `Info`
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.Mempool.ManuallyRemovedTxs
 
 From current configuration:
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### cardano.node.utxoSize
 
@@ -10029,11 +12324,11 @@ Filtered: `Visible` because the filter level is `Info`
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.Forge.StartLeadershipCheckPlus
 
 From current configuration:
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### mem.resident
 
@@ -10042,11 +12337,11 @@ TODO JNF
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.Resources
 
 From current configuration:
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### peersFromNodeKernel
 
@@ -10055,11 +12350,11 @@ TODO Doc
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.Peers
 
 From current configuration:
-Filtered: `Visible` because the filter level is `Notice`
+Filtered:  because the filter level is `Notice`
 
 ### rts.gcLiveBytes
 
@@ -10068,11 +12363,11 @@ TODO JNF
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.Resources
 
 From current configuration:
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### rts.gcMajorNum
 
@@ -10081,11 +12376,11 @@ TODO JNF
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.Resources
 
 From current configuration:
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### rts.gcMinorNum
 
@@ -10094,11 +12389,11 @@ TODO JNF
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.Resources
 
 From current configuration:
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### rts.gcticks
 
@@ -10107,11 +12402,11 @@ TODO JNF
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.Resources
 
 From current configuration:
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### rts.mutticks
 
@@ -10120,11 +12415,11 @@ TODO JNF
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.Resources
 
 From current configuration:
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### rts.threads
 
@@ -10133,11 +12428,11 @@ TODO JNF
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.Resources
 
 From current configuration:
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ### stat.cputicks
 
@@ -10146,11 +12441,11 @@ Reports the CPU ticks, sice the process was started
 ***
 
 
-Dispatched by: 
+Dispatched by:
 Cardano.Node.Resources
 
 From current configuration:
-Filtered: `Visible` because the filter level is `Info`
+Filtered:  because the filter level is `Info`
 
 ## Datapoints
 ### NodeInfo
@@ -10159,15 +12454,15 @@ Filtered: `Visible` because the filter level is `Info`
 ***
 Basic information about this node collected at startup
 
- _niName_: Name of the node. 
- _niProtocol_: Protocol which this nodes uses. 
- _niVersion_: Software version which this node is using. 
- _niStartTime_: Start time of this node. 
+ _niName_: Name of the node.
+ _niProtocol_: Protocol which this nodes uses.
+ _niVersion_: Software version which this node is using.
+ _niStartTime_: Start time of this node.
  _niSystemStartTime_: How long did the start of the node took.
 ***
 
 
-Configuration: TraceConfig {tcOptions = fromList [([],[ConfBackend [Stdout MachineFormat,EKGBackend],ConfDetail DNormal,ConfSeverity Notice]),(["Node","AcceptPolicy"],[ConfSeverity Info]),(["Node","BlockFetchClient","CompletedBlockFetch"],[ConfLimiter "CompletedBlockFetchLimiter" 2.0]),(["Node","ChainDB"],[ConfSeverity Info]),(["Node","ChainDB","AddBlockEvent","AddBlockValidation","ValidCandidate"],[ConfLimiter "ValidCandidateLimiter" 2.0]),(["Node","ChainDB","AddBlockEvent","AddedBlockToQueue"],[ConfLimiter "AddedBlockToQueueLimiter" 2.0]),(["Node","ChainDB","AddBlockEvent","AddedBlockToVolatileDB"],[ConfLimiter "AddedBlockToVolatileDBLimiter" 2.0]),(["Node","ChainDB","CopyToImmutableDBEvent","CopiedBlockToImmutableDB"],[ConfLimiter "CopiedBlockToImmutableDBLimiter" 2.0]),(["Node","DNSResolver"],[ConfSeverity Info]),(["Node","DNSSubscription"],[ConfSeverity Info]),(["Node","DiffusionInit"],[ConfSeverity Info]),(["Node","ErrorPolicy"],[ConfSeverity Info]),(["Node","Forge"],[ConfSeverity Info]),(["Node","IpSubscription"],[ConfSeverity Info]),(["Node","LocalErrorPolicy"],[ConfSeverity Info]),(["Node","Mempool"],[ConfSeverity Info]),(["Node","Resources"],[ConfSeverity Info])], tcForwarder = TraceOptionForwarder {tofAddress = LocalSocket "/tmp/forwarder.sock", tofMode = Initiator, tofConnQueueSize = 2000, tofDisconnQueueSize = 200000}, tcNodeName = Nothing, tcPeerFreqency = Just 2000, tcResourceFreqency = Just 5000}
+Configuration: TraceConfig {tcOptions = fromList [([],[ConfBackend [Stdout MachineFormat,EKGBackend],ConfDetail DNormal,ConfSeverity Notice]),(["Node","AcceptPolicy"],[ConfSeverity Info]),(["Node","BlockFetchClient","CompletedBlockFetch"],[ConfLimiter "CompletedBlockFetchLimiter" 2.0]),(["Node","ChainDB"],[ConfSeverity Info]),(["Node","ChainDB","AddBlockEvent","AddBlockValidation","ValidCandidate"],[ConfLimiter "ValidCandidateLimiter" 2.0]),(["Node","ChainDB","AddBlockEvent","AddedBlockToQueue"],[ConfLimiter "AddedBlockToQueueLimiter" 2.0]),(["Node","ChainDB","AddBlockEvent","AddedBlockToVolatileDB"],[ConfLimiter "AddedBlockToVolatileDBLimiter" 2.0]),(["Node","ChainDB","CopyToImmutableDBEvent","CopiedBlockToImmutableDB"],[ConfLimiter "CopiedBlockToImmutableDBLimiter" 2.0]),(["Node","DNSResolver"],[ConfSeverity Info]),(["Node","DNSSubscription"],[ConfSeverity Info]),(["Node","DiffusionInit"],[ConfSeverity Info]),(["Node","ErrorPolicy"],[ConfSeverity Info]),(["Node","Forge"],[ConfSeverity Info]),(["Node","IpSubscription"],[ConfSeverity Info]),(["Node","LocalErrorPolicy"],[ConfSeverity Info]),(["Node","Mempool"],[ConfSeverity Info]),(["Node","Resources"],[ConfSeverity Info])], tcForwarder = TraceOptionForwarder {tofAddress = LocalSocket "/tmp/forwarder.sock", tofMode = Initiator, tofConnQueueSize = 2000, tofDisconnQueueSize = 200000, tofVerbosity = Minimum}, tcNodeName = Nothing, tcPeerFreqency = Just 2000, tcResourceFreqency = Just 5000}
 
-549 log messages.
-Generated at 2022-01-14 22:58:35.715578147 MSK.
+667 log messages.
+Generated at 2022-04-06 09:29:35.016237637 CEST.
