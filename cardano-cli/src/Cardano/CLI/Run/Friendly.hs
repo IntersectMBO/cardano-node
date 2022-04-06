@@ -169,7 +169,7 @@ friendlyTxOut (TxOut addr amount mdatum) =
    renderDatum TxOutDatumNone = Aeson.Null
    renderDatum (TxOutDatumHash _ h) =
      Aeson.String $ serialiseToRawBytesHexText h
-   renderDatum (TxOutDatum _ sData) =
+   renderDatum (TxOutDatumInTx _ sData) =
      scriptDataToJson ScriptDataJsonDetailedSchema sData
    renderDatum (TxOutDatumInline _ _) = panic "TODO: Babbage"
 

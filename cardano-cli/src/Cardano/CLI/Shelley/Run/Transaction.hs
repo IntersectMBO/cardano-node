@@ -685,7 +685,7 @@ toTxOutInAnyEra era (TxOutAnyEra addr val mDatumHash) =
       sData <- readScriptDataOrFile fileOrSdata
       TxOut <$> toAddressInAnyEra era addr
             <*> toTxOutValueInAnyEra era val
-            <*> pure (TxOutDatum supported sData)
+            <*> pure (TxOutDatumInTx supported sData)
 
     (Nothing, _) ->
       txFeatureMismatch era TxFeatureTxOutDatum
