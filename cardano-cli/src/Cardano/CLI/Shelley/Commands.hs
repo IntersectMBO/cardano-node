@@ -245,6 +245,7 @@ data TransactionCmd
       ScriptDataOrFile
   | TxGetTxId InputTxBodyOrTxFile
   | TxView InputTxBodyOrTxFile
+  | TxDebugScript
 
 data InputTxBodyOrTxFile = InputTxBodyFile TxBodyFile | InputTxFile TxFile
   deriving Show

@@ -622,6 +622,8 @@ pTransaction =
         (Opt.info pTransactionId $ Opt.progDesc "Print a transaction identifier.")
     , subParser "view" $
         Opt.info pTransactionView $ Opt.progDesc "Print a transaction."
+    , subParser "debug-script" $
+        Opt.info pDebugScript $ Opt.progDesc "Debug script."
     ]
  where
   -- Backwards compatible parsers
@@ -787,6 +789,9 @@ pTransaction =
 
   pTransactionView :: Parser TransactionCmd
   pTransactionView = TxView <$> pInputTxOrTxBodyFile
+
+  pDebugScript :: Parser TransactionCmd
+  pDebugScript = pure TxDebugScriptCmd
 
 pNodeCmd :: Parser NodeCmd
 pNodeCmd =
