@@ -105,7 +105,7 @@ let
 
     # Prevents cabal from choosing alternate plans, so that
     # *all* dependencies are provided by Nix.
-    exactDeps = true;
+    exactDeps = false;
 
     shellHook = ''
       echo 'nix-shell options & flags:  withHoogle=${toString withHoogle} profileName=${profileName} autoStartCluster=${toString autoStartCluster} workbenchDevMode=${toString workbenchDevMode}'
@@ -165,7 +165,7 @@ let
 
     # Prevents cabal from choosing alternate plans, so that
     # *all* dependencies are provided by Nix.
-    exactDeps = true;
+    exactDeps = false;
 
     shellHook = ''
       echo "DevOps Tools" \
@@ -213,6 +213,7 @@ let
       ${setLocale}
     '';
 
+
     # These programs will be available inside the nix-shell.
     nativeBuildInputs = [
       nix-prefetch-git
@@ -227,7 +228,7 @@ let
 
     # Prevents cabal from choosing alternate plans, so that
     # *all* dependencies are provided by Nix.
-    exactDeps = true;
+    exactDeps = false;
 
     inherit withHoogle;
   };

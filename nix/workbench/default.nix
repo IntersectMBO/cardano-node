@@ -8,7 +8,7 @@
 , makeWrapper
 , runCommand
 , customConfig
-, cardano-cli
+# , cardano-cli
 , cardano-topology
 , locli
 
@@ -55,7 +55,7 @@ let
       jq
       moreutils
 
-      cardano-cli
+   #   cardano-cli
       cardano-topology
       locli
     ];

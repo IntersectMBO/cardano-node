@@ -183,8 +183,8 @@ runQueryCmd cmd =
       runQueryPoolParams consensusModeParams network poolid
     QueryProtocolState' consensusModeParams network mOutFile ->
       runQueryProtocolState consensusModeParams network mOutFile
-    QueryUTxO' consensusModeParams qFilter networkId mOutFile ->
-      runQueryUTxO consensusModeParams qFilter networkId mOutFile
+    -- QueryUTxO' consensusModeParams qFilter networkId mOutFile ->
+    --   runQueryUTxO consensusModeParams qFilter networkId mOutFile
     QueryKesPeriodInfo consensusModeParams network nodeOpCert nodeOpCertCounter mOutFile ->
       runQueryKesPeriodInfo consensusModeParams network nodeOpCert nodeOpCertCounter mOutFile
 

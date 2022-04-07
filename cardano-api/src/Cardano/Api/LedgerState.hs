@@ -141,7 +141,7 @@ import qualified Ouroboros.Consensus.HardFork.Combinator as Consensus
 import qualified Ouroboros.Consensus.HardFork.Combinator.AcrossEras as HFC
 import qualified Ouroboros.Consensus.HardFork.Combinator.Basics as HFC
 import qualified Ouroboros.Consensus.Ledger.Abstract as Ledger
-import           Ouroboros.Consensus.Ledger.Basics (LedgerResult (lrEvents), MapKind (..), lrResult)
+import           Ouroboros.Consensus.Ledger.Basics (LedgerResult (lrEvents), EmptyMK, lrResult)
 import qualified Ouroboros.Consensus.Ledger.Extended as Ledger
 import qualified Ouroboros.Consensus.Mempool.TxLimits as TxLimits
 import qualified Ouroboros.Consensus.Node.ProtocolInfo as Consensus

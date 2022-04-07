@@ -889,9 +889,9 @@ pQueryCmd =
         (Opt.info pQueryStakeAddressInfo $ Opt.progDesc "Get the current delegations and \
                                                         \reward accounts filtered by stake \
                                                         \address.")
-    , subParser "utxo"
-        (Opt.info pQueryUTxO $ Opt.progDesc "Get a portion of the current UTxO: \
-                                            \by tx in, by address or the whole.")
+    -- , subParser "utxo"
+    --     (Opt.info pQueryUTxO $ Opt.progDesc "Get a portion of the current UTxO: \
+    --                                         \by tx in, by address or the whole.")
     , subParser "ledger-state"
         (Opt.info pQueryLedgerState $ Opt.progDesc "Dump the current ledger state of the node (Ledger.NewEpochState -- advanced command)")
     , subParser "protocol-state"
@@ -919,13 +919,13 @@ pQueryCmd =
                   <*> pNetworkId
                   <*> pMaybeOutputFile
 
-    pQueryUTxO :: Parser QueryCmd
-    pQueryUTxO =
-      QueryUTxO'
-        <$> pConsensusModeParams
-        <*> pQueryUTxOFilter
-        <*> pNetworkId
-        <*> pMaybeOutputFile
+    -- pQueryUTxO :: Parser QueryCmd
+    -- pQueryUTxO =
+    --   QueryUTxO'
+    --     <$> pConsensusModeParams
+    --     <*> pQueryUTxOFilter
+    --     <*> pNetworkId
+    --     <*> pMaybeOutputFile
 
     pQueryStakePools :: Parser QueryCmd
     pQueryStakePools =

@@ -2,19 +2,19 @@ index-state: 2021-12-07T00:00:00Z
 
 packages:
     cardano-api
-    cardano-cli
-    cardano-client-demo
+    -- cardano-cli
+    -- cardano-client-demo
     cardano-git-rev
     cardano-node
     cardano-node-capi
-    cardano-node-chairman
+    -- cardano-node-chairman
     cardano-submit-api
-    cardano-testnet
+    -- cardano-testnet
     cardano-tracer
     bench/cardano-topology
     bench/locli
-    bench/tx-generator
-    plutus-example
+    -- bench/tx-generator
+    -- plutus-example
     trace-dispatcher
     trace-resources
     trace-forward
@@ -22,8 +22,8 @@ packages:
 package cardano-api
   ghc-options: -Werror
 
-package cardano-cli
-  ghc-options: -Werror
+-- package cardano-cli
+--   ghc-options: -Werror
 
 package cardano-git-rev
   ghc-options: -Werror
@@ -31,14 +31,14 @@ package cardano-git-rev
 package cardano-node
   ghc-options: -Werror
 
-package cardano-node-chairman
-  ghc-options: -Werror
+-- package cardano-node-chairman
+--   ghc-options: -Werror
 
-package cardano-testnet
-  ghc-options: -Werror
+-- package cardano-testnet
+--   ghc-options: -Werror
 
-package tx-generator
-  ghc-options: -Werror
+-- package tx-generator
+--   ghc-options: -Werror
 
 package trace-dispatcher
   ghc-options: -Werror
@@ -49,8 +49,8 @@ package trace-resources
 package cardano-tracer
   ghc-options: -Werror
 
-package plutus-examples
-  ghc-options: -Werror
+-- package plutus-examples
+--   ghc-options: -Werror
 
 package cryptonite
   -- Using RDRAND instead of /dev/urandom as an entropy source for key
@@ -67,25 +67,25 @@ test-show-details: direct
 -- Then enable specific tests in this repo
 
 package cardano-api
-  tests: True
+--  tests: True
 
-package cardano-cli
-  tests: True
+-- package cardano-cli
+--   tests: True
 
 package cardano-node
   tests: True
 
-package cardano-node-chairman
-  tests: True
+-- package cardano-node-chairman
+--   tests: True
 
 package cardano-submit-api
   tests: True
 
-package cardano-testnet
-  tests: True
+-- package cardano-testnet
+--   tests: True
 
-package plutus-examples
-  tests: True
+-- package plutus-examples
+--   tests: True
 
 package trace-resources
   tests: True
@@ -168,15 +168,14 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: 41545ba3ac6b3095966316a99883d678b5ab8da8
-  --sha256: 0icq9y3nnl42fz536da84414av36g37894qnyw4rk3qkalksqwir
+  tag: 1587462ac8b2e50af2691f5ad93d3c2aa4674ed1
+  --sha256: 195950d7r64mp36xmjvwzfb6iazzr8viylwfqbw7g06pcw7q7d4f
   subdir:
     base-deriving-via
     binary
     binary/test
     cardano-crypto-class
     cardano-crypto-praos
-    cardano-crypto-tests
     measures
     orphans-deriving-via
     slotting
@@ -191,30 +190,31 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger
-  tag: 1a9ec4ae9e0b09d54e49b2a40c4ead37edadcce5
-  --sha256: 0avzyiqq0m8njd41ck9kpn992yq676b1az9xs77977h7cf85y4wm
+  tag: 32ea4347d98886f88f784d670e5fcf9dad2fb4e5
+  --sha256: 1pslr9f75fvqndzgjgxybi2qprd2il8054sc8jbsn4dqggqhj92p
   subdir:
     eras/alonzo/impl
     eras/alonzo/test-suite
+    eras/babbage/impl
     eras/byron/chain/executable-spec
     eras/byron/crypto
     eras/byron/crypto/test
     eras/byron/ledger/executable-spec
     eras/byron/ledger/impl
     eras/byron/ledger/impl/test
-    eras/shelley/impl
-    eras/shelley/test-suite
     eras/shelley-ma/impl
     eras/shelley-ma/test-suite
+    eras/shelley/impl
+    eras/shelley/test-suite
+    libs/cardano-data
     libs/cardano-ledger-core
     libs/cardano-ledger-pretty
     libs/cardano-protocol-tpraos
-    libs/cardano-data
     libs/compact-map
+    libs/non-integral
     libs/set-algebra
     libs/small-steps
     libs/small-steps-test
-    libs/non-integral
 
 source-repository-package
   type: git
@@ -255,8 +255,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: 20ce798ea992631ab7a74c08ddeafcab505e597a
-  --sha256: 0fqsbahbvm9fncldi1vv6v312hd0zx5wpi2nhaygw5s31y2cf3wl
+  tag: 1f0b5965e01a52238fbb27b9227c3bf16ef99501
+  --sha256: 1mfl4p9237agn1jas1f4dh5dvbxfix7zha9h2j0438sbb4f1gnmq
   subdir:
     io-sim
     io-classes
@@ -278,17 +278,13 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/plutus
-  tag: 1efbb276ef1a10ca6961d0fd32e6141e9798bd11
-  --sha256: 1jicyk4hr8p0xksj4048gdxndrb42jz4wsnkhc3ymxbm5v6snalf
+  tag: ccf5bcb99ffe054dc8cd5626723f64e02708dbae
+  --sha256: 18569bgywilibz7r5jyxj9bid8g4fwr80cc0hd9rcm3jhasbgq8i
   subdir:
-    freer-extras
-    plutus-core
-    plutus-ledger
     plutus-ledger-api
     plutus-tx
-    plutus-tx-plugin
+    plutus-core
     prettyprinter-configurable
-    stubs/plutus-ghc-stub
     word-array
 
 source-repository-package
