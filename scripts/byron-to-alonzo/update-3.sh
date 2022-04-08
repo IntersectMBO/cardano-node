@@ -63,11 +63,12 @@ cardano-cli key convert-byron-key \
 cardano-cli transaction build-raw \
             --shelley-era \
             --invalid-hereafter 100000 \
-            --fee 0 \
+            --fee 231501 \
             --tx-in ${TXID0}#0\
             --tx-in ${TXID1}#0\
             --tx-out $(cat addresses/user1.addr)+$((${COINS_IN_INPUT} / 2)) \
             --tx-out $(cat addresses/user1.addr)+$((${COINS_IN_INPUT} / 2)) \
+            --tx-out $(cat addresses/user1.addr)+9017768499 \
             --certificate-file addresses/pool-owner1-stake.reg.cert \
             --certificate-file node-pool1/registration.cert \
             --certificate-file addresses/user1-stake.reg.cert \

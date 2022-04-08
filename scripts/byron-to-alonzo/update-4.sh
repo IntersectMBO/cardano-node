@@ -43,11 +43,13 @@ cardano-cli governance create-update-proposal \
 
 cardano-cli transaction build-raw \
             --allegra-era \
-            --fee 0 \
+            --fee 186181 \
             --tx-in $TXID2#0\
             --tx-in $TXID2#1\
+            --tx-in $TXID2#2\
             --tx-out $(cat addresses/user1.addr)+$((${COINS_IN_INPUT} / 2)) \
             --tx-out $(cat addresses/user1.addr)+$((${COINS_IN_INPUT} / 2)) \
+            --tx-out $(cat addresses/user1.addr)+9017582318 \
             --update-proposal-file update-proposal-mary \
             --out-file tx3.txbody
 
