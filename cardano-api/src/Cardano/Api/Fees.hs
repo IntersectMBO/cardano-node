@@ -873,7 +873,7 @@ makeTransactionBodyAutoBalance eraInMode systemstart history pparams
     txbody0 <-
       first TxBodyError $ makeTransactionBody txbodycontent
         { txOuts =
-              TxOut changeaddr (lovelaceToTxOutValue 0) TxOutDatumNone
+              TxOut changeaddr (lovelaceToTxOutValue 0) TxOutDatumNone ReferenceScriptNone
             : txOuts txbodycontent
             --TODO: think about the size of the change output
             -- 1,2,4 or 8 bytes?
@@ -913,7 +913,7 @@ makeTransactionBodyAutoBalance eraInMode systemstart history pparams
                  txFee  = TxFeeExplicit explicitTxFees $ Lovelace (2^(32 :: Integer) - 1),
                  txOuts = TxOut changeaddr
                                 (lovelaceToTxOutValue $ Lovelace (2^(64 :: Integer)) - 1)
-                                TxOutDatumNone
+                                TxOutDatumNone ReferenceScriptNone
                         : txOuts txbodycontent
                }
 
@@ -956,10 +956,10 @@ makeTransactionBodyAutoBalance eraInMode systemstart history pparams
         makeTransactionBody txbodycontent1 {
           txFee  = TxFeeExplicit explicitTxFees fee,
           txOuts = accountForNoChange
-                     (TxOut changeaddr balance TxOutDatumNone)
+                     (TxOut changeaddr balance TxOutDatumNone ReferenceScriptNone)
                      (txOuts txbodycontent)
         }
-    return (BalancedTxBody txbody3 (TxOut changeaddr balance TxOutDatumNone) fee)
+    return (BalancedTxBody txbody3 (TxOut changeaddr balance TxOutDatumNone ReferenceScriptNone) fee)
  where
    era :: ShelleyBasedEra era
    era = shelleyBasedEra
@@ -973,7 +973,7 @@ makeTransactionBodyAutoBalance eraInMode systemstart history pparams
    -- the fee calculation includes a change address for simplicity and
    -- we make no attempt to recalculate the tx fee without a change address.
    accountForNoChange :: TxOut CtxTx era -> [TxOut CtxTx era] -> [TxOut CtxTx era]
-   accountForNoChange change@(TxOut _ balance _) rest =
+   accountForNoChange change@(TxOut _ balance _ _) rest =
      case txOutValueToLovelace balance of
        Lovelace 0 -> rest
        _ -> change : rest
@@ -984,7 +984,7 @@ makeTransactionBodyAutoBalance eraInMode systemstart history pparams
     | txOutValueToLovelace balance < 0 =
         Left . TxBodyErrorAdaBalanceNegative $ txOutValueToLovelace balance
     | otherwise =
-        case checkMinUTxOValue (TxOut changeaddr balance TxOutDatumNone) pparams of
+        case checkMinUTxOValue (TxOut changeaddr balance TxOutDatumNone ReferenceScriptNone) pparams of
           Left (TxBodyErrorMinUTxONotMet txOutAny minUTxO) ->
             Left $ TxBodyErrorAdaBalanceTooSmall txOutAny minUTxO (txOutValueToLovelace balance)
           Left err -> Left err
@@ -994,7 +994,7 @@ makeTransactionBodyAutoBalance eraInMode systemstart history pparams
      :: TxOut CtxTx era
      -> ProtocolParameters
      -> Either TxBodyErrorAutoBalance ()
-   checkMinUTxOValue txout@(TxOut _ v _) pparams' = do
+   checkMinUTxOValue txout@(TxOut _ v _ _) pparams' = do
      minUTxO  <- first TxBodyErrorMinUTxOMissingPParams
                    $ calculateMinimumUTxO era txout pparams'
      if txOutValueToLovelace v >= selectLovelace minUTxO
@@ -1024,7 +1024,7 @@ calculateMinimumUTxO
   -> TxOut CtxTx era
   -> ProtocolParameters
   -> Either MinimumUTxOError Value
-calculateMinimumUTxO era txout@(TxOut _ v _) pparams' =
+calculateMinimumUTxO era txout@(TxOut _ v _ _) pparams' =
   case era of
     ShelleyBasedEraShelley -> lovelaceToValue <$> getMinUTxOPreAlonzo pparams'
     ShelleyBasedEraAllegra -> calcMinUTxOAllegraMary
