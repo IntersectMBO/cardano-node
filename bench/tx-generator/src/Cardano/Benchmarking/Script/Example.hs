@@ -4,13 +4,10 @@ where
 import           Prelude
 import           Control.Monad
 import qualified Data.ByteString.Lazy.Char8 as BSL
-import qualified Data.List.NonEmpty as NonEmpty
-import           Data.Word
 import           Data.Dependent.Sum ((==>) )
 
 import           Cardano.Api (AnyCardanoEra(..), CardanoEra(..), Quantity(..), ScriptData(..), SlotNo(..), quantityToLovelace )
 import           Cardano.Api.Shelley (ExecutionUnits(..))
-import           Cardano.Node.Configuration.NodeAddress
 import           Ouroboros.Network.NodeToClient (withIOManager)
 
 import           Cardano.Benchmarking.Types
@@ -50,7 +47,6 @@ testScript =
   , ReadSigningKey passPartout "configuration/genesis-shelley/utxo-keys/utxo1.skey"
   , Delay 10
   , Delay 10
-  , Set $ TTargets ==> makeTargets [ 3000, 3001, 3002]
   , WaitForEra $ AnyCardanoEra ByronEra
   , CancelBenchmark threadName
   , ImportGenesisFund globalWalletName DiscardTX passPartout passPartout
@@ -65,7 +61,3 @@ testScript =
   passPartout = KeyName "pass-partout"
 
   threadName = ThreadName "thread1"
-  makeTargets = NonEmpty.fromList . map (\p -> makeAddr ("127.0.0.1", p))
-
-  makeAddr :: (String, Word16) -> NodeIPv4Address
-  makeAddr (a,b) = NodeAddress (NodeHostIPv4Address $ read a) (fromIntegral b)

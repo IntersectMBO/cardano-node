@@ -14,12 +14,15 @@ where
 import           Prelude
 import           GHC.Generics
 
+import           Data.List.NonEmpty
+
 import           Cardano.Benchmarking.OuroborosImports (SigningKeyFile)
 import           Cardano.Api (AnyCardanoEra, ExecutionUnits, Lovelace, ScriptData, ScriptRedeemer, TextEnvelope, TxIn)
 
+
 import           Cardano.Benchmarking.Script.Env
 import           Cardano.Benchmarking.Script.Store
-import           Cardano.Benchmarking.Types (TPSRate, NumberOfTxs)
+import           Cardano.Benchmarking.Types (TPSRate, NumberOfTxs, NodeIPv4Address)
 
 data Action where
   Set                :: !SetKeyVal -> Action
@@ -49,7 +52,7 @@ deriving instance Generic ProtocolParametersSource
 
 data SubmitMode where
   LocalSocket :: SubmitMode
-  NodeToNode  :: SubmitMode
+  NodeToNode  :: NonEmpty NodeIPv4Address -> SubmitMode
   DumpToFile  :: !FilePath -> SubmitMode
   DiscardTX   :: SubmitMode
   deriving (Show, Eq)
