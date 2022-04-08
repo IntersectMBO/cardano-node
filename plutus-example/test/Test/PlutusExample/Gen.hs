@@ -13,12 +13,12 @@ import qualified Cardano.Ledger.Alonzo.TxInfo as Alonzo
 -- import           Cardano.Ledger.BaseTypes (ProtoVer)
 import           Cardano.Ledger.Crypto (StandardCrypto)
 import qualified Cardano.Ledger.Era as Ledger
+import qualified Cardano.Ledger.Shelley.UTxO as Ledger
+import qualified Cardano.Ledger.TxIn as Ledger
 import           Cardano.PlutusExample.ScriptContextChecker
 import           Gen.Cardano.Api.Typed
 import qualified Ledger as Plutus
 import qualified Plutus.V1.Ledger.DCert as Plutus
-import qualified Cardano.Ledger.Shelley.UTxO as Ledger
-import qualified Cardano.Ledger.TxIn as Ledger
 
 import           Hedgehog (Gen)
 import qualified Hedgehog.Gen as Gen
@@ -30,7 +30,7 @@ genPlutusTxOut = do
   alonzoTxOut <-
     TxOut <$> (shelleyAddressInEra <$> genAddressShelley)
           <*> genTxOutValue AlonzoEra
-          <*> genTxOutDatumHash AlonzoEra
+          <*> genTxOutDatumHashTxContext AlonzoEra
   Gen.just . return . Alonzo.txInfoOut
     $ toShelleyTxOut ShelleyBasedEraAlonzo (toCtxUTxOTxOut alonzoTxOut)
 
@@ -50,7 +50,7 @@ genMyCustomRedeemer =
 genTxInfoIn :: Gen Plutus.TxInInfo
 genTxInfoIn = do
   txinput <- genTxIn
-  txout <- genTxOut AlonzoEra
+  txout <- genTxOutTxContext AlonzoEra
   lUTxO <- genLedgerUTxO ShelleyBasedEraAlonzo (txinput, txout)
   let mTxInfoIn = Alonzo.txInfoIn lUTxO (toShelleyTxIn txinput)
   case mTxInfoIn of
