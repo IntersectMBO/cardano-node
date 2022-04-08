@@ -558,7 +558,7 @@ runTxBuild (AnyCardanoEra era) (AnyConsensusModeParams cModeParams) networkId mS
     notScriptLockedTxIns :: Monad m => UTxO era -> ExceptT ShelleyTxCmdError m ()
     notScriptLockedTxIns (UTxO utxo) = do
       let scriptLockedTxIns =
-            filter (\(_, TxOut aInEra _ _) -> not $ isKeyAddress aInEra ) $ Map.assocs utxo
+            filter (\(_, TxOut aInEra _ _ _) -> not $ isKeyAddress aInEra ) $ Map.assocs utxo
       if null scriptLockedTxIns
       then return ()
       else left . ShelleyTxCmdExpectedKeyLockedTxIn $ map fst scriptLockedTxIns
@@ -660,6 +660,7 @@ toTxOutValueInAnyEra era val =
         Nothing -> txFeatureMismatch era TxFeatureMultiAssetOutputs
     Right multiAssetInEra -> return (TxOutValue multiAssetInEra val)
 
+-- TODO: Babbage era
 toTxOutInAnyEra :: CardanoEra era
                 -> TxOutAnyEra
                 -> ExceptT ShelleyTxCmdError IO (TxOut CtxTx era)
@@ -669,23 +670,27 @@ toTxOutInAnyEra era (TxOutAnyEra addr val mDatumHash) =
       TxOut <$> toAddressInAnyEra era addr
             <*> toTxOutValueInAnyEra era val
             <*> pure TxOutDatumNone
+            <*> pure ReferenceScriptNone
 
     (Just supported, TxOutDatumByHashOnly dh) ->
       TxOut <$> toAddressInAnyEra era addr
             <*> toTxOutValueInAnyEra era val
             <*> pure (TxOutDatumHash supported dh)
+            <*> pure ReferenceScriptNone
 
     (Just supported, TxOutDatumByHashOf fileOrSdata) -> do
       sData <- readScriptDataOrFile fileOrSdata
       TxOut <$> toAddressInAnyEra era addr
             <*> toTxOutValueInAnyEra era val
             <*> pure (TxOutDatumHash supported $ hashScriptData sData)
+            <*> pure ReferenceScriptNone
 
     (Just supported, TxOutDatumByValue fileOrSdata) -> do
       sData <- readScriptDataOrFile fileOrSdata
       TxOut <$> toAddressInAnyEra era addr
             <*> toTxOutValueInAnyEra era val
             <*> pure (TxOutDatumInTx supported sData)
+            <*> pure ReferenceScriptNone
 
     (Nothing, _) ->
       txFeatureMismatch era TxFeatureTxOutDatum
