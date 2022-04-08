@@ -61,7 +61,6 @@ initConstants = do
   setN TMinValuePerUTxO      _nix_min_utxo_value
   setN TFee                  _nix_tx_fee
   setN TEra                  _nix_era
-  setN TTargets              _nix_targetNodes
   setN TLocalSocket          _nix_localNodeSocketPath
   setConst  TTTL             1000000
   where
@@ -146,9 +145,10 @@ benchmarkingPhase wallet = do
   debugMode <- askNixOption _nix_debugMode
   plutusMode <- askNixOption _nix_plutusMode
   plutusAutoMode <- askNixOption _nix_plutusAutoMode
+  targetNodes <- askNixOption _nix_targetNodes
   tx_count <- askNixOption _nix_tx_count
   tps <- askNixOption _nix_tps
-  let target = if debugMode then LocalSocket else NodeToNode
+  let target = if debugMode then LocalSocket else NodeToNode targetNodes
   spendMode <- case (plutusAutoMode, plutusMode) of
     ( True,    _ ) -> SpendAutoScript <$> askNixOption  _nix_plutusLoopScript
     (False, True ) -> do

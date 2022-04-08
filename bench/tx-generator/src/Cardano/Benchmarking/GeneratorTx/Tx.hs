@@ -98,7 +98,7 @@ mkFee f = case shelleyBasedEra @ era of
   ShelleyBasedEraAllegra -> TxFeeExplicit TxFeesExplicitInAllegraEra f
   ShelleyBasedEraMary    -> TxFeeExplicit TxFeesExplicitInMaryEra f
   ShelleyBasedEraAlonzo  -> TxFeeExplicit TxFeesExplicitInAlonzoEra f
-  ShelleyBasedEraBabbage -> TxFeeExplicit TxFeesExplicitInBabbageEra f  
+  ShelleyBasedEraBabbage -> TxFeeExplicit TxFeesExplicitInBabbageEra f
 
 mkValidityUpperBound :: forall era .
      IsShelleyBasedEra era

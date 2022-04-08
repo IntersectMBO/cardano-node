@@ -66,7 +66,7 @@ withEra :: (forall era. IsShelleyBasedEra era => AsType era -> ActionM x) -> Act
 withEra action = do
   era <- get $ User TEra
   case era of
-    AnyCardanoEra BabbageEra -> action AsBabbageEra    
+    AnyCardanoEra BabbageEra -> action AsBabbageEra
     AnyCardanoEra AlonzoEra  -> action AsAlonzoEra
     AnyCardanoEra MaryEra    -> action AsMaryEra
     AnyCardanoEra AllegraEra -> action AsAllegraEra
@@ -218,7 +218,7 @@ runWalletScriptInMode submitMode s = do
     NextTx nextScript tx -> do
       case submitMode of
         LocalSocket -> void $ localSubmitTx $ txInModeCardano tx
-        NodeToNode -> throwE $ ApiError "NodeToNodeMode not supported in runWalletScriptInMode"
+        NodeToNode _ -> throwE $ ApiError "NodeToNodeMode not supported in runWalletScriptInMode"
         DumpToFile filePath -> dumpToFile filePath $ txInModeCardano tx
         DiscardTX -> return ()
       runWalletScriptInMode submitMode nextScript
@@ -302,13 +302,12 @@ runBenchmarkInEra sourceWallet submitMode (ThreadName threadName) txCount tps er
     walletScript = benchmarkWalletScript walletRefSrc txGenerator txCount (const fundSource) inToOut toUTxO fundToStore
 
   case submitMode of
-    NodeToNode -> do
-      targets  <- getUser TTargets
+    NodeToNode targetNodes -> do
       connectClient <- getConnectClient
       let
         coreCall :: AsType era -> ExceptT TxGenError IO AsyncBenchmarkControl
         coreCall eraProxy = GeneratorTx.walletBenchmark (btTxSubmit_ tracers) (btN2N_ tracers) connectClient
-                                               threadName targets tps LogErrors eraProxy txCount walletScript        
+                                               threadName targetNodes tps LogErrors eraProxy txCount walletScript        
       ret <- liftIO $ runExceptT $ coreCall era
       case ret of
         Left err -> liftTxGenError err
@@ -428,11 +427,10 @@ runPlutusBenchmark sourceWallet submitMode scriptFile scriptBudget scriptData sc
     walletScript = benchmarkWalletScript walletRefSrc txGenerator txCount (const fundSource) inToOut toUTxO fundToStore
 
   case submitMode of
-    NodeToNode -> do
-      targets  <- getUser TTargets
+    NodeToNode targetNodes -> do
       connectClient <- getConnectClient
       ret <- liftIO $ runExceptT $ GeneratorTx.walletBenchmark (btTxSubmit_ tracers) (btN2N_ tracers) connectClient
-                               threadName targets tps LogErrors AsAlonzoEra txCount walletScript
+                               threadName targetNodes tps LogErrors AsAlonzoEra txCount walletScript
       case ret of
         Left err -> liftTxGenError err
         Right ctl -> setName (ThreadName threadName) ctl
@@ -454,7 +452,7 @@ importGenesisFund wallet submitMode genesisKeyName destKey = do
   tracer <- btTxSubmit_ <$> get BenchTracers
   localSubmit <- case submitMode of
     LocalSocket -> getLocalSubmitTx
-    NodeToNode -> throwE $ WalletError "NodeToNode mode not supported in importGenesisFund"
+    NodeToNode _ -> throwE $ WalletError "NodeToNode mode not supported in importGenesisFund"
     DumpToFile filePath -> return $ \tx -> dumpToFileIO filePath tx >> return SubmitSuccess
     DiscardTX -> return $ \_ -> return SubmitSuccess
   networkId <- getUser TNetworkId
@@ -579,7 +577,7 @@ createChangeGeneric sourceWallet submitMode createCoins addressMsg value count =
       Left err -> throwE $ WalletError err
       Right tx -> case submitMode of
         LocalSocket -> void $ localSubmitTx tx
-        NodeToNode -> throwE $ WalletError "NodeToNode mode not supported in createChangeGeneric"
+        NodeToNode _ -> throwE $ WalletError "NodeToNode mode not supported in createChangeGeneric"
         DumpToFile filePath -> dumpToFile filePath tx
         DiscardTX -> return ()
 
