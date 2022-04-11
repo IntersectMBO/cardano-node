@@ -14,7 +14,7 @@ import           Cardano.Api
 
 import           Cardano.Benchmarking.FundSet as FundSet
 import           Cardano.Benchmarking.Types (NumberOfTxs (..))
-import           Cardano.Api.Shelley (ProtocolParameters)
+import           Cardano.Api.Shelley (ProtocolParameters, ReferenceScript(..))
 type WalletRef = MVar Wallet
 
 type TxGenerator era = [Fund] -> [TxOut CtxTx era] -> Either String (Tx era, TxId)
@@ -121,7 +121,7 @@ mkUTxOVariant variant networkId key validity values
     , newFunds
     )
  where
-  mkTxOut v = TxOut (keyAddress @ era networkId key) (mkTxOutValueAdaOnly v) TxOutDatumNone
+  mkTxOut v = TxOut (keyAddress @ era networkId key) (mkTxOutValueAdaOnly v) TxOutDatumNone ReferenceScriptNone
 
   newFunds txId = zipWith (mkNewFund txId) [TxIx 0 ..] values
 
