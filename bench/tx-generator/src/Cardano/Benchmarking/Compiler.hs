@@ -60,7 +60,6 @@ initConstants = do
   setN TTxAdditionalSize     _nix_add_tx_size
   setN TMinValuePerUTxO      _nix_min_utxo_value
   setN TFee                  _nix_tx_fee
-  setN TEra                  _nix_era
   setN TLocalSocket          _nix_localNodeSocketPath
   setConst  TTTL             1000000
   where
@@ -72,8 +71,9 @@ initConstants = do
 
 importGenesisFunds :: DstWallet -> Compiler ()
 importGenesisFunds wallet = do
+  era <- askNixOption _nix_era
   cmd1 (ReadSigningKey $ KeyName "pass-partout") _nix_sigKey
-  emit $ ImportGenesisFund wallet LocalSocket (KeyName "pass-partout") (KeyName "pass-partout")
+  emit $ ImportGenesisFund era wallet LocalSocket (KeyName "pass-partout") (KeyName "pass-partout")
   delay
 
 addCollaterals :: SrcWallet -> DstWallet -> Compiler ()

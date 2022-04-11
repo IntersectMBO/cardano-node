@@ -19,7 +19,7 @@ action a = case a of
   DefineSigningKey name descr -> defineSigningKey name descr
   AddFund era wallet txIn lovelace keyName -> addFund era wallet txIn lovelace keyName
   Delay t -> delay t
-  ImportGenesisFund wallet submitMode genesisKey fundKey -> importGenesisFund wallet submitMode genesisKey fundKey
+  ImportGenesisFund era wallet submitMode genesisKey fundKey -> importGenesisFund era wallet submitMode genesisKey fundKey
   CreateChange era sourceWallet dstWallet payMode submitMode value count -> createChange era sourceWallet dstWallet payMode submitMode value count
   RunBenchmark era sourceWallet submitMode spendMode thread count tps -> runBenchmark era sourceWallet submitMode spendMode thread count tps
   WaitBenchmark thread -> waitBenchmark thread

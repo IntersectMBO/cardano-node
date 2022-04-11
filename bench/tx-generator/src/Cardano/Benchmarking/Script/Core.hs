@@ -59,10 +59,8 @@ import           Cardano.Benchmarking.Script.Setters
 import           Cardano.Benchmarking.Script.Store as Store
 import           Cardano.Benchmarking.Script.Types
 
-liftCoreWithEra :: (forall era. IsShelleyBasedEra era => AsType era -> ExceptT TxGenError IO x) -> ActionM (Either TxGenError x)
-liftCoreWithEra coreCall = do
-  era <- get $ User TEra
-  withEra era ( liftIO . runExceptT . coreCall)
+liftCoreWithEra :: AnyCardanoEra -> (forall era. IsShelleyBasedEra era => AsType era -> ExceptT TxGenError IO x) -> ActionM (Either TxGenError x)
+liftCoreWithEra era coreCall = withEra era ( liftIO . runExceptT . coreCall)
 
 withEra :: AnyCardanoEra -> (forall era. IsShelleyBasedEra era => AsType era -> ActionM x) -> ActionM x
 withEra era action = do
@@ -444,12 +442,13 @@ dumpToFileIO :: FilePath -> TxInMode CardanoMode -> IO ()
 dumpToFileIO filePath tx = appendFile filePath ('\n' : show tx)
 
 importGenesisFund
-   :: WalletName
+   :: AnyCardanoEra
+   -> WalletName
    -> SubmitMode
    -> KeyName
    -> KeyName
    -> ActionM ()
-importGenesisFund wallet submitMode genesisKeyName destKey = do
+importGenesisFund era wallet submitMode genesisKeyName destKey = do
   tracer <- btTxSubmit_ <$> get BenchTracers
   localSubmit <- case submitMode of
     LocalSocket -> getLocalSubmitTx
@@ -468,7 +467,7 @@ importGenesisFund wallet submitMode genesisKeyName destKey = do
       let addr = Core.keyAddress @ era networkId fundKey
       f <- GeneratorTx.secureGenesisFund tracer localSubmit networkId genesis fee ttl genesisKey addr
       return (f, fundKey)
-  result <- liftCoreWithEra coreCall
+  result <- liftCoreWithEra era coreCall
   case result of 
     Left err -> liftTxGenError err
     Right ((txIn, outVal), skey) -> addFundToWallet wallet txIn outVal skey
