@@ -33,7 +33,7 @@ data Action where
   ReadSigningKey     :: !KeyName -> !SigningKeyFile -> Action
   DefineSigningKey   :: !KeyName -> !TextEnvelope -> Action
   AddFund            :: !AnyCardanoEra -> !WalletName -> !TxIn -> !Lovelace -> !KeyName -> Action
-  ImportGenesisFund  :: !WalletName -> !SubmitMode -> !KeyName -> !KeyName -> Action
+  ImportGenesisFund  :: !AnyCardanoEra -> !WalletName -> !SubmitMode -> !KeyName -> !KeyName -> Action
   CreateChange       :: !AnyCardanoEra -> !WalletName -> !WalletName -> !SubmitMode -> !PayMode -> !Lovelace -> !Int -> Action
   RunBenchmark       :: !AnyCardanoEra -> !WalletName -> !SubmitMode -> !SpendMode -> !ThreadName -> !NumberOfTxs -> !TPSRate -> Action
   WaitBenchmark      :: !ThreadName -> Action
