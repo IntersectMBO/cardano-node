@@ -325,7 +325,7 @@ runTransactionCmd cmd =
     TxHashScriptData scriptDataOrFile -> runTxHashScriptData scriptDataOrFile
     TxGetTxId txinfile -> runTxGetTxId txinfile
     TxView txinfile -> runTxView txinfile
-    TxDebugScript nodeLogFile -> runTxDebugScript nodeLogFile
+    TxDebugScript nodeLogFile debugScriptFilter -> runTxDebugScript nodeLogFile debugScriptFilter
     TxMintedPolicyId sFile -> runTxCreatePolicyId sFile
     TxCreateWitness txBodyfile witSignData mbNw outFile ->
       runTxCreateWitness txBodyfile witSignData mbNw outFile
@@ -1447,16 +1447,21 @@ runTxView = \case
     InAnyCardanoEra era tx <- readFileTx txFile
     liftIO $ BS.putStr $ friendlyTxBS era tx
 
-runTxDebugScript :: TxNodeLogFile -> ExceptT ShelleyTxCmdError IO ()
-runTxDebugScript (TxNodeLogFile nodeLogFile) = do
-  liftIO $ IO.putStrLn $ "Node log file: " <> nodeLogFile
+runTxDebugScript :: TxNodeLogFile -> TxDebugScriptFilter -> ExceptT ShelleyTxCmdError IO ()
+runTxDebugScript (TxNodeLogFile nodeLogFile) scriptFilter = do
+  liftIO $ IO.putStrLn $ "Node log file: " <> nodeLogFile <> ", Script filter: " <> show scriptFilter
 
   lines <- liftIO $ LBS.lines <$> LBS.readFile nodeLogFile
 
-  forM_ lines $ \line -> do
-    let logObjectResult = Aeson.eitherDecode @LogObject line
-    forM_ logObjectResult $ \logObject ->
-      liftIO $ IO.print logObject
+  case scriptFilter of
+    TxDebugScriptFilterOfTxFile (TxFile txFile) -> do
+      InAnyCardanoEra era tx <- readFileTx txFile
+      liftIO $ BS.putStr $ friendlyTxBS era tx
+
+      forM_ lines $ \line -> do
+        let logObjectResult = Aeson.eitherDecode @LogObject line
+        forM_ logObjectResult $ \logObject ->
+          liftIO $ IO.print logObject
 
 -- ----------------------------------------------------------------------------
 -- Witness commands

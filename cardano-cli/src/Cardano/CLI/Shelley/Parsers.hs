@@ -791,7 +791,7 @@ pTransaction =
   pTransactionView = TxView <$> pInputTxOrTxBodyFile
 
   pTransactionDebugScript :: Parser TransactionCmd
-  pTransactionDebugScript = TxDebugScript <$> pNodeLogFile
+  pTransactionDebugScript = TxDebugScript <$> pNodeLogFile <*> pTxDebugScriptFilter
 
 pNodeCmd :: Parser NodeCmd
 pNodeCmd =
@@ -1625,6 +1625,15 @@ pNodeLogFile = TxNodeLogFile <$>
     (  Opt.long "node-log-file"
     <> Opt.metavar "FILE"
     <> Opt.help "Filepath of the node log."
+    <> Opt.completer (Opt.bashCompleter "file")
+    )
+
+pTxDebugScriptFilter :: Parser TxDebugScriptFilter
+pTxDebugScriptFilter = TxDebugScriptFilterOfTxFile . TxFile <$>
+  Opt.strOption
+    (  Opt.long "tx-file"
+    <> Opt.metavar "FILE"
+    <> Opt.help "Transaction file."
     <> Opt.completer (Opt.bashCompleter "file")
     )
 

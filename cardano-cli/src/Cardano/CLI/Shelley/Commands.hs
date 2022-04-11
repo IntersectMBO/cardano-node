@@ -44,6 +44,7 @@ module Cardano.CLI.Shelley.Commands
   , WitnessSigningData (..)
   , ColdVerificationKeyOrFile (..)
   , TxNodeLogFile(..)
+  , TxDebugScriptFilter(..)
   ) where
 
 import           Prelude
@@ -158,7 +159,11 @@ renderKeyCmd cmd =
     KeyConvertITNBip32ToStakeKey {} -> "key convert-itn-bip32-key"
     KeyConvertCardanoAddressSigningKey {} -> "key convert-cardano-address-signing-key"
 
-newtype TxNodeLogFile = TxNodeLogFile FilePath deriving (Eq, Show)
+newtype TxNodeLogFile = TxNodeLogFile FilePath deriving Show
+
+newtype TxDebugScriptFilter =
+  TxDebugScriptFilterOfTxFile TxFile
+  deriving Show
 
 data TransactionCmd
   = TxBuildRaw
@@ -248,7 +253,9 @@ data TransactionCmd
       ScriptDataOrFile
   | TxGetTxId InputTxBodyOrTxFile
   | TxView InputTxBodyOrTxFile
-  | TxDebugScript TxNodeLogFile
+  | TxDebugScript
+      TxNodeLogFile
+      TxDebugScriptFilter
 
 data InputTxBodyOrTxFile = InputTxBodyFile TxBodyFile | InputTxFile TxFile
   deriving Show
