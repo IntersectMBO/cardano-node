@@ -60,11 +60,12 @@ import           Cardano.Benchmarking.Script.Store as Store
 import           Cardano.Benchmarking.Script.Types
 
 liftCoreWithEra :: (forall era. IsShelleyBasedEra era => AsType era -> ExceptT TxGenError IO x) -> ActionM (Either TxGenError x)
-liftCoreWithEra coreCall = withEra ( liftIO . runExceptT . coreCall)
-
-withEra :: (forall era. IsShelleyBasedEra era => AsType era -> ActionM x) -> ActionM x
-withEra action = do
+liftCoreWithEra coreCall = do
   era <- get $ User TEra
+  withEra era ( liftIO . runExceptT . coreCall)
+
+withEra :: AnyCardanoEra -> (forall era. IsShelleyBasedEra era => AsType era -> ActionM x) -> ActionM x
+withEra era action = do
   case era of
     AnyCardanoEra BabbageEra -> action AsBabbageEra
     AnyCardanoEra AlonzoEra  -> action AsAlonzoEra
@@ -116,7 +117,8 @@ addFund wallet txIn lovelace keyName = do
   let
     mkOutValue :: forall era. IsShelleyBasedEra era => AsType era -> ActionM (InAnyCardanoEra TxOutValue)
     mkOutValue = \_ -> return $ InAnyCardanoEra (cardanoEra @ era) (mkTxOutValueAdaOnly lovelace)
-  outValue <- withEra mkOutValue
+  era <- get $ User TEra
+  outValue <- withEra era mkOutValue
   addFundToWallet wallet txIn outValue fundKey
 
 addFundToWallet :: WalletName -> TxIn -> InAnyCardanoEra TxOutValue -> SigningKey PaymentKey -> ActionM ()
@@ -243,7 +245,9 @@ makeMetadata = do
 runBenchmark :: WalletName -> SubmitMode -> SpendMode -> ThreadName -> NumberOfTxs -> TPSRate -> ActionM ()
 runBenchmark sourceWallet submitMode spendMode threadName txCount tps
   = case spendMode of
-      SpendOutput -> withEra $ runBenchmarkInEra sourceWallet submitMode threadName txCount tps
+      SpendOutput -> do
+        era <- get $ User TEra
+        withEra era $ runBenchmarkInEra sourceWallet submitMode threadName txCount tps
       SpendScript scriptFile scriptBudget scriptData scriptRedeemer
         -> runPlutusBenchmark sourceWallet submitMode scriptFile scriptBudget scriptData scriptRedeemer threadName txCount tps
       SpendAutoScript scriptFile -> spendAutoScript sourceWallet submitMode scriptFile threadName txCount tps
@@ -477,10 +481,14 @@ initWallet name = liftIO Wallet.initWallet >>= setName name
 
 createChange :: WalletName -> WalletName -> SubmitMode -> PayMode -> Lovelace -> Int -> ActionM ()
 createChange sourceWallet dstWallet submitMode payMode value count = case payMode of
-  PayToAddr keyName -> withEra $ createChangeInEra sourceWallet dstWallet submitMode PlainOldFund keyName value count
+  PayToAddr keyName -> do
+    era <- get $ User TEra
+    withEra era $ createChangeInEra sourceWallet dstWallet submitMode PlainOldFund keyName value count
   -- Problem here: PayToCollateral will create an output marked as collateral
   -- and also return any change to a collateral, which makes the returned change unusable.
-  PayToCollateral keyName -> withEra $ createChangeInEra sourceWallet dstWallet submitMode CollateralFund keyName value count
+  PayToCollateral keyName -> do
+    era <- get $ User TEra
+    withEra era $ createChangeInEra sourceWallet dstWallet submitMode CollateralFund keyName value count
   PayToScript scriptFile scriptData -> createChangeScriptFunds sourceWallet dstWallet submitMode scriptFile scriptData value count
 
 createChangeScriptFunds :: WalletName -> WalletName -> SubmitMode -> FilePath -> ScriptData -> Lovelace -> Int -> ActionM ()
