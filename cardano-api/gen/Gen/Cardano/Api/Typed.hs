@@ -20,7 +20,8 @@ module Gen.Cardano.Api.Typed
 
   , genTxId
   , genTxIn
-  , genTxOut
+  , genTxOutTxContext
+  , genTxOutUTxOContext
   , genUTxO
 
     -- * Scripts
@@ -48,7 +49,8 @@ module Gen.Cardano.Api.Typed
   , genUpdateProposal
   , genProtocolParametersUpdate
   , genScriptDataSupportedInAlonzoEra
-  , genTxOutDatumHash
+  , genTxOutDatumHashTxContext
+  , genTxOutDatumHashUTxOContext
   , genTxOutValue
   , genValueForTxOut
   , genValueForMinting
@@ -63,7 +65,7 @@ import           Cardano.Api.Byron (KeyWitness (ByronKeyWitness),
 import           Cardano.Api.Shelley (Hash (ScriptDataHash), KESPeriod (KESPeriod),
                    OperationalCertificateIssueCounter (OperationalCertificateIssueCounter),
                    PlutusScript (PlutusScriptSerialised), ProtocolParameters (ProtocolParameters),
-                   StakeCredential (StakeCredentialByKey), StakePoolKey)
+                   ReferenceScript (..), StakeCredential (StakeCredentialByKey), StakePoolKey)
 
 import           Cardano.Prelude
 
@@ -391,15 +393,24 @@ genTxOutValue era =
     Left adaOnlyInEra     -> TxOutAdaOnly adaOnlyInEra <$> genLovelace
     Right multiAssetInEra -> TxOutValue multiAssetInEra <$> genValueForTxOut
 
-genTxOut :: CardanoEra era -> Gen (TxOut CtxTx era)
-genTxOut era =
+genTxOutTxContext :: CardanoEra era -> Gen (TxOut CtxTx era)
+genTxOutTxContext era =
   TxOut <$> genAddressInEra era
         <*> genTxOutValue era
-        <*> genTxOutDatumHash era
+        <*> genTxOutDatumHashTxContext era
+        <*> return ReferenceScriptNone -- TODO: Babbage Era
+
+genTxOutUTxOContext :: CardanoEra era -> Gen (TxOut CtxUTxO era)
+genTxOutUTxOContext era =
+  TxOut <$> genAddressInEra era
+        <*> genTxOutValue era
+        <*> genTxOutDatumHashUTxOContext era
+        <*> return ReferenceScriptNone -- TODO: Babbage Era
+
 
 genUTxO :: CardanoEra era -> Gen (UTxO era)
 genUTxO era =
-  UTxO <$> Gen.map (Range.constant 0 5) ((,) <$> genTxIn <*> (toCtxUTxOTxOut <$> genTxOut era))
+  UTxO <$> Gen.map (Range.constant 0 5) ((,) <$> genTxIn <*> (toCtxUTxOTxOut <$> genTxOutTxContext era))
 
 genTtl :: Gen SlotNo
 genTtl = genSlotNo
@@ -507,7 +518,7 @@ genTxBodyContent :: CardanoEra era -> Gen (TxBodyContent BuildTx era)
 genTxBodyContent era = do
   txIns <- map (, BuildTxWith (KeyWitness KeyWitnessForSpending)) <$> Gen.list (Range.constant 1 10) genTxIn
   txInsCollateral <- genTxInsCollateral era
-  txOuts <- Gen.list (Range.constant 1 10) (genTxOut era)
+  txOuts <- Gen.list (Range.constant 1 10) (genTxOutTxContext era)
   txFee <- genTxFee era
   txValidityRange <- genTxValidityRange era
   txMetadata <- genTxMetadataInEra era
@@ -772,8 +783,8 @@ genExecutionUnits = ExecutionUnits <$> Gen.integral (Range.constant 0 1000)
 genExecutionUnitPrices :: Gen ExecutionUnitPrices
 genExecutionUnitPrices = ExecutionUnitPrices <$> genRational <*> genRational
 
-genTxOutDatumHash :: CardanoEra era -> Gen (TxOutDatum CtxTx era)
-genTxOutDatumHash era = case era of
+genTxOutDatumHashTxContext :: CardanoEra era -> Gen (TxOutDatum CtxTx era)
+genTxOutDatumHashTxContext era = case era of
     ByronEra   -> pure TxOutDatumNone
     ShelleyEra -> pure TxOutDatumNone
     AllegraEra -> pure TxOutDatumNone
@@ -787,6 +798,22 @@ genTxOutDatumHash era = case era of
                     [ pure TxOutDatumNone
                     , TxOutDatumHash ScriptDataInBabbageEra <$> genHashScriptData
                     , TxOutDatumInTx ScriptDataInBabbageEra <$> genScriptData
+                    , TxOutDatumInline InlineDatumSupportedInBabbageEra <$> genScriptData
+                    ]
+
+genTxOutDatumHashUTxOContext :: CardanoEra era -> Gen (TxOutDatum CtxUTxO era)
+genTxOutDatumHashUTxOContext era = case era of
+    ByronEra   -> pure TxOutDatumNone
+    ShelleyEra -> pure TxOutDatumNone
+    AllegraEra -> pure TxOutDatumNone
+    MaryEra    -> pure TxOutDatumNone
+    AlonzoEra  -> Gen.choice
+                    [ pure TxOutDatumNone
+                    , TxOutDatumHash ScriptDataInAlonzoEra <$> genHashScriptData
+                    ]
+    BabbageEra -> Gen.choice
+                    [ pure TxOutDatumNone
+                    , TxOutDatumHash ScriptDataInBabbageEra <$> genHashScriptData
                     , TxOutDatumInline InlineDatumSupportedInBabbageEra <$> genScriptData
                     ]
 

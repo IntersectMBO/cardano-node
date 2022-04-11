@@ -163,7 +163,7 @@ import           Data.List (intercalate, sortBy)
 import qualified Data.List.NonEmpty as NonEmpty
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import           Data.Maybe (fromMaybe, maybeToList)
+import           Data.Maybe (catMaybes, fromMaybe, maybeToList)
 import           Data.Scientific (toBoundedInteger)
 import qualified Data.Sequence.Strict as Seq
 import           Data.Set (Set)
@@ -479,9 +479,10 @@ data CtxTx
 -- | The context is the UTxO
 data CtxUTxO
 
-data TxOut ctx era = TxOut (AddressInEra   era)
-                           (TxOutValue     era)
-                           (TxOutDatum ctx era)
+data TxOut ctx era = TxOut (AddressInEra    era)
+                           (TxOutValue      era)
+                           (TxOutDatum ctx  era)
+                           (ReferenceScript era)
 
 deriving instance Eq   (TxOut ctx era)
 deriving instance Show (TxOut ctx era)
@@ -504,103 +505,259 @@ txOutInAnyEra :: IsCardanoEra era => TxOut CtxTx era -> TxOutInAnyEra
 txOutInAnyEra = TxOutInAnyEra cardanoEra
 
 toCtxUTxOTxOut :: TxOut CtxTx  era -> TxOut CtxUTxO era
-toCtxUTxOTxOut (TxOut addr val d) =
+toCtxUTxOTxOut (TxOut addr val d refS) =
   let dat = case d of
               TxOutDatumNone -> TxOutDatumNone
               TxOutDatumHash s h -> TxOutDatumHash s h
               TxOutDatumInTx' s h _ -> TxOutDatumHash s h
               TxOutDatumInline s sd -> TxOutDatumInline s sd
-  in TxOut addr val dat
+  in TxOut addr val dat refS
 
 instance IsCardanoEra era => ToJSON (TxOut ctx era) where
-  toJSON (TxOut addr val TxOutDatumNone) =
-    object [ "address" .= addr
-           , "value"   .= val
-           ]
-  toJSON (TxOut addr val (TxOutDatumHash _ h)) =
-    object [ "address"   .= addr
-           , "value"     .= val
-           , "datumhash" .= h
-           ]
-  toJSON (TxOut addr val (TxOutDatumInTx' _ h d)) =
-    object [ "address"   .= addr
-           , "value"     .= val
-           , "datumhash" .= h
-           , "datum"     .= scriptDataToJson ScriptDataJsonDetailedSchema d
-           ]
-  toJSON (TxOut addr val (TxOutDatumInline _ d)) =
-    object [ "address"         .= addr
-           , "value"           .= val
-           , "inlineDatumhash" .= hashScriptData d
-           , "inlineDatum"     .= scriptDataToJson ScriptDataJsonDetailedSchema d
-           ]
+  toJSON  = txOutToJsonValue cardanoEra
+
+txOutToJsonValue :: CardanoEra era -> TxOut ctx era -> Aeson.Value
+txOutToJsonValue era (TxOut addr val dat refScript) =
+  case era of
+    ByronEra -> object ["address" .= addr, "value" .= val]
+    ShelleyEra -> object ["address" .= addr, "value" .= val]
+    AllegraEra -> object ["address" .= addr, "value" .= val]
+    MaryEra -> object ["address" .= addr, "value" .= val]
+    AlonzoEra -> object $ catMaybes
+                   [ Just ("address" .= addr)
+                   , Just ("value" .= val)
+                   , datHashJsonVal dat
+                   , datJsonVal dat
+                   ]
+    BabbageEra ->
+      object $ catMaybes
+        [ Just ("address" .= addr)
+        , Just ("value" .= val)
+        , datHashJsonVal dat
+        , datJsonVal dat
+        , inlineDatumJsonVal dat
+        , refScriptJsonVal refScript
+        ]
+ where
+   datHashJsonVal :: TxOutDatum ctx era -> Maybe Aeson.Pair
+   datHashJsonVal d =
+     case d of
+       TxOutDatumNone -> Nothing
+       TxOutDatumHash _ h ->
+         Just $ "datumhash" .= toJSON h
+       TxOutDatumInTx' _ h _ ->
+         Just $ "datumhash" .= toJSON h
+       TxOutDatumInline _ datum ->
+         Just $ "inlineDatumhash"  .= toJSON (hashScriptData datum)
+
+   datJsonVal :: TxOutDatum ctx era -> Maybe Aeson.Pair
+   datJsonVal d =
+     case d of
+       TxOutDatumNone -> Nothing
+       TxOutDatumHash _ _ -> Nothing
+       TxOutDatumInTx' _ _ datum ->
+         Just $ "datum" .= scriptDataToJson ScriptDataJsonDetailedSchema datum
+       TxOutDatumInline _ _ -> Nothing
+
+   inlineDatumJsonVal :: TxOutDatum ctx era -> Maybe Aeson.Pair
+   inlineDatumJsonVal d =
+     case d of
+       TxOutDatumNone -> Nothing
+       TxOutDatumHash {} -> Nothing
+       TxOutDatumInTx'{} -> Nothing
+       TxOutDatumInline _ datum ->
+         Just $ "inlineDatum" .= scriptDataToJson ScriptDataJsonDetailedSchema datum
+
+   refScriptJsonVal :: ReferenceScript era -> Maybe Aeson.Pair
+   refScriptJsonVal rScript =
+     case rScript of
+       ReferenceScript _ s -> Just $ "referenceScript" .= s
+       ReferenceScriptNone -> Nothing
 
 instance (IsShelleyBasedEra era, IsCardanoEra era)
   => FromJSON (TxOut CtxTx era) where
       parseJSON = withObject "TxOut" $ \o -> do
-        addr <- o .: "address"
-        val <- o .: "value"
-        case scriptDataSupportedInEra cardanoEra of
-          Just supported -> do
-            mData <- o .:? "datum"
-            mDatumHash <- o .:? "datumhash"
-            case (mData, mDatumHash) of
-              (Nothing, Nothing) ->
-                pure $ TxOut addr val TxOutDatumNone
-              (Nothing, Just (Aeson.String dHashTxt))  -> do
-                dh <- runParsecParser (parseHash $ AsHash AsScriptData) dHashTxt
-                pure $ TxOut addr val $ TxOutDatumHash supported dh
-              (Just sDataVal, Just (Aeson.String dHashTxt)) ->
-                case scriptDataFromJson ScriptDataJsonDetailedSchema sDataVal of
-                  Left err ->
-                    fail $ "Error parsing TxOut JSON: " <> displayError err
-                  Right sData -> do
-                    dHash <- runParsecParser (parseHash $ AsHash AsScriptData) dHashTxt
-                    pure . TxOut addr val $ TxOutDatumInTx' supported dHash sData
-              (mDatVal, wrongDatumHashFormat) ->
-                fail $ "Error parsing TxOut's datum hash/data: " <>
-                       "\nData value:" <> show mDatVal <>
-                       "\nDatumHash: " <> show wrongDatumHashFormat
+        case shelleyBasedEra :: ShelleyBasedEra era of
+          ShelleyBasedEraShelley ->
+            TxOut <$> o .: "address"
+                  <*> o .: "value"
+                  <*> return TxOutDatumNone
+                  <*> return ReferenceScriptNone
+          ShelleyBasedEraMary ->
+            TxOut <$> o .: "address"
+                  <*> o .: "value"
+                  <*> return TxOutDatumNone
+                  <*> return ReferenceScriptNone
+          ShelleyBasedEraAllegra ->
+            TxOut <$> o .: "address"
+                  <*> o .: "value"
+                  <*> return TxOutDatumNone
+                  <*> return ReferenceScriptNone
+          ShelleyBasedEraAlonzo -> alonzoTxOutParser ScriptDataInAlonzoEra o
 
-          Nothing -> pure $ TxOut addr val TxOutDatumNone
+          ShelleyBasedEraBabbage -> do
+            alonzoTxOutInBabbage <- alonzoTxOutParser ScriptDataInBabbageEra o
+
+            -- We check for the existence of inline datums
+            inlineDatumHash <- o .:? "inlineDatumhash"
+            inlineDatum <- o .:? "inlineDatum"
+            mInlineDatum <-
+              case (inlineDatum, inlineDatumHash) of
+                (Just dVal, Just h) ->
+                  case scriptDataFromJson ScriptDataJsonDetailedSchema dVal of
+                    Left err ->
+                      fail $ "Error parsing TxOut JSON: " <> displayError err
+                    Right sData ->
+                      if hashScriptData sData /= h
+                      then fail "Inline datum not equivalent to inline datum hash"
+                      else return $ TxOutDatumInline InlineDatumSupportedInBabbageEra sData
+                (Nothing, Nothing) -> return TxOutDatumNone
+                (_,_) -> fail "Should not be possible to create a tx output with either an inline datum hash or an inline datum"
+
+            -- We check for a reference script
+            mReferenceScript <- fromMaybe ReferenceScriptNone <$> o .:? "referenceScript"
+
+            reconcile alonzoTxOutInBabbage mInlineDatum mReferenceScript
+         where
+           reconcile
+             :: TxOut CtxTx BabbageEra -- ^ Alonzo era datum in Babbage era
+             -> TxOutDatum CtxTx BabbageEra -- ^ Babbagae inline datum
+             -> ReferenceScript BabbageEra
+             -> Aeson.Parser (TxOut CtxTx BabbageEra)
+           reconcile top@(TxOut addr v dat r) babbageDatum babbageReferenceScript = do
+             -- We check for conflicting datums
+             finalDat <- case (dat, babbageDatum) of
+                           (TxOutDatumNone, bDatum) -> return bDatum
+                           (anyDat, TxOutDatumNone) -> return anyDat
+                           (alonzoDat, babbageDat) ->
+                             fail $ "Parsed an Alonzo era datum and a Babbage era datum " <>
+                                    "TxOut: " <> show top <>
+                                    "Alonzo datum: " <> show alonzoDat <>
+                                    "Babbage dat: " <> show babbageDat
+             finalRefScript <- case (r, babbageReferenceScript) of
+                                 (ReferenceScriptNone, bRefScript) -> return bRefScript
+                                 (_,_) -> fail "Parsed an Alonzo era reference script. This should not be possible"
+
+             return $ TxOut addr v finalDat finalRefScript
+
+           alonzoTxOutParser :: ScriptDataSupportedInEra era -> Aeson.Object -> Aeson.Parser (TxOut CtxTx era)
+           alonzoTxOutParser supp o = do
+            mDatumHash <- o .:? "datumhash"
+            mDatumVal <- o .:? "datum"
+            case (mDatumVal, mDatumHash) of
+               (Nothing,Nothing) -> TxOut <$> o .: "address"
+                                          <*> o .: "value"
+                                          <*> return TxOutDatumNone
+                                          <*> return ReferenceScriptNone
+               (Just dVal, Just dHash) ->
+                 case scriptDataFromJson ScriptDataJsonDetailedSchema dVal of
+                   Left err ->
+                     fail $ "Error parsing TxOut JSON: " <> displayError err
+                   Right sData -> TxOut <$> o .: "address"
+                                        <*> o .: "value"
+                                        <*> return (TxOutDatumInTx' supp dHash sData)
+                                        <*> return ReferenceScriptNone
+               (Nothing, Just dHash) ->
+                 TxOut <$> o .: "address"
+                       <*> o .: "value"
+                       <*> return (TxOutDatumHash supp dHash)
+                       <*> return ReferenceScriptNone
+               (Just _dVal, Nothing) -> fail "Only datum JSON was found, this should not be possible."
 
 instance (IsShelleyBasedEra era, IsCardanoEra era)
   => FromJSON (TxOut CtxUTxO era) where
       parseJSON = withObject "TxOut" $ \o -> do
-        addr <- o .: "address"
-        val <- o .: "value"
-        case scriptDataSupportedInEra cardanoEra of
-          Just supported -> do
+        case shelleyBasedEra :: ShelleyBasedEra era of
+          ShelleyBasedEraShelley ->
+            TxOut <$> o .: "address"
+                  <*> o .: "value"
+                  <*> return TxOutDatumNone
+                  <*> return ReferenceScriptNone
+          ShelleyBasedEraMary ->
+            TxOut <$> o .: "address"
+                  <*> o .: "value"
+                  <*> return TxOutDatumNone
+                  <*> return ReferenceScriptNone
+          ShelleyBasedEraAllegra ->
+            TxOut <$> o .: "address"
+                  <*> o .: "value"
+                  <*> return TxOutDatumNone
+                  <*> return ReferenceScriptNone
+          ShelleyBasedEraAlonzo -> alonzoTxOutParser ScriptDataInAlonzoEra o
+
+          ShelleyBasedEraBabbage -> do
+            alonzoTxOutInBabbage <- alonzoTxOutParser ScriptDataInBabbageEra o
+
+            -- We check for the existence of inline datums
+            inlineDatumHash <- o .:? "inlineDatumhash"
+            inlineDatum <- o .:? "inlineDatum"
+            mInlineDatum <-
+              case (inlineDatum, inlineDatumHash) of
+                (Just dVal, Just h) ->
+                  case scriptDataFromJson ScriptDataJsonDetailedSchema dVal of
+                    Left err ->
+                      fail $ "Error parsing TxOut JSON: " <> displayError err
+                    Right sData ->
+                      if hashScriptData sData /= h
+                      then fail "Inline datum not equivalent to inline datum hash"
+                      else return $ TxOutDatumInline InlineDatumSupportedInBabbageEra sData
+                (Nothing, Nothing) -> return TxOutDatumNone
+                (_,_) -> fail "Should not be possible to create a tx output with either an inline datum hash or an inline datum"
+
+            -- We check for a reference script
+            mReferenceScript <- fromMaybe ReferenceScriptNone <$> o .:? "referenceScript"
+
+            reconcile alonzoTxOutInBabbage mInlineDatum mReferenceScript
+         where
+           reconcile
+             :: TxOut CtxUTxO BabbageEra -- ^ Alonzo era datum in Babbage era
+             -> TxOutDatum CtxUTxO BabbageEra -- ^ Babbagae inline datum
+             -> ReferenceScript BabbageEra
+             -> Aeson.Parser (TxOut CtxUTxO BabbageEra)
+           reconcile (TxOut addr v dat r) babbageDatum babbageReferenceScript = do
+             -- We check for conflicting datums
+             finalDat <- case (dat, babbageDatum) of
+                           (TxOutDatumNone, bDatum) -> return bDatum
+                           (anyDat, TxOutDatumNone) -> return anyDat
+                           (_,_) -> fail "Parsed an Alonzo era datum and a Babbage era datum"
+             finalRefScript <- case (r, babbageReferenceScript) of
+                                 (ReferenceScriptNone, bRefScript) -> return bRefScript
+                                 (_,_) -> fail "Parsed an Alonzo era reference script. This should not be possible"
+
+             return $ TxOut addr v finalDat finalRefScript
+
+           alonzoTxOutParser :: ScriptDataSupportedInEra era -> Aeson.Object -> Aeson.Parser (TxOut CtxUTxO era)
+           alonzoTxOutParser supp o = do
             mDatumHash <- o .:? "datumhash"
             case mDatumHash of
-              Nothing ->
-                pure $ TxOut addr val TxOutDatumNone
-              Just (Aeson.String dHashTxt)  -> do
-                dh <- runParsecParser (parseHash $ AsHash AsScriptData) dHashTxt
-                pure $ TxOut addr val $ TxOutDatumHash supported dh
-              Just wrongDatumHashFormat ->
-                fail $ "Error parsing TxOut's datum hash: " <>
-                       "\nDatumHash: " <> show wrongDatumHashFormat
-          Nothing -> pure $ TxOut addr val TxOutDatumNone
+               Nothing -> TxOut <$> o .: "address"
+                                          <*> o .: "value"
+                                          <*> return TxOutDatumNone
+                                          <*> return ReferenceScriptNone
+               Just dHash ->
+                 TxOut <$> o .: "address"
+                        <*> o .: "value"
+                        <*> return (TxOutDatumHash supp dHash)
+                        <*> return ReferenceScriptNone
 
 fromByronTxOut :: Byron.TxOut -> TxOut ctx ByronEra
 fromByronTxOut (Byron.TxOut addr value) =
   TxOut
     (AddressInEra ByronAddressInAnyEra (ByronAddress addr))
     (TxOutAdaOnly AdaOnlyInByronEra (fromByronLovelace value))
-     TxOutDatumNone
+     TxOutDatumNone ReferenceScriptNone
 
 
 toByronTxOut :: TxOut ctx ByronEra -> Maybe Byron.TxOut
 toByronTxOut (TxOut (AddressInEra ByronAddressInAnyEra (ByronAddress addr))
-                    (TxOutAdaOnly AdaOnlyInByronEra value) _) =
+                    (TxOutAdaOnly AdaOnlyInByronEra value) _ _) =
     Byron.TxOut addr <$> toByronLovelace value
 
 toByronTxOut (TxOut (AddressInEra ByronAddressInAnyEra (ByronAddress _))
-                    (TxOutValue era _) _) = case era of {}
+                    (TxOutValue era _) _ _) = case era of {}
 
 toByronTxOut (TxOut (AddressInEra (ShelleyAddressInEra era) ShelleyAddress{})
-                    _ _) = case era of {}
+                    _ _ _) = case era of {}
 
 
 toShelleyTxOut :: forall era ledgerera.
@@ -608,25 +765,26 @@ toShelleyTxOut :: forall era ledgerera.
                => ShelleyBasedEra era
                -> TxOut CtxUTxO era
                -> Ledger.TxOut ledgerera
-toShelleyTxOut era (TxOut _ (TxOutAdaOnly AdaOnlyInByronEra _) _) =
+toShelleyTxOut era (TxOut _ (TxOutAdaOnly AdaOnlyInByronEra _) _ _) =
     case era of {}
 
-toShelleyTxOut _ (TxOut addr (TxOutAdaOnly AdaOnlyInShelleyEra value) _) =
+toShelleyTxOut _ (TxOut addr (TxOutAdaOnly AdaOnlyInShelleyEra value) _ _) =
     Shelley.TxOut (toShelleyAddr addr) (toShelleyLovelace value)
 
-toShelleyTxOut _ (TxOut addr (TxOutAdaOnly AdaOnlyInAllegraEra value) _) =
+toShelleyTxOut _ (TxOut addr (TxOutAdaOnly AdaOnlyInAllegraEra value) _ _) =
     Shelley.TxOut (toShelleyAddr addr) (toShelleyLovelace value)
 
-toShelleyTxOut _ (TxOut addr (TxOutValue MultiAssetInMaryEra value) _) =
+toShelleyTxOut _ (TxOut addr (TxOutValue MultiAssetInMaryEra value) _ _) =
     Shelley.TxOut (toShelleyAddr addr) (toMaryValue value)
 
-toShelleyTxOut _ (TxOut addr (TxOutValue MultiAssetInAlonzoEra value) txoutdata) =
+toShelleyTxOut _ (TxOut addr (TxOutValue MultiAssetInAlonzoEra value) txoutdata _) =
     Alonzo.TxOut (toShelleyAddr addr) (toMaryValue value)
                  (toAlonzoTxOutDataHash txoutdata)
 
-toShelleyTxOut _ (TxOut addr (TxOutValue MultiAssetInBabbageEra value) txoutdata) =
-    Babbage.TxOut (toShelleyAddr addr) (toMaryValue value)
-                  (toBabbageTxOutDatum txoutdata) (error "TODO: Babbage era")
+toShelleyTxOut era (TxOut addr (TxOutValue MultiAssetInBabbageEra value) txoutdata refScript) =
+    let cEra = shelleyBasedToCardanoEra era
+    in Babbage.TxOut (toShelleyAddr addr) (toMaryValue value)
+                     (toBabbageTxOutDatum txoutdata) (refScriptToShelleyScript cEra refScript)
 
 
 fromShelleyTxOut :: ShelleyLedgerEra era ~ ledgerera
@@ -639,7 +797,7 @@ fromShelleyTxOut era ledgerTxOut =
         TxOut (fromShelleyAddr era addr)
               (TxOutAdaOnly AdaOnlyInShelleyEra
                             (fromShelleyLovelace value))
-               TxOutDatumNone
+               TxOutDatumNone ReferenceScriptNone
       where
         Shelley.TxOut addr value = ledgerTxOut
 
@@ -647,7 +805,7 @@ fromShelleyTxOut era ledgerTxOut =
         TxOut (fromShelleyAddr era addr)
               (TxOutAdaOnly AdaOnlyInAllegraEra
                             (fromShelleyLovelace value))
-               TxOutDatumNone
+               TxOutDatumNone ReferenceScriptNone
       where
         Shelley.TxOut addr value = ledgerTxOut
 
@@ -655,7 +813,7 @@ fromShelleyTxOut era ledgerTxOut =
         TxOut (fromShelleyAddr era addr)
               (TxOutValue MultiAssetInMaryEra
                           (fromMaryValue value))
-               TxOutDatumNone
+               TxOutDatumNone ReferenceScriptNone
       where
         Shelley.TxOut addr value = ledgerTxOut
 
@@ -664,6 +822,7 @@ fromShelleyTxOut era ledgerTxOut =
              (TxOutValue MultiAssetInAlonzoEra
                          (fromMaryValue value))
              (fromAlonzoTxOutDataHash ScriptDataInAlonzoEra datahash)
+             ReferenceScriptNone
       where
         Alonzo.TxOut addr value datahash = ledgerTxOut
 
@@ -1189,7 +1348,7 @@ txOutValueToValue tv =
     TxOutValue _ v -> v
 
 prettyRenderTxOut :: TxOutInAnyEra -> Text
-prettyRenderTxOut (TxOutInAnyEra _ (TxOut (AddressInEra _ addr) txOutVal _)) =
+prettyRenderTxOut (TxOutInAnyEra _ (TxOut (AddressInEra _ addr) txOutVal _ _)) =
      serialiseAddress (toAddressAny addr) <> " + "
   <> renderValue (txOutValueToValue txOutVal)
 
@@ -1227,6 +1386,7 @@ data TxOutDatum ctx era where
 
 deriving instance Eq   (TxOutDatum ctx era)
 deriving instance Show (TxOutDatum ctx era)
+
 
 pattern TxOutDatumInTx
   :: ScriptDataSupportedInEra era
@@ -2015,6 +2175,7 @@ fromAlonzoTxOut multiAssetInEra scriptDataInEra txdatums
    TxOut (fromShelleyAddr shelleyBasedEra addr)
          (TxOutValue multiAssetInEra (fromMaryValue value))
          (fromAlonzoTxOutDatum scriptDataInEra datahash)
+         ReferenceScriptNone
   where
     fromAlonzoTxOutDatum :: ScriptDataSupportedInEra era
                          -> StrictMaybe (Alonzo.DataHash StandardCrypto)
@@ -2399,7 +2560,7 @@ makeByronTransactionBody TxBodyContent { txIns, txOuts } = do
     classifyRangeError :: TxOut CtxTx ByronEra -> TxBodyError
     classifyRangeError
       txout@(TxOut (AddressInEra ByronAddressInAnyEra ByronAddress{})
-                   (TxOutAdaOnly AdaOnlyInByronEra value) _)
+                   (TxOutAdaOnly AdaOnlyInByronEra value) _ _)
       | value < 0        = TxBodyOutputNegative (lovelaceToQuantity value)
                                                 (txOutInAnyEra txout)
       | otherwise        = TxBodyOutputOverflow (lovelaceToQuantity value)
@@ -2407,11 +2568,11 @@ makeByronTransactionBody TxBodyContent { txIns, txOuts } = do
 
     classifyRangeError
       (TxOut (AddressInEra ByronAddressInAnyEra (ByronAddress _))
-             (TxOutValue era _) _) = case era of {}
+             (TxOutValue era _) _ _) = case era of {}
 
     classifyRangeError
       (TxOut (AddressInEra (ShelleyAddressInEra era) ShelleyAddress{})
-             _ _) = case era of {}
+             _ _ _) = case era of {}
 
 getByronTxBodyContent :: Annotated Byron.Tx ByteString
                       -> TxBodyContent ViewTx ByronEra
@@ -2461,7 +2622,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraShelley
            for_ txIns $ \(txin@(TxIn _ (TxIx txix)), _) ->
               guard (fromIntegral txix <= maxShelleyTxInIx) ?! TxBodyInIxOverflow txin
       | let maxTxOut = fromIntegral (maxBound :: Word64) :: Lovelace
-      , txout@(TxOut _ (TxOutAdaOnly AdaOnlyInShelleyEra v) _) <- txOuts ]
+      , txout@(TxOut _ (TxOutAdaOnly AdaOnlyInShelleyEra v) _ _) <- txOuts ]
     case txMetadata of
       TxMetadataNone      -> return ()
       TxMetadataInEra _ m -> first TxBodyMetadataError (validateTxMetadata m)
@@ -2535,7 +2696,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraAllegra
            for_ txIns $ \(txin@(TxIn _ (TxIx txix)), _) ->
               guard (fromIntegral txix <= maxShelleyTxInIx) ?! TxBodyInIxOverflow txin
       | let maxTxOut = fromIntegral (maxBound :: Word64) :: Lovelace
-      , txout@(TxOut _ (TxOutAdaOnly AdaOnlyInAllegraEra v) _) <- txOuts
+      , txout@(TxOut _ (TxOutAdaOnly AdaOnlyInAllegraEra v) _ _) <- txOuts
       ]
     case txMetadata of
       TxMetadataNone      -> return ()
@@ -2619,7 +2780,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraMary
            for_ txIns $ \(txin@(TxIn _ (TxIx txix)), _) ->
               guard (fromIntegral txix <= maxShelleyTxInIx) ?! TxBodyInIxOverflow txin
       | let maxTxOut = fromIntegral (maxBound :: Word64) :: Quantity
-      , txout@(TxOut _ (TxOutValue MultiAssetInMaryEra v) _) <- txOuts
+      , txout@(TxOut _ (TxOutValue MultiAssetInMaryEra v) _ _) <- txOuts
       , let allPositive =
               case [ q | (_,q) <- valueToList v, q < 0 ] of
                 []  -> Right ()
@@ -2720,7 +2881,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraAlonzo
            for_ txIns $ \(txin@(TxIn _ (TxIx txix)), _) ->
               guard (fromIntegral txix <= maxShelleyTxInIx) ?! TxBodyInIxOverflow txin
       | let maxTxOut = fromIntegral (maxBound :: Word64) :: Quantity
-      , txout@(TxOut _ (TxOutValue MultiAssetInAlonzoEra v) _) <- txOuts
+      , txout@(TxOut _ (TxOutValue MultiAssetInAlonzoEra v) _ _) <- txOuts
       , let allPositive =
               case [ q | (_,q) <- valueToList v, q < 0 ] of
                 []  -> Right ()
@@ -2822,7 +2983,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraAlonzo
 
     scriptdata :: [ScriptData]
     scriptdata =
-        [ d | TxOut _ _ (TxOutDatumInTx _ d) <- txOuts ]
+        [ d | TxOut _ _ (TxOutDatumInTx _ d) _ <- txOuts ]
      ++ [ d | (_, AnyScriptWitness
                     (PlutusScriptWitness
                        _ _ _ (ScriptDatumForTxIn d) _ _)) <- witnesses
@@ -2868,25 +3029,26 @@ toShelleyTxOutAny :: forall ctx era ledgerera.
                 => ShelleyBasedEra era
                 -> TxOut ctx era
                 -> Ledger.TxOut ledgerera
-toShelleyTxOutAny era (TxOut _ (TxOutAdaOnly AdaOnlyInByronEra _) _) =
+toShelleyTxOutAny era (TxOut _ (TxOutAdaOnly AdaOnlyInByronEra _) _ _) =
     case era of {}
 
-toShelleyTxOutAny _ (TxOut addr (TxOutAdaOnly AdaOnlyInShelleyEra value) _) =
+toShelleyTxOutAny _ (TxOut addr (TxOutAdaOnly AdaOnlyInShelleyEra value) _ _) =
     Shelley.TxOut (toShelleyAddr addr) (toShelleyLovelace value)
 
-toShelleyTxOutAny _ (TxOut addr (TxOutAdaOnly AdaOnlyInAllegraEra value) _) =
+toShelleyTxOutAny _ (TxOut addr (TxOutAdaOnly AdaOnlyInAllegraEra value) _ _) =
     Shelley.TxOut (toShelleyAddr addr) (toShelleyLovelace value)
 
-toShelleyTxOutAny _ (TxOut addr (TxOutValue MultiAssetInMaryEra value) _) =
+toShelleyTxOutAny _ (TxOut addr (TxOutValue MultiAssetInMaryEra value) _ _) =
     Shelley.TxOut (toShelleyAddr addr) (toMaryValue value)
 
-toShelleyTxOutAny _ (TxOut addr (TxOutValue MultiAssetInAlonzoEra value) txoutdata) =
+toShelleyTxOutAny _ (TxOut addr (TxOutValue MultiAssetInAlonzoEra value) txoutdata _) =
     Alonzo.TxOut (toShelleyAddr addr) (toMaryValue value)
                  (toAlonzoTxOutDataHash' txoutdata)
 
-toShelleyTxOutAny ShelleyBasedEraBabbage (TxOut addr (TxOutValue MultiAssetInBabbageEra value) txoutdata) =
-    Babbage.TxOut (toShelleyAddr addr) (toMaryValue value)
-                  (toBabbageTxOutDatum' txoutdata) (error "TODO: Babbage era")
+toShelleyTxOutAny era (TxOut addr (TxOutValue MultiAssetInBabbageEra value) txoutdata refScript) =
+    let cEra = shelleyBasedToCardanoEra era
+    in Babbage.TxOut (toShelleyAddr addr) (toMaryValue value)
+                    (toBabbageTxOutDatum' txoutdata) (refScriptToShelleyScript cEra refScript)
 
 
 toAlonzoTxOutDataHash' :: TxOutDatum ctx AlonzoEra

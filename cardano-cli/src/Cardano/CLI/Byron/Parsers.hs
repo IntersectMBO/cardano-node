@@ -58,6 +58,7 @@ import           Cardano.Api hiding (GenesisParameters, UpdateProposal)
 import           Cardano.Api.Byron (Address (..), ByronProtocolParametersUpdate (..),
                    toByronLovelace)
 
+import           Cardano.Api.Shelley (ReferenceScript (ReferenceScriptNone))
 import           Cardano.CLI.Byron.Commands
 import           Cardano.CLI.Byron.Genesis
 import           Cardano.CLI.Byron.Key
@@ -289,7 +290,8 @@ parseTxOut =
   option
     ( (\(addr, lovelace) -> TxOut (pAddressInEra addr)
                                   (pLovelaceTxOut lovelace)
-                                  TxOutDatumNone)
+                                  TxOutDatumNone
+                                  ReferenceScriptNone)
       <$> auto
     )
     $ long "txout"

@@ -32,14 +32,23 @@ prop_json_roundtrip_alonzo_genesis = H.property $ do
 
 prop_json_roundtrip_utxo :: Property
 prop_json_roundtrip_utxo = H.property $ do
-  utxo <- forAll $ genUTxO AlonzoEra
+  utxo <- forAll $ genUTxO BabbageEra
   tripping utxo encode eitherDecode
 
 prop_json_roundtrip_txoutvalue :: Property
 prop_json_roundtrip_txoutvalue = H.property $ do
-  oVal <- forAll $ genTxOutValue AlonzoEra
+  oVal <- forAll $ genTxOutValue BabbageEra
   tripping oVal encode eitherDecode
 
+prop_json_roundtrip_txout_tx_context :: Property
+prop_json_roundtrip_txout_tx_context = H.property $ do
+  txOut <- forAll $ genTxOutTxContext BabbageEra
+  tripping txOut encode eitherDecode
+
+prop_json_roundtrip_txout_utxo_context :: Property
+prop_json_roundtrip_txout_utxo_context = H.property $ do
+  txOut <- forAll $ genTxOutUTxOContext BabbageEra
+  tripping txOut encode eitherDecode
 
 prop_json_roundtrip_eraInMode :: Property
 prop_json_roundtrip_eraInMode = H.property $ do

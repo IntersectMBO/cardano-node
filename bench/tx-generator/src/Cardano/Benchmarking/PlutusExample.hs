@@ -12,7 +12,8 @@ import qualified Data.ByteString.Char8 as BSC
 import           Cardano.CLI.Shelley.Script (readFileScriptInAnyLang)
 
 import           Cardano.Api
-import           Cardano.Api.Shelley (ProtocolParameters, PlutusScript(..), fromAlonzoExUnits, protocolParamCostModels, toPlutusData)
+import           Cardano.Api.Shelley ( ProtocolParameters, PlutusScript(..), ReferenceScript(..)
+                                     , fromAlonzoExUnits, protocolParamCostModels, toPlutusData)
 import           Cardano.Ledger.Alonzo.TxInfo (exBudgetToExUnits)
 import           Cardano.Benchmarking.FundSet
 import           Cardano.Benchmarking.Wallet
@@ -30,8 +31,12 @@ mkUtxoScript networkId (scriptFile, script, txOutDatum) validity values
     , newFunds
     )
  where
-  mkTxOut v = TxOut plutusScriptAddr (mkTxOutValueAdaOnly v) (TxOutDatumHash ScriptDataInAlonzoEra $ hashScriptData txOutDatum)
-
+  mkTxOut v = TxOut
+                 plutusScriptAddr
+                 (mkTxOutValueAdaOnly v)
+                 (TxOutDatumHash ScriptDataInAlonzoEra $ hashScriptData txOutDatum)
+                 ReferenceScriptNone   
+                    
   plutusScriptAddr = makeShelleyAddressInEra
                        networkId
                        (PaymentCredentialByScript $ hashScript script)

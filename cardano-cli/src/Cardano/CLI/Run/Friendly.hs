@@ -138,8 +138,9 @@ friendlyWithdrawals (TxWithdrawals _ withdrawals) =
     | (addr@(StakeAddress net cred), amount, _) <- withdrawals
     ]
 
+-- TODO: Babbage era
 friendlyTxOut :: TxOut CtxTx era -> Aeson.Value
-friendlyTxOut (TxOut addr amount mdatum) =
+friendlyTxOut (TxOut addr amount mdatum _) =
   case addr of
     AddressInEra ByronAddressInAnyEra byronAdr ->
       object  [ "address era" .= String "Byron"
