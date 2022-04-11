@@ -32,10 +32,10 @@ data Action where
   Delay              :: !Double -> Action
   ReadSigningKey     :: !KeyName -> !SigningKeyFile -> Action
   DefineSigningKey   :: !KeyName -> !TextEnvelope -> Action
-  AddFund            :: !WalletName -> !TxIn -> !Lovelace -> !KeyName -> Action
+  AddFund            :: !AnyCardanoEra -> !WalletName -> !TxIn -> !Lovelace -> !KeyName -> Action
   ImportGenesisFund  :: !WalletName -> !SubmitMode -> !KeyName -> !KeyName -> Action
-  CreateChange       :: !WalletName -> !WalletName -> !SubmitMode -> !PayMode -> !Lovelace -> !Int -> Action
-  RunBenchmark       :: !WalletName -> !SubmitMode -> !SpendMode -> !ThreadName -> !NumberOfTxs -> !TPSRate -> Action
+  CreateChange       :: !AnyCardanoEra -> !WalletName -> !WalletName -> !SubmitMode -> !PayMode -> !Lovelace -> !Int -> Action
+  RunBenchmark       :: !AnyCardanoEra -> !WalletName -> !SubmitMode -> !SpendMode -> !ThreadName -> !NumberOfTxs -> !TPSRate -> Action
   WaitBenchmark      :: !ThreadName -> Action
   CancelBenchmark    :: !ThreadName -> Action
   Reserved           :: [String] -> Action
