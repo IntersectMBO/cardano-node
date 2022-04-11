@@ -1619,8 +1619,8 @@ pOperatorCertIssueCounterFile =
         )
     )
 
-pNodeLogFile :: Parser FilePath
-pNodeLogFile =
+pNodeLogFile :: Parser TxNodeLogFile
+pNodeLogFile = TxNodeLogFile <$>
   Opt.strOption
     (  Opt.long "node-log-file"
     <> Opt.metavar "FILE"

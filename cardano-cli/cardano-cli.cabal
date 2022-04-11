@@ -125,6 +125,7 @@ library
                       , filepath
                       , formatting
                       , iproute
+                      , locli
                       , network
                       , optparse-applicative-fork
                       , ouroboros-consensus

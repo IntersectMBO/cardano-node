@@ -5,6 +5,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 {-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 
@@ -14,8 +15,9 @@ module Cardano.CLI.Shelley.Run.Transaction
   , runTransactionCmd
   ) where
 
-import           Cardano.Prelude hiding (All, Any)
+import           Cardano.Prelude hiding (All, Any, lines)
 import           Prelude (String, error)
+import           Cardano.Unlog.LogObject (LogObject(..))
 
 import qualified Data.Aeson as Aeson
 import           Data.Aeson.Encode.Pretty (encodePretty)
@@ -1445,10 +1447,16 @@ runTxView = \case
     InAnyCardanoEra era tx <- readFileTx txFile
     liftIO $ BS.putStr $ friendlyTxBS era tx
 
-runTxDebugScript :: FilePath -> ExceptT ShelleyTxCmdError IO ()
-runTxDebugScript nodeLogFile = do
+runTxDebugScript :: TxNodeLogFile -> ExceptT ShelleyTxCmdError IO ()
+runTxDebugScript (TxNodeLogFile nodeLogFile) = do
   liftIO $ IO.putStrLn $ "Node log file: " <> nodeLogFile
-  return ()
+
+  lines <- liftIO $ LBS.lines <$> LBS.readFile nodeLogFile
+
+  forM_ lines $ \line -> do
+    let logObjectResult = Aeson.eitherDecode @LogObject line
+    forM_ logObjectResult $ \logObject ->
+      liftIO $ IO.print logObject
 
 -- ----------------------------------------------------------------------------
 -- Witness commands
