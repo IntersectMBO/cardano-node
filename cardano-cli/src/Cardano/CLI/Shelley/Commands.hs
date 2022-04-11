@@ -245,6 +245,7 @@ data TransactionCmd
       ScriptDataOrFile
   | TxGetTxId InputTxBodyOrTxFile
   | TxView InputTxBodyOrTxFile
+  | TxDebugScript FilePath
 
 data InputTxBodyOrTxFile = InputTxBodyFile TxBodyFile | InputTxFile TxFile
   deriving Show
@@ -275,6 +276,7 @@ renderTransactionCmd cmd =
     TxHashScriptData {} -> "transaction hash-script-data"
     TxGetTxId {} -> "transaction txid"
     TxView {} -> "transaction view"
+    TxDebugScript {} -> "transaction debug-script"
 
 data NodeCmd
   = NodeKeyGenCold VerificationKeyFile SigningKeyFile OpCertCounterFile

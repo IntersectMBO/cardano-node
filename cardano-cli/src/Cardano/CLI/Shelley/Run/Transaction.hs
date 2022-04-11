@@ -323,6 +323,7 @@ runTransactionCmd cmd =
     TxHashScriptData scriptDataOrFile -> runTxHashScriptData scriptDataOrFile
     TxGetTxId txinfile -> runTxGetTxId txinfile
     TxView txinfile -> runTxView txinfile
+    TxDebugScript nodeLogFile -> runTxDebugScript nodeLogFile
     TxMintedPolicyId sFile -> runTxCreatePolicyId sFile
     TxCreateWitness txBodyfile witSignData mbNw outFile ->
       runTxCreateWitness txBodyfile witSignData mbNw outFile
@@ -1444,6 +1445,10 @@ runTxView = \case
     InAnyCardanoEra era tx <- readFileTx txFile
     liftIO $ BS.putStr $ friendlyTxBS era tx
 
+runTxDebugScript :: FilePath -> ExceptT ShelleyTxCmdError IO ()
+runTxDebugScript nodeLogFile = do
+  liftIO $ IO.putStrLn $ "Node log file: " <> nodeLogFile
+  return ()
 
 -- ----------------------------------------------------------------------------
 -- Witness commands

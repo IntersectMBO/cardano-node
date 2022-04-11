@@ -622,6 +622,8 @@ pTransaction =
         (Opt.info pTransactionId $ Opt.progDesc "Print a transaction identifier.")
     , subParser "view" $
         Opt.info pTransactionView $ Opt.progDesc "Print a transaction."
+    , subParser "debug-script" $
+        Opt.info pTransactionDebugScript $ Opt.progDesc "Debug script."
     ]
  where
   -- Backwards compatible parsers
@@ -787,6 +789,9 @@ pTransaction =
 
   pTransactionView :: Parser TransactionCmd
   pTransactionView = TxView <$> pInputTxOrTxBodyFile
+
+  pTransactionDebugScript :: Parser TransactionCmd
+  pTransactionDebugScript = TxDebugScript <$> pNodeLogFile
 
 pNodeCmd :: Parser NodeCmd
 pNodeCmd =
@@ -1612,6 +1617,15 @@ pOperatorCertIssueCounterFile =
         (  Opt.long "operational-certificate-issue-counter"
         <> Opt.internal
         )
+    )
+
+pNodeLogFile :: Parser FilePath
+pNodeLogFile =
+  Opt.strOption
+    (  Opt.long "node-log-file"
+    <> Opt.metavar "FILE"
+    <> Opt.help "Filepath of the node log."
+    <> Opt.completer (Opt.bashCompleter "file")
     )
 
 pOperationalCertificateFile :: Parser FilePath
