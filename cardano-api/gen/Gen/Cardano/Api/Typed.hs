@@ -519,6 +519,8 @@ genTxBodyContent era = do
   txIns <- map (, BuildTxWith (KeyWitness KeyWitnessForSpending)) <$> Gen.list (Range.constant 1 10) genTxIn
   txInsCollateral <- genTxInsCollateral era
   txOuts <- Gen.list (Range.constant 1 10) (genTxOutTxContext era)
+  txTotalCollateral <- genTxTotalCollateral era
+  txReturnCollateral <- genTxReturnCollateral era
   txFee <- genTxFee era
   txValidityRange <- genTxValidityRange era
   txMetadata <- genTxMetadataInEra era
@@ -535,6 +537,8 @@ genTxBodyContent era = do
     { Api.txIns
     , Api.txInsCollateral
     , Api.txOuts
+    , Api.txTotalCollateral
+    , Api.txReturnCollateral
     , Api.txFee
     , Api.txValidityRange
     , Api.txMetadata
@@ -556,6 +560,20 @@ genTxInsCollateral era =
                           [ pure TxInsCollateralNone
                           , TxInsCollateral supported <$> Gen.list (Range.linear 0 10) genTxIn
                           ]
+
+genTxReturnCollateral :: CardanoEra era -> Gen (TxReturnCollateral CtxTx era)
+genTxReturnCollateral era =
+  case totalAndReturnCollateralSupportedInEra  era of
+    Nothing -> return TxReturnCollateralNone
+    Just supp ->
+      TxReturnCollateral supp <$>  genTxOutTxContext era
+
+genTxTotalCollateral :: CardanoEra era -> Gen (TxTotalCollateral era)
+genTxTotalCollateral era =
+  case totalAndReturnCollateralSupportedInEra  era of
+    Nothing -> return TxTotalCollateralNone
+    Just supp ->
+      TxTotalCollateral supp <$> genLovelace
 
 genTxFee :: CardanoEra era -> Gen (TxFee era)
 genTxFee era =

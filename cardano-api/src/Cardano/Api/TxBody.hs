@@ -63,6 +63,8 @@ module Cardano.Api.TxBody (
 
     -- * Other transaction body types
     TxInsCollateral(..),
+    TxReturnCollateral(..),
+    TxTotalCollateral(..),
     TxFee(..),
     TxValidityLowerBound(..),
     TxValidityUpperBound(..),
@@ -96,6 +98,7 @@ module Cardano.Api.TxBody (
     CertificatesSupportedInEra(..),
     UpdateProposalSupportedInEra(..),
     InlineDatumSupportedInEra(..),
+    TxTotalAndReturnCollateralSupportedInEra(..),
 
     -- ** Feature availability functions
     collateralSupportedInEra,
@@ -114,6 +117,7 @@ module Cardano.Api.TxBody (
     txScriptValiditySupportedInShelleyBasedEra,
     txScriptValiditySupportedInCardanoEra,
     inlineDatumSupportedInEra,
+    totalAndReturnCollateralSupportedInEra,
 
     -- * Inspecting 'ScriptWitness'es
     AnyScriptWitness(..),
@@ -174,6 +178,7 @@ import qualified Data.Text as Text
 import           Data.Type.Equality (TestEquality (..), (:~:) (Refl))
 import           Data.Word (Word16, Word32, Word64)
 import           GHC.Generics
+import           GHC.Records (HasField (..))
 import qualified Text.Parsec as Parsec
 import qualified Text.Parsec.Language as Parsec
 import qualified Text.Parsec.String as Parsec
@@ -193,6 +198,7 @@ import qualified Cardano.Ledger.Address as Shelley
 import qualified Cardano.Ledger.AuxiliaryData as Ledger (hashAuxiliaryData)
 import           Cardano.Ledger.BaseTypes (StrictMaybe (..), maybeToStrictMaybe)
 import qualified Cardano.Ledger.BaseTypes as Ledger
+import qualified Cardano.Ledger.Coin as Ledger
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Core as Ledger
 import qualified Cardano.Ledger.Credential as Shelley
@@ -1352,6 +1358,44 @@ prettyRenderTxOut (TxOutInAnyEra _ (TxOut (AddressInEra _ addr) txOutVal _ _)) =
      serialiseAddress (toAddressAny addr) <> " + "
   <> renderValue (txOutValueToValue txOutVal)
 
+data TxReturnCollateral ctx era where
+
+     TxReturnCollateralNone :: TxReturnCollateral ctx era
+
+     TxReturnCollateral     :: TxTotalAndReturnCollateralSupportedInEra era
+                            -> TxOut ctx era
+                            -> TxReturnCollateral ctx era
+
+deriving instance Eq   (TxReturnCollateral ctx era)
+deriving instance Show (TxReturnCollateral ctx era)
+
+data TxTotalCollateral era where
+
+     TxTotalCollateralNone :: TxTotalCollateral era
+
+     TxTotalCollateral     :: TxTotalAndReturnCollateralSupportedInEra era
+                           -> Lovelace
+                           -> TxTotalCollateral era
+
+deriving instance Eq   (TxTotalCollateral era)
+deriving instance Show (TxTotalCollateral era)
+
+data TxTotalAndReturnCollateralSupportedInEra era where
+
+     TxTotalAndReturnCollateralInBabbageEra :: TxTotalAndReturnCollateralSupportedInEra BabbageEra
+
+deriving instance Eq   (TxTotalAndReturnCollateralSupportedInEra era)
+deriving instance Show (TxTotalAndReturnCollateralSupportedInEra era)
+
+totalAndReturnCollateralSupportedInEra
+  :: CardanoEra era -> Maybe (TxTotalAndReturnCollateralSupportedInEra era)
+totalAndReturnCollateralSupportedInEra ByronEra = Nothing
+totalAndReturnCollateralSupportedInEra ShelleyEra = Nothing
+totalAndReturnCollateralSupportedInEra AllegraEra = Nothing
+totalAndReturnCollateralSupportedInEra MaryEra = Nothing
+totalAndReturnCollateralSupportedInEra AlonzoEra = Nothing
+totalAndReturnCollateralSupportedInEra BabbageEra = Just TxTotalAndReturnCollateralInBabbageEra
+
 -- ----------------------------------------------------------------------------
 -- Transaction output datum (era-dependent)
 --
@@ -1587,21 +1631,23 @@ deriving instance Show (TxMintValue build era)
 
 data TxBodyContent build era =
      TxBodyContent {
-       txIns            :: TxIns build era,
-       txInsCollateral  :: TxInsCollateral era,
-       txOuts           :: [TxOut CtxTx era],
-       txFee            :: TxFee era,
-       txValidityRange  :: (TxValidityLowerBound era,
-                            TxValidityUpperBound era),
-       txMetadata       :: TxMetadataInEra era,
-       txAuxScripts     :: TxAuxScripts era,
-       txExtraKeyWits   :: TxExtraKeyWitnesses era,
-       txProtocolParams :: BuildTxWith build (Maybe ProtocolParameters),
-       txWithdrawals    :: TxWithdrawals  build era,
-       txCertificates   :: TxCertificates build era,
-       txUpdateProposal :: TxUpdateProposal era,
-       txMintValue      :: TxMintValue    build era,
-       txScriptValidity :: TxScriptValidity era
+       txIns              :: TxIns build era,
+       txInsCollateral    :: TxInsCollateral era,
+       txOuts             :: [TxOut CtxTx era],
+       txTotalCollateral  :: TxTotalCollateral era,
+       txReturnCollateral :: TxReturnCollateral CtxTx era,
+       txFee              :: TxFee era,
+       txValidityRange    :: (TxValidityLowerBound era,
+                              TxValidityUpperBound era),
+       txMetadata         :: TxMetadataInEra era,
+       txAuxScripts       :: TxAuxScripts era,
+       txExtraKeyWits     :: TxExtraKeyWitnesses era,
+       txProtocolParams   :: BuildTxWith build (Maybe ProtocolParameters),
+       txWithdrawals      :: TxWithdrawals  build era,
+       txCertificates     :: TxCertificates build era,
+       txUpdateProposal   :: TxUpdateProposal era,
+       txMintValue        :: TxMintValue    build era,
+       txScriptValidity   :: TxScriptValidity era
      }
      deriving (Eq, Show)
 
@@ -2070,20 +2116,22 @@ fromLedgerTxBody
   -> TxBodyContent ViewTx era
 fromLedgerTxBody era scriptValidity body scriptdata mAux =
     TxBodyContent
-      { txIns            = fromLedgerTxIns            era body
-      , txInsCollateral  = fromLedgerTxInsCollateral  era body
-      , txOuts           = fromLedgerTxOuts           era body scriptdata
-      , txFee            = fromLedgerTxFee            era body
-      , txValidityRange  = fromLedgerTxValidityRange  era body
-      , txWithdrawals    = fromLedgerTxWithdrawals    era body
-      , txCertificates   = fromLedgerTxCertificates   era body
-      , txUpdateProposal = fromLedgerTxUpdateProposal era body
-      , txMintValue      = fromLedgerTxMintValue      era body
-      , txExtraKeyWits   = fromLedgerTxExtraKeyWitnesses era body
-      , txProtocolParams = ViewTx
+      { txIns              = fromLedgerTxIns               era body
+      , txInsCollateral    = fromLedgerTxInsCollateral     era body
+      , txOuts             = fromLedgerTxOuts              era body scriptdata
+      , txTotalCollateral  = fromLedgerTxTotalCollateral   era body
+      , txReturnCollateral = fromLedgerTxReturnCollateral  era body
+      , txFee              = fromLedgerTxFee               era body
+      , txValidityRange    = fromLedgerTxValidityRange     era body
+      , txWithdrawals      = fromLedgerTxWithdrawals       era body
+      , txCertificates     = fromLedgerTxCertificates      era body
+      , txUpdateProposal   = fromLedgerTxUpdateProposal    era body
+      , txMintValue        = fromLedgerTxMintValue         era body
+      , txExtraKeyWits     = fromLedgerTxExtraKeyWitnesses era body
+      , txProtocolParams   = ViewTx
       , txMetadata
       , txAuxScripts
-      , txScriptValidity = scriptValidity
+      , txScriptValidity   = scriptValidity
       }
   where
     (txMetadata, txAuxScripts) = fromLedgerTxAuxiliaryData era mAux
@@ -2186,6 +2234,46 @@ fromAlonzoTxOut multiAssetInEra scriptDataInEra txdatums
                   = TxOutDatumInTx' supported (ScriptDataHash dh)
                                               (fromAlonzoData d)
       | otherwise = TxOutDatumHash supported (ScriptDataHash dh)
+
+
+fromLedgerTxTotalCollateral
+  :: ShelleyBasedEra era
+  -> Ledger.TxBody (ShelleyLedgerEra era)
+  -> TxTotalCollateral era
+fromLedgerTxTotalCollateral era txbody =
+  case totalAndReturnCollateralSupportedInEra $ shelleyBasedToCardanoEra era of
+    Nothing -> TxTotalCollateralNone
+    Just supp ->
+      let totColl = obtainTotalCollateralHasFieldConstraint supp $ getField @"totalCollateral" txbody
+      in TxTotalCollateral supp $ fromShelleyLovelace totColl
+ where
+  obtainTotalCollateralHasFieldConstraint
+    :: TxTotalAndReturnCollateralSupportedInEra era
+    -> (HasField "totalCollateral" (Ledger.TxBody (ShelleyLedgerEra era)) Ledger.Coin => a)
+    -> a
+  obtainTotalCollateralHasFieldConstraint TxTotalAndReturnCollateralInBabbageEra f = f
+
+fromLedgerTxReturnCollateral
+  :: ShelleyBasedEra era
+  -> Ledger.TxBody (ShelleyLedgerEra era)
+  -> TxReturnCollateral CtxTx era
+fromLedgerTxReturnCollateral era txbody =
+  case totalAndReturnCollateralSupportedInEra $ shelleyBasedToCardanoEra era of
+    Nothing -> TxReturnCollateralNone
+    Just supp ->
+      case obtainCollateralReturnHasFieldConstraint supp $ getField @"collateralReturn" txbody of
+        SNothing -> TxReturnCollateralNone
+        SJust collReturnOut ->
+          TxReturnCollateral supp $ fromShelleyTxOut era collReturnOut
+ where
+  obtainCollateralReturnHasFieldConstraint
+    :: TxTotalAndReturnCollateralSupportedInEra era
+    -> (HasField "collateralReturn"
+          (Ledger.TxBody (ShelleyLedgerEra era))
+          (StrictMaybe (Ledger.TxOut (ShelleyLedgerEra era))) => a)
+    -> a
+  obtainCollateralReturnHasFieldConstraint TxTotalAndReturnCollateralInBabbageEra f = f
+
 
 fromLedgerTxFee
   :: ShelleyBasedEra era -> Ledger.TxBody (ShelleyLedgerEra era) -> TxFee era
@@ -2578,23 +2666,25 @@ getByronTxBodyContent :: Annotated Byron.Tx ByteString
                       -> TxBodyContent ViewTx ByronEra
 getByronTxBodyContent (Annotated Byron.UnsafeTx{txInputs, txOutputs} _) =
     TxBodyContent {
-      txIns            = [ (fromByronTxIn input, ViewTx)
-                         | input <- toList txInputs],
-      txInsCollateral  = TxInsCollateralNone,
-      txOuts           = fromByronTxOut <$> toList txOutputs,
-      txFee            = TxFeeImplicit TxFeesImplicitInByronEra,
-      txValidityRange  = (TxValidityNoLowerBound,
-                          TxValidityNoUpperBound
-                            ValidityNoUpperBoundInByronEra),
-      txMetadata       = TxMetadataNone,
-      txAuxScripts     = TxAuxScriptsNone,
-      txExtraKeyWits   = TxExtraKeyWitnessesNone,
-      txProtocolParams = ViewTx,
-      txWithdrawals    = TxWithdrawalsNone,
-      txCertificates   = TxCertificatesNone,
-      txUpdateProposal = TxUpdateProposalNone,
-      txMintValue      = TxMintNone,
-      txScriptValidity = TxScriptValidityNone
+      txIns              = [ (fromByronTxIn input, ViewTx)
+                           | input <- toList txInputs],
+      txInsCollateral    = TxInsCollateralNone,
+      txOuts             = fromByronTxOut <$> toList txOutputs,
+      txReturnCollateral = TxReturnCollateralNone,
+      txTotalCollateral  = TxTotalCollateralNone,
+      txFee              = TxFeeImplicit TxFeesImplicitInByronEra,
+      txValidityRange    = (TxValidityNoLowerBound,
+                            TxValidityNoUpperBound
+                              ValidityNoUpperBoundInByronEra),
+      txMetadata         = TxMetadataNone,
+      txAuxScripts       = TxAuxScriptsNone,
+      txExtraKeyWits     = TxExtraKeyWitnessesNone,
+      txProtocolParams   = ViewTx,
+      txWithdrawals      = TxWithdrawalsNone,
+      txCertificates     = TxCertificatesNone,
+      txUpdateProposal   = TxUpdateProposalNone,
+      txMintValue        = TxMintNone,
+      txScriptValidity   = TxScriptValidityNone
     }
 
 makeShelleyTransactionBody :: ()
