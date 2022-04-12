@@ -19,14 +19,14 @@ import           Options.Applicative as Opt
 import           Ouroboros.Network.NodeToClient (withIOManager)
 
 import           Cardano.Benchmarking.Compiler (compileOptions)
-import           Cardano.Benchmarking.NixOptions (parseNixServiceOptions)
+import           Cardano.Benchmarking.NixOptions (NixServiceOptions, parseNixServiceOptions, setNodeConfigFile, _nix_nodeConfigFile)
 import           Cardano.Benchmarking.Script (runScript, parseScriptFileAeson)
 import           Cardano.Benchmarking.Script.Aeson (prettyPrint)
 import           Cardano.Benchmarking.Script.Selftest (runSelftest)
 
 data Command
   = Json FilePath
-  | JsonHL FilePath
+  | JsonHL FilePath (Maybe FilePath)
   | Compile FilePath
   | Selftest FilePath
 
@@ -39,9 +39,10 @@ runCommand = withIOManager $ \iocp -> do
     Json file -> do
       script <- parseScriptFileAeson file
       runScript script iocp >>= handleError
-    JsonHL file -> do
-      o <- parseNixServiceOptions file
-      case compileOptions o of
+    JsonHL file nodeConfigOverwrite -> do
+      opts <- parseNixServiceOptions file
+      finalOpts <- mangleNodeConfig opts nodeConfigOverwrite
+      case compileOptions finalOpts of
         Right script -> runScript script iocp >>= handleError
         err -> handleError err
     Compile file -> do
@@ -50,41 +51,45 @@ runCommand = withIOManager $ \iocp -> do
         Right script -> BSL.putStr $ prettyPrint script
         err -> handleError err
     Selftest outFile -> runSelftest iocp (Just outFile) >>= handleError
-  where
+ where
   handleError :: Show a => Either a b -> IO ()
   handleError = \case
     Right _  -> exitSuccess
     Left err -> die $ show err
 
+  mangleNodeConfig :: NixServiceOptions -> Maybe FilePath -> IO NixServiceOptions
+  mangleNodeConfig opts fp = case (_nix_nodeConfigFile opts, fp) of
+    (_      , Just newFilePath) -> return $ setNodeConfigFile opts newFilePath
+    (Just _ , Nothing) -> return opts
+    (Nothing, Nothing) -> die "No node-configFile set"
+
 commandParser :: Parser Command
 commandParser
-  = subparser (jsonCmd <> jsonHLCmd <> compileCmd <> selfTestCmd)
+  = subparser (
+       cmdParser "json" jsonCmd "Run a generic benchmarking script."
+    <> cmdParser "json_highlevel" jsonHLCmd "Run the tx-generator using a flat config."
+    <> cmdParser "compile" compileCmd "Compile flat-options to benchmarking script."
+    <> cmdParser "selftest" selfTestCmd "Run a build-in selftest."
+       )
  where
-  jsonCmd = command "json"
-    (Json <$> info (strArgument (metavar "FILEPATH"))
-      (  progDesc "tx-generator run JsonScript"
-      <> fullDesc
-      <> header "tx-generator - run a generic benchmarking script"
-      )
+  cmdParser cmd parser description = command cmd $ info parser $ progDesc description
+  jsonCmd = Json <$> filePath "low-level benchmarking script"
+
+  jsonHLCmd = JsonHL <$> filePath "benchmarking options"
+                     <*> nodeConfigOpt
+
+  compileCmd = Compile <$> filePath "benchmarking options"
+
+  selfTestCmd = Selftest <$> filePath "output file"
+
+  filePath helpMsg = strArgument (metavar "FILEPATH" <> help helpMsg)
+
+  nodeConfigOpt :: Parser (Maybe FilePath)
+  nodeConfigOpt = option (Just <$> str)
+    ( long "nodeConfig"
+      <> short 'n'
+      <> metavar "FILENAME"
+      <> value Nothing
+      <> help "the node configfile"
     )
-  jsonHLCmd = command "json_highlevel"
-    (JsonHL <$> info (strArgument (metavar "FILEPATH"))
-      (  progDesc "tx-generator run Options"
-      <> fullDesc
-      <> header "tx-generator - run flat-options"
-      )
-    )
-  compileCmd = command "compile"
-    (Compile <$> info (strArgument (metavar "FILEPATH"))
-      (  progDesc "tx-generator compile Options"
-      <> fullDesc
-      <> header "tx-generator - compile flat-options to benchmarking script"
-      )
-    )
-  selfTestCmd = command "selftest"
-    (Selftest <$> info (strArgument (metavar "FILEPATH"))
-      (  progDesc "tx-generator selftest"
-      <> fullDesc
-      <> header "tx-generator - run a built-in selftest write txs to a file"
-      )
-    )
+

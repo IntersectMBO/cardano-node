@@ -37,12 +37,20 @@ data NixServiceOptions = NixServiceOptions {
   , _nix_plutusRedeemer   :: Integer
   , _nix_executionMemory  :: Natural
   , _nix_executionSteps   :: Natural
-  , _nix_nodeConfigFile       :: FilePath
+  , _nix_nodeConfigFile       :: Maybe FilePath
   , _nix_sigKey               :: SigningKeyFile
   , _nix_localNodeSocketPath  :: String
   , _nix_targetNodes          :: NonEmpty NodeIPv4Address
   } deriving (Show, Eq)
 deriving instance Generic NixServiceOptions
+
+getNodeConfigFile :: NixServiceOptions -> FilePath
+getNodeConfigFile opts = case _nix_nodeConfigFile opts of
+  Nothing -> error "getNodeConfigFile: This should not happend: nodeConfigFile not set"
+  Just fp -> fp
+
+setNodeConfigFile :: NixServiceOptions -> FilePath -> NixServiceOptions
+setNodeConfigFile opts filePath = opts {_nix_nodeConfigFile = Just filePath }
 
 jsonOptions :: Options
 jsonOptions = defaultOptions { fieldLabelModifier = stripPrefix }
