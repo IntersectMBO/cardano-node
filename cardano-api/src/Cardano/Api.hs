@@ -236,6 +236,7 @@ module Cardano.Api (
     certificatesSupportedInEra,
     updateProposalSupportedInEra,
     scriptDataSupportedInEra,
+    totalAndReturnCollateralSupportedInEra,
 
     -- ** Fee calculation
     transactionFee,
