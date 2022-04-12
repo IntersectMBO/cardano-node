@@ -70,7 +70,7 @@ import Ouroboros.Consensus.HardFork.Combinator.AcrossEras (OneEraForgeStateInfo 
 import Ouroboros.Consensus.HardFork.Combinator.Embed.Unary
 import Ouroboros.Consensus.HardFork.Combinator.Util.Functors (Flip (..))
 import Ouroboros.Consensus.Ledger.Abstract (IsLedger)
-import Ouroboros.Consensus.Ledger.Basics (MapKind (EmptyMK))
+import Ouroboros.Consensus.Ledger.Basics (EmptyMK)
 import Ouroboros.Consensus.Ledger.Extended (ExtLedgerState)
 import Ouroboros.Consensus.Node (NodeKernel (..))
 import Ouroboros.Consensus.Shelley.Ledger qualified as Shelley
@@ -234,8 +234,8 @@ instance All GetKESInfo xs => GetKESInfo (HardForkBlock xs) where
 -- * General ledger
 --
 class LedgerQueries blk where
-  ledgerUtxoSize     :: LedgerState blk 'EmptyMK -> Int
-  ledgerDelegMapSize :: LedgerState blk 'EmptyMK -> Int
+  ledgerUtxoSize     :: LedgerState blk EmptyMK -> Int
+  ledgerDelegMapSize :: LedgerState blk EmptyMK -> Int
 
 instance LedgerQueries Byron.ByronBlock where
   ledgerUtxoSize = Map.size . Byron.unUTxO . Byron.cvsUtxo . Byron.byronLedgerState
@@ -304,7 +304,7 @@ mapNodeKernelDataIO f (NodeKernelData ref) =
 
 nkQueryLedger ::
      IsLedger (LedgerState blk)
-  => (ExtLedgerState blk 'EmptyMK -> a)
+  => (ExtLedgerState blk EmptyMK -> a)
   -> NodeKernel IO RemoteConnectionId LocalConnectionId blk
   -> IO a
 nkQueryLedger f NodeKernel{getChainDB} =

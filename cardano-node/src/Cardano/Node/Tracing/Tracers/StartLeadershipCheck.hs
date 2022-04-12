@@ -25,7 +25,7 @@ import           Ouroboros.Network.NodeToNode (RemoteConnectionId)
 import           Ouroboros.Consensus.Block (SlotNo (..))
 import           Ouroboros.Consensus.HardFork.Combinator
 import           Ouroboros.Consensus.Ledger.Abstract (IsLedger)
-import           Ouroboros.Consensus.Ledger.Basics (MapKind (EmptyMK))
+import           Ouroboros.Consensus.Ledger.Basics (EmptyMK)
 import           Ouroboros.Consensus.Ledger.Extended (ExtLedgerState, ledgerState)
 import           Ouroboros.Consensus.Node (NodeKernel (..))
 import           Ouroboros.Consensus.Node.Tracers
@@ -82,7 +82,7 @@ forgeTracerTransform nodeKern (Trace tr) = pure $ Trace $ T.arrow $ T.emit $
 
 nkQueryLedger ::
      IsLedger (LedgerState blk)
-  => (ExtLedgerState blk 'EmptyMK -> a)
+  => (ExtLedgerState blk EmptyMK -> a)
   -> NodeKernel IO RemoteConnectionId LocalConnectionId blk
   -> IO a
 nkQueryLedger f NodeKernel{getChainDB} =
