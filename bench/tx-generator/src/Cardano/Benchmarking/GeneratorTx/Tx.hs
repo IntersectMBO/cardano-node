@@ -73,6 +73,8 @@ mkGenesisTransaction key _payloadSize ttl fee txins txouts
     , txUpdateProposal = TxUpdateProposalNone
     , txMintValue = TxMintNone
     , txScriptValidity = TxScriptValidityNone
+    , txReturnCollateral = TxReturnCollateralNone
+    , txTotalCollateral = TxTotalCollateralNone
     }
   fees = case shelleyBasedEra @ era of
     ShelleyBasedEraShelley -> TxFeeExplicit TxFeesExplicitInShelleyEra fee

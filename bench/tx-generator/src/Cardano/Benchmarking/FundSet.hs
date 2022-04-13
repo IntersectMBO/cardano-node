@@ -120,6 +120,7 @@ liftAnyEra f x = case x of
   InAnyCardanoEra AllegraEra a ->   InAnyCardanoEra AllegraEra $ f a
   InAnyCardanoEra MaryEra a    ->   InAnyCardanoEra MaryEra $ f a
   InAnyCardanoEra AlonzoEra a  ->   InAnyCardanoEra AlonzoEra $ f a
+  InAnyCardanoEra BabbageEra a  ->  InAnyCardanoEra BabbageEra $ f a  
 
 type FundSelector = FundSet -> Either String [Fund]
 type FundSource = IO (Either String [Fund])

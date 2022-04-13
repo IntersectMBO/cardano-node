@@ -164,6 +164,8 @@ genTx protocolParameters (collateral, collFunds) fee metadata witness inFunds ou
     , txUpdateProposal = TxUpdateProposalNone
     , txMintValue = TxMintNone
     , txScriptValidity = TxScriptValidityNone
+    , txReturnCollateral = TxReturnCollateralNone
+    , txTotalCollateral = TxTotalCollateralNone
     }
 
   upperBound :: TxValidityUpperBound era
