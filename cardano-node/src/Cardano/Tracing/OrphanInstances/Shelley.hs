@@ -1009,6 +1009,7 @@ instance ToJSON (Alonzo.CollectError StandardCrypto) where
               Alonzo.LanguageNotSupported -> String "Language not supported"
               Alonzo.InlineDatumsNotSupported -> String "Inline datums not supported"
               Alonzo.ReferenceScriptsNotSupported -> String "Reference scripts not supported"
+              Alonzo.ReferenceInputsNotSupported -> String "Reference inputs not supported"
           ]
 
 instance ToJSON Alonzo.TagMismatchDescription where
