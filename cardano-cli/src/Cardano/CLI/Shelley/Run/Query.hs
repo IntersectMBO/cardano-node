@@ -55,9 +55,9 @@ import qualified Cardano.Ledger.Era as Ledger
 import           Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import           Cardano.Ledger.Shelley.Constraints
 import           Cardano.Ledger.Shelley.EpochBoundary
-import           Cardano.Ledger.Shelley.LedgerState (DPState (_pstate),
-                   EpochState (esLState, esSnapshots), LedgerState (_delegationState),
-                   NewEpochState (nesEs), PState (_fPParams, _pParams, _retiring))
+import           Cardano.Ledger.Shelley.LedgerState (DPState (..),
+                   EpochState (esLState, esSnapshots), LedgerState (..), NewEpochState (nesEs),
+                   PState (_fPParams, _pParams, _retiring))
 import qualified Cardano.Ledger.Shelley.PParams as Shelley
 import           Cardano.Ledger.Shelley.Scripts ()
 import qualified Cardano.Protocol.TPraos.API as Ledger
@@ -884,7 +884,9 @@ writePoolParams (StakePoolKeyHash hk) qState =
 
     Right ledgerState -> do
       let DebugLedgerState snapshot = ledgerState
-      let poolState = _pstate $ _delegationState $ esLState $ nesEs snapshot
+
+      let poolState :: PState StandardCrypto
+          poolState = dpsPState . lsDPState $ esLState $ nesEs snapshot
 
       -- Pool parameters
       let poolParams = Map.lookup hk $ _pParams poolState
