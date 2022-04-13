@@ -184,6 +184,8 @@ module Cardano.Api (
 
     -- ** Other transaction body types
     TxInsCollateral(..),
+    TxTotalCollateral(..),
+    TxReturnCollateral(..),
     TxFee(..),
     TxValidityLowerBound(..),
     TxValidityUpperBound(..),
@@ -234,6 +236,7 @@ module Cardano.Api (
     certificatesSupportedInEra,
     updateProposalSupportedInEra,
     scriptDataSupportedInEra,
+    totalAndReturnCollateralSupportedInEra,
 
     -- ** Fee calculation
     transactionFee,

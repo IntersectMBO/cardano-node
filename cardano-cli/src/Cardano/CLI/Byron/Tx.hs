@@ -151,6 +151,8 @@ txSpendGenesisUTxOByronPBFT gc nId sk (ByronAddress bAddr) outs = do
             ]
             TxInsCollateralNone
             outs
+            TxTotalCollateralNone
+            TxReturnCollateralNone
             (TxFeeImplicit TxFeesImplicitInByronEra)
             ( TxValidityNoLowerBound
             , TxValidityNoUpperBound ValidityNoUpperBoundInByronEra
@@ -190,6 +192,8 @@ txSpendUTxOByronPBFT nId sk txIns outs = do
                      ]
                      TxInsCollateralNone
                      outs
+                     TxTotalCollateralNone
+                     TxReturnCollateralNone
                      (TxFeeImplicit TxFeesImplicitInByronEra)
                      ( TxValidityNoLowerBound
                      , TxValidityNoUpperBound ValidityNoUpperBoundInByronEra
