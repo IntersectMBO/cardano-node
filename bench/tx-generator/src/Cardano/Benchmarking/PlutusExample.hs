@@ -12,7 +12,7 @@ import qualified Data.ByteString.Char8 as BSC
 import           Cardano.CLI.Shelley.Script (readFileScriptInAnyLang)
 
 import           Cardano.Api
-import           Cardano.Api.Shelley ( ProtocolParameters, PlutusScript(..), ReferenceScript(..)
+import           Cardano.Api.Shelley ( ProtocolParameters(..), PlutusScript(..), ReferenceScript(..)
                                      , fromAlonzoExUnits, protocolParamCostModels, toPlutusData)
 import           Cardano.Ledger.Alonzo.TxInfo (exBudgetToExUnits)
 import           Cardano.Benchmarking.FundSet
@@ -80,7 +80,13 @@ preExecuteScript protocolParameters (PlutusScript _ (PlutusScriptSerialised scri
   costModel <- case Map.lookup (AnyPlutusScriptVersion PlutusScriptV1) (protocolParamCostModels protocolParameters) of
     Just (CostModel x) -> Right x
     Nothing -> Left "costModel unavailable"
-  let (_logout, res) = Plutus.evaluateScriptCounting Plutus.Verbose costModel script
+  evaluationContext <- case Plutus.mkEvaluationContext costModel of
+    Just x -> Right x
+    Nothing -> Left "evaluationContext unavailable"
+  let
+    apiVersion = protocolParamProtocolVersion protocolParameters
+    protocolVersion = Plutus.ProtocolVersion (fromIntegral $ fst apiVersion) (fromIntegral $ snd apiVersion)
+    (_logout, res) = Plutus.evaluateScriptCounting protocolVersion Plutus.Verbose evaluationContext script
                               [ toPlutusData datum
                               , toPlutusData redeemer
                               , Plutus.toData dummyContext ]
