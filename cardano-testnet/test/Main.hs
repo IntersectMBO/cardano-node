@@ -9,13 +9,13 @@ import           Prelude
 import           Test.Tasty (TestTree)
 
 -- TODO: Move to plutus-apps
--- import qualified Spec.Plutus.Direct.CertifyingAndWithdrawingPlutus
 -- import qualified Spec.Plutus.Direct.ScriptContextEquality
 -- import qualified Spec.Plutus.Direct.ScriptContextEqualityMint
 -- import qualified Spec.Plutus.Direct.TxInLockingPlutus
 -- import qualified Spec.Plutus.Script.TxInLockingPlutus
 -- import qualified Spec.Plutus.SubmitApi.TxInLockingPlutus
-import qualified Spec.Shutdown
+import           Spec.Cli.KesPeriodInfo (hprop_kes_period_info)
+import qualified Spec.Node.Shutdown
 import qualified Spec.ShutdownOnSlotSynced
 import qualified System.Environment as E
 import qualified Test.Tasty as T
@@ -27,8 +27,6 @@ tests = do
   pure $ T.testGroup "test/Spec.hs"
     [ T.testGroup "Spec"
       [ -- TODO: Move to plutus-apps
-        -- Fails to meet deadline on MacOS for an unknown reason
-     --    H.ignoreOnMacAndWindows "Plutus.Direct.CertifyingAndWithdrawingPlutus" Spec.Plutus.Direct.CertifyingAndWithdrawingPlutus.hprop_plutus_certifying_withdrawing
      --  , H.testProperty "Plutus.Direct.TxInLockingPlutus" Spec.Plutus.Direct.TxInLockingPlutus.hprop_plutus
      --    -- This hangs on Windows for an unknown reason
      --  , H.ignoreOnWindows "Plutus.Script.TxInLockingPlutus" Spec.Plutus.Script.TxInLockingPlutus.hprop_plutus
@@ -36,8 +34,11 @@ tests = do
      --  , H.ignoreOnWindows "Plutus.Direct.ScriptContextEquality"  Spec.Plutus.Direct.ScriptContextEquality.hprop_plutus_script_context_equality
      --  , H.ignoreOnWindows "Plutus.Direct.ScriptContextEqualityMint" Spec.Plutus.Direct.ScriptContextEqualityMint.hprop_plutus_script_context_mint_equality
         -- There is a blocking call on Windows that prevents graceful shutdown and we currently aren't testing the shutdown IPC flag.
-        H.ignoreOnWindows "Shutdown" Spec.Shutdown.hprop_shutdown
+        H.ignoreOnWindows "Shutdown" Spec.Node.Shutdown.hprop_shutdown
       , H.ignoreOnWindows "ShutdownOnSlotSynced" Spec.ShutdownOnSlotSynced.hprop_shutdownOnSlotSynced
+      -- Ignored on Windows due to <stdout>: commitBuffer: invalid argument (invalid character)
+      -- as a result of the kes-period-info output to stdout.
+      , H.ignoreOnWindows "kes-period-info" hprop_kes_period_info
       ]
     ]
 

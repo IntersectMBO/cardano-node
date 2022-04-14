@@ -4,16 +4,16 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Spec.Shutdown
+module Spec.Node.Shutdown
   ( hprop_shutdown
   ) where
 
 import           Control.Monad
-import           Data.Ord
 import           Data.Function
 import           Data.Functor ((<&>))
 import           Data.Int
 import           Data.Maybe
+import           Data.Ord
 import           GHC.Num
 import           Hedgehog (Property, (===))
 import           System.FilePath ((</>))
