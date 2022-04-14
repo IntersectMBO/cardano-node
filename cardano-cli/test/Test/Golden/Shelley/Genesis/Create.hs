@@ -66,9 +66,13 @@ golden_shelleyGenesisCreate :: Property
 golden_shelleyGenesisCreate = propertyOnce $ do
   H.moduleWorkspace "tmp" $ \tempDir -> do
     sourceGenesisSpecFile <- noteInputFile "test/data/golden/shelley/genesis/genesis.spec.json"
+    sourceAlonzoGenesisSpecFile <- noteInputFile "test/data/golden/alonzo/genesis.alonzo.spec.json"
+
     genesisSpecFile <- noteTempFile tempDir "genesis.spec.json"
+    alonzoSpecFile <- noteTempFile tempDir "genesis.alonzo.spec.json"
 
     liftIO $ IO.copyFile sourceGenesisSpecFile genesisSpecFile
+    liftIO $ IO.copyFile sourceAlonzoGenesisSpecFile alonzoSpecFile
 
     let genesisFile = tempDir <> "/genesis.json"
 
@@ -149,6 +153,12 @@ golden_shelleyGenesisCreate = propertyOnce $ do
     (supply, fmtSupply) <- fmap (OP.withSnd show) $ forAll $ G.int (R.linear 10000000 4000000000)
     (delegateCount, fmtDelegateCount) <- fmap (OP.withSnd show) $ forAll $ G.int (R.linear 4 19)
     (utxoCount, fmtUtxoCount) <- fmap (OP.withSnd show) $ forAll $ G.int (R.linear 4 19)
+
+    sourceAlonzoGenesisSpecFile <- noteInputFile "test/data/golden/alonzo/genesis.alonzo.spec.json"
+
+    alonzoSpecFile <- noteTempFile tempDir "genesis.alonzo.spec.json"
+
+    liftIO $ IO.copyFile sourceAlonzoGenesisSpecFile alonzoSpecFile
 
     -- Create the genesis json file and required keys
     void $ execCardanoCLI
