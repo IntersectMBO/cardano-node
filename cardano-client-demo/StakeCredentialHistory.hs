@@ -259,7 +259,7 @@ main = do
              _era)
            state -> do
              let getGoSnapshot = L.unStake . L._stake . L._pstakeGo . L.esSnapshots . L.nesEs
-                 getBalances = UM.unUnify . UM.Rewards . L._unified . L._dstate . L._delegationState . L.esLState . L.nesEs
+                 getBalances = UM.unUnify . UM.Rewards . L._unified . L.dpsDState . L.lsDPState . L.esLState . L.nesEs
                  getPV :: HasField "_protocolVersion" (LC.PParams era) L.ProtVer =>
                    L.NewEpochState era -> L.ProtVer
                  getPV = getField @"_protocolVersion" . L.esPp . L.nesEs
