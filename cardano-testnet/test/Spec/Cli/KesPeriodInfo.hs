@@ -49,15 +49,6 @@ import           Testnet.Utils (waitUntilEpoch)
 
 import           Testnet.Properties.Cli.KesPeriodInfo
 
-{-
-The aim is to test a Plutus certifying and rewarding script. Certifying in the sense of validating a certificate
-e.g in this case a delegating certificate and rewarding in the sense of validating a rewards withdrawal.
-In this test, we delegate a Plutus script staking address to our stake pool. We must:
-  1. Create a stake pool
-  2. Delegate our Plutus script address to said staking pool
-  3. Withdraw our rewards from our Plutus script staking address.
--}
-
 isLinux :: Bool
 isLinux = os == "linux"
 
@@ -440,15 +431,19 @@ hprop_kes_period_info = H.integration . H.runFinallies . H.workspace "chairman" 
         H.failMessage callStack "cardano-cli query tip returned Nothing for EpochNo"
       Just currEpoch -> return currEpoch
 
-  let nodeHasMintedEpoch = currEpoch + 2
-  targetEpoch <- waitUntilEpoch
+  let nodeHasMintedEpoch = currEpoch + 3
+  currentEpoch <- waitUntilEpoch
                    (work </> "current-tip.json")
                    testnetMagic
                    execConfig
                    nodeHasMintedEpoch
 
-  H.note_ "Check we have reached 2 epochs ahead"
-  targetEpoch === nodeHasMintedEpoch
+  H.note_ "Check we have reached at least 3 epochs ahead"
+  if currentEpoch >= nodeHasMintedEpoch
+  then H.success
+  else H.failMessage
+       callStack $ "We have not reached our target epoch. Target epoch: " <> show nodeHasMintedEpoch <>
+                   " Current epoch: " <> show currentEpoch
 
 
   void $ H.execCli' execConfig

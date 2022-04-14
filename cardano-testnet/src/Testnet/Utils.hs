@@ -55,7 +55,7 @@ waitUntilEpoch fp testnetMagic execConfig desiredEpoch = do
       H.failMessage
         callStack "waitUntilEpoch: cardano-cli query tip returned Nothing for EpochNo"
     Just currEpoch ->
-      if currEpoch == desiredEpoch
+      if currEpoch >= desiredEpoch
       then return currEpoch
       else do liftIO $ threadDelay 10_000_000
               waitUntilEpoch fp testnetMagic execConfig desiredEpoch
