@@ -35,6 +35,7 @@ import           Options.Applicative hiding (help, str)
 import qualified Options.Applicative as Opt
 import qualified Options.Applicative.Help as H
 import           Prettyprinter (line, pretty)
+import           Text.Parsec ((<?>))
 import qualified Text.Parsec as Parsec
 import qualified Text.Parsec.Error as Parsec
 import qualified Text.Parsec.Language as Parsec
@@ -1974,7 +1975,7 @@ parseTxIn = TxIn <$> parseTxId <*> (Parsec.char '#' *> parseTxIx)
 
 parseTxId :: Parsec.Parser TxId
 parseTxId = do
-  str <- Parsec.many1 Parsec.hexDigit Parsec.<?> "transaction id (hexadecimal)"
+  str <- some Parsec.hexDigit <?> "transaction id (hexadecimal)"
   case deserialiseFromRawBytesHex AsTxId (BSC.pack str) of
     Right addr -> return addr
     Left e -> fail $ "Incorrect transaction id format: " ++ displayError e
@@ -2787,7 +2788,7 @@ pExtraEntropy =
     parseEntropyBytes :: Parsec.Parser ByteString
     parseEntropyBytes = either fail return
                       . B16.decode . BSC.pack
-                    =<< Parsec.many1 Parsec.hexDigit
+                    =<< some Parsec.hexDigit
 
 pUTxOCostPerWord :: Parser Lovelace
 pUTxOCostPerWord =
