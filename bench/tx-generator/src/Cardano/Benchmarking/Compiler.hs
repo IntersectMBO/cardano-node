@@ -45,7 +45,7 @@ testCompiler o c = case runExcept $ runRWST c o 0 of
 compileToScript :: Compiler ()
 compileToScript = do
   initConstants
-  emit . StartProtocol =<< askNixOption _nix_nodeConfigFile
+  emit . StartProtocol =<< askNixOption getNodeConfigFile
   genesisWallet <- newWallet "genesis_wallet"
   importGenesisFunds genesisWallet
   splitWallet <- splittingPhase genesisWallet
@@ -60,8 +60,6 @@ initConstants = do
   setN TTxAdditionalSize     _nix_add_tx_size
   setN TMinValuePerUTxO      _nix_min_utxo_value
   setN TFee                  _nix_tx_fee
-  setN TEra                  _nix_era
-  setN TTargets              _nix_targetNodes
   setN TLocalSocket          _nix_localNodeSocketPath
   setConst  TTTL             1000000
   where
@@ -73,44 +71,47 @@ initConstants = do
 
 importGenesisFunds :: DstWallet -> Compiler ()
 importGenesisFunds wallet = do
+  era <- askNixOption _nix_era
   cmd1 (ReadSigningKey $ KeyName "pass-partout") _nix_sigKey
-  emit $ ImportGenesisFund wallet LocalSocket (KeyName "pass-partout") (KeyName "pass-partout")
+  emit $ ImportGenesisFund era wallet LocalSocket (KeyName "pass-partout") (KeyName "pass-partout")
   delay
 
 addCollaterals :: SrcWallet -> DstWallet -> Compiler ()
 addCollaterals src dest = do
+  era <- askNixOption _nix_era
   isAnyPlutusMode >>= \case
     False -> return ()
     True -> do
       tx_fee <- askNixOption _nix_tx_fee
       safeCollateral <- _safeCollateral <$> evilFeeMagic
-      emit $ CreateChange src src LocalSocket (PayToAddr $ KeyName "pass-partout") (safeCollateral + tx_fee) 1
-      emit $ CreateChange src dest LocalSocket (PayToCollateral $ KeyName "pass-partout") safeCollateral 1
+      emit $ CreateChange era src src LocalSocket (PayToAddr $ KeyName "pass-partout") (safeCollateral + tx_fee) 1
+      emit $ CreateChange era src dest LocalSocket (PayToCollateral $ KeyName "pass-partout") safeCollateral 1
 
 splittingPhase :: SrcWallet -> Compiler DstWallet
 splittingPhase srcWallet = do
   (NumberOfTxs tx_count) <- askNixOption _nix_tx_count
   (NumberOfInputsPerTx inputs_per_tx) <- askNixOption _nix_inputs_per_tx
   tx_fee <- askNixOption _nix_tx_fee
+  era <- askNixOption _nix_era  
   minValuePerInput <- _minValuePerInput <$> evilFeeMagic
   splitSteps <- splitSequenceWalletNames srcWallet srcWallet $ unfoldSplitSequence tx_fee minValuePerInput (tx_count * inputs_per_tx)
-  forM_ (init splitSteps) createChange
+  forM_ (init splitSteps) $ createChange era
   plutus <- isAnyPlutusMode
-  (if plutus then createChangePlutus else createChange) $ last splitSteps
+  (if plutus then createChangePlutus era else createChange era) $ last splitSteps
  where
-  createChange :: SplitStep -> Compiler DstWallet
-  createChange (src, dst, value, count) = do
-     emit $ CreateChange src dst LocalSocket (PayToAddr $ KeyName "pass-partout") value count
+  createChange :: AnyCardanoEra -> SplitStep -> Compiler DstWallet
+  createChange era (src, dst, value, count) = do
+     emit $ CreateChange era src dst LocalSocket (PayToAddr $ KeyName "pass-partout") value count
      delay
      return dst
 
-  createChangePlutus :: SplitStep -> Compiler DstWallet
-  createChangePlutus (src, dst, value, count) = do
+  createChangePlutus :: AnyCardanoEra -> SplitStep -> Compiler DstWallet
+  createChangePlutus era (src, dst, value, count) = do
      autoMode <- isPlutusAutoMode
      plutusTarget <- if autoMode
        then PayToScript <$> askNixOption _nix_plutusLoopScript <*> pure (ScriptDataNumber 0)
        else PayToScript <$> askNixOption _nix_plutusScript     <*> (ScriptDataNumber <$> askNixOption _nix_plutusData)
-     emit $ CreateChange src dst LocalSocket plutusTarget value count
+     emit $ CreateChange era src dst LocalSocket plutusTarget value count
      delay
      return dst
 
@@ -146,9 +147,11 @@ benchmarkingPhase wallet = do
   debugMode <- askNixOption _nix_debugMode
   plutusMode <- askNixOption _nix_plutusMode
   plutusAutoMode <- askNixOption _nix_plutusAutoMode
+  targetNodes <- askNixOption _nix_targetNodes
   tx_count <- askNixOption _nix_tx_count
   tps <- askNixOption _nix_tps
-  let target = if debugMode then LocalSocket else NodeToNode
+  era <- askNixOption _nix_era
+  let target = if debugMode then LocalSocket else NodeToNode targetNodes
   spendMode <- case (plutusAutoMode, plutusMode) of
     ( True,    _ ) -> SpendAutoScript <$> askNixOption  _nix_plutusLoopScript
     (False, True ) -> do
@@ -161,7 +164,7 @@ benchmarkingPhase wallet = do
                   <*> (ScriptDataNumber <$> askNixOption _nix_plutusData)
                   <*> (ScriptDataNumber <$> askNixOption _nix_plutusRedeemer)
     (False,False) ->  return SpendOutput
-  emit $ RunBenchmark wallet target spendMode (ThreadName "tx-submit-benchmark") tx_count tps
+  emit $ RunBenchmark era wallet target spendMode (ThreadName "tx-submit-benchmark") tx_count tps
   unless debugMode $ do
     emit $ WaitBenchmark $ ThreadName "tx-submit-benchmark"
 
@@ -224,5 +227,3 @@ newWallet n = do
   name <- WalletName <$> newIdentifier n
   emit $ InitWallet name
   return name
-
-  

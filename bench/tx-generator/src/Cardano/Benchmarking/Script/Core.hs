@@ -59,14 +59,13 @@ import           Cardano.Benchmarking.Script.Setters
 import           Cardano.Benchmarking.Script.Store as Store
 import           Cardano.Benchmarking.Script.Types
 
-liftCoreWithEra :: (forall era. IsShelleyBasedEra era => AsType era -> ExceptT TxGenError IO x) -> ActionM (Either TxGenError x)
-liftCoreWithEra coreCall = withEra ( liftIO . runExceptT . coreCall)
+liftCoreWithEra :: AnyCardanoEra -> (forall era. IsShelleyBasedEra era => AsType era -> ExceptT TxGenError IO x) -> ActionM (Either TxGenError x)
+liftCoreWithEra era coreCall = withEra era ( liftIO . runExceptT . coreCall)
 
-withEra :: (forall era. IsShelleyBasedEra era => AsType era -> ActionM x) -> ActionM x
-withEra action = do
-  era <- get $ User TEra
+withEra :: AnyCardanoEra -> (forall era. IsShelleyBasedEra era => AsType era -> ActionM x) -> ActionM x
+withEra era action = do
   case era of
-    AnyCardanoEra BabbageEra -> action AsBabbageEra    
+    AnyCardanoEra BabbageEra -> action AsBabbageEra
     AnyCardanoEra AlonzoEra  -> action AsAlonzoEra
     AnyCardanoEra MaryEra    -> action AsMaryEra
     AnyCardanoEra AllegraEra -> action AsAllegraEra
@@ -110,13 +109,13 @@ defineSigningKey name descr
       , FromSomeType (AsSigningKey AsPaymentKey) id
       ]
 
-addFund :: WalletName -> TxIn -> Lovelace -> KeyName -> ActionM ()
-addFund wallet txIn lovelace keyName = do
+addFund :: AnyCardanoEra -> WalletName -> TxIn -> Lovelace -> KeyName -> ActionM ()
+addFund era wallet txIn lovelace keyName = do
   fundKey  <- getName keyName
   let
     mkOutValue :: forall era. IsShelleyBasedEra era => AsType era -> ActionM (InAnyCardanoEra TxOutValue)
     mkOutValue = \_ -> return $ InAnyCardanoEra (cardanoEra @ era) (mkTxOutValueAdaOnly lovelace)
-  outValue <- withEra mkOutValue
+  outValue <- withEra era mkOutValue
   addFundToWallet wallet txIn outValue fundKey
 
 addFundToWallet :: WalletName -> TxIn -> InAnyCardanoEra TxOutValue -> SigningKey PaymentKey -> ActionM ()
@@ -218,7 +217,7 @@ runWalletScriptInMode submitMode s = do
     NextTx nextScript tx -> do
       case submitMode of
         LocalSocket -> void $ localSubmitTx $ txInModeCardano tx
-        NodeToNode -> throwE $ ApiError "NodeToNodeMode not supported in runWalletScriptInMode"
+        NodeToNode _ -> throwE $ ApiError "NodeToNodeMode not supported in runWalletScriptInMode"
         DumpToFile filePath -> dumpToFile filePath $ txInModeCardano tx
         DiscardTX -> return ()
       runWalletScriptInMode submitMode nextScript
@@ -240,10 +239,10 @@ makeMetadata = do
     Right m -> return m
     Left err -> throwE $ MetadataError err
 
-runBenchmark :: WalletName -> SubmitMode -> SpendMode -> ThreadName -> NumberOfTxs -> TPSRate -> ActionM ()
-runBenchmark sourceWallet submitMode spendMode threadName txCount tps
+runBenchmark :: AnyCardanoEra -> WalletName -> SubmitMode -> SpendMode -> ThreadName -> NumberOfTxs -> TPSRate -> ActionM ()
+runBenchmark era sourceWallet submitMode spendMode threadName txCount tps
   = case spendMode of
-      SpendOutput -> withEra $ runBenchmarkInEra sourceWallet submitMode threadName txCount tps
+      SpendOutput -> withEra era $ runBenchmarkInEra sourceWallet submitMode threadName txCount tps
       SpendScript scriptFile scriptBudget scriptData scriptRedeemer
         -> runPlutusBenchmark sourceWallet submitMode scriptFile scriptBudget scriptData scriptRedeemer threadName txCount tps
       SpendAutoScript scriptFile -> spendAutoScript sourceWallet submitMode scriptFile threadName txCount tps
@@ -260,7 +259,6 @@ runBenchmarkInEra sourceWallet submitMode (ThreadName threadName) txCount tps er
   tracers  <- get BenchTracers
   networkId <- getUser TNetworkId
   fundKey <- getName $ KeyName "pass-partout" -- should be walletkey
-  targets  <- getUser TTargets
   (NumberOfInputsPerTx   numInputs) <- getUser TNumberOfInputsPerTx
   (NumberOfOutputsPerTx numOutputs) <- getUser TNumberOfOutputsPerTx
   fee <- getUser TFee
@@ -269,7 +267,6 @@ runBenchmarkInEra sourceWallet submitMode (ThreadName threadName) txCount tps er
   walletRefSrc <- getName sourceWallet
   let walletRefDst = walletRefSrc 
   metadata <- makeMetadata
-  connectClient <- getConnectClient
   let
     (Quantity minValue) = lovelaceToQuantity $ fromIntegral numOutputs * minValuePerUTxO + fee
 
@@ -303,11 +300,13 @@ runBenchmarkInEra sourceWallet submitMode (ThreadName threadName) txCount tps er
     walletScript :: FundSet.Target -> WalletScript era
     walletScript = benchmarkWalletScript walletRefSrc txGenerator txCount (const fundSource) inToOut toUTxO fundToStore
 
-    coreCall :: AsType era -> ExceptT TxGenError IO AsyncBenchmarkControl
-    coreCall eraProxy = GeneratorTx.walletBenchmark (btTxSubmit_ tracers) (btN2N_ tracers) connectClient
-                                               threadName targets tps LogErrors eraProxy txCount walletScript
   case submitMode of
-    NodeToNode -> do
+    NodeToNode targetNodes -> do
+      connectClient <- getConnectClient
+      let
+        coreCall :: AsType era -> ExceptT TxGenError IO AsyncBenchmarkControl
+        coreCall eraProxy = GeneratorTx.walletBenchmark (btTxSubmit_ tracers) (btN2N_ tracers) connectClient
+                                               threadName targetNodes tps LogErrors eraProxy txCount walletScript        
       ret <- liftIO $ runExceptT $ coreCall era
       case ret of
         Left err -> liftTxGenError err
@@ -327,7 +326,6 @@ runPlutusBenchmark ::
   -> ActionM ()
 runPlutusBenchmark sourceWallet submitMode scriptFile scriptBudget scriptData scriptRedeemer (ThreadName threadName) txCount tps = do
   tracers  <- get BenchTracers
-  targets  <- getUser TTargets
   (NumberOfInputsPerTx   numInputs) <- getUser TNumberOfInputsPerTx
   (NumberOfOutputsPerTx numOutputs) <- getUser TNumberOfOutputsPerTx
   networkId <- getUser TNetworkId
@@ -351,7 +349,6 @@ runPlutusBenchmark sourceWallet submitMode scriptFile scriptBudget scriptData sc
   baseFee <- getUser TFee
   _minValuePerUTxO <- getUser TMinValuePerUTxO -- TODO:Fix
   metadata <- makeMetadata
-  connectClient <- getConnectClient
 
   let costsPreRun = preExecuteScript protocolParameters script scriptData scriptRedeemer
   executionUnits <- case (scriptBudget, costsPreRun) of
@@ -429,9 +426,10 @@ runPlutusBenchmark sourceWallet submitMode scriptFile scriptBudget scriptData sc
     walletScript = benchmarkWalletScript walletRefSrc txGenerator txCount (const fundSource) inToOut toUTxO fundToStore
 
   case submitMode of
-    NodeToNode -> do
+    NodeToNode targetNodes -> do
+      connectClient <- getConnectClient
       ret <- liftIO $ runExceptT $ GeneratorTx.walletBenchmark (btTxSubmit_ tracers) (btN2N_ tracers) connectClient
-                               threadName targets tps LogErrors AsAlonzoEra txCount walletScript
+                               threadName targetNodes tps LogErrors AsAlonzoEra txCount walletScript
       case ret of
         Left err -> liftTxGenError err
         Right ctl -> setName (ThreadName threadName) ctl
@@ -444,16 +442,17 @@ dumpToFileIO :: FilePath -> TxInMode CardanoMode -> IO ()
 dumpToFileIO filePath tx = appendFile filePath ('\n' : show tx)
 
 importGenesisFund
-   :: WalletName
+   :: AnyCardanoEra
+   -> WalletName
    -> SubmitMode
    -> KeyName
    -> KeyName
    -> ActionM ()
-importGenesisFund wallet submitMode genesisKeyName destKey = do
+importGenesisFund era wallet submitMode genesisKeyName destKey = do
   tracer <- btTxSubmit_ <$> get BenchTracers
   localSubmit <- case submitMode of
     LocalSocket -> getLocalSubmitTx
-    NodeToNode -> throwE $ WalletError "NodeToNode mode not supported in importGenesisFund"
+    NodeToNode _ -> throwE $ WalletError "NodeToNode mode not supported in importGenesisFund"
     DumpToFile filePath -> return $ \tx -> dumpToFileIO filePath tx >> return SubmitSuccess
     DiscardTX -> return $ \_ -> return SubmitSuccess
   networkId <- getUser TNetworkId
@@ -468,7 +467,7 @@ importGenesisFund wallet submitMode genesisKeyName destKey = do
       let addr = Core.keyAddress @ era networkId fundKey
       f <- GeneratorTx.secureGenesisFund tracer localSubmit networkId genesis fee ttl genesisKey addr
       return (f, fundKey)
-  result <- liftCoreWithEra coreCall
+  result <- liftCoreWithEra era coreCall
   case result of 
     Left err -> liftTxGenError err
     Right ((txIn, outVal), skey) -> addFundToWallet wallet txIn outVal skey
@@ -476,12 +475,12 @@ importGenesisFund wallet submitMode genesisKeyName destKey = do
 initWallet :: WalletName -> ActionM ()
 initWallet name = liftIO Wallet.initWallet >>= setName name
 
-createChange :: WalletName -> WalletName -> SubmitMode -> PayMode -> Lovelace -> Int -> ActionM ()
-createChange sourceWallet dstWallet submitMode payMode value count = case payMode of
-  PayToAddr keyName -> withEra $ createChangeInEra sourceWallet dstWallet submitMode PlainOldFund keyName value count
+createChange :: AnyCardanoEra -> WalletName -> WalletName -> SubmitMode -> PayMode -> Lovelace -> Int -> ActionM ()
+createChange era sourceWallet dstWallet submitMode payMode value count = case payMode of
+  PayToAddr keyName -> withEra era $ createChangeInEra sourceWallet dstWallet submitMode PlainOldFund keyName value count
   -- Problem here: PayToCollateral will create an output marked as collateral
   -- and also return any change to a collateral, which makes the returned change unusable.
-  PayToCollateral keyName -> withEra $ createChangeInEra sourceWallet dstWallet submitMode CollateralFund keyName value count
+  PayToCollateral keyName -> withEra era $ createChangeInEra sourceWallet dstWallet submitMode CollateralFund keyName value count
   PayToScript scriptFile scriptData -> createChangeScriptFunds sourceWallet dstWallet submitMode scriptFile scriptData value count
 
 createChangeScriptFunds :: WalletName -> WalletName -> SubmitMode -> FilePath -> ScriptData -> Lovelace -> Int -> ActionM ()
@@ -578,7 +577,7 @@ createChangeGeneric sourceWallet submitMode createCoins addressMsg value count =
       Left err -> throwE $ WalletError err
       Right tx -> case submitMode of
         LocalSocket -> void $ localSubmitTx tx
-        NodeToNode -> throwE $ WalletError "NodeToNode mode not supported in createChangeGeneric"
+        NodeToNode _ -> throwE $ WalletError "NodeToNode mode not supported in createChangeGeneric"
         DumpToFile filePath -> dumpToFile filePath tx
         DiscardTX -> return ()
 
