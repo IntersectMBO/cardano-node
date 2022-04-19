@@ -138,6 +138,7 @@ library
                       , set-algebra
                       , split
                       , strict-containers
+                      , syb
                       , text
                       , time
                       , transformers

@@ -15,10 +15,10 @@ import           Cardano.Prelude
 import           Data.Aeson (Value (..), object, toJSON, (.=))
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Key as AesonKey
-import qualified Data.Aeson.KeyMap as Aeson
 import qualified Data.Aeson.Types as Aeson
 import qualified Data.ByteString.Base16 as Base16
 import qualified Data.ByteString.Char8 as BSC
+import           Data.Generics (everywhere, mkT)
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
 import           Data.Text.Encoding (decodeLatin1)
@@ -188,19 +188,8 @@ friendlyDatum = \case
     -- 'ScriptData.scriptDataToJson' formats byte strings as Base16 blobs.
     -- So here we try to display text data where byte strings look like text.
     showDatum :: ScriptData -> Aeson.Value
-    showDatum = decodeStrings . scriptDataToJson ScriptDataJsonNoSchema
-
-    decodeStrings :: Aeson.Value -> Aeson.Value
-    decodeStrings = \case
-      String s -> String $ decodeString s
-      Object obj ->
-        Object
-        $ Aeson.mapKeyVal
-            (AesonKey.fromText . decodeString . AesonKey.toText)
-            decodeStrings
-            obj
-      Array a -> Array $ decodeStrings <$> a
-      v -> v
+    showDatum =
+      everywhere (mkT decodeString) . scriptDataToJson ScriptDataJsonNoSchema
 
     decodeString :: Text -> Text
     decodeString str
