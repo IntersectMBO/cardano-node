@@ -52,7 +52,18 @@ golden_view_byron =
     diffVsGoldenFile result "test/data/golden/byron/transaction-view.out"
 
 golden_view_shelley :: Property
-golden_view_shelley =
+golden_view_shelley = let
+  certDir = "test/data/golden/shelley/certificates"
+  certs =
+    (certDir </>) <$>
+    [ "genesis_key_delegation_certificate"
+    , "mir_certificate"
+    , "stake_address_deregistration_certificate"
+    , "stake_address_registration_certificate"
+    , "stake_pool_deregistration_certificate"
+    , "stake_pool_registration_certificate"
+    ]
+  in
   propertyOnce $
   moduleWorkspace "tmp" $ \tempDir -> do
     updateProposalFile <- noteTempFile tempDir "update-proposal"
@@ -98,7 +109,7 @@ golden_view_shelley =
 
     -- Create transaction body
     void $
-      execCardanoCLI
+      execCardanoCLI $
         [ "transaction", "build-raw"
         , "--shelley-era"
         , "--tx-in"
@@ -114,6 +125,8 @@ golden_view_shelley =
         , "--update-proposal-file", updateProposalFile
         , "--out-file", transactionBodyFile
         ]
+        ++
+        ["--certificate-file=" <> cert | cert <- certs]
 
     -- View transaction body
     result <-
