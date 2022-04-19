@@ -13,7 +13,7 @@ socket_dir="${data_dir}/socket"
 mkdir -p "${socket_dir}"
 
 # Launch a node
-cabal run exe:cardano-node -- run \
+cabal run --enable-profiling exe:cardano-node -- +RTS -p -RTS run \
   --config "${configuration}/mainnet-config-new-tracing.yaml" \
   --topology "${configuration}/mainnet-topology.json" \
   --database-path "${db_dir}" \

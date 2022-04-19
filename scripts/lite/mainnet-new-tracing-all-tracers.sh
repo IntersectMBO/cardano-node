@@ -13,8 +13,8 @@ socket_dir="${data_dir}/socket"
 mkdir -p "${socket_dir}"
 
 # Launch a node
-cabal run --enable-profiling exe:cardano-node -- +RTS -pa -RTS run \
-  --config "${configuration}/membench-config-new.yaml" \
+cabal run --enable-profiling exe:cardano-node -- +RTS -p -RTS run \
+  --config "${configuration}/mainnet-config-new-tracing-all-tracers.yaml" \
   --topology "${configuration}/mainnet-topology.json" \
   --database-path "${db_dir}" \
   --socket-path "${socket_dir}/node-1-socket" \
