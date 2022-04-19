@@ -448,6 +448,12 @@ testnet testnetOptions H.Conf {..} = do
   -- Set up our template
   H.createDirectoryIfMissing $ tempAbsPath </> "shelley"
 
+  -- TODO: This is fragile, we should be passing in all necessary
+  -- configuration files.
+  let sourceAlonzoGenesisSpecFile = base </> "cardano-cli/test/data/golden/alonzo/genesis.alonzo.spec.json"
+  alonzoSpecFile <- H.noteTempFile tempAbsPath "shelley/genesis.alonzo.spec.json"
+  liftIO $ IO.copyFile sourceAlonzoGenesisSpecFile alonzoSpecFile
+
   void $ H.execCli
     [ "genesis", "create"
     , "--testnet-magic", show @Int testnetMagic

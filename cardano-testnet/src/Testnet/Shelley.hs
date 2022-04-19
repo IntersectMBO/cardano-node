@@ -193,6 +193,12 @@ testnet testnetOptions H.Conf {..} = do
   let poolAddrs = ("pool-owner" <>) <$> poolNodesN
   let addrs = userAddrs <> poolAddrs
 
+  -- TODO: This is fragile, we should be passing in all necessary
+  -- configuration files.
+  let sourceAlonzoGenesisSpecFile = base </> "cardano-cli/test/data/golden/alonzo/genesis.alonzo.spec.json"
+  alonzoSpecFile <- H.noteTempFile tempAbsPath "genesis.alonzo.spec.json"
+  liftIO $ IO.copyFile sourceAlonzoGenesisSpecFile alonzoSpecFile
+
   -- Set up our template
   void $ H.execCli
     [ "genesis", "create"
