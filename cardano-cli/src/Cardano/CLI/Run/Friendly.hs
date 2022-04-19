@@ -15,14 +15,13 @@ import           Cardano.Prelude
 import           Data.Aeson (Value (..), object, toJSON, (.=))
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Key as AesonKey
-import qualified Data.Aeson.Text as Aeson
+import qualified Data.Aeson.KeyMap as Aeson
 import qualified Data.Aeson.Types as Aeson
 import qualified Data.ByteString.Base16 as Base16
 import qualified Data.ByteString.Char8 as BSC
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
 import           Data.Text.Encoding (decodeLatin1)
-import qualified Data.Text.Lazy as LText
 import           Data.Yaml (array)
 import           Data.Yaml.Pretty (setConfCompare)
 import qualified Data.Yaml.Pretty as Yaml
@@ -181,33 +180,35 @@ friendlyDatum :: TxOutDatum CtxTx era -> Aeson.Pair
 friendlyDatum = \case
   TxOutDatumNone -> "datum" .= Null
   TxOutDatumHash _ h -> "datum hash" .= String (serialiseToRawBytesHexText h)
-  TxOutDatumInTx _ datum -> "datum" .= conv datum
-  TxOutDatumInline _ datum -> "datum (inline)" .= conv datum
+  TxOutDatumInTx _ datum -> "datum" .= showDatum datum
+  TxOutDatumInline _ datum -> "datum (inline)" .= showDatum datum
   where
 
     -- | 'ScriptData' does not support text, only byte strings.
     -- 'ScriptData.scriptDataToJson' formats byte strings as Base16 blobs.
     -- So here we try to display text data where byte strings look like text.
-    conv :: ScriptData -> Aeson.Value
-    conv = \case
-      ScriptDataNumber n -> Number $ fromInteger n
-      ScriptDataBytes bs -> String $ convBS bs
-      ScriptDataList vs -> array $ map conv vs
-      ScriptDataMap kvs -> object [convKey k .= conv v | (k, v) <- kvs]
-      ScriptDataConstructor n vs ->
-        array [Number $ fromInteger n, array $ map conv vs]
+    showDatum :: ScriptData -> Aeson.Value
+    showDatum = decodeStrings . scriptDataToJson ScriptDataJsonNoSchema
 
-    convKey :: ScriptData -> Aeson.Key
-    convKey =
-      AesonKey.fromText
-      . \case
-          ScriptDataNumber n -> textShow n
-          ScriptDataBytes bs -> convBS bs
-          v -> LText.toStrict . Aeson.encodeToLazyText $ conv v
+    decodeStrings :: Aeson.Value -> Aeson.Value
+    decodeStrings = \case
+      String s -> String $ decodeString s
+      Object obj ->
+        Object
+        $ Aeson.mapKeyVal
+            (AesonKey.fromText . decodeString . AesonKey.toText)
+            decodeStrings
+            obj
+      Array a -> Array $ decodeStrings <$> a
+      v -> v
 
-    convBS bs
-      | Right s <- decodeUtf8' bs, Text.all isPrint s = s
-      | otherwise = "0x" <> decodeLatin1 (Base16.encode bs)
+    decodeString :: Text -> Text
+    decodeString str
+      | Just b16 <- Text.stripPrefix "0x" str
+      , Right bs <- Base16.decode $ encodeUtf8 b16
+      , BSC.all (\c -> isAscii c && isPrint c) bs =
+          decodeLatin1 bs
+      | otherwise = str
 
 
 friendlyStakeReference :: StakeAddressReference -> Aeson.Value
