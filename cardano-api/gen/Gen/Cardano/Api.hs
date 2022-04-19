@@ -9,22 +9,26 @@ module Gen.Cardano.Api
   ) where
 
 import           Cardano.Prelude
-import           Control.Monad (MonadFail(fail))
+
+import           Cardano.Api.Shelley as Api
+
+import           Control.Monad (MonadFail (fail))
 import qualified Data.Map.Strict as Map
+import qualified Data.Text as Text
 
 --TODO: why do we have this odd split? We can get rid of the old name "typed"
-import           Gen.Cardano.Api.Typed (genRational)
+import           Gen.Cardano.Api.Typed (genCostModel, genRational)
 
-import           Cardano.Ledger.Shelley.Metadata (Metadata (..), Metadatum (..))
 import qualified Cardano.Ledger.Alonzo.Genesis as Alonzo
 import qualified Cardano.Ledger.Alonzo.Language as Alonzo
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 import qualified Cardano.Ledger.BaseTypes as Ledger
 import qualified Cardano.Ledger.Coin as Ledger
+import           Cardano.Ledger.Shelley.Metadata (Metadata (..), Metadatum (..))
 
 import           Hedgehog (Gen, Range)
 import qualified Hedgehog.Gen as Gen
-import qualified Hedgehog.Range as Range
+import qualified Hedgehog.Internal.Range as Range
 
 genMetadata :: Gen (Metadata era)
 genMetadata = do
@@ -83,19 +87,23 @@ genExUnits = do
     , Alonzo.exUnitsSteps = exUnitsSteps'
     }
 
-genCostModel :: Range Int -> Gen Text -> Gen Integer -> Gen Alonzo.CostModel
-genCostModel r gt gi = do
-  map' <- Gen.map r ((,) <$> gt <*> gi)
-  return $ Alonzo.CostModel map'
+genCostModels :: Gen Alonzo.CostModels
+genCostModels = do
+  CostModel cModel <- genCostModel
+  lang <- genLanguage
+  case Alonzo.mkCostModel lang cModel of
+    Left err -> panic . Text.pack $ "genCostModels: " <> err
+    Right alonzoCostModel ->
+      Alonzo.CostModels . conv <$> Gen.list (Range.linear 1 3) (return alonzoCostModel)
+ where
+  conv :: [Alonzo.CostModel] -> Map Alonzo.Language Alonzo.CostModel
+  conv [] = mempty
+  conv (c : rest) = Map.singleton (Alonzo.getCostModelLanguage c) c <> conv rest
 
 genAlonzoGenesis :: Gen Alonzo.AlonzoGenesis
 genAlonzoGenesis = do
   coinsPerUTxOWord <- genCoin (Range.linear 0 5)
-  costmdls' <- Gen.map (Range.linear 0 5) $ (,)
-    <$> genLanguage
-    <*> genCostModel (Range.linear 0 5)
-          (Gen.text (Range.linear 0 10) Gen.alphaNum)
-          (Gen.integral (Range.linear 0 100))
+  costmdls' <- genCostModels
   prices' <- genPrices
   maxTxExUnits' <- genExUnits
   maxBlockExUnits' <- genExUnits

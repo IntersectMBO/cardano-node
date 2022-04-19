@@ -2244,12 +2244,13 @@ fromLedgerTxTotalCollateral era txbody =
   case totalAndReturnCollateralSupportedInEra $ shelleyBasedToCardanoEra era of
     Nothing -> TxTotalCollateralNone
     Just supp ->
-      let totColl = obtainTotalCollateralHasFieldConstraint supp $ getField @"totalCollateral" txbody
-      in TxTotalCollateral supp $ fromShelleyLovelace totColl
+      case obtainTotalCollateralHasFieldConstraint supp $ getField @"totalCollateral" txbody of
+        SNothing -> TxTotalCollateralNone
+        SJust totColl -> TxTotalCollateral supp $ fromShelleyLovelace totColl
  where
   obtainTotalCollateralHasFieldConstraint
     :: TxTotalAndReturnCollateralSupportedInEra era
-    -> (HasField "totalCollateral" (Ledger.TxBody (ShelleyLedgerEra era)) Ledger.Coin => a)
+    -> (HasField "totalCollateral" (Ledger.TxBody (ShelleyLedgerEra era)) (StrictMaybe Ledger.Coin) => a)
     -> a
   obtainTotalCollateralHasFieldConstraint TxTotalAndReturnCollateralInBabbageEra f = f
 

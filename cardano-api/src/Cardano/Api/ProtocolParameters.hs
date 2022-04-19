@@ -53,6 +53,7 @@ module Cardano.Api.ProtocolParameters (
     fromAlonzoScriptLanguage,
     toAlonzoCostModel,
     fromAlonzoCostModel,
+    toAlonzoCostModels,
 
     -- * Data family instances
     AsType(..)
@@ -747,10 +748,10 @@ validateCostModel :: PlutusScriptVersion lang
                   -> CostModel
                   -> Either InvalidCostModel ()
 validateCostModel PlutusScriptV1 (CostModel m)
-  | Alonzo.validateCostModelParams m = Right ()
+  | Alonzo.isCostModelParamsWellFormed m = Right ()
   | otherwise                        = Left (InvalidCostModel (CostModel m))
 validateCostModel PlutusScriptV2 (CostModel m)
-  | Alonzo.validateCostModelParams m = Right ()
+  | Alonzo.isCostModelParamsWellFormed m = Right ()
   | otherwise                        = Left (InvalidCostModel (CostModel m))
 
 -- TODO alonzo: it'd be nice if the library told us what was wrong
@@ -764,19 +765,23 @@ instance Error InvalidCostModel where
 
 toAlonzoCostModels
   :: Map AnyPlutusScriptVersion CostModel
-  -> Map Alonzo.Language Alonzo.CostModel
-toAlonzoCostModels =
-    Map.fromList
-  . map (bimap toAlonzoScriptLanguage toAlonzoCostModel)
-  . Map.toList
+  -> Either String Alonzo.CostModels
+toAlonzoCostModels m = do
+  f <- mapM conv $ Map.toList m
+  Right . Alonzo.CostModels $ Map.fromList f
+ where
+  conv :: (AnyPlutusScriptVersion, CostModel) -> Either String (Alonzo.Language, Alonzo.CostModel)
+  conv (anySVer, cModel )= do
+    alonzoCostModel <- toAlonzoCostModel cModel (toAlonzoScriptLanguage anySVer)
+    Right (toAlonzoScriptLanguage anySVer, alonzoCostModel)
 
 fromAlonzoCostModels
-  :: Map Alonzo.Language Alonzo.CostModel
+  :: Alonzo.CostModels
   -> Map AnyPlutusScriptVersion CostModel
-fromAlonzoCostModels =
+fromAlonzoCostModels (Alonzo.CostModels m)=
     Map.fromList
   . map (bimap fromAlonzoScriptLanguage fromAlonzoCostModel)
-  . Map.toList
+  $ Map.toList m
 
 toAlonzoScriptLanguage :: AnyPlutusScriptVersion -> Alonzo.Language
 toAlonzoScriptLanguage (AnyPlutusScriptVersion PlutusScriptV1) = Alonzo.PlutusV1
@@ -786,11 +791,11 @@ fromAlonzoScriptLanguage :: Alonzo.Language -> AnyPlutusScriptVersion
 fromAlonzoScriptLanguage Alonzo.PlutusV1 = AnyPlutusScriptVersion PlutusScriptV1
 fromAlonzoScriptLanguage Alonzo.PlutusV2 = AnyPlutusScriptVersion PlutusScriptV2
 
-toAlonzoCostModel :: CostModel -> Alonzo.CostModel
-toAlonzoCostModel (CostModel m) = Alonzo.CostModel m
+toAlonzoCostModel :: CostModel -> Alonzo.Language -> Either String Alonzo.CostModel
+toAlonzoCostModel (CostModel m) l = Alonzo.mkCostModel l m
 
 fromAlonzoCostModel :: Alonzo.CostModel -> CostModel
-fromAlonzoCostModel (Alonzo.CostModel m) = CostModel m
+fromAlonzoCostModel m = CostModel $ Alonzo.getCostModelParams m
 
 
 -- ----------------------------------------------------------------------------
@@ -985,7 +990,7 @@ toAlonzoPParamsUpdate
                                   noInlineMaybeToStrictMaybe protocolUpdateUTxOCostPerWord
     , Alonzo._costmdls        = if Map.null protocolUpdateCostModels
                                   then Ledger.SNothing
-                                  else Ledger.SJust
+                                  else either (const Ledger.SNothing) Ledger.SJust
                                          (toAlonzoCostModels protocolUpdateCostModels)
     , Alonzo._prices          = noInlineMaybeToStrictMaybe $
                                   toAlonzoPrices =<< protocolUpdatePrices
@@ -1293,7 +1298,10 @@ toAlonzoPParams ProtocolParameters {
 
       -- New params in Alonzo:
     , Alonzo._coinsPerUTxOWord  = toShelleyLovelace utxoCostPerWord
-    , Alonzo._costmdls        = toAlonzoCostModels protocolParamCostModels
+    , Alonzo._costmdls        = either
+                                  (\e -> error $ "toAlonzoPParams: invalid cost models, error: " <> e)
+                                  id
+                                  (toAlonzoCostModels protocolParamCostModels)
     , Alonzo._prices          = fromMaybe
                                   (error "toAlonzoPParams: invalid Price values")
                                   (toAlonzoPrices prices)

@@ -962,24 +962,7 @@ readAlonzoGenesis
   :: FilePath
   -> ExceptT ShelleyGenesisCmdError IO Alonzo.AlonzoGenesis
 readAlonzoGenesis fpath = do
-  readAndDecode
-    `catchError` \err ->
-      case err of
-        ShelleyGenesisCmdGenesisFileError (FileIOError _ ioe)
-          | isDoesNotExistError ioe -> writeDefault
-        _                           -> left err
+  lbs <- handleIOExceptT (ShelleyGenesisCmdGenesisFileError . FileIOError fpath) $ LBS.readFile fpath
+  firstExceptT (ShelleyGenesisCmdAesonDecodeError fpath . Text.pack)
+    . hoistEither $ Aeson.eitherDecode' lbs
 
- where
-  defaults :: Alonzo.AlonzoGenesis
-  defaults = alonzoGenesisDefaults
-
-  writeDefault = do
-    handleIOExceptT (ShelleyGenesisCmdGenesisFileError . FileIOError fpath) $
-      LBS.writeFile fpath (encodePretty defaults)
-    return defaults
-
-  readAndDecode :: ExceptT ShelleyGenesisCmdError IO Alonzo.AlonzoGenesis
-  readAndDecode = do
-      lbs <- handleIOExceptT (ShelleyGenesisCmdGenesisFileError . FileIOError fpath) $ LBS.readFile fpath
-      firstExceptT (ShelleyGenesisCmdAesonDecodeError fpath . Text.pack)
-        . hoistEither $ Aeson.eitherDecode' lbs

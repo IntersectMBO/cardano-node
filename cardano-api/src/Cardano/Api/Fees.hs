@@ -435,6 +435,8 @@ data TransactionValidityError =
 
   | TransactionValidityBasicFailure (Alonzo.BasicFailure Ledger.StandardCrypto)
 
+  | TransactionValidityCostModelError (Map AnyPlutusScriptVersion CostModel) String
+
 deriving instance Show TransactionValidityError
 
 instance Error TransactionValidityError where
@@ -461,6 +463,11 @@ instance Error TransactionValidityError where
     <> show (map (renderTxIn . fromShelleyTxIn) $ Set.toList txins)
   displayError (TransactionValidityBasicFailure (Alonzo.BadTranslation errmsg)) =
     "Error translating the transaction context: " <> show errmsg
+
+  displayError (TransactionValidityCostModelError cModels err) =
+    "An error occurred while converting from the cardano-api cost" <>
+    " models to the cardano-ledger cost models. Error: " <> err <>
+    " Cost models: " <> show cModels
 
 -- | Compute the 'ExecutionUnits' needed for each script in the transaction.
 --
@@ -503,14 +510,15 @@ evaluateTransactionExecutionUnits _eraInMode systemstart history pparams utxo tx
                -> Either TransactionValidityError
                          (Map ScriptWitnessIndex
                               (Either ScriptExecutionError ExecutionUnits))
-    evalAlonzo era tx =
+    evalAlonzo era tx = do
+      cModelArray <- toAlonzoCostModelsArray (protocolParamCostModels pparams)
       case Alonzo.evaluateTransactionExecutionUnits
              (toLedgerPParams era pparams)
              tx
              (toLedgerUTxO era utxo)
              (toLedgerEpochInfo history)
              systemstart
-             (toAlonzoCostModels (protocolParamCostModels pparams))
+             cModelArray
         of Left  err   -> Left err
            Right exmapResult ->
              case exmapResult of
@@ -523,13 +531,12 @@ evaluateTransactionExecutionUnits _eraInMode systemstart history pparams utxo tx
         hoistEpochInfo (first TransactionValidityIntervalError . runExcept) $
           Consensus.interpreterToEpochInfo interpreter
 
-    toAlonzoCostModels :: Map AnyPlutusScriptVersion CostModel
-                       -> Array.Array Alonzo.Language Alonzo.CostModel
-    toAlonzoCostModels costmodels =
-      Array.array
-        (minBound, maxBound)
-        [ (toAlonzoLanguage lang, toAlonzoCostModel costmodel)
-        | (lang, costmodel) <- Map.toList costmodels ]
+    toAlonzoCostModelsArray
+      :: Map AnyPlutusScriptVersion CostModel
+      -> Either TransactionValidityError (Array.Array Alonzo.Language Alonzo.CostModel)
+    toAlonzoCostModelsArray costmodels = do
+      Alonzo.CostModels cModels <- first (TransactionValidityCostModelError costmodels) $ toAlonzoCostModels costmodels
+      return $ Array.array (minBound, maxBound) (Map.toList cModels)
 
     fromLedgerScriptExUnitsMap
       :: Map Alonzo.RdmrPtr (Either (Alonzo.ScriptFailure Ledger.StandardCrypto)
@@ -565,6 +572,8 @@ evaluateTransactionExecutionUnits _eraInMode systemstart history pparams utxo tx
         Alonzo.MissingScript rdmrPtr -> ScriptErrorMissingScript rdmrPtr
 
         Alonzo.NoCostModel l -> ScriptErrorMissingCostModel l
+
+        Alonzo.CorruptCostModel _l -> error "TODO: Babbage is this used in the ledger?"
 
 
 -- ----------------------------------------------------------------------------

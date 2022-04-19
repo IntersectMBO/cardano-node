@@ -305,7 +305,10 @@ data DebugLedgerState era where
 
 instance
     ( Typeable era
-    , Shelley.TransLedgerState FromCBOR (ShelleyLedgerEra era)
+    , Ledger.Era (ShelleyLedgerEra era)
+    , FromCBOR (Core.PParams (ShelleyLedgerEra era))
+    , FromCBOR (Core.Value (ShelleyLedgerEra era))
+    , FromCBOR (Ledger.State (Core.EraRule "PPUP" (ShelleyLedgerEra era)))
     , Share (Core.TxOut (ShelleyLedgerEra era)) ~ Interns (Shelley.Credential 'Shelley.Staking (Ledger.Crypto (ShelleyLedgerEra era)))
     , FromSharedCBOR (Core.TxOut (ShelleyLedgerEra era))
     ) => FromCBOR (DebugLedgerState era) where

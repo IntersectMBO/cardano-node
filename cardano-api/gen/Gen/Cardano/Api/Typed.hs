@@ -10,6 +10,7 @@ module Gen.Cardano.Api.Typed
   ( genAddressByron
   , genAddressShelley
   , genCertificate
+  , genCostModel
   , genMaybePraosNonce
   , genPraosNonce
   , genProtocolParameters
@@ -75,19 +76,23 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Short as SBS
 import           Data.Coerce
 import           Data.String
+import qualified Data.Text as Text
 
 import qualified Cardano.Binary as CBOR
 import qualified Cardano.Crypto.Hash as Crypto
 import qualified Cardano.Crypto.Seed as Crypto
 import qualified Cardano.Ledger.Shelley.TxBody as Ledger (EraIndependentTxBody)
-import qualified Plutus.V1.Ledger.Api as Plutus
+import qualified PlutusCore as Plutus
 
 import           Hedgehog (Gen, Range)
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 
 import qualified Cardano.Crypto.Hash.Class as CRYPTO
+import           Cardano.Ledger.Alonzo.Language (Language (..))
+import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 import           Cardano.Ledger.SafeHash (unsafeMakeSafeHash)
+
 import           Gen.Cardano.Api.Metadata (genTxMetadata)
 import           Test.Cardano.Chain.UTxO.Gen (genVKWitness)
 import           Test.Cardano.Crypto.Gen (genProtocolMagicId)
@@ -780,11 +785,15 @@ genUpdateProposal =
 genCostModel :: Gen CostModel
 genCostModel = case Plutus.defaultCostModelParams of
   Nothing -> panic "Plutus defaultCostModelParams is broken."
-  Just dcm ->
-      CostModel
-    -- TODO This needs to be the cost model struct for whichever
-    -- Plutus version we're using, once we support multiple Plutus versions.
-    <$> mapM (const $ Gen.integral (Range.linear 0 5000)) dcm
+  Just dcm -> do
+      eCostModel <- Alonzo.mkCostModel <$> genPlutusLanguage
+                                       <*> mapM (const $ Gen.integral (Range.linear 0 5000)) dcm
+      case eCostModel of
+        Left err -> panic $ Text.pack $ "genCostModel: " <> err
+        Right cModel -> return . CostModel $ Alonzo.getCostModelParams cModel
+
+genPlutusLanguage :: Gen Language
+genPlutusLanguage = Gen.element [PlutusV1, PlutusV2]
 
 genCostModels :: Gen (Map AnyPlutusScriptVersion CostModel)
 genCostModels =

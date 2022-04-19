@@ -4,7 +4,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -37,52 +36,53 @@ module Cardano.Node.Queries
   , fromSMaybe
   ) where
 
-import Cardano.Prelude hiding (All, (:.:))
+import           Cardano.Prelude hiding (All, (:.:))
 
-import Data.IORef (IORef, newIORef, readIORef, writeIORef)
-import Data.Map.Strict qualified as Map
-import Data.SOP.Strict
 import qualified Data.Compact.SplitMap as SplitMap
+import           Data.IORef (IORef, newIORef, readIORef, writeIORef)
+import qualified Data.Map.Strict as Map
+import           Data.SOP.Strict
 import qualified Data.UMap as UM
 
-import Cardano.Chain.Block qualified as Byron
-import Cardano.Chain.UTxO qualified as Byron
-import Cardano.Crypto.Hash qualified as Crypto
-import Cardano.Crypto.Hashing qualified as Byron.Crypto
-import Cardano.Crypto.KES.Class (Period)
-import Cardano.Protocol.TPraos.OCert (KESPeriod (..))
+import qualified Cardano.Chain.Block as Byron
+import qualified Cardano.Chain.UTxO as Byron
+import qualified Cardano.Crypto.Hash as Crypto
+import qualified Cardano.Crypto.Hashing as Byron.Crypto
+import           Cardano.Crypto.KES.Class (Period)
+import           Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 
-import Cardano.Ledger.BaseTypes (StrictMaybe (..), fromSMaybe)
-import Cardano.Ledger.SafeHash qualified as Ledger
-import Cardano.Ledger.Shelley.LedgerState qualified as Shelley
-import Cardano.Ledger.Shelley.UTxO qualified as Shelley
-import Cardano.Ledger.TxIn qualified as Ledger
+import           Cardano.Ledger.BaseTypes (StrictMaybe (..), fromSMaybe)
+import qualified Cardano.Ledger.SafeHash as Ledger
+import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
+import qualified Cardano.Ledger.Shelley.UTxO as Shelley
+import qualified Cardano.Ledger.TxIn as Ledger
 
-import Ouroboros.Consensus.Block (ForgeStateInfo, ForgeStateUpdateError)
-import Ouroboros.Consensus.Byron.Ledger.Block (ByronBlock)
-import Ouroboros.Consensus.Byron.Ledger.Block qualified as Byron
-import Ouroboros.Consensus.Byron.Ledger.Ledger qualified as Byron
-import Ouroboros.Consensus.Byron.Ledger.Mempool (TxId (..))
-import Ouroboros.Consensus.Cardano qualified as Cardano
-import Ouroboros.Consensus.Cardano.Block qualified as Cardano
-import Ouroboros.Consensus.HardFork.Combinator
-import Ouroboros.Consensus.HardFork.Combinator.AcrossEras (OneEraForgeStateInfo (..), OneEraForgeStateUpdateError (..))
-import Ouroboros.Consensus.HardFork.Combinator.Embed.Unary
-import Ouroboros.Consensus.Ledger.Abstract (IsLedger)
-import Ouroboros.Consensus.Ledger.Extended (ExtLedgerState)
-import Ouroboros.Consensus.Node (NodeKernel (..))
-import Ouroboros.Consensus.Shelley.Ledger qualified as Shelley
-import Ouroboros.Consensus.Shelley.Ledger.Block (ShelleyBlock)
-import Ouroboros.Consensus.Shelley.Ledger.Mempool (TxId (..))
-import Ouroboros.Consensus.Shelley.Node ()
-import Ouroboros.Consensus.Protocol.Ledger.HotKey qualified as HotKey
-import Ouroboros.Consensus.Storage.ChainDB qualified as ChainDB
-import Ouroboros.Consensus.TypeFamilyWrappers
-import Ouroboros.Consensus.Util.Orphans ()
+import           Ouroboros.Consensus.Block (ForgeStateInfo, ForgeStateUpdateError)
+import           Ouroboros.Consensus.Byron.Ledger.Block (ByronBlock)
+import qualified Ouroboros.Consensus.Byron.Ledger.Block as Byron
+import qualified Ouroboros.Consensus.Byron.Ledger.Ledger as Byron
+import           Ouroboros.Consensus.Byron.Ledger.Mempool (TxId (..))
+import qualified Ouroboros.Consensus.Cardano as Cardano
+import qualified Ouroboros.Consensus.Cardano.Block as Cardano
+import           Ouroboros.Consensus.HardFork.Combinator
+import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (OneEraForgeStateInfo (..),
+                   OneEraForgeStateUpdateError (..))
+import           Ouroboros.Consensus.HardFork.Combinator.Embed.Unary
+import           Ouroboros.Consensus.Ledger.Abstract (IsLedger)
+import           Ouroboros.Consensus.Ledger.Extended (ExtLedgerState)
+import           Ouroboros.Consensus.Node (NodeKernel (..))
+import qualified Ouroboros.Consensus.Protocol.Ledger.HotKey as HotKey
+import qualified Ouroboros.Consensus.Shelley.Ledger as Shelley
+import           Ouroboros.Consensus.Shelley.Ledger.Block (ShelleyBlock)
+import           Ouroboros.Consensus.Shelley.Ledger.Mempool (TxId (..))
+import           Ouroboros.Consensus.Shelley.Node ()
+import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
+import           Ouroboros.Consensus.TypeFamilyWrappers
+import           Ouroboros.Consensus.Util.Orphans ()
 
-import Ouroboros.Network.AnchoredFragment qualified as AF
-import Ouroboros.Network.NodeToClient (LocalConnectionId)
-import Ouroboros.Network.NodeToNode (RemoteConnectionId)
+import qualified Ouroboros.Network.AnchoredFragment as AF
+import           Ouroboros.Network.NodeToClient (LocalConnectionId)
+import           Ouroboros.Network.NodeToNode (RemoteConnectionId)
 
 --
 -- * TxId -> ByteString projection
@@ -243,7 +243,7 @@ instance LedgerQueries (Shelley.ShelleyBlock era) where
   ledgerUtxoSize =
       (\(Shelley.UTxO xs)-> SplitMap.size xs)
     . Shelley._utxo
-    . Shelley._utxoState
+    . Shelley.lsUTxOState
     . Shelley.esLState
     . Shelley.nesEs
     . Shelley.shelleyLedgerState
@@ -251,8 +251,8 @@ instance LedgerQueries (Shelley.ShelleyBlock era) where
       UM.size
     . UM.Delegations
     . Shelley._unified
-    . Shelley._dstate
-    . Shelley._delegationState
+    . Shelley.dpsDState
+    . Shelley.lsDPState
     . Shelley.esLState
     . Shelley.nesEs
     . Shelley.shelleyLedgerState
