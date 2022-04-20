@@ -150,6 +150,7 @@ txSpendGenesisUTxOByronPBFT gc nId sk (ByronAddress bAddr) outs = do
               , BuildTxWith (KeyWitness KeyWitnessForSpending))
             ]
             TxInsCollateralNone
+            TxInsReferenceNone
             outs
             TxTotalCollateralNone
             TxReturnCollateralNone
@@ -191,6 +192,7 @@ txSpendUTxOByronPBFT nId sk txIns outs = do
                        ) | txIn <- txIns
                      ]
                      TxInsCollateralNone
+                     TxInsReferenceNone
                      outs
                      TxTotalCollateralNone
                      TxReturnCollateralNone
