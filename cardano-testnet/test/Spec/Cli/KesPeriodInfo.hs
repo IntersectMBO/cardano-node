@@ -64,7 +64,7 @@ hprop_kes_period_info = H.integration . H.runFinallies . H.workspace "chairman" 
                               tempAbsBasePath' Nothing
 
   let fastTestnetOptions = defaultTestnetOptions
-                             { bftNodeOptions = replicate 1 defaultTestnetNodeOptions
+                             { bftNodeOptions = replicate 2 defaultTestnetNodeOptions
                              , epochLength = 500
                              , slotLength = 0.02
                              , activeSlotsCoeff = 0.1
