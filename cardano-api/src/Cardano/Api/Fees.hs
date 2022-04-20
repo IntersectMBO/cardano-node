@@ -59,11 +59,11 @@ import qualified Prettyprinter as PP
 import qualified Prettyprinter.Render.String as PP
 
 import qualified Cardano.Binary as CBOR
+import qualified Cardano.Ledger.BaseTypes as Ledger
 import           Cardano.Slotting.EpochInfo (EpochInfo, hoistEpochInfo)
 
 import qualified Cardano.Chain.Common as Byron
 
-import qualified Cardano.Ledger.Alonzo.Rules.Utxo as Alonzo
 import qualified Cardano.Ledger.Coin as Ledger
 import qualified Cardano.Ledger.Core as Ledger
 import qualified Cardano.Ledger.Crypto as Ledger
@@ -73,6 +73,7 @@ import qualified Cardano.Ledger.Shelley.API as Ledger (CLI, DCert, TxIn, Wdrl)
 import qualified Cardano.Ledger.Shelley.API.Wallet as Ledger (evaluateTransactionBalance,
                    evaluateTransactionFee)
 
+import qualified Cardano.Ledger.Shelley.API.Wallet as Shelley
 import           Cardano.Ledger.Shelley.PParams (PParams' (..))
 
 import qualified Cardano.Ledger.Mary.Value as Mary
@@ -85,6 +86,9 @@ import qualified Cardano.Ledger.Alonzo.Tools as Alonzo
 import qualified Cardano.Ledger.Alonzo.TxWitness as Alonzo
 
 import qualified Plutus.V1.Ledger.Api as Plutus
+
+import qualified Cardano.Ledger.Babbage as Babbage
+import           Cardano.Ledger.Babbage.PParams (PParams' (..))
 
 import qualified Ouroboros.Consensus.HardFork.History as Consensus
 
@@ -493,7 +497,10 @@ evaluateTransactionExecutionUnits _eraInMode systemstart history pparams utxo tx
           ShelleyBasedEraAllegra -> evalPreAlonzo
           ShelleyBasedEraMary    -> evalPreAlonzo
           ShelleyBasedEraAlonzo  -> evalAlonzo era tx'
-          ShelleyBasedEraBabbage -> error "TODO: Babbage"
+          ShelleyBasedEraBabbage ->
+            case collateralSupportedInEra $ shelleyBasedToCardanoEra era of
+              Just supp -> obtainHasFieldConstraint supp $ evalBabbage era tx'
+              Nothing -> return mempty
   where
     -- Pre-Alonzo eras do not support languages with execution unit accounting.
     evalPreAlonzo :: Either TransactionValidityError
@@ -519,6 +526,31 @@ evaluateTransactionExecutionUnits _eraInMode systemstart history pparams utxo tx
              (toLedgerEpochInfo history)
              systemstart
              cModelArray
+        of Left  err   -> Left err
+           Right exmapResult ->
+             case exmapResult of
+               Left err -> Left (TransactionValidityBasicFailure err)
+               Right exmap -> Right (fromLedgerScriptExUnitsMap exmap)
+
+    evalBabbage :: forall ledgerera.
+                  ShelleyLedgerEra era ~ ledgerera
+               => ledgerera ~ Babbage.BabbageEra Ledger.StandardCrypto
+               => HasField "_maxTxExUnits" (Ledger.PParams ledgerera) Alonzo.ExUnits
+               => HasField"_protocolVersion" (Ledger.PParams ledgerera) Ledger.ProtVer
+               => ShelleyBasedEra era
+               -> Ledger.Tx ledgerera
+               -> Either TransactionValidityError
+                         (Map ScriptWitnessIndex
+                              (Either ScriptExecutionError ExecutionUnits))
+    evalBabbage era tx = do
+      costModelsArray <- toAlonzoCostModelsArray (protocolParamCostModels pparams)
+      case Alonzo.evaluateTransactionExecutionUnits
+             (toLedgerPParams era pparams)
+             tx
+             (toLedgerUTxO era utxo)
+             (toLedgerEpochInfo history)
+             systemstart
+             costModelsArray
         of Left  err   -> Left err
            Right exmapResult ->
              case exmapResult of
@@ -573,7 +605,16 @@ evaluateTransactionExecutionUnits _eraInMode systemstart history pparams utxo tx
 
         Alonzo.NoCostModel l -> ScriptErrorMissingCostModel l
 
-        Alonzo.CorruptCostModel _l -> error "TODO: Babbage is this used in the ledger?"
+        Alonzo.CorruptCostModel _l ->
+          error "fromAlonzoScriptExecutionError: CorruptCostModel will be removed"
+
+
+    obtainHasFieldConstraint
+      :: ShelleyLedgerEra era ~ ledgerera
+      => CollateralSupportedInEra era
+      -> (HasField "_maxTxExUnits" (Ledger.PParams ledgerera) Alonzo.ExUnits => a) ->  a
+    obtainHasFieldConstraint CollateralInAlonzoEra f =  f
+    obtainHasFieldConstraint CollateralInBabbageEra f =  f
 
 
 -- ----------------------------------------------------------------------------
@@ -653,7 +694,7 @@ evaluateTransactionBalance pparams poolids utxo
     withLedgerConstraints ShelleyBasedEraAllegra f _  = f AdaOnlyInAllegraEra
     withLedgerConstraints ShelleyBasedEraMary    _ f  = f MultiAssetInMaryEra
     withLedgerConstraints ShelleyBasedEraAlonzo  _ f  = f MultiAssetInAlonzoEra
-    withLedgerConstraints ShelleyBasedEraBabbage _ _f = error "TODO: Babbage"
+    withLedgerConstraints ShelleyBasedEraBabbage _ f = f MultiAssetInBabbageEra
 
 type LedgerEraConstraints ledgerera =
        ( Ledger.Era.Crypto ledgerera ~ Ledger.StandardCrypto
@@ -1039,12 +1080,17 @@ calculateMinimumUTxO era txout@(TxOut _ v _ _) pparams' =
     ShelleyBasedEraAllegra -> calcMinUTxOAllegraMary
     ShelleyBasedEraMary -> calcMinUTxOAllegraMary
     ShelleyBasedEraAlonzo ->
-      case protocolParamUTxOCostPerWord pparams' of
-        Just (Lovelace costPerWord) -> do
-          Right . lovelaceToValue
-            $ Lovelace (Alonzo.utxoEntrySize (toShelleyTxOutAny era txout) * costPerWord)
-        Nothing -> Left PParamsUTxOCostPerWordMissing
-    ShelleyBasedEraBabbage -> error "TODO: Babbage"
+      let lTxOut = toShelleyTxOutAny era txout
+          babPParams = toAlonzoPParams pparams'
+          minUTxO = Shelley.evaluateMinLovelaceOutput babPParams lTxOut
+          val = lovelaceToValue $ fromShelleyLovelace minUTxO
+      in Right val
+    ShelleyBasedEraBabbage ->
+      let lTxOut = toShelleyTxOutAny era txout
+          babPParams = toBabbagePParams pparams'
+          minUTxO = Shelley.evaluateMinLovelaceOutput babPParams lTxOut
+          val = lovelaceToValue $ fromShelleyLovelace minUTxO
+      in Right val
  where
    calcMinUTxOAllegraMary :: Either MinimumUTxOError Value
    calcMinUTxOAllegraMary = do
