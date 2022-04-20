@@ -192,7 +192,7 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger
-  tag: 1db68a3ec0a2dcb5751004beb22b906162474f23
+  tag: c4c691ff0b94b6e4acb36b2ca93d9ff43c38c5ff
   --sha256: 03pv2jvskbi65dwaddp6a8bxbbcw674csjxhg8xbqd6q1kfpc41a
   subdir:
     eras/alonzo/impl
@@ -257,7 +257,7 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: f9acc16a4ae2979756105d704dfe8ace0f8c3f5e
+  tag: 21619d769f79cf92cb7b9be3440a135a8cc89d69
   --sha256: 1vpglwh3jfygrbfg369mw0a0qgy8glsa5lyzwifn2swa5yqv7xlx
   subdir:
     io-sim

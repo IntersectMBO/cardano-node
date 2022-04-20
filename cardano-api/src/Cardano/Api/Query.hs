@@ -318,6 +318,7 @@ instance
     , FromCBOR (Ledger.State (Core.EraRule "PPUP" (ShelleyLedgerEra era)))
     , Share (Core.TxOut (ShelleyLedgerEra era)) ~ Interns (Shelley.Credential 'Shelley.Staking (Ledger.Crypto (ShelleyLedgerEra era)))
     , FromSharedCBOR (Core.TxOut (ShelleyLedgerEra era))
+    , FromCBOR (Shelley.StashedAVVMAddresses (ShelleyLedgerEra era))
     ) => FromCBOR (DebugLedgerState era) where
   fromCBOR = DebugLedgerState <$> (fromCBOR :: Decoder s (Shelley.NewEpochState (ShelleyLedgerEra era)))
 
