@@ -24,9 +24,6 @@ module Cardano.Api.ScriptData (
     scriptDataFromJsonDetailedSchema,
     scriptDataToJsonDetailedSchema,
 
-    -- * Conversion to inline data
-    scriptDataToBinaryData,
-
     -- * Internal conversion functions
     toPlutusData,
     fromPlutusData,
@@ -67,7 +64,6 @@ import           Control.Applicative (Alternative (..))
 
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import qualified Cardano.Ledger.Alonzo.Data as Alonzo
-import qualified Cardano.Ledger.Babbage.TxBody as Babbage
 import qualified Cardano.Ledger.SafeHash as Ledger
 import           Ouroboros.Consensus.Shelley.Eras (StandardAlonzo, StandardCrypto)
 import qualified Plutus.V1.Ledger.Api as Plutus
@@ -591,12 +587,3 @@ instance Error ScriptDataJsonSchemaError where
      ++ "required by the schema.\nUnexpected value: "
      ++ LBS.unpack (Aeson.encode v)
 
--- ----------------------------------------------------------------------------
--- Inline data
---
--- | Conversion of ScriptData to binary data which allows for the storage of data
--- onchain within a transaction output.
---
-
-scriptDataToBinaryData :: ScriptData -> Babbage.Datum ledgerera
-scriptDataToBinaryData = Babbage.Datum . Alonzo.dataToBinaryData . toAlonzoData
