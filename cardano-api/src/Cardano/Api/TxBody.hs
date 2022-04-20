@@ -63,6 +63,7 @@ module Cardano.Api.TxBody (
 
     -- * Other transaction body types
     TxInsCollateral(..),
+    TxInsReference(..),
     TxReturnCollateral(..),
     TxTotalCollateral(..),
     TxFee(..),
@@ -1275,6 +1276,16 @@ data TxInsCollateral era where
 deriving instance Eq   (TxInsCollateral era)
 deriving instance Show (TxInsCollateral era)
 
+data TxInsReference era where
+
+     TxInsReferenceNone :: TxInsReference era
+
+     TxInsReference     :: ReferenceTxInsScriptsInlineDatumsSupportedInEra era
+                        -> [TxIn]
+                        -> TxInsReference era
+
+deriving instance Eq   (TxInsReference era)
+deriving instance Show (TxInsReference era)
 
 -- ----------------------------------------------------------------------------
 -- Transaction output values (era-dependent)
@@ -1633,6 +1644,7 @@ data TxBodyContent build era =
      TxBodyContent {
        txIns              :: TxIns build era,
        txInsCollateral    :: TxInsCollateral era,
+       txInsReference     :: TxInsReference era,
        txOuts             :: [TxOut CtxTx era],
        txTotalCollateral  :: TxTotalCollateral era,
        txReturnCollateral :: TxReturnCollateral CtxTx era,
@@ -2118,6 +2130,7 @@ fromLedgerTxBody era scriptValidity body scriptdata mAux =
     TxBodyContent
       { txIns              = fromLedgerTxIns               era body
       , txInsCollateral    = fromLedgerTxInsCollateral     era body
+      , txInsReference     = fromLedgerTxInsReference      era body
       , txOuts             = fromLedgerTxOuts              era body scriptdata
       , txTotalCollateral  = fromLedgerTxTotalCollateral   era body
       , txReturnCollateral = fromLedgerTxReturnCollateral  era body
@@ -2175,6 +2188,20 @@ fromLedgerTxInsCollateral era body =
       ShelleyBasedEraAlonzo  -> toList $ Alonzo.collateral' body
       ShelleyBasedEraBabbage -> toList $ Babbage.collateral body
 
+fromLedgerTxInsReference
+  :: ShelleyBasedEra era -> Ledger.TxBody (ShelleyLedgerEra era) -> TxInsReference era
+fromLedgerTxInsReference era txBody =
+  case refInsScriptsAndInlineDatsSupportedInEra $ shelleyBasedToCardanoEra era of
+    Nothing -> TxInsReferenceNone
+    Just suppInEra ->
+      let ledgerRefInputs = obtainReferenceInputsHasFieldConstraint suppInEra $ getField @"referenceInputs" txBody
+      in TxInsReference suppInEra $ map fromShelleyTxIn $ Set.toList ledgerRefInputs
+ where
+  obtainReferenceInputsHasFieldConstraint
+    :: ReferenceTxInsScriptsInlineDatumsSupportedInEra era
+    -> (HasField "referenceInputs" (Ledger.TxBody (ShelleyLedgerEra era)) (Set (Ledger.TxIn StandardCrypto)) => a)
+    -> a
+  obtainReferenceInputsHasFieldConstraint ReferenceTxInsScriptsInlineDatumsBabbageInEra f = f
 
 fromLedgerTxOuts
   :: forall era.
@@ -2670,6 +2697,7 @@ getByronTxBodyContent (Annotated Byron.UnsafeTx{txInputs, txOutputs} _) =
       txIns              = [ (fromByronTxIn input, ViewTx)
                            | input <- toList txInputs],
       txInsCollateral    = TxInsCollateralNone,
+      txInsReference     = TxInsReferenceNone,
       txOuts             = fromByronTxOut <$> toList txOutputs,
       txReturnCollateral = TxReturnCollateralNone,
       txTotalCollateral  = TxTotalCollateralNone,

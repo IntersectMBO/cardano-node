@@ -184,6 +184,7 @@ module Cardano.Api (
 
     -- ** Other transaction body types
     TxInsCollateral(..),
+    TxInsReference(..),
     TxTotalCollateral(..),
     TxReturnCollateral(..),
     TxFee(..),
