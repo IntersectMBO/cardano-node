@@ -40,7 +40,7 @@ import qualified Hedgehog.Extras.Test.Process as H
 import qualified System.Info as SYS
 import qualified Test.Base as H
 import qualified Test.Process as H
-import           Testnet.Cardano (TestnetOptions (..), TestnetRuntime (..), defaultTestnetOptions,
+import           Testnet.Cardano (TestnetOptions (..), TestnetRuntime (..), defaultTestnetOptions, defaultTestnetNodeOptions,
                    testnet)
 import qualified Testnet.Cardano as TC
 import           Testnet.Conf (ProjectBase (..), YamlFilePath (..))
@@ -64,8 +64,9 @@ hprop_kes_period_info = H.integration . H.runFinallies . H.workspace "chairman" 
                               tempAbsBasePath' Nothing
 
   let fastTestnetOptions = defaultTestnetOptions
-                             { epochLength = 500
-                             , slotLength = 0.01
+                             { bftNodeOptions = replicate 1 defaultTestnetNodeOptions
+                             , epochLength = 500
+                             , slotLength = 0.02
                              , activeSlotsCoeff = 0.1
                              }
   runTime@TC.TestnetRuntime { testnetMagic } <- testnet fastTestnetOptions conf
