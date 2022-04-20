@@ -145,7 +145,7 @@ toConsensusGenTx (TxInMode (ShelleyTx _ tx) AlonzoEraInCardanoMode) =
 toConsensusGenTx (TxInMode (ShelleyTx _ _tx) BabbageEraInCardanoMode) =
     Consensus.HardForkGenTx (Consensus.OneEraGenTx (S (S (S (S (Z tx'))))))
   where
-    tx' = error "TODO: Babbage era" -- Consensus.mkShelleyTx tx
+    tx' = error "TODO: Babbage era - depends on consensus exposing a babbage era" -- Consensus.mkShelleyTx tx
 
 -- ----------------------------------------------------------------------------
 -- Transaction ids in the context of a consensus mode
@@ -206,7 +206,8 @@ toConsensusTxId (TxIdInMode txid AlonzoEraInCardanoMode) =
   txid' :: Consensus.TxId (Consensus.GenTx (Consensus.ShelleyBlock Consensus.StandardAlonzo))
   txid' = Consensus.ShelleyTxId $ toShelleyTxId txid
 
-toConsensusTxId (TxIdInMode _txid BabbageEraInCardanoMode) = error "TODO: Babbage era"
+toConsensusTxId (TxIdInMode _txid BabbageEraInCardanoMode) =
+  error "TODO: Babbage era - depends on consensus exposing a babbage era"
 
 -- ----------------------------------------------------------------------------
 -- Transaction validation errors in the context of eras and consensus modes

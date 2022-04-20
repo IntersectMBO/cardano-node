@@ -324,7 +324,8 @@ toConsensusEraIndex ShelleyEraInCardanoMode = eraIndex1
 toConsensusEraIndex AllegraEraInCardanoMode = eraIndex2
 toConsensusEraIndex MaryEraInCardanoMode    = eraIndex3
 toConsensusEraIndex AlonzoEraInCardanoMode  = eraIndex4
-toConsensusEraIndex BabbageEraInCardanoMode = error "TODO: Babbage era"
+toConsensusEraIndex BabbageEraInCardanoMode =
+  error "TODO: Babbage era - depends on consensus exposing a babbage era"
 
 
 fromConsensusEraIndex :: ConsensusBlockForMode mode ~ Consensus.HardForkBlock xs

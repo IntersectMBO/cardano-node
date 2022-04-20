@@ -52,7 +52,7 @@ import           Data.Aeson (FromJSON (..), ToJSON, toJSON, withText)
 import qualified Data.Text as Text
 import           Data.Type.Equality (TestEquality (..), (:~:) (Refl))
 
-import           Ouroboros.Consensus.Shelley.Eras as Ledger (StandardAllegra, StandardAlonzo,
+import           Ouroboros.Consensus.Shelley.Eras as Consensus (StandardAllegra, StandardAlonzo,
                    StandardCrypto, StandardMary, StandardShelley)
 
 import qualified Cardano.Ledger.Babbage as Babbage
@@ -402,9 +402,10 @@ cardanoEraStyle BabbageEra = ShelleyBasedEra ShelleyBasedEraBabbage
 --
 type family ShelleyLedgerEra era where
 
-  ShelleyLedgerEra ShelleyEra = Ledger.StandardShelley
-  ShelleyLedgerEra AllegraEra = Ledger.StandardAllegra
-  ShelleyLedgerEra MaryEra    = Ledger.StandardMary
-  ShelleyLedgerEra AlonzoEra  = Ledger.StandardAlonzo
+  ShelleyLedgerEra ShelleyEra = Consensus.StandardShelley
+  ShelleyLedgerEra AllegraEra = Consensus.StandardAllegra
+  ShelleyLedgerEra MaryEra    = Consensus.StandardMary
+  ShelleyLedgerEra AlonzoEra  = Consensus.StandardAlonzo
+  --TODO: Babbage era - depends on consensus exposing a babbage era
   ShelleyLedgerEra BabbageEra = Babbage.BabbageEra StandardCrypto
 

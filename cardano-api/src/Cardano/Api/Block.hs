@@ -150,7 +150,7 @@ instance Show (Block era) where
     showsPrec p (ShelleyBlock ShelleyBasedEraBabbage _block) =
       showParen (p >= 11)
         ( showString "ShelleyBlock ShelleyBasedEraBabbage "
-        . error "TODO: Babbage era" --showsPrec 11 block
+        . error "TODO: Babbage era - depends on consensus exposing a babbage era" --showsPrec 11 block
         )
 
 getBlockTxs :: forall era . Block era -> [Tx era]
@@ -186,7 +186,8 @@ obtainConsensusShelleyBasedEra ShelleyBasedEraShelley f = f
 obtainConsensusShelleyBasedEra ShelleyBasedEraAllegra f = f
 obtainConsensusShelleyBasedEra ShelleyBasedEraMary    f = f
 obtainConsensusShelleyBasedEra ShelleyBasedEraAlonzo  f = f
-obtainConsensusShelleyBasedEra ShelleyBasedEraBabbage _f = error "TODO: Babbage era"
+obtainConsensusShelleyBasedEra ShelleyBasedEraBabbage _f =
+  error "TODO: Babbage era - depends on consensus exposing a babbage era"
 
 
 -- ----------------------------------------------------------------------------
@@ -252,7 +253,8 @@ toConsensusBlock bInMode =
     BlockInMode (ShelleyBlock ShelleyBasedEraAllegra b') AllegraEraInCardanoMode -> Consensus.BlockAllegra b'
     BlockInMode (ShelleyBlock ShelleyBasedEraMary b') MaryEraInCardanoMode -> Consensus.BlockMary b'
     BlockInMode (ShelleyBlock ShelleyBasedEraAlonzo b') AlonzoEraInCardanoMode -> Consensus.BlockAlonzo b'
-    BlockInMode (ShelleyBlock ShelleyBasedEraBabbage _b') BabbageEraInCardanoMode -> error "TODO: Babbage"
+    BlockInMode (ShelleyBlock ShelleyBasedEraBabbage _b') BabbageEraInCardanoMode ->
+      error "TODO: Babbage era - depends on consensus exposing a babbage era"
 
 -- ----------------------------------------------------------------------------
 -- Block headers
@@ -289,7 +291,8 @@ getBlockHeader (ShelleyBlock shelleyEra block) = case shelleyEra of
   ShelleyBasedEraAllegra -> go
   ShelleyBasedEraMary -> go
   ShelleyBasedEraAlonzo -> go
-  ShelleyBasedEraBabbage -> error "TODO: Babbage era"
+  ShelleyBasedEraBabbage ->
+    error "TODO: Babbage era - depends on consensus exposing a babbage era"
   where
     go :: Consensus.ShelleyBasedEra (ShelleyLedgerEra era) => BlockHeader
     go = BlockHeader headerFieldSlot (HeaderHash hashSBS) headerFieldBlockNo
