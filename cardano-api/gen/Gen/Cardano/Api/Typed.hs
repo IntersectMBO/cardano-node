@@ -67,7 +67,9 @@ import           Cardano.Api.Byron (KeyWitness (ByronKeyWitness),
 import           Cardano.Api.Shelley (Hash (ScriptDataHash), KESPeriod (KESPeriod),
                    OperationalCertificateIssueCounter (OperationalCertificateIssueCounter),
                    PlutusScript (PlutusScriptSerialised), ProtocolParameters (ProtocolParameters),
-                   ReferenceScript (..), StakeCredential (StakeCredentialByKey), StakePoolKey)
+                   ReferenceScript (..), ReferenceTxInsScriptsInlineDatumsSupportedInEra (..),
+                   StakeCredential (StakeCredentialByKey), StakePoolKey,
+                   refInsScriptsAndInlineDatsSupportedInEra)
 
 import           Cardano.Prelude
 
@@ -524,6 +526,7 @@ genTxBodyContent :: CardanoEra era -> Gen (TxBodyContent BuildTx era)
 genTxBodyContent era = do
   txIns <- map (, BuildTxWith (KeyWitness KeyWitnessForSpending)) <$> Gen.list (Range.constant 1 10) genTxIn
   txInsCollateral <- genTxInsCollateral era
+  txInsReference <- genTxInsReference era
   txOuts <- Gen.list (Range.constant 1 10) (genTxOutTxContext era)
   txTotalCollateral <- genTxTotalCollateral era
   txReturnCollateral <- genTxReturnCollateral era
@@ -542,6 +545,7 @@ genTxBodyContent era = do
   pure $ TxBodyContent
     { Api.txIns
     , Api.txInsCollateral
+    , Api.txInsReference
     , Api.txOuts
     , Api.txTotalCollateral
     , Api.txReturnCollateral
@@ -566,6 +570,15 @@ genTxInsCollateral era =
                           [ pure TxInsCollateralNone
                           , TxInsCollateral supported <$> Gen.list (Range.linear 0 10) genTxIn
                           ]
+genTxInsReference :: CardanoEra era -> Gen (TxInsReference era)
+genTxInsReference era =
+    case refInsScriptsAndInlineDatsSupportedInEra era of
+      Nothing        -> pure TxInsReferenceNone
+      Just supported -> Gen.choice
+                          [ pure TxInsReferenceNone
+                          , TxInsReference supported <$> Gen.list (Range.linear 0 10) genTxIn
+                          ]
+
 
 genTxReturnCollateral :: CardanoEra era -> Gen (TxReturnCollateral CtxTx era)
 genTxReturnCollateral era =
@@ -826,7 +839,7 @@ genTxOutDatumHashTxContext era = case era of
                     [ pure TxOutDatumNone
                     , TxOutDatumHash ScriptDataInBabbageEra <$> genHashScriptData
                     , TxOutDatumInTx ScriptDataInBabbageEra <$> genScriptData
-                    , TxOutDatumInline InlineDatumSupportedInBabbageEra <$> genScriptData
+                    , TxOutDatumInline ReferenceTxInsScriptsInlineDatumsInBabbageEra <$> genScriptData
                     ]
 
 genTxOutDatumHashUTxOContext :: CardanoEra era -> Gen (TxOutDatum CtxUTxO era)
@@ -842,7 +855,7 @@ genTxOutDatumHashUTxOContext era = case era of
     BabbageEra -> Gen.choice
                     [ pure TxOutDatumNone
                     , TxOutDatumHash ScriptDataInBabbageEra <$> genHashScriptData
-                    , TxOutDatumInline InlineDatumSupportedInBabbageEra <$> genScriptData
+                    , TxOutDatumInline ReferenceTxInsScriptsInlineDatumsInBabbageEra <$> genScriptData
                     ]
 
 mkDummyHash :: forall h a. CRYPTO.HashAlgorithm h => Int -> CRYPTO.Hash h a

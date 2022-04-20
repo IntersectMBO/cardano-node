@@ -98,7 +98,6 @@ module Cardano.Api.TxBody (
     WithdrawalsSupportedInEra(..),
     CertificatesSupportedInEra(..),
     UpdateProposalSupportedInEra(..),
-    InlineDatumSupportedInEra(..),
     TxTotalAndReturnCollateralSupportedInEra(..),
 
     -- ** Feature availability functions
@@ -117,7 +116,6 @@ module Cardano.Api.TxBody (
     updateProposalSupportedInEra,
     txScriptValiditySupportedInShelleyBasedEra,
     txScriptValiditySupportedInCardanoEra,
-    inlineDatumSupportedInEra,
     totalAndReturnCollateralSupportedInEra,
 
     -- * Inspecting 'ScriptWitness'es
@@ -617,7 +615,7 @@ instance (IsShelleyBasedEra era, IsCardanoEra era)
                     Right sData ->
                       if hashScriptData sData /= h
                       then fail "Inline datum not equivalent to inline datum hash"
-                      else return $ TxOutDatumInline InlineDatumSupportedInBabbageEra sData
+                      else return $ TxOutDatumInline ReferenceTxInsScriptsInlineDatumsInBabbageEra sData
                 (Nothing, Nothing) -> return TxOutDatumNone
                 (_,_) -> fail "Should not be possible to create a tx output with either an inline datum hash or an inline datum"
 
@@ -707,7 +705,7 @@ instance (IsShelleyBasedEra era, IsCardanoEra era)
                     Right sData ->
                       if hashScriptData sData /= h
                       then fail "Inline datum not equivalent to inline datum hash"
-                      else return $ TxOutDatumInline InlineDatumSupportedInBabbageEra sData
+                      else return $ TxOutDatumInline ReferenceTxInsScriptsInlineDatumsInBabbageEra sData
                 (Nothing, Nothing) -> return TxOutDatumNone
                 (_,_) -> fail "Should not be possible to create a tx output with either an inline datum hash or an inline datum"
 
@@ -843,7 +841,7 @@ toAlonzoTxOutDataHash
 toAlonzoTxOutDataHash  TxOutDatumNone                        = SNothing
 toAlonzoTxOutDataHash (TxOutDatumHash _ (ScriptDataHash dh)) = SJust dh
 toAlonzoTxOutDataHash (TxOutDatumInline inlineDatumSupp _sd) =
-  case inlineDatumSupp :: InlineDatumSupportedInEra AlonzoEra of {}
+  case inlineDatumSupp :: ReferenceTxInsScriptsInlineDatumsSupportedInEra AlonzoEra of {}
 
 fromAlonzoTxOutDataHash :: ScriptDataSupportedInEra era
                         -> StrictMaybe (Alonzo.DataHash StandardCrypto)
@@ -1435,7 +1433,7 @@ data TxOutDatum ctx era where
      -- datum hash. Note that the datum map will not be updated with this datum,
      -- it only exists at the transaction output.
      --
-     TxOutDatumInline :: InlineDatumSupportedInEra era
+     TxOutDatumInline :: ReferenceTxInsScriptsInlineDatumsSupportedInEra era
                       -> ScriptData
                       -> TxOutDatum ctx era
 
@@ -1453,21 +1451,6 @@ pattern TxOutDatumInTx s d <- TxOutDatumInTx' s _ d
 
 {-# COMPLETE TxOutDatumNone, TxOutDatumHash, TxOutDatumInTx', TxOutDatumInline #-}
 {-# COMPLETE TxOutDatumNone, TxOutDatumHash, TxOutDatumInTx , TxOutDatumInline #-}
-
-
-data InlineDatumSupportedInEra era where
-  InlineDatumSupportedInBabbageEra :: InlineDatumSupportedInEra Babbage
-
-deriving instance Eq   (InlineDatumSupportedInEra era)
-deriving instance Show (InlineDatumSupportedInEra era)
-
-inlineDatumSupportedInEra :: CardanoEra era -> Maybe (InlineDatumSupportedInEra era)
-inlineDatumSupportedInEra ByronEra = Nothing
-inlineDatumSupportedInEra ShelleyEra = Nothing
-inlineDatumSupportedInEra AllegraEra = Nothing
-inlineDatumSupportedInEra MaryEra = Nothing
-inlineDatumSupportedInEra AlonzoEra = Nothing
-inlineDatumSupportedInEra BabbageEra = Just InlineDatumSupportedInBabbageEra
 
 parseHash :: SerialiseAsRawBytes (Hash a) => AsType (Hash a) -> Parsec.Parser (Hash a)
 parseHash asType = do
@@ -2201,7 +2184,7 @@ fromLedgerTxInsReference era txBody =
     :: ReferenceTxInsScriptsInlineDatumsSupportedInEra era
     -> (HasField "referenceInputs" (Ledger.TxBody (ShelleyLedgerEra era)) (Set (Ledger.TxIn StandardCrypto)) => a)
     -> a
-  obtainReferenceInputsHasFieldConstraint ReferenceTxInsScriptsInlineDatumsBabbageInEra f = f
+  obtainReferenceInputsHasFieldConstraint ReferenceTxInsScriptsInlineDatumsInBabbageEra f = f
 
 fromLedgerTxOuts
   :: forall era.
@@ -3176,7 +3159,7 @@ toAlonzoTxOutDataHash'  TxOutDatumNone                          = SNothing
 toAlonzoTxOutDataHash' (TxOutDatumHash _ (ScriptDataHash dh))   = SJust dh
 toAlonzoTxOutDataHash' (TxOutDatumInTx' _ (ScriptDataHash dh) _) = SJust dh
 toAlonzoTxOutDataHash' (TxOutDatumInline inlineDatumSupp _sd) =
-  case inlineDatumSupp :: InlineDatumSupportedInEra AlonzoEra of {}
+  case inlineDatumSupp :: ReferenceTxInsScriptsInlineDatumsSupportedInEra AlonzoEra of {}
 
 -- TODO: Consolidate with alonzo function and rename
 toBabbageTxOutDatum'
