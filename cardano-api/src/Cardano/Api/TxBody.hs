@@ -63,6 +63,7 @@ module Cardano.Api.TxBody (
 
     -- * Other transaction body types
     TxInsCollateral(..),
+    TxInsReference(..),
     TxReturnCollateral(..),
     TxTotalCollateral(..),
     TxFee(..),
@@ -97,7 +98,6 @@ module Cardano.Api.TxBody (
     WithdrawalsSupportedInEra(..),
     CertificatesSupportedInEra(..),
     UpdateProposalSupportedInEra(..),
-    InlineDatumSupportedInEra(..),
     TxTotalAndReturnCollateralSupportedInEra(..),
 
     -- ** Feature availability functions
@@ -116,7 +116,6 @@ module Cardano.Api.TxBody (
     updateProposalSupportedInEra,
     txScriptValiditySupportedInShelleyBasedEra,
     txScriptValiditySupportedInCardanoEra,
-    inlineDatumSupportedInEra,
     totalAndReturnCollateralSupportedInEra,
 
     -- * Inspecting 'ScriptWitness'es
@@ -616,7 +615,7 @@ instance (IsShelleyBasedEra era, IsCardanoEra era)
                     Right sData ->
                       if hashScriptData sData /= h
                       then fail "Inline datum not equivalent to inline datum hash"
-                      else return $ TxOutDatumInline InlineDatumSupportedInBabbageEra sData
+                      else return $ TxOutDatumInline ReferenceTxInsScriptsInlineDatumsInBabbageEra sData
                 (Nothing, Nothing) -> return TxOutDatumNone
                 (_,_) -> fail "Should not be possible to create a tx output with either an inline datum hash or an inline datum"
 
@@ -706,7 +705,7 @@ instance (IsShelleyBasedEra era, IsCardanoEra era)
                     Right sData ->
                       if hashScriptData sData /= h
                       then fail "Inline datum not equivalent to inline datum hash"
-                      else return $ TxOutDatumInline InlineDatumSupportedInBabbageEra sData
+                      else return $ TxOutDatumInline ReferenceTxInsScriptsInlineDatumsInBabbageEra sData
                 (Nothing, Nothing) -> return TxOutDatumNone
                 (_,_) -> fail "Should not be possible to create a tx output with either an inline datum hash or an inline datum"
 
@@ -842,7 +841,7 @@ toAlonzoTxOutDataHash
 toAlonzoTxOutDataHash  TxOutDatumNone                        = SNothing
 toAlonzoTxOutDataHash (TxOutDatumHash _ (ScriptDataHash dh)) = SJust dh
 toAlonzoTxOutDataHash (TxOutDatumInline inlineDatumSupp _sd) =
-  case inlineDatumSupp :: InlineDatumSupportedInEra AlonzoEra of {}
+  case inlineDatumSupp :: ReferenceTxInsScriptsInlineDatumsSupportedInEra AlonzoEra of {}
 
 fromAlonzoTxOutDataHash :: ScriptDataSupportedInEra era
                         -> StrictMaybe (Alonzo.DataHash StandardCrypto)
@@ -1275,6 +1274,16 @@ data TxInsCollateral era where
 deriving instance Eq   (TxInsCollateral era)
 deriving instance Show (TxInsCollateral era)
 
+data TxInsReference era where
+
+     TxInsReferenceNone :: TxInsReference era
+
+     TxInsReference     :: ReferenceTxInsScriptsInlineDatumsSupportedInEra era
+                        -> [TxIn]
+                        -> TxInsReference era
+
+deriving instance Eq   (TxInsReference era)
+deriving instance Show (TxInsReference era)
 
 -- ----------------------------------------------------------------------------
 -- Transaction output values (era-dependent)
@@ -1424,7 +1433,7 @@ data TxOutDatum ctx era where
      -- datum hash. Note that the datum map will not be updated with this datum,
      -- it only exists at the transaction output.
      --
-     TxOutDatumInline :: InlineDatumSupportedInEra era
+     TxOutDatumInline :: ReferenceTxInsScriptsInlineDatumsSupportedInEra era
                       -> ScriptData
                       -> TxOutDatum ctx era
 
@@ -1442,21 +1451,6 @@ pattern TxOutDatumInTx s d <- TxOutDatumInTx' s _ d
 
 {-# COMPLETE TxOutDatumNone, TxOutDatumHash, TxOutDatumInTx', TxOutDatumInline #-}
 {-# COMPLETE TxOutDatumNone, TxOutDatumHash, TxOutDatumInTx , TxOutDatumInline #-}
-
-
-data InlineDatumSupportedInEra era where
-  InlineDatumSupportedInBabbageEra :: InlineDatumSupportedInEra Babbage
-
-deriving instance Eq   (InlineDatumSupportedInEra era)
-deriving instance Show (InlineDatumSupportedInEra era)
-
-inlineDatumSupportedInEra :: CardanoEra era -> Maybe (InlineDatumSupportedInEra era)
-inlineDatumSupportedInEra ByronEra = Nothing
-inlineDatumSupportedInEra ShelleyEra = Nothing
-inlineDatumSupportedInEra AllegraEra = Nothing
-inlineDatumSupportedInEra MaryEra = Nothing
-inlineDatumSupportedInEra AlonzoEra = Nothing
-inlineDatumSupportedInEra BabbageEra = Just InlineDatumSupportedInBabbageEra
 
 parseHash :: SerialiseAsRawBytes (Hash a) => AsType (Hash a) -> Parsec.Parser (Hash a)
 parseHash asType = do
@@ -1633,6 +1627,7 @@ data TxBodyContent build era =
      TxBodyContent {
        txIns              :: TxIns build era,
        txInsCollateral    :: TxInsCollateral era,
+       txInsReference     :: TxInsReference era,
        txOuts             :: [TxOut CtxTx era],
        txTotalCollateral  :: TxTotalCollateral era,
        txReturnCollateral :: TxReturnCollateral CtxTx era,
@@ -2118,6 +2113,7 @@ fromLedgerTxBody era scriptValidity body scriptdata mAux =
     TxBodyContent
       { txIns              = fromLedgerTxIns               era body
       , txInsCollateral    = fromLedgerTxInsCollateral     era body
+      , txInsReference     = fromLedgerTxInsReference      era body
       , txOuts             = fromLedgerTxOuts              era body scriptdata
       , txTotalCollateral  = fromLedgerTxTotalCollateral   era body
       , txReturnCollateral = fromLedgerTxReturnCollateral  era body
@@ -2175,6 +2171,20 @@ fromLedgerTxInsCollateral era body =
       ShelleyBasedEraAlonzo  -> toList $ Alonzo.collateral' body
       ShelleyBasedEraBabbage -> toList $ Babbage.collateral body
 
+fromLedgerTxInsReference
+  :: ShelleyBasedEra era -> Ledger.TxBody (ShelleyLedgerEra era) -> TxInsReference era
+fromLedgerTxInsReference era txBody =
+  case refInsScriptsAndInlineDatsSupportedInEra $ shelleyBasedToCardanoEra era of
+    Nothing -> TxInsReferenceNone
+    Just suppInEra ->
+      let ledgerRefInputs = obtainReferenceInputsHasFieldConstraint suppInEra $ getField @"referenceInputs" txBody
+      in TxInsReference suppInEra $ map fromShelleyTxIn $ Set.toList ledgerRefInputs
+ where
+  obtainReferenceInputsHasFieldConstraint
+    :: ReferenceTxInsScriptsInlineDatumsSupportedInEra era
+    -> (HasField "referenceInputs" (Ledger.TxBody (ShelleyLedgerEra era)) (Set (Ledger.TxIn StandardCrypto)) => a)
+    -> a
+  obtainReferenceInputsHasFieldConstraint ReferenceTxInsScriptsInlineDatumsInBabbageEra f = f
 
 fromLedgerTxOuts
   :: forall era.
@@ -2670,6 +2680,7 @@ getByronTxBodyContent (Annotated Byron.UnsafeTx{txInputs, txOutputs} _) =
       txIns              = [ (fromByronTxIn input, ViewTx)
                            | input <- toList txInputs],
       txInsCollateral    = TxInsCollateralNone,
+      txInsReference     = TxInsReferenceNone,
       txOuts             = fromByronTxOut <$> toList txOutputs,
       txReturnCollateral = TxReturnCollateralNone,
       txTotalCollateral  = TxTotalCollateralNone,
@@ -3148,7 +3159,7 @@ toAlonzoTxOutDataHash'  TxOutDatumNone                          = SNothing
 toAlonzoTxOutDataHash' (TxOutDatumHash _ (ScriptDataHash dh))   = SJust dh
 toAlonzoTxOutDataHash' (TxOutDatumInTx' _ (ScriptDataHash dh) _) = SJust dh
 toAlonzoTxOutDataHash' (TxOutDatumInline inlineDatumSupp _sd) =
-  case inlineDatumSupp :: InlineDatumSupportedInEra AlonzoEra of {}
+  case inlineDatumSupp :: ReferenceTxInsScriptsInlineDatumsSupportedInEra AlonzoEra of {}
 
 -- TODO: Consolidate with alonzo function and rename
 toBabbageTxOutDatum'

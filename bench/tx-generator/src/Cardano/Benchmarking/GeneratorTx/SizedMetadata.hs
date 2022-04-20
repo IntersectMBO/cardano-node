@@ -104,6 +104,7 @@ dummyTxSizeInEra metadata = case makeTransactionBody dummyTx of
       txIns = [( TxIn "dbaff4e270cfb55612d9e2ac4658a27c79da4a5271c6f90853042d1403733810" (TxIx 0)
                , BuildTxWith $ KeyWitness KeyWitnessForSpending )]
     , txInsCollateral = TxInsCollateralNone
+    , txInsReference = TxInsReferenceNone
     , txOuts = []
     , txFee = mkFee 0
     , txValidityRange = (TxValidityNoLowerBound, mkValidityUpperBound 0)

@@ -184,6 +184,7 @@ module Cardano.Api (
 
     -- ** Other transaction body types
     TxInsCollateral(..),
+    TxInsReference(..),
     TxTotalCollateral(..),
     TxReturnCollateral(..),
     TxFee(..),
@@ -220,7 +221,6 @@ module Cardano.Api (
     WithdrawalsSupportedInEra(..),
     CertificatesSupportedInEra(..),
     UpdateProposalSupportedInEra(..),
-    InlineDatumSupportedInEra(..),
 
     -- ** Feature availability functions
     collateralSupportedInEra,

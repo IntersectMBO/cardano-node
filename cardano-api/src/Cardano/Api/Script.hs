@@ -37,8 +37,8 @@ module Cardano.Api.Script (
 
     -- * Reference scripts
     ReferenceScript(..),
-    ReferenceScriptsSupportedInEra(..),
-    referenceScriptsSupportedInEra,
+    ReferenceTxInsScriptsInlineDatumsSupportedInEra(..),
+    refInsScriptsAndInlineDatsSupportedInEra,
     refScriptToShelleyScript,
 
     -- * Use of a script in an era as a witness
@@ -1350,7 +1350,7 @@ parsePaymentKeyHash txt =
 -- has to be added to the transaction, they can now be referenced via a transaction output.
 
 data ReferenceScript era where
-     ReferenceScript :: ReferenceScriptsSupportedInEra era
+     ReferenceScript :: ReferenceTxInsScriptsInlineDatumsSupportedInEra era
                      -> ScriptInAnyLang
                      -> ReferenceScript era
 
@@ -1365,24 +1365,25 @@ instance IsCardanoEra era => ToJSON (ReferenceScript era) where
 
 instance IsCardanoEra era => FromJSON (ReferenceScript era) where
   parseJSON = Aeson.withObject "ReferenceScript" $ \o ->
-    case referenceScriptsSupportedInEra (cardanoEra :: CardanoEra era) of
+    case refInsScriptsAndInlineDatsSupportedInEra (cardanoEra :: CardanoEra era) of
       Nothing -> pure ReferenceScriptNone
       Just refSupInEra ->
         ReferenceScript refSupInEra <$> o .: "referenceScript"
 
-data ReferenceScriptsSupportedInEra era where
-    ReferenceScriptsInBabbageEra  :: ReferenceScriptsSupportedInEra BabbageEra
+data ReferenceTxInsScriptsInlineDatumsSupportedInEra era where
+    ReferenceTxInsScriptsInlineDatumsInBabbageEra :: ReferenceTxInsScriptsInlineDatumsSupportedInEra BabbageEra
 
-deriving instance Eq (ReferenceScriptsSupportedInEra era)
-deriving instance Show (ReferenceScriptsSupportedInEra era)
+deriving instance Eq (ReferenceTxInsScriptsInlineDatumsSupportedInEra era)
+deriving instance Show (ReferenceTxInsScriptsInlineDatumsSupportedInEra era)
 
-referenceScriptsSupportedInEra :: CardanoEra era -> Maybe (ReferenceScriptsSupportedInEra era)
-referenceScriptsSupportedInEra ByronEra   = Nothing
-referenceScriptsSupportedInEra ShelleyEra = Nothing
-referenceScriptsSupportedInEra AllegraEra = Nothing
-referenceScriptsSupportedInEra MaryEra    = Nothing
-referenceScriptsSupportedInEra AlonzoEra  = Nothing
-referenceScriptsSupportedInEra BabbageEra = Just ReferenceScriptsInBabbageEra
+refInsScriptsAndInlineDatsSupportedInEra
+  :: CardanoEra era -> Maybe (ReferenceTxInsScriptsInlineDatumsSupportedInEra era)
+refInsScriptsAndInlineDatsSupportedInEra ByronEra   = Nothing
+refInsScriptsAndInlineDatsSupportedInEra ShelleyEra = Nothing
+refInsScriptsAndInlineDatsSupportedInEra AllegraEra = Nothing
+refInsScriptsAndInlineDatsSupportedInEra MaryEra    = Nothing
+refInsScriptsAndInlineDatsSupportedInEra AlonzoEra  = Nothing
+refInsScriptsAndInlineDatsSupportedInEra BabbageEra = Just ReferenceTxInsScriptsInlineDatumsInBabbageEra
 
 refScriptToShelleyScript
   :: CardanoEra era

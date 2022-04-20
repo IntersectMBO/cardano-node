@@ -377,9 +377,10 @@ runTxBuildRaw (AnyCardanoEra era)
         <$> validateTxIns  era inputsAndScripts
         <*> validateTxInsCollateral
                            era inputsCollateral
+        <*> pure TxInsReferenceNone --TODO: Babbage era
         <*> validateTxOuts era txouts
-        <*> pure TxTotalCollateralNone
-        <*> pure TxReturnCollateralNone
+        <*> pure TxTotalCollateralNone --TODO: Babbage era
+        <*> pure TxReturnCollateralNone --TODO: Babbage era
         <*> validateTxFee  era mFee
         <*> ((,) <$> validateTxValidityLowerBound era mLowerBound
                  <*> validateTxValidityUpperBound era mUpperBound)
@@ -456,6 +457,7 @@ runTxBuild (AnyCardanoEra era) (AnyConsensusModeParams cModeParams) networkId mS
         TxBodyContent
           <$> validateTxIns               era txins
           <*> validateTxInsCollateral     era txinsc
+          <*> pure TxInsReferenceNone -- TODO: Babbage era
           <*> validateTxOuts              era txouts
           <*> pure TxTotalCollateralNone -- TODO: Babbage era
           <*> pure TxReturnCollateralNone -- TODO: Babbage era
