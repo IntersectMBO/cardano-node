@@ -152,6 +152,7 @@ genTx protocolParameters (collateral, collFunds) fee metadata witness inFunds ou
   txBodyContent = TxBodyContent {
       txIns = map (\f -> (getFundTxIn f, BuildTxWith witness)) inFunds
     , txInsCollateral = collateral
+    , txInsReference = TxInsReferenceNone
     , txOuts = outputs
     , txFee = fee
     , txValidityRange = (TxValidityNoLowerBound, upperBound)

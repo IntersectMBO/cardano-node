@@ -61,6 +61,7 @@ mkGenesisTransaction key _payloadSize ttl fee txins txouts
   txBodyContent = TxBodyContent {
       txIns = zip txins $ repeat $ BuildTxWith $ KeyWitness KeyWitnessForSpending
     , txInsCollateral = TxInsCollateralNone
+    , txInsReference = TxInsReferenceNone
     , txOuts = txouts
     , txFee = fees
     , txValidityRange = (TxValidityNoLowerBound, validityUpperBound)
