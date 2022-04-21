@@ -295,6 +295,7 @@ renderFeature TxFeatureProtocolParameters   = "Protocol parameters"
 renderFeature TxFeatureTxOutDatum           = "Transaction output datums"
 renderFeature TxFeatureScriptValidity       = "Script validity"
 renderFeature TxFeatureExtraKeyWits         = "Required signers"
+renderFeature TxFeatureInlineDatums         = "Inline datums"
 
 runTransactionCmd :: TransactionCmd -> ExceptT ShelleyTxCmdError IO ()
 runTransactionCmd cmd =
@@ -601,6 +602,7 @@ data TxFeature = TxFeatureShelleyAddresses
                | TxFeatureTxOutDatum
                | TxFeatureScriptValidity
                | TxFeatureExtraKeyWits
+               | TxFeatureInlineDatums
   deriving Show
 
 txFeatureMismatch :: CardanoEra era
@@ -712,7 +714,15 @@ toTxOutInAnyEra era (TxOutAnyEra addr val mDatumHash) =
             <*> toTxOutValueInAnyEra era val
             <*> pure (TxOutDatumInTx supported sData)
             <*> pure ReferenceScriptNone
-
+    (Just _, TxOutInlineDatumByValue fileOrSdata) ->
+      case refInsScriptsAndInlineDatsSupportedInEra era of
+        Nothing -> txFeatureMismatch era TxFeatureInlineDatums
+        Just inlineSupp -> do
+          sData <- readScriptDataOrFile fileOrSdata
+          TxOut <$> toAddressInAnyEra era addr
+                <*> toTxOutValueInAnyEra era val
+                <*> pure (TxOutDatumInline inlineSupp sData)
+                <*> pure ReferenceScriptNone
     (Nothing, _) ->
       txFeatureMismatch era TxFeatureTxOutDatum
 

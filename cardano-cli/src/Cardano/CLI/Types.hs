@@ -330,6 +330,7 @@ data TxOutAnyEra = TxOutAnyEra
 data TxOutDatumAnyEra = TxOutDatumByHashOnly (Hash ScriptData)
                       | TxOutDatumByHashOf    ScriptDataOrFile
                       | TxOutDatumByValue     ScriptDataOrFile
+                      | TxOutInlineDatumByValue ScriptDataOrFile
                       | TxOutDatumByNone
   deriving (Eq, Show)
 

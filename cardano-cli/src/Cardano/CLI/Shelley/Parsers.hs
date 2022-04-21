@@ -2009,6 +2009,7 @@ pTxOutDatum =
       pTxOutDatumByHashOnly
   <|> pTxOutDatumByHashOf
   <|> pTxOutDatumByValue
+  <|> pTxOutInlineDatumByValue
   <|> pure TxOutDatumByNone
   where
     pTxOutDatumByHashOnly =
@@ -2037,6 +2038,17 @@ pTxOutDatum =
           \given here in JSON syntax."
           "The script datum to embed in the tx for this output, \
           \in the given JSON file."
+
+    pTxOutInlineDatumByValue =
+      TxOutInlineDatumByValue <$>
+        pScriptDataOrFile
+          "tx-out-inline-datum"
+          "The script datum to embed in the tx output as an inline datum, \
+          \given here in JSON syntax."
+          "The script datum to embed in the tx output as an inline datum, \
+          \in the given JSON file."
+
+
 
 pMintMultiAsset
   :: BalanceTxExecUnits
