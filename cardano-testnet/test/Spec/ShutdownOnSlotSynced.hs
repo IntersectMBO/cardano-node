@@ -42,7 +42,7 @@ hprop_shutdownOnSlotSynced = H.integration . H.runFinallies . H.workspace "chair
   conf <- H.noteShowM $
     H.mkConf (H.ProjectBase base) (H.YamlFilePath configurationTemplate) tempAbsBasePath' Nothing
   let maxSlot = 1500
-      slotLen = 0.01
+      slotLen = 0.02
   let fastTestnetOptions = defaultTestnetOptions
         { epochLength = 300
         , slotLength = slotLen

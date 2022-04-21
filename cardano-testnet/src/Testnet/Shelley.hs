@@ -99,7 +99,7 @@ defaultTestnetOptions = TestnetOptions
   , activeSlotsCoeff = 0.1
   , securityParam = 10
   , epochLength = 1000
-  , slotLength = 0.2
+  , slotLength = 0.4
   , maxLovelaceSupply = 1000000000
   , enableP2P = False
   }
