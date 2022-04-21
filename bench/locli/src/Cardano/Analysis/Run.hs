@@ -7,8 +7,9 @@ module Cardano.Analysis.Run (module Cardano.Analysis.Run) where
 import Prelude (String)
 import Cardano.Prelude
 
+import Control.Monad (fail)
 import Data.Aeson.Types qualified as Aeson
-import Data.Aeson (FromJSON(..), Object, ToJSON(..), withObject, (.:))
+import Data.Aeson (FromJSON(..), Object, ToJSON(..), withObject, (.:), (.:?))
 import Data.Attoparsec.Text qualified as Atto
 import Data.Attoparsec.Time qualified as Iso8601
 import Data.Text (intercalate, pack)
@@ -25,8 +26,6 @@ import Options.Applicative qualified as Opt
 data GenesisSpec
   = GenesisSpec
   { delegators          :: Word64
-  , dense_pool_density  :: Word64
-  , n_pools             :: Word64
   , utxo                :: Word64
   }
   deriving (Generic, Show, ToJSON)
@@ -79,8 +78,6 @@ renderRunExport Run{metadata=Metadata{..}, ..} =
   [[ "Profile",    profile]
   ,[ "Era",        era ]
   ,[ "Date",       show timestamp]
-  ,[ "Pools",      show $ n_pools genesisSpec]
-  ,[ "Density",    show $ dense_pool_density genesisSpec]
   ,[ "Delegators", show $ delegators genesisSpec]
   ,[ "UTxO",       show $ utxo genesisSpec]
   ]
@@ -116,7 +113,13 @@ instance FromJSON RunPartial where
     --
     tag       <- meta .: "tag"
     profile   <- meta .: "profile"
-    era       <- generator .: "era"
+
+    eraGtor   <- generator       .:? "era"
+    eraTop    <- profile_content .:? "era"
+    era <- case eraGtor <> eraTop of
+      Just x -> pure x
+      Nothing -> fail "While parsing run metafile:  missing era specification"
+
     timestamp <- (meta .: "timestamp" :: Aeson.Parser Integer)
                   <&> Time.posixSecondsToUTCTime . realToFrac
     --

@@ -266,7 +266,7 @@ case "$op" in
                 fatal  "no such profile:  $profile_name"
             profile json-by-name         "$profile_name" > "$dir"/profile.json
         fi
-        msg "run | allocate | profile:  $(if test -n "$profile"; then echo pre-supplied ($profile_name):  $profile; else echo computed:  $profile_name; fi)"
+        msg "run | allocate | profile:  $(if test -n "$profile"; then echo "pre-supplied ($profile_name):  $profile"; else echo "computed:  $profile_name"; fi)"
 
         profile node-specs "$dir"/profile.json > "$dir"/node-specs.json
 
