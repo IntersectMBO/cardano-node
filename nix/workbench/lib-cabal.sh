@@ -13,7 +13,7 @@ function workbench-prebuild-executables()
     for exe in cardano-node cardano-cli cardano-topology
     do echo "workbench:    $(with_color blue prebuilding) $(with_color red $exe)"
        cabal -v0 build -- exe:$exe 2>&1 >/dev/null |
-           { grep -v 'Temporary modify'; true; } || return 1
+           { grep -v 'exprType TYPE'; true; } || return 1
     done
     echo
 }
