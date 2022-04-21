@@ -174,6 +174,12 @@ case "$op" in
         rm -rf   "$dir"/{*-keys,byron,pools,nodes,*.json,*.params,*.version}
         mkdir -p "$dir"
 
+        jq ' $prof[0] as $p
+           | . * ($p.genesis.alonzo // {})
+           ' --slurpfile prof       "$profile_json"  \
+           "$global_basedir"/profiles/presets/mainnet/genesis/genesis-alonzo.json \
+           >   "$dir"/genesis.alonzo.spec.json
+
         cardano-cli genesis create --genesis-dir "$dir"/ \
             $(jq '.cli_args.createSpec | join(" ")' "$profile_json" --raw-output)
 
