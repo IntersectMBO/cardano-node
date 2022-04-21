@@ -66,11 +66,15 @@ usage_start()
 {
     cat <<EOF
 Usage:
-   start-cluster [FLAGS..]
+   start [FLAGS..]
 
    Flags:
 
       --batch-name NAME               Override the batch name (default: ${batchName:-default})
+
+      --profile-name NAME             Select profile by name (default: ${batchName:-default})
+      --profile DIR                   Select profile by complete spec stored in DIR
+
       --no-generator | --no-gen       Don't auto-start the tx-generator
 
       --cabal                         'cabal run' mode for cardano-* executables

@@ -66,8 +66,8 @@ def genesis_profile_variants:
       , n_dense_hosts:                  0
       }
     , genesis:
-      { utxo: 6000000
-      , delegators: 1300000
+      { utxo:                           6000000
+      , delegators:                     1300000
       , max_block_size:                 80000
       , epoch_length:                   600
       , parameter_k:                    3

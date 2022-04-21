@@ -3,7 +3,7 @@ usage_profile() {
     list                  List profile names (json)
     all-profiles | all    All profile contents (json)
     compose NAME..        Create a profile composed from named profiles
-    get NAME              Get contents of either named profile, or profile JSON desc
+    json-by-name NAME     Get contents of either named profile, or profile JSON desc
     describe NAME         Print a human description of a profile
     node-specs PROFILE-NAME/JSON
                           Print node specs JSON for the given profile and environment
