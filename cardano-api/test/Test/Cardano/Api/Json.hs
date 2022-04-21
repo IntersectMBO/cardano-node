@@ -35,6 +35,11 @@ prop_json_roundtrip_utxo = H.property $ do
   utxo <- forAll $ genUTxO BabbageEra
   tripping utxo encode eitherDecode
 
+prop_json_roundtrip_reference_scripts :: Property
+prop_json_roundtrip_reference_scripts = H.property $ do
+  rScript <- forAll $ genReferenceScript BabbageEra
+  tripping rScript encode eitherDecode
+
 prop_json_roundtrip_txoutvalue :: Property
 prop_json_roundtrip_txoutvalue = H.property $ do
   oVal <- forAll $ genTxOutValue BabbageEra
@@ -73,7 +78,8 @@ prop_json_roundtrip_eraInMode = H.property $ do
       AllegraEraInCardanoMode -> parseJSON $ toJSON AllegraEraInCardanoMode
       MaryEraInCardanoMode -> parseJSON $ toJSON MaryEraInCardanoMode
       AlonzoEraInCardanoMode -> parseJSON $ toJSON AlonzoEraInCardanoMode
-      BabbageEraInCardanoMode -> panic "TODO: Babbage"
+      BabbageEraInCardanoMode ->
+        panic "TODO: Babbage era - depends on consensus exposing a babbage era"
 
 prop_json_roundtrip_scriptdata_detailed_json :: Property
 prop_json_roundtrip_scriptdata_detailed_json = H.property $ do

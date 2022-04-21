@@ -450,8 +450,10 @@ getTxBody (ShelleyTx era tx) =
       ShelleyBasedEraShelley -> getShelleyTxBody tx
       ShelleyBasedEraAllegra -> getShelleyTxBody tx
       ShelleyBasedEraMary    -> getShelleyTxBody tx
-      ShelleyBasedEraAlonzo  -> getAlonzoTxBody ScriptDataInAlonzoEra TxScriptValiditySupportedInAlonzoEra tx
-      ShelleyBasedEraBabbage -> error "TODO: Babbage"
+      ShelleyBasedEraAlonzo  ->
+        getAlonzoTxBody ScriptDataInAlonzoEra TxScriptValiditySupportedInAlonzoEra tx
+      ShelleyBasedEraBabbage ->
+        getAlonzoTxBody ScriptDataInBabbageEra TxScriptValiditySupportedInBabbageEra tx
   where
     getShelleyTxBody :: forall ledgerera.
                         ShelleyLedgerEra era ~ ledgerera
@@ -514,7 +516,7 @@ getTxWitnesses (ShelleyTx era tx) =
       ShelleyBasedEraAllegra -> getShelleyTxWitnesses tx
       ShelleyBasedEraMary    -> getShelleyTxWitnesses tx
       ShelleyBasedEraAlonzo  -> getAlonzoTxWitnesses  tx
-      ShelleyBasedEraBabbage -> error "TODO: Babbage"
+      ShelleyBasedEraBabbage -> getAlonzoTxWitnesses  tx
   where
     getShelleyTxWitnesses :: forall ledgerera.
                              ToCBOR (Ledger.AuxiliaryData ledgerera)
@@ -575,7 +577,7 @@ makeSignedTransaction witnesses (ShelleyTxBody era txbody
       ShelleyBasedEraAllegra -> makeShelleySignedTransaction txbody
       ShelleyBasedEraMary    -> makeShelleySignedTransaction txbody
       ShelleyBasedEraAlonzo  -> makeAlonzoSignedTransaction  txbody
-      ShelleyBasedEraBabbage -> error "TODO: Babbage era"
+      ShelleyBasedEraBabbage -> makeAlonzoSignedTransaction  txbody
   where
     makeShelleySignedTransaction
       :: forall ledgerera.
@@ -699,7 +701,8 @@ makeShelleyBootstrapWitness nwOrAddr (ShelleyTxBody era txbody _ _ _ _) sk =
         makeShelleyBasedBootstrapWitness era nwOrAddr txbody sk
       ShelleyBasedEraAlonzo  ->
         makeShelleyBasedBootstrapWitness era nwOrAddr txbody sk
-      ShelleyBasedEraBabbage -> error "TODO: Babbage"
+      ShelleyBasedEraBabbage ->
+        makeShelleyBasedBootstrapWitness era nwOrAddr txbody sk
 
 
 makeShelleyBasedBootstrapWitness :: forall era.
@@ -810,7 +813,7 @@ makeShelleyKeyWitness (ShelleyTxBody era txbody _ _ _ _) =
       ShelleyBasedEraAllegra -> makeShelleyBasedKeyWitness txbody
       ShelleyBasedEraMary    -> makeShelleyBasedKeyWitness txbody
       ShelleyBasedEraAlonzo  -> makeShelleyBasedKeyWitness txbody
-      ShelleyBasedEraBabbage -> error "TODO: Babbage"
+      ShelleyBasedEraBabbage -> makeShelleyBasedKeyWitness txbody
   where
     makeShelleyBasedKeyWitness :: Shelley.UsesValue (ShelleyLedgerEra era)
                                => Ledger.Crypto (ShelleyLedgerEra era) ~ StandardCrypto

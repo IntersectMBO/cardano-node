@@ -26,6 +26,7 @@ module Gen.Cardano.Api.Typed
   , genUTxO
 
     -- * Scripts
+  , genReferenceScript
   , genScript
   , genSimpleScript
   , genPlutusScript
@@ -406,15 +407,20 @@ genTxOutTxContext era =
   TxOut <$> genAddressInEra era
         <*> genTxOutValue era
         <*> genTxOutDatumHashTxContext era
-        <*> return ReferenceScriptNone -- TODO: Babbage Era
+        <*> genReferenceScript era
 
 genTxOutUTxOContext :: CardanoEra era -> Gen (TxOut CtxUTxO era)
 genTxOutUTxOContext era =
   TxOut <$> genAddressInEra era
         <*> genTxOutValue era
         <*> genTxOutDatumHashUTxOContext era
-        <*> return ReferenceScriptNone -- TODO: Babbage Era
+        <*> genReferenceScript era
 
+genReferenceScript :: CardanoEra era -> Gen (ReferenceScript era)
+genReferenceScript era =
+  case refInsScriptsAndInlineDatsSupportedInEra era of
+    Nothing -> return ReferenceScriptNone
+    Just supp -> ReferenceScript supp <$> genScriptInAnyLang
 
 genUTxO :: CardanoEra era -> Gen (UTxO era)
 genUTxO era =
@@ -732,7 +738,7 @@ genProtocolParameters :: Gen ProtocolParameters
 genProtocolParameters =
   ProtocolParameters
     <$> ((,) <$> genNat <*> genNat)
-    <*> genRational
+    <*> Gen.maybe genRational
     <*> genMaybePraosNonce
     <*> genNat
     <*> genNat
