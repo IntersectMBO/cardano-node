@@ -85,11 +85,23 @@ def add_derived_params:
 | ($hosts.dense * $compo.dense_pool_density) as $n_dense_pools
 | ($n_singular_pools + $n_dense_pools)       as $n_pools
 
+| ($gsis.delegators // $n_pools)             as $effective_delegators
+
+## Stuffed UTxO is what we need over requested-UTxO + delegators' UTxO:
+| $effective_delegators                      as $utxo_delegated
+| ($tx_count * $gtor.inputs_per_tx)          as $utxo_generated
+| ($gsis.utxo - $utxo_generated - $effective_delegators)
+                                             as $utxo_stuffed
 ## Note how derivations come in phases, too:
 ##
 | (## First derivation:
    { common:
-     { composition:
+     { derived:
+         { utxo_delegated:        $utxo_delegated
+         , utxo_generated:        $utxo_generated
+         , utxo_stuffed:          $utxo_stuffed
+         }
+     , composition:
          { n_hosts:               ($compo.n_bft_hosts + $hosts.singular + $hosts.dense)
          , n_pools:               $n_pools
          , n_singular_hosts:      $hosts.singular
@@ -100,7 +112,7 @@ def add_derived_params:
          }
      , genesis:
          { genesis_future_offset: $future_offset
-         , delegators:            ($gsis.delegators // $n_pools)
+         , delegators:            $effective_delegators
          , pool_coin:             (if $n_pools == 0 then 0
                                    else $gsis.per_pool_balance end)
          , shelley:
@@ -168,7 +180,10 @@ def profile_pretty_describe($p):
   , "  - pools:              \($p.composition.n_pools)"
   , "    - normal:             \($p.composition.n_singular_pools)"
   , "    - dense:              \($p.composition.n_dense_pools)"
-  , "  - UTxO:               \($p.genesis.utxo)"
+  , "  - UTxO:               \($p.genesis.utxo), of which:"
+  , "    - delegated:          \($p.derived.utxo_delegated)"
+  , "    - generated:          \($p.derived.utxo_generated)"
+  , "    - stuffed:            \($p.derived.utxo_stuffed)"
   , "  - delegators:         \($p.genesis.delegators)"
   , ""
   ]

@@ -26,7 +26,7 @@ def profile_cli_args($p):
                                     , $p.genesis.delegators ]
                                      | max)
      , "--testnet-magic",          $p.genesis.network_magic
-     , "--num-stuffed-utxo",       $p.genesis.utxo
+     , "--num-stuffed-utxo",       $p.derived.utxo_stuffed
      ] +
      if $p.composition.dense_pool_density != 1
      then
