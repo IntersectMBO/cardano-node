@@ -165,6 +165,8 @@ data TransactionCmd
       -- ^ Transaction inputs with optional spending scripts
       [TxIn]
       -- ^ Transaction inputs for collateral, only key witnesses, no scripts.
+      [TxIn]
+      -- ^ Reference inputs
       [RequiredSigner]
       -- ^ Required signers
       [TxOutAnyEra]
@@ -202,6 +204,8 @@ data TransactionCmd
       -- ^ Transaction inputs with optional spending scripts
       [TxIn]
       -- ^ Transaction inputs for collateral, only key witnesses, no scripts.
+      [TxIn]
+      -- ^ Reference inputs
       [TxOutAnyEra]
       -- ^ Normal outputs
       TxOutChangeAddress

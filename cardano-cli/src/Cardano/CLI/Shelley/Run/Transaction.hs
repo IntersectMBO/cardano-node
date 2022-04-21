@@ -300,15 +300,15 @@ runTransactionCmd :: TransactionCmd -> ExceptT ShelleyTxCmdError IO ()
 runTransactionCmd cmd =
   case cmd of
     TxBuild era consensusModeParams nid mScriptValidity mOverrideWits txins reqSigners
-            txinsc txouts changeAddr mValue mLowBound mUpperBound certs wdrls metadataSchema
+            txinsc txinsref txouts changeAddr mValue mLowBound mUpperBound certs wdrls metadataSchema
             scriptFiles metadataFiles mpparams mUpProp outputFormat output ->
-      runTxBuild era consensusModeParams nid mScriptValidity txins txinsc txouts changeAddr mValue mLowBound
+      runTxBuild era consensusModeParams nid mScriptValidity txins txinsc txinsref txouts changeAddr mValue mLowBound
                  mUpperBound certs wdrls reqSigners metadataSchema scriptFiles
                  metadataFiles mpparams mUpProp outputFormat mOverrideWits output
-    TxBuildRaw era mScriptValidity txins txinsc reqSigners txouts mValue mLowBound mUpperBound
+    TxBuildRaw era mScriptValidity txins txinsc txinsref reqSigners txouts mValue mLowBound mUpperBound
                fee certs wdrls metadataSchema scriptFiles
                metadataFiles mpparams mUpProp outputFormat out ->
-      runTxBuildRaw era mScriptValidity txins txinsc txouts mLowBound mUpperBound
+      runTxBuildRaw era mScriptValidity txins txinsc txinsref txouts mLowBound mUpperBound
                     fee mValue certs wdrls reqSigners metadataSchema
                     scriptFiles metadataFiles mpparams mUpProp outputFormat out
     TxSign txinfile skfiles network txoutfile ->
@@ -341,6 +341,8 @@ runTxBuildRaw
   -- ^ TxIn with potential script witness
   -> [TxIn]
   -- ^ TxIn for collateral
+  -> [TxIn]
+  -- ^ Reference TxIn
   -> [TxOutAnyEra]
   -> Maybe SlotNo
   -- ^ Tx lower bound
@@ -364,7 +366,8 @@ runTxBuildRaw
   -> TxBodyFile
   -> ExceptT ShelleyTxCmdError IO ()
 runTxBuildRaw (AnyCardanoEra era)
-              mScriptValidity inputsAndScripts inputsCollateral txouts
+              mScriptValidity inputsAndScripts inputsCollateral
+              txinsref txouts
               mLowerBound mUpperBound
               mFee mValue
               certFiles withdrawals reqSigners
@@ -377,7 +380,8 @@ runTxBuildRaw (AnyCardanoEra era)
         <$> validateTxIns  era inputsAndScripts
         <*> validateTxInsCollateral
                            era inputsCollateral
-        <*> pure TxInsReferenceNone --TODO: Babbage era
+        <*> validateTxInsReference
+                           era txinsref
         <*> validateTxOuts era txouts
         <*> pure TxTotalCollateralNone --TODO: Babbage era
         <*> pure TxReturnCollateralNone --TODO: Babbage era
@@ -417,6 +421,8 @@ runTxBuild
   -- ^ TxIn with potential script witness
   -> [TxIn]
   -- ^ TxIn for collateral
+  -> [TxIn]
+  -- ^ Reference TxIns
   -> [TxOutAnyEra]
   -- ^ Normal outputs
   -> TxOutChangeAddress
@@ -442,7 +448,7 @@ runTxBuild
   -> TxBuildOutputOptions
   -> ExceptT ShelleyTxCmdError IO ()
 runTxBuild (AnyCardanoEra era) (AnyConsensusModeParams cModeParams) networkId mScriptValidity
-           txins txinsc txouts (TxOutChangeAddress changeAddr) mValue mLowerBound mUpperBound
+           txins txinsc txinsref txouts (TxOutChangeAddress changeAddr) mValue mLowerBound mUpperBound
            certFiles withdrawals reqSigners metadataSchema scriptFiles metadataFiles mpparams
            mUpdatePropFile outputFormat mOverrideWits outputOptions = do
   SocketPath sockPath <- firstExceptT ShelleyTxCmdSocketEnvError readEnvSocketPath
@@ -457,7 +463,7 @@ runTxBuild (AnyCardanoEra era) (AnyConsensusModeParams cModeParams) networkId mS
         TxBodyContent
           <$> validateTxIns               era txins
           <*> validateTxInsCollateral     era txinsc
-          <*> pure TxInsReferenceNone -- TODO: Babbage era
+          <*> validateTxInsReference      era txinsref
           <*> validateTxOuts              era txouts
           <*> pure TxTotalCollateralNone -- TODO: Babbage era
           <*> pure TxReturnCollateralNone -- TODO: Babbage era
@@ -633,6 +639,15 @@ validateTxInsCollateral era txins =
     case collateralSupportedInEra era of
       Nothing -> txFeatureMismatch era TxFeatureCollateral
       Just supported -> return (TxInsCollateral supported txins)
+
+validateTxInsReference :: CardanoEra era
+                       -> [TxIn]
+                       -> ExceptT ShelleyTxCmdError IO (TxInsReference era)
+validateTxInsReference _ [] = return TxInsReferenceNone
+validateTxInsReference era txins =
+  case refInsScriptsAndInlineDatsSupportedInEra era of
+    Nothing -> return TxInsReferenceNone
+    Just supp -> return $ TxInsReference supp txins
 
 
 validateTxOuts :: forall era.

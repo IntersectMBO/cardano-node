@@ -671,6 +671,7 @@ pTransaction =
             <*> some (pTxIn AutoBalance)
             <*> many pRequiredSigner
             <*> many pTxInCollateral
+            <*> many pReferenceTxIn
             <*> many pTxOut
             <*> pChangeAddress
             <*> optional (pMintMultiAsset AutoBalance)
@@ -704,6 +705,7 @@ pTransaction =
                <*> optional pScriptValidity
                <*> some (pTxIn ManualBalance)
                <*> many pTxInCollateral
+               <*> many pReferenceTxIn
                <*> many pRequiredSigner
                <*> many pTxOut
                <*> optional (pMintMultiAsset ManualBalance)
@@ -1955,6 +1957,14 @@ pTxInCollateral :: Parser TxIn
 pTxInCollateral =
     Opt.option (readerFromParsecParser parseTxIn)
       (  Opt.long "tx-in-collateral"
+      <> Opt.metavar "TX-IN"
+      <> Opt.help "TxId#TxIx"
+      )
+
+pReferenceTxIn :: Parser TxIn
+pReferenceTxIn =
+    Opt.option (readerFromParsecParser parseTxIn)
+      (  Opt.long "tx-in-reference"
       <> Opt.metavar "TX-IN"
       <> Opt.help "TxId#TxIx"
       )
