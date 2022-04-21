@@ -72,14 +72,13 @@ case "$op" in
         local usage="USAGE: wb profile $op NAME"
         local name=${1:?$usage}
 
-        profile json-by-name $name |
-        (cd "$global_basedir/profiles";
+        echo -n "workbench:  "
 
-         echo -n "workbench:  "
-         jq '
-          include "derived";
-          profile_pretty_describe(.)
-          ' --raw-output);;
+        profile json-by-name $name |
+        jq 'include "derived";
+
+           profile_pretty_describe(.)
+           ' --raw-output -L "$global_basedir/profiles";;
 
     has-preset )
         local usage="USAGE: wb profile $op NAME"

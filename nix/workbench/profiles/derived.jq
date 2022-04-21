@@ -1,5 +1,5 @@
 include "defaults";
-include "cli-args";
+include "genesis";
 
 def may_attr($attr; $dict; $defdict; $scale; $suf):
   if ($dict[$attr] //

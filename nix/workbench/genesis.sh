@@ -94,33 +94,16 @@ case "$op" in
         local usage="USAGE:  wb genesis $op PROFILE-JSON"
         local profile_json=${1:?$usage}
 
-        args=(--slurpfile profile $profile_json
-              --sort-keys
-              --null-input
-             )
-        ## Remove parts of profile that don't invalidate
-        ## the cryptographic material in genesis.  Note the conservative approach.
-        ##
-        ## Note that the genesis cache entry itself must still be updated
-        ## to match these parameters, hence the distinction between parameters:
-        jq '
-           $profile[0].genesis * $profile[0].composition
+        local args=(
+            --slurpfile profile      $profile_json
+            --arg       profile_json $profile_json
+            --sort-keys
+            --null-input
+            -L "$global_basedir/profiles"
+        )
+        jq 'include "genesis";
 
-           ## Genesis-relevant -- must be updated in finalise-cache-entry:
-           | del(.active_slots_coeff)
-           | del(.epoch_length)
-           | del(.max_block_size)
-           | del(.max_tx_size)
-           | del(.parameter_k)
-           | del(.slot_duration)
-
-           ## Genesis-irrelevant -- safe to ignore in finalise-cache-entry:
-           | del(.byron)
-           | del(.era)
-           | del(.genesis_future_offset)
-           | del(.locations)
-           | del(.with_proxy)
-           | del(.with_observer)
+           profile_genesis_cache_key($profile[0]; $profile_json)
            ' ${args[*]};;
 
     profile-cache-key )
@@ -132,18 +115,12 @@ case "$op" in
                                     sha1sum | cut -c-7)
             --slurpfile profile $profile_json
             --raw-output
+            -L "$global_basedir/profiles"
         )
-        jq 'if $profile[0].preset == null
-            then [ "k\(.composition.n_pools)"
-                 , "d\(.composition.dense_pool_density)"
-                 , "\(.genesis.delegators / 1000)kD"
-                 , "\(.genesis.utxo / 1000)kU"
-                 , "\($params_hash)" ]
-            else [ "preset"
-                 , $profile[0].preset ]
-            end
-            | join("-")
-            ' ${args[*]} $profile_json;;
+        jq 'include "genesis";
+
+           profile_genesis_cache_entry_name($profile[0]; $params_hash)
+           ' ${args[*]} $profile_json;;
 
     genesis-from-preset )
         local usage="USAGE:  wb genesis $op PRESET GENESIS-DIR"
