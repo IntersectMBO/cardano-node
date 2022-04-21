@@ -2002,6 +2002,7 @@ pTxOut =
                       \the multi-asset syntax (including simply Lovelace)."
           )
     <*> pTxOutDatum
+    <*> pRefScriptFp
 
 
 pTxOutDatum :: Parser TxOutDatumAnyEra
@@ -2048,7 +2049,14 @@ pTxOutDatum =
           "The script datum to embed in the tx output as an inline datum, \
           \in the given JSON file."
 
-
+pRefScriptFp :: Parser ReferenceScriptAnyEra
+pRefScriptFp =
+  ReferenceScriptAnyEra <$> Opt.strOption
+    (  Opt.long "reference-script-file"
+    <> Opt.metavar "FILE"
+    <> Opt.help "Reference script input file."
+    <> Opt.completer (Opt.bashCompleter "file")
+    ) <|> pure ReferenceScriptAnyEraNone
 
 pMintMultiAsset
   :: BalanceTxExecUnits
@@ -2954,7 +2962,8 @@ parseStakeAddress = do
       Nothing   -> fail $ "invalid address: " <> Text.unpack str
       Just addr -> pure addr
 
-parseTxOutAnyEra :: Parsec.Parser (TxOutDatumAnyEra -> TxOutAnyEra)
+parseTxOutAnyEra
+  :: Parsec.Parser (TxOutDatumAnyEra -> ReferenceScriptAnyEra -> TxOutAnyEra)
 parseTxOutAnyEra = do
     addr <- parseAddressAny
     Parsec.spaces

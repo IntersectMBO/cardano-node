@@ -21,6 +21,7 @@ module Cardano.CLI.Types
   , OutputFormat (..)
   , OutputSerialisation (..)
   , TxBuildOutputOptions(..)
+  , ReferenceScriptAnyEra (..)
   , SigningKeyFile (..)
   , SocketPath (..)
   , ScriptFile (..)
@@ -325,6 +326,7 @@ data TxOutAnyEra = TxOutAnyEra
                      AddressAny
                      Value
                      TxOutDatumAnyEra
+                     ReferenceScriptAnyEra
   deriving (Eq, Show)
 
 data TxOutDatumAnyEra = TxOutDatumByHashOnly (Hash ScriptData)
@@ -332,6 +334,11 @@ data TxOutDatumAnyEra = TxOutDatumByHashOnly (Hash ScriptData)
                       | TxOutDatumByValue     ScriptDataOrFile
                       | TxOutInlineDatumByValue ScriptDataOrFile
                       | TxOutDatumByNone
+  deriving (Eq, Show)
+
+data ReferenceScriptAnyEra
+  = ReferenceScriptAnyEraNone
+  | ReferenceScriptAnyEra FilePath
   deriving (Eq, Show)
 
 -- | A partially-specified transaction output indented to use as a change

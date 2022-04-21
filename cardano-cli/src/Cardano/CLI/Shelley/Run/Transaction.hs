@@ -683,48 +683,72 @@ toTxOutValueInAnyEra era val =
         Nothing -> txFeatureMismatch era TxFeatureMultiAssetOutputs
     Right multiAssetInEra -> return (TxOutValue multiAssetInEra val)
 
--- TODO: Babbage era
 toTxOutInAnyEra :: CardanoEra era
                 -> TxOutAnyEra
                 -> ExceptT ShelleyTxCmdError IO (TxOut CtxTx era)
-toTxOutInAnyEra era (TxOutAnyEra addr val mDatumHash) =
-  case (scriptDataSupportedInEra era, mDatumHash) of
-    (_, TxOutDatumByNone) ->
-      TxOut <$> toAddressInAnyEra era addr
-            <*> toTxOutValueInAnyEra era val
-            <*> pure TxOutDatumNone
-            <*> pure ReferenceScriptNone
+toTxOutInAnyEra era (TxOutAnyEra addr' val' mDatumHash refScriptFp) = do
+  addr <- toAddressInAnyEra era addr'
+  val <- toTxOutValueInAnyEra era val'
+  (datum, refScript)
+    <- case (scriptDataSupportedInEra era, refInsScriptsAndInlineDatsSupportedInEra era) of
+         (Nothing, Nothing) -> pure (TxOutDatumNone, ReferenceScriptNone)
+         (Just sup, Nothing)->
+           (,) <$> toTxAlonzoDatum sup mDatumHash <*> pure ReferenceScriptNone
+         (Just sup, Just inlineDatumRefScriptSupp) ->
+           toTxDatumReferenceScriptBabbage sup inlineDatumRefScriptSupp mDatumHash refScriptFp
+         (Nothing, Just _) ->
+           -- TODO: Figure out how to make this state unrepresentable
+           panic "toTxOutInAnyEra: Should not be possible that inline datums are allowed but datums are not"
+  pure $ TxOut addr val datum refScript
+ where
+  getReferenceScript
+    :: ReferenceScriptAnyEra
+    -> ReferenceTxInsScriptsInlineDatumsSupportedInEra era
+    -> ExceptT ShelleyTxCmdError IO (ReferenceScript era)
+  getReferenceScript ReferenceScriptAnyEraNone _ = return ReferenceScriptNone
+  getReferenceScript (ReferenceScriptAnyEra fp) supp = do
+    ReferenceScript supp
+      <$> firstExceptT ShelleyTxCmdScriptFileError (readFileScriptInAnyLang fp)
 
-    (Just supported, TxOutDatumByHashOnly dh) ->
-      TxOut <$> toAddressInAnyEra era addr
-            <*> toTxOutValueInAnyEra era val
-            <*> pure (TxOutDatumHash supported dh)
-            <*> pure ReferenceScriptNone
+  toTxDatumReferenceScriptBabbage
+    :: ScriptDataSupportedInEra era
+    -> ReferenceTxInsScriptsInlineDatumsSupportedInEra era
+    -> TxOutDatumAnyEra
+    -> ReferenceScriptAnyEra
+    -> ExceptT ShelleyTxCmdError IO (TxOutDatum CtxTx era, ReferenceScript era)
+  toTxDatumReferenceScriptBabbage sDataSupp inlineRefSupp cliDatum refScriptFp' = do
+    refScript <- getReferenceScript refScriptFp' inlineRefSupp
+    case cliDatum of
+       TxOutDatumByNone -> do
+         pure (TxOutDatumNone, refScript)
+       TxOutDatumByHashOnly dh -> do
+         pure (TxOutDatumHash sDataSupp dh, refScript)
+       TxOutDatumByHashOf fileOrSdata -> do
+         sData <- readScriptDataOrFile fileOrSdata
+         pure (TxOutDatumHash sDataSupp $ hashScriptData sData, refScript)
+       TxOutDatumByValue fileOrSdata -> do
+         sData <- readScriptDataOrFile fileOrSdata
+         pure (TxOutDatumInTx sDataSupp sData, refScript)
+       TxOutInlineDatumByValue fileOrSdata -> do
+         sData <- readScriptDataOrFile fileOrSdata
+         pure (TxOutDatumInline inlineRefSupp sData, refScript)
 
-    (Just supported, TxOutDatumByHashOf fileOrSdata) -> do
-      sData <- readScriptDataOrFile fileOrSdata
-      TxOut <$> toAddressInAnyEra era addr
-            <*> toTxOutValueInAnyEra era val
-            <*> pure (TxOutDatumHash supported $ hashScriptData sData)
-            <*> pure ReferenceScriptNone
-
-    (Just supported, TxOutDatumByValue fileOrSdata) -> do
-      sData <- readScriptDataOrFile fileOrSdata
-      TxOut <$> toAddressInAnyEra era addr
-            <*> toTxOutValueInAnyEra era val
-            <*> pure (TxOutDatumInTx supported sData)
-            <*> pure ReferenceScriptNone
-    (Just _, TxOutInlineDatumByValue fileOrSdata) ->
-      case refInsScriptsAndInlineDatsSupportedInEra era of
-        Nothing -> txFeatureMismatch era TxFeatureInlineDatums
-        Just inlineSupp -> do
-          sData <- readScriptDataOrFile fileOrSdata
-          TxOut <$> toAddressInAnyEra era addr
-                <*> toTxOutValueInAnyEra era val
-                <*> pure (TxOutDatumInline inlineSupp sData)
-                <*> pure ReferenceScriptNone
-    (Nothing, _) ->
-      txFeatureMismatch era TxFeatureTxOutDatum
+  toTxAlonzoDatum
+    :: ScriptDataSupportedInEra era
+    -> TxOutDatumAnyEra
+    -> ExceptT ShelleyTxCmdError IO (TxOutDatum CtxTx era)
+  toTxAlonzoDatum supp cliDatum =
+    case cliDatum of
+      TxOutDatumByHashOnly h -> pure (TxOutDatumHash supp h)
+      TxOutDatumByHashOf sDataOrFile -> do
+        sData <- readScriptDataOrFile sDataOrFile
+        pure (TxOutDatumHash supp $ hashScriptData sData)
+      TxOutDatumByValue sDataOrFile -> do
+        sData <- readScriptDataOrFile sDataOrFile
+        pure (TxOutDatumInTx supp sData)
+      TxOutInlineDatumByValue _ ->
+        txFeatureMismatch era TxFeatureInlineDatums
+      TxOutDatumByNone -> pure TxOutDatumNone
 
 validateTxFee :: CardanoEra era
               -> Maybe Lovelace
