@@ -88,7 +88,7 @@ data ShelleyTxCmdError
   | ShelleyTxCmdMetaDecodeError !FilePath !CBOR.DecoderError
   | ShelleyTxCmdBootstrapWitnessError !ShelleyBootstrapWitnessError
   | ShelleyTxCmdSocketEnvError !EnvSocketError
-  | ShelleyTxCmdTxSubmitError !Text
+  | ShelleyTxCmdTxSubmitError !Text Aeson.Value
   | ShelleyTxCmdTxSubmitErrorByron !(ApplyTxErr ByronBlock)
   | ShelleyTxCmdTxSubmitErrorShelley !(ApplyTxErr (ShelleyBlock StandardShelley))
   | ShelleyTxCmdTxSubmitErrorAllegra !(ApplyTxErr (ShelleyBlock StandardAllegra))
@@ -168,7 +168,7 @@ renderShelleyTxCmdError err =
     ShelleyTxCmdAesonDecodeProtocolParamsError fp decErr ->
       "Error while decoding the protocol parameters at: " <> show fp
                                             <> " Error: " <> show decErr
-    ShelleyTxCmdTxSubmitError res -> "Error while submitting tx: " <> res
+    ShelleyTxCmdTxSubmitError res _ -> "Error while submitting tx: " <> res
     ShelleyTxCmdTxSubmitErrorByron res ->
       "Error while submitting tx: " <> Text.pack (show res)
     ShelleyTxCmdTxSubmitErrorShelley res ->
@@ -1204,7 +1204,11 @@ runTxSubmit (AnyConsensusModeParams cModeParams) network txFile = do
       Net.Tx.SubmitSuccess -> liftIO $ putTextLn "Transaction successfully submitted."
       Net.Tx.SubmitFail reason ->
         case reason of
-          TxValidationErrorInMode err _eraInMode -> left . ShelleyTxCmdTxSubmitError . Text.pack $ show err
+          TxValidationErrorInMode err _eraInMode -> do
+            let errorAsText = Text.pack (show err)
+            let errorAsJson = Aeson.Null
+            left $ ShelleyTxCmdTxSubmitError errorAsText errorAsJson
+
           TxValidationEraMismatch mismatchErr -> left $ ShelleyTxCmdTxSubmitErrorEraMismatch mismatchErr
 
 -- ----------------------------------------------------------------------------

@@ -25,6 +25,8 @@ module Cardano.Api.InMode (
 
 import           Prelude
 
+import           Data.Aeson (ToJSON(..), Value)
+import qualified Data.Aeson as Aeson
 import           Data.SOP.Strict (NS (S, Z))
 
 import qualified Ouroboros.Consensus.Byron.Ledger as Consensus
@@ -35,6 +37,8 @@ import qualified Ouroboros.Consensus.HardFork.Combinator.Degenerate as Consensus
 import qualified Ouroboros.Consensus.Ledger.SupportsMempool as Consensus
 import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
 import qualified Ouroboros.Consensus.TypeFamilyWrappers as Consensus
+import qualified Cardano.Ledger.Shelley.API.Mempool as Ledger
+import qualified Cardano.Ledger.Shelley.Rules.Ledger as Ledger
 
 import           Cardano.Api.Eras
 import           Cardano.Api.Modes
@@ -226,6 +230,22 @@ data TxValidationError era where
        :: ShelleyBasedEra era
        -> Consensus.ApplyTxErr (Consensus.ShelleyBlock (ShelleyLedgerEra era))
        -> TxValidationError era
+
+instance ToJSON (TxValidationError era) where
+  toJSON txValidationErrorInMode = case txValidationErrorInMode of
+    ByronTxValidationError _applyTxError -> Aeson.Null -- TODO implement
+    ShelleyTxValidationError sbe applyTxError -> applyTxErrorToJson sbe applyTxError
+
+applyTxErrorToJson :: ShelleyBasedEra era -> Consensus.ApplyTxErr (Consensus.ShelleyBlock (ShelleyLedgerEra era)) -> Value
+applyTxErrorToJson ShelleyBasedEraShelley (Ledger.ApplyTxError predicateFailures) = toJSON $ fmap ledgerPredicateFailureToJson predicateFailures
+applyTxErrorToJson ShelleyBasedEraAllegra (Ledger.ApplyTxError predicateFailures) = toJSON $ fmap ledgerPredicateFailureToJson predicateFailures
+applyTxErrorToJson ShelleyBasedEraMary (Ledger.ApplyTxError predicateFailures) = toJSON $ fmap ledgerPredicateFailureToJson predicateFailures
+applyTxErrorToJson ShelleyBasedEraAlonzo (Ledger.ApplyTxError predicateFailures) = toJSON $ fmap ledgerPredicateFailureToJson predicateFailures
+applyTxErrorToJson ShelleyBasedEraBabbage (Ledger.ApplyTxError predicateFailures) = toJSON $ fmap ledgerPredicateFailureToJson predicateFailures
+
+ledgerPredicateFailureToJson :: Ledger.LedgerPredicateFailure era -> Value
+ledgerPredicateFailureToJson (Ledger.UtxowFailure _predicateFailure) = Aeson.Null
+ledgerPredicateFailureToJson (Ledger.DelegsFailure _predicateFailure) = Aeson.Null
 
 -- The GADT in the ShelleyTxValidationError case requires a custom instance
 instance Show (TxValidationError era) where
