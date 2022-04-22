@@ -43,11 +43,13 @@ cardano-cli governance create-update-proposal \
 
 cardano-cli transaction build-raw \
             --mary-era \
-            --fee 0 \
+            --fee 186181 \
             --tx-in $TXID2#0\
             --tx-in $TXID2#1\
+            --tx-in $TXID2#2\
             --tx-out $(cat addresses/user1.addr)+$((${COINS_IN_INPUT} / 2)) \
             --tx-out $(cat addresses/user1.addr)+$((${COINS_IN_INPUT} / 2)) \
+            --tx-out $(cat addresses/user1.addr)+9017396137 \
             --update-proposal-file update-proposal-alonzo \
             --out-file tx4.txbody
 
@@ -73,4 +75,3 @@ popd
 
 echo "Restart the nodes now to endorse the update."
 
-cardano-cli transaction submit --cardano-mode --testnet-magic 42 --tx-file mary.tx
