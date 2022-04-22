@@ -281,8 +281,8 @@ instance ( ShelleyBasedEra era
 
 
 instance ( ShelleyBasedEra era
-         , ToObject (PredicateFailure (UTXO era))
-         , ToObject (PredicateFailure (UTXOW era))
+        --  , ToObject (PredicateFailure (UTXO era))
+        --  , ToObject (PredicateFailure (UTXOW era))
          , ToObject (PredicateFailure (Core.EraRule "DELEGS" era))
          , ToObject (PredicateFailure (Core.EraRule "UTXOW" era))
          ) => ToObject (LedgerPredicateFailure era) where
