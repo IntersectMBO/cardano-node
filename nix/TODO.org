@@ -1,0 +1,4 @@
+* A simple TODO list
+
+1. shell.nix has a separate pin of the =cardano-mainnet-mirror= flake -- that
+   could've been using the =flake.nix= reference somehow.

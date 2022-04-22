@@ -210,7 +210,7 @@
 
           inherit (mkPackages project) projectPackages projectExes profiledProject assertedProject eventloggedProject pinned-workbench;
 
-          shell = import ./shell.nix { inherit pkgs customConfig; };
+          shell = import ./shell.nix { inherit pkgs customConfig cardano-mainnet-mirror; };
           devShells = {
             inherit (shell) devops;
             cluster = shell;

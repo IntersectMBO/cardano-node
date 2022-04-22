@@ -11,6 +11,7 @@ global_mode='unknown'
 . "$global_basedir"/lib.sh
 . "$global_basedir"/env.sh
 . "$global_basedir"/profile.sh
+. "$global_basedir"/chaindb.sh
 . "$global_basedir"/genesis.sh
 . "$global_basedir"/topology.sh
 . "$global_basedir"/manifest.sh
@@ -33,6 +34,7 @@ usage_main() {
     analyse      (a)      Analyse cluster runs
 
     env          (e)      Environment configuration
+    chaindb      (c)      ChainDB
     genesis      (g)      Genesis
     topology     (t)      Topology generation
     run          (r)      Managing cluster runs.  Default op is 'list'
@@ -216,6 +218,7 @@ main() {
 
         ## Public, internals-y:
         env          | e )        env                 "$@";;
+        chaindb      | c )        chaindb             "$@";;
         genesis      | g )        genesis             "$@";;
         topology     | topo | t ) topology            "$@";;
         run          | runs | r ) run                 "$@";;

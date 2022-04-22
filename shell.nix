@@ -14,6 +14,7 @@ in
     };
   }
 , pkgs ? import ./nix customConfig
+, cardano-mainnet-mirror ? __getFlake "github:input-output-hk/cardano-mainnet-mirror/nix"
 }:
 with pkgs;
 let
@@ -69,6 +70,7 @@ let
     nativeBuildInputs = with haskellPackages; with cardanoNodePackages; [
       cardano-ping
       cabalWrapped
+      db-analyser
       ghcid
       haskellBuildUtils
       pkgs.graphviz
@@ -116,6 +118,8 @@ let
       ''}
 
       ${setLocale}
+
+      export CARDANO_MAINNET_MIRROR=${cardano-mainnet-mirror.outputs.defaultPackage.x86_64-linux.outPath}
 
       ${lib.optionalString autoStartCluster ''
       echo "workbench:  starting cluster (because 'autoStartCluster' is true):"
