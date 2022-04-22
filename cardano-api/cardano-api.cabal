@@ -178,7 +178,6 @@ library gen
                       , containers
                       , hedgehog
                       , plutus-core
-                      , plutus-ledger-api
                       , cardano-ledger-shelley
                       , text
 
