@@ -58,7 +58,7 @@ getGenesis (SomeConsensusProtocol CardanoBlockType info) = shelleyBasedGenesis
   (ProtocolInfoArgsCardano
    _
    Consensus.ProtocolParamsShelleyBased{Consensus.shelleyBasedGenesis}
-    _ _ _ _ _ _ _ _) = info
+    _ _ _ _ _ _ _ _ _ _) = info
 getGenesis (SomeConsensusProtocol _ _ ) = error "getGenesis (SomeConsensusProtocol _ _ ) unknown protocol"
 
 protocolToTopLevelConfig :: SomeConsensusProtocol -> TopLevelConfig CardanoBlock
