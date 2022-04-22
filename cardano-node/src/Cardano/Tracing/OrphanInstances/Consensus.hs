@@ -113,6 +113,7 @@ instance HasSeverityAnnotation (ChainDB.TraceEvent blk) where
       ChainDB.CandidateContainsFutureBlocksExceedingClockSkew{} -> Error
       ChainDB.UpdateLedgerDbTraceEvent {} -> Debug
     ChainDB.ChainSelectionForFutureBlock{} -> Debug
+    ChainDB.PipeliningEvent {} -> Debug
 
   getSeverityAnnotation (ChainDB.TraceLedgerReplayEvent ev) = case ev of
     LedgerDB.ReplayFromGenesis {} -> Info
@@ -463,6 +464,12 @@ instance ( ConvertRawHash blk
           "Chain added block " <> renderRealPointAsPhrase pt
         ChainDB.ChainSelectionForFutureBlock pt ->
           "Chain selection run for block previously from future: " <> renderRealPointAsPhrase pt
+        ChainDB.PipeliningEvent ev' ->
+          case ev' of
+            ChainDB.SetTentativeHeader {} -> "SetTentativeHeader"
+            ChainDB.TrapTentativeHeader {} -> "TrapTentativeHeader"
+            ChainDB.OutdatedTentativeHeader {} -> "OutdatedTentativeHeader"
+
       ChainDB.TraceLedgerReplayEvent ev -> case ev of
         LedgerDB.ReplayFromGenesis _replayTo ->
           "Replaying ledger from genesis"
@@ -852,6 +859,14 @@ instance ( ConvertRawHash blk
     ChainDB.ChainSelectionForFutureBlock pt ->
       mconcat [ "kind" .= String "TraceAddBlockEvent.ChainSelectionForFutureBlock"
                , "block" .= toObject verb pt ]
+    ChainDB.PipeliningEvent ev' ->
+      case ev' of
+        ChainDB.SetTentativeHeader {} ->
+          mconcat [ "kind" .= String "TraceAddBlockEvent.SetTentativeHeader" ]
+        ChainDB.TrapTentativeHeader {} ->
+          mconcat [ "kind" .= String "TraceAddBlockEvent.TrapTentativeHeader" ]
+        ChainDB.OutdatedTentativeHeader {} ->
+          mconcat [ "kind" .= String "TraceAddBlockEvent.OutdatedTentativeHeader" ]
    where
      addedHdrsNewChain
        :: AF.AnchoredFragment (Header blk)

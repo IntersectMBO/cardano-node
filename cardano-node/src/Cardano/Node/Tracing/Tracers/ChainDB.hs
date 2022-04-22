@@ -212,6 +212,7 @@ sevTraceAddBlockEvent (ChainDB.SwitchedToAFork events _ _ _) =
       maximumDef Notice (map sevLedgerEvent events)
 sevTraceAddBlockEvent (ChainDB.AddBlockValidation ev') = sevTraceValidationEvent ev'
 sevTraceAddBlockEvent ChainDB.ChainSelectionForFutureBlock{} = Debug
+sevTraceAddBlockEvent ChainDB.PipeliningEvent{} = Debug
 
 sevLedgerEvent :: LedgerEvent blk -> SeverityS
 sevLedgerEvent (LedgerUpdate _)  = Notice
@@ -251,6 +252,8 @@ namesForChainDBAddBlock (ChainDB.AddBlockValidation ev') =
       "AddBlockValidation" : namesForChainDBAddBlockValidation ev'
 namesForChainDBAddBlock (ChainDB.ChainSelectionForFutureBlock {}) =
       ["ChainSelectionForFutureBlock"]
+namesForChainDBAddBlock (ChainDB.PipeliningEvent {}) =
+      ["PipeliningEvent"]
 
 namesForChainDBAddBlockValidation :: ChainDB.TraceValidationEvent blk -> [Text]
 namesForChainDBAddBlockValidation (ChainDB.ValidCandidate {}) =
@@ -300,7 +303,14 @@ instance ( LogFormatting (Header blk)
       "Chain added block " <> renderRealPointAsPhrase pt
   forHuman (ChainDB.ChainSelectionForFutureBlock pt) =
       "Chain selection run for block previously from future: " <> renderRealPointAsPhrase pt
-
+  forHuman (ChainDB.PipeliningEvent ev') =
+    case ev' of
+      ChainDB.SetTentativeHeader {} ->
+        "A new tentative header got set"
+      ChainDB.TrapTentativeHeader {} ->
+        "The body of tentative block turned out to be invalid"
+      ChainDB.OutdatedTentativeHeader {} ->
+        "We selected a new (better) chain, which cleared the previous tentative header"
   forMachine dtal (ChainDB.IgnoreBlockOlderThanK pt) =
       mconcat [ "kind" .= String "IgnoreBlockOlderThanK"
                , "block" .= forMachine dtal pt ]
@@ -355,6 +365,14 @@ instance ( LogFormatting (Header blk)
   forMachine dtal (ChainDB.ChainSelectionForFutureBlock pt) =
       mconcat [ "kind" .= String "TChainSelectionForFutureBlock"
                , "block" .= forMachine dtal pt ]
+  forMachine _dtal (ChainDB.PipeliningEvent ev') =
+    case ev' of
+      ChainDB.SetTentativeHeader {} ->
+        mconcat [ "kind" .= String "SetTentativeHeader" ]
+      ChainDB.TrapTentativeHeader {} ->
+        mconcat [ "kind" .= String "TrapTentativeHeader" ]
+      ChainDB.OutdatedTentativeHeader {} ->
+        mconcat [ "kind" .= String "OutdatedTentativeHeader" ]
 
   asMetrics (ChainDB.SwitchedToAFork _warnings newTipInfo _oldChain newChain) =
     let ChainInformation { slots, blocks, density, epoch, slotInEpoch } =

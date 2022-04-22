@@ -28,7 +28,7 @@ import qualified Data.Set as Set
 import           Data.Text (pack)
 
 import           Network.TypedProtocol.Codec (AnyMessageAndAgency (..))
-import           Network.TypedProtocol.Core (ClientHasAgency, PeerHasAgency (..), ServerHasAgency)
+import           Network.TypedProtocol.Core (PeerHasAgency (..))
 
 
 import           Network.Mux (MiniProtocolNum (..), MuxTrace (..), WithMuxBearer (..))
@@ -91,10 +91,7 @@ import           Ouroboros.Network.Protocol.LocalTxMonitor.Type (LocalTxMonitor)
 import qualified Ouroboros.Network.Protocol.LocalTxMonitor.Type as LocalTxMonitor
 import           Ouroboros.Network.Protocol.LocalTxSubmission.Type (LocalTxSubmission)
 import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Type as LocalTxSub
-import           Ouroboros.Network.Protocol.Trans.Hello.Type (Hello)
-import qualified Ouroboros.Network.Protocol.Trans.Hello.Type as Hello
-import           Ouroboros.Network.Protocol.TxSubmission.Type (Message (..), TxSubmission)
-import           Ouroboros.Network.Protocol.TxSubmission2.Type (TxSubmission2)
+import           Ouroboros.Network.Protocol.TxSubmission2.Type as TxSubmission2
 import           Ouroboros.Network.RethrowPolicy (ErrorCommand (..))
 import           Ouroboros.Network.Server2 (ServerTrace (..))
 import qualified Ouroboros.Network.Server2 as Server
@@ -588,10 +585,6 @@ instance (ToObject peer, Show (TxId (GenTx blk)), Show (GenTx blk))
   trTransformer = trStructured
 
 instance (ToObject peer, Show (TxId (GenTx blk)), Show (GenTx blk))
-  => Transformable Text IO (TraceLabelPeer peer (NtN.TraceSendRecv (TxSubmission (GenTxId blk) (GenTx blk)))) where
-  trTransformer = trStructured
-
-instance (ToObject peer, Show (TxId (GenTx blk)), Show (GenTx blk))
      => Transformable Text IO (TraceLabelPeer peer (TraceTxSubmissionOutbound (GenTxId blk) (GenTx blk))) where
   trTransformer = trStructured
 
@@ -780,32 +773,6 @@ instance ( ConvertTxId blk
              , "agency" .= String (pack $ show stok)
              ]
 
-instance ( ToObject (AnyMessageAndAgency ps)
-         , forall (st :: ps). Show (ClientHasAgency st)
-         , forall (st :: ps). Show (ServerHasAgency st)
-         )
-      => ToObject (AnyMessageAndAgency (Hello ps stIdle)) where
-  toObject verb (AnyMessageAndAgency stok msg) =
-    case (stok, msg) of
-      (_, Hello.MsgHello) ->
-        mconcat [ "kind" .= String "MsgHello"
-                 , "agency" .= String (pack $ show stok)
-                 ]
-      ( ClientAgency (Hello.TokClientTalk tok)
-        , Hello.MsgTalk msg' ) ->
-        mconcat [ "kind" .= String "MsgTalk"
-                 , "message" .=
-                     toObject verb
-                       (AnyMessageAndAgency (ClientAgency tok) msg')
-                 ]
-      ( ServerAgency (Hello.TokServerTalk tok)
-        , Hello.MsgTalk msg' ) ->
-        mconcat [ "kind" .= String "MsgTalk"
-                 , "message" .=
-                     toObject verb
-                       (AnyMessageAndAgency (ServerAgency tok) msg')
-                 ]
-
 instance (forall result. Show (query result))
       => ToObject (AnyMessageAndAgency (LocalStateQuery blk pt query)) where
   toObject _verb (AnyMessageAndAgency stok LocalStateQuery.MsgAcquire{}) =
@@ -940,7 +907,12 @@ instance ToObject (AnyMessageAndAgency (ChainSync blk pt tip)) where
               ]
 
 instance (Show txid, Show tx)
-      => ToObject (AnyMessageAndAgency (TxSubmission txid tx)) where
+      => ToObject (AnyMessageAndAgency (TxSubmission2 txid tx)) where
+  toObject _verb (AnyMessageAndAgency stok MsgInit) =
+    mconcat
+      [ "kind" .= String "MsgInit"
+      , "agency" .= String (pack $ show stok)
+      ]
   toObject _verb (AnyMessageAndAgency stok (MsgRequestTxs txids)) =
     mconcat
       [ "kind" .= String "MsgRequestTxs"
