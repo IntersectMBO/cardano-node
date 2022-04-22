@@ -254,15 +254,9 @@ in pkgs.commonLib.defServiceModule
           "Decision procedure for the run script content.";
       };
       
-      configExeArgsFn = cfg:
-        if cfg.highLevelConfig
-        then [
+      configExeArgsFn = cfg: [
           "json_highlevel"
           "${pkgs.writeText "tx-gen-config.json" (__toJSON (cleanNixServiceOptions cfg))}"
-        ]
-        else [
-          "json"
-          "${pkgs.writeText "lowLevelTxGenScript.json" (__toJSON (lowLevelTxGenScript cfg))}"
         ];
 
       configSystemdExtraConfig = _: {};
