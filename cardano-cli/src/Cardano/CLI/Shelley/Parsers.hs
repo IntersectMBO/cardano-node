@@ -671,6 +671,7 @@ pTransaction =
             <*> some (pTxIn AutoBalance)
             <*> many pRequiredSigner
             <*> many pTxInCollateral
+            <*> optional pReturnCollateral
             <*> optional pTotalCollateral
             <*> many pReferenceTxIn
             <*> many pTxOut
@@ -706,6 +707,7 @@ pTransaction =
                <*> optional pScriptValidity
                <*> some (pTxIn ManualBalance)
                <*> many pTxInCollateral
+               <*> optional pReturnCollateral
                <*> optional pTotalCollateral
                <*> many pReferenceTxIn
                <*> many pRequiredSigner
@@ -1962,6 +1964,21 @@ pTxInCollateral =
       <> Opt.metavar "TX-IN"
       <> Opt.help "TxId#TxIx"
       )
+
+pReturnCollateral :: Parser TxOutAnyEra
+pReturnCollateral =
+  Opt.option (readerFromParsecParser parseTxOutAnyEra)
+          (  Opt.long "tx-out-return-collateral"
+          <> Opt.metavar "ADDRESS VALUE"
+          -- TODO alonzo: Update the help text to describe the new syntax as well.
+          <> Opt.help "The transaction output as ADDRESS VALUE where ADDRESS is \
+                      \the Bech32-encoded address followed by the value in \
+                      \Lovelace. In the situation where your collateral txin \
+                      \over collateralizes the transaction, you can optionally \
+                      \specify a tx out of your choosing to return the excess Lovelace."
+          )
+    <*> pTxOutDatum
+    <*> pRefScriptFp
 
 pTotalCollateral :: Parser Lovelace
 pTotalCollateral =

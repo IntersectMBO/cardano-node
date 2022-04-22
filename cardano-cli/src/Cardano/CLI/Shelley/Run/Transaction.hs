@@ -298,21 +298,24 @@ renderFeature TxFeatureExtraKeyWits         = "Required signers"
 renderFeature TxFeatureInlineDatums         = "Inline datums"
 renderFeature TxFeatureTotalCollateral      = "Total collateral"
 renderFeature TxFeatureReferenceInputs      = "Reference inputs"
+renderFeature TxFeatureReturnCollateral     = "Return collateral"
 
 runTransactionCmd :: TransactionCmd -> ExceptT ShelleyTxCmdError IO ()
 runTransactionCmd cmd =
   case cmd of
     TxBuild era consensusModeParams nid mScriptValidity mOverrideWits txins reqSigners
-            txinsc mTotCollateral txinsref txouts changeAddr mValue mLowBound mUpperBound certs wdrls metadataSchema
-            scriptFiles metadataFiles mpparams mUpProp outputFormat output ->
-      runTxBuild era consensusModeParams nid mScriptValidity txins txinsc mTotCollateral txinsref txouts changeAddr mValue mLowBound
+            txinsc mReturnColl mTotCollateral txinsref txouts changeAddr mValue mLowBound
+            mUpperBound certs wdrls metadataSchema scriptFiles metadataFiles mpparams
+            mUpProp outputFormat output ->
+      runTxBuild era consensusModeParams nid mScriptValidity txins txinsc mReturnColl
+                 mTotCollateral txinsref txouts changeAddr mValue mLowBound
                  mUpperBound certs wdrls reqSigners metadataSchema scriptFiles
                  metadataFiles mpparams mUpProp outputFormat mOverrideWits output
-    TxBuildRaw era mScriptValidity txins txinsc mTotColl txinsref reqSigners txouts mValue mLowBound mUpperBound
-               fee certs wdrls metadataSchema scriptFiles
+    TxBuildRaw era mScriptValidity txins txinsc mReturnColl mTotColl txinsref reqSigners
+               txouts mValue mLowBound mUpperBound fee certs wdrls metadataSchema scriptFiles
                metadataFiles mpparams mUpProp outputFormat out ->
-      runTxBuildRaw era mScriptValidity txins txinsc mTotColl txinsref txouts mLowBound mUpperBound
-                    fee mValue certs wdrls reqSigners metadataSchema
+      runTxBuildRaw era mScriptValidity txins txinsc mReturnColl mTotColl txinsref txouts
+                    mLowBound mUpperBound fee mValue certs wdrls reqSigners metadataSchema
                     scriptFiles metadataFiles mpparams mUpProp outputFormat out
     TxSign txinfile skfiles network txoutfile ->
       runTxSign txinfile skfiles network txoutfile
@@ -344,6 +347,8 @@ runTxBuildRaw
   -- ^ TxIn with potential script witness
   -> [TxIn]
   -- ^ TxIn for collateral
+  -> Maybe TxOutAnyEra
+  -- ^ Return collateral
   -> Maybe Lovelace
   -- ^ Total collateral
   -> [TxIn]
@@ -372,7 +377,7 @@ runTxBuildRaw
   -> ExceptT ShelleyTxCmdError IO ()
 runTxBuildRaw (AnyCardanoEra era)
               mScriptValidity inputsAndScripts inputsCollateral
-              mTotCollateral txinsref txouts
+              mReturnCollateral mTotCollateral txinsref txouts
               mLowerBound mUpperBound
               mFee mValue
               certFiles withdrawals reqSigners
@@ -389,7 +394,7 @@ runTxBuildRaw (AnyCardanoEra era)
                            era txinsref
         <*> validateTxOuts era txouts
         <*> validateTxTotalCollateral era mTotCollateral
-        <*> pure TxReturnCollateralNone --TODO: Babbage era
+        <*> validateTxReturnCollateral era mReturnCollateral
         <*> validateTxFee  era mFee
         <*> ((,) <$> validateTxValidityLowerBound era mLowerBound
                  <*> validateTxValidityUpperBound era mUpperBound)
@@ -426,6 +431,8 @@ runTxBuild
   -- ^ TxIn with potential script witness
   -> [TxIn]
   -- ^ TxIn for collateral
+  -> Maybe TxOutAnyEra
+  -- ^ Return collateral
   -> Maybe Lovelace
   -- ^ Total collateral
   -> [TxIn]
@@ -455,7 +462,7 @@ runTxBuild
   -> TxBuildOutputOptions
   -> ExceptT ShelleyTxCmdError IO ()
 runTxBuild (AnyCardanoEra era) (AnyConsensusModeParams cModeParams) networkId mScriptValidity
-           txins txinsc mtotcoll txinsref txouts (TxOutChangeAddress changeAddr) mValue mLowerBound mUpperBound
+           txins txinsc mReturnCollateral mtotcoll txinsref txouts (TxOutChangeAddress changeAddr) mValue mLowerBound mUpperBound
            certFiles withdrawals reqSigners metadataSchema scriptFiles metadataFiles mpparams
            mUpdatePropFile outputFormat mOverrideWits outputOptions = do
   SocketPath sockPath <- firstExceptT ShelleyTxCmdSocketEnvError readEnvSocketPath
@@ -473,7 +480,7 @@ runTxBuild (AnyCardanoEra era) (AnyConsensusModeParams cModeParams) networkId mS
           <*> validateTxInsReference      era txinsref
           <*> validateTxOuts              era txouts
           <*> validateTxTotalCollateral   era mtotcoll
-          <*> pure TxReturnCollateralNone -- TODO: Babbage era
+          <*> validateTxReturnCollateral  era mReturnCollateral
           <*> validateTxFee               era dummyFee
           <*> ((,) <$> validateTxValidityLowerBound era mLowerBound
                    <*> validateTxValidityUpperBound era mUpperBound)
@@ -611,6 +618,7 @@ data TxFeature = TxFeatureShelleyAddresses
                | TxFeatureInlineDatums
                | TxFeatureTotalCollateral
                | TxFeatureReferenceInputs
+               | TxFeatureReturnCollateral
   deriving Show
 
 txFeatureMismatch :: CardanoEra era
@@ -777,6 +785,18 @@ validateTxTotalCollateral era (Just coll) =
   case totalAndReturnCollateralSupportedInEra era of
     Just supp -> return $ TxTotalCollateral supp coll
     Nothing -> txFeatureMismatch era TxFeatureTotalCollateral
+
+validateTxReturnCollateral :: CardanoEra era
+                           -> Maybe TxOutAnyEra
+                           -> ExceptT ShelleyTxCmdError IO (TxReturnCollateral CtxTx era)
+validateTxReturnCollateral _ Nothing = return TxReturnCollateralNone
+validateTxReturnCollateral era (Just retColTxOut) = do
+  txout <- toTxOutInAnyEra era retColTxOut
+  case totalAndReturnCollateralSupportedInEra era of
+    Just supp -> return $ TxReturnCollateral supp txout
+    Nothing -> txFeatureMismatch era TxFeatureReturnCollateral
+
+
 
 validateTxValidityLowerBound :: CardanoEra era
                              -> Maybe SlotNo
