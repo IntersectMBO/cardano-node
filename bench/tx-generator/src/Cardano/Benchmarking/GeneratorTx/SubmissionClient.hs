@@ -51,12 +51,12 @@ import           Ouroboros.Consensus.Shelley.Eras (StandardCrypto)
 import           Ouroboros.Consensus.Cardano.Block (GenTx (GenTxAllegra, GenTxAlonzo, GenTxShelley, GenTxMary))
 import qualified Ouroboros.Consensus.Cardano.Block as Block (TxId(GenTxIdShelley, GenTxIdAllegra, GenTxIdAlonzo, GenTxIdMary))
 
-import           Ouroboros.Network.Protocol.TxSubmission.Client (ClientStIdle (..),
-                                                                 ClientStTxIds (..),
-                                                                 ClientStTxs (..),
-                                                                 TxSubmissionClient (..))
-import           Ouroboros.Network.Protocol.TxSubmission.Type (BlockingReplyList (..),
-                                                               TokBlockingStyle (..), TxSizeInBytes)
+import           Ouroboros.Network.Protocol.TxSubmission2.Client (ClientStIdle (..),
+                                                                  ClientStTxIds (..),
+                                                                  ClientStTxs (..),
+                                                                  TxSubmissionClient (..))
+import           Ouroboros.Network.Protocol.TxSubmission2.Type (BlockingReplyList (..),
+                                                                TokBlockingStyle (..), TxSizeInBytes)
 
 import           Cardano.Api
 import           Cardano.Api.Shelley (Tx(ShelleyTx), fromShelleyTxId)

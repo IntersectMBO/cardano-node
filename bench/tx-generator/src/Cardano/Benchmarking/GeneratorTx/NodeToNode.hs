@@ -47,9 +47,8 @@ import           Ouroboros.Network.Protocol.BlockFetch.Client (BlockFetchClient 
 import           Ouroboros.Network.Protocol.Handshake.Version (simpleSingletonVersions)
 import           Ouroboros.Network.Protocol.KeepAlive.Codec
 import           Ouroboros.Network.Protocol.KeepAlive.Client
-import           Ouroboros.Network.Protocol.TxSubmission.Client (TxSubmissionClient,
-                                                                 txSubmissionClientPeer)
-import           Ouroboros.Network.Protocol.Trans.Hello.Util (wrapClientPeer)
+import           Ouroboros.Network.Protocol.TxSubmission2.Client (TxSubmissionClient,
+                                                                  txSubmissionClientPeer)
 
 import           Ouroboros.Network.Snocket (socketSnocket)
 
@@ -95,7 +94,7 @@ benchmarkConnectTxSubmit ioManager handshakeTracer submissionTracer codecConfig 
   supportedVers :: Map.Map NodeToNodeVersion (BlockNodeToNodeVersion blk)
   supportedVers = supportedNodeToNodeVersions (Proxy @blk)
   myCodecs :: Codecs blk DeserialiseFailure IO
-                ByteString ByteString ByteString ByteString ByteString ByteString ByteString
+                ByteString ByteString ByteString ByteString ByteString ByteString
   myCodecs  = defaultCodecs codecConfig blkN2nVer n2nVer
   peerMultiplex =
     simpleSingletonVersions
@@ -124,7 +123,7 @@ benchmarkConnectTxSubmit ioManager handshakeTracer submissionTracer codecConfig 
                                          MuxPeer
                                            submissionTracer
                                            (cTxSubmission2Codec myCodecs)
-                                           (wrapClientPeer $ txSubmissionClientPeer myTxSubClient)
+                                           (txSubmissionClientPeer myTxSubClient)
           } )
         n2nVer
   -- Stolen from: Ouroboros/Consensus/Network/NodeToNode.hs
@@ -134,27 +133,21 @@ benchmarkConnectTxSubmit ioManager handshakeTracer submissionTracer codecConfig 
     -> remotePeer
     -> Channel IO ByteString
     -> IO ((), Maybe ByteString)
-  kaClient version them channel = do
-    case version of
-      -- Version 1 doesn't support keep alive protocol but Blockfetch
-      -- still requires a PeerGSV per peer.
-      NodeToNodeV_1 -> forever (threadDelay 1000) >> return ((), Nothing)
-      NodeToNodeV_2 -> forever (threadDelay 1000) >> return ((), Nothing)
-      _             -> do
-        keepAliveRng <- newStdGen
-        peerGSVMap <- liftIO . newTVarIO $ Map.singleton them defaultGSV
-        runPeerWithLimits
+  kaClient _version them channel = do
+    keepAliveRng <- newStdGen
+    peerGSVMap <- liftIO . newTVarIO $ Map.singleton them defaultGSV
+    runPeerWithLimits
+      nullTracer
+      (cKeepAliveCodec myCodecs)
+      (byteLimitsKeepAlive (const 0)) -- TODO: Real Bytelimits, see #1727
+      timeLimitsKeepAlive
+      channel
+      $ keepAliveClientPeer
+      $ keepAliveClient
           nullTracer
-          (cKeepAliveCodec myCodecs)
-          (byteLimitsKeepAlive (const 0)) -- TODO: Real Bytelimits, see #1727
-          timeLimitsKeepAlive
-          channel
-          $ keepAliveClientPeer
-          $ keepAliveClient
-              nullTracer
-              keepAliveRng
-              (continueForever (Proxy :: Proxy IO)) them peerGSVMap
-              (KeepAliveInterval 10)
+          keepAliveRng
+          (continueForever (Proxy :: Proxy IO)) them peerGSVMap
+          (KeepAliveInterval 10)
 
 -- the null block fetch client
 blockFetchClientNull
