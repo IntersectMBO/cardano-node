@@ -54,11 +54,7 @@ compileToScript = do
 
 initConstants :: Compiler ()
 initConstants = do
-  setN TNumberOfInputsPerTx  _nix_inputs_per_tx
-  setN TNumberOfOutputsPerTx _nix_outputs_per_tx
-  setN TNumberOfTxs          _nix_tx_count
   setN TTxAdditionalSize     _nix_add_tx_size
-  setN TMinValuePerUTxO      _nix_min_utxo_value
   setN TFee                  _nix_tx_fee
   setN TLocalSocket          _nix_localNodeSocketPath
   setConst  TTTL             1000000
@@ -148,7 +144,7 @@ benchmarkingPhase wallet = do
   plutusMode <- askNixOption _nix_plutusMode
   plutusAutoMode <- askNixOption _nix_plutusAutoMode
   targetNodes <- askNixOption _nix_targetNodes
-  tx_count <- askNixOption _nix_tx_count
+  extraArgs <- evilValueMagic
   tps <- askNixOption _nix_tps
   era <- askNixOption _nix_era
   let target = if debugMode then LocalSocket else NodeToNode targetNodes
@@ -164,7 +160,7 @@ benchmarkingPhase wallet = do
                   <*> (ScriptDataNumber <$> askNixOption _nix_plutusData)
                   <*> (ScriptDataNumber <$> askNixOption _nix_plutusRedeemer)
     (False,False) ->  return SpendOutput
-  emit $ RunBenchmark era wallet target spendMode (ThreadName "tx-submit-benchmark") tx_count tps
+  emit $ RunBenchmark era wallet target spendMode (ThreadName "tx-submit-benchmark") extraArgs tps
   unless debugMode $ do
     emit $ WaitBenchmark $ ThreadName "tx-submit-benchmark"
 
@@ -227,3 +223,30 @@ newWallet n = do
   name <- WalletName <$> newIdentifier n
   emit $ InitWallet name
   return name
+
+-- Approximate the ada values for inputs of the benchmarking Phase
+evilValueMagic :: Compiler RunBenchmarkAux
+evilValueMagic = do
+  (NumberOfInputsPerTx inputsPerTx) <- askNixOption _nix_inputs_per_tx
+  (NumberOfOutputsPerTx outputsPerTx) <- askNixOption _nix_outputs_per_tx
+  (NumberOfTxs txCount) <- askNixOption _nix_tx_count
+  fee <- askNixOption _nix_tx_fee
+  minValuePerUTxO <- askNixOption _nix_min_utxo_value
+  let
+    (Quantity minValue) = lovelaceToQuantity $ fromIntegral outputsPerTx * minValuePerUTxO + fee
+
+  -- this is not totally correct:
+  -- beware of rounding errors !
+    minValuePerInput = quantityToLovelace $ fromIntegral (if m==0 then d else d+1)
+      where
+        (d, m) = minValue `divMod` fromIntegral inputsPerTx
+  return $  RunBenchmarkAux {
+      auxTxCount = txCount
+    , auxFee = fee
+    , auxOutputsPerTx = outputsPerTx
+    , auxInputsPerTx = inputsPerTx
+    , auxInputs = inputsPerTx * txCount
+    , auxOutputs = inputsPerTx * txCount
+    , auxMinValuePerUTxO = minValuePerInput
+    }
+

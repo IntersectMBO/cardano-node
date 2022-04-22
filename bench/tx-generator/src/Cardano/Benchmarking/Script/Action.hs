@@ -22,7 +22,7 @@ action a = case a of
   Delay t -> delay t
   ImportGenesisFund era wallet submitMode genesisKey fundKey -> importGenesisFund era wallet submitMode genesisKey fundKey
   CreateChange era sourceWallet dstWallet payMode submitMode value count -> createChange era sourceWallet dstWallet payMode submitMode value count
-  RunBenchmark era sourceWallet submitMode spendMode thread count tps -> runBenchmark era sourceWallet submitMode spendMode thread count tps
+  RunBenchmark era sourceWallet submitMode spendMode thread auxArgs tps -> runBenchmark era sourceWallet submitMode spendMode thread auxArgs tps
   WaitBenchmark thread -> waitBenchmark thread
   CancelBenchmark thread -> cancelBenchmark thread
   WaitForEra era -> waitForEra era

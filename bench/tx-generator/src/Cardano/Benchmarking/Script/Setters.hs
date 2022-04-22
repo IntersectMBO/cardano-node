@@ -24,11 +24,7 @@ import           Cardano.Benchmarking.Types
 
 -- Some boiler plate; ToDo may generate this.
 data Tag v where
-  TNumberOfInputsPerTx  :: Tag NumberOfInputsPerTx
-  TNumberOfOutputsPerTx :: Tag NumberOfOutputsPerTx
-  TNumberOfTxs          :: Tag NumberOfTxs
   TFee                  :: Tag Lovelace
-  TMinValuePerUTxO      :: Tag Lovelace
   TTTL                  :: Tag SlotNo
   TTxAdditionalSize     :: Tag TxAdditionalSize
   TLocalSocket          :: Tag String
@@ -43,11 +39,7 @@ deriving instance Show (Tag v)
 deriving instance Eq (Tag v)
 
 data Sum where
-  SNumberOfInputsPerTx  :: !NumberOfInputsPerTx  -> Sum
-  SNumberOfOutputsPerTx :: !NumberOfOutputsPerTx -> Sum
-  SNumberOfTxs          :: !NumberOfTxs          -> Sum
   SFee                  :: !Lovelace             -> Sum
-  SMinValuePerUTxO      :: !Lovelace             -> Sum
   STTL                  :: !SlotNo               -> Sum
   STxAdditionalSize     :: !TxAdditionalSize     -> Sum
   SLocalSocket          :: !String               -> Sum
@@ -56,11 +48,7 @@ data Sum where
 
 taggedToSum :: Applicative f => DSum Tag f -> f Sum
 taggedToSum x = case x of
-  (TNumberOfInputsPerTx  :=> v) -> SNumberOfInputsPerTx  <$> v
-  (TNumberOfOutputsPerTx :=> v) -> SNumberOfOutputsPerTx <$> v
-  (TNumberOfTxs          :=> v) -> SNumberOfTxs          <$> v
   (TFee                  :=> v) -> SFee                  <$> v
-  (TMinValuePerUTxO      :=> v) -> SMinValuePerUTxO      <$> v
   (TTTL                  :=> v) -> STTL                  <$> v
   (TTxAdditionalSize     :=> v) -> STxAdditionalSize     <$> v
   (TLocalSocket          :=> v) -> SLocalSocket          <$> v
@@ -68,11 +56,7 @@ taggedToSum x = case x of
 
 sumToTagged :: Applicative f => Sum -> DSum Tag f
 sumToTagged x = case x of
-  SNumberOfInputsPerTx  v -> TNumberOfInputsPerTx  ==> v
-  SNumberOfOutputsPerTx v -> TNumberOfOutputsPerTx ==> v
-  SNumberOfTxs          v -> TNumberOfTxs          ==> v
   SFee                  v -> TFee                  ==> v
-  SMinValuePerUTxO      v -> TMinValuePerUTxO      ==> v
   STTL                  v -> TTTL                  ==> v
   STxAdditionalSize     v -> TTxAdditionalSize     ==> v
   SLocalSocket          v -> TLocalSocket          ==> v
