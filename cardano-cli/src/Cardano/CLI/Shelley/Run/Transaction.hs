@@ -296,20 +296,22 @@ renderFeature TxFeatureTxOutDatum           = "Transaction output datums"
 renderFeature TxFeatureScriptValidity       = "Script validity"
 renderFeature TxFeatureExtraKeyWits         = "Required signers"
 renderFeature TxFeatureInlineDatums         = "Inline datums"
+renderFeature TxFeatureTotalCollateral      = "Total collateral"
+renderFeature TxFeatureReferenceInputs      = "Reference inputs"
 
 runTransactionCmd :: TransactionCmd -> ExceptT ShelleyTxCmdError IO ()
 runTransactionCmd cmd =
   case cmd of
     TxBuild era consensusModeParams nid mScriptValidity mOverrideWits txins reqSigners
-            txinsc txinsref txouts changeAddr mValue mLowBound mUpperBound certs wdrls metadataSchema
+            txinsc mTotCollateral txinsref txouts changeAddr mValue mLowBound mUpperBound certs wdrls metadataSchema
             scriptFiles metadataFiles mpparams mUpProp outputFormat output ->
-      runTxBuild era consensusModeParams nid mScriptValidity txins txinsc txinsref txouts changeAddr mValue mLowBound
+      runTxBuild era consensusModeParams nid mScriptValidity txins txinsc mTotCollateral txinsref txouts changeAddr mValue mLowBound
                  mUpperBound certs wdrls reqSigners metadataSchema scriptFiles
                  metadataFiles mpparams mUpProp outputFormat mOverrideWits output
-    TxBuildRaw era mScriptValidity txins txinsc txinsref reqSigners txouts mValue mLowBound mUpperBound
+    TxBuildRaw era mScriptValidity txins txinsc mTotColl txinsref reqSigners txouts mValue mLowBound mUpperBound
                fee certs wdrls metadataSchema scriptFiles
                metadataFiles mpparams mUpProp outputFormat out ->
-      runTxBuildRaw era mScriptValidity txins txinsc txinsref txouts mLowBound mUpperBound
+      runTxBuildRaw era mScriptValidity txins txinsc mTotColl txinsref txouts mLowBound mUpperBound
                     fee mValue certs wdrls reqSigners metadataSchema
                     scriptFiles metadataFiles mpparams mUpProp outputFormat out
     TxSign txinfile skfiles network txoutfile ->
@@ -342,6 +344,8 @@ runTxBuildRaw
   -- ^ TxIn with potential script witness
   -> [TxIn]
   -- ^ TxIn for collateral
+  -> Maybe Lovelace
+  -- ^ Total collateral
   -> [TxIn]
   -- ^ Reference TxIn
   -> [TxOutAnyEra]
@@ -368,7 +372,7 @@ runTxBuildRaw
   -> ExceptT ShelleyTxCmdError IO ()
 runTxBuildRaw (AnyCardanoEra era)
               mScriptValidity inputsAndScripts inputsCollateral
-              txinsref txouts
+              mTotCollateral txinsref txouts
               mLowerBound mUpperBound
               mFee mValue
               certFiles withdrawals reqSigners
@@ -384,7 +388,7 @@ runTxBuildRaw (AnyCardanoEra era)
         <*> validateTxInsReference
                            era txinsref
         <*> validateTxOuts era txouts
-        <*> pure TxTotalCollateralNone --TODO: Babbage era
+        <*> validateTxTotalCollateral era mTotCollateral
         <*> pure TxReturnCollateralNone --TODO: Babbage era
         <*> validateTxFee  era mFee
         <*> ((,) <$> validateTxValidityLowerBound era mLowerBound
@@ -422,6 +426,8 @@ runTxBuild
   -- ^ TxIn with potential script witness
   -> [TxIn]
   -- ^ TxIn for collateral
+  -> Maybe Lovelace
+  -- ^ Total collateral
   -> [TxIn]
   -- ^ Reference TxIns
   -> [TxOutAnyEra]
@@ -449,7 +455,7 @@ runTxBuild
   -> TxBuildOutputOptions
   -> ExceptT ShelleyTxCmdError IO ()
 runTxBuild (AnyCardanoEra era) (AnyConsensusModeParams cModeParams) networkId mScriptValidity
-           txins txinsc txinsref txouts (TxOutChangeAddress changeAddr) mValue mLowerBound mUpperBound
+           txins txinsc mtotcoll txinsref txouts (TxOutChangeAddress changeAddr) mValue mLowerBound mUpperBound
            certFiles withdrawals reqSigners metadataSchema scriptFiles metadataFiles mpparams
            mUpdatePropFile outputFormat mOverrideWits outputOptions = do
   SocketPath sockPath <- firstExceptT ShelleyTxCmdSocketEnvError readEnvSocketPath
@@ -466,7 +472,7 @@ runTxBuild (AnyCardanoEra era) (AnyConsensusModeParams cModeParams) networkId mS
           <*> validateTxInsCollateral     era txinsc
           <*> validateTxInsReference      era txinsref
           <*> validateTxOuts              era txouts
-          <*> pure TxTotalCollateralNone -- TODO: Babbage era
+          <*> validateTxTotalCollateral   era mtotcoll
           <*> pure TxReturnCollateralNone -- TODO: Babbage era
           <*> validateTxFee               era dummyFee
           <*> ((,) <$> validateTxValidityLowerBound era mLowerBound
@@ -603,6 +609,8 @@ data TxFeature = TxFeatureShelleyAddresses
                | TxFeatureScriptValidity
                | TxFeatureExtraKeyWits
                | TxFeatureInlineDatums
+               | TxFeatureTotalCollateral
+               | TxFeatureReferenceInputs
   deriving Show
 
 txFeatureMismatch :: CardanoEra era
@@ -648,7 +656,7 @@ validateTxInsReference :: CardanoEra era
 validateTxInsReference _ [] = return TxInsReferenceNone
 validateTxInsReference era txins =
   case refInsScriptsAndInlineDatsSupportedInEra era of
-    Nothing -> return TxInsReferenceNone
+    Nothing -> txFeatureMismatch era TxFeatureReferenceInputs
     Just supp -> return $ TxInsReference supp txins
 
 
@@ -761,6 +769,14 @@ validateTxFee era mfee =
       (Right _, Nothing) -> txFeatureMismatch era TxFeatureImplicitFees
       (Left  _, Just _)  -> txFeatureMismatch era TxFeatureExplicitFees
 
+validateTxTotalCollateral :: CardanoEra era
+                          -> Maybe Lovelace
+                          -> ExceptT ShelleyTxCmdError IO (TxTotalCollateral era)
+validateTxTotalCollateral _ Nothing = return TxTotalCollateralNone
+validateTxTotalCollateral era (Just coll) =
+  case totalAndReturnCollateralSupportedInEra era of
+    Just supp -> return $ TxTotalCollateral supp coll
+    Nothing -> txFeatureMismatch era TxFeatureTotalCollateral
 
 validateTxValidityLowerBound :: CardanoEra era
                              -> Maybe SlotNo
@@ -861,11 +877,10 @@ validateTxCertificates
      CardanoEra era
   -> [(CertificateFile, Maybe (ScriptWitnessFiles WitCtxStake))]
   -> ExceptT ShelleyTxCmdError IO (TxCertificates BuildTx era)
+validateTxCertificates _ [] = return TxCertificatesNone
 validateTxCertificates era certFiles =
   case certificatesSupportedInEra era of
-    Nothing
-      | null certFiles -> return TxCertificatesNone
-      | otherwise      -> txFeatureMismatch era TxFeatureCertificates
+    Nothing -> txFeatureMismatch era TxFeatureCertificates
     Just supported -> do
       certs <- sequence
                  [ firstExceptT ShelleyTxCmdReadTextViewFileError . newExceptT $

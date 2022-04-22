@@ -165,6 +165,8 @@ data TransactionCmd
       -- ^ Transaction inputs with optional spending scripts
       [TxIn]
       -- ^ Transaction inputs for collateral, only key witnesses, no scripts.
+      (Maybe Lovelace)
+      -- ^ Total collateral
       [TxIn]
       -- ^ Reference inputs
       [RequiredSigner]
@@ -204,6 +206,8 @@ data TransactionCmd
       -- ^ Transaction inputs with optional spending scripts
       [TxIn]
       -- ^ Transaction inputs for collateral, only key witnesses, no scripts.
+      (Maybe Lovelace)
+      -- ^ Total collateral
       [TxIn]
       -- ^ Reference inputs
       [TxOutAnyEra]

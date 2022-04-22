@@ -671,6 +671,7 @@ pTransaction =
             <*> some (pTxIn AutoBalance)
             <*> many pRequiredSigner
             <*> many pTxInCollateral
+            <*> optional pTotalCollateral
             <*> many pReferenceTxIn
             <*> many pTxOut
             <*> pChangeAddress
@@ -705,6 +706,7 @@ pTransaction =
                <*> optional pScriptValidity
                <*> some (pTxIn ManualBalance)
                <*> many pTxInCollateral
+               <*> optional pTotalCollateral
                <*> many pReferenceTxIn
                <*> many pRequiredSigner
                <*> many pTxOut
@@ -1960,6 +1962,17 @@ pTxInCollateral =
       <> Opt.metavar "TX-IN"
       <> Opt.help "TxId#TxIx"
       )
+
+pTotalCollateral :: Parser Lovelace
+pTotalCollateral =
+  Opt.option (Lovelace <$> readerFromParsecParser decimal)
+    (  Opt.long "tx-total-collateral"
+    <> Opt.metavar "INTEGER"
+    <> Opt.help "The total amount of collateral that will be collected \
+                 \as fees in the event of a Plutus script failure. Must be used \
+                 \in conjuction with \"--tx-out-return-collateral\"."
+    )
+
 
 pReferenceTxIn :: Parser TxIn
 pReferenceTxIn =
