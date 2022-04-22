@@ -460,7 +460,6 @@ mkTracers _ _ _ _ _ enableP2P =
       , NodeToNode.tChainSyncSerialisedTracer = nullTracer
       , NodeToNode.tBlockFetchTracer = nullTracer
       , NodeToNode.tBlockFetchSerialisedTracer = nullTracer
-      , NodeToNode.tTxSubmissionTracer = nullTracer
       , NodeToNode.tTxSubmission2Tracer = nullTracer
       }
     , diffusionTracers = Diffusion.nullTracers
@@ -1316,9 +1315,6 @@ nodeToNodeTracers' trSel verb tr =
   , NodeToNode.tBlockFetchSerialisedTracer =
       showOnOff (traceBlockFetchProtocolSerialised trSel)
                 "BlockFetchProtocolSerialised" tr
-  , NodeToNode.tTxSubmissionTracer =
-      tracerOnOff (traceTxSubmissionProtocol trSel)
-                  verb "TxSubmissionProtocol" tr
   , NodeToNode.tTxSubmission2Tracer =
       tracerOnOff (traceTxSubmissionProtocol trSel)
                   verb "TxSubmissionProtocol" tr
