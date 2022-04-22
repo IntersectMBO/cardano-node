@@ -54,9 +54,9 @@ import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
 import           Ouroboros.Network.Driver.Simple (TraceSendRecv (..))
 import           Ouroboros.Network.Protocol.BlockFetch.Type (BlockFetch (..), Message (..))
 import           Ouroboros.Network.Protocol.ChainSync.Type as ChainSync
-import           Ouroboros.Network.Protocol.Trans.Hello.Type (ClientHasAgency (..), Hello,
-                   Message (..), ServerHasAgency (..))
-import qualified Ouroboros.Network.Protocol.TxSubmission.Type as STX
+--import           Ouroboros.Network.Protocol.TxSubmission2.Type (ClientHasAgency (..), Message (..),
+--                   ServerHasAgency (..), TxSubmission2)
+import qualified Ouroboros.Network.Protocol.TxSubmission2.Type as STX
 import qualified Ouroboros.Network.Protocol.TxSubmission2.Type as TXS
 
 --------------------------------------------------------------------------------
@@ -377,7 +377,7 @@ instance ( ConvertTxId blk
 --------------------------------------------------------------------------------
 
 severityTxSubmissionNode :: BlockFetch.TraceLabelPeer peer
-  (TraceSendRecv (TXS.TxSubmission (GenTxId blk) (GenTx blk))) -> SeverityS
+  (TraceSendRecv (TXS.TxSubmission2 (GenTxId blk) (GenTx blk))) -> SeverityS
 severityTxSubmissionNode (BlockFetch.TraceLabelPeer _ v) = severityTxSubNode v
   where
     severityTxSubNode (TraceSendMsg msg) = severityTxSubNode' msg
@@ -387,7 +387,7 @@ severityTxSubmissionNode (BlockFetch.TraceLabelPeer _ v) = severityTxSubNode v
 
     severityTxSubNode'' ::
         Message
-          (TXS.TxSubmission (GenTxId blk) (GenTx blk))
+          (TXS.TxSubmission2 (GenTxId blk) (GenTx blk))
           from
           to
      -> SeverityS
@@ -399,7 +399,7 @@ severityTxSubmissionNode (BlockFetch.TraceLabelPeer _ v) = severityTxSubNode v
 
 
 namesForTxSubmissionNode :: BlockFetch.TraceLabelPeer peer
-  (TraceSendRecv (TXS.TxSubmission (GenTxId blk) (GenTx blk))) -> [Text]
+  (TraceSendRecv (TXS.TxSubmission2 (GenTxId blk) (GenTx blk))) -> [Text]
 namesForTxSubmissionNode (BlockFetch.TraceLabelPeer _ v) =
   "NodeToNode" : namesTxSubNode v
   where
@@ -410,7 +410,7 @@ namesForTxSubmissionNode (BlockFetch.TraceLabelPeer _ v) =
 
     namesTxSubNode'' ::
          Message
-          (TXS.TxSubmission (GenTxId blk) (GenTx blk))
+          (TXS.TxSubmission2 (GenTxId blk) (GenTx blk))
           from
           to
       -> [Text]
@@ -422,7 +422,7 @@ namesForTxSubmissionNode (BlockFetch.TraceLabelPeer _ v) =
 
 
 instance (Show txid, Show tx)
-      => LogFormatting (AnyMessageAndAgency (STX.TxSubmission txid tx)) where
+      => LogFormatting (AnyMessageAndAgency (STX.TxSubmission2 txid tx)) where
   forMachine _dtal (AnyMessageAndAgency stok (STX.MsgRequestTxs txids)) =
     mconcat
       [ "kind" .= String "MsgRequestTxs"
@@ -454,7 +454,7 @@ instance (Show txid, Show tx)
 docTTxSubmissionNode :: Documented
   (BlockFetch.TraceLabelPeer peer
     (TraceSendRecv
-      (TXS.TxSubmission (GenTxId blk) (GenTx blk))))
+      (TXS.TxSubmission2 (GenTxId blk) (GenTx blk))))
 docTTxSubmissionNode =
   addDocumentedNamespace  ["NodeToNode", "Send"] docTTxSubmissionNode'
   `addDocs` addDocumentedNamespace  ["NodeToNode", "Recieve"] docTTxSubmissionNode'
@@ -462,7 +462,7 @@ docTTxSubmissionNode =
 docTTxSubmissionNode' :: Documented
   (BlockFetch.TraceLabelPeer peer
     (TraceSendRecv
-      (TXS.TxSubmission (GenTxId blk) (GenTx blk))))
+      (TXS.TxSubmission2 (GenTxId blk) (GenTx blk))))
 docTTxSubmissionNode' = Documented [
       DocMsg
         ["RequestTxIds"]
@@ -572,16 +572,16 @@ severityTxSubmission2Node (BlockFetch.TraceLabelPeer _ v) = severityTxSubNode v
 
     severityTxSubNode'' ::
         Message
-          (Hello (TXS.TxSubmission (GenTxId blk) (GenTx blk)) stIdle)
+          (TXS.TxSubmission2 (GenTxId blk) (GenTx blk))
           from
           to
      -> SeverityS
-    severityTxSubNode'' MsgHello {}                      = Debug
-    severityTxSubNode'' (MsgTalk TXS.MsgRequestTxIds {}) = Info
-    severityTxSubNode'' (MsgTalk TXS.MsgReplyTxIds {})   = Info
-    severityTxSubNode'' (MsgTalk TXS.MsgRequestTxs {})   = Info
-    severityTxSubNode'' (MsgTalk TXS.MsgReplyTxs {})     = Info
-    severityTxSubNode'' (MsgTalk TXS.MsgDone {})         = Info
+    severityTxSubNode'' STX.MsgInit {}         = Debug
+    severityTxSubNode'' TXS.MsgRequestTxIds {} = Info
+    severityTxSubNode'' TXS.MsgReplyTxIds {}   = Info
+    severityTxSubNode'' TXS.MsgRequestTxs {}   = Info
+    severityTxSubNode'' TXS.MsgReplyTxs {}     = Info
+    severityTxSubNode'' TXS.MsgDone {}         = Info
 
 namesForTxSubmission2Node :: forall blk peer. BlockFetch.TraceLabelPeer peer
   (TraceSendRecv (TXS.TxSubmission2 (GenTxId blk) (GenTx blk))) -> [Text]
@@ -595,37 +595,17 @@ namesForTxSubmission2Node (BlockFetch.TraceLabelPeer _ v) =
 
     namesTxSubNode'' ::
          Message
-          (Hello (TXS.TxSubmission (GenTxId blk) (GenTx blk)) stIdle)
+          ((TXS.TxSubmission2 (GenTxId blk) (GenTx blk)) stIdle)
           from
           to
       -> [Text]
-    namesTxSubNode'' MsgHello {}                      = ["MsgHello"]
-    namesTxSubNode'' (MsgTalk TXS.MsgRequestTxIds {}) = ["RequestTxIds"]
-    namesTxSubNode'' (MsgTalk TXS.MsgReplyTxIds {})   = ["ReplyTxIds"]
-    namesTxSubNode'' (MsgTalk TXS.MsgRequestTxs {})   = ["RequestTxs"]
-    namesTxSubNode'' (MsgTalk TXS.MsgReplyTxs {})     = ["ReplyTxs"]
-    namesTxSubNode'' (MsgTalk TXS.MsgDone {})         = ["Done"]
+    namesTxSubNode'' TXS.MsgInit {}         = ["MsgInit"]
+    namesTxSubNode'' TXS.MsgRequestTxIds {} = ["RequestTxIds"]
+    namesTxSubNode'' TXS.MsgReplyTxIds {}   = ["ReplyTxIds"]
+    namesTxSubNode'' TXS.MsgRequestTxs {}   = ["RequestTxs"]
+    namesTxSubNode'' TXS.MsgReplyTxs {}     = ["ReplyTxs"]
+    namesTxSubNode'' TXS.MsgDone {}         = ["Done"]
 
-
-instance (Show txid, Show tx)
-      => LogFormatting (AnyMessageAndAgency (TXS.TxSubmission2 txid tx)) where
-  forMachine _dtal (AnyMessageAndAgency
-                   -- we need this pattern match for GHC to recognise this
-                   -- function as total.
-                   stok@(ClientAgency TokHello)
-                   MsgHello) =
-    mconcat
-      [ "kind" .= String "MsgHello"
-      , "agency" .= String (pack $ show stok)
-      ]
-  forMachine dtal (AnyMessageAndAgency
-                  (ClientAgency (TokClientTalk stok))
-                  (MsgTalk msg)) =
-    forMachine dtal (AnyMessageAndAgency (ClientAgency stok) msg)
-  forMachine dtal (AnyMessageAndAgency
-                  (ServerAgency (TokServerTalk stok))
-                  (MsgTalk msg)) =
-    forMachine dtal (AnyMessageAndAgency (ServerAgency stok) msg)
 
 docTTxSubmission2Node :: Documented
   (BlockFetch.TraceLabelPeer peer
