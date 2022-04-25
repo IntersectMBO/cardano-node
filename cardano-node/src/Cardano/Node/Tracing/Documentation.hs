@@ -530,19 +530,6 @@ docTracers configFileName outputFileName _ _ _ = do
              (TraceSendRecv
                (BlockFetch x (Point blk)))))
 
-    txSubmissionNodeTr  <-  mkCardanoTracer
-                trBase trForward mbTrEKG
-                "TxSubmission"
-                namesForTxSubmissionNode
-                severityTxSubmissionNode
-                allPublic
-    configureTracers trConfig docTTxSubmissionNode [txSubmissionNodeTr]
-    txSubmissionNodeTrDoc <- documentTracer trConfig txSubmissionNodeTr
-      (docTTxSubmissionNode :: Documented
-        (BlockFetch.TraceLabelPeer peer
-          (TraceSendRecv
-            (TxSubmission (GenTxId blk) (GenTx blk)))))
-
     txSubmission2Tr  <-  mkCardanoTracer
                 trBase trForward mbTrEKG
                 "TxSubmission2"
@@ -882,7 +869,6 @@ docTracers configFileName outputFileName _ _ _ = do
             <> chainSyncSerialisedTrDoc
             <> blockFetchTrDoc
             <> blockFetchSerialisedTrDoc
-            <> txSubmissionNodeTrDoc
             <> txSubmission2TrDoc
 -- Diffusion
             <> dtMuxTrDoc

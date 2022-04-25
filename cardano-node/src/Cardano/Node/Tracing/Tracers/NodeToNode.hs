@@ -36,7 +36,7 @@ import           Cardano.Logging
 import           Cardano.Prelude hiding (Show, show)
 import           Data.Aeson (Value (String), toJSON, (.=))
 import           Data.Text (pack)
-import           Network.TypedProtocol.Codec (AnyMessageAndAgency (..), PeerHasAgency (..))
+import           Network.TypedProtocol.Codec (AnyMessageAndAgency (..))
 import           Text.Show
 
 import           Cardano.Node.Queries (ConvertTxId)
@@ -391,6 +391,7 @@ severityTxSubmissionNode (BlockFetch.TraceLabelPeer _ v) = severityTxSubNode v
           from
           to
      -> SeverityS
+    severityTxSubNode'' TXS.MsgInit {} = Info
     severityTxSubNode'' TXS.MsgRequestTxIds {} = Info
     severityTxSubNode'' TXS.MsgReplyTxIds {}   = Info
     severityTxSubNode'' TXS.MsgRequestTxs {}   = Info
@@ -414,6 +415,7 @@ namesForTxSubmissionNode (BlockFetch.TraceLabelPeer _ v) =
           from
           to
       -> [Text]
+    namesTxSubNode'' TXS.MsgInit {} = ["MsgInit"]
     namesTxSubNode'' TXS.MsgRequestTxIds {} = ["RequestTxIds"]
     namesTxSubNode'' TXS.MsgReplyTxIds {}   = ["ReplyTxIds"]
     namesTxSubNode'' TXS.MsgRequestTxs {}   = ["RequestTxs"]
@@ -423,6 +425,11 @@ namesForTxSubmissionNode (BlockFetch.TraceLabelPeer _ v) =
 
 instance (Show txid, Show tx)
       => LogFormatting (AnyMessageAndAgency (STX.TxSubmission2 txid tx)) where
+  forMachine _dtal (AnyMessageAndAgency stok STX.MsgInit) =
+    mconcat
+      [ "kind" .= String "MsgInit"
+      , "agency" .= String (pack $ show stok)
+      ]
   forMachine _dtal (AnyMessageAndAgency stok (STX.MsgRequestTxs txids)) =
     mconcat
       [ "kind" .= String "MsgRequestTxs"
@@ -595,7 +602,7 @@ namesForTxSubmission2Node (BlockFetch.TraceLabelPeer _ v) =
 
     namesTxSubNode'' ::
          Message
-          ((TXS.TxSubmission2 (GenTxId blk) (GenTx blk)) stIdle)
+          (TXS.TxSubmission2 (GenTxId blk) (GenTx blk))
           from
           to
       -> [Text]
