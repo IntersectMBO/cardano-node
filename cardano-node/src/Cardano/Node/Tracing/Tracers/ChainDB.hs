@@ -658,6 +658,21 @@ docChainDBAddBlock = Documented [
         "Run chain selection for a block that was previously from the future.\
         \ This is done for all blocks from the future each time a new block is\
         \ added."
+    , DocMsg
+        ["PipeliningEvent", "SetTentativeHeader"]
+        []
+        "An event traced during block selection when the tentative header\
+        \ (in the context of diffusion pipelining) is set."
+    , DocMsg
+        ["PipeliningEvent", "TrapTentativeHeader"]
+        []
+        "An event traced during block selection when the body of the tentative\
+        \ header turned out to be invalid."
+    , DocMsg
+        ["PipeliningEvent", "OutdatedTentativeHeader"]
+        []
+        "An event traced during block selection when the tentative header got\
+        \ cleared on chain selection."
   ]
 
 

@@ -34,7 +34,8 @@ import           Cardano.Tracing.Render (renderChainHash, renderChunkNo, renderH
 
 import           Ouroboros.Consensus.Block (BlockProtocol, BlockSupportsProtocol, CannotForge,
                    ConvertRawHash (..), ForgeStateUpdateError, Header, RealPoint, blockNo,
-                   blockPrevHash, getHeader, headerPoint, pointHash, realPointHash, realPointSlot)
+                   blockPoint, blockPrevHash, getHeader, headerPoint, pointHash, realPointHash,
+                   realPointSlot)
 import           Ouroboros.Consensus.HeaderValidation
 import           Ouroboros.Consensus.Ledger.Abstract
 import           Ouroboros.Consensus.Ledger.Extended
