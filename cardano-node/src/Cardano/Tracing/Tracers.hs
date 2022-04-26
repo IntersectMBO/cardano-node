@@ -231,6 +231,7 @@ instance ElidingTracer (WithSeverity (ChainDB.TraceEvent blk)) where
   doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.AddBlockValidation (ChainDB.InvalidBlock _ _)))) = False
   doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.AddBlockValidation ChainDB.CandidateContainsFutureBlocksExceedingClockSkew{}))) = False
   doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.AddedToCurrentChain events _ _  _))) = null events
+  doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.PipeliningEvent{}))) = False
   doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent _)) = True
   doelide (WithSeverity _ (ChainDB.TraceCopyToImmutableDBEvent _)) = True
   doelide (WithSeverity _ (ChainDB.TraceInitChainSelEvent (ChainDB.InitChainSelValidation (ChainDB.UpdateLedgerDbTraceEvent{})))) = True
