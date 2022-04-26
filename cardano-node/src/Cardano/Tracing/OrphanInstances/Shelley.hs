@@ -36,7 +36,6 @@ import           Cardano.Tracing.OrphanInstances.Consensus ()
 import           Cardano.Tracing.Render (renderTxId)
 
 import           Ouroboros.Consensus.Ledger.SupportsMempool (txId)
--- import qualified Ouroboros.Consensus.Ledger.SupportsMempool as SupportsMempool
 import           Ouroboros.Consensus.Util.Condense (condense)
 import           Ouroboros.Network.Block (SlotNo (..), blockHash, blockNo, blockSlot)
 import           Ouroboros.Network.Point (WithOrigin, withOriginToMaybe)
@@ -48,14 +47,11 @@ import           Ouroboros.Consensus.Shelley.Ledger.Inspect
 
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import           Cardano.Ledger.Alonzo as Alonzo
--- import qualified Cardano.Ledger.Alonzo.PlutusScriptApi as Alonzo
 import           Cardano.Ledger.Alonzo.Rules.Bbody (AlonzoBbodyPredFail)
 import qualified Cardano.Ledger.Alonzo.Rules.Utxo as Alonzo
 import qualified Cardano.Ledger.Alonzo.Rules.Utxos as Alonzo
 import           Cardano.Ledger.Alonzo.Rules.Utxow (UtxowPredicateFail (..))
 import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
--- import qualified Cardano.Ledger.Alonzo.TxInfo as Alonzo
--- import qualified Cardano.Ledger.AuxiliaryData as Core
 import           Cardano.Ledger.BaseTypes (strictMaybeToMaybe)
 import           Cardano.Ledger.Chain
 import qualified Cardano.Ledger.Core as Core
@@ -64,7 +60,6 @@ import qualified Cardano.Ledger.Crypto as Core
 import qualified Cardano.Ledger.Era as Ledger
 import qualified Cardano.Ledger.SafeHash as SafeHash
 import qualified Cardano.Ledger.ShelleyMA.Rules.Utxo as MA
--- import qualified Cardano.Ledger.ShelleyMA.Timelocks as MA
 import           Cardano.Protocol.TPraos.BHeader (LastAppliedBlock, labBlockNo)
 import           Cardano.Protocol.TPraos.Rules.OCert
 import           Cardano.Protocol.TPraos.Rules.Overlay
@@ -98,7 +93,6 @@ import           Cardano.Protocol.TPraos.OCert (KESPeriod (KESPeriod))
 import           Cardano.Protocol.TPraos.Rules.Prtcl
 import qualified Data.Aeson.Key as Aeson
 import           Cardano.Api.Orphans ()
--- import qualified Cardano.Ledger.AuxiliaryData as Core
 
 
 {- HLINT ignore "Use :" -}

@@ -42,20 +42,12 @@ import qualified Ouroboros.Consensus.Ledger.SupportsMempool as Consensus
 import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
 import qualified Ouroboros.Consensus.TypeFamilyWrappers as Consensus
 import           Cardano.Api.InMode.ToJson (applyTxErrorToJson)
--- import qualified Cardano.Ledger.Shelley.API.Mempool as Ledger
--- import qualified Cardano.Ledger.Shelley.Rules.Ledger as Ledger
--- import qualified Cardano.Ledger.Core as Ledger
--- import qualified Cardano.Ledger.Era as Ledger
--- import qualified Cardano.Ledger.Alonzo.Rules.Utxow as Ledger
--- import qualified Cardano.Ledger.Shelley as Ledger
 
 import           Cardano.Api.Eras
 import           Cardano.Api.Modes
 import           Cardano.Api.Tx
 import           Cardano.Api.TxBody
 
--- import qualified Cardano.Ledger.Core as Core
--- import qualified Cardano.Ledger.Crypto as Core
 
 -- ----------------------------------------------------------------------------
 -- Transactions in the context of a consensus mode
@@ -250,12 +242,6 @@ instance ToJSON (TxValidationError era) where
     ShelleyTxValidationError ShelleyBasedEraMary applyTxError -> applyTxErrorToJson applyTxError
     ShelleyTxValidationError ShelleyBasedEraAlonzo applyTxError -> applyTxErrorToJson applyTxError
     ShelleyTxValidationError ShelleyBasedEraBabbage _applyTxError -> Aeson.Null -- TODO implement
-
-    --  ShelleyBasedEraShelley :: ShelleyBasedEra ShelleyEra
-    --  ShelleyBasedEraAllegra :: ShelleyBasedEra AllegraEra
-    --  ShelleyBasedEraMary    :: ShelleyBasedEra MaryEra
-    --  ShelleyBasedEraAlonzo  :: ShelleyBasedEra AlonzoEra
-    --  ShelleyBasedEraBabbage :: ShelleyBasedEra BabbageEra
 
 -- The GADT in the ShelleyTxValidationError case requires a custom instance
 instance Show (TxValidationError era) where

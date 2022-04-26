@@ -32,7 +32,6 @@ module Cardano.Api.InMode.ToJson
 import           Cardano.Api.Orphans ()
 import           Cardano.Ledger.Alonzo.Rules.Bbody (AlonzoBbodyPredFail)
 import           Cardano.Ledger.Alonzo.Rules.Utxow (UtxowPredicateFail (..))
--- import           Cardano.Ledger.Alonzo.TxWitness (RdmrPtr)
 import           Cardano.Ledger.BaseTypes (strictMaybeToMaybe)
 import           Cardano.Ledger.Chain
 import           Cardano.Ledger.Crypto (StandardCrypto)
@@ -63,9 +62,7 @@ import           Cardano.Protocol.TPraos.OCert (KESPeriod (KESPeriod))
 import           Cardano.Protocol.TPraos.Rules.OCert
 import           Cardano.Protocol.TPraos.Rules.Overlay
 import           Cardano.Protocol.TPraos.Rules.Prtcl
--- import           Cardano.Protocol.TPraos.Rules.Prtcl (PrtclPredicateFailure (OverlayFailure, UpdnFailure), PrtlSeqFailure (WrongBlockNoPrtclSeq, WrongBlockSequencePrtclSeq, WrongSlotIntervalPrtclSeq))
 import           Cardano.Protocol.TPraos.Rules.Tickn
--- import           Cardano.Protocol.TPraos.Rules.Tickn (TicknPredicateFailure)
 import           Cardano.Protocol.TPraos.Rules.Updn
 import           Cardano.Slotting.Block (BlockNo (..))
 import           Data.Aeson (ToJSON(..), Value(..), (.=), object)
@@ -77,7 +74,6 @@ import           Ouroboros.Consensus.Util.Condense (condense)
 import           Ouroboros.Network.Block (SlotNo (..), blockHash, blockNo, blockSlot)
 import           Ouroboros.Network.Point (WithOrigin, withOriginToMaybe)
 import           Prelude (error)
--- import           Cardano.Ledger.Keys (VKey, KeyRole(Witness))
 
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Types as Aeson
@@ -85,12 +81,10 @@ import qualified Data.Set as Set
 import qualified Data.Text as Text
 import qualified Cardano.Api.Address as Api
 import qualified Cardano.Api.Certificate as Api
--- import qualified Cardano.Api.HasTypeProxy as Api
 import qualified Cardano.Api.Script as Api
 import qualified Cardano.Api.SerialiseRaw as Api
 import qualified Cardano.Api.SerialiseTextEnvelope as Api
 import qualified Cardano.Api.TxBody as Api
--- import qualified Cardano.Api.Shelley as Api
 import qualified Ouroboros.Consensus.Ledger.SupportsMempool as SupportsMempool
 import qualified Ouroboros.Consensus.Protocol.Ledger.HotKey as HotKey
 import qualified Cardano.Crypto.Hash.Class as Crypto
@@ -109,10 +103,7 @@ import qualified Cardano.Ledger.SafeHash as SafeHash
 import qualified Cardano.Ledger.ShelleyMA.Rules.Utxo as MA
 import qualified Cardano.Ledger.ShelleyMA.Timelocks as MA
 import qualified Data.Aeson.Key as Aeson
--- import qualified Cardano.Ledger.Shelley.API as API
 import qualified Ouroboros.Consensus.Ledger.SupportsMempool as Consensus
--- import qualified Cardano.Api.Eras as Api
--- import qualified Data.Aeson as Aeson
 import qualified Cardano.Protocol.TPraos.BHeader as Protocol
 import qualified Cardano.Crypto.VRF.Class as Crypto
 import qualified Cardano.Ledger.BaseTypes as Ledger
@@ -128,8 +119,6 @@ applyTxErrorToJson ::
   , ToJSON (PredicateFailure (Core.EraRule "UTXO" era))
   , ToJSON (PredicateFailure (Core.EraRule "DELEGS" era))
   , ToJSON (PredicateFailure (Core.EraRule "UTXOW" era))
-  -- , ToJSON (VKey 'Witness (Ledger.Crypto era))
-  -- , ToJSON (WitHashes (Ledger.Crypto era))
   , ToJSON (Core.AuxiliaryDataHash (Ledger.Crypto era))
   ) => Consensus.ApplyTxErr (ShelleyBlock era) -> Value
 applyTxErrorToJson (ApplyTxError predicateFailures) = toJSON (fmap toJSON predicateFailures)
@@ -331,13 +320,7 @@ instance ( ShelleyBasedEra era
   toJSON (DelegsFailure f) = toJSON f
 
 instance
-  ( -- ToJSON (Alonzo.ScriptPurpose StandardCrypto)
-  -- , ToJSON RdmrPtr
-  -- , ToJSON (VKey 'Witness StandardCrypto)
-  -- , ToJSON (WitHashes StandardCrypto)
-  -- , 
-  ToJSON (Core.AuxiliaryDataHash StandardCrypto)
-  -- , ToJSON VotingPeriod
+  ( ToJSON (Core.AuxiliaryDataHash StandardCrypto)
   ) => ToJSON (UtxowPredicateFail (Alonzo.AlonzoEra StandardCrypto)) where
   toJSON (WrappedShelleyEraFailure utxoPredFail) = toJSON utxoPredFail
   toJSON (MissingRedeemers scripts) = object
@@ -400,8 +383,6 @@ renderScriptPurpose (Alonzo.Certifying cert) =
 instance ( ShelleyBasedEra era
          , ToJSON (PredicateFailure (UTXO era))
          , ToJSON (PredicateFailure (Core.EraRule "UTXO" era))
-        --  , ToJSON (VKey 'Witness (Ledger.Crypto era))
-        --  , ToJSON (WitHashes (Ledger.Crypto era))
          , ToJSON (Core.AuxiliaryDataHash (Ledger.Crypto era))
          ) => ToJSON (UtxowPredicateFailure era) where
   toJSON (ExtraneousScriptWitnessesUTXOW extraneousScripts) = object
@@ -588,7 +569,6 @@ renderValueNotConservedErr consumed produced = String $
 
 instance
   ( Ledger.Era era
-  -- , ToJSON VotingPeriod
   ) => ToJSON (PpupPredicateFailure era) where
   toJSON (NonGenesisUpdatePPUP proposalKeys genesisKeys) = object
     [ "kind"  .= String "NonGenesisUpdatePPUP"
@@ -626,7 +606,6 @@ instance ( ToJSON (PredicateFailure (Core.EraRule "POOL" era))
 
 instance
   ( Ledger.Era era
-  -- , ToJSON MIRPot
   ) => ToJSON (DelegPredicateFailure era) where
   toJSON (StakeKeyAlreadyRegisteredDELEG alreadyRegistered) = object
     [ "kind"        .= String "StakeKeyAlreadyRegisteredDELEG"
@@ -939,10 +918,7 @@ instance ToJSON (UpecPredicateFailure era) where
 --------------------------------------------------------------------------------
 
 
-instance
-  -- ( ToJSON VotingPeriod
-  -- ) =>
-  ToJSON (Alonzo.UtxoPredicateFailure (Alonzo.AlonzoEra StandardCrypto)) where
+instance ToJSON (Alonzo.UtxoPredicateFailure (Alonzo.AlonzoEra StandardCrypto)) where
   toJSON (Alonzo.BadInputsUTxO badInputs) = object
     [ "kind"      .= String "BadInputsUTxO"
     , "badInputs" .= badInputs
@@ -1037,10 +1013,7 @@ instance
     [ "kind"  .= String "NoCollateralInputs"
     ]
 
-instance
-  -- ( ToJSON VotingPeriod
-  -- ) =>
-  ToJSON (Alonzo.UtxosPredicateFailure (Alonzo.AlonzoEra StandardCrypto)) where
+instance ToJSON (Alonzo.UtxosPredicateFailure (Alonzo.AlonzoEra StandardCrypto)) where
   toJSON (Alonzo.ValidationTagMismatch isValidating reason) = object
     [ "kind"          .= String "ValidationTagMismatch"
     , "isvalidating"  .= isValidating
@@ -1114,12 +1087,6 @@ instance ToJSON Alonzo.FailureDescription where
 
 instance
   ( ToJSON (Core.AuxiliaryDataHash StandardCrypto)
-  -- , ToJSON (WitHashes StandardCrypto)
-  -- , ToJSON RdmrPtr
-  -- , ToJSON MIRPot
-  -- , ToJSON VotingPeriod
-  -- , ToJSON (VKey 'Witness StandardCrypto)
-  -- , ToJSON (Alonzo.ScriptPurpose StandardCrypto)
   ) => ToJSON (AlonzoBbodyPredFail (Alonzo.AlonzoEra StandardCrypto)) where
   toJSON err = object
     [ "kind"  .= String "AlonzoBbodyPredFail"

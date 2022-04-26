@@ -36,8 +36,10 @@ import           Cardano.Slotting.Slot (SlotNo (..))
 import           Cardano.Slotting.Time (SystemStart (..))
 
 import qualified Cardano.Crypto.Hash.Class as Crypto
+import qualified Cardano.Ledger.AuxiliaryData as Core
 import qualified Cardano.Ledger.Coin as Shelley
 import qualified Cardano.Ledger.Core as Core
+import qualified Cardano.Ledger.Crypto as Core
 import qualified Cardano.Ledger.Crypto as Crypto
 import qualified Cardano.Ledger.Mary.Value as Mary
 import qualified Cardano.Ledger.PoolDistr as Ledger
@@ -47,13 +49,11 @@ import qualified Cardano.Ledger.Shelley.Constraints as Shelley
 import qualified Cardano.Ledger.Shelley.EpochBoundary as ShelleyEpoch
 import qualified Cardano.Ledger.Shelley.LedgerState as ShelleyLedger
 import           Cardano.Ledger.Shelley.PParams (PParamsUpdate)
-import qualified Cardano.Ledger.Shelley.RewardUpdate as Shelley
 import qualified Cardano.Ledger.Shelley.Rewards as Shelley
+import qualified Cardano.Ledger.Shelley.RewardUpdate as Shelley
+
 import qualified Ouroboros.Consensus.Shelley.Eras as Consensus
-import qualified Cardano.Ledger.AuxiliaryData as Core
--- import           Cardano.Ledger.Crypto (StandardCrypto)
--- import qualified Cardano.Ledger.Core as Core
-import qualified Cardano.Ledger.Crypto as Core
+
 
 -- Orphan instances involved in the JSON output of the API queries.
 -- We will remove/replace these as we provide more API wrapper types

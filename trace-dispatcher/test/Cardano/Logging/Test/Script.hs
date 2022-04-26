@@ -26,9 +26,6 @@ import           Cardano.Logging.Test.Messages
 import           Cardano.Logging.Test.Tracer
 import           Cardano.Logging.Test.Types
 
--- import           Debug.Trace
-
-
 -- | Run a script in a single thread and uses the oracle to test for correctness
 --   The duration of the test is given by time in seconds
 runScriptSimple ::
