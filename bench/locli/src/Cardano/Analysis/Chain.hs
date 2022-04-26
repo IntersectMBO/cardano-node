@@ -10,13 +10,10 @@ import Data.Aeson
 import Data.Time.Clock (UTCTime, NominalDiffTime)
 import Data.Time.Clock qualified as Time
 
-import Cardano.Analysis.Run
+import Cardano.Analysis.Context
+import Cardano.Analysis.Ground
 import Cardano.Slotting.Slot (EpochNo (..),  SlotNo (..))
 
-
-newtype EpochSlot = EpochSlot { unEpochSlot :: Word64 }
-  deriving stock (Eq, Generic, Ord, Show)
-  deriving newtype (FromJSON, NFData, ToJSON, Num)
 
 -- | A pretty obvious (and dangerously assumptious) interpretation of an absolute slot number.
 --   This is wrong, if you consider the reasons why epochLength can change.
@@ -25,9 +22,6 @@ unsafeParseSlot Genesis{..} slot =  (EpochNo epoch, EpochSlot epochSlot)
   where
     (epoch, epochSlot) = unSlotNo slot `divMod` epochLength
 
-newtype EpochSafeInt = EpochSafeInt { unEpochSafeInt :: Word64 }
-  deriving stock (Eq, Generic, Ord, Show)
-  deriving newtype (FromJSON, NFData, ToJSON, Num)
 
 slotEpochSafeInt :: Genesis -> EpochSlot -> EpochSafeInt
 slotEpochSafeInt Genesis{..} (EpochSlot relSlot) =

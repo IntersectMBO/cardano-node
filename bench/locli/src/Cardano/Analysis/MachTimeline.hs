@@ -1,3 +1,5 @@
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE StrictData #-}
 {-# OPTIONS_GHC -Wno-incomplete-patterns -Wno-name-shadowing -Wno-orphans #-}
 {- HLINT ignore "Use head" -}
@@ -7,6 +9,8 @@ import Prelude (String, (!!), error, head, last)
 import Cardano.Prelude hiding (head)
 
 import Control.Arrow ((&&&), (***))
+import Control.Concurrent.Async (mapConcurrently)
+import Control.DeepSeq          qualified as DS
 import Data.Vector (Vector)
 import Data.Vector qualified as Vec
 import Data.Map.Strict qualified as Map
@@ -21,6 +25,8 @@ import Data.Distribution
 
 import Cardano.Analysis.API
 import Cardano.Analysis.Chain
+import Cardano.Analysis.ChainFilter
+import Cardano.Analysis.Ground
 import Cardano.Analysis.Run
 import Cardano.Analysis.Version
 import Cardano.Unlog.LogObject hiding (Text)
@@ -154,6 +160,18 @@ data RunScalars
   , rsSubmitted     :: Maybe Word64
   , rsThreadwiseTps :: Maybe (Vector Float)
   }
+  deriving stock Generic
+  deriving anyclass NFData
+
+machTimeline :: Run -> [ChainFilter] -> [FilterName] -> [(JsonLogfile, [LogObject])]
+             -> IO [(JsonLogfile, (RunScalars, [SlotStats]))]
+machTimeline run filters filterNames xs =
+  mapConcurrently
+    (\(logfile, objs) ->
+        evaluate $ DS.force
+        (logfile,
+         timelineFromLogObjects run objs))
+    xs
 
 timelineFromLogObjects :: Run -> [LogObject] -> (RunScalars, [SlotStats])
 timelineFromLogObjects run =

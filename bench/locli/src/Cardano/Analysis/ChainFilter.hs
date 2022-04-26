@@ -12,11 +12,14 @@ import Control.Monad.Trans.Except.Extra (newExceptT)
 import Data.Aeson
 import Data.ByteString.Lazy.Char8       qualified as LBS
 import Data.Text                        qualified as T
-import System.FilePath.Posix (takeBaseName)
+import Options.Applicative
+import Options.Applicative              qualified as Opt
+import System.FilePath.Posix                        (takeBaseName)
 
-import Cardano.Slotting.Slot (EpochNo (..),  SlotNo (..))
+import Cardano.Analysis.Ground
+import Cardano.Slotting.Slot            (EpochNo (..),  SlotNo (..))
 
-import Cardano.Analysis.Chain
+-- import Cardano.Analysis.Chain
 
 
 newtype JsonFilterFile
@@ -70,3 +73,11 @@ readChainFilter (JsonFilterFile f) =
   fmap (, FilterName . T.pack $ takeBaseName f)
     . newExceptT
     $ eitherDecode @[ChainFilter] <$> LBS.readFile f
+
+argChainFilterset :: String -> String -> Parser JsonFilterFile
+argChainFilterset optname desc =
+  fmap JsonFilterFile $
+    Opt.option Opt.str
+      $ long optname
+      <> metavar "FILTERSET-FILE"
+      <> help desc

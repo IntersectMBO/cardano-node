@@ -20,7 +20,8 @@ import Ouroboros.Network.Block  (BlockNo(..))
 
 import Cardano.Analysis.Chain
 import Cardano.Analysis.ChainFilter
-import Cardano.Analysis.Run
+import Cardano.Analysis.Context
+import Cardano.Analysis.Ground
 import Cardano.Analysis.Version
 import Cardano.Logging.Resources.Types
 import Cardano.Unlog.LogObject  hiding (Text)
@@ -201,6 +202,7 @@ data SlotStats
     , slResources    :: !(Resources (Maybe Word64))
     }
   deriving (Generic, Show, ToJSON)
+  deriving anyclass NFData
 
 --
 -- * Key properties

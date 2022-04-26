@@ -17,6 +17,8 @@ library
   exposed-modules:     Data.Accum
                        Data.Distribution
 
+                       Cardano.Command
+
                        Cardano.Analysis.TopHandler
                        Cardano.Analysis.Run
 
@@ -24,16 +26,15 @@ library
                        Cardano.Analysis.BlockProp
                        Cardano.Analysis.Chain
                        Cardano.Analysis.ChainFilter
+                       Cardano.Analysis.Context
                        Cardano.Analysis.Driver
+                       Cardano.Analysis.Ground
                        Cardano.Analysis.MachTimeline
                        Cardano.Analysis.Version
 
-                       Cardano.Unlog.Commands
                        Cardano.Unlog.LogObject
-                       Cardano.Unlog.Parsers
                        Cardano.Unlog.Render
                        Cardano.Unlog.Resources
-                       Cardano.Unlog.Run
 
   other-modules:       Paths_locli
 

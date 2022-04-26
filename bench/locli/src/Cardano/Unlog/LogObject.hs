@@ -37,42 +37,14 @@ import qualified Data.Aeson.Key as Aeson
 
 type Text = ShortText
 
-readLogObjectStream :: JsonLogfile -> IO [LogObject]
-readLogObjectStream (JsonLogfile f) =
+readLogObjectStream :: FilePath -> IO [LogObject]
+readLogObjectStream f =
   LBS.readFile f
     <&>
     fmap (either (LogObject zeroUTCTime "DecodeError" "" (TId "0") . LODecodeError)
                  id
           . AE.eitherDecode)
     . LBS.split (fromIntegral $ fromEnum '\n')
-
-newtype JsonRunMetafile
-  = JsonRunMetafile { unJsonRunMetafile :: FilePath }
-  deriving (Show, Eq)
-
-newtype JsonGenesisFile
-  = JsonGenesisFile { unJsonGenesisFile :: FilePath }
-  deriving (Show, Eq)
-
-newtype JsonLogfile
-  = JsonLogfile { unJsonLogfile :: FilePath }
-  deriving (Show, Eq)
-
-newtype JsonOutputFile
-  = JsonOutputFile { unJsonOutputFile :: FilePath }
-  deriving (Show, Eq)
-
-newtype TextOutputFile
-  = TextOutputFile { unTextOutputFile :: FilePath }
-  deriving (Show, Eq)
-
-newtype CsvOutputFile
-  = CsvOutputFile { unCsvOutputFile :: FilePath }
-  deriving (Show, Eq)
-
-newtype OutputFile
-  = OutputFile { unOutputFile :: FilePath }
-  deriving (Show, Eq)
 
 data LogObject
   = LogObject

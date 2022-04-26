@@ -1,76 +1,115 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE StrictData #-}
-{-# OPTIONS_GHC -Wno-incomplete-patterns -Wno-name-shadowing #-}
+{-# OPTIONS_GHC -Wno-incomplete-patterns -Wno-name-shadowing -Wno-orphans #-}
 module Cardano.Analysis.Run (module Cardano.Analysis.Run) where
 
 import Prelude (String)
 import Cardano.Prelude
 
 import Control.Monad (fail)
+import Control.Monad.Trans.Except.Extra (firstExceptT, newExceptT)
+import Data.Aeson qualified as Aeson
 import Data.Aeson.Types qualified as Aeson
 import Data.Aeson (FromJSON(..), Object, ToJSON(..), withObject, (.:), (.:?))
-import Data.Attoparsec.Text qualified as Atto
-import Data.Attoparsec.Time qualified as Iso8601
-import Data.Text (intercalate, pack)
-import Data.Time.Clock (UTCTime, NominalDiffTime)
+import Data.ByteString.Lazy.Char8 qualified as LBS
+import Data.Text (intercalate)
+import Data.Text qualified as T
 import Data.Time.Clock.POSIX qualified as Time
 import Options.Applicative
 import Options.Applicative qualified as Opt
+import Text.Printf (printf)
 
---
--- This is difficult: we have two different genesis-related structures:
---  1. the real ShelleyGenesis
---  2. the profile-supplied genesis specification used by the workbench & bench-on-AWS.
---
-data GenesisSpec
-  = GenesisSpec
-  { delegators          :: Word64
-  , utxo                :: Word64
-  }
-  deriving (Generic, Show, ToJSON)
+import Cardano.Analysis.ChainFilter
+import Cardano.Analysis.Context
+import Cardano.Analysis.Ground
 
--- | Partial 'Cardano.Ledger.Shelley.Genesis.ShelleyGenesis'
-data Genesis
-  = Genesis
-  { activeSlotsCoeff   :: Double
-  , protocolParams     :: PParams
-  , networkMagic       :: Word64
-  , epochLength        :: Word64
-  , systemStart        :: UTCTime
-  , slotsPerKESPeriod  :: Word64
-  , slotLength         :: NominalDiffTime
-  , maxKESEvolutions   :: Word64
-  , securityParam      :: Word64
-  }
-  deriving (Generic, Show, ToJSON)
 
--- | Partial 'Cardano.Ledger.Shelley.PParams.PParams'
-data PParams
-  = PParams
-  { maxTxSize         :: Word64
-  , maxBlockBodySize  :: Word64
-  }
-  deriving (Generic, Show, ToJSON)
+data AnalysisCommand
+  = MachineTimelineCmd
+      MachineTimelineOutputFiles
+  | BlockPropagationCmd
+      BlockPropagationOutputFiles
+  | SubstringKeysCmd
+  | RunInfoCmd
+  deriving (Show)
 
-data GeneratorProfile
-  = GeneratorProfile
-  { add_tx_size     :: Word64
-  , inputs_per_tx   :: Word64
-  , outputs_per_tx  :: Word64
-  , tps             :: Word64
-  , tx_count        :: Word64
-  }
-  deriving (Generic, Show, ToJSON)
+parseAnalysisCommand :: Parser AnalysisCommand
+parseAnalysisCommand =
+  Opt.subparser $
+    mconcat
+      [ Opt.command "machine-timeline"
+          (Opt.info (MachineTimelineCmd
+                       <$> parseMachineTimelineOutputFiles) $
+            Opt.progDesc "Machine performance timeline")
+      , Opt.command "block-propagation"
+          (Opt.info (BlockPropagationCmd
+                       <$> parseBlockPropagationOutputFiles) $
+            Opt.progDesc "Block propagation")
+      , Opt.command "substring-keys"
+          (Opt.info (pure SubstringKeysCmd) $
+            Opt.progDesc "Dump substrings that narrow logs to relevant subset")
+      , Opt.command "chaininfo"
+          (Opt.info (pure RunInfoCmd) $
+            Opt.progDesc "Dump substrings that narrow logs to relevant subset")
+      ]
 
-data Metadata
-  = Metadata
-  { tag       :: Text
-  , profile   :: Text
-  , era       :: Text
-  , timestamp :: UTCTime
-  }
-  deriving (Generic, Show, ToJSON)
+renderAnalysisCommand :: AnalysisCommand -> Text
+renderAnalysisCommand sc =
+  case sc of
+    MachineTimelineCmd {}  -> "analyse machine-timeline"
+    BlockPropagationCmd {} -> "analyse block-propagation"
+    SubstringKeysCmd {}    -> "analyse substring-keys"
+    RunInfoCmd {}        -> "print extracted Run information"
+
+data AnalysisCmdError
+  = AnalysisCmdError                         !Text
+  | MissingRunContext
+  | MissingLogfiles
+  | RunMetaParseError      !JsonRunMetafile  !Text
+  | GenesisParseError      !JsonGenesisFile  !Text
+  | ChainFiltersParseError !JsonFilterFile   !Text
+  deriving Show
+
+renderAnalysisCmdError :: AnalysisCommand -> AnalysisCmdError -> Text
+renderAnalysisCmdError cmd err =
+  case err of
+    AnalysisCmdError  err' -> renderError cmd err'
+      "Analysis command failed"
+      pure
+    MissingRunContext -> "Missing run context:  Shelley genesis and the run metafile are required."
+    MissingLogfiles -> "Missing log files to analyse"
+    RunMetaParseError (JsonRunMetafile fp) err' -> renderError cmd err'
+      ("Benchmark run metafile parse failed: " <> T.pack fp)
+      pure
+    GenesisParseError (JsonGenesisFile fp) err' -> renderError cmd err'
+      ("Genesis parse failed: " <> T.pack fp)
+      pure
+    ChainFiltersParseError (JsonFilterFile fp) err' -> renderError cmd err'
+      ("Chain filter list parse failed: " <> T.pack fp)
+      pure
+ where
+   renderError :: AnalysisCommand -> a -> Text -> (a -> [Text]) -> Text
+   renderError cmd' cmdErr desc renderer =
+      mconcat [ desc, ": "
+              , renderAnalysisCommand cmd'
+              , "  Error: "
+              , mconcat (renderer cmdErr)
+              ]
+
+readRun :: JsonGenesisFile -> JsonRunMetafile -> ExceptT AnalysisCmdError IO Run
+readRun shelleyGenesis runmeta = do
+  progress "genesis" (Q $ unJsonGenesisFile shelleyGenesis)
+  progress "meta"    (Q $ unJsonRunMetafile runmeta)
+  runPartial <- firstExceptT (RunMetaParseError runmeta . T.pack)
+                       (newExceptT $
+                        Aeson.eitherDecode @RunPartial <$> LBS.readFile (unJsonRunMetafile runmeta))
+  run        <- firstExceptT (GenesisParseError shelleyGenesis . T.pack)
+                       (newExceptT $
+                        Aeson.eitherDecode @Genesis <$> LBS.readFile (unJsonGenesisFile shelleyGenesis))
+                <&> completeRun runPartial
+  progress "run"     (J run)
+  pure run
 
 renderRunExport :: Run -> [Text]
 renderRunExport Run{metadata=Metadata{..}, ..} =
@@ -127,30 +166,18 @@ instance FromJSON RunPartial where
         genesis  = ()
     pure Run{..}
 
-optUTCTime :: String -> String -> Parser UTCTime
-optUTCTime optname desc =
-  Opt.option (readerFromAttoParser Iso8601.utcTime)
-    $ long optname
-    <> metavar "ISO8601-TIME"
-    <> help desc
+---
+--- Run progress
+---
+data F
+  = R String
+  | Q String
+  | L [String]
+  | forall a. ToJSON a => J a
 
-optDuration :: String -> String -> NominalDiffTime -> Parser NominalDiffTime
-optDuration optname desc def=
-  Opt.option ((realToFrac :: Double -> NominalDiffTime) <$> Opt.auto)
-    $ long optname
-    <> metavar "SEC"
-    <> help desc
-    <> value def
-
-optWord :: String -> String -> Word64 -> Parser Word64
-optWord optname desc def =
-  Opt.option auto
-    $ long optname
-    <> metavar "INT"
-    <> help desc
-    <> value def
-
--- Stolen from: cardano-cli/src/Cardano/CLI/Shelley/Parsers.hs
-readerFromAttoParser :: Atto.Parser a -> Opt.ReadM a
-readerFromAttoParser p =
-    Opt.eitherReader (Atto.parseOnly (p <* Atto.endOfInput) . pack)
+progress :: MonadIO m => String -> F -> m ()
+progress key = putStrLn . T.pack . \case
+  R x  -> printf "{ \"%s\":  %s }"    key x
+  Q x  -> printf "{ \"%s\": \"%s\" }" key x
+  L xs -> printf "{ \"%s\": \"%s\" }" key (Cardano.Prelude.intercalate "\", \"" xs)
+  J x  -> printf "{ \"%s\": %s }" key (LBS.unpack $ Aeson.encode x)
