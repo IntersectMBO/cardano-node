@@ -197,6 +197,7 @@ docChainDBTraceEvent' =
 --------------------------------------------------------------------------------
 
 sevTraceAddBlockEvent :: ChainDB.TraceAddBlockEvent blk -> SeverityS
+sevTraceAddBlockEvent ChainDB.PipeliningEvent {} = Info
 sevTraceAddBlockEvent ChainDB.IgnoreBlockOlderThanK {} = Info
 sevTraceAddBlockEvent ChainDB.IgnoreBlockAlreadyInVolatileDB {} = Info
 sevTraceAddBlockEvent ChainDB.IgnoreInvalidBlock {} = Info
@@ -227,6 +228,8 @@ sevTraceValidationEvent ChainDB.CandidateContainsFutureBlocksExceedingClockSkew{
 namesForChainDBAddBlock :: ChainDB.TraceAddBlockEvent blk -> [Text]
 namesForChainDBAddBlock (ChainDB.IgnoreBlockOlderThanK _) =
       ["IgnoreBlockOlderThanK"]
+namesForChainDBAddBlock (ChainDB.PipeliningEvent _) =
+      ["PipeliningEvent"]
 namesForChainDBAddBlock (ChainDB.IgnoreBlockAlreadyInVolatileDB _) =
       ["IgnoreBlockAlreadyInVolatileDB"]
 namesForChainDBAddBlock (ChainDB.IgnoreInvalidBlock {}) =
@@ -273,6 +276,8 @@ instance ( LogFormatting (Header blk)
          , LedgerSupportsProtocol blk
          , InspectLedger blk
          ) => LogFormatting (ChainDB.TraceAddBlockEvent blk) where
+  forHuman (ChainDB.PipeliningEvent _pt) =
+    "Pipelining"
   forHuman (ChainDB.IgnoreBlockOlderThanK pt) =
     "Ignoring block older than K: " <> renderRealPointAsPhrase pt
   forHuman (ChainDB.IgnoreBlockAlreadyInVolatileDB pt) =
@@ -301,6 +306,8 @@ instance ( LogFormatting (Header blk)
   forHuman (ChainDB.ChainSelectionForFutureBlock pt) =
       "Chain selection run for block previously from future: " <> renderRealPointAsPhrase pt
 
+  forMachine _dtal (ChainDB.PipeliningEvent _pt) =
+      mconcat [ "pipelining" .= String "Pipelining" ]
   forMachine dtal (ChainDB.IgnoreBlockOlderThanK pt) =
       mconcat [ "kind" .= String "IgnoreBlockOlderThanK"
                , "block" .= forMachine dtal pt ]

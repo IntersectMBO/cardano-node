@@ -1028,12 +1028,6 @@ instance ToJSON Alonzo.TagMismatchDescription where
 
 instance ToJSON Alonzo.FailureDescription where
   toJSON f = case f of
-    Alonzo.OnePhaseFailure t ->
-      object
-        [ "kind" .= String "FailureDescription"
-        , "error" .= String "OnePhaseFailure"
-        , "description" .= t
-        ]
     Alonzo.PlutusFailure t _bs ->
       object
         [ "kind" .= String "FailureDescription"

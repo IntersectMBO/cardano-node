@@ -93,6 +93,7 @@ instance ConvertRawHash blk => ConvertRawHash (Header blk) where
 instance HasPrivacyAnnotation (ChainDB.TraceEvent blk)
 instance HasSeverityAnnotation (ChainDB.TraceEvent blk) where
   getSeverityAnnotation (ChainDB.TraceAddBlockEvent ev) = case ev of
+    ChainDB.PipeliningEvent _ -> Info
     ChainDB.IgnoreBlockOlderThanK {} -> Info
     ChainDB.IgnoreBlockAlreadyInVolatileDB {} -> Info
     ChainDB.IgnoreInvalidBlock {} -> Info
@@ -415,6 +416,7 @@ instance ( ConvertRawHash blk
       => HasTextFormatter (ChainDB.TraceEvent blk) where
     formatText tev _obj = case tev of
       ChainDB.TraceAddBlockEvent ev -> case ev of
+        ChainDB.PipeliningEvent _ -> "Pipelining"
         ChainDB.IgnoreBlockOlderThanK pt ->
           "Ignoring block older than K: " <> renderRealPointAsPhrase pt
         ChainDB.IgnoreBlockAlreadyInVolatileDB pt ->
@@ -773,6 +775,7 @@ instance ( ConvertRawHash blk
          , ToObject (LedgerEvent blk))
       => ToObject (ChainDB.TraceEvent blk) where
   toObject verb (ChainDB.TraceAddBlockEvent ev) = case ev of
+    ChainDB.PipeliningEvent _ -> mconcat ["Pipelining" .= String "Pipelining"]
     ChainDB.IgnoreBlockOlderThanK pt ->
       mconcat [ "kind" .= String "TraceAddBlockEvent.IgnoreBlockOlderThanK"
                , "block" .= toObject verb pt ]
