@@ -32,7 +32,8 @@ import           Cardano.Tracing.Render (renderChainHash, renderChunkNo, renderH
 
 import           Ouroboros.Consensus.Block (BlockProtocol, BlockSupportsProtocol, CannotForge,
                    ConvertRawHash (..), ForgeStateUpdateError, Header, RealPoint, blockNo,
-                   blockPrevHash, getHeader, headerPoint, pointHash, realPointHash, realPointSlot)
+                   blockPoint, blockPrevHash, getHeader, headerPoint, pointHash, realPointHash,
+                   realPointSlot)
 import           Ouroboros.Consensus.HeaderValidation
 import           Ouroboros.Consensus.Ledger.Abstract
 import           Ouroboros.Consensus.Ledger.Extended
@@ -464,11 +465,10 @@ instance ( ConvertRawHash blk
           "Chain added block " <> renderRealPointAsPhrase pt
         ChainDB.ChainSelectionForFutureBlock pt ->
           "Chain selection run for block previously from future: " <> renderRealPointAsPhrase pt
-        ChainDB.PipeliningEvent ev' ->
-          case ev' of
-            ChainDB.SetTentativeHeader {} -> "SetTentativeHeader"
-            ChainDB.TrapTentativeHeader {} -> "TrapTentativeHeader"
-            ChainDB.OutdatedTentativeHeader {} -> "OutdatedTentativeHeader"
+        ChainDB.PipeliningEvent ev' -> case ev' of
+          ChainDB.SetTentativeHeader hdr  -> "Set tentative header to " <> renderPointAsPhrase (blockPoint hdr)
+          ChainDB.TrapTentativeHeader hdr -> "Discovered trap tentative header " <> renderPointAsPhrase (blockPoint hdr)
+          ChainDB.OutdatedTentativeHeader hdr -> "Tentative header is now outdated" <> renderPointAsPhrase (blockPoint hdr)
 
       ChainDB.TraceLedgerReplayEvent ev -> case ev of
         LedgerDB.ReplayFromGenesis _replayTo ->
@@ -859,14 +859,19 @@ instance ( ConvertRawHash blk
     ChainDB.ChainSelectionForFutureBlock pt ->
       mconcat [ "kind" .= String "TraceAddBlockEvent.ChainSelectionForFutureBlock"
                , "block" .= toObject verb pt ]
-    ChainDB.PipeliningEvent ev' ->
-      case ev' of
-        ChainDB.SetTentativeHeader {} ->
-          mconcat [ "kind" .= String "TraceAddBlockEvent.SetTentativeHeader" ]
-        ChainDB.TrapTentativeHeader {} ->
-          mconcat [ "kind" .= String "TraceAddBlockEvent.TrapTentativeHeader" ]
-        ChainDB.OutdatedTentativeHeader {} ->
-          mconcat [ "kind" .= String "TraceAddBlockEvent.OutdatedTentativeHeader" ]
+    ChainDB.PipeliningEvent ev' -> case ev' of
+      ChainDB.SetTentativeHeader hdr  ->
+        mconcat [ "kind" .= String "TraceAddBlockEvent.PipeliningEvent.SetTentativeHeader"
+                 , "block" .= renderPointForVerbosity verb (blockPoint hdr)
+                 ]
+      ChainDB.TrapTentativeHeader hdr ->
+        mconcat [ "kind" .= String "TraceAddBlockEvent.PipeliningEvent.TrapTentativeHeader"
+                 , "block" .= renderPointForVerbosity verb (blockPoint hdr)
+                 ]
+      ChainDB.OutdatedTentativeHeader hdr ->
+        mconcat [ "kind" .= String "TraceAddBlockEvent.PipeliningEvent.OutdatedTentativeHeader"
+                 , "block" .= renderPointForVerbosity verb (blockPoint hdr)
+                 ]
    where
      addedHdrsNewChain
        :: AF.AnchoredFragment (Header blk)
