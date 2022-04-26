@@ -26,7 +26,6 @@ import qualified Data.Set as Set
 import qualified Data.Text as Text
 
 import qualified Cardano.Api as Api
-import           Cardano.Api.Orphans ()
 import qualified Cardano.Api.Shelley as Api
 import           Cardano.Ledger.Crypto (StandardCrypto)
 

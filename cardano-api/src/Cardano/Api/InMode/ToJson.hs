@@ -6,11 +6,13 @@
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase                 #-}
 {-# LANGUAGE MultiParamTypeClasses      #-}
 {-# LANGUAGE NamedFieldPuns             #-}
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
 {-# LANGUAGE StandaloneDeriving         #-}
+{-# LANGUAGE TypeApplications           #-}
 {-# LANGUAGE TypeFamilies               #-}
 {-# LANGUAGE UndecidableInstances       #-}
 
@@ -75,19 +77,14 @@ import           Ouroboros.Network.Block (SlotNo (..), blockHash, blockNo, block
 import           Ouroboros.Network.Point (WithOrigin, withOriginToMaybe)
 import           Prelude (error)
 
-import qualified Data.Aeson as Aeson
-import qualified Data.Aeson.Types as Aeson
-import qualified Data.Set as Set
-import qualified Data.Text as Text
 import qualified Cardano.Api.Address as Api
 import qualified Cardano.Api.Certificate as Api
 import qualified Cardano.Api.Script as Api
 import qualified Cardano.Api.SerialiseRaw as Api
 import qualified Cardano.Api.SerialiseTextEnvelope as Api
 import qualified Cardano.Api.TxBody as Api
-import qualified Ouroboros.Consensus.Ledger.SupportsMempool as SupportsMempool
-import qualified Ouroboros.Consensus.Protocol.Ledger.HotKey as HotKey
 import qualified Cardano.Crypto.Hash.Class as Crypto
+import qualified Cardano.Crypto.VRF.Class as Crypto
 import qualified Cardano.Ledger.Alonzo as Alonzo
 import qualified Cardano.Ledger.Alonzo.PlutusScriptApi as Alonzo
 import qualified Cardano.Ledger.Alonzo.Rules.Utxo as Alonzo
@@ -95,6 +92,7 @@ import qualified Cardano.Ledger.Alonzo.Rules.Utxos as Alonzo
 import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
 import qualified Cardano.Ledger.Alonzo.TxInfo as Alonzo
 import qualified Cardano.Ledger.AuxiliaryData as Core
+import qualified Cardano.Ledger.BaseTypes as Ledger
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Core as Ledger
 import qualified Cardano.Ledger.Crypto as Core
@@ -102,11 +100,18 @@ import qualified Cardano.Ledger.Era as Ledger
 import qualified Cardano.Ledger.SafeHash as SafeHash
 import qualified Cardano.Ledger.ShelleyMA.Rules.Utxo as MA
 import qualified Cardano.Ledger.ShelleyMA.Timelocks as MA
-import qualified Data.Aeson.Key as Aeson
-import qualified Ouroboros.Consensus.Ledger.SupportsMempool as Consensus
 import qualified Cardano.Protocol.TPraos.BHeader as Protocol
-import qualified Cardano.Crypto.VRF.Class as Crypto
-import qualified Cardano.Ledger.BaseTypes as Ledger
+import qualified Data.Aeson as Aeson
+import qualified Data.Aeson.Key as Aeson
+import qualified Data.Aeson.Types as Aeson
+import qualified Data.ByteString.UTF8 as BSU
+import qualified Data.Set as Set
+import qualified Data.Text as Text
+import qualified Ouroboros.Consensus.Ledger.SupportsMempool as Consensus
+import qualified Ouroboros.Consensus.Ledger.SupportsMempool as SupportsMempool
+import qualified Ouroboros.Consensus.Protocol.Ledger.HotKey as HotKey
+import qualified Plutus.V1.Ledger.Api as Plutus
+import qualified PlutusCore.Core as Plutus
 
 instance ToJSON (PredicateFailure (Core.EraRule "LEDGER" era)) => ToJSON (ApplyTxError era) where
   toJSON (ApplyTxError es) = toJSON es
@@ -1078,11 +1083,11 @@ instance ToJSON Alonzo.FailureDescription where
       , "error"       .= String "OnePhaseFailure"
       , "description" .= t
       ]
-    Alonzo.PlutusFailure t _bs -> object
-      [ "kind"        .= String "FailureDescription"
-      , "error"       .= String "PlutusFailure"
-      , "description" .= t
-      -- , "reconstructionDetail" .= bs
+    Alonzo.PlutusFailure t bs -> object
+      [ "kind"                  .= String "FailureDescription"
+      , "error"                 .= String "PlutusFailure"
+      , "description"           .= t
+      , "reconstructionDetail"  .= Alonzo.debugPlutus (BSU.toString bs)
       ]
 
 instance
@@ -1109,3 +1114,65 @@ showLastAppBlockNo wOblk =  case withOriginToMaybe wOblk of
 
 renderTxId :: Consensus.TxId (GenTx (ShelleyBlock era)) -> Text
 renderTxId = error "TODO implement"
+
+instance ToJSON Alonzo.PlutusDebugInfo where
+  toJSON = \case
+    Alonzo.DebugSuccess _budget -> "success" -- PV1.ExBudget
+    Alonzo.DebugCannotDecode msg -> toJSON msg
+    Alonzo.DebugInfo texts e d -> object
+      [ "texts" .= texts
+      , "error" .= e
+      , "debug" .= d
+      ]
+    Alonzo.DebugBadHex msg -> toJSON msg
+
+instance ToJSON Alonzo.PlutusError where
+  toJSON = \case
+    Alonzo.PlutusErrorV1 evaluationError -> toJSON evaluationError
+    Alonzo.PlutusErrorV2 evaluationError -> toJSON evaluationError
+
+instance ToJSON Alonzo.PlutusDebug where
+  toJSON = \case
+    Alonzo.PlutusDebugV1 costModel exUnits _sbs _ds protVer -> object
+      [ "costModel" .= costModel
+      , "exUnits"   .= exUnits
+      -- , "sbs"       .= toJSON (show @Text sbs)
+      -- , "ds"        .= toJSON (show @Text ds)
+      , "protVer"   .= protVer
+      ]
+    Alonzo.PlutusDebugV2 costModel exUnits _sbs _ds protVer -> object
+      [ "costModel" .= costModel
+      , "exUnits"   .= exUnits
+      -- , "sbs"       .= toJSON (show @Text sbs)
+      -- , "ds"        .= toJSON (show @Text ds)
+      , "protVer"   .= protVer
+      ]
+
+instance ToJSON Plutus.EvaluationError where
+  toJSON = \case
+    Plutus.CekError e -> object
+      [ "kind"    .= String "CekError"
+      , "error"   .= toJSON @Text (show e)
+      ]
+    Plutus.DeBruijnError e -> object
+      [ "kind"    .= String "DeBruijnError"
+      , "error"   .= toJSON @Text (show e)
+      ]
+    Plutus.CodecError e -> object
+      [ "kind"    .= String "CodecError"
+      , "error"   .= toJSON @Text (show e)
+      ]
+    Plutus.IncompatibleVersionError actual -> object
+      [ "kind"    .= String "IncompatibleVersionError"
+      , "actual"  .= toJSON actual
+      ]
+    Plutus.CostModelParameterMismatch   -> object
+      [ "kind"    .= String "CostModelParameterMismatch"
+      ]
+
+instance ToJSON (Plutus.Version ann) where
+  toJSON (Plutus.Version _ i j k) = object
+    [ "i" .= toJSON i
+    , "j" .= toJSON j
+    , "k" .= toJSON k
+    ]

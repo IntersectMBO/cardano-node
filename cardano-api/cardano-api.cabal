@@ -138,6 +138,7 @@ library
                       , ouroboros-network
                       , ouroboros-network-framework
                       , parsec
+                      , plutus-core
                       , plutus-ledger-api
                       , prettyprinter
                       , scientific
@@ -153,6 +154,7 @@ library
                       , transformers-except
                       , typed-protocols
                       , unordered-containers >= 0.2.11
+                      , utf8-string
                       , vector
                       , yaml
 
