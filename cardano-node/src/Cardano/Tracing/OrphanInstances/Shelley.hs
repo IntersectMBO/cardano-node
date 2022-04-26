@@ -19,7 +19,7 @@ module Cardano.Tracing.OrphanInstances.Shelley () where
 
 import           Cardano.Prelude
 
-import           Data.Aeson (Value (..), object)
+import           Data.Aeson (Value (..))
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Types as Aeson
 import qualified Data.Set as Set
@@ -36,7 +36,7 @@ import           Cardano.Tracing.OrphanInstances.Consensus ()
 import           Cardano.Tracing.Render (renderTxId)
 
 import           Ouroboros.Consensus.Ledger.SupportsMempool (txId)
-import qualified Ouroboros.Consensus.Ledger.SupportsMempool as SupportsMempool
+-- import qualified Ouroboros.Consensus.Ledger.SupportsMempool as SupportsMempool
 import           Ouroboros.Consensus.Util.Condense (condense)
 import           Ouroboros.Network.Block (SlotNo (..), blockHash, blockNo, blockSlot)
 import           Ouroboros.Network.Point (WithOrigin, withOriginToMaybe)
@@ -48,14 +48,14 @@ import           Ouroboros.Consensus.Shelley.Ledger.Inspect
 
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import           Cardano.Ledger.Alonzo as Alonzo
-import qualified Cardano.Ledger.Alonzo.PlutusScriptApi as Alonzo
+-- import qualified Cardano.Ledger.Alonzo.PlutusScriptApi as Alonzo
 import           Cardano.Ledger.Alonzo.Rules.Bbody (AlonzoBbodyPredFail)
 import qualified Cardano.Ledger.Alonzo.Rules.Utxo as Alonzo
 import qualified Cardano.Ledger.Alonzo.Rules.Utxos as Alonzo
 import           Cardano.Ledger.Alonzo.Rules.Utxow (UtxowPredicateFail (..))
 import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
-import qualified Cardano.Ledger.Alonzo.TxInfo as Alonzo
-import qualified Cardano.Ledger.AuxiliaryData as Core
+-- import qualified Cardano.Ledger.Alonzo.TxInfo as Alonzo
+-- import qualified Cardano.Ledger.AuxiliaryData as Core
 import           Cardano.Ledger.BaseTypes (strictMaybeToMaybe)
 import           Cardano.Ledger.Chain
 import qualified Cardano.Ledger.Core as Core
@@ -64,7 +64,7 @@ import qualified Cardano.Ledger.Crypto as Core
 import qualified Cardano.Ledger.Era as Ledger
 import qualified Cardano.Ledger.SafeHash as SafeHash
 import qualified Cardano.Ledger.ShelleyMA.Rules.Utxo as MA
-import qualified Cardano.Ledger.ShelleyMA.Timelocks as MA
+-- import qualified Cardano.Ledger.ShelleyMA.Timelocks as MA
 import           Cardano.Protocol.TPraos.BHeader (LastAppliedBlock, labBlockNo)
 import           Cardano.Protocol.TPraos.Rules.OCert
 import           Cardano.Protocol.TPraos.Rules.Overlay
@@ -97,6 +97,8 @@ import           Cardano.Protocol.TPraos.API (ChainTransitionError (ChainTransit
 import           Cardano.Protocol.TPraos.OCert (KESPeriod (KESPeriod))
 import           Cardano.Protocol.TPraos.Rules.Prtcl
 import qualified Data.Aeson.Key as Aeson
+import           Cardano.Api.Orphans ()
+-- import qualified Cardano.Ledger.AuxiliaryData as Core
 
 
 {- HLINT ignore "Use :" -}
@@ -108,9 +110,6 @@ import qualified Data.Aeson.Key as Aeson
 
 instance ShelleyBasedEra era => ToObject (GenTx (ShelleyBlock era)) where
   toObject _ tx = mconcat [ "txid" .= Text.take 8 (renderTxId (txId tx)) ]
-
-instance ToJSON (SupportsMempool.TxId (GenTx (ShelleyBlock era))) where
-  toJSON = String . Text.take 8 . renderTxId
 
 instance ShelleyBasedEra era => ToObject (Header (ShelleyBlock era)) where
   toObject _verb b = mconcat
@@ -142,8 +141,6 @@ instance Core.Crypto crypto => ToObject (TPraosCannotForge crypto) where
       , "expected" .= genDlgVRFHash
       , "actual" .= coreNodeVRFHash
       ]
-
-deriving newtype instance ToJSON KESPeriod
 
 instance ToObject HotKey.KESInfo where
   toObject _verb HotKey.KESInfo { kesStartPeriod, kesEndPeriod, kesEvolution } =
@@ -382,8 +379,8 @@ instance ( ShelleyBasedEra era
              ]
   toObject _verb (MissingTxBodyMetadataHash metadataHash) =
     mconcat [ "kind" .= String "MissingTxBodyMetadataHash"
-             , "metadataHash" .= metadataHash
-             ]
+            , "metadataHash" .= metadataHash
+            ]
   toObject _verb (MissingTxMetadata txBodyMetadataHash) =
     mconcat [ "kind" .= String "MissingTxMetadata"
              , "txBodyMetadataHash" .= txBodyMetadataHash
@@ -453,15 +450,6 @@ instance ( ShelleyBasedEra era
              , "addrs"   .= addrs
              ]
 
-
-instance ToJSON MA.ValidityInterval where
-  toJSON vi =
-    Aeson.object $
-        [ "invalidBefore"    .= x | x <- mbfield (MA.invalidBefore    vi) ]
-     ++ [ "invalidHereafter" .= x | x <- mbfield (MA.invalidHereafter vi) ]
-    where
-      mbfield SNothing  = []
-      mbfield (SJust x) = [x]
 
 instance ( ShelleyBasedEra era
          , ToJSON (Core.Value era)
@@ -974,74 +962,6 @@ instance ToObject (Alonzo.UtxosPredicateFailure (AlonzoEra StandardCrypto)) wher
   toObject verb (Alonzo.UpdateFailure pFailure) =
     toObject verb pFailure
 
-deriving newtype instance ToJSON Alonzo.IsValid
-
-instance ToJSON (Alonzo.CollectError StandardCrypto) where
-  toJSON cError =
-    case cError of
-      Alonzo.NoRedeemer sPurpose ->
-        object
-          [ "kind" .= String "CollectError"
-          , "error" .= String "NoRedeemer"
-          , "scriptpurpose" .= renderScriptPurpose sPurpose
-          ]
-      Alonzo.NoWitness sHash ->
-        object
-          [ "kind" .= String "CollectError"
-          , "error" .= String "NoWitness"
-          , "scripthash" .= toJSON sHash
-          ]
-      Alonzo.NoCostModel lang ->
-        object
-          [ "kind" .= String "CollectError"
-          , "error" .= String "NoCostModel"
-          , "language" .= toJSON lang
-          ]
-      Alonzo.BadTranslation err ->
-        object
-          [ "kind" .= String "PlutusTranslationError"
-          , "error" .= case err of
-              Alonzo.ByronInputInContext -> String "Byron input in the presence of a plutus script"
-              Alonzo.ByronOutputInContext -> String "Byron output in the presence of a plutus script"
-              Alonzo.TranslationLogicErrorInput -> String "Logic error translating inputs"
-              Alonzo.TranslationLogicErrorRedeemer -> String "Logic error translating redeemers"
-              Alonzo.TranslationLogicErrorDoubleDatum -> String "Logic error double datum"
-              Alonzo.LanguageNotSupported -> String "Language not supported"
-              Alonzo.InlineDatumsNotSupported -> String "Inline datums not supported"
-              Alonzo.ReferenceScriptsNotSupported -> String "Reference scripts not supported"
-              Alonzo.ReferenceInputsNotSupported -> String "Reference inputs not supported"
-          ]
-
-instance ToJSON Alonzo.TagMismatchDescription where
-  toJSON tmd = case tmd of
-    Alonzo.PassedUnexpectedly ->
-      object
-        [ "kind" .= String "TagMismatchDescription"
-        , "error" .= String "PassedUnexpectedly"
-        ]
-    Alonzo.FailedUnexpectedly forReasons ->
-      object
-        [ "kind" .= String "TagMismatchDescription"
-        , "error" .= String "FailedUnexpectedly"
-        , "reconstruction" .= forReasons
-        ]
-
-instance ToJSON Alonzo.FailureDescription where
-  toJSON f = case f of
-    Alonzo.OnePhaseFailure t ->
-      object
-        [ "kind" .= String "FailureDescription"
-        , "error" .= String "OnePhaseFailure"
-        , "description" .= t
-        ]
-    Alonzo.PlutusFailure t _bs ->
-      object
-        [ "kind" .= String "FailureDescription"
-        , "error" .= String "PlutusFailure"
-        , "description" .= t
-        -- , "reconstructionDetail" .= bs
-        ]
-
 instance ToObject (AlonzoBbodyPredFail (Alonzo.AlonzoEra StandardCrypto)) where
   toObject _ err = mconcat [ "kind" .= String "AlonzoBbodyPredFail"
                             , "error" .= String (show err)
@@ -1061,6 +981,5 @@ showLastAppBlockNo wOblk =  case withOriginToMaybe wOblk of
 
 -- Common to cardano-cli
 
-deriving newtype instance Core.Crypto crypto => ToJSON (Core.AuxiliaryDataHash crypto)
-
+-- deriving newtype instance Core.Crypto crypto => ToJSON (Core.AuxiliaryDataHash crypto)
 deriving newtype instance Core.Crypto crypto => ToJSON (TxId crypto)

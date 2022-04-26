@@ -50,10 +50,16 @@ import           Cardano.Ledger.Shelley.PParams (PParamsUpdate)
 import qualified Cardano.Ledger.Shelley.RewardUpdate as Shelley
 import qualified Cardano.Ledger.Shelley.Rewards as Shelley
 import qualified Ouroboros.Consensus.Shelley.Eras as Consensus
-
+import qualified Cardano.Ledger.AuxiliaryData as Core
+-- import           Cardano.Ledger.Crypto (StandardCrypto)
+-- import qualified Cardano.Ledger.Core as Core
+import qualified Cardano.Ledger.Crypto as Core
 
 -- Orphan instances involved in the JSON output of the API queries.
 -- We will remove/replace these as we provide more API wrapper types
+
+-- deriving newtype instance ToJSON (Core.AuxiliaryDataHash StandardCrypto)
+deriving newtype instance Core.Crypto crypto => ToJSON (Core.AuxiliaryDataHash crypto)
 
 instance ToJSON (Mary.Value era) where
   toJSON (Mary.Value l ps) =

@@ -29,7 +29,6 @@ import           Ouroboros.Consensus.Shelley.Eras (StandardCrypto)
 import           Ouroboros.Consensus.Shelley.Ledger.Block (ShelleyHash (..))
 import           Ouroboros.Network.Block (BlockNo (..), HeaderHash, Tip (..))
 
-import           Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import           Cardano.Ledger.PoolDistr (PoolDistr (..))
 import           Cardano.Protocol.TPraos.BHeader (HashHeader (..))
@@ -78,7 +77,6 @@ deriving newtype instance CC.Crypto crypto => ToJSON (TxId crypto)
 deriving newtype instance CC.Crypto crypto => ToJSON (ShelleyHash crypto)
 deriving newtype instance CC.Crypto crypto => ToJSON (HashHeader crypto)
 
-deriving newtype instance ToJSON (AuxiliaryDataHash StandardCrypto)
 deriving newtype instance ToJSON Ledger.LogWeight
 deriving newtype instance ToJSON (PoolDistr StandardCrypto)
 

@@ -1206,7 +1206,7 @@ runTxSubmit (AnyConsensusModeParams cModeParams) network txFile = do
         case reason of
           TxValidationErrorInMode err _eraInMode -> do
             let errorAsText = Text.pack (show err)
-            let errorAsJson = Aeson.Null
+            let errorAsJson = Aeson.toJSON err
             left $ ShelleyTxCmdTxSubmitError errorAsText errorAsJson
 
           TxValidationEraMismatch mismatchErr -> left $ ShelleyTxCmdTxSubmitErrorEraMismatch mismatchErr
