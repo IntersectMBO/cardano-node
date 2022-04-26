@@ -88,7 +88,7 @@ data ShelleyTxCmdError
   | ShelleyTxCmdMetaDecodeError !FilePath !CBOR.DecoderError
   | ShelleyTxCmdBootstrapWitnessError !ShelleyBootstrapWitnessError
   | ShelleyTxCmdSocketEnvError !EnvSocketError
-  | ShelleyTxCmdTxSubmitError !Text Aeson.Value
+  | ShelleyTxCmdTxSubmitError !Text
   | ShelleyTxCmdTxSubmitErrorByron !(ApplyTxErr ByronBlock)
   | ShelleyTxCmdTxSubmitErrorShelley !(ApplyTxErr (ShelleyBlock StandardShelley))
   | ShelleyTxCmdTxSubmitErrorAllegra !(ApplyTxErr (ShelleyBlock StandardAllegra))
@@ -168,7 +168,7 @@ renderShelleyTxCmdError err =
     ShelleyTxCmdAesonDecodeProtocolParamsError fp decErr ->
       "Error while decoding the protocol parameters at: " <> show fp
                                             <> " Error: " <> show decErr
-    ShelleyTxCmdTxSubmitError res _ -> "Error while submitting tx: " <> res
+    ShelleyTxCmdTxSubmitError res -> "Error while submitting tx: " <> res
     ShelleyTxCmdTxSubmitErrorByron res ->
       "Error while submitting tx: " <> Text.pack (show res)
     ShelleyTxCmdTxSubmitErrorShelley res ->
@@ -319,8 +319,8 @@ runTransactionCmd cmd =
                     scriptFiles metadataFiles mpparams mUpProp outputFormat out
     TxSign txinfile skfiles network txoutfile ->
       runTxSign txinfile skfiles network txoutfile
-    TxSubmit anyConensusModeParams network txFp ->
-      runTxSubmit anyConensusModeParams network txFp
+    TxSubmit anyConensusModeParams network txFp errorDetailFp ->
+      runTxSubmit anyConensusModeParams network txFp errorDetailFp
     TxCalculateMinFee txbody mnw pGenesisOrParamsFile nInputs nOutputs
                       nShelleyKeyWitnesses nByronKeyWitnesses ->
       runTxCalculateMinFee txbody mnw pGenesisOrParamsFile nInputs nOutputs
@@ -1183,8 +1183,9 @@ runTxSubmit
   :: AnyConsensusModeParams
   -> NetworkId
   -> FilePath
+  -> Maybe FilePath
   -> ExceptT ShelleyTxCmdError IO ()
-runTxSubmit (AnyConsensusModeParams cModeParams) network txFile = do
+runTxSubmit (AnyConsensusModeParams cModeParams) network txFile mErrorDetailFp = do
     SocketPath sockPath <- firstExceptT ShelleyTxCmdSocketEnvError readEnvSocketPath
 
     InAnyCardanoEra era tx <- readFileTx txFile
@@ -1206,8 +1207,9 @@ runTxSubmit (AnyConsensusModeParams cModeParams) network txFile = do
         case reason of
           TxValidationErrorInMode err _eraInMode -> do
             let errorAsText = Text.pack (show err)
-            let errorAsJson = Aeson.toJSON err
-            left $ ShelleyTxCmdTxSubmitError errorAsText errorAsJson
+            forM_ mErrorDetailFp $ \errorDetailFp ->
+              liftIO $ LBS.writeFile errorDetailFp (Aeson.encode err)
+            left $ ShelleyTxCmdTxSubmitError errorAsText
 
           TxValidationEraMismatch mismatchErr -> left $ ShelleyTxCmdTxSubmitErrorEraMismatch mismatchErr
 

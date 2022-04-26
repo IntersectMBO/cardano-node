@@ -240,7 +240,7 @@ data TransactionCmd
   | TxSign InputTxBodyOrTxFile [WitnessSigningData] (Maybe NetworkId) TxFile
   | TxCreateWitness TxBodyFile WitnessSigningData (Maybe NetworkId) OutputFile
   | TxAssembleTxBodyWitness TxBodyFile [WitnessFile] OutputFile
-  | TxSubmit AnyConsensusModeParams NetworkId FilePath
+  | TxSubmit AnyConsensusModeParams NetworkId FilePath (Maybe FilePath)
   | TxMintedPolicyId ScriptFile
   | TxCalculateMinFee
       TxBodyFile
