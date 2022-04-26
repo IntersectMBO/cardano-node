@@ -252,8 +252,11 @@ namesForChainDBAddBlock (ChainDB.AddBlockValidation ev') =
       "AddBlockValidation" : namesForChainDBAddBlockValidation ev'
 namesForChainDBAddBlock (ChainDB.ChainSelectionForFutureBlock {}) =
       ["ChainSelectionForFutureBlock"]
-namesForChainDBAddBlock (ChainDB.PipeliningEvent {}) =
-      ["PipeliningEvent"]
+namesForChainDBAddBlock (ChainDB.PipeliningEvent ev) =
+      "PipeliningEvent" : case ev of
+        ChainDB.SetTentativeHeader{}      -> ["SetTentativeHeader"]
+        ChainDB.TrapTentativeHeader{}     -> ["TrapTentativeHeader"]
+        ChainDB.OutdatedTentativeHeader{} -> ["OutdatedTentativeHeader"]
 
 namesForChainDBAddBlockValidation :: ChainDB.TraceValidationEvent blk -> [Text]
 namesForChainDBAddBlockValidation (ChainDB.ValidCandidate {}) =
@@ -303,14 +306,7 @@ instance ( LogFormatting (Header blk)
       "Chain added block " <> renderRealPointAsPhrase pt
   forHuman (ChainDB.ChainSelectionForFutureBlock pt) =
       "Chain selection run for block previously from future: " <> renderRealPointAsPhrase pt
-  forHuman (ChainDB.PipeliningEvent ev') =
-    case ev' of
-      ChainDB.SetTentativeHeader {} ->
-        "A new tentative header got set"
-      ChainDB.TrapTentativeHeader {} ->
-        "The body of tentative block turned out to be invalid"
-      ChainDB.OutdatedTentativeHeader {} ->
-        "We selected a new (better) chain, which cleared the previous tentative header"
+  forHuman (ChainDB.PipeliningEvent ev') = forHuman ev'
   forMachine dtal (ChainDB.IgnoreBlockOlderThanK pt) =
       mconcat [ "kind" .= String "IgnoreBlockOlderThanK"
                , "block" .= forMachine dtal pt ]
@@ -365,14 +361,8 @@ instance ( LogFormatting (Header blk)
   forMachine dtal (ChainDB.ChainSelectionForFutureBlock pt) =
       mconcat [ "kind" .= String "TChainSelectionForFutureBlock"
                , "block" .= forMachine dtal pt ]
-  forMachine _dtal (ChainDB.PipeliningEvent ev') =
-    case ev' of
-      ChainDB.SetTentativeHeader {} ->
-        mconcat [ "kind" .= String "SetTentativeHeader" ]
-      ChainDB.TrapTentativeHeader {} ->
-        mconcat [ "kind" .= String "TrapTentativeHeader" ]
-      ChainDB.OutdatedTentativeHeader {} ->
-        mconcat [ "kind" .= String "OutdatedTentativeHeader" ]
+  forMachine dtal (ChainDB.PipeliningEvent ev') =
+    kindContext "PipeliningEvent" $ forMachine dtal ev'
 
   asMetrics (ChainDB.SwitchedToAFork _warnings newTipInfo _oldChain newChain) =
     let ChainInformation { slots, blocks, density, epoch, slotInEpoch } =
@@ -393,6 +383,26 @@ instance ( LogFormatting (Header blk)
         , IntM    "cardano.node.epoch" (fromIntegral (unEpochNo epoch))
         ]
   asMetrics _ = []
+
+instance ( ConvertRawHash (Header blk)
+         , HasHeader (Header blk)
+         ) => LogFormatting (ChainDB.TracePipeliningEvent blk) where
+  forHuman (ChainDB.SetTentativeHeader hdr) =
+      "Set tentative header to " <> renderPointAsPhrase (blockPoint hdr)
+  forHuman (ChainDB.TrapTentativeHeader hdr) =
+      "Discovered trap tentative header " <> renderPointAsPhrase (blockPoint hdr)
+  forHuman (ChainDB.OutdatedTentativeHeader hdr) =
+      "Tentative header is now outdated " <> renderPointAsPhrase (blockPoint hdr)
+
+  forMachine dtals (ChainDB.SetTentativeHeader hdr) =
+      mconcat [ "kind" .= String "SetTentativeHeader"
+               , "block" .= renderPointForDetails dtals (blockPoint hdr) ]
+  forMachine dtals (ChainDB.TrapTentativeHeader hdr) =
+      mconcat [ "kind" .= String "TrapTentativeHeader"
+               , "block" .= renderPointForDetails dtals (blockPoint hdr) ]
+  forMachine dtals (ChainDB.OutdatedTentativeHeader hdr) =
+      mconcat [ "kind" .= String "OutdatedTentativeHeader"
+               , "block" .= renderPointForDetails dtals (blockPoint hdr)]
 
 addedHdrsNewChain :: HasHeader (Header blk)
   => AF.AnchoredFragment (Header blk)
@@ -635,6 +645,21 @@ docChainDBAddBlock = Documented [
         "Run chain selection for a block that was previously from the future.\
         \ This is done for all blocks from the future each time a new block is\
         \ added."
+    , DocMsg
+        ["PipeliningEvent", "SetTentativeHeader"]
+        []
+        "An event traced during block selection when the tentative header\
+        \ (in the context of diffusion pipelining) is set."
+    , DocMsg
+        ["PipeliningEvent", "TrapTentativeHeader"]
+        []
+        "An event traced during block selection when the body of the tentative\
+        \ header turned out to be invalid."
+    , DocMsg
+        ["PipeliningEvent", "OutdatedTentativeHeader"]
+        []
+        "An event traced during block selection when the tentative header got\
+        \ cleared on chain selection."
   ]
 
 
