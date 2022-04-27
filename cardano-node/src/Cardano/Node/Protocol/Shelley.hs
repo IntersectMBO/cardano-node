@@ -36,10 +36,10 @@ import           Cardano.Ledger.Keys (coerceKeyRole)
 
 import qualified Ouroboros.Consensus.Cardano as Consensus
 import qualified Ouroboros.Consensus.Mempool.TxLimits as TxLimits
-import           Ouroboros.Consensus.Protocol.TPraos (TPraosCanBeLeader (..))
+import           Ouroboros.Consensus.Protocol.Praos.Common (PraosCanBeLeader (..))
 import           Ouroboros.Consensus.Shelley.Eras (StandardShelley)
 import           Ouroboros.Consensus.Shelley.Node (Nonce (..), ProtocolParamsShelley (..),
-                   ProtocolParamsShelleyBased (..), TPraosLeaderCredentials (..))
+                   ProtocolParamsShelleyBased (..), ShelleyLeaderCredentials (..))
 
 import           Cardano.Ledger.BaseTypes (ProtVer (..))
 import qualified Cardano.Ledger.Shelley.Genesis as Shelley
@@ -139,7 +139,7 @@ validateGenesis genesis =
 
 readLeaderCredentials
   :: Maybe ProtocolFilepaths
-  -> ExceptT PraosLeaderCredentialsError IO [TPraosLeaderCredentials StandardCrypto]
+  -> ExceptT PraosLeaderCredentialsError IO [ShelleyLeaderCredentials StandardCrypto]
 readLeaderCredentials Nothing = return []
 readLeaderCredentials (Just pfp) =
   -- The set of credentials is a sum total of what comes from the CLI,
@@ -150,7 +150,7 @@ readLeaderCredentials (Just pfp) =
 readLeaderCredentialsSingleton ::
      ProtocolFilepaths ->
      ExceptT PraosLeaderCredentialsError IO
-             [TPraosLeaderCredentials StandardCrypto]
+             [ShelleyLeaderCredentials StandardCrypto]
 -- It's OK to supply none of the files on the CLI
 readLeaderCredentialsSingleton
    ProtocolFilepaths
@@ -207,13 +207,13 @@ data ShelleyCredentials
 
 readLeaderCredentialsBulk
   :: ProtocolFilepaths
-  -> ExceptT PraosLeaderCredentialsError IO [TPraosLeaderCredentials StandardCrypto]
+  -> ExceptT PraosLeaderCredentialsError IO [ShelleyLeaderCredentials StandardCrypto]
 readLeaderCredentialsBulk ProtocolFilepaths { shelleyBulkCredsFile = mfp } =
   mapM parseShelleyCredentials =<< readBulkFile mfp
  where
    parseShelleyCredentials
      :: ShelleyCredentials
-     -> ExceptT PraosLeaderCredentialsError IO (TPraosLeaderCredentials StandardCrypto)
+     -> ExceptT PraosLeaderCredentialsError IO (ShelleyLeaderCredentials StandardCrypto)
    parseShelleyCredentials ShelleyCredentials { scCert, scVrf, scKes } = do
      mkPraosLeaderCredentials
        <$> parseEnvelope AsOperationalCertificate scCert
@@ -243,20 +243,20 @@ mkPraosLeaderCredentials ::
      OperationalCertificate
   -> SigningKey VrfKey
   -> SigningKey KesKey
-  -> TPraosLeaderCredentials StandardCrypto
+  -> ShelleyLeaderCredentials StandardCrypto
 mkPraosLeaderCredentials
     (OperationalCertificate opcert (StakePoolVerificationKey vkey))
     (VrfSigningKey vrfKey)
     (KesSigningKey kesKey) =
-    TPraosLeaderCredentials
-    { tpraosLeaderCredentialsCanBeLeader =
-        TPraosCanBeLeader {
-        tpraosCanBeLeaderOpCert     = opcert,
-          tpraosCanBeLeaderColdVerKey = coerceKeyRole vkey,
-          tpraosCanBeLeaderSignKeyVRF = vrfKey
+    ShelleyLeaderCredentials
+    { shelleyLeaderCredentialsCanBeLeader =
+        PraosCanBeLeader {
+        praosCanBeLeaderOpCert     = opcert,
+          praosCanBeLeaderColdVerKey = coerceKeyRole vkey,
+          praosCanBeLeaderSignKeyVRF = vrfKey
         },
-      tpraosLeaderCredentialsInitSignKey = kesKey,
-      tpraosLeaderCredentialsLabel = "Shelley"
+      shelleyLeaderCredentialsInitSignKey = kesKey,
+      shelleyLeaderCredentialsLabel = "Shelley"
     }
 
 parseEnvelope ::
