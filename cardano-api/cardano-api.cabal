@@ -47,6 +47,7 @@ library
                         -- in this module
                         Cardano.Api.Orphans
                         Cardano.Api.SerialiseTextEnvelope
+                        Cardano.Api.InMode
 
   other-modules:
                         -- Splitting up the big Typed module:
@@ -86,7 +87,6 @@ library
                         Cardano.Api.StakePoolMetadata
                         Cardano.Api.Tx
                         Cardano.Api.TxBody
-                        Cardano.Api.InMode
                         Cardano.Api.TxMetadata
                         Cardano.Api.TxSubmit.ErrorRender
                         Cardano.Api.TxSubmit.Types
