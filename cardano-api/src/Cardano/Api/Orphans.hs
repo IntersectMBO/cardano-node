@@ -4,7 +4,9 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -27,15 +29,20 @@ import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import           Data.UMap (Trip (Triple), UMap (UnifiedMap))
 
+import qualified Cardano.Ledger.Babbage as Babbage
 import           Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import qualified Cardano.Ledger.BaseTypes as Ledger
 import           Cardano.Ledger.Compactible (Compactible (fromCompact))
+import qualified Cardano.Ledger.Era as Ledger
 import qualified Cardano.Ledger.Shelley.PoolRank as Shelley
 import           Cardano.Ledger.UnifiedMap (UnifiedMap)
 import           Cardano.Slotting.Slot (SlotNo (..))
 import           Cardano.Slotting.Time (SystemStart (..))
 
 import qualified Cardano.Crypto.Hash.Class as Crypto
+import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
+import qualified Cardano.Ledger.Babbage.PParams as Babbage
+import qualified Cardano.Ledger.Babbage.TxBody as Babbage
 import qualified Cardano.Ledger.Coin as Shelley
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as Crypto
@@ -51,6 +58,8 @@ import qualified Cardano.Ledger.Shelley.RewardUpdate as Shelley
 import qualified Cardano.Ledger.Shelley.Rewards as Shelley
 import qualified Ouroboros.Consensus.Shelley.Eras as Consensus
 
+import           Cardano.Api.Script
+import           Cardano.Api.SerialiseRaw (serialiseToRawBytesHexText)
 
 -- Orphan instances involved in the JSON output of the API queries.
 -- We will remove/replace these as we provide more API wrapper types
@@ -152,9 +161,61 @@ instance ToJSON (PParamsUpdate era) where
      ++ [ "protocolVersion"       .= x | x <- mbfield (Shelley._protocolVersion pp) ]
      ++ [ "minUTxOValue"          .= x | x <- mbfield (Shelley._minUTxOValue pp) ]
      ++ [ "minPoolCost"           .= x | x <- mbfield (Shelley._minPoolCost pp) ]
-    where
-      mbfield SNothing  = []
-      mbfield (SJust x) = [x]
+
+instance ToJSON (Babbage.PParamsUpdate era) where
+  toJSON pp =
+    Aeson.object $
+        [ "minFeeA"               .= x | x <- mbfield (Babbage._minfeeA pp) ]
+     ++ [ "minFeeB"               .= x | x <- mbfield (Babbage._minfeeB pp) ]
+     ++ [ "maxBlockBodySize"      .= x | x <- mbfield (Babbage._maxBBSize pp) ]
+     ++ [ "maxTxSize"             .= x | x <- mbfield (Babbage._maxTxSize pp) ]
+     ++ [ "maxBlockHeaderSize"    .= x | x <- mbfield (Babbage._maxBHSize pp) ]
+     ++ [ "keyDeposit"            .= x | x <- mbfield (Babbage._keyDeposit pp) ]
+     ++ [ "poolDeposit"           .= x | x <- mbfield (Babbage._poolDeposit pp) ]
+     ++ [ "eMax"                  .= x | x <- mbfield (Babbage._eMax pp) ]
+     ++ [ "nOpt"                  .= x | x <- mbfield (Babbage._nOpt pp) ]
+     ++ [ "a0"                    .= x | x <- mbfield (Babbage._a0 pp) ]
+     ++ [ "rho"                   .= x | x <- mbfield (Babbage._rho pp) ]
+     ++ [ "tau"                   .= x | x <- mbfield (Babbage._tau pp) ]
+     ++ [ "protocolVersion"       .= x | x <- mbfield (Babbage._protocolVersion pp) ]
+     ++ [ "minPoolCost"           .= x | x <- mbfield (Babbage._minPoolCost pp) ]
+     ++ [ "coinsPerUTxOWord"      .= x | x <- mbfield (Babbage._coinsPerUTxOWord pp) ]
+     ++ [ "costmdls"              .= x | x <- mbfield (Babbage._costmdls pp) ]
+     ++ [ "prices"                .= x | x <- mbfield (Babbage._prices pp) ]
+     ++ [ "maxTxExUnits"          .= x | x <- mbfield (Babbage._maxTxExUnits pp) ]
+     ++ [ "maxBlockExUnits"       .= x | x <- mbfield (Babbage._maxBlockExUnits pp) ]
+     ++ [ "maxValSize"            .= x | x <- mbfield (Babbage._maxValSize pp) ]
+     ++ [ "collateralPercentage"  .= x | x <- mbfield (Babbage._collateralPercentage pp) ]
+     ++ [ "maxCollateralInputs"   .= x | x <- mbfield (Babbage._maxCollateralInputs pp) ]
+
+mbfield :: StrictMaybe a -> [a]
+mbfield SNothing  = []
+mbfield (SJust x) = [x]
+
+instance ( Ledger.Era era
+         , ToJSON (Core.Value era)
+         , ToJSON (Babbage.Datum era)
+         , ToJSON (Core.Script era)
+         ) => ToJSON (Babbage.TxOut era) where
+  toJSON (Babbage.TxOut addr val dat mRefScript)=
+    object
+      [ "address" .= addr
+      , "value" .= val
+      , "datum" .= dat
+      , "referenceScript" .= mRefScript
+      ]
+
+instance Ledger.Crypto era ~ Consensus.StandardCrypto
+  => ToJSON (Babbage.Datum era) where
+    toJSON d = case Babbage.datumDataHash d of
+                 SNothing -> Aeson.Null
+                 SJust dH -> toJSON $ ScriptDataHash dH
+
+instance ToJSON (Alonzo.Script (Babbage.BabbageEra Consensus.StandardCrypto)) where
+  toJSON s = Aeson.String . serialiseToRawBytesHexText
+               $ ScriptHash $ Ledger.hashScript @(Babbage.BabbageEra Consensus.StandardCrypto) s
+
+
 
 instance Crypto.Crypto crypto => ToJSON (Shelley.DPState crypto) where
   toJSON dpState = object [ "dstate" .= Shelley.dpsDState dpState
