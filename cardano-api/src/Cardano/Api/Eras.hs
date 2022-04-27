@@ -53,9 +53,7 @@ import qualified Data.Text as Text
 import           Data.Type.Equality (TestEquality (..), (:~:) (Refl))
 
 import           Ouroboros.Consensus.Shelley.Eras as Consensus (StandardAllegra, StandardAlonzo,
-                   StandardCrypto, StandardMary, StandardShelley)
-
-import qualified Cardano.Ledger.Babbage as Babbage
+                   StandardBabbage, StandardMary, StandardShelley)
 
 import           Cardano.Api.HasTypeProxy
 
