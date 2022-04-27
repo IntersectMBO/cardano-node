@@ -257,6 +257,16 @@ data NodeHardForkProtocolConfiguration =
        -- configured the same, or they will disagree.
        --
      , npcTestAlonzoHardForkAtVersion       :: Maybe Word
+
+     , npcTestBabbageHardForkAtEpoch        :: Maybe EpochNo
+
+       -- | For testing purposes we support specifying that the hard fork
+       -- happens at a given major protocol version.
+       --
+       -- Obviously if this is used, all the nodes in the test cluster must be
+       -- configured the same, or they will disagree.
+       --
+     , npcTestBabbageHardForkAtVersion      :: Maybe Word
      }
   deriving (Eq, Show)
 
