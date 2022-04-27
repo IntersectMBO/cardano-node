@@ -98,7 +98,7 @@ instance ConvertTxId ByronBlock where
   txIdToRawBytes (ByronUpdateVoteId voteId) =
     Byron.Crypto.abstractHashToBytes voteId
 
-instance ConvertTxId (ShelleyBlock c) where
+instance ConvertTxId (ShelleyBlock protocol c) where
   txIdToRawBytes (ShelleyTxId txId) =
     Crypto.hashToBytes . Ledger.extractHash . Ledger._unTxId $ txId
 
@@ -127,7 +127,7 @@ class HasKESInfo blk where
   getKESInfo :: Proxy blk -> ForgeStateUpdateError blk -> Maybe HotKey.KESInfo
   getKESInfo _ _ = Nothing
 
-instance HasKESInfo (ShelleyBlock era) where
+instance HasKESInfo (ShelleyBlock protocol era) where
   getKESInfo _ (HotKey.KESCouldNotEvolve ki _) = Just ki
   getKESInfo _ (HotKey.KESKeyAlreadyPoisoned ki _) = Just ki
 
@@ -168,7 +168,7 @@ class HasKESMetricsData blk where
   -- Default to 'NoKESMetricsData'
   getKESMetricsData _ _ = NoKESMetricsData
 
-instance HasKESMetricsData (ShelleyBlock c) where
+instance HasKESMetricsData (ShelleyBlock protocol c) where
   getKESMetricsData _ forgeStateInfo =
       TPraosKESMetricsData currKesPeriod maxKesEvos oCertStartKesPeriod
     where
@@ -207,7 +207,7 @@ class GetKESInfo blk where
   getKESInfoFromStateInfo :: Proxy blk -> ForgeStateInfo blk -> Maybe HotKey.KESInfo
   getKESInfoFromStateInfo _ _ = Nothing
 
-instance GetKESInfo (ShelleyBlock era) where
+instance GetKESInfo (ShelleyBlock protocol era) where
   getKESInfoFromStateInfo _ = Just
 
 instance GetKESInfo ByronBlock
@@ -238,7 +238,7 @@ instance LedgerQueries Byron.ByronBlock where
   ledgerUtxoSize = Map.size . Byron.unUTxO . Byron.cvsUtxo . Byron.byronLedgerState
   ledgerDelegMapSize _ = 0
 
-instance LedgerQueries (Shelley.ShelleyBlock era) where
+instance LedgerQueries (Shelley.ShelleyBlock protocol era) where
   ledgerUtxoSize =
       (\(Shelley.UTxO xs)-> Map.size xs)
     . Shelley._utxo
@@ -268,13 +268,14 @@ instance LedgerQueries (Cardano.CardanoBlock c) where
     Cardano.LedgerStateAllegra ledgerAllegra -> ledgerUtxoSize ledgerAllegra
     Cardano.LedgerStateMary    ledgerMary    -> ledgerUtxoSize ledgerMary
     Cardano.LedgerStateAlonzo  ledgerAlonzo  -> ledgerUtxoSize ledgerAlonzo
+    Cardano.LedgerStateBabbage ledgerBabbage -> ledgerUtxoSize ledgerBabbage
   ledgerDelegMapSize = \case
     Cardano.LedgerStateByron   ledgerByron   -> ledgerDelegMapSize ledgerByron
     Cardano.LedgerStateShelley ledgerShelley -> ledgerDelegMapSize ledgerShelley
     Cardano.LedgerStateAllegra ledgerAllegra -> ledgerDelegMapSize ledgerAllegra
     Cardano.LedgerStateMary    ledgerMary    -> ledgerDelegMapSize ledgerMary
     Cardano.LedgerStateAlonzo  ledgerAlonzo  -> ledgerDelegMapSize ledgerAlonzo
-
+    Cardano.LedgerStateBabbage ledgerBabbage -> ledgerDelegMapSize ledgerBabbage
 --
 -- * Node kernel
 --

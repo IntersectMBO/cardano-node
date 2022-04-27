@@ -42,12 +42,13 @@ import           Ouroboros.Network.Block (SlotNo (..), blockHash, blockNo, block
 import           Ouroboros.Network.Point (WithOrigin, withOriginToMaybe)
 
 import qualified Ouroboros.Consensus.Protocol.Ledger.HotKey as HotKey
+import qualified Ouroboros.Consensus.Protocol.Praos as Praos
 import           Ouroboros.Consensus.Protocol.TPraos (TPraosCannotForge (..))
 import           Ouroboros.Consensus.Shelley.Ledger hiding (TxId)
 import           Ouroboros.Consensus.Shelley.Ledger.Inspect
+import qualified Ouroboros.Consensus.Shelley.Protocol.Praos as Praos
 
 import qualified Cardano.Crypto.Hash.Class as Crypto
-import           Cardano.Ledger.Alonzo as Alonzo
 import qualified Cardano.Ledger.Alonzo.PlutusScriptApi as Alonzo
 import           Cardano.Ledger.Alonzo.Rules.Bbody (AlonzoBbodyPredFail)
 import qualified Cardano.Ledger.Alonzo.Rules.Utxo as Alonzo
@@ -56,7 +57,8 @@ import           Cardano.Ledger.Alonzo.Rules.Utxow (UtxowPredicateFail (..))
 import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
 import qualified Cardano.Ledger.Alonzo.TxInfo as Alonzo
 import qualified Cardano.Ledger.AuxiliaryData as Core
-import           Cardano.Ledger.BaseTypes (strictMaybeToMaybe)
+import qualified Cardano.Ledger.Babbage.Rules.Utxo as Babbage
+import           Cardano.Ledger.BaseTypes (activeSlotLog, strictMaybeToMaybe)
 import           Cardano.Ledger.Chain
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Core as Ledger
@@ -106,13 +108,13 @@ import qualified Data.Aeson.Key as Aeson
 --
 -- NOTE: this list is sorted in roughly topological order.
 
-instance ShelleyBasedEra era => ToObject (GenTx (ShelleyBlock era)) where
+instance ShelleyBasedEra era => ToObject (GenTx (ShelleyBlock protocol era)) where
   toObject _ tx = mconcat [ "txid" .= Text.take 8 (renderTxId (txId tx)) ]
 
-instance ToJSON (SupportsMempool.TxId (GenTx (ShelleyBlock era))) where
+instance ToJSON (SupportsMempool.TxId (GenTx (ShelleyBlock protocol era))) where
   toJSON = String . Text.take 8 . renderTxId
 
-instance ShelleyBasedEra era => ToObject (Header (ShelleyBlock era)) where
+instance ShelleyCompatible protocol era => ToObject (Header (ShelleyBlock protocol era)) where
   toObject _verb b = mconcat
         [ "kind" .= String "ShelleyBlock"
         , "hash" .= condense (blockHash b)
@@ -289,7 +291,13 @@ instance ( ShelleyBasedEra era
   toObject verb (UtxowFailure f) = toObject verb f
   toObject verb (DelegsFailure f) = toObject verb f
 
-instance ToObject (UtxowPredicateFail (Alonzo.AlonzoEra StandardCrypto)) where
+instance ( ShelleyBasedEra era
+         , ToJSON (Ledger.Value era)
+         , ToJSON (Ledger.TxOut era)
+         , ToObject (PredicateFailure (Ledger.EraRule "PPUP" era))
+         , ToObject (PredicateFailure (Ledger.EraRule "UTXO" era))
+         , Ledger.Crypto era ~ StandardCrypto
+         ) => ToObject (UtxowPredicateFail era) where
   toObject v (WrappedShelleyEraFailure utxoPredFail) =
     toObject v utxoPredFail
   toObject _ (MissingRedeemers scripts) =
@@ -867,7 +875,13 @@ instance ToObject (UpecPredicateFailure era) where
 --------------------------------------------------------------------------------
 
 
-instance ToObject (Alonzo.UtxoPredicateFailure (Alonzo.AlonzoEra StandardCrypto)) where
+instance ( Ledger.Era era
+         , ToJSON (Ledger.Value era)
+         , Show (Ledger.Value era)
+         , ToJSON (Ledger.TxOut era)
+         , ToObject (PredicateFailure (Ledger.EraRule "UTXOS" era))
+         , ShelleyBasedEra era
+         ) => ToObject (Alonzo.UtxoPredicateFailure era) where
   toObject _verb (Alonzo.BadInputsUTxO badInputs) =
     mconcat [ "kind" .= String "BadInputsUTxO"
              , "badInputs" .= badInputs
@@ -961,7 +975,9 @@ instance ToObject (Alonzo.UtxoPredicateFailure (Alonzo.AlonzoEra StandardCrypto)
   toObject _verb Alonzo.NoCollateralInputs =
     mconcat [ "kind" .= String "NoCollateralInputs" ]
 
-instance ToObject (Alonzo.UtxosPredicateFailure (AlonzoEra StandardCrypto)) where
+instance ( ToJSON (Alonzo.CollectError (Ledger.Crypto era))
+         , ToObject (PredicateFailure (Ledger.EraRule "PPUP" era))
+         ) =>ToObject (Alonzo.UtxosPredicateFailure era) where
   toObject _ (Alonzo.ValidationTagMismatch isValidating reason) =
     mconcat [ "kind" .= String "ValidationTagMismatch"
              , "isvalidating" .= isValidating
@@ -1028,12 +1044,6 @@ instance ToJSON Alonzo.TagMismatchDescription where
 
 instance ToJSON Alonzo.FailureDescription where
   toJSON f = case f of
-    Alonzo.OnePhaseFailure t ->
-      object
-        [ "kind" .= String "FailureDescription"
-        , "error" .= String "OnePhaseFailure"
-        , "description" .= t
-        ]
     Alonzo.PlutusFailure t _bs ->
       object
         [ "kind" .= String "FailureDescription"
@@ -1042,10 +1052,136 @@ instance ToJSON Alonzo.FailureDescription where
         -- , "reconstructionDetail" .= bs
         ]
 
-instance ToObject (AlonzoBbodyPredFail (Alonzo.AlonzoEra StandardCrypto)) where
+instance ( Ledger.Era era
+         , Show (PredicateFailure (Ledger.EraRule "LEDGERS" era))
+         ) => ToObject (AlonzoBbodyPredFail era) where
   toObject _ err = mconcat [ "kind" .= String "AlonzoBbodyPredFail"
                             , "error" .= String (show err)
                             ]
+
+--------------------------------------------------------------------------------
+-- Babbage related
+--------------------------------------------------------------------------------
+
+instance ( ToJSON (Ledger.Value era)
+         , ToJSON (Ledger.TxOut era)
+         , ShelleyBasedEra era
+         , ToObject (UtxowPredicateFail era)
+         , ToObject (PredicateFailure (Ledger.EraRule "UTXOS" era))
+         ) => ToObject (Babbage.BabbageUtxoPred era) where
+  toObject v err =
+    case err of
+      Babbage.FromAlonzoUtxoFail alonzoFail ->
+        toObject v alonzoFail
+      Babbage.FromAlonzoUtxowFail alonzoFail->
+        toObject v alonzoFail
+
+      Babbage.UnequalCollateralReturn bal totalCol ->
+        mconcat [ "kind" .= String "UnequalCollateralReturn"
+                , "calculatedTotalCollateral" .= bal
+                , "txIndicatedTotalCollateral" .= totalCol
+                ]
+      -- TODO: Plutus team needs to expose a better error
+      -- type.
+      Babbage.MalformedScripts s ->
+        mconcat [ "kind" .= String "MalformedScripts"
+                , "scripts" .= s
+                ]
+      -- A transaction output is too small.
+      Babbage.BabbageOutputTooSmallUTxO outputs->
+        mconcat [ "kind" .= String "BabbageOutputTooSmall"
+                , "outputs" .= outputs
+                ]
+
+instance Core.Crypto crypto => ToObject (Praos.PraosValidationErr crypto) where
+  toObject _ err' =
+    case err' of
+      Praos.VRFKeyUnknown unknownKeyHash ->
+        mconcat [ "kind" .= String "VRFKeyUnknown"
+                , "vrfKey" .= unknownKeyHash
+                ]
+      Praos.VRFKeyWrongVRFKey stakePoolKeyHash registeredVrfForSaidStakepool wrongKeyHashInBlockHeader ->
+        mconcat [ "kind" .= String "VRFKeyWrongVRFKey"
+                , "stakePoolKeyHash" .= stakePoolKeyHash
+                , "stakePoolVrfKey" .= registeredVrfForSaidStakepool
+                , "blockHeaderVrfKey" .= wrongKeyHashInBlockHeader
+                ]
+      Praos.VRFKeyBadProof slotNo nonce vrfCalculatedVal->
+        mconcat [ "kind" .= String "VRFKeyBadProof"
+                , "slotNumberUsedInVrfCalculation" .= slotNo
+                , "nonceUsedInVrfCalculation" .= nonce
+                , "calculatedVrfValue" .= String (show vrfCalculatedVal)
+                ]
+      Praos.VRFLeaderValueTooBig leaderValue sigma f->
+        mconcat [ "kind" .= String "VRFLeaderValueTooBig"
+                , "leaderValue" .= leaderValue
+                , "sigma" .= sigma
+                , "f" .= activeSlotLog f
+                ]
+      Praos.KESBeforeStartOCERT startKesPeriod currKesPeriod ->
+        mconcat [ "kind" .= String "KESBeforeStartOCERT"
+                , "opCertStartingKesPeriod" .= startKesPeriod
+                , "currentKesPeriod" .= currKesPeriod
+                ]
+      Praos.KESAfterEndOCERT currKesPeriod startKesPeriod maxKesKeyEvos ->
+        mconcat [ "kind" .= String "KESAfterEndOCERT"
+                , "opCertStartingKesPeriod" .= startKesPeriod
+                , "currentKesPeriod" .= currKesPeriod
+                , "maxKesKeyEvolutions" .= maxKesKeyEvos
+                ]
+      Praos.CounterTooSmallOCERT lastCounter currentCounter ->
+        mconcat [ "kind" .= String "CounterTooSmallOCERT"
+                , "lastCounter" .= lastCounter
+                , "currentCounter" .= currentCounter
+                ]
+      Praos.CounterOverIncrementedOCERT lastCounter currentCounter ->
+        mconcat [ "kind" .= String "CounterOverIncrementedOCERT"
+                , "lastCounter" .= lastCounter
+                , "currentCounter" .= currentCounter
+                ]
+      Praos.InvalidSignatureOCERT counter oCertStartKesPeriod err ->
+        mconcat [ "kind" .= String "InvalidSignatureOCERT"
+                , "counter" .= counter
+                , "opCertStartingKesPeriod" .= oCertStartKesPeriod
+                , "error" .= err
+                ]
+      Praos.InvalidKesSignatureOCERT currentKesPeriod opCertStartKesPeriod expectedKesEvos err ->
+        mconcat [ "kind" .= String "InvalidKesSignatureOCERT"
+                , "currentKesPeriod" .= currentKesPeriod
+                , "opCertStartingKesPeriod" .= opCertStartKesPeriod
+                , "expectedKesEvolutions" .= expectedKesEvos
+                , "error" .= err
+                ]
+      Praos.NoCounterForKeyHashOCERT stakePoolKeyHash->
+        mconcat [ "kind" .= String "NoCounterForKeyHashOCERT"
+                , "stakePoolKeyHash" .= stakePoolKeyHash
+                ]
+
+instance ToObject (Praos.PraosCannotForge crypto) where
+  toObject _ (Praos.PraosCannotForgeKeyNotUsableYet currentKesPeriod startingKesPeriod) =
+    mconcat [ "kind" .= String "PraosCannotForgeKeyNotUsableYet"
+            , "currentKesPeriod" .= currentKesPeriod
+            , "opCertStartingKesPeriod" .= startingKesPeriod
+            ]
+
+instance ToObject Praos.PraosEnvelopeError where
+  toObject _ err' =
+    case err' of
+      Praos.ObsoleteNode maxPtclVersionFromPparams blkHeaderPtclVersion ->
+        mconcat [ "kind" .= String "ObsoleteNode"
+                , "maxMajorProtocolVersion" .= maxPtclVersionFromPparams
+                , "headerProtocolVersion" .= blkHeaderPtclVersion
+                ]
+      Praos.HeaderSizeTooLarge headerSize ledgerViewMaxHeaderSize ->
+        mconcat [ "kind" .= String "HeaderSizeTooLarge"
+                , "maxHeaderSize" .= ledgerViewMaxHeaderSize
+                , "headerSize" .= headerSize
+                ]
+      Praos.BlockSizeTooLarge blockSize ledgerViewMaxBlockSize ->
+        mconcat [ "kind" .= String "BlockSizeTooLarge"
+                , "maxBlockSize" .= ledgerViewMaxBlockSize
+                , "blockSize" .= blockSize
+                ]
 
 --------------------------------------------------------------------------------
 -- Helper functions

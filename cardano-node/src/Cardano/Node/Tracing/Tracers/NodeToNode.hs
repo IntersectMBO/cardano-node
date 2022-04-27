@@ -54,8 +54,6 @@ import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
 import           Ouroboros.Network.Driver.Simple (TraceSendRecv (..))
 import           Ouroboros.Network.Protocol.BlockFetch.Type (BlockFetch (..), Message (..))
 import           Ouroboros.Network.Protocol.ChainSync.Type as ChainSync
---import           Ouroboros.Network.Protocol.TxSubmission2.Type (ClientHasAgency (..), Message (..),
---                   ServerHasAgency (..), TxSubmission2)
 import qualified Ouroboros.Network.Protocol.TxSubmission2.Type as STX
 import qualified Ouroboros.Network.Protocol.TxSubmission2.Type as TXS
 
