@@ -135,6 +135,7 @@ library
                       , cardano-crypto-class
                       , cardano-crypto-wrapper
                       , cardano-ledger-alonzo
+                      , cardano-ledger-babbage
                       , cardano-ledger-byron
                       , cardano-ledger-core
                       , cardano-ledger-shelley-ma
