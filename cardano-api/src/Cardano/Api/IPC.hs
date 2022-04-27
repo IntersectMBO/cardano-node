@@ -91,6 +91,7 @@ import           Control.Concurrent.STM (TMVar, atomically, newEmptyTMVarIO, put
 import           Control.Monad (void)
 import           Control.Tracer (nullTracer)
 
+import           Ouroboros.Consensus.Shelley.Ledger.SupportsProtocol ()
 import qualified Ouroboros.Network.Block as Net
 import qualified Ouroboros.Network.Mux as Net
 import           Ouroboros.Network.NodeToClient (NodeToClientProtocols (..),
@@ -110,15 +111,18 @@ import qualified Ouroboros.Network.Protocol.LocalTxMonitor.Type as Consensus
 import           Ouroboros.Network.Protocol.LocalTxSubmission.Client (LocalTxSubmissionClient (..),
                    SubmitResult (..))
 import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Client as Net.Tx
-import           Ouroboros.Network.Util.ShowProxy (ShowProxy (..))
 
 import qualified Ouroboros.Consensus.Block as Consensus
+import           Ouroboros.Consensus.Cardano.CanHardFork
 import qualified Ouroboros.Consensus.Ledger.Query as Consensus
 import qualified Ouroboros.Consensus.Ledger.SupportsMempool as Consensus
+import qualified Ouroboros.Consensus.Ledger.SupportsProtocol as Consensus
 import qualified Ouroboros.Consensus.Network.NodeToClient as Consensus
 import qualified Ouroboros.Consensus.Node.NetworkProtocolVersion as Consensus
 import qualified Ouroboros.Consensus.Node.ProtocolInfo as Consensus
-import qualified Ouroboros.Consensus.Node.Run as Consensus
+import qualified Ouroboros.Consensus.Protocol.TPraos as Consensus
+import qualified Ouroboros.Consensus.Shelley.Eras as Consensus
+import qualified Ouroboros.Consensus.Shelley.Ledger.Block as Consensus
 
 import           Cardano.Api.Block
 import           Cardano.Api.HasTypeProxy
@@ -231,9 +235,10 @@ connectToLocalNodeWithVersion LocalNodeConnectInfo {
       -- block-parametrised view and then do the final setup for the versioned
       -- bundles of mini-protocols.
       case mkLocalNodeClientParams localConsensusModeParams clients of
-        LocalNodeClientParams ptcl clients' ->
+        LocalNodeClientParamsSingleBlock ptcl clients' ->
           mkVersionedProtocols localNodeNetworkId ptcl clients'
-
+        LocalNodeClientParamsCardano ptcl clients' ->
+          mkVersionedProtocols localNodeNetworkId ptcl clients'
 
 mkVersionedProtocols :: forall block.
                         ( Consensus.ShowQuery (Consensus.Query block)
@@ -346,17 +351,23 @@ mkVersionedProtocols networkid ptcl unversionedClients =
 -- handlers for the node-to-client protocol.
 --
 data LocalNodeClientParams where
-     LocalNodeClientParams
-       :: (Consensus.SerialiseNodeToClientConstraints block,
-           Consensus.SupportedNetworkProtocolVersion block,
-           ShowProxy block, ShowProxy (Consensus.ApplyTxErr block),
-           ShowProxy (Consensus.GenTx block), ShowProxy (Consensus.Query block),
-           Consensus.ShowQuery (Consensus.Query block),
-           ProtocolClient block
+     LocalNodeClientParamsSingleBlock
+       :: (ProtocolClient block,
+           Consensus.LedgerSupportsProtocol
+           (Consensus.ShelleyBlock
+              (Consensus.TPraos Consensus.StandardCrypto)
+              (Consensus.ShelleyEra Consensus.StandardCrypto))
+
            )
        => ProtocolClientInfoArgs block
        -> (NodeToClientVersion -> LocalNodeClientProtocolsForBlock block)
        -> LocalNodeClientParams
+
+     LocalNodeClientParamsCardano
+      :: (ProtocolClient block, CardanoHardForkConstraints (ConsensusCryptoForBlock block))
+      => ProtocolClientInfoArgs block
+      -> (NodeToClientVersion -> LocalNodeClientProtocolsForBlock block)
+      -> LocalNodeClientParams
 
 data LocalNodeClientProtocolsForBlock block =
      LocalNodeClientProtocolsForBlock {
@@ -404,19 +415,19 @@ mkLocalNodeClientParams modeparams clients =
     --
     case modeparams of
       ByronModeParams epochSlots ->
-        LocalNodeClientParams
+        LocalNodeClientParamsSingleBlock
           (ProtocolClientInfoArgsByron epochSlots)
           (convLocalNodeClientProtocols ByronMode . clients)
 
       ShelleyModeParams ->
-        LocalNodeClientParams
+        LocalNodeClientParamsSingleBlock
           ProtocolClientInfoArgsShelley
           (convLocalNodeClientProtocols ShelleyMode . clients)
 
       CardanoModeParams epochSlots ->
-        LocalNodeClientParams
-          (ProtocolClientInfoArgsCardano epochSlots)
-          (convLocalNodeClientProtocols CardanoMode . clients)
+       LocalNodeClientParamsCardano
+         (ProtocolClientInfoArgsCardano epochSlots)
+         (convLocalNodeClientProtocols CardanoMode . clients)
 
 
 convLocalNodeClientProtocols :: forall mode block.
