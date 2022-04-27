@@ -91,6 +91,7 @@ import qualified Ouroboros.Consensus.Byron.Ledger as Consensus
 import           Ouroboros.Consensus.Cardano.Block (LedgerState (..), StandardCrypto)
 import qualified Ouroboros.Consensus.Cardano.Block as Consensus
 import qualified Ouroboros.Consensus.Ledger.Query as Consensus
+import qualified Ouroboros.Consensus.Protocol.Abstract as Consensus
 import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
 import           Ouroboros.Network.Block (Serialised (..))
 
@@ -307,6 +308,7 @@ instance
     ( Typeable era
     , Ledger.Era (ShelleyLedgerEra era)
     , FromCBOR (Core.PParams (ShelleyLedgerEra era))
+    , FromCBOR (Shelley.StashedAVVMAddresses (ShelleyLedgerEra era))
     , FromCBOR (Core.Value (ShelleyLedgerEra era))
     , FromCBOR (Ledger.State (Core.EraRule "PPUP" (ShelleyLedgerEra era)))
     , Share (Core.TxOut (ShelleyLedgerEra era)) ~ Interns (Shelley.Credential 'Shelley.Staking (Ledger.Crypto (ShelleyLedgerEra era)))
@@ -330,9 +332,8 @@ instance ( IsShelleyBasedEra era
                                           , "possibleRewardUpdate" .= Shelley.nesRu newEpochS
                                           , "stakeDistrib" .= Shelley.nesPd newEpochS
                                           ]
-
 newtype ProtocolState era
-  = ProtocolState (Serialised (TPraos.ChainDepState (Ledger.Crypto (ShelleyLedgerEra era))))
+  = ProtocolState (Serialised (Consensus.ChainDepState (ConsensusProtocol era)))
 
 decodeProtocolState
   :: ProtocolState era
@@ -474,8 +475,8 @@ toConsensusQuery (QueryInEra erainmode (QueryInShelleyBasedEra era q)) =
 
 
 toConsensusQueryShelleyBased
-  :: forall era ledgerera mode block xs result.
-     ConsensusBlockForEra era ~ Consensus.ShelleyBlock ledgerera
+  :: forall era ledgerera mode protocol block xs result.
+     ConsensusBlockForEra era ~ Consensus.ShelleyBlock protocol ledgerera
   => Ledger.Crypto ledgerera ~ Consensus.StandardCrypto
   => ConsensusBlockForMode mode ~ block
   => block ~ Consensus.HardForkBlock xs
@@ -673,16 +674,23 @@ fromConsensusQueryResult (QueryInEra AlonzoEraInCardanoMode
       _ -> fromConsensusQueryResultMismatch
 
 fromConsensusQueryResult (QueryInEra BabbageEraInCardanoMode
-                                     (QueryInShelleyBasedEra _era _q)) _q' _r' =
-    error "TODO: Babbage era - depends on consensus exposing a babbage era"
+                                     (QueryInShelleyBasedEra _era q)) q' r' =
+    case q' of
+      Consensus.BlockQuery (Consensus.QueryIfCurrentBabbage q'')
+        -> bimap fromConsensusEraMismatch
+                 (fromConsensusQueryResultShelleyBased
+                    ShelleyBasedEraBabbage q q'')
+                 r'
+      _ -> fromConsensusQueryResultMismatch
 
 fromConsensusQueryResultShelleyBased
-  :: forall era ledgerera result result'.
+  :: forall era ledgerera protocol result result'.
      ShelleyLedgerEra era ~ ledgerera
   => Ledger.Crypto ledgerera ~ Consensus.StandardCrypto
+  => ConsensusProtocol era ~ protocol
   => ShelleyBasedEra era
   -> QueryInShelleyBasedEra era result
-  -> Consensus.BlockQuery (Consensus.ShelleyBlock ledgerera) result'
+  -> Consensus.BlockQuery (Consensus.ShelleyBlock protocol ledgerera) result'
   -> result'
   -> result
 fromConsensusQueryResultShelleyBased _ QueryEpoch q' epoch =
