@@ -26,12 +26,16 @@ module Cardano.Api.Modes (
     AnyEraInMode(..),
     toEraInMode,
 
+    -- * The protocols supported in each era
+    ConsensusProtocol,
+
     -- * Connection parameters for each mode
     ConsensusModeParams(..),
     AnyConsensusModeParams(..),
     Byron.EpochSlots(..),
 
     -- * Conversions to and from types in the consensus library
+    ConsensusCryptoForBlock,
     ConsensusBlockForMode,
     ConsensusBlockForEra,
     toConsensusEraIndex,
@@ -53,10 +57,10 @@ import qualified Ouroboros.Consensus.Cardano.Block as Consensus
 import qualified Ouroboros.Consensus.Cardano.ByronHFC as Consensus (ByronBlockHFC)
 import           Ouroboros.Consensus.HardFork.Combinator as Consensus (EraIndex (..), eraIndexSucc,
                    eraIndexZero)
-import           Ouroboros.Consensus.Shelley.Eras (StandardAllegra, StandardAlonzo, StandardMary,
-                   StandardShelley)
-import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
-import qualified Ouroboros.Consensus.Shelley.ShelleyHFC as Consensus (ShelleyBlockHFC)
+import qualified Ouroboros.Consensus.Protocol.Praos as Consensus
+import qualified Ouroboros.Consensus.Protocol.TPraos as Consensus
+import qualified Ouroboros.Consensus.Shelley.HFEras as Consensus
+import qualified Ouroboros.Consensus.Shelley.ShelleyHFC as Consensus
 
 import qualified Cardano.Chain.Slotting as Byron (EpochSlots (..))
 
@@ -286,17 +290,28 @@ deriving instance Show (ConsensusModeParams mode)
 --
 type family ConsensusBlockForMode mode where
   ConsensusBlockForMode ByronMode   = Consensus.ByronBlockHFC
-  ConsensusBlockForMode ShelleyMode = Consensus.ShelleyBlockHFC StandardShelley
+  ConsensusBlockForMode ShelleyMode = Consensus.ShelleyBlockHFC (Consensus.TPraos StandardCrypto) Consensus.StandardShelley
   ConsensusBlockForMode CardanoMode = Consensus.CardanoBlock StandardCrypto
 
 type family ConsensusBlockForEra era where
   ConsensusBlockForEra ByronEra   = Consensus.ByronBlock
-  ConsensusBlockForEra ShelleyEra = Consensus.ShelleyBlock StandardShelley
-  ConsensusBlockForEra AllegraEra = Consensus.ShelleyBlock StandardAllegra
-  ConsensusBlockForEra MaryEra    = Consensus.ShelleyBlock StandardMary
-  ConsensusBlockForEra AlonzoEra  = Consensus.ShelleyBlock StandardAlonzo
+  ConsensusBlockForEra ShelleyEra = Consensus.StandardShelleyBlock
+  ConsensusBlockForEra AllegraEra = Consensus.StandardAllegraBlock
+  ConsensusBlockForEra MaryEra    = Consensus.StandardMaryBlock
+  ConsensusBlockForEra AlonzoEra  = Consensus.StandardAlonzoBlock
+  ConsensusBlockForEra BabbageEra = Consensus.StandardBabbageBlock
 
+type family ConsensusCryptoForBlock block where
+  ConsensusCryptoForBlock Consensus.ByronBlockHFC = StandardCrypto
+  ConsensusCryptoForBlock (Consensus.ShelleyBlockHFC (Consensus.TPraos StandardCrypto) Consensus.StandardShelley) = Consensus.StandardShelley
+  ConsensusCryptoForBlock (Consensus.CardanoBlock StandardCrypto) = StandardCrypto
 
+type family ConsensusProtocol era where
+  ConsensusProtocol ShelleyEra = Consensus.TPraos StandardCrypto
+  ConsensusProtocol AllegraEra = Consensus.TPraos StandardCrypto
+  ConsensusProtocol MaryEra = Consensus.TPraos StandardCrypto
+  ConsensusProtocol AlonzoEra = Consensus.TPraos StandardCrypto
+  ConsensusProtocol BabbageEra = Consensus.Praos StandardCrypto
 
 eraIndex0 :: Consensus.EraIndex (x0 : xs)
 eraIndex0 = Consensus.eraIndexZero
@@ -313,6 +328,9 @@ eraIndex3 = eraIndexSucc eraIndex2
 eraIndex4 :: Consensus.EraIndex (x4 : x3 : x2 : x1 : x0 : xs)
 eraIndex4 = eraIndexSucc eraIndex3
 
+eraIndex5 :: Consensus.EraIndex (x5 : x4 : x3 : x2 : x1 : x0 : xs)
+eraIndex5 = eraIndexSucc eraIndex4
+
 toConsensusEraIndex :: ConsensusBlockForMode mode ~ Consensus.HardForkBlock xs
                     => EraInMode era mode
                     -> Consensus.EraIndex xs
@@ -324,8 +342,7 @@ toConsensusEraIndex ShelleyEraInCardanoMode = eraIndex1
 toConsensusEraIndex AllegraEraInCardanoMode = eraIndex2
 toConsensusEraIndex MaryEraInCardanoMode    = eraIndex3
 toConsensusEraIndex AlonzoEraInCardanoMode  = eraIndex4
-toConsensusEraIndex BabbageEraInCardanoMode =
-  error "TODO: Babbage era - depends on consensus exposing a babbage era"
+toConsensusEraIndex BabbageEraInCardanoMode = eraIndex5
 
 
 fromConsensusEraIndex :: ConsensusBlockForMode mode ~ Consensus.HardForkBlock xs
@@ -339,11 +356,10 @@ fromConsensusEraIndex ByronMode = fromByronEraIndex
                       -> AnyEraInMode ByronMode
     fromByronEraIndex (Consensus.EraIndex (Z (K ()))) =
       AnyEraInMode ByronEraInByronMode
-
 fromConsensusEraIndex ShelleyMode = fromShelleyEraIndex
   where
     fromShelleyEraIndex :: Consensus.EraIndex
-                             '[Consensus.ShelleyBlock StandardShelley]
+                             '[Consensus.StandardShelleyBlock]
                         -> AnyEraInMode ShelleyMode
     fromShelleyEraIndex (Consensus.EraIndex (Z (K ()))) =
       AnyEraInMode ShelleyEraInShelleyMode
@@ -368,4 +384,7 @@ fromConsensusEraIndex CardanoMode = fromShelleyEraIndex
 
     fromShelleyEraIndex (Consensus.EraIndex (S (S (S (S (Z (K ()))))))) =
       AnyEraInMode AlonzoEraInCardanoMode
+
+    fromShelleyEraIndex (Consensus.EraIndex (S (S (S (S (S (Z (K ())))))))) =
+      AnyEraInMode BabbageEraInCardanoMode
 
