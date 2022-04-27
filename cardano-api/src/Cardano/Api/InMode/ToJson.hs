@@ -122,6 +122,8 @@ import qualified PlutusCore as PlutusCore
 import qualified UntypedPlutusCore.Core.Type
 import qualified PlutusCore.Evaluation.Machine.Exception
 import qualified PlutusCore.DeBruijn
+import qualified Cardano.Ledger.Alonzo.Scripts
+import qualified Cardano.Ledger.Alonzo.Language as Alonzo
 
 instance ToJSON (PredicateFailure (Core.EraRule "LEDGER" era)) => ToJSON (ApplyTxError era) where
   toJSON (ApplyTxError es) = toJSON es
@@ -1144,19 +1146,25 @@ instance ToJSON Alonzo.PlutusError where
 instance ToJSON Alonzo.PlutusDebug where
   toJSON = \case
     Alonzo.PlutusDebugV1 costModel exUnits sbs ds protVer -> object
-      [ "costModel" .= costModel
-      , "exUnits"   .= exUnits
-      , "sbs"       .= toJSON (Text.decodeLatin1 (B16.encode (SBS.fromShort sbs)))
-      , "ds"        .= toJSON ds
-      , "protVer"   .= protVer
+      [ "costModel"   .= costModel
+      , "exUnits"     .= exUnits
+      , "sbs"         .= toJSON (Text.decodeLatin1 (B16.encode (SBS.fromShort sbs)))
+      , "scriptHash"  .= scriptHashOf Alonzo.PlutusV1 sbs
+      , "ds"          .= toJSON ds
+      , "protVer"     .= protVer
       ]
     Alonzo.PlutusDebugV2 costModel exUnits sbs ds protVer -> object
-      [ "costModel" .= costModel
-      , "exUnits"   .= exUnits
-      , "sbs"       .= toJSON (Text.decodeLatin1 (B16.encode (SBS.fromShort sbs)))
-      , "ds"        .= toJSON ds
-      , "protVer"   .= protVer
+      [ "costModel"   .= costModel
+      , "exUnits"     .= exUnits
+      , "sbs"         .= toJSON (Text.decodeLatin1 (B16.encode (SBS.fromShort sbs)))
+      , "scriptHash"  .= scriptHashOf Alonzo.PlutusV2 sbs
+      , "ds"          .= toJSON ds
+      , "protVer"     .= protVer
       ]
+
+
+scriptHashOf :: Alonzo.Language -> SBS.ShortByteString -> Text
+scriptHashOf lang sbs = Text.pack $ show (Cardano.Ledger.Alonzo.Scripts.PlutusScript lang sbs)
 
 instance ToJSON Plutus.EvaluationError where
   toJSON = \case
