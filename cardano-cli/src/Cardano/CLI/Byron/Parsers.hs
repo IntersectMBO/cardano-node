@@ -744,15 +744,6 @@ readDouble = do
   when (f > 1) $ readerError "fraction must be <= 1"
   return f
 
-parseFilePath :: String -> String -> Parser FilePath
-parseFilePath optname desc =
-  strOption
-    ( long optname
-    <> metavar "FILEPATH"
-    <> help desc
-    <> completer (bashCompleter "file")
-    )
-
 parseSigningKeyFile :: String -> String -> Parser SigningKeyFile
 parseSigningKeyFile opt desc = SigningKeyFile <$> parseFilePath opt desc
 

@@ -1,9 +1,5 @@
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
 
-#if !defined(mingw32_HOST_OS)
-#define UNIX
-#endif
 
 module Cardano.CLI.Byron.Genesis
   ( ByronGenesisError(..)
@@ -20,22 +16,14 @@ import           Cardano.Prelude hiding (option, show, trace)
 import           Prelude (String)
 
 import           Control.Monad.Trans.Except.Extra (firstExceptT, left, right)
-import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.Map.Strict as Map
 import           Data.Text.Lazy.Builder (toLazyText)
 import           Data.Time (UTCTime)
 import           Formatting.Buildable
-import           Text.Printf (printf)
 
 import           System.Directory (createDirectory, doesPathExist)
-import           System.FilePath ((</>))
-#ifdef UNIX
-import           System.Posix.Files (ownerReadMode, setFileMode)
-#else
-import           System.Directory (emptyPermissions, readable, setPermissions)
-#endif
-import           Cardano.Api (Key (..), NetworkId)
+import           Cardano.Api (Key (..), NetworkId, writeSecrets)
 import           Cardano.Api.Byron (ByronKey, SerialiseAsRawBytes (..), SigningKey (..),
                      toByronRequiresNetworkMagic)
 
@@ -217,15 +205,3 @@ dumpGenesis (NewDirectory outDir) genesisData gs = do
 
   wOut :: String -> String -> (a -> ByteString) -> [a] -> IO ()
   wOut = writeSecrets outDir
-
-writeSecrets :: FilePath -> String -> String -> (a -> ByteString) -> [a] -> IO ()
-writeSecrets outDir prefix suffix secretOp xs =
-  forM_ (zip xs [0::Int ..]) $
-  \(secret, nr)-> do
-    let filename = outDir </> prefix <> "." <> printf "%03d" nr <> "." <> suffix
-    BS.writeFile filename $ secretOp secret
-#ifdef UNIX
-    setFileMode    filename ownerReadMode
-#else
-    setPermissions filename (emptyPermissions {readable = True})
-#endif
