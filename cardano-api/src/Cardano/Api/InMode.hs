@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -33,6 +34,9 @@ import qualified Ouroboros.Consensus.HardFork.Combinator as Consensus
 import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (EraMismatch)
 import qualified Ouroboros.Consensus.HardFork.Combinator.Degenerate as Consensus
 import qualified Ouroboros.Consensus.Ledger.SupportsMempool as Consensus
+import qualified Ouroboros.Consensus.Ledger.SupportsProtocol as Consensus
+import qualified Ouroboros.Consensus.Protocol.TPraos as TPraos
+import qualified Ouroboros.Consensus.Shelley.HFEras as Consensus
 import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
 import qualified Ouroboros.Consensus.TypeFamilyWrappers as Consensus
 
@@ -96,6 +100,10 @@ fromConsensusGenTx CardanoMode (Consensus.HardForkGenTx (Consensus.OneEraGenTx (
   let Consensus.ShelleyTx _txid shelleyEraTx = tx'
   in TxInMode (ShelleyTx ShelleyBasedEraAlonzo shelleyEraTx) AlonzoEraInCardanoMode
 
+fromConsensusGenTx CardanoMode (Consensus.HardForkGenTx (Consensus.OneEraGenTx (S (S (S (S (S (Z tx')))))))) =
+  let Consensus.ShelleyTx _txid shelleyEraTx = tx'
+  in TxInMode (ShelleyTx ShelleyBasedEraBabbage shelleyEraTx) BabbageEraInCardanoMode
+
 toConsensusGenTx :: ConsensusBlockForMode mode ~ block
                  => TxInMode mode
                  -> Consensus.GenTx block
@@ -142,10 +150,10 @@ toConsensusGenTx (TxInMode (ShelleyTx _ tx) AlonzoEraInCardanoMode) =
   where
     tx' = Consensus.mkShelleyTx tx
 
-toConsensusGenTx (TxInMode (ShelleyTx _ _tx) BabbageEraInCardanoMode) =
-    Consensus.HardForkGenTx (Consensus.OneEraGenTx (S (S (S (S (Z tx'))))))
+toConsensusGenTx (TxInMode (ShelleyTx _ tx) BabbageEraInCardanoMode) =
+    Consensus.HardForkGenTx (Consensus.OneEraGenTx (S (S (S (S (S (Z tx')))))))
   where
-    tx' = error "TODO: Babbage era - depends on consensus exposing a babbage era" -- Consensus.mkShelleyTx tx
+    tx' = Consensus.mkShelleyTx tx
 
 -- ----------------------------------------------------------------------------
 -- Transaction ids in the context of a consensus mode
@@ -171,9 +179,9 @@ toConsensusTxId (TxIdInMode txid ByronEraInByronMode) =
   txid' = Consensus.ByronTxId $ toByronTxId txid
 
 toConsensusTxId (TxIdInMode t ShelleyEraInShelleyMode) =
-  Consensus.HardForkGenTxId $ Consensus.OneEraGenTxId  $ Z  (Consensus.WrapGenTxId txid')
+    Consensus.HardForkGenTxId $ Consensus.OneEraGenTxId  $ Z  (Consensus.WrapGenTxId txid')
  where
-  txid' :: Consensus.TxId (Consensus.GenTx (Consensus.ShelleyBlock Consensus.StandardShelley))
+  txid' :: Consensus.TxId (Consensus.GenTx Consensus.StandardShelleyBlock)
   txid' = Consensus.ShelleyTxId $ toShelleyTxId t
 
 toConsensusTxId (TxIdInMode txid ByronEraInCardanoMode) =
@@ -185,25 +193,25 @@ toConsensusTxId (TxIdInMode txid ByronEraInCardanoMode) =
 toConsensusTxId (TxIdInMode txid ShelleyEraInCardanoMode) =
   Consensus.HardForkGenTxId (Consensus.OneEraGenTxId (S (Z (Consensus.WrapGenTxId txid'))))
  where
-  txid' :: Consensus.TxId (Consensus.GenTx (Consensus.ShelleyBlock Consensus.StandardShelley))
+  txid' :: Consensus.TxId (Consensus.GenTx Consensus.StandardShelleyBlock)
   txid' = Consensus.ShelleyTxId $ toShelleyTxId txid
 
 toConsensusTxId (TxIdInMode txid AllegraEraInCardanoMode) =
   Consensus.HardForkGenTxId (Consensus.OneEraGenTxId (S (S (Z (Consensus.WrapGenTxId txid')))))
  where
-  txid' :: Consensus.TxId (Consensus.GenTx (Consensus.ShelleyBlock Consensus.StandardAllegra))
+  txid' :: Consensus.TxId (Consensus.GenTx Consensus.StandardAllegraBlock)
   txid' = Consensus.ShelleyTxId $ toShelleyTxId txid
 
 toConsensusTxId (TxIdInMode txid MaryEraInCardanoMode) =
   Consensus.HardForkGenTxId (Consensus.OneEraGenTxId (S (S (S (Z (Consensus.WrapGenTxId txid'))))))
  where
-  txid' :: Consensus.TxId (Consensus.GenTx (Consensus.ShelleyBlock Consensus.StandardMary))
+  txid' :: Consensus.TxId (Consensus.GenTx Consensus.StandardMaryBlock)
   txid' = Consensus.ShelleyTxId $ toShelleyTxId txid
 
 toConsensusTxId (TxIdInMode txid AlonzoEraInCardanoMode) =
   Consensus.HardForkGenTxId (Consensus.OneEraGenTxId (S (S (S (S (Z (Consensus.WrapGenTxId txid')))))))
  where
-  txid' :: Consensus.TxId (Consensus.GenTx (Consensus.ShelleyBlock Consensus.StandardAlonzo))
+  txid' :: Consensus.TxId (Consensus.GenTx Consensus.StandardAlonzoBlock)
   txid' = Consensus.ShelleyTxId $ toShelleyTxId txid
 
 toConsensusTxId (TxIdInMode _txid BabbageEraInCardanoMode) =
@@ -224,7 +232,7 @@ data TxValidationError era where
 
      ShelleyTxValidationError
        :: ShelleyBasedEra era
-       -> Consensus.ApplyTxErr (Consensus.ShelleyBlock (ShelleyLedgerEra era))
+       -> Consensus.ApplyTxErr (Consensus.ShelleyBlock (ConsensusProtocol era) (ShelleyLedgerEra era))
        -> TxValidationError era
 
 -- The GADT in the ShelleyTxValidationError case requires a custom instance
@@ -282,6 +290,10 @@ deriving instance Show (TxValidationErrorInMode mode)
 
 
 fromConsensusApplyTxErr :: ConsensusBlockForMode mode ~ block
+                        => Consensus.LedgerSupportsProtocol
+                             (Consensus.ShelleyBlock
+                             (TPraos.TPraos Consensus.StandardCrypto)
+                             (Consensus.ShelleyEra Consensus.StandardCrypto))
                         => ConsensusMode mode
                         -> Consensus.ApplyTxErr block
                         -> TxValidationErrorInMode mode
@@ -320,6 +332,10 @@ fromConsensusApplyTxErr CardanoMode (Consensus.ApplyTxErrAlonzo err) =
       (ShelleyTxValidationError ShelleyBasedEraAlonzo err)
       AlonzoEraInCardanoMode
 
+fromConsensusApplyTxErr CardanoMode (Consensus.ApplyTxErrBabbage err) =
+    TxValidationErrorInMode
+      (ShelleyTxValidationError ShelleyBasedEraBabbage err)
+      BabbageEraInCardanoMode
+
 fromConsensusApplyTxErr CardanoMode (Consensus.ApplyTxErrWrongEra err) =
     TxValidationEraMismatch err
-
