@@ -104,14 +104,24 @@ import qualified Cardano.Protocol.TPraos.BHeader as Protocol
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Key as Aeson
 import qualified Data.Aeson.Types as Aeson
+import qualified Data.ByteString.Base16 as B16
+import qualified Data.ByteString.Short as SBS
 import qualified Data.ByteString.UTF8 as BSU
 import qualified Data.Set as Set
 import qualified Data.Text as Text
+import qualified Data.Text.Encoding as Text
 import qualified Ouroboros.Consensus.Ledger.SupportsMempool as Consensus
 import qualified Ouroboros.Consensus.Ledger.SupportsMempool as SupportsMempool
 import qualified Ouroboros.Consensus.Protocol.Ledger.HotKey as HotKey
 import qualified Plutus.V1.Ledger.Api as Plutus
 import qualified PlutusCore.Core as Plutus
+import qualified UntypedPlutusCore.Evaluation.Machine.Cek.Internal as Cek
+import qualified PlutusCore.Evaluation.Machine.ExBudget as Cek
+-- import qualified PlutusCore.DeBruijn as PlutusCore
+import qualified PlutusCore as PlutusCore
+import qualified UntypedPlutusCore.Core.Type
+import qualified PlutusCore.Evaluation.Machine.Exception
+import qualified PlutusCore.DeBruijn
 
 instance ToJSON (PredicateFailure (Core.EraRule "LEDGER" era)) => ToJSON (ApplyTxError era) where
   toJSON (ApplyTxError es) = toJSON es
@@ -1133,18 +1143,18 @@ instance ToJSON Alonzo.PlutusError where
 
 instance ToJSON Alonzo.PlutusDebug where
   toJSON = \case
-    Alonzo.PlutusDebugV1 costModel exUnits _sbs _ds protVer -> object
+    Alonzo.PlutusDebugV1 costModel exUnits sbs ds protVer -> object
       [ "costModel" .= costModel
       , "exUnits"   .= exUnits
-      -- , "sbs"       .= toJSON (show @Text sbs)
-      -- , "ds"        .= toJSON (show @Text ds)
+      , "sbs"       .= toJSON (Text.decodeLatin1 (B16.encode (SBS.fromShort sbs)))
+      , "ds"        .= toJSON ds
       , "protVer"   .= protVer
       ]
-    Alonzo.PlutusDebugV2 costModel exUnits _sbs _ds protVer -> object
+    Alonzo.PlutusDebugV2 costModel exUnits sbs ds protVer -> object
       [ "costModel" .= costModel
       , "exUnits"   .= exUnits
-      -- , "sbs"       .= toJSON (show @Text sbs)
-      -- , "ds"        .= toJSON (show @Text ds)
+      , "sbs"       .= toJSON (Text.decodeLatin1 (B16.encode (SBS.fromShort sbs)))
+      , "ds"        .= toJSON ds
       , "protVer"   .= protVer
       ]
 
@@ -1153,6 +1163,7 @@ instance ToJSON Plutus.EvaluationError where
     Plutus.CekError e -> object
       [ "kind"    .= String "CekError"
       , "error"   .= toJSON @Text (show e)
+      , "value"   .= toJSON e
       ]
     Plutus.DeBruijnError e -> object
       [ "kind"    .= String "DeBruijnError"
@@ -1176,3 +1187,60 @@ instance ToJSON (Plutus.Version ann) where
     , "j" .= toJSON j
     , "k" .= toJSON k
     ]
+
+instance ToJSON Plutus.Data where
+  toJSON = \case
+    Plutus.Constr t as -> object
+      [ "kind"      .= String "Constr"
+      , "tag"       .= toJSON t
+      , "arguments" .= fmap toJSON as
+      ]
+    Plutus.Map es -> object
+      [ "kind"    .= String "Map"
+      , "entries" .= fmap dataEntryToJson es
+      ]
+    Plutus.List es -> object
+      [ "kind"      .= String "List"
+      , "elements"  .= fmap toJSON es
+      ]
+    Plutus.I n -> object
+      [ "kind"  .= String "I"
+      , "value" .= toJSON n
+      ]
+    Plutus.B bs -> object
+      [ "kind"  .= String "B"
+      , "value" .= toJSON (Text.decodeLatin1 (B16.encode bs))
+      ]
+
+dataEntryToJson :: (Plutus.Data, Plutus.Data) -> Value
+dataEntryToJson (k, v) = toJSON [toJSON k, toJSON v]
+
+instance ToJSON Cek.CekUserError where
+  toJSON = \case
+    Cek.CekOutOfExError (Cek.ExRestrictingBudget res) -> object
+      [ "kind" .= String "CekOutOfExError"
+      , "budget" .= toJSON res
+      ]
+    Cek.CekEvaluationFailure -> object
+      [ "kind" .= String "CekEvaluationFailure"
+      ]
+
+instance (ToJSON name, ToJSON fun) => ToJSON (Cek.CekEvaluationException name uni fun) where
+
+instance (ToJSON name, ToJSON fun) => ToJSON (UntypedPlutusCore.Core.Type.Term name uni fun ()) where
+
+instance ToJSON fun => ToJSON (Cek.EvaluationError Cek.CekUserError (PlutusCore.Evaluation.Machine.Exception.MachineError fun)) where
+
+instance ToJSON PlutusCore.NamedDeBruijn where
+
+instance ToJSON PlutusCore.DeBruijn.Index where
+
+instance ToJSON PlutusCore.DefaultFun where
+
+instance ToJSON (PlutusCore.Some a) where
+  toJSON _ = "Some"
+
+instance ToJSON fun => ToJSON (PlutusCore.Evaluation.Machine.Exception.MachineError fun) where
+
+instance ToJSON PlutusCore.Evaluation.Machine.Exception.UnliftingError where
+  toJSON _ = "UnliftingError"

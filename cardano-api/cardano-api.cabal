@@ -146,6 +146,7 @@ library
                       , small-steps
                       , cardano-ledger-shelley
                       , small-steps
+                      , some
                       , stm
                       , strict-containers
                       , text
