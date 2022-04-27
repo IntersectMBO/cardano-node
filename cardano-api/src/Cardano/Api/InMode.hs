@@ -214,8 +214,11 @@ toConsensusTxId (TxIdInMode txid AlonzoEraInCardanoMode) =
   txid' :: Consensus.TxId (Consensus.GenTx Consensus.StandardAlonzoBlock)
   txid' = Consensus.ShelleyTxId $ toShelleyTxId txid
 
-toConsensusTxId (TxIdInMode _txid BabbageEraInCardanoMode) =
-  error "TODO: Babbage era - depends on consensus exposing a babbage era"
+toConsensusTxId (TxIdInMode txid BabbageEraInCardanoMode) =
+  Consensus.HardForkGenTxId (Consensus.OneEraGenTxId (S (S (S (S (S (Z (Consensus.WrapGenTxId txid'))))))))
+ where
+  txid' :: Consensus.TxId (Consensus.GenTx Consensus.StandardBabbageBlock)
+  txid' = Consensus.ShelleyTxId $ toShelleyTxId txid
 
 -- ----------------------------------------------------------------------------
 -- Transaction validation errors in the context of eras and consensus modes

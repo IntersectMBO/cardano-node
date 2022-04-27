@@ -18,8 +18,8 @@ module Cardano.Node.Tracing.StateRep
   , traceNodeStateShutdown
   ) where
 
-import           Cardano.Prelude
 import           Cardano.Logging
+import           Cardano.Prelude
 import           Data.Aeson
 import           Data.Time.Clock
 
@@ -199,13 +199,15 @@ getSlotForNow (SomeConsensusProtocol whichP pInfo) s = do
           nowSinceSystemStart = now `diffUTCTime` getSystemStartTime cfgShelley
       return . SlotNo $ floor nowSinceSystemStart
     CardanoBlockType -> do
-      let CardanoLedgerConfig _ cfgShelley cfgAllegra cfgMary cfgAlonzo =
+      let CardanoLedgerConfig _ cfgShelley cfgAllegra cfgMary
+                                cfgAlonzo cfgBabbage =
             Consensus.configLedger cfg
           latestNowSinceSystemStart = minimum
             [ now `diffUTCTime` getSystemStartTime cfgShelley
             , now `diffUTCTime` getSystemStartTime cfgAllegra
             , now `diffUTCTime` getSystemStartTime cfgMary
             , now `diffUTCTime` getSystemStartTime cfgAlonzo
+            , now `diffUTCTime` getSystemStartTime cfgBabbage
             ]
       return . SlotNo $ floor latestNowSinceSystemStart
     _ ->
