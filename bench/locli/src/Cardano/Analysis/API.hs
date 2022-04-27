@@ -15,9 +15,6 @@ import Data.Time.Clock          (NominalDiffTime)
 import Data.Time                (UTCTime)
 import Text.Printf              (PrintfArg, printf)
 
-import Cardano.Slotting.Slot    (EpochNo(..), SlotNo(..))
-import Ouroboros.Network.Block  (BlockNo(..))
-
 import Cardano.Analysis.Chain
 import Cardano.Analysis.ChainFilter
 import Cardano.Analysis.Context
@@ -37,7 +34,8 @@ import Data.Distribution
 data BlockPropagation
   = BlockPropagation
     { bpVersion             :: !Version
-    , bpSlotRange           :: !(SlotNo, SlotNo) -- ^ Analysis range, inclusive.
+    , bpDomainSlots         :: !(DataDomain SlotNo)
+    , bpDomainBlocks        :: !(DataDomain BlockNo)
     , bpForgerChecks        :: !(Distribution Float NominalDiffTime)
     , bpForgerLeads         :: !(Distribution Float NominalDiffTime)
     , bpForgerForges        :: !(Distribution Float NominalDiffTime)
@@ -52,7 +50,6 @@ data BlockPropagation
     , bpPeerSends           :: !(Distribution Float NominalDiffTime)
     , bpPropagation         :: ![(Float, Distribution Float NominalDiffTime)]
     , bpSizes               :: !(Distribution Float Int)
-    , bpChainBlockEvents    :: [BlockEvents]
     }
   deriving (Generic, FromJSON, ToJSON, Show)
 
@@ -137,21 +134,32 @@ data BPErrorKind
   | BPEFork                  !Hash
   deriving (FromJSON, Generic, NFData, Show, ToJSON)
 
-data DataDomain
+data DataDomain a
   = DataDomain
-    { ddRawSlotFirst      :: !SlotNo
-    , ddRawSlotLast       :: !SlotNo
-    , ddAnalysisSlotFirst :: !SlotNo
-    , ddAnalysisSlotLast  :: !SlotNo
+    { ddRawFirst      :: !a
+    , ddRawLast       :: !a
+    , ddFilteredFirst :: !a
+    , ddFilteredLast  :: !a
+    , ddRawCount      :: Int
+    , ddFilteredCount :: Int
     }
-  deriving (Generic, Show, ToJSON)
+  deriving (Generic, Show, ToJSON, FromJSON)
+  deriving anyclass NFData
 -- Perhaps:  Plutus.V1.Ledger.Slot.SlotRange = Interval Slot
+
+mkDataDomainInj :: a -> a -> (a -> Int) -> DataDomain a
+mkDataDomainInj f l measure = DataDomain f l f l delta delta
+  where delta = measure l - measure f
+
+mkDataDomain :: a -> a -> a -> a -> (a -> Int) -> DataDomain a
+mkDataDomain f l f' l' measure =
+  DataDomain f l f' l' (measure l - measure f) (measure l' - measure f')
 
 -- | The top-level representation of the machine timeline analysis results.
 data MachTimeline
   = MachTimeline
     { sVersion           :: !Version
-    , sSlotRange         :: (SlotNo, SlotNo) -- ^ Analysis range, inclusive.
+    , sDomain            :: !(DataDomain SlotNo)
     , sMaxChecks         :: !Word64
     , sSlotMisses        :: ![Word64]
     , sSpanLensCPU85     :: ![Int]
@@ -172,7 +180,7 @@ data MachTimeline
     , sSpanLensCPU85RwdDistrib  :: !(Distribution Float Int)
     , sResourceDistribs  :: !(Resources (Distribution Float Word64))
     }
-  deriving (Generic, Show, ToJSON)
+  deriving (Generic, NFData, Show, ToJSON)
 
 data SlotStats
   = SlotStats
@@ -255,6 +263,18 @@ testSlotStats g SlotStats{..} = \case
 --
 -- * Timeline rendering instances
 --
+bpFieldsForger :: DField a -> Bool
+bpFieldsForger Field{fId} = elem fId
+  [ "fChecked", "fLeading", "fForged", "fAdopted", "fAnnounced", "fSendStart" ]
+
+bpFieldsPeers :: DField a -> Bool
+bpFieldsPeers Field{fId} = elem fId
+  [ "noticedVal", "requestedVal", "fetchedVal", "pAdoptedVal", "pAnnouncedVal", "pSendStartVal" ]
+
+bpFieldsPropagation :: DField a -> Bool
+bpFieldsPropagation Field{fHead2} = elem fHead2
+  [ "0.50", "0.80", "0.90", "0.92", "0.94", "0.96", "0.98", "1.00" ]
+
 instance RenderDistributions BlockPropagation where
   rdFields _ =
     --  Width LeftPad
@@ -356,6 +376,36 @@ instance RenderTimeline BlockEvents where
      bpeIsNegative _ _ = False
 
   rtCommentary BlockEvents{..} = ("    " <>) . show <$> beErrors
+
+mtFieldsReport :: DField a -> Bool
+mtFieldsReport Field{fId} = elem fId
+  [ "CPU", "GC", "MUT", "RSS", "Heap", "Live", "Alloc" ]
+
+instance RenderDistributions MachTimeline where
+  rdFields _ =
+    --  Width LeftPad
+    [ Field 4 0 "missR"    "Miss"  "ratio"  $ DFloat   sMissDistrib
+    , Field 5 0 "CheckΔ"   (d!!0)  "Check"  $ DDeltaT  sSpanCheckDistrib
+    , Field 5 0 "LeadΔ"    (d!!1)  "Lead"   $ DDeltaT  sSpanLeadDistrib
+    , Field 5 0 "ForgeΔ"   (d!!2)  "Forge"  $ DDeltaT  sSpanForgeDistrib
+    , Field 4 0 "BlkGap"   "Block" "gap"    $ DWord64  sBlocklessDistrib
+    , Field 5 0 "chDensity" "Dens" "ity"    $ DFloat   sDensityDistrib
+    , Field 3 0 "CPU"      "CPU"   "%"      $ DWord64 (rCentiCpu . sResourceDistribs)
+    , Field 3 0 "GC"       "GC"    "%"      $ DWord64 (rCentiGC . sResourceDistribs)
+    , Field 3 0 "MUT"      "MUT"    "%"     $ DWord64 (fmap (min 999) . rCentiMut . sResourceDistribs)
+    , Field 3 0 "GcMaj"    "GC "   "Maj"    $ DWord64 (rGcsMajor . sResourceDistribs)
+    , Field 3 0 "GcMin"    "flt "  "Min"    $ DWord64 (rGcsMinor . sResourceDistribs)
+    , Field 5 0 "RSS"      (m!!0)  "RSS"    $ DWord64 (rRSS . sResourceDistribs)
+    , Field 5 0 "Heap"     (m!!1)  "Heap"   $ DWord64 (rHeap . sResourceDistribs)
+    , Field 5 0 "Live"     (m!!2)  "Live"   $ DWord64 (rLive . sResourceDistribs)
+    , Field 5 0 "Allocd"   "Alloc" "MB"     $ DWord64 (rAlloc . sResourceDistribs)
+    , Field 5 0 "CPU85%LensAll"  (c!!0) "All"   $ DInt     sSpanLensCPU85Distrib
+    , Field 5 0 "CPU85%LensEBnd" (c!!1) "EBnd"  $ DInt     sSpanLensCPU85EBndDistrib
+    ]
+   where
+     d = nChunksEachOf  3 6 "---- Δt ----"
+     m = nChunksEachOf  3 6 "Memory usage, MB"
+     c = nChunksEachOf  2 6 "CPU85% spans"
 
 instance RenderTimeline SlotStats where
   rtFields _ =

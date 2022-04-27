@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE GADTs #-}
@@ -48,11 +49,15 @@ data Distribution a b =
   , dPercentiles  :: [Percentile a b]
   }
   deriving (Functor, Generic, Show)
+  deriving anyclass NFData
 
 instance (FromJSON a, FromJSON b) => FromJSON (Distribution a b)
 instance (  ToJSON a,   ToJSON b) => ToJSON   (Distribution a b)
 
-newtype PercSpec a = Perc { psFrac :: a } deriving (Eq, Generic, Show)
+newtype PercSpec a =
+  Perc { psFrac :: a }
+  deriving (Eq, Generic, Show)
+  deriving anyclass NFData
 
 instance (FromJSON a) => FromJSON (PercSpec a)
 instance (  ToJSON a) => ToJSON   (PercSpec a)
@@ -79,6 +84,7 @@ data Percentile a b =
   , pctSample      :: !b
   }
   deriving (Functor, Generic, Show)
+  deriving anyclass NFData
 
 instance (FromJSON a, FromJSON b) => FromJSON (Percentile a b)
 instance (  ToJSON a,   ToJSON b) => ToJSON   (Percentile a b)

@@ -12,7 +12,6 @@ import Data.Time.Clock qualified as Time
 
 import Cardano.Analysis.Context
 import Cardano.Analysis.Ground
-import Cardano.Slotting.Slot (EpochNo (..),  SlotNo (..))
 
 
 -- | A pretty obvious (and dangerously assumptious) interpretation of an absolute slot number.

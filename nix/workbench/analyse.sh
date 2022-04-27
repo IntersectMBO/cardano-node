@@ -39,7 +39,7 @@ do case "$1" in
        --outdir )           self_args+=($1 "$2"); outdir=$2; shift;;
        * ) break;; esac; shift; done
 
-if ! curl --connect-timeout=0.5 http://169.254.169.254/latest/meta-data 2>&1 | grep --quiet 404
+if curl --connect-timeout 0.5 http://169.254.169.254/latest/meta-data >/dev/null 2>&1
 then aws='true'; fi
 
 ## Work around the odd parallelism bug killing performance on AWS:
@@ -147,8 +147,13 @@ case "$op" in
             'analyse'
             'block-propagation'
             ## ->
-            --timeline-pretty "$adir"/block-propagation.txt
-            --analysis-json   "$adir"/block-propagation.json
+            --forger-text      "$adir"/blockprop-forger.txt
+            --peers-text       "$adir"/blockprop-peers.txt
+            --propagation-text "$adir"/blockprop-propagation.txt
+            --stats-text       "$adir"/blockprop-stats.txt
+            --analysis-json    "$adir"/blockprop.json
+            --chain-text       "$adir"/chain.txt
+            --chain-json       "$adir"/chain.json
 
             $(if test -n "$dump_logobjects"
               then echo --logobjects-json; fi)
@@ -178,7 +183,9 @@ case "$op" in
             'analyse'
             'machine-timeline'
             ## ->
-            --timeline-pretty         "$adir"/logs-$mach.timeline.txt
+            --fullstats-text          "$adir"/logs-$mach.fullstats.txt
+            --reportstats-text        "$adir"/logs-$mach.report.txt
+            --timeline-text           "$adir"/logs-$mach.timeline.txt
             --stats-csv               "$adir"/logs-$mach.stats.csv
             --analysis-json           "$adir"/logs-$mach.analysis.json
 

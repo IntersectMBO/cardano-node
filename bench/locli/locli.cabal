@@ -18,6 +18,7 @@ library
                        Data.Distribution
 
                        Cardano.Command
+                       Cardano.Util
 
                        Cardano.Analysis.TopHandler
                        Cardano.Analysis.Run

@@ -6,21 +6,14 @@ module Cardano.Analysis.Driver
   ) where
 
 import Prelude                          (String)
-import Prelude           qualified as P (error, head)
+import Prelude           qualified as P (head)
 import Cardano.Prelude
 
 import Control.Arrow                    ((&&&))
-import Control.Monad
 import Control.Monad.Trans.Except.Extra (firstExceptT)
-import Control.Concurrent.Async         (mapConcurrently)
 
-import Data.Aeson                       qualified as AE
-import Data.ByteString.Lazy.Char8       qualified as LBS
 import Data.Text                        qualified as T
-import Data.Text.IO                     qualified as T
 import Data.List                        ((!!))
-
-import System.FilePath                  qualified as F
 
 import Graphics.Histogram               qualified as Hist
 import Graphics.Gnuplot.Frame.OptionSet qualified as Opts
@@ -34,7 +27,15 @@ import Cardano.Analysis.Run
 import Cardano.Analysis.Version
 import Cardano.Unlog.LogObject          hiding (Text)
 import Cardano.Unlog.Render
+import Cardano.Util
 
+
+_reportBanner :: [FilterName] -> FilePath -> Text
+_reportBanner fnames inputfp = mconcat
+  [ "input: ", logfileRunIdentifier (T.pack inputfp), " "
+  , "locli: ", gitRev getVersion, " "
+  , "filters: ", T.intercalate " " (unFilterName <$> fnames)
+  ]
 
 -- | This estimates the run identifier, given the expected path structure.
 logfileRunIdentifier :: Text -> Text
@@ -44,13 +45,6 @@ logfileRunIdentifier fp =
     _ -> fp
  where
    xs = T.split (== '/') fp
-
-textId :: FilePath -> [FilterName] -> Text
-textId inputfp fnames = mconcat
-  [ "input: ", logfileRunIdentifier (T.pack inputfp), " "
-  , "locli: ", gitRev getVersion
-  , "filters: ", T.intercalate " " (unFilterName <$> fnames)
-  ]
 
 --
 -- Analysis command dispatch
@@ -81,7 +75,8 @@ runAnalysisCommand _ _ [] _ =
 --
 -- Analysis command implementation
 --
-runLiftLogObjects :: [JsonLogfile] -> ExceptT Text IO [(JsonLogfile, [LogObject])]
+runLiftLogObjects :: [JsonLogfile]
+                  -> ExceptT Text IO [(JsonLogfile, [LogObject])]
 runLiftLogObjects fs = liftIO $
   flip mapConcurrently fs
     (joinT . (pure &&& readLogObjectStream . unJsonLogfile))
@@ -89,86 +84,55 @@ runLiftLogObjects fs = liftIO $
    joinT :: (IO a, IO b) -> IO (a, b)
    joinT (a, b) = (,) <$> a <*> b
 
-runDumpLogObjects :: [(JsonLogfile, [LogObject])] -> ExceptT Text IO ()
-runDumpLogObjects os = liftIO $ do
-  flip mapConcurrently os $
-    \(JsonLogfile f, objs) -> do
-      dumpLOStream objs
-        (JsonOutputFile $ F.dropExtension f <> ".logobjects.json")
-  pure ()
+runBlockProp :: Run -> [ChainFilter] -> [(JsonLogfile, [LogObject])]
+             -> ExceptT Text IO (BlockPropagation, [BlockEvents])
+runBlockProp run filters objLists = liftIO $
+  blockProp run filters objLists
 
-runBlockPropagation ::
-  Run -> [ChainFilter] -> [FilterName] -> [JsonLogfile] -> BlockPropagationOutputFiles -> ExceptT Text IO ()
-runBlockPropagation run filters filterNames logfiles BlockPropagationOutputFiles{..} = do
+runBlockPropagation :: Run -> [ChainFilter] -> [FilterName] -> [JsonLogfile] -> BlockPropagationOutputFiles
+                    -> ExceptT Text IO ()
+runBlockPropagation run filters _filterNames logfiles BlockPropagationOutputFiles{..} = do
   objLists <- runLiftLogObjects logfiles
+  (blockPropagation, chain) <- runBlockProp run filters objLists
 
-  liftIO $ do
-    blockPropagation <- blockProp run filters objLists
+  forM_ bpofAnalysis $ dumpObject "blockprop"
+    blockPropagation
+  forM_ bpofChain $ dumpObjects "blockprop-chain"
+    chain
 
-    forM_ bpofTimelinePretty $
-      \(TextOutputFile f) ->
-        withFile f WriteMode $ \hnd -> do
-          progress "pretty-timeline" (Q f)
-          hPutStrLn hnd $ textId f filterNames
-          mapM_ (T.hPutStrLn hnd)
-            (renderDistributions run RenderPretty blockPropagation)
-          mapM_ (T.hPutStrLn hnd)
-            (renderTimeline run $ bpChainBlockEvents blockPropagation)
+  forM_ bpofForgerPretty $ dumpText "blockprop-forger" $
+    renderDistributions run RenderPretty bpFieldsForger blockPropagation
 
-    forM_ bpofAnalysis $
-      \(JsonOutputFile f) ->
-        withFile f WriteMode $ \hnd -> do
-          progress "analysis" (Q f)
-          LBS.hPutStrLn hnd (AE.encode blockPropagation)
+  forM_ bpofPeersPretty $ dumpText "blockprop-peers" $
+    renderDistributions run RenderPretty bpFieldsPeers blockPropagation
 
-runMachineTimeline ::
-  Run -> [JsonLogfile] -> [ChainFilter] -> [FilterName] -> MachineTimelineOutputFiles -> ExceptT Text IO ()
-runMachineTimeline run@Run{genesis} logfiles filters filterNames MachineTimelineOutputFiles{..} = do
-  objLists <- runLiftLogObjects logfiles
+  forM_ bpofPropagationPretty $ dumpText "blockprop-peers" $
+    renderDistributions run RenderPretty bpFieldsPropagation blockPropagation
 
-  liftIO $ do
-    -- 0. Recover LogObjects
+  forM_ bpofFullStatsPretty $ dumpText "blockprop-full-stats" $
+    renderDistributions run RenderPretty (const True) blockPropagation
 
-    -- 1. Derive the basic scalars and vectors
-    let (,) runStats allSlotStats = timelineFromLogObjects run (snd $ objLists !! 0)
-    forM_ mtofSlotStats $
-      \(JsonOutputFile f) -> do
-        progress "raw-slots" (Q f)
-        withFile f WriteMode $ \hnd ->
-          forM_ allSlotStats $ LBS.hPutStrLn hnd . AE.encode
+  forM_ bpofChainPretty $ dumpText "blockprop-chain" $
+    renderTimeline run (const True) chain
 
-    -- 2. Filter the slot stats
-    let slotStats = filterSlotStats filters allSlotStats
-    progress "subsetting" $ J $
-      DataDomain
-        ((head    allSlotStats <&> slSlot) & fromMaybe 0)
-        ((lastMay allSlotStats <&> slSlot) & fromMaybe 0)
-        ((head       slotStats <&> slSlot) & fromMaybe 0)
-        ((lastMay    slotStats <&> slSlot) & fromMaybe 0)
+runSlotFilters ::
+     Run
+  -> [ChainFilter] -> [FilterName]
+  -> [(JsonLogfile, [SlotStats])]
+  -> ExceptT Text IO (DataDomain SlotNo, [(JsonLogfile, [SlotStats])])
+runSlotFilters Run{genesis} flts _fltNames slots = do
+  filtered <- liftIO $ mapConcurrentlyPure (fmap $ filterSlotStats flts) slots
+  let samplePre  =    slots !! 0 & snd
+      samplePost = filtered !! 0 & snd
+      domain = mkDataDomain
+        ((head    samplePre  <&> slSlot) & fromMaybe 0)
+        ((lastMay samplePre  <&> slSlot) & fromMaybe 0)
+        ((head    samplePost <&> slSlot) & fromMaybe 0)
+        ((lastMay samplePost <&> slSlot) & fromMaybe 0)
+        (fromIntegral . unSlotNo)
+  progress "subsetting" $ J domain
+  pure $ (,) domain filtered
 
-    -- 3. Derive the timeline
-    let timeline :: MachTimeline
-        timeline = slotStatsMachTimeline run slotStats
-        timelineOutput :: LBS.ByteString
-        timelineOutput = AE.encode timeline
-
-    -- 4. Render various outputs
-    forM_ mtofTimelinePretty
-      (renderPrettyMachTimeline slotStats timeline)
-    forM_ mtofStatsCsv
-      (renderExportStats runStats timeline)
-    forM_ mtofTimelineCsv
-       (renderExportTimeline slotStats)
-    forM_ mtofHistogram
-      (renderHistogram "CPU usage spans over 85%" "Span length"
-        (toList $ sort $ sSpanLensCPU85 timeline))
-
-    flip (maybe $ LBS.putStrLn timelineOutput) mtofAnalysis $
-      \case
-        JsonOutputFile f ->
-          withFile f WriteMode $ \hnd -> do
-            progress "analysis" (Q f)
-            LBS.hPutStrLn hnd timelineOutput
  where
    -- | Use the supplied chain filters.
    --
@@ -184,47 +148,69 @@ runMachineTimeline run@Run{genesis} logfiles filters filterNames MachineTimeline
       slotFilters :: [SlotCond]
       slotFilters = catSlotFilters filters
 
-   renderHistogram :: Integral a
+runSlotStatsSummary :: Run -> [(JsonLogfile, [SlotStats])]
+  -> ExceptT Text IO [(JsonLogfile, MachTimeline)]
+runSlotStatsSummary run slots = liftIO $
+  mapConcurrentlyPure (fmap $ slotStatsSummary run) slots
+
+runMachineTimeline ::
+     Run -> [JsonLogfile] -> [ChainFilter] -> [FilterName] -> MachineTimelineOutputFiles
+  -> ExceptT Text IO ()
+runMachineTimeline run@Run{} logfiles filters filterNames MachineTimelineOutputFiles{..} = do
+  objLists <- runLiftLogObjects logfiles
+  (_scalars, slotsRaw :: [(JsonLogfile, [SlotStats])]) <- liftIO $
+    mapAndUnzip redistribute <$>
+      collectSlotStats run objLists
+
+  (_domain, slots :: [(JsonLogfile, [SlotStats])]) <-
+    runSlotFilters run filters filterNames slotsRaw
+
+  forM_ mtofSlotStats . const $
+    dumpAssociatedObjectStreams "slots" slots
+
+  analyses :: [(JsonLogfile, MachTimeline)] <-
+    runSlotStatsSummary run slots
+
+  forM_ mtofAnalysis . const $
+    dumpAssociatedObjects "perf-stats"
+      analyses
+
+  forM_ mtofFullStatsPretty . const $
+    dumpAssociatedTextStreams "perf-full" $
+      fmap (fmap $ renderDistributions run RenderPretty (const True)) analyses
+
+  forM_ mtofReportStatsPretty . const $
+    dumpAssociatedTextStreams "perf-report" $
+      fmap (fmap $ renderDistributions run RenderPretty mtFieldsReport) analyses
+
+  forM_ mtofTimelinePretty . const $
+    dumpAssociatedTextStreams "mach" $
+      fmap (fmap $ renderTimeline run (const True)) slots
+
+  -- forM_ mtofFullStatsCsv $ dumpText "perf-full" $
+  --   renderDistributions run RenderCsv (const True) analyses
+
+ where
+   _renderHistogram :: Integral a
      => String -> String -> [a] -> OutputFile -> IO ()
-   renderHistogram desc ylab xs (OutputFile f) =
+   _renderHistogram desc ylab xs (OutputFile f) =
      Hist.plotAdv f opts hist >> pure ()
     where
       hist = Hist.histogram Hist.binFreedmanDiaconis $ fromIntegral <$> xs
       opts = Opts.title desc $ Opts.yLabel ylab $ Opts.xLabel "Population" $
              Hist.defOpts hist
 
-   renderPrettyMachTimeline ::
-        [SlotStats] -> MachTimeline -> TextOutputFile -> IO ()
-   renderPrettyMachTimeline xs s (TextOutputFile f) =
-     withFile f WriteMode $ \hnd -> do
-       progress "pretty-timeline" (Q f)
-       hPutStrLn hnd $ textId f filterNames
-       mapM_ (T.hPutStrLn hnd)
-         (renderDistributions run RenderPretty s)
-       mapM_ (T.hPutStrLn hnd)
-         (renderTimeline run xs)
-   renderExportStats :: RunScalars -> MachTimeline -> CsvOutputFile -> IO ()
-   renderExportStats rs s (CsvOutputFile f) =
+   _renderExportStats :: RunScalars -> MachTimeline -> CsvOutputFile -> IO ()
+   _renderExportStats rs s (CsvOutputFile f) =
      withFile f WriteMode $
        \h -> do
          progress "csv-stats" (Q f)
          mapM_ (hPutStrLn h)
-           (renderDistributions run RenderCsv s)
+           (renderDistributions run RenderCsv (const True) s)
          mapM_ (hPutStrLn h) $
            renderRunExport run
            <>
            renderRunScalars rs
-   renderExportTimeline :: [SlotStats] -> CsvOutputFile -> IO ()
-   renderExportTimeline _xs (CsvOutputFile _o) =
-     P.error "Timeline export is not supported."
-     -- withFile o WriteMode $
-     --   mapM_ (T.hPutStrLn hnd) (renderTimeline xs)
-
-dumpLOStream :: [LogObject] -> JsonOutputFile -> IO ()
-dumpLOStream objs (JsonOutputFile f) = do
-  progress "logobjects" (Q f)
-  withFile f WriteMode $ \hnd -> do
-    forM_ objs $ LBS.hPutStrLn hnd . AE.encode
 
 renderRunScalars :: RunScalars -> [Text]
 renderRunScalars RunScalars{..} =

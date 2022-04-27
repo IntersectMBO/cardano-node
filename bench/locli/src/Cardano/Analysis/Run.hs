@@ -4,7 +4,6 @@
 {-# OPTIONS_GHC -Wno-incomplete-patterns -Wno-name-shadowing -Wno-orphans #-}
 module Cardano.Analysis.Run (module Cardano.Analysis.Run) where
 
-import Prelude (String)
 import Cardano.Prelude
 
 import Control.Monad (fail)
@@ -18,11 +17,11 @@ import Data.Text qualified as T
 import Data.Time.Clock.POSIX qualified as Time
 import Options.Applicative
 import Options.Applicative qualified as Opt
-import Text.Printf (printf)
 
 import Cardano.Analysis.ChainFilter
 import Cardano.Analysis.Context
 import Cardano.Analysis.Ground
+import Cardano.Util
 
 
 data AnalysisCommand
@@ -40,11 +39,13 @@ parseAnalysisCommand =
     mconcat
       [ Opt.command "machine-timeline"
           (Opt.info (MachineTimelineCmd
-                       <$> parseMachineTimelineOutputFiles) $
+                       <$> parseMachineTimelineOutputFiles
+                     <**> Opt.helper) $
             Opt.progDesc "Machine performance timeline")
       , Opt.command "block-propagation"
           (Opt.info (BlockPropagationCmd
-                       <$> parseBlockPropagationOutputFiles) $
+                       <$> parseBlockPropagationOutputFiles
+                     <**> Opt.helper) $
             Opt.progDesc "Block propagation")
       , Opt.command "substring-keys"
           (Opt.info (pure SubstringKeysCmd) $
@@ -165,19 +166,3 @@ instance FromJSON RunPartial where
     let metadata = Metadata{..}
         genesis  = ()
     pure Run{..}
-
----
---- Run progress
----
-data F
-  = R String
-  | Q String
-  | L [String]
-  | forall a. ToJSON a => J a
-
-progress :: MonadIO m => String -> F -> m ()
-progress key = putStrLn . T.pack . \case
-  R x  -> printf "{ \"%s\":  %s }"    key x
-  Q x  -> printf "{ \"%s\": \"%s\" }" key x
-  L xs -> printf "{ \"%s\": \"%s\" }" key (Cardano.Prelude.intercalate "\", \"" xs)
-  J x  -> printf "{ \"%s\": %s }" key (LBS.unpack $ Aeson.encode x)

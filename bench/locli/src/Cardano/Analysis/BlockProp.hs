@@ -22,8 +22,6 @@ import Prelude                  (String, (!!), error, head, last, id, show, tail
 import Cardano.Prelude          hiding (head, show)
 
 import Control.Arrow            ((***), (&&&))
-import Control.DeepSeq          qualified as DS
-import Control.Concurrent.Async (mapConcurrently)
 import Data.Aeson               (ToJSON(..), FromJSON(..))
 import Data.Bifunctor
 import Data.Function            (on)
@@ -58,6 +56,7 @@ import Cardano.Analysis.Version
 import Cardano.Unlog.LogObject  hiding (Text)
 import Cardano.Unlog.Render
 import Cardano.Unlog.Resources
+import Cardano.Util
 
 
 -- | Block's events, as seen by its forger.
@@ -260,23 +259,28 @@ mapChainToPeerBlockObservationCDF percs cbes proj desc =
    blockObservations be =
      proj `mapMaybe` filter isValidBlockObservation (beObservations be)
 
-blockProp :: Run -> [ChainFilter] -> [(JsonLogfile, [LogObject])] -> IO BlockPropagation
+blockProp :: Run -> [ChainFilter] -> [(JsonLogfile, [LogObject])] -> IO (BlockPropagation, [BlockEvents])
 blockProp run cFilters xs = do
   putStrLn ("blockProp: recovering block event maps" :: String)
-  doBlockProp run cFilters =<< mapConcurrently
-    (\x ->
-        evaluate $ DS.force $
-        blockEventMapsFromLogObjects run x)
-    xs
+  mapConcurrentlyPure (blockEventMapsFromLogObjects run) xs
+    >>= doBlockProp run cFilters
 
-doBlockProp :: Run -> [ChainFilter] -> [MachView] -> IO BlockPropagation
+doBlockProp :: Run -> [ChainFilter] -> [MachView] -> IO (BlockPropagation, [BlockEvents])
 doBlockProp run@Run{genesis} cFilters machViews = do
   putStrLn ("tip block: "    <> show tipBlock :: String)
   putStrLn ("chain length: " <> show (length chain) :: String)
-  pure BlockPropagation
-    { bpSlotRange           = (,)
-                              (head chainV & beSlotNo)
-                              (last chainV & beSlotNo)
+  let (blk0,  blkL)  = (head chain,  last chain)
+      (blk0V, blkLV) = (head chainV, last chainV)
+  pure . (, chainV) $ BlockPropagation
+    { bpDomainSlots         = DataDomain
+                                (blk0  & beSlotNo)  (blkL  & beSlotNo)
+                                (blk0V & beSlotNo)  (blkLV & beSlotNo)
+                                (fromIntegral . unSlotNo $ beSlotNo blkL  - beSlotNo blk0)
+                                (fromIntegral . unSlotNo $ beSlotNo blkLV - beSlotNo blk0V)
+    , bpDomainBlocks        = DataDomain
+                                (blk0  & beBlockNo) (blkL  & beBlockNo)
+                                (blk0V & beBlockNo) (blkLV & beBlockNo)
+                                (length chain) (length chainV)
     , bpForgerChecks        = forgerEventsCDF   (Just . bfChecked   . beForge)
     , bpForgerLeads         = forgerEventsCDF   (Just . bfLeading   . beForge)
     , bpForgerForges        = forgerEventsCDF   (Just . bfForged    . beForge)
@@ -296,7 +300,6 @@ doBlockProp run@Run{genesis} cFilters machViews = do
       [ (p', forgerEventsCDF (Just . dPercSpec' "bePropagation" p . bePropagation))
       | p@(Perc p') <- adoptionPcts <> [Perc 1.0] ]
     , bpSizes               = forgerEventsCDF   (Just . bfBlockSize . beForge)
-    , bpChainBlockEvents    = chainV
     , bpVersion             = getVersion
     }
  where

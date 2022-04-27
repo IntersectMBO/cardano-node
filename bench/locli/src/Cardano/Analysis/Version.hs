@@ -4,13 +4,14 @@ module Cardano.Analysis.Version
   (Version (..), getVersion)
 where
 
-import qualified Cardano.Git.Rev (gitRev)
-import           Data.Aeson (FromJSON (..), ToJSON (..))
-import           Data.Text (Text, pack)
-import           Data.Version (showVersion)
-import           GHC.Generics (Generic)
-import           Paths_locli (version)
-import           Prelude (Show)
+import Cardano.Prelude (NFData)
+import Cardano.Git.Rev qualified (gitRev)
+import Data.Aeson (FromJSON (..), ToJSON (..))
+import Data.Text (Text, pack)
+import Data.Version (showVersion)
+import GHC.Generics (Generic)
+import Paths_locli (version)
+import Prelude (Show)
 
 
 data Version =
@@ -19,6 +20,7 @@ data Version =
   , version :: Text
   }
   deriving (Generic, FromJSON, Show, ToJSON)
+  deriving anyclass NFData
 
 getVersion :: Version
 getVersion =

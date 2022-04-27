@@ -17,7 +17,6 @@ import Options.Applicative              qualified as Opt
 import System.FilePath.Posix                        (takeBaseName)
 
 import Cardano.Analysis.Ground
-import Cardano.Slotting.Slot            (EpochNo (..),  SlotNo (..))
 
 -- import Cardano.Analysis.Chain
 

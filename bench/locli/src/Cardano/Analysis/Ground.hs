@@ -1,6 +1,10 @@
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
 {-# LANGUAGE DeriveGeneric #-}
-module Cardano.Analysis.Ground (module Cardano.Analysis.Ground) where
+module Cardano.Analysis.Ground
+  ( module Cardano.Analysis.Ground
+  , BlockNo (..), EpochNo (..), SlotNo (..)
+  )
+where
 
 import Prelude (String)
 import Cardano.Prelude hiding (head)
@@ -13,7 +17,8 @@ import Data.Time.Clock                              (UTCTime, NominalDiffTime)
 import Options.Applicative
 import Options.Applicative              qualified as Opt
 
-import Ouroboros.Network.Block (SlotNo(..))
+import Cardano.Slotting.Slot    (EpochNo(..), SlotNo(..))
+import Ouroboros.Network.Block  (BlockNo(..))
 
 
 newtype EpochSlot = EpochSlot { unEpochSlot :: Word64 }
@@ -59,11 +64,12 @@ newtype OutputFile
 data MachineTimelineOutputFiles
   = MachineTimelineOutputFiles
   { mtofSlotStats          :: Maybe JsonOutputFile
+  , mtofAnalysis           :: Maybe JsonOutputFile
+  , mtofFullStatsPretty    :: Maybe TextOutputFile
+  , mtofReportStatsPretty  :: Maybe TextOutputFile
   , mtofTimelinePretty     :: Maybe TextOutputFile
   , mtofTimelineCsv        :: Maybe  CsvOutputFile
-  , mtofStatsCsv           :: Maybe  CsvOutputFile
-  , mtofHistogram          :: Maybe     OutputFile
-  , mtofAnalysis           :: Maybe JsonOutputFile
+  , mtofFullStatsCsv       :: Maybe  CsvOutputFile
   , mtofDerivedVectors0Csv :: Maybe  CsvOutputFile
   , mtofDerivedVectors1Csv :: Maybe  CsvOutputFile
   }
@@ -71,7 +77,12 @@ data MachineTimelineOutputFiles
 
 data BlockPropagationOutputFiles
   = BlockPropagationOutputFiles
-  { bpofTimelinePretty     :: Maybe TextOutputFile
+  { bpofForgerPretty       :: Maybe TextOutputFile
+  , bpofPeersPretty        :: Maybe TextOutputFile
+  , bpofPropagationPretty  :: Maybe TextOutputFile
+  , bpofFullStatsPretty    :: Maybe TextOutputFile
+  , bpofChainPretty        :: Maybe TextOutputFile
+  , bpofChain              :: Maybe JsonOutputFile
   , bpofAnalysis           :: Maybe JsonOutputFile
   }
   deriving (Show)
@@ -174,9 +185,18 @@ parseMachineTimelineOutputFiles =
   MachineTimelineOutputFiles
     <$> optional
         (argJsonOutputFile "slotstats-json"
-           "Dump extracted per-slot summaries, as a side-effect of log analysis")
+           "Per-slot performance summaries")
     <*> optional
-        (argTextOutputFile "timeline-pretty"
+        (argJsonOutputFile "analysis-json"
+           "Write analysis JSON to this file, if specified -- otherwise print to stdout.")
+    <*> optional
+        (argTextOutputFile "fullstats-text"
+           "Full performance statistics breakdown")
+    <*> optional
+        (argTextOutputFile "reportstats-text"
+           "Report performance statistics breakdown")
+    <*> optional
+        (argTextOutputFile "timeline-text"
            "Dump pretty timeline of extracted slot leadership summaries, as a side-effect of log analysis")
     <*> optional
         (argCsvOutputFile "timeline-csv"
@@ -184,12 +204,6 @@ parseMachineTimelineOutputFiles =
     <*> optional
         (argCsvOutputFile "stats-csv"
            "Dump CSV of the timeline statistics")
-    <*> optional
-        (argOutputFile "cpu-spans-histogram-png"
-           "Write a PNG file with the CPU spans histogram")
-    <*> optional
-        (argJsonOutputFile "analysis-json"
-           "Write analysis JSON to this file, if specified -- otherwise print to stdout.")
     <*> optional
         (argCsvOutputFile "derived-vectors-0-csv"
            "Dump CSV of vectors derived from the timeline")
@@ -201,9 +215,16 @@ parseBlockPropagationOutputFiles :: Parser BlockPropagationOutputFiles
 parseBlockPropagationOutputFiles =
   BlockPropagationOutputFiles
     <$> optional
-        (argTextOutputFile "timeline-pretty"
-           "Dump pretty timeline of extracted slot leadership summaries, as a side-effect of log analysis")
+        (argTextOutputFile "forger-text"       "Forger stats")
     <*> optional
-        (argJsonOutputFile "analysis-json"
-           "Write analysis JSON to this file, if specified -- otherwise print to stdout.")
-
+        (argTextOutputFile "peers-text"        "Peers stats")
+    <*> optional
+        (argTextOutputFile "propagation-text"  "Propagation stats")
+    <*> optional
+        (argTextOutputFile "stats-text"        "Full (forger+peers+propagation) stats")
+    <*> optional
+        (argTextOutputFile "chain-text"        "Timeline of chain evolution, one line per block")
+    <*> optional
+        (argJsonOutputFile "chain-json"        "Chain as JSON")
+    <*> optional
+        (argJsonOutputFile "analysis-json"     "Analysis as JSON")

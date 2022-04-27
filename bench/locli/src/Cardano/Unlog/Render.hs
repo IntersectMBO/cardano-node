@@ -67,8 +67,8 @@ mapSomeFieldDistribution f a = \case
   DFloat  s -> f (s a)
   DDeltaT s -> f (s a)
 
-renderTimeline :: forall a. RenderTimeline a => Run -> [a] -> [Text]
-renderTimeline run xs =
+renderTimeline :: forall a. RenderTimeline a => Run -> (IField a -> Bool) -> [a] -> [Text]
+renderTimeline run flt xs =
   concatMap (uncurry fLine) $ zip xs [(0 :: Int)..]
  where
    fLine :: a -> Int -> [Text]
@@ -86,7 +86,7 @@ renderTimeline run xs =
          IText   (($v)->x) -> T.take fWidth . T.dropWhileEnd (== 's') $ x
 
    fields :: [IField a]
-   fields = rtFields run
+   fields = filter flt $ rtFields run
 
    head1, head2 :: Maybe Text
    head1 = if all ((== 0) . T.length . fHead1) fields then Nothing
@@ -103,8 +103,9 @@ renderTimeline run xs =
    renderLine' lpfn wfn rfn = renderField lpfn wfn rfn <$> fields
    renderField lpfn wfn rfn f = T.replicate (lpfn f) " " <> T.center (wfn f) ' ' (rfn f)
 
-renderDistributions :: forall a. RenderDistributions a => Run -> RenderMode -> a -> [Text]
-renderDistributions run mode x =
+renderDistributions :: forall a. RenderDistributions a => Run -> RenderMode -> (DField a -> Bool) -> a
+                    -> [Text]
+renderDistributions run mode flt x =
   case mode of
     RenderPretty -> catMaybes [head1, head2] <> pLines <> sizeAvg
     RenderCsv    -> headCsv : pLines
@@ -166,7 +167,7 @@ renderDistributions run mode x =
    renderField lpfn wfn rfn f = T.replicate (lpfn f) " " <> T.center (wfn f) ' ' (rfn f)
 
    fields :: [DField a]
-   fields = percField : rdFields run
+   fields = percField : filter flt (rdFields run)
 
    percField :: DField a
    percField = Field 6 0 "%tile" "" "%tile" (DFloat $ const percsDistrib)
