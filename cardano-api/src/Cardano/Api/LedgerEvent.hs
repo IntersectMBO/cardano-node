@@ -32,17 +32,18 @@ import           Cardano.Ledger.Shelley.Rewards
 import           Cardano.Ledger.Shelley.Rules.Epoch (EpochEvent (PoolReapEvent))
 import           Cardano.Ledger.Shelley.Rules.Mir (MirEvent (..))
 import           Cardano.Ledger.Shelley.Rules.NewEpoch
-                   (NewEpochEvent (EpochEvent, MirEvent, DeltaRewardEvent, TotalRewardEvent))
+                   (NewEpochEvent (DeltaRewardEvent, EpochEvent, MirEvent, TotalRewardEvent))
 import           Cardano.Ledger.Shelley.Rules.PoolReap (PoolreapEvent (RetiredPools))
+import           Cardano.Ledger.Shelley.Rules.Rupd (RupdEvent (RupdEvent))
 import           Cardano.Ledger.Shelley.Rules.Tick (TickEvent (NewEpochEvent))
 import           Control.State.Transition (Event)
 import           Data.Function (($), (.))
 import           Data.Functor (fmap)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import           Data.Set (Set)
 import           Data.Maybe (Maybe (Just, Nothing))
 import           Data.SOP.Strict
+import           Data.Set (Set)
 import           Ouroboros.Consensus.Byron.Ledger.Block (ByronBlock)
 import           Ouroboros.Consensus.Cardano.Block (HardForkBlock)
 import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (getOneEraLedgerEvent)
@@ -51,7 +52,6 @@ import           Ouroboros.Consensus.Ledger.Basics (AuxLedgerEvent)
 import           Ouroboros.Consensus.Shelley.Ledger (ShelleyBlock,
                    ShelleyLedgerEvent (ShelleyLedgerEventTICK))
 import           Ouroboros.Consensus.TypeFamilyWrappers
-import Cardano.Ledger.Shelley.Rules.Rupd (RupdEvent(RupdEvent))
 
 data LedgerEvent
   = -- | The given pool is being registered for the first time on chain.
@@ -82,7 +82,7 @@ instance
     Event (Ledger.Core.EraRule "MIR" ledgerera) ~ MirEvent ledgerera,
     Event (Ledger.Core.EraRule "RUPD" ledgerera) ~ RupdEvent (Crypto ledgerera)
   ) =>
-  ConvertLedgerEvent (ShelleyBlock ledgerera)
+  ConvertLedgerEvent (ShelleyBlock protocol ledgerera)
   where
   toLedgerEvent evt = case unwrapLedgerEvent evt of
     LEDeltaRewardEvent e m -> Just $ IncrementalRewardsDistribution e m
@@ -139,7 +139,7 @@ pattern LERewardEvent ::
   ) =>
   EpochNo ->
   Map StakeCredential (Set (Reward StandardCrypto)) ->
-  AuxLedgerEvent (LedgerState (ShelleyBlock ledgerera))
+  AuxLedgerEvent (LedgerState (ShelleyBlock protocol ledgerera))
 pattern LERewardEvent e m <-
   ShelleyLedgerEventTICK
     (NewEpochEvent (TotalRewardEvent e (Map.mapKeys fromShelleyStakeCredential -> m)))
@@ -152,7 +152,7 @@ pattern LEDeltaRewardEvent ::
   ) =>
   EpochNo ->
   Map StakeCredential (Set (Reward StandardCrypto)) ->
-  AuxLedgerEvent (LedgerState (ShelleyBlock ledgerera))
+  AuxLedgerEvent (LedgerState (ShelleyBlock protocol ledgerera))
 pattern LEDeltaRewardEvent e m <-
   ShelleyLedgerEventTICK
     (NewEpochEvent (DeltaRewardEvent (RupdEvent e (Map.mapKeys fromShelleyStakeCredential -> m))))
@@ -167,7 +167,7 @@ pattern LEMirTransfer ::
   Map StakeCredential Lovelace ->
   Lovelace ->
   Lovelace ->
-  AuxLedgerEvent (LedgerState (ShelleyBlock ledgerera))
+  AuxLedgerEvent (LedgerState (ShelleyBlock protocol ledgerera))
 pattern LEMirTransfer rp tp rtt ttr <-
   ShelleyLedgerEventTICK
     ( NewEpochEvent
@@ -193,7 +193,7 @@ pattern LERetiredPools ::
   Map StakeCredential (Map (Hash StakePoolKey) Lovelace) ->
   Map StakeCredential (Map (Hash StakePoolKey) Lovelace) ->
   EpochNo ->
-  AuxLedgerEvent (LedgerState (ShelleyBlock ledgerera))
+  AuxLedgerEvent (LedgerState (ShelleyBlock protocol ledgerera))
 pattern LERetiredPools r u e <-
   ShelleyLedgerEventTICK
     ( NewEpochEvent
