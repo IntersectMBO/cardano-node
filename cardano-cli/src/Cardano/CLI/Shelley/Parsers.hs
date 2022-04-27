@@ -1993,7 +1993,10 @@ pCardanoEra = asum
       (  Opt.long "alonzo-era"
       <> Opt.help "Specify the Alonzo era"
       )
-
+  , Opt.flag' (AnyCardanoEra BabbageEra)
+      (  Opt.long "babbage-era"
+      <> Opt.help "Specify the Babbage era"
+      )
     -- Default for now:
   , pure (AnyCardanoEra AlonzoEra)
   ]
