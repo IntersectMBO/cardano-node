@@ -385,6 +385,9 @@ instance FromJSON PartialNodeConfiguration where
         npcTestAlonzoHardForkAtEpoch   <- v .:? "TestAlonzoHardForkAtEpoch"
         npcTestAlonzoHardForkAtVersion <- v .:? "TestAlonzoHardForkAtVersion"
 
+        npcTestBabbageHardForkAtEpoch   <- v .:? "TestBabbageHardForkAtEpoch"
+        npcTestBabbageHardForkAtVersion <- v .:? "TestBabbageHardForkAtVersion"
+
         pure NodeHardForkProtocolConfiguration {
                npcTestEnableDevelopmentHardForkEras,
 
@@ -398,7 +401,10 @@ instance FromJSON PartialNodeConfiguration where
                npcTestMaryHardForkAtVersion,
 
                npcTestAlonzoHardForkAtEpoch,
-               npcTestAlonzoHardForkAtVersion
+               npcTestAlonzoHardForkAtVersion,
+
+               npcTestBabbageHardForkAtEpoch,
+               npcTestBabbageHardForkAtVersion
              }
 
 -- | Default configuration is mainnet
@@ -482,6 +488,7 @@ makeNodeConfiguration pnc = do
     lastToEither "Missing EnableP2P"
     $ pncEnableP2P pnc
 
+  -- TODO: This is not mandatory
   testEnableDevelopmentNetworkProtocols <-
     lastToEither "Missing TestEnableDevelopmentNetworkProtocols" $
       pncTestEnableDevelopmentNetworkProtocols pnc
