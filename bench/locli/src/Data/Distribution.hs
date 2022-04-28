@@ -25,7 +25,8 @@ module Data.Distribution
   , renderPercSpec
   , Percentile(..)
   , pctFrac
-  , stdPercentiles
+  , distribPercSpecs
+  , stdPercSpecs
   -- Aux
   , spans
   ) where
@@ -92,8 +93,11 @@ instance (  ToJSON a,   ToJSON b) => ToJSON   (Percentile a b)
 pctFrac :: Percentile a b -> a
 pctFrac = psFrac . pctSpec
 
-stdPercentiles :: [PercSpec Float]
-stdPercentiles =
+distribPercSpecs :: Distribution a b -> [PercSpec a]
+distribPercSpecs = fmap pctSpec . dPercentiles
+
+stdPercSpecs :: [PercSpec Float]
+stdPercSpecs =
   [ Perc 0.01, Perc 0.05
   , Perc 0.1, Perc 0.2, Perc 0.3, Perc 0.4
   , Perc 0.5, Perc 0.6

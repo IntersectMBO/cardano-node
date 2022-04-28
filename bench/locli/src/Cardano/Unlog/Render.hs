@@ -6,7 +6,7 @@
 {-# LANGUAGE ViewPatterns #-}
 module Cardano.Unlog.Render (module Cardano.Unlog.Render) where
 
-import Prelude                  (head, id, tail)
+import Prelude                  (head, id, last, tail)
 import Cardano.Prelude          hiding (head)
 
 import Control.Arrow            ((&&&))
@@ -163,23 +163,35 @@ renderDistributions run mode flt x =
 
    renderLine' ::
      (DField a -> Int) -> (DField a -> Int) -> (DField a -> Text) -> [Text]
-   renderLine' lpfn wfn rfn = renderField lpfn wfn rfn <$> fields
-   renderField lpfn wfn rfn f = T.replicate (lpfn f) " " <> T.center (wfn f) ' ' (rfn f)
+   renderLine' lefPad width render = renderField lefPad width render <$> fields
+   renderField :: forall f. (f -> Int) -> (f -> Int) -> (f -> Text) -> f -> Text
+   renderField lefPad width render f = T.replicate (lefPad f) " " <> T.center (width f) ' ' (render f)
 
    fields :: [DField a]
-   fields = percField : filter flt (rdFields run)
+   fields = percField : nsamplesField : filter flt (rdFields run)
+
+   firstDistribPercSpecs :: [PercSpec Float]
+   firstDistribPercSpecs = mapSomeFieldDistribution distribPercSpecs x $ fSelect . head $ rdFields run
 
    percField :: DField a
    percField = Field 6 0 "%tile" "" "%tile" (DFloat $ const percsDistrib)
    nPercs = length $ dPercentiles percsDistrib
    percsDistrib = mapSomeFieldDistribution
                     distribPercsAsDistrib x (fSelect $ head (rdFields run))
+   distribPercsAsDistrib :: Distribution Float b -> Distribution Float Float
+   distribPercsAsDistrib Distribution{..} = Distribution 1 0.5 $
+     (\p -> p {pctSample = psFrac (pctSpec p)}) <$> dPercentiles
+
+   nsamplesField :: DField a
+   nsamplesField = Field 6 0 "Nsamp" "" "Nsamp" (DInt $ const nsamplesDistrib)
+   nsamplesDistrib = computeDistribution firstDistribPercSpecs populationIndices
+   populationIndices :: [Int]
+   populationIndices = [1..maxPopulationSize]
+   maxPopulationSize :: Int
+   maxPopulationSize = last . sort $ mapSomeFieldDistribution dSize x . fSelect <$> rdFields run
 
 -- * Auxiliaries
 --
-distribPercsAsDistrib :: Distribution Float b -> Distribution Float Float
-distribPercsAsDistrib Distribution{..} = Distribution 1 0.5 $
-  (\p -> p {pctSample = psFrac (pctSpec p)}) <$> dPercentiles
 
 nChunksEachOf :: Int -> Int -> Text -> [Text]
 nChunksEachOf chunks each center =

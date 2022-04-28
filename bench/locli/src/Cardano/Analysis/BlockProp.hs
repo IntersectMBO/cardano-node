@@ -316,8 +316,8 @@ doBlockProp run@Run{genesis} cFilters machViews = do
                       xs -> xs
 
    forgerEventsCDF   :: (Real a, ToRealFrac a Float) => (BlockEvents -> Maybe a) -> Distribution Float a
-   forgerEventsCDF   = mapChainToBlockEventCDF           stdPercentiles chainV
-   observerEventsCDF = mapChainToPeerBlockObservationCDF stdPercentiles chainV
+   forgerEventsCDF   = mapChainToBlockEventCDF           stdPercSpecs chainV
+   observerEventsCDF = mapChainToPeerBlockObservationCDF stdPercSpecs chainV
 
    adoptionMap    :: [Map Hash UTCTime]
    adoptionMap    =  Map.mapMaybe mbeAdopted <$> eventMaps

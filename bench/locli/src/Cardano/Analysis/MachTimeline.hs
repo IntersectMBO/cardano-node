@@ -65,11 +65,11 @@ slotStatsSummary _ slots =
   , sSpanLensCPU85Distrib = dist spanLensCPU85
   , sSpanLensCPU85EBndDistrib = dist sSpanLensCPU85EBnd
   , sSpanLensCPU85RwdDistrib  = dist sSpanLensCPU85Rwd
-  , sResourceDistribs         = computeResDistrib stdPercentiles resDistProjs slots
+  , sResourceDistribs         = computeResDistrib stdPercSpecs resDistProjs slots
   }
  where
    dist :: (Real a, ToRealFrac a Float) => [a] -> Distribution Float a
-   dist = computeDistribution stdPercentiles
+   dist = computeDistribution stdPercSpecs
    sSpanLensCPU85EBnd = Vec.length <$>
                         filter (spanContainsEpochSlot 3) spansCPU85
    sSpanLensCPU85Rwd  = Vec.length <$>
