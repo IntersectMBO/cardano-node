@@ -642,13 +642,27 @@ echo ""
 echo "EnableLogMetrics: False" >> ${ROOT}/configuration.yaml
 echo "EnableLogging: True" >> ${ROOT}/configuration.yaml
 
-if [ "$1" = "alonzo" ]; then
+if [ "$1" = "babbage" ]; then
+  echo "TestShelleyHardForkAtEpoch: 0" >> ${ROOT}/configuration.yaml
+  echo "TestAllegraHardForkAtEpoch: 0" >> ${ROOT}/configuration.yaml
+  echo "TestMaryHardForkAtEpoch: 0" >> ${ROOT}/configuration.yaml
+  echo "TestAlonzoHardForkAtEpoch: 0" >> ${ROOT}/configuration.yaml
+  echo "TestBabbageHardForkAtEpoch: 0" >> ${ROOT}/configuration.yaml
+  echo "TestEnableDevelopmentHardForkEras: True" >> ${ROOT}/configuration.yaml
+  echo "TestEnableDevelopmentNetworkProtocols: True" >> ${ROOT}/configuration.yaml
+
+  $SED -i ${ROOT}/configuration.yaml \
+      -e 's/LastKnownBlockVersion-Major: 1/LastKnownBlockVersion-Major: 6/'
+
+  # Copy the cost model
+  echo "Nodes will start in Babbage era from epoch 0"
+
+elif [ "$1" = "alonzo" ]; then
   echo "TestShelleyHardForkAtEpoch: 0" >> ${ROOT}/configuration.yaml
   echo "TestAllegraHardForkAtEpoch: 0" >> ${ROOT}/configuration.yaml
   echo "TestMaryHardForkAtEpoch: 0" >> ${ROOT}/configuration.yaml
   echo "TestAlonzoHardForkAtEpoch: 0" >> ${ROOT}/configuration.yaml
   echo "TestEnableDevelopmentHardForkEras: True" >> ${ROOT}/configuration.yaml
-  echo "TestEnableDevelopmentNetworkProtocols: True" >> ${ROOT}/configuration.yaml
 
   $SED -i ${ROOT}/configuration.yaml \
       -e 's/LastKnownBlockVersion-Major: 1/LastKnownBlockVersion-Major: 5/'
