@@ -175,32 +175,79 @@ generateTOC traces metrics datapoints =
   where
     generateTOCTraces =
       fromText "\n\n## [Trace Messages](#trace-messages)"
-      <> mconcat (namespaceToToc <$> traces)
+      <> mconcat (reverse (fst (foldl namespaceToToc ([], []) traces)))
     generateTOCMetrics =
       fromText "\n\n## [Metrics](#metrics)"
-      <> mconcat (nameToToc <$> metrics)
+      <> mconcat (reverse (fst (foldl namespaceToToc ([], []) (map splitToNS metrics))))
     generateTOCDatapoints =
       fromText "\n\n## [Datapoints](#datapoints)"
-      <> mconcat (namespaceToToc <$> datapoints)
-    namespaceToToc ns =
-      fromText "\n1. "
-      <> fromText "["
-      <> namespaceBuilder ns
-      <> fromText "](#"
-      <> namespaceRefBuilder ns
-      <> fromText ")"
-    namespaceBuilder ns = mconcat (intersperse (singleton '.') (map (fromString . unintern) ns))
+      <> mconcat (reverse (fst (foldl namespaceToToc ([], []) datapoints)))
+    namespaceToToc :: ([Builder], Namespace) -> Namespace -> ([Builder], Namespace)
+    namespaceToToc (builders, context) ns =
+      if init ns == context
+        then
+          ((fromText "\n"
+          <> fromString (replicate (length context) '\t')
+          <> fromText "1. "
+          <> fromText "["
+          <> (fromString . unintern) (last ns)
+          <> fromText "](#"
+          <> namespaceRefBuilder ns
+          <> fromText ")") : builders, context)
+        else
+          let cpl = commonPrefixLength context ns
+              ns' = drop cpl ns
+              context' = take cpl context
+          in namespaceToTocWithContext (builders, context') ns'
+
+    namespaceToTocWithContext :: ([Builder], Namespace) -> Namespace -> ([Builder], Namespace)
+    namespaceToTocWithContext (builders, context) ns =
+      case ns of
+        [single] ->   ((fromText "\n"
+                      <> fromString (replicate (length context) '\t')
+                      <> fromText "1. "
+                      <> fromText "["
+                      <> (fromString . unintern) single
+                      <> fromText "](#"
+                      <> namespaceRefBuilder ns
+                      <> fromText ")") : builders, context)
+        (hdn : tln) ->
+          let builder = fromText "\n"
+                        <> fromString (replicate (length context) '\t')
+                        <> fromText "1. __"
+                        <> (fromString . unintern) hdn
+                        <> fromText "__"
+          in  namespaceToTocWithContext
+              (builder : builders, context ++ [hdn]) tln
+        [] -> error "inpossible"
+
+    splitToNS :: Namespace -> Namespace
+    splitToNS [sym] =
+      let str = unintern sym
+          strs = T.split (== '.') (pack str)
+      in map (intern . T.unpack) strs
+
+
+    commonPrefixLength :: Eq a => [a] -> [a] -> Int
+    commonPrefixLength [] _ = 0
+    commonPrefixLength _ [] = 0
+    commonPrefixLength (a : ta) (b : tb) =
+      if a == b
+          then 1 + commonPrefixLength ta tb
+          else 0
+
+--    namespaceBuilder ns = mconcat (intersperse (singleton '.') (map (fromString . unintern) ns))
     namespaceRefBuilder ns = mconcat (map (fromText . toLower . pack . unintern) ns)
-    nameToToc [name] =
-      fromText "\n1. "
-      <> fromText "["
-      <> (fromString . unintern) name
-      <> fromText "](#"
-      <> fromText (nameRefBuilder ((pack . unintern) name))
-      <> fromText ")"
-    nameToToc list =
-      fromText "unexpected" <> fromText ((pack . show) list)
-    nameRefBuilder name = toLower $ T.filter (/= '.') name
+    -- nameToToc [name] =
+    --   fromText "\n1. "
+    --   <> fromText "["
+    --   <> (fromString . unintern) name
+    --   <> fromText "](#"
+    --   <> fromText (nameRefBuilder ((pack . unintern) name))
+    --   <> fromText ")"
+    -- nameToToc list =
+      -- fromText "unexpected" <> fromText ((pack . show) list)
+--    nameRefBuilder name = toLower $ T.filter (/= '.') name
 
 buildersToText :: [(Namespace, DocuResult)] -> TraceConfig -> IO Text
 buildersToText builderList configuration = do
