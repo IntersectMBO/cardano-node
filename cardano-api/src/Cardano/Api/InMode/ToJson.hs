@@ -122,7 +122,7 @@ import qualified PlutusCore as PlutusCore
 import qualified UntypedPlutusCore.Core.Type
 import qualified PlutusCore.Evaluation.Machine.Exception
 import qualified PlutusCore.DeBruijn
-import qualified Cardano.Ledger.Alonzo.Scripts
+import qualified Cardano.Ledger.Alonzo.Scripts as Ledger
 import qualified Cardano.Ledger.Alonzo.Language as Alonzo
 -- import           Cardano.Api.HasTypeProxy (FromSomeType)
 -- import           Cardano.Api.Script (ScriptInAnyLang(..), ScriptLanguage(..), PlutusScriptVersion(..), AsType(..))
@@ -132,6 +132,9 @@ import qualified Cardano.Ledger.Alonzo.Language as Alonzo
 -- import qualified Data.ByteString.Short as SBS
 -- import           Cardano.Api.Eras (ShelleyLedgerEra(..))
 import           Ouroboros.Consensus.Shelley.Eras as Consensus (StandardAlonzo)
+import qualified Cardano.Ledger.Hashes as Ledger
+import qualified Cardano.Crypto.Hash as Hash
+
 instance ToJSON (PredicateFailure (Core.EraRule "LEDGER" era)) => ToJSON (ApplyTxError era) where
   toJSON (ApplyTxError es) = toJSON es
 
@@ -1201,18 +1204,15 @@ instance ToJSON Alonzo.PlutusDebug where
 -- decodeScript Alonzo.PlutusV1 bs = ScriptInAnyLang (PlutusScriptLanguage PlutusScriptV1) <$> deserialiseFromCBOR (AsScript AsPlutusScriptV1) bs
 -- decodeScript Alonzo.PlutusV2 bs = ScriptInAnyLang (PlutusScriptLanguage PlutusScriptV2) <$> deserialiseFromCBOR (AsScript AsPlutusScriptV2) bs
 
+scriptHashOf :: Alonzo.Language -> SBS.ShortByteString -> Text
+scriptHashOf lang sbs = Text.pack $ Hash.hashToStringAsHex h
+  where Ledger.ScriptHash h = Ledger.hashScript @Consensus.StandardAlonzo (Ledger.PlutusScript lang sbs)
 
--- (CC.Crypto c) => Shelley.ValidateScript (AlonzoEra c)
-scriptHashOf :: ()
-  => Alonzo.Language
-  -> SBS.ShortByteString
-  -> Text
--- scriptHashOf lang sbs = Text.pack $ show @(Ledger.Script Consensus.StandardAlonzo) (Cardano.Ledger.Alonzo.Scripts.PlutusScript lang sbs)
-scriptHashOf lang sbs = Text.pack $ show $ Ledger.hashScript @Consensus.StandardAlonzo (Cardano.Ledger.Alonzo.Scripts.PlutusScript lang sbs)
+-- scriptHashOf lang sbs = Text.pack $ show @(Ledger.Script Consensus.StandardAlonzo) (Ledger.PlutusScript lang sbs)
 -- scriptHashOf Alonzo.PlutusV1 bs = ScriptInAnyLang (PlutusScriptLanguage PlutusScriptV1) <$> deserialiseFromCBOR (AsScript AsPlutusScriptV1) bs
 -- scriptHashOf Alonzo.PlutusV2 bs = ScriptInAnyLang (PlutusScriptLanguage PlutusScriptV2) <$> deserialiseFromCBOR (AsScript AsPlutusScriptV2) bs
   -- where bs = SBS.fromShort sbs
-  -- Text.pack $ show (Cardano.Ledger.Alonzo.Scripts.PlutusScript lang sbs)
+  -- Text.pack $ show (Ledger.PlutusScript lang sbs)
 
 instance ToJSON Plutus.EvaluationError where
   toJSON = \case
