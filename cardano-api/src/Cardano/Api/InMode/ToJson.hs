@@ -1206,7 +1206,12 @@ instance ToJSON Alonzo.PlutusDebug where
 
 scriptHashOf :: Alonzo.Language -> SBS.ShortByteString -> Text
 scriptHashOf lang sbs = Text.pack $ Hash.hashToStringAsHex h
-  where Ledger.ScriptHash h = Ledger.hashScript @Consensus.StandardAlonzo (Ledger.PlutusScript lang sbs)
+  where Ledger.ScriptHash h = case lang of
+          Alonzo.PlutusV1 -> Ledger.hashScript @Consensus.StandardAlonzo (Ledger.PlutusScript lang sbs)
+          Alonzo.PlutusV2 -> error "not implemented"
+            -- TODO Babbage era
+            -- Ledger.hashScript @Consensus.StandardBabbage (Ledger.PlutusScript lang sbs)
+   
 
 -- scriptHashOf lang sbs = Text.pack $ show @(Ledger.Script Consensus.StandardAlonzo) (Ledger.PlutusScript lang sbs)
 -- scriptHashOf Alonzo.PlutusV1 bs = ScriptInAnyLang (PlutusScriptLanguage PlutusScriptV1) <$> deserialiseFromCBOR (AsScript AsPlutusScriptV1) bs
