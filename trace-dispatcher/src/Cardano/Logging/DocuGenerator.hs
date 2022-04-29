@@ -184,21 +184,24 @@ generateTOC traces metrics datapoints =
       <> mconcat (reverse (fst (foldl namespaceToToc ([], []) datapoints)))
     namespaceToToc :: ([Builder], Namespace) -> Namespace -> ([Builder], Namespace)
     namespaceToToc (builders, context) ns =
-      if init ns == context
+      let ns' = if take 2 ns == [intern "Cardano", intern "Node"]
+                  then drop 2 ns
+                  else ns
+      in if init ns' == context
         then
           ((fromText "\n"
           <> fromString (replicate (length context) '\t')
           <> fromText "1. "
           <> fromText "["
-          <> (fromString . unintern) (last ns)
+          <> (fromString . unintern) (last ns')
           <> fromText "](#"
-          <> namespaceRefBuilder ns
+          <> namespaceRefBuilder ns'
           <> fromText ")") : builders, context)
         else
-          let cpl = commonPrefixLength context ns
-              ns' = drop cpl ns
+          let cpl  = commonPrefixLength context ns'
+              ns'' = drop cpl ns'
               context' = take cpl context
-          in namespaceToTocWithContext (builders, context') ns'
+          in namespaceToTocWithContext (builders, context') ns''
 
     namespaceToTocWithContext :: ([Builder], Namespace) -> Namespace -> ([Builder], Namespace)
     namespaceToTocWithContext (builders, context) ns =
@@ -236,18 +239,8 @@ generateTOC traces metrics datapoints =
           then 1 + commonPrefixLength ta tb
           else 0
 
---    namespaceBuilder ns = mconcat (intersperse (singleton '.') (map (fromString . unintern) ns))
     namespaceRefBuilder ns = mconcat (map (fromText . toLower . pack . unintern) ns)
-    -- nameToToc [name] =
-    --   fromText "\n1. "
-    --   <> fromText "["
-    --   <> (fromString . unintern) name
-    --   <> fromText "](#"
-    --   <> fromText (nameRefBuilder ((pack . unintern) name))
-    --   <> fromText ")"
-    -- nameToToc list =
-      -- fromText "unexpected" <> fromText ((pack . show) list)
---    nameRefBuilder name = toLower $ T.filter (/= '.') name
+
 
 buildersToText :: [(Namespace, DocuResult)] -> TraceConfig -> IO Text
 buildersToText builderList configuration = do
