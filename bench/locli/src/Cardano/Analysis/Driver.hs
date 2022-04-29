@@ -18,6 +18,7 @@ import Data.List                        ((!!))
 import Graphics.Histogram               qualified as Hist
 import Graphics.Gnuplot.Frame.OptionSet qualified as Opts
 
+import Data.Distribution
 import Cardano.Analysis.API
 import Cardano.Analysis.BlockProp
 import Cardano.Analysis.ChainFilter
@@ -101,16 +102,16 @@ runBlockPropagation run filters _filterNames logfiles BlockPropagationOutputFile
     chain
 
   forM_ bpofForgerPretty $ dumpText "blockprop-forger" $
-    renderDistributions run RenderPretty bpFieldsForger blockPropagation
+    renderDistributions run RenderPretty bpFieldsForger Nothing blockPropagation
 
   forM_ bpofPeersPretty $ dumpText "blockprop-peers" $
-    renderDistributions run RenderPretty bpFieldsPeers blockPropagation
+    renderDistributions run RenderPretty bpFieldsPeers Nothing blockPropagation
 
-  forM_ bpofPropagationPretty $ dumpText "blockprop-peers" $
-    renderDistributions run RenderPretty bpFieldsPropagation blockPropagation
+  forM_ bpofPropagationPretty $ dumpText "blockprop-propagation" $
+    renderDistributions run RenderPretty bpFieldsPropagation (Just briefPercSpecs) blockPropagation
 
   forM_ bpofFullStatsPretty $ dumpText "blockprop-full-stats" $
-    renderDistributions run RenderPretty (const True) blockPropagation
+    renderDistributions run RenderPretty (const True) Nothing blockPropagation
 
   forM_ bpofChainPretty $ dumpText "blockprop-chain" $
     renderTimeline run (const True) chain
@@ -177,11 +178,11 @@ runMachineTimeline run@Run{} logfiles filters filterNames MachineTimelineOutputF
 
   forM_ mtofFullStatsPretty . const $
     dumpAssociatedTextStreams "perf-full" $
-      fmap (fmap $ renderDistributions run RenderPretty (const True)) analyses
+      fmap (fmap $ renderDistributions run RenderPretty (const True) Nothing) analyses
 
   forM_ mtofReportStatsPretty . const $
     dumpAssociatedTextStreams "perf-report" $
-      fmap (fmap $ renderDistributions run RenderPretty mtFieldsReport) analyses
+      fmap (fmap $ renderDistributions run RenderPretty mtFieldsReport Nothing) analyses
 
   forM_ mtofTimelinePretty . const $
     dumpAssociatedTextStreams "mach" $
@@ -206,7 +207,7 @@ runMachineTimeline run@Run{} logfiles filters filterNames MachineTimelineOutputF
        \h -> do
          progress "csv-stats" (Q f)
          mapM_ (hPutStrLn h)
-           (renderDistributions run RenderCsv (const True) s)
+           (renderDistributions run RenderCsv (const True) Nothing s)
          mapM_ (hPutStrLn h) $
            renderRunExport run
            <>

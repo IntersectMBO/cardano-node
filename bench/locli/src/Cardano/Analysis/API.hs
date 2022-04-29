@@ -8,7 +8,6 @@ import Prelude                  ((!!), error)
 import Cardano.Prelude          hiding (head)
 
 import Data.Aeson               (ToJSON(..), FromJSON(..))
-import Data.List.Split          (splitOn)
 import Data.Text   qualified as T
 import Data.Text.Short          (toText)
 import Data.Time.Clock          (NominalDiffTime)
@@ -451,9 +450,9 @@ instance RenderTimeline SlotStats where
                 <*> (fromIntegral . max 1 . (1024 *) <$> rCentiMut slResources)))
     , Field 7 0 "mempoolTxs"   "Mempool" "txs"   $ IWord64 slMempoolTxs
     , Field 9 0 "utxoEntries"  "UTxO"  "entries" $ IWord64 slUtxoSize
-    , Field 10 0 "absSlotTime" "Absolute" "slot time" $ IText
-      (\SlotStats{..}->
-         T.pack $ " " `splitOn` show slStart !! 1)
+    -- , Field 10 0 "absSlotTime" "Absolute" "slot time" $ IText
+    --   (\SlotStats{..}->
+    --      T.pack $ " " `splitOn` show slStart !! 1)
     ]
    where
      t w = nChunksEachOf 4 (w + 1) "mempool tx"

@@ -103,15 +103,25 @@ renderTimeline run flt xs =
    renderLine' lpfn wfn rfn = renderField lpfn wfn rfn <$> fields
    renderField lpfn wfn rfn f = T.replicate (lpfn f) " " <> T.center (wfn f) ' ' (rfn f)
 
-renderDistributions :: forall a. RenderDistributions a => Run -> RenderMode -> (DField a -> Bool) -> a
-                    -> [Text]
-renderDistributions run mode flt x =
+renderDistributions :: forall a. RenderDistributions a =>
+     Run -> RenderMode -> (DField a -> Bool) -> Maybe [PercSpec Float] -> a
+  -> [Text]
+renderDistributions run mode flt mPercs x =
   case mode of
     RenderPretty -> catMaybes [head1, head2] <> pLines <> sizeAvg
     RenderCsv    -> headCsv : pLines
      where headCsv = T.intercalate "," $ fId <$> fields
 
  where
+   percSpecs :: [PercSpec Float]
+   percSpecs = maybe (mapSomeFieldDistribution distribPercSpecs x (fSelect . head $ rdFields run))
+                     id
+                     mPercs
+
+   -- XXX:  very expensive, the way it's used below..
+   subsetDistrib :: Distribution Float b -> Distribution Float b
+   subsetDistrib = maybe id subsetDistribution mPercs
+
    pLines :: [Text]
    pLines = fLine <$> [0..(nPercs - 1)]
 
@@ -125,16 +135,16 @@ renderDistributions run mode flt x =
       in T.pack $ case fSelect of
         DInt    (($x)->d) -> (if mode == RenderPretty
                               then printf "%*d" fWidth
-                              else printf "%d") (getCapPerc d)
+                              else printf "%d") (getCapPerc $ subsetDistrib d)
         DWord64 (($x)->d) -> (if mode == RenderPretty
                               then printf "%*d" fWidth
-                              else printf "%d") (getCapPerc d)
+                              else printf "%d") (getCapPerc $ subsetDistrib d)
         DFloat  (($x)->d) -> (if mode == RenderPretty
                               then take fWidth . printf "%*F" (fWidth - 2)
-                              else printf "%F") (getCapPerc d)
+                              else printf "%F") (getCapPerc $ subsetDistrib d)
         DDeltaT (($x)->d) -> (if mode == RenderPretty
                               then take fWidth else id)
-                             . dropWhileEnd (== 's') . show $ getCapPerc d
+                             . dropWhileEnd (== 's') . show $ getCapPerc $ subsetDistrib d
 
    head1, head2 :: Maybe Text
    head1 = if all ((== 0) . T.length . fHead1) fields then Nothing
@@ -170,21 +180,18 @@ renderDistributions run mode flt x =
    fields :: [DField a]
    fields = percField : nsamplesField : filter flt (rdFields run)
 
-   firstDistribPercSpecs :: [PercSpec Float]
-   firstDistribPercSpecs = mapSomeFieldDistribution distribPercSpecs x $ fSelect . head $ rdFields run
-
    percField :: DField a
    percField = Field 6 0 "%tile" "" "%tile" (DFloat $ const percsDistrib)
    nPercs = length $ dPercentiles percsDistrib
    percsDistrib = mapSomeFieldDistribution
-                    distribPercsAsDistrib x (fSelect $ head (rdFields run))
+                    (distribPercsAsDistrib . subsetDistrib) x (fSelect $ head (rdFields run))
    distribPercsAsDistrib :: Distribution Float b -> Distribution Float Float
    distribPercsAsDistrib Distribution{..} = Distribution 1 0.5 $
      (\p -> p {pctSample = psFrac (pctSpec p)}) <$> dPercentiles
 
    nsamplesField :: DField a
    nsamplesField = Field 6 0 "Nsamp" "" "Nsamp" (DInt $ const nsamplesDistrib)
-   nsamplesDistrib = computeDistribution firstDistribPercSpecs populationIndices
+   nsamplesDistrib = computeDistribution percSpecs populationIndices
    populationIndices :: [Int]
    populationIndices = [1..maxPopulationSize]
    maxPopulationSize :: Int

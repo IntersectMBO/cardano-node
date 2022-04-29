@@ -17,6 +17,7 @@ module Data.Distribution
   , computeDistribution
   , computeDistributionStats
   , mapToDistribution
+  , subsetDistribution
   , zeroDistribution
   , dPercIx
   , dPercSpec
@@ -26,6 +27,7 @@ module Data.Distribution
   , Percentile(..)
   , pctFrac
   , distribPercSpecs
+  , briefPercSpecs
   , stdPercSpecs
   -- Aux
   , spans
@@ -95,6 +97,10 @@ pctFrac = psFrac . pctSpec
 
 distribPercSpecs :: Distribution a b -> [PercSpec a]
 distribPercSpecs = fmap pctSpec . dPercentiles
+
+briefPercSpecs :: [PercSpec Float]
+briefPercSpecs =
+  [ Perc 0.5, Perc 0.9, Perc 1.0 ]
 
 stdPercSpecs :: [PercSpec Float]
 stdPercSpecs =
@@ -169,6 +175,10 @@ computeDistribution percentiles (sort -> sorted) =
          if size == 0
          then (0,           0)
          else (head sorted, last sorted)
+
+subsetDistribution :: Eq a => [PercSpec a] -> Distribution a b -> Distribution a b
+subsetDistribution xs d =
+  d { dPercentiles = dPercentiles d & filter ((`elem` xs) . pctSpec) }
 
 class RealFrac b => ToRealFrac a b where
   toRealFrac :: a -> b
