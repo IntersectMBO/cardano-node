@@ -4,709 +4,707 @@
 
 ## [Trace Messages](#trace-messages)
 1. __AcceptPolicy__
-	1. [ConnectionHardLimit](#cardanonodeacceptpolicyconnectionhardlimit)
-	1. [ConnectionLimitResume](#cardanonodeacceptpolicyconnectionlimitresume)
-	1. [ConnectionRateLimiting](#cardanonodeacceptpolicyconnectionratelimiting)
-1. __BlockFetch__
-	1. __NodeToNode__
-		1. __Recieve__
-			1. [BatchDone](#cardanonodeblockfetchnodetonoderecievebatchdone)
-			1. [Block](#cardanonodeblockfetchnodetonoderecieveblock)
-			1. [ClientDone](#cardanonodeblockfetchnodetonoderecieveclientdone)
-			1. [NoBlocks](#cardanonodeblockfetchnodetonoderecievenoblocks)
-			1. [RequestRange](#cardanonodeblockfetchnodetonoderecieverequestrange)
-			1. [StartBatch](#cardanonodeblockfetchnodetonoderecievestartbatch)
-		1. __Send__
-			1. [BatchDone](#cardanonodeblockfetchnodetonodesendbatchdone)
-			1. [Block](#cardanonodeblockfetchnodetonodesendblock)
-			1. [ClientDone](#cardanonodeblockfetchnodetonodesendclientdone)
-			1. [NoBlocks](#cardanonodeblockfetchnodetonodesendnoblocks)
-			1. [RequestRange](#cardanonodeblockfetchnodetonodesendrequestrange)
-			1. [StartBatch](#cardanonodeblockfetchnodetonodesendstartbatch)
-1. __BlockFetchClient__
-	1. [AcknowledgedFetchRequest](#cardanonodeblockfetchclientacknowledgedfetchrequest)
-	1. [AddedFetchRequest](#cardanonodeblockfetchclientaddedfetchrequest)
-	1. [ClientTerminating](#cardanonodeblockfetchclientclientterminating)
-	1. [CompletedBlockFetch](#cardanonodeblockfetchclientcompletedblockfetch)
-	1. [CompletedFetchBatch](#cardanonodeblockfetchclientcompletedfetchbatch)
-	1. [RejectedFetchBatch](#cardanonodeblockfetchclientrejectedfetchbatch)
-	1. [SendFetchRequest](#cardanonodeblockfetchclientsendfetchrequest)
-	1. [StartedFetchBatch](#cardanonodeblockfetchclientstartedfetchbatch)
-1. [BlockFetchDecision](#cardanonodeblockfetchdecision)
-1. __BlockFetchSerialised__
-	1. __NodeToNode__
-		1. __Recieve__
-			1. [BatchDone](#cardanonodeblockfetchserialisednodetonoderecievebatchdone)
-			1. [Block](#cardanonodeblockfetchserialisednodetonoderecieveblock)
-			1. [ClientDone](#cardanonodeblockfetchserialisednodetonoderecieveclientdone)
-			1. [NoBlocks](#cardanonodeblockfetchserialisednodetonoderecievenoblocks)
-			1. [RequestRange](#cardanonodeblockfetchserialisednodetonoderecieverequestrange)
-			1. [StartBatch](#cardanonodeblockfetchserialisednodetonoderecievestartbatch)
-		1. __Send__
-			1. [BatchDone](#cardanonodeblockfetchserialisednodetonodesendbatchdone)
-			1. [Block](#cardanonodeblockfetchserialisednodetonodesendblock)
-			1. [ClientDone](#cardanonodeblockfetchserialisednodetonodesendclientdone)
-			1. [NoBlocks](#cardanonodeblockfetchserialisednodetonodesendnoblocks)
-			1. [RequestRange](#cardanonodeblockfetchserialisednodetonodesendrequestrange)
-			1. [StartBatch](#cardanonodeblockfetchserialisednodetonodesendstartbatch)
-1. __BlockFetchServer__
-	1. [SendBlock](#cardanonodeblockfetchserversendblock)
-1. __BlockchainTime__
-	1. [CurrentSlotUnknown](#cardanonodeblockchaintimecurrentslotunknown)
-	1. [StartTimeInTheFuture](#cardanonodeblockchaintimestarttimeinthefuture)
-	1. [SystemClockMovedBack](#cardanonodeblockchaintimesystemclockmovedback)
+	1. [ConnectionHardLimit](#connectionhardlimit)
+	1. [ConnectionRateLimiting](#acceptpolicyconnectionratelimiting)
+	1. [ConnectionLimitResume](#acceptpolicyconnectionlimitresume)
 1. __ChainDB__
 	1. __AddBlockEvent__
+		1. [AddedBlockToVolatileDB](#addedblocktovolatiledb)
+		1. [AddedBlockToQueue](#chaindbaddblockeventaddedblocktoqueue)
 		1. __AddBlockValidation__
-			1. [CandidateContainsFutureBlocks](#cardanonodechaindbaddblockeventaddblockvalidationcandidatecontainsfutureblocks)
-			1. [CandidateContainsFutureBlocksExceedingClockSkew](#cardanonodechaindbaddblockeventaddblockvalidationcandidatecontainsfutureblocksexceedingclockskew)
-			1. [InvalidBlock](#cardanonodechaindbaddblockeventaddblockvalidationinvalidblock)
-			1. [ValidCandidate](#cardanonodechaindbaddblockeventaddblockvalidationvalidcandidate)
-		1. [AddedBlockToQueue](#cardanonodechaindbaddblockeventaddedblocktoqueue)
-		1. [AddedBlockToVolatileDB](#cardanonodechaindbaddblockeventaddedblocktovolatiledb)
-		1. [AddedToCurrentChain](#cardanonodechaindbaddblockeventaddedtocurrentchain)
-		1. [BlockInTheFuture](#cardanonodechaindbaddblockeventblockinthefuture)
-		1. [ChainSelectionForFutureBlock](#cardanonodechaindbaddblockeventchainselectionforfutureblock)
-		1. [IgnoreBlockAlreadyInVolatileDB](#cardanonodechaindbaddblockeventignoreblockalreadyinvolatiledb)
-		1. [IgnoreBlockOlderThanK](#cardanonodechaindbaddblockeventignoreblockolderthank)
-		1. [IgnoreInvalidBlock](#cardanonodechaindbaddblockeventignoreinvalidblock)
-		1. [StoreButDontChange](#cardanonodechaindbaddblockeventstorebutdontchange)
-		1. [SwitchedToAFork](#cardanonodechaindbaddblockeventswitchedtoafork)
-		1. [TryAddToCurrentChain](#cardanonodechaindbaddblockeventtryaddtocurrentchain)
-		1. [TrySwitchToAFork](#cardanonodechaindbaddblockeventtryswitchtoafork)
-	1. __TraceCopyToImmutableDBEvent__
-		1. [CopiedBlockToImmutableDB](#cardanonodechaindbtracecopytoimmutabledbeventcopiedblocktoimmutabledb)
-		1. [NoBlocksToCopyToImmutableDB](#cardanonodechaindbtracecopytoimmutabledbeventnoblockstocopytoimmutabledb)
+			1. [ValidCandidate](#validcandidate)
+			1. [CandidateContainsFutureBlocks](#chaindbaddblockeventaddblockvalidationcandidatecontainsfutureblocks)
+			1. [CandidateContainsFutureBlocksExceedingClockSkew](#chaindbaddblockeventaddblockvalidationcandidatecontainsfutureblocksexceedingclockskew)
+			1. [InvalidBlock](#chaindbaddblockeventaddblockvalidationinvalidblock)
+		1. [IgnoreBlockOlderThanK](#ignoreblockolderthank)
+		1. [IgnoreBlockAlreadyInVolatileDB](#chaindbaddblockeventignoreblockalreadyinvolatiledb)
+		1. [IgnoreInvalidBlock](#chaindbaddblockeventignoreinvalidblock)
+		1. [BlockInTheFuture](#chaindbaddblockeventblockinthefuture)
+		1. [TryAddToCurrentChain](#chaindbaddblockeventtryaddtocurrentchain)
+		1. [TrySwitchToAFork](#chaindbaddblockeventtryswitchtoafork)
+		1. [StoreButDontChange](#chaindbaddblockeventstorebutdontchange)
+		1. [AddedToCurrentChain](#chaindbaddblockeventaddedtocurrentchain)
+		1. [SwitchedToAFork](#chaindbaddblockeventswitchedtoafork)
+		1. [ChainSelectionForFutureBlock](#chaindbaddblockeventchainselectionforfutureblock)
 	1. __TraceFollowerEvent__
-		1. [FollowerNewImmIterator](#cardanonodechaindbtracefollowereventfollowernewimmiterator)
-		1. [FollowerNoLongerInMem](#cardanonodechaindbtracefollowereventfollowernolongerinmem)
-		1. [FollowerSwitchToMem](#cardanonodechaindbtracefollowereventfollowerswitchtomem)
-		1. [NewFollower](#cardanonodechaindbtracefollowereventnewfollower)
+		1. [FollowerNoLongerInMem](#followernolongerinmem)
+		1. [NewFollower](#chaindbtracefollowereventnewfollower)
+		1. [FollowerSwitchToMem](#chaindbtracefollowereventfollowerswitchtomem)
+		1. [FollowerNewImmIterator](#chaindbtracefollowereventfollowernewimmiterator)
+	1. __TraceCopyToImmutableDBEvent__
+		1. [NoBlocksToCopyToImmutableDB](#noblockstocopytoimmutabledb)
+		1. [CopiedBlockToImmutableDB](#chaindbtracecopytoimmutabledbeventcopiedblocktoimmutabledb)
 	1. __TraceGCEvent__
-		1. [PerformedGC](#cardanonodechaindbtracegceventperformedgc)
-		1. [ScheduledGC](#cardanonodechaindbtracegceventscheduledgc)
-	1. __TraceImmutableDBEvent__
-		1. __CacheEvent__
-			1. [CurrentChunkHit](#cardanonodechaindbtraceimmutabledbeventcacheeventcurrentchunkhit)
-			1. [PastChunkEvict](#cardanonodechaindbtraceimmutabledbeventcacheeventpastchunkevict)
-			1. [PastChunkExpired](#cardanonodechaindbtraceimmutabledbeventcacheeventpastchunkexpired)
-			1. [PastChunkHit](#cardanonodechaindbtraceimmutabledbeventcacheeventpastchunkhit)
-			1. [PastChunkMiss](#cardanonodechaindbtraceimmutabledbeventcacheeventpastchunkmiss)
-		1. [ChunkFileDoesntFit](#cardanonodechaindbtraceimmutabledbeventchunkfiledoesntfit)
-		1. __ChunkValidation__
-			1. [InvalidChunkFile](#cardanonodechaindbtraceimmutabledbeventchunkvalidationinvalidchunkfile)
-			1. [InvalidPrimaryIndex](#cardanonodechaindbtraceimmutabledbeventchunkvalidationinvalidprimaryindex)
-			1. [InvalidSecondaryIndex](#cardanonodechaindbtraceimmutabledbeventchunkvalidationinvalidsecondaryindex)
-			1. [MissingChunkFile](#cardanonodechaindbtraceimmutabledbeventchunkvalidationmissingchunkfile)
-			1. [MissingPrimaryIndex](#cardanonodechaindbtraceimmutabledbeventchunkvalidationmissingprimaryindex)
-			1. [MissingSecondaryIndex](#cardanonodechaindbtraceimmutabledbeventchunkvalidationmissingsecondaryindex)
-			1. [RewritePrimaryIndex](#cardanonodechaindbtraceimmutabledbeventchunkvalidationrewriteprimaryindex)
-			1. [RewriteSecondaryIndex](#cardanonodechaindbtraceimmutabledbeventchunkvalidationrewritesecondaryindex)
-			1. [StartedValidatingChunk](#cardanonodechaindbtraceimmutabledbeventchunkvalidationstartedvalidatingchunk)
-			1. [ValidatedChunk](#cardanonodechaindbtraceimmutabledbeventchunkvalidationvalidatedchunk)
-		1. [DBAlreadyClosed](#cardanonodechaindbtraceimmutabledbeventdbalreadyclosed)
-		1. [DBClosed](#cardanonodechaindbtraceimmutabledbeventdbclosed)
-		1. [DeletingAfter](#cardanonodechaindbtraceimmutabledbeventdeletingafter)
-		1. [Migrating](#cardanonodechaindbtraceimmutabledbeventmigrating)
-		1. [NoValidLastLocation](#cardanonodechaindbtraceimmutabledbeventnovalidlastlocation)
-		1. [ValidatedLastLocation](#cardanonodechaindbtraceimmutabledbeventvalidatedlastlocation)
+		1. [PerformedGC](#performedgc)
+		1. [ScheduledGC](#chaindbtracegceventscheduledgc)
 	1. __TraceInitChainSelEvent__
-		1. [CandidateContainsFutureBlocks](#cardanonodechaindbtraceinitchainseleventcandidatecontainsfutureblocks)
-		1. [CandidateContainsFutureBlocksExceedingClockSkew](#cardanonodechaindbtraceinitchainseleventcandidatecontainsfutureblocksexceedingclockskew)
-		1. [InitalChainSelected](#cardanonodechaindbtraceinitchainseleventinitalchainselected)
-		1. [InvalidBlock](#cardanonodechaindbtraceinitchainseleventinvalidblock)
-		1. [StartedInitChainSelection](#cardanonodechaindbtraceinitchainseleventstartedinitchainselection)
-		1. [UpdateLedgerDb](#cardanonodechaindbtraceinitchainseleventupdateledgerdb)
-		1. [ValidCandidate](#cardanonodechaindbtraceinitchainseleventvalidcandidate)
-	1. __TraceIteratorEvent__
-		1. [BlockGCedFromVolatileDB](#cardanonodechaindbtraceiteratoreventblockgcedfromvolatiledb)
-		1. [BlockMissingFromVolatileDB](#cardanonodechaindbtraceiteratoreventblockmissingfromvolatiledb)
-		1. [BlockWasCopiedToImmutableDB](#cardanonodechaindbtraceiteratoreventblockwascopiedtoimmutabledb)
-		1. [StreamFromBoth](#cardanonodechaindbtraceiteratoreventstreamfromboth)
-		1. [StreamFromImmutableDB](#cardanonodechaindbtraceiteratoreventstreamfromimmutabledb)
-		1. [StreamFromVolatileDB](#cardanonodechaindbtraceiteratoreventstreamfromvolatiledb)
-		1. [SwitchBackToVolatileDB](#cardanonodechaindbtraceiteratoreventswitchbacktovolatiledb)
-		1. [UnknownRangeRequested](#cardanonodechaindbtraceiteratoreventunknownrangerequested)
-	1. __TraceLedgerEvent__
-		1. [DeletedSnapshot](#cardanonodechaindbtraceledgereventdeletedsnapshot)
-		1. [InvalidSnapshot](#cardanonodechaindbtraceledgereventinvalidsnapshot)
-		1. [TookSnapshot](#cardanonodechaindbtraceledgereventtooksnapshot)
-	1. __TraceLedgerReplayEvent__
-		1. [ReplayFromGenesis](#cardanonodechaindbtraceledgerreplayeventreplayfromgenesis)
-		1. [ReplayFromSnapshot](#cardanonodechaindbtraceledgerreplayeventreplayfromsnapshot)
-		1. [ReplayedBlock](#cardanonodechaindbtraceledgerreplayeventreplayedblock)
+		1. [ValidCandidate](#validcandidate)
+		1. [CandidateContainsFutureBlocks](#chaindbtraceinitchainseleventcandidatecontainsfutureblocks)
+		1. [CandidateContainsFutureBlocksExceedingClockSkew](#chaindbtraceinitchainseleventcandidatecontainsfutureblocksexceedingclockskew)
+		1. [InvalidBlock](#chaindbtraceinitchainseleventinvalidblock)
+		1. [UpdateLedgerDb](#chaindbtraceinitchainseleventupdateledgerdb)
+		1. [StartedInitChainSelection](#chaindbtraceinitchainseleventstartedinitchainselection)
+		1. [InitalChainSelected](#chaindbtraceinitchainseleventinitalchainselected)
 	1. __TraceOpenEvent__
-		1. [ClosedDB](#cardanonodechaindbtraceopeneventcloseddb)
-		1. [OpenedDB](#cardanonodechaindbtraceopeneventopeneddb)
-		1. [OpenedImmutableDB](#cardanonodechaindbtraceopeneventopenedimmutabledb)
-		1. [OpenedLgrDB](#cardanonodechaindbtraceopeneventopenedlgrdb)
-		1. [OpenedVolatileDB](#cardanonodechaindbtraceopeneventopenedvolatiledb)
-		1. [StartedOpeningDB](#cardanonodechaindbtraceopeneventstartedopeningdb)
-		1. [StartedOpeningImmutableDB](#cardanonodechaindbtraceopeneventstartedopeningimmutabledb)
-		1. [StartedOpeningLgrDB](#cardanonodechaindbtraceopeneventstartedopeninglgrdb)
-		1. [StartedOpeningVolatileDB](#cardanonodechaindbtraceopeneventstartedopeningvolatiledb)
+		1. [ClosedDB](#closeddb)
+		1. [OpenedDB](#chaindbtraceopeneventopeneddb)
+		1. [OpenedImmutableDB](#chaindbtraceopeneventopenedimmutabledb)
+		1. [OpenedVolatileDB](#chaindbtraceopeneventopenedvolatiledb)
+		1. [OpenedLgrDB](#chaindbtraceopeneventopenedlgrdb)
+		1. [StartedOpeningDB](#chaindbtraceopeneventstartedopeningdb)
+		1. [StartedOpeningImmutableDB](#chaindbtraceopeneventstartedopeningimmutabledb)
+		1. [StartedOpeningVolatileDB](#chaindbtraceopeneventstartedopeningvolatiledb)
+		1. [StartedOpeningLgrDB](#chaindbtraceopeneventstartedopeninglgrdb)
+	1. __TraceIteratorEvent__
+		1. [StreamFromVolatileDB](#streamfromvolatiledb)
+		1. [UnknownRangeRequested](#chaindbtraceiteratoreventunknownrangerequested)
+		1. [StreamFromImmutableDB](#chaindbtraceiteratoreventstreamfromimmutabledb)
+		1. [StreamFromBoth](#chaindbtraceiteratoreventstreamfromboth)
+		1. [BlockMissingFromVolatileDB](#chaindbtraceiteratoreventblockmissingfromvolatiledb)
+		1. [BlockWasCopiedToImmutableDB](#chaindbtraceiteratoreventblockwascopiedtoimmutabledb)
+		1. [BlockGCedFromVolatileDB](#chaindbtraceiteratoreventblockgcedfromvolatiledb)
+		1. [SwitchBackToVolatileDB](#chaindbtraceiteratoreventswitchbacktovolatiledb)
+	1. __TraceLedgerEvent__
+		1. [TookSnapshot](#tooksnapshot)
+		1. [InvalidSnapshot](#chaindbtraceledgereventinvalidsnapshot)
+		1. [DeletedSnapshot](#chaindbtraceledgereventdeletedsnapshot)
+	1. __TraceLedgerReplayEvent__
+		1. [ReplayFromSnapshot](#replayfromsnapshot)
+		1. [ReplayFromGenesis](#chaindbtraceledgerreplayeventreplayfromgenesis)
+		1. [ReplayedBlock](#chaindbtraceledgerreplayeventreplayedblock)
+	1. __TraceImmutableDBEvent__
+		1. [ValidatedLastLocation](#validatedlastlocation)
+		1. [NoValidLastLocation](#chaindbtraceimmutabledbeventnovalidlastlocation)
+		1. [ChunkFileDoesntFit](#chaindbtraceimmutabledbeventchunkfiledoesntfit)
+		1. [Migrating](#chaindbtraceimmutabledbeventmigrating)
+		1. [DeletingAfter](#chaindbtraceimmutabledbeventdeletingafter)
+		1. [DBAlreadyClosed](#chaindbtraceimmutabledbeventdbalreadyclosed)
+		1. [DBClosed](#chaindbtraceimmutabledbeventdbclosed)
+		1. __ChunkValidation__
+			1. [ValidatedChunk](#validatedchunk)
+			1. [StartedValidatingChunk](#chaindbtraceimmutabledbeventchunkvalidationstartedvalidatingchunk)
+			1. [MissingChunkFile](#chaindbtraceimmutabledbeventchunkvalidationmissingchunkfile)
+			1. [InvalidChunkFile](#chaindbtraceimmutabledbeventchunkvalidationinvalidchunkfile)
+			1. [MissingPrimaryIndex](#chaindbtraceimmutabledbeventchunkvalidationmissingprimaryindex)
+			1. [MissingSecondaryIndex](#chaindbtraceimmutabledbeventchunkvalidationmissingsecondaryindex)
+			1. [InvalidPrimaryIndex](#chaindbtraceimmutabledbeventchunkvalidationinvalidprimaryindex)
+			1. [InvalidSecondaryIndex](#chaindbtraceimmutabledbeventchunkvalidationinvalidsecondaryindex)
+			1. [RewritePrimaryIndex](#chaindbtraceimmutabledbeventchunkvalidationrewriteprimaryindex)
+			1. [RewriteSecondaryIndex](#chaindbtraceimmutabledbeventchunkvalidationrewritesecondaryindex)
+		1. __CacheEvent__
+			1. [PastChunkHit](#pastchunkhit)
+			1. [CurrentChunkHit](#chaindbtraceimmutabledbeventcacheeventcurrentchunkhit)
+			1. [PastChunkMiss](#chaindbtraceimmutabledbeventcacheeventpastchunkmiss)
+			1. [PastChunkEvict](#chaindbtraceimmutabledbeventcacheeventpastchunkevict)
+			1. [PastChunkExpired](#chaindbtraceimmutabledbeventcacheeventpastchunkexpired)
 	1. __TraceVolatileDBEvent__
-		1. [BlockAlreadyHere](#cardanonodechaindbtracevolatiledbeventblockalreadyhere)
-		1. [DBAlreadyClosed](#cardanonodechaindbtracevolatiledbeventdbalreadyclosed)
-		1. [InvalidFileNames](#cardanonodechaindbtracevolatiledbeventinvalidfilenames)
-		1. [Truncate](#cardanonodechaindbtracevolatiledbeventtruncate)
-1. __ChainSync__
-	1. __NodeToClient__
-		1. __Recieve__
-			1. [AwaitReply](#cardanonodechainsyncnodetoclientrecieveawaitreply)
-			1. [Done](#cardanonodechainsyncnodetoclientrecievedone)
-			1. [FindIntersect](#cardanonodechainsyncnodetoclientrecievefindintersect)
-			1. [IntersectFound](#cardanonodechainsyncnodetoclientrecieveintersectfound)
-			1. [IntersectNotFound](#cardanonodechainsyncnodetoclientrecieveintersectnotfound)
-			1. [RequestNext](#cardanonodechainsyncnodetoclientrecieverequestnext)
-			1. [RollBackward](#cardanonodechainsyncnodetoclientrecieverollbackward)
-			1. [RollForward](#cardanonodechainsyncnodetoclientrecieverollforward)
-		1. __Send__
-			1. [AwaitReply](#cardanonodechainsyncnodetoclientsendawaitreply)
-			1. [Done](#cardanonodechainsyncnodetoclientsenddone)
-			1. [FindIntersect](#cardanonodechainsyncnodetoclientsendfindintersect)
-			1. [IntersectFound](#cardanonodechainsyncnodetoclientsendintersectfound)
-			1. [IntersectNotFound](#cardanonodechainsyncnodetoclientsendintersectnotfound)
-			1. [RequestNext](#cardanonodechainsyncnodetoclientsendrequestnext)
-			1. [RollBackward](#cardanonodechainsyncnodetoclientsendrollbackward)
-			1. [RollForward](#cardanonodechainsyncnodetoclientsendrollforward)
+		1. [DBAlreadyClosed](#dbalreadyclosed)
+		1. [Truncate](#chaindbtracevolatiledbeventtruncate)
+		1. [InvalidFileNames](#chaindbtracevolatiledbeventinvalidfilenames)
+		1. [BlockAlreadyHere](#chaindbtracevolatiledbeventblockalreadyhere)
+1. __DNSResolver__
+	1. [LookupAError](#lookupaerror)
+	1. [LookupException](#dnsresolverlookupexception)
+	1. [LookupAAAAError](#dnsresolverlookupaaaaerror)
+	1. [LookupIPv6First](#dnsresolverlookupipv6first)
+	1. [LookupIPv4First](#dnsresolverlookupipv4first)
+	1. [LookupAResult](#dnsresolverlookuparesult)
+	1. [LookupAAAAResult](#dnsresolverlookupaaaaresult)
+1. __DNSSubscription__
+	1. __DNS__
+		1. [ConnectEnd](#connectend)
+		1. [ConnectStart](#dnssubscriptiondnsconnectstart)
+		1. [ConnectException](#dnssubscriptiondnsconnectexception)
+		1. [SocketAllocationException](#dnssubscriptiondnssocketallocationexception)
+		1. [TryConnectToPeer](#dnssubscriptiondnstryconnecttopeer)
+		1. [SkippingPeer](#dnssubscriptiondnsskippingpeer)
+		1. [SubscriptionRunning](#dnssubscriptiondnssubscriptionrunning)
+		1. [SubscriptionWaiting](#dnssubscriptiondnssubscriptionwaiting)
+		1. [SubscriptionFailed](#dnssubscriptiondnssubscriptionfailed)
+		1. [SubscriptionWaitingNewConnection](#dnssubscriptiondnssubscriptionwaitingnewconnection)
+		1. [Start](#dnssubscriptiondnsstart)
+		1. [Restart](#dnssubscriptiondnsrestart)
+		1. [ConnectionExist](#dnssubscriptiondnsconnectionexist)
+		1. [UnsupportedRemoteAddr](#dnssubscriptiondnsunsupportedremoteaddr)
+		1. [MissingLocalAddress](#dnssubscriptiondnsmissinglocaladdress)
+		1. [ApplicationException](#dnssubscriptiondnsapplicationexception)
+		1. [AllocateSocket](#dnssubscriptiondnsallocatesocket)
+		1. [CloseSocket](#dnssubscriptiondnsclosesocket)
+1. __DiffusionInit__
+	1. [RunLocalServer](#runlocalserver)
+	1. [RunServer](#diffusioninitrunserver)
+	1. [UsingSystemdSocket](#diffusioninitusingsystemdsocket)
+	1. [CreateSystemdSocketForSnocketPath](#diffusioninitcreatesystemdsocketforsnocketpath)
+	1. [CreatedLocalSocket](#diffusioninitcreatedlocalsocket)
+	1. [ConfiguringLocalSocket](#diffusioninitconfiguringlocalsocket)
+	1. [ListeningLocalSocket](#diffusioninitlisteninglocalsocket)
+	1. [LocalSocketUp](#diffusioninitlocalsocketup)
+	1. [CreatingServerSocket](#diffusioninitcreatingserversocket)
+	1. [ConfiguringServerSocket](#diffusioninitconfiguringserversocket)
+	1. [ListeningServerSocket](#diffusioninitlisteningserversocket)
+	1. [ServerSocketUp](#diffusioninitserversocketup)
+	1. [UnsupportedLocalSystemdSocket](#diffusioninitunsupportedlocalsystemdsocket)
+	1. [UnsupportedReadySocketCase](#diffusioninitunsupportedreadysocketcase)
+	1. [DiffusionErrored](#diffusioninitdiffusionerrored)
+1. __ErrorPolicy__
+	1. [SuspendConsumer](#suspendconsumer)
+	1. [SuspendPeer](#errorpolicysuspendpeer)
+	1. [LocalNodeError](#errorpolicylocalnodeerror)
+	1. [ResumePeer](#errorpolicyresumepeer)
+	1. [KeepSuspended](#errorpolicykeepsuspended)
+	1. [ResumeConsumer](#errorpolicyresumeconsumer)
+	1. [ResumeProducer](#errorpolicyresumeproducer)
+	1. [UnhandledApplicationException](#errorpolicyunhandledapplicationexception)
+	1. [UnhandledConnectionException](#errorpolicyunhandledconnectionexception)
+	1. [AcceptException](#errorpolicyacceptexception)
+1. __Forge__
+	1. [SlotIsImmutable](#slotisimmutable)
+	1. [StartLeadershipCheck](#forgestartleadershipcheck)
+	1. [BlockFromFuture](#forgeblockfromfuture)
+	1. [BlockContext](#forgeblockcontext)
+	1. [NoLedgerState](#forgenoledgerstate)
+	1. [LedgerState](#forgeledgerstate)
+	1. [NoLedgerView](#forgenoledgerview)
+	1. [LedgerView](#forgeledgerview)
+	1. [ForgeStateUpdateError](#forgeforgestateupdateerror)
+	1. [NodeCannotForge](#forgenodecannotforge)
+	1. [NodeNotLeader](#forgenodenotleader)
+	1. [NodeIsLeader](#forgenodeisleader)
+	1. [ForgedBlock](#forgeforgedblock)
+	1. [DidntAdoptBlock](#forgedidntadoptblock)
+	1. [ForgedInvalidBlock](#forgeforgedinvalidblock)
+	1. [AdoptedBlock](#forgeadoptedblock)
+	1. [StartLeadershipCheckPlus](#forgestartleadershipcheckplus)
+1. __IpSubscription__
+	1. __IP__
+		1. [ConnectEnd](#connectend)
+		1. [ConnectStart](#ipsubscriptionipconnectstart)
+		1. [ConnectException](#ipsubscriptionipconnectexception)
+		1. [SocketAllocationException](#ipsubscriptionipsocketallocationexception)
+		1. [TryConnectToPeer](#ipsubscriptioniptryconnecttopeer)
+		1. [SkippingPeer](#ipsubscriptionipskippingpeer)
+		1. [SubscriptionRunning](#ipsubscriptionipsubscriptionrunning)
+		1. [SubscriptionWaiting](#ipsubscriptionipsubscriptionwaiting)
+		1. [SubscriptionFailed](#ipsubscriptionipsubscriptionfailed)
+		1. [SubscriptionWaitingNewConnection](#ipsubscriptionipsubscriptionwaitingnewconnection)
+		1. [Start](#ipsubscriptionipstart)
+		1. [Restart](#ipsubscriptioniprestart)
+		1. [ConnectionExist](#ipsubscriptionipconnectionexist)
+		1. [UnsupportedRemoteAddr](#ipsubscriptionipunsupportedremoteaddr)
+		1. [MissingLocalAddress](#ipsubscriptionipmissinglocaladdress)
+		1. [ApplicationException](#ipsubscriptionipapplicationexception)
+		1. [AllocateSocket](#ipsubscriptionipallocatesocket)
+		1. [CloseSocket](#ipsubscriptionipclosesocket)
+1. __LocalErrorPolicy__
+	1. [SuspendConsumer](#suspendconsumer)
+	1. [SuspendPeer](#localerrorpolicysuspendpeer)
+	1. [LocalNodeError](#localerrorpolicylocalnodeerror)
+	1. [ResumePeer](#localerrorpolicyresumepeer)
+	1. [KeepSuspended](#localerrorpolicykeepsuspended)
+	1. [ResumeConsumer](#localerrorpolicyresumeconsumer)
+	1. [ResumeProducer](#localerrorpolicyresumeproducer)
+	1. [UnhandledApplicationException](#localerrorpolicyunhandledapplicationexception)
+	1. [UnhandledConnectionException](#localerrorpolicyunhandledconnectionexception)
+	1. [AcceptException](#localerrorpolicyacceptexception)
+1. __Mempool__
+	1. [RejectedTx](#rejectedtx)
+	1. [AddedTx](#mempooladdedtx)
+	1. [RemoveTxs](#mempoolremovetxs)
+	1. [ManuallyRemovedTxs](#mempoolmanuallyremovedtxs)
+1. [Resources](#resources)
+1. __BlockFetchClient__
+	1. [AddedFetchRequest](#addedfetchrequest)
+	1. [CompletedBlockFetch](#blockfetchclientcompletedblockfetch)
+	1. [AcknowledgedFetchRequest](#blockfetchclientacknowledgedfetchrequest)
+	1. [SendFetchRequest](#blockfetchclientsendfetchrequest)
+	1. [StartedFetchBatch](#blockfetchclientstartedfetchbatch)
+	1. [CompletedFetchBatch](#blockfetchclientcompletedfetchbatch)
+	1. [RejectedFetchBatch](#blockfetchclientrejectedfetchbatch)
+	1. [ClientTerminating](#blockfetchclientclientterminating)
+1. __Startup__
+	1. [StartupP2PInfo](#startupp2pinfo)
+	1. [StartupInfo](#startupstartupinfo)
+	1. [StartupTime](#startupstartuptime)
+	1. [StartupNetworkMagic](#startupstartupnetworkmagic)
+	1. [StartupSocketConfigError](#startupstartupsocketconfigerror)
+	1. [StartupDBValidation](#startupstartupdbvalidation)
+	1. [NetworkConfigUpdate](#startupnetworkconfigupdate)
+	1. [NetworkConfigUpdateError](#startupnetworkconfigupdateerror)
+	1. [NetworkConfig](#startupnetworkconfig)
+	1. [P2PWarning](#startupp2pwarning)
+	1. [P2PWarningDevelopementNetworkProtocols](#startupp2pwarningdevelopementnetworkprotocols)
+	1. [WarningDevelopmentNetworkProtocols](#startupwarningdevelopmentnetworkprotocols)
+	1. [Common](#startupcommon)
+	1. [ShelleyBased](#startupshelleybased)
+	1. [Byron](#startupbyron)
+	1. [Network](#startupnetwork)
+1. __Shutdown__
+	1. [AbnormalShutdown](#abnormalshutdown)
+	1. [ShutdownRequested](#shutdownshutdownrequested)
+	1. [ShutdownUnexpectedInput](#shutdownshutdownunexpectedinput)
+	1. [RequestingShutdown](#shutdownrequestingshutdown)
+	1. [ShutdownArmedAtSlot](#shutdownshutdownarmedatslot)
+1. [Peers](#peers)
+1. __ReplayBlock__
+	1. [LedgerReplay](#ledgerreplay)
 1. __ChainSyncClient__
 	1. __ChainSyncClientEvent__
-		1. [DownloadedHeader](#cardanonodechainsyncclientchainsyncclienteventdownloadedheader)
-		1. [Exception](#cardanonodechainsyncclientchainsyncclienteventexception)
-		1. [FoundIntersection](#cardanonodechainsyncclientchainsyncclienteventfoundintersection)
-		1. [RolledBack](#cardanonodechainsyncclientchainsyncclienteventrolledback)
-		1. [Termination](#cardanonodechainsyncclientchainsyncclienteventtermination)
-1. __ChainSyncNode__
-	1. __NodeToNode__
-		1. __Recieve__
-			1. [AwaitReply](#cardanonodechainsyncnodenodetonoderecieveawaitreply)
-			1. [Done](#cardanonodechainsyncnodenodetonoderecievedone)
-			1. [FindIntersect](#cardanonodechainsyncnodenodetonoderecievefindintersect)
-			1. [IntersectFound](#cardanonodechainsyncnodenodetonoderecieveintersectfound)
-			1. [IntersectNotFound](#cardanonodechainsyncnodenodetonoderecieveintersectnotfound)
-			1. [RequestNext](#cardanonodechainsyncnodenodetonoderecieverequestnext)
-			1. [RollBackward](#cardanonodechainsyncnodenodetonoderecieverollbackward)
-			1. [RollForward](#cardanonodechainsyncnodenodetonoderecieverollforward)
-		1. __Send__
-			1. [AwaitReply](#cardanonodechainsyncnodenodetonodesendawaitreply)
-			1. [Done](#cardanonodechainsyncnodenodetonodesenddone)
-			1. [FindIntersect](#cardanonodechainsyncnodenodetonodesendfindintersect)
-			1. [IntersectFound](#cardanonodechainsyncnodenodetonodesendintersectfound)
-			1. [IntersectNotFound](#cardanonodechainsyncnodenodetonodesendintersectnotfound)
-			1. [RequestNext](#cardanonodechainsyncnodenodetonodesendrequestnext)
-			1. [RollBackward](#cardanonodechainsyncnodenodetonodesendrollbackward)
-			1. [RollForward](#cardanonodechainsyncnodenodetonodesendrollforward)
-1. __ChainSyncSerialised__
-	1. __NodeToNode__
-		1. __Recieve__
-			1. [AwaitReply](#cardanonodechainsyncserialisednodetonoderecieveawaitreply)
-			1. [Done](#cardanonodechainsyncserialisednodetonoderecievedone)
-			1. [FindIntersect](#cardanonodechainsyncserialisednodetonoderecievefindintersect)
-			1. [IntersectFound](#cardanonodechainsyncserialisednodetonoderecieveintersectfound)
-			1. [IntersectNotFound](#cardanonodechainsyncserialisednodetonoderecieveintersectnotfound)
-			1. [RequestNext](#cardanonodechainsyncserialisednodetonoderecieverequestnext)
-			1. [RollBackward](#cardanonodechainsyncserialisednodetonoderecieverollbackward)
-			1. [RollForward](#cardanonodechainsyncserialisednodetonoderecieverollforward)
-		1. __Send__
-			1. [AwaitReply](#cardanonodechainsyncserialisednodetonodesendawaitreply)
-			1. [Done](#cardanonodechainsyncserialisednodetonodesenddone)
-			1. [FindIntersect](#cardanonodechainsyncserialisednodetonodesendfindintersect)
-			1. [IntersectFound](#cardanonodechainsyncserialisednodetonodesendintersectfound)
-			1. [IntersectNotFound](#cardanonodechainsyncserialisednodetonodesendintersectnotfound)
-			1. [RequestNext](#cardanonodechainsyncserialisednodetonodesendrequestnext)
-			1. [RollBackward](#cardanonodechainsyncserialisednodetonodesendrollbackward)
-			1. [RollForward](#cardanonodechainsyncserialisednodetonodesendrollforward)
-1. __ChainSyncServerBlock__
-	1. __ChainSyncServerEvent__
-		1. __ServerRead__
-			1. [RollBackward](#cardanonodechainsyncserverblockchainsyncservereventserverreadrollbackward)
-			1. [RollForward](#cardanonodechainsyncserverblockchainsyncservereventserverreadrollforward)
-			1. [ServerRead](#cardanonodechainsyncserverblockchainsyncservereventserverreadserverread)
-			1. [ServerReadBlocked](#cardanonodechainsyncserverblockchainsyncservereventserverreadserverreadblocked)
+		1. [RolledBack](#rolledback)
+		1. [DownloadedHeader](#chainsyncclientchainsyncclienteventdownloadedheader)
+		1. [FoundIntersection](#chainsyncclientchainsyncclienteventfoundintersection)
+		1. [Exception](#chainsyncclientchainsyncclienteventexception)
+		1. [Termination](#chainsyncclientchainsyncclienteventtermination)
 1. __ChainSyncServerHeader__
 	1. __ChainSyncServerEvent__
 		1. __ServerRead__
-			1. [RollBackward](#cardanonodechainsyncserverheaderchainsyncservereventserverreadrollbackward)
-			1. [RollForward](#cardanonodechainsyncserverheaderchainsyncservereventserverreadrollforward)
-			1. [ServerRead](#cardanonodechainsyncserverheaderchainsyncservereventserverreadserverread)
-			1. [ServerReadBlocked](#cardanonodechainsyncserverheaderchainsyncservereventserverreadserverreadblocked)
-1. __ConnectionManager__
-	1. [Connect](#cardanonodeconnectionmanagerconnect)
-	1. [ConnectError](#cardanonodeconnectionmanagerconnecterror)
-	1. [ConnectionCleanup](#cardanonodeconnectionmanagerconnectioncleanup)
-	1. [ConnectionExists](#cardanonodeconnectionmanagerconnectionexists)
-	1. [ConnectionFailure](#cardanonodeconnectionmanagerconnectionfailure)
-	1. [ConnectionHandler](#cardanonodeconnectionmanagerconnectionhandler)
-	1. [ConnectionManagerCounters](#cardanonodeconnectionmanagerconnectionmanagercounters)
-	1. [ConnectionNotFound](#cardanonodeconnectionmanagerconnectionnotfound)
-	1. [ConnectionTimeWait](#cardanonodeconnectionmanagerconnectiontimewait)
-	1. [ConnectionTimeWaitDone](#cardanonodeconnectionmanagerconnectiontimewaitdone)
-	1. [ForbiddenConnection](#cardanonodeconnectionmanagerforbiddenconnection)
-	1. [ForbiddenOperation](#cardanonodeconnectionmanagerforbiddenoperation)
-	1. [ImpossibleConnection](#cardanonodeconnectionmanagerimpossibleconnection)
-	1. [IncludeConnection](#cardanonodeconnectionmanagerincludeconnection)
-	1. [PruneConnections](#cardanonodeconnectionmanagerpruneconnections)
-	1. [Shutdown](#cardanonodeconnectionmanagershutdown)
-	1. [State](#cardanonodeconnectionmanagerstate)
-	1. [TerminatedConnection](#cardanonodeconnectionmanagerterminatedconnection)
-	1. [TerminatingConnection](#cardanonodeconnectionmanagerterminatingconnection)
-	1. [UnexpectedlyFalseAssertion](#cardanonodeconnectionmanagerunexpectedlyfalseassertion)
-	1. [UnknownConnection](#cardanonodeconnectionmanagerunknownconnection)
-	1. [UnregisterConnection](#cardanonodeconnectionmanagerunregisterconnection)
-1. __ConnectionManagerTransition__
-	1. [ConnectionManagerTransition](#cardanonodeconnectionmanagertransitionconnectionmanagertransition)
-1. __DNSResolver__
-	1. [LookupAAAAError](#cardanonodednsresolverlookupaaaaerror)
-	1. [LookupAAAAResult](#cardanonodednsresolverlookupaaaaresult)
-	1. [LookupAError](#cardanonodednsresolverlookupaerror)
-	1. [LookupAResult](#cardanonodednsresolverlookuparesult)
-	1. [LookupException](#cardanonodednsresolverlookupexception)
-	1. [LookupIPv4First](#cardanonodednsresolverlookupipv4first)
-	1. [LookupIPv6First](#cardanonodednsresolverlookupipv6first)
-1. __DNSSubscription__
-	1. __DNS__
-		1. [AllocateSocket](#cardanonodednssubscriptiondnsallocatesocket)
-		1. [ApplicationException](#cardanonodednssubscriptiondnsapplicationexception)
-		1. [CloseSocket](#cardanonodednssubscriptiondnsclosesocket)
-		1. [ConnectEnd](#cardanonodednssubscriptiondnsconnectend)
-		1. [ConnectException](#cardanonodednssubscriptiondnsconnectexception)
-		1. [ConnectStart](#cardanonodednssubscriptiondnsconnectstart)
-		1. [ConnectionExist](#cardanonodednssubscriptiondnsconnectionexist)
-		1. [MissingLocalAddress](#cardanonodednssubscriptiondnsmissinglocaladdress)
-		1. [Restart](#cardanonodednssubscriptiondnsrestart)
-		1. [SkippingPeer](#cardanonodednssubscriptiondnsskippingpeer)
-		1. [SocketAllocationException](#cardanonodednssubscriptiondnssocketallocationexception)
-		1. [Start](#cardanonodednssubscriptiondnsstart)
-		1. [SubscriptionFailed](#cardanonodednssubscriptiondnssubscriptionfailed)
-		1. [SubscriptionRunning](#cardanonodednssubscriptiondnssubscriptionrunning)
-		1. [SubscriptionWaiting](#cardanonodednssubscriptiondnssubscriptionwaiting)
-		1. [SubscriptionWaitingNewConnection](#cardanonodednssubscriptiondnssubscriptionwaitingnewconnection)
-		1. [TryConnectToPeer](#cardanonodednssubscriptiondnstryconnecttopeer)
-		1. [UnsupportedRemoteAddr](#cardanonodednssubscriptiondnsunsupportedremoteaddr)
-1. __DebugPeerSelection__
-	1. __DebugPeerSelection__
-		1. [GovernorState](#cardanonodedebugpeerselectiondebugpeerselectiongovernorstate)
-1. __DebugPeerSelectionResponder__
-	1. __DebugPeerSelection__
-		1. [GovernorState](#cardanonodedebugpeerselectionresponderdebugpeerselectiongovernorstate)
-1. __DiffusionInit__
-	1. [ConfiguringLocalSocket](#cardanonodediffusioninitconfiguringlocalsocket)
-	1. [ConfiguringServerSocket](#cardanonodediffusioninitconfiguringserversocket)
-	1. [CreateSystemdSocketForSnocketPath](#cardanonodediffusioninitcreatesystemdsocketforsnocketpath)
-	1. [CreatedLocalSocket](#cardanonodediffusioninitcreatedlocalsocket)
-	1. [CreatingServerSocket](#cardanonodediffusioninitcreatingserversocket)
-	1. [DiffusionErrored](#cardanonodediffusioninitdiffusionerrored)
-	1. [ListeningLocalSocket](#cardanonodediffusioninitlisteninglocalsocket)
-	1. [ListeningServerSocket](#cardanonodediffusioninitlisteningserversocket)
-	1. [LocalSocketUp](#cardanonodediffusioninitlocalsocketup)
-	1. [RunLocalServer](#cardanonodediffusioninitrunlocalserver)
-	1. [RunServer](#cardanonodediffusioninitrunserver)
-	1. [ServerSocketUp](#cardanonodediffusioninitserversocketup)
-	1. [UnsupportedLocalSystemdSocket](#cardanonodediffusioninitunsupportedlocalsystemdsocket)
-	1. [UnsupportedReadySocketCase](#cardanonodediffusioninitunsupportedreadysocketcase)
-	1. [UsingSystemdSocket](#cardanonodediffusioninitusingsystemdsocket)
-1. __ErrorPolicy__
-	1. [AcceptException](#cardanonodeerrorpolicyacceptexception)
-	1. [KeepSuspended](#cardanonodeerrorpolicykeepsuspended)
-	1. [LocalNodeError](#cardanonodeerrorpolicylocalnodeerror)
-	1. [ResumeConsumer](#cardanonodeerrorpolicyresumeconsumer)
-	1. [ResumePeer](#cardanonodeerrorpolicyresumepeer)
-	1. [ResumeProducer](#cardanonodeerrorpolicyresumeproducer)
-	1. [SuspendConsumer](#cardanonodeerrorpolicysuspendconsumer)
-	1. [SuspendPeer](#cardanonodeerrorpolicysuspendpeer)
-	1. [UnhandledApplicationException](#cardanonodeerrorpolicyunhandledapplicationexception)
-	1. [UnhandledConnectionException](#cardanonodeerrorpolicyunhandledconnectionexception)
-1. __Forge__
-	1. [AdoptedBlock](#cardanonodeforgeadoptedblock)
-	1. [BlockContext](#cardanonodeforgeblockcontext)
-	1. [BlockFromFuture](#cardanonodeforgeblockfromfuture)
-	1. [DidntAdoptBlock](#cardanonodeforgedidntadoptblock)
-	1. [ForgeStateUpdateError](#cardanonodeforgeforgestateupdateerror)
-	1. [ForgedBlock](#cardanonodeforgeforgedblock)
-	1. [ForgedInvalidBlock](#cardanonodeforgeforgedinvalidblock)
-	1. [LedgerState](#cardanonodeforgeledgerstate)
-	1. [LedgerView](#cardanonodeforgeledgerview)
-	1. [NoLedgerState](#cardanonodeforgenoledgerstate)
-	1. [NoLedgerView](#cardanonodeforgenoledgerview)
-	1. [NodeCannotForge](#cardanonodeforgenodecannotforge)
-	1. [NodeIsLeader](#cardanonodeforgenodeisleader)
-	1. [NodeNotLeader](#cardanonodeforgenodenotleader)
-	1. [SlotIsImmutable](#cardanonodeforgeslotisimmutable)
-	1. [StartLeadershipCheck](#cardanonodeforgestartleadershipcheck)
-	1. [StartLeadershipCheckPlus](#cardanonodeforgestartleadershipcheckplus)
-1. [ForgeStateInfo](#cardanonodeforgestateinfo)
-1. __ForgeStats__
-	1. [ForgeStats](#cardanonodeforgestatsforgestats)
-1. __Handshake__
-	1. __Receive__
-		1. [AcceptVersion](#cardanonodehandshakereceiveacceptversion)
-		1. [ProposeVersions](#cardanonodehandshakereceiveproposeversions)
-		1. [Refuse](#cardanonodehandshakereceiverefuse)
-		1. [ReplyVersions](#cardanonodehandshakereceivereplyversions)
-	1. __Send__
-		1. [AcceptVersion](#cardanonodehandshakesendacceptversion)
-		1. [ProposeVersions](#cardanonodehandshakesendproposeversions)
-		1. [Refuse](#cardanonodehandshakesendrefuse)
-		1. [ReplyVersions](#cardanonodehandshakesendreplyversions)
-1. __InboundGovernor__
-	1. [DemotedToColdRemote](#cardanonodeinboundgovernordemotedtocoldremote)
-	1. [DemotedToWarmRemote](#cardanonodeinboundgovernordemotedtowarmremote)
-	1. [InboundGovernorCounters](#cardanonodeinboundgovernorinboundgovernorcounters)
-	1. [InboundGovernorError](#cardanonodeinboundgovernorinboundgovernorerror)
-	1. [MuxCleanExit](#cardanonodeinboundgovernormuxcleanexit)
-	1. [MuxErrored](#cardanonodeinboundgovernormuxerrored)
-	1. [NewConnection](#cardanonodeinboundgovernornewconnection)
-	1. [PromotedToHotRemote](#cardanonodeinboundgovernorpromotedtohotremote)
-	1. [PromotedToWarmRemote](#cardanonodeinboundgovernorpromotedtowarmremote)
-	1. [RemoteState](#cardanonodeinboundgovernorremotestate)
-	1. [ResponderErrored](#cardanonodeinboundgovernorrespondererrored)
-	1. [ResponderRestarted](#cardanonodeinboundgovernorresponderrestarted)
-	1. [ResponderStartFailure](#cardanonodeinboundgovernorresponderstartfailure)
-	1. [ResponderStarted](#cardanonodeinboundgovernorresponderstarted)
-	1. [ResponderTerminated](#cardanonodeinboundgovernorresponderterminated)
-	1. [UnexpectedlyFalseAssertion](#cardanonodeinboundgovernorunexpectedlyfalseassertion)
-	1. [WaitIdleRemote](#cardanonodeinboundgovernorwaitidleremote)
-1. __InboundGovernorTransition__
-	1. [InboundGovernorTransition](#cardanonodeinboundgovernortransitioninboundgovernortransition)
-1. __IpSubscription__
-	1. __IP__
-		1. [AllocateSocket](#cardanonodeipsubscriptionipallocatesocket)
-		1. [ApplicationException](#cardanonodeipsubscriptionipapplicationexception)
-		1. [CloseSocket](#cardanonodeipsubscriptionipclosesocket)
-		1. [ConnectEnd](#cardanonodeipsubscriptionipconnectend)
-		1. [ConnectException](#cardanonodeipsubscriptionipconnectexception)
-		1. [ConnectStart](#cardanonodeipsubscriptionipconnectstart)
-		1. [ConnectionExist](#cardanonodeipsubscriptionipconnectionexist)
-		1. [MissingLocalAddress](#cardanonodeipsubscriptionipmissinglocaladdress)
-		1. [Restart](#cardanonodeipsubscriptioniprestart)
-		1. [SkippingPeer](#cardanonodeipsubscriptionipskippingpeer)
-		1. [SocketAllocationException](#cardanonodeipsubscriptionipsocketallocationexception)
-		1. [Start](#cardanonodeipsubscriptionipstart)
-		1. [SubscriptionFailed](#cardanonodeipsubscriptionipsubscriptionfailed)
-		1. [SubscriptionRunning](#cardanonodeipsubscriptionipsubscriptionrunning)
-		1. [SubscriptionWaiting](#cardanonodeipsubscriptionipsubscriptionwaiting)
-		1. [SubscriptionWaitingNewConnection](#cardanonodeipsubscriptionipsubscriptionwaitingnewconnection)
-		1. [TryConnectToPeer](#cardanonodeipsubscriptioniptryconnecttopeer)
-		1. [UnsupportedRemoteAddr](#cardanonodeipsubscriptionipunsupportedremoteaddr)
-1. [KeepAliveClient](#cardanonodekeepaliveclient)
-1. __LedgerPeers__
-	1. [DisabledLedgerPeers](#cardanonodeledgerpeersdisabledledgerpeers)
-	1. [FallingBackToBootstrapPeers](#cardanonodeledgerpeersfallingbacktobootstrappeers)
-	1. [FetchingNewLedgerState](#cardanonodeledgerpeersfetchingnewledgerstate)
-	1. [PickedPeer](#cardanonodeledgerpeerspickedpeer)
-	1. [PickedPeers](#cardanonodeledgerpeerspickedpeers)
-	1. [RequestForPeers](#cardanonodeledgerpeersrequestforpeers)
-	1. [ReusingLedgerState](#cardanonodeledgerpeersreusingledgerstate)
-	1. [TraceUseLedgerAfter](#cardanonodeledgerpeerstraceuseledgerafter)
-	1. [WaitingOnRequest](#cardanonodeledgerpeerswaitingonrequest)
-1. __LocalConnectionManager__
-	1. [Connect](#cardanonodelocalconnectionmanagerconnect)
-	1. [ConnectError](#cardanonodelocalconnectionmanagerconnecterror)
-	1. [ConnectionCleanup](#cardanonodelocalconnectionmanagerconnectioncleanup)
-	1. [ConnectionExists](#cardanonodelocalconnectionmanagerconnectionexists)
-	1. [ConnectionFailure](#cardanonodelocalconnectionmanagerconnectionfailure)
-	1. [ConnectionHandler](#cardanonodelocalconnectionmanagerconnectionhandler)
-	1. [ConnectionManagerCounters](#cardanonodelocalconnectionmanagerconnectionmanagercounters)
-	1. [ConnectionNotFound](#cardanonodelocalconnectionmanagerconnectionnotfound)
-	1. [ConnectionTimeWait](#cardanonodelocalconnectionmanagerconnectiontimewait)
-	1. [ConnectionTimeWaitDone](#cardanonodelocalconnectionmanagerconnectiontimewaitdone)
-	1. [ForbiddenConnection](#cardanonodelocalconnectionmanagerforbiddenconnection)
-	1. [ForbiddenOperation](#cardanonodelocalconnectionmanagerforbiddenoperation)
-	1. [ImpossibleConnection](#cardanonodelocalconnectionmanagerimpossibleconnection)
-	1. [IncludeConnection](#cardanonodelocalconnectionmanagerincludeconnection)
-	1. [PruneConnections](#cardanonodelocalconnectionmanagerpruneconnections)
-	1. [Shutdown](#cardanonodelocalconnectionmanagershutdown)
-	1. [State](#cardanonodelocalconnectionmanagerstate)
-	1. [TerminatedConnection](#cardanonodelocalconnectionmanagerterminatedconnection)
-	1. [TerminatingConnection](#cardanonodelocalconnectionmanagerterminatingconnection)
-	1. [UnexpectedlyFalseAssertion](#cardanonodelocalconnectionmanagerunexpectedlyfalseassertion)
-	1. [UnknownConnection](#cardanonodelocalconnectionmanagerunknownconnection)
-	1. [UnregisterConnection](#cardanonodelocalconnectionmanagerunregisterconnection)
-1. __LocalErrorPolicy__
-	1. [AcceptException](#cardanonodelocalerrorpolicyacceptexception)
-	1. [KeepSuspended](#cardanonodelocalerrorpolicykeepsuspended)
-	1. [LocalNodeError](#cardanonodelocalerrorpolicylocalnodeerror)
-	1. [ResumeConsumer](#cardanonodelocalerrorpolicyresumeconsumer)
-	1. [ResumePeer](#cardanonodelocalerrorpolicyresumepeer)
-	1. [ResumeProducer](#cardanonodelocalerrorpolicyresumeproducer)
-	1. [SuspendConsumer](#cardanonodelocalerrorpolicysuspendconsumer)
-	1. [SuspendPeer](#cardanonodelocalerrorpolicysuspendpeer)
-	1. [UnhandledApplicationException](#cardanonodelocalerrorpolicyunhandledapplicationexception)
-	1. [UnhandledConnectionException](#cardanonodelocalerrorpolicyunhandledconnectionexception)
-1. __LocalHandshake__
-	1. __Receive__
-		1. [AcceptVersion](#cardanonodelocalhandshakereceiveacceptversion)
-		1. [ProposeVersions](#cardanonodelocalhandshakereceiveproposeversions)
-		1. [Refuse](#cardanonodelocalhandshakereceiverefuse)
-		1. [ReplyVersions](#cardanonodelocalhandshakereceivereplyversions)
-	1. __Send__
-		1. [AcceptVersion](#cardanonodelocalhandshakesendacceptversion)
-		1. [ProposeVersions](#cardanonodelocalhandshakesendproposeversions)
-		1. [Refuse](#cardanonodelocalhandshakesendrefuse)
-		1. [ReplyVersions](#cardanonodelocalhandshakesendreplyversions)
-1. __LocalInboundGovernor__
-	1. [DemotedToColdRemote](#cardanonodelocalinboundgovernordemotedtocoldremote)
-	1. [DemotedToWarmRemote](#cardanonodelocalinboundgovernordemotedtowarmremote)
-	1. [InboundGovernorCounters](#cardanonodelocalinboundgovernorinboundgovernorcounters)
-	1. [InboundGovernorError](#cardanonodelocalinboundgovernorinboundgovernorerror)
-	1. [MuxCleanExit](#cardanonodelocalinboundgovernormuxcleanexit)
-	1. [MuxErrored](#cardanonodelocalinboundgovernormuxerrored)
-	1. [NewConnection](#cardanonodelocalinboundgovernornewconnection)
-	1. [PromotedToHotRemote](#cardanonodelocalinboundgovernorpromotedtohotremote)
-	1. [PromotedToWarmRemote](#cardanonodelocalinboundgovernorpromotedtowarmremote)
-	1. [RemoteState](#cardanonodelocalinboundgovernorremotestate)
-	1. [ResponderErrored](#cardanonodelocalinboundgovernorrespondererrored)
-	1. [ResponderRestarted](#cardanonodelocalinboundgovernorresponderrestarted)
-	1. [ResponderStartFailure](#cardanonodelocalinboundgovernorresponderstartfailure)
-	1. [ResponderStarted](#cardanonodelocalinboundgovernorresponderstarted)
-	1. [ResponderTerminated](#cardanonodelocalinboundgovernorresponderterminated)
-	1. [UnexpectedlyFalseAssertion](#cardanonodelocalinboundgovernorunexpectedlyfalseassertion)
-	1. [WaitIdleRemote](#cardanonodelocalinboundgovernorwaitidleremote)
-1. __LocalRootPeers__
-	1. [LocalRootDomains](#cardanonodelocalrootpeerslocalrootdomains)
-	1. [LocalRootError](#cardanonodelocalrootpeerslocalrooterror)
-	1. [LocalRootFailure](#cardanonodelocalrootpeerslocalrootfailure)
-	1. [LocalRootGroups](#cardanonodelocalrootpeerslocalrootgroups)
-	1. [LocalRootResult](#cardanonodelocalrootpeerslocalrootresult)
-	1. [LocalRootWaiting](#cardanonodelocalrootpeerslocalrootwaiting)
-1. __LocalServer__
-	1. [AcceptConnection](#cardanonodelocalserveracceptconnection)
-	1. [AcceptError](#cardanonodelocalserveraccepterror)
-	1. [AcceptPolicy](#cardanonodelocalserveracceptpolicy)
-	1. [Error](#cardanonodelocalservererror)
-	1. [Started](#cardanonodelocalserverstarted)
-	1. [Stopped](#cardanonodelocalserverstopped)
-1. __LocalTxSubmissionServer__
-	1. [ReceivedTx](#cardanonodelocaltxsubmissionserverreceivedtx)
-1. __Mempool__
-	1. [AddedTx](#cardanonodemempooladdedtx)
-	1. [ManuallyRemovedTxs](#cardanonodemempoolmanuallyremovedtxs)
-	1. [RejectedTx](#cardanonodemempoolrejectedtx)
-	1. [RemoveTxs](#cardanonodemempoolremovetxs)
-1. __Mux__
-	1. [ChannelRecvEnd](#cardanonodemuxchannelrecvend)
-	1. [ChannelRecvStart](#cardanonodemuxchannelrecvstart)
-	1. [ChannelSendEnd](#cardanonodemuxchannelsendend)
-	1. [ChannelSendStart](#cardanonodemuxchannelsendstart)
-	1. [CleanExit](#cardanonodemuxcleanexit)
-	1. [ExceptionExit](#cardanonodemuxexceptionexit)
-	1. [HandshakeClientEnd](#cardanonodemuxhandshakeclientend)
-	1. [HandshakeClientError](#cardanonodemuxhandshakeclienterror)
-	1. [HandshakeServerEnd](#cardanonodemuxhandshakeserverend)
-	1. [HandshakeServerError](#cardanonodemuxhandshakeservererror)
-	1. [HandshakeStart](#cardanonodemuxhandshakestart)
-	1. [RecvDeltaQObservation](#cardanonodemuxrecvdeltaqobservation)
-	1. [RecvDeltaQSample](#cardanonodemuxrecvdeltaqsample)
-	1. [RecvEnd](#cardanonodemuxrecvend)
-	1. [RecvHeaderEnd](#cardanonodemuxrecvheaderend)
-	1. [RecvHeaderStart](#cardanonodemuxrecvheaderstart)
-	1. [RecvStart](#cardanonodemuxrecvstart)
-	1. [SDUReadTimeoutException](#cardanonodemuxsdureadtimeoutexception)
-	1. [SDUWriteTimeoutException](#cardanonodemuxsduwritetimeoutexception)
-	1. [SendEnd](#cardanonodemuxsendend)
-	1. [SendStart](#cardanonodemuxsendstart)
-	1. [Shutdown](#cardanonodemuxshutdown)
-	1. [StartEagerly](#cardanonodemuxstarteagerly)
-	1. [StartOnDemand](#cardanonodemuxstartondemand)
-	1. [StartedOnDemand](#cardanonodemuxstartedondemand)
-	1. [State](#cardanonodemuxstate)
-	1. [TCPInfo](#cardanonodemuxtcpinfo)
-	1. [Terminating](#cardanonodemuxterminating)
-1. __MuxLocal__
-	1. [ChannelRecvEnd](#cardanonodemuxlocalchannelrecvend)
-	1. [ChannelRecvStart](#cardanonodemuxlocalchannelrecvstart)
-	1. [ChannelSendEnd](#cardanonodemuxlocalchannelsendend)
-	1. [ChannelSendStart](#cardanonodemuxlocalchannelsendstart)
-	1. [CleanExit](#cardanonodemuxlocalcleanexit)
-	1. [ExceptionExit](#cardanonodemuxlocalexceptionexit)
-	1. [HandshakeClientEnd](#cardanonodemuxlocalhandshakeclientend)
-	1. [HandshakeClientError](#cardanonodemuxlocalhandshakeclienterror)
-	1. [HandshakeServerEnd](#cardanonodemuxlocalhandshakeserverend)
-	1. [HandshakeServerError](#cardanonodemuxlocalhandshakeservererror)
-	1. [HandshakeStart](#cardanonodemuxlocalhandshakestart)
-	1. [RecvDeltaQObservation](#cardanonodemuxlocalrecvdeltaqobservation)
-	1. [RecvDeltaQSample](#cardanonodemuxlocalrecvdeltaqsample)
-	1. [RecvEnd](#cardanonodemuxlocalrecvend)
-	1. [RecvHeaderEnd](#cardanonodemuxlocalrecvheaderend)
-	1. [RecvHeaderStart](#cardanonodemuxlocalrecvheaderstart)
-	1. [RecvStart](#cardanonodemuxlocalrecvstart)
-	1. [SDUReadTimeoutException](#cardanonodemuxlocalsdureadtimeoutexception)
-	1. [SDUWriteTimeoutException](#cardanonodemuxlocalsduwritetimeoutexception)
-	1. [SendEnd](#cardanonodemuxlocalsendend)
-	1. [SendStart](#cardanonodemuxlocalsendstart)
-	1. [Shutdown](#cardanonodemuxlocalshutdown)
-	1. [StartEagerly](#cardanonodemuxlocalstarteagerly)
-	1. [StartOnDemand](#cardanonodemuxlocalstartondemand)
-	1. [StartedOnDemand](#cardanonodemuxlocalstartedondemand)
-	1. [State](#cardanonodemuxlocalstate)
-	1. [TCPInfo](#cardanonodemuxlocaltcpinfo)
-	1. [Terminating](#cardanonodemuxlocalterminating)
-1. __PeerSelection__
-	1. [ChurnMode](#cardanonodepeerselectionchurnmode)
-	1. [ChurnWait](#cardanonodepeerselectionchurnwait)
-	1. [DemoteAsynchronous](#cardanonodepeerselectiondemoteasynchronous)
-	1. [DemoteHotDone](#cardanonodepeerselectiondemotehotdone)
-	1. [DemoteHotFailed](#cardanonodepeerselectiondemotehotfailed)
-	1. [DemoteHotPeers](#cardanonodepeerselectiondemotehotpeers)
-	1. [DemoteLocalHotPeers](#cardanonodepeerselectiondemotelocalhotpeers)
-	1. [DemoteWarmDone](#cardanonodepeerselectiondemotewarmdone)
-	1. [DemoteWarmFailed](#cardanonodepeerselectiondemotewarmfailed)
-	1. [DemoteWarmPeers](#cardanonodepeerselectiondemotewarmpeers)
-	1. [ForgetColdPeers](#cardanonodepeerselectionforgetcoldpeers)
-	1. [GossipRequests](#cardanonodepeerselectiongossiprequests)
-	1. [GossipResults](#cardanonodepeerselectiongossipresults)
-	1. [GovernorWakeup](#cardanonodepeerselectiongovernorwakeup)
-	1. [LocalRootPeersChanged](#cardanonodepeerselectionlocalrootpeerschanged)
-	1. [PromoteColdDone](#cardanonodepeerselectionpromotecolddone)
-	1. [PromoteColdFailed](#cardanonodepeerselectionpromotecoldfailed)
-	1. [PromoteColdLocalPeers](#cardanonodepeerselectionpromotecoldlocalpeers)
-	1. [PromoteColdPeers](#cardanonodepeerselectionpromotecoldpeers)
-	1. [PromoteWarmAborted](#cardanonodepeerselectionpromotewarmaborted)
-	1. [PromoteWarmDone](#cardanonodepeerselectionpromotewarmdone)
-	1. [PromoteWarmFailed](#cardanonodepeerselectionpromotewarmfailed)
-	1. [PromoteWarmLocalPeers](#cardanonodepeerselectionpromotewarmlocalpeers)
-	1. [PromoteWarmPeers](#cardanonodepeerselectionpromotewarmpeers)
-	1. [PublicRootsFailure](#cardanonodepeerselectionpublicrootsfailure)
-	1. [PublicRootsRequest](#cardanonodepeerselectionpublicrootsrequest)
-	1. [PublicRootsResults](#cardanonodepeerselectionpublicrootsresults)
-	1. [TargetsChanged](#cardanonodepeerselectiontargetschanged)
-1. __PeerSelectionActions__
-	1. [MonitoringError](#cardanonodepeerselectionactionsmonitoringerror)
-	1. [MonitoringResult](#cardanonodepeerselectionactionsmonitoringresult)
-	1. [StatusChangeFailure](#cardanonodepeerselectionactionsstatuschangefailure)
-	1. [StatusChanged](#cardanonodepeerselectionactionsstatuschanged)
-1. __PeerSelectionCounters__
-	1. [PeerSelectionCounters](#cardanonodepeerselectioncounterspeerselectioncounters)
-1. [Peers](#cardanonodepeers)
-1. __PublicRootPeers__
-	1. __PublicRootPeers__
-		1. [PublicRootDomains](#cardanonodepublicrootpeerspublicrootpeerspublicrootdomains)
-		1. [PublicRootFailure](#cardanonodepublicrootpeerspublicrootpeerspublicrootfailure)
-		1. [PublicRootRelayAccessPoint](#cardanonodepublicrootpeerspublicrootpeerspublicrootrelayaccesspoint)
-		1. [PublicRootResult](#cardanonodepublicrootpeerspublicrootpeerspublicrootresult)
-1. __ReplayBlock__
-	1. [LedgerReplay](#cardanonodereplayblockledgerreplay)
-1. [Resources](#cardanonoderesources)
-1. __Server__
-	1. [AcceptConnection](#cardanonodeserveracceptconnection)
-	1. [AcceptError](#cardanonodeserveraccepterror)
-	1. [AcceptPolicy](#cardanonodeserveracceptpolicy)
-	1. [Error](#cardanonodeservererror)
-	1. [Started](#cardanonodeserverstarted)
-	1. [Stopped](#cardanonodeserverstopped)
-1. __Shutdown__
-	1. [AbnormalShutdown](#cardanonodeshutdownabnormalshutdown)
-	1. [RequestingShutdown](#cardanonodeshutdownrequestingshutdown)
-	1. [ShutdownArmedAtSlot](#cardanonodeshutdownshutdownarmedatslot)
-	1. [ShutdownRequested](#cardanonodeshutdownshutdownrequested)
-	1. [ShutdownUnexpectedInput](#cardanonodeshutdownshutdownunexpectedinput)
-1. __Startup__
-	1. [Byron](#cardanonodestartupbyron)
-	1. [Common](#cardanonodestartupcommon)
-	1. [Network](#cardanonodestartupnetwork)
-	1. [NetworkConfig](#cardanonodestartupnetworkconfig)
-	1. [NetworkConfigUpdate](#cardanonodestartupnetworkconfigupdate)
-	1. [NetworkConfigUpdateError](#cardanonodestartupnetworkconfigupdateerror)
-	1. [P2PWarning](#cardanonodestartupp2pwarning)
-	1. [P2PWarningDevelopementNetworkProtocols](#cardanonodestartupp2pwarningdevelopementnetworkprotocols)
-	1. [ShelleyBased](#cardanonodestartupshelleybased)
-	1. [StartupDBValidation](#cardanonodestartupstartupdbvalidation)
-	1. [StartupInfo](#cardanonodestartupstartupinfo)
-	1. [StartupNetworkMagic](#cardanonodestartupstartupnetworkmagic)
-	1. [StartupP2PInfo](#cardanonodestartupstartupp2pinfo)
-	1. [StartupSocketConfigError](#cardanonodestartupstartupsocketconfigerror)
-	1. [StartupTime](#cardanonodestartupstartuptime)
-	1. [WarningDevelopmentNetworkProtocols](#cardanonodestartupwarningdevelopmentnetworkprotocols)
-1. __StateQueryClient__
-	1. __Recieve__
-		1. [Acquire](#cardanonodestatequeryclientrecieveacquire)
-		1. [Acquired](#cardanonodestatequeryclientrecieveacquired)
-		1. [Done](#cardanonodestatequeryclientrecievedone)
-		1. [Failure](#cardanonodestatequeryclientrecievefailure)
-		1. [Query](#cardanonodestatequeryclientrecievequery)
-		1. [ReAcquire](#cardanonodestatequeryclientrecievereacquire)
-		1. [Release](#cardanonodestatequeryclientrecieverelease)
-		1. [Result](#cardanonodestatequeryclientrecieveresult)
-	1. __Send__
-		1. [Acquire](#cardanonodestatequeryclientsendacquire)
-		1. [Acquired](#cardanonodestatequeryclientsendacquired)
-		1. [Done](#cardanonodestatequeryclientsenddone)
-		1. [Failure](#cardanonodestatequeryclientsendfailure)
-		1. [Query](#cardanonodestatequeryclientsendquery)
-		1. [ReAcquire](#cardanonodestatequeryclientsendreacquire)
-		1. [Release](#cardanonodestatequeryclientsendrelease)
-		1. [Result](#cardanonodestatequeryclientsendresult)
+			1. [ServerRead](#serverread)
+			1. [ServerReadBlocked](#chainsyncserverheaderchainsyncservereventserverreadserverreadblocked)
+			1. [RollForward](#chainsyncserverheaderchainsyncservereventserverreadrollforward)
+			1. [RollBackward](#chainsyncserverheaderchainsyncservereventserverreadrollbackward)
+1. __ChainSyncServerBlock__
+	1. __ChainSyncServerEvent__
+		1. __ServerRead__
+			1. [ServerRead](#serverread)
+			1. [ServerReadBlocked](#chainsyncserverblockchainsyncservereventserverreadserverreadblocked)
+			1. [RollForward](#chainsyncserverblockchainsyncservereventserverreadrollforward)
+			1. [RollBackward](#chainsyncserverblockchainsyncservereventserverreadrollbackward)
+1. [BlockFetchDecision](#blockfetchdecision)
+1. __BlockFetchServer__
+	1. [SendBlock](#sendblock)
+1. [ForgeStateInfo](#forgestateinfo)
 1. __TxInbound__
-	1. [TxInboundCanRequestMoreTxs](#cardanonodetxinboundtxinboundcanrequestmoretxs)
-	1. [TxInboundCannotRequestMoreTxs](#cardanonodetxinboundtxinboundcannotrequestmoretxs)
-	1. [TxInboundTerminated](#cardanonodetxinboundtxinboundterminated)
-	1. [TxSubmissionCollected](#cardanonodetxinboundtxsubmissioncollected)
-	1. [TxSubmissionProcessed](#cardanonodetxinboundtxsubmissionprocessed)
-1. __TxMonitorClient__
-	1. __Recieve__
-		1. [Acquire](#cardanonodetxmonitorclientrecieveacquire)
-		1. [Acquired](#cardanonodetxmonitorclientrecieveacquired)
-		1. [Done](#cardanonodetxmonitorclientrecievedone)
-		1. [Failure](#cardanonodetxmonitorclientrecievefailure)
-		1. [Query](#cardanonodetxmonitorclientrecievequery)
-		1. [ReAcquire](#cardanonodetxmonitorclientrecievereacquire)
-		1. [Release](#cardanonodetxmonitorclientrecieverelease)
-		1. [Result](#cardanonodetxmonitorclientrecieveresult)
-	1. __Send__
-		1. [Acquire](#cardanonodetxmonitorclientsendacquire)
-		1. [Acquired](#cardanonodetxmonitorclientsendacquired)
-		1. [Done](#cardanonodetxmonitorclientsenddone)
-		1. [Failure](#cardanonodetxmonitorclientsendfailure)
-		1. [Query](#cardanonodetxmonitorclientsendquery)
-		1. [ReAcquire](#cardanonodetxmonitorclientsendreacquire)
-		1. [Release](#cardanonodetxmonitorclientsendrelease)
-		1. [Result](#cardanonodetxmonitorclientsendresult)
+	1. [TxSubmissionProcessed](#txsubmissionprocessed)
+	1. [TxSubmissionCollected](#txinboundtxsubmissioncollected)
+	1. [TxInboundTerminated](#txinboundtxinboundterminated)
+	1. [TxInboundCanRequestMoreTxs](#txinboundtxinboundcanrequestmoretxs)
+	1. [TxInboundCannotRequestMoreTxs](#txinboundtxinboundcannotrequestmoretxs)
 1. __TxOutbound__
-	1. [ControlMessage](#cardanonodetxoutboundcontrolmessage)
-	1. [RecvMsgRequest](#cardanonodetxoutboundrecvmsgrequest)
-	1. [SendMsgReply](#cardanonodetxoutboundsendmsgreply)
+	1. [SendMsgReply](#sendmsgreply)
+	1. [RecvMsgRequest](#txoutboundrecvmsgrequest)
+	1. [ControlMessage](#txoutboundcontrolmessage)
+1. __LocalTxSubmissionServer__
+	1. [ReceivedTx](#receivedtx)
+1. __BlockchainTime__
+	1. [CurrentSlotUnknown](#currentslotunknown)
+	1. [StartTimeInTheFuture](#blockchaintimestarttimeinthefuture)
+	1. [SystemClockMovedBack](#blockchaintimesystemclockmovedback)
+1. [KeepAliveClient](#keepaliveclient)
+1. __ChainSync__
+	1. __NodeToClient__
+		1. __Send__
+			1. [RollForward](#rollforward)
+			1. [RollBackward](#chainsyncnodetoclientsendrollbackward)
+			1. [AwaitReply](#chainsyncnodetoclientsendawaitreply)
+			1. [RequestNext](#chainsyncnodetoclientsendrequestnext)
+			1. [FindIntersect](#chainsyncnodetoclientsendfindintersect)
+			1. [IntersectFound](#chainsyncnodetoclientsendintersectfound)
+			1. [IntersectNotFound](#chainsyncnodetoclientsendintersectnotfound)
+			1. [Done](#chainsyncnodetoclientsenddone)
+		1. __Recieve__
+			1. [RollForward](#rollforward)
+			1. [RollBackward](#chainsyncnodetoclientrecieverollbackward)
+			1. [AwaitReply](#chainsyncnodetoclientrecieveawaitreply)
+			1. [RequestNext](#chainsyncnodetoclientrecieverequestnext)
+			1. [FindIntersect](#chainsyncnodetoclientrecievefindintersect)
+			1. [IntersectFound](#chainsyncnodetoclientrecieveintersectfound)
+			1. [IntersectNotFound](#chainsyncnodetoclientrecieveintersectnotfound)
+			1. [Done](#chainsyncnodetoclientrecievedone)
+1. __TxMonitorClient__
+	1. __Send__
+		1. [Done](#done)
+		1. [Acquired](#txmonitorclientsendacquired)
+		1. [Acquire](#txmonitorclientsendacquire)
+		1. [Failure](#txmonitorclientsendfailure)
+		1. [Query](#txmonitorclientsendquery)
+		1. [Result](#txmonitorclientsendresult)
+		1. [Release](#txmonitorclientsendrelease)
+		1. [ReAcquire](#txmonitorclientsendreacquire)
+	1. __Recieve__
+		1. [Done](#done)
+		1. [Acquired](#txmonitorclientrecieveacquired)
+		1. [Acquire](#txmonitorclientrecieveacquire)
+		1. [Failure](#txmonitorclientrecievefailure)
+		1. [Query](#txmonitorclientrecievequery)
+		1. [Result](#txmonitorclientrecieveresult)
+		1. [Release](#txmonitorclientrecieverelease)
+		1. [ReAcquire](#txmonitorclientrecievereacquire)
+1. __TxSubmissionClient__
+	1. __Send__
+		1. [Done](#done)
+		1. [AcceptTx](#txsubmissionclientsendaccepttx)
+		1. [SubmitTx](#txsubmissionclientsendsubmittx)
+		1. [RejectTx](#txsubmissionclientsendrejecttx)
+	1. __Recieve__
+		1. [Done](#done)
+		1. [AcceptTx](#txsubmissionclientrecieveaccepttx)
+		1. [SubmitTx](#txsubmissionclientrecievesubmittx)
+		1. [RejectTx](#txsubmissionclientrecieverejecttx)
+1. __StateQueryClient__
+	1. __Send__
+		1. [Done](#done)
+		1. [Acquired](#statequeryclientsendacquired)
+		1. [Acquire](#statequeryclientsendacquire)
+		1. [Failure](#statequeryclientsendfailure)
+		1. [Query](#statequeryclientsendquery)
+		1. [Result](#statequeryclientsendresult)
+		1. [Release](#statequeryclientsendrelease)
+		1. [ReAcquire](#statequeryclientsendreacquire)
+	1. __Recieve__
+		1. [Done](#done)
+		1. [Acquired](#statequeryclientrecieveacquired)
+		1. [Acquire](#statequeryclientrecieveacquire)
+		1. [Failure](#statequeryclientrecievefailure)
+		1. [Query](#statequeryclientrecievequery)
+		1. [Result](#statequeryclientrecieveresult)
+		1. [Release](#statequeryclientrecieverelease)
+		1. [ReAcquire](#statequeryclientrecievereacquire)
+1. __ChainSyncNode__
+	1. __NodeToNode__
+		1. __Send__
+			1. [RollForward](#rollforward)
+			1. [RollBackward](#chainsyncnodenodetonodesendrollbackward)
+			1. [AwaitReply](#chainsyncnodenodetonodesendawaitreply)
+			1. [RequestNext](#chainsyncnodenodetonodesendrequestnext)
+			1. [FindIntersect](#chainsyncnodenodetonodesendfindintersect)
+			1. [IntersectFound](#chainsyncnodenodetonodesendintersectfound)
+			1. [IntersectNotFound](#chainsyncnodenodetonodesendintersectnotfound)
+			1. [Done](#chainsyncnodenodetonodesenddone)
+		1. __Recieve__
+			1. [RollForward](#rollforward)
+			1. [RollBackward](#chainsyncnodenodetonoderecieverollbackward)
+			1. [AwaitReply](#chainsyncnodenodetonoderecieveawaitreply)
+			1. [RequestNext](#chainsyncnodenodetonoderecieverequestnext)
+			1. [FindIntersect](#chainsyncnodenodetonoderecievefindintersect)
+			1. [IntersectFound](#chainsyncnodenodetonoderecieveintersectfound)
+			1. [IntersectNotFound](#chainsyncnodenodetonoderecieveintersectnotfound)
+			1. [Done](#chainsyncnodenodetonoderecievedone)
+1. __ChainSyncSerialised__
+	1. __NodeToNode__
+		1. __Send__
+			1. [RollForward](#rollforward)
+			1. [RollBackward](#chainsyncserialisednodetonodesendrollbackward)
+			1. [AwaitReply](#chainsyncserialisednodetonodesendawaitreply)
+			1. [RequestNext](#chainsyncserialisednodetonodesendrequestnext)
+			1. [FindIntersect](#chainsyncserialisednodetonodesendfindintersect)
+			1. [IntersectFound](#chainsyncserialisednodetonodesendintersectfound)
+			1. [IntersectNotFound](#chainsyncserialisednodetonodesendintersectnotfound)
+			1. [Done](#chainsyncserialisednodetonodesenddone)
+		1. __Recieve__
+			1. [RollForward](#rollforward)
+			1. [RollBackward](#chainsyncserialisednodetonoderecieverollbackward)
+			1. [AwaitReply](#chainsyncserialisednodetonoderecieveawaitreply)
+			1. [RequestNext](#chainsyncserialisednodetonoderecieverequestnext)
+			1. [FindIntersect](#chainsyncserialisednodetonoderecievefindintersect)
+			1. [IntersectFound](#chainsyncserialisednodetonoderecieveintersectfound)
+			1. [IntersectNotFound](#chainsyncserialisednodetonoderecieveintersectnotfound)
+			1. [Done](#chainsyncserialisednodetonoderecievedone)
+1. __BlockFetch__
+	1. __NodeToNode__
+		1. __Send__
+			1. [StartBatch](#startbatch)
+			1. [RequestRange](#blockfetchnodetonodesendrequestrange)
+			1. [NoBlocks](#blockfetchnodetonodesendnoblocks)
+			1. [Block](#blockfetchnodetonodesendblock)
+			1. [BatchDone](#blockfetchnodetonodesendbatchdone)
+			1. [ClientDone](#blockfetchnodetonodesendclientdone)
+		1. __Recieve__
+			1. [StartBatch](#startbatch)
+			1. [RequestRange](#blockfetchnodetonoderecieverequestrange)
+			1. [NoBlocks](#blockfetchnodetonoderecievenoblocks)
+			1. [Block](#blockfetchnodetonoderecieveblock)
+			1. [BatchDone](#blockfetchnodetonoderecievebatchdone)
+			1. [ClientDone](#blockfetchnodetonoderecieveclientdone)
+1. __BlockFetchSerialised__
+	1. __NodeToNode__
+		1. __Send__
+			1. [StartBatch](#startbatch)
+			1. [RequestRange](#blockfetchserialisednodetonodesendrequestrange)
+			1. [NoBlocks](#blockfetchserialisednodetonodesendnoblocks)
+			1. [Block](#blockfetchserialisednodetonodesendblock)
+			1. [BatchDone](#blockfetchserialisednodetonodesendbatchdone)
+			1. [ClientDone](#blockfetchserialisednodetonodesendclientdone)
+		1. __Recieve__
+			1. [StartBatch](#startbatch)
+			1. [RequestRange](#blockfetchserialisednodetonoderecieverequestrange)
+			1. [NoBlocks](#blockfetchserialisednodetonoderecievenoblocks)
+			1. [Block](#blockfetchserialisednodetonoderecieveblock)
+			1. [BatchDone](#blockfetchserialisednodetonoderecievebatchdone)
+			1. [ClientDone](#blockfetchserialisednodetonoderecieveclientdone)
 1. __TxSubmission__
 	1. __NodeToNode__
-		1. __Recieve__
-			1. [Done](#cardanonodetxsubmissionnodetonoderecievedone)
-			1. [ReplyTxIds](#cardanonodetxsubmissionnodetonoderecievereplytxids)
-			1. [ReplyTxs](#cardanonodetxsubmissionnodetonoderecievereplytxs)
-			1. [RequestTxIds](#cardanonodetxsubmissionnodetonoderecieverequesttxids)
-			1. [RequestTxs](#cardanonodetxsubmissionnodetonoderecieverequesttxs)
 		1. __Send__
-			1. [Done](#cardanonodetxsubmissionnodetonodesenddone)
-			1. [ReplyTxIds](#cardanonodetxsubmissionnodetonodesendreplytxids)
-			1. [ReplyTxs](#cardanonodetxsubmissionnodetonodesendreplytxs)
-			1. [RequestTxIds](#cardanonodetxsubmissionnodetonodesendrequesttxids)
-			1. [RequestTxs](#cardanonodetxsubmissionnodetonodesendrequesttxs)
+			1. [Done](#done)
+			1. [ReplyTxIds](#txsubmissionnodetonodesendreplytxids)
+			1. [RequestTxIds](#txsubmissionnodetonodesendrequesttxids)
+			1. [RequestTxs](#txsubmissionnodetonodesendrequesttxs)
+			1. [ReplyTxs](#txsubmissionnodetonodesendreplytxs)
+		1. __Recieve__
+			1. [Done](#done)
+			1. [ReplyTxIds](#txsubmissionnodetonoderecievereplytxids)
+			1. [RequestTxIds](#txsubmissionnodetonoderecieverequesttxids)
+			1. [RequestTxs](#txsubmissionnodetonoderecieverequesttxs)
+			1. [ReplyTxs](#txsubmissionnodetonoderecievereplytxs)
 1. __TxSubmission2__
 	1. __NodeToNode__
-		1. __Recieve__
-			1. [Done](#cardanonodetxsubmission2nodetonoderecievedone)
-			1. [MsgHello](#cardanonodetxsubmission2nodetonoderecievemsghello)
-			1. [ReplyTxIds](#cardanonodetxsubmission2nodetonoderecievereplytxids)
-			1. [ReplyTxs](#cardanonodetxsubmission2nodetonoderecievereplytxs)
-			1. [RequestTxIds](#cardanonodetxsubmission2nodetonoderecieverequesttxids)
-			1. [RequestTxs](#cardanonodetxsubmission2nodetonoderecieverequesttxs)
 		1. __Send__
-			1. [Done](#cardanonodetxsubmission2nodetonodesenddone)
-			1. [MsgHello](#cardanonodetxsubmission2nodetonodesendmsghello)
-			1. [ReplyTxIds](#cardanonodetxsubmission2nodetonodesendreplytxids)
-			1. [ReplyTxs](#cardanonodetxsubmission2nodetonodesendreplytxs)
-			1. [RequestTxIds](#cardanonodetxsubmission2nodetonodesendrequesttxids)
-			1. [RequestTxs](#cardanonodetxsubmission2nodetonodesendrequesttxs)
-1. __TxSubmissionClient__
-	1. __Recieve__
-		1. [AcceptTx](#cardanonodetxsubmissionclientrecieveaccepttx)
-		1. [Done](#cardanonodetxsubmissionclientrecievedone)
-		1. [RejectTx](#cardanonodetxsubmissionclientrecieverejecttx)
-		1. [SubmitTx](#cardanonodetxsubmissionclientrecievesubmittx)
+			1. [Done](#done)
+			1. [ReplyTxIds](#txsubmission2nodetonodesendreplytxids)
+			1. [RequestTxIds](#txsubmission2nodetonodesendrequesttxids)
+			1. [RequestTxs](#txsubmission2nodetonodesendrequesttxs)
+			1. [ReplyTxs](#txsubmission2nodetonodesendreplytxs)
+			1. [MsgHello](#txsubmission2nodetonodesendmsghello)
+		1. __Recieve__
+			1. [Done](#done)
+			1. [ReplyTxIds](#txsubmission2nodetonoderecievereplytxids)
+			1. [RequestTxIds](#txsubmission2nodetonoderecieverequesttxids)
+			1. [RequestTxs](#txsubmission2nodetonoderecieverequesttxs)
+			1. [ReplyTxs](#txsubmission2nodetonoderecievereplytxs)
+			1. [MsgHello](#txsubmission2nodetonoderecievemsghello)
+1. __Mux__
+	1. [Shutdown](#shutdown)
+	1. [RecvHeaderEnd](#muxrecvheaderend)
+	1. [RecvHeaderStart](#muxrecvheaderstart)
+	1. [RecvStart](#muxrecvstart)
+	1. [RecvEnd](#muxrecvend)
+	1. [SendStart](#muxsendstart)
+	1. [SendEnd](#muxsendend)
+	1. [State](#muxstate)
+	1. [CleanExit](#muxcleanexit)
+	1. [ExceptionExit](#muxexceptionexit)
+	1. [ChannelRecvStart](#muxchannelrecvstart)
+	1. [ChannelRecvEnd](#muxchannelrecvend)
+	1. [ChannelSendStart](#muxchannelsendstart)
+	1. [ChannelSendEnd](#muxchannelsendend)
+	1. [HandshakeStart](#muxhandshakestart)
+	1. [HandshakeClientEnd](#muxhandshakeclientend)
+	1. [HandshakeServerEnd](#muxhandshakeserverend)
+	1. [HandshakeClientError](#muxhandshakeclienterror)
+	1. [HandshakeServerError](#muxhandshakeservererror)
+	1. [RecvDeltaQObservation](#muxrecvdeltaqobservation)
+	1. [RecvDeltaQSample](#muxrecvdeltaqsample)
+	1. [SDUReadTimeoutException](#muxsdureadtimeoutexception)
+	1. [SDUWriteTimeoutException](#muxsduwritetimeoutexception)
+	1. [StartEagerly](#muxstarteagerly)
+	1. [StartOnDemand](#muxstartondemand)
+	1. [StartedOnDemand](#muxstartedondemand)
+	1. [Terminating](#muxterminating)
+	1. [TCPInfo](#muxtcpinfo)
+1. __MuxLocal__
+	1. [Shutdown](#shutdown)
+	1. [RecvHeaderEnd](#muxlocalrecvheaderend)
+	1. [RecvHeaderStart](#muxlocalrecvheaderstart)
+	1. [RecvStart](#muxlocalrecvstart)
+	1. [RecvEnd](#muxlocalrecvend)
+	1. [SendStart](#muxlocalsendstart)
+	1. [SendEnd](#muxlocalsendend)
+	1. [State](#muxlocalstate)
+	1. [CleanExit](#muxlocalcleanexit)
+	1. [ExceptionExit](#muxlocalexceptionexit)
+	1. [ChannelRecvStart](#muxlocalchannelrecvstart)
+	1. [ChannelRecvEnd](#muxlocalchannelrecvend)
+	1. [ChannelSendStart](#muxlocalchannelsendstart)
+	1. [ChannelSendEnd](#muxlocalchannelsendend)
+	1. [HandshakeStart](#muxlocalhandshakestart)
+	1. [HandshakeClientEnd](#muxlocalhandshakeclientend)
+	1. [HandshakeServerEnd](#muxlocalhandshakeserverend)
+	1. [HandshakeClientError](#muxlocalhandshakeclienterror)
+	1. [HandshakeServerError](#muxlocalhandshakeservererror)
+	1. [RecvDeltaQObservation](#muxlocalrecvdeltaqobservation)
+	1. [RecvDeltaQSample](#muxlocalrecvdeltaqsample)
+	1. [SDUReadTimeoutException](#muxlocalsdureadtimeoutexception)
+	1. [SDUWriteTimeoutException](#muxlocalsduwritetimeoutexception)
+	1. [StartEagerly](#muxlocalstarteagerly)
+	1. [StartOnDemand](#muxlocalstartondemand)
+	1. [StartedOnDemand](#muxlocalstartedondemand)
+	1. [Terminating](#muxlocalterminating)
+	1. [TCPInfo](#muxlocaltcpinfo)
+1. __Handshake__
 	1. __Send__
-		1. [AcceptTx](#cardanonodetxsubmissionclientsendaccepttx)
-		1. [Done](#cardanonodetxsubmissionclientsenddone)
-		1. [RejectTx](#cardanonodetxsubmissionclientsendrejecttx)
-		1. [SubmitTx](#cardanonodetxsubmissionclientsendsubmittx)
+		1. [ReplyVersions](#replyversions)
+		1. [ProposeVersions](#handshakesendproposeversions)
+		1. [AcceptVersion](#handshakesendacceptversion)
+		1. [Refuse](#handshakesendrefuse)
+	1. __Receive__
+		1. [ReplyVersions](#replyversions)
+		1. [ProposeVersions](#handshakereceiveproposeversions)
+		1. [AcceptVersion](#handshakereceiveacceptversion)
+		1. [Refuse](#handshakereceiverefuse)
+1. __LocalHandshake__
+	1. __Send__
+		1. [ReplyVersions](#replyversions)
+		1. [ProposeVersions](#localhandshakesendproposeversions)
+		1. [AcceptVersion](#localhandshakesendacceptversion)
+		1. [Refuse](#localhandshakesendrefuse)
+	1. __Receive__
+		1. [ReplyVersions](#replyversions)
+		1. [ProposeVersions](#localhandshakereceiveproposeversions)
+		1. [AcceptVersion](#localhandshakereceiveacceptversion)
+		1. [Refuse](#localhandshakereceiverefuse)
+1. __LedgerPeers__
+	1. [PickedPeers](#pickedpeers)
+	1. [PickedPeer](#ledgerpeerspickedpeer)
+	1. [FetchingNewLedgerState](#ledgerpeersfetchingnewledgerstate)
+	1. [DisabledLedgerPeers](#ledgerpeersdisabledledgerpeers)
+	1. [TraceUseLedgerAfter](#ledgerpeerstraceuseledgerafter)
+	1. [WaitingOnRequest](#ledgerpeerswaitingonrequest)
+	1. [RequestForPeers](#ledgerpeersrequestforpeers)
+	1. [ReusingLedgerState](#ledgerpeersreusingledgerstate)
+	1. [FallingBackToBootstrapPeers](#ledgerpeersfallingbacktobootstrappeers)
+1. __LocalRootPeers__
+	1. [LocalRootWaiting](#localrootwaiting)
+	1. [LocalRootDomains](#localrootpeerslocalrootdomains)
+	1. [LocalRootResult](#localrootpeerslocalrootresult)
+	1. [LocalRootGroups](#localrootpeerslocalrootgroups)
+	1. [LocalRootFailure](#localrootpeerslocalrootfailure)
+	1. [LocalRootError](#localrootpeerslocalrooterror)
+1. __PublicRootPeers__
+	1. __PublicRootPeers__
+		1. [PublicRootDomains](#publicrootdomains)
+		1. [PublicRootRelayAccessPoint](#publicrootpeerspublicrootpeerspublicrootrelayaccesspoint)
+		1. [PublicRootResult](#publicrootpeerspublicrootpeerspublicrootresult)
+		1. [PublicRootFailure](#publicrootpeerspublicrootpeerspublicrootfailure)
+1. __PeerSelection__
+	1. [TargetsChanged](#targetschanged)
+	1. [LocalRootPeersChanged](#peerselectionlocalrootpeerschanged)
+	1. [PublicRootsRequest](#peerselectionpublicrootsrequest)
+	1. [PublicRootsResults](#peerselectionpublicrootsresults)
+	1. [PublicRootsFailure](#peerselectionpublicrootsfailure)
+	1. [GossipRequests](#peerselectiongossiprequests)
+	1. [GossipResults](#peerselectiongossipresults)
+	1. [ForgetColdPeers](#peerselectionforgetcoldpeers)
+	1. [PromoteColdPeers](#peerselectionpromotecoldpeers)
+	1. [PromoteColdLocalPeers](#peerselectionpromotecoldlocalpeers)
+	1. [PromoteColdFailed](#peerselectionpromotecoldfailed)
+	1. [PromoteColdDone](#peerselectionpromotecolddone)
+	1. [PromoteWarmPeers](#peerselectionpromotewarmpeers)
+	1. [PromoteWarmLocalPeers](#peerselectionpromotewarmlocalpeers)
+	1. [PromoteWarmFailed](#peerselectionpromotewarmfailed)
+	1. [PromoteWarmDone](#peerselectionpromotewarmdone)
+	1. [PromoteWarmAborted](#peerselectionpromotewarmaborted)
+	1. [DemoteWarmPeers](#peerselectiondemotewarmpeers)
+	1. [DemoteWarmFailed](#peerselectiondemotewarmfailed)
+	1. [DemoteWarmDone](#peerselectiondemotewarmdone)
+	1. [DemoteHotPeers](#peerselectiondemotehotpeers)
+	1. [DemoteLocalHotPeers](#peerselectiondemotelocalhotpeers)
+	1. [DemoteHotFailed](#peerselectiondemotehotfailed)
+	1. [DemoteHotDone](#peerselectiondemotehotdone)
+	1. [DemoteAsynchronous](#peerselectiondemoteasynchronous)
+	1. [GovernorWakeup](#peerselectiongovernorwakeup)
+	1. [ChurnWait](#peerselectionchurnwait)
+	1. [ChurnMode](#peerselectionchurnmode)
+1. __DebugPeerSelection__
+	1. __DebugPeerSelection__
+		1. [GovernorState](#governorstate)
+1. __DebugPeerSelectionResponder__
+	1. __DebugPeerSelection__
+		1. [GovernorState](#governorstate)
+1. __PeerSelectionCounters__
+	1. [PeerSelectionCounters](#peerselectioncounters)
+1. __PeerSelectionActions__
+	1. [StatusChangeFailure](#statuschangefailure)
+	1. [StatusChanged](#peerselectionactionsstatuschanged)
+	1. [MonitoringError](#peerselectionactionsmonitoringerror)
+	1. [MonitoringResult](#peerselectionactionsmonitoringresult)
+1. __ConnectionManager__
+	1. [Shutdown](#shutdown)
+	1. [State](#connectionmanagerstate)
+	1. [UnregisterConnection](#connectionmanagerunregisterconnection)
+	1. [IncludeConnection](#connectionmanagerincludeconnection)
+	1. [Connect](#connectionmanagerconnect)
+	1. [ConnectError](#connectionmanagerconnecterror)
+	1. [TerminatingConnection](#connectionmanagerterminatingconnection)
+	1. [TerminatedConnection](#connectionmanagerterminatedconnection)
+	1. [ConnectionHandler](#connectionmanagerconnectionhandler)
+	1. [ConnectionExists](#connectionmanagerconnectionexists)
+	1. [ForbiddenConnection](#connectionmanagerforbiddenconnection)
+	1. [ImpossibleConnection](#connectionmanagerimpossibleconnection)
+	1. [ConnectionFailure](#connectionmanagerconnectionfailure)
+	1. [ConnectionNotFound](#connectionmanagerconnectionnotfound)
+	1. [ForbiddenOperation](#connectionmanagerforbiddenoperation)
+	1. [PruneConnections](#connectionmanagerpruneconnections)
+	1. [ConnectionCleanup](#connectionmanagerconnectioncleanup)
+	1. [ConnectionTimeWait](#connectionmanagerconnectiontimewait)
+	1. [ConnectionTimeWaitDone](#connectionmanagerconnectiontimewaitdone)
+	1. [ConnectionManagerCounters](#connectionmanagerconnectionmanagercounters)
+	1. [UnexpectedlyFalseAssertion](#connectionmanagerunexpectedlyfalseassertion)
+	1. [UnknownConnection](#connectionmanagerunknownconnection)
+1. __ConnectionManagerTransition__
+	1. [ConnectionManagerTransition](#connectionmanagertransition)
+1. __Server__
+	1. [AcceptPolicy](#acceptpolicy)
+	1. [AcceptError](#serveraccepterror)
+	1. [AcceptConnection](#serveracceptconnection)
+	1. [Started](#serverstarted)
+	1. [Stopped](#serverstopped)
+	1. [Error](#servererror)
+1. __InboundGovernor__
+	1. [UnexpectedlyFalseAssertion](#unexpectedlyfalseassertion)
+	1. [ResponderRestarted](#inboundgovernorresponderrestarted)
+	1. [NewConnection](#inboundgovernornewconnection)
+	1. [ResponderStartFailure](#inboundgovernorresponderstartfailure)
+	1. [ResponderErrored](#inboundgovernorrespondererrored)
+	1. [ResponderStarted](#inboundgovernorresponderstarted)
+	1. [ResponderTerminated](#inboundgovernorresponderterminated)
+	1. [PromotedToWarmRemote](#inboundgovernorpromotedtowarmremote)
+	1. [PromotedToHotRemote](#inboundgovernorpromotedtohotremote)
+	1. [DemotedToColdRemote](#inboundgovernordemotedtocoldremote)
+	1. [DemotedToWarmRemote](#inboundgovernordemotedtowarmremote)
+	1. [WaitIdleRemote](#inboundgovernorwaitidleremote)
+	1. [MuxCleanExit](#inboundgovernormuxcleanexit)
+	1. [MuxErrored](#inboundgovernormuxerrored)
+	1. [InboundGovernorCounters](#inboundgovernorinboundgovernorcounters)
+	1. [RemoteState](#inboundgovernorremotestate)
+	1. [InboundGovernorError](#inboundgovernorinboundgovernorerror)
+1. __InboundGovernorTransition__
+	1. [InboundGovernorTransition](#inboundgovernortransition)
+1. __LocalConnectionManager__
+	1. [Shutdown](#shutdown)
+	1. [State](#localconnectionmanagerstate)
+	1. [UnregisterConnection](#localconnectionmanagerunregisterconnection)
+	1. [IncludeConnection](#localconnectionmanagerincludeconnection)
+	1. [Connect](#localconnectionmanagerconnect)
+	1. [ConnectError](#localconnectionmanagerconnecterror)
+	1. [TerminatingConnection](#localconnectionmanagerterminatingconnection)
+	1. [TerminatedConnection](#localconnectionmanagerterminatedconnection)
+	1. [ConnectionHandler](#localconnectionmanagerconnectionhandler)
+	1. [ConnectionExists](#localconnectionmanagerconnectionexists)
+	1. [ForbiddenConnection](#localconnectionmanagerforbiddenconnection)
+	1. [ImpossibleConnection](#localconnectionmanagerimpossibleconnection)
+	1. [ConnectionFailure](#localconnectionmanagerconnectionfailure)
+	1. [ConnectionNotFound](#localconnectionmanagerconnectionnotfound)
+	1. [ForbiddenOperation](#localconnectionmanagerforbiddenoperation)
+	1. [PruneConnections](#localconnectionmanagerpruneconnections)
+	1. [ConnectionCleanup](#localconnectionmanagerconnectioncleanup)
+	1. [ConnectionTimeWait](#localconnectionmanagerconnectiontimewait)
+	1. [ConnectionTimeWaitDone](#localconnectionmanagerconnectiontimewaitdone)
+	1. [ConnectionManagerCounters](#localconnectionmanagerconnectionmanagercounters)
+	1. [UnexpectedlyFalseAssertion](#localconnectionmanagerunexpectedlyfalseassertion)
+	1. [UnknownConnection](#localconnectionmanagerunknownconnection)
+1. __LocalServer__
+	1. [AcceptPolicy](#acceptpolicy)
+	1. [AcceptError](#localserveraccepterror)
+	1. [AcceptConnection](#localserveracceptconnection)
+	1. [Started](#localserverstarted)
+	1. [Stopped](#localserverstopped)
+	1. [Error](#localservererror)
+1. __LocalInboundGovernor__
+	1. [UnexpectedlyFalseAssertion](#unexpectedlyfalseassertion)
+	1. [ResponderRestarted](#localinboundgovernorresponderrestarted)
+	1. [NewConnection](#localinboundgovernornewconnection)
+	1. [ResponderStartFailure](#localinboundgovernorresponderstartfailure)
+	1. [ResponderErrored](#localinboundgovernorrespondererrored)
+	1. [ResponderStarted](#localinboundgovernorresponderstarted)
+	1. [ResponderTerminated](#localinboundgovernorresponderterminated)
+	1. [PromotedToWarmRemote](#localinboundgovernorpromotedtowarmremote)
+	1. [PromotedToHotRemote](#localinboundgovernorpromotedtohotremote)
+	1. [DemotedToColdRemote](#localinboundgovernordemotedtocoldremote)
+	1. [DemotedToWarmRemote](#localinboundgovernordemotedtowarmremote)
+	1. [WaitIdleRemote](#localinboundgovernorwaitidleremote)
+	1. [MuxCleanExit](#localinboundgovernormuxcleanexit)
+	1. [MuxErrored](#localinboundgovernormuxerrored)
+	1. [InboundGovernorCounters](#localinboundgovernorinboundgovernorcounters)
+	1. [RemoteState](#localinboundgovernorremotestate)
+	1. [InboundGovernorError](#localinboundgovernorinboundgovernorerror)
 
 ## [Metrics](#metrics)
 1. __mem__
@@ -734,90 +732,64 @@
 		1. [slots](#cardanonodeslots)
 		1. [slots](#cardanonodeslots)
 1. [Block replay progress (%)](#block replay progress (%))
-1. [blocksForgedNum](#blocksforgednum)
 1. __cardano__
 	1. __node__
-		1. [aboutToLeadSlotLast](#cardanonodeabouttoleadslotlast)
-		1. [aboutToLeadSlotLast](#cardanonodeabouttoleadslotlast)
-		1. [adoptedSlotLast](#cardanonodeadoptedslotlast)
-		1. [blockContext](#cardanonodeblockcontext)
-		1. [blockFromFuture](#cardanonodeblockfromfuture)
-		1. [blocks](#cardanonodeblocks)
-		1. [blocks](#cardanonodeblocks)
 		1. __chainSync__
+			1. [rollForward](#rollforward)
 			1. [rollForward](#cardanonodechainsyncrollforward)
-			1. [rollForward](#cardanonodechainsyncrollforward)
-		1. [connectedPeers](#cardanonodeconnectedpeers)
-		1. __connectionManager__
-			1. [duplexConns](#cardanonodeconnectionmanagerduplexconns)
-			1. [duplexConns](#cardanonodeconnectionmanagerduplexconns)
-			1. [fullDuplexConns](#cardanonodeconnectionmanagerfullduplexconns)
-			1. [fullDuplexConns](#cardanonodeconnectionmanagerfullduplexconns)
-			1. [inboundConns](#cardanonodeconnectionmanagerinboundconns)
-			1. [inboundConns](#cardanonodeconnectionmanagerinboundconns)
-			1. [outboundConns](#cardanonodeconnectionmanageroutboundconns)
-			1. [outboundConns](#cardanonodeconnectionmanageroutboundconns)
-			1. [unidirectionalConns](#cardanonodeconnectionmanagerunidirectionalconns)
-			1. [unidirectionalConns](#cardanonodeconnectionmanagerunidirectionalconns)
-		1. [couldNotForgeSlotLast](#cardanonodecouldnotforgeslotlast)
-		1. [couldNotForgeSlotLast](#cardanonodecouldnotforgeslotlast)
-		1. [currentKESPeriod](#cardanonodecurrentkesperiod)
-		1. [delegMapSize](#cardanonodedelegmapsize)
-		1. [density](#cardanonodedensity)
-		1. [density](#cardanonodedensity)
-		1. [epoch](#cardanonodeepoch)
-		1. [epoch](#cardanonodeepoch)
-		1. [forgedInvalidSlotLast](#cardanonodeforgedinvalidslotlast)
-		1. [forgedSlotLast](#cardanonodeforgedslotlast)
-		1. [ledgerState](#cardanonodeledgerstate)
-		1. [ledgerView](#cardanonodeledgerview)
-		1. [mempoolBytes](#cardanonodemempoolbytes)
-		1. [mempoolBytes](#cardanonodemempoolbytes)
-		1. [mempoolBytes](#cardanonodemempoolbytes)
-		1. [mempoolBytes](#cardanonodemempoolbytes)
-		1. [nodeCannotForge](#cardanonodenodecannotforge)
-		1. [nodeIsLeader](#cardanonodenodeisleader)
-		1. [nodeNotLeader](#cardanonodenodenotleader)
-		1. [notAdoptedSlotLast](#cardanonodenotadoptedslotlast)
-		1. [operationalCertificateExpiryKESPeriod](#cardanonodeoperationalcertificateexpirykesperiod)
-		1. [operationalCertificateStartKESPeriod](#cardanonodeoperationalcertificatestartkesperiod)
-		1. __peerSelection__
-			1. [cold](#cardanonodepeerselectioncold)
-			1. [hot](#cardanonodepeerselectionhot)
-			1. [warm](#cardanonodepeerselectionwarm)
-		1. [remainingKESPeriods](#cardanonoderemainingkesperiods)
+		1. [connectedPeers](#connectedpeers)
 		1. __served__
-			1. [block](#cardanonodeservedblock)
-		1. [slotInEpoch](#cardanonodeslotinepoch)
-		1. [slotInEpoch](#cardanonodeslotinepoch)
-		1. [slotIsImmutable](#cardanonodeslotisimmutable)
-		1. [slots](#cardanonodeslots)
-		1. [slots](#cardanonodeslots)
+			1. [block](#block)
 		1. __submissions__
-			1. [accepted](#cardanonodesubmissionsaccepted)
+			1. [accepted](#accepted)
 			1. [rejected](#cardanonodesubmissionsrejected)
 			1. [submitted](#cardanonodesubmissionssubmitted)
+		1. [mempoolBytes](#mempoolbytes)
+		1. [mempoolBytes](#cardanonodemempoolbytes)
+		1. [mempoolBytes](#cardanonodemempoolbytes)
+		1. [mempoolBytes](#cardanonodemempoolbytes)
 		1. [txsInMempool](#cardanonodetxsinmempool)
 		1. [txsInMempool](#cardanonodetxsinmempool)
 		1. [txsInMempool](#cardanonodetxsinmempool)
 		1. [txsInMempool](#cardanonodetxsinmempool)
 		1. [txsProcessedNum](#cardanonodetxsprocessednum)
+		1. [slotIsImmutable](#cardanonodeslotisimmutable)
+		1. [aboutToLeadSlotLast](#cardanonodeabouttoleadslotlast)
+		1. [aboutToLeadSlotLast](#cardanonodeabouttoleadslotlast)
+		1. [blockFromFuture](#cardanonodeblockfromfuture)
+		1. [blockContext](#cardanonodeblockcontext)
+		1. [couldNotForgeSlotLast](#cardanonodecouldnotforgeslotlast)
+		1. [couldNotForgeSlotLast](#cardanonodecouldnotforgeslotlast)
+		1. [ledgerState](#cardanonodeledgerstate)
+		1. [ledgerView](#cardanonodeledgerview)
+		1. [currentKESPeriod](#cardanonodecurrentkesperiod)
+		1. [operationalCertificateExpiryKESPeriod](#cardanonodeoperationalcertificateexpirykesperiod)
+		1. [operationalCertificateStartKESPeriod](#cardanonodeoperationalcertificatestartkesperiod)
+		1. [remainingKESPeriods](#cardanonoderemainingkesperiods)
+		1. [nodeCannotForge](#cardanonodenodecannotforge)
+		1. [nodeNotLeader](#cardanonodenodenotleader)
+		1. [nodeIsLeader](#cardanonodenodeisleader)
+		1. [forgedSlotLast](#cardanonodeforgedslotlast)
+		1. [notAdoptedSlotLast](#cardanonodenotadoptedslotlast)
+		1. [forgedInvalidSlotLast](#cardanonodeforgedinvalidslotlast)
+		1. [adoptedSlotLast](#cardanonodeadoptedslotlast)
+		1. [delegMapSize](#cardanonodedelegmapsize)
 		1. [utxoSize](#cardanonodeutxosize)
-1. __mem__
-	1. [resident](#memresident)
-1. [nodeCannotForgeNum](#nodecannotforgenum)
-1. [nodeIsLeaderNum](#nodeisleadernum)
-1. [peersFromNodeKernel](#peersfromnodekernel)
-1. __rts__
-	1. [gcLiveBytes](#rtsgclivebytes)
-	1. [gcMajorNum](#rtsgcmajornum)
-	1. [gcMinorNum](#rtsgcminornum)
-	1. [gcticks](#rtsgcticks)
-	1. [mutticks](#rtsmutticks)
-	1. [threads](#rtsthreads)
-1. [slotsMissed](#slotsmissed)
-1. __stat__
-	1. [cputicks](#statcputicks)
+		1. __peerSelection__
+			1. [cold](#cold)
+			1. [hot](#cardanonodepeerselectionhot)
+			1. [warm](#cardanonodepeerselectionwarm)
+		1. __connectionManager__
+			1. [duplexConns](#duplexconns)
+			1. [duplexConns](#cardanonodeconnectionmanagerduplexconns)
+			1. [fullDuplexConns](#cardanonodeconnectionmanagerfullduplexconns)
+			1. [fullDuplexConns](#cardanonodeconnectionmanagerfullduplexconns)
+			1. [inboundConns](#cardanonodeconnectionmanagerinboundconns)
+			1. [inboundConns](#cardanonodeconnectionmanagerinboundconns)
+			1. [outboundConns](#cardanonodeconnectionmanageroutboundconns)
+			1. [outboundConns](#cardanonodeconnectionmanageroutboundconns)
+			1. [unidirectionalConns](#cardanonodeconnectionmanagerunidirectionalconns)
+			1. [unidirectionalConns](#cardanonodeconnectionmanagerunidirectionalconns)
 
 ## [Datapoints](#datapoints)
 1. [NodeInfo](#nodeinfo)
@@ -5800,28 +5772,7 @@ Backends:
 			`EKGBackend`
 Filtered:  because the filter level is `Notice`
 
-### Cardano.Node.ForgeStats.ForgeStats
-
-
-***
-nodeCannotForgeNum shows how many times this node could not forge.
-nodeIsLeaderNum shows how many times this node was leader.
-blocksForgedNum shows how many blocks did forge in this node.
-slotsMissed shows how many slots were missed in this node.
-***
-
-
-> Severity:   `Info`
-Privacy:   `Public`
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`Stdout MachineFormat`,
-			`EKGBackend`
-Filtered:  because the filter level is `Notice`
-
-### Cardano.Node.Handshake.Receive.AcceptVersion
+### Cardano.Node.TxMonitorClient.Recieve.ReAcquire
 
 
 ***
@@ -11227,10 +11178,7 @@ Filtered:  because the filter level is `Notice`
 
 
 ***
-Request one or more transactions corresponding to the given transaction identifiers. 
-While it is the responsibility of the replying peer to keep within pipelining in-flight limits, the sender must also cooperate by keeping the total requested across all in-flight requests within the limits. 
-It is an error to ask for transaction identifiers that were not previously announced (via 'MsgReplyTxIds'). 
-It is an error to ask for transaction identifiers that are not outstanding or that were already asked for.
+
 ***
 
 
@@ -11410,14 +11358,7 @@ Filtered:  because the filter level is `Notice`
 
 
 ***
-Request a non-empty list of transaction identifiers from the client, and confirm a number of outstanding transaction identifiers. 
-With 'TokBlocking' this is a a blocking operation: the response will always have at least one transaction identifier, and it does not expect a prompt response: there is no timeout. This covers the case when there is nothing else to do but wait. For example this covers leaf nodes that rarely, if ever, create and submit a transaction. 
-With 'TokNonBlocking' this is a non-blocking operation: the response may be an empty list and this does expect a prompt response. This covers high throughput use cases where we wish to pipeline, by interleaving requests for additional transaction identifiers with requests for transactions, which requires these requests not block. 
-The request gives the maximum number of transaction identifiers that can be accepted in the response. This must be greater than zero in the 'TokBlocking' case. In the 'TokNonBlocking' case either the numbers acknowledged or the number requested must be non-zero. In either case, the number requested must not put the total outstanding over the fixed protocol limit. 
-The request also gives the number of outstanding transaction identifiers that can now be acknowledged. The actual transactions to acknowledge are known to the peer based on the FIFO order in which they were provided. 
-There is no choice about when to use the blocking case versus the non-blocking case, it depends on whether there are any remaining unacknowledged transactions (after taking into account the ones acknowledged in this message): 
-* The blocking case must be used when there are zero remaining   unacknowledged transactions. 
-* The non-blocking case must be used when there are non-zero remaining   unacknowledged transactions.
+
 ***
 
 
@@ -11435,10 +11376,7 @@ Filtered:  because the filter level is `Notice`
 
 
 ***
-Request one or more transactions corresponding to the given transaction identifiers. 
-While it is the responsibility of the replying peer to keep withinpipelining in-flight limits, the sender must also cooperate by keepingthe total requested across all in-flight requests within the limits.
-It is an error to ask for transaction identifiers that were notpreviously announced (via 'MsgReplyTxIds').
-It is an error to ask for transaction identifiers that are notoutstanding or that were already asked for.
+
 ***
 
 
@@ -11718,20 +11656,7 @@ Cardano.Node.Resources
 From current configuration:
 Filtered:  because the filter level is `Info`
 
-### blocksForgedNum
-
-***
-How many blocks did forge in this node?
-***
-
-
-Dispatched by: 
-Cardano.Node.ForgeStats.ForgeStats
-
-From current configuration:
-Filtered:  because the filter level is `Notice`
-
-### cardano.node.aboutToLeadSlotLast
+### rts.gcLiveBytes
 
 ***
 TODO JNF
@@ -11830,7 +11755,7 @@ TODO Doc
 
 
 Dispatched by: 
-Cardano.Node.ChainSyncServerHeader.ChainSyncServerEvent.ServerRead.RollForward
+Cardano.Node.Peers
 
 From current configuration:
 Filtered:  because the filter level is `Notice`
@@ -11843,7 +11768,7 @@ Number of blocks in this chain fragment.
 
 
 Dispatched by: 
-Cardano.Node.ChainSyncServerBlock.ChainSyncServerEvent.ServerRead.RollForward
+Cardano.Node.ChainDB.AddBlockEvent.AddedToCurrentChain
 
 From current configuration:
 Filtered:  because the filter level is `Info`
@@ -12285,7 +12210,7 @@ Filtered:  because the filter level is `Info`
 
 
 Dispatched by: 
-Cardano.Node.PeerSelectionCounters.PeerSelectionCounters
+Cardano.Node.Forge.LedgerState
 
 From current configuration:
 Filtered:  because the filter level is `Info`
@@ -12298,7 +12223,7 @@ Filtered:  because the filter level is `Info`
 
 
 Dispatched by: 
-Cardano.Node.PeerSelectionCounters.PeerSelectionCounters
+Cardano.Node.Forge.LedgerView
 
 From current configuration:
 Filtered:  because the filter level is `Info`
@@ -12311,7 +12236,7 @@ Filtered:  because the filter level is `Info`
 
 
 Dispatched by: 
-Cardano.Node.PeerSelectionCounters.PeerSelectionCounters
+Cardano.Node.Forge.ForgeStateUpdateError
 
 From current configuration:
 Filtered:  because the filter level is `Info`
@@ -12537,33 +12462,7 @@ Cardano.Node.LocalConnectionManager.ConnectionManagerCounters
 From current configuration:
 Filtered:  because the filter level is `Notice`
 
-### nodeCannotForgeNum
-
-***
-How many times this node could not forge?
-***
-
-
-Dispatched by: 
-Cardano.Node.ForgeStats.ForgeStats
-
-From current configuration:
-Filtered:  because the filter level is `Notice`
-
-### nodeIsLeaderNum
-
-***
-How many times this node was leader?
-***
-
-
-Dispatched by: 
-Cardano.Node.ForgeStats.ForgeStats
-
-From current configuration:
-Filtered:  because the filter level is `Notice`
-
-### peersFromNodeKernel
+### cardano.node.connectionManager.fullDuplexConns
 
 ***
 
@@ -12654,20 +12553,7 @@ Cardano.Node.ConnectionManager.ConnectionManagerCounters
 From current configuration:
 Filtered:  because the filter level is `Notice`
 
-### slotsMissed
-
-***
-How many slots were missed in this node?
-***
-
-
-Dispatched by: 
-Cardano.Node.ForgeStats.ForgeStats
-
-From current configuration:
-Filtered:  because the filter level is `Notice`
-
-### stat.cputicks
+### cardano.node.connectionManager.unidirectionalConns
 
 ***
 
@@ -12697,5 +12583,5 @@ Basic information about this node collected at startup
 
 Configuration: TraceConfig {tcOptions = fromList [([],[ConfBackend [Stdout MachineFormat,EKGBackend],ConfDetail DNormal,ConfSeverity Notice]),(["Node","AcceptPolicy"],[ConfSeverity Info]),(["Node","ChainDB"],[ConfSeverity Info]),(["Node","ChainDB","AddBlockEvent","AddedBlockToVolatileDB"],[ConfLimiter "AddedBlockToVolatileDBLimiter" 2.0]),(["Node","ChainDB","AddBlockEvent","AddedBlockToQueue"],[ConfLimiter "AddedBlockToQueueLimiter" 2.0]),(["Node","ChainDB","AddBlockEvent","AddBlockValidation","ValidCandidate"],[ConfLimiter "ValidCandidateLimiter" 2.0]),(["Node","ChainDB","CopyToImmutableDBEvent","CopiedBlockToImmutableDB"],[ConfLimiter "CopiedBlockToImmutableDBLimiter" 2.0]),(["Node","DNSResolver"],[ConfSeverity Info]),(["Node","DNSSubscription"],[ConfSeverity Info]),(["Node","DiffusionInit"],[ConfSeverity Info]),(["Node","ErrorPolicy"],[ConfSeverity Info]),(["Node","Forge"],[ConfSeverity Info]),(["Node","IpSubscription"],[ConfSeverity Info]),(["Node","LocalErrorPolicy"],[ConfSeverity Info]),(["Node","Mempool"],[ConfSeverity Info]),(["Node","Resources"],[ConfSeverity Info]),(["Node","BlockFetchClient","CompletedBlockFetch"],[ConfLimiter "CompletedBlockFetchLimiter" 2.0])], tcForwarder = TraceOptionForwarder {tofAddress = LocalSocket "/tmp/forwarder.sock", tofMode = Initiator, tofConnQueueSize = 2000, tofDisconnQueueSize = 200000, tofVerbosity = Minimum}, tcNodeName = Nothing, tcPeerFreqency = Just 2000, tcResourceFreqency = Just 5000}
 
-672 log messages.
-Generated at 2022-05-06 10:18:02.192098573 CEST.
+667 log messages.
+Generated at 2022-04-29 10:19:03.913417825 CEST.
