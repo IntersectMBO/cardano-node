@@ -53,7 +53,7 @@ with pkgs;
     machine.wait_for_open_port(3001)
     machine.succeed("systemctl status cardano-node")
     machine.succeed(
-        "${cardanoNodePackages.cardano-ping}/bin/cardano-ping -h 127.0.0.1 -c 1 -q --json | tail -n 1 | ${jq}/bin/jq -c"
+        "${cardanoNodePackages.cardano-ping}/bin/cardano-ping -h 127.0.0.1 -c 1 -q --json | cat"
     )
     machine.wait_for_open_port(8101)
     machine.succeed("systemctl status cardano-submit-api")
