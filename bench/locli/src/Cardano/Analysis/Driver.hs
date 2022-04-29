@@ -85,21 +85,41 @@ runLiftLogObjects fs = liftIO $
    joinT :: (IO a, IO b) -> IO (a, b)
    joinT (a, b) = (,) <$> a <*> b
 
-runBlockProp :: Run -> [ChainFilter] -> [(JsonLogfile, [LogObject])]
-             -> ExceptT Text IO (BlockPropagation, [BlockEvents])
-runBlockProp run filters objLists = liftIO $
-  blockProp run filters objLists
+runBuildMachViews :: Run -> [(JsonLogfile, [LogObject])]
+                  -> ExceptT Text IO [(JsonLogfile, MachView)]
+runBuildMachViews run objLists = liftIO $
+  buildMachViews run objLists
+
+runRebuildChain :: Run -> [(JsonLogfile, MachView)]
+             -> ExceptT Text IO [BlockEvents]
+runRebuildChain run machViews = liftIO $
+  rebuildChain run machViews
+
+runFilterChain :: Run -> [ChainFilter] -> [FilterName] -> [BlockEvents]
+             -> ExceptT Text IO (DataDomain SlotNo, DataDomain BlockNo, [BlockEvents])
+runFilterChain run flts fltNames chain = liftIO $
+  filterChain run flts fltNames chain
 
 runBlockPropagation :: Run -> [ChainFilter] -> [FilterName] -> [JsonLogfile] -> BlockPropagationOutputFiles
                     -> ExceptT Text IO ()
-runBlockPropagation run filters _filterNames logfiles BlockPropagationOutputFiles{..} = do
+runBlockPropagation run flts fltNames logfiles BlockPropagationOutputFiles{..} = do
   objLists <- runLiftLogObjects logfiles
-  (blockPropagation, chain) <- runBlockProp run filters objLists
 
+  machViews <- runBuildMachViews run objLists
+  forM_ bpofMachViews . const $ dumpAssociatedObjects "mach-view"
+    machViews
+
+  chainRaw <- runRebuildChain run machViews
+  forM_ bpofChainRaw $ dumpObjects "chain-raw"
+    chainRaw
+
+  (domS, domB, chain) <- runFilterChain run flts fltNames chainRaw
+  forM_ bpofChain $ dumpObjects "chain"
+    chain
+
+  blockPropagation <- pure $ blockProp run chain domS domB
   forM_ bpofAnalysis $ dumpObject "blockprop"
     blockPropagation
-  forM_ bpofChain $ dumpObjects "blockprop-chain"
-    chain
 
   forM_ bpofForgerPretty $ dumpText "blockprop-forger" $
     renderDistributions run RenderPretty bpFieldsForger Nothing blockPropagation
@@ -113,8 +133,8 @@ runBlockPropagation run filters _filterNames logfiles BlockPropagationOutputFile
   forM_ bpofFullStatsPretty $ dumpText "blockprop-full-stats" $
     renderDistributions run RenderPretty (const True) Nothing blockPropagation
 
-  forM_ bpofChainPretty $ dumpText "blockprop-chain" $
-    renderTimeline run (const True) chain
+  forM_ bpofChainPretty $ dumpText "chain" $
+    renderTimeline run (const True) False chain
 
 runSlotFilters ::
      Run
@@ -186,7 +206,7 @@ runMachineTimeline run@Run{} logfiles filters filterNames MachineTimelineOutputF
 
   forM_ mtofTimelinePretty . const $
     dumpAssociatedTextStreams "mach" $
-      fmap (fmap $ renderTimeline run (const True)) slots
+      fmap (fmap $ renderTimeline run (const True) False) slots
 
   -- forM_ mtofFullStatsCsv $ dumpText "perf-full" $
   --   renderDistributions run RenderCsv (const True) analyses

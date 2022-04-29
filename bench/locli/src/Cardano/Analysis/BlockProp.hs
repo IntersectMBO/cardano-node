@@ -15,7 +15,7 @@
 {- HLINT ignore "Use head" -}
 {- HLINT ignore "Avoid lambda" -}
 module Cardano.Analysis.BlockProp
-  (blockProp)
+  (MachView, buildMachViews, rebuildChain, filterChain, blockProp)
 where
 
 import Prelude                  (String, (!!), error, head, last, id, show, tail)
@@ -128,7 +128,7 @@ data MachBlockEvents a
   = MFE (ForgerEvents a)
   | MOE (ObserverEvents a)
   | MBE  BPError
-  deriving (Generic, NFData)
+  deriving (Generic, NFData, FromJSON, ToJSON)
 
 mbeForgP, mbeObsvP :: MachBlockEvents a -> Bool
 mbeForgP = \case
@@ -224,7 +224,7 @@ data MachView
   , mvChecked :: Maybe UTCTime
   , mvLeading :: Maybe UTCTime
   }
-  deriving (Generic, NFData)
+  deriving (FromJSON, Generic, NFData, ToJSON)
 
 blockMapMaxBlock :: MachBlockMap a -> MachBlockEvents a
 blockMapMaxBlock = maximumBy ordBlockEv . Map.elems
@@ -259,81 +259,31 @@ mapChainToPeerBlockObservationCDF percs cbes proj desc =
    blockObservations be =
      proj `mapMaybe` filter isValidBlockObservation (beObservations be)
 
-blockProp :: Run -> [ChainFilter] -> [(JsonLogfile, [LogObject])] -> IO (BlockPropagation, [BlockEvents])
-blockProp run cFilters xs = do
-  putStrLn ("blockProp: recovering block event maps" :: String)
-  mapConcurrentlyPure (blockEventMapsFromLogObjects run) xs
-    >>= doBlockProp run cFilters
+buildMachViews :: Run -> [(JsonLogfile, [LogObject])] -> IO [(JsonLogfile, MachView)]
+buildMachViews run = mapConcurrentlyPure (fst &&& blockEventMapsFromLogObjects run)
 
-doBlockProp :: Run -> [ChainFilter] -> [MachView] -> IO (BlockPropagation, [BlockEvents])
-doBlockProp run@Run{genesis} cFilters machViews = do
-  putStrLn ("tip block: "    <> show tipBlock :: String)
-  putStrLn ("chain length: " <> show (length chain) :: String)
-  let (blk0,  blkL)  = (head chain,  last chain)
-      (blk0V, blkLV) = (head chainV, last chainV)
-  pure . (, chainV) $ BlockPropagation
-    { bpDomainSlots         = DataDomain
-                                (blk0  & beSlotNo)  (blkL  & beSlotNo)
-                                (blk0V & beSlotNo)  (blkLV & beSlotNo)
-                                (fromIntegral . unSlotNo $ beSlotNo blkL  - beSlotNo blk0)
-                                (fromIntegral . unSlotNo $ beSlotNo blkLV - beSlotNo blk0V)
-    , bpDomainBlocks        = DataDomain
-                                (blk0  & beBlockNo) (blkL  & beBlockNo)
-                                (blk0V & beBlockNo) (blkLV & beBlockNo)
-                                (length chain) (length chainV)
-    , bpForgerChecks        = forgerEventsCDF   (Just . bfChecked   . beForge)
-    , bpForgerLeads         = forgerEventsCDF   (Just . bfLeading   . beForge)
-    , bpForgerForges        = forgerEventsCDF   (Just . bfForged    . beForge)
-    , bpForgerAdoptions     = forgerEventsCDF   ((\x ->
-                                                    if bfChainDelta x == 1
-                                                    then Just (bfAdopted x)
-                                                    else Nothing)   . beForge)
-    , bpForgerAnnouncements = forgerEventsCDF   (Just . bfAnnounced . beForge)
-    , bpForgerSends         = forgerEventsCDF   (Just . bfSending   . beForge)
-    , bpPeerNotices         = observerEventsCDF (Just . boNoticed)   "noticed"
-    , bpPeerRequests        = observerEventsCDF (Just . boRequested) "requested"
-    , bpPeerFetches         = observerEventsCDF (Just . boFetched)   "fetched"
-    , bpPeerAdoptions       = observerEventsCDF boAdopted            "adopted"
-    , bpPeerAnnouncements   = observerEventsCDF boAnnounced          "announced"
-    , bpPeerSends           = observerEventsCDF boSending            "sending"
-    , bpPropagation         =
-      [ (p', forgerEventsCDF (Just . dPercSpec' "bePropagation" p . bePropagation))
-      | p@(Perc p') <- adoptionPcts <> [Perc 1.0] ]
-    , bpSizes               = forgerEventsCDF   (Just . bfBlockSize . beForge)
-    , bpVersion             = getVersion
-    }
+rebuildChain :: Run -> [(JsonLogfile, MachView)] -> IO [BlockEvents]
+rebuildChain run@Run{genesis} xs@(fmap snd -> machViews) = do
+  progress "tip" $ Q $ show $ bfeBlock tipBlock
+  pure
+    $ computeChainBlockGaps
+    $ doRebuildChain (fmap deltifyEvents <$> eventMaps) tipHash
  where
    eventMaps      = mvBlocks <$> machViews
 
-   chain, chainV :: [BlockEvents]
-   chain          = rebuildChain (fmap deltifyEvents <$> eventMaps) tipHash
-                    & computeChainBlockGaps
-   chainV         = filter (isValidBlockEvent genesis cFilters) chain &
-                    \case
-                      [] -> error $ mconcat
-                        ["All ", show (length chain)
-                        , " blocks dropped by chain filters: ", show cFilters]
-                      xs -> xs
-
-   forgerEventsCDF   :: (Real a, ToRealFrac a Float) => (BlockEvents -> Maybe a) -> Distribution Float a
-   forgerEventsCDF   = mapChainToBlockEventCDF           stdPercSpecs chainV
-   observerEventsCDF = mapChainToPeerBlockObservationCDF stdPercSpecs chainV
-
-   adoptionMap    :: [Map Hash UTCTime]
-   adoptionMap    =  Map.mapMaybe mbeAdopted <$> eventMaps
-
-   heightMap      :: Map BlockNo (Set Hash)
-   heightMap      = foldr (\em acc ->
-                             Map.foldr
-                             (\mbe -> Map.alter
-                                      (maybe (Just $ Set.singleton (mbeBlock mbe))
-                                             (Just . Set.insert (mbeBlock mbe)))
-                                      (mbeBlockNo mbe))
-                             acc em)
-                    mempty eventMaps
-   tipBlock       = getBlockForge eventMaps tipHash
-   tipHash        = rewindChain eventMaps 1 (mbeBlock finalBlockEv)
    finalBlockEv   = maximumBy ordBlockEv $ blockMapMaxBlock <$> eventMaps
+
+   tipHash        = rewindChain eventMaps 1 (mbeBlock finalBlockEv)
+   tipBlock       = getBlockForge eventMaps tipHash
+
+   computeChainBlockGaps :: [BlockEvents] -> [BlockEvents]
+   computeChainBlockGaps [] = error "computeChainBlockGaps on an empty chain"
+   computeChainBlockGaps lst@(hd:_) =
+     snd $ mapAccumL step (unSlotStart . bfSlotStart $ beForge hd) lst
+    where
+      step :: UTCTime -> BlockEvents -> (UTCTime, BlockEvents)
+      step prevForge x@(beForgedAt -> at) =
+        (at, x { beForge = (beForge x) { bfBlockGap = at `diffUTCTime` prevForge } })
 
    rewindChain :: [MachBlockMap a] -> Int -> Hash -> Hash
    rewindChain eventMaps count tip = go tip count
@@ -352,8 +302,21 @@ doBlockProp run@Run{genesis} cFilters machViews = do
          ])
      & mapMbe id (error "Silly invariant failed.") (error "Silly invariant failed.")
 
-   rebuildChain :: [MachBlockMap NominalDiffTime] -> Hash -> [BlockEvents]
-   rebuildChain machBlockMaps tip = go (Just tip) []
+   adoptionMap    :: [Map Hash UTCTime]
+   adoptionMap    =  Map.mapMaybe mbeAdopted <$> eventMaps
+
+   heightMap      :: Map BlockNo (Set Hash)
+   heightMap      = foldr (\em acc ->
+                             Map.foldr
+                             (\mbe -> Map.alter
+                                      (maybe (Just $ Set.singleton (mbeBlock mbe))
+                                             (Just . Set.insert (mbeBlock mbe)))
+                                      (mbeBlockNo mbe))
+                             acc em)
+                    mempty eventMaps
+
+   doRebuildChain :: [MachBlockMap NominalDiffTime] -> Hash -> [BlockEvents]
+   doRebuildChain machBlockMaps tip = go (Just tip) []
     where go Nothing  acc = acc
           go (Just h) acc =
             case partitionMbes $ mapMaybe (Map.lookup h) machBlockMaps of
@@ -363,15 +326,6 @@ doBlockProp run@Run{genesis} cFilters machViews = do
                 ] ++ intercalate "\n" (show <$> ers)
               blkEvs@(forgerEv:_, oEvs, ers) ->
                 go (bfePrevBlock forgerEv) (liftBlockEvents forgerEv oEvs ers : acc)
-
-   computeChainBlockGaps :: [BlockEvents] -> [BlockEvents]
-   computeChainBlockGaps [] = error "computeChainBlockGaps on an empty chain"
-   computeChainBlockGaps lst@(hd:_) =
-     snd $ mapAccumL step (unSlotStart . bfSlotStart $ beForge hd) lst
-    where
-      step :: UTCTime -> BlockEvents -> (UTCTime, BlockEvents)
-      step prevForge x@(beForgedAt -> at) =
-        (at, x { beForge = (beForge x) { bfBlockGap = at `diffUTCTime` prevForge } })
 
    liftBlockEvents :: ForgerEvents NominalDiffTime -> [ObserverEvents NominalDiffTime] -> [BPError] -> BlockEvents
    liftBlockEvents ForgerEvents{bfeHost=host, ..} os errs =
@@ -448,6 +402,62 @@ doBlockProp run@Run{genesis} cFilters machViews = do
        , " forged by ", show (unHost host)
        , " -- missing: ", slotDesc
        ]
+
+filterChain :: Run -> [ChainFilter] -> [FilterName] -> [BlockEvents]
+            -> IO (DataDomain SlotNo, DataDomain BlockNo, [BlockEvents])
+filterChain Run{genesis} flts fltNames chain = do
+  progress "chain-slot-domain"  $ J domSlot
+  progress "chain-block-domain" $ J domBlock
+  pure (domSlot, domBlock, fltrd)
+ where
+   fltrd = filter (isValidBlockEvent genesis flts) chain &
+           \case
+             [] -> error $ mconcat
+                   ["All ", show (length chain)
+                   , " blocks dropped by chain filters: ", show flts]
+             xs -> xs
+   (blk0,  blkL)  = (head chain, last chain)
+   (blk0V, blkLV) = (head fltrd, last fltrd)
+   domSlot = DataDomain
+             (blk0  & beSlotNo)  (blkL  & beSlotNo)
+             (blk0V & beSlotNo)  (blkLV & beSlotNo)
+             (fromIntegral . unSlotNo $ beSlotNo blkL  - beSlotNo blk0)
+             (fromIntegral . unSlotNo $ beSlotNo blkLV - beSlotNo blk0V)
+   domBlock = DataDomain
+              (blk0  & beBlockNo) (blkL  & beBlockNo)
+              (blk0V & beBlockNo) (blkLV & beBlockNo)
+              (length chain) (length fltrd)
+
+blockProp :: Run -> [BlockEvents] -> DataDomain SlotNo -> DataDomain BlockNo -> BlockPropagation
+blockProp run@Run{genesis} chain domSlot domBlock = do
+  BlockPropagation
+    { bpDomainSlots         = domSlot
+    , bpDomainBlocks        = domBlock
+    , bpForgerChecks        = forgerEventsCDF   (Just . bfChecked   . beForge)
+    , bpForgerLeads         = forgerEventsCDF   (Just . bfLeading   . beForge)
+    , bpForgerForges        = forgerEventsCDF   (Just . bfForged    . beForge)
+    , bpForgerAdoptions     = forgerEventsCDF   ((\x ->
+                                                    if bfChainDelta x == 1
+                                                    then Just (bfAdopted x)
+                                                    else Nothing)   . beForge)
+    , bpForgerAnnouncements = forgerEventsCDF   (Just . bfAnnounced . beForge)
+    , bpForgerSends         = forgerEventsCDF   (Just . bfSending   . beForge)
+    , bpPeerNotices         = observerEventsCDF (Just . boNoticed)   "noticed"
+    , bpPeerRequests        = observerEventsCDF (Just . boRequested) "requested"
+    , bpPeerFetches         = observerEventsCDF (Just . boFetched)   "fetched"
+    , bpPeerAdoptions       = observerEventsCDF boAdopted            "adopted"
+    , bpPeerAnnouncements   = observerEventsCDF boAnnounced          "announced"
+    , bpPeerSends           = observerEventsCDF boSending            "sending"
+    , bpPropagation         =
+      [ (p', forgerEventsCDF (Just . dPercSpec' "bePropagation" p . bePropagation))
+      | p@(Perc p') <- adoptionPcts <> [Perc 1.0] ]
+    , bpSizes               = forgerEventsCDF   (Just . bfBlockSize . beForge)
+    , bpVersion             = getVersion
+    }
+ where
+   forgerEventsCDF   :: (Real a, ToRealFrac a Float) => (BlockEvents -> Maybe a) -> Distribution Float a
+   forgerEventsCDF   = mapChainToBlockEventCDF           stdPercSpecs chain
+   observerEventsCDF = mapChainToPeerBlockObservationCDF stdPercSpecs chain
 
 -- | Given a single machine's log object stream, recover its block map.
 blockEventMapsFromLogObjects :: Run -> (JsonLogfile, [LogObject]) -> MachView

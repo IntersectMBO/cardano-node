@@ -147,13 +147,14 @@ case "$op" in
             'analyse'
             'block-propagation'
             ## ->
+            --mach-views-json  "$adir"/mach-view.json
+            --chain-json       "$adir"/chain.json
+            --chain-text       "$adir"/chain.txt
+            --analysis-json    "$adir"/blockprop.json
             --forger-text      "$adir"/blockprop-forger.txt
             --peers-text       "$adir"/blockprop-peers.txt
             --propagation-text "$adir"/blockprop-propagation.txt
-            --stats-text       "$adir"/blockprop-stats.txt
-            --analysis-json    "$adir"/blockprop.json
-            --chain-text       "$adir"/chain.txt
-            --chain-json       "$adir"/chain.json
+            --fullstats-text   "$adir"/blockprop-full.txt
 
             $(if test -n "$dump_logobjects"
               then echo --logobjects-json; fi)

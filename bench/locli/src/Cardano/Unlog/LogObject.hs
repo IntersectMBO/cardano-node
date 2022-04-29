@@ -81,6 +81,8 @@ instance Show Hash where show = LText.unpack . toText . unHash
 
 instance AE.ToJSONKey Hash where
   toJSONKey = AE.toJSONKeyText (toText . unHash)
+instance AE.FromJSONKey Hash where
+  fromJSONKey = AE.FromJSONKeyText (Hash . fromText)
 
 newtype Host = Host { unHost :: ShortText }
   deriving (Eq, Generic, Ord)

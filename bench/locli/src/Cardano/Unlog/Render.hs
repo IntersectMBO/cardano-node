@@ -67,13 +67,13 @@ mapSomeFieldDistribution f a = \case
   DFloat  s -> f (s a)
   DDeltaT s -> f (s a)
 
-renderTimeline :: forall a. RenderTimeline a => Run -> (IField a -> Bool) -> [a] -> [Text]
-renderTimeline run flt xs =
+renderTimeline :: forall a. RenderTimeline a => Run -> (IField a -> Bool) -> Bool -> [a] -> [Text]
+renderTimeline run flt withCommentary xs =
   concatMap (uncurry fLine) $ zip xs [(0 :: Int)..]
  where
    fLine :: a -> Int -> [Text]
    fLine l i = (if i `mod` 33 == 0 then catMaybes [head1, head2] else [])
-               <> (entry l : rtCommentary l)
+               <> (entry l : if withCommentary then rtCommentary l else [])
 
    entry :: a -> Text
    entry v = renderLineDist $

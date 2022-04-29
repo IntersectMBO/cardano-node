@@ -81,8 +81,10 @@ data BlockPropagationOutputFiles
   , bpofPeersPretty        :: Maybe TextOutputFile
   , bpofPropagationPretty  :: Maybe TextOutputFile
   , bpofFullStatsPretty    :: Maybe TextOutputFile
+  , bpofMachViews          :: Maybe JsonOutputFile
   , bpofChainPretty        :: Maybe TextOutputFile
   , bpofChain              :: Maybe JsonOutputFile
+  , bpofChainRaw           :: Maybe JsonOutputFile
   , bpofAnalysis           :: Maybe JsonOutputFile
   }
   deriving (Show)
@@ -221,9 +223,13 @@ parseBlockPropagationOutputFiles =
     <*> optional
         (argTextOutputFile "propagation-text"  "Propagation stats")
     <*> optional
-        (argTextOutputFile "stats-text"        "Full (forger+peers+propagation) stats")
+        (argTextOutputFile "fullstats-text"    "Full (forger+peers+propagation) stats")
+    <*> optional
+        (argJsonOutputFile "mach-views-json"   "Machine chain views as JSON")
     <*> optional
         (argTextOutputFile "chain-text"        "Timeline of chain evolution, one line per block")
+    <*> optional
+        (argJsonOutputFile "chain-raw-json"    "Unfiltered chain as JSON")
     <*> optional
         (argJsonOutputFile "chain-json"        "Chain as JSON")
     <*> optional
