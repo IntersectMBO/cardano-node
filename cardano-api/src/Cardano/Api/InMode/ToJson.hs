@@ -68,8 +68,10 @@ import           Cardano.Protocol.TPraos.Rules.Tickn
 import           Cardano.Protocol.TPraos.Rules.Updn
 import           Cardano.Slotting.Block (BlockNo (..))
 import           Data.Aeson (ToJSON(..), Value(..), (.=), object)
+import           Data.Aeson.Types (Pair)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (txId)
 import           Ouroboros.Consensus.Protocol.TPraos (TPraosCannotForge (..))
+import           Ouroboros.Consensus.Shelley.Eras as Consensus (StandardAlonzo)
 import           Ouroboros.Consensus.Shelley.Ledger hiding (TxId)
 import           Ouroboros.Consensus.Shelley.Ledger.Inspect
 import           Ouroboros.Consensus.Util.Condense (condense)
@@ -83,12 +85,15 @@ import qualified Cardano.Api.Script as Api
 import qualified Cardano.Api.SerialiseRaw as Api
 import qualified Cardano.Api.SerialiseTextEnvelope as Api
 import qualified Cardano.Api.TxBody as Api
+import qualified Cardano.Crypto.Hash as Hash
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import qualified Cardano.Crypto.VRF.Class as Crypto
 import qualified Cardano.Ledger.Alonzo as Alonzo
+import qualified Cardano.Ledger.Alonzo.Language as Alonzo
 import qualified Cardano.Ledger.Alonzo.PlutusScriptApi as Alonzo
 import qualified Cardano.Ledger.Alonzo.Rules.Utxo as Alonzo
 import qualified Cardano.Ledger.Alonzo.Rules.Utxos as Alonzo
+import qualified Cardano.Ledger.Alonzo.Scripts as Ledger
 import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
 import qualified Cardano.Ledger.Alonzo.TxInfo as Alonzo
 import qualified Cardano.Ledger.AuxiliaryData as Core
@@ -97,13 +102,13 @@ import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Core as Ledger
 import qualified Cardano.Ledger.Crypto as Core
 import qualified Cardano.Ledger.Era as Ledger
+import qualified Cardano.Ledger.Hashes as Ledger
 import qualified Cardano.Ledger.SafeHash as SafeHash
 import qualified Cardano.Ledger.ShelleyMA.Rules.Utxo as MA
 import qualified Cardano.Ledger.ShelleyMA.Timelocks as MA
 import qualified Cardano.Protocol.TPraos.BHeader as Protocol
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Key as Aeson
-import qualified Data.Aeson.Types as Aeson
 import qualified Data.ByteString.Base16 as B16
 import qualified Data.ByteString.Short as SBS
 import qualified Data.ByteString.UTF8 as BSU
@@ -114,26 +119,13 @@ import qualified Ouroboros.Consensus.Ledger.SupportsMempool as Consensus
 import qualified Ouroboros.Consensus.Ledger.SupportsMempool as SupportsMempool
 import qualified Ouroboros.Consensus.Protocol.Ledger.HotKey as HotKey
 import qualified Plutus.V1.Ledger.Api as Plutus
-import qualified PlutusCore.Core as Plutus
-import qualified UntypedPlutusCore.Evaluation.Machine.Cek.Internal as Cek
-import qualified PlutusCore.Evaluation.Machine.ExBudget as Cek
--- import qualified PlutusCore.DeBruijn as PlutusCore
 import qualified PlutusCore as PlutusCore
-import qualified UntypedPlutusCore.Core.Type
-import qualified PlutusCore.Evaluation.Machine.Exception
+import qualified PlutusCore.Core as Plutus
 import qualified PlutusCore.DeBruijn
-import qualified Cardano.Ledger.Alonzo.Scripts as Ledger
-import qualified Cardano.Ledger.Alonzo.Language as Alonzo
--- import           Cardano.Api.HasTypeProxy (FromSomeType)
--- import           Cardano.Api.Script (ScriptInAnyLang(..), ScriptLanguage(..), PlutusScriptVersion(..), AsType(..))
--- import qualified Cardano.Api.Script as Api
--- import           Cardano.Api.SerialiseCBOR
--- import           Cardano.Binary (DecoderError)
--- import qualified Data.ByteString.Short as SBS
--- import           Cardano.Api.Eras (ShelleyLedgerEra(..))
-import           Ouroboros.Consensus.Shelley.Eras as Consensus (StandardAlonzo)
-import qualified Cardano.Ledger.Hashes as Ledger
-import qualified Cardano.Crypto.Hash as Hash
+import qualified PlutusCore.Evaluation.Machine.ExBudget as Cek
+import qualified PlutusCore.Evaluation.Machine.Exception
+import qualified UntypedPlutusCore.Core.Type
+import qualified UntypedPlutusCore.Evaluation.Machine.Cek.Internal as Cek
 
 instance ToJSON (PredicateFailure (Core.EraRule "LEDGER" era)) => ToJSON (ApplyTxError era) where
   toJSON (ApplyTxError es) = toJSON es
@@ -149,7 +141,6 @@ applyTxErrorToJson ::
   , ToJSON (Core.AuxiliaryDataHash (Ledger.Crypto era))
   ) => Consensus.ApplyTxErr (ShelleyBlock era) -> Value
 applyTxErrorToJson (ApplyTxError predicateFailures) = toJSON (fmap toJSON predicateFailures)
-
 
 instance
   ( ShelleyBasedEra era
@@ -208,12 +199,13 @@ instance ToJSON HotKey.KESEvolutionError where
     , "targetPeriod"  .= targetPeriod
     ]
 
-instance ( ShelleyBasedEra era
-         , ToJSON (PredicateFailure (UTXO era))
-         , ToJSON (PredicateFailure (UTXOW era))
-         , ToJSON (PredicateFailure (Core.EraRule "BBODY" era))
-         , ToJSON (BlockTransitionError era)
-         ) => ToJSON (ShelleyLedgerError era) where
+instance
+  ( ShelleyBasedEra era
+  , ToJSON (PredicateFailure (UTXO era))
+  , ToJSON (PredicateFailure (UTXOW era))
+  , ToJSON (PredicateFailure (Core.EraRule "BBODY" era))
+  , ToJSON (BlockTransitionError era)
+  ) => ToJSON (ShelleyLedgerError era) where
   toJSON (BBodyError (BlockTransitionError fs)) = object
     [ "kind"      .= String "BBodyError"
     , "failures"  .= map toJSON fs
@@ -311,12 +303,13 @@ instance
     , "currentBlockHash"      .= String (textShow currentHash)
     ]
 
-instance ( ShelleyBasedEra era
-         , ToJSON (PredicateFailure (UTXO era))
-         , ToJSON (PredicateFailure (UTXOW era))
-         , ToJSON (PredicateFailure (Core.EraRule "LEDGER" era))
-         , ToJSON (PredicateFailure (Core.EraRule "LEDGERS" era))
-         ) => ToJSON (BbodyPredicateFailure era) where
+instance
+  ( ShelleyBasedEra era
+  , ToJSON (PredicateFailure (UTXO era))
+  , ToJSON (PredicateFailure (UTXOW era))
+  , ToJSON (PredicateFailure (Core.EraRule "LEDGER" era))
+  , ToJSON (PredicateFailure (Core.EraRule "LEDGERS" era))
+  ) => ToJSON (BbodyPredicateFailure era) where
   toJSON (WrongBlockBodySizeBBODY actualBodySz claimedBodySz) = object
     [ "kind"                  .= String "WrongBlockBodySizeBBODY"
     , "actualBlockBodySize"   .= actualBodySz
@@ -330,88 +323,104 @@ instance ( ShelleyBasedEra era
   toJSON (LedgersFailure f) = toJSON f
 
 
-instance ( ShelleyBasedEra era
-         , ToJSON (PredicateFailure (UTXO era))
-         , ToJSON (PredicateFailure (UTXOW era))
-         , ToJSON (PredicateFailure (Core.EraRule "LEDGER" era))
-         ) => ToJSON (LedgersPredicateFailure era) where
-  toJSON (LedgerFailure f) = toJSON f
+instance
+  ( ShelleyBasedEra era
+  , ToJSON (PredicateFailure (UTXO era))
+  , ToJSON (PredicateFailure (UTXOW era))
+  , ToJSON (PredicateFailure (Core.EraRule "LEDGER" era))
+  ) => ToJSON (LedgersPredicateFailure era) where
+  toJSON (LedgerFailure f) = object
+    [ "kind"  .= String "LedgerFailure"
+    , "value" .= toJSON f
+    ]
 
-instance ( ShelleyBasedEra era
-         , ToJSON (PredicateFailure (UTXO era))
-         , ToJSON (PredicateFailure (UTXOW era))
-         , ToJSON (PredicateFailure (Core.EraRule "DELEGS" era))
-         , ToJSON (PredicateFailure (Core.EraRule "UTXOW" era))
-         ) => ToJSON (LedgerPredicateFailure era) where
-  toJSON (UtxowFailure f) = toJSON f
-  toJSON (DelegsFailure f) = toJSON f
+instance
+  ( ShelleyBasedEra era
+  , ToJSON (PredicateFailure (UTXO era))
+  , ToJSON (PredicateFailure (UTXOW era))
+  , ToJSON (PredicateFailure (Core.EraRule "DELEGS" era))
+  , ToJSON (PredicateFailure (Core.EraRule "UTXOW" era))
+  ) => ToJSON (LedgerPredicateFailure era) where
+  toJSON (UtxowFailure f) = object
+    [ "kind"  .= String "UtxowFailure"
+    , "value" .= toJSON f
+    ]
+  toJSON (DelegsFailure f) = object
+    [ "kind"  .= String "UtxowFailure"
+    , "value" .= toJSON f
+    ]
 
 instance
   ( ToJSON (Core.AuxiliaryDataHash StandardCrypto)
   ) => ToJSON (UtxowPredicateFail (Alonzo.AlonzoEra StandardCrypto)) where
   toJSON (WrappedShelleyEraFailure utxoPredFail) = toJSON utxoPredFail
   toJSON (MissingRedeemers scripts) = object
-    [ "kind" .= String "MissingRedeemers"
+    [ "kind"    .= String "MissingRedeemers"
     , "scripts" .= renderMissingRedeemers scripts
     ]
   toJSON (MissingRequiredDatums required received) = object
-    [ "kind" .= String "MissingRequiredDatums"
-    , "required" .= map (Crypto.hashToTextAsHex . SafeHash.extractHash) (Set.toList required)
-    , "received" .= map (Crypto.hashToTextAsHex . SafeHash.extractHash) (Set.toList received)
+    [ "kind"      .= String "MissingRequiredDatums"
+    , "required"  .= map (Crypto.hashToTextAsHex . SafeHash.extractHash) (Set.toList required)
+    , "received"  .= map (Crypto.hashToTextAsHex . SafeHash.extractHash) (Set.toList received)
     ]
   toJSON (PPViewHashesDontMatch ppHashInTxBody ppHashFromPParams) = object
-    [ "kind" .= String "PPViewHashesDontMatch"
-    , "fromTxBody" .= renderScriptIntegrityHash (strictMaybeToMaybe ppHashInTxBody)
+    [ "kind"        .= String "PPViewHashesDontMatch"
+    , "fromTxBody"  .= renderScriptIntegrityHash (strictMaybeToMaybe ppHashInTxBody)
     , "fromPParams" .= renderScriptIntegrityHash (strictMaybeToMaybe ppHashFromPParams)
     ]
   toJSON (MissingRequiredSigners missingKeyWitnesses) = object
-    [ "kind" .= String "MissingRequiredSigners"
+    [ "kind"      .= String "MissingRequiredSigners"
     , "witnesses" .= Set.toList missingKeyWitnesses
     ]
   toJSON (UnspendableUTxONoDatumHash txins) = object
-    [ "kind" .= String "MissingRequiredSigners"
+    [ "kind"  .= String "MissingRequiredSigners"
     , "txins" .= Set.toList txins
     ]
   toJSON (NonOutputSupplimentaryDatums disallowed acceptable) = object
-    [ "kind" .= String "NonOutputSupplimentaryDatums"
-    , "disallowed" .= Set.toList disallowed
-    , "acceptable" .= Set.toList acceptable
+    [ "kind"        .= String "NonOutputSupplimentaryDatums"
+    , "disallowed"  .= Set.toList disallowed
+    , "acceptable"  .= Set.toList acceptable
     ]
   toJSON (ExtraRedeemers rdmrs) = object
-    [ "kind" .= String "ExtraRedeemers"
+    [ "kind"  .= String "ExtraRedeemers"
     , "rdmrs" .= map (Api.renderScriptWitnessIndex . Api.fromAlonzoRdmrPtr) rdmrs
     ]
 
-renderScriptIntegrityHash :: Maybe (Alonzo.ScriptIntegrityHash StandardCrypto) -> Aeson.Value
+renderScriptIntegrityHash :: Maybe (Alonzo.ScriptIntegrityHash StandardCrypto) -> Value
 renderScriptIntegrityHash (Just witPPDataHash) =
-  Aeson.String . Crypto.hashToTextAsHex $ SafeHash.extractHash witPPDataHash
+  String . Crypto.hashToTextAsHex $ SafeHash.extractHash witPPDataHash
 renderScriptIntegrityHash Nothing = Aeson.Null
 
 renderScriptHash :: ScriptHash StandardCrypto -> Text
 renderScriptHash = Api.serialiseToRawBytesHexText . Api.fromShelleyScriptHash
 
-renderMissingRedeemers :: [(Alonzo.ScriptPurpose StandardCrypto, ScriptHash StandardCrypto)] -> Aeson.Value
-renderMissingRedeemers scripts = Aeson.object $ map renderTuple  scripts
+renderMissingRedeemers :: [(Alonzo.ScriptPurpose StandardCrypto, ScriptHash StandardCrypto)] -> Value
+renderMissingRedeemers scripts = object $ map renderTuple  scripts
  where
-  renderTuple :: (Alonzo.ScriptPurpose StandardCrypto, ScriptHash StandardCrypto) -> Aeson.Pair
+  renderTuple :: (Alonzo.ScriptPurpose StandardCrypto, ScriptHash StandardCrypto) -> Pair
   renderTuple (scriptPurpose, sHash) =
     Aeson.fromText (renderScriptHash sHash) .= renderScriptPurpose scriptPurpose
 
-renderScriptPurpose :: Alonzo.ScriptPurpose StandardCrypto -> Aeson.Value
-renderScriptPurpose (Alonzo.Minting pid) =
-  Aeson.object [ "minting" .= toJSON pid]
-renderScriptPurpose (Alonzo.Spending txin) =
-  Aeson.object [ "spending" .= Api.fromShelleyTxIn txin]
-renderScriptPurpose (Alonzo.Rewarding rwdAcct) =
-  Aeson.object [ "rewarding" .= Aeson.String (Api.serialiseAddress $ Api.fromShelleyStakeAddr rwdAcct)]
-renderScriptPurpose (Alonzo.Certifying cert) =
-  Aeson.object [ "certifying" .= toJSON (Api.textEnvelopeDefaultDescr $ Api.fromShelleyCertificate cert)]
+renderScriptPurpose :: Alonzo.ScriptPurpose StandardCrypto -> Value
+renderScriptPurpose (Alonzo.Minting pid) = object
+  [ "minting" .= toJSON pid
+  ]
+renderScriptPurpose (Alonzo.Spending txin) = object
+  [ "spending" .= Api.fromShelleyTxIn txin
+  ]
+renderScriptPurpose (Alonzo.Rewarding rwdAcct) = object
+  [ "rewarding" .= String (Api.serialiseAddress $ Api.fromShelleyStakeAddr rwdAcct)
+  ]
+renderScriptPurpose (Alonzo.Certifying cert) = object
+  [ "certifying" .= toJSON (Api.textEnvelopeDefaultDescr $ Api.fromShelleyCertificate cert)
+  ]
 
-instance ( ShelleyBasedEra era
-         , ToJSON (PredicateFailure (UTXO era))
-         , ToJSON (PredicateFailure (Core.EraRule "UTXO" era))
-         , ToJSON (Core.AuxiliaryDataHash (Ledger.Crypto era))
-         ) => ToJSON (UtxowPredicateFailure era) where
+instance
+  ( ShelleyBasedEra era
+  , ToJSON (PredicateFailure (UTXO era))
+  , ToJSON (PredicateFailure (Core.EraRule "UTXO" era))
+  , ToJSON (Core.AuxiliaryDataHash (Ledger.Crypto era))
+  ) => ToJSON (UtxowPredicateFailure era) where
   toJSON (ExtraneousScriptWitnessesUTXOW extraneousScripts) = object
     [ "kind"              .= String "InvalidWitnessesUTXOW"
     , "extraneousScripts" .= extraneousScripts
@@ -454,12 +463,12 @@ instance ( ShelleyBasedEra era
     [ "kind"  .= String "InvalidMetadata"
     ]
 
-instance ( ShelleyBasedEra era
-         , ToJSON (Core.Value era)
-         , ToJSON (Core.TxOut era)
-         , ToJSON (PredicateFailure (Core.EraRule "PPUP" era))
-         )
-      => ToJSON (UtxoPredicateFailure era) where
+instance
+  ( ShelleyBasedEra era
+  , ToJSON (Core.Value era)
+  , ToJSON (Core.TxOut era)
+  , ToJSON (PredicateFailure (Core.EraRule "PPUP" era))
+  ) => ToJSON (UtxoPredicateFailure era) where
   toJSON (BadInputsUTxO badInputs) = object
     [ "kind" .= String "BadInputsUTxO"
     , "badInputs" .= badInputs
@@ -500,8 +509,10 @@ instance ( ShelleyBasedEra era
     , "produced" .= produced
     , "error" .= renderValueNotConservedErr consumed produced
     ]
-  toJSON (UpdateFailure f) = toJSON f
-
+  toJSON (UpdateFailure f) = object
+    [ "kind"  .= String "UpdateFailure"
+    , "value" .= toJSON f
+    ]
   toJSON (WrongNetwork network addrs) = object
     [ "kind" .= String "WrongNetwork"
     , "network" .= network
@@ -585,12 +596,12 @@ instance ( ShelleyBasedEra era
     , "error"   .= String "Too many asset ids in the tx output"
     ]
 
-renderBadInputsUTxOErr ::  Set (TxIn era) -> Aeson.Value
+renderBadInputsUTxOErr ::  Set (TxIn era) -> Value
 renderBadInputsUTxOErr txIns
   | Set.null txIns = String "The transaction contains no inputs."
   | otherwise = String "The transaction contains inputs that do not exist in the UTxO set."
 
-renderValueNotConservedErr :: Show val => val -> val -> Aeson.Value
+renderValueNotConservedErr :: Show val => val -> val -> Value
 renderValueNotConservedErr consumed produced = String $
   "This transaction consumed " <> show consumed <> " but produced " <> show produced
 
@@ -678,8 +689,8 @@ instance
     , "reserves"      .= reserves
     ]
     where potText = case mirpot of
-                        ReservesMIR -> "Reserves"
-                        TreasuryMIR -> "Treasury"
+            ReservesMIR -> "ReservesMIR"
+            TreasuryMIR -> "TreasuryMIR"
   toJSON (MIRCertificateTooLateinEpochDELEG currSlot boundSlotNo) = object
     [ "kind"                        .= String "MIRCertificateTooLateinEpochDELEG"
     , "currentSlotNo"               .= currSlot
@@ -776,8 +787,14 @@ instance
 instance ( ToJSON (PredicateFailure (Core.EraRule "NEWEPOCH" era))
          , ToJSON (PredicateFailure (Core.EraRule "RUPD" era))
          ) => ToJSON (TickPredicateFailure era) where
-  toJSON (NewEpochFailure f) = toJSON f
-  toJSON (RupdFailure     f) = toJSON f
+  toJSON (NewEpochFailure f) = object
+    [ "kind"  .= String "NewEpochFailure"
+    , "value" .= toJSON f
+    ]
+  toJSON (RupdFailure f) = object
+    [ "kind"  .= String "RupdFailure"
+    , "value" .= toJSON f
+    ]
 
 instance ToJSON TicknPredicateFailure where
   toJSON x = case x of {} -- no constructors
@@ -786,8 +803,14 @@ instance ( ToJSON (PredicateFailure (Core.EraRule "EPOCH" era))
          , ToJSON (PredicateFailure (Core.EraRule "MIR" era))
          , Core.Crypto (Ledger.Crypto era)
          ) => ToJSON (NewEpochPredicateFailure era) where
-  toJSON (EpochFailure f) = toJSON f
-  toJSON (MirFailure f) = toJSON f
+  toJSON (EpochFailure f) = object
+    [ "kind"    .= String "EpochFailure"
+    , "update"  .= toJSON f
+    ]
+  toJSON (MirFailure f) = object
+    [ "kind"    .= String "MirFailure"
+    , "update"  .= toJSON f
+    ]
   toJSON (CorruptRewardUpdate update) = object
     [ "kind"    .= String "CorruptRewardUpdate"
     , "update"  .= String (show update)
@@ -797,9 +820,18 @@ instance ( ToJSON (PredicateFailure (Core.EraRule "POOLREAP" era))
          , ToJSON (PredicateFailure (Core.EraRule "SNAP" era))
          , ToJSON (PredicateFailure (Core.EraRule "UPEC" era))
          ) => ToJSON (EpochPredicateFailure era) where
-  toJSON (PoolReapFailure f) = toJSON f
-  toJSON (SnapFailure     f) = toJSON f
-  toJSON (UpecFailure     f) = toJSON f
+  toJSON (PoolReapFailure f) = object
+    [ "kind"    .= String "PoolReapFailure"
+    , "update"  .= toJSON f
+    ]
+  toJSON (SnapFailure f) = object
+    [ "kind"    .= String "SnapFailure"
+    , "update"  .= toJSON f
+    ]
+  toJSON (UpecFailure f) = object
+    [ "kind"    .= String "UpecFailure"
+    , "update"  .= toJSON f
+    ]
 
 instance ToJSON (PoolreapPredicateFailure era) where
   toJSON x = case x of {} -- no constructors
@@ -829,8 +861,14 @@ instance
   , ToJSON (Crypto.OutputVRF (Core.VRF crypto))
   , ToJSON (Crypto.CertifiedVRF (Core.VRF crypto) Nonce)
   ) => ToJSON (PrtclPredicateFailure crypto) where
-  toJSON (OverlayFailure f) = toJSON f
-  toJSON (UpdnFailure f) = toJSON f
+  toJSON (OverlayFailure f) = object
+    [ "kind"    .= String "OverlayFailure"
+    , "update"  .= toJSON f
+    ]
+  toJSON (UpdnFailure f) = object
+    [ "kind"    .= String "UpdnFailure"
+    , "update"  .= toJSON f
+    ]
 
 instance
   ( Core.Crypto crypto
@@ -990,7 +1028,10 @@ instance ToJSON (Alonzo.UtxoPredicateFailure (Alonzo.AlonzoEra StandardCrypto)) 
     , "outputs" .= badOutputs
     , "error"   .= String "The output is smaller than the allow minimum UTxO value defined in the protocol parameters"
     ]
-  toJSON (Alonzo.UtxosFailure predFailure) = toJSON predFailure
+  toJSON (Alonzo.UtxosFailure predFailure) = object
+    [ "kind"    .= String "UtxosFailure"
+    , "error"   .= toJSON predFailure
+    ]
   toJSON (Alonzo.OutputBootAddrAttrsTooBig txouts) = object
     [ "kind"    .= String "OutputBootAddrAttrsTooBig"
     , "outputs" .= txouts
@@ -1057,22 +1098,22 @@ deriving newtype instance ToJSON Alonzo.IsValid
 instance ToJSON (Alonzo.CollectError StandardCrypto) where
   toJSON cError = case cError of
     Alonzo.NoRedeemer sPurpose -> object
-      [ "kind" .= String "CollectError"
-      , "error" .= String "NoRedeemer"
+      [ "kind"          .= String "CollectError"
+      , "error"         .= String "NoRedeemer"
       , "scriptpurpose" .= renderScriptPurpose sPurpose
       ]
     Alonzo.NoWitness sHash -> object
-      [ "kind" .= String "CollectError"
-      , "error" .= String "NoWitness"
-      , "scripthash" .= toJSON sHash
+      [ "kind"        .= String "CollectError"
+      , "error"       .= String "NoWitness"
+      , "scripthash"  .= toJSON sHash
       ]
     Alonzo.NoCostModel lang -> object
-      [ "kind" .= String "CollectError"
-      , "error" .= String "NoCostModel"
-      , "language" .= toJSON lang
+      [ "kind"      .= String "CollectError"
+      , "error"     .= String "NoCostModel"
+      , "language"  .= toJSON lang
       ]
     Alonzo.BadTranslation err -> object
-      [ "kind" .= String "PlutusTranslationError"
+      [ "kind"  .= String "PlutusTranslationError"
       , "error" .= errMsg
       ]
       where errMsg = case err of
@@ -1099,7 +1140,7 @@ instance ToJSON Alonzo.TagMismatchDescription where
       ]
 
 instance ToJSON Alonzo.FailureDescription where
-  toJSON f = case f of
+  toJSON = \case
     Alonzo.OnePhaseFailure t -> object
       [ "kind"        .= String "FailureDescription"
       , "error"       .= String "OnePhaseFailure"
@@ -1139,14 +1180,25 @@ renderTxId = error "TODO implement"
 
 instance ToJSON Alonzo.PlutusDebugInfo where
   toJSON = \case
-    Alonzo.DebugSuccess _budget -> "success" -- PV1.ExBudget
-    Alonzo.DebugCannotDecode msg -> toJSON msg
+    Alonzo.DebugSuccess budget -> object
+      [ "kind"    .= String "DebugSuccess"
+      , "budget"  .= budget
+      ]
+    Alonzo.DebugCannotDecode msg -> object
+      [ "kind"    .= String "DebugCannotDecode"
+      , "message" .= toJSON msg
+      ]
     Alonzo.DebugInfo texts e d -> object
-      [ "texts" .= texts
+      [ "kind"  .= String "DebugInfo"
+      , "texts" .= texts
       , "error" .= e
       , "debug" .= d
       ]
-    Alonzo.DebugBadHex msg -> toJSON msg
+    Alonzo.DebugBadHex msg -> object
+      [ "kind"    .= String "DebugBadHex"
+      , "message" .= toJSON msg
+      ]
+
 
 instance ToJSON Alonzo.PlutusError where
   toJSON = \case
@@ -1172,74 +1224,33 @@ instance ToJSON Alonzo.PlutusDebug where
       , "protVer"     .= protVer
       ]
 
-
-    -- textEnvTypes :: [FromSomeType HasTextEnvelope ScriptInAnyLang]
-    -- textEnvTypes            =
-    --   [ FromSomeType (AsScript AsPlutusScriptV1)
-    --                  (ScriptInAnyLang (PlutusScriptLanguage PlutusScriptV1          ))
-    --   , FromSomeType (AsScript AsPlutusScriptV2)
-    --                  (ScriptInAnyLang (PlutusScriptLanguage PlutusScriptV2))
-    --   ]
-
-
-      -- Just (FromSomeType ttoken f) ->
-      --   first TextEnvelopeDecodeError $
-      --     f <$> deserialiseFromCBOR ttoken (teRawCBOR te)
-
--- ScriptInAnyLang :: ScriptLanguage lang
---                      -> Script lang
---                      -> ScriptInAnyLang
--- scriptHashOf :: ()
---   => Alonzo.Language
---   -> SBS.ShortByteString
---   -> Either DecoderError Api.ScriptHash
--- scriptHashOf lang sbs = hashScript <$> decodeScript lang (SBS.fromShort sbs)
---   where hashScript :: ScriptInAnyLang -> Api.ScriptHash
---         hashScript = error ""
-
--- decodeScript :: ()
---   => Alonzo.Language
---   -> ByteString
---   -> Either DecoderError ScriptInAnyLang
--- decodeScript Alonzo.PlutusV1 bs = ScriptInAnyLang (PlutusScriptLanguage PlutusScriptV1) <$> deserialiseFromCBOR (AsScript AsPlutusScriptV1) bs
--- decodeScript Alonzo.PlutusV2 bs = ScriptInAnyLang (PlutusScriptLanguage PlutusScriptV2) <$> deserialiseFromCBOR (AsScript AsPlutusScriptV2) bs
-
 scriptHashOf :: Alonzo.Language -> SBS.ShortByteString -> Text
 scriptHashOf lang sbs = Text.pack $ Hash.hashToStringAsHex h
   where Ledger.ScriptHash h = case lang of
           Alonzo.PlutusV1 -> Ledger.hashScript @Consensus.StandardAlonzo (Ledger.PlutusScript lang sbs)
           Alonzo.PlutusV2 -> error "not implemented"
-            -- TODO Babbage era
-            -- Ledger.hashScript @Consensus.StandardBabbage (Ledger.PlutusScript lang sbs)
-   
-
--- scriptHashOf lang sbs = Text.pack $ show @(Ledger.Script Consensus.StandardAlonzo) (Ledger.PlutusScript lang sbs)
--- scriptHashOf Alonzo.PlutusV1 bs = ScriptInAnyLang (PlutusScriptLanguage PlutusScriptV1) <$> deserialiseFromCBOR (AsScript AsPlutusScriptV1) bs
--- scriptHashOf Alonzo.PlutusV2 bs = ScriptInAnyLang (PlutusScriptLanguage PlutusScriptV2) <$> deserialiseFromCBOR (AsScript AsPlutusScriptV2) bs
-  -- where bs = SBS.fromShort sbs
-  -- Text.pack $ show (Ledger.PlutusScript lang sbs)
 
 instance ToJSON Plutus.EvaluationError where
   toJSON = \case
     Plutus.CekError e -> object
-      [ "kind"    .= String "CekError"
-      , "error"   .= toJSON @Text (show e)
-      , "value"   .= toJSON e
+      [ "kind"  .= String "CekError"
+      , "error" .= toJSON @Text (show e)
+      , "value" .= toJSON e
       ]
     Plutus.DeBruijnError e -> object
-      [ "kind"    .= String "DeBruijnError"
-      , "error"   .= toJSON @Text (show e)
+      [ "kind"  .= String "DeBruijnError"
+      , "error" .= toJSON @Text (show e)
       ]
     Plutus.CodecError e -> object
-      [ "kind"    .= String "CodecError"
-      , "error"   .= toJSON @Text (show e)
+      [ "kind"  .= String "CodecError"
+      , "error" .= toJSON @Text (show e)
       ]
     Plutus.IncompatibleVersionError actual -> object
       [ "kind"    .= String "IncompatibleVersionError"
       , "actual"  .= toJSON actual
       ]
     Plutus.CostModelParameterMismatch   -> object
-      [ "kind"    .= String "CostModelParameterMismatch"
+      [ "kind"  .= String "CostModelParameterMismatch"
       ]
 
 instance ToJSON (Plutus.Version ann) where
@@ -1279,11 +1290,11 @@ dataEntryToJson (k, v) = toJSON [toJSON k, toJSON v]
 instance ToJSON Cek.CekUserError where
   toJSON = \case
     Cek.CekOutOfExError (Cek.ExRestrictingBudget res) -> object
-      [ "kind" .= String "CekOutOfExError"
-      , "budget" .= toJSON res
+      [ "kind"    .= String "CekOutOfExError"
+      , "budget"  .= toJSON res
       ]
     Cek.CekEvaluationFailure -> object
-      [ "kind" .= String "CekEvaluationFailure"
+      [ "kind"  .= String "CekEvaluationFailure"
       ]
 
 instance (ToJSON name, ToJSON fun) => ToJSON (Cek.CekEvaluationException name uni fun) where
