@@ -470,9 +470,9 @@ instance
   , ToJSON (PredicateFailure (Core.EraRule "PPUP" era))
   ) => ToJSON (UtxoPredicateFailure era) where
   toJSON (BadInputsUTxO badInputs) = object
-    [ "kind" .= String "BadInputsUTxO"
+    [ "kind"      .= String "BadInputsUTxO"
     , "badInputs" .= badInputs
-    , "error" .= renderBadInputsUTxOErr badInputs
+    , "error"     .= renderBadInputsUTxOErr badInputs
     ]
   toJSON (ExpiredUTxO ttl slot) = object
     [ "kind" .= String "ExpiredUTxO"
@@ -480,46 +480,46 @@ instance
     , "slot" .= slot
     ]
   toJSON (MaxTxSizeUTxO txsize maxtxsize) = object
-    [ "kind" .= String "MaxTxSizeUTxO"
-    , "size" .= txsize
+    [ "kind"    .= String "MaxTxSizeUTxO"
+    , "size"    .= txsize
     , "maxSize" .= maxtxsize
     ]
   -- TODO: Add the minimum allowed UTxO value to OutputTooSmallUTxO
   toJSON (OutputTooSmallUTxO badOutputs) = object
-    [ "kind" .= String "OutputTooSmallUTxO"
+    [ "kind"    .= String "OutputTooSmallUTxO"
     , "outputs" .= badOutputs
-    , "error" .= String "The output is smaller than the allow minimum UTxO value defined in the protocol parameters"
+    , "error"   .= String "The output is smaller than the allow minimum UTxO value defined in the protocol parameters"
     ]
   toJSON (OutputBootAddrAttrsTooBig badOutputs) = object
-    [ "kind" .= String "OutputBootAddrAttrsTooBig"
+    [ "kind"    .= String "OutputBootAddrAttrsTooBig"
     , "outputs" .= badOutputs
-    , "error" .= String "The Byron address attributes are too big"
+    , "error"   .= String "The Byron address attributes are too big"
     ]
   toJSON InputSetEmptyUTxO = object
     [ "kind" .= String "InputSetEmptyUTxO"
     ]
   toJSON (FeeTooSmallUTxO minfee txfee) = object
-    [ "kind" .= String "FeeTooSmallUTxO"
+    [ "kind"    .= String "FeeTooSmallUTxO"
     , "minimum" .= minfee
-    , "fee" .= txfee
+    , "fee"     .= txfee
     ]
   toJSON (ValueNotConservedUTxO consumed produced) = object
-    [ "kind" .= String "ValueNotConservedUTxO"
-    , "consumed" .= consumed
-    , "produced" .= produced
-    , "error" .= renderValueNotConservedErr consumed produced
+    [ "kind"      .= String "ValueNotConservedUTxO"
+    , "consumed"  .= consumed
+    , "produced"  .= produced
+    , "error"     .= renderValueNotConservedErr consumed produced
     ]
   toJSON (UpdateFailure f) = object
     [ "kind"  .= String "UpdateFailure"
     , "value" .= toJSON f
     ]
   toJSON (WrongNetwork network addrs) = object
-    [ "kind" .= String "WrongNetwork"
+    [ "kind"    .= String "WrongNetwork"
     , "network" .= network
     , "addrs"   .= addrs
     ]
   toJSON (WrongNetworkWithdrawal network addrs) = object
-    [ "kind" .= String "WrongNetworkWithdrawal"
+    [ "kind"    .= String "WrongNetworkWithdrawal"
     , "network" .= network
     , "addrs"   .= addrs
     ]
@@ -689,8 +689,8 @@ instance
     , "reserves"      .= reserves
     ]
     where potText = case mirpot of
-            ReservesMIR -> "ReservesMIR"
-            TreasuryMIR -> "TreasuryMIR"
+            ReservesMIR -> "Reserves"
+            TreasuryMIR -> "Treasury"
   toJSON (MIRCertificateTooLateinEpochDELEG currSlot boundSlotNo) = object
     [ "kind"                        .= String "MIRCertificateTooLateinEpochDELEG"
     , "currentSlotNo"               .= currSlot
@@ -713,8 +713,8 @@ instance
     , "available" .= available
     ]
     where potText = case mirpot of
-                      ReservesMIR -> "Reserves"
-                      TreasuryMIR -> "Treasury"
+            ReservesMIR -> "Reserves"
+            TreasuryMIR -> "Treasury"
   toJSON MIRProducesNegativeUpdate = object
     [ "kind" .= String "MIRProducesNegativeUpdate"
     ]
@@ -725,8 +725,8 @@ instance
     , "amount"  .= coin
     ]
     where potText = case pot of
-                      ReservesMIR -> "Reserves"
-                      TreasuryMIR -> "Treasury"
+            ReservesMIR -> "Reserves"
+            TreasuryMIR -> "Treasury"
 
 instance
   ( Core.Crypto (Ledger.Crypto era)
