@@ -97,15 +97,15 @@ instance HasSeverityAnnotation (ChainDB.TraceEvent blk) where
     ChainDB.IgnoreBlockOlderThanK {} -> Info
     ChainDB.IgnoreBlockAlreadyInVolatileDB {} -> Info
     ChainDB.IgnoreInvalidBlock {} -> Info
-    ChainDB.AddedBlockToQueue {} -> Debug
-    ChainDB.PoppedBlockFromQueue {} -> Debug
+    ChainDB.AddedBlockToQueue {} -> Info
+    ChainDB.PoppedBlockFromQueue {} -> Info
     ChainDB.BlockInTheFuture {} -> Info
-    ChainDB.AddedBlockToVolatileDB {} -> Debug
+    ChainDB.AddedBlockToVolatileDB {} -> Info
     ChainDB.TryAddToCurrentChain {} -> Debug
     ChainDB.TrySwitchToAFork {} -> Info
     ChainDB.StoreButDontChange {} -> Debug
     ChainDB.AddedToCurrentChain events _ _ _ ->
-      maximumDef Notice (map getSeverityAnnotation events)
+      maximumDef Notice (Info : map getSeverityAnnotation events)
     ChainDB.SwitchedToAFork events _ _ _ ->
       maximumDef Notice (map getSeverityAnnotation events)
     ChainDB.AddBlockValidation ev' -> case ev' of

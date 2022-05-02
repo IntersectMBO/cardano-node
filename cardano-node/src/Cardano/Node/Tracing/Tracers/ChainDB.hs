@@ -197,10 +197,10 @@ sevTraceAddBlockEvent :: ChainDB.TraceAddBlockEvent blk -> SeverityS
 sevTraceAddBlockEvent ChainDB.IgnoreBlockOlderThanK {} = Info
 sevTraceAddBlockEvent ChainDB.IgnoreBlockAlreadyInVolatileDB {} = Info
 sevTraceAddBlockEvent ChainDB.IgnoreInvalidBlock {} = Info
-sevTraceAddBlockEvent ChainDB.AddedBlockToQueue {} = Debug
-sevTraceAddBlockEvent ChainDB.PoppedBlockFromQueue {} = Debug
+sevTraceAddBlockEvent ChainDB.AddedBlockToQueue {} = Info
+sevTraceAddBlockEvent ChainDB.PoppedBlockFromQueue {} = Info
 sevTraceAddBlockEvent ChainDB.BlockInTheFuture {} = Info
-sevTraceAddBlockEvent ChainDB.AddedBlockToVolatileDB {} = Debug
+sevTraceAddBlockEvent ChainDB.AddedBlockToVolatileDB {} = Info
 sevTraceAddBlockEvent ChainDB.TryAddToCurrentChain {} = Debug
 sevTraceAddBlockEvent ChainDB.TrySwitchToAFork {} = Info
 sevTraceAddBlockEvent ChainDB.StoreButDontChange {} = Debug
