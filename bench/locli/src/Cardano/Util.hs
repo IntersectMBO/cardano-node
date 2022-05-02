@@ -10,7 +10,8 @@ import Cardano.Prelude
 
 import Control.Concurrent.Async   (forConcurrently, forConcurrently_, mapConcurrently, mapConcurrently_)
 import Control.DeepSeq            qualified as DS
-import Data.Aeson                 (ToJSON, encode)
+import Control.Monad.Trans.Except.Extra (firstExceptT, newExceptT)
+import Data.Aeson                 (FromJSON, ToJSON, encode, eitherDecode)
 import Data.ByteString.Lazy.Char8 qualified as LBS
 import Data.Text                  qualified as T
 import Text.Printf                (printf)
@@ -73,6 +74,15 @@ dumpAssociatedObjects ident xs = liftIO $
         progress ident (Q f)
         withFile (replaceExtension f $ ident <> ".json") WriteMode $ \hnd ->
           LBS.hPutStrLn hnd $ encode x
+
+readAssociatedObjects :: forall a.
+  FromJSON a => String -> [JsonLogfile] -> ExceptT Text IO [(JsonLogfile, a)]
+readAssociatedObjects ident fs = firstExceptT T.pack . newExceptT . fmap sequence . fmap (fmap sequence) $
+  flip mapConcurrently fs $
+    \jf@(JsonLogfile f) -> do
+        x <- eitherDecode @a <$> LBS.readFile (replaceExtension f $ ident <> ".json")
+        progress ident (Q f)
+        pure (jf, x)
 
 dumpAssociatedObjectStreams :: ToJSON a => String -> [(JsonLogfile, [a])] -> ExceptT Text IO ()
 dumpAssociatedObjectStreams ident xss = liftIO $

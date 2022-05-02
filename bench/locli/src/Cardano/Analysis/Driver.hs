@@ -1,9 +1,7 @@
 {-# OPTIONS_GHC -Wno-incomplete-patterns -Wno-name-shadowing #-}
 module Cardano.Analysis.Driver
-  ( AnalysisCmdError
-  , renderAnalysisCmdError
-  , runAnalysisCommand
-  ) where
+  ( module Cardano.Analysis.Driver )
+where
 
 import Prelude                          (String)
 import Prelude           qualified as P (head)
@@ -50,21 +48,17 @@ logfileRunIdentifier fp =
 --
 -- Analysis command dispatch
 --
-runAnalysisCommand :: Maybe Run -> [([ChainFilter], FilterName)] -> [JsonLogfile] -> AnalysisCommand -> ExceptT AnalysisCmdError IO ()
-runAnalysisCommand (Just run) filters logfiles@(_:_) (MachineTimelineCmd oFiles) = do
+runAnalysisCommand :: Maybe Run -> ([ChainFilter], [FilterName]) -> [JsonLogfile] -> AnalysisCommand -> ExceptT AnalysisCmdError IO ()
+runAnalysisCommand (Just run) flts logfiles@(_:_) (MachineTimelineCmd oFiles) = do
   progress "run"     (Q . T.unpack . logfileRunIdentifier . T.pack . unJsonLogfile $ P.head logfiles)
 
-  let (,) justFilters filterNames = unzip filters
-
   firstExceptT AnalysisCmdError $
-    runMachineTimeline run logfiles (mconcat justFilters) filterNames oFiles
-runAnalysisCommand (Just run) filters logfiles@(_:_) (BlockPropagationCmd oFiles) = do
+    runMachineTimeline run logfiles flts oFiles
+runAnalysisCommand (Just run) flts logfiles@(_:_) (BlockPropagationCmd oFiles) = do
   progress "run"     (Q . T.unpack . logfileRunIdentifier . T.pack . unJsonLogfile $ P.head logfiles)
 
-  let (,) justFilters filterNames = unzip filters
-
   firstExceptT AnalysisCmdError $
-    runBlockPropagation run (mconcat justFilters) filterNames logfiles oFiles
+    runBlockPropagation run flts logfiles oFiles
 runAnalysisCommand _ _ _ SubstringKeysCmd = liftIO $
   mapM_ putStrLn logObjectStreamInterpreterKeys
 runAnalysisCommand _ _ _ RunInfoCmd = pure ()
@@ -85,39 +79,24 @@ runLiftLogObjects fs = liftIO $
    joinT :: (IO a, IO b) -> IO (a, b)
    joinT (a, b) = (,) <$> a <*> b
 
-runBuildMachViews :: Run -> [(JsonLogfile, [LogObject])]
-                  -> ExceptT Text IO [(JsonLogfile, MachView)]
-runBuildMachViews run objLists = liftIO $
-  buildMachViews run objLists
-
-runRebuildChain :: Run -> [(JsonLogfile, MachView)]
-             -> ExceptT Text IO [BlockEvents]
-runRebuildChain run machViews = liftIO $
-  rebuildChain run machViews
-
-runFilterChain :: Run -> [ChainFilter] -> [FilterName] -> [BlockEvents]
-             -> ExceptT Text IO (DataDomain SlotNo, DataDomain BlockNo, [BlockEvents])
-runFilterChain run flts fltNames chain = liftIO $
-  filterChain run flts fltNames chain
-
-runBlockPropagation :: Run -> [ChainFilter] -> [FilterName] -> [JsonLogfile] -> BlockPropagationOutputFiles
+runBlockPropagation :: Run -> ([ChainFilter], [FilterName]) -> [JsonLogfile] -> BlockPropagationOutputFiles
                     -> ExceptT Text IO ()
-runBlockPropagation run flts fltNames logfiles BlockPropagationOutputFiles{..} = do
+runBlockPropagation run flts logfiles BlockPropagationOutputFiles{..} = do
   objLists <- runLiftLogObjects logfiles
 
-  machViews <- runBuildMachViews run objLists
+  machViews <- buildMachViews run objLists & liftIO
   forM_ bpofMachViews . const $ dumpAssociatedObjects "mach-view"
     machViews
 
-  chainRaw <- runRebuildChain run machViews
+  chainRaw <- rebuildChain run machViews & liftIO
   forM_ bpofChainRaw $ dumpObjects "chain-raw"
     chainRaw
 
-  (domS, domB, chain) <- runFilterChain run flts fltNames chainRaw
+  (domS, domB, chain) <- filterChain run flts chainRaw & liftIO
   forM_ bpofChain $ dumpObjects "chain"
     chain
 
-  blockPropagation <- pure $ blockProp run chain domS domB
+  blockPropagation <- liftIO $ blockProp run chain domS domB
   forM_ bpofAnalysis $ dumpObject "blockprop"
     blockPropagation
 
@@ -136,12 +115,18 @@ runBlockPropagation run flts fltNames logfiles BlockPropagationOutputFiles{..} =
   forM_ bpofChainPretty $ dumpText "chain" $
     renderTimeline run (const True) False chain
 
+runCollectSlotStats ::
+     Run -> [(JsonLogfile, [LogObject])]
+  -> ExceptT Text IO ([(JsonLogfile, RunScalars)], [(JsonLogfile, [SlotStats])])
+runCollectSlotStats run objs = liftIO $
+  mapAndUnzip redistribute <$> collectSlotStats run objs
+
 runSlotFilters ::
      Run
-  -> [ChainFilter] -> [FilterName]
+  -> ([ChainFilter], [FilterName])
   -> [(JsonLogfile, [SlotStats])]
   -> ExceptT Text IO (DataDomain SlotNo, [(JsonLogfile, [SlotStats])])
-runSlotFilters Run{genesis} flts _fltNames slots = do
+runSlotFilters Run{genesis} (flts, _fltNames) slots = do
   filtered <- liftIO $ mapConcurrentlyPure (fmap $ filterSlotStats flts) slots
   let samplePre  =    slots !! 0 & snd
       samplePost = filtered !! 0 & snd
@@ -175,16 +160,15 @@ runSlotStatsSummary run slots = liftIO $
   mapConcurrentlyPure (fmap $ slotStatsSummary run) slots
 
 runMachineTimeline ::
-     Run -> [JsonLogfile] -> [ChainFilter] -> [FilterName] -> MachineTimelineOutputFiles
+     Run -> [JsonLogfile] -> ([ChainFilter], [FilterName]) -> MachineTimelineOutputFiles
   -> ExceptT Text IO ()
-runMachineTimeline run@Run{} logfiles filters filterNames MachineTimelineOutputFiles{..} = do
+runMachineTimeline run@Run{} logfiles (filters, filterNames) MachineTimelineOutputFiles{..} = do
   objLists <- runLiftLogObjects logfiles
-  (_scalars, slotsRaw :: [(JsonLogfile, [SlotStats])]) <- liftIO $
-    mapAndUnzip redistribute <$>
-      collectSlotStats run objLists
+  (_scalars, slotsRaw :: [(JsonLogfile, [SlotStats])]) <-
+    runCollectSlotStats run objLists
 
   (_domain, slots :: [(JsonLogfile, [SlotStats])]) <-
-    runSlotFilters run filters filterNames slotsRaw
+    runSlotFilters run (filters, filterNames) slotsRaw
 
   forM_ mtofSlotStats . const $
     dumpAssociatedObjectStreams "slots" slots

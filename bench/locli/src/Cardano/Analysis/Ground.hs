@@ -41,9 +41,17 @@ newtype JsonRunMetafile
   = JsonRunMetafile { unJsonRunMetafile :: FilePath }
   deriving (Show, Eq)
 
+newtype JsonDomainFile
+  = JsonDomainFile { unJsonDomainFile :: FilePath }
+  deriving (Show, Eq)
+
 newtype JsonLogfile
   = JsonLogfile { unJsonLogfile :: FilePath }
   deriving (NFData, Show, Eq)
+
+newtype JsonInputFile
+  = JsonInputFile { unJsonInputFile :: FilePath }
+  deriving (Show, Eq)
 
 newtype JsonOutputFile
   = JsonOutputFile { unJsonOutputFile :: FilePath }
@@ -92,20 +100,36 @@ data BlockPropagationOutputFiles
 ---
 --- Parsers
 ---
-argJsonGenesisFile :: String -> String -> Parser JsonGenesisFile
-argJsonGenesisFile optname desc =
+optJsonGenesisFile :: String -> String -> Parser JsonGenesisFile
+optJsonGenesisFile optname desc =
   fmap JsonGenesisFile $
     Opt.option Opt.str
       $ long optname
       <> metavar "GENESIS-FILE"
       <> help desc
 
-argJsonRunMetafile :: String -> String -> Parser JsonRunMetafile
-argJsonRunMetafile optname desc =
+optJsonRunMetafile :: String -> String -> Parser JsonRunMetafile
+optJsonRunMetafile optname desc =
   fmap JsonRunMetafile $
     Opt.option Opt.str
       $ long optname
       <> metavar "RUN-METAFILE"
+      <> help desc
+
+optJsonDomainFile :: String -> String -> Parser JsonDomainFile
+optJsonDomainFile optname desc =
+  fmap JsonDomainFile $
+    Opt.option Opt.str
+      $ long optname
+      <> metavar "DOMAINFILE"
+      <> help desc
+
+optJsonLogfile :: String -> String -> Parser JsonLogfile
+optJsonLogfile optname desc =
+  fmap JsonLogfile $
+    Opt.option Opt.str
+      $ long optname
+      <> metavar "JSONLOGFILE"
       <> help desc
 
 argJsonLogfile :: Parser JsonLogfile
@@ -113,32 +137,40 @@ argJsonLogfile =
   JsonLogfile <$>
     Opt.argument Opt.str (Opt.metavar "LOGFILE")
 
-argJsonOutputFile :: String -> String -> Parser JsonOutputFile
-argJsonOutputFile optname desc =
+optJsonInputFile :: String -> String -> Parser JsonInputFile
+optJsonInputFile optname desc =
+  fmap JsonInputFile $
+    Opt.option Opt.str
+      $ long optname
+      <> metavar "JSON-FILE"
+      <> help desc
+
+optJsonOutputFile :: String -> String -> Parser JsonOutputFile
+optJsonOutputFile optname desc =
   fmap JsonOutputFile $
     Opt.option Opt.str
       $ long optname
       <> metavar "JSON-OUTFILE"
       <> help desc
 
-argTextOutputFile :: String -> String -> Parser TextOutputFile
-argTextOutputFile optname desc =
+optTextOutputFile :: String -> String -> Parser TextOutputFile
+optTextOutputFile optname desc =
   fmap TextOutputFile $
     Opt.option Opt.str
       $ long optname
       <> metavar "TEXT-OUTFILE"
       <> help desc
 
-argCsvOutputFile :: String -> String -> Parser CsvOutputFile
-argCsvOutputFile optname desc =
+optCsvOutputFile :: String -> String -> Parser CsvOutputFile
+optCsvOutputFile optname desc =
   fmap CsvOutputFile $
     Opt.option Opt.str
       $ long optname
       <> metavar "CSV-OUTFILE"
       <> help desc
 
-argOutputFile :: String -> String -> Parser OutputFile
-argOutputFile optname desc =
+optOutputFile :: String -> String -> Parser OutputFile
+optOutputFile optname desc =
   fmap OutputFile $
     Opt.option Opt.str
       $ long optname
@@ -186,51 +218,51 @@ parseMachineTimelineOutputFiles :: Parser MachineTimelineOutputFiles
 parseMachineTimelineOutputFiles =
   MachineTimelineOutputFiles
     <$> optional
-        (argJsonOutputFile "slotstats-json"
+        (optJsonOutputFile "slotstats-json"
            "Per-slot performance summaries")
     <*> optional
-        (argJsonOutputFile "analysis-json"
+        (optJsonOutputFile "analysis-json"
            "Write analysis JSON to this file, if specified -- otherwise print to stdout.")
     <*> optional
-        (argTextOutputFile "fullstats-text"
+        (optTextOutputFile "fullstats-text"
            "Full performance statistics breakdown")
     <*> optional
-        (argTextOutputFile "reportstats-text"
+        (optTextOutputFile "reportstats-text"
            "Report performance statistics breakdown")
     <*> optional
-        (argTextOutputFile "timeline-text"
+        (optTextOutputFile "timeline-text"
            "Dump pretty timeline of extracted slot leadership summaries, as a side-effect of log analysis")
     <*> optional
-        (argCsvOutputFile "timeline-csv"
+        (optCsvOutputFile "timeline-csv"
            "Dump CSV of the timeline")
     <*> optional
-        (argCsvOutputFile "stats-csv"
+        (optCsvOutputFile "stats-csv"
            "Dump CSV of the timeline statistics")
     <*> optional
-        (argCsvOutputFile "derived-vectors-0-csv"
+        (optCsvOutputFile "derived-vectors-0-csv"
            "Dump CSV of vectors derived from the timeline")
     <*> optional
-        (argCsvOutputFile "derived-vectors-1-csv"
+        (optCsvOutputFile "derived-vectors-1-csv"
            "Dump CSV of vectors derived from the timeline")
 
 parseBlockPropagationOutputFiles :: Parser BlockPropagationOutputFiles
 parseBlockPropagationOutputFiles =
   BlockPropagationOutputFiles
     <$> optional
-        (argTextOutputFile "forger-text"       "Forger stats")
+        (optTextOutputFile "forger-text"       "Forger stats")
     <*> optional
-        (argTextOutputFile "peers-text"        "Peers stats")
+        (optTextOutputFile "peers-text"        "Peers stats")
     <*> optional
-        (argTextOutputFile "propagation-text"  "Propagation stats")
+        (optTextOutputFile "propagation-text"  "Propagation stats")
     <*> optional
-        (argTextOutputFile "fullstats-text"    "Full (forger+peers+propagation) stats")
+        (optTextOutputFile "fullstats-text"    "Full (forger+peers+propagation) stats")
     <*> optional
-        (argJsonOutputFile "mach-views-json"   "Machine chain views as JSON")
+        (optJsonOutputFile "mach-views-json"   "Machine chain views as JSON")
     <*> optional
-        (argTextOutputFile "chain-text"        "Timeline of chain evolution, one line per block")
+        (optTextOutputFile "chain-text"        "Timeline of chain evolution, one line per block")
     <*> optional
-        (argJsonOutputFile "chain-raw-json"    "Unfiltered chain as JSON")
+        (optJsonOutputFile "chain-raw-json"    "Unfiltered chain as JSON")
     <*> optional
-        (argJsonOutputFile "chain-json"        "Chain as JSON")
+        (optJsonOutputFile "chain-json"        "Chain as JSON")
     <*> optional
-        (argJsonOutputFile "analysis-json"     "Analysis as JSON")
+        (optJsonOutputFile "analysis-json"     "Analysis as JSON")

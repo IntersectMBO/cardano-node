@@ -403,9 +403,9 @@ rebuildChain run@Run{genesis} xs@(fmap snd -> machViews) = do
        , " -- missing: ", slotDesc
        ]
 
-filterChain :: Run -> [ChainFilter] -> [FilterName] -> [BlockEvents]
+filterChain :: Run -> ([ChainFilter], [FilterName]) -> [BlockEvents]
             -> IO (DataDomain SlotNo, DataDomain BlockNo, [BlockEvents])
-filterChain Run{genesis} flts fltNames chain = do
+filterChain Run{genesis} (flts, fltNames) chain = do
   progress "chain-slot-domain"  $ J domSlot
   progress "chain-block-domain" $ J domBlock
   pure (domSlot, domBlock, fltrd)
@@ -428,9 +428,10 @@ filterChain Run{genesis} flts fltNames chain = do
               (blk0V & beBlockNo) (blkLV & beBlockNo)
               (length chain) (length fltrd)
 
-blockProp :: Run -> [BlockEvents] -> DataDomain SlotNo -> DataDomain BlockNo -> BlockPropagation
+blockProp :: Run -> [BlockEvents] -> DataDomain SlotNo -> DataDomain BlockNo -> IO BlockPropagation
 blockProp run@Run{genesis} chain domSlot domBlock = do
-  BlockPropagation
+  progress "block-propagation" $ J (domSlot, domBlock)
+  pure $ BlockPropagation
     { bpDomainSlots         = domSlot
     , bpDomainBlocks        = domBlock
     , bpForgerChecks        = forgerEventsCDF   (Just . bfChecked   . beForge)

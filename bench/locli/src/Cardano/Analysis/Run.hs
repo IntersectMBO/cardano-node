@@ -98,6 +98,14 @@ renderAnalysisCmdError cmd err =
               , mconcat (renderer cmdErr)
               ]
 
+readFilters :: [JsonFilterFile] -> ExceptT AnalysisCmdError IO ([ChainFilter], [FilterName])
+readFilters fltfs = do
+  xs <-
+    forM fltfs $ \f ->
+      firstExceptT (ChainFiltersParseError f . T.pack)
+        (readChainFilter f)
+  pure (mconcat $ fst <$> xs, snd <$> xs)
+
 readRun :: JsonGenesisFile -> JsonRunMetafile -> ExceptT AnalysisCmdError IO Run
 readRun shelleyGenesis runmeta = do
   progress "genesis" (Q $ unJsonGenesisFile shelleyGenesis)

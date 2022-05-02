@@ -20,7 +20,7 @@ EOF
 }
 
 analyse() {
-local dump_logobjects= force_prefilter= prefilter_jq= self_args=() locli_args=() filters=() filter_args=() aws= outdir=
+local dump_logobjects= force_prefilter= prefilter_jq= self_args=() locli_args=() filters=() aws= outdir=
 while test $# -gt 0
 do case "$1" in
        --dump-logobjects )  dump_logobjects='true';  self_args+=($1);;
@@ -33,7 +33,7 @@ do case "$1" in
                             for f in ${filter_files[*]}
                             do test -f "$f" ||
                                     fail "no such filter: $f"; done
-                            filter_args+=(${filter_files[*]/#/--filter })
+                            filters+=(${filter_files[*]/#/--filter })
                             self_args+=($1 $2); shift;;
        --rts )              self_args+=($1 $2); locli_args+=(+RTS $2         -RTS); shift;;
        --outdir )           self_args+=($1 "$2"); outdir=$2; shift;;
@@ -63,11 +63,62 @@ case "$op" in
 
         time locli 'analyse' 'chaininfo' "${locli_args[@]}"
         ;;
+    # 'read-mach-views' "${logs[@]/#/--log }"
     standard | std )
         for r in $*
         do analyse ${self_args[*]} prepare           $r
-           analyse ${self_args[*]} block-propagation $r
-           analyse ${self_args[*]} machine-timeline  $r
+
+           local name=${1:-current}; shift
+           local dir=$(run get "$name")
+           local adir=${outdir:-$dir/analysis}
+           test -n "$dir" -a -d "$adir" || fail "malformed run: $name"
+
+           local logs=("$adir"/logs-*.flt.json)
+           local locli_args_here+=(
+               'meta-genesis'         --run-metafile    "$dir"/meta.json
+                                      --shelley-genesis "$dir"/genesis-shelley.json
+
+               'unlog' ${logs[@]/#/--log }
+               $(if test -n "$dump_logobjects"; then echo \
+                 'dump-logobjects'; fi)
+
+               'build-mach-views'
+               $(if test -n "$dump_mach_views"; then echo \
+                 'dump-mach-views'; fi)
+
+               'build-chain'
+               $(if test -n "$dump_chain_raw"; then echo \
+                 'dump-chain-raw'     --chain           "$adir"/chain-raw.json; fi)
+
+               'filter-chain' "${filters[@]}"
+               $(if test -n "$dump_chain"; then echo \
+                 'dump-chain'         --chain           "$adir"/chain.json; fi)
+
+               'timeline-chain'       --timeline        "$adir"/chain.txt
+
+               'collect-slots'
+               $(if test -n "$dump_slots_raw"; then echo \
+                 'dump-slots-raw'; fi)
+
+               'filter-slots' "${filters[@]}"
+               $(if test -n "$dump_slots"; then echo \
+                 'dump-slots'; fi)
+
+               'timeline-slots'
+
+               'propagation'
+               'dump-propagation'     --analysis        "$adir"/blockprop.json
+               'report-prop-forger'   --report          "$adir"/blockprop-forger.txt
+               'report-prop-peers'    --report          "$adir"/blockprop-peers.txt
+               'report-prop-endtoend' --report          "$adir"/blockprop-endtoend.txt
+               'report-prop-full'     --report          "$adir"/blockprop-full.txt
+
+               'perfanalysis'
+               'dump-perfanalysis'
+               'report-perf-full'
+               'report-perf-brief'
+           )
+           time locli "${locli_args_here[@]}"
         done
         ;;
     prepare | prep )
@@ -82,7 +133,7 @@ case "$op" in
 
         ## 0. ask locli what it cares about
         local keyfile="$adir"/substring-keys
-        locli analyse substring-keys > "$keyfile"
+        locli 'list-logobject-keys' --keys "$keyfile"
 
         ## 1. unless already done, filter logs according to locli's requirements
         local logdirs=($(ls -d "$dir"/node-*/ 2>/dev/null))
@@ -142,7 +193,7 @@ case "$op" in
         locli_args+=(
             --genesis         "$dir"/genesis-shelley.json
             --run-metafile    "$dir"/meta.json
-            "${filter_args[@]}"
+            "${filters[@]}"
 
             'analyse'
             'block-propagation'
@@ -179,7 +230,7 @@ case "$op" in
         locli_args+=(
             --genesis                 "$dir"/genesis-shelley.json
             --run-metafile            "$dir"/meta.json
-            "${filter_args[@]}"
+            "${filters[@]}"
 
             'analyse'
             'machine-timeline'
