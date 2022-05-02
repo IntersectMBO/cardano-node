@@ -163,10 +163,9 @@ deserialiseInput asType acceptedFormats inputBs =
     deserialiseHex :: SerialiseAsRawBytes a => DeserialiseInputResult a
     deserialiseHex
       | isValidHex inputBs =
-          maybe
-            (DeserialiseInputError InputInvalidError)
-            DeserialiseInputSuccess
-            (deserialiseFromRawBytesHex asType inputBs)
+          case deserialiseFromRawBytesHex asType inputBs of
+            Left _ -> DeserialiseInputError InputInvalidError
+            Right x -> DeserialiseInputSuccess x
       | otherwise = DeserialiseInputErrorFormatMismatch
 
     isValidHex :: ByteString -> Bool

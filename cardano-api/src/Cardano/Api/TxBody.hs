@@ -152,6 +152,7 @@ module Cardano.Api.TxBody (
 
 import           Prelude
 
+import           Control.Applicative (some)
 import           Control.Monad (guard)
 import           Data.Aeson (object, withObject, withText, (.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
@@ -182,6 +183,7 @@ import           Data.Word (Word16, Word32, Word64)
 import           GHC.Generics
 import           GHC.Records (HasField (..))
 import qualified Text.Parsec as Parsec
+import           Text.Parsec ((<?>))
 import qualified Text.Parsec.Language as Parsec
 import qualified Text.Parsec.String as Parsec
 import qualified Text.Parsec.Token as Parsec
@@ -240,8 +242,8 @@ import           Cardano.Api.Address
 import           Cardano.Api.Certificate
 import           Cardano.Api.Eras
 import           Cardano.Api.Error
-import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Hash
+import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.KeysByron
 import           Cardano.Api.KeysShelley
 import           Cardano.Api.NetworkId
@@ -430,10 +432,10 @@ instance FromJSONKey TxIn where
 
 parseTxId :: Parsec.Parser TxId
 parseTxId = do
-  str <- Parsec.many1 Parsec.hexDigit Parsec.<?> "transaction id (hexadecimal)"
-  case deserialiseFromRawBytesHex AsTxId (BSC.pack str) of
-    Just addr -> return addr
-    Nothing -> fail $ "Incorrect transaction id format:: " ++ show str
+  str <- some Parsec.hexDigit <?> "transaction id (hexadecimal)"
+  failEitherWith
+    (\e -> "Incorrect transaction id format: " ++ displayError e) $
+    deserialiseFromRawBytesHex AsTxId $ BSC.pack str
 
 parseTxIn :: Parsec.Parser TxIn
 parseTxIn = TxIn <$> parseTxId <*> (Parsec.char '#' *> parseTxIx)
@@ -1486,10 +1488,9 @@ pattern TxOutDatumInTx s d <- TxOutDatumInTx' s _ d
 
 parseHash :: SerialiseAsRawBytes (Hash a) => AsType (Hash a) -> Parsec.Parser (Hash a)
 parseHash asType = do
-  str <- Parsec.many1 Parsec.hexDigit Parsec.<?> "hash"
-  case deserialiseFromRawBytesHex asType (BSC.pack str) of
-    Just sdh -> return sdh
-    Nothing  -> fail $ "Failed to parse hash: " ++ show str
+  str <- some Parsec.hexDigit <?> "hash"
+  failEitherWith (\e -> "Failed to parse hash: " ++ displayError e) $
+    deserialiseFromRawBytesHex asType (BSC.pack str)
 
 -- ----------------------------------------------------------------------------
 -- Transaction fees

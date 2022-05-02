@@ -17,6 +17,35 @@ module Cardano.CLI.Shelley.Parsers
 import           Cardano.Prelude hiding (All, Any, option)
 import           Prelude (String)
 
+import           Control.Monad.Fail (fail)
+import qualified Data.Aeson as Aeson
+import qualified Data.Aeson.Parser as Aeson.Parser
+import qualified Data.Attoparsec.ByteString.Char8 as Atto
+import qualified Data.ByteString.Base16 as B16
+import qualified Data.ByteString.Char8 as BSC
+import qualified Data.IP as IP
+import qualified Data.List.NonEmpty as NE
+import qualified Data.Set as Set
+import qualified Data.Text as Text
+import qualified Data.Text.Encoding as Text
+import           Data.Time.Clock (UTCTime)
+import           Data.Time.Format (defaultTimeLocale, iso8601DateFormat, parseTimeOrError)
+import           Network.Socket (PortNumber)
+import           Options.Applicative hiding (help, str)
+import qualified Options.Applicative as Opt
+import qualified Options.Applicative.Help as H
+import           Prettyprinter (line, pretty)
+import           Text.Parsec ((<?>))
+import qualified Text.Parsec as Parsec
+import qualified Text.Parsec.Error as Parsec
+import qualified Text.Parsec.Language as Parsec
+import qualified Text.Parsec.String as Parsec
+import qualified Text.Parsec.Token as Parsec
+
+import qualified Cardano.Ledger.BaseTypes as Shelley
+import qualified Cardano.Ledger.Shelley.TxBody as Shelley
+import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
+
 import           Cardano.Api
 import           Cardano.Api.Shelley
 
@@ -25,35 +54,6 @@ import           Cardano.CLI.Shelley.Key (InputFormat (..), PaymentVerifier (..)
                    StakeVerifier (..), VerificationKeyOrFile (..), VerificationKeyOrHashOrFile (..),
                    VerificationKeyTextOrFile (..), deserialiseInput, renderInputDecodeError)
 import           Cardano.CLI.Types
-import qualified Cardano.Ledger.BaseTypes as Shelley
-import           Control.Monad.Fail (fail)
-import           Data.Time.Clock (UTCTime)
-import           Data.Time.Format (defaultTimeLocale, iso8601DateFormat, parseTimeOrError)
-import           Network.Socket (PortNumber)
-import           Options.Applicative hiding (help, str)
-import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
-import           Prettyprinter (line, pretty)
-
-import qualified Data.ByteString.Base16 as B16
-import qualified Data.ByteString.Char8 as BSC
-import qualified Data.IP as IP
-import qualified Data.List.NonEmpty as NE
-import qualified Data.Set as Set
-import qualified Data.Text as Text
-import qualified Data.Text.Encoding as Text
-
-import qualified Data.Aeson as Aeson
-import qualified Data.Aeson.Parser as Aeson.Parser
-import qualified Data.Attoparsec.ByteString.Char8 as Atto
-import qualified Options.Applicative as Opt
-import qualified Options.Applicative.Help as H
-import qualified Text.Parsec as Parsec
-import qualified Text.Parsec.Error as Parsec
-import qualified Text.Parsec.Language as Parsec
-import qualified Text.Parsec.String as Parsec
-import qualified Text.Parsec.Token as Parsec
-
-import qualified Cardano.Ledger.Shelley.TxBody as Shelley
 
 {- HLINT ignore "Use <$>" -}
 
@@ -1748,7 +1748,7 @@ pGenesisVerificationKeyHash =
   where
     deserialiseFromHex :: String -> Either String (Hash GenesisKey)
     deserialiseFromHex =
-      maybe (Left "Invalid genesis verification key hash.") Right
+      first (\e -> "Invalid genesis verification key hash: " ++ displayError e)
         . deserialiseFromRawBytesHex (AsHash AsGenesisKey)
         . BSC.pack
 
@@ -1763,7 +1763,7 @@ pGenesisVerificationKey =
   where
     deserialiseFromHex :: String -> Either String (VerificationKey GenesisKey)
     deserialiseFromHex =
-      maybe (Left "Invalid genesis verification key.") Right
+      first (\e -> "Invalid genesis verification key: " ++ displayError e)
         . deserialiseFromRawBytesHex (AsVerificationKey AsGenesisKey)
         . BSC.pack
 
@@ -1798,7 +1798,9 @@ pGenesisDelegateVerificationKeyHash =
   where
     deserialiseFromHex :: String -> Either String (Hash GenesisDelegateKey)
     deserialiseFromHex =
-      maybe (Left "Invalid genesis delegate verification key hash.") Right
+      first
+        (\e ->
+          "Invalid genesis delegate verification key hash: " ++ displayError e)
         . deserialiseFromRawBytesHex (AsHash AsGenesisDelegateKey)
         . BSC.pack
 
@@ -1815,7 +1817,8 @@ pGenesisDelegateVerificationKey =
       :: String
       -> Either String (VerificationKey GenesisDelegateKey)
     deserialiseFromHex =
-      maybe (Left "Invalid genesis delegate verification key.") Right
+      first
+        (\e -> "Invalid genesis delegate verification key: " ++ displayError e)
         . deserialiseFromRawBytesHex (AsVerificationKey AsGenesisDelegateKey)
         . BSC.pack
 
@@ -1861,9 +1864,9 @@ pKesVerificationKey =
 
         -- The input was not valid Bech32. Attempt to deserialise it as hex.
         Left (Bech32DecodingError _) ->
-          case deserialiseFromRawBytesHex asType (BSC.pack str) of
-            Just res' -> Right res'
-            Nothing -> Left "Invalid stake pool verification key."
+          first
+            (\e -> "Invalid stake pool verification key: " ++ displayError e) $
+          deserialiseFromRawBytesHex asType (BSC.pack str)
 
 pKesVerificationKeyFile :: Parser VerificationKeyFile
 pKesVerificationKeyFile =
@@ -1972,10 +1975,10 @@ parseTxIn = TxIn <$> parseTxId <*> (Parsec.char '#' *> parseTxIx)
 
 parseTxId :: Parsec.Parser TxId
 parseTxId = do
-  str <- Parsec.many1 Parsec.hexDigit Parsec.<?> "transaction id (hexadecimal)"
+  str <- some Parsec.hexDigit <?> "transaction id (hexadecimal)"
   case deserialiseFromRawBytesHex AsTxId (BSC.pack str) of
-    Just addr -> return addr
-    Nothing -> fail $ "Incorrect transaction id format:: " ++ show str
+    Right addr -> return addr
+    Left e -> fail $ "Incorrect transaction id format: " ++ displayError e
 
 parseTxIx :: Parsec.Parser TxIx
 parseTxIx = TxIx . fromIntegral <$> decimal
@@ -2318,24 +2321,24 @@ pStakePoolVerificationKeyFile =
 pStakePoolVerificationKeyHash :: Parser (Hash StakePoolKey)
 pStakePoolVerificationKeyHash =
     Opt.option
-      (Opt.maybeReader pBech32OrHexStakePoolId)
+      (pBech32StakePoolId <|> pHexStakePoolId)
         (  Opt.long "stake-pool-id"
         <> Opt.metavar "STAKE-POOL-ID"
         <> Opt.help "Stake pool ID/verification key hash (either \
                     \Bech32-encoded or hex-encoded)."
         )
   where
-    pBech32OrHexStakePoolId :: String -> Maybe (Hash StakePoolKey)
-    pBech32OrHexStakePoolId str =
-      pBech32StakePoolId str <|> pHexStakePoolId str
-
-    pHexStakePoolId :: String -> Maybe (Hash StakePoolKey)
+    pHexStakePoolId :: ReadM (Hash StakePoolKey)
     pHexStakePoolId =
-      deserialiseFromRawBytesHex (AsHash AsStakePoolKey) . BSC.pack
+      Opt.eitherReader $
+        first displayError
+          . deserialiseFromRawBytesHex (AsHash AsStakePoolKey)
+          . BSC.pack
 
-    pBech32StakePoolId :: String -> Maybe (Hash StakePoolKey)
+    pBech32StakePoolId :: ReadM (Hash StakePoolKey)
     pBech32StakePoolId =
-      either (const Nothing) Just
+      Opt.eitherReader $
+        first displayError
         . deserialiseFromBech32 (AsHash AsStakePoolKey)
         . Text.pack
 
@@ -2381,7 +2384,7 @@ pVrfVerificationKeyHash =
   where
     deserialiseFromHex :: String -> Either String (Hash VrfKey)
     deserialiseFromHex =
-      maybe (Left "Invalid VRF verification key hash.") Right
+      first (\e -> "Invalid VRF verification key hash: " ++ displayError e)
         . deserialiseFromRawBytesHex (AsHash AsVrfKey)
         . BSC.pack
 
@@ -2582,15 +2585,17 @@ pStakePoolMetadataUrl =
 pStakePoolMetadataHash :: Parser (Hash StakePoolMetadata)
 pStakePoolMetadataHash =
     Opt.option
-      (Opt.maybeReader metadataHash)
+      (Opt.eitherReader metadataHash)
         (  Opt.long "metadata-hash"
         <> Opt.metavar "HASH"
         <> Opt.help "Pool metadata hash."
         )
   where
-    metadataHash :: String -> Maybe (Hash StakePoolMetadata)
-    metadataHash = deserialiseFromRawBytesHex (AsHash AsStakePoolMetadata)
-                 . BSC.pack
+    metadataHash :: String -> Either String (Hash StakePoolMetadata)
+    metadataHash =
+      first displayError
+        . deserialiseFromRawBytesHex (AsHash AsStakePoolMetadata)
+        . BSC.pack
 
 pStakePoolRegistrationCert :: Parser PoolCmd
 pStakePoolRegistrationCert =
@@ -2783,7 +2788,7 @@ pExtraEntropy =
     parseEntropyBytes :: Parsec.Parser ByteString
     parseEntropyBytes = either fail return
                       . B16.decode . BSC.pack
-                    =<< Parsec.many1 Parsec.hexDigit
+                    =<< some Parsec.hexDigit
 
 pUTxOCostPerWord :: Parser Lovelace
 pUTxOCostPerWord =
