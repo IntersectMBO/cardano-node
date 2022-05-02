@@ -1027,20 +1027,13 @@ instance ToJSON Alonzo.TagMismatchDescription where
         ]
 
 instance ToJSON Alonzo.FailureDescription where
-  toJSON f = case f of
-    Alonzo.OnePhaseFailure t ->
-      object
-        [ "kind" .= String "FailureDescription"
-        , "error" .= String "OnePhaseFailure"
-        , "description" .= t
-        ]
-    Alonzo.PlutusFailure t _bs ->
-      object
-        [ "kind" .= String "FailureDescription"
-        , "error" .= String "PlutusFailure"
-        , "description" .= t
-        -- , "reconstructionDetail" .= bs
-        ]
+  toJSON (Alonzo.PlutusFailure t _bs) =
+    object
+      [ "kind" .= String "FailureDescription"
+      , "error" .= String "PlutusFailure"
+      , "description" .= t
+      -- , "reconstructionDetail" .= bs
+      ]
 
 instance ToObject (AlonzoBbodyPredFail (Alonzo.AlonzoEra StandardCrypto)) where
   toObject _ err = mconcat [ "kind" .= String "AlonzoBbodyPredFail"
