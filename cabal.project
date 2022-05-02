@@ -235,8 +235,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/iohk-monitoring-framework
-  tag: eb7854d1337637b8672af1227b276aa33a658f47
-  --sha256: 1ll81hlhkhj96f5v6lswjkq2h8f7zcmdrj2azqhi4ylzafn026r3
+  tag: f68b38557fcf0d09b6cad99c58a85db71c4675d6
+  --sha256: 060vf0ilksz90p3fybi91rgi353v0waa8d9ixxnqhrjx9f76nd13
   subdir:
     contra-tracer
     iohk-monitoring
@@ -256,8 +256,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: 874770a17af4d63e344daa10c730e0840d3c6ac8
-  --sha256: 1m97xyka3z6kf9q79g39ndyrw3xkc1hv2radhs0vs1j6g0gszys7
+  tag: 225794024fed4636776277039250efe13a1417a6
+  --sha256: 1l1v2d5p3cvl4jf10cr2f2dqwmzkqp7cffm1vm7i5yma2d8jjkan
   subdir:
     io-sim
     io-classes
