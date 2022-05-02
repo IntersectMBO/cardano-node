@@ -10,6 +10,7 @@
 {-# LANGUAGE MultiParamTypeClasses      #-}
 {-# LANGUAGE NamedFieldPuns             #-}
 {-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE QuantifiedConstraints      #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
 {-# LANGUAGE StandaloneDeriving         #-}
 {-# LANGUAGE TypeApplications           #-}
@@ -1299,7 +1300,16 @@ instance ToJSON Cek.CekUserError where
 
 instance (ToJSON name, ToJSON fun) => ToJSON (Cek.CekEvaluationException name uni fun) where
 
-instance (ToJSON name, ToJSON fun) => ToJSON (UntypedPlutusCore.Core.Type.Term name uni fun ()) where
+instance (ToJSON name, ToJSON fun) => ToJSON (UntypedPlutusCore.Core.Type.Term name uni fun ann) where
+  toJSON = \case
+    UntypedPlutusCore.Core.Type.Var _ _ -> String "Var"
+    UntypedPlutusCore.Core.Type.LamAbs _ _ _ -> String "LamAbs"
+    UntypedPlutusCore.Core.Type.Apply _ _ _ -> String "Apply"
+    UntypedPlutusCore.Core.Type.Force _ _ -> String "Force"
+    UntypedPlutusCore.Core.Type.Delay _ _ -> String "Delay"
+    UntypedPlutusCore.Core.Type.Constant _ _ -> String "Constant"
+    UntypedPlutusCore.Core.Type.Builtin _ _ -> String "Builtin"
+    UntypedPlutusCore.Core.Type.Error _ -> String "Error"
 
 instance ToJSON fun => ToJSON (Cek.EvaluationError Cek.CekUserError (PlutusCore.Evaluation.Machine.Exception.MachineError fun)) where
 
@@ -1309,8 +1319,18 @@ instance ToJSON PlutusCore.DeBruijn.Index where
 
 instance ToJSON PlutusCore.DefaultFun where
 
-instance ToJSON (PlutusCore.Some a) where
-  toJSON _ = "Some"
+instance (forall a. ToJSON (f a)) => ToJSON (PlutusCore.Some f) where
+  toJSON (PlutusCore.Some a) = object
+    [ "kind"  .= String "Some"
+    , "value" .= toJSON a
+    ]
+
+instance (ToJSON (uni (PlutusCore.Esc a)), ToJSON a) => ToJSON (PlutusCore.ValueOf uni a) where
+  toJSON (PlutusCore.ValueOf u a) = object
+    [ "kind" .= String "ValueOf"
+    , "uni"   .= toJSON u
+    , "a"     .= toJSON a
+    ]
 
 instance ToJSON fun => ToJSON (PlutusCore.Evaluation.Machine.Exception.MachineError fun) where
 
