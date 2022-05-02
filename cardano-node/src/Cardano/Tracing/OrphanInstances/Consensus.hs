@@ -98,6 +98,7 @@ instance HasSeverityAnnotation (ChainDB.TraceEvent blk) where
     ChainDB.IgnoreBlockAlreadyInVolatileDB {} -> Info
     ChainDB.IgnoreInvalidBlock {} -> Info
     ChainDB.AddedBlockToQueue {} -> Debug
+    ChainDB.PoppedBlockFromQueue {} -> Debug
     ChainDB.BlockInTheFuture {} -> Info
     ChainDB.AddedBlockToVolatileDB {} -> Debug
     ChainDB.TryAddToCurrentChain {} -> Debug
@@ -115,6 +116,10 @@ instance HasSeverityAnnotation (ChainDB.TraceEvent blk) where
       ChainDB.UpdateLedgerDbTraceEvent {} -> Debug
     ChainDB.ChainSelectionForFutureBlock{} -> Debug
     ChainDB.PipeliningEvent{} -> Info   -- TODO
+    ChainDB.AddingBlockToQueue{} -> Info   -- TODO
+    ChainDB.PoppingBlockFromQueue{} -> Info   -- TODO
+    ChainDB.AddingBlockToVolatileDB{} -> Info   -- TODO
+    ChainDB.SwitchingSelection{} -> Info   -- TODO
 
   getSeverityAnnotation (ChainDB.TraceLedgerReplayEvent ev) = case ev of
     LedgerDB.ReplayFromGenesis {} -> Info
@@ -425,6 +430,8 @@ instance ( ConvertRawHash blk
           "Ignoring previously seen invalid block: " <> renderRealPointAsPhrase pt
         ChainDB.AddedBlockToQueue pt sz ->
           "Block added to queue: " <> renderRealPointAsPhrase pt <> " queue size " <> condenseT sz
+        ChainDB.PoppedBlockFromQueue pt ->
+          "Popped block from queue: " <> renderRealPointAsPhrase pt
         ChainDB.BlockInTheFuture pt slot ->
           "Ignoring block from future: " <> renderRealPointAsPhrase pt <> ", slot " <> condenseT slot
         ChainDB.StoreButDontChange pt ->
@@ -469,6 +476,11 @@ instance ( ConvertRawHash blk
           ChainDB.SetTentativeHeader hdr  -> "Set tentative header to " <> renderPointAsPhrase (blockPoint hdr)
           ChainDB.TrapTentativeHeader hdr -> "Discovered trap tentative header " <> renderPointAsPhrase (blockPoint hdr)
           ChainDB.OutdatedTentativeHeader hdr -> "Tentative header is now outdated" <> renderPointAsPhrase (blockPoint hdr)
+          ChainDB.SettingTentativeHeader pt  -> "Setting tentative header to " <> renderRealPointAsPhrase pt
+        ChainDB.AddingBlockToQueue{} -> "TODO AddingBlockToQueue"   -- TODO
+        ChainDB.PoppingBlockFromQueue{} -> "TODO PoppingBlockFromQueue"   -- TODO
+        ChainDB.AddingBlockToVolatileDB{} -> "TODO AddingBlockToVolatileDB"   -- TODO
+        ChainDB.SwitchingSelection{} -> "TODO SwitchingSelection"   -- TODO
       ChainDB.TraceLedgerReplayEvent ev -> case ev of
         LedgerDB.ReplayFromGenesis _replayTo ->
           "Replaying ledger from genesis"
@@ -793,6 +805,10 @@ instance ( ConvertRawHash blk
       mconcat [ "kind" .= String "TraceAddBlockEvent.AddedBlockToQueue"
                , "block" .= toObject verb pt
                , "queueSize" .= toJSON sz ]
+    ChainDB.PoppedBlockFromQueue pt ->
+      mconcat [ "kind" .= String "TraceAddBlockEvent.PoppedBlockFromQueue"
+               , "block" .= toObject verb pt
+               ]
     ChainDB.BlockInTheFuture pt slot ->
       mconcat [ "kind" .= String "TraceAddBlockEvent.BlockInTheFuture"
                , "block" .= toObject verb pt
@@ -871,6 +887,25 @@ instance ( ConvertRawHash blk
         mconcat [ "kind" .= String "TraceAddBlockEvent.PipeliningEvent.OutdatedTentativeHeader"
                  , "block" .= renderPoint (blockPoint hdr)
                  ]
+      ChainDB.SettingTentativeHeader pt  ->
+        mconcat [ "kind" .= String "TraceAddBlockEvent.PipeliningEvent.SettingTentativeHeader"
+                 , "block" .= renderRealPoint pt
+                 ]
+    ChainDB.AddingBlockToQueue pt ->
+      mconcat [ "kind" .= String "TraceAddBlockEvent.AddingBlockToQueue"
+               , "block" .= toObject verb pt
+               ]
+    ChainDB.PoppingBlockFromQueue{} ->
+      mconcat [ "kind" .= String "TraceAddBlockEvent.PoppingBlockFromQueue"
+               ]
+    ChainDB.AddingBlockToVolatileDB pt (BlockNo bn) _ ->
+      mconcat [ "kind" .= String "TraceAddBlockEvent.AddingBlockToVolatileDB"
+               , "block" .= toObject verb pt
+               , "blockNo" .= show bn ]
+    ChainDB.SwitchingSelection pt ->
+      mconcat [ "kind" .= String "TraceAddBlockEvent.SwitchingSelection"
+               , "block" .= toObject verb pt
+               ]
    where
      addedHdrsNewChain
        :: AF.AnchoredFragment (Header blk)

@@ -198,6 +198,7 @@ sevTraceAddBlockEvent ChainDB.IgnoreBlockOlderThanK {} = Info
 sevTraceAddBlockEvent ChainDB.IgnoreBlockAlreadyInVolatileDB {} = Info
 sevTraceAddBlockEvent ChainDB.IgnoreInvalidBlock {} = Info
 sevTraceAddBlockEvent ChainDB.AddedBlockToQueue {} = Debug
+sevTraceAddBlockEvent ChainDB.PoppedBlockFromQueue {} = Debug
 sevTraceAddBlockEvent ChainDB.BlockInTheFuture {} = Info
 sevTraceAddBlockEvent ChainDB.AddedBlockToVolatileDB {} = Debug
 sevTraceAddBlockEvent ChainDB.TryAddToCurrentChain {} = Debug
@@ -210,6 +211,10 @@ sevTraceAddBlockEvent (ChainDB.SwitchedToAFork events _ _ _) =
 sevTraceAddBlockEvent (ChainDB.AddBlockValidation ev') = sevTraceValidationEvent ev'
 sevTraceAddBlockEvent ChainDB.ChainSelectionForFutureBlock{} = Debug
 sevTraceAddBlockEvent ChainDB.PipeliningEvent{} = Info   -- TODO Debug?
+sevTraceAddBlockEvent ChainDB.AddingBlockToQueue{} = Info   -- TODO
+sevTraceAddBlockEvent ChainDB.PoppingBlockFromQueue{} = Info   -- TODO
+sevTraceAddBlockEvent ChainDB.AddingBlockToVolatileDB{} = Info   -- TODO
+sevTraceAddBlockEvent ChainDB.SwitchingSelection{} = Info   -- TODO
 
 sevLedgerEvent :: LedgerEvent blk -> SeverityS
 sevLedgerEvent (LedgerUpdate _)  = Notice
@@ -231,6 +236,8 @@ namesForChainDBAddBlock (ChainDB.IgnoreInvalidBlock {}) =
       ["IgnoreBlockAlreadyInVolatileDB"]
 namesForChainDBAddBlock (ChainDB.AddedBlockToQueue {}) =
       ["AddedBlockToQueue"]
+namesForChainDBAddBlock (ChainDB.PoppedBlockFromQueue {}) =
+      ["PoppedBlockFromQueue"]
 namesForChainDBAddBlock (ChainDB.BlockInTheFuture {}) =
       ["BlockInTheFuture"]
 namesForChainDBAddBlock (ChainDB.AddedBlockToVolatileDB {}) =
@@ -253,6 +260,15 @@ namesForChainDBAddBlock (ChainDB.PipeliningEvent ev) = "PipeliningEvent" : case 
       ChainDB.SetTentativeHeader{}      -> ["SetTentativeHeader"]
       ChainDB.TrapTentativeHeader{}     -> ["TrapTentativeHeader"]
       ChainDB.OutdatedTentativeHeader{} -> ["OutdatedTentativeHeader"]
+      ChainDB.SettingTentativeHeader{}  -> ["SettingTentativeHeader"]
+namesForChainDBAddBlock (ChainDB.AddingBlockToQueue {}) =
+      ["AddingBlockToQueue"]
+namesForChainDBAddBlock (ChainDB.PoppingBlockFromQueue {}) =
+      ["PoppingBlockFromQueue"]
+namesForChainDBAddBlock (ChainDB.AddingBlockToVolatileDB {}) =
+      ["AddingBlockToVolatileDB"]
+namesForChainDBAddBlock (ChainDB.SwitchingSelection {}) =
+      ["SwitchingSelection"]
 
 namesForChainDBAddBlockValidation :: ChainDB.TraceValidationEvent blk -> [Text]
 namesForChainDBAddBlockValidation (ChainDB.ValidCandidate {}) =
@@ -283,6 +299,8 @@ instance ( LogFormatting (Header blk)
       "Ignoring previously seen invalid block: " <> renderRealPointAsPhrase pt
   forHuman (ChainDB.AddedBlockToQueue pt sz) =
       "Block added to queue: " <> renderRealPointAsPhrase pt <> " queue size " <> condenseT sz
+  forHuman (ChainDB.PoppedBlockFromQueue pt) =
+      "Block popped from queue: " <> renderRealPointAsPhrase pt
   forHuman (ChainDB.BlockInTheFuture pt slot) =
       "Ignoring block from future: " <> renderRealPointAsPhrase pt <> ", slot " <> condenseT slot
   forHuman (ChainDB.StoreButDontChange pt) =
@@ -303,6 +321,10 @@ instance ( LogFormatting (Header blk)
   forHuman (ChainDB.ChainSelectionForFutureBlock pt) =
       "Chain selection run for block previously from future: " <> renderRealPointAsPhrase pt
   forHuman (ChainDB.PipeliningEvent ev') = forHuman ev'
+  forHuman ChainDB.AddingBlockToQueue{} = "TODO AddingBlockToQueue"   -- TODO
+  forHuman ChainDB.PoppingBlockFromQueue{} = "TODO PoppingBlockFromQueue"   -- TODO
+  forHuman ChainDB.AddingBlockToVolatileDB{} = "TODO AddingBlockToVolatileDB"   -- TODO
+  forHuman ChainDB.SwitchingSelection{} = "TODO SwitchingSelection"   -- TODO
 
   forMachine dtal (ChainDB.IgnoreBlockOlderThanK pt) =
       mconcat [ "kind" .= String "IgnoreBlockOlderThanK"
@@ -318,6 +340,10 @@ instance ( LogFormatting (Header blk)
       mconcat [ "kind" .= String "AddedBlockToQueue"
                , "block" .= forMachine dtal pt
                , "queueSize" .= toJSON sz ]
+  forMachine dtal (ChainDB.PoppedBlockFromQueue pt) =
+      mconcat [ "kind" .= String "PoppedBlockFromQueue"
+               , "block" .= forMachine dtal pt
+               ]
   forMachine dtal (ChainDB.BlockInTheFuture pt slot) =
       mconcat [ "kind" .= String "BlockInTheFuture"
                , "block" .= forMachine dtal pt
@@ -360,6 +386,21 @@ instance ( LogFormatting (Header blk)
                , "block" .= forMachine dtal pt ]
   forMachine dtal (ChainDB.PipeliningEvent ev') =
     kindContext "PipeliningEvent" $ forMachine dtal ev'
+  forMachine dtal (ChainDB.AddingBlockToQueue pt) =
+      mconcat [ "kind" .= String "AddingBlockToQueue"
+               , "block" .= forMachine dtal pt
+               ]
+  forMachine _dtal (ChainDB.PoppingBlockFromQueue) =
+      mconcat [ "kind" .= String "PoppingBlockFromQueue"
+               ]
+  forMachine dtal (ChainDB.AddingBlockToVolatileDB pt (BlockNo bn) _) =
+      mconcat [ "kind" .= String "AddingBlockToVolatileDB"
+               , "block" .= forMachine dtal pt
+               , "blockNo" .= showT bn ]
+  forMachine dtal (ChainDB.SwitchingSelection pt) =
+      mconcat [ "kind" .= String "SwitchingSelection"
+               , "block" .= forMachine dtal pt
+               ]
 
   asMetrics (ChainDB.SwitchedToAFork _warnings newTipInfo _oldChain newChain) =
     let ChainInformation { slots, blocks, density, epoch, slotInEpoch } =
@@ -390,6 +431,8 @@ instance ( ConvertRawHash (Header blk)
       "Discovered trap tentative header " <> renderPointAsPhrase (blockPoint hdr)
   forHuman (ChainDB.OutdatedTentativeHeader hdr) =
       "Tentative header is now outdated " <> renderPointAsPhrase (blockPoint hdr)
+  forHuman (ChainDB.SettingTentativeHeader pt) =
+      "Setting tentative header to " <> renderPointAsPhrase (castPoint (realPointToPoint pt) :: Point (Header blk))
 
   forMachine dtals (ChainDB.SetTentativeHeader hdr) =
       mconcat [ "kind" .= String "SetTentativeHeader"
@@ -400,6 +443,9 @@ instance ( ConvertRawHash (Header blk)
   forMachine dtals (ChainDB.OutdatedTentativeHeader hdr) =
       mconcat [ "kind" .= String "OutdatedTentativeHeader"
                , "block" .= renderPointForDetails dtals (blockPoint hdr)]
+  forMachine dtals (ChainDB.SettingTentativeHeader pt) =
+      mconcat [ "kind" .= String "SettingTentativeHeader"
+               , "block" .= renderPointForDetails dtals (castPoint (realPointToPoint pt) :: Point (Header blk)) ]
 
 addedHdrsNewChain :: HasHeader (Header blk)
   => AF.AnchoredFragment (Header blk)
@@ -554,6 +600,10 @@ docChainDBAddBlock = [
         []
         "The block was added to the queue and will be added to the ChainDB by\
         \ the background thread. The size of the queue is included.."
+    , DocMsg
+        (ChainDB.PoppedBlockFromQueue anyProto)
+        []
+        "The block was popped from the queue by the background thread."
     , DocMsg
         (ChainDB.BlockInTheFuture anyProto anyProto)
         []

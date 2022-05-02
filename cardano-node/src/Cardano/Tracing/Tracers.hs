@@ -222,17 +222,7 @@ instance ElidingTracer (WithSeverity (ChainDB.TraceEvent blk)) where
   -- the types to be elided
   doelide (WithSeverity _ (ChainDB.TraceLedgerReplayEvent _)) = True
   doelide (WithSeverity _ (ChainDB.TraceGCEvent _)) = True
-  doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.IgnoreBlockOlderThanK _))) = False
-  doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.IgnoreInvalidBlock _ _))) = False
-  doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.BlockInTheFuture _ _))) = False
-  doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.StoreButDontChange _))) = False
-  doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.TrySwitchToAFork _ _))) = False
-  doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.SwitchedToAFork{}))) = False
-  doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.AddBlockValidation (ChainDB.InvalidBlock _ _)))) = False
-  doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.AddBlockValidation ChainDB.CandidateContainsFutureBlocksExceedingClockSkew{}))) = False
-  doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.AddedToCurrentChain events _ _  _))) = null events
-  doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.PipeliningEvent{}))) = False
-  doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent _)) = True
+  doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent ev)) = doelideTraceAddBlockEvent ev
   doelide (WithSeverity _ (ChainDB.TraceCopyToImmutableDBEvent _)) = True
   doelide (WithSeverity _ (ChainDB.TraceInitChainSelEvent (ChainDB.InitChainSelValidation (ChainDB.UpdateLedgerDbTraceEvent{})))) = True
   doelide _ = False
@@ -268,6 +258,35 @@ instance ElidingTracer (WithSeverity (ChainDB.TraceEvent blk)) where
 
   reportelided _tverb _tr (WithSeverity _ (ChainDB.TraceLedgerReplayEvent (LedgerDB.ReplayedBlock{}))) _count = pure ()
   reportelided t tr ev count = defaultelidedreporting  t tr ev count
+
+doelideTraceAddBlockEvent :: ChainDB.TraceAddBlockEvent blk -> Bool
+doelideTraceAddBlockEvent ev = case ev of
+    ChainDB.IgnoreBlockOlderThanK _ -> False
+    ChainDB.IgnoreInvalidBlock _ _ -> False
+    ChainDB.BlockInTheFuture _ _ -> False
+    ChainDB.StoreButDontChange _ -> False
+    ChainDB.TrySwitchToAFork _ _ -> False
+    ChainDB.SwitchedToAFork{} -> False
+    ChainDB.AddBlockValidation (ChainDB.InvalidBlock _ _) -> False
+    ChainDB.AddBlockValidation ChainDB.CandidateContainsFutureBlocksExceedingClockSkew{} -> False
+    ChainDB.AddBlockValidation (ChainDB.UpdateLedgerDbTraceEvent _) -> False
+    ChainDB.AddBlockValidation ChainDB.ValidCandidate{} -> False
+
+    -- TODO temporary code layout to highlight key pipelining events
+    ChainDB.AddingBlockToQueue{} -> False
+    ChainDB.AddedBlockToQueue{} -> False
+    ChainDB.PoppingBlockFromQueue{} -> False
+    ChainDB.PoppedBlockFromQueue{} -> False
+    ChainDB.AddingBlockToVolatileDB{} -> False
+    ChainDB.AddedBlockToVolatileDB{} -> False
+    ChainDB.PipeliningEvent{} -> False
+    ChainDB.SwitchingSelection{} -> False
+    ChainDB.AddedToCurrentChain{} -> False   -- TODO temporary change for pipelining benchmark run
+
+    ChainDB.AddBlockValidation ChainDB.CandidateContainsFutureBlocks{} -> True
+    ChainDB.ChainSelectionForFutureBlock{} -> True
+    ChainDB.IgnoreBlockAlreadyInVolatileDB{} -> True
+    ChainDB.TryAddToCurrentChain{} -> True
 
 instance (StandardHash header, Eq peer) => ElidingTracer
   (WithSeverity [TraceLabelPeer peer (FetchDecision [Point header])]) where
