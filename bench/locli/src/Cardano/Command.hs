@@ -1,12 +1,13 @@
+{-# OPTIONS_GHC -fmax-pmcheck-models=300 #-}
 module Cardano.Command (module Cardano.Command) where
 
 import Prelude (String)
 import Cardano.Prelude                  hiding (State)
 
-import Control.Monad.Trans.Except.Extra (firstExceptT, newExceptT)
 import Data.Aeson                       qualified as Aeson
 import Data.ByteString.Lazy.Char8       qualified as LBS
 import Data.Text                        (pack)
+import Data.Text                        qualified as T
 import Data.Text.Short                  (toText)
 import Options.Applicative
 import Options.Applicative              qualified as Opt
@@ -14,7 +15,6 @@ import Options.Applicative              qualified as Opt
 import Cardano.Analysis.API
 import Cardano.Analysis.BlockProp
 import Cardano.Analysis.ChainFilter
-import Cardano.Analysis.Driver
 import Cardano.Analysis.Ground
 import Cardano.Analysis.MachTimeline
 import Cardano.Analysis.Run
@@ -25,26 +25,17 @@ import Cardano.Util
 import Data.Distribution
 
 data CommandError
-  = AnalysisError   AnalysisCommand AnalysisCmdError
-  | CommandError    ChainCommand    Text
+  = CommandError    ChainCommand    Text
   deriving Show
 
 renderCommandError :: CommandError -> Text
-renderCommandError (AnalysisError cmd err) =
-  renderAnalysisCmdError cmd err
 renderCommandError (CommandError cmd err) =
   "While executing chained command '" <> show cmd <> "':  " <> err
 
 -- | Sub-commands
 data Command
   -- | Analysis commands
-  = AnalysisCommand
-      (Maybe JsonGenesisFile)
-      (Maybe JsonRunMetafile)
-      [JsonFilterFile]
-      AnalysisCommand
-      [JsonLogfile]
-  | ChainCommand
+  = ChainCommand
       [ChainCommand]
   deriving Show
 
@@ -309,7 +300,7 @@ runChainCommand _ c@DumpChainRaw{} = missingCommandData c
 runChainCommand s@State{sRun=Just run, sChainRaw=Just chainRaw}
   c@(FilterChain fltfs) = do
   flts <- readFilters fltfs
-          & firstExceptT (fromAnalysisError c)
+          & firstExceptT (CommandError c)
   (domSlot, domBlock, chain) <- filterChain run flts chainRaw
                                 & liftIO & firstExceptT (CommandError c)
   pure s { sChain = Just chain, sDomSlots = Just domSlot, sDomBlocks = Just domBlock }
@@ -333,8 +324,10 @@ runChainCommand _ c@TimelineChain{} = missingCommandData c
 
 runChainCommand s@State{sRun=Just run, sObjLists=Just objs}
   c@CollectSlots = do
-  (scalars, slotsRaw) <- runCollectSlotStats run objs
-                         & firstExceptT (CommandError c)
+  (scalars, slotsRaw) <-
+    mapAndUnzip redistribute <$> collectSlotStats run objs
+    & liftIO
+    & firstExceptT (CommandError c)
   pure s { sScalars = Just scalars, sSlotsRaw = Just slotsRaw }
 runChainCommand _ c@CollectSlots = missingCommandData c
   ["run metadata & genesis", "lifted logobjects"]
@@ -349,8 +342,9 @@ runChainCommand _ c@DumpSlotsRaw = missingCommandData c
 runChainCommand s@State{sRun=Just run, sSlotsRaw=Just slotsRaw}
   c@(FilterSlots fltfs) = do
   flts <- readFilters fltfs
-          & firstExceptT (fromAnalysisError c)
+          & firstExceptT (CommandError c)
   (domSlots, fltrd) <- runSlotFilters run flts slotsRaw
+                       & liftIO
                        & firstExceptT (CommandError c)
   pure s { sSlots = Just fltrd, sDomSlots = Just domSlots }
 runChainCommand _ c@FilterSlots{} = missingCommandData c
@@ -388,9 +382,12 @@ runChainCommand _ c@DumpPropagation{} = missingCommandData c
 
 runChainCommand s@State{sRun=Just run, sSlots=Just slots}
   c@PerfAnalysis = do
-  perfAnalysis <- runSlotStatsSummary run slots
+  perfAnalysis <- mapConcurrentlyPure (fmap $ slotStatsSummary run) slots
+                  & liftIO
                   & firstExceptT (CommandError c)
   pure s { sPerfAnalysis = Just perfAnalysis }
+runChainCommand _ c@PerfAnalysis{} = missingCommandData c
+  ["run metadata & genesis", "filtered slots"]
 
 runChainCommand s@State{sPerfAnalysis=Just perf}
   c@DumpPerfAnalysis = do
@@ -458,6 +455,22 @@ missingCommandData :: ChainCommand -> [String] -> ExceptT CommandError IO a
 missingCommandData c xs =
   throwError $ CommandError c (pack $ printf "Some of the following data was missing:  %s" $ intercalate ", " xs)
 
+_reportBanner :: [FilterName] -> FilePath -> Text
+_reportBanner fnames inputfp = mconcat
+  [ "input: ", logfileRunIdentifier (pack inputfp), " "
+  , "locli: ", gitRev getVersion, " "
+  , "filters: ", T.intercalate " " (unFilterName <$> fnames)
+  ]
+ where
+   -- | This estimates the run identifier, given the expected path structure.
+   logfileRunIdentifier :: Text -> Text
+   logfileRunIdentifier fp =
+     case drop (length xs - 3) xs of
+       rundir:_ -> rundir
+       _ -> fp
+    where
+      xs = T.split (== '/') fp
+
 fromAnalysisError :: ChainCommand -> AnalysisCmdError -> CommandError
 fromAnalysisError c (AnalysisCmdError t) = CommandError c t
 fromAnalysisError c o = CommandError c (show o)
@@ -473,60 +486,14 @@ runCommand (ChainCommand cs) =
            Nothing Nothing Nothing Nothing
            Nothing Nothing Nothing Nothing
 
-runCommand (AnalysisCommand shelleyGenesis runmeta chainFilters c logfiles) = do
-  progress "locli-version" (J getVersion)
-
-  maybeRun <- firstExceptT (AnalysisError c) $
-              -- Discharge the optionality:
-              sequence $
-               readRun
-               <$> shelleyGenesis
-               <*> runmeta
-
-  filters <- firstExceptT (AnalysisError c) $ readFilters chainFilters
-
-  firstExceptT (AnalysisError c) $
-    runAnalysisCommand maybeRun filters logfiles c
-
-parseCommand :: Parser Command
-parseCommand =
-  asum
-  -- [ AnalysisCommand
-  --   <$> optional
-  --         (argJsonGenesisFile "genesis"      "Genesis file of the run")
-  --   <*> optional
-  --         (argJsonRunMetafile "run-metafile" "The meta.json file from the benchmark run")
-  --   <*> many
-  --         (argChainFilterset "filter"
-  --           "List of block/slot selection criteria, as JSON file")
-  --   <*> subparser
-  --       (mconcat
-  --        [ commandGroup "Log analysis"
-  --        , metavar "COMMAND"
-  --        , command'
-  --          "analyse"
-  --          "Log analysis"
-  --          parseAnalysisCommand
-  --        ])
-  --   <*> many
-  --         argJsonLogfile
-  [ ChainCommand
-    <$> some
-          parseChainCommand
-          -- (subparser parseChainCommand)
-  ]
-  where
-    command' :: String -> String -> Parser a -> Mod CommandFields a
-    command' c descr p =
-      command c $ info (p <**> helper) $
-        mconcat [ progDesc descr ]
-
 opts :: ParserInfo Command
 opts =
-  Opt.info (parseCommand <**> Opt.helper)
+  Opt.info (ChainCommand
+              <$> some parseChainCommand
+            <**> Opt.helper)
     ( Opt.fullDesc
       <> Opt.header
-      "locli - parse JSON log files, as emitted by cardano-node."
+      "locli - high-level analyses on JSON log files emitted by cardano-node."
     )
 
 pref :: ParserPrefs

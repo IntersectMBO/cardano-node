@@ -5,7 +5,7 @@ import           Cardano.Prelude hiding (option)
 import           Control.Monad.Trans.Except.Exit (orDie)
 import qualified Options.Applicative as Opt
 
-import           Cardano.Analysis.TopHandler
+import           Cardano.TopHandler
 import           Cardano.Command (opts, pref, renderCommandError, runCommand)
 
 

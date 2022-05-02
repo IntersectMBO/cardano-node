@@ -8,7 +8,6 @@ module Cardano.Analysis.ChainFilter (module Cardano.Analysis.ChainFilter) where
 import Prelude (String)
 import Cardano.Prelude hiding (head)
 
-import Control.Monad.Trans.Except.Extra (newExceptT)
 import Data.Aeson
 import Data.ByteString.Lazy.Char8       qualified as LBS
 import Data.Text                        qualified as T
@@ -17,6 +16,7 @@ import Options.Applicative              qualified as Opt
 import System.FilePath.Posix                        (takeBaseName)
 
 import Cardano.Analysis.Ground
+import Cardano.Util
 
 -- import Cardano.Analysis.Chain
 
@@ -80,3 +80,11 @@ argChainFilterset optname desc =
       $ long optname
       <> metavar "FILTERSET-FILE"
       <> help desc
+
+readFilters :: [JsonFilterFile] -> ExceptT Text IO ([ChainFilter], [FilterName])
+readFilters fltfs = do
+  xs <-
+    forM fltfs $ \f@(JsonFilterFile fp) ->
+      firstExceptT (\x -> T.pack $ "Failed to parse chain filter " <> fp <> ": " <> x)
+        (readChainFilter f)
+  pure (mconcat $ fst <$> xs, snd <$> xs)

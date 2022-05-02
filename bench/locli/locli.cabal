@@ -18,9 +18,9 @@ library
                        Data.Distribution
 
                        Cardano.Command
+                       Cardano.TopHandler
                        Cardano.Util
 
-                       Cardano.Analysis.TopHandler
                        Cardano.Analysis.Run
 
                        Cardano.Analysis.API
@@ -28,7 +28,6 @@ library
                        Cardano.Analysis.Chain
                        Cardano.Analysis.ChainFilter
                        Cardano.Analysis.Context
-                       Cardano.Analysis.Driver
                        Cardano.Analysis.Ground
                        Cardano.Analysis.MachTimeline
                        Cardano.Analysis.Version

@@ -14,9 +14,11 @@ import Cardano.Prelude hiding (Text, head, show)
 
 import Control.Monad (fail)
 import Data.Aeson (FromJSON(..), ToJSON(..), Value(..), Object, (.:), (.:?))
-import Data.Aeson.Types (Parser)
 import Data.Aeson qualified as AE
+import Data.Aeson.KeyMap qualified as KeyMap
+import Data.Aeson.Types (Parser)
 import Data.Aeson.Types qualified as AE
+import Data.Aeson.Key qualified as Aeson
 import Data.ByteString.Lazy qualified as LBS
 import Data.Text qualified as LText
 import Data.Text.Short qualified as Text
@@ -26,16 +28,24 @@ import Data.Map qualified as Map
 import Data.Vector (Vector)
 import Quiet (Quiet (..))
 
-import Ouroboros.Network.Block (BlockNo(..), SlotNo(..))
-
 import Cardano.Logging.Resources.Types
 
+import Cardano.Analysis.Ground
+import Cardano.Util
+
 import Data.Accum (zeroUTCTime)
-import qualified Data.Aeson.KeyMap as KeyMap
-import qualified Data.Aeson.Key as Aeson
 
 
 type Text = ShortText
+
+runLiftLogObjects :: [JsonLogfile]
+                  -> ExceptT LText.Text IO [(JsonLogfile, [LogObject])]
+runLiftLogObjects fs = liftIO $
+  flip mapConcurrently fs
+    (joinT . (pure &&& readLogObjectStream . unJsonLogfile))
+ where
+   joinT :: (IO a, IO b) -> IO (a, b)
+   joinT (a, b) = (,) <$> a <*> b
 
 readLogObjectStream :: FilePath -> IO [LogObject]
 readLogObjectStream f =

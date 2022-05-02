@@ -5,7 +5,7 @@ module Cardano.Analysis.Context (module Cardano.Analysis.Context) where
 
 import Cardano.Prelude
 
-import Data.Aeson (ToJSON)
+import Data.Aeson (FromJSON, ToJSON)
 import Data.Time.Clock (UTCTime, NominalDiffTime)
 
 
@@ -18,7 +18,7 @@ data GenesisSpec
   { delegators          :: Word64
   , utxo                :: Word64
   }
-  deriving (Generic, Show, ToJSON)
+  deriving (Generic, Show, ToJSON, FromJSON)
 
 -- | Partial 'Cardano.Ledger.Shelley.Genesis.ShelleyGenesis'
 data Genesis
@@ -33,7 +33,7 @@ data Genesis
   , maxKESEvolutions   :: Word64
   , securityParam      :: Word64
   }
-  deriving (Generic, Show, ToJSON)
+  deriving (Generic, Show, FromJSON, ToJSON)
 
 -- | Partial 'Cardano.Ledger.Shelley.PParams.PParams'
 data PParams
@@ -41,7 +41,7 @@ data PParams
   { maxTxSize         :: Word64
   , maxBlockBodySize  :: Word64
   }
-  deriving (Generic, Show, ToJSON)
+  deriving (Generic, Show, FromJSON, ToJSON)
 
 data GeneratorProfile
   = GeneratorProfile
@@ -51,7 +51,7 @@ data GeneratorProfile
   , tps             :: Word64
   , tx_count        :: Word64
   }
-  deriving (Generic, Show, ToJSON)
+  deriving (Generic, Show, FromJSON, ToJSON)
 
 data Metadata
   = Metadata
@@ -60,4 +60,4 @@ data Metadata
   , era       :: Text
   , timestamp :: UTCTime
   }
-  deriving (Generic, Show, ToJSON)
+  deriving (Generic, Show, FromJSON, ToJSON)

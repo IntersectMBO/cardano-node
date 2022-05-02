@@ -406,8 +406,8 @@ rebuildChain run@Run{genesis} xs@(fmap snd -> machViews) = do
 filterChain :: Run -> ([ChainFilter], [FilterName]) -> [BlockEvents]
             -> IO (DataDomain SlotNo, DataDomain BlockNo, [BlockEvents])
 filterChain Run{genesis} (flts, fltNames) chain = do
-  progress "chain-slot-domain"  $ J domSlot
-  progress "chain-block-domain" $ J domBlock
+  progress "filtered-chain-slot-domain"  $ J domSlot
+  progress "filtered-chain-block-domain" $ J domBlock
   pure (domSlot, domBlock, fltrd)
  where
    fltrd = filter (isValidBlockEvent genesis flts) chain &

@@ -7,11 +7,12 @@ module Cardano.Analysis.MachTimeline (module Cardano.Analysis.MachTimeline) wher
 
 import Prelude (String, error, head, last)
 import Cardano.Prelude hiding (head)
+import Cardano.Prelude qualified as CP
 
-import Control.Arrow ((&&&), (***))
+import Data.List                        ((!!))
+import Data.Map.Strict qualified as Map
 import Data.Vector (Vector)
 import Data.Vector qualified as Vec
-import Data.Map.Strict qualified as Map
 
 import Data.Time.Clock (NominalDiffTime, UTCTime)
 import Data.Time.Clock qualified as Time
@@ -21,6 +22,7 @@ import Data.Distribution
 
 import Cardano.Analysis.API
 import Cardano.Analysis.Chain
+import Cardano.Analysis.ChainFilter
 import Cardano.Analysis.Ground
 import Cardano.Analysis.Run
 import Cardano.Analysis.Version
@@ -41,6 +43,32 @@ data RunScalars
 
 collectSlotStats :: Run -> [(JsonLogfile, [LogObject])] -> IO [(JsonLogfile, (RunScalars, [SlotStats]))]
 collectSlotStats run = mapConcurrentlyPure (fmap $ timelineFromLogObjects run)
+
+runSlotFilters ::
+     Run
+  -> ([ChainFilter], [FilterName])
+  -> [(JsonLogfile, [SlotStats])]
+  -> IO (DataDomain SlotNo, [(JsonLogfile, [SlotStats])])
+runSlotFilters Run{genesis} (flts, _fltNames) slots = do
+  filtered <- mapConcurrentlyPure (fmap $ filterSlotStats flts) slots
+  let samplePre  =    slots !! 0 & snd
+      samplePost = filtered !! 0 & snd
+      domain = mkDataDomain
+        ((CP.head samplePre  <&> slSlot) & fromMaybe 0)
+        ((lastMay samplePre  <&> slSlot) & fromMaybe 0)
+        ((CP.head samplePost <&> slSlot) & fromMaybe 0)
+        ((lastMay samplePost <&> slSlot) & fromMaybe 0)
+        (fromIntegral . unSlotNo)
+  progress "filtered-slotstats-slot-domain" $ J domain
+  pure $ (,) domain filtered
+
+ where
+   filterSlotStats :: [ChainFilter] -> [SlotStats] -> [SlotStats]
+   filterSlotStats filters =
+     filter (\x -> all (testSlotStats genesis x) slotFilters)
+    where
+      slotFilters :: [SlotCond]
+      slotFilters = catSlotFilters filters
 
 slotStatsSummary :: Run -> [SlotStats] -> MachTimeline
 slotStatsSummary _ slots =
