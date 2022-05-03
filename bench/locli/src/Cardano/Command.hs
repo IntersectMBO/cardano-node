@@ -286,8 +286,13 @@ runChainCommand _ c@RebuildChain = missingCommandData c
 
 runChainCommand s
   c@(ReadChain f) = do
-  chainRaw <- Aeson.eitherDecode @[BlockEvents] <$> LBS.readFile (unJsonInputFile f)
-              & firstExceptT (CommandError c . pack) . newExceptT
+  chainRaw <- sequence
+              . fmap (Aeson.eitherDecode @BlockEvents)
+              . filter ((> 5) . LBS.length)
+              . LBS.split '\n'
+              <$> LBS.readFile (unJsonInputFile f)
+              & newExceptT
+              & firstExceptT (CommandError c . pack)
   pure s { sChainRaw = Just chainRaw, sChain = Just chainRaw }
 
 runChainCommand s@State{sChainRaw=Just chainRaw}
