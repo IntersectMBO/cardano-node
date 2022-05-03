@@ -284,6 +284,8 @@
 	1. [ControlMessage](#txoutboundcontrolmessage)
 1. __LocalTxSubmissionServer__
 	1. [ReceivedTx](#receivedtx)
+1. __ForgeStats__
+	1. [ForgeStats](#forgestats)
 1. __BlockchainTime__
 	1. [CurrentSlotUnknown](#currentslotunknown)
 	1. [StartTimeInTheFuture](#blockchaintimestarttimeinthefuture)
@@ -775,6 +777,12 @@
 		1. [adoptedSlotLast](#cardanonodeadoptedslotlast)
 		1. [delegMapSize](#cardanonodedelegmapsize)
 		1. [utxoSize](#cardanonodeutxosize)
+1. [blocksForgedNum](#blocksforgednum)
+1. [nodeCannotForgeNum](#nodecannotforgenum)
+1. [nodeIsLeaderNum](#nodeisleadernum)
+1. [slotsMissed](#slotsmissed)
+1. __cardano__
+	1. __node__
 		1. __peerSelection__
 			1. [cold](#cold)
 			1. [hot](#cardanonodepeerselectionhot)
@@ -5110,6 +5118,27 @@ Filtered:  because the filter level is `Notice`
 
 ***
 A transaction was received.
+***
+
+
+> Severity:   `Info`
+Privacy:   `Public`
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`Stdout MachineFormat`,
+			`EKGBackend`
+Filtered:  because the filter level is `Notice`
+
+### Cardano.Node.ForgeStats.ForgeStats
+
+
+***
+nodeCannotForgeNum shows how many times this node could not forge.
+nodeIsLeaderNum shows how many times this node was leader.
+blocksForgedNum shows how many blocks did forge in this node.
+slotsMissed shows how many slots were missed in this node.
 ***
 
 
@@ -12397,6 +12426,58 @@ Cardano.Node.Forge.StartLeadershipCheckPlus
 From current configuration:
 Filtered:  because the filter level is `Info`
 
+### blocksForgedNum
+
+***
+How many blocks did forge in this node?
+***
+
+
+Dispatched by: 
+Cardano.Node.ForgeStats.ForgeStats
+
+From current configuration:
+Filtered:  because the filter level is `Notice`
+
+### nodeCannotForgeNum
+
+***
+How many times this node could not forge?
+***
+
+
+Dispatched by: 
+Cardano.Node.ForgeStats.ForgeStats
+
+From current configuration:
+Filtered:  because the filter level is `Notice`
+
+### nodeIsLeaderNum
+
+***
+How many times this node was leader?
+***
+
+
+Dispatched by: 
+Cardano.Node.ForgeStats.ForgeStats
+
+From current configuration:
+Filtered:  because the filter level is `Notice`
+
+### slotsMissed
+
+***
+How many slots were missed in this node?
+***
+
+
+Dispatched by: 
+Cardano.Node.ForgeStats.ForgeStats
+
+From current configuration:
+Filtered:  because the filter level is `Notice`
+
 ### cardano.node.peerSelection.cold
 
 ***
@@ -12583,5 +12664,5 @@ Basic information about this node collected at startup
 
 Configuration: TraceConfig {tcOptions = fromList [([],[ConfBackend [Stdout MachineFormat,EKGBackend],ConfDetail DNormal,ConfSeverity Notice]),(["Node","AcceptPolicy"],[ConfSeverity Info]),(["Node","ChainDB"],[ConfSeverity Info]),(["Node","ChainDB","AddBlockEvent","AddedBlockToVolatileDB"],[ConfLimiter "AddedBlockToVolatileDBLimiter" 2.0]),(["Node","ChainDB","AddBlockEvent","AddedBlockToQueue"],[ConfLimiter "AddedBlockToQueueLimiter" 2.0]),(["Node","ChainDB","AddBlockEvent","AddBlockValidation","ValidCandidate"],[ConfLimiter "ValidCandidateLimiter" 2.0]),(["Node","ChainDB","CopyToImmutableDBEvent","CopiedBlockToImmutableDB"],[ConfLimiter "CopiedBlockToImmutableDBLimiter" 2.0]),(["Node","DNSResolver"],[ConfSeverity Info]),(["Node","DNSSubscription"],[ConfSeverity Info]),(["Node","DiffusionInit"],[ConfSeverity Info]),(["Node","ErrorPolicy"],[ConfSeverity Info]),(["Node","Forge"],[ConfSeverity Info]),(["Node","IpSubscription"],[ConfSeverity Info]),(["Node","LocalErrorPolicy"],[ConfSeverity Info]),(["Node","Mempool"],[ConfSeverity Info]),(["Node","Resources"],[ConfSeverity Info]),(["Node","BlockFetchClient","CompletedBlockFetch"],[ConfLimiter "CompletedBlockFetchLimiter" 2.0])], tcForwarder = TraceOptionForwarder {tofAddress = LocalSocket "/tmp/forwarder.sock", tofMode = Initiator, tofConnQueueSize = 2000, tofDisconnQueueSize = 200000, tofVerbosity = Minimum}, tcNodeName = Nothing, tcPeerFreqency = Just 2000, tcResourceFreqency = Just 5000}
 
-667 log messages.
-Generated at 2022-04-29 10:19:03.913417825 CEST.
+672 log messages.
+Generated at 2022-05-03 10:28:08.407392314 CEST.
