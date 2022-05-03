@@ -29,6 +29,10 @@ import           Ouroboros.Consensus.Node.Run (RunNode)
 import           Ouroboros.Consensus.Shelley.ShelleyHFC (ShelleyBlockHFC)
 import           Ouroboros.Consensus.Util.IOLike (IOLike)
 
+import           Ouroboros.Consensus.Protocol.TPraos (TPraos)
+import           Ouroboros.Consensus.Shelley.Node.Praos (ProtocolParamsBabbage)
+import           Ouroboros.Consensus.Protocol.Praos.Translate
+
 class (RunNode blk, IOLike m) => Protocol m blk where
   data ProtocolInfoArgs m blk
   protocolInfo :: ProtocolInfoArgs m blk -> ProtocolInfo m blk
@@ -57,10 +61,12 @@ instance IOLike m => Protocol m (CardanoBlock StandardCrypto) where
           (ProtocolParamsAllegra StandardCrypto)
           (ProtocolParamsMary StandardCrypto)
           (ProtocolParamsAlonzo StandardCrypto)
+          (ProtocolParamsBabbage StandardCrypto)
           (ProtocolTransitionParamsShelleyBased StandardShelley)
           (ProtocolTransitionParamsShelleyBased StandardAllegra)
           (ProtocolTransitionParamsShelleyBased StandardMary)
           (ProtocolTransitionParamsShelleyBased StandardAlonzo)
+          (ProtocolTransitionParamsShelleyBased StandardBabbage)
 
   protocolInfo (ProtocolInfoArgsCardano
                paramsByron
@@ -69,10 +75,12 @@ instance IOLike m => Protocol m (CardanoBlock StandardCrypto) where
                paramsAllegra
                paramsMary
                paramsAlonzo
+               paramsBabbage
                paramsByronShelley
                paramsShelleyAllegra
                paramsAllegraMary
-               paramsMaryAlonzo) =
+               paramsMaryAlonzo
+               paramsAlonzoBabbage) =
     protocolInfoCardano
       paramsByron
       paramsShelleyBased
@@ -80,10 +88,12 @@ instance IOLike m => Protocol m (CardanoBlock StandardCrypto) where
       paramsAllegra
       paramsMary
       paramsAlonzo
+      paramsBabbage
       paramsByronShelley
       paramsShelleyAllegra
       paramsAllegraMary
       paramsMaryAlonzo
+      paramsAlonzoBabbage
 
 instance ProtocolClient ByronBlockHFC where
   data ProtocolClientInfoArgs ByronBlockHFC =
@@ -97,22 +107,22 @@ instance ProtocolClient (CardanoBlock StandardCrypto) where
   protocolClientInfo (ProtocolClientInfoArgsCardano epochSlots) =
     protocolClientInfoCardano epochSlots
 
-instance IOLike m => Protocol m (ShelleyBlockHFC StandardShelley) where
-  data ProtocolInfoArgs m (ShelleyBlockHFC StandardShelley) = ProtocolInfoArgsShelley
+instance IOLike m => Protocol m (ShelleyBlockHFC c StandardShelley) where
+  data ProtocolInfoArgs m (ShelleyBlockHFC c StandardShelley) = ProtocolInfoArgsShelley
     (ProtocolParamsShelleyBased StandardShelley)
     (ProtocolParamsShelley StandardCrypto)
   protocolInfo (ProtocolInfoArgsShelley paramsShelleyBased paramsShelley) =
     inject $ protocolInfoShelley paramsShelleyBased paramsShelley
 
-instance ProtocolClient (ShelleyBlockHFC StandardShelley) where
-  data ProtocolClientInfoArgs (ShelleyBlockHFC StandardShelley) =
+instance ProtocolClient (ShelleyBlockHFC c StandardShelley) where
+  data ProtocolClientInfoArgs (ShelleyBlockHFC c StandardShelley) =
     ProtocolClientInfoArgsShelley
   protocolClientInfo ProtocolClientInfoArgsShelley =
     inject protocolClientInfoShelley
 
 data BlockType blk where
   ByronBlockType :: BlockType ByronBlockHFC
-  ShelleyBlockType :: BlockType (ShelleyBlockHFC StandardShelley)
+  ShelleyBlockType :: BlockType (ShelleyBlockHFC (TPraos StandardCrypto) StandardShelley)
   CardanoBlockType :: BlockType (CardanoBlock StandardCrypto)
 
 deriving instance Eq (BlockType blk)

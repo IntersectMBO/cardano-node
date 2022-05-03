@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 
@@ -59,6 +60,8 @@ import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
 import qualified Ouroboros.Consensus.Shelley.ShelleyHFC as Consensus (ShelleyBlockHFC)
 
 import qualified Cardano.Chain.Slotting as Byron (EpochSlots (..))
+
+import           Ouroboros.Consensus.Protocol.TPraos (TPraos)
 
 -- ----------------------------------------------------------------------------
 -- Consensus modes
@@ -286,17 +289,15 @@ deriving instance Show (ConsensusModeParams mode)
 --
 type family ConsensusBlockForMode mode where
   ConsensusBlockForMode ByronMode   = Consensus.ByronBlockHFC
-  ConsensusBlockForMode ShelleyMode = Consensus.ShelleyBlockHFC StandardShelley
+  ConsensusBlockForMode ShelleyMode = Consensus.ShelleyBlockHFC (TPraos StandardCrypto) StandardShelley
   ConsensusBlockForMode CardanoMode = Consensus.CardanoBlock StandardCrypto
 
 type family ConsensusBlockForEra era where
   ConsensusBlockForEra ByronEra   = Consensus.ByronBlock
-  ConsensusBlockForEra ShelleyEra = Consensus.ShelleyBlock StandardShelley
-  ConsensusBlockForEra AllegraEra = Consensus.ShelleyBlock StandardAllegra
-  ConsensusBlockForEra MaryEra    = Consensus.ShelleyBlock StandardMary
-  ConsensusBlockForEra AlonzoEra  = Consensus.ShelleyBlock StandardAlonzo
-
-
+  ConsensusBlockForEra ShelleyEra = Consensus.ShelleyBlock (TPraos StandardCrypto) StandardShelley
+  ConsensusBlockForEra AllegraEra = Consensus.ShelleyBlock (TPraos StandardCrypto) StandardAllegra
+  ConsensusBlockForEra MaryEra    = Consensus.ShelleyBlock (TPraos StandardCrypto) StandardMary
+  ConsensusBlockForEra AlonzoEra  = Consensus.ShelleyBlock (TPraos StandardCrypto) StandardAlonzo
 
 eraIndex0 :: Consensus.EraIndex (x0 : xs)
 eraIndex0 = Consensus.eraIndexZero
@@ -343,7 +344,7 @@ fromConsensusEraIndex ByronMode = fromByronEraIndex
 fromConsensusEraIndex ShelleyMode = fromShelleyEraIndex
   where
     fromShelleyEraIndex :: Consensus.EraIndex
-                             '[Consensus.ShelleyBlock StandardShelley]
+                             '[Consensus.ShelleyBlock (TPraos StandardCrypto) StandardShelley]
                         -> AnyEraInMode ShelleyMode
     fromShelleyEraIndex (Consensus.EraIndex (Z (K ()))) =
       AnyEraInMode ShelleyEraInShelleyMode
@@ -369,3 +370,5 @@ fromConsensusEraIndex CardanoMode = fromShelleyEraIndex
     fromShelleyEraIndex (Consensus.EraIndex (S (S (S (S (Z (K ()))))))) =
       AnyEraInMode AlonzoEraInCardanoMode
 
+    fromShelleyEraIndex (Consensus.EraIndex (S (S (S (S (S (Z (K ())))))))) =
+      AnyEraInMode BabbageEraInCardanoMode
