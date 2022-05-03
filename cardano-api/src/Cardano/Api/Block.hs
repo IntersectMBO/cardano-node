@@ -71,6 +71,11 @@ import qualified Ouroboros.Consensus.HardFork.Combinator.Degenerate as Consensus
 import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
 import qualified Ouroboros.Consensus.Shelley.ShelleyHFC as Consensus
 import qualified Ouroboros.Network.Block as Consensus
+import qualified Ouroboros.Consensus.Protocol.TPraos as Consensus
+
+-- TODO do I need these imports?
+import           Ouroboros.Consensus.Protocol.Praos.Translate ()
+import           Ouroboros.Consensus.Shelley.Ledger.SupportsProtocol ()
 
 import qualified Cardano.Chain.Block as Byron
 import qualified Cardano.Chain.UTxO as Byron
@@ -102,7 +107,7 @@ data Block era where
                 -> Block ByronEra
 
      ShelleyBlock :: ShelleyBasedEra era
-                  -> Consensus.ShelleyBlock (ShelleyLedgerEra era)
+                  -> Consensus.ShelleyBlock (Consensus.TPraos Consensus.StandardCrypto) (ShelleyLedgerEra era)
                   -> Block era
 
 -- | A block consists of a header and a body containing transactions.
@@ -165,7 +170,7 @@ getBlockTxs (ByronBlock Consensus.ByronBlock { Consensus.byronBlockRaw }) =
         } -> map ByronTx txs
 getBlockTxs (ShelleyBlock era Consensus.ShelleyBlock{Consensus.shelleyBlockRaw}) =
     obtainConsensusShelleyBasedEra era $
-      getShelleyBlockTxs era shelleyBlockRaw
+      getShelleyBlockTxs era shelleyBlockRaw -- HERE
 
 getShelleyBlockTxs :: forall era ledgerera.
                       ledgerera ~ ShelleyLedgerEra era
@@ -299,7 +304,7 @@ getBlockHeader (ShelleyBlock shelleyEra block) = case shelleyEra of
       where
         Consensus.HeaderFields {
             Consensus.headerFieldHash
-              = Consensus.ShelleyHash (TPraos.HashHeader (Cardano.Crypto.Hash.Class.UnsafeHash hashSBS)),
+              = Consensus.ShelleyHash (TPraos.HashHeader (Cardano.Crypto.Hash.Class.UnsafeHash hashSBS)), -- HERE
             Consensus.headerFieldSlot,
             Consensus.headerFieldBlockNo
           } = Consensus.getHeaderFields block
@@ -364,25 +369,25 @@ fromConsensusPointHF (Consensus.BlockPoint slot (Consensus.OneEraHash h)) =
 toConsensusPoint :: forall ledgerera.
                       Consensus.ShelleyBasedEra ledgerera
                    => ChainPoint
-                   -> Consensus.Point (Consensus.ShelleyBlock ledgerera)
+                   -> Consensus.Point (Consensus.ShelleyBlock (Consensus.TPraos Consensus.StandardCrypto) ledgerera)
 toConsensusPoint ChainPointAtGenesis = Consensus.GenesisPoint
 toConsensusPoint (ChainPoint slot (HeaderHash h)) =
     Consensus.BlockPoint slot (Consensus.fromShortRawHash proxy h)
   where
-    proxy :: Proxy (Consensus.ShelleyBlock ledgerera)
+    proxy :: Proxy (Consensus.ShelleyBlock (Consensus.TPraos Consensus.StandardCrypto) ledgerera)
     proxy = Proxy
 
 -- | Convert a 'Consensus.Point' for single Shelley-era block type
 --
 fromConsensusPoint :: forall ledgerera.
                       Consensus.ShelleyBasedEra ledgerera
-                   => Consensus.Point (Consensus.ShelleyBlock ledgerera)
+                   => Consensus.Point (Consensus.ShelleyBlock (Consensus.TPraos Consensus.StandardCrypto) ledgerera)
                    -> ChainPoint
 fromConsensusPoint Consensus.GenesisPoint = ChainPointAtGenesis
 fromConsensusPoint (Consensus.BlockPoint slot h) =
     ChainPoint slot (HeaderHash (Consensus.toShortRawHash proxy h))
   where
-    proxy :: Proxy (Consensus.ShelleyBlock ledgerera)
+    proxy :: Proxy (Consensus.ShelleyBlock (Consensus.TPraos Consensus.StandardCrypto) ledgerera)
     proxy = Proxy
 
 chainPointToSlotNo :: ChainPoint -> Maybe SlotNo
@@ -439,7 +444,7 @@ fromConsensusTip ByronMode = conv
 
 fromConsensusTip ShelleyMode = conv
   where
-    conv :: Consensus.Tip (Consensus.ShelleyBlockHFC Consensus.StandardShelley)
+    conv :: Consensus.Tip (Consensus.ShelleyBlockHFC (Consensus.TPraos Consensus.StandardCrypto) Consensus.StandardShelley)
          -> ChainTip
     conv Consensus.TipGenesis = ChainTipAtGenesis
     conv (Consensus.Tip slot (Consensus.OneEraHash h) block) =

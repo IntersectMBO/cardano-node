@@ -31,7 +31,8 @@ import           Ouroboros.Consensus.Util.IOLike (IOLike)
 
 import           Ouroboros.Consensus.Protocol.TPraos (TPraos)
 import           Ouroboros.Consensus.Shelley.Node.Praos (ProtocolParamsBabbage)
-import           Ouroboros.Consensus.Protocol.Praos.Translate
+import           Ouroboros.Consensus.Protocol.Praos.Translate ()
+import           Ouroboros.Consensus.Shelley.Ledger.SupportsProtocol ()
 
 class (RunNode blk, IOLike m) => Protocol m blk where
   data ProtocolInfoArgs m blk
@@ -107,15 +108,15 @@ instance ProtocolClient (CardanoBlock StandardCrypto) where
   protocolClientInfo (ProtocolClientInfoArgsCardano epochSlots) =
     protocolClientInfoCardano epochSlots
 
-instance IOLike m => Protocol m (ShelleyBlockHFC c StandardShelley) where
-  data ProtocolInfoArgs m (ShelleyBlockHFC c StandardShelley) = ProtocolInfoArgsShelley
+instance IOLike m => Protocol m (ShelleyBlockHFC (TPraos StandardCrypto) StandardShelley) where
+  data ProtocolInfoArgs m (ShelleyBlockHFC (TPraos StandardCrypto) StandardShelley) = ProtocolInfoArgsShelley
     (ProtocolParamsShelleyBased StandardShelley)
     (ProtocolParamsShelley StandardCrypto)
   protocolInfo (ProtocolInfoArgsShelley paramsShelleyBased paramsShelley) =
     inject $ protocolInfoShelley paramsShelleyBased paramsShelley
 
-instance ProtocolClient (ShelleyBlockHFC c StandardShelley) where
-  data ProtocolClientInfoArgs (ShelleyBlockHFC c StandardShelley) =
+instance ProtocolClient (ShelleyBlockHFC (TPraos StandardCrypto) StandardShelley) where
+  data ProtocolClientInfoArgs (ShelleyBlockHFC (TPraos StandardCrypto) StandardShelley) =
     ProtocolClientInfoArgsShelley
   protocolClientInfo ProtocolClientInfoArgsShelley =
     inject protocolClientInfoShelley
