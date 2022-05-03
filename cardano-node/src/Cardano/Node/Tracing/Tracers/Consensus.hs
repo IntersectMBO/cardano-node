@@ -177,7 +177,7 @@ namesForChainSyncClientEvent' TraceException {} =
 namesForChainSyncClientEvent' TraceTermination {} =
       ["Termination"]
 
-instance (Show (Header blk), ConvertRawHash blk, LedgerSupportsProtocol blk)
+instance (ConvertRawHash blk, LedgerSupportsProtocol blk)
       => LogFormatting (TraceChainSyncClientEvent blk) where
   forHuman (TraceDownloadedHeader pt) =
     "While following a candidate chain, we rolled forward by downloading a\
