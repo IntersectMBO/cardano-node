@@ -396,7 +396,7 @@ instance HasSeverityAnnotation (TracePeerSelection addr) where
       TracePromoteWarmLocalPeers {} -> Info
       TracePromoteWarmFailed     {} -> Info
       TracePromoteWarmDone       {} -> Info
---      TracePromoteWarmAborted    {} -> Info
+      TracePromoteWarmAborted    {} -> Info
       TraceDemoteWarmPeers       {} -> Info
       TraceDemoteWarmFailed      {} -> Info
       TraceDemoteWarmDone        {} -> Info
@@ -773,7 +773,7 @@ instance ( ConvertTxId blk
              , "agency" .= String (pack $ show stok)
              ]
 
-instance (forall result. Show (query result))
+instance LocalStateQuery.ShowQuery query
       => ToObject (AnyMessageAndAgency (LocalStateQuery blk pt query)) where
   toObject _verb (AnyMessageAndAgency stok LocalStateQuery.MsgAcquire{}) =
     mconcat [ "kind" .= String "MsgAcquire"
@@ -1504,14 +1504,12 @@ instance ToObject (TracePeerSelection SockAddr) where
              , "actualActive" .= aActive
              , "peer" .= toJSON p
              ]
-{-
   toObject _verb (TracePromoteWarmAborted tActive aActive p) =
     mconcat [ "kind" .= String "PromoteWarmAborted"
              , "targetActive" .= tActive
              , "actualActive" .= aActive
              , "peer" .= toJSON p
              ]
--}
   toObject _verb (TraceDemoteWarmPeers tEst aEst sp) =
     mconcat [ "kind" .= String "DemoteWarmPeers"
              , "targetEstablished" .= tEst
