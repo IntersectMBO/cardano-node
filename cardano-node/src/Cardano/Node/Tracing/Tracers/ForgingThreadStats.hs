@@ -14,9 +14,11 @@ import           Cardano.Prelude hiding (All, concat, (:.:))
 import           Data.Aeson (Value (..), (.=))
 import qualified Data.Map.Strict as Map
 
-import           Cardano.Node.Tracing.Tracers.StartLeadershipCheck (ForgeTracerType)
+import           Cardano.Node.Tracing.Tracers.StartLeadershipCheck (ForgeTracerType,
+                   TraceStartLeadershipCheckPlus)
 import           Cardano.Slotting.Slot (SlotNo (..))
 import           Ouroboros.Consensus.Node.Tracers
+import qualified Ouroboros.Consensus.Node.Tracers as Consensus
 import           Ouroboros.Consensus.Shelley.Node ()
 
 --------------------------------------------------------------------------------
@@ -66,7 +68,10 @@ instance LogFormatting ForgeThreadStats where
 emptyForgeThreadStats :: ForgeThreadStats
 emptyForgeThreadStats = ForgeThreadStats 0 0 0 0 0
 
-docForgeStats :: Documented ForgeThreadStats
+docForgeStats :: Documented
+  (Either
+      (Consensus.TraceLabelCreds (Consensus.TraceForgeEvent blk))
+      (Consensus.TraceLabelCreds TraceStartLeadershipCheckPlus))
 docForgeStats = Documented [
     DocMsg
       ["ForgeStats"]

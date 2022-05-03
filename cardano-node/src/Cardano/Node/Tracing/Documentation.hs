@@ -33,7 +33,7 @@ import           Cardano.Node.Tracing.Tracers.BlockReplayProgress
 import           Cardano.Node.Tracing.Tracers.ChainDB
 import           Cardano.Node.Tracing.Tracers.Consensus
 import           Cardano.Node.Tracing.Tracers.Diffusion
-import           Cardano.Node.Tracing.Tracers.ForgingThreadStats (forgeThreadStats)
+import           Cardano.Node.Tracing.Tracers.ForgingThreadStats (docForgeStats, forgeThreadStats)
 import           Cardano.Node.Tracing.Tracers.KESInfo
 import           Cardano.Node.Tracing.Tracers.NodeToClient
 import           Cardano.Node.Tracing.Tracers.NodeToNode
@@ -401,6 +401,12 @@ docTracers configFileName outputFileName _ _ _ = do
       (docForge :: Documented
         (Either (Consensus.TraceLabelCreds (Consensus.TraceForgeEvent blk))
                 (Consensus.TraceLabelCreds TraceStartLeadershipCheckPlus)))
+
+    forgeThreadStatsTrDoc <- documentTracer trConfig forgeThreadStatsTr
+      (docForgeStats :: Documented
+        (Either
+           (Consensus.TraceLabelCreds (Consensus.TraceForgeEvent blk))
+           (Consensus.TraceLabelCreds TraceStartLeadershipCheckPlus)))
 
     blockchainTimeTr   <- mkCardanoTracer
                 trBase trForward mbTrEKG
@@ -871,6 +877,7 @@ docTracers configFileName outputFileName _ _ _ = do
             <> localTxSubmissionServerTrDoc
             <> mempoolTrDoc
             <> forgeTrDoc
+            <> forgeThreadStatsTrDoc
             <> blockchainTimeTrDoc
 -- NodeToClient
             <> keepAliveClientTrDoc
