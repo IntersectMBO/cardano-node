@@ -58,6 +58,7 @@ import           Cardano.CLI.Shelley.Key (PaymentVerifier, StakeVerifier, Verifi
 import           Cardano.CLI.Types
 
 import           Cardano.Ledger.Shelley.TxBody (MIRPot)
+import           Cardano.Chain.Common (BlockCount)
 --
 -- Shelley CLI command data types
 --
@@ -416,6 +417,7 @@ renderTextViewCmd (TextViewInfo _ _) = "text-view decode-cbor"
 
 data GenesisCmd
   = GenesisCreate GenesisDir Word Word (Maybe SystemStart) (Maybe Lovelace) NetworkId
+  | GenesisCreateCardano GenesisDir Word Word (Maybe SystemStart) (Maybe Lovelace) BlockCount Word Rational NetworkId FilePath FilePath FilePath (Maybe FilePath)
   | GenesisCreateStaked GenesisDir Word Word Word Word (Maybe SystemStart) (Maybe Lovelace) Lovelace NetworkId Word Word Word
   | GenesisKeyGenGenesis VerificationKeyFile SigningKeyFile
   | GenesisKeyGenDelegate VerificationKeyFile SigningKeyFile OpCertCounterFile
@@ -431,6 +433,7 @@ renderGenesisCmd :: GenesisCmd -> Text
 renderGenesisCmd cmd =
   case cmd of
     GenesisCreate {} -> "genesis create"
+    GenesisCreateCardano {} -> "genesis create-cardano"
     GenesisCreateStaked {} -> "genesis create-staked"
     GenesisKeyGenGenesis {} -> "genesis key-gen-genesis"
     GenesisKeyGenDelegate {} -> "genesis key-gen-delegate"

@@ -16,10 +16,11 @@ module Cardano.CLI.Shelley.Run.Genesis
   ) where
 
 import           Cardano.Prelude hiding (unlines)
-import           Prelude (id, unlines)
+import           Prelude (id, unlines, zip3, error)
 
 import           Data.Aeson hiding (Key)
 import qualified Data.Aeson as Aeson
+import qualified Data.Aeson.KeyMap as Aeson
 import           Data.Aeson.Encode.Pretty (encodePretty)
 import qualified Data.Binary.Get as Bin
 import qualified Data.ByteString.Char8 as BS
@@ -33,13 +34,14 @@ import qualified Data.Sequence.Strict as Seq
 import           Data.String (fromString)
 import qualified Data.Text as Text
 import qualified Data.Text.IO as Text
-import           Data.Time.Clock (NominalDiffTime, UTCTime, addUTCTime, getCurrentTime)
+import           Data.Time.Clock (NominalDiffTime, UTCTime, addUTCTime, getCurrentTime, secondsToNominalDiffTime)
 
-import           Cardano.Binary (ToCBOR (..))
+import           Cardano.Binary (ToCBOR (..), Annotated(Annotated))
 
 import           Cardano.Crypto.Hash (HashAlgorithm)
 import qualified Cardano.Crypto.Hash as Hash
 import qualified Cardano.Crypto.Random as Crypto
+import qualified Cardano.Crypto as CC
 import           Crypto.Random as Crypto
 
 import           System.Directory (createDirectoryIfMissing, listDirectory)
@@ -53,6 +55,7 @@ import qualified Cardano.Crypto.Hash as Crypto
 
 import           Cardano.Api
 import           Cardano.Api.Shelley
+import           Cardano.Api.Byron (toByronRequiresNetworkMagic, toByronProtocolMagicId, toByronLovelace)
 
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
 import           Ouroboros.Consensus.Shelley.Eras (StandardShelley)
@@ -80,6 +83,24 @@ import           Cardano.CLI.Shelley.Run.StakeAddress (ShelleyStakeAddressCmdErr
                    renderShelleyStakeAddressCmdError, runStakeAddressKeyGen)
 import           Cardano.CLI.Types
 
+import           Cardano.CLI.Byron.Delegation
+import qualified Cardano.CLI.Byron.Key as Byron
+import qualified Cardano.Crypto.Signing as Byron
+import           Cardano.CLI.Byron.Genesis as Byron
+import           Cardano.Chain.Genesis (FakeAvvmOptions (..), TestnetBalanceOptions (..), gsDlgIssuersSecrets, gsRichSecrets, gsPoorSecrets, gdProtocolParameters)
+import qualified Cardano.Chain.Common as Byron (rationalToLovelacePortion, mkKnownLovelace, KeyHash)
+
+import           Cardano.Chain.Common (BlockCount(unBlockCount))
+import qualified Cardano.Chain.Genesis as Genesis
+import           Cardano.Chain.Delegation (delegateVK)
+import           Cardano.Api.SerialiseTextEnvelope (textEnvelopeToJSON)
+import qualified Cardano.Chain.Delegation as Dlg
+import           Cardano.Slotting.Slot (EpochSize(EpochSize))
+import           Cardano.Chain.Update
+import           Data.Fixed (Fixed(MkFixed))
+import qualified Data.Yaml as Yaml
+import           Text.JSON.Canonical (parseCanonicalJSON, renderCanonicalJSON)
+
 {- HLINT ignore "Reduce duplication" -}
 
 data ShelleyGenesisCmdError
@@ -99,6 +120,7 @@ data ShelleyGenesisCmdError
   | ShelleyGenesisCmdPoolCmdError !ShelleyPoolCmdError
   | ShelleyGenesisCmdStakeAddressCmdError !ShelleyStakeAddressCmdError
   | ShelleyGenesisCmdCostModelsError !FilePath
+  | ShelleyGenesisCmdByronError !ByronGenesisError
   deriving Show
 
 instance Error ShelleyGenesisCmdError where
@@ -138,6 +160,7 @@ instance Error ShelleyGenesisCmdError where
        "Error while decoding Shelley genesis at: " <> fp <>
        " Error: " <>  Text.unpack e
       ShelleyGenesisCmdGenesisFileReadError e -> displayError e
+      ShelleyGenesisCmdByronError e -> show e
 
 runGenesisCmd :: GenesisCmd -> ExceptT ShelleyGenesisCmdError IO ()
 runGenesisCmd (GenesisKeyGenGenesis vk sk) = runGenesisKeyGenGenesis vk sk
@@ -148,6 +171,7 @@ runGenesisCmd (GenesisVerKey vk sk) = runGenesisVerKey vk sk
 runGenesisCmd (GenesisTxIn vk nw mOutFile) = runGenesisTxIn vk nw mOutFile
 runGenesisCmd (GenesisAddr vk nw mOutFile) = runGenesisAddr vk nw mOutFile
 runGenesisCmd (GenesisCreate gd gn un ms am nw) = runGenesisCreate gd gn un ms am nw
+runGenesisCmd (GenesisCreateCardano gd gn un ms am k slotLength sc nw bg sg ag mNodeCfg) = runGenesisCreateCardano gd gn un ms am k slotLength sc nw bg sg ag mNodeCfg
 runGenesisCmd (GenesisCreateStaked gd gn gp gl un ms am ds nw bf bp su) = runGenesisCreateStaked gd gn gp gl un ms am ds nw bf bp su
 runGenesisCmd (GenesisHashFile gf) = runGenesisHashFile gf
 
@@ -368,6 +392,246 @@ runGenesisCreate (GenesisDir rootdir)
     gendir  = rootdir </> "genesis-keys"
     deldir  = rootdir </> "delegate-keys"
     utxodir = rootdir </> "utxo-keys"
+
+
+toSKeyJSON :: Key a => SigningKey a -> ByteString
+toSKeyJSON = LBS.toStrict . textEnvelopeToJSON Nothing
+
+toVkeyJSON :: Key a => SigningKey a -> ByteString
+toVkeyJSON = LBS.toStrict . textEnvelopeToJSON Nothing . getVerificationKey
+
+toVkeyJSON' :: Key a => VerificationKey a -> ByteString
+toVkeyJSON' = LBS.toStrict . textEnvelopeToJSON Nothing
+
+toOpCert :: (OperationalCertificate, OperationalCertificateIssueCounter) -> ByteString
+toOpCert = LBS.toStrict . textEnvelopeToJSON Nothing . fst
+
+toCounter :: (OperationalCertificate, OperationalCertificateIssueCounter) -> ByteString
+toCounter = LBS.toStrict . textEnvelopeToJSON Nothing . snd
+
+generateShelleyNodeSecrets :: [SigningKey GenesisDelegateExtendedKey] -> [VerificationKey GenesisKey]
+    -> IO (Map (Hash GenesisKey)
+      ( Hash GenesisDelegateKey, Hash VrfKey)
+      , [SigningKey VrfKey]
+      , [SigningKey KesKey]
+      , [(OperationalCertificate, OperationalCertificateIssueCounter)])
+generateShelleyNodeSecrets shelleyDelegateKeys shelleyGenesisvkeys = do
+  let
+    shelleyDelegatevkeys :: [VerificationKey GenesisDelegateKey]
+    shelleyDelegatevkeys = map (castVerificationKey . getVerificationKey) shelleyDelegateKeys
+  vrfKeys <- forM shelleyDelegateKeys $ \_ -> generateSigningKey AsVrfKey
+  kesKeys <- forM shelleyDelegateKeys $ \_ -> generateSigningKey AsKesKey
+
+  let
+    opCertInputs :: [(VerificationKey KesKey, SigningKey GenesisDelegateExtendedKey)]
+    opCertInputs = zip (map getVerificationKey kesKeys) shelleyDelegateKeys
+    createOpCert :: (VerificationKey KesKey, SigningKey GenesisDelegateExtendedKey) -> (OperationalCertificate, OperationalCertificateIssueCounter)
+    createOpCert (kesKey, delegateKey) = either (error . show) identity eResult
+      where
+        eResult = issueOperationalCertificate kesKey (Right delegateKey) (KESPeriod 0) counter
+        counter = OperationalCertificateIssueCounter 0 (convert . getVerificationKey $ delegateKey)
+        convert :: VerificationKey GenesisDelegateExtendedKey
+                -> VerificationKey StakePoolKey
+        convert = (castVerificationKey :: VerificationKey GenesisDelegateKey
+                                       -> VerificationKey StakePoolKey)
+                . (castVerificationKey :: VerificationKey GenesisDelegateExtendedKey
+                                       -> VerificationKey GenesisDelegateKey)
+
+    opCerts :: [(OperationalCertificate, OperationalCertificateIssueCounter)]
+    opCerts = map createOpCert opCertInputs
+
+    vrfvkeys = map getVerificationKey vrfKeys
+    combinedMap :: [ ( VerificationKey GenesisKey
+                     , VerificationKey GenesisDelegateKey
+                     , VerificationKey VrfKey
+                     )
+                   ]
+    combinedMap = zip3 shelleyGenesisvkeys shelleyDelegatevkeys vrfvkeys
+    hashKeys :: (VerificationKey GenesisKey, VerificationKey GenesisDelegateKey, VerificationKey VrfKey) -> (Hash GenesisKey, (Hash GenesisDelegateKey, Hash VrfKey))
+    hashKeys (genesis,delegate,vrf) = (verificationKeyHash genesis, (verificationKeyHash delegate, verificationKeyHash vrf));
+    delegateMap :: Map (Hash GenesisKey) (Hash GenesisDelegateKey, Hash VrfKey)
+    delegateMap = Map.fromList . map hashKeys $ combinedMap
+
+  return (delegateMap, vrfKeys, kesKeys, opCerts)
+
+--
+-- Create Genesis Cardano command implementation
+--
+
+runGenesisCreateCardano :: GenesisDir
+                 -> Word  -- ^ num genesis & delegate keys to make
+                 -> Word  -- ^ num utxo keys to make
+                 -> Maybe SystemStart
+                 -> Maybe Lovelace
+                 -> BlockCount
+                 -> Word     -- ^ slot length in ms
+                 -> Rational
+                 -> NetworkId
+                 -> FilePath -- ^ Byron Genesis
+                 -> FilePath -- ^ Shelley Genesis
+                 -> FilePath -- ^ Alonzo Genesis
+                 -> Maybe FilePath
+                 -> ExceptT ShelleyGenesisCmdError IO ()
+runGenesisCreateCardano (GenesisDir rootdir)
+                 genNumGenesisKeys _genNumUTxOKeys
+                 mStart mAmount mSecurity slotLength mSlotCoeff
+                 network byronGenesisT shelleyGenesisT alonzoGenesisT mNodeCfg = do
+  start <- maybe (SystemStart <$> getCurrentTimePlus30) pure mStart
+  (byronGenesis', byronSecrets) <- convertToShelleyError $ Byron.mkGenesis $ byronParams start
+  let
+    byronGenesis = byronGenesis'
+      { gdProtocolParameters = (gdProtocolParameters byronGenesis') {
+          ppSlotDuration = floor ( toRational slotLength * recip mSlotCoeff )
+        }
+      }
+
+    genesisKeys = gsDlgIssuersSecrets byronSecrets
+    byronGenesisKeys = map ByronSigningKey genesisKeys
+    shelleyGenesisKeys = map convertGenesisKey genesisKeys
+    shelleyGenesisvkeys :: [VerificationKey GenesisKey]
+    shelleyGenesisvkeys = map (castVerificationKey . getVerificationKey) shelleyGenesisKeys
+
+    delegateKeys = gsRichSecrets byronSecrets
+    byronDelegateKeys = map ByronSigningKey delegateKeys
+    shelleyDelegateKeys :: [SigningKey GenesisDelegateExtendedKey]
+    shelleyDelegateKeys = map convertDelegate delegateKeys
+    shelleyDelegatevkeys :: [VerificationKey GenesisDelegateKey]
+    shelleyDelegatevkeys = map (castVerificationKey . getVerificationKey) shelleyDelegateKeys
+
+    utxoKeys = gsPoorSecrets byronSecrets
+    byronUtxoKeys = map (ByronSigningKey . Genesis.poorSecretToKey) utxoKeys
+    shelleyUtxoKeys = map (convertPoor . Genesis.poorSecretToKey) utxoKeys
+
+  dlgCerts <- convertToShelleyError $ mapM (findDelegateCert byronGenesis) byronDelegateKeys
+  let
+    overrideShelleyGenesis t = t
+      { sgNetworkMagic = unNetworkMagic (toNetworkMagic network)
+      , sgNetworkId = toShelleyNetwork network
+      , sgActiveSlotsCoeff = fromMaybe (error $ "Could not convert from Rational: " ++ show mSlotCoeff) $ Ledger.boundRational mSlotCoeff
+      , sgSecurityParam = unBlockCount mSecurity
+      , sgUpdateQuorum = fromIntegral $ ((genNumGenesisKeys `div` 3) * 2) + 1
+      , sgEpochLength = EpochSize $ floor $ (fromIntegral (unBlockCount mSecurity) * 10) / mSlotCoeff
+      , sgMaxLovelaceSupply = 45000000000000000
+      , sgSystemStart = getSystemStart start
+      , sgSlotLength = secondsToNominalDiffTime $ MkFixed (fromIntegral slotLength) * 1000000000
+      }
+  shelleyGenesisTemplate <- liftIO $ overrideShelleyGenesis . fromRight (error "shelley genesis template not found") <$> readAndDecodeShelleyGenesis shelleyGenesisT
+  alonzoGenesis <- readAlonzoGenesis alonzoGenesisT
+  (delegateMap, vrfKeys, kesKeys, opCerts) <- liftIO $ generateShelleyNodeSecrets shelleyDelegateKeys shelleyGenesisvkeys
+  let
+    shelleyGenesis :: ShelleyGenesis StandardShelley
+    shelleyGenesis = updateTemplate start delegateMap Nothing [] mempty 0 [] [] shelleyGenesisTemplate
+
+  liftIO $ do
+    createDirectoryIfMissing False rootdir
+    createDirectoryIfMissing False gendir
+    createDirectoryIfMissing False deldir
+    createDirectoryIfMissing False utxodir
+
+    writeSecrets gendir "byron" "key" serialiseToRawBytes byronGenesisKeys
+    writeSecrets gendir "shelley" "skey" toSKeyJSON shelleyGenesisKeys
+    writeSecrets gendir "shelley" "vkey" toVkeyJSON shelleyGenesisKeys
+
+    writeSecrets deldir "byron" "key" serialiseToRawBytes byronDelegateKeys
+    writeSecrets deldir "shelley" "skey" toSKeyJSON shelleyDelegateKeys
+    writeSecrets deldir "shelley" "vkey" toVkeyJSON' shelleyDelegatevkeys
+    writeSecrets deldir "shelley" "vrf.skey" toSKeyJSON vrfKeys
+    writeSecrets deldir "shelley" "vrf.vkey" toVkeyJSON vrfKeys
+    writeSecrets deldir "shelley" "kes.skey" toSKeyJSON kesKeys
+    writeSecrets deldir "shelley" "kes.vkey" toVkeyJSON kesKeys
+
+    writeSecrets utxodir "byron" "key" serialiseToRawBytes byronUtxoKeys
+    writeSecrets utxodir "shelley" "skey" toSKeyJSON shelleyUtxoKeys
+    writeSecrets utxodir "shelley" "vkey" toVkeyJSON shelleyUtxoKeys
+
+    writeSecrets deldir "byron" "cert.json" serialiseDelegationCert dlgCerts
+
+    writeSecrets deldir "shelley" "opcert.json" toOpCert opCerts
+    writeSecrets deldir "shelley" "counter.json" toCounter opCerts
+
+    LBS.writeFile (rootdir </> "byron-genesis.json") (canonicalEncodePretty byronGenesis)
+  writeFileGenesis (rootdir </> "shelley-genesis.json") shelleyGenesis
+  writeFileGenesis (rootdir </> "alonzo-genesis.json") alonzoGenesis
+
+  liftIO $ do
+    case mNodeCfg of
+      Nothing -> pure ()
+      Just nodeCfg -> do
+        nodeConfig <- Yaml.decodeFileThrow nodeCfg
+        let
+          hashShelleyGenesis :: ToJSON genesis => genesis -> Text
+          hashShelleyGenesis genesis = Crypto.hashToTextAsHex gh
+            where
+              content :: ByteString
+              content = LBS.toStrict $ encodePretty genesis
+              gh :: Crypto.Hash Crypto.Blake2b_256 ByteString
+              gh = Crypto.hashWith id content
+          hashByronGenesis :: Genesis.GenesisData -> Text
+          hashByronGenesis genesis = Crypto.hashToTextAsHex genesisHash
+            where
+              genesisHash :: Crypto.Hash Crypto.Blake2b_256 ByteString
+              genesisHash = Crypto.hashWith id
+                  . LBS.toStrict
+                  . renderCanonicalJSON
+                  . either (error "error parsing json that was just encoded!?") identity
+                  . parseCanonicalJSON
+                  . canonicalEncodePretty $ genesis
+          -- TODO, NodeConfig needs a ToJSON instance
+          updateConfig :: Yaml.Value -> Yaml.Value
+          updateConfig (Object obj) = Object
+              $ (Aeson.insert "ByronGenesisHash" . String . hashByronGenesis) byronGenesis
+              $ (Aeson.insert "ShelleyGenesisHash" . String . hashShelleyGenesis) shelleyGenesis
+              $ (Aeson.insert "AlonzoGenesisHash"  . String . hashShelleyGenesis) alonzoGenesis
+              obj
+          updateConfig x = x
+          newConfig :: Yaml.Value
+          newConfig = updateConfig nodeConfig
+        encodeFile (rootdir </> "node-config.json") newConfig
+
+  where
+    convertToShelleyError = withExceptT ShelleyGenesisCmdByronError
+    convertGenesisKey :: Byron.SigningKey -> SigningKey GenesisExtendedKey
+    convertGenesisKey (Byron.SigningKey xsk) = GenesisExtendedSigningKey xsk
+
+    convertDelegate :: Byron.SigningKey -> SigningKey GenesisDelegateExtendedKey
+    convertDelegate (Byron.SigningKey xsk) = GenesisDelegateExtendedSigningKey xsk
+
+    convertPoor :: Byron.SigningKey -> SigningKey ByronKey
+    convertPoor = ByronSigningKey
+
+    byronParams start = Byron.GenesisParameters (getSystemStart start) byronGenesisT mSecurity byronNetwork byronBalance byronFakeAvvm byronAvvmFactor Nothing
+    gendir  = rootdir </> "genesis-keys"
+    deldir  = rootdir </> "delegate-keys"
+    utxodir = rootdir </> "utxo-keys"
+    byronNetwork = CC.AProtocolMagic
+                      (Annotated (toByronProtocolMagicId network) ())
+                      (toByronRequiresNetworkMagic network)
+    byronBalance = TestnetBalanceOptions
+        { tboRichmen = genNumGenesisKeys
+        , tboPoors = 1
+        , tboTotalBalance = fromMaybe zeroLovelace $ toByronLovelace (fromMaybe 0 mAmount)
+        , tboRichmenShare = 0
+        }
+    byronFakeAvvm = FakeAvvmOptions
+        { faoCount = 0
+        , faoOneBalance = zeroLovelace
+        }
+    byronAvvmFactor = Byron.rationalToLovelacePortion 0.0
+    zeroLovelace = Byron.mkKnownLovelace @0
+
+    -- Compare a given 'SigningKey' with a 'Certificate' 'VerificationKey'
+    isCertForSK :: CC.SigningKey -> Dlg.Certificate -> Bool
+    isCertForSK sk cert = delegateVK cert == CC.toVerification sk
+
+    findDelegateCert :: Genesis.GenesisData -> SigningKey ByronKey -> ExceptT ByronGenesisError IO Dlg.Certificate
+    findDelegateCert byronGenesis bSkey@(ByronSigningKey sk) = do
+      case find (isCertForSK sk) (Map.elems $ dlgCertMap byronGenesis) of
+        Nothing -> throwE . NoGenesisDelegationForKey
+                   . Byron.prettyPublicKey $ getVerificationKey bSkey
+        Just x  -> pure x
+
+    dlgCertMap :: Genesis.GenesisData -> Map Byron.KeyHash Dlg.Certificate
+    dlgCertMap byronGenesis = Genesis.unGenesisDelegation $ Genesis.gdHeavyDelegation byronGenesis
 
 runGenesisCreateStaked
   :: GenesisDir
@@ -687,7 +951,7 @@ computeDelegation nw delegDir pool delegIx = do
    stakeVKF = delegDir </> "staking" ++ strIndexDeleg ++ ".vkey"
 
 -- | Current UTCTime plus 30 seconds
-getCurrentTimePlus30 :: ExceptT ShelleyGenesisCmdError IO UTCTime
+getCurrentTimePlus30 :: ExceptT a IO UTCTime
 getCurrentTimePlus30 =
     plus30sec <$> liftIO getCurrentTime
   where

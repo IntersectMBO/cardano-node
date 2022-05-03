@@ -26,8 +26,12 @@ common project-config
                         -Wredundant-constraints
                         -Wunused-packages
 
+common maybe-unix
+  if !os(windows)
+     build-depends:    unix
+
 library
-  import:               base, project-config
+  import:               base, project-config, maybe-unix
 
   hs-source-dirs:       src
 
@@ -42,6 +46,7 @@ library
                         -- we create wrapper types for the ledger types
                         -- in this module
                         Cardano.Api.Orphans
+                        Cardano.Api.SerialiseTextEnvelope
 
   other-modules:
                         -- Splitting up the big Typed module:
@@ -75,7 +80,6 @@ library
                         Cardano.Api.SerialiseJSON
                         Cardano.Api.SerialiseLedgerCddl
                         Cardano.Api.SerialiseRaw
-                        Cardano.Api.SerialiseTextEnvelope
                         Cardano.Api.SerialiseUsing
                         Cardano.Api.Shelley.Genesis
                         Cardano.Api.SpecialByron
@@ -124,6 +128,7 @@ library
                       , memory
                       , network
                       , nothunks
+                      , optparse-applicative-fork
                       , ouroboros-consensus
                       , ouroboros-consensus-byron
                       , ouroboros-consensus-cardano

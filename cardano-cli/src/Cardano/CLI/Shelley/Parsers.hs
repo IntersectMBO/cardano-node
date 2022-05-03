@@ -54,6 +54,7 @@ import           Cardano.CLI.Shelley.Key (InputFormat (..), PaymentVerifier (..)
                    StakeVerifier (..), VerificationKeyOrFile (..), VerificationKeyOrHashOrFile (..),
                    VerificationKeyTextOrFile (..), deserialiseInput, renderInputDecodeError)
 import           Cardano.CLI.Types
+import           Cardano.Chain.Common (BlockCount(BlockCount))
 
 {- HLINT ignore "Use <$>" -}
 
@@ -1101,6 +1102,10 @@ pGenesisCmd =
     , subParser "initial-txin"
         (Opt.info pGenesisTxIn $
            Opt.progDesc "Get the TxIn for an initial UTxO based on the verification key")
+    , subParser "create-cardano"
+        (Opt.info pGenesisCreateCardano $
+           Opt.progDesc ("Create a Byron and Shelley genesis file from a genesis "
+                      ++ "template and genesis/delegation/spending keys."))
     , subParser "create"
         (Opt.info pGenesisCreate $
            Opt.progDesc ("Create a Shelley genesis file from a genesis "
@@ -1143,6 +1148,28 @@ pGenesisCmd =
     pGenesisTxIn :: Parser GenesisCmd
     pGenesisTxIn =
       GenesisTxIn <$> pVerificationKeyFile Input <*> pNetworkId <*> pMaybeOutputFile
+
+    pGenesisCreateCardano :: Parser GenesisCmd
+    pGenesisCreateCardano =
+      GenesisCreateCardano <$> pGenesisDir
+                    <*> pGenesisNumGenesisKeys
+                    <*> pGenesisNumUTxOKeys
+                    <*> pMaybeSystemStart
+                    <*> pInitialSupplyNonDelegated
+                    <*> (BlockCount <$> pSecurityParam)
+                    <*> pSlotLength
+                    <*> pSlotCoefficient
+                    <*> pNetworkId
+                    <*> parseFilePath
+                          "byron-template"
+                          "JSON file with genesis defaults for each byron."
+                    <*> parseFilePath
+                          "shelley-template"
+                          "JSON file with genesis defaults for each shelley."
+                    <*> parseFilePath
+                          "alonzo-template"
+                          "JSON file with genesis defaults for each alonzo."
+                    <*> pNodeConfigTemplate
 
     pGenesisCreate :: Parser GenesisCmd
     pGenesisCreate =
@@ -1197,9 +1224,12 @@ pGenesisCmd =
         Opt.option Opt.auto
           (  Opt.long "gen-genesis-keys"
           <> Opt.metavar "INT"
-          <> Opt.help "The number of genesis keys to make [default is 0]."
-          <> Opt.value 0
+          <> Opt.help "The number of genesis keys to make [default is 3]."
+          <> Opt.value 3
           )
+
+    pNodeConfigTemplate :: Parser (Maybe FilePath)
+    pNodeConfigTemplate = optional $ parseFilePath "node-config-template" "the node config template"
 
     pGenesisNumUTxOKeys :: Parser Word
     pGenesisNumUTxOKeys =
@@ -1259,6 +1289,34 @@ pGenesisCmd =
           <> Opt.metavar "LOVELACE"
           <> Opt.help "The initial coin supply in Lovelace which will be evenly distributed across initial, delegating stake holders."
           <> Opt.value 0
+          )
+
+    pSecurityParam :: Parser Word64
+    pSecurityParam =
+        Opt.option Opt.auto
+          (  Opt.long "security-param"
+          <> Opt.metavar "INT"
+          <> Opt.help "Security parameter for genesis file [default is 108]."
+          <> Opt.value 108
+          )
+
+    pSlotLength :: Parser Word
+    pSlotLength =
+        Opt.option Opt.auto
+          (  Opt.long "slot-length"
+          <> Opt.metavar "INT"
+          <> Opt.help "slot length (ms) parameter for genesis file [default is 1000]."
+          <> Opt.value 1000
+          )
+
+
+    pSlotCoefficient :: Parser Rational
+    pSlotCoefficient =
+        Opt.option readRationalUnitInterval
+          (  Opt.long "slot-coefficient"
+          <> Opt.metavar "RATIONAL"
+          <> Opt.help "Slot Coefficient for genesis file [default is .05]."
+          <> Opt.value 0.05
           )
 
     pBulkPoolCredFiles :: Parser Word

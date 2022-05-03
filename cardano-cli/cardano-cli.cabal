@@ -42,7 +42,6 @@ common maybe-Win32
 
 library
   import:               base, project-config
-                      , maybe-unix
                       , maybe-Win32
 
   if flag(unexpected_thunks)
@@ -102,6 +101,7 @@ library
                       , binary
                       , bytestring
                       , base16-bytestring >= 1.0
+                      , canonical-json
                       , cardano-api
                       , cardano-binary
                       , cardano-git-rev
