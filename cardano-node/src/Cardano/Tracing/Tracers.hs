@@ -1003,6 +1003,7 @@ teeForge ft tverb tr = Tracer $
       Consensus.TraceNodeCannotForge {} -> teeForge' (ftTraceNodeCannotForge ft)
       Consensus.TraceNodeNotLeader{} -> teeForge' (ftTraceNodeNotLeader ft)
       Consensus.TraceNodeIsLeader{} -> teeForge' (ftTraceNodeIsLeader ft)
+      Consensus.TraceForgingMempoolSnapshot{} -> nullTracer
       Consensus.TraceForgedBlock{} -> teeForge' (ftForged ft)
       Consensus.TraceDidntAdoptBlock{} -> teeForge' (ftDidntAdoptBlock ft)
       Consensus.TraceForgedInvalidBlock{} -> teeForge' (ftForgedInvalid ft)
@@ -1043,6 +1044,8 @@ teeForge' tr =
           LogValue "nodeNotLeader" $ PureI $ fromIntegral $ unSlotNo slot
         Consensus.TraceNodeIsLeader slot ->
           LogValue "nodeIsLeader" $ PureI $ fromIntegral $ unSlotNo slot
+        Consensus.TraceForgingMempoolSnapshot slot _ _ _ ->
+          LogValue "forgedMempoolSnapshot" $ PureI $ fromIntegral $ unSlotNo slot
         Consensus.TraceForgedBlock slot _ _ _ ->
           LogValue "forgedSlotLast" $ PureI $ fromIntegral $ unSlotNo slot
         Consensus.TraceDidntAdoptBlock slot _ ->

@@ -246,6 +246,7 @@ instance HasSeverityAnnotation (TraceForgeEvent blk) where
   getSeverityAnnotation TraceNodeCannotForge {}        = Error
   getSeverityAnnotation TraceNodeNotLeader {}          = Info
   getSeverityAnnotation TraceNodeIsLeader {}           = Info
+  getSeverityAnnotation TraceForgingMempoolSnapshot {} = Info   -- TODO Debug?
   getSeverityAnnotation TraceForgedBlock {}            = Info
   getSeverityAnnotation TraceDidntAdoptBlock {}        = Error
   getSeverityAnnotation TraceForgedInvalidBlock {}     = Error
@@ -376,6 +377,15 @@ instance ( tx ~ GenTx blk
       "Not leading slot " <> showT (unSlotNo slotNo)
     TraceNodeIsLeader slotNo -> const $
       "Leading slot " <> showT (unSlotNo slotNo)
+    TraceForgingMempoolSnapshot slotNo pt mpHash mpSlot -> const $
+      "While forging in slot "
+        <> showT (unSlotNo slotNo)
+        <> " we acquired a mempool snapshot valid against "
+        <> renderPointAsPhrase pt
+        <> " from a mempool that was prepared for "
+        <> renderChainHash (Text.decodeLatin1 . toRawHash (Proxy @blk)) mpHash
+        <> " ticked to slot "
+        <> showT (unSlotNo mpSlot)
     TraceForgedBlock slotNo _ _ _ -> const $
       "Forged block in slot " <> showT (unSlotNo slotNo)
     TraceDidntAdoptBlock slotNo _ -> const $
@@ -1382,6 +1392,14 @@ instance ( tx ~ GenTx blk
     mconcat
       [ "kind" .= String "TraceNodeIsLeader"
       , "slot" .= toJSON (unSlotNo slotNo)
+      ]
+  toObject verb (TraceForgingMempoolSnapshot slotNo pt mpHash mpSlot) =
+    mconcat
+      [ "kind"        .= String "TraceForgingMempoolSnapshot"
+      , "slot"        .= toJSON (unSlotNo slotNo)
+      , "prev"        .= renderPointForVerbosity verb pt
+      , "mempoolHash" .= String (renderChainHash @blk (renderHeaderHash (Proxy @blk)) mpHash)
+      , "mempoolSlot" .= toJSON (unSlotNo mpSlot)
       ]
   toObject _verb (TraceForgedBlock slotNo _ blk _) =
     mconcat
