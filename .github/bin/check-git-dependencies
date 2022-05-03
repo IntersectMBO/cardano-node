@@ -12,7 +12,7 @@ rm -rf tmp/dep-repo-result
 
 branches () {
   git rev-parse --abbrev-ref HEAD
-  git branch -r | grep 'origin/.*\<release\>' || true
+  git branch -r | grep 'origin/\(.*\<release\>\|\<patch-.*\>\)' || true
   git tag | grep '\<v[0-9]\+\>' || true
 }
 
