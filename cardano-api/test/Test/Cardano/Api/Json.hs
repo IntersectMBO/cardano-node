@@ -60,6 +60,7 @@ prop_json_roundtrip_eraInMode = H.property $ do
   H.assert $ parseEither rountripEraInModeParser AllegraEraInCardanoMode == Right AllegraEraInCardanoMode
   H.assert $ parseEither rountripEraInModeParser MaryEraInCardanoMode == Right MaryEraInCardanoMode
   H.assert $ parseEither rountripEraInModeParser AlonzoEraInCardanoMode == Right AlonzoEraInCardanoMode
+  H.assert $ parseEither rountripEraInModeParser BabbageEraInCardanoMode == Right BabbageEraInCardanoMode
 
   where
     -- Defined this way instead of using 'tripping' in order to warn the
@@ -74,8 +75,7 @@ prop_json_roundtrip_eraInMode = H.property $ do
       AllegraEraInCardanoMode -> parseJSON $ toJSON AllegraEraInCardanoMode
       MaryEraInCardanoMode -> parseJSON $ toJSON MaryEraInCardanoMode
       AlonzoEraInCardanoMode -> parseJSON $ toJSON AlonzoEraInCardanoMode
-      BabbageEraInCardanoMode ->
-        panic "TODO: Babbage era - depends on consensus exposing a babbage era"
+      BabbageEraInCardanoMode -> parseJSON $ toJSON BabbageEraInCardanoMode
 
 prop_json_roundtrip_scriptdata_detailed_json :: Property
 prop_json_roundtrip_scriptdata_detailed_json = H.property $ do
