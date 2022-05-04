@@ -116,17 +116,16 @@ def add_derived_params:
          , pool_coin:             (if $n_pools == 0 then 0
                                    else $gsis.per_pool_balance end)
          , shelley:
-           ({ protocolParams:
-              { activeSlotsCoeff:           $gsis.active_slots_coeff
-              , epochLength:                $gsis.epoch_length
-              , securityParam:              $gsis.parameter_k
-              , slotLength:                 $gsis.slot_duration
-              , maxTxSize:                  $gsis.max_tx_size
-              , protocolParams:
-                { "decentralisationParam":  $gsis.decentralisation_param
-                , "maxBlockBodySize":       $gsis.max_block_size
-                , "nOpt":                   $compo.n_pools
-                }
+           ({
+             activeSlotsCoeff:           $gsis.active_slots_coeff
+           , epochLength:                $gsis.epoch_length
+           , securityParam:              $gsis.parameter_k
+           , slotLength:                 $gsis.slot_duration
+           , protocolParams:
+              { maxTxSize:                  $gsis.max_tx_size
+              , decentralisationParam:      $gsis.decentralisation_param
+              , maxBlockBodySize:           $gsis.max_block_size
+              , nOpt:                       $compo.n_pools
               }
             } * ($gsis.shelley // {}))
          # , alonzo: supposed to already be filled

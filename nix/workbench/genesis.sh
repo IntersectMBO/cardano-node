@@ -152,24 +152,27 @@ case "$op" in
         mkdir -p "$dir"
 
         jq ' $prof[0] as $p
+           | . * ($p.genesis.shelley // {})
            | . * ($p.genesis.alonzo // {})
            ' --slurpfile prof       "$profile_json"  \
            "$global_basedir"/profiles/presets/mainnet/genesis/genesis-alonzo.json \
            >   "$dir"/genesis.alonzo.spec.json
 
+        msg "genesis:  creating initial genesis"
         cardano-cli genesis create --genesis-dir "$dir"/ \
             $(jq '.cli_args.createSpec | join(" ")' "$profile_json" --raw-output)
 
         ## Overlay the verbatim genesis part into the profile spec:
         local params=(
-            --slurpfile profile "$profile_json"
+            --slurpfile prof "$profile_json"
             --raw-output
         )
-        jq "${params[@]}" '
-           . * ($profile[0].genesis.shelley // {})
-           '   "$dir"/genesis.spec.json |
+        jq ' $prof[0] as $p
+           | . * ($p.genesis.shelley // {})
+           '   "$dir"/genesis.spec.json "${params[@]}" |
         sponge "$dir"/genesis.spec.json
 
+        msg "genesis:  mutating into staked genesis"
         params=(--genesis-dir "$dir"
                 $(jq '.cli_args.createFinalBulk | join(" ")' "$profile_json" --raw-output)
                )
@@ -177,10 +180,14 @@ case "$op" in
         mv "$dir"/genesis.json "$dir"/genesis-shelley.json
         mv "$dir"/genesis.spec.json "$dir"/genesis-shelley.spec.json
 
+        msg "genesis:  removing delegator keys.."
+        rm "$dir"/stake-delegator-keys -rf
+
         cat <<<$cache_key_input               > "$dir"/cache.key.input
         cat <<<$cache_key                     > "$dir"/cache.key
         cat <<<$global_genesis_format_version > "$dir"/layout.version
 
+        msg "genesis:  moving keys"
         ## TODO: try to get rid of this step:
         Massage_the_key_file_layout_to_match_AWS "$profile_json" "$topo_dir" "$dir";;
 

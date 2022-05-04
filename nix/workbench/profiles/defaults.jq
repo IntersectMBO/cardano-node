@@ -56,6 +56,7 @@ def era_defaults($era):
         , minFeeA:                    0
         , minFeeB:                    0
         , decentralisationParam:      0
+        , nOpt:                       50
         }
       }
     }
