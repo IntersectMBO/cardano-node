@@ -116,7 +116,7 @@ library
                       , cardano-prelude
                       , cardano-protocol-tpraos
                       , cardano-slotting
-                      , compact-map
+                      , vector-map
                       , contra-tracer
                       , cborg >= 0.2.4 && < 0.3
                       , containers

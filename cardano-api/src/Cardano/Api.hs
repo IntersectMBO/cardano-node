@@ -17,6 +17,7 @@ module Cardano.Api (
     AllegraEra,
     MaryEra,
     AlonzoEra,
+    BabbageEra,
     CardanoEra(..),
     IsCardanoEra(..),
     AnyCardanoEra(..),
