@@ -204,7 +204,7 @@ TraceIpSubscription: True
 TraceLocalRootPeers: True
 
 # Trace public root peers
-TracePublicRootPeers: True 
+TracePublicRootPeers: True
 
 # Trace peer selection
 TracePeerSelection: True

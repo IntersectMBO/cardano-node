@@ -26,7 +26,6 @@ module Cardano.Api.Eras
   , Shelley
   , Allegra
   , Mary
-  , Babbage
 
     -- * Shelley-based eras
   , ShelleyBasedEra(..)
@@ -108,7 +107,6 @@ type Byron   = ByronEra
 type Shelley = ShelleyEra
 type Allegra = AllegraEra
 type Mary    = MaryEra
-type Babbage = BabbageEra
 
 {-# DEPRECATED Byron   "Use 'ByronEra' or 'ByronAddr' as appropriate" #-}
 {-# DEPRECATED Shelley "Use 'ShelleyEra' or 'ShelleyAddr' as appropriate" #-}
@@ -330,7 +328,6 @@ instance IsShelleyBasedEra MaryEra where
 
 instance IsShelleyBasedEra AlonzoEra where
    shelleyBasedEra = ShelleyBasedEraAlonzo
-
 
 instance IsShelleyBasedEra BabbageEra where
    shelleyBasedEra = ShelleyBasedEraBabbage

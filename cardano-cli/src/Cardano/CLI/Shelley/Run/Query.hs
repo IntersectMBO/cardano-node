@@ -30,6 +30,7 @@ import           Prelude (String, id)
 import           Cardano.Api
 import qualified Cardano.Api as Api
 import           Cardano.Api.Byron
+import           Cardano.Api.Orphans ()
 import           Cardano.Api.Shelley
 import           Cardano.CLI.Environment (EnvSocketError, readEnvSocketPath, renderEnvSocketError)
 import           Cardano.CLI.Helpers (HelpersError (..), hushM, pPrintCBOR, renderHelpersError)
@@ -1322,13 +1323,13 @@ obtainLedgerEraClassConstraints
       , ToJSON (DebugLedgerState era)
       , FromCBOR (DebugLedgerState era)
       , Era.Crypto ledgerera ~ StandardCrypto
+      , ToJSON (Core.PParams ledgerera)
       ) => a) -> a
 obtainLedgerEraClassConstraints ShelleyBasedEraShelley f = f
 obtainLedgerEraClassConstraints ShelleyBasedEraAllegra f = f
 obtainLedgerEraClassConstraints ShelleyBasedEraMary    f = f
 obtainLedgerEraClassConstraints ShelleyBasedEraAlonzo  f = f
-obtainLedgerEraClassConstraints ShelleyBasedEraBabbage _f =
-  panic "TODO: Babbage era - depends on consensus exposing a babbage era"
+obtainLedgerEraClassConstraints ShelleyBasedEraBabbage f = f
 
 
 eligibleLeaderSlotsConstaints

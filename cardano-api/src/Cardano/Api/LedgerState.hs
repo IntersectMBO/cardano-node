@@ -232,8 +232,7 @@ applyBlock env oldState validationMode block
         ShelleyBasedEraAllegra -> Consensus.BlockAllegra shelleyBlock
         ShelleyBasedEraMary    -> Consensus.BlockMary shelleyBlock
         ShelleyBasedEraAlonzo  -> Consensus.BlockAlonzo shelleyBlock
-        ShelleyBasedEraBabbage ->
-          error "TODO: Babbage era - depends on consensus exposing a babbage era"
+        ShelleyBasedEraBabbage -> Consensus.BlockBabbage shelleyBlock
 
 pattern LedgerStateByron
   :: Ledger.LedgerState Byron.ByronBlock

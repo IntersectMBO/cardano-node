@@ -139,6 +139,7 @@ toEraInMode ShelleyEra CardanoMode = Just ShelleyEraInCardanoMode
 toEraInMode AllegraEra CardanoMode = Just AllegraEraInCardanoMode
 toEraInMode MaryEra    CardanoMode = Just MaryEraInCardanoMode
 toEraInMode AlonzoEra  CardanoMode = Just AlonzoEraInCardanoMode
+toEraInMode BabbageEra CardanoMode = Just BabbageEraInCardanoMode
 toEraInMode _ _                    = Nothing
 
 -- | A representation of which 'CardanoEra's are included in each

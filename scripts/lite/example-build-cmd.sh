@@ -35,6 +35,9 @@ lovelaceattxindiv2=$(expr $lovelaceattxin / 2)
 changeaddr=addr_test1qpmxr8d8jcl25kyz2tz9a9sxv7jxglhddyf475045y8j3zxjcg9vquzkljyfn3rasfwwlkwu7hhm59gzxmsyxf3w9dps8832xh
 targetaddr=addr_test1vpqgspvmh6m2m5pwangvdg499srfzre2dd96qq57nlnw6yctpasy4
 
+echo "Utxo at start"
+$CARDANO_CLI query utxo --whole-utxo --testnet-magic "$TESTNET_MAGIC"
+
 $CARDANO_CLI transaction build \
   --alonzo-era \
   --cardano-mode \
@@ -53,7 +56,7 @@ $CARDANO_CLI transaction sign \
 # SUBMIT
 $CARDANO_CLI transaction submit --tx-file $WORK/build.tx --testnet-magic "$TESTNET_MAGIC"
 echo "Pausing for 5 seconds..."
-sleep 5
+sleep 10
 
 echo "Querying UTxO at change address and target address."
 echo ""
