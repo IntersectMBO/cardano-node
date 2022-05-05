@@ -17,6 +17,7 @@ import Control.Monad.Trans.Except.Extra (firstExceptT, newExceptT)
 import Data.Aeson                       (FromJSON, ToJSON, encode, eitherDecode)
 import Data.ByteString.Lazy.Char8       qualified as LBS
 import Data.Text                        qualified as T
+import Data.Text.Short                  (fromText)
 import Text.Printf                      (printf)
 
 import System.FilePath                  qualified as F
@@ -53,6 +54,18 @@ progress key = putStrLn . T.pack . \case
   Q x  -> printf "{ \"%s\": \"%s\" }" key x
   L xs -> printf "{ \"%s\": \"%s\" }" key (Cardano.Prelude.intercalate "\", \"" xs)
   J x  -> printf "{ \"%s\": %s }" key (LBS.unpack $ encode x)
+
+-- /path/to/logs-HOSTNAME.some.ext -> HOSTNAME
+hostFromLogfilename :: JsonLogfile -> Host
+hostFromLogfilename (JsonLogfile f) =
+  Host $ fromText . stripPrefixHard "logs-" . T.pack . F.dropExtensions . F.takeFileName $ f
+ where
+   stripPrefixHard :: Text -> Text -> Text
+   stripPrefixHard p s = fromMaybe s $ T.stripPrefix p s
+
+hostDeduction :: HostDeduction -> (JsonLogfile -> Host)
+hostDeduction = \case
+  HostFromLogfilename -> hostFromLogfilename
 
 -- Dumping to files
 --

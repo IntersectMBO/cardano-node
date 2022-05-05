@@ -55,7 +55,10 @@ parseChainCommand =
    , op "unlog" "Read log files"
      (Unlog
        <$> some
-       (optJsonLogfile     "log"             "JSON log stream"))
+           (optJsonLogfile    "log"             "JSON log stream")
+       <*> optional
+           (parseHostDeduction "host-from-log-filename"
+                                                "Derive hostname from log filename: logs-HOSTNAME.*"))
    , op "dump-logobjects" "Dump lifted log object streams, alongside input files"
      (DumpLogObjects & pure)
    ]) <|>
@@ -155,6 +158,13 @@ parseChainCommand =
      command c $ info (p <**> helper) $
        mconcat [ progDesc descr ]
 
+   parseHostDeduction :: String -> String -> Parser HostDeduction
+   parseHostDeduction name desc =
+     Opt.flag' HostFromLogfilename
+     (  Opt.long name
+     <> Opt.help desc
+     )
+
 data ChainCommand
   = ListLogobjectKeys
       TextOutputFile
@@ -165,6 +175,7 @@ data ChainCommand
 
   | Unlog               -- () -> [(JsonLogfile, [LogObject])]
       [JsonLogfile]
+      (Maybe HostDeduction)
   | DumpLogObjects
 
   | BuildMachViews      -- [(JsonLogfile, [LogObject])] -> [(JsonLogfile, MachView)]
@@ -250,8 +261,8 @@ runChainCommand s
   pure s { sRun = Just run }
 
 runChainCommand s
-  c@(Unlog logs) = do
-  los <- runLiftLogObjects logs
+  c@(Unlog logs mHostDed) = do
+  los <- runLiftLogObjects logs mHostDed
          & firstExceptT (CommandError c)
   pure s { sObjLists = Just los }
 

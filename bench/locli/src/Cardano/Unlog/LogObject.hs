@@ -5,6 +5,7 @@
 {-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-partial-fields -Wno-orphans #-}
 
 module Cardano.Unlog.LogObject (module Cardano.Unlog.LogObject) where
@@ -17,7 +18,6 @@ import Data.Aeson (FromJSON(..), ToJSON(..), Value(..), Object, (.:), (.:?))
 import Data.Aeson qualified as AE
 import Data.Aeson.KeyMap qualified as KeyMap
 import Data.Aeson.Types (Parser)
-import Data.Aeson.Types qualified as AE
 import Data.Aeson.Key qualified as Aeson
 import Data.ByteString.Lazy qualified as LBS
 import Data.Text qualified as LText
@@ -26,7 +26,6 @@ import Data.Text.Short (ShortText, fromText, toText)
 import Data.Time.Clock (NominalDiffTime, UTCTime)
 import Data.Map qualified as Map
 import Data.Vector (Vector)
-import Quiet (Quiet (..))
 
 import Cardano.Logging.Resources.Types
 
@@ -38,14 +37,18 @@ import Data.Accum (zeroUTCTime)
 
 type Text = ShortText
 
-runLiftLogObjects :: [JsonLogfile]
+runLiftLogObjects :: [JsonLogfile] -> Maybe HostDeduction
                   -> ExceptT LText.Text IO [(JsonLogfile, [LogObject])]
-runLiftLogObjects fs = liftIO $
-  flip mapConcurrently fs
-    (joinT . (pure &&& readLogObjectStream . unJsonLogfile))
+runLiftLogObjects fs (fmap hostDeduction -> mHostDed) = liftIO $
+  forConcurrently fs
+    (\f -> (f,) . fmap (setLOhost f mHostDed) <$> readLogObjectStream (unJsonLogfile f))
  where
-   joinT :: (IO a, IO b) -> IO (a, b)
-   joinT (a, b) = (,) <$> a <*> b
+   setLOhost :: JsonLogfile -> Maybe (JsonLogfile -> Host) -> LogObject -> LogObject
+   setLOhost _   Nothing lo = lo
+   setLOhost lf (Just f) lo = lo { loHost = f lf }
+
+   -- joinT :: (IO a, IO b) -> IO (a, b)
+   -- joinT (a, b) = (,) <$> a <*> b
 
 readLogObjectStream :: FilePath -> IO [LogObject]
 readLogObjectStream f =
@@ -72,38 +75,6 @@ instance ToJSON LogObject
 instance Print ShortText where
   hPutStr   h = hPutStr   h . toText
   hPutStrLn h = hPutStrLn h . toText
-
-newtype TId = TId { unTId :: ShortText }
-  deriving (Eq, Generic, Ord)
-  deriving newtype (FromJSON, ToJSON)
-  deriving anyclass NFData
-  deriving Show via Quiet TId
-
-newtype Hash = Hash { unHash :: ShortText }
-  deriving (Eq, Generic, Ord)
-  deriving newtype (FromJSON, ToJSON)
-  deriving anyclass NFData
-
-shortHash :: Hash -> LText.Text
-shortHash = toText . Text.take 6 . unHash
-
-instance Show Hash where show = LText.unpack . toText . unHash
-
-instance AE.ToJSONKey Hash where
-  toJSONKey = AE.toJSONKeyText (toText . unHash)
-instance AE.FromJSONKey Hash where
-  fromJSONKey = AE.FromJSONKeyText (Hash . fromText)
-
-newtype Host = Host { unHost :: ShortText }
-  deriving (Eq, Generic, Ord)
-  deriving newtype (IsString, FromJSON, ToJSON)
-  deriving anyclass NFData
-  deriving Show via Quiet Host
-
-instance FromJSON BlockNo where
-  parseJSON o = BlockNo <$> parseJSON o
-instance ToJSON BlockNo where
-  toJSON (BlockNo x) = toJSON x
 
 deriving instance NFData a => NFData (Resources a)
 

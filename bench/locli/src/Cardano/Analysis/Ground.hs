@@ -1,25 +1,63 @@
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 module Cardano.Analysis.Ground
   ( module Cardano.Analysis.Ground
   , BlockNo (..), EpochNo (..), SlotNo (..)
   )
 where
 
-import Prelude (String)
-import Cardano.Prelude hiding (head)
+import Prelude                          (String, show)
+import Cardano.Prelude                  hiding (head)
 
-import Data.Aeson (FromJSON, ToJSON)
+import Data.Aeson--                       (FromJSON (..), ToJSON (..), ToJSONKey (..), FromJSONKey (..))
+import Data.Aeson.Types                 (toJSONKeyText)
 import Data.Attoparsec.Text             qualified as Atto
 import Data.Attoparsec.Time             qualified as Iso8601
 import Data.Text                        qualified as T
+import Data.Text.Short                  qualified as SText
+import Data.Text.Short                  (ShortText, fromText, toText)
 import Data.Time.Clock                              (UTCTime, NominalDiffTime)
 import Options.Applicative
 import Options.Applicative              qualified as Opt
+import Quiet                            (Quiet (..))
 
-import Cardano.Slotting.Slot    (EpochNo(..), SlotNo(..))
-import Ouroboros.Network.Block  (BlockNo(..))
+import Cardano.Slotting.Slot            (EpochNo(..), SlotNo(..))
+import Ouroboros.Network.Block          (BlockNo(..))
 
+
+newtype TId = TId { unTId :: ShortText }
+  deriving (Eq, Generic, Ord)
+  deriving newtype (FromJSON, ToJSON)
+  deriving anyclass NFData
+  deriving Show via Quiet TId
+
+newtype Hash = Hash { unHash :: ShortText }
+  deriving (Eq, Generic, Ord)
+  deriving newtype (FromJSON, ToJSON)
+  deriving anyclass NFData
+
+shortHash :: Hash -> T.Text
+shortHash = toText . SText.take 6 . unHash
+
+instance Show Hash where show = T.unpack . toText . unHash
+
+instance ToJSONKey Hash where
+  toJSONKey = toJSONKeyText (toText . unHash)
+instance FromJSONKey Hash where
+  fromJSONKey = FromJSONKeyText (Hash . fromText)
+
+newtype Host = Host { unHost :: ShortText }
+  deriving (Eq, Generic, Ord)
+  deriving newtype (IsString, FromJSON, ToJSON)
+  deriving anyclass NFData
+  deriving Show via Quiet Host
+
+instance FromJSON BlockNo where
+  parseJSON o = BlockNo <$> parseJSON o
+instance ToJSON BlockNo where
+  toJSON (BlockNo x) = toJSON x
 
 newtype EpochSlot = EpochSlot { unEpochSlot :: Word64 }
   deriving stock (Eq, Generic, Ord, Show)
@@ -29,6 +67,9 @@ newtype EpochSafeInt = EpochSafeInt { unEpochSafeInt :: Word64 }
   deriving stock (Eq, Generic, Ord, Show)
   deriving newtype (FromJSON, NFData, ToJSON, Num)
 
+data HostDeduction
+  = HostFromLogfilename
+  deriving stock (Eq, Ord, Show)
 
 ---
 --- Files
@@ -47,7 +88,8 @@ newtype JsonDomainFile
 
 newtype JsonLogfile
   = JsonLogfile { unJsonLogfile :: FilePath }
-  deriving (NFData, Show, Eq)
+  deriving (Show, Eq)
+  deriving newtype (NFData)
 
 newtype JsonInputFile
   = JsonInputFile { unJsonInputFile :: FilePath }

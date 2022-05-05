@@ -60,7 +60,7 @@ case "$op" in
                'meta-genesis'         --run-metafile    "$dir"/meta.json
                                       --shelley-genesis "$dir"/genesis-shelley.json
 
-               'unlog' ${logs[@]/#/--log }
+               'unlog' --host-from-log-filename ${logs[@]/#/--log }
                $(if test -n "$dump_logobjects"; then echo \
                  'dump-logobjects'; fi)
 
