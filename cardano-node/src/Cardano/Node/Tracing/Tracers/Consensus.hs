@@ -1096,56 +1096,58 @@ docMempool' = Documented [
 --------------------------------------------------------------------------------
 
 severityForge :: ForgeTracerType blk -> SeverityS
-severityForge (Left t)  = severityForge' t
-severityForge (Right t) = severityForge'' t
+severityForge (Left t)  = severityForge'' t
+severityForge (Right t) = severityForge'''' t
 
-severityForge' :: TraceForgeEvent blk -> SeverityS
-severityForge' TraceStartLeadershipCheck {}  = Info
-severityForge' TraceSlotIsImmutable {}       = Error
-severityForge' TraceBlockFromFuture {}       = Error
-severityForge' TraceBlockContext {}          = Debug
-severityForge' TraceNoLedgerState {}         = Error
-severityForge' TraceLedgerState {}           = Debug
-severityForge' TraceNoLedgerView {}          = Error
-severityForge' TraceLedgerView {}            = Debug
-severityForge' TraceForgeStateUpdateError {} = Error
-severityForge' TraceNodeCannotForge {}       = Error
-severityForge' TraceNodeNotLeader {}         = Info
-severityForge' TraceNodeIsLeader {}          = Info
-severityForge' TraceForgedBlock {}           = Info
-severityForge' TraceDidntAdoptBlock {}       = Error
-severityForge' TraceForgedInvalidBlock {}    = Error
-severityForge' TraceAdoptedBlock {}          = Info
+severityForge'' :: TraceForgeEvent blk -> SeverityS
+severityForge'' TraceStartLeadershipCheck {}  = Info
+severityForge'' TraceSlotIsImmutable {}       = Error
+severityForge'' TraceBlockFromFuture {}       = Error
+severityForge'' TraceBlockContext {}          = Debug
+severityForge'' TraceNoLedgerState {}         = Error
+severityForge'' TraceLedgerState {}           = Debug
+severityForge'' TraceNoLedgerView {}          = Error
+severityForge'' TraceLedgerView {}            = Debug
+severityForge'' TraceForgeStateUpdateError {} = Error
+severityForge'' TraceNodeCannotForge {}       = Error
+severityForge'' TraceNodeNotLeader {}         = Info
+severityForge'' TraceNodeIsLeader {}          = Info
+severityForge'' TraceForgedBlock {}           = Info
+severityForge'' TraceDidntAdoptBlock {}       = Error
+severityForge'' TraceForgedInvalidBlock {}    = Error
+severityForge'' TraceAdoptedBlock {}          = Info
+severityForge'' TraceForgeTickedLedgerState {}= Info
+severityForge'' TraceForgingMempoolSnapshot {}= Info
 
-severityForge'' :: TraceStartLeadershipCheckPlus -> SeverityS
-severityForge'' _ = Info
+severityForge'''' :: TraceStartLeadershipCheckPlus -> SeverityS
+severityForge'''' _ = Info
 
 namesForForge :: ForgeTracerType blk -> [Text]
-namesForForge (Left t)  = namesForForge' t
-namesForForge (Right t) = namesForForge'' t
+namesForForge (Left t)  = namesForForge'' t
+namesForForge (Right t) = namesForForge'''' t
 
-namesForForge' :: TraceForgeEvent blk -> [Text]
-namesForForge' TraceStartLeadershipCheck {}  = ["StartLeadershipCheck"]
-namesForForge' TraceSlotIsImmutable {}       = ["SlotIsImmutable"]
-namesForForge' TraceBlockFromFuture {}       = ["BlockFromFuture"]
-namesForForge' TraceBlockContext {}          = ["BlockContext"]
-namesForForge' TraceNoLedgerState {}         = ["NoLedgerState"]
-namesForForge' TraceLedgerState {}           = ["LedgerState"]
-namesForForge' TraceNoLedgerView {}          = ["NoLedgerView"]
-namesForForge' TraceLedgerView {}            = ["LedgerView"]
-namesForForge' TraceForgeStateUpdateError {} = ["ForgeStateUpdateError"]
-namesForForge' TraceNodeCannotForge {}       = ["NodeCannotForge"]
-namesForForge' TraceNodeNotLeader {}         = ["NodeNotLeader"]
-namesForForge' TraceNodeIsLeader {}          = ["NodeIsLeader"]
-namesForForge' TraceForgedBlock {}           = ["ForgedBlock"]
-namesForForge' TraceDidntAdoptBlock {}       = ["DidntAdoptBlock"]
-namesForForge' TraceForgedInvalidBlock {}    = ["ForgedInvalidBlock"]
-namesForForge' TraceAdoptedBlock {}          = ["AdoptedBlock"]
+namesForForge'' :: TraceForgeEvent blk -> [Text]
+namesForForge'' TraceStartLeadershipCheck {}  = ["StartLeadershipCheck"]
+namesForForge'' TraceSlotIsImmutable {}       = ["SlotIsImmutable"]
+namesForForge'' TraceBlockFromFuture {}       = ["BlockFromFuture"]
+namesForForge'' TraceBlockContext {}          = ["BlockContext"]
+namesForForge'' TraceNoLedgerState {}         = ["NoLedgerState"]
+namesForForge'' TraceLedgerState {}           = ["LedgerState"]
+namesForForge'' TraceNoLedgerView {}          = ["NoLedgerView"]
+namesForForge'' TraceLedgerView {}            = ["LedgerView"]
+namesForForge'' TraceForgeStateUpdateError {} = ["ForgeStateUpdateError"]
+namesForForge'' TraceNodeCannotForge {}       = ["NodeCannotForge"]
+namesForForge'' TraceNodeNotLeader {}         = ["NodeNotLeader"]
+namesForForge'' TraceNodeIsLeader {}          = ["NodeIsLeader"]
+namesForForge'' TraceForgedBlock {}           = ["ForgedBlock"]
+namesForForge'' TraceDidntAdoptBlock {}       = ["DidntAdoptBlock"]
+namesForForge'' TraceForgedInvalidBlock {}    = ["ForgedInvalidBlock"]
+namesForForge'' TraceAdoptedBlock {}          = ["AdoptedBlock"]
+namesForForge'' TraceForgeTickedLedgerState {}= ["ForgeTickedLedgerState"]
+namesForForge'' TraceForgingMempoolSnapshot {}= ["ForgingMempoolSnapshot"]
 
-namesForForge'' :: TraceStartLeadershipCheckPlus -> [Text]
-namesForForge'' TraceStartLeadershipCheckPlus{}  =
-  ["StartLeadershipCheckPlus"]
-
+namesForForge'''' :: TraceStartLeadershipCheckPlus -> [Text]
+namesForForge'''' TraceStartLeadershipCheckPlus{} = ["StartLeadershipCheckPlus"]
 
 instance ( tx ~ GenTx blk
          , ConvertRawHash blk
@@ -1273,6 +1275,18 @@ instance ( tx ~ GenTx blk
           (blockHash blk)
       , "blockSize" .= toJSON (estimateBlockSize (getHeader blk))
       ]
+  forMachine _dtal (TraceForgeTickedLedgerState slotNo _pt) =
+    mconcat
+      [ "kind" .= String "TraceAdoptedBlock"
+      , "slot" .= toJSON (unSlotNo slotNo)
+      ]
+  forMachine _dtal (TraceForgingMempoolSnapshot slotNo _pt _ch _lastSyncedWrt) =
+    mconcat
+      [ "kind" .= String "TraceAdoptedBlock"
+      , "slot" .= toJSON (unSlotNo slotNo)
+      ]
+
+
 
   forHuman (TraceStartLeadershipCheck slotNo) =
       "Checking for leadership in slot " <> showT (unSlotNo slotNo)
@@ -1330,7 +1344,12 @@ instance ( tx ~ GenTx blk
       "Adopted block forged in slot "
         <> showT (unSlotNo slotNo)
         <> ": " <> renderHeaderHash (Proxy @blk) (blockHash blk)
-      --  <> ", TxIds: " <> showT (map txId txs) TODO Fix
+  forHuman (TraceForgeTickedLedgerState slotNo _blk ) =
+      "Ticked ledger state for forge in slot "
+        <> showT (unSlotNo slotNo)
+  forHuman (TraceForgingMempoolSnapshot slotNo _ _ _) =
+      "Took mempool snapshot for forging in slot "
+        <> showT (unSlotNo slotNo)
 
   asMetrics (TraceForgeStateUpdateError slot reason) =
     IntM "cardano.node.forgeStateUpdateError" (fromIntegral $ unSlotNo slot) :
@@ -1382,6 +1401,10 @@ instance ( tx ~ GenTx blk
     [IntM "cardano.node.forgedInvalidSlotLast" (fromIntegral $ unSlotNo slot)]
   asMetrics (TraceAdoptedBlock slot _ _) =
     [IntM "cardano.node.adoptedSlotLast" (fromIntegral $ unSlotNo slot)]
+  asMetrics (TraceForgeTickedLedgerState slot _) =
+    [IntM "cardano.node.forgeTickedLedgerState" (fromIntegral $ unSlotNo slot)]
+  asMetrics (TraceForgingMempoolSnapshot slot _ _ _) =
+    [IntM "cardano.node.forgeTookMempoolSnapshot" (fromIntegral $ unSlotNo slot)]
 
 instance LogFormatting TraceStartLeadershipCheckPlus where
   forMachine _dtal TraceStartLeadershipCheckPlus {..} =

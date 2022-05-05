@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
@@ -5,6 +6,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -62,6 +64,7 @@ import qualified Ouroboros.Consensus.Storage.VolatileDB.Impl as VolDb
 import           Ouroboros.Network.BlockFetch.ClientState (TraceLabelPeer (..))
 
 import           Ouroboros.Consensus.Util.Condense
+import           Ouroboros.Consensus.Util.Enclose (Enclosing' (..))
 import           Ouroboros.Consensus.Util.Orphans ()
 
 import qualified Ouroboros.Network.AnchoredFragment as AF
@@ -113,6 +116,9 @@ instance HasSeverityAnnotation (ChainDB.TraceEvent blk) where
       ChainDB.CandidateContainsFutureBlocksExceedingClockSkew{} -> Error
       ChainDB.UpdateLedgerDbTraceEvent {} -> Debug
     ChainDB.ChainSelectionForFutureBlock{} -> Debug
+    ChainDB.PipeliningEvent {} -> Debug
+    ChainDB.PoppedBlockFromQueue {} -> Debug
+    ChainDB.ChangingSelection {} -> Debug
 
   getSeverityAnnotation (ChainDB.TraceLedgerReplayEvent ev) = case ev of
     LedgerDB.ReplayFromGenesis {} -> Info
@@ -243,6 +249,8 @@ instance HasSeverityAnnotation (TraceForgeEvent blk) where
   getSeverityAnnotation TraceDidntAdoptBlock {}        = Error
   getSeverityAnnotation TraceForgedInvalidBlock {}     = Error
   getSeverityAnnotation TraceAdoptedBlock {}           = Info
+  getSeverityAnnotation TraceForgeTickedLedgerState {} = Info
+  getSeverityAnnotation TraceForgingMempoolSnapshot {} = Info
 
 
 instance HasPrivacyAnnotation (TraceLocalTxSubmissionServerEvent blk)
@@ -292,6 +300,12 @@ instance ( ToObject (ApplyTxErr blk), Show (ApplyTxErr blk), ToObject (GenTx blk
       => Transformable Text IO (TraceEventMempool blk) where
   trTransformer = trStructured
 
+instance Condense t => Condense (Enclosing' t) where
+  condense RisingEdge = "RisingEdge"
+  condense (FallingEdgeWith a) = "FallingEdge: " <> condense a
+
+deriving instance Generic (Enclosing' t)
+instance ToJSON t => ToJSON (Enclosing' t)
 
 condenseT :: Condense a => a -> Text
 condenseT = pack . condense
@@ -382,6 +396,13 @@ instance ( tx ~ GenTx blk
         <> showT (unSlotNo slotNo)
         <> ": " <> renderHeaderHash (Proxy @blk) (blockHash blk)
         <> ", TxIds: " <> showT (map (txId . txForgetValidated) txs)
+    TraceForgeTickedLedgerState slotNo pt -> const $
+      "Ticked ledger state for the slot of the to-be forged block "
+        <> showT (unSlotNo slotNo)
+        <> ": " <> showT pt
+    TraceForgingMempoolSnapshot slotNo _pt _chainHash _lastSyncedSlot -> const $
+      "Acquired a mempool snapshot for slot "
+      <> showT (unSlotNo slotNo)
 
 
 instance Transformable Text IO (TraceLocalTxSubmissionServerEvent blk) where
@@ -459,10 +480,17 @@ instance ( ConvertRawHash blk
             in
               "Pushing ledger state for block " <> renderRealPointAsPhrase curr <> ". Progress: " <>
               showProgressT (fromIntegral atDiff) (fromIntegral toDiff) <> "%"
-        ChainDB.AddedBlockToVolatileDB pt _ _ ->
+        ChainDB.AddedBlockToVolatileDB pt _ _ _ ->
           "Chain added block " <> renderRealPointAsPhrase pt
         ChainDB.ChainSelectionForFutureBlock pt ->
           "Chain selection run for block previously from future: " <> renderRealPointAsPhrase pt
+        ChainDB.PipeliningEvent ev' -> case ev' of
+          ChainDB.SetTentativeHeader hdr _ -> "Set tentative header to " <> renderPointAsPhrase (blockPoint hdr)
+          ChainDB.TrapTentativeHeader hdr -> "Discovered trap tentative header " <> renderPointAsPhrase (blockPoint hdr)
+          ChainDB.OutdatedTentativeHeader hdr -> "Tentative header is now outdated" <> renderPointAsPhrase (blockPoint hdr)
+        ChainDB.PoppedBlockFromQueue _ -> "Popped block from queue to add to ChainDB"
+        ChainDB.ChangingSelection pt -> "Tip of the chain has changed to point" <> renderPointAsPhrase pt
+
       ChainDB.TraceLedgerReplayEvent ev -> case ev of
         LedgerDB.ReplayFromGenesis _replayTo ->
           "Replaying ledger from genesis"
@@ -844,14 +872,33 @@ instance ( ConvertRawHash blk
                  , "currentBlock" .= renderRealPoint curr
                  , "targetBlock" .= renderRealPoint goal
                  ]
+    ChainDB.PoppedBlockFromQueue _erpt ->
+      mconcat [ "kind" .= String "TraceAddBlockEvent.PoppedBlockFromQueue" ]
+    ChainDB.ChangingSelection pt ->
+      mconcat [ "kind" .= String "TraceAddBlockEvent.PoppedBlockFromQueue"
+              , "point" .= renderPointForVerbosity verb pt
+              ]
 
-    ChainDB.AddedBlockToVolatileDB pt (BlockNo bn) _ ->
+    ChainDB.AddedBlockToVolatileDB pt (BlockNo bn) _ _ ->
       mconcat [ "kind" .= String "TraceAddBlockEvent.AddedBlockToVolatileDB"
                , "block" .= toObject verb pt
                , "blockNo" .= show bn ]
     ChainDB.ChainSelectionForFutureBlock pt ->
       mconcat [ "kind" .= String "TraceAddBlockEvent.ChainSelectionForFutureBlock"
                , "block" .= toObject verb pt ]
+    ChainDB.PipeliningEvent ev' -> case ev' of
+      ChainDB.SetTentativeHeader hdr _  ->
+        mconcat [ "kind" .= String "TraceAddBlockEvent.PipeliningEvent.SetTentativeHeader"
+                 , "block" .= renderPointForVerbosity verb (blockPoint hdr)
+                 ]
+      ChainDB.TrapTentativeHeader hdr ->
+        mconcat [ "kind" .= String "TraceAddBlockEvent.PipeliningEvent.TrapTentativeHeader"
+                 , "block" .= renderPointForVerbosity verb (blockPoint hdr)
+                 ]
+      ChainDB.OutdatedTentativeHeader hdr ->
+        mconcat [ "kind" .= String "TraceAddBlockEvent.PipeliningEvent.OutdatedTentativeHeader"
+                 , "block" .= renderPointForVerbosity verb (blockPoint hdr)
+                 ]
    where
      addedHdrsNewChain
        :: AF.AnchoredFragment (Header blk)
@@ -1368,6 +1415,16 @@ instance ( tx ~ GenTx blk
           verb
           (blockHash blk)
       , "blockSize" .= toJSON (estimateBlockSize (getHeader blk))
+      ]
+  toObject _verb (TraceForgeTickedLedgerState slotNo _pt) =
+    mconcat
+      [ "kind" .= String "TraceForgeTickedLedgerState"
+      , "slot" .= toJSON (unSlotNo slotNo)
+      ]
+  toObject _verb (TraceForgingMempoolSnapshot slotNo _pt _hash _lastSyncedWrt) =
+    mconcat
+      [ "kind" .= String "TraceForgingMempoolSnapshot"
+      , "slot" .= toJSON (unSlotNo slotNo)
       ]
 
 

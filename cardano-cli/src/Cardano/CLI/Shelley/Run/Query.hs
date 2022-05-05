@@ -81,7 +81,7 @@ import           Text.Printf (printf)
 
 import           Cardano.Protocol.TPraos.Rules.Prtcl
 import qualified Data.ByteString.Lazy.Char8 as LBS
-import qualified Data.Compact.VMap as VMap
+import qualified Data.VMap as VMap
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import qualified Data.Text as Text

@@ -212,6 +212,9 @@ sevTraceAddBlockEvent (ChainDB.SwitchedToAFork events _ _ _) =
       maximumDef Notice (map sevLedgerEvent events)
 sevTraceAddBlockEvent (ChainDB.AddBlockValidation ev') = sevTraceValidationEvent ev'
 sevTraceAddBlockEvent ChainDB.ChainSelectionForFutureBlock{} = Debug
+sevTraceAddBlockEvent ChainDB.PipeliningEvent{} = Debug
+sevTraceAddBlockEvent ChainDB.PoppedBlockFromQueue {} = Debug
+sevTraceAddBlockEvent ChainDB.ChangingSelection {} = Debug
 
 sevLedgerEvent :: LedgerEvent blk -> SeverityS
 sevLedgerEvent (LedgerUpdate _)  = Notice
@@ -251,6 +254,15 @@ namesForChainDBAddBlock (ChainDB.AddBlockValidation ev') =
       "AddBlockValidation" : namesForChainDBAddBlockValidation ev'
 namesForChainDBAddBlock (ChainDB.ChainSelectionForFutureBlock {}) =
       ["ChainSelectionForFutureBlock"]
+namesForChainDBAddBlock (ChainDB.PipeliningEvent ev) =
+      "PipeliningEvent" : case ev of
+        ChainDB.SetTentativeHeader{}      -> ["SetTentativeHeader"]
+        ChainDB.TrapTentativeHeader{}     -> ["TrapTentativeHeader"]
+        ChainDB.OutdatedTentativeHeader{} -> ["OutdatedTentativeHeader"]
+namesForChainDBAddBlock (ChainDB.PoppedBlockFromQueue {}) =
+      ["PoppedBlockFromQueue"]
+namesForChainDBAddBlock (ChainDB.ChangingSelection {}) =
+      ["ChangingSelection"]
 
 namesForChainDBAddBlockValidation :: ChainDB.TraceValidationEvent blk -> [Text]
 namesForChainDBAddBlockValidation (ChainDB.ValidCandidate {}) =
@@ -296,11 +308,14 @@ instance ( LogFormatting (Header blk)
       "Switched to a fork, new tip: " <> renderPointAsPhrase (AF.headPoint c) <>
         Text.concat [ "\nEvent: " <> showT e | e <- es ]
   forHuman (ChainDB.AddBlockValidation ev') = forHuman ev'
-  forHuman (ChainDB.AddedBlockToVolatileDB pt _ _) =
+  forHuman (ChainDB.AddedBlockToVolatileDB pt _ _ _) =
       "Chain added block " <> renderRealPointAsPhrase pt
   forHuman (ChainDB.ChainSelectionForFutureBlock pt) =
       "Chain selection run for block previously from future: " <> renderRealPointAsPhrase pt
-
+  forHuman (ChainDB.PipeliningEvent ev') = forHuman ev'
+  forHuman (ChainDB.PoppedBlockFromQueue e) = "Popped block from queue: "
+    <> renderEnclosed (renderRealPointAsPhrase) e
+  forHuman (ChainDB.ChangingSelection pt) = "Chain tip updated: " <> renderPointAsPhrase pt
   forMachine dtal (ChainDB.IgnoreBlockOlderThanK pt) =
       mconcat [ "kind" .= String "IgnoreBlockOlderThanK"
                , "block" .= forMachine dtal pt ]
@@ -348,13 +363,19 @@ instance ( LogFormatting (Header blk)
                | not (null events) ]
   forMachine dtal (ChainDB.AddBlockValidation ev') =
     kindContext "AddBlockEvent" $ forMachine dtal ev'
-  forMachine dtal (ChainDB.AddedBlockToVolatileDB pt (BlockNo bn) _) =
+  forMachine dtal (ChainDB.AddedBlockToVolatileDB pt (BlockNo bn) _ _) =
       mconcat [ "kind" .= String "AddedBlockToVolatileDB"
                , "block" .= forMachine dtal pt
                , "blockNo" .= showT bn ]
   forMachine dtal (ChainDB.ChainSelectionForFutureBlock pt) =
       mconcat [ "kind" .= String "TChainSelectionForFutureBlock"
                , "block" .= forMachine dtal pt ]
+  forMachine dtal (ChainDB.PipeliningEvent ev') =
+    kindContext "PipeliningEvent" $ forMachine dtal ev'
+  forMachine _dtal (ChainDB.PoppedBlockFromQueue _erpt) =
+    mconcat [ "kind" .= String "PoppedBlockFromQueue" ]
+  forMachine dtal (ChainDB.ChangingSelection pt) =
+    kindContext "PipeliningEvent" $ forMachine dtal pt
 
   asMetrics (ChainDB.SwitchedToAFork _warnings newTipInfo _oldChain newChain) =
     let ChainInformation { slots, blocks, density, epoch, slotInEpoch } =
@@ -375,6 +396,26 @@ instance ( LogFormatting (Header blk)
         , IntM    "cardano.node.epoch" (fromIntegral (unEpochNo epoch))
         ]
   asMetrics _ = []
+
+instance ( ConvertRawHash (Header blk)
+         , HasHeader (Header blk)
+         ) => LogFormatting (ChainDB.TracePipeliningEvent blk) where
+  forHuman (ChainDB.SetTentativeHeader hdr _) =
+      "Set tentative header to " <> renderPointAsPhrase (blockPoint hdr)
+  forHuman (ChainDB.TrapTentativeHeader hdr) =
+      "Discovered trap tentative header " <> renderPointAsPhrase (blockPoint hdr)
+  forHuman (ChainDB.OutdatedTentativeHeader hdr) =
+      "Tentative header is now outdated " <> renderPointAsPhrase (blockPoint hdr)
+
+  forMachine dtals (ChainDB.SetTentativeHeader hdr _) =
+      mconcat [ "kind" .= String "SetTentativeHeader"
+               , "block" .= renderPointForDetails dtals (blockPoint hdr) ]
+  forMachine dtals (ChainDB.TrapTentativeHeader hdr) =
+      mconcat [ "kind" .= String "TrapTentativeHeader"
+               , "block" .= renderPointForDetails dtals (blockPoint hdr) ]
+  forMachine dtals (ChainDB.OutdatedTentativeHeader hdr) =
+      mconcat [ "kind" .= String "OutdatedTentativeHeader"
+               , "block" .= renderPointForDetails dtals (blockPoint hdr)]
 
 addedHdrsNewChain :: HasHeader (Header blk)
   => AF.AnchoredFragment (Header blk)

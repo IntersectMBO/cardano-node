@@ -987,6 +987,8 @@ teeForge ft tverb tr = Tracer $
       Consensus.TraceDidntAdoptBlock{} -> teeForge' (ftDidntAdoptBlock ft)
       Consensus.TraceForgedInvalidBlock{} -> teeForge' (ftForgedInvalid ft)
       Consensus.TraceAdoptedBlock{} -> teeForge' (ftAdopted ft)
+      Consensus.TraceForgeTickedLedgerState {} -> nullTracer
+      Consensus.TraceForgingMempoolSnapshot {} -> nullTracer
   case event of
     Consensus.TraceStartLeadershipCheck _slot -> pure ()
     _ -> traceWith (toLogObject' tverb tr) ev
@@ -1031,6 +1033,10 @@ teeForge' tr =
           LogValue "forgedInvalidSlotLast" $ PureI $ fromIntegral $ unSlotNo slot
         Consensus.TraceAdoptedBlock slot _ _ ->
           LogValue "adoptedSlotLast" $ PureI $ fromIntegral $ unSlotNo slot
+        Consensus.TraceForgeTickedLedgerState slot _ ->
+          LogValue "tickedLedgerState" $ PureI $ fromIntegral $ unSlotNo slot
+        Consensus.TraceForgingMempoolSnapshot slot _ _ _ ->
+          LogValue "forgingMempoolSnapshot" $ PureI $ fromIntegral $ unSlotNo slot
 
 forgeTracer
   :: forall blk.
