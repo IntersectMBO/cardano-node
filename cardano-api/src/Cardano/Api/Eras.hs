@@ -406,6 +406,5 @@ type family ShelleyLedgerEra era where
   ShelleyLedgerEra AllegraEra = Consensus.StandardAllegra
   ShelleyLedgerEra MaryEra    = Consensus.StandardMary
   ShelleyLedgerEra AlonzoEra  = Consensus.StandardAlonzo
-  --TODO: Babbage era - depends on consensus exposing a babbage era
-  ShelleyLedgerEra BabbageEra = Babbage.BabbageEra StandardCrypto
+  ShelleyLedgerEra BabbageEra = Consensus.StandardBabbage
 
