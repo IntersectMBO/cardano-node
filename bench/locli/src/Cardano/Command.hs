@@ -80,6 +80,9 @@ parseChainCommand =
    , op "dump-chain-raw" "Dump raw chain"
      (DumpChainRaw
        <$> optJsonOutputFile "chain"           "JSON unfiltered chain output file")
+   , op "timeline-chain-raw" "Render unfiltered chain timeline"
+     (TimelineChainRaw
+       <$> optTextOutputFile "timeline"        "Render a human-readable reconstructed unfiltered chain view")
    ]) <|>
 
    subparser (mconcat [ commandGroup "Block propagation:  chain filtering"
@@ -174,6 +177,8 @@ data ChainCommand
       JsonInputFile
   | DumpChainRaw
       JsonOutputFile
+  | TimelineChainRaw
+      TextOutputFile
 
   | FilterChain         -- [ChainFilter] -> [BlockEvents] -> [BlockEvents]
       [JsonFilterFile]
@@ -301,6 +306,14 @@ runChainCommand s@State{sChainRaw=Just chainRaw}
   pure s
 runChainCommand _ c@DumpChainRaw{} = missingCommandData c
   ["unfiltered chain"]
+
+runChainCommand s@State{sRun=Just run, sChainRaw=Just chainRaw}
+  c@(TimelineChainRaw f) = do
+  dumpText "chain" (renderTimeline run (const True) False chainRaw) f
+    & firstExceptT (CommandError c)
+  pure s
+runChainCommand _ c@TimelineChainRaw{} = missingCommandData c
+  ["run metadata & genesis", "unfiltered chain"]
 
 runChainCommand s@State{sRun=Just run, sChainRaw=Just chainRaw}
   c@(FilterChain fltfs) = do

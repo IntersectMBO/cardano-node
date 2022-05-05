@@ -72,6 +72,8 @@ case "$op" in
                $(if test -n "$dump_chain_raw"; then echo \
                  'dump-chain-raw'     --chain           "$adir"/chain-raw.json; fi)
 
+               'timeline-chain-raw'   --timeline        "$adir"/chain-raw.txt
+
                'filter-chain' "${filters[@]}"
                $(if test -n "$dump_chain"; then echo \
                  'dump-chain'         --chain           "$adir"/chain.json; fi)
