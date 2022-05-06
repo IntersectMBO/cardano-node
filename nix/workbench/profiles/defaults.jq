@@ -39,7 +39,6 @@ def era_defaults($era):
     , epoch_length:                   2200   # Ought to be at least (10 * k / f).
     , parameter_k:                    10
     , slot_duration:                  1
-    , genesis_future_offset:          "3 seconds"
 
     ## Block size & contents
     , max_block_size:                 64000

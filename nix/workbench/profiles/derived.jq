@@ -56,9 +56,11 @@ def profile_name_era_suffix($era):
 
 def add_derived_params:
   (.genesis.genesis_future_offset //
-    if      .composition.n_hosts > 50 then "32 minutes"
-    else if .composition.n_hosts == 3 then "3 minutes"
-         else "10 minutes" end end)          as $future_offset
+    ((.genesis.utxo + .genesis.delegators) as $dataset_size
+     | (if $dataset_size < 10000 then 3
+        else $dataset_size / 50000
+        end) as $seconds
+     | "\($seconds) seconds"))               as $future_offset
 | .composition                               as $compo
 | .genesis                                   as $gsis
 | .generator                                 as $gtor
