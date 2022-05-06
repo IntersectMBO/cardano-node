@@ -55,12 +55,16 @@ def profile_name_era_suffix($era):
   "-\($era | (.[0:2] + .[-2:]))";
 
 def add_derived_params:
-  (.genesis.genesis_future_offset //
-    ((.genesis.utxo + .genesis.delegators) as $dataset_size
-     | (if $dataset_size < 10000 then 3
-        else $dataset_size / 50000
-        end) as $seconds
-     | "\($seconds) seconds"))               as $future_offset
+  (.genesis.utxo + .genesis.delegators)      as $dataset_measure
+| (if $dataset_measure < 10000 then 3
+   else $dataset_measure / 50000
+   end)                                      as $dataset_induced_startup_delay_optimistic
+| (if $dataset_measure < 10000 then 3
+   else $dataset_measure / 10000
+   end)                                      as $dataset_induced_startup_delay_conservative
+| (.derived.genesis_future_offset //
+   "\($dataset_induced_startup_delay_optimistic) seconds")
+                                             as $genesis_future_offset
 | .composition                               as $compo
 | .genesis                                   as $gsis
 | .generator                                 as $gtor
@@ -69,12 +73,12 @@ def add_derived_params:
 
 ## Absolute durations:
 | ($gsis.epoch_length * $gsis.slot_duration) as $epoch_duration
-| ($epoch_duration * $gtor.epochs)           as $duration
+| ($epoch_duration * $gtor.epochs)           as $generator_duration
 
 ## Tx count for inferred absolute duration.
 ##   Note that this the workload would take longer, if we saturate the cluster.
-| ($gtor.tx_count // ($duration * $gtor.tps))
-                                             as $tx_count
+| ($gtor.tx_count // ($generator_duration * $gtor.tps))
+                                             as $generator_tx_count
 
 ## Effective cluster composition:
 | (if $compo.dense_pool_density > 1
@@ -91,17 +95,33 @@ def add_derived_params:
 
 ## Stuffed UTxO is what we need over requested-UTxO + delegators' UTxO:
 | $effective_delegators                      as $utxo_delegated
-| ($tx_count * $gtor.inputs_per_tx)          as $utxo_generated
+| ($generator_tx_count * $gtor.inputs_per_tx)
+                                             as $utxo_generated
 | ($gsis.utxo - $utxo_generated - $effective_delegators)
                                              as $utxo_stuffed
+| 381                                        as $default_value_tx_size_estimate
+| (($gsis.max_block_size / $default_value_tx_size_estimate) | floor)
+                                             as $default_value_tx_per_block_estimate
+| ($generator_tx_count / $default_value_tx_per_block_estimate | . * 0.15 | ceil)
+                                             as $generator_blocks_lower_bound
 ## Note how derivations come in phases, too:
 ##
 | (## First derivation:
    { common:
      { derived:
-         { utxo_delegated:        $utxo_delegated
-         , utxo_generated:        $utxo_generated
-         , utxo_stuffed:          $utxo_stuffed
+         { utxo_delegated:                $utxo_delegated
+         , utxo_generated:                $utxo_generated
+         , utxo_stuffed:                  $utxo_stuffed
+         , dataset_measure:               $dataset_measure
+         , dataset_induced_startup_delay_optimistic:   $dataset_induced_startup_delay_optimistic
+         , dataset_induced_startup_delay_conservative: $dataset_induced_startup_delay_conservative
+         , genesis_future_offset:         $genesis_future_offset
+         , epoch_duration:                $epoch_duration
+         , generator_duration:            $generator_duration
+         , generator_tx_count:            $generator_tx_count
+         , default_value_tx_size_estimate: $default_value_tx_size_estimate
+         , default_value_tx_per_block_estimate: $default_value_tx_per_block_estimate
+         , generator_blocks_lower_bound:  $generator_blocks_lower_bound
          }
      , composition:
          { n_hosts:               ($compo.n_bft_hosts + $hosts.singular + $hosts.dense)
@@ -113,8 +133,7 @@ def add_derived_params:
          , n_pool_hosts:          ($hosts.singular + $hosts.dense)
          }
      , genesis:
-         { genesis_future_offset: $future_offset
-         , delegators:            $effective_delegators
+         { delegators:            $effective_delegators
          , pool_coin:             (if $n_pools == 0 then 0
                                    else $gsis.per_pool_balance end)
          , shelley:
@@ -133,18 +152,14 @@ def add_derived_params:
          # , alonzo: supposed to already be filled
          }
      , generator:
-         { tx_count:              $tx_count
+         { tx_count:              $generator_tx_count
          }
      , node:
          {
          }
      , tolerances:
-         { minimum_chain_density: ($gsis.active_slots_coeff * 0.5)
-         , cluster_startup_overhead_s:
-                (($gsis.utxo + $gsis.delegators) as $dataset_size
-                | if $dataset_size < 10000 then 15
-                  else $dataset_size / 10000
-                  end)
+         { minimum_chain_density:      ($gsis.active_slots_coeff * 0.5)
+         , cluster_startup_overhead_s: $dataset_induced_startup_delay_conservative
          }
      }
    }
@@ -186,6 +201,10 @@ def profile_pretty_describe($p):
   , "    - generated:          \($p.derived.utxo_generated)"
   , "    - stuffed:            \($p.derived.utxo_stuffed)"
   , "  - delegators:         \($p.genesis.delegators)"
+  , "  - generator duration: \($p.generator.generator_duration            | tostring)s"
+  , "    - epochs:             \($p.generator.epochs                      | tostring)ep"
+  , "    - transaction count:  \($p.derived.generator_tx_count | . / 1000 | tostring)kTx"
+  , "    - full blocks:        \($p.derived.generator_blocks_lower_bound  | tostring)"
   , ""
   ]
   | . + if $p.node.shutdown_on_slot_synced == null then []

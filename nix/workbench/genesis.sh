@@ -233,7 +233,7 @@ case "$op" in
         then return; fi
 
         ## Decide start time:
-        local future_offset=$(jq .genesis.genesis_future_offset "$profile_json" --raw-output)
+        local future_offset=$(jq .derived.genesis_future_offset "$profile_json" --raw-output)
         local system_start_epoch=$(date '+%s' --date="now + $future_offset")
         local system_start_human=$(date --date=@$system_start_epoch --utc +"%Y-%m-%dT%H:%M:%SZ")
         local start_time=$(date --date=@$system_start_epoch --utc --iso-8601=s |
