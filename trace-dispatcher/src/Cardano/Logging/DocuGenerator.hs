@@ -183,7 +183,8 @@ generateTOC traces metrics datapoints =
       <> mconcat (reverse (fst (foldl namespaceToToc ([], []) datapoints)))
     namespaceToToc :: ([Builder], Namespace) -> Namespace -> ([Builder], Namespace)
     namespaceToToc (builders, context) ns =
-      let ns' = if take 2 ns == ["Cardano", "Node"]
+      let ref = namespaceRefBuilder ns
+          ns' = if take 2 ns == ["Cardano", "Node"]
                   then drop 2 ns
                   else ns
       in if init ns' == context
@@ -194,16 +195,20 @@ generateTOC traces metrics datapoints =
           <> fromText "["
           <> fromText (last ns')
           <> fromText "](#"
-          <> namespaceRefBuilder ns'
+          <> ref
           <> fromText ")") : builders, context)
         else
           let cpl  = commonPrefixLength context ns'
               ns'' = drop cpl ns'
               context' = take cpl context
-          in namespaceToTocWithContext (builders, context') ns''
+          in namespaceToTocWithContext (builders, context') ns'' ref
 
-    namespaceToTocWithContext :: ([Builder], Namespace) -> Namespace -> ([Builder], Namespace)
-    namespaceToTocWithContext (builders, context) ns =
+    namespaceToTocWithContext ::
+         ([Builder], Namespace)
+      -> Namespace
+      -> Builder
+      -> ([Builder], Namespace)
+    namespaceToTocWithContext (builders, context) ns ref =
       case ns of
         [single] ->   ((fromText "\n"
                       <> fromString (replicate (length context) '\t')
@@ -211,7 +216,7 @@ generateTOC traces metrics datapoints =
                       <> fromText "["
                       <> fromText single
                       <> fromText "](#"
-                      <> namespaceRefBuilder ns
+                      <> ref
                       <> fromText ")") : builders, context)
         (hdn : tln) ->
           let builder = fromText "\n"
@@ -220,7 +225,7 @@ generateTOC traces metrics datapoints =
                         <> fromText hdn
                         <> fromText "__"
           in  namespaceToTocWithContext
-              (builder : builders, context ++ [hdn]) tln
+              (builder : builders, context ++ [hdn]) tln ref
         [] -> error "inpossible"
 
     splitToNS :: Namespace -> Namespace
