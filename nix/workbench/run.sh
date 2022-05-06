@@ -229,9 +229,10 @@ case "$op" in
         local batch=${1:?$usage}; shift
         local profile_name=${1:?$usage}; shift
 
-        local profile= topology= genesis_cache_entry=
+        local profile= topology= genesis_cache_entry= manifest=
         while test $# -gt 0
         do case "$1" in
+               --manifest )            manifest=$2; shift;;
                --profile )             profile=$2; shift;;
                --topology )            topology=$2; shift;;
                --genesis-cache-entry ) genesis_cache_entry=$2; shift;;
@@ -239,9 +240,12 @@ case "$op" in
                --* ) msg "FATAL:  unknown flag '$1'"; usage_run;;
                * ) break;; esac; shift; done
 
+        manifest report "$manifest"
+        local hash=$(jq '."cardano-node" | .[:5]' -r <<<$manifest)
+
         local timestamp=$(date +'%s' --utc)
         local date=$(date +'%Y'-'%m'-'%d'-'%H.%M' --date=@$timestamp --utc)
-        local tag=$date.$batch.$profile_name
+        local tag=$date.$batch.$hash.$profile_name
         local dir=$global_rundir/$tag
         local realdir=$(realpath --canonicalize-missing "$dir")
         local cacheDir=$(envjqr 'cacheDir')
@@ -281,6 +285,7 @@ case "$op" in
             --arg       date             "$date"
             --arg       node_commit_desc "$node_commit_desc"
             --slurpfile profile_content  "$dir"/profile.json
+            --argjson   manifest         "$manifest"
         )
         jq_fmutate "$dir"/meta.json '. *
            { meta:
@@ -290,6 +295,7 @@ case "$op" in
              , timestamp:        $timestamp
              , date:             $date
              , node_commit_desc: $node_commit_desc
+             , manifest:         $manifest
              , profile_content:  $profile_content[0]
              }
            }

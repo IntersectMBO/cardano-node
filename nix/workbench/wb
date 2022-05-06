@@ -13,6 +13,7 @@ global_mode='unknown'
 . "$global_basedir"/profile.sh
 . "$global_basedir"/genesis.sh
 . "$global_basedir"/topology.sh
+. "$global_basedir"/manifest.sh
 . "$global_basedir"/run.sh
 . "$global_basedir"/scenario.sh
 . "$global_basedir"/analyse.sh
@@ -95,6 +96,7 @@ start()
     local genesis_cache_entry_dir=
     local topology_dir=
     local verbose=
+    local manifest="{}"
 
     local run_args=()
     local run_allocate_args=()
@@ -130,11 +132,17 @@ start()
 
     backend assert-is $backend
     backend assert-stopped
+    backend setenv-defaults "$profile"
 
-    setenvjq    'port_shift_ekg'        100
-    setenvjq    'port_shift_prometheus' 200
-    setenvjqstr 'supervisor_conf'      "$profile"/supervisor.conf
-    run ${run_args[@]} allocate $batch_name $profile_name ${run_allocate_args[@]}
+    local args=(
+        ${run_args[@]}
+        allocate
+        $batch_name
+        $profile_name
+        ${run_allocate_args[@]}
+        --manifest "$(manifest collect-from-checkout .)"
+    )
+    run "${args[@]}"
 
     current_run_path=$(run current-path)
     mkdir -p "$current_run_path"
@@ -180,6 +188,7 @@ main() {
         ## Public, secondary:
         profile      | profiles | prof | ps | p )
                                   profile             "$@";;
+        manifest     | m )        manifest            "$@";;
         analyse      | a )        analyse             "$@";;
 
         ## Public, internals-y:

@@ -1,18 +1,7 @@
 usage_supervisor() {
      usage "supervisor" "Backend:  manages a local cluster using 'supervisord'" <<EOF
-    is-running       Test if 'supervisord' is running
 
-    get-node-socket-path RUN-DIR
-                     Given a state dir, print the default node socket path
-                       for 'cardano-cli'
-
-    describe-run RUN-DIR
-    allocate-run RUN-DIR
-    start-cluster RUN-DIR
-    start-generator RUN-DIR
-    cleanup-cluster RUN-DIR
-    wait-pools-stopped RUNDIR
-    stop-cluster RUN-DIR
+    Please see documentation for 'wb backend' for the supported commands.
 
     Supervisor-specific:
 
@@ -30,25 +19,13 @@ case "$op" in
     is-running )
         test "$(sleep 0.5s; netstat -pltn 2>/dev/null | grep ':9001 ' | wc -l)" != "0";;
 
-    get-node-socket-path )
-        local usage="USAGE: wb supervisor $op STATE-DIR"
-        local state_dir=${1:?$usage}
+    setenv-defaults )
+        local usage="USAGE: wb supervisor $op PROFILE-DIR"
+        local profile_dir=${1:?$usage}
 
-        echo -n $state_dir/node-0/node.socket
-        ;;
-
-    describe-run )
-        local usage="USAGE: wb supervisor $op RUN-DIR"
-        local dir=${1:?$usage}
-
-        local basePort=$(                   envjq 'basePort')
-        local port_ekg=$((       basePort+$(envjq 'port_shift_ekg')))
-        local port_prometheus=$((basePort+$(envjq 'port_shift_prometheus')))
-
-        cat <<EOF
-  - EKG URL (node-0):        http://localhost:$port_ekg/
-  - Prometheus URL (node-0): http://localhost:$port_prometheus/metrics
-EOF
+        setenvjq    'port_shift_ekg'        100
+        setenvjq    'port_shift_prometheus' 200
+        setenvjqstr 'supervisor_conf'      "$profile_dir"/supervisor.conf
         ;;
 
     allocate-run )
@@ -64,6 +41,20 @@ EOF
 
         mkdir -p               "$dir"/supervisor
         cp -f $supervisor_conf "$dir"/supervisor/supervisord.conf
+        ;;
+
+    describe-run )
+        local usage="USAGE: wb supervisor $op RUN-DIR"
+        local dir=${1:?$usage}
+
+        local basePort=$(                   envjq 'basePort')
+        local port_ekg=$((       basePort+$(envjq 'port_shift_ekg')))
+        local port_prometheus=$((basePort+$(envjq 'port_shift_prometheus')))
+
+        cat <<EOF
+  - EKG URL (node-0):        http://localhost:$port_ekg/
+  - Prometheus URL (node-0): http://localhost:$port_prometheus/metrics
+EOF
         ;;
 
     start-cluster )
@@ -93,6 +84,13 @@ EOF
 
         backend_supervisor save-pids "$dir";;
 
+    get-node-socket-path )
+        local usage="USAGE: wb supervisor $op STATE-DIR"
+        local state_dir=${1:?$usage}
+
+        echo -n $state_dir/node-0/node.socket
+        ;;
+
     start-generator )
         local usage="USAGE: wb supervisor $op RUN-DIR"
         local dir=${1:?$usage}; shift
@@ -103,14 +101,6 @@ EOF
                * ) break;; esac; shift; done
 
         supervisorctl start generator;;
-
-    cleanup-cluster )
-        local usage="USAGE: wb supervisor $op RUN-DIR"
-        local dir=${1:?$usage}; shift
-
-        msg "supervisor:  resetting cluster state in:  $dir"
-        rm -f $dir/*/std{out,err} $dir/node-*/*.socket $dir/*/logs/* 2>/dev/null || true
-        rm -fr $dir/node-*/state-cluster/;;
 
     wait-pools-stopped )
         local usage="USAGE: wb supervisor $op RUN-DIR"
@@ -136,6 +126,14 @@ EOF
         else pkill supervisord
         fi
         ;;
+
+    cleanup-cluster )
+        local usage="USAGE: wb supervisor $op RUN-DIR"
+        local dir=${1:?$usage}; shift
+
+        msg "supervisor:  resetting cluster state in:  $dir"
+        rm -f $dir/*/std{out,err} $dir/node-*/*.socket $dir/*/logs/* 2>/dev/null || true
+        rm -fr $dir/node-*/state-cluster/;;
 
     save-pids )
         local usage="USAGE: wb supervisor $op RUN-DIR"
@@ -167,18 +165,6 @@ EOF
         msg "supervisor:  node pids:     $pidsfile"
         msg "supervisor:  node pid maps: $mapn2p $mapp2n"
         ;;
-
-    lostream-fixup-jqargs )
-        local usage="USAGE: wb supervisor $op RUN-DIR"
-        local dir=${1:?$usage}
-
-        echo --compact-output --argjson mapp2n '[{}]';;# --slurpfile mapp2n "$dir"/supervisor/pid2node.map;;
-        #echo --compact-output --slurpfile mapp2n "$dir"/supervisor/pid2node.map;;
-
-    lostream-fixup-jqexpr )
-        local usage="USAGE: wb supervisor $op"
-
-        echo '| $mapp2n[0] as $map | . * { host: ($map[.pid] // $dirHostname) }';;
 
     * ) usage_supervisor;; esac
 }

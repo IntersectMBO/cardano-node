@@ -4,24 +4,25 @@ usage_backend() {
                      Test if the cluster specified by the run directory
                        is currently running
 
-    get-node-socket-path RUNDIR
-                     Given a run directory, print the node socket path
-                       for 'cardano-cli'
+    setenv-defaults PROFILE-DIR
+                     Setup the global environment in env.jq,
+                       using profile in PROFILE-DIR
 
     allocate-run RUNDIR
     describe-run RUNDIR
     start-cluster RUNDIR
                      Start the cluster nodes
+    get-node-socket-path RUNDIR
+                     Given a run directory, print the node socket path
+                       for 'cardano-cli'
     start-generator RUNDIR
                      Start generator
-    cleanup-cluster RUNDIR
-                     Wipe cluster state to pristine
+
     wait-pools-stopped RUNDIR
                      Wait until all pools are stopped
     stop-cluster RUNDIR
-
-    lostream-fixup-jqargs RUNDIR
-    lostream-fixup-jqexpr
+    cleanup-cluster RUNDIR
+                     Wipe cluster state to pristine
 
     assert-is BACKEND-NAME
                      Check that the current backend is as expected
@@ -35,17 +36,15 @@ local op=${1:-$(usage_backend)} # No need to shift -- backends will use the op.
 
 case "${op}" in
     is-running )                 backend_$WORKBENCH_BACKEND "$@";;
-    get-node-socket-path )       backend_$WORKBENCH_BACKEND "$@";;
-    record-extended-env-config ) backend_$WORKBENCH_BACKEND "$@";;
+    setenv-defaults )            backend_$WORKBENCH_BACKEND "$@";;
     allocate-run )               backend_$WORKBENCH_BACKEND "$@";;
     describe-run )               backend_$WORKBENCH_BACKEND "$@";;
     start-cluster )              backend_$WORKBENCH_BACKEND "$@";;
+    get-node-socket-path )       backend_$WORKBENCH_BACKEND "$@";;
     start-generator )            backend_$WORKBENCH_BACKEND "$@";;
-    cleanup-cluster )            backend_$WORKBENCH_BACKEND "$@";;
     wait-pools-stopped )         backend_$WORKBENCH_BACKEND "$@";;
     stop-cluster )               backend_$WORKBENCH_BACKEND "$@";;
-    lostream-fixup-jqargs )      backend_$WORKBENCH_BACKEND "$@";;
-    lostream-fixup-jqexpr )      backend_$WORKBENCH_BACKEND "$@";;
+    cleanup-cluster )            backend_$WORKBENCH_BACKEND "$@";;
 
     ## Handle non-generic calls:
     passthrough | pass )         backend_$WORKBENCH_BACKEND "$@";;
