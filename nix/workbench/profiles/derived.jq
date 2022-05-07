@@ -68,7 +68,7 @@ def add_derived_params:
 | .composition                               as $compo
 | .genesis                                   as $gsis
 | .generator                                 as $gtor
-| .tolerances                                as $tolr
+| .analysis                                  as $ana
 | .era                                       as $era
 
 ## Absolute durations:
@@ -157,7 +157,7 @@ def add_derived_params:
      , node:
          {
          }
-     , tolerances:
+     , analysis:
          { minimum_chain_density:      ($gsis.active_slots_coeff * 0.5)
          , cluster_startup_overhead_s: $dataset_induced_startup_delay_conservative
          }

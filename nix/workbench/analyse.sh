@@ -50,6 +50,13 @@ case "$op" in
            local adir=$dir/analysis
            test -n "$dir" -a -d "$adir" || fail "malformed run: $name"
 
+           if test -z "${filters[*]}"
+           then local filter_names=$(jq '.analysis.filters
+                                        | join(",")
+                                        ' "$dir"/profile.json --raw-output)
+                analysis_set_filters "$filter_names"
+           fi
+
            local logs=("$adir"/logs-*.flt.json)
            local args=(
                'meta-genesis'         --run-metafile    "$dir"/meta.json

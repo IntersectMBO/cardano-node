@@ -67,7 +67,7 @@ EOF
         then export  CARDANO_NODE_SOCKET_PATH=$(backend_supervisor get-node-socket-path "$dir")
         fi
 
-        local patience=$(jq .tolerances.cluster_startup_overhead_s $dir/profile.json) i=0
+        local patience=$(jq .analysis.cluster_startup_overhead_s $dir/profile.json) i=0
         echo -n "workbench:  supervisor:  waiting ${patience}s for $CARDANO_NODE_SOCKET_PATH to appear: " >&2
         while test ! -S $CARDANO_NODE_SOCKET_PATH
         do printf "%3d" $i; sleep 1
