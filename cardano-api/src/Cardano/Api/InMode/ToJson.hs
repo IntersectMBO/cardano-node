@@ -120,13 +120,14 @@ import qualified Ouroboros.Consensus.Ledger.SupportsMempool as Consensus
 import qualified Ouroboros.Consensus.Ledger.SupportsMempool as SupportsMempool
 import qualified Ouroboros.Consensus.Protocol.Ledger.HotKey as HotKey
 import qualified Plutus.V1.Ledger.Api as Plutus
-import qualified PlutusCore as PlutusCore
+import qualified PlutusCore
 import qualified PlutusCore.Core as Plutus
 import qualified PlutusCore.DeBruijn
 import qualified PlutusCore.Evaluation.Machine.ExBudget as Cek
 import qualified PlutusCore.Evaluation.Machine.Exception
 import qualified UntypedPlutusCore.Core.Type
 import qualified UntypedPlutusCore.Evaluation.Machine.Cek.Internal as Cek
+import qualified Plutus.V1.Ledger.Api as PV1
 
 instance ToJSON (PredicateFailure (Core.EraRule "LEDGER" era)) => ToJSON (ApplyTxError era) where
   toJSON (ApplyTxError es) = toJSON es
@@ -1214,6 +1215,7 @@ instance ToJSON Alonzo.PlutusDebug where
       , "sbs"         .= toJSON (Text.decodeLatin1 (B16.encode (SBS.fromShort sbs)))
       , "scriptHash"  .= scriptHashOf Alonzo.PlutusV1 sbs
       , "ds"          .= toJSON ds
+      , "dsSummary"   .= plutusDataToDsSummary ds
       , "protVer"     .= protVer
       ]
     Alonzo.PlutusDebugV2 costModel exUnits sbs ds protVer -> object
@@ -1222,8 +1224,95 @@ instance ToJSON Alonzo.PlutusDebug where
       , "sbs"         .= toJSON (Text.decodeLatin1 (B16.encode (SBS.fromShort sbs)))
       , "scriptHash"  .= scriptHashOf Alonzo.PlutusV2 sbs
       , "ds"          .= toJSON ds
+      , "dsSummary"   .= plutusDataToDsSummary ds
       , "protVer"     .= protVer
       ]
+
+plutusDataToDsSummary :: [Plutus.Data] -> Aeson.Value
+plutusDataToDsSummary [dat, redeemer, info] = Aeson.object
+  [ "data"      .= toJSON dat
+  , "redeemer"  .= toJSON redeemer
+  , "info"      .= plutusInfoDataToDsSummary info
+  ]
+plutusDataToDsSummary [dat, info] = Aeson.object
+  [ "data"      .= toJSON dat
+  , "info"      .= plutusInfoDataToDsSummary info
+  ]
+plutusDataToDsSummary _ = Aeson.Null
+
+plutusInfoDataToDsSummary :: Plutus.Data -> Aeson.Value
+plutusInfoDataToDsSummary info = case PV1.fromData info of
+  Nothing -> String "no-info"
+  Just PV1.ScriptContext { PV1.scriptContextTxInfo, PV1.scriptContextPurpose} -> object
+    [ "scriptContextTxInfo" .= txInfoToJson scriptContextTxInfo
+    , "scriptContextPurpose" .= scriptPurposeToJson scriptContextPurpose
+    ]
+
+txInfoToJson :: PV1.TxInfo -> Value
+txInfoToJson txInfo = Aeson.object
+  [ "txInfoInputs"      .= toJSON (PV1.toData (PV1.txInfoInputs txInfo))
+  , "txInfoOutputs"     .= toJSON (PV1.toData (PV1.txInfoOutputs txInfo))
+  , "txInfoFee"         .= toJSON (PV1.toData (PV1.txInfoFee txInfo))
+  , "txInfoMint"        .= toJSON (PV1.toData (PV1.txInfoMint txInfo))
+  , "txInfoDCert"       .= toJSON (PV1.toData (PV1.txInfoDCert txInfo))
+  , "txInfoWdrl"        .= toJSON (PV1.toData (PV1.txInfoWdrl txInfo))
+  , "txInfoValidRange"  .= toJSON (PV1.toData (PV1.txInfoValidRange txInfo))
+  , "txInfoSignatories" .= toJSON (PV1.toData (PV1.txInfoSignatories txInfo))
+  , "txInfoData"        .= toJSON (PV1.toData (PV1.txInfoData txInfo))
+  , "txInfoId"          .= toJSON (PV1.toData (PV1.txInfoId txInfo))
+  ]
+
+-- toData :: (ToData a) => a -> PLC.Data
+-- toData a = builtinDataToData (toBuiltinData a)
+
+instance ToJSON PV1.Datum where
+  toJSON v = toJSON (PV1.toData (PV1.getDatum v))
+
+instance ToJSON PV1.DatumHash where
+  toJSON v = toJSON (PV1.toData v)
+
+instance ToJSON PV1.DCert where
+  toJSON v = toJSON (PV1.toData v)
+
+instance ToJSON PV1.POSIXTimeRange where
+  toJSON v = toJSON (PV1.toData v)
+
+instance ToJSON PV1.PubKeyHash where
+  toJSON v = toJSON (PV1.toData v)
+
+instance ToJSON PV1.StakingCredential where
+  toJSON v = toJSON (PV1.toData v)
+
+instance ToJSON PV1.TxId where
+  toJSON v = toJSON (PV1.toData v)
+
+instance ToJSON PV1.TxInInfo where
+  toJSON v = toJSON (PV1.toData v)
+
+instance ToJSON PV1.TxOut where
+  toJSON v = toJSON (PV1.toData v)
+
+instance ToJSON PV1.Value where
+  toJSON v = toJSON (PV1.toData v)
+
+scriptPurposeToJson :: PV1.ScriptPurpose -> Value
+scriptPurposeToJson = \case
+  PV1.Minting currencySymbol -> Aeson.object
+    [ "kind" .= String "Minting"
+    , "value" .= toJSON (PV1.toData currencySymbol)
+    ]
+  PV1.Spending txOutRef -> Aeson.object
+    [ "kind" .= String "Spending"
+    , "value" .= toJSON (PV1.toData txOutRef)
+    ]
+  PV1.Rewarding stakingCredential -> Aeson.object
+    [ "kind" .= String "Rewarding"
+    , "value" .= toJSON (PV1.toData stakingCredential)
+    ]
+  PV1.Certifying dCert -> Aeson.object
+    [ "kind" .= String "Certifying"
+    , "value" .= toJSON (PV1.toData dCert)
+    ]
 
 scriptHashOf :: Alonzo.Language -> SBS.ShortByteString -> Text
 scriptHashOf lang sbs = Text.pack $ Hash.hashToStringAsHex h
@@ -1250,7 +1339,7 @@ instance ToJSON Plutus.EvaluationError where
       [ "kind"    .= String "IncompatibleVersionError"
       , "actual"  .= toJSON actual
       ]
-    Plutus.CostModelParameterMismatch   -> object
+    Plutus.CostModelParameterMismatch -> object
       [ "kind"  .= String "CostModelParameterMismatch"
       ]
 
@@ -1302,14 +1391,30 @@ instance (ToJSON name, ToJSON fun) => ToJSON (Cek.CekEvaluationException name un
 
 instance (ToJSON name, ToJSON fun) => ToJSON (UntypedPlutusCore.Core.Type.Term name uni fun ann) where
   toJSON = \case
-    UntypedPlutusCore.Core.Type.Var _ _ -> String "Var"
-    UntypedPlutusCore.Core.Type.LamAbs _ _ _ -> String "LamAbs"
-    UntypedPlutusCore.Core.Type.Apply _ _ _ -> String "Apply"
-    UntypedPlutusCore.Core.Type.Force _ _ -> String "Force"
-    UntypedPlutusCore.Core.Type.Delay _ _ -> String "Delay"
-    UntypedPlutusCore.Core.Type.Constant _ _ -> String "Constant"
-    UntypedPlutusCore.Core.Type.Builtin _ _ -> String "Builtin"
-    UntypedPlutusCore.Core.Type.Error _ -> String "Error"
+    UntypedPlutusCore.Core.Type.Var {} -> Aeson.object
+      [ "kind" .= String "Var"
+      ]
+    UntypedPlutusCore.Core.Type.LamAbs {} -> Aeson.object
+      [ "kind" .= String "LamAbs"
+      ]
+    UntypedPlutusCore.Core.Type.Apply {} -> Aeson.object
+      [ "kind" .= String "Apply"
+      ]
+    UntypedPlutusCore.Core.Type.Force {} -> Aeson.object
+      [ "kind" .= String "Force"
+      ]
+    UntypedPlutusCore.Core.Type.Delay {} -> Aeson.object
+      [ "kind" .= String "Delay"
+      ]
+    UntypedPlutusCore.Core.Type.Constant {} -> Aeson.object
+      [ "kind" .= String "Constant"
+      ]
+    UntypedPlutusCore.Core.Type.Builtin {} -> Aeson.object
+      [ "kind" .= String "Builtin"
+      ]
+    UntypedPlutusCore.Core.Type.Error {} -> Aeson.object
+      [ "kind" .= String "Error"
+      ]
 
 instance ToJSON fun => ToJSON (Cek.EvaluationError Cek.CekUserError (PlutusCore.Evaluation.Machine.Exception.MachineError fun)) where
 
@@ -1336,3 +1441,4 @@ instance ToJSON fun => ToJSON (PlutusCore.Evaluation.Machine.Exception.MachineEr
 
 instance ToJSON PlutusCore.Evaluation.Machine.Exception.UnliftingError where
   toJSON _ = "UnliftingError"
+

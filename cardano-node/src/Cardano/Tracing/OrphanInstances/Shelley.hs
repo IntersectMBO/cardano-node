@@ -974,5 +974,4 @@ showLastAppBlockNo wOblk =  case withOriginToMaybe wOblk of
 
 -- Common to cardano-cli
 
--- deriving newtype instance Core.Crypto crypto => ToJSON (Core.AuxiliaryDataHash crypto)
 deriving newtype instance Core.Crypto crypto => ToJSON (TxId crypto)
