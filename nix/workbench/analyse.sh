@@ -20,15 +20,8 @@ while test $# -gt 0
 do case "$1" in
        --dump-logobjects )  dump_logobjects='true';;
        --prefilter-jq )     preflt_jq='true';;
-       --filters )          local filter_names=()
-                            filter_names+=($(echo $2 | sed 's_,_ _'))
-                            local filter_paths=(${filter_names[*]/#/"$global_basedir/chain-filters/"})
-                            local filter_files=(${filter_paths[*]/%/.json})
-                            for f in ${filter_files[*]}
-                            do test -f "$f" ||
-                                    fail "no such filter: $f"; done
-                            filters+=(${filter_files[*]/#/--filter })
-                            shift;;
+       --filters )          analysis_set_filters "base,$2"; shift;;
+       --no-filters )       analysis_set_filters "";;
        * ) break;; esac; shift; done
 
 if curl --connect-timeout 0.5 http://169.254.169.254/latest/meta-data >/dev/null 2>&1
@@ -47,10 +40,12 @@ local op=${1:-$(usage_analyse)}; shift
 case "$op" in
     # 'read-mach-views' "${logs[@]/#/--log }"
     standard | std )
-        for r in $*
+        local runs=($*); if test $# = 0; then runs=(current); fi
+
+        for r in ${runs[*]}
         do analyse prepare $r
 
-           local name=${1:-current}; shift
+           local name=${1:-current}; if test $# != 0; then shift; fi
            local dir=$(run get "$name")
            local adir=$dir/analysis
            test -n "$dir" -a -d "$adir" || fail "malformed run: $name"
@@ -141,7 +136,7 @@ case "$op" in
     prepare | prep )
         local usage="USAGE: wb analyse $op [RUN-NAME=current].."
 
-        local name=${1:-current}; shift
+        local name=${1:-current}; if test $# != 0; then shift; fi
         local dir=$(run get "$name")
         test -n "$dir" || fail "malformed run: $name"
 
@@ -163,9 +158,7 @@ case "$op" in
         local jq_args=(
             --sort-keys
             --compact-output
-            $(wb backend lostream-fixup-jqargs "$dir")
-            ' delpaths([["app"],["env"],["loc"],["msg"],["ns"],["sev"]])
-            '"$(wb backend lostream-fixup-jqexpr)"
+            'delpaths([["app"],["env"],["loc"],["msg"],["ns"],["sev"]])'
         )
         for d in "${logdirs[@]}"
         do throttle_shell_job_spawns
@@ -193,4 +186,16 @@ throttle_shell_job_spawns() {
     sleep 0.5s
     while ((${num_jobs@P} >= num_threads - 4))
     do wait -n; sleep 0.$(((RANDOM % 5) + 1))s; done
+}
+
+analysis_set_filters() {
+    local filter_names=($(echo $1 | sed 's_,_ _g'))
+    local filter_paths=(${filter_names[*]/#/"$global_basedir/chain-filters/"})
+    local filter_files=(${filter_paths[*]/%/.json})
+
+    for f in ${filter_files[*]}
+    do test -f "$f" ||
+            fail "no such filter: $f"; done
+
+    filters+=(${filter_files[*]/#/--filter })
 }

@@ -245,7 +245,10 @@ case "$op" in
 
         local timestamp=$(date +'%s' --utc)
         local date=$(date +'%Y'-'%m'-'%d'-'%H.%M' --date=@$timestamp --utc)
-        local tag=$date.$batch.$hash.$profile_name
+
+        ## Key decision point:
+        local tag=$date$(if test "$batch" != 'plain'; then echo -n .$batch; fi).$hash.$profile_name
+
         local dir=$global_rundir/$tag
         local realdir=$(realpath --canonicalize-missing "$dir")
         local cacheDir=$(envjqr 'cacheDir')
