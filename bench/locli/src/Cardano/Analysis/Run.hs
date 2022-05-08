@@ -8,11 +8,9 @@ import Cardano.Prelude
 
 import Control.Monad (fail)
 import Data.Aeson qualified as Aeson
-import Data.Aeson.Types qualified as Aeson
 import Data.Aeson (FromJSON(..), Object, ToJSON(..), withObject, (.:), (.:?))
 import Data.ByteString.Lazy.Char8 qualified as LBS
 import Data.Text qualified as T
-import Data.Time.Clock.POSIX qualified as Time
 
 import Cardano.Analysis.ChainFilter
 import Cardano.Analysis.Context
@@ -55,12 +53,9 @@ instance FromJSON RunPartial where
 
     eraGtor   <- generator       .:? "era"
     eraTop    <- profile_content .:? "era"
-    era <- case eraGtor <> eraTop of
+    era <- case eraGtor <|> eraTop of
       Just x -> pure x
       Nothing -> fail "While parsing run metafile:  missing era specification"
-
-    timestamp <- (meta .: "timestamp" :: Aeson.Parser Integer)
-                  <&> Time.posixSecondsToUTCTime . realToFrac
     --
     let metadata = Metadata{..}
         genesis  = ()

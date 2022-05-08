@@ -1,5 +1,12 @@
 include "defaults";
 include "genesis";
+include "lib";
+
+def default_value_tx_size_estimate:
+  381;
+
+def may_mult($x):
+  if . == null then null else . * $x end;
 
 def may_attr($attr; $dict; $defdict; $scale; $suf):
   if ($dict[$attr] //
@@ -12,14 +19,14 @@ def profile_name($p):
 | era_defaults($p.era).generator   as   $generator_defaults
 | era_defaults($p.era).composition as $composition_defaults
 | era_defaults($p.era).node        as        $node_defaults
-| $p.node.shutdown_on_slot_synced  as                $slots
+| $p.node.shutdown_on_slot_synced  as       $shutdown_slots
   ## Genesis
 | [ "k\($p.composition.n_pools)" ]
   + if $p.composition.n_dense_hosts > 0
     then may_attr("dense_pool_density";
                   $p.composition; $composition_defaults; 1; "ppn")
     else [] end
-  + if $slots
+  + if $shutdown_slots
     then [($p.node.shutdown_on_slot_synced | tostring) + "slots"]
     else [ ($p.generator.epochs                  | tostring) + "ep"
          , ($p.generator.tx_count     | . / 1000 | tostring) + "kTx" ]
@@ -58,10 +65,10 @@ def add_derived_params:
   (.genesis.utxo + .genesis.delegators)      as $dataset_measure
 | (if $dataset_measure < 10000 then 3
    else $dataset_measure / 50000
-   end)                                      as $dataset_induced_startup_delay_optimistic
+   end | ceil)                               as $dataset_induced_startup_delay_optimistic
 | (if $dataset_measure < 10000 then 3
    else $dataset_measure / 10000
-   end)                                      as $dataset_induced_startup_delay_conservative
+   end | ceil)                               as $dataset_induced_startup_delay_conservative
 | (.derived.genesis_future_offset //
    "\($dataset_induced_startup_delay_optimistic) seconds")
                                              as $genesis_future_offset
@@ -70,10 +77,17 @@ def add_derived_params:
 | .generator                                 as $gtor
 | .analysis                                  as $ana
 | .era                                       as $era
+| .node                                      as $node
 
 ## Absolute durations:
 | ($gsis.epoch_length * $gsis.slot_duration) as $epoch_duration
-| ($epoch_duration * $gtor.epochs)           as $generator_duration
+| $node.shutdown_on_slot_synced              as $shutdown_slots
+| (if $shutdown_slots != null
+   then $shutdown_slots / $gsis.epoch_length | ceil
+   else $gtor.epochs
+   end)                                      as $effective_epochs
+| ($epoch_duration * $effective_epochs)      as $generator_duration
+| ($shutdown_slots | may_mult($gsis.slot_duration)) as $shutdown_time
 
 ## Tx count for inferred absolute duration.
 ##   Note that this the workload would take longer, if we saturate the cluster.
@@ -97,12 +111,12 @@ def add_derived_params:
 | $effective_delegators                      as $utxo_delegated
 | ($generator_tx_count * $gtor.inputs_per_tx)
                                              as $utxo_generated
-| ($gsis.utxo - $utxo_generated - $effective_delegators)
-                                             as $utxo_stuffed
-| 381                                        as $default_value_tx_size_estimate
-| (($gsis.max_block_size / $default_value_tx_size_estimate) | floor)
+| ([ $gsis.utxo - $utxo_generated - $effective_delegators
+   , 0
+   ] | max)                                  as $utxo_stuffed
+| (($gsis.max_block_size / default_value_tx_size_estimate) | floor)
                                              as $default_value_tx_per_block_estimate
-| ($generator_tx_count / $default_value_tx_per_block_estimate | . * 0.15 | ceil)
+| ($generator_tx_count / $default_value_tx_per_block_estimate | . * 1.15 | ceil)
                                              as $generator_blocks_lower_bound
 ## Note how derivations come in phases, too:
 ##
@@ -117,11 +131,13 @@ def add_derived_params:
          , dataset_induced_startup_delay_conservative: $dataset_induced_startup_delay_conservative
          , genesis_future_offset:         $genesis_future_offset
          , epoch_duration:                $epoch_duration
+         , effective_epochs:              $effective_epochs
          , generator_duration:            $generator_duration
          , generator_tx_count:            $generator_tx_count
-         , default_value_tx_size_estimate: $default_value_tx_size_estimate
+         , default_value_tx_size_estimate: default_value_tx_size_estimate
          , default_value_tx_per_block_estimate: $default_value_tx_per_block_estimate
          , generator_blocks_lower_bound:  $generator_blocks_lower_bound
+         , shutdown_time:                 $shutdown_time
          }
      , composition:
          { n_hosts:               ($compo.n_bft_hosts + $hosts.singular + $hosts.dense)
@@ -186,8 +202,7 @@ def add_derived_params:
 ;
 
 def profile_pretty_describe($p):
-  [ "profile: \($p.name)"
-  , "  - era:                \($p.era)"
+  [ "  - era:                \($p.era)"
   , "  - epoch slots:        \($p.genesis.epoch_length)"
   , "  - slot duration:      \($p.genesis.slot_duration)"
   , "  - k:                  \($p.genesis.parameter_k)"
@@ -201,8 +216,9 @@ def profile_pretty_describe($p):
   , "    - generated:          \($p.derived.utxo_generated)"
   , "    - stuffed:            \($p.derived.utxo_stuffed)"
   , "  - delegators:         \($p.genesis.delegators)"
-  , "  - generator duration: \($p.generator.generator_duration            | tostring)s"
-  , "    - epochs:             \($p.generator.epochs                      | tostring)ep"
+  , "  - generator duration: \($p.derived.generator_duration              | tostring)s"
+  , "    - requested epochs:   \($p.generator.epochs                      | tostring)ep"
+  , "    - effective epochs:   \($p.derived.effective_epochs              | tostring)ep"
   , "    - transaction count:  \($p.derived.generator_tx_count | . / 1000 | tostring)kTx"
   , "    - full blocks:        \($p.derived.generator_blocks_lower_bound  | tostring)"
   , ""

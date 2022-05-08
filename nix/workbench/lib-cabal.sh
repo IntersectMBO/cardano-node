@@ -10,7 +10,7 @@ function workbench-prebuild-executables()
 
     echo "workbench:  prebuilding executables (because of useCabalRun)"
     unset NIX_ENFORCE_PURITY
-    for exe in cardano-node cardano-cli cardano-topology
+    for exe in cardano-node cardano-cli cardano-topology tx-generator
     do echo "workbench:    $(with_color blue prebuilding) $(with_color red $exe)"
        cabal -v0 build -- exe:$exe 2>&1 >/dev/null |
            { grep -v 'exprType TYPE'; true; } || return 1
@@ -45,5 +45,3 @@ function tx-generator() {
 export WORKBENCH_CABAL_MODE=t
 
 export -f cardano-cli cardano-node cardano-topology locli tx-generator
-
-workbench-prebuild-executables

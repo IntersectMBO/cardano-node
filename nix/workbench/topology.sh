@@ -93,18 +93,17 @@ case "${op}" in
         ;;
 
     density-map )
-        local usage="USAGE:  wb topology density-map PROFILE-JSON TOPO-DIR"
+        local usage="USAGE:  wb topology density-map PROFILE-JSON NODE-SPECS"
         local profile_json=${1:?$usage}
-        local topo_dir=${2:?$usage}
+        local node_specs=${2:?$usage}
 
         args=(--slurpfile profile  "$profile_json"
-              --slurpfile topology "$topo_dir"/topology-nixops.json
+              --argjson   node_specs "$node_specs"
               --null-input --compact-output
              )
-        jq ' $topology[0] as $topo
-           | $topo.coreNodes
+        jq ' $node_specs
            | map
-             ({ key:   "\(.nodeId)"
+             ({ key:   "\(.i)"
               , value: ((.pools) // 0)
               })
            | from_entries

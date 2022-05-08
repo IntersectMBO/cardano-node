@@ -22,8 +22,10 @@ scenario() {
 local op=${1:---help}; shift
 local usage="USAGE: wb scenario SCENARIO-OP OP-ARGS.."
 local dir=${1:?$usage}; shift
+local tag=$(jq '.meta.tag' -r $dir/meta.json)
+local p=$dir/profile.json
 
-msg "starting scenario:  $(with_color blue $op)"
+progress "run | scenario" "starting $(with_color blue $op)"
 case "$op" in
     idle | default )
         backend start-cluster "$dir"
@@ -31,7 +33,11 @@ case "$op" in
 
     fixed )
         backend start-cluster      "$dir"
+
+        scenario_setup_termination "$dir"
         backend wait-pools-stopped "$dir"
+        scenario_cleanup_termination
+
         backend stop-cluster       "$dir"
         ;;
 
@@ -43,7 +49,11 @@ case "$op" in
     fixed-loaded )
         backend start-cluster      "$dir"
         backend start-generator    "$dir"
+
+        scenario_setup_termination "$dir"
         backend wait-pools-stopped "$dir"
+        scenario_cleanup_termination
+
         backend stop-cluster       "$dir"
         ;;
 
@@ -56,4 +66,38 @@ case "$op" in
         ;;
 
     * ) usage_scenario;; esac
+}
+
+__scenario_exit_trap_dir=
+scenario_exit_trap() {
+    echo >&2
+    msg "scenario:  $(with_color yellow exit trap triggered)"
+    backend stop-cluster "$__scenario_exit_trap_dir"
+}
+
+__scenario_watcher_pid=
+scenario_watcher() {
+    while test $__scenario_watcher_end_time -gt $(date +%s)
+    do sleep 3; done
+    echo >&2
+    msg "scenario:  $(with_color yellow end of time reached) for:  $(with_color red $(jq '.meta.tag' -r $__scenario_exit_trap_dir/meta.json))"
+    rm -f $dir/flag/cluster-termination
+    msg "scenario:  $(with_color red signalled termination)"
+}
+
+scenario_setup_termination() {
+    local run_dir=$1
+    export __scenario_exit_trap_dir=$run_dir
+    trap scenario_exit_trap EXIT
+
+    export __scenario_watcher_self=$BASHPID
+    local termination_tolerance_s=40
+    export __scenario_watcher_end_time=$(jq '
+           .meta.timing.earliest_end + '$termination_tolerance_s  $run_dir/meta.json)
+    scenario_watcher &
+    __scenario_watcher_pid=$!
+}
+
+scenario_cleanup_termination() {
+    kill $__scenario_watcher_pid 2>/dev/null || true
 }

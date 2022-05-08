@@ -1,6 +1,7 @@
 module Cardano.Util
   ( module Cardano.Util
   , module Control.Arrow
+  , module Control.Applicative
   , module Control.Concurrent.Async
   , module Control.Monad.Trans.Except.Extra
   , module Text.Printf
@@ -11,6 +12,7 @@ import Prelude                          (String)
 import Cardano.Prelude
 
 import Control.Arrow                    ((&&&), (***))
+import Control.Applicative              ((<|>))
 import Control.Concurrent.Async         (forConcurrently, forConcurrently_, mapConcurrently, mapConcurrently_)
 import Control.DeepSeq                  qualified as DS
 import Control.Monad.Trans.Except.Extra (firstExceptT, newExceptT)
@@ -26,10 +28,9 @@ import Cardano.Analysis.Ground
 
 
 mapConcurrentlyPure :: NFData b => (a -> b) -> [a] -> IO [b]
-mapConcurrentlyPure f xs =
+mapConcurrentlyPure f =
   mapConcurrently
     (evaluate . DS.force . f)
-    xs
 
 mapAndUnzip :: (a -> (b, c)) -> [a] -> ([b], [c])
 mapAndUnzip _ [] = ([], [])

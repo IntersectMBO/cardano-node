@@ -58,6 +58,5 @@ data Metadata
   { tag       :: Text
   , profile   :: Text
   , era       :: Text
-  , timestamp :: UTCTime
   }
   deriving (Generic, Show, FromJSON, ToJSON)

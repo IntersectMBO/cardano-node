@@ -85,7 +85,9 @@ def profiles($era; $mcompo; $topo; $extra_profiles):
   | map (## Assemble into a dictionary..
            { "\(.name)":
                ## ..and cleanup:
-               . | delpaths ([["generator", "epochs"]])})
+               .
+               # | delpaths ([["generator", "epochs"]])
+           })
   | add;
 
 def profile_names($era; $mcompo; $topo; $extra_profiles):

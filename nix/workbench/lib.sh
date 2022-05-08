@@ -68,8 +68,13 @@ msg_ne() {
     echo -ne "workbench:  $*" >&2
 }
 
+progress() {
+    local subsys=$1; shift
+    msg "$(with_color green $subsys):  $(with_color blue $*)"
+}
+
 fail() {
-    msg "$*"
+    msg "$(with_color red $*)"
     exit 1
 }
 

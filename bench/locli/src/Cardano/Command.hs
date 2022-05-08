@@ -33,10 +33,9 @@ renderCommandError (CommandError cmd err) =
   "While executing chained command '" <> show cmd <> "':  " <> err
 
 -- | Sub-commands
-data Command
+newtype Command
   -- | Analysis commands
-  = ChainCommand
-      [ChainCommand]
+  = ChainCommand [ChainCommand]
   deriving Show
 
 parseChainCommand :: Parser ChainCommand

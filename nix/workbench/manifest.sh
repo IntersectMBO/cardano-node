@@ -55,20 +55,40 @@ case "${op}" in
         local usage="USAGE: wb manifest $0 MANIFEST-JSON-VALUE"
         local json=${1:?$usage}
 
-        msg "component manifest:"
-        jq '
+        jq 'include "lib";
+
+        def repo_color($repo):
+          { "cardano-node":      "yellow"
+          , "ouroboros-network": "white"
+          , "cardano-ledger":    "red"
+          , "plutus":            "cyan"
+          }[$repo] // "off";
+        def repo_colorly($repo; $hash):
+          colorly(repo_color($repo); $hash[:5]) + $hash[5:];
+        def repo_status($status):
+          { modified:   colorly("red";   $status)
+          , clean:      colorly("cyan"; $status)
+          }[$status];
+        def repo_comment($manifest; $repo):
+          { "cardano-node":
+              " (branch \(colorly("yellow"; $manifest."cardano-node-branch")) - \(repo_status($manifest."cardano-node-status")))"
+          }[$repo] // "";
+
         . as $manifest
         | ($manifest
           | del(."cardano-node-status")
           | del(."cardano-node-branch")
           | to_entries
           | (map(.key | length) | max | . + 1) as $maxlen
-          | map( (if .key == "cardano-node" then " (branch \($manifest."cardano-node-branch"), \($manifest."cardano-node-status"))" else "" end)
-                 as $mod
-               | "   \(.key): \(" " * (.key | $maxlen - length))\(.value)\($mod)\n")
+          | map([ "   \(.key): "
+                , " " * (.key | $maxlen - length)
+                , repo_colorly(.key; .value)
+                , repo_comment($manifest; .key)
+                , "\n"
+                ] | add)
           | add
           )
-        ' --raw-output <<<$json
+        ' --raw-output -L$global_basedir <<<$json
         ;;
 
     * ) usage_manifest;; esac

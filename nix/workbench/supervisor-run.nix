@@ -52,8 +52,7 @@ let
         --cache-dir    ${cacheDir} \
         --base-port    ${toString basePort} \
         ''${WORKBENCH_CABAL_MODE:+--cabal} \
-        "$@" &&
-        echo 'workbench:  cluster started. Run `stop-cluster` to stop' >&2
+        "$@"
   '';
 
   interactive-stop = pkgs.writeScriptBin "stop-cluster" ''
