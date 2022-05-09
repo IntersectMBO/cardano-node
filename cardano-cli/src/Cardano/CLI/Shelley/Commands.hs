@@ -166,6 +166,12 @@ data TransactionCmd
       -- ^ Transaction inputs with optional spending scripts
       [TxIn]
       -- ^ Transaction inputs for collateral, only key witnesses, no scripts.
+      (Maybe TxOutAnyEra)
+      -- ^ Return collateral
+      (Maybe Lovelace)
+      -- ^ Total collateral
+      [TxIn]
+      -- ^ Reference inputs
       [RequiredSigner]
       -- ^ Required signers
       [TxOutAnyEra]
@@ -203,6 +209,12 @@ data TransactionCmd
       -- ^ Transaction inputs with optional spending scripts
       [TxIn]
       -- ^ Transaction inputs for collateral, only key witnesses, no scripts.
+      (Maybe TxOutAnyEra)
+      -- ^ Return collateral
+      (Maybe Lovelace)
+      -- ^ Total collateral
+      [TxIn]
+      -- ^ Reference inputs
       [TxOutAnyEra]
       -- ^ Normal outputs
       TxOutChangeAddress

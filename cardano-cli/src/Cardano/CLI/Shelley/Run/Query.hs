@@ -866,7 +866,7 @@ writeFilteredUTxOs shelleyBasedEra' mOutFile utxo =
           ShelleyBasedEraAllegra -> writeUTxo fpath utxo
           ShelleyBasedEraMary -> writeUTxo fpath utxo
           ShelleyBasedEraAlonzo -> writeUTxo fpath utxo
-          ShelleyBasedEraBabbage -> panic "TODO: Babbage"
+          ShelleyBasedEraBabbage -> writeUTxo fpath utxo
  where
    writeUTxo fpath utxo' =
      handleIOExceptT (ShelleyQueryCmdWriteFileError . FileIOError fpath)
@@ -885,7 +885,9 @@ printFilteredUTxOs shelleyBasedEra' (UTxO utxo) = do
       mapM_ (printUtxo shelleyBasedEra') $ Map.toList utxo
     ShelleyBasedEraAlonzo ->
       mapM_ (printUtxo shelleyBasedEra') $ Map.toList utxo
-    ShelleyBasedEraBabbage -> panic "TODO: Babbage"
+    ShelleyBasedEraBabbage ->
+      mapM_ (printUtxo shelleyBasedEra') $ Map.toList utxo
+
  where
    title :: Text
    title =
@@ -930,7 +932,14 @@ printUtxo shelleyBasedEra' txInOutTuple =
              , textShowN 6 index
              , "        " <> printableValue value <> " + " <> Text.pack (show mDatum)
              ]
-    ShelleyBasedEraBabbage -> panic "TODO: Babbage"
+    ShelleyBasedEraBabbage ->
+      let (TxIn (TxId txhash) (TxIx index), TxOut _ value mDatum _) = txInOutTuple
+      in Text.putStrLn $
+           mconcat
+             [ Text.decodeLatin1 (hashToBytesAsHex txhash)
+             , textShowN 6 index
+             , "        " <> printableValue value <> " + " <> Text.pack (show mDatum)
+             ]
  where
   textShowN :: Show a => Int -> a -> Text
   textShowN len x =
@@ -1318,7 +1327,8 @@ obtainLedgerEraClassConstraints ShelleyBasedEraShelley f = f
 obtainLedgerEraClassConstraints ShelleyBasedEraAllegra f = f
 obtainLedgerEraClassConstraints ShelleyBasedEraMary    f = f
 obtainLedgerEraClassConstraints ShelleyBasedEraAlonzo  f = f
-obtainLedgerEraClassConstraints ShelleyBasedEraBabbage _f = panic "TODO: Babbage"
+obtainLedgerEraClassConstraints ShelleyBasedEraBabbage _f =
+  panic "TODO: Babbage era - depends on consensus exposing a babbage era"
 
 
 eligibleLeaderSlotsConstaints
@@ -1338,4 +1348,4 @@ eligibleLeaderSlotsConstaints ShelleyBasedEraShelley f = f
 eligibleLeaderSlotsConstaints ShelleyBasedEraAllegra f = f
 eligibleLeaderSlotsConstaints ShelleyBasedEraMary    f = f
 eligibleLeaderSlotsConstaints ShelleyBasedEraAlonzo  f = f
-eligibleLeaderSlotsConstaints ShelleyBasedEraBabbage _f = panic "TODO: Babbage"
+eligibleLeaderSlotsConstaints ShelleyBasedEraBabbage f = f

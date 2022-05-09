@@ -672,6 +672,9 @@ pTransaction =
             <*> some (pTxIn AutoBalance)
             <*> many pRequiredSigner
             <*> many pTxInCollateral
+            <*> optional pReturnCollateral
+            <*> optional pTotalCollateral
+            <*> many pReferenceTxIn
             <*> many pTxOut
             <*> pChangeAddress
             <*> optional (pMintMultiAsset AutoBalance)
@@ -705,6 +708,9 @@ pTransaction =
                <*> optional pScriptValidity
                <*> some (pTxIn ManualBalance)
                <*> many pTxInCollateral
+               <*> optional pReturnCollateral
+               <*> optional pTotalCollateral
+               <*> many pReferenceTxIn
                <*> many pRequiredSigner
                <*> many pTxOut
                <*> optional (pMintMultiAsset ManualBalance)
@@ -2020,6 +2026,40 @@ pTxInCollateral =
       <> Opt.help "TxId#TxIx"
       )
 
+pReturnCollateral :: Parser TxOutAnyEra
+pReturnCollateral =
+  Opt.option (readerFromParsecParser parseTxOutAnyEra)
+          (  Opt.long "tx-out-return-collateral"
+          <> Opt.metavar "ADDRESS VALUE"
+          -- TODO alonzo: Update the help text to describe the new syntax as well.
+          <> Opt.help "The transaction output as ADDRESS VALUE where ADDRESS is \
+                      \the Bech32-encoded address followed by the value in \
+                      \Lovelace. In the situation where your collateral txin \
+                      \over collateralizes the transaction, you can optionally \
+                      \specify a tx out of your choosing to return the excess Lovelace."
+          )
+    <*> pTxOutDatum
+    <*> pRefScriptFp
+
+pTotalCollateral :: Parser Lovelace
+pTotalCollateral =
+  Opt.option (Lovelace <$> readerFromParsecParser decimal)
+    (  Opt.long "tx-total-collateral"
+    <> Opt.metavar "INTEGER"
+    <> Opt.help "The total amount of collateral that will be collected \
+                 \as fees in the event of a Plutus script failure. Must be used \
+                 \in conjuction with \"--tx-out-return-collateral\"."
+    )
+
+
+pReferenceTxIn :: Parser TxIn
+pReferenceTxIn =
+    Opt.option (readerFromParsecParser parseTxIn)
+      (  Opt.long "tx-in-reference"
+      <> Opt.metavar "TX-IN"
+      <> Opt.help "TxId#TxIx"
+      )
+
 pWitnessOverride :: Parser Word
 pWitnessOverride = Opt.option Opt.auto
   (  Opt.long "witness-override"
@@ -2053,6 +2093,7 @@ pTxOut =
                       \the multi-asset syntax (including simply Lovelace)."
           )
     <*> pTxOutDatum
+    <*> pRefScriptFp
 
 
 pTxOutDatum :: Parser TxOutDatumAnyEra
@@ -2060,6 +2101,7 @@ pTxOutDatum =
       pTxOutDatumByHashOnly
   <|> pTxOutDatumByHashOf
   <|> pTxOutDatumByValue
+  <|> pTxOutInlineDatumByValue
   <|> pure TxOutDatumByNone
   where
     pTxOutDatumByHashOnly =
@@ -2088,6 +2130,24 @@ pTxOutDatum =
           \given here in JSON syntax."
           "The script datum to embed in the tx for this output, \
           \in the given JSON file."
+
+    pTxOutInlineDatumByValue =
+      TxOutInlineDatumByValue <$>
+        pScriptDataOrFile
+          "tx-out-inline-datum"
+          "The script datum to embed in the tx output as an inline datum, \
+          \given here in JSON syntax."
+          "The script datum to embed in the tx output as an inline datum, \
+          \in the given JSON file."
+
+pRefScriptFp :: Parser ReferenceScriptAnyEra
+pRefScriptFp =
+  ReferenceScriptAnyEra <$> Opt.strOption
+    (  Opt.long "reference-script-file"
+    <> Opt.metavar "FILE"
+    <> Opt.help "Reference script input file."
+    <> Opt.completer (Opt.bashCompleter "file")
+    ) <|> pure ReferenceScriptAnyEraNone
 
 pMintMultiAsset
   :: BalanceTxExecUnits
@@ -2995,7 +3055,8 @@ parseStakeAddress = do
       Nothing   -> fail $ "invalid address: " <> Text.unpack str
       Just addr -> pure addr
 
-parseTxOutAnyEra :: Parsec.Parser (TxOutDatumAnyEra -> TxOutAnyEra)
+parseTxOutAnyEra
+  :: Parsec.Parser (TxOutDatumAnyEra -> ReferenceScriptAnyEra -> TxOutAnyEra)
 parseTxOutAnyEra = do
     addr <- parseAddressAny
     Parsec.spaces
