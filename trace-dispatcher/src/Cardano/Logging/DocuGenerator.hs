@@ -196,7 +196,7 @@ generateTOC traces metrics datapoints =
     namespaceToToc :: ([Builder], Namespace) -> Namespace -> ([Builder], Namespace)
     namespaceToToc (builders, context) ns =
       let ref = namespaceRefBuilder ns
-          ns' = if take 2 ns == ["Cardano", "Node"]
+          ns' = if take 2 ns == [intern "Cardano", intern "Node"]
                   then drop 2 ns
                   else ns
       in if init ns' == context
@@ -205,7 +205,7 @@ generateTOC traces metrics datapoints =
           <> fromString (replicate (length context) '\t')
           <> fromText "1. "
           <> fromText "["
-          <> fromText (last ns')
+          <> fromString (unintern (last ns'))
           <> fromText "](#"
           <> ref
           <> fromText ")") : builders, context)
@@ -226,7 +226,7 @@ generateTOC traces metrics datapoints =
                       <> fromString (replicate (length context) '\t')
                       <> fromText "1. "
                       <> fromText "["
-                      <> fromText single
+                      <> fromString (unintern single)
                       <> fromText "](#"
                       <> ref
                       <> fromText ")") : builders, context)
@@ -234,14 +234,14 @@ generateTOC traces metrics datapoints =
           let builder = fromText "\n"
                         <> fromString (replicate (length context) '\t')
                         <> fromText "1. __"
-                        <> fromText hdn
+                        <> fromString (unintern hdn)
                         <> fromText "__"
           in  namespaceToTocWithContext
               (builder : builders, context ++ [hdn]) tln ref
         [] -> error "inpossible"
 
     splitToNS :: Namespace -> Namespace
-    splitToNS [sym] = T.split (== '.') sym
+    splitToNS [sym] = map (intern . T.unpack) (T.split (== '.') ((pack . unintern) sym))
 
 
     commonPrefixLength :: Eq a => [a] -> [a] -> Int
@@ -252,7 +252,8 @@ generateTOC traces metrics datapoints =
           then 1 + commonPrefixLength ta tb
           else 0
 
-    namespaceRefBuilder ns = mconcat (map (fromText . toLower ) ns)
+    namespaceRefBuilder :: Namespace -> Builder
+    namespaceRefBuilder ns = mconcat (map (fromText . toLower . pack . unintern) ns)
 
 
 buildersToText :: [(Namespace, DocuResult)] -> TraceConfig -> IO Text
