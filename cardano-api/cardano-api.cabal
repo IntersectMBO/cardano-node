@@ -87,6 +87,7 @@ library
                         Cardano.Api.Tx
                         Cardano.Api.TxBody
                         Cardano.Api.InMode
+                        Cardano.Api.InMode.Export
                         Cardano.Api.InMode.ToJson
                         Cardano.Api.TxMetadata
                         Cardano.Api.TxSubmit.ErrorRender

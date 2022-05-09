@@ -39,7 +39,7 @@ import qualified Ouroboros.Consensus.HardFork.Combinator.Degenerate as Consensus
 import qualified Ouroboros.Consensus.Ledger.SupportsMempool as Consensus
 import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
 import qualified Ouroboros.Consensus.TypeFamilyWrappers as Consensus
-import           Cardano.Api.InMode.ToJson (applyTxErrorToJson)
+import           Cardano.Api.InMode.Export (applyTxErrorToJson)
 
 import           Cardano.Api.Eras
 import           Cardano.Api.Modes

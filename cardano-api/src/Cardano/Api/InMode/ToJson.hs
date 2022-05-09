@@ -20,9 +20,7 @@
 {-# OPTIONS_GHC -Wno-orphans            #-}
 
 module Cardano.Api.InMode.ToJson
-  ( applyTxErrorToJson
-
-  , renderScriptIntegrityHash
+  ( renderScriptIntegrityHash
   , renderScriptHash
   , renderMissingRedeemers
   , renderScriptPurpose
@@ -131,18 +129,6 @@ import qualified Plutus.V1.Ledger.Api as PV1
 
 instance ToJSON (PredicateFailure (Core.EraRule "LEDGER" era)) => ToJSON (ApplyTxError era) where
   toJSON (ApplyTxError es) = toJSON es
-
-applyTxErrorToJson ::
-  ( ShelleyBasedEra era
-  , ToJSON (Core.Value era)
-  , ToJSON (Core.TxOut era)
-  , ToJSON (PredicateFailure (Core.EraRule "PPUP" era))
-  , ToJSON (PredicateFailure (Core.EraRule "UTXO" era))
-  , ToJSON (PredicateFailure (Core.EraRule "DELEGS" era))
-  , ToJSON (PredicateFailure (Core.EraRule "UTXOW" era))
-  , ToJSON (Core.AuxiliaryDataHash (Ledger.Crypto era))
-  ) => Consensus.ApplyTxErr (ShelleyBlock era) -> Value
-applyTxErrorToJson (ApplyTxError predicateFailures) = toJSON (fmap toJSON predicateFailures)
 
 instance
   ( ShelleyBasedEra era
