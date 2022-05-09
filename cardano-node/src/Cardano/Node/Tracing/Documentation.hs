@@ -50,6 +50,7 @@ import           Cardano.Node.TraceConstraints
 
 
 import           Ouroboros.Consensus.Block.Forging
+import           Ouroboros.Consensus.Block.NestedContent (HasNestedContent)
 import           Ouroboros.Consensus.BlockchainTime.WallClock.Types (RelativeTime)
 import           Ouroboros.Consensus.BlockchainTime.WallClock.Util (TraceBlockchainTimeEvent (..))
 import           Ouroboros.Consensus.Cardano.Block
@@ -175,6 +176,7 @@ docTracers :: forall blk peer remotePeer.
   , Show (ForgeStateUpdateError blk)
   , Show (CannotForge blk)
   , ShowQuery (BlockQuery blk)
+  , HasNestedContent Header blk
   )
   => FilePath
   -> FilePath

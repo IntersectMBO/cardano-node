@@ -4,6 +4,7 @@
 module Cardano.Node.TraceConstraints (TraceConstraints) where
 
 
+import           Prelude (Show)
 import           Data.Aeson
 
 import           Cardano.BM.Tracing (ToObject)
@@ -31,6 +32,8 @@ type TraceConstraints blk =
     , HasKESMetricsData blk
     , HasKESInfo blk
     , GetKESInfo blk
+    , Show blk
+    , Show (Header blk)
 
     , ToObject (ApplyTxErr blk)
     , ToObject (GenTx blk)

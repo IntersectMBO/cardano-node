@@ -1,6 +1,8 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -30,8 +32,7 @@ module Cardano.Node.Tracing.Tracers.NodeToClient
 import           Cardano.Logging
 import           Cardano.Prelude hiding (Show, show)
 import           Data.Aeson (Value (String), (.=))
-import           Data.Text (pack)
-import           Network.TypedProtocol.Codec (AnyMessageAndAgency (..))
+import           Network.TypedProtocol.Codec (AnyMessage (..))
 import           Text.Show
 
 import           Cardano.Slotting.Slot (SlotNo)
@@ -49,8 +50,10 @@ import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as LSQ
 import qualified Ouroboros.Network.Protocol.LocalTxMonitor.Type as LTM
 import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Type as LTS
 
+import           Cardano.Node.Tracing.Tracers.NodeToNode (formatMessageWithAgency)
 
-instance LogFormatting (AnyMessageAndAgency ps)
+
+instance LogFormatting (AnyMessage ps)
       => LogFormatting (TraceSendRecv ps) where
   forMachine dtal (TraceSendMsg m) = mconcat
     [ "kind" .= String "Send" , "msg" .= forMachine dtal m ]
@@ -75,7 +78,7 @@ severityTChainSync (BlockFetch.TraceLabelPeer _ v) = severityTChainSync' v
     severityTChainSync' (TraceSendMsg msg) = severityTChainSync'' msg
     severityTChainSync' (TraceRecvMsg msg) = severityTChainSync'' msg
 
-    severityTChainSync'' (AnyMessageAndAgency _agency msg) = severityTChainSync''' msg
+    severityTChainSync'' (AnyMessage msg) = severityTChainSync''' msg
 
     severityTChainSync''' :: Message
                                      (ChainSync header point tip) from to
@@ -97,7 +100,7 @@ namesForTChainSync (BlockFetch.TraceLabelPeer _ v) = namesTChainSync v
     namesTChainSync (TraceSendMsg msg) = "Send" : namesTChainSync' msg
     namesTChainSync (TraceRecvMsg msg) = "Receive" : namesTChainSync' msg
 
-    namesTChainSync' (AnyMessageAndAgency _agency msg) = namesTChainSync'' msg
+    namesTChainSync' (AnyMessage msg) = namesTChainSync'' msg
 
     namesTChainSync'' :: Message (ChainSync header point tip) from to
                                -> [Text]
@@ -111,39 +114,25 @@ namesForTChainSync (BlockFetch.TraceLabelPeer _ v) = namesTChainSync v
     namesTChainSync'' MsgDone {}              = ["Done"]
 
 
-instance LogFormatting (AnyMessageAndAgency (ChainSync blk pt tip)) where
-   forMachine _dtal (AnyMessageAndAgency stok ChainSync.MsgRequestNext{}) =
-     mconcat [ "kind" .= String "MsgRequestNext"
-              , "agency" .= String (pack $ show stok)
-              ]
-   forMachine _dtal (AnyMessageAndAgency stok ChainSync.MsgAwaitReply{}) =
-     mconcat [ "kind" .= String "MsgAwaitReply"
-              , "agency" .= String (pack $ show stok)
-              ]
-   forMachine _dtal (AnyMessageAndAgency stok ChainSync.MsgRollForward{}) =
-     mconcat [ "kind" .= String "MsgRollForward"
-              , "agency" .= String (pack $ show stok)
-              ]
-   forMachine _dtal (AnyMessageAndAgency stok ChainSync.MsgRollBackward{}) =
-     mconcat [ "kind" .= String "MsgRollBackward"
-              , "agency" .= String (pack $ show stok)
-              ]
-   forMachine _dtal (AnyMessageAndAgency stok ChainSync.MsgFindIntersect{}) =
-     mconcat [ "kind" .= String "MsgFindIntersect"
-              , "agency" .= String (pack $ show stok)
-              ]
-   forMachine _dtal (AnyMessageAndAgency stok ChainSync.MsgIntersectFound{}) =
-     mconcat [ "kind" .= String "MsgIntersectFound"
-              , "agency" .= String (pack $ show stok)
-              ]
-   forMachine _dtal (AnyMessageAndAgency stok ChainSync.MsgIntersectNotFound{}) =
-     mconcat [ "kind" .= String "MsgIntersectNotFound"
-              , "agency" .= String (pack $ show stok)
-              ]
-   forMachine _dtal (AnyMessageAndAgency stok ChainSync.MsgDone{}) =
-     mconcat [ "kind" .= String "MsgDone"
-              , "agency" .= String (pack $ show stok)
-              ]
+instance ( forall (st :: ChainSync blk pt tip) (st' :: ChainSync blk pt tip).
+             Show (Message (ChainSync blk pt tip) st st'))
+      => LogFormatting (AnyMessage (ChainSync blk pt tip)) where
+   forMachine dtal (AnyMessage msg@ChainSync.MsgRequestNext {}) =
+     formatMessageWithAgency dtal msg "MsgRequestNext"
+   forMachine dtal (AnyMessage msg@ChainSync.MsgAwaitReply{}) =
+     formatMessageWithAgency dtal msg "MsgAwaitReply"
+   forMachine dtal (AnyMessage msg@ChainSync.MsgRollForward{}) =
+     formatMessageWithAgency dtal msg "MsgRollForward"
+   forMachine dtal (AnyMessage msg@ChainSync.MsgRollBackward{}) =
+     formatMessageWithAgency dtal msg "MsgRollBackward"
+   forMachine dtal (AnyMessage msg@ChainSync.MsgFindIntersect{}) =
+     formatMessageWithAgency dtal msg "MsgFindIntersect"
+   forMachine dtal (AnyMessage msg@ChainSync.MsgIntersectFound{}) =
+     formatMessageWithAgency dtal msg "MsgIntersectFound"
+   forMachine dtal (AnyMessage msg@ChainSync.MsgIntersectNotFound{}) =
+     formatMessageWithAgency dtal msg "MsgIntersectNotFound"
+   forMachine dtal (AnyMessage msg@ChainSync.MsgDone{}) =
+     formatMessageWithAgency dtal msg "MsgDone"
 
 docTChainSyncNodeToClient :: Documented (BlockFetch.TraceLabelPeer peer (TraceSendRecv
     (ChainSync x (Point blk) (Tip blk))))
@@ -241,7 +230,7 @@ namesForTTxMonitor (TraceLabelPeer _ v) = namesForTTxMonitor' v
     namesForTTxMonitor' (TraceSendMsg msg) = "Send"    : namesForTTxMonitor'' msg
     namesForTTxMonitor' (TraceRecvMsg msg) = "Receive" : namesForTTxMonitor'' msg
 
-    namesForTTxMonitor'' (AnyMessageAndAgency _agency msg) = namesForTTxMonitor''' msg
+    namesForTTxMonitor'' (AnyMessage msg) = namesForTTxMonitor''' msg
 
     namesForTTxMonitor''' :: Message (LTM.LocalTxMonitor (GenTxId blk) (GenTx blk) SlotNo)
                                      from to
@@ -258,51 +247,32 @@ namesForTTxMonitor (TraceLabelPeer _ v) = namesForTTxMonitor' v
     namesForTTxMonitor''' LTM.MsgRelease {} = ["Release"]
     namesForTTxMonitor''' LTM.MsgDone {} = ["Done"]
 
-instance LogFormatting (AnyMessageAndAgency (LTM.LocalTxMonitor txid tx slotNo)) where
-  forMachine _dtal (AnyMessageAndAgency stok LTM.MsgAcquire {}) =
-    mconcat [ "kind" .= String "MsgAcquire"
-             , "agency" .= String (pack $ show stok)
-             ]
-  forMachine _dtal (AnyMessageAndAgency stok LTM.MsgAcquired {}) =
-    mconcat [ "kind" .= String "MsgAcquired"
-             , "agency" .= String (pack $ show stok)
-             ]
-  forMachine _dtal (AnyMessageAndAgency stok LTM.MsgAwaitAcquire {}) =
-    mconcat [ "kind" .= String "MsgAwaitAcquire"
-             , "agency" .= String (pack $ show stok)
-             ]
-  forMachine _dtal (AnyMessageAndAgency stok LTM.MsgNextTx {}) =
-    mconcat [ "kind" .= String "MsgNextTx"
-             , "agency" .= String (pack $ show stok)
-             ]
-  forMachine _dtal (AnyMessageAndAgency stok LTM.MsgReplyNextTx {}) =
-    mconcat [ "kind" .= String "MsgReplyNextTx"
-             , "agency" .= String (pack $ show stok)
-             ]
-  forMachine _dtal (AnyMessageAndAgency stok LTM.MsgHasTx {}) =
-    mconcat [ "kind" .= String "MsgHasTx"
-             , "agency" .= String (pack $ show stok)
-             ]
-  forMachine _dtal (AnyMessageAndAgency stok LTM.MsgReplyHasTx {}) =
-    mconcat [ "kind" .= String "MsgReplyHasTx"
-             , "agency" .= String (pack $ show stok)
-             ]
-  forMachine _dtal (AnyMessageAndAgency stok LTM.MsgGetSizes {}) =
-    mconcat [ "kind" .= String "MsgGetSizes"
-             , "agency" .= String (pack $ show stok)
-             ]
-  forMachine _dtal (AnyMessageAndAgency stok LTM.MsgReplyGetSizes {}) =
-    mconcat [ "kind" .= String "MsgReplyGetSizes"
-             , "agency" .= String (pack $ show stok)
-             ]
-  forMachine _dtal (AnyMessageAndAgency stok LTM.MsgRelease {}) =
-    mconcat [ "kind" .= String "MsgRelease"
-             , "agency" .= String (pack $ show stok)
-             ]
-  forMachine _dtal (AnyMessageAndAgency stok LTM.MsgDone {}) =
-    mconcat [ "kind" .= String "MsgDone"
-             , "agency" .= String (pack $ show stok)
-             ]
+instance (forall (st :: LTM.LocalTxMonitor txid tx slotNo)
+                 (st' :: LTM.LocalTxMonitor txid tx slotNo).
+            Show (Message (LTM.LocalTxMonitor txid tx slotNo) st st'))
+      => LogFormatting (AnyMessage (LTM.LocalTxMonitor txid tx slotNo)) where
+  forMachine dtal (AnyMessage msg@LTM.MsgAcquire {}) =
+    formatMessageWithAgency dtal msg "MsgAcquire"
+  forMachine dtal (AnyMessage msg@LTM.MsgAcquired {}) =
+    formatMessageWithAgency dtal msg "MsgAcquired"
+  forMachine dtal (AnyMessage msg@LTM.MsgAwaitAcquire {}) =
+    formatMessageWithAgency dtal msg "MsgAwaitAcquire"
+  forMachine dtal (AnyMessage msg@LTM.MsgNextTx {}) =
+    formatMessageWithAgency dtal msg "MsgNextTx"
+  forMachine dtal (AnyMessage msg@LTM.MsgReplyNextTx {}) =
+    formatMessageWithAgency dtal msg "MsgReplyNextTx"
+  forMachine dtal (AnyMessage msg@LTM.MsgHasTx {}) =
+    formatMessageWithAgency dtal msg "MsgHasTx"
+  forMachine dtal (AnyMessage msg@LTM.MsgReplyHasTx {}) =
+    formatMessageWithAgency dtal msg "MsgReplyHasTx"
+  forMachine dtal (AnyMessage msg@LTM.MsgGetSizes {}) =
+    formatMessageWithAgency dtal msg "MsgGetSizes"
+  forMachine dtal (AnyMessage msg@LTM.MsgReplyGetSizes {}) =
+    formatMessageWithAgency dtal msg "MsgReplyGetSizes"
+  forMachine dtal (AnyMessage msg@LTM.MsgRelease {}) =
+    formatMessageWithAgency dtal msg "MsgRelease"
+  forMachine dtal (AnyMessage msg@LTM.MsgDone {}) =
+    formatMessageWithAgency dtal msg "MsgDone"
 
 docTTxMonitor :: Documented
   (TraceLabelPeer
@@ -327,7 +297,7 @@ severityTTxSubmission (BlockFetch.TraceLabelPeer _ v) = severityTTxSubmission' v
     severityTTxSubmission' (TraceSendMsg msg) = severityTTxSubmission'' msg
     severityTTxSubmission' (TraceRecvMsg msg) = severityTTxSubmission'' msg
 
-    severityTTxSubmission'' (AnyMessageAndAgency _agency msg) = severityTTxSubmission''' msg
+    severityTTxSubmission'' (AnyMessage msg) = severityTTxSubmission''' msg
 
     severityTTxSubmission''' :: Message
                                         (LTS.LocalTxSubmission tx reject) from to
@@ -346,7 +316,7 @@ namesForTTxSubmission (BlockFetch.TraceLabelPeer _ v) = namesTTxSubmission v
     namesTTxSubmission (TraceSendMsg msg) = "Send" : namesTTxSubmission' msg
     namesTTxSubmission (TraceRecvMsg msg) = "Receive" : namesTTxSubmission' msg
 
-    namesTTxSubmission' (AnyMessageAndAgency _agency msg) = namesTTxSubmission'' msg
+    namesTTxSubmission' (AnyMessage msg) = namesTTxSubmission'' msg
 
     namesTTxSubmission'' :: Message
                                     (LTS.LocalTxSubmission tx reject) from to
@@ -357,23 +327,18 @@ namesForTTxSubmission (BlockFetch.TraceLabelPeer _ v) = namesTTxSubmission v
     namesTTxSubmission'' LTS.MsgDone {}     = ["Done"]
 
 
-instance LogFormatting (AnyMessageAndAgency (LTS.LocalTxSubmission tx err)) where
-  forMachine _dtal (AnyMessageAndAgency stok LTS.MsgSubmitTx{}) =
-    mconcat [ "kind" .= String "MsgSubmitTx"
-             , "agency" .= String (pack $ show stok)
-             ]
-  forMachine _dtal (AnyMessageAndAgency stok LTS.MsgAcceptTx{}) =
-    mconcat [ "kind" .= String "MsgAcceptTx"
-             , "agency" .= String (pack $ show stok)
-             ]
-  forMachine _dtal (AnyMessageAndAgency stok LTS.MsgRejectTx{}) =
-    mconcat [ "kind" .= String "MsgRejectTx"
-             , "agency" .= String (pack $ show stok)
-             ]
-  forMachine _dtal (AnyMessageAndAgency stok LTS.MsgDone{}) =
-    mconcat [ "kind" .= String "MsgDone"
-             , "agency" .= String (pack $ show stok)
-             ]
+instance (forall (st :: LTS.LocalTxSubmission tx err)
+                 (st' :: LTS.LocalTxSubmission tx err).
+            Show (Message (LTS.LocalTxSubmission tx err) st st'))
+      => LogFormatting (AnyMessage (LTS.LocalTxSubmission tx err)) where
+  forMachine dtal (AnyMessage msg@LTS.MsgSubmitTx{}) =
+    formatMessageWithAgency dtal msg "MsgSubmitTx"
+  forMachine dtal (AnyMessage msg@LTS.MsgAcceptTx{}) =
+    formatMessageWithAgency dtal msg "MsgAcceptTx"
+  forMachine dtal (AnyMessage msg@LTS.MsgRejectTx{}) =
+    formatMessageWithAgency dtal msg "MsgRejectTx"
+  forMachine dtal (AnyMessage msg@LTS.MsgDone{}) =
+    formatMessageWithAgency dtal msg "MsgDone"
 
 docTTxSubmission :: Documented
   (BlockFetch.TraceLabelPeer
@@ -424,7 +389,7 @@ severityTStateQuery (BlockFetch.TraceLabelPeer _ v) = severityTStateQuery' v
     severityTStateQuery' (TraceSendMsg msg) = severityTStateQuery'' msg
     severityTStateQuery' (TraceRecvMsg msg) = severityTStateQuery'' msg
 
-    severityTStateQuery'' (AnyMessageAndAgency _agency msg) = severityTStateQuery''' msg
+    severityTStateQuery'' (AnyMessage msg) = severityTStateQuery''' msg
 
     severityTStateQuery''' :: Message
                                     (LSQ.LocalStateQuery block point query1) from to
@@ -446,7 +411,7 @@ namesForTStateQuery (BlockFetch.TraceLabelPeer _ v) = namesForTStateQuery' v
     namesForTStateQuery' (TraceSendMsg msg) = "Send" : namesForTStateQuery'' msg
     namesForTStateQuery' (TraceRecvMsg msg) = "Receive" : namesForTStateQuery'' msg
 
-    namesForTStateQuery'' (AnyMessageAndAgency _agency msg) = namesForTStateQuery''' msg
+    namesForTStateQuery'' (AnyMessage msg) = namesForTStateQuery''' msg
 
     namesForTStateQuery''' :: Message
                                     (LSQ.LocalStateQuery block point query1) from to
@@ -461,40 +426,28 @@ namesForTStateQuery (BlockFetch.TraceLabelPeer _ v) = namesForTStateQuery' v
     namesForTStateQuery''' LSQ.MsgReAcquire {} = ["ReAcquire"]
     namesForTStateQuery''' LSQ.MsgDone {}      = ["Done"]
 
-instance (forall result. Show (Query blk result))
-      => LogFormatting (AnyMessageAndAgency (LSQ.LocalStateQuery blk pt (Query blk))) where
-  forMachine _dtal (AnyMessageAndAgency stok LSQ.MsgAcquire{}) =
-    mconcat [ "kind" .= String "MsgAcquire"
-             , "agency" .= String (pack $ show stok)
-             ]
-  forMachine _dtal (AnyMessageAndAgency stok LSQ.MsgAcquired{}) =
-    mconcat [ "kind" .= String "MsgAcquired"
-             , "agency" .= String (pack $ show stok)
-             ]
-  forMachine _dtal (AnyMessageAndAgency stok LSQ.MsgFailure{}) =
-    mconcat [ "kind" .= String "MsgFailure"
-             , "agency" .= String (pack $ show stok)
-             ]
-  forMachine _dtal (AnyMessageAndAgency stok LSQ.MsgQuery{}) =
-    mconcat [ "kind" .= String "MsgQuery"
-             , "agency" .= String (pack $ show stok)
-             ]
-  forMachine _dtal (AnyMessageAndAgency stok LSQ.MsgResult{}) =
-    mconcat [ "kind" .= String "MsgResult"
-             , "agency" .= String (pack $ show stok)
-             ]
-  forMachine _dtal (AnyMessageAndAgency stok LSQ.MsgRelease{}) =
-    mconcat [ "kind" .= String "MsgRelease"
-             , "agency" .= String (pack $ show stok)
-             ]
-  forMachine _dtal (AnyMessageAndAgency stok LSQ.MsgReAcquire{}) =
-    mconcat [ "kind" .= String "MsgReAcquire"
-             , "agency" .= String (pack $ show stok)
-             ]
-  forMachine _dtal (AnyMessageAndAgency stok LSQ.MsgDone{}) =
-    mconcat [ "kind" .= String "MsgDone"
-             , "agency" .= String (pack $ show stok)
-             ]
+instance ( forall result. Show (Query blk result)
+         , forall (st :: LSQ.LocalStateQuery blk pt (Query blk))
+                  (st' :: LSQ.LocalStateQuery blk pt (Query blk)).
+             Show (Message (LSQ.LocalStateQuery blk pt (Query blk)) st st')
+         )
+      => LogFormatting (AnyMessage (LSQ.LocalStateQuery blk pt (Query blk))) where
+  forMachine dtal (AnyMessage msg@LSQ.MsgAcquire{}) =
+    formatMessageWithAgency dtal msg "MsgAcquire"
+  forMachine dtal (AnyMessage msg@LSQ.MsgAcquired{}) =
+    formatMessageWithAgency dtal msg "MsgAcquired"
+  forMachine dtal (AnyMessage msg@LSQ.MsgFailure{}) =
+    formatMessageWithAgency dtal msg "MsgFailure"
+  forMachine dtal (AnyMessage msg@LSQ.MsgQuery{}) =
+    formatMessageWithAgency dtal msg "MsgQuery"
+  forMachine dtal (AnyMessage msg@LSQ.MsgResult{}) =
+    formatMessageWithAgency dtal msg "MsgResult"
+  forMachine dtal (AnyMessage msg@LSQ.MsgRelease{}) =
+    formatMessageWithAgency dtal msg "MsgRelease"
+  forMachine dtal (AnyMessage msg@LSQ.MsgReAcquire{}) =
+    formatMessageWithAgency dtal msg "MsgReAcquire"
+  forMachine dtal (AnyMessage msg@LSQ.MsgDone{}) =
+    formatMessageWithAgency dtal msg "MsgDone"
 
 docTStateQuery :: Documented
       (BlockFetch.TraceLabelPeer peer

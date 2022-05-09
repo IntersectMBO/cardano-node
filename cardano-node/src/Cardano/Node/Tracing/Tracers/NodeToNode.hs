@@ -1,6 +1,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -30,13 +31,17 @@ module Cardano.Node.Tracing.Tracers.NodeToNode
   , severityTxSubmission2Node
   , namesForTxSubmission2Node
   , docTTxSubmission2Node
+  -- * Utils
+  , formatMessageWithAgency
   ) where
 
+import           Prelude (String)
 import           Cardano.Logging
 import           Cardano.Prelude hiding (Show, show)
-import           Data.Aeson (Value (String), toJSON, (.=))
+import           Data.Aeson (Value (String), toJSON, (.=), Object)
+import           Data.Singletons
 import           Data.Text (pack)
-import           Network.TypedProtocol.Codec (AnyMessageAndAgency (..))
+import           Network.TypedProtocol.Codec (AnyMessage (..))
 import           Text.Show
 
 import           Cardano.Node.Queries (ConvertTxId)
@@ -68,7 +73,7 @@ severityTChainSyncNode (BlockFetch.TraceLabelPeer _ v) = severityTChainSync' v
     severityTChainSync' (TraceSendMsg msg) = severityTChainSync'' msg
     severityTChainSync' (TraceRecvMsg msg) = severityTChainSync'' msg
 
-    severityTChainSync'' (AnyMessageAndAgency _agency msg) = severityTChainSync''' msg
+    severityTChainSync'' (AnyMessage msg) = severityTChainSync''' msg
 
     severityTChainSync''' :: Message
                                      (ChainSync header point tip) from to
@@ -90,7 +95,7 @@ namesForTChainSyncNode (BlockFetch.TraceLabelPeer _ v) = namesTChainSync v
     namesTChainSync (TraceSendMsg msg) = "Send" : namesTChainSync' msg
     namesTChainSync (TraceRecvMsg msg) = "Receive" : namesTChainSync' msg
 
-    namesTChainSync' (AnyMessageAndAgency _agency msg) = namesTChainSync'' msg
+    namesTChainSync' (AnyMessage msg) = namesTChainSync'' msg
 
     namesTChainSync'' :: Message (ChainSync header point tip) from to
                                -> [Text]
@@ -114,7 +119,7 @@ severityTChainSyncSerialised (BlockFetch.TraceLabelPeer _ v) = severityTChainSyn
     severityTChainSync' (TraceSendMsg msg) = severityTChainSync'' msg
     severityTChainSync' (TraceRecvMsg msg) = severityTChainSync'' msg
 
-    severityTChainSync'' (AnyMessageAndAgency _agency msg) = severityTChainSync''' msg
+    severityTChainSync'' (AnyMessage msg) = severityTChainSync''' msg
 
     severityTChainSync''' :: Message
                                      (ChainSync header point tip) from to
@@ -135,7 +140,7 @@ namesForTChainSyncSerialised (BlockFetch.TraceLabelPeer _ v) = namesTChainSync v
     namesTChainSync (TraceSendMsg msg) = "Send" : namesTChainSync' msg
     namesTChainSync (TraceRecvMsg msg) = "Receive" : namesTChainSync' msg
 
-    namesTChainSync' (AnyMessageAndAgency _agency msg) = namesTChainSync'' msg
+    namesTChainSync' (AnyMessage msg) = namesTChainSync'' msg
 
     namesTChainSync'' :: Message (ChainSync header point tip) from to
                                -> [Text]
@@ -159,7 +164,7 @@ severityTBlockFetch (BlockFetch.TraceLabelPeer _ v) = severityTBlockFetch' v
     severityTBlockFetch' (TraceSendMsg msg) = severityTBlockFetch'' msg
     severityTBlockFetch' (TraceRecvMsg msg) = severityTBlockFetch'' msg
 
-    severityTBlockFetch'' (AnyMessageAndAgency _agency msg) = severityTBlockFetch''' msg
+    severityTBlockFetch'' (AnyMessage msg) = severityTBlockFetch''' msg
 
     severityTBlockFetch''' :: Message (BlockFetch x (Point blk)) from to
                                    -> SeverityS
@@ -177,7 +182,7 @@ namesForTBlockFetch (BlockFetch.TraceLabelPeer _ v) = namesTBlockFetch v
     namesTBlockFetch (TraceSendMsg msg) = "Send" : namesTBlockFetch' msg
     namesTBlockFetch (TraceRecvMsg msg) = "Receive" : namesTBlockFetch' msg
 
-    namesTBlockFetch' (AnyMessageAndAgency _agency msg) = namesTBlockFetch'' msg
+    namesTBlockFetch' (AnyMessage msg) = namesTBlockFetch'' msg
 
     namesTBlockFetch'' :: Message (BlockFetch x (Point blk)) from to
                                -> [Text]
@@ -188,6 +193,25 @@ namesForTBlockFetch (BlockFetch.TraceLabelPeer _ v) = namesTBlockFetch v
     namesTBlockFetch'' MsgBatchDone {}    = ["BatchDone"]
     namesTBlockFetch'' MsgClientDone {}   = ["ClientDone"]
 
+
+formatMessageWithAgency :: forall ps (st :: ps) (st' :: ps).
+                  SingI st
+               => Show (Sing st)
+               => Show (Message ps st st')
+               => DetailLevel
+               -> Message ps st st'
+               -> String
+               -> Object
+formatMessageWithAgency dtal msg _condensed | dtal >= DMaximum =
+  mconcat [ "kind" .= String (pack $ show msg)
+          , "agency" .= String (pack $ show (sing :: Sing st))
+          ]
+formatMessageWithAgency _ _msg condensed =
+  mconcat [ "kind" .= String (pack condensed)
+          , "agency" .= String (pack $ show (sing :: Sing st))
+          ]
+
+
 instance ( ConvertTxId blk
          , ConvertRawHash blk
          , HasHeader blk
@@ -196,46 +220,34 @@ instance ( ConvertTxId blk
          , SerialiseNodeToNodeConstraints blk
          , HasTxs blk
          , LedgerSupportsMempool blk
-         )
-      => LogFormatting (AnyMessageAndAgency (BlockFetch blk (Point blk))) where
-  forMachine DMinimal (AnyMessageAndAgency stok (MsgBlock blk)) =
-    mconcat [ "kind" .= String "MsgBlock"
-             , "agency" .= String (pack $ show stok)
-             , "blockHash" .= renderHeaderHash (Proxy @blk) (blockHash blk)
-             , "blockSize" .= toJSON (estimateBlockSize (getHeader blk))
-             ]
+         , Show blk)
+      => LogFormatting (AnyMessage (BlockFetch blk (Point blk))) where
+  forMachine dtal@DMinimal (AnyMessage msg@(MsgBlock blk)) =
+       formatMessageWithAgency dtal msg "MsgBlock"
+    <> mconcat [ "blockHash" .= renderHeaderHash (Proxy @blk) (blockHash blk)
+               , "blockSize" .= toJSON (estimateBlockSize (getHeader blk))
+               ]
 
-  forMachine dtal (AnyMessageAndAgency stok (MsgBlock blk)) =
-    mconcat [ "kind" .= String "MsgBlock"
-             , "agency" .= String (pack $ show stok)
-             , "blockHash" .= renderHeaderHash (Proxy @blk) (blockHash blk)
-             , "blockSize" .= toJSON (estimateBlockSize (getHeader blk))
-             , "txIds" .= toJSON (presentTx <$> extractTxs blk)
-             ]
+  forMachine dtal (AnyMessage msg@(MsgBlock blk)) =
+       formatMessageWithAgency dtal msg "MsgBlock"
+    <> mconcat [ "blockHash" .= renderHeaderHash (Proxy @blk) (blockHash blk)
+               , "blockSize" .= toJSON (estimateBlockSize (getHeader blk))
+               , "txIds" .= toJSON (presentTx <$> extractTxs blk)
+               ]
       where
         presentTx :: GenTx blk -> Value
         presentTx =  String . renderTxIdForDetails dtal . txId
 
-  forMachine _v (AnyMessageAndAgency stok MsgRequestRange{}) =
-    mconcat [ "kind" .= String "MsgRequestRange"
-             , "agency" .= String (pack $ show stok)
-             ]
-  forMachine _v (AnyMessageAndAgency stok MsgStartBatch{}) =
-    mconcat [ "kind" .= String "MsgStartBatch"
-             , "agency" .= String (pack $ show stok)
-             ]
-  forMachine _v (AnyMessageAndAgency stok MsgNoBlocks{}) =
-    mconcat [ "kind" .= String "MsgNoBlocks"
-             , "agency" .= String (pack $ show stok)
-             ]
-  forMachine _v (AnyMessageAndAgency stok MsgBatchDone{}) =
-    mconcat [ "kind" .= String "MsgBatchDone"
-             , "agency" .= String (pack $ show stok)
-             ]
-  forMachine _v (AnyMessageAndAgency stok MsgClientDone{}) =
-    mconcat [ "kind" .= String "MsgClientDone"
-             , "agency" .= String (pack $ show stok)
-             ]
+  forMachine dtal (AnyMessage msg@MsgRequestRange{}) =
+    formatMessageWithAgency dtal msg "MsgRequestRange"
+  forMachine dtal (AnyMessage msg@MsgStartBatch{}) =
+    formatMessageWithAgency dtal msg "MsgStartBatch"
+  forMachine dtal (AnyMessage msg@MsgNoBlocks{}) =
+    formatMessageWithAgency dtal msg "MsgNoBlocks"
+  forMachine dtal (AnyMessage msg@MsgBatchDone{}) =
+    formatMessageWithAgency dtal msg "MsgBatchDone"
+  forMachine dtal (AnyMessage msg@MsgClientDone{}) =
+    formatMessageWithAgency dtal msg "MsgClientDone"
 
 docTBlockFetch :: Documented
      (BlockFetch.TraceLabelPeer peer
@@ -287,7 +299,7 @@ severityTBlockFetchSerialised (BlockFetch.TraceLabelPeer _ v) = severityTBlockFe
     severityTBlockFetch' (TraceSendMsg msg) = severityTBlockFetch'' msg
     severityTBlockFetch' (TraceRecvMsg msg) = severityTBlockFetch'' msg
 
-    severityTBlockFetch'' (AnyMessageAndAgency _agency msg) = severityTBlockFetch''' msg
+    severityTBlockFetch'' (AnyMessage msg) = severityTBlockFetch''' msg
 
     severityTBlockFetch''' :: Message (BlockFetch x (Point blk)) from to
                                    -> SeverityS
@@ -305,7 +317,7 @@ namesForTBlockFetchSerialised (BlockFetch.TraceLabelPeer _ v) = namesTBlockFetch
     namesTBlockFetch (TraceSendMsg msg) = "Send" : namesTBlockFetch' msg
     namesTBlockFetch (TraceRecvMsg msg) = "Receive" : namesTBlockFetch' msg
 
-    namesTBlockFetch' (AnyMessageAndAgency _agency msg) = namesTBlockFetch'' msg
+    namesTBlockFetch' (AnyMessage msg) = namesTBlockFetch'' msg
 
     namesTBlockFetch'' :: Message (BlockFetch x (Point blk)) from to
                                -> [Text]
@@ -324,45 +336,23 @@ instance ( ConvertTxId blk
          , StandardHash blk
          , HasTxs blk
          )
-      => LogFormatting (AnyMessageAndAgency (BlockFetch (Serialised blk) (Point blk))) where
-  forMachine DMinimal (AnyMessageAndAgency stok (MsgBlock _blk)) =
-    mconcat [ "kind" .= String "MsgBlock"
-             , "agency" .= String (pack $ show stok)
-            -- , "blockHash" .= renderHeaderHash (Proxy @blk) (blockHash blk)
-            -- , "blockSize" .= toJSON (estimateBlockSize (getHeader blk))
-             ]
+      => LogFormatting (AnyMessage (BlockFetch (Serialised blk) (Point blk))) where
+  forMachine dtal@DMinimal (AnyMessage msg@(MsgBlock _blk)) =
+    formatMessageWithAgency dtal msg "MsgBlock"
 
-  forMachine _dtal (AnyMessageAndAgency stok (MsgBlock _blk)) =
-    mconcat [ "kind" .= String "MsgBlock"
-             , "agency" .= String (pack $ show stok)
-          -- , "blockHash" .= renderHeaderHash (Proxy @blk) (blockHash blk)
-          --  , "blockSize" .= toJSON (estimateBlockSize (getHeader blk))
-          --   , "txIds" .= toJSON (presentTx <$> extractTxs blk)
-             ]
-      -- where
-      --   presentTx :: GenTx blk -> Value
-      --   presentTx =  String . renderTxIdForDetails dtal . txId
+  forMachine dtal (AnyMessage msg@(MsgBlock _blk)) =
+    formatMessageWithAgency dtal msg "MsgBlock"
 
-  forMachine _v (AnyMessageAndAgency stok MsgRequestRange{}) =
-    mconcat [ "kind" .= String "MsgRequestRange"
-             , "agency" .= String (pack $ show stok)
-             ]
-  forMachine _v (AnyMessageAndAgency stok MsgStartBatch{}) =
-    mconcat [ "kind" .= String "MsgStartBatch"
-             , "agency" .= String (pack $ show stok)
-             ]
-  forMachine _v (AnyMessageAndAgency stok MsgNoBlocks{}) =
-    mconcat [ "kind" .= String "MsgNoBlocks"
-             , "agency" .= String (pack $ show stok)
-             ]
-  forMachine _v (AnyMessageAndAgency stok MsgBatchDone{}) =
-    mconcat [ "kind" .= String "MsgBatchDone"
-             , "agency" .= String (pack $ show stok)
-             ]
-  forMachine _v (AnyMessageAndAgency stok MsgClientDone{}) =
-    mconcat [ "kind" .= String "MsgClientDone"
-             , "agency" .= String (pack $ show stok)
-             ]
+  forMachine dtal (AnyMessage msg@MsgRequestRange{}) =
+    formatMessageWithAgency dtal msg "MsgRequestRange"
+  forMachine dtal (AnyMessage msg@MsgStartBatch{}) =
+    formatMessageWithAgency dtal msg "MsgStartBatch"
+  forMachine dtal (AnyMessage msg@MsgNoBlocks{}) =
+    formatMessageWithAgency dtal msg "MsgNoBlocks"
+  forMachine dtal (AnyMessage msg@MsgBatchDone{}) =
+    formatMessageWithAgency dtal msg "MsgBatchDone"
+  forMachine dtal (AnyMessage msg@MsgClientDone{}) =
+    formatMessageWithAgency dtal msg "MsgClientDone"
 
   forHuman = pack . show
 
@@ -378,7 +368,7 @@ severityTxSubmissionNode (BlockFetch.TraceLabelPeer _ v) = severityTxSubNode v
     severityTxSubNode (TraceSendMsg msg) = severityTxSubNode' msg
     severityTxSubNode (TraceRecvMsg msg) = severityTxSubNode' msg
 
-    severityTxSubNode' (AnyMessageAndAgency _agency msg) = severityTxSubNode'' msg
+    severityTxSubNode' (AnyMessage msg) = severityTxSubNode'' msg
 
     severityTxSubNode'' ::
         Message
@@ -402,7 +392,7 @@ namesForTxSubmissionNode (BlockFetch.TraceLabelPeer _ v) =
     namesTxSubNode (TraceSendMsg msg) = "Send" : namesTxSubNode' msg
     namesTxSubNode (TraceRecvMsg msg) = "Receive" : namesTxSubNode' msg
 
-    namesTxSubNode' (AnyMessageAndAgency _agency msg) = namesTxSubNode'' msg
+    namesTxSubNode' (AnyMessage msg) = namesTxSubNode'' msg
 
     namesTxSubNode'' ::
          Message
@@ -419,39 +409,19 @@ namesForTxSubmissionNode (BlockFetch.TraceLabelPeer _ v) =
 
 
 instance (Show txid, Show tx)
-      => LogFormatting (AnyMessageAndAgency (STX.TxSubmission2 txid tx)) where
-  forMachine _dtal (AnyMessageAndAgency stok STX.MsgInit) =
-    mconcat
-      [ "kind" .= String "MsgInit"
-      , "agency" .= String (pack $ show stok)
-      ]
-  forMachine _dtal (AnyMessageAndAgency stok (STX.MsgRequestTxs txids)) =
-    mconcat
-      [ "kind" .= String "MsgRequestTxs"
-      , "agency" .= String (pack $ show stok)
-      , "txIds" .= String (pack $ show txids)
-      ]
-  forMachine _dtal (AnyMessageAndAgency stok (STX.MsgReplyTxs txs)) =
-    mconcat
-      [ "kind" .= String "MsgReplyTxs"
-      , "agency" .= String (pack $ show stok)
-      , "txs" .= String (pack $ show txs)
-      ]
-  forMachine _dtal (AnyMessageAndAgency stok STX.MsgRequestTxIds {}) =
-    mconcat
-      [ "kind" .= String "MsgRequestTxIds"
-      , "agency" .= String (pack $ show stok)
-      ]
-  forMachine _dtal (AnyMessageAndAgency stok (STX.MsgReplyTxIds _)) =
-    mconcat
-      [ "kind" .= String "MsgReplyTxIds"
-      , "agency" .= String (pack $ show stok)
-      ]
-  forMachine _dtal (AnyMessageAndAgency stok STX.MsgDone) =
-    mconcat
-      [ "kind" .= String "MsgDone"
-      , "agency" .= String (pack $ show stok)
-      ]
+      => LogFormatting (AnyMessage (STX.TxSubmission2 txid tx)) where
+  forMachine dtal (AnyMessage msg@STX.MsgInit) =
+    formatMessageWithAgency dtal msg "MsgInit"
+  forMachine dtal (AnyMessage msg@STX.MsgRequestTxs {}) =
+    formatMessageWithAgency dtal msg "MsgRequestTxs"
+  forMachine dtal (AnyMessage msg@STX.MsgReplyTxs {}) =
+    formatMessageWithAgency dtal msg "MsgReplyTxs"
+  forMachine dtal (AnyMessage msg@STX.MsgRequestTxIds {}) =
+    formatMessageWithAgency dtal msg "MsgRequestTxIds"
+  forMachine dtal (AnyMessage msg@STX.MsgReplyTxIds {}) =
+    formatMessageWithAgency dtal msg "MsgReplyTxIds"
+  forMachine dtal (AnyMessage msg@STX.MsgDone) =
+    formatMessageWithAgency dtal msg "MsgDone"
 
 docTTxSubmissionNode :: Documented
   (BlockFetch.TraceLabelPeer peer
@@ -570,7 +540,7 @@ severityTxSubmission2Node (BlockFetch.TraceLabelPeer _ v) = severityTxSubNode v
     severityTxSubNode (TraceSendMsg msg) = severityTxSubNode' msg
     severityTxSubNode (TraceRecvMsg msg) = severityTxSubNode' msg
 
-    severityTxSubNode' (AnyMessageAndAgency _agency msg) = severityTxSubNode'' msg
+    severityTxSubNode' (AnyMessage msg) = severityTxSubNode'' msg
 
     severityTxSubNode'' ::
         Message
@@ -593,7 +563,7 @@ namesForTxSubmission2Node (BlockFetch.TraceLabelPeer _ v) =
     namesTxSubNode (TraceSendMsg msg) = "Send" : namesTxSubNode' msg
     namesTxSubNode (TraceRecvMsg msg) = "Receive" : namesTxSubNode' msg
 
-    namesTxSubNode' (AnyMessageAndAgency _agency msg) = namesTxSubNode'' msg
+    namesTxSubNode' (AnyMessage msg) = namesTxSubNode'' msg
 
     namesTxSubNode'' ::
          Message

@@ -37,7 +37,7 @@ import           Data.Aeson (Value (String), (.=))
 import           Data.Text (pack)
 import           Network.Mux (MuxTrace (..), WithMuxBearer (..))
 import qualified Network.Socket as Socket
-import           Network.TypedProtocol.Codec (AnyMessageAndAgency (..))
+import           Network.TypedProtocol.Codec (AnyMessage (..))
 import           Text.Show
 
 import           Cardano.Node.Configuration.TopologyP2P (UseLedger (..))
@@ -74,6 +74,8 @@ severityMux' MuxTraceChannelRecvStart {}      = Debug
 severityMux' MuxTraceChannelRecvEnd {}        = Debug
 severityMux' MuxTraceChannelSendStart {}      = Debug
 severityMux' MuxTraceChannelSendEnd {}        = Debug
+severityMux' MuxTraceChannelTryRecvStart {}   = Debug
+severityMux' MuxTraceChannelTryRecvEnd {}     = Debug
 severityMux' MuxTraceHandshakeStart           = Debug
 severityMux' MuxTraceHandshakeClientEnd {}    = Info
 severityMux' MuxTraceHandshakeServerEnd       = Debug
@@ -107,6 +109,8 @@ namesForMux' MuxTraceChannelRecvStart {}      = ["ChannelRecvStart"]
 namesForMux' MuxTraceChannelRecvEnd {}        = ["ChannelRecvEnd"]
 namesForMux' MuxTraceChannelSendStart {}      = ["ChannelSendStart"]
 namesForMux' MuxTraceChannelSendEnd {}        = ["ChannelSendEnd"]
+namesForMux' MuxTraceChannelTryRecvStart {}   = ["ChannelTryRecvStart"]
+namesForMux' MuxTraceChannelTryRecvEnd {}     = ["ChannelTryRecvEnd"]
 namesForMux' MuxTraceHandshakeStart           = ["HandshakeStart "]
 namesForMux' MuxTraceHandshakeClientEnd {}    = ["HandshakeClientEnd"]
 namesForMux' MuxTraceHandshakeServerEnd       = ["HandshakeServerEnd"]
@@ -271,8 +275,8 @@ severityHandshake' ::
 severityHandshake' (TraceSendMsg m) = severityHandshake'' m
 severityHandshake' (TraceRecvMsg m) = severityHandshake'' m
 
-severityHandshake'' :: AnyMessageAndAgency (HS.Handshake nt CBOR.Term) -> SeverityS
-severityHandshake'' (AnyMessageAndAgency _agency msg) = severityHandshake''' msg
+severityHandshake'' :: AnyMessage (HS.Handshake nt CBOR.Term) -> SeverityS
+severityHandshake'' (AnyMessage msg) = severityHandshake''' msg
 
 severityHandshake''' :: Message (HS.Handshake nt CBOR.Term) from to -> SeverityS
 severityHandshake''' HS.MsgProposeVersions {} = Info
@@ -289,8 +293,8 @@ namesForHandshake' ::
 namesForHandshake' (TraceSendMsg m) = "Send" : namesForHandshake'' m
 namesForHandshake' (TraceRecvMsg m) = "Receive" : namesForHandshake'' m
 
-namesForHandshake'' :: AnyMessageAndAgency (HS.Handshake nt CBOR.Term) -> [Text]
-namesForHandshake'' (AnyMessageAndAgency _agency msg) = namesForHandshake''' msg
+namesForHandshake'' :: AnyMessage (HS.Handshake nt CBOR.Term) -> [Text]
+namesForHandshake'' (AnyMessage msg) = namesForHandshake''' msg
 
 namesForHandshake''' :: Message (HS.Handshake nt CBOR.Term) from to -> [Text]
 namesForHandshake''' HS.MsgProposeVersions {} = ["ProposeVersions"]
@@ -348,8 +352,8 @@ severityLocalHandshake' ::
 severityLocalHandshake' (TraceSendMsg m) = severityLocalHandshake'' m
 severityLocalHandshake' (TraceRecvMsg m) = severityLocalHandshake'' m
 
-severityLocalHandshake'' :: AnyMessageAndAgency (HS.Handshake nt CBOR.Term) -> SeverityS
-severityLocalHandshake'' (AnyMessageAndAgency _agency msg) = severityLocalHandshake''' msg
+severityLocalHandshake'' :: AnyMessage (HS.Handshake nt CBOR.Term) -> SeverityS
+severityLocalHandshake'' (AnyMessage msg) = severityLocalHandshake''' msg
 
 severityLocalHandshake''' :: Message (HS.Handshake nt CBOR.Term) from to -> SeverityS
 severityLocalHandshake''' HS.MsgProposeVersions {} = Info
@@ -366,8 +370,8 @@ namesForLocalHandshake' ::
 namesForLocalHandshake' (TraceSendMsg m) = "Send" : namesForLocalHandshake'' m
 namesForLocalHandshake' (TraceRecvMsg m) = "Receive" : namesForLocalHandshake'' m
 
-namesForLocalHandshake'' :: AnyMessageAndAgency (HS.Handshake nt CBOR.Term) -> [Text]
-namesForLocalHandshake'' (AnyMessageAndAgency _agency msg) = namesForLocalHandshake''' msg
+namesForLocalHandshake'' :: AnyMessage (HS.Handshake nt CBOR.Term) -> [Text]
+namesForLocalHandshake'' (AnyMessage msg) = namesForLocalHandshake''' msg
 
 namesForLocalHandshake''' :: Message (HS.Handshake nt CBOR.Term) from to -> [Text]
 namesForLocalHandshake''' HS.MsgProposeVersions {} = ["ProposeVersions"]

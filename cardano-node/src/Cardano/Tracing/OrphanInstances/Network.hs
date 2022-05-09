@@ -19,16 +19,17 @@ import           Cardano.Prelude hiding (group, show)
 import           Prelude (String, id, show)
 
 import           Control.Monad.Class.MonadTime (DiffTime, Time (..))
-import           Data.Aeson (Value (..))
+import           Data.Aeson (Value (..), Object)
 import qualified Data.Aeson as Aeson
 import           Data.Aeson.Types (listValue)
 import qualified Data.IP as IP
 import qualified Data.Map.Strict as Map
+import           Data.Singletons
 import qualified Data.Set as Set
 import           Data.Text (pack)
 
-import           Network.TypedProtocol.Codec (AnyMessageAndAgency (..))
-import           Network.TypedProtocol.Core (PeerHasAgency (..))
+import           Network.TypedProtocol.Core
+import           Network.TypedProtocol.Codec (AnyMessage (..))
 
 
 import           Network.Mux (MiniProtocolNum (..), MuxTrace (..), WithMuxBearer (..))
@@ -352,6 +353,8 @@ instance HasSeverityAnnotation (WithMuxBearer peer MuxTrace) where
     MuxTraceChannelRecvEnd {} -> Debug
     MuxTraceChannelSendStart {} -> Debug
     MuxTraceChannelSendEnd {} -> Debug
+    MuxTraceChannelTryRecvStart {} -> Debug
+    MuxTraceChannelTryRecvEnd {} -> Debug
     MuxTraceHandshakeStart -> Debug
     MuxTraceHandshakeClientEnd {} -> Info
     MuxTraceHandshakeServerEnd -> Debug
@@ -544,14 +547,17 @@ instance (Show header, StandardHash header, Show peer)
      => HasTextFormatter (TraceLabelPeer peer (TraceFetchClientState header)) where
   formatText a _ = pack (show a)
 
-instance ToObject peer
+instance ( ToObject peer
+         , StandardHash blk
+         , Show (Header blk)
+         )
      => Transformable Text IO (TraceLabelPeer peer (NtN.TraceSendRecv (ChainSync (Header blk) (Point blk) (Tip blk)))) where
   trTransformer = trStructured
 instance (Show peer, StandardHash blk, Show (Header blk))
      => HasTextFormatter (TraceLabelPeer peer (NtN.TraceSendRecv (ChainSync (Header blk) (Point blk) (Tip blk)))) where
   formatText a _ = pack (show a)
 
-instance (ToObject peer, ToObject (AnyMessageAndAgency (TraceTxSubmissionInbound (GenTxId blk) (GenTx blk))))
+instance (ToObject peer, ToObject (AnyMessage (TraceTxSubmissionInbound (GenTxId blk) (GenTx blk))))
      => Transformable Text IO (TraceLabelPeer peer (NtN.TraceSendRecv (TraceTxSubmissionInbound  (GenTxId blk) (GenTx blk)))) where
   trTransformer = trStructured
 
@@ -559,23 +565,23 @@ instance ToObject peer
      => Transformable Text IO (TraceLabelPeer peer (TraceTxSubmissionInbound  (GenTxId blk) (GenTx blk))) where
   trTransformer = trStructured
 
-instance (ToObject peer, ConvertTxId blk, RunNode blk, HasTxs blk)
+instance (ToObject peer, ConvertTxId blk, RunNode blk, HasTxs blk, Show blk)
      => Transformable Text IO (TraceLabelPeer peer (NtN.TraceSendRecv (BlockFetch blk (Point blk)))) where
   trTransformer = trStructured
 
-instance ToObject localPeer
+instance (ToObject localPeer, StandardHash blk)
      => Transformable Text IO (TraceLabelPeer localPeer (NtN.TraceSendRecv (ChainSync (Serialised blk) (Point blk) (Tip blk)))) where
   trTransformer = trStructured
 
-instance (applyTxErr ~ ApplyTxErr blk, ToObject localPeer)
+instance (applyTxErr ~ ApplyTxErr blk, ToObject localPeer, Show (TxId (GenTx blk)), Show (GenTx blk))
      => Transformable Text IO (TraceLabelPeer localPeer (NtN.TraceSendRecv (LocalTxMonitor (GenTxId blk) (GenTx blk) SlotNo))) where
   trTransformer = trStructured
 
-instance (applyTxErr ~ ApplyTxErr blk, ToObject localPeer)
+instance (applyTxErr ~ ApplyTxErr blk, ToObject localPeer, Show applyTxErr, Show (GenTx blk))
      => Transformable Text IO (TraceLabelPeer localPeer (NtN.TraceSendRecv (LocalTxSubmission (GenTx blk) applyTxErr))) where
   trTransformer = trStructured
 
-instance (LocalStateQuery.ShowQuery (BlockQuery blk), ToObject localPeer)
+instance (LocalStateQuery.ShowQuery (BlockQuery blk), ToObject localPeer, StandardHash blk)
      => Transformable Text IO (TraceLabelPeer localPeer (NtN.TraceSendRecv (LocalStateQuery blk (Point blk) (Query blk)))) where
   trTransformer = trStructured
 
@@ -727,217 +733,156 @@ instance Show addr
 --
 -- NOTE: this list is sorted by the unqualified name of the outermost type.
 
+formatMessageWithAgency
+  :: forall ps (st :: ps) (st' :: ps).
+     SingI st
+  => Show (Message ps st st')
+  => Show (Sing st)
+  => TracingVerbosity
+  -> Message ps st st'
+  -> String
+  -> Object
+formatMessageWithAgency MaximalVerbosity msg _condensed =
+  mconcat [ "kind" .= String (pack $ show msg)
+          , "agency" .= String (pack $ show (sing :: Sing st))
+          ]
+formatMessageWithAgency _ _msg condensed =
+  mconcat [ "kind" .= String (pack condensed)
+          , "agency" .= String (pack $ show (sing :: Sing st))
+          ]
+
 instance ( ConvertTxId blk
          , RunNode blk
          , HasTxs blk
+         , Show blk
          )
-      => ToObject (AnyMessageAndAgency (BlockFetch blk (Point blk))) where
-  toObject MinimalVerbosity (AnyMessageAndAgency stok (MsgBlock blk)) =
-    mconcat [ "kind" .= String "MsgBlock"
-             , "agency" .= String (pack $ show stok)
-             , "blockHash" .= renderHeaderHash (Proxy @blk) (blockHash blk)
-             , "blockSize" .= toJSON (estimateBlockSize (getHeader blk))
-             ]
+      => ToObject (AnyMessage (BlockFetch blk (Point blk))) where
+  toObject verb@MinimalVerbosity (AnyMessage msg@(MsgBlock blk)) =
+       formatMessageWithAgency verb msg "MsgBlock"
+    <> mconcat [ "blockHash" .= renderHeaderHash (Proxy @blk) (blockHash blk)
+               , "blockSize" .= toJSON (estimateBlockSize (getHeader blk))
+               ]
 
-  toObject verb (AnyMessageAndAgency stok (MsgBlock blk)) =
-    mconcat [ "kind" .= String "MsgBlock"
-             , "agency" .= String (pack $ show stok)
-             , "blockHash" .= renderHeaderHash (Proxy @blk) (blockHash blk)
-             , "blockSize" .= toJSON (estimateBlockSize (getHeader blk))
-             , "txIds" .= toJSON (presentTx <$> extractTxs blk)
-             ]
+  toObject verb (AnyMessage msg@(MsgBlock blk)) =
+       formatMessageWithAgency verb msg "MsgBlock"
+    <> mconcat [ "blockHash" .= renderHeaderHash (Proxy @blk) (blockHash blk)
+               , "blockSize" .= toJSON (estimateBlockSize (getHeader blk))
+               , "txIds" .= toJSON (presentTx <$> extractTxs blk)
+               ]
       where
         presentTx :: GenTx blk -> Value
         presentTx =  String . renderTxIdForVerbosity verb . txId
 
-  toObject _v (AnyMessageAndAgency stok MsgRequestRange{}) =
-    mconcat [ "kind" .= String "MsgRequestRange"
-             , "agency" .= String (pack $ show stok)
-             ]
-  toObject _v (AnyMessageAndAgency stok MsgStartBatch{}) =
-    mconcat [ "kind" .= String "MsgStartBatch"
-             , "agency" .= String (pack $ show stok)
-             ]
-  toObject _v (AnyMessageAndAgency stok MsgNoBlocks{}) =
-    mconcat [ "kind" .= String "MsgNoBlocks"
-             , "agency" .= String (pack $ show stok)
-             ]
-  toObject _v (AnyMessageAndAgency stok MsgBatchDone{}) =
-    mconcat [ "kind" .= String "MsgBatchDone"
-             , "agency" .= String (pack $ show stok)
-             ]
-  toObject _v (AnyMessageAndAgency stok MsgClientDone{}) =
-    mconcat [ "kind" .= String "MsgClientDone"
-             , "agency" .= String (pack $ show stok)
-             ]
+  toObject verb (AnyMessage msg@MsgRequestRange{}) =
+    formatMessageWithAgency verb msg "MsgRequestRange"
+  toObject verb (AnyMessage msg@MsgStartBatch{}) =
+    formatMessageWithAgency verb msg "MsgStartBatch"
+  toObject verb (AnyMessage msg@MsgNoBlocks{}) =
+    formatMessageWithAgency verb msg "MsgNoBlocks"
+  toObject verb (AnyMessage msg@MsgBatchDone{}) =
+    formatMessageWithAgency verb msg "MsgBatchDone"
+  toObject verb (AnyMessage msg@MsgClientDone{}) =
+    formatMessageWithAgency verb msg "MsgClientDone"
 
-instance (forall result. Show (query result))
-      => ToObject (AnyMessageAndAgency (LocalStateQuery blk pt query)) where
-  toObject _verb (AnyMessageAndAgency stok LocalStateQuery.MsgAcquire{}) =
-    mconcat [ "kind" .= String "MsgAcquire"
-             , "agency" .= String (pack $ show stok)
-             ]
-  toObject _verb (AnyMessageAndAgency stok LocalStateQuery.MsgAcquired{}) =
-    mconcat [ "kind" .= String "MsgAcquired"
-             , "agency" .= String (pack $ show stok)
-             ]
-  toObject _verb (AnyMessageAndAgency stok LocalStateQuery.MsgFailure{}) =
-    mconcat [ "kind" .= String "MsgFailure"
-             , "agency" .= String (pack $ show stok)
-             ]
-  toObject _verb (AnyMessageAndAgency stok LocalStateQuery.MsgQuery{}) =
-    mconcat [ "kind" .= String "MsgQuery"
-             , "agency" .= String (pack $ show stok)
-             ]
-  toObject _verb (AnyMessageAndAgency stok LocalStateQuery.MsgResult{}) =
-    mconcat [ "kind" .= String "MsgResult"
-             , "agency" .= String (pack $ show stok)
-             ]
-  toObject _verb (AnyMessageAndAgency stok LocalStateQuery.MsgRelease{}) =
-    mconcat [ "kind" .= String "MsgRelease"
-             , "agency" .= String (pack $ show stok)
-             ]
-  toObject _verb (AnyMessageAndAgency stok LocalStateQuery.MsgReAcquire{}) =
-    mconcat [ "kind" .= String "MsgReAcquire"
-             , "agency" .= String (pack $ show stok)
-             ]
-  toObject _verb (AnyMessageAndAgency stok LocalStateQuery.MsgDone{}) =
-    mconcat [ "kind" .= String "MsgDone"
-             , "agency" .= String (pack $ show stok)
-             ]
+instance ( LocalStateQuery.ShowQuery query
+         , Show pt
+         )
+      => ToObject (AnyMessage (LocalStateQuery blk pt query)) where
+  toObject verb (AnyMessage msg@LocalStateQuery.MsgAcquire{}) =
+    formatMessageWithAgency verb msg "MsgAcquire"
+  toObject verb (AnyMessage msg@LocalStateQuery.MsgAcquired{}) =
+    formatMessageWithAgency verb msg "MsgAcquired"
+  toObject verb (AnyMessage msg@LocalStateQuery.MsgFailure{}) =
+    formatMessageWithAgency verb msg "MsgFailure"
+  toObject verb (AnyMessage msg@LocalStateQuery.MsgQuery{}) =
+    formatMessageWithAgency verb msg "MsgQuery"
+  toObject verb (AnyMessage msg@LocalStateQuery.MsgResult{}) =
+    formatMessageWithAgency verb msg "MsgResult"
+  toObject verb (AnyMessage msg@LocalStateQuery.MsgRelease{}) =
+    formatMessageWithAgency verb msg "MsgRelease"
+  toObject verb (AnyMessage msg@LocalStateQuery.MsgReAcquire{}) =
+    formatMessageWithAgency verb msg "MsgReAcquire"
+  toObject verb (AnyMessage msg@LocalStateQuery.MsgDone{}) =
+    formatMessageWithAgency verb msg "MsgDone"
 
-instance ToObject (AnyMessageAndAgency (LocalTxMonitor txid tx slotno)) where
-  toObject _verb (AnyMessageAndAgency stok LocalTxMonitor.MsgAcquire {}) =
-    mconcat [ "kind" .= String "MsgAcuire"
-             , "agency" .= String (pack $ show stok)
-             ]
-  toObject _verb (AnyMessageAndAgency stok LocalTxMonitor.MsgAcquired {}) =
-    mconcat [ "kind" .= String "MsgAcuired"
-             , "agency" .= String (pack $ show stok)
-             ]
-  toObject _verb (AnyMessageAndAgency stok LocalTxMonitor.MsgAwaitAcquire {}) =
-    mconcat [ "kind" .= String "MsgAwaitAcuire"
-             , "agency" .= String (pack $ show stok)
-             ]
-  toObject _verb (AnyMessageAndAgency stok LocalTxMonitor.MsgNextTx {}) =
-    mconcat [ "kind" .= String "MsgNextTx"
-             , "agency" .= String (pack $ show stok)
-             ]
-  toObject _verb (AnyMessageAndAgency stok LocalTxMonitor.MsgReplyNextTx {}) =
-    mconcat [ "kind" .= String "MsgReplyNextTx"
-             , "agency" .= String (pack $ show stok)
-             ]
-  toObject _verb (AnyMessageAndAgency stok LocalTxMonitor.MsgHasTx {}) =
-    mconcat [ "kind" .= String "MsgHasTx"
-             , "agency" .= String (pack $ show stok)
-             ]
-  toObject _verb (AnyMessageAndAgency stok LocalTxMonitor.MsgReplyHasTx {}) =
-    mconcat [ "kind" .= String "MsgReplyHasTx"
-             , "agency" .= String (pack $ show stok)
-             ]
-  toObject _verb (AnyMessageAndAgency stok LocalTxMonitor.MsgGetSizes {}) =
-    mconcat [ "kind" .= String "MsgGetSizes"
-             , "agency" .= String (pack $ show stok)
-             ]
-  toObject _verb (AnyMessageAndAgency stok LocalTxMonitor.MsgReplyGetSizes {}) =
-    mconcat [ "kind" .= String "MsgReplyGetSizes"
-             , "agency" .= String (pack $ show stok)
-             ]
-  toObject _verb (AnyMessageAndAgency stok LocalTxMonitor.MsgRelease {}) =
-    mconcat [ "kind" .= String "MsgRelease"
-             , "agency" .= String (pack $ show stok)
-             ]
-  toObject _verb (AnyMessageAndAgency stok LocalTxMonitor.MsgDone {}) =
-    mconcat [ "kind" .= String "MsgDone"
-             , "agency" .= String (pack $ show stok)
-             ]
+instance ( forall (st :: LocalTxMonitor txid tx slotno)
+                  (st' :: LocalTxMonitor txid tx slotno).
+             Show (Message (LocalTxMonitor txid tx slotno) st st')
+         )
+      => ToObject (AnyMessage (LocalTxMonitor txid tx slotno)) where
+  toObject verb (AnyMessage msg@LocalTxMonitor.MsgAcquire {}) =
+    formatMessageWithAgency verb msg "LocalTxMonitor"
+  toObject verb (AnyMessage msg@LocalTxMonitor.MsgAcquired {}) =
+    formatMessageWithAgency verb msg "LocalTxMonitor"
+  toObject verb (AnyMessage msg@LocalTxMonitor.MsgAwaitAcquire {}) =
+    formatMessageWithAgency verb msg "LocalTxMonitor"
+  toObject verb (AnyMessage msg@LocalTxMonitor.MsgNextTx {}) =
+    formatMessageWithAgency verb msg "LocalTxMonitor"
+  toObject verb (AnyMessage msg@LocalTxMonitor.MsgReplyNextTx {}) =
+    formatMessageWithAgency verb msg "LocalTxMonitor"
+  toObject verb (AnyMessage msg@LocalTxMonitor.MsgHasTx {}) =
+    formatMessageWithAgency verb msg "LocalTxMonitor"
+  toObject verb (AnyMessage msg@LocalTxMonitor.MsgReplyHasTx {}) =
+    formatMessageWithAgency verb msg "LocalTxMonitor"
+  toObject verb (AnyMessage msg@LocalTxMonitor.MsgGetSizes {}) =
+    formatMessageWithAgency verb msg "LocalTxMonitor"
+  toObject verb (AnyMessage msg@LocalTxMonitor.MsgReplyGetSizes {}) =
+    formatMessageWithAgency verb msg "LocalTxMonitor"
+  toObject verb (AnyMessage msg@LocalTxMonitor.MsgRelease {}) =
+    formatMessageWithAgency verb msg "LocalTxMonitor"
+  toObject verb (AnyMessage msg@LocalTxMonitor.MsgDone {}) =
+    formatMessageWithAgency verb msg "LocalTxMonitor"
 
-instance ToObject (AnyMessageAndAgency (LocalTxSubmission tx err)) where
-  toObject _verb (AnyMessageAndAgency stok LocalTxSub.MsgSubmitTx{}) =
-    mconcat [ "kind" .= String "MsgSubmitTx"
-             , "agency" .= String (pack $ show stok)
-             ]
-  toObject _verb (AnyMessageAndAgency stok LocalTxSub.MsgAcceptTx{}) =
-    mconcat [ "kind" .= String "MsgAcceptTx"
-             , "agency" .= String (pack $ show stok)
-             ]
-  toObject _verb (AnyMessageAndAgency stok LocalTxSub.MsgRejectTx{}) =
-    mconcat [ "kind" .= String "MsgRejectTx"
-             , "agency" .= String (pack $ show stok)
-             ]
-  toObject _verb (AnyMessageAndAgency stok LocalTxSub.MsgDone{}) =
-    mconcat [ "kind" .= String "MsgDone"
-             , "agency" .= String (pack $ show stok)
-             ]
+instance ( forall (st :: LocalTxSubmission tx err)
+                  (st' :: LocalTxSubmission tx err).
+              Show (Message (LocalTxSubmission tx err) st st')
+         )
+      => ToObject (AnyMessage (LocalTxSubmission tx err)) where
+  toObject verb (AnyMessage msg@LocalTxSub.MsgSubmitTx{}) =
+    formatMessageWithAgency verb msg "MsgSubmitTx"
+  toObject verb (AnyMessage msg@LocalTxSub.MsgAcceptTx{}) =
+    formatMessageWithAgency verb msg "MsgAcceptTx"
+  toObject verb (AnyMessage msg@LocalTxSub.MsgRejectTx{}) =
+    formatMessageWithAgency verb msg "MsgRejectTx"
+  toObject verb (AnyMessage msg@LocalTxSub.MsgDone{}) =
+    formatMessageWithAgency verb msg "MsgDone"
 
-instance ToObject (AnyMessageAndAgency (ChainSync blk pt tip)) where
-   toObject _verb (AnyMessageAndAgency stok ChainSync.MsgRequestNext{}) =
-     mconcat [ "kind" .= String "MsgRequestNext"
-              , "agency" .= String (pack $ show stok)
-              ]
-   toObject _verb (AnyMessageAndAgency stok ChainSync.MsgAwaitReply{}) =
-     mconcat [ "kind" .= String "MsgAwaitReply"
-              , "agency" .= String (pack $ show stok)
-              ]
-   toObject _verb (AnyMessageAndAgency stok ChainSync.MsgRollForward{}) =
-     mconcat [ "kind" .= String "MsgRollForward"
-              , "agency" .= String (pack $ show stok)
-              ]
-   toObject _verb (AnyMessageAndAgency stok ChainSync.MsgRollBackward{}) =
-     mconcat [ "kind" .= String "MsgRollBackward"
-              , "agency" .= String (pack $ show stok)
-              ]
-   toObject _verb (AnyMessageAndAgency stok ChainSync.MsgFindIntersect{}) =
-     mconcat [ "kind" .= String "MsgFindIntersect"
-              , "agency" .= String (pack $ show stok)
-              ]
-   toObject _verb (AnyMessageAndAgency stok ChainSync.MsgIntersectFound{}) =
-     mconcat [ "kind" .= String "MsgIntersectFound"
-              , "agency" .= String (pack $ show stok)
-              ]
-   toObject _verb (AnyMessageAndAgency stok ChainSync.MsgIntersectNotFound{}) =
-     mconcat [ "kind" .= String "MsgIntersectNotFound"
-              , "agency" .= String (pack $ show stok)
-              ]
-   toObject _verb (AnyMessageAndAgency stok ChainSync.MsgDone{}) =
-     mconcat [ "kind" .= String "MsgDone"
-              , "agency" .= String (pack $ show stok)
-              ]
+instance ( forall (st :: ChainSync blk pt tip)
+                  (st' :: ChainSync blk pt tip).
+             Show (Message (ChainSync blk pt tip) st st')
+         )
+      => ToObject (AnyMessage (ChainSync blk pt tip)) where
+   toObject verb (AnyMessage msg@ChainSync.MsgRequestNext{}) =
+     formatMessageWithAgency verb msg "MsgRequestNext"
+   toObject verb (AnyMessage msg@ChainSync.MsgAwaitReply{}) =
+     formatMessageWithAgency verb msg "MsgAwaitReply"
+   toObject verb (AnyMessage msg@ChainSync.MsgRollForward{}) =
+     formatMessageWithAgency verb msg "MsgRollForward"
+   toObject verb (AnyMessage msg@ChainSync.MsgRollBackward{}) =
+     formatMessageWithAgency verb msg "MsgRollBackward"
+   toObject verb (AnyMessage msg@ChainSync.MsgFindIntersect{}) =
+     formatMessageWithAgency verb msg "MsgFindIntersect"
+   toObject verb (AnyMessage msg@ChainSync.MsgIntersectFound{}) =
+     formatMessageWithAgency verb msg "MsgIntersectFound"
+   toObject verb (AnyMessage msg@ChainSync.MsgIntersectNotFound{}) =
+     formatMessageWithAgency verb msg "MsgIntersectNotFound"
+   toObject verb (AnyMessage msg@ChainSync.MsgDone{}) =
+     formatMessageWithAgency verb msg "MsgDone"
 
 instance (Show txid, Show tx)
-      => ToObject (AnyMessageAndAgency (TxSubmission2 txid tx)) where
-  toObject _verb (AnyMessageAndAgency stok MsgInit) =
-    mconcat
-      [ "kind" .= String "MsgInit"
-      , "agency" .= String (pack $ show stok)
-      ]
-  toObject _verb (AnyMessageAndAgency stok (MsgRequestTxs txids)) =
-    mconcat
-      [ "kind" .= String "MsgRequestTxs"
-      , "agency" .= String (pack $ show stok)
-      , "txIds" .= String (pack $ show txids)
-      ]
-  toObject _verb (AnyMessageAndAgency stok (MsgReplyTxs txs)) =
-    mconcat
-      [ "kind" .= String "MsgReplyTxs"
-      , "agency" .= String (pack $ show stok)
-      , "txs" .= String (pack $ show txs)
-      ]
-  toObject _verb (AnyMessageAndAgency stok MsgRequestTxIds{}) =
-    mconcat
-      [ "kind" .= String "MsgRequestTxIds"
-      , "agency" .= String (pack $ show stok)
-      ]
-  toObject _verb (AnyMessageAndAgency stok (MsgReplyTxIds _)) =
-    mconcat
-      [ "kind" .= String "MsgReplyTxIds"
-      , "agency" .= String (pack $ show stok)
-      ]
-  toObject _verb (AnyMessageAndAgency stok MsgDone) =
-    mconcat
-      [ "kind" .= String "MsgDone"
-      , "agency" .= String (pack $ show stok)
-      ]
+      => ToObject (AnyMessage (TxSubmission2 txid tx)) where
+  toObject verb (AnyMessage msg@MsgInit) =
+    formatMessageWithAgency verb msg "MsgInit"
+  toObject verb (AnyMessage msg@MsgRequestTxs{}) =
+    formatMessageWithAgency verb msg "MsgRequestTxs"
+  toObject verb (AnyMessage msg@MsgReplyTxs{}) =
+    formatMessageWithAgency verb msg "MsgReplyTxs"
+  toObject verb (AnyMessage msg@MsgRequestTxIds{}) =
+    formatMessageWithAgency verb msg "MsgRequestTxIds"
+  toObject verb (AnyMessage msg@MsgReplyTxIds{}) =
+    formatMessageWithAgency verb msg "MsgReplyTxIds"
+  toObject verb (AnyMessage msg@MsgDone) =
+    formatMessageWithAgency verb msg "MsgDone"
 
 instance ToJSON peerAddr => ToJSON (ConnectionId peerAddr) where
   toJSON ConnectionId { localAddress, remoteAddress } =
@@ -1145,7 +1090,7 @@ instance (ToObject peer, ToObject a) => ToObject (TraceLabelPeer peer a) where
     mconcat [ "peer" .= toObject verb peerid ] <> toObject verb a
 
 
-instance ToObject (AnyMessageAndAgency ps)
+instance ToObject (AnyMessage ps)
       => ToObject (TraceSendRecv ps) where
   toObject verb (TraceSendMsg m) = mconcat
     [ "kind" .= String "Send" , "msg" .= toObject verb m ]
@@ -1670,25 +1615,29 @@ instance ToObject PeerSelectionCounters where
              , "hotPeers" .= hotPeers ev
              ]
 
-instance (Show (ClientHasAgency st), Show (ServerHasAgency st))
-  => ToJSON (PeerHasAgency pr st) where
-  toJSON (ClientAgency cha) =
-    Aeson.object [ "kind" .= String "ClientAgency"
-                 , "agency" .= show cha
-                 ]
-  toJSON (ServerAgency sha) =
-    Aeson.object [ "kind" .= String "ServerAgency"
-                 , "agency" .= show sha
-                 ]
+stateToJSON :: forall st.
+               ActiveState st
+            => Show (Sing st)
+            => Sing st
+            -> Value
+stateToJSON tok =
+  case activeAgency :: ActiveAgency st of
+    ClientHasAgency -> Aeson.object [ "kind" .= String "ClientAgency"
+                                    , "state" .= String (pack $ show tok)
+                                    ]
+    ServerHasAgency -> Aeson.object [ "kind" .= String "ServerAgency"
+                                    , "state" .= String (pack $ show tok)
+                                    ]
+
 
 instance ToJSON ProtocolLimitFailure where
-  toJSON (ExceededSizeLimit tok) =
+  toJSON (ExceededSizeLimit (tok :: Sing st)) =
     Aeson.object [ "kind" .= String "ProtocolLimitFailure"
-                 , "agency" .= toJSON tok
+                 , "state" .= stateToJSON tok
                  ]
-  toJSON (ExceededTimeLimit tok) =
+  toJSON (ExceededTimeLimit (tok :: Sing st)) =
     Aeson.object [ "kind" .= String "ProtocolLimitFailure"
-                 , "agency" .= toJSON tok
+                 , "state" .= stateToJSON tok
                  ]
 
 instance Show vNumber => ToJSON (RefuseReason vNumber) where

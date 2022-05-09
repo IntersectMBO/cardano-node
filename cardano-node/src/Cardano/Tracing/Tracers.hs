@@ -66,7 +66,7 @@ import           Ouroboros.Consensus.Ledger.Extended (ledgerState)
 import           Ouroboros.Consensus.Ledger.Inspect (InspectLedger, LedgerEvent)
 import           Ouroboros.Consensus.Ledger.Query (BlockQuery)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx, GenTxId, HasTxs,
-                   LedgerSupportsMempool)
+                   LedgerSupportsMempool, TxId)
 import           Ouroboros.Consensus.Ledger.SupportsProtocol (LedgerSupportsProtocol)
 import           Ouroboros.Consensus.Mempool.API (MempoolSize (..), TraceEventMempool (..))
 import qualified Ouroboros.Consensus.Network.NodeToClient as NodeToClient
@@ -1280,6 +1280,10 @@ forgeStateInfoTracer p _ts tracer = Tracer $ \ev -> do
 nodeToClientTracers'
   :: ( ToObject localPeer
      , ShowQuery (BlockQuery blk)
+     , StandardHash blk
+     , Show (TxId (GenTx blk))
+     , Show (GenTx blk)
+     , Show (ApplyTxErr blk)
      )
   => TraceSelection
   -> TracingVerbosity
@@ -1311,6 +1315,8 @@ nodeToNodeTracers'
      , HasTxs blk
      , Show peer
      , ToObject peer
+     , Show (Header blk)
+     , Show blk
      )
   => TraceSelection
   -> TracingVerbosity
