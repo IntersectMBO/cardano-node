@@ -93,6 +93,7 @@ import           Control.Tracer (nullTracer)
 
 import           Ouroboros.Consensus.Shelley.Ledger.SupportsProtocol ()
 import qualified Ouroboros.Network.Block as Net
+import qualified Ouroboros.Network.Driver.Stateful as Stateful
 import qualified Ouroboros.Network.Mux as Net
 import           Ouroboros.Network.NodeToClient (NodeToClientProtocols (..),
                    NodeToClientVersionData (..))
@@ -102,7 +103,7 @@ import           Ouroboros.Network.Protocol.ChainSync.Client as Net.Sync
 import           Ouroboros.Network.Protocol.ChainSync.ClientPipelined as Net.SyncP
 import           Ouroboros.Network.Protocol.LocalStateQuery.Client (LocalStateQueryClient (..))
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Client as Net.Query
-import           Ouroboros.Network.Protocol.LocalStateQuery.Type (AcquireFailure (..))
+import           Ouroboros.Network.Protocol.LocalStateQuery.Type (AcquireFailure (..), State(StateIdle))
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as Net.Query
 import           Ouroboros.Network.Protocol.LocalTxMonitor.Client (LocalTxMonitorClient (..),
                    localTxMonitorClientPeer)
@@ -241,9 +242,7 @@ connectToLocalNodeWithVersion LocalNodeConnectInfo {
           mkVersionedProtocols localNodeNetworkId ptcl clients'
 
 mkVersionedProtocols :: forall block.
-                        ( Consensus.ShowQuery (Consensus.Query block)
-                        , ProtocolClient block
-                        )
+                        ProtocolClient block
                      => NetworkId
                      -> ProtocolClientInfoArgs block
                      -> (NodeToClientVersion -> LocalNodeClientProtocolsForBlock block)
@@ -295,7 +294,7 @@ mkVersionedProtocols networkid ptcl unversionedClients =
                       cChainSyncCodec
                       (Net.Sync.chainSyncClientPeer client)
               LocalChainSyncClientPipelined clientPipelined
-                -> Net.MuxPeerPipelined
+                -> Net.MuxPeer
                       nullTracer
                       cChainSyncCodec
                       (Net.SyncP.chainSyncClientPeerPipelined clientPipelined)
@@ -311,20 +310,24 @@ mkVersionedProtocols networkid ptcl unversionedClients =
 
         , localStateQueryProtocol =
             Net.InitiatorProtocolOnly $
-              Net.MuxPeer
-                nullTracer
-                cStateQueryCodec
-                (maybe Net.localStateQueryPeerNull
-                       Net.Query.localStateQueryClientPeer
-                       localStateQueryClientForBlock)
+              Net.MuxPeerRaw $ \channel ->
+                Stateful.runPeer
+                  nullTracer
+                  cStateQueryCodec
+                  channel
+                  StateIdle
+                  (maybe Net.localStateQueryPeerNull
+                         Net.Query.localStateQueryClientPeer
+                         localStateQueryClientForBlock)
+
         , localTxMonitorProtocol =
             Net.InitiatorProtocolOnly $
               Net.MuxPeer
-                nullTracer
-                cTxMonitorCodec
-                (maybe Net.localTxMonitorPeerNull
-                       localTxMonitorClientPeer
-                       localTxMonitoringClientForBlock)
+                  nullTracer
+                  cTxMonitorCodec
+                  (maybe Net.localTxMonitorPeerNull
+                         localTxMonitorClientPeer
+                         localTxMonitoringClientForBlock)
         }
       where
         Consensus.Codecs {

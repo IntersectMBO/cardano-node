@@ -6,9 +6,12 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Cardano.Api.LedgerState
   ( -- * Initialization / Accumulation
@@ -84,11 +87,13 @@ import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import           Data.Text.Lazy (toStrict)
 import           Data.Text.Lazy.Builder (toLazyText)
+import           Data.Type.Nat
+import           Data.Type.Queue (SingQueueF (..))
+import qualified Data.Type.Queue as Queue
 import           Data.Word
 import qualified Data.Yaml as Yaml
 import           Formatting.Buildable (build)
 import           GHC.Records (HasField (..))
-import           Network.TypedProtocol.Pipelined (Nat (..))
 import           System.FilePath
 
 import           Cardano.Api.Block
@@ -396,27 +401,28 @@ foldBlocks nodeConfigFilePath socketPath validationMode state0 accumulate = do
                         IO ()
                     -- ^ Client returns maybe an error.
     chainSyncClient pipelineSize stateIORef errorIORef env ledgerState0
-      = CSP.ChainSyncClientPipelined $ pure $ clientIdle_RequestMoreN Origin Origin Zero initialLedgerStateHistory
+        = CSP.ChainSyncClientPipelined $ pure $ clientIdle_RequestMoreN Origin Origin SingEmptyF initialLedgerStateHistory
       where
           initialLedgerStateHistory = Seq.singleton (0, (ledgerState0, []), Origin)
 
           clientIdle_RequestMoreN
             :: WithOrigin BlockNo
             -> WithOrigin BlockNo
-            -> Nat n -- Number of requests inflight.
+            -> SingQueueF CSP.F q -- Queue of requests inflight.
             -> LedgerStateHistory
-            -> CSP.ClientPipelinedStIdle n (BlockInMode CardanoMode) ChainPoint ChainTip IO ()
-          clientIdle_RequestMoreN clientTip serverTip n knownLedgerStates
-            = case pipelineDecisionMax pipelineSize n clientTip serverTip  of
-                Collect -> case n of
-                  Succ predN -> CSP.CollectResponse Nothing (clientNextN predN knownLedgerStates)
-                _ -> CSP.SendMsgRequestNextPipelined (clientIdle_RequestMoreN clientTip serverTip (Succ n) knownLedgerStates)
+            -> CSP.ClientPipelinedStIdle (BlockInMode CardanoMode) ChainPoint ChainTip q IO ()
+          clientIdle_RequestMoreN clientTip serverTip q knownLedgerStates
+            = case pipelineDecisionMax pipelineSize (queueFDepthNat q) clientTip serverTip  of
+                Collect -> case q of
+                  SingConsF CSP.FCanAwait  q' -> CSP.CollectResponse Nothing (clientNextN q' knownLedgerStates)
+                  SingConsF CSP.FMustReply q' -> CSP.CollectResponse Nothing (clientNextN q' knownLedgerStates)
+                _ -> CSP.SendMsgRequestNextPipelined (clientIdle_RequestMoreN clientTip serverTip (q Queue.|> CSP.FCanAwait) knownLedgerStates)
 
           clientNextN
-            :: Nat n -- Number of requests inflight.
+            :: SingQueueF CSP.F q -- Queue of requests inflight.
             -> LedgerStateHistory
-            -> CSP.ClientStNext n (BlockInMode CardanoMode) ChainPoint ChainTip IO ()
-          clientNextN n knownLedgerStates =
+            -> CSP.ClientStNext (BlockInMode CardanoMode) ChainPoint ChainTip q IO ()
+          clientNextN q knownLedgerStates =
             CSP.ClientStNext {
                 CSP.recvMsgRollForward = \blockInMode@(BlockInMode block@(Block (BlockHeader slotNo _ currBlockNo) _) _era) serverChainTip -> do
                   let newLedgerStateE = applyBlock
@@ -429,7 +435,7 @@ foldBlocks nodeConfigFilePath socketPath validationMode state0 accumulate = do
                         validationMode
                         block
                   case newLedgerStateE of
-                    Left err -> clientIdle_DoneN n (Just err)
+                    Left err -> clientIdle_DoneN q (Just err)
                     Right newLedgerState -> do
                       let (knownLedgerStates', committedStates) = pushLedgerState env knownLedgerStates slotNo newLedgerState blockInMode
                           newClientTip = At currBlockNo
@@ -445,41 +451,44 @@ foldBlocks nodeConfigFilePath socketPath validationMode state0 accumulate = do
                               =<< readIORef stateIORef
                             writeIORef stateIORef newState
                       if newClientTip == newServerTip
-                        then  clientIdle_DoneN n Nothing
-                        else return (clientIdle_RequestMoreN newClientTip newServerTip n knownLedgerStates')
+                        then  clientIdle_DoneN q Nothing
+                        else return (clientIdle_RequestMoreN newClientTip newServerTip q knownLedgerStates')
               , CSP.recvMsgRollBackward = \chainPoint serverChainTip -> do
                   let newClientTip = Origin -- We don't actually keep track of blocks so we temporarily "forget" the tip.
                       newServerTip = fromChainTip serverChainTip
                       truncatedKnownLedgerStates = case chainPoint of
                           ChainPointAtGenesis -> initialLedgerStateHistory
                           ChainPoint slotNo _ -> rollBackLedgerStateHist knownLedgerStates slotNo
-                  return (clientIdle_RequestMoreN newClientTip newServerTip n truncatedKnownLedgerStates)
+                  return (clientIdle_RequestMoreN newClientTip newServerTip q truncatedKnownLedgerStates)
               }
 
           clientIdle_DoneN
-            :: Nat n -- Number of requests inflight.
+            :: SingQueueF CSP.F q -- Queue of requests inflight.
             -> Maybe LedgerStateError -- Return value (maybe an error)
-            -> IO (CSP.ClientPipelinedStIdle n (BlockInMode CardanoMode) ChainPoint ChainTip IO ())
-          clientIdle_DoneN n errorMay = case n of
-            Succ predN -> return (CSP.CollectResponse Nothing (clientNext_DoneN predN errorMay)) -- Ignore remaining message responses
-            Zero -> do
+            -> IO (CSP.ClientPipelinedStIdle (BlockInMode CardanoMode) ChainPoint ChainTip q IO ())
+          clientIdle_DoneN q errorMay = case q of
+            SingConsF CSP.FCanAwait  q' -> return (CSP.CollectResponse Nothing (clientNext_DoneN q' errorMay)) -- Ignore remaining message responses
+            SingConsF CSP.FMustReply q' -> return (CSP.CollectResponse Nothing (clientNext_DoneN q' errorMay)) -- Ignore remaining message responses
+            SingEmptyF -> do
               writeIORef errorIORef errorMay
               return (CSP.SendMsgDone ())
 
           clientNext_DoneN
-            :: Nat n -- Number of requests inflight.
+            :: SingQueueF CSP.F q -- Queue of requests inflight.
             -> Maybe LedgerStateError -- Return value (maybe an error)
-            -> CSP.ClientStNext n (BlockInMode CardanoMode) ChainPoint ChainTip IO ()
-          clientNext_DoneN n errorMay =
+            -> CSP.ClientStNext (BlockInMode CardanoMode) ChainPoint ChainTip q IO ()
+          clientNext_DoneN q errorMay =
             CSP.ClientStNext {
-                CSP.recvMsgRollForward = \_ _ -> clientIdle_DoneN n errorMay
-              , CSP.recvMsgRollBackward = \_ _ -> clientIdle_DoneN n errorMay
+                CSP.recvMsgRollForward = \_ _ -> clientIdle_DoneN q errorMay
+              , CSP.recvMsgRollBackward = \_ _ -> clientIdle_DoneN q errorMay
               }
 
           fromChainTip :: ChainTip -> WithOrigin BlockNo
           fromChainTip ct = case ct of
             ChainTipAtGenesis -> Origin
             ChainTip _ _ bno -> At bno
+
+
 
 -- | Wrap a 'ChainSyncClient' with logic that tracks the ledger state.
 chainSyncClientWithLedgerState
@@ -507,35 +516,18 @@ chainSyncClientWithLedgerState
                         a
   -- ^ A client that acts just like the wrapped client but doesn't require the
   -- 'LedgerState' annotation on the block type.
-chainSyncClientWithLedgerState env ledgerState0 validationMode (CS.ChainSyncClient clientTop)
-  = CS.ChainSyncClient (goClientStIdle (Right initialLedgerStateHistory) <$> clientTop)
+chainSyncClientWithLedgerState env ledgerState0 validationMode =
+    CS.mapChainSyncClientSt id id id forward backward (Right initialLedgerStateHistory)
   where
-    goClientStIdle
-      :: Either LedgerStateError (History (Either LedgerStateError LedgerStateEvents))
-      -> CS.ClientStIdle (BlockInMode CardanoMode, Either LedgerStateError (LedgerState, [LedgerEvent])) ChainPoint ChainTip m a
-      -> CS.ClientStIdle (BlockInMode CardanoMode                                                      ) ChainPoint ChainTip m a
-    goClientStIdle history client = case client of
-      CS.SendMsgRequestNext a b -> CS.SendMsgRequestNext (goClientStNext history a) (goClientStNext history <$> b)
-      CS.SendMsgFindIntersect ps a -> CS.SendMsgFindIntersect ps (goClientStIntersect history a)
-      CS.SendMsgDone a -> CS.SendMsgDone a
-
-    -- This is where the magic happens. We intercept the blocks and rollbacks
-    -- and use it to maintain the correct ledger state.
-    goClientStNext
-      :: Either LedgerStateError (History (Either LedgerStateError LedgerStateEvents))
-      -> CS.ClientStNext (BlockInMode CardanoMode, Either LedgerStateError (LedgerState, [LedgerEvent])) ChainPoint ChainTip m a
-      -> CS.ClientStNext (BlockInMode CardanoMode                                                      ) ChainPoint ChainTip m a
-    goClientStNext (Left err) (CS.ClientStNext recvMsgRollForward recvMsgRollBackward) = CS.ClientStNext
-      (\blkInMode tip -> CS.ChainSyncClient $
-            goClientStIdle (Left err) <$> CS.runChainSyncClient
-                (recvMsgRollForward (blkInMode, Left err) tip)
-      )
-      (\point tip -> CS.ChainSyncClient $
-            goClientStIdle (Left err) <$> CS.runChainSyncClient (recvMsgRollBackward point tip)
-      )
-    goClientStNext (Right history) (CS.ClientStNext recvMsgRollForward recvMsgRollBackward) = CS.ClientStNext
-      (\blkInMode@(BlockInMode blk@(Block (BlockHeader slotNo _ _) _) _) tip -> CS.ChainSyncClient $ let
-          newLedgerStateE = case Seq.lookup 0 history of
+    -- called on every 'MsgRollForward'
+    forward :: HistoryState
+            -> BlockInMode CardanoMode
+            -> ( (BlockInMode CardanoMode, Either LedgerStateError (LedgerState, [LedgerEvent]))
+               , HistoryState
+               )
+    forward state@(Left err) blkInMode = ((blkInMode, Left err), state)
+    forward (Right history)  blkInMode@(BlockInMode blk@(Block (BlockHeader slotNo _ _) _) _) =
+      let newLedgerStateE = case Seq.lookup 0 history of
             Nothing -> error "Impossible! History should always be non-empty"
             Just (_, Left err, _) -> Left err
             Just (_, Right (oldLedgerState, _), _) -> applyBlock
@@ -544,29 +536,25 @@ chainSyncClientWithLedgerState env ledgerState0 validationMode (CS.ChainSyncClie
                   validationMode
                   blk
           (history', _) = pushLedgerState env history slotNo newLedgerStateE blkInMode
-          in goClientStIdle (Right history') <$> CS.runChainSyncClient
-                (recvMsgRollForward (blkInMode, newLedgerStateE) tip)
-      )
-      (\point tip -> let
-          oldestSlot = case history of
+      in ((blkInMode, newLedgerStateE), Right history')
+
+    -- called on every 'MsgRollBackward'
+    backward :: HistoryState -> ChainPoint -> HistoryState
+    backward state@Left {} _ = state
+    backward (Right history) point =
+      let oldestSlot = case history of
             _ Seq.:|> (s, _, _) -> s
             Seq.Empty -> error "Impossible! History should always be non-empty"
-          history' = (\h -> if Seq.null h
-                              then Left (InvalidRollback oldestSlot point)
-                              else Right h)
-                  $ case point of
-                        ChainPointAtGenesis -> initialLedgerStateHistory
-                        ChainPoint slotNo _ -> rollBackLedgerStateHist history slotNo
-        in CS.ChainSyncClient $ goClientStIdle history' <$> CS.runChainSyncClient (recvMsgRollBackward point tip)
-      )
 
-    goClientStIntersect
-      :: Either LedgerStateError (History (Either LedgerStateError LedgerStateEvents))
-      -> CS.ClientStIntersect (BlockInMode CardanoMode, Either LedgerStateError (LedgerState, [LedgerEvent])) ChainPoint ChainTip m a
-      -> CS.ClientStIntersect (BlockInMode CardanoMode                                                      ) ChainPoint ChainTip m a
-    goClientStIntersect history (CS.ClientStIntersect recvMsgIntersectFound recvMsgIntersectNotFound) = CS.ClientStIntersect
-      (\point tip -> CS.ChainSyncClient (goClientStIdle history <$> CS.runChainSyncClient (recvMsgIntersectFound point tip)))
-      (\tip -> CS.ChainSyncClient (goClientStIdle history <$> CS.runChainSyncClient (recvMsgIntersectNotFound tip)))
+          state' :: HistoryState
+          state' =
+            (\h -> if Seq.null h
+                   then Left (InvalidRollback oldestSlot point)
+                   else Right h
+            ) $ case point of
+                  ChainPointAtGenesis -> initialLedgerStateHistory
+                  ChainPoint slotNo _ -> rollBackLedgerStateHist history slotNo
+      in state'
 
     initialLedgerStateHistory :: History (Either LedgerStateError LedgerStateEvents)
     initialLedgerStateHistory = Seq.singleton (0, Right (ledgerState0, []), Origin)
@@ -590,40 +578,18 @@ chainSyncClientPipelinedWithLedgerState
                         ChainTip
                         m
                         a
-chainSyncClientPipelinedWithLedgerState env ledgerState0 validationMode (CSP.ChainSyncClientPipelined clientTop)
-  = CSP.ChainSyncClientPipelined (goClientPipelinedStIdle (Right initialLedgerStateHistory) Zero <$> clientTop)
+chainSyncClientPipelinedWithLedgerState env ledgerState0 validationMode =
+    CSP.mapChainSyncClientPipelinedSt id id id forward backward (Right initialLedgerStateHistory)
   where
-    goClientPipelinedStIdle
-      :: Either LedgerStateError (History (Either LedgerStateError LedgerStateEvents))
-      -> Nat n
-      -> CSP.ClientPipelinedStIdle n (BlockInMode CardanoMode, Either LedgerStateError (LedgerState, [LedgerEvent])) ChainPoint ChainTip m a
-      -> CSP.ClientPipelinedStIdle n (BlockInMode CardanoMode                                                      ) ChainPoint ChainTip m a
-    goClientPipelinedStIdle history n client = case client of
-      CSP.SendMsgRequestNext a b -> CSP.SendMsgRequestNext (goClientStNext history n a) (goClientStNext history n <$> b)
-      CSP.SendMsgRequestNextPipelined a ->  CSP.SendMsgRequestNextPipelined (goClientPipelinedStIdle history (Succ n) a)
-      CSP.SendMsgFindIntersect ps a -> CSP.SendMsgFindIntersect ps (goClientPipelinedStIntersect history n a)
-      CSP.CollectResponse a b -> case n of
-        Succ nPrev -> CSP.CollectResponse ((fmap . fmap) (goClientPipelinedStIdle history n) a) (goClientStNext history nPrev b)
-      CSP.SendMsgDone a -> CSP.SendMsgDone a
-
-    -- This is where the magic happens. We intercept the blocks and rollbacks
-    -- and use it to maintain the correct ledger state.
-    goClientStNext
-      :: Either LedgerStateError (History (Either LedgerStateError LedgerStateEvents))
-      -> Nat n
-      -> CSP.ClientStNext n (BlockInMode CardanoMode, Either LedgerStateError (LedgerState, [LedgerEvent])) ChainPoint ChainTip m a
-      -> CSP.ClientStNext n (BlockInMode CardanoMode                                                      ) ChainPoint ChainTip m a
-    goClientStNext (Left err) n (CSP.ClientStNext recvMsgRollForward recvMsgRollBackward) = CSP.ClientStNext
-      (\blkInMode tip ->
-          goClientPipelinedStIdle (Left err) n <$> recvMsgRollForward
-            (blkInMode, Left err) tip
-      )
-      (\point tip ->
-          goClientPipelinedStIdle (Left err) n <$> recvMsgRollBackward point tip
-      )
-    goClientStNext (Right history) n (CSP.ClientStNext recvMsgRollForward recvMsgRollBackward) = CSP.ClientStNext
-      (\blkInMode@(BlockInMode blk@(Block (BlockHeader slotNo _ _) _) _) tip -> let
-          newLedgerStateE = case Seq.lookup 0 history of
+    -- called on every 'MsgRollForward'
+    forward :: HistoryState
+            -> BlockInMode CardanoMode
+            -> ( (BlockInMode CardanoMode, Either LedgerStateError (LedgerState, [LedgerEvent]))
+               , HistoryState
+               )
+    forward state@(Left err) blkInMode = ((blkInMode, Left err), state)
+    forward (Right history)  blkInMode@(BlockInMode blk@(Block (BlockHeader slotNo _ _) _) _) =
+      let newLedgerStateE = case Seq.lookup 0 history of
             Nothing -> error "Impossible! History should always be non-empty"
             Just (_, Left err, _) -> Left err
             Just (_, Right (oldLedgerState, _), _) -> applyBlock
@@ -632,35 +598,28 @@ chainSyncClientPipelinedWithLedgerState env ledgerState0 validationMode (CSP.Cha
                   validationMode
                   blk
           (history', _) = pushLedgerState env history slotNo newLedgerStateE blkInMode
-        in goClientPipelinedStIdle (Right history') n <$> recvMsgRollForward
-              (blkInMode, newLedgerStateE) tip
-      )
-      (\point tip -> let
-          oldestSlot = case history of
+      in ((blkInMode, newLedgerStateE), Right history')
+
+    -- called on every 'MsgRollBackward'
+    backward :: HistoryState -> ChainPoint -> HistoryState
+    backward state@Left {} _ = state
+    backward (Right history) point =
+      let oldestSlot = case history of
             _ Seq.:|> (s, _, _) -> s
             Seq.Empty -> error "Impossible! History should always be non-empty"
-          history' = (\h -> if Seq.null h
-                              then Left (InvalidRollback oldestSlot point)
-                              else Right h)
-                  $ case point of
-                        ChainPointAtGenesis -> initialLedgerStateHistory
-                        ChainPoint slotNo _ -> rollBackLedgerStateHist history slotNo
-        in goClientPipelinedStIdle history' n <$> recvMsgRollBackward point tip
-      )
 
-    goClientPipelinedStIntersect
-      :: Either LedgerStateError (History (Either LedgerStateError LedgerStateEvents))
-      -> Nat n
-      -> CSP.ClientPipelinedStIntersect (BlockInMode CardanoMode, Either LedgerStateError (LedgerState, [LedgerEvent])) ChainPoint ChainTip m a
-      -> CSP.ClientPipelinedStIntersect (BlockInMode CardanoMode                                                      ) ChainPoint ChainTip m a
-    goClientPipelinedStIntersect history _ (CSP.ClientPipelinedStIntersect recvMsgIntersectFound recvMsgIntersectNotFound) = CSP.ClientPipelinedStIntersect
-      (\point tip -> goClientPipelinedStIdle history Zero <$> recvMsgIntersectFound point tip)
-      (\tip -> goClientPipelinedStIdle history Zero <$> recvMsgIntersectNotFound tip)
+          state' :: HistoryState
+          state' =
+            (\h -> if Seq.null h
+                   then Left (InvalidRollback oldestSlot point)
+                   else Right h
+            ) $ case point of
+                  ChainPointAtGenesis -> initialLedgerStateHistory
+                  ChainPoint slotNo _ -> rollBackLedgerStateHist history slotNo
+      in state'
 
     initialLedgerStateHistory :: History (Either LedgerStateError LedgerStateEvents)
     initialLedgerStateHistory = Seq.singleton (0, Right (ledgerState0, []), Origin)
-
-{- HLINT ignore chainSyncClientPipelinedWithLedgerState "Use fmap" -}
 
 -- | A history of k (security parameter) recent ledger states. The head is the
 -- most recent item. Elements are:
@@ -671,6 +630,8 @@ chainSyncClientPipelinedWithLedgerState env ledgerState0 validationMode (CSP.Cha
 --
 type LedgerStateHistory = History LedgerStateEvents
 type History a = Seq (SlotNo, a, WithOrigin (BlockInMode CardanoMode))
+type HistoryState = Either LedgerStateError (History (Either LedgerStateError LedgerStateEvents))
+
 
 -- | Add a new ledger state to the history
 pushLedgerState

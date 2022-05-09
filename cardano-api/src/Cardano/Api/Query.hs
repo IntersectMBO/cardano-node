@@ -84,7 +84,7 @@ import           Data.Text (Text)
 import           Data.Typeable
 import           Prelude
 
-import           Ouroboros.Network.Protocol.LocalStateQuery.Client (Some (..))
+import           Ouroboros.Network.Protocol.LocalStateQuery.Codec (Some (..))
 
 import qualified Ouroboros.Consensus.HardFork.Combinator as Consensus
 import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (EraMismatch)
