@@ -445,6 +445,11 @@ mkNodeToNodeTracers configReflection trBase trForward mbTrEKG _trDataPoint trCon
                 ["TxSubmission", "Remote"]
     configureTracers configReflection trConfig [txSubmission2Tracer]
 
+    !keepAliveTracer <- mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["KeepAlive", "Remote"]
+    configureTracers configReflection trConfig [keepAliveTracer]
+
     pure $ NtN.Tracers
       { NtN.tChainSyncTracer = Tracer $
           traceWith chainSyncTracer
@@ -456,6 +461,8 @@ mkNodeToNodeTracers configReflection trBase trForward mbTrEKG _trDataPoint trCon
           traceWith blockFetchSerialisedTr
       , NtN.tTxSubmission2Tracer = Tracer $
           traceWith txSubmission2Tracer
+      , NtN.tKeepAliveTracer = Tracer $
+          traceWith keepAliveTracer
       }
 
 mkDiffusionTracers
