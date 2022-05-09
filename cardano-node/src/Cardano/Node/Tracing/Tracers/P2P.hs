@@ -1333,6 +1333,12 @@ instance (ToJSON addr, Show addr)
   forHuman = pack . show
   asMetrics (TrInboundGovernorCounters InboundGovernorCounters {..}) =
             [ IntM
+                "cardano.node.inbound-governor.idle"
+                (fromIntegral idlePeersRemote)
+            , IntM
+                "cardano.node.inbound-governor.cold"
+                (fromIntegral coldPeersRemote)
+            , IntM
                 "cardano.node.inbound-governor.warm"
                 (fromIntegral warmPeersRemote)
             , IntM
@@ -1410,7 +1416,11 @@ docInboundGovernor = Documented
       ""
   ,  DocMsg
       ["InboundGovernorCounters"]
-      []
+      [("cardano.node.inbound-governor.idle","")
+      ,("cardano.node.inbound-governor.cold","")
+      ,("cardano.node.inbound-governor.warm","")
+      ,("cardano.node.inbound-governor.hot","")
+      ]
       ""
   ,  DocMsg
       ["RemoteState"]

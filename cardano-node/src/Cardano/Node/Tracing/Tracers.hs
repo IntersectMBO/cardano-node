@@ -243,14 +243,19 @@ mkConsensusTracers trBase trForward mbTrEKG _trDataPoint trConfig nodeKernel = d
                 namesForChainSyncServerEvent
                 severityChainSyncServerEvent
                 allPublic
-    configureTracers trConfig docChainSyncServerEvent [chainSyncServerHeaderTr]
+    configureTracers trConfig docChainSyncServerEventHeader [chainSyncServerHeaderTr]
+    -- any server header event advances the counter
+    let chainSyncServerHeaderMetricsTr = contramap
+                (const
+                    (FormattedMetrics [CounterM "cardano.node.metrics.served.header" Nothing]))
+                (fromMaybe mempty mbTrEKG)
     chainSyncServerBlockTr <- mkCardanoTracer
                 trBase trForward mbTrEKG
                 "ChainSyncServerBlock"
                 namesForChainSyncServerEvent
                 severityChainSyncServerEvent
                 allPublic
-    configureTracers trConfig docChainSyncServerEvent [chainSyncServerBlockTr]
+    configureTracers trConfig docChainSyncServerEventBlock [chainSyncServerBlockTr]
     blockFetchDecisionTr  <- mkCardanoTracer
                 trBase trForward mbTrEKG
                 "BlockFetchDecision"
@@ -340,7 +345,8 @@ mkConsensusTracers trBase trForward mbTrEKG _trDataPoint trConfig nodeKernel = d
       { Consensus.chainSyncClientTracer = Tracer $
           traceWith chainSyncClientTr
       , Consensus.chainSyncServerHeaderTracer = Tracer $
-          traceWith chainSyncServerHeaderTr
+           traceWith chainSyncServerHeaderTr
+          <> traceWith chainSyncServerHeaderMetricsTr
       , Consensus.chainSyncServerBlockTracer = Tracer $
           traceWith chainSyncServerBlockTr
       , Consensus.blockFetchDecisionTracer = Tracer $

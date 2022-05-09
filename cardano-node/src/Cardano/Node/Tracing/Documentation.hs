@@ -278,9 +278,9 @@ docTracers configFileName outputFileName _ _ _ = do
                 namesForChainSyncServerEvent
                 severityChainSyncServerEvent
                 allPublic
-    configureTracers trConfig docChainSyncServerEvent [chainSyncServerHeaderTr]
+    configureTracers trConfig docChainSyncServerEventHeader [chainSyncServerHeaderTr]
     chainSyncServerHeaderTrDoc <- documentTracer trConfig chainSyncServerHeaderTr
-      (docChainSyncServerEvent :: Documented (TraceChainSyncServerEvent blk))
+      (docChainSyncServerEventHeader :: Documented (TraceChainSyncServerEvent blk))
 
     chainSyncServerBlockTr <- mkCardanoTracer
                 trBase trForward mbTrEKG
@@ -288,9 +288,9 @@ docTracers configFileName outputFileName _ _ _ = do
                 namesForChainSyncServerEvent
                 severityChainSyncServerEvent
                 allPublic
-    configureTracers trConfig docChainSyncServerEvent [chainSyncServerBlockTr]
+    configureTracers trConfig docChainSyncServerEventBlock [chainSyncServerBlockTr]
     chainSyncServerBlockTrDoc <- documentTracer trConfig chainSyncServerBlockTr
-      (docChainSyncServerEvent :: Documented (TraceChainSyncServerEvent blk))
+      (docChainSyncServerEventBlock :: Documented (TraceChainSyncServerEvent blk))
 
     blockFetchDecisionTr  <- mkCardanoTracer
                 trBase trForward mbTrEKG

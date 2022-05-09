@@ -17,7 +17,8 @@ module Cardano.Node.Tracing.Tracers.Consensus
 
   , severityChainSyncServerEvent
   , namesForChainSyncServerEvent
-  , docChainSyncServerEvent
+  , docChainSyncServerEventHeader
+  , docChainSyncServerEventBlock
 
   , severityBlockFetchDecision
   , namesForBlockFetchDecision
@@ -305,18 +306,44 @@ instance ConvertRawHash blk
               , "point" .= forMachine dtal point
               ]
 
-  asMetrics (TraceChainSyncRollForward _point) =
-      [CounterM "cardano.node.chainSync.rollForward" Nothing]
   asMetrics _ = []
 
-docChainSyncServerEvent :: Documented (TraceChainSyncServerEvent blk)
-docChainSyncServerEvent =
+
+docChainSyncServerEventHeader :: Documented (TraceChainSyncServerEvent blk)
+docChainSyncServerEventHeader =
     addDocumentedNamespace
       ["ChainSyncServerEvent", "ServerRead"]
-      docChainSyncServerEvent'
+      docChainSyncServerEventHeader'
 
-docChainSyncServerEvent' :: Documented (TraceChainSyncServerEvent blk)
-docChainSyncServerEvent' = Documented [
+-- | Metrics documented here, but implemented specially
+docChainSyncServerEventHeader' :: Documented (TraceChainSyncServerEvent blk)
+docChainSyncServerEventHeader' = Documented [
+    DocMsg
+      ["ServerRead"]
+      [("cardano.node.metrics.served.header", "A counter triggered ony on header event")]
+      "A server read has occurred, either for an add block or a rollback"
+    , DocMsg
+       ["ServerReadBlocked"]
+      [("cardano.node.metrics.served.header", "A counter triggered ony on header event")]
+      "A server read has blocked, either for an add block or a rollback"
+    , DocMsg
+      ["RollForward"]
+      [("cardano.node.metrics.served.header", "A counter triggered ony on header event")]
+      "Roll forward to the given point."
+    , DocMsg
+      ["RollBackward"]
+      [("cardano.node.metrics.served.header", "A counter triggered ony on header event")]
+      ""
+  ]
+
+docChainSyncServerEventBlock :: Documented (TraceChainSyncServerEvent blk)
+docChainSyncServerEventBlock =
+    addDocumentedNamespace
+      ["ChainSyncServerEvent", "ServerRead"]
+      docChainSyncServerEventBlock'
+
+docChainSyncServerEventBlock' :: Documented (TraceChainSyncServerEvent blk)
+docChainSyncServerEventBlock' = Documented [
     DocMsg
       ["ServerRead"]
       []
@@ -327,7 +354,7 @@ docChainSyncServerEvent' = Documented [
       "A server read has blocked, either for an add block or a rollback"
     , DocMsg
       ["RollForward"]
-      [("cardano.node.chainSync.rollForward", "")]
+      []
       "Roll forward to the given point."
     , DocMsg
       ["RollBackward"]
