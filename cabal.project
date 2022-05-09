@@ -168,8 +168,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: 394c4637c24d82325bd04ceb99c8e8df5617e663
-  --sha256: 02q8y69za5b0vsnj9qga1364vkmfc1kh35d0yshw1lf7nw9bls8m
+  tag: 8fe904d629194b1fbaaf2d0a4e0ccd17052e9103
+  --sha256: sha256-5B5lJFfUm4jbCBQtqTMvtiY2AWtnsN/1TYftAglT38A=
   subdir:
     base-deriving-via
     binary
@@ -191,8 +191,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger
-  tag: 1db68a3ec0a2dcb5751004beb22b906162474f23
-  --sha256: 03pv2jvskbi65dwaddp6a8bxbbcw674csjxhg8xbqd6q1kfpc41a
+  tag: 1ee17ad1dab70b2a96c32bf3883ed0e3994c5465
+  --sha256: 02jyc58ar76is3dlcir302swh63qzms92s7k8v1qd3ypzdyq4y7z
   subdir:
     eras/alonzo/impl
     eras/alonzo/test-suite
@@ -279,8 +279,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/plutus
-  tag: ccf5bcb99ffe054dc8cd5626723f64e02708dbae
-  --sha256: 18569bgywilibz7r5jyxj9bid8g4fwr80cc0hd9rcm3jhasbgq8i
+  tag: 5cc518f1202930ad52b8ba838af32af084c0e754
+  --sha256: 0w9v0n7rv2bmp0m4nrvxxncic7b23v3m4f89k31x0cawqzvhysbf
   subdir:
     plutus-core
     plutus-ledger-api
