@@ -59,7 +59,7 @@ cardano-cli stake-address registration-certificate \
   --out-file "$WORK/pledger.regcert"
 
 cardano-cli transaction build \
-  --alonzo-era \
+  --babbage-era \
   --testnet-magic "$TESTNET_MAGIC" \
   --change-address "$utxoaddr" \
   --tx-in "$txin" \
@@ -126,7 +126,7 @@ cardano-cli stake-address registration-certificate \
   --out-file "$WORK/stakekey.regcert"
 
 cardano-cli transaction build \
-  --alonzo-era \
+  --babbage-era \
   --testnet-magic "$TESTNET_MAGIC" \
   --change-address "$utxoaddrwithstaking" \
   --tx-in "$keytxin" \
@@ -190,7 +190,7 @@ cardano-cli stake-address delegation-certificate \
 # REGISTER STAKE POOL AND DELEGATE THE PLEDGER TO THE STAKE POOL IN ONE TX
 
 cardano-cli transaction build \
-  --alonzo-era \
+  --babbage-era \
   --testnet-magic "$TESTNET_MAGIC" \
   --change-address "$utxoaddr" \
   --tx-in "$txinupdated" \
@@ -258,7 +258,7 @@ echo ""
 keytxin2=$(jq -r 'keys[0]' "$WORK/staking-key-utxo-2.json")
 
 cardano-cli transaction build \
-  --alonzo-era \
+  --babbage-era \
   --testnet-magic "$TESTNET_MAGIC" \
   --change-address "$utxoaddrwithstaking" \
   --tx-in "$keytxin2" \
@@ -325,7 +325,7 @@ cardano-cli stake-address registration-certificate \
   --out-file "$WORK/script.regcert"
 
 cardano-cli transaction build \
-  --alonzo-era \
+  --babbage-era \
   --testnet-magic "$TESTNET_MAGIC" \
   --change-address "$utxoaddr" \
   --tx-in "$txinupdated2" \
@@ -389,7 +389,7 @@ echo ""
 echo "Selected txin: $txinupdated2"
 
 cardano-cli transaction build \
-  --alonzo-era \
+  --babbage-era \
   --testnet-magic "$TESTNET_MAGIC" \
   --change-address "$utxoaddr" \
   --tx-in "$txinupdated3" \
