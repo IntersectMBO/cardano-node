@@ -71,7 +71,7 @@ import           Ouroboros.Consensus.Ledger.Extended (ledgerState)
 import           Ouroboros.Consensus.Ledger.Inspect (InspectLedger, LedgerEvent)
 import           Ouroboros.Consensus.Ledger.Query (BlockQuery)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx, GenTxId, HasTxs,
-                   LedgerSupportsMempool)
+                   LedgerSupportsMempool, TxId)
 import           Ouroboros.Consensus.Ledger.SupportsProtocol (LedgerSupportsProtocol)
 import           Ouroboros.Consensus.Mempool (MempoolSize (..), TraceEventMempool (..))
 import           Ouroboros.Consensus.MiniProtocol.BlockFetch.Server
@@ -509,6 +509,8 @@ mkTracers _ _ _ _ _ enableP2P =
       , Consensus.blockchainTimeTracer = nullTracer
       , Consensus.consensusErrorTracer = nullTracer
       , Consensus.gsmTracer = nullTracer
+      , Consensus.consensusSanityCheckTracer = nullTracer
+      , Consensus.gddTracer = nullTracer
       }
     , nodeToClientTracers = NodeToClient.Tracers
       { NodeToClient.tChainSyncTracer = nullTracer
@@ -522,6 +524,7 @@ mkTracers _ _ _ _ _ enableP2P =
       , NodeToNode.tBlockFetchTracer = nullTracer
       , NodeToNode.tBlockFetchSerialisedTracer = nullTracer
       , NodeToNode.tTxSubmission2Tracer = nullTracer
+      , NodeToNode.tKeepAliveTracer = nullTracer
       }
     , diffusionTracers = Diffusion.nullTracers
     , diffusionTracersExtra =
@@ -808,6 +811,8 @@ mkConsensusTracers mbEKGDirect trSel verb tr nodeKern fStats = do
     , Consensus.consensusErrorTracer =
         Tracer $ \err -> traceWith (toLogObject tr) (ConsensusStartupException err)
     , Consensus.gsmTracer = tracerOnOff (traceGsm trSel) verb "GSM" tr
+    , Consensus.consensusSanityCheckTracer = nullTracer
+    , Consensus.gddTracer = nullTracer
     }
  where
    mkForgeTracers :: IO ForgeTracers
@@ -1379,6 +1384,10 @@ forgeStateInfoTracer p _ts tracer = Tracer $ \ev -> do
 nodeToClientTracers'
   :: ( ToObject localPeer
      , ShowQuery (BlockQuery blk)
+     , StandardHash blk
+     , Show (TxId (GenTx blk))
+     , Show (GenTx blk)
+     , Show (ApplyTxErr blk)
      )
   => TraceSelection
   -> TracingVerbosity
@@ -1410,6 +1419,8 @@ nodeToNodeTracers'
      , HasTxs blk
      , Show peer
      , ToObject peer
+     , Show (Header blk)
+     , Show blk
      )
   => TraceSelection
   -> TracingVerbosity
@@ -1432,6 +1443,9 @@ nodeToNodeTracers' trSel verb tr =
   , NodeToNode.tTxSubmission2Tracer =
       tracerOnOff (traceTxSubmissionProtocol trSel)
                   verb "TxSubmissionProtocol" tr
+  , NodeToNode.tKeepAliveTracer =
+      tracerOnOff (traceKeepAliveProtocol trSel)
+                  verb "KeepAliveProtocol" tr
   }
 
 teeTraceBlockFetchDecision

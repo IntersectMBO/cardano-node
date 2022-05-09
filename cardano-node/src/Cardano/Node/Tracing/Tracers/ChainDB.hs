@@ -1488,18 +1488,20 @@ instance MetaTrace (ChainDB.UnknownRange blk) where
 instance ( StandardHash blk
          , ConvertRawHash blk)
          => LogFormatting (LedgerDB.TraceSnapshotEvent blk) where
-  forHuman (LedgerDB.TookSnapshot snap pt) =
+  forHuman (LedgerDB.TookSnapshot snap pt et) =
       "Took ledger snapshot " <> showT snap <>
-        " at " <> renderRealPointAsPhrase pt
+        " at " <> renderRealPointAsPhrase pt <>
+        " time " <> showT et
   forHuman (LedgerDB.DeletedSnapshot snap) =
       "Deleted old snapshot " <> showT snap
   forHuman (LedgerDB.InvalidSnapshot snap failure) =
       "Invalid snapshot " <> showT snap <> showT failure
 
-  forMachine dtals (LedgerDB.TookSnapshot snap pt) =
+  forMachine dtals (LedgerDB.TookSnapshot snap pt et) =
     mconcat [ "kind" .= String "TookSnapshot"
              , "snapshot" .= forMachine dtals snap
-             , "tip" .= show pt ]
+             , "tip" .= show pt
+             , "time" .= show et ]
   forMachine dtals (LedgerDB.DeletedSnapshot snap) =
     mconcat [ "kind" .= String "DeletedSnapshot"
              , "snapshot" .= forMachine dtals snap ]

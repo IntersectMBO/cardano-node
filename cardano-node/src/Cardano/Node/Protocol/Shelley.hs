@@ -39,7 +39,6 @@ import           Cardano.Node.Types
 import           Cardano.Tracing.OrphanInstances.HardFork ()
 import           Cardano.Tracing.OrphanInstances.Shelley ()
 import qualified Ouroboros.Consensus.Cardano as Consensus
-import qualified Ouroboros.Consensus.Mempool.Capacity as TxLimits
 import           Ouroboros.Consensus.Protocol.Praos.Common (PraosCanBeLeader (..))
 import           Ouroboros.Consensus.Shelley.Node (Nonce (..), ProtocolParams (..),
                    ProtocolParamsShelleyBased (..), ShelleyLeaderCredentials (..))
@@ -85,9 +84,7 @@ mkSomeConsensusProtocolShelley NodeShelleyProtocolConfiguration {
       }
       Consensus.ProtocolParamsShelley {
         shelleyProtVer =
-          ProtVer (natVersion @2) 0,
-        shelleyMaxTxCapacityOverrides =
-          TxLimits.mkOverrides TxLimits.noOverridesMeasure
+          ProtVer (natVersion @2) 0
       }
 
 genesisHashToPraosNonce :: GenesisHash -> Nonce

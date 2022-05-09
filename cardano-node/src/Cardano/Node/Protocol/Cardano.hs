@@ -35,7 +35,6 @@ import qualified Ouroboros.Consensus.Cardano.CanHardFork as Consensus
 import           Ouroboros.Consensus.Cardano.Condense ()
 import           Ouroboros.Consensus.Config (emptyCheckpointsMap)
 import           Ouroboros.Consensus.HardFork.Combinator.Condense ()
-import qualified Ouroboros.Consensus.Mempool.Capacity as TxLimits
 import qualified Ouroboros.Consensus.Shelley.Node.Praos as Praos
 
 import           Prelude
@@ -167,9 +166,7 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
               npcByronSupportedProtocolVersionAlt,
           byronSoftwareVersion = Byron.softwareVersion,
           byronLeaderCredentials =
-            byronLeaderCredentials,
-          byronMaxTxCapacityOverrides =
-            TxLimits.mkOverrides TxLimits.noOverridesMeasure
+            byronLeaderCredentials
         }
       , paramsShelleyBased =
         Consensus.ProtocolParamsShelleyBased {
@@ -184,9 +181,7 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
           -- is in the Shelley era. That is, it is the version of protocol
           -- /after/ Shelley, i.e. Allegra.
           shelleyProtVer =
-            ProtVer (natVersion @3) 0,
-          shelleyMaxTxCapacityOverrides =
-            TxLimits.mkOverrides TxLimits.noOverridesMeasure
+            ProtVer (natVersion @3) 0
         }
       , paramsAllegra =
         Consensus.ProtocolParamsAllegra {
@@ -195,9 +190,7 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
           -- is in the Allegra era. That is, it is the version of protocol
           -- /after/ Allegra, i.e. Mary.
           allegraProtVer =
-            ProtVer (natVersion @4) 0,
-          allegraMaxTxCapacityOverrides =
-            TxLimits.mkOverrides TxLimits.noOverridesMeasure
+            ProtVer (natVersion @4) 0
         }
       , paramsMary =
         Consensus.ProtocolParamsMary {
@@ -205,9 +198,7 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
           -- version that this node will declare that it understands, when it
           -- is in the Mary era. That is, it is the version of protocol
           -- /after/ Mary, i.e. Alonzo.
-          maryProtVer = ProtVer (natVersion @5) 0,
-          maryMaxTxCapacityOverrides =
-            TxLimits.mkOverrides TxLimits.noOverridesMeasure
+          maryProtVer = ProtVer (natVersion @5) 0
         }
       , paramsAlonzo =
         Consensus.ProtocolParamsAlonzo {
@@ -220,9 +211,7 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
           -- this is a HACK so that we can distinguish between others
           -- versions of the node that are broadcasting major version 7.
           -- We intentionally broadcast 7.0 starting in Babbage.
-          alonzoProtVer = ProtVer (natVersion @7) 2,
-          alonzoMaxTxCapacityOverrides =
-            TxLimits.mkOverrides TxLimits.noOverridesMeasure
+          alonzoProtVer = ProtVer (natVersion @7) 2
         }
       , paramsBabbage =
         Praos.ProtocolParamsBabbage {
@@ -233,9 +222,7 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
           -- version. It is the protocol version that this node will declare
           -- that it understands during the Babbage era. That is, it is the
           -- version of protocol /after/ Babbage, i.e. Conway.
-          Praos.babbageProtVer = ProtVer (natVersion @9) 1,
-          Praos.babbageMaxTxCapacityOverrides =
-            TxLimits.mkOverrides TxLimits.noOverridesMeasure
+          Praos.babbageProtVer = ProtVer (natVersion @9) 1
         }
       , paramsConway =
         Praos.ProtocolParamsConway {
@@ -244,9 +231,7 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
           Praos.conwayProtVer =
             if npcExperimentalHardForksEnabled
             then ProtVer (natVersion @10) 0
-            else ProtVer (natVersion @9) 1,
-          Praos.conwayMaxTxCapacityOverrides =
-            TxLimits.mkOverrides TxLimits.noOverridesMeasure
+            else ProtVer (natVersion @9) 1
         }
         -- The remaining arguments specify the parameters needed to transition between two eras
       , ledgerTransitionConfig =

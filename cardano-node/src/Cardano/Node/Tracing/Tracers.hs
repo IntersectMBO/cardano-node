@@ -64,7 +64,7 @@ import           Ouroboros.Network.NodeToNode (RemoteAddress)
 
 import           Codec.CBOR.Read (DeserialiseFailure)
 import           Control.Monad (unless)
-import           "contra-tracer" Control.Tracer (Tracer (..))
+import           "contra-tracer" Control.Tracer (Tracer (..), nullTracer)
 import           Data.Proxy (Proxy (..))
 import           Network.Mux.Trace (TraceLabelPeer (..))
 
@@ -361,6 +361,8 @@ mkConsensusTracers configReflection trBase trForward mbTrEKG _trDataPoint trConf
           traceWith consensusStartupErrorTr . ConsensusStartupException
       , Consensus.gsmTracer = Tracer $
           traceWith consensusGsmTr
+      , Consensus.consensusSanityCheckTracer = nullTracer
+      , Consensus.gddTracer = nullTracer
       }
 
 mkNodeToClientTracers :: forall blk.
@@ -445,6 +447,11 @@ mkNodeToNodeTracers configReflection trBase trForward mbTrEKG _trDataPoint trCon
                 ["TxSubmission", "Remote"]
     configureTracers configReflection trConfig [txSubmission2Tracer]
 
+    !keepAliveTracer <- mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["KeepAlive", "Remote"]
+    configureTracers configReflection trConfig [keepAliveTracer]
+
     pure $ NtN.Tracers
       { NtN.tChainSyncTracer = Tracer $
           traceWith chainSyncTracer
@@ -456,6 +463,8 @@ mkNodeToNodeTracers configReflection trBase trForward mbTrEKG _trDataPoint trCon
           traceWith blockFetchSerialisedTr
       , NtN.tTxSubmission2Tracer = Tracer $
           traceWith txSubmission2Tracer
+      , NtN.tKeepAliveTracer = Tracer $
+          traceWith keepAliveTracer
       }
 
 mkDiffusionTracers

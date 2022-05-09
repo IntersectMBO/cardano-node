@@ -588,9 +588,10 @@ instance ( ConvertRawHash blk
       ChainDB.TraceSnapshotEvent ev -> case ev of
         LedgerDB.InvalidSnapshot snap failure ->
           "Invalid snapshot " <> showT snap <> showT failure
-        LedgerDB.TookSnapshot snap pt ->
+        LedgerDB.TookSnapshot snap pt et ->
           "Took ledger snapshot " <> showT snap <>
-          " at " <> renderRealPointAsPhrase pt
+          " at " <> renderRealPointAsPhrase pt <>
+          " time " <> showT et
         LedgerDB.DeletedSnapshot snap ->
           "Deleted old snapshot " <> showT snap
       ChainDB.TraceCopyToImmutableDBEvent ev -> case ev of
@@ -1054,10 +1055,11 @@ instance ( ConvertRawHash blk
 
   toObject MinimalVerbosity (ChainDB.TraceSnapshotEvent _ev) = mempty -- no output
   toObject verb (ChainDB.TraceSnapshotEvent ev) = case ev of
-    LedgerDB.TookSnapshot snap pt ->
+    LedgerDB.TookSnapshot snap pt et ->
       mconcat [ "kind" .= String "TraceSnapshotEvent.TookSnapshot"
                , "snapshot" .= toObject verb snap
-               , "tip" .= show pt ]
+               , "tip" .= show pt
+               , "time" .= show et ]
     LedgerDB.DeletedSnapshot snap ->
       mconcat [ "kind" .= String "TraceSnapshotEvent.DeletedSnapshot"
                , "snapshot" .= toObject verb snap ]
