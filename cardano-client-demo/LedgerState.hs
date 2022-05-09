@@ -17,7 +17,7 @@ import           Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
 import qualified Data.Text as T
 import           Data.Word
-import           Network.TypedProtocol.Pipelined (Nat (..))
+import           Data.Type.Nat (Nat (..))
 import qualified Ouroboros.Consensus.Shelley.Ledger as Shelley
 import           Ouroboros.Network.Protocol.ChainSync.ClientPipelined
                    (ChainSyncClientPipelined (ChainSyncClientPipelined),

@@ -42,7 +42,7 @@ import           Cardano.Tracing.OrphanInstances.Consensus ()
 import           Cardano.Tracing.OrphanInstances.Network ()
 import           Cardano.Tracing.OrphanInstances.Shelley ()
 
-import           Ouroboros.Network.Protocol.TxSubmission2.Type (TokBlockingStyle (..))
+import           Ouroboros.Network.Protocol.TxSubmission2.Type (SingBlockingStyle (..))
 
 import           Cardano.Api
 
@@ -121,11 +121,11 @@ mkSubmissionSummary ssThreadName startTime reportsRefs
 walletTxSource :: forall era. WalletScript era -> TpsThrottle -> TxSource era
 walletTxSource walletScript tpsThrottle = Active $ worker walletScript
  where
-  worker :: forall m blocking . MonadIO m => WalletScript era -> TokBlockingStyle blocking -> Req -> m (TxSource era, [Tx era])
+  worker :: forall m blocking . MonadIO m => WalletScript era -> SingBlockingStyle blocking -> Req -> m (TxSource era, [Tx era])
   worker script blocking req = do
     (done, txCount) <- case blocking of
-       TokBlocking -> liftIO $ consumeTxsBlocking tpsThrottle req
-       TokNonBlocking -> liftIO $ consumeTxsNonBlocking tpsThrottle req
+       SingBlocking -> liftIO $ consumeTxsBlocking tpsThrottle req
+       SingNonBlocking -> liftIO $ consumeTxsNonBlocking tpsThrottle req
     (txList, newScript) <- liftIO $ unFold script txCount
     case done of
       Stop -> return (Exhausted, txList)

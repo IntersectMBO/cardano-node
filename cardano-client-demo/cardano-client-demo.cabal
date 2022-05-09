@@ -34,7 +34,9 @@ executable scan-blocks-pipelined
                       , cardano-ledger-byron
                       , cardano-slotting
                       , filepath
+                      , ouroboros-network
                       , time
+                      , typed-protocols
 
 executable chain-sync-client-with-ledger-state
   import:               base, project-config

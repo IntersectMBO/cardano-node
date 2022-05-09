@@ -11,11 +11,15 @@ import           Cardano.Slotting.Slot
 import           Control.Monad (when)
 import           Data.Kind
 import           Data.Proxy
+import           Data.Type.Queue
+import           Data.Type.Nat
 import           Data.Time
 import           Data.Word (Word32)
 import qualified GHC.TypeLits as GHC
 import           System.Environment (getArgs)
 import           System.FilePath ((</>))
+
+import           Ouroboros.Network.Protocol.ChainSync.ClientPipelined
 
 -- | Connects to a local cardano node, requests the blocks and prints out the
 -- number of transactions. To run this, you must first start a local node e.g.:
@@ -76,16 +80,17 @@ chainSyncClient pipelineSize = ChainSyncClientPipelined $ do
   startTime <- getCurrentTime
   let
     clientIdle_RequestMoreN :: WithOrigin BlockNo -> WithOrigin BlockNo
-                            -> Nat n -> ClientPipelinedStIdle n (BlockInMode CardanoMode)
-                                 ChainPoint ChainTip IO ()
-    clientIdle_RequestMoreN clientTip serverTip n = case pipelineDecisionMax pipelineSize n clientTip serverTip  of
-      Collect -> case n of
-        Succ predN -> CollectResponse Nothing (clientNextN predN)
-      _ -> SendMsgRequestNextPipelined (clientIdle_RequestMoreN clientTip serverTip (Succ n))
+                            -> SingQueueF F q -> ClientPipelinedStIdle (BlockInMode CardanoMode)
+                                              ChainPoint ChainTip q IO ()
+    clientIdle_RequestMoreN clientTip serverTip q = case pipelineDecisionMax pipelineSize (queueFDepthNat q) clientTip serverTip  of
+      Collect -> case q of
+        SingConsF FCanAwait q' -> CollectResponse Nothing (clientNextN q')
+        SingConsF FMustReply q' -> CollectResponse Nothing (clientNextN q')
+      _ -> SendMsgRequestNextPipelined (clientIdle_RequestMoreN clientTip serverTip (q |> FCanAwait))
 
-    clientNextN :: Nat n -> ClientStNext n (BlockInMode CardanoMode)
-                                 ChainPoint ChainTip IO ()
-    clientNextN n =
+    clientNextN :: SingQueueF F q -> ClientStNext (BlockInMode CardanoMode)
+                                     ChainPoint ChainTip q IO ()
+    clientNextN q =
       ClientStNext {
           recvMsgRollForward = \(BlockInMode block@(Block (BlockHeader _ _ currBlockNo@(BlockNo blockNo)) _) _) serverChainTip -> do
             let newClientTip = At currBlockNo
@@ -97,27 +102,30 @@ chainSyncClient pipelineSize = ChainSyncClientPipelined $ do
                   rate = fromIntegral blockNo / elapsedTime
               putStrLn $ "Rate = " ++ show rate ++ " blocks/second"
             if newClientTip == newServerTip
-              then  clientIdle_DoneN n
-              else return (clientIdle_RequestMoreN newClientTip newServerTip n)
+              then  clientIdle_DoneN q
+              else return (clientIdle_RequestMoreN newClientTip newServerTip q)
         , recvMsgRollBackward = \_ serverChainTip -> do
             putStrLn "Rollback"
             let newClientTip = Origin -- We don't actually keep track of blocks so we temporarily "forget" the tip.
                 newServerTip = fromChainTip serverChainTip
-            return (clientIdle_RequestMoreN newClientTip newServerTip n)
+            return (clientIdle_RequestMoreN newClientTip newServerTip q)
         }
 
-    clientIdle_DoneN :: Nat n -> IO (ClientPipelinedStIdle n (BlockInMode CardanoMode)
-                                 ChainPoint ChainTip IO ())
-    clientIdle_DoneN n = case n of
-      Succ predN -> do
+    clientIdle_DoneN :: SingQueueF F q -> IO (ClientPipelinedStIdle (BlockInMode CardanoMode)
+                                              ChainPoint ChainTip q IO ())
+    clientIdle_DoneN q = case q of
+      SingConsF FCanAwait q' -> do
         putStrLn "Chain Sync: done! (Ignoring remaining responses)"
-        return $ CollectResponse Nothing (clientNext_DoneN predN) -- Ignore remaining message responses
-      Zero -> do
+        return $ CollectResponse Nothing (clientNext_DoneN q') -- Ignore remaining message responses
+      SingConsF FMustReply q' -> do
+        putStrLn "Chain Sync: done! (Ignoring remaining responses)"
+        return $ CollectResponse Nothing (clientNext_DoneN q') -- Ignore remaining message responses
+      SingEmptyF -> do
         putStrLn "Chain Sync: done!"
         return $ SendMsgDone ()
 
-    clientNext_DoneN :: Nat n -> ClientStNext n (BlockInMode CardanoMode)
-                                 ChainPoint ChainTip IO ()
+    clientNext_DoneN :: SingQueueF F q -> ClientStNext (BlockInMode CardanoMode)
+                                          ChainPoint ChainTip q IO ()
     clientNext_DoneN n =
       ClientStNext {
           recvMsgRollForward = \_ _ -> clientIdle_DoneN n
@@ -133,4 +141,4 @@ chainSyncClient pipelineSize = ChainSyncClientPipelined $ do
       ChainTipAtGenesis -> Origin
       ChainTip _ _ bno -> At bno
 
-  return (clientIdle_RequestMoreN Origin Origin Zero)
+  return (clientIdle_RequestMoreN Origin Origin SingEmptyF)
