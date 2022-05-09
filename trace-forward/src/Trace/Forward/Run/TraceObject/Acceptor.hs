@@ -20,7 +20,6 @@ import           Data.Void (Void)
 
 import           Ouroboros.Network.Mux (MuxMode (..), MuxPeer (..), RunMiniProtocol (..))
 import           Ouroboros.Network.Driver.Simple (runPeer)
-import           Ouroboros.Network.Util.ShowProxy (ShowProxy(..))
 
 import qualified Trace.Forward.Protocol.TraceObject.Acceptor as Acceptor
 import qualified Trace.Forward.Protocol.TraceObject.Codec as Acceptor
@@ -30,7 +29,6 @@ import           Trace.Forward.Configuration.TraceObject (AcceptorConfiguration 
 
 acceptTraceObjectsInit
   :: (CBOR.Serialise lo,
-      ShowProxy lo,
       Typeable lo)
   => AcceptorConfiguration lo -- ^ Acceptor's configuration.
   -> ([lo] -> IO ())          -- ^ The handler for accepted 'TraceObject's.
@@ -41,7 +39,6 @@ acceptTraceObjectsInit config loHandler peerErrorHandler =
 
 acceptTraceObjectsResp
   :: (CBOR.Serialise lo,
-      ShowProxy lo,
       Typeable lo)
   => AcceptorConfiguration lo -- ^ Acceptor's configuration.
   -> ([lo] -> IO ())          -- ^ The handler for accepted 'TraceObject's.
@@ -52,7 +49,6 @@ acceptTraceObjectsResp config loHandler peerErrorHandler =
 
 runPeerWithHandler
   :: (CBOR.Serialise lo,
-      ShowProxy lo,
       Typeable lo)
   => AcceptorConfiguration lo
   -> ([lo] -> IO ())
@@ -73,13 +69,12 @@ runPeerWithHandler config@AcceptorConfiguration{acceptorTracer, shouldWeStop} lo
 
 acceptorActions
   :: (CBOR.Serialise lo,
-      ShowProxy lo,
       Typeable lo)
   => AcceptorConfiguration lo -- ^ Acceptor's configuration.
   -> ([lo] -> IO ())          -- ^ The handler for accepted 'TraceObject's.
   -> Acceptor.TraceObjectAcceptor lo IO ()
 acceptorActions config@AcceptorConfiguration{whatToRequest, shouldWeStop} loHandler =
-  Acceptor.SendMsgTraceObjectsRequest TokBlocking whatToRequest $ \replyWithTraceObjects -> do
+  Acceptor.SendMsgTraceObjectsRequest SingBlocking whatToRequest $ \replyWithTraceObjects -> do
     loHandler $ getTraceObjectsFromReply replyWithTraceObjects
     ifM (readTVarIO shouldWeStop)
       (return $ Acceptor.SendMsgDone $ return ())

@@ -263,8 +263,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: c764553561bed8978d2c6753d1608dc65449617a
-  --sha256: 0hdh7xdrvxw943r6qr0xr4kwszindh5mnsn1lww6qdnxnmn7wcsc
+  tag: c7b4ead782e88238714db4a305d68a6fbdef7692
+  --sha256: 0h79izbcyylf38slncm3vh9vq89hy0phy2ps6q3bpklaz02x12j3
   subdir:
     monoidal-synchronisation
     network-mux
@@ -290,11 +290,13 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/typed-protocols
-  tag: 181601bc3d9e9d21a671ce01e0b481348b3ca104
-  --sha256: 1lr97b2z7l0rpsmmz92rsv27qzd5vavz10cf7n25svya4kkiysp5
+  tag: e808e5c084593055fd34709cd159fa9e74c843e1
+  --sha256: 01b035im4lxahdwdmmlfg3cjc32mx7p2y0fk64m7vb3wqx0nvys5
   subdir:
     typed-protocols
     typed-protocols-cborg
+    typed-protocols-stateful
+    typed-protocols-stateful-cborg
     typed-protocols-examples
 
 source-repository-package
@@ -314,8 +316,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ekg-forward
-  tag: 297cd9db5074339a2fb2e5ae7d0780debb670c63
-  --sha256: 1zcwry3y5rmd9lgxy89wsb3k4kpffqji35dc7ghzbz603y1gy24g
+  tag: a7b401a95f1963352fbfd940e65f0d609386c2fd
+  --sha256: 17yxa4panvgfa4q3czpr3k03hpd1bxz6d1jpr4dhhqx1sagp4lri
 
 source-repository-package
   type: git

@@ -27,7 +27,7 @@ traceObjectAcceptorApply f = go
         SendMsgDone $ return acc
     | otherwise =
         SendMsgTraceObjectsRequest
-          TokNonBlocking
+          SingNonBlocking
           (NumberOfTraceObjects 1)
           $ \_reply -> return $ go (f acc) (pred n)
 
@@ -45,8 +45,8 @@ traceObjectForwarderCount = go 0
       , recvMsgTraceObjectsRequest =
           \blocking _numOfTO ->
             return ( case blocking of
-                       TokBlocking    -> BlockingReply (NE.fromList [1, 2, 3])
-                       TokNonBlocking -> NonBlockingReply [1, 2]
+                       SingBlocking    -> BlockingReply (NE.fromList [1, 2, 3])
+                       SingNonBlocking -> NonBlockingReply [1, 2]
                    , go (succ n)
                    )
       }

@@ -61,6 +61,7 @@ library
                        , extra
                        , io-classes
                        , ouroboros-network-framework
+                       , singletons
                        , serialise
                        , stm
                        , text

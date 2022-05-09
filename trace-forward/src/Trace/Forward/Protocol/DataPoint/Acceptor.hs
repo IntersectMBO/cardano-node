@@ -14,8 +14,7 @@ module Trace.Forward.Protocol.DataPoint.Acceptor
   , dataPointAcceptorPeer
   ) where
 
-import           Network.TypedProtocol.Core (Peer (..), PeerHasAgency (..),
-                                             PeerRole (..))
+import           Network.TypedProtocol.Peer.Client
 
 import           Trace.Forward.Protocol.DataPoint.Type
 
@@ -34,15 +33,15 @@ data DataPointAcceptor m a where
 dataPointAcceptorPeer
   :: Monad m
   => DataPointAcceptor m a
-  -> Peer DataPointForward 'AsClient 'StIdle m a
+  -> Client DataPointForward 'NonPipelined 'Empty 'StIdle m stm a
 dataPointAcceptorPeer = \case
   SendMsgDataPointsRequest request next ->
     -- Send our message (request for new 'DataPoint's from the forwarder).
-    Yield (ClientAgency TokIdle) (MsgDataPointsRequest request) $
+    Yield (MsgDataPointsRequest request) $
       -- We're now into the 'StBusy' state, and now we'll wait for a reply
       -- from the forwarder. It is assuming that the forwarder will reply
       -- immediately (even there are no 'DataPoint's).
-      Await (ServerAgency TokBusy) $ \(MsgDataPointsReply reply) ->
+      Await $ \(MsgDataPointsReply reply) ->
         Effect $
           dataPointAcceptorPeer <$> next reply
 
@@ -51,5 +50,5 @@ dataPointAcceptorPeer = \case
     -- 'StDone' state. Once in the 'StDone' state we can actually stop using
     -- 'done', with a return value.
     Effect $
-      Yield (ClientAgency TokIdle) MsgDone . Done TokDone
+      Yield MsgDone . Done
         <$> getResult

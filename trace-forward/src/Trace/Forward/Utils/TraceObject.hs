@@ -104,13 +104,13 @@ readFromSink sink@ForwardSink{forwardQueue, wasUsed} =
     { Forwarder.recvMsgTraceObjectsRequest = \blocking (NumberOfTraceObjects n) -> do
         replyList <-
           case blocking of
-            TokBlocking -> do
+            SingBlocking -> do
               objs <- atomically $ getNTraceObjects n forwardQueue >>= \case
                 []     -> retry -- No 'TraceObject's yet, just wait...
                 (x:xs) -> return $ x NE.:| xs
               atomically . modifyTVar' wasUsed . const $ True
               return $ BlockingReply objs
-            TokNonBlocking -> do
+            SingNonBlocking -> do
               objs <- atomically $ getNTraceObjects n forwardQueue
               unless (null objs) $
                 atomically . modifyTVar' wasUsed . const $ True

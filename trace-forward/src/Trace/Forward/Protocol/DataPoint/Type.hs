@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE PolyKinds #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 
 -- | The type of the 'DataPoint' forwarding/accepting protocol.
@@ -13,17 +14,15 @@ module Trace.Forward.Protocol.DataPoint.Type
   , DataPointValue
   , DataPointValues
   , DataPointForward (..)
+  , SingDataPointForward (..)
   , Message (..)
-  , ClientHasAgency (..)
-  , ServerHasAgency (..)
-  , NobodyHasAgency (..)
   ) where
 
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Text (Text)
+import           Data.Singletons
 
-import           Network.TypedProtocol.Core (Protocol (..))
-import           Ouroboros.Network.Util.ShowProxy (ShowProxy(..))
+import           Network.TypedProtocol.Core
 
 -- | A kind to identify our protocol, and the types of the states in the state
 -- transition diagram of the protocol.
@@ -59,8 +58,16 @@ data DataPointForward where
   -- | Both the acceptor and forwarder are in the terminal state. They're done.
   StDone :: DataPointForward
 
-instance ShowProxy DataPointForward where
-  showProxy _ = "DataPointForward"
+data SingDataPointForward (st :: DataPointForward) where
+  SingIdle :: SingDataPointForward StIdle
+  SingBusy :: SingDataPointForward StBusy
+  SingDone :: SingDataPointForward StDone
+
+deriving instance Show (SingDataPointForward (st :: DataPointForward))
+type instance Sing = SingDataPointForward
+instance SingI StIdle where sing = SingIdle
+instance SingI StBusy where sing = SingBusy
+instance SingI StDone where sing = SingDone
 
 instance Protocol DataPointForward where
 
@@ -83,39 +90,10 @@ instance Protocol DataPointForward where
     MsgDone
       :: Message DataPointForward 'StIdle 'StDone
 
-  -- | This is an explanation of our states, in terms of which party has agency
-  -- in each state.
-  --
-  -- 1. When both peers are in Idle state, the acceptor can send a message
-  --    to the forwarder (request for new 'DataPoint's),
-  -- 2. When both peers are in Busy state, the forwarder is expected to send
-  --    a reply to the acceptor (list of new 'DataPoint's).
-  --
-  -- So we assume that, from __interaction__ point of view:
-  -- 1. ClientHasAgency (from 'Network.TypedProtocol.Core') corresponds to acceptor's agency.
-  -- 3. ServerHasAgency (from 'Network.TypedProtocol.Core') corresponds to forwarder's agency.
-  --
-  data ClientHasAgency st where
-    TokIdle :: ClientHasAgency 'StIdle
+  type StateToken = SingDataPointForward
 
-  data ServerHasAgency st where
-    TokBusy :: ServerHasAgency 'StBusy
+  type StateAgency StIdle = ClientAgency
+  type StateAgency StBusy = ServerAgency
+  type StateAgency StDone = NobodyAgency
 
-  data NobodyHasAgency st where
-    TokDone :: NobodyHasAgency 'StDone
-
-  -- | Impossible cases.
-  exclusionLemma_ClientAndServerHaveAgency TokIdle tok = case tok of {}
-  exclusionLemma_NobodyAndClientHaveAgency TokDone tok = case tok of {}
-  exclusionLemma_NobodyAndServerHaveAgency TokDone tok = case tok of {}
-
-instance Show (Message DataPointForward from to) where
-  show MsgDataPointsRequest{} = "MsgDataPointsRequest"
-  show MsgDataPointsReply{}   = "MsgDataPointsReply"
-  show MsgDone{}              = "MsgDone"
-
-instance Show (ClientHasAgency (st :: DataPointForward)) where
-  show TokIdle = "TokIdle"
-
-instance Show (ServerHasAgency (st :: DataPointForward)) where
-  show TokBusy{} = "TokBusy"
+deriving instance Show (Message DataPointForward from to)

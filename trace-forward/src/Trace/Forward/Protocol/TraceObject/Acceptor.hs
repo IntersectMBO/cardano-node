@@ -14,14 +14,13 @@ module Trace.Forward.Protocol.TraceObject.Acceptor
   , traceObjectAcceptorPeer
   ) where
 
-import           Network.TypedProtocol.Core (Peer (..), PeerHasAgency (..),
-                                             PeerRole (..))
+import           Network.TypedProtocol.Peer.Client
 
 import           Trace.Forward.Protocol.TraceObject.Type
 
 data TraceObjectAcceptor lo m a where
   SendMsgTraceObjectsRequest
-    :: TokBlockingStyle blocking
+    :: SingBlockingStyle blocking
     -> NumberOfTraceObjects
     -> (BlockingReplyList blocking lo -> m (TraceObjectAcceptor lo m a))
     -> TraceObjectAcceptor lo m a
@@ -35,24 +34,24 @@ data TraceObjectAcceptor lo m a where
 traceObjectAcceptorPeer
   :: Monad m
   => TraceObjectAcceptor lo m a
-  -> Peer (TraceObjectForward lo) 'AsClient 'StIdle m a
+  -> Client (TraceObjectForward lo) 'NonPipelined 'Empty 'StIdle m stm a
 traceObjectAcceptorPeer = \case
-  SendMsgTraceObjectsRequest TokBlocking request next ->
+  SendMsgTraceObjectsRequest SingBlocking request next ->
     -- Send our message (request for new 'TraceObject's from the forwarder).
-    Yield (ClientAgency TokIdle) (MsgTraceObjectsRequest TokBlocking request) $
+    Yield (MsgTraceObjectsRequest SingBlocking request) $
       -- We're now into the 'StBusy' state, and now we'll wait for a reply
       -- from the forwarder.
-      Await (ServerAgency (TokBusy TokBlocking)) $ \(MsgTraceObjectsReply reply) ->
+      Await $ \(MsgTraceObjectsReply reply) ->
         Effect $
           traceObjectAcceptorPeer <$> next reply
 
-  SendMsgTraceObjectsRequest TokNonBlocking request next ->
+  SendMsgTraceObjectsRequest SingNonBlocking request next ->
     -- Send our message (request for new 'TraceObject's from the forwarder).
-    Yield (ClientAgency TokIdle) (MsgTraceObjectsRequest TokNonBlocking request) $
+    Yield (MsgTraceObjectsRequest SingNonBlocking request) $
       -- We're now into the 'StBusy' state, and now we'll wait for a reply
       -- from the forwarder. It is assuming that the forwarder will reply
       -- immediately (even there are no 'TraceObject's).
-      Await (ServerAgency (TokBusy TokNonBlocking)) $ \(MsgTraceObjectsReply reply) ->
+      Await $ \(MsgTraceObjectsReply reply) ->
         Effect $
           traceObjectAcceptorPeer <$> next reply
 
@@ -61,5 +60,5 @@ traceObjectAcceptorPeer = \case
     -- 'StDone' state. Once in the 'StDone' state we can actually stop using
     -- 'done', with a return value.
     Effect $
-      Yield (ClientAgency TokIdle) MsgDone . Done TokDone
+      Yield MsgDone . Done
         <$> getResult

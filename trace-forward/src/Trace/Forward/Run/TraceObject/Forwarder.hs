@@ -10,7 +10,6 @@ import qualified Data.ByteString.Lazy as LBS
 import           Data.Void (Void)
 import           Ouroboros.Network.Driver.Simple (runPeer)
 import           Ouroboros.Network.Mux (MuxMode (..), MuxPeer (..), RunMiniProtocol (..))
-import           Ouroboros.Network.Util.ShowProxy (ShowProxy(..))
 
 import qualified Trace.Forward.Protocol.TraceObject.Forwarder as Forwarder
 import qualified Trace.Forward.Protocol.TraceObject.Codec as Forwarder
@@ -18,8 +17,7 @@ import           Trace.Forward.Utils.TraceObject
 import           Trace.Forward.Configuration.TraceObject (ForwarderConfiguration (..))
 
 forwardTraceObjectsInit
-  :: (CBOR.Serialise lo,
-      ShowProxy lo)
+  :: CBOR.Serialise lo
   => ForwarderConfiguration lo
   -> ForwardSink lo
   -> RunMiniProtocol 'InitiatorMode LBS.ByteString IO () Void
@@ -27,8 +25,7 @@ forwardTraceObjectsInit config sink =
   InitiatorProtocolOnly $ runPeerWithSink config sink
 
 forwardTraceObjectsResp
-  :: (CBOR.Serialise lo,
-      ShowProxy lo)
+  :: CBOR.Serialise lo
   => ForwarderConfiguration lo
   -> ForwardSink lo
   -> RunMiniProtocol 'ResponderMode LBS.ByteString IO Void ()
@@ -36,7 +33,7 @@ forwardTraceObjectsResp config sink =
   ResponderProtocolOnly $ runPeerWithSink config sink
 
 runPeerWithSink
-  :: (ShowProxy lo, CBOR.Serialise lo)
+  :: CBOR.Serialise lo
   => ForwarderConfiguration lo
   -> ForwardSink lo
   -> MuxPeer LBS.ByteString IO ()

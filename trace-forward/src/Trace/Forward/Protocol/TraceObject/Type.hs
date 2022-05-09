@@ -13,22 +13,20 @@
 
 module Trace.Forward.Protocol.TraceObject.Type
   ( TraceObjectForward (..)
-  , TokBlockingStyle (..)
+  , SingTraceObjectForward (..)
+  , SingBlockingStyle (..)
   , Message (..)
-  , ClientHasAgency (..)
-  , ServerHasAgency (..)
-  , NobodyHasAgency (..)
   , NumberOfTraceObjects (..)
   , BlockingReplyList (..)
   ) where
 
 import           Codec.Serialise (Serialise (..))
 import           Data.List.NonEmpty (NonEmpty)
-import           Data.Proxy (Proxy(..))
+import           Data.Singletons
 import           Data.Word (Word16)
 import           GHC.Generics (Generic)
 
-import           Network.TypedProtocol.Core (Protocol (..))
+import           Network.TypedProtocol.Core
 import           Ouroboros.Network.Util.ShowProxy (ShowProxy(..))
 
 -- | A kind to identify our protocol, and the types of the states in the state
@@ -84,22 +82,41 @@ instance (ShowProxy lo)
     , ")"
     ]
 
+deriving instance Show (SingTraceObjectForward st)
+
 data StBlockingStyle where
   -- | In this sub-state the reply need not be prompt. There is no timeout.
   StBlocking    :: StBlockingStyle
   -- | In this sub-state the peer must reply. There is a timeout.
   StNonBlocking :: StBlockingStyle
 
+
+data SingTraceObjectForward (st :: TraceObjectForward lo) where
+  SingIdle :: SingTraceObjectForward StIdle
+  SingBusy :: SingBlockingStyle a
+             -> SingTraceObjectForward (StBusy a)
+  SingDone :: SingTraceObjectForward StDone
+
 -- | The value level equivalent of 'StBlockingStyle'.
 --
 -- This is also used in 'MsgTraceObjectsRequest' where it is interpreted (and can be encoded)
 -- as a 'Bool' with 'True' for blocking, and 'False' for non-blocking.
-data TokBlockingStyle (k :: StBlockingStyle) where
-  TokBlocking    :: TokBlockingStyle 'StBlocking
-  TokNonBlocking :: TokBlockingStyle 'StNonBlocking
+data SingBlockingStyle (b :: StBlockingStyle) where
+  SingBlocking    :: SingBlockingStyle StBlocking
+  SingNonBlocking :: SingBlockingStyle StNonBlocking
 
-deriving instance Eq   (TokBlockingStyle b)
-deriving instance Show (TokBlockingStyle b)
+deriving instance Eq   (SingBlockingStyle b)
+deriving instance Show (SingBlockingStyle b)
+type instance Sing = SingBlockingStyle
+instance SingI StBlocking    where sing = SingBlocking
+instance SingI StNonBlocking where sing = SingNonBlocking
+
+type instance Sing = SingTraceObjectForward
+instance SingI StIdle     where sing = SingIdle
+instance SingI b
+      => SingI (StBusy b) where sing = SingBusy sing
+instance SingI StDone     where sing = SingDone
+
 
 -- | We have requests for lists of things. In the blocking case the
 -- corresponding reply must be non-empty, whereas in the non-blocking case
@@ -128,7 +145,7 @@ instance Protocol (TraceObjectForward lo) where
     -- With 'TokNonBlocking' this is a non-blocking operation: the reply
     -- may be an empty list and this does expect a prompt reply.
     MsgTraceObjectsRequest
-      :: TokBlockingStyle blocking
+      :: SingBlockingStyle blocking
       -> NumberOfTraceObjects
       -> Message (TraceObjectForward lo) 'StIdle ('StBusy blocking)
 
@@ -142,40 +159,11 @@ instance Protocol (TraceObjectForward lo) where
     MsgDone
       :: Message (TraceObjectForward lo) 'StIdle 'StDone
 
-  -- | This is an explanation of our states, in terms of which party has agency
-  -- in each state.
-  --
-  -- 1. When both peers are in Idle state, the acceptor can send a message
-  --    to the forwarder (request for new 'TraceObject's),
-  -- 2. When both peers are in Busy state, the forwarder is expected to send
-  --    a reply to the acceptor (list of new 'TraceObject's).
-  --
-  -- So we assume that, from __interaction__ point of view:
-  -- 1. ClientHasAgency (from 'Network.TypedProtocol.Core') corresponds to acceptor's agency.
-  -- 3. ServerHasAgency (from 'Network.TypedProtocol.Core') corresponds to forwarder's agency.
-  --
-  data ClientHasAgency st where
-    TokIdle :: ClientHasAgency 'StIdle
+  type StateAgency StIdle     = ClientAgency
+  type StateAgency (StBusy _) = ServerAgency
+  type StateAgency StDone     = NobodyAgency
 
-  data ServerHasAgency st where
-    TokBusy :: TokBlockingStyle blocking -> ServerHasAgency ('StBusy blocking)
+  type StateToken = SingTraceObjectForward
 
-  data NobodyHasAgency st where
-    TokDone :: NobodyHasAgency 'StDone
-
-  -- | Impossible cases.
-  exclusionLemma_ClientAndServerHaveAgency TokIdle tok = case tok of {}
-  exclusionLemma_NobodyAndClientHaveAgency TokDone tok = case tok of {}
-  exclusionLemma_NobodyAndServerHaveAgency TokDone tok = case tok of {}
-
-instance Show lo
-      => Show (Message (TraceObjectForward lo) from to) where
-  show MsgTraceObjectsRequest{} = "MsgTraceObjectsRequest"
-  show MsgTraceObjectsReply{}   = "MsgTraceObjectsReply"
-  show MsgDone{}                = "MsgDone"
-
-instance Show (ClientHasAgency (st :: TraceObjectForward lo)) where
-  show TokIdle = "TokIdle"
-
-instance Show (ServerHasAgency (st :: TraceObjectForward lo)) where
-  show TokBusy{} = "TokBusy"
+deriving instance Show lo
+               => Show (Message (TraceObjectForward lo) from to)
