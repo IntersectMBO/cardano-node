@@ -5,6 +5,7 @@
 {-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-partial-fields -Wno-orphans #-}
 
 module Cardano.Unlog.LogObject (module Cardano.Unlog.LogObject) where
@@ -14,9 +15,10 @@ import Cardano.Prelude hiding (Text, head, show)
 
 import Control.Monad (fail)
 import Data.Aeson (FromJSON(..), ToJSON(..), Value(..), Object, (.:), (.:?))
-import Data.Aeson.Types (Parser)
 import Data.Aeson qualified as AE
-import Data.Aeson.Types qualified as AE
+import Data.Aeson.KeyMap qualified as KeyMap
+import Data.Aeson.Types (Parser)
+import Data.Aeson.Key qualified as Aeson
 import Data.ByteString.Lazy qualified as LBS
 import Data.Text qualified as LText
 import Data.Text.Short qualified as Text
@@ -24,55 +26,38 @@ import Data.Text.Short (ShortText, fromText, toText)
 import Data.Time.Clock (NominalDiffTime, UTCTime)
 import Data.Map qualified as Map
 import Data.Vector (Vector)
-import Quiet (Quiet (..))
-
-import Ouroboros.Network.Block (BlockNo(..), SlotNo(..))
 
 import Cardano.Logging.Resources.Types
 
+import Cardano.Analysis.Ground
+import Cardano.Util
+
 import Data.Accum (zeroUTCTime)
-import qualified Data.Aeson.KeyMap as KeyMap
-import qualified Data.Aeson.Key as Aeson
 
 
 type Text = ShortText
 
-readLogObjectStream :: JsonLogfile -> IO [LogObject]
-readLogObjectStream (JsonLogfile f) =
+runLiftLogObjects :: [JsonLogfile] -> Maybe HostDeduction
+                  -> ExceptT LText.Text IO [(JsonLogfile, [LogObject])]
+runLiftLogObjects fs (fmap hostDeduction -> mHostDed) = liftIO $
+  forConcurrently fs
+    (\f -> (f,) . fmap (setLOhost f mHostDed) <$> readLogObjectStream (unJsonLogfile f))
+ where
+   setLOhost :: JsonLogfile -> Maybe (JsonLogfile -> Host) -> LogObject -> LogObject
+   setLOhost _   Nothing lo = lo
+   setLOhost lf (Just f) lo = lo { loHost = f lf }
+
+   -- joinT :: (IO a, IO b) -> IO (a, b)
+   -- joinT (a, b) = (,) <$> a <*> b
+
+readLogObjectStream :: FilePath -> IO [LogObject]
+readLogObjectStream f =
   LBS.readFile f
     <&>
     fmap (either (LogObject zeroUTCTime "DecodeError" "" (TId "0") . LODecodeError)
                  id
           . AE.eitherDecode)
     . LBS.split (fromIntegral $ fromEnum '\n')
-
-newtype JsonRunMetafile
-  = JsonRunMetafile { unJsonRunMetafile :: FilePath }
-  deriving (Show, Eq)
-
-newtype JsonGenesisFile
-  = JsonGenesisFile { unJsonGenesisFile :: FilePath }
-  deriving (Show, Eq)
-
-newtype JsonLogfile
-  = JsonLogfile { unJsonLogfile :: FilePath }
-  deriving (Show, Eq)
-
-newtype JsonOutputFile
-  = JsonOutputFile { unJsonOutputFile :: FilePath }
-  deriving (Show, Eq)
-
-newtype TextOutputFile
-  = TextOutputFile { unTextOutputFile :: FilePath }
-  deriving (Show, Eq)
-
-newtype CsvOutputFile
-  = CsvOutputFile { unCsvOutputFile :: FilePath }
-  deriving (Show, Eq)
-
-newtype OutputFile
-  = OutputFile { unOutputFile :: FilePath }
-  deriving (Show, Eq)
 
 data LogObject
   = LogObject
@@ -90,36 +75,6 @@ instance ToJSON LogObject
 instance Print ShortText where
   hPutStr   h = hPutStr   h . toText
   hPutStrLn h = hPutStrLn h . toText
-
-newtype TId = TId { unTId :: ShortText }
-  deriving (Eq, Generic, Ord)
-  deriving newtype (FromJSON, ToJSON)
-  deriving anyclass NFData
-  deriving Show via Quiet TId
-
-newtype Hash = Hash { unHash :: ShortText }
-  deriving (Eq, Generic, Ord)
-  deriving newtype (FromJSON, ToJSON)
-  deriving anyclass NFData
-
-shortHash :: Hash -> LText.Text
-shortHash = toText . Text.take 6 . unHash
-
-instance Show Hash where show = LText.unpack . toText . unHash
-
-instance AE.ToJSONKey Hash where
-  toJSONKey = AE.toJSONKeyText (toText . unHash)
-
-newtype Host = Host { unHost :: ShortText }
-  deriving (Eq, Generic, Ord)
-  deriving newtype (IsString, FromJSON, ToJSON)
-  deriving anyclass NFData
-  deriving Show via Quiet Host
-
-instance FromJSON BlockNo where
-  parseJSON o = BlockNo <$> parseJSON o
-instance ToJSON BlockNo where
-  toJSON (BlockNo x) = toJSON x
 
 deriving instance NFData a => NFData (Resources a)
 

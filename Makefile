@@ -54,9 +54,13 @@ cluster-shell:           ARGS += --arg 'autoStartCluster' true ## Enter Nix shel
 cluster-shell-dev:       ARGS += --arg 'autoStartCluster' true --arg 'workbenchDevMode' true ## Enter Nix shell, dev mode, and start workbench cluster
 cluster-shell-trace:     ARGS += --arg 'autoStartCluster' true --argstr 'autoStartClusterArgs' '--trace --trace-workbench' ## Enter Nix shell, start workbench cluster, with shell tracing
 cluster-shell-dev-trace: ARGS += --arg 'autoStartCluster' true --arg 'workbenchDevMode' true --argstr 'autoStartClusterArgs' '--trace --trace-workbench' ## Enter Nix shell, dev mode, start workbench cluster, with shell tracing
+fixed:                   PROFILE = fixed-${ERA}
 fixed:                   ARGS += --arg 'autoStartCluster' true
-fixed:                   PROFILE = fixed-alzo
-shell-dev cluster-shell-dev cluster-shell-trace cluster-shell-dev-trace fixed: shell
+forge-stress:            PROFILE = forge-stress-${ERA}
+forge-stress:            ARGS += --arg 'workbenchDevMode' true
+quick:                   PROFILE = quick-${ERA}
+quick:                   ARGS += --arg 'workbenchDevMode' true
+shell-dev cluster-shell-dev cluster-shell-trace cluster-shell-dev-trace fixed forge-stress quick: shell
 
 test-smoke: smoke ## Build the 'workbench-smoke-test', same as the Hydra job
 smoke:
@@ -66,12 +70,14 @@ smoke-analysis:
 	nix build -f 'default.nix' 'workbench-smoke-analysis' --out-link result-smoke-analysis --cores 0 --show-trace
 ci-analysis:
 	nix build -f 'default.nix' 'workbench-ci-analysis'    --out-link result-ci-analysis    --cores 0 --show-trace
+
 list-profiles: ## List workbench profiles
 	nix build .#workbench.profile-names-json --json | jq '.[0].outputs.out' -r | xargs jq .
 show-profile: ## NAME=profile-name
 	@test -n "${NAME}" || { echo 'HELP:  to specify profile to show, add NAME=profle-name' && exit 1; }
 	nix build .#all-profiles-json --json --option substitute false | jq '.[0].outputs.out' -r | xargs jq ".\"${NAME}\" | if . == null then error(\"\n###\n### Error:  unknown profile: ${NAME}  Please consult:  make list-profiles\n###\") else . end"
 ps: list-profiles
+
 bump-cardano-node-workbench: ## Update the cardano-node-workbench flake input
 	nix flake lock --update-input cardano-node-workbench
 bump-node-measured: ## Update the node-measured flake input

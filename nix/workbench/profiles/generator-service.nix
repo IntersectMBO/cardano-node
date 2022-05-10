@@ -50,7 +50,9 @@ let
           dsmPassthrough = {
             # rtsOpts = ["-xc"];
           };
-        } // profile.value.generator;
+        }
+        //
+        removeAttrs profile.value.generator ["epochs"];
 
   ## Given an env config, evaluate it and produce the node service.
   ## Call the given function on this service.

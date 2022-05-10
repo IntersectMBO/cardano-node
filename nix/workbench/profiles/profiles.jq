@@ -4,7 +4,8 @@
 ##  - genesis
 ##  - generator
 ##  - node
-##  - tolerances (ranges of acceptable properties, given above parameters)
+##  - analysis (properties relevant to analysis)
+##  - derived  (properties derived from all above)
 ##
 ## When combined with cluster composition (an extract from topology, see the
 ## definition below) and service parameters (non-crucial things like state directory,
@@ -84,7 +85,9 @@ def profiles($era; $mcompo; $topo; $extra_profiles):
   | map (## Assemble into a dictionary..
            { "\(.name)":
                ## ..and cleanup:
-               . | delpaths ([["generator", "epochs"]])})
+               .
+               # | delpaths ([["generator", "epochs"]])
+           })
   | add;
 
 def profile_names($era; $mcompo; $topo; $extra_profiles):

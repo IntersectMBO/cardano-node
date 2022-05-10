@@ -2,7 +2,7 @@ global_genesis_format_version=March-14-2022
 
 usage_genesis() {
      usage "genesis" "Genesis" <<EOF
-    prepare [--force] CACHEDIR PROFILE-JSON TOPO-DIR OUTDIR
+    prepare-cache-entry [--force] PROFILE-JSON RUN-META-JSON CACHEDIR TOPO-DIR OUTDIR
                      Prepare a genesis cache entry for the specified profile.
                        Cache entry regeneration can be --force 'd
 
@@ -16,7 +16,7 @@ usage_genesis() {
     actually-genesis PROFILE-JSON TOPO-DIR DIR
                      (DEV) Internal procedure to actually generate genesis
 
-    finalise-cache-entry PROFILE-JSON DIR
+    finalise-cache-entry PROFILE-JSON TIMING-JSON-EXPR DIR
                      (DEV) Update a genesis cache entry to the given profile
 EOF
 }
@@ -25,8 +25,8 @@ genesis() {
 local op=${1:-$(usage_genesis)}; shift
 
 case "$op" in
-    prepare )
-        local usage="USAGE:  wb genesis $op [--force] CACHEDIR PROFILE-JSON TOPO-DIR OUTDIR"
+    prepare-cache-entry )
+        local usage="USAGE:  wb genesis $op [--force] PROFILE-JSON CACHEDIR NODE-SPECS OUTDIR"
 
         local regenesis_causes=()
         while test $# -gt 0
@@ -34,9 +34,9 @@ case "$op" in
                --force ) regenesis_causes+=('has--force');;
                * ) break;; esac; shift; done
 
-        local cachedir=${1:?$usage}
-        local profile_json=${2:?$usage}
-        local topo_dir=${3:?$usage}
+        local profile_json=${1:?$usage}
+        local cachedir=${2:?$usage}
+        local node_specs=${3:?$usage}
         local outdir=${4:?$usage}
 
         local cache_key_input=$(genesis profile-cache-key-input "$profile_json")
@@ -52,7 +52,7 @@ case "$op" in
         if genesis cache-test "$cache_path"
         then cache_hit=t; cache_hit_desc='hit'
         else cache_hit=;  cache_hit_desc='miss'; fi
-        msg "genesis: preparing cache entry $cache_key:  $cache_hit_desc ($cache_path)"
+        msg "genesis | cache:  preparing entry $cache_key:  $cache_hit_desc ($cache_path)"
 
         if   test -z "$cache_hit"
         then regenesis_causes+=('cache-miss')
@@ -68,15 +68,15 @@ case "$op" in
              if profile has-preset "$profile_json"
              then local preset=$(jq .preset "$profile_json" -r)
                   genesis genesis-from-preset "$preset" "$cache_path"
-             else genesis actually-genesis "$profile_json" "$topo_dir" "$cache_path" "$cache_key_input" "$cache_key"
+             else genesis actually-genesis "$profile_json" "$node_specs" "$cache_path" "$cache_key_input" "$cache_key"
              fi
         fi
 
-        genesis finalise-cache-entry "$profile_json" "$cache_path"
-
         ## Install the cache entry:
         rm -f $outdir ## Must be a symlink for this to succeed
-        ln -s "$(realpath "$cache_path")" "$outdir";;
+        ln -s "$(realpath "$cache_path")" "$outdir"
+        echo >&2
+        ;;
 
     cache-test )
         local usage="USAGE:  wb genesis $op GENESIS-CACHE-DIR"
@@ -94,33 +94,16 @@ case "$op" in
         local usage="USAGE:  wb genesis $op PROFILE-JSON"
         local profile_json=${1:?$usage}
 
-        args=(--slurpfile profile $profile_json
-              --sort-keys
-              --null-input
-             )
-        ## Remove parts of profile that don't invalidate
-        ## the cryptographic material in genesis.  Note the conservative approach.
-        ##
-        ## Note that the genesis cache entry itself must still be updated
-        ## to match these parameters, hence the distinction between parameters:
-        jq '
-           $profile[0].genesis * $profile[0].composition
+        local args=(
+            --slurpfile profile      $profile_json
+            --arg       profile_json $profile_json
+            --sort-keys
+            --null-input
+            -L "$global_basedir/profiles"
+        )
+        jq 'include "genesis";
 
-           ## Genesis-relevant -- must be updated in finalise-cache-entry:
-           | del(.active_slots_coeff)
-           | del(.epoch_length)
-           | del(.max_block_size)
-           | del(.max_tx_size)
-           | del(.parameter_k)
-           | del(.slot_duration)
-
-           ## Genesis-irrelevant -- safe to ignore in finalise-cache-entry:
-           | del(.byron)
-           | del(.era)
-           | del(.genesis_future_offset)
-           | del(.locations)
-           | del(.with_proxy)
-           | del(.with_observer)
+           profile_genesis_cache_key($profile[0]; $profile_json)
            ' ${args[*]};;
 
     profile-cache-key )
@@ -132,18 +115,12 @@ case "$op" in
                                     sha1sum | cut -c-7)
             --slurpfile profile $profile_json
             --raw-output
+            -L "$global_basedir/profiles"
         )
-        jq 'if $profile[0].preset == null
-            then [ "k\(.composition.n_pools)"
-                 , "d\(.composition.dense_pool_density)"
-                 , "\(.genesis.delegators / 1000)kD"
-                 , "\(.genesis.utxo / 1000)kU"
-                 , "\($params_hash)" ]
-            else [ "preset"
-                 , $profile[0].preset ]
-            end
-            | join("-")
-            ' ${args[*]} $profile_json;;
+        jq 'include "genesis";
+
+           profile_genesis_cache_entry_name($profile[0]; $params_hash)
+           ' ${args[*]} $profile_json;;
 
     genesis-from-preset )
         local usage="USAGE:  wb genesis $op PRESET GENESIS-DIR"
@@ -164,9 +141,9 @@ case "$op" in
         done;;
 
     actually-genesis )
-        local usage="USAGE:  wb genesis $op PROFILE-JSON TOPO-DIR DIR"
+        local usage="USAGE:  wb genesis $op PROFILE-JSON NODE-SPECS DIR"
         local profile_json=${1:?$usage}
-        local topo_dir=${2:?$usage}
+        local node_specs=${2:?$usage}
         local dir=${3:?$usage}
         local cache_key_input=$4
         local cache_key=$5
@@ -174,19 +151,28 @@ case "$op" in
         rm -rf   "$dir"/{*-keys,byron,pools,nodes,*.json,*.params,*.version}
         mkdir -p "$dir"
 
+        jq ' $prof[0] as $p
+           | . * ($p.genesis.shelley // {})
+           | . * ($p.genesis.alonzo // {})
+           ' --slurpfile prof       "$profile_json"  \
+           "$global_basedir"/profiles/presets/mainnet/genesis/genesis-alonzo.json \
+           >   "$dir"/genesis.alonzo.spec.json
+
+        msg "genesis:  creating initial genesis"
         cardano-cli genesis create --genesis-dir "$dir"/ \
             $(jq '.cli_args.createSpec | join(" ")' "$profile_json" --raw-output)
 
         ## Overlay the verbatim genesis part into the profile spec:
         local params=(
-            --slurpfile profile "$profile_json"
+            --slurpfile prof "$profile_json"
             --raw-output
         )
-        jq "${params[@]}" '
-           . * ($profile[0].genesis.shelley // {})
-           '   "$dir"/genesis.spec.json |
+        jq ' $prof[0] as $p
+           | . * ($p.genesis.shelley // {})
+           '   "$dir"/genesis.spec.json "${params[@]}" |
         sponge "$dir"/genesis.spec.json
 
+        msg "genesis:  mutating into staked genesis"
         params=(--genesis-dir "$dir"
                 $(jq '.cli_args.createFinalBulk | join(" ")' "$profile_json" --raw-output)
                )
@@ -194,21 +180,26 @@ case "$op" in
         mv "$dir"/genesis.json "$dir"/genesis-shelley.json
         mv "$dir"/genesis.spec.json "$dir"/genesis-shelley.spec.json
 
+        msg "genesis:  removing delegator keys.."
+        rm "$dir"/stake-delegator-keys -rf
+
         cat <<<$cache_key_input               > "$dir"/cache.key.input
         cat <<<$cache_key                     > "$dir"/cache.key
         cat <<<$global_genesis_format_version > "$dir"/layout.version
 
+        msg "genesis:  moving keys"
         ## TODO: try to get rid of this step:
-        Massage_the_key_file_layout_to_match_AWS "$profile_json" "$topo_dir" "$dir";;
+        Massage_the_key_file_layout_to_match_AWS "$profile_json" "$node_specs" "$dir";;
 
     derive-from-cache )
-        local usage="USAGE:  wb genesis $op PROFILE-OUT CACHE-ENTRY-DIR OUTDIR"
+        local usage="USAGE:  wb genesis $op PROFILE-OUT TIMING-JSON-EXPR CACHE-ENTRY-DIR OUTDIR"
         local profile=${1:?$usage}
-        local cache_entry=${2:?$usage}
-        local outdir=${3:?$usage}
+        local timing=${2:?$usage}
+        local cache_entry=${3:?$usage}
+        local outdir=${4:?$usage}
 
         msg "genesis | derive-from-cache:  $cache_entry -> $outdir"
-        ls -l $cache_entry
+        # ls -l $cache_entry
 
         mkdir -p "$outdir"
         ( cd $outdir
@@ -226,35 +217,29 @@ case "$op" in
           ln -s $cache_entry/stake-delegator-keys
           ln -s $cache_entry/utxo-keys
           ## JSON
-          cp -v $cache_entry/genesis*.json .
+          cp    $cache_entry/genesis*.json .
           chmod u+w          genesis*.json
         )
-        genesis finalise-cache-entry $profile/profile.json $outdir
-
-        ls -l $outdir/node-keys
+        genesis finalise-cache-entry $profile/profile.json "$timing" $outdir
+        # ls -l $outdir/node-keys
         ;;
 
     finalise-cache-entry )
-        local usage="USAGE:  wb genesis $op PROFILE-JSON DIR"
+        local usage="USAGE:  wb genesis $op PROFILE-JSON TIMING-JSON-EXPR DIR"
         local profile_json=${1:?$usage}
-        local dir=${2:?$usage}
+        local timing=${2:?$usage}
+        local dir=${3:?$usage}
 
         if profile has-preset "$profile_json"
         then return; fi
 
         ## Decide start time:
-        local system_start_epoch=$(date '+%s' --date="now + $(jq .genesis.genesis_future_offset "$profile_json" --raw-output)")
-        local system_start_human=$(date --date=@$system_start_epoch --utc +"%Y-%m-%dT%H:%M:%SZ")
-        local start_time=$(date --date=@$system_start_epoch --utc --iso-8601=s |
-                           cut -c-19)
+        genesis_byron "$(jq '.start' -r <<<$timing)" "$dir"
 
-        genesis_byron "$system_start_epoch" "$dir"
-
-        jq ' $prof[0] as $p
-           | . * ($p.genesis.shelley // {})
-           | . * { systemStart: $start_time }
-           ' --slurpfile prof       "$profile_json"  \
-             --arg       start_time "${start_time}Z" \
+        jq ' . * ($prof[0].genesis.shelley // {})
+           | . * { systemStart: $timing.systemStart }
+           ' --slurpfile prof        "$profile_json" \
+             --argjson   timing      "$timing"       \
                "$dir"/genesis-shelley.json |
         sponge "$dir"/genesis-shelley.json
 
@@ -270,13 +255,13 @@ case "$op" in
 __KEY_ROOT=
 Massage_the_key_file_layout_to_match_AWS() {
     local profile_json=${1:?$usage}
-    local topo_dir=${2:?$usage}
+    local node_specs=${2:?$usage}
     local dir=${3:?$usage}
     local ids
 
     set -euo pipefail
 
-    local pool_density_map=$(topology density-map "$profile_json" "$topo_dir")
+    local pool_density_map=$(topology density-map "$profile_json" "$node_specs")
     msg "genesis: pool density map:  $pool_density_map"
 
     __KEY_ROOT=$dir

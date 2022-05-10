@@ -59,6 +59,42 @@ def genesis_profile_variants:
       }
     , generator: { tps: 10 }
     }
+  , { name: "forge-stress"
+    , scenario: "fixed-loaded"
+    , composition:
+      { n_singular_hosts:               2
+      , n_dense_hosts:                  0
+      }
+    , genesis:
+      { utxo:                           6000000
+      , delegators:                     1300000
+      , max_block_size:                 80000
+      , epoch_length:                   600
+      , parameter_k:                    3
+      }
+    , node:
+      { shutdown_on_slot_synced: 2400
+      }
+    , generator: { tps: 15 }
+    }
+  , { name: "quick"
+    , scenario: "fixed-loaded"
+    , composition:
+      { n_singular_hosts:               2
+      , n_dense_hosts:                  0
+      }
+    , genesis:
+      { utxo:                           6000
+      , delegators:                     1300
+      , max_block_size:                 80000
+      , epoch_length:                   600
+      , parameter_k:                    3
+      }
+    , node:
+      { shutdown_on_slot_synced: 10
+      }
+    , generator: { tps: 15 }
+    }
 
   ## Chainsync:
   , { name: "chainsync"

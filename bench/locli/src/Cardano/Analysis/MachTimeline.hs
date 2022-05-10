@@ -1,68 +1,85 @@
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE StrictData #-}
 {-# OPTIONS_GHC -Wno-incomplete-patterns -Wno-name-shadowing -Wno-orphans #-}
 {- HLINT ignore "Use head" -}
 module Cardano.Analysis.MachTimeline (module Cardano.Analysis.MachTimeline) where
 
-import Prelude (String, (!!), error, head, last)
+import Prelude (String, error, head, last)
 import Cardano.Prelude hiding (head)
+import Cardano.Prelude qualified as CP
 
-import Control.Arrow ((&&&), (***))
+import Data.List                        ((!!))
+import Data.Map.Strict qualified as Map
 import Data.Vector (Vector)
 import Data.Vector qualified as Vec
-import Data.Map.Strict qualified as Map
 
 import Data.Time.Clock (NominalDiffTime, UTCTime)
 import Data.Time.Clock qualified as Time
-
-import Ouroboros.Network.Block (SlotNo(..))
 
 import Data.Accum
 import Data.Distribution
 
 import Cardano.Analysis.API
 import Cardano.Analysis.Chain
+import Cardano.Analysis.ChainFilter
+import Cardano.Analysis.Ground
 import Cardano.Analysis.Run
 import Cardano.Analysis.Version
 import Cardano.Unlog.LogObject hiding (Text)
-import Cardano.Unlog.Render
 import Cardano.Unlog.Resources
+import Cardano.Util
 
-instance RenderDistributions MachTimeline where
-  rdFields _ =
-    --  Width LeftPad
-    [ Field 4 0 "missR"    "Miss"  "ratio"  $ DFloat   sMissDistrib
-    , Field 5 0 "CheckΔ"   (d!!0)  "Check"  $ DDeltaT  sSpanCheckDistrib
-    , Field 5 0 "LeadΔ"    (d!!1)  "Lead"   $ DDeltaT  sSpanLeadDistrib
-    , Field 5 0 "ForgeΔ"   (d!!2)  "Forge"  $ DDeltaT  sSpanForgeDistrib
-    , Field 4 0 "BlkGap"   "Block" "gap"    $ DWord64  sBlocklessDistrib
-    , Field 5 0 "chDensity" "Dens" "ity"    $ DFloat   sDensityDistrib
-    , Field 3 0 "CPU"      "CPU"   "%"      $ DWord64 (rCentiCpu . sResourceDistribs)
-    , Field 3 0 "GC"       "GC"    "%"      $ DWord64 (rCentiGC . sResourceDistribs)
-    , Field 3 0 "MUT"      "MUT"    "%"     $ DWord64 (fmap (min 999) . rCentiMut . sResourceDistribs)
-    , Field 3 0 "GcMaj"    "GC "   "Maj"    $ DWord64 (rGcsMajor . sResourceDistribs)
-    , Field 3 0 "GcMin"    "flt "  "Min"    $ DWord64 (rGcsMinor . sResourceDistribs)
-    , Field 5 0 "RSS"      (m!!0)  "RSS"    $ DWord64 (rRSS . sResourceDistribs)
-    , Field 5 0 "Heap"     (m!!1)  "Heap"   $ DWord64 (rHeap . sResourceDistribs)
-    , Field 5 0 "Live"     (m!!2)  "Live"   $ DWord64 (rLive . sResourceDistribs)
-    , Field 5 0 "Allocd"   "Alloc" "MB"     $ DWord64 (rAlloc . sResourceDistribs)
-    , Field 5 0 "CPU85%LensAll"  (c!!0) "All"   $ DInt     sSpanLensCPU85Distrib
-    , Field 5 0 "CPU85%LensEBnd" (c!!1) "EBnd"  $ DInt     sSpanLensCPU85EBndDistrib
-    ]
-   where
-     d = nChunksEachOf  3 6 "---- Δt ----"
-     m = nChunksEachOf  3 6 "Memory usage, MB"
-     c = nChunksEachOf  2 6 "CPU85% spans"
 
-slotStatsMachTimeline :: Run -> [SlotStats] -> MachTimeline
-slotStatsMachTimeline _ slots =
+-- | A side-effect of analysis
+data RunScalars
+  = RunScalars
+  { rsElapsed       :: Maybe NominalDiffTime
+  , rsSubmitted     :: Maybe Word64
+  , rsThreadwiseTps :: Maybe (Vector Float)
+  }
+  deriving stock Generic
+  deriving anyclass NFData
+
+collectSlotStats :: Run -> [(JsonLogfile, [LogObject])] -> IO [(JsonLogfile, (RunScalars, [SlotStats]))]
+collectSlotStats run = mapConcurrentlyPure (fmap $ timelineFromLogObjects run)
+
+runSlotFilters ::
+     Run
+  -> ([ChainFilter], [FilterName])
+  -> [(JsonLogfile, [SlotStats])]
+  -> IO (DataDomain SlotNo, [(JsonLogfile, [SlotStats])])
+runSlotFilters Run{genesis} (flts, _fltNames) slots = do
+  filtered <- mapConcurrentlyPure (fmap $ filterSlotStats flts) slots
+  let samplePre  =    slots !! 0 & snd
+      samplePost = filtered !! 0 & snd
+      domain = mkDataDomain
+        ((CP.head samplePre  <&> slSlot) & fromMaybe 0)
+        ((lastMay samplePre  <&> slSlot) & fromMaybe 0)
+        ((CP.head samplePost <&> slSlot) & fromMaybe 0)
+        ((lastMay samplePost <&> slSlot) & fromMaybe 0)
+        (fromIntegral . unSlotNo)
+  progress "filtered-slotstats-slot-domain" $ J domain
+  pure $ (,) domain filtered
+
+ where
+   filterSlotStats :: [ChainFilter] -> [SlotStats] -> [SlotStats]
+   filterSlotStats filters =
+     filter (\x -> all (testSlotStats genesis x) slotFilters)
+    where
+      slotFilters :: [SlotCond]
+      slotFilters = catSlotFilters filters
+
+slotStatsSummary :: Run -> [SlotStats] -> MachTimeline
+slotStatsSummary _ slots =
   MachTimeline
   { sMaxChecks            = maxChecks
   , sSlotMisses           = misses
   , sSpanLensCPU85        = spanLensCPU85
   , sSpanLensCPU85EBnd    = sSpanLensCPU85EBnd
   , sSpanLensCPU85Rwd     = sSpanLensCPU85Rwd
-  , sSlotRange            = (,) (slSlot $ head slots)
-                                (slSlot $ last slots)
+  , sDomain               = mkDataDomainInj (slSlot $ head slots) (slSlot $ last slots)
+                                            (fromIntegral . unSlotNo)
   , sVersion              = getVersion
   --
   , sMissDistrib          = dist missRatios
@@ -76,11 +93,11 @@ slotStatsMachTimeline _ slots =
   , sSpanLensCPU85Distrib = dist spanLensCPU85
   , sSpanLensCPU85EBndDistrib = dist sSpanLensCPU85EBnd
   , sSpanLensCPU85RwdDistrib  = dist sSpanLensCPU85Rwd
-  , sResourceDistribs         = computeResDistrib stdPercentiles resDistProjs slots
+  , sResourceDistribs         = computeResDistrib stdPercSpecs resDistProjs slots
   }
  where
    dist :: (Real a, ToRealFrac a Float) => [a] -> Distribution Float a
-   dist = computeDistribution stdPercentiles
+   dist = computeDistribution stdPercSpecs
    sSpanLensCPU85EBnd = Vec.length <$>
                         filter (spanContainsEpochSlot 3) spansCPU85
    sSpanLensCPU85Rwd  = Vec.length <$>
@@ -147,13 +164,6 @@ forTANth xs@TimelineAccum{aSlotStats=ss} n f =
      case splitAt n xs of
        (pre, x:post) -> pre <> (f x : post)
        _ -> error $ "mapNth: couldn't go " <> show n <> "-deep into the timeline"
-
-data RunScalars
-  = RunScalars
-  { rsElapsed       :: Maybe NominalDiffTime
-  , rsSubmitted     :: Maybe Word64
-  , rsThreadwiseTps :: Maybe (Vector Float)
-  }
 
 timelineFromLogObjects :: Run -> [LogObject] -> (RunScalars, [SlotStats])
 timelineFromLogObjects run =

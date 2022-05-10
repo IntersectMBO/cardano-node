@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE GADTs #-}
@@ -16,6 +17,7 @@ module Data.Distribution
   , computeDistribution
   , computeDistributionStats
   , mapToDistribution
+  , subsetDistribution
   , zeroDistribution
   , dPercIx
   , dPercSpec
@@ -24,7 +26,9 @@ module Data.Distribution
   , renderPercSpec
   , Percentile(..)
   , pctFrac
-  , stdPercentiles
+  , distribPercSpecs
+  , briefPercSpecs
+  , stdPercSpecs
   -- Aux
   , spans
   ) where
@@ -48,11 +52,15 @@ data Distribution a b =
   , dPercentiles  :: [Percentile a b]
   }
   deriving (Functor, Generic, Show)
+  deriving anyclass NFData
 
 instance (FromJSON a, FromJSON b) => FromJSON (Distribution a b)
 instance (  ToJSON a,   ToJSON b) => ToJSON   (Distribution a b)
 
-newtype PercSpec a = Perc { psFrac :: a } deriving (Eq, Generic, Show)
+newtype PercSpec a =
+  Perc { psFrac :: a }
+  deriving (Eq, Generic, Show)
+  deriving anyclass NFData
 
 instance (FromJSON a) => FromJSON (PercSpec a)
 instance (  ToJSON a) => ToJSON   (PercSpec a)
@@ -79,6 +87,7 @@ data Percentile a b =
   , pctSample      :: !b
   }
   deriving (Functor, Generic, Show)
+  deriving anyclass NFData
 
 instance (FromJSON a, FromJSON b) => FromJSON (Percentile a b)
 instance (  ToJSON a,   ToJSON b) => ToJSON   (Percentile a b)
@@ -86,8 +95,15 @@ instance (  ToJSON a,   ToJSON b) => ToJSON   (Percentile a b)
 pctFrac :: Percentile a b -> a
 pctFrac = psFrac . pctSpec
 
-stdPercentiles :: [PercSpec Float]
-stdPercentiles =
+distribPercSpecs :: Distribution a b -> [PercSpec a]
+distribPercSpecs = fmap pctSpec . dPercentiles
+
+briefPercSpecs :: [PercSpec Float]
+briefPercSpecs =
+  [ Perc 0.5, Perc 0.9, Perc 1.0 ]
+
+stdPercSpecs :: [PercSpec Float]
+stdPercSpecs =
   [ Perc 0.01, Perc 0.05
   , Perc 0.1, Perc 0.2, Perc 0.3, Perc 0.4
   , Perc 0.5, Perc 0.6
@@ -159,6 +175,10 @@ computeDistribution percentiles (sort -> sorted) =
          if size == 0
          then (0,           0)
          else (head sorted, last sorted)
+
+subsetDistribution :: Eq a => [PercSpec a] -> Distribution a b -> Distribution a b
+subsetDistribution xs d =
+  d { dPercentiles = dPercentiles d & filter ((`elem` xs) . pctSpec) }
 
 class RealFrac b => ToRealFrac a b where
   toRealFrac :: a -> b

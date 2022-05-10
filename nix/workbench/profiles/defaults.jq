@@ -39,7 +39,6 @@ def era_defaults($era):
     , epoch_length:                   2200   # Ought to be at least (10 * k / f).
     , parameter_k:                    10
     , slot_duration:                  1
-    , genesis_future_offset:          "3 seconds"
 
     ## Block size & contents
     , max_block_size:                 64000
@@ -56,6 +55,7 @@ def era_defaults($era):
         , minFeeA:                    0
         , minFeeB:                    0
         , decentralisationParam:      0
+        , nOpt:                       50
         }
       }
     }
@@ -76,18 +76,19 @@ def era_defaults($era):
     , tracing_backend:                "iohk-monitoring"  ## or "trace-dispatcher"
     }
 
-  , tolerances:
+  , analysis:
     { cluster_startup_overhead_s:     10
     , start_log_spread_s:             120
     , last_log_spread_s:              120
     , silence_since_last_block_s:     120
     , tx_loss_ratio:                  0.02
     , finish_patience:                21
+    , filters:                        ["base", "size-full"]
     }
   }
 
 , shelley:
-  { tolerances:
+  { analysis:
     { maximum_missed_slots:           0
     }
   }

@@ -28,7 +28,7 @@ let
   ## nodeSpecServiceConfig :: NodeSpec -> ServiceConfig
   ##
   nodeSpecServiceConfig =
-    { name, i, kind, port, isProducer }@nodeSpec:
+    { name, i, kind, port, isProducer, ... }@nodeSpec:
 
     let
     nodeConfigBits = rec {
