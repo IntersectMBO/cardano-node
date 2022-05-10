@@ -71,7 +71,7 @@ import           Cardano.Slotting.Block (BlockNo (..))
 import           Cardano.Slotting.Slot (SlotNo (..))
 import           Cardano.Slotting.Time (SystemStart (..))
 import           Data.Aeson (FromJSON (..), ToJSON (..), Value(..), object, (.=))
-import           Data.Aeson.Types (Pair, ToJSONKey (..), toJSONKeyText)
+import           Data.Aeson.Types (ToJSONKey (..), toJSONKeyText)
 import           Data.BiMap (BiMap (..), Bimap)
 import           Data.Compact.VMap (VB, VMap, VP)
 import           Data.Functor.Contravariant (Contravariant (..))
@@ -86,12 +86,8 @@ import           Ouroboros.Network.Block (blockHash, blockNo, blockSlot)
 import           Ouroboros.Network.Point (WithOrigin, withOriginToMaybe)
 import           Prelude hiding ((.), map, show)
 
-import qualified Cardano.Api.Address as Api
-import qualified Cardano.Api.Certificate as Api
+import qualified Cardano.Api.Alonzo.Render as Render
 import qualified Cardano.Api.Ledger.Mary as Api
-import qualified Cardano.Api.Script as Api
-import qualified Cardano.Api.SerialiseRaw as Api
-import qualified Cardano.Api.SerialiseTextEnvelope as Api
 import qualified Cardano.Api.TxBody as Api
 import qualified Cardano.Crypto.Hash as Hash
 import qualified Cardano.Crypto.Hash.Class as Crypto
@@ -128,7 +124,6 @@ import qualified Cardano.Ledger.ShelleyMA.Timelocks as MA
 import qualified Cardano.Prelude as CP
 import qualified Cardano.Protocol.TPraos.BHeader as Protocol
 import qualified Data.Aeson as Aeson
-import qualified Data.Aeson.Key as Aeson
 import qualified Data.ByteString.Base16 as B16
 import qualified Data.ByteString.Short as SBS
 import qualified Data.ByteString.UTF8 as BSU
@@ -137,7 +132,6 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
-import qualified Ouroboros.Consensus.Ledger.SupportsMempool as Consensus
 import qualified Ouroboros.Consensus.Ledger.SupportsMempool as SupportsMempool
 import qualified Ouroboros.Consensus.Protocol.Ledger.HotKey as HotKey
 import qualified Ouroboros.Consensus.Shelley.Eras as Consensus
@@ -438,10 +432,10 @@ instance
   , ToJSON (Core.Tx era)
   , ToJSON (TxId (Ledger.Crypto era))
   ) => ToJSON (GenTx (ShelleyBlock era)) where
-  toJSON tx = object [ "txid" .= Text.take 8 (renderTxId (txId tx)) ]
+  toJSON tx = object [ "txid" .= Text.take 8 (Render.renderTxId (txId tx)) ]
 
 instance ToJSON (SupportsMempool.TxId (GenTx (ShelleyBlock era))) where
-  toJSON = String . Text.take 8 . renderTxId
+  toJSON = String . Text.take 8 . Render.renderTxId
 
 instance
   ( ShelleyBasedEra era
@@ -647,7 +641,7 @@ instance
   toJSON (WrappedShelleyEraFailure utxoPredFail) = toJSON utxoPredFail
   toJSON (MissingRedeemers scripts) = object
     [ "kind"    .= String "MissingRedeemers"
-    , "scripts" .= renderMissingRedeemers scripts
+    , "scripts" .= Render.renderMissingRedeemers scripts
     ]
   toJSON (MissingRequiredDatums required received) = object
     [ "kind"      .= String "MissingRequiredDatums"
@@ -656,8 +650,8 @@ instance
     ]
   toJSON (PPViewHashesDontMatch ppHashInTxBody ppHashFromPParams) = object
     [ "kind"        .= String "PPViewHashesDontMatch"
-    , "fromTxBody"  .= renderScriptIntegrityHash (strictMaybeToMaybe ppHashInTxBody)
-    , "fromPParams" .= renderScriptIntegrityHash (strictMaybeToMaybe ppHashFromPParams)
+    , "fromTxBody"  .= Render.renderScriptIntegrityHash (strictMaybeToMaybe ppHashInTxBody)
+    , "fromPParams" .= Render.renderScriptIntegrityHash (strictMaybeToMaybe ppHashFromPParams)
     ]
   toJSON (MissingRequiredSigners missingKeyWitnesses) = object
     [ "kind"      .= String "MissingRequiredSigners"
@@ -734,7 +728,7 @@ instance
   toJSON (BadInputsUTxO badInputs) = object
     [ "kind"      .= String "BadInputsUTxO"
     , "badInputs" .= badInputs
-    , "error"     .= renderBadInputsUTxOErr badInputs
+    , "error"     .= Render.renderBadInputsUTxOErr badInputs
     ]
   toJSON (ExpiredUTxO ttl slot) = object
     [ "kind" .= String "ExpiredUTxO"
@@ -769,7 +763,7 @@ instance
     [ "kind"      .= String "ValueNotConservedUTxO"
     , "consumed"  .= consumed
     , "produced"  .= produced
-    , "error"     .= renderValueNotConservedErr consumed produced
+    , "error"     .= Render.renderValueNotConservedErr consumed produced
     ]
   toJSON (UpdateFailure f) = object
     [ "kind"  .= String "UpdateFailure"
@@ -801,7 +795,7 @@ instance ( ShelleyBasedEra era
   toJSON (MA.BadInputsUTxO badInputs) = object
     [ "kind"      .= String "BadInputsUTxO"
     , "badInputs" .= badInputs
-    , "error"     .= renderBadInputsUTxOErr badInputs
+    , "error"     .= Render.renderBadInputsUTxOErr badInputs
     ]
   toJSON (MA.OutsideValidityIntervalUTxO validityInterval slot) = object
     [ "kind"              .= String "ExpiredUTxO"
@@ -825,7 +819,7 @@ instance ( ShelleyBasedEra era
     [ "kind"      .= String "ValueNotConservedUTxO"
     , "consumed"  .= consumed
     , "produced"  .= produced
-    , "error"     .= renderValueNotConservedErr consumed produced
+    , "error"     .= Render.renderValueNotConservedErr consumed produced
     ]
   toJSON (MA.WrongNetwork network addrs) = object
     [ "kind"    .= String "WrongNetwork"
@@ -1240,7 +1234,7 @@ instance ToJSON (Alonzo.UtxoPredicateFailure (Alonzo.AlonzoEra StandardCrypto)) 
   toJSON (Alonzo.BadInputsUTxO badInputs) = object
     [ "kind"      .= String "BadInputsUTxO"
     , "badInputs" .= badInputs
-    , "error"     .= renderBadInputsUTxOErr badInputs
+    , "error"     .= Render.renderBadInputsUTxOErr badInputs
     ]
   toJSON (Alonzo.OutsideValidityIntervalUTxO validtyInterval slot) = object
     [ "kind"              .= String "ExpiredUTxO"
@@ -1264,7 +1258,7 @@ instance ToJSON (Alonzo.UtxoPredicateFailure (Alonzo.AlonzoEra StandardCrypto)) 
     [ "kind"      .= String "ValueNotConservedUTxO"
     , "consumed"  .= consumed
     , "produced"  .= produced
-    , "error"     .= renderValueNotConservedErr consumed produced
+    , "error"     .= Render.renderValueNotConservedErr consumed produced
     ]
   toJSON (Alonzo.WrongNetwork network addrs) = object
     [ "kind"    .= String "WrongNetwork"
@@ -1353,7 +1347,7 @@ instance ToJSON (Alonzo.CollectError StandardCrypto) where
     Alonzo.NoRedeemer sPurpose -> object
       [ "kind"          .= String "CollectError"
       , "error"         .= String "NoRedeemer"
-      , "scriptpurpose" .= renderScriptPurpose sPurpose
+      , "scriptpurpose" .= Render.renderScriptPurpose sPurpose
       ]
     Alonzo.NoWitness sHash -> object
       [ "kind"        .= String "CollectError"
@@ -1679,48 +1673,6 @@ instance ToJSON fun => ToJSON (PlutusCore.Evaluation.Machine.Exception.MachineEr
 
 instance ToJSON PlutusCore.Evaluation.Machine.Exception.UnliftingError where
   toJSON _ = "UnliftingError"
-
-renderScriptIntegrityHash :: Maybe (Alonzo.ScriptIntegrityHash StandardCrypto) -> Value
-renderScriptIntegrityHash (Just witPPDataHash) =
-  String . Crypto.hashToTextAsHex $ SafeHash.extractHash witPPDataHash
-renderScriptIntegrityHash Nothing = Aeson.Null
-
-
-renderScriptHash :: ScriptHash StandardCrypto -> Text
-renderScriptHash = Api.serialiseToRawBytesHexText . Api.fromShelleyScriptHash
-
-renderMissingRedeemers :: [(Alonzo.ScriptPurpose StandardCrypto, ScriptHash StandardCrypto)] -> Value
-renderMissingRedeemers scripts = object $ map renderTuple  scripts
- where
-  renderTuple :: (Alonzo.ScriptPurpose StandardCrypto, ScriptHash StandardCrypto) -> Pair
-  renderTuple (scriptPurpose, sHash) =
-    Aeson.fromText (renderScriptHash sHash) .= renderScriptPurpose scriptPurpose
-
-renderScriptPurpose :: Alonzo.ScriptPurpose StandardCrypto -> Value
-renderScriptPurpose (Alonzo.Minting pid) = object
-  [ "minting" .= toJSON pid
-  ]
-renderScriptPurpose (Alonzo.Spending txin) = object
-  [ "spending" .= Api.fromShelleyTxIn txin
-  ]
-renderScriptPurpose (Alonzo.Rewarding rwdAcct) = object
-  [ "rewarding" .= String (Api.serialiseAddress $ Api.fromShelleyStakeAddr rwdAcct)
-  ]
-renderScriptPurpose (Alonzo.Certifying cert) = object
-  [ "certifying" .= toJSON (Api.textEnvelopeDefaultDescr $ Api.fromShelleyCertificate cert)
-  ]
-
-renderBadInputsUTxOErr ::  Set (TxIn era) -> Value
-renderBadInputsUTxOErr txIns
-  | Set.null txIns = String "The transaction contains no inputs."
-  | otherwise = String "The transaction contains inputs that do not exist in the UTxO set."
-
-renderValueNotConservedErr :: Show val => val -> val -> Value
-renderValueNotConservedErr consumed produced = String $
-  "This transaction consumed " <> show consumed <> " but produced " <> show produced
-
-renderTxId :: Consensus.TxId (GenTx (ShelleyBlock era)) -> Text
-renderTxId = error "TODO implement"
 
 textShow :: Show a => a -> Text
 textShow = Text.pack . CP.show
