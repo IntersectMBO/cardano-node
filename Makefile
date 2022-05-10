@@ -56,11 +56,12 @@ cluster-shell-trace:     ARGS += --arg 'autoStartCluster' true --argstr 'autoSta
 cluster-shell-dev-trace: ARGS += --arg 'autoStartCluster' true --arg 'workbenchDevMode' true --argstr 'autoStartClusterArgs' '--trace --trace-workbench' ## Enter Nix shell, dev mode, start workbench cluster, with shell tracing
 fixed:                   PROFILE = fixed-${ERA}
 fixed:                   ARGS += --arg 'autoStartCluster' true
-forge-stress:            PROFILE = forge-stress-plutus-${ERA}
-forge-stress:            ARGS += --arg 'workbenchDevMode' true
+forge-stress:            PROFILE = forge-stress-${ERA}
+forge-stress-plutus:     PROFILE = forge-stress-plutus-${ERA}
+forge-stress-newtracing: PROFILE = forge-stress-newtracing-${ERA}
 quick:                   PROFILE = quick-${ERA}
-quick:                   ARGS += --arg 'workbenchDevMode' true
-shell-dev cluster-shell-dev cluster-shell-trace cluster-shell-dev-trace fixed forge-stress quick: shell
+forge-stress forge-stress-plutus forge-stress-newtracing quick: ARGS += --arg 'workbenchDevMode' true
+shell-dev cluster-shell-dev cluster-shell-trace cluster-shell-dev-trace fixed forge-stress forge-stress-plutus forge-stress-newtracing quick: shell
 
 test-smoke: smoke ## Build the 'workbench-smoke-test', same as the Hydra job
 smoke:
