@@ -164,8 +164,6 @@ let
       | ${figlet}/bin/figlet -f banner -c \
       | ${lolcat}/bin/lolcat
 
-      wb explain-mode
-
       ${with customConfig.localCluster;
         (import ./nix/workbench/shell.nix { inherit lib workbenchDevMode; useCabalRun = false; }).shellHook}
 

@@ -54,10 +54,11 @@ cluster-shell:           ARGS += --arg 'autoStartCluster' true ## Enter Nix shel
 cluster-shell-dev:       ARGS += --arg 'autoStartCluster' true --arg 'workbenchDevMode' true ## Enter Nix shell, dev mode, and start workbench cluster
 cluster-shell-trace:     ARGS += --arg 'autoStartCluster' true --argstr 'autoStartClusterArgs' '--trace --trace-workbench' ## Enter Nix shell, start workbench cluster, with shell tracing
 cluster-shell-dev-trace: ARGS += --arg 'autoStartCluster' true --arg 'workbenchDevMode' true --argstr 'autoStartClusterArgs' '--trace --trace-workbench' ## Enter Nix shell, dev mode, start workbench cluster, with shell tracing
+fixed:                   PROFILE = fixed-${ERA}
 fixed:                   ARGS += --arg 'autoStartCluster' true
-fixed:                   PROFILE = fixed-alzo
-forge-stress:            PROFILE = forge-stress-alzo
-quick:                   PROFILE = quick-alzo
+forge-stress:            PROFILE = forge-stress-${ERA}
+forge-stress:            ARGS += --arg 'workbenchDevMode' true
+quick:                   PROFILE = quick-${ERA}
 quick:                   ARGS += --arg 'workbenchDevMode' true
 shell-dev cluster-shell-dev cluster-shell-trace cluster-shell-dev-trace fixed forge-stress quick: shell
 

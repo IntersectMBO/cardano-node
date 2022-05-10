@@ -36,6 +36,7 @@ let
     [ git graphviz
       jq
       moreutils
+      procps
 
       cardano-cli
       cardano-topology

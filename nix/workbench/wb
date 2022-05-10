@@ -141,7 +141,7 @@ start()
     profile_name=${profile_name:-$(jq '.name' -r $profile/profile.json)}
 
     progress "top-level" "iterations of profile $(with_color 'yellow' $profile_name):  $(with_color 'white' $iterations)"
-    for ((i=0; i<=$iterations; i++))
+    for ((i=0; i<$iterations; i++))
     do local args=(
             ${run_allocate_args[@]}
             --manifest "$(manifest collect-from-checkout .)"
