@@ -54,7 +54,7 @@ import           Cardano.CLI.Shelley.Key (InputFormat (..), PaymentVerifier (..)
                    StakeVerifier (..), VerificationKeyOrFile (..), VerificationKeyOrHashOrFile (..),
                    VerificationKeyTextOrFile (..), deserialiseInput, renderInputDecodeError)
 import           Cardano.CLI.Types
-import           Cardano.Chain.Common (BlockCount(BlockCount))
+import           Cardano.Chain.Common (BlockCount (BlockCount))
 
 {- HLINT ignore "Use <$>" -}
 
@@ -2038,8 +2038,8 @@ pReturnCollateral =
                       \over collateralizes the transaction, you can optionally \
                       \specify a tx out of your choosing to return the excess Lovelace."
           )
-    <*> pTxOutDatum
-    <*> pRefScriptFp
+    <*> pure TxOutDatumByNone -- TODO: Babbage era - we should be able to return these
+    <*> pure ReferenceScriptAnyEraNone -- TODO: Babbage era - we should be able to return these
 
 pTotalCollateral :: Parser Lovelace
 pTotalCollateral =
