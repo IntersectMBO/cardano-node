@@ -74,6 +74,7 @@ import           Data.Aeson (FromJSON (..), ToJSON (..), Value(..), object, (.=)
 import           Data.Aeson.Types (Pair, ToJSONKey (..), toJSONKeyText)
 import           Data.BiMap (BiMap (..), Bimap)
 import           Data.Compact.VMap (VB, VMap, VP)
+import           Data.Functor.Contravariant (Contravariant (..))
 import           Data.UMap (Trip (Triple), UMap (UnifiedMap))
 import           Ouroboros.Consensus.Ledger.SupportsMempool (txId)
 import           Ouroboros.Consensus.Protocol.TPraos (TPraosCannotForge (..))
@@ -87,6 +88,7 @@ import           Prelude hiding ((.), map, show)
 
 import qualified Cardano.Api.Address as Api
 import qualified Cardano.Api.Certificate as Api
+import qualified Cardano.Api.Ledger.Mary as Api
 import qualified Cardano.Api.Script as Api
 import qualified Cardano.Api.SerialiseRaw as Api
 import qualified Cardano.Api.SerialiseTextEnvelope as Api
@@ -168,12 +170,10 @@ instance ToJSONKey Mary.AssetName where
       render = Text.decodeLatin1 . B16.encode . Mary.assetName
 
 instance ToJSON (Mary.PolicyID era) where
-  toJSON (Mary.PolicyID (Shelley.ScriptHash h)) = Aeson.String (hashToText h)
+  toJSON = toJSON . Api.PolicyID
 
 instance ToJSONKey (Mary.PolicyID era) where
-  toJSONKey = toJSONKeyText render
-    where
-      render (Mary.PolicyID (Shelley.ScriptHash h)) = hashToText h
+  toJSONKey = contramap Api.PolicyID toJSONKey
 
 instance ToJSON Mary.AssetName where
   toJSON = Aeson.String . Text.decodeLatin1 . B16.encode . Mary.assetName
