@@ -38,7 +38,6 @@ module Cardano.Api.InMode (
   ) where
 
 import           Cardano.Api.Eras
-import           Cardano.Api.InMode.ToJson ()
 import           Cardano.Api.Modes
 import           Cardano.Api.Orphans ()
 import           Cardano.Api.Tx
