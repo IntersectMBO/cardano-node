@@ -67,7 +67,7 @@ in
       ''
         yq '
         .
-        | .TraceOptionResourceFreqency = 1000
+        | .TraceOptionResourceFrequency = 1000
         ' ${node-measured}/configuration/cardano/mainnet-config-new-tracing.yaml > config.json
       ''}
   cp -v ${node-measured}/configuration/cardano/*-genesis.json .

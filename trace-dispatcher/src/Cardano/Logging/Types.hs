@@ -362,9 +362,9 @@ data TraceConfig = TraceConfig {
     -- | Optional human-readable name of the node.
   , tcNodeName  :: Maybe Text
     -- | Optional peer trace frequency in milliseconds.
-  , tcPeerFreqency  :: Maybe Int
+  , tcPeerFrequency  :: Maybe Int
     -- | Optional resource trace frequency in milliseconds.
-  , tcResourceFreqency :: Maybe Int
+  , tcResourceFrequency :: Maybe Int
 }
   deriving (Eq, Ord, Show)
 
@@ -373,8 +373,8 @@ emptyTraceConfig = TraceConfig {
     tcOptions = Map.empty
   , tcForwarder = defaultForwarder
   , tcNodeName = Nothing
-  , tcPeerFreqency = Just 2000 -- Every 2 seconds
-  , tcResourceFreqency = Just 1000 -- Every second
+  , tcPeerFrequency = Just 2000 -- Every 2 seconds
+  , tcResourceFrequency = Just 1000 -- Every second
   }
 
 ---------------------------------------------------------------------------

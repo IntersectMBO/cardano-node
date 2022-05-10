@@ -54,8 +54,8 @@ config1 = TraceConfig {
       , tofVerbosity = Minimum
       }
     , tcNodeName = Nothing
-    , tcPeerFreqency = Nothing
-    , tcResourceFreqency = Nothing
+    , tcPeerFrequency = Nothing
+    , tcResourceFrequency = Nothing
     }
 
 config2 :: TraceConfig
@@ -73,8 +73,8 @@ config2 = TraceConfig {
       , tofVerbosity = Minimum
       }
     , tcNodeName = Just "node-1"
-    , tcPeerFreqency = Nothing
-    , tcResourceFreqency = Nothing
+    , tcPeerFrequency = Nothing
+    , tcResourceFrequency = Nothing
     }
 
 testConfig' ::

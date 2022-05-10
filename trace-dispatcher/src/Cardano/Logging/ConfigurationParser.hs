@@ -67,15 +67,15 @@ parseRepresentation bs = transform (decodeEither' bs)
           to''
           (traceOptionForwarder cr)
           (traceOptionNodeName cr)
-          (traceOptionPeerFreqency cr)
-          (traceOptionResourceFreqency cr)
+          (traceOptionPeerFrequency cr)
+          (traceOptionResourceFrequency cr)
 
 data ConfigRepresentation = ConfigRepresentation {
     traceOptions                :: OptionsRepresentation
   , traceOptionForwarder        :: TraceOptionForwarder
   , traceOptionNodeName         :: Maybe Text
-  , traceOptionPeerFreqency     :: Maybe Int
-  , traceOptionResourceFreqency :: Maybe Int
+  , traceOptionPeerFrequency     :: Maybe Int
+  , traceOptionResourceFrequency :: Maybe Int
   }
   deriving (Eq, Ord, Show,Generic)
 
@@ -86,8 +86,8 @@ instance AE.FromJSON ConfigRepresentation where
                            <$> obj .: "TraceOptions"
                            <*> obj .: "TraceOptionForwarder"
                            <*> obj .:? "TraceOptionNodeName"
-                           <*> obj .:? "TraceOptionPeerFreqency"
-                           <*> obj .:? "TraceOptionResourceFreqency"
+                           <*> obj .:? "TraceOptionPeerFrequency"
+                           <*> obj .:? "TraceOptionResourceFrequency"
 
 data ConfigOptionRep = ConfigOptionRep
     { severity :: Maybe SeverityF

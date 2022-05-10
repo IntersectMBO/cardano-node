@@ -133,9 +133,9 @@ TraceOptionForwarder:
       filePath: /tmp/forwarder.sock
     mode: Initiator
 
-TraceOptionPeerFreqency: 2000
+TraceOptionPeerFrequency: 2000
 
-TraceOptionResourceFreqency: 5000
+TraceOptionResourceFrequency: 5000
 
 ##### Stubs for legacy logging config #####
 
