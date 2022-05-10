@@ -77,6 +77,35 @@ def genesis_profile_variants:
       }
     , generator: { tps: 15 }
     }
+  , { name: "forge-stress-plutus"
+    , scenario: "fixed-loaded"
+    , composition:
+      { n_singular_hosts:               1
+      , n_dense_hosts:                  0
+      }
+    , genesis:
+      { utxo:                           6000000
+      , delegators:                     1300000
+      , max_block_size:                 80000
+      , epoch_length:                   600
+      , parameter_k:                    3
+      , alonzo:
+        { maxTxExUnits:
+          { exUnitsMem:                 12500000
+          }
+        }
+      }
+    , generator:
+      { inputs_per_tx:                  1
+      , outputs_per_tx:                 1
+      , tx_count:                       800
+      , plutusMode:                     true
+      , plutusAutoMode:                 true
+      }
+    , node:
+      { shutdown_on_slot_synced:        2400
+      }
+    }
   , { name: "quick"
     , scenario: "fixed-loaded"
     , composition:
