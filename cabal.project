@@ -18,6 +18,12 @@ packages:
     trace-resources
     trace-forward
 
+package ouroboros-network-framework
+ ghc-options: -fno-ignore-asserts
+
+package ouroboros-network
+ ghc-options: -fno-ignore-asserts
+
 package cardano-api
   ghc-options: -Werror
 
