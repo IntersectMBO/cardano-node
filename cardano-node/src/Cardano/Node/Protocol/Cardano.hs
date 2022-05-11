@@ -278,7 +278,7 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
           transitionTrigger =
              case npcTestBabbageHardForkAtEpoch of
                 Nothing -> Consensus.TriggerHardForkAtVersion
-                             (maybe 6 fromIntegral npcTestBabbageHardForkAtVersion)
+                             (maybe 7 fromIntegral npcTestBabbageHardForkAtVersion)
                 Just epochNo -> Consensus.TriggerHardForkAtEpoch epochNo
 
         }
