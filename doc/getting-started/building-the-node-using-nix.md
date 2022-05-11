@@ -54,7 +54,7 @@ Or run directly, eg.:
 nix run .#cardano-cli -- version
 ```
 
-### Developpment environments
+### Development environments
 
 A shell environment with pre-compiled, cached, cabal dependencies is available with:
 ```
