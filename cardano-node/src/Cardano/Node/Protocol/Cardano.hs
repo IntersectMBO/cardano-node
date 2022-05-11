@@ -210,7 +210,7 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
           Praos.babbageProtVer =
             if npcTestEnableDevelopmentHardForkEras
             then ProtVer 7 0  -- Advertise we can support Babbage
-            else ProtVer 6 0, -- Otherwise we only advertise we know about Mary,=
+            else ProtVer 6 0, -- Otherwise we only advertise we know about (the second) Alonzo
           Praos.babbageMaxTxCapacityOverrides =
             TxLimits.mkOverrides TxLimits.noOverridesMeasure
         }
