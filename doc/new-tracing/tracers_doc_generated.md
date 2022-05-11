@@ -720,9 +720,6 @@
 		1. [blockFromFuture](#cardanonodeblockfromfuture)
 		1. [blocks](#cardanonodeblocks)
 		1. [blocks](#cardanonodeblocks)
-		1. __chainSync__
-			1. [rollForward](#cardanonodechainsyncrollforward)
-			1. [rollForward](#cardanonodechainsyncrollforward)
 		1. [connectedPeers](#cardanonodeconnectedpeers)
 		1. __connectionManager__
 			1. [duplexConns](#cardanonodeconnectionmanagerduplexconns)
@@ -745,12 +742,27 @@
 		1. [epoch](#cardanonodeepoch)
 		1. [forgedInvalidSlotLast](#cardanonodeforgedinvalidslotlast)
 		1. [forgedSlotLast](#cardanonodeforgedslotlast)
+		1. __inbound-governor__
+			1. [cold](#cardanonodeinbound-governorcold)
+			1. [cold](#cardanonodeinbound-governorcold)
+			1. [hot](#cardanonodeinbound-governorhot)
+			1. [hot](#cardanonodeinbound-governorhot)
+			1. [idle](#cardanonodeinbound-governoridle)
+			1. [idle](#cardanonodeinbound-governoridle)
+			1. [warm](#cardanonodeinbound-governorwarm)
+			1. [warm](#cardanonodeinbound-governorwarm)
 		1. [ledgerState](#cardanonodeledgerstate)
 		1. [ledgerView](#cardanonodeledgerview)
 		1. [mempoolBytes](#cardanonodemempoolbytes)
 		1. [mempoolBytes](#cardanonodemempoolbytes)
 		1. [mempoolBytes](#cardanonodemempoolbytes)
 		1. [mempoolBytes](#cardanonodemempoolbytes)
+		1. __metrics__
+			1. __served__
+				1. [header](#cardanonodemetricsservedheader)
+				1. [header](#cardanonodemetricsservedheader)
+				1. [header](#cardanonodemetricsservedheader)
+				1. [header](#cardanonodemetricsservedheader)
 		1. [nodeCannotForge](#cardanonodenodecannotforge)
 		1. [nodeIsLeader](#cardanonodenodeisleader)
 		1. [nodeNotLeader](#cardanonodenodenotleader)
@@ -11785,32 +11797,6 @@ Cardano.Node.ChainDB.AddBlockEvent.SwitchedToAFork
 From current configuration:
 Filtered:  because the filter level is `Info`
 
-### cardano.node.chainSync.rollForward
-
-***
-
-***
-
-
-Dispatched by: 
-Cardano.Node.ChainSyncServerHeader.ChainSyncServerEvent.ServerRead.RollForward
-
-From current configuration:
-Filtered:  because the filter level is `Notice`
-
-### cardano.node.chainSync.rollForward
-
-***
-
-***
-
-
-Dispatched by: 
-Cardano.Node.ChainSyncServerBlock.ChainSyncServerEvent.ServerRead.RollForward
-
-From current configuration:
-Filtered:  because the filter level is `Notice`
-
 ### cardano.node.connectedPeers
 
 ***
@@ -12084,6 +12070,110 @@ Cardano.Node.Forge.ForgedBlock
 From current configuration:
 Filtered:  because the filter level is `Info`
 
+### cardano.node.inbound-governor.cold
+
+***
+
+***
+
+
+Dispatched by: 
+Cardano.Node.InboundGovernor.InboundGovernorCounters
+
+From current configuration:
+Filtered:  because the filter level is `Notice`
+
+### cardano.node.inbound-governor.cold
+
+***
+
+***
+
+
+Dispatched by: 
+Cardano.Node.LocalInboundGovernor.InboundGovernorCounters
+
+From current configuration:
+Filtered:  because the filter level is `Notice`
+
+### cardano.node.inbound-governor.hot
+
+***
+
+***
+
+
+Dispatched by: 
+Cardano.Node.InboundGovernor.InboundGovernorCounters
+
+From current configuration:
+Filtered:  because the filter level is `Notice`
+
+### cardano.node.inbound-governor.hot
+
+***
+
+***
+
+
+Dispatched by: 
+Cardano.Node.LocalInboundGovernor.InboundGovernorCounters
+
+From current configuration:
+Filtered:  because the filter level is `Notice`
+
+### cardano.node.inbound-governor.idle
+
+***
+
+***
+
+
+Dispatched by: 
+Cardano.Node.InboundGovernor.InboundGovernorCounters
+
+From current configuration:
+Filtered:  because the filter level is `Notice`
+
+### cardano.node.inbound-governor.idle
+
+***
+
+***
+
+
+Dispatched by: 
+Cardano.Node.LocalInboundGovernor.InboundGovernorCounters
+
+From current configuration:
+Filtered:  because the filter level is `Notice`
+
+### cardano.node.inbound-governor.warm
+
+***
+
+***
+
+
+Dispatched by: 
+Cardano.Node.InboundGovernor.InboundGovernorCounters
+
+From current configuration:
+Filtered:  because the filter level is `Notice`
+
+### cardano.node.inbound-governor.warm
+
+***
+
+***
+
+
+Dispatched by: 
+Cardano.Node.LocalInboundGovernor.InboundGovernorCounters
+
+From current configuration:
+Filtered:  because the filter level is `Notice`
+
 ### cardano.node.ledgerState
 
 ***
@@ -12161,6 +12251,58 @@ Cardano.Node.Mempool.RemoveTxs
 
 From current configuration:
 Filtered:  because the filter level is `Info`
+
+### cardano.node.metrics.served.header
+
+***
+A counter triggered ony on header event
+***
+
+
+Dispatched by: 
+Cardano.Node.ChainSyncServerHeader.ChainSyncServerEvent.ServerRead.RollBackward
+
+From current configuration:
+Filtered:  because the filter level is `Notice`
+
+### cardano.node.metrics.served.header
+
+***
+A counter triggered ony on header event
+***
+
+
+Dispatched by: 
+Cardano.Node.ChainSyncServerHeader.ChainSyncServerEvent.ServerRead.RollForward
+
+From current configuration:
+Filtered:  because the filter level is `Notice`
+
+### cardano.node.metrics.served.header
+
+***
+A counter triggered ony on header event
+***
+
+
+Dispatched by: 
+Cardano.Node.ChainSyncServerHeader.ChainSyncServerEvent.ServerRead.ServerRead
+
+From current configuration:
+Filtered:  because the filter level is `Notice`
+
+### cardano.node.metrics.served.header
+
+***
+A counter triggered ony on header event
+***
+
+
+Dispatched by: 
+Cardano.Node.ChainSyncServerHeader.ChainSyncServerEvent.ServerRead.ServerReadBlocked
+
+From current configuration:
+Filtered:  because the filter level is `Notice`
 
 ### cardano.node.nodeCannotForge
 
@@ -12660,5 +12802,5 @@ Basic information about this node collected at startup
 
 Configuration: TraceConfig {tcOptions = fromList [([],[ConfBackend [Stdout MachineFormat,EKGBackend],ConfDetail DNormal,ConfSeverity Notice]),(["Node","AcceptPolicy"],[ConfSeverity Info]),(["Node","BlockFetchClient","CompletedBlockFetch"],[ConfLimiter "CompletedBlockFetchLimiter" 2.0]),(["Node","ChainDB"],[ConfSeverity Info]),(["Node","ChainDB","AddBlockEvent","AddBlockValidation","ValidCandidate"],[ConfLimiter "ValidCandidateLimiter" 2.0]),(["Node","ChainDB","AddBlockEvent","AddedBlockToQueue"],[ConfLimiter "AddedBlockToQueueLimiter" 2.0]),(["Node","ChainDB","AddBlockEvent","AddedBlockToVolatileDB"],[ConfLimiter "AddedBlockToVolatileDBLimiter" 2.0]),(["Node","ChainDB","CopyToImmutableDBEvent","CopiedBlockToImmutableDB"],[ConfLimiter "CopiedBlockToImmutableDBLimiter" 2.0]),(["Node","DNSResolver"],[ConfSeverity Info]),(["Node","DNSSubscription"],[ConfSeverity Info]),(["Node","DiffusionInit"],[ConfSeverity Info]),(["Node","ErrorPolicy"],[ConfSeverity Info]),(["Node","Forge"],[ConfSeverity Info]),(["Node","IpSubscription"],[ConfSeverity Info]),(["Node","LocalErrorPolicy"],[ConfSeverity Info]),(["Node","Mempool"],[ConfSeverity Info]),(["Node","Resources"],[ConfSeverity Info])], tcForwarder = TraceOptionForwarder {tofAddress = LocalSocket "/tmp/forwarder.sock", tofMode = Initiator, tofConnQueueSize = 2000, tofDisconnQueueSize = 200000, tofVerbosity = Minimum}, tcNodeName = Nothing, tcPeerFrequency = Just 2000, tcResourceFrequency = Just 5000}
 
-672 log messages.
-Generated at 2022-05-06 10:18:02.192098573 CEST.
+682 log messages.
+Generated at 2022-05-09 14:10:47.375534862 CEST.
