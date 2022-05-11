@@ -34,14 +34,15 @@ import           Cardano.Node.Tracing.Tracers.Shutdown
 import           Cardano.Node.Tracing.Tracers.Startup
 import           Trace.Forward.Utils.DataPoint (DataPoint)
 
-import           Cardano.Node.Queries (NodeKernelData)
 import           Cardano.Node.Protocol.Types (SomeConsensusProtocol)
+import           Cardano.Node.Queries (NodeKernelData)
 import           Cardano.Node.Startup
 import           Cardano.Node.TraceConstraints
 import           Cardano.Node.Tracing
 import           Cardano.Node.Tracing.Peers
 import qualified Cardano.Node.Tracing.StateRep as SR
 import           "contra-tracer" Control.Tracer (Tracer (..))
+
 import           Ouroboros.Consensus.Ledger.Inspect (LedgerEvent)
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client (TraceChainSyncClientEvent)
 import qualified Ouroboros.Consensus.Network.NodeToClient as NodeToClient
@@ -49,13 +50,15 @@ import qualified Ouroboros.Consensus.Network.NodeToClient as NtC
 import qualified Ouroboros.Consensus.Network.NodeToNode as NodeToNode
 import qualified Ouroboros.Consensus.Network.NodeToNode as NtN
 import           Ouroboros.Consensus.Node (NetworkP2PMode (..))
-import qualified Ouroboros.Consensus.Node.Run as Consensus
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
+import qualified Ouroboros.Consensus.Node.Run as Consensus
 import qualified Ouroboros.Consensus.Node.Tracers as Consensus
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 import qualified Ouroboros.Consensus.Storage.LedgerDB.OnDisk as LedgerDB
 
 import           Network.Mux.Trace (TraceLabelPeer (..))
+
+import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
 import           Ouroboros.Network.ConnectionId (ConnectionId)
 import qualified Ouroboros.Network.Diffusion as Diffusion
 import qualified Ouroboros.Network.Diffusion.NonP2P as NonP2P
@@ -244,11 +247,14 @@ mkConsensusTracers trBase trForward mbTrEKG _trDataPoint trConfig nodeKernel = d
                 severityChainSyncServerEvent
                 allPublic
     configureTracers trConfig docChainSyncServerEventHeader [chainSyncServerHeaderTr]
+
+    -- Special chainSync server metrics, send directly to EKG
     -- any server header event advances the counter
     let chainSyncServerHeaderMetricsTr = contramap
                 (const
                     (FormattedMetrics [CounterM "cardano.node.metrics.served.header" Nothing]))
                 (fromMaybe mempty mbTrEKG)
+
     chainSyncServerBlockTr <- mkCardanoTracer
                 trBase trForward mbTrEKG
                 "ChainSyncServerBlock"
@@ -270,6 +276,17 @@ mkConsensusTracers trBase trForward mbTrEKG _trDataPoint trConfig nodeKernel = d
                 severityBlockFetchClient
                 allPublic
     configureTracers trConfig docBlockFetchClient [blockFetchClientTr]
+
+    -- Special blockFetch client metrics, send directly to EKG
+    blockFetchClientMetricsTr <- do
+        tr1 <- foldMTraceM calculateBlockFetchClientMetrics initialClientMetrics
+                    (metricsFormatter ""
+                      (fromMaybe mempty mbTrEKG))
+        pure $ filterTrace (\ (_, TraceLabelPeer _ m) -> case m of
+                                              BlockFetch.CompletedBlockFetch {} -> True
+                                              _ -> False)
+                 tr1
+
     blockFetchServerTr  <- mkCardanoTracer
                 trBase trForward mbTrEKG
                 "BlockFetchServer"
@@ -353,6 +370,7 @@ mkConsensusTracers trBase trForward mbTrEKG _trDataPoint trConfig nodeKernel = d
           traceWith blockFetchDecisionTr
       , Consensus.blockFetchClientTracer = Tracer $
           traceWith blockFetchClientTr
+          <> traceWith blockFetchClientMetricsTr
       , Consensus.blockFetchServerTracer = Tracer $
           traceWith blockFetchServerTr
       , Consensus.forgeStateInfoTracer = Tracer $
