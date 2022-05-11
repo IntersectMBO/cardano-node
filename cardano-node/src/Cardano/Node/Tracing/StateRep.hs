@@ -7,7 +7,12 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Node.Tracing.StateRep
-  ( NodeState (..)
+  ( AddedToCurrentChain (..)
+  , InitChainSelection (..)
+  , NodeState (..)
+  , OpeningDbs (..)
+  , Replays (..)
+  , StartupState (..)
   , traceNodeStateChainDB
   , traceNodeStateStartup
   , traceNodeStateShutdown
@@ -65,7 +70,7 @@ data InitChainSelection
   | InitChainSelected
   deriving (Generic, FromJSON, ToJSON)
 
-type SyncPercentage = Word8
+type SyncPercentage = Double
 
 data AddedToCurrentChain
   = AddedToCurrentChain !EpochNo !SlotNo !SyncPercentage
@@ -143,9 +148,11 @@ traceNodeStateChainDB scp tr ev =
           let RP.RealPoint slotSinceSystemStart _ = currentTip
           -- The slot corresponding to the latest wall-clock time (our target).
           slotNow <- getSlotForNow scp slotSinceSystemStart
-          let syncProgressPct = (unSlotNo slotSinceSystemStart `div` unSlotNo slotNow) * 100
+          let syncProgressPct :: SyncPercentage
+              syncProgressPct =
+                (fromIntegral (unSlotNo slotSinceSystemStart) / fromIntegral (unSlotNo slotNow)) * 100.0
           traceWith tr $ NodeAddBlock $
-            AddedToCurrentChain ntEpoch (SlotNo sInEpoch) $ fromIntegral syncProgressPct
+            AddedToCurrentChain ntEpoch (SlotNo sInEpoch) syncProgressPct
         _ -> return ()
     _ -> return ()
 
