@@ -1083,10 +1083,10 @@ instance ( ToJSON (Ledger.Value era)
                 ]
       -- This means there are datums in the datum map
       -- that do not correspond to any tx input datums.
-      Babbage.DanglingWitnessDataHash datums ->
-        mconcat [ "kind" .= String "DanglingWitnessDataHash"
-                , "datums" .= datums
-                ]
+      --Babbage.DanglingWitnessDataHash datums ->
+      --  mconcat [ "kind" .= String "DanglingWitnessDataHash"
+      --          , "datums" .= datums
+      --          ]
       -- This is only relevant for Plutus scripts
       -- and will occur due to a serialisation error.
       -- TODO: Plutus team needs to expose a better error

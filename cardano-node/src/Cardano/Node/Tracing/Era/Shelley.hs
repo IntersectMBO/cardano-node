@@ -1073,10 +1073,10 @@ instance ( Ledger.Era era
                 , "calculatedTotalCollateral" .= bal
                 , "txIndicatedTotalCollateral" .= totalCol
                 ]
-      Babbage.DanglingWitnessDataHash datums ->
-        mconcat [ "kind" .= String "MissingDatums"
-                , "datums" .= datums
-                ]
+      --Babbage.DanglingWitnessDataHash datums ->
+      --  mconcat [ "kind" .= String "MissingDatums"
+      --          , "datums" .= datums
+      --          ]
       -- This is only relevant for Plutus scripts
       -- and will occur due to a serialisation error.
       -- TODO: Plutus team needs to expose a better error
