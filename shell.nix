@@ -103,7 +103,7 @@ let
       echo 'nix-shell top-level shellHook:  withHoogle=${toString withHoogle} profileName=${profileName} autoStartCluster=${toString autoStartCluster} workbenchDevMode=${toString workbenchDevMode}'
 
       ${with customConfig.localCluster;
-        (import ./nix/workbench/shell.nix { inherit lib workbenchDevMode; useCabalRun = true; }).shellHook}
+        (import ./nix/workbench/shell.nix { inherit lib workbenchDevMode profileName; useCabalRun = true; }).shellHook}
 
       ${lib.optionalString autoStartCluster ''
       function atexit() {
@@ -165,7 +165,7 @@ let
       | ${lolcat}/bin/lolcat
 
       ${with customConfig.localCluster;
-        (import ./nix/workbench/shell.nix { inherit lib workbenchDevMode; useCabalRun = false; }).shellHook}
+        (import ./nix/workbench/shell.nix { inherit lib workbenchDevMode profileName; useCabalRun = false; }).shellHook}
 
       # Socket path default to first node launched by "start-cluster":
       export CARDANO_NODE_SOCKET_PATH=$(wb backend get-node-socket-path ${cluster.stateDir})

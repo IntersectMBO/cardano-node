@@ -73,6 +73,11 @@ progress() {
     msg "$(with_color green $subsys):  $(with_color blue $*)"
 }
 
+progress_ne() {
+    local subsys=$1; shift
+    msg_ne "$(with_color green $subsys):  $(with_color blue $*)"
+}
+
 fail() {
     msg "$(with_color red $*)"
     exit 1

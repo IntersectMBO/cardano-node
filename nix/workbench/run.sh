@@ -302,7 +302,7 @@ case "$op" in
         else
             profile has-profile          "$profile_name" ||
                 fatal  "no such profile:  $profile_name"
-            profile json-by-name         "$profile_name" > "$dir"/profile.json
+            profile json                 "$profile_name" > "$dir"/profile.json
         fi
         jq '.' <<<$node_specs > "$dir"/node-specs.json
 
@@ -464,12 +464,12 @@ EOF
     start )
         local usage="USAGE: wb run $op [--idle] [--scenario NAME] [--analyse] TAG"
 
-        local scenario_override= analyse= analysis_can_fail=
+        local scenario_override= analyse=yes analysis_can_fail=
         while test $# -gt 0
         do case "$1" in
                --idle )              scenario_override='generic-idle';;
                --scenario | -s )     scenario_override=$2; shift;;
-               --analyse | -a )      analyse=t;;
+               --no-analysis )       analyse=;;
                --analysis-can-fail ) analysis_can_fail=t;;
                --* ) msg "FATAL:  unknown flag '$1'"; usage_run;;
                * ) break;; esac; shift; done

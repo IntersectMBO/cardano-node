@@ -1,4 +1,5 @@
 { lib
+, profileName
 , workbenchDevMode ? false
 , useCabalRun ? false
 , checkoutWbMode ? "unknown"
@@ -10,6 +11,7 @@ let
   shellHook = ''
     echo 'workbench shellHook:  workbenchDevMode=${toString workbenchDevMode} useCabalRun=${toString useCabalRun}'
     export WORKBENCH_BACKEND=supervisor
+    export WORKBENCH_SHELL_PROFILE=${profileName}
 
     ${optionalString
       workbenchDevMode

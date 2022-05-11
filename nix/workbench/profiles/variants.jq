@@ -3,23 +3,41 @@
 
 def genesis_profile_variants:
 
-  { scenario: "fixed-loaded"
-  , composition:
-    { n_singular_hosts:               2
-    , n_dense_hosts:                  0
-    }
-  , genesis:
-    { utxo:                           6000000
-    , delegators:                     1300000
-    , max_block_size:                 80000
-    , epoch_length:                   600
-    , parameter_k:                    3
-    }
-  , node:
-    { shutdown_on_slot_synced: 2400
-    }
-  , generator: { tps: 15 }
-  } as $forge_stress_base
+    { scenario: "fixed-loaded"
+    , composition:
+      { n_singular_hosts:               2
+      , n_dense_hosts:                  0
+      }
+    , genesis:
+      { utxo:                           6000000
+      , delegators:                     1300000
+      , max_block_size:                 80000
+      , epoch_length:                   600
+      , parameter_k:                    3
+      }
+    , node:
+      { shutdown_on_slot_synced: 2400
+      }
+    , generator: { tps: 15 }
+    } as $forge_stress_base
+
+  | { genesis:
+      { alonzo:
+        { maxTxExUnits:
+          { exUnitsMem:                 12500000
+          }
+        }
+      }
+    , generator:
+      { inputs_per_tx:                  1
+      , outputs_per_tx:                 1
+      , plutusMode:                     true
+      , plutusAutoMode:                 true
+      }
+    , analysis:
+      { filters:                        ["base", "size-small"]
+      }
+    } as $plutus_base
   |
 
   ## Baseline:
@@ -79,34 +97,27 @@ def genesis_profile_variants:
     , generator: { tps: 10 }
     }
 
-  , { name: "forge-stress"
-    } * $forge_stress_base
+  , $forge_stress_base *
+    { name: "forge-stress"
+    }
 
-  , { name: "forge-stress-newtracing"
+  , $forge_stress_base *
+    { name: "forge-stress-newtracing"
     , node:
       { tracing_backend:                "trace-dispatcher"
       }
-    } * $forge_stress_base
+    }
 
-  , { name: "forge-stress-plutus"
+  , $forge_stress_base *
+    $plutus_base *
+    { name: "forge-stress-plutus"
     , composition:
       { n_singular_hosts:               1
       }
-    , genesis:
-      { alonzo:
-        { maxTxExUnits:
-          { exUnitsMem:                 12500000
-          }
-        }
-      }
     , generator:
-      { inputs_per_tx:                  1
-      , outputs_per_tx:                 1
-      , tx_count:                       800
-      , plutusMode:                     true
-      , plutusAutoMode:                 true
+      { tx_count:                       800
       }
-    } * $forge_stress_base
+    }
 
   , { name: "quick"
     , scenario: "fixed-loaded"

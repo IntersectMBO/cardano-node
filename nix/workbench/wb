@@ -114,7 +114,7 @@ start()
 
         --idle )                         run_start_args+=($1);;
         --scenario | -s )                run_start_args+=($1 $2); shift;;
-        --analyse | -a )                 run_start_args+=($1);;
+        --no-analysis )                  run_start_args+=($1);;
         --analysis-can-fail )            run_start_args+=($1);;
 
         --cabal-mode | --cabal )         cabal_mode=t;;

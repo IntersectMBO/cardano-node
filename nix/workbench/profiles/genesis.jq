@@ -1,17 +1,15 @@
 ## WARNING:  keep in sync with 'profile-cache-key-input' below this one: vvv
 ##
 def profile_cli_args($p):
-($p.genesis.per_pool_balance * $p.composition.n_pools) as $pools_balance
-|
 { common:
   { createSpec:
-    [ "--supply",                  ($pools_balance + $p.genesis.funds_balance)
+    [ "--supply",                  $p.derived.supply_total
     , "--testnet-magic",           $p.genesis.network_magic
     , "--gen-genesis-keys",        $p.composition.n_bft_hosts
     , "--gen-utxo-keys",           1
     ]
  , createFinalIncremental:
-    ([ "--supply",                 ($p.genesis.funds_balance)
+    ([ "--supply",                 $p.genesis.funds_balance
      , "--gen-utxo-keys",          1
      ] +
      if $p.composition.dense_pool_density != 1
@@ -19,14 +17,12 @@ def profile_cli_args($p):
      [  ]
      else [] end)
   , createFinalBulk:
-    ([ "--supply",                 ($p.genesis.funds_balance)
+    ([ "--supply",                 $p.genesis.funds_balance
      , "--gen-utxo-keys",          1
      , "--gen-genesis-keys",       $p.composition.n_bft_hosts
-     , "--supply-delegated",       $pools_balance
+     , "--supply-delegated",       $p.derived.supply_delegated
      , "--gen-pools",              $p.composition.n_pools
-     , "--gen-stake-delegs",       ([ $p.composition.n_pools
-                                    , $p.genesis.delegators ]
-                                     | max)
+     , "--gen-stake-delegs",       $p.derived.delegators_effective
      , "--testnet-magic",          $p.genesis.network_magic
      , "--num-stuffed-utxo",       $p.derived.utxo_stuffed
      ] +
