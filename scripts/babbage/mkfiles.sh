@@ -135,12 +135,17 @@ mkdir -p "${ROOT}/genesis/shelley"
 
 mv "${ROOT}/byron-gen-command/genesis.json" "${ROOT}/genesis/byron/genesis-wrong.json"
 mv "${ROOT}/genesis.alonzo.json" "${ROOT}/genesis/shelley/genesis.alonzo.json"
-mv "${ROOT}/genesis.json" "${ROOT}/genesis/shelley/genesis.json"
+mv "${ROOT}/genesis.json" "${ROOT}/genesis/shelley/genesis-wrong.json"
 
+# Modify byron protocol magic
 jq --raw-output '.protocolConsts.protocolMagic = 42' test/genesis/byron/genesis-wrong.json > test/genesis/byron/genesis.json
 
 rm "${ROOT}/genesis/byron/genesis-wrong.json"
 
+# Modify shelley active slot coeff
+jq --raw-output '.activeSlotsCoeff = 2.0e-1' test/genesis/shelley/genesis-wrong.json > test/genesis/shelley/genesis.json
+
+rm "${ROOT}/genesis/shelley/genesis-wrong.json"
 
 mv test/pools/vrf1.skey test/node-spo1/vrf.skey
 mv test/pools/vrf2.skey test/node-spo2/vrf.skey
