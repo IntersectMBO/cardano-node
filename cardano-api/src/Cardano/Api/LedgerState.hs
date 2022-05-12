@@ -1514,4 +1514,6 @@ constructGlobals
   -> Globals
 constructGlobals sGen eInfo pParams =
   let majorPParamsVer = fst $ protocolParamProtocolVersion pParams
-  in Shelley.Spec.mkShelleyGlobals sGen eInfo majorPParamsVer
+  -- TODO 0 is the wrong slot; this slot needs to come from the NTC query
+  -- result, eg recvMsgAcquired should include the point it acquired
+  in Shelley.Spec.mkShelleyGlobals sGen 0 eInfo majorPParamsVer
