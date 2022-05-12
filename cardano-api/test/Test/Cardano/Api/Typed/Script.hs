@@ -116,6 +116,12 @@ prop_roundtrip_ScriptData =
     sData <- H.forAll genHashableScriptData
     sData === fromAlonzoData (toAlonzoData sData)
 
+prop_roundtrip_ScriptData_JSON :: Property
+prop_roundtrip_ScriptData_JSON =
+  H.property $ do
+    sData <- H.forAll genScriptData
+    H.tripping sData scriptDataToJsonDetailedSchema scriptDataFromJsonDetailedSchema
+
 -- -----------------------------------------------------------------------------
 
 tests :: TestTree
