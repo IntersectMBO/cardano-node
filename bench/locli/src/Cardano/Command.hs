@@ -43,7 +43,10 @@ parseChainCommand =
   subparser (mconcat [ commandGroup "Common data:  logobject keys, run metafile & genesis"
    , op "list-logobject-keys" "List logobject keys that analyses care about"
      (ListLogobjectKeys
-       <$> optTextOutputFile  "keys"            "Text file to write logobject keys to")
+       <$> optTextOutputFile  "keys"           "Text file to write logobject keys to")
+   , op "list-logobject-keys-legacy" "List legacy logobject keys that analyses care about"
+     (ListLogobjectKeysLegacy
+       <$> optTextOutputFile  "keys-legacy"     "Text file to write logobject keys to")
    , op "meta-genesis" "Machine performance timeline"
      (MetaGenesis
        <$> optJsonRunMetafile "run-metafile"    "The meta.json file from the benchmark run"
@@ -167,6 +170,8 @@ parseChainCommand =
 data ChainCommand
   = ListLogobjectKeys
       TextOutputFile
+  | ListLogobjectKeysLegacy
+      TextOutputFile
 
   | MetaGenesis         -- () -> Run
       JsonRunMetafile
@@ -250,6 +255,11 @@ runChainCommand :: State -> ChainCommand -> ExceptT CommandError IO State
 runChainCommand s
   c@(ListLogobjectKeys f) = do
   dumpText "logobject-keys" (toText <$> logObjectStreamInterpreterKeys) f
+    & firstExceptT (CommandError c)
+  pure s
+runChainCommand s
+  c@(ListLogobjectKeysLegacy f) = do
+  dumpText "logobject-keys-legacy" (toText <$> logObjectStreamInterpreterKeysLegacy) f
     & firstExceptT (CommandError c)
   pure s
 

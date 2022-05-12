@@ -258,16 +258,20 @@ namesForChainSyncServerEvent :: TraceChainSyncServerEvent blk -> [Text]
 namesForChainSyncServerEvent ev =
     "ChainSyncServerEvent" : namesForChainSyncServerEvent' ev
 
+nameChainUpdate :: ChainUpdate block a -> Text
+nameChainUpdate = \case
+  AddBlock{} -> "AddBlock"
+  RollBack{} -> "RollBack"
 
 namesForChainSyncServerEvent' :: TraceChainSyncServerEvent blk -> [Text]
-namesForChainSyncServerEvent' TraceChainSyncServerRead        {} =
-      ["ServerRead"]
-namesForChainSyncServerEvent' TraceChainSyncServerReadBlocked {} =
-      ["ServerReadBlocked"]
-namesForChainSyncServerEvent' TraceChainSyncRollForward       {} =
-      ["RollForward"]
-namesForChainSyncServerEvent' TraceChainSyncRollBackward      {} =
-      ["RollBackward"]
+namesForChainSyncServerEvent' (TraceChainSyncServerRead        _ x) =
+  ["ServerRead", nameChainUpdate x]
+namesForChainSyncServerEvent' (TraceChainSyncServerReadBlocked _ x) =
+  ["ServerReadBlocked", nameChainUpdate x]
+namesForChainSyncServerEvent' TraceChainSyncRollForward{} =
+  ["RollForward"]
+namesForChainSyncServerEvent' TraceChainSyncRollBackward{} =
+  ["RollBackward"]
 
 instance ConvertRawHash blk
       => LogFormatting (TraceChainSyncServerEvent blk) where

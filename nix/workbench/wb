@@ -96,6 +96,8 @@ start()
     local verbose=
     local manifest="{}"
     local iterations=1
+    local no_retry_failed_runs=t
+    local analyse_args=()
     local analyse=yes analysis_can_fail=
 
     local run_args=()
@@ -105,7 +107,7 @@ start()
     do case "$1" in
         --batch-name )                   batch_name=$2;   shift;;
         --profile-name )                 profile_name=$2; shift;;
-        --iterations | --times | --iter | -n ) iterations=$2; shift;;
+        --iterations | --times | --iter | -n ) iterations=$2; no_retry_failed_runs=; shift;;
         --cache-dir )                    setenvjqstr 'cacheDir' $2; shift;;
         --base-port )                    setenvjq    'basePort' $2; shift;;
 
@@ -115,8 +117,12 @@ start()
 
         --idle )                         run_start_args+=($1);;
         --scenario | -s )                run_start_args+=($1 $2); shift;;
+
         --no-analysis )                  analyse=;;
-        --analysis-can-fail | -f )       analysis_can_fail=t;;
+        --analysis-can-fail | -af )      analysis_can_fail=t;;
+        --dump-logobjects | -lo )        analyse_args+=($1);;
+        --dump-machviews  | -mw )        analyse_args+=($1);;
+        --filters )                      analyse_args+=($1 $2); shift;;
 
         --cabal-mode | --cabal )         cabal_mode=t;;
         --supervisor | --backend-supervisor )
@@ -158,8 +164,8 @@ start()
 
        progress "top-level | analysis" "processing logs of $(with_color white $tag)"
        local tag=$(run current-tag)
-       analyse std $tag ||
-           if test -n "$analysis_can_fail"
+       analyse ${analyse_args[@]} std $tag ||
+           if test -n "$analysis_can_fail" -a -z "$no_retry_failed_runs"
            then progress "run | analysis" "log processing failed, but --analysis-can-fail prevents failure:  $(with_color red $tag)"
                 iterations=$((iterations + 1))
            else fail "analysis failed:  $tag"

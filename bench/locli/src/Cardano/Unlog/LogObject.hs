@@ -26,6 +26,7 @@ import Data.Text.Short (ShortText, fromText, toText)
 import Data.Time.Clock (NominalDiffTime, UTCTime)
 import Data.Map qualified as Map
 import Data.Vector (Vector)
+import Data.Vector qualified as V
 
 import Cardano.Logging.Resources.Types
 
@@ -54,7 +55,7 @@ readLogObjectStream :: FilePath -> IO [LogObject]
 readLogObjectStream f =
   LBS.readFile f
     <&>
-    fmap (either (LogObject zeroUTCTime "DecodeError" "" (TId "0") . LODecodeError)
+    fmap (either (LogObject zeroUTCTime "Cardano.Analysis.DecodeError" "DecodeError" "" (TId "0") . LODecodeError)
                  id
           . AE.eitherDecode)
     . LBS.split (fromIntegral $ fromEnum '\n')
@@ -62,6 +63,7 @@ readLogObjectStream f =
 data LogObject
   = LogObject
     { loAt   :: !UTCTime
+    , loNS   :: !Text
     , loKind :: !Text
     , loHost :: !Host
     , loTid  :: !TId
@@ -82,45 +84,47 @@ deriving instance NFData a => NFData (Resources a)
 -- LogObject stream interpretation
 --
 
-interpreters :: Map Text (Object -> Parser LOBody)
-interpreters = Map.fromList
-  [ (,) "TraceStartLeadershipCheck" $
+type ACouple t = (t, t)
+
+interpreters :: ACouple (Map Text (Object -> Parser LOBody))
+interpreters = (Map.fromList *** Map.fromList) . unzip . fmap ent $
+  [ (,,) "TraceStartLeadershipCheck" "Cardano.Node.Forge.StartLeadershipCheck" $
     \v -> LOTraceStartLeadershipCheck
             <$> v .: "slot"
             <*> (v .:? "utxoSize"     <&> fromMaybe 0)
             <*> (v .:? "chainDensity" <&> fromMaybe 0)
 
-  , (,) "TraceBlockContext" $
+  , (,,) "TraceBlockContext" "Cardano.Node.Forge.BlockContext" $
     \v -> LOBlockContext
             <$> v .: "tipBlockNo"
 
-  , (,) "TraceNodeIsLeader" $
+  , (,,) "TraceNodeIsLeader" "Cardano.Node.Forge.NodeIsLeader" $
     \v -> LOTraceLeadershipDecided
             <$> v .: "slot"
             <*> pure True
 
-  , (,) "TraceNodeNotLeader" $
+  , (,,) "TraceNodeNotLeader" "Cardano.Node.Forge.NodeNotLeader" $
     \v -> LOTraceLeadershipDecided
             <$> v .: "slot"
             <*> pure False
 
-  , (,) "TraceMempoolAddedTx" $
+  , (,,) "TraceMempoolAddedTx" "Cardano.Node.Mempool.AddedTx" $
     \v -> do
       x :: Object <- v .: "mempoolSize"
       LOMempoolTxs <$> x .: "numTxs"
 
-  , (,) "TraceMempoolRemoveTxs" $
+  , (,,) "TraceMempoolRemoveTxs" "Cardano.Node.Mempool.RemoveTxs" $
     \v -> do
       x :: Object <- v .: "mempoolSize"
       LOMempoolTxs <$> x .: "numTxs"
 
-  , (,) "TraceMempoolRejectedTx" $
+  , (,,) "TraceMempoolRejectedTx" "Cardano.Node.Mempool.RejectedTx" $
     \_ -> pure LOMempoolRejectedTx
 
-  , (,) "TraceLedgerEvent.TookSnapshot" $
+  , (,,) "TraceLedgerEvent.TookSnapshot" "Cardano.Node.LedgerEvent.TookSnapshot" $
     \_ -> pure LOLedgerTookSnapshot
 
-  , (,) "TraceBenchTxSubSummary" $
+  , (,,) "TraceBenchTxSubSummary" "TraceBenchTxSubSummary" $
     \v -> do
        x :: Object <- v .: "summary"
        LOGeneratorSummary
@@ -130,28 +134,28 @@ interpreters = Map.fromList
          <*> x .: "ssElapsed"
          <*> x .: "ssThreadwiseTps"
 
-  , (,) "TraceBenchTxSubServAck" $
+  , (,,) "TraceBenchTxSubServAck" "TraceBenchTxSubServAck" $
     \v -> LOTxsAcked <$> v .: "txIds"
 
-  , (,) "Resources" $
+  , (,,) "Resources" "Cardano.Node.Resources" $
     \v -> LOResources <$> parsePartialResourceStates (Object v)
 
-  , (,) "TraceTxSubmissionCollected" $
+  , (,,) "TraceTxSubmissionCollected" "TraceTxSubmissionCollected" $
     \v -> LOTxsCollected
             <$> v .: "count"
 
-  , (,) "TraceTxSubmissionProcessed" $
+  , (,,) "TraceTxSubmissionProcessed" "TraceTxSubmissionProcessed" $
     \v -> LOTxsProcessed
             <$> v .: "accepted"
             <*> v .: "rejected"
 
-  , (,) "TraceForgedBlock" $
+  , (,,) "TraceForgedBlock" "Cardano.Node.Forge.ForgedBlock" $
     \v -> LOBlockForged
             <$> v .: "block"
             <*> v .: "blockPrev"
             <*> v .: "blockNo"
             <*> v .: "slot"
-  , (,) "TraceAddBlockEvent.AddedToCurrentChain" $
+  , (,,) "TraceAddBlockEvent.AddedToCurrentChain" "Cardano.Node.ChainDB.AddBlockEvent.AddedToCurrentChain" $
     \v -> LOBlockAddedToCurrentChain
             <$> ((v .: "newtip")     <&> hashFromPoint)
             <*> pure Nothing
@@ -159,35 +163,35 @@ interpreters = Map.fromList
                 -- Compat for node versions 1.27 and older:
                  <&> fromMaybe 1)
   -- TODO: we should clarify the distinction between the two cases (^ and v).
-  , (,) "TraceAdoptedBlock" $
+  , (,,) "TraceAdoptedBlock" "Cardano.Node.Forge.AdoptedBlock" $
     \v -> LOBlockAddedToCurrentChain
             <$> v .: "blockHash"
             <*> ((v .: "blockSize") <&> Just)
             <*> pure 1
-  , (,) "ChainSyncServerEvent.TraceChainSyncServerRead.AddBlock" $
+  , (,,) "ChainSyncServerEvent.TraceChainSyncServerRead.AddBlock" "Cardano.Node.ChainSyncServerHeader.ChainSyncServerEvent.ServerRead.AddBlock" $
     \v -> LOChainSyncServerSendHeader
             <$> v .: "block"
             <*> v .: "blockNo"
             <*> v .: "slot"
-  , (,) "ChainSyncServerEvent.TraceChainSyncServerReadBlocked.AddBlock" $
+  , (,,) "ChainSyncServerEvent.TraceChainSyncServerReadBlocked.AddBlock" "Cardano.Node.ChainSyncServerHeader.ChainSyncServerEvent.ServerReadBlocked.AddBlock" $
     \v -> LOChainSyncServerSendHeader
             <$> v .: "block"
             <*> v .: "blockNo"
             <*> v .: "slot"
   -- v, but not ^ -- how is that possible?
-  , (,) "TraceBlockFetchServerSendBlock" $
+  , (,,) "TraceBlockFetchServerSendBlock" "Cardano.Node.BlockFetchServer.SendBlock" $
     \v -> LOBlockFetchServerSending
             <$> v .: "block"
-  , (,) "SendFetchRequest" $
+  , (,,) "SendFetchRequest" "Cardano.Node.BlockFetchClient.SendFetchRequest" $
     \v -> LOBlockFetchClientRequested
             <$> v .: "head"
             <*> v .: "length"
-  , (,) "ChainSyncClientEvent.TraceDownloadedHeader" $
+  , (,,) "ChainSyncClientEvent.TraceDownloadedHeader" "Cardano.Node.ChainSyncClient.ChainSyncClientEvent.DownloadedHeader" $
     \v -> LOChainSyncClientSeenHeader
             <$> v .: "block"
             <*> v .: "blockNo"
             <*> v .: "slot"
-  , (,) "CompletedBlockFetch" $
+  , (,,) "CompletedBlockFetch" "Cardano.Node.BlockFetchClient.CompletedBlockFetch" $
     \v -> LOBlockFetchClientCompletedFetch
             <$> v .: "block"
   ]
@@ -195,8 +199,12 @@ interpreters = Map.fromList
    hashFromPoint :: LText.Text -> Hash
    hashFromPoint = Hash . fromText . Prelude.head . LText.splitOn "@"
 
-logObjectStreamInterpreterKeys :: [Text]
-logObjectStreamInterpreterKeys = Map.keys interpreters
+   ent :: (a,b,c) -> ((a,c), (b,c))
+   ent (a,b,c) = ((a,c), (b,c))
+
+logObjectStreamInterpreterKeysLegacy, logObjectStreamInterpreterKeys :: [Text]
+logObjectStreamInterpreterKeysLegacy = Map.keys (fst interpreters)
+logObjectStreamInterpreterKeys       = Map.keys (snd interpreters)
 
 data LOBody
   = LOTraceStartLeadershipCheck !SlotNo !Word64 !Float
@@ -253,12 +261,20 @@ instance FromJSON LogObject where
     body :: Object <- v .: "data"
     -- XXX:  fix node causing the need for this workaround
     (,) unwrapped kind <- unwrap "credentials" "val" body
+    nsVorNs :: Value <- v .: "ns"
+    let ns = case nsVorNs of
+               Array (V.toList -> [String ns']) -> fromText ns'
+               String ns' -> fromText ns'
+               x -> error $
+                 "The 'ns' field must be either a string, or a singleton-String vector, was: " <> show x
     LogObject
       <$> v .: "at"
+      <*> pure ns
       <*> pure kind
       <*> v .: "host"
       <*> v .: "thread"
-      <*> case Map.lookup kind interpreters of
+      <*> case Map.lookup ns   (snd interpreters) <|>
+               Map.lookup kind (fst interpreters) of
             Just interp -> interp unwrapped
             Nothing -> pure $ LOAny unwrapped
    where

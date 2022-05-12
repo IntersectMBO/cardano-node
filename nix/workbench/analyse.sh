@@ -14,14 +14,16 @@ EOF
 }
 
 analyse() {
-local dump_logobjects= preflt_jq= filters=() aws=
-local dump_logobjects= dump_slots_raw= dump_slots= dump_chain_raw= dump_chain= dump_mach_views=
+local filters=() aws=
+local dump_logobjects= dump_machviews= dump_chain_raw= dump_chain= dump_slots_raw= dump_slots=
 while test $# -gt 0
 do case "$1" in
-       --dump-logobjects )  dump_logobjects='true';;
-       --prefilter-jq )     preflt_jq='true';;
-       --filters )          analysis_set_filters "base,$2"; shift;;
-       --no-filters )       analysis_set_filters "";;
+       --dump-logobjects | -lo )  dump_logobjects='true';;
+       --dump-machviews  | -mw )  dump_machviews='true';;
+       --dump-chain-raw  | -cr )  dump_chain_raw='true';;
+       --dump-chain      | -c )   dump_chain='true';;
+       --filters )                analysis_set_filters "base,$2"; shift;;
+       --no-filters )             analysis_set_filters "";;
        * ) break;; esac; shift; done
 
 if curl --connect-timeout 0.5 http://169.254.169.254/latest/meta-data >/dev/null 2>&1
@@ -35,7 +37,7 @@ else locli_rts_args=()
      echo "{ \"aws\": false }"
 fi
 
-local op=${1:-$(usage_analyse)}; shift
+local op=${1:-standard}; if test $# != 0; then shift; fi
 
 case "$op" in
     # 'read-mach-views' "${logs[@]/#/--log }"
@@ -67,7 +69,7 @@ case "$op" in
                  'dump-logobjects'; fi)
 
                'build-mach-views'
-               $(if test -n "$dump_mach_views"; then echo \
+               $(if test -n "$dump_machviews"; then echo \
                  'dump-mach-views'; fi)
 
                'build-chain'
@@ -152,7 +154,10 @@ case "$op" in
 
         ## 0. ask locli what it cares about
         local keyfile="$adir"/substring-keys
-        locli 'list-logobject-keys' --keys "$keyfile"
+        case $(jq '.node.tracing_backend // "iohk-monitoring"' --raw-output $dir/profile.json) in
+             trace-dispatcher ) locli 'list-logobject-keys'        --keys        "$keyfile";;
+             iohk-monitoring  ) locli 'list-logobject-keys-legacy' --keys-legacy "$keyfile";;
+        esac
 
         ## 1. unless already done, filter logs according to locli's requirements
         local logdirs=($(ls -d "$dir"/node-*/ 2>/dev/null))
@@ -173,11 +178,7 @@ case "$op" in
            if test -z "$logfiles"
            then msg "no logs in $d, skipping.."; fi
            local output="$adir"/logs-$(basename "$d").flt.json
-           grep -hFf "$keyfile" $logfiles |
-               if test "$preflt_jq" = 'true'
-               then jq "${jq_args[@]}" --arg dirHostname "$(basename "$d")"
-               else cat
-               fi > "$output" &
+           grep -hFf "$keyfile" $logfiles > "$output" &
         done
 
         wait;;
