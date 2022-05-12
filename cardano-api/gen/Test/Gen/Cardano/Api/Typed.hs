@@ -238,7 +238,7 @@ genScriptData =
         , ScriptDataBytes  <$> genByteString
         ]
         -- The Gen.recursive combinator calls these with the size halved
-        [ ScriptDataConstructor <$> genInteger
+        [ ScriptDataConstructor <$> genConstructorInteger
                                 <*> genScriptDataList
         , ScriptDataList <$> genScriptDataList
         , ScriptDataMap  <$> genScriptDataMap
@@ -246,6 +246,13 @@ genScriptData =
   where
     genInteger :: Gen Integer
     genInteger = Gen.integral
+                  (Range.linear
+                    (-fromIntegral (maxBound :: Word64) :: Integer)
+                    (2 * fromIntegral (maxBound :: Word64) :: Integer))
+
+
+    genConstructorInteger :: Gen Integer
+    genConstructorInteger = Gen.integral
                   (Range.linear
                     0 -- TODO: Alonzo should be -> (-fromIntegral (maxBound :: Word64) :: Integer)
                       -- Wrapping bug needs to be fixed in Plutus library
