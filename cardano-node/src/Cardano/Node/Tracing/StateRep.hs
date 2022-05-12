@@ -2,6 +2,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE StandaloneDeriving #-}
 
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -16,6 +17,9 @@ module Cardano.Node.Tracing.StateRep
   , traceNodeStateChainDB
   , traceNodeStateStartup
   , traceNodeStateShutdown
+  , namesNodeState
+  , severityNodeState
+  , docNodeState
   ) where
 
 import           Cardano.Prelude
@@ -99,10 +103,62 @@ data NodeState
   | NodeOpeningDbs OpeningDbs
   | NodeReplays Replays
   | NodeInitChainSelection InitChainSelection
+  | NodeKernelOnline
   | NodeAddBlock AddedToCurrentChain
   | NodeStartup StartupState
   | NodeShutdown ShutdownTrace
   deriving (Generic, FromJSON, ToJSON)
+
+instance LogFormatting NodeState where
+  forMachine _ = \case
+    NodeOpeningDbs x -> mconcat
+      [ "kind" .= String "NodeOpeningDbs",         "openingDb" .= toJSON x]
+    NodeReplays x -> mconcat
+      [ "kind" .= String "NodeReplays",            "replays"   .= toJSON x]
+    NodeInitChainSelection x -> mconcat
+      [ "kind" .= String "NodeInitChainSelection", "chainSel"  .= toJSON x]
+    NodeAddBlock x -> mconcat
+      [ "kind" .= String "NodeAddBlock",           "addBlock"  .= toJSON x]
+    NodeStartup x -> mconcat
+      [ "kind" .= String "NodeStartup",            "startup"   .= toJSON x]
+    NodeShutdown x -> mconcat
+      [ "kind" .= String "NodeShutdown",           "shutdown"  .= toJSON x]
+    _ -> mempty
+
+docNodeState :: Documented NodeState
+docNodeState = addDocumentedNamespace  [] $
+  Documented
+  [ DocMsg ["NodeTracingOnlineConfiguring"] [] "Tracing system came online, system configuring now"
+  , DocMsg ["NodeOpeningDbs"]               [] "ChainDB components being opened"
+  , DocMsg ["NodeReplays"]                  [] "Replaying chain"
+  , DocMsg ["NodeInitChainSelection"]       [] "Performing initial chain selection"
+  , DocMsg ["NodeKernelOnline"]             [] "Node kernel online"
+  , DocMsg ["NodeAddBlock"]                 [] "Applying block"
+  , DocMsg ["NodeStartup"]                  [] "Node startup"
+  , DocMsg ["NodeShutdown"]                 [] "Node shutting down"
+  ]
+
+namesNodeState :: NodeState -> [Text]
+namesNodeState = \case
+  NodeTracingOnlineConfiguring -> ["TracingOnlineConfiguring"]
+  NodeOpeningDbs _x -> ["OpeningDbs"] -- : namesOpeninDbs x
+  NodeReplays _x -> ["Replays"] -- : namesReplays x
+  NodeInitChainSelection _x -> ["InitChainSelection"] -- : namesInitChainSelection -- Worth it?
+  NodeKernelOnline -> ["NodeKernelOnline"]
+  NodeAddBlock _x -> ["AddBlock"] -- : namesAddBlock x
+  NodeStartup _x -> ["Startup"] -- : namesForStartup x -- Worth it?
+  NodeShutdown _x -> ["Shutdown"] -- : namesShutdown x
+
+severityNodeState :: NodeState -> SeverityS
+severityNodeState = \case
+  NodeTracingOnlineConfiguring -> Info
+  NodeOpeningDbs _x -> Info
+  NodeReplays _x -> Notice
+  NodeInitChainSelection _x -> Notice
+  NodeKernelOnline -> Info
+  NodeAddBlock _x -> Notice
+  NodeStartup _x -> Info
+  NodeShutdown _x -> Warning
 
 traceNodeStateChainDB
   :: SomeConsensusProtocol

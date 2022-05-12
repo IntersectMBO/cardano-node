@@ -1142,7 +1142,7 @@ instance ( StandardHash blk
     mconcat [ "kind" .= String "DeletedSnapshot"
              , "snapshot" .= forMachine dtals snap ]
   forMachine dtals (LedgerDB.InvalidSnapshot snap failure) =
-    mconcat [ "kind" .= String "TraceLedgerEvent.InvalidSnapshot"
+    mconcat [ "kind" .= String "InvalidSnapshot"
              , "snapshot" .= forMachine dtals snap
              , "failure" .= show failure ]
 

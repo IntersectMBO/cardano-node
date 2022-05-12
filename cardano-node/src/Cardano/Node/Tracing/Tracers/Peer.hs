@@ -123,11 +123,11 @@ namesForPeers :: [PeerT blk] -> [Text]
 namesForPeers _ = []
 
 severityPeers :: [PeerT blk] -> SeverityS
+severityPeers [] = Debug
 severityPeers _ = Notice
 
 instance LogFormatting [PeerT blk] where
-  forMachine DMinimal _ = mconcat [ "kind"  .= String "NodeKernelPeers"]
-  forMachine _ []       = mconcat [ "kind"  .= String "NodeKernelPeers"]
+  forMachine _ []       = mempty
   forMachine dtal xs    = mconcat
     [ "kind"  .= String "NodeKernelPeers"
     , "peers" .= toJSON (foldl' (\acc x -> forMachine dtal x : acc) [] xs)

@@ -63,6 +63,7 @@ import           Cardano.Node.Configuration.POM (NodeConfiguration (..),
                    defaultPartialNodeConfiguration, makeNodeConfiguration, parseNodeConfigurationFP)
 import           Cardano.Node.Startup
 import           Cardano.Node.Tracing.API
+import           Cardano.Node.Tracing.StateRep
 import           Cardano.Node.Tracing.Tracers.Startup (getStartupInfo)
 import           Cardano.Node.Types
 import           Cardano.Tracing.Config (TraceOptions (..), TraceSelection (..))
@@ -238,7 +239,9 @@ handleNodeWithTracers  cmdPc nc p networkMagic runP = do
             -- We ignore peer logging thread if it dies, but it will be killed
             -- when 'handleSimpleNode' terminates.
                 handleSimpleNode runP p2pMode tracers nc
-                  (setNodeKernel nodeKernelData)
+                  (\nk -> do
+                      setNodeKernel nodeKernelData nk
+                      traceWith (nodeStateTracer tracers) NodeKernelOnline)
                 `finally`
                 forM_ mLoggingLayer
                   shutdownLoggingLayer
