@@ -188,11 +188,7 @@ validateScriptData d =
       err:_ -> Left err
   where
     -- collect all errors in a monoidal fold style:
-    collect (ScriptDataNumber n) =
-        [ ScriptDataNumberOutOfRange n
-        |    n >         fromIntegral (maxBound :: Word64)
-          || n < negate (fromIntegral (maxBound :: Word64))
-        ]
+    collect (ScriptDataNumber _n) = mempty
     collect (ScriptDataBytes bs) =
         [ ScriptDataBytesTooLong len
         | let len = BS.length bs
@@ -221,13 +217,9 @@ scriptDataByteStringMaxLength = 64
 --
 data ScriptDataRangeError =
 
-    -- | The number is outside the maximum range of @-2^64-1 .. 2^64-1@.
+    -- | The constructor number is outside the maximum range of @-2^64-1 .. 2^64-1@.
     --
-    ScriptDataNumberOutOfRange !Integer
-
-    -- | The number is outside the maximum range of @-2^64-1 .. 2^64-1@.
-    --
-  | ScriptDataConstructorOutOfRange !Integer
+    ScriptDataConstructorOutOfRange !Integer
 
     -- | The length of a byte string metadatum value exceeds the maximum of
     -- 64 bytes.
@@ -236,10 +228,6 @@ data ScriptDataRangeError =
   deriving (Eq, Show)
 
 instance Error ScriptDataRangeError where
-  displayError (ScriptDataNumberOutOfRange n) =
-      "Number in script data value "
-        <> show n
-        <> " is outside the range -(2^64-1) .. 2^64-1."
   displayError (ScriptDataConstructorOutOfRange n) =
       "Constructor numbers in script data value "
         <> show n
