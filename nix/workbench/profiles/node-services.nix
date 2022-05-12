@@ -50,16 +50,33 @@ let
           UseTraceDispatcher   = true;
 
           TraceOptionSeverity  = [
-            { ns = "";                                    severity = "Debug";   }
-            { ns = "Node.Resources";                      severity = "Debug";   }
-            { ns = "Node.ChainDB";                        severity = "Debug";   }
-            # { ns = "Node.Mempool";                        severity = "Debug";   }
-            # { ns = "Node.ChainDB.ImmutableDBEvent";       severity = "Warning"; }
+            { ns = "";                      severity = "Debug"; }
+            { ns = "Node.ChainDB";          severity = "Info"; }
+            { ns = "Node.AcceptPolicy";     severity = "Info"; }
+            { ns = "Node.DNSResolver";      severity = "Info"; }
+            { ns = "Node.DNSSubscription";  severity = "Info"; }
+            { ns = "Node.DiffusionInit";    severity = "Info"; }
+            { ns = "Node.ErrorPolicy";      severity = "Info"; }
+            { ns = "Node.Forge";            severity = "Info"; }
+            { ns = "Node.IpSubscription";   severity = "Info"; }
+            { ns = "Node.LocalErrorPolicy"; severity = "Info"; }
+            { ns = "Node.Mempool";          severity = "Info"; }
+            { ns = "Node.Resources";        severity = "Info"; }
+
+            { ns = "Node.Mux";                          severity = "Silence"; }
+            { ns = "Node.LocalHandshake";               severity = "Silence"; }
+            { ns = "Node.MuxLocal";                     severity = "Silence"; }
+            { ns = "Node.TxOutbound";                   severity = "Silence"; }
+            { ns = "Node.TxSubmission2";                severity = "Silence"; }
+            { ns = "Node.BlockFetchSerialised";         severity = "Silence"; }
+            { ns = "Node.ChainSyncSerialised";          severity = "Silence"; }
           ];
 
           TraceOptionDetail = [
-            { ns = "";                                    detail = "DNormal";   }
-            { ns = "Node.BlockFetchClient";               detail = "DMinimal";  }
+            { ns = "";                      detail = "DNormal"; }
+            { ns = "Node.BlockFetchClient"; detail = "DMinimal"; }
+            { ns = "Node.TxSubmission2";
+              detail = "DMinimal"; }
           ];
 
           TraceOptionBackend = [
@@ -67,25 +84,23 @@ let
               backends = [
                 "Stdout MachineFormat"
                 "EKGBackend"
-                "Forwarder"
+                # "Forwarder"
               ];
             }
-            # { ns = "Node.ChainDB";
-            #   backends = ["Stdout HumanFormatColoured"];
-            # }
           ];
 
           TraceOptionLimiter = [
-            { ns = "Node.ChainDB.OpenEvent";
-              limiterName = "ChainDB open limiter";
-              limiterFrequency = 0.1;
-            }
+            { ns = "Node.ChainDB.AddBlockEvent.AddedBlockToQueue";                 limiterFrequency = 2.0; limiterName = "AddedBlockToQueue"; }
+            { ns = "Node.ChainDB.AddBlockEvent.AddedBlockToVolatileDB";            limiterFrequency = 2.0; limiterName = "AddedBlockToVolatileDB"; }
+            { ns = "Node.ChainDB.CopyToImmutableDBEvent.CopiedBlockToImmutableDB"; limiterFrequency = 2.0; limiterName = "CopiedBlockToImmutableDB"; }
+            { ns = "Node.ChainDB.AddBlockEvent.AddBlockValidation.ValidCandidate"; limiterFrequency = 2.0; limiterName = "ValidCandidate"; }
+            { ns = "Node.BlockFetchClient.CompletedBlockFetch";                    limiterFrequency = 2.0; limiterName = "CompletedBlockFetch"; }
           ];
 
           TraceOptionForwarder = {
-            mode = "Initiator";
+            mode = "Responder";
             address = {
-              filePath = "/tmp/forwarder-${toString i}.sock";
+              filePath = "forwarder.sock";
             };
           };
         };

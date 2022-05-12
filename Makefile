@@ -12,6 +12,7 @@ endif
 PROFILE ?= ${CLUSTER_PROFILE}
 REV     ?= master
 ARGS    ?=
+CMD     ?=
 
 
 help: ## Print documentation
@@ -58,10 +59,11 @@ fixed:                   PROFILE = fixed-${ERA}
 fixed:                   ARGS += --arg 'autoStartCluster' true
 forge-stress:            PROFILE = forge-stress-${ERA}
 forge-stress-plutus:     PROFILE = forge-stress-plutus-${ERA}
-forge-stress-newtracing: PROFILE = forge-stress-newtracing-${ERA}
+forge-stress-oldtracing: PROFILE = forge-stress-oldtracing-${ERA}
 quick:                   PROFILE = quick-${ERA}
-forge-stress forge-stress-plutus forge-stress-newtracing quick: ARGS += --arg 'workbenchDevMode' true
-shell-dev cluster-shell-dev cluster-shell-trace cluster-shell-dev-trace fixed forge-stress forge-stress-plutus forge-stress-newtracing quick: shell
+quick-oldtracing:        PROFILE = quick-oldtracing-${ERA}
+forge-stress forge-stress-plutus forge-stress-oldtracing quick quick-oldtracing: ARGS += --arg 'workbenchDevMode' true
+shell-dev cluster-shell-dev cluster-shell-trace cluster-shell-dev-trace fixed forge-stress forge-stress-plutus forge-stress-oldtracing quick quick-oldtracing: shell
 
 test-smoke: smoke ## Build the 'workbench-smoke-test', same as the Hydra job
 smoke:
@@ -95,7 +97,7 @@ membench-5-at: ## Membench:  5 iterations, set commit by:  make membench-5-at RE
 	nix build .#membench-node-this-5.batch-report      --out-link result-batch-5-report --override-input node-measured github:input-output-hk/cardano-node/${REV}
 
 shell: ## Enter Nix shell, CI mode (workbench run from Nix store)
-	nix-shell --max-jobs 8 --cores 0 --show-trace --argstr profileName ${PROFILE} ${ARGS}
+	nix-shell --max-jobs 8 --cores 0 --show-trace --argstr profileName ${PROFILE} ${ARGS} ${if ${CMD},--run "${CMD}"}
 
 cli node:
 	cabal --ghc-options="+RTS -qn8 -A32M -RTS" build cardano-$@

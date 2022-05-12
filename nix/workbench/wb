@@ -96,6 +96,7 @@ start()
     local verbose=
     local manifest="{}"
     local iterations=1
+    local analyse=yes analysis_can_fail=
 
     local run_args=()
     local run_allocate_args=()
@@ -114,8 +115,8 @@ start()
 
         --idle )                         run_start_args+=($1);;
         --scenario | -s )                run_start_args+=($1 $2); shift;;
-        --no-analysis )                  run_start_args+=($1);;
-        --analysis-can-fail )            run_start_args+=($1);;
+        --no-analysis )                  analyse=;;
+        --analysis-can-fail | -f )       analysis_can_fail=t;;
 
         --cabal-mode | --cabal )         cabal_mode=t;;
         --supervisor | --backend-supervisor )
@@ -152,6 +153,17 @@ start()
        mkdir -p "$current_run_path"
 
        run ${run_args[@]} 'start'    ${run_start_args[@]} $(run current-tag)
+
+       if test -z "$analyse"; then continue; fi
+
+       progress "top-level | analysis" "processing logs of $(with_color white $tag)"
+       local tag=$(run current-tag)
+       analyse std $tag ||
+           if test -n "$analysis_can_fail"
+           then progress "run | analysis" "log processing failed, but --analysis-can-fail prevents failure:  $(with_color red $tag)"
+                iterations=$((iterations + 1))
+           else fail "analysis failed:  $tag"
+                false; fi
     done
 }
 

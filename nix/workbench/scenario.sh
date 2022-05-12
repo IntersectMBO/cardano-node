@@ -100,4 +100,5 @@ scenario_setup_termination() {
 
 scenario_cleanup_termination() {
     kill $__scenario_watcher_pid 2>/dev/null || true
+    trap - EXIT
 }

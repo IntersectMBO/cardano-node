@@ -2,7 +2,24 @@
 ## variations of genesis/generator/node axes.
 
 def genesis_profile_variants:
-
+    { scenario: "fixed-loaded"
+    , composition:
+      { n_singular_hosts:               2
+      , n_dense_hosts:                  0
+      }
+    , genesis:
+      { utxo:                           6000
+      , delegators:                     1300
+      , max_block_size:                 80000
+      , epoch_length:                   600
+      , parameter_k:                    3
+      }
+    , node:
+      { shutdown_on_slot_synced: 10
+      }
+    , generator: { tps: 15 }
+    } as $quick_base
+  |
     { scenario: "fixed-loaded"
     , composition:
       { n_singular_hosts:               2
@@ -20,8 +37,8 @@ def genesis_profile_variants:
       }
     , generator: { tps: 15 }
     } as $forge_stress_base
-
-  | { genesis:
+  |
+    { genesis:
       { alonzo:
         { maxTxExUnits:
           { exUnitsMem:                 12500000
@@ -99,13 +116,13 @@ def genesis_profile_variants:
 
   , $forge_stress_base *
     { name: "forge-stress"
-    }
-
-  , $forge_stress_base *
-    { name: "forge-stress-newtracing"
     , node:
       { tracing_backend:                "trace-dispatcher"
       }
+    }
+
+  , $forge_stress_base *
+    { name: "forge-stress-oldtracing"
     }
 
   , $forge_stress_base *
@@ -119,23 +136,15 @@ def genesis_profile_variants:
       }
     }
 
-  , { name: "quick"
-    , scenario: "fixed-loaded"
-    , composition:
-      { n_singular_hosts:               2
-      , n_dense_hosts:                  0
-      }
-    , genesis:
-      { utxo:                           6000
-      , delegators:                     1300
-      , max_block_size:                 80000
-      , epoch_length:                   600
-      , parameter_k:                    3
-      }
+  , $quick_base *
+    { name: "quick"
     , node:
-      { shutdown_on_slot_synced: 10
+      { tracing_backend:                "trace-dispatcher"
       }
-    , generator: { tps: 15 }
+    }
+
+  , $quick_base *
+    { name: "quick-oldtracing"
     }
 
   ## Chainsync:

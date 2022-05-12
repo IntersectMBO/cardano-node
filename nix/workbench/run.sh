@@ -470,7 +470,8 @@ EOF
                --idle )              scenario_override='generic-idle';;
                --scenario | -s )     scenario_override=$2; shift;;
                --no-analysis )       analyse=;;
-               --analysis-can-fail ) analysis_can_fail=t;;
+               --analysis-can-fail | -f )
+                                     analysis_can_fail=t;;
                --* ) msg "FATAL:  unknown flag '$1'"; usage_run;;
                * ) break;; esac; shift; done
 
@@ -488,14 +489,6 @@ EOF
         scenario "$scenario" "$dir"
 
         run compat-meta-fixups "$tag"
-        if test -n "$analyse"
-        then progress "run | analysis" "processing logs of $(with_color white $tag)"
-             analyse std $tag ||
-                 if test -n "$analysis_can_fail"
-                 then progress "run | analysis" "log processing failed, but --analysis-can-fail prevents failure:  $(with_color red $tag)"
-                 else fail "analysis failed:  $tag"
-                     false; fi
-        fi
         ;;
 
     stop )

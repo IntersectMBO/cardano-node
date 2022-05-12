@@ -206,3 +206,21 @@ analysis_set_filters() {
 
     filters+=(${filter_files[*]/#/--filter })
 }
+
+analysis_classify_traces() {
+    local name=${1:-current}; if test $# != 0; then shift; fi
+    local dir=$(run get "$name")
+
+    progress "analysis" "enumerating namespace from logs of node-0.."
+    local types=($(grep -h '^{' $dir/node-0/stdout* | jq --raw-output '.ns' 2>/dev/null | tr -d ']["' | sort -u))
+
+    progress_ne "analysis" "collecting occurence stats: "
+    for node in $dir/node-*/
+    do for type in ${types[*]}
+       do echo $(grep -hF "\"$type\"" $node/stdout* | wc -l) $type
+       done |
+           sort -nr > $node/log-namespace-occurence-stats.txt
+       echo -n ' '$(basename $node) >&2
+    done
+    echo >&2
+}
