@@ -80,6 +80,7 @@ initTraceDispatcher nc p networkMagic nodeKernel p2pMode = do
  where
   mkTracers trConfig = do
     ekgStore <- EKG.newStore
+    EKG.registerGcMetrics ekgStore
     ekgTrace <- ekgTracer (Left ekgStore)
 
     stdoutTrace <- standardTracer
