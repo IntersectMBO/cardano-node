@@ -25,12 +25,13 @@ module Cardano.Logging.Trace (
   , withDetails
   , foldTraceM
   , foldMTraceM
+  , foldMCondTraceM
   , routingTrace
 )
 
 where
 
-import           Control.Monad (join)
+import           Control.Monad (join, when)
 import           Control.Monad.IO.Unlift
 import qualified Control.Tracer as T
 import           Data.Maybe (isJust)
@@ -247,6 +248,30 @@ foldMTraceM cata initial (Trace tr) = do
             ! accu <- cata x lc v
             pure $ join (,) accu
           T.traceWith tr (lc, Right (Folding x'))
+        (lc, Left control) -> do
+          T.traceWith tr (lc, Left control)
+
+-- | Like foldMTraceM, but filter the trace by a predicate.
+foldMCondTraceM
+  :: forall a acc m . (MonadUnliftIO m)
+  => (acc -> LoggingContext -> a -> m acc)
+  -> acc
+  -> (a -> Bool)
+  -> Trace m (Folding a acc)
+  -> m (Trace m a)
+foldMCondTraceM cata initial flt (Trace tr) = do
+  ref <- liftIO (newMVar initial)
+  let trr = mkTracer ref
+  pure $ Trace (T.arrow trr)
+ where
+    mkTracer ref = T.emit $
+      \case
+        (lc, Right v) -> do
+          x' <- modifyMVar ref $ \x -> do
+            ! accu <- cata x lc v
+            pure $ join (,) accu
+          when (flt v) $
+            T.traceWith tr (lc, Right (Folding x'))
         (lc, Left control) -> do
           T.traceWith tr (lc, Left control)
 

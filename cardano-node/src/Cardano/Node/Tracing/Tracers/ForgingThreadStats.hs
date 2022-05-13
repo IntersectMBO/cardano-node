@@ -130,7 +130,11 @@ emptyForgingStats = ForgingStats mempty 0 0 0 0
 
 forgeThreadStats :: Trace IO (Folding (ForgeTracerType blk) ForgingStats)
   -> IO (Trace IO (ForgeTracerType blk))
-forgeThreadStats = foldMTraceM calculateThreadStats emptyForgingStats
+forgeThreadStats = foldMCondTraceM calculateThreadStats emptyForgingStats
+  (\case
+      Left Consensus.TraceStartLeadershipCheck{} -> True
+      Left _  -> False
+      Right _ -> True)
 
 calculateThreadStats :: MonadIO m
   => ForgingStats
