@@ -360,9 +360,9 @@ mkConsensusTracers trBase trForward mbTrEKG _trDataPoint trConfig nodeKernel = d
       , Consensus.mempoolTracer = Tracer $
           traceWith mempoolTr
       , Consensus.forgeTracer =
-          Tracer (traceWith (contramap Left forgeTr))
+          Tracer (\(Consensus.TraceLabelCreds _ x) -> traceWith (contramap Left forgeTr) x)
           <> -- TODO: add the forge-thread-stats as a datapoint
-          Tracer (traceWith (contramap Left forgeThreadStatsTr))
+          Tracer (\(Consensus.TraceLabelCreds _ x) -> traceWith (contramap Left forgeThreadStatsTr) x)
       , Consensus.blockchainTimeTracer = Tracer $
           traceWith blockchainTimeTr
       , Consensus.keepAliveClientTracer = Tracer $

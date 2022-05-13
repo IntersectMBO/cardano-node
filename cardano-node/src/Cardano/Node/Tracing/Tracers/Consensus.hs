@@ -910,59 +910,53 @@ docMempool' = Documented [
 
 severityForge :: ForgeTracerType blk -> SeverityS
 severityForge (Left t)  = severityForge' t
-severityForge (Right t) = severityForge''' t
+severityForge (Right t) = severityForge'' t
 
-severityForge' :: TraceLabelCreds (TraceForgeEvent blk) -> SeverityS
-severityForge' (TraceLabelCreds _t e) = severityForge'' e
+severityForge' :: TraceForgeEvent blk -> SeverityS
+severityForge' TraceStartLeadershipCheck {}  = Info
+severityForge' TraceSlotIsImmutable {}       = Error
+severityForge' TraceBlockFromFuture {}       = Error
+severityForge' TraceBlockContext {}          = Debug
+severityForge' TraceNoLedgerState {}         = Error
+severityForge' TraceLedgerState {}           = Debug
+severityForge' TraceNoLedgerView {}          = Error
+severityForge' TraceLedgerView {}            = Debug
+severityForge' TraceForgeStateUpdateError {} = Error
+severityForge' TraceNodeCannotForge {}       = Error
+severityForge' TraceNodeNotLeader {}         = Info
+severityForge' TraceNodeIsLeader {}          = Info
+severityForge' TraceForgedBlock {}           = Info
+severityForge' TraceDidntAdoptBlock {}       = Error
+severityForge' TraceForgedInvalidBlock {}    = Error
+severityForge' TraceAdoptedBlock {}          = Info
 
-severityForge'' :: TraceForgeEvent blk -> SeverityS
-severityForge'' TraceStartLeadershipCheck {}  = Info
-severityForge'' TraceSlotIsImmutable {}       = Error
-severityForge'' TraceBlockFromFuture {}       = Error
-severityForge'' TraceBlockContext {}          = Debug
-severityForge'' TraceNoLedgerState {}         = Error
-severityForge'' TraceLedgerState {}           = Debug
-severityForge'' TraceNoLedgerView {}          = Error
-severityForge'' TraceLedgerView {}            = Debug
-severityForge'' TraceForgeStateUpdateError {} = Error
-severityForge'' TraceNodeCannotForge {}       = Error
-severityForge'' TraceNodeNotLeader {}         = Info
-severityForge'' TraceNodeIsLeader {}          = Info
-severityForge'' TraceForgedBlock {}           = Info
-severityForge'' TraceDidntAdoptBlock {}       = Error
-severityForge'' TraceForgedInvalidBlock {}    = Error
-severityForge'' TraceAdoptedBlock {}          = Info
-
-severityForge''' :: TraceLabelCreds TraceStartLeadershipCheckPlus -> SeverityS
-severityForge''' _ = Info
+severityForge'' :: TraceStartLeadershipCheckPlus -> SeverityS
+severityForge'' _ = Info
 
 namesForForge :: ForgeTracerType blk -> [Text]
 namesForForge (Left t)  = namesForForge' t
-namesForForge (Right t) = namesForForge''' t
+namesForForge (Right t) = namesForForge'' t
 
-namesForForge' :: TraceLabelCreds (TraceForgeEvent blk) -> [Text]
-namesForForge' (TraceLabelCreds _t e) = namesForForge'' e
+namesForForge' :: TraceForgeEvent blk -> [Text]
+namesForForge' TraceStartLeadershipCheck {}  = ["StartLeadershipCheck"]
+namesForForge' TraceSlotIsImmutable {}       = ["SlotIsImmutable"]
+namesForForge' TraceBlockFromFuture {}       = ["BlockFromFuture"]
+namesForForge' TraceBlockContext {}          = ["BlockContext"]
+namesForForge' TraceNoLedgerState {}         = ["NoLedgerState"]
+namesForForge' TraceLedgerState {}           = ["LedgerState"]
+namesForForge' TraceNoLedgerView {}          = ["NoLedgerView"]
+namesForForge' TraceLedgerView {}            = ["LedgerView"]
+namesForForge' TraceForgeStateUpdateError {} = ["ForgeStateUpdateError"]
+namesForForge' TraceNodeCannotForge {}       = ["NodeCannotForge"]
+namesForForge' TraceNodeNotLeader {}         = ["NodeNotLeader"]
+namesForForge' TraceNodeIsLeader {}          = ["NodeIsLeader"]
+namesForForge' TraceForgedBlock {}           = ["ForgedBlock"]
+namesForForge' TraceDidntAdoptBlock {}       = ["DidntAdoptBlock"]
+namesForForge' TraceForgedInvalidBlock {}    = ["ForgedInvalidBlock"]
+namesForForge' TraceAdoptedBlock {}          = ["AdoptedBlock"]
 
-namesForForge'' :: TraceForgeEvent blk -> [Text]
-namesForForge'' TraceStartLeadershipCheck {}  = ["StartLeadershipCheck"]
-namesForForge'' TraceSlotIsImmutable {}       = ["SlotIsImmutable"]
-namesForForge'' TraceBlockFromFuture {}       = ["BlockFromFuture"]
-namesForForge'' TraceBlockContext {}          = ["BlockContext"]
-namesForForge'' TraceNoLedgerState {}         = ["NoLedgerState"]
-namesForForge'' TraceLedgerState {}           = ["LedgerState"]
-namesForForge'' TraceNoLedgerView {}          = ["NoLedgerView"]
-namesForForge'' TraceLedgerView {}            = ["LedgerView"]
-namesForForge'' TraceForgeStateUpdateError {} = ["ForgeStateUpdateError"]
-namesForForge'' TraceNodeCannotForge {}       = ["NodeCannotForge"]
-namesForForge'' TraceNodeNotLeader {}         = ["NodeNotLeader"]
-namesForForge'' TraceNodeIsLeader {}          = ["NodeIsLeader"]
-namesForForge'' TraceForgedBlock {}           = ["ForgedBlock"]
-namesForForge'' TraceDidntAdoptBlock {}       = ["DidntAdoptBlock"]
-namesForForge'' TraceForgedInvalidBlock {}    = ["ForgedInvalidBlock"]
-namesForForge'' TraceAdoptedBlock {}          = ["AdoptedBlock"]
-
-namesForForge''' :: TraceLabelCreds TraceStartLeadershipCheckPlus -> [Text]
-namesForForge''' (TraceLabelCreds _ TraceStartLeadershipCheckPlus {})  =
+namesForForge'' :: TraceStartLeadershipCheckPlus -> [Text]
+namesForForge'' TraceStartLeadershipCheckPlus{}  =
   ["StartLeadershipCheckPlus"]
 
 
@@ -1204,12 +1198,12 @@ instance ( tx ~ GenTx blk
 
 instance LogFormatting TraceStartLeadershipCheckPlus where
   forMachine _dtal TraceStartLeadershipCheckPlus {..} =
-        mconcat [ "kind" .= String "TraceStartLeadershipCheckPlus"
-                 , "slotNo" .= toJSON (unSlotNo tsSlotNo)
-                 , "utxoSize" .= Number (fromIntegral tsUtxoSize)
-                 , "delegMapSize" .= Number (fromIntegral tsUtxoSize)
-                 , "chainDensity" .= Number (fromRational (toRational tsChainDensity))
-                 ]
+        mconcat [ "kind" .= String "TraceStartLeadershipCheck"
+                , "slot" .= toJSON (unSlotNo tsSlotNo)
+                , "utxoSize" .= Number (fromIntegral tsUtxoSize)
+                , "delegMapSize" .= Number (fromIntegral tsUtxoSize)
+                , "chainDensity" .= Number (fromRational (toRational tsChainDensity))
+                ]
   forHuman TraceStartLeadershipCheckPlus {..} =
       "Checking for leadership in slot " <> showT (unSlotNo tsSlotNo)
       <> " utxoSize " <> showT tsUtxoSize
@@ -1219,12 +1213,12 @@ instance LogFormatting TraceStartLeadershipCheckPlus where
     [IntM "cardano.node.utxoSize" (fromIntegral tsUtxoSize),
      IntM "cardano.node.delegMapSize" (fromIntegral tsDelegMapSize)]
 
-docForge :: Documented (Either (TraceLabelCreds (TraceForgeEvent blk))
-                               (TraceLabelCreds TraceStartLeadershipCheckPlus))
+docForge :: Documented (Either (TraceForgeEvent blk)
+                               TraceStartLeadershipCheckPlus)
 docForge = addDocumentedNamespace [] docForge'
 
-docForge' :: Documented (Either (TraceLabelCreds (TraceForgeEvent blk))
-                               (TraceLabelCreds TraceStartLeadershipCheckPlus))
+docForge' :: Documented (Either (TraceForgeEvent blk)
+                               TraceStartLeadershipCheckPlus)
 docForge' = Documented [
     DocMsg
       ["StartLeadershipCheck"]

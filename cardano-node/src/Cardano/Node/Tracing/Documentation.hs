@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE QuantifiedConstraints #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -381,7 +382,7 @@ docTracers configFileName outputFileName _ _ _ = do
     mempoolTrDoc <- documentTracer trConfig mempoolTr
       (docMempool :: Documented (TraceEventMempool blk))
 
-    forgeTr    <- mkCardanoTracer
+    forgeTr <-  mkCardanoTracer
                 trBase trForward mbTrEKG
                 "Forge"
                 namesForForge
@@ -389,24 +390,26 @@ docTracers configFileName outputFileName _ _ _ = do
                 allPublic
 
     -- TODO Tracers docforgeThreadStatsTr?
-    forgeThreadStatsTr <- mkCardanoTracer'
+    forgeThreadStatsTr <-
+                mkCardanoTracer'
                 trBase trForward mbTrEKG
                 "ForgeStats"
                 namesForForge
                 severityForge
                 allPublic
                 forgeThreadStats
+
     configureTracers trConfig docForge [forgeTr, forgeThreadStatsTr]
     forgeTrDoc <- documentTracer trConfig forgeTr
       (docForge :: Documented
-        (Either (Consensus.TraceLabelCreds (Consensus.TraceForgeEvent blk))
-                (Consensus.TraceLabelCreds TraceStartLeadershipCheckPlus)))
+        (Either (Consensus.TraceForgeEvent blk)
+                TraceStartLeadershipCheckPlus))
 
     forgeThreadStatsTrDoc <- documentTracer trConfig forgeThreadStatsTr
       (docForgeStats :: Documented
         (Either
-           (Consensus.TraceLabelCreds (Consensus.TraceForgeEvent blk))
-           (Consensus.TraceLabelCreds TraceStartLeadershipCheckPlus)))
+           (Consensus.TraceForgeEvent blk)
+           TraceStartLeadershipCheckPlus))
 
     blockchainTimeTr   <- mkCardanoTracer
                 trBase trForward mbTrEKG
