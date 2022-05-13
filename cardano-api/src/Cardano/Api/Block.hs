@@ -149,10 +149,10 @@ instance Show (Block era) where
         . showsPrec 11 block
         )
 
-    showsPrec p (ShelleyBlock ShelleyBasedEraBabbage _block) =
+    showsPrec p (ShelleyBlock ShelleyBasedEraBabbage block) =
       showParen (p >= 11)
         ( showString "ShelleyBlock ShelleyBasedEraBabbage "
-        . error "TODO: Babbage era - depends on consensus exposing a babbage era" --showsPrec 11 block
+        . showsPrec 11 block
         )
 
 getBlockTxs :: forall era . Block era -> [Tx era]
