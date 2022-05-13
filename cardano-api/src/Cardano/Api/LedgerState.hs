@@ -55,7 +55,7 @@ import           Control.Exception
 import           Control.Monad (when)
 import           Control.Monad.Trans.Class
 import           Control.Monad.Trans.Except
-import           Control.Monad.Trans.Except.Extra
+import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistEither, left)
 import           Data.Aeson as Aeson
 import qualified Data.Aeson.Types as Data.Aeson.Types.Internal
 import           Data.Bifunctor
@@ -63,6 +63,7 @@ import           Data.ByteArray (ByteArrayAccess)
 import qualified Data.ByteArray
 import           Data.ByteString as BS
 import qualified Data.ByteString.Base16 as Base16
+import qualified Data.ByteString.Lazy as LB
 import           Data.ByteString.Short as BSS
 import           Data.Foldable
 import           Data.IORef
@@ -77,8 +78,11 @@ import           Data.Sharing (FromSharedCBOR, Interns, Share)
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
+import           Data.Text.Lazy (toStrict)
+import           Data.Text.Lazy.Builder (toLazyText)
 import           Data.Word
 import qualified Data.Yaml as Yaml
+import           Formatting.Buildable (build)
 import           GHC.Records (HasField (..))
 import           System.FilePath
 
@@ -92,7 +96,7 @@ import           Cardano.Api.IPC (ConsensusModeParams (..),
                    LocalNodeConnectInfo (..), connectToLocalNode)
 import           Cardano.Api.KeysPraos
 import           Cardano.Api.LedgerEvent (LedgerEvent, toLedgerEvent)
-import           Cardano.Api.Modes (CardanoMode, EpochSlots (..))
+import           Cardano.Api.Modes (CardanoMode, ConsensusProtocol, EpochSlots (..))
 import           Cardano.Api.NetworkId (NetworkId (..), NetworkMagic (NetworkMagic))
 import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.Query (CurrentEpochState (..), ProtocolState,
@@ -112,7 +116,7 @@ import           Cardano.Ledger.BaseTypes (Globals (..), UnitInterval, (⭒))
 import qualified Cardano.Ledger.BaseTypes as Shelley.Spec
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Credential as Shelley.Spec
-import qualified Cardano.Ledger.Crypto as Crypto
+-- import qualified Cardano.Ledger.Crypto as Crypto
 import qualified Cardano.Ledger.Era as Ledger
 import qualified Cardano.Ledger.Keys as Shelley.Spec
 import qualified Cardano.Ledger.Shelley.API as ShelleyAPI
@@ -142,6 +146,8 @@ import           Ouroboros.Consensus.Ledger.Basics (LedgerResult (lrEvents), lrR
 import qualified Ouroboros.Consensus.Ledger.Extended as Ledger
 import qualified Ouroboros.Consensus.Mempool.TxLimits as TxLimits
 import qualified Ouroboros.Consensus.Node.ProtocolInfo as Consensus
+import qualified Ouroboros.Consensus.Protocol.Abstract as Consensus
+-- import qualified Ouroboros.Consensus.Protocol.Praos as Consensus
 import qualified Ouroboros.Consensus.Protocol.TPraos as TPraos
 import qualified Ouroboros.Consensus.Shelley.Eras as Shelley
 import qualified Ouroboros.Consensus.Shelley.Ledger.Block as Shelley
@@ -232,8 +238,7 @@ applyBlock env oldState validationMode block
         ShelleyBasedEraAllegra -> Consensus.BlockAllegra shelleyBlock
         ShelleyBasedEraMary    -> Consensus.BlockMary shelleyBlock
         ShelleyBasedEraAlonzo  -> Consensus.BlockAlonzo shelleyBlock
-        ShelleyBasedEraBabbage ->
-          error "TODO: Babbage era - depends on consensus exposing a babbage era"
+        ShelleyBasedEraBabbage -> Consensus.BlockBabbage shelleyBlock
 
 pattern LedgerStateByron
   :: Ledger.LedgerState Byron.ByronBlock
@@ -1262,7 +1267,7 @@ unChainHash ch =
     Ouroboros.Network.Block.BlockHash bh -> BSS.fromShort (HFC.getOneEraHash bh)
 
 data LeadershipError = LeaderErrDecodeLedgerStateFailure
-                     | LeaderErrDecodeProtocolStateFailure
+                     | LeaderErrDecodeProtocolStateFailure (LB.ByteString, DecoderError)
                      | LeaderErrDecodeProtocolEpochStateFailure DecoderError
                      | LeaderErrGenesisSlot
                      | LeaderErrStakePoolHasNoStake PoolId
@@ -1282,8 +1287,8 @@ data LeadershipError = LeaderErrDecodeLedgerStateFailure
 instance Error LeadershipError where
   displayError LeaderErrDecodeLedgerStateFailure =
     "Failed to successfully decode ledger state"
-  displayError LeaderErrDecodeProtocolStateFailure =
-    "Failed to successfully decode protocol state"
+  displayError (LeaderErrDecodeProtocolStateFailure (_, decErr)) =
+    "Failed to successfully decode protocol state: " <> Text.unpack (toStrict . toLazyText $ build decErr)
   displayError LeaderErrGenesisSlot =
     "Leadership schedule currently cannot be calculated from genesis"
   displayError (LeaderErrStakePoolHasNoStake poolId) =
@@ -1318,7 +1323,7 @@ nextEpochEligibleLeadershipSlots
   -> EpochInfo (Either Text)
   -> (ChainTip, EpochNo)
   -> Either LeadershipError (Set SlotNo)
-nextEpochEligibleLeadershipSlots sbe sGen serCurrEpochState ptclState
+nextEpochEligibleLeadershipSlots sbe sGen serCurrEpochState _ptclState
                  poolid@(StakePoolKeyHash poolHash) (VrfSigningKey vrfSkey) pParams
                  eInfo (cTip, currentEpoch) = do
 
@@ -1348,8 +1353,8 @@ nextEpochEligibleLeadershipSlots sbe sGen serCurrEpochState ptclState
       else Left $ LeaderErrStakeDistribUnstable tip stableStakeDistribSlot stabilityWindowSlots currentEpochLastSlot
 
   -- Let's do a nonce check. The candidate nonce and the evolving nonce should not be equal.
-  chainDepState <- first (const LeaderErrDecodeProtocolStateFailure)
-                     $ decodeProtocolState ptclState
+  chainDepState <- first LeaderErrDecodeProtocolStateFailure
+                     $ error "nextEpochEligibleLeadershipSlots: Currently broken" -- decodeProtocolState ptclState
 
   -- We need the candidate nonce, the previous epoch's last block header hash
   -- and the extra entropy from the protocol parameters. We then need to combine them
@@ -1384,6 +1389,18 @@ nextEpochEligibleLeadershipSlots sbe sGen serCurrEpochState ptclState
   f :: Shelley.Spec.ActiveSlotCoeff
   f = activeSlotCoeff globals
 
+
+--getFromCbor
+--  :: ShelleyBasedEra era
+--  -> (( FromCBOR (Consensus.ChainDepState (ConsensusProtocol era))
+--      , FromCBOR (ChainDepStateProtocol era)
+--      ) => a)
+--  -> a
+--getFromCbor ShelleyBasedEraShelley f = f
+--getFromCbor ShelleyBasedEraAllegra f = f
+--getFromCbor ShelleyBasedEraMary f = f
+--getFromCbor ShelleyBasedEraAlonzo f = f
+--getFromCbor ShelleyBasedEraBabbage f = f
 
 -- | Return slots a given stake pool operator is leading.
 -- See Leader Value Calculation in the Shelley ledger specification.
@@ -1457,9 +1474,11 @@ currentEpochEligibleLeadershipSlots
   :: ShelleyLedgerEra era ~ ledgerera
   => Ledger.Era ledgerera
   => HasField "_d" (Core.PParams ledgerera) UnitInterval
-  => Crypto.Signable (Crypto.VRF (Ledger.Crypto ledgerera)) Shelley.Spec.Seed
+  -- => Crypto.Signable (Crypto.VRF (Ledger.Crypto ledgerera)) Shelley.Spec.Seed
   => Share (Core.TxOut (ShelleyLedgerEra era)) ~ Interns (Shelley.Spec.Credential 'Shelley.Spec.Staking (Ledger.Crypto (ShelleyLedgerEra era)))
-  => Ledger.Crypto ledgerera ~ Shelley.StandardCrypto
+ -- => Ledger.Crypto ledgerera ~ Shelley.StandardCrypto
+  => FromCBOR (Consensus.ChainDepState (ConsensusProtocol era))
+  -- => Consensus.ChainDepState (ConsensusProtocol era) ~ Consensus.ChainDepState (ConsensusProtocol era)
   => ShelleyBasedEra era
   -> ShelleyGenesis Shelley.StandardShelley
   -> EpochInfo (Either Text)
@@ -1474,14 +1493,14 @@ currentEpochEligibleLeadershipSlots sbe sGen eInfo pParams ptclState
                         poolid@(StakePoolKeyHash poolHash) (VrfSigningKey vrkSkey)
                         serCurrEpochState currentEpoch = do
 
-  chainDepState <- first (const LeaderErrDecodeProtocolStateFailure)
+  _chainDepState <- first LeaderErrDecodeProtocolStateFailure
                      $ decodeProtocolState ptclState
 
   -- We use the current epoch's nonce for the current leadership schedule
   -- calculation because the TICKN transition updates the epoch nonce
   -- at the start of the epoch.
-  let Tick.TicknState epochNonce _ = TPraos.csTickn chainDepState
-
+  let -- Tick.TicknState epochNonce _ = TPraos.csTickn chainDepState
+      epochNonce = error "currentEpochEligibleLeadershipSlots: currently broken"
   currentEpochRange <- first LeaderErrSlotRangeCalculationFailure
                          $ Slot.epochInfoRange eInfo currentEpoch
 
