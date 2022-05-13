@@ -1673,6 +1673,7 @@ acceptKeyWitnessCDDLSerialisation err =
             , FromCDDLWitness "TxWitness AllegraEra" CddlWitness
             , FromCDDLWitness "TxWitness MaryEra" CddlWitness
             , FromCDDLWitness "TxWitness AlonzoEra" CddlWitness
+            , FromCDDLWitness "TxWitness BabbageEra" CddlWitness
             ]
 
 newtype CddlWitness = CddlWitness { unCddlWitness :: InAnyCardanoEra KeyWitness}
@@ -1722,11 +1723,13 @@ acceptTxCDDLSerialisation err =
             , FromCDDLTx "Witnessed Tx AllegraEra" CddlTx
             , FromCDDLTx "Witnessed Tx MaryEra" CddlTx
             , FromCDDLTx "Witnessed Tx AlonzoEra" CddlTx
+            , FromCDDLTx "Witnessed Tx BabbageEra" CddlTx
             , FromCDDLTx "Unwitnessed Tx Byron" CddlTx
             , FromCDDLTx "Unwitnessed Tx Shelley" CddlTx
             , FromCDDLTx "Unwitnessed Tx AllegraEra" CddlTx
             , FromCDDLTx "Unwitnessed Tx MaryEra" CddlTx
             , FromCDDLTx "Unwitnessed Tx AlonzoEra" CddlTx
+            , FromCDDLTx "Unwitnessed Tx BabbageEra" CddlTx
             ]
 
 readFileTx :: FilePath -> ExceptT ShelleyTxCmdError IO (InAnyCardanoEra Tx)
@@ -1742,6 +1745,7 @@ readFileInAnyCardanoEra
      , HasTextEnvelope (thing AllegraEra)
      , HasTextEnvelope (thing MaryEra)
      , HasTextEnvelope (thing AlonzoEra)
+     , HasTextEnvelope (thing BabbageEra)
      )
   => (forall era. AsType era -> AsType (thing era))
   -> FilePath
@@ -1756,6 +1760,7 @@ readFileInAnyCardanoEra asThing file =
       , FromSomeType (asThing AsAllegraEra) (InAnyCardanoEra AllegraEra)
       , FromSomeType (asThing AsMaryEra)    (InAnyCardanoEra MaryEra)
       , FromSomeType (asThing AsAlonzoEra)  (InAnyCardanoEra AlonzoEra)
+      , FromSomeType (asThing AsBabbageEra) (InAnyCardanoEra BabbageEra)
       ]
       file
 

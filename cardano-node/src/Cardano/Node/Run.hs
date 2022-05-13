@@ -181,7 +181,7 @@ handleNodeWithTracers
   -> NetworkMagic
   -> Protocol.ProtocolInfoArgs IO blk
   -> IO ()
-handleNodeWithTracers  cmdPc nc p networkMagic runP = do
+handleNodeWithTracers cmdPc nc p networkMagic runP = do
   -- This IORef contains node kernel structure which holds node kernel.
   -- Used for ledger queries and peer connection status.
   nodeKernelData <- mkNodeKernelData
