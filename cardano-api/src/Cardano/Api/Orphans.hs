@@ -188,6 +188,33 @@ instance ToJSON (Babbage.PParamsUpdate era) where
      ++ [ "collateralPercentage"  .= x | x <- mbfield (Babbage._collateralPercentage pp) ]
      ++ [ "maxCollateralInputs"   .= x | x <- mbfield (Babbage._maxCollateralInputs pp) ]
 
+instance ToJSON (Babbage.PParams (Babbage.BabbageEra Consensus.StandardCrypto)) where
+  toJSON pp =
+    Aeson.object
+      [ "minFeeA" .= Babbage._minfeeA pp
+      , "minFeeB" .= Babbage._minfeeB pp
+      , "maxBlockBodySize" .= Babbage._maxBBSize pp
+      , "maxTxSize" .= Babbage._maxTxSize pp
+      , "maxBlockHeaderSize" .= Babbage._maxBHSize pp
+      , "keyDeposit" .= Babbage._keyDeposit pp
+      , "poolDeposit" .= Babbage._poolDeposit pp
+      , "eMax" .= Babbage._eMax pp
+      , "nOpt" .= Babbage._nOpt pp
+      , "a0" .= Babbage._a0 pp
+      , "rho" .= Babbage._rho pp
+      , "tau" .= Babbage._tau pp
+      , "protocolVersion" .= Babbage._protocolVersion pp
+      , "minPoolCost" .= Babbage._minPoolCost pp
+      , "coinsPerUTxOWord" .= Babbage._coinsPerUTxOWord pp
+      , "costmdls" .= Babbage._costmdls pp
+      , "prices" .= Babbage._prices pp
+      , "maxTxExUnits" .= Babbage._maxTxExUnits pp
+      , "maxBlockExUnits" .= Babbage._maxBlockExUnits pp
+      , "maxValSize" .= Babbage._maxValSize pp
+      , "collateralPercentage" .= Babbage._collateralPercentage pp
+      , "maxCollateralInputs" .= Babbage._maxCollateralInputs pp
+      ]
+
 mbfield :: StrictMaybe a -> [a]
 mbfield SNothing  = []
 mbfield (SJust x) = [x]

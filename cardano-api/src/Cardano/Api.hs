@@ -551,6 +551,8 @@ module Cardano.Api (
     ConsensusModeIsMultiEra(..),
     AnyConsensusModeParams(..),
     ConsensusModeParams(..),
+    ConsensusProtocol,
+    ChainDepStateProtocol,
     ConsensusBlockForMode,
     ConsensusBlockForEra,
     EraInMode(..),
