@@ -6,6 +6,7 @@
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 -- The Shelley ledger uses promoted data kinds which we have to use, but we do
@@ -120,7 +121,6 @@ import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.TxBody
 import           Cardano.Api.Value
 
-import qualified Cardano.Protocol.TPraos.API as TPraos
 import qualified Data.Aeson.KeyMap as KeyMap
 import           Data.Word (Word64)
 
@@ -334,11 +334,12 @@ instance ( IsShelleyBasedEra era
 newtype ProtocolState era
   = ProtocolState (Serialised (Consensus.ChainDepState (ConsensusProtocol era)))
 
+-- ChainDepState can use Praos or TPraos crypto
 decodeProtocolState
-  :: ProtocolState era
-  -> Either LBS.ByteString (TPraos.ChainDepState StandardCrypto)
-decodeProtocolState (ProtocolState (Serialised pbs)) =
-  first (const pbs) (decodeFull pbs)
+  :: FromCBOR (Consensus.ChainDepState (ConsensusProtocol era))
+  => ProtocolState era
+  -> Either (LBS.ByteString, DecoderError) (Consensus.ChainDepState (ConsensusProtocol era))
+decodeProtocolState (ProtocolState (Serialised pbs)) = first (pbs,) $ decodeFull pbs
 
 newtype SerialisedCurrentEpochState era
   = SerialisedCurrentEpochState (Serialised (Shelley.EpochState (ShelleyLedgerEra era)))
@@ -469,8 +470,7 @@ toConsensusQuery (QueryInEra erainmode (QueryInShelleyBasedEra era q)) =
       AllegraEraInCardanoMode -> toConsensusQueryShelleyBased erainmode q
       MaryEraInCardanoMode    -> toConsensusQueryShelleyBased erainmode q
       AlonzoEraInCardanoMode  -> toConsensusQueryShelleyBased erainmode q
-      BabbageEraInCardanoMode ->
-        error "TODO: Babbage era - depends on consensus exposing a babbage era"
+      BabbageEraInCardanoMode -> toConsensusQueryShelleyBased erainmode q
 
 
 toConsensusQueryShelleyBased
@@ -557,8 +557,7 @@ consensusQueryInEraInMode erainmode =
       AllegraEraInCardanoMode -> Consensus.QueryIfCurrentAllegra
       MaryEraInCardanoMode    -> Consensus.QueryIfCurrentMary
       AlonzoEraInCardanoMode  -> Consensus.QueryIfCurrentAlonzo
-      BabbageEraInCardanoMode ->
-        error "TODO: Babbage era - depends on consensus exposing a babbage era"
+      BabbageEraInCardanoMode -> Consensus.QueryIfCurrentBabbage
 
 -- ----------------------------------------------------------------------------
 -- Conversions of query results from the consensus types.

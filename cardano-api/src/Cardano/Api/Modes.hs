@@ -28,6 +28,7 @@ module Cardano.Api.Modes (
 
     -- * The protocols supported in each era
     ConsensusProtocol,
+    ChainDepStateProtocol,
 
     -- * Connection parameters for each mode
     ConsensusModeParams(..),
@@ -139,6 +140,7 @@ toEraInMode ShelleyEra CardanoMode = Just ShelleyEraInCardanoMode
 toEraInMode AllegraEra CardanoMode = Just AllegraEraInCardanoMode
 toEraInMode MaryEra    CardanoMode = Just MaryEraInCardanoMode
 toEraInMode AlonzoEra  CardanoMode = Just AlonzoEraInCardanoMode
+toEraInMode BabbageEra CardanoMode = Just BabbageEraInCardanoMode
 toEraInMode _ _                    = Nothing
 
 -- | A representation of which 'CardanoEra's are included in each
@@ -312,6 +314,14 @@ type family ConsensusProtocol era where
   ConsensusProtocol MaryEra = Consensus.TPraos StandardCrypto
   ConsensusProtocol AlonzoEra = Consensus.TPraos StandardCrypto
   ConsensusProtocol BabbageEra = Consensus.Praos StandardCrypto
+
+
+type family ChainDepStateProtocol era where
+  ChainDepStateProtocol ShelleyEra = Consensus.TPraosState StandardCrypto
+  ChainDepStateProtocol AllegraEra = Consensus.TPraosState StandardCrypto
+  ChainDepStateProtocol MaryEra = Consensus.TPraosState StandardCrypto
+  ChainDepStateProtocol AlonzoEra = Consensus.TPraosState StandardCrypto
+  ChainDepStateProtocol BabbageEra = Consensus.PraosState StandardCrypto
 
 eraIndex0 :: Consensus.EraIndex (x0 : xs)
 eraIndex0 = Consensus.eraIndexZero
