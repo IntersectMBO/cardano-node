@@ -110,6 +110,7 @@ library
                       , cardano-crypto-wrapper
                       , cardano-data
                       , cardano-ledger-alonzo
+                      , cardano-ledger-babbage
                       , cardano-ledger-byron
                       , cardano-ledger-core
                       , cardano-ledger-shelley-ma
