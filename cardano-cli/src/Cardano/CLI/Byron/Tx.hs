@@ -52,6 +52,9 @@ import qualified Ouroboros.Consensus.Byron.Ledger as Byron
 import           Ouroboros.Consensus.Cardano.Block (EraMismatch (..))
 import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Client as Net.Tx
 
+import qualified Prettyprinter as PP
+import qualified Prettyprinter.Render.Terminal as PP
+
 data ByronTxError
   = TxDeserialisationFailed !FilePath !Binary.DecoderError
   | ByronTxSubmitError !Text
@@ -238,7 +241,7 @@ nodeSubmitTx network gentx = do
       Net.Tx.SubmitSuccess -> liftIO $ putTextLn "Transaction successfully submitted."
       Net.Tx.SubmitFail reason ->
         case reason of
-          TxValidationErrorInMode err _eraInMode -> left . ByronTxSubmitError . Text.pack $ show err
+          TxValidationErrorInMode err _eraInMode -> left . ByronTxSubmitError $ PP.renderStrict $ PP.layoutPretty PP.defaultLayoutOptions $ PP.pretty err
           TxValidationEraMismatch mismatchErr -> left $ ByronTxSubmitErrorEraMismatch mismatchErr
 
     return ()

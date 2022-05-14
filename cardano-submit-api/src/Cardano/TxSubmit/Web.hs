@@ -70,6 +70,9 @@ import qualified Servant
 import qualified System.IO as IO
 import qualified System.Metrics.Prometheus.Metric.Gauge as Gauge
 
+import qualified Prettyprinter as PP
+import qualified Prettyprinter.Render.Layout as PP
+
 runTxSubmitServer
   :: Trace IO Text
   -> TxSubmitMetrics
@@ -161,7 +164,7 @@ txSubmitPost trace metrics (AnyConsensusModeParams cModeParams) networkId (Socke
         return $ getTxId (getTxBody tx)
       Net.Tx.SubmitFail reason ->
         case reason of
-          TxValidationErrorInMode err _eraInMode -> left . TxCmdTxSubmitError . T.pack $ show err
+          TxValidationErrorInMode err _eraInMode -> left . TxCmdTxSubmitError . T.pack $ PP.renderStrict $ PP.layoutPretty PP.defaultLayoutOptions $ PP.pretty err
           TxValidationEraMismatch mismatchErr -> left $ TxCmdTxSubmitErrorEraMismatch mismatchErr
     where
       handle :: ExceptT TxCmdError IO TxId -> Handler TxId

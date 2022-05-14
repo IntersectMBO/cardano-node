@@ -59,6 +59,7 @@ import qualified Ouroboros.Consensus.HardFork.Combinator.Degenerate as Consensus
 import qualified Ouroboros.Consensus.Ledger.SupportsMempool as Consensus
 import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
 import qualified Ouroboros.Consensus.TypeFamilyWrappers as Consensus
+import qualified Prettyprinter as PP
 
 
 -- ----------------------------------------------------------------------------
@@ -255,43 +256,42 @@ instance ToJSON (TxValidationError era) where
     ShelleyTxValidationError ShelleyBasedEraAlonzo applyTxError -> applyTxErrorToJson applyTxError
     ShelleyTxValidationError ShelleyBasedEraBabbage _applyTxError -> Aeson.Null -- TODO implement
 
--- The GADT in the ShelleyTxValidationError case requires a custom instance
-instance Show (TxValidationError era) where
-    showsPrec p (ByronTxValidationError err) =
-      showParen (p >= 11)
-        ( showString "ByronTxValidationError "
-        . showsPrec 11 err
-        )
+instance PP.Pretty (TxValidationError era) where
+  pretty (ByronTxValidationError err) = mconcat
+    [ "ByronTxValidationError:"
+    , PP.line
+    , PP.nest 2 $ PP.pretty $ show err
+    ]
 
-    showsPrec p (ShelleyTxValidationError ShelleyBasedEraShelley err) =
-      showParen (p >= 11)
-        ( showString "ShelleyTxValidationError ShelleyBasedEraShelley "
-        . showsPrec 11 err
-        )
+  pretty (ShelleyTxValidationError ShelleyBasedEraShelley err) =mconcat
+    [ "ShelleyTxValidationError ShelleyBasedEraShelley:"
+    , PP.line
+    , PP.nest 2 $ PP.pretty $ show err
+    ]
 
-    showsPrec p (ShelleyTxValidationError ShelleyBasedEraAllegra err) =
-      showParen (p >= 11)
-        ( showString "ShelleyTxValidationError ShelleyBasedEraAllegra "
-        . showsPrec 11 err
-        )
+  pretty (ShelleyTxValidationError ShelleyBasedEraAllegra err) =mconcat
+    [ "ShelleyTxValidationError ShelleyBasedEraAllegra:"
+    , PP.line
+    , PP.nest 2 $ PP.pretty $ show err
+    ]
 
-    showsPrec p (ShelleyTxValidationError ShelleyBasedEraMary err) =
-      showParen (p >= 11)
-        ( showString "ShelleyTxValidationError ShelleyBasedEraMary "
-        . showsPrec 11 err
-        )
+  pretty (ShelleyTxValidationError ShelleyBasedEraMary err) =mconcat
+    [ "ShelleyTxValidationError ShelleyBasedEraMary:"
+    , PP.line
+    , PP.nest 2 $ PP.pretty $ show err
+    ]
 
-    showsPrec p (ShelleyTxValidationError ShelleyBasedEraAlonzo err) =
-      showParen (p >= 11)
-        ( showString "ShelleyTxValidationError ShelleyBasedEraAlonzo "
-        . showsPrec 11 err
-        )
+  pretty (ShelleyTxValidationError ShelleyBasedEraAlonzo err) =mconcat
+    [ "ShelleyTxValidationError ShelleyBasedEraAlonzo:"
+    , PP.line
+    , PP.nest 2 $ PP.pretty $ show err
+    ]
 
-    showsPrec p (ShelleyTxValidationError ShelleyBasedEraBabbage err) =
-      showParen (p >= 11)
-        ( showString "ShelleyTxValidationError ShelleyBasedEraBabbage "
-        . showsPrec 11 err
-        )
+  pretty (ShelleyTxValidationError ShelleyBasedEraBabbage err) =mconcat
+    [ "ShelleyTxValidationError ShelleyBasedEraBabbage:"
+    , PP.line
+    , PP.nest 2 $ PP.pretty $ show err
+    ]
 
 -- | A 'TxValidationError' in one of the eras supported by a given protocol
 -- mode.
@@ -306,8 +306,28 @@ data TxValidationErrorInMode mode where
      TxValidationEraMismatch :: EraMismatch
                              -> TxValidationErrorInMode mode
 
-deriving instance Show (TxValidationErrorInMode mode)
+instance PP.Pretty (TxValidationErrorInMode mode) where
+  pretty (TxValidationErrorInMode e eraInMode) = mconcat
+    [ "TxValidationErrorInMode"
+    , PP.line
+    , PP.nest 2 $ mconcat
+      [ "era in mode:" <> PP.pretty (show eraInMode)
+      , PP.line
+      , "error:"
+      , PP.line
+      , PP.nest 2 $ PP.pretty e
+      ]
+    ]
 
+  pretty (TxValidationEraMismatch e) = mconcat
+    [ "TxValidationErrorInMode"
+    , PP.line
+    , PP.nest 2 $ mconcat
+      [ "error:"
+      , PP.line
+      , PP.nest 2 $ PP.pretty (show e)
+      ]
+    ]
 
 fromConsensusApplyTxErr :: ConsensusBlockForMode mode ~ block
                         => ConsensusMode mode

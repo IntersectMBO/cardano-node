@@ -134,6 +134,7 @@ library
                       , ouroboros-network
                       , parsec
                       , prettyprinter
+                      , prettyprinter-ansi-terminal
                       , cardano-ledger-shelley
                       , set-algebra
                       , split
