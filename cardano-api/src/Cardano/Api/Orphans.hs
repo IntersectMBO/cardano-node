@@ -1393,10 +1393,9 @@ instance ToJSON Alonzo.FailureDescription where
       , "error"       .= String "OnePhaseFailure"
       , "description" .= t
       ]
-    Alonzo.PlutusFailure t bs -> object
+    Alonzo.PlutusFailure _t bs -> object
       [ "kind"                  .= String "FailureDescription"
       , "error"                 .= String "PlutusFailure"
-      , "description"           .= t
       , "reconstructionDetail"  .= Alonzo.debugPlutus (BSU.toString bs)
       ]
 
