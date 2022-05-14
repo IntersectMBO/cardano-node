@@ -211,7 +211,7 @@ mkDispatchTracers nodeKernel trBase trForward mbTrEKG trDataPoint trConfig enabl
       , startupTracer = Tracer $ \x -> traceWith startupTr x >> SR.traceNodeStateStartup nodeStateTr x
       , shutdownTracer = Tracer $ \x -> traceWith shutdownTr x >> SR.traceNodeStateShutdown nodeStateTr x
       , nodeInfoTracer = Tracer (traceWith nodeInfoTr)
-      , nodeStateTracer = Tracer $ \x -> traceWith stateTr x >> traceWith nodeStateTr x
+      , nodeStateTracer = Tracer (traceWith stateTr) <> Tracer (traceWith nodeStateTr)
       , resourcesTracer = Tracer (traceWith resourcesTr)
       , peersTracer = Tracer $ \x -> traceWith peersTr x >> traceNodePeers nodePeersTr x
     }

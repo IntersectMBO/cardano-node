@@ -111,7 +111,8 @@ import           Ouroboros.Consensus.MiniProtocol.LocalTxSubmission.Server
 import           Ouroboros.Consensus.Node.Run (SerialiseNodeToNodeConstraints, estimateBlockSize)
 import           Ouroboros.Consensus.Node.Tracers
 import qualified Ouroboros.Consensus.Protocol.Ledger.HotKey as HotKey
-
+import qualified Ouroboros.Network.AnchoredFragment as AF
+import qualified Ouroboros.Network.AnchoredSeq as AS
 
 
 
@@ -454,23 +455,47 @@ namesForBlockFetchClient' BlockFetch.ClientTerminating {} =
   ["ClientTerminating"]
 
 
-instance LogFormatting (BlockFetch.TraceFetchClientState header) where
+instance (HasHeader header, ConvertRawHash header) =>
+  LogFormatting (BlockFetch.TraceFetchClientState header) where
   forMachine _dtal BlockFetch.AddedFetchRequest {} =
     mconcat [ "kind" .= String "AddedFetchRequest" ]
   forMachine _dtal BlockFetch.AcknowledgedFetchRequest {} =
     mconcat [ "kind" .= String "AcknowledgedFetchRequest" ]
-  forMachine _dtal BlockFetch.SendFetchRequest {} =
-    mconcat [ "kind" .= String "SendFetchRequest" ]
-  forMachine _dtal BlockFetch.CompletedBlockFetch {} =
-    mconcat [ "kind" .= String "CompletedBlockFetch" ]
+  forMachine _dtal (BlockFetch.SendFetchRequest af) =
+    mconcat [ "kind" .= String "SendFetchRequest"
+            , "head" .= String (renderChainHash
+                                 (renderHeaderHash (Proxy @header))
+                                 (AF.headHash af))
+            , "length" .= toJSON (fragmentLength af)]
+   where
+     -- NOTE: this ignores the Byron era with its EBB complication:
+     -- the length would be underestimated by 1, if the AF is anchored
+     -- at the epoch boundary.
+     fragmentLength :: AF.AnchoredFragment header -> Int
+     fragmentLength f = fromIntegral . unBlockNo $
+        case (f, f) of
+          (AS.Empty{}, AS.Empty{}) -> 0
+          (firstHdr AS.:< _, _ AS.:> lastHdr) ->
+            blockNo lastHdr - blockNo firstHdr + 1
+  forMachine _dtal (BlockFetch.CompletedBlockFetch pt _ _ _ delay blockSize) =
+    mconcat [ "kind"  .= String "CompletedBlockFetch"
+            , "delay" .= (realToFrac delay :: Double)
+            , "size"  .= blockSize
+            , "block" .= String
+              (case pt of
+                 GenesisPoint -> "Genesis"
+                 BlockPoint _ h -> renderHeaderHash (Proxy @header) h)
+            ]
   forMachine _dtal BlockFetch.CompletedFetchBatch {} =
     mconcat [ "kind" .= String "CompletedFetchBatch" ]
   forMachine _dtal BlockFetch.StartedFetchBatch {} =
     mconcat [ "kind" .= String "StartedFetchBatch" ]
   forMachine _dtal BlockFetch.RejectedFetchBatch {} =
     mconcat [ "kind" .= String "RejectedFetchBatch" ]
-  forMachine _dtal BlockFetch.ClientTerminating {} =
-    mconcat [ "kind" .= String "ClientTerminating" ]
+  forMachine _dtal (BlockFetch.ClientTerminating outstanding) =
+    mconcat [ "kind" .= String "ClientTerminating"
+            , "outstanding" .= outstanding
+            ]
 
 
 docBlockFetchClient ::
