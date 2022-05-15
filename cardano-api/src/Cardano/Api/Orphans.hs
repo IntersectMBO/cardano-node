@@ -86,6 +86,7 @@ import           Ouroboros.Consensus.Util.Condense (condense)
 import           Ouroboros.Network.Block (blockHash, blockNo, blockSlot)
 import           Ouroboros.Network.Point (WithOrigin, withOriginToMaybe)
 import           Prelude hiding ((.), map, show)
+import           Prettyprinter (Pretty)
 
 import qualified Cardano.Api.Alonzo.Render as Render
 import qualified Cardano.Api.Ledger.Mary as Api
@@ -1698,8 +1699,6 @@ instance
 
 instance
   ( ShelleyBasedEra era
-  -- , ToJSON (PredicateFailure (UTXO era))
-  -- , ToJSON (PredicateFailure (UTXOW era))
   , PP.Pretty (PredicateFailure (Core.EraRule "DELEGS" era))
   , PP.Pretty (PredicateFailure (Core.EraRule "UTXOW" era))
   ) => PP.Pretty (LedgerPredicateFailure era) where
@@ -1978,17 +1977,78 @@ instance
       , "rdmrs" .= map (Api.renderScriptWitnessIndex . Api.fromAlonzoRdmrPtr) rdmrs
       ]
 
--- instance ToJSON (PredicateFailure (Core.EraRule "LEDGER" era)) => ToJSON (ApplyTxError era) where
---   toJSON (ApplyTxError es) = toJSON es
-
--- applyTxErrorToJson ::
---   ( Consensus.ShelleyBasedEra era
+-- instance
+--   ( ShelleyBasedEra era
 --   , ToJSON (Core.AuxiliaryDataHash (Ledger.Crypto era))
---   , ToJSON (Core.TxOut era)
---   , ToJSON (Core.Value era)
---   , ToJSON (Ledger.PredicateFailure (Core.EraRule "DELEGS" era))
---   , ToJSON (Ledger.PredicateFailure (Core.EraRule "PPUP" era))
---   , ToJSON (Ledger.PredicateFailure (Core.EraRule "UTXO" era))
---   , ToJSON (Ledger.PredicateFailure (Core.EraRule "UTXOW" era))
---   ) => Consensus.ApplyTxErr (Consensus.ShelleyBlock era) -> Value
--- applyTxErrorToJson (Consensus.ApplyTxError predicateFailures) = toJSON (fmap toJSON predicateFailures)
+--   ) => Pretty (Core.AuxiliaryDataHash (Ledger.Crypto era)) where
+--   pretty hash = PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ toJSON hash
+
+instance
+  ( ShelleyBasedEra era
+  , ToJSON (PredicateFailure (UTXO era))
+  -- , ToJSON (PredicateFailure (Core.EraRule "UTXO" era))
+  , Pretty (PredicateFailure (Core.EraRule "UTXO" era))
+  , ToJSON (Core.AuxiliaryDataHash (Ledger.Crypto era))
+  ) => PP.Pretty (UtxowPredicateFailure era) where
+  pretty (ExtraneousScriptWitnessesUTXOW extraneousScripts) = "[h1]" <> do
+    PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
+      [ "kind"              .= String "InvalidWitnessesUTXOW"
+      , "extraneousScripts" .= extraneousScripts
+      ]
+  pretty (InvalidWitnessesUTXOW wits') = "[h2]" <> do
+    PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
+      [ "kind"              .= String "InvalidWitnessesUTXOW"
+      , "invalidWitnesses"  .= map textShow wits'
+      ]
+  pretty (MissingVKeyWitnessesUTXOW (WitHashes wits')) = "[h3]" <> do
+    PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
+      [ "kind"              .= String "MissingVKeyWitnessesUTXOW"
+      , "missingWitnesses"  .= wits'
+      ]
+  pretty (MissingScriptWitnessesUTXOW missingScripts) = "[h4]" <> do
+    PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
+      [ "kind"            .= String "MissingScriptWitnessesUTXOW"
+      , "missingScripts"  .= missingScripts
+      ]
+  pretty (ScriptWitnessNotValidatingUTXOW failedScripts) = "[h5]" <> do
+    PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
+      [ "kind"          .= String "ScriptWitnessNotValidatingUTXOW"
+      , "failedScripts" .= failedScripts
+      ]
+  pretty (UtxoFailure f) = PP.pretty f
+  pretty (MIRInsufficientGenesisSigsUTXOW genesisSigs) = "[h6]" <> do
+    PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
+      [ "kind"        .= String "MIRInsufficientGenesisSigsUTXOW"
+      , "genesisSigs" .= genesisSigs
+      ]
+  pretty (MissingTxBodyMetadataHash metadataHash) = "[h7]" <> do
+    PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
+      [ "kind"          .= String "MissingTxBodyMetadataHash"
+      , "metadataHash"  .= metadataHash
+      ]
+  pretty (MissingTxMetadata txBodyMetadataHash) = "[h8]" <> do
+    PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
+      [ "kind"                .= String "MissingTxMetadata"
+      , "txBodyMetadataHash"  .= txBodyMetadataHash
+      ]
+  pretty (ConflictingMetadataHash txBodyMetadataHash fullMetadataHash) = "[h9]" <> do
+    PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
+      [ "kind"                .= String "ConflictingMetadataHash"
+      , "txBodyMetadataHash"  .= txBodyMetadataHash
+      , "fullMetadataHash"    .= fullMetadataHash
+      ]
+  pretty InvalidMetadata = "[h10]" <> do
+    PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
+      [ "kind"  .= String "InvalidMetadata"
+      ]
+
+-- instance
+--   ( ShelleyBasedEra era
+--   -- , ToObject (PredicateFailure (UTXO era))
+--   -- , ToObject (PredicateFailure (UTXOW era))
+--   -- , ToObject (PredicateFailure (Core.EraRule "LEDGER" era))
+--   ) => PP.Pretty (ApplyTxError era) where
+--   pretty verb (ApplyTxError predicateFailures) = PP.vsep $ map pretty predicateFailures
+
+-- (PP.Pretty
+--                           (PredicateFailure (Ledger.EraRule "UTXO" era)))
