@@ -1,6 +1,5 @@
 {-# LANGUAGE FlexibleInstances #-}
-
-{-# OPTIONS_GHC -Wno-deprecations #-} -- TODO Fix deprecations
+{-# LANGUAGE OverloadedStrings #-}
 
 module Main
   ( main
@@ -20,11 +19,11 @@ import qualified Spec.Network
 
 tests :: IO T.TestTree
 tests = do
-  let t0 = H.testProperty "isPortOpen False" Spec.Network.hprop_isPortOpen_False
-  let t1 = H.testProperty "isPortOpen True" Spec.Network.hprop_isPortOpen_True
-  let t2 = H.testProperty "chairman" Spec.Chairman.Byron.hprop_chairman
-  let t3 = H.testProperty "chairman" Spec.Chairman.Cardano.hprop_chairman
-  let t4 = H.testProperty "chairman" Spec.Chairman.Shelley.hprop_chairman
+  let t0 = H.testPropertyNamed "isPortOpen False" "isportopen-true"   Spec.Network.hprop_isPortOpen_False
+  let t1 = H.testPropertyNamed "isPortOpen True"  "isportopen-false"  Spec.Network.hprop_isPortOpen_True
+  let t2 = H.testPropertyNamed "chairman Byron"   "chairman-byron"    Spec.Chairman.Byron.hprop_chairman
+  let t3 = H.testPropertyNamed "chairman Cardano" "chairman-cardano"  Spec.Chairman.Cardano.hprop_chairman
+  let t4 = H.testPropertyNamed "chairman Shelley" "chairman-shell"    Spec.Chairman.Shelley.hprop_chairman
 
   pure $ T.testGroup "test/Spec.hs"
     [ T.testGroup "Spec"

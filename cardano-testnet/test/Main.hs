@@ -1,7 +1,6 @@
 {-# LANGUAGE FlexibleInstances   #-}
 {-# LANGUAGE ImportQualifiedPost #-}
-
-{-# OPTIONS_GHC -Wno-deprecations #-} -- TODO Fix deprecations
+{-# LANGUAGE OverloadedStrings   #-}
 
 module Main
   ( main
@@ -20,11 +19,11 @@ import Test.Util qualified as H
 tests :: IO TestTree
 tests = pure $ T.testGroup "test/Spec.hs"
   [ T.testGroup "Spec"
-    [ H.ignoreOnWindows "Shutdown" Spec.Node.Shutdown.hprop_shutdown
-    , H.ignoreOnWindows "ShutdownOnSlotSynced" Spec.ShutdownOnSlotSynced.hprop_shutdownOnSlotSynced
+    [ H.ignoreOnWindows "Spec.Node.Shutdown" "Spec.Node.Shutdown" Spec.Node.Shutdown.hprop_shutdown
+    , H.ignoreOnWindows "Spec.ShutdownOnSlotSynced" "Spec.ShutdownOnSlotSynced" Spec.ShutdownOnSlotSynced.hprop_shutdownOnSlotSynced
       -- Ignored on Windows due to <stdout>: commitBuffer: invalid argument (invalid character)
       -- as a result of the kes-period-info output to stdout.
-      , H.ignoreOnWindows "kes-period-info" Spec.Cli.KesPeriodInfo.hprop_kes_period_info
+      , H.ignoreOnWindows "Spec.Cli.KesPeriodInfo" "Spec.Cli.KesPeriodInfo" Spec.Cli.KesPeriodInfo.hprop_kes_period_info
     ]
   ]
 
