@@ -24,6 +24,7 @@ import qualified Control.Concurrent.STM as STM
 import           Control.Monad (fail)
 import           Control.Monad.Trans.Except.Extra (newExceptT)
 import           Control.Tracer (Tracer, traceWith)
+import qualified Data.Text as Text
 import qualified Data.Time.Clock as Clock
 
 import qualified Data.List.NonEmpty as NE
@@ -52,6 +53,9 @@ import           Cardano.Benchmarking.Wallet (WalletScript)
 
 import           Cardano.Ledger.Shelley.API (ShelleyGenesis)
 import           Ouroboros.Network.Protocol.LocalTxSubmission.Type (SubmitResult (..))
+
+import qualified Prettyprinter as PP
+import qualified Prettyprinter.Render.Terminal as PP
 
 readSigningKey :: SigningKeyFile -> ExceptT TxGenError IO (SigningKey PaymentKey)
 readSigningKey =
@@ -91,7 +95,7 @@ secureGenesisFund submitTracer localSubmitTx networkId genesis txFee ttl key out
       [ "******* Funding secured ("
       , show $ fundTxIn fund, " -> ", show $ fundAdaValue fund
       , ")"]
-    SubmitFail e -> fail $ show e
+    SubmitFail e -> fail $ Text.unpack $ PP.renderStrict $ PP.layoutPretty PP.defaultLayoutOptions $ PP.pretty e
   return fund
 
 type AsyncBenchmarkControl = (Async (), [Async ()], IO SubmissionSummary, IO ())

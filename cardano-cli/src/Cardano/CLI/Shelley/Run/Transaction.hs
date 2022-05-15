@@ -61,6 +61,9 @@ import           Ouroboros.Consensus.Shelley.Ledger (ShelleyBlock)
 import           Ouroboros.Network.Protocol.LocalStateQuery.Type (AcquireFailure (..))
 import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Client as Net.Tx
 
+import qualified Prettyprinter as PP
+import qualified Prettyprinter.Render.Terminal as PP
+
 import qualified System.IO as IO
 
 {- HLINT ignore "Use let" -}
@@ -1206,7 +1209,7 @@ runTxSubmit (AnyConsensusModeParams cModeParams) network txFile mErrorDetailFp =
       Net.Tx.SubmitFail reason ->
         case reason of
           TxValidationErrorInMode err _eraInMode -> do
-            let errorAsText = Text.pack (show err)
+            let errorAsText = PP.renderStrict $ PP.layoutPretty PP.defaultLayoutOptions $ PP.pretty err
             forM_ mErrorDetailFp $ \errorDetailFp ->
               liftIO $ LBS.writeFile errorDetailFp (Aeson.encode err)
             left $ ShelleyTxCmdTxSubmitError errorAsText

@@ -59,6 +59,9 @@ import           Cardano.Benchmarking.Script.Setters
 import           Cardano.Benchmarking.Script.Store as Store
 import           Cardano.Benchmarking.Script.Types
 
+import qualified Prettyprinter as PP
+import qualified Prettyprinter.Render.Terminal as PP
+
 liftCoreWithEra :: AnyCardanoEra -> (forall era. IsShelleyBasedEra era => AsType era -> ExceptT TxGenError IO x) -> ActionM (Either TxGenError x)
 liftCoreWithEra era coreCall = withEra era ( liftIO . runExceptT . coreCall)
 
@@ -229,7 +232,11 @@ localSubmitTx tx = do
   case ret of
     SubmitSuccess -> return ()
     SubmitFail e -> traceDebug $ concat
-                        [ "local submit failed: " , show e , " (" , show tx , ")"]
+      [ "local submit failed: "
+      , Text.unpack $ PP.renderStrict $ PP.layoutPretty PP.defaultLayoutOptions $ PP.pretty e
+      , " ("
+      , show tx
+      , ")"]
   return ret
 
 makeMetadata :: forall era. IsShelleyBasedEra era => ActionM (TxMetadataInEra era)

@@ -99,6 +99,8 @@ library
                      , ouroboros-consensus-shelley
                      , ouroboros-network
                      , ouroboros-network-framework
+                     , prettyprinter
+                     , prettyprinter-ansi-terminal
                      , plutus-ledger-api
                      , random
                      , serialise

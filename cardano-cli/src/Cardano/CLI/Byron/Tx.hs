@@ -30,7 +30,6 @@ import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
-import qualified Data.Text as Text
 import           Formatting (sformat, (%))
 
 import           Cardano.Api
