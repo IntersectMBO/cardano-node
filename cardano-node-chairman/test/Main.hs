@@ -1,5 +1,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 
+{-# OPTIONS_GHC -Wno-deprecations #-} -- TODO Fix deprecations
+
 module Main
   ( main
   ) where

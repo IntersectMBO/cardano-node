@@ -3,6 +3,8 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE TemplateHaskell #-}
 
+{-# OPTIONS_GHC -Wno-deprecations #-} -- TODO Fix deprecations
+
 module Test.Cardano.Api.Json
   ( tests
   ) where

@@ -2952,11 +2952,11 @@
     "hackageNix": {
       "flake": false,
       "locked": {
-        "lastModified": 1646961339,
-        "narHash": "sha256-hsXNxSugSyOALfOt0I+mXrKioJ/nWX49/RhF/88N6D0=",
+        "lastModified": 1652577195,
+        "narHash": "sha256-BpjiUhjS1k3qWmGrMqhh/kPit8PEpLGFMAsQzGuAA1Q=",
         "owner": "input-output-hk",
         "repo": "hackage.nix",
-        "rev": "5dea95d408c29b56a14faae378ae4e39d63126f4",
+        "rev": "b0eecedf42be238ab752cf9c2d3ee86d33aa9d4c",
         "type": "github"
       },
       "original": {

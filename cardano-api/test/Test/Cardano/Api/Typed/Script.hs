@@ -1,5 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 
+{-# OPTIONS_GHC -Wno-deprecations #-} -- TODO Fix deprecations
+
 module Test.Cardano.Api.Typed.Script
   ( tests
   ) where

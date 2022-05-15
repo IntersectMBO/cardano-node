@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -Wno-deprecations #-} -- TODO Fix deprecations
+
 module Test.Util
   ( ignoreOn
   , ignoreOnWindows

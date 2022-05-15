@@ -1,6 +1,8 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE TemplateHaskell #-}
 
+{-# OPTIONS_GHC -Wno-deprecations #-} -- TODO Fix deprecations
+
 module Test.Cardano.Api.KeysByron
   ( tests
   ) where
