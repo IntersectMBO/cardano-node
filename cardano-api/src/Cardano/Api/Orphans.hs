@@ -119,12 +119,14 @@ import qualified Cardano.Ledger.Shelley.LedgerState as ShelleyLedger
 import qualified Cardano.Ledger.Shelley.PoolRank as Shelley
 import qualified Cardano.Ledger.Shelley.Rewards as Shelley
 import qualified Cardano.Ledger.Shelley.RewardUpdate as Shelley
+import qualified Cardano.Ledger.Shelley.Rules.Bbody as Ledger
 import qualified Cardano.Ledger.ShelleyMA.Rules.Utxo as MA
 import qualified Cardano.Ledger.ShelleyMA.Timelocks as MA
 import qualified Cardano.Prelude as CP
 import qualified Cardano.Protocol.TPraos.BHeader as Protocol
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Base16 as B16
+import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Short as SBS
 import qualified Data.ByteString.UTF8 as BSU
 import qualified Data.Compact.VMap as VMap
@@ -135,6 +137,7 @@ import qualified Data.Text.Encoding as Text
 import qualified Ouroboros.Consensus.Ledger.SupportsMempool as SupportsMempool
 import qualified Ouroboros.Consensus.Protocol.Ledger.HotKey as HotKey
 import qualified Ouroboros.Consensus.Shelley.Eras as Consensus
+import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
 import qualified Plutus.V1.Ledger.Api as Plutus
 import qualified Plutus.V1.Ledger.Api as PV1
 import qualified PlutusCore
@@ -142,6 +145,7 @@ import qualified PlutusCore.Core as Plutus
 import qualified PlutusCore.DeBruijn
 import qualified PlutusCore.Evaluation.Machine.ExBudget as Cek
 import qualified PlutusCore.Evaluation.Machine.Exception
+import qualified Prettyprinter as PP
 import qualified UntypedPlutusCore.Core.Type
 import qualified UntypedPlutusCore.Evaluation.Machine.Cek.Internal as Cek
 
@@ -631,7 +635,7 @@ instance
     , "value" .= toJSON f
     ]
   toJSON (DelegsFailure f) = object
-    [ "kind"  .= String "UtxowFailure"
+    [ "kind"  .= String "DelegsFailure"
     , "value" .= toJSON f
     ]
 
@@ -1680,3 +1684,277 @@ showLastAppBlockNo :: WithOrigin (LastAppliedBlock crypto) -> Text
 showLastAppBlockNo wOblk =  case withOriginToMaybe wOblk of
                      Nothing -> "Genesis Block"
                      Just blk -> textShow . unBlockNo $ labBlockNo blk
+
+-------
+
+instance
+  ( ShelleyBasedEra era
+  , PP.Pretty (PredicateFailure (Core.EraRule "DELEGS" era))
+  , PP.Pretty (PredicateFailure (Core.EraRule "UTXOW" era))
+  ) => PP.Pretty (Consensus.ApplyTxError era) where
+  pretty (Consensus.ApplyTxError predicateFailures) = PP.vsep (fmap PP.pretty predicateFailures)
+
+
+instance
+  ( ShelleyBasedEra era
+  -- , ToJSON (PredicateFailure (UTXO era))
+  -- , ToJSON (PredicateFailure (UTXOW era))
+  , PP.Pretty (PredicateFailure (Core.EraRule "DELEGS" era))
+  , PP.Pretty (PredicateFailure (Core.EraRule "UTXOW" era))
+  ) => PP.Pretty (LedgerPredicateFailure era) where
+  pretty (UtxowFailure f) = PP.vsep
+    [ "kind: UtxowFailure"
+    , PP.nest 2 $ PP.vsep
+      [ "value: "
+      , PP.pretty f
+      ]
+    ]
+  pretty (DelegsFailure f) = mempty
+    [ "kind: DelegsFailure"
+    , PP.nest 2 $ PP.vsep
+      [ "value: "
+      , PP.pretty f
+      ]
+    ]
+
+instance
+  ( PP.Pretty (PredicateFailure (Core.EraRule "POOL" era))
+  , PP.Pretty (PredicateFailure (Core.EraRule "DELEG" era))
+  ) => PP.Pretty (DelplPredicateFailure era) where
+  pretty (PoolFailure   f) = PP.pretty f
+  pretty (DelegFailure  f) = PP.pretty f
+
+instance ( ShelleyBasedEra era
+         , PP.Pretty (Ledger.PredicateFailure (Core.EraRule "DELPL" era))
+         , ToJSON (Map (RewardAcnt (Ledger.Crypto era)) Coin)
+         ) => PP.Pretty (DelegsPredicateFailure era) where
+  pretty (DelegateeNotRegisteredDELEG targetPool) = PP.vsep
+    [ "DelegateeNotRegisteredDELEG"
+    , "targetPool:"
+    , PP.nest 2 $ PP.pretty targetPool
+    ]
+  pretty (WithdrawalsNotInRewardsDELEGS incorrectWithdrawals) = PP.vsep
+    [ "WithdrawalsNotInRewardsDELEGS"
+    , "incorrectWithdrawals"
+    -- TODO borrowing ToJSON instance
+    , PP.nest 2 $ PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ toJSON incorrectWithdrawals
+    ]
+  pretty (DelplFailure f) = PP.pretty f
+
+instance Crypto.Crypto crypto => PP.Pretty (VMap VB VB (Shelley.KeyHash 'Shelley.StakePool crypto) (Shelley.PoolParams crypto)) where
+  pretty = prettyMap . VMap.toMap
+
+prettyMap :: forall k v ann. (PP.Pretty k, PP.Pretty v) => Map k v -> PP.Doc ann
+prettyMap m = PP.vsep $ uncurry prettyEntry <$> Map.toList m
+  where prettyEntry :: k -> v -> PP.Doc ann
+        prettyEntry k v = PP.hsep
+          [ PP.pretty k <> ": "
+          , PP.nest 2 $ PP.pretty v
+          ]
+
+-- TODO Borrowing ToJSON instance for implementation for now.
+instance
+  ( Crypto.Crypto crypto
+  , ToJSON (KeyHash 'StakePool crypto)
+  ) => PP.Pretty (KeyHash 'StakePool crypto) where
+  pretty = PP.pretty . Text.decodeUtf8 . LBS.toStrict . Aeson.encode . toJSON
+
+instance
+  ( Crypto.Crypto crypto
+  , ToJSON (PoolParams crypto)
+  ) => PP.Pretty (PoolParams crypto) where
+  pretty = PP.pretty . Text.decodeUtf8 . LBS.toStrict . Aeson.encode . toJSON
+
+instance
+  ( Core.Crypto (Ledger.Crypto era)
+  ) => PP.Pretty (PoolPredicateFailure era) where
+  pretty (StakePoolNotRegisteredOnKeyPOOL (KeyHash unregStakePool)) = PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
+    [ "kind"                .= String "StakePoolNotRegisteredOnKeyPOOL"
+    , "unregisteredKeyHash" .= String (textShow unregStakePool)
+    , "error"               .= String "This stake pool key hash is unregistered"
+    ]
+  pretty (StakePoolRetirementWrongEpochPOOL currentEpoch intendedRetireEpoch maxRetireEpoch) = PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
+    [ "kind"                    .= String "StakePoolRetirementWrongEpochPOOL"
+    , "currentEpoch"            .= String (textShow currentEpoch)
+    , "intendedRetirementEpoch" .= String (textShow intendedRetireEpoch)
+    , "maxEpochForRetirement"   .= String (textShow maxRetireEpoch)
+    ]
+  pretty (StakePoolCostTooLowPOOL certCost protCost) = PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
+    [ "kind"              .= String "StakePoolCostTooLowPOOL"
+    , "certificateCost"   .= String (textShow certCost)
+    , "protocolParCost"   .= String (textShow protCost)
+    , "error"             .= String "The stake pool cost is too low"
+    ]
+  pretty (PoolMedataHashTooBig poolID hashSize) = PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
+    [ "kind"      .= String "PoolMedataHashTooBig"
+    , "poolID"    .= String (textShow poolID)
+    , "hashSize"  .= String (textShow hashSize)
+    , "error"     .= String "The stake pool metadata hash is too large"
+    ]
+
+-- Apparently this should never happen according to the Shelley exec spec
+  pretty (WrongCertificateTypePOOL index) =
+    case index of
+      0 -> PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
+        [ "kind"  .= String "WrongCertificateTypePOOL"
+        , "error" .= String "Wrong certificate type: Delegation certificate"
+        ]
+      1 -> PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
+        [ "kind"  .= String "WrongCertificateTypePOOL"
+        , "error" .= String "Wrong certificate type: MIR certificate"
+        ]
+      2 -> PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
+        [ "kind"  .= String "WrongCertificateTypePOOL"
+        , "error" .= String "Wrong certificate type: Genesis certificate"
+        ]
+      k -> PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
+        [ "kind"            .= String "WrongCertificateTypePOOL"
+        , "certificateType" .= k
+        , "error"           .= String "Wrong certificate type: Unknown certificate type"
+        ]
+
+  pretty (WrongNetworkPOOL networkId listedNetworkId poolId) = PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
+    [ "kind"            .= String "WrongNetworkPOOL"
+    , "networkId"       .= String (textShow networkId)
+    , "listedNetworkId" .= String (textShow listedNetworkId)
+    , "poolId"          .= String (textShow poolId)
+    , "error"           .= String "Wrong network ID in pool registration certificate"
+    ]
+
+
+instance
+  ( Ledger.Era era
+  ) => PP.Pretty (DelegPredicateFailure era) where
+  pretty (StakeKeyAlreadyRegisteredDELEG alreadyRegistered) = PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
+    [ "kind"        .= String "StakeKeyAlreadyRegisteredDELEG"
+    , "credential"  .= String (textShow alreadyRegistered)
+    , "error"       .= String "Staking credential already registered"
+    ]
+  pretty (StakeKeyInRewardsDELEG alreadyRegistered) = PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
+    [ "kind"        .= String "StakeKeyInRewardsDELEG"
+    , "credential"  .= String (textShow alreadyRegistered)
+    , "error"       .= String "Staking credential registered in rewards map"
+    ]
+  pretty (StakeKeyNotRegisteredDELEG notRegistered) = PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
+    [ "kind"        .= String "StakeKeyNotRegisteredDELEG"
+    , "credential"  .= String (textShow notRegistered)
+    , "error"       .= String "Staking credential not registered"
+    ]
+  pretty (StakeKeyNonZeroAccountBalanceDELEG remBalance) = PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
+    [ "kind"              .= String "StakeKeyNonZeroAccountBalanceDELEG"
+    , "remainingBalance"  .= remBalance
+    ]
+  pretty (StakeDelegationImpossibleDELEG unregistered) = PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
+    [ "kind"        .= String "StakeDelegationImpossibleDELEG"
+    , "credential"  .= String (textShow unregistered)
+    , "error"       .= String "Cannot delegate this stake credential because it is not registered"
+    ]
+  pretty WrongCertificateTypeDELEG = PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
+    [ "kind" .= String "WrongCertificateTypeDELEG"
+    ]
+  pretty (GenesisKeyNotInMappingDELEG (KeyHash genesisKeyHash)) = PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
+    [ "kind"            .= String "GenesisKeyNotInMappingDELEG"
+    , "unknownKeyHash"  .= String (textShow genesisKeyHash)
+    , "error"           .= String "This genesis key is not in the delegation mapping"
+    ]
+  pretty (DuplicateGenesisDelegateDELEG (KeyHash genesisKeyHash)) = PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
+    [ "kind"              .= String "DuplicateGenesisDelegateDELEG"
+    , "duplicateKeyHash"  .= String (textShow genesisKeyHash)
+    , "error"             .= String "This genesis key has already been delegated to"
+    ]
+  pretty (InsufficientForInstantaneousRewardsDELEG mirpot neededMirAmount reserves) = PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
+    [ "kind"          .= String "InsufficientForInstantaneousRewardsDELEG"
+    , "pot"           .= String potText
+    , "neededAmount"  .= neededMirAmount
+    , "reserves"      .= reserves
+    ]
+    where potText = case mirpot of
+            ReservesMIR -> "Reserves"
+            TreasuryMIR -> "Treasury"
+  pretty (MIRCertificateTooLateinEpochDELEG currSlot boundSlotNo) = PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
+    [ "kind"                        .= String "MIRCertificateTooLateinEpochDELEG"
+    , "currentSlotNo"               .= currSlot
+    , "mustBeSubmittedBeforeSlotNo" .= boundSlotNo
+    ]
+  pretty (DuplicateGenesisVRFDELEG vrfKeyHash) = PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
+    [ "kind"    .= String "DuplicateGenesisVRFDELEG"
+    , "keyHash" .= vrfKeyHash
+    ]
+  pretty MIRTransferNotCurrentlyAllowed = PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
+    [ "kind" .= String "MIRTransferNotCurrentlyAllowed"
+    ]
+  pretty MIRNegativesNotCurrentlyAllowed = PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
+    [ "kind" .= String "MIRNegativesNotCurrentlyAllowed"
+    ]
+  pretty (InsufficientForTransferDELEG mirpot attempted available) = PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
+    [ "kind"      .= String "DuplicateGenesisVRFDELEG"
+    , "pot"       .= String potText
+    , "attempted" .= attempted
+    , "available" .= available
+    ]
+    where potText = case mirpot of
+            ReservesMIR -> "Reserves"
+            TreasuryMIR -> "Treasury"
+  pretty MIRProducesNegativeUpdate = PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
+    [ "kind" .= String "MIRProducesNegativeUpdate"
+    ]
+  pretty (MIRNegativeTransfer pot coin) = PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
+    [ "kind"    .= String "MIRNegativeTransfer"
+    , "error"   .= String "Attempt to transfer a negative amount from a pot."
+    , "pot"     .= String potText
+    , "amount"  .= coin
+    ]
+    where potText = case pot of
+            ReservesMIR -> "Reserves"
+            TreasuryMIR -> "Treasury"
+
+instance
+  ( ToJSON (Core.AuxiliaryDataHash StandardCrypto)
+  ) => PP.Pretty (UtxowPredicateFail (Alonzo.AlonzoEra StandardCrypto)) where
+  pretty (WrappedShelleyEraFailure utxoPredFail) = PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode utxoPredFail
+  pretty (MissingRedeemers scripts) = PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
+    [ "kind"    .= String "MissingRedeemers"
+    , "scripts" .= Render.renderMissingRedeemers scripts
+    ]
+  pretty (MissingRequiredDatums required received) = PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
+    [ "kind"      .= String "MissingRequiredDatums"
+    , "required"  .= map (Crypto.hashToTextAsHex . SafeHash.extractHash) (Set.toList required)
+    , "received"  .= map (Crypto.hashToTextAsHex . SafeHash.extractHash) (Set.toList received)
+    ]
+  pretty (PPViewHashesDontMatch ppHashInTxBody ppHashFromPParams) = PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
+    [ "kind"        .= String "PPViewHashesDontMatch"
+    , "fromTxBody"  .= Render.renderScriptIntegrityHash (strictMaybeToMaybe ppHashInTxBody)
+    , "fromPParams" .= Render.renderScriptIntegrityHash (strictMaybeToMaybe ppHashFromPParams)
+    ]
+  pretty (MissingRequiredSigners missingKeyWitnesses) = PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
+    [ "kind"      .= String "MissingRequiredSigners"
+    , "witnesses" .= Set.toList missingKeyWitnesses
+    ]
+  pretty (UnspendableUTxONoDatumHash txins) = PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
+    [ "kind"  .= String "MissingRequiredSigners"
+    , "txins" .= Set.toList txins
+    ]
+  pretty (NonOutputSupplimentaryDatums disallowed acceptable) = PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
+    [ "kind"        .= String "NonOutputSupplimentaryDatums"
+    , "disallowed"  .= Set.toList disallowed
+    , "acceptable"  .= Set.toList acceptable
+    ]
+  pretty (ExtraRedeemers rdmrs) = PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
+    [ "kind"  .= String "ExtraRedeemers"
+    , "rdmrs" .= map (Api.renderScriptWitnessIndex . Api.fromAlonzoRdmrPtr) rdmrs
+    ]
+
+-- instance ToJSON (PredicateFailure (Core.EraRule "LEDGER" era)) => ToJSON (ApplyTxError era) where
+--   toJSON (ApplyTxError es) = toJSON es
+
+-- applyTxErrorToJson ::
+--   ( Consensus.ShelleyBasedEra era
+--   , ToJSON (Core.AuxiliaryDataHash (Ledger.Crypto era))
+--   , ToJSON (Core.TxOut era)
+--   , ToJSON (Core.Value era)
+--   , ToJSON (Ledger.PredicateFailure (Core.EraRule "DELEGS" era))
+--   , ToJSON (Ledger.PredicateFailure (Core.EraRule "PPUP" era))
+--   , ToJSON (Ledger.PredicateFailure (Core.EraRule "UTXO" era))
+--   , ToJSON (Ledger.PredicateFailure (Core.EraRule "UTXOW" era))
+--   ) => Consensus.ApplyTxErr (Consensus.ShelleyBlock era) -> Value
+-- applyTxErrorToJson (Consensus.ApplyTxError predicateFailures) = toJSON (fmap toJSON predicateFailures)

@@ -263,35 +263,32 @@ instance PP.Pretty (TxValidationError era) where
     , PP.nest 2 $ PP.pretty $ show err
     ]
 
-  pretty (ShelleyTxValidationError ShelleyBasedEraShelley err) =mconcat
+  pretty (ShelleyTxValidationError ShelleyBasedEraShelley err) = mconcat
     [ "ShelleyTxValidationError ShelleyBasedEraShelley:"
     , PP.line
     , PP.nest 2 $ PP.pretty $ show err
     ]
 
-  pretty (ShelleyTxValidationError ShelleyBasedEraAllegra err) =mconcat
+  pretty (ShelleyTxValidationError ShelleyBasedEraAllegra err) = mconcat
     [ "ShelleyTxValidationError ShelleyBasedEraAllegra:"
     , PP.line
     , PP.nest 2 $ PP.pretty $ show err
     ]
 
-  pretty (ShelleyTxValidationError ShelleyBasedEraMary err) =mconcat
+  pretty (ShelleyTxValidationError ShelleyBasedEraMary err) = mconcat
     [ "ShelleyTxValidationError ShelleyBasedEraMary:"
     , PP.line
     , PP.nest 2 $ PP.pretty $ show err
     ]
 
-  pretty (ShelleyTxValidationError ShelleyBasedEraAlonzo err) =mconcat
+  pretty (ShelleyTxValidationError ShelleyBasedEraAlonzo err) = mconcat
     [ "ShelleyTxValidationError ShelleyBasedEraAlonzo:"
     , PP.line
-    , PP.nest 2 $ PP.pretty $ show err
+    , PP.nest 2 $ PP.pretty err
     ]
 
-  pretty (ShelleyTxValidationError ShelleyBasedEraBabbage err) =mconcat
-    [ "ShelleyTxValidationError ShelleyBasedEraBabbage:"
-    , PP.line
-    , PP.nest 2 $ PP.pretty $ show err
-    ]
+  -- TODO Babbage
+  pretty (ShelleyTxValidationError ShelleyBasedEraBabbage _err) = "<not available>"
 
 -- | A 'TxValidationError' in one of the eras supported by a given protocol
 -- mode.
@@ -370,7 +367,6 @@ fromConsensusApplyTxErr CardanoMode (Consensus.ApplyTxErrAlonzo err) =
 
 fromConsensusApplyTxErr CardanoMode (Consensus.ApplyTxErrWrongEra err) =
     TxValidationEraMismatch err
-
 
 applyTxErrorToJson ::
   ( Consensus.ShelleyBasedEra era
