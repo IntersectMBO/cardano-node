@@ -142,6 +142,7 @@ library
                       , plutus-core
                       , plutus-ledger-api
                       , prettyprinter
+                      , prettyprinter-combinators
                       , scientific
                       , serialise
                       , small-steps
