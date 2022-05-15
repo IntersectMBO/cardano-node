@@ -1,3 +1,4 @@
+{-# LANGUAGE BlockArguments             #-}
 {-# LANGUAGE DataKinds                  #-}
 {-# LANGUAGE DerivingStrategies         #-}
 {-# LANGUAGE FlexibleContexts           #-}
@@ -1705,14 +1706,14 @@ instance
   pretty (UtxowFailure f) = PP.vsep
     [ "kind: UtxowFailure"
     , PP.nest 2 $ PP.vsep
-      [ "value: "
-      , PP.pretty f
+      [ "value 1: "
+      , PP.pretty  f
       ]
     ]
   pretty (DelegsFailure f) = mempty
     [ "kind: DelegsFailure"
     , PP.nest 2 $ PP.vsep
-      [ "value: "
+      [ "value 2: "
       , PP.pretty f
       ]
     ]
@@ -1737,7 +1738,7 @@ instance ( ShelleyBasedEra era
     [ "WithdrawalsNotInRewardsDELEGS"
     , "incorrectWithdrawals"
     -- TODO borrowing ToJSON instance
-    , PP.nest 2 $ PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ toJSON incorrectWithdrawals
+    , PP.nest 2 $ "[a]" <> do PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ toJSON incorrectWithdrawals
     ]
   pretty (DelplFailure f) = PP.pretty f
 
@@ -1757,153 +1758,178 @@ instance
   ( Crypto.Crypto crypto
   , ToJSON (KeyHash 'StakePool crypto)
   ) => PP.Pretty (KeyHash 'StakePool crypto) where
-  pretty = PP.pretty . Text.decodeUtf8 . LBS.toStrict . Aeson.encode . toJSON
+  pretty v = "[b]" <> do PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ toJSON v
 
 instance
   ( Crypto.Crypto crypto
   , ToJSON (PoolParams crypto)
   ) => PP.Pretty (PoolParams crypto) where
-  pretty = PP.pretty . Text.decodeUtf8 . LBS.toStrict . Aeson.encode . toJSON
+  pretty v = "[c]" <> do PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ toJSON v
 
 instance
   ( Core.Crypto (Ledger.Crypto era)
   ) => PP.Pretty (PoolPredicateFailure era) where
-  pretty (StakePoolNotRegisteredOnKeyPOOL (KeyHash unregStakePool)) = PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
-    [ "kind"                .= String "StakePoolNotRegisteredOnKeyPOOL"
-    , "unregisteredKeyHash" .= String (textShow unregStakePool)
-    , "error"               .= String "This stake pool key hash is unregistered"
-    ]
-  pretty (StakePoolRetirementWrongEpochPOOL currentEpoch intendedRetireEpoch maxRetireEpoch) = PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
-    [ "kind"                    .= String "StakePoolRetirementWrongEpochPOOL"
-    , "currentEpoch"            .= String (textShow currentEpoch)
-    , "intendedRetirementEpoch" .= String (textShow intendedRetireEpoch)
-    , "maxEpochForRetirement"   .= String (textShow maxRetireEpoch)
-    ]
-  pretty (StakePoolCostTooLowPOOL certCost protCost) = PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
-    [ "kind"              .= String "StakePoolCostTooLowPOOL"
-    , "certificateCost"   .= String (textShow certCost)
-    , "protocolParCost"   .= String (textShow protCost)
-    , "error"             .= String "The stake pool cost is too low"
-    ]
-  pretty (PoolMedataHashTooBig poolID hashSize) = PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
-    [ "kind"      .= String "PoolMedataHashTooBig"
-    , "poolID"    .= String (textShow poolID)
-    , "hashSize"  .= String (textShow hashSize)
-    , "error"     .= String "The stake pool metadata hash is too large"
-    ]
+  pretty (StakePoolNotRegisteredOnKeyPOOL (KeyHash unregStakePool)) = "[da]" <> do
+    PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
+      [ "kind"                .= String "StakePoolNotRegisteredOnKeyPOOL"
+      , "unregisteredKeyHash" .= String (textShow unregStakePool)
+      , "error"               .= String "This stake pool key hash is unregistered"
+      ]
+  pretty (StakePoolRetirementWrongEpochPOOL currentEpoch intendedRetireEpoch maxRetireEpoch) = "[db]" <> do
+    PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
+      [ "kind"                    .= String "StakePoolRetirementWrongEpochPOOL"
+      , "currentEpoch"            .= String (textShow currentEpoch)
+      , "intendedRetirementEpoch" .= String (textShow intendedRetireEpoch)
+      , "maxEpochForRetirement"   .= String (textShow maxRetireEpoch)
+      ]
+  pretty (StakePoolCostTooLowPOOL certCost protCost) = "[dc]" <> do
+    PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
+      [ "kind"              .= String "StakePoolCostTooLowPOOL"
+      , "certificateCost"   .= String (textShow certCost)
+      , "protocolParCost"   .= String (textShow protCost)
+      , "error"             .= String "The stake pool cost is too low"
+      ]
+  pretty (PoolMedataHashTooBig poolID hashSize) = "[dd]" <> do
+    PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
+      [ "kind"      .= String "PoolMedataHashTooBig"
+      , "poolID"    .= String (textShow poolID)
+      , "hashSize"  .= String (textShow hashSize)
+      , "error"     .= String "The stake pool metadata hash is too large"
+      ]
 
 -- Apparently this should never happen according to the Shelley exec spec
   pretty (WrongCertificateTypePOOL index) =
     case index of
-      0 -> PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
-        [ "kind"  .= String "WrongCertificateTypePOOL"
-        , "error" .= String "Wrong certificate type: Delegation certificate"
-        ]
-      1 -> PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
-        [ "kind"  .= String "WrongCertificateTypePOOL"
-        , "error" .= String "Wrong certificate type: MIR certificate"
-        ]
-      2 -> PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
-        [ "kind"  .= String "WrongCertificateTypePOOL"
-        , "error" .= String "Wrong certificate type: Genesis certificate"
-        ]
-      k -> PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
-        [ "kind"            .= String "WrongCertificateTypePOOL"
-        , "certificateType" .= k
-        , "error"           .= String "Wrong certificate type: Unknown certificate type"
-        ]
+      0 -> "[ee]" <> do
+        PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
+          [ "kind"  .= String "WrongCertificateTypePOOL"
+          , "error" .= String "Wrong certificate type: Delegation certificate"
+          ]
+      1 -> "[ef]" <> do
+        PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
+          [ "kind"  .= String "WrongCertificateTypePOOL"
+          , "error" .= String "Wrong certificate type: MIR certificate"
+          ]
+      2 -> "[eg]" <> do
+        PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
+          [ "kind"  .= String "WrongCertificateTypePOOL"
+          , "error" .= String "Wrong certificate type: Genesis certificate"
+          ]
+      k -> "[eh]" <> do
+        PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
+          [ "kind"            .= String "WrongCertificateTypePOOL"
+          , "certificateType" .= k
+          , "error"           .= String "Wrong certificate type: Unknown certificate type"
+          ]
 
-  pretty (WrongNetworkPOOL networkId listedNetworkId poolId) = PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
-    [ "kind"            .= String "WrongNetworkPOOL"
-    , "networkId"       .= String (textShow networkId)
-    , "listedNetworkId" .= String (textShow listedNetworkId)
-    , "poolId"          .= String (textShow poolId)
-    , "error"           .= String "Wrong network ID in pool registration certificate"
-    ]
+  pretty (WrongNetworkPOOL networkId listedNetworkId poolId) = "[i]" <> do
+    PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
+      [ "kind"            .= String "WrongNetworkPOOL"
+      , "networkId"       .= String (textShow networkId)
+      , "listedNetworkId" .= String (textShow listedNetworkId)
+      , "poolId"          .= String (textShow poolId)
+      , "error"           .= String "Wrong network ID in pool registration certificate"
+      ]
 
 
 instance
   ( Ledger.Era era
   ) => PP.Pretty (DelegPredicateFailure era) where
-  pretty (StakeKeyAlreadyRegisteredDELEG alreadyRegistered) = PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
-    [ "kind"        .= String "StakeKeyAlreadyRegisteredDELEG"
-    , "credential"  .= String (textShow alreadyRegistered)
-    , "error"       .= String "Staking credential already registered"
-    ]
-  pretty (StakeKeyInRewardsDELEG alreadyRegistered) = PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
-    [ "kind"        .= String "StakeKeyInRewardsDELEG"
-    , "credential"  .= String (textShow alreadyRegistered)
-    , "error"       .= String "Staking credential registered in rewards map"
-    ]
-  pretty (StakeKeyNotRegisteredDELEG notRegistered) = PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
-    [ "kind"        .= String "StakeKeyNotRegisteredDELEG"
-    , "credential"  .= String (textShow notRegistered)
-    , "error"       .= String "Staking credential not registered"
-    ]
-  pretty (StakeKeyNonZeroAccountBalanceDELEG remBalance) = PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
-    [ "kind"              .= String "StakeKeyNonZeroAccountBalanceDELEG"
-    , "remainingBalance"  .= remBalance
-    ]
-  pretty (StakeDelegationImpossibleDELEG unregistered) = PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
-    [ "kind"        .= String "StakeDelegationImpossibleDELEG"
-    , "credential"  .= String (textShow unregistered)
-    , "error"       .= String "Cannot delegate this stake credential because it is not registered"
-    ]
-  pretty WrongCertificateTypeDELEG = PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
-    [ "kind" .= String "WrongCertificateTypeDELEG"
-    ]
-  pretty (GenesisKeyNotInMappingDELEG (KeyHash genesisKeyHash)) = PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
-    [ "kind"            .= String "GenesisKeyNotInMappingDELEG"
-    , "unknownKeyHash"  .= String (textShow genesisKeyHash)
-    , "error"           .= String "This genesis key is not in the delegation mapping"
-    ]
-  pretty (DuplicateGenesisDelegateDELEG (KeyHash genesisKeyHash)) = PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
-    [ "kind"              .= String "DuplicateGenesisDelegateDELEG"
-    , "duplicateKeyHash"  .= String (textShow genesisKeyHash)
-    , "error"             .= String "This genesis key has already been delegated to"
-    ]
-  pretty (InsufficientForInstantaneousRewardsDELEG mirpot neededMirAmount reserves) = PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
-    [ "kind"          .= String "InsufficientForInstantaneousRewardsDELEG"
-    , "pot"           .= String potText
-    , "neededAmount"  .= neededMirAmount
-    , "reserves"      .= reserves
-    ]
+  pretty (StakeKeyAlreadyRegisteredDELEG alreadyRegistered) = "[f]" <> do
+    PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
+      [ "kind"        .= String "StakeKeyAlreadyRegisteredDELEG"
+      , "credential"  .= String (textShow alreadyRegistered)
+      , "error"       .= String "Staking credential already registered"
+      ]
+  pretty (StakeKeyInRewardsDELEG alreadyRegistered) = "[f]" <> do
+    PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
+      [ "kind"        .= String "StakeKeyInRewardsDELEG"
+      , "credential"  .= String (textShow alreadyRegistered)
+      , "error"       .= String "Staking credential registered in rewards map"
+      ]
+  pretty (StakeKeyNotRegisteredDELEG notRegistered) = "[f]" <> do
+    PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
+      [ "kind"        .= String "StakeKeyNotRegisteredDELEG"
+      , "credential"  .= String (textShow notRegistered)
+      , "error"       .= String "Staking credential not registered"
+      ]
+  pretty (StakeKeyNonZeroAccountBalanceDELEG remBalance) = "[f]" <> do
+    PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
+      [ "kind"              .= String "StakeKeyNonZeroAccountBalanceDELEG"
+      , "remainingBalance"  .= remBalance
+      ]
+  pretty (StakeDelegationImpossibleDELEG unregistered) = "[f]" <> do
+    PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
+      [ "kind"        .= String "StakeDelegationImpossibleDELEG"
+      , "credential"  .= String (textShow unregistered)
+      , "error"       .= String "Cannot delegate this stake credential because it is not registered"
+      ]
+  pretty WrongCertificateTypeDELEG = "[f]" <> do
+    PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
+      [ "kind" .= String "WrongCertificateTypeDELEG"
+      ]
+  pretty (GenesisKeyNotInMappingDELEG (KeyHash genesisKeyHash)) = "[f]" <> do
+    PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
+      [ "kind"            .= String "GenesisKeyNotInMappingDELEG"
+      , "unknownKeyHash"  .= String (textShow genesisKeyHash)
+      , "error"           .= String "This genesis key is not in the delegation mapping"
+      ]
+  pretty (DuplicateGenesisDelegateDELEG (KeyHash genesisKeyHash)) = "[f]" <> do
+    PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
+      [ "kind"              .= String "DuplicateGenesisDelegateDELEG"
+      , "duplicateKeyHash"  .= String (textShow genesisKeyHash)
+      , "error"             .= String "This genesis key has already been delegated to"
+      ]
+  pretty (InsufficientForInstantaneousRewardsDELEG mirpot neededMirAmount reserves) = "[f]" <> do
+    PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
+      [ "kind"          .= String "InsufficientForInstantaneousRewardsDELEG"
+      , "pot"           .= String potText
+      , "neededAmount"  .= neededMirAmount
+      , "reserves"      .= reserves
+      ]
     where potText = case mirpot of
             ReservesMIR -> "Reserves"
             TreasuryMIR -> "Treasury"
-  pretty (MIRCertificateTooLateinEpochDELEG currSlot boundSlotNo) = PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
-    [ "kind"                        .= String "MIRCertificateTooLateinEpochDELEG"
-    , "currentSlotNo"               .= currSlot
-    , "mustBeSubmittedBeforeSlotNo" .= boundSlotNo
-    ]
-  pretty (DuplicateGenesisVRFDELEG vrfKeyHash) = PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
-    [ "kind"    .= String "DuplicateGenesisVRFDELEG"
-    , "keyHash" .= vrfKeyHash
-    ]
-  pretty MIRTransferNotCurrentlyAllowed = PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
-    [ "kind" .= String "MIRTransferNotCurrentlyAllowed"
-    ]
-  pretty MIRNegativesNotCurrentlyAllowed = PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
-    [ "kind" .= String "MIRNegativesNotCurrentlyAllowed"
-    ]
-  pretty (InsufficientForTransferDELEG mirpot attempted available) = PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
-    [ "kind"      .= String "DuplicateGenesisVRFDELEG"
-    , "pot"       .= String potText
-    , "attempted" .= attempted
-    , "available" .= available
-    ]
+  pretty (MIRCertificateTooLateinEpochDELEG currSlot boundSlotNo) = "[f]" <> do
+    PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
+      [ "kind"                        .= String "MIRCertificateTooLateinEpochDELEG"
+      , "currentSlotNo"               .= currSlot
+      , "mustBeSubmittedBeforeSlotNo" .= boundSlotNo
+      ]
+  pretty (DuplicateGenesisVRFDELEG vrfKeyHash) = "[f]" <> do
+    PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
+      [ "kind"    .= String "DuplicateGenesisVRFDELEG"
+      , "keyHash" .= vrfKeyHash
+      ]
+  pretty MIRTransferNotCurrentlyAllowed = "[f]" <> do
+    PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
+      [ "kind" .= String "MIRTransferNotCurrentlyAllowed"
+      ]
+  pretty MIRNegativesNotCurrentlyAllowed = "[f]" <> do
+    PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
+      [ "kind" .= String "MIRNegativesNotCurrentlyAllowed"
+      ]
+  pretty (InsufficientForTransferDELEG mirpot attempted available) = "[f]" <> do
+    PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
+      [ "kind"      .= String "DuplicateGenesisVRFDELEG"
+      , "pot"       .= String potText
+      , "attempted" .= attempted
+      , "available" .= available
+      ]
     where potText = case mirpot of
             ReservesMIR -> "Reserves"
             TreasuryMIR -> "Treasury"
-  pretty MIRProducesNegativeUpdate = PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
-    [ "kind" .= String "MIRProducesNegativeUpdate"
-    ]
-  pretty (MIRNegativeTransfer pot coin) = PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
-    [ "kind"    .= String "MIRNegativeTransfer"
-    , "error"   .= String "Attempt to transfer a negative amount from a pot."
-    , "pot"     .= String potText
-    , "amount"  .= coin
-    ]
+  pretty MIRProducesNegativeUpdate = "[f]" <> do
+    PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
+      [ "kind" .= String "MIRProducesNegativeUpdate"
+      ]
+  pretty (MIRNegativeTransfer pot coin) = "[f]" <> do
+    PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
+      [ "kind"    .= String "MIRNegativeTransfer"
+      , "error"   .= String "Attempt to transfer a negative amount from a pot."
+      , "pot"     .= String potText
+      , "amount"  .= coin
+      ]
     where potText = case pot of
             ReservesMIR -> "Reserves"
             TreasuryMIR -> "Treasury"
@@ -1911,38 +1937,46 @@ instance
 instance
   ( ToJSON (Core.AuxiliaryDataHash StandardCrypto)
   ) => PP.Pretty (UtxowPredicateFail (Alonzo.AlonzoEra StandardCrypto)) where
-  pretty (WrappedShelleyEraFailure utxoPredFail) = PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode utxoPredFail
-  pretty (MissingRedeemers scripts) = PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
-    [ "kind"    .= String "MissingRedeemers"
-    , "scripts" .= Render.renderMissingRedeemers scripts
-    ]
-  pretty (MissingRequiredDatums required received) = PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
-    [ "kind"      .= String "MissingRequiredDatums"
-    , "required"  .= map (Crypto.hashToTextAsHex . SafeHash.extractHash) (Set.toList required)
-    , "received"  .= map (Crypto.hashToTextAsHex . SafeHash.extractHash) (Set.toList received)
-    ]
-  pretty (PPViewHashesDontMatch ppHashInTxBody ppHashFromPParams) = PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
-    [ "kind"        .= String "PPViewHashesDontMatch"
-    , "fromTxBody"  .= Render.renderScriptIntegrityHash (strictMaybeToMaybe ppHashInTxBody)
-    , "fromPParams" .= Render.renderScriptIntegrityHash (strictMaybeToMaybe ppHashFromPParams)
-    ]
-  pretty (MissingRequiredSigners missingKeyWitnesses) = PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
-    [ "kind"      .= String "MissingRequiredSigners"
-    , "witnesses" .= Set.toList missingKeyWitnesses
-    ]
-  pretty (UnspendableUTxONoDatumHash txins) = PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
-    [ "kind"  .= String "MissingRequiredSigners"
-    , "txins" .= Set.toList txins
-    ]
-  pretty (NonOutputSupplimentaryDatums disallowed acceptable) = PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
-    [ "kind"        .= String "NonOutputSupplimentaryDatums"
-    , "disallowed"  .= Set.toList disallowed
-    , "acceptable"  .= Set.toList acceptable
-    ]
-  pretty (ExtraRedeemers rdmrs) = PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
-    [ "kind"  .= String "ExtraRedeemers"
-    , "rdmrs" .= map (Api.renderScriptWitnessIndex . Api.fromAlonzoRdmrPtr) rdmrs
-    ]
+  pretty (WrappedShelleyEraFailure utxoPredFail) = "[g1]" <> do
+    PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode utxoPredFail
+  pretty (MissingRedeemers scripts) = "[g2]" <> do
+    PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
+      [ "kind"    .= String "MissingRedeemers"
+      , "scripts" .= Render.renderMissingRedeemers scripts
+      ]
+  pretty (MissingRequiredDatums required received) = "[g3]" <> do
+    PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
+      [ "kind"      .= String "MissingRequiredDatums"
+      , "required"  .= map (Crypto.hashToTextAsHex . SafeHash.extractHash) (Set.toList required)
+      , "received"  .= map (Crypto.hashToTextAsHex . SafeHash.extractHash) (Set.toList received)
+      ]
+  pretty (PPViewHashesDontMatch ppHashInTxBody ppHashFromPParams) = "[g4]" <> do
+    PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
+      [ "kind"        .= String "PPViewHashesDontMatch"
+      , "fromTxBody"  .= Render.renderScriptIntegrityHash (strictMaybeToMaybe ppHashInTxBody)
+      , "fromPParams" .= Render.renderScriptIntegrityHash (strictMaybeToMaybe ppHashFromPParams)
+      ]
+  pretty (MissingRequiredSigners missingKeyWitnesses) = "[g5]" <> do
+    PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
+      [ "kind"      .= String "MissingRequiredSigners"
+      , "witnesses" .= Set.toList missingKeyWitnesses
+      ]
+  pretty (UnspendableUTxONoDatumHash txins) = "[g6]" <> do
+    PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
+      [ "kind"  .= String "MissingRequiredSigners"
+      , "txins" .= Set.toList txins
+      ]
+  pretty (NonOutputSupplimentaryDatums disallowed acceptable) = "[g7]" <> do
+    PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
+      [ "kind"        .= String "NonOutputSupplimentaryDatums"
+      , "disallowed"  .= Set.toList disallowed
+      , "acceptable"  .= Set.toList acceptable
+      ]
+  pretty (ExtraRedeemers rdmrs) = "[g8]" <> do
+    PP.pretty $ Text.decodeUtf8 $ LBS.toStrict $ Aeson.encode $ object
+      [ "kind"  .= String "ExtraRedeemers"
+      , "rdmrs" .= map (Api.renderScriptWitnessIndex . Api.fromAlonzoRdmrPtr) rdmrs
+      ]
 
 -- instance ToJSON (PredicateFailure (Core.EraRule "LEDGER" era)) => ToJSON (ApplyTxError era) where
 --   toJSON (ApplyTxError es) = toJSON es
