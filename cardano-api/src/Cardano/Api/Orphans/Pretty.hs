@@ -79,6 +79,7 @@ import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Short as SBS
 import qualified Data.ByteString.UTF8 as BSU
 import qualified Data.Compact.VMap as VMap
+import qualified Data.List.NonEmpty as NEL
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import qualified Data.Text as Text
@@ -329,8 +330,10 @@ instance
 instance
   ( ToJSON (Core.AuxiliaryDataHash StandardCrypto)
   ) => PP.Pretty (UtxowPredicateFail (Alonzo.AlonzoEra StandardCrypto)) where
-  pretty (WrappedShelleyEraFailure utxoPredFail) =
-    PP.hang 2 $ "WrappedShelleyEraFailure: " <+> PP.pretty utxoPredFail
+  pretty (WrappedShelleyEraFailure utxoPredFail) = PP.vsep
+    [ "WrappedShelleyEraFailure:"
+    , PP.nest 2 $ PP.pretty utxoPredFail
+    ]
   pretty (MissingRedeemers scripts) = "[g2]" <+> do
     prettyJson $ object
       [ "kind"    .= String "MissingRedeemers"
@@ -570,8 +573,10 @@ instance Pretty (Alonzo.UtxosPredicateFailure (Alonzo.AlonzoEra StandardCrypto))
   pretty (Alonzo.ValidationTagMismatch isValidating reason) = PP.vsep
     [ "ValidationTagMismatch:"
     , PP.nest 2 $ PP.vsep
-      [ PP.hang 2 $ "isValidating:" <+> PP.pretty isValidating
-      , PP.hang 2 $ "reason:" <+> PP.pretty reason
+      [ "isValidating:"
+      , PP.nest 2 $ PP.pretty isValidating
+      , "reason:"
+      , PP.nest 2 $ PP.pretty reason
       ]
     ]
   pretty (Alonzo.CollectErrors errors) =
@@ -616,56 +621,64 @@ instance Pretty Alonzo.TagMismatchDescription where
   pretty tmd = case tmd of
     Alonzo.PassedUnexpectedly -> "PassedUnexpectedly"
     Alonzo.FailedUnexpectedly forReasons -> PP.vsep
-      [ "FailedUnexpectedly"
-      , PP.nest 2 $ PP.pretty forReasons
+      [ "FailedUnexpectedly:"
+      , PP.vsep $ ("-" <+>) . PP.hang 2 . PP.pretty <$> NEL.toList forReasons
       ]
 
 instance Pretty Alonzo.FailureDescription where
   pretty = \case
     Alonzo.OnePhaseFailure t -> "OnePhaseFailure" <+> PP.pretty t
-    Alonzo.PlutusFailure _t bs -> PP.vsep
+    Alonzo.PlutusFailure t bs -> PP.vsep
       [ "PlutusFailure"
       , PP.nest 2 $ PP.vsep
-        [ "_"
-        , PP.pretty (Alonzo.debugPlutus (BSU.toString bs))
+        [ "-" <+> PP.hang 2 do PP.pretty (Text.strip t)
+        , "-" <+> PP.hang 2 do PP.pretty (Alonzo.debugPlutus (BSU.toString bs))
         ]
       ]
 
 instance Pretty Alonzo.PlutusDebugInfo where
   pretty = \case
-    Alonzo.DebugSuccess budget -> "DebugSuccess"
-      <+> PP.pretty budget
-    Alonzo.DebugCannotDecode msg -> "DebugCannotDecode"
-      <+> PP.pretty msg
-    Alonzo.DebugInfo texts e d -> "DebugInfo"
-      <+> PP.pretty texts
-      <+> PP.pretty e
-      <+> PP.pretty d
-    Alonzo.DebugBadHex msg -> "DebugBadHex"
-      <+> PP.pretty msg
+    Alonzo.DebugSuccess budget -> PP.vsep
+      [ "DebugSuccess:"
+      , PP.nest 2 $ PP.pretty budget
+      ]
+    Alonzo.DebugCannotDecode msg -> PP.vsep
+      [ "DebugCannotDecode:"
+      , PP.nest 2 $ PP.pretty msg
+      ]
+    Alonzo.DebugInfo texts e d -> PP.vsep
+      [ "DebugInfo:"
+      , "-" <+> PP.hang 2 do PP.pretty texts
+      , "-" <+> PP.hang 2 do PP.pretty e
+      , "-" <+> PP.hang 2 do PP.pretty d
+      ]
+    Alonzo.DebugBadHex msg -> PP.vsep
+      [ "DebugBadHex:"
+      , PP.nest 2 $ PP.pretty msg
+      ]
 
 instance Pretty Alonzo.PlutusDebug where
   pretty = \case
     Alonzo.PlutusDebugV1 costModel exUnits sbs ds protVer -> PP.vsep
       [ "PlutusDebugV1"
       , PP.nest 2 $ PP.vsep
-        [ PP.hang 2 $ "costModel:"  <+> PP.pretty costModel
-        , PP.hang 2 $ "exUnits:"    <+> PP.pretty exUnits
-        , PP.hang 2 $ "sbs:"        <+> PP.pretty (Text.decodeLatin1 (B16.encode (SBS.fromShort sbs)))
-        , PP.hang 2 $ "scriptHash:" <+> PP.pretty (scriptHashOf Alonzo.PlutusV1 sbs)
-        , PP.hang 2 $ "dsSummary:"  <+> prettyPlutusDatas ds
-        , PP.hang 2 $ "protVer:"    <+> PP.pretty protVer
+        [ "costModel:"  <+> PP.hang 2 do PP.pretty costModel
+        , "exUnits:"    <+> PP.hang 2 do PP.pretty exUnits
+        , "sbs:"        <+> PP.hang 2 do PP.pretty (Text.decodeLatin1 (B16.encode (SBS.fromShort sbs)))
+        , "scriptHash:" <+> PP.hang 2 do PP.pretty (scriptHashOf Alonzo.PlutusV1 sbs)
+        , "dsSummary:"  <+> PP.hang 2 do prettyPlutusDatas ds
+        , "protVer:"    <+> PP.hang 2 do PP.pretty protVer
         ]
       ]
     Alonzo.PlutusDebugV2 costModel exUnits sbs ds protVer -> PP.vsep
       [ "PlutusDebugV2"
       , PP.nest 2 $ PP.vsep
-        [ PP.hang 2 $ "costModel:"  <+>  PP.pretty costModel
-        , PP.hang 2 $ "exUnits:"    <+>  PP.pretty exUnits
-        , PP.hang 2 $ "sbs:"        <+>  PP.pretty (Text.decodeLatin1 (B16.encode (SBS.fromShort sbs)))
-        , PP.hang 2 $ "scriptHash:" <+>  PP.pretty (scriptHashOf Alonzo.PlutusV2 sbs)
-        , PP.hang 2 $ "dsSummary:"  <+>  prettyPlutusDatas ds
-        , PP.hang 2 $ "protVer:"    <+>  PP.pretty protVer
+        [ "costModel:"  <+> PP.hang 2 do PP.pretty costModel
+        , "exUnits:"    <+> PP.hang 2 do PP.pretty exUnits
+        , "sbs:"        <+> PP.hang 2 do PP.pretty (Text.decodeLatin1 (B16.encode (SBS.fromShort sbs)))
+        , "scriptHash:" <+> PP.hang 2 do PP.pretty (scriptHashOf Alonzo.PlutusV2 sbs)
+        , "dsSummary:"  <+> PP.hang 2 do prettyPlutusDatas ds
+        , "protVer:"    <+> PP.hang 2 do PP.pretty protVer
         ]
       ]
 
@@ -688,16 +701,16 @@ prettyPlutusDatas = \case
   [dat, redeemer, info] -> PP.vsep
     [ "PlutusData:"
     , PP.nest 2 $ PP.vsep
-      [ PP.hang 2 $ "data"     <+> "=" <+> PP.pretty dat
-      , PP.hang 2 $ "redeemer" <+> "=" <+> PP.pretty redeemer
-      , PP.hang 2 $ "info"     <+> "=" <+> prettyPlutusData info
+      [ "data:"     <+> PP.hang 2 do PP.pretty dat
+      , "redeemer:" <+> PP.hang 2 do PP.pretty redeemer
+      , "info:"     <+> PP.hang 2 do prettyPlutusData info
       ]
     ]
   [dat, info] -> PP.vsep
     [ "PlutusData:"
     , PP.nest 2 $ PP.vsep
-      [ PP.hang 2 $ "data"     <+> "=" <+> PP.pretty dat
-      , PP.hang 2 $ "info"     <+> "=" <+> prettyPlutusData info
+      [ "data:" <+> PP.hang 2 do PP.pretty dat
+      , "info:" <+> PP.hang 2 do prettyPlutusData info
       ]
     ]
   ds -> PP.vsep
@@ -707,26 +720,27 @@ prettyPlutusDatas = \case
 
 prettyPlutusData :: Plutus.Data -> PP.Doc ann
 prettyPlutusData info = case PV1.fromData info of
-  Nothing -> "Nothing"
-  Just PV1.ScriptContext { PV1.scriptContextTxInfo, PV1.scriptContextPurpose} -> "Just"
-    <+> "ScriptContext"
-      <+> prettyTxInfo scriptContextTxInfo
-      <+> prettyScriptPurpose scriptContextPurpose
+  Nothing -> "NoScriptContext"
+  Just PV1.ScriptContext { PV1.scriptContextTxInfo, PV1.scriptContextPurpose} -> PP.vsep
+    [ "ScriptContext:"
+    , "-" <+> PP.hang 2 do prettyTxInfo scriptContextTxInfo
+    , "-" <+> PP.hang 2 do prettyScriptPurpose scriptContextPurpose
+    ]
 
 prettyTxInfo :: PV1.TxInfo -> PP.Doc ann
 prettyTxInfo txInfo = PP.vsep
   [ "TxInfo:"
   , PP.nest 2 $ PP.vsep
-    [ PP.hang 2 $ "txInfoInputs:"       <+> prettyJson (PV1.toData (PV1.txInfoInputs txInfo))
-    , PP.hang 2 $ "txInfoOutputs:"      <+> prettyJson (PV1.toData (PV1.txInfoOutputs txInfo))
-    , PP.hang 2 $ "txInfoFee:"          <+> prettyJson (PV1.toData (PV1.txInfoFee txInfo))
-    , PP.hang 2 $ "txInfoMint:"         <+> prettyJson (PV1.toData (PV1.txInfoMint txInfo))
-    , PP.hang 2 $ "txInfoDCert:"        <+> prettyJson (PV1.toData (PV1.txInfoDCert txInfo))
-    , PP.hang 2 $ "txInfoWdrl:"         <+> prettyJson (PV1.toData (PV1.txInfoWdrl txInfo))
-    , PP.hang 2 $ "txInfoValidRange:"   <+> prettyJson (PV1.toData (PV1.txInfoValidRange txInfo))
-    , PP.hang 2 $ "txInfoSignatories:"  <+> prettyJson (PV1.toData (PV1.txInfoSignatories txInfo))
-    , PP.hang 2 $ "txInfoData:"         <+> prettyJson (PV1.toData (PV1.txInfoData txInfo))
-    , PP.hang 2 $ "txInfoId:"           <+> prettyJson (PV1.toData (PV1.txInfoId txInfo))
+    [ "txInfoInputs:"       <+> PP.hang 2 do prettyJson (PV1.toData (PV1.txInfoInputs txInfo))
+    , "txInfoOutputs:"      <+> PP.hang 2 do prettyJson (PV1.toData (PV1.txInfoOutputs txInfo))
+    , "txInfoFee:"          <+> PP.hang 2 do prettyJson (PV1.toData (PV1.txInfoFee txInfo))
+    , "txInfoMint:"         <+> PP.hang 2 do prettyJson (PV1.toData (PV1.txInfoMint txInfo))
+    , "txInfoDCert:"        <+> PP.hang 2 do prettyJson (PV1.toData (PV1.txInfoDCert txInfo))
+    , "txInfoWdrl:"         <+> PP.hang 2 do prettyJson (PV1.toData (PV1.txInfoWdrl txInfo))
+    , "txInfoValidRange:"   <+> PP.hang 2 do prettyJson (PV1.toData (PV1.txInfoValidRange txInfo))
+    , "txInfoSignatories:"  <+> PP.hang 2 do prettyJson (PV1.toData (PV1.txInfoSignatories txInfo))
+    , "txInfoData:"         <+> PP.hang 2 do prettyJson (PV1.toData (PV1.txInfoData txInfo))
+    , "txInfoId:"           <+> PP.hang 2 do prettyJson (PV1.toData (PV1.txInfoId txInfo))
     ]
   ]
 
@@ -735,13 +749,13 @@ prettyJson = PP.pretty . Text.decodeUtf8 . LBS.toStrict . Aeson.encode
 
 prettyScriptPurpose :: PV1.ScriptPurpose -> PP.Doc ann
 prettyScriptPurpose = \case
-  PV1.Minting currencySymbol -> "Minting"
+  PV1.Minting currencySymbol -> "Minting:"
     <+> PP.pretty (PV1.toData currencySymbol)
-  PV1.Spending txOutRef -> "Spending"
+  PV1.Spending txOutRef -> "Spending:"
     <+> PP.pretty (PV1.toData txOutRef)
-  PV1.Rewarding stakingCredential -> "Rewarding"
+  PV1.Rewarding stakingCredential -> "Rewarding:"
     <+> PP.pretty (PV1.toData stakingCredential)
-  PV1.Certifying dCert -> "Certifying"
+  PV1.Certifying dCert -> "Certifying:"
     <+> PP.pretty (PV1.toData dCert)
 
 -------
