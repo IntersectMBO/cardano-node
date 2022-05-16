@@ -40,6 +40,7 @@ module Cardano.Api.InMode (
 import           Cardano.Api.Eras
 import           Cardano.Api.Modes
 import           Cardano.Api.Orphans ()
+import           Cardano.Api.Orphans.Pretty ()
 import           Cardano.Api.Tx
 import           Cardano.Api.TxBody
 import           Data.Aeson (ToJSON(..), Value(..))

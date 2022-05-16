@@ -46,6 +46,7 @@ library
                         -- we create wrapper types for the ledger types
                         -- in this module
                         Cardano.Api.Orphans
+                        Cardano.Api.Orphans.Pretty
                         Cardano.Api.SerialiseTextEnvelope
 
   other-modules:
@@ -142,7 +143,6 @@ library
                       , plutus-core
                       , plutus-ledger-api
                       , prettyprinter
-                      , prettyprinter-combinators
                       , scientific
                       , serialise
                       , small-steps
