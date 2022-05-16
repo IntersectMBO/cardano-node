@@ -99,8 +99,8 @@ start()
     local manifest="{}"
     local iterations=1
     local no_retry_failed_runs=t
-    local analyse_args=()
-    local analyse=yes analysis_can_fail=
+    local no_analysis= analyse_args=()
+    local analysis_can_fail=
 
     local run_args=()
     local run_allocate_args=()
@@ -120,7 +120,7 @@ start()
         --idle )                         run_start_args+=($1);;
         --scenario | -s )                run_start_args+=($1 $2); shift;;
 
-        --no-analysis )                  analyse=;;
+        --no-analysis )                  no_analysis=true;;
         --analysis-can-fail | -af )      analysis_can_fail=t;;
         --dump-logobjects | -lo )        analyse_args+=($1);;
         --dump-machviews  | -mw )        analyse_args+=($1);;
@@ -148,6 +148,7 @@ start()
     backend setenv-defaults "$profile"
 
     profile_name=${profile_name:-$(jq '.name' -r $profile/profile.json)}
+    analysis_type=$(jq '.analysis.type' -r $profile/profile.json)
 
     progress "top-level" "iterations of profile $(with_color 'yellow' $profile_name):  $(with_color 'white' $iterations)"
     for ((i=0; i<$iterations; i++))
@@ -156,17 +157,17 @@ start()
             --manifest "$(manifest collect-from-checkout .)"
         )
        run ${run_args[@]} 'allocate' $batch_name $profile_name "${args[@]}"
+       local tag=$(run current-tag)
 
        current_run_path=$(run current-path)
        mkdir -p "$current_run_path"
 
-       run ${run_args[@]} 'start'    ${run_start_args[@]} $(run current-tag)
+       run ${run_args[@]} 'start'    ${run_start_args[@]} $tag
 
-       if test -z "$analyse"; then continue; fi
+       if test -n "$no_analysis" -o $analysis_type = null; then continue; fi
 
-       progress "top-level | analysis" "processing logs of $(with_color white $tag)"
-       local tag=$(run current-tag)
-       analyse ${analyse_args[@]} std $tag ||
+       progress "top-level | analysis" "analysis type $analysis_type on $(with_color white $tag)"
+       analyse ${analyse_args[@]} $analysis_type $tag ||
            if test -n "$analysis_can_fail" -a -z "$no_retry_failed_runs"
            then progress "run | analysis" "log processing failed, but --analysis-can-fail prevents failure:  $(with_color red $tag)"
                 iterations=$((iterations + 1))

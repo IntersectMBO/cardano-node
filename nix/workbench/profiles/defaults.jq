@@ -77,7 +77,8 @@ def era_defaults($era):
     }
 
   , analysis:
-    { cluster_startup_overhead_s:     10
+    { type:                           null
+    , cluster_startup_overhead_s:     10
     , start_log_spread_s:             120
     , last_log_spread_s:              120
     , silence_since_last_block_s:     120

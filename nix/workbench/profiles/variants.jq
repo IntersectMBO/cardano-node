@@ -18,6 +18,9 @@ def genesis_profile_variants:
       { shutdown_on_slot_synced: 10
       }
     , generator: { tps: 15 }
+    , analysis:
+      { type:                           "standard"
+      }
     } as $quick_base
   |
     { scenario: "fixed-loaded"
