@@ -12,8 +12,12 @@ usage_backend() {
     describe-run RUNDIR
     start-cluster RUNDIR
                      Start the cluster nodes
-    get-node-socket-path RUNDIR
-                     Given a run directory, print the node socket path
+    start-node RUNDIR NODE-NAME
+    stop-node RUNDIR NODE-NAME
+    wait-node RUNDIR NODE-NAME
+                     Start/stop/wait for a particular node in the cluster
+    get-node-socket-path RUNDIR [NODE]
+                     Given a run directory, print a given node's node socket path
                        for 'cardano-cli'
     start-generator RUNDIR
                      Start generator
@@ -40,6 +44,10 @@ case "${op}" in
     allocate-run )               backend_$WORKBENCH_BACKEND "$@";;
     describe-run )               backend_$WORKBENCH_BACKEND "$@";;
     start-cluster )              backend_$WORKBENCH_BACKEND "$@";;
+    start-node )                 backend_$WORKBENCH_BACKEND "$@";;
+    stop-node )                  backend_$WORKBENCH_BACKEND "$@";;
+    wait-node )                  backend_$WORKBENCH_BACKEND "$@";;
+    wait-node-stopped )          backend_$WORKBENCH_BACKEND "$@";;
     get-node-socket-path )       backend_$WORKBENCH_BACKEND "$@";;
     start-generator )            backend_$WORKBENCH_BACKEND "$@";;
     wait-pools-stopped )         backend_$WORKBENCH_BACKEND "$@";;
