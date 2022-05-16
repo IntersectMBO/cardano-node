@@ -116,13 +116,13 @@ def genesis_profile_variants:
 
   , $forge_stress_base *
     { name: "forge-stress"
-    , node:
-      { tracing_backend:                "trace-dispatcher"
-      }
     }
 
   , $forge_stress_base *
     { name: "forge-stress-oldtracing"
+    , node:
+      { tracing_backend:                "iohk-monitoring"
+      }
     }
 
   , $forge_stress_base *
@@ -138,13 +138,13 @@ def genesis_profile_variants:
 
   , $quick_base *
     { name: "quick"
-    , node:
-      { tracing_backend:                "trace-dispatcher"
-      }
     }
 
   , $quick_base *
     { name: "quick-oldtracing"
+    , node:
+      { tracing_backend:                "iohk-monitoring"
+      }
     }
 
   ## Chainsync:
