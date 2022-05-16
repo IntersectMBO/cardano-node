@@ -65,13 +65,25 @@ def profile_node_specs($env; $prof):
           + if $prof.composition.with_proxy then 1 else 0 end;
           $n_bfts + $n_pools
           + if $prof.composition.with_proxy then 1 else 0 end
+          + if $prof.composition.with_chaindb_server then 1 else 0 end)]
+   | map({ i: .
+         , kind: "chaindb-server"
+         , pools: 0
+         }))
+   as $chaindbs
+| ([range($n_bfts + $n_pools
+          + if $prof.composition.with_proxy then 1 else 0 end
+          + if $prof.composition.with_chaindb_server then 1 else 0 end;
+          $n_bfts + $n_pools
+          + if $prof.composition.with_proxy then 1 else 0 end
+          + if $prof.composition.with_chaindb_server then 1 else 0 end
           + if $prof.composition.with_observer then 1 else 0 end)]
    | map({ i: .
          , kind: "observer"
          , pools: 0
          }))
    as $observers
-| ($bfts + $pools + $proxies + $observers
+| ($bfts + $pools + $proxies + $chaindbs + $observers
    | map(. +
          { name:       "node-\(.["i"])"
          , isProducer: ([.kind == "bft", .kind == "pool"] | any)

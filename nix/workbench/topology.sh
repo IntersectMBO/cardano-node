@@ -121,24 +121,13 @@ case "${op}" in
 
         case "$role" in
         local-bft | local-pool )
-            args=(--slurpfile topology "$topo_dir"/topology-nixops.json
+            args=(-L$global_basedir
+                  --slurpfile topology "$topo_dir"/topology-nixops.json
                   --argjson   basePort $basePort
-                  --argjson   i         $i
+                  --argjson   i        $i
                   --null-input
                  )
-            jq '
-            def loopback_node_topology_from_nixops_topology($topo; $i):
-                $topo.coreNodes[$i].producers                      as $producers
-              | ($producers | map(ltrimstr("node-") | fromjson))   as $prod_indices
-              | { Producers:
-                  ( $prod_indices
-                    | map
-                      ({ addr:    "127.0.0.1"
-                      , port:    ($basePort + .)
-                      , valency: 1
-                      }
-                      ))
-                };
+            jq 'include "topology";
 
             loopback_node_topology_from_nixops_topology($topology[0]; $i)
             ' "${args[@]}";;
@@ -148,26 +137,17 @@ case "${op}" in
             local topo_proxy=$(profile preset-get-file "$preset" 'proxy topology' 'topology-proxy.json')
 
             jq . "$topo_proxy";;
+        local-chaindb-server )
+            ## ChainDB servers are just that:
+            jq --null-input "{ Producers: [] }";;
         local-observer )
-            args=(--slurpfile topology "$topo_dir"/topology-nixops.json
-                  --argjson   basePort $basePort
-                  --null-input
+            args=(-L$global_basedir
+                  --argjson   basePort     $basePort
                  )
-            jq '
-            def loopback_observer_topology_from_nixops_topology($topo):
-              [range(0; $topo.coreNodes | length)] as $prod_indices
-            | { Producers:
-                ( $prod_indices
-                | map
-                  ({ addr:    "127.0.0.1"
-                   , port:    ($basePort + .)
-                   , valency: 1
-                   }
-                  ))
-              };
+            jq 'include "topology";
 
-            loopback_observer_topology_from_nixops_topology($topology[0])
-            ' "${args[@]}";;
+            composition_observer_topology_loopback(.composition; $basePort)
+            ' "${args[@]}" <<<$prof;;
         * ) fail "unhandled role for topology node '$i': '$role'";;
         esac;;
 

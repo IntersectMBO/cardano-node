@@ -52,6 +52,9 @@ def profile_name($p):
   + if $p.composition.with_proxy
     then ["prox"]
     else [] end
+  + if $p.composition.with_chaindb_server
+    then ["chdb"]
+    else [] end
   + if $p.composition.with_observer
     then ["obsrv"]
     else [] end
