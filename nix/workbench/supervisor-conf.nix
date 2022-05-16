@@ -60,7 +60,8 @@ let
       stdout_logfile = "${service.value.stateDir}/stdout";
       stderr_logfile = "${service.value.stateDir}/stderr";
       startretries   = 0;
-      autostart      = nodeSpec.value.autostart;
+      autostart      = nodeSpec.value.autostart
+                       or true; ## Backward compatibility for profiles coming from old pinned workbench.
       autorestart    = false;
     };
 

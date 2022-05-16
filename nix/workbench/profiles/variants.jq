@@ -59,6 +59,40 @@ def genesis_profile_variants:
       }
     } as $plutus_base
   |
+    { scenario: "chainsync"
+    , preset: "mainnet"
+    , composition:
+      { n_singular_hosts:               0
+      , n_dense_hosts:                  0
+      , with_chaindb_server:            true
+      , with_observer:                  true
+      }
+    , analysis:
+      { type:                           "performance"
+      }
+    } as $chainsync_base
+  |
+    { node:
+      { tracing_backend:                "iohk-monitoring"
+      }
+    } as $old_tracing
+  |
+    { node:
+      { mainnet_chaindb_upto_chunk:     10
+      , shutdown_on_slot_synced:
+        { observer:                     237599
+        }
+      }
+    } as $chaindb_early_byron
+  |
+    { node:
+      { mainnet_chaindb_upto_chunk:     1800
+      , shutdown_on_slot_synced:
+        { observer:                     47173650 # 37173650
+        }
+      }
+    } as $chaindb_early_alonzo
+  |
 
   ## Baseline:
   [ { genesis: { utxo: 4000000, delegators: 1000000 } }
@@ -121,11 +155,8 @@ def genesis_profile_variants:
     { name: "forge-stress"
     }
 
-  , $forge_stress_base *
+  , $forge_stress_base * $old_tracing *
     { name: "forge-stress-oldtracing"
-    , node:
-      { tracing_backend:                "iohk-monitoring"
-      }
     }
 
   , $forge_stress_base *
@@ -143,25 +174,23 @@ def genesis_profile_variants:
     { name: "quick"
     }
 
-  , $quick_base *
+  , $quick_base * $old_tracing *
     { name: "quick-oldtracing"
-    , node:
-      { tracing_backend:                "iohk-monitoring"
-      }
     }
 
-  ## Chainsync:
-  , { name: "chainsync"
-    , scenario: "chainsync"
-    , preset: "mainnet"
-    , composition:
-      { locations:                      ["LO"]
-      , n_bft_hosts:                    0
-      , n_singular_hosts:               0
-      , n_dense_hosts:                  0
-      , with_proxy:                     true
-      , with_observer:                  true
-      } }
+  , $chainsync_base * $chaindb_early_byron *
+    { name: "chainsync-early-byron"
+    }
+  , $chainsync_base * $chaindb_early_byron * $old_tracing *
+    { name: "chainsync-early-byron-oldtracing"
+    }
+
+  , $chainsync_base * $chaindb_early_alonzo *
+    { name: "chainsync-early-alonzo"
+    }
+  , $chainsync_base * $chaindb_early_alonzo * $old_tracing *
+    { name: "chainsync-early-alonzo-oldtracing"
+    }
   ];
 
 def generator_profile_variants:

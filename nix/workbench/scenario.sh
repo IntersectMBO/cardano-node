@@ -8,12 +8,9 @@ usage_scenario() {
                             amount is submitted
 
     chainsync DIR         Chain syncing:
-                            1. start the preset-defined proxy node,
-                               using its respective connected topology mode,
-                               fetching the chain up to the specified slot
-                            2. restart the proxy with a disconnected topogy mode,
-                               effectively making it an idle chaindb server
-                            3. start the fetcher node, connected to the proxy
+                            1. start the preset-defined chaindb-server node,
+                               feeding it a generated chaindb
+                            2. start the fetcher node, connected to the chaindb-server
 
 EOF
 }
@@ -58,11 +55,29 @@ case "$op" in
         ;;
 
     chainsync )
-        ## This starts all nodes, due to unconditional start-up,
-        ## to start in default mode -- meaning that:
-        ##  - the proxy does start, connected
-        ##  - the fetcher doesn't
-        backend start-cluster   "$dir"
+        local chaindb_args=(
+            mainnet-chunks-with-snapshot-at-slot
+            "$dir"/node-0/run/current/node-0/db-testnet
+            $(jq '.node.shutdown_on_slot_synced.observer' $p)
+            $(jq '.node.mainnet_chaindb_upto_chunk' $p)
+        )
+        progress "scenario" "preparing ChainDB for the server node"
+        chaindb "${chaindb_args[@]}"
+
+        progress "scenario" "starting the ChainDB server node"
+        backend start-cluster "$dir"
+
+        progress "scenario" "starting the fetcher node"
+        backend start-node        "$dir" 'node-1'
+        ## TODO:
+        # time -o $out/totals time -f %M -o $out/highwater
+        # +RTS -s$out/rts.dump
+
+        scenario_setup_exit_trap  "$dir"
+        backend wait-node-stopped "$dir" 'node-1'
+        scenario_cleanup_exit_trap
+
+        backend stop-cluster      "$dir"
         ;;
 
     * ) usage_scenario;; esac
@@ -73,6 +88,16 @@ scenario_exit_trap() {
     echo >&2
     msg "scenario:  $(with_color yellow exit trap triggered)"
     backend stop-cluster "$__scenario_exit_trap_dir"
+}
+
+scenario_setup_exit_trap() {
+    local run_dir=$1
+    export __scenario_exit_trap_dir=$run_dir
+    trap scenario_exit_trap EXIT
+}
+
+scenario_cleanup_exit_trap() {
+    trap - EXIT
 }
 
 __scenario_watcher_pid=
@@ -87,8 +112,8 @@ scenario_watcher() {
 
 scenario_setup_termination() {
     local run_dir=$1
-    export __scenario_exit_trap_dir=$run_dir
-    trap scenario_exit_trap EXIT
+
+    scenario_setup_exit_trap $run_dir
 
     export __scenario_watcher_self=$BASHPID
     local termination_tolerance_s=40
@@ -100,5 +125,5 @@ scenario_setup_termination() {
 
 scenario_cleanup_termination() {
     kill $__scenario_watcher_pid 2>/dev/null || true
-    trap - EXIT
+    scenario_cleanup_exit_trap
 }

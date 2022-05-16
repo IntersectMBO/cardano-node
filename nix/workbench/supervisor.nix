@@ -32,6 +32,9 @@ let
         "127.0.0.1";
 
       finaliseNodeService =
+        let time_fmtstr =
+              ''{ \"wall\": %e, \"user\": %U, \"sys\": %S, \"avg_cpu_pct\": \"%P\", \"rss_peak_kb\": %M, \"pageflt_major\": %F, \"pageflt_minor\": %R, \"inputs\": %I, \"outputs\": %O }'';
+        in
         { name, i, isProducer, ... }: svc: recursiveUpdate svc
           ({
             stateDir       = stateDir + "/${name}";
@@ -40,7 +43,7 @@ let
             topology       = "topology.json";
             nodeConfigFile = "config.json";
           } // optionalAttrs useCabalRun {
-            executable     = "cabal run exe:cardano-node --";
+            executable     = ''time -f "${time_fmtstr}" -o time-output.json cabal run exe:cardano-node --'';
           } // optionalAttrs isProducer {
             operationalCertificate = "../genesis/node-keys/node${toString i}.opcert";
             kesKey         = "../genesis/node-keys/node-kes${toString i}.skey";

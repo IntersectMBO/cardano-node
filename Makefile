@@ -43,9 +43,6 @@ test-ghcid: ## Run ghcid on test suites
 test-ghcid-nix: ## Run ghcid on test suites with Nix
 	@ghcid --command="stack ghci --test --main-is $(PROJECT_NAME):test:$(PROJECT_NAME)-test --nix -j$(NUM_PROC)"
 
-bench-chainsync: PROFILE=chainsync-${ERA}
-bench-chainsync: cluster-shell-dev ## Enter Nix shell and start the chainsync benchmark
-
 ## TODO: migrate to `nix develop`
 cluster-shell: ## Enter Nix shell and start the workbench cluster
 	nix-shell --max-jobs 8 --cores 0 --show-trace --argstr profileName ${PROFILE} --arg 'autoStartCluster' true
@@ -62,8 +59,12 @@ forge-stress-plutus:     PROFILE = forge-stress-plutus-${ERA}
 forge-stress-oldtracing: PROFILE = forge-stress-oldtracing-${ERA}
 quick:                   PROFILE = quick-${ERA}
 quick-oldtracing:        PROFILE = quick-oldtracing-${ERA}
-forge-stress forge-stress-plutus forge-stress-oldtracing quick quick-oldtracing: ARGS += --arg 'workbenchDevMode' true
-shell-dev cluster-shell-dev cluster-shell-trace cluster-shell-dev-trace fixed forge-stress forge-stress-plutus forge-stress-oldtracing quick quick-oldtracing: shell
+chainsync-byron:             PROFILE = chainsync-early-byron-${ERA}
+chainsync-byron-oldtracing:  PROFILE = chainsync-early-byron-oldtracing-${ERA}
+chainsync-alonzo:            PROFILE = chainsync-early-alonzo-${ERA}
+chainsync-alonzo-oldtracing: PROFILE = chainsync-early-alonzo-oldtracing-${ERA}
+forge-stress forge-stress-plutus forge-stress-oldtracing quick quick-oldtracing chainsync-byron chainsync-byron-oldtracing chainsync-alonzo chainsync-alonzo-oldtracing: ARGS += --arg 'workbenchDevMode' true
+shell-dev cluster-shell-dev cluster-shell-trace cluster-shell-dev-trace fixed forge-stress forge-stress-plutus forge-stress-oldtracing quick quick-oldtracing chainsync-byron chainsync-byron-oldtracing chainsync-alonzo chainsync-alonzo-oldtracing: shell
 
 test-smoke: smoke ## Build the 'workbench-smoke-test', same as the Hydra job
 smoke:
@@ -128,4 +129,4 @@ full-clean: clean
 cls:
 	echo -en "\ec"
 
-.PHONY: bench-chainsync cabal-hashes clean cli cls cluster-profiles cluster-shell cluster-shell-dev cluster-shell-dev-trace cluster-shell-trace ghci ghcid help node run-test shell shell-dev stylish-haskell test-ghci test-ghcid test-ghcid-nix
+.PHONY: cabal-hashes clean cli cls cluster-profiles cluster-shell cluster-shell-dev cluster-shell-dev-trace cluster-shell-trace ghci ghcid help node run-test shell shell-dev stylish-haskell test-ghci test-ghcid test-ghcid-nix

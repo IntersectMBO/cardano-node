@@ -44,58 +44,48 @@ let
         {
           TestEnableDevelopmentHardForkEras     = true;
           TestEnableDevelopmentNetworkProtocols = true;
+          TurnOnLogMetrics                      = true;
         };
       tracing = {
         trace-dispatcher = {
           UseTraceDispatcher   = true;
 
-          TraceOptionSeverity  = [
-            { ns = "";                      severity = "Debug"; }
-            { ns = "Node.ChainDB";          severity = "Info"; }
-            { ns = "Node.AcceptPolicy";     severity = "Info"; }
-            { ns = "Node.DNSResolver";      severity = "Info"; }
-            { ns = "Node.DNSSubscription";  severity = "Info"; }
-            { ns = "Node.DiffusionInit";    severity = "Info"; }
-            { ns = "Node.ErrorPolicy";      severity = "Info"; }
-            { ns = "Node.Forge";            severity = "Info"; }
-            { ns = "Node.IpSubscription";   severity = "Info"; }
-            { ns = "Node.LocalErrorPolicy"; severity = "Info"; }
-            { ns = "Node.Mempool";          severity = "Info"; }
-            { ns = "Node.Resources";        severity = "Info"; }
+          TraceOptions  = {
+            ""                            = { severity = "Debug";
+                                              backends = [
+                                                "Stdout MachineFormat"
+                                                "EKGBackend"
+                                                # "Forwarder"
+                                              ];
+                                            }
+            "Node.ChainDB"                = { severity = "Info"; }
+            "Node.AcceptPolicy"           = { severity = "Info"; }
+            "Node.DNSResolver"            = { severity = "Info"; }
+            "Node.DNSSubscription"        = { severity = "Info"; }
+            "Node.DiffusionInit"          = { severity = "Info"; }
+            "Node.ErrorPolicy"            = { severity = "Info"; }
+            "Node.Forge"                  = { severity = "Info"; }
+            "Node.IpSubscription"         = { severity = "Info"; }
+            "Node.LocalErrorPolicy"       = { severity = "Info"; }
+            "Node.Mempool"                = { severity = "Info"; }
+            "Node.Resources"              = { severity = "Info"; }
 
-            { ns = "Node.Mux";                          severity = "Silence"; }
-            { ns = "Node.LocalHandshake";               severity = "Silence"; }
-            { ns = "Node.MuxLocal";                     severity = "Silence"; }
-            { ns = "Node.TxOutbound";                   severity = "Silence"; }
-            { ns = "Node.TxSubmission2";                severity = "Silence"; }
-            { ns = "Node.BlockFetchSerialised";         severity = "Silence"; }
-            { ns = "Node.ChainSyncSerialised";          severity = "Silence"; }
-          ];
+            "Node.Mux"                    = { severity = "Silence"; }
+            "Node.LocalHandshake"         = { severity = "Silence"; }
+            "Node.MuxLocal"               = { severity = "Silence"; }
+            "Node.TxOutbound"             = { severity = "Silence"; }
+            "Node.TxSubmission2"          = { severity = "Silence"; }
+            "Node.BlockFetchSerialised"   = { severity = "Silence"; }
+            "Node.ChainSyncSerialised"    = { severity = "Silence"; }
 
-          TraceOptionDetail = [
-            { ns = "";                      detail = "DNormal"; }
-            { ns = "Node.BlockFetchClient"; detail = "DMinimal"; }
-            { ns = "Node.TxSubmission2";
-              detail = "DMinimal"; }
-          ];
-
-          TraceOptionBackend = [
-            { ns = "";
-              backends = [
-                "Stdout MachineFormat"
-                "EKGBackend"
-                # "Forwarder"
-              ];
-            }
-          ];
-
-          TraceOptionLimiter = [
-            { ns = "Node.ChainDB.AddBlockEvent.AddedBlockToQueue";                 limiterFrequency = 2.0; limiterName = "AddedBlockToQueue"; }
-            { ns = "Node.ChainDB.AddBlockEvent.AddedBlockToVolatileDB";            limiterFrequency = 2.0; limiterName = "AddedBlockToVolatileDB"; }
-            { ns = "Node.ChainDB.CopyToImmutableDBEvent.CopiedBlockToImmutableDB"; limiterFrequency = 2.0; limiterName = "CopiedBlockToImmutableDB"; }
-            { ns = "Node.ChainDB.AddBlockEvent.AddBlockValidation.ValidCandidate"; limiterFrequency = 2.0; limiterName = "ValidCandidate"; }
-            { ns = "Node.BlockFetchClient.CompletedBlockFetch";                    limiterFrequency = 2.0; limiterName = "CompletedBlockFetch"; }
-          ];
+            "Node.BlockFetchClient"       = { detail = "DMinimal"; }
+            "Node.TxSubmission2"          = { detail = "DMinimal"; }
+            "Node.ChainDB.AddBlockEvent.AddedBlockToQueue"                  = { maxFrequency = 2.0; }
+            "Node.ChainDB.AddBlockEvent.AddedBlockToVolatileDB"             = { maxFrequency = 2.0; }
+            "Node.ChainDB.CopyToImmutableDBEvent.CopiedBlockToImmutableDB"  = { maxFrequency = 2.0; }
+            "Node.ChainDB.AddBlockEvent.AddBlockValidation.ValidCandidate"  = { maxFrequency = 2.0; }
+            "Node.BlockFetchClient.CompletedBlockFetch"                     = { maxFrequency = 2.0; }
+          };
 
           TraceOptionForwarder = {
             mode = "Responder";
@@ -154,15 +144,20 @@ let
     {
       inherit port;
 
-      ## For the definition of 'nodeConfigBits', please see below.
+      ## For the definition of 'nodeConfigBits', please see above.
+      ## Meaning:
+      ##   1. take the common base
+      ##   2. apply either the hardforks config, or the preset (typically mainnet)
+      ##   3. overlay the tracing config
       nodeConfig =
         backend.finaliseNodeConfig nodeSpec
           (recursiveUpdate
-            nodeConfigBits.base
-            (if __hasAttr "preset" profile.value
-             then readJSONMay (./presets + "/${profile.value.preset}/config.json")
-             else nodeConfigBits.era_setup_hardforks //
-                  nodeConfigBits.tracing.${profile.value.node.tracing_backend}));
+            (recursiveUpdate
+              nodeConfigBits.base
+              (if __hasAttr "preset" profile.value
+               then readJSONMay (./presets + "/${profile.value.preset}/config.json")
+               else nodeConfigBits.era_setup_hardforks))
+            nodeConfigBits.tracing.${profile.value.node.tracing_backend});
 
       extraArgs =
         let shutdownSlot = profile.value.node.shutdown_on_slot_synced;

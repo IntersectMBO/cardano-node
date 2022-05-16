@@ -42,7 +42,7 @@ let
           localNodeSocketPath = "../node-0/node.socket";
 
           ## nodeConfig of the locally running node.
-          localNodeConf = exemplarNode.serviceConfig.value;
+          localNodeConf = removeAttrs exemplarNode.serviceConfig.value ["executable"];
 
           ## The nodeConfig of the Tx generator itself.
           nodeConfig = backend.finaliseGeneratorConfig generatorNodeConfigDefault;
