@@ -684,25 +684,26 @@ instance Pretty Ledger.ExUnits where
   pretty _ = "ExUnits"
 
 prettyPlutusDatas :: [Plutus.Data] -> PP.Doc ann
-prettyPlutusDatas [dat, redeemer, info] = PP.vsep
-  [ "PlutusData:"
-  , PP.nest 2 $ PP.vsep
-    [ PP.hang 2 $ "data"     <+> "=" <+> PP.pretty dat
-    , PP.hang 2 $ "redeemer" <+> "=" <+> PP.pretty redeemer
-    , PP.hang 2 $ "info"     <+> "=" <+> prettyPlutusData info
+prettyPlutusDatas = \case
+  [dat, redeemer, info] -> PP.vsep
+    [ "PlutusData:"
+    , PP.nest 2 $ PP.vsep
+      [ PP.hang 2 $ "data"     <+> "=" <+> PP.pretty dat
+      , PP.hang 2 $ "redeemer" <+> "=" <+> PP.pretty redeemer
+      , PP.hang 2 $ "info"     <+> "=" <+> prettyPlutusData info
+      ]
     ]
-  ]
-prettyPlutusDatas [dat, info] = PP.vsep
-  [ "PlutusData:"
-  , PP.nest 2 $ PP.vsep
-    [ PP.hang 2 $ "data"     <+> "=" <+> PP.pretty dat
-    , PP.hang 2 $ "info"     <+> "=" <+> prettyPlutusData info
+  [dat, info] -> PP.vsep
+    [ "PlutusData:"
+    , PP.nest 2 $ PP.vsep
+      [ PP.hang 2 $ "data"     <+> "=" <+> PP.pretty dat
+      , PP.hang 2 $ "info"     <+> "=" <+> prettyPlutusData info
+      ]
     ]
-  ]
-prettyPlutusDatas ds = PP.vsep
-  [ "PlutusData"
-  , PP.vsep ((\d -> PP.nest 2 $ "-" <+> PP.pretty d) <$> ds)
-  ]
+  ds -> PP.vsep
+    [ "PlutusData"
+    , PP.vsep ((\d -> PP.nest 2 $ "-" <+> PP.pretty d) <$> ds)
+    ]
 
 prettyPlutusData :: Plutus.Data -> PP.Doc ann
 prettyPlutusData info = case PV1.fromData info of
