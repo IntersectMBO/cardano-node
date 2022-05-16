@@ -168,7 +168,11 @@ let
         let shutdownSlot = profile.value.node.shutdown_on_slot_synced;
         in backend.finaliseNodeArgs nodeSpec
           (if shutdownSlot != null
-           then ["--shutdown-on-slot-synced" (toString shutdownSlot)]
+           then if isAttrs shutdownSlot
+                then if shutdownSlot.${nodeSpec.kind} or null != null
+                     then ["--shutdown-on-slot-synced" (toString shutdownSlot.${nodeSpec.kind})]
+                     else []
+                else ["--shutdown-on-slot-synced" (toString shutdownSlot)]
            else []);
     };
 

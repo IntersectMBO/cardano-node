@@ -6,7 +6,7 @@ def default_value_tx_size_estimate:
   381;
 
 def may_mult($x):
-  if . == null then null else . * $x end;
+  if type != "number" then null else . * $x end;
 
 def may_attr($attr; $dict; $defdict; $scale; $suf):
   if ($dict[$attr] //
@@ -26,8 +26,8 @@ def profile_name($p):
     then may_attr("dense_pool_density";
                   $p.composition; $composition_defaults; 1; "ppn")
     else [] end
-  + if $shutdown_slots
-    then [($p.node.shutdown_on_slot_synced | tostring) + "slots"]
+  + if $shutdown_slots | type == "number"
+    then [($shutdown_slots | tostring) + "slots"]
     else [ ($p.generator.epochs                  | tostring) + "ep"
          , ($p.generator.tx_count     | . / 1000 | tostring) + "kTx" ]
     end
@@ -66,10 +66,10 @@ def profile_name_era_suffix($era):
 
 def add_derived_params:
   (.genesis.utxo + .genesis.delegators)      as $dataset_measure
-| (if $dataset_measure < 10000 then 3
+| (if $dataset_measure < 10000 then 10
    else $dataset_measure / 50000
    end | ceil)                               as $dataset_induced_startup_delay_optimistic
-| (if $dataset_measure < 10000 then 3
+| (if $dataset_measure < 10000 then 10
    else $dataset_measure / 10000
    end | ceil)                               as $dataset_induced_startup_delay_conservative
 | (.derived.genesis_future_offset //
@@ -85,7 +85,7 @@ def add_derived_params:
 ## Absolute durations:
 | ($gsis.epoch_length * $gsis.slot_duration) as $epoch_duration
 | $node.shutdown_on_slot_synced              as $shutdown_slots
-| (if $shutdown_slots != null
+| (if $shutdown_slots | type == "number"
    then $shutdown_slots / $gsis.epoch_length | ceil
    else $gtor.epochs
    end)                                      as $effective_epochs
