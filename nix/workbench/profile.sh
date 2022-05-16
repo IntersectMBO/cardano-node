@@ -85,6 +85,11 @@ case "$op" in
         local profile=${1:?$usage}
         profile json "$profile" | jqtest ".preset != null";;
 
+    preset )
+        local usage="USAGE: wb profile $op NAME"
+        local profile=${1:?$usage}
+        profile json "$profile" | jq -r ".preset";;
+
     preset-get-file )
         local usage="USAGE: wb profile $op PRESET-NAME DESC FILE"
         local preset=${1:?$usage}
@@ -118,17 +123,28 @@ case "$op" in
         local usage="USAGE: wb profile $op PROFILE-JSON"
         local profile=${1:?$usage}
 
-        local offset=$(profile json "$profile" |
-                       jq '.derived.genesis_future_offset' --raw-output)
-        local start=$(date '+%s' --date="now + $offset")
+        if profile has-preset "$profile"
+        then
+            local preset=$(profile json "$profile" | jq '.preset' -r)
+            local shelley=$(profile preset-get-file "$preset" 'genesis' 'genesis/genesis-shelley.json')
+            local start=$(jq '.systemStart | fromdateiso8601' $shelley)
+            local offset="$((start - $(date +%s))) seconds"
+            local start_tag=$(date --date=@$(date +%s) --utc +'%Y'-'%m'-'%d'-'%H.%M')
+        else
+            local offset=$(profile json "$profile" |
+                               jq '.derived.genesis_future_offset' --raw-output)
+            local start=$(date '+%s' --date="now + $offset")
+            local start_tag=$(date --date=@$start --utc +'%Y'-'%m'-'%d'-'%H.%M')
+        fi
         local args=(
             -L "$global_basedir"
             --arg 'future_offset'   "$offset"
             --arg 'start'           "$start"
             --arg 'start_human'     "$(date --date=@$start --utc +"%Y-%m-%dT%H:%M:%SZ")"
-            --arg 'start_tag'       "$(date --date=@$start --utc +'%Y'-'%m'-'%d'-'%H.%M')"
+            --arg 'start_tag'       "$start_tag"
             --arg 'systemStart'     "$(date --date=@$start --utc --iso-8601=s | cut -c-19)Z"
         )
+
         profile json "$profile" | jq '
           include "profile-run";
 

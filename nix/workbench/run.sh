@@ -230,7 +230,7 @@ case "$op" in
         local batch=${1:?$usage}; shift
         local profile_name=${1:?$usage}; shift
 
-        local profile= topology= genesis_cache_entry= manifest=
+        local profile= topology= genesis_cache_entry= manifest= preset=
         while test $# -gt 0
         do case "$1" in
                --manifest )            manifest=$2; shift;;
@@ -241,7 +241,11 @@ case "$op" in
                --* ) msg "FATAL:  unknown flag '$1'"; usage_run;;
                * ) break;; esac; shift; done
 
-        progress "run" "allocating a new one.."
+        if profile has-preset "$profile"/profile.json
+        then preset=$(profile json "$profile"/profile.json | jq '.preset' -r)
+             progress "run" "allocating from preset '$preset'"
+        else progress "run" "allocating a new one"
+        fi
 
         ## 0. report software manifest
         progress "run | manifest" "component versions:"
@@ -332,13 +336,14 @@ case "$op" in
         else topology make    "$dir"/profile.json "$dir"/topology
         fi
 
-        if test   -n "$genesis_cache_entry"
-        then genesis derive-from-cache      \
+        if      test -z "$genesis_cache_entry"
+        then fail "internal error:  no genesis cache entry"
+
+        else genesis derive-from-cache      \
                      "$profile"             \
                      "$timing"              \
                      "$genesis_cache_entry" \
                      "$dir"/genesis
-        else fail "internal error:  no genesis cache entry"
         fi
         ## Record geneses
         cp "$dir"/genesis/genesis-shelley.json "$dir"/genesis-shelley.json
