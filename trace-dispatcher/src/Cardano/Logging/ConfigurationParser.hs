@@ -102,7 +102,7 @@ instance AE.FromJSON ConfigOptionRep where
                          <$> obj .:? "severity"
                          <*> obj .:? "detail"
                          <*> obj .:? "backends"
-                         <*> obj .:? "maxFrequecy"
+                         <*> obj .:? "maxFrequency"
 
 toConfigOptions :: ConfigOptionRep -> [ConfigOption]
 toConfigOptions ConfigOptionRep {..} =

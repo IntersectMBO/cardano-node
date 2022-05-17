@@ -25,7 +25,7 @@ import           Data.IORef (IORef, newIORef, readIORef, writeIORef)
 import           Data.List (maximumBy, nub)
 import qualified Data.Map as Map
 import           Data.Maybe (fromMaybe, mapMaybe)
-import           Data.Text (Text, unpack, pack)
+import           Data.Text (Text, pack, unpack)
 
 import           Cardano.Logging.DocuGenerator (addFiltered, addLimiter)
 import           Cardano.Logging.FrequencyLimiter (LimitingMessage (..), limitFrequency)
