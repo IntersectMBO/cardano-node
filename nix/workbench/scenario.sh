@@ -55,14 +55,23 @@ case "$op" in
         ;;
 
     chainsync )
-        local chaindb_args=(
+        local observer=(
+            mainnet-chunks-with-snapshot-at-slot
+            "$dir"/node-1/run/current/node-1/db-testnet
+            $(jq '.chaindb.ledger_snapshot.observer'       $p)
+            $(jq '.chaindb.mainnet_chunks.observer'        $p)
+        )
+        progress "scenario" "preparing ChainDB for the observer"
+        chaindb "${observer[@]}"
+
+        local chaindb_server=(
             mainnet-chunks-with-snapshot-at-slot
             "$dir"/node-0/run/current/node-0/db-testnet
-            $(jq '.node.shutdown_on_slot_synced.observer' $p)
-            $(jq '.node.mainnet_chaindb_upto_chunk' $p)
+            $(jq '.chaindb.ledger_snapshot.chaindb_server' $p)
+            $(jq '.chaindb.mainnet_chunks.chaindb_server'  $p)
         )
         progress "scenario" "preparing ChainDB for the server node"
-        chaindb "${chaindb_args[@]}"
+        chaindb "${chaindb_server[@]}"
 
         progress "scenario" "starting the ChainDB server node"
         backend start-cluster "$dir"
@@ -70,7 +79,6 @@ case "$op" in
         progress "scenario" "starting the fetcher node"
         backend start-node        "$dir" 'node-1'
         ## TODO:
-        # time -o $out/totals time -f %M -o $out/highwater
         # +RTS -s$out/rts.dump
 
         scenario_setup_exit_trap  "$dir"

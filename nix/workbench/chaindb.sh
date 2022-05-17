@@ -120,12 +120,17 @@ snapshot-at-slot )
     else progress "chaindb" "reapplying blocks.."
 
          ## Actually produce the snapshot:
+         local maybe_precedent=$(chaindb_mainnet_ledger_snapshots_before_slot $cachedir $slotno)
          args=( --configByron     "$(jq -r .byron   <<<$geneses)"
                 --configShelley   "$(jq -r .shelley <<<$geneses)"
                 --configAlonzo    "$(jq -r .alonzo  <<<$geneses)"
                 --nonce           "$shelleyGenesisHash"
                 --store-ledger    $slotno
               )
+         if test -n "$maybe_precedent"
+         then progress "chaindb" "found a precedent snapshot at slot $maybe_precedent, using as base.."
+              args+=(--analyse-from $maybe_precedent)
+         fi
          db-analyser  --db $out cardano "${args[@]}"
 
          ls -ltrh          $out/ledger
@@ -175,4 +180,11 @@ validate )
     ;;
 
 * ) usage_chaindb;; esac
+}
+
+chaindb_mainnet_ledger_snapshots_before_slot() {
+    local cachedir=$1
+    local slot=$2
+    ( cd $cachedir/ledger && ls -1 mainnet-ledger.* | cut -d. -f2; echo $slot
+    ) | sort -n | grep -wB1 $slot | grep -v $slot | head -n1 2>/dev/null
 }

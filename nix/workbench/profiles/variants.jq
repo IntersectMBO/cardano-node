@@ -77,18 +77,36 @@ def genesis_profile_variants:
       }
     } as $old_tracing
   |
-    { node:
-      { mainnet_chaindb_upto_chunk:     10
-      , shutdown_on_slot_synced:
+    { chaindb:
+      { mainnet_chunks:
+        { chaindb_server:               10
+        , observer:                     0
+        }
+      , ledger_snapshot:
+        { chaindb_server:               237599
+        , observer:                     0
+        }
+      }
+    , node:
+      { shutdown_on_slot_synced:
         { observer:                     237599
         }
       }
     } as $chaindb_early_byron
   |
-    { node:
-      { mainnet_chaindb_upto_chunk:     1800
-      , shutdown_on_slot_synced:
-        { observer:                     47173650 # 37173650
+    { chaindb:
+      { mainnet_chunks:
+        { chaindb_server:               1800
+        , observer:                     1799
+        }
+      , ledger_snapshot:
+        { chaindb_server:               38901589
+        , observer:                     37173650
+        }
+      }
+    , node:
+      { shutdown_on_slot_synced:
+        { observer:                     38901589
         }
       }
     } as $chaindb_early_alonzo
