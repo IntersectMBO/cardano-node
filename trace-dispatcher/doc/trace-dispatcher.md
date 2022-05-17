@@ -524,30 +524,25 @@ If the configuration file is in Yaml format, the following entry means, that by 
 all messages with Info or higher Priority are shown:
 
 ```yaml
-TraceOptionSeverity:
-  - ns: ''
-    severity: Info
 ```
 
 But if you want to see Debug messages of the ChainDB tracer, then add:
 
 ```yaml
-TraceOptionSeverity:
-  - ns: ''
+  Node:
     severity: Info
-  - ns: Node.ChainDB
+  Node.ChainDB:
     severity: Debug
 ```
 
 And if you never want to see any message of the AcceptPolicy tracer, then add:
 
 ```yaml
-TraceOptionSeverity:
-  - ns: ''
+  Node:
     severity: Info
-  - ns: Node.ChainDB
+  Node.ChainDB:
     severity: Debug
-  - ns: Node.AcceptPolicy
+  Node.AcceptPolicy:
     severity: SilentF
 ```
 
@@ -555,10 +550,8 @@ As another example, if you don't want to see more then 1 BlockFetchClient
 message per second, then add this to your configuration file:
 
 ```yaml
-TraceOptionLimiter:
-  - ns: Node.BlockFetchClient
-    limiterName: BlockFetchLimiter
-    limiterFrequency: 1.0
+  Node.BlockFetchClient:
+    maxFrequency: 1.0
 ```
 
 ## Documentation

@@ -6,6 +6,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 
+{-# OPTIONS_GHC -Wno-partial-fields  #-}
 
 module Cardano.Logging.Types (
     Trace(..)
@@ -278,16 +279,19 @@ data FormatLogging =
 -- Configuration options for individual namespace elements
 data ConfigOption =
     -- | Severity level for a filter (default is Warning)
-    ConfSeverity SeverityF
+    ConfSeverity {severity :: SeverityF}
     -- | Detail level (default is DNormal)
-  | ConfDetail DetailLevel
+  | ConfDetail {detail :: DetailLevel}
   -- | To which backend to pass
   --   Default is [EKGBackend, Forwarder, Stdout HumanFormatColoured]
-  | ConfBackend [BackendConfig]
+  | ConfBackend {backends :: [BackendConfig]}
   -- | Construct a limiter with name (Text) and limiting to the Double,
   -- which represents frequency in number of messages per second
-  | ConfLimiter Text Double
-  deriving (Eq, Ord, Show)
+  | ConfLimiter {maxFrequency :: Double}
+  deriving (Eq, Ord, Show, Generic)
+
+instance AE.FromJSON ConfigOption where
+  parseJSON = AE.genericParseJSON AE.defaultOptions{AE.sumEncoding = AE.UntaggedValue}
 
 newtype ForwarderAddr
   = LocalSocket FilePath

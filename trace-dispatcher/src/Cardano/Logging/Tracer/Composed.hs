@@ -41,11 +41,11 @@ instance (LogFormatting m) => LogFormatting (MessageOrLimit m) where
 -- The tracer gets a 'namesFor', 'severityFor' and 'privacyFor' function
 -- as arguments, to set the logging context accordingly.
 --
--- The tracer gets the backends: 'trStdout', 'trForward' and 'mbTrEkg'
+-- The tracer gets the backends': 'trStdout', 'trForward' and 'mbTrEkg'
 -- as arguments.
 --
 -- The returned tracer need to be configured for the specification of
--- filtering, detailLevel, frequencyLimiting and backends with formatting before use.
+-- filtering, detailLevel, frequencyLimiting and backends' with formatting before use.
 mkCardanoTracer :: forall evt.
      LogFormatting evt
   => Trace IO FormattedMessage
@@ -98,34 +98,34 @@ mkCardanoTracer' trStdout trForward mbTrEkg name namesFor severityFor privacyFor
       -> Trace m x
       -> IO (Trace IO (MessageOrLimit evt1))
     backendsAndFormat mbBackends _ =
-      let backends = fromMaybe
+      let backends' = fromMaybe
                       [EKGBackend, Forwarder, Stdout HumanFormatColoured]
                       mbBackends
       in do
         mbEkgTrace     <- case mbTrEkg of
                             Nothing -> pure Nothing
                             Just ekgTrace ->
-                              if EKGBackend `elem` backends
+                              if EKGBackend `elem` backends'
                                 then pure $ Just
                                       (metricsFormatter "Cardano" ekgTrace)
                                 else pure Nothing
-        mbForwardTrace <- if Forwarder `elem` backends
+        mbForwardTrace <- if Forwarder `elem` backends'
                             then fmap (Just . filterTraceByPrivacy (Just Public))
                                   (forwardFormatter "Cardano" trForward)
                             else pure Nothing
-        mbStdoutTrace  <-  if Stdout HumanFormatColoured `elem` backends
+        mbStdoutTrace  <-  if Stdout HumanFormatColoured `elem` backends'
                             then fmap Just
                                 (humanFormatter True "Cardano" trStdout)
-                            else if Stdout HumanFormatUncoloured `elem` backends
+                            else if Stdout HumanFormatUncoloured `elem` backends'
                               then fmap Just
                                   (humanFormatter False "Cardano" trStdout)
-                              else if Stdout MachineFormat `elem` backends
+                              else if Stdout MachineFormat `elem` backends'
                                 then fmap Just
                                   (machineFormatter "Cardano" trStdout)
                                 else pure Nothing
         case mbEkgTrace <> mbForwardTrace <> mbStdoutTrace of
           Nothing -> pure $ Trace NT.nullTracer
-          Just tr -> pure (preFormatted backends tr)
+          Just tr -> pure (preFormatted backends' tr)
 
 -- A simple dataPointTracer which supports building a namespace.
 mkDataPointTracer :: forall dp. ToJSON dp
