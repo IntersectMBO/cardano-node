@@ -341,6 +341,9 @@ runChainCommand s@State{sRun=Just run, sChainRaw=Just chainRaw}
           & firstExceptT (CommandError c)
   (domSlot, domBlock, chain) <- filterChain run flts chainRaw
                                 & liftIO & firstExceptT (CommandError c)
+  when (ddFilteredCount domBlock == 0) $
+    throwE $ CommandError c $ mconcat
+      [ "All ", show (ddRawCount domBlock), " blocks filtered out." ]
   pure s { sChain = Just chain, sDomSlots = Just domSlot, sDomBlocks = Just domBlock }
 runChainCommand _ c@FilterChain{} = missingCommandData c
   ["run metadata & genesis", "slot filters", "unfiltered slot stats"]
@@ -384,6 +387,9 @@ runChainCommand s@State{sRun=Just run, sSlotsRaw=Just slotsRaw}
   (domSlots, fltrd) <- runSlotFilters run flts slotsRaw
                        & liftIO
                        & firstExceptT (CommandError c)
+  when (maximum (length . snd <$> fltrd) == 0) $
+    throwE $ CommandError c $ mconcat
+      [ "All ", show $ maximum (length . snd <$> slotsRaw), " slots filtered out." ]
   pure s { sSlots = Just fltrd, sDomSlots = Just domSlots }
 runChainCommand _ c@FilterSlots{} = missingCommandData c
   ["run metadata & genesis", "slot filters", "unfiltered slot stats"]
