@@ -15,6 +15,7 @@ import qualified Data.Map as Map
 import           Data.Maybe (fromMaybe)
 import           Data.Time.Clock (getCurrentTime)
 
+
 import           System.Metrics as EKG
 
 import           Network.Mux.Trace (TraceLabelPeer (..))
@@ -57,7 +58,7 @@ initTraceDispatcher ::
   -> IO (Tracers RemoteConnectionId LocalConnectionId blk p2p)
 initTraceDispatcher nc p networkMagic nodeKernel p2pMode = do
   trConfig <- readConfiguration (unConfigPath $ ncConfigFile nc)
---  trace ("TraceConfig " <> show trConfig) $ pure ()
+  putStrLn $ "New tracer configuration: " <> show trConfig
 
   tracers <- mkTracers trConfig
 
