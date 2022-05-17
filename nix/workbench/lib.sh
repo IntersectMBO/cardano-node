@@ -60,6 +60,27 @@ with_color() {
     color reset
 }
 
+colorise_colors=(
+    red green yellow blue cyan white reset red green yellow blue cyan white reset
+    red green yellow blue cyan white reset red green yellow blue cyan white reset
+    red green yellow blue cyan white reset red green yellow blue cyan white reset
+    red green yellow blue cyan white reset red green yellow blue cyan white reset
+    red green yellow blue cyan white reset red green yellow blue cyan white reset
+    red green yellow blue cyan white reset red green yellow blue cyan white reset
+    red green yellow blue cyan white reset red green yellow blue cyan white reset
+    red green yellow blue cyan white reset red green yellow blue cyan white reset
+    red green yellow blue cyan white reset red green yellow blue cyan white reset
+    red green yellow blue cyan white reset red green yellow blue cyan white reset
+    red green yellow blue cyan white reset red green yellow blue cyan white reset
+    red green yellow blue cyan white reset red green yellow blue cyan white reset
+)
+colorise() {
+    for ((i=0; $#!=0; i++))
+    do echo -n "$(with_color ${colorise_colors[$i]} $1) "
+       shift
+    done
+}
+
 msg() {
     echo "workbench:  $*" >&2
 }

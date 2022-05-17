@@ -166,7 +166,7 @@ start()
 
        if test -n "$no_analysis" -o $analysis_type = null; then continue; fi
 
-       progress "top-level | analysis" "analysis type $analysis_type on $(with_color white $tag)"
+       progress "top-level | analysis" "analysis type $(with_color yellow $analysis_type) on $(with_color white $tag)"
        analyse ${analyse_args[@]} $analysis_type $tag ||
            if test -n "$analysis_can_fail" -a -z "$no_retry_failed_runs"
            then progress "run | analysis" "log processing failed, but --analysis-can-fail prevents failure:  $(with_color red $tag)"
