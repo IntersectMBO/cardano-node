@@ -27,13 +27,12 @@ advice to use namespaces for any analysis tools of traces!
 1. Specify a filter for the severity of the messages you want to see, e.g.:
 
   ~~~yaml
-  TraceOptionSeverity:
-    # Show messages of Severity Notice or higher as default
-    - ns: ""
+  # Show messages of Severity Notice or higher as default
+  Node:
       severity: Notice
 
     # But show ChainDB messages starting from Info
-    - ns: Node.ChainDB
+  Node.ChainDB:
       severity: Info
   ~~~
 
@@ -48,9 +47,10 @@ advice to use namespaces for any analysis tools of traces!
 2. Specify in which detail level, the messages get shown.
 
   ~~~yaml
-  TraceOptionDetail:
-    # All messages are shown with normal detail level
-    - ns: ""
+  Node:
+      # Keep this
+      severity: Notice      
+      # All messages are shown with normal detail level
       detail: DNormal
   ~~~
 
@@ -62,11 +62,9 @@ advice to use namespaces for any analysis tools of traces!
     frequency in which messages get shown.
 
     ~~~yaml
-    TraceOptionLimiter:
-      # Only show a maximum of 2 of these messages per second
-      - ns: Node.ChainDB.AddBlockEvent.AddedBlockToQueue
-        limiterName: AddedBlockToQueueLimiter
-        limiterFrequency: 2.0
+    Node.ChainDB.AddBlockEvent.AddedBlockToQueue:
+        # Only show a maximum of 2 of these messages per second
+        maxFrequency: 2.0
     ~~~
 
     The activity of limiters will be written in the traces as well.
@@ -74,9 +72,12 @@ advice to use namespaces for any analysis tools of traces!
 4. Specify the backends the messages are routed to.
 
   ~~~yaml
-  TraceOptionBackend:
-    # Use these backends
-    - ns: ""
+  Node:
+      # Keep this
+      severity: Notice      
+      # And this
+      detail: DNormal  
+      # And specify a list of backends to use
       backends:
         - Stdout MachineFormat
         - EKGBackend

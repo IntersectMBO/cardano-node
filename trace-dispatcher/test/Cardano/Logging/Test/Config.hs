@@ -59,7 +59,7 @@ config3 = emptyTraceConfig {
          [ ConfSeverity (SeverityF (Just Debug))
          , ConfDetail DNormal
          , ConfBackend [Stdout HumanFormatColoured, EKGBackend]
-         , ConfLimiter "message1 limiter 100" 100
+         , ConfLimiter 100
          ])
     , (["Node", "Test", "Message2"],
          [ ConfSeverity (SeverityF (Just Error))

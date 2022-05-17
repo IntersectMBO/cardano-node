@@ -45,110 +45,87 @@ TurnOnLogging: True
 # Use old tracing as standard for now
 UseTraceDispatcher: True
 
-
-TraceOptionSeverity:
-  # Show messages of Severity Notice or higher as default
-  - ns: ""
+TraceOptions:
+  Node:
     severity: Silence
-
-  # But modify severity for the following namespaces
-  - ns: Node.ChainDB
-    severity: Info
-
-  - ns: Node.ChainDB.AddBlockEvent.AddBlockValidation.ValidCandidate
-    severity: Silence
-
-  - ns: Node.ChainDB.InitChainSelEvent.UpdateLedgerDb
-    severity: Silence
-
-  - ns: Node.ConnectionManager
-    severity: Info
-
-  - ns: Node.AcceptPolicy
-    severity: Info
-
-  - ns: Node.DNSResolver
-    severity: Info
-
-  - ns: Node.DNSSubscription
-    severity: Info
-
-  - ns: Node.DiffusionInit
-    severity: Info
-
-  - ns: Node.ErrorPolicy
-    severity: Info
-
-  - ns: Node.Forge
-    severity: Info
-
-  - ns: Node.InboundGovernor
-    severity: Info
-
-  - ns: Node.IpSubscription
-    severity: Info
-
-  - ns: Node.IpSubscription
-    severity: Info
-
-  - ns: Node.LedgerPeers
-    severity: Info
-
-  - ns: Node.LocalErrorPolicy
-    severity: Info
-
-  - ns: Node.LocalRootPeers
-    severity: Info
-
-  - ns: Node.Mempool
-    severity: Info
-
-  - ns: Node.PeerSelection
-    severity: Info
-
-  - ns: Node.PeerSelectionActions
-    severity: Info
-
-  - ns: Node.PublicRootPeers
-    severity: Info
-
-  - ns: Node.Resources
-    severity: Silence
-
-TraceOptionDetail:
-  # All messages are shown with normal detail level
-  - ns: ""
     detail: DNormal
-
-TraceOptionBackend:
-  # Use these backends
-  - ns: ""
     backends:
       - Stdout MachineFormat
       - EKGBackend
       - Forwarder
 
-# Limit the frequency of the following messages
-TraceOptionLimiter:
-  - ns: Node.ChainDB.AddBlockEvent.AddedBlockToQueue
-    limiterName: AddedBlockToQueueLimiter
-    limiterFrequency: 2.0
+  Node.ChainDB:
+     severity: Info
 
-  - ns: Node.ChainDB.AddBlockEvent.AddedBlockToVolatileDB
-    limiterName: AddedBlockToVolatileDBLimiter
-    limiterFrequency: 2.0
+  Node.ChainDB.AddBlockEvent.AddBlockValidation.ValidCandidate:
+    severity: Silence
 
-  - ns: Node.ChainDB.CopyToImmutableDBEvent.CopiedBlockToImmutableDB
-    limiterName: CopiedBlockToImmutableDBLimiter
-    limiterFrequency: 2.0
+  Node.ChainDB.InitChainSelEvent.UpdateLedgerDb:
+    severity: Silence
 
-  - ns: Node.ChainDB.AddBlockEvent.AddBlockValidation.ValidCandidate
-    limiterName: ValidCandidateLimiter
-    limiterFrequency: 2.0
+  Node.ConnectionManager:
+    severity: Info
 
-  - ns: Node.BlockFetchClient.CompletedBlockFetch
-    limiterName: CompletedBlockFetchLimiter
-    limiterFrequency: 2.0
+  Node.AcceptPolicy:
+    severity: Info
+
+  Node.DNSResolver:
+    severity: Info
+
+  Node.DNSSubscription:
+    severity: Info
+
+  Node.DiffusionInit:
+    severity: Info
+
+  Node.ErrorPolicy:
+    severity: Info
+
+  Node.Forge:
+    severity: Info
+
+  Node.InboundGovernor:
+    severity: Info
+
+  Node.IpSubscription:
+    severity: Info
+
+  Node.LedgerPeers:
+    severity: Info
+
+  Node.LocalErrorPolicy:
+    severity: Info
+
+  Node.LocalRootPeers:
+    severity: Info
+
+  Node.Mempool:
+    severity: Info
+
+  Node.PeerSelection:
+    severity: Info
+
+  Node.PeerSelectionActions:
+    severity: Info
+
+  Node.PublicRootPeers:
+    severity: Info
+
+
+  Node.ChainDB.AddBlockEvent.AddedBlockToQueue:
+    maxFrequency: 2.0
+
+  Node.ChainDB.AddBlockEvent.AddedBlockToVolatileDB:
+    maxFrequency: 2.0
+
+  Node.ChainDB.CopyToImmutableDBEvent.CopiedBlockToImmutableDB:
+    maxFrequency: 2.0
+
+  Node.ChainDB.AddBlockEvent.AddBlockValidation.ValidCandidate:
+    maxFrequency: 2.0
+
+  Node.BlockFetchClient.CompletedBlockFetch:
+    maxFrequency: 2.0
 
 # Options for the trace forwarder
 TraceOptionForwarder:
@@ -159,7 +136,6 @@ TraceOptionForwarder:
 TraceOptionPeerFreqency: 2000
 
 TraceOptionResourceFreqency: 5000
-
 
 ##### Stubs for legacy logging config #####
 
