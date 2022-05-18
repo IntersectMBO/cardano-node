@@ -83,11 +83,7 @@ cardano-cli byron genesis genesis \
 # SPOs in the ShelleyGenesis
 
 
-cp configuration/cardano/mainnet-alonzo-genesis.json test/genesis.alonzo.spec.json
-
-
-# -e 's/ByronGenesisFile: byron/genesis.json/ByronGenesisFile: "${ROOT}/byron/genesis.json' \
-# -e 's/ShelleyGenesisFile: shelley/genesis.json/ShelleyGenesisFile: "${ROOT}/shelley/genesis.json' \
+cp scripts/babbage/alonzo-babbage-test-genesis.json test/genesis.alonzo.spec.json
 
 cp configuration/defaults/byron-mainnet/configuration.yaml ${ROOT}/
 $SED -i ${ROOT}/configuration.yaml \
