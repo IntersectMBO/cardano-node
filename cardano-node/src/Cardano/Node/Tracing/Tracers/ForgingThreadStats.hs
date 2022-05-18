@@ -75,7 +75,7 @@ docForgeStats :: Documented
       TraceStartLeadershipCheckPlus)
 docForgeStats = Documented [
     DocMsg
-      ["ForgeStats"]
+      []
       [("nodeCannotForgeNum",
         "How many times this node could not forge?")
       ,("nodeIsLeaderNum",
