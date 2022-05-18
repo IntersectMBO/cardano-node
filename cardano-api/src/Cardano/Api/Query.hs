@@ -122,7 +122,6 @@ import           Cardano.Api.TxBody
 import           Cardano.Api.Value
 
 import qualified Data.Aeson.KeyMap as KeyMap
-import qualified Data.Compact.SplitMap as SplitMap
 import           Data.Word (Word64)
 
 -- ----------------------------------------------------------------------------
@@ -379,7 +378,7 @@ toLedgerUTxO :: ShelleyLedgerEra era ~ ledgerera
              -> Shelley.UTxO ledgerera
 toLedgerUTxO era (UTxO utxo) =
     Shelley.UTxO
-  . SplitMap.fromList
+  . Map.fromList
   . map (bimap toShelleyTxIn (toShelleyTxOut era))
   . Map.toList
   $ utxo
@@ -393,7 +392,7 @@ fromLedgerUTxO era (Shelley.UTxO utxo) =
     UTxO
   . Map.fromList
   . map (bimap fromShelleyTxIn (fromShelleyTxOut era))
-  . SplitMap.toList
+  . Map.toList
   $ utxo
 
 fromShelleyPoolDistr :: Shelley.PoolDistr StandardCrypto
