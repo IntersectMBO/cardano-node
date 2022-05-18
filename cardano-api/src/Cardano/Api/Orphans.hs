@@ -21,13 +21,13 @@ import qualified Data.Aeson as Aeson
 import           Data.Aeson.Types (ToJSONKey (..), toJSONKeyText)
 import           Data.BiMap (BiMap (..), Bimap)
 import qualified Data.ByteString.Base16 as B16
-import           Data.Compact.VMap (VB, VMap, VP)
-import qualified Data.Compact.VMap as VMap
 import qualified Data.Map.Strict as Map
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import           Data.UMap (Trip (Triple), UMap (UnifiedMap))
+import           Data.VMap (VB, VMap, VP)
+import qualified Data.VMap as VMap
 
 import qualified Cardano.Ledger.Babbage as Babbage
 import           Cardano.Ledger.BaseTypes (StrictMaybe (..))
