@@ -43,8 +43,8 @@ import qualified Cardano.Protocol.TPraos.Rules.Tickn as Ledger
 
 import qualified Cardano.Ledger.Mary.Value as Ledger.Mary
 
-import qualified Data.Compact.VMap as VMap
 import qualified Cardano.Ledger.Shelley.PoolRank as Ledger
+import qualified Data.VMap as VMap
 
 instance ToJSON (OneEraHash xs) where
   toJSON = toJSON
