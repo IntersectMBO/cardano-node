@@ -53,6 +53,8 @@ TraceOptions:
       - EKGBackend
       - Forwarder
 
+# More interesing tracers
+
   Node.ChainDB:
     severity: Info
 
@@ -86,6 +88,238 @@ TraceOptions:
   Node.Resources:
     severity: Info
 
+#-------------------------------------------------------------------
+# Metric tracers
+#carry metrics blocksForgedNum
+  Node.ReplayBlock.LedgerReplay:
+    severity: Info
+
+
+# carry metrics blocksForgedNum, nodeCannotForgeNum, nodeIsLeaderNum, slotsMissed
+#  nodeCannotForgeNum.
+  Node.ForgeStats:
+    severity: Info
+
+
+# carry metrics cardano.node.aboutToLeadSlotLast
+  Node.Forge.StartLeadershipCheck:
+    severity: Info
+
+
+# carry metrics cardano.node.aboutToLeadSlotLast, cardano.node.adoptedSlotLast
+#   cardano.node.delegMapSize
+#   cardano.node.utxoSize
+  Node.Forge.StartLeadershipCheckPlus:
+    severity: Info
+
+
+# carry metrics cardano.node.adoptedSlotLast
+  Node.Forge.AdoptedBlock:
+    severity: Info
+
+
+# carry metrics cardano.node.blockContext
+  Node.Forge.BlockContext:
+    severity: Info
+
+
+# carry metrics cardano.node.blockFromFuture
+  Node.Forge.BlockFromFuture:
+    severity: Info
+
+
+# carry metrics cardano.node.blocks, cardano.node.density
+#   cardano.node.epoch
+#    cardano.node.slotInEpoch
+#    cardano.node.slots
+  Node.ChainDB.AddBlockEvent.AddedToCurrentChain:
+    severity: Info
+
+
+# carry metrics cardano.node.blocks, cardano.node.density
+#   cardano.node.epoch
+#    cardano.node.slotInEpoch
+#    cardano.node.slots
+  Node.ChainDB.AddBlockEvent.SwitchedToAFork:
+    severity: Info
+
+
+# carry metrics cardano.node.connectedPeers
+  Node.BlockFetchDecision:
+    severity: Info
+
+
+# carry metrics cardano.node.connectionManager.duplexConns
+#  cardano.node.connectionManager.fullDuplexConns
+#  cardano.node.connectionManager.inboundConns
+#  cardano.node.connectionManager.outboundConns
+#  cardano.node.connectionManager.unidirectionalConns
+  Node.ConnectionManager.ConnectionManagerCounters:
+    severity: Info
+
+
+# carry metrics cardano.node.connectionManager.duplexConns
+#  cardano.node.connectionManager.fullDuplexConns
+#  cardano.node.connectionManager.inboundConns
+#  cardano.node.connectionManager.outboundConns
+#  cardano.node.connectionManager.unidirectionalConns
+  Node.LocalConnectionManager.ConnectionManagerCounters:
+    severity: Info
+
+
+# carry metrics cardano.node.couldNotForgeSlotLast
+  Node.Forge.NoLedgerState:
+    severity: Info
+
+
+# carry metrics cardano.node.couldNotForgeSlotLast
+  Node.Forge.NoLedgerView:
+    severity: Info
+
+
+# carry metrics cardano.node.currentKESPeriod
+#   cardano.node.operationalCertificateExpiryKESPeriod
+#   cardano.node.operationalCertificateStartKESPeriod
+#   cardano.node.remainingKESPeriods
+  Node.Forge.ForgeStateUpdateError:
+    severity: Info
+
+
+# carry metrics cardano.node.forgedInvalidSlotLast
+  Node.Forge.ForgedInvalidBlock:
+    severity: Info
+
+
+# carry metrics cardano.node.forgedSlotLast
+  Node.Forge.ForgedBlock:
+    severity: Info
+
+
+# carry metrics cardano.node.inbound-governor.cold
+#   cardano.node.inbound-governor.hot
+#   cardano.node.inbound-governor.idle
+#   cardano.node.inbound-governor.warm
+  Node.InboundGovernor.InboundGovernorCounters:
+    severity: Info
+
+
+# carry metrics cardano.node.inbound-governor.cold
+#   cardano.node.inbound-governor.hot
+#   cardano.node.inbound-governor.idle
+#   cardano.node.inbound-governor.warm
+  Node.LocalInboundGovernor.InboundGovernorCounters:
+    severity: Info
+
+
+# carry metrics cardano.node.ledgerState
+  Node.Forge.LedgerState:
+    severity: Info
+
+
+# carry metrics cardano.node.ledgerView
+  Node.Forge.LedgerView:
+    severity: Info
+
+
+# carry metrics cardano.node.mempoolBytes
+#   cardano.node.txsInMempool
+  Node.Mempool.AddedTx:
+    severity: Info
+
+
+# carry metrics cardano.node.mempoolBytes
+#   cardano.node.txsInMempool
+#   cardano.node.txsProcessedNum
+  Node.Mempool.ManuallyRemovedTxs:
+    severity: Info
+
+
+# carry metrics cardano.node.mempoolBytes
+#   cardano.node.txsInMempool
+  Node.Mempool.RejectedTx:
+    severity: Info
+
+
+# carry metrics cardano.node.mempoolBytes
+  Node.Mempool.RemoveTxs:
+    severity: Info
+
+
+# carry metrics cardano.node.metrics.served.header
+  Node.ChainSyncServerHeader.ChainSyncServerEvent.ServerRead.RollBackward:
+    severity: Info
+
+
+# carry metrics cardano.node.metrics.served.header
+  Node.ChainSyncServerHeader.ChainSyncServerEvent.ServerRead.RollForward:
+    severity: Info
+
+
+# carry metrics cardano.node.metrics.served.header
+  Node.ChainSyncServerHeader.ChainSyncServerEvent.ServerRead.ServerRead:
+    severity: Info
+
+
+# carry metrics cardano.node.metrics.served.header
+  Node.ChainSyncServerHeader.ChainSyncServerEvent.ServerRead.ServerReadBlocked:
+    severity: Info
+
+
+# carry metrics cardano.node.nodeCannotForge
+  Node.Forge.NodeCannotForge:
+    severity: Info
+
+
+# carry metrics cardano.node.nodeIsLeader
+  Node.Forge.NodeIsLeader:
+    severity: Info
+
+
+# carry metrics cardano.node.nodeNotLeader
+  Node.Forge.NodeNotLeader:
+    severity: Info
+
+
+# carry metrics cardano.node.notAdoptedSlotLast
+  Node.Forge.DidntAdoptBlock:
+    severity: Info
+
+
+# carry metrics cardano.node.peerSelection.cold
+#   cardano.node.peerSelection.hot
+#   cardano.node.peerSelection.warm
+  Node.PeerSelectionCounters.PeerSelectionCounters:
+    severity: Info
+
+
+# carry metrics cardano.node.served.block
+  Node.BlockFetchServer.SendBlock:
+    severity: Info
+
+# carry metrics cardano.node.slotIsImmutable
+  Node.Forge.SlotIsImmutable:
+    severity: Info
+
+# carry metrics cardano.node.submissions.accepted
+#   cardano.node.submissions.rejected
+  Node.TxInbound.TxSubmissionProcessed:
+    severity: Info
+
+# carry metrics cardano.node.submissions.submitted
+  Node.TxInbound.TxSubmissionCollected:
+    severity: Info
+
+# carry metrics mem.resident, rts.gcLiveBytes, rts.gcMajorNum, rts.gcMinorNum
+#  rts.gcticks, rts.mutticks, rts.threads, stat.cputicks
+  Node.Resources:
+    severity: Info
+
+# carry metrics peersFromNodeKernel
+  Node.Peers:
+    severity: Info
+
+#---------------------------
+# Frequency limited tracer
   Node.ChainDB.AddBlockEvent.AddedBlockToQueue:
     maxFrequency: 2.0
 
