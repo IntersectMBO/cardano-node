@@ -99,6 +99,7 @@ import qualified Cardano.Ledger.Alonzo.PParams as Alonzo
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 
 import qualified Cardano.Ledger.Babbage.PParams as Babbage
+import           Cardano.Ledger.Babbage.Translation (coinsPerUTxOWordToCoinsPerUTxOByte)
 
 import           Cardano.Api.Address
 import           Cardano.Api.Eras
@@ -1057,7 +1058,7 @@ toBabbagePParamsUpdate
                                   noInlineMaybeToStrictMaybe protocolUpdateProtocolVersion
     , Babbage._minPoolCost     = toShelleyLovelace <$>
                                   noInlineMaybeToStrictMaybe protocolUpdateMinPoolCost
-    , Babbage._coinsPerUTxOWord  = toShelleyLovelace <$>
+    , Babbage._coinsPerUTxOByte = (coinsPerUTxOWordToCoinsPerUTxOByte  . toShelleyLovelace) <$>
                                   noInlineMaybeToStrictMaybe protocolUpdateUTxOCostPerWord
     , Babbage._costmdls        = if Map.null protocolUpdateCostModels
                                   then Ledger.SNothing
@@ -1260,7 +1261,7 @@ fromBabbagePParamsUpdate
     , Babbage._tau
     , Babbage._protocolVersion
     , Babbage._minPoolCost
-    , Babbage._coinsPerUTxOWord
+    , Babbage._coinsPerUTxOByte
     , Babbage._costmdls
     , Babbage._prices
     , Babbage._maxTxExUnits
@@ -1294,8 +1295,8 @@ fromBabbagePParamsUpdate
                                             strictMaybeToMaybe _rho
     , protocolUpdateTreasuryCut         = Ledger.unboundRational <$>
                                             strictMaybeToMaybe _tau
-    , protocolUpdateUTxOCostPerWord     = fromShelleyLovelace <$>
-                                            strictMaybeToMaybe _coinsPerUTxOWord
+    , protocolUpdateUTxOCostPerWord     = ((*8) . fromShelleyLovelace) <$>
+                                            strictMaybeToMaybe _coinsPerUTxOByte
     , protocolUpdateCostModels          = maybe mempty fromAlonzoCostModels
                                                (strictMaybeToMaybe _costmdls)
     , protocolUpdatePrices              = fromAlonzoPrices <$>
@@ -1521,7 +1522,9 @@ toBabbagePParams ProtocolParameters {
                                (Ledger.boundRational protocolParamTreasuryCut)
 
       -- New params in Babbage.
-    , Babbage._coinsPerUTxOWord  = toShelleyLovelace utxoCostPerWord
+    , Babbage._coinsPerUTxOByte = coinsPerUTxOWordToCoinsPerUTxOByte
+                                   (toShelleyLovelace utxoCostPerWord)
+
     , Babbage._costmdls        = either
                                   (\e -> error $ "toAlonzoPParams: invalid cost models, error: " <> e)
                                   id
@@ -1690,7 +1693,7 @@ fromBabbagePParams
     , Babbage._tau
     , Babbage._protocolVersion
     , Babbage._minPoolCost
-    , Babbage._coinsPerUTxOWord
+    , Babbage._coinsPerUTxOByte
     , Babbage._costmdls
     , Babbage._prices
     , Babbage._maxTxExUnits
@@ -1718,7 +1721,7 @@ fromBabbagePParams
     , protocolParamPoolPledgeInfluence = Ledger.unboundRational _a0
     , protocolParamMonetaryExpansion   = Ledger.unboundRational _rho
     , protocolParamTreasuryCut         = Ledger.unboundRational _tau
-    , protocolParamUTxOCostPerWord     = Just (fromShelleyLovelace _coinsPerUTxOWord)
+    , protocolParamUTxOCostPerWord     = Just (8 * fromShelleyLovelace _coinsPerUTxOByte)
     , protocolParamCostModels          = fromAlonzoCostModels _costmdls
     , protocolParamPrices              = Just (fromAlonzoPrices _prices)
     , protocolParamMaxTxExUnits        = Just (fromAlonzoExUnits _maxTxExUnits)

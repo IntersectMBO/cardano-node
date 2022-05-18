@@ -38,7 +38,6 @@ module Cardano.Node.Queries
 
 import           Cardano.Prelude hiding (All, (:.:))
 
-import qualified Data.Compact.SplitMap as SplitMap
 import           Data.IORef (IORef, newIORef, readIORef, writeIORef)
 import qualified Data.Map.Strict as Map
 import           Data.SOP.Strict
@@ -241,7 +240,7 @@ instance LedgerQueries Byron.ByronBlock where
 
 instance LedgerQueries (Shelley.ShelleyBlock era) where
   ledgerUtxoSize =
-      (\(Shelley.UTxO xs)-> SplitMap.size xs)
+      (\(Shelley.UTxO xs)-> Map.size xs)
     . Shelley._utxo
     . Shelley.lsUTxOState
     . Shelley.esLState
