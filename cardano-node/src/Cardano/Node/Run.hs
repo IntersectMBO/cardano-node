@@ -63,7 +63,7 @@ import           Cardano.Node.Configuration.POM (NodeConfiguration (..),
                    defaultPartialNodeConfiguration, makeNodeConfiguration, parseNodeConfigurationFP)
 import           Cardano.Node.Startup
 import           Cardano.Node.Tracing.API
-import           Cardano.Node.Tracing.StateRep
+import           Cardano.Node.Tracing.StateRep (NodeState(NodeKernelOnline))
 import           Cardano.Node.Tracing.Tracers.Startup (getStartupInfo)
 import           Cardano.Node.Types
 import           Cardano.Tracing.Config (TraceOptions (..), TraceSelection (..))

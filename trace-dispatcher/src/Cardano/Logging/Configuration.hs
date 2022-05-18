@@ -25,7 +25,7 @@ import           Data.IORef (IORef, newIORef, readIORef, writeIORef)
 import           Data.List (maximumBy, nub)
 import qualified Data.Map as Map
 import           Data.Maybe (fromMaybe, mapMaybe)
-import           Data.Text (Text, pack, unpack)
+import           Data.Text (Text, intercalate, unpack)
 
 import           Cardano.Logging.DocuGenerator (addFiltered, addLimiter)
 import           Cardano.Logging.FrequencyLimiter (LimitingMessage (..), limitFrequency)
@@ -317,7 +317,7 @@ getLimiterSpec :: TraceConfig -> Namespace -> Maybe (Text, Double)
 getLimiterSpec config ns = getOption limiterSelector config ns
   where
     limiterSelector :: ConfigOption -> Maybe (Text, Double)
-    limiterSelector (ConfLimiter f) = Just ((pack . show) ns, f)
+    limiterSelector (ConfLimiter f) = Just (intercalate "." ns, f)
     limiterSelector _               = Nothing
 
 -- | Searches in the config to find an option
