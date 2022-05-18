@@ -47,79 +47,62 @@ let
           TurnOnLogMetrics                      = true;
         };
       tracing = {
-        trace-dispatcher = {
-          UseTraceDispatcher   = true;
-
-          TraceOptions  = {
-            ""                            = { severity = "Debug";
-                                              backends = [
-                                                "Stdout MachineFormat"
-                                                "EKGBackend"
-                                                # "Forwarder"
-                                              ];
-                                            };
-            "Node.AcceptPolicy"             = { severity = "Info"; };
-            "Node.ChainDB"                  = { severity = "Info"; };
-            "Node.DNSResolver"              = { severity = "Info"; };
-            "Node.DNSSubscription"          = { severity = "Info"; };
-            "Node.DiffusionInit"            = { severity = "Info"; };
-            "Node.ErrorPolicy"              = { severity = "Info"; };
-            "Node.Forge"                    = { severity = "Info"; };
-            "Node.IpSubscription"           = { severity = "Info"; };
-            "Node.LocalErrorPolicy"         = { severity = "Info"; };
-            "Node.Mempool"                  = { severity = "Info"; };
-            "Node.Resources"                = { severity = "Info"; };
-
-            "Node.BlockFetchClient"         = { severity = "Silence"; };
-            "Node.BlockFetchDecision"       = { severity = "Silence"; };
-            "Node.BlockFetchSerialised"     = { severity = "Silence"; };
-            "Node.ChainSyncNode.NodeToNode" = { severity = "Silence"; };
-            "Node.ChainSyncSerialised"      = { severity = "Silence"; };
-            "Node.LocalHandshake"           = { severity = "Silence"; };
-            "Node.Mux"                      = { severity = "Silence"; };
-            "Node.MuxLocal"                 = { severity = "Silence"; };
-            "Node.TxOutbound"               = { severity = "Silence"; };
-            "Node.TxSubmission2"            = { severity = "Silence"; };
-
-            "Node.BlockFetchClient"         = { detail = "DMinimal"; };
-            "Node.TxSubmission2"            = { detail = "DMinimal"; };
-            "Node.BlockFetchClient.CompletedBlockFetch"                     = { maxFrequency = 2.0; };
-            "Node.ChainDB.AddBlockEvent.AddBlockValidation.ValidCandidate"  = { maxFrequency = 2.0; };
-            "Node.ChainDB.AddBlockEvent.AddedBlockToQueue"                  = { maxFrequency = 2.0; };
-            "Node.ChainDB.AddBlockEvent.AddedBlockToVolatileDB"             = { maxFrequency = 2.0; };
-            "Node.ChainDB.CopyToImmutableDBEvent.CopiedBlockToImmutableDB"  = { maxFrequency = 2.0; };
-          };
-
-          TraceOptionForwarder = {
-            mode = "Responder";
-            address = {
-              filePath = "forwarder.sock";
-            };
-          };
-        };
-        iohk-monitoring = {
-          defaultScribes = [
-            [ "StdoutSK" "stdout" ]
-          ];
-          setupScribes =
-            [{
-              scKind   = "StdoutSK";
-              scName   = "stdout";
-              scFormat = "ScJson";
-            }];
-          minSeverity                 = "Debug";
-          TraceMempool                = true;
-          TraceTxInbound              = true;
-          TraceBlockFetchClient       = true;
-          TraceBlockFetchServer       = true;
-          TraceChainSyncHeaderServer  = true;
-          TraceChainSyncClient        = true;
-          options = {
-            mapBackends = {
-              "cardano.node.resources" = [ "KatipBK" ];
-            };
-          };
-        };
+        trace-dispatcher = import ./tracing.nix        { inherit nodeSpec; profile = profile.value; };
+        iohk-monitoring  = import ./tracing-legacy.nix { inherit nodeSpec; profile = profile.value; };
+      };
+      tracing-transform = {
+        trace-dispatcher = xs:
+          ## For trace-dispatcher, we remove all legacy tracing options:
+          removeAttrs xs
+            [
+              "TraceAcceptPolicy"
+              "TraceBlockFetchClient"
+              "TraceBlockFetchDecisions"
+              "TraceBlockFetchProtocol"
+              "TraceBlockFetchProtocolSerialised"
+              "TraceBlockFetchServer"
+              "TraceChainDb"
+              "TraceChainSyncBlockServer"
+              "TraceChainSyncClient"
+              "TraceChainSyncHeaderServer"
+              "TraceChainSyncProtocol"
+              "TraceConnectionManager"
+              "TraceDNSResolver"
+              "TraceDNSSubscription"
+              "TraceDiffusionInitialization"
+              "TraceErrorPolicy"
+              "TraceForge"
+              "TraceHandshake"
+              "TraceInboundGovernor"
+              "TraceIpSubscription"
+              "TraceLedgerPeers"
+              "TraceLocalChainSyncProtocol"
+              "TraceLocalErrorPolicy"
+              "TraceLocalHandshake"
+              "TraceLocalRootPeers"
+              "TraceLocalTxSubmissionProtocol"
+              "TraceLocalTxSubmissionServer"
+              "TraceMempool"
+              "TraceMux"
+              "TracePeerSelection"
+              "TracePeerSelectionActions"
+              "TracePublicRootPeers"
+              "TraceServer"
+              "TraceTxInbound"
+              "TraceTxOutbound"
+              "TraceTxSubmissionProtocol"
+              "TracingVerbosity"
+              "defaultBackends"
+              "defaultScribes"
+              "hasEKG"
+              "hasPrometheus"
+              "minSeverity"
+              "options"
+              "rotation"
+              "setupBackends"
+              "setupScribes"
+            ];
+        iohk-monitoring  = xs: xs;
       };
       era_setup_hardforks = {
         shelley =
@@ -153,14 +136,15 @@ let
       ##   2. apply either the hardforks config, or the preset (typically mainnet)
       ##   3. overlay the tracing config
       nodeConfig =
-        backend.finaliseNodeConfig nodeSpec
-          (recursiveUpdate
+        nodeConfigBits.tracing-transform.${profile.value.node.tracing_backend}
+          (backend.finaliseNodeConfig nodeSpec
             (recursiveUpdate
-              nodeConfigBits.base
-              (if __hasAttr "preset" profile.value
-               then readJSONMay (./presets + "/${profile.value.preset}/config.json")
-               else nodeConfigBits.era_setup_hardforks))
-            nodeConfigBits.tracing.${profile.value.node.tracing_backend});
+              (recursiveUpdate
+                nodeConfigBits.base
+                (if __hasAttr "preset" profile.value
+                 then readJSONMay (./presets + "/${profile.value.preset}/config.json")
+                 else nodeConfigBits.era_setup_hardforks))
+              nodeConfigBits.tracing.${profile.value.node.tracing_backend}));
 
       extraArgs =
         let shutdownSlot = profile.value.node.shutdown_on_slot_synced;
