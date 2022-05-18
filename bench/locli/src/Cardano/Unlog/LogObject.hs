@@ -10,7 +10,7 @@
 
 module Cardano.Unlog.LogObject (module Cardano.Unlog.LogObject) where
 
-import Prelude (String, error, head, id, show)
+import Prelude (error, head, id, show)
 import Cardano.Prelude hiding (Text, head, show)
 
 import Control.Monad (fail)

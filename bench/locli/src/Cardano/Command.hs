@@ -1,7 +1,6 @@
 {-# OPTIONS_GHC -fmax-pmcheck-models=300 #-}
 module Cardano.Command (module Cardano.Command) where
 
-import Prelude (String)
 import Cardano.Prelude                  hiding (State)
 
 import Data.Aeson                       qualified as Aeson
@@ -21,7 +20,6 @@ import Cardano.Analysis.Run
 import Cardano.Analysis.Version
 import Cardano.Unlog.LogObject          hiding (Text)
 import Cardano.Unlog.Render
-import Cardano.Util
 import Data.Distribution
 
 data CommandError
@@ -311,8 +309,7 @@ runChainCommand _ c@RebuildChain = missingCommandData c
 
 runChainCommand s
   c@(ReadChain f) = do
-  chainRaw <- sequence
-              . fmap (Aeson.eitherDecode @BlockEvents)
+  chainRaw <- mapM (Aeson.eitherDecode @BlockEvents)
               . filter ((> 5) . LBS.length)
               . LBS.split '\n'
               <$> LBS.readFile (unJsonInputFile f)
@@ -366,8 +363,8 @@ runChainCommand _ c@TimelineChain{} = missingCommandData c
 runChainCommand s@State{sRun=Just run, sObjLists=Just objs}
   c@CollectSlots = do
   (scalars, slotsRaw) <-
-    mapAndUnzip redistribute <$> collectSlotStats run objs
-    & liftIO
+    fmap (mapAndUnzip redistribute) <$> collectSlotStats run objs
+    & newExceptT
     & firstExceptT (CommandError c)
   pure s { sScalars = Just scalars, sSlotsRaw = Just slotsRaw }
 runChainCommand _ c@CollectSlots = missingCommandData c
@@ -426,8 +423,9 @@ runChainCommand _ c@DumpPropagation{} = missingCommandData c
 
 runChainCommand s@State{sRun=Just run, sSlots=Just slots}
   c@PerfAnalysis = do
-  perfAnalysis <- mapConcurrentlyPure (fmap $ slotStatsSummary run) slots
-                  & liftIO
+  perfAnalysis <- mapConcurrentlyPure (slotStatsSummary run) slots
+                  & fmap sequence
+                  & newExceptT
                   & firstExceptT (CommandError c)
   pure s { sPerfAnalysis = Just perfAnalysis }
 runChainCommand _ c@PerfAnalysis{} = missingCommandData c

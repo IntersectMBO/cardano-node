@@ -47,6 +47,7 @@ library
                      , bytestring
                      , cardano-git-rev
                      , cardano-prelude
+                     , cardano-ledger-core
                      , iohk-monitoring
                      , cardano-slotting
                      , containers
