@@ -179,7 +179,7 @@ instance ToJSON (Babbage.PParamsUpdate era) where
      ++ [ "tau"                   .= x | x <- mbfield (Babbage._tau pp) ]
      ++ [ "protocolVersion"       .= x | x <- mbfield (Babbage._protocolVersion pp) ]
      ++ [ "minPoolCost"           .= x | x <- mbfield (Babbage._minPoolCost pp) ]
-     ++ [ "coinsPerUTxOWord"      .= x | x <- mbfield (Babbage._coinsPerUTxOWord pp) ]
+     ++ [ "coinsPerUTxOByte"      .= x | x <- mbfield (Babbage._coinsPerUTxOByte pp) ]
      ++ [ "costmdls"              .= x | x <- mbfield (Babbage._costmdls pp) ]
      ++ [ "prices"                .= x | x <- mbfield (Babbage._prices pp) ]
      ++ [ "maxTxExUnits"          .= x | x <- mbfield (Babbage._maxTxExUnits pp) ]
@@ -205,7 +205,7 @@ instance ToJSON (Babbage.PParams (Babbage.BabbageEra Consensus.StandardCrypto)) 
       , "tau" .= Babbage._tau pp
       , "protocolVersion" .= Babbage._protocolVersion pp
       , "minPoolCost" .= Babbage._minPoolCost pp
-      , "coinsPerUTxOWord" .= Babbage._coinsPerUTxOWord pp
+      , "coinsPerUTxOByte" .= Babbage._coinsPerUTxOByte pp
       , "costmdls" .= Babbage._costmdls pp
       , "prices" .= Babbage._prices pp
       , "maxTxExUnits" .= Babbage._maxTxExUnits pp
