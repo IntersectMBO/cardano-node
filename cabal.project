@@ -100,9 +100,6 @@ package trace-resources
 package byron-spec-ledger
   tests: False
 
-package vector-map
-  ghc-options: -Werror
-
 package iohk-monitoring
   tests: False
 
