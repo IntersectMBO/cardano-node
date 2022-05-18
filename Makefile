@@ -4,61 +4,32 @@ NUM_PROC     = $(nproc --all)
 ## One of:  shey alra mary alzo
 ERA             ?= alzo
 
-CLUSTER_PROFILE ?= default-${ERA}
-ifneq "${CLUSTER_PROFILE}" "default-${ERA}"
-$(warning DEPRECATED:  CLUSTER_PROFILE is deprecated, please use PROFILE)
-endif
-
-PROFILE ?= ${CLUSTER_PROFILE}
+PROFILE ?= default-${ERA}
 REV     ?= master
 ARGS    ?=
 CMD     ?=
-
 
 help: ## Print documentation
 	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
 stylish-haskell: ## Apply stylish-haskell on all *.hs files
-	@find . -type f -name "*.hs" -not -path '.git' -not -path '*.stack-work*' -print0 | xargs -0 stylish-haskell -i
+	@find . -type f -name "*.hs" -not -path '.git' -print0 | xargs -0 stylish-haskell -i
 
 cabal-hashes:
 	nix run .#checkCabalProject
 
-ghci: ## Run repl
-	@stack ghci $(PROJECT_NAME):lib --haddock-deps --ghci-options=-fobject-code --nix
-
-ghcid:  ## Run ghcid
-	@ghcid --command "stack ghci $(PROJECT_NAME):lib --nix -j12 --ghci-options=-fobject-code"
-
-run-test: ## Build & run test
-	@stack build --fast --nix && \
-	stack test --fast --nix
-
-test-ghci: ## Run repl on test suites
-	@stack ghci $(PROJECT_NAME):lib $(PROJECT_NAME):test:$(PROJECT_NAME)-test --ghci-options=-fobject-code --nix
-
-test-ghcid: ## Run ghcid on test suites
-	@ghcid --command "stack ghci --nix $(PROJECT_NAME):lib $(PROJECT_NAME):test:$(PROJECT_NAME)-test --ghci-options=-fobject-code"
-
-test-ghcid-nix: ## Run ghcid on test suites with Nix
-	@ghcid --command="stack ghci --test --main-is $(PROJECT_NAME):test:$(PROJECT_NAME)-test --nix -j$(NUM_PROC)"
-
 ## TODO: migrate to `nix develop`
-cluster-shell: ## Enter Nix shell and start the workbench cluster
-	nix-shell --max-jobs 8 --cores 0 --show-trace --argstr profileName ${PROFILE} --arg 'autoStartCluster' true
+cluster-shell: CMD = start-cluster ## Enter Nix shell and start the workbench cluster
+cluster-shell:
+	nix-shell --max-jobs 8 --cores 0 --show-trace --argstr profileName ${PROFILE}
 
-shell-dev:               ARGS += --arg 'workbenchDevMode' true ## Enter Nix shell, dev mode (workbench run from checkout)
-cluster-shell:           ARGS += --arg 'autoStartCluster' true ## Enter Nix shell, and start workbench cluster
-cluster-shell-dev:       ARGS += --arg 'autoStartCluster' true --arg 'workbenchDevMode' true ## Enter Nix shell, dev mode, and start workbench cluster
-cluster-shell-trace:     ARGS += --arg 'autoStartCluster' true --argstr 'autoStartClusterArgs' '--trace --trace-workbench' ## Enter Nix shell, start workbench cluster, with shell tracing
-cluster-shell-dev-trace: ARGS += --arg 'autoStartCluster' true --arg 'workbenchDevMode' true --argstr 'autoStartClusterArgs' '--trace --trace-workbench' ## Enter Nix shell, dev mode, start workbench cluster, with shell tracing
-fixed:                   PROFILE = fixed-${ERA}
-fixed:                   ARGS += --arg 'autoStartCluster' true
-forge-stress:            PROFILE = forge-stress-${ERA}
-forge-stress-plutus:     PROFILE = forge-stress-plutus-${ERA}
-forge-stress-oldtracing: PROFILE = forge-stress-oldtracing-${ERA}
-quick:                   PROFILE = quick-${ERA}
-quick-oldtracing:        PROFILE = quick-oldtracing-${ERA}
+shell-dev:                   ARGS += --arg 'workbenchDevMode' true ## Enter Nix shell, dev mode (workbench run from checkout)
+fixed:                       PROFILE = fixed-${ERA}
+forge-stress:                PROFILE = forge-stress-${ERA}
+forge-stress-plutus:         PROFILE = forge-stress-plutus-${ERA}
+forge-stress-oldtracing:     PROFILE = forge-stress-oldtracing-${ERA}
+quick:                       PROFILE = quick-${ERA}
+quick-oldtracing:            PROFILE = quick-oldtracing-${ERA}
 chainsync-byron:             PROFILE = chainsync-early-byron-${ERA}
 chainsync-byron-oldtracing:  PROFILE = chainsync-early-byron-oldtracing-${ERA}
 chainsync-alonzo:            PROFILE = chainsync-early-alonzo-${ERA}
@@ -124,7 +95,7 @@ clean: clean-profile
 	rm -rf logs/ socket/ cluster.*
 
 full-clean: clean
-	rm -rf db dist-newstyle .stack-work $(shell find . -name '*~' -or -name '*.swp')
+	rm -rf db dist-newstyle $(shell find . -name '*~' -or -name '*.swp')
 
 cls:
 	echo -en "\ec"

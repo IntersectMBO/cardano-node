@@ -15,9 +15,9 @@ EOF
 }
 
 cardano_mainnet_geneses=(
-    --arg byron   "$global_basedir"/../../configuration/cardano/mainnet-byron-genesis.json
-    --arg shelley "$global_basedir"/../../configuration/cardano/mainnet-shelley-genesis.json
-    --arg alonzo  "$global_basedir"/../../configuration/cardano/mainnet-alonzo-genesis.json
+    --arg byron   "$global_basedir"/profiles/presets/mainnet/genesis/byron/genesis.json
+    --arg shelley "$global_basedir"/profiles/presets/mainnet/genesis/genesis-shelley.json
+    --arg alonzo  "$global_basedir"/profiles/presets/mainnet/genesis/genesis.alonzo.json
     --arg shelley_hash '1a3be38bcbb7911969283716ad7aa550250226b76a61fc51cc9a9a35d9276d81'
 )
 
@@ -129,10 +129,16 @@ snapshot-at-slot )
               )
          if test -n "$maybe_precedent"
          then progress "chaindb" "found a precedent snapshot at slot $maybe_precedent, using as base.."
-              args+=(--analyse-from $maybe_precedent)
+              local precedent_cache_entry=$cachedir/ledger/mainnet-ledger.$maybe_precedent
+              mkdir $out/ledger/
+              cp $precedent_cache_entry $out/ledger/${maybe_precedent}_db-analyser
+              args+=(--only-immutable-db --analyse-from $maybe_precedent)
          fi
          db-analyser  --db $out cardano "${args[@]}"
 
+         (cd $out/ledger;
+          for x in *_db-analyser
+          do mv $x ${x/_db-analyser/}; done)
          ls -ltrh          $out/ledger
 
          mkdir             $out/temp

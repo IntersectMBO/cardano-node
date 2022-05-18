@@ -88,7 +88,7 @@ case "$op" in
     preset )
         local usage="USAGE: wb profile $op NAME"
         local profile=${1:?$usage}
-        profile json "$profile" | jq -r ".preset";;
+        profile json "$profile" | jq -r '.preset // ""';;
 
     preset-get-file )
         local usage="USAGE: wb profile $op PRESET-NAME DESC FILE"

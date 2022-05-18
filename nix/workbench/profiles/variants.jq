@@ -69,6 +69,7 @@ def genesis_profile_variants:
       }
     , analysis:
       { type:                           "performance"
+      , filters:                        []
       }
     } as $chainsync_base
   |
@@ -108,6 +109,10 @@ def genesis_profile_variants:
       { shutdown_on_slot_synced:
         { observer:                     38901589
         }
+      }
+    , genesis:
+      { utxo:                           6000000
+      , delegators:                     1300000
       }
     } as $chaindb_early_alonzo
   |

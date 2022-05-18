@@ -155,7 +155,7 @@ case "$op" in
            | . * ($p.genesis.shelley // {})
            | . * ($p.genesis.alonzo // {})
            ' --slurpfile prof       "$profile_json"  \
-           "$global_basedir"/profiles/presets/mainnet/genesis/genesis-alonzo.json \
+           "$global_basedir"/profiles/presets/mainnet/genesis/genesis.alonzo.json \
            >   "$dir"/genesis.alonzo.spec.json
 
         msg "genesis:  creating initial genesis"
@@ -256,7 +256,7 @@ case "$op" in
         jq ' $prof[0] as $p
            | . * ($p.genesis.alonzo // {})
            ' --slurpfile prof       "$profile_json"  \
-           "$global_basedir"/profiles/presets/mainnet/genesis/genesis-alonzo.json \
+           "$global_basedir"/profiles/presets/mainnet/genesis/genesis.alonzo.json \
            >   "$dir"/genesis.alonzo.json;;
 
     * ) usage_genesis;; esac

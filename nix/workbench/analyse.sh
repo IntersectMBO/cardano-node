@@ -210,18 +210,43 @@ analysis_set_filters() {
 
 analysis_classify_traces() {
     local name=${1:-current}; if test $# != 0; then shift; fi
+    local node=${1:-node-0}; if test $# != 0; then shift; fi
     local dir=$(run get "$name")
 
-    progress "analysis" "enumerating namespace from logs of node-0.."
-    local types=($(grep -h '^{' $dir/node-0/stdout* | jq --raw-output '.ns' 2>/dev/null | tr -d ']["' | sort -u))
+    progress "analysis" "enumerating namespace from logs of $(with_color yellow $node)"
+    grep -h '^{' $dir/$node/stdout* | jq --raw-output '(try .ns[0] // .ns) + ":" + (.data.kind // "")' 2>/dev/null | sort -u
+    # grep -h '^{' $dir/$node/stdout* | jq --raw-output '.ns' 2>/dev/null | tr -d ']["' | sort -u
+}
 
-    progress_ne "analysis" "collecting occurence stats: "
-    for node in $dir/node-*/
-    do for type in ${types[*]}
-       do echo $(grep -hF "\"$type\"" $node/stdout* | wc -l) $type
+analysis_trace_frequencies() {
+    local same_types=
+    while test $# -gt 0
+    do case "$1" in
+       --same-types | --same | -s )  same_types='true';;
+       * ) break;; esac; shift; done
+
+    local name=${1:-current}; if test $# != 0; then shift; fi
+    local dir=$(run get "$name")
+    local types=()
+
+    if test -n "$same_types"
+    then types=($(analysis_classify_traces $name 'node-0'))
+         progress_ne "analysis" "message frequencies: "; fi
+
+    for nodedir in $dir/node-*/
+    do local node=$(basename $nodedir)
+
+       if test -z "$same_types"
+       then types=($(analysis_classify_traces $name $node))
+            progress "analysis" "message frequencies: $(with_color yellow $node)"; fi
+
+       for type in ${types[*]}
+       do local ns=$(cut -d: -f1 <<<$type)
+          local kind=$(cut -d: -f2 <<<$type)
+          echo $(grep -h "\"$ns\".*\"$kind\"\|\"$kind\".*\"$ns\"" $nodedir/stdout* | wc -l) $type
        done |
-           sort -nr > $node/log-namespace-occurence-stats.txt
-       echo -n ' '$(basename $node) >&2
+           sort -nr > $nodedir/log-namespace-occurence-stats.txt
+       test -n "$same_types" && echo -n ' '$node >&2
     done
     echo >&2
 }

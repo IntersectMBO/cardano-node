@@ -69,7 +69,7 @@ case "${op}" in
 
     assert-stopped )
         backend is-running &&
-          fatal "backend reports that cluster is already running. Please stop it first:  stop-cluster" ||
+          fatal "backend reports that cluster is already running. Please stop it first:  $(yellow stop-cluster)" ||
           true
         ;;
 

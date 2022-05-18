@@ -6,8 +6,6 @@ self: {
     batchName   = "plain";
     profileName = "default-alzo";
     basePort    = 30000;
-    autoStartCluster = false;
-    autoStartClusterArgs = "";
     enableEKG        = true;
     workbenchDevMode = false;
     extraSupervisorConfig = {};

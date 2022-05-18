@@ -22,7 +22,7 @@ local dir=${1:?$usage}; shift
 local tag=$(jq '.meta.tag' -r $dir/meta.json)
 local p=$dir/profile.json
 
-progress "run | scenario" "starting $(with_color blue $op)"
+progress "run | scenario" "starting $(yellow $op)"
 case "$op" in
     idle | default )
         backend start-cluster "$dir"
@@ -61,7 +61,7 @@ case "$op" in
             $(jq '.chaindb.ledger_snapshot.observer'       $p)
             $(jq '.chaindb.mainnet_chunks.observer'        $p)
         )
-        progress "scenario" "preparing ChainDB for the observer"
+        progress "scenario" "preparing ChainDB for the $(green "observer (fetcher)")"
         chaindb "${observer[@]}"
 
         local chaindb_server=(
@@ -70,13 +70,13 @@ case "$op" in
             $(jq '.chaindb.ledger_snapshot.chaindb_server' $p)
             $(jq '.chaindb.mainnet_chunks.chaindb_server'  $p)
         )
-        progress "scenario" "preparing ChainDB for the server node"
+        progress "scenario" "preparing ChainDB for the $(green server node)"
         chaindb "${chaindb_server[@]}"
 
-        progress "scenario" "starting the ChainDB server node"
+        progress "scenario" "starting the $(yellow ChainDB server node)"
         backend start-cluster "$dir"
 
-        progress "scenario" "starting the fetcher node"
+        progress "scenario" "starting the $(yellow fetcher node)"
         backend start-node        "$dir" 'node-1'
         ## TODO:
         # +RTS -s$out/rts.dump
@@ -86,6 +86,8 @@ case "$op" in
         scenario_cleanup_exit_trap
 
         backend stop-cluster      "$dir"
+
+        analysis_trace_frequencies 'current'
         ;;
 
     * ) usage_scenario;; esac

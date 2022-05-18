@@ -96,8 +96,12 @@ case "$op" in
         local tag=${1:?$usage}
         local dir=$(run compute-path "$tag")
 
-        jq_check_json "$dir"/meta.json ||
-            fatal "run $tag (at $dir) missing a file:  meta.json"
+        if ! jq_check_json "$dir"/meta.json
+        then if test $tag = 'current'
+             then local alt=$(run list | tail -n1)
+                  progress 'run | check' "$(with_color white current) missing, resetting to $(with_color white $alt)"
+                  run set-current $alt
+             else fatal "run $tag (at $dir) missing a file:  meta.json"; fi; fi
 
         test -f "$dir"/profile.json -a -f "$dir"/genesis-shelley.json ||
             run fix-legacy-run-structure "$tag";;
