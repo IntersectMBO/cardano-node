@@ -97,6 +97,7 @@ txinCollateral=$(jq -r 'keys[0]' $WORK/utxo-2.json)
 
 
 dummyaddress=addr_test1vpqgspvmh6m2m5pwangvdg499srfzre2dd96qq57nlnw6yctpasy4
+returncollateraladdress=addr_test1vqmqsfa558aslugy8xhwatssydxccn86jaty7n9k55v8qtceuzsyw
 
 lovelaceatplutusscriptaddr=$(jq -r ".[\"$plutusutxotxin\"].value.lovelace" $WORK/plutusutxo.json)
 
@@ -119,6 +120,7 @@ $CARDANO_CLI transaction build \
   --protocol-params-file "$WORK/pparams.json" \
   --tx-in-redeemer-file "$redeemerfilepath" \
   --out-file $WORK/test-alonzo.body
+#  --tx-out-return-collateral "$returncollateraladdress+1000" \
 
 $CARDANO_CLI transaction sign \
   --tx-body-file $WORK/test-alonzo.body \
