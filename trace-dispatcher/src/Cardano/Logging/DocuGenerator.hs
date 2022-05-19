@@ -127,6 +127,17 @@ docIt :: MonadIO m
   => BackendConfig
   -> (LoggingContext, Either TraceControl a)
   -> m ()
+docIt EKGBackend (LoggingContext{},
+  Left (Document idx mdText mdMetrics (DocCollector docRef))) = do
+    liftIO $ modifyIORef docRef (\ docMap ->
+        Map.insert
+          idx
+          ((\e -> e { ldBackends  = EKGBackend : ldBackends e
+                    })
+            (case Map.lookup idx docMap of
+                          Just e  -> e
+                          Nothing -> seq mdText (seq mdMetrics (emptyLogDoc mdText mdMetrics))))
+          docMap)
 docIt backend (LoggingContext {..},
   Left (Document idx mdText mdMetrics (DocCollector docRef))) = do
     liftIO $ modifyIORef docRef (\ docMap ->
