@@ -250,10 +250,12 @@ mkConsensusTracers trBase trForward mbTrEKG _trDataPoint trConfig nodeKernel = d
 
     -- Special chainSync server metrics, send directly to EKG
     -- any server header event advances the counter
-    let chainSyncServerHeaderMetricsTr = contramap
-                (const
-                    (FormattedMetrics [CounterM "cardano.node.metrics.served.header" Nothing]))
-                (fromMaybe mempty mbTrEKG)
+    let chainSyncServerHeaderMetricsTr =
+           contramap
+              (const
+                (FormattedMetrics
+                  [CounterM "cardano.node.metrics.served.header" Nothing]))
+              (mkMetricsTracer mbTrEKG)
 
     chainSyncServerBlockTr <- mkCardanoTracer
                 trBase trForward mbTrEKG
@@ -281,7 +283,7 @@ mkConsensusTracers trBase trForward mbTrEKG _trDataPoint trConfig nodeKernel = d
     blockFetchClientMetricsTr <- do
         tr1 <- foldMTraceM calculateBlockFetchClientMetrics initialClientMetrics
                     (metricsFormatter ""
-                      (fromMaybe mempty mbTrEKG))
+                      (mkMetricsTracer mbTrEKG))
         pure $ filterTrace (\ (_, TraceLabelPeer _ m) -> case m of
                                               BlockFetch.CompletedBlockFetch {} -> True
                                               _ -> False)
