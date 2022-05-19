@@ -10,7 +10,7 @@ $(1): CMD := start-cluster; exit
 endif
 ifeq ($(3)$(4),truefalse)
 define EXTRA_HELP +=
-$(1): ## Shell for profile $(2) (also -auto -nix -autonix)\n
+$(1): ## Shell for profile \033[34m$(2)\033[0m  (also: \033[34m-auto -nix -autonix\033[0m)\n
 endef
 endif
 

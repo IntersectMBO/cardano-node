@@ -1,9 +1,12 @@
 ## WARNING:  keep in sync with 'profile-cache-key-input' below this one: vvv
 ##
+def fmt_decimal_10_5($x):
+  ($x / 100000 | tostring) + "00000";
+
 def profile_cli_args($p):
 { common:
   { createSpec:
-    [ "--supply",                  $p.derived.supply_total
+    [ "--supply",                  fmt_decimal_10_5($p.derived.supply_total)
     , "--testnet-magic",           $p.genesis.network_magic
     , "--gen-genesis-keys",        $p.composition.n_bft_hosts
     , "--gen-utxo-keys",           1
@@ -17,14 +20,14 @@ def profile_cli_args($p):
      [  ]
      else [] end)
   , createFinalBulk:
-    ([ "--supply",                 $p.genesis.funds_balance
+    ([ "--supply",                 fmt_decimal_10_5($p.genesis.funds_balance)
      , "--gen-utxo-keys",          1
      , "--gen-genesis-keys",       $p.composition.n_bft_hosts
-     , "--supply-delegated",       $p.derived.supply_delegated
+     , "--supply-delegated",       fmt_decimal_10_5($p.derived.supply_delegated)
      , "--gen-pools",              $p.composition.n_pools
      , "--gen-stake-delegs",       $p.derived.delegators_effective
      , "--testnet-magic",          $p.genesis.network_magic
-     , "--num-stuffed-utxo",       $p.derived.utxo_stuffed
+     , "--num-stuffed-utxo",       fmt_decimal_10_5($p.derived.utxo_stuffed)
      ] +
      if $p.composition.dense_pool_density != 1
      then
@@ -33,7 +36,7 @@ def profile_cli_args($p):
      else [] end)
   , pools:
     [ "--argjson"
-    , "initialPoolCoin",           $p.genesis.pool_coin
+    , "initialPoolCoin",           fmt_decimal_10_5($p.genesis.pool_coin)
     ]
   }
 }

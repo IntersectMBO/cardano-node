@@ -103,15 +103,8 @@ def era_defaults($era):
   }
 
 , alonzo:
-  { genesis:
-    { shelley:
-      { protocolParams:
-        { protocolVersion:
-          { major: 5
-          , minor: 0
-          }
-        }
-      }
-    }
-  }
+  (.genesis.shelley.protocolParams.protocolVersion =
+      { major: 5
+      , minor: 0
+      })
 } | (.common * .[$era]);
