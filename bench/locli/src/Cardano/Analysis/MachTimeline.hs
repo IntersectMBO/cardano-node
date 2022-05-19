@@ -5,30 +5,30 @@
 {- HLINT ignore "Use head" -}
 module Cardano.Analysis.MachTimeline (module Cardano.Analysis.MachTimeline) where
 
-import Prelude (String, error, head, last)
+import Prelude (error, head, last)
 import Cardano.Prelude hiding (head)
 import Cardano.Prelude qualified as CP
 
 import Data.List                        ((!!))
 import Data.Map.Strict qualified as Map
+import Data.Text                        (pack)
 import Data.Vector (Vector)
 import Data.Vector qualified as Vec
 
 import Data.Time.Clock (NominalDiffTime, UTCTime)
 import Data.Time.Clock qualified as Time
 
-import Data.Accum
 import Data.Distribution
 
 import Cardano.Analysis.API
 import Cardano.Analysis.Chain
 import Cardano.Analysis.ChainFilter
+import Cardano.Analysis.Context
 import Cardano.Analysis.Ground
 import Cardano.Analysis.Run
 import Cardano.Analysis.Version
 import Cardano.Unlog.LogObject hiding (Text)
 import Cardano.Unlog.Resources
-import Cardano.Util
 
 
 -- | A side-effect of analysis
@@ -41,8 +41,9 @@ data RunScalars
   deriving stock Generic
   deriving anyclass NFData
 
-collectSlotStats :: Run -> [(JsonLogfile, [LogObject])] -> IO [(JsonLogfile, (RunScalars, [SlotStats]))]
-collectSlotStats run = mapConcurrentlyPure (fmap $ timelineFromLogObjects run)
+collectSlotStats :: Run -> [(JsonLogfile, [LogObject])]
+                 -> IO (Either Text [(JsonLogfile, (RunScalars, [SlotStats]))])
+collectSlotStats run = fmap sequence <$> mapConcurrentlyPure (timelineFromLogObjects run)
 
 runSlotFilters ::
      Run
@@ -70,9 +71,11 @@ runSlotFilters Run{genesis} (flts, _fltNames) slots = do
       slotFilters :: [SlotCond]
       slotFilters = catSlotFilters filters
 
-slotStatsSummary :: Run -> [SlotStats] -> MachTimeline
-slotStatsSummary _ slots =
-  MachTimeline
+slotStatsSummary :: Run -> (JsonLogfile, [SlotStats]) -> Either Text (JsonLogfile, MachTimeline)
+slotStatsSummary _ (JsonLogfile f, []) =
+  Left $ "slotStatsSummary:  zero filtered slots from " <> pack f
+slotStatsSummary _ (f, slots) =
+  Right . (f,) $ MachTimeline
   { sMaxChecks            = maxChecks
   , sSlotMisses           = misses
   , sSpanLensCPU85        = spanLensCPU85
@@ -86,9 +89,9 @@ slotStatsSummary _ slots =
   , sLeadsDistrib         = dist (slCountLeads <$> slots)
   , sUtxoDistrib          = dist (slUtxoSize <$> slots)
   , sDensityDistrib       = dist (slDensity <$> slots)
-  , sSpanCheckDistrib     = dist (slSpanCheck <$> slots)
-  , sSpanLeadDistrib      = dist (slSpanLead <$> slots)
-  , sSpanForgeDistrib     = dist (filter (/= 0) $ slSpanForge <$> slots)
+  , sSpanCheckDistrib     = dist (slSpanCheck `mapSMaybe` slots)
+  , sSpanLeadDistrib      = dist (slSpanLead `mapSMaybe` slots)
+  , sSpanForgeDistrib     = dist (filter (/= 0) $ slSpanForge `mapSMaybe` slots)
   , sBlocklessDistrib     = dist (slBlockless <$> slots)
   , sSpanLensCPU85Distrib = dist spanLensCPU85
   , sSpanLensCPU85EBndDistrib = dist sSpanLensCPU85EBnd
@@ -165,16 +168,25 @@ forTANth xs@TimelineAccum{aSlotStats=ss} n f =
        (pre, x:post) -> pre <> (f x : post)
        _ -> error $ "mapNth: couldn't go " <> show n <> "-deep into the timeline"
 
-timelineFromLogObjects :: Run -> [LogObject] -> (RunScalars, [SlotStats])
-timelineFromLogObjects run =
-  (aRunScalars &&& reverse . aSlotStats)
-  . foldl' (timelineStep run) zeroTimelineAccum
+timelineFromLogObjects :: Run -> (JsonLogfile, [LogObject])
+                       -> Either Text (JsonLogfile, (RunScalars, [SlotStats]))
+timelineFromLogObjects _ (JsonLogfile f, []) =
+  Left $ "timelineFromLogObjects:  zero logobjects from " <> pack f
+timelineFromLogObjects run@Run{genesis} (f, xs) =
+  Right . (f,)
+  $ foldl' (timelineStep run)
+           zeroTimelineAccum
+           xs
+  & (aRunScalars &&& reverse . aSlotStats)
  where
+   firstLogObjectTime :: UTCTime
+   firstLogObjectTime = loAt (head xs)
+
    zeroTimelineAccum :: TimelineAccum
    zeroTimelineAccum =
      TimelineAccum
      { aResAccums     = mkResAccums
-     , aResTimestamp  = zeroUTCTime
+     , aResTimestamp  = firstLogObjectTime
      , aMempoolTxs    = 0
      , aBlockNo       = 0
      , aLastBlockSlot = 0
@@ -187,20 +199,19 @@ timelineFromLogObjects run =
    zeroSlotStats :: SlotStats
    zeroSlotStats =
      SlotStats
-     { slSlot = 0
+     { slSlot = impliedSlot genesis firstLogObjectTime
      , slEpoch = 0
      , slEpochSlot = 0
      , slEpochSafeInt = 0
-     , slStart = SlotStart zeroUTCTime
+     , slStart = SlotStart firstLogObjectTime
      , slCountChecks = 0
      , slCountLeads = 0
      , slCountForges = 0
-     , slEarliest = zeroUTCTime
-     , slSpanCheck = realToFrac (0 :: Int)
-     , slSpanLead = realToFrac (0 :: Int)
-     , slSpanForge = realToFrac (0 :: Int)
+     , slSpanCheck = SNothing
+     , slSpanLead = SNothing
+     , slSpanForge = SNothing
+     , slSpanTxsMem = SNothing
      , slMempoolTxs = 0
-     , slTxsMemSpan = Nothing
      , slTxsCollected = 0
      , slTxsAccepted = 0
      , slTxsRejected = 0
@@ -214,90 +225,57 @@ timelineFromLogObjects run =
      }
 
 timelineStep :: Run -> TimelineAccum -> LogObject -> TimelineAccum
-timelineStep run@Run{genesis} a@TimelineAccum{aSlotStats=cur:_, ..} = \case
-  LogObject{loAt, loBody=LOTraceStartLeadershipCheck slot utxo density} ->
-    if      slot == slSlot cur     -- L-shipCheck for the current slot.
-    then forTAHead a
-         (registerLeadCheck loAt)
-    else if slot - slSlot cur == 1 -- L-shipCheck for the next slot.
-    then forTAHead (addTimelineSlot run slot loAt 0 utxo density a)
-         (registerLeadCheck loAt)
-    else if slot < slSlot cur      -- L-shipCheck for a slot we've gone by already.
-    then forTANth a (fromIntegral . unSlotNo $ slSlot cur - slot)
-                  (registerLeadCheck loAt)
-         -- L-shipCheck for a further-than-immediate future slot
-    else let gap = unSlotNo $ slot - slSlot cur - 1
-             gapStartSlot = slSlot cur + 1 in
-         patchSlotCheckGap gap gapStartSlot a
-         & addTimelineSlot run slot loAt 1 utxo density
-   where
-     registerLeadCheck :: UTCTime -> SlotStats -> SlotStats
-     registerLeadCheck now sl@SlotStats{..} =
-       sl { slCountChecks = slCountChecks + 1
-          , slSpanCheck = now `sinceSlot` slStart -- XXX: used to "max 0" this
-          }
-
-     patchSlotCheckGap :: Word64 -> SlotNo -> TimelineAccum -> TimelineAccum
-     patchSlotCheckGap 0 _ a' = a'
-     patchSlotCheckGap gapLen slot a'@TimelineAccum{aSlotStats=cur':_} =
-       patchSlotCheckGap (gapLen - 1) (slot + 1) $
-        addTimelineSlot run slot
-          (unSlotStart $ genesis `slotStart` slot)
-          0 (slUtxoSize cur') (slDensity cur') a'
-  LogObject{loAt, loBody=LOTraceLeadershipDecided slot yesNo} ->
-    if slot /= slSlot cur
-    then error $ "LeadDecided for noncurrent slot=" <> show slot <> " cur=" <> show (slSlot cur)
-    else forTAHead a (onLeadershipCertainty loAt yesNo)
-   where
-     onLeadershipCertainty :: UTCTime -> Bool -> SlotStats -> SlotStats
-     onLeadershipCertainty now lead sl@SlotStats{..} =
-       sl { slCountLeads = slCountLeads + if lead then 1 else 0
-          , slSpanLead   = checkToCertainty
-          }
-      where
-        checkAbsTime = slSpanCheck `Time.addUTCTime` unSlotStart slStart
-        checkToCertainty = now `Time.diffUTCTime` checkAbsTime
-  LogObject{loAt, loBody=LOBlockForged _ _ _ slot} ->
-    if slot /= slSlot cur
-    then error $ "BlockForged for noncurrent slot=" <> show slot <> " cur=" <> show (slSlot cur)
-    else forTAHead a (onBlockForge loAt)
-   where
-     onBlockForge :: UTCTime -> SlotStats -> SlotStats
-     onBlockForge now sl@SlotStats{..} =
-       sl { slCountForges = slCountForges + 1
-          , slSpanForge   = certaintyToForge
-          }
-      where
-        certaintyAbsTime = slSpanLead `Time.addUTCTime` (slSpanCheck `Time.addUTCTime` unSlotStart slStart)
-        certaintyToForge = now `Time.diffUTCTime` certaintyAbsTime
+timelineStep Run{genesis} a@TimelineAccum{aSlotStats=cur:_, ..} =
+  let continue :: SlotNo -> UTCTime -> TimelineAccum
+      continue slot loAt =
+        if slot < slSlot cur then a
+        else a
+             & (if slot - slSlot cur <= 1
+                then identity                   -- for the next slot, no gap to patch
+                else patchSlotGap genesis slot) -- for a future slot, patch the gap just until
+             & if slot == slSlot cur
+               then identity                    -- for the current slot, nothing to add
+               else addTimelineSlot genesis slot loAt
+      mapExistingSlot :: SlotNo -> (SlotStats -> SlotStats) -> TimelineAccum -> TimelineAccum
+      mapExistingSlot slot fSlot a'@TimelineAccum{aSlotStats=last:_} =
+        (if slot < slSlot last -- for a slot gone by
+         then forTANth  a' (fromIntegral . unSlotNo $ slSlot last - slot) fSlot
+         else forTAHead a' fSlot)
+  in \case
+  -- First, events that can extend the timeline:
+  --
   LogObject{loAt, loBody=LOResources rs} ->
-    -- Update resource stats accumulators & record values current slot.
-    (forTAHead a
-      \s-> s { slResources = Just <$> extractResAccums accs })
-    { aResAccums = accs, aResTimestamp = loAt }
-   where accs = updateResAccums loAt rs aResAccums
+    continue slot loAt
+    & mapExistingSlot slot
+     (\sl -> sl { slResources = Just <$> extractResAccums accs })
+    & \a' -> a' { aResAccums    = accs
+                , aResTimestamp = loAt
+                }
+   where
+     slot = impliedSlot genesis loAt
+     accs = updateResAccums loAt rs aResAccums
+  LogObject{loAt, loBody=LOTraceStartLeadershipCheck slot utxo density} ->
+    continue slot loAt
+    & mapExistingSlot slot
+    (\sl@SlotStats{..} ->
+        sl { slCountChecks = slCountChecks + 1
+           , slSpanCheck = SJust $ loAt `sinceSlot` slStart
+           , slUtxoSize = utxo
+           , slDensity = density
+           })
+  -- Next, events that technically should extend the timeline,
+  -- but we don't really care for their misattribution to incur the overhead:
+  --
   LogObject{loBody=LOMempoolTxs txCount} ->
     (forTAHead a
       \s-> s { slMempoolTxs = txCount })
     { aMempoolTxs     = txCount }
-  LogObject{loBody=LOBlockContext blockNo} ->
-    (forTAHead a
-      \s-> s { slBlockNo = blockNo
-             , slBlockless = if newBlock then 0 else slBlockless cur
-             })
-    { aBlockNo        = blockNo
-    , aLastBlockSlot  = if newBlock
-                        then slSlot cur
-                        else aLastBlockSlot
-    }
-   where
-     newBlock = aBlockNo /= blockNo
-  LogObject{loBody=LOLedgerTookSnapshot} ->
-    forTAHead a
-      \s-> s { slChainDBSnap = slChainDBSnap cur + 1 }
   LogObject{loBody=LOMempoolRejectedTx} ->
     forTAHead a
       \s-> s { slRejectedTx = slRejectedTx cur + 1 }
+  LogObject{loBody=LOLedgerTookSnapshot} ->
+    forTAHead a
+      \s-> s { slChainDBSnap = slChainDBSnap cur + 1 }
   LogObject{loBody=LOGeneratorSummary _noFails sent elapsed threadwiseTps} ->
     a { aRunScalars = aRunScalars
         { rsThreadwiseTps = Just threadwiseTps
@@ -320,33 +298,120 @@ timelineStep run@Run{genesis} a@TimelineAccum{aSlotStats=cur:_, ..} = \case
   LogObject{loBody=LOTxsProcessed acc rej, loTid, loAt} ->
     (forTAHead a
       \s@SlotStats{..}-> s
-      { slTxsMemSpan =
+      { slSpanTxsMem =
           case loTid `Map.lookup` aTxsCollectedAt of
             Nothing ->
               -- error $ mconcat
               -- ["LOTxsProcessed missing LOTxsCollected for tid", show tid, " at ", show loAt]
-              Just $
+              SJust $
               1.0
               +
-              fromMaybe 0 slTxsMemSpan
+              fromSMaybe 0 slSpanTxsMem
             Just base ->
-              Just $
+              SJust $
               (loAt `Time.diffUTCTime` base)
               +
-              fromMaybe 0 slTxsMemSpan
+              fromSMaybe 0 slSpanTxsMem
       , slTxsAccepted = slTxsAccepted + acc
       , slTxsRejected = slTxsRejected + max 0 (fromIntegral rej)
       })
     { aTxsCollectedAt = loTid `Map.delete` aTxsCollectedAt
     }
+  -- Next, events that rely on their slotstats to pre-exist:
+  --
+  LogObject{loAt, loBody=LOTraceLeadershipDecided slot yesNo} ->
+    if slot /= slSlot cur
+    then error $ "LeadDecided for noncurrent slot=" <> show slot <> " cur=" <> show (slSlot cur)
+    else forTAHead a (onLeadershipCertainty loAt yesNo)
+   where
+     onLeadershipCertainty :: UTCTime -> Bool -> SlotStats -> SlotStats
+     onLeadershipCertainty now lead sl@SlotStats{..} =
+       sl { slCountLeads = slCountLeads + if lead then 1 else 0
+          , slSpanLead   = checkToCertainty
+          }
+      where
+        checkAbsTime = slSpanCheck <&> (`Time.addUTCTime` unSlotStart slStart)
+        checkToCertainty = (now `Time.diffUTCTime`) <$> checkAbsTime
+  LogObject{loBody=LOBlockContext blockNo} ->
+    (forTAHead a
+      \s-> s { slBlockNo = blockNo
+             , slBlockless = if newBlock then 0 else slBlockless cur
+             })
+    { aBlockNo        = blockNo
+    , aLastBlockSlot  = if newBlock
+                        then slSlot cur
+                        else aLastBlockSlot
+    }
+   where
+     newBlock = aBlockNo /= blockNo
+  LogObject{loAt, loBody=LOBlockForged _ _ _ slot} ->
+    if slot /= slSlot cur
+    then error $ "BlockForged for noncurrent slot=" <> show slot <> " cur=" <> show (slSlot cur)
+    else forTAHead a (onBlockForge loAt)
+   where
+     onBlockForge :: UTCTime -> SlotStats -> SlotStats
+     onBlockForge now sl@SlotStats{..} =
+       sl { slCountForges = slCountForges + 1
+          , slSpanForge   = certaintyToForge
+          }
+      where
+        certaintyAbsTime = Time.addUTCTime
+                           <$> slSpanLead
+                           <*> (slSpanCheck <&> (`Time.addUTCTime` unSlotStart slStart))
+        certaintyToForge = (now `Time.diffUTCTime`) <$> certaintyAbsTime
   _ -> a
 timelineStep _ a = const a
 
-addTimelineSlot ::
-     Run
-  -> SlotNo -> UTCTime -> Word64 -> Word64 -> Float
-  -> TimelineAccum -> TimelineAccum
-addTimelineSlot Run{genesis} slot time checks utxo density a@TimelineAccum{..} =
+patchSlotGap :: Genesis -> SlotNo -> TimelineAccum -> TimelineAccum
+patchSlotGap genesis curSlot a@TimelineAccum{aSlotStats=last:_, ..} =
+  a & go (unSlotNo $ curSlot - gapStartSlot) gapStartSlot
+ where
+   gapStartSlot = slSlot last + 1
+
+   go :: Word64 -> SlotNo -> TimelineAccum -> TimelineAccum
+   go 0      _         acc = acc
+   go gapLen patchSlot acc =
+     go (gapLen - 1) (patchSlot + 1) (acc & addGapSlot patchSlot)
+
+   addGapSlot :: SlotNo -> TimelineAccum -> TimelineAccum
+   addGapSlot slot acc =
+    let (epoch, epochSlot) = genesis `unsafeParseSlot` slot in
+      acc { aSlotStats = SlotStats
+          { slSlot        = slot
+          , slEpoch       = epoch
+          , slEpochSlot   = epochSlot
+          , slEpochSafeInt= slotEpochSafeInt genesis epochSlot
+          , slStart       = slStart
+            -- Updated as we see repeats:
+          , slCountChecks = 0
+          , slCountLeads  = 0
+          , slCountForges = 0
+          , slSpanCheck   = SNothing
+          , slSpanLead    = SNothing
+          , slSpanForge   = SNothing
+          , slSpanTxsMem  = SNothing
+          , slTxsCollected= 0
+          , slTxsAccepted = 0
+          , slTxsRejected = 0
+          , slMempoolTxs  = aMempoolTxs
+          , slUtxoSize    = slUtxoSize last
+          , slDensity     = slDensity last
+          , slChainDBSnap = 0
+          , slRejectedTx  = 0
+          , slBlockNo     = aBlockNo
+          , slBlockless   = unSlotNo $ slot - aLastBlockSlot
+          , slResources   = maybeDiscard
+                            <$> discardObsoleteValues
+                            <*> extractResAccums aResAccums}
+          : aSlotStats acc
+        }
+    where maybeDiscard :: (Word64 -> Maybe Word64) -> Word64 -> Maybe Word64
+          maybeDiscard f = f
+
+          slStart = slotStart genesis slot
+
+addTimelineSlot :: Genesis -> SlotNo -> UTCTime -> TimelineAccum -> TimelineAccum
+addTimelineSlot genesis slot time a@TimelineAccum{..} =
   let (epoch, epochSlot) = genesis `unsafeParseSlot` slot in
     a { aSlotStats = SlotStats
         { slSlot        = slot
@@ -354,21 +419,20 @@ addTimelineSlot Run{genesis} slot time checks utxo density a@TimelineAccum{..} =
         , slEpochSlot   = epochSlot
         , slEpochSafeInt= slotEpochSafeInt genesis epochSlot
         , slStart       = slStart
-        , slEarliest    = time
           -- Updated as we see repeats:
-        , slCountChecks = checks
+        , slCountChecks = 0
         , slCountLeads  = 0
         , slCountForges = 0
-        , slSpanCheck   = time `sinceSlot` slStart
-        , slSpanLead    = 0
-        , slSpanForge   = 0
-        , slTxsMemSpan  = Nothing
+        , slSpanCheck   = SJust $ time `sinceSlot` slStart
+        , slSpanLead    = SNothing
+        , slSpanForge   = SNothing
+        , slSpanTxsMem  = SNothing
         , slTxsCollected= 0
         , slTxsAccepted = 0
         , slTxsRejected = 0
         , slMempoolTxs  = aMempoolTxs
-        , slUtxoSize    = utxo
-        , slDensity     = density
+        , slUtxoSize    = 0
+        , slDensity     = 0
         , slChainDBSnap = 0
         , slRejectedTx  = 0
         , slBlockNo     = aBlockNo

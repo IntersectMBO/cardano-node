@@ -95,9 +95,27 @@ mkDispatchTracers nodeKernel trBase trForward mbTrEKG trDataPoint trConfig enabl
                 trDataPoint
                 (const ["NodeState"])
 
+    -- State tracer
+    stateTr   <- mkCardanoTracer
+                trBase trForward mbTrEKG
+                "State"
+                SR.namesNodeState
+                SR.severityNodeState
+                allPublic
+    configureTracers trConfig SR.docNodeState [stateTr]
+
     nodePeersTr <- mkDataPointTracer
                 trDataPoint
                 (const ["NodePeers"])
+
+    -- Peers tracer
+    peersTr   <- mkCardanoTracer
+                trBase trForward mbTrEKG
+                "Peers"
+                namesForPeers
+                severityPeers
+                allPublic
+    configureTracers trConfig docPeers [peersTr]
 
     -- Resource tracer
     resourcesTr <- mkCardanoTracer
@@ -124,15 +142,6 @@ mkDispatchTracers nodeKernel trBase trForward mbTrEKG trDataPoint trConfig enabl
                 severityShutdown
                 allPublic
     configureTracers trConfig docShutdown [shutdownTr]
-
-    -- Peers tracer
-    peersTr   <- mkCardanoTracer
-                trBase trForward mbTrEKG
-                "Peers"
-                namesForPeers
-                severityPeers
-                allPublic
-    configureTracers trConfig docPeers [peersTr]
 
     chainDBTr <- mkCardanoTracer'
                 trBase trForward mbTrEKG
@@ -202,7 +211,7 @@ mkDispatchTracers nodeKernel trBase trForward mbTrEKG trDataPoint trConfig enabl
       , startupTracer = Tracer $ \x -> traceWith startupTr x >> SR.traceNodeStateStartup nodeStateTr x
       , shutdownTracer = Tracer $ \x -> traceWith shutdownTr x >> SR.traceNodeStateShutdown nodeStateTr x
       , nodeInfoTracer = Tracer (traceWith nodeInfoTr)
-      , nodeStateTracer = Tracer (traceWith nodeStateTr)
+      , nodeStateTracer = Tracer (traceWith stateTr) <> Tracer (traceWith nodeStateTr)
       , resourcesTracer = Tracer (traceWith resourcesTr)
       , peersTracer = Tracer $ \x -> traceWith peersTr x >> traceNodePeers nodePeersTr x
     }
@@ -351,8 +360,9 @@ mkConsensusTracers trBase trForward mbTrEKG _trDataPoint trConfig nodeKernel = d
       , Consensus.mempoolTracer = Tracer $
           traceWith mempoolTr
       , Consensus.forgeTracer =
-          Tracer (traceWith (contramap Left forgeTr))
-          <> Tracer (traceWith (contramap Left forgeThreadStatsTr))
+          Tracer (\(Consensus.TraceLabelCreds _ x) -> traceWith (contramap Left forgeTr) x)
+          <> -- TODO: add the forge-thread-stats as a datapoint
+          Tracer (\(Consensus.TraceLabelCreds _ x) -> traceWith (contramap Left forgeThreadStatsTr) x)
       , Consensus.blockchainTimeTracer = Tracer $
           traceWith blockchainTimeTr
       , Consensus.keepAliveClientTracer = Tracer $

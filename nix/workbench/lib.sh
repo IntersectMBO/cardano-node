@@ -60,6 +60,27 @@ with_color() {
     color reset
 }
 
+colorise_colors=(
+    red green yellow blue cyan white reset red green yellow blue cyan white reset
+    red green yellow blue cyan white reset red green yellow blue cyan white reset
+    red green yellow blue cyan white reset red green yellow blue cyan white reset
+    red green yellow blue cyan white reset red green yellow blue cyan white reset
+    red green yellow blue cyan white reset red green yellow blue cyan white reset
+    red green yellow blue cyan white reset red green yellow blue cyan white reset
+    red green yellow blue cyan white reset red green yellow blue cyan white reset
+    red green yellow blue cyan white reset red green yellow blue cyan white reset
+    red green yellow blue cyan white reset red green yellow blue cyan white reset
+    red green yellow blue cyan white reset red green yellow blue cyan white reset
+    red green yellow blue cyan white reset red green yellow blue cyan white reset
+    red green yellow blue cyan white reset red green yellow blue cyan white reset
+)
+colorise() {
+    for ((i=0; $#!=0; i++))
+    do echo -n "$(with_color ${colorise_colors[$i]} $1) "
+       shift
+    done
+}
+
 msg() {
     echo "workbench:  $*" >&2
 }
@@ -68,9 +89,35 @@ msg_ne() {
     echo -ne "workbench:  $*" >&2
 }
 
+green() {
+    with_color green $*
+}
+
+white() {
+    with_color white $*
+}
+
+yellow() {
+    with_color yellow $*
+}
+
+red() {
+    with_color red $*
+}
+
 progress() {
     local subsys=$1; shift
     msg "$(with_color green $subsys):  $(with_color blue $*)"
+}
+
+progress_ne() {
+    local subsys=$1; shift
+    msg_ne "$(with_color green $subsys):  $(with_color blue $*)"
+}
+
+warn() {
+    local subsys=$1; shift
+    msg "$(with_color green $subsys):  $(with_color yellow $*)"
 }
 
 fail() {

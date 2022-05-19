@@ -20,13 +20,12 @@ doc                                                           @docs-access
 README.*                                                      @docs-access
 
 bench/tx-generator                                            @deepfire @MarcFontaine
-bench                                                         @deepfire @denisshevchenko @jutaro @MarcFontaine @cleverca22
+bench                                                         @deepfire @denisshevchenko @jutaro @MarcFontaine @mgmeier @cleverca22
 cardano-tracer                                                @deepfire @denisshevchenko
-nix/workbench                                                 @deepfire @denisshevchenko @jutaro @MarcFontaine
-nix/supervisord-cluster                                       @deepfire @denisshevchenko @jutaro @MarcFontaine
-trace-dispatcher                                              @deepfire @denisshevchenko @jutaro
-trace-forward                                                 @deepfire @denisshevchenko @jutaro
-trace-resources                                               @deepfire @denisshevchenko @jutaro
+nix/workbench                                                 @deepfire @denisshevchenko @jutaro @MarcFontaine @mgmeier
+trace-dispatcher                                              @deepfire @denisshevchenko @jutaro @mgmeier
+trace-forward                                                 @deepfire @denisshevchenko @jutaro @mgmeier
+trace-resources                                               @deepfire @denisshevchenko @jutaro @mgmeier
 Makefile                                                      @deepfire
 
 .buildkite                                                    @devops

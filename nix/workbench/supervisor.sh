@@ -58,39 +58,69 @@ case "$op" in
 EOF
         ;;
 
+    start-node )
+        local usage="USAGE: wb supervisor $op RUN-DIR NODE-NAME"
+        local dir=${1:?$usage}; shift
+        local node=${1:?$usage}; shift
+
+        supervisorctl      start                  $node
+        backend_supervisor wait-node       "$dir" $node
+        backend_supervisor save-child-pids "$dir"
+        ;;
+
+    stop-node )
+        local usage="USAGE: wb supervisor $op RUN-DIR NODE-NAME"
+        local dir=${1:?$usage}; shift
+        local node=${1:?$usage}; shift
+
+        supervisorctl stop $node
+        ;;
+
+    wait-node )
+        local usage="USAGE: wb supervisor $op RUN-DIR [NODE-NAME]"
+        local dir=${1:?$usage}; shift
+        local node=${1:-$(dirname $CARDANO_NODE_SOCKET_PATH | xargs basename)}; shift
+        local socket=$(backend_supervisor get-node-socket-path "$dir" $node)
+
+        local patience=$(jq '.analysis.cluster_startup_overhead_s | ceil' $dir/profile.json) i=0
+        echo -n "workbench:  supervisor:  waiting ${patience}s for socket of $node: " >&2
+        while test ! -S $socket
+        do printf "%3d" $i; sleep 1
+           i=$((i+1))
+           if test $i -ge $patience
+           then echo
+                progress "supervisor" "$(red FATAL):  workbench:  supervisor:  patience ran out for $(white $node) after ${patience}s, socket $socket"
+                backend_supervisor stop-cluster "$dir"
+                fatal "$node startup did not succeed:  check logs in $(dirname $socket)/stdout & stderr"
+           fi
+           echo -ne "\b\b\b"
+        done >&2
+        echo " $node up (${i}s)" >&2
+        ;;
+
     start-cluster )
         local usage="USAGE: wb supervisor $op RUN-DIR"
         local dir=${1:?$usage}; shift
 
         supervisord --config  "$dir"/supervisor/supervisord.conf $@
 
-        if test ! -v CARDANO_NODE_SOCKET_PATH
-        then export  CARDANO_NODE_SOCKET_PATH=$(backend_supervisor get-node-socket-path "$dir")
-        fi
+        for node in $(jq_tolist keys "$dir"/node-specs.json)
+        do jqtest ".\"$node\".autostart" "$dir"/node-specs.json &&
+                backend_supervisor wait-node "$dir" $node; done
 
-        local patience=$(jq '.analysis.cluster_startup_overhead_s | ceil' $dir/profile.json) i=0
-        echo -n "workbench:  supervisor:  waiting ${patience}s for $CARDANO_NODE_SOCKET_PATH to appear: " >&2
-        while test ! -S $CARDANO_NODE_SOCKET_PATH
-        do printf "%3d" $i; sleep 1
-           i=$((i+1))
-           if test $i -ge $patience
-           then echo
-                msg "FATAL:  workbench:  supervisor:  patience ran out after ${patience}s"
-                backend_supervisor stop-cluster "$dir"
-                fatal "node startup did not succeed:  check logs in $dir/node-0/stdout"
-           fi
-           echo -ne "\b\b\b"
-        done >&2
-        echo " node-0 online after $i seconds" >&2
+        if test ! -v CARDANO_NODE_SOCKET_PATH
+        then export  CARDANO_NODE_SOCKET_PATH=$(backend_supervisor get-node-socket-path "$dir" 'node-0')
+        fi
 
         backend_supervisor save-child-pids "$dir"
         backend_supervisor save-pid-maps "$dir";;
 
     get-node-socket-path )
-        local usage="USAGE: wb supervisor $op STATE-DIR"
+        local usage="USAGE: wb supervisor $op STATE-DIR NODE-NAME"
         local state_dir=${1:?$usage}
+        local node_name=${2:?$usage}
 
-        echo -n $state_dir/node-0/node.socket
+        echo -n $state_dir/$node_name/node.socket
         ;;
 
     start-generator )
@@ -104,6 +134,19 @@ EOF
 
         supervisorctl start generator
         backend_supervisor save-child-pids "$dir";;
+
+    wait-node-stopped )
+        local usage="USAGE: wb supervisor $op RUN-DIR NODE"
+        local dir=${1:?$usage}; shift
+        local node=${1:?$usage}; shift
+
+        progress_ne "supervisor" "waiting until $node stops:  ....."
+        local i=0
+        while supervisorctl status $node > /dev/null
+        do echo -ne "\b\b\b\b\b"; printf "%5d" $i >&2; i=$((i+1)); sleep 1
+        done >&2
+        echo -e "\b\b\b\b\bdone, after $(with_color white $i) seconds" >&2
+        ;;
 
     wait-pools-stopped )
         local usage="USAGE: wb supervisor $op RUN-DIR"
@@ -152,9 +195,9 @@ EOF
         pstree -p "$(cat "$svpid")" > "$pstree"
 
         local pidsfile="$dir"/supervisor/child.pids
-        { grep '\\---\|--=' "$pstree" || true; } |
-            sed 's/^.*\\--- \([0-9]*\) .*/\1/; s/^[ ]*[^ ]* \([0-9]+\) .*/\1/
-                ' > "$pidsfile"
+        { grep -e '---\|--=' "$pstree" || true; } |
+          sed 's/^.*--[=-] \([0-9]*\) .*/\1/; s/^[ ]*[^ ]* \([0-9]+\) .*/\1/
+              ' > "$pidsfile"
         ;;
 
     save-pid-maps )
@@ -164,13 +207,24 @@ EOF
         local mapn2p=$dir/supervisor/node2pid.map; echo '{}' > "$mapn2p"
         local mapp2n=$dir/supervisor/pid2node.map; echo '{}' > "$mapp2n"
         local pstree=$dir/supervisor/ps.tree
+
         for node in $(jq_tolist keys "$dir"/node-specs.json)
-        do local service_pid=$(supervisorctl pid $node)
-           if test -z "$(ps h --ppid $service_pid)"
-           then local pid=$service_pid
-           else local pid=$(fgrep -e "= $(printf %05d $service_pid) " -A1 "$pstree" |
-                                tail -n1 | sed 's/^.*\\--- \([0-9]*\) .*/\1/; s/^[ ]*[^ ]* \([0-9]*\) .*/\1/')
+        do ## supervisord's service PID is the immediately invoked binary,
+           ## ..which isn't necessarily 'cardano-node', but could be 'time' or 'cabal' or..
+           local service_pid=$(supervisorctl pid $node)
+           if   test $service_pid = '0'
+           then continue
+           elif test -z "$(ps h --ppid $service_pid)" ## Any children?
+           then local pid=$service_pid ## <-=^^^ none, in case we're running executables directly.
+                ## ..otherwise, it's a chain of children, e.g.: time -> cabal -> cardano-node
+           else local pid=$(grep -e "[=-] $(printf %05d $service_pid) " -A5 "$pstree" |
+                            grep -e '---\|--=' |
+                            head -n1 |
+                            sed 's/^.*--[=-] \([0-9]*\) .*/\1/;
+                                 s/^[ ]*[^ ]* \([0-9]*\) .*/\1/')
            fi
+           if test -z "$pid"
+           then warn "supervisor" "failed to detect PID of $(white $node)"; fi
            jq_fmutate "$mapn2p" '. * { "'$node'": '$pid' }'
            jq_fmutate "$mapp2n" '. * { "'$pid'": "'$node'" }'
         done

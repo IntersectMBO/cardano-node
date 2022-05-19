@@ -1,7 +1,6 @@
 {-# OPTIONS_GHC -fmax-pmcheck-models=300 #-}
 module Cardano.Command (module Cardano.Command) where
 
-import Prelude (String)
 import Cardano.Prelude                  hiding (State)
 
 import Data.Aeson                       qualified as Aeson
@@ -21,7 +20,6 @@ import Cardano.Analysis.Run
 import Cardano.Analysis.Version
 import Cardano.Unlog.LogObject          hiding (Text)
 import Cardano.Unlog.Render
-import Cardano.Util
 import Data.Distribution
 
 data CommandError
@@ -43,7 +41,10 @@ parseChainCommand =
   subparser (mconcat [ commandGroup "Common data:  logobject keys, run metafile & genesis"
    , op "list-logobject-keys" "List logobject keys that analyses care about"
      (ListLogobjectKeys
-       <$> optTextOutputFile  "keys"            "Text file to write logobject keys to")
+       <$> optTextOutputFile  "keys"           "Text file to write logobject keys to")
+   , op "list-logobject-keys-legacy" "List legacy logobject keys that analyses care about"
+     (ListLogobjectKeysLegacy
+       <$> optTextOutputFile  "keys-legacy"     "Text file to write logobject keys to")
    , op "meta-genesis" "Machine performance timeline"
      (MetaGenesis
        <$> optJsonRunMetafile "run-metafile"    "The meta.json file from the benchmark run"
@@ -167,6 +168,8 @@ parseChainCommand =
 data ChainCommand
   = ListLogobjectKeys
       TextOutputFile
+  | ListLogobjectKeysLegacy
+      TextOutputFile
 
   | MetaGenesis         -- () -> Run
       JsonRunMetafile
@@ -252,6 +255,11 @@ runChainCommand s
   dumpText "logobject-keys" (toText <$> logObjectStreamInterpreterKeys) f
     & firstExceptT (CommandError c)
   pure s
+runChainCommand s
+  c@(ListLogobjectKeysLegacy f) = do
+  dumpText "logobject-keys-legacy" (toText <$> logObjectStreamInterpreterKeysLegacy) f
+    & firstExceptT (CommandError c)
+  pure s
 
 runChainCommand s
   c@(MetaGenesis runMeta shelleyGenesis) = do
@@ -301,8 +309,7 @@ runChainCommand _ c@RebuildChain = missingCommandData c
 
 runChainCommand s
   c@(ReadChain f) = do
-  chainRaw <- sequence
-              . fmap (Aeson.eitherDecode @BlockEvents)
+  chainRaw <- mapM (Aeson.eitherDecode @BlockEvents)
               . filter ((> 5) . LBS.length)
               . LBS.split '\n'
               <$> LBS.readFile (unJsonInputFile f)
@@ -331,6 +338,9 @@ runChainCommand s@State{sRun=Just run, sChainRaw=Just chainRaw}
           & firstExceptT (CommandError c)
   (domSlot, domBlock, chain) <- filterChain run flts chainRaw
                                 & liftIO & firstExceptT (CommandError c)
+  when (ddFilteredCount domBlock == 0) $
+    throwE $ CommandError c $ mconcat
+      [ "All ", show (ddRawCount domBlock), " blocks filtered out." ]
   pure s { sChain = Just chain, sDomSlots = Just domSlot, sDomBlocks = Just domBlock }
 runChainCommand _ c@FilterChain{} = missingCommandData c
   ["run metadata & genesis", "slot filters", "unfiltered slot stats"]
@@ -353,8 +363,8 @@ runChainCommand _ c@TimelineChain{} = missingCommandData c
 runChainCommand s@State{sRun=Just run, sObjLists=Just objs}
   c@CollectSlots = do
   (scalars, slotsRaw) <-
-    mapAndUnzip redistribute <$> collectSlotStats run objs
-    & liftIO
+    fmap (mapAndUnzip redistribute) <$> collectSlotStats run objs
+    & newExceptT
     & firstExceptT (CommandError c)
   pure s { sScalars = Just scalars, sSlotsRaw = Just slotsRaw }
 runChainCommand _ c@CollectSlots = missingCommandData c
@@ -374,6 +384,9 @@ runChainCommand s@State{sRun=Just run, sSlotsRaw=Just slotsRaw}
   (domSlots, fltrd) <- runSlotFilters run flts slotsRaw
                        & liftIO
                        & firstExceptT (CommandError c)
+  when (maximum (length . snd <$> fltrd) == 0) $
+    throwE $ CommandError c $ mconcat
+      [ "All ", show $ maximum (length . snd <$> slotsRaw), " slots filtered out." ]
   pure s { sSlots = Just fltrd, sDomSlots = Just domSlots }
 runChainCommand _ c@FilterSlots{} = missingCommandData c
   ["run metadata & genesis", "slot filters", "unfiltered slot stats"]
@@ -410,8 +423,9 @@ runChainCommand _ c@DumpPropagation{} = missingCommandData c
 
 runChainCommand s@State{sRun=Just run, sSlots=Just slots}
   c@PerfAnalysis = do
-  perfAnalysis <- mapConcurrentlyPure (fmap $ slotStatsSummary run) slots
-                  & liftIO
+  perfAnalysis <- mapConcurrentlyPure (slotStatsSummary run) slots
+                  & fmap sequence
+                  & newExceptT
                   & firstExceptT (CommandError c)
   pure s { sPerfAnalysis = Just perfAnalysis }
 runChainCommand _ c@PerfAnalysis{} = missingCommandData c

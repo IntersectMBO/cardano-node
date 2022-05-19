@@ -5,7 +5,6 @@
 {- HLINT ignore "Use head" -}
 module Cardano.Analysis.ChainFilter (module Cardano.Analysis.ChainFilter) where
 
-import Prelude (String)
 import Cardano.Prelude hiding (head)
 
 import Data.Aeson

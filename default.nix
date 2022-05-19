@@ -6,12 +6,11 @@ in
   # override scripts with custom configuration
   withHoogle ? defaultCustomConfig.withHoogle
 , profileName ? defaultCustomConfig.localCluster.profileName
-, autoStartCluster ? defaultCustomConfig.localCluster.autoStartCluster
 , workbenchDevMode ? defaultCustomConfig.localCluster.workbenchDevMode
 , customConfig ? {
     inherit withHoogle;
     localCluster = {
-      inherit autoStartCluster profileName workbenchDevMode;
+      inherit profileName workbenchDevMode;
     };
   }
 }:

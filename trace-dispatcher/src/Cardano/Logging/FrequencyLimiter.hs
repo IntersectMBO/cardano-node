@@ -50,18 +50,15 @@ instance LogFormatting LimitingMessage where
     ". Suppressed " <> pack (show num) <> " messages."
   forHuman (RememberLimiting txt num) = "Frequency limiting still active for " <> txt <>
     ". Suppressed so far " <> pack (show num) <> " messages."
-  forMachine _dtl (StartLimiting txt) = mconcat
+  forMachine _dtl StartLimiting{} = mconcat
         [ "kind" .= String "StartLimiting"
-        , "name" .= String txt
         ]
-  forMachine _dtl (StopLimiting txt num) = mconcat
+  forMachine _dtl (StopLimiting _txt num) = mconcat
         [ "kind" .= String "StopLimiting"
-        , "name" .= String txt
         , "numSuppressed" .= Number (fromIntegral num)
         ]
-  forMachine _dtl (RememberLimiting txt num) = mconcat
+  forMachine _dtl (RememberLimiting _txt num) = mconcat
         [ "kind" .= String "RememberLimiting"
-        , "name" .= String txt
         , "numSuppressed" .= Number (fromIntegral num)
         ]
   asMetrics (StartLimiting _txt)          = []

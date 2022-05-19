@@ -32,6 +32,26 @@ let
         "127.0.0.1";
 
       finaliseNodeService =
+        let time_fmtstr =
+              "{ " + escape [''"''] (concatStringsSep ''\n, '' time_entries) + " }";
+            time_entries = [
+              ''"wall_clock_s":       %e''
+              ''"user_cpu_s":         %U''
+              ''"sys_cpu_s":          %S''
+              ''"avg_cpu_pct":       "%P"''
+              ''"rss_peak_kb":        %M''
+              ''"signals_received":   %k''
+              ''"ctxsw_involuntary":  %c''
+              ''"ctxsw_volunt_waits": %w''
+              ''"pageflt_major":      %F''
+              ''"pageflt_minor":      %R''
+              ''"swaps":              %W''
+              ''"io_fs_reads":        %I''
+              ''"io_fs_writes":       %O''
+              ''"cmdline":           "%C"''
+              ''"exit_code":          %x''
+            ];
+        in
         { name, i, isProducer, ... }: svc: recursiveUpdate svc
           ({
             stateDir       = stateDir + "/${name}";
@@ -40,7 +60,7 @@ let
             topology       = "topology.json";
             nodeConfigFile = "config.json";
           } // optionalAttrs useCabalRun {
-            executable     = "cabal run exe:cardano-node --";
+            executable     = ''time -f "${time_fmtstr}" -o kernel-resource-summary.json cabal run exe:cardano-node -- +RTS -sghc-rts-report.txt -RTS'';
           } // optionalAttrs isProducer {
             operationalCertificate = "../genesis/node-keys/node${toString i}.opcert";
             kesKey         = "../genesis/node-keys/node-kes${toString i}.skey";

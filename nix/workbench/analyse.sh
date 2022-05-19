@@ -14,14 +14,16 @@ EOF
 }
 
 analyse() {
-local dump_logobjects= preflt_jq= filters=() aws=
-local dump_logobjects= dump_slots_raw= dump_slots= dump_chain_raw= dump_chain= dump_mach_views=
+local filters=() aws= sargs=()
+local dump_logobjects= dump_machviews= dump_chain_raw= dump_chain= dump_slots_raw= dump_slots=
 while test $# -gt 0
 do case "$1" in
-       --dump-logobjects )  dump_logobjects='true';;
-       --prefilter-jq )     preflt_jq='true';;
-       --filters )          analysis_set_filters "base,$2"; shift;;
-       --no-filters )       analysis_set_filters "";;
+       --dump-logobjects | -lo )  sargs+=($1);    dump_logobjects='true';;
+       --dump-machviews  | -mw )  sargs+=($1);    dump_machviews='true';;
+       --dump-chain-raw  | -cr )  sargs+=($1);    dump_chain_raw='true';;
+       --dump-chain      | -c )   sargs+=($1);    dump_chain='true';;
+       --filters )                sargs+=($1 $2); analysis_set_filters "base,$2"; shift;;
+       --no-filters )             sargs+=($1);    analysis_set_filters "";;
        * ) break;; esac; shift; done
 
 if curl --connect-timeout 0.5 http://169.254.169.254/latest/meta-data >/dev/null 2>&1
@@ -35,76 +37,67 @@ else locli_rts_args=()
      echo "{ \"aws\": false }"
 fi
 
-local op=${1:-$(usage_analyse)}; shift
+local op=${1:-standard}; if test $# != 0; then shift; fi
 
 case "$op" in
     # 'read-mach-views' "${logs[@]/#/--log }"
-    standard | std )
+    everything | full | all | standard | std )
+        local script=(
+            logs               $(test -n "$dump_logobjects" && echo 'dump-logobjects')
+            context
+
+            build-mach-views   $(test -n "$dump_machviews" && echo 'dump-mach-views')
+            build-chain        $(test -n "$dump_chain_raw" && echo 'dump-chain-raw')
+            chain-timeline-raw
+            filter-chain       $(test -n "$dump_chain" && echo 'dump-chain')
+            chain-timeline
+
+            collect-slots      $(test -n "$dump_slots_raw" && echo 'dump-slots-raw')
+            filter-slots       $(test -n "$dump_slots" && echo 'dump-slots')
+            timeline-slots
+
+            propagation
+            dump-propagation
+            report-prop-{forger,peers,endtoend,full}
+
+            perfanalysis
+            dump-perfanalysis
+            report-perf-{full,brief}
+         )
+        progress "analysis" "$(with_color white full), calling script:  $(colorise ${script[*]})"
+        analyse ${sargs[*]} map "call ${script[*]}" "$@"
+        ;;
+
+    performance | perf )
+        local script=(
+            logs               $(test -n "$dump_logobjects" && echo 'dump-logobjects')
+            context
+
+            collect-slots      $(test -n "$dump_slots_raw" && echo 'dump-slots-raw')
+            filter-slots       $(test -n "$dump_slots" && echo 'dump-slots')
+            timeline-slots
+
+            perfanalysis
+            dump-perfanalysis
+            report-perf-{full,brief}
+        )
+        progress "analysis" "$(with_color white performance), calling script:  $(colorise ${script[*]})"
+        analyse ${sargs[*]} map "call ${script[*]}" "$@"
+        ;;
+
+    map )
+        local usage="USAGE: wb analyse $op OP RUNS.."
+
+        local preop=${1:?usage}; shift
         local runs=($*); if test $# = 0; then runs=(current); fi
 
+        local op_split=($preop)
+        local op=${op_split[0]}
+        local args=${op_split[*]:1}
+        progress "analyse" "mapping op $(with_color yellow $op) $(with_color cyan $args) over runs:  $(with_color white ${runs[*]})"
         for r in ${runs[*]}
-        do analyse prepare $r
-
-           local name=${1:-current}; if test $# != 0; then shift; fi
-           local dir=$(run get "$name")
-           local adir=$dir/analysis
-           test -n "$dir" -a -d "$adir" || fail "malformed run: $name"
-
-           if test -z "${filters[*]}"
-           then local filter_names=$(jq '.analysis.filters
-                                        | join(",")
-                                        ' "$dir"/profile.json --raw-output)
-                analysis_set_filters "$filter_names"
-           fi
-
-           local logs=("$adir"/logs-*.flt.json)
-           local args=(
-               'meta-genesis'         --run-metafile    "$dir"/meta.json
-                                      --shelley-genesis "$dir"/genesis-shelley.json
-
-               'unlog' --host-from-log-filename ${logs[@]/#/--log }
-               $(if test -n "$dump_logobjects"; then echo \
-                 'dump-logobjects'; fi)
-
-               'build-mach-views'
-               $(if test -n "$dump_mach_views"; then echo \
-                 'dump-mach-views'; fi)
-
-               'build-chain'
-               $(if test -n "$dump_chain_raw"; then echo \
-                 'dump-chain-raw'     --chain           "$adir"/chain-raw.json; fi)
-
-               'timeline-chain-raw'   --timeline        "$adir"/chain-raw.txt
-
-               'filter-chain' "${filters[@]}"
-               $(if test -n "$dump_chain"; then echo \
-                 'dump-chain'         --chain           "$adir"/chain.json; fi)
-
-               'timeline-chain'       --timeline        "$adir"/chain.txt
-
-               'collect-slots'
-               $(if test -n "$dump_slots_raw"; then echo \
-                 'dump-slots-raw'; fi)
-
-               'filter-slots' "${filters[@]}"
-               $(if test -n "$dump_slots"; then echo \
-                 'dump-slots'; fi)
-
-               'timeline-slots'
-
-               'propagation'
-               'dump-propagation'     --analysis        "$adir"/blockprop.json
-               'report-prop-forger'   --report          "$adir"/blockprop-forger.txt
-               'report-prop-peers'    --report          "$adir"/blockprop-peers.txt
-               'report-prop-endtoend' --report          "$adir"/blockprop-endtoend.txt
-               'report-prop-full'     --report          "$adir"/blockprop-full.txt
-
-               'perfanalysis'
-               'dump-perfanalysis'
-               'report-perf-full'
-               'report-perf-brief'
-           )
-           time locli "${locli_rts_args[@]}" "${args[@]}"
+        do analyse ${sargs[*]} prepare $r
+           analyse ${sargs[*]} $op $r ${args[*]}
         done
         ;;
 
@@ -117,26 +110,33 @@ case "$op" in
         test -n "$dir" -a -d "$adir" || fail "malformed run: $name"
 
         local logfiles=("$adir"/logs-*.flt.json)
-        local logs=(       'unlog'
-                           ${logfiles[*]/#/--log })
-        local run=(       'meta-genesis'
-                           --run-metafile    "$dir"/meta.json
-                           --shelley-genesis "$dir"/genesis-shelley.json)
-        local chain_raw=( 'dump-chain-raw'
-                          --chain     "$adir"/chain-raw.json )
-        local chain=(     'dump-chain-raw'
-                          --chain     "$adir"/chain.json )
-        local flt_chain=( 'filter-chain'
-                          "${filters[@]}")
-        local ops0=("$@")
-        local ops1=(${ops0[*]/#auto-logs/${logs[*]}})
-        local ops2=(${ops1[*]/#auto-run/${run[*]}})
-        local ops3=(${ops2[*]/#auto-dump-chain-raw/${chain_raw[*]}})
-        local ops4=(${ops3[*]/#auto-filter-chain/${flt_chain[*]}})
-        local ops5=(${ops4[*]/#auto-dump-chain/${chain[*]}})
-        local ops_final=(${ops5[*]})
 
-        echo locli "${locli_rts_args[@]}" "${ops_final[@]}"
+        if test -z "${filters[*]}"
+        then local filter_names=$(jq '.analysis.filters
+                                      | join(",")
+                                     ' "$dir"/profile.json --raw-output)
+             analysis_set_filters "$filter_names"
+        fi
+
+        local v0=("$@")
+        local v1=(${v0[*]/#logs/               'unlog' --host-from-log-filename ${logfiles[*]/#/--log }})
+        local v2=(${v1[*]/#context/            'meta-genesis'   --run-metafile "$dir"/meta.json
+                                                             --shelley-genesis "$dir"/genesis-shelley.json})
+        local v3=(${v2[*]/#dump-chain-raw/     'dump-chain-raw'        --chain "$adir"/chain-raw.json})
+        local v4=(${v3[*]/#chain-timeline-raw/ 'timeline-chain-raw' --timeline "$adir"/chain-raw.txt})
+        local v5=(${v4[*]/#filter-chain/       'filter-chain'                  ${filters[*]}})
+        local v6=(${v5[*]/#dump-chain/         'dump-chain'            --chain "$adir"/chain.json})
+        local v7=(${v6[*]/#chain-timeline/     'timeline-chain'     --timeline "$adir"/chain.txt})
+        local v8=(${v7[*]/#filter-slots/       'filter-slots'                  ${filters[*]}})
+        local v9=(${v8[*]/#dump-propagation/   'dump-propagation'   --analysis "$adir"/blockprop.json})
+
+        local va=(${v9[*]/#report-prop-forger/  'report-prop-forger'  --report "$adir"/blockprop-forger.txt  })
+        local vb=(${va[*]/#report-prop-peers/   'report-prop-peers'   --report "$adir"/blockprop-peers.txt   })
+        local vc=(${vb[*]/#report-prop-endtoend/'report-prop-endtoend' --report "$adir"/blockprop-endtoend.txt})
+        local vd=(${vc[*]/#report-prop-full/    'report-prop-full'    --report "$adir"/blockprop-full.txt    })
+        local ops_final=(${vd[*]})
+
+        progress "analysis | locli" "$(with_color reset ${locli_rts_args[@]}) $(colorise "${ops_final[@]}")"
         time locli "${locli_rts_args[@]}" "${ops_final[@]}"
         ;;
 
@@ -147,12 +147,16 @@ case "$op" in
         local dir=$(run get "$name")
         test -n "$dir" || fail "malformed run: $name"
 
+        progress "analyse" "preparing run for analysis:  $(with_color white $name)"
         local adir=$dir/analysis
         mkdir -p "$adir"
 
         ## 0. ask locli what it cares about
         local keyfile="$adir"/substring-keys
-        locli 'list-logobject-keys' --keys "$keyfile"
+        case $(jq '.node.tracing_backend // "trace-dispatcher"' --raw-output $dir/profile.json) in
+             trace-dispatcher ) locli 'list-logobject-keys'        --keys        "$keyfile";;
+             iohk-monitoring  ) locli 'list-logobject-keys-legacy' --keys-legacy "$keyfile";;
+        esac
 
         ## 1. unless already done, filter logs according to locli's requirements
         local logdirs=($(ls -d "$dir"/node-*/ 2>/dev/null))
@@ -167,17 +171,14 @@ case "$op" in
             --compact-output
             'delpaths([["app"],["env"],["loc"],["msg"],["ns"],["sev"]])'
         )
+        progress "analyse" "filtering logs:  $(with_color black ${logdirs[@]})"
         for d in "${logdirs[@]}"
         do throttle_shell_job_spawns
            local logfiles="$(ls "$d"/stdout* 2>/dev/null | tac) $(ls "$d"/node-*.json 2>/dev/null)"
            if test -z "$logfiles"
            then msg "no logs in $d, skipping.."; fi
            local output="$adir"/logs-$(basename "$d").flt.json
-           grep -hFf "$keyfile" $logfiles |
-               if test "$preflt_jq" = 'true'
-               then jq "${jq_args[@]}" --arg dirHostname "$(basename "$d")"
-               else cat
-               fi > "$output" &
+           grep -hFf "$keyfile" $logfiles > "$output" &
         done
 
         wait;;
@@ -205,4 +206,47 @@ analysis_set_filters() {
             fail "no such filter: $f"; done
 
     filters+=(${filter_files[*]/#/--filter })
+}
+
+analysis_classify_traces() {
+    local name=${1:-current}; if test $# != 0; then shift; fi
+    local node=${1:-node-0}; if test $# != 0; then shift; fi
+    local dir=$(run get "$name")
+
+    progress "analysis" "enumerating namespace from logs of $(with_color yellow $node)"
+    grep -h '^{' $dir/$node/stdout* | jq --raw-output '(try .ns[0] // .ns) + ":" + (.data.kind // "")' 2>/dev/null | sort -u
+    # grep -h '^{' $dir/$node/stdout* | jq --raw-output '.ns' 2>/dev/null | tr -d ']["' | sort -u
+}
+
+analysis_trace_frequencies() {
+    local same_types=
+    while test $# -gt 0
+    do case "$1" in
+       --same-types | --same | -s )  same_types='true';;
+       * ) break;; esac; shift; done
+
+    local name=${1:-current}; if test $# != 0; then shift; fi
+    local dir=$(run get "$name")
+    local types=()
+
+    if test -n "$same_types"
+    then types=($(analysis_classify_traces $name 'node-0'))
+         progress_ne "analysis" "message frequencies: "; fi
+
+    for nodedir in $dir/node-*/
+    do local node=$(basename $nodedir)
+
+       if test -z "$same_types"
+       then types=($(analysis_classify_traces $name $node))
+            progress "analysis" "message frequencies: $(with_color yellow $node)"; fi
+
+       for type in ${types[*]}
+       do local ns=$(cut -d: -f1 <<<$type)
+          local kind=$(cut -d: -f2 <<<$type)
+          echo $(grep -h "\"$ns\".*\"$kind\"\|\"$kind\".*\"$ns\"" $nodedir/stdout* | wc -l) $type
+       done |
+           sort -nr > $nodedir/log-namespace-occurence-stats.txt
+       test -n "$same_types" && echo -n ' '$node >&2
+    done
+    echo >&2
 }

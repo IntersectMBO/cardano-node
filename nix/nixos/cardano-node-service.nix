@@ -9,27 +9,42 @@ let
   envConfig = cfg.environments.${cfg.environment};
   runtimeDir = if cfg.runtimeDir == null then cfg.stateDir else "/run/${cfg.runtimeDir}";
   mkScript = cfg:
-    let baseConfig = recursiveUpdate (cfg.nodeConfig
-      // (mapAttrs' (era: epoch:
-        nameValuePair "Test${era}HardForkAtEpoch" epoch
-      ) cfg.forceHardForks)
-      // (optionalAttrs cfg.useNewTopology {
-        EnableP2P = true;
-        TargetNumberOfRootPeers = cfg.targetNumberOfRootPeers;
-        TargetNumberOfKnownPeers = cfg.targetNumberOfKnownPeers;
-        TargetNumberOfEstablishedPeers = cfg.targetNumberOfEstablishedPeers;
-        TargetNumberOfActivePeers = cfg.targetNumberOfActivePeers;
-        TestEnableDevelopmentNetworkProtocols = true;
-        MaxConcurrencyBulkSync = 2;
-      })) cfg.extraNodeConfig;
+    let baseConfig =
+          recursiveUpdate
+            (cfg.nodeConfig
+             // (mapAttrs' (era: epoch:
+               nameValuePair "Test${era}HardForkAtEpoch" epoch
+             ) cfg.forceHardForks)
+            // (optionalAttrs cfg.useNewTopology {
+              EnableP2P = true;
+              TargetNumberOfRootPeers = cfg.targetNumberOfRootPeers;
+              TargetNumberOfKnownPeers = cfg.targetNumberOfKnownPeers;
+              TargetNumberOfEstablishedPeers = cfg.targetNumberOfEstablishedPeers;
+              TargetNumberOfActivePeers = cfg.targetNumberOfActivePeers;
+              TestEnableDevelopmentNetworkProtocols = true;
+              MaxConcurrencyBulkSync = 2;
+            })) cfg.extraNodeConfig;
+        baseInstanceConfig =
+          i:
+          if !cfg.useLegacyTracing
+          then baseConfig //
+               { ## XXX: remove once legacy tracing is dropped
+                 minSeverity = "Critical";
+                 setupScribes = [];
+                 setupBackends = [];
+                 defaultScribes = [];
+                 defaultBackends = [];
+                 options = {};
+               }
+          else baseConfig //
+               (optionalAttrs (baseConfig ? hasEKG) {
+                  hasEKG = baseConfig.hasEKG + i;
+               }) //
+               (optionalAttrs (baseConfig ? hasPrometheus) {
+                 hasPrometheus = map (n: if isInt n then n + i else n) baseConfig.hasPrometheus;
+               });
     in i: let
-    instanceConfig = recursiveUpdate (baseConfig
-      // (optionalAttrs (baseConfig ? hasEKG) {
-          hasEKG = baseConfig.hasEKG + i;
-      })
-      // (optionalAttrs (baseConfig ? hasPrometheus) {
-          hasPrometheus = map (n: if isInt n then n + i else n) baseConfig.hasPrometheus;
-      })) (cfg.extraNodeInstanceConfig i);
+    instanceConfig = recursiveUpdate (baseInstanceConfig i) (cfg.extraNodeInstanceConfig i);
     nodeConfigFile = if (cfg.nodeConfigFile != null) then cfg.nodeConfigFile
       else toFile "config-${toString cfg.nodeId}-${toString i}.json" (toJSON instanceConfig);
     newTopology = {
@@ -422,6 +437,14 @@ in {
         default = cfg.nodeConfig.EnableP2P or false;
         description = ''
           Use new, p2p/ledger peers compatible topology.
+        '';
+      };
+
+      useLegacyTracing = mkOption {
+        type = types.bool;
+        default = true;
+        description = ''
+          Use the legacy tracing, based on iohk-monitoring-framework.
         '';
       };
 

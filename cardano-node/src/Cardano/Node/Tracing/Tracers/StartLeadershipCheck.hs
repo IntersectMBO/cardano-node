@@ -36,8 +36,8 @@ import           Cardano.Slotting.Slot (fromWithOrigin)
 import           Cardano.Ledger.BaseTypes (StrictMaybe (..), fromSMaybe)
 
 
-type ForgeTracerType blk = Either (TraceLabelCreds (TraceForgeEvent blk))
-                                  (TraceLabelCreds TraceStartLeadershipCheckPlus)
+type ForgeTracerType blk = Either (TraceForgeEvent blk)
+                                  TraceStartLeadershipCheckPlus
 
 data TraceStartLeadershipCheckPlus =
   TraceStartLeadershipCheckPlus {
@@ -56,8 +56,7 @@ forgeTracerTransform ::
   -> IO (Trace IO (ForgeTracerType blk))
 forgeTracerTransform nodeKern (Trace tr) = pure $ Trace $ T.arrow $ T.emit $
     \case
-      (lc, Right (Left (TraceLabelCreds creds
-                        (TraceStartLeadershipCheck slotNo)))) -> do
+      (lc, Right (Left slc@(TraceStartLeadershipCheck slotNo))) -> do
         query <- mapNodeKernelDataIO
                     (\nk ->
                        (,,)
@@ -65,7 +64,8 @@ forgeTracerTransform nodeKern (Trace tr) = pure $ Trace $ T.arrow $ T.emit $
                          <*> nkQueryLedger (ledgerDelegMapSize . ledgerState) nk
                          <*> nkQueryChain fragmentChainDensity nk)
                     nodeKern
-        fromSMaybe (pure ())
+        fromSMaybe
+           (T.traceWith tr (lc, Right (Left slc)))
            (query <&>
              \(utxoSize, delegMapSize, chainDensity) ->
                 let msg = TraceStartLeadershipCheckPlus
@@ -73,7 +73,7 @@ forgeTracerTransform nodeKern (Trace tr) = pure $ Trace $ T.arrow $ T.emit $
                             utxoSize
                             delegMapSize
                             (fromRational chainDensity)
-                in T.traceWith tr (lc, Right (Right (TraceLabelCreds creds msg))))
+                in T.traceWith tr (lc, Right (Right msg)))
       (lc, Right a) ->
           T.traceWith tr (lc, Right a)
       (lc, Left control) ->

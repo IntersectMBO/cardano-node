@@ -111,7 +111,8 @@ import           Ouroboros.Consensus.MiniProtocol.LocalTxSubmission.Server
 import           Ouroboros.Consensus.Node.Run (SerialiseNodeToNodeConstraints, estimateBlockSize)
 import           Ouroboros.Consensus.Node.Tracers
 import qualified Ouroboros.Consensus.Protocol.Ledger.HotKey as HotKey
-
+import qualified Ouroboros.Network.AnchoredFragment as AF
+import qualified Ouroboros.Network.AnchoredSeq as AS
 
 
 
@@ -258,16 +259,20 @@ namesForChainSyncServerEvent :: TraceChainSyncServerEvent blk -> [Text]
 namesForChainSyncServerEvent ev =
     "ChainSyncServerEvent" : namesForChainSyncServerEvent' ev
 
+nameChainUpdate :: ChainUpdate block a -> Text
+nameChainUpdate = \case
+  AddBlock{} -> "AddBlock"
+  RollBack{} -> "RollBack"
 
 namesForChainSyncServerEvent' :: TraceChainSyncServerEvent blk -> [Text]
-namesForChainSyncServerEvent' TraceChainSyncServerRead        {} =
-      ["ServerRead"]
-namesForChainSyncServerEvent' TraceChainSyncServerReadBlocked {} =
-      ["ServerReadBlocked"]
-namesForChainSyncServerEvent' TraceChainSyncRollForward       {} =
-      ["RollForward"]
-namesForChainSyncServerEvent' TraceChainSyncRollBackward      {} =
-      ["RollBackward"]
+namesForChainSyncServerEvent' (TraceChainSyncServerRead        _ x) =
+  ["ServerRead", nameChainUpdate x]
+namesForChainSyncServerEvent' (TraceChainSyncServerReadBlocked _ x) =
+  ["ServerReadBlocked", nameChainUpdate x]
+namesForChainSyncServerEvent' TraceChainSyncRollForward{} =
+  ["RollForward"]
+namesForChainSyncServerEvent' TraceChainSyncRollBackward{} =
+  ["RollBackward"]
 
 instance ConvertRawHash blk
       => LogFormatting (TraceChainSyncServerEvent blk) where
@@ -450,23 +455,47 @@ namesForBlockFetchClient' BlockFetch.ClientTerminating {} =
   ["ClientTerminating"]
 
 
-instance LogFormatting (BlockFetch.TraceFetchClientState header) where
+instance (HasHeader header, ConvertRawHash header) =>
+  LogFormatting (BlockFetch.TraceFetchClientState header) where
   forMachine _dtal BlockFetch.AddedFetchRequest {} =
     mconcat [ "kind" .= String "AddedFetchRequest" ]
   forMachine _dtal BlockFetch.AcknowledgedFetchRequest {} =
     mconcat [ "kind" .= String "AcknowledgedFetchRequest" ]
-  forMachine _dtal BlockFetch.SendFetchRequest {} =
-    mconcat [ "kind" .= String "SendFetchRequest" ]
-  forMachine _dtal BlockFetch.CompletedBlockFetch {} =
-    mconcat [ "kind" .= String "CompletedBlockFetch" ]
+  forMachine _dtal (BlockFetch.SendFetchRequest af) =
+    mconcat [ "kind" .= String "SendFetchRequest"
+            , "head" .= String (renderChainHash
+                                 (renderHeaderHash (Proxy @header))
+                                 (AF.headHash af))
+            , "length" .= toJSON (fragmentLength af)]
+   where
+     -- NOTE: this ignores the Byron era with its EBB complication:
+     -- the length would be underestimated by 1, if the AF is anchored
+     -- at the epoch boundary.
+     fragmentLength :: AF.AnchoredFragment header -> Int
+     fragmentLength f = fromIntegral . unBlockNo $
+        case (f, f) of
+          (AS.Empty{}, AS.Empty{}) -> 0
+          (firstHdr AS.:< _, _ AS.:> lastHdr) ->
+            blockNo lastHdr - blockNo firstHdr + 1
+  forMachine _dtal (BlockFetch.CompletedBlockFetch pt _ _ _ delay blockSize) =
+    mconcat [ "kind"  .= String "CompletedBlockFetch"
+            , "delay" .= (realToFrac delay :: Double)
+            , "size"  .= blockSize
+            , "block" .= String
+              (case pt of
+                 GenesisPoint -> "Genesis"
+                 BlockPoint _ h -> renderHeaderHash (Proxy @header) h)
+            ]
   forMachine _dtal BlockFetch.CompletedFetchBatch {} =
     mconcat [ "kind" .= String "CompletedFetchBatch" ]
   forMachine _dtal BlockFetch.StartedFetchBatch {} =
     mconcat [ "kind" .= String "StartedFetchBatch" ]
   forMachine _dtal BlockFetch.RejectedFetchBatch {} =
     mconcat [ "kind" .= String "RejectedFetchBatch" ]
-  forMachine _dtal BlockFetch.ClientTerminating {} =
-    mconcat [ "kind" .= String "ClientTerminating" ]
+  forMachine _dtal (BlockFetch.ClientTerminating outstanding) =
+    mconcat [ "kind" .= String "ClientTerminating"
+            , "outstanding" .= outstanding
+            ]
 
 
 docBlockFetchClient ::
@@ -906,59 +935,53 @@ docMempool' = Documented [
 
 severityForge :: ForgeTracerType blk -> SeverityS
 severityForge (Left t)  = severityForge' t
-severityForge (Right t) = severityForge''' t
+severityForge (Right t) = severityForge'' t
 
-severityForge' :: TraceLabelCreds (TraceForgeEvent blk) -> SeverityS
-severityForge' (TraceLabelCreds _t e) = severityForge'' e
+severityForge' :: TraceForgeEvent blk -> SeverityS
+severityForge' TraceStartLeadershipCheck {}  = Info
+severityForge' TraceSlotIsImmutable {}       = Error
+severityForge' TraceBlockFromFuture {}       = Error
+severityForge' TraceBlockContext {}          = Debug
+severityForge' TraceNoLedgerState {}         = Error
+severityForge' TraceLedgerState {}           = Debug
+severityForge' TraceNoLedgerView {}          = Error
+severityForge' TraceLedgerView {}            = Debug
+severityForge' TraceForgeStateUpdateError {} = Error
+severityForge' TraceNodeCannotForge {}       = Error
+severityForge' TraceNodeNotLeader {}         = Info
+severityForge' TraceNodeIsLeader {}          = Info
+severityForge' TraceForgedBlock {}           = Info
+severityForge' TraceDidntAdoptBlock {}       = Error
+severityForge' TraceForgedInvalidBlock {}    = Error
+severityForge' TraceAdoptedBlock {}          = Info
 
-severityForge'' :: TraceForgeEvent blk -> SeverityS
-severityForge'' TraceStartLeadershipCheck {}  = Info
-severityForge'' TraceSlotIsImmutable {}       = Error
-severityForge'' TraceBlockFromFuture {}       = Error
-severityForge'' TraceBlockContext {}          = Debug
-severityForge'' TraceNoLedgerState {}         = Error
-severityForge'' TraceLedgerState {}           = Debug
-severityForge'' TraceNoLedgerView {}          = Error
-severityForge'' TraceLedgerView {}            = Debug
-severityForge'' TraceForgeStateUpdateError {} = Error
-severityForge'' TraceNodeCannotForge {}       = Error
-severityForge'' TraceNodeNotLeader {}         = Info
-severityForge'' TraceNodeIsLeader {}          = Info
-severityForge'' TraceForgedBlock {}           = Info
-severityForge'' TraceDidntAdoptBlock {}       = Error
-severityForge'' TraceForgedInvalidBlock {}    = Error
-severityForge'' TraceAdoptedBlock {}          = Info
-
-severityForge''' :: TraceLabelCreds TraceStartLeadershipCheckPlus -> SeverityS
-severityForge''' _ = Info
+severityForge'' :: TraceStartLeadershipCheckPlus -> SeverityS
+severityForge'' _ = Info
 
 namesForForge :: ForgeTracerType blk -> [Text]
 namesForForge (Left t)  = namesForForge' t
-namesForForge (Right t) = namesForForge''' t
+namesForForge (Right t) = namesForForge'' t
 
-namesForForge' :: TraceLabelCreds (TraceForgeEvent blk) -> [Text]
-namesForForge' (TraceLabelCreds _t e) = namesForForge'' e
+namesForForge' :: TraceForgeEvent blk -> [Text]
+namesForForge' TraceStartLeadershipCheck {}  = ["StartLeadershipCheck"]
+namesForForge' TraceSlotIsImmutable {}       = ["SlotIsImmutable"]
+namesForForge' TraceBlockFromFuture {}       = ["BlockFromFuture"]
+namesForForge' TraceBlockContext {}          = ["BlockContext"]
+namesForForge' TraceNoLedgerState {}         = ["NoLedgerState"]
+namesForForge' TraceLedgerState {}           = ["LedgerState"]
+namesForForge' TraceNoLedgerView {}          = ["NoLedgerView"]
+namesForForge' TraceLedgerView {}            = ["LedgerView"]
+namesForForge' TraceForgeStateUpdateError {} = ["ForgeStateUpdateError"]
+namesForForge' TraceNodeCannotForge {}       = ["NodeCannotForge"]
+namesForForge' TraceNodeNotLeader {}         = ["NodeNotLeader"]
+namesForForge' TraceNodeIsLeader {}          = ["NodeIsLeader"]
+namesForForge' TraceForgedBlock {}           = ["ForgedBlock"]
+namesForForge' TraceDidntAdoptBlock {}       = ["DidntAdoptBlock"]
+namesForForge' TraceForgedInvalidBlock {}    = ["ForgedInvalidBlock"]
+namesForForge' TraceAdoptedBlock {}          = ["AdoptedBlock"]
 
-namesForForge'' :: TraceForgeEvent blk -> [Text]
-namesForForge'' TraceStartLeadershipCheck {}  = ["StartLeadershipCheck"]
-namesForForge'' TraceSlotIsImmutable {}       = ["SlotIsImmutable"]
-namesForForge'' TraceBlockFromFuture {}       = ["BlockFromFuture"]
-namesForForge'' TraceBlockContext {}          = ["BlockContext"]
-namesForForge'' TraceNoLedgerState {}         = ["NoLedgerState"]
-namesForForge'' TraceLedgerState {}           = ["LedgerState"]
-namesForForge'' TraceNoLedgerView {}          = ["NoLedgerView"]
-namesForForge'' TraceLedgerView {}            = ["LedgerView"]
-namesForForge'' TraceForgeStateUpdateError {} = ["ForgeStateUpdateError"]
-namesForForge'' TraceNodeCannotForge {}       = ["NodeCannotForge"]
-namesForForge'' TraceNodeNotLeader {}         = ["NodeNotLeader"]
-namesForForge'' TraceNodeIsLeader {}          = ["NodeIsLeader"]
-namesForForge'' TraceForgedBlock {}           = ["ForgedBlock"]
-namesForForge'' TraceDidntAdoptBlock {}       = ["DidntAdoptBlock"]
-namesForForge'' TraceForgedInvalidBlock {}    = ["ForgedInvalidBlock"]
-namesForForge'' TraceAdoptedBlock {}          = ["AdoptedBlock"]
-
-namesForForge''' :: TraceLabelCreds TraceStartLeadershipCheckPlus -> [Text]
-namesForForge''' (TraceLabelCreds _ TraceStartLeadershipCheckPlus {})  =
+namesForForge'' :: TraceStartLeadershipCheckPlus -> [Text]
+namesForForge'' TraceStartLeadershipCheckPlus{}  =
   ["StartLeadershipCheckPlus"]
 
 
@@ -1200,12 +1223,12 @@ instance ( tx ~ GenTx blk
 
 instance LogFormatting TraceStartLeadershipCheckPlus where
   forMachine _dtal TraceStartLeadershipCheckPlus {..} =
-        mconcat [ "kind" .= String "TraceStartLeadershipCheckPlus"
-                 , "slotNo" .= toJSON (unSlotNo tsSlotNo)
-                 , "utxoSize" .= Number (fromIntegral tsUtxoSize)
-                 , "delegMapSize" .= Number (fromIntegral tsUtxoSize)
-                 , "chainDensity" .= Number (fromRational (toRational tsChainDensity))
-                 ]
+        mconcat [ "kind" .= String "TraceStartLeadershipCheck"
+                , "slot" .= toJSON (unSlotNo tsSlotNo)
+                , "utxoSize" .= Number (fromIntegral tsUtxoSize)
+                , "delegMapSize" .= Number (fromIntegral tsUtxoSize)
+                , "chainDensity" .= Number (fromRational (toRational tsChainDensity))
+                ]
   forHuman TraceStartLeadershipCheckPlus {..} =
       "Checking for leadership in slot " <> showT (unSlotNo tsSlotNo)
       <> " utxoSize " <> showT tsUtxoSize
@@ -1215,12 +1238,12 @@ instance LogFormatting TraceStartLeadershipCheckPlus where
     [IntM "cardano.node.utxoSize" (fromIntegral tsUtxoSize),
      IntM "cardano.node.delegMapSize" (fromIntegral tsDelegMapSize)]
 
-docForge :: Documented (Either (TraceLabelCreds (TraceForgeEvent blk))
-                               (TraceLabelCreds TraceStartLeadershipCheckPlus))
+docForge :: Documented (Either (TraceForgeEvent blk)
+                               TraceStartLeadershipCheckPlus)
 docForge = addDocumentedNamespace [] docForge'
 
-docForge' :: Documented (Either (TraceLabelCreds (TraceForgeEvent blk))
-                               (TraceLabelCreds TraceStartLeadershipCheckPlus))
+docForge' :: Documented (Either (TraceForgeEvent blk)
+                               TraceStartLeadershipCheckPlus)
 docForge' = Documented [
     DocMsg
       ["StartLeadershipCheck"]

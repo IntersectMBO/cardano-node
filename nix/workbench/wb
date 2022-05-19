@@ -11,6 +11,7 @@ global_mode='unknown'
 . "$global_basedir"/lib.sh
 . "$global_basedir"/env.sh
 . "$global_basedir"/profile.sh
+. "$global_basedir"/chaindb.sh
 . "$global_basedir"/genesis.sh
 . "$global_basedir"/topology.sh
 . "$global_basedir"/manifest.sh
@@ -33,6 +34,7 @@ usage_main() {
     analyse      (a)      Analyse cluster runs
 
     env          (e)      Environment configuration
+    chaindb      (c)      ChainDB
     genesis      (g)      Genesis
     topology     (t)      Topology generation
     run          (r)      Managing cluster runs.  Default op is 'list'
@@ -96,6 +98,9 @@ start()
     local verbose=
     local manifest="{}"
     local iterations=1
+    local no_retry_failed_runs=t
+    local no_analysis= analyse_args=()
+    local analysis_can_fail=
 
     local run_args=()
     local run_allocate_args=()
@@ -104,7 +109,7 @@ start()
     do case "$1" in
         --batch-name )                   batch_name=$2;   shift;;
         --profile-name )                 profile_name=$2; shift;;
-        --iterations | --times | --iter | -n ) iterations=$2; shift;;
+        --iterations | --times | --iter | -n ) iterations=$2; no_retry_failed_runs=; shift;;
         --cache-dir )                    setenvjqstr 'cacheDir' $2; shift;;
         --base-port )                    setenvjq    'basePort' $2; shift;;
 
@@ -114,8 +119,12 @@ start()
 
         --idle )                         run_start_args+=($1);;
         --scenario | -s )                run_start_args+=($1 $2); shift;;
-        --analyse | -a )                 run_start_args+=($1);;
-        --analysis-can-fail )            run_start_args+=($1);;
+
+        --no-analysis )                  no_analysis=true;;
+        --analysis-can-fail | -af )      analysis_can_fail=t;;
+        --dump-logobjects | -lo )        analyse_args+=($1);;
+        --dump-machviews  | -mw )        analyse_args+=($1);;
+        --filters )                      analyse_args+=($1 $2); shift;;
 
         --cabal-mode | --cabal )         cabal_mode=t;;
         --supervisor | --backend-supervisor )
@@ -139,6 +148,7 @@ start()
     backend setenv-defaults "$profile"
 
     profile_name=${profile_name:-$(jq '.name' -r $profile/profile.json)}
+    analysis_type=$(jq '.analysis.type' -r $profile/profile.json)
 
     progress "top-level" "iterations of profile $(with_color 'yellow' $profile_name):  $(with_color 'white' $iterations)"
     for ((i=0; i<$iterations; i++))
@@ -147,11 +157,22 @@ start()
             --manifest "$(manifest collect-from-checkout .)"
         )
        run ${run_args[@]} 'allocate' $batch_name $profile_name "${args[@]}"
+       local tag=$(run current-tag)
 
        current_run_path=$(run current-path)
        mkdir -p "$current_run_path"
 
-       run ${run_args[@]} 'start'    ${run_start_args[@]} $(run current-tag)
+       run ${run_args[@]} 'start'    ${run_start_args[@]} $tag
+
+       if test -n "$no_analysis" -o $analysis_type = null; then continue; fi
+
+       progress "top-level | analysis" "analysis type $(with_color yellow $analysis_type) on $(with_color white $tag)"
+       analyse ${analyse_args[@]} $analysis_type $tag ||
+           if test -n "$analysis_can_fail" -a -z "$no_retry_failed_runs"
+           then progress "run | analysis" "log processing failed, but --analysis-can-fail prevents failure:  $(with_color red $tag)"
+                iterations=$((iterations + 1))
+           else fail "analysis failed:  $tag"
+                false; fi
     done
 }
 
@@ -198,6 +219,7 @@ main() {
 
         ## Public, internals-y:
         env          | e )        env                 "$@";;
+        chaindb      | c )        chaindb             "$@";;
         genesis      | g )        genesis             "$@";;
         topology     | topo | t ) topology            "$@";;
         run          | runs | r ) run                 "$@";;

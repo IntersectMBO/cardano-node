@@ -66,12 +66,12 @@ initTraceDispatcher nc p networkMagic nodeKernel p2pMode = do
 
   startResourceTracer
     (resourcesTracer tracers)
-    (fromMaybe 1000 (tcResourceFreqency trConfig))
+    (fromMaybe 1000 (tcResourceFrequency trConfig))
 
   startPeerTracer
     (peersTracer tracers)
     nodeKernel
-    (fromMaybe 2000 (tcPeerFreqency trConfig))
+    (fromMaybe 2000 (tcPeerFrequency trConfig))
 
   now <- getCurrentTime
   prepareNodeInfo (ncProtocol nc) p trConfig now

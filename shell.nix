@@ -4,22 +4,21 @@ let defaultCustomConfig = import ./nix/custom-config.nix defaultCustomConfig;
 in
 { withHoogle ? defaultCustomConfig.withHoogle
 , profileName ? defaultCustomConfig.localCluster.profileName
-, autoStartCluster ? defaultCustomConfig.localCluster.autoStartCluster
-, autoStartClusterArgs ? defaultCustomConfig.localCluster.autoStartClusterArgs
 , workbenchDevMode ? defaultCustomConfig.localCluster.workbenchDevMode
 , customConfig ? {
     inherit withHoogle;
     localCluster =  {
-      inherit autoStartCluster autoStartClusterArgs profileName workbenchDevMode;
+      inherit profileName workbenchDevMode;
     };
   }
 , pkgs ? import ./nix customConfig
+, cardano-mainnet-mirror ? __getFlake "github:input-output-hk/cardano-mainnet-mirror/nix"
 }:
 with pkgs;
 let
   inherit (pkgs) customConfig;
   inherit (customConfig) withHoogle localCluster;
-  inherit (localCluster) autoStartCluster autoStartClusterArgs profileName workbenchDevMode;
+  inherit (localCluster) profileName workbenchDevMode;
   inherit (pkgs.haskell-nix) haskellLib;
   commandHelp =
     ''
@@ -32,7 +31,6 @@ let
           * stop-cluster - stop a local development cluster
           * restart-cluster - restart the last cluster run (in 'run/current')
                               (WARNING: logs & node DB will be wiped clean)
-
       "
     '';
   # Test cases will assume a UTF-8 locale and provide text in this character encoding.
@@ -69,6 +67,7 @@ let
     nativeBuildInputs = with haskellPackages; with cardanoNodePackages; [
       cardano-ping
       cabalWrapped
+      db-analyser
       ghcid
       haskellBuildUtils
       pkgs.graphviz
@@ -100,27 +99,21 @@ let
     exactDeps = true;
 
     shellHook = ''
-      echo 'nix-shell top-level shellHook:  withHoogle=${toString withHoogle} profileName=${profileName} autoStartCluster=${toString autoStartCluster} workbenchDevMode=${toString workbenchDevMode}'
+      echo 'nix-shell top-level shellHook:  withHoogle=${toString withHoogle} profileName=${profileName} workbenchDevMode=${toString workbenchDevMode}'
 
       ${with customConfig.localCluster;
-        (import ./nix/workbench/shell.nix { inherit lib workbenchDevMode; useCabalRun = true; }).shellHook}
+        (import ./nix/workbench/shell.nix { inherit lib workbenchDevMode profileName; useCabalRun = true; }).shellHook}
 
-      ${lib.optionalString autoStartCluster ''
       function atexit() {
           if wb backend is-running
-          then echo "workbench:  stopping cluster (because 'autoStartCluster' implies this):"
-               stop-cluster
+          then stop-cluster
           fi
       }
       trap atexit EXIT
-      ''}
 
       ${setLocale}
 
-      ${lib.optionalString autoStartCluster ''
-      echo "workbench:  starting cluster (because 'autoStartCluster' is true):"
-      start-cluster ${autoStartClusterArgs}
-      ''}
+      export CARDANO_MAINNET_MIRROR=${cardano-mainnet-mirror.outputs.defaultPackage.x86_64-linux.outPath}
 
       ${commandHelp}
 
@@ -165,7 +158,7 @@ let
       | ${lolcat}/bin/lolcat
 
       ${with customConfig.localCluster;
-        (import ./nix/workbench/shell.nix { inherit lib workbenchDevMode; useCabalRun = false; }).shellHook}
+        (import ./nix/workbench/shell.nix { inherit lib workbenchDevMode profileName; useCabalRun = false; }).shellHook}
 
       # Socket path default to first node launched by "start-cluster":
       export CARDANO_NODE_SOCKET_PATH=$(wb backend get-node-socket-path ${cluster.stateDir})
@@ -188,10 +181,6 @@ let
       echo '      edit ~/.config/nix/nix.conf and add line `access-tokens = "github.com=23ac...b289"`'
       ${commandHelp}
 
-      ${lib.optionalString autoStartCluster ''
-      echo "workbench:  starting cluster (because 'autoStartCluster' is true):"
-      start-cluster
-      ''}
     '';
   };
 

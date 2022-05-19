@@ -2,7 +2,10 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# OPTIONS_GHC -Wno-name-shadowing #-}
 {- HLINT ignore "Use head" -}
-module Cardano.Analysis.API (module Cardano.Analysis.API) where
+module Cardano.Analysis.API
+  ( module Cardano.Analysis.API
+  , module Cardano.Util)
+where
 
 import Prelude                  ((!!), error)
 import Cardano.Prelude          hiding (head)
@@ -11,8 +14,7 @@ import Data.Aeson               (ToJSON(..), FromJSON(..))
 import Data.Text   qualified as T
 import Data.Text.Short          (toText)
 import Data.Time.Clock          (NominalDiffTime)
-import Data.Time                (UTCTime)
-import Text.Printf              (PrintfArg, printf)
+import Text.Printf              (PrintfArg)
 
 import Cardano.Analysis.Chain
 import Cardano.Analysis.ChainFilter
@@ -22,6 +24,7 @@ import Cardano.Analysis.Version
 import Cardano.Logging.Resources.Types
 import Cardano.Unlog.LogObject  hiding (Text)
 import Cardano.Unlog.Render
+import Cardano.Util
 
 import Data.Distribution
 
@@ -60,7 +63,7 @@ data BlockEvents
   , beBlockNo      :: !BlockNo
   , beSlotNo       :: !SlotNo
   , beEpochNo      :: !EpochNo
-  , beEpochSafeInt    :: !EpochSafeInt
+  , beEpochSafeInt :: !EpochSafeInt
   , beForge        :: !BlockForge
   , beObservations :: [BlockObservation]
   , bePropagation  :: !(Distribution Float NominalDiffTime)
@@ -195,12 +198,11 @@ data SlotStats
     , slRejectedTx   :: !Word64
     , slBlockNo      :: !Word64
     , slBlockless    :: !Word64
-    , slEarliest     :: !UTCTime
-    , slSpanCheck    :: !NominalDiffTime
-    , slSpanLead     :: !NominalDiffTime
-    , slSpanForge    :: !NominalDiffTime
+    , slSpanCheck    :: !(StrictMaybe NominalDiffTime)
+    , slSpanLead     :: !(StrictMaybe NominalDiffTime)
+    , slSpanForge    :: !(StrictMaybe NominalDiffTime)
     , slMempoolTxs   :: !Word64
-    , slTxsMemSpan   :: !(Maybe NominalDiffTime)
+    , slSpanTxsMem   :: !(StrictMaybe NominalDiffTime)
     , slTxsCollected :: !Word64
     , slTxsAccepted  :: !Word64
     , slTxsRejected  :: !Word64
@@ -420,10 +422,10 @@ instance RenderTimeline SlotStats where
     , Field 3 0 "forges"       "For"   "ge"      $ IWord64 slCountForges
     , Field 4 0 "CDBSnap"      "CDB"   "snap"    $ IWord64 slChainDBSnap
     , Field 3 0 "rejTxs"       "rej"   "txs"     $ IWord64 slRejectedTx
-    , Field 7 0 "checkSpan"    "check" "span"    $ IDeltaT slSpanCheck
-    , Field 5 0 "leadSpan"     "lead"  "span"    $ IDeltaT slSpanLead
-    , Field 5 0 "forgeSpan"    "forg"  "span"    $ IDeltaT slSpanForge
-    , Field 4 0 "mempoolTxSpan" (t 4!!0) "span"  $ IText (maybe "" show.slTxsMemSpan)
+    , Field 7 0 "checkSpan"    "check" "span"    $ IText (smaybe "" show.slSpanCheck)
+    , Field 5 0 "leadSpan"     "lead"  "span"    $ IText (smaybe "" show.slSpanLead)
+    , Field 5 0 "forgeSpan"    "forg"  "span"    $ IText (smaybe "" show.slSpanForge)
+    , Field 4 0 "mempoolTxSpan" (t 4!!0) "span"  $ IText (smaybe "" show.slSpanTxsMem)
     , Field 4 0 "txsColl"     (t 4!!1) "cold"    $ IWord64 slTxsCollected
     , Field 4 0 "txsAcc"      (t 4!!2) "accd"    $ IWord64 slTxsAccepted
     , Field 4 0 "txsRej"      (t 4!!3) "rejd"    $ IWord64 slTxsRejected

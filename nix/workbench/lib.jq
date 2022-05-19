@@ -11,3 +11,6 @@ def color:
 
 def colorly($col; $x):
   "\(color[$col])\($x)\(color["off"])";
+
+def drop_nulls:
+  map(select(. != null));

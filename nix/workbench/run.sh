@@ -96,8 +96,12 @@ case "$op" in
         local tag=${1:?$usage}
         local dir=$(run compute-path "$tag")
 
-        jq_check_json "$dir"/meta.json ||
-            fatal "run $tag (at $dir) missing a file:  meta.json"
+        if ! jq_check_json "$dir"/meta.json
+        then if test $tag = 'current'
+             then local alt=$(run list | tail -n1)
+                  progress 'run | check' "$(with_color white current) missing, resetting to $(with_color white $alt)"
+                  run set-current $alt
+             else fatal "run $tag (at $dir) missing a file:  meta.json"; fi; fi
 
         test -f "$dir"/profile.json -a -f "$dir"/genesis-shelley.json ||
             run fix-legacy-run-structure "$tag";;
@@ -230,7 +234,7 @@ case "$op" in
         local batch=${1:?$usage}; shift
         local profile_name=${1:?$usage}; shift
 
-        local profile= topology= genesis_cache_entry= manifest=
+        local profile= topology= genesis_cache_entry= manifest= preset=
         while test $# -gt 0
         do case "$1" in
                --manifest )            manifest=$2; shift;;
@@ -241,7 +245,11 @@ case "$op" in
                --* ) msg "FATAL:  unknown flag '$1'"; usage_run;;
                * ) break;; esac; shift; done
 
-        progress "run" "allocating a new one.."
+        if profile has-preset "$profile"/profile.json
+        then preset=$(profile json "$profile"/profile.json | jq '.preset' -r)
+             progress "run" "allocating from preset '$preset'"
+        else progress "run" "allocating a new one"
+        fi
 
         ## 0. report software manifest
         progress "run | manifest" "component versions:"
@@ -302,7 +310,7 @@ case "$op" in
         else
             profile has-profile          "$profile_name" ||
                 fatal  "no such profile:  $profile_name"
-            profile json-by-name         "$profile_name" > "$dir"/profile.json
+            profile json                 "$profile_name" > "$dir"/profile.json
         fi
         jq '.' <<<$node_specs > "$dir"/node-specs.json
 
@@ -332,13 +340,14 @@ case "$op" in
         else topology make    "$dir"/profile.json "$dir"/topology
         fi
 
-        if test   -n "$genesis_cache_entry"
-        then genesis derive-from-cache      \
+        if      test -z "$genesis_cache_entry"
+        then fail "internal error:  no genesis cache entry"
+
+        else genesis derive-from-cache      \
                      "$profile"             \
                      "$timing"              \
                      "$genesis_cache_entry" \
                      "$dir"/genesis
-        else fail "internal error:  no genesis cache entry"
         fi
         ## Record geneses
         cp "$dir"/genesis/genesis-shelley.json "$dir"/genesis-shelley.json
@@ -464,13 +473,14 @@ EOF
     start )
         local usage="USAGE: wb run $op [--idle] [--scenario NAME] [--analyse] TAG"
 
-        local scenario_override= analyse= analysis_can_fail=
+        local scenario_override= analyse=yes analysis_can_fail=
         while test $# -gt 0
         do case "$1" in
                --idle )              scenario_override='generic-idle';;
                --scenario | -s )     scenario_override=$2; shift;;
-               --analyse | -a )      analyse=t;;
-               --analysis-can-fail ) analysis_can_fail=t;;
+               --no-analysis )       analyse=;;
+               --analysis-can-fail | -f )
+                                     analysis_can_fail=t;;
                --* ) msg "FATAL:  unknown flag '$1'"; usage_run;;
                * ) break;; esac; shift; done
 
@@ -488,14 +498,6 @@ EOF
         scenario "$scenario" "$dir"
 
         run compat-meta-fixups "$tag"
-        if test -n "$analyse"
-        then progress "run | analysis" "processing logs of $(with_color white $tag)"
-             analyse std $tag ||
-                 if test -n "$analysis_can_fail"
-                 then progress "run | analysis" "log processing failed, but --analysis-can-fail prevents failure:  $(with_color red $tag)"
-                 else fail "analysis failed:  $tag"
-                     false; fi
-        fi
         ;;
 
     stop )

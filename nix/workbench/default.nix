@@ -1,5 +1,6 @@
 { pkgs
 , lib, jq, runCommand
+, db-analyser
 , cardanoNodePackages
 }:
 
@@ -40,6 +41,7 @@ let
 
       cardano-cli
       cardano-topology
+      db-analyser
       locli
     ];
 

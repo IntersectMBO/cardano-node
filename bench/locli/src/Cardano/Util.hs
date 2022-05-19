@@ -1,5 +1,7 @@
 module Cardano.Util
-  ( module Cardano.Util
+  ( module Prelude
+  , module Cardano.Util
+  , module Cardano.Ledger.BaseTypes
   , module Control.Arrow
   , module Control.Applicative
   , module Control.Concurrent.Async
@@ -20,12 +22,38 @@ import Data.Aeson                       (FromJSON, ToJSON, encode, eitherDecode)
 import Data.ByteString.Lazy.Char8       qualified as LBS
 import Data.Text                        qualified as T
 import Data.Text.Short                  (fromText)
+import GHC.Base                         (build)
 import Text.Printf                      (printf)
 
 import System.FilePath                  qualified as F
 
 import Cardano.Analysis.Ground
+import Cardano.Ledger.BaseTypes         (StrictMaybe (..), fromSMaybe)
 
+
+smaybe :: b -> (a -> b) -> StrictMaybe a -> b
+smaybe x _  SNothing = x
+smaybe _ f (SJust x) = f x
+
+mapSMaybe          :: (a -> StrictMaybe b) -> [a] -> [b]
+mapSMaybe _ []     = []
+mapSMaybe f (x:xs) =
+ let rs = mapSMaybe f xs in
+ case f x of
+  SNothing -> rs
+  SJust r  -> r:rs
+{-# NOINLINE [1] mapSMaybe #-}
+
+{-# RULES
+"mapSMaybe"     [~1] forall f xs. mapSMaybe f xs
+                     = build (\c n -> foldr (mapSMaybeFB c f) n xs)
+  #-}
+
+{-# INLINE [0] mapSMaybeFB #-} -- See Note [Inline FB functions] in GHC.List
+mapSMaybeFB :: (b -> r -> r) -> (a -> StrictMaybe b) -> a -> r -> r
+mapSMaybeFB cons f x next = case f x of
+  SNothing -> next
+  SJust r -> cons r next
 
 mapConcurrentlyPure :: NFData b => (a -> b) -> [a] -> IO [b]
 mapConcurrentlyPure f =

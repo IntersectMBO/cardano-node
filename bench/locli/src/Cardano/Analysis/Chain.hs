@@ -42,6 +42,13 @@ slotStart Genesis{..} =
   . fromIntegral
   . unSlotNo
 
+impliedSlot :: Genesis -> UTCTime -> SlotNo
+impliedSlot Genesis{..} =
+  SlotNo
+  . floor
+  . (/ slotLength)
+  . (`Time.diffUTCTime` systemStart)
+
 sinceSlot :: UTCTime -> SlotStart -> NominalDiffTime
 sinceSlot t (SlotStart start) = Time.diffUTCTime t start
 

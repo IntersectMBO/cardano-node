@@ -155,7 +155,7 @@ case "$op" in
            | . * ($p.genesis.shelley // {})
            | . * ($p.genesis.alonzo // {})
            ' --slurpfile prof       "$profile_json"  \
-           "$global_basedir"/profiles/presets/mainnet/genesis/genesis-alonzo.json \
+           "$global_basedir"/profiles/presets/mainnet/genesis/genesis.alonzo.json \
            >   "$dir"/genesis.alonzo.spec.json
 
         msg "genesis:  creating initial genesis"
@@ -198,10 +198,20 @@ case "$op" in
         local cache_entry=${3:?$usage}
         local outdir=${4:?$usage}
 
-        msg "genesis | derive-from-cache:  $cache_entry -> $outdir"
+        mkdir -p "$outdir"
+
+        local preset=$(profile preset "$profile"/profile.json)
+        if test -n "$preset"
+        then progress "genesis" "instantiating from preset $(with_color white $preset):  $cache_entry"
+             mkdir -p "$outdir"/byron
+             cp -f $cache_entry/genesis*.json "$outdir"
+             cp -f $cache_entry/byron/*.json  "$outdir"/byron
+             return
+        fi
+
+        progress "genesis" "deriving from cache:  $cache_entry -> $outdir"
         # ls -l $cache_entry
 
-        mkdir -p "$outdir"
         ( cd $outdir
           ln -s $profile   ./profile
           ln -s $cache_entry cache-entry
@@ -246,7 +256,7 @@ case "$op" in
         jq ' $prof[0] as $p
            | . * ($p.genesis.alonzo // {})
            ' --slurpfile prof       "$profile_json"  \
-           "$global_basedir"/profiles/presets/mainnet/genesis/genesis-alonzo.json \
+           "$global_basedir"/profiles/presets/mainnet/genesis/genesis.alonzo.json \
            >   "$dir"/genesis.alonzo.json;;
 
     * ) usage_genesis;; esac

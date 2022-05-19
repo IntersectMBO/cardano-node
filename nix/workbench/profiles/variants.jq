@@ -2,6 +2,120 @@
 ## variations of genesis/generator/node axes.
 
 def genesis_profile_variants:
+    { scenario: "fixed-loaded"
+    , composition:
+      { n_singular_hosts:               2
+      , n_dense_hosts:                  0
+      }
+    , genesis:
+      { utxo:                           6000
+      , delegators:                     1300
+      , max_block_size:                 80000
+      , epoch_length:                   600
+      , parameter_k:                    3
+      }
+    , node:
+      { shutdown_on_slot_synced: 10
+      }
+    , generator: { tps: 15 }
+    , analysis:
+      { type:                           "standard"
+      }
+    } as $quick_base
+  |
+    { scenario: "fixed-loaded"
+    , composition:
+      { n_singular_hosts:               2
+      , n_dense_hosts:                  0
+      }
+    , genesis:
+      { utxo:                           6000000
+      , delegators:                     1300000
+      , max_block_size:                 80000
+      , epoch_length:                   600
+      , parameter_k:                    3
+      }
+    , node:
+      { shutdown_on_slot_synced: 2400
+      }
+    , generator: { tps: 15 }
+    } as $forge_stress_base
+  |
+    { genesis:
+      { alonzo:
+        { maxTxExUnits:
+          { exUnitsMem:                 12500000
+          }
+        }
+      }
+    , generator:
+      { inputs_per_tx:                  1
+      , outputs_per_tx:                 1
+      , plutusMode:                     true
+      , plutusAutoMode:                 true
+      }
+    , analysis:
+      { filters:                        ["base", "size-small"]
+      }
+    } as $plutus_base
+  |
+    { scenario: "chainsync"
+    , preset: "mainnet"
+    , composition:
+      { n_singular_hosts:               0
+      , n_dense_hosts:                  0
+      , with_chaindb_server:            true
+      , with_observer:                  true
+      }
+    , analysis:
+      { type:                           "performance"
+      , filters:                        []
+      }
+    } as $chainsync_base
+  |
+    { node:
+      { tracing_backend:                "iohk-monitoring"
+      }
+    } as $old_tracing
+  |
+    { chaindb:
+      { mainnet_chunks:
+        { chaindb_server:               10
+        , observer:                     0
+        }
+      , ledger_snapshot:
+        { chaindb_server:               237599
+        , observer:                     0
+        }
+      }
+    , node:
+      { shutdown_on_slot_synced:
+        { observer:                     237599
+        }
+      }
+    } as $chaindb_early_byron
+  |
+    { chaindb:
+      { mainnet_chunks:
+        { chaindb_server:               1800
+        , observer:                     1799
+        }
+      , ledger_snapshot:
+        { chaindb_server:               38901589
+        , observer:                     37173650
+        }
+      }
+    , node:
+      { shutdown_on_slot_synced:
+        { observer:                     38901589
+        }
+      }
+    , genesis:
+      { utxo:                           6000000
+      , delegators:                     1300000
+      }
+    } as $chaindb_early_alonzo
+  |
 
   ## Baseline:
   [ { genesis: { utxo: 4000000, delegators: 1000000 } }
@@ -59,55 +173,47 @@ def genesis_profile_variants:
       }
     , generator: { tps: 10 }
     }
-  , { name: "forge-stress"
-    , scenario: "fixed-loaded"
-    , composition:
-      { n_singular_hosts:               2
-      , n_dense_hosts:                  0
-      }
-    , genesis:
-      { utxo:                           6000000
-      , delegators:                     1300000
-      , max_block_size:                 80000
-      , epoch_length:                   600
-      , parameter_k:                    3
-      }
-    , node:
-      { shutdown_on_slot_synced: 2400
-      }
-    , generator: { tps: 15 }
-    }
-  , { name: "quick"
-    , scenario: "fixed-loaded"
-    , composition:
-      { n_singular_hosts:               2
-      , n_dense_hosts:                  0
-      }
-    , genesis:
-      { utxo:                           6000
-      , delegators:                     1300
-      , max_block_size:                 80000
-      , epoch_length:                   600
-      , parameter_k:                    3
-      }
-    , node:
-      { shutdown_on_slot_synced: 10
-      }
-    , generator: { tps: 15 }
+
+  , $forge_stress_base *
+    { name: "forge-stress"
     }
 
-  ## Chainsync:
-  , { name: "chainsync"
-    , scenario: "chainsync"
-    , preset: "mainnet"
+  , $forge_stress_base * $old_tracing *
+    { name: "forge-stress-oldtracing"
+    }
+
+  , $forge_stress_base *
+    $plutus_base *
+    { name: "forge-stress-plutus"
     , composition:
-      { locations:                      ["LO"]
-      , n_bft_hosts:                    0
-      , n_singular_hosts:               0
-      , n_dense_hosts:                  0
-      , with_proxy:                     true
-      , with_observer:                  true
-      } }
+      { n_singular_hosts:               1
+      }
+    , generator:
+      { tx_count:                       800
+      }
+    }
+
+  , $quick_base *
+    { name: "quick"
+    }
+
+  , $quick_base * $old_tracing *
+    { name: "quick-oldtracing"
+    }
+
+  , $chainsync_base * $chaindb_early_byron *
+    { name: "chainsync-early-byron"
+    }
+  , $chainsync_base * $chaindb_early_byron * $old_tracing *
+    { name: "chainsync-early-byron-oldtracing"
+    }
+
+  , $chainsync_base * $chaindb_early_alonzo *
+    { name: "chainsync-early-alonzo"
+    }
+  , $chainsync_base * $chaindb_early_alonzo * $old_tracing *
+    { name: "chainsync-early-alonzo-oldtracing"
+    }
   ];
 
 def generator_profile_variants:
