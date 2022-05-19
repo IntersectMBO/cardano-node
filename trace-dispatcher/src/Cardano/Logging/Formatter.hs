@@ -89,8 +89,8 @@ forwardFormatter application (Trace tr) = do
           T.traceWith tr ( nlc
                          , Right (FormattedForwarder to))
         (lc, Left ctrl) -> do
-          T.traceWith tr ( lc
-                         , Left ctrl)
+          T.traceWith tr (lc { lcNamespace = application : lcNamespace lc}
+                            , Left ctrl)
 
 -- | Format this trace for human readability
 -- The boolean value tells, if this representation is for the console and should be colored
