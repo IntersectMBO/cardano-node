@@ -4,6 +4,7 @@ module Cardano.Logging.Tracer.Composed (
     mkCardanoTracer
   , mkCardanoTracer'
   , mkDataPointTracer
+  , mkMetricsTracer
   , MessageOrLimit(..)
   , documentTracer
   ) where
@@ -137,6 +138,9 @@ mkDataPointTracer :: forall dp. ToJSON dp
 mkDataPointTracer trDataPoint namesFor = do
     let tr = NT.contramap DataPoint trDataPoint
     pure $ withNamesAppended namesFor tr
+
+mkMetricsTracer :: Maybe (Trace IO FormattedMessage) -> Trace IO FormattedMessage
+mkMetricsTracer = fromMaybe mempty
 
 documentTracer ::
      TraceConfig
