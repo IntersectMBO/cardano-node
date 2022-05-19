@@ -316,11 +316,10 @@ documentMarkdown (Documented documented) tracers = do
                       [ namespacesBuilder (nub ldNamespace)
                       , betweenLines (fromText ldDoc)
                       ]
-        _                     -> DocuTracer $
+        _ -> DocuTracer $
                     mconcat $ intersperse (fromText "\n\n")
                       [ namespacesBuilder (nub ldNamespace)
                       , betweenLines (fromText ldDoc)
-                     -- , propertiesBuilder ld
                       , configBuilder ld
                       ]
 
@@ -353,21 +352,6 @@ documentMarkdown (Documented documented) tracers = do
     namespaceMetricsBuilder :: Namespace -> Builder
     namespaceMetricsBuilder ns = mconcat (intersperse (singleton '.') (map fromText ns))
 
-    -- propertiesBuilder :: LogDoc -> Builder
-    -- propertiesBuilder LogDoc {..} =
-    --     case nub ldSeverity of
-    --       []  -> fromText "> Severity:   " <> asCode (fromString (show Info))
-    --       [s] -> fromText "> Severity:   " <> asCode (fromString (show s))
-    --       l   -> fromText "> Severities: "
-    --               <> mconcat (intersperse (singleton ',')
-    --                     (map (asCode . fromString . show) l))
-    --   <>
-    --     case nub ldPrivacy of
-    --       []  -> fromText "\nPrivacy:   " <> asCode (fromString (show Public))
-    --       [p] -> fromText "\nPrivacy:   " <> asCode (fromString (show p))
-    --       l   -> fromText "\nPrivacies: "
-    --               <> mconcat (intersperse (singleton ',')
-    --                     (map (asCode . fromString . show) l))
 
     configBuilder :: LogDoc -> Builder
     configBuilder LogDoc {..} =
