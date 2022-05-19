@@ -53,6 +53,8 @@ TraceOptions:
       - EKGBackend
       - Forwarder
 
+# More interesing tracers
+
   Node.ChainDB:
     severity: Info
 
@@ -86,6 +88,8 @@ TraceOptions:
   Node.Resources:
     severity: Info
 
+#---------------------------
+# Frequency limited tracer
   Node.ChainDB.AddBlockEvent.AddedBlockToQueue:
     maxFrequency: 2.0
 

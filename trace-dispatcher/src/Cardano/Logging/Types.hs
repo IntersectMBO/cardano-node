@@ -108,7 +108,7 @@ data Metric
   -- | A double metric.
   -- Text is used to name the metric
     | DoubleM Text Double
-  -- | An counter metric.
+  -- | A counter metric.
   -- Text is used to name the metric
     | CounterM Text (Maybe Int)
   deriving (Show, Eq)

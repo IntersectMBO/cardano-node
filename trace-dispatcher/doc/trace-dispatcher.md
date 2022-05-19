@@ -343,6 +343,7 @@ class LogFormatting a where
 data Metric
     = IntM (Maybe Text) Int
     | DoubleM (Maybe Text) Double
+    | CounterM Text (Maybe Int)
     deriving (Show, Eq)
 ```
 
