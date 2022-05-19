@@ -36,7 +36,6 @@ oracleMessages conf ScriptRes {..} =
                       && privacyForMessage msg == Public
           isCorrectForwarder = includedExactlyOnce msg srForwardRes == inForwarder
           inEKG = elem EKGBackend backends
-                      && fromEnum (severityForMessage msg) >= fromEnum filterSeverity
                       && not (null (asMetrics msg))
           isCorrectEKG = includedExactlyOnce msg srEkgRes == inEKG
           res = isCorrectStdout && isCorrectForwarder && isCorrectEKG
