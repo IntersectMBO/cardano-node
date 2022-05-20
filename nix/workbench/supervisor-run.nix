@@ -1,6 +1,6 @@
 let
   batchNameDefault   = "plain";
-  profileNameDefault = "default-alzo";
+  profileNameDefault = "default-bage";
 in
 
 { pkgs

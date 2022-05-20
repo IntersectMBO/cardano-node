@@ -4,7 +4,7 @@ self: {
     cacheDir    = "${self.localCluster.stateDir}/.cache";
     stateDir    = "run/current";
     batchName   = "plain";
-    profileName = "default-alzo";
+    profileName = "default-bage";
     basePort    = 30000;
     enableEKG        = true;
     workbenchDevMode = false;

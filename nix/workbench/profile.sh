@@ -17,6 +17,7 @@ global_profile_eras=(
     allegra
     mary
     alonzo
+    babbage
 )
 
 profile() {

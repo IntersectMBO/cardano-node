@@ -8,8 +8,8 @@ include legacy.mk
 PROJECT_NAME = cardano-node
 NUM_PROC     = $(nproc --all)
 
-## One of:  shey alra mary alzo
-ERA     ?= alzo
+## One of:  shey alra mary alzo bage
+ERA     ?= bage
 
 PROFILE ?= default-${ERA}
 REV     ?= master
