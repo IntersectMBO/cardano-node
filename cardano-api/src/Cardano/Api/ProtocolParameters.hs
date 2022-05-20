@@ -1057,9 +1057,9 @@ toBabbagePParamsUpdate
     , Babbage._protocolVersion = uncurry Ledger.ProtVer <$>
                                   noInlineMaybeToStrictMaybe protocolUpdateProtocolVersion
     , Babbage._minPoolCost     = toShelleyLovelace <$>
-                                  noInlineMaybeToStrictMaybe protocolUpdateMinPoolCost
-    , Babbage._coinsPerUTxOByte = (coinsPerUTxOWordToCoinsPerUTxOByte  . toShelleyLovelace) <$>
-                                  noInlineMaybeToStrictMaybe protocolUpdateUTxOCostPerWord
+                                   noInlineMaybeToStrictMaybe protocolUpdateMinPoolCost
+    , Babbage._coinsPerUTxOByte = coinsPerUTxOWordToCoinsPerUTxOByte  . toShelleyLovelace <$>
+                                    noInlineMaybeToStrictMaybe protocolUpdateUTxOCostPerWord
     , Babbage._costmdls        = if Map.null protocolUpdateCostModels
                                   then Ledger.SNothing
                                   else either (const Ledger.SNothing) Ledger.SJust
@@ -1295,7 +1295,7 @@ fromBabbagePParamsUpdate
                                             strictMaybeToMaybe _rho
     , protocolUpdateTreasuryCut         = Ledger.unboundRational <$>
                                             strictMaybeToMaybe _tau
-    , protocolUpdateUTxOCostPerWord     = ((*8) . fromShelleyLovelace) <$>
+    , protocolUpdateUTxOCostPerWord     = (*8) . fromShelleyLovelace <$>
                                             strictMaybeToMaybe _coinsPerUTxOByte
     , protocolUpdateCostModels          = maybe mempty fromAlonzoCostModels
                                                (strictMaybeToMaybe _costmdls)

@@ -785,7 +785,7 @@ genProtocolParametersUpdate = do
   protocolUpdateMonetaryExpansion   <- Gen.maybe genRational
   protocolUpdateTreasuryCut         <- Gen.maybe genRational
   protocolUpdateUTxOCostPerWord     <- Gen.maybe genLovelace
-  protocolUpdateCostModels          <- return mempty -- genCostModels
+  let protocolUpdateCostModels = mempty -- genCostModels
   --TODO: Babbage figure out how to deal with
   -- asymmetric cost model JSON instances
   protocolUpdatePrices              <- Gen.maybe genExecutionUnitPrices
