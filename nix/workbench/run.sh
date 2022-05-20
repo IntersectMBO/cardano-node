@@ -373,6 +373,14 @@ case "$op" in
         cp $(jq '."start"'          -r $gtor) "$gen_dir"/start.sh
         ln -s          ../node-0/config.json  "$gen_dir"
 
+        local trac=$profile/tracer-service.json
+        trac_dir="$dir"/tracer
+        mkdir -p                              "$trac_dir"
+        cp $(jq '."tracer-config"'        -r $trac) "$trac_dir"/tracer-config.json
+        cp $(jq '."nixos-service-config"' -r $trac) "$trac_dir"/nixos-service-config.json
+        cp $(jq '."config"'               -r $trac) "$trac_dir"/config.json
+        cp $(jq '."start"'                -r $trac) "$trac_dir"/start.sh
+
         backend allocate-run "$dir"
 
         progress "run" "allocated $(with_color white $tag) @ $dir"

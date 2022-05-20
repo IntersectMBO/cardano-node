@@ -7,7 +7,7 @@
                                       backends = [
                                         "Stdout MachineFormat"
                                         "EKGBackend"
-                                        # "Forwarder"
+                                        "Forwarder"
                                       ];
                                     };
     "Node.AcceptPolicy"             = { severity = "Info"; };
@@ -44,9 +44,10 @@
   };
 
   TraceOptionForwarder = {
-    mode = "Responder";
+    # mode = "Responder";
+    mode = "Initiator";
     address = {
-      filePath = "forwarder.sock";
+      filePath = "../tracer/tracer.socket";
     };
   };
 }

@@ -54,6 +54,11 @@ let
                ./generator-service.nix
                { inherit runJq backend profile; })
         generator-service;
+
+      inherit (pkgs.callPackage
+               ./tracer-service.nix
+               { inherit runJq backend profile; })
+        tracer-service;
     };
 
 in profile

@@ -52,10 +52,10 @@ def all_profile_variants:
        .alonzo.maxBlockExUnits.exUnitsMem = (62 * $M))         ## CAD-3991  CR.064
     } as $plutus_next
   |
-  # ####################################################################################################
-  # ##
-  # ### Status quo
-  # ##
+  ####################################################################################################
+  ##
+  ### Status quo
+  ##
     $dataset_jun2022
       as $current_dataset
   |
@@ -72,10 +72,10 @@ def all_profile_variants:
      $current_plutus
     ) as $status_quo
   |
-  # ####################################################################################################
-  # ##
-  # ### Definition vocabulary
-  # ##
+  ####################################################################################################
+  ##
+  ### Definition vocabulary
+  ##
     ({}|
      .generator.tps                   = 15
     ) as $saturation_tps_value
@@ -95,6 +95,16 @@ def all_profile_variants:
       , n_dense_hosts:                  0
       }
     } as $doublet
+  |
+    { composition:
+      { n_singular_hosts:               10
+      , n_dense_hosts:                  0
+      }
+    } as $tenner
+  |
+    ({}|
+     .node.tracer                     = true
+    ) as $with_tracer
   |
     ({}|
      .node.tracing_backend           = "iohk-monitoring"
@@ -226,6 +236,9 @@ def all_profile_variants:
   , $startstop_base *
     { name: "startstop"
     }
+  , $startstop_base * $with_tracer *
+    { name: "startstop-tracer"
+    }
   , $startstop_base * $old_tracing *
     { name: "startstop-oldtracing"
     }
@@ -237,12 +250,11 @@ def all_profile_variants:
       }
     }
 
-  , $compressed *
+  , $fixed_loaded * $tenner *
     { name: "10"
-    , composition:
-      { n_singular_hosts:               10
-      , n_dense_hosts:                  0
-      }
+    }
+  , $fixed_loaded * $tenner * $with_tracer *
+    { name: "10-tracer"
     }
 
   , $plutus *
@@ -261,12 +273,18 @@ def all_profile_variants:
       { tx_count:                       800
       }
     }
+  , $forge_stress_base * $old_tracing * $with_tracer *
+    { name: "forge-stress-tracer"
+    }
   , $forge_stress_base * $old_tracing *
     { name: "forge-stress-oldtracing"
     }
 
   , $chainsync_base * $chaindb_early_byron *
     { name: "chainsync-early-byron"
+    }
+  , $chainsync_base * $chaindb_early_byron * $with_tracer *
+    { name: "chainsync-early-byron-tracer"
     }
   , $chainsync_base * $chaindb_early_byron * $old_tracing *
     { name: "chainsync-early-byron-oldtracing"

@@ -46,6 +46,17 @@ let
       };
     }
     //
+    {
+      "program:tracer" = {
+        directory      = "${stateDir}/tracer";
+        command        = "sh start.sh";
+        stdout_logfile = "${stateDir}/tracer/stdout";
+        stderr_logfile = "${stateDir}/tracer/stderr";
+        autostart      = true;
+        startretries   = 0;
+      };
+    }
+    //
     extraSupervisorConfig;
 
   ##

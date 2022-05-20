@@ -102,6 +102,15 @@ let
             ByronGenesisFile     = "../genesis/byron/genesis.json";
           });
 
+      finaliseTracerService =
+        svc: recursiveUpdate svc
+          ({
+            configFile     = "config.json";
+            logRoot        = ".";
+          } // optionalAttrs useCabalRun {
+            executable     = "cabal run exe:cardano-tracer --";
+          });
+
       materialise-profile =
         { profileNix }:
         pkgs.runCommand "workbench-profile-outputs-${profileNix.name}-supervisord" {}

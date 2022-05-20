@@ -26,7 +26,16 @@ pkgs.runCommand "workbench-profile-output-${profileNix.name}"
         start          = startupScript;
         run-script     = runScript.JSON;
       };
-    passAsFile = [ "nodeServices" "generatorService" ];
+    tracerService =
+      with profileNix.tracer-service;
+      __toJSON
+      { name                 = "tracer";
+        tracer-config        = tracer-config.JSON;
+        nixos-service-config = nixos-service-config.JSON;
+        config               = config.JSON;
+        start                = startupScript;
+      };
+    passAsFile = [ "nodeServices" "generatorService" "tracerService" ];
   }
   ''
   mkdir $out
@@ -34,6 +43,7 @@ pkgs.runCommand "workbench-profile-output-${profileNix.name}"
   cp    ${backendProfile}/*        $out
   cp    $nodeServicesPath          $out/node-services.json
   cp    $generatorServicePath      $out/generator-service.json
+  cp    $tracerServicePath         $out/tracer-service.json
 
   wb profile node-specs $out/profile.json > $out/node-specs.json
   ''

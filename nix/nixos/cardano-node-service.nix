@@ -318,6 +318,12 @@ in {
         description = ''Local communication socket path.'';
       };
 
+      tracerSocketPath = mkOption {
+        type = types.nullOr types.str;
+        default = null;
+        description = ''Connect and forward traces to cardano-tracer's local socket.'';
+      };
+
       systemdSocketActivation = mkOption {
         type = types.bool;
         default = false;
