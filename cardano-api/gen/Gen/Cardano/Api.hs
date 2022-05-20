@@ -103,7 +103,8 @@ genCostModels = do
 genAlonzoGenesis :: Gen Alonzo.AlonzoGenesis
 genAlonzoGenesis = do
   coinsPerUTxOWord <- genCoin (Range.linear 0 5)
-  costmdls' <- genCostModels
+  -- TODO: Babbage: Figure out how to deal with the asymmetric cost model JSON
+  _costmdls' <- genCostModels
   prices' <- genPrices
   maxTxExUnits' <- genExUnits
   maxBlockExUnits' <- genExUnits
@@ -113,7 +114,7 @@ genAlonzoGenesis = do
 
   return Alonzo.AlonzoGenesis
     { Alonzo.coinsPerUTxOWord = coinsPerUTxOWord
-    , Alonzo.costmdls = costmdls'
+    , Alonzo.costmdls = Alonzo.CostModels mempty
     , Alonzo.prices = prices'
     , Alonzo.maxTxExUnits = maxTxExUnits'
     , Alonzo.maxBlockExUnits = maxBlockExUnits'
