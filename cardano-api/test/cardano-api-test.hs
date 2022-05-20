@@ -17,6 +17,7 @@ import qualified Test.Cardano.Api.Typed.JSON
 import qualified Test.Cardano.Api.Typed.Ord
 import qualified Test.Cardano.Api.Typed.RawBytes
 import qualified Test.Cardano.Api.Typed.Script
+import qualified Test.Cardano.Api.Typed.TxBody
 import qualified Test.Cardano.Api.Typed.Value
 
 main :: IO ()
@@ -41,5 +42,6 @@ tests =
     , Test.Cardano.Api.Typed.Ord.tests
     , Test.Cardano.Api.Typed.RawBytes.tests
     , Test.Cardano.Api.Typed.Script.tests
+    , Test.Cardano.Api.Typed.TxBody.tests
     , Test.Cardano.Api.Typed.Value.tests
     ]
