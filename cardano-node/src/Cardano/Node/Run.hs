@@ -6,7 +6,6 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PackageImports #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 
 #if !defined(mingw32_HOST_OS)
@@ -192,59 +191,63 @@ handleNodeWithTracers cmdPc nc p networkMagic runP = do
       let fp = maybe  "No file path found!"
                       unConfigPath
                       (getLast (pncConfigFile cmdPc))
-      (tracers, mLoggingLayer) <-
-        case ncTraceConfig nc of
-          TraceDispatcher{} -> do
-            (, Nothing) <$>
-              initTraceDispatcher
-                nc
-                p
-                networkMagic
-                nodeKernelData
-                p2pMode
-          _ -> do
-            eLoggingLayer <- runExceptT $ createLoggingLayer
-              (Text.pack (showVersion version))
+      case ncTraceConfig nc of
+        TraceDispatcher{} -> do
+          tracers <-
+            initTraceDispatcher
               nc
               p
+              networkMagic
+              nodeKernelData
+              p2pMode
+          handleSimpleNode runP p2pMode tracers nc
+            (\nk -> do
+                setNodeKernel nodeKernelData nk
+                traceWith (nodeStateTracer tracers) NodeKernelOnline)
 
-            loggingLayer <- case eLoggingLayer of
-              Left err  -> putTextLn (Text.pack $ show err) >> exitFailure
-              Right res -> return res
-            !trace <- setupTrace loggingLayer
-            let tracer = contramap pack $ toLogObject trace
-            logTracingVerbosity nc tracer
+        _ -> do
+          eLoggingLayer <- runExceptT $ createLoggingLayer
+            (Text.pack (showVersion version))
+            nc
+            p
 
-            -- Legacy logging infrastructure must trace 'nodeStartTime' and 'nodeBasicInfo'.
-            startTime <- getCurrentTime
-            traceCounter "nodeStartTime" trace (ceiling $ utcTimeToPOSIXSeconds startTime)
-            nbi <- nodeBasicInfo nc p startTime
-            forM_ nbi $ \(LogObject nm mt content) ->
-              traceNamedObject (appendName nm trace) (mt, content)
+          loggingLayer <- case eLoggingLayer of
+            Left err  -> putTextLn (Text.pack $ show err) >> exitFailure
+            Right res -> return res
+          !trace <- setupTrace loggingLayer
+          let tracer = contramap pack $ toLogObject trace
+          logTracingVerbosity nc tracer
 
-            (,Just loggingLayer) <$>
-              mkTracers
-                (Consensus.configBlock cfg)
-                (ncTraceConfig nc)
-                trace
-                nodeKernelData
-                (llEKGDirect loggingLayer)
-                p2pMode
+          -- Legacy logging infrastructure must trace 'nodeStartTime' and 'nodeBasicInfo'.
+          startTime <- getCurrentTime
+          traceCounter "nodeStartTime" trace (ceiling $ utcTimeToPOSIXSeconds startTime)
+          nbi <- nodeBasicInfo nc p startTime
+          forM_ nbi $ \(LogObject nm mt content) ->
+            traceNamedObject (appendName nm trace) (mt, content)
 
-      getStartupInfo nc p fp
-        >>= mapM_ (traceWith $ startupTracer tracers)
+          tracers <-
+            mkTracers
+              (Consensus.configBlock cfg)
+              (ncTraceConfig nc)
+              trace
+              nodeKernelData
+              (llEKGDirect loggingLayer)
+              p2pMode
 
-      Async.withAsync (handlePeersListSimple (error "Implement Tracer IO [Peer blk]") nodeKernelData)
-          $ \_peerLoggingThread ->
-            -- We ignore peer logging thread if it dies, but it will be killed
-            -- when 'handleSimpleNode' terminates.
-                handleSimpleNode runP p2pMode tracers nc
-                  (\nk -> do
-                      setNodeKernel nodeKernelData nk
-                      traceWith (nodeStateTracer tracers) NodeKernelOnline)
-                `finally`
-                forM_ mLoggingLayer
-                  shutdownLoggingLayer
+          getStartupInfo nc p fp
+            >>= mapM_ (traceWith $ startupTracer tracers)
+
+          Async.withAsync (handlePeersListSimple (error "Implement Tracer IO [Peer blk]") nodeKernelData)
+              $ \_peerLoggingThread ->
+                -- We ignore peer logging thread if it dies, but it will be killed
+                -- when 'handleSimpleNode' terminates.
+                    handleSimpleNode runP p2pMode tracers nc
+                      (\nk -> do
+                          setNodeKernel nodeKernelData nk
+                          traceWith (nodeStateTracer tracers) NodeKernelOnline)
+                    `finally`
+                    forM_ eLoggingLayer
+                      shutdownLoggingLayer
 
 
 logTracingVerbosity :: NodeConfiguration -> Tracer IO String -> IO ()
