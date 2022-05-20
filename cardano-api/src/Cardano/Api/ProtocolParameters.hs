@@ -33,6 +33,7 @@ module Cardano.Api.ProtocolParameters (
     ExecutionUnitPrices(..),
     CostModel(..),
     validateCostModel,
+    fromAlonzoCostModels,
 
     -- * Update proposals to change the protocol parameters
     UpdateProposal(..),

@@ -1067,6 +1067,7 @@ pGovernanceCmd =
                         <*> pEpochNoUpdateProp
                         <*> some pGenesisVerificationKeyFile
                         <*> pProtocolParametersUpdate
+                        <*> optional pCostModels
 
 pTransferAmt :: Parser Lovelace
 pTransferAmt =
@@ -2762,13 +2763,22 @@ pProtocolParametersUpdate =
     <*> optional pMonetaryExpansion
     <*> optional pTreasuryExpansion
     <*> optional pUTxOCostPerWord
-    <*> pure mempty -- TODO alonzo: separate support for cost model files
+    <*> pure mempty
     <*> optional pExecutionUnitPrices
     <*> optional pMaxTxExecutionUnits
     <*> optional pMaxBlockExecutionUnits
     <*> optional pMaxValueSize
     <*> optional pCollateralPercent
     <*> optional pMaxCollateralInputs
+
+pCostModels :: Parser FilePath
+pCostModels =
+  Opt.strOption
+    (  Opt.long "cost-model-file"
+    <> Opt.metavar "FILE"
+    <> Opt.help "Filepath of the JSON formatted cost model"
+    <> Opt.completer (Opt.bashCompleter "file")
+    )
 
 pMinFeeLinearFactor :: Parser Natural
 pMinFeeLinearFactor =
