@@ -1,5 +1,4 @@
 {-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module Test.Cardano.Api.Typed.TxBody
@@ -8,7 +7,7 @@ module Test.Cardano.Api.Typed.TxBody
 
 import           Cardano.Prelude
 
-import           Hedgehog (Property, failure, footnoteShow, (===))
+import           Hedgehog (Property, annotateShow, failure, (===))
 import qualified Hedgehog as H
 import           Test.Tasty (TestTree)
 import           Test.Tasty.Hedgehog (testProperty)
@@ -16,7 +15,7 @@ import           Test.Tasty.TH (testGroupGenerator)
 
 import           Cardano.Api
 import           Cardano.Api.Shelley
-import           Cardano.Ledger.BaseTypes (StrictMaybe (..))
+import           Data.Type.Equality (TestEquality (testEquality))
 import           Gen.Cardano.Api.Typed
 import           Test.Cardano.Api.Typed.Orphans ()
 
@@ -26,28 +25,50 @@ import           Test.Cardano.Api.Typed.Orphans ()
 prop_roundtrip_txbodycontent_txouts:: Property
 prop_roundtrip_txbodycontent_txouts =
   H.property $ do
-    content <- H.forAll $ upgradeSimpleScripts ShelleyBasedEraBabbage <$> genTxBodyContent BabbageEra
+    content <- H.forAll $ genTxBodyContent BabbageEra
+    -- Create the ledger body & auxiliaries
     body <- case makeTransactionBody content of
-      Left err -> footnoteShow err >> failure
+      Left err -> annotateShow err >> failure
       Right body -> pure body
-    footnoteShow body
-    -- NOTE: This tests 'getTxBodyContent' and 'fromLedgerTxBody'
+    annotateShow body
+    -- Convert ledger body back via 'getTxBodyContent' and 'fromLedgerTxBody'
     let (TxBody content') = body
-    txOuts content === txOuts content'
+    matchTxOuts (txOuts content) (txOuts content')
  where
-  -- FIXME: This vvv is not the only case in which the propery is unstable
-  -- NOTE: SimpleV1 scripts are "interpreted" as SimpleV2 on the conversion
-  -- back. So to be able to re-use the genTxBodyContent generator, we "upgrade"
-  -- those scripts directly by doing the conversion once "a priori".
-  upgradeSimpleScripts :: ShelleyBasedEra era -> TxBodyContent BuildTx era -> TxBodyContent BuildTx era
-  upgradeSimpleScripts sbe content@TxBodyContent{txOuts} =
-    content{txOuts = map (upgradeSimpleRefScript sbe) txOuts }
+  matchTxOuts as bs =
+    mapM_ matchTxOut $ zip as bs
 
-  upgradeSimpleRefScript sbe (TxOut address value datum refScript) =
-    TxOut address value datum $
-      case refScriptToShelleyScript (shelleyBasedToCardanoEra sbe) refScript of
-        SJust ledgerScript -> fromShelleyScriptToReferenceScript sbe ledgerScript
-        SNothing -> ReferenceScriptNone
+  matchTxOut (a, b) = do
+    let TxOut aAddress aValue aDatum aRefScript = a
+    let TxOut bAddress bValue bDatum bRefScript = b
+    aAddress === bAddress
+    aValue === bValue
+    matchDatum (aDatum, bDatum)
+    matchRefScript (aRefScript, bRefScript)
+
+  -- NOTE: We accept TxOutDatumInTx instead of TxOutDatumHash as it may be
+  -- correctly resolved given a datum matching the hash was generated.
+  matchDatum = \case
+    (TxOutDatumHash _ dh, TxOutDatumInTx _ d) ->
+      dh === hashScriptData d
+    (a, b) ->
+      a === b
+
+  -- NOTE: After Allegra, all eras interpret SimpleScriptV1 as SimpleScriptV2
+  -- because V2 is a superset of V1. So we accept that as a valid conversion.
+  matchRefScript (a, b)
+    | isSimpleScriptV1 a && isSimpleScriptV2 b =
+      refScriptToShelleyScript BabbageEra a === refScriptToShelleyScript BabbageEra b
+    | otherwise =
+      a === b
+
+  isSimpleScriptV1 = isLang (SimpleScriptLanguage SimpleScriptV1)
+
+  isSimpleScriptV2 = isLang (SimpleScriptLanguage SimpleScriptV2)
+
+  isLang expected = \case
+    (ReferenceScript _ (ScriptInAnyLang actual _)) -> isJust $ testEquality expected actual
+    _ -> False
 
 tests :: TestTree
 tests = $testGroupGenerator
