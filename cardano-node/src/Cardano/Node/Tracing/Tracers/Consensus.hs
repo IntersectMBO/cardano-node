@@ -93,6 +93,8 @@ import           Cardano.Prelude hiding (All, Show, show)
 
 import           Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 
+import qualified Ouroboros.Network.AnchoredFragment as AF
+import qualified Ouroboros.Network.AnchoredSeq as AS
 import           Ouroboros.Network.Block hiding (blockPrevHash)
 import           Ouroboros.Network.BlockFetch.ClientState (TraceLabelPeer (..))
 import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
@@ -121,8 +123,7 @@ import           Ouroboros.Consensus.MiniProtocol.LocalTxSubmission.Server
 import           Ouroboros.Consensus.Node.Run (SerialiseNodeToNodeConstraints, estimateBlockSize)
 import           Ouroboros.Consensus.Node.Tracers
 import qualified Ouroboros.Consensus.Protocol.Ledger.HotKey as HotKey
-import qualified Ouroboros.Network.AnchoredFragment as AF
-import qualified Ouroboros.Network.AnchoredSeq as AS
+import           Ouroboros.Consensus.Util.Enclose
 
 
 
@@ -260,61 +261,50 @@ docChainSyncClientEvent' = Documented [
 --------------------------------------------------------------------------------
 
 severityChainSyncServerEvent :: TraceChainSyncServerEvent blk -> SeverityS
-severityChainSyncServerEvent TraceChainSyncServerRead        {} = Info
-severityChainSyncServerEvent TraceChainSyncServerReadBlocked {} = Info
-severityChainSyncServerEvent TraceChainSyncRollForward       {} = Info
-severityChainSyncServerEvent TraceChainSyncRollBackward      {} = Info
+severityChainSyncServerEvent (TraceChainSyncServerUpdate _tip _upd _blocking enclosing) =
+    case enclosing of
+      RisingEdge         -> Info
+      FallingEdgeWith () -> Debug
 
 namesForChainSyncServerEvent :: TraceChainSyncServerEvent blk -> [Text]
 namesForChainSyncServerEvent ev =
     "ChainSyncServerEvent" : namesForChainSyncServerEvent' ev
 
-nameChainUpdate :: ChainUpdate block a -> Text
-nameChainUpdate = \case
-  AddBlock{} -> "AddBlock"
-  RollBack{} -> "RollBack"
-
 namesForChainSyncServerEvent' :: TraceChainSyncServerEvent blk -> [Text]
-namesForChainSyncServerEvent' (TraceChainSyncServerRead        _ x) =
-  ["ServerRead", nameChainUpdate x]
-namesForChainSyncServerEvent' (TraceChainSyncServerReadBlocked _ x) =
-  ["ServerReadBlocked", nameChainUpdate x]
-namesForChainSyncServerEvent' TraceChainSyncRollForward{} =
-  ["RollForward"]
-namesForChainSyncServerEvent' TraceChainSyncRollBackward{} =
-  ["RollBackward"]
+namesForChainSyncServerEvent' (TraceChainSyncServerUpdate _tip _update NonBlocking _enclosing) =
+      ["ServerRead"]
+namesForChainSyncServerEvent' (TraceChainSyncServerUpdate _tip _update Blocking _enclosing) =
+      ["ServerReadBlocked"]
 
 instance ConvertRawHash blk
       => LogFormatting (TraceChainSyncServerEvent blk) where
-  forMachine _dtal (TraceChainSyncServerRead tip (AddBlock _hdr)) =
-      mconcat
+  forMachine _dtal (TraceChainSyncServerUpdate tip (AddBlock _hdr) NonBlocking enclosing) =
+      mconcat $
                [ "kind" .= String "ChainSyncServerRead.AddBlock"
                , tipToObject tip
                ]
-  forMachine _dtal (TraceChainSyncServerRead tip (RollBack _pt)) =
-      mconcat
+               <> [ "risingEdge" .= True | RisingEdge <- [enclosing] ]
+  forMachine _dtal (TraceChainSyncServerUpdate tip (RollBack _pt) NonBlocking enclosing) =
+      mconcat $
                [ "kind" .= String "ChainSyncServerRead.RollBack"
                , tipToObject tip
                ]
-  forMachine _dtal (TraceChainSyncServerReadBlocked tip (AddBlock _hdr)) =
-      mconcat
+               <> [ "risingEdge" .= True | RisingEdge <- [enclosing] ]
+  forMachine _dtal (TraceChainSyncServerUpdate tip (AddBlock _pt) Blocking enclosing) =
+      mconcat $
                [ "kind" .= String "ChainSyncServerReadBlocked.AddBlock"
                , tipToObject tip
                ]
-  forMachine _dtal (TraceChainSyncServerReadBlocked tip (RollBack _pt)) =
-      mconcat
+               <> [ "risingEdge" .= True | RisingEdge <- [enclosing] ]
+  forMachine _dtal (TraceChainSyncServerUpdate tip (RollBack _pt) Blocking enclosing) =
+      mconcat $
                [ "kind" .= String "ChainSyncServerReadBlocked.RollBack"
                , tipToObject tip
                ]
-  forMachine dtal (TraceChainSyncRollForward point) =
-      mconcat [ "kind" .= String "ChainSyncServerRead.RollForward"
-              , "point" .= forMachine dtal point
-              ]
-  forMachine dtal (TraceChainSyncRollBackward point) =
-      mconcat [ "kind" .= String "ChainSyncServerRead.ChainSyncRollBackward"
-              , "point" .= forMachine dtal point
-              ]
+               <> [ "risingEdge" .= True | RisingEdge <- [enclosing] ]
 
+  asMetrics (TraceChainSyncServerUpdate _tip (AddBlock _hdr) _blocking FallingEdge) =
+      [CounterM "cardano.node.chainSync.rollForward" Nothing]
   asMetrics _ = []
 
 
@@ -1100,24 +1090,24 @@ severityForge (Left t)  = severityForge'' t
 severityForge (Right t) = severityForge'''' t
 
 severityForge'' :: TraceForgeEvent blk -> SeverityS
-severityForge'' TraceStartLeadershipCheck {}  = Info
-severityForge'' TraceSlotIsImmutable {}       = Error
-severityForge'' TraceBlockFromFuture {}       = Error
-severityForge'' TraceBlockContext {}          = Debug
-severityForge'' TraceNoLedgerState {}         = Error
-severityForge'' TraceLedgerState {}           = Debug
-severityForge'' TraceNoLedgerView {}          = Error
-severityForge'' TraceLedgerView {}            = Debug
-severityForge'' TraceForgeStateUpdateError {} = Error
-severityForge'' TraceNodeCannotForge {}       = Error
-severityForge'' TraceNodeNotLeader {}         = Info
-severityForge'' TraceNodeIsLeader {}          = Info
-severityForge'' TraceForgedBlock {}           = Info
-severityForge'' TraceDidntAdoptBlock {}       = Error
-severityForge'' TraceForgedInvalidBlock {}    = Error
-severityForge'' TraceAdoptedBlock {}          = Info
-severityForge'' TraceForgeTickedLedgerState {}= Info
-severityForge'' TraceForgingMempoolSnapshot {}= Info
+severityForge'' TraceStartLeadershipCheck {}    = Info
+severityForge'' TraceSlotIsImmutable {}         = Error
+severityForge'' TraceBlockFromFuture {}         = Error
+severityForge'' TraceBlockContext {}            = Debug
+severityForge'' TraceNoLedgerState {}           = Error
+severityForge'' TraceLedgerState {}             = Debug
+severityForge'' TraceNoLedgerView {}            = Error
+severityForge'' TraceLedgerView {}              = Debug
+severityForge'' TraceForgeStateUpdateError {}   = Error
+severityForge'' TraceNodeCannotForge {}         = Error
+severityForge'' TraceNodeNotLeader {}           = Info
+severityForge'' TraceNodeIsLeader {}            = Info
+severityForge'' TraceForgeTickedLedgerState {}  = Debug
+severityForge'' TraceForgingMempoolSnapshot {}  = Debug
+severityForge'' TraceForgedBlock {}             = Info
+severityForge'' TraceDidntAdoptBlock {}         = Error
+severityForge'' TraceForgedInvalidBlock {}      = Error
+severityForge'' TraceAdoptedBlock {}            = Info
 
 severityForge'''' :: TraceStartLeadershipCheckPlus -> SeverityS
 severityForge'''' _ = Info
@@ -1127,24 +1117,24 @@ namesForForge (Left t)  = namesForForge'' t
 namesForForge (Right t) = namesForForge'''' t
 
 namesForForge'' :: TraceForgeEvent blk -> [Text]
-namesForForge'' TraceStartLeadershipCheck {}  = ["StartLeadershipCheck"]
-namesForForge'' TraceSlotIsImmutable {}       = ["SlotIsImmutable"]
-namesForForge'' TraceBlockFromFuture {}       = ["BlockFromFuture"]
-namesForForge'' TraceBlockContext {}          = ["BlockContext"]
-namesForForge'' TraceNoLedgerState {}         = ["NoLedgerState"]
-namesForForge'' TraceLedgerState {}           = ["LedgerState"]
-namesForForge'' TraceNoLedgerView {}          = ["NoLedgerView"]
-namesForForge'' TraceLedgerView {}            = ["LedgerView"]
-namesForForge'' TraceForgeStateUpdateError {} = ["ForgeStateUpdateError"]
-namesForForge'' TraceNodeCannotForge {}       = ["NodeCannotForge"]
-namesForForge'' TraceNodeNotLeader {}         = ["NodeNotLeader"]
-namesForForge'' TraceNodeIsLeader {}          = ["NodeIsLeader"]
-namesForForge'' TraceForgedBlock {}           = ["ForgedBlock"]
-namesForForge'' TraceDidntAdoptBlock {}       = ["DidntAdoptBlock"]
-namesForForge'' TraceForgedInvalidBlock {}    = ["ForgedInvalidBlock"]
-namesForForge'' TraceAdoptedBlock {}          = ["AdoptedBlock"]
-namesForForge'' TraceForgeTickedLedgerState {}= ["ForgeTickedLedgerState"]
-namesForForge'' TraceForgingMempoolSnapshot {}= ["ForgingMempoolSnapshot"]
+namesForForge'' TraceStartLeadershipCheck {}   = ["StartLeadershipCheck"]
+namesForForge'' TraceSlotIsImmutable {}        = ["SlotIsImmutable"]
+namesForForge'' TraceBlockFromFuture {}        = ["BlockFromFuture"]
+namesForForge'' TraceBlockContext {}           = ["BlockContext"]
+namesForForge'' TraceNoLedgerState {}          = ["NoLedgerState"]
+namesForForge'' TraceLedgerState {}            = ["LedgerState"]
+namesForForge'' TraceNoLedgerView {}           = ["NoLedgerView"]
+namesForForge'' TraceLedgerView {}             = ["LedgerView"]
+namesForForge'' TraceForgeStateUpdateError {}  = ["ForgeStateUpdateError"]
+namesForForge'' TraceNodeCannotForge {}        = ["NodeCannotForge"]
+namesForForge'' TraceNodeNotLeader {}          = ["NodeNotLeader"]
+namesForForge'' TraceNodeIsLeader {}           = ["NodeIsLeader"]
+namesForForge'' TraceForgeTickedLedgerState {} = ["ForgeTickedLedgerState"]
+namesForForge'' TraceForgingMempoolSnapshot {} = ["ForgingMempoolSnapshot"]
+namesForForge'' TraceForgedBlock {}            = ["ForgedBlock"]
+namesForForge'' TraceDidntAdoptBlock {}        = ["DidntAdoptBlock"]
+namesForForge'' TraceForgedInvalidBlock {}     = ["ForgedInvalidBlock"]
+namesForForge'' TraceAdoptedBlock {}           = ["AdoptedBlock"]
 
 namesForForge'''' :: TraceStartLeadershipCheckPlus -> [Text]
 namesForForge'''' TraceStartLeadershipCheckPlus{} = ["StartLeadershipCheckPlus"]
@@ -1232,6 +1222,20 @@ instance ( tx ~ GenTx blk
       [ "kind" .= String "TraceNodeIsLeader"
       , "slot" .= toJSON (unSlotNo slotNo)
       ]
+  forMachine dtal (TraceForgeTickedLedgerState slotNo prevPt) =
+    mconcat
+      [ "kind" .= String "TraceForgeTickedLedgerState"
+      , "slot" .= toJSON (unSlotNo slotNo)
+      , "prev" .= renderPointForDetails dtal prevPt
+      ]
+  forMachine dtal (TraceForgingMempoolSnapshot slotNo prevPt mpHash mpSlot) =
+    mconcat
+      [ "kind"        .= String "TraceForgingMempoolSnapshot"
+      , "slot"        .= toJSON (unSlotNo slotNo)
+      , "prev"        .= renderPointForDetails dtal prevPt
+      , "mempoolHash" .= String (renderChainHash @blk (renderHeaderHash (Proxy @blk)) mpHash)
+      , "mempoolSlot" .= toJSON (unSlotNo mpSlot)
+      ]
   forMachine _dtal (TraceForgedBlock slotNo _ blk _) =
     mconcat
       [ "kind" .= String "TraceForgedBlock"
@@ -1274,16 +1278,6 @@ instance ( tx ~ GenTx blk
           dtal
           (blockHash blk)
       , "blockSize" .= toJSON (estimateBlockSize (getHeader blk))
-      ]
-  forMachine _dtal (TraceForgeTickedLedgerState slotNo _pt) =
-    mconcat
-      [ "kind" .= String "TraceAdoptedBlock"
-      , "slot" .= toJSON (unSlotNo slotNo)
-      ]
-  forMachine _dtal (TraceForgingMempoolSnapshot slotNo _pt _ch _lastSyncedWrt) =
-    mconcat
-      [ "kind" .= String "TraceAdoptedBlock"
-      , "slot" .= toJSON (unSlotNo slotNo)
       ]
 
 
@@ -1332,6 +1326,20 @@ instance ( tx ~ GenTx blk
       "Not leading slot " <> showT (unSlotNo slotNo)
   forHuman (TraceNodeIsLeader slotNo) =
       "Leading slot " <> showT (unSlotNo slotNo)
+  forHuman (TraceForgeTickedLedgerState slotNo prevPt) =
+      "While forging in slot "
+        <> showT (unSlotNo slotNo)
+        <> " we ticked the ledger state ahead from "
+        <> renderPointAsPhrase prevPt
+  forHuman (TraceForgingMempoolSnapshot slotNo prevPt mpHash mpSlot) =
+      "While forging in slot "
+        <> showT (unSlotNo slotNo)
+        <> " we acquired a mempool snapshot valid against "
+        <> renderPointAsPhrase prevPt
+        <> " from a mempool that was prepared for "
+        <> renderChainHash @blk (renderHeaderHash (Proxy @blk)) mpHash
+        <> " ticked to slot "
+        <> showT (unSlotNo mpSlot)
   forHuman (TraceForgedBlock slotNo _ _ _) =
       "Forged block in slot " <> showT (unSlotNo slotNo)
   forHuman (TraceDidntAdoptBlock slotNo _) =
@@ -1344,12 +1352,6 @@ instance ( tx ~ GenTx blk
       "Adopted block forged in slot "
         <> showT (unSlotNo slotNo)
         <> ": " <> renderHeaderHash (Proxy @blk) (blockHash blk)
-  forHuman (TraceForgeTickedLedgerState slotNo _blk ) =
-      "Ticked ledger state for forge in slot "
-        <> showT (unSlotNo slotNo)
-  forHuman (TraceForgingMempoolSnapshot slotNo _ _ _) =
-      "Took mempool snapshot for forging in slot "
-        <> showT (unSlotNo slotNo)
 
   asMetrics (TraceForgeStateUpdateError slot reason) =
     IntM "cardano.node.forgeStateUpdateError" (fromIntegral $ unSlotNo slot) :
@@ -1393,6 +1395,8 @@ instance ( tx ~ GenTx blk
     [IntM "cardano.node.nodeNotLeader" (fromIntegral $ unSlotNo slot)]
   asMetrics (TraceNodeIsLeader slot) =
     [IntM "cardano.node.nodeIsLeader" (fromIntegral $ unSlotNo slot)]
+  asMetrics TraceForgeTickedLedgerState {} = []
+  asMetrics TraceForgingMempoolSnapshot {} = []
   asMetrics (TraceForgedBlock slot _ _ _) =
     [IntM "cardano.node.forgedSlotLast" (fromIntegral $ unSlotNo slot)]
   asMetrics (TraceDidntAdoptBlock slot _) =
@@ -1401,10 +1405,6 @@ instance ( tx ~ GenTx blk
     [IntM "cardano.node.forgedInvalidSlotLast" (fromIntegral $ unSlotNo slot)]
   asMetrics (TraceAdoptedBlock slot _ _) =
     [IntM "cardano.node.adoptedSlotLast" (fromIntegral $ unSlotNo slot)]
-  asMetrics (TraceForgeTickedLedgerState slot _) =
-    [IntM "cardano.node.forgeTickedLedgerState" (fromIntegral $ unSlotNo slot)]
-  asMetrics (TraceForgingMempoolSnapshot slot _ _ _) =
-    [IntM "cardano.node.forgeTookMempoolSnapshot" (fromIntegral $ unSlotNo slot)]
 
 instance LogFormatting TraceStartLeadershipCheckPlus where
   forMachine _dtal TraceStartLeadershipCheckPlus {..} =

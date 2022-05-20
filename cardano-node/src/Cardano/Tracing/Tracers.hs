@@ -76,10 +76,11 @@ import qualified Ouroboros.Consensus.Node.Run as Consensus (RunNode)
 import qualified Ouroboros.Consensus.Node.Tracers as Consensus
 import           Ouroboros.Consensus.Protocol.Abstract (ValidationErr)
 import qualified Ouroboros.Consensus.Protocol.Ledger.HotKey as HotKey
+import           Ouroboros.Consensus.Util.Enclose
 
 import qualified Ouroboros.Network.AnchoredFragment as AF
-import           Ouroboros.Network.Block (BlockNo (..), HasHeader (..), Point, StandardHash,
-                   blockNo, pointSlot, unBlockNo)
+import           Ouroboros.Network.Block (BlockNo (..), ChainUpdate (..),
+                   HasHeader (..), Point, StandardHash, blockNo, pointSlot, unBlockNo)
 import           Ouroboros.Network.BlockFetch.ClientState (TraceFetchClientState (..),
                    TraceLabelPeer (..))
 import           Ouroboros.Network.BlockFetch.Decision (FetchDecision, FetchDecline (..))
@@ -609,7 +610,7 @@ sendEKGDirectDouble ekgDirect name val = do
 --------------------------------------------------------------------------------
 
 isRollForward :: TraceChainSyncServerEvent blk -> Bool
-isRollForward (TraceChainSyncRollForward _) = True
+isRollForward (TraceChainSyncServerUpdate _tip (AddBlock _hdr) _blocking FallingEdge) = True
 isRollForward _ = False
 
 mkConsensusTracers
@@ -983,12 +984,12 @@ teeForge ft tverb tr = Tracer $
       Consensus.TraceNodeCannotForge {} -> teeForge' (ftTraceNodeCannotForge ft)
       Consensus.TraceNodeNotLeader{} -> teeForge' (ftTraceNodeNotLeader ft)
       Consensus.TraceNodeIsLeader{} -> teeForge' (ftTraceNodeIsLeader ft)
+      Consensus.TraceForgeTickedLedgerState{} -> nullTracer
+      Consensus.TraceForgingMempoolSnapshot{} -> nullTracer
       Consensus.TraceForgedBlock{} -> teeForge' (ftForged ft)
       Consensus.TraceDidntAdoptBlock{} -> teeForge' (ftDidntAdoptBlock ft)
       Consensus.TraceForgedInvalidBlock{} -> teeForge' (ftForgedInvalid ft)
       Consensus.TraceAdoptedBlock{} -> teeForge' (ftAdopted ft)
-      Consensus.TraceForgeTickedLedgerState {} -> nullTracer
-      Consensus.TraceForgingMempoolSnapshot {} -> nullTracer
   case event of
     Consensus.TraceStartLeadershipCheck _slot -> pure ()
     _ -> traceWith (toLogObject' tverb tr) ev
@@ -1025,6 +1026,10 @@ teeForge' tr =
           LogValue "nodeNotLeader" $ PureI $ fromIntegral $ unSlotNo slot
         Consensus.TraceNodeIsLeader slot ->
           LogValue "nodeIsLeader" $ PureI $ fromIntegral $ unSlotNo slot
+        Consensus.TraceForgeTickedLedgerState slot _prevPt ->
+          LogValue "forgeTickedLedgerState" $ PureI $ fromIntegral $ unSlotNo slot
+        Consensus.TraceForgingMempoolSnapshot slot _prevPt _mpHash _mpSlotNo ->
+          LogValue "forgingMempoolSnapshot" $ PureI $ fromIntegral $ unSlotNo slot
         Consensus.TraceForgedBlock slot _ _ _ ->
           LogValue "forgedSlotLast" $ PureI $ fromIntegral $ unSlotNo slot
         Consensus.TraceDidntAdoptBlock slot _ ->
@@ -1033,10 +1038,6 @@ teeForge' tr =
           LogValue "forgedInvalidSlotLast" $ PureI $ fromIntegral $ unSlotNo slot
         Consensus.TraceAdoptedBlock slot _ _ ->
           LogValue "adoptedSlotLast" $ PureI $ fromIntegral $ unSlotNo slot
-        Consensus.TraceForgeTickedLedgerState slot _ ->
-          LogValue "tickedLedgerState" $ PureI $ fromIntegral $ unSlotNo slot
-        Consensus.TraceForgingMempoolSnapshot slot _ _ _ ->
-          LogValue "forgingMempoolSnapshot" $ PureI $ fromIntegral $ unSlotNo slot
 
 forgeTracer
   :: forall blk.
