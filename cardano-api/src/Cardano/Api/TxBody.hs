@@ -2248,8 +2248,15 @@ fromLedgerTxOuts era body scriptdata =
       , txout <- toList (Alonzo.outputs' body) ]
 
     ShelleyBasedEraBabbage ->
-      map (fromBabbageTxOut ScriptDataInBabbageEra ReferenceTxInsScriptsInlineDatumsInBabbageEra  MultiAssetInBabbageEra)
-          (toList $ Babbage.outputs body)
+      [ fromBabbageTxOut
+          MultiAssetInBabbageEra
+          ScriptDataInBabbageEra
+          ReferenceTxInsScriptsInlineDatumsInBabbageEra
+          txdatums
+          txouts
+      | let txdatums = selectTxDatums scriptdata
+      , txouts <- toList (Babbage.outputs body)
+      ]
   where
     selectTxDatums  TxBodyNoScriptData                            = Map.empty
     selectTxDatums (TxBodyScriptData _ (Alonzo.TxDats' datums) _) = datums
@@ -2288,20 +2295,41 @@ fromBabbageTxOut
   => ShelleyLedgerEra era ~ ledgerera
   => Ledger.Crypto ledgerera ~ StandardCrypto
   => Ledger.Value ledgerera ~ Mary.Value StandardCrypto
-  => ScriptDataSupportedInEra era
+  => MultiAssetSupportedInEra era
+  -> ScriptDataSupportedInEra era
   -> ReferenceTxInsScriptsInlineDatumsSupportedInEra era
-  -> MultiAssetSupportedInEra era
+  -> Map (Alonzo.DataHash StandardCrypto)
+         (Alonzo.Data ledgerera)
   -> Babbage.TxOut ledgerera
   -> TxOut CtxTx era
-fromBabbageTxOut s i m (Babbage.TxOut addr val datum mRefScript) =
+fromBabbageTxOut multiAssetInEra scriptDataInEra inlineDatumsInEra txdatums txout =
    TxOut
      (fromShelleyAddr shelleyBasedEra addr)
-     (TxOutValue m (fromMaryValue val))
-     (fromBabbageTxOutDatum s i datum)
+     (TxOutValue multiAssetInEra (fromMaryValue val))
+     babbageTxOutDatum
      (case mRefScript of
        SNothing -> ReferenceScriptNone
        SJust rScript -> fromShelleyScriptToReferenceScript shelleyBasedEra rScript
      )
+ where
+   -- NOTE: This is different to 'fromBabbageTxOutDatum' as it may resolve
+   -- 'DatumHash' values using the datums included in the transaction.
+   babbageTxOutDatum :: TxOutDatum CtxTx era
+   babbageTxOutDatum =
+     case datum of
+       Babbage.NoDatum -> TxOutDatumNone
+       Babbage.DatumHash dh -> resolveDatumInTx dh
+       Babbage.Datum d ->
+         TxOutDatumInline inlineDatumsInEra $
+           binaryDataToScriptData inlineDatumsInEra d
+
+   resolveDatumInTx :: Alonzo.DataHash StandardCrypto -> TxOutDatum CtxTx era
+   resolveDatumInTx dh
+      | Just d <- Map.lookup dh txdatums
+                  = TxOutDatumInTx' scriptDataInEra (ScriptDataHash dh) (fromAlonzoData d)
+      | otherwise = TxOutDatumHash scriptDataInEra (ScriptDataHash dh)
+
+   (Babbage.TxOut addr val datum mRefScript) = txout
 
 fromLedgerTxTotalCollateral
   :: ShelleyBasedEra era
