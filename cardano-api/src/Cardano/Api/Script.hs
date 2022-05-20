@@ -619,6 +619,15 @@ scriptLanguageSupportedInEra era lang =
       (AlonzoEra, PlutusScriptLanguage PlutusScriptV1) ->
         Just PlutusScriptV1InAlonzo
 
+      (BabbageEra, SimpleScriptLanguage SimpleScriptV1) ->
+        Just SimpleScriptV1InBabbage
+
+      (BabbageEra, SimpleScriptLanguage SimpleScriptV2) ->
+        Just SimpleScriptV2InBabbage
+
+      (BabbageEra, PlutusScriptLanguage PlutusScriptV1) ->
+        Just PlutusScriptV1InBabbage
+
       (BabbageEra, PlutusScriptLanguage PlutusScriptV2) ->
         Just PlutusScriptV2InBabbage
 
