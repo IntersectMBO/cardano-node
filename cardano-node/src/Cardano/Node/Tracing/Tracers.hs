@@ -485,13 +485,6 @@ mkNodeToNodeTracers trBase trForward mbTrEKG _trDataPoint trConfig = do
                 severityTBlockFetchSerialised
                 allPublic
     configureTracers trConfig docTBlockFetch [blockFetchSerialisedTr]
-    txSubmissionTr  <-  mkCardanoTracer
-                trBase trForward mbTrEKG
-                "TxSubmission"
-                namesForTxSubmissionNode
-                severityTxSubmissionNode
-                allPublic
-    configureTracers trConfig docTTxSubmissionNode [txSubmissionTr]
     txSubmission2Tracer  <-  mkCardanoTracer
                 trBase trForward mbTrEKG
                 "TxSubmission2"
@@ -508,8 +501,6 @@ mkNodeToNodeTracers trBase trForward mbTrEKG _trDataPoint trConfig = do
           traceWith blockFetchTr
       , NtN.tBlockFetchSerialisedTracer = Tracer $
           traceWith blockFetchSerialisedTr
-      , NtN.tTxSubmissionTracer = Tracer $
-          traceWith txSubmissionTr
       , NtN.tTxSubmission2Tracer = Tracer $
           traceWith txSubmission2Tracer
       }

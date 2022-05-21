@@ -23,7 +23,7 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base16 as Base16
 import qualified Data.ByteString.Lazy as BSL
 import           Data.Char (ord)
-import qualified Data.Compact.VMap as VMap
+import qualified Data.VMap as VMap
 import           Data.Foldable (toList)
 import           Data.List (intercalate)
 import qualified Data.Map.Strict as Map

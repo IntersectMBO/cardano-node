@@ -26,7 +26,6 @@ module Cardano.Api.Eras
   , Shelley
   , Allegra
   , Mary
-  , Babbage
 
     -- * Shelley-based eras
   , ShelleyBasedEra(..)
@@ -53,9 +52,7 @@ import qualified Data.Text as Text
 import           Data.Type.Equality (TestEquality (..), (:~:) (Refl))
 
 import           Ouroboros.Consensus.Shelley.Eras as Consensus (StandardAllegra, StandardAlonzo,
-                   StandardCrypto, StandardMary, StandardShelley)
-
-import qualified Cardano.Ledger.Babbage as Babbage
+                   StandardBabbage, StandardMary, StandardShelley)
 
 import           Cardano.Api.HasTypeProxy
 
@@ -110,7 +107,6 @@ type Byron   = ByronEra
 type Shelley = ShelleyEra
 type Allegra = AllegraEra
 type Mary    = MaryEra
-type Babbage = BabbageEra
 
 {-# DEPRECATED Byron   "Use 'ByronEra' or 'ByronAddr' as appropriate" #-}
 {-# DEPRECATED Shelley "Use 'ShelleyEra' or 'ShelleyAddr' as appropriate" #-}
@@ -333,7 +329,6 @@ instance IsShelleyBasedEra MaryEra where
 instance IsShelleyBasedEra AlonzoEra where
    shelleyBasedEra = ShelleyBasedEraAlonzo
 
-
 instance IsShelleyBasedEra BabbageEra where
    shelleyBasedEra = ShelleyBasedEraBabbage
 
@@ -406,6 +401,5 @@ type family ShelleyLedgerEra era where
   ShelleyLedgerEra AllegraEra = Consensus.StandardAllegra
   ShelleyLedgerEra MaryEra    = Consensus.StandardMary
   ShelleyLedgerEra AlonzoEra  = Consensus.StandardAlonzo
-  --TODO: Babbage era - depends on consensus exposing a babbage era
-  ShelleyLedgerEra BabbageEra = Babbage.BabbageEra StandardCrypto
+  ShelleyLedgerEra BabbageEra = Consensus.StandardBabbage
 

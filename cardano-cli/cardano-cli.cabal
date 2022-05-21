@@ -110,13 +110,14 @@ library
                       , cardano-crypto-wrapper
                       , cardano-data
                       , cardano-ledger-alonzo
+                      , cardano-ledger-babbage
                       , cardano-ledger-byron
                       , cardano-ledger-core
                       , cardano-ledger-shelley-ma
                       , cardano-prelude
                       , cardano-protocol-tpraos
                       , cardano-slotting
-                      , compact-map
+                      , vector-map
                       , contra-tracer
                       , cborg >= 0.2.4 && < 0.3
                       , containers
@@ -130,6 +131,7 @@ library
                       , ouroboros-consensus
                       , ouroboros-consensus-byron
                       , ouroboros-consensus-cardano
+                      , ouroboros-consensus-protocol
                       , ouroboros-consensus-shelley
                       , ouroboros-network
                       , parsec

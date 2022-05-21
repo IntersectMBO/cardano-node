@@ -33,30 +33,35 @@ import           Cardano.Slotting.Block (BlockNo (..))
 import           Ouroboros.Network.Block (SlotNo (..), blockHash, blockNo, blockSlot)
 import           Ouroboros.Network.Point (WithOrigin, withOriginToMaybe)
 
+import qualified Cardano.Ledger.Babbage.Rules.Utxo as Babbage
 import           Ouroboros.Consensus.Ledger.SupportsMempool (txId)
 import qualified Ouroboros.Consensus.Ledger.SupportsMempool as SupportsMempool
 import qualified Ouroboros.Consensus.Protocol.Ledger.HotKey as HotKey
+import qualified Ouroboros.Consensus.Protocol.Praos as Praos
 import           Ouroboros.Consensus.Protocol.TPraos (TPraosCannotForge (..))
 import           Ouroboros.Consensus.Shelley.Ledger hiding (TxId)
 import           Ouroboros.Consensus.Shelley.Ledger.Inspect
+import qualified Ouroboros.Consensus.Shelley.Protocol.Praos as Praos
 import           Ouroboros.Consensus.Util.Condense (condense)
+
 
 import           Cardano.Protocol.TPraos.BHeader (LastAppliedBlock, labBlockNo)
 import           Cardano.Protocol.TPraos.Rules.OCert
 import           Cardano.Protocol.TPraos.Rules.Overlay
-import           Cardano.Protocol.TPraos.Rules.Updn
+import           Cardano.Protocol.TPraos.Rules.Updn (UpdnPredicateFailure)
 
 
-import qualified Cardano.Ledger.Alonzo as Alonzo
+import qualified Cardano.Ledger.Alonzo.PlutusScriptApi as Alonzo
 import           Cardano.Ledger.Alonzo.Rules.Bbody (AlonzoBbodyPredFail)
 import qualified Cardano.Ledger.Alonzo.Rules.Utxo as Alonzo
 import qualified Cardano.Ledger.Alonzo.Rules.Utxos as Alonzo
 import           Cardano.Ledger.Alonzo.Rules.Utxow (UtxowPredicateFail (..))
 import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
 import qualified Cardano.Ledger.AuxiliaryData as Core
-import           Cardano.Ledger.BaseTypes (strictMaybeToMaybe)
+import           Cardano.Ledger.BaseTypes (activeSlotLog, strictMaybeToMaybe)
 import           Cardano.Ledger.Chain
 import qualified Cardano.Ledger.Core as Core
+import qualified Cardano.Ledger.Core as Ledger
 import qualified Cardano.Ledger.Crypto as Core
 import qualified Cardano.Ledger.Era as Ledger
 import qualified Cardano.Ledger.SafeHash as SafeHash
@@ -102,15 +107,15 @@ import qualified Data.Aeson.Key as Aeson
 --
 -- NOTE: this list is sorted in roughly topological order.
 
-instance (  ToJSON (SupportsMempool.TxId (GenTx (ShelleyBlock era)))
+instance (  ToJSON (SupportsMempool.TxId (GenTx (ShelleyBlock protocol era)))
          ,  ShelleyBasedEra era)
-         => LogFormatting (GenTx (ShelleyBlock era)) where
+         => LogFormatting (GenTx (ShelleyBlock protocol era)) where
   forMachine dtal tx =
     mconcat $
         ( "txid" .= txId tx )
       : [ "tx"   .= condense tx | dtal == DDetailed ]
 
-instance ShelleyBasedEra era => LogFormatting (Header (ShelleyBlock era)) where
+instance ShelleyCompatible protocol era => LogFormatting (Header (ShelleyBlock protocol era)) where
   forMachine _dtal b = mconcat
         [ "kind" .= String "ShelleyBlock"
         , "hash" .= condense (blockHash b)
@@ -346,7 +351,13 @@ instance ( ShelleyBasedEra era
   forMachine dtal (UtxowFailure f)  = forMachine dtal f
   forMachine dtal (DelegsFailure f) = forMachine dtal f
 
-instance LogFormatting (UtxowPredicateFail (Alonzo.AlonzoEra StandardCrypto)) where
+instance ( ShelleyBasedEra era
+         , ToJSON (Ledger.Value era)
+         , ToJSON (Ledger.TxOut era)
+         , Ledger.Crypto era ~ StandardCrypto
+         , LogFormatting (PredicateFailure (Ledger.EraRule "PPUP" era))
+         , LogFormatting (PredicateFailure (Ledger.EraRule "UTXO" era))
+         ) => LogFormatting (UtxowPredicateFail era) where
   forMachine dtal (WrappedShelleyEraFailure utxoPredFail) =
     forMachine dtal utxoPredFail
   forMachine _ (MissingRedeemers scripts) =
@@ -919,8 +930,13 @@ instance LogFormatting (UpecPredicateFailure era) where
 --------------------------------------------------------------------------------
 -- Alonzo related
 --------------------------------------------------------------------------------
-
-instance LogFormatting (Alonzo.UtxoPredicateFailure (Alonzo.AlonzoEra StandardCrypto)) where
+instance ( Ledger.Era era
+         , ShelleyBasedEra era
+         , ToJSON (Ledger.Value era)
+         , ToJSON (Ledger.TxOut era)
+         , Show (Ledger.Value era)
+         , LogFormatting (PredicateFailure (Ledger.EraRule "UTXOS" era))
+         ) => LogFormatting (Alonzo.UtxoPredicateFailure era) where
   forMachine _dtal (Alonzo.BadInputsUTxO badInputs) =
     mconcat [ "kind" .= String "BadInputsUTxO"
              , "badInputs" .= badInputs
@@ -1014,7 +1030,9 @@ instance LogFormatting (Alonzo.UtxoPredicateFailure (Alonzo.AlonzoEra StandardCr
   forMachine _dtal Alonzo.NoCollateralInputs =
     mconcat [ "kind" .= String "NoCollateralInputs" ]
 
-instance LogFormatting (Alonzo.UtxosPredicateFailure (Alonzo.AlonzoEra StandardCrypto)) where
+instance ( ToJSON (Alonzo.CollectError (Ledger.Crypto era))
+         , LogFormatting (PredicateFailure (Ledger.EraRule "PPUP" era))
+         ) => LogFormatting (Alonzo.UtxosPredicateFailure era) where
   forMachine _ (Alonzo.ValidationTagMismatch isValidating reason) =
     mconcat [ "kind" .= String "ValidationTagMismatch"
              , "isvalidating" .= isValidating
@@ -1027,10 +1045,135 @@ instance LogFormatting (Alonzo.UtxosPredicateFailure (Alonzo.AlonzoEra StandardC
   forMachine dtal (Alonzo.UpdateFailure pFailure) =
     forMachine dtal pFailure
 
-instance LogFormatting (AlonzoBbodyPredFail (Alonzo.AlonzoEra StandardCrypto)) where
+instance ( Ledger.Era era
+         , Show (PredicateFailure (Ledger.EraRule "LEDGERS" era))
+         ) => LogFormatting (AlonzoBbodyPredFail era) where
   forMachine _ err = mconcat [ "kind" .= String "AlonzoBbodyPredFail"
                             , "error" .= String (show err)
                             ]
+--------------------------------------------------------------------------------
+-- Babbage related
+--------------------------------------------------------------------------------
+
+
+instance ( Ledger.Era era
+         , LogFormatting (Alonzo.UtxoPredicateFailure era)
+         , LogFormatting (UtxowPredicateFail era)
+         , ToJSON (Ledger.TxOut era)
+         ) => LogFormatting (Babbage.BabbageUtxoPred era) where
+  forMachine v err =
+    case err of
+      Babbage.FromAlonzoUtxoFail alonzoFail ->
+        forMachine v alonzoFail
+      Babbage.FromAlonzoUtxowFail alonzoFail->
+        forMachine v alonzoFail
+
+      Babbage.UnequalCollateralReturn bal totalCol ->
+        mconcat [ "kind" .= String "UnequalCollateralReturn"
+                , "calculatedTotalCollateral" .= bal
+                , "txIndicatedTotalCollateral" .= totalCol
+                ]
+      -- TODO: Plutus team needs to expose a better error
+      -- type.
+      Babbage.MalformedScripts s ->
+        mconcat [ "kind" .= String "MalformedScripts"
+                , "scripts" .= s
+                ]
+      -- The transaction contains outputs that are too small
+      Babbage.BabbageOutputTooSmallUTxO outputs ->
+        mconcat [ "kind" .= String "OutputTooSmall"
+                , "outputs" .= outputs
+                ]
+
+instance Core.Crypto crypto => LogFormatting (Praos.PraosValidationErr crypto) where
+  forMachine _ err' =
+    case err' of
+      Praos.VRFKeyUnknown unknownKeyHash ->
+        mconcat [ "kind" .= String "VRFKeyUnknown"
+                , "vrfKey" .= unknownKeyHash
+                ]
+      Praos.VRFKeyWrongVRFKey stakePoolKeyHash registeredVrfForSaidStakepool wrongKeyHashInBlockHeader ->
+        mconcat [ "kind" .= String "VRFKeyWrongVRFKey"
+                , "stakePoolKeyHash" .= stakePoolKeyHash
+                , "stakePoolVrfKey" .= registeredVrfForSaidStakepool
+                , "blockHeaderVrfKey" .= wrongKeyHashInBlockHeader
+                ]
+      Praos.VRFKeyBadProof slotNo nonce vrfCalculatedVal->
+        mconcat [ "kind" .= String "VRFKeyBadProof"
+                , "slotNumberUsedInVrfCalculation" .= slotNo
+                , "nonceUsedInVrfCalculation" .= nonce
+                , "calculatedVrfValue" .= String (show vrfCalculatedVal)
+                ]
+      Praos.VRFLeaderValueTooBig leaderValue sigma f->
+        mconcat [ "kind" .= String "VRFLeaderValueTooBig"
+                , "leaderValue" .= leaderValue
+                , "sigma" .= sigma
+                , "f" .= activeSlotLog f
+                ]
+      Praos.KESBeforeStartOCERT startKesPeriod currKesPeriod ->
+        mconcat [ "kind" .= String "KESBeforeStartOCERT"
+                , "opCertStartingKesPeriod" .= startKesPeriod
+                , "currentKesPeriod" .= currKesPeriod
+                ]
+      Praos.KESAfterEndOCERT currKesPeriod startKesPeriod maxKesKeyEvos ->
+        mconcat [ "kind" .= String "KESAfterEndOCERT"
+                , "opCertStartingKesPeriod" .= startKesPeriod
+                , "currentKesPeriod" .= currKesPeriod
+                , "maxKesKeyEvolutions" .= maxKesKeyEvos
+                ]
+      Praos.CounterTooSmallOCERT lastCounter currentCounter ->
+        mconcat [ "kind" .= String "CounterTooSmallOCERT"
+                , "lastCounter" .= lastCounter
+                , "currentCounter" .= currentCounter
+                ]
+      Praos.CounterOverIncrementedOCERT lastCounter currentCounter ->
+        mconcat [ "kind" .= String "CounterOverIncrementedOCERT"
+                , "lastCounter" .= lastCounter
+                , "currentCounter" .= currentCounter
+                ]
+      Praos.InvalidSignatureOCERT counter oCertStartKesPeriod err ->
+        mconcat [ "kind" .= String "InvalidSignatureOCERT"
+                , "counter" .= counter
+                , "opCertStartingKesPeriod" .= oCertStartKesPeriod
+                , "error" .= err
+                ]
+      Praos.InvalidKesSignatureOCERT currentKesPeriod opCertStartKesPeriod expectedKesEvos err ->
+        mconcat [ "kind" .= String "InvalidKesSignatureOCERT"
+                , "currentKesPeriod" .= currentKesPeriod
+                , "opCertStartingKesPeriod" .= opCertStartKesPeriod
+                , "expectedKesEvolutions" .= expectedKesEvos
+                , "error" .= err
+                ]
+      Praos.NoCounterForKeyHashOCERT stakePoolKeyHash->
+        mconcat [ "kind" .= String "NoCounterForKeyHashOCERT"
+                , "stakePoolKeyHash" .= stakePoolKeyHash
+                ]
+
+instance LogFormatting (Praos.PraosCannotForge crypto) where
+  forMachine _ (Praos.PraosCannotForgeKeyNotUsableYet currentKesPeriod startingKesPeriod) =
+    mconcat [ "kind" .= String "PraosCannotForgeKeyNotUsableYet"
+            , "currentKesPeriod" .= currentKesPeriod
+            , "opCertStartingKesPeriod" .= startingKesPeriod
+            ]
+
+instance LogFormatting Praos.PraosEnvelopeError where
+  forMachine _ err' =
+    case err' of
+      Praos.ObsoleteNode maxPtclVersionFromPparams blkHeaderPtclVersion ->
+        mconcat [ "kind" .= String "ObsoleteNode"
+                , "maxMajorProtocolVersion" .= maxPtclVersionFromPparams
+                , "headerProtocolVersion" .= blkHeaderPtclVersion
+                ]
+      Praos.HeaderSizeTooLarge headerSize ledgerViewMaxHeaderSize ->
+        mconcat [ "kind" .= String "HeaderSizeTooLarge"
+                , "maxHeaderSize" .= ledgerViewMaxHeaderSize
+                , "headerSize" .= headerSize
+                ]
+      Praos.BlockSizeTooLarge blockSize ledgerViewMaxBlockSize ->
+        mconcat [ "kind" .= String "BlockSizeTooLarge"
+                , "maxBlockSize" .= ledgerViewMaxBlockSize
+                , "blockSize" .= blockSize
+                ]
 
 
 --------------------------------------------------------------------------------

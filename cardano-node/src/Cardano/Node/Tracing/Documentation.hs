@@ -97,7 +97,6 @@ import           Ouroboros.Network.Protocol.Handshake.Unversioned (UnversionedPr
 import           Ouroboros.Network.Protocol.LocalStateQuery.Type (LocalStateQuery)
 import qualified Ouroboros.Network.Protocol.LocalTxMonitor.Type as LTM
 import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Type as LTS
-import           Ouroboros.Network.Protocol.TxSubmission.Type (TxSubmission)
 import           Ouroboros.Network.Protocol.TxSubmission2.Type (TxSubmission2)
 import           Ouroboros.Network.Server2 (ServerTrace (..))
 import           Ouroboros.Network.Snocket (LocalAddress (..))
@@ -106,6 +105,8 @@ import           Ouroboros.Network.Subscription.Ip (WithIPList (..))
 import           Ouroboros.Network.Subscription.Worker (SubscriptionTrace (..))
 import           Ouroboros.Network.TxSubmission.Inbound (TraceTxSubmissionInbound)
 import           Ouroboros.Network.TxSubmission.Outbound (TraceTxSubmissionOutbound)
+
+import           Cardano.Api.Orphans ()
 
 data TraceDocumentationCmd
   = TraceDocumentationCmd
@@ -539,19 +540,6 @@ docTracers configFileName outputFileName _ _ _ = do
              (TraceSendRecv
                (BlockFetch x (Point blk)))))
 
-    txSubmissionNodeTr  <-  mkCardanoTracer
-                trBase trForward mbTrEKG
-                "TxSubmission"
-                namesForTxSubmissionNode
-                severityTxSubmissionNode
-                allPublic
-    configureTracers trConfig docTTxSubmissionNode [txSubmissionNodeTr]
-    txSubmissionNodeTrDoc <- documentTracer trConfig txSubmissionNodeTr
-      (docTTxSubmissionNode :: Documented
-        (BlockFetch.TraceLabelPeer peer
-          (TraceSendRecv
-            (TxSubmission (GenTxId blk) (GenTx blk)))))
-
     txSubmission2Tr  <-  mkCardanoTracer
                 trBase trForward mbTrEKG
                 "TxSubmission2"
@@ -892,7 +880,6 @@ docTracers configFileName outputFileName _ _ _ = do
             <> chainSyncSerialisedTrDoc
             <> blockFetchTrDoc
             <> blockFetchSerialisedTrDoc
-            <> txSubmissionNodeTrDoc
             <> txSubmission2TrDoc
 -- Diffusion
             <> dtMuxTrDoc

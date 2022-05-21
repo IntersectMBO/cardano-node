@@ -100,7 +100,7 @@ package trace-resources
 package byron-spec-ledger
   tests: False
 
-package compact-map
+package vector-map
   ghc-options: -Werror
 
 package iohk-monitoring
@@ -168,8 +168,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: 394c4637c24d82325bd04ceb99c8e8df5617e663
-  --sha256: 02q8y69za5b0vsnj9qga1364vkmfc1kh35d0yshw1lf7nw9bls8m
+  tag: 631cb6cf1fa01ab346233b610a38b3b4cba6e6ab
+  --sha256: 0944wg2nqazmhlmsynwgdwxxj6ay0hb9qig9l128isb2cjia0hlp
   subdir:
     base-deriving-via
     binary
@@ -191,12 +191,13 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger
-  tag: 1db68a3ec0a2dcb5751004beb22b906162474f23
-  --sha256: 03pv2jvskbi65dwaddp6a8bxbbcw674csjxhg8xbqd6q1kfpc41a
+  tag: c415253fff9a5ce9d7575230fc9098bcfee97653
+  --sha256: 1m4hq8yxcm7ny5vjzqkrl9qn9zmpr8c9xs0c98ix9hm9xd79fapc
   subdir:
     eras/alonzo/impl
     eras/alonzo/test-suite
     eras/babbage/impl
+    eras/babbage/test-suite
     eras/byron/chain/executable-spec
     eras/byron/crypto
     eras/byron/crypto/test
@@ -211,7 +212,7 @@ source-repository-package
     libs/cardano-ledger-pretty
     libs/cardano-protocol-tpraos
     libs/cardano-data
-    libs/compact-map
+    libs/vector-map
     libs/set-algebra
     libs/small-steps
     libs/small-steps-test
@@ -256,11 +257,9 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: ad47441e9e399495579d7dd05ccaf96b46a487b2
-  --sha256: 1a54yfc4m9n5j699cn8ln524h28043dyrlzn34wmnhsgqnxhavr4
+  tag: ea202b7b21983140d1944ccfde8750b891b59699
+  --sha256: 0bixx0b61sjzls7hzwjlgmvl0yk1ckd40cfazda8b3smqvxfrphq
   subdir:
-    io-sim
-    io-classes
     monoidal-synchronisation
     network-mux
     ouroboros-consensus
@@ -271,7 +270,23 @@ source-repository-package
     ouroboros-network
     ouroboros-network-framework
     ouroboros-network-testing
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/io-sim
+  tag: 606de33fa2f467d108fb1efb86daeb3348bf34e3
+  --sha256: 048djqfdkzrbmdz670knbkjy12wddpvsmhm4x5yldg3w9lwqi1yx
+  subdir:
+    io-classes
+    io-sim
     strict-stm
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/typed-protocols
+  tag: 91c3fba44d68439df207796171cd6f867354b76b
+  --sha256: 1h1nh10859kd7j8bb55y577jfdp42aqpppx8fn0pm6fra5748a50
+  subdir:
     typed-protocols
     typed-protocols-cborg
     typed-protocols-examples
@@ -279,8 +294,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/plutus
-  tag: ccf5bcb99ffe054dc8cd5626723f64e02708dbae
-  --sha256: 18569bgywilibz7r5jyxj9bid8g4fwr80cc0hd9rcm3jhasbgq8i
+  tag: fec94223a985e34d3b270460c8f150002f41b85b
+  --sha256: 1mwknikvbpv9lj43c3ya24v7wpcbpcsrk0fnh6knpi7ds4rmj9j0
   subdir:
     plutus-core
     plutus-ledger-api

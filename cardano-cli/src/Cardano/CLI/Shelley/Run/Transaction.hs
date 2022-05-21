@@ -35,7 +35,8 @@ import           Cardano.CLI.Shelley.Output
 import           Cardano.Api
 import           Cardano.Api.Byron hiding (SomeByronSigningKey (..))
 import           Cardano.Api.Shelley
-import           Ouroboros.Consensus.Shelley.Eras (StandardAllegra, StandardMary, StandardShelley)
+import           Ouroboros.Consensus.Shelley.Eras (StandardAllegra, StandardCrypto, StandardMary,
+                   StandardShelley)
 
 --TODO: do this nicely via the API too:
 import qualified Cardano.Binary as CBOR
@@ -57,6 +58,7 @@ import           Cardano.CLI.Types
 import           Ouroboros.Consensus.Byron.Ledger (ByronBlock)
 import           Ouroboros.Consensus.Cardano.Block (EraMismatch (..))
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr)
+import qualified Ouroboros.Consensus.Protocol.TPraos as TPraos
 import           Ouroboros.Consensus.Shelley.Ledger (ShelleyBlock)
 import           Ouroboros.Network.Protocol.LocalStateQuery.Type (AcquireFailure (..))
 import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Client as Net.Tx
@@ -90,9 +92,12 @@ data ShelleyTxCmdError
   | ShelleyTxCmdSocketEnvError !EnvSocketError
   | ShelleyTxCmdTxSubmitError !Text
   | ShelleyTxCmdTxSubmitErrorByron !(ApplyTxErr ByronBlock)
-  | ShelleyTxCmdTxSubmitErrorShelley !(ApplyTxErr (ShelleyBlock StandardShelley))
-  | ShelleyTxCmdTxSubmitErrorAllegra !(ApplyTxErr (ShelleyBlock StandardAllegra))
-  | ShelleyTxCmdTxSubmitErrorMary !(ApplyTxErr (ShelleyBlock StandardMary))
+  | ShelleyTxCmdTxSubmitErrorShelley
+      !(ApplyTxErr (ShelleyBlock (TPraos.TPraos StandardCrypto) StandardShelley))
+  | ShelleyTxCmdTxSubmitErrorAllegra
+      !(ApplyTxErr (ShelleyBlock (TPraos.TPraos StandardCrypto) StandardAllegra))
+  | ShelleyTxCmdTxSubmitErrorMary
+      !(ApplyTxErr (ShelleyBlock (TPraos.TPraos StandardCrypto) StandardMary))
   | ShelleyTxCmdTxSubmitErrorEraMismatch !EraMismatch
   | ShelleyTxCmdTxFeatureMismatch !AnyCardanoEra !TxFeature
   | ShelleyTxCmdTxBodyError !TxBodyError
@@ -1668,6 +1673,7 @@ acceptKeyWitnessCDDLSerialisation err =
             , FromCDDLWitness "TxWitness AllegraEra" CddlWitness
             , FromCDDLWitness "TxWitness MaryEra" CddlWitness
             , FromCDDLWitness "TxWitness AlonzoEra" CddlWitness
+            , FromCDDLWitness "TxWitness BabbageEra" CddlWitness
             ]
 
 newtype CddlWitness = CddlWitness { unCddlWitness :: InAnyCardanoEra KeyWitness}
@@ -1717,11 +1723,13 @@ acceptTxCDDLSerialisation err =
             , FromCDDLTx "Witnessed Tx AllegraEra" CddlTx
             , FromCDDLTx "Witnessed Tx MaryEra" CddlTx
             , FromCDDLTx "Witnessed Tx AlonzoEra" CddlTx
+            , FromCDDLTx "Witnessed Tx BabbageEra" CddlTx
             , FromCDDLTx "Unwitnessed Tx Byron" CddlTx
             , FromCDDLTx "Unwitnessed Tx Shelley" CddlTx
             , FromCDDLTx "Unwitnessed Tx AllegraEra" CddlTx
             , FromCDDLTx "Unwitnessed Tx MaryEra" CddlTx
             , FromCDDLTx "Unwitnessed Tx AlonzoEra" CddlTx
+            , FromCDDLTx "Unwitnessed Tx BabbageEra" CddlTx
             ]
 
 readFileTx :: FilePath -> ExceptT ShelleyTxCmdError IO (InAnyCardanoEra Tx)
@@ -1737,6 +1745,7 @@ readFileInAnyCardanoEra
      , HasTextEnvelope (thing AllegraEra)
      , HasTextEnvelope (thing MaryEra)
      , HasTextEnvelope (thing AlonzoEra)
+     , HasTextEnvelope (thing BabbageEra)
      )
   => (forall era. AsType era -> AsType (thing era))
   -> FilePath
@@ -1751,6 +1760,7 @@ readFileInAnyCardanoEra asThing file =
       , FromSomeType (asThing AsAllegraEra) (InAnyCardanoEra AllegraEra)
       , FromSomeType (asThing AsMaryEra)    (InAnyCardanoEra MaryEra)
       , FromSomeType (asThing AsAlonzoEra)  (InAnyCardanoEra AlonzoEra)
+      , FromSomeType (asThing AsBabbageEra) (InAnyCardanoEra BabbageEra)
       ]
       file
 

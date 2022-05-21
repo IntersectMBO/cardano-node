@@ -76,10 +76,11 @@ import qualified Ouroboros.Consensus.Node.Run as Consensus (RunNode)
 import qualified Ouroboros.Consensus.Node.Tracers as Consensus
 import           Ouroboros.Consensus.Protocol.Abstract (ValidationErr)
 import qualified Ouroboros.Consensus.Protocol.Ledger.HotKey as HotKey
+import           Ouroboros.Consensus.Util.Enclose
 
 import qualified Ouroboros.Network.AnchoredFragment as AF
-import           Ouroboros.Network.Block (BlockNo (..), HasHeader (..), Point, StandardHash,
-                   blockNo, pointSlot, unBlockNo)
+import           Ouroboros.Network.Block (BlockNo (..), ChainUpdate (..),
+                   HasHeader (..), Point, StandardHash, blockNo, pointSlot, unBlockNo)
 import           Ouroboros.Network.BlockFetch.ClientState (TraceFetchClientState (..),
                    TraceLabelPeer (..))
 import           Ouroboros.Network.BlockFetch.Decision (FetchDecision, FetchDecline (..))
@@ -231,6 +232,7 @@ instance ElidingTracer (WithSeverity (ChainDB.TraceEvent blk)) where
   doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.AddBlockValidation (ChainDB.InvalidBlock _ _)))) = False
   doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.AddBlockValidation ChainDB.CandidateContainsFutureBlocksExceedingClockSkew{}))) = False
   doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.AddedToCurrentChain events _ _  _))) = null events
+  doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent (ChainDB.PipeliningEvent{}))) = False
   doelide (WithSeverity _ (ChainDB.TraceAddBlockEvent _)) = True
   doelide (WithSeverity _ (ChainDB.TraceCopyToImmutableDBEvent _)) = True
   doelide (WithSeverity _ (ChainDB.TraceInitChainSelEvent (ChainDB.InitChainSelValidation (ChainDB.UpdateLedgerDbTraceEvent{})))) = True
@@ -460,7 +462,6 @@ mkTracers _ _ _ _ _ enableP2P =
       , NodeToNode.tChainSyncSerialisedTracer = nullTracer
       , NodeToNode.tBlockFetchTracer = nullTracer
       , NodeToNode.tBlockFetchSerialisedTracer = nullTracer
-      , NodeToNode.tTxSubmissionTracer = nullTracer
       , NodeToNode.tTxSubmission2Tracer = nullTracer
       }
     , diffusionTracers = Diffusion.nullTracers
@@ -609,7 +610,7 @@ sendEKGDirectDouble ekgDirect name val = do
 --------------------------------------------------------------------------------
 
 isRollForward :: TraceChainSyncServerEvent blk -> Bool
-isRollForward (TraceChainSyncRollForward _) = True
+isRollForward (TraceChainSyncServerUpdate _tip (AddBlock _hdr) _blocking FallingEdge) = True
 isRollForward _ = False
 
 mkConsensusTracers
@@ -983,6 +984,8 @@ teeForge ft tverb tr = Tracer $
       Consensus.TraceNodeCannotForge {} -> teeForge' (ftTraceNodeCannotForge ft)
       Consensus.TraceNodeNotLeader{} -> teeForge' (ftTraceNodeNotLeader ft)
       Consensus.TraceNodeIsLeader{} -> teeForge' (ftTraceNodeIsLeader ft)
+      Consensus.TraceForgeTickedLedgerState{} -> nullTracer
+      Consensus.TraceForgingMempoolSnapshot{} -> nullTracer
       Consensus.TraceForgedBlock{} -> teeForge' (ftForged ft)
       Consensus.TraceDidntAdoptBlock{} -> teeForge' (ftDidntAdoptBlock ft)
       Consensus.TraceForgedInvalidBlock{} -> teeForge' (ftForgedInvalid ft)
@@ -1023,6 +1026,10 @@ teeForge' tr =
           LogValue "nodeNotLeader" $ PureI $ fromIntegral $ unSlotNo slot
         Consensus.TraceNodeIsLeader slot ->
           LogValue "nodeIsLeader" $ PureI $ fromIntegral $ unSlotNo slot
+        Consensus.TraceForgeTickedLedgerState slot _prevPt ->
+          LogValue "forgeTickedLedgerState" $ PureI $ fromIntegral $ unSlotNo slot
+        Consensus.TraceForgingMempoolSnapshot slot _prevPt _mpHash _mpSlotNo ->
+          LogValue "forgingMempoolSnapshot" $ PureI $ fromIntegral $ unSlotNo slot
         Consensus.TraceForgedBlock slot _ _ _ ->
           LogValue "forgedSlotLast" $ PureI $ fromIntegral $ unSlotNo slot
         Consensus.TraceDidntAdoptBlock slot _ ->
@@ -1316,9 +1323,6 @@ nodeToNodeTracers' trSel verb tr =
   , NodeToNode.tBlockFetchSerialisedTracer =
       showOnOff (traceBlockFetchProtocolSerialised trSel)
                 "BlockFetchProtocolSerialised" tr
-  , NodeToNode.tTxSubmissionTracer =
-      tracerOnOff (traceTxSubmissionProtocol trSel)
-                  verb "TxSubmissionProtocol" tr
   , NodeToNode.tTxSubmission2Tracer =
       tracerOnOff (traceTxSubmissionProtocol trSel)
                   verb "TxSubmissionProtocol" tr

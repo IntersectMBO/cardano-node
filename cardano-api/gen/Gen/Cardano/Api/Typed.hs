@@ -755,7 +755,9 @@ genProtocolParameters =
     <*> genRational
     <*> genRational
     <*> Gen.maybe genLovelace
-    <*> genCostModels
+    <*> return mempty
+    --TODO: Babbage figure out how to deal with
+    -- asymmetric cost model JSON instances
     <*> Gen.maybe genExecutionUnitPrices
     <*> Gen.maybe genExecutionUnits
     <*> Gen.maybe genExecutionUnits
@@ -783,7 +785,9 @@ genProtocolParametersUpdate = do
   protocolUpdateMonetaryExpansion   <- Gen.maybe genRational
   protocolUpdateTreasuryCut         <- Gen.maybe genRational
   protocolUpdateUTxOCostPerWord     <- Gen.maybe genLovelace
-  protocolUpdateCostModels          <- genCostModels
+  let protocolUpdateCostModels = mempty -- genCostModels
+  --TODO: Babbage figure out how to deal with
+  -- asymmetric cost model JSON instances
   protocolUpdatePrices              <- Gen.maybe genExecutionUnitPrices
   protocolUpdateMaxTxExUnits        <- Gen.maybe genExecutionUnits
   protocolUpdateMaxBlockExUnits     <- Gen.maybe genExecutionUnits
@@ -814,8 +818,8 @@ genCostModel = case Plutus.defaultCostModelParams of
 genPlutusLanguage :: Gen Language
 genPlutusLanguage = Gen.element [PlutusV1, PlutusV2]
 
-genCostModels :: Gen (Map AnyPlutusScriptVersion CostModel)
-genCostModels =
+_genCostModels :: Gen (Map AnyPlutusScriptVersion CostModel)
+_genCostModels =
     Gen.map (Range.linear 0 (length plutusScriptVersions))
             ((,) <$> Gen.element plutusScriptVersions
                  <*> genCostModel)

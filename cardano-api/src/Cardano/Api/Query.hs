@@ -6,6 +6,7 @@
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 -- The Shelley ledger uses promoted data kinds which we have to use, but we do
@@ -91,6 +92,7 @@ import qualified Ouroboros.Consensus.Byron.Ledger as Consensus
 import           Ouroboros.Consensus.Cardano.Block (LedgerState (..), StandardCrypto)
 import qualified Ouroboros.Consensus.Cardano.Block as Consensus
 import qualified Ouroboros.Consensus.Ledger.Query as Consensus
+import qualified Ouroboros.Consensus.Protocol.Abstract as Consensus
 import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
 import           Ouroboros.Network.Block (Serialised (..))
 
@@ -119,9 +121,7 @@ import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.TxBody
 import           Cardano.Api.Value
 
-import qualified Cardano.Protocol.TPraos.API as TPraos
 import qualified Data.Aeson.KeyMap as KeyMap
-import qualified Data.Compact.SplitMap as SplitMap
 import           Data.Word (Word64)
 
 -- ----------------------------------------------------------------------------
@@ -307,6 +307,7 @@ instance
     ( Typeable era
     , Ledger.Era (ShelleyLedgerEra era)
     , FromCBOR (Core.PParams (ShelleyLedgerEra era))
+    , FromCBOR (Shelley.StashedAVVMAddresses (ShelleyLedgerEra era))
     , FromCBOR (Core.Value (ShelleyLedgerEra era))
     , FromCBOR (Ledger.State (Core.EraRule "PPUP" (ShelleyLedgerEra era)))
     , Share (Core.TxOut (ShelleyLedgerEra era)) ~ Interns (Shelley.Credential 'Shelley.Staking (Ledger.Crypto (ShelleyLedgerEra era)))
@@ -330,15 +331,15 @@ instance ( IsShelleyBasedEra era
                                           , "possibleRewardUpdate" .= Shelley.nesRu newEpochS
                                           , "stakeDistrib" .= Shelley.nesPd newEpochS
                                           ]
-
 newtype ProtocolState era
-  = ProtocolState (Serialised (TPraos.ChainDepState (Ledger.Crypto (ShelleyLedgerEra era))))
+  = ProtocolState (Serialised (Consensus.ChainDepState (ConsensusProtocol era)))
 
+-- ChainDepState can use Praos or TPraos crypto
 decodeProtocolState
-  :: ProtocolState era
-  -> Either LBS.ByteString (TPraos.ChainDepState StandardCrypto)
-decodeProtocolState (ProtocolState (Serialised pbs)) =
-  first (const pbs) (decodeFull pbs)
+  :: FromCBOR (Consensus.ChainDepState (ConsensusProtocol era))
+  => ProtocolState era
+  -> Either (LBS.ByteString, DecoderError) (Consensus.ChainDepState (ConsensusProtocol era))
+decodeProtocolState (ProtocolState (Serialised pbs)) = first (pbs,) $ decodeFull pbs
 
 newtype SerialisedCurrentEpochState era
   = SerialisedCurrentEpochState (Serialised (Shelley.EpochState (ShelleyLedgerEra era)))
@@ -377,7 +378,7 @@ toLedgerUTxO :: ShelleyLedgerEra era ~ ledgerera
              -> Shelley.UTxO ledgerera
 toLedgerUTxO era (UTxO utxo) =
     Shelley.UTxO
-  . SplitMap.fromList
+  . Map.fromList
   . map (bimap toShelleyTxIn (toShelleyTxOut era))
   . Map.toList
   $ utxo
@@ -391,7 +392,7 @@ fromLedgerUTxO era (Shelley.UTxO utxo) =
     UTxO
   . Map.fromList
   . map (bimap fromShelleyTxIn (fromShelleyTxOut era))
-  . SplitMap.toList
+  . Map.toList
   $ utxo
 
 fromShelleyPoolDistr :: Shelley.PoolDistr StandardCrypto
@@ -469,13 +470,12 @@ toConsensusQuery (QueryInEra erainmode (QueryInShelleyBasedEra era q)) =
       AllegraEraInCardanoMode -> toConsensusQueryShelleyBased erainmode q
       MaryEraInCardanoMode    -> toConsensusQueryShelleyBased erainmode q
       AlonzoEraInCardanoMode  -> toConsensusQueryShelleyBased erainmode q
-      BabbageEraInCardanoMode ->
-        error "TODO: Babbage era - depends on consensus exposing a babbage era"
+      BabbageEraInCardanoMode -> toConsensusQueryShelleyBased erainmode q
 
 
 toConsensusQueryShelleyBased
-  :: forall era ledgerera mode block xs result.
-     ConsensusBlockForEra era ~ Consensus.ShelleyBlock ledgerera
+  :: forall era ledgerera mode protocol block xs result.
+     ConsensusBlockForEra era ~ Consensus.ShelleyBlock protocol ledgerera
   => Ledger.Crypto ledgerera ~ Consensus.StandardCrypto
   => ConsensusBlockForMode mode ~ block
   => block ~ Consensus.HardForkBlock xs
@@ -557,8 +557,7 @@ consensusQueryInEraInMode erainmode =
       AllegraEraInCardanoMode -> Consensus.QueryIfCurrentAllegra
       MaryEraInCardanoMode    -> Consensus.QueryIfCurrentMary
       AlonzoEraInCardanoMode  -> Consensus.QueryIfCurrentAlonzo
-      BabbageEraInCardanoMode ->
-        error "TODO: Babbage era - depends on consensus exposing a babbage era"
+      BabbageEraInCardanoMode -> Consensus.QueryIfCurrentBabbage
 
 -- ----------------------------------------------------------------------------
 -- Conversions of query results from the consensus types.
@@ -673,16 +672,23 @@ fromConsensusQueryResult (QueryInEra AlonzoEraInCardanoMode
       _ -> fromConsensusQueryResultMismatch
 
 fromConsensusQueryResult (QueryInEra BabbageEraInCardanoMode
-                                     (QueryInShelleyBasedEra _era _q)) _q' _r' =
-    error "TODO: Babbage era - depends on consensus exposing a babbage era"
+                                     (QueryInShelleyBasedEra _era q)) q' r' =
+    case q' of
+      Consensus.BlockQuery (Consensus.QueryIfCurrentBabbage q'')
+        -> bimap fromConsensusEraMismatch
+                 (fromConsensusQueryResultShelleyBased
+                    ShelleyBasedEraBabbage q q'')
+                 r'
+      _ -> fromConsensusQueryResultMismatch
 
 fromConsensusQueryResultShelleyBased
-  :: forall era ledgerera result result'.
+  :: forall era ledgerera protocol result result'.
      ShelleyLedgerEra era ~ ledgerera
   => Ledger.Crypto ledgerera ~ Consensus.StandardCrypto
+  => ConsensusProtocol era ~ protocol
   => ShelleyBasedEra era
   -> QueryInShelleyBasedEra era result
-  -> Consensus.BlockQuery (Consensus.ShelleyBlock ledgerera) result'
+  -> Consensus.BlockQuery (Consensus.ShelleyBlock protocol ledgerera) result'
   -> result'
   -> result
 fromConsensusQueryResultShelleyBased _ QueryEpoch q' epoch =
