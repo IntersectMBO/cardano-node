@@ -1250,29 +1250,15 @@ instance (ConvertRawHash blk, LedgerSupportsProtocol blk)
 
 instance ConvertRawHash blk
       => ToObject (TraceChainSyncServerEvent blk) where
-  toObject _verb ev = case ev of
-    TraceChainSyncServerUpdate tip AddBlock{} NonBlocking enclosing ->
+  toObject verb ev = case ev of
+    TraceChainSyncServerUpdate tip update blocking enclosing ->
       mconcat $
-        [ "kind" .= String "ChainSyncServerEvent.TraceChainSyncServerRead.AddBlock"
-        , tipToObject tip
-        ]
-        <> [ "risingEdge" .= True | RisingEdge <- [enclosing] ]
-    TraceChainSyncServerUpdate tip RollBack{} NonBlocking enclosing ->
-      mconcat $
-        [ "kind" .= String "ChainSyncServerEvent.TraceChainSyncServerRead.RollBack"
-        , tipToObject tip
-        ]
-        <> [ "risingEdge" .= True | RisingEdge <- [enclosing] ]
-    TraceChainSyncServerUpdate tip AddBlock{} Blocking enclosing ->
-      mconcat $
-        [ "kind" .= String "ChainSyncServerEvent.TraceChainSyncServerReadBlocked.AddBlock"
-        , tipToObject tip
-        ]
-        <> [ "risingEdge" .= True | RisingEdge <- [enclosing] ]
-    TraceChainSyncServerUpdate tip RollBack{} Blocking enclosing ->
-      mconcat $
-        [ "kind" .= String "ChainSyncServerEvent.TraceChainSyncServerReadBlocked.RollBack"
-        , tipToObject tip
+        [ "kind" .= String "ChainSyncServerEvent.TraceChainSyncServerUpdate"
+        , "tip" .= tipToObject tip
+        , case update of
+            AddBlock pt -> "addBlock" .= renderPointForVerbosity verb pt
+            RollBack pt -> "rollBackTo" .= renderPointForVerbosity verb pt
+        , "blockingRead" .= case blocking of Blocking -> True; NonBlocking -> False
         ]
         <> [ "risingEdge" .= True | RisingEdge <- [enclosing] ]
 
