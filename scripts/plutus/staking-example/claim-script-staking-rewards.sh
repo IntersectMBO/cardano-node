@@ -36,8 +36,8 @@ echo ""
 txin=$(jq -r 'keys[0]' $WORK/utxo-1.json)
 txinlovelace=$(jq -r ".[\"$txin\"].value.lovelace" $WORK/utxo-1.json)
 txincollateral=$(jq -r 'keys[1]' $WORK/utxo-1.json)
-scriptpaymentaddrwithstakecred=$(cardano-cli address build --payment-verification-key-file $UTXO_VKEY1  --stake-script-file "scripts/plutus/scripts/guess-42-stake.plutus" --testnet-magic 42)
-stakingscriptaddr=$(cardano-cli stake-address build --stake-script-file scripts/plutus/scripts/guess-42-stake.plutus --testnet-magic 42)
+scriptpaymentaddrwithstakecred=$(cardano-cli address build --payment-verification-key-file $UTXO_VKEY1  --stake-script-file "scripts/plutus/scripts/v1/guess-42-stake.plutus" --testnet-magic 42)
+stakingscriptaddr=$(cardano-cli stake-address build --stake-script-file scripts/plutus/scripts/v1/guess-42-stake.plutus --testnet-magic 42)
 
 # STEP 1 - Get reward account balance
 
@@ -61,7 +61,7 @@ cardano-cli transaction build \
   --tx-in-collateral "$txincollateral" \
   --tx-out "$scriptpaymentaddrwithstakecred+$totalspendable" \
   --withdrawal "$stakingscriptaddr+$rewardamt" \
-  --withdrawal-script-file "scripts/plutus/scripts/guess-42-stake.plutus" \
+  --withdrawal-script-file "scripts/plutus/scripts/v1/guess-42-stake.plutus" \
   --withdrawal-redeemer-file "scripts/plutus/data/42.redeemer" \
   --protocol-params-file "$WORK/pparams.json" \
   --out-file "$WORK/script-withdrawal.txbody"
