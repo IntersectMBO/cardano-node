@@ -158,31 +158,30 @@ mkDataDomain f l f' l' measure =
   DataDomain f l f' l' (measure l - measure f) (measure l' - measure f')
 
 -- | The top-level representation of the machine timeline analysis results.
-data MachTimeline
+data MachTimeline' f
   = MachTimeline
-    { sVersion           :: !Version
-    , sDomain            :: !(DataDomain SlotNo)
-    , sMaxChecks         :: !Word64
-    , sSlotMisses        :: ![Word64]
-    , sSpanLensCPU85     :: ![Int]
-    , sSpanLensCPU85EBnd :: ![Int]
-    , sSpanLensCPU85Rwd  :: ![Int]
+    { sVersion                  :: !Version
+    , sDomain                   :: !(f (DataDomain SlotNo))
     -- distributions
-    , sMissDistrib       :: !(Distribution Float Float)
-    , sLeadsDistrib      :: !(Distribution Float Word64)
-    , sUtxoDistrib       :: !(Distribution Float Word64)
-    , sDensityDistrib    :: !(Distribution Float Float)
-    , sSpanCheckDistrib  :: !(Distribution Float NominalDiffTime)
-    , sSpanLeadDistrib   :: !(Distribution Float NominalDiffTime)
-    , sSpanForgeDistrib  :: !(Distribution Float NominalDiffTime)
-    , sBlocklessDistrib  :: !(Distribution Float Word64)
-    , sSpanLensCPU85Distrib
-                         :: !(Distribution Float Int)
-    , sSpanLensCPU85EBndDistrib :: !(Distribution Float Int)
-    , sSpanLensCPU85RwdDistrib  :: !(Distribution Float Int)
-    , sResourceDistribs  :: !(Resources (Distribution Float Word64))
+    , sMissDistrib              :: !(f (Distribution Float Float))
+    , sLeadsDistrib             :: !(f (Distribution Float Word64))
+    , sUtxoDistrib              :: !(f (Distribution Float Word64))
+    , sDensityDistrib           :: !(f (Distribution Float Float))
+    , sSpanCheckDistrib         :: !(f (Distribution Float NominalDiffTime))
+    , sSpanLeadDistrib          :: !(f (Distribution Float NominalDiffTime))
+    , sSpanForgeDistrib         :: !(f (Distribution Float NominalDiffTime))
+    , sBlocklessDistrib         :: !(f (Distribution Float Word64))
+    , sSpanLensCPU85Distrib     :: !(f (Distribution Float Int))
+    , sSpanLensCPU85EBndDistrib :: !(f (Distribution Float Int))
+    , sSpanLensCPU85RwdDistrib  :: !(f (Distribution Float Int))
+    , sResourceDistribs         :: !(f (Resources (Distribution Float Word64)))
     }
-  deriving (Generic, NFData, Show, ToJSON)
+  deriving (Generic)
+
+type MachTimeline = MachTimeline' Identity
+deriving instance NFData MachTimeline
+deriving instance Show   MachTimeline
+deriving instance ToJSON MachTimeline
 
 data SlotStats
   = SlotStats
@@ -385,25 +384,26 @@ mtFieldsReport Field{fId} = elem fId
 instance RenderDistributions MachTimeline where
   rdFields _ =
     --  Width LeftPad
-    [ Field 4 0 "missR"    "Miss"  "ratio"  $ DFloat   sMissDistrib
-    , Field 5 0 "CheckΔ"   (d!!0)  "Check"  $ DDeltaT  sSpanCheckDistrib
-    , Field 5 0 "LeadΔ"    (d!!1)  "Lead"   $ DDeltaT  sSpanLeadDistrib
-    , Field 5 0 "ForgeΔ"   (d!!2)  "Forge"  $ DDeltaT  sSpanForgeDistrib
-    , Field 4 0 "BlkGap"   "Block" "gap"    $ DWord64  sBlocklessDistrib
-    , Field 5 0 "chDensity" "Dens" "ity"    $ DFloat   sDensityDistrib
-    , Field 3 0 "CPU"      "CPU"   "%"      $ DWord64 (rCentiCpu . sResourceDistribs)
-    , Field 3 0 "GC"       "GC"    "%"      $ DWord64 (rCentiGC . sResourceDistribs)
-    , Field 3 0 "MUT"      "MUT"    "%"     $ DWord64 (fmap (min 999) . rCentiMut . sResourceDistribs)
-    , Field 3 0 "GcMaj"    "GC "   "Maj"    $ DWord64 (rGcsMajor . sResourceDistribs)
-    , Field 3 0 "GcMin"    "flt "  "Min"    $ DWord64 (rGcsMinor . sResourceDistribs)
-    , Field 5 0 "RSS"      (m!!0)  "RSS"    $ DWord64 (rRSS . sResourceDistribs)
-    , Field 5 0 "Heap"     (m!!1)  "Heap"   $ DWord64 (rHeap . sResourceDistribs)
-    , Field 5 0 "Live"     (m!!2)  "Live"   $ DWord64 (rLive . sResourceDistribs)
-    , Field 5 0 "Allocd"   "Alloc" "MB"     $ DWord64 (rAlloc . sResourceDistribs)
-    , Field 5 0 "CPU85%LensAll"  (c!!0) "All"   $ DInt     sSpanLensCPU85Distrib
-    , Field 5 0 "CPU85%LensEBnd" (c!!1) "EBnd"  $ DInt     sSpanLensCPU85EBndDistrib
+    [ Field 4 0 "missR"    "Miss"  "ratio"  $ DFloat   (i . sMissDistrib)
+    , Field 5 0 "CheckΔ"   (d!!0)  "Check"  $ DDeltaT  (i . sSpanCheckDistrib)
+    , Field 5 0 "LeadΔ"    (d!!1)  "Lead"   $ DDeltaT  (i . sSpanLeadDistrib)
+    , Field 5 0 "ForgeΔ"   (d!!2)  "Forge"  $ DDeltaT  (i . sSpanForgeDistrib)
+    , Field 4 0 "BlkGap"   "Block" "gap"    $ DWord64  (i . sBlocklessDistrib)
+    , Field 5 0 "chDensity" "Dens" "ity"    $ DFloat   (i . sDensityDistrib)
+    , Field 3 0 "CPU"      "CPU"   "%"      $ DWord64 (rCentiCpu .i. sResourceDistribs)
+    , Field 3 0 "GC"       "GC"    "%"      $ DWord64 (rCentiGC .i. sResourceDistribs)
+    , Field 3 0 "MUT"      "MUT"    "%"     $ DWord64 (fmap (min 999) . rCentiMut .i. sResourceDistribs)
+    , Field 3 0 "GcMaj"    "GC "   "Maj"    $ DWord64 (rGcsMajor .i. sResourceDistribs)
+    , Field 3 0 "GcMin"    "flt "  "Min"    $ DWord64 (rGcsMinor .i. sResourceDistribs)
+    , Field 5 0 "RSS"      (m!!0)  "RSS"    $ DWord64 (rRSS .i. sResourceDistribs)
+    , Field 5 0 "Heap"     (m!!1)  "Heap"   $ DWord64 (rHeap .i. sResourceDistribs)
+    , Field 5 0 "Live"     (m!!2)  "Live"   $ DWord64 (rLive .i. sResourceDistribs)
+    , Field 5 0 "Allocd"   "Alloc" "MB"     $ DWord64 (rAlloc .i. sResourceDistribs)
+    , Field 5 0 "CPU85%LensAll"  (c!!0) "All"   $ DInt     (i . sSpanLensCPU85Distrib)
+    , Field 5 0 "CPU85%LensEBnd" (c!!1) "EBnd"  $ DInt     (i . sSpanLensCPU85EBndDistrib)
     ]
    where
+     i = runIdentity
      d = nChunksEachOf  3 6 "---- Δt ----"
      m = nChunksEachOf  3 6 "Memory usage, MB"
      c = nChunksEachOf  2 6 "CPU85% spans"

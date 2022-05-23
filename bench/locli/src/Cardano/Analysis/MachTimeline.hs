@@ -76,31 +76,27 @@ slotStatsSummary _ (JsonLogfile f, []) =
   Left $ "slotStatsSummary:  zero filtered slots from " <> pack f
 slotStatsSummary _ (f, slots) =
   Right . (f,) $ MachTimeline
-  { sMaxChecks            = maxChecks
-  , sSlotMisses           = misses
-  , sSpanLensCPU85        = spanLensCPU85
-  , sSpanLensCPU85EBnd    = sSpanLensCPU85EBnd
-  , sSpanLensCPU85Rwd     = sSpanLensCPU85Rwd
-  , sDomain               = mkDataDomainInj (slSlot $ head slots) (slSlot $ last slots)
-                                            (fromIntegral . unSlotNo)
-  , sVersion              = getVersion
+  { sVersion                  = getVersion
+  , sDomain                   = i $ mkDataDomainInj (slSlot $ head slots) (slSlot $ last slots)
+                                                       (fromIntegral . unSlotNo)
   --
-  , sMissDistrib          = dist missRatios
-  , sLeadsDistrib         = dist (slCountLeads <$> slots)
-  , sUtxoDistrib          = dist (slUtxoSize <$> slots)
-  , sDensityDistrib       = dist (slDensity <$> slots)
-  , sSpanCheckDistrib     = dist (slSpanCheck `mapSMaybe` slots)
-  , sSpanLeadDistrib      = dist (slSpanLead `mapSMaybe` slots)
-  , sSpanForgeDistrib     = dist (filter (/= 0) $ slSpanForge `mapSMaybe` slots)
-  , sBlocklessDistrib     = dist (slBlockless <$> slots)
-  , sSpanLensCPU85Distrib = dist spanLensCPU85
+  , sMissDistrib              = dist missRatios
+  , sLeadsDistrib             = dist (slCountLeads <$> slots)
+  , sUtxoDistrib              = dist (slUtxoSize <$> slots)
+  , sDensityDistrib           = dist (slDensity <$> slots)
+  , sSpanCheckDistrib         = dist (slSpanCheck `mapSMaybe` slots)
+  , sSpanLeadDistrib          = dist (slSpanLead `mapSMaybe` slots)
+  , sSpanForgeDistrib         = dist (filter (/= 0) $ slSpanForge `mapSMaybe` slots)
+  , sBlocklessDistrib         = dist (slBlockless <$> slots)
+  , sSpanLensCPU85Distrib     = dist spanLensCPU85
   , sSpanLensCPU85EBndDistrib = dist sSpanLensCPU85EBnd
   , sSpanLensCPU85RwdDistrib  = dist sSpanLensCPU85Rwd
-  , sResourceDistribs         = computeResDistrib stdPercSpecs resDistProjs slots
+  , sResourceDistribs         = i $ computeResDistrib stdPercSpecs resDistProjs slots
   }
  where
-   dist :: (Real a, ToRealFrac a Float) => [a] -> Distribution Float a
-   dist = computeDistribution stdPercSpecs
+   i = Identity
+   dist :: (Real a, ToRealFrac a Float) => [a] -> Identity (Distribution Float a)
+   dist = i . computeDistribution stdPercSpecs
    sSpanLensCPU85EBnd = Vec.length <$>
                         filter (spanContainsEpochSlot 3) spansCPU85
    sSpanLensCPU85Rwd  = Vec.length <$>
