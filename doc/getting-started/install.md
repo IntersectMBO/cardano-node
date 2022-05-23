@@ -139,6 +139,24 @@ export LD_LIBRARY_PATH="/usr/local/lib:$LD_LIBRARY_PATH"
 export PKG_CONFIG_PATH="/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH"
 ```
 
+
+#### Installing secp256k1
+
+```bash
+sudo apt-get -y install autoconf automake libtool
+mkdir secp256k1-sources
+cd secp256k1-sources
+git clone https://github.com/bitcoin-core/secp256k1.git
+cd secp256k1
+git reset --hard $SECP256K1_REF
+./autogen.sh
+./configure --prefix=/usr --enable-module-schnorrsig --enable-experimental
+make
+make check
+sudo make install
+cd ../..
+```        
+
 #### Downloading the source code for cardano-node
 
 Create a working directory for your builds:
