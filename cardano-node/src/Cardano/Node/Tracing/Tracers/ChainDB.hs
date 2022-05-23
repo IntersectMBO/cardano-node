@@ -297,7 +297,7 @@ instance ( LogFormatting (Header blk)
         RisingEdge ->
           "About to add block to queue: " <> renderRealPointAsPhrase pt
         FallingEdgeWith sz ->
-          "Block added to queue: " <> renderRealPointAsPhrase pt <> " queue size " <> condenseT sz
+          "Block added to queue: " <> renderRealPointAsPhrase pt <> ", queue size " <> condenseT sz
   forHuman (ChainDB.PoppedBlockFromQueue edgePt) =
       case edgePt of
         RisingEdge ->
@@ -323,8 +323,8 @@ instance ( LogFormatting (Header blk)
   forHuman (ChainDB.AddBlockValidation ev') = forHuman ev'
   forHuman (ChainDB.AddedBlockToVolatileDB pt _ _ enclosing) =
       case enclosing of
-        RisingEdge         -> "Chain about to add block " <> renderRealPointAsPhrase pt
-        FallingEdgeWith () -> "Chain added block " <> renderRealPointAsPhrase pt
+        RisingEdge  -> "Chain about to add block " <> renderRealPointAsPhrase pt
+        FallingEdge -> "Chain added block " <> renderRealPointAsPhrase pt
   forHuman (ChainDB.ChainSelectionForFutureBlock pt) =
       "Chain selection run for block previously from future: " <> renderRealPointAsPhrase pt
   forHuman (ChainDB.PipeliningEvent ev') = forHuman ev'
@@ -341,10 +341,14 @@ instance ( LogFormatting (Header blk)
   forMachine dtal (ChainDB.AddedBlockToQueue pt edgeSz) =
       mconcat [ "kind" .= String "AddedBlockToQueue"
                , "block" .= forMachine dtal pt
-               , case edgeSz of RisingEdge -> "risingEdge" .= True; FallingEdgeWith sz -> "queueSize" .= toJSON sz ]
+               , case edgeSz of
+                   RisingEdge         -> "risingEdge" .= True
+                   FallingEdgeWith sz -> "queueSize" .= toJSON sz ]
   forMachine dtal (ChainDB.PoppedBlockFromQueue edgePt) =
       mconcat [ "kind" .= String "TraceAddBlockEvent.PoppedBlockFromQueue"
-               , case edgePt of RisingEdge -> "risingEdge" .= True; FallingEdgeWith pt -> "block" .= forMachine dtal pt ]
+               , case edgePt of
+                   RisingEdge         -> "risingEdge" .= True
+                   FallingEdgeWith pt -> "block" .= forMachine dtal pt ]
   forMachine dtal (ChainDB.BlockInTheFuture pt slot) =
       mconcat [ "kind" .= String "BlockInTheFuture"
                , "block" .= forMachine dtal pt
@@ -417,8 +421,8 @@ instance ( ConvertRawHash (Header blk)
          ) => LogFormatting (ChainDB.TracePipeliningEvent blk) where
   forHuman (ChainDB.SetTentativeHeader hdr enclosing) =
       case enclosing of
-        RisingEdge         -> "About to set tentative header to " <> renderPointAsPhrase (blockPoint hdr)
-        FallingEdgeWith () -> "Set tentative header to " <> renderPointAsPhrase (blockPoint hdr)
+        RisingEdge  -> "About to set tentative header to " <> renderPointAsPhrase (blockPoint hdr)
+        FallingEdge -> "Set tentative header to " <> renderPointAsPhrase (blockPoint hdr)
   forHuman (ChainDB.TrapTentativeHeader hdr) =
       "Discovered trap tentative header " <> renderPointAsPhrase (blockPoint hdr)
   forHuman (ChainDB.OutdatedTentativeHeader hdr) =
