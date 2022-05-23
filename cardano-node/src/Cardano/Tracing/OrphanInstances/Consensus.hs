@@ -66,7 +66,7 @@ import qualified Ouroboros.Consensus.Storage.VolatileDB.Impl as VolDb
 import           Ouroboros.Network.BlockFetch.ClientState (TraceLabelPeer (..))
 
 import           Ouroboros.Consensus.Util.Condense
-import           Ouroboros.Consensus.Util.Enclose (Enclosing' (..))
+import           Ouroboros.Consensus.Util.Enclose
 import           Ouroboros.Consensus.Util.Orphans ()
 
 import qualified Ouroboros.Network.AnchoredFragment as AF
@@ -502,14 +502,14 @@ instance ( ConvertRawHash blk
               "Pushing ledger state for block " <> renderRealPointAsPhrase curr <> ". Progress: " <>
               showProgressT (fromIntegral atDiff) (fromIntegral toDiff) <> "%"
         ChainDB.AddedBlockToVolatileDB pt _ _ enclosing -> case enclosing of
-          RisingEdge         -> "Chain about to add block " <> renderRealPointAsPhrase pt
-          FallingEdgeWith () -> "Chain added block " <> renderRealPointAsPhrase pt
+          RisingEdge  -> "Chain about to add block " <> renderRealPointAsPhrase pt
+          FallingEdge -> "Chain added block " <> renderRealPointAsPhrase pt
         ChainDB.ChainSelectionForFutureBlock pt ->
           "Chain selection run for block previously from future: " <> renderRealPointAsPhrase pt
         ChainDB.PipeliningEvent ev' -> case ev' of
           ChainDB.SetTentativeHeader hdr enclosing -> case enclosing of
-            RisingEdge         -> "About to set tentative header to " <> renderPointAsPhrase (blockPoint hdr)
-            FallingEdgeWith () -> "Set tentative header to " <> renderPointAsPhrase (blockPoint hdr)
+            RisingEdge  -> "About to set tentative header to " <> renderPointAsPhrase (blockPoint hdr)
+            FallingEdge -> "Set tentative header to " <> renderPointAsPhrase (blockPoint hdr)
           ChainDB.TrapTentativeHeader hdr -> "Discovered trap tentative header " <> renderPointAsPhrase (blockPoint hdr)
           ChainDB.OutdatedTentativeHeader hdr -> "Tentative header is now outdated" <> renderPointAsPhrase (blockPoint hdr)
 
@@ -836,10 +836,14 @@ instance ( ConvertRawHash blk
     ChainDB.AddedBlockToQueue pt edgeSz ->
       mconcat [ "kind" .= String "TraceAddBlockEvent.AddedBlockToQueue"
                , "block" .= toObject verb pt
-               , case edgeSz of RisingEdge -> "risingEdge" .= True; FallingEdgeWith sz -> "queueSize" .= toJSON sz ]
+               , case edgeSz of
+                   RisingEdge         -> "risingEdge" .= True
+                   FallingEdgeWith sz -> "queueSize" .= toJSON sz ]
     ChainDB.PoppedBlockFromQueue edgePt ->
       mconcat [ "kind" .= String "TraceAddBlockEvent.PoppedBlockFromQueue"
-               , case edgePt of RisingEdge -> "risingEdge" .= True; FallingEdgeWith pt -> "block" .= toObject verb pt ]
+               , case edgePt of
+                   RisingEdge         -> "risingEdge" .= True
+                   FallingEdgeWith pt -> "block" .= toObject verb pt ]
     ChainDB.BlockInTheFuture pt slot ->
       mconcat [ "kind" .= String "TraceAddBlockEvent.BlockInTheFuture"
                , "block" .= toObject verb pt

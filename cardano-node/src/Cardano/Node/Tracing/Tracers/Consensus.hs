@@ -263,8 +263,8 @@ docChainSyncClientEvent' = Documented [
 severityChainSyncServerEvent :: TraceChainSyncServerEvent blk -> SeverityS
 severityChainSyncServerEvent (TraceChainSyncServerUpdate _tip _upd _blocking enclosing) =
     case enclosing of
-      RisingEdge         -> Info
-      FallingEdgeWith () -> Debug
+      RisingEdge  -> Info
+      FallingEdge -> Debug
 
 namesForChainSyncServerEvent :: TraceChainSyncServerEvent blk -> [Text]
 namesForChainSyncServerEvent ev =
@@ -303,8 +303,6 @@ instance ConvertRawHash blk
                ]
                <> [ "risingEdge" .= True | RisingEdge <- [enclosing] ]
 
-  asMetrics (TraceChainSyncServerUpdate _tip (AddBlock _hdr) _blocking FallingEdge) =
-      [CounterM "cardano.node.chainSync.rollForward" Nothing]
   asMetrics _ = []
 
 
