@@ -112,6 +112,7 @@ cardano-cli genesis create-staked --genesis-dir "${ROOT}" \
   --testnet-magic "${NETWORK_MAGIC}" \
   --gen-pools 3 \
   --supply-delegated 100000000000 \
+  --gen-utxo-keys 3 \
   --gen-stake-delegs 3
 
 SPO_NODES="node-spo1 node-spo2 node-spo3"
@@ -149,7 +150,7 @@ $SED -i "${ROOT}/genesis/shelley/genesis.json" \
     -e 's/"minFeeB": 0/"minFeeB": 155381/' \
     -e 's/"minUTxOValue": 0/"minUTxOValue": 1000000/' \
     -e 's/"decentralisationParam": 1.0/"decentralisationParam": 0.7/' \
-    -e 's/"major": 0/"major": 2/' \
+    -e 's/"major": 0/"major": 7/' \
     -e 's/"rho": 0.0/"rho": 0.1/' \
     -e 's/"tau": 0.0/"tau": 0.1/' \
     -e 's/"updateQuorum": 5/"updateQuorum": 2/'

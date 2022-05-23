@@ -18,7 +18,7 @@ mkdir -p $work
 export WORKD="${WORKD:-example/work}"
 export CARDANO_NODE_SOCKET_PATH="${CARDANO_NODE_SOCKET_PATH:-example/node-bft1/node.sock}"
 mkdir -p "$WORKD"
-plutusscriptinuse=scripts/plutus/scripts/minting-context-equivalance-test.plutus
+plutusscriptinuse=scripts/plutus/scripts/v1/minting-context-equivalance-test.plutus
 
 utxovkey=example/shelley/utxo-keys/utxo1.vkey
 utxoskey=example/shelley/utxo-keys/utxo1.skey

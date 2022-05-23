@@ -19,7 +19,7 @@ echo "Socket path: $(pwd)"
 
 ls -al "$CARDANO_NODE_SOCKET_PATH"
 
-plutusscriptinuse="$BASE/scripts/plutus/scripts/always-fails.plutus"
+plutusscriptinuse="$BASE/scripts/plutus/scripts/v1/always-fails.plutus"
 # This datum hash is the hash of the untyped 42
 scriptdatumhash="9e1199a988ba72ffd6e9c269cadb3b53b5f360ff99f112d9b2ee30c4d74ad88b"
 #ExUnits {exUnitsMem = 11300, exUnitsSteps = 45070000}))
