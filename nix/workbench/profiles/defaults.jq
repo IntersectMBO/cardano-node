@@ -74,6 +74,7 @@ def era_defaults($era):
     { rts_flags_override:             []
     , shutdown_on_slot_synced:        null
     , tracing_backend:                "trace-dispatcher"  ## or "iohk-monitoring"
+    , tracer:                         true
     }
 
   , analysis:
@@ -103,15 +104,8 @@ def era_defaults($era):
   }
 
 , alonzo:
-  { genesis:
-    { shelley:
-      { protocolParams:
-        { protocolVersion:
-          { major: 5
-          , minor: 0
-          }
-        }
-      }
-    }
-  }
+  (.genesis.shelley.protocolParams.protocolVersion =
+      { major: 5
+      , minor: 0
+      })
 } | (.common * .[$era]);

@@ -128,7 +128,7 @@ def add_derived_params:
          , utxo_delegated:                $effective_delegators
          , utxo_generated:                $utxo_generated
            ## Stuffed UTxO is what we need over requested-UTxO + delegators' UTxO:
-         , utxo_stuffed:                  ([ $gsis.utxo - $utxo_generated - $effective_delegators
+         , utxo_stuffed:                  ([ $gsis.utxo
                                            , 0
                                            ] | max)
 

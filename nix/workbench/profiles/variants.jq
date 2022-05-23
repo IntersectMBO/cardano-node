@@ -1,66 +1,159 @@
 ## Profile variants are defined as a cartesian product of
 ## variations of genesis/generator/node axes.
 
-def genesis_profile_variants:
-    { scenario: "fixed-loaded"
-    , composition:
-      { n_singular_hosts:               2
-      , n_dense_hosts:                  0
+def all_profile_variants:
+                                         1024    as $Ki
+  |                                      1000000 as $M
+  ####################################################################################################
+  ##
+  ### Record history
+  ##
+  | { genesis:
+      { utxo:                               (4 * $M)
+      , delegators:                         (1 * $M)
       }
-    , genesis:
-      { utxo:                           6000
-      , delegators:                     1300
-      , max_block_size:                 80000
-      , epoch_length:                   600
-      , parameter_k:                    3
-      }
-    , node:
-      { shutdown_on_slot_synced: 10
-      }
-    , generator: { tps: 15 }
-    , analysis:
-      { type:                           "standard"
-      }
-    } as $quick_base
+    } as $dataset_oct2021
   |
-    { scenario: "fixed-loaded"
-    , composition:
-      { n_singular_hosts:               2
-      , n_dense_hosts:                  0
-      }
-    , genesis:
-      { utxo:                           6000000
-      , delegators:                     1300000
-      , max_block_size:                 80000
-      , epoch_length:                   600
-      , parameter_k:                    3
-      }
-    , node:
-      { shutdown_on_slot_synced: 2400
-      }
-    , generator: { tps: 15 }
-    } as $forge_stress_base
+    ({} |
+     .genesis.max_block_size              = (72 * $Ki)
+    ) as $blocksize_dec2021
   |
     { genesis:
-      { alonzo:
-        { maxTxExUnits:
-          { exUnitsMem:                 12500000
-          }
-        }
+      ({} |
+       .max_block_size                    = (72 * $Ki) |       ## ???
+       .alonzo.maxTxExUnits.exUnitsMem    = (12.5 * $M) )      ## RMT-54  CR.059
+    } as $params_jan2022
+  |
+    { genesis:
+      ({}|
+       .max_block_size                    = (80 * $Ki) |       ## RMT-56  CAD-3891  CR.061
+       .alonzo.maxTxExUnits.exUnitsMem    = (14 * $M) |        ## RMT-56
+       .alonzo.maxBlockExUnits.exUnitsMem = (56 * $M))         ## CAD-3945
+    } as $params_feb2022
+  |
+    { genesis:
+      { utxo:                               (6 * $M)
+      , delegators:                         (1.3 * $M)
       }
-    , generator:
+    } as $dataset_mar2022
+  |
+    { genesis:
+      { max_block_size:                     (88 * $Ki) }       ## CAD-4153  CR.068
+    } as $blocksize_may2022
+  |
+    { genesis:
+      { utxo:                               (8 * $M)
+      , delegators:                         (1.3 * $M)
+      }
+    } as $dataset_jun2022
+  |
+    { genesis:
+      ({}|
+       .alonzo.maxBlockExUnits.exUnitsMem = (62 * $M))         ## CAD-3991  CR.064
+    } as $plutus_next
+  |
+  ####################################################################################################
+  ##
+  ### Status quo
+  ##
+    $dataset_jun2022
+      as $current_dataset
+  |
+    ({}|
+     .genesis.max_block_size = $params_feb2022.genesis.max_block_size
+    ) as $current_block_size
+  |
+    ({}|
+     .genesis.alonzo = $params_feb2022.genesis.alonzo
+    ) as $current_plutus
+  |
+    ($current_dataset *
+     $current_block_size *
+     $current_plutus
+    ) as $status_quo
+  |
+  ####################################################################################################
+  ##
+  ### Definition vocabulary
+  ##
+    ({}|
+     .generator.tps                   = 15
+    ) as $saturation_tps_value
+  |
+    ({}|
+     .generator.tps                   = 0.2
+    ) as $saturation_tps_plutus
+  |
+    { composition:
+      { n_singular_hosts:               1
+      , n_dense_hosts:                  0
+      }
+    } as $singleton
+  |
+    { composition:
+      { n_singular_hosts:               2
+      , n_dense_hosts:                  0
+      }
+    } as $doublet
+  |
+    { composition:
+      { n_singular_hosts:               10
+      , n_dense_hosts:                  0
+      }
+    } as $tenner
+  |
+    ({}|
+     .node.tracer                     = true
+    ) as $with_tracer
+  |
+    ({}|
+     .node.tracing_backend           = "iohk-monitoring"
+    ) as $old_tracing
+  |
+    { genesis:
+      { epoch_length:                   600
+      , parameter_k:                    3
+      }
+    } as $compressed
+  |
+   ($compressed * $saturation_tps_value *
+    { scenario:                        "fixed-loaded"
+    , analysis:
+      { type:                          "standard" }
+    }) as $fixed_loaded
+  |
+   ($fixed_loaded * $saturation_tps_plutus *
+    { generator:
       { inputs_per_tx:                  1
       , outputs_per_tx:                 1
       , plutusMode:                     true
       , plutusAutoMode:                 true
       }
     , analysis:
-      { filters:                        ["base", "size-small"]
+      { type:                          "standard"
+      , filters:                        ["base", "size-small"]
       }
-    } as $plutus_base
+    }) as $plutus
   |
-    { scenario: "chainsync"
-    , preset: "mainnet"
+   ($fixed_loaded * $doublet *
+    { genesis:
+      { utxo:                           6000
+      , delegators:                     1300
+      , max_block_size:                 80000
+      }
+    , node:
+      { shutdown_on_slot_synced:        10
+      }
+    }) as $startstop_base
+  |
+   ($status_quo * $fixed_loaded * $doublet *
+    { node:
+      { shutdown_on_slot_synced:        2400
+      }
+    }) as $forge_stress_base
+  |
+    { scenario:                        "chainsync"
+    , preset:                          "mainnet"
     , composition:
       { n_singular_hosts:               0
       , n_dense_hosts:                  0
@@ -68,15 +161,10 @@ def genesis_profile_variants:
       , with_observer:                  true
       }
     , analysis:
-      { type:                           "performance"
+      { type:                          "performance"
       , filters:                        []
       }
     } as $chainsync_base
-  |
-    { node:
-      { tracing_backend:                "iohk-monitoring"
-      }
-    } as $old_tracing
   |
     { chaindb:
       { mainnet_chunks:
@@ -95,6 +183,7 @@ def genesis_profile_variants:
       }
     } as $chaindb_early_byron
   |
+   ($dataset_oct2021 *
     { chaindb:
       { mainnet_chunks:
         { chaindb_server:               1800
@@ -110,99 +199,92 @@ def genesis_profile_variants:
         { observer:                     38901589
         }
       }
-    , genesis:
-      { utxo:                           6000000
-      , delegators:                     1300000
-      }
-    } as $chaindb_early_alonzo
+    }) as $chaindb_early_alonzo
   |
+  ####################################################################################################
+  ##
+  ### Actual profiles
+  ##
 
   ## Baseline:
-  [ { genesis: { utxo: 4000000, delegators: 1000000 } }
+  [ { name: "default"
+    , desc: "Default profile, as per nix/workbench/profiles/defaults.jq"
+    }
 
-  ## Baseline, tweaked for fast local repro:
-  , { genesis: { utxo: 4000000, delegators: 1000000
-               , slot_duration: 0.2 }
-    , composition: { with_observer: false }}
+  ## Short slots:
+  , $status_quo *
+    ({}|
+     .genesis.slot_duration           = 0.2 )
 
-  ## Size-varied derivatives of baseline:
-  , { genesis: { utxo: 4000000, delegators: 1000000 } }
-  , { genesis: { utxo: 5000000, delegators: 1250000 } }
-  , { genesis: { utxo: 6000000, delegators: 1500000 } }
-  , { genesis: { utxo: 4000000, delegators: 1000000, dense_pool_density:  2 } }
-  , { genesis: { utxo: 4000000, delegators: 1000000, dense_pool_density:  3 } }
-  , { genesis: { utxo: 4000000, delegators: 1000000, dense_pool_density: 10 } }
+  ## Dense pool:
+  , $status_quo *
+    ({}|
+     .genesis.dense_pool_density      = 10 )
 
-  ## TPS-varied derivatives of baseline:
-  , { genesis: { utxo: 4000000, delegators: 1000000 }
-    , generator: { tps: 5 } }
-  , { genesis: { utxo: 4000000, delegators: 1000000 }
-    , generator: { tps: 10 } }
+  ## Sub-saturation TPS:
+  , ($status_quo | .generator.tps     = 5 )
+  , ($status_quo | .generator.tps     = 10 )
 
-  ## Calibration:
-  , { genesis: { utxo: 2000000, delegators: 1000000, max_block_size:  128000 }
-    , generator: { tps:  16 } }
-  , { genesis: { utxo: 2000000, delegators: 1000000, max_block_size:  256000 }
-    , generator: { tps:  32 } }
-  , { genesis: { utxo: 2000000, delegators:  500000, max_block_size:  512000 }
-    , generator: { tps:  64 } }
-  , { genesis: { utxo: 2000000, delegators:  500000, max_block_size: 1024000 }
-    , generator: { tps: 128 } }
-  , { genesis: { utxo: 2000000, delegators:  500000, max_block_size: 2048000 }
-    , generator: { tps: 256 } }
+  ## Block size:
+  , ($status_quo | .genesis.max_block_size =  128000 | .generator.tps = 16 )
+  , ($status_quo | .genesis.max_block_size =  256000 | .generator.tps = 32 )
+  , ($status_quo | .genesis.max_block_size =  512000 | .generator.tps = 64 )
+  , ($status_quo | .genesis.max_block_size = 1024000 | .generator.tps = 128 )
+  , ($status_quo | .genesis.max_block_size = 2048000 | .generator.tps = 256 )
 
   ## Fixed
-  , { name: "fixed"
-    , scenario: "fixed"
-    , genesis: { utxo: 4000000, delegators: 1000000 }
-    , node:
-      { shutdown_on_slot_synced: 150
-      }
+  , $startstop_base *
+    { name: "startstop"
     }
-  , { name: "smoke"
-    , scenario: "fixed-loaded"
-    , node:
-      { shutdown_on_slot_synced: 60
-      }
-    , generator: { tps: 10 }
+  , $startstop_base * $with_tracer *
+    { name: "startstop-tracer"
     }
-  , { scenario: "fixed-loaded"
-    , genesis: { utxo: 1000000, delegators: 1000000 }
-    , node:
-      { shutdown_on_slot_synced: 600
-      }
-    , generator: { tps: 10 }
+  , $startstop_base * $old_tracing *
+    { name: "startstop-oldtracing"
     }
 
-  , $forge_stress_base *
-    { name: "forge-stress"
-    }
-
-  , $forge_stress_base * $old_tracing *
-    { name: "forge-stress-oldtracing"
-    }
-
-  , $forge_stress_base *
-    $plutus_base *
-    { name: "forge-stress-plutus"
-    , composition:
-      { n_singular_hosts:               1
+  , $fixed_loaded * $saturation_tps_value *
+    { name: "smoke"
+    , node:
+      { shutdown_on_slot_synced:        80
       }
+    }
+
+  , $fixed_loaded * $tenner *
+    { name: "10"
+    }
+  , $fixed_loaded * $tenner * $with_tracer *
+    { name: "10-tracer"
+    }
+
+  , $plutus *
+    { name: "plutus"
     , generator:
       { tx_count:                       800
       }
     }
 
-  , $quick_base *
-    { name: "quick"
+  , $forge_stress_base *
+    { name: "forge-stress"
     }
-
-  , $quick_base * $old_tracing *
-    { name: "quick-oldtracing"
+  , $forge_stress_base * $plutus * $singleton *
+    { name: "forge-stress-plutus"
+    , generator:
+      { tx_count:                       800
+      }
+    }
+  , $forge_stress_base * $old_tracing * $with_tracer *
+    { name: "forge-stress-tracer"
+    }
+  , $forge_stress_base * $old_tracing *
+    { name: "forge-stress-oldtracing"
     }
 
   , $chainsync_base * $chaindb_early_byron *
     { name: "chainsync-early-byron"
+    }
+  , $chainsync_base * $chaindb_early_byron * $with_tracer *
+    { name: "chainsync-early-byron-tracer"
     }
   , $chainsync_base * $chaindb_early_byron * $old_tracing *
     { name: "chainsync-early-byron-oldtracing"
@@ -215,19 +297,3 @@ def genesis_profile_variants:
     { name: "chainsync-early-alonzo-oldtracing"
     }
   ];
-
-def generator_profile_variants:
-  [ { generator: {} }
-  ];
-
-def node_profile_variants:
-  [ { node: {} }
-  ];
-
-def       all_profile_variants:
-  [   genesis_profile_variants
-  , generator_profile_variants
-  ,      node_profile_variants
-  ]
-  | [combinations]
-  | map (reduce .[] as $item ({}; . * $item));

@@ -69,7 +69,6 @@ def compute_profiles($era; $mcompo; $topo; $extra_profiles):
 
   ## Profiles are variants + custom (or aux) profiles:
   | all_profile_variants + adhoc_profiles + $extra_profiles
-
   | map (## Each profile extends defaults:
          era_defaults($era) * .
 
@@ -83,10 +82,7 @@ def compute_profiles($era; $mcompo; $topo; $extra_profiles):
 def profiles($era; $mcompo; $topo; $extra_profiles):
   compute_profiles($era; $mcompo; $topo; $extra_profiles)
   | map (## Assemble into a dictionary..
-           { "\(.name)":
-               ## ..and cleanup:
-               .
-               # | delpaths ([["generator", "epochs"]])
+           { "\(.name)": .
            })
   | add;
 

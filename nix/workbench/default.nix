@@ -33,7 +33,7 @@ let
       dontStrip = true;
     };
 
-  workbench = with cardanoNodePackages; with pkgs; workbench'
+  workbench = with cardanoNodePackages; with pkgs; workbench' (
     [ git graphviz
       jq
       moreutils
@@ -41,9 +41,9 @@ let
 
       cardano-cli
       cardano-topology
-      db-analyser
+    ] ++ lib.optional (!pkgs.stdenv.hostPlatform.isDarwin) db-analyser ++ [
       locli
-    ];
+    ]);
 
   runWorkbench =
     name: command:

@@ -1,6 +1,6 @@
-bump-cardano-node-workbench: ## Update the cardano-node-workbench flake input
+bump-cardano-node-workbench:
 	nix flake lock --update-input cardano-node-workbench
-bump-node-measured: ## Update the node-measured flake input
+bump-node-measured:
 	nix flake lock --update-input node-measured
 bump-cardano-deployment: ## Sync the flake.lock to the CI check
 	nix run nixpkgs#nixUnstable -- build .#hydraJobs.cardano-deployment
@@ -13,11 +13,11 @@ membench-5:    ## Membench:  5 iterations, current commit
 membench-5-at: ## Membench:  5 iterations, set commit by:  make membench-5-at REV=[master]
 	nix build .#membench-node-this-5.batch-report      --out-link result-batch-5-report --override-input node-measured github:input-output-hk/cardano-node/${REV}
 
-test-smoke: smoke ## Build the 'workbench-smoke-test', same as the Hydra job
+test-smoke: smoke ## Build the 'workbench-smoke-test' flake attr, same as the Hydra job
 smoke:
 	nix build -f 'default.nix' 'workbench-smoke-test'     --out-link result-smoke-run      --cores 0
 
-test-analysis: smoke-analysis ## Build the 'workbench-smoke-analysis', same as the Hydra job
+test-analysis: smoke-analysis ## Build the 'workbench-smoke-analysis' flake attr, same as the Hydra job
 smoke-analysis:
 	nix build -f 'default.nix' 'workbench-smoke-analysis' --out-link result-smoke-analysis --cores 0 --show-trace
 
