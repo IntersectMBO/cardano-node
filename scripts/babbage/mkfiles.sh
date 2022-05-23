@@ -36,7 +36,7 @@ SECURITY_PARAM=10
 NUM_SPO_NODES=3
 INIT_SUPPLY=10020000000
 START_TIME="$(${DATE} -d "now + 30 seconds" +%s)"
-ROOT=test
+ROOT=example
 mkdir -p "${ROOT}"
 
 cat > "${ROOT}/byron.genesis.spec.json" <<EOF
@@ -83,10 +83,10 @@ cardano-cli byron genesis genesis \
 # SPOs in the ShelleyGenesis
 
 
-cp scripts/babbage/alonzo-babbage-test-genesis.json test/genesis.alonzo.spec.json
+cp scripts/babbage/alonzo-babbage-test-genesis.json "${ROOT}/genesis.alonzo.spec.json"
 
-cp configuration/defaults/byron-mainnet/configuration.yaml ${ROOT}/
-$SED -i ${ROOT}/configuration.yaml \
+cp configuration/defaults/byron-mainnet/configuration.yaml "${ROOT}/"
+$SED -i "${ROOT}/configuration.yaml" \
      -e 's/Protocol: RealPBFT/Protocol: Cardano/' \
      -e '/Protocol/ aPBftSignatureThreshold: 0.6' \
      -e 's/minSeverity: Info/minSeverity: Debug/' \
@@ -97,13 +97,13 @@ $SED -i ${ROOT}/configuration.yaml \
      -e 's/LastKnownBlockVersion-Major: 0/LastKnownBlockVersion-Major: 6/' \
      -e 's/LastKnownBlockVersion-Minor: 2/LastKnownBlockVersion-Minor: 0/'
 
-  echo "TestShelleyHardForkAtEpoch: 0" >> ${ROOT}/configuration.yaml
-  echo "TestAllegraHardForkAtEpoch: 0" >> ${ROOT}/configuration.yaml
-  echo "TestMaryHardForkAtEpoch: 0" >> ${ROOT}/configuration.yaml
-  echo "TestAlonzoHardForkAtEpoch: 0" >> ${ROOT}/configuration.yaml
-  echo "TestBabbageHardForkAtEpoch: 0" >> ${ROOT}/configuration.yaml
-  echo "TestEnableDevelopmentHardForkEras: True" >> ${ROOT}/configuration.yaml
-  echo "TestEnableDevelopmentNetworkProtocols: True" >> ${ROOT}/configuration.yaml
+  echo "TestShelleyHardForkAtEpoch: 0" >> "${ROOT}/configuration.yaml"
+  echo "TestAllegraHardForkAtEpoch: 0" >> "${ROOT}/configuration.yaml"
+  echo "TestMaryHardForkAtEpoch: 0" >> "${ROOT}/configuration.yaml"
+  echo "TestAlonzoHardForkAtEpoch: 0" >> "${ROOT}/configuration.yaml"
+  echo "TestBabbageHardForkAtEpoch: 0" >> "${ROOT}/configuration.yaml"
+  echo "TestEnableDevelopmentHardForkEras: True" >> "${ROOT}/configuration.yaml"
+  echo "TestEnableDevelopmentNetworkProtocols: True" >> "${ROOT}/configuration.yaml"
 
 # Copy the cost mode
 
@@ -134,12 +134,12 @@ mv "${ROOT}/byron-gen-command/genesis.json" "${ROOT}/genesis/byron/genesis-wrong
 mv "${ROOT}/genesis.alonzo.json" "${ROOT}/genesis/shelley/genesis.alonzo.json"
 mv "${ROOT}/genesis.json" "${ROOT}/genesis/shelley/genesis.json"
 
-jq --raw-output '.protocolConsts.protocolMagic = 42' test/genesis/byron/genesis-wrong.json > test/genesis/byron/genesis.json
+jq --raw-output '.protocolConsts.protocolMagic = 42' "${ROOT}/genesis/byron/genesis-wrong.json" > "${ROOT}/genesis/byron/genesis.json"
 
 rm "${ROOT}/genesis/byron/genesis-wrong.json"
 
 
-$SED -i test/genesis/shelley/genesis.json \
+$SED -i "${ROOT}/genesis/shelley/genesis.json" \
     -e 's/"slotLength": 1/"slotLength": 0.1/' \
     -e 's/"activeSlotsCoeff": 5.0e-2/"activeSlotsCoeff": 0.1/' \
     -e 's/"securityParam": 2160/"securityParam": 10/' \
@@ -154,38 +154,38 @@ $SED -i test/genesis/shelley/genesis.json \
     -e 's/"tau": 0.0/"tau": 0.1/' \
     -e 's/"updateQuorum": 5/"updateQuorum": 2/'
 
-mv test/pools/vrf1.skey test/node-spo1/vrf.skey
-mv test/pools/vrf2.skey test/node-spo2/vrf.skey
-mv test/pools/vrf3.skey test/node-spo3/vrf.skey
+mv "${ROOT}/pools/vrf1.skey" "${ROOT}/node-spo1/vrf.skey"
+mv "${ROOT}/pools/vrf2.skey" "${ROOT}/node-spo2/vrf.skey"
+mv "${ROOT}/pools/vrf3.skey" "${ROOT}/node-spo3/vrf.skey"
 
-mv test/pools/opcert1.cert test/node-spo1/opcert.cert
-mv test/pools/opcert2.cert test/node-spo2/opcert.cert
-mv test/pools/opcert3.cert test/node-spo3/opcert.cert
+mv "${ROOT}/pools/opcert1.cert" "${ROOT}/node-spo1/opcert.cert"
+mv "${ROOT}/pools/opcert2.cert" "${ROOT}/node-spo2/opcert.cert"
+mv "${ROOT}/pools/opcert3.cert" "${ROOT}/node-spo3/opcert.cert"
 
-mv test/pools/kes1.skey test/node-spo1/kes.skey
-mv test/pools/kes2.skey test/node-spo2/kes.skey
-mv test/pools/kes3.skey test/node-spo3/kes.skey
+mv "${ROOT}/pools/kes1.skey" "${ROOT}/node-spo1/kes.skey"
+mv "${ROOT}/pools/kes2.skey" "${ROOT}/node-spo2/kes.skey"
+mv "${ROOT}/pools/kes3.skey" "${ROOT}/node-spo3/kes.skey"
 
 #Byron related
 
-mv "${ROOT}"/byron-gen-command/delegate-keys.000.key ${ROOT}/node-spo1/byron-delegate.key
-mv "${ROOT}"/byron-gen-command/delegate-keys.001.key ${ROOT}/node-spo2/byron-delegate.key
-mv "${ROOT}"/byron-gen-command/delegate-keys.002.key ${ROOT}/node-spo3/byron-delegate.key
+mv "${ROOT}/byron-gen-command/delegate-keys.000.key" "${ROOT}/node-spo1/byron-delegate.key"
+mv "${ROOT}/byron-gen-command/delegate-keys.001.key" "${ROOT}/node-spo2/byron-delegate.key"
+mv "${ROOT}/byron-gen-command/delegate-keys.002.key" "${ROOT}/node-spo3/byron-delegate.key"
 
-mv "${ROOT}"/byron-gen-command/delegation-cert.000.json ${ROOT}/node-spo1/byron-delegation.cert
-mv "${ROOT}"/byron-gen-command/delegation-cert.001.json ${ROOT}/node-spo2/byron-delegation.cert
-mv "${ROOT}"/byron-gen-command/delegation-cert.002.json ${ROOT}/node-spo3/byron-delegation.cert
+mv "${ROOT}/byron-gen-command/delegation-cert.000.json" "${ROOT}/node-spo1/byron-delegation.cert"
+mv "${ROOT}/byron-gen-command/delegation-cert.001.json" "${ROOT}/node-spo2/byron-delegation.cert"
+mv "${ROOT}/byron-gen-command/delegation-cert.002.json" "${ROOT}/node-spo3/byron-delegation.cert"
 
 
 
-echo 3001 > "${ROOT}"/node-spo1/port
-echo 3002 > "${ROOT}"/node-spo2/port
-echo 3003 > "${ROOT}"/node-spo3/port
+echo 3001 > "${ROOT}/node-spo1/port"
+echo 3002 > "${ROOT}/node-spo2/port"
+echo 3003 > "${ROOT}/node-spo3/port"
 
 # Make topology files
 # Make topology files
 #TODO generalise this over the N BFT nodes and pool nodes
-cat > ${ROOT}/node-spo1/topology.json <<EOF
+cat > "${ROOT}/node-spo1/topology.json" <<EOF
 {
    "Producers": [
      {
@@ -202,7 +202,7 @@ cat > ${ROOT}/node-spo1/topology.json <<EOF
  }
 EOF
 
-cat > ${ROOT}/node-spo2/topology.json <<EOF
+cat > "${ROOT}/node-spo2/topology.json" <<EOF
 {
    "Producers": [
      {
@@ -219,7 +219,7 @@ cat > ${ROOT}/node-spo2/topology.json <<EOF
  }
 EOF
 
-cat > ${ROOT}/node-spo3/topology.json <<EOF
+cat > "${ROOT}/node-spo3/topology.json" <<EOF
 {
    "Producers": [
      {
@@ -242,34 +242,36 @@ for NODE in ${SPO_NODES}; do
     echo "#!/usr/bin/env bash"
     echo ""
     echo "cardano-node run \\"
-    echo "  --config                          ${ROOT}/configuration.yaml \\"
-    echo "  --topology                        ${ROOT}/${NODE}/topology.json \\"
-    echo "  --database-path                   ${ROOT}/${NODE}/db \\"
+    echo "  --config                          '${ROOT}/configuration.yaml' \\"
+    echo "  --topology                        '${ROOT}/${NODE}/topology.json' \\"
+    echo "  --database-path                   '${ROOT}/${NODE}/db' \\"
     echo "  --socket-path                     '$(sprocket "${ROOT}/${NODE}/node.sock")' \\"
-    echo "  --shelley-kes-key                 ${ROOT}/${NODE}/kes.skey \\"
-    echo "  --shelley-vrf-key                 ${ROOT}/${NODE}/vrf.skey \\"
-    echo "  --byron-delegation-certificate    ${ROOT}/${NODE}/byron-delegation.cert \\"
-    echo "  --byron-signing-key               ${ROOT}/${NODE}/byron-delegate.key \\"
-    echo "  --shelley-operational-certificate ${ROOT}/${NODE}/opcert.cert \\"
-    echo "  --port                            $(cat ${ROOT}/${NODE}/port) \\"
-    echo "  | tee -a ${ROOT}/${NODE}/node.log"
-  ) > "${ROOT}"/${NODE}.sh
+    echo "  --shelley-kes-key                 '${ROOT}/${NODE}/kes.skey' \\"
+    echo "  --shelley-vrf-key                 '${ROOT}/${NODE}/vrf.skey' \\"
+    echo "  --byron-delegation-certificate    '${ROOT}/${NODE}/byron-delegation.cert' \\"
+    echo "  --byron-signing-key               '${ROOT}/${NODE}/byron-delegate.key' \\"
+    echo "  --shelley-operational-certificate '${ROOT}/${NODE}/opcert.cert' \\"
+    echo "  --port                            $(cat "${ROOT}/${NODE}/port") \\"
+    echo "  | tee -a '${ROOT}/${NODE}/node.log'"
+  ) > "${ROOT}/${NODE}.sh"
 
-  chmod a+x test/${NODE}.sh
+  chmod a+x "${ROOT}/${NODE}.sh"
 
-  echo "${ROOT}"/${NODE}.sh
+  echo "${ROOT}/${NODE}.sh"
 done
 
-echo "#!/usr/bin/env bash" > "${ROOT}"/all.sh
-echo "" >> "${ROOT}"/all.sh
+mkdir -p "${ROOT}/run"
+
+echo "#!/usr/bin/env bash" > "${ROOT}/run/all.sh"
+echo "" >> "${ROOT}/run/all.sh"
 
 for NODE in ${SPO_NODES}; do
-  echo "$ROOT/${NODE}.sh &" >> $ROOT/all.sh
+  echo "$ROOT/${NODE}.sh &" >> "${ROOT}/run/all.sh"
 done
-echo "" >> $ROOT/all.sh
-echo "wait" >> $ROOT/all.sh
+echo "" >> "${ROOT}/run/all.sh"
+echo "wait" >> "${ROOT}/run/all.sh"
 
-chmod a+x $ROOT/all.sh
+chmod a+x "${ROOT}/run/all.sh"
 
 echo "CARDANO_NODE_SOCKET_PATH=${ROOT}/node-spo1/node.sock "
 
