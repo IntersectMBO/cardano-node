@@ -25,33 +25,38 @@ local p=$dir/profile.json
 progress "run | scenario" "starting $(yellow $op)"
 case "$op" in
     idle | default )
-        backend start-cluster "$dir"
+        backend start                "$dir"
+        backend start-nodes          "$dir"
         ;;
 
     fixed )
-        backend start-cluster      "$dir"
+        backend start                "$dir"
 
-        scenario_setup_termination "$dir"
-        backend wait-pools-stopped "$dir"
+        scenario_setup_termination   "$dir"
+        backend start-nodes          "$dir"
+        backend wait-pools-stopped   "$dir"
         scenario_cleanup_termination
 
-        backend stop-cluster       "$dir"
+        backend stop-cluster         "$dir"
         ;;
 
     loaded )
-        backend start-cluster   "$dir"
-        backend start-generator "$dir"
+        backend start                "$dir"
+        backend start-nodes          "$dir"
+        backend start-generator      "$dir"
         ;;
 
     fixed-loaded )
-        backend start-cluster      "$dir"
-        backend start-generator    "$dir"
+        backend start                "$dir"
 
-        scenario_setup_termination "$dir"
-        backend wait-pools-stopped "$dir"
+        backend start-nodes          "$dir"
+        backend start-generator      "$dir"
+
+        scenario_setup_termination   "$dir"
+        backend wait-pools-stopped   "$dir"
         scenario_cleanup_termination
 
-        backend stop-cluster       "$dir"
+        backend stop-cluster         "$dir"
         ;;
 
     chainsync )
@@ -73,8 +78,10 @@ case "$op" in
         progress "scenario" "preparing ChainDB for the $(green server node)"
         chaindb "${chaindb_server[@]}"
 
+        backend start "$dir"
+
         progress "scenario" "starting the $(yellow ChainDB server node)"
-        backend start-cluster "$dir"
+        backend start-node        "$dir" 'node-0'
 
         progress "scenario" "starting the $(yellow fetcher node)"
         backend start-node        "$dir" 'node-1'

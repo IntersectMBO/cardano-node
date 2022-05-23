@@ -10,7 +10,7 @@ function workbench-prebuild-executables()
 
     echo "workbench:  prebuilding executables (because of useCabalRun)"
     unset NIX_ENFORCE_PURITY
-    for exe in cardano-node cardano-cli cardano-topology tx-generator locli
+    for exe in cardano-node cardano-cli cardano-topology cardano-tracer tx-generator locli
     do echo "workbench:    $(with_color blue prebuilding) $(with_color red $exe)"
        cabal -v0 build -- exe:$exe 2>&1 >/dev/null |
            { grep -v 'exprType TYPE'; true; } || return 1
@@ -30,6 +30,10 @@ function cardano-topology() {
     cabal -v0 run exe:cardano-topology -- "$@"
 }
 
+function cardano-tracer() {
+    cabal -v0 run exe:cardano-tracer -- "$@"
+}
+
 function locli() {
     cabal -v0 build exe:locli
     set-git-rev \
@@ -44,4 +48,4 @@ function tx-generator() {
 
 export WORKBENCH_CABAL_MODE=t
 
-export -f cardano-cli cardano-node cardano-topology locli tx-generator
+export -f cardano-cli cardano-node cardano-topology cardano-tracer locli tx-generator
