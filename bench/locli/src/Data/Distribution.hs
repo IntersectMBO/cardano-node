@@ -49,6 +49,7 @@ data Distribution a b =
   Distribution
   { dSize         :: Int
   , dAverage      :: a
+  , dRange        :: (b, b)
   , dPercentiles  :: [Percentile a b]
   }
   deriving (Functor, Generic, Show)
@@ -114,11 +115,12 @@ stdPercSpecs =
   , Perc 0.9995, Perc 0.9997, Perc 0.9998, Perc 0.9999
   ]
 
-zeroDistribution :: Num a => Distribution a b
+zeroDistribution :: (Num a, Num b) => Distribution a b
 zeroDistribution =
   Distribution
   { dSize        = 0
   , dAverage     = 0
+  , dRange       = (0, 0)
   , dPercentiles = mempty
   }
 
@@ -126,8 +128,8 @@ zeroDistribution =
 -- (aka. coefficient of variance).
 computeDistributionStats ::
     forall a v
-  . ( v ~ Double -- 'v' is fixed by Stat.stdDev
-    , Num a
+  . ( RealFrac a
+    , v ~ Double -- 'v' is fixed by Stat.stdDev
     )
   => String -> [Distribution a v]
   -> Either String (Distribution a v, Distribution a v)
@@ -136,9 +138,14 @@ computeDistributionStats desc xs = do
     Left $ "Empty list of distributions in " <> desc
   let distPcts    = dPercentiles <$> xs
       pctDistVals = transpose distPcts
+      total       = sum $ xs <&> \Distribution{..} -> dAverage * fromIntegral dSize
+      samples     = sum $ dSize <$> xs
   unless (all (pctLen ==) (length <$> distPcts)) $
     Left ("Distributions with different percentile counts: " <> show (length <$> distPcts) <> " in " <> desc)
-  pure $ (join (***) (Distribution (length xs) 0)
+  pure $ (join (***) (Distribution
+                      (length xs)
+                      (fromRational (toRational total) / fromIntegral samples)
+                      (minimum $ fst . dRange <$> xs, maximum $ snd . dRange <$> xs))
           :: ([Percentile a v], [Percentile a v]) -> (Distribution a v, Distribution a v))
        $ unzip (pctsMeanCoV <$> pctDistVals)
  where
@@ -159,6 +166,7 @@ computeDistribution percentiles (sort -> sorted) =
   Distribution
   { dSize        = size
   , dAverage     = toRealFrac (F.sum sorted) / fromIntegral (size `max` 1)
+  , dRange       = (mini, maxi)
   , dPercentiles =
     (Percentile     (Perc 0)   mini:) .
     (<> [Percentile (Perc 1.0) maxi]) $

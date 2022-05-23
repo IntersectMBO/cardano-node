@@ -186,8 +186,13 @@ renderDistributions run mode flt mPercs x =
    percsDistrib = mapSomeFieldDistribution
                     (distribPercsAsDistrib . subsetDistrib) x (fSelect $ head (rdFields run))
    distribPercsAsDistrib :: Distribution Float b -> Distribution Float Float
-   distribPercsAsDistrib Distribution{..} = Distribution 1 0.5 $
-     (\p -> p {pctSample = psFrac (pctSpec p)}) <$> dPercentiles
+   distribPercsAsDistrib Distribution{..} =
+     Distribution
+       (length dPercentiles)
+       0.5
+       (head dPercentiles & psFrac . pctSpec,
+        last dPercentiles & psFrac . pctSpec)
+       $ (\p -> p {pctSample = psFrac (pctSpec p)}) <$> dPercentiles
 
    nsamplesField :: DField a
    nsamplesField = Field 6 0 "Nsamp" "" "Nsamp" (DInt $ const nsamplesDistrib)
