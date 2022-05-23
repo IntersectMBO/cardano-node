@@ -256,7 +256,7 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: 4119d2dd91d9ea90846f083b75815e67c1032e4a
+  tag: a39c6952f47a7be26c7e384d21f44c4d853d454c
   --sha256: 1966j2h6wv1j49kckz1jzbsijzscks7j1z0zs2hrbpak2wdz553y
   subdir:
     io-sim
@@ -308,6 +308,16 @@ source-repository-package
   location: https://github.com/input-output-hk/flat
   tag: ee59880f47ab835dbd73bea0847dab7869fc20d8
   --sha256: 1lrzknw765pz2j97nvv9ip3l1mcpf2zr4n56hwlz0rk7wq7ls4cm
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/haskell-lmdb
+  tag: 774fee77940591108a7142f8f1d3d41a1afd6e06
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/lmdb-simple
+  tag: 5b2c622c1cf43deca081139b2d1d1eb9fc991064
 
 constraints:
     hedgehog >= 1.0
