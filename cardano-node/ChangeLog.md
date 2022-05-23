@@ -1,5 +1,91 @@
 # Changelog for cardano-node
 
+## 1.35.0 -- May 2022
+
+### ledger changes
+
+- Implementing the Babbage era. (#2560, #2599, #2602, #2613, #2618, #2619,
+  #2629, #2633, #2643, #2645, #2654, #2661, #2664, #2666, #2678, #2681, #2689,
+  #2694, #2700, #2701, #2702, #2708, #2710, #2711, #2712, #2716, #2717, #2723,
+  #2727, #2751, #2766, #2789, #2799)
+- Fix a bug in the computation of the exponential function via Taylor series
+  approximation. This bug was not ever exhibited in code, but the fix is useful
+  for future resilience. (#2591)
+- Add missing protocol parameters to the Alonzo CDDL spec. (#2590)
+- Work to separate the ledger from the TPraos protocol. (#2575, #2605, #2628,
+  #2630, #2711, #2748, #2763, #2776)
+- For Plutus V2, encode the cost model in the integrity hash using a definite
+  length list. (#2589)
+- Additional testing across all eras. (#2338, #2598, #2620, #2656, #2674, #2695,
+  #2696, #2698, #2747, #2758, #2760, #2790)
+- Various internal refactorings and small fixes. (#2596, #2597, #2600, #2603,
+  #2606, #2608, #2611, #2621, #2622, #2623, #2624, #2639, #2644, #2650, #2660,
+  #2671, #2706, #2709, #2721, #2722, #2733, #2735, #2752, #2755, #2768, #2769,
+  #2773, #2777, #2795, #2803)
+- Add a check to ensure that only positive transfers are allowed in MIR certs.
+  (#2579)
+- Various work to reduce the memory usage of a running ledger. (#2584, #2592,
+  #2607, #2609, #2616, #2625, #2637, #2675, #2707, #2759)
+- Various work to increase the performance of the ledger. (#2632, #2636, #2667,
+  #2668, #2699, #2731, #2750, #2761, #2767, #2771, #2772, #2801, #2804)
+- Add JSON serialiser/deserialiser for Alonzo genesis. This is not used in the
+  ledger, but may be used by the node. (#2627)
+- Add two new events related to rewards - `DeltaRewardEvent` and
+  `TotalRewardEvent`. The former gives incremental rewards as they are being
+  computed, and the latter gives a report of the result at the end of
+  computation. (#2615, #2647, #2673, #2690)
+- Add an additional reward event, `RestrainedRewards`, which contains details of
+  any rewards which are subsequently not paid out owing to e.g. deregistered
+  addresses. (#2726)
+- Add an event which yields the stake distribution at the time where it is
+  snapshotted. (#2652)
+- Add two new events related to Plutus script execution.
+  `SuccessfulPlutusScriptsEvent` is emitted in the case of no failures where
+  `IsValid` is true. This event contains all the information needed to rerun all
+  the scripts in a transaction. In the case of `IsValid` being false and
+  failures being present, two events are emitted; the preceding event with
+  successful scripts and a `FailedPlutusScriptsEvent` with the details for
+  failing scripts. (#2670)
+- Add an event `TotalAdaPotEvent` which is emitted on the epoch boundary and
+  reports the size of the various ADA pots (reserves, treasury, reward pot etc.)
+  (#2797)
+- Disallow the spending of Byron outputs in transactions also spending from
+  Plutus V2 locked outputs. Plutus V1 scripts could be spent in the same
+  transaction as Byron outputs, but the Byron outputs would not be visible to
+  Plutus. (#2617)
+- Fix a memory leak in the tests. (#2648)
+- Add a reference for the cost model keys. (#2635)
+- Specify how seeds are computed, and how a slot is converted to a seed, in the
+  Shelley specification. (#2626)
+- Significant improvements to the benchmarking suite. (#2668, #2669, #2699)
+- Fix the pulsing size used for incremental computation of rewards. This should
+  result in a more even spread of load over the epoch. (#2676)
+- Prune the unusued `cardano-ledger-example-shelley` package. (#2693)
+- Add logic to the STS rules to run certain things only if no failures have yet
+  been accumulated. This is useful to e.g. avoid evaluating Plutus scripts in places where the transaction is broken. (#2679)
+- Hide the `CostModel` constructor. The appropriate way to construct a
+  `CostModel` is using `costModelParamsToCostModel`. (#2703, #2730)
+- Support querying the set of UTxO entries which are required to process a
+  block. This is an important feature required for moving the UTxO onto disk.
+  (#2715)
+- Add support for stashing the AVVM addresses at the Byron/Shelley transition.
+  This is slightly annoying work to enable on-disk UTxO, since the AVVM
+  addresses must be removed on the Shelley/Allegra boundary, but by the time
+  UTxO is on disk (from Shelley onwards) we disallow full queries over the UTxO.
+  (#2728)
+- Remove ledger-based validation of `Datum`. This is now done entirely by Plutus
+  on deserialisation. (#2757)
+- Add documentation on all ledger events. This can be found at
+  https://github.com/input-output-hk/cardano-ledger/blob/master/docs/LedgerEvents.md(#2778)
+- In the Alonzo era, extend the epoch info provided by Plutus to allow time
+  translation arbitrarily into the future. This pertains to a bug in consensus
+  which was allowing arbitrarily distant translation only in the last era. This
+  bug has been fixed, but the ledger must preserve the previous behaviour in the
+  existing era. (#2785)
+- Translate legacy cost mode parameter names in the JSON deserialiser. The
+  deserialiser now does not care about the names, only about the ordering of the
+  parameters. This is consistent with how cost model parameters are treated in
+  update proposals. (#2792)
 ## 1.34.1 -- March 2022
 
 ### node changes
