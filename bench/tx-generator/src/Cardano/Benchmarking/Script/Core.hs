@@ -35,19 +35,18 @@ import qualified Cardano.Benchmarking.GeneratorTx as GeneratorTx
 import           Cardano.Benchmarking.GeneratorTx as GeneratorTx
                    (AsyncBenchmarkControl, TxGenError)
 
-import           Cardano.Benchmarking.GeneratorTx.LocalProtocolDefinition as Core (startProtocol)
 import           Cardano.Benchmarking.GeneratorTx.NodeToNode (ConnectClient, benchmarkConnectTxSubmit)
 import           Cardano.Benchmarking.GeneratorTx.SizedMetadata (mkMetadata)
 import           Cardano.Benchmarking.GeneratorTx.Tx as Core (keyAddress, mkFee, txInModeCardano)
 
 import           Cardano.Benchmarking.OuroborosImports as Core
-                   (LocalSubmitTx, SigningKeyFile
-                   , getGenesis, protocolToNetworkId, protocolToCodecConfig, makeLocalConnectInfo)
+                   ( LocalSubmitTx, SigningKeyFile
+                   , protocolToCodecConfig, makeLocalConnectInfo)
 import           Cardano.Benchmarking.PlutusExample as PlutusExample
 import           Cardano.Benchmarking.Tracer as Core
-                   ( createLoggingLayerTracers, btTxSubmit_, btN2N_, btConnect_, btSubmission2_)
+                   ( btTxSubmit_, btN2N_, btConnect_, btSubmission2_)
 import           Cardano.Benchmarking.Types as Core
-                   (NumberOfInputsPerTx(..), NumberOfOutputsPerTx(..),NumberOfTxs(..), SubmissionErrorPolicy(..)
+                   ( NumberOfInputsPerTx(..), NumberOfOutputsPerTx(..),NumberOfTxs(..), SubmissionErrorPolicy(..)
                    , TPSRate, TxAdditionalSize(..))
 import           Cardano.Benchmarking.Wallet as Wallet hiding (keyAddress)
 import           Cardano.Benchmarking.FundSet as FundSet (getFundTxIn)
@@ -79,17 +78,6 @@ setProtocolParameters s = case s of
   UseLocalProtocolFile file -> do
     protocolParameters <- liftIO $ readProtocolParametersFile file
     set ProtocolParameterMode $ ProtocolParameterLocal protocolParameters
-
-startProtocol :: FilePath -> ActionM ()
-startProtocol filePath = do
-  liftIO (runExceptT $ Core.startProtocol filePath) >>= \case
-    Left err -> throwE $ CliError err
-    Right (loggingLayer, protocol) -> do
-      set LoggingLayer loggingLayer
-      set Protocol protocol
-      set BenchTracers $ Core.createLoggingLayerTracers loggingLayer
-      set Genesis $ Core.getGenesis protocol
-      set (User TNetworkId) $ protocolToNetworkId protocol
 
 readSigningKey :: KeyName -> SigningKeyFile -> ActionM ()
 readSigningKey name filePath =

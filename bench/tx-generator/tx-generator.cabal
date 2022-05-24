@@ -1,5 +1,5 @@
 name:                  tx-generator
-version:               2.1
+version:               2.2
 description:           The transaction generator for cardano node
 author:                IOHK
 maintainer:            operations@iohk.io
@@ -30,7 +30,6 @@ library
                        Cardano.Benchmarking.FundSet
                        Cardano.Benchmarking.GeneratorTx
                        Cardano.Benchmarking.GeneratorTx.Error
-                       Cardano.Benchmarking.GeneratorTx.LocalProtocolDefinition
                        Cardano.Benchmarking.GeneratorTx.Genesis
                        Cardano.Benchmarking.GeneratorTx.NodeToNode
                        Cardano.Benchmarking.GeneratorTx.Tx
@@ -45,6 +44,7 @@ library
                        Cardano.Benchmarking.Script.Aeson
                        Cardano.Benchmarking.Script.Core
                        Cardano.Benchmarking.Script.Env
+                       Cardano.Benchmarking.Script.NodeConfig                       
                        Cardano.Benchmarking.Script.Selftest                       
                        Cardano.Benchmarking.Script.Setters
                        Cardano.Benchmarking.Script.Store

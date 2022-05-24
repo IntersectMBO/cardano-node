@@ -4,9 +4,10 @@ where
 import           Data.Functor.Identity
 import           Data.Dependent.Sum (DSum(..))
 
-import           Cardano.Benchmarking.Script.Env
-import           Cardano.Benchmarking.Script.Store
 import           Cardano.Benchmarking.Script.Core
+import           Cardano.Benchmarking.Script.Env
+import           Cardano.Benchmarking.Script.NodeConfig (startProtocol)
+import           Cardano.Benchmarking.Script.Store
 import           Cardano.Benchmarking.Script.Types
 
 action :: Action -> ActionM ()

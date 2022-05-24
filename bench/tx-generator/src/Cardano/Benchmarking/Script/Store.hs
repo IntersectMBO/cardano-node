@@ -36,7 +36,7 @@ type Fund = (Core.Fund, SigningKey PaymentKey)
 
 data Store v where
   User         :: Setters.Tag x -> Store x
-  LoggingLayer :: Store LoggingLayer
+  LoggingLayer :: Store (Maybe LoggingLayer)
   Protocol     :: Store SomeConsensusProtocol
   BenchTracers :: Store Core.BenchTracers
   Genesis      :: Store (ShelleyGenesis StandardShelley)
