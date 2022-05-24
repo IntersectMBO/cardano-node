@@ -414,6 +414,7 @@
       hydraJobsPr =
         let
           nonPrJobs = map lib.hasPrefix [
+            "linux.native.membenches"
             "linux.native.workbench-ci-analysis"
             "linux.native.workbench-ci-test"
           ];
