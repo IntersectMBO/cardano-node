@@ -411,7 +411,7 @@ in {
       };
 
       instancePublicProducers = mkOption {
-        # type = types.functionTo (types.listOf types.attrs);
+        type = types.functionTo (types.listOf types.attrs);
         default = _: [];
         description = ''Routes to public peers. Only used if slot < usePeersFromLedgerAfterSlot and specific to a given instance (when multiple instances are used).'';
       };
