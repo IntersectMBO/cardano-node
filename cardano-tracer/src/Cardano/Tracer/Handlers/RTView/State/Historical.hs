@@ -25,7 +25,7 @@ import qualified Data.Map.Strict as M
 import           Data.Set (Set)
 import qualified Data.Set as S
 import           Data.Text (Text)
-import           Data.Text.Read
+import           Data.Text.Read (decimal, double)
 import           Data.Time.Clock (UTCTime)
 import           Data.Word (Word64)
 

@@ -48,6 +48,7 @@ library
                        Cardano.Tracer.Handlers.Metrics.Utils
 
                        Cardano.Tracer.Handlers.RTView.Run
+                       Cardano.Tracer.Handlers.RTView.SSL.Certs
                        Cardano.Tracer.Handlers.RTView.State.Displayed
                        Cardano.Tracer.Handlers.RTView.State.EraSettings
                        Cardano.Tracer.Handlers.RTView.State.Errors
@@ -100,6 +101,7 @@ library
   other-modules:       Paths_cardano_tracer
 
   build-depends:         aeson
+                       , aeson-pretty
                        , async
                        , async-extras
                        , blaze-html

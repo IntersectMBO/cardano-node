@@ -280,6 +280,14 @@ span[data-tooltip] {
   cursor: pointer;
 }
 
+.dark .rt-view-export-icon svg {
+  width: 29px;
+  margin-top: 5px;
+  margin-right: 5px;
+  color: whitesmoke;
+  cursor: pointer;
+}
+
 .dark .rt-view-search-errors-icon svg {
   width: 18px;
   color: whitesmoke;
@@ -388,6 +396,7 @@ span[data-tooltip] {
   color: whitesmoke;
   background-color: #282841;
   border-top: 1px solid #555;
+  display: block;
 }
 
 .dark .rt-view-notifications-title {
@@ -619,6 +628,14 @@ span[data-tooltip] {
   cursor: pointer;
 }
 
+.light .rt-view-export-icon svg {
+  width: 29px;
+  margin-top: 5px;
+  margin-right: 5px;
+  color: #444;
+  cursor: pointer;
+}
+
 .light .rt-view-search-errors-icon svg {
   width: 18px;
   color: #444;
@@ -720,6 +737,7 @@ span[data-tooltip] {
   color: #555;
   background-color: whitesmoke;
   border-top: 1px solid #bebebe;
+  display: block;
 }
 
 .light .rt-view-notifications-title {

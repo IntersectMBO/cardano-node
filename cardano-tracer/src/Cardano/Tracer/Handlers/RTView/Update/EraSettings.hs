@@ -6,7 +6,7 @@ module Cardano.Tracer.Handlers.RTView.Update.EraSettings
   ) where
 
 import           Control.Concurrent.STM.TVar (readTVarIO)
-import           Control.Monad (forever, forM_) 
+import           Control.Monad (forM_, forever)
 import           Control.Monad.Extra (whenJust)
 import qualified Data.Map.Strict as M
 import           Data.Set (Set)

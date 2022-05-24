@@ -1,7 +1,8 @@
 {-# LANGUAGE QuasiQuotes #-}
 
 module Cardano.Tracer.Handlers.RTView.UI.JS.Utils
-  ( closeModalsByEscapeButton
+  ( checkURL
+  , closeModalsByEscapeButton
   , copyTextToClipboard
   , downloadJSONFile
   , selectOption
@@ -9,8 +10,21 @@ module Cardano.Tracer.Handlers.RTView.UI.JS.Utils
 
 import           Data.String.QQ
 import           Data.Text (Text)
-import           Graphics.UI.Threepenny.Core
+import           Data.Word (Word16)
 import qualified Graphics.UI.Threepenny as UI
+import           Graphics.UI.Threepenny.Core
+
+-- | If the user open default 'http'-page, we have to redirect him
+--   to 'https'-page based on settings.
+checkURL
+  :: String
+  -> Word16
+  -> UI ()
+checkURL host port =
+  UI.runFunction $ UI.ffi checkAndRedirectIfNeeded
+ where
+  checkAndRedirectIfNeeded =
+    "if (window.location.protocol == 'http:') {window.location.replace(\"https://" <> host <> ":" <> show port <> "\");}"
 
 copyTextToClipboard :: String -> UI ()
 copyTextToClipboard textToCopy =
@@ -37,7 +51,7 @@ downloadJSONFile jsonFileName textToExport =
 downloadJSONFile' :: String
 downloadJSONFile' = [s|
 var element = document.createElement('a');
-element.setAttribute('href', 'data:application/json;charset=utf-8,' + %2);
+element.setAttribute('href', 'data:application/json;charset=utf-8,' + encodeURIComponent(%2));
 element.setAttribute('download', %1);
 element.style.display = 'none';
 document.body.appendChild(element);

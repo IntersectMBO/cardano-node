@@ -3,12 +3,13 @@
 module Cardano.Tracer.Handlers.RTView.System
   ( getPathToChartsConfig
   , getPathToThemeConfig
+  , getPathsToSSLCerts
   , getProcessId
   ) where
 
 import           Data.Word (Word32)
-import           Graphics.UI.Threepenny.Core
-import           System.Directory
+import           Graphics.UI.Threepenny.Core (UI, liftIO)
+import qualified System.Directory as D
 import           System.FilePath ((</>))
 
 #if defined(mingw32_HOST_OS)
@@ -33,7 +34,21 @@ getPathToThemeConfig  = getPathToConfig "theme"
 
 getPathToConfig :: FilePath -> IO FilePath
 getPathToConfig configName = do
-  configDir <- getXdgDirectory XdgConfig ""
+  configDir <- getPathToConfigDir
+  return $ configDir </> configName
+
+getPathsToSSLCerts :: IO (FilePath, FilePath)
+getPathsToSSLCerts = do
+  configDir <- getPathToConfigDir
+  let pathToSSLSubDir = configDir </> "ssl"
+  D.createDirectoryIfMissing True pathToSSLSubDir
+  return ( pathToSSLSubDir </> "cert.pem"
+         , pathToSSLSubDir </> "key.pem"
+         )
+
+getPathToConfigDir :: IO FilePath
+getPathToConfigDir = do
+  configDir <- D.getXdgDirectory D.XdgConfig ""
   let pathToRTViewConfigDir = configDir </> "cardano-rt-view"
-  createDirectoryIfMissing True pathToRTViewConfigDir
-  return $ pathToRTViewConfigDir </> configName
+  D.createDirectoryIfMissing True pathToRTViewConfigDir
+  return pathToRTViewConfigDir

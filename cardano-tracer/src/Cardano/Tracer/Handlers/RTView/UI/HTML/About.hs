@@ -11,13 +11,13 @@ import qualified Graphics.UI.Threepenny as UI
 import           Graphics.UI.Threepenny.Core
 import           System.Directory (makeAbsolute)
 import           System.Environment (getArgs)
-import           System.Info.Extra (isWindows, isMac)
+import           System.Info.Extra (isMac, isWindows)
 
 import           Cardano.Git.Rev (gitRev)
 
 import           Cardano.Tracer.Handlers.RTView.System
-import           Cardano.Tracer.Handlers.RTView.UI.JS.Utils
 import           Cardano.Tracer.Handlers.RTView.UI.Img.Icons
+import           Cardano.Tracer.Handlers.RTView.UI.JS.Utils
 import           Cardano.Tracer.Handlers.RTView.UI.Utils
 import           Paths_cardano_tracer (version)
 

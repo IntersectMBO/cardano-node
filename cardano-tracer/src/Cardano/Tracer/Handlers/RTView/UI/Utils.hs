@@ -34,6 +34,7 @@ module Cardano.Tracer.Handlers.RTView.UI.Utils
   , setDisplayedValue
   , delete'
   , fadeInModal
+  , exportErrorsToJSONFile
   ) where
 
 import           Control.Monad (unless, void)
@@ -41,13 +42,17 @@ import           Control.Monad.Extra (whenJustM)
 import           Data.String.QQ
 import           Data.Text (Text, unpack)
 import qualified Data.Text as T
+import           Data.Time.Clock.System (getSystemTime, systemToUTCTime)
+import           Data.Time.Format (defaultTimeLocale, formatTime)
 import qualified Foreign.JavaScript as JS
 import qualified Foreign.RemotePtr as Foreign
 import qualified Graphics.UI.Threepenny as UI
 import           Graphics.UI.Threepenny.Core
-import           Graphics.UI.Threepenny.JQuery
+import           Graphics.UI.Threepenny.JQuery (Easing (..), fadeIn, fadeOut)
 
 import           Cardano.Tracer.Handlers.RTView.State.Displayed
+import           Cardano.Tracer.Handlers.RTView.State.Errors
+import           Cardano.Tracer.Handlers.RTView.UI.JS.Utils
 import           Cardano.Tracer.Types
 
 (##) :: UI Element -> String -> UI Element
@@ -237,3 +242,15 @@ fadeInModal modal = do
   fadeOut modal 1 Swing $ return ()
   void $ element modal #. "modal is-active"
   fadeIn modal 150 Swing $ return ()
+
+exportErrorsToJSONFile
+  :: Errors
+  -> NodeId
+  -> Text
+  -> UI ()
+exportErrorsToJSONFile nodesErrors nodeId nodeName =
+  whenJustM (liftIO $ errorsToJSON nodesErrors nodeId) $ \errorsAsJSON -> do
+    now <- liftIO $ systemToUTCTime <$> getSystemTime
+    let nowF = formatTime defaultTimeLocale "%FT%T%z" now
+        fileName = "node-" <> unpack nodeName <> "-errors-" <> nowF <> ".json"
+    downloadJSONFile fileName errorsAsJSON

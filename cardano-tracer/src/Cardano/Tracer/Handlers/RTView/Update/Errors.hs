@@ -12,8 +12,8 @@ module Cardano.Tracer.Handlers.RTView.Update.Errors
   , sortErrorsBySeverity
   ) where
 
-import           Control.Concurrent.STM.TVar
-import           Control.Monad
+import           Control.Concurrent.STM.TVar (readTVarIO)
+import           Control.Monad (forM, forM_, forever, unless, void, when)
 import           Control.Monad.Extra (whenJust, whenJustM)
 import qualified Data.Map.Strict as M
 import qualified Data.Text as T

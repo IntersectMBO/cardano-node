@@ -15,13 +15,13 @@ import           Data.Aeson (FromJSON, decode')
 import qualified Data.Map.Strict as M
 import           Data.Text (Text, pack)
 import           Data.Text.Read (decimal)
-import           Data.Time.Calendar
+import           Data.Time.Calendar (Day (..))
 import           Data.Time.Clock (UTCTime (..))
-import           Data.Time.Clock.POSIX
+import           Data.Time.Clock.POSIX (posixSecondsToUTCTime, utcTimeToPOSIXSeconds)
 import           Data.Word (Word64)
 
-import           Trace.Forward.Utils.DataPoint (askForDataPoints)
 import           Trace.Forward.Protocol.DataPoint.Type (DataPointName)
+import           Trace.Forward.Utils.DataPoint (askForDataPoints)
 
 import           Cardano.Tracer.Types
 

@@ -20,8 +20,8 @@ import           Data.Map.Strict (Map)
 import           Data.Word (Word16)
 import           GHC.Generics (Generic)
 
-import           Cardano.Tracer.Types (NodeId (..))
 import           Cardano.Tracer.Handlers.RTView.State.Historical
+import           Cardano.Tracer.Types (NodeId (..))
 
 data ChartId
   = CPUChart

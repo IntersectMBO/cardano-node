@@ -15,12 +15,13 @@ import           Graphics.UI.Threepenny.Core
 import           System.FilePath ((</>))
 
 import           Cardano.Tracer.Configuration
+import           Cardano.Tracer.Handlers.RTView.State.Displayed
 import           Cardano.Tracer.Handlers.RTView.State.Errors
 import           Cardano.Tracer.Handlers.RTView.UI.HTML.Node.EKG
 import           Cardano.Tracer.Handlers.RTView.UI.HTML.Node.Errors
 import           Cardano.Tracer.Handlers.RTView.UI.HTML.Node.Peers
-import           Cardano.Tracer.Handlers.RTView.UI.JS.Utils
 import           Cardano.Tracer.Handlers.RTView.UI.Img.Icons
+import           Cardano.Tracer.Handlers.RTView.UI.JS.Utils
 import           Cardano.Tracer.Handlers.RTView.UI.Utils
 import           Cardano.Tracer.Types
 
@@ -30,9 +31,11 @@ addNodeColumn
   -> NonEmpty LoggingParams
   -> Errors
   -> UI.Timer
+  -> DisplayedElements
   -> NodeId
   -> UI ()
-addNodeColumn window loggingConfig nodesErrors updateErrorsTimer nodeId@(NodeId anId) = do
+addNodeColumn window loggingConfig nodesErrors updateErrorsTimer
+              displayedElements nodeId@(NodeId anId) = do
   let id' = unpack anId
   ls <- logsSettings loggingConfig id'
 
@@ -43,7 +46,7 @@ addNodeColumn window loggingConfig nodesErrors updateErrorsTimer nodeId@(NodeId 
                                   # set text "Details"
   on UI.click peersDetailsButton . const $ fadeInModal peersTable
 
-  errorsTable <- mkErrorsTable window nodeId nodesErrors updateErrorsTimer
+  errorsTable <- mkErrorsTable window nodeId nodesErrors updateErrorsTimer displayedElements
   errorsDetailsButton <- UI.button ## (id' <> "__node-errors-details-button")
                                    #. "button is-danger"
                                    # set UI.enabled False
