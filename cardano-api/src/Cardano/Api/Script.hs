@@ -619,6 +619,15 @@ scriptLanguageSupportedInEra era lang =
       (AlonzoEra, PlutusScriptLanguage PlutusScriptV1) ->
         Just PlutusScriptV1InAlonzo
 
+      (BabbageEra, SimpleScriptLanguage SimpleScriptV1) ->
+        Just SimpleScriptV1InBabbage
+
+      (BabbageEra, SimpleScriptLanguage SimpleScriptV2) ->
+        Just SimpleScriptV2InBabbage
+
+      (BabbageEra, PlutusScriptLanguage PlutusScriptV1) ->
+        Just PlutusScriptV1InBabbage
+
       (BabbageEra, PlutusScriptLanguage PlutusScriptV2) ->
         Just PlutusScriptV2InBabbage
 
@@ -1432,21 +1441,14 @@ fromShelleyScriptToReferenceScript sbe script =
    scriptInEraToRefScript $ fromShelleyBasedScript sbe script
 
 scriptInEraToRefScript :: ScriptInEra era -> ReferenceScript era
-scriptInEraToRefScript sIne@(ScriptInEra langInEra s) =
-  let sLang = languageOfScriptLanguageInEra langInEra
-      era = shelleyBasedToCardanoEra $ eraOfScriptInEra sIne
-  in case refInsScriptsAndInlineDatsSupportedInEra era of
-       Nothing -> ReferenceScriptNone
-       Just supp ->
-         case sLang of
-           PlutusScriptLanguage PlutusScriptV2 ->
-             ReferenceScript supp $ toScriptInAnyLang s
-           SimpleScriptLanguage SimpleScriptV1 ->
-             ReferenceScriptNone
-           SimpleScriptLanguage SimpleScriptV2 ->
-             ReferenceScriptNone
-           PlutusScriptLanguage PlutusScriptV1 ->
-             ReferenceScriptNone
+scriptInEraToRefScript sIne@(ScriptInEra _ s) =
+  case refInsScriptsAndInlineDatsSupportedInEra era of
+    Nothing -> ReferenceScriptNone
+    Just supp ->
+      -- Any script can be a reference script
+      ReferenceScript supp $ toScriptInAnyLang s
+ where
+  era = shelleyBasedToCardanoEra $ eraOfScriptInEra sIne
 
 -- Helpers
 

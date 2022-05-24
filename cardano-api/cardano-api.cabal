@@ -233,6 +233,7 @@ test-suite cardano-api-test
                         Test.Cardano.Api.Typed.Orphans
                         Test.Cardano.Api.Typed.RawBytes
                         Test.Cardano.Api.Typed.Script
+                        Test.Cardano.Api.Typed.TxBody
                         Test.Cardano.Api.Typed.Value
 
   ghc-options:          -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
