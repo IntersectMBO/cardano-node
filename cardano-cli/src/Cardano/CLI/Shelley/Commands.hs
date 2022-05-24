@@ -57,8 +57,8 @@ import           Cardano.CLI.Shelley.Key (PaymentVerifier, StakeVerifier, Verifi
                    VerificationKeyOrHashOrFile, VerificationKeyTextOrFile)
 import           Cardano.CLI.Types
 
-import           Cardano.Ledger.Shelley.TxBody (MIRPot)
 import           Cardano.Chain.Common (BlockCount)
+import           Cardano.Ledger.Shelley.TxBody (MIRPot)
 --
 -- Shelley CLI command data types
 --
@@ -170,7 +170,7 @@ data TransactionCmd
       -- ^ Return collateral
       (Maybe Lovelace)
       -- ^ Total collateral
-      [TxIn]
+      [(TxIn, Maybe TxIn, Maybe (ScriptWitnessFiles WitCtxTxIn))]
       -- ^ Reference inputs
       [RequiredSigner]
       -- ^ Required signers
@@ -213,7 +213,7 @@ data TransactionCmd
       -- ^ Return collateral
       (Maybe Lovelace)
       -- ^ Total collateral
-      [TxIn]
+      [(TxIn, Maybe TxIn, Maybe (ScriptWitnessFiles WitCtxTxIn))]
       -- ^ Reference inputs
       [TxOutAnyEra]
       -- ^ Normal outputs

@@ -1068,6 +1068,11 @@ substituteExecutionUnits exUnitsMap =
         Nothing      -> wit
         Just exunits -> PlutusScriptWitness langInEra version script
                                             datum redeemer exunits
+    f idx wit@(PlutusReferenceScriptWitness langInEra version datum redeemer _) =
+            case Map.lookup idx exUnitsMap of
+        Nothing      -> wit
+        Just exunits -> PlutusReferenceScriptWitness langInEra version datum redeemer exunits
+    f _ wit@SimpleReferenceScriptWitness = wit
 
 calculateMinimumUTxO
   :: ShelleyBasedEra era

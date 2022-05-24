@@ -225,7 +225,7 @@ instance FromJSON QueryTipLocalStateOutput where
 
 data ScriptCostOutput =
   ScriptCostOutput
-    { scScriptHash :: ScriptHash
+    { scScriptHash :: Maybe ScriptHash
     , scExecutionUnits :: ExecutionUnits
     , scAda :: Lovelace
     }
@@ -239,7 +239,7 @@ instance ToJSON ScriptCostOutput where
 
 data PlutusScriptCostError
   = PlutusScriptCostErrPlutusScriptNotFound ScriptWitnessIndex
-  | PlutusScriptCostErrExecError ScriptWitnessIndex ScriptHash ScriptExecutionError
+  | PlutusScriptCostErrExecError ScriptWitnessIndex (Maybe ScriptHash) ScriptExecutionError
   | PlutusScriptCostErrRationalExceedsBound ExecutionUnitPrices  ExecutionUnits
   deriving Show
 
@@ -268,18 +268,35 @@ renderScriptCosts eUnitPrices scriptMapping executionCostMapping =
   sequenceA $ Map.foldlWithKey
     (\accum sWitInd eExecUnits -> do
       case List.lookup sWitInd scriptMapping of
-        Just (AnyScriptWitness SimpleScriptWitness{}) ->  accum
+        Just (AnyScriptWitness SimpleScriptWitness{}) -> accum
+
         Just (AnyScriptWitness (PlutusScriptWitness _ pVer pScript _ _ _)) -> do
           let scriptHash = hashScript $ PlutusScript pVer pScript
           case eExecUnits of
             Right execUnits ->
               case calculateExecutionUnitsLovelace eUnitPrices execUnits of
                 Just llCost ->
-                  Right (ScriptCostOutput scriptHash execUnits llCost)
+                  Right (ScriptCostOutput (Just scriptHash) execUnits llCost)
                     : accum
                 Nothing ->
                   Left (PlutusScriptCostErrRationalExceedsBound eUnitPrices execUnits)
                     : accum
-            Left err -> Left (PlutusScriptCostErrExecError sWitInd scriptHash err) : accum
+            Left err -> Left (PlutusScriptCostErrExecError sWitInd (Just scriptHash) err) : accum
+
+        Just (AnyScriptWitness PlutusReferenceScriptWitness{}) ->
+          case eExecUnits of
+            Right execUnits ->
+              case calculateExecutionUnitsLovelace eUnitPrices execUnits of
+                Just llCost ->
+                  Right (ScriptCostOutput Nothing execUnits llCost)
+                    : accum
+                Nothing ->
+                  Left (PlutusScriptCostErrRationalExceedsBound eUnitPrices execUnits)
+                    : accum
+            Left err -> Left (PlutusScriptCostErrExecError sWitInd Nothing err) : accum
+
+        Just (AnyScriptWitness SimpleReferenceScriptWitness) -> accum
+
         Nothing -> Left (PlutusScriptCostErrPlutusScriptNotFound sWitInd) : accum
+
     ) [] executionCostMapping

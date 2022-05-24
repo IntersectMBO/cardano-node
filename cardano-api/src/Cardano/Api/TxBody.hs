@@ -170,7 +170,7 @@ import           Data.List (intercalate, sortBy)
 import qualified Data.List.NonEmpty as NonEmpty
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import           Data.Maybe (fromMaybe, maybeToList)
+import           Data.Maybe (catMaybes, fromMaybe, isJust, maybeToList)
 import           Data.Scientific (toBoundedInteger)
 import qualified Data.Sequence.Strict as Seq
 import           Data.Set (Set)
@@ -1310,16 +1310,17 @@ data TxInsCollateral era where
 deriving instance Eq   (TxInsCollateral era)
 deriving instance Show (TxInsCollateral era)
 
-data TxInsReference era where
+data TxInsReference build era where
 
-     TxInsReferenceNone :: TxInsReference era
+     TxInsReferenceNone :: TxInsReference buil era
 
      TxInsReference     :: ReferenceTxInsScriptsInlineDatumsSupportedInEra era
-                        -> [TxIn]
-                        -> TxInsReference era
+                        -- (potential input to be spent, _ Reference input)
+                        -> [(Maybe TxIn, BuildTxWith build (Witness WitCtxTxIn era), TxIn)]
+                        -> TxInsReference build era
 
-deriving instance Eq   (TxInsReference era)
-deriving instance Show (TxInsReference era)
+deriving instance Eq   (TxInsReference bsuild era)
+deriving instance Show (TxInsReference bsuild era)
 
 -- ----------------------------------------------------------------------------
 -- Transaction output values (era-dependent)
@@ -1662,7 +1663,7 @@ data TxBodyContent build era =
      TxBodyContent {
        txIns              :: TxIns build era,
        txInsCollateral    :: TxInsCollateral era,
-       txInsReference     :: TxInsReference era,
+       txInsReference     :: TxInsReference build era,
        txOuts             :: [TxOut CtxTx era],
        txTotalCollateral  :: TxTotalCollateral era,
        txReturnCollateral :: TxReturnCollateral CtxTx era,
@@ -2206,14 +2207,17 @@ fromLedgerTxInsCollateral era body =
       ShelleyBasedEraAlonzo  -> toList $ Alonzo.collateral' body
       ShelleyBasedEraBabbage -> toList $ Babbage.collateral body
 
+-- This is fine we only trying to view
 fromLedgerTxInsReference
-  :: ShelleyBasedEra era -> Ledger.TxBody (ShelleyLedgerEra era) -> TxInsReference era
+  :: ShelleyBasedEra era -> Ledger.TxBody (ShelleyLedgerEra era) -> TxInsReference ViewTx era
 fromLedgerTxInsReference era txBody =
   case refInsScriptsAndInlineDatsSupportedInEra $ shelleyBasedToCardanoEra era of
     Nothing -> TxInsReferenceNone
     Just suppInEra ->
       let ledgerRefInputs = obtainReferenceInputsHasFieldConstraint suppInEra $ getField @"referenceInputs" txBody
-      in TxInsReference suppInEra $ map fromShelleyTxIn $ Set.toList ledgerRefInputs
+          spendingTxIns = repeat Nothing :: [Maybe TxIn]
+      in TxInsReference suppInEra
+           $ zip3 spendingTxIns (repeat ViewTx) (map fromShelleyTxIn . Set.toList $ ledgerRefInputs)
  where
   obtainReferenceInputsHasFieldConstraint
     :: ReferenceTxInsScriptsInlineDatumsSupportedInEra era
@@ -2846,8 +2850,8 @@ makeShelleyTransactionBody era@ShelleyBasedEraShelley
     maxShelleyTxInIx = fromIntegral $ maxBound @Word16
 
     scripts :: [Ledger.Script StandardShelley]
-    scripts =
-      [ toShelleyScript (scriptWitnessScript scriptwitness)
+    scripts = catMaybes
+      [ toShelleyScript <$> scriptWitnessScript scriptwitness
       | (_, AnyScriptWitness scriptwitness)
           <- collectTxBodyScriptWitnesses txbodycontent
       ]
@@ -2927,8 +2931,8 @@ makeShelleyTransactionBody era@ShelleyBasedEraAllegra
     maxShelleyTxInIx = fromIntegral $ maxBound @Word16
 
     scripts :: [Ledger.Script StandardAllegra]
-    scripts =
-      [ toShelleyScript (scriptWitnessScript scriptwitness)
+    scripts = catMaybes
+      [ toShelleyScript <$> scriptWitnessScript scriptwitness
       | (_, AnyScriptWitness scriptwitness)
           <- collectTxBodyScriptWitnesses txbodycontent
       ]
@@ -3024,8 +3028,8 @@ makeShelleyTransactionBody era@ShelleyBasedEraMary
     maxShelleyTxInIx = fromIntegral $ maxBound @Word16
 
     scripts :: [Ledger.Script StandardMary]
-    scripts =
-      [ toShelleyScript (scriptWitnessScript scriptwitness)
+    scripts = catMaybes
+      [ toShelleyScript <$> scriptWitnessScript scriptwitness
       | (_, AnyScriptWitness scriptwitness)
           <- collectTxBodyScriptWitnesses txbodycontent
       ]
@@ -3154,8 +3158,8 @@ makeShelleyTransactionBody era@ShelleyBasedEraAlonzo
     witnesses = collectTxBodyScriptWitnesses txbodycontent
 
     scripts :: [Ledger.Script StandardAlonzo]
-    scripts =
-      [ toShelleyScript (scriptWitnessScript scriptwitness)
+    scripts = catMaybes
+      [ toShelleyScript <$> scriptWitnessScript scriptwitness
       | (_, AnyScriptWitness scriptwitness) <- witnesses
       ]
 
@@ -3261,15 +3265,16 @@ makeShelleyTransactionBody era@ShelleyBasedEraBabbage
     return $
       ShelleyTxBody era
         (Babbage.TxBody
-           { Babbage.inputs = Set.fromList (map (toShelleyTxIn . fst) txIns)
+           { Babbage.inputs = let normalIns = txIns
+                                  insToBeSpentViaRef = getInputsToBeSpentByReferenceInputs unwrapTxInsReference
+                              in Set.fromList $ map (toShelleyTxIn . fst) $ orderTxIns $ normalIns ++ insToBeSpentViaRef
            , Babbage.collateral =
                case txInsCollateral of
                 TxInsCollateralNone     -> Set.empty
                 TxInsCollateral _ txins -> Set.fromList (map toShelleyTxIn txins)
            , Babbage.referenceInputs =
-               case txInsReference of
-                 TxInsReferenceNone -> Set.empty
-                 TxInsReference _ txins -> Set.fromList (map toShelleyTxIn txins)
+               Set.fromList (map toShelleyTxIn $ getReferenceInputs unwrapTxInsReference)
+
            , Babbage.outputs = Seq.fromList (map (toShelleyTxOutAny era) txOuts)
            , Babbage.collateralReturn =
                case txReturnCollateral of
@@ -3332,6 +3337,20 @@ makeShelleyTransactionBody era@ShelleyBasedEraBabbage
         txAuxData
         txScriptValidity
   where
+    getReferenceInputs :: [(Maybe TxIn, BuildTxWith BuildTx (Witness WitCtxTxIn era), TxIn)] -> [TxIn]
+    getReferenceInputs = map (\(_,_,i) -> i)
+
+    unwrapTxInsReference =
+      case txInsReference of
+        TxInsReferenceNone -> []
+        TxInsReference _ refTxins -> refTxins
+
+    getInputsToBeSpentByReferenceInputs
+      :: [(Maybe TxIn, BuildTxWith BuildTx (Witness WitCtxTxIn era), TxIn)] -> [(TxIn, BuildTxWith BuildTx (Witness WitCtxTxIn era))]
+    getInputsToBeSpentByReferenceInputs ((Just i,sw,_) : x) = (i,sw) : getInputsToBeSpentByReferenceInputs x
+    getInputsToBeSpentByReferenceInputs ((Nothing,_,_) : x) = getInputsToBeSpentByReferenceInputs x
+    getInputsToBeSpentByReferenceInputs [] = []
+
     maxShelleyTxInIx :: Word
     maxShelleyTxInIx = fromIntegral $ maxBound @Word16
 
@@ -3339,8 +3358,8 @@ makeShelleyTransactionBody era@ShelleyBasedEraBabbage
     witnesses = collectTxBodyScriptWitnesses txbodycontent
 
     scripts :: [Ledger.Script StandardBabbage]
-    scripts =
-      [ toShelleyScript (scriptWitnessScript scriptwitness)
+    scripts = catMaybes
+      [ toShelleyScript <$> scriptWitnessScript scriptwitness
       | (_, AnyScriptWitness scriptwitness) <- witnesses
       ]
 
@@ -3361,21 +3380,64 @@ makeShelleyTransactionBody era@ShelleyBasedEraBabbage
                     (PlutusScriptWitness
                        _ _ _ (ScriptDatumForTxIn d) _ _)) <- witnesses
             ]
+     ++ referenceTxInScriptData
+
+    referenceTxInScriptData :: [ScriptData]
+    referenceTxInScriptData =
+      case txInsReference of
+        TxInsReferenceNone -> []
+        TxInsReference _ refTxins ->
+          [ dat
+          | (_, BuildTxWith (ScriptWitness _ (PlutusReferenceScriptWitness _ _ (ScriptDatumForTxIn dat) _ _) ), _ ) <- refTxins
+          ]
+
     redeemers :: Alonzo.Redeemers StandardBabbage
     redeemers =
-      Alonzo.Redeemers $
-        Map.fromList
-          [ (toAlonzoRdmrPtr idx, (toAlonzoData d, toAlonzoExUnits e))
-          | (idx, AnyScriptWitness
-                    (PlutusScriptWitness _ _ _ _ d e)) <- witnesses
-          ]
+      let -- Simple scripts and reference simple scripts do not have redeemers nor execution units.
+          -- Therefore we must filter them out.
+          mRedeemersAndExecUnits :: [(ScriptWitnessIndex, Maybe (ScriptRedeemer, ExecutionUnits))]
+          mRedeemersAndExecUnits = [ (idx, retrieveAllRedeemersAndExecUnits sw)
+                                   | (idx, AnyScriptWitness sw) <- witnesses
+                                   , isJust $ retrieveAllRedeemersAndExecUnits sw
+                                   -- This check is necessary otherwise the ScriptWitnessIndex
+                                   -- will be incorrect
+                                   ]
+
+          folder acc (i, Just rAnde) = acc ++ [(i, rAnde)]
+          folder acc (_, Nothing) = acc
+
+          redeemersAndExecUnits :: [(ScriptWitnessIndex, (ScriptRedeemer, ExecutionUnits))]
+          redeemersAndExecUnits = foldl folder [] mRedeemersAndExecUnits
+      in Alonzo.Redeemers $
+           Map.fromList
+             [ (toAlonzoRdmrPtr idx, (toAlonzoData r, toAlonzoExUnits e))
+             | (idx, (r,e)) <- redeemersAndExecUnits
+             ]
+
+   -- Here we need to be careful and take into account reference sripts
+    retrieveAllRedeemersAndExecUnits
+      :: ScriptWitness witctx era -> Maybe (ScriptRedeemer, ExecutionUnits)
+    retrieveAllRedeemersAndExecUnits (PlutusScriptWitness _ _ _ _ r e) = Just (r, e)
+    retrieveAllRedeemersAndExecUnits (PlutusReferenceScriptWitness _ _ _ r e) = Just (r, e)
+    retrieveAllRedeemersAndExecUnits SimpleScriptWitness {} = Nothing
+    retrieveAllRedeemersAndExecUnits SimpleReferenceScriptWitness = Nothing
 
     languages :: Set Alonzo.Language
     languages =
-      Set.fromList
-        [ toAlonzoLanguage (AnyPlutusScriptVersion v)
-        | (_, AnyScriptWitness (PlutusScriptWitness _ v _ _ _ _)) <- witnesses
+      Set.fromList $ catMaybes
+        [ getScriptLanguage sw
+        | (_, AnyScriptWitness sw) <- witnesses
         ]
+
+    getScriptLanguage :: ScriptWitness witctx era -> Maybe Alonzo.Language
+    getScriptLanguage (PlutusScriptWitness _ v _ _ _ _) =
+      Just $ toAlonzoLanguage (AnyPlutusScriptVersion v)
+    getScriptLanguage (PlutusReferenceScriptWitness _ (PlutusScriptLanguage v) _ _ _) =
+      Just $ toAlonzoLanguage (AnyPlutusScriptVersion v)
+    getScriptLanguage (PlutusReferenceScriptWitness _ (SimpleScriptLanguage _v) _ _ _) =
+      Nothing
+    getScriptLanguage SimpleScriptWitness{} = Nothing
+    getScriptLanguage SimpleReferenceScriptWitness{} = Nothing
 
     txAuxData :: Maybe (Ledger.AuxiliaryData StandardBabbage)
     txAuxData
@@ -3592,22 +3654,38 @@ collectTxBodyScriptWitnesses :: forall era.
                              -> [(ScriptWitnessIndex, AnyScriptWitness era)]
 collectTxBodyScriptWitnesses TxBodyContent {
                                txIns,
+                               txInsReference,
                                txWithdrawals,
                                txCertificates,
                                txMintValue
                              } =
     concat
-      [ scriptWitnessesTxIns        txIns
+      [ scriptWitnessesTxIns        (txIns ++ getReferenceInputWitnesses txInsReference)
       , scriptWitnessesWithdrawals  txWithdrawals
       , scriptWitnessesCertificates txCertificates
       , scriptWitnessesMinting      txMintValue
       ]
   where
+    -- We are only interested in txins that are witnessed by reference scripts
+    -- We omit the reference inputs not being used to witness the spending of a txinput
+    getReferenceInputWitnesses
+      :: TxInsReference BuildTx era
+      -> [(TxIn, BuildTxWith BuildTx (Witness WitCtxTxIn era))]
+    getReferenceInputWitnesses TxInsReferenceNone = []
+    getReferenceInputWitnesses (TxInsReference _ ins) =
+      foldl folder [] ins
+     where
+       folder acc (Just inputToBeSpent, scrWit, _) = acc ++ [(inputToBeSpent, scrWit)]
+       folder acc (Nothing, _, _) = acc
+    -- TODO: This needs to be modified. How? Spending inputs now exist in the RedemeerTxIn type
+    -- so we must extract those, add them to the "normal" txins, order them and then
+    -- we can get the correct scriptwitness index!
     scriptWitnessesTxIns
       :: [(TxIn, BuildTxWith BuildTx (Witness WitCtxTxIn era))]
       -> [(ScriptWitnessIndex, AnyScriptWitness era)]
     scriptWitnessesTxIns txins =
         [ (ScriptWitnessIndexTxIn ix, AnyScriptWitness witness)
+        -- !!!!So your reference input should not be the txin in the tuple. it should exist in the witness!!!
           -- The tx ins are indexed in the map order by txid
         | (ix, (_, BuildTxWith (ScriptWitness _ witness)))
             <- zip [0..] (orderTxIns txins)

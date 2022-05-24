@@ -542,6 +542,10 @@ data ScriptInEra era where
      ScriptInEra :: ScriptLanguageInEra lang era
                  -> Script lang
                  -> ScriptInEra era
+     -- TODO: This is a problem because eventually we call toShelleyScript
+     -- which takes a ScriptInEra and expect there to be a script......
+     -- Perhaps we need a separate type for reference inputs since they are
+     -- a different thing.
 
 deriving instance Show (ScriptInEra era)
 
@@ -686,7 +690,6 @@ toScriptInEra era (ScriptInAnyLang lang s) = do
 eraOfScriptInEra :: ScriptInEra era -> ShelleyBasedEra era
 eraOfScriptInEra (ScriptInEra langInEra _) = eraOfScriptLanguageInEra langInEra
 
-
 -- ----------------------------------------------------------------------------
 -- Scripts used in a transaction (in an era) to witness authorised use
 --
@@ -749,6 +752,18 @@ data ScriptWitness witctx era where
                          -> ExecutionUnits
                          -> ScriptWitness witctx era
 
+     -- The script is provided via the transaction input specified
+     -- therefore we cannot know anything about the script without
+     -- direct access to the UTxO
+     PlutusReferenceScriptWitness :: ScriptLanguageInEra lang era
+                                  -> ScriptLanguage lang
+                                  -> ScriptDatum witctx
+                                  -> ScriptRedeemer
+                                  -> ExecutionUnits
+                                  -> ScriptWitness witctx era
+
+     SimpleReferenceScriptWitness ::  ScriptWitness witctx era
+
 deriving instance Show (ScriptWitness witctx era)
 
 -- The GADT in the SimpleScriptWitness constructor requires a custom instance
@@ -786,14 +801,15 @@ deriving instance Eq   (ScriptDatum witctx)
 deriving instance Show (ScriptDatum witctx)
 
 
-scriptWitnessScript :: ScriptWitness witctx era -> ScriptInEra era
+scriptWitnessScript :: ScriptWitness witctx era -> Maybe (ScriptInEra era)
 scriptWitnessScript (SimpleScriptWitness langInEra version script) =
-    ScriptInEra langInEra (SimpleScript version script)
+    Just $ ScriptInEra langInEra (SimpleScript version script)
 
 scriptWitnessScript (PlutusScriptWitness langInEra version script _ _ _) =
-    ScriptInEra langInEra (PlutusScript version script)
+    Just $ ScriptInEra langInEra (PlutusScript version script)
 
-
+scriptWitnessScript PlutusReferenceScriptWitness{} = Nothing -- TODO: Babbage era - think about this
+scriptWitnessScript SimpleReferenceScriptWitness = Nothing -- TODO: Babbage era - think about this
 -- ----------------------------------------------------------------------------
 -- The kind of witness to use, key (signature) or script
 --
@@ -1136,7 +1152,6 @@ toShelleyScript (ScriptInEra langInEra (PlutusScript PlutusScriptV2
                                          (PlutusScriptSerialised script))) =
     case langInEra of
       PlutusScriptV2InBabbage -> Alonzo.PlutusScript Alonzo.PlutusV2 script
-
 
 fromShelleyBasedScript  :: ShelleyBasedEra era
                         -> Ledger.Script (ShelleyLedgerEra era)

@@ -65,6 +65,7 @@ import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Client as Net.Tx
 
 import qualified System.IO as IO
 
+import qualified Cardano.Ledger.Core as Core
 {- HLINT ignore "Use let" -}
 
 data ShelleyTxCmdError
@@ -104,6 +105,7 @@ data ShelleyTxCmdError
   | ShelleyTxCmdNotImplemented !Text
   | ShelleyTxCmdWitnessEraMismatch !AnyCardanoEra !AnyCardanoEra !WitnessFile
   | ShelleyTxCmdScriptLanguageNotSupportedInEra !AnyScriptLanguage !AnyCardanoEra
+  | ShelleyTxCmdReferenceScriptsNotSupportedInEra !AnyCardanoEra
   | ShelleyTxCmdScriptExpectedSimple !FilePath !AnyScriptLanguage
   | ShelleyTxCmdScriptExpectedPlutus !FilePath !AnyScriptLanguage
   | ShelleyTxCmdGenesisCmdError !ShelleyGenesisCmdError
@@ -271,6 +273,8 @@ renderShelleyTxCmdError err =
     ShelleyTxCmdPParamExecutionUnitsNotAvailable ->
       "Execution units not available in the protocol parameters. This is \
       \likely due to not being in the Alonzo era"
+    ShelleyTxCmdReferenceScriptsNotSupportedInEra (AnyCardanoEra era) ->
+      "Reference scripts not supported in era: " <> show era
 
 renderEra :: AnyCardanoEra -> Text
 renderEra (AnyCardanoEra ByronEra)   = "Byron"
@@ -356,7 +360,7 @@ runTxBuildRaw
   -- ^ Return collateral
   -> Maybe Lovelace
   -- ^ Total collateral
-  -> [TxIn]
+  -> [(TxIn, Maybe TxIn, Maybe (ScriptWitnessFiles WitCtxTxIn))]
   -- ^ Reference TxIn
   -> [TxOutAnyEra]
   -> Maybe SlotNo
@@ -440,7 +444,7 @@ runTxBuild
   -- ^ Return collateral
   -> Maybe Lovelace
   -- ^ Total collateral
-  -> [TxIn]
+  -> [(TxIn, Maybe TxIn, Maybe (ScriptWitnessFiles WitCtxTxIn))]
   -- ^ Reference TxIns
   -> [TxOutAnyEra]
   -- ^ Normal outputs
@@ -498,6 +502,11 @@ runTxBuild (AnyCardanoEra era) (AnyConsensusModeParams cModeParams) networkId mS
           <*> validateTxUpdateProposal    era mUpdatePropFile
           <*> validateTxMintValue         era mValue
           <*> validateTxScriptValidity    era mScriptValidity
+
+      liftIO $ print ("TxBody ref inputs before execution units substitution" :: String)
+      liftIO $ print $ txInsReference txBodyContent
+      liftIO $ print ("TxBody inputs before execution units substitution" :: String)
+      liftIO $ print $ txIns txBodyContent
 
       eInMode <- case toEraInMode era CardanoMode of
                    Just result -> return result
@@ -564,13 +573,19 @@ runTxBuild (AnyCardanoEra era) (AnyConsensusModeParams cModeParams) networkId mS
             Nothing -> left ShelleyTxCmdPParamExecutionUnitsNotAvailable
         OutputTxBodyOnly (TxBodyFile fpath)  ->
           case outputFormat of
-            OutputCliSerialisation ->
+            OutputCliSerialisation -> do
+              let (ShelleyTxBody _ _ _ scriptData _ _) = balancedTxBody
+              liftIO $ print ("Tx body construction phase cli format" :: String)
+              liftIO $ print scriptData
               firstExceptT ShelleyTxCmdWriteFileError . newExceptT $
                 writeFileTextEnvelope fpath Nothing balancedTxBody
-            OutputLedgerCDDLSerialisation ->
+            OutputLedgerCDDLSerialisation -> do
+              let (ShelleyTxBody _ _ _ scriptData _ _) = balancedTxBody
+              liftIO $ print ("Tx body construction phase cddl format" :: String)
+              liftIO $ print scriptData
               let noWitTx = makeSignedTransaction [] balancedTxBody
-              in firstExceptT ShelleyTxCmdWriteFileError . newExceptT $
-                   writeTxFileTextEnvelopeCddl fpath noWitTx
+              firstExceptT ShelleyTxCmdWriteFileError . newExceptT $
+                writeTxFileTextEnvelopeCddl fpath noWitTx
 
     (CardanoMode, LegacyByronEra) -> left ShelleyTxCmdByronEra
 
@@ -663,15 +678,39 @@ validateTxInsCollateral era txins =
       Nothing -> txFeatureMismatch era TxFeatureCollateral
       Just supported -> return (TxInsCollateral supported txins)
 
-validateTxInsReference :: CardanoEra era
-                       -> [TxIn]
-                       -> ExceptT ShelleyTxCmdError IO (TxInsReference era)
+validateTxInsReference :: forall era. CardanoEra era
+                       -> [(TxIn, Maybe TxIn, Maybe (ScriptWitnessFiles WitCtxTxIn))]
+                       -> ExceptT ShelleyTxCmdError IO (TxInsReference BuildTx era)
 validateTxInsReference _ [] = return TxInsReferenceNone
 validateTxInsReference era txins =
   case refInsScriptsAndInlineDatsSupportedInEra era of
     Nothing -> txFeatureMismatch era TxFeatureReferenceInputs
-    Just supp -> return $ TxInsReference supp txins
-
+    Just supp -> do
+      final <- mapM convert txins
+      return $ TxInsReference supp final
+ where
+  convert
+    :: (TxIn, Maybe TxIn, Maybe (ScriptWitnessFiles WitCtxTxIn))
+    -> ExceptT ShelleyTxCmdError IO
+       -- So we must pass the txin we are using for the reference
+       -- script witness, and the txin that we may or may not intend
+       -- to spend. Users are free to include a reference script but
+       -- not use it to witness the spending of any txin.
+               ( Maybe TxIn
+               , BuildTxWith BuildTx (Witness WitCtxTxIn era)
+               , TxIn
+               )
+  convert (txinRef, mTxInToSpend, mScriptWitnessFiles) =
+    case mScriptWitnessFiles of
+      Just scriptWitnessFiles -> do
+        sWit <- createScriptWitness era scriptWitnessFiles
+        return ( mTxInToSpend
+               , BuildTxWith $ ScriptWitness ScriptWitnessForSpending sWit
+               , txinRef
+               )
+      -- TODO: Babbage era, we should be able to include a reference input as is
+      -- i.e not labelled with KeyWitnessForSpending. Perhaps add another constructor?
+      Nothing -> return (Nothing, BuildTxWith $ KeyWitness KeyWitnessForSpending, txinRef)
 
 validateTxOuts :: forall era.
                   CardanoEra era
@@ -997,9 +1036,9 @@ validateTxMintValue era (Just (val, scriptWitnessFiles)) =
         -- The set (and map) of policy ids for which we have witnesses:
         witnesses <- mapM (createScriptWitness era) scriptWitnessFiles
         let witnessesProvidedMap :: Map PolicyId (ScriptWitness WitCtxMint era)
-            witnessesProvidedMap = Map.fromList
-                                     [ (scriptWitnessPolicyId witness, witness)
-                                     | witness <- witnesses ]
+            witnessesProvidedMap =
+              Map.fromList [ (\(Just pid, w) -> (pid, w)) (scriptWitnessPolicyId witness, witness)
+                           | witness <- witnesses ]
             witnessesProvidedSet = Map.keysSet witnessesProvidedMap
 
         -- Check not too many, nor too few:
@@ -1020,11 +1059,11 @@ validateTxMintValue era (Just (val, scriptWitnessFiles)) =
       where
         witnessesExtra = Set.elems (witnessesProvided Set.\\ witnessesNeeded)
 
-scriptWitnessPolicyId :: ScriptWitness witctx era -> PolicyId
+scriptWitnessPolicyId :: ScriptWitness witctx era -> Maybe PolicyId
 scriptWitnessPolicyId witness =
   case scriptWitnessScript witness of
-    ScriptInEra _ script -> scriptPolicyId script
-
+    Just (ScriptInEra _ script) -> Just $ scriptPolicyId script
+    Nothing -> Nothing
 
 createScriptWitness
   :: CardanoEra era
@@ -1073,6 +1112,30 @@ createScriptWitness era (PlutusScriptWitnessFiles
                  scriptFile
                  (AnyScriptLanguage lang)
 
+createScriptWitness era SimpleReferenceScriptWitnessFiles =
+   case refInsScriptsAndInlineDatsSupportedInEra era of
+    Nothing -> left $ ShelleyTxCmdReferenceScriptsNotSupportedInEra
+                    $ getIsCardanoEra era (AnyCardanoEra era)
+    Just _ -> return SimpleReferenceScriptWitness
+
+createScriptWitness era (PlutusReferenceScriptWitnessFiles anyScrLang@(AnyScriptLanguage anyScriptLanguage) datumOrFile redeemerOrFile execUnits) = do
+  case refInsScriptsAndInlineDatsSupportedInEra era of
+    Nothing -> left $ ShelleyTxCmdReferenceScriptsNotSupportedInEra
+                    $ getIsCardanoEra era (AnyCardanoEra era)
+    Just _ -> do
+      datum    <- readScriptDatumOrFile    datumOrFile
+      redeemer <- readScriptRedeemerOrFile redeemerOrFile
+      case scriptLanguageSupportedInEra era anyScriptLanguage of
+        Just sLangInEra ->  return $ PlutusReferenceScriptWitness sLangInEra (languageOfScriptLanguageInEra sLangInEra) datum redeemer execUnits
+        Nothing -> left $ ShelleyTxCmdScriptLanguageNotSupportedInEra anyScrLang (anyCardanoEra era)
+
+getIsCardanoEra :: CardanoEra era -> (IsCardanoEra era => a) -> a
+getIsCardanoEra ByronEra f = f
+getIsCardanoEra ShelleyEra f = f
+getIsCardanoEra AllegraEra f = f
+getIsCardanoEra MaryEra f = f
+getIsCardanoEra AlonzoEra f = f
+getIsCardanoEra BabbageEra f = f
 
 readScriptDatumOrFile :: ScriptDatumOrFile witctx
                       -> ExceptT ShelleyTxCmdError IO (ScriptDatum witctx)
@@ -1125,7 +1188,7 @@ runTxSign txOrTxBody witSigningData mnw (TxFile outTxFile) = do
     (InputTxFile (TxFile inputTxFile)) -> do
       anyTx <- readFileTx inputTxFile
 
-      InAnyShelleyBasedEra _era tx <-
+      InAnyShelleyBasedEra era tx <-
           onlyInShelleyBasedEras "sign for Byron era transactions" anyTx
 
       let (txbody, existingTxKeyWits) = getTxBodyAndWitnesses tx
@@ -1137,6 +1200,8 @@ runTxSign txOrTxBody witSigningData mnw (TxFile outTxFile) = do
       let newShelleyKeyWits = map (makeShelleyKeyWitness txbody) sksShelley
           allKeyWits = existingTxKeyWits ++ newShelleyKeyWits ++ byronWitnesses
           signedTx = makeSignedTransaction allKeyWits txbody
+          ShelleyTx _ ledgerTx = signedTx
+      liftIO $ getConstraints era $ print ledgerTx
 
       firstExceptT ShelleyTxCmdWriteFileError . newExceptT $
         writeFileTextEnvelope outTxFile Nothing signedTx
@@ -1163,7 +1228,7 @@ runTxSign txOrTxBody witSigningData mnw (TxFile outTxFile) = do
                       writeTxFileTextEnvelopeCddl outTxFile tx
 
         UnwitnessedCliFormattedTxBody anyTxbody -> do
-          InAnyShelleyBasedEra _era txbody <-
+          InAnyShelleyBasedEra era txbody <-
             --TODO: in principle we should be able to support Byron era txs too
             onlyInShelleyBasedEras "sign for Byron era transactions" anyTxbody
           -- Byron witnesses require the network ID. This can either be provided
@@ -1174,10 +1239,21 @@ runTxSign txOrTxBody witSigningData mnw (TxFile outTxFile) = do
 
           let shelleyKeyWitnesses = map (makeShelleyKeyWitness txbody) sksShelley
               tx = makeSignedTransaction (byronWitnesses ++ shelleyKeyWitnesses) txbody
+              ShelleyTx _ ledgerTx = tx
+          liftIO $ getConstraints era $ print ledgerTx
 
           firstExceptT ShelleyTxCmdWriteFileError . newExceptT $
             writeFileTextEnvelope outTxFile Nothing tx
 
+getConstraints
+  :: ShelleyBasedEra era
+  -> (Show (Core.Tx (ShelleyLedgerEra era)) => a)
+  -> a
+getConstraints ShelleyBasedEraShelley f = f
+getConstraints ShelleyBasedEraAllegra f = f
+getConstraints ShelleyBasedEraMary f = f
+getConstraints ShelleyBasedEraAlonzo f = f
+getConstraints ShelleyBasedEraBabbage f = f
 
 -- ----------------------------------------------------------------------------
 -- Transaction submission
