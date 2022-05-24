@@ -234,20 +234,20 @@ beForgedAt BlockEvents{beForge=BlockForge{..}} =
   bfForged `afterSlot` bfSlotStart
 
 mapChainToBlockEventCDF ::
-  (Real a, ToRealFrac a Float)
-  => [PercSpec Float]
+  (Real a, ToRealFrac a Double)
+  => [PercSpec Double]
   -> [BlockEvents]
   -> (BlockEvents -> Maybe a)
-  -> Distribution Float a
+  -> Distribution Double a
 mapChainToBlockEventCDF percs cbes proj =
   computeDistribution percs $ mapMaybe proj cbes
 
 mapChainToPeerBlockObservationCDF ::
-     [PercSpec Float]
+     [PercSpec Double]
   -> [BlockEvents]
   -> (BlockObservation -> Maybe NominalDiffTime)
   -> String
-  -> Distribution Float NominalDiffTime
+  -> Distribution Double NominalDiffTime
 mapChainToPeerBlockObservationCDF percs cbes proj desc =
   computeDistribution percs allObservations
  where
@@ -457,7 +457,7 @@ blockProp run@Run{genesis} chain domSlot domBlock = do
     , bpVersion             = getVersion
     }
  where
-   forgerEventsCDF   :: (Real a, ToRealFrac a Float) => (BlockEvents -> Maybe a) -> Distribution Float a
+   forgerEventsCDF   :: (Real a, ToRealFrac a Double) => (BlockEvents -> Maybe a) -> Distribution Double a
    forgerEventsCDF   = mapChainToBlockEventCDF           stdPercSpecs chain
    observerEventsCDF = mapChainToPeerBlockObservationCDF stdPercSpecs chain
 

@@ -38,20 +38,20 @@ data BlockPropagation
     { bpVersion             :: !Version
     , bpDomainSlots         :: !(DataDomain SlotNo)
     , bpDomainBlocks        :: !(DataDomain BlockNo)
-    , bpForgerChecks        :: !(Distribution Float NominalDiffTime)
-    , bpForgerLeads         :: !(Distribution Float NominalDiffTime)
-    , bpForgerForges        :: !(Distribution Float NominalDiffTime)
-    , bpForgerAdoptions     :: !(Distribution Float NominalDiffTime)
-    , bpForgerAnnouncements :: !(Distribution Float NominalDiffTime)
-    , bpForgerSends         :: !(Distribution Float NominalDiffTime)
-    , bpPeerNotices         :: !(Distribution Float NominalDiffTime)
-    , bpPeerRequests        :: !(Distribution Float NominalDiffTime)
-    , bpPeerFetches         :: !(Distribution Float NominalDiffTime)
-    , bpPeerAdoptions       :: !(Distribution Float NominalDiffTime)
-    , bpPeerAnnouncements   :: !(Distribution Float NominalDiffTime)
-    , bpPeerSends           :: !(Distribution Float NominalDiffTime)
-    , bpPropagation         :: ![(Float, Distribution Float NominalDiffTime)]
-    , bpSizes               :: !(Distribution Float Int)
+    , bpForgerChecks        :: !(Distribution Double NominalDiffTime)
+    , bpForgerLeads         :: !(Distribution Double NominalDiffTime)
+    , bpForgerForges        :: !(Distribution Double NominalDiffTime)
+    , bpForgerAdoptions     :: !(Distribution Double NominalDiffTime)
+    , bpForgerAnnouncements :: !(Distribution Double NominalDiffTime)
+    , bpForgerSends         :: !(Distribution Double NominalDiffTime)
+    , bpPeerNotices         :: !(Distribution Double NominalDiffTime)
+    , bpPeerRequests        :: !(Distribution Double NominalDiffTime)
+    , bpPeerFetches         :: !(Distribution Double NominalDiffTime)
+    , bpPeerAdoptions       :: !(Distribution Double NominalDiffTime)
+    , bpPeerAnnouncements   :: !(Distribution Double NominalDiffTime)
+    , bpPeerSends           :: !(Distribution Double NominalDiffTime)
+    , bpPropagation         :: ![(Double, Distribution Double NominalDiffTime)]
+    , bpSizes               :: !(Distribution Double Int)
     }
   deriving (Generic, FromJSON, ToJSON, Show)
 
@@ -66,7 +66,7 @@ data BlockEvents
   , beEpochSafeInt :: !EpochSafeInt
   , beForge        :: !BlockForge
   , beObservations :: [BlockObservation]
-  , bePropagation  :: !(Distribution Float NominalDiffTime)
+  , bePropagation  :: !(Distribution Double NominalDiffTime)
                       -- ^ CDF of slot-start-to-adoptions on cluster
   , beOtherBlocks  :: [Hash]
   , beErrors       :: [BPError]
@@ -163,18 +163,18 @@ data MachTimeline' f
     { sVersion                  :: !Version
     , sDomain                   :: !(f (DataDomain SlotNo))
     -- distributions
-    , sMissDistrib              :: !(f (Distribution Float Float))
-    , sLeadsDistrib             :: !(f (Distribution Float Word64))
-    , sUtxoDistrib              :: !(f (Distribution Float Word64))
-    , sDensityDistrib           :: !(f (Distribution Float Float))
-    , sSpanCheckDistrib         :: !(f (Distribution Float NominalDiffTime))
-    , sSpanLeadDistrib          :: !(f (Distribution Float NominalDiffTime))
-    , sSpanForgeDistrib         :: !(f (Distribution Float NominalDiffTime))
-    , sBlocklessDistrib         :: !(f (Distribution Float Word64))
-    , sSpanLensCPU85Distrib     :: !(f (Distribution Float Int))
-    , sSpanLensCPU85EBndDistrib :: !(f (Distribution Float Int))
-    , sSpanLensCPU85RwdDistrib  :: !(f (Distribution Float Int))
-    , sResourceDistribs         :: !(f (Resources (Distribution Float Word64)))
+    , sMissDistrib              :: !(f (Distribution Double Double))
+    , sLeadsDistrib             :: !(f (Distribution Double Word64))
+    , sUtxoDistrib              :: !(f (Distribution Double Word64))
+    , sDensityDistrib           :: !(f (Distribution Double Double))
+    , sSpanCheckDistrib         :: !(f (Distribution Double NominalDiffTime))
+    , sSpanLeadDistrib          :: !(f (Distribution Double NominalDiffTime))
+    , sSpanForgeDistrib         :: !(f (Distribution Double NominalDiffTime))
+    , sBlocklessDistrib         :: !(f (Distribution Double Word64))
+    , sSpanLensCPU85Distrib     :: !(f (Distribution Double Int))
+    , sSpanLensCPU85EBndDistrib :: !(f (Distribution Double Int))
+    , sSpanLensCPU85RwdDistrib  :: !(f (Distribution Double Int))
+    , sResourceDistribs         :: !(f (Resources (Distribution Double Word64)))
     }
   deriving (Generic)
 
@@ -206,7 +206,7 @@ data SlotStats
     , slTxsAccepted  :: !Word64
     , slTxsRejected  :: !Word64
     , slUtxoSize     :: !Word64
-    , slDensity      :: !Float
+    , slDensity      :: !Double
     , slResources    :: !(Resources (Maybe Word64))
     }
   deriving (Generic, Show, ToJSON)
@@ -308,7 +308,7 @@ instance RenderDistributions BlockPropagation where
      r = nChunksEachOf aLen 6 "Slot-rel. Δt to adoption centile:"
      aLen = length adoptionPcts + 1 -- +1 is for the implied 1.0 percentile
 
-adoptionPcts :: [PercSpec Float]
+adoptionPcts :: [PercSpec Double]
 adoptionPcts =
   [ Perc 0.5, Perc 0.8, Perc 0.9, Perc 0.92, Perc 0.94, Perc 0.96, Perc 0.98 ]
 
@@ -354,7 +354,7 @@ instance RenderTimeline BlockEvents where
      m = nChunksEachOf 3 4 "Missing"
      n = nChunksEachOf 2 4 "Negative"
 
-     percSpec :: Float -> Distribution Float NominalDiffTime -> NominalDiffTime
+     percSpec :: Double -> Distribution Double NominalDiffTime -> NominalDiffTime
      percSpec ps d = dPercSpec (Perc ps) d
        & fromMaybe (error $ printf "No percentile %f in distribution." ps)
      af  f = avg . fmap f
@@ -438,7 +438,7 @@ instance RenderTimeline SlotStats where
     , Field 6 0 "productiv"   "Produc" "tivity"  $ IText
       (\SlotStats{..}->
           f 4 $ calcProd <$> (min 6 . -- workaround for ghc-8.10.2
-                              fromIntegral <$> rCentiMut slResources :: Maybe Float)
+                              fromIntegral <$> rCentiMut slResources :: Maybe Double)
           <*> (fromIntegral <$> rCentiCpu slResources))
     , Field 5 0 "rssMB"       (m 5!!0) "RSS"     $ IText (d 5.rRSS  .slResources)
     , Field 5 0 "heapMB"      (m 5!!1) "Heap"    $ IText (d 5.rHeap .slResources)
@@ -447,7 +447,7 @@ instance RenderTimeline SlotStats where
     , Field 6 0 "allocMut"     "Alloc/" "mutSec" $ IText
       (\SlotStats{..}->
           d 5 $
-          (ceiling :: Float -> Int)
+          (ceiling :: Double -> Int)
           <$> ((/) <$> (fromIntegral . (100 *) <$> rAlloc slResources)
                 <*> (fromIntegral . max 1 . (1024 *) <$> rCentiMut slResources)))
     , Field 7 0 "mempoolTxs"   "Mempool" "txs"   $ IWord64 slMempoolTxs
@@ -471,5 +471,5 @@ instance RenderTimeline SlotStats where
        Just x  -> T.pack $ printf ("%0."<>show width<>"f") x
        Nothing -> mconcat (replicate width "-")
 
-     calcProd :: Float -> Float -> Float
+     calcProd :: Double -> Double -> Double
      calcProd mut' cpu' = if cpu' == 0 then 1 else mut' / cpu'

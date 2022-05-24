@@ -52,14 +52,14 @@ type ResDistribProjections a = Resources (a -> Maybe Word64)
 
 computeResDistrib ::
   forall a
-  .  [PercSpec Float]
+  .  [PercSpec Double]
   -> ResDistribProjections a
   -> [a]
-  -> Resources (Distribution Float Word64)
+  -> Resources (Distribution Double Word64)
 computeResDistrib percentiles projs xs =
   compDist <$> projs
  where
-   compDist :: (a -> Maybe Word64) -> Distribution Float Word64
+   compDist :: (a -> Maybe Word64) -> Distribution Double Word64
    compDist proj = computeDistribution percentiles
      (catMaybes . toList $ proj <$> xs)
 

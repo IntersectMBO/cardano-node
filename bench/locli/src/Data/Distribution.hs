@@ -14,6 +14,7 @@
 module Data.Distribution
   ( ToRealFrac(..)
   , Distribution(..)
+  , mapDistributionIx
   , computeDistribution
   , computeDistributionStats
   , mapToDistribution
@@ -33,12 +34,11 @@ module Data.Distribution
   , spans
   ) where
 
-import Prelude (String, (!!), error, head, last, show)
+import Prelude (String, (!!), error, head, show)
 import Cardano.Prelude hiding (head, show)
 
 import Control.Arrow
 import Data.Aeson (FromJSON(..), ToJSON(..))
-import Data.Foldable qualified as F
 import Data.List (span)
 import Data.Vector (Vector)
 import Data.Vector qualified as Vec
@@ -49,6 +49,7 @@ data Distribution a b =
   Distribution
   { dSize         :: Int
   , dAverage      :: a
+  , dStddev       :: a
   , dRange        :: (b, b)
   , dPercentiles  :: [Percentile a b]
   }
@@ -65,6 +66,15 @@ newtype PercSpec a =
 
 instance (FromJSON a) => FromJSON (PercSpec a)
 instance (  ToJSON a) => ToJSON   (PercSpec a)
+
+mapDistributionIx :: (a -> b) -> Distribution a c -> Distribution b c
+mapDistributionIx f Distribution{..} =
+  Distribution
+  { dAverage     = f dAverage
+  , dStddev      = f dStddev
+  , dPercentiles = mapPercentileIx f <$> dPercentiles
+  , ..
+  }
 
 dPercIx :: Int -> Distribution a b -> b
 dPercIx i d = pctSample $ dPercentiles d !! i
@@ -93,17 +103,20 @@ data Percentile a b =
 instance (FromJSON a, FromJSON b) => FromJSON (Percentile a b)
 instance (  ToJSON a,   ToJSON b) => ToJSON   (Percentile a b)
 
+mapPercentileIx :: (a -> b) -> Percentile a c -> Percentile b c
+mapPercentileIx f Percentile{..} = Percentile { pctSpec = Perc (f $ psFrac pctSpec), ..}
+
 pctFrac :: Percentile a b -> a
 pctFrac = psFrac . pctSpec
 
 distribPercSpecs :: Distribution a b -> [PercSpec a]
 distribPercSpecs = fmap pctSpec . dPercentiles
 
-briefPercSpecs :: [PercSpec Float]
+briefPercSpecs :: [PercSpec Double]
 briefPercSpecs =
   [ Perc 0.5, Perc 0.9, Perc 1.0 ]
 
-stdPercSpecs :: [PercSpec Float]
+stdPercSpecs :: [PercSpec Double]
 stdPercSpecs =
   [ Perc 0.01, Perc 0.05
   , Perc 0.1, Perc 0.2, Perc 0.3, Perc 0.4
@@ -120,6 +133,7 @@ zeroDistribution =
   Distribution
   { dSize        = 0
   , dAverage     = 0
+  , dStddev      = 0
   , dRange       = (0, 0)
   , dPercentiles = mempty
   }
@@ -145,6 +159,7 @@ computeDistributionStats desc xs = do
   pure $ (join (***) (Distribution
                       (length xs)
                       (fromRational (toRational total) / fromIntegral samples)
+                      0
                       (minimum $ fst . dRange <$> xs, maximum $ snd . dRange <$> xs))
           :: ([Percentile a v], [Percentile a v]) -> (Distribution a v, Distribution a v))
        $ unzip (pctsMeanCoV <$> pctDistVals)
@@ -158,31 +173,35 @@ computeDistributionStats desc xs = do
       vec = Vec.fromList $ pctSample <$> xs'
       mean = Stat.mean vec
 
-mapToDistribution :: (Real v, ToRealFrac v a) => (b -> v) -> [PercSpec a] -> [b] -> Distribution a v
+mapToDistribution :: (Real v, ToRealFrac v a, a ~ Double)
+  => (b -> v) -> [PercSpec a] -> [b] -> Distribution a v
 mapToDistribution f pspecs xs = computeDistribution pspecs (f <$> xs)
 
-computeDistribution :: (Real v, ToRealFrac v a) => [PercSpec a] -> [v] -> Distribution a v
+computeDistribution :: (Real v, ToRealFrac v a, a ~ Double)
+  => [PercSpec a] -> [v] -> Distribution a v
 computeDistribution percentiles (sort -> sorted) =
   Distribution
   { dSize        = size
-  , dAverage     = toRealFrac (F.sum sorted) / fromIntegral (size `max` 1)
+  , dAverage     = Stat.mean   doubleVec
+  , dStddev      = Stat.stdDev doubleVec
   , dRange       = (mini, maxi)
   , dPercentiles =
     (Percentile     (Perc 0)   mini:) .
     (<> [Percentile (Perc 1.0) maxi]) $
     percentiles <&>
       \spec ->
-        let sample = if size == 0
-                     then 0
-                     else sorted !! indexAtFrac (psFrac spec)
+        let sample = if size == 0 then 0
+                     else vec Vec.! fracIndex (psFrac spec)
         in Percentile spec sample
   }
- where size = length sorted
-       indexAtFrac f = floor (fromIntegral (size - 1) * f)
+ where vec         = Vec.fromList sorted
+       size        = length vec
+       doubleVec   = fromRational . toRational <$> vec
+       fracIndex f = floor (fromIntegral (size - 1) * f)
        (,) mini maxi =
          if size == 0
          then (0,           0)
-         else (head sorted, last sorted)
+         else (vec Vec.! 0, Vec.last vec)
 
 subsetDistribution :: Eq a => [PercSpec a] -> Distribution a b -> Distribution a b
 subsetDistribution xs d =

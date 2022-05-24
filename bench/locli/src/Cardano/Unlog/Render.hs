@@ -48,19 +48,19 @@ type DField a = Field DSelect a
 type IField a = Field ISelect a
 
 data DSelect a
-  = DInt    (a -> Distribution Float Int)
-  | DWord64 (a -> Distribution Float Word64)
-  | DFloat  (a -> Distribution Float Float)
-  | DDeltaT (a -> Distribution Float NominalDiffTime)
+  = DInt    (a -> Distribution Double Int)
+  | DWord64 (a -> Distribution Double Word64)
+  | DFloat  (a -> Distribution Double Double)
+  | DDeltaT (a -> Distribution Double NominalDiffTime)
 
 data ISelect a
   = IInt    (a -> Int)
   | IWord64 (a -> Word64)
-  | IFloat  (a -> Float)
+  | IFloat  (a -> Double)
   | IDeltaT (a -> NominalDiffTime)
   | IText   (a -> Text)
 
-mapSomeFieldDistribution :: (forall b. Distribution Float b -> c) -> a -> DSelect a -> c
+mapSomeFieldDistribution :: (forall b. Distribution Double b -> c) -> a -> DSelect a -> c
 mapSomeFieldDistribution f a = \case
   DInt    s -> f (s a)
   DWord64 s -> f (s a)
@@ -104,7 +104,7 @@ renderTimeline run flt withCommentary xs =
    renderField lpfn wfn rfn f = T.replicate (lpfn f) " " <> T.center (wfn f) ' ' (rfn f)
 
 renderDistributions :: forall a. RenderDistributions a =>
-     Run -> RenderMode -> (DField a -> Bool) -> Maybe [PercSpec Float] -> a
+     Run -> RenderMode -> (DField a -> Bool) -> Maybe [PercSpec Double] -> a
   -> [Text]
 renderDistributions run mode flt mPercs x =
   case mode of
@@ -113,13 +113,13 @@ renderDistributions run mode flt mPercs x =
      where headCsv = T.intercalate "," $ fId <$> fields
 
  where
-   percSpecs :: [PercSpec Float]
+   percSpecs :: [PercSpec Double]
    percSpecs = maybe (mapSomeFieldDistribution distribPercSpecs x (fSelect . head $ rdFields run))
                      id
                      mPercs
 
    -- XXX:  very expensive, the way it's used below..
-   subsetDistrib :: Distribution Float b -> Distribution Float b
+   subsetDistrib :: Distribution Double b -> Distribution Double b
    subsetDistrib = maybe id subsetDistribution mPercs
 
    pLines :: [Text]
@@ -185,10 +185,11 @@ renderDistributions run mode flt mPercs x =
    nPercs = length $ dPercentiles percsDistrib
    percsDistrib = mapSomeFieldDistribution
                     (distribPercsAsDistrib . subsetDistrib) x (fSelect $ head (rdFields run))
-   distribPercsAsDistrib :: Distribution Float b -> Distribution Float Float
+   distribPercsAsDistrib :: Distribution Double b -> Distribution Double Double
    distribPercsAsDistrib Distribution{..} =
      Distribution
        (length dPercentiles)
+       0.5
        0.5
        (head dPercentiles & psFrac . pctSpec,
         last dPercentiles & psFrac . pctSpec)

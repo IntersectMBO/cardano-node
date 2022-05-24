@@ -36,7 +36,7 @@ data RunScalars
   = RunScalars
   { rsElapsed       :: Maybe NominalDiffTime
   , rsSubmitted     :: Maybe Word64
-  , rsThreadwiseTps :: Maybe (Vector Float)
+  , rsThreadwiseTps :: Maybe (Vector Double)
   }
   deriving stock Generic
   deriving anyclass NFData
@@ -95,7 +95,7 @@ slotStatsSummary _ (f, slots) =
   }
  where
    i = Identity
-   dist :: (Real a, ToRealFrac a Float) => [a] -> Identity (Distribution Float a)
+   dist :: (Real a, ToRealFrac a Double) => [a] -> Identity (Distribution Double a)
    dist = i . computeDistribution stdPercSpecs
    sSpanLensCPU85EBnd = Vec.length <$>
                         filter (spanContainsEpochSlot 3) spansCPU85
@@ -134,7 +134,7 @@ slotStatsSummary _ (f, slots) =
      , rThreads     = rThreads    . slResources
      }
 
-   missRatio :: Word64 -> Float
+   missRatio :: Word64 -> Double
    missRatio = (/ fromIntegral maxChecks) . fromIntegral
 
 -- The "fold" state that accumulates as we process 'LogObject's into a stream
