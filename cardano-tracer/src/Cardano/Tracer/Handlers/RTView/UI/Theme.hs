@@ -17,8 +17,8 @@ import qualified Graphics.UI.Threepenny as UI
 import           Graphics.UI.Threepenny.Core
 
 import           Cardano.Tracer.Handlers.RTView.System
-import           Cardano.Tracer.Handlers.RTView.UI.Img.Icons
 import           Cardano.Tracer.Handlers.RTView.UI.Charts
+import           Cardano.Tracer.Handlers.RTView.UI.Img.Icons
 import           Cardano.Tracer.Handlers.RTView.UI.Utils
 
 restoreTheme, switchTheme :: UI.Window -> UI ()

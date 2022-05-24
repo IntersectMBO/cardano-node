@@ -18,7 +18,7 @@ import           Data.Maybe (mapMaybe)
 import           Data.Text (Text, intercalate)
 import           Data.Time.Clock (UTCTime)
 
-import           Cardano.Logging (TraceObject (..), SeverityS)
+import           Cardano.Logging (SeverityS, TraceObject (..))
 
 import           Cardano.Tracer.Types (NodeId)
 

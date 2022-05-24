@@ -6,8 +6,8 @@ module Cardano.Tracer.Handlers.RTView.Update.Chain
   ( updateBlockchainHistory
   ) where
 
-import           Data.Time.Clock
-import           Data.Text.Read
+import           Data.Text.Read (double)
+import           Data.Time.Clock (UTCTime)
 
 import           Cardano.Tracer.Handlers.Metrics.Utils
 import           Cardano.Tracer.Handlers.RTView.State.Historical
@@ -37,7 +37,7 @@ updateBlockchainHistory nodeId (ChainHistory cHistory) metricName metricValue no
         addHistoricalData cHistory nodeId now ChainDensityData $ ValueD density'
 
   updateSlotNum =
-    readValueI metricValue $ addHistoricalData cHistory nodeId now SlotNumData 
+    readValueI metricValue $ addHistoricalData cHistory nodeId now SlotNumData
 
   updateBlockNum =
     readValueI metricValue $ addHistoricalData cHistory nodeId now BlockNumData

@@ -1,4 +1,6 @@
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE StandaloneDeriving #-}
 
 module Cardano.Tracer.Handlers.RTView.State.Errors
   ( ErrorIx
@@ -16,15 +18,20 @@ module Cardano.Tracer.Handlers.RTView.State.Errors
   , severityDesc
   , initErrors
   , deleteAllErrors
+  , errorsToJSON
   ) where
 
 import           Control.Concurrent.STM (atomically)
-import           Control.Concurrent.STM.TVar
+import           Control.Concurrent.STM.TVar (TVar, modifyTVar', newTVarIO, readTVarIO)
+import           Data.Aeson (ToJSON)
+import           Data.Aeson.Encode.Pretty (encodePretty)
+import qualified Data.ByteString.Lazy as BSL
 import           Data.List (find, sortBy)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
 import           Data.Text (Text, isInfixOf)
 import qualified Data.Text as T
+import           Data.Text.Encoding (decodeUtf8)
 
 import           Cardano.Tracer.Handlers.RTView.State.TraceObjects
 import           Cardano.Tracer.Types (NodeId)
@@ -34,6 +41,9 @@ import           Cardano.Logging (SeverityS)
 type ErrorIx = Int
 type ErrorInfo = (ErrorIx, TraceObjectInfo)
 type Errors = TVar (Map NodeId [ErrorInfo])
+
+-- | We need it to export errors list to JSON-file.
+deriving instance ToJSON SeverityS
 
 initErrors :: IO Errors
 initErrors = newTVarIO M.empty
@@ -130,3 +140,14 @@ getErrorsHandled errors nodeId handler = do
   case M.lookup nodeId errors' of
     Nothing -> return []
     Just errorsFromNode -> return $ handler errorsFromNode
+
+errorsToJSON
+  :: Errors
+  -> NodeId
+  -> IO (Maybe Text)
+errorsToJSON errors nodeId =
+  getErrors errors nodeId >>= \case
+    [] -> return Nothing
+    errorsFromNode -> do
+      let errorsList = [eI | (_ix, eI) <- errorsFromNode]
+      return . Just . decodeUtf8 . BSL.toStrict $ encodePretty errorsList

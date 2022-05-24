@@ -1,4 +1,5 @@
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Cardano.Tracer.Handlers.RTView.Run
   ( runRTView
@@ -14,8 +15,9 @@ import qualified Graphics.UI.Threepenny as UI
 import           System.Time.Extra (sleep)
 
 import           Cardano.Tracer.Configuration
-import           Cardano.Tracer.Handlers.RTView.State.EraSettings
+import           Cardano.Tracer.Handlers.RTView.SSL.Certs
 import           Cardano.Tracer.Handlers.RTView.State.Displayed
+import           Cardano.Tracer.Handlers.RTView.State.EraSettings
 import           Cardano.Tracer.Handlers.RTView.State.Errors
 import           Cardano.Tracer.Handlers.RTView.State.Historical
 import           Cardano.Tracer.Handlers.RTView.State.Last
@@ -48,6 +50,8 @@ runRTView TracerConfig{logging, network, hasRTView}
   whenJust hasRTView $ \(Endpoint host port) -> do
     -- Pause to prevent collision between "Listening"-notifications from servers.
     sleep 0.3
+    -- Get paths to default SSL files for config.
+    (certFile, keyFile) <- placeDefaultSSLFiles
     -- Initialize displayed stuff outside of main page renderer,
     -- to be able to update corresponding elements after page reloading.
     displayedElements <- initDisplayedElements
@@ -64,8 +68,10 @@ runRTView TracerConfig{logging, network, hasRTView}
     errors <- initErrors
 
     void . sequenceConcurrently $
-      [ UI.startGUI (config host port) $
+      [ UI.startGUI (config host port certFile keyFile) $
           mkMainPage
+            host
+            port
             connectedNodes
             displayedElements
             acceptedMetrics
@@ -96,8 +102,14 @@ runRTView TracerConfig{logging, network, hasRTView}
           savedTO
       ]
  where
-  config h p = UI.defaultConfig
-    { UI.jsPort = Just . fromIntegral $ p
-    , UI.jsAddr = Just . encodeUtf8 . T.pack $ h
-    , UI.jsLog  = const $ return () -- To hide 'threepenny-gui' internal messages.
+  -- RTView's web page is available via 'https://'.
+  -- If the user will open 'http://' url, he will be redirected
+  -- to 'https://' url automatically.
+  config h p cert key = UI.defaultConfig
+    { UI.jsSSLBind = Just . encodeUtf8 . T.pack $ h
+    , UI.jsSSLPort = Just . fromIntegral $ p
+    , UI.jsSSLCert = Just cert
+    , UI.jsSSLKey  = Just key
+    , UI.jsLog     = const $ return () -- To hide 'threepenny-gui' internal messages.
+    , UI.jsWindowReloadOnDisconnect = False
     }

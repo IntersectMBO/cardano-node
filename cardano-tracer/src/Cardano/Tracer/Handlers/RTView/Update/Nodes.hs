@@ -17,14 +17,14 @@ import           Control.Monad (forM_, unless, when)
 import           Control.Monad.Extra (whenJust)
 import           Data.List.NonEmpty (NonEmpty)
 import qualified Data.Map.Strict as M
-import           Data.Maybe (fromMaybe, catMaybes)
+import           Data.Maybe (catMaybes, fromMaybe)
 import           Data.Set (Set, (\\))
 import qualified Data.Set as S
 import qualified Data.Text as T
-import           Data.Text.Read
-import           Data.Time.Calendar
-import           Data.Time.Clock
-import           Data.Time.Clock.System
+import           Data.Text.Read (double)
+import           Data.Time.Calendar (diffDays)
+import           Data.Time.Clock (UTCTime, addUTCTime, diffUTCTime, utctDay)
+import           Data.Time.Clock.System (getSystemTime, systemToUTCTime)
 import           Data.Time.Format (defaultTimeLocale, formatTime)
 import           Data.Word (Word64)
 import qualified Graphics.UI.Threepenny as UI
@@ -33,12 +33,12 @@ import           Text.Read (readMaybe)
 
 import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.Handlers.Metrics.Utils
+import           Cardano.Tracer.Handlers.RTView.State.Displayed
 import           Cardano.Tracer.Handlers.RTView.State.EraSettings
 import           Cardano.Tracer.Handlers.RTView.State.Errors
-import           Cardano.Tracer.Handlers.RTView.State.Displayed
 import           Cardano.Tracer.Handlers.RTView.State.TraceObjects
-import           Cardano.Tracer.Handlers.RTView.UI.HTML.Node.Column
 import           Cardano.Tracer.Handlers.RTView.UI.Charts
+import           Cardano.Tracer.Handlers.RTView.UI.HTML.Node.Column
 import           Cardano.Tracer.Handlers.RTView.UI.Types
 import           Cardano.Tracer.Handlers.RTView.UI.Utils
 import           Cardano.Tracer.Handlers.RTView.Update.NodeInfo
@@ -70,7 +70,13 @@ updateNodesUI window connectedNodes displayedElements acceptedMetrics savedTO no
     let disconnected   = displayed \\ connected -- In 'displayed' but not in 'connected'.
         newlyConnected = connected \\ displayed -- In 'connected' but not in 'displayed'.
     deleteColumnsForDisconnected window connected disconnected
-    addColumnsForConnected window newlyConnected loggingConfig nodesErrors updateErrorsTimer
+    addColumnsForConnected
+      window
+      newlyConnected
+      loggingConfig
+      nodesErrors
+      updateErrorsTimer
+      displayedElements
     checkNoNodesState window connected
     askNSetNodeInfo window dpRequestors newlyConnected displayedElements
     addDatasetsForConnected window newlyConnected colors datasetIndices displayedElements
@@ -87,12 +93,19 @@ addColumnsForConnected
   -> NonEmpty LoggingParams
   -> Errors
   -> UI.Timer
+  -> DisplayedElements
   -> UI ()
-addColumnsForConnected window newlyConnected loggingConfig nodesErrors updateErrorsTimer = do
+addColumnsForConnected window newlyConnected loggingConfig
+                       nodesErrors updateErrorsTimer displayedElements = do
   unless (S.null newlyConnected) $
     findAndShow window "main-table-container"
   forM_ newlyConnected $
-    addNodeColumn window loggingConfig nodesErrors updateErrorsTimer
+    addNodeColumn
+      window
+      loggingConfig
+      nodesErrors
+      updateErrorsTimer
+      displayedElements
 
 addDatasetsForConnected
   :: UI.Window

@@ -5,7 +5,7 @@ module Cardano.Tracer.Handlers.RTView.Update.Reload
   ( updateUIAfterReload
   ) where
 
-import           Control.Concurrent.STM.TVar
+import           Control.Concurrent.STM.TVar (readTVarIO)
 import           Data.List.NonEmpty (NonEmpty)
 import qualified Graphics.UI.Threepenny as UI
 import           Graphics.UI.Threepenny.Core
@@ -33,8 +33,14 @@ updateUIAfterReload window connectedNodes displayedElements dpRequestors
                     loggingConfig colors datasetIndices nodesErrors updateErrorsTimer = do
   -- Ok, web-page was reload (i.e. it's the first update after DOM-rendering),
   -- so displayed state should be restored immediately.
-  connected <- liftIO $ readTVarIO connectedNodes  
-  addColumnsForConnected window connected loggingConfig nodesErrors updateErrorsTimer
+  connected <- liftIO $ readTVarIO connectedNodes
+  addColumnsForConnected
+    window
+    connected
+    loggingConfig
+    nodesErrors
+    updateErrorsTimer
+    displayedElements
   checkNoNodesState window connected
   askNSetNodeInfo window dpRequestors connected displayedElements
   addDatasetsForConnected window connected colors datasetIndices displayedElements

@@ -11,14 +11,14 @@ import           Control.Monad (forM_)
 import           Control.Monad.Extra (whenJust)
 import qualified Data.Map.Strict as M
 import           Data.Text (pack)
-import           Data.Text.Read
+import           Data.Text.Read (decimal)
 import qualified Graphics.UI.Threepenny as UI
-import           Graphics.UI.Threepenny.Core
-import           Text.Printf
+import           Graphics.UI.Threepenny.Core (UI, liftIO)
+import           Text.Printf (printf)
 
 import           Cardano.Tracer.Handlers.Metrics.Utils
-import           Cardano.Tracer.Handlers.RTView.State.EraSettings
 import           Cardano.Tracer.Handlers.RTView.State.Displayed
+import           Cardano.Tracer.Handlers.RTView.State.EraSettings
 import           Cardano.Tracer.Handlers.RTView.UI.Utils
 import           Cardano.Tracer.Types
 
