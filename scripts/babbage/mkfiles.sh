@@ -111,8 +111,10 @@ $SED -i "${ROOT}/configuration.yaml" \
 cardano-cli genesis create-staked --genesis-dir "${ROOT}" \
   --testnet-magic "${NETWORK_MAGIC}" \
   --gen-pools 3 \
-  --supply-delegated 100000000000 \
-  --gen-stake-delegs 3
+  --supply 1000000000000 \
+  --supply-delegated 1000000000000 \
+  --gen-stake-delegs 3 \
+  --gen-utxo-keys 3
 
 SPO_NODES="node-spo1 node-spo2 node-spo3"
 
