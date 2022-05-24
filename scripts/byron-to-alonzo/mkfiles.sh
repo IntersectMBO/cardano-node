@@ -353,6 +353,21 @@ cardano-cli stake-address key-gen \
   --verification-key-file shelley/utxo-keys/utxo2-stake.vkey \
   --signing-key-file shelley/utxo-keys/utxo2-stake.skey
 
+# Create a symlink to all the payment keys in utxo-keys directory
+mkdir -p utxo-keys
+
+for x in $(find shelley/utxo-keys -type f); do
+  if cat "$x" | jq -e 'select(
+      false
+      or .type == "GenesisUTxOVerificationKey_ed25519"
+      or .type == "GenesisUTxOSigningKey_ed25519"
+      or .type == "PaymentSigningKeyShelley_ed25519"
+      or .type == "PaymentVerificationKeyShelley_ed25519"
+      )' > /dev/null; then
+    ln -sf "../$x" "utxo-keys/$(basename "$x")"
+  fi
+done
+
 echo "====================================================================="
 echo "Generated genesis keys and genesis files:"
 echo
