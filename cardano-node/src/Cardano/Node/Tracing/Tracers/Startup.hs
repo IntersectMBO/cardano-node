@@ -130,6 +130,7 @@ namesStartupInfo = \case
   StartupSocketConfigError {}               -> ["StartupSocketConfigError"]
   StartupDBValidation {}                    -> ["StartupDBValidation"]
   NetworkConfigUpdate {}                    -> ["NetworkConfigUpdate"]
+  NetworkConfigUpdateUnsupported            -> ["NetworkConfigUpdateUnsupported"]
   NetworkConfigUpdateError {}               -> ["NetworkConfigUpdateError"]
   NetworkConfig {}                          -> ["NetworkConfig"]
   P2PWarning {}                             -> ["P2PWarning"]
@@ -198,7 +199,10 @@ instance ( Show (BlockNodeToNodeVersion blk)
                , "message" .= String "start db validation" ]
   forMachine _dtal NetworkConfigUpdate =
       mconcat [ "kind" .= String "NetworkConfigUpdate"
-               , "message" .= String "ntework configuration update" ]
+               , "message" .= String "network configuration update" ]
+  forMachine _dtal NetworkConfigUpdateUnsupported =
+      mconcat [ "kind" .= String "NetworkConfigUpdate"
+              , "message" .= String "network topology reconfiguration is not supported in non-p2p mode" ]
   forMachine _dtal (NetworkConfigUpdateError err) =
       mconcat [ "kind" .= String "NetworkConfigUpdateError"
                , "error" .= String err ]
@@ -299,6 +303,8 @@ ppStartupInfoTrace (StartupSocketConfigError err) =
 ppStartupInfoTrace StartupDBValidation = "Performing DB validation"
 
 ppStartupInfoTrace NetworkConfigUpdate = "Performing topology configuration update"
+ppStartupInfoTrace NetworkConfigUpdateUnsupported =
+  "Network topology reconfiguration is not supported in non-p2p mode"
 ppStartupInfoTrace (NetworkConfigUpdateError err) = err
 ppStartupInfoTrace (NetworkConfig localRoots publicRoots useLedgerAfter) =
     pack
