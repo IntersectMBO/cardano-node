@@ -13,6 +13,7 @@ export TESTNET_MAGIC="${TESTNET_MAGIC:-42}"
 export UTXO_VKEY="${UTXO_VKEY:-example/utxo-keys/utxo1.vkey}"
 export UTXO_SKEY="${UTXO_SKEY:-example/utxo-keys/utxo1.skey}"
 export RESULT_FILE="${RESULT_FILE:-$WORK/result.out}"
+export PV=v1 # Plutus Script Version
 
 echo "Socket path: $CARDANO_NODE_SOCKET_PATH"
 echo "Socket path: $(pwd)"
@@ -20,7 +21,7 @@ echo "Socket path: $(pwd)"
 ls -al "$CARDANO_NODE_SOCKET_PATH"
 
 # NB: This plutus script uses a "typed" redeemer and "typed" datum.
-plutusscriptinuse="$BASE/scripts/plutus/scripts/context-equivalance-test.plutus"
+plutusscriptinuse="$BASE/scripts/plutus/scripts/$PV/context-equivalance-test.plutus"
 # This datum hash is the hash of the typed 42
 scriptdatumhash="fcaa61fb85676101d9e3398a484674e71c45c3fd41b492682f3b0054f4cf3273"
 datumfilepath="$BASE/scripts/plutus/data/typed-42.datum"

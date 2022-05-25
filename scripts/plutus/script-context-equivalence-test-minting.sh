@@ -17,8 +17,10 @@ mkdir -p $work
 # Step 1 - Send ADA to token script owner
 export WORKD="${WORKD:-example/work}"
 export CARDANO_NODE_SOCKET_PATH="${CARDANO_NODE_SOCKET_PATH:-example/node-bft1/node.sock}"
+export PV=v1 # Plutus Script Version
+
 mkdir -p "$WORKD"
-plutusscriptinuse=scripts/plutus/scripts/minting-context-equivalance-test.plutus
+plutusscriptinuse=scripts/plutus/scripts/$PV/minting-context-equivalance-test.plutus
 
 utxovkey=example/utxo-keys/utxo1.vkey
 utxoskey=example/utxo-keys/utxo1.skey

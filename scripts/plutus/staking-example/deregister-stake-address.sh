@@ -13,10 +13,11 @@ export CARDANO_NODE_SOCKET_PATH="${CARDANO_NODE_SOCKET_PATH:-example/node-bft1/n
 export TESTNET_MAGIC="${TESTNET_MAGIC:-42}"
 export UTXO_VKEY1="${UTXO_VKEY1:-example/shelley/utxo-keys/utxo1.vkey}"
 export UTXO_SKEY1="${UTXO_SKEY1:-example/shelley/utxo-keys/utxo1.skey}"
+export PV=v1 # Plutus Script Version
 
 utxoaddr=$(cardano-cli address build --testnet-magic "$TESTNET_MAGIC" --payment-verification-key-file "$UTXO_VKEY1")
-scriptpaymentaddrwithstakecred=$(cardano-cli address build --payment-verification-key-file "$UTXO_VKEY1"  --stake-script-file "scripts/plutus/scripts/guess-42-stake.plutus" --testnet-magic 42)
-stakingscriptaddr=$(cardano-cli stake-address build --stake-script-file scripts/plutus/scripts/guess-42-stake.plutus --testnet-magic 42)
+scriptpaymentaddrwithstakecred=$(cardano-cli address build --payment-verification-key-file "$UTXO_VKEY1"  --stake-script-file "scripts/plutus/scripts/$PV/guess-42-stake.plutus" --testnet-magic 42)
+stakingscriptaddr=$(cardano-cli stake-address build --stake-script-file scripts/plutus/scripts/$PV/guess-42-stake.plutus --testnet-magic 42)
 
 # DEREGISTRATION
 
@@ -39,7 +40,7 @@ echo "Selected txin: $txinupdated3"
 
 # Create deregistration certificate
 cardano-cli stake-address deregistration-certificate \
-  --stake-script-file "scripts/plutus/scripts/guess-42-stake.plutus" \
+  --stake-script-file "scripts/plutus/scripts/$PV/guess-42-stake.plutus" \
   --out-file "$WORK/script.deregcert"
 
 
@@ -57,7 +58,7 @@ cardano-cli transaction build \
   --tx-out "$scriptpaymentaddrwithstakecred+500" \
   --witness-override 3 \
   --certificate-file "$WORK/script.deregcert" \
-  --certificate-script-file "scripts/plutus/scripts/guess-42-stake.plutus" \
+  --certificate-script-file "scripts/plutus/scripts/$PV/guess-42-stake.plutus" \
   --certificate-redeemer-file "scripts/plutus/data/42.redeemer" \
   --protocol-params-file "$WORK/pparams.json" \
   --out-file "$WORK/script-deregistration-cert.txbody"

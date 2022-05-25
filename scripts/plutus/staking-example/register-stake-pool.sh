@@ -19,6 +19,7 @@ export UTXO_STAKING_VKEY1="${UTXO_STAKING_VKEY1:=example/shelley/utxo-keys/utxo-
 export UTXO_STAKING_SKEY1="${UTXO_STAKING_SKEY1:=example/shelley/utxo-keys/utxo-stake.skey}"
 export UTXO_STAKING_VKEY2="${UTXO_STAKING_VKEY2:=example/shelley/utxo-keys/utxo2-stake.vkey}"
 export UTXO_STAKING_SKEY2="${UTXO_STAKING_SKEY2:=example/shelley/utxo-keys/utxo2-stake.skey}"
+export PV=v1 # Plutus Script Version
 
 mkdir -p "$WORK"
 
@@ -41,7 +42,7 @@ echo ""
 txin=$(jq -r 'keys[]' "$WORK/utxo-1.json")
 lovelaceattxin=$(jq -r ".[\"$txin\"].value.lovelace" "$WORK/utxo-1.json")
 lovelaceattxindiv3=$((lovelaceattxin / 3))
-scriptpaymentaddrwithstakecred=$(cardano-cli address build --payment-verification-key-file "$UTXO_VKEY1"  --stake-script-file "scripts/plutus/scripts/guess-42-stake.plutus" --testnet-magic 42)
+scriptpaymentaddrwithstakecred=$(cardano-cli address build --payment-verification-key-file "$UTXO_VKEY1"  --stake-script-file "scripts/plutus/scripts/$PV/guess-42-stake.plutus" --testnet-magic 42)
 poolownerstakekey="example/addresses/pool-owner1-stake.vkey"
 poolowneraddresswstakecred=$(cardano-cli address build --payment-verification-key-file  example/addresses/pool-owner1.vkey --stake-verification-key-file example/addresses/pool-owner1-stake.vkey --testnet-magic 42)
 poolcoldkey="example/node-pool1/shelley/operator.vkey"
@@ -321,7 +322,7 @@ lovelaceattxin=$(jq -r ".[\"$txin\"].value.lovelace" "$WORK/utxo-2.json")
 lovelaceattxindiv3=$((lovelaceattxin / 3))
 
 cardano-cli stake-address registration-certificate \
-  --stake-script-file "scripts/plutus/scripts/guess-42-stake.plutus" \
+  --stake-script-file "scripts/plutus/scripts/$PV/guess-42-stake.plutus" \
   --out-file "$WORK/script.regcert"
 
 cardano-cli transaction build \
@@ -345,7 +346,7 @@ cardano-cli transaction submit \
   --tx-file "$WORK/script-registration-cert.tx" \
   --testnet-magic "$TESTNET_MAGIC"
 
-stakingscriptaddr=$(cardano-cli stake-address build --stake-script-file scripts/plutus/scripts/guess-42-stake.plutus --testnet-magic 42)
+stakingscriptaddr=$(cardano-cli stake-address build --stake-script-file scripts/plutus/scripts/$PV/guess-42-stake.plutus --testnet-magic 42)
 
 echo ""
 echo "Staking script address"
@@ -367,7 +368,7 @@ echo "$registeredscr"
 # We need to delegate the script staking address
 
 cardano-cli stake-address delegation-certificate \
-  --stake-script-file "scripts/plutus/scripts/guess-42-stake.plutus" \
+  --stake-script-file "scripts/plutus/scripts/$PV/guess-42-stake.plutus" \
   --cold-verification-key-file "$poolcoldkey" \
   --out-file "$WORK/script.delegcert"
 
@@ -397,7 +398,7 @@ cardano-cli transaction build \
   --tx-out "$scriptpaymentaddrwithstakecred+999978" \
   --witness-override 3 \
   --certificate-file "$WORK/script.delegcert" \
-  --certificate-script-file "scripts/plutus/scripts/guess-42-stake.plutus" \
+  --certificate-script-file "scripts/plutus/scripts/$PV/guess-42-stake.plutus" \
   --certificate-redeemer-file "scripts/plutus/data/42.redeemer" \
   --protocol-params-file "$WORK/pparams.json" \
   --out-file "$WORK/script-delegation-cert.txbody"
