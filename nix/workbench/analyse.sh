@@ -60,8 +60,8 @@ case "$op" in
             dump-propagation
             report-prop-{forger,peers,endtoend,full}
 
-            perfanalysis
-            dump-perfanalysis
+            machperf
+            dump-machperf
             report-perf-{full,brief}
          )
         progress "analysis" "$(with_color white full), calling script:  $(colorise ${script[*]})"
@@ -77,8 +77,8 @@ case "$op" in
             filter-slots       $(test -n "$dump_slots" && echo 'dump-slots')
             timeline-slots
 
-            perfanalysis
-            dump-perfanalysis
+            machperf
+            dump-machperf
             report-perf-{full,brief}
         )
         progress "analysis" "$(with_color white performance), calling script:  $(colorise ${script[*]})"

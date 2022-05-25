@@ -3,7 +3,7 @@
 {-# LANGUAGE StrictData #-}
 {-# OPTIONS_GHC -Wno-incomplete-patterns -Wno-name-shadowing -Wno-orphans #-}
 {- HLINT ignore "Use head" -}
-module Cardano.Analysis.MachTimeline (module Cardano.Analysis.MachTimeline) where
+module Cardano.Analysis.MachPerf (module Cardano.Analysis.MachPerf) where
 
 import Prelude (error, head, last)
 import Cardano.Prelude hiding (head)
@@ -71,16 +71,61 @@ runSlotFilters Run{genesis} (flts, _fltNames) slots = do
       slotFilters :: [SlotCond]
       slotFilters = catSlotFilters filters
 
-slotStatsSummary :: Run -> (JsonLogfile, [SlotStats]) -> Either Text (JsonLogfile, MachTimeline)
-slotStatsSummary _ (JsonLogfile f, []) =
-  Left $ "slotStatsSummary:  zero filtered slots from " <> pack f
-slotStatsSummary _ (f, slots) =
-  Right . (f,) $ MachTimeline
+data SlotStatsSummary
+  = SlotStatsSummary
+  { sssMissRatios       :: [Double]
+  , sssSpanLensCpu      :: [Int]
+  , sssSpanLensCpuEpoch :: [Int]
+  , sssSpanLensCpuRwd   :: [Int]
+  }
+
+slotStatsSummary :: Run -> [SlotStats] -> SlotStatsSummary
+slotStatsSummary Run{genesis=Genesis{epochLength}} slots =
+  SlotStatsSummary{..}
+ where
+   sssMissRatios       = missRatio . (maxChecks -) <$> checkCounts
+   sssSpanLensCpu      = spanLen <$> spansCpu
+   sssSpanLensCpuRwd   = Vec.length <$> filter (spanContainsEpochSlot rewardCalcBeginSlot) spansCpu
+   sssSpanLensCpuEpoch = Vec.length <$> spansCpuEpoch
+
+   checkCounts = slCountChecks <$> slots
+   maxChecks   = maximum checkCounts
+
+   rewardCalcBeginSlot = 3 + floor @Double (fromIntegral epochLength * 0.4)
+
+   missRatio :: Word64 -> Double
+   missRatio = (/ fromIntegral maxChecks) . fromIntegral
+
+   spansCpu :: [Vector SlotStats]
+   spansCpu       = spans
+                      ((/= Just False) . fmap (>=85) . rCentiCpu . slResources)
+                      (toList slots)
+
+   spansCpuEpoch :: [Vector SlotStats]
+   spansCpuEpoch  = filter (spanContainsEpochSlot 3) spansCpu <&>
+     \v-> let   tailEpoch =  slEpoch (Vec.last v)
+          in if tailEpoch == slEpoch (Vec.head v) then v
+             else Vec.dropWhile ((tailEpoch == ) . slEpoch) v
+
+   spanLen :: Vector SlotStats -> Int
+   spanLen = fromIntegral . unSlotNo . uncurry (-) . (slSlot *** slSlot) . (Vec.last &&& Vec.head)
+
+   spanContainsEpochSlot :: Word64 -> Vector SlotStats -> Bool
+   spanContainsEpochSlot s =
+     uncurry (&&)
+     . ((s >) . unEpochSlot . slEpochSlot . Vec.head &&&
+        (s <) . unEpochSlot . slEpochSlot . Vec.last)
+
+slotStatsMachPerf :: Run -> (JsonLogfile, [SlotStats]) -> Either Text (JsonLogfile, MachPerf)
+slotStatsMachPerf _ (JsonLogfile f, []) =
+  Left $ "slotStatsMachPerf:  zero filtered slots from " <> pack f
+slotStatsMachPerf run (f, slots) =
+  Right . (f,) $ MachPerf
   { sVersion                  = getVersion
-  , sDomain                   = i $ mkDataDomainInj (slSlot $ head slots) (slSlot $ last slots)
-                                                       (fromIntegral . unSlotNo)
+  , sDomainSlots              = i $ mkDataDomainInj (slSlot $ head slots) (slSlot $ last slots)
+                                                    (fromIntegral . unSlotNo)
   --
-  , sMissDistrib              = dist missRatios
+  , sMissDistrib              = dist sssMissRatios
   , sLeadsDistrib             = dist (slCountLeads <$> slots)
   , sUtxoDistrib              = dist (slUtxoSize <$> slots)
   , sDensityDistrib           = dist (slDensity <$> slots)
@@ -88,37 +133,18 @@ slotStatsSummary _ (f, slots) =
   , sSpanLeadDistrib          = dist (slSpanLead `mapSMaybe` slots)
   , sSpanForgeDistrib         = dist (filter (/= 0) $ slSpanForge `mapSMaybe` slots)
   , sBlocklessDistrib         = dist (slBlockless <$> slots)
-  , sSpanLensCPU85Distrib     = dist spanLensCPU85
-  , sSpanLensCPU85EBndDistrib = dist sSpanLensCPU85EBnd
-  , sSpanLensCPU85RwdDistrib  = dist sSpanLensCPU85Rwd
-  , sResourceDistribs         = i $ computeResDistrib stdPercSpecs resDistProjs slots
+  , sSpanLensCpuDistrib       = dist sssSpanLensCpu
+  , sSpanLensCpuEpochDistrib  = dist sssSpanLensCpuEpoch
+  , sSpanLensCpuRwdDistrib    = dist sssSpanLensCpuRwd
+  , sResourceDistribs         = i <$> computeResDistrib stdPercSpecs resDistProjs slots
   }
  where
    i = Identity
    dist :: (Real a, ToRealFrac a Double) => [a] -> Identity (Distribution Double a)
    dist = i . computeDistribution stdPercSpecs
-   sSpanLensCPU85EBnd = Vec.length <$>
-                        filter (spanContainsEpochSlot 3) spansCPU85
-   sSpanLensCPU85Rwd  = Vec.length <$>
-                        filter (spanContainsEpochSlot 803) spansCPU85
 
-   checkCounts      = slCountChecks <$> slots
-   maxChecks        = if length checkCounts == 0
-                      then 0 else maximum checkCounts
-   misses           = (maxChecks -) <$> checkCounts
-   missRatios       = missRatio <$> misses
-   spansCPU85 :: [Vector SlotStats]
-   spansCPU85       = spans
-                        ((/= Just False) . fmap (>=85) . rCentiCpu . slResources)
-                        (toList slots)
-   spanLensCPU85    = spanLen <$> spansCPU85
-   spanContainsEpochSlot :: Word64 -> Vector SlotStats -> Bool
-   spanContainsEpochSlot s =
-     uncurry (&&)
-     . ((s >) . unEpochSlot . slEpochSlot . Vec.head &&&
-        (s <) . unEpochSlot . slEpochSlot . Vec.last)
-   spanLen :: Vector SlotStats -> Int
-   spanLen = fromIntegral . unSlotNo . uncurry (-) . (slSlot *** slSlot) . (Vec.last &&& Vec.head)
+   SlotStatsSummary{..} = slotStatsSummary run slots
+
    resDistProjs     =
      Resources
      { rCentiCpu    = rCentiCpu   . slResources
@@ -133,9 +159,6 @@ slotStatsSummary _ (f, slots) =
      , rCentiBlkIO  = rCentiBlkIO . slResources
      , rThreads     = rThreads    . slResources
      }
-
-   missRatio :: Word64 -> Double
-   missRatio = (/ fromIntegral maxChecks) . fromIntegral
 
 -- The "fold" state that accumulates as we process 'LogObject's into a stream
 -- of 'SlotStats'.

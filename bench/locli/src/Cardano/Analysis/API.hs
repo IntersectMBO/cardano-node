@@ -158,10 +158,10 @@ mkDataDomain f l f' l' measure =
   DataDomain f l f' l' (measure l - measure f) (measure l' - measure f')
 
 -- | The top-level representation of the machine timeline analysis results.
-data MachTimeline' f
-  = MachTimeline
+data MachPerf' f
+  = MachPerf
     { sVersion                  :: !Version
-    , sDomain                   :: !(f (DataDomain SlotNo))
+    , sDomainSlots              :: !(f (DataDomain SlotNo))
     -- distributions
     , sMissDistrib              :: !(f (Distribution Double Double))
     , sLeadsDistrib             :: !(f (Distribution Double Word64))
@@ -171,17 +171,18 @@ data MachTimeline' f
     , sSpanLeadDistrib          :: !(f (Distribution Double NominalDiffTime))
     , sSpanForgeDistrib         :: !(f (Distribution Double NominalDiffTime))
     , sBlocklessDistrib         :: !(f (Distribution Double Word64))
-    , sSpanLensCPU85Distrib     :: !(f (Distribution Double Int))
-    , sSpanLensCPU85EBndDistrib :: !(f (Distribution Double Int))
-    , sSpanLensCPU85RwdDistrib  :: !(f (Distribution Double Int))
-    , sResourceDistribs         :: !(f (Resources (Distribution Double Word64)))
+    , sSpanLensCpuDistrib       :: !(f (Distribution Double Int))
+    , sSpanLensCpuEpochDistrib  :: !(f (Distribution Double Int))
+    , sSpanLensCpuRwdDistrib    :: !(f (Distribution Double Int))
+    , sResourceDistribs         :: !(Resources (f (Distribution Double Word64)))
     }
   deriving (Generic)
 
-type MachTimeline = MachTimeline' Identity
-deriving instance NFData MachTimeline
-deriving instance Show   MachTimeline
-deriving instance ToJSON MachTimeline
+type    MachPerf = MachPerf' Identity
+type ClusterPerf = MachPerf' Identity
+deriving instance NFData MachPerf
+deriving instance Show   MachPerf
+deriving instance ToJSON MachPerf
 
 data SlotStats
   = SlotStats
@@ -319,10 +320,10 @@ instance RenderTimeline BlockEvents where
     , Field 5 0 "abs.slot"     "abs."  "slot#"  $ IWord64 (unSlotNo  . beSlotNo)
     , Field 6 0 "hash"         "block" "hash"   $ IText   (shortHash . beBlock)
     , Field 6 0 "hashPrev"     "prev"  "hash"   $ IText   (shortHash . beBlockPrev)
-    , Field 7 0 "forger"       "forger" "host"  $ IText  (toText . unHost . bfForger . beForge)
+    , Field 7 0 "forger"       "forger" "host"  $ IText   (toText . unHost . bfForger . beForge)
     , Field 9 0 "blockSize"    "size"  "bytes"  $ IInt    (bfBlockSize . beForge)
     , Field 7 0 "blockGap"     "block" "gap"    $ IDeltaT (bfBlockGap  . beForge)
-    , Field 3 0 "forks"         "for"  "-ks"    $ IInt   (count bpeIsFork . beErrors)
+    , Field 3 0 "forks"         "for"  "-ks"    $ IInt    (count bpeIsFork . beErrors)
     , Field 6 0 "fChecked"      (f!!0) "Check"  $ IDeltaT (bfChecked   . beForge)
     , Field 6 0 "fLeading"      (f!!1) "Lead"   $ IDeltaT (bfLeading   . beForge)
     , Field 6 0 "fForged"       (f!!2) "Forge"  $ IDeltaT (bfForged    . beForge)
@@ -381,39 +382,40 @@ mtFieldsReport :: DField a -> Bool
 mtFieldsReport Field{fId} = elem fId
   [ "CPU", "GC", "MUT", "RSS", "Heap", "Live", "Alloc" ]
 
-instance RenderDistributions MachTimeline where
+instance RenderDistributions MachPerf where
   rdFields _ =
     --  Width LeftPad
-    [ Field 4 0 "missR"    "Miss"  "ratio"  $ DFloat   (i . sMissDistrib)
-    , Field 5 0 "CheckΔ"   (d!!0)  "Check"  $ DDeltaT  (i . sSpanCheckDistrib)
-    , Field 5 0 "LeadΔ"    (d!!1)  "Lead"   $ DDeltaT  (i . sSpanLeadDistrib)
-    , Field 5 0 "ForgeΔ"   (d!!2)  "Forge"  $ DDeltaT  (i . sSpanForgeDistrib)
-    , Field 4 0 "BlkGap"   "Block" "gap"    $ DWord64  (i . sBlocklessDistrib)
-    , Field 5 0 "chDensity" "Dens" "ity"    $ DFloat   (i . sDensityDistrib)
-    , Field 3 0 "CPU"      "CPU"   "%"      $ DWord64 (rCentiCpu .i. sResourceDistribs)
-    , Field 3 0 "GC"       "GC"    "%"      $ DWord64 (rCentiGC .i. sResourceDistribs)
-    , Field 3 0 "MUT"      "MUT"    "%"     $ DWord64 (fmap (min 999) . rCentiMut .i. sResourceDistribs)
-    , Field 3 0 "GcMaj"    "GC "   "Maj"    $ DWord64 (rGcsMajor .i. sResourceDistribs)
-    , Field 3 0 "GcMin"    "flt "  "Min"    $ DWord64 (rGcsMinor .i. sResourceDistribs)
-    , Field 5 0 "RSS"      (m!!0)  "RSS"    $ DWord64 (rRSS .i. sResourceDistribs)
-    , Field 5 0 "Heap"     (m!!1)  "Heap"   $ DWord64 (rHeap .i. sResourceDistribs)
-    , Field 5 0 "Live"     (m!!2)  "Live"   $ DWord64 (rLive .i. sResourceDistribs)
-    , Field 5 0 "Allocd"   "Alloc" "MB"     $ DWord64 (rAlloc .i. sResourceDistribs)
-    , Field 5 0 "CPU85%LensAll"  (c!!0) "All"   $ DInt     (i . sSpanLensCPU85Distrib)
-    , Field 5 0 "CPU85%LensEBnd" (c!!1) "EBnd"  $ DInt     (i . sSpanLensCPU85EBndDistrib)
+    [ Field 4 0 "missR"       "Miss"  "ratio" $ DFloat  (i.               sMissDistrib)
+    , Field 5 0 "CheckΔ"      (d!!0)  "Check" $ DDeltaT (i.               sSpanCheckDistrib)
+    , Field 5 0 "LeadΔ"       (d!!1)  "Lead"  $ DDeltaT (i.               sSpanLeadDistrib)
+    , Field 5 0 "ForgeΔ"      (d!!2)  "Forge" $ DDeltaT (i.               sSpanForgeDistrib)
+    , Field 4 0 "BlkGap"      "Block" "gap"   $ DWord64 (i.               sBlocklessDistrib)
+    , Field 5 0 "chDensity"   "Dens"  "ity"   $ DFloat  (i.               sDensityDistrib)
+    , Field 3 0 "CPU"         "CPU"   "%"     $ DWord64 (i. rCentiCpu   . sResourceDistribs)
+    , Field 3 0 "GC"          "GC"    "%"     $ DWord64 (i. rCentiGC    . sResourceDistribs)
+    , Field 3 0 "MUT"         "MUT"   "%"     $ DWord64 (fmap (min 999) .
+                                                         i. rCentiMut   . sResourceDistribs)
+    , Field 3 0 "GcMaj"       "GC "   "Maj"   $ DWord64 (i. rGcsMajor   . sResourceDistribs)
+    , Field 3 0 "GcMin"       "flt "  "Min"   $ DWord64 (i. rGcsMinor   . sResourceDistribs)
+    , Field 5 0 "RSS"         (m!!0)  "RSS"   $ DWord64 (i. rRSS        . sResourceDistribs)
+    , Field 5 0 "Heap"        (m!!1)  "Heap"  $ DWord64 (i. rHeap       . sResourceDistribs)
+    , Field 5 0 "Live"        (m!!2)  "Live"  $ DWord64 (i. rLive       . sResourceDistribs)
+    , Field 5 0 "Allocd"      "Alloc" "MB"    $ DWord64 (i. rAlloc      . sResourceDistribs)
+    , Field 5 0 "CPULenAll"   (c!!0)  "All"   $ DInt    (i.               sSpanLensCpuDistrib)
+    , Field 5 0 "CPULenEpoch" (c!!1)  "Epoch" $ DInt    (i.               sSpanLensCpuEpochDistrib)
     ]
    where
      i = runIdentity
      d = nChunksEachOf  3 6 "---- Δt ----"
      m = nChunksEachOf  3 6 "Memory usage, MB"
-     c = nChunksEachOf  2 6 "CPU85% spans"
+     c = nChunksEachOf  2 6 "CPU% spans"
 
 instance RenderTimeline SlotStats where
   rtFields _ =
     --  Width LeftPad
-    [ Field 5 0 "abs.slot"     "abs."  "slot#"   $ IWord64 (unSlotNo . slSlot)
-    , Field 4 0 "slot"         "  epo" "slot"    $ IWord64 (unEpochSlot . slEpochSlot)
-    , Field 2 0 "epoch"        "ch "   "#"       $ IWord64 (unEpochNo . slEpoch)
+    [ Field 5 0 "abs.slot"     "abs."  "slot#"   $ IWord64 (unSlotNo       . slSlot)
+    , Field 4 0 "slot"         "  epo" "slot"    $ IWord64 (unEpochSlot    . slEpochSlot)
+    , Field 2 0 "epoch"        "ch "   "#"       $ IWord64 (unEpochNo      . slEpoch)
     , Field 3 0 "safetyInt"    "safe"  "int"     $ IWord64 (unEpochSafeInt . slEpochSafeInt)
     , Field 5 0 "block"        "block" "no."     $ IWord64 slBlockNo
     , Field 5 0 "blockGap"     "block" "gap"     $ IWord64 slBlockless

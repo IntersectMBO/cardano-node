@@ -29,7 +29,7 @@ library
                        Cardano.Analysis.ChainFilter
                        Cardano.Analysis.Context
                        Cardano.Analysis.Ground
-                       Cardano.Analysis.MachTimeline
+                       Cardano.Analysis.MachPerf
                        Cardano.Analysis.Version
 
                        Cardano.Unlog.LogObject

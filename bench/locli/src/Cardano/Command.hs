@@ -1,4 +1,4 @@
-{-# OPTIONS_GHC -fmax-pmcheck-models=300 #-}
+{-# OPTIONS_GHC -fmax-pmcheck-models=5000 #-}
 module Cardano.Command (module Cardano.Command) where
 
 import Cardano.Prelude                  hiding (State)
@@ -15,7 +15,7 @@ import Cardano.Analysis.API
 import Cardano.Analysis.BlockProp
 import Cardano.Analysis.ChainFilter
 import Cardano.Analysis.Ground
-import Cardano.Analysis.MachTimeline
+import Cardano.Analysis.MachPerf
 import Cardano.Analysis.Run
 import Cardano.Analysis.Version
 import Cardano.Unlog.LogObject          hiding (Text)
@@ -79,26 +79,26 @@ parseChainCommand =
      (RebuildChain & pure)
    , op "read-chain" "Read reconstructed chain"
      (ReadChain
-       <$> optJsonInputFile  "chain"           "Block event stream (JSON)")
+       <$> optJsonInputFile  "chain"         "Block event stream (JSON)")
    , op "dump-chain-raw" "Dump raw chain"
      (DumpChainRaw
-       <$> optJsonOutputFile "chain"           "JSON unfiltered chain output file")
+       <$> optJsonOutputFile "chain"         "JSON unfiltered chain output file")
    , op "timeline-chain-raw" "Render unfiltered chain timeline"
      (TimelineChainRaw
-       <$> optTextOutputFile "timeline"        "Render a human-readable reconstructed unfiltered chain view")
+       <$> optTextOutputFile "timeline"      "Render a human-readable reconstructed unfiltered chain view")
    ]) <|>
 
    subparser (mconcat [ commandGroup "Block propagation:  chain filtering"
    , op "filter-chain" "Filter chain"
      (FilterChain
        <$> many
-       (argChainFilterset  "filter"        "JSON list of block/slot selection criteria"))
+       (argChainFilterset  "filter"          "JSON list of block/slot selection criteria"))
    , op "dump-chain" "Dump filtered chain"
      (DumpChain
-       <$> optJsonOutputFile "chain"           "JSON filtered chain output file")
+       <$> optJsonOutputFile "chain"         "JSON filtered chain output file")
    , op "timeline-chain" "Render chain timeline"
      (TimelineChain
-       <$> optTextOutputFile "timeline"        "Render a human-readable reconstructed chain view")
+       <$> optTextOutputFile "timeline"      "Render a human-readable reconstructed chain view")
    ]) <|>
 
    subparser (mconcat [ commandGroup "Machine performance analysis:  slot stats"
@@ -125,10 +125,18 @@ parseChainCommand =
    ]) <|>
 
    subparser (mconcat [ commandGroup "Machine performance:  analysis"
-   , op "perfanalysis" "Statistical analysis on per-slot machine data"
-     (PerfAnalysis & pure)
-   , op "dump-perfanalysis" "Dump block propagation analysis as JSON, alongside input files"
-     (DumpPerfAnalysis & pure)
+   , op "machperf" "Statistical analysis on per-slot machine data"
+     (Cardano.Command.MachPerf & pure)
+   , op "dump-machperf" "Dump machine performance analysis as JSON, alongside input files"
+     (DumpMachPerf & pure)
+   ]) <|>
+
+   subparser (mconcat [ commandGroup "Cluster performance:  analysis"
+   , op "clusterperf" "Consolidate machine performance stats to cluster stats."
+     (Cardano.Command.ClusterPerf & pure)
+   , op "dump-clusterperf" "Dump cluster performance stats as JSON"
+     (DumpClusterPerf
+       <$> optJsonOutputFile "analysis"      "JSON block propagation output file")
    ]) <|>
 
    subparser (mconcat [ commandGroup "Block propagation:  reports"
@@ -212,8 +220,11 @@ data ChainCommand
   | DumpPropagation
       JsonOutputFile
 
-  | PerfAnalysis
-  | DumpPerfAnalysis
+  | MachPerf
+  | DumpMachPerf
+  | ClusterPerf
+  | DumpClusterPerf
+      JsonOutputFile
 
   | ReportPropForger
       TextOutputFile
@@ -245,7 +256,8 @@ data State
   , sSlotsRaw      :: Maybe [(JsonLogfile, [SlotStats])]
   , sScalars       :: Maybe [(JsonLogfile, RunScalars)]
   , sSlots         :: Maybe [(JsonLogfile, [SlotStats])]
-  , sPerfAnalysis  :: Maybe [(JsonLogfile, MachTimeline)]
+  , sMachPerf      :: Maybe [(JsonLogfile, MachPerf)]
+  , sClusterPerf   :: Maybe ClusterPerf
   }
 
 runChainCommand :: State -> ChainCommand -> ExceptT CommandError IO State
@@ -422,22 +434,32 @@ runChainCommand _ c@DumpPropagation{} = missingCommandData c
   ["block propagation"]
 
 runChainCommand s@State{sRun=Just run, sSlots=Just slots}
-  c@PerfAnalysis = do
-  perfAnalysis <- mapConcurrentlyPure (slotStatsSummary run) slots
-                  & fmap sequence
-                  & newExceptT
-                  & firstExceptT (CommandError c)
-  pure s { sPerfAnalysis = Just perfAnalysis }
-runChainCommand _ c@PerfAnalysis{} = missingCommandData c
+  c@Cardano.Command.MachPerf = do
+  perf <- mapConcurrentlyPure (slotStatsMachPerf run) slots
+          & fmap sequence
+          & newExceptT
+          & firstExceptT (CommandError c)
+  pure s { sMachPerf = Just perf }
+runChainCommand _ c@Cardano.Command.MachPerf{} = missingCommandData c
   ["run metadata & genesis", "filtered slots"]
 
-runChainCommand s@State{sPerfAnalysis=Just perf}
-  c@DumpPerfAnalysis = do
+runChainCommand s@State{sMachPerf=Just perf}
+  c@DumpMachPerf = do
   dumpAssociatedObjects "perf-stats" perf
     & firstExceptT (CommandError c)
   pure s
-runChainCommand _ c@DumpPerfAnalysis = missingCommandData c
-  ["performance analysis"]
+runChainCommand _ c@DumpMachPerf = missingCommandData c
+  ["machine performance stats"]
+
+-- runChainCommand s@State{sRun=Just run, sSlots=Just slots, sMachPerf=Just perf}
+--   c@Cardano.Command.ClusterPerf = do
+--   perf <- mapConcurrentlyPure (slotStatsMachPerf run) slots
+--           & fmap sequence
+--           & newExceptT
+--           & firstExceptT (CommandError c)
+--   pure s { sClusterPerf = Just perf }
+-- runChainCommand _ c@Cardano.Command.ClusterPerf{} = missingCommandData c
+--   ["run metadata & genesis", "filtered slots", "machine performance stats"]
 
 runChainCommand s@State{sRun=Just run, sBlockProp=Just prop}
   c@(ReportPropForger f) = do
@@ -474,23 +496,23 @@ runChainCommand s@State{sRun=Just run, sBlockProp=Just prop}
 runChainCommand _ c@ReportPropFull{} = missingCommandData c
   ["run metadata & genesis", "block propagation"]
 
-runChainCommand s@State{sRun=Just run, sPerfAnalysis=Just perf}
+runChainCommand s@State{sRun=Just run, sMachPerf=Just perf}
   c@ReportMachPerfFull = do
   dumpAssociatedTextStreams "perf-full"
     (fmap (fmap $ renderDistributions run RenderPretty (const True) Nothing) perf)
     & firstExceptT (CommandError c)
   pure s
 runChainCommand _ c@ReportMachPerfFull{} = missingCommandData c
-  ["run metadata & genesis", "performance analysis"]
+  ["run metadata & genesis", "machine performance stats"]
 
-runChainCommand s@State{sRun=Just run, sPerfAnalysis=Just perf}
+runChainCommand s@State{sRun=Just run, sMachPerf=Just perf}
   c@ReportMachPerfBrief = do
   dumpAssociatedTextStreams "perf-brief"
     (fmap (fmap $ renderDistributions run RenderPretty mtFieldsReport Nothing) perf)
     & firstExceptT (CommandError c)
   pure s
 runChainCommand _ c@ReportMachPerfBrief{} = missingCommandData c
-  ["run metadata & genesis", "performance analysis"]
+  ["run metadata & genesis", "machien performance stats"]
 
 
 missingCommandData :: ChainCommand -> [String] -> ExceptT CommandError IO a
@@ -527,6 +549,7 @@ runCommand (ChainCommand cs) =
      State Nothing Nothing Nothing Nothing
            Nothing Nothing Nothing Nothing
            Nothing Nothing Nothing Nothing
+           Nothing
 
 opts :: ParserInfo Command
 opts =
