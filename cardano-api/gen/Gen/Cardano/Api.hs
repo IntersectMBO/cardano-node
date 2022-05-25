@@ -92,7 +92,7 @@ genCostModels = do
   CostModel cModel <- genCostModel
   lang <- genLanguage
   case Alonzo.mkCostModel lang cModel of
-    Left err -> panic . Text.pack $ "genCostModels: " <> err
+    Left err -> panic . Text.pack $ "genCostModels: " <> show err
     Right alonzoCostModel ->
       Alonzo.CostModels . conv <$> Gen.list (Range.linear 1 3) (return alonzoCostModel)
  where

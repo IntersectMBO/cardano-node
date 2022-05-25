@@ -752,12 +752,12 @@ newtype CostModel = CostModel (Map Text Integer)
 validateCostModel :: PlutusScriptVersion lang
                   -> CostModel
                   -> Either InvalidCostModel ()
-validateCostModel PlutusScriptV1 (CostModel m)
-  | Alonzo.isCostModelParamsWellFormed m = Right ()
-  | otherwise                        = Left (InvalidCostModel (CostModel m))
-validateCostModel PlutusScriptV2 (CostModel m)
-  | Alonzo.isCostModelParamsWellFormed m = Right ()
-  | otherwise                        = Left (InvalidCostModel (CostModel m))
+validateCostModel PlutusScriptV1 (CostModel m) =
+    bimap (\_err -> InvalidCostModel (CostModel m)) id
+  $ Alonzo.assertWellFormedCostModelParams m
+validateCostModel PlutusScriptV2 (CostModel m) =
+    bimap (\_err -> InvalidCostModel (CostModel m)) id
+  $ Alonzo.assertWellFormedCostModelParams m
 
 -- TODO alonzo: it'd be nice if the library told us what was wrong
 newtype InvalidCostModel = InvalidCostModel CostModel
@@ -797,7 +797,7 @@ fromAlonzoScriptLanguage Alonzo.PlutusV1 = AnyPlutusScriptVersion PlutusScriptV1
 fromAlonzoScriptLanguage Alonzo.PlutusV2 = AnyPlutusScriptVersion PlutusScriptV2
 
 toAlonzoCostModel :: CostModel -> Alonzo.Language -> Either String Alonzo.CostModel
-toAlonzoCostModel (CostModel m) l = Alonzo.mkCostModel l m
+toAlonzoCostModel (CostModel m) l = bimap show id $ Alonzo.mkCostModel l m
 
 fromAlonzoCostModel :: Alonzo.CostModel -> CostModel
 fromAlonzoCostModel m = CostModel $ Alonzo.getCostModelParams m
