@@ -102,7 +102,7 @@ addFund era wallet txIn lovelace keyName = do
   fundKey  <- getName keyName
   let
     mkOutValue :: forall era. IsShelleyBasedEra era => AsType era -> ActionM (InAnyCardanoEra TxOutValue)
-    mkOutValue = \_ -> return $ InAnyCardanoEra (cardanoEra @ era) (mkTxOutValueAdaOnly lovelace)
+    mkOutValue = \_ -> return $ InAnyCardanoEra (cardanoEra @ era) (lovelaceToTxOutValue lovelace)
   outValue <- withEra era mkOutValue
   addFundToWallet wallet txIn outValue fundKey
 
@@ -242,8 +242,8 @@ runBenchmark era sourceWallet submitMode spendMode threadName txCount tps
   = case spendMode of
       SpendOutput -> withEra era $ runBenchmarkInEra sourceWallet submitMode threadName txCount tps
       SpendScript scriptFile scriptBudget scriptData scriptRedeemer
-        -> runPlutusBenchmark sourceWallet submitMode scriptFile scriptBudget scriptData scriptRedeemer threadName txCount tps
-      SpendAutoScript scriptFile -> spendAutoScript sourceWallet submitMode scriptFile threadName txCount tps
+        -> withEra era $ runPlutusBenchmark sourceWallet submitMode scriptFile scriptBudget scriptData scriptRedeemer threadName txCount tps
+      SpendAutoScript scriptFile -> withEra era $ spendAutoScript sourceWallet submitMode scriptFile threadName txCount tps
 
 runBenchmarkInEra :: forall era. IsShelleyBasedEra era
   => WalletName
@@ -311,8 +311,8 @@ runBenchmarkInEra sourceWallet submitMode (ThreadName threadName) txCount tps er
         Right ctl -> setName (ThreadName threadName) ctl
     _otherwise -> runWalletScriptInMode submitMode $ walletScript $ FundSet.Target "alternate-submit-mode"
 
-runPlutusBenchmark ::
-     WalletName
+runPlutusBenchmark :: forall era. IsShelleyBasedEra era
+  => WalletName
   -> SubmitMode
   -> FilePath
   -> ScriptBudget
@@ -321,8 +321,9 @@ runPlutusBenchmark ::
   -> ThreadName
   -> NumberOfTxs
   -> TPSRate
+  -> AsType era
   -> ActionM ()
-runPlutusBenchmark sourceWallet submitMode scriptFile scriptBudget scriptData scriptRedeemer (ThreadName threadName) txCount tps = do
+runPlutusBenchmark sourceWallet submitMode scriptFile scriptBudget scriptData scriptRedeemer (ThreadName threadName) txCount tps era = do
   tracers  <- get BenchTracers
   (NumberOfInputsPerTx   numInputs) <- getUser TNumberOfInputsPerTx
   (NumberOfOutputsPerTx numOutputs) <- getUser TNumberOfOutputsPerTx
@@ -403,31 +404,36 @@ runPlutusBenchmark sourceWallet submitMode scriptFile scriptBudget scriptData sc
 --    inToOut = FundSet.inputsToOutputsWithFee totalFee 1
 
     PlutusScript PlutusScriptV1 script' = script
-    scriptWitness :: ScriptWitness WitCtxTxIn AlonzoEra
-    scriptWitness = PlutusScriptWitness
-                          PlutusScriptV1InAlonzo
+    scriptWitness :: ScriptWitness WitCtxTxIn era
+    scriptWitness = case scriptLanguageSupportedInEra (cardanoEra @ era) (PlutusScriptLanguage PlutusScriptV1) of
+      Nothing -> error $ "runPlutusBenchmark: Plutus V1 scriptlanguage not supported : in era" ++ show (cardanoEra @ era)
+      Just scriptLang -> PlutusScriptWitness
+                          scriptLang
                           PlutusScriptV1
                           script'
                           (ScriptDatumForTxIn scriptData)
                           scriptRedeemer
                           executionUnits
 
-    collateral = (TxInsCollateral CollateralInAlonzoEra $  map getFundTxIn collateralFunds, collateralFunds)
+    collateral = case collateralSupportedInEra (cardanoEra @ era) of
+      Nothing -> error $ "runPlutusBenchmark: collateral: era not supported :" ++ show (cardanoEra @ era)
+      Just p -> (TxInsCollateral p $  map getFundTxIn collateralFunds, collateralFunds)
+
     txGenerator = genTx protocolParameters collateral (mkFee totalFee) metadata (ScriptWitness ScriptWitnessForSpending scriptWitness)
 
     fundToStore = mkWalletFundStore walletRefDst
 
-    toUTxO :: FundSet.Target -> FundSet.SeqNumber -> ToUTxO AlonzoEra
+    toUTxO :: FundSet.Target -> FundSet.SeqNumber -> ToUTxO era
     toUTxO target seqNumber = Wallet.mkUTxO networkId fundKey (InFlight target seqNumber)
 
-    walletScript :: FundSet.Target -> WalletScript AlonzoEra
+    walletScript :: FundSet.Target -> WalletScript era
     walletScript = benchmarkWalletScript walletRefSrc txGenerator txCount (const fundSource) inToOut toUTxO fundToStore
 
   case submitMode of
     NodeToNode targetNodes -> do
       connectClient <- getConnectClient
       ret <- liftIO $ runExceptT $ GeneratorTx.walletBenchmark (btTxSubmit_ tracers) (btN2N_ tracers) connectClient
-                               threadName targetNodes tps LogErrors AsAlonzoEra txCount walletScript
+                               threadName targetNodes tps LogErrors era txCount walletScript
       case ret of
         Left err -> liftTxGenError err
         Right ctl -> setName (ThreadName threadName) ctl
@@ -591,8 +597,16 @@ It is intended to be used with the the loop script from cardano-node/plutus-exam
 loopScriptFile is the FilePath to the Plutus script that implements the delay loop. (for example in /nix/store/).
 spendAutoScript relies on a particular calling convention of the loop script.
 -}
-spendAutoScript :: WalletName -> SubmitMode -> FilePath -> ThreadName -> NumberOfTxs -> TPSRate -> ActionM ()
-spendAutoScript sourceWallet submitMode loopScriptFile threadName txCount tps = do
+spendAutoScript :: forall era. IsShelleyBasedEra era
+  => WalletName
+  -> SubmitMode
+  -> FilePath
+  -> ThreadName
+  -> NumberOfTxs
+  -> TPSRate
+  -> AsType era
+  -> ActionM ()
+spendAutoScript sourceWallet submitMode loopScriptFile threadName txCount tps era = do
   protocolParameters <- getProtocolParameters
   perTxBudget <- case protocolParamMaxTxExUnits protocolParameters of
     Nothing -> throwE $ ApiError "Cannot determine protocolParamMaxTxExUnits"
@@ -615,7 +629,7 @@ spendAutoScript sourceWallet submitMode loopScriptFile threadName txCount tps = 
   redeemer <- case startSearch isInLimits 0 searchUpperBound of
     Left err -> throwE $ ApiError $ "cannot find fitting redeemer :" ++ err
     Right n -> return $ toLoopArgument n
-  runPlutusBenchmark sourceWallet submitMode loopScriptFile PreExecuteScript (ScriptDataNumber 0) redeemer threadName txCount tps
+  runPlutusBenchmark sourceWallet submitMode loopScriptFile PreExecuteScript (ScriptDataNumber 0) redeemer threadName txCount tps era
   where
     -- This is the hardcoded calling convention of the loop.plutus script.
     -- To loop n times one has to pass n + 1_000_000 as redeemer.

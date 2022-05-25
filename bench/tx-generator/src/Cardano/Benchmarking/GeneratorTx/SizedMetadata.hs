@@ -130,12 +130,9 @@ dummyTxSize _p m = (dummyTxSizeInEra @ era) $ metadataInEra m
 
 metadataInEra :: forall era . IsShelleyBasedEra era => Maybe TxMetadata -> TxMetadataInEra era
 metadataInEra Nothing = TxMetadataNone
-metadataInEra (Just m) = case shelleyBasedEra @ era of
-  ShelleyBasedEraShelley -> TxMetadataInEra TxMetadataInShelleyEra m
-  ShelleyBasedEraAllegra -> TxMetadataInEra TxMetadataInAllegraEra m
-  ShelleyBasedEraMary    -> TxMetadataInEra TxMetadataInMaryEra m
-  ShelleyBasedEraAlonzo  -> TxMetadataInEra TxMetadataInAlonzoEra m
-  ShelleyBasedEraBabbage -> TxMetadataInEra TxMetadataInBabbageEra m
+metadataInEra (Just m) = case txMetadataSupportedInEra (cardanoEra @ era) of
+  Nothing -> error "unreachable"
+  Just e -> TxMetadataInEra e m
 
 mkMetadata :: forall era . IsShelleyBasedEra era => Int -> Either String (TxMetadataInEra era)
 mkMetadata 0 = Right $ metadataInEra Nothing
