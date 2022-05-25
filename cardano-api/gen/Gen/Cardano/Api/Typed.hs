@@ -820,7 +820,7 @@ genCostModel' = do
       PlutusV1 -> PV1.costModelParamNames
       PlutusV2 -> PV2.costModelParamNames
   generatedParams <- Map.fromList <$>
-    mapM (\paramName -> pure (paramName,) <*> Gen.integral (Range.linear 0 5000)) costModelParamNames
+    mapM (\paramName -> (paramName,) <$> Gen.integral (Range.linear 0 5000)) costModelParamNames
   case Alonzo.mkCostModel lang generatedParams of
     Left err -> panic $ Text.pack $ "genCostModel: " <> err
     Right cModel -> return cModel
