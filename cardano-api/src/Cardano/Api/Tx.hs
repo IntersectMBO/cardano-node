@@ -50,14 +50,13 @@ module Cardano.Api.Tx (
 
 import           Data.Maybe
 
-import           Data.Aeson (ToJSON, object, toJSON, (.=))
+import           Data.Aeson (ToJSON, Value (..), object, toJSON, (.=))
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
-import           Data.Text (Text)
 import           Data.Type.Equality (TestEquality (..), (:~:) (Refl))
 import qualified Data.Vector as Vector
 import           Lens.Micro
@@ -438,17 +437,17 @@ instance ToJSON (KeyWitness era) where
   toJSON a = case a of
     ByronKeyWitness w ->
       object
-        [ "type" .= ("key" :: Text)
+        [ "type" .= String "key"
         , "in_witness" .= show w
         ]
     ShelleyBootstrapWitness _era w ->
       object
-        ["type" .= ("bootstrap" :: Text)
+        ["type" .= String "bootstrap"
         , "bootstrap_witness" .= show w
         ]
     ShelleyKeyWitness _era witness ->
       object
-        [ "type" .= ("keyWitness" :: Text)
+        [ "type" .= String "keyWitness"
         , "witness" .= witness
         ]
 
