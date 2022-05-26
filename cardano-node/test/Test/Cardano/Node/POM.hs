@@ -17,7 +17,7 @@ import           Cardano.Tracing.Config (PartialTraceOptions (..), defaultPartia
                    partialTraceSelectionToEither)
 import qualified Ouroboros.Consensus.Node as Consensus (NetworkP2PMode (..))
 import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (SnapshotInterval (..))
-import           Ouroboros.Network.Block (MaxSlotNo (..), SlotNo (..))
+import           Ouroboros.Network.Block (SlotNo (..))
 import           Ouroboros.Network.NodeToNode (AcceptedConnectionsLimit (..),
                    DiffusionMode (InitiatorAndResponderDiffusionMode))
 
@@ -84,7 +84,7 @@ testPartialCliConfig :: PartialNodeConfiguration
 testPartialCliConfig =
   PartialNodeConfiguration
     { pncSocketConfig = Last . Just $ SocketConfig mempty mempty mempty mempty
-    , pncShutdownConfig = Last . Just $ ShutdownConfig Nothing (Just . MaxSlotNo $ SlotNo 42)
+    , pncShutdownConfig = Last . Just $ ShutdownConfig Nothing (Just . ASlot . Identity $ SlotNo 42)
     , pncConfigFile   = mempty
     , pncTopologyFile = mempty
     , pncDatabaseFile = mempty
@@ -117,7 +117,7 @@ eExpectedConfig = do
                     (return $ PartialTracingOnLegacy defaultPartialTraceConfiguration)
   return $ NodeConfiguration
     { ncSocketConfig = SocketConfig mempty mempty mempty mempty
-    , ncShutdownConfig = ShutdownConfig Nothing (Just . MaxSlotNo $ SlotNo 42)
+    , ncShutdownConfig = ShutdownConfig Nothing (Just . ASlot . Identity $ SlotNo 42)
     , ncConfigFile = ConfigYamlFilePath "configuration/cardano/mainnet-config.json"
     , ncTopologyFile = TopologyFile "configuration/cardano/mainnet-topology.json"
     , ncDatabaseFile = DbFile "mainnet/db/"

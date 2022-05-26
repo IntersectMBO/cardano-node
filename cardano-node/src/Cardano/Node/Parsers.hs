@@ -19,8 +19,6 @@ import qualified Options.Applicative as Opt
 import qualified Options.Applicative.Help as OptI
 import           System.Posix.Types (Fd (..))
 
-import           Ouroboros.Network.Block (MaxSlotNo (..), SlotNo (..))
-
 import           Ouroboros.Consensus.Mempool.API (MempoolCapacityBytes (..),
                    MempoolCapacityBytesOverride (..))
 import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (SnapshotInterval (..))
@@ -66,7 +64,7 @@ nodeRunParser = do
 
   validate <- lastOption parseValidateDB
   shutdownIPC <- lastOption parseShutdownIPC
-  shutdownOnSlot <- lastOption parseShutdownOnSlotSynced
+  shutdownOnLimit <- lastOption parseShutdownOnLimit
 
   maybeMempoolCapacityOverride <- lastOption parseMempoolCapacityOverride
 
@@ -93,7 +91,7 @@ nodeRunParser = do
              }
            , pncValidateDB = validate
            , pncShutdownConfig =
-               Last . Just $ ShutdownConfig (getLast shutdownIPC) (getLast shutdownOnSlot)
+               Last . Just $ ShutdownConfig (getLast shutdownIPC) (join $ getLast shutdownOnLimit)
            , pncProtocolConfig = mempty
            , pncMaxConcurrencyBulkSync = mempty
            , pncMaxConcurrencyDeadline = mempty
@@ -214,16 +212,6 @@ parseShutdownIPC =
         <> help "Shut down the process when this inherited FD reaches EOF"
         <> hidden
       )
-
-parseShutdownOnSlotSynced :: Parser MaxSlotNo
-parseShutdownOnSlotSynced =
-    fmap (fromMaybe NoMaxSlotNo) $
-    optional $ option (MaxSlotNo . SlotNo <$> auto) (
-         long "shutdown-on-slot-synced"
-      <> metavar "SLOT"
-      <> help "Shut down the process after ChainDB is synced up to the specified slot"
-      <> hidden
-    )
 
 parseTopologyFile :: Parser FilePath
 parseTopologyFile =
