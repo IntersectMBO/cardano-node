@@ -45,7 +45,7 @@
       url = "github:input-output-hk/cardano-node";
     };
     node-snapshot = {
-      url = "github:input-output-hk/cardano-node/7f00e3ea5a61609e19eeeee4af35241571efdf5c";
+      url = "github:input-output-hk/cardano-node/b07949e9b3668ca21d01b5d7c7ee68bfd559a8e5";
     };
     node-process = {
       url = "github:input-output-hk/cardano-node";
