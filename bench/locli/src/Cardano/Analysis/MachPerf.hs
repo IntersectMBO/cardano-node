@@ -268,6 +268,8 @@ timelineStep Run{genesis} a@TimelineAccum{aSlotStats=cur:_, ..} =
         (if slot < slSlot last -- for a slot gone by
          then forTANth  a' (fromIntegral . unSlotNo $ slSlot last - slot) fSlot
          else forTAHead a' fSlot)
+      forExistingSlot :: SlotNo -> TimelineAccum -> (SlotStats -> SlotStats) -> TimelineAccum
+      forExistingSlot slot a' fSlot = mapExistingSlot slot fSlot a'
   in \case
   -- First, events that can extend the timeline:
   --
@@ -347,13 +349,14 @@ timelineStep Run{genesis} a@TimelineAccum{aSlotStats=cur:_, ..} =
   -- Next, events that rely on their slotstats to pre-exist:
   --
   LogObject{loAt, loHost, loBody=LOTraceLeadershipDecided slot yesNo} ->
-    if slot /= slSlot cur
+    if slot > slSlot cur
     then error $ mconcat
-         [ "LeadDecided for noncurrent slot=", show slot
+         [ "LeadDecided for a future slot=", show slot
          , " cur=", show (slSlot cur)
          , " host=", unpack . toText $ unHost loHost
          ]
-    else forTAHead a (onLeadershipCertainty loAt yesNo)
+    else forExistingSlot slot a $
+           onLeadershipCertainty loAt yesNo
    where
      onLeadershipCertainty :: UTCTime -> Bool -> SlotStats -> SlotStats
      onLeadershipCertainty now lead sl@SlotStats{..} =
@@ -376,13 +379,14 @@ timelineStep Run{genesis} a@TimelineAccum{aSlotStats=cur:_, ..} =
    where
      newBlock = aBlockNo /= blockNo
   LogObject{loAt, loHost, loBody=LOBlockForged _ _ _ slot} ->
-    if slot /= slSlot cur
+    if slot > slSlot cur
     then error $ mconcat
-         [ "BlockForged for noncurrent slot=", show slot
+         [ "BlockForged for a future slot=", show slot
          , " cur=", show (slSlot cur)
          , " host=", unpack . toText $ unHost loHost
          ]
-    else forTAHead a (onBlockForge loAt)
+    else forExistingSlot slot a $
+           onBlockForge loAt
    where
      onBlockForge :: UTCTime -> SlotStats -> SlotStats
      onBlockForge now sl@SlotStats{..} =
