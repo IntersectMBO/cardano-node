@@ -3,7 +3,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE InstanceSigs #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -106,6 +105,7 @@ module Cardano.Api.Script (
     Hash(..),
   ) where
 
+import qualified Data.ByteString.Base16 as Base16
 import qualified Data.ByteString.Lazy as LBS
 import           Data.ByteString.Short (ShortByteString)
 import qualified Data.ByteString.Short as SBS
@@ -246,6 +246,9 @@ instance TestEquality PlutusScriptVersion where
     testEquality PlutusScriptV1 PlutusScriptV1 = Just Refl
     testEquality PlutusScriptV2 PlutusScriptV2 = Just Refl
     testEquality _ _ = Nothing
+
+instance ToJSON (PlutusScriptVersion lang) where
+  toJSON = toJSON . fromEnum . AnyScriptLanguage . PlutusScriptLanguage
 
 
 data AnyScriptLanguage where
@@ -428,6 +431,19 @@ instance IsScriptLanguage lang => HasTextEnvelope (Script lang) where
         PlutusScriptLanguage PlutusScriptV1 -> "PlutusScriptV1"
         PlutusScriptLanguage PlutusScriptV2 -> "PlutusScriptV2"
 
+instance ToJSON (Script lang) where
+  toJSON a = case a of
+    SimpleScript script ->
+      object
+        [ "type" .= String "simple"
+        , "script" .= script
+        ]
+    PlutusScript version script ->
+      object
+        [ "type" .= String "plutus"
+        , "version" .= version
+        , "script" .= script
+        ]
 
 -- ----------------------------------------------------------------------------
 -- Scripts in any language
@@ -512,6 +528,13 @@ instance Eq (ScriptInEra era) where
                         (languageOfScriptLanguageInEra langInEra') of
         Nothing   -> False
         Just Refl -> script == script'
+
+instance ToJSON (ScriptInEra era) where
+  toJSON (ScriptInEra language script) =
+    object
+      [ "language" .= language
+      , "script" .= script
+      ]
 
 
 data ScriptLanguageInEra lang era where
@@ -983,6 +1006,12 @@ instance IsPlutusScriptLanguage lang => HasTextEnvelope (PlutusScript lang) wher
         PlutusScriptV1 -> "PlutusScriptV1"
         PlutusScriptV2 -> "PlutusScriptV2"
 
+instance ToJSON (PlutusScript lang) where
+  toJSON (PlutusScriptSerialised bytes) =
+    object
+      [ "base16" .= Text.decodeUtf8 (Base16.encode $ SBS.fromShort bytes)
+      ]
+
 
 -- | An example Plutus script that always succeeds, irrespective of inputs.
 --
@@ -1324,7 +1353,7 @@ instance IsCardanoEra era => FromJSON (ReferenceScript era) where
         ReferenceScript refSupInEra <$> o .: "referenceScript"
 
 instance EraCast ReferenceScript where
-  eraCast toEra = \case
+  eraCast toEra a = case a of
     ReferenceScriptNone -> pure ReferenceScriptNone
     v@(ReferenceScript (_ :: ReferenceTxInsScriptsInlineDatumsSupportedInEra fromEra) scriptInAnyLang) ->
       case refInsScriptsAndInlineDatsSupportedInEra toEra of
