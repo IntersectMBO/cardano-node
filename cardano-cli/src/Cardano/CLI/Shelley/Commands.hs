@@ -251,7 +251,9 @@ data TransactionCmd
   | TxHashScriptData
       ScriptDataOrFile
   | TxGetTxId InputTxBodyOrTxFile
-  | TxView InputTxBodyOrTxFile
+  | TxView
+      InputTxBodyOrTxFile
+      (Maybe OutputFile)
 
 data InputTxBodyOrTxFile = InputTxBodyFile TxBodyFile | InputTxFile TxFile
   deriving Show
