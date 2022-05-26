@@ -57,8 +57,7 @@ import           Ouroboros.Network.Protocol.TxSubmission2.Type (BlockingReplyLis
                                                                 TokBlockingStyle (..), TxSizeInBytes)
 
 import           Cardano.Api
-import           Cardano.Api.InMode (toConsensusGenTx)
-import           Cardano.Api.Shelley (fromShelleyTxId)
+import           Cardano.Api.Shelley (fromShelleyTxId, toConsensusGenTx)
 
 import           Cardano.Benchmarking.Tracer
 import           Cardano.Benchmarking.Types

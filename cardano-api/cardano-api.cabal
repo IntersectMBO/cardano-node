@@ -47,7 +47,6 @@ library
                         -- in this module
                         Cardano.Api.Orphans
                         Cardano.Api.SerialiseTextEnvelope
-                        Cardano.Api.InMode
 
   other-modules:
                         -- Splitting up the big Typed module:
@@ -62,6 +61,7 @@ library
                         Cardano.Api.HasTypeProxy
                         Cardano.Api.IPC
                         Cardano.Api.IPC.Monad
+                        Cardano.Api.InMode
                         Cardano.Api.Json
                         Cardano.Api.Key
                         Cardano.Api.KeysByron
