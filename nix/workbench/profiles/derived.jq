@@ -19,7 +19,10 @@ def profile_name($p):
 | era_defaults($p.era).generator   as   $generator_defaults
 | era_defaults($p.era).composition as $composition_defaults
 | era_defaults($p.era).node        as        $node_defaults
-| $p.node.shutdown_on_slot_synced  as       $shutdown_slots
+| $p.node.shutdown_on_block_synced as       $shutdown_block
+| ($p.node.shutdown_on_slot_synced // (($shutdown_block * 1.5 / $p.genesis.active_slots_coeff)
+                                       | ceil))
+                                   as       $shutdown_slots
   ## Genesis
 | [ "k\($p.composition.n_pools)" ]
   + if $p.composition.n_dense_hosts > 0
@@ -84,7 +87,10 @@ def add_derived_params:
 
 ## Absolute durations:
 | ($gsis.epoch_length * $gsis.slot_duration) as $epoch_duration
-| $node.shutdown_on_slot_synced              as $shutdown_slots
+| $node.shutdown_on_block_synced             as $shutdown_block
+| ($node.shutdown_on_slot_synced // (($shutdown_block * 1.5 / $gsis.active_slots_coeff)
+                                     | ceil))
+                                             as $shutdown_slots
 | (if $shutdown_slots | type == "number"
    then $shutdown_slots / $gsis.epoch_length | ceil
    else $gtor.epochs
@@ -241,6 +247,10 @@ def profile_pretty_describe($p):
   | . + if $p.node.shutdown_on_slot_synced == null then []
         else [
     "  - terminate at slot:  \($p.node.shutdown_on_slot_synced)"
+        ] end
+  | . + if $p.node.shutdown_on_block_synced == null then []
+        else [
+    "  - terminate at block: \($p.node.shutdown_on_block_synced)"
         ] end
   | . + [""]
   | join("\n");

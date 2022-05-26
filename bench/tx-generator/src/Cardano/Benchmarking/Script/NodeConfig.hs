@@ -63,7 +63,7 @@ makeNodeConfig logConfig = liftToAction $ ExceptT $ do
                  , shelleyBulkCredsFile = Just ""
                  }
                , pncValidateDB = Last $ Just False
-               , pncShutdownConfig = Last $ Just $ ShutdownConfig Nothing Nothing
+               , pncShutdownConfig = Last $ Just $ ShutdownConfig Nothing Nothing Nothing
                , pncConfigFile = Last $ Just configFp
                }
  configYamlPc <- parseNodeConfigurationFP . Just $ configFp

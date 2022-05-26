@@ -154,15 +154,21 @@ let
               nodeConfigBits.tracing.${profile.value.node.tracing_backend}));
 
       extraArgs =
-        let shutdownSlot = profile.value.node.shutdown_on_slot_synced;
+        let shutdownSlot  = profile.value.node.shutdown_on_slot_synced;
+            shutdownBlock = profile.value.node.shutdown_on_block_synced;
+            mayKindArgs =
+              val: kind: flag:
+              if val != null
+              then if isAttrs val
+                   then if val.${kind} or null != null
+                        then [flag (toString val.${kind})]
+                        else []
+                   else [flag (toString val)]
+              else [];
         in backend.finaliseNodeArgs nodeSpec
-          (if shutdownSlot != null
-           then if isAttrs shutdownSlot
-                then if shutdownSlot.${nodeSpec.kind} or null != null
-                     then ["--shutdown-on-slot-synced" (toString shutdownSlot.${nodeSpec.kind})]
-                     else []
-                else ["--shutdown-on-slot-synced" (toString shutdownSlot)]
-           else []);
+          (mayKindArgs shutdownSlot  nodeSpec.kind "--shutdown-on-slot-synced"
+           ++
+           mayKindArgs shutdownBlock nodeSpec.kind "--shutdown-on-block-synced");
     };
 
   ## Given an env config, evaluate it and produce the node service.
