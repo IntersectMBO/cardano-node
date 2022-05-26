@@ -119,12 +119,13 @@ scenario_cleanup_exit_trap() {
 
 __scenario_watcher_pid=
 scenario_watcher() {
-    while test $__scenario_watcher_end_time -gt $(date +%s)
-    do sleep 3; done
+    while test $__scenario_watcher_end_time -ge $(date +%s)
+    do sleep 1; done
     echo >&2
-    msg "scenario:  $(with_color yellow end of time reached) for:  $(with_color red $(jq '.meta.tag' -r $__scenario_exit_trap_dir/meta.json))"
+    msg "scenario:  $(yellow end of time reached) for:  $(red $(jq '.meta.tag' -r $__scenario_exit_trap_dir/meta.json))"
     rm -f $dir/flag/cluster-termination
-    msg "scenario:  $(with_color red signalled termination)"
+    msg "scenario:  $(red signalled termination)"
+    progress "scenario" "now:  $(yellow $(date))"
 }
 
 scenario_setup_termination() {
@@ -134,8 +135,16 @@ scenario_setup_termination() {
 
     export __scenario_watcher_self=$BASHPID
     local termination_tolerance_s=40
-    export __scenario_watcher_end_time=$(jq '
-           .meta.timing.earliest_end + '$termination_tolerance_s  $run_dir/meta.json)
+    local now=$(date +%s)
+    local till_shutdown=$(($(jq '.meta.timing.shutdown_end' $run_dir/meta.json) - now))
+    local till_workload=$(($(jq '.meta.timing.workload_end' $run_dir/meta.json) - now))
+    local till_earliest=$(($(jq '.meta.timing.earliest_end' $run_dir/meta.json) - now))
+    export __scenario_watcher_end_time=$((now + till_earliest + termination_tolerance_s))
+    progress "scenario" "now:  $(yellow $(date --date=@$now))"
+    progress "scenario" "until end:  workload $(yellow $till_workload), $(blue shutdown) $(yellow $till_shutdown), $(blue earliest) $(yellow $till_earliest)"
+    progress "scenario" "shutdown tolerance:  $(yellow $termination_tolerance_s) s"
+    # progress "scenario" "until end: workload $(yellow $(date --date=@$__scenario_watcher_end_time))"
+    progress "scenario" "termination in $(white $((till_earliest + termination_tolerance_s))) seconds.."
     scenario_watcher &
     __scenario_watcher_pid=$!
 }

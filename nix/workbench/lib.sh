@@ -93,6 +93,10 @@ green() {
     with_color green $*
 }
 
+blue() {
+    with_color blue $*
+}
+
 white() {
     with_color white $*
 }

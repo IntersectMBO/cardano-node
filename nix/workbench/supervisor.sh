@@ -181,7 +181,7 @@ EOF
         for ((pool_ix=0; pool_ix < $pools; pool_ix++))
         do while supervisorctl status node-${pool_ix} > /dev/null &&
                    test -f $dir/flag/cluster-termination
-           do echo -ne "\b\b\b\b\b\b"; printf "%6d" $i;          i=$((i+1)); sleep 1; done
+           do echo -ne "\b\b\b\b\b\b"; printf "%6d" $((i + 1)); i=$((i+1)); sleep 1; done
               echo -ne "\b\b\b\b\b\b"; echo -n "node-${pool_ix} 000000"
         done >&2
         if test -f $dir/flag/cluster-termination
