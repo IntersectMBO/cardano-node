@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -49,12 +50,14 @@ module Cardano.Api.Tx (
 
 import           Data.Maybe
 
+import           Data.Aeson (ToJSON, object, toJSON, (.=))
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
+import           Data.Text (Text)
 import           Data.Type.Equality (TestEquality (..), (:~:) (Refl))
 import qualified Data.Vector as Vector
 import           Lens.Micro
@@ -428,7 +431,29 @@ instance IsCardanoEra era => SerialiseAsCBOR (KeyWitness era) where
         ConwayEra  -> decodeShelleyBasedWitness ShelleyBasedEraConway bs
 
 
+<<<<<<< HEAD
 encodeShelleyBasedKeyWitness :: CBOR.EncCBOR w => w -> CBOR.Encoding
+=======
+instance ToJSON (KeyWitness era) where
+  toJSON a = case a of
+    ByronKeyWitness w ->
+      object
+        [ "type" .= ("key" :: Text)
+        , "in_witness" .= show w
+        ]
+    ShelleyBootstrapWitness _era w ->
+      object
+        ["type" .= ("bootstrap" :: Text)
+        , "bootstrap_witness" .= show w
+        ]
+    ShelleyKeyWitness _era witness ->
+      object
+        [ "type" .= ("keyWitness" :: Text)
+        , "witness" .= witness
+        ]
+
+encodeShelleyBasedKeyWitness :: ToCBOR w => w -> CBOR.Encoding
+>>>>>>> d02481507 (Add ToJSON instance for KeyWitness:)
 encodeShelleyBasedKeyWitness wit =
     CBOR.encodeListLen 2 <> CBOR.encodeWord 0 <> CBOR.encCBOR wit
 

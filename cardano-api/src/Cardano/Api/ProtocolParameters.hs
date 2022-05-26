@@ -703,6 +703,7 @@ instance ToJSON ProtocolParametersUpdate where
       . ("utxoCostPerByte" ..=? protocolUpdateUTxOCostPerByte ref)
       ) []
 
+
 -- ----------------------------------------------------------------------------
 -- Praos nonce
 --
@@ -807,7 +808,7 @@ fromAlonzoPrices Alonzo.Prices{Alonzo.prSteps, Alonzo.prMem} =
 
 newtype CostModel = CostModel [Integer]
   deriving (Eq, Show)
-  deriving newtype (ToCBOR, FromCBOR)
+  deriving newtype (ToCBOR, FromCBOR, ToJSON)
 
 newtype CostModels = CostModels { unCostModels :: Map AnyPlutusScriptVersion CostModel }
   deriving (Eq, Show)

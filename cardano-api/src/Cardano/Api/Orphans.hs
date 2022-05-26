@@ -1,3 +1,5 @@
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -10,11 +12,18 @@ module Cardano.Api.Orphans () where
 
 import           Data.Aeson (ToJSON (..), object, pairs, (.=))
 import qualified Data.Aeson as Aeson
+import qualified Data.ByteString.Base16 as Base16
 import           Data.Text (Text)
+import qualified Data.Text.Encoding as Text
 
 import qualified Cardano.Ledger.Crypto as Crypto
-import           Cardano.Ledger.Shelley.API (MIRPot (..))
 
+import           Cardano.Ledger.Shelley.API (MIRPot (..))
+import qualified Cardano.Ledger.Shelley.API as Ledger (KeyRole (..), WitVKey)
+
+import           Cardano.Api.SerialiseCBOR (ToCBOR (..))
+import           Cardano.Binary (encodeListLen, serialize')
+import           Codec.CBOR.Encoding (encodeWord)
 import qualified Ouroboros.Consensus.Shelley.Ledger.Query as Consensus
 
 -- Orphan instances involved in the JSON output of the API queries.
@@ -61,3 +70,8 @@ instance ToJSON MIRPot where
     case pot of
       ReservesMIR -> "reserves"
       TreasuryMIR -> "treasury"
+
+instance Crypto.Crypto crypto => ToJSON (Ledger.WitVKey 'Ledger.Witness crypto) where
+  toJSON = toJSON . Text.decodeLatin1 . Base16.encode . serialize' . prefixWithTag
+   where
+    prefixWithTag wit = encodeListLen 2 <> encodeWord 0 <> toCBOR wit
