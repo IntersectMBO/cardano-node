@@ -277,3 +277,4 @@ chmod a+x "${ROOT}/run/all.sh"
 
 echo "CARDANO_NODE_SOCKET_PATH=${ROOT}/node-spo1/node.sock "
 
+(cd "$ROOT"; ln -s node-spo1/node.sock main.sock)

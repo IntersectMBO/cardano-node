@@ -9,7 +9,7 @@ set -eo pipefail
 export WORK="${WORK:-example/work}"
 export BASE="${BASE:-.}"
 export CARDANO_CLI="${CARDANO_CLI:-cardano-cli}"
-export CARDANO_NODE_SOCKET_PATH="${CARDANO_NODE_SOCKET_PATH:-example/node-bft1/node.sock}"
+export CARDANO_NODE_SOCKET_PATH="${CARDANO_NODE_SOCKET_PATH:-example/main.sock}"
 export TESTNET_MAGIC="${TESTNET_MAGIC:-42}"
 export UTXO_VKEY="${UTXO_VKEY:-example/shelley/utxo-keys/utxo1.vkey}"
 export UTXO_SKEY="${UTXO_SKEY:-example/shelley/utxo-keys/utxo1.skey}"

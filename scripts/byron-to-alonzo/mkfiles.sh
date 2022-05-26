@@ -695,3 +695,5 @@ elif [ "$1" = "shelley" ]; then
 else
   echo "Default yaml configuration applied."
 fi
+
+(cd "$ROOT"; ln -s node-bft1/node.sock main.sock)

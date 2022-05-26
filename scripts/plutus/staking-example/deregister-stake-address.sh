@@ -9,10 +9,10 @@ set -o pipefail
 
 export BASE="${BASE:-.}"
 export WORK="${WORK:-example/work}"
-export CARDANO_NODE_SOCKET_PATH="${CARDANO_NODE_SOCKET_PATH:-example/node-bft1/node.sock}"
+export CARDANO_NODE_SOCKET_PATH="${CARDANO_NODE_SOCKET_PATH:-example/main.sock}"
 export TESTNET_MAGIC="${TESTNET_MAGIC:-42}"
-export UTXO_VKEY1="${UTXO_VKEY1:-example/shelley/utxo-keys/utxo1.vkey}"
-export UTXO_SKEY1="${UTXO_SKEY1:-example/shelley/utxo-keys/utxo1.skey}"
+export UTXO_VKEY1="${UTXO_VKEY1:-example/utxo-keys/utxo1.vkey}"
+export UTXO_SKEY1="${UTXO_SKEY1:-example/utxo-keys/utxo1.skey}"
 export PV=v1 # Plutus Script Version
 
 utxoaddr=$(cardano-cli address build --testnet-magic "$TESTNET_MAGIC" --payment-verification-key-file "$UTXO_VKEY1")
