@@ -1,9 +1,11 @@
 usage_scenario() {
      usage "scenario" "Run scenario control" <<EOF
-    idle DIR              Idle, isolated cluster scenario, runs indefinitely;
-                            Aliased as 'default' scenario
+    idle DIR              Idle, isolated cluster scenario, runs indefinitely
 
-    loaded DIR            Isolated cluster under tx-generator workload;
+    fixed DIR             Isolated cluster;
+                            Terminates after profile-implied time elapses
+
+    fixed-loaded DIR      Isolated cluster under tx-generator workload;
                             Terminates after profile-implied transaction
                             amount is submitted
 
@@ -24,7 +26,7 @@ local p=$dir/profile.json
 
 progress "run | scenario" "starting $(yellow $op)"
 case "$op" in
-    idle | default )
+    idle )
         backend start                "$dir"
         backend start-nodes          "$dir"
         ;;
@@ -38,12 +40,6 @@ case "$op" in
         scenario_cleanup_termination
 
         backend stop-cluster         "$dir"
-        ;;
-
-    loaded )
-        backend start                "$dir"
-        backend start-nodes          "$dir"
-        backend start-generator      "$dir"
         ;;
 
     fixed-loaded )

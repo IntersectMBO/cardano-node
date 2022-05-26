@@ -24,7 +24,7 @@ profile() {
 local op=${1:-show}; test $# -gt 0 && shift
 
 case "$op" in
-    list | names )
+    list | names | ls )
         profile generate-all | jq 'keys'
         ;;
 

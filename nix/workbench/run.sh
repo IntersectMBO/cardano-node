@@ -17,7 +17,7 @@ usage_run() {
                             --scenario forces a scenario, different from what
                                 is implied by the run profile;
                                 See 'wb scenario --help' for scenario descriptions
-                            --idle is a short-cut for the 'generic-idle' scenario
+                            --idle is a short-cut for '--scenario idle'
                             --analyse triggers analysis after 'start' returns
 
     stop TAG              Stop the named run

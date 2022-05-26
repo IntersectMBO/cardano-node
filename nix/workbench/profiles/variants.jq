@@ -6,7 +6,7 @@ def all_profile_variants:
   |                                      1000000 as $M
   ####################################################################################################
   ##
-  ### Record history
+  ### Historic record
   ##
   | { genesis:
       { utxo:                               (4 * $M)
@@ -54,10 +54,17 @@ def all_profile_variants:
   |
   ####################################################################################################
   ##
-  ### Status quo
+  ### Definition vocabulary:  dataset size
   ##
     $dataset_jun2022
       as $current_dataset
+  | ({}|
+     .generator.tps                   = 15
+    ) as $current_tps_saturation_value
+  |
+    ({}|
+     .generator.tps                   = 0.2
+    ) as $current_tps_saturation_plutus
   |
     ({}|
      .genesis.max_block_size = $params_feb2022.genesis.max_block_size
@@ -67,105 +74,22 @@ def all_profile_variants:
      .genesis.alonzo = $params_feb2022.genesis.alonzo
     ) as $current_plutus
   |
-    ($current_dataset *
-     $current_block_size *
-     $current_plutus
-    ) as $status_quo
+    ($current_block_size *
+     $current_plutus *
+     $current_dataset
+    ) as $dataset_status_quo
   |
-  ####################################################################################################
+    ($current_block_size *
+     $current_plutus *
+     { genesis:
+       { utxo:                              (0.5 * $M)
+       , delegators:                        (0.1 * $M)
+       }
+     }) as $dataset_miniature
+  |
   ##
-  ### Definition vocabulary
+  ### Definition vocabulary:  chain
   ##
-    ({}|
-     .generator.tps                   = 15
-    ) as $saturation_tps_value
-  |
-    ({}|
-     .generator.tps                   = 0.2
-    ) as $saturation_tps_plutus
-  |
-    { composition:
-      { n_singular_hosts:               1
-      , n_dense_hosts:                  0
-      }
-    } as $singleton
-  |
-    { composition:
-      { n_singular_hosts:               2
-      , n_dense_hosts:                  0
-      }
-    } as $doublet
-  |
-    { composition:
-      { n_singular_hosts:               10
-      , n_dense_hosts:                  0
-      }
-    } as $tenner
-  |
-    ({}|
-     .node.tracer                     = true
-    ) as $with_tracer
-  |
-    ({}|
-     .node.tracing_backend           = "iohk-monitoring"
-    ) as $old_tracing
-  |
-    { genesis:
-      { epoch_length:                   600
-      , parameter_k:                    3
-      }
-    } as $compressed
-  |
-   ($compressed * $saturation_tps_value *
-    { scenario:                        "fixed-loaded"
-    , analysis:
-      { type:                          "standard" }
-    }) as $fixed_loaded
-  |
-   ($fixed_loaded * $saturation_tps_plutus *
-    { generator:
-      { inputs_per_tx:                  1
-      , outputs_per_tx:                 1
-      , plutusMode:                     true
-      , plutusAutoMode:                 true
-      }
-    , analysis:
-      { type:                          "standard"
-      , filters:                        ["base", "size-small"]
-      }
-    }) as $plutus
-  |
-   ($fixed_loaded * $doublet *
-    { genesis:
-      { utxo:                           6000
-      , delegators:                     1300
-      , max_block_size:                 80000
-      }
-    , node:
-      { shutdown_on_slot_synced:        10
-      }
-    }) as $startstop_base
-  |
-   ($status_quo * $fixed_loaded * $doublet *
-    { node:
-      { shutdown_on_slot_synced:        2400
-      }
-    }) as $forge_stress_base
-  |
-    { scenario:                        "chainsync"
-    , preset:                          "mainnet"
-    , composition:
-      { n_singular_hosts:               0
-      , n_dense_hosts:                  0
-      , with_chaindb_server:            true
-      , with_observer:                  true
-      }
-    , analysis:
-      { type:                          "performance"
-      , filters:                        []
-      }
-    } as $chainsync_base
-  |
     { chaindb:
       { mainnet_chunks:
         { chaindb_server:               10
@@ -201,40 +125,207 @@ def all_profile_variants:
       }
     }) as $chaindb_early_alonzo
   |
+  ##
+  ### Definition vocabulary:  cluster size
+  ##
+    { composition:
+      { n_singular_hosts:               1
+      , n_dense_hosts:                  0
+      }
+    } as $singleton
+  |
+    { composition:
+      { n_singular_hosts:               2
+      , n_dense_hosts:                  0
+      }
+    } as $doublet
+  |
+    { composition:
+      { n_singular_hosts:               6
+      , n_dense_hosts:                  0
+      }
+    } as $hexagon
+  |
+    { composition:
+      { n_singular_hosts:               10
+      , n_dense_hosts:                  0
+      }
+    } as $tenner
+  |
+    { composition:
+      { n_singular_hosts:               0
+      , n_dense_hosts:                  0
+      , with_chaindb_server:            true
+      , with_observer:                  true
+      }
+    } as $chainsync_cluster
+  |
+  ##
+  ### Definition vocabulary:  timescale
+  ##
+    { genesis:
+      { epoch_length:                   600
+      , parameter_k:                    3
+      }
+    } as $compressed_timescale
+  |
+    { genesis:
+      { epoch_length:                   (3600 * 24 * 5)
+      , parameter_k:                    (18   * 24 * 5)
+      }
+    } as $mainnet_timescale
+  |
+  ##
+  ### Definition vocabulary:  duration
+  ##
+    ({} |
+     .generator.epochs                = 3
+    ) as $for_3ep
+  |
+    ({} |
+     .generator.epochs                = 4
+    ) as $for_4ep
+  |
+    ({} |
+     .node.shutdown_on_block_synced   = 1
+    ) as $for_1blk
+  |
+    ({} |
+     .node.shutdown_on_block_synced   = 3
+    ) as $for_3blk
+  |
+    ({} |
+     .node.shutdown_on_block_synced   = 15
+    ) as $for_15blk
+  |
+    ({} |
+     .node.shutdown_on_block_synced   = 30
+    ) as $for_30blk
+  |
+  ##
+  ### Definition vocabulary:  workload
+  ##
+   ($current_tps_saturation_plutus *
+    { extra_desc: "with Plutus workload"
+    , generator:
+      { inputs_per_tx:                  1
+      , outputs_per_tx:                 1
+      , plutusMode:                     true
+      , plutusAutoMode:                 true
+      }
+    , analysis:
+      { filters:                        ["base", "size-small"]
+      }
+    }) as $plutus
+  |
+  ##
+  ### Definition vocabulary:  node config variants
+  ##
+    ({ extra_desc:                     "with cardano-tracer"
+     , suffix:                         "tracer"
+     }|
+     .node.tracer                     = true
+    ) as $with_tracer
+  |
+    ({ extra_desc:                     "with legacy iohk-monitoring"
+     , suffix:                         "oldtracing"
+     }|
+     .node.tracing_backend           = "iohk-monitoring"
+    ) as $old_tracing
+  |
+    ({ extra_desc:                     "with P2P networking"
+     , suffix:                         "p2p"
+     }|
+     .node.verbatim.EnableP2P         = true
+    ) as $p2p
+  |
+  ##
+  ### Definition vocabulary:  scenario
+  ##
+   ($mainnet_timescale * $chainsync_cluster *
+    { desc: "Mainnet chain syncing benchmark"
+    , scenario:                        "chainsync"
+    , preset:                          "mainnet"
+    , analysis:
+      { type:                          "performance"
+      , filters:                        []
+      }
+    }) as $scenario_chainsync
+  |
+   ($compressed_timescale * $current_tps_saturation_value *
+    { scenario:                        "fixed-loaded"
+    }) as $scenario_fixed_loaded
+  |
+  ##
+  ### Definition vocabulary:  base variant
+  ##
+   ($scenario_fixed_loaded * $doublet * $dataset_miniature * $for_1blk *
+    { desc: "Stop as soon as we've seen a single block"
+    }) as $startstop_base
+  |
+   ($scenario_fixed_loaded * $doublet * $dataset_miniature * $for_3blk *
+    { desc: "Miniature dataset, CI-friendly duration, test scale"
+    }) as $citest_base
+  |
+   ($scenario_fixed_loaded * $doublet * $dataset_miniature * $for_15blk *
+    { desc: "Miniature dataset, CI-friendly duration, bench scale"
+    }) as $cibench_base
+  |
+   ($scenario_fixed_loaded * $doublet * $dataset_status_quo *
+    { node:
+      { shutdown_on_slot_synced:        2400
+      }
+    , desc: "Status-quo dataset size, honest four epochs."
+    }) as $forge_stress_base
+  |
   ####################################################################################################
   ##
   ### Actual profiles
   ##
 
-  ## Baseline:
-  [ { name: "default"
-    , desc: "Default profile, as per nix/workbench/profiles/defaults.jq"
-    }
-
+  ### First, auto-named profiles:
+  ###
   ## Short slots:
-  , $status_quo *
+  [ $dataset_status_quo *
     ({}|
      .genesis.slot_duration           = 0.2 )
 
   ## Dense pool:
-  , $status_quo *
+  , $dataset_status_quo *
     ({}|
      .genesis.dense_pool_density      = 10 )
 
   ## Sub-saturation TPS:
-  , ($status_quo | .generator.tps     = 5 )
-  , ($status_quo | .generator.tps     = 10 )
+  , ($dataset_status_quo | .generator.tps     = 5 )
+  , ($dataset_status_quo | .generator.tps     = 10 )
 
   ## Block size:
-  , ($status_quo | .genesis.max_block_size =  128000 | .generator.tps = 16 )
-  , ($status_quo | .genesis.max_block_size =  256000 | .generator.tps = 32 )
-  , ($status_quo | .genesis.max_block_size =  512000 | .generator.tps = 64 )
-  , ($status_quo | .genesis.max_block_size = 1024000 | .generator.tps = 128 )
-  , ($status_quo | .genesis.max_block_size = 2048000 | .generator.tps = 256 )
+  , ($dataset_status_quo | .genesis.max_block_size =  128000 | .generator.tps = 16 )
+  , ($dataset_status_quo | .genesis.max_block_size =  256000 | .generator.tps = 32 )
+  , ($dataset_status_quo | .genesis.max_block_size =  512000 | .generator.tps = 64 )
+  , ($dataset_status_quo | .genesis.max_block_size = 1024000 | .generator.tps = 128 )
+  , ($dataset_status_quo | .genesis.max_block_size = 2048000 | .generator.tps = 256 )
 
-  ## Fixed
+  ### Next, semantically-named profiles:
+  ###
+  ## Base variants:
+  , { name: "default"
+    , desc: "Default, as per nix/workbench/profiles/defaults.jq"
+    }
+  , $plutus *
+    { name: "plutus"
+    , desc: "Default with Plutus workload"
+    }
+
+  ## Fastest -- start-stop
   , $startstop_base *
     { name: "startstop"
+    }
+  , $startstop_base * $p2p *
+    { name: "startstop-p2p"
+    }
+  , $startstop_base * $plutus *
+    { name: "startstop-plutus"
     }
   , $startstop_base * $with_tracer *
     { name: "startstop-tracer"
@@ -243,57 +334,85 @@ def all_profile_variants:
     { name: "startstop-oldtracing"
     }
 
-  , $fixed_loaded * $saturation_tps_value *
-    { name: "smoke"
-    , node:
-      { shutdown_on_slot_synced:        80
-      }
+  ## CI variants: test duration, 3 blocks
+  , $citest_base *
+    { name: "ci-test"
+    }
+  , $citest_base * $p2p *
+    { name: "ci-test-p2p"
+    }
+  , $citest_base * $plutus *
+    { name: "ci-test-plutus"
+    }
+  , $citest_base * $with_tracer *
+    { name: "ci-test-tracer"
     }
 
-  , $fixed_loaded * $tenner *
+  ## CI variants: bench duration, 15 blocks
+  , $cibench_base *
+    { name: "ci-bench"
+    }
+  , $cibench_base * $p2p *
+    { name: "ci-bench-p2p"
+    }
+  , $cibench_base * $plutus *
+    { name: "ci-bench-plutus"
+    }
+  , $cibench_base * $with_tracer *
+    { name: "ci-bench-tracer"
+    }
+
+  ## Large local cluster -- 10 nodes
+  , $cibench_base * $tenner *
     { name: "10"
     }
-  , $fixed_loaded * $tenner * $with_tracer *
+  , $cibench_base * $tenner * $p2p *
+    { name: "10-p2p"
+    }
+  , $cibench_base * $tenner * $plutus *
+    { name: "10-plutus"
+    }
+  , $cibench_base * $tenner * $with_tracer *
     { name: "10-tracer"
     }
 
-  , $plutus *
-    { name: "plutus"
-    , generator:
-      { tx_count:                       800
-      }
-    }
-
+  ## Status-quo (huge) dataset, small cluster (2 nodes)
   , $forge_stress_base *
     { name: "forge-stress"
     }
-  , $forge_stress_base * $plutus * $singleton *
-    { name: "forge-stress-plutus"
-    , generator:
-      { tx_count:                       800
-      }
+  , $forge_stress_base * $plutus *
+    { name: "forge-stress-p2p"
     }
-  , $forge_stress_base * $old_tracing * $with_tracer *
+  , $forge_stress_base * $plutus *
+    { name: "forge-stress-plutus"
+    }
+  , $forge_stress_base * $plutus * $singleton *
+    { name: "forge-stress-plutus-singleton"
+    }
+  , $forge_stress_base * $with_tracer *
     { name: "forge-stress-tracer"
     }
-  , $forge_stress_base * $old_tracing *
-    { name: "forge-stress-oldtracing"
-    }
 
-  , $chainsync_base * $chaindb_early_byron *
+  , $scenario_chainsync * $chaindb_early_byron *
     { name: "chainsync-early-byron"
     }
-  , $chainsync_base * $chaindb_early_byron * $with_tracer *
+  , $scenario_chainsync * $chaindb_early_byron * $with_tracer *
     { name: "chainsync-early-byron-tracer"
     }
-  , $chainsync_base * $chaindb_early_byron * $old_tracing *
+  , $scenario_chainsync * $chaindb_early_byron * $old_tracing *
     { name: "chainsync-early-byron-oldtracing"
     }
 
-  , $chainsync_base * $chaindb_early_alonzo *
+  , $scenario_chainsync * $chaindb_early_alonzo *
     { name: "chainsync-early-alonzo"
     }
-  , $chainsync_base * $chaindb_early_alonzo * $old_tracing *
+  , $scenario_chainsync * $chaindb_early_alonzo * $with_tracer *
+    { name: "chainsync-early-alonzo-tracer"
+    }
+  , $scenario_chainsync * $chaindb_early_alonzo * $old_tracing *
     { name: "chainsync-early-alonzo-oldtracing"
+    }
+  , $scenario_chainsync * $chaindb_early_alonzo * $p2p *
+    { name: "chainsync-early-alonzo-p2p"
     }
   ];
