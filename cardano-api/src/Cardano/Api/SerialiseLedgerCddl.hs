@@ -290,15 +290,18 @@ cddlTypeToEra "Witnessed Tx ShelleyEra" = return $ AnyCardanoEra ShelleyEra
 cddlTypeToEra "Witnessed Tx AllegraEra" = return $ AnyCardanoEra AllegraEra
 cddlTypeToEra "Witnessed Tx MaryEra" = return $ AnyCardanoEra MaryEra
 cddlTypeToEra "Witnessed Tx AlonzoEra" = return $ AnyCardanoEra AlonzoEra
+cddlTypeToEra "Witnessed Tx BabbageEra" = return $ AnyCardanoEra BabbageEra
 cddlTypeToEra "Unwitnessed Tx ByronEra" = return $ AnyCardanoEra ByronEra
 cddlTypeToEra "Unwitnessed Tx ShelleyEra" = return $ AnyCardanoEra ShelleyEra
 cddlTypeToEra "Unwitnessed Tx AllegraEra" = return $ AnyCardanoEra AllegraEra
 cddlTypeToEra "Unwitnessed Tx MaryEra" = return $ AnyCardanoEra MaryEra
 cddlTypeToEra "Unwitnessed Tx AlonzoEra" = return $ AnyCardanoEra AlonzoEra
+cddlTypeToEra "Unwitnessed Tx BabbageEra" = return $ AnyCardanoEra BabbageEra
 cddlTypeToEra "TxWitness ShelleyEra" = return $ AnyCardanoEra ShelleyEra
 cddlTypeToEra "TxWitness AllegraEra" = return $ AnyCardanoEra AllegraEra
 cddlTypeToEra "TxWitness MaryEra" = return $ AnyCardanoEra MaryEra
 cddlTypeToEra "TxWitness AlonzoEra" = return $ AnyCardanoEra AlonzoEra
+cddlTypeToEra "TxWitness BabbageEra" = return $ AnyCardanoEra BabbageEra
 cddlTypeToEra unknownCddlType = Left $ TextEnvelopeCddlErrUnknownType unknownCddlType
 
 readFileTextEnvelopeCddlAnyOf
