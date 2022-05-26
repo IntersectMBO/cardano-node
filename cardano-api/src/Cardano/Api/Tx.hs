@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -49,6 +50,7 @@ module Cardano.Api.Tx (
 
 import           Data.Maybe
 
+import           Data.Aeson (ToJSON, object, toJSON, (.=))
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
@@ -56,6 +58,7 @@ import qualified Data.ByteString.Lazy as LBS
 import           Data.Functor.Identity (Identity)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
+import           Data.Text (Text)
 import           Data.Type.Equality (TestEquality (..), (:~:) (Refl))
 import qualified Data.Vector as Vector
 import           Formatting (build, formatToString)
@@ -430,6 +433,26 @@ instance IsCardanoEra era => SerialiseAsCBOR (KeyWitness era) where
         AlonzoEra  -> decodeShelleyBasedWitness ShelleyBasedEraAlonzo  bs
         BabbageEra -> decodeShelleyBasedWitness ShelleyBasedEraBabbage bs
         ConwayEra  -> decodeShelleyBasedWitness ShelleyBasedEraConway bs
+
+
+instance ToJSON (KeyWitness era) where
+  toJSON a = case a of
+    ByronKeyWitness w ->
+      object
+        [ "type" .= ("key" :: Text)
+        , "in_witness" .= show w
+        ]
+    ShelleyBootstrapWitness _era w ->
+      object
+        ["type" .= ("bootstrap" :: Text)
+        , "bootstrap_witness" .= show w
+        ]
+    ShelleyKeyWitness _era (Shelley.WitVKey key signature) ->
+      object
+        [ "type" .= ("key" :: Text)
+        , "key:TODO" .= show key
+        , "signature:TODO" .= show signature
+        ]
 
 
 encodeShelleyBasedKeyWitness :: ToCBOR w => w -> CBOR.Encoding
