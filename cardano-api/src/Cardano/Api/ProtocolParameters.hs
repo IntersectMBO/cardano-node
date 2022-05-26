@@ -3,7 +3,6 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -538,7 +537,7 @@ data ProtocolParametersUpdate =
        -- /Introduced in Babbage.  Supercedes 'protocolUpdateUTxOCostPerWord'/
        protocolUpdateUTxOCostPerByte :: Maybe Lovelace
     }
-  deriving (Eq, Show)
+  deriving (Eq, Generic, Show)
 
 instance Semigroup ProtocolParametersUpdate where
     ppu1 <> ppu2 =
@@ -673,6 +672,36 @@ instance FromCBOR ProtocolParametersUpdate where
         <*> fromCBOR
         <*> fromCBOR
 
+instance ToJSON ProtocolParametersUpdate where
+  toJSON ref =
+    object $
+      ( ("protocolVersion" ..=? protocolUpdateProtocolVersion ref)
+      . ("decentralization" ..=? protocolUpdateDecentralization ref)
+      . ("extraPraosEntropy" ..=? protocolUpdateExtraPraosEntropy ref)
+      . ("maxBlockHeaderSize" ..=? protocolUpdateMaxBlockHeaderSize ref)
+      . ("maxBlockBodySize" ..=? protocolUpdateMaxBlockBodySize ref)
+      . ("maxTxSize" ..=? protocolUpdateMaxTxSize ref)
+      . ("txFeeFixed" ..=? protocolUpdateTxFeeFixed ref)
+      . ("txFeePerByte" ..=? protocolUpdateTxFeePerByte ref)
+      . ("minUTxOValue" ..=? protocolUpdateMinUTxOValue ref)
+      . ("stakeAddressDeposit" ..=? protocolUpdateStakeAddressDeposit ref)
+      . ("stakePoolDeposit" ..=? protocolUpdateStakePoolDeposit ref)
+      . ("minPoolCost" ..=? protocolUpdateMinPoolCost ref)
+      . ("poolRetireMaxEpoch" ..=? protocolUpdatePoolRetireMaxEpoch ref)
+      . ("stakePoolTargetNum" ..=? protocolUpdateStakePoolTargetNum ref)
+      . ("poolPledgeInfluence" ..=? protocolUpdatePoolPledgeInfluence ref)
+      . ("monetaryExpansion" ..=? protocolUpdateMonetaryExpansion ref)
+      . ("treasuryCut" ..=? protocolUpdateTreasuryCut ref)
+      . ("utxoCostPerWord" ..=? protocolUpdateUTxOCostPerWord ref)
+      . ("costModels" ..= protocolUpdateCostModels ref)
+      . ("prices" ..=? protocolUpdatePrices ref)
+      . ("maxTxExUnits" ..=? protocolUpdateMaxTxExUnits ref)
+      . ("maxBlockExUnits" ..=? protocolUpdateMaxBlockExUnits ref)
+      . ("maxValueSize" ..=? protocolUpdateMaxValueSize ref)
+      . ("collateralPercent" ..=? protocolUpdateCollateralPercent ref)
+      . ("maxCollateralInputs" ..=? protocolUpdateMaxCollateralInputs ref)
+      . ("utxoCostPerByte" ..=? protocolUpdateUTxOCostPerByte ref)
+      ) []
 
 -- ----------------------------------------------------------------------------
 -- Praos nonce
@@ -845,7 +874,7 @@ data UpdateProposal =
      UpdateProposal
        !(Map (Hash GenesisKey) ProtocolParametersUpdate)
        !EpochNo
-    deriving stock (Eq, Show)
+    deriving stock (Eq, Generic, Show)
     deriving anyclass SerialiseAsCBOR
 
 instance HasTypeProxy UpdateProposal where
@@ -867,6 +896,13 @@ instance FromCBOR UpdateProposal where
       UpdateProposal
         <$> fromCBOR
         <*> fromCBOR
+
+instance ToJSON UpdateProposal where
+  toJSON (UpdateProposal updates epoch) =
+    object
+      [ "updates" .= Map.mapKeys serialiseToRawBytesHexText updates
+      , "epoch" .= epoch
+      ]
 
 makeShelleyUpdateProposal :: ProtocolParametersUpdate
                           -> [Hash GenesisKey]
@@ -1247,7 +1283,7 @@ unbundleLedgerShelleyBasedProtocolParams
   :: ShelleyBasedEra era
   -> BundledProtocolParameters era
   -> Ledger.PParams (ShelleyLedgerEra era)
-unbundleLedgerShelleyBasedProtocolParams = \case
+unbundleLedgerShelleyBasedProtocolParams era = case era of
   ShelleyBasedEraShelley -> \(BundleAsShelleyBasedProtocolParameters _ _ lpp) -> lpp
   ShelleyBasedEraAllegra -> \(BundleAsShelleyBasedProtocolParameters _ _ lpp) -> lpp
   ShelleyBasedEraMary -> \(BundleAsShelleyBasedProtocolParameters _ _ lpp) -> lpp
