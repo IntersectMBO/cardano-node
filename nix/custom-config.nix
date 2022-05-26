@@ -17,7 +17,6 @@ self: {
     rtsflags = "";
     limit2 = "6553M";
     variantTable = {
-      baseline = {};
       new-tracing = { legacyTracing = false; };
     };
     shelleyGenesisHash = "1a3be38bcbb7911969283716ad7aa550250226b76a61fc51cc9a9a35d9276d81";
