@@ -87,6 +87,16 @@ def all_profile_variants:
        }
      }) as $dataset_miniature
   |
+    { genesis:
+      { utxo:                               (30 * $M)
+      , delegators:                         0
+      , max_block_size:                     (1 * $M)
+      }
+    , generator:
+      { tps:                                (1 * $M / (360 * 20))
+      }
+    } as $dataset_dish
+  |
   ##
   ### Definition vocabulary:  chain
   ##
@@ -139,6 +149,12 @@ def all_profile_variants:
       , n_dense_hosts:                  0
       }
     } as $doublet
+  |
+    { composition:
+      { n_singular_hosts:               3
+      , n_dense_hosts:                  0
+      }
+    } as $triplet
   |
     { composition:
       { n_singular_hosts:               6
@@ -278,6 +294,13 @@ def all_profile_variants:
     , desc: "Status-quo dataset size, honest four epochs."
     }) as $forge_stress_base
   |
+   ($scenario_fixed_loaded * $triplet * $dataset_dish *
+    { node:
+      { shutdown_on_slot_synced:        2400
+      }
+    , desc: "Dish dataset & setup"
+    }) as $dish_base
+  |
   ####################################################################################################
   ##
   ### Actual profiles
@@ -360,6 +383,14 @@ def all_profile_variants:
     }
   , $cibench_base * $with_tracer *
     { name: "ci-bench-tracer"
+    }
+
+  ## Dish variants
+  , $dish_base *
+    { name: "dish"
+    }
+  , $dish_base * $plutus *
+    { name: "dish-plutus"
     }
 
   ## Large local cluster -- 10 nodes
