@@ -387,28 +387,32 @@
         }
       );
 
+      makeRequired = isPr: extra:
+      let
+        jobs = lib.foldl' lib.mergeAttrs { } (lib.attrValues flake.systemHydraJobs);
+        nonRequiredPaths = map lib.hasPrefix ([ "macos." ] ++ lib.optional isPr "linux.native.membenches");
+      in with self.legacyPackages.${defaultSystem};
+        releaseTools.aggregate {
+          name = "github-required";
+          meta.description = "All jobs required to pass CI";
+          constituents = lib.collect lib.isDerivation
+            (lib.mapAttrsRecursiveCond (v: !(lib.isDerivation v))
+              (path: value:
+                let stringPath = lib.concatStringsSep "." path; in if lib.isAttrs value && (lib.any (p: p stringPath) nonRequiredPaths) then { } else value)
+              jobs) ++ extra;
+        };
+
+
       hydraJobs =
         let
           jobs = lib.foldl' lib.mergeAttrs { } (lib.attrValues flake.systemHydraJobs);
-          nonRequiredPaths = map lib.hasPrefix [ "macos." ];
         in
         jobs // (with self.legacyPackages.${defaultSystem}; rec {
           cardano-deployment = cardanoLib.mkConfigHtml { inherit (cardanoLib.environments) mainnet testnet; };
           build-version = writeText "version.json" (builtins.toJSON {
             inherit (self) lastModified lastModifiedDate narHash outPath shortRev rev;
           });
-          required = releaseTools.aggregate {
-            name = "github-required";
-            meta.description = "All jobs required to pass CI";
-            constituents = lib.collect lib.isDerivation
-              (lib.mapAttrsRecursiveCond (v: !(lib.isDerivation v))
-                (path: value:
-                  let stringPath = lib.concatStringsSep "." path; in if lib.isAttrs value && (lib.any (p: p stringPath) nonRequiredPaths) then { } else value)
-                jobs) ++ [
-              cardano-deployment
-              build-version
-            ];
-          };
+          required = makeRequired false [ cardano-deployment build-version ];
         });
 
       hydraJobsPr =
@@ -422,7 +426,9 @@
         (lib.mapAttrsRecursiveCond (v: !(lib.isDerivation v))
           (path: value:
             let stringPath = lib.concatStringsSep "." path; in if lib.isAttrs value && (lib.any (p: p stringPath) nonPrJobs) then { } else value)
-          hydraJobs);
+          hydraJobs) // {
+            required = makeRequired true [ hydraJobs.cardano-deployment hydraJobs.build-version ];
+          };
 
     in
     builtins.removeAttrs flake [ "systemHydraJobs" ] // {
