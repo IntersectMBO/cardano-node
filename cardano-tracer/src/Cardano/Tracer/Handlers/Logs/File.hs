@@ -23,14 +23,14 @@ import           Data.Maybe (mapMaybe)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import           Data.Time.Format (defaultTimeLocale, formatTime)
-import           System.Directory
+import           System.Directory (createDirectoryIfMissing, doesDirectoryExist, makeAbsolute)
 import           System.Directory.Extra (listFiles)
 import           System.FilePath ((</>))
 
 import           Cardano.Logging (Namespace, TraceObject (..))
 
 import           Cardano.Tracer.Configuration (LogFormat (..))
-import           Cardano.Tracer.Handlers.Logs.Utils (createLogAndSymLink, isItLog)
+import           Cardano.Tracer.Handlers.Logs.Utils (createEmptyLog, isItLog)
 import           Cardano.Tracer.Types (NodeId (..))
 
 -- | Append the list of 'TraceObject's to the latest log via symbolic link.
@@ -46,18 +46,14 @@ writeTraceObjectsToFile
   -> LogFormat
   -> [TraceObject]
   -> IO ()
-writeTraceObjectsToFile nodeId currentLogLock rootDir ForHuman traceObjects = do
-  let itemsToWrite = mapMaybe traceObjectToText traceObjects
+writeTraceObjectsToFile nodeId currentLogLock rootDir format traceObjects = do
+  rootDirAbs <- makeAbsolute rootDir
+  let converter = case format of
+                    ForHuman   -> traceObjectToText
+                    ForMachine -> traceObjectToJSON
+  let itemsToWrite = mapMaybe converter traceObjects
   unless (null itemsToWrite) $ do
-    pathToCurrentLog <- getPathToCurrentlog nodeId rootDir ForHuman
-    let preparedLine = TE.encodeUtf8 $ T.concat itemsToWrite
-    withLock currentLogLock $
-      BS.appendFile pathToCurrentLog preparedLine
-
-writeTraceObjectsToFile nodeId currentLogLock rootDir ForMachine traceObjects = do
-  let itemsToWrite = mapMaybe traceObjectToJSON traceObjects
-  unless (null itemsToWrite) $ do
-    pathToCurrentLog <- getPathToCurrentlog nodeId rootDir ForMachine
+    pathToCurrentLog <- getPathToCurrentlog nodeId rootDirAbs format
     let preparedLine = TE.encodeUtf8 $ T.concat itemsToWrite
     withLock currentLogLock $
       BS.appendFile pathToCurrentLog preparedLine
@@ -78,24 +74,24 @@ getPathToCurrentlog
   -> FilePath
   -> LogFormat
   -> IO FilePath
-getPathToCurrentlog (NodeId anId) rootDir format =
+getPathToCurrentlog (NodeId anId) rootDirAbs format =
   ifM (doesDirectoryExist subDirForLogs)
     getPathToCurrentLogIfExists
     prepareLogsStructure
  where
-  subDirForLogs = rootDir </> T.unpack anId
+  subDirForLogs = rootDirAbs </> T.unpack anId
 
   getPathToCurrentLogIfExists = do
     logsWeNeed <- filter (isItLog format) <$> listFiles subDirForLogs
     if null logsWeNeed
-      then createLogAndSymLink subDirForLogs format
+      then createEmptyLog subDirForLogs format
       -- We can sort the logs by timestamp, the biggest one is the latest one.
       else return $ subDirForLogs </> maximum logsWeNeed
 
   prepareLogsStructure = do
     -- The root directory (as a parent for subDirForLogs) will be created as well if needed.
     createDirectoryIfMissing True subDirForLogs
-    createLogAndSymLink subDirForLogs format
+    createEmptyLog subDirForLogs format
 
 nl :: T.Text
 #ifdef UNIX
