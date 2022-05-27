@@ -11,6 +11,7 @@ import           Data.Text (pack)
 import           Data.Version (showVersion)
 
 import           Control.Concurrent (threadDelay)
+import           Control.Monad (forM_)
 import           Control.Monad.IO.Class
 import           Control.Monad.Trans.Except
 
@@ -96,6 +97,5 @@ shutDownLogging = do
   traceError "QRT Last Message. LoggingLayer going to shutdown. 73 . . . ."
   liftIO $ do
     threadDelay (200*1000)
-    case ll of
-      Just x -> shutdownLoggingLayer x
-      Nothing -> return ()
+    forM_ ll $
+      shutdownLoggingLayer
