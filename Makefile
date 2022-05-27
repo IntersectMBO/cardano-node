@@ -17,7 +17,7 @@ ARGS    ?=
 CMD     ?=
 
 lint hlint:
-	hlint .
+	hlint bench cardano-{api,cli,client-demo,node,node-capi,node-chairman,submit-api,testnet,tracer}
 
 stylish-haskell: ## Apply stylish-haskell on all *.hs files
 	@find . -type f -name "*.hs" -not -path '.git' -print0 | xargs -0 stylish-haskell -i

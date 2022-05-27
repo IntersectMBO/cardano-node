@@ -144,14 +144,16 @@ let
       ##   3. overlay the tracing config
       nodeConfig =
         nodeConfigBits.tracing-transform.${profile.value.node.tracing_backend}
-          (backend.finaliseNodeConfig nodeSpec
-            (recursiveUpdate
+          (recursiveUpdate
+            (backend.finaliseNodeConfig nodeSpec
               (recursiveUpdate
-                nodeConfigBits.base
-                (if __hasAttr "preset" profile.value
-                 then readJSONMay (./presets + "/${profile.value.preset}/config.json")
-                 else nodeConfigBits.era_setup_hardforks))
-              nodeConfigBits.tracing.${profile.value.node.tracing_backend}));
+                (recursiveUpdate
+                  nodeConfigBits.base
+                  (if __hasAttr "preset" profile.value
+                   then readJSONMay (./presets + "/${profile.value.preset}/config.json")
+                   else nodeConfigBits.era_setup_hardforks))
+                nodeConfigBits.tracing.${profile.value.node.tracing_backend}))
+            ${profile.value.node.verbatim});
 
       extraArgs =
         let shutdownSlot  = profile.value.node.shutdown_on_slot_synced;
