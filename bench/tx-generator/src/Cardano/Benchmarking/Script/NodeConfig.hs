@@ -97,5 +97,5 @@ shutDownLogging = do
   traceError "QRT Last Message. LoggingLayer going to shutdown. 73 . . . ."
   liftIO $ do
     threadDelay (200*1000)
-    forM_ ll $
+    forM_ ll
       shutdownLoggingLayer

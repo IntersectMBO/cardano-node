@@ -17,7 +17,7 @@ ARGS    ?=
 CMD     ?=
 
 lint hlint:
-	hlint .
+	hlint bench cardano-{api,cli,client-demo,node,node-capi,node-chairman,submit-api,testnet,tracer}
 
 stylish-haskell: ## Apply stylish-haskell on all *.hs files
 	@find . -type f -name "*.hs" -not -path '.git' -print0 | xargs -0 stylish-haskell -i
@@ -61,6 +61,7 @@ PROFILES_10           := 10 10-p2p 10-plutus 10-tracer
 PROFILES_FORGE_STRESS := forge-stress forge-stress-p2p forge-stress-plutus forge-stress-plutus-singleton forge-stress-tracer
 PROFILES_CHAINSYNC    := chainsync-early-byron  chainsync-early-byron-tracer  chainsync-early-byron-oldtracing
 PROFILES_CHAINSYNC    += chainsync-early-alonzo chainsync-early-alonzo-tracer chainsync-early-alonzo-oldtracing chainsync-early-alonzo-p2p
+PROFILES_VENDOR       := dish dish-plutus dish-10M dish-10M-plutus
 
 SHELL_PROFILES += $(PROFILES_BASE)
 SHELL_PROFILES += $(PROFILES_STARTSTOP)
@@ -69,6 +70,7 @@ SHELL_PROFILES += $(PROFILES_CI_BENCH)
 SHELL_PROFILES += $(PROFILES_10)
 SHELL_PROFILES += $(PROFILES_FORGE_STRESS)
 SHELL_PROFILES += $(PROFILES_CHAINSYNC)
+SHELL_PROFILES += $(PROFILES_VENDOR)
 
 ## Note:  to enable a shell for a profile, just add its name (one of names from 'make ps') to SHELL_PROFILES
 
