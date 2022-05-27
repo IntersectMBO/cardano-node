@@ -15,13 +15,14 @@ import           Data.List.Extra (dropEnd)
 import qualified Data.List.NonEmpty as NE
 import           Data.Time (diffUTCTime, getCurrentTime)
 import           Data.Word (Word16, Word32, Word64)
-import           System.Directory (doesDirectoryExist, getFileSize, removeFile)
+import           System.Directory (doesDirectoryExist, getFileSize, makeAbsolute,
+                   removeFile)
 import           System.Directory.Extra (listDirectories, listFiles)
 import           System.FilePath ((</>), takeDirectory)
 import           System.Time.Extra (sleep)
 
 import           Cardano.Tracer.Configuration
-import           Cardano.Tracer.Handlers.Logs.Utils (createLogAndUpdateSymLink,
+import           Cardano.Tracer.Handlers.Logs.Utils (createEmptyLogRotation,
                    getTimeStampFromLog, isItLog)
 import           Cardano.Tracer.Utils (showProblemIfAny)
 
@@ -61,15 +62,16 @@ checkRootDir
   -> RotationParams
   -> LoggingParams
   -> IO ()
-checkRootDir currentLogLock rotParams LoggingParams{logRoot, logFormat} =
-  whenM (doesDirectoryExist logRoot) $
-    listDirectories logRoot >>= \case
+checkRootDir currentLogLock rotParams LoggingParams{logRoot, logFormat} = do
+  logRootAbs <- makeAbsolute logRoot
+  whenM (doesDirectoryExist logRootAbs) $
+    listDirectories logRootAbs >>= \case
       [] ->
         -- There are no nodes' subdirs yet (or they were deleted),
         -- so no rotation can be performed for now.
         return ()
       logsSubDirs -> do
-        let fullPathsToSubDirs = map (logRoot </>) logsSubDirs
+        let fullPathsToSubDirs = map (logRootAbs </>) logsSubDirs
         forConcurrently_ fullPathsToSubDirs $
           checkLogs currentLogLock rotParams logFormat
 
@@ -105,7 +107,7 @@ checkIfCurrentLogIsFull
   -> IO ()
 checkIfCurrentLogIsFull currentLogLock pathToCurrentLog format maxSizeInBytes =
   whenM logIsFull $
-    createLogAndUpdateSymLink currentLogLock (takeDirectory pathToCurrentLog) format
+    createEmptyLogRotation currentLogLock (takeDirectory pathToCurrentLog) format
  where
   logIsFull = do
     size <- getFileSize pathToCurrentLog
