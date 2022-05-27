@@ -11,16 +11,15 @@ import           Prelude
 
 import           Control.Concurrent (threadDelay)
 import           Control.Monad
-import           Control.Monad.IO.Class
 
 import           Ouroboros.Network.NodeToClient (IOManager)
-import           Cardano.Node.Configuration.Logging (shutdownLoggingLayer)
 
 import           Cardano.Benchmarking.Tracer (createDebugTracers)
 import           Cardano.Benchmarking.Script.Action
 import           Cardano.Benchmarking.Script.Aeson (parseScriptFileAeson)
 import           Cardano.Benchmarking.Script.Core (setProtocolParameters)
 import           Cardano.Benchmarking.Script.Env
+import           Cardano.Benchmarking.Script.NodeConfig (shutDownLogging)
 import           Cardano.Benchmarking.Script.Store
 import           Cardano.Benchmarking.Script.Types
 
@@ -42,11 +41,3 @@ runScript script iom = runActionM execScript iom >>= \case
     set BenchTracers createDebugTracers
     setProtocolParameters QueryLocalNode
     forM_ script action
-
-shutDownLogging :: ActionM ()
-shutDownLogging = do
-  ll <- get LoggingLayer
-  traceError "QRT Last Message. LoggingLayer going to shutdown. 73 . . . ."
-  liftIO $ do
-    threadDelay (200*1000)
-    shutdownLoggingLayer ll

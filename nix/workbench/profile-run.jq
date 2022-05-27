@@ -4,8 +4,9 @@ def profile_timing($prof;
                    $start_human;
                    $start_tag;
                    $systemStart):
-  ($systemStart | fromdateiso8601 | . + $prof.derived.shutdown_time)      as $shutdown_end
-| ($systemStart | fromdateiso8601 | . + $prof.derived.generator_duration) as $workload_end
+  ($systemStart | fromdateiso8601 | . + $prof.derived.generator_duration)   as $workload_end
+| ($systemStart | fromdateiso8601 | . + ($prof.derived.shutdown_time
+                                      // $prof.derived.generator_duration)) as $shutdown_end
 | ( [$shutdown_end, $workload_end]
   | map(select(. != null))
   | min)                                                                as $earliest_end

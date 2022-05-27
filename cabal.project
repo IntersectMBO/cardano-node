@@ -130,6 +130,9 @@ package small-steps
 package small-steps-test
   tests: False
 
+package tx-generator
+  tests: True
+
 package goblins
   tests: False
 

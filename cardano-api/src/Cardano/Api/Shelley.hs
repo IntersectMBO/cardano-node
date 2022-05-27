@@ -211,6 +211,7 @@ module Cardano.Api.Shelley
     nextEpochEligibleLeadershipSlots,
     -- ** Conversions
     shelleyPayAddrToPlutusPubKHash,
+    toConsensusGenTx,
     --TODO: arrange not to export these
     toShelleyNetwork,
     fromShelleyPParams,
@@ -223,6 +224,7 @@ import           Cardano.Api.Block
 import           Cardano.Api.Certificate
 import           Cardano.Api.Eras
 import           Cardano.Api.IPC
+import           Cardano.Api.InMode
 import           Cardano.Api.KeysPraos
 import           Cardano.Api.KeysShelley
 import           Cardano.Api.LedgerState

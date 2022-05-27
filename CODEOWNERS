@@ -26,7 +26,8 @@ nix/workbench                                                 @deepfire @denissh
 trace-dispatcher                                              @deepfire @denisshevchenko @jutaro @mgmeier
 trace-forward                                                 @deepfire @denisshevchenko @jutaro @mgmeier
 trace-resources                                               @deepfire @denisshevchenko @jutaro @mgmeier
-Makefile                                                      @deepfire
+Makefile                                                      @deepfire @mgmeier
+*.mk                                                          @deepfire @mgmeier
 
 .buildkite                                                    @devops
 .github                                                       @devops

@@ -6,7 +6,7 @@ ifeq ($(3),true)
 $(1): ARGS += --arg 'workbenchDevMode' true
 endif
 ifeq ($(4),true)
-$(1): CMD := start-cluster; exit
+$(1): CMD := start-cluster && exit || exit 1
 endif
 ifeq ($(3)$(4),truefalse)
 define EXTRA_HELP +=

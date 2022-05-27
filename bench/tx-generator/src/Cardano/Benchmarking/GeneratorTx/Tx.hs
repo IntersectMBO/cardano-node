@@ -1,5 +1,4 @@
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -23,7 +22,7 @@ where
 import           Prelude
 import           Cardano.Benchmarking.Types (TxAdditionalSize (..))
 
-import           Cardano.Api hiding (txOutValueToLovelace)
+import           Cardano.Api
 
 type Fund = (TxIn, InAnyCardanoEra TxOutValue)
 
@@ -63,7 +62,7 @@ mkGenesisTransaction key _payloadSize ttl fee txins txouts
     , txInsCollateral = TxInsCollateralNone
     , txInsReference = TxInsReferenceNone
     , txOuts = txouts
-    , txFee = fees
+    , txFee = mkFee fee
     , txValidityRange = (TxValidityNoLowerBound, validityUpperBound)
     , txMetadata = TxMetadataNone
     , txAuxScripts = TxAuxScriptsNone
@@ -77,12 +76,6 @@ mkGenesisTransaction key _payloadSize ttl fee txins txouts
     , txReturnCollateral = TxReturnCollateralNone
     , txTotalCollateral = TxTotalCollateralNone
     }
-  fees = case shelleyBasedEra @ era of
-    ShelleyBasedEraShelley -> TxFeeExplicit TxFeesExplicitInShelleyEra fee
-    ShelleyBasedEraAllegra -> TxFeeExplicit TxFeesExplicitInAllegraEra fee
-    ShelleyBasedEraMary    -> TxFeeExplicit TxFeesExplicitInMaryEra fee
-    ShelleyBasedEraAlonzo  -> TxFeeExplicit TxFeesExplicitInAlonzoEra fee
-    ShelleyBasedEraBabbage -> TxFeeExplicit TxFeesExplicitInBabbageEra fee
   validityUpperBound = case shelleyBasedEra @ era of
     ShelleyBasedEraShelley -> TxValidityUpperBound ValidityUpperBoundInShelleyEra ttl
     ShelleyBasedEraAllegra -> TxValidityUpperBound ValidityUpperBoundInAllegraEra ttl
@@ -94,45 +87,24 @@ mkFee :: forall era .
      IsShelleyBasedEra era
   => Lovelace
   -> TxFee era
-mkFee f = case shelleyBasedEra @ era of
-  ShelleyBasedEraShelley -> TxFeeExplicit TxFeesExplicitInShelleyEra f
-  ShelleyBasedEraAllegra -> TxFeeExplicit TxFeesExplicitInAllegraEra f
-  ShelleyBasedEraMary    -> TxFeeExplicit TxFeesExplicitInMaryEra f
-  ShelleyBasedEraAlonzo  -> TxFeeExplicit TxFeesExplicitInAlonzoEra f
-  ShelleyBasedEraBabbage -> TxFeeExplicit TxFeesExplicitInBabbageEra f
+mkFee f = case txFeesExplicitInEra (cardanoEra @ era) of
+    Right e -> TxFeeExplicit e f
+    Left b -> TxFeeImplicit b -- error "unreachable"
 
 mkValidityUpperBound :: forall era .
      IsShelleyBasedEra era
   => SlotNo
   -> TxValidityUpperBound era
-mkValidityUpperBound ttl = case shelleyBasedEra @ era of
-  ShelleyBasedEraShelley -> TxValidityUpperBound ValidityUpperBoundInShelleyEra ttl
-  ShelleyBasedEraAllegra -> TxValidityUpperBound ValidityUpperBoundInAllegraEra ttl
-  ShelleyBasedEraMary    -> TxValidityUpperBound ValidityUpperBoundInMaryEra ttl
-  ShelleyBasedEraAlonzo  -> TxValidityUpperBound ValidityUpperBoundInAlonzoEra ttl
-  ShelleyBasedEraBabbage -> TxValidityUpperBound ValidityUpperBoundInBabbageEra ttl
+mkValidityUpperBound ttl = case validityUpperBoundSupportedInEra (cardanoEra @ era) of
+  Just p -> TxValidityUpperBound p ttl
+  Nothing -> error "unreachable"
 
 mkTxOutValueAdaOnly :: forall era . IsShelleyBasedEra era => Lovelace -> TxOutValue era
-mkTxOutValueAdaOnly l = case shelleyBasedEra @ era of
-  ShelleyBasedEraShelley -> TxOutAdaOnly AdaOnlyInShelleyEra l
-  ShelleyBasedEraAllegra -> TxOutAdaOnly AdaOnlyInAllegraEra l
-  ShelleyBasedEraMary    -> TxOutValue MultiAssetInMaryEra $ lovelaceToValue l
-  ShelleyBasedEraAlonzo  -> TxOutValue MultiAssetInAlonzoEra $ lovelaceToValue l
-  ShelleyBasedEraBabbage -> TxOutValue MultiAssetInBabbageEra $ lovelaceToValue l
-  
-txOutValueToLovelace :: TxOutValue era -> Lovelace
-txOutValueToLovelace = \case
-  TxOutAdaOnly AdaOnlyInByronEra   x -> x
-  TxOutAdaOnly AdaOnlyInShelleyEra x -> x
-  TxOutAdaOnly AdaOnlyInAllegraEra x -> x
-  TxOutValue _ v -> case valueToLovelace v of
-    Just c -> c
-    Nothing -> error "txOutValueLovelace  TxOut contains no ADA"
+mkTxOutValueAdaOnly l = case multiAssetSupportedInEra (cardanoEra @ era) of
+  Right p -> TxOutValue p $ lovelaceToValue l
+  Left p -> TxOutAdaOnly p l
 
 txInModeCardano :: forall era . IsShelleyBasedEra era => Tx era -> TxInMode CardanoMode
-txInModeCardano tx = case shelleyBasedEra @ era of
-  ShelleyBasedEraShelley -> TxInMode tx ShelleyEraInCardanoMode
-  ShelleyBasedEraAllegra -> TxInMode tx AllegraEraInCardanoMode
-  ShelleyBasedEraMary    -> TxInMode tx MaryEraInCardanoMode
-  ShelleyBasedEraAlonzo  -> TxInMode tx AlonzoEraInCardanoMode
-  ShelleyBasedEraBabbage -> TxInMode tx BabbageEraInCardanoMode
+txInModeCardano tx = case toEraInMode (cardanoEra @ era) CardanoMode of
+  Just t -> TxInMode tx t
+  Nothing -> error "txInModeCardano :unreachable"

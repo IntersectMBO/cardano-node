@@ -121,14 +121,14 @@ mkUTxOVariant variant networkId key validity values
     , newFunds
     )
  where
-  mkTxOut v = TxOut (keyAddress @ era networkId key) (mkTxOutValueAdaOnly v) TxOutDatumNone ReferenceScriptNone
+  mkTxOut v = TxOut (keyAddress @ era networkId key) (lovelaceToTxOutValue v) TxOutDatumNone ReferenceScriptNone
 
   newFunds txId = zipWith (mkNewFund txId) [TxIx 0 ..] values
 
   mkNewFund :: TxId -> TxIx -> Lovelace -> Fund
   mkNewFund txId txIx val = Fund $ InAnyCardanoEra (cardanoEra @ era) $ FundInEra {
       _fundTxIn = TxIn txId txIx
-    , _fundVal = mkTxOutValueAdaOnly val
+    , _fundVal = lovelaceToTxOutValue val
     , _fundSigningKey = Just key
     , _fundValidity = validity
     , _fundVariant = variant
@@ -229,11 +229,3 @@ keyAddress networkId k
       networkId
       (PaymentCredentialByKey $ verificationKeyHash $ getVerificationKey k)
       NoStakeAddress
-
-mkTxOutValueAdaOnly :: forall era . IsShelleyBasedEra era => Lovelace -> TxOutValue era
-mkTxOutValueAdaOnly l = case shelleyBasedEra @ era of
-  ShelleyBasedEraShelley -> TxOutAdaOnly AdaOnlyInShelleyEra l
-  ShelleyBasedEraAllegra -> TxOutAdaOnly AdaOnlyInAllegraEra l
-  ShelleyBasedEraMary    -> TxOutValue MultiAssetInMaryEra $ lovelaceToValue l
-  ShelleyBasedEraAlonzo  -> TxOutValue MultiAssetInAlonzoEra $ lovelaceToValue l
-  ShelleyBasedEraBabbage -> TxOutValue MultiAssetInBabbageEra $ lovelaceToValue l

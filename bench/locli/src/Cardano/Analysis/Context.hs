@@ -48,7 +48,7 @@ data GeneratorProfile
   { add_tx_size     :: Word64
   , inputs_per_tx   :: Word64
   , outputs_per_tx  :: Word64
-  , tps             :: Word64
+  , tps             :: Double
   , tx_count        :: Word64
   }
   deriving (Generic, Show, FromJSON, ToJSON)

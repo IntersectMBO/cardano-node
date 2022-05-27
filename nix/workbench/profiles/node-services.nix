@@ -123,6 +123,13 @@ let
             TestMaryHardForkAtEpoch    = 0;
             TestAlonzoHardForkAtEpoch  = 0;
           };
+        babbage =
+          { TestShelleyHardForkAtEpoch = 0;
+            TestAllegraHardForkAtEpoch = 0;
+            TestMaryHardForkAtEpoch    = 0;
+            TestAlonzoHardForkAtEpoch  = 0;
+            TestBabbageHardForkAtEpoch = 0;
+          };
       }.${profile.value.era};
     };
     in

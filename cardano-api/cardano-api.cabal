@@ -61,6 +61,7 @@ library
                         Cardano.Api.HasTypeProxy
                         Cardano.Api.IPC
                         Cardano.Api.IPC.Monad
+                        Cardano.Api.InMode
                         Cardano.Api.Json
                         Cardano.Api.Key
                         Cardano.Api.KeysByron
@@ -86,7 +87,6 @@ library
                         Cardano.Api.StakePoolMetadata
                         Cardano.Api.Tx
                         Cardano.Api.TxBody
-                        Cardano.Api.InMode
                         Cardano.Api.TxMetadata
                         Cardano.Api.TxSubmit.ErrorRender
                         Cardano.Api.TxSubmit.Types

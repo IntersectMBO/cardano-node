@@ -29,7 +29,7 @@ def profile_name($p):
   + if $shutdown_slots | type == "number"
     then [($shutdown_slots | tostring) + "slots"]
     else [ ($p.generator.epochs                  | tostring) + "ep"
-         , ($p.generator.tx_count     | . / 1000 | tostring) + "kTx" ]
+         , ($p.generator.tx_count | . / 1000 | ceil | tostring) + "kTx" ]
     end
   + [ ($p.genesis.utxo           | . / 1000 | tostring) + "kU"
     , ($p.genesis.delegators     | . / 1000 | tostring) + "kD"
@@ -97,7 +97,7 @@ def add_derived_params:
 
 ## Tx count for inferred absolute duration.
 ##   Note that this the workload would take longer, if we saturate the cluster.
-| ($gtor.tx_count // ($generator_duration * $gtor.tps))
+| ($gtor.tx_count // ($generator_duration * $gtor.tps) | ceil)
                                              as $generator_tx_count
 ## Effective cluster composition:
 | (if $compo.dense_pool_density > 1
@@ -234,7 +234,7 @@ def profile_pretty_describe($p):
   , "  - generator duration: \($p.derived.generator_duration              | tostring)s"
   , "    - requested epochs:   \($p.generator.epochs                      | tostring)ep"
   , "    - effective epochs:   \($p.derived.effective_epochs              | tostring)ep"
-  , "    - transaction count:  \($p.derived.generator_tx_count | . / 1000 | tostring)kTx"
+  , "    - transaction count:  \($p.derived.generator_tx_count | . / 1000 | ceil | tostring)kTx"
   , "    - full blocks:        \($p.derived.generator_blocks_lower_bound  | tostring)"
   , ""
   ]

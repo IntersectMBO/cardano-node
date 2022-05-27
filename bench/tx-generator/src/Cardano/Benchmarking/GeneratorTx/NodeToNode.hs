@@ -88,7 +88,7 @@ benchmarkConnectTxSubmit ioManager handshakeTracer submissionTracer codecConfig 
       foldMap (\p -> p connId controlMessageSTM) bundle
 
   n2nVer :: NodeToNodeVersion
-  n2nVer = NodeToNodeV_7
+  n2nVer = NodeToNodeV_10
   blkN2nVer :: BlockNodeToNodeVersion blk
   blkN2nVer = supportedVers Map.! n2nVer
   supportedVers :: Map.Map NodeToNodeVersion (BlockNodeToNodeVersion blk)
