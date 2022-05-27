@@ -21,7 +21,8 @@ module Cardano.Benchmarking.Tracer
   , TraceBenchTxSubmit(..)
   , TraceLowLevelSubmit(..)
   , createLoggingLayerTracers
-  , createDebugTracers
+  , createStdoutTracers
+  , createDebugTracers  
   ) where
 
 
@@ -32,7 +33,7 @@ import qualified Data.Text as T
 import           Data.Time.Clock (DiffTime, NominalDiffTime, getCurrentTime)
 import           Prelude (Show (..), String)
 
-import           Control.Tracer (debugTracer)
+import           Control.Tracer (stdoutTracer)
 
 import           Cardano.Api
 import qualified Codec.CBOR.Term as CBOR
@@ -76,7 +77,12 @@ data BenchTracers =
 createDebugTracers :: BenchTracers
 createDebugTracers = initTracers tr tr
   where
-    tr = contramap (\(_,t) -> BSL.unpack $ encode t) debugTracer
+    tr = contramap (\(_,t) -> BSL.unpack $ encode t) stdoutTracer
+
+createStdoutTracers :: BenchTracers
+createStdoutTracers = initTracers tr tr
+  where
+    tr = contramap (\(_,t) -> BSL.unpack $ encode t) stdoutTracer
 
 createLoggingLayerTracers :: LoggingLayer -> BenchTracers
 createLoggingLayerTracers loggingLayer

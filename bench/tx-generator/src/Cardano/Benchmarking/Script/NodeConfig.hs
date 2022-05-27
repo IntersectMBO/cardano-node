@@ -82,14 +82,14 @@ startProtocol filePath = do
   case ncTraceConfig nodeConfig of
     TraceDispatcher _ -> do
       set Store.LoggingLayer Nothing
-      set Store.BenchTracers createDebugTracers
+      set Store.BenchTracers createStdoutTracers
     TracingOnLegacy _ -> do
       loggingLayer <- makeLegacyLoggingLayer nodeConfig protocol
       set Store.LoggingLayer $ Just loggingLayer
       set Store.BenchTracers $ createLoggingLayerTracers loggingLayer
     TracingOff -> do
       set Store.LoggingLayer Nothing
-      set Store.BenchTracers createDebugTracers
+      set Store.BenchTracers createStdoutTracers
 
 shutDownLogging :: ActionM ()
 shutDownLogging = do
