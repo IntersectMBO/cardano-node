@@ -2,7 +2,7 @@ pkgs:
 let serviceConfigToJSON =
       cfg:
       {
-        networkMagic = 764824073; ## Mainnet
+        inherit (cfg) networkMagic;
         # loRequestNum = 100;
         network =
           if        cfg.acceptingSocket != null
@@ -28,6 +28,10 @@ let serviceConfigToJSON =
           rpMaxAgeHours   = 24;
         };
 
+        hasRTView = {
+          epHost    = "127.0.0.1";
+          epPort    = 3300;
+        };
         hasEKG = [
           { epHost    = "127.0.0.1";
             epPort    = 3100; ## supervisord.portShiftPrometheus
@@ -58,9 +62,10 @@ in pkgs.commonLib.defServiceModule
 
       extraOptionDecls = {
         ### You can actually change those!
-        acceptingSocket = mayOpt str        "Socket path: as acceptor.";
-        connectToSocket = mayOpt str        "Socket path: connect to.";
-        logRoot         = opt    str null   "Log storage root directory.";
+        networkMagic    = opt    int 764824073 "Network magic (764824073 for Cardano mainnet).";
+        acceptingSocket = mayOpt str           "Socket path: as acceptor.";
+        connectToSocket = mayOpt str           "Socket path: connect to.";
+        logRoot         = opt    str null      "Log storage root directory.";
 
         ### Here be dragons, on the other hand..
         configFile      = mayOpt str

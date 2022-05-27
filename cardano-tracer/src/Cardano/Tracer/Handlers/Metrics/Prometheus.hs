@@ -55,6 +55,8 @@ runPrometheusServer
   -> AcceptedMetrics
   -> IO ()
 runPrometheusServer (Endpoint host port) connectedNodes acceptedMetrics = forever $ do
+  -- Pause to prevent collision between "Listening"-notifications from servers.
+  sleep 0.1
   -- If everything is okay, the function 'simpleHttpServe' never returns.
   -- But if there is some problem, it never throws an exception, but just stops.
   -- So if it stopped - it will be re-started.

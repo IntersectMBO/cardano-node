@@ -10,8 +10,8 @@ usage_backend() {
 
     allocate-run RUNDIR
     describe-run RUNDIR
-    start-cluster RUNDIR
-                     Start the cluster nodes
+    start RUNDIR     Start the backend
+    start-nodes RUNDIR
     start-node RUNDIR NODE-NAME
     stop-node RUNDIR NODE-NAME
     wait-node RUNDIR NODE-NAME
@@ -43,7 +43,8 @@ case "${op}" in
     setenv-defaults )            backend_$WORKBENCH_BACKEND "$@";;
     allocate-run )               backend_$WORKBENCH_BACKEND "$@";;
     describe-run )               backend_$WORKBENCH_BACKEND "$@";;
-    start-cluster )              backend_$WORKBENCH_BACKEND "$@";;
+    start )                      backend_$WORKBENCH_BACKEND "$@";;
+    start-nodes )                backend_$WORKBENCH_BACKEND "$@";;
     start-node )                 backend_$WORKBENCH_BACKEND "$@";;
     stop-node )                  backend_$WORKBENCH_BACKEND "$@";;
     wait-node )                  backend_$WORKBENCH_BACKEND "$@";;

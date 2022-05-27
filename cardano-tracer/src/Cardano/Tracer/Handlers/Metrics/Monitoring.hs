@@ -20,6 +20,7 @@ import           Data.Text.Encoding (encodeUtf8)
 import qualified Graphics.UI.Threepenny as UI
 import           Graphics.UI.Threepenny.Core (UI, Element, liftIO, set, (#), (#+))
 import           System.Remote.Monitoring (forkServerWith, serverThreadId)
+import           System.Time.Extra (sleep)
 
 import           Cardano.Tracer.Configuration (Endpoint (..))
 import           Cardano.Tracer.Types (AcceptedMetrics, ConnectedNodes, NodeId (..))
@@ -39,7 +40,9 @@ runMonitoringServer
   -> ConnectedNodes
   -> AcceptedMetrics
   -> IO ()
-runMonitoringServer (Endpoint listHost listPort, monitorEP) connectedNodes acceptedMetrics =
+runMonitoringServer (Endpoint listHost listPort, monitorEP) connectedNodes acceptedMetrics = do
+  -- Pause to prevent collision between "Listening"-notifications from servers.
+  sleep 0.2
   UI.startGUI config $ \window -> do
     void $ return window # set UI.title "EKG Monitoring Nodes"
     void $ mkPageBody window connectedNodes monitorEP acceptedMetrics

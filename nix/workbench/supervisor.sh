@@ -26,6 +26,7 @@ case "$op" in
 
         setenvjq    'port_shift_ekg'        100
         setenvjq    'port_shift_prometheus' 200
+        setenvjq    'port_shift_rtview'     300
         setenvjqstr 'supervisor_conf'      "$profile_dir"/supervisor.conf
         ;;
 
@@ -51,8 +52,10 @@ case "$op" in
         local basePort=$(                   envjq 'basePort')
         local port_ekg=$((       basePort+$(envjq 'port_shift_ekg')))
         local port_prometheus=$((basePort+$(envjq 'port_shift_prometheus')))
+        local port_rtview=$((    basePort+$(envjq 'port_shift_rtview')))
 
         cat <<EOF
+  - RTView URL:              http://localhost:$port_rtview
   - EKG URL (node-0):        http://localhost:$port_ekg/
   - Prometheus URL (node-0): http://localhost:$port_prometheus/metrics
 EOF
@@ -98,13 +101,20 @@ EOF
         echo " $node up (${i}s)" >&2
         ;;
 
-    start-cluster )
-        local usage="USAGE: wb supervisor $op RUN-DIR"
+    start-nodes )
+        local usage="USAGE: wb supervisor $op RUN-DIR [HONOR_AUTOSTART=]"
         local dir=${1:?$usage}; shift
+        local honor_autostart=${1:-}
 
-        supervisord --config  "$dir"/supervisor/supervisord.conf $@
+        local nodes=($(jq_tolist keys "$dir"/node-specs.json))
 
-        for node in $(jq_tolist keys "$dir"/node-specs.json)
+        if test -n "$honor_autostart"
+        then for node in ${nodes[*]}
+             do jqtest ".\"$node\".autostart" "$dir"/node-specs.json &&
+                     supervisorctl start $node; done;
+        else supervisorctl start ${nodes[*]}; fi
+
+        for node in ${nodes[*]}
         do jqtest ".\"$node\".autostart" "$dir"/node-specs.json &&
                 backend_supervisor wait-node "$dir" $node; done
 
@@ -113,7 +123,20 @@ EOF
         fi
 
         backend_supervisor save-child-pids "$dir"
-        backend_supervisor save-pid-maps "$dir";;
+        backend_supervisor save-pid-maps   "$dir"
+        ;;
+
+    start )
+        local usage="USAGE: wb supervisor $op RUN-DIR"
+        local dir=${1:?$usage}; shift
+
+        supervisord --config  "$dir"/supervisor/supervisord.conf $@
+
+        if jqtest ".node.tracer" "$dir"/profile.json
+        then progress_ne "supervisor" "waiting for $(yellow cardano-tracer) to create socket: "
+             while test ! -e "$dir"/tracer/tracer.socket; do sleep 1; done
+             echo $(green ' OK') >&2
+        fi;;
 
     get-node-socket-path )
         local usage="USAGE: wb supervisor $op STATE-DIR NODE-NAME"
