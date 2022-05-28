@@ -47,8 +47,7 @@ config1 = TraceConfig {
           , (["tracer3","TestMessage"], [ConfSeverity (SeverityF (Just Info))])
           ]
     , tcForwarder = TraceOptionForwarder {
-        tofAddress = LocalSocket "forwarder.log"
-      , tofMode = Responder
+        tofMode = Responder
       , tofConnQueueSize = 100
       , tofDisconnQueueSize = 1000
       , tofVerbosity = Minimum
@@ -66,8 +65,7 @@ config2 = TraceConfig {
         , (["tracer3","TestMessage"], [ConfSeverity (SeverityF (Just Warning))])
         ]
     , tcForwarder = TraceOptionForwarder {
-        tofAddress = LocalSocket "forwarder.log"
-      , tofMode = Responder
+        tofMode = Responder
       , tofConnQueueSize = 100
       , tofDisconnQueueSize = 1000
       , tofVerbosity = Minimum

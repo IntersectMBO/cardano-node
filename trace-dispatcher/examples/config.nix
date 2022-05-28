@@ -15,4 +15,5 @@ To add in node-services.nix
                  {ns = ""; backends = ["Stdout HumanFormatColoured"; "Forwarder"; "EKGBackend"];}
                  {ns = "Cardano.Node.ChainDB"; backends = ["Forwarder"];}
                ];
-               TraceOptionForwarder = {filePath: "/tmp/forwarder.sock";};
+
+               TraceOptionForwarder = {mode: "Initiator"};

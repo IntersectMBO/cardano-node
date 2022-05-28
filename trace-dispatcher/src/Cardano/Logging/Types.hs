@@ -323,8 +323,7 @@ instance AE.FromJSON Verbosity where
                                     <> "Unknown Verbosity: " <> show other
 
 data TraceOptionForwarder = TraceOptionForwarder {
-    tofAddress          :: ForwarderAddr
-  , tofMode             :: ForwarderMode
+    tofMode             :: ForwarderMode
   , tofConnQueueSize    :: Word
   , tofDisconnQueueSize :: Word
   , tofVerbosity        :: Verbosity
@@ -333,16 +332,14 @@ data TraceOptionForwarder = TraceOptionForwarder {
 instance AE.FromJSON TraceOptionForwarder where
     parseJSON (AE.Object obj) =
       TraceOptionForwarder
-        <$> obj AE..: "address"
-        <*> obj AE..: "mode"
+        <$> obj AE..:  "mode"
         <*> obj AE..:? "connQueueSize"    AE..!= 2000
         <*> obj AE..:? "disconnQueueSize" AE..!= 200000
         <*> obj AE..:? "verbosity"        AE..!= Minimum
 
 defaultForwarder :: TraceOptionForwarder
 defaultForwarder = TraceOptionForwarder {
-    tofAddress = LocalSocket "forwarder.sock"
-  , tofMode = Responder
+    tofMode = Responder
   , tofConnQueueSize = 2000
   , tofDisconnQueueSize = 200000
   , tofVerbosity = Minimum

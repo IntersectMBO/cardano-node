@@ -18,6 +18,7 @@ import           Control.Monad.IO.Class
 import           "contra-tracer" Control.Tracer (Tracer, contramap, nullTracer,
                      stdoutTracer)
 import qualified Data.ByteString.Lazy as LBS
+import           Data.Maybe (fromMaybe)
 import           Data.Void (Void)
 import           Data.Word (Word16)
 
@@ -61,8 +62,9 @@ initForwarding :: forall m. (MonadIO m)
   -> TraceConfig
   -> NetworkMagic
   -> EKG.Store
+  -> Maybe FilePath
   -> m (ForwardSink TraceObject, DataPointStore)
-initForwarding iomgr config networkMagic ekgStore = liftIO $ do
+initForwarding iomgr config networkMagic ekgStore forwardSocket = liftIO $ do
   forwardSink <- initForwardSink tfConfig
   dpStore <- initDataPointStore
   launchForwarders
@@ -75,9 +77,10 @@ initForwarding iomgr config networkMagic ekgStore = liftIO $ do
     ekgStore
     forwardSink
     dpStore
+    forwardSocket
   pure (forwardSink, dpStore)
  where
-  LocalSocket p = tofAddress $ tcForwarder config
+  p = fromMaybe "" forwardSocket
   connSize = tofConnQueueSize $ tcForwarder config
   disconnSize = tofDisconnQueueSize $ tcForwarder config
   verbosity = tofVerbosity $ tcForwarder config
@@ -121,24 +124,31 @@ launchForwarders
   -> EKG.Store
   -> ForwardSink TraceObject
   -> DataPointStore
+  -> Maybe FilePath
   -> IO ()
 launchForwarders iomgr TraceConfig{tcForwarder} networkMagic
-                 ekgConfig tfConfig dpfConfig ekgStore sink dpStore =
-  void . async $
-    runInLoop
-      (launchForwardersViaLocalSocket
-         iomgr
-         networkMagic
-         tcForwarder
-         ekgConfig
-         tfConfig
-         dpfConfig
-         sink
-         ekgStore
-         dpStore)
-      p 1
- where
-  LocalSocket p = tofAddress tcForwarder
+                 ekgConfig tfConfig dpfConfig
+                 ekgStore sink dpStore forwardSocket =
+  -- If 'forwardSocket' is not specified, it's impossible to establish
+  -- network connection with acceptor application (for example, 'cardano-tracer').
+  -- In this case, we should not lauch forwarders.
+  case forwardSocket of
+    Nothing -> return ()
+    Just p -> 
+      void . async $
+        runInLoop
+          (launchForwardersViaLocalSocket
+             iomgr
+             networkMagic
+             tcForwarder
+             ekgConfig
+             tfConfig
+             dpfConfig
+             sink
+             ekgStore
+             dpStore
+             p)
+          p 1
 
 launchForwardersViaLocalSocket
   :: IOManager
@@ -150,15 +160,16 @@ launchForwardersViaLocalSocket
   -> ForwardSink TraceObject
   -> EKG.Store
   -> DataPointStore
+  -> FilePath
   -> IO ()
 launchForwardersViaLocalSocket iomgr networkMagic
-  TraceOptionForwarder {tofAddress=(LocalSocket p), tofMode=Initiator}
-  ekgConfig tfConfig dpfConfig sink ekgStore dpStore =
+  TraceOptionForwarder {tofMode=Initiator}
+  ekgConfig tfConfig dpfConfig sink ekgStore dpStore p =
     doConnectToAcceptor networkMagic (localSnocket iomgr) (localAddressFromPath p)
       noTimeLimitsHandshake ekgConfig tfConfig dpfConfig sink ekgStore dpStore
 launchForwardersViaLocalSocket iomgr networkMagic
-  TraceOptionForwarder {tofAddress=(LocalSocket p), tofMode=Responder}
-  ekgConfig tfConfig dpfConfig sink ekgStore dpStore =
+  TraceOptionForwarder {tofMode=Responder}
+  ekgConfig tfConfig dpfConfig sink ekgStore dpStore p =
     doListenToAcceptor networkMagic (localSnocket iomgr) (localAddressFromPath p)
       noTimeLimitsHandshake ekgConfig tfConfig dpfConfig sink ekgStore dpStore
 

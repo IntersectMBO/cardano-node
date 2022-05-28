@@ -48,8 +48,5 @@
   TraceOptionForwarder = {
     # mode = "Responder";
     mode = "Initiator";
-    address = {
-      filePath = "../tracer/tracer.socket";
-    };
   };
 }

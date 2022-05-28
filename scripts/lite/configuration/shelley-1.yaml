@@ -286,6 +286,4 @@ TraceOptionLimiter:
     limiterName: ResourceLimiter
     limiterFrequency: 1.0
 TraceOptionForwarder:
-    address:
-      filePath: /tmp/forwarder-1.sock
     mode: Initiator

@@ -40,9 +40,10 @@
     }
   ],
   "TraceOptionForwarder": {
-    "filePath": "/tmp/forwarder.sock"
+      "mode": "Initiator",
+      "queueSize": 1000,
+      "verbosity": "Minimum"
   },
-  "TraceOptionForwardQueueSize": 1000,
   "TraceOptionLimiter": [
 
   ]

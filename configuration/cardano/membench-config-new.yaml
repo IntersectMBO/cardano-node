@@ -129,8 +129,6 @@ TraceOptions:
 
 # Options for the trace forwarder
 TraceOptionForwarder:
-    address:
-      filePath: /tmp/forwarder.sock
     mode: Initiator
 
 TraceOptionPeerFrequency: 2000

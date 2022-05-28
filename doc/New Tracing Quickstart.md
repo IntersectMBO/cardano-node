@@ -103,8 +103,6 @@ First of all, add `TraceOptionForwarder` section in the node's configuration, th
 
 ~~~yaml
 TraceOptionForwarder:
-    address:
-      filePath: /tmp/forwarder.sock
     mode: Initiator
 ~~~
 
