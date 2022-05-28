@@ -117,15 +117,8 @@ jobs:
 
     - name: Deploy documentation to gh-pages 🚀
       if: github.ref == 'refs/heads/master'
-      run: |
-        git fetch origin gh-pages:gh-pages
-        git config --local user.email "operations@iohk.io"
-        git config --local user.name  "Input Output HK"
-        git add .
-        git stash
-        git checkout gh-pages
-        cp -r ./haddocks/* ./
-        rm -rf haddocks
-        git add -A
-        git commit -m "Deployed haddocks" || true
-        git push https://${{ github.actor }}:${{ github.token }}@github.com/${{ github.repository }}.git HEAD:gh-pages
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN || github.token }}
+        publish_dir: haddocks
+        force_orphan: true
