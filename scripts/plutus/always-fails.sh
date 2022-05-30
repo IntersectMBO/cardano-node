@@ -8,18 +8,19 @@ set -o pipefail
 export WORK="${WORK:-example/work}"
 export BASE="${BASE:-.}"
 export CARDANO_CLI="${CARDANO_CLI:-cardano-cli}"
-export CARDANO_NODE_SOCKET_PATH="${CARDANO_NODE_SOCKET_PATH:-example/node-bft1/node.sock}"
+export CARDANO_NODE_SOCKET_PATH="${CARDANO_NODE_SOCKET_PATH:-example/main.sock}"
 export TESTNET_MAGIC="${TESTNET_MAGIC:-42}"
-export UTXO_VKEY="${UTXO_VKEY:-example/shelley/utxo-keys/utxo1.vkey}"
-export UTXO_SKEY="${UTXO_SKEY:-example/shelley/utxo-keys/utxo1.skey}"
+export UTXO_VKEY="${UTXO_VKEY:-example/utxo-keys/utxo1.vkey}"
+export UTXO_SKEY="${UTXO_SKEY:-example/utxo-keys/utxo1.skey}"
 export RESULT_FILE="${RESULT_FILE:-$WORK/result.out}"
+export PV=v1 # Plutus Script Version
 
 echo "Socket path: $CARDANO_NODE_SOCKET_PATH"
 echo "Socket path: $(pwd)"
 
 ls -al "$CARDANO_NODE_SOCKET_PATH"
 
-plutusscriptinuse="$BASE/scripts/plutus/scripts/always-fails.plutus"
+plutusscriptinuse="$BASE/scripts/plutus/scripts/$PV/always-fails.plutus"
 # This datum hash is the hash of the untyped 42
 scriptdatumhash="9e1199a988ba72ffd6e9c269cadb3b53b5f360ff99f112d9b2ee30c4d74ad88b"
 #ExUnits {exUnitsMem = 11300, exUnitsSteps = 45070000}))
