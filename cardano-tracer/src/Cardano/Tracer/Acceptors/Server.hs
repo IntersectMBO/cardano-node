@@ -39,10 +39,11 @@ import qualified Trace.Forward.Configuration.TraceObject as TF
 import           Trace.Forward.Run.DataPoint.Acceptor (acceptDataPointsResp)
 import           Trace.Forward.Run.TraceObject.Acceptor (acceptTraceObjectsResp)
 
-import           Cardano.Tracer.Acceptors.Utils (prepareDataPointRequestor,
-                   prepareMetricsStores, removeDisconnectedNode)
+import           Cardano.Tracer.Acceptors.Utils (notifyAboutNodeDisconnected,
+                   prepareDataPointRequestor, prepareMetricsStores, removeDisconnectedNode)
 import qualified Cardano.Tracer.Configuration as TC
 import           Cardano.Tracer.Handlers.Logs.TraceObjects (traceObjectsHandler)
+import           Cardano.Tracer.Handlers.RTView.Notifications.Types
 import           Cardano.Tracer.Handlers.RTView.Run (SavedTraceObjects)
 import           Cardano.Tracer.Types (AcceptedMetrics, ConnectedNodes, DataPointRequestors)
 import           Cardano.Tracer.Utils (connIdToNodeId)
@@ -59,21 +60,23 @@ runAcceptorsServer
   -> SavedTraceObjects
   -> DataPointRequestors
   -> Lock
+  -> EventsQueues
   -> IO ()
 runAcceptorsServer config p (ekgConfig, tfConfig, dpfConfig) connectedNodes 
-                   acceptedMetrics savedTO dpRequestors currentLogLock = withIOManager $ \iocp ->
-  doListenToForwarder
-    (localSnocket iocp)
-    (localAddressFromPath p)
-    (TC.networkMagic config)
-    noTimeLimitsHandshake $
-    -- Please note that we always run all the supported protocols,
-    -- there is no mechanism to disable some of them.
-    appResponder
-      [ (runEKGAcceptor ekgConfig connectedNodes acceptedMetrics errorHandler, 1)
-      , (runTraceObjectsAcceptor config tfConfig currentLogLock savedTO errorHandler, 2)
-      , (runDataPointsAcceptor dpfConfig connectedNodes dpRequestors errorHandler, 3)
-      ]
+                   acceptedMetrics savedTO dpRequestors currentLogLock eventsQueues =
+  withIOManager $ \iocp ->
+    doListenToForwarder
+      (localSnocket iocp)
+      (localAddressFromPath p)
+      (TC.networkMagic config)
+      noTimeLimitsHandshake $
+      -- Please note that we always run all the supported protocols,
+      -- there is no mechanism to disable some of them.
+      appResponder
+        [ (runEKGAcceptor ekgConfig connectedNodes acceptedMetrics errorHandler, 1)
+        , (runTraceObjectsAcceptor config tfConfig currentLogLock savedTO errorHandler, 2)
+        , (runDataPointsAcceptor dpfConfig connectedNodes dpRequestors errorHandler, 3)
+        ]
  where
   appResponder protocolsWithNums =
     OuroborosApplication $ \connectionId _shouldStopSTM ->
@@ -84,7 +87,9 @@ runAcceptorsServer config p (ekgConfig, tfConfig, dpfConfig) connectedNodes
          }
       | (protocol, num) <- protocolsWithNums
       ]
-  errorHandler = removeDisconnectedNode connectedNodes acceptedMetrics dpRequestors
+  errorHandler connId = do
+    removeDisconnectedNode connectedNodes acceptedMetrics dpRequestors connId
+    notifyAboutNodeDisconnected eventsQueues connId
 
 doListenToForwarder
   :: Snocket IO LocalSocket LocalAddress

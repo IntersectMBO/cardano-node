@@ -4,6 +4,8 @@
 
 module Cardano.Tracer.Handlers.RTView.UI.HTML.NoNodes
   ( mkNoNodesInfo
+  , hideNoNodes
+  , showNoNodes
   ) where
 
 import           Data.List (intercalate)
@@ -22,45 +24,59 @@ import           Cardano.Tracer.Handlers.RTView.UI.Utils
 --   configuration of 'cardano-tracer'.
 mkNoNodesInfo :: Network -> UI Element
 mkNoNodesInfo networkConfig = do
+  window <- askWindow
   closeIt <- UI.button #. "delete" # set (UI.attr "aria-label") "delete"
-  infoNote <-
-    UI.mkElement "article" ## "no-nodes-info"
-                           #. "container message is-link rt-view-no-nodes-info" #+
-      [ UI.div #. "message-header" #+
-          [ UI.p # set text "«Hey, where are my nodes?»"
-          , element closeIt
-          ]
-      , UI.div #. "message-body" #+
-          [ UI.p #+
-              [ UI.span # set UI.html pleaseWait
-              ]
-          , UI.p #. "mt-5" #+
-              [ string intro
-              ]
-          , UI.p #. "mt-5" #+
-              [ UI.span # set UI.html cardanoTracerNote
-              ]
-          , UI.p #. "mt-5" #+
-              [ UI.span # set UI.html cardanoNodeNote
-              ]
-          , UI.p #. "mt-5" #+
-              [ UI.span # set UI.html nodeNameNote
-              ]
-          , UI.p #. "mt-5" #+
-              [ UI.span # set UI.html sshNote
-              ]
-          , UI.p #. "mt-5" #+
-              [ string "For more details, please read "
-              , UI.anchor # set UI.href "https://github.com/input-output-hk/cardano-node/blob/master/cardano-tracer/docs/cardano-tracer.md#configuration"
-                          # set text "our documentation"
-                          # set UI.target "_blank"
-              , image "rt-view-href-icon" externalLinkSVG
-              , string "."
-              ]
-          ]
-      ]
-  on UI.click closeIt . const $ element infoNote # hideIt
-  return infoNote
+  on UI.click closeIt . const $ findAndHide window "no-nodes-info"
+
+  UI.div ## "no-nodes" #. "container is-max-widescreen" #+
+    [ UI.p #. "has-text-centered" #+
+        [ image "rt-view-no-nodes-icon" noNodesSVG ## "no-nodes-icon"
+        ]
+    , UI.p ## "no-nodes-message" #. "rt-view-no-nodes-message" #+
+        [ string "There are no connected nodes. Yet."
+        ]
+    , UI.div #. "rt-view-no-nodes-progress" #+
+        [ UI.mkElement "progress" ## "no-nodes-progress"
+                                  #. "progress is-small is-link"
+                                  # set UI.value "0"
+                                  # set (attr "max") "60"
+        ]
+    , UI.mkElement "article" ## "no-nodes-info"
+                             #. "container message is-link rt-view-no-nodes-info" #+
+        [ UI.div #. "message-header" #+
+            [ UI.p # set text "«Hey, where are my nodes?»"
+            , element closeIt
+            ]
+        , UI.div #. "message-body" #+
+            [ UI.p #+
+                [ UI.span # set UI.html pleaseWait
+                ]
+            , UI.p #. "mt-5" #+
+                [ string intro
+                ]
+            , UI.p #. "mt-5" #+
+                [ UI.span # set UI.html cardanoTracerNote
+                ]
+            , UI.p #. "mt-5" #+
+                [ UI.span # set UI.html cardanoNodeNote
+                ]
+            , UI.p #. "mt-5" #+
+                [ UI.span # set UI.html nodeNameNote
+                ]
+            , UI.p #. "mt-5" #+
+                [ UI.span # set UI.html sshNote
+                ]
+            , UI.p #. "mt-5" #+
+                [ string "For more details, please read "
+                , UI.anchor # set UI.href "https://github.com/input-output-hk/cardano-node/blob/master/cardano-tracer/docs/cardano-tracer.md#configuration"
+                            # set text "our documentation"
+                            # set UI.target "_blank"
+                , image "rt-view-href-icon" externalLinkSVG
+                , string "."
+                ]
+            ]
+        ]
+    ]
  where
   pleaseWait =
     "If your nodes and <code>cardano-tracer</code> are configured properly, "
@@ -68,7 +84,7 @@ mkNoNodesInfo networkConfig = do
     <> "but it can take some time."
 
   intro =
-    "However, if there is no connection after 1 minute, please check your configuration files."
+    "However, if there is no connection after 1 minute, please check your configuration."
 
   cardanoTracerNote =
     case networkConfig of
@@ -92,15 +108,17 @@ mkNoNodesInfo networkConfig = do
   cardanoNodeNote =
     case networkConfig of
       AcceptAt (LocalSocket _p) ->
-        "Correspondingly, your nodes tracing sockets should be configured to initiate connections. Make sure their command line invocations "
-        <> "contains <code>--tracer-socket-path-connect LOCAL-SOCKET</code>."
+        "Correspondingly, your nodes should be configured to initiate connections using tracing socket."
+        <> " Make sure their command line invocations contain <code>--tracer-socket-path-connect"
+        <> " PATH-TO-LOCAL-SOCKET</code>."
       ConnectTo{} ->
-        "Correspondingly, your nodes tracing sockets should be configured to accept connections. Make sure their command line invocations "
-        <> "contains <code>--tracer-socket-path-accept LOCAL-SOCKET</code>."
+        "Correspondingly, your nodes should be configured to accept connections using tracing socket."
+        <> " Make sure their command line invocations contain <code>--tracer-socket-path-accept"
+        <> " PATH-TO-LOCAL-SOCKET</code>."
 
   nodeNameNote =
-    "Also, please add a meaningful name for your nodes using <code>TraceOptionNodeName</code> field. "
-    <> "For example: <pre>" <> traceOptionNodeName <> "</pre>"
+    "Also, please add a meaningful name for your nodes using <code>TraceOptionNodeName</code> field"
+    <> " in their configuration files. For example: <pre>" <> traceOptionNodeName <> "</pre>"
 
   sshNote =
     "If your <code>cardano-tracer</code> and your nodes are running on different machines, the only "
@@ -110,3 +128,16 @@ traceOptionNodeName :: String
 traceOptionNodeName = [s|
 "TraceOptionNodeName": "stk-a-1-IOG1"
 |]
+
+hideNoNodes, showNoNodes :: UI.Window -> UI.Timer -> UI ()
+hideNoNodes window aTimer = do
+  findAndHide window "no-nodes"
+  findAndHide window "no-nodes-info"
+  UI.stop aTimer
+showNoNodes window aTimer = do
+  let elId = "no-nodes-progress"
+  findAndSet (set UI.value "0") window elId
+  findAndSet visibleOnly window elId
+  findAndShow window "no-nodes"
+  findAndShow window "no-nodes-info"
+  UI.start aTimer

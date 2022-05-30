@@ -14,6 +14,7 @@ import           Graphics.UI.Threepenny.JQuery (Easing (..), fadeIn, fadeOut)
 import           Text.Read (readMaybe)
 
 import           Cardano.Tracer.Configuration
+import           Cardano.Tracer.Handlers.RTView.Notifications.Types
 import           Cardano.Tracer.Handlers.RTView.State.Historical
 import           Cardano.Tracer.Handlers.RTView.UI.Charts
 import           Cardano.Tracer.Handlers.RTView.UI.HTML.About
@@ -23,6 +24,7 @@ import           Cardano.Tracer.Handlers.RTView.UI.Img.Icons
 import           Cardano.Tracer.Handlers.RTView.UI.JS.ChartJS
 import qualified Cardano.Tracer.Handlers.RTView.UI.JS.Charts as Chart
 import           Cardano.Tracer.Handlers.RTView.UI.JS.Utils
+import           Cardano.Tracer.Handlers.RTView.UI.Notifications
 import           Cardano.Tracer.Handlers.RTView.UI.Theme
 import           Cardano.Tracer.Handlers.RTView.UI.Types
 import           Cardano.Tracer.Handlers.RTView.UI.Utils
@@ -37,10 +39,11 @@ mkPageBody
   -> TransactionsHistory
   -> DatasetsIndices
   -> DatasetsTimestamps
+  -> EventsQueues
   -> UI Element
 mkPageBody window networkConfig connected
            (ResHistory rHistory) (ChainHistory cHistory) (TXHistory tHistory)
-           dsIxs dsTss = do
+           dsIxs dsTss eventsQueues = do
   txsProcessedNumTimer <- mkChartTimer connected tHistory dsIxs dsTss TxsProcessedNumData TxsProcessedNumChart
   mempoolBytesTimer    <- mkChartTimer connected tHistory dsIxs dsTss MempoolBytesData    MempoolBytesChart
   txsInMempoolTimer    <- mkChartTimer connected tHistory dsIxs dsTss TxsInMempoolData    TxsInMempoolChart
@@ -132,13 +135,7 @@ mkPageBody window networkConfig connected
           [ UI.div ## "preloader" #. "pageloader is-active" #+
               [ UI.span #. "title" # set text "Just a second..."
               ]
-          , topNavigation window
-          , UI.div ## "no-nodes" #. "container is-max-widescreen has-text-centered" #+
-              [ image "rt-view-no-nodes-icon" noNodesSVG ## "no-nodes-icon"
-              , UI.p ## "no-nodes-message" #. "rt-view-no-nodes-message" #+
-                  [ string "There are no connected nodes. Yet."
-                  ]
-              ]
+          , topNavigation window eventsQueues
           , mkNoNodesInfo networkConfig
           , UI.mkElement "section" #. "section" #+
               [ UI.div ## "main-table-container"
@@ -482,15 +479,18 @@ mkPageBody window networkConfig connected
 
   return body
 
-topNavigation :: UI.Window -> UI Element
-topNavigation window = do
+topNavigation
+  :: UI.Window
+  -> EventsQueues
+  -> UI Element
+topNavigation window eventsQueues = do
   info <- mkAboutInfo
-  infoIcon <- image "has-tooltip-multiline has-tooltip-bottom rt-view-info-icon mr-3" rtViewInfoSVG
+  infoIcon <- image "has-tooltip-multiline has-tooltip-bottom rt-view-info-icon mr-1" rtViewInfoSVG
                     ## "info-icon"
                     # set dataTooltip "RTView info"
   on UI.click infoIcon . const $ fadeInModal info
 
-  notificationsEvents   <- mkNotificationsEvents
+  notificationsEvents   <- mkNotificationsEvents eventsQueues
   notificationsSettings <- mkNotificationsSettings
 
   notificationsEventsItem <- UI.anchor #. "navbar-item" #+
@@ -501,11 +501,14 @@ topNavigation window = do
                                  [ image "rt-view-notify-menu-icon" settingsSVG
                                  , string "Settings"
                                  ]
-  on UI.click notificationsEventsItem   . const $ fadeInModal notificationsEvents
-  on UI.click notificationsSettingsItem . const $ fadeInModal notificationsSettings
+  on UI.click notificationsEventsItem . const $
+    fadeInModal notificationsEvents
+  on UI.click notificationsSettingsItem . const $ do
+    restoreEmailSettings window
+    fadeInModal notificationsSettings
 
-  _notificationsIcon <- image "rt-view-info-icon mr-2" rtViewNotifySVG
-                              ## "notifications-icon"
+  notificationsIcon <- image "rt-view-info-icon mr-2" rtViewNotifySVG
+                             ## "notifications-icon"
 
   themeIcon <- image "has-tooltip-multiline has-tooltip-bottom rt-view-theme-icon" rtViewThemeToLightSVG
                      ## "theme-icon"
@@ -514,8 +517,8 @@ topNavigation window = do
 
   UI.div ## "top-bar" #. "navbar rt-view-top-bar" #+
     [ element info
-    --, element notificationsEvents
-    --, element notificationsSettings
+    , element notificationsEvents
+    , element notificationsSettings
     , UI.div #. "navbar-brand" #+
         [ UI.div #. "navbar-item" #+
             [ image "rt-view-cardano-logo" cardanoLogoSVG ## "cardano-logo"
@@ -527,13 +530,13 @@ topNavigation window = do
         , UI.div #. "navbar-end" #+
             [ UI.div #. "navbar-item" #+ [element themeIcon]
             , UI.div #. "navbar-item" #+ [element infoIcon]
-            --, UI.div #. "navbar-item has-dropdown is-hoverable" #+
-            --    [ UI.anchor #. "navbar-link" #+ [element notificationsIcon]
-            --    , UI.div #. "navbar-dropdown is-right" #+
-            --        [ element notificationsEventsItem
-            --        , element notificationsSettingsItem
-            --        ]
-            --    ]
+            , UI.div #. "navbar-item has-dropdown is-hoverable" #+
+                [ UI.anchor #. "navbar-link" #+ [element notificationsIcon]
+                , UI.div #. "navbar-dropdown is-right" #+
+                    [ element notificationsEventsItem
+                    , element notificationsSettingsItem
+                    ]
+                ]
             ]
         ]
     ]
@@ -618,10 +621,6 @@ mkChart window chartUpdateTimer chartId chartName = do
         ]
     , UI.canvas ## show chartId #. "rt-view-chart-area" #+ []
     ]
-
-shownState, hiddenState :: String
-shownState  = "shown"
-hiddenState = "hidden"
 
 changeVisibilityForCharts
   :: UI.Window

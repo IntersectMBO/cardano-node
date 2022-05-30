@@ -5,7 +5,6 @@ module Cardano.Tracer.Handlers.RTView.Update.Utils
   , utc2ns
   , utc2s
   , s2utc
-  , showT
   , readInt
   , nullTime
   ) where
@@ -13,7 +12,7 @@ module Cardano.Tracer.Handlers.RTView.Update.Utils
 import           Control.Concurrent.STM.TVar (readTVarIO)
 import           Data.Aeson (FromJSON, decode')
 import qualified Data.Map.Strict as M
-import           Data.Text (Text, pack)
+import           Data.Text (Text)
 import           Data.Text.Read (decimal)
 import           Data.Time.Calendar (Day (..))
 import           Data.Time.Clock (UTCTime (..))
@@ -59,9 +58,6 @@ utc2ns utc = fromInteger . round $ 1000_000_000 * utcTimeToPOSIXSeconds utc
 
 s2utc :: Word64 -> UTCTime
 s2utc posixTime = posixSecondsToUTCTime $ fromIntegral posixTime
-
-showT :: Show a => a -> Text
-showT = pack . show
 
 readInt :: Text -> Int -> Int
 readInt t defInt =

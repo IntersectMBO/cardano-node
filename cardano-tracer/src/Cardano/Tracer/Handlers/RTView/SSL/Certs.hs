@@ -5,6 +5,7 @@ module Cardano.Tracer.Handlers.RTView.SSL.Certs
   ( placeDefaultSSLFiles
   ) where
 
+import           Control.Exception.Extra (ignore)
 import           Control.Monad.Extra (unlessM)
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
@@ -23,7 +24,9 @@ placeDefaultSSLFiles = do
   D.setPermissions pathToKeyFile  (D.setOwnerWritable True . D.setOwnerReadable True $ D.emptyPermissions) -- 0600
   return (pathToCertFile, pathToKeyFile)
  where
-  writeIfNeeded p f = unlessM (D.doesFileExist p) $ BS.writeFile p f
+  writeIfNeeded p f =
+    unlessM (D.doesFileExist p) . ignore $
+      BS.writeFile p f
 
 -- By default we use self-signed 'cert.pem' certificate and 'key.pem' key created
 -- by 'openssl' program. Example of the command:

@@ -22,11 +22,14 @@ module Cardano.Tracer.Handlers.RTView.UI.Utils
   , findAndHide
   , findAndShow
   , findAndGetValue
+  , findAndGetCheckboxState
   , image
   , showIt
   , showInline
   , showFlex
   , hideIt
+  , hiddenOnly
+  , visibleOnly
   , pageTitle
   , pageTitleNotify
   , shortenName
@@ -35,6 +38,8 @@ module Cardano.Tracer.Handlers.RTView.UI.Utils
   , delete'
   , fadeInModal
   , exportErrorsToJSONFile
+  , shownState
+  , hiddenState
   ) where
 
 import           Control.Monad (unless, void)
@@ -57,6 +62,10 @@ import           Cardano.Tracer.Types
 
 (##) :: UI Element -> String -> UI Element
 (##) el anId = el # set UI.id_ anId
+
+shownState, hiddenState :: String
+shownState  = "shown"
+hiddenState = "hidden"
 
 findAndDo
   :: UI.Window
@@ -155,6 +164,15 @@ findAndGetValue window elId =
     Nothing -> return ""
     Just el -> get value el
 
+findAndGetCheckboxState
+  :: UI.Window
+  -> Text
+  -> UI (Maybe Bool)
+findAndGetCheckboxState window elId =
+  UI.getElementById window (unpack elId) >>= \case
+    Nothing -> return Nothing
+    Just el -> Just <$> get UI.checked el
+
 findByClassAndSet
   :: (UI Element -> UI Element)
   -> UI.Window
@@ -172,11 +190,15 @@ findAndHide = findAndSet hideIt
 showIt
   , showInline
   , showFlex
-  , hideIt :: UI Element -> UI Element
-showIt     = set style [("display", "block")]
-showInline = set style [("display", "inline")]
-showFlex   = set style [("display", "flex")]
-hideIt     = set style [("display", "none")]
+  , hideIt
+  , hiddenOnly
+  , visibleOnly :: UI Element -> UI Element
+showIt      = set style [("display", "block")]
+showInline  = set style [("display", "inline")]
+showFlex    = set style [("display", "flex")]
+hideIt      = set style [("display", "none")]
+hiddenOnly  = set style [("visibility", "hidden")]
+visibleOnly = set style [("visibility", "visible")]
 
 pageTitle, pageTitleNotify :: String
 pageTitle       = "Cardano RTView"

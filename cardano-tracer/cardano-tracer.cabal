@@ -47,8 +47,18 @@ library
                        Cardano.Tracer.Handlers.Metrics.Servers
                        Cardano.Tracer.Handlers.Metrics.Utils
 
+                       Cardano.Tracer.Handlers.RTView.Notifications.Check
+                       Cardano.Tracer.Handlers.RTView.Notifications.Email
+                       Cardano.Tracer.Handlers.RTView.Notifications.Send
+                       Cardano.Tracer.Handlers.RTView.Notifications.Settings
+                       Cardano.Tracer.Handlers.RTView.Notifications.Timer
+                       Cardano.Tracer.Handlers.RTView.Notifications.Types
+                       Cardano.Tracer.Handlers.RTView.Notifications.Utils
+
                        Cardano.Tracer.Handlers.RTView.Run
+
                        Cardano.Tracer.Handlers.RTView.SSL.Certs
+
                        Cardano.Tracer.Handlers.RTView.State.Displayed
                        Cardano.Tracer.Handlers.RTView.State.EraSettings
                        Cardano.Tracer.Handlers.RTView.State.Errors
@@ -56,7 +66,9 @@ library
                        Cardano.Tracer.Handlers.RTView.State.Last
                        Cardano.Tracer.Handlers.RTView.State.Peers
                        Cardano.Tracer.Handlers.RTView.State.TraceObjects
+
                        Cardano.Tracer.Handlers.RTView.System
+
                        Cardano.Tracer.Handlers.RTView.UI.CSS.Bulma
                        Cardano.Tracer.Handlers.RTView.UI.CSS.Own
                        Cardano.Tracer.Handlers.RTView.UI.HTML.Node.Column
@@ -73,9 +85,11 @@ library
                        Cardano.Tracer.Handlers.RTView.UI.JS.Utils
                        Cardano.Tracer.Handlers.RTView.UI.Img.Icons
                        Cardano.Tracer.Handlers.RTView.UI.Charts
+                       Cardano.Tracer.Handlers.RTView.UI.Notifications
                        Cardano.Tracer.Handlers.RTView.UI.Theme
                        Cardano.Tracer.Handlers.RTView.UI.Types
                        Cardano.Tracer.Handlers.RTView.UI.Utils
+
                        Cardano.Tracer.Handlers.RTView.Update.Chain
                        Cardano.Tracer.Handlers.RTView.Update.EKG
                        Cardano.Tracer.Handlers.RTView.Update.EraSettings
@@ -112,15 +126,18 @@ library
                        , cborg
                        , containers
                        , contra-tracer
+                       , cryptonite
                        , directory
                        , ekg
                        , ekg-core
                        , ekg-forward
                        , extra
                        , filepath
+                       , mime-mail
                        , optparse-applicative
                        , ouroboros-network
                        , ouroboros-network-framework
+                       , smtp-mail == 0.3.0.0
                        , snap-blaze
                        , snap-core
                        , snap-server

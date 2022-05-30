@@ -25,31 +25,36 @@ import           Text.Read (readMaybe)
 
 import           Cardano.Logging (SeverityS (..))
 
+import           Cardano.Tracer.Handlers.RTView.Notifications.Check
+import           Cardano.Tracer.Handlers.RTView.Notifications.Types
 import           Cardano.Tracer.Handlers.RTView.State.Errors
 import           Cardano.Tracer.Handlers.RTView.State.TraceObjects
 import           Cardano.Tracer.Handlers.RTView.UI.Img.Icons
 import           Cardano.Tracer.Handlers.RTView.UI.JS.Utils
 import           Cardano.Tracer.Handlers.RTView.UI.Utils
-import           Cardano.Tracer.Handlers.RTView.Update.Utils
 import           Cardano.Tracer.Types
+import           Cardano.Tracer.Utils
 
 runErrorsUpdater
   :: ConnectedNodes
   -> Errors
   -> SavedTraceObjects
+  -> EventsQueues
   -> IO ()
-runErrorsUpdater connectedNodes nodesErrors savedTO = forever $ do
+runErrorsUpdater connectedNodes nodesErrors savedTO eventsQueues = forever $ do
   sleep 2.0
   connected <- readTVarIO connectedNodes
   savedTraceObjects <- readTVarIO savedTO
   forM_ connected $ \nodeId ->
     whenJust (M.lookup nodeId savedTraceObjects) $ \savedTOForNode ->
       forM_ (M.toList savedTOForNode) $ \(_, trObInfo@(_, severity, _)) ->
-        when (itIsError severity) $
+        when (itIsError severity) $ do
           addError nodesErrors nodeId trObInfo
+          checkCommonErrors nodeId trObInfo eventsQueues
  where
   itIsError sev =
     case sev of
+      Warning   -> True
       Error     -> True
       Critical  -> True
       Alert     -> True

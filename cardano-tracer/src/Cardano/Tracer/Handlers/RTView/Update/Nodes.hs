@@ -39,6 +39,7 @@ import           Cardano.Tracer.Handlers.RTView.State.Errors
 import           Cardano.Tracer.Handlers.RTView.State.TraceObjects
 import           Cardano.Tracer.Handlers.RTView.UI.Charts
 import           Cardano.Tracer.Handlers.RTView.UI.HTML.Node.Column
+import           Cardano.Tracer.Handlers.RTView.UI.HTML.NoNodes
 import           Cardano.Tracer.Handlers.RTView.UI.Types
 import           Cardano.Tracer.Handlers.RTView.UI.Utils
 import           Cardano.Tracer.Handlers.RTView.Update.NodeInfo
@@ -58,9 +59,11 @@ updateNodesUI
   -> DatasetsIndices
   -> Errors
   -> UI.Timer
+  -> UI.Timer
   -> UI ()
 updateNodesUI window connectedNodes displayedElements acceptedMetrics savedTO nodesEraSettings
-              dpRequestors loggingConfig colors datasetIndices nodesErrors updateErrorsTimer = do
+              dpRequestors loggingConfig colors datasetIndices nodesErrors updateErrorsTimer
+              noNodesProgressTimer = do
   (connected, displayedEls) <- liftIO . atomically $ (,)
     <$> readTVar connectedNodes
     <*> readTVar displayedElements
@@ -77,7 +80,7 @@ updateNodesUI window connectedNodes displayedElements acceptedMetrics savedTO no
       nodesErrors
       updateErrorsTimer
       displayedElements
-    checkNoNodesState window connected
+    checkNoNodesState window connected noNodesProgressTimer
     askNSetNodeInfo window dpRequestors newlyConnected displayedElements
     addDatasetsForConnected window newlyConnected colors datasetIndices displayedElements
     liftIO $ updateDisplayedElements displayedElements connected
@@ -134,15 +137,15 @@ deleteColumnsForDisconnected window connected disconnected = do
   -- for disconnected node. Because the user may want to see the
   -- historical data even for the node that already disconnected.
 
-checkNoNodesState :: UI.Window -> Set NodeId -> UI ()
-checkNoNodesState window connected =
+checkNoNodesState
+  :: UI.Window
+  -> Set NodeId
+  -> UI.Timer
+  -> UI ()
+checkNoNodesState window connected noNodesProgressTimer =
   if S.null connected
-    then do
-      findAndShow window "no-nodes"
-      findAndShow window "no-nodes-info"
-    else do
-      findAndHide window "no-nodes"
-      findAndHide window "no-nodes-info"
+    then showNoNodes window noNodesProgressTimer
+    else hideNoNodes window noNodesProgressTimer
 
 updateNodesUptime
   :: ConnectedNodes

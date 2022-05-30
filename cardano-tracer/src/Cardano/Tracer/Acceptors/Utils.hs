@@ -1,5 +1,8 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Cardano.Tracer.Acceptors.Utils
-  ( prepareDataPointRequestor
+  ( notifyAboutNodeDisconnected
+  , prepareDataPointRequestor
   , prepareMetricsStores
   , removeDisconnectedNode
   ) where
@@ -8,6 +11,7 @@ import           Control.Concurrent.STM (atomically)
 import           Control.Concurrent.STM.TVar (TVar, newTVarIO, modifyTVar')
 import qualified Data.Map.Strict as M
 import qualified Data.Set as S
+import           Data.Time.Clock.System (getSystemTime, systemToUTCTime)
 import qualified System.Metrics as EKG
 
 import           Ouroboros.Network.Snocket (LocalAddress)
@@ -15,6 +19,10 @@ import           Ouroboros.Network.Socket (ConnectionId (..))
 import           System.Metrics.Store.Acceptor (MetricsLocalStore, emptyMetricsLocalStore)
 import           Trace.Forward.Utils.DataPoint (DataPointRequestor, initDataPointRequestor)
 
+import           Cardano.Logging (SeverityS (..))
+
+import           Cardano.Tracer.Handlers.RTView.Notifications.Types
+import           Cardano.Tracer.Handlers.RTView.Notifications.Utils
 import           Cardano.Tracer.Types (AcceptedMetrics, ConnectedNodes, DataPointRequestors)
 import           Cardano.Tracer.Utils (connIdToNodeId)
 
@@ -65,3 +73,14 @@ removeDisconnectedNode connectedNodes acceptedMetrics dpRequestors connId = atom
   modifyTVar' dpRequestors    $ M.delete nodeId
  where
   nodeId = connIdToNodeId connId
+
+notifyAboutNodeDisconnected
+  :: EventsQueues
+  -> ConnectionId LocalAddress
+  -> IO ()
+notifyAboutNodeDisconnected eventsQueues connId = do
+  now <- systemToUTCTime <$> getSystemTime
+  addNewEvent eventsQueues EventNodeDisconnected $ Event nodeId now Warning msg
+ where
+  nodeId = connIdToNodeId connId
+  msg = "Node is disconnected"

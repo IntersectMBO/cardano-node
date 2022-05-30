@@ -1,11 +1,6 @@
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-
-#if !defined(mingw32_HOST_OS)
-#define UNIX
-#endif
 
 module Cardano.Tracer.Handlers.Logs.File
   ( writeTraceObjectsToFile
@@ -32,6 +27,7 @@ import           Cardano.Logging (Namespace, TraceObject (..))
 import           Cardano.Tracer.Configuration (LogFormat (..))
 import           Cardano.Tracer.Handlers.Logs.Utils (createEmptyLog, isItLog)
 import           Cardano.Tracer.Types (NodeId (..))
+import           Cardano.Tracer.Utils (nl)
 
 -- | Append the list of 'TraceObject's to the latest log via symbolic link.
 --
@@ -92,13 +88,6 @@ getPathToCurrentlog (NodeId anId) rootDirAbs format =
     -- The root directory (as a parent for subDirForLogs) will be created as well if needed.
     createDirectoryIfMissing True subDirForLogs
     createEmptyLog subDirForLogs format
-
-nl :: T.Text
-#ifdef UNIX
-nl = "\n"
-#else
-nl = "\r\n"
-#endif
 
 traceObjectToText :: TraceObject -> Maybe T.Text
 traceObjectToText TraceObject{toHuman, toHostname, toNamespace, toSeverity, toThreadId, toTimestamp} =

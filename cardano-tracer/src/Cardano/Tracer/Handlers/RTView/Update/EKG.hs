@@ -13,8 +13,8 @@ import           Graphics.UI.Threepenny.Core (UI, liftIO)
 
 import           Cardano.Tracer.Handlers.Metrics.Utils
 import           Cardano.Tracer.Handlers.RTView.UI.Utils
-import           Cardano.Tracer.Handlers.RTView.Update.Utils
 import           Cardano.Tracer.Types
+import           Cardano.Tracer.Utils
 
 updateEKGMetrics :: AcceptedMetrics -> UI ()
 updateEKGMetrics acceptedMetrics = do

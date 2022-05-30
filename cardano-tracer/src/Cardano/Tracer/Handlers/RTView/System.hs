@@ -3,6 +3,7 @@
 module Cardano.Tracer.Handlers.RTView.System
   ( getPathToChartsConfig
   , getPathToThemeConfig
+  , getPathsToNotificationsSettings
   , getPathsToSSLCerts
   , getProcessId
   ) where
@@ -44,6 +45,15 @@ getPathsToSSLCerts = do
   D.createDirectoryIfMissing True pathToSSLSubDir
   return ( pathToSSLSubDir </> "cert.pem"
          , pathToSSLSubDir </> "key.pem"
+         )
+
+getPathsToNotificationsSettings :: IO (FilePath, FilePath)
+getPathsToNotificationsSettings = do
+  configDir <- getPathToConfigDir
+  let pathToNotifySubDir = configDir </> "notifications"
+  D.createDirectoryIfMissing True pathToNotifySubDir
+  return ( pathToNotifySubDir </> "email"
+         , pathToNotifySubDir </> "events"
          )
 
 getPathToConfigDir :: IO FilePath

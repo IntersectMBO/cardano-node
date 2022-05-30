@@ -3,6 +3,7 @@
 
 module Cardano.Tracer.Handlers.RTView.Run
   ( runRTView
+  , module Cardano.Tracer.Handlers.RTView.Notifications.Utils
   , module Cardano.Tracer.Handlers.RTView.State.TraceObjects
   ) where
 
@@ -15,6 +16,8 @@ import qualified Graphics.UI.Threepenny as UI
 import           System.Time.Extra (sleep)
 
 import           Cardano.Tracer.Configuration
+import           Cardano.Tracer.Handlers.RTView.Notifications.Types
+import           Cardano.Tracer.Handlers.RTView.Notifications.Utils
 import           Cardano.Tracer.Handlers.RTView.SSL.Certs
 import           Cardano.Tracer.Handlers.RTView.State.Displayed
 import           Cardano.Tracer.Handlers.RTView.State.EraSettings
@@ -35,8 +38,6 @@ import           Cardano.Tracer.Types
 --
 --   The web-page is built using 'threepenny-gui' library. Please note
 --   Gitub-version of this library is used, not Hackage-version!
---
---   TODO ...
 
 runRTView
   :: TracerConfig
@@ -44,9 +45,10 @@ runRTView
   -> AcceptedMetrics
   -> SavedTraceObjects
   -> DataPointRequestors
+  -> EventsQueues
   -> IO ()
 runRTView TracerConfig{logging, network, hasRTView}
-          connectedNodes acceptedMetrics savedTO dpRequestors =
+          connectedNodes acceptedMetrics savedTO dpRequestors eventsQueues =
   whenJust hasRTView $ \(Endpoint host port) -> do
     -- Pause to prevent collision between "Listening"-notifications from servers.
     sleep 0.3
@@ -61,11 +63,11 @@ runRTView TracerConfig{logging, network, hasRTView}
     -- show charts with historical data (where X axis is the time) for the
     -- period when RTView web-page wasn't opened.
     resourcesHistory <- initResourcesHistory
-    lastResources <- initLastResources
-    chainHistory <- initBlockchainHistory
-    txHistory <- initTransactionsHistory
-    eraSettings <- initErasSettings
-    errors <- initErrors
+    lastResources    <- initLastResources
+    chainHistory     <- initBlockchainHistory
+    txHistory        <- initTransactionsHistory
+    eraSettings      <- initErasSettings
+    errors           <- initErrors
 
     void . sequenceConcurrently $
       [ UI.startGUI (config host port certFile keyFile) $
@@ -83,6 +85,7 @@ runRTView TracerConfig{logging, network, hasRTView}
             chainHistory
             txHistory
             errors
+            eventsQueues
       , runHistoricalUpdater
           savedTO
           acceptedMetrics
@@ -98,6 +101,7 @@ runRTView TracerConfig{logging, network, hasRTView}
           connectedNodes
           errors
           savedTO
+          eventsQueues
       ]
  where
   -- RTView's web page is available via 'https://' url only.
@@ -107,5 +111,5 @@ runRTView TracerConfig{logging, network, hasRTView}
     , UI.jsSSLCert = Just cert
     , UI.jsSSLKey  = Just key
     , UI.jsLog     = const $ return () -- To hide 'threepenny-gui' internal messages.
-    , UI.jsWindowReloadOnDisconnect = False
+    -- , UI.jsWindowReloadOnDisconnect = False
     }
