@@ -166,6 +166,22 @@ jobs:
         echo "SECP256K1_PATH=$SECP256K1_PATH"
         echo "$SECP256K1_PATH" >> $GITHUB_PATH
 
+    - name: Install libopenssl (Windows)
+      if: matrix.os == 'windows-latest'
+      env:
+        RUNNER_TEMP: ${{ runner.temp }}
+      run: |
+        git clone https://github.com/openssl/openssl
+        (
+          cd openssl
+          ./Configure
+          make
+          make install
+        )
+        export PKG_CONFIG_PATH="$PKG_CONFIG_PATH;$(readlink -f openssl/lib/pkgconfig | sed 's|^/d|D:|g' | tr / '\\')"
+        echo "PKG_CONFIG_PATH=$PKG_CONFIG_PATH"
+        echo "PKG_CONFIG_PATH=$PKG_CONFIG_PATH" >> $GITHUB_ENV
+
     - name: Cabal update
       run: retry 2 cabal update
 
