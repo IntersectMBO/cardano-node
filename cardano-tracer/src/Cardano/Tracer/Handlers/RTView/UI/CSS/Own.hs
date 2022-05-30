@@ -148,6 +148,11 @@ span[data-tooltip] {
   }
 }
 
+@media screen and (min-width: 769px), print
+  .field-label {
+    flex-grow: 1.5;
+  }
+
 @media only screen and (max-width: 769px) {
   .rt-view-peer-modal {
     width: 80%;
@@ -160,6 +165,9 @@ span[data-tooltip] {
   .rt-view-ekg-metrics-modal {
     width: 80%;
   }
+}
+
+.rt-view-notifications-settings {
 }
 
 .rt-view-logs-input {
@@ -412,8 +420,6 @@ span[data-tooltip] {
 .dark .rt-view-notifications-body {
   color: whitesmoke;
   background-color: #131325;
-  border-bottom-left-radius: 6px;
-  border-bottom-right-radius: 6px;
 }
 
 .dark .rt-view-ekg-metrics-title {
@@ -532,6 +538,17 @@ span[data-tooltip] {
   margin-left: 20px;
   margin-right: 5px;
   color: #0cc9cb;
+}
+
+.dark .rt-view-email-only {
+  color: orange;
+  font-size: 95%;
+  margin-bottom: 21px;
+}
+
+.dark .rt-view-label {
+  font-size: 80%;
+  font-weight: 600;
 }
 
 /**** Light Theme ****/
@@ -753,8 +770,6 @@ span[data-tooltip] {
 .light .rt-view-notifications-body {
   color: #555;
   background-color: #eaeaea;
-  border-bottom-left-radius: 6px;
-  border-bottom-right-radius: 6px;
 }
 
 .light .rt-view-ekg-metrics-title {
@@ -880,6 +895,17 @@ span[data-tooltip] {
   padding-top: 6px;
   margin-right: 9px;
   color: #0033ad;
+}
+
+.light .rt-view-email-only {
+  color: #d68c04;
+  font-size: 95%;
+  margin-bottom: 21px;
+}
+
+.light .rt-view-label {
+  font-size: 80%;
+  font-weight: 600;
 }
 |]
 
