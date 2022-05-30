@@ -504,8 +504,8 @@ topNavigation window = do
   on UI.click notificationsEventsItem   . const $ fadeInModal notificationsEvents
   on UI.click notificationsSettingsItem . const $ fadeInModal notificationsSettings
 
-  _notificationsIcon <- image "rt-view-info-icon mr-2" rtViewNotifySVG
-                              ## "notifications-icon"
+  notificationsIcon <- image "rt-view-info-icon mr-2" rtViewNotifySVG
+                             ## "notifications-icon"
 
   themeIcon <- image "has-tooltip-multiline has-tooltip-bottom rt-view-theme-icon" rtViewThemeToLightSVG
                      ## "theme-icon"
@@ -514,8 +514,8 @@ topNavigation window = do
 
   UI.div ## "top-bar" #. "navbar rt-view-top-bar" #+
     [ element info
-    --, element notificationsEvents
-    --, element notificationsSettings
+    , element notificationsEvents
+    , element notificationsSettings
     , UI.div #. "navbar-brand" #+
         [ UI.div #. "navbar-item" #+
             [ image "rt-view-cardano-logo" cardanoLogoSVG ## "cardano-logo"
@@ -527,13 +527,13 @@ topNavigation window = do
         , UI.div #. "navbar-end" #+
             [ UI.div #. "navbar-item" #+ [element themeIcon]
             , UI.div #. "navbar-item" #+ [element infoIcon]
-            --, UI.div #. "navbar-item has-dropdown is-hoverable" #+
-            --    [ UI.anchor #. "navbar-link" #+ [element notificationsIcon]
-            --    , UI.div #. "navbar-dropdown is-right" #+
-            --        [ element notificationsEventsItem
-            --        , element notificationsSettingsItem
-            --        ]
-            --    ]
+            , UI.div #. "navbar-item has-dropdown is-hoverable" #+
+                [ UI.anchor #. "navbar-link" #+ [element notificationsIcon]
+                , UI.div #. "navbar-dropdown is-right" #+
+                    [ element notificationsEventsItem
+                    , element notificationsSettingsItem
+                    ]
+                ]
             ]
         ]
     ]
