@@ -7,10 +7,12 @@ module Cardano.Tracer.Handlers.RTView.UI.HTML.Node.Errors
 
 import           Control.Monad (when)
 import           Control.Monad.Extra (unlessM)
+import           Data.Maybe (fromMaybe)
 import           Data.Text (unpack)
 import qualified Graphics.UI.Threepenny as UI
 import           Graphics.UI.Threepenny.Core
 
+import           Cardano.Tracer.Handlers.RTView.State.Displayed
 import           Cardano.Tracer.Handlers.RTView.State.Errors
 import           Cardano.Tracer.Handlers.RTView.UI.Img.Icons
 import           Cardano.Tracer.Handlers.RTView.UI.Utils
@@ -22,8 +24,9 @@ mkErrorsTable
   -> NodeId
   -> Errors
   -> UI.Timer
+  -> DisplayedElements
   -> UI Element
-mkErrorsTable window nodeId@(NodeId anId) nodesErrors updateErrorsTimer = do
+mkErrorsTable window nodeId@(NodeId anId) nodesErrors updateErrorsTimer displayedElements = do
   let id' = unpack anId
   closeIt <- UI.button #. "delete"
   deleteAll <- image "has-tooltip-multiline has-tooltip-left rt-view-delete-errors-icon" trashSVG
@@ -64,6 +67,12 @@ mkErrorsTable window nodeId@(NodeId anId) nodesErrors updateErrorsTimer = do
                               # set dataState "asc"
   on UI.click sortBySeverityIcon . const $
     sortErrorsBySeverity window nodeId sortBySeverityIcon nodesErrors
+
+  exportToJSON <- image "has-tooltip-multiline has-tooltip-left rt-view-export-icon" exportSVG
+                        # set dataTooltip "Click to export errors to JSON-file"
+  on UI.click exportToJSON . const $ do
+    nName <- liftIO $ getDisplayedValue displayedElements nodeId (anId <> "__node-name")
+    exportErrorsToJSONFile nodesErrors nodeId $ fromMaybe anId nName
 
   errorsTable <-
     UI.div #. "modal" #+
@@ -106,12 +115,19 @@ mkErrorsTable window nodeId@(NodeId anId) nodesErrors updateErrorsTimer = do
                   ]
               ]
           , UI.mkElement "footer" #. "modal-card-foot rt-view-errors-foot" #+
-              [ UI.div #. "field has-addons" #+
-                  [ UI.p #. "control" #+
-                      [ element searchMessagesInput
+              [ UI.div #. "columns" #+
+                  [ UI.div #. "column" #+
+                      [ UI.div #. "field has-addons" #+
+                          [ UI.p #. "control" #+
+                              [ element searchMessagesInput
+                              ]
+                          , UI.p #. "control" #+
+                              [ element searchMessages
+                              ]
+                          ]
                       ]
-                  , UI.p #. "control" #+
-                      [ element searchMessages
+                  , UI.div #. "column has-text-right" #+
+                      [ element exportToJSON
                       ]
                   ]
               ]

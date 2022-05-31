@@ -5,13 +5,13 @@ module Cardano.Tracer.Handlers.RTView.Update.Peers
   ( updateNodesPeers
   ) where
 
-import           Control.Concurrent.STM.TVar
-import           Control.Monad
+import           Control.Concurrent.STM.TVar (readTVarIO)
+import           Control.Monad (forM_, void)
 import           Control.Monad.Extra (whenJustM)
 import           Data.List (find)
 import           Data.List.Extra (notNull)
-import           Data.Maybe (mapMaybe)
 import qualified Data.Map.Strict as M
+import           Data.Maybe (mapMaybe)
 import           Data.Set ((\\))
 import qualified Data.Set as S
 import           Data.Text (Text, unpack)

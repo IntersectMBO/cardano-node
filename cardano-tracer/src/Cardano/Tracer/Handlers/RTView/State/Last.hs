@@ -21,8 +21,12 @@ import           Cardano.Tracer.Types (NodeId)
 --   rendering on the corresponding chart.
 
 data LastResourcesForNode = LastResourcesForNode
-  { cpuLastTicks :: !Int
-  , cpuLastNS    :: !Word64
+  { cpuLastTicks    :: !Int
+  , cpuLastNS       :: !Word64
+  , cpuGCLastTicks  :: !Int
+  , cpuGCLastNS     :: !Word64
+  , cpuAppLastTicks :: !Int
+  , cpuAppLastNS    :: !Word64
   }
 
 type LastResources = TVar (Map NodeId LastResourcesForNode)
@@ -40,8 +44,12 @@ addNullResources lastResources nodeId = atomically $
  where
   nulls =
     LastResourcesForNode
-      { cpuLastTicks = 0
-      , cpuLastNS = 0
+      { cpuLastTicks    = 0
+      , cpuLastNS       = 0
+      , cpuGCLastTicks  = 0
+      , cpuGCLastNS     = 0
+      , cpuAppLastTicks = 0
+      , cpuAppLastNS    = 0
       }
 
 updateLastResources

@@ -316,9 +316,9 @@ source-repository-package
 
 source-repository-package
   type: git
-  location: https://github.com/HeinrichApfelmus/threepenny-gui
-  tag: e3bb8283fc7d2e8aa374eea29426002e8dcd67a8
-  --sha256: 0nf836b552asgpwn2gxwl7yd7ssdhb1wkvdqz6s4dpzqnlpyivx9
+  location: https://github.com/denisshevchenko/threepenny-gui
+  tag: 4ec92ded05ccf59ba4a874be4b404ac1b6d666b6
+  --sha256: 00fvvaf4ir4hskq4a6gggbh2wmdvy8j8kn6s4m1p1vlh8m8mq514
 
 -- Drops an instance breaking our code. Should be released to Hackage eventually.
 source-repository-package
@@ -335,6 +335,9 @@ constraints:
     -- systemd-2.3.0 requires at least network 3.1.1.0 but it doesn't declare
     -- that dependency
   , network >= 3.1.1.0
+
+package snap-server
+  flags: +openssl
 
 package comonad
   flags: -test-doctests

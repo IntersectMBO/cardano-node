@@ -26,11 +26,11 @@ module Cardano.Tracer.Handlers.RTView.UI.Charts
 --   to re-render their values after web-page reloading.
 
 import           Control.Concurrent.STM (atomically)
-import           Control.Concurrent.STM.TBQueue
-import           Control.Concurrent.STM.TVar
+import           Control.Concurrent.STM.TBQueue (newTBQueueIO, tryReadTBQueue, writeTBQueue)
+import           Control.Concurrent.STM.TVar (modifyTVar', newTVarIO, readTVarIO)
 import           Control.Exception.Extra (ignore, try_)
 import           Control.Monad (forM, forM_, when)
-import           Data.Aeson
+import           Data.Aeson (decodeFileStrict', encodeFile)
 import           Data.List.Extra (chunksOf)
 import qualified Data.Map.Strict as M
 import           Data.Maybe (catMaybes, fromMaybe)
@@ -39,7 +39,6 @@ import           Data.Text (pack)
 import           Graphics.UI.Threepenny.Core
 import           Text.Read (readMaybe)
 
-import           Cardano.Tracer.Types
 import           Cardano.Tracer.Handlers.RTView.State.Displayed
 import           Cardano.Tracer.Handlers.RTView.State.Historical
 import           Cardano.Tracer.Handlers.RTView.System
@@ -48,6 +47,7 @@ import qualified Cardano.Tracer.Handlers.RTView.UI.JS.Charts as Chart
 import qualified Cardano.Tracer.Handlers.RTView.UI.JS.Utils as JS
 import           Cardano.Tracer.Handlers.RTView.UI.Types
 import           Cardano.Tracer.Handlers.RTView.UI.Utils
+import           Cardano.Tracer.Types
 
 chartsIds :: [ChartId]
 chartsIds = [minBound .. maxBound]

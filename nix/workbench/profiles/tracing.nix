@@ -7,8 +7,10 @@
                                       backends = [
                                         "Stdout MachineFormat"
                                         "EKGBackend"
+                                      ] ++ (if !profile.node.tracer then [] else
+                                      [
                                         "Forwarder"
-                                      ];
+                                      ]);
                                     };
     "Node.AcceptPolicy"             = { severity = "Info"; };
     "Node.ChainDB"                  = { severity = "Info"; };

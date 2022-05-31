@@ -9,8 +9,8 @@ module Cardano.Tracer.Handlers.RTView.UI.JS.Utils
 
 import           Data.String.QQ
 import           Data.Text (Text)
-import           Graphics.UI.Threepenny.Core
 import qualified Graphics.UI.Threepenny as UI
+import           Graphics.UI.Threepenny.Core
 
 copyTextToClipboard :: String -> UI ()
 copyTextToClipboard textToCopy =
@@ -37,7 +37,7 @@ downloadJSONFile jsonFileName textToExport =
 downloadJSONFile' :: String
 downloadJSONFile' = [s|
 var element = document.createElement('a');
-element.setAttribute('href', 'data:application/json;charset=utf-8,' + %2);
+element.setAttribute('href', 'data:application/json;charset=utf-8,' + encodeURIComponent(%2));
 element.setAttribute('download', %1);
 element.style.display = 'none';
 document.body.appendChild(element);

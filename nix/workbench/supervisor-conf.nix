@@ -52,7 +52,7 @@ let
         command        = "sh start.sh";
         stdout_logfile = "${stateDir}/tracer/stdout";
         stderr_logfile = "${stateDir}/tracer/stderr";
-        autostart      = true;
+        autostart      = false;
         startretries   = 0;
       };
     }

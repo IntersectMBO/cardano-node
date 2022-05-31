@@ -5,24 +5,24 @@ module Cardano.Tracer.Handlers.RTView.UI.HTML.Body
   ( mkPageBody
   ) where
 
-import           Control.Monad (void, unless, when)
-import           Control.Monad.Extra (whenM, whenJustM)
+import           Control.Monad (unless, void, when)
+import           Control.Monad.Extra (whenJustM, whenM)
 import           Data.Text (Text)
 import qualified Graphics.UI.Threepenny as UI
 import           Graphics.UI.Threepenny.Core
-import           Graphics.UI.Threepenny.JQuery
+import           Graphics.UI.Threepenny.JQuery (Easing (..), fadeIn, fadeOut)
 import           Text.Read (readMaybe)
 
 import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.Handlers.RTView.State.Historical
-import           Cardano.Tracer.Handlers.RTView.UI.Img.Icons
+import           Cardano.Tracer.Handlers.RTView.UI.Charts
 import           Cardano.Tracer.Handlers.RTView.UI.HTML.About
 import           Cardano.Tracer.Handlers.RTView.UI.HTML.NoNodes
 import           Cardano.Tracer.Handlers.RTView.UI.HTML.Notifications
-import qualified Cardano.Tracer.Handlers.RTView.UI.JS.Charts as Chart
+import           Cardano.Tracer.Handlers.RTView.UI.Img.Icons
 import           Cardano.Tracer.Handlers.RTView.UI.JS.ChartJS
+import qualified Cardano.Tracer.Handlers.RTView.UI.JS.Charts as Chart
 import           Cardano.Tracer.Handlers.RTView.UI.JS.Utils
-import           Cardano.Tracer.Handlers.RTView.UI.Charts
 import           Cardano.Tracer.Handlers.RTView.UI.Theme
 import           Cardano.Tracer.Handlers.RTView.UI.Types
 import           Cardano.Tracer.Handlers.RTView.UI.Utils
@@ -321,7 +321,7 @@ mkPageBody window networkConfig connected
                       [ UI.div #. "divider" #+
                           [ element showHideLeadership
                           , UI.span #. "rt-view-chart-group-title" # set text "Leadership"
-                          ] 
+                          ]
                       ]
                   , UI.div ## "leadership-charts" #. "columns" #+
                       [ UI.div #. "column" #+
@@ -359,7 +359,7 @@ mkPageBody window networkConfig connected
                       [ UI.div #. "divider" #+
                           [ element showHideResources
                           , UI.span #. "rt-view-chart-group-title" # set text "Resources"
-                          ] 
+                          ]
                       ]
                   , UI.div ## "resources-charts" #. "columns" #+
                       [ UI.div #. "column" #+
@@ -399,8 +399,8 @@ mkPageBody window networkConfig connected
   Chart.newTimeChartJS GCMajorNumChart   ""
   Chart.newTimeChartJS GCMinorNumChart   ""
   Chart.newTimeChartJS GCLiveMemoryChart "MB"
-  Chart.newTimeChartJS CPUTimeGCChart    "Milliseconds"
-  Chart.newTimeChartJS CPUTimeAppChart   "Milliseconds"
+  Chart.newTimeChartJS CPUTimeGCChart    "Percent"
+  Chart.newTimeChartJS CPUTimeAppChart   "Percent"
   Chart.newTimeChartJS ThreadsNumChart   ""
 
   Chart.newTimeChartJS ChainDensityChart "Percent"
@@ -488,7 +488,7 @@ topNavigation window = do
   infoIcon <- image "has-tooltip-multiline has-tooltip-bottom rt-view-info-icon mr-3" rtViewInfoSVG
                     ## "info-icon"
                     # set dataTooltip "RTView info"
-  on UI.click infoIcon . const $ fadeInModal info 
+  on UI.click infoIcon . const $ fadeInModal info
 
   notificationsEvents   <- mkNotificationsEvents
   notificationsSettings <- mkNotificationsSettings

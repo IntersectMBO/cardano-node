@@ -5,13 +5,13 @@ module Cardano.Tracer.Handlers.RTView.Update.NodeState
   ( askNSetNodeState
   ) where
 
-import           Control.Concurrent.STM.TVar
+import           Control.Concurrent.STM.TVar (readTVarIO)
 import           Control.Monad (forM_)
 import           Control.Monad.Extra (whenJustM)
 import           Data.Text (pack)
 import qualified Graphics.UI.Threepenny as UI
-import           Graphics.UI.Threepenny.Core
-import           Text.Printf
+import           Graphics.UI.Threepenny.Core (UI, liftIO)
+import           Text.Printf (printf)
 
 import           Cardano.Node.Tracing.StateRep
 

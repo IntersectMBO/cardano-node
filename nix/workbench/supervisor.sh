@@ -133,7 +133,8 @@ EOF
         supervisord --config  "$dir"/supervisor/supervisord.conf $@
 
         if jqtest ".node.tracer" "$dir"/profile.json
-        then progress_ne "supervisor" "waiting for $(yellow cardano-tracer) to create socket: "
+        then supervisorctl start tracer
+             progress_ne "supervisor" "waiting for $(yellow cardano-tracer) to create socket: "
              while test ! -e "$dir"/tracer/tracer.socket; do sleep 1; done
              echo $(green ' OK') >&2
         fi;;

@@ -3,9 +3,9 @@ module Cardano.Tracer.Handlers.RTView.Update.Historical
   ) where
 
 import           Control.Concurrent.STM.TVar (readTVarIO)
-import           Control.Monad (forever, forM_)
+import           Control.Monad (forM_, forever)
 import qualified Data.Map.Strict as M
-import           Data.Time.Clock.System
+import           Data.Time.Clock.System (getSystemTime, systemToUTCTime)
 import           System.Time.Extra (sleep)
 
 import           Cardano.Tracer.Handlers.Metrics.Utils

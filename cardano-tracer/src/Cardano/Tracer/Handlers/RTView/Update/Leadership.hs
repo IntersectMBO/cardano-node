@@ -5,7 +5,7 @@ module Cardano.Tracer.Handlers.RTView.Update.Leadership
   ( updateLeadershipHistory
   ) where
 
-import           Data.Time.Clock
+import           Data.Time.Clock (UTCTime)
 
 import           Cardano.Tracer.Handlers.Metrics.Utils
 import           Cardano.Tracer.Handlers.RTView.State.Historical

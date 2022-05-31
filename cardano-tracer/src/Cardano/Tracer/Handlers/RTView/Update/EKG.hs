@@ -9,7 +9,7 @@ import           Control.Monad (forM_, unless)
 import           Data.List (partition, sort)
 import qualified Data.Map.Strict as M
 import           Data.Text (intercalate, isPrefixOf)
-import           Graphics.UI.Threepenny.Core
+import           Graphics.UI.Threepenny.Core (UI, liftIO)
 
 import           Cardano.Tracer.Handlers.Metrics.Utils
 import           Cardano.Tracer.Handlers.RTView.UI.Utils
