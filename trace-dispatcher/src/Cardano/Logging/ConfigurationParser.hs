@@ -14,7 +14,9 @@ import           Control.Exception (throwIO)
 import qualified Data.Aeson as AE
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as BS
+import           Data.Functor
 import           Data.List (foldl')
+import           Data.Maybe (fromMaybe)
 import qualified Data.Map as Map
 import           Data.Text (Text, split)
 import           Data.Yaml
@@ -84,7 +86,7 @@ type OptionsRepresentation = Map.Map Text ConfigOptionRep
 instance AE.FromJSON ConfigRepresentation where
     parseJSON (Object obj) = ConfigRepresentation
                            <$> obj .: "TraceOptions"
-                           <*> obj .: "TraceOptionForwarder"
+                           <*> (obj .:? "TraceOptionForwarder" <&> fromMaybe defaultForwarder)
                            <*> obj .:? "TraceOptionNodeName"
                            <*> obj .:? "TraceOptionPeerFrequency"
                            <*> obj .:? "TraceOptionResourceFrequency"

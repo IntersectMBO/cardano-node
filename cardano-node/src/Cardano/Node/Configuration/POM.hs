@@ -38,6 +38,7 @@ import           System.FilePath (takeDirectory, (</>))
 
 import qualified Cardano.Chain.Update as Byron
 import           Cardano.Crypto (RequiresNetworkMagic (..))
+import           Cardano.Logging.Types
 import           Cardano.Node.Configuration.NodeAddress (SocketPath)
 import           Cardano.Node.Configuration.Socket (SocketConfig (..))
 import           Cardano.Node.Handlers.Shutdown
@@ -114,7 +115,7 @@ data NodeConfiguration
        , ncLoggingSwitch  :: !Bool
        , ncLogMetrics     :: !Bool
        , ncTraceConfig    :: !TraceOptions
-       , ncForwardSocket  :: !(Maybe SocketPath)
+       , ncTraceForwardSocket :: !(Maybe (SocketPath, ForwarderMode))
 
        , ncMaybeMempoolCapacityOverride :: !(Maybe MempoolCapacityBytesOverride)
 
@@ -170,7 +171,7 @@ data PartialNodeConfiguration
        , pncLoggingSwitch  :: !(Last Bool)
        , pncLogMetrics     :: !(Last Bool)
        , pncTraceConfig    :: !(Last PartialTraceOptions)
-       , pncForwardSocket  :: !(Last SocketPath)
+       , pncTraceForwardSocket :: !(Last (SocketPath, ForwarderMode))
 
          -- Configuration for testing purposes
        , pncMaybeMempoolCapacityOverride :: !(Last MempoolCapacityBytesOverride)
@@ -229,7 +230,6 @@ instance FromJSON PartialNodeConfiguration where
                                then Last . Just <$> return (PartialTraceDispatcher partialTraceSelection)
                                else Last . Just <$> return (PartialTracingOnLegacy partialTraceSelection)
                              else Last . Just <$> return PartialTracingOff
-      pncForwardSocket <- Last <$> v .:? "ForwardSocketPath"
 
       -- Protocol parameters
       protocol <-  v .:? "Protocol" .!= ByronProtocol
@@ -282,7 +282,7 @@ instance FromJSON PartialNodeConfiguration where
            , pncLoggingSwitch = Last $ Just pncLoggingSwitch'
            , pncLogMetrics
            , pncTraceConfig
-           , pncForwardSocket
+           , pncTraceForwardSocket = mempty
            , pncConfigFile = mempty
            , pncTopologyFile = mempty
            , pncDatabaseFile = mempty
@@ -432,7 +432,7 @@ defaultPartialNodeConfiguration =
     , pncMaxConcurrencyDeadline = mempty
     , pncLogMetrics = mempty
     , pncTraceConfig = mempty
-    , pncForwardSocket = mempty
+    , pncTraceForwardSocket = mempty
     , pncMaybeMempoolCapacityOverride = mempty
     , pncProtocolIdleTimeout   = Last (Just 5)
     , pncTimeWaitTimeout       = Last (Just 60)
@@ -522,7 +522,7 @@ makeNodeConfiguration pnc = do
              , ncLogMetrics = logMetrics
              , ncTraceConfig = if loggingSwitch then traceConfig
                                                 else TracingOff
-             , ncForwardSocket = getLast $ pncForwardSocket pnc
+             , ncTraceForwardSocket = getLast $ pncTraceForwardSocket pnc
              , ncMaybeMempoolCapacityOverride = getLast $ pncMaybeMempoolCapacityOverride pnc
              , ncProtocolIdleTimeout
              , ncTimeWaitTimeout

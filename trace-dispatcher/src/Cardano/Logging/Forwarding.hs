@@ -1,6 +1,5 @@
 {-# LANGUAGE DataKinds           #-}
 {-# LANGUAGE FlexibleInstances   #-}
-{-# LANGUAGE NamedFieldPuns      #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE PackageImports      #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -18,7 +17,6 @@ import           Control.Monad.IO.Class
 import           "contra-tracer" Control.Tracer (Tracer, contramap, nullTracer,
                      stdoutTracer)
 import qualified Data.ByteString.Lazy as LBS
-import           Data.Maybe (fromMaybe)
 import           Data.Void (Void)
 import           Data.Word (Word16)
 
@@ -62,25 +60,24 @@ initForwarding :: forall m. (MonadIO m)
   -> TraceConfig
   -> NetworkMagic
   -> EKG.Store
-  -> Maybe FilePath
+  -> Maybe (FilePath, ForwarderMode)
   -> m (ForwardSink TraceObject, DataPointStore)
-initForwarding iomgr config networkMagic ekgStore forwardSocket = liftIO $ do
+initForwarding iomgr config magic ekgStore tracerSocketMode = liftIO $ do
   forwardSink <- initForwardSink tfConfig
   dpStore <- initDataPointStore
   launchForwarders
     iomgr
-    config
-    networkMagic
+    magic
     ekgConfig
     tfConfig
     dpfConfig
     ekgStore
     forwardSink
     dpStore
-    forwardSocket
+    tracerSocketMode
   pure (forwardSink, dpStore)
  where
-  p = fromMaybe "" forwardSocket
+  p = maybe "" fst tracerSocketMode
   connSize = tofConnQueueSize $ tcForwarder config
   disconnSize = tofDisconnQueueSize $ tcForwarder config
   verbosity = tofVerbosity $ tcForwarder config
@@ -116,7 +113,6 @@ initForwarding iomgr config networkMagic ekgStore forwardSocket = liftIO $ do
 
 launchForwarders
   :: IOManager
-  -> TraceConfig
   -> NetworkMagic
   -> EKGF.ForwarderConfiguration
   -> TF.ForwarderConfiguration TraceObject
@@ -124,36 +120,35 @@ launchForwarders
   -> EKG.Store
   -> ForwardSink TraceObject
   -> DataPointStore
-  -> Maybe FilePath
+  -> Maybe (FilePath, ForwarderMode)
   -> IO ()
-launchForwarders iomgr TraceConfig{tcForwarder} networkMagic
+launchForwarders iomgr magic
                  ekgConfig tfConfig dpfConfig
-                 ekgStore sink dpStore forwardSocket =
-  -- If 'forwardSocket' is not specified, it's impossible to establish
+                 ekgStore sink dpStore tracerSocketMode =
+  -- If 'tracerSocketMode' is not specified, it's impossible to establish
   -- network connection with acceptor application (for example, 'cardano-tracer').
   -- In this case, we should not lauch forwarders.
-  case forwardSocket of
+  case tracerSocketMode of
     Nothing -> return ()
-    Just p -> 
+    Just (socketPath, mode) ->
       void . async $
         runInLoop
           (launchForwardersViaLocalSocket
              iomgr
-             networkMagic
-             tcForwarder
+             magic
              ekgConfig
              tfConfig
              dpfConfig
              sink
              ekgStore
              dpStore
-             p)
-          p 1
+             socketPath
+             mode)
+          socketPath 1
 
 launchForwardersViaLocalSocket
   :: IOManager
   -> NetworkMagic
-  -> TraceOptionForwarder
   -> EKGF.ForwarderConfiguration
   -> TF.ForwarderConfiguration TraceObject
   -> DPF.ForwarderConfiguration
@@ -161,17 +156,15 @@ launchForwardersViaLocalSocket
   -> EKG.Store
   -> DataPointStore
   -> FilePath
+  -> ForwarderMode
   -> IO ()
-launchForwardersViaLocalSocket iomgr networkMagic
-  TraceOptionForwarder {tofMode=Initiator}
-  ekgConfig tfConfig dpfConfig sink ekgStore dpStore p =
-    doConnectToAcceptor networkMagic (localSnocket iomgr) (localAddressFromPath p)
-      noTimeLimitsHandshake ekgConfig tfConfig dpfConfig sink ekgStore dpStore
-launchForwardersViaLocalSocket iomgr networkMagic
-  TraceOptionForwarder {tofMode=Responder}
-  ekgConfig tfConfig dpfConfig sink ekgStore dpStore p =
-    doListenToAcceptor networkMagic (localSnocket iomgr) (localAddressFromPath p)
-      noTimeLimitsHandshake ekgConfig tfConfig dpfConfig sink ekgStore dpStore
+launchForwardersViaLocalSocket
+  iomgr magic ekgConfig tfConfig dpfConfig sink ekgStore dpStore p mode =
+  (case mode of
+     Initiator -> doConnectToAcceptor
+     Responder -> doListenToAcceptor)
+  magic (localSnocket iomgr) (localAddressFromPath p)
+  noTimeLimitsHandshake ekgConfig tfConfig dpfConfig sink ekgStore dpStore
 
 doConnectToAcceptor
   :: NetworkMagic
@@ -185,7 +178,7 @@ doConnectToAcceptor
   -> EKG.Store
   -> DataPointStore
   -> IO ()
-doConnectToAcceptor networkMagic snocket address timeLimits
+doConnectToAcceptor magic snocket address timeLimits
                     ekgConfig tfConfig dpfConfig sink ekgStore dpStore = do
   connectToNode
     snocket
@@ -196,7 +189,7 @@ doConnectToAcceptor networkMagic snocket address timeLimits
     acceptableVersion
     (simpleSingletonVersions
        ForwardingV_1
-       (ForwardingVersionData networkMagic)
+       (ForwardingVersionData magic)
        (forwarderApp [ (forwardEKGMetrics       ekgConfig ekgStore, 1)
                      , (forwardTraceObjectsInit tfConfig  sink,     2)
                      , (forwardDataPointsInit   dpfConfig dpStore,  3)
@@ -232,7 +225,7 @@ doListenToAcceptor
   -> EKG.Store
   -> DataPointStore
   -> IO ()
-doListenToAcceptor networkMagic snocket address timeLimits
+doListenToAcceptor magic snocket address timeLimits
                    ekgConfig tfConfig dpfConfig sink ekgStore dpStore = do
   networkState <- newNetworkMutableState
   race_ (cleanNetworkMutableState networkState)
@@ -248,7 +241,7 @@ doListenToAcceptor networkMagic snocket address timeLimits
             acceptableVersion
             (simpleSingletonVersions
                ForwardingV_1
-               (ForwardingVersionData networkMagic)
+               (ForwardingVersionData magic)
                (SomeResponderApplication $
                  forwarderApp [ (forwardEKGMetricsResp   ekgConfig ekgStore, 1)
                               , (forwardTraceObjectsResp tfConfig  sink,     2)

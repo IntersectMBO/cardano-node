@@ -28,6 +28,7 @@ module Cardano.Logging.Types (
   , ForwarderMode(..)
   , Verbosity(..)
   , TraceOptionForwarder(..)
+  , defaultForwarder
   , TraceConfig(..)
   , emptyTraceConfig
   , FormattedMessage(..)
@@ -323,8 +324,7 @@ instance AE.FromJSON Verbosity where
                                     <> "Unknown Verbosity: " <> show other
 
 data TraceOptionForwarder = TraceOptionForwarder {
-    tofMode             :: ForwarderMode
-  , tofConnQueueSize    :: Word
+    tofConnQueueSize    :: Word
   , tofDisconnQueueSize :: Word
   , tofVerbosity        :: Verbosity
 } deriving (Eq, Ord, Show)
@@ -332,15 +332,13 @@ data TraceOptionForwarder = TraceOptionForwarder {
 instance AE.FromJSON TraceOptionForwarder where
     parseJSON (AE.Object obj) =
       TraceOptionForwarder
-        <$> obj AE..:  "mode"
-        <*> obj AE..:? "connQueueSize"    AE..!= 2000
+        <$> obj AE..:? "connQueueSize"    AE..!= 2000
         <*> obj AE..:? "disconnQueueSize" AE..!= 200000
         <*> obj AE..:? "verbosity"        AE..!= Minimum
 
 defaultForwarder :: TraceOptionForwarder
 defaultForwarder = TraceOptionForwarder {
-    tofMode = Responder
-  , tofConnQueueSize = 2000
+    tofConnQueueSize = 2000
   , tofDisconnQueueSize = 200000
   , tofVerbosity = Minimum
 }
