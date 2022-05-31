@@ -317,8 +317,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/denisshevchenko/threepenny-gui
-  tag: e869c68d2f2a4bea6c40d3eb58ef7977550a6928
-  --sha256: 08yis8d4c4lm1fmsb71cdvjqvvslaadnin3ddijawd611nn2n4pr
+  tag: 4ec92ded05ccf59ba4a874be4b404ac1b6d666b6
+  --sha256: 00fvvaf4ir4hskq4a6gggbh2wmdvy8j8kn6s4m1p1vlh8m8mq514
 
 -- Drops an instance breaking our code. Should be released to Hackage eventually.
 source-repository-package

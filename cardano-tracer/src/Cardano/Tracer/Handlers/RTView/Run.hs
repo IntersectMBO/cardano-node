@@ -70,8 +70,6 @@ runRTView TracerConfig{logging, network, hasRTView}
     void . sequenceConcurrently $
       [ UI.startGUI (config host port certFile keyFile) $
           mkMainPage
-            host
-            port
             connectedNodes
             displayedElements
             acceptedMetrics
@@ -102,9 +100,7 @@ runRTView TracerConfig{logging, network, hasRTView}
           savedTO
       ]
  where
-  -- RTView's web page is available via 'https://'.
-  -- If the user will open 'http://' url, he will be redirected
-  -- to 'https://' url automatically.
+  -- RTView's web page is available via 'https://' url only.
   config h p cert key = UI.defaultConfig
     { UI.jsSSLBind = Just . encodeUtf8 . T.pack $ h
     , UI.jsSSLPort = Just . fromIntegral $ p

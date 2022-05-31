@@ -1,8 +1,7 @@
 {-# LANGUAGE QuasiQuotes #-}
 
 module Cardano.Tracer.Handlers.RTView.UI.JS.Utils
-  ( checkURL
-  , closeModalsByEscapeButton
+  ( closeModalsByEscapeButton
   , copyTextToClipboard
   , downloadJSONFile
   , selectOption
@@ -10,21 +9,8 @@ module Cardano.Tracer.Handlers.RTView.UI.JS.Utils
 
 import           Data.String.QQ
 import           Data.Text (Text)
-import           Data.Word (Word16)
 import qualified Graphics.UI.Threepenny as UI
 import           Graphics.UI.Threepenny.Core
-
--- | If the user open default 'http'-page, we have to redirect him
---   to 'https'-page based on settings.
-checkURL
-  :: String
-  -> Word16
-  -> UI ()
-checkURL host port =
-  UI.runFunction $ UI.ffi checkAndRedirectIfNeeded
- where
-  checkAndRedirectIfNeeded =
-    "if (window.location.protocol == 'http:') {window.location.replace(\"https://" <> host <> ":" <> show port <> "\");}"
 
 copyTextToClipboard :: String -> UI ()
 copyTextToClipboard textToCopy =

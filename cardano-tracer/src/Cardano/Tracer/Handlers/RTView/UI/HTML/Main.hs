@@ -8,7 +8,6 @@ import           Control.Concurrent.STM.TVar (readTVarIO)
 import           Control.Monad (void)
 import           Control.Monad.Extra (whenM)
 import           Data.List.NonEmpty (NonEmpty)
-import           Data.Word (Word16)
 import qualified Graphics.UI.Threepenny as UI
 import           Graphics.UI.Threepenny.Core
 import           System.Time.Extra (sleep)
@@ -25,7 +24,6 @@ import           Cardano.Tracer.Handlers.RTView.UI.CSS.Bulma
 import           Cardano.Tracer.Handlers.RTView.UI.CSS.Own
 import           Cardano.Tracer.Handlers.RTView.UI.HTML.Body
 import           Cardano.Tracer.Handlers.RTView.UI.Img.Icons
-import           Cardano.Tracer.Handlers.RTView.UI.JS.Utils
 import           Cardano.Tracer.Handlers.RTView.UI.Theme
 import           Cardano.Tracer.Handlers.RTView.UI.Utils
 import           Cardano.Tracer.Handlers.RTView.Update.EKG
@@ -38,9 +36,7 @@ import           Cardano.Tracer.Handlers.RTView.Update.Reload
 import           Cardano.Tracer.Types
 
 mkMainPage
-  :: String
-  -> Word16
-  -> ConnectedNodes
+  :: ConnectedNodes
   -> DisplayedElements
   -> AcceptedMetrics
   -> SavedTraceObjects
@@ -55,7 +51,7 @@ mkMainPage
   -> Errors
   -> UI.Window
   -> UI ()
-mkMainPage host port connectedNodes displayedElements acceptedMetrics savedTO
+mkMainPage connectedNodes displayedElements acceptedMetrics savedTO
            nodesEraSettings dpRequestors reloadFlag loggingConfig networkConfig
            resourcesHistory chainHistory txHistory nodesErrors window = do
   void $ return window # set UI.title pageTitle
@@ -166,7 +162,5 @@ mkMainPage host port connectedNodes displayedElements acceptedMetrics savedTO
     UI.stop uiEKGTimer
     UI.stop uiErrorsTimer
     liftIO $ pageWasReload reloadFlag
-
-  checkURL host port
 
   void $ UI.element pageBody
