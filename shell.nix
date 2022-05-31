@@ -84,6 +84,7 @@ let
       pkgs.hlint
       pkgs.moreutils
       pkgs.pstree
+      pkgs.time
       cluster.interactive-start
       cluster.interactive-stop
       cluster.interactive-restart
@@ -146,6 +147,7 @@ let
       cardanolib-py
       cluster.workbench.workbench
       pstree
+      pkgs.time
     ];
 
     # Prevents cabal from choosing alternate plans, so that
