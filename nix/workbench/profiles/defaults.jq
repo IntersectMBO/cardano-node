@@ -83,9 +83,9 @@ def era_defaults($era):
       , ProtocolIdleTimeout:             5
       , TimeWaitTimeout:                 60
       , AcceptedConnectionsLimit:
-        { acceptedConnectionsHardLimit:  512
-        , acceptedConnectionsSoftLimit:  384
-        , acceptedConnectionsDelay:      5
+        { hardLimit:                     512
+        , softLimit:                     384
+        , delay:                         5
         }
       , TargetNumberOfRootPeers:         100
       , TargetNumberOfKnownPeers:        100
