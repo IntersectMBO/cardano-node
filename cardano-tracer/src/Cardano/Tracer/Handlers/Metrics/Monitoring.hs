@@ -23,6 +23,7 @@ import           System.Remote.Monitoring (forkServerWith, serverThreadId)
 import           System.Time.Extra (sleep)
 
 import           Cardano.Tracer.Configuration (Endpoint (..))
+import           Cardano.Tracer.Handlers.RTView.SSL.Certs (placeDefaultSSLFiles)
 import           Cardano.Tracer.Types (AcceptedMetrics, ConnectedNodes, NodeId (..))
 
 -- | 'ekg' package allows to run only one EKG server, to display only one web page
@@ -43,13 +44,17 @@ runMonitoringServer
 runMonitoringServer (Endpoint listHost listPort, monitorEP) connectedNodes acceptedMetrics = do
   -- Pause to prevent collision between "Listening"-notifications from servers.
   sleep 0.2
-  UI.startGUI config $ \window -> do
+  (certFile, keyFile) <- placeDefaultSSLFiles
+  UI.startGUI (config certFile keyFile) $ \window -> do
     void $ return window # set UI.title "EKG Monitoring Nodes"
     void $ mkPageBody window connectedNodes monitorEP acceptedMetrics
  where
-  config = UI.defaultConfig
-    { UI.jsPort = Just . fromIntegral $ listPort
-    , UI.jsAddr = Just . encodeUtf8 . T.pack $ listHost
+  config cert key = UI.defaultConfig
+    { UI.jsSSLBind = Just . encodeUtf8 . T.pack $ listHost
+    , UI.jsSSLPort = Just . fromIntegral $ listPort
+    , UI.jsSSLCert = Just cert
+    , UI.jsSSLKey  = Just key
+    , UI.jsLog     = const $ return ()
     }
 
 -- | We have to keep an id of the node as well as thread id of currently launched EKG server.
