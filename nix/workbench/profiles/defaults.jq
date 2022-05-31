@@ -75,7 +75,7 @@ def era_defaults($era):
     , shutdown_on_slot_synced:        300
     , shutdown_on_block_synced:       null
     , tracing_backend:                "trace-dispatcher"  ## or "iohk-monitoring"
-    , tracer:                         false
+    , tracer:                         true
     , verbatim:
       { EnableP2P:                       false
 

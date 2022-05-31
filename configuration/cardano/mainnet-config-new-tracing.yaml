@@ -105,21 +105,8 @@ TraceOptions:
   Node.BlockFetchClient.CompletedBlockFetch:
     maxFrequency: 2.0
 
-# Options for the trace forwarder
-TraceOptionForwarder:
-    mode: Initiator
-
 TraceOptionPeerFrequency: 2000
 
 TraceOptionResourceFrequency: 5000
 
-
-##### Stubs for legacy logging config #####
-
 TurnOnLogMetrics: False
-minSeverity: Critical
-setupScribes: []
-setupBackends: []
-defaultScribes: []
-defaultBackends: []
-options: {}

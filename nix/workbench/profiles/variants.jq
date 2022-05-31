@@ -237,11 +237,11 @@ def all_profile_variants:
   ##
   ### Definition vocabulary:  node config variants
   ##
-    ({ extra_desc:                     "with cardano-tracer"
-     , suffix:                         "tracer"
+    ({ extra_desc:                     "without cardano-tracer"
+     , suffix:                         "notracer"
      }|
-     .node.tracer                     = true
-    ) as $with_tracer
+     .node.tracer                     = false
+    ) as $without_tracer
   |
     ({ extra_desc:                     "with legacy iohk-monitoring"
      , suffix:                         "oldtracing"
@@ -350,8 +350,8 @@ def all_profile_variants:
   , $startstop_base * $plutus *
     { name: "startstop-plutus"
     }
-  , $startstop_base * $with_tracer *
-    { name: "startstop-tracer"
+  , $startstop_base * $without_tracer *
+    { name: "startstop-notracer"
     }
   , $startstop_base * $old_tracing *
     { name: "startstop-oldtracing"
@@ -367,8 +367,8 @@ def all_profile_variants:
   , $citest_base * $plutus *
     { name: "ci-test-plutus"
     }
-  , $citest_base * $with_tracer *
-    { name: "ci-test-tracer"
+  , $citest_base * $without_tracer *
+    { name: "ci-test-notracer"
     }
 
   ## CI variants: bench duration, 15 blocks
@@ -381,8 +381,8 @@ def all_profile_variants:
   , $cibench_base * $plutus *
     { name: "ci-bench-plutus"
     }
-  , $cibench_base * $with_tracer *
-    { name: "ci-bench-tracer"
+  , $cibench_base * $without_tracer *
+    { name: "ci-bench-notracer"
     }
 
   ## Dish variants
@@ -415,8 +415,8 @@ def all_profile_variants:
   , $cibench_base * $tenner * $plutus *
     { name: "10-plutus"
     }
-  , $cibench_base * $tenner * $with_tracer *
-    { name: "10-tracer"
+  , $cibench_base * $tenner * $without_tracer *
+    { name: "10-notracer"
     }
 
   ## Status-quo (huge) dataset, small cluster (2 nodes)
@@ -432,15 +432,15 @@ def all_profile_variants:
   , $forge_stress_base * $plutus * $singleton *
     { name: "forge-stress-plutus-singleton"
     }
-  , $forge_stress_base * $with_tracer *
-    { name: "forge-stress-tracer"
+  , $forge_stress_base * $without_tracer *
+    { name: "forge-stress-notracer"
     }
 
   , $scenario_chainsync * $chaindb_early_byron *
     { name: "chainsync-early-byron"
     }
-  , $scenario_chainsync * $chaindb_early_byron * $with_tracer *
-    { name: "chainsync-early-byron-tracer"
+  , $scenario_chainsync * $chaindb_early_byron * $without_tracer *
+    { name: "chainsync-early-byron-notracer"
     }
   , $scenario_chainsync * $chaindb_early_byron * $old_tracing *
     { name: "chainsync-early-byron-oldtracing"
@@ -449,8 +449,8 @@ def all_profile_variants:
   , $scenario_chainsync * $chaindb_early_alonzo *
     { name: "chainsync-early-alonzo"
     }
-  , $scenario_chainsync * $chaindb_early_alonzo * $with_tracer *
-    { name: "chainsync-early-alonzo-tracer"
+  , $scenario_chainsync * $chaindb_early_alonzo * $without_tracer *
+    { name: "chainsync-early-alonzo-notracer"
     }
   , $scenario_chainsync * $chaindb_early_alonzo * $old_tracing *
     { name: "chainsync-early-alonzo-oldtracing"

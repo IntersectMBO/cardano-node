@@ -99,12 +99,7 @@ So it is assumed that if you want to use the new tracing infrastructure - you wi
 
 This example describes the simplest case, when the node and `cardano-tracer` on the same machine.
 
-First of all, add `TraceOptionForwarder` section in the node's configuration, this section specifies how the node should work with `cardano-tracer`:
-
-~~~yaml
-TraceOptionForwarder:
-    mode: Initiator
-~~~
+First of all, add `--tracer-socket-path-connect /tmp/forwarder.sock` option to the node's CLI options, asking it to connect to `cardano-tracer`.
 
 Then build and run `cardano-tracer`:
 

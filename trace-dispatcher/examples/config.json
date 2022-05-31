@@ -1,50 +1,63 @@
 {
-  "TraceOptionSeverity": [
-    {
-      "ns": "",
-      "severity": "Info"
-    },
-    {
-      "ns": "Cardano.Node.AcceptPolicy",
-      "severity": "Silence"
-    },
-    {
-      "ns": "Cardano.Node.ChainDB",
-      "severity": "Debug"
-    }
-  ],
-  "TraceOptionDetail": [
-    {
-      "ns": "",
-      "detail": "DNormal"
-    },
-    {
-      "ns": "Cardano.Node.BlockFetchClient",
-      "detail": "DMinimal"
-    }
-  ],
-  "TraceOptionBackend": [
-    {
-      "ns": "",
+  "TraceOptions": {
+    "Node": {
+      "severity": "Notice",
+      "detail": "DNormal",
       "backends": [
-        "Stdout HumanFormatColoured",
-        "Forwarder",
-        "EKGBackend"
-      ]
-    },
-    {
-      "ns": "Cardano.Node.ChainDB",
-      "backends": [
+        "Stdout MachineFormat",
+        "EKGBackend",
         "Forwarder"
       ]
+    },
+    "Node.ChainDB": {
+      "severity": "Info"
+    },
+    "Node.AcceptPolicy": {
+      "severity": "Info"
+    },
+    "Node.DNSResolver": {
+      "severity": "Info"
+    },
+    "Node.DNSSubscription": {
+      "severity": "Info"
+    },
+    "Node.DiffusionInit": {
+      "severity": "Info"
+    },
+    "Node.ErrorPolicy": {
+      "severity": "Info"
+    },
+    "Node.Forge": {
+      "severity": "Info"
+    },
+    "Node.IpSubscription": {
+      "severity": "Info"
+    },
+    "Node.LocalErrorPolicy": {
+      "severity": "Info"
+    },
+    "Node.Mempool": {
+      "severity": "Info"
+    },
+    "Node.Resources": {
+      "severity": "Info"
+    },
+    "Node.ChainDB.AddBlockEvent.AddedBlockToQueue": {
+      "maxFrequency": 2
+    },
+    "Node.ChainDB.AddBlockEvent.AddedBlockToVolatileDB": {
+      "maxFrequency": 2
+    },
+    "Node.ChainDB.CopyToImmutableDBEvent.CopiedBlockToImmutableDB": {
+      "maxFrequency": 2
+    },
+    "Node.ChainDB.AddBlockEvent.AddBlockValidation.ValidCandidate": {
+      "maxFrequency": 2
+    },
+    "Node.BlockFetchClient.CompletedBlockFetch": {
+      "maxFrequency": 2
     }
-  ],
-  "TraceOptionForwarder": {
-      "mode": "Initiator",
-      "queueSize": 1000,
-      "verbosity": "Minimum"
   },
-  "TraceOptionLimiter": [
-
-  ]
+  "TraceOptionPeerFrequency": 2000,
+  "TraceOptionResourceFrequency": 5000
 }

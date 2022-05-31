@@ -255,35 +255,3 @@ options:
   mapSeverity:
     cardano.node.ChainDB: Notice
     cardano.node.DnsSubscription: Debug
-
-##### New logging model #####
-
-UseTraceDispatcher: False
-
-TraceOptionSeverity:
-  - ns: ''
-    severity: Info
-  - ns: Node.AcceptPolicy
-    severity: Silence
-  - ns: Node.ChainDB
-    severity: Debug
-TraceOptionDetail:
-  - ns: ''
-    detail: DNormal
-  - ns: Node.BlockFetchClient
-    detail: DMinimal
-TraceOptionBackend:
-  - ns: ''
-    backends:
-    - Stdout HumanFormatColoured
-    - Forwarder
-    - EKGBackend
-  - ns: Node.ChainDB
-    backends:
-    - Forwarder
-TraceOptionLimiter:
-  - ns: Node.Resources
-    limiterName: ResourceLimiter
-    limiterFrequency: 1.0
-TraceOptionForwarder:
-    mode: Initiator

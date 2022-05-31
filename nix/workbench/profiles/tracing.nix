@@ -44,9 +44,4 @@
     "Node.ChainDB.AddBlockEvent.AddedBlockToVolatileDB"             = { maxFrequency = 2.0; };
     "Node.ChainDB.CopyToImmutableDBEvent.CopiedBlockToImmutableDB"  = { maxFrequency = 2.0; };
   };
-
-  TraceOptionForwarder = {
-    # mode = "Responder";
-    mode = "Initiator";
-  };
 }
