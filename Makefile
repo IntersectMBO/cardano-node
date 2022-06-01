@@ -34,6 +34,12 @@ trace-documentation:
 ###
 ### Workbench
 ###
+CI_TARGETS := hlint ci-test-plutus-autonix
+ci:  ci-report ci-targets
+ci-report:
+	@echo -e "\033[34mGoals under test\033[0m:  \033[33m$(CI_TARGETS)\033[0m"
+ci-targets:  $(CI_TARGETS)
+
 ##
 ## Base targets:
 ##

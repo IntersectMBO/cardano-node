@@ -234,13 +234,14 @@ case "$op" in
         local batch=${1:?$usage}; shift
         local profile_name=${1:?$usage}; shift
 
-        local profile= topology= genesis_cache_entry= manifest= preset=
+        local profile= topology= genesis_cache_entry= manifest= preset= cabal_mode=
         while test $# -gt 0
         do case "$1" in
                --manifest )            manifest=$2; shift;;
                --profile )             profile=$2; shift;;
                --topology )            topology=$2; shift;;
                --genesis-cache-entry ) genesis_cache_entry=$2; shift;;
+               --cabal-mode | --cabal ) cabal_mode=t;;
                -- ) shift; break;;
                --* ) msg "FATAL:  unknown flag '$1'"; usage_run;;
                * ) break;; esac; shift; done
@@ -285,7 +286,7 @@ case "$op" in
         profile describe-timing "$timing"
 
         ## 3. decide the tag:
-        local tag=$(jq '.start_tag' -r <<<$timing)$(if test "$batch" != 'plain'; then echo -n .$batch; fi).$hash.$profile_name
+        local tag=$(jq '.start_tag' -r <<<$timing)$(if test "$batch" != 'plain'; then echo -n .$batch; fi).$hash.$profile_name$(test -z "$cabal_mode" && echo '.nix')
         progress "run | tag" "allocated run identifier (tag):  $(with_color white $tag)"
 
         ## 4. allocate directory:
