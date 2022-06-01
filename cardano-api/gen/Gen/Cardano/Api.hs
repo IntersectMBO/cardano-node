@@ -26,6 +26,7 @@ import qualified Cardano.Ledger.BaseTypes as Ledger
 import qualified Cardano.Ledger.Coin as Ledger
 import           Cardano.Ledger.Shelley.Metadata (Metadata (..), Metadatum (..))
 
+
 import           Hedgehog (Gen, Range)
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Internal.Range as Range
