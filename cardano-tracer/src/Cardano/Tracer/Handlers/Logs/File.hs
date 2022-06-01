@@ -121,17 +121,18 @@ mkName names = T.intercalate "." names
 traceObjectToJSON :: TraceObject -> Maybe T.Text
 traceObjectToJSON TraceObject{toMachine, toTimestamp, toNamespace, toHostname, toSeverity, toThreadId} =
   case toMachine of
-    Nothing -> Nothing
-    Just msgForMachine -> Just
-      . T.append nl
-      . TE.decodeUtf8
-      . LBS.toStrict
-      . encodingToLazyByteString
-      . pairs $    "at"     .= formatTime defaultTimeLocale "%F %H:%M:%S%4QZ" toTimestamp
-                <> "ns"     .= mkName toNamespace
-                <> "data"   .= case decodeStrict' $ TE.encodeUtf8 msgForMachine of
-                                 Just (v :: Value) -> v
-                                 Nothing -> ""
-                <> "sev"    .= T.pack (show toSeverity)
-                <> "thread" .= T.filter isDigit toThreadId
-                <> "host"   .= T.pack toHostname
+    Nothing  -> Nothing
+    Just msg -> Just $ toAsJSON msg <> nl
+ where
+  toAsJSON msgForMachine =
+      TE.decodeUtf8
+    . LBS.toStrict
+    . encodingToLazyByteString
+    . pairs $ "at"     .= formatTime defaultTimeLocale "%F %H:%M:%S%4QZ" toTimestamp
+           <> "ns"     .= mkName toNamespace
+           <> "data"   .= case decodeStrict' $ TE.encodeUtf8 msgForMachine of
+                            Just (v :: Value) -> v
+                            Nothing -> ""
+           <> "sev"    .= T.pack (show toSeverity)
+           <> "thread" .= T.filter isDigit toThreadId
+           <> "host"   .= T.pack toHostname
