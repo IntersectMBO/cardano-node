@@ -369,6 +369,7 @@ module Cardano.Api (
     ScriptDatum(..),
     ScriptRedeemer,
     scriptWitnessScript,
+    fromAlonzoLanguage,
 
     -- ** Inspecting 'ScriptWitness'es
     AnyScriptWitness(..),

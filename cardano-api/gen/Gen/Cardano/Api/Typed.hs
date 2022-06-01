@@ -81,12 +81,16 @@ import qualified Data.ByteString.Short as SBS
 import           Data.Coerce
 import           Data.String
 import qualified Data.Text as Text
+import qualified Data.Map as Map
+import qualified Data.Set as Set
 
 import qualified Cardano.Binary as CBOR
 import qualified Cardano.Crypto.Hash as Crypto
 import qualified Cardano.Crypto.Seed as Crypto
 import qualified Cardano.Ledger.Shelley.TxBody as Ledger (EraIndependentTxBody)
-import qualified PlutusCore as Plutus
+
+import qualified Plutus.V1.Ledger.Api as PV1
+import qualified Plutus.V2.Ledger.Api as PV2
 
 import           Hedgehog (Gen, Range)
 import qualified Hedgehog.Gen as Gen
@@ -806,27 +810,33 @@ genUpdateProposal =
                      <*> genProtocolParametersUpdate)
     <*> genEpochNo
 
-genCostModel :: Gen CostModel
-genCostModel = case Plutus.defaultCostModelParams of
-  Nothing -> panic "Plutus defaultCostModelParams is broken."
-  Just dcm -> do
-      eCostModel <- Alonzo.mkCostModel <$> genPlutusLanguage
-                                       <*> mapM (const $ Gen.integral (Range.linear 0 5000)) dcm
-      case eCostModel of
-        Left err -> panic $ Text.pack $ "genCostModel: " <> err
-        Right cModel -> return . CostModel $ Alonzo.getCostModelParams cModel
+genCostModel :: Gen Api.CostModel
+genCostModel = CostModel . Alonzo.getCostModelParams <$> genCostModel'
+
+genCostModel' :: Gen Alonzo.CostModel
+genCostModel' = do
+  lang <- genPlutusLanguage
+  let
+    costModelParamNames = Set.toList $ case lang of
+      PlutusV1 -> PV1.costModelParamNames
+      PlutusV2 -> PV2.costModelParamNames
+  generatedParams <- Map.fromList <$>
+    mapM (\paramName -> (paramName,) <$> Gen.integral (Range.linear 0 5000)) costModelParamNames
+  case Alonzo.mkCostModel lang generatedParams of
+    Left err -> panic $ Text.pack $ "genCostModel: " <> err
+    Right cModel -> return cModel
 
 genPlutusLanguage :: Gen Language
 genPlutusLanguage = Gen.element [PlutusV1, PlutusV2]
 
 _genCostModels :: Gen (Map AnyPlutusScriptVersion CostModel)
 _genCostModels =
-    Gen.map (Range.linear 0 (length plutusScriptVersions))
-            ((,) <$> Gen.element plutusScriptVersions
-                 <*> genCostModel)
-  where
+  let
     plutusScriptVersions :: [AnyPlutusScriptVersion]
     plutusScriptVersions = [minBound..maxBound]
+  in
+    Gen.map (Range.linear 0 (length plutusScriptVersions))
+            ((\cm -> (Api.fromAlonzoLanguage $ Alonzo.getCostModelLanguage cm, CostModel $ Alonzo.getCostModelParams cm)) <$> genCostModel')
 
 genExecutionUnits :: Gen ExecutionUnits
 genExecutionUnits = ExecutionUnits <$> Gen.integral (Range.constant 0 1000)
