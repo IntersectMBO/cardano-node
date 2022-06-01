@@ -188,7 +188,7 @@ serialiseWitnessLedgerCddl sbe kw =
   witEra ShelleyBasedEraAllegra = "TxWitness AllegraEra"
   witEra ShelleyBasedEraMary = "TxWitness MaryEra"
   witEra ShelleyBasedEraAlonzo = "TxWitness AlonzoEra"
-  witEra ShelleyBasedEraBabbage = "TxWitnessaBabbageEra"
+  witEra ShelleyBasedEraBabbage = "TxWitness BabbageEra"
 
 deserialiseWitnessLedgerCddl
   :: ShelleyBasedEra era
