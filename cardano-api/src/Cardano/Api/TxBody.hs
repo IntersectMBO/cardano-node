@@ -188,7 +188,8 @@ import qualified Text.Parsec.String as Parsec
 import           Cardano.Binary (Annotated (..), reAnnotate, recoverBytes)
 import qualified Cardano.Binary as CBOR
 import qualified Cardano.Crypto.Hash.Class as Crypto
-import qualified Cardano.Ledger.Serialization as CBOR (decodeNullMaybe, encodeNullMaybe, mkSized, sizedValue)
+import qualified Cardano.Ledger.Serialization as CBOR (decodeNullMaybe, encodeNullMaybe, mkSized,
+                   sizedValue)
 import           Cardano.Slotting.Slot (SlotNo (..))
 
 import qualified Cardano.Chain.Common as Byron
@@ -1166,16 +1167,16 @@ data TxInsCollateral era where
 deriving instance Eq   (TxInsCollateral era)
 deriving instance Show (TxInsCollateral era)
 
-data TxInsReference era where
+data TxInsReference build era where
 
-     TxInsReferenceNone :: TxInsReference era
+     TxInsReferenceNone :: TxInsReference build era
 
      TxInsReference     :: ReferenceTxInsScriptsInlineDatumsSupportedInEra era
                         -> [TxIn]
-                        -> TxInsReference era
+                        -> TxInsReference build era
 
-deriving instance Eq   (TxInsReference era)
-deriving instance Show (TxInsReference era)
+deriving instance Eq   (TxInsReference build era)
+deriving instance Show (TxInsReference build era)
 
 -- ----------------------------------------------------------------------------
 -- Transaction output values (era-dependent)
@@ -1518,7 +1519,7 @@ data TxBodyContent build era =
      TxBodyContent {
        txIns              :: TxIns build era,
        txInsCollateral    :: TxInsCollateral era,
-       txInsReference     :: TxInsReference era,
+       txInsReference     :: TxInsReference build era,
        txOuts             :: [TxOut CtxTx era],
        txTotalCollateral  :: TxTotalCollateral era,
        txReturnCollateral :: TxReturnCollateral CtxTx era,
@@ -1928,6 +1929,44 @@ instance IsCardanoEra era => HasTextEnvelope (TxBody era) where
         AlonzoEra  -> "TxBodyAlonzo"
         BabbageEra -> "TxBodyBabbage"
 
+-- | Calculate the transaction identifier for a 'TxBody'.
+--
+getTxId :: forall era. TxBody era -> TxId
+getTxId (ByronTxBody tx) =
+    TxId
+  . fromMaybe impossible
+  . Crypto.hashFromBytesShort
+  . Byron.abstractHashToShort
+  . Byron.hashDecoded
+  $ tx
+  where
+    impossible =
+      error "getTxId: byron and shelley hash sizes do not match"
+
+getTxId (ShelleyTxBody era tx _ _ _ _) =
+  obtainConstraints era $ getTxIdShelley era tx
+ where
+  obtainConstraints
+    :: ShelleyBasedEra era
+    -> (( Ledger.Crypto (ShelleyLedgerEra era) ~ StandardCrypto
+        , Ledger.UsesTxBody (ShelleyLedgerEra era)
+        ) => a)
+    -> a
+  obtainConstraints ShelleyBasedEraShelley f = f
+  obtainConstraints ShelleyBasedEraAllegra f = f
+  obtainConstraints ShelleyBasedEraMary    f = f
+  obtainConstraints ShelleyBasedEraAlonzo  f = f
+  obtainConstraints ShelleyBasedEraBabbage f = f
+
+getTxIdShelley
+  :: Ledger.Crypto (ShelleyLedgerEra era) ~ StandardCrypto
+  => Ledger.UsesTxBody (ShelleyLedgerEra era)
+  => ShelleyBasedEra era -> Ledger.TxBody (ShelleyLedgerEra era) -> TxId
+getTxIdShelley _ tx =
+    TxId
+  . Crypto.castHash
+  . (\(Ledger.TxId txhash) -> SafeHash.extractHash txhash)
+  $ Ledger.txid tx
 
 -- ----------------------------------------------------------------------------
 -- Constructing transaction bodies
@@ -2063,13 +2102,14 @@ fromLedgerTxInsCollateral era body =
       ShelleyBasedEraBabbage -> toList $ Babbage.collateral body
 
 fromLedgerTxInsReference
-  :: ShelleyBasedEra era -> Ledger.TxBody (ShelleyLedgerEra era) -> TxInsReference era
+  :: ShelleyBasedEra era -> Ledger.TxBody (ShelleyLedgerEra era) -> TxInsReference ViewTx era
 fromLedgerTxInsReference era txBody =
   case refInsScriptsAndInlineDatsSupportedInEra $ shelleyBasedToCardanoEra era of
     Nothing -> TxInsReferenceNone
     Just suppInEra ->
       let ledgerRefInputs = obtainReferenceInputsHasFieldConstraint suppInEra $ getField @"referenceInputs" txBody
-      in TxInsReference suppInEra $ map fromShelleyTxIn $ Set.toList ledgerRefInputs
+      in TxInsReference suppInEra
+           $ map fromShelleyTxIn . Set.toList $ ledgerRefInputs
  where
   obtainReferenceInputsHasFieldConstraint
     :: ReferenceTxInsScriptsInlineDatumsSupportedInEra era
@@ -2702,8 +2742,8 @@ makeShelleyTransactionBody era@ShelleyBasedEraShelley
     maxShelleyTxInIx = fromIntegral $ maxBound @Word16
 
     scripts :: [Ledger.Script StandardShelley]
-    scripts =
-      [ toShelleyScript (scriptWitnessScript scriptwitness)
+    scripts = catMaybes
+      [ toShelleyScript <$> scriptWitnessScript scriptwitness
       | (_, AnyScriptWitness scriptwitness)
           <- collectTxBodyScriptWitnesses txbodycontent
       ]
@@ -2783,8 +2823,8 @@ makeShelleyTransactionBody era@ShelleyBasedEraAllegra
     maxShelleyTxInIx = fromIntegral $ maxBound @Word16
 
     scripts :: [Ledger.Script StandardAllegra]
-    scripts =
-      [ toShelleyScript (scriptWitnessScript scriptwitness)
+    scripts = catMaybes
+      [ toShelleyScript <$> scriptWitnessScript scriptwitness
       | (_, AnyScriptWitness scriptwitness)
           <- collectTxBodyScriptWitnesses txbodycontent
       ]
@@ -2880,8 +2920,8 @@ makeShelleyTransactionBody era@ShelleyBasedEraMary
     maxShelleyTxInIx = fromIntegral $ maxBound @Word16
 
     scripts :: [Ledger.Script StandardMary]
-    scripts =
-      [ toShelleyScript (scriptWitnessScript scriptwitness)
+    scripts = catMaybes
+      [ toShelleyScript <$> scriptWitnessScript scriptwitness
       | (_, AnyScriptWitness scriptwitness)
           <- collectTxBodyScriptWitnesses txbodycontent
       ]
@@ -3012,8 +3052,8 @@ makeShelleyTransactionBody era@ShelleyBasedEraAlonzo
     witnesses = collectTxBodyScriptWitnesses txbodycontent
 
     scripts :: [Ledger.Script StandardAlonzo]
-    scripts =
-      [ toShelleyScript (scriptWitnessScript scriptwitness)
+    scripts = catMaybes
+      [ toShelleyScript <$> scriptWitnessScript scriptwitness
       | (_, AnyScriptWitness scriptwitness) <- witnesses
       ]
 
@@ -3119,15 +3159,14 @@ makeShelleyTransactionBody era@ShelleyBasedEraBabbage
     return $
       ShelleyTxBody era
         (Babbage.TxBody
-           { Babbage.inputs = Set.fromList (map (toShelleyTxIn . fst) txIns)
+           { Babbage.inputs = Set.fromList $ map (toShelleyTxIn . fst) txIns
            , Babbage.collateral =
                case txInsCollateral of
                 TxInsCollateralNone     -> Set.empty
                 TxInsCollateral _ txins -> Set.fromList (map toShelleyTxIn txins)
            , Babbage.referenceInputs =
-               case txInsReference of
-                 TxInsReferenceNone -> Set.empty
-                 TxInsReference _ txins -> Set.fromList (map toShelleyTxIn txins)
+               Set.fromList (map toShelleyTxIn referenceTxIns)
+
            , Babbage.outputs = Seq.fromList (map (CBOR.mkSized . toShelleyTxOutAny era) txOuts)
            , Babbage.collateralReturn =
                case txReturnCollateral of
@@ -3192,6 +3231,12 @@ makeShelleyTransactionBody era@ShelleyBasedEraBabbage
         txAuxData
         txScriptValidity
   where
+    referenceTxIns :: [TxIn]
+    referenceTxIns =
+      case txInsReference of
+        TxInsReferenceNone -> []
+        TxInsReference _ refTxins -> refTxins
+
     maxShelleyTxInIx :: Word
     maxShelleyTxInIx = fromIntegral $ maxBound @Word16
 
@@ -3199,8 +3244,8 @@ makeShelleyTransactionBody era@ShelleyBasedEraBabbage
     witnesses = collectTxBodyScriptWitnesses txbodycontent
 
     scripts :: [Ledger.Script StandardBabbage]
-    scripts =
-      [ toShelleyScript (scriptWitnessScript scriptwitness)
+    scripts = catMaybes
+      [ toShelleyScript <$> scriptWitnessScript scriptwitness
       | (_, AnyScriptWitness scriptwitness) <- witnesses
       ]
 
@@ -3221,6 +3266,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraBabbage
                     (PlutusScriptWitness
                        _ _ _ (ScriptDatumForTxIn d) _ _)) <- witnesses
             ]
+
     redeemers :: Alonzo.Redeemers StandardBabbage
     redeemers =
       Alonzo.Redeemers $
@@ -3232,10 +3278,15 @@ makeShelleyTransactionBody era@ShelleyBasedEraBabbage
 
     languages :: Set Alonzo.Language
     languages =
-      Set.fromList
-        [ toAlonzoLanguage (AnyPlutusScriptVersion v)
-        | (_, AnyScriptWitness (PlutusScriptWitness _ v _ _ _ _)) <- witnesses
+      Set.fromList $ catMaybes
+        [ getScriptLanguage sw
+        | (_, AnyScriptWitness sw) <- witnesses
         ]
+
+    getScriptLanguage :: ScriptWitness witctx era -> Maybe Alonzo.Language
+    getScriptLanguage (PlutusScriptWitness _ v _ _ _ _) =
+      Just $ toAlonzoLanguage (AnyPlutusScriptVersion v)
+    getScriptLanguage SimpleScriptWitness{} = Nothing
 
     txAuxData :: Maybe (Ledger.AuxiliaryData StandardBabbage)
     txAuxData
@@ -3356,96 +3407,6 @@ fromAlonzoRdmrPtr (Alonzo.RdmrPtr tag n) =
       Alonzo.Mint  -> ScriptWitnessIndexMint        (fromIntegral n)
       Alonzo.Cert  -> ScriptWitnessIndexCertificate (fromIntegral n)
       Alonzo.Rewrd -> ScriptWitnessIndexWithdrawal  (fromIntegral n)
-
-
-mapTxScriptWitnesses :: forall era.
-                        (forall witctx. ScriptWitnessIndex
-                                     -> ScriptWitness witctx era
-                                     -> ScriptWitness witctx era)
-                     -> TxBodyContent BuildTx era
-                     -> TxBodyContent BuildTx era
-mapTxScriptWitnesses f txbodycontent@TxBodyContent {
-                         txIns,
-                         txWithdrawals,
-                         txCertificates,
-                         txMintValue
-                       } =
-    txbodycontent {
-      txIns          = mapScriptWitnessesTxIns        txIns
-    , txMintValue    = mapScriptWitnessesMinting      txMintValue
-    , txCertificates = mapScriptWitnessesCertificates txCertificates
-    , txWithdrawals  = mapScriptWitnessesWithdrawals  txWithdrawals
-    }
-  where
-    mapScriptWitnessesTxIns
-      :: [(TxIn, BuildTxWith BuildTx (Witness WitCtxTxIn era))]
-      -> [(TxIn, BuildTxWith BuildTx (Witness WitCtxTxIn era))]
-    mapScriptWitnessesTxIns txins =
-        [ (txin, BuildTxWith wit')
-          -- The tx ins are indexed in the map order by txid
-        | (ix, (txin, BuildTxWith wit)) <- zip [0..] (orderTxIns txins)
-        , let wit' = case wit of
-                       KeyWitness{}              -> wit
-                       ScriptWitness ctx witness -> ScriptWitness ctx witness'
-                         where
-                           witness' = f (ScriptWitnessIndexTxIn ix) witness
-        ]
-
-    mapScriptWitnessesWithdrawals
-      :: TxWithdrawals BuildTx era
-      -> TxWithdrawals BuildTx era
-    mapScriptWitnessesWithdrawals  TxWithdrawalsNone = TxWithdrawalsNone
-    mapScriptWitnessesWithdrawals (TxWithdrawals supported withdrawals) =
-      TxWithdrawals supported
-        [ (addr, withdrawal, BuildTxWith (adjustWitness (f (ScriptWitnessIndexWithdrawal ix)) wit))
-          -- The withdrawals are indexed in the map order by stake credential
-        | (ix, (addr, withdrawal, BuildTxWith wit)) <- zip [0..] (orderStakeAddrs withdrawals)
-        ]
-      where
-        adjustWitness
-          :: (ScriptWitness witctx era -> ScriptWitness witctx era)
-          -> Witness witctx era
-          -> Witness witctx era
-        adjustWitness _ (KeyWitness ctx) = KeyWitness ctx
-        adjustWitness g (ScriptWitness ctx witness') = ScriptWitness ctx (g witness')
-
-    mapScriptWitnessesCertificates
-      :: TxCertificates BuildTx era
-      -> TxCertificates BuildTx era
-    mapScriptWitnessesCertificates  TxCertificatesNone = TxCertificatesNone
-    mapScriptWitnessesCertificates (TxCertificates supported certs
-                                                   (BuildTxWith witnesses)) =
-      TxCertificates supported certs $ BuildTxWith $ Map.fromList
-        [ (stakecred, ScriptWitness ctx witness')
-          -- The certs are indexed in list order
-        | (ix, cert) <- zip [0..] certs
-        , stakecred  <- maybeToList (selectStakeCredential cert)
-        , ScriptWitness ctx witness
-                     <- maybeToList (Map.lookup stakecred witnesses)
-        , let witness' = f (ScriptWitnessIndexCertificate ix) witness
-        ]
-
-    selectStakeCredential cert =
-      case cert of
-        StakeAddressDeregistrationCertificate stakecred   -> Just stakecred
-        StakeAddressDelegationCertificate     stakecred _ -> Just stakecred
-        _                                                 -> Nothing
-
-    mapScriptWitnessesMinting
-      :: TxMintValue BuildTx era
-      -> TxMintValue BuildTx era
-    mapScriptWitnessesMinting  TxMintNone = TxMintNone
-    mapScriptWitnessesMinting (TxMintValue supported value
-                                           (BuildTxWith witnesses)) =
-      TxMintValue supported value $ BuildTxWith $ Map.fromList
-        [ (policyid, witness')
-          -- The minting policies are indexed in policy id order in the value
-        | let ValueNestedRep bundle = valueToNestedRep value
-        , (ix, ValueNestedBundle policyid _) <- zip [0..] bundle
-        , witness <- maybeToList (Map.lookup policyid witnesses)
-        , let witness' = f (ScriptWitnessIndexMint ix) witness
-        ]
-
 
 collectTxBodyScriptWitnesses :: forall era.
                                 TxBodyContent BuildTx era
