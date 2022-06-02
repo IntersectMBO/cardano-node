@@ -46,56 +46,11 @@ sudo apt-get install automake build-essential pkg-config libffi-dev libgmp-dev l
 
 If you are using a different flavor of Linux, you will need to use the correct package manager for your platform instead of `yum` or `apt-get`, and the names of the packages you need to install might differ.  On MacOSX, use the Homebrew (`brew`) installer.
 
-#### Downloading, unpacking, installing, and updating Cabal:
+#### Installing the Haskell environment
 
-Download the relevant `cabal-install` (version 3.6.2.0) binary from https://www.haskell.org/cabal/download.html
+The recommended way to install the Haskell tools is via [GHCup](https://www.haskell.org/ghcup/). Its installation script will guide you through the installation, and warn you about packages that you have to make sure are installed in the system (the ones described on the step above). Check [this page](https://www.haskell.org/ghcup/install/) for further explanation on the installation process.
 
-```bash
-tar -xf cabal-install-3.6.2.0-xxxxxx.tar.xz
-rm cabal-install-3.6.2.0-xxxxxx.tar.xz
-mkdir -p ~/.local/bin
-mv cabal ~/.local/bin/
-```
-
-Verify that ~/.local/bin is in your PATH:
-
-```bash
-echo $PATH
-```
-
-If `~/.local/bin` is not in the PATH, you need to add the following line to  your `.bashrc` file
-
-```bash
-export PATH="~/.local/bin:$PATH"
-```
-
-and source the file:
-
-```bash
-source .bashrc
-```
-
-Update cabal:
-
-```bash
-cabal update
-```
-
-Confirm that you installed cabal version `3.6.2.0`:
-
-```bash
-cabal --version
-```
-
-#### Downloading and installing the GHC compiler:
-
-Download and install version `8.10.7` of GHC.  The easiest way to do this is to use [ghcup](https://www.haskell.org/ghcup/).
-
-```bash
-curl --proto '=https' --tlsv1.2 -sSf https://get-ghcup.haskell.org | sh
-```
-
-Then open a new terminal (to get an updated environment) and run:
+Once GHCup is installed, open a new terminal (to get an updated environment) and run:
 
 ```bash
 ghcup install ghc 8.10.7
@@ -104,12 +59,17 @@ ghcup set ghc 8.10.7
 ghcup set cabal 3.6.2.0
 ```
 
-Create a working directory for your builds:
+Alternatively, with `ghcup tui` you can pick the specific versions of the tools that you want to install, in particular you should have installed and set:
+- `cabal >= 3.6.2.0`
+- `GHC >= 8.10.7`
+
+To check that you will use the GHCup tools (and not any other installation on the system), you can execute
 
 ```bash
-mkdir -p ~/src
-cd ~/src
+which cabal
 ```
+
+and it should return a path of this shape: `/home/<user>/.ghcup/bin/cabal`.
 
 #### Installing Libsodium
 
@@ -132,11 +92,32 @@ make
 sudo make install
 ```
 
-Add the following to your .bashrc file and source it:
+Add the following to your `~/.bashrc` file and source it (or re-open the terminal):
 
 ```bash
 export LD_LIBRARY_PATH="/usr/local/lib:$LD_LIBRARY_PATH"
 export PKG_CONFIG_PATH="/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH"
+```
+
+#### Installing Secp256k1
+
+Create a working directory for your builds:
+
+```bash
+mkdir -p ~/src
+cd ~/src
+```
+
+Download and install `libsecp256k1`:
+
+```bash
+git clone https://github.com/bitcoin-core/secp256k1
+cd secp256k1
+git checkout ac83be33
+./autogen.sh
+./configure --enable-module-schnorrsig --enable-experimental
+make
+sudo make install
 ```
 
 #### Downloading the source code for cardano-node
@@ -199,6 +180,8 @@ mkdir -p ~/.local/bin
 cp -p "$(./scripts/bin-path.sh cardano-node)" ~/.local/bin/
 cp -p "$(./scripts/bin-path.sh cardano-cli)" ~/.local/bin/
 ```
+
+**Note:** `~/.local/bin` should be in the `$PATH`.
 
 Note, we avoid using `cabal install` because that method prevents the installed binaries from reporting
 the git revision with the `--version` switch.
