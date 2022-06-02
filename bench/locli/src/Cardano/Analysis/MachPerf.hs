@@ -11,7 +11,8 @@ import Cardano.Prelude qualified as CP
 
 import Data.List                        ((!!))
 import Data.Map.Strict qualified as Map
-import Data.Text                        (pack)
+import Data.Text                        (pack, unpack)
+import Data.Text.Short                  (toText)
 import Data.Vector (Vector)
 import Data.Vector qualified as Vec
 
@@ -172,20 +173,24 @@ data TimelineAccum
   , aSlotStats     :: [SlotStats]
   , aRunScalars    :: RunScalars
   , aTxsCollectedAt:: Map.Map TId UTCTime
+  , aHost          :: Host
   }
 
 forTAHead :: TimelineAccum -> (SlotStats -> SlotStats) -> TimelineAccum
 forTAHead xs@TimelineAccum{aSlotStats=s:ss} f = xs {aSlotStats=f s:ss}
 
 forTANth :: TimelineAccum -> Int -> (SlotStats -> SlotStats) -> TimelineAccum
-forTANth xs@TimelineAccum{aSlotStats=ss} n f =
+forTANth xs@TimelineAccum{aSlotStats=ss, aHost} n f =
   xs { aSlotStats = mapNth f n ss }
  where
    mapNth :: (a -> a) -> Int -> [a] -> [a]
    mapNth f n xs =
      case splitAt n xs of
        (pre, x:post) -> pre <> (f x : post)
-       _ -> error $ "mapNth: couldn't go " <> show n <> "-deep into the timeline"
+       _ -> error $ mconcat
+            [ "mapNth: couldn't go ", show n, "-deep into the timeline, "
+            , "host=", unpack . toText $ unHost aHost
+            ]
 
 timelineFromLogObjects :: Run -> (JsonLogfile, [LogObject])
                        -> Either Text (JsonLogfile, (RunScalars, [SlotStats]))
@@ -200,6 +205,8 @@ timelineFromLogObjects run@Run{genesis} (f, xs) =
  where
    firstLogObjectTime :: UTCTime
    firstLogObjectTime = loAt (head xs)
+   firstLogObjectHost :: Host
+   firstLogObjectHost = loHost (head xs)
 
    zeroTimelineAccum :: TimelineAccum
    zeroTimelineAccum =
@@ -212,6 +219,7 @@ timelineFromLogObjects run@Run{genesis} (f, xs) =
      , aSlotStats     = [zeroSlotStats]
      , aRunScalars    = zeroRunScalars
      , aTxsCollectedAt= mempty
+     , aHost          = firstLogObjectHost
      }
    zeroRunScalars :: RunScalars
    zeroRunScalars = RunScalars Nothing Nothing Nothing
@@ -338,9 +346,13 @@ timelineStep Run{genesis} a@TimelineAccum{aSlotStats=cur:_, ..} =
     }
   -- Next, events that rely on their slotstats to pre-exist:
   --
-  LogObject{loAt, loBody=LOTraceLeadershipDecided slot yesNo} ->
+  LogObject{loAt, loHost, loBody=LOTraceLeadershipDecided slot yesNo} ->
     if slot /= slSlot cur
-    then error $ "LeadDecided for noncurrent slot=" <> show slot <> " cur=" <> show (slSlot cur)
+    then error $ mconcat
+         [ "LeadDecided for noncurrent slot=", show slot
+         , " cur=", show (slSlot cur)
+         , " host=", unpack . toText $ unHost loHost
+         ]
     else forTAHead a (onLeadershipCertainty loAt yesNo)
    where
      onLeadershipCertainty :: UTCTime -> Bool -> SlotStats -> SlotStats
@@ -363,9 +375,13 @@ timelineStep Run{genesis} a@TimelineAccum{aSlotStats=cur:_, ..} =
     }
    where
      newBlock = aBlockNo /= blockNo
-  LogObject{loAt, loBody=LOBlockForged _ _ _ slot} ->
+  LogObject{loAt, loHost, loBody=LOBlockForged _ _ _ slot} ->
     if slot /= slSlot cur
-    then error $ "BlockForged for noncurrent slot=" <> show slot <> " cur=" <> show (slSlot cur)
+    then error $ mconcat
+         [ "BlockForged for noncurrent slot=", show slot
+         , " cur=", show (slSlot cur)
+         , " host=", unpack . toText $ unHost loHost
+         ]
     else forTAHead a (onBlockForge loAt)
    where
      onBlockForge :: UTCTime -> SlotStats -> SlotStats

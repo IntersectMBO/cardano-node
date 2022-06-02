@@ -465,11 +465,10 @@ blockProp run@Run{genesis} chain domSlot domBlock = do
 -- | Given a single machine's log object stream, recover its block map.
 blockEventMapsFromLogObjects :: Run -> (JsonLogfile, [LogObject]) -> MachView
 blockEventMapsFromLogObjects run (f@(unJsonLogfile -> fp), xs) =
-  trace ("processing " <> fp)
-  $ if Map.size (mvBlocks view) == 0
-    then error $ mconcat
-         ["No block events in ",fp," : ","LogObject count: ",show (length xs)]
-    else view
+  if Map.size (mvBlocks view) == 0
+  then error $ mconcat
+       ["No block events in ",fp," : ","LogObject count: ",show (length xs)]
+  else view
  where
    view = foldl' (blockPropMachEventsStep run f) initial xs
    initial =
