@@ -45,4 +45,4 @@ With this we are able to generate an operational certificate for our stake pool:
     --kes-period 205 \
     --out-file node.cert
 
-Note that with the Vasil hard fork, you must create your operational certificate using cold.counter +1. This means that the counter must be exactly one more than the previously used one.
+This command will increment the number in the cold.counter file by one. Note that from the Vasil hard fork onwards this is required behaviour: it is only valid for new operational certificates to use the counter value (previously used on the chain) plus exactly one. Prior to Vasil it was permitted to use any strictly larger counter value than used previously, but this is no longer permitted. It must be incremented by exactly one. In particular, this means one cannot use the current time or slot number as an issue number.
