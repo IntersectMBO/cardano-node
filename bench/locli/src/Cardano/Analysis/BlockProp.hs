@@ -349,7 +349,8 @@ rebuildChain run@Run{genesis} xs@(fmap snd -> machViews) = do
        , bfChainDelta = bfeChainDelta
        , bfAnnounced  = (bfeAnnounced <|> Just 0.05) -- Temporary hack until ChainSync tracing is fixed
                         & handleMiss "Δt Announced (forger)"
-       , bfSending    = bfeSending   & handleMiss "Δt Sending (forger)"
+       , bfSending    = (bfeSending <|> Just 0.01) -- Temporary hack until ChainSync tracing is fixed
+                        & handleMiss "Δt Sending (forger)"
        }
      , beObservations =
          catMaybes $
