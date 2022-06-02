@@ -229,6 +229,68 @@ case "$op" in
 
         echo $dir;;
 
+    list-aws | lsaws )
+        local usage="USAGE: wb run $op [DEPLOYMENT=bench-1] [ENV=bench]"
+        local depl=${1:-bench-1}
+        local env=${2:-bench}
+
+        ssh $env -- \
+            sh -c "'cd $depl/runs &&
+                    find . -mindepth 2 -maxdepth 2 -type f -name 'meta.json' -exec dirname \{\} \; |
+                    grep -v current\$\\|deploy-logs\$ |
+                    cut -c3- |
+                    sort ||
+                    true'" 2>/dev/null;;
+
+    allocate-from-aws | steal-from-aws | aws-get )
+        local usage="USAGE: wb run $op RUN [MACHINE] [DEPLOYMENT=bench-1] [ENV=bench]"
+        local run=${1:?$usage}
+        local mach=${2:-}
+        local depl=${3:-bench-1}
+        local env=${4:-bench}
+
+        local meta=$(ssh $env -- sh -c "'jq . $depl/runs/$run/meta.json'")
+        if ! jq . <<<$meta >/dev/null
+        then fail "allocate-from-aws:  malformed $(yellow meta.json) in $(white $run) on $(white $depl)@$(white env)"; fi
+
+        ## Minor validation passed, create & populate run with remote data:
+        local dir=$global_rundir/$run
+        mkdir -p "$dir"
+        jq . <<<$meta > $dir/meta.json
+
+        local hosts=($(if test -n "$mach"; then echo $mach
+                       else jq -r '.hostname | keys | .[]' <<<$meta; fi))
+        local objects=(
+            ${hosts[*]}
+            genesis-shelley.json
+            genesis-alonzo.json
+            network-latency-matrix.json
+            machines.json
+        )
+
+        local count=${#objects[*]}
+        progress "run | aws-get $(white $run)" "objects to fetch:  $(white $count) total:  $(yellow ${objects[*]})"
+
+        local max_batch=9
+        progress "run | aws-get $(white $run)" "fetching in batches"
+
+        local base=0 batch
+        while test $base -lt $count
+        do local batch=(${objects[*]:$base:$max_batch})
+           progress_ne "run | aws-get $(white $run)" "fetching batch: "
+           local obj=
+           for obj in ${batch[*]}
+           do { ssh $env -- \
+                    sh -c "'cd $depl/runs/$run && if test -f compressed/logs-$obj.tar.zst; then cat compressed/logs-$obj.tar.zst; else tar c $obj --zstd --ignore-failed-read; fi'" 2>/dev/null |
+                    (cd $dir; tar x --zstd)
+                echo -ne " $(yellow $obj)" >&2
+              } &
+           done
+           wait
+           echo >&2
+           base=$((base + max_batch))
+        done;;
+
     allocate )
         local usage="USAGE: wb run $op BATCH-NAME PROFILE-NAME [ENV-CONFIG-OPTS..] [-- BACKEND-ARGS-AND-ENV-CONFIG-OPTS..]"
         local batch=${1:?$usage}; shift
