@@ -503,6 +503,21 @@ case "$op" in
             (cd $dir; tar x --zstd)
         ;;
 
+    trim )
+        local usage="USAGE: wb run $op TAG"
+        local tag=${1:?$usage}
+        local dir=$global_rundir/$tag
+
+        if ! run check "$tag"
+        then fatal "run fails sanity checks:  $tag at $dir"; fi
+
+        jq_fmutate "$dir"/genesis-shelley.json '
+           del(.initialFunds)
+         | del(.staking)
+         | .initialFunds = {}
+         | .staking      = {}
+        ';;
+
     describe )
         local usage="USAGE: wb run $op TAG"
         local tag=${1:?$usage}
