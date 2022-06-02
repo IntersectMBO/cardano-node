@@ -6,7 +6,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
@@ -123,7 +122,6 @@ module Cardano.Api.TxBody (
     ScriptWitnessIndex(..),
     renderScriptWitnessIndex,
     collectTxBodyScriptWitnesses,
-    mapTxScriptWitnesses,
 
     -- * Conversion to inline data
     scriptDataToInlineDatum,
@@ -145,6 +143,8 @@ module Cardano.Api.TxBody (
 
     -- * Misc helpers
     calculateExecutionUnitsLovelace,
+    orderStakeAddrs,
+    orderTxIns,
 
     -- * Data family instances
     AsType(AsTxId, AsTxBody, AsByronTxBody, AsShelleyTxBody, AsMaryTxBody),
@@ -154,11 +154,10 @@ import           Prelude
 
 import           Control.Applicative (some)
 import           Control.Monad (guard)
-import           Data.Aeson (object, withObject, withText, (.:), (.:?), (.=))
+import           Data.Aeson (object, withObject, (.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Key as Aeson
 import qualified Data.Aeson.KeyMap as KeyMap
-import           Data.Aeson.Types (ToJSONKey (..), toJSONKeyText)
 import qualified Data.Aeson.Types as Aeson
 import           Data.Bifunctor (first)
 import           Data.ByteString (ByteString)
@@ -170,7 +169,7 @@ import           Data.List (intercalate, sortBy)
 import qualified Data.List.NonEmpty as NonEmpty
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import           Data.Maybe (fromMaybe, maybeToList)
+import           Data.Maybe (catMaybes, fromMaybe, maybeToList)
 import           Data.Scientific (toBoundedInteger)
 import qualified Data.Sequence.Strict as Seq
 import           Data.Set (Set)
@@ -184,9 +183,7 @@ import           GHC.Generics
 import           GHC.Records (HasField (..))
 import           Text.Parsec ((<?>))
 import qualified Text.Parsec as Parsec
-import qualified Text.Parsec.Language as Parsec
 import qualified Text.Parsec.String as Parsec
-import qualified Text.Parsec.Token as Parsec
 
 import           Cardano.Binary (Annotated (..), reAnnotate, recoverBytes)
 import qualified Cardano.Binary as CBOR
@@ -201,7 +198,6 @@ import qualified Cardano.Crypto.Hashing as Byron
 import qualified Cardano.Ledger.Address as Shelley
 import qualified Cardano.Ledger.AuxiliaryData as Ledger (hashAuxiliaryData)
 import           Cardano.Ledger.BaseTypes (StrictMaybe (..), maybeToStrictMaybe)
-import qualified Cardano.Ledger.BaseTypes as Ledger
 import qualified Cardano.Ledger.Coin as Ledger
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Core as Ledger
@@ -256,7 +252,7 @@ import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseJSON
 import           Cardano.Api.SerialiseRaw
 import           Cardano.Api.SerialiseTextEnvelope
-import           Cardano.Api.SerialiseUsing
+import           Cardano.Api.TxIn
 import           Cardano.Api.TxMetadata
 import           Cardano.Api.Utils
 import           Cardano.Api.Value
@@ -341,146 +337,6 @@ scriptValidityToTxScriptValidity era scriptValidity = case txScriptValiditySuppo
 
 txScriptValidityToIsValid :: TxScriptValidity era -> Alonzo.IsValid
 txScriptValidityToIsValid = scriptValidityToIsValid . txScriptValidityToScriptValidity
-
--- ----------------------------------------------------------------------------
--- Transaction Ids
---
-
-newtype TxId = TxId (Shelley.Hash StandardCrypto Shelley.EraIndependentTxBody)
-  -- We use the Shelley representation and convert to/from the Byron one
-  deriving stock (Eq, Ord)
-  deriving (Show, IsString)         via UsingRawBytesHex TxId
-  deriving (ToJSON, FromJSON)       via UsingRawBytesHex TxId
-  deriving (ToJSONKey, FromJSONKey) via UsingRawBytesHex TxId
-
-instance HasTypeProxy TxId where
-    data AsType TxId = AsTxId
-    proxyToAsType _ = AsTxId
-
-instance SerialiseAsRawBytes TxId where
-    serialiseToRawBytes (TxId h) = Crypto.hashToBytes h
-    deserialiseFromRawBytes AsTxId bs = TxId <$> Crypto.hashFromBytes bs
-
-toByronTxId :: TxId -> Byron.TxId
-toByronTxId (TxId h) =
-    Byron.unsafeHashFromBytes (Crypto.hashToBytes h)
-
-toShelleyTxId :: TxId -> Ledger.TxId StandardCrypto
-toShelleyTxId (TxId h) =
-    Ledger.TxId (SafeHash.unsafeMakeSafeHash (Crypto.castHash h))
-
-fromShelleyTxId :: Ledger.TxId StandardCrypto -> TxId
-fromShelleyTxId (Ledger.TxId h) =
-    TxId (Crypto.castHash (SafeHash.extractHash h))
-
--- | Calculate the transaction identifier for a 'TxBody'.
---
-getTxId :: forall era. TxBody era -> TxId
-getTxId (ByronTxBody tx) =
-    TxId
-  . fromMaybe impossible
-  . Crypto.hashFromBytesShort
-  . Byron.abstractHashToShort
-  . Byron.hashDecoded
-  $ tx
-  where
-    impossible =
-      error "getTxId: byron and shelley hash sizes do not match"
-
-getTxId (ShelleyTxBody era tx _ _ _ _) =
-  obtainConstraints era $ getTxIdShelley era tx
- where
-  obtainConstraints
-    :: ShelleyBasedEra era
-    -> (( Ledger.Crypto (ShelleyLedgerEra era) ~ StandardCrypto
-        , Ledger.UsesTxBody (ShelleyLedgerEra era)
-        ) => a)
-    -> a
-  obtainConstraints ShelleyBasedEraShelley f = f
-  obtainConstraints ShelleyBasedEraAllegra f = f
-  obtainConstraints ShelleyBasedEraMary    f = f
-  obtainConstraints ShelleyBasedEraAlonzo  f = f
-  obtainConstraints ShelleyBasedEraBabbage f = f
-
-getTxIdShelley
-  :: Ledger.Crypto (ShelleyLedgerEra era) ~ StandardCrypto
-  => Ledger.UsesTxBody (ShelleyLedgerEra era)
-  => ShelleyBasedEra era -> Ledger.TxBody (ShelleyLedgerEra era) -> TxId
-getTxIdShelley _ tx =
-    TxId
-  . Crypto.castHash
-  . (\(Ledger.TxId txhash) -> SafeHash.extractHash txhash)
-  $ Ledger.txid tx
-
-
--- ----------------------------------------------------------------------------
--- Transaction inputs
---
-
-data TxIn = TxIn TxId TxIx
-  deriving (Eq, Ord, Show)
-
-instance ToJSON TxIn where
-  toJSON txIn = Aeson.String $ renderTxIn txIn
-
-instance ToJSONKey TxIn where
-  toJSONKey = toJSONKeyText renderTxIn
-
-instance FromJSON TxIn where
-  parseJSON = withText "TxIn" $ runParsecParser parseTxIn
-
-instance FromJSONKey TxIn where
-  fromJSONKey = Aeson.FromJSONKeyTextParser $ runParsecParser parseTxIn
-
-parseTxId :: Parsec.Parser TxId
-parseTxId = do
-  str <- some Parsec.hexDigit <?> "transaction id (hexadecimal)"
-  failEitherWith
-    (\e -> "Incorrect transaction id format: " ++ displayError e) $
-    deserialiseFromRawBytesHex AsTxId $ BSC.pack str
-
-parseTxIn :: Parsec.Parser TxIn
-parseTxIn = TxIn <$> parseTxId <*> (Parsec.char '#' *> parseTxIx)
-
-parseTxIx :: Parsec.Parser TxIx
-parseTxIx = TxIx . fromIntegral <$> decimal
-
-decimal :: Parsec.Parser Integer
-Parsec.TokenParser { Parsec.decimal = decimal } = Parsec.haskell
-
-
-renderTxIn :: TxIn -> Text
-renderTxIn (TxIn txId (TxIx ix)) =
-  serialiseToRawBytesHexText txId <> "#" <> Text.pack (show ix)
-
-
-newtype TxIx = TxIx Word
-  deriving stock (Eq, Ord, Show)
-  deriving newtype (Enum)
-  deriving newtype (ToJSON, FromJSON)
-
-fromByronTxIn :: Byron.TxIn -> TxIn
-fromByronTxIn (Byron.TxInUtxo txId index) =
-  let shortBs = Byron.abstractHashToShort txId
-      mApiHash = Crypto.hashFromBytesShort shortBs
-  in case mApiHash of
-       Just apiHash -> TxIn (TxId apiHash) (TxIx . fromIntegral $ toInteger index)
-       Nothing -> error $ "Error converting Byron era TxId: " <> show txId
-
-toByronTxIn :: TxIn -> Byron.TxIn
-toByronTxIn (TxIn txid (TxIx txix)) =
-    Byron.TxInUtxo (toByronTxId txid) (fromIntegral txix)
-
--- | This function may overflow on the transaction index. Call sites must ensure
--- that all uses of this function are appropriately guarded.
-toShelleyTxIn :: TxIn -> Ledger.TxIn StandardCrypto
-toShelleyTxIn (TxIn txid (TxIx txix)) =
-    Ledger.TxIn (toShelleyTxId txid) (Ledger.TxIx $ fromIntegral txix)
-
-fromShelleyTxIn :: Ledger.TxIn StandardCrypto -> TxIn
-fromShelleyTxIn (Ledger.TxIn txid (Ledger.TxIx txix)) =
-    TxIn (fromShelleyTxId txid) (TxIx (fromIntegral txix))
-
 
 -- ----------------------------------------------------------------------------
 -- Transaction outputs
