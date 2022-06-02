@@ -85,31 +85,70 @@ case "$op" in
         analyse ${sargs[*]} map "call ${script[*]}" "$@"
         ;;
 
+    performance-single-host | perf-single )
+        local usage="USAGE: wb analyse $op HOST"
+        local host=${1:?usage}; shift
+
+        local script=(
+            logs               'dump-logobjects'
+            context
+
+            collect-slots      $(test -n "$dump_slots_raw" && echo 'dump-slots-raw')
+            filter-slots       $(test -n "$dump_slots" && echo 'dump-slots')
+            timeline-slots
+
+            machperf
+            dump-machperf
+            report-perf-{full,brief}
+        )
+        progress "analysis" "$(with_color white performance), calling script:  $(colorise ${script[*]})"
+        analyse ${sargs[*]} map "call --host $host ${script[*]}" "$@"
+        ;;
+
     map )
-        local usage="USAGE: wb analyse $op OP RUNS.."
+        local usage="USAGE: wb analyse $op OP [-opt-flag] [--long-option OPTVAL] RUNS.."
+        ## Meaning: map OP over RUNS, optionally giving flags/options to OP
 
         local preop=${1:?usage}; shift
         local runs=($*); if test $# = 0; then runs=(current); fi
 
         local op_split=($preop)
         local op=${op_split[0]}
-        local args=${op_split[*]:1}
-        progress "analyse" "mapping op $(with_color yellow $op) $(with_color cyan $args) over runs:  $(with_color white ${runs[*]})"
+        local op_args=()
+        ## This is magical and stupid, but oh well, it's the cost of abstraction:
+        ##  1. We are passing all '--long-option VAL' pairs to the mapped preop
+        ##  2. We are passing all '-opt-flag' flags to the mapped preop
+        for ((i=1; i<=${#op_split[*]}; i++))
+        do local arg=${op_split[$i]} argnext=${op_split[$((i+1))]}
+           case "$arg" in
+               --* ) op_args+=($arg $argnext); i=$((i+1));;
+               -*  ) op_args+=($arg);;
+               * ) break;; esac; done
+        local args=${op_split[*]:$i}
+        progress "analyse" "mapping op $(with_color yellow $op ${op_args[*]}) $(with_color cyan $args) over runs:  $(with_color white ${runs[*]})"
         for r in ${runs[*]}
         do analyse ${sargs[*]} prepare $r
-           analyse ${sargs[*]} $op $r ${args[*]}
+           analyse ${sargs[*]} $op ${op_args[*]} $r ${args[*]}
         done
         ;;
 
     call )
-        local usage="USAGE: wb analyse $op RUN-NAME OPS.."
+        local usage="USAGE: wb analyse $op [--host HOST] RUN-NAME OPS.."
+
+        local host=
+        while test $# -gt 0
+        do case "$1" in
+               --host ) host=$2; shift;;
+               * ) break;; esac; shift; done
 
         local name=${1:?$usage}; shift
         local dir=$(run get "$name")
         local adir=$dir/analysis
         test -n "$dir" -a -d "$adir" || fail "malformed run: $name"
 
-        local logfiles=("$adir"/logs-*.flt.json)
+        local logfiles=($(if test -z "$host"
+                          then ls "$adir"/logs-*.flt.json
+                          else ls "$adir"/logs-$host.flt.json; fi))
 
         if test -z "${filters[*]}"
         then local filter_names=$(jq '.analysis.filters
