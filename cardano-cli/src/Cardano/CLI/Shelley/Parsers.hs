@@ -229,10 +229,58 @@ pScriptFor name (Just deprecated) help =
         <> Opt.internal
         )
 
+pPlutusReferenceScriptWitnessFiles
+  :: WitCtx witctx
+  -> BalanceTxExecUnits -- ^ Use the @execution-units@ flag.
+  -> Parser (ScriptWitnessFiles witctx)
+pPlutusReferenceScriptWitnessFiles witctx autoBalanceExecUnits =
+   toReferenceScriptWitnessFiles
+     <$> ( (,,,,) <$> pReferenceTxIn
+                  <*> pAnyScriptLang
+                  <*> pScriptDatumOrFile "reference-tx-in" witctx
+                  <*> pScriptRedeemerOrFile "reference-tx-in"
+                  <*> (case autoBalanceExecUnits of
+                        AutoBalance -> pure (ExecutionUnits 0 0)
+                        ManualBalance -> pExecutionUnits "reference-tx-in")
+         )
+ where
+  pReferenceTxIn :: Parser TxIn
+  pReferenceTxIn =
+    Opt.option (readerFromParsecParser parseTxIn)
+      (  Opt.long "tx-in-reference"
+      <> Opt.metavar "TX-IN"
+      <> Opt.help "TxId#TxIx - Specify a reference input. The reference input may or may not have\
+                  \ a plutus reference script attached."
+      )
+  pAnyScriptLang :: Parser AnyScriptLanguage
+  pAnyScriptLang =
+    Opt.flag' (AnyScriptLanguage $ SimpleScriptLanguage SimpleScriptV1)
+      (  Opt.long "simple-script-v1"
+      <> Opt.help "Specify a simple script v1 reference script."
+      ) <|>
+    Opt.flag' (AnyScriptLanguage $ SimpleScriptLanguage SimpleScriptV2)
+      (  Opt.long "simple-script-v2"
+      <> Opt.help "Specify a simple script v2 reference script."
+      ) <|>
+    Opt.flag' (AnyScriptLanguage $ PlutusScriptLanguage PlutusScriptV1)
+      (  Opt.long "plutus-script-v1"
+      <> Opt.help "Specify a plutus script v1 reference script."
+      ) <|>
+    Opt.flag' (AnyScriptLanguage $ PlutusScriptLanguage PlutusScriptV2)
+      (  Opt.long "plutus-script-v2"
+      <> Opt.help "Specify a plutus script v2 reference script."
+      )
+
+
+  toReferenceScriptWitnessFiles
+    :: (TxIn, AnyScriptLanguage, ScriptDatumOrFile witctx, ScriptRedeemerOrFile, ExecutionUnits)
+    -> ScriptWitnessFiles witctx
+  toReferenceScriptWitnessFiles (txin, sLang, d,r, e) = PlutusReferenceScriptWitnessFiles txin sLang d r e
+
 pScriptWitnessFiles :: forall witctx.
                        WitCtx witctx
                     -> BalanceTxExecUnits -- ^ Use the @execution-units@ flag.
-                    -> String
+                    -> String -- ^ Script flag prefix
                     -> Maybe String
                     -> String
                     -> Parser (ScriptWitnessFiles witctx)
@@ -241,11 +289,11 @@ pScriptWitnessFiles witctx autoBalanceExecUnits scriptFlagPrefix scriptFlagPrefi
       <$> pScriptFor (scriptFlagPrefix ++ "-script-file")
                      ((++ "-script-file") <$> scriptFlagPrefixDeprecated)
                      ("The file containing the script to witness " ++ help)
-      <*> optional ((,,) <$> pScriptDatumOrFile
-                         <*> pScriptRedeemerOrFile
+      <*> optional ((,,) <$> pScriptDatumOrFile scriptFlagPrefix witctx
+                         <*> pScriptRedeemerOrFile scriptFlagPrefix
                          <*> (case autoBalanceExecUnits of
                                AutoBalance -> pure (ExecutionUnits 0 0)
-                               ManualBalance -> pExecutionUnits)
+                               ManualBalance -> pExecutionUnits scriptFlagPrefix)
                    )
   where
     toScriptWitnessFiles :: ScriptFile
@@ -256,31 +304,33 @@ pScriptWitnessFiles witctx autoBalanceExecUnits scriptFlagPrefix scriptFlagPrefi
     toScriptWitnessFiles sf Nothing        = SimpleScriptWitnessFile  sf
     toScriptWitnessFiles sf (Just (d,r, e)) = PlutusScriptWitnessFiles sf d r e
 
-    pScriptDatumOrFile :: Parser (ScriptDatumOrFile witctx)
-    pScriptDatumOrFile =
-      case witctx of
-        WitCtxTxIn  -> ScriptDatumOrFileForTxIn <$>
-                         pScriptDataOrFile
-                           (scriptFlagPrefix ++ "-datum")
-                           "The script datum, in JSON syntax."
-                           "The script datum, in the given JSON file."
-        WitCtxMint  -> pure NoScriptDatumOrFileForMint
-        WitCtxStake -> pure NoScriptDatumOrFileForStake
 
-    pScriptRedeemerOrFile :: Parser ScriptDataOrFile
-    pScriptRedeemerOrFile = pScriptDataOrFile (scriptFlagPrefix ++ "-redeemer")
-                           "The script redeemer, in JSON syntax."
-                           "The script redeemer, in the given JSON file."
+pExecutionUnits :: String -> Parser ExecutionUnits
+pExecutionUnits scriptFlagPrefix =
+  uncurry ExecutionUnits <$>
+    Opt.option Opt.auto
+      (  Opt.long (scriptFlagPrefix ++ "-execution-units")
+      <> Opt.metavar "(INT, INT)"
+      <> Opt.help "The time and space units needed by the script."
+      )
 
-    pExecutionUnits :: Parser ExecutionUnits
-    pExecutionUnits =
-      uncurry ExecutionUnits <$>
-        Opt.option Opt.auto
-          (  Opt.long (scriptFlagPrefix ++ "-execution-units")
-          <> Opt.metavar "(INT, INT)"
-          <> Opt.help "The time and space units needed by the script."
-          )
+pScriptRedeemerOrFile :: String -> Parser ScriptDataOrFile
+pScriptRedeemerOrFile scriptFlagPrefix =
+  pScriptDataOrFile (scriptFlagPrefix ++ "-redeemer")
+    "The script redeemer, in JSON syntax."
+    "The script redeemer, in the given JSON file."
 
+
+pScriptDatumOrFile :: String -> WitCtx witctx -> Parser (ScriptDatumOrFile witctx)
+pScriptDatumOrFile scriptFlagPrefix witctx =
+  case witctx of
+    WitCtxTxIn  -> ScriptDatumOrFileForTxIn <$>
+                     pScriptDataOrFile
+                       (scriptFlagPrefix ++ "-datum")
+                       "The script datum, in JSON syntax."
+                       "The script datum, in the given JSON file."
+    WitCtxMint  -> pure NoScriptDatumOrFileForMint
+    WitCtxStake -> pure NoScriptDatumOrFileForStake
 
 pScriptDataOrFile :: String -> String -> String -> Parser ScriptDataOrFile
 pScriptDataOrFile dataFlagPrefix helpTextForValue helpTextForFile =
@@ -674,7 +724,6 @@ pTransaction =
             <*> many pTxInCollateral
             <*> optional pReturnCollateral
             <*> optional pTotalCollateral
-            <*> many pReferenceTxIn
             <*> many pTxOut
             <*> pChangeAddress
             <*> optional (pMintMultiAsset AutoBalance)
@@ -710,7 +759,6 @@ pTransaction =
                <*> many pTxInCollateral
                <*> optional pReturnCollateral
                <*> optional pTotalCollateral
-               <*> many pReferenceTxIn
                <*> many pRequiredSigner
                <*> many pTxOut
                <*> optional (pMintMultiAsset ManualBalance)
@@ -2016,11 +2064,14 @@ pTxIn balance =
                 <> Opt.metavar "TX-IN"
                <> Opt.help "TxId#TxIx"
                )
-         <*> optional (pScriptWitnessFiles
-                         WitCtxTxIn
-                         balance
-                         "tx-in" (Just "txin")
-                         "the spending of the transaction input.")
+         <*> optional pPlutusScriptOrReferenceInputWitness
+ where
+  pPlutusScriptOrReferenceInputWitness :: Parser (ScriptWitnessFiles WitCtxTxIn)
+  pPlutusScriptOrReferenceInputWitness =
+     pScriptWitnessFiles WitCtxTxIn balance
+      "tx-in" (Just "txin")
+      "the spending of the transaction input." <|>
+     pPlutusReferenceScriptWitnessFiles WitCtxTxIn balance
 
 pTxInCollateral :: Parser TxIn
 pTxInCollateral =
@@ -2054,15 +2105,6 @@ pTotalCollateral =
                  \as fees in the event of a Plutus script failure. Must be used \
                  \in conjuction with \"--tx-out-return-collateral\"."
     )
-
-
-pReferenceTxIn :: Parser TxIn
-pReferenceTxIn =
-    Opt.option (readerFromParsecParser parseTxIn)
-      (  Opt.long "tx-in-reference"
-      <> Opt.metavar "TX-IN"
-      <> Opt.help "TxId#TxIx"
-      )
 
 pWitnessOverride :: Parser Word
 pWitnessOverride = Opt.option Opt.auto
@@ -2951,7 +2993,7 @@ pMaxTxExecutionUnits =
     (  Opt.long "max-tx-execution-units"
     <> Opt.metavar "(INT, INT)"
     <> Opt.help "Max total script execution resources units allowed per tx \
-                \(from Alonzo era)."
+                \(from Alonzo era). They are denominated as follows (steps, memory)."
     )
 
 pMaxBlockExecutionUnits :: Parser ExecutionUnits
@@ -2961,7 +3003,7 @@ pMaxBlockExecutionUnits =
     (  Opt.long "max-block-execution-units"
     <> Opt.metavar "(INT, INT)"
     <> Opt.help "Max total script execution resources units allowed per block \
-                \(from Alonzo era)."
+                \(from Alonzo era). They are denominated as follows (steps, memory)."
     )
 
 pMaxValueSize :: Parser Natural
