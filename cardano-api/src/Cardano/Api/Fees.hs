@@ -60,7 +60,7 @@ import qualified Prettyprinter.Render.String as PP
 
 import qualified Cardano.Binary as CBOR
 import qualified Cardano.Ledger.BaseTypes as Ledger
-import           Cardano.Slotting.EpochInfo (EpochInfo, hoistEpochInfo)
+import           Cardano.Slotting.EpochInfo (EpochInfo(..), hoistEpochInfo)
 
 import qualified Cardano.Chain.Common as Byron
 
@@ -523,14 +523,11 @@ evaluateTransactionExecutionUnits _eraInMode systemstart history pparams utxo tx
              (toLedgerPParams era pparams)
              tx
              (toLedgerUTxO era utxo)
-             (toLedgerEpochInfo history)
+             (hoistEpochInfo (first (Text.pack . show)) (toLedgerEpochInfo history)) -- TODO any way to avoid using show?
              systemstart
              cModelArray
-        of Left  err   -> Left err
-           Right exmapResult ->
-             case exmapResult of
-               Left err -> Left (TransactionValidityBasicFailure err)
-               Right exmap -> Right (fromLedgerScriptExUnitsMap exmap)
+        of Left  err   -> Left (TransactionValidityBasicFailure err)
+           Right exmap -> Right (fromLedgerScriptExUnitsMap exmap)
 
     evalBabbage :: forall ledgerera.
                   ShelleyLedgerEra era ~ ledgerera
@@ -548,14 +545,11 @@ evaluateTransactionExecutionUnits _eraInMode systemstart history pparams utxo tx
              (toLedgerPParams era pparams)
              tx
              (toLedgerUTxO era utxo)
-             (toLedgerEpochInfo history)
+             (hoistEpochInfo (first (Text.pack . show)) (toLedgerEpochInfo history)) -- TODO any way to avoid using show?
              systemstart
              costModelsArray
-        of Left  err   -> Left err
-           Right exmapResult ->
-             case exmapResult of
-               Left err -> Left (TransactionValidityBasicFailure err)
-               Right exmap -> Right (fromLedgerScriptExUnitsMap exmap)
+        of Left  err   -> Left (TransactionValidityBasicFailure err)
+           Right exmap -> Right (fromLedgerScriptExUnitsMap exmap)
 
     toLedgerEpochInfo :: EraHistory mode
                       -> EpochInfo (Either TransactionValidityError)

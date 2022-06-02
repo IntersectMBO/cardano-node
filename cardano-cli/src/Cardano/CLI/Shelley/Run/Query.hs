@@ -67,7 +67,7 @@ import qualified Cardano.Protocol.TPraos.API as Ledger
 import           Cardano.Slotting.EpochInfo (EpochInfo (..), epochInfoSlotToUTCTime, hoistEpochInfo)
 import           Control.Monad.Trans.Except (except)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistMaybe, left,
-                   newExceptT)
+                   newExceptT, hoistEither)
 import           Data.Aeson.Encode.Pretty (encodePretty)
 import           Data.Aeson.Types as Aeson
 import           Data.Coerce (coerce)
@@ -84,7 +84,6 @@ import           Ouroboros.Consensus.Protocol.TPraos
 import           Ouroboros.Network.Block (Serialised (..))
 import           Ouroboros.Network.Protocol.LocalStateQuery.Type (AcquireFailure (..))
 import           Text.Printf (printf)
-import           Control.Monad.Trans.Except.Extra (hoistEither)
 
 import           Cardano.Protocol.TPraos.Rules.Prtcl
 import qualified Data.ByteString.Lazy.Char8 as LBS

@@ -80,7 +80,6 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Short as SBS
 import           Data.Coerce
 import           Data.String
-import qualified Data.Text as Text
 
 import qualified Cardano.Binary as CBOR
 import qualified Cardano.Crypto.Hash as Crypto
@@ -100,6 +99,9 @@ import           Cardano.Ledger.SafeHash (unsafeMakeSafeHash)
 import           Gen.Cardano.Api.Metadata (genTxMetadata)
 import           Test.Cardano.Chain.UTxO.Gen (genVKWitness)
 import           Test.Cardano.Crypto.Gen (genProtocolMagicId)
+
+import qualified Prettyprinter as PP
+import qualified Prettyprinter.Render.Text as PP
 
 {- HLINT ignore "Reduce duplication" -}
 
@@ -813,7 +815,7 @@ genCostModel = case Plutus.defaultCostModelParams of
       eCostModel <- Alonzo.mkCostModel <$> genPlutusLanguage
                                        <*> mapM (const $ Gen.integral (Range.linear 0 5000)) dcm
       case eCostModel of
-        Left err -> panic $ Text.pack $ "genCostModel: " <> err
+        Left err -> panic $ PP.renderStrict (PP.layoutSmart (PP.LayoutOptions (PP.AvailablePerLine 80 1.0)) ("genCostModel: " <> PP.pretty err))
         Right cModel -> return . CostModel $ Alonzo.getCostModelParams cModel
 
 genPlutusLanguage :: Gen Language

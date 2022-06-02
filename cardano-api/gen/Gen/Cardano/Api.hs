@@ -14,7 +14,6 @@ import           Cardano.Api.Shelley as Api
 
 import           Control.Monad (MonadFail (fail))
 import qualified Data.Map.Strict as Map
-import qualified Data.Text as Text
 
 --TODO: why do we have this odd split? We can get rid of the old name "typed"
 import           Gen.Cardano.Api.Typed (genCostModel, genRational)
@@ -29,6 +28,9 @@ import           Cardano.Ledger.Shelley.Metadata (Metadata (..), Metadatum (..))
 import           Hedgehog (Gen, Range)
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Internal.Range as Range
+
+import qualified Prettyprinter as PP
+import qualified Prettyprinter.Render.Text as PP
 
 genMetadata :: Gen (Metadata era)
 genMetadata = do
@@ -92,7 +94,7 @@ genCostModels = do
   CostModel cModel <- genCostModel
   lang <- genLanguage
   case Alonzo.mkCostModel lang cModel of
-    Left err -> panic . Text.pack $ "genCostModels: " <> err
+    Left err -> panic $ PP.renderStrict (PP.layoutSmart (PP.LayoutOptions (PP.AvailablePerLine 80 1.0)) ("genCostModel: " <> PP.pretty err))
     Right alonzoCostModel ->
       Alonzo.CostModels . conv <$> Gen.list (Range.linear 1 3) (return alonzoCostModel)
  where

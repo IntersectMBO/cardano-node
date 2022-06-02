@@ -68,6 +68,7 @@ import           Data.Aeson (FromJSON (..), ToJSON (..), object, withObject, (.!
                    (.=))
 import           Data.Bifunctor (bimap)
 import           Data.ByteString (ByteString)
+import           Data.Either (isRight)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (fromMaybe, isJust, isNothing)
@@ -117,6 +118,9 @@ import           Cardano.Api.StakePoolMetadata
 import           Cardano.Api.TxMetadata
 import           Cardano.Api.Utils
 import           Cardano.Api.Value
+
+import qualified Prettyprinter as PP
+import qualified Prettyprinter.Render.String as PP
 
 
 -- | The values of the set of /updatable/ protocol parameters. At any
@@ -753,11 +757,11 @@ validateCostModel :: PlutusScriptVersion lang
                   -> CostModel
                   -> Either InvalidCostModel ()
 validateCostModel PlutusScriptV1 (CostModel m)
-  | Alonzo.isCostModelParamsWellFormed m = Right ()
-  | otherwise                        = Left (InvalidCostModel (CostModel m))
+  | isRight (Alonzo.assertWellFormedCostModelParams m)  = Right ()
+  | otherwise                                           = Left (InvalidCostModel (CostModel m))
 validateCostModel PlutusScriptV2 (CostModel m)
-  | Alonzo.isCostModelParamsWellFormed m = Right ()
-  | otherwise                        = Left (InvalidCostModel (CostModel m))
+  | isRight (Alonzo.assertWellFormedCostModelParams m)  = Right ()
+  | otherwise                                           = Left (InvalidCostModel (CostModel m))
 
 -- TODO alonzo: it'd be nice if the library told us what was wrong
 newtype InvalidCostModel = InvalidCostModel CostModel
@@ -797,7 +801,9 @@ fromAlonzoScriptLanguage Alonzo.PlutusV1 = AnyPlutusScriptVersion PlutusScriptV1
 fromAlonzoScriptLanguage Alonzo.PlutusV2 = AnyPlutusScriptVersion PlutusScriptV2
 
 toAlonzoCostModel :: CostModel -> Alonzo.Language -> Either String Alonzo.CostModel
-toAlonzoCostModel (CostModel m) l = Alonzo.mkCostModel l m
+toAlonzoCostModel (CostModel m) l = case Alonzo.mkCostModel l m of
+  Right costModel -> Right costModel
+  Left e -> Left (PP.renderString (PP.layoutSmart (PP.LayoutOptions (PP.AvailablePerLine 80 1.0)) (PP.pretty e)))
 
 fromAlonzoCostModel :: Alonzo.CostModel -> CostModel
 fromAlonzoCostModel m = CostModel $ Alonzo.getCostModelParams m

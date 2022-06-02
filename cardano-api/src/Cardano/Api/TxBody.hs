@@ -239,6 +239,7 @@ import qualified Cardano.Ledger.Babbage.PParams as Babbage
 import qualified Cardano.Ledger.Babbage.TxBody as Babbage
 import           Ouroboros.Consensus.Shelley.Eras (StandardAllegra, StandardAlonzo, StandardBabbage,
                    StandardMary, StandardShelley)
+import qualified Cardano.Ledger.Serialization as Ledger
 
 import           Cardano.Api.Address
 import           Cardano.Api.Certificate
@@ -2253,7 +2254,7 @@ fromLedgerTxOuts era body scriptdata =
           ScriptDataInBabbageEra
           ReferenceTxInsScriptsInlineDatumsInBabbageEra
           txdatums
-          txouts
+          (Ledger.sizedValue txouts)
       | let txdatums = selectTxDatums scriptdata
       , txouts <- toList (Babbage.outputs body)
       ]
@@ -3134,10 +3135,10 @@ makeShelleyTransactionBody era@ShelleyBasedEraAlonzo
              BuildTxWith Nothing        -> SNothing
              BuildTxWith (Just pparams) ->
                Alonzo.hashScriptIntegrity
-                 (toLedgerPParams ShelleyBasedEraAlonzo pparams)
-                 languages
-                 redeemers
-                 datums)
+                  (Set.map (Alonzo.getLanguageView (toLedgerPParams ShelleyBasedEraAlonzo pparams)) languages)
+                  redeemers
+                  datums
+                 )
           (maybeToStrictMaybe
             (Ledger.hashAuxiliaryData <$> txAuxData))
           SNothing) -- TODO alonzo: support optional network id in TxBodyContent
@@ -3270,11 +3271,11 @@ makeShelleyTransactionBody era@ShelleyBasedEraBabbage
                case txInsReference of
                  TxInsReferenceNone -> Set.empty
                  TxInsReference _ txins -> Set.fromList (map toShelleyTxIn txins)
-           , Babbage.outputs = Seq.fromList (map (toShelleyTxOutAny era) txOuts)
+           , Babbage.outputs = Seq.fromList (map (Ledger.mkSized . toShelleyTxOutAny era) txOuts)
            , Babbage.collateralReturn =
                case txReturnCollateral of
                  TxReturnCollateralNone -> SNothing
-                 TxReturnCollateral _ colTxOut -> SJust $ toShelleyTxOutAny era colTxOut
+                 TxReturnCollateral _ colTxOut -> SJust $ Ledger.mkSized $ toShelleyTxOutAny era colTxOut
            , Babbage.totalCollateral =
                case txTotalCollateral of
                  TxTotalCollateralNone -> SNothing
@@ -3318,8 +3319,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraBabbage
                  BuildTxWith Nothing        -> SNothing
                  BuildTxWith (Just pparams) ->
                     Alonzo.hashScriptIntegrity
-                      (toLedgerPParams ShelleyBasedEraBabbage pparams)
-                      languages
+                      (Set.map (Alonzo.getLanguageView (toLedgerPParams ShelleyBasedEraBabbage pparams)) languages)
                       redeemers
                       datums
            , Babbage.adHash =

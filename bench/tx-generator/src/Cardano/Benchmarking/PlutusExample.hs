@@ -21,6 +21,9 @@ import           Cardano.Benchmarking.Wallet
 import qualified Plutus.V1.Ledger.Api as Plutus
 import           Plutus.V1.Ledger.Contexts (ScriptContext(..), ScriptPurpose(..), TxInfo(..), TxOutRef(..))
 
+import qualified Prettyprinter as PP
+import qualified Prettyprinter.Render.String as PP
+
 mkUtxoScript ::
      NetworkId
   -> (FilePath, Script PlutusScriptV1, ScriptData)
@@ -81,8 +84,9 @@ preExecuteScript protocolParameters (PlutusScript _ (PlutusScriptSerialised scri
     Just (CostModel x) -> Right x
     Nothing -> Left "costModel unavailable"
   evaluationContext <- case Plutus.mkEvaluationContext costModel of
-    Just x -> Right x
-    Nothing -> Left "evaluationContext unavailable"
+    Right x -> Right x
+    Left e -> Left $ PP.renderString (PP.layoutSmart (PP.LayoutOptions (PP.AvailablePerLine 80 1.0)) ("evaluationContext unavailable: " <> PP.pretty e))
+
   let
     apiVersion = protocolParamProtocolVersion protocolParameters
     protocolVersion = Plutus.ProtocolVersion (fromIntegral $ fst apiVersion) (fromIntegral $ snd apiVersion)

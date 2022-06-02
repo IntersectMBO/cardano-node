@@ -182,6 +182,7 @@ library gen
                       , cardano-prelude
                       , containers
                       , hedgehog
+                      , prettyprinter
                       , plutus-core
                       , cardano-ledger-shelley
                       , text

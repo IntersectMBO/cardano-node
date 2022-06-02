@@ -64,6 +64,7 @@ import qualified Data.Aeson.KeyMap as KeyMap
 import           Data.Aeson.Types (Parser, ToJSONKey)
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
+import qualified Data.ByteString.Short as SBS
 import qualified Data.ByteString.Char8 as BSC
 import qualified Data.Map.Merge.Strict as Map
 import           Data.Map.Strict (Map)
@@ -277,7 +278,7 @@ toMaryValue v =
     toMaryPolicyID (PolicyId sh) = Mary.PolicyID (toShelleyScriptHash sh)
 
     toMaryAssetName :: AssetName -> Mary.AssetName
-    toMaryAssetName (AssetName n) = Mary.AssetName n
+    toMaryAssetName (AssetName n) = Mary.AssetName (SBS.toShort n)
 
 
 fromMaryValue :: Mary.Value StandardCrypto -> Value
@@ -294,7 +295,7 @@ fromMaryValue (Mary.Value lovelace other) =
     fromMaryPolicyID (Mary.PolicyID sh) = PolicyId (fromShelleyScriptHash sh)
 
     fromMaryAssetName :: Mary.AssetName -> AssetName
-    fromMaryAssetName (Mary.AssetName n) = AssetName n
+    fromMaryAssetName (Mary.AssetName n) = AssetName (SBS.fromShort n)
 
 -- | Calculate cost of making a UTxO entry for a given 'Value' and
 -- mininimum UTxO value derived from the 'ProtocolParameters'
