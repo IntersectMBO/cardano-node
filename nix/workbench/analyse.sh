@@ -153,7 +153,7 @@ case "$op" in
 
         ## 0. ask locli what it cares about
         local keyfile="$adir"/substring-keys
-        case $(jq '.node.tracing_backend // "trace-dispatcher"' --raw-output $dir/profile.json) in
+        case $(jq '.node.tracing_backend // "iohk-monitoring"' --raw-output $dir/profile.json) in
              trace-dispatcher ) locli 'list-logobject-keys'        --keys        "$keyfile";;
              iohk-monitoring  ) locli 'list-logobject-keys-legacy' --keys-legacy "$keyfile";;
         esac
