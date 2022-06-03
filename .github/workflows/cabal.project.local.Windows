@@ -3,5 +3,3 @@ package cardano-crypto-praos
 
 package HsOpenSSL
   flags: +use-pkg-config
-
-write-ghc-environment-files: always
