@@ -58,6 +58,7 @@ import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
 import qualified Cardano.Ledger.Alonzo.TxInfo as Alonzo
 import qualified Cardano.Ledger.AuxiliaryData as Core
 import qualified Cardano.Ledger.Babbage.Rules.Utxo as Babbage
+import qualified Cardano.Ledger.Babbage.Rules.Utxow as Babbage
 import           Cardano.Ledger.BaseTypes (activeSlotLog, strictMaybeToMaybe)
 import           Cardano.Ledger.Chain
 import qualified Cardano.Ledger.Core as Core
@@ -1020,7 +1021,11 @@ instance ToJSON (Alonzo.CollectError StandardCrypto) where
               Alonzo.ByronInputInContext -> String "Byron input in the presence of a plutus script"
               Alonzo.ByronOutputInContext -> String "Byron output in the presence of a plutus script"
               Alonzo.TranslationLogicErrorInput -> String "Logic error translating inputs"
-              Alonzo.TranslationLogicErrorRedeemer -> String "Logic error translating redeemers"
+              Alonzo.RdmrPtrPointsToNothing ptr ->
+                object
+                  [ "kind" .= String "RedeemerPointerPointsToNothing"
+                  , "ptr" .= (Api.renderScriptWitnessIndex . Api.fromAlonzoRdmrPtr) ptr
+                  ]
               Alonzo.TranslationLogicErrorDoubleDatum -> String "Logic error double datum"
               Alonzo.LanguageNotSupported -> String "Language not supported"
               Alonzo.InlineDatumsNotSupported -> String "Inline datums not supported"
@@ -1074,24 +1079,40 @@ instance ( ToJSON (Ledger.Value era)
     case err of
       Babbage.FromAlonzoUtxoFail alonzoFail ->
         toObject v alonzoFail
-      Babbage.FromAlonzoUtxowFail alonzoFail->
-        toObject v alonzoFail
 
-      Babbage.UnequalCollateralReturn bal totalCol ->
+      Babbage.IncorrectTotalCollateralField provided declared ->
         mconcat [ "kind" .= String "UnequalCollateralReturn"
-                , "calculatedTotalCollateral" .= bal
-                , "txIndicatedTotalCollateral" .= totalCol
+                , "collateralProvided" .= provided
+                , "collateralDeclared" .= declared
                 ]
-      -- TODO: Plutus team needs to expose a better error
-      -- type.
-      Babbage.MalformedScripts s ->
-        mconcat [ "kind" .= String "MalformedScripts"
-                , "scripts" .= s
-                ]
-      -- A transaction output is too small.
       Babbage.BabbageOutputTooSmallUTxO outputs->
         mconcat [ "kind" .= String "BabbageOutputTooSmall"
                 , "outputs" .= outputs
+                ]
+
+instance ( Ledger.Era era
+         , ShelleyBasedEra era
+         , Ledger.Crypto era ~ StandardCrypto
+         , ToJSON (Ledger.Value era)
+         , ToJSON (Ledger.TxOut era)
+         , ToObject (UtxowPredicateFailure era)
+         , ToObject (PredicateFailure (Ledger.EraRule "PPUP" era))
+         , ToObject (PredicateFailure (Ledger.EraRule "UTXO" era))
+         ) => ToObject (Babbage.BabbageUtxowPred era) where
+  toObject v err =
+    case err of
+      Babbage.FromAlonzoUtxowFail alonzoFail ->
+        toObject v alonzoFail
+      Babbage.UtxoFailure utxoFail ->
+        toObject v utxoFail
+      -- TODO: Plutus team needs to expose a better error type.
+      Babbage.MalformedScriptWitnesses s ->
+        mconcat [ "kind" .= String "MalformedScriptWitnesses"
+                , "scripts" .= s
+                ]
+      Babbage.MalformedReferenceScripts s ->
+        mconcat [ "kind" .= String "MalformedReferenceScripts"
+                , "scripts" .= s
                 ]
 
 instance Core.Crypto crypto => ToObject (Praos.PraosValidationErr crypto) where

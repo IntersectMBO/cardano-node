@@ -34,6 +34,7 @@ import           Ouroboros.Network.Block (SlotNo (..), blockHash, blockNo, block
 import           Ouroboros.Network.Point (WithOrigin, withOriginToMaybe)
 
 import qualified Cardano.Ledger.Babbage.Rules.Utxo as Babbage
+import qualified Cardano.Ledger.Babbage.Rules.Utxow as Babbage
 import           Ouroboros.Consensus.Ledger.SupportsMempool (txId)
 import qualified Ouroboros.Consensus.Ledger.SupportsMempool as SupportsMempool
 import qualified Ouroboros.Consensus.Protocol.Ledger.HotKey as HotKey
@@ -1058,31 +1059,47 @@ instance ( Ledger.Era era
 
 instance ( Ledger.Era era
          , LogFormatting (Alonzo.UtxoPredicateFailure era)
-         , LogFormatting (UtxowPredicateFail era)
          , ToJSON (Ledger.TxOut era)
          ) => LogFormatting (Babbage.BabbageUtxoPred era) where
   forMachine v err =
     case err of
       Babbage.FromAlonzoUtxoFail alonzoFail ->
         forMachine v alonzoFail
-      Babbage.FromAlonzoUtxowFail alonzoFail->
-        forMachine v alonzoFail
 
-      Babbage.UnequalCollateralReturn bal totalCol ->
-        mconcat [ "kind" .= String "UnequalCollateralReturn"
-                , "calculatedTotalCollateral" .= bal
-                , "txIndicatedTotalCollateral" .= totalCol
-                ]
-      -- TODO: Plutus team needs to expose a better error
-      -- type.
-      Babbage.MalformedScripts s ->
-        mconcat [ "kind" .= String "MalformedScripts"
-                , "scripts" .= s
+      Babbage.IncorrectTotalCollateralField provided declared ->
+        mconcat [ "kind" .= String "IncorrectTotalCollateralField"
+                , "collateralProvided" .= provided
+                , "collateralDeclared" .= declared
                 ]
       -- The transaction contains outputs that are too small
       Babbage.BabbageOutputTooSmallUTxO outputs ->
         mconcat [ "kind" .= String "OutputTooSmall"
                 , "outputs" .= outputs
+                ]
+
+instance ( Ledger.Era era
+         , ShelleyBasedEra era
+         , Ledger.Crypto era ~ StandardCrypto
+         , ToJSON (Ledger.Value era)
+         , ToJSON (Ledger.TxOut era)
+         , LogFormatting (UtxowPredicateFailure era)
+         , LogFormatting (PredicateFailure (Ledger.EraRule "PPUP" era))
+         , LogFormatting (PredicateFailure (Ledger.EraRule "UTXO" era))
+         ) => LogFormatting (Babbage.BabbageUtxowPred era) where
+  forMachine v err =
+    case err of
+      Babbage.FromAlonzoUtxowFail alonzoFail ->
+        forMachine v alonzoFail
+      Babbage.UtxoFailure utxoFail ->
+        forMachine v utxoFail
+      -- TODO: Plutus team needs to expose a better error type.
+      Babbage.MalformedScriptWitnesses s ->
+        mconcat [ "kind" .= String "MalformedScriptWitnesses"
+                , "scripts" .= s
+                ]
+      Babbage.MalformedReferenceScripts s ->
+        mconcat [ "kind" .= String "MalformedReferenceScripts"
+                , "scripts" .= s
                 ]
 
 instance Core.Crypto crypto => LogFormatting (Praos.PraosValidationErr crypto) where
