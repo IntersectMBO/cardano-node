@@ -50,7 +50,9 @@ lovelaceattxindiv3=$(expr $lovelaceattxin / 4)
 $CARDANO_CLI query protocol-parameters --testnet-magic "$TESTNET_MAGIC" --out-file $WORK/pparams.json
 dummyaddress=addr_test1vpqgspvmh6m2m5pwangvdg499srfzre2dd96qq57nlnw6yctpasy4
 
-# We first create the reference script at the utxoaddr
+# We first:
+# - Create the reference script at the utxoaddr
+# - Send ADA and a datum to the reference script address
 $CARDANO_CLI transaction build \
   --babbage-era \
   --cardano-mode \
@@ -116,6 +118,7 @@ echo "$plutusreferencescripttxin"
 echo "Plutus input we are trying to spend"
 echo "$plutuslockedutxotxin"
 
+# Alternative build-raw method
 #$CARDANO_CLI transaction build-raw \
 #  --babbage-era \
 #  --script-valid \
