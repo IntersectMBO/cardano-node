@@ -57,8 +57,8 @@ mkCardanoTracer :: forall evt.
   -> (evt -> SeverityS)
   -> (evt -> Privacy)
   -> IO (Trace IO evt)
-mkCardanoTracer trStdout trForward mbTrEkg name namesFor severityFor privacyFor =
-    mkCardanoTracer' trStdout trForward mbTrEkg name namesFor severityFor
+mkCardanoTracer trStdout trForward mbTrEkg tracerName namesFor severityFor privacyFor =
+    mkCardanoTracer' trStdout trForward mbTrEkg tracerName namesFor severityFor
         privacyFor noHook
   where
     noHook :: Trace IO evt -> IO (Trace IO evt)
@@ -76,7 +76,7 @@ mkCardanoTracer' :: forall evt evt1.
   -> (evt -> Privacy)
   -> (Trace IO evt1 -> IO (Trace IO evt))
   -> IO (Trace IO evt)
-mkCardanoTracer' trStdout trForward mbTrEkg name namesFor severityFor privacyFor
+mkCardanoTracer' trStdout trForward mbTrEkg tracerName namesFor severityFor privacyFor
   hook = do
     messageTrace   <- withBackendsFromConfig backendsAndFormat
     messageTrace'  <- withLimitersFromConfig
@@ -96,12 +96,11 @@ mkCardanoTracer' trStdout trForward mbTrEkg name namesFor severityFor privacyFor
     addContextAndFilter tr = do
       tr'  <- withDetailsFromConfig tr
       tr'' <- filterSeverityFromConfig tr'
-      pure $ withNamesAppended namesFor
-            $ appendName name
-              $ appendName "Node"
-                $ withSeverity severityFor
-                  $ withPrivacy privacyFor
-                    tr''
+      pure  $ withNamesAppended namesFor
+              $ appendName tracerName
+               $ withSeverity severityFor
+                 $ withPrivacy privacyFor
+                   tr''
 
     backendsAndFormat ::
          Maybe [BackendConfig]
@@ -114,17 +113,17 @@ mkCardanoTracer' trStdout trForward mbTrEkg name namesFor severityFor privacyFor
       in do
         mbForwardTrace <- if Forwarder `elem` backends'
                             then fmap (Just . filterTraceByPrivacy (Just Public))
-                                  (forwardFormatter "Cardano" trForward)
+                                  (forwardFormatter Nothing trForward)
                             else pure Nothing
         mbStdoutTrace  <-  if Stdout HumanFormatColoured `elem` backends'
                             then fmap Just
-                                (humanFormatter True "Cardano" trStdout)
+                                (humanFormatter True Nothing trStdout)
                             else if Stdout HumanFormatUncoloured `elem` backends'
                               then fmap Just
-                                  (humanFormatter False "Cardano" trStdout)
+                                  (humanFormatter False Nothing trStdout)
                               else if Stdout MachineFormat `elem` backends'
                                 then fmap Just
-                                  (machineFormatter "Cardano" trStdout)
+                                  (machineFormatter Nothing trStdout)
                                 else pure Nothing
         case mbForwardTrace <> mbStdoutTrace of
           Nothing -> pure $ Trace NT.nullTracer
