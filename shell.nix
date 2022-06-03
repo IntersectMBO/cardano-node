@@ -12,6 +12,8 @@ in
     };
   }
 , pkgs ? import ./nix customConfig
+# to use profiled build of haskell dependencies:
+, profiled ? false
 , cardano-mainnet-mirror ? __getFlake "github:input-output-hk/cardano-mainnet-mirror/nix"
 }:
 with pkgs;
@@ -20,6 +22,7 @@ let
   inherit (customConfig) withHoogle localCluster;
   inherit (localCluster) profileName workbenchDevMode;
   inherit (pkgs.haskell-nix) haskellLib;
+  project = if profiled then cardanoNodeProject.profiled else cardanoNodeProject;
   commandHelp =
     ''
       echo "
@@ -49,7 +52,7 @@ let
       { inherit profileName;
         useCabalRun = true;
       };
-    in cardanoNodeProject.shellFor {
+    in project.shellFor {
     name = "cluster-shell";
 
     inherit withHoogle;
@@ -59,7 +62,7 @@ let
     tools = {
       haskell-language-server = {
         version = "latest";
-        inherit (cardanoNodeProject) index-state;
+        inherit (project) index-state;
       };
     };
 
@@ -127,7 +130,7 @@ let
       { profileName = "devops-bage";
         useCabalRun = false;
       };
-    in cardanoNodeProject.shellFor {
+    in project.shellFor {
     name = "devops-shell";
 
     packages = _: [];
@@ -186,7 +189,7 @@ let
     '';
   };
 
-  dev = cardanoNodeProject.shell;
+  dev = project.shell;
 
 in
 
