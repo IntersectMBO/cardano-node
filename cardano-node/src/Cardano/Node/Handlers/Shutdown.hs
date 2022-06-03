@@ -11,8 +11,8 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Node.Handlers.Shutdown
-  ( SlotOrBlock (..)
-  , parseShutdownOnLimit
+  ( ShutdownOn (..)
+  , parseShutdownOn
 
   -- * Generalised shutdown handling
   , ShutdownConfig (..)
@@ -46,17 +46,17 @@ import           Ouroboros.Consensus.Util.STM (Watcher (..), forkLinkedWatcher)
 import           Ouroboros.Network.Block (BlockNo (..), HasHeader, SlotNo (..), pointSlot)
 
 
-data SlotOrBlock
+data ShutdownOn
   = ASlot  !SlotNo
   | ABlock !BlockNo
-  | NoShutdownOnSlotOrBlock
+  | NoShutdown
   deriving (Generic, Eq, Show)
 
-deriving instance FromJSON SlotOrBlock
-deriving instance ToJSON SlotOrBlock
+deriving instance FromJSON ShutdownOn
+deriving instance ToJSON ShutdownOn
 
-parseShutdownOnLimit :: Opt.Parser SlotOrBlock
-parseShutdownOnLimit =
+parseShutdownOn :: Opt.Parser ShutdownOn
+parseShutdownOn =
     Opt.option (ASlot . SlotNo <$> Opt.auto) (
          Opt.long "shutdown-on-slot-synced"
       <> Opt.metavar "SLOT"
@@ -70,7 +70,7 @@ parseShutdownOnLimit =
       <> Opt.help "Shut down the process after ChainDB is synced up to the specified block"
       <> Opt.hidden
     )
-    <|> pure NoShutdownOnSlotOrBlock
+    <|> pure NoShutdown
 
 data ShutdownTrace
   = ShutdownRequested
@@ -81,7 +81,7 @@ data ShutdownTrace
   -- ^ Received shutdown request but found unexpected input in --shutdown-ipc FD:
   | RequestingShutdown Text
   -- ^ Ringing the node shutdown doorbell for reason
-  | ShutdownArmedAt SlotOrBlock
+  | ShutdownArmedAt ShutdownOn
   -- ^ Will terminate upon reaching a ChainDB sync limit
   deriving (Generic, FromJSON, ToJSON)
 
@@ -98,7 +98,7 @@ deriving instance Eq AndWithOrigin
 data ShutdownConfig
   = ShutdownConfig
     { scIPC         :: !(Maybe Fd)
-    , scOnSyncLimit :: !(Maybe SlotOrBlock)
+    , scOnSyncLimit :: !(Maybe ShutdownOn)
     }
     deriving (Eq, Show)
 
@@ -145,16 +145,16 @@ maybeSpawnOnSlotSyncedShutdownHandler sc tr registry chaindb =
       traceWith tr (ShutdownArmedAt lim)
       spawnLimitTerminator lim
  where
-  spawnLimitTerminator :: SlotOrBlock -> IO ()
+  spawnLimitTerminator :: ShutdownOn -> IO ()
   spawnLimitTerminator limit =
     void $ forkLinkedWatcher registry "slotLimitTerminator" Watcher {
-        wFingerprint = id
+        wFingerprint = identity
       , wInitial     = Nothing
       , wReader      =
           case limit of
             ASlot   x -> AndWithOriginSlot . (x,) . pointSlot <$> ChainDB.getTipPoint chaindb
             ABlock  x -> AndWithOriginBlock . (x,) <$> ChainDB.getTipBlockNo chaindb
-            NoShutdownOnSlotOrBlock -> return WithoutOrigin
+            NoShutdown -> return WithoutOrigin
       , wNotify      = \case
           (AndWithOriginSlot (lim, At cur)) ->
               when (cur >= lim) $ do

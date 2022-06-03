@@ -84,7 +84,7 @@ testPartialCliConfig :: PartialNodeConfiguration
 testPartialCliConfig =
   PartialNodeConfiguration
     { pncSocketConfig = Last . Just $ SocketConfig mempty mempty mempty mempty
-    , pncShutdownConfig = Last . Just $ ShutdownConfig Nothing (Just . ASlot . Identity $ SlotNo 42)
+    , pncShutdownConfig = Last . Just $ ShutdownConfig Nothing (Just . ASlot $ SlotNo 42)
     , pncConfigFile   = mempty
     , pncTopologyFile = mempty
     , pncDatabaseFile = mempty
@@ -117,7 +117,7 @@ eExpectedConfig = do
                     (return $ PartialTracingOnLegacy defaultPartialTraceConfiguration)
   return $ NodeConfiguration
     { ncSocketConfig = SocketConfig mempty mempty mempty mempty
-    , ncShutdownConfig = ShutdownConfig Nothing (Just . ASlot . Identity $ SlotNo 42)
+    , ncShutdownConfig = ShutdownConfig Nothing (Just . ASlot $ SlotNo 42)
     , ncConfigFile = ConfigYamlFilePath "configuration/cardano/mainnet-config.json"
     , ncTopologyFile = TopologyFile "configuration/cardano/mainnet-topology.json"
     , ncDatabaseFile = DbFile "mainnet/db/"

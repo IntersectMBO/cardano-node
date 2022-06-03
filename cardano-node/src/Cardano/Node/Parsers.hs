@@ -65,7 +65,7 @@ nodeRunParser = do
 
   validate <- lastOption parseValidateDB
   shutdownIPC <- lastOption parseShutdownIPC
-  shutdownOnLimit <- lastOption parseShutdownOnLimit
+  shutdownOnLimit <- lastOption parseShutdownOn
 
   maybeMempoolCapacityOverride <- lastOption parseMempoolCapacityOverride
 
