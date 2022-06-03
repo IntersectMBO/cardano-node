@@ -1,8 +1,7 @@
 package cardano-crypto-praos
   flags: -external-libsodium-vrf
 
+package HsOpenSSL
+  flags: +use-pkg-config
+
 write-ghc-environment-files: always
-
-ignore-project: False
-
-reorder-goals: False
