@@ -23,7 +23,8 @@ import           Ouroboros.Consensus.Mempool.API (MempoolCapacityBytes (..),
                    MempoolCapacityBytesOverride (..))
 import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (SnapshotInterval (..))
 
-import           Cardano.Node.Configuration.NodeAddress
+import           Cardano.Node.Configuration.NodeAddress (NodeHostIPv4Address (NodeHostIPv4Address),
+                   NodeHostIPv6Address (NodeHostIPv6Address), PortNumber, SocketPath (SocketPath))
 import           Cardano.Node.Configuration.POM (PartialNodeConfiguration (..), lastOption)
 import           Cardano.Node.Configuration.Socket
 import           Cardano.Node.Handlers.Shutdown
@@ -91,7 +92,7 @@ nodeRunParser = do
              }
            , pncValidateDB = validate
            , pncShutdownConfig =
-               Last . Just $ ShutdownConfig (getLast shutdownIPC) (join $ getLast shutdownOnLimit)
+               Last . Just $ ShutdownConfig (getLast shutdownIPC) (getLast shutdownOnLimit)
            , pncProtocolConfig = mempty
            , pncMaxConcurrencyBulkSync = mempty
            , pncMaxConcurrencyDeadline = mempty

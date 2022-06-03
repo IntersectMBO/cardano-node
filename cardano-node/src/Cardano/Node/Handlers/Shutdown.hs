@@ -26,9 +26,9 @@ module Cardano.Node.Handlers.Shutdown
   )
 where
 
+import           Cardano.Prelude
 import           Data.Aeson (FromJSON, ToJSON)
 import           Generic.Data.Orphans ()
-import           Cardano.Prelude
 
 import           Data.Text (pack)
 import qualified GHC.IO.Handle.FD as IO (fdToHandle)
@@ -43,34 +43,34 @@ import           Ouroboros.Consensus.Block (Header)
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 import           Ouroboros.Consensus.Util.ResourceRegistry (ResourceRegistry)
 import           Ouroboros.Consensus.Util.STM (Watcher (..), forkLinkedWatcher)
-import           Ouroboros.Network.Block (HasHeader, BlockNo (..), SlotNo (..), pointSlot)
+import           Ouroboros.Network.Block (BlockNo (..), HasHeader, SlotNo (..), pointSlot)
 
 
-data SlotOrBlock f
-  = ASlot  !(f SlotNo)
-  | ABlock !(f BlockNo)
-  deriving (Generic)
+data SlotOrBlock
+  = ASlot  !SlotNo
+  | ABlock !BlockNo
+  | NoShutdownOnSlotOrBlock
+  deriving (Generic, Eq, Show)
 
-deriving instance Eq (SlotOrBlock Identity)
-deriving instance Show (SlotOrBlock Identity)
-deriving instance FromJSON (SlotOrBlock Identity)
-deriving instance ToJSON (SlotOrBlock Identity)
+deriving instance FromJSON SlotOrBlock
+deriving instance ToJSON SlotOrBlock
 
-parseShutdownOnLimit :: Opt.Parser (Maybe (SlotOrBlock Identity))
+parseShutdownOnLimit :: Opt.Parser SlotOrBlock
 parseShutdownOnLimit =
-    optional (Opt.option (ASlot . Identity . SlotNo <$> Opt.auto) (
+    Opt.option (ASlot . SlotNo <$> Opt.auto) (
          Opt.long "shutdown-on-slot-synced"
       <> Opt.metavar "SLOT"
       <> Opt.help "Shut down the process after ChainDB is synced up to the specified slot"
       <> Opt.hidden
-    ))
+    )
     <|>
-    optional (Opt.option (ABlock . Identity . BlockNo <$> Opt.auto) (
+    Opt.option (ABlock . BlockNo <$> Opt.auto) (
          Opt.long "shutdown-on-block-synced"
       <> Opt.metavar "BLOCK"
       <> Opt.help "Shut down the process after ChainDB is synced up to the specified block"
       <> Opt.hidden
-    ))
+    )
+    <|> pure NoShutdownOnSlotOrBlock
 
 data ShutdownTrace
   = ShutdownRequested
@@ -81,21 +81,24 @@ data ShutdownTrace
   -- ^ Received shutdown request but found unexpected input in --shutdown-ipc FD:
   | RequestingShutdown Text
   -- ^ Ringing the node shutdown doorbell for reason
-  | ShutdownArmedAt (SlotOrBlock Identity)
+  | ShutdownArmedAt SlotOrBlock
   -- ^ Will terminate upon reaching a ChainDB sync limit
   deriving (Generic, FromJSON, ToJSON)
 
 deriving instance FromJSON BlockNo
 deriving instance ToJSON BlockNo
 
-newtype AndWithOrigin a = AndWithOrigin (a, WithOrigin a) deriving (Eq)
+data AndWithOrigin
+  = AndWithOriginBlock (BlockNo, WithOrigin BlockNo)
+  | AndWithOriginSlot (SlotNo, WithOrigin SlotNo)
+  | WithoutOrigin
 
-deriving instance Eq (SlotOrBlock AndWithOrigin)
+deriving instance Eq AndWithOrigin
 
 data ShutdownConfig
   = ShutdownConfig
     { scIPC         :: !(Maybe Fd)
-    , scOnSyncLimit :: !(Maybe (SlotOrBlock Identity))
+    , scOnSyncLimit :: !(Maybe SlotOrBlock)
     }
     deriving (Eq, Show)
 
@@ -142,27 +145,27 @@ maybeSpawnOnSlotSyncedShutdownHandler sc tr registry chaindb =
       traceWith tr (ShutdownArmedAt lim)
       spawnLimitTerminator lim
  where
-  spawnLimitTerminator :: SlotOrBlock Identity -> IO ()
+  spawnLimitTerminator :: SlotOrBlock -> IO ()
   spawnLimitTerminator limit =
     void $ forkLinkedWatcher registry "slotLimitTerminator" Watcher {
-        wFingerprint = identity
+        wFingerprint = id
       , wInitial     = Nothing
       , wReader      =
           case limit of
-            ASlot  (Identity x) -> ASlot  . AndWithOrigin . (x,) <$>
-                                   (pointSlot <$> ChainDB.getTipPoint chaindb)
-            ABlock (Identity x) -> ABlock . AndWithOrigin . (x,) <$>
-                                   ChainDB.getTipBlockNo chaindb
+            ASlot   x -> AndWithOriginSlot . (x,) . pointSlot <$> ChainDB.getTipPoint chaindb
+            ABlock  x -> AndWithOriginBlock . (x,) <$> ChainDB.getTipBlockNo chaindb
+            NoShutdownOnSlotOrBlock -> return WithoutOrigin
       , wNotify      = \case
-          ASlot (AndWithOrigin (lim, At cur)) ->
+          (AndWithOriginSlot (lim, At cur)) ->
               when (cur >= lim) $ do
                 traceWith tr (RequestingShutdown $ "spawnLimitTerminator: reached target slot "
                               <> (pack . show) cur)
                 throwIO ExitSuccess
-          ABlock (AndWithOrigin (lim, At cur)) ->
+          (AndWithOriginBlock (lim, At cur)) ->
               when (cur >= lim) $ do
                 traceWith tr (RequestingShutdown $ "spawnLimitTerminator: reached target block "
                               <> (pack . show) cur)
                 throwIO ExitSuccess
+          WithoutOrigin -> pure ()
           _ -> pure ()
       }
