@@ -6,8 +6,8 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NumericUnderscores #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE RankNTypes #-} --
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -15,42 +15,43 @@
 module Cardano.Benchmarking.Script.Core
 where
 
-import           Prelude
+import           Control.Concurrent (threadDelay)
+import           Control.Monad
+import           Control.Monad.IO.Class
+import           Control.Monad.Trans.Except
+import           Control.Tracer (nullTracer)
 import           Data.Ratio ((%))
 import qualified Data.Text as Text (unpack)
-import           Control.Monad
-import           Control.Monad.Trans.Except
-import           Control.Monad.IO.Class
-import           Control.Concurrent (threadDelay)
-import           Control.Tracer (nullTracer)
+import           Prelude
 
-import           Ouroboros.Network.Protocol.LocalTxSubmission.Type (SubmitResult (..))
 import           Cardano.Api
-import           Cardano.Api.Shelley (ProtocolParameters, protocolParamMaxTxExUnits, protocolParamPrices)
+import           Cardano.Api.Shelley (PlutusScriptOrReferenceInput (..), ProtocolParameters,
+                   protocolParamMaxTxExUnits, protocolParamPrices)
+import           Ouroboros.Network.Protocol.LocalTxSubmission.Type (SubmitResult (..))
 
+import           Cardano.Benchmarking.FundSet (FundInEra (..), Validity (..), Variant (..),
+                   liftAnyEra)
 import qualified Cardano.Benchmarking.FundSet as FundSet
-import           Cardano.Benchmarking.FundSet (FundInEra(..), Validity(..), Variant(..), liftAnyEra )
-import qualified Cardano.Benchmarking.GeneratorTx as GeneratorTx
-                   ( waitBenchmark, walletBenchmark , readSigningKey, secureGenesisFund)
-import           Cardano.Benchmarking.GeneratorTx as GeneratorTx
-                   (AsyncBenchmarkControl, TxGenError)
+import           Cardano.Benchmarking.GeneratorTx as GeneratorTx (AsyncBenchmarkControl, TxGenError)
+import qualified Cardano.Benchmarking.GeneratorTx as GeneratorTx (readSigningKey, secureGenesisFund,
+                   waitBenchmark, walletBenchmark)
 
-import           Cardano.Benchmarking.GeneratorTx.NodeToNode (ConnectClient, benchmarkConnectTxSubmit)
+import           Cardano.Benchmarking.GeneratorTx.NodeToNode (ConnectClient,
+                   benchmarkConnectTxSubmit)
 import           Cardano.Benchmarking.GeneratorTx.SizedMetadata (mkMetadata)
 import           Cardano.Benchmarking.GeneratorTx.Tx as Core (keyAddress, mkFee, txInModeCardano)
 
-import           Cardano.Benchmarking.OuroborosImports as Core
-                   ( LocalSubmitTx, SigningKeyFile
-                   , protocolToCodecConfig, makeLocalConnectInfo)
-import           Cardano.Benchmarking.PlutusExample as PlutusExample
-import           Cardano.Benchmarking.Tracer as Core
-                   ( btTxSubmit_, btN2N_, btConnect_, btSubmission2_)
-import           Cardano.Benchmarking.Types as Core
-                   ( NumberOfInputsPerTx(..), NumberOfOutputsPerTx(..),NumberOfTxs(..), SubmissionErrorPolicy(..)
-                   , TPSRate, TxAdditionalSize(..))
-import           Cardano.Benchmarking.Wallet as Wallet hiding (keyAddress)
 import           Cardano.Benchmarking.FundSet as FundSet (getFundTxIn)
 import           Cardano.Benchmarking.ListBufferedSelector
+import           Cardano.Benchmarking.OuroborosImports as Core (LocalSubmitTx, SigningKeyFile,
+                   makeLocalConnectInfo, protocolToCodecConfig)
+import           Cardano.Benchmarking.PlutusExample as PlutusExample
+import           Cardano.Benchmarking.Tracer as Core (btConnect_, btN2N_, btSubmission2_,
+                   btTxSubmit_)
+import           Cardano.Benchmarking.Types as Core (NumberOfInputsPerTx (..),
+                   NumberOfOutputsPerTx (..), NumberOfTxs (..), SubmissionErrorPolicy (..), TPSRate,
+                   TxAdditionalSize (..))
+import           Cardano.Benchmarking.Wallet as Wallet hiding (keyAddress)
 
 import           Cardano.Benchmarking.Script.Aeson (readProtocolParametersFile)
 import           Cardano.Benchmarking.Script.Env
@@ -263,7 +264,7 @@ runBenchmarkInEra sourceWallet submitMode (ThreadName threadName) txCount tps er
   minValuePerUTxO <- getUser TMinValuePerUTxO
   protocolParameters <- getProtocolParameters
   walletRefSrc <- getName sourceWallet
-  let walletRefDst = walletRefSrc 
+  let walletRefDst = walletRefSrc
   metadata <- makeMetadata
   let
     (Quantity minValue) = lovelaceToQuantity $ fromIntegral numOutputs * minValuePerUTxO + fee
@@ -304,7 +305,7 @@ runBenchmarkInEra sourceWallet submitMode (ThreadName threadName) txCount tps er
       let
         coreCall :: AsType era -> ExceptT TxGenError IO AsyncBenchmarkControl
         coreCall eraProxy = GeneratorTx.walletBenchmark (btTxSubmit_ tracers) (btN2N_ tracers) connectClient
-                                               threadName targetNodes tps LogErrors eraProxy txCount walletScript        
+                                               threadName targetNodes tps LogErrors eraProxy txCount walletScript
       ret <- liftIO $ runExceptT $ coreCall era
       case ret of
         Left err -> liftTxGenError err
@@ -410,7 +411,7 @@ runPlutusBenchmark sourceWallet submitMode scriptFile scriptBudget scriptData sc
       Just scriptLang -> PlutusScriptWitness
                           scriptLang
                           PlutusScriptV1
-                          script'
+                          (PScript script')
                           (ScriptDatumForTxIn scriptData)
                           scriptRedeemer
                           executionUnits
@@ -472,10 +473,10 @@ importGenesisFund era wallet submitMode genesisKeyName destKey = do
       f <- GeneratorTx.secureGenesisFund tracer localSubmit networkId genesis fee ttl genesisKey addr
       return (f, fundKey)
   result <- liftCoreWithEra era coreCall
-  case result of 
+  case result of
     Left err -> liftTxGenError err
     Right ((txIn, outVal), skey) -> addFundToWallet wallet txIn outVal skey
-  
+
 initWallet :: WalletName -> ActionM ()
 initWallet name = liftIO Wallet.initWallet >>= setName name
 
@@ -493,7 +494,7 @@ createChangeScriptFunds sourceWallet dstWallet submitMode scriptFile scriptData 
   networkId <- getUser TNetworkId
   protocolParameters <- getProtocolParameters
   _fundKey <- getName $ KeyName "pass-partout"
-  fee <- getUser TFee  
+  fee <- getUser TFee
   script <- liftIO $ PlutusExample.readScript scriptFile --TODO: this should throw a file-not-found-error !
   let
     createCoins fundSource coins = do
