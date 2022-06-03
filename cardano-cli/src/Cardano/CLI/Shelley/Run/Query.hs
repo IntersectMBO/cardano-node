@@ -63,7 +63,6 @@ import           Cardano.Ledger.Shelley.LedgerState (DPState (..),
                    PState (_fPParams, _pParams, _retiring))
 import qualified Cardano.Ledger.Shelley.PParams as Shelley
 import           Cardano.Ledger.Shelley.Scripts ()
-import qualified Cardano.Protocol.TPraos.API as Ledger
 import           Cardano.Slotting.EpochInfo (EpochInfo (..), epochInfoSlotToUTCTime, hoistEpochInfo)
 import           Control.Monad.Trans.Except (except)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistMaybe, left,
@@ -84,9 +83,7 @@ import           Ouroboros.Consensus.Protocol.TPraos
 import           Ouroboros.Network.Block (Serialised (..))
 import           Ouroboros.Network.Protocol.LocalStateQuery.Type (AcquireFailure (..))
 import           Text.Printf (printf)
-import           Control.Monad.Trans.Except.Extra (hoistEither)
 
-import           Cardano.Protocol.TPraos.Rules.Prtcl
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import qualified Data.VMap as VMap
 import qualified Data.Map.Strict as Map
@@ -435,9 +432,9 @@ runQueryKesPeriodInfo (AnyConsensusModeParams cModeParams) network nodeOpCertFil
       -- it is equivalent to what we have on disk.
 
       let ptclStateQinMode = QueryInEra eInMode . QueryInShelleyBasedEra sbe $ QueryProtocolState
-      _ptclState <- executeQuery era cModeParams localNodeConnInfo ptclStateQinMode
+      ptclState <- executeQuery era cModeParams localNodeConnInfo ptclStateQinMode
 
-      (onDiskC, stateC) <- panic "runQueryKesPeriodInfo: currentlyBroken - opCertOnDiskAndStateCounters ptclState opCert"
+      (onDiskC, stateC) <- eligibleLeaderSlotsConstaints sbe $ opCertOnDiskAndStateCounters ptclState opCert
       let counterInformation = opCertNodeAndOnDiskCounters onDiskC stateC
 
       -- Always render diagnostic information
@@ -551,22 +548,21 @@ runQueryKesPeriodInfo (AnyConsensusModeParams cModeParams) network nodeOpCertFil
 
    -- We get the operational certificate counter from the protocol state and check that
    -- it is equivalent to what we have on disk.
-   _opCertOnDiskAndStateCounters
-     :: FromCBOR (Consensus.ChainDepState (ConsensusProtocol era))
-     => ConsensusProtocol era ~ crypto
-     => Crypto.ADDRHASH crypto ~ Blake2b.Blake2b_224
-     => Consensus.ChainDepState crypto~ Ledger.ChainDepState crypto
-     => ProtocolState era
-     -> OperationalCertificate
-     -> ExceptT ShelleyQueryCmdError IO (OpCertOnDiskCounter, Maybe OpCertNodeStateCounter)
-   _opCertOnDiskAndStateCounters ptclState opCert@(OperationalCertificate _ stakePoolVKey) = do
+   opCertOnDiskAndStateCounters :: forall era . ()
+      => Consensus.PraosProtocolSupportsNode (ConsensusProtocol era)
+      => FromCBOR (Consensus.ChainDepState (ConsensusProtocol era))
+      => Crypto.ADDRHASH (Consensus.PraosProtocolSupportsNodeCrypto (ConsensusProtocol era)) ~ Blake2b.Blake2b_224
+      => ProtocolState era
+      -> OperationalCertificate
+      -> ExceptT ShelleyQueryCmdError IO (OpCertOnDiskCounter, Maybe OpCertNodeStateCounter)
+   opCertOnDiskAndStateCounters ptclState opCert@(OperationalCertificate _ stakePoolVKey) = do
     let onDiskOpCertCount = fromIntegral $ getOpCertCount opCert
     case decodeProtocolState ptclState of
       Left decErr -> left $ ShelleyQueryCmdProtocolStateDecodeFailure decErr
       Right chainDepState -> do
         -- We need the stake pool id to determine what the counter of our SPO
         -- should be.
-        let PrtclState opCertCounterMap _ _ = Ledger.csProtocol chainDepState
+        let opCertCounterMap = Consensus.getOpCertCounters (Proxy @(ConsensusProtocol era)) chainDepState
             StakePoolKeyHash blockIssuerHash = verificationKeyHash stakePoolVKey
 
         case Map.lookup (coerce blockIssuerHash) opCertCounterMap of
@@ -1359,6 +1355,7 @@ eligibleLeaderSlotsConstaints
       , HasField "_d" (Core.PParams (ShelleyLedgerEra era)) UnitInterval
       , Crypto.Signable (Crypto.VRF (Ledger.Crypto ledgerera)) Seed
       , Share (Core.TxOut (ShelleyLedgerEra era)) ~ Interns (Ledger.Credential 'Staking StandardCrypto)
+      ,  Crypto.ADDRHASH (Consensus.PraosProtocolSupportsNodeCrypto (ConsensusProtocol era)) ~ Blake2b.Blake2b_224
       ) => a
      )
   -> a
