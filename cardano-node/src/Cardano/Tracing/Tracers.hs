@@ -610,7 +610,7 @@ sendEKGDirectDouble ekgDirect name val = do
 --------------------------------------------------------------------------------
 
 isRollForward :: TraceChainSyncServerEvent blk -> Bool
-isRollForward (TraceChainSyncServerUpdate _tip (AddBlock _hdr) _blocking FallingEdge) = True
+isRollForward (TraceChainSyncServerUpdate _tip (AddBlock _pt) _blocking FallingEdge) = True
 isRollForward _ = False
 
 mkConsensusTracers

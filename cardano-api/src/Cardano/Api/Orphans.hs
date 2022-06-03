@@ -21,6 +21,7 @@ import qualified Data.Aeson as Aeson
 import           Data.Aeson.Types (ToJSONKey (..), toJSONKeyText)
 import           Data.BiMap (BiMap (..), Bimap)
 import qualified Data.ByteString.Base16 as B16
+import qualified Data.ByteString.Short as Short
 import qualified Data.Map.Strict as Map
 import           Data.Text (Text)
 import qualified Data.Text as Text
@@ -74,7 +75,7 @@ instance ToJSON (Mary.Value era) where
 instance ToJSONKey Mary.AssetName where
   toJSONKey = toJSONKeyText render
     where
-      render = Text.decodeLatin1 . B16.encode . Mary.assetName
+      render = Text.decodeLatin1 . B16.encode . Short.fromShort . Mary.assetName
 
 instance ToJSON (Mary.PolicyID era) where
   toJSON (Mary.PolicyID (Shelley.ScriptHash h)) = Aeson.String (hashToText h)
@@ -85,7 +86,7 @@ instance ToJSONKey (Mary.PolicyID era) where
       render (Mary.PolicyID (Shelley.ScriptHash h)) = hashToText h
 
 instance ToJSON Mary.AssetName where
-  toJSON = Aeson.String . Text.decodeLatin1 . B16.encode . Mary.assetName
+  toJSON = Aeson.String . Text.decodeLatin1 . B16.encode . Short.fromShort . Mary.assetName
 
 instance ToJSON Shelley.AccountState where
   toJSON (Shelley.AccountState tr rs) = object [ "treasury" .= tr

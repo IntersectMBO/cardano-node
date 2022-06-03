@@ -16,7 +16,6 @@ module Cardano.Node.Tracing.Render
   , renderPointForDetails
   , renderRealPoint
   , renderRealPointAsPhrase
-  , renderEnclosed
   , renderSlotNo
   , renderTip
   , renderTipForDetails
@@ -43,7 +42,6 @@ import           Ouroboros.Consensus.Storage.ImmutableDB.Chunks.Internal (ChunkN
 import           Ouroboros.Consensus.Util.Condense (Condense, condense)
 import           Ouroboros.Network.Block (ChainHash (..), HeaderHash, StandardHash, Tip,
                    getTipPoint)
-import Ouroboros.Consensus.Util.Enclose (Enclosing'(FallingEdgeWith, RisingEdge))
 
 condenseT :: Condense a => a -> Text
 condenseT = Text.pack . condense
@@ -96,10 +94,6 @@ renderRealPointAsPhrase (RealPoint slotNo headerHash) =
   renderHeaderHash (Proxy @blk) headerHash
     <> " at slot "
     <> renderSlotNo slotNo
-
-renderEnclosed :: (t -> Text) -> Enclosing' t -> Text
-renderEnclosed _ RisingEdge = "RisingEdge"
-renderEnclosed rdr (FallingEdgeWith t) = "FallingEdgeWith " <> rdr t
 
 renderPointForDetails
   :: forall blk.

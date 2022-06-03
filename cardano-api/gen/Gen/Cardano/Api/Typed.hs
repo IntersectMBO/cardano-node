@@ -813,7 +813,7 @@ genCostModel = case Plutus.defaultCostModelParams of
       eCostModel <- Alonzo.mkCostModel <$> genPlutusLanguage
                                        <*> mapM (const $ Gen.integral (Range.linear 0 5000)) dcm
       case eCostModel of
-        Left err -> panic $ Text.pack $ "genCostModel: " <> err
+        Left err -> panic $ Text.pack $ "genCostModel: " <> show err
         Right cModel -> return . CostModel $ Alonzo.getCostModelParams cModel
 
 genPlutusLanguage :: Gen Language

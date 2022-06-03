@@ -194,8 +194,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger
-  tag: c415253fff9a5ce9d7575230fc9098bcfee97653
-  --sha256: 1m4hq8yxcm7ny5vjzqkrl9qn9zmpr8c9xs0c98ix9hm9xd79fapc
+  tag: f31c29add34c1d81938bdb505e568ba3b1115d8d
+  --sha256: 090n2pm1p7y793n4q2368amlmk1vsbnkknb6fmgv0xrriyn5fx4g
   subdir:
     eras/alonzo/impl
     eras/alonzo/test-suite
@@ -239,8 +239,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/iohk-monitoring-framework
-  tag: eb7854d1337637b8672af1227b276aa33a658f47
-  --sha256: 1ll81hlhkhj96f5v6lswjkq2h8f7zcmdrj2azqhi4ylzafn026r3
+  tag: 066f7002aac5a0efc20e49643fea45454f226caa
+  --sha256: 0s6x4in11k5ba7nl7la896g28sznf9185xlqg9c604jqz58vj9nj
   subdir:
     contra-tracer
     iohk-monitoring
@@ -260,8 +260,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: ea202b7b21983140d1944ccfde8750b891b59699
-  --sha256: 0bixx0b61sjzls7hzwjlgmvl0yk1ckd40cfazda8b3smqvxfrphq
+  tag: c254d02b9de67cabc71d26e3f27a2a3d13538d21
+  --sha256: 083kr0zaddgmq71j4am7kb93cdi05sjv7rqslzmdfp73mkxi4sfn
   subdir:
     monoidal-synchronisation
     network-mux
@@ -277,8 +277,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/io-sim
-  tag: 606de33fa2f467d108fb1efb86daeb3348bf34e3
-  --sha256: 048djqfdkzrbmdz670knbkjy12wddpvsmhm4x5yldg3w9lwqi1yx
+  tag: f4183f274d88d0ad15817c7052df3a6a8b40e6dc
+  --sha256: 0vb2pd9hl89v2y5hrhrsm69yx0jf98vppjmfncj2fraxr3p3lldw
   subdir:
     io-classes
     io-sim
@@ -287,8 +287,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/typed-protocols
-  tag: 91c3fba44d68439df207796171cd6f867354b76b
-  --sha256: 1h1nh10859kd7j8bb55y577jfdp42aqpppx8fn0pm6fra5748a50
+  tag: 181601bc3d9e9d21a671ce01e0b481348b3ca104
+  --sha256: 1lr97b2z7l0rpsmmz92rsv27qzd5vavz10cf7n25svya4kkiysp5
   subdir:
     typed-protocols
     typed-protocols-cborg
@@ -297,8 +297,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/plutus
-  tag: fec94223a985e34d3b270460c8f150002f41b85b
-  --sha256: 1mwknikvbpv9lj43c3ya24v7wpcbpcsrk0fnh6knpi7ds4rmj9j0
+  tag: d24a7540e4659b57ce2ab25dadb968991e232191
+  --sha256: 15glaghkaa5kh1ayfkw2jahkqq3955kmfzplmb210gvrlnlghlaa
   subdir:
     plutus-core
     plutus-ledger-api

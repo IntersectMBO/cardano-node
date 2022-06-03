@@ -526,11 +526,8 @@ evaluateTransactionExecutionUnits _eraInMode systemstart history pparams utxo tx
              (toLedgerEpochInfo history)
              systemstart
              cModelArray
-        of Left  err   -> Left err
-           Right exmapResult ->
-             case exmapResult of
-               Left err -> Left (TransactionValidityBasicFailure err)
-               Right exmap -> Right (fromLedgerScriptExUnitsMap exmap)
+        of Left err -> Left (TransactionValidityBasicFailure err)
+           Right exmap -> Right (fromLedgerScriptExUnitsMap exmap)
 
     evalBabbage :: forall ledgerera.
                   ShelleyLedgerEra era ~ ledgerera
@@ -551,16 +548,12 @@ evaluateTransactionExecutionUnits _eraInMode systemstart history pparams utxo tx
              (toLedgerEpochInfo history)
              systemstart
              costModelsArray
-        of Left  err   -> Left err
-           Right exmapResult ->
-             case exmapResult of
-               Left err -> Left (TransactionValidityBasicFailure err)
-               Right exmap -> Right (fromLedgerScriptExUnitsMap exmap)
+        of Left err    -> Left (TransactionValidityBasicFailure err)
+           Right exmap -> Right (fromLedgerScriptExUnitsMap exmap)
 
-    toLedgerEpochInfo :: EraHistory mode
-                      -> EpochInfo (Either TransactionValidityError)
+    toLedgerEpochInfo :: EraHistory mode -> EpochInfo (Either Text.Text)
     toLedgerEpochInfo (EraHistory _ interpreter) =
-        hoistEpochInfo (first TransactionValidityIntervalError . runExcept) $
+        hoistEpochInfo (first (Text.pack . show) . runExcept) $
           Consensus.interpreterToEpochInfo interpreter
 
     toAlonzoCostModelsArray

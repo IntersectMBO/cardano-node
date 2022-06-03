@@ -139,6 +139,7 @@ library
                       , parsec
                       , plutus-ledger-api
                       , prettyprinter
+                      , prettyprinter-configurable
                       , scientific
                       , serialise
                       , small-steps
