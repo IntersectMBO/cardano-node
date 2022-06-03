@@ -11,10 +11,10 @@ import           Examples.TestObjects
 docTracers :: IO ()
 docTracers = do
   t <- standardTracer
-  t1' <- humanFormatter True "cardano" t
+  t1' <- humanFormatter True (Just "cardano") t
   let t1 = withSeverityTraceForgeEvent
                 (appendName "node" t1')
-  t2' <- machineFormatter "cardano" t
+  t2' <- machineFormatter (Just "cardano") t
   let t2 = withSeverityTraceForgeEvent
                 (appendName "node" t2')
   bl <- documentMarkdown traceForgeEventDocu [t1, t2]

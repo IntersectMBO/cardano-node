@@ -14,7 +14,7 @@ import           Examples.TestObjects
 test1 :: IO ()
 test1 = do
     stdoutTracer' <- standardTracer
-    simpleTracer <- machineFormatter "cardano" stdoutTracer'
+    simpleTracer <- machineFormatter (Just "cardano") stdoutTracer'
     configureTracers emptyTraceConfig traceForgeEventDocu [simpleTracer]
     let simpleTracer1 = filterTraceBySeverity
                           (Just (SeverityF (Just Warning)))
@@ -32,7 +32,7 @@ test1 = do
 test2 :: IO ()
 test2 = do
     stdoutTracer' <- standardTracer
-    simpleTracer <- humanFormatter True "cardano" stdoutTracer'
+    simpleTracer <- humanFormatter True (Just "cardano") stdoutTracer'
     configureTracers emptyTraceConfig traceForgeEventDocu [simpleTracer]
     let simpleTracer1  = withSeverity loSeverity
                             (filterTraceBySeverity
