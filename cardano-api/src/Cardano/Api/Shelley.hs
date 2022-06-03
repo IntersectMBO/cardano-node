@@ -209,9 +209,11 @@ module Cardano.Api.Shelley
     LeadershipError(..),
     currentEpochEligibleLeadershipSlots,
     nextEpochEligibleLeadershipSlots,
+
     -- ** Conversions
     shelleyPayAddrToPlutusPubKHash,
     toConsensusGenTx,
+    fromAlonzoCostModels,
     --TODO: arrange not to export these
     toShelleyNetwork,
     fromShelleyPParams,
