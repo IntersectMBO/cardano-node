@@ -4,6 +4,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -69,6 +70,7 @@ import           Data.Foldable
 import           Data.IORef
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (mapMaybe)
+import           Data.Proxy (Proxy(Proxy))
 import           Data.SOP.Strict (NP (..))
 import           Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
@@ -96,7 +98,8 @@ import           Cardano.Api.IPC (ConsensusModeParams (..),
                    LocalNodeConnectInfo (..), connectToLocalNode)
 import           Cardano.Api.KeysPraos
 import           Cardano.Api.LedgerEvent (LedgerEvent, toLedgerEvent)
-import           Cardano.Api.Modes (CardanoMode, ConsensusProtocol, EpochSlots (..))
+import           Cardano.Api.Modes (CardanoMode, EpochSlots (..))
+import qualified Cardano.Api.Modes as Api
 import           Cardano.Api.NetworkId (NetworkId (..), NetworkMagic (NetworkMagic))
 import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.Query (CurrentEpochState (..), ProtocolState,
@@ -123,8 +126,6 @@ import qualified Cardano.Ledger.Shelley.API as ShelleyAPI
 import qualified Cardano.Ledger.Shelley.Genesis as Shelley.Spec
 import qualified Cardano.Protocol.TPraos.API as TPraos
 import qualified Cardano.Protocol.TPraos.BHeader as TPraos
-import qualified Cardano.Protocol.TPraos.Rules.Prtcl as TPraos
-import qualified Cardano.Protocol.TPraos.Rules.Tickn as Tick
 import           Cardano.Slotting.EpochInfo (EpochInfo)
 import qualified Cardano.Slotting.EpochInfo.API as Slot
 import           Cardano.Slotting.Slot (WithOrigin (At, Origin))
@@ -147,7 +148,7 @@ import qualified Ouroboros.Consensus.Ledger.Extended as Ledger
 import qualified Ouroboros.Consensus.Mempool.TxLimits as TxLimits
 import qualified Ouroboros.Consensus.Node.ProtocolInfo as Consensus
 import qualified Ouroboros.Consensus.Protocol.Abstract as Consensus
--- import qualified Ouroboros.Consensus.Protocol.Praos as Consensus
+import qualified Ouroboros.Consensus.Protocol.Praos.Common as Consensus
 import qualified Ouroboros.Consensus.Protocol.TPraos as TPraos
 import qualified Ouroboros.Consensus.Shelley.Eras as Shelley
 import qualified Ouroboros.Consensus.Shelley.Ledger.Block as Shelley
@@ -1306,9 +1307,12 @@ instance Error LeadershipError where
   displayError LeaderErrCandidateNonceStillEvolving = "Candidate nonce is still evolving"
 
 nextEpochEligibleLeadershipSlots
-  :: HasField "_d" (Core.PParams (ShelleyLedgerEra era)) UnitInterval
+  :: forall era.
+     HasField "_d" (Core.PParams (ShelleyLedgerEra era)) UnitInterval
   => Ledger.Era (ShelleyLedgerEra era)
   => Share (Core.TxOut (ShelleyLedgerEra era)) ~ Interns (Shelley.Spec.Credential 'Shelley.Spec.Staking (Ledger.Crypto (ShelleyLedgerEra era)))
+  => FromCBOR (Consensus.ChainDepState (Api.ConsensusProtocol era))
+  => Consensus.PraosProtocolSupportsNode (Api.ConsensusProtocol era)
   => ShelleyBasedEra era
   -> ShelleyGenesis Shelley.StandardShelley
   -> SerialisedCurrentEpochState era
@@ -1323,7 +1327,7 @@ nextEpochEligibleLeadershipSlots
   -> EpochInfo (Either Text)
   -> (ChainTip, EpochNo)
   -> Either LeadershipError (Set SlotNo)
-nextEpochEligibleLeadershipSlots sbe sGen serCurrEpochState _ptclState
+nextEpochEligibleLeadershipSlots sbe sGen serCurrEpochState ptclState
                  poolid@(StakePoolKeyHash poolHash) (VrfSigningKey vrfSkey) pParams
                  eInfo (cTip, currentEpoch) = do
 
@@ -1352,22 +1356,22 @@ nextEpochEligibleLeadershipSlots sbe sGen serCurrEpochState _ptclState
       then return ()
       else Left $ LeaderErrStakeDistribUnstable tip stableStakeDistribSlot stabilityWindowSlots currentEpochLastSlot
 
-  -- Let's do a nonce check. The candidate nonce and the evolving nonce should not be equal.
   chainDepState <- first LeaderErrDecodeProtocolStateFailure
-                     $ error "nextEpochEligibleLeadershipSlots: Currently broken" -- decodeProtocolState ptclState
+                     $ decodeProtocolState ptclState
 
   -- We need the candidate nonce, the previous epoch's last block header hash
   -- and the extra entropy from the protocol parameters. We then need to combine them
   -- with the (⭒) operator.
-  let TPraos.PrtclState _ evolvingNonce candidateNonce = TPraos.csProtocol chainDepState
+  let Consensus.PraosNonces { Consensus.candidateNonce, Consensus.evolvingNonce } =
+        Consensus.getPraosNonces (Proxy @(Api.ConsensusProtocol era)) chainDepState
 
   when (evolvingNonce == candidateNonce)
    $ Left LeaderErrCandidateNonceStillEvolving
 
   -- Get the previous epoch's last block header hash nonce
-  let Tick.TicknState _ prevEpochLastBlkHeaderHashNonce = TPraos.csTickn chainDepState
+  let previousLabNonce = Consensus.previousLabNonce (Consensus.getPraosNonces (Proxy @(Api.ConsensusProtocol era)) chainDepState)
       extraEntropy = toLedgerNonce $ protocolParamExtraPraosEntropy pParams
-      nextEpochsNonce = candidateNonce ⭒ prevEpochLastBlkHeaderHashNonce ⭒ extraEntropy
+      nextEpochsNonce = candidateNonce ⭒ previousLabNonce ⭒ extraEntropy
 
   -- Then we get the "mark" snapshot. This snapshot will be used for the next
   -- epoch's leadership schedule.
@@ -1471,13 +1475,15 @@ obtainDecodeEpochStateConstraints ShelleyBasedEraBabbage f = f
 -- | Return the slots at which a particular stake pool operator is
 -- expected to mint a block.
 currentEpochEligibleLeadershipSlots
-  :: ShelleyLedgerEra era ~ ledgerera
+  :: forall era ledgerera .
+     ShelleyLedgerEra era ~ ledgerera
   => Ledger.Era ledgerera
+  => Consensus.PraosProtocolSupportsNode (Api.ConsensusProtocol era)
   => HasField "_d" (Core.PParams ledgerera) UnitInterval
   -- => Crypto.Signable (Crypto.VRF (Ledger.Crypto ledgerera)) Shelley.Spec.Seed
   => Share (Core.TxOut (ShelleyLedgerEra era)) ~ Interns (Shelley.Spec.Credential 'Shelley.Spec.Staking (Ledger.Crypto (ShelleyLedgerEra era)))
  -- => Ledger.Crypto ledgerera ~ Shelley.StandardCrypto
-  => FromCBOR (Consensus.ChainDepState (ConsensusProtocol era))
+  => FromCBOR (Consensus.ChainDepState (Api.ConsensusProtocol era))
   -- => Consensus.ChainDepState (ConsensusProtocol era) ~ Consensus.ChainDepState (ConsensusProtocol era)
   => ShelleyBasedEra era
   -> ShelleyGenesis Shelley.StandardShelley
@@ -1493,14 +1499,13 @@ currentEpochEligibleLeadershipSlots sbe sGen eInfo pParams ptclState
                         poolid@(StakePoolKeyHash poolHash) (VrfSigningKey vrkSkey)
                         serCurrEpochState currentEpoch = do
 
-  _chainDepState <- first LeaderErrDecodeProtocolStateFailure
+  chainDepState <- first LeaderErrDecodeProtocolStateFailure
                      $ decodeProtocolState ptclState
 
   -- We use the current epoch's nonce for the current leadership schedule
   -- calculation because the TICKN transition updates the epoch nonce
   -- at the start of the epoch.
-  let -- Tick.TicknState epochNonce _ = TPraos.csTickn chainDepState
-      epochNonce = error "currentEpochEligibleLeadershipSlots: currently broken"
+  let epochNonce = Consensus.epochNonce (Consensus.getPraosNonces (Proxy @(Api.ConsensusProtocol era)) chainDepState)
   currentEpochRange <- first LeaderErrSlotRangeCalculationFailure
                          $ Slot.epochInfoRange eInfo currentEpoch
 

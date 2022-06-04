@@ -67,7 +67,7 @@ import qualified Cardano.Protocol.TPraos.API as Ledger
 import           Cardano.Slotting.EpochInfo (EpochInfo (..), epochInfoSlotToUTCTime, hoistEpochInfo)
 import           Control.Monad.Trans.Except (except)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistMaybe, left,
-                   newExceptT)
+                   newExceptT, hoistEither)
 import           Data.Aeson.Encode.Pretty (encodePretty)
 import           Data.Aeson.Types as Aeson
 import           Data.Coerce (coerce)
@@ -84,6 +84,7 @@ import           Ouroboros.Consensus.Protocol.TPraos
 import           Ouroboros.Network.Block (Serialised (..))
 import           Ouroboros.Network.Protocol.LocalStateQuery.Type (AcquireFailure (..))
 import           Text.Printf (printf)
+import           Control.Monad.Trans.Except.Extra (hoistEither)
 
 import           Cardano.Protocol.TPraos.Rules.Prtcl
 import qualified Data.ByteString.Lazy.Char8 as LBS
@@ -99,6 +100,7 @@ import           Formatting.Buildable (build)
 import           Numeric (showEFloat)
 import qualified Ouroboros.Consensus.HardFork.History as Consensus
 import qualified Ouroboros.Consensus.Protocol.Abstract as Consensus
+import qualified Ouroboros.Consensus.Protocol.Praos.Common as Consensus
 
 import qualified Ouroboros.Consensus.HardFork.History.Qry as Qry
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as LocalStateQuery
@@ -1148,10 +1150,10 @@ runQueryLeadershipSchedule (AnyConsensusModeParams cModeParams) network
   sbe <- getSbe $ cardanoEraStyle era
   let cMode = consensusModeOnly cModeParams
 
-  _poolid <- firstExceptT ShelleyQueryCmdTextReadError
+  poolid <- firstExceptT ShelleyQueryCmdTextReadError
               . newExceptT $ readVerificationKeyOrHashOrFile AsStakePoolKey coldVerKeyFile
 
-  _vrkSkey <- firstExceptT ShelleyQueryCmdTextEnvelopeReadError . newExceptT
+  vrkSkey <- firstExceptT ShelleyQueryCmdTextEnvelopeReadError . newExceptT
                $ readFileTextEnvelope (AsSigningKey AsVrfKey) vrfSkeyFp
   shelleyGenesis <- firstExceptT ShelleyQueryCmdGenesisReadError $
                           newExceptT $ readAndDecodeShelleyGenesis genFile
@@ -1164,8 +1166,8 @@ runQueryLeadershipSchedule (AnyConsensusModeParams cModeParams) network
           ptclStateQuery = QueryInEra eInMode . QueryInShelleyBasedEra sbe $ QueryProtocolState
           eraHistoryQuery = QueryEraHistory CardanoModeIsMultiEra
 
-      _pparams <- executeQuery era cModeParams localNodeConnInfo pparamsQuery
-      _ptclState <- executeQuery era cModeParams localNodeConnInfo ptclStateQuery
+      pparams <- executeQuery era cModeParams localNodeConnInfo pparamsQuery
+      ptclState <- executeQuery era cModeParams localNodeConnInfo ptclStateQuery
       eraHistory <- firstExceptT ShelleyQueryCmdAcquireFailure . newExceptT $ queryNodeLocalState localNodeConnInfo Nothing eraHistoryQuery
       let eInfo = toEpochInfo eraHistory
 
@@ -1174,36 +1176,34 @@ runQueryLeadershipSchedule (AnyConsensusModeParams cModeParams) network
              CurrentEpoch -> do
                let currentEpochStateQuery = QueryInEra eInMode $ QueryInShelleyBasedEra sbe QueryCurrentEpochState
                    currentEpochQuery = QueryInEra eInMode $ QueryInShelleyBasedEra sbe QueryEpoch
-               _serCurrentEpochState <- executeQuery era cModeParams localNodeConnInfo currentEpochStateQuery
-               _curentEpoch <- executeQuery era cModeParams localNodeConnInfo currentEpochQuery
-               panic "currently broken"
-               --firstExceptT ShelleyQueryCmdLeaderShipError $ hoistEither
-               --  $ eligibleLeaderSlotsConstaints sbe
-               --  $ currentEpochEligibleLeadershipSlots
-               --      sbe
-               --      shelleyGenesis
-               --      eInfo
-               --      pparams
-               --      ptclState
-               --      poolid
-               --      vrkSkey
-               --      serCurrentEpochState
-               --      curentEpoch
+               serCurrentEpochState <- executeQuery era cModeParams localNodeConnInfo currentEpochStateQuery
+               curentEpoch <- executeQuery era cModeParams localNodeConnInfo currentEpochQuery
+               firstExceptT ShelleyQueryCmdLeaderShipError $ hoistEither
+                $ eligibleLeaderSlotsConstaints sbe
+                $ currentEpochEligibleLeadershipSlots
+                    sbe
+                    shelleyGenesis
+                    eInfo
+                    pparams
+                    ptclState
+                    poolid
+                    vrkSkey
+                    serCurrentEpochState
+                    curentEpoch
 
              NextEpoch -> do
                let currentEpochStateQuery = QueryInEra eInMode $ QueryInShelleyBasedEra sbe QueryCurrentEpochState
                    currentEpochQuery = QueryInEra eInMode $ QueryInShelleyBasedEra sbe QueryEpoch
-               _tip <- liftIO $ getLocalChainTip localNodeConnInfo
+               tip <- liftIO $ getLocalChainTip localNodeConnInfo
 
-               _curentEpoch <- executeQuery era cModeParams localNodeConnInfo currentEpochQuery
-               _serCurrentEpochState <- executeQuery era cModeParams localNodeConnInfo currentEpochStateQuery
+               curentEpoch <- executeQuery era cModeParams localNodeConnInfo currentEpochQuery
+               serCurrentEpochState <- executeQuery era cModeParams localNodeConnInfo currentEpochStateQuery
 
-               panic "runQueryLeadershipSchedule: currently broken"
-               --firstExceptT ShelleyQueryCmdLeaderShipError $ hoistEither
-               --  $ eligibleLeaderSlotsConstaints sbe
-               --  $ nextEpochEligibleLeadershipSlots sbe shelleyGenesis
-               --      serCurrentEpochState ptclState poolid vrkSkey pparams
-               --      eInfo (tip, curentEpoch)
+               firstExceptT ShelleyQueryCmdLeaderShipError $ hoistEither
+                $ eligibleLeaderSlotsConstaints sbe
+                $ nextEpochEligibleLeadershipSlots sbe shelleyGenesis
+                    serCurrentEpochState ptclState poolid vrkSkey pparams
+                    eInfo (tip, curentEpoch)
 
       case mJsonOutputFile of
         Nothing -> liftIO $ printLeadershipScheduleAsText schedule eInfo (SystemStart $ sgSystemStart shelleyGenesis)
@@ -1348,15 +1348,13 @@ obtainLedgerEraClassConstraints ShelleyBasedEraAlonzo  f = f
 obtainLedgerEraClassConstraints ShelleyBasedEraBabbage f = f
 
 
-_eligibleLeaderSlotsConstaints
+eligibleLeaderSlotsConstaints
   :: ShelleyLedgerEra era ~ ledgerera
   => ShelleyBasedEra era
   -> (( ShelleyLedgerEra era ~ ledgerera
       , Ledger.Crypto ledgerera ~ StandardCrypto
-     -- , FromCBOR (Consensus.ChainDepState (ConsensusProtocol era))
-      --, FromCBOR (ChainDepStateProtocol era)
-    --  , FromCBOR (TPraosState StandardCrypto)
-    --  , FromCBOR (DebugLedgerState era)
+      , Consensus.PraosProtocolSupportsNode (ConsensusProtocol era)
+      , FromCBOR (Consensus.ChainDepState (ConsensusProtocol era))
       , Era.Era ledgerera
       , HasField "_d" (Core.PParams (ShelleyLedgerEra era)) UnitInterval
       , Crypto.Signable (Crypto.VRF (Ledger.Crypto ledgerera)) Seed
@@ -1364,11 +1362,11 @@ _eligibleLeaderSlotsConstaints
       ) => a
      )
   -> a
-_eligibleLeaderSlotsConstaints ShelleyBasedEraShelley f = f
-_eligibleLeaderSlotsConstaints ShelleyBasedEraAllegra f = f
-_eligibleLeaderSlotsConstaints ShelleyBasedEraMary    f = f
-_eligibleLeaderSlotsConstaints ShelleyBasedEraAlonzo  f = f
-_eligibleLeaderSlotsConstaints ShelleyBasedEraBabbage _f = _f
+eligibleLeaderSlotsConstaints ShelleyBasedEraShelley f = f
+eligibleLeaderSlotsConstaints ShelleyBasedEraAllegra f = f
+eligibleLeaderSlotsConstaints ShelleyBasedEraMary    f = f
+eligibleLeaderSlotsConstaints ShelleyBasedEraAlonzo  f = f
+eligibleLeaderSlotsConstaints ShelleyBasedEraBabbage f = f
 
 -- Required instances
 -- instance FromCBOR (TPraosState StandardCrypto) where
