@@ -74,12 +74,15 @@ jobs:
 
         sed -i "s|/d/a/1/s/|D:/a/cardano-node/cardano-node/|g" libsodium-win64/lib/pkgconfig/libsodium.pc
 
-        export PKG_CONFIG_PATH="$(readlink -f libsodium-win64/lib/pkgconfig | sed 's|^/d|D:|g' | tr / '\\')"
+        export PKG_CONFIG_PATH="$PKG_CONFIG_PATH;$(readlink -f libsodium-win64/lib/pkgconfig | sed 's|^/d|D:|g' | tr / '\\')"
         echo "PKG_CONFIG_PATH=$PKG_CONFIG_PATH" >> $GITHUB_ENV
 
         export LIBSODIUM_PATH="$(readlink -f libsodium-win64/bin | sed 's|^/d|D:|g' | tr / '\\')"
         echo "LIBSODIUM_PATH=$LIBSODIUM_PATH"
         echo "$LIBSODIUM_PATH" >> $GITHUB_PATH
+
+        echo "# pkg-config libsodium"
+        pkg-config libsodium --cflags --libs
 
     - name: Install libsodium (MacOS)
       if: matrix.os == 'macos-latest'
@@ -87,13 +90,6 @@ jobs:
 
     - name: Setup Github Scripts
       run: echo "$(pwd)/.github/bin" >> $GITHUB_PATH
-
-    - name: Configure to use libsodium
-      run: |
-        cat >> cabal.project <<EOF
-        package cardano-crypto-praos
-          flags: -external-libsodium-vrf
-        EOF
 
     - name: Haskell versions
       run: |
@@ -166,6 +162,84 @@ jobs:
         echo "SECP256K1_PATH=$SECP256K1_PATH"
         echo "$SECP256K1_PATH" >> $GITHUB_PATH
 
+    - name: Install vcpkg (Windows)
+      if: matrix.os == 'windows-latest'
+      env:
+        RUNNER_TEMP: ${{ runner.temp }}
+      run: |
+        mkdir -p "$RUNNER_TEMP/bin"
+        mkdir -p "$RUNNER_TEMP/lib"
+
+        cd "$RUNNER_TEMP/lib"
+        git clone https://github.com/Microsoft/vcpkg.git
+        vcpkg/bootstrap-vcpkg.bat
+        echo "PWD: $(pwd)"
+        
+        cd "$RUNNER_TEMP/bin"
+        ln -s ../lib/vcpkg/vcpkg.exe vcpkg
+        echo "PWD: $(pwd)"
+
+        export VCPKG_ROOT="$RUNNER_TEMP/lib/vcpkg"
+        echo "VCPKG_ROOT=$VCPKG_ROOT" >> $GITHUB_ENV
+
+        echo "$RUNNER_TEMP/bin" >> $GITHUB_PATH
+
+        echo "# View pc files"
+        cd "$RUNNER_TEMP"
+        for x in $(find . -name '*.pc'); do
+          echo "# $x"
+          cat "$x"
+        done
+
+    - name: Install openssl (Windows)
+      if: matrix.os == 'windows-latest'
+      run: |
+        vcpkg --triplet x64-mingw-dynamic install openssl
+        export PKG_CONFIG_PATH="$PKG_CONFIG_PATH;$(readlink -f "$RUNNER_TEMP/lib/vcpkg/packages/openssl_x64-mingw-dynamic/lib/pkgconfig" | sed 's|^/c|D:|g' | tr / '\\')"
+        echo "PKG_CONFIG_PATH=$PKG_CONFIG_PATH"
+        echo "PKG_CONFIG_PATH=$PKG_CONFIG_PATH" >> $GITHUB_ENV
+
+        # Not sure why this the pc file points to a lib64 instead of lib where the files are.
+        (cd "$RUNNER_TEMP/lib/vcpkg/packages/openssl_x64-mingw-dynamic"; ln -s lib lib64)
+
+        export OPENSSL_PATH="$RUNNER_TEMP/lib/vcpkg/packages/openssl_x64-mingw-dynamic/bin"
+        echo "OPENSSL_PATH=$OPENSSL_PATH"
+        echo "$OPENSSL_PATH" >> $GITHUB_PATH
+
+        echo "# pkg-config openssl"
+        pkg-config openssl --cflags --libs
+
+    - name: Path
+      run:  echo "$PATH"
+
+    - name: Find asn1.h file
+      if: matrix.os == 'windows-latest'
+      env:
+        RUNNER_TEMP: ${{ runner.temp }}
+      run: |
+        cd "$RUNNER_TEMP/lib"
+
+        echo "Finding asn1.h file"
+        find . -name 'asn1.h'
+
+        echo "Finding *.a files"
+        find . -name '*.a'
+
+        echo "Finding *.dll files"
+        find . -name '*.dll'
+
+    - name: List all pkg-config packages
+      if: matrix.os == 'windows-latest'
+      run: |
+        echo "=== Package list ==="
+        pkg-config --list-all
+        
+        echo "=== Package details ==="
+        for x in $(pkg-config --list-all | cut -d ' ' -f 1); do
+          echo "# $x"
+          pkg-config "$x" --cflags --libs
+        done
+
     - name: Cabal update
       run: retry 2 cabal update
 
@@ -178,6 +252,9 @@ jobs:
         fi
 
         cp .github/workflows/cabal.project.local.$RUNNER_OS cabal.project.local
+
+        echo "# cabal.project.local"
+        cat cabal.project.local
 
     - name: Record dependencies
       run: |
@@ -196,7 +273,7 @@ jobs:
           cache-${{ env.CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}
 
     - name: Build
-      run: retry 2 cabal build cardano-node cardano-cli cardano-node-chairman cardano-submit-api
+      run: cabal build cardano-node cardano-cli cardano-node-chairman cardano-submit-api
 
     - name: Run tests
       run: |
