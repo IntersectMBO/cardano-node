@@ -1,5 +1,5 @@
 -- run `nix flake lock --update-input hackageNix` after updating index-state.
-index-state: 2022-02-18T00:00:00Z
+index-state: 2022-06-01T00:00:00Z
 
 packages:
     cardano-api
@@ -339,6 +339,8 @@ constraints:
     -- that dependency
   , network >= 3.1.1.0
   , HSOpenSSL >= 0.11.7.2
+  , algebraic-graphs < 0.7
+  , protolude < 0.3.1
 
 package snap-server
   flags: +openssl

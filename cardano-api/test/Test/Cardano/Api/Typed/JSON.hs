@@ -6,6 +6,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
+{-# OPTIONS_GHC -Wno-deprecations #-} -- TODO Fix deprecations
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Api.Typed.JSON
