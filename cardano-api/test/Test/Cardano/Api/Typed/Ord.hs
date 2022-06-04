@@ -1,26 +1,19 @@
-{-# LANGUAGE TemplateHaskell #-}
-
-{-# OPTIONS_GHC -Wno-deprecations #-} -- TODO Fix deprecations
-
 module Test.Cardano.Api.Typed.Ord
   ( tests
   ) where
 
-import           Prelude
-
-import           Hedgehog (Property, (===))
-import qualified Hedgehog as H
-import           Test.Cardano.Api.Metadata (genTxMetadataValue)
-import           Test.Tasty (TestTree)
-import           Test.Tasty.Hedgehog (testProperty)
-import           Test.Tasty.TH (testGroupGenerator)
-
 import           Cardano.Api
 import           Cardano.Api.Shelley
 import           Gen.Cardano.Api.Typed
+import           Hedgehog (Property, (===))
+import           Prelude
+import           Test.Cardano.Api.Metadata (genTxMetadataValue)
+import           Test.Tasty (TestTree, testGroup)
+import           Test.Tasty.Hedgehog (testPropertyNamed)
+
+import qualified Hedgehog as H
 
 {- HLINT ignore "Use camelCase" -}
-
 
 ord_distributive :: (Show a, Ord a, Ord b)
                       => H.Gen a -> (a -> b) -> Property
@@ -61,4 +54,11 @@ prop_ord_distributive_ScriptData =
 -- -----------------------------------------------------------------------------
 
 tests :: TestTree
-tests = $testGroupGenerator
+tests = testGroup "Test.Cardano.Api.Typed.Ord"
+  [ testPropertyNamed "ord distributive TxId"         "ord distributive TxId"           prop_ord_distributive_TxId
+  , testPropertyNamed "ord distributive TxIn"         "ord distributive TxIn"           prop_ord_distributive_TxIn
+  , testPropertyNamed "ord distributive Address"      "ord distributive Address"        prop_ord_distributive_Address
+  , testPropertyNamed "ord distributive StakeAddress" "ord distributive StakeAddress"   prop_ord_distributive_StakeAddress
+  , testPropertyNamed "ord distributive TxMetadata"   "ord distributive TxMetadata"     prop_ord_distributive_TxMetadata
+  , testPropertyNamed "ord distributive ScriptData"   "ord distributive ScriptData"     prop_ord_distributive_ScriptData
+  ]

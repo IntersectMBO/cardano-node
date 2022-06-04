@@ -1,23 +1,18 @@
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE TemplateHaskell #-}
-
-{-# OPTIONS_GHC -Wno-deprecations #-} -- TODO Fix deprecations
 
 module Test.Cardano.Api.Typed.Address
   ( tests
   ) where
 
-import           Cardano.Prelude
-
-import           Hedgehog (Property)
-import qualified Hedgehog as H
-import           Test.Tasty (TestTree)
-import           Test.Tasty.Hedgehog (testProperty)
-import           Test.Tasty.TH (testGroupGenerator)
-
 import           Cardano.Api
-import           Gen.Cardano.Api.Typed
+import           Cardano.Prelude (($), Eq, Show)
+import           Gen.Cardano.Api.Typed (genAddressByron, genAddressShelley)
+import           Hedgehog (Property)
 import           Test.Cardano.Api.Typed.Orphans ()
+import           Test.Tasty (TestTree, testGroup)
+import           Test.Tasty.Hedgehog (testPropertyNamed)
+
+import qualified Hedgehog as H
 
 {- HLINT ignore "Use camelCase" -}
 
@@ -48,4 +43,7 @@ roundtrip_serialise_address asType g =
 -- -----------------------------------------------------------------------------
 
 tests :: TestTree
-tests = $testGroupGenerator
+tests = testGroup "Test.Cardano.Api.Typed.Address"
+  [ testPropertyNamed "roundtrip shelley address" "roundtrip shelley address" prop_roundtrip_shelley_address
+  , testPropertyNamed "roundtrip byron address"   "roundtrip byron address" prop_roundtrip_byron_address
+  ]

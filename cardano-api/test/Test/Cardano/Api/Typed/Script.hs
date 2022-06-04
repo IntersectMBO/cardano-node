@@ -1,27 +1,20 @@
-{-# LANGUAGE TemplateHaskell #-}
-
-{-# OPTIONS_GHC -Wno-deprecations #-} -- TODO Fix deprecations
-
 module Test.Cardano.Api.Typed.Script
   ( tests
   ) where
 
-import           Cardano.Prelude
-
-import           Data.Aeson
-import           Hedgehog (Property, (===))
-import qualified Hedgehog as H
-import           Hedgehog.Extras.Aeson
-import           Test.Tasty (TestTree)
-import           Test.Tasty.Hedgehog (testProperty)
-import           Test.Tasty.TH (testGroupGenerator)
-
 import           Cardano.Api
 import           Cardano.Api.Shelley
+import           Cardano.Prelude
+import           Data.Aeson
 import           Gen.Cardano.Api.Typed
+import           Hedgehog (Property, (===))
+import           Hedgehog.Extras.Aeson
+import           Test.Tasty (TestTree, testGroup)
+import           Test.Tasty.Hedgehog (testPropertyNamed)
+
+import qualified Hedgehog as H
 
 {- HLINT ignore "Use camelCase" -}
-
 
 exampleSimpleScriptV1_All :: SimpleScript SimpleScriptV1
 exampleSimpleScriptV1_All =
@@ -133,4 +126,14 @@ prop_roundtrip_ScriptData =
 -- -----------------------------------------------------------------------------
 
 tests :: TestTree
-tests = $testGroupGenerator
+tests = testGroup "Test.Cardano.Api.Typed.Script"
+  [ testPropertyNamed "golden SimpleScriptV1 All"     "golden SimpleScriptV1 All"     prop_golden_SimpleScriptV1_All
+  , testPropertyNamed "golden SimpleScriptV1 Any"     "golden SimpleScriptV1 Any"     prop_golden_SimpleScriptV1_Any
+  , testPropertyNamed "golden SimpleScriptV1 MofN"    "golden SimpleScriptV1 MofN"    prop_golden_SimpleScriptV1_MofN
+  , testPropertyNamed "golden SimpleScriptV2 All"     "golden SimpleScriptV2 All"     prop_golden_SimpleScriptV2_All
+  , testPropertyNamed "golden SimpleScriptV2 Any"     "golden SimpleScriptV2 Any"     prop_golden_SimpleScriptV2_Any
+  , testPropertyNamed "golden SimpleScriptV2 MofN"    "golden SimpleScriptV2 MofN"    prop_golden_SimpleScriptV2_MofN
+  , testPropertyNamed "roundtrip SimpleScriptV1 JSON" "roundtrip SimpleScriptV1 JSON" prop_roundtrip_SimpleScriptV1_JSON
+  , testPropertyNamed "roundtrip SimpleScriptV2 JSON" "roundtrip SimpleScriptV2 JSON" prop_roundtrip_SimpleScriptV2_JSON
+  , testPropertyNamed "roundtrip ScriptData"          "roundtrip ScriptData"          prop_roundtrip_ScriptData
+  ]

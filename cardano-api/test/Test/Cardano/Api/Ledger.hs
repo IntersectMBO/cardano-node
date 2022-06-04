@@ -1,26 +1,20 @@
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
-
-{-# OPTIONS_GHC -Wno-deprecations #-} -- TODO Fix deprecations
 
 module Test.Cardano.Api.Ledger
   ( tests
   ) where
 
-import           Cardano.Prelude
-
+import           Cardano.Ledger.Address (deserialiseAddr, serialiseAddr)
+import           Cardano.Prelude (($))
 import           Hedgehog (Property)
+import           Ouroboros.Consensus.Shelley.Eras (StandardCrypto)
+import           Test.Cardano.Api.Genesis (exampleShelleyGenesis)
+import           Test.Cardano.Ledger.Shelley.Serialisation.Generators.Genesis (genAddress)
+import           Test.Tasty (TestTree, testGroup)
+import           Test.Tasty.Hedgehog (testPropertyNamed)
+
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Aeson as H
-import           Test.Tasty (TestTree)
-import           Test.Tasty.Hedgehog (testProperty)
-import           Test.Tasty.TH (testGroupGenerator)
-
-import           Cardano.Ledger.Address (deserialiseAddr, serialiseAddr)
-import           Ouroboros.Consensus.Shelley.Eras (StandardCrypto)
-import           Test.Cardano.Api.Genesis
-import           Test.Cardano.Ledger.Shelley.Serialisation.Generators.Genesis (genAddress)
 
 prop_golden_ShelleyGenesis :: Property
 prop_golden_ShelleyGenesis = H.goldenTestJsonValuePretty exampleShelleyGenesis "test/Golden/ShelleyGenesis"
@@ -37,4 +31,7 @@ prop_roundtrip_Address_CBOR = H.property $ do
 -- -----------------------------------------------------------------------------
 
 tests :: TestTree
-tests = $testGroupGenerator
+tests = testGroup "Test.Cardano.Api.Ledger"
+  [ testPropertyNamed "golden ShelleyGenesis"  "golden ShelleyGenesis"  prop_golden_ShelleyGenesis
+  , testPropertyNamed "roundtrip Address CBOR" "roundtrip Address CBOR" prop_roundtrip_Address_CBOR
+  ]

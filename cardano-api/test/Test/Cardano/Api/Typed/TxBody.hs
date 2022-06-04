@@ -1,25 +1,20 @@
 {-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE TemplateHaskell #-}
-
-{-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Test.Cardano.Api.Typed.TxBody
   ( tests
   ) where
 
-import           Cardano.Prelude
-
-import           Hedgehog (Property, annotateShow, failure, (===), MonadTest)
-import qualified Hedgehog as H
-import           Test.Tasty (TestTree)
-import           Test.Tasty.Hedgehog (testProperty)
-import           Test.Tasty.TH (testGroupGenerator)
-
 import           Cardano.Api
 import           Cardano.Api.Shelley (ReferenceScript (..), refScriptToShelleyScript)
+import           Cardano.Prelude
 import           Data.Type.Equality (TestEquality (testEquality))
-import           Gen.Cardano.Api.Typed
+import           Gen.Cardano.Api.Typed (genTxBodyContent)
+import           Hedgehog (Property, annotateShow, failure, (===), MonadTest)
 import           Test.Cardano.Api.Typed.Orphans ()
+import           Test.Tasty (TestTree, testGroup)
+import           Test.Tasty.Hedgehog (testPropertyNamed)
+
+import qualified Hedgehog as H
 
 {- HLINT ignore "Use camelCase" -}
 
@@ -80,4 +75,6 @@ prop_roundtrip_txbodycontent_txouts =
     _ -> False
 
 tests :: TestTree
-tests = $testGroupGenerator
+tests = testGroup "Test.Cardano.Api.Typed.TxBody"
+  [ testPropertyNamed "roundtrip txbodycontent txouts" "roundtrip txbodycontent txouts" prop_roundtrip_txbodycontent_txouts
+  ]

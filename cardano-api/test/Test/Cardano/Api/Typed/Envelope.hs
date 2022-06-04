@@ -1,24 +1,18 @@
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
-
-{-# OPTIONS_GHC -Wno-deprecations #-} -- TODO Fix deprecations
 
 module Test.Cardano.Api.Typed.Envelope
   ( tests
   ) where
 
-import           Cardano.Prelude
-
-import           Hedgehog (Property)
-import qualified Hedgehog as H
-import           Test.Tasty (TestTree)
-import           Test.Tasty.Hedgehog (testProperty)
-import           Test.Tasty.TH (testGroupGenerator)
-
 import           Cardano.Api
+import           Cardano.Prelude
 import           Gen.Cardano.Api.Typed
+import           Hedgehog (Property)
 import           Test.Cardano.Api.Typed.Orphans ()
+import           Test.Tasty (TestTree, testGroup)
+import           Test.Tasty.Hedgehog (testPropertyNamed)
+
+import qualified Hedgehog as H
 
 {- HLINT ignore "Use camelCase" -}
 
@@ -115,4 +109,21 @@ roundtrip_SigningKey_envelope roletoken =
 -- -----------------------------------------------------------------------------
 
 tests :: TestTree
-tests = $testGroupGenerator
+tests = testGroup "Test.Cardano.Api.Typed.Envelope"
+  [ testPropertyNamed "roundtrip ByronVerificationKey envelope"           "roundtrip ByronVerificationKey envelope"           prop_roundtrip_ByronVerificationKey_envelope
+  , testPropertyNamed "roundtrip ByronSigningKey envelope"                "roundtrip ByronSigningKey envelope"                prop_roundtrip_ByronSigningKey_envelope
+  , testPropertyNamed "roundtrip PaymentVerificationKey envelope"         "roundtrip PaymentVerificationKey envelope"         prop_roundtrip_PaymentVerificationKey_envelope
+  , testPropertyNamed "roundtrip PaymentSigningKey envelope"              "roundtrip PaymentSigningKey envelope"              prop_roundtrip_PaymentSigningKey_envelope
+  , testPropertyNamed "roundtrip StakeVerificationKey envelope"           "roundtrip StakeVerificationKey envelope"           prop_roundtrip_StakeVerificationKey_envelope
+  , testPropertyNamed "roundtrip StakeSigningKey envelope"                "roundtrip StakeSigningKey envelope"                prop_roundtrip_StakeSigningKey_envelope
+  , testPropertyNamed "roundtrip StakePoolVerificationKey envelope"       "roundtrip StakePoolVerificationKey envelope"       prop_roundtrip_StakePoolVerificationKey_envelope
+  , testPropertyNamed "roundtrip StakePoolSigningKey envelope"            "roundtrip StakePoolSigningKey envelope"            prop_roundtrip_StakePoolSigningKey_envelope
+  , testPropertyNamed "roundtrip GenesisVerificationKey envelope"         "roundtrip GenesisVerificationKey envelope"         prop_roundtrip_GenesisVerificationKey_envelope
+  , testPropertyNamed "roundtrip GenesisSigningKey envelope"              "roundtrip GenesisSigningKey envelope"              prop_roundtrip_GenesisSigningKey_envelope
+  , testPropertyNamed "roundtrip GenesisDelegateVerificationKey envelope" "roundtrip GenesisDelegateVerificationKey envelope" prop_roundtrip_GenesisDelegateVerificationKey_envelope
+  , testPropertyNamed "roundtrip GenesisDelegateSigningKey envelope"      "roundtrip GenesisDelegateSigningKey envelope"      prop_roundtrip_GenesisDelegateSigningKey_envelope
+  , testPropertyNamed "roundtrip KesVerificationKey envelope"             "roundtrip KesVerificationKey envelope"             prop_roundtrip_KesVerificationKey_envelope
+  , testPropertyNamed "roundtrip KesSigningKey envelope"                  "roundtrip KesSigningKey envelope"                  prop_roundtrip_KesSigningKey_envelope
+  , testPropertyNamed "roundtrip VrfVerificationKey envelope"             "roundtrip VrfVerificationKey envelope"             prop_roundtrip_VrfVerificationKey_envelope
+  , testPropertyNamed "roundtrip VrfSigningKey envelope"                  "roundtrip VrfSigningKey envelope"                  prop_roundtrip_VrfSigningKey_envelope
+  ]
