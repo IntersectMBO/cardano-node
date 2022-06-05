@@ -3,10 +3,6 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeApplications #-}
 
-#if !defined(mingw32_HOST_OS)
-#define UNIX
-#endif
-
 module Testnet.Shelley
   ( TestnetOptions(..)
   , defaultTestnetOptions
@@ -16,11 +12,7 @@ module Testnet.Shelley
   , hprop_testnet_pause
   ) where
 
-#ifdef UNIX
-import           Prelude (Bool (..), Integer, map, (-))
-#else
 import           Prelude (Bool (..), Integer, (-))
-#endif
 
 import           Control.Monad
 import           Control.Monad.IO.Class
@@ -68,9 +60,6 @@ import qualified Hedgehog.Extras.Test.Process as H
 import qualified System.Directory as IO
 import qualified System.IO as IO
 import qualified System.Info as OS
-#ifdef UNIX
-import           System.Posix.Files
-#endif
 import qualified Hedgehog.Extras.Stock.Time as DTC
 import qualified System.Process as IO
 import qualified Test.Base as H
@@ -227,13 +216,6 @@ testnet testnetOptions H.Conf {..} = do
     , "--start-time", DTC.formatIso8601 startTime
     ]
 
-#ifdef UNIX
-  --TODO: Remove me after #1948 is merged.
-  let numNodesStr = map show [1..numPraosNodes]
-      vrfPath n = tempAbsPath </> "delegate-keys" </> "delegate" <> n <> ".vrf.skey"
-  H.evalIO $ mapM_ (\n -> setFileMode (vrfPath n) ownerModes) numNodesStr
-#endif
-
   forM_ allNodes $ \p -> H.createDirectoryIfMissing $ tempAbsPath </> p
 
   -- Make the pool operator cold keys
@@ -251,10 +233,6 @@ testnet testnetOptions H.Conf {..} = do
       , "--verification-key-file", tempAbsPath </> n </> "vrf.vkey"
       , "--signing-key-file", tempAbsPath </> n </> "vrf.skey"
       ]
-#ifdef UNIX
-    --TODO: Remove me after #1948 is merged.
-    void . liftIO $ setFileMode (tempAbsPath </> n </> "vrf.skey") ownerModes
-#endif
   -- Symlink the BFT operator keys from the genesis delegates, for uniformity
   forM_ praosNodesN $ \n -> do
     H.createFileLink (tempAbsPath </> "delegate-keys/delegate" <> n <> ".skey") (tempAbsPath </> "node-praos" <> n </> "operator.skey")
