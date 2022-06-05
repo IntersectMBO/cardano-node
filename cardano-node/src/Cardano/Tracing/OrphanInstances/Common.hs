@@ -58,7 +58,7 @@ import           Cardano.BM.Stats
 import           Cardano.BM.Tracing (HasPrivacyAnnotation (..), HasSeverityAnnotation (..),
                    Severity (..), ToObject (..), Tracer (..), TracingVerbosity (..),
                    Transformable (..))
-import           Cardano.Slotting.Block (BlockNo (..))
+import           Cardano.Node.Handlers.Shutdown ()
 import           Ouroboros.Consensus.Byron.Ledger.Block (ByronHash (..))
 import           Ouroboros.Consensus.HardFork.Combinator (OneEraHash (..))
 import           Ouroboros.Network.Block (HeaderHash, Tip (..))
@@ -102,7 +102,6 @@ instance ToJSON (OneEraHash xs) where
     toJSON . Text.decodeLatin1 . B16.encode . SBS.fromShort $ bs
 
 deriving newtype instance ToJSON ByronHash
-deriving newtype instance ToJSON BlockNo
 
 instance HasPrivacyAnnotation  ResourceStats
 instance HasSeverityAnnotation ResourceStats where

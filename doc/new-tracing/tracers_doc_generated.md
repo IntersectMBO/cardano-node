@@ -597,7 +597,7 @@
 1. __Shutdown__
 	1. [AbnormalShutdown](#cardanonodeshutdownabnormalshutdown)
 	1. [RequestingShutdown](#cardanonodeshutdownrequestingshutdown)
-	1. [ShutdownArmedAtSlot](#cardanonodeshutdownshutdownarmedatslot)
+	1. [ShutdownArmedAtSlotBlock](#cardanonodeshutdownshutdownarmedatslotblock)
 	1. [ShutdownRequested](#cardanonodeshutdownshutdownrequested)
 	1. [ShutdownUnexpectedInput](#cardanonodeshutdownshutdownunexpectedinput)
 1. __Startup__
@@ -8973,11 +8973,11 @@ Backends:
 			`EKGBackend`
 Filtered  by config value: `Notice`
 
-### Cardano.Node.Shutdown.ShutdownArmedAtSlot
+### Cardano.Node.Shutdown.ShutdownArmedAtSlotBlock
 
 
 ***
-Setting up node shutdown at given slot.
+Setting up node shutdown at given slot / block.
 ***
 
 
