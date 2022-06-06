@@ -1,13 +1,79 @@
 # Changelog for cardano-node
 
-## 1.35.0 -- May 2022
+## 1.35.0 -- June 2022
+
+### node changes
+- cardano-node-3633: init forwarding if needed. #3634
+- Fix tracing config to allow selection of the new tracing system #3655
+- RTS workaround converting SIGTERM into SIGINT #3641
+- cardano-node-3644: node state ADT expand. #3656
+- Add --shutdown-on-slot-synced test and ensure ExitSuccess #3670
+- cardano-node: Remove unused constraints from TraceConstraints #3822
+- Sync percentage fixed. #3854
+- cardano-node: register GC metrics. #3858
+- workbench: support new tracing & add a Plutus workload profile #3851
+- Old peers tracing was erroneously called in new tracing #3880
+- Install a dummy SIGHUP handler for non p2p mode #3896
+- cardano-node: implement --shutdown-on-block-synced #3932
+- Tracer updates;
+  - Correct JSON logs. #3640
+  - Fix JSON data. #3654
+  - Fix time format in JSON log. #3660
+  - Double backslashes for forwarding. #3671
+  - Try Windows tests. #3714
+  - New tracers without prototypes #3731
+  - Better documentation generation for new-tracing #3834
+  - Fix Hyperlinks in generated docs #3842
+  - Change of configuration structure #3867
+  - Separate routing of metrics #3876
+  - Porting ekg-direct metrics to new-tracing #3873
+  - init RTView #3852
+  - Remove symlink, fix logs cut off. #3930
+  - RTView: CPU usage (GC + App) as pct, https by default, errors export #3934
+  - Fix bug with empty line #3962
+- Documentation updates;
+  - Update Haskell installation method and mention libsecp256k1 #3796
+  - Update cardano-node-cli-reference.md #3630
+- Various build, testing and benchmarking infrastructure improvements. (#3638, #3643, #3705, #3789, #3812, #3824, #3941)
+
+### consensus changes
+- Block diffusion pipelining (#3688, #3742, #3752)
+- Moving from two VRF checks to one, as of Babbage (#3595)
+- Restricted opcert issue number increment, as of Babbage (#3595)
+- Bugfix: transaction validity intervals will actually be limited, as of Babbage (#3754 et al)
+- Simplification: Babbage will run proper Praos protocol instead of Transitional Praos, since d will remain at 0 (#3595)
+- Simplification: remove stale handshake versions (#3696 #3699)
+
+### network changes
+- Multinode Diffusion Simulation #3497
+- Trace exceptions thrown by inboundGovernorLoop #3591
+- Added prop_timeouts_enforced #3532
+- Connection Manager tests using IOSimPOR #3632
+- Don't overwrite localrootpeers lookup results #3641
+- Extract tcp_info for mux tcp bearer #3648
+- IOSim MonadFix instance #3647
+- io-classes: added strict versions of traceTVar & traceTMVar #3654
+- Platform independent TCPInfo trace #3660
+- Connection manager transition order test using IOSimPOR #3640
+- Removed ST effects from IOSimPOR #3662
+- RootPeersDNS: garbage collect DNS results && test single source of truth #3643
+- Enabled accept errors in net-sim testing #3668
+- Update supported protocol versions of cardano-ping" #3700
+- Add `yield` to `MonadFork` #3713
+- Diffusion Tests (#3619, #3629, #3633, #3636, #3707, #3727, #3728, #3761)
+- cardano-ping: fix misplaced `unless quiet` #3729
+- Import `getMonotonicNSec` from base rather than via FFI #3735
+- Various changes #3736
+- Documentation updates;
+  - Update chain-sync documentation #3594
+  - Fixed typos in network-mux #3666
 
 ### ledger changes
 
 - Implementing the Babbage era. (#2560, #2599, #2602, #2613, #2618, #2619,
   #2629, #2633, #2643, #2645, #2654, #2661, #2664, #2666, #2678, #2681, #2689,
   #2694, #2700, #2701, #2702, #2708, #2710, #2711, #2712, #2716, #2717, #2723,
-  #2727, #2751, #2766, #2789, #2799)
+  #2727, #2751, #2766, #2789, #2799, #2807, #2813, #2814, #2821)
 - Fix a bug in the computation of the exponential function via Taylor series
   approximation. This bug was not ever exhibited in code, but the fix is useful
   for future resilience. (#2591)
@@ -60,7 +126,7 @@
 - Significant improvements to the benchmarking suite. (#2668, #2669, #2699)
 - Fix the pulsing size used for incremental computation of rewards. This should
   result in a more even spread of load over the epoch. (#2676)
-- Prune the unusued `cardano-ledger-example-shelley` package. (#2693)
+- Prune the unused `cardano-ledger-example-shelley` package. (#2693)
 - Add logic to the STS rules to run certain things only if no failures have yet
   been accumulated. This is useful to e.g. avoid evaluating Plutus scripts in places where the transaction is broken. (#2679)
 - Hide the `CostModel` constructor. The appropriate way to construct a
@@ -86,6 +152,7 @@
   deserialiser now does not care about the names, only about the ordering of the
   parameters. This is consistent with how cost model parameters are treated in
   update proposals. (#2792)
+
 ## 1.34.1 -- March 2022
 
 ### node changes
