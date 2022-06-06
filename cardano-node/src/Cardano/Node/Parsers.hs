@@ -1,5 +1,6 @@
 {-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Cardano.Node.Parsers
@@ -23,6 +24,7 @@ import           Ouroboros.Consensus.Mempool.API (MempoolCapacityBytes (..),
                    MempoolCapacityBytesOverride (..))
 import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (SnapshotInterval (..))
 
+import           Cardano.Logging.Types
 import           Cardano.Node.Configuration.NodeAddress (NodeHostIPv4Address (NodeHostIPv4Address),
                    NodeHostIPv6Address (NodeHostIPv6Address), PortNumber, SocketPath (SocketPath))
 import           Cardano.Node.Configuration.POM (PartialNodeConfiguration (..), lastOption)
@@ -45,6 +47,7 @@ nodeRunParser = do
   topFp <- lastOption parseTopologyFile
   dbFp <- lastOption parseDbPath
   socketFp <- lastOption $ parseSocketPath "Path to a cardano-node socket"
+  traceForwardSocket <- lastOption parseTracerSocketMode
 
   -- Protocol files
   byronCertFile   <- optional parseByronDelegationCert
@@ -99,6 +102,7 @@ nodeRunParser = do
            , pncLoggingSwitch = mempty
            , pncLogMetrics = mempty
            , pncTraceConfig = mempty
+           , pncTraceForwardSocket = traceForwardSocket
            , pncMaybeMempoolCapacityOverride = maybeMempoolCapacityOverride
            , pncProtocolIdleTimeout = mempty
            , pncTimeWaitTimeout = mempty
@@ -118,6 +122,22 @@ parseSocketPath helpMessage =
         <> completer (bashCompleter "file")
         <> metavar "FILEPATH"
     )
+
+parseTracerSocketMode :: Parser (SocketPath, ForwarderMode)
+parseTracerSocketMode =
+  ((, Responder) . SocketPath <$> strOption
+   ( long "tracer-socket-path-accept"
+       <> help "Accept incoming cardano-tracer connection at local socket"
+       <> completer (bashCompleter "file")
+       <> metavar "FILEPATH"
+    ))
+  <|>
+  ((, Initiator) . SocketPath <$> strOption
+   ( long "tracer-socket-path-connect"
+       <> help "Connect to cardano-tracer listening on a local socket"
+       <> completer (bashCompleter "file")
+       <> metavar "FILEPATH"
+    ))
 
 parseHostIPv4Addr :: Parser NodeHostIPv4Address
 parseHostIPv4Addr =

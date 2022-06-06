@@ -133,7 +133,7 @@ let
       }.${profile.value.era};
     };
     in
-    backend.finaliseNodeService nodeSpec
+    backend.finaliseNodeService profile.value nodeSpec
     {
       inherit port;
 
@@ -169,7 +169,7 @@ let
               else [];
             shutBlockArgs = mayKindArgs shutdownBlock nodeSpec.kind "--shutdown-on-block-synced";
             shutSlotArgs  = mayKindArgs shutdownSlot  nodeSpec.kind "--shutdown-on-slot-synced";
-        in backend.finaliseNodeArgs nodeSpec
+        in backend.finaliseNodeArgs profile nodeSpec
           (if   shutBlockArgs != []
            then shutBlockArgs
            else shutSlotArgs);

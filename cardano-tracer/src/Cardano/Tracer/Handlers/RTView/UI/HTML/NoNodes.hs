@@ -92,15 +92,11 @@ mkNoNodesInfo networkConfig = do
   cardanoNodeNote =
     case networkConfig of
       AcceptAt (LocalSocket _p) ->
-        "Correspondingly, your nodes should be configured as clients. Make sure their configuration "
-        <> "files contain <code>TraceOptionForwarder</code> section like this:"
-        <> "<pre>" <> traceOptionForwarderInit <> "</pre>"
-        <> "where <code>PATH_TO_SOCK</code> is a path to a local socket."
-      ConnectTo _addrs ->
-        "Correspondingly, your nodes should be configured as servers. Make sure their configuration "
-        <> "files contain <code>TraceOptionForwarder</code> section like this:"
-        <> "<pre>" <> traceOptionForwarderResp <> "</pre>"
-        <> "where <code>PATH_TO_SOCK</code> is a path to a local socket."
+        "Correspondingly, your nodes tracing sockets should be configured to initiate connections. Make sure their command line invocations "
+        <> "contains <code>--tracer-socket-path-connect LOCAL-SOCKET</code>."
+      ConnectTo{} ->
+        "Correspondingly, your nodes tracing sockets should be configured to accept connections. Make sure their command line invocations "
+        <> "contains <code>--tracer-socket-path-accept LOCAL-SOCKET</code>."
 
   nodeNameNote =
     "Also, please add a meaningful name for your nodes using <code>TraceOptionNodeName</code> field. "
@@ -109,26 +105,6 @@ mkNoNodesInfo networkConfig = do
   sshNote =
     "If your <code>cardano-tracer</code> and your nodes are running on different machines, the only "
     <> "way to connect them is SSH tunneling with your credentials."
-
-traceOptionForwarderInit :: String
-traceOptionForwarderInit = [s|
-"TraceOptionForwarder": {
-  "address": {
-    "filePath": "PATH_TO_SOCK"
-  },
-  "mode": "Initiator"
-}
-|]
-
-traceOptionForwarderResp :: String
-traceOptionForwarderResp = [s|
-"TraceOptionForwarder": {
-  "address": {
-    "filePath": "PATH_TO_SOCK"
-  },
-  "mode": "Responder"
-}
-|]
 
 traceOptionNodeName :: String
 traceOptionNodeName = [s|

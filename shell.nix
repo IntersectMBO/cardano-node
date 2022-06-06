@@ -5,6 +5,7 @@ in
 { withHoogle ? defaultCustomConfig.withHoogle
 , profileName ? defaultCustomConfig.localCluster.profileName
 , workbenchDevMode ? defaultCustomConfig.localCluster.workbenchDevMode
+, useCabalRun ? true
 , customConfig ? {
     inherit withHoogle;
     localCluster =  {
@@ -49,9 +50,7 @@ let
 
   shell =
     let cluster = pkgs.supervisord-workbench-for-profile
-      { inherit profileName;
-        useCabalRun = true;
-      };
+      { inherit profileName useCabalRun; };
     in project.shellFor {
     name = "cluster-shell";
 
@@ -103,22 +102,19 @@ let
     exactDeps = true;
 
     shellHook = ''
-      echo 'nix-shell top-level shellHook:  withHoogle=${toString withHoogle} profileName=${profileName} workbenchDevMode=${toString workbenchDevMode}'
-
       ${with customConfig.localCluster;
-        (import ./nix/workbench/shell.nix { inherit lib workbenchDevMode profileName; useCabalRun = true; }).shellHook}
+        (import ./nix/workbench/shell.nix { inherit lib workbenchDevMode profileName useCabalRun; }).shellHook}
 
-      function atexit() {
+      function workbench_atexit() {
           if wb backend is-running
           then stop-cluster
           fi
       }
-      trap atexit EXIT
-
-      ${setLocale}
+      trap workbench_atexit EXIT
 
       export CARDANO_MAINNET_MIRROR=${cardano-mainnet-mirror.outputs.defaultPackage.x86_64-linux.outPath}
 
+      ${setLocale}
       ${commandHelp}
 
       set +e

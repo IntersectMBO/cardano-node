@@ -113,13 +113,17 @@ let
       "--config ${nodeConfigFile}"
       "--database-path ${instanceDbPath}"
       "--topology ${topology}"
-    ] ++ (lib.optionals (!cfg.systemdSocketActivation) ([
+    ] ++ lib.optionals (!cfg.systemdSocketActivation) [
       "--host-addr ${cfg.hostAddr}"
       "--port ${toString (cfg.port + i)}"
       "--socket-path ${cfg.socketPath}"
-    ] ++ lib.optional (cfg.ipv6HostAddr i != null)
-      "--host-ipv6-addr ${cfg.ipv6HostAddr i}"
-    )) ++ consensusParams.${cfg.nodeConfig.Protocol} ++ cfg.extraArgs ++ cfg.rtsArgs;
+    ] ++ lib.optionals (cfg.tracerSocketPathAccept != null) [
+        "--tracer-socket-path-accept ${cfg.tracerSocketPathAccept}"
+    ] ++ lib.optionals (cfg.tracerSocketPathConnect != null) [
+        "--tracer-socket-path-connect ${cfg.tracerSocketPathConnect}"
+    ] ++ lib.optionals (cfg.ipv6HostAddr i != null) [
+        "--host-ipv6-addr ${cfg.ipv6HostAddr i}"
+    ] ++ consensusParams.${cfg.nodeConfig.Protocol} ++ cfg.extraArgs ++ cfg.rtsArgs;
     in ''
         echo "Starting: ${concatStringsSep "\"\n   echo \"" cmd}"
         echo "..or, once again, in a single line:"
@@ -318,10 +322,16 @@ in {
         description = ''Local communication socket path.'';
       };
 
-      tracerSocketPath = mkOption {
+      tracerSocketPathAccept = mkOption {
         type = types.nullOr types.str;
         default = null;
-        description = ''Connect and forward traces to cardano-tracer's local socket.'';
+        description = ''Listen for incoming cardano-tracer connection on a local socket.'';
+      };
+
+      tracerSocketPathConnect = mkOption {
+        type = types.nullOr types.str;
+        default = null;
+        description = ''Connect to cardano-tracer listening on a local socket.'';
       };
 
       systemdSocketActivation = mkOption {

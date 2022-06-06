@@ -99,12 +99,13 @@ start()
     local manifest="{}"
     local iterations=1
     local no_retry_failed_runs=t
-    local no_analysis= analyse_args=()
+    local no_analysis=
     local analysis_can_fail=
 
     local run_args=()
     local run_allocate_args=()
     local run_start_args=()
+    local analyse_args=(--dump-logobjects --dump-machviews)
     while test $# -gt 0
     do case "$1" in
         --batch-name )                   batch_name=$2;   shift;;
@@ -122,11 +123,9 @@ start()
 
         --no-analysis )                  no_analysis=true;;
         --analysis-can-fail | -af )      analysis_can_fail=t;;
-        --dump-logobjects | -lo )        analyse_args+=($1);;
-        --dump-machviews  | -mw )        analyse_args+=($1);;
         --filters )                      analyse_args+=($1 $2); shift;;
 
-        --cabal-mode | --cabal )         cabal_mode=t;;
+        --cabal-mode | --cabal )         run_allocate_args+=($1); cabal_mode=t;;
         --supervisor | --backend-supervisor )
                                          backend=supervisor;;
 

@@ -9,7 +9,7 @@ with lib;
 
 let
   shellHook = ''
-    echo 'workbench shellHook:  workbenchDevMode=${toString workbenchDevMode} useCabalRun=${toString useCabalRun}'
+    echo 'workbench shellHook:  workbenchDevMode=${toString workbenchDevMode} useCabalRun=${toString useCabalRun} profileName=${profileName}'
     export WORKBENCH_BACKEND=supervisor
     export WORKBENCH_SHELL_PROFILE=${profileName}
 

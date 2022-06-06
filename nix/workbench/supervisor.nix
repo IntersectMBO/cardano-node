@@ -52,7 +52,7 @@ let
               ''"exit_code":          %x''
             ];
         in
-        { name, i, isProducer, ... }: svc: recursiveUpdate svc
+        profile: { name, i, isProducer, ... }: svc: recursiveUpdate svc
           ({
             stateDir       = stateDir + "/${name}";
             ## Everything is local in the supervisord setup:
@@ -65,6 +65,8 @@ let
             operationalCertificate = "../genesis/node-keys/node${toString i}.opcert";
             kesKey         = "../genesis/node-keys/node-kes${toString i}.skey";
             vrfKey         = "../genesis/node-keys/node-vrf${toString i}.skey";
+          } // optionalAttrs profile.node.tracer {
+            tracerSocketPathConnect = "../tracer/tracer.socket";
           });
 
       finaliseNodeConfig =
@@ -82,7 +84,7 @@ let
           });
 
       finaliseNodeArgs =
-        { port, ... }: cfg: cfg;
+        profile: nodeSpec: args: args;
 
       finaliseGeneratorService =
         svc: recursiveUpdate svc
