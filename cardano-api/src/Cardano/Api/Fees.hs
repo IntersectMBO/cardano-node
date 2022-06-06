@@ -44,6 +44,7 @@ import           Prelude
 import qualified Data.Array as Array
 import           Data.Bifunctor (bimap, first)
 import qualified Data.ByteString as BS
+import           Data.ByteString.Short (ShortByteString)
 import           Data.Map (Map)
 import qualified Data.Map as Map
 import           Data.Maybe (fromMaybe)
@@ -83,6 +84,7 @@ import qualified Cardano.Ledger.Alonzo.Language as Alonzo
 import           Cardano.Ledger.Alonzo.PParams (PParams' (..))
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 import qualified Cardano.Ledger.Alonzo.Tools as Alonzo
+import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
 import qualified Cardano.Ledger.Alonzo.TxWitness as Alonzo
 
 import qualified Plutus.V1.Ledger.Api as Plutus
@@ -260,7 +262,7 @@ evaluateTransactionFee pparams txbody keywitcount _byronwitcount =
           tx
           keywitcount
 
-    -- Conjur up all the necessary class instances and evidence
+    -- Conjure up all the necessary class instances and evidence
     withLedgerConstraints
       :: ShelleyLedgerEra era ~ ledgerera
       => ShelleyBasedEra era
@@ -330,6 +332,13 @@ estimateTransactionKeyWitnessCount TxBodyContent {
 -- Script execution units
 --
 
+type PlutusScriptBytes = ShortByteString
+
+type ResolvablePointers =
+       Map
+         Alonzo.RdmrPtr
+         (Alonzo.ScriptPurpose Ledger.StandardCrypto, Maybe (PlutusScriptBytes, Alonzo.Language))
+
 -- | The different possible reasons that executing a script can fail,
 -- as reported by 'evaluateTransactionExecutionUnits'.
 --
@@ -373,7 +382,9 @@ data ScriptExecutionError =
      | ScriptErrorNotPlutusWitnessedTxIn ScriptWitnessIndex
 
        -- | A redeemer pointer points to a script that does not exist.
-     | ScriptErrorMissingScript Alonzo.RdmrPtr
+     | ScriptErrorMissingScript
+         Alonzo.RdmrPtr -- The invalid pointer
+         ResolvablePointers -- A mapping a pointers that are possible to resolve
 
        -- | A cost model was missing for a language which was used.
      | ScriptErrorMissingCostModel Alonzo.Language
@@ -411,9 +422,10 @@ instance Error ScriptExecutionError where
       renderScriptWitnessIndex scriptWitness <> " is not a Plutus script \
       \witnessed tx input and cannot be spent using a Plutus script witness."
 
-  displayError (ScriptErrorMissingScript rdmrPtr) =
+  displayError (ScriptErrorMissingScript rdmrPtr resolveable) =
      "The redeemer pointer: " <> show rdmrPtr <> " points to a Plutus \
-     \script that does not exist."
+     \script that does not exist.\n" <>
+     "The pointers that can be resolved are: " <> show resolveable
 
   displayError (ScriptErrorMissingCostModel language) =
       "No cost model was found for language " <> show language
@@ -594,7 +606,7 @@ evaluateTransactionExecutionUnits _eraInMode systemstart history pparams utxo tx
         -- This should not occur while using cardano-cli because we zip together
         -- the Plutus script and the use site (txin, certificate etc). Therefore
         -- the redeemer pointer will always point to a Plutus script.
-        Alonzo.MissingScript rdmrPtr -> ScriptErrorMissingScript rdmrPtr
+        Alonzo.MissingScript rdmrPtr resolveable -> ScriptErrorMissingScript rdmrPtr resolveable
 
         Alonzo.NoCostModel l -> ScriptErrorMissingCostModel l
 
