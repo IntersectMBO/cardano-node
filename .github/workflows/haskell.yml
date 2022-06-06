@@ -56,7 +56,7 @@ jobs:
     - name: Add build script path
       run: echo "$(pwd)/.github/bin" >> $GITHUB_PATH
 
-    - name: Install pkgconfiglite
+    - name: Install pkgconfiglite (Windows)
       if: matrix.os == 'windows-latest'
       run: retry 2 choco install -y pkgconfiglite
 
@@ -84,9 +84,28 @@ jobs:
         echo "# pkg-config libsodium"
         pkg-config libsodium --cflags --libs
 
+    - name: Install lmdb (Windows)
+      if: matrix.os == 'windows-latest'
+      env:
+        RUNNER_TEMP: ${{ runner.temp }}
+      run: |
+        echo "RUNNER_TEMP=$RUNNER_TEMP"
+        cd "$RUNNER_TEMP"
+        RUNNER_TEMP_FWD="$(echo "$RUNNER_TEMP" | sed 's|\\|/|g')"
+        curl -Ls \
+          --connect-timeout 5 \
+          --max-time 10 \
+          --retry 5 \
+          --retry-delay 0 \
+          --retry-max-time 40 \
+          https://mirror.msys2.org/mingw/mingw64/mingw-w64-x86_64-lmdb-0.9.29-1-any.pkg.tar.zst -o lmdb-0.9.29.pkg.tar.zst
+        tar xvf lmdb-0.9.29.pkg.tar.zst
+
     - name: Install libsodium (MacOS)
       if: matrix.os == 'macos-latest'
-      run: brew install libsodium
+      run: |
+        brew install libsodium
+        brew install lmdb
 
     - name: Setup Github Scripts
       run: echo "$(pwd)/.github/bin" >> $GITHUB_PATH
@@ -102,6 +121,7 @@ jobs:
         sudo apt-get update
         sudo apt-get -y install libsodium23 libsodium-dev
         sudo apt-get -y install libsystemd0 libsystemd-dev
+        sudo apt-get -y install liblmdb-dev
         sudo apt-get -y remove --purge software-properties-common
         sudo apt-get -y autoremove
 
@@ -255,6 +275,18 @@ jobs:
 
         echo "# cabal.project.local"
         cat cabal.project.local
+
+
+    - name: Extra dirs (Windows)
+      if: matrix.os == 'windows-latest'
+      run: |
+        cat >> cabal.project.local <<EOF
+        package lmdb
+          extra-include-dirs: D:\a\_temp\mingw64\include
+          extra-lib-dirs:     D:\a\_temp\mingw64\lib
+                              D:\a\_temp\mingw64\bin
+        EOF
+        cat ./cabal.project.local
 
     - name: Record dependencies
       run: |
