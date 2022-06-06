@@ -788,6 +788,7 @@ type ScriptRedeemer = ScriptData
 
 data ScriptDatum witctx where
      ScriptDatumForTxIn    :: ScriptData -> ScriptDatum WitCtxTxIn
+     InlineScriptDatum     ::               ScriptDatum WitCtxTxIn
      NoScriptDatumForMint  ::               ScriptDatum WitCtxMint
      NoScriptDatumForStake ::               ScriptDatum WitCtxStake
 

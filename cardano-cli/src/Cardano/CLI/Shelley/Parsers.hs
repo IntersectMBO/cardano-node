@@ -322,13 +322,21 @@ pScriptRedeemerOrFile scriptFlagPrefix =
 pScriptDatumOrFile :: String -> WitCtx witctx -> Parser (ScriptDatumOrFile witctx)
 pScriptDatumOrFile scriptFlagPrefix witctx =
   case witctx of
-    WitCtxTxIn  -> ScriptDatumOrFileForTxIn <$>
+    WitCtxTxIn  -> (ScriptDatumOrFileForTxIn <$>
                      pScriptDataOrFile
                        (scriptFlagPrefix ++ "-datum")
                        "The script datum, in JSON syntax."
-                       "The script datum, in the given JSON file."
+                       "The script datum, in the given JSON file.") <|>
+                    pInlineDatumPresent scriptFlagPrefix
     WitCtxMint  -> pure NoScriptDatumOrFileForMint
     WitCtxStake -> pure NoScriptDatumOrFileForStake
+
+pInlineDatumPresent :: String -> Parser (ScriptDatumOrFile WitCtxTxIn)
+pInlineDatumPresent scriptFlagPrefix =
+  flag' InlineDatumPresentAtTxIn
+    (  long (scriptFlagPrefix ++ "-inline-datum-present")
+    <> Opt.help "Inline datum present at transaction input."
+    )
 
 pScriptDataOrFile :: String -> String -> String -> Parser ScriptDataOrFile
 pScriptDataOrFile dataFlagPrefix helpTextForValue helpTextForFile =

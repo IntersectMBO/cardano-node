@@ -61,7 +61,7 @@ $CARDANO_CLI transaction build \
   --tx-in "$txin" \
   --tx-out "$utxoaddr+$lovelaceattxindiv3" \
   --tx-out "$plutusscriptaddr+$lovelaceattxindiv3" \
-  --tx-out-datum-hash "$scriptdatumhash" \
+  --tx-out-inline-datum-file "$datumfilepath" \
   --tx-out "$dummyaddress+$lovelaceattxindiv3" \
   --tx-out-reference-script-file "$plutusscriptinuse" \
   --protocol-params-file "$WORK/pparams.json" \
@@ -147,7 +147,7 @@ $CARDANO_CLI transaction build \
   --tx-in "$plutuslockedutxotxin" \
   --tx-in-reference "$plutusreferencescripttxin" \
   --plutus-script-v2 \
-  --reference-tx-in-datum-file "$datumfilepath"  \
+  --reference-tx-in-inline-datum-present \
   --reference-tx-in-redeemer-file "$redeemerfilepath" \
   --tx-out "$dummyaddress2+10000000" \
   --protocol-params-file "$WORK/pparams.json"
