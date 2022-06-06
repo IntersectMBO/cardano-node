@@ -3,38 +3,33 @@
 ## 1.35.0 -- June 2022
 
 ### node changes
-- cardano-node-3633: init forwarding if needed. #3634
-- Fix tracing config to allow selection of the new tracing system #3655
 - RTS workaround converting SIGTERM into SIGINT #3641
-- cardano-node-3644: node state ADT expand. #3656
-- Add --shutdown-on-slot-synced test and ensure ExitSuccess #3670
-- cardano-node: Remove unused constraints from TraceConstraints #3822
-- Sync percentage fixed. #3854
-- cardano-node: register GC metrics. #3858
-- workbench: support new tracing & add a Plutus workload profile #3851
-- Old peers tracing was erroneously called in new tracing #3880
 - Install a dummy SIGHUP handler for non p2p mode #3896
+- Add --shutdown-on-slot-synced test and ensure ExitSuccess #3670
 - cardano-node: implement --shutdown-on-block-synced #3932
-- Tracer updates;
-  - Correct JSON logs. #3640
-  - Fix JSON data. #3654
-  - Fix time format in JSON log. #3660
-  - Double backslashes for forwarding. #3671
-  - Try Windows tests. #3714
-  - New tracers without prototypes #3731
-  - Better documentation generation for new-tracing #3834
-  - Fix Hyperlinks in generated docs #3842
-  - Change of configuration structure #3867
-  - Separate routing of metrics #3876
+- Tracing infra updates:
+  - Configuration structure rework, for better UX: #3867
+  - Rework implementation to eliminate prototypes from trace definitions #3731
+  - Fix tracing config to allow selection of the new tracing system #3655
+  - Register GC metrics. #3858
+  - Metrics are no longer impacted by severities and frequecy limits #3876
   - Porting ekg-direct metrics to new-tracing #3873
-  - init RTView #3852
+  - Node state data point extensions and fixes: #3854 #3656
+  - Old peers tracing was erroneously called in new tracing #3880
+  - Remove unused constraints from TraceConstraints #3822
+  - Properly init trace forwarding when needed. #3634
+- cardano-tracer:
+  - Format fixes for forwarded traces: (#3640, #3654, #3660, #3671).
+  - Test fixes: #3714
   - Remove symlink, fix logs cut off. #3930
-  - RTView: CPU usage (GC + App) as pct, https by default, errors export #3934
   - Fix bug with empty line #3962
+  - RTView, a web performance dashboard, as part of cardano-tracer #3852
+  - RTView: CPU usage (GC + App) as pct, https by default, errors export #3934
 - Documentation updates;
   - Update Haskell installation method and mention libsecp256k1 #3796
   - Update cardano-node-cli-reference.md #3630
-- Various build, testing and benchmarking infrastructure improvements. (#3638, #3643, #3705, #3789, #3812, #3824, #3941)
+  - Documentation improvements for new tracing. (#3834, #3842)
+- Various workbench, build, testing and benchmarking infrastructure improvements. (#3638, #3643, #3705, #3789, #3812, #3824, #3941, #3851)
 
 ### consensus changes
 - Block diffusion pipelining (#3688, #3742, #3752)
