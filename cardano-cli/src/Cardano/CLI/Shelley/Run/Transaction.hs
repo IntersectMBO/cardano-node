@@ -273,7 +273,7 @@ renderShelleyTxCmdError err =
       "Execution units not available in the protocol parameters. This is \
       \likely due to not being in the Alonzo era"
     ShelleyTxCmdReferenceScriptsNotSupportedInEra (AnyCardanoEra era) ->
-      "Reference scripts not supported in era: " <> show era
+      "TxCmd: Reference scripts not supported in era: " <> show era
 
 renderEra :: AnyCardanoEra -> Text
 renderEra (AnyCardanoEra ByronEra)   = "Byron"
@@ -391,13 +391,18 @@ runTxBuildRaw (AnyCardanoEra era)
               metadataFiles mpparams mUpdatePropFile
               outputFormat
               (TxBodyFile fpath) = do
+    let referenceInputsWithWits = [ (input, wit)
+                                  | (_, wit@(Just (PlutusReferenceScriptWitnessFiles input _ _ _ _)))
+                                       <- inputsAndScripts
+                                  ]
+
     txBodyContent <-
       TxBodyContent
         <$> validateTxIns  era inputsAndScripts
         <*> validateTxInsCollateral
                            era inputsCollateral
         <*> validateTxInsReference
-                           era inputsAndScripts
+                           era referenceInputsWithWits
         <*> validateTxOuts era txouts
         <*> validateTxTotalCollateral era mTotCollateral
         <*> validateTxReturnCollateral era mReturnCollateral
@@ -474,14 +479,18 @@ runTxBuild (AnyCardanoEra era) (AnyConsensusModeParams cModeParams) networkId mS
       consensusMode = consensusModeOnly cModeParams
       dummyFee = Just $ Lovelace 0
       inputsThatRequireWitnessing = [input | (input,_) <- txins]
-      referenceInputs = [input | (_, Just (PlutusReferenceScriptWitnessFiles input _ _ _ _)) <- txins]
+      referenceInputsWithWits = [ (input, wit)
+                                | (_, wit@(Just (PlutusReferenceScriptWitnessFiles input _ _ _ _)))
+                                    <- txins
+                                ]
+      referenceInputs = map fst referenceInputsWithWits
   case (consensusMode, cardanoEraStyle era) of
     (CardanoMode, ShelleyBasedEra sbe) -> do
       txBodyContent <-
         TxBodyContent
           <$> validateTxIns               era txins
           <*> validateTxInsCollateral     era txinsc
-          <*> validateTxInsReference      era txins
+          <*> validateTxInsReference      era referenceInputsWithWits
           <*> validateTxOuts              era txouts
           <*> validateTxTotalCollateral   era mtotcoll
           <*> validateTxReturnCollateral  era mReturnCollateral

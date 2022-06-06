@@ -966,7 +966,7 @@ fromShelleyScriptHash = ScriptHash
 
 
 -- ----------------------------------------------------------------------------
--- The simple native script language
+-- The simple script language
 --
 
 data SimpleScript lang where

@@ -63,7 +63,7 @@ $CARDANO_CLI transaction build \
   --tx-out "$plutusscriptaddr+$lovelaceattxindiv3" \
   --tx-out-datum-hash "$scriptdatumhash" \
   --tx-out "$dummyaddress+$lovelaceattxindiv3" \
-  --reference-script-file "$plutusscriptinuse" \
+  --tx-out-reference-script-file "$plutusscriptinuse" \
   --protocol-params-file "$WORK/pparams.json" \
   --out-file "$WORK/create-datum-output.body"
 

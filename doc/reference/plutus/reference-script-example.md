@@ -2,16 +2,16 @@
 
 ## What is a reference script?
 
-A reference script is a script that exists at a particular transaction output. It can be used to witness, for example, a UTxO at the corresponding script address of said reference script. Why is this useful? It means we no longer have to include the script in the transaction, greatly reducing its size
+A reference script is a script that exists at a particular transaction output. It can be used to witness, for example, a UTxO at the corresponding script address of said reference script. This is useful because the script does not have to be included in the transaction anymore, which significantly reduces the transaction size.
 
 ### An example of using a Plutus V2 reference script
 
-Below is an example that shows how to use a Plutus spending script. We will walk though the [shell script example of how to use a reference script to spend a tx input](scripts/plutus/example-reference-script-usage.sh).This is a step-by-step process involving:
+Below is an example that shows how to use a Plutus spending script. Here we discuss a [shell script example of how to use a reference script to spend a tx input](scripts/plutus/example-reference-script-usage.sh). This is a step-by-step process involving:
 
 + the creation of the `Required Redeemer` Plutus txin script
 + the creation of the `Required Redeemer` Plutus script at a transaction output (creation of the reference script)
-+ sending ADA and a datum to the Plutus script address
-+ spending ADA at the Plutus script address using the Plutus reference script
++ sending ada and a datum to the Plutus script address
++ spending ada at the Plutus script address using the Plutus reference script
 
 In this example we will use the [Required Redeemer](scripts/plutus/scripts/v2/required-redeemer.plutus) Plutus spending script. In order to execute a reference Plutus spending script, we require the following:
 
@@ -47,13 +47,14 @@ cabal install cardano-node
 ./scripts/babbage/mkfiles.sh
 ```
 
-To start your babbage cluster you need to run the `example/run/all.sh` shell script.
-The remainder of this guide briefly talks about the [shell script example](scripts/plutus/example-reference-script-usage.sh) that automatically does everything for you.
+To start your babbage cluster, you need to run the `example/run/all.sh` shell script.
+The remainder of this guide provides a brief walkthrough of the [shell script example](scripts/plutus/example-reference-script-usage.sh) that automatically creates a reference script and spends the utxo at
+the reference script's corresponding script address.
 
 #### Creating a reference script at a transaction output and
-#### sending ADA to the script address (with a datum)
+#### sending ada to the script address (with a datum)
 
-In order to use a reference script we must first create said reference script at a particular address. Note you cannot create a reference script at the same correspnding script address, this will result in a failure when trying to spend the transaction input at the script address.
+In order to use a reference script, we must first create this script at a particular transaction output.
 
 ```bash
 cardano-cli transaction build \
@@ -66,13 +67,14 @@ cardano-cli transaction build \
   --tx-out "$plutusscriptaddr+$lovelace" \
   --tx-out-datum-hash "$scriptdatumhash" \
   --tx-out "$dummyaddress+$lovelaceattxindiv3" \
-  --reference-script-file "$plutusscriptinuse" \
+  --tx-out-reference-script-file "$plutusscriptinuse" \
   --protocol-params-file "$WORK/pparams.json" \
   --out-file "$WORK/create-datum-output.body"
 ```
 
-There are a couple things happening in the following `build` command.
-Firstly we are sending ADA to the plutus script address along with a datum. This is reflected in the following lines:
+The following should be noted about this build command:
+
+Firstly, we are sending ada to the plutus script address along with a datum hash. This is reflected in the following lines:
 
 ```bash
 ...
@@ -83,12 +85,12 @@ Firstly we are sending ADA to the plutus script address along with a datum. This
 
 We have seen this before in the [plutus-spending-script-example.md](doc/reference/plutus/plutus-spending-script-example.md).
 
-Secondly we are creating a reference script at an address, which cannot be the same as the reference script address, of our choosing in the following lines:
+Secondly, we are creating a reference script at a tx output:
 
 ```bash
 ...
 --tx-out "$dummyaddress+$lovelaceattxindiv3" \
---reference-script-file "$plutusscriptinuse" \
+--tx-out-reference-script-file "$plutusscriptinuse" \
 ...
 ```
 
@@ -105,14 +107,14 @@ cardano-cli transaction sign \
 ```
 
 
-#### Spending ADA at the script address
+#### Spending ada at the script address
 
-Now that there is ADA at our script address, we must construct the appropriate transaction in order to spend it.
-Because we are using the `build` command we only have to concern ourselves with the following:
+Now that there is ada at our script address, we must construct the appropriate transaction in order to spend it.
+Because we are using the `build` command, we should only note the following:
 
 `$plutusutxotxin` - This is the tx input that sits at the Plutus script address (NB: It has a datum hash).
-`tx-in-reference` -This specifies the reference input you are using to witness a transaction input.
-`plutus-script-v2`- This specifies the version of the reference script at the reference input. There are no restrictions on the type of script we can have at a reference input.
+`tx-in-reference` - This specifies the reference input you are using to witness a transaction input.
+`plutus-script-v2`- This specifies the version of the reference script at the reference input.
 `reference-tx-in-datum-file` - This is the datum to be used with the reference script.
 `reference-tx-in-redeemer-file` - This is the redeemer to be used with the reference script.
 
@@ -140,7 +142,7 @@ cardano-cli transaction sign \
   --out-file $WORK/alonzo-ref-script.tx
 ```
 
-If there is ADA at `$dummyaddress2` then the Plutus script was successfully executed. Conversely, if the Plutus script failed, the collateral input would have been consumed.
+If there is ada at `$dummyaddress2`, then the Plutus script was successfully executed. Conversely, if the Plutus script failed, the collateral input would have been consumed.
 
 You can use the [example-txin-locking-plutus-script.sh](../../../scripts/plutus/example-txin-locking-plutus-script.sh) in conjunction with [mkfiles.sh alonzo](../../../scripts/byron-to-alonzo/mkfiles.sh) script to automagically run the `AlwaysSucceeds` script.
 

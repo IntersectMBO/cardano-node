@@ -256,15 +256,13 @@ pPlutusReferenceScriptWitnessFiles witctx autoBalanceExecUnits =
   pAnyScriptLang =
     Opt.flag' (AnyScriptLanguage $ SimpleScriptLanguage SimpleScriptV1)
       (  Opt.long "simple-script-v1"
-      <> Opt.help "Specify a simple script v1 reference script."
+      <> Opt.help "Specify a simple script v1 reference script. \
+                  \See documentation at doc/reference/simple-scripts.md"
       ) <|>
     Opt.flag' (AnyScriptLanguage $ SimpleScriptLanguage SimpleScriptV2)
       (  Opt.long "simple-script-v2"
-      <> Opt.help "Specify a simple script v2 reference script."
-      ) <|>
-    Opt.flag' (AnyScriptLanguage $ PlutusScriptLanguage PlutusScriptV1)
-      (  Opt.long "plutus-script-v1"
-      <> Opt.help "Specify a plutus script v1 reference script."
+      <> Opt.help "Specify a simple script v2 reference script. \
+                  \See documentation at doc/reference/simple-scripts.md"
       ) <|>
     Opt.flag' (AnyScriptLanguage $ PlutusScriptLanguage PlutusScriptV2)
       (  Opt.long "plutus-script-v2"
@@ -2189,7 +2187,7 @@ pTxOutDatum =
 pRefScriptFp :: Parser ReferenceScriptAnyEra
 pRefScriptFp =
   ReferenceScriptAnyEra <$> Opt.strOption
-    (  Opt.long "reference-script-file"
+    (  Opt.long "tx-out-reference-script-file"
     <> Opt.metavar "FILE"
     <> Opt.help "Reference script input file."
     <> Opt.completer (Opt.bashCompleter "file")
