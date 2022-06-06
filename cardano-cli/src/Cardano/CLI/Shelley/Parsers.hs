@@ -2332,7 +2332,7 @@ pTxByronWitnessCount =
       <> Opt.value 0
       )
 
-pQueryUTxOFilterWhole :: Parser (QueryUTxOFilter WholeL)
+pQueryUTxOFilterWhole :: Parser (QueryUTxOFilter 'WholeL)
 pQueryUTxOFilterWhole =
       pQueryUTxOWhole
   <|> pQueryUTxOByAddress
@@ -2343,7 +2343,7 @@ pQueryUTxOFilterWhole =
         <> Opt.help "Return the whole UTxO (only appropriate on small testnets)."
         )
 
-    pQueryUTxOByAddress :: Parser (QueryUTxOFilter WholeL)
+    pQueryUTxOByAddress :: Parser (QueryUTxOFilter 'WholeL)
     pQueryUTxOByAddress = QueryUTxOByAddress . Set.fromList <$> some pByAddress
 
     pByAddress :: Parser AddressAny
@@ -2354,11 +2354,11 @@ pQueryUTxOFilterWhole =
           <> Opt.help "Filter by Cardano address(es) (Bech32-encoded)."
           )
 
-pQueryUTxOFilterLarge :: Parser (QueryUTxOFilter LargeL)
+pQueryUTxOFilterLarge :: Parser (QueryUTxOFilter 'LargeL)
 pQueryUTxOFilterLarge =
       pQueryUTxOByTxIn
   where
-    pQueryUTxOByTxIn :: Parser (QueryUTxOFilter LargeL)
+    pQueryUTxOByTxIn :: Parser (QueryUTxOFilter 'LargeL)
     pQueryUTxOByTxIn = QueryUTxOByTxIn . Set.fromList <$> some pByTxIn
 
     pByTxIn :: Parser TxIn
