@@ -170,8 +170,6 @@ data TransactionCmd
       -- ^ Return collateral
       (Maybe Lovelace)
       -- ^ Total collateral
-      [TxIn]
-      -- ^ Reference inputs
       [RequiredSigner]
       -- ^ Required signers
       [TxOutAnyEra]
@@ -213,8 +211,6 @@ data TransactionCmd
       -- ^ Return collateral
       (Maybe Lovelace)
       -- ^ Total collateral
-      [TxIn]
-      -- ^ Reference inputs
       [TxOutAnyEra]
       -- ^ Normal outputs
       TxOutChangeAddress

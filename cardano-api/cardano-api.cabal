@@ -87,6 +87,7 @@ library
                         Cardano.Api.StakePoolMetadata
                         Cardano.Api.Tx
                         Cardano.Api.TxBody
+                        Cardano.Api.TxIn
                         Cardano.Api.TxMetadata
                         Cardano.Api.TxSubmit.ErrorRender
                         Cardano.Api.TxSubmit.Types

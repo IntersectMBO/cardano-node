@@ -52,9 +52,9 @@ import           Data.Word (Word64)
 
 import qualified Cardano.Chain.Slotting as Byron
 
-import           Cardano.Api (AddressAny, EpochNo, ExecutionUnits, Hash, InAnyCardanoEra,
-                   PaymentKey, ScriptData, SlotNo (SlotNo), Tx, Value, WitCtxMint, WitCtxStake,
-                   WitCtxTxIn)
+import           Cardano.Api (AddressAny, AnyScriptLanguage, EpochNo, ExecutionUnits, Hash,
+                   InAnyCardanoEra, PaymentKey, ScriptData, SlotNo (SlotNo), Tx, TxIn, Value,
+                   WitCtxMint, WitCtxStake, WitCtxTxIn)
 
 import qualified Cardano.Ledger.Crypto as Crypto
 
@@ -288,10 +288,21 @@ data ScriptWitnessFiles witctx where
                               -> ScriptWitnessFiles witctx
 
      PlutusScriptWitnessFiles :: ScriptFile
-                              -> ScriptDatumOrFile witctx
+                              -> ScriptDatumOrFile witctx -- TODO: Babbage Modify to allow specification of inline datums
                               -> ScriptRedeemerOrFile
                               -> ExecutionUnits
                               -> ScriptWitnessFiles witctx
+
+     -- TODO: SimpleReferenceScriptWitnessFiles :: ScriptWitnessFiles witctx
+
+     PlutusReferenceScriptWitnessFiles
+       :: TxIn
+       -> AnyScriptLanguage
+       -> ScriptDatumOrFile witctx -- TODO: Babbage Modify to allow specification of inline datums
+       -> ScriptRedeemerOrFile
+       -> ExecutionUnits
+       -> ScriptWitnessFiles witctx
+
 
 deriving instance Show (ScriptWitnessFiles witctx)
 

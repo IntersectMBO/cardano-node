@@ -115,6 +115,7 @@ module Cardano.Api.Shelley
     toShelleyScriptHash,
     fromShelleyScriptHash,
     PlutusScript(..),
+    PlutusScriptOrReferenceInput(..),
     toPlutusData,
     fromPlutusData,
     toAlonzoData,
