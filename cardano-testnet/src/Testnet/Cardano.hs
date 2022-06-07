@@ -4,11 +4,7 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeApplications #-}
 
-{-# OPTIONS_GHC -Wno-unused-imports -Wno-unused-local-binds -Wno-unused-matches #-}
-
-#if !defined(mingw32_HOST_OS)
-#define UNIX
-#endif
+{-# OPTIONS_GHC -Wno-unused-local-binds -Wno-unused-matches #-}
 
 module Testnet.Cardano
   ( ForkPoint(..)
@@ -27,55 +23,41 @@ module Testnet.Cardano
   , testnet
   ) where
 
-#ifdef UNIX
-import           Prelude (Bool (..), map)
-#else
-import           Prelude (Bool (..))
-#endif
-
 import           Control.Applicative (pure)
-import           Control.Monad
+import           Control.Monad (Monad (..), forM_, void, forM, (=<<), when, fmap, return)
 import           Control.Monad.IO.Class (liftIO)
-import           Data.Aeson (Value, (.=))
-import           Data.Bool
+import           Data.Aeson ((.=))
+import           Data.Bool (Bool(..))
 import           Data.ByteString.Lazy (ByteString)
-import           Data.Either
-import           Data.Eq
-import           Data.Function
-import           Data.Functor
-import           Data.Int
-import           Data.List (length, replicate, unzip3, unzip4, unzip5, zip, zipWith4, zipWith5,
-                   zipWith6, (\\))
-import           Data.Maybe
-import           Data.Ord
-import           Data.Semigroup
-import           Data.String
-import           GHC.Enum
-import           GHC.Float
-import           GHC.Num
-import           GHC.Real
+import           Data.Eq (Eq)
+import           Data.Function (($), (.), flip, id)
+import           Data.Functor ((<$>), (<&>))
+import           Data.Int (Int)
+import           Data.List (length, replicate, unzip5, zip, zipWith6, (\\))
+import           Data.Maybe (Maybe(Just), fromJust)
+import           Data.Ord (Ord((<=)))
+import           Data.Semigroup (Semigroup((<>)))
+import           Data.String (IsString(fromString), String)
+import           GHC.Enum (Bounded, Enum)
+import           GHC.Float (Double)
+import           GHC.Num (Num((-), (+)))
+import           GHC.Real (fromIntegral, Integral(div))
 import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket (..))
-import           Hedgehog.Extras.Stock.Time
+import           Hedgehog.Extras.Stock.Time (formatIso8601, showUTCTimeSeconds)
+import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter (..))
+import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
 import           System.FilePath.Posix ((</>))
 import           System.IO (FilePath)
-import           Text.Read
-import           Text.Show
-
-#ifdef UNIX
-import           System.Posix.Files
-#endif
+import           Text.Read (Read)
+import           Text.Show (Show(show))
 
 import qualified Cardano.Node.Configuration.Topology as NonP2P
 import qualified Cardano.Node.Configuration.TopologyP2P as P2P
-import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter (..))
-import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
-
 import qualified Data.Aeson as J
 import qualified Data.HashMap.Lazy as HM
 import qualified Data.List as L
 import qualified Data.Map as M
 import qualified Data.Time.Clock as DTC
-import qualified Data.Yaml as Y
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Stock.Aeson as J
 import qualified Hedgehog.Extras.Stock.IO.File as IO
@@ -89,9 +71,8 @@ import qualified Hedgehog.Extras.Test.File as H
 import qualified Hedgehog.Extras.Test.Network as H
 import qualified Hedgehog.Extras.Test.Process as H
 import qualified System.Directory as IO
-import qualified System.Environment as IO
-import qualified System.IO as IO
 import qualified System.Info as OS
+import qualified System.IO as IO
 import qualified System.Process as IO
 import qualified Test.Process as H
 import qualified Testnet.Conf as H
@@ -796,7 +777,7 @@ testnet testnetOptions H.Conf {..} = do
     when (OS.os `L.elem` ["darwin", "linux"]) $ do
       H.onFailure . H.noteIO_ $ IO.readProcess "lsof" ["-iTCP:" <> portString, "-sTCP:LISTEN", "-n", "-P"] ""
 
-    pure (sprocket, stdIn, nodeStdoutFile, nodeStderrFile, hProcess)
+    return (sprocket, stdIn, nodeStdoutFile, nodeStderrFile, hProcess)
 
   H.threadDelay 100000
 

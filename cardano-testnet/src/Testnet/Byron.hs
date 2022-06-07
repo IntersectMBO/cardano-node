@@ -2,7 +2,7 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeApplications #-}
 
-{-# OPTIONS_GHC -Wno-unused-imports -Wno-unused-local-binds -Wno-unused-matches #-}
+{-# OPTIONS_GHC -Wno-unused-local-binds -Wno-unused-matches #-}
 
 module Testnet.Byron
   ( testnet
@@ -11,31 +11,30 @@ module Testnet.Byron
   , defaultTestnetOptions
   ) where
 
-import           Control.Monad
-import           Data.Aeson (Value, (.=))
-import           Data.Bool (Bool (..))
+import           Control.Monad (Monad(..), forM_, void, (=<<), when)
+import           Data.Aeson (Value)
+import           Data.Bool (Bool(..))
 import           Data.ByteString.Lazy (ByteString)
-import           Data.Eq
-import           Data.Function
-import           Data.Functor
-import           Data.Int
-import           Data.Maybe
-import           Data.Ord
-import           Data.Semigroup
-import           Data.String
-import           GHC.Num
-import           GHC.Real
+import           Data.Eq (Eq)
+import           Data.Function (($), (.), flip)
+import           Data.Functor (Functor(..), (<&>))
+import           Data.Int (Int)
+import           Data.Maybe (Maybe(Just))
+import           Data.Ord (Ord((<=)))
+import           Data.Semigroup (Semigroup((<>)))
+import           Data.String (String)
+import           GHC.Num (Num((-)))
+import           GHC.Real (fromIntegral)
 import           Hedgehog.Extras.Stock.Aeson (rewriteObject)
-import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket (..))
-import           Hedgehog.Extras.Stock.Time
+import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket(..))
+import           Hedgehog.Extras.Stock.Time (showUTCTimeSeconds)
 import           System.FilePath.Posix ((</>))
-import           Text.Show
+import           Text.Show (Show(show))
+import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter(..))
+import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint(..))
 
 import qualified Cardano.Node.Configuration.Topology as NonP2P
 import qualified Cardano.Node.Configuration.TopologyP2P as P2P
-import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter (..))
-import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
-
 import qualified Data.Aeson as J
 import qualified Data.HashMap.Lazy as HM
 import qualified Data.List as L
@@ -50,12 +49,11 @@ import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
 import qualified Hedgehog.Extras.Test.Network as H
 import qualified Hedgehog.Extras.Test.Process as H
-import qualified System.IO as IO
 import qualified System.Info as OS
+import qualified System.IO as IO
 import qualified System.Process as IO
 import qualified Test.Process as H
 import qualified Testnet.Conf as H
-import qualified Testnet.List as L
 
 {- HLINT ignore "Reduce duplication" -}
 {- HLINT ignore "Redundant <&>" -}
