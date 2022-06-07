@@ -1,6 +1,7 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# OPTIONS_GHC -Wno-name-shadowing #-}
+{-# LANGUAGE GeneralisedNewtypeDeriving #-}
+{-# OPTIONS_GHC -Wno-name-shadowing -Wno-orphans #-}
 {- HLINT ignore "Use head" -}
 module Cardano.Analysis.API
   ( module Cardano.Analysis.API
@@ -26,7 +27,7 @@ import Cardano.Unlog.LogObject  hiding (Text)
 import Cardano.Unlog.Render
 import Cardano.Util
 
-import Data.Distribution
+import Data.CDF
 
 --
 -- * API types
@@ -38,22 +39,22 @@ data BlockPropagation
     { bpVersion             :: !Version
     , bpDomainSlots         :: !(DataDomain SlotNo)
     , bpDomainBlocks        :: !(DataDomain BlockNo)
-    , bpForgerChecks        :: !(Distribution Double NominalDiffTime)
-    , bpForgerLeads         :: !(Distribution Double NominalDiffTime)
-    , bpForgerForges        :: !(Distribution Double NominalDiffTime)
-    , bpForgerAdoptions     :: !(Distribution Double NominalDiffTime)
-    , bpForgerAnnouncements :: !(Distribution Double NominalDiffTime)
-    , bpForgerSends         :: !(Distribution Double NominalDiffTime)
-    , bpPeerNotices         :: !(Distribution Double NominalDiffTime)
-    , bpPeerRequests        :: !(Distribution Double NominalDiffTime)
-    , bpPeerFetches         :: !(Distribution Double NominalDiffTime)
-    , bpPeerAdoptions       :: !(Distribution Double NominalDiffTime)
-    , bpPeerAnnouncements   :: !(Distribution Double NominalDiffTime)
-    , bpPeerSends           :: !(Distribution Double NominalDiffTime)
-    , bpPropagation         :: ![(Double, Distribution Double NominalDiffTime)]
-    , bpSizes               :: !(Distribution Double Int)
+    , bpForgerChecks        :: !(DirectCDF NominalDiffTime)
+    , bpForgerLeads         :: !(DirectCDF NominalDiffTime)
+    , bpForgerForges        :: !(DirectCDF NominalDiffTime)
+    , bpForgerAdoptions     :: !(DirectCDF NominalDiffTime)
+    , bpForgerAnnouncements :: !(DirectCDF NominalDiffTime)
+    , bpForgerSends         :: !(DirectCDF NominalDiffTime)
+    , bpPeerNotices         :: !(DirectCDF NominalDiffTime)
+    , bpPeerRequests        :: !(DirectCDF NominalDiffTime)
+    , bpPeerFetches         :: !(DirectCDF NominalDiffTime)
+    , bpPeerAdoptions       :: !(DirectCDF NominalDiffTime)
+    , bpPeerAnnouncements   :: !(DirectCDF NominalDiffTime)
+    , bpPeerSends           :: !(DirectCDF NominalDiffTime)
+    , bpPropagation         :: ![(Double, DirectCDF NominalDiffTime)]
+    , bpSizes               :: !(DirectCDF Int)
     }
-  deriving (Generic, FromJSON, ToJSON, Show)
+  deriving (Generic, Show, FromJSON, ToJSON)
 
 -- | All events related to a block.
 data BlockEvents
@@ -66,7 +67,7 @@ data BlockEvents
   , beEpochSafeInt :: !EpochSafeInt
   , beForge        :: !BlockForge
   , beObservations :: [BlockObservation]
-  , bePropagation  :: !(Distribution Double NominalDiffTime)
+  , bePropagation  :: !(DirectCDF NominalDiffTime)
                       -- ^ CDF of slot-start-to-adoptions on cluster
   , beOtherBlocks  :: [Hash]
   , beErrors       :: [BPError]
@@ -163,23 +164,25 @@ data MachPerf' f
     { sVersion                  :: !Version
     , sDomainSlots              :: !(f (DataDomain SlotNo))
     -- distributions
-    , sMissDistrib              :: !(f (Distribution Double Double))
-    , sLeadsDistrib             :: !(f (Distribution Double Word64))
-    , sUtxoDistrib              :: !(f (Distribution Double Word64))
-    , sDensityDistrib           :: !(f (Distribution Double Double))
-    , sSpanCheckDistrib         :: !(f (Distribution Double NominalDiffTime))
-    , sSpanLeadDistrib          :: !(f (Distribution Double NominalDiffTime))
-    , sSpanForgeDistrib         :: !(f (Distribution Double NominalDiffTime))
-    , sBlocklessDistrib         :: !(f (Distribution Double Word64))
-    , sSpanLensCpuDistrib       :: !(f (Distribution Double Int))
-    , sSpanLensCpuEpochDistrib  :: !(f (Distribution Double Int))
-    , sSpanLensCpuRwdDistrib    :: !(f (Distribution Double Int))
-    , sResourceDistribs         :: !(Resources (f (Distribution Double Word64)))
+    , sMissDistrib              :: !(f (DirectCDF Double))
+    , sLeadsDistrib             :: !(f (DirectCDF Word64))
+    , sUtxoDistrib              :: !(f (DirectCDF Word64))
+    , sDensityDistrib           :: !(f (DirectCDF Double))
+    , sSpanCheckDistrib         :: !(f (DirectCDF NominalDiffTime))
+    , sSpanLeadDistrib          :: !(f (DirectCDF NominalDiffTime))
+    , sSpanForgeDistrib         :: !(f (DirectCDF NominalDiffTime))
+    , sBlocklessDistrib         :: !(f (DirectCDF Word64))
+    , sSpanLensCpuDistrib       :: !(f (DirectCDF Int))
+    , sSpanLensCpuEpochDistrib  :: !(f (DirectCDF Int))
+    , sSpanLensCpuRwdDistrib    :: !(f (DirectCDF Int))
+    , sResourceDistribs         :: !(Resources (f (DirectCDF Word64)))
     }
   deriving (Generic)
 
 type    MachPerf = MachPerf' Identity
 type ClusterPerf = MachPerf' Identity
+deriving newtype instance FromJSON a => FromJSON (I a)
+deriving newtype instance ToJSON   a => ToJSON   (I a)
 deriving instance NFData MachPerf
 deriving instance Show   MachPerf
 deriving instance ToJSON MachPerf
@@ -276,7 +279,7 @@ bpFieldsPropagation :: DField a -> Bool
 bpFieldsPropagation Field{fHead2} = elem fHead2
   [ "0.50", "0.80", "0.90", "0.92", "0.94", "0.96", "0.98", "1.00" ]
 
-instance RenderDistributions BlockPropagation where
+instance RenderDirectCDFs BlockPropagation where
   rdFields _ =
     --  Width LeftPad
     [ Field 6 0 "fChecked"      (f!!0) "Checkd" $ DDeltaT bpForgerChecks
@@ -296,11 +299,11 @@ instance RenderDistributions BlockPropagation where
             (T.take 4 $ T.pack $ printf "%.04f" ps)
             (DDeltaT ((\(ps', d) ->
                          if ps' == ps then d
-                         else error $ printf "Percspec mismatch: [%d]: exp=%f act=%f" i ps ps')
+                         else error $ printf "Centispec mismatch: [%d]: exp=%f act=%f" i ps ps')
                       . fromMaybe
                         (error $ printf "No percentile %d/%f in bpPropagation." i ps)
                       . flip atMay i . bpPropagation))
-    | (i, Perc ps) <- zip [0::Int ..] (adoptionPcts <> [Perc 1.0]) ] ++
+    | (i, Centi ps) <- zip [0::Int ..] (adoptionPcts <> [Centi 1.0]) ] ++
     [ Field 9 0 "sizes"         "Size"  "bytes" $ DInt    bpSizes
     ]
    where
@@ -309,9 +312,9 @@ instance RenderDistributions BlockPropagation where
      r = nChunksEachOf aLen 6 "Slot-rel. Δt to adoption centile:"
      aLen = length adoptionPcts + 1 -- +1 is for the implied 1.0 percentile
 
-adoptionPcts :: [PercSpec Double]
+adoptionPcts :: [CentiSpec]
 adoptionPcts =
-  [ Perc 0.5, Perc 0.8, Perc 0.9, Perc 0.92, Perc 0.94, Perc 0.96, Perc 0.98 ]
+  [ Centi 0.5, Centi 0.8, Centi 0.9, Centi 0.92, Centi 0.94, Centi 0.96, Centi 0.98 ]
 
 instance RenderTimeline BlockEvents where
   rtFields _ =
@@ -355,8 +358,8 @@ instance RenderTimeline BlockEvents where
      m = nChunksEachOf 3 4 "Missing"
      n = nChunksEachOf 2 4 "Negative"
 
-     percSpec :: Double -> Distribution Double NominalDiffTime -> NominalDiffTime
-     percSpec ps d = dPercSpec (Perc ps) d
+     percSpec :: Double -> DirectCDF NominalDiffTime -> NominalDiffTime
+     percSpec ps d = dCentiSpec (Centi ps) d
        & fromMaybe (error $ printf "No percentile %f in distribution." ps)
      af  f = avg . fmap f
      af' f = avg . mapMaybe f
@@ -382,7 +385,7 @@ mtFieldsReport :: DField a -> Bool
 mtFieldsReport Field{fId} = elem fId
   [ "CPU", "GC", "MUT", "RSS", "Heap", "Live", "Alloc" ]
 
-instance RenderDistributions MachPerf where
+instance RenderDirectCDFs MachPerf where
   rdFields _ =
     --  Width LeftPad
     [ Field 4 0 "missR"       "Miss"  "ratio" $ DFloat  (i.               sMissDistrib)

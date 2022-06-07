@@ -45,7 +45,7 @@ import Cardano.Slotting.Slot    (EpochNo(..), SlotNo(..))
 import Ouroboros.Network.Block  (BlockNo(..))
 
 import Data.Accum
-import Data.Distribution
+import Data.CDF
 
 import Cardano.Analysis.API
 import Cardano.Analysis.Chain
@@ -233,32 +233,6 @@ beForgedAt :: BlockEvents -> UTCTime
 beForgedAt BlockEvents{beForge=BlockForge{..}} =
   bfForged `afterSlot` bfSlotStart
 
-mapChainToBlockEventCDF ::
-  (Real a, ToRealFrac a Double)
-  => [PercSpec Double]
-  -> [BlockEvents]
-  -> (BlockEvents -> Maybe a)
-  -> Distribution Double a
-mapChainToBlockEventCDF percs cbes proj =
-  computeDistribution percs $ mapMaybe proj cbes
-
-mapChainToPeerBlockObservationCDF ::
-     [PercSpec Double]
-  -> [BlockEvents]
-  -> (BlockObservation -> Maybe NominalDiffTime)
-  -> String
-  -> Distribution Double NominalDiffTime
-mapChainToPeerBlockObservationCDF percs cbes proj desc =
-  computeDistribution percs allObservations
- where
-   allObservations :: [NominalDiffTime]
-   allObservations =
-     concat $ cbes <&> blockObservations
-
-   blockObservations :: BlockEvents -> [NominalDiffTime]
-   blockObservations be =
-     proj `mapMaybe` filter isValidBlockObservation (beObservations be)
-
 buildMachViews :: Run -> [(JsonLogfile, [LogObject])] -> IO [(JsonLogfile, MachView)]
 buildMachViews run = mapConcurrentlyPure (fst &&& blockEventMapsFromLogObjects run)
 
@@ -367,7 +341,7 @@ rebuildChain run@Run{genesis} xs@(fmap snd -> machViews) = do
              <*> Just boeSending
              <*> Just boeErrorsCrit
              <*> Just boeErrorsSoft
-     , bePropagation  = computeDistribution adoptionPcts adoptions
+     , bePropagation  = computeCDF adoptionPcts adoptions
      , beOtherBlocks  = otherBlocks
      , beErrors =
          errs
@@ -452,15 +426,47 @@ blockProp run@Run{genesis} chain domSlot domBlock = do
     , bpPeerAnnouncements   = observerEventsCDF boAnnounced          "announced"
     , bpPeerSends           = observerEventsCDF boSending            "sending"
     , bpPropagation         =
-      [ (p', forgerEventsCDF (Just . dPercSpec' "bePropagation" p . bePropagation))
-      | p@(Perc p') <- adoptionPcts <> [Perc 1.0] ]
+      [ (p', forgerEventsCDF (Just . dCentiSpec' "bePropagation" p . bePropagation))
+      | p@(Centi p') <- adoptionPcts <> [Centi 1.0] ]
     , bpSizes               = forgerEventsCDF   (Just . bfBlockSize . beForge)
     , bpVersion             = getVersion
     }
  where
-   forgerEventsCDF   :: (Real a, ToRealFrac a Double) => (BlockEvents -> Maybe a) -> Distribution Double a
-   forgerEventsCDF   = mapChainToBlockEventCDF           stdPercSpecs chain
-   observerEventsCDF = mapChainToPeerBlockObservationCDF stdPercSpecs chain
+   forgerEventsCDF   :: (Real a) => (BlockEvents -> Maybe a) -> DirectCDF a
+   forgerEventsCDF   = flip (witherToDistrib (computeCDF stdCentiSpecs)) chain
+   observerEventsCDF = mapChainToPeerBlockObservationCDF stdCentiSpecs chain
+
+   mapChainToBlockEventCDF ::
+     (Real a)
+     => [CentiSpec]
+     -> [BlockEvents]
+     -> (BlockEvents -> Maybe a)
+     -> DirectCDF a
+   mapChainToBlockEventCDF percs cbes proj =
+     computeCDF percs $
+       mapMaybe proj cbes
+
+   mapChainToPeerBlockObservationCDF ::
+        [CentiSpec]
+     -> [BlockEvents]
+     -> (BlockObservation -> Maybe NominalDiffTime)
+     -> String
+     -> DirectCDF NominalDiffTime
+   mapChainToPeerBlockObservationCDF percs cbes proj desc =
+     computeCDF percs $
+       concat $ cbes <&> blockObservations
+    where
+      blockObservations :: BlockEvents -> [NominalDiffTime]
+      blockObservations be =
+        proj `mapMaybe` filter isValidBlockObservation (beObservations be)
+
+witherToDistrib ::
+     ([b] -> DirectCDF b)
+  -> (a -> Maybe b)
+  -> [a]
+  -> DirectCDF b
+witherToDistrib distrify proj xs =
+  distrify $ mapMaybe proj xs
 
 -- | Given a single machine's log object stream, recover its block map.
 blockEventMapsFromLogObjects :: Run -> (JsonLogfile, [LogObject]) -> MachView

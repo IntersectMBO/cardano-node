@@ -19,7 +19,7 @@ import Data.Vector qualified as Vec
 import Data.Time.Clock (NominalDiffTime, UTCTime)
 import Data.Time.Clock qualified as Time
 
-import Data.Distribution
+import Data.CDF
 
 import Cardano.Analysis.API
 import Cardano.Analysis.Chain
@@ -137,12 +137,12 @@ slotStatsMachPerf run (f, slots) =
   , sSpanLensCpuDistrib       = dist sssSpanLensCpu
   , sSpanLensCpuEpochDistrib  = dist sssSpanLensCpuEpoch
   , sSpanLensCpuRwdDistrib    = dist sssSpanLensCpuRwd
-  , sResourceDistribs         = i <$> computeResDistrib stdPercSpecs resDistProjs slots
+  , sResourceDistribs         = i <$> computeResDistrib stdCentiSpecs resDistProjs slots
   }
  where
    i = Identity
-   dist :: (Real a, ToRealFrac a Double) => [a] -> Identity (Distribution Double a)
-   dist = i . computeDistribution stdPercSpecs
+   dist :: (Real a) => [a] -> Identity (DirectCDF a)
+   dist = i . computeCDF stdCentiSpecs
 
    SlotStatsSummary{..} = slotStatsSummary run slots
 

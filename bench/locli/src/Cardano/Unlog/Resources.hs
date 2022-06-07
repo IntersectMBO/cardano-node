@@ -16,7 +16,7 @@ module Cardano.Unlog.Resources
 import Cardano.Prelude
 
 import Data.Accum
-import Data.Distribution
+import Data.CDF
 import Data.Time.Clock (UTCTime)
 
 import Cardano.Logging.Resources.Types
@@ -52,15 +52,15 @@ type ResDistribProjections a = Resources (a -> Maybe Word64)
 
 computeResDistrib ::
   forall a
-  .  [PercSpec Double]
+  .  [CentiSpec]
   -> ResDistribProjections a
   -> [a]
-  -> Resources (Distribution Double Word64)
+  -> Resources (DirectCDF Word64)
 computeResDistrib percentiles projs xs =
   compDist <$> projs
  where
-   compDist :: (a -> Maybe Word64) -> Distribution Double Word64
-   compDist proj = computeDistribution percentiles
+   compDist :: (a -> Maybe Word64) -> DirectCDF Word64
+   compDist proj = computeCDF percentiles
      (catMaybes . toList $ proj <$> xs)
 
 type ResContinuity a = Resources (a -> Maybe a)

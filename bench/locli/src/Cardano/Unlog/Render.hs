@@ -9,15 +9,14 @@ module Cardano.Unlog.Render (module Cardano.Unlog.Render) where
 import Prelude                  (head, id, last, tail)
 import Cardano.Prelude          hiding (head)
 
-import Control.Arrow            ((&&&))
 import Data.List                (dropWhileEnd)
 import Data.Text                qualified as T
 import Data.Time.Clock          (NominalDiffTime)
-import Text.Printf              (printf)
 
-import Data.Distribution
+import Data.CDF
 
 import Cardano.Analysis.Run
+import Cardano.Util
 
 
 data RenderMode
@@ -25,7 +24,7 @@ data RenderMode
   | RenderCsv
   deriving (Eq, Show)
 
-class Show a => RenderDistributions a where
+class Show a => RenderDirectCDFs a where
   rdFields :: Run -> [DField a]
 
 class Show a => RenderTimeline a where
@@ -48,10 +47,10 @@ type DField a = Field DSelect a
 type IField a = Field ISelect a
 
 data DSelect a
-  = DInt    (a -> Distribution Double Int)
-  | DWord64 (a -> Distribution Double Word64)
-  | DFloat  (a -> Distribution Double Double)
-  | DDeltaT (a -> Distribution Double NominalDiffTime)
+  = DInt    (a -> DirectCDF Int)
+  | DWord64 (a -> DirectCDF Word64)
+  | DFloat  (a -> DirectCDF Double)
+  | DDeltaT (a -> DirectCDF NominalDiffTime)
 
 data ISelect a
   = IInt    (a -> Int)
@@ -60,8 +59,8 @@ data ISelect a
   | IDeltaT (a -> NominalDiffTime)
   | IText   (a -> Text)
 
-mapSomeFieldDistribution :: (forall b. Distribution Double b -> c) -> a -> DSelect a -> c
-mapSomeFieldDistribution f a = \case
+mapSomeFieldDirectCDF :: (forall b. DirectCDF b -> c) -> a -> DSelect a -> c
+mapSomeFieldDirectCDF f a = \case
   DInt    s -> f (s a)
   DWord64 s -> f (s a)
   DFloat  s -> f (s a)
@@ -103,48 +102,48 @@ renderTimeline run flt withCommentary xs =
    renderLine' lpfn wfn rfn = renderField lpfn wfn rfn <$> fields
    renderField lpfn wfn rfn f = T.replicate (lpfn f) " " <> T.center (wfn f) ' ' (rfn f)
 
-renderDistributions :: forall a. RenderDistributions a =>
-     Run -> RenderMode -> (DField a -> Bool) -> Maybe [PercSpec Double] -> a
+renderDirectCDFs :: forall a. RenderDirectCDFs a =>
+     Run -> RenderMode -> (DField a -> Bool) -> Maybe [CentiSpec] -> a
   -> [Text]
-renderDistributions run mode flt mPercs x =
+renderDirectCDFs run mode flt mCentis x =
   case mode of
     RenderPretty -> catMaybes [head1, head2] <> pLines <> sizeAvg
     RenderCsv    -> headCsv : pLines
      where headCsv = T.intercalate "," $ fId <$> fields
 
  where
-   percSpecs :: [PercSpec Double]
-   percSpecs = maybe (mapSomeFieldDistribution distribPercSpecs x (fSelect . head $ rdFields run))
+   percSpecs :: [CentiSpec]
+   percSpecs = maybe (mapSomeFieldDirectCDF distribCentiSpecs x (fSelect . head $ rdFields run))
                      id
-                     mPercs
+                     mCentis
 
    -- XXX:  very expensive, the way it's used below..
-   subsetDistrib :: Distribution Double b -> Distribution Double b
-   subsetDistrib = maybe id subsetDistribution mPercs
+   subsetDistrib :: DirectCDF b -> DirectCDF b
+   subsetDistrib = maybe id subsetCDF mCentis
 
    pLines :: [Text]
-   pLines = fLine <$> [0..(nPercs - 1)]
+   pLines = fLine <$> [0..(nCentis - 1)]
 
    fLine :: Int -> Text
    fLine pctIx = (if mode == RenderPretty
                   then renderLineDistPretty
                   else renderLineDistCsv) $
     \Field{..} ->
-      let getCapPerc :: forall b c. Distribution b c -> c
-          getCapPerc = dPercIx pctIx
+      let getCapCenti :: forall c. DirectCDF c -> c
+          getCapCenti = dCentiIx pctIx
       in T.pack $ case fSelect of
         DInt    (($x)->d) -> (if mode == RenderPretty
                               then printf "%*d" fWidth
-                              else printf "%d") (getCapPerc $ subsetDistrib d)
+                              else printf "%d") (getCapCenti $ subsetDistrib d)
         DWord64 (($x)->d) -> (if mode == RenderPretty
                               then printf "%*d" fWidth
-                              else printf "%d") (getCapPerc $ subsetDistrib d)
+                              else printf "%d") (getCapCenti $ subsetDistrib d)
         DFloat  (($x)->d) -> (if mode == RenderPretty
                               then take fWidth . printf "%*F" (fWidth - 2)
-                              else printf "%F") (getCapPerc $ subsetDistrib d)
+                              else printf "%F") (getCapCenti $ subsetDistrib d)
         DDeltaT (($x)->d) -> (if mode == RenderPretty
                               then take fWidth else id)
-                             . dropWhileEnd (== 's') . show $ getCapPerc $ subsetDistrib d
+                             . dropWhileEnd (== 's') . show $ getCapCenti $ subsetDistrib d
 
    head1, head2 :: Maybe Text
    head1 = if all ((== 0) . T.length . fHead1) fields then Nothing
@@ -156,12 +155,12 @@ renderDistributions run mode flt mPercs x =
    sizeAvg = fmap (T.intercalate " ")
      [ (T.center (fWidth (head fields)) ' ' "avg" :) $
        (\f -> flip (renderField fLeftPad fWidth) f $ const $
-                mapSomeFieldDistribution
+                mapSomeFieldDirectCDF
                   (T.take (fWidth f) .T.pack . printf "%F" . dAverage)  x (fSelect f))
        <$> tail fields
      , (T.center (fWidth (head fields)) ' ' "size" :) $
        (\f -> flip (renderField fLeftPad fWidth) f $ const $
-                mapSomeFieldDistribution
+                mapSomeFieldDirectCDF
                   (T.take (fWidth f) . T.pack . show . dSize)    x (fSelect f))
        <$> tail fields
      ]
@@ -182,30 +181,29 @@ renderDistributions run mode flt mPercs x =
 
    percField :: DField a
    percField = Field 6 0 "%tile" "" "%tile" (DFloat $ const percsDistrib)
-   nPercs = length $ dPercentiles percsDistrib
-   percsDistrib = mapSomeFieldDistribution
-                    (distribPercsAsDistrib . subsetDistrib) x (fSelect $ head (rdFields run))
-   distribPercsAsDistrib :: Distribution Double b -> Distribution Double Double
-   distribPercsAsDistrib Distribution{..} =
-     Distribution
-       (length dPercentiles)
+   nCentis = length $ dCentiles percsDistrib
+   percsDistrib = mapSomeFieldDirectCDF
+                    (distribCentisAsDistrib . subsetDistrib) x (fSelect $ head (rdFields run))
+   distribCentisAsDistrib :: DirectCDF b -> DirectCDF Double
+   distribCentisAsDistrib CDF{..} =
+     CDF
+       (length dCentiles)
        0.5
        0.5
-       (head dPercentiles & psFrac . pctSpec,
-        last dPercentiles & psFrac . pctSpec)
-       $ (\p -> p {pctSample = psFrac (pctSpec p)}) <$> dPercentiles
+       (head dCentiles & unCentiSpec . fst,
+        last dCentiles & unCentiSpec . fst)
+       $ (id &&& I . unCentiSpec) . fst <$> dCentiles
 
    nsamplesField :: DField a
    nsamplesField = Field 6 0 "Nsamp" "" "Nsamp" (DInt $ const nsamplesDistrib)
-   nsamplesDistrib = computeDistribution percSpecs populationIndices
+   nsamplesDistrib = computeCDF percSpecs populationIndices
    populationIndices :: [Int]
    populationIndices = [1..maxPopulationSize]
    maxPopulationSize :: Int
-   maxPopulationSize = last . sort $ mapSomeFieldDistribution dSize x . fSelect <$> rdFields run
+   maxPopulationSize = last . sort $ mapSomeFieldDirectCDF dSize x . fSelect <$> rdFields run
 
 -- * Auxiliaries
 --
-
 nChunksEachOf :: Int -> Int -> Text -> [Text]
 nChunksEachOf chunks each center =
   T.chunksOf each (T.center (each * chunks) ' ' center)

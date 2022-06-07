@@ -20,8 +20,11 @@ import Control.DeepSeq                  qualified as DS
 import Control.Monad.Trans.Except.Extra (firstExceptT, newExceptT)
 import Data.Aeson                       (FromJSON, ToJSON, encode, eitherDecode)
 import Data.ByteString.Lazy.Char8       qualified as LBS
+import Data.List                        (span)
 import Data.Text                        qualified as T
 import Data.Text.Short                  (fromText)
+import Data.Vector                      (Vector)
+import Data.Vector                      qualified as Vec
 import GHC.Base                         (build)
 import Text.Printf                      (printf)
 
@@ -150,3 +153,14 @@ dumpAssociatedTextStreams ident xss = liftIO $
         progress ident (Q f)
         withFile (replaceExtension f $ ident <> ".txt") WriteMode $ \hnd -> do
           forM_ xs $ hPutStrLn hnd
+
+spans :: forall a. (a -> Bool) -> [a] -> [Vector a]
+spans f = go []
+ where
+   go :: [Vector a] -> [a] -> [Vector a]
+   go acc [] = reverse acc
+   go acc xs =
+     case span f $ dropWhile (not . f) xs of
+       ([], rest) -> go acc rest
+       (ac, rest) ->
+         go (Vec.fromList ac:acc) rest

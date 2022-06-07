@@ -20,7 +20,7 @@ import Cardano.Analysis.Run
 import Cardano.Analysis.Version
 import Cardano.Unlog.LogObject          hiding (Text)
 import Cardano.Unlog.Render
-import Data.Distribution
+import Data.CDF
 
 data CommandError
   = CommandError    ChainCommand    Text
@@ -451,20 +451,28 @@ runChainCommand s@State{sMachPerf=Just perf}
 runChainCommand _ c@DumpMachPerf = missingCommandData c
   ["machine performance stats"]
 
--- runChainCommand s@State{sRun=Just run, sSlots=Just slots, sMachPerf=Just perf}
---   c@Cardano.Command.ClusterPerf = do
---   perf <- mapConcurrentlyPure (slotStatsMachPerf run) slots
---           & fmap sequence
---           & newExceptT
---           & firstExceptT (CommandError c)
---   pure s { sClusterPerf = Just perf }
--- runChainCommand _ c@Cardano.Command.ClusterPerf{} = missingCommandData c
---   ["run metadata & genesis", "filtered slots", "machine performance stats"]
+runChainCommand s@State{sRun=Just run, sSlots=Just slots, sMachPerf=Just _machPerfs}
+  c@Cardano.Command.ClusterPerf = do
+  _perf <- mapConcurrentlyPure (slotStatsMachPerf run) slots
+          & fmap sequence
+          & newExceptT
+          & firstExceptT (CommandError c)
+  pure s { sClusterPerf = Nothing }
+runChainCommand _ c@Cardano.Command.ClusterPerf{} = missingCommandData c
+  ["run metadata & genesis", "filtered slots", "machine performance stats"]
+
+runChainCommand s@State{sMachPerf=Just perf}
+  c@(DumpClusterPerf _f) = do
+  dumpAssociatedObjects "perf-stats" perf
+    & firstExceptT (CommandError c)
+  pure s
+runChainCommand _ c@DumpClusterPerf{} = missingCommandData c
+  ["cluster performance stats"]
 
 runChainCommand s@State{sRun=Just run, sBlockProp=Just prop}
   c@(ReportPropForger f) = do
   dumpText "blockprop-forger"
-    (renderDistributions run RenderPretty bpFieldsForger Nothing prop) f
+    (renderDirectCDFs run RenderPretty bpFieldsForger Nothing prop) f
     & firstExceptT (CommandError c)
   pure s
 runChainCommand _ c@ReportPropForger{} = missingCommandData c
@@ -473,7 +481,7 @@ runChainCommand _ c@ReportPropForger{} = missingCommandData c
 runChainCommand s@State{sRun=Just run, sBlockProp=Just prop}
   c@(ReportPropPeers f) = do
   dumpText "blockprop-peers"
-    (renderDistributions run RenderPretty bpFieldsPeers Nothing prop) f
+    (renderDirectCDFs run RenderPretty bpFieldsPeers Nothing prop) f
     & firstExceptT (CommandError c)
   pure s
 runChainCommand _ c@ReportPropPeers{} = missingCommandData c
@@ -482,7 +490,7 @@ runChainCommand _ c@ReportPropPeers{} = missingCommandData c
 runChainCommand s@State{sRun=Just run, sBlockProp=Just prop}
   c@(ReportPropEndToEnd f) = do
   dumpText "blockprop-endtoend"
-    (renderDistributions run RenderPretty bpFieldsPropagation (Just briefPercSpecs) prop) f
+    (renderDirectCDFs run RenderPretty bpFieldsPropagation (Just briefCentiSpecs) prop) f
     & firstExceptT (CommandError c)
   pure s
 runChainCommand _ c@ReportPropEndToEnd{} = missingCommandData c
@@ -490,7 +498,7 @@ runChainCommand _ c@ReportPropEndToEnd{} = missingCommandData c
 
 runChainCommand s@State{sRun=Just run, sBlockProp=Just prop}
   c@(ReportPropFull f) = do
-  dumpText "blockprop-full" (renderDistributions run RenderPretty (const True) Nothing prop) f
+  dumpText "blockprop-full" (renderDirectCDFs run RenderPretty (const True) Nothing prop) f
     & firstExceptT (CommandError c)
   pure s
 runChainCommand _ c@ReportPropFull{} = missingCommandData c
@@ -499,7 +507,7 @@ runChainCommand _ c@ReportPropFull{} = missingCommandData c
 runChainCommand s@State{sRun=Just run, sMachPerf=Just perf}
   c@ReportMachPerfFull = do
   dumpAssociatedTextStreams "perf-full"
-    (fmap (fmap $ renderDistributions run RenderPretty (const True) Nothing) perf)
+    (fmap (fmap $ renderDirectCDFs run RenderPretty (const True) Nothing) perf)
     & firstExceptT (CommandError c)
   pure s
 runChainCommand _ c@ReportMachPerfFull{} = missingCommandData c
@@ -508,7 +516,7 @@ runChainCommand _ c@ReportMachPerfFull{} = missingCommandData c
 runChainCommand s@State{sRun=Just run, sMachPerf=Just perf}
   c@ReportMachPerfBrief = do
   dumpAssociatedTextStreams "perf-brief"
-    (fmap (fmap $ renderDistributions run RenderPretty mtFieldsReport Nothing) perf)
+    (fmap (fmap $ renderDirectCDFs run RenderPretty mtFieldsReport Nothing) perf)
     & firstExceptT (CommandError c)
   pure s
 runChainCommand _ c@ReportMachPerfBrief{} = missingCommandData c
