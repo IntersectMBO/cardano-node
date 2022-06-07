@@ -64,7 +64,7 @@ testAggregation :: IO ()
 testAggregation = do
     simpleTracer <- standardTracer
     formTracer <- fmap (appendName "BaseTrace")
-                      (humanFormatter True "cardano" simpleTracer)
+                      (humanFormatter True (Just "cardano") simpleTracer)
     tracer <- foldTraceM calculate emptyStats formTracer
     configureTracers emptyTraceConfig baseStatsDocumented [tracer]
     traceWith tracer 1.0

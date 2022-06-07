@@ -17,7 +17,7 @@ repeated t n d = do
 testLimiting :: IO ()
 testLimiting = do
   t1 <- standardTracer
-  tf1 <- humanFormatter True "cardano" t1
+  tf1 <- humanFormatter True (Just "cardano") t1
   tf2 <- limitFrequency 5 "5 messages per second"
             (appendName "tracer1" (contramap Message tf1))
                (appendName "limiter1" (contramap Limit tf1))

@@ -56,10 +56,10 @@ metricsFormatter application (Trace tr) =
 -- | Format this trace as TraceObject for the trace forwarder
 forwardFormatter
   :: forall a m . (LogFormatting a, MonadIO m)
-  => Text
+  => Maybe Text
   -> Trace m FormattedMessage
   -> m (Trace m a)
-forwardFormatter application (Trace tr) = do
+forwardFormatter condApplication (Trace tr) = do
   hn <- liftIO getHostName
   let trr = mkTracer hn
   pure $ Trace (T.arrow trr)
@@ -72,7 +72,9 @@ forwardFormatter application (Trace tr) = do
           let fh = forHuman v
               details = fromMaybe DNormal (lcDetails lc)
               fm = forMachine details v
-              nlc = lc { lcNamespace = application : lcNamespace lc}
+              nlc = lc { lcNamespace = case condApplication of
+                                                  Just app -> app : lcNamespace lc
+                                                  Nothing  -> lcNamespace lc}
               to = TraceObject {
                       toHuman     = if fh == "" then Nothing else Just fh
                     , toMachine   = if fm == mempty then Nothing else
@@ -89,7 +91,9 @@ forwardFormatter application (Trace tr) = do
           T.traceWith tr ( nlc
                          , Right (FormattedForwarder to))
         (lc, Left ctrl) -> do
-          T.traceWith tr (lc { lcNamespace = application : lcNamespace lc}
+          T.traceWith tr (lc { lcNamespace = case condApplication of
+                                              Just app -> app : lcNamespace lc
+                                              Nothing  -> lcNamespace lc}
                             , Left ctrl)
 
 -- | Format this trace for human readability
@@ -98,10 +102,10 @@ forwardFormatter application (Trace tr) = do
 humanFormatter
   :: forall a m . (LogFormatting a, MonadIO m)
   => Bool
-  -> Text
+  -> Maybe Text
   -> Trace m FormattedMessage
   -> m (Trace m a)
-humanFormatter withColor application (Trace tr) = do
+humanFormatter withColor condApplication (Trace tr) = do
   hn <- liftIO getHostName
   let trr = mkTracer hn
   pure $ Trace (T.arrow trr)
@@ -110,21 +114,25 @@ humanFormatter withColor application (Trace tr) = do
       \ case
         (lc, Right v) -> do
           let fh = forHuman v
-          text <- liftIO $ formatContextHuman withColor hn application lc fh
-          T.traceWith tr (lc { lcNamespace = application : lcNamespace lc}
+          text <- liftIO $ formatContextHuman withColor hn condApplication lc fh
+          T.traceWith tr (lc { lcNamespace = case condApplication of
+                                              Just app -> app : lcNamespace lc
+                                              Nothing  -> lcNamespace lc}
                              , Right (FormattedHuman withColor text))
         (lc, Left ctrl) -> do
-          T.traceWith tr (lc { lcNamespace = application : lcNamespace lc}
+          T.traceWith tr (lc { lcNamespace = case condApplication of
+                                              Just app -> app : lcNamespace lc
+                                              Nothing  -> lcNamespace lc}
                              , Left ctrl)
 
 formatContextHuman ::
      Bool
   -> String
-  -> Text
+  -> Maybe Text
   -> LoggingContext
   -> Text
   -> IO Text
-formatContextHuman withColor hostname application LoggingContext {..}  txt = do
+formatContextHuman withColor hostname condApplication LoggingContext {..}  txt = do
   thid <- myThreadId
   time <- getCurrentTime
   let severity = fromMaybe Info lcSeverity
@@ -137,7 +145,10 @@ formatContextHuman withColor hostname application LoggingContext {..}  txt = do
                     $ fromString hostname
                       <> singleton ':'
                       <> mconcat (intersperse (singleton '.')
-                          (map fromText (application : lcNamespace)))
+                          (case condApplication of
+                            Just app -> map fromText (app : lcNamespace)
+                            Nothing  -> map fromText lcNamespace))
+
       tadd     = fromText " ("
                   <> fromString (show severity)
                   <> singleton ','
@@ -159,10 +170,10 @@ formatContextHuman withColor hostname application LoggingContext {..}  txt = do
 -- The text argument gives the application name which is prepended to the namespace
 machineFormatter
   :: forall a m . (LogFormatting a, MonadIO m)
-  => Text
+  => Maybe Text
   -> Trace m FormattedMessage
   -> m (Trace m a)
-machineFormatter application (Trace tr) = do
+machineFormatter condApplication (Trace tr) = do
   hn <- liftIO getHostName
   let trr = mkTracer hn
   pure $ Trace (T.arrow trr)
@@ -171,28 +182,34 @@ machineFormatter application (Trace tr) = do
       \case
         (lc, Right v) -> do
           let detailLevel = fromMaybe DNormal (lcDetails lc)
-          obj <- liftIO $ formatContextMachine hn application lc (forMachine detailLevel v)
-          T.traceWith tr (lc { lcNamespace = application : lcNamespace lc}
+          obj <- liftIO $ formatContextMachine hn condApplication lc (forMachine detailLevel v)
+          T.traceWith tr (lc { lcNamespace = case condApplication of
+                                              Just app -> app : lcNamespace lc
+                                              Nothing  -> lcNamespace lc}
                          , Right (FormattedMachine (decodeUtf8 (BS.toStrict
                                 (AE.encodingToLazyByteString obj)))))
         (lc, Left c) -> do
-          T.traceWith tr (lc { lcNamespace = application : lcNamespace lc}
+          T.traceWith tr (lc { lcNamespace = case condApplication of
+                                              Just app -> app : lcNamespace lc
+                                              Nothing  -> lcNamespace lc}
                          , Left c)
 
 formatContextMachine ::
      String
-  -> Text
+  -> Maybe Text
   -> LoggingContext
   -> AE.Object
   -> IO AE.Encoding
-formatContextMachine hostname application LoggingContext {..} obj = do
+formatContextMachine hostname condApplication LoggingContext {..} obj = do
   thid <- myThreadId
   time <- getCurrentTime
   let severity = (pack . show) (fromMaybe Info lcSeverity)
       tid      = fromMaybe ((pack . show) thid)
                     ((stripPrefix "ThreadId " . pack . show) thid)
       ns       = mconcat (intersperse (singleton '.')
-                        (map fromText (application : lcNamespace)))
+                     (case condApplication of
+                       Just app -> map fromText (app : lcNamespace)
+                       Nothing  -> map fromText lcNamespace))
       ts       = pack $ formatTime defaultTimeLocale "%F %H:%M:%S%4QZ" time
   pure $ AE.pairs $    "at"      .= ts
                     <> "ns"      .= toStrict (toLazyText ns)

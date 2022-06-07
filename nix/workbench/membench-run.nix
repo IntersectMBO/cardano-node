@@ -137,7 +137,7 @@ in
 
       map(select(${if legacyTracing
                    then ".ns[0] == \"cardano.node.resources\""
-                   else ".ns    == \"Cardano.Node.Resources\""}) | .data)
+                   else ".ns    == \"Resources\""}) | .data)
     | { RSS:          map(.RSS) | minavgmax
       , Heap:         map(.Heap) | minavgmax
       , CentiCpuMax:  map(.CentiCpu) | max

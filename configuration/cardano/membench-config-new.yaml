@@ -1,3 +1,4 @@
+# Options for the trace forwarder
 ################################################################################
 # Mainnet Cardano Node Configuration
 
@@ -46,16 +47,23 @@ UseTraceDispatcher: True
 
 TraceOptions:
   "":
-    severity: Notice
+    severity: Silence
     detail: DNormal
     backends:
       - Stdout MachineFormat
       - EKGBackend
       - Forwarder
 
-# More interesing tracers
-
   ChainDB:
+     severity: Info
+
+  ChainDB.AddBlockEvent.AddBlockValidation.ValidCandidate:
+    severity: Silence
+
+  ChainDB.InitChainSelEvent.UpdateLedgerDb:
+    severity: Silence
+
+  ConnectionManager:
     severity: Info
 
   AcceptPolicy:
@@ -76,20 +84,34 @@ TraceOptions:
   Forge:
     severity: Info
 
+  InboundGovernor:
+    severity: Info
+
   IpSubscription:
+    severity: Info
+
+  LedgerPeers:
     severity: Info
 
   LocalErrorPolicy:
     severity: Info
 
+  LocalRootPeers:
+    severity: Info
+
   Mempool:
     severity: Info
 
-  Resources:
+  PeerSelection:
     severity: Info
 
-#---------------------------
-# Frequency limited tracer
+  PeerSelectionActions:
+    severity: Info
+
+  PublicRootPeers:
+    severity: Info
+
+
   ChainDB.AddBlockEvent.AddedBlockToQueue:
     maxFrequency: 2.0
 
@@ -105,8 +127,22 @@ TraceOptions:
   BlockFetchClient.CompletedBlockFetch:
     maxFrequency: 2.0
 
+# Options for the trace forwarder
+TraceOptionForwarder:
+    address:
+      filePath: /tmp/forwarder.sock
+    mode: Initiator
+
 TraceOptionPeerFrequency: 2000
 
 TraceOptionResourceFrequency: 5000
 
+##### Stubs for legacy logging config #####
+
 TurnOnLogMetrics: False
+minSeverity: Critical
+setupScribes: []
+setupBackends: []
+defaultScribes: []
+defaultBackends: []
+options: {}

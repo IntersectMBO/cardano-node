@@ -182,16 +182,16 @@ docChainDBTraceEvent = addDocumentedNamespace [] docChainDBTraceEvent'
 docChainDBTraceEvent' :: Documented (ChainDB.TraceEvent blk)
 docChainDBTraceEvent' =
     addDocumentedNamespace ["AddBlockEvent"] docChainDBAddBlock
-    `addDocs` addDocumentedNamespace ["TraceFollowerEvent"] docChainDBFollower
-    `addDocs` addDocumentedNamespace ["TraceCopyToImmutableDBEvent"] docChainDBImmtable
-    `addDocs` addDocumentedNamespace ["TraceGCEvent"] docChainDBGCEvent
-    `addDocs` addDocumentedNamespace ["TraceInitChainSelEvent"] docChainDBInitChainSel
-    `addDocs` addDocumentedNamespace ["TraceOpenEvent"] docChainDBOpenEvent
-    `addDocs` addDocumentedNamespace ["TraceIteratorEvent"] docChainDBIteratorEvent
-    `addDocs` addDocumentedNamespace ["TraceLedgerEvent"] docChainDBLedgerEvent
-    `addDocs` addDocumentedNamespace ["TraceLedgerReplayEvent"] docChainDBLedgerReplayEvent
-    `addDocs` addDocumentedNamespace ["TraceImmutableDBEvent"] docChainDBImmutableDBEvent
-    `addDocs` addDocumentedNamespace ["TraceVolatileDBEvent"] docChainDBVolatileDBEvent
+    `addDocs` addDocumentedNamespace ["FollowerEvent"] docChainDBFollower
+    `addDocs` addDocumentedNamespace ["CopyToImmutableDBEvent"] docChainDBImmtable
+    `addDocs` addDocumentedNamespace ["GCEvent"] docChainDBGCEvent
+    `addDocs` addDocumentedNamespace ["InitChainSelEvent"] docChainDBInitChainSel
+    `addDocs` addDocumentedNamespace ["OpenEvent"] docChainDBOpenEvent
+    `addDocs` addDocumentedNamespace ["IteratorEvent"] docChainDBIteratorEvent
+    `addDocs` addDocumentedNamespace ["LedgerEvent"] docChainDBLedgerEvent
+    `addDocs` addDocumentedNamespace ["LedgerReplayEvent"] docChainDBLedgerReplayEvent
+    `addDocs` addDocumentedNamespace ["ImmutableDBEvent"] docChainDBImmutableDBEvent
+    `addDocs` addDocumentedNamespace ["VolatileDBEvent"] docChainDBVolatileDBEvent
 
 --------------------------------------------------------------------------------
 -- AddBlockEvent
@@ -592,6 +592,10 @@ docChainDBAddBlock = Documented [
         "The block was added to the queue and will be added to the ChainDB by\
         \ the background thread. The size of the queue is included.."
     , DocMsg
+        ["PoppedBlockFromQueue"]
+        []
+        ""
+    , DocMsg
         ["BlockInTheFuture"]
         []
         "The block is from the future, i.e., its slot number is greater than\
@@ -674,6 +678,10 @@ docChainDBAddBlock = Documented [
         []
         "An event traced during validating performed while adding a block.\
         \ A point was found to be invalid."
+    , DocMsg
+        ["AddBlockValidation", "UpdateLedgerDb"]
+        []
+        ""
     , DocMsg
         ["ChainSelectionForFutureBlock"]
         []
