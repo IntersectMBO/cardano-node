@@ -229,51 +229,78 @@ pScriptFor name (Just deprecated) help =
         <> Opt.internal
         )
 
-pPlutusReferenceScriptWitnessFiles
+pReferenceScriptWitnessFiles
   :: WitCtx witctx
   -> BalanceTxExecUnits -- ^ Use the @execution-units@ flag.
   -> Parser (ScriptWitnessFiles witctx)
-pPlutusReferenceScriptWitnessFiles witctx autoBalanceExecUnits =
+pReferenceScriptWitnessFiles witctx autoBalanceExecUnits =
    toReferenceScriptWitnessFiles
-     <$> ( (,,,,) <$> pReferenceTxIn
-                  <*> pAnyScriptLang
-                  <*> pScriptDatumOrFile "reference-tx-in" witctx
-                  <*> pScriptRedeemerOrFile "reference-tx-in"
-                  <*> (case autoBalanceExecUnits of
-                        AutoBalance -> pure (ExecutionUnits 0 0)
-                        ManualBalance -> pExecutionUnits "reference-tx-in")
-         )
+     <$> pReferenceTxIn
+     <*> (simpleWit <|> pPWitness)
+
+
  where
-  pReferenceTxIn :: Parser TxIn
-  pReferenceTxIn =
-    Opt.option (readerFromParsecParser parseTxIn)
-      (  Opt.long "tx-in-reference"
-      <> Opt.metavar "TX-IN"
-      <> Opt.help "TxId#TxIx - Specify a reference input. The reference input may or may not have\
-                  \ a plutus reference script attached."
-      )
-  pAnyScriptLang :: Parser AnyScriptLanguage
-  pAnyScriptLang =
-    Opt.flag' (AnyScriptLanguage $ SimpleScriptLanguage SimpleScriptV1)
-      (  Opt.long "simple-script-v1"
-      <> Opt.help "Specify a simple script v1 reference script. \
-                  \See documentation at doc/reference/simple-scripts.md"
-      ) <|>
-    Opt.flag' (AnyScriptLanguage $ SimpleScriptLanguage SimpleScriptV2)
-      (  Opt.long "simple-script-v2"
-      <> Opt.help "Specify a simple script v2 reference script. \
-                  \See documentation at doc/reference/simple-scripts.md"
-      ) <|>
+  pPWitness =
+    (,,,) <$> pPlutusScriptLanguage
+          <*> (Just <$> pScriptDatumOrFile "reference-tx-in" witctx)
+          <*> (Just <$> pScriptRedeemerOrFile "reference-tx-in")
+          <*> (case autoBalanceExecUnits of
+                AutoBalance -> pure $ Just (ExecutionUnits 0 0)
+                ManualBalance -> Just <$> pExecutionUnits "reference-tx-in")
+
+  simpleWit
+    :: Parser ( AnyScriptLanguage
+              , Maybe (ScriptDatumOrFile witctx)
+              , Maybe ScriptRedeemerOrFile
+              , Maybe ExecutionUnits
+              )
+  simpleWit =
+    (,,,) <$> pSimpleScriptLang
+          <*> pure Nothing
+          <*> pure Nothing
+          <*> pure Nothing
+
+  pPlutusScriptLanguage :: Parser AnyScriptLanguage
+  pPlutusScriptLanguage =
     Opt.flag' (AnyScriptLanguage $ PlutusScriptLanguage PlutusScriptV2)
       (  Opt.long "plutus-script-v2"
       <> Opt.help "Specify a plutus script v2 reference script."
       )
 
+  pSimpleScriptLang :: Parser AnyScriptLanguage
+  pSimpleScriptLang =
+    Opt.flag' (AnyScriptLanguage $ SimpleScriptLanguage SimpleScriptV2)
+      (  Opt.long "simple-script"
+      <> Opt.help "Specify a simple script reference script. \
+                  \See documentation at doc/reference/simple-scripts.md"
+      )
 
   toReferenceScriptWitnessFiles
-    :: (TxIn, AnyScriptLanguage, ScriptDatumOrFile witctx, ScriptRedeemerOrFile, ExecutionUnits)
+    :: TxIn
+    -> ( AnyScriptLanguage
+       , Maybe (ScriptDatumOrFile witctx)
+       , Maybe ScriptRedeemerOrFile
+       , Maybe ExecutionUnits
+       )
     -> ScriptWitnessFiles witctx
-  toReferenceScriptWitnessFiles (txin, sLang, d,r, e) = PlutusReferenceScriptWitnessFiles txin sLang d r e
+  toReferenceScriptWitnessFiles txin (sLang, mD, mR, mE) =
+    case sLang of
+      AnyScriptLanguage (SimpleScriptLanguage _) ->
+        SimpleReferenceScriptWitnessFiles txin sLang
+      AnyScriptLanguage (PlutusScriptLanguage _) ->
+        case (mD, mR, mE) of
+          (Just d, Just r, Just e) -> PlutusReferenceScriptWitnessFiles txin sLang d r e
+          (_,_,_) -> panic "toReferenceScriptWitnessFiles: Should not be possible"
+
+
+pReferenceTxIn :: Parser TxIn
+pReferenceTxIn =
+  Opt.option (readerFromParsecParser parseTxIn)
+    (  Opt.long "tx-in-reference"
+    <> Opt.metavar "TX-IN"
+    <> Opt.help "TxId#TxIx - Specify a reference input. The reference input may or may not have\
+                \ a plutus reference script attached."
+    )
 
 pScriptWitnessFiles :: forall witctx.
                        WitCtx witctx
@@ -2077,7 +2104,8 @@ pTxIn balance =
      pScriptWitnessFiles WitCtxTxIn balance
       "tx-in" (Just "txin")
       "the spending of the transaction input." <|>
-     pPlutusReferenceScriptWitnessFiles WitCtxTxIn balance
+     pReferenceScriptWitnessFiles WitCtxTxIn balance
+
 
 pTxInCollateral :: Parser TxIn
 pTxInCollateral =
