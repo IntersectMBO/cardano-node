@@ -9,6 +9,7 @@ import           Cardano.Prelude
 
 import           Data.Time.Clock (secondsToDiffTime)
 
+import           Cardano.Node.Configuration.LedgerDB
 import           Cardano.Node.Configuration.POM
 import           Cardano.Node.Configuration.Socket
 import           Cardano.Node.Handlers.Shutdown
@@ -68,6 +69,7 @@ testPartialYamlConfig =
     , pncProtocolFiles = mempty
     , pncValidateDB = mempty
     , pncMaybeMempoolCapacityOverride = mempty
+    , pncLedgerDBBackend = Last $ Just $ LMDB Nothing
     , pncProtocolIdleTimeout = mempty
     , pncTimeWaitTimeout = mempty
     , pncAcceptedConnectionsLimit = mempty
@@ -100,6 +102,7 @@ testPartialCliConfig =
     , pncLogMetrics = mempty
     , pncTraceConfig = Last (Just $ PartialTracingOnLegacy defaultPartialTraceConfiguration)
     , pncMaybeMempoolCapacityOverride = mempty
+    , pncLedgerDBBackend = Last $ Just $ LMDB Nothing
     , pncProtocolIdleTimeout = mempty
     , pncTimeWaitTimeout = mempty
     , pncAcceptedConnectionsLimit = mempty
@@ -135,6 +138,7 @@ eExpectedConfig = do
     , ncLogMetrics = True
     , ncTraceConfig = traceOptions
     , ncMaybeMempoolCapacityOverride = Nothing
+    , ncLedgerDBBackend = LMDB Nothing
     , ncProtocolIdleTimeout = 5
     , ncTimeWaitTimeout = 60
     , ncAcceptedConnectionsLimit =
