@@ -63,6 +63,7 @@ module Cardano.Api.Script (
     TimeLocksSupported(..),
     timeLocksSupported,
     adjustSimpleScriptVersion,
+    SimpleScriptOrReferenceInput(..),
 
     -- * The Plutus script language
     PlutusScript(..),
@@ -730,6 +731,12 @@ data PlutusScriptOrReferenceInput lang
   | PReferenceScript TxIn
   deriving (Eq, Show)
 
+
+data SimpleScriptOrReferenceInput lang
+  = SScript (SimpleScript lang)
+  | SReferenceScript TxIn
+  deriving (Eq, Show)
+
 -- | A /use/ of a script within a transaction body to witness that something is
 -- being used in an authorised manner. That can be
 --
@@ -747,7 +754,7 @@ data ScriptWitness witctx era where
 
      SimpleScriptWitness :: ScriptLanguageInEra lang era
                          -> SimpleScriptVersion lang
-                         -> SimpleScript        lang
+                         -> SimpleScriptOrReferenceInput lang
                          -> ScriptWitness witctx era
 
      PlutusScriptWitness :: ScriptLanguageInEra  lang era
@@ -799,12 +806,14 @@ deriving instance Show (ScriptDatum witctx)
 -- Reference scripts exist in the UTxO, so without access to the UTxO we cannot
 -- retrieve the script.
 scriptWitnessScript :: ScriptWitness witctx era -> Maybe (ScriptInEra era)
-scriptWitnessScript (SimpleScriptWitness langInEra version script) =
+scriptWitnessScript (SimpleScriptWitness langInEra version (SScript script)) =
     Just $ ScriptInEra langInEra (SimpleScript version script)
 
 scriptWitnessScript (PlutusScriptWitness langInEra version (PScript script) _ _ _) =
     Just $ ScriptInEra langInEra (PlutusScript version script)
 
+scriptWitnessScript (SimpleScriptWitness _ _ (SReferenceScript _)) =
+    Nothing
 scriptWitnessScript (PlutusScriptWitness _ _ (PReferenceScript _) _ _ _) =
     Nothing
 
