@@ -8,7 +8,7 @@ To set up your platform, you will need:
 
 * An x86 host \(AMD or Intel\)
 * A virtual machine or AWS instance with at least 2 cores
-* 8GB of RAM and at least 10GB of free disk space
+* 12GB of RAM and at least 65GB of free disk space
 * A recent version of Linux
 
 **Note** The node can be built and run on other operating systems, including Windows and MacOSX, but we recommend that
