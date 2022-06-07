@@ -3,10 +3,6 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeApplications #-}
 
-#if !defined(mingw32_HOST_OS)
-#define UNIX
-#endif
-
 module Testnet.Shelley
   ( TestnetOptions(..)
   , defaultTestnetOptions
@@ -16,39 +12,33 @@ module Testnet.Shelley
   , hprop_testnet_pause
   ) where
 
-#ifdef UNIX
-import           Prelude (Bool (..), Integer, map, (-))
-#else
-import           Prelude (Bool (..), Integer, (-))
-#endif
-
-import           Control.Monad
-import           Control.Monad.IO.Class
-import           Control.Monad.Trans.Resource
-import           Data.Aeson
+import           Control.Monad (Monad(..), forever, forM_, void, (=<<), when)
+import           Control.Monad.IO.Class (MonadIO(liftIO))
+import           Control.Monad.Trans.Resource (MonadResource(liftResourceT), resourceForkIO)
+import           Data.Aeson (Value, ToJSON(toJSON))
 import           Data.ByteString.Lazy (ByteString)
-import           Data.Eq
-import           Data.Function
-import           Data.Functor
-import           Data.Int
+import           Data.Eq (Eq)
+import           Data.Function (($), (.), flip)
+import           Data.Functor (Functor(fmap), (<$>), (<&>))
+import           Data.Int (Int)
 import           Data.List ((\\))
-import           Data.Maybe
-import           Data.Ord
-import           Data.Semigroup
+import           Data.Maybe (Maybe(Nothing, Just), fromJust)
+import           Data.Ord (Ord((<=)))
+import           Data.Semigroup (Semigroup((<>)))
 import           Data.String (String, fromString)
-import           Data.Time.Clock
-import           GHC.Float
-import           GHC.Real
-import           Hedgehog.Extras.Stock.Aeson
-import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket (..))
+import           Data.Time.Clock (UTCTime)
+import           GHC.Float (Double)
+import           GHC.Real (fromIntegral)
+import           Hedgehog.Extras.Stock.Aeson (rewriteObject)
+import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket(..))
+import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter(..))
+import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint(..))
+import           Prelude (Bool(..), Integer, (-))
 import           System.FilePath.Posix ((</>))
-import           Text.Show
+import           Text.Show (Show(show))
 
 import qualified Cardano.Node.Configuration.Topology as NonP2P
 import qualified Cardano.Node.Configuration.TopologyP2P as P2P
-import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter (..))
-import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
-
 import qualified Control.Concurrent as IO
 import qualified Data.Aeson as J
 import qualified Data.HashMap.Lazy as HM
@@ -61,17 +51,14 @@ import qualified Hedgehog.Extras.Stock.IO.Network.Socket as IO
 import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 import qualified Hedgehog.Extras.Stock.OS as OS
 import qualified Hedgehog.Extras.Stock.String as S
+import qualified Hedgehog.Extras.Stock.Time as DTC
 import qualified Hedgehog.Extras.Test.Base as H
 import qualified Hedgehog.Extras.Test.File as H
 import qualified Hedgehog.Extras.Test.Network as H
 import qualified Hedgehog.Extras.Test.Process as H
 import qualified System.Directory as IO
-import qualified System.IO as IO
 import qualified System.Info as OS
-#ifdef UNIX
-import           System.Posix.Files
-#endif
-import qualified Hedgehog.Extras.Stock.Time as DTC
+import qualified System.IO as IO
 import qualified System.Process as IO
 import qualified Test.Base as H
 import qualified Test.Process as H
@@ -227,13 +214,6 @@ testnet testnetOptions H.Conf {..} = do
     , "--start-time", DTC.formatIso8601 startTime
     ]
 
-#ifdef UNIX
-  --TODO: Remove me after #1948 is merged.
-  let numNodesStr = map show [1..numPraosNodes]
-      vrfPath n = tempAbsPath </> "delegate-keys" </> "delegate" <> n <> ".vrf.skey"
-  H.evalIO $ mapM_ (\n -> setFileMode (vrfPath n) ownerModes) numNodesStr
-#endif
-
   forM_ allNodes $ \p -> H.createDirectoryIfMissing $ tempAbsPath </> p
 
   -- Make the pool operator cold keys
@@ -251,10 +231,6 @@ testnet testnetOptions H.Conf {..} = do
       , "--verification-key-file", tempAbsPath </> n </> "vrf.vkey"
       , "--signing-key-file", tempAbsPath </> n </> "vrf.skey"
       ]
-#ifdef UNIX
-    --TODO: Remove me after #1948 is merged.
-    void . liftIO $ setFileMode (tempAbsPath </> n </> "vrf.skey") ownerModes
-#endif
   -- Symlink the BFT operator keys from the genesis delegates, for uniformity
   forM_ praosNodesN $ \n -> do
     H.createFileLink (tempAbsPath </> "delegate-keys/delegate" <> n <> ".skey") (tempAbsPath </> "node-praos" <> n </> "operator.skey")

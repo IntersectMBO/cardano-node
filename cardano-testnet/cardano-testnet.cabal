@@ -56,7 +56,6 @@ library
                       , text
                       , time
                       , unordered-containers
-                      , yaml
 
   hs-source-dirs:       src
   exposed-modules:      Test.Base
