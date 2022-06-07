@@ -1,6 +1,7 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
+{-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-name-shadowing -Wno-orphans #-}
 {- HLINT ignore "Use head" -}
 module Cardano.Analysis.API
@@ -34,27 +35,33 @@ import Data.CDF
 --
 
 -- | Results of block propagation analysis.
-data BlockPropagation
-  = BlockPropagation
+data BlockProp f
+  = BlockProp
     { bpVersion             :: !Version
     , bpDomainSlots         :: !(DataDomain SlotNo)
     , bpDomainBlocks        :: !(DataDomain BlockNo)
-    , bpForgerChecks        :: !(DirectCDF NominalDiffTime)
-    , bpForgerLeads         :: !(DirectCDF NominalDiffTime)
-    , bpForgerForges        :: !(DirectCDF NominalDiffTime)
-    , bpForgerAdoptions     :: !(DirectCDF NominalDiffTime)
-    , bpForgerAnnouncements :: !(DirectCDF NominalDiffTime)
-    , bpForgerSends         :: !(DirectCDF NominalDiffTime)
-    , bpPeerNotices         :: !(DirectCDF NominalDiffTime)
-    , bpPeerRequests        :: !(DirectCDF NominalDiffTime)
-    , bpPeerFetches         :: !(DirectCDF NominalDiffTime)
-    , bpPeerAdoptions       :: !(DirectCDF NominalDiffTime)
-    , bpPeerAnnouncements   :: !(DirectCDF NominalDiffTime)
-    , bpPeerSends           :: !(DirectCDF NominalDiffTime)
-    , bpPropagation         :: ![(Double, DirectCDF NominalDiffTime)]
-    , bpSizes               :: !(DirectCDF Int)
+    , bpForgerChecks        :: !(CDF f NominalDiffTime)
+    , bpForgerLeads         :: !(CDF f NominalDiffTime)
+    , bpForgerForges        :: !(CDF f NominalDiffTime)
+    , bpForgerAdoptions     :: !(CDF f NominalDiffTime)
+    , bpForgerAnnouncements :: !(CDF f NominalDiffTime)
+    , bpForgerSends         :: !(CDF f NominalDiffTime)
+    , bpPeerNotices         :: !(CDF f NominalDiffTime)
+    , bpPeerRequests        :: !(CDF f NominalDiffTime)
+    , bpPeerFetches         :: !(CDF f NominalDiffTime)
+    , bpPeerAdoptions       :: !(CDF f NominalDiffTime)
+    , bpPeerAnnouncements   :: !(CDF f NominalDiffTime)
+    , bpPeerSends           :: !(CDF f NominalDiffTime)
+    , bpPropagation         :: ![(Double, CDF f NominalDiffTime)]
+    , bpSizes               :: !(CDF f Int)
     }
-  deriving (Generic, Show, FromJSON, ToJSON)
+  deriving (Generic)
+deriving instance (Show     (f NominalDiffTime), Show     (f Int)) => Show     (BlockProp f)
+deriving instance (FromJSON (f NominalDiffTime), FromJSON (f Int)) => FromJSON (BlockProp f)
+deriving instance (ToJSON   (f NominalDiffTime), ToJSON   (f Int)) => ToJSON   (BlockProp f)
+
+type BlockPropOne = BlockProp I
+type BlockProps   = BlockProp (CDF I)
 
 -- | All events related to a block.
 data BlockEvents
@@ -158,34 +165,57 @@ mkDataDomain :: a -> a -> a -> a -> (a -> Int) -> DataDomain a
 mkDataDomain f l f' l' measure =
   DataDomain f l f' l' (measure l - measure f) (measure l' - measure f')
 
+dataDomainsMergeInner :: Ord a => [DataDomain a] -> DataDomain a
+dataDomainsMergeInner xs =
+  DataDomain
+  { ddRawFirst      = maximum $ xs <&> ddRawFirst
+  , ddRawLast       = minimum $ xs <&> ddRawLast
+  , ddFilteredFirst = maximum $ xs <&> ddFilteredFirst
+  , ddFilteredLast  = minimum $ xs <&> ddFilteredLast
+  , ddRawCount      =     sum $ xs <&> ddRawCount
+  , ddFilteredCount =     sum $ xs <&> ddFilteredCount
+  }
+
+dataDomainsMergeOuter :: Ord a => [DataDomain a] -> DataDomain a
+dataDomainsMergeOuter xs =
+  DataDomain
+  { ddRawFirst      = minimum $ xs <&> ddRawFirst
+  , ddRawLast       = maximum $ xs <&> ddRawLast
+  , ddFilteredFirst = minimum $ xs <&> ddFilteredFirst
+  , ddFilteredLast  = maximum $ xs <&> ddFilteredLast
+  , ddRawCount      =     sum $ xs <&> ddRawCount
+  , ddFilteredCount =     sum $ xs <&> ddFilteredCount
+  }
+
 -- | The top-level representation of the machine timeline analysis results.
-data MachPerf' f
+data MachPerf f
   = MachPerf
-    { sVersion                  :: !Version
-    , sDomainSlots              :: !(f (DataDomain SlotNo))
+    { sVersion              :: !Version
+    , sDomainSlots          :: !(DataDomain SlotNo)
     -- distributions
-    , sMissDistrib              :: !(f (DirectCDF Double))
-    , sLeadsDistrib             :: !(f (DirectCDF Word64))
-    , sUtxoDistrib              :: !(f (DirectCDF Word64))
-    , sDensityDistrib           :: !(f (DirectCDF Double))
-    , sSpanCheckDistrib         :: !(f (DirectCDF NominalDiffTime))
-    , sSpanLeadDistrib          :: !(f (DirectCDF NominalDiffTime))
-    , sSpanForgeDistrib         :: !(f (DirectCDF NominalDiffTime))
-    , sBlocklessDistrib         :: !(f (DirectCDF Word64))
-    , sSpanLensCpuDistrib       :: !(f (DirectCDF Int))
-    , sSpanLensCpuEpochDistrib  :: !(f (DirectCDF Int))
-    , sSpanLensCpuRwdDistrib    :: !(f (DirectCDF Int))
-    , sResourceDistribs         :: !(Resources (f (DirectCDF Word64)))
+    , sMissCDF              :: !(CDF f Double)
+    , sLeadsCDF             :: !(CDF f Word64)
+    , sUtxoCDF              :: !(CDF f Word64)
+    , sDensityCDF           :: !(CDF f Double)
+    , sSpanCheckCDF         :: !(CDF f NominalDiffTime)
+    , sSpanLeadCDF          :: !(CDF f NominalDiffTime)
+    , sSpanForgeCDF         :: !(CDF f NominalDiffTime)
+    , sBlocklessCDF         :: !(CDF f Word64)
+    , sSpanLensCpuCDF       :: !(CDF f Int)
+    , sSpanLensCpuEpochCDF  :: !(CDF f Int)
+    , sSpanLensCpuRwdCDF    :: !(CDF f Int)
+    , sResourceCDFs         :: !(Resources (CDF f Word64))
     }
   deriving (Generic)
 
-type    MachPerf = MachPerf' Identity
-type ClusterPerf = MachPerf' Identity
+type MachPerfOne = MachPerf I
+type ClusterPerf = MachPerf (CDF I)
 deriving newtype instance FromJSON a => FromJSON (I a)
 deriving newtype instance ToJSON   a => ToJSON   (I a)
-deriving instance NFData MachPerf
-deriving instance Show   MachPerf
-deriving instance ToJSON MachPerf
+deriving instance (FromJSON (a Double), FromJSON (a Int), FromJSON (a NominalDiffTime), FromJSON (a Word64)) => FromJSON (MachPerf a)
+deriving instance (NFData   (a Double), NFData   (a Int), NFData   (a NominalDiffTime), NFData   (a Word64)) => NFData   (MachPerf a)
+deriving instance (Show     (a Double), Show     (a Int),   Show   (a NominalDiffTime), Show     (a Word64)) => Show     (MachPerf a)
+deriving instance (ToJSON   (a Double), ToJSON   (a Int), ToJSON   (a NominalDiffTime), ToJSON   (a Word64)) => ToJSON   (MachPerf a)
 
 data SlotStats
   = SlotStats
@@ -279,7 +309,7 @@ bpFieldsPropagation :: DField a -> Bool
 bpFieldsPropagation Field{fHead2} = elem fHead2
   [ "0.50", "0.80", "0.90", "0.92", "0.94", "0.96", "0.98", "1.00" ]
 
-instance RenderDirectCDFs BlockPropagation where
+instance RenderDirectCDFs BlockPropOne where
   rdFields _ =
     --  Width LeftPad
     [ Field 6 0 "fChecked"      (f!!0) "Checkd" $ DDeltaT bpForgerChecks
@@ -299,22 +329,22 @@ instance RenderDirectCDFs BlockPropagation where
             (T.take 4 $ T.pack $ printf "%.04f" ps)
             (DDeltaT ((\(ps', d) ->
                          if ps' == ps then d
-                         else error $ printf "Centispec mismatch: [%d]: exp=%f act=%f" i ps ps')
+                         else error $ printf "Centile mismatch: [%d]: exp=%f act=%f" i ps ps')
                       . fromMaybe
-                        (error $ printf "No percentile %d/%f in bpPropagation." i ps)
+                        (error $ printf "No centile %d/%f in bpPropagation." i ps)
                       . flip atMay i . bpPropagation))
-    | (i, Centi ps) <- zip [0::Int ..] (adoptionPcts <> [Centi 1.0]) ] ++
+    | (i, Centile ps) <- zip [0::Int ..] (adoptionPcts <> [Centile 1.0]) ] ++
     [ Field 9 0 "sizes"         "Size"  "bytes" $ DInt    bpSizes
     ]
    where
      f = nChunksEachOf 6    7 "--- Forger event Δt: ---"
      p = nChunksEachOf 6    6 "--- Peer event Δt: ---"
      r = nChunksEachOf aLen 6 "Slot-rel. Δt to adoption centile:"
-     aLen = length adoptionPcts + 1 -- +1 is for the implied 1.0 percentile
+     aLen = length adoptionPcts + 1 -- +1 is for the implied 1.0 centile
 
-adoptionPcts :: [CentiSpec]
+adoptionPcts :: [Centile]
 adoptionPcts =
-  [ Centi 0.5, Centi 0.8, Centi 0.9, Centi 0.92, Centi 0.94, Centi 0.96, Centi 0.98 ]
+  [ Centile 0.5, Centile 0.8, Centile 0.9, Centile 0.92, Centile 0.94, Centile 0.96, Centile 0.98 ]
 
 instance RenderTimeline BlockEvents where
   rtFields _ =
@@ -359,8 +389,8 @@ instance RenderTimeline BlockEvents where
      n = nChunksEachOf 2 4 "Negative"
 
      percSpec :: Double -> DirectCDF NominalDiffTime -> NominalDiffTime
-     percSpec ps d = dCentiSpec (Centi ps) d
-       & fromMaybe (error $ printf "No percentile %f in distribution." ps)
+     percSpec ps d = unI $ Centile ps `projectCDF` d
+       & fromMaybe (error $ printf "No centile %f in distribution." ps)
      af  f = avg . fmap f
      af' f = avg . mapMaybe f
      avg :: [NominalDiffTime] -> NominalDiffTime
@@ -385,30 +415,29 @@ mtFieldsReport :: DField a -> Bool
 mtFieldsReport Field{fId} = elem fId
   [ "CPU", "GC", "MUT", "RSS", "Heap", "Live", "Alloc" ]
 
-instance RenderDirectCDFs MachPerf where
+instance RenderDirectCDFs MachPerfOne where
   rdFields _ =
     --  Width LeftPad
-    [ Field 4 0 "missR"       "Miss"  "ratio" $ DFloat  (i.               sMissDistrib)
-    , Field 5 0 "CheckΔ"      (d!!0)  "Check" $ DDeltaT (i.               sSpanCheckDistrib)
-    , Field 5 0 "LeadΔ"       (d!!1)  "Lead"  $ DDeltaT (i.               sSpanLeadDistrib)
-    , Field 5 0 "ForgeΔ"      (d!!2)  "Forge" $ DDeltaT (i.               sSpanForgeDistrib)
-    , Field 4 0 "BlkGap"      "Block" "gap"   $ DWord64 (i.               sBlocklessDistrib)
-    , Field 5 0 "chDensity"   "Dens"  "ity"   $ DFloat  (i.               sDensityDistrib)
-    , Field 3 0 "CPU"         "CPU"   "%"     $ DWord64 (i. rCentiCpu   . sResourceDistribs)
-    , Field 3 0 "GC"          "GC"    "%"     $ DWord64 (i. rCentiGC    . sResourceDistribs)
+    [ Field 4 0 "missR"       "Miss"  "ratio" $ DFloat                 sMissCDF
+    , Field 5 0 "CheckΔ"      (d!!0)  "Check" $ DDeltaT                sSpanCheckCDF
+    , Field 5 0 "LeadΔ"       (d!!1)  "Lead"  $ DDeltaT                sSpanLeadCDF
+    , Field 5 0 "ForgeΔ"      (d!!2)  "Forge" $ DDeltaT                sSpanForgeCDF
+    , Field 4 0 "BlkGap"      "Block" "gap"   $ DWord64                sBlocklessCDF
+    , Field 5 0 "chDensity"   "Dens"  "ity"   $ DFloat                 sDensityCDF
+    , Field 3 0 "CPU"         "CPU"   "%"     $ DWord64 (rCentiCpu   . sResourceCDFs)
+    , Field 3 0 "GC"          "GC"    "%"     $ DWord64 (rCentiGC    . sResourceCDFs)
     , Field 3 0 "MUT"         "MUT"   "%"     $ DWord64 (fmap (min 999) .
-                                                         i. rCentiMut   . sResourceDistribs)
-    , Field 3 0 "GcMaj"       "GC "   "Maj"   $ DWord64 (i. rGcsMajor   . sResourceDistribs)
-    , Field 3 0 "GcMin"       "flt "  "Min"   $ DWord64 (i. rGcsMinor   . sResourceDistribs)
-    , Field 5 0 "RSS"         (m!!0)  "RSS"   $ DWord64 (i. rRSS        . sResourceDistribs)
-    , Field 5 0 "Heap"        (m!!1)  "Heap"  $ DWord64 (i. rHeap       . sResourceDistribs)
-    , Field 5 0 "Live"        (m!!2)  "Live"  $ DWord64 (i. rLive       . sResourceDistribs)
-    , Field 5 0 "Allocd"      "Alloc" "MB"    $ DWord64 (i. rAlloc      . sResourceDistribs)
-    , Field 5 0 "CPULenAll"   (c!!0)  "All"   $ DInt    (i.               sSpanLensCpuDistrib)
-    , Field 5 0 "CPULenEpoch" (c!!1)  "Epoch" $ DInt    (i.               sSpanLensCpuEpochDistrib)
+                                                         rCentiMut   . sResourceCDFs)
+    , Field 3 0 "GcMaj"       "GC "   "Maj"   $ DWord64 (rGcsMajor   . sResourceCDFs)
+    , Field 3 0 "GcMin"       "flt "  "Min"   $ DWord64 (rGcsMinor   . sResourceCDFs)
+    , Field 5 0 "RSS"         (m!!0)  "RSS"   $ DWord64 (rRSS        . sResourceCDFs)
+    , Field 5 0 "Heap"        (m!!1)  "Heap"  $ DWord64 (rHeap       . sResourceCDFs)
+    , Field 5 0 "Live"        (m!!2)  "Live"  $ DWord64 (rLive       . sResourceCDFs)
+    , Field 5 0 "Allocd"      "Alloc" "MB"    $ DWord64 (rAlloc      . sResourceCDFs)
+    , Field 5 0 "CPULenAll"   (c!!0)  "All"   $ DInt                   sSpanLensCpuCDF
+    , Field 5 0 "CPULenEpoch" (c!!1)  "Epoch" $ DInt                   sSpanLensCpuEpochCDF
     ]
    where
-     i = runIdentity
      d = nChunksEachOf  3 6 "---- Δt ----"
      m = nChunksEachOf  3 6 "Memory usage, MB"
      c = nChunksEachOf  2 6 "CPU% spans"

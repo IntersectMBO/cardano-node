@@ -289,3 +289,18 @@ analysis_trace_frequencies() {
     done
     echo >&2
 }
+
+analysis_config_extract_legacy_tracing() {
+    local file=$(realpath $1)
+    local nix_eval_args=(
+        --raw
+        --impure
+        --expr '
+          let f = __fromJSON (__readFile "'$file'");
+          in with f;
+             __toJSON
+             { inherit rotation;
+             }'
+    )
+    nix eval "${nix_eval_args[@]}" | jq --sort-keys
+}

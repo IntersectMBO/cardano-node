@@ -251,12 +251,12 @@ data State
   , sMachViews     :: Maybe [(JsonLogfile, MachView)]
   , sChainRaw      :: Maybe [BlockEvents]
   , sChain         :: Maybe [BlockEvents]
-  , sBlockProp     :: Maybe BlockPropagation
+  , sBlockProp     :: Maybe BlockPropOne
     -- performance
   , sSlotsRaw      :: Maybe [(JsonLogfile, [SlotStats])]
   , sScalars       :: Maybe [(JsonLogfile, RunScalars)]
   , sSlots         :: Maybe [(JsonLogfile, [SlotStats])]
-  , sMachPerf      :: Maybe [(JsonLogfile, MachPerf)]
+  , sMachPerf      :: Maybe [(JsonLogfile, MachPerfOne)]
   , sClusterPerf   :: Maybe ClusterPerf
   }
 
@@ -490,7 +490,7 @@ runChainCommand _ c@ReportPropPeers{} = missingCommandData c
 runChainCommand s@State{sRun=Just run, sBlockProp=Just prop}
   c@(ReportPropEndToEnd f) = do
   dumpText "blockprop-endtoend"
-    (renderDirectCDFs run RenderPretty bpFieldsPropagation (Just briefCentiSpecs) prop) f
+    (renderDirectCDFs run RenderPretty bpFieldsPropagation (Just briefCentiles) prop) f
     & firstExceptT (CommandError c)
   pure s
 runChainCommand _ c@ReportPropEndToEnd{} = missingCommandData c

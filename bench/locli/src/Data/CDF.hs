@@ -13,22 +13,24 @@
 {-# OPTIONS_GHC -Wwarn #-}
 
 module Data.CDF
-  ( ToRealFrac(..)
+  ( Centile(..)
+  , renderCentile
+  , briefCentiles
+  , stdCentiles
+  , CDFError (..)
   , CDF(..)
+  , centilesCDF
+  , filterCDF
+  , zeroCDF
+  , projectCDF
+  , projectCDF'
+  , indexCDF
   , DirectCDF
   , computeCDF
   , computeCDFStats
   , mapToCDF
-  , subsetCDF
-  , zeroCDF
-  , dCentiIx
-  , dCentiSpec
-  , dCentiSpec'
-  , CentiSpec(..)
-  , renderCentiSpec
-  , distribCentiSpecs
-  , briefCentiSpecs
-  , stdCentiSpecs
+  , CDF2
+  , cdf2OfCDFs
   --
   , module Data.SOP.Strict
   ) where
@@ -45,76 +47,83 @@ import Text.Printf (printf)
 
 
 -- | Centile specifier: a fractional in range of [0; 1].
-newtype CentiSpec =
-  Centi { unCentiSpec :: Double }
+newtype Centile =
+  Centile { unCentile :: Double }
   deriving (Eq, Generic, FromJSON, ToJSON, Show)
   deriving anyclass NFData
 
-renderCentiSpec :: Int -> CentiSpec -> String
-renderCentiSpec width = \case
-  Centi x    -> printf ("%0."<>show (width-2)<>"f") x
+renderCentile :: Int -> Centile -> String
+renderCentile width = \case
+  Centile x    -> printf ("%0."<>show (width-2)<>"f") x
 
-briefCentiSpecs :: [CentiSpec]
-briefCentiSpecs =
-  [ Centi 0.5, Centi 0.9, Centi 1.0 ]
+briefCentiles :: [Centile]
+briefCentiles =
+  [ Centile 0.5, Centile 0.9, Centile 1.0 ]
 
-stdCentiSpecs :: [CentiSpec]
-stdCentiSpecs =
-  [ Centi 0.01, Centi 0.05
-  , Centi 0.1, Centi 0.2, Centi 0.3, Centi 0.4
-  , Centi 0.5, Centi 0.6
-  , Centi 0.7, Centi 0.75
-  , Centi 0.8, Centi 0.85, Centi 0.875
-  , Centi 0.9, Centi 0.925, Centi 0.95, Centi 0.97, Centi 0.98, Centi 0.99
-  , Centi 0.995, Centi 0.997, Centi 0.998, Centi 0.999
-  , Centi 0.9995, Centi 0.9997, Centi 0.9998, Centi 0.9999
+stdCentiles :: [Centile]
+stdCentiles =
+  [ Centile 0.01, Centile 0.05
+  , Centile 0.1, Centile 0.2, Centile 0.3, Centile 0.4
+  , Centile 0.5, Centile 0.6
+  , Centile 0.7, Centile 0.75
+  , Centile 0.8, Centile 0.85, Centile 0.875
+  , Centile 0.9, Centile 0.925, Centile 0.95, Centile 0.97, Centile 0.98, Centile 0.99
+  , Centile 0.995, Centile 0.997, Centile 0.998, Centile 0.999
+  , Centile 0.9995, Centile 0.9997, Centile 0.9998, Centile 0.9999
   ]
 
 --
--- CDF
+-- * Parametric CDF (cumulative distribution function)
 --
 data CDF p a =
   CDF
-  { dSize      :: Int
-  , dAverage   :: Double
-  , dStddev    :: Double
-  , dRange     :: (a, a)
-  , dCentiles  :: [(CentiSpec, p a)]
+  { cdfSize      :: Int
+  , cdfAverage   :: Double
+  , cdfStddev    :: Double
+  , cdfRange     :: (a, a)
+  , cdfSamples  :: [(Centile, p a)]
   }
   deriving (Functor, Generic, Show)
   deriving anyclass NFData
 
-type DirectCDF a = CDF I a
-
 instance (FromJSON (p a), FromJSON a) => FromJSON (CDF p a)
 instance (  ToJSON (p a),   ToJSON a) => ToJSON   (CDF p a)
 
-dCentiIx :: Int -> DirectCDF a -> a
-dCentiIx i d = unI . snd $ dCentiles d !! i
-
-dCentiSpec :: CentiSpec -> DirectCDF a -> Maybe a
-dCentiSpec p = fmap (unI . snd) . find ((== p) . fst) . dCentiles
-
-dCentiSpec' :: String -> CentiSpec -> DirectCDF a -> a
-dCentiSpec' desc p =
-  maybe (error er) (unI . snd) . find ((== p) . fst) . dCentiles
- where
-   er = printf "Missing centile %f in %s" (show $ unCentiSpec p) desc
-
-distribCentiSpecs :: DirectCDF a -> [CentiSpec]
-distribCentiSpecs = fmap fst . dCentiles
+centilesCDF :: CDF p a -> [Centile]
+centilesCDF = fmap fst . cdfSamples
 
 zeroCDF :: (Num a) => CDF p a
 zeroCDF =
   CDF
-  { dSize     = 0
-  , dAverage  = 0
-  , dStddev   = 0
-  , dRange    = (0, 0)
-  , dCentiles = mempty
+  { cdfSize    = 0
+  , cdfAverage = 0
+  , cdfStddev  = 0
+  , cdfRange   = (0, 0)
+  , cdfSamples = mempty
   }
 
--- | For a list of distributions, compute a distribution of averages and rel stddev
+filterCDF :: ((Centile, p a) -> Bool) -> CDF p a -> CDF p a
+filterCDF f d =
+  d { cdfSamples = cdfSamples d & filter f }
+
+indexCDF :: Int -> CDF p a -> p a
+indexCDF i d = snd $ cdfSamples d !! i
+
+projectCDF :: Centile -> CDF p a -> Maybe (p a)
+projectCDF p = fmap snd . find ((== p) . fst) . cdfSamples
+
+projectCDF' :: String -> Centile -> CDF p a -> p a
+projectCDF' desc p =
+  maybe (error er) snd . find ((== p) . fst) . cdfSamples
+ where
+   er = printf "Missing centile %f in %s" (show $ unCentile p) desc
+
+--
+-- * Trivial instantiation: samples are value points
+--
+type DirectCDF a = CDF I a
+
+-- | For a list of cdfs, compute a distribution of averages and rel stddev
 -- (aka. coefficient of variance).
 computeCDFStats ::
     forall a v
@@ -124,26 +133,26 @@ computeCDFStats ::
 computeCDFStats desc xs = do
   when (null xs) $
     Left $ "Empty list of distributions in " <> desc
-  let distPcts    = dCentiles <$> xs
-      pctDistVals = transpose distPcts
-      total       = sum $ xs <&> \CDF{..} -> dAverage * fromIntegral dSize
-      nSamples    = sum $ xs <&> dSize
-  unless (all (pctLen ==) (length <$> distPcts)) $
-    Left ("CDFs with different percentile counts: " <> show (length <$> distPcts) <> " in " <> desc)
+  let samples    = cdfSamples <$> xs
+      sampleDistVals = transpose samples
+      total       = sum $ xs <&> \CDF{..} -> cdfAverage * fromIntegral cdfSize
+      nSamples    = sum $ xs <&> cdfSize
+  unless (all (sampleLen ==) (length <$> samples)) $
+    Left ("CDFs with different centile counts: " <> show (length <$> samples) <> " in " <> desc)
   pure $ (join (***) (CDF
                       (length xs)
                       (fromRational (toRational total) / fromIntegral nSamples)
                       0
-                      (minimum $ fromRational . toRational . fst . dRange <$> xs,
-                       maximum $ fromRational . toRational . snd . dRange <$> xs))
-          :: ([(CentiSpec, I v)], [(CentiSpec, I v)])
+                      (minimum $ fromRational . toRational . fst . cdfRange <$> xs,
+                       maximum $ fromRational . toRational . snd . cdfRange <$> xs))
+          :: ([(Centile, I v)], [(Centile, I v)])
           -> (DirectCDF Double,   DirectCDF Double))
-       $ unzip (pctsMeanCoV <$> pctDistVals)
+       $ unzip (samplesMeanCoV <$> sampleDistVals)
  where
-   pctLen = length . dCentiles $ head xs
+   sampleLen = length . cdfSamples $ head xs
 
-   pctsMeanCoV :: [(c, I a)] -> ((c, I Double), (c, I Double))
-   pctsMeanCoV xs' = --join (***) (fst $ head xs',)
+   samplesMeanCoV :: [(c, I a)] -> ((c, I Double), (c, I Double))
+   samplesMeanCoV xs' = --join (***) (fst $ head xs',)
      ((fst $ head xs', I mean),
       (fst $ head xs', I $ Stat.stdDev vec / mean))
     where
@@ -151,25 +160,20 @@ computeCDFStats desc xs = do
       vec  = Vec.fromList $ fromRational . toRational . unI . snd <$> xs'
       mean = Stat.mean vec
 
-mapToCDF :: Real a
-  => (b -> a) -> [CentiSpec] -> [b] -> DirectCDF a
-mapToCDF f pspecs xs = computeCDF pspecs (f <$> xs)
-
-computeCDF :: Real v
-  => [CentiSpec] -> [v] -> DirectCDF v
-computeCDF percentiles (sort -> sorted) =
+computeCDF :: Real v => [Centile] -> [v] -> DirectCDF v
+computeCDF centiles (sort -> sorted) =
   CDF
-  { dSize        = size
-  , dAverage     = Stat.mean   doubleVec
-  , dStddev      = Stat.stdDev doubleVec
-  , dRange       = (mini, maxi)
-  , dCentiles =
-    (    (Centi   0, I mini) :) .
-    (<> [(Centi 1.0, I maxi) ]) $
-    percentiles <&>
+  { cdfSize        = size
+  , cdfAverage     = Stat.mean   doubleVec
+  , cdfStddev      = Stat.stdDev doubleVec
+  , cdfRange       = (mini, maxi)
+  , cdfSamples =
+    (    (Centile   0, I mini) :) .
+    (<> [(Centile 1.0, I maxi) ]) $
+    centiles <&>
       \spec ->
         let sample = if size == 0 then 0
-                     else vec Vec.! fracIndex (unCentiSpec spec)
+                     else vec Vec.! fracIndex (unCentile spec)
         in (,) spec (I sample)
   }
  where vec         = Vec.fromList sorted
@@ -181,15 +185,47 @@ computeCDF percentiles (sort -> sorted) =
          then (0,           0)
          else (vec Vec.! 0, Vec.last vec)
 
-subsetCDF :: [CentiSpec] -> DirectCDF a -> DirectCDF a
-subsetCDF xs d =
-  d { dCentiles = dCentiles d & filter ((`elem` xs) . fst) }
+mapToCDF :: Real a => (b -> a) -> [Centile] -> [b] -> DirectCDF a
+mapToCDF f pspecs xs = computeCDF pspecs (f <$> xs)
 
-class RealFrac b => ToRealFrac a b where
-  toRealFrac :: a -> b
+type CDF2 a = CDF (CDF I) a
 
-instance RealFrac b => ToRealFrac Int b where
-  toRealFrac = fromIntegral
+data CDFError
+  = CDFIncoherentSamplingLengths  [Int]
+  | CDFIncoherentSamplingCentiles [[Centile]]
+  | CDFEmptyDataset
 
-instance {-# OVERLAPPABLE #-} (RealFrac b, Real a) => ToRealFrac a b where
-  toRealFrac = realToFrac
+-- cdf2OfCDFs :: forall a. Real a => ([a] -> DirectCDF a) -> [DirectCDF a] -> Either CDFError (CDF2 a)
+
+cdf2OfCDFs :: forall a p. Real a => ([p a] -> CDF I a) -> [CDF p a] -> Either CDFError (CDF (CDF I) a)
+cdf2OfCDFs _ [] = Left CDFEmptyDataset
+cdf2OfCDFs cdfy xs = do
+  unless (all (head lengths ==) lengths) $
+    Left $ CDFIncoherentSamplingLengths lengths
+  unless (null incoherent) $
+    Left $ CDFIncoherentSamplingCentiles (fmap fst <$> incoherent)
+  pure CDF
+    { cdfSize    = totalSize
+    , cdfAverage = totalArea / fromIntegral totalSize
+    , cdfRange   = (,) (minimum $ fst <$> ranges)
+                       (maximum $ snd <$> ranges)
+    , cdfStddev  = maximum $ cdfStddev <$> xs
+    , cdfSamples = fmap cdfy <$> coherent
+    }
+ where
+   totalSize      = sum sizes
+   sizes          = cdfSize <$> xs
+   ranges         = cdfRange <$> xs
+   samples        = cdfSamples <$> xs
+   lengths        = length <$> samples
+   totalArea      = sum $ xs <&> \CDF{..} -> cdfAverage * fromIntegral cdfSize
+
+   centileOrdered :: [[(Centile, p a)]]
+   centileOrdered = transpose samples
+
+   (incoherent, coherent) = partitionEithers $ centileOrdered <&>
+     \case
+       [] -> error "cdfOfCDFs:  empty list of centiles, hands down."
+       xxs@((c, _):(fmap fst -> cs)) -> if any (/= c) cs
+                                        then Left xxs
+                                        else Right (c, snd <$> xxs)

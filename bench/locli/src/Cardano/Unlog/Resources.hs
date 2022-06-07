@@ -1,4 +1,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE DeriveTraversable #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Unlog.Resources
   ( ResAccums
@@ -6,7 +8,7 @@ module Cardano.Unlog.Resources
   , updateResAccums
   , extractResAccums
   , ResDistribProjections
-  , computeResDistrib
+  , computeResCDF
   , ResContinuity
   , discardObsoleteValues
   -- * Re-exports
@@ -20,6 +22,9 @@ import Data.CDF
 import Data.Time.Clock (UTCTime)
 
 import Cardano.Logging.Resources.Types
+
+deriving instance Foldable Resources
+deriving instance Traversable Resources
 
 -- | Resource accumulators
 type ResAccums = Resources (Accum Word64 Word64)
@@ -50,17 +55,17 @@ extractResAccums = (aCurrent <$>)
 
 type ResDistribProjections a = Resources (a -> Maybe Word64)
 
-computeResDistrib ::
+computeResCDF ::
   forall a
-  .  [CentiSpec]
+  .  [Centile]
   -> ResDistribProjections a
   -> [a]
   -> Resources (DirectCDF Word64)
-computeResDistrib percentiles projs xs =
+computeResCDF centiles projs xs =
   compDist <$> projs
  where
    compDist :: (a -> Maybe Word64) -> DirectCDF Word64
-   compDist proj = computeCDF percentiles
+   compDist proj = computeCDF centiles
      (catMaybes . toList $ proj <$> xs)
 
 type ResContinuity a = Resources (a -> Maybe a)

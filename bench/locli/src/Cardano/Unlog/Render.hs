@@ -103,7 +103,7 @@ renderTimeline run flt withCommentary xs =
    renderField lpfn wfn rfn f = T.replicate (lpfn f) " " <> T.center (wfn f) ' ' (rfn f)
 
 renderDirectCDFs :: forall a. RenderDirectCDFs a =>
-     Run -> RenderMode -> (DField a -> Bool) -> Maybe [CentiSpec] -> a
+     Run -> RenderMode -> (DField a -> Bool) -> Maybe [Centile] -> a
   -> [Text]
 renderDirectCDFs run mode flt mCentis x =
   case mode of
@@ -112,14 +112,14 @@ renderDirectCDFs run mode flt mCentis x =
      where headCsv = T.intercalate "," $ fId <$> fields
 
  where
-   percSpecs :: [CentiSpec]
-   percSpecs = maybe (mapSomeFieldDirectCDF distribCentiSpecs x (fSelect . head $ rdFields run))
+   percSpecs :: [Centile]
+   percSpecs = maybe (mapSomeFieldDirectCDF centilesCDF x (fSelect . head $ rdFields run))
                      id
                      mCentis
 
    -- XXX:  very expensive, the way it's used below..
    subsetDistrib :: DirectCDF b -> DirectCDF b
-   subsetDistrib = maybe id subsetCDF mCentis
+   subsetDistrib = maybe id (filterCDF . \cs c -> elem (fst c) cs) mCentis
 
    pLines :: [Text]
    pLines = fLine <$> [0..(nCentis - 1)]
@@ -129,21 +129,21 @@ renderDirectCDFs run mode flt mCentis x =
                   then renderLineDistPretty
                   else renderLineDistCsv) $
     \Field{..} ->
-      let getCapCenti :: forall c. DirectCDF c -> c
-          getCapCenti = dCentiIx pctIx
+      let getCapCentile :: forall c. DirectCDF c -> c
+          getCapCentile = unI . indexCDF pctIx
       in T.pack $ case fSelect of
         DInt    (($x)->d) -> (if mode == RenderPretty
                               then printf "%*d" fWidth
-                              else printf "%d") (getCapCenti $ subsetDistrib d)
+                              else printf "%d") (getCapCentile $ subsetDistrib d)
         DWord64 (($x)->d) -> (if mode == RenderPretty
                               then printf "%*d" fWidth
-                              else printf "%d") (getCapCenti $ subsetDistrib d)
+                              else printf "%d") (getCapCentile $ subsetDistrib d)
         DFloat  (($x)->d) -> (if mode == RenderPretty
                               then take fWidth . printf "%*F" (fWidth - 2)
-                              else printf "%F") (getCapCenti $ subsetDistrib d)
+                              else printf "%F") (getCapCentile $ subsetDistrib d)
         DDeltaT (($x)->d) -> (if mode == RenderPretty
                               then take fWidth else id)
-                             . dropWhileEnd (== 's') . show $ getCapCenti $ subsetDistrib d
+                             . dropWhileEnd (== 's') . show $ getCapCentile $ subsetDistrib d
 
    head1, head2 :: Maybe Text
    head1 = if all ((== 0) . T.length . fHead1) fields then Nothing
@@ -156,12 +156,12 @@ renderDirectCDFs run mode flt mCentis x =
      [ (T.center (fWidth (head fields)) ' ' "avg" :) $
        (\f -> flip (renderField fLeftPad fWidth) f $ const $
                 mapSomeFieldDirectCDF
-                  (T.take (fWidth f) .T.pack . printf "%F" . dAverage)  x (fSelect f))
+                  (T.take (fWidth f) .T.pack . printf "%F" . cdfAverage)  x (fSelect f))
        <$> tail fields
      , (T.center (fWidth (head fields)) ' ' "size" :) $
        (\f -> flip (renderField fLeftPad fWidth) f $ const $
                 mapSomeFieldDirectCDF
-                  (T.take (fWidth f) . T.pack . show . dSize)    x (fSelect f))
+                  (T.take (fWidth f) . T.pack . show . cdfSize)    x (fSelect f))
        <$> tail fields
      ]
 
@@ -181,18 +181,18 @@ renderDirectCDFs run mode flt mCentis x =
 
    percField :: DField a
    percField = Field 6 0 "%tile" "" "%tile" (DFloat $ const percsDistrib)
-   nCentis = length $ dCentiles percsDistrib
+   nCentis = length $ cdfSamples percsDistrib
    percsDistrib = mapSomeFieldDirectCDF
                     (distribCentisAsDistrib . subsetDistrib) x (fSelect $ head (rdFields run))
    distribCentisAsDistrib :: DirectCDF b -> DirectCDF Double
    distribCentisAsDistrib CDF{..} =
      CDF
-       (length dCentiles)
+       (length cdfSamples)
        0.5
        0.5
-       (head dCentiles & unCentiSpec . fst,
-        last dCentiles & unCentiSpec . fst)
-       $ (id &&& I . unCentiSpec) . fst <$> dCentiles
+       (head cdfSamples & unCentile . fst,
+        last cdfSamples & unCentile . fst)
+       $ (id &&& I . unCentile) . fst <$> cdfSamples
 
    nsamplesField :: DField a
    nsamplesField = Field 6 0 "Nsamp" "" "Nsamp" (DInt $ const nsamplesDistrib)
@@ -200,7 +200,7 @@ renderDirectCDFs run mode flt mCentis x =
    populationIndices :: [Int]
    populationIndices = [1..maxPopulationSize]
    maxPopulationSize :: Int
-   maxPopulationSize = last . sort $ mapSomeFieldDirectCDF dSize x . fSelect <$> rdFields run
+   maxPopulationSize = last . sort $ mapSomeFieldDirectCDF cdfSize x . fSelect <$> rdFields run
 
 -- * Auxiliaries
 --

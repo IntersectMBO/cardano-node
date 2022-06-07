@@ -125,8 +125,8 @@ data MachineTimelineOutputFiles
   }
   deriving (Show)
 
-data BlockPropagationOutputFiles
-  = BlockPropagationOutputFiles
+data BlockPropOutputFiles
+  = BlockPropOutputFiles
   { bpofForgerPretty       :: Maybe TextOutputFile
   , bpofPeersPretty        :: Maybe TextOutputFile
   , bpofPropagationPretty  :: Maybe TextOutputFile
@@ -287,9 +287,9 @@ parseMachineTimelineOutputFiles =
         (optCsvOutputFile "derived-vectors-1-csv"
            "Dump CSV of vectors derived from the timeline")
 
-parseBlockPropagationOutputFiles :: Parser BlockPropagationOutputFiles
-parseBlockPropagationOutputFiles =
-  BlockPropagationOutputFiles
+parseBlockPropOutputFiles :: Parser BlockPropOutputFiles
+parseBlockPropOutputFiles =
+  BlockPropOutputFiles
     <$> optional
         (optTextOutputFile "forger-text"       "Forger stats")
     <*> optional

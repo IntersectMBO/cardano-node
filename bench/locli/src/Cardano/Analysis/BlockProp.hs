@@ -15,7 +15,12 @@
 {- HLINT ignore "Use head" -}
 {- HLINT ignore "Avoid lambda" -}
 module Cardano.Analysis.BlockProp
-  (MachView, buildMachViews, rebuildChain, filterChain, blockProp)
+  ( summariseBlockProps
+  , MachView
+  , buildMachViews
+  , rebuildChain
+  , filterChain
+  , blockProp)
 where
 
 import Prelude                  (String, (!!), error, head, last, id, show, tail)
@@ -58,6 +63,39 @@ import Cardano.Unlog.Render
 import Cardano.Unlog.Resources
 import Cardano.Util
 
+
+summariseBlockProps :: [Centile] -> [BlockPropOne] -> Either CDFError BlockProps
+summariseBlockProps _ [] = error "Asked to summarise empty list of BlockPropOne"
+summariseBlockProps centiles bs@(headline:_) = do
+  bpForgerChecks           <- cdf2OfCDFs cdfy $ bs <&> bpForgerChecks
+  bpForgerLeads            <- cdf2OfCDFs cdfy $ bs <&> bpForgerLeads
+  bpForgerForges           <- cdf2OfCDFs cdfy $ bs <&> bpForgerForges
+  bpForgerAdoptions        <- cdf2OfCDFs cdfy $ bs <&> bpForgerAdoptions
+  bpForgerAnnouncements    <- cdf2OfCDFs cdfy $ bs <&> bpForgerAnnouncements
+  bpForgerSends            <- cdf2OfCDFs cdfy $ bs <&> bpForgerSends
+  bpPeerNotices            <- cdf2OfCDFs cdfy $ bs <&> bpPeerNotices
+  bpPeerRequests           <- cdf2OfCDFs cdfy $ bs <&> bpPeerRequests
+  bpPeerFetches            <- cdf2OfCDFs cdfy $ bs <&> bpPeerFetches
+  bpPeerAdoptions          <- cdf2OfCDFs cdfy $ bs <&> bpPeerAdoptions
+  bpPeerAnnouncements      <- cdf2OfCDFs cdfy $ bs <&> bpPeerAnnouncements
+  bpPeerSends              <- cdf2OfCDFs cdfy $ bs <&> bpPeerSends
+  bpSizes                  <- cdf2OfCDFs cdfy $ bs <&> bpSizes
+  bpPropagation            <- sequence $ (transpose $ bs <&> bpPropagation) <&>
+    \case
+      [] -> Left CDFEmptyDataset
+      xs@((d,_):ds) -> do
+        unless (all (d ==) $ fmap fst ds) $
+          Left $ CDFIncoherentSamplingCentiles [Centile . fst <$> xs]
+        (d,) <$> cdf2OfCDFs cdfy (snd <$> xs)
+  pure $ BlockProp
+    { bpVersion             = bpVersion headline
+    , bpDomainSlots         = dataDomainsMergeOuter $ bs <&> bpDomainSlots
+    , bpDomainBlocks        = dataDomainsMergeOuter $ bs <&> bpDomainBlocks
+    , ..
+    }
+ where
+   cdfy :: forall a. Real a => [I a] -> CDF I a
+   cdfy = computeCDF centiles . fmap unI
 
 -- | Block's events, as seen by its forger.
 data ForgerEvents a
@@ -404,10 +442,10 @@ filterChain Run{genesis} (flts, fltNames) chain = do
               (blk0V & beBlockNo) (blkLV & beBlockNo)
               (length chain) (length fltrd)
 
-blockProp :: Run -> [BlockEvents] -> DataDomain SlotNo -> DataDomain BlockNo -> IO BlockPropagation
+blockProp :: Run -> [BlockEvents] -> DataDomain SlotNo -> DataDomain BlockNo -> IO BlockPropOne
 blockProp run@Run{genesis} chain domSlot domBlock = do
   progress "block-propagation" $ J (domSlot, domBlock)
-  pure $ BlockPropagation
+  pure $ BlockProp
     { bpDomainSlots         = domSlot
     , bpDomainBlocks        = domBlock
     , bpForgerChecks        = forgerEventsCDF   (Just . bfChecked   . beForge)
@@ -426,19 +464,19 @@ blockProp run@Run{genesis} chain domSlot domBlock = do
     , bpPeerAnnouncements   = observerEventsCDF boAnnounced          "announced"
     , bpPeerSends           = observerEventsCDF boSending            "sending"
     , bpPropagation         =
-      [ (p', forgerEventsCDF (Just . dCentiSpec' "bePropagation" p . bePropagation))
-      | p@(Centi p') <- adoptionPcts <> [Centi 1.0] ]
+      [ (p', forgerEventsCDF (Just . unI . projectCDF' "bePropagation" p . bePropagation))
+      | p@(Centile p') <- adoptionPcts <> [Centile 1.0] ]
     , bpSizes               = forgerEventsCDF   (Just . bfBlockSize . beForge)
     , bpVersion             = getVersion
     }
  where
    forgerEventsCDF   :: (Real a) => (BlockEvents -> Maybe a) -> DirectCDF a
-   forgerEventsCDF   = flip (witherToDistrib (computeCDF stdCentiSpecs)) chain
-   observerEventsCDF = mapChainToPeerBlockObservationCDF stdCentiSpecs chain
+   forgerEventsCDF   = flip (witherToDistrib (computeCDF stdCentiles)) chain
+   observerEventsCDF = mapChainToPeerBlockObservationCDF stdCentiles chain
 
    mapChainToBlockEventCDF ::
      (Real a)
-     => [CentiSpec]
+     => [Centile]
      -> [BlockEvents]
      -> (BlockEvents -> Maybe a)
      -> DirectCDF a
@@ -447,7 +485,7 @@ blockProp run@Run{genesis} chain domSlot domBlock = do
        mapMaybe proj cbes
 
    mapChainToPeerBlockObservationCDF ::
-        [CentiSpec]
+        [Centile]
      -> [BlockEvents]
      -> (BlockObservation -> Maybe NominalDiffTime)
      -> String

@@ -32,6 +32,34 @@ import Cardano.Unlog.LogObject hiding (Text)
 import Cardano.Unlog.Resources
 
 
+summariseClusterPerf :: [Centile] -> [MachPerfOne] -> Either CDFError ClusterPerf
+summariseClusterPerf _ [] = error "Asked to summarise empty list of MachPerfOne"
+summariseClusterPerf centiles mps@(headline:_) = do
+  sMissCDF              <- cdf2OfCDFs cdfy $ mps <&> sMissCDF
+  sLeadsCDF             <- cdf2OfCDFs cdfy $ mps <&> sLeadsCDF
+  sUtxoCDF              <- cdf2OfCDFs cdfy $ mps <&> sUtxoCDF
+  sDensityCDF           <- cdf2OfCDFs cdfy $ mps <&> sDensityCDF
+  sSpanCheckCDF         <- cdf2OfCDFs cdfy $ mps <&> sSpanCheckCDF
+  sSpanLeadCDF          <- cdf2OfCDFs cdfy $ mps <&> sSpanLeadCDF
+  sSpanForgeCDF         <- cdf2OfCDFs cdfy $ mps <&> sSpanForgeCDF
+  sBlocklessCDF         <- cdf2OfCDFs cdfy $ mps <&> sBlocklessCDF
+  sSpanLensCpuCDF       <- cdf2OfCDFs cdfy $ mps <&> sSpanLensCpuCDF
+  sSpanLensCpuEpochCDF  <- cdf2OfCDFs cdfy $ mps <&> sSpanLensCpuEpochCDF
+  sSpanLensCpuRwdCDF    <- cdf2OfCDFs cdfy $ mps <&> sSpanLensCpuRwdCDF
+  sResourceCDFs         <- sequence $ (traverse identity $ mps <&> sResourceCDFs) <&>
+    \case
+      [] -> Left CDFEmptyDataset
+      (xs :: [CDF I Word64]) -> cdf2OfCDFs cdfy xs :: Either CDFError (CDF (CDF I) Word64)
+
+  pure MachPerf
+    { sVersion          = sVersion headline
+    , sDomainSlots      = dataDomainsMergeOuter $ mps <&> sDomainSlots
+    , ..
+    }
+ where
+   cdfy :: forall a. Real a => [I a] -> CDF I a
+   cdfy = computeCDF centiles . fmap unI
+
 -- | A side-effect of analysis
 data RunScalars
   = RunScalars
@@ -117,32 +145,31 @@ slotStatsSummary Run{genesis=Genesis{epochLength}} slots =
      . ((s >) . unEpochSlot . slEpochSlot . Vec.head &&&
         (s <) . unEpochSlot . slEpochSlot . Vec.last)
 
-slotStatsMachPerf :: Run -> (JsonLogfile, [SlotStats]) -> Either Text (JsonLogfile, MachPerf)
+slotStatsMachPerf :: Run -> (JsonLogfile, [SlotStats]) -> Either Text (JsonLogfile, MachPerfOne)
 slotStatsMachPerf _ (JsonLogfile f, []) =
   Left $ "slotStatsMachPerf:  zero filtered slots from " <> pack f
 slotStatsMachPerf run (f, slots) =
   Right . (f,) $ MachPerf
-  { sVersion                  = getVersion
-  , sDomainSlots              = i $ mkDataDomainInj (slSlot $ head slots) (slSlot $ last slots)
-                                                    (fromIntegral . unSlotNo)
+  { sVersion              = getVersion
+  , sDomainSlots          = mkDataDomainInj (slSlot $ head slots) (slSlot $ last slots)
+                                            (fromIntegral . unSlotNo)
   --
-  , sMissDistrib              = dist sssMissRatios
-  , sLeadsDistrib             = dist (slCountLeads <$> slots)
-  , sUtxoDistrib              = dist (slUtxoSize <$> slots)
-  , sDensityDistrib           = dist (slDensity <$> slots)
-  , sSpanCheckDistrib         = dist (slSpanCheck `mapSMaybe` slots)
-  , sSpanLeadDistrib          = dist (slSpanLead `mapSMaybe` slots)
-  , sSpanForgeDistrib         = dist (filter (/= 0) $ slSpanForge `mapSMaybe` slots)
-  , sBlocklessDistrib         = dist (slBlockless <$> slots)
-  , sSpanLensCpuDistrib       = dist sssSpanLensCpu
-  , sSpanLensCpuEpochDistrib  = dist sssSpanLensCpuEpoch
-  , sSpanLensCpuRwdDistrib    = dist sssSpanLensCpuRwd
-  , sResourceDistribs         = i <$> computeResDistrib stdCentiSpecs resDistProjs slots
+  , sMissCDF              = dist sssMissRatios
+  , sLeadsCDF             = dist (slCountLeads <$> slots)
+  , sUtxoCDF              = dist (slUtxoSize <$> slots)
+  , sDensityCDF           = dist (slDensity <$> slots)
+  , sSpanCheckCDF         = dist (slSpanCheck `mapSMaybe` slots)
+  , sSpanLeadCDF          = dist (slSpanLead `mapSMaybe` slots)
+  , sSpanForgeCDF         = dist (filter (/= 0) $ slSpanForge `mapSMaybe` slots)
+  , sBlocklessCDF         = dist (slBlockless <$> slots)
+  , sSpanLensCpuCDF       = dist sssSpanLensCpu
+  , sSpanLensCpuEpochCDF  = dist sssSpanLensCpuEpoch
+  , sSpanLensCpuRwdCDF    = dist sssSpanLensCpuRwd
+  , sResourceCDFs         = computeResCDF stdCentiles resDistProjs slots
   }
  where
-   i = Identity
-   dist :: (Real a) => [a] -> Identity (DirectCDF a)
-   dist = i . computeCDF stdCentiSpecs
+   dist :: (Real a) => [a] -> DirectCDF a
+   dist = computeCDF stdCentiles
 
    SlotStatsSummary{..} = slotStatsSummary run slots
 
