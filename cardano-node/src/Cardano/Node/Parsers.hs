@@ -15,6 +15,7 @@ import           Cardano.Prelude hiding (option)
 import           Prelude (String)
 
 import           Data.Time.Clock (secondsToDiffTime)
+import           Data.Prefix.Units
 import           Options.Applicative hiding (str)
 import qualified Options.Applicative as Opt
 import qualified Options.Applicative.Help as OptI
@@ -25,6 +26,7 @@ import           Ouroboros.Consensus.Mempool.API (MempoolCapacityBytes (..),
 import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (SnapshotInterval (..))
 
 import           Cardano.Logging.Types
+import           Cardano.Node.Configuration.LedgerDB
 import           Cardano.Node.Configuration.NodeAddress (NodeHostIPv4Address (NodeHostIPv4Address),
                    NodeHostIPv6Address (NodeHostIPv6Address), PortNumber, SocketPath (SocketPath))
 import           Cardano.Node.Configuration.POM (PartialNodeConfiguration (..), lastOption)
@@ -72,6 +74,8 @@ nodeRunParser = do
 
   maybeMempoolCapacityOverride <- lastOption parseMempoolCapacityOverride
 
+  ledgerDBBackend <- lastOption parseLedgerDBBackend
+
   pure $ PartialNodeConfiguration
            { pncSocketConfig =
                Last . Just $ SocketConfig
@@ -104,6 +108,7 @@ nodeRunParser = do
            , pncTraceConfig = mempty
            , pncTraceForwardSocket = traceForwardSocket
            , pncMaybeMempoolCapacityOverride = maybeMempoolCapacityOverride
+           , pncLedgerDBBackend = ledgerDBBackend
            , pncProtocolIdleTimeout = mempty
            , pncTimeWaitTimeout = mempty
            , pncAcceptedConnectionsLimit = mempty
@@ -206,8 +211,28 @@ parseMempoolCapacityOverride = parseOverride <|> parseNoOverride
     parseNoOverride =
       flag' NoMempoolCapacityBytesOverride
         (  long "no-mempool-capacity-override"
-        <> help "The port number"
+        <> help "Don't override the mempool capacity"
         )
+
+parseLedgerDBBackend :: Parser BackingStoreSelectorFlag
+parseLedgerDBBackend = parseInMemory <|> parseLMDB
+  where
+    parseInMemory :: Parser BackingStoreSelectorFlag
+    parseInMemory =
+      flag' InMemory (  long "in-memory-ledger-db-backend"
+                     <> help "Use the InMemory ledger DB backend. \
+                             \ Incompatible with `--lmdb-ledger-db-backend`."
+                     )
+
+    parseLMDB :: Parser BackingStoreSelectorFlag
+    parseLMDB =
+      LMDB . either (const Nothing) Just . parseValue ParseBinary <$>
+      strOption (  long "lmdb-ledger-db-backend"
+                <> metavar "MAPSIZE"
+                <> help "Use the LMDB ledger DB backend. The mapsize argument \
+                        \ must be a number followed by a unit, for example 10Gi \
+                        \ for 10 Gibibytes. Incompatible with `--in-memory-ledger-db-backend`."
+                )
 
 parseDbPath :: Parser FilePath
 parseDbPath =
