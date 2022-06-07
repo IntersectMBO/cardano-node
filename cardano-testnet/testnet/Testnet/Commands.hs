@@ -4,6 +4,7 @@ import           Data.Function
 import           Data.Monoid
 import           Options.Applicative
 import           System.IO (IO)
+import           Testnet.Commands.Babbage
 import           Testnet.Commands.Byron
 import           Testnet.Commands.Cardano
 import           Testnet.Commands.Shelley
@@ -17,6 +18,7 @@ commands = commandsTestnet <|> commandsGeneral
 commandsTestnet :: Parser (IO ())
 commandsTestnet = hsubparser $ mempty
   <>  commandGroup "Testnets:"
+  <>  cmdBabbage
   <>  cmdByron
   <>  cmdCardano
   <>  cmdShelley
