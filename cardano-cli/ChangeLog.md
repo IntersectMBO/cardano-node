@@ -13,6 +13,7 @@
 - Extend deserialiseFromRawBytesHex to produce error description (#3304)
 - add genesis create-cardano command (#3832)
 - Propagate protocol in block type (#3818)
+- Fix kes period info command (#3945)
 
 ## 1.34.0 -- February 2022
 
