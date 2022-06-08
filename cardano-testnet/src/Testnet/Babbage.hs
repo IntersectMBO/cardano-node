@@ -20,6 +20,7 @@ module Testnet.Babbage
   , testnet
   ) where
 
+import           Control.Applicative (Applicative(..))
 import           Control.Lens ((.~))
 import           Control.Monad (Monad (..), fmap, forM, forM_, return, void, when, (=<<))
 import           Data.Aeson (encode, object, toJSON, (.=))
@@ -198,6 +199,12 @@ testnet testnetOptions H.Conf {..} = do
     , "--gen-utxo-keys", "3"
     ]
 
+  wallets <- forM [1..3] $ \idx -> do
+    pure $ Wallet
+      { paymentSKey = tempAbsPath </> "utxo-keys/utxo" <> show @Int idx <> ".skey"
+      , paymentVKey = tempAbsPath </> "utxo-keys/utxo" <> show @Int idx <> ".vkey"
+      }
+
   let spoNodes :: [String] = ["node-spo1", "node-spo2", "node-spo3"]
 
   -- Create the node directories
@@ -370,6 +377,10 @@ testnet testnetOptions H.Conf {..} = do
     H.assertByDeadlineIOCustom "stdout does not contain \"Chain extended\"" deadline $ IO.fileContains "Chain extended, new tip" nodeStdoutFile
 
   H.noteShowIO_ DTC.getCurrentTime
+
+  forM_ wallets $ \wallet -> do
+    H.cat $ paymentSKey wallet
+    H.cat $ paymentVKey wallet
 
   return TestnetRuntime
     { configurationFile
