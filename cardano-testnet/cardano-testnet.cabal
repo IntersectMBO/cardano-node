@@ -25,13 +25,8 @@ common project-config
                         -Wredundant-constraints
                         -Wunused-packages
 
-common maybe-unix
-  if !os(windows)
-      build-depends:    unix
-
 library
   import:               base, project-config
-                      , maybe-unix
 
   build-depends:        aeson
                       , base16-bytestring
