@@ -18,10 +18,13 @@ import qualified Cardano.Crypto.Libsodium as Crypto
 import           System.Posix.Files
 #endif
 
+import qualified GHC.IO.Encoding as GHC
+
 main :: IO ()
 main = toplevelExceptionHandler $ do
   -- TODO: Remove sodiumInit: https://github.com/input-output-hk/cardano-base/issues/175
   Crypto.sodiumInit
+  GHC.mkTextEncoding "UTF-8" >>= GHC.setLocaleEncoding
 #ifdef UNIX
   _ <- setFileCreationMask (otherModes `unionFileModes` groupModes)
 #endif
