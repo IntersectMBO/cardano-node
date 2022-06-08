@@ -9,7 +9,7 @@ To set up your platform, you will need:
 
 | Network | CPU Cores | Free RAM | Free storage | OS for Pasive Node | OS for Stake pool |
 | :---: | :---: | :---: | :---: | :---: | :---: | 
-| Mainnet | 2 | 12GB | 120GB | Linux / Windows** / MacOS | Linux | 
+| Mainnet | 2 | 16GB | 75GB of free storage (100GB recommended for future growth | Linux / Windows** / MacOS | Linux | 
 | Testnet | 2 | 4GB | 20GB | Linux / Windows** / MacOS | Linux |
 
 ****Note** If you are building on Windows, we recommend using WSL2 under Windows 10 as this provides a development and execution environment that is very similar to Ubuntu.
