@@ -1,20 +1,26 @@
 # Changelog for cardano-api
 
 ## 1.35.0 -- June 2022
-- Add `IsString` (Hash BlockHeader) #3619
-- Make `LedgerStateEvents` a type alias #3692
-- Propagate protocol epoch state decode error #3696
-- Expose the tx mempool monitoring mini protocol in cardano-api #3706
-- Babbage functionality integration in cardano api Part 1 #3803
-- Remove unused package #3816
-- Add `IsCardanoEra` constraint to BlockInMode #3665
-- Update cardano-api's TxOut with inline datum #3773
-- Update cardano-api txout with reference scripts #3779
-- Implement return and total collateral in cardano-api #3787
-- Add reference transaction inputs to cardano-api #3804
-- Fix datum in tx and ref scripts #3882
-- Support the babbage era in the API function `cddlTypeToEra` #3916
-- Fix typo for TxWitness BabbageEra #3961
+- Add Vasil hardfork to cardano-api and cardano-cli (#3765)
+- Reference script integration (#3953)
+- Add `IsString` (Hash BlockHeader) (#3619)
+- Make `LedgerStateEvents` a type alias (#3692)
+- Propagate protocol epoch state decode error (#3696)
+- Expose the tx mempool monitoring mini protocol in cardano-api (#3706)
+- Babbage functionality integration in cardano api Part 1 (#3803)
+- Remove unused package (#3816)
+- Add `IsCardanoEra` constraint to BlockInMode (#3665)
+- Update cardano-api's TxOut with inline datum (#3773)
+- Update cardano-api txout with reference scripts (#3779)
+- Implement return and total collateral in cardano-api (#3787)
+- Add reference transaction inputs to cardano-api (#3804)
+- Fix datum in tx and ref scripts (#3882)
+- Support the babbage era in the API function `cddlTypeToEra` (#3916)
+- Fix typo for TxWitness BabbageEra (#3961)
+- kes-period-info property test (#3718)
+- Extend deserialiseFromRawBytesHex to produce error description (#3304)
+- add genesis create-cardano command (#3832)
+- Propagate protocol in block type (#3818)
 
 
 ## 1.34.0 -- February 2022

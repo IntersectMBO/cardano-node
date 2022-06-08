@@ -1,12 +1,18 @@
 # Changelog for cardano-cli
 
 ## 1.35.0 -- June 2022
-- Add friendly printing of transactions (envelopes) with signatures #3617
-- cardano-cli transaction view: Add friendly certificate printing #3377
-- cardano-cli query kes-period-info: Always display metrics #3683
-- JSON format for leadership schedule #3687
-- Vasil cardano-cli update #3810
-- Prevent return collateral from including reference scripts and datums #3850
+- Add Vasil hardfork to cardano-api and cardano-cli (#3765)
+- Reference script integration (#3953)
+- Add friendly printing of transactions (envelopes) with signatures (#3617)
+- cardano-cli transaction view: Add friendly certificate printing (#3377)
+- cardano-cli query kes-period-info: Always display metrics (#3683)
+- JSON format for leadership schedule (#3687)
+- Vasil cardano-cli update (#3810)
+- Prevent return collateral from including reference scripts and datums (#3850)
+- kes-period-info property test (#3718)
+- Extend deserialiseFromRawBytesHex to produce error description (#3304)
+- add genesis create-cardano command (#3832)
+- Propagate protocol in block type (#3818)
 
 ## 1.34.0 -- February 2022
 

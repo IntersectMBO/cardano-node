@@ -3,72 +3,87 @@
 ## 1.35.0 -- June 2022
 
 ### node changes
-- RTS workaround converting SIGTERM into SIGINT #3641
-- Install a dummy SIGHUP handler for non p2p mode #3896
-- Add --shutdown-on-slot-synced test and ensure ExitSuccess #3670
-- cardano-node: implement --shutdown-on-block-synced #3932
+- RTS workaround converting SIGTERM into SIGINT (#3641)
+- Install a dummy SIGHUP handler for non p2p mode (#3896)
+- Add --shutdown-on-slot-synced test and ensure ExitSuccess (#3670)
+- cardano-node: implement --shutdown-on-block-synced (#3932)
+- Update dependencies and pins. (#3700)
+- Propagate protocol in block type (#3818)
 - Tracing infra updates:
-  - Configuration structure rework, for better UX: #3867
-  - Rework implementation to eliminate prototypes from trace definitions #3731
-  - Fix tracing config to allow selection of the new tracing system #3655
-  - Register GC metrics. #3858
-  - Metrics are no longer impacted by severities and frequecy limits #3876
-  - Porting ekg-direct metrics to new-tracing #3873
-  - Node state data point extensions and fixes: #3854 #3656
-  - Old peers tracing was erroneously called in new tracing #3880
-  - Remove unused constraints from TraceConstraints #3822
-  - Properly init trace forwarding when needed. #3634
+  - Configuration structure rework, for better UX: (#3867)
+  - Rework implementation to eliminate prototypes from trace definitions (#3731)
+  - Fix tracing config to allow selection of the new tracing system (#3655)
+  - Register GC metrics. (#3858)
+  - Metrics are no longer impacted by severities and frequecy limits (#3876)
+  - Porting ekg-direct metrics to new-tracing (#3873)
+  - Node state data point extensions and fixes: (#3854, #3656)
+  - Old peers tracing was erroneously called in new tracing (#3880)
+  - Remove unused constraints from TraceConstraints (#3822)
+  - Properly init trace forwarding when needed. (#3634)
 - cardano-tracer:
   - Format fixes for forwarded traces: (#3640, #3654, #3660, #3671).
-  - Test fixes: #3714
-  - Remove symlink, fix logs cut off. #3930
-  - Fix bug with empty line #3962
-  - RTView, a web performance dashboard, as part of cardano-tracer #3852
-  - RTView: CPU usage (GC + App) as pct, https by default, errors export #3934
+  - Test fixes: (#3714)
+  - Remove symlink, fix logs cut off. (#3930)
+  - Fix bug with empty line (#3962)
+  - RTView, a web performance dashboard, as part of cardano-tracer (#3852)
+  - RTView: CPU usage (GC + App) as pct, https by default, errors export (#3934)
 - Documentation updates;
-  - Update Haskell installation method and mention libsecp256k1 #3796
-  - Update cardano-node-cli-reference.md #3630
+  - Update Haskell installation method and mention libsecp256k1 (#3796)
+  - Update cardano-node-cli-reference.md (#3630)
   - Documentation improvements for new tracing. (#3834, #3842)
 - Various workbench, build, testing and benchmarking infrastructure improvements. (#3638, #3643, #3705, #3789, #3812, #3824, #3941, #3851)
 
 ### consensus changes
-- Block diffusion pipelining (#3688, #3742, #3752)
+- Block diffusion pipelining (#3688, #3742, #3752, #3688)
 - Moving from two VRF checks to one, as of Babbage (#3595)
 - Restricted opcert issue number increment, as of Babbage (#3595)
-- Bugfix: transaction validity intervals will actually be limited, as of Babbage (#3754 et al)
+- New function getOpCertCounters (#3781)
+- Bugfix: transaction validity intervals will actually be limited, as of Babbage (#3754)
 - Simplification: Babbage will run proper Praos protocol instead of Transitional Praos, since d will remain at 0 (#3595)
-- Simplification: remove stale handshake versions (#3696 #3699)
+- protocol: add `PraosProtocolSupportsNode` class (#3758)
+- Provide an `EpochInfo` that can fail to ledger. (#3770)
+- Add `COMPLETE` pragma for `FallingEdge` pattern synonym (#3766)
+- Simplification: remove stale handshake versions (#3696, #3699)
 
 ### network changes
-- Multinode Diffusion Simulation #3497
-- Trace exceptions thrown by inboundGovernorLoop #3591
-- Added prop_timeouts_enforced #3532
-- Connection Manager tests using IOSimPOR #3632
-- Don't overwrite localrootpeers lookup results #3641
-- Extract tcp_info for mux tcp bearer #3648
-- IOSim MonadFix instance #3647
-- io-classes: added strict versions of traceTVar & traceTMVar #3654
-- Platform independent TCPInfo trace #3660
-- Connection manager transition order test using IOSimPOR #3640
-- Removed ST effects from IOSimPOR #3662
-- RootPeersDNS: garbage collect DNS results && test single source of truth #3643
-- Enabled accept errors in net-sim testing #3668
-- Update supported protocol versions of cardano-ping" #3700
-- Add `yield` to `MonadFork` #3713
+- Multinode Diffusion Simulation (#3497)
+- Trace exceptions thrown by inboundGovernorLoop (#3591)
+- Added prop_timeouts_enforced (#3532)
+- Connection Manager tests using IOSimPOR (#3632)
+- Don't overwrite localrootpeers lookup results (#3641)
+- Extract tcp_info for mux tcp bearer (#3648)
+- IOSim MonadFix instance (#3647)
+- io-classes: added strict versions of traceTVar & traceTMVar (#3654)
+- Platform independent TCPInfo trace (#3660)
+- Connection manager transition order test using IOSimPOR (#3640)
+- Removed ST effects from IOSimPOR (#3662)
+- RootPeersDNS: garbage collect DNS results && test single source of truth (#3643)
+- Enabled accept errors in net-sim testing (#3668)
+- Update supported protocol versions of cardano-ping" (#3700)
+- Add `yield` to `MonadFork` (#3713)
 - Diffusion Tests (#3619, #3629, #3633, #3636, #3707, #3727, #3728, #3761)
-- cardano-ping: fix misplaced `unless quiet` #3729
-- Import `getMonotonicNSec` from base rather than via FFI #3735
-- Various changes #3736
+- cardano-ping: fix misplaced `unless quiet` (#3729)
+- Import `getMonotonicNSec` from base rather than via FFI (#3735)
+- connection-manager: mini-protocol params )[#3606](https://github.com/input-output-hk/ouroboros-network/pull/3606))
+- Remove TxSubmission V1 and all node-to-node versions smaller or equal to NodeToNodeV_6 (#3696)
+- Remove NodeToClientV_8 and below (#3699)
+- Relax overly strict disconnection rule for known-invalid blocks (#3726)
+- Moved io-sim & typed-protocols to new repositories (#3747)
+- Fix NodeToNodeVersion for Babbage and P2P. (#3775)
+- Various changes (#3736)
 - Documentation updates;
-  - Update chain-sync documentation #3594
-  - Fixed typos in network-mux #3666
+  - Update chain-sync documentation (#3594)
+  - Fixed typos in network-mux (#3666)
+  - Reflect recent nix build changes in documentation links. (#3651)
+  - Fix typos (#3635)
+
 
 ### ledger changes
 
 - Implementing the Babbage era. (#2560, #2599, #2602, #2613, #2618, #2619,
   #2629, #2633, #2643, #2645, #2654, #2661, #2664, #2666, #2678, #2681, #2689,
   #2694, #2700, #2701, #2702, #2708, #2710, #2711, #2712, #2716, #2717, #2723,
-  #2727, #2751, #2766, #2789, #2799, #2807, #2813, #2814, #2821)
+  #2727, #2751, #2766, #2789, #2799, #2807, #2813, #2814, #2815, #2816, #2819, #2821, #2822)
 - Fix a bug in the computation of the exponential function via Taylor series
   approximation. This bug was not ever exhibited in code, but the fix is useful
   for future resilience. (#2591)
@@ -78,7 +93,7 @@
 - For Plutus V2, encode the cost model in the integrity hash using a definite
   length list. (#2589)
 - Additional testing across all eras. (#2338, #2598, #2620, #2656, #2674, #2695,
-  #2696, #2698, #2747, #2758, #2760, #2790)
+  #2696, #2698, #2747, #2758, #2760, #2790, #2817)
 - Various internal refactorings and small fixes. (#2596, #2597, #2600, #2603,
   #2606, #2608, #2611, #2621, #2622, #2623, #2624, #2639, #2644, #2650, #2660,
   #2671, #2706, #2709, #2721, #2722, #2733, #2735, #2752, #2755, #2768, #2769,
@@ -147,6 +162,11 @@
   deserialiser now does not care about the names, only about the ordering of the
   parameters. This is consistent with how cost model parameters are treated in
   update proposals. (#2792)
+- Ensure pure `EpochInfo` is not overused. (#2818)
+
+### Infrastructure changes
+- Nix changes (#3592, #3711, #3707, #3716, #3722, #3717, #3736, #3785, #3625, #3649, #3698, #3722, #3749, #3760)
+- CI changes (#3754, #3745, #3767, #3995, #3797, #3589, #3599, #3618, #3661, #3694, #3687, #3690, #3703, #3712, #3737)
 
 ## 1.34.1 -- March 2022
 
