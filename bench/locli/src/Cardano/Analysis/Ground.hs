@@ -8,7 +8,7 @@ module Cardano.Analysis.Ground
   )
 where
 
-import Prelude                          (String, show)
+import Prelude                          (String, fail, show)
 import Cardano.Prelude                  hiding (head)
 
 import Data.Aeson--                       (FromJSON (..), ToJSON (..), ToJSONKey (..), FromJSONKey (..))
@@ -55,7 +55,13 @@ newtype Host = Host { unHost :: ShortText }
   deriving Show via Quiet Host
 
 instance FromJSON BlockNo where
-  parseJSON o = BlockNo <$> parseJSON o
+  parseJSON o = case o of
+    Number{}  -> BlockNo <$> parseJSON o
+    Object o' -> BlockNo <$> o' .: "unBlockNo"
+    _         -> fail "illegal type for BlockNo"
+    -- FIXME: this workaround catches a faulty JSON serialisation of BlockNo
+    -- * is:         {"unBlockNo":1790}
+    -- * should be:  1790
 instance ToJSON BlockNo where
   toJSON (BlockNo x) = toJSON x
 
