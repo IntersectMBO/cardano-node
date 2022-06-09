@@ -1018,20 +1018,28 @@ instance ToJSON (Alonzo.CollectError StandardCrypto) where
         object
           [ "kind" .= String "PlutusTranslationError"
           , "error" .= case err of
-              Alonzo.ByronInputInContext -> String "Byron input in the presence of a plutus script"
-              Alonzo.ByronOutputInContext -> String "Byron output in the presence of a plutus script"
-              Alonzo.TranslationLogicErrorInput -> String "Logic error translating inputs"
+              Alonzo.ByronTxOutInContext txOutSource ->
+                String $
+                  "Cannot construct a Plutus ScriptContext from this transaction "
+                    <> "due to a Byron UTxO being created or spent: "
+                    <> show txOutSource
+              Alonzo.TranslationLogicMissingInput txin ->
+                String $ "Transaction input does not exist in the UTxO: " <> show txin
               Alonzo.RdmrPtrPointsToNothing ptr ->
                 object
                   [ "kind" .= String "RedeemerPointerPointsToNothing"
                   , "ptr" .= (Api.renderScriptWitnessIndex . Api.fromAlonzoRdmrPtr) ptr
                   ]
-              Alonzo.TranslationLogicErrorDoubleDatum -> String "Logic error double datum"
-              Alonzo.LanguageNotSupported -> String "Language not supported"
-              Alonzo.InlineDatumsNotSupported -> String "Inline datums not supported"
-              Alonzo.ReferenceScriptsNotSupported -> String "Reference scripts not supported"
-              Alonzo.ReferenceInputsNotSupported -> String "Reference inputs not supported"
-              Alonzo.TimeTranslationPastHorizon -> String "Time translation requested past the horizon"
+              Alonzo.LanguageNotSupported lang ->
+                String $ "Language not supported: " <> show lang
+              Alonzo.InlineDatumsNotSupported txOutSource ->
+                String $ "Inline datums not supported, output source: " <> show txOutSource
+              Alonzo.ReferenceScriptsNotSupported txOutSource ->
+                String $ "Reference scripts not supported, output source: " <> show txOutSource
+              Alonzo.ReferenceInputsNotSupported txins ->
+                String $ "Reference inputs not supported: " <> show txins
+              Alonzo.TimeTranslationPastHorizon msg ->
+                String $ "Time translation requested past the horizon: " <> show msg
           ]
 
 instance ToJSON Alonzo.TagMismatchDescription where

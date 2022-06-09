@@ -41,6 +41,7 @@ import           Cardano.Slotting.Slot (SlotNo (..))
 import           Cardano.Slotting.Time (SystemStart (..))
 
 import qualified Cardano.Crypto.Hash.Class as Crypto
+import qualified Cardano.Ledger.Alonzo.Data as Alonzo
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 import qualified Cardano.Ledger.Babbage.PParams as Babbage
 import qualified Cardano.Ledger.Babbage.TxBody as Babbage
@@ -233,11 +234,12 @@ instance ( Ledger.Era era
       , "referenceScript" .= mRefScript
       ]
 
-instance Ledger.Crypto era ~ Consensus.StandardCrypto
-  => ToJSON (Babbage.Datum era) where
-    toJSON d = case Babbage.datumDataHash d of
-                 SNothing -> Aeson.Null
-                 SJust dH -> toJSON $ ScriptDataHash dH
+instance ( Ledger.Era era
+         , Ledger.Crypto era ~ Consensus.StandardCrypto
+         ) => ToJSON (Babbage.Datum era) where
+  toJSON d = case Alonzo.datumDataHash d of
+               SNothing -> Aeson.Null
+               SJust dH -> toJSON $ ScriptDataHash dH
 
 instance ToJSON (Alonzo.Script (Babbage.BabbageEra Consensus.StandardCrypto)) where
   toJSON s = Aeson.String . serialiseToRawBytesHexText
