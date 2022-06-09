@@ -37,7 +37,7 @@ updateErasSettings connected settings savedTO = do
   savedTraceObjects <- readTVarIO savedTO
   forM_ connected $ \nodeId ->
     whenJust (M.lookup nodeId savedTraceObjects) $ \savedTOForNode ->
-      whenJust (M.lookup "Cardano.Node.Startup.ShelleyBased" savedTOForNode) $ \(trObValue, _, _) ->
+      whenJust (M.lookup "Startup.ShelleyBased" savedTOForNode) $ \(trObValue, _, _) ->
         -- Example: "Era Alonzo, Slot length 1s, Epoch length 432000, Slots per KESPeriod 129600"
         case T.words $ T.replace "," "" trObValue of
           [_, era, _, _, slotLen, _, _, epochLen, _, _, _, kesPeriod] ->
