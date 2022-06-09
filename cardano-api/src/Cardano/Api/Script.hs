@@ -962,10 +962,10 @@ hashScript (PlutusScript PlutusScriptV1 (PlutusScriptSerialised script)) =
     ScriptHash
   . Ledger.hashScript @(ShelleyLedgerEra AlonzoEra)
   $ Alonzo.PlutusScript Alonzo.PlutusV1 script
--- TODO: Babbage era PV2 only exists in Babbage era onwards!
+
 hashScript (PlutusScript PlutusScriptV2 (PlutusScriptSerialised script)) =
     ScriptHash
-  . Ledger.hashScript @(ShelleyLedgerEra AlonzoEra)
+  . Ledger.hashScript @(ShelleyLedgerEra BabbageEra)
   $ Alonzo.PlutusScript Alonzo.PlutusV2 script
 
 toShelleyScriptHash :: ScriptHash -> Shelley.ScriptHash StandardCrypto
