@@ -102,7 +102,6 @@ $SED -i "${ROOT}/configuration.yaml" \
   echo "TestMaryHardForkAtEpoch: 0" >> "${ROOT}/configuration.yaml"
   echo "TestAlonzoHardForkAtEpoch: 0" >> "${ROOT}/configuration.yaml"
   echo "TestBabbageHardForkAtEpoch: 0" >> "${ROOT}/configuration.yaml"
-  echo "TestEnableDevelopmentHardForkEras: True" >> "${ROOT}/configuration.yaml"
   echo "TestEnableDevelopmentNetworkProtocols: True" >> "${ROOT}/configuration.yaml"
 
 # Copy the cost mode
