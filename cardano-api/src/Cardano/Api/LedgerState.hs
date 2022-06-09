@@ -70,13 +70,13 @@ import           Data.Foldable
 import           Data.IORef
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (mapMaybe)
-import           Data.Proxy (Proxy(Proxy))
-import           Data.SOP.Strict (NP (..))
+import           Data.Proxy (Proxy (Proxy))
 import           Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
 import           Data.Set (Set)
 import qualified Data.Set as Set
 import           Data.Sharing (FromSharedCBOR, Interns, Share)
+import           Data.SOP.Strict (NP (..))
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
@@ -114,13 +114,14 @@ import qualified Cardano.Crypto.Hashing
 import qualified Cardano.Crypto.ProtocolMagic
 import qualified Cardano.Crypto.VRF as Crypto
 import           Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
-import qualified Cardano.Ledger.BHeaderView as Ledger
-import           Cardano.Ledger.BaseTypes (Globals (..), UnitInterval, (⭒))
+import           Cardano.Ledger.BaseTypes (Globals (..), Nonce, UnitInterval, (⭒))
 import qualified Cardano.Ledger.BaseTypes as Shelley.Spec
+import qualified Cardano.Ledger.BHeaderView as Ledger
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Credential as Shelley.Spec
 import qualified Cardano.Ledger.Era as Ledger
 import qualified Cardano.Ledger.Keys as Shelley.Spec
+import qualified Cardano.Ledger.PoolDistr as Ledger
 import qualified Cardano.Ledger.Shelley.API as ShelleyAPI
 import qualified Cardano.Ledger.Shelley.Genesis as Shelley.Spec
 import qualified Cardano.Protocol.TPraos.API as TPraos
@@ -146,6 +147,7 @@ import           Ouroboros.Consensus.Ledger.Basics (LedgerResult (lrEvents), lrR
 import qualified Ouroboros.Consensus.Ledger.Extended as Ledger
 import qualified Ouroboros.Consensus.Mempool.TxLimits as TxLimits
 import qualified Ouroboros.Consensus.Node.ProtocolInfo as Consensus
+import           Ouroboros.Consensus.Protocol.Abstract (ChainDepState)
 import qualified Ouroboros.Consensus.Protocol.Abstract as Consensus
 import qualified Ouroboros.Consensus.Protocol.Praos.Common as Consensus
 import qualified Ouroboros.Consensus.Protocol.TPraos as TPraos
@@ -1410,8 +1412,8 @@ nextEpochEligibleLeadershipSlots sbe sGen serCurrEpochState ptclState
 -- See Leader Value Calculation in the Shelley ledger specification.
 -- We need the certified natural value from the VRF, active slot coefficient
 -- and the stake proportion of the stake pool.
-isLeadingSlots
-  :: Crypto.Signable v Shelley.Spec.Seed
+isLeadingSlots :: forall v era. ()
+  => Crypto.Signable v Shelley.Spec.Seed
   => Crypto.VRFAlgorithm v
   => Crypto.ContextVRF v ~ ()
   => HasField "_d" (Core.PParams (ShelleyLedgerEra era)) UnitInterval
@@ -1425,20 +1427,23 @@ isLeadingSlots
   -> Set SlotNo
 isLeadingSlots sbe (firstSlotOfEpoch, lastSlotofEpoch) eNonce pParams vrfSkey
              stakePoolStake activeSlotCoeff' =
-  let certified s = certifiedNaturalValue s eNonce vrfSkey
+  let certified :: SlotNo -> Crypto.OutputVRF v
+      certified s = certifiedNaturalValue s eNonce vrfSkey
+
+      pp :: Core.PParams (ShelleyLedgerEra era)
       pp = toLedgerPParams sbe pParams
+
+      slotRangeOfInterest :: Set SlotNo
       slotRangeOfInterest = Set.fromList [firstSlotOfEpoch .. lastSlotofEpoch]
 
+      isLeader :: SlotNo -> Bool
       isLeader s = not (Ledger.isOverlaySlot firstSlotOfEpoch (getField @"_d" pp) s)
                  && TPraos.checkLeaderValue (certified s)
                                             stakePoolStake activeSlotCoeff'
   in Set.filter isLeader slotRangeOfInterest
  where
   certifiedNaturalValue
-    :: Crypto.Signable v Shelley.Spec.Seed
-    => Crypto.VRFAlgorithm v
-    => Crypto.ContextVRF v ~ ()
-    => SlotNo
+    :: SlotNo
     -> Consensus.Nonce
     -> Crypto.SignKeyVRF v
     -> Crypto.OutputVRF v
@@ -1474,9 +1479,8 @@ obtainDecodeEpochStateConstraints ShelleyBasedEraBabbage f = f
 
 -- | Return the slots at which a particular stake pool operator is
 -- expected to mint a block.
-currentEpochEligibleLeadershipSlots
-  :: forall era ledgerera .
-     ShelleyLedgerEra era ~ ledgerera
+currentEpochEligibleLeadershipSlots :: forall era ledgerera. ()
+  => ShelleyLedgerEra era ~ ledgerera
   => Ledger.Era ledgerera
   => Consensus.PraosProtocolSupportsNode (Api.ConsensusProtocol era)
   => HasField "_d" (Core.PParams ledgerera) UnitInterval
@@ -1499,27 +1503,30 @@ currentEpochEligibleLeadershipSlots sbe sGen eInfo pParams ptclState
                         poolid@(StakePoolKeyHash poolHash) (VrfSigningKey vrkSkey)
                         serCurrEpochState currentEpoch = do
 
-  chainDepState <- first LeaderErrDecodeProtocolStateFailure
-                     $ decodeProtocolState ptclState
+  chainDepState :: ChainDepState (Api.ConsensusProtocol era) <-
+    first LeaderErrDecodeProtocolStateFailure $ decodeProtocolState ptclState
 
   -- We use the current epoch's nonce for the current leadership schedule
   -- calculation because the TICKN transition updates the epoch nonce
   -- at the start of the epoch.
-  let epochNonce = Consensus.epochNonce (Consensus.getPraosNonces (Proxy @(Api.ConsensusProtocol era)) chainDepState)
-  currentEpochRange <- first LeaderErrSlotRangeCalculationFailure
-                         $ Slot.epochInfoRange eInfo currentEpoch
+  let epochNonce :: Nonce = Consensus.epochNonce (Consensus.getPraosNonces (Proxy @(Api.ConsensusProtocol era)) chainDepState)
 
-  CurrentEpochState cEstate <- first LeaderErrDecodeProtocolEpochStateFailure
-                                 $ obtainDecodeEpochStateConstraints sbe
-                                 $ decodeCurrentEpochState serCurrEpochState
+  currentEpochRange :: (SlotNo, SlotNo) <- first LeaderErrSlotRangeCalculationFailure
+    $ Slot.epochInfoRange eInfo currentEpoch
+
+  CurrentEpochState (cEstate :: ShelleyAPI.EpochState (ShelleyLedgerEra era)) <-
+    first LeaderErrDecodeProtocolEpochStateFailure
+      $ obtainDecodeEpochStateConstraints sbe
+      $ decodeCurrentEpochState serCurrEpochState
 
   -- We need the "set" stake distribution (distribution of the previous epoch)
   -- in order to calculate the leadership schedule of the current epoch.
-  let setSnapshotPoolDistr = ShelleyAPI.unPoolDistr . ShelleyAPI.calculatePoolDistr
+  let setSnapshotPoolDistr :: Map.Map (ShelleyAPI.KeyHash 'ShelleyAPI.StakePool Shelley.StandardCrypto) (Ledger.IndividualPoolStake Shelley.StandardCrypto)
+      setSnapshotPoolDistr = ShelleyAPI.unPoolDistr . ShelleyAPI.calculatePoolDistr
                                 . ShelleyAPI._pstakeSet . obtainIsStandardCrypto sbe
                                 $ ShelleyAPI.esSnapshots cEstate
 
-  relativeStake <- maybe (Left $ LeaderErrStakePoolHasNoStake poolid)
+  relativeStake :: Rational <- maybe (Left $ LeaderErrStakePoolHasNoStake poolid)
                          (Right . ShelleyAPI.individualPoolStake)
                          (Map.lookup poolHash setSnapshotPoolDistr)
 
