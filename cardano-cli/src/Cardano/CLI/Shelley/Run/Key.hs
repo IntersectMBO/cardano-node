@@ -31,7 +31,6 @@ import qualified Cardano.Crypto.Wallet as Crypto
 import qualified Cardano.Ledger.Keys as Shelley
 
 import           Cardano.Api
-import           Cardano.Api.Byron hiding (SomeByronSigningKey (..))
 import qualified Cardano.Api.Byron as ByronApi
 import           Cardano.Api.Crypto.Ed25519Bip32 (xPrvFromBytes)
 import           Cardano.Api.Shelley
