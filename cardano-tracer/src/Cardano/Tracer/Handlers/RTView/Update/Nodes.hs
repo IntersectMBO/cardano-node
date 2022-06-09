@@ -208,7 +208,7 @@ setChunkValidationProgress connected savedTO = do
       let nodeChunkValidationElId = anId <> "__node-chunk-validation"
       forM_ (M.toList savedTOForNode) $ \(namespace, (trObValue, _, _)) ->
         case namespace of
-          "Cardano.Node.ChainDB.ImmDbEvent.ChunkValidation.ValidatedChunk" ->
+          "ChainDB.ImmutableDBEvent.ChunkValidation.ValidatedChunk" ->
             -- In this case we don't need to check if the value differs from displayed one,
             -- because this 'TraceObject' is forwarded only with new values, and after 100%
             -- the node doesn't forward it anymore.
@@ -219,7 +219,7 @@ setChunkValidationProgress connected savedTO = do
                 setTextValue nodeChunkValidationElId $
                              T.init progressPct <> "&nbsp;%: no. " <> current <> " from " <> T.init from
               _ -> return ()
-          "Cardano.Node.ChainDB.ImmDbEvent.ValidatedLastLocation" ->
+          "ChainDB.ImmutableDBEvent.ValidatedLastLocation" ->
             setTextAndClasses nodeChunkValidationElId "100&nbsp;%" "rt-view-percent-done"
           _ -> return ()
 
@@ -234,7 +234,7 @@ setLedgerDBProgress connected savedTO = do
       let nodeLedgerDBUpdateElId = anId <> "__node-update-ledger-db"
       forM_ (M.toList savedTOForNode) $ \(namespace, (trObValue, _, _)) ->
         case namespace of
-          "Cardano.Node.ChainDB.InitChainSelEvent.UpdateLedgerDb" ->
+          "ChainDB.InitChainSelEvent.UpdateLedgerDb" ->
             -- In this case we don't need to check if the value differs from displayed one,
             -- because this 'TraceObject' is forwarded only with new values, and after 100%
             -- the node doesn't forward it anymore.

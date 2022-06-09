@@ -36,8 +36,7 @@ updateNodesPeers window displayedPeers savedTO = do
   forM_ (M.toList savedTraceObjects) $ \(nodeId, savedTOForNode) ->
     forM_ (M.toList savedTOForNode) $ \(namespace, (trObValue, _, _)) ->
       case namespace of
-        "Cardano.Node.Peers" ->
-          doUpdatePeers window nodeId displayedPeers trObValue
+        "Peers" -> doUpdatePeers window nodeId displayedPeers trObValue
         _ -> return ()
 
 doUpdatePeers
