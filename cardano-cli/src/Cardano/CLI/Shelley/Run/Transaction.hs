@@ -1135,6 +1135,7 @@ readScriptDatumOrFile :: ScriptDatumOrFile witctx
                       -> ExceptT ShelleyTxCmdError IO (ScriptDatum witctx)
 readScriptDatumOrFile (ScriptDatumOrFileForTxIn df) = ScriptDatumForTxIn <$>
                                                         readScriptDataOrFile df
+readScriptDatumOrFile InlineDatumPresentAtTxIn      = pure InlineScriptDatum
 readScriptDatumOrFile NoScriptDatumOrFileForMint    = pure NoScriptDatumForMint
 readScriptDatumOrFile NoScriptDatumOrFileForStake   = pure NoScriptDatumForStake
 

@@ -309,6 +309,7 @@ deriving instance Show (ScriptWitnessFiles witctx)
 data ScriptDatumOrFile witctx where
      ScriptDatumOrFileForTxIn    :: ScriptDataOrFile
                                  -> ScriptDatumOrFile WitCtxTxIn
+     InlineDatumPresentAtTxIn    :: ScriptDatumOrFile WitCtxTxIn
 
      NoScriptDatumOrFileForMint  :: ScriptDatumOrFile WitCtxMint
      NoScriptDatumOrFileForStake :: ScriptDatumOrFile WitCtxStake
