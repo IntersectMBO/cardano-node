@@ -42,18 +42,12 @@ module Cardano.Api (
     AsType(..),
     -- * Cryptographic key interface
     -- $keys
-    Key,
-    VerificationKey,
+    Key(..),
     SigningKey(..),
-    getVerificationKey,
-    verificationKeyHash,
+    VerificationKey(..),
     castVerificationKey,
     castSigningKey,
-
-    -- ** Generating keys
     generateSigningKey,
-    deterministicSigningKey,
-    deterministicSigningKeySeedSize,
 
     -- ** Hashes
     -- | In Cardano most keys are identified by their hash, and hashes are
@@ -692,7 +686,6 @@ import           Cardano.Api.IPC
 import           Cardano.Api.IPC.Monad
 import           Cardano.Api.Key
 import           Cardano.Api.KeysByron
-import           Cardano.Api.KeysPraos
 import           Cardano.Api.KeysShelley
 import           Cardano.Api.LedgerEvent
 import           Cardano.Api.LedgerState

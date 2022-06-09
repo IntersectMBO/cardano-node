@@ -12,6 +12,7 @@ module Cardano.Api.Shelley
 
     -- * Cryptographic key interface
     -- $keys
+    Key(..),
     VerificationKey(..),
     SigningKey(..),
 
@@ -230,6 +231,7 @@ import           Cardano.Api.Eras
 import           Cardano.Api.IPC
 import           Cardano.Api.InMode
 import           Cardano.Api.KeysPraos
+import           Cardano.Api.KeysByron
 import           Cardano.Api.KeysShelley
 import           Cardano.Api.LedgerState
 import           Cardano.Api.NetworkId
