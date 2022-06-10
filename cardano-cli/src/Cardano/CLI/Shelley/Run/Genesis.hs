@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
@@ -21,7 +22,6 @@ import           Prelude (id, unlines, zip3, error)
 import           Data.Aeson hiding (Key)
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.KeyMap as Aeson
-import           Data.Aeson.Encode.Pretty (encodePretty)
 import qualified Data.Binary.Get as Bin
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy.Char8 as LBS
@@ -100,6 +100,14 @@ import           Cardano.Chain.Update
 import           Data.Fixed (Fixed(MkFixed))
 import qualified Data.Yaml as Yaml
 import           Text.JSON.Canonical (parseCanonicalJSON, renderCanonicalJSON)
+
+import           Cardano.CLI.Shelley.Run.Genesis.ListMap (ListMap(..))
+import           Cardano.CLI.Shelley.Run.Genesis.LazyToJson (LazyToJson(lazyToJson))
+import           Cardano.CLI.Shelley.Run.Genesis.Types (toOutputTemplate)
+
+import qualified Cardano.CLI.Shelley.Run.Genesis.Types as OT
+import qualified Data.ByteString.Builder as B
+import qualified HaskellWorks.Control.Monad.Lazy as Lazy
 
 {- HLINT ignore "Reduce duplication" -}
 
@@ -563,7 +571,7 @@ runGenesisCreateCardano (GenesisDir rootdir)
           hashShelleyGenesis genesis = Crypto.hashToTextAsHex gh
             where
               content :: ByteString
-              content = LBS.toStrict $ encodePretty genesis
+              content = LBS.toStrict $ encode genesis
               gh :: Crypto.Hash Crypto.Blake2b_256 ByteString
               gh = Crypto.hashWith id content
           hashByronGenesis :: Genesis.GenesisData -> Text
@@ -702,19 +710,22 @@ runGenesisCreateStaked (GenesisDir rootdir)
   nonDelegAddrs <- readInitialFundAddresses utxodir network
   start <- maybe (SystemStart <$> getCurrentTimePlus30) pure mStart
 
-  stuffedUtxoAddrs <- liftIO $ replicateM (fromIntegral numStuffedUtxo)
-                      genStuffedAddress
+  stuffedUtxoAddrs <- liftIO $ Lazy.replicateM (fromIntegral numStuffedUtxo) genStuffedAddress
 
   let poolMap :: Map (Ledger.KeyHash Ledger.Staking StandardCrypto) (Ledger.PoolParams StandardCrypto)
       poolMap = Map.fromList $ mkDelegationMapEntry <$> delegations
       delegAddrs = dInitialUtxoAddr <$> delegations
-      shelleyGenesis =
-        updateTemplate
+      !shelleyGenesis =
+        updateOutputTemplate
           -- Shelley genesis parameters
           start genDlgs mNonDlgAmount nonDelegAddrs poolMap
-          stDlgAmount delegAddrs stuffedUtxoAddrs template
+          stDlgAmount delegAddrs stuffedUtxoAddrs (toOutputTemplate template)
 
-  writeFileGenesis (rootdir </> "genesis.json")        shelleyGenesis
+  -- shelleyGenesis contains lazy loaded data, so using lazyToJson to serialise to avoid
+  -- retaining large datastructures in memory.
+  liftIO $ LBS.writeFile (rootdir </> "genesis.json")
+    $ B.toLazyByteString $ lazyToJson shelleyGenesis
+
   writeFileGenesis (rootdir </> "genesis.alonzo.json") alonzoGenesis
   --TODO: rationalise the naming convention on these genesis json files.
 
@@ -977,7 +988,7 @@ readShelleyGenesisWithDefault fpath adjustDefaults = do
 
     writeDefault = do
       handleIOExceptT (ShelleyGenesisCmdGenesisFileError . FileIOError fpath) $
-        LBS.writeFile fpath (encodePretty defaults)
+        LBS.writeFile fpath (encode defaults)
       return defaults
 
 readAndDecodeShelleyGenesis
@@ -1069,6 +1080,86 @@ updateTemplate (SystemStart start)
     unLovelace :: Integral a => Lovelace -> a
     unLovelace (Lovelace coin) = fromIntegral coin
 
+updateOutputTemplate
+    :: SystemStart
+    -- Genesis delegation (not stake-based):
+    -> Map (Hash GenesisKey) (Hash GenesisDelegateKey, Hash VrfKey)
+    -- Non-delegated initial UTxO spec:
+    -> Maybe Lovelace
+    -> [AddressInEra ShelleyEra]
+    -- Genesis staking: pools/delegation map & delegated initial UTxO spec:
+    -> Map (Ledger.KeyHash 'Ledger.Staking StandardCrypto) (Ledger.PoolParams StandardCrypto)
+    -> Lovelace
+    -> [AddressInEra ShelleyEra]
+    -> [AddressInEra ShelleyEra]
+    -> OT.OutputShelleyGenesis StandardShelley
+    -> OT.OutputShelleyGenesis StandardShelley
+updateOutputTemplate (SystemStart start)
+               genDelegMap mAmountNonDeleg utxoAddrsNonDeleg
+               poolSpecs (Lovelace amountDeleg) utxoAddrsDeleg stuffedUtxoAddrs
+               template = do
+
+    let pparamsFromTemplate = OT.sgProtocolParams template
+        shelleyGenesis = template
+          { OT.sgSystemStart = start
+          , OT.sgMaxLovelaceSupply = fromIntegral $ nonDelegCoin + delegCoin
+          , OT.sgGenDelegs = shelleyDelKeys
+          , OT.sgInitialFunds = ListMap
+                              [ (toShelleyAddr addr, toShelleyLovelace v)
+                              | (addr, v) <-
+                                distribute (nonDelegCoin - subtractForTreasury) utxoAddrsNonDeleg ++
+                                distribute (delegCoin - subtractForTreasury)    utxoAddrsDeleg ++
+                                mkStuffedUtxo stuffedUtxoAddrs ]
+          , OT.sgStaking =
+            ShelleyGenesisStaking
+              { sgsPools = Map.fromList
+                            [ (Ledger._poolId poolParams, poolParams)
+                            | poolParams <- Map.elems poolSpecs ]
+              , sgsStake = Ledger._poolId <$> poolSpecs
+              }
+          , OT.sgProtocolParams = pparamsFromTemplate
+          }
+    shelleyGenesis
+  where
+    maximumLovelaceSupply :: Word64
+    maximumLovelaceSupply = OT.sgMaxLovelaceSupply template
+    -- If the initial funds are equal to the maximum funds, rewards cannot be created.
+    subtractForTreasury :: Integer
+    subtractForTreasury = nonDelegCoin `quot` 10
+    nonDelegCoin, delegCoin :: Integer
+    nonDelegCoin = fromIntegral (fromMaybe maximumLovelaceSupply (unLovelace <$> mAmountNonDeleg))
+    delegCoin = fromIntegral amountDeleg
+
+    distribute :: Integer -> [AddressInEra ShelleyEra] -> [(AddressInEra ShelleyEra, Lovelace)]
+    distribute funds addrs =
+      fst $ List.foldl' folder ([], fromIntegral funds) addrs
+     where
+       nAddrs, coinPerAddr, splitThreshold :: Integer
+       nAddrs = fromIntegral $ length addrs
+       coinPerAddr = funds `div` nAddrs
+       splitThreshold = coinPerAddr + nAddrs
+
+       folder :: ([(AddressInEra ShelleyEra, Lovelace)], Integer)
+              -> AddressInEra ShelleyEra
+              -> ([(AddressInEra ShelleyEra, Lovelace)], Integer)
+       folder (acc, rest) addr
+         | rest > splitThreshold =
+             ((addr, Lovelace coinPerAddr) : acc, rest - coinPerAddr)
+         | otherwise = ((addr, Lovelace rest) : acc, 0)
+
+    mkStuffedUtxo :: [AddressInEra ShelleyEra] -> [(AddressInEra ShelleyEra, Lovelace)]
+    mkStuffedUtxo xs = (, Lovelace minUtxoVal) <$> xs
+      where (Coin minUtxoVal) = Shelley._minUTxOValue $ OT.sgProtocolParams template
+
+    shelleyDelKeys = ListMap
+      [ (gh, Ledger.GenDelegPair gdh h)
+      | (GenesisKeyHash gh,
+          (GenesisDelegateKeyHash gdh, VrfKeyHash h)) <- Map.toList genDelegMap
+      ]
+
+    unLovelace :: Integral a => Lovelace -> a
+    unLovelace (Lovelace coin) = fromIntegral coin
+
 writeFileGenesis
   :: ToJSON genesis
   => FilePath
@@ -1076,7 +1167,7 @@ writeFileGenesis
   -> ExceptT ShelleyGenesisCmdError IO ()
 writeFileGenesis fpath genesis =
   handleIOExceptT (ShelleyGenesisCmdGenesisFileError . FileIOError fpath) $
-    LBS.writeFile fpath (encodePretty genesis)
+    LBS.writeFile fpath (Aeson.encode genesis)
 
 -- ----------------------------------------------------------------------------
 
@@ -1229,4 +1320,3 @@ readAlonzoGenesis fpath = do
   lbs <- handleIOExceptT (ShelleyGenesisCmdGenesisFileError . FileIOError fpath) $ LBS.readFile fpath
   firstExceptT (ShelleyGenesisCmdAesonDecodeError fpath . Text.pack)
     . hoistEither $ Aeson.eitherDecode' lbs
-
