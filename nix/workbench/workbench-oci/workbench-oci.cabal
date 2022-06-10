@@ -1,0 +1,71 @@
+cabal-version:  3.0
+name:           workbench-oci
+version:        0.0.0.1
+synopsis:       Workbench OCI producer
+description:    Create the Docker files needed to benchmark a cluster profile.
+homepage:       https://github.com/input-output-hk/cardano-node/tree/master/nix/workbench/workbench-oci
+bug-reports:    https://github.com/input-output-hk/cardano-node/issues
+license:        Apache-2.0
+license-file:   LICENSE
+                NOTICE
+author:         Federico Mastellone
+maintainer:     federico.pascual-mastellone@iohk.io
+copyright:      TODO
+category:       TODO
+build-type:     Simple
+tested-with:    GHC == 8.10.7
+extra-source-files:
+  CHANGELOG.md
+  README.md
+
+data-files:
+  data/test/node-specs-default-bage.json
+
+common project-config
+  ghc-options: -Wall
+               -Wcompat
+               -Wmissing-export-lists
+               -Wincomplete-record-updates
+               -Wincomplete-uni-patterns
+               -Wpartial-fields
+               -Wredundant-constraints
+               -Wunused-packages
+               -Werror
+
+common lang
+  default-language: Haskell2010
+  default-extensions:
+
+common deps
+  build-depends:
+    base >=4.14
+
+--library
+--  import: lang
+--  import: deps
+--  exposed-modules:
+--  Workbench.Types
+--  build-depends:
+--  other-modules:
+--    Paths_workbench-oci
+--  autogen-modules:
+--    Paths_workbench-oci
+--  hs-source-dirs:
+--    src
+
+executable workbench-oci
+  import: project-config
+  import: lang
+  import: deps
+  main-is: app/Main.hs
+  other-modules:
+--    Workbench.Types
+--    Paths_workbench-oci
+  other-extensions:
+  build-depends:
+    , bytestring >= 0.11.0.0
+    , containers >= 0.6.0.0
+    , aeson >= 2.0.0.0
+  hs-source-dirs:
+    --src
+  default-language: Haskell2010

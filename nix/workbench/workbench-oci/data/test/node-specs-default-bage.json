@@ -1,0 +1,56 @@
+{
+  "node-0": {
+    "i": 0,
+    "kind": "pool",
+    "pools": 1,
+    "autostart": true,
+    "name": "node-0",
+    "isProducer": true,
+    "port": 30000
+  },
+  "node-1": {
+    "i": 1,
+    "kind": "pool",
+    "pools": 1,
+    "autostart": true,
+    "name": "node-1",
+    "isProducer": true,
+    "port": 30001
+  },
+  "node-2": {
+    "i": 2,
+    "kind": "pool",
+    "pools": 1,
+    "autostart": true,
+    "name": "node-2",
+    "isProducer": true,
+    "port": 30002
+  },
+  "node-3": {
+    "i": 3,
+    "kind": "pool",
+    "pools": 1,
+    "autostart": true,
+    "name": "node-3",
+    "isProducer": true,
+    "port": 30003
+  },
+  "node-4": {
+    "i": 4,
+    "kind": "pool",
+    "pools": 1,
+    "autostart": true,
+    "name": "node-4",
+    "isProducer": true,
+    "port": 30004
+  },
+  "node-5": {
+    "i": 5,
+    "kind": "pool",
+    "pools": 1,
+    "autostart": true,
+    "name": "node-5",
+    "isProducer": true,
+    "port": 30005
+  }
+}
