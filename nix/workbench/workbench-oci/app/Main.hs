@@ -27,8 +27,11 @@ main = do
     (Left err) -> do
       putStrLn "JSON parser failed"
       putStrLn err
+    -- TODO/FIXME: Check that the key name (Like node-0) is equal to the "name"
+    --             key inside the node object ???
     (Right nodesList) -> do
-      print (nodesList::NodesMap)
+      --print (nodesList::NodesMap)
+      putStrLn $ toYaml nodesList
 
 --------------------------------------------------------------------------------
 
@@ -86,3 +89,17 @@ instance Aeson.FromJSON Node where
             , nodeIsProducer = nIsProducer
             , nodePort = nPort
           }
+
+-- Testing how a docker-compose file could be built.
+--------------------------------------------------------------------------------
+
+toYaml :: NodesMap -> String
+toYaml nodesMap =
+     "services:\n"
+  ++ (concat (map toYamlService (Map.toList nodesMap)))
+
+toYamlService :: (NodeName, Node) -> String
+toYamlService (nName, node) =
+     "  " ++ nName ++ ":\n"
+  ++ "    ports:\n"
+  ++ "      - \"" ++ (show $ nodePort node) ++ ":" ++ (show $ nodePort node) ++ "\"\n"
