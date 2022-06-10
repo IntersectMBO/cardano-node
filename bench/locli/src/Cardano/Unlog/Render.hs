@@ -1,8 +1,10 @@
 {-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeInType #-}
 {-# LANGUAGE ViewPatterns #-}
 module Cardano.Unlog.Render (module Cardano.Unlog.Render) where
 
@@ -24,49 +26,46 @@ data RenderMode
   | RenderCsv
   deriving (Eq, Show)
 
-class Show a => RenderDirectCDFs a where
-  rdFields :: Run -> [DField a]
+class RenderCDFs a p where
+  rdFields :: [Field DSelect p a]
 
-class Show a => RenderTimeline a where
-  rtFields     :: Run -> [IField a]
+class RenderTimeline a where
+  rtFields     :: Run -> [Field ISelect I a]
   rtCommentary :: a -> [Text]
   rtCommentary _ = []
 
 -- | Incapsulate all information necessary to render a column.
-data Field s a
+data Field (s :: (Type -> Type) -> k -> Type) (p :: Type -> Type) (a :: k)
   = Field
   { fWidth   :: Int
   , fLeftPad :: Int
   , fId      :: Text
   , fHead1   :: Text
   , fHead2   :: Text
-  , fSelect  :: s a
+  , fSelect  :: s p a
   }
 
-type DField a = Field DSelect a
-type IField a = Field ISelect a
+data DSelect p a
+  = DInt    (a p -> CDF p Int)
+  | DWord64 (a p -> CDF p Word64)
+  | DFloat  (a p -> CDF p Double)
+  | DDeltaT (a p -> CDF p NominalDiffTime)
 
-data DSelect a
-  = DInt    (a -> DirectCDF Int)
-  | DWord64 (a -> DirectCDF Word64)
-  | DFloat  (a -> DirectCDF Double)
-  | DDeltaT (a -> DirectCDF NominalDiffTime)
-
-data ISelect a
+data ISelect p a
   = IInt    (a -> Int)
   | IWord64 (a -> Word64)
   | IFloat  (a -> Double)
   | IDeltaT (a -> NominalDiffTime)
   | IText   (a -> Text)
 
-mapSomeFieldDirectCDF :: (forall b. DirectCDF b -> c) -> a -> DSelect a -> c
+mapSomeFieldDirectCDF :: forall p c a. (forall b. CDF p b -> c) -> a p -> DSelect p a -> c
 mapSomeFieldDirectCDF f a = \case
   DInt    s -> f (s a)
   DWord64 s -> f (s a)
   DFloat  s -> f (s a)
   DDeltaT s -> f (s a)
 
-renderTimeline :: forall a. RenderTimeline a => Run -> (IField a -> Bool) -> Bool -> [a] -> [Text]
+renderTimeline :: forall (a :: Type). RenderTimeline a => Run -> (Field ISelect I a -> Bool) -> Bool -> [a] -> [Text]
 renderTimeline run flt withCommentary xs =
   concatMap (uncurry fLine) $ zip xs [(0 :: Int)..]
  where
@@ -84,7 +83,7 @@ renderTimeline run flt withCommentary xs =
          IDeltaT (($v)->x) -> T.pack $ take fWidth $ printf "%-*s" fWidth $ dropWhileEnd (== 's') $ show x
          IText   (($v)->x) -> T.take fWidth . T.dropWhileEnd (== 's') $ x
 
-   fields :: [IField a]
+   fields :: [Field ISelect I a]
    fields = filter flt $ rtFields run
 
    head1, head2 :: Maybe Text
@@ -98,52 +97,54 @@ renderTimeline run flt withCommentary xs =
    renderLineDist = T.intercalate " " . renderLine' fLeftPad fWidth
 
    renderLine' ::
-     (IField a -> Int) -> (IField a -> Int) -> (IField a -> Text) -> [Text]
+     (Field ISelect I a -> Int) -> (Field ISelect I a -> Int) -> (Field ISelect I a -> Text) -> [Text]
    renderLine' lpfn wfn rfn = renderField lpfn wfn rfn <$> fields
    renderField lpfn wfn rfn f = T.replicate (lpfn f) " " <> T.center (wfn f) ' ' (rfn f)
 
-renderDirectCDFs :: forall a. RenderDirectCDFs a =>
-     Run -> RenderMode -> (DField a -> Bool) -> Maybe [Centile] -> a
+renderCDFs :: forall p a. (RenderCDFs a p, KnownCDF p) => Anchor -> RenderMode -> (Field DSelect p a -> Bool) -> Maybe [Centile] -> a p
   -> [Text]
-renderDirectCDFs run mode flt mCentis x =
+renderCDFs a mode flt mCentis x =
   case mode of
-    RenderPretty -> catMaybes [head1, head2] <> pLines <> sizeAvg
+    RenderPretty -> renderAnchor a : catMaybes [head1, head2] <> pLines <> sizeAvg
     RenderCsv    -> headCsv : pLines
      where headCsv = T.intercalate "," $ fId <$> fields
 
  where
    percSpecs :: [Centile]
-   percSpecs = maybe (mapSomeFieldDirectCDF centilesCDF x (fSelect . head $ rdFields run))
+   percSpecs = maybe (mapSomeFieldDirectCDF centilesCDF x (fSelect . head $ rdFields @a @p))
                      id
                      mCentis
 
    -- XXX:  very expensive, the way it's used below..
-   subsetDistrib :: DirectCDF b -> DirectCDF b
+   subsetDistrib :: CDF p b -> CDF p b
    subsetDistrib = maybe id (filterCDF . \cs c -> elem (fst c) cs) mCentis
 
    pLines :: [Text]
    pLines = fLine <$> [0..(nCentis - 1)]
+
+   ix :: CDFIx p
+   ix = cdfIx
 
    fLine :: Int -> Text
    fLine pctIx = (if mode == RenderPretty
                   then renderLineDistPretty
                   else renderLineDistCsv) $
     \Field{..} ->
-      let getCapCentile :: forall c. DirectCDF c -> c
-          getCapCentile = unI . indexCDF pctIx
+      let getCapCentile :: forall c. CDF p c -> p c
+          getCapCentile = indexCDF pctIx
       in T.pack $ case fSelect of
         DInt    (($x)->d) -> (if mode == RenderPretty
                               then printf "%*d" fWidth
-                              else printf "%d") (getCapCentile $ subsetDistrib d)
+                              else printf "%d") . unliftCDFVal ix . getCapCentile $ subsetDistrib d
         DWord64 (($x)->d) -> (if mode == RenderPretty
                               then printf "%*d" fWidth
-                              else printf "%d") (getCapCentile $ subsetDistrib d)
+                              else printf "%d") . unliftCDFVal ix . getCapCentile $ subsetDistrib d
         DFloat  (($x)->d) -> (if mode == RenderPretty
                               then take fWidth . printf "%*F" (fWidth - 2)
-                              else printf "%F") (getCapCentile $ subsetDistrib d)
+                              else printf "%F") . unliftCDFVal ix . getCapCentile $ subsetDistrib d
         DDeltaT (($x)->d) -> (if mode == RenderPretty
                               then take fWidth else id)
-                             . dropWhileEnd (== 's') . show $ getCapCentile $ subsetDistrib d
+                             . dropWhileEnd (== 's') . show . unliftCDFVal ix . getCapCentile $ subsetDistrib d
 
    head1, head2 :: Maybe Text
    head1 = if all ((== 0) . T.length . fHead1) fields then Nothing
@@ -171,20 +172,20 @@ renderDirectCDFs run mode flt mCentis x =
    renderLineDistCsv    = T.intercalate "," . renderLine' (const 0) (const 0)
 
    renderLine' ::
-     (DField a -> Int) -> (DField a -> Int) -> (DField a -> Text) -> [Text]
+     (Field DSelect p a -> Int) -> (Field DSelect p a -> Int) -> (Field DSelect p a -> Text) -> [Text]
    renderLine' lefPad width render = renderField lefPad width render <$> fields
    renderField :: forall f. (f -> Int) -> (f -> Int) -> (f -> Text) -> f -> Text
    renderField lefPad width render f = T.replicate (lefPad f) " " <> T.center (width f) ' ' (render f)
 
-   fields :: [DField a]
-   fields = percField : nsamplesField : filter flt (rdFields run)
+   fields :: [Field DSelect p a]
+   fields = percField : nsamplesField : filter flt rdFields
 
-   percField :: DField a
+   percField :: Field DSelect p a
    percField = Field 6 0 "%tile" "" "%tile" (DFloat $ const percsDistrib)
    nCentis = length $ cdfSamples percsDistrib
    percsDistrib = mapSomeFieldDirectCDF
-                    (distribCentisAsDistrib . subsetDistrib) x (fSelect $ head (rdFields run))
-   distribCentisAsDistrib :: DirectCDF b -> DirectCDF Double
+                    (distribCentisAsDistrib . subsetDistrib) x (fSelect $ head rdFields)
+   distribCentisAsDistrib :: CDF p b -> CDF p Double
    distribCentisAsDistrib CDF{..} =
      CDF
        (length cdfSamples)
@@ -192,15 +193,15 @@ renderDirectCDFs run mode flt mCentis x =
        0.5
        (head cdfSamples & unCentile . fst,
         last cdfSamples & unCentile . fst)
-       $ (id &&& I . unCentile) . fst <$> cdfSamples
+       $ (id &&& flip liftCDFVal cdfIx . unCentile) . fst <$> cdfSamples
 
-   nsamplesField :: DField a
+   nsamplesField :: Field DSelect p a
    nsamplesField = Field 6 0 "Nsamp" "" "Nsamp" (DInt $ const nsamplesDistrib)
-   nsamplesDistrib = computeCDF percSpecs populationIndices
+   nsamplesDistrib = cdf percSpecs populationIndices
    populationIndices :: [Int]
    populationIndices = [1..maxPopulationSize]
    maxPopulationSize :: Int
-   maxPopulationSize = last . sort $ mapSomeFieldDirectCDF cdfSize x . fSelect <$> rdFields run
+   maxPopulationSize = last . sort $ mapSomeFieldDirectCDF cdfSize x . fSelect <$> rdFields @a @p
 
 -- * Auxiliaries
 --

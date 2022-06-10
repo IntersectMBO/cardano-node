@@ -67,26 +67,26 @@ import Cardano.Util
 summariseBlockProps :: [Centile] -> [BlockPropOne] -> Either CDFError BlockProps
 summariseBlockProps _ [] = error "Asked to summarise empty list of BlockPropOne"
 summariseBlockProps centiles bs@(headline:_) = do
-  bpForgerChecks           <- cdf2OfCDFs cdfy $ bs <&> bpForgerChecks
-  bpForgerLeads            <- cdf2OfCDFs cdfy $ bs <&> bpForgerLeads
-  bpForgerForges           <- cdf2OfCDFs cdfy $ bs <&> bpForgerForges
-  bpForgerAdoptions        <- cdf2OfCDFs cdfy $ bs <&> bpForgerAdoptions
-  bpForgerAnnouncements    <- cdf2OfCDFs cdfy $ bs <&> bpForgerAnnouncements
-  bpForgerSends            <- cdf2OfCDFs cdfy $ bs <&> bpForgerSends
-  bpPeerNotices            <- cdf2OfCDFs cdfy $ bs <&> bpPeerNotices
-  bpPeerRequests           <- cdf2OfCDFs cdfy $ bs <&> bpPeerRequests
-  bpPeerFetches            <- cdf2OfCDFs cdfy $ bs <&> bpPeerFetches
-  bpPeerAdoptions          <- cdf2OfCDFs cdfy $ bs <&> bpPeerAdoptions
-  bpPeerAnnouncements      <- cdf2OfCDFs cdfy $ bs <&> bpPeerAnnouncements
-  bpPeerSends              <- cdf2OfCDFs cdfy $ bs <&> bpPeerSends
-  bpSizes                  <- cdf2OfCDFs cdfy $ bs <&> bpSizes
-  bpPropagation            <- sequence $ (transpose $ bs <&> bpPropagation) <&>
+  bpForgerChecks           <- cdf2OfCDFs comb $ bs <&> bpForgerChecks
+  bpForgerLeads            <- cdf2OfCDFs comb $ bs <&> bpForgerLeads
+  bpForgerForges           <- cdf2OfCDFs comb $ bs <&> bpForgerForges
+  bpForgerAdoptions        <- cdf2OfCDFs comb $ bs <&> bpForgerAdoptions
+  bpForgerAnnouncements    <- cdf2OfCDFs comb $ bs <&> bpForgerAnnouncements
+  bpForgerSends            <- cdf2OfCDFs comb $ bs <&> bpForgerSends
+  bpPeerNotices            <- cdf2OfCDFs comb $ bs <&> bpPeerNotices
+  bpPeerRequests           <- cdf2OfCDFs comb $ bs <&> bpPeerRequests
+  bpPeerFetches            <- cdf2OfCDFs comb $ bs <&> bpPeerFetches
+  bpPeerAdoptions          <- cdf2OfCDFs comb $ bs <&> bpPeerAdoptions
+  bpPeerAnnouncements      <- cdf2OfCDFs comb $ bs <&> bpPeerAnnouncements
+  bpPeerSends              <- cdf2OfCDFs comb $ bs <&> bpPeerSends
+  bpSizes                  <- cdf2OfCDFs comb $ bs <&> bpSizes
+  bpPropagation            <- sequence $ transpose (bs <&> bpPropagation) <&>
     \case
       [] -> Left CDFEmptyDataset
       xs@((d,_):ds) -> do
         unless (all (d ==) $ fmap fst ds) $
           Left $ CDFIncoherentSamplingCentiles [Centile . fst <$> xs]
-        (d,) <$> cdf2OfCDFs cdfy (snd <$> xs)
+        (d,) <$> cdf2OfCDFs comb (snd <$> xs)
   pure $ BlockProp
     { bpVersion             = bpVersion headline
     , bpDomainSlots         = dataDomainsMergeOuter $ bs <&> bpDomainSlots
@@ -94,8 +94,8 @@ summariseBlockProps centiles bs@(headline:_) = do
     , ..
     }
  where
-   cdfy :: forall a. Real a => [I a] -> CDF I a
-   cdfy = computeCDF centiles . fmap unI
+   comb :: forall a. Divisible a => Combine I a
+   comb = stdCombine1 centiles
 
 -- | Block's events, as seen by its forger.
 data ForgerEvents a
@@ -379,7 +379,7 @@ rebuildChain run@Run{genesis} xs@(fmap snd -> machViews) = do
              <*> Just boeSending
              <*> Just boeErrorsCrit
              <*> Just boeErrorsSoft
-     , bePropagation  = computeCDF adoptionPcts adoptions
+     , bePropagation  = cdf adoptionPcts adoptions
      , beOtherBlocks  = otherBlocks
      , beErrors =
          errs
@@ -418,11 +418,11 @@ rebuildChain run@Run{genesis} xs@(fmap snd -> machViews) = do
        ]
 
 filterChain :: Run -> ([ChainFilter], [FilterName]) -> [BlockEvents]
-            -> IO (DataDomain SlotNo, DataDomain BlockNo, [BlockEvents])
+            -> IO (DataDomain SlotNo, DataDomain BlockNo, [FilterName], [BlockEvents])
 filterChain Run{genesis} (flts, fltNames) chain = do
   progress "filtered-chain-slot-domain"  $ J domSlot
   progress "filtered-chain-block-domain" $ J domBlock
-  pure (domSlot, domBlock, fltrd)
+  pure (domSlot, domBlock, fltNames, fltrd)
  where
    fltrd = filter (isValidBlockEvent genesis flts) chain &
            \case
@@ -470,8 +470,8 @@ blockProp run@Run{genesis} chain domSlot domBlock = do
     , bpVersion             = getVersion
     }
  where
-   forgerEventsCDF   :: (Real a) => (BlockEvents -> Maybe a) -> DirectCDF a
-   forgerEventsCDF   = flip (witherToDistrib (computeCDF stdCentiles)) chain
+   forgerEventsCDF   :: (Real a, KnownCDF p) => (BlockEvents -> Maybe a) -> CDF p a
+   forgerEventsCDF   = flip (witherToDistrib (cdf stdCentiles)) chain
    observerEventsCDF = mapChainToPeerBlockObservationCDF stdCentiles chain
 
    mapChainToBlockEventCDF ::
@@ -481,7 +481,7 @@ blockProp run@Run{genesis} chain domSlot domBlock = do
      -> (BlockEvents -> Maybe a)
      -> DirectCDF a
    mapChainToBlockEventCDF percs cbes proj =
-     computeCDF percs $
+     cdf percs $
        mapMaybe proj cbes
 
    mapChainToPeerBlockObservationCDF ::
@@ -491,7 +491,7 @@ blockProp run@Run{genesis} chain domSlot domBlock = do
      -> String
      -> DirectCDF NominalDiffTime
    mapChainToPeerBlockObservationCDF percs cbes proj desc =
-     computeCDF percs $
+     cdf percs $
        concat $ cbes <&> blockObservations
     where
       blockObservations :: BlockEvents -> [NominalDiffTime]
@@ -499,10 +499,10 @@ blockProp run@Run{genesis} chain domSlot domBlock = do
         proj `mapMaybe` filter isValidBlockObservation (beObservations be)
 
 witherToDistrib ::
-     ([b] -> DirectCDF b)
+     ([b] -> CDF p b)
   -> (a -> Maybe b)
   -> [a]
-  -> DirectCDF b
+  -> CDF p b
 witherToDistrib distrify proj xs =
   distrify $ mapMaybe proj xs
 

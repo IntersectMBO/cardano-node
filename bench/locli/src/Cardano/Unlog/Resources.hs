@@ -65,7 +65,7 @@ computeResCDF centiles projs xs =
   compDist <$> projs
  where
    compDist :: (a -> Maybe Word64) -> DirectCDF Word64
-   compDist proj = computeCDF centiles
+   compDist proj = cdf centiles
      (catMaybes . toList $ proj <$> xs)
 
 type ResContinuity a = Resources (a -> Maybe a)

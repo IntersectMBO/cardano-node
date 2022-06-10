@@ -1,6 +1,7 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-name-shadowing -Wno-orphans #-}
 {- HLINT ignore "Use head" -}
@@ -208,8 +209,18 @@ data MachPerf f
     }
   deriving (Generic)
 
-type MachPerfOne = MachPerf I
-type ClusterPerf = MachPerf (CDF I)
+-- | One machine's performance
+type    MachPerfOne  = MachPerf I
+
+-- | Bunch'a machines performances
+type    ClusterPerf  = MachPerf (CDF I)
+
+-- | Bunch'a bunches'a machine performances.
+--   Same as above, since we collapse [CDF I] into CDF I -- just with more statistical confidence.
+newtype ClusterPerfs
+  = ClusterPerfs { unClusterPerfs :: ClusterPerf }
+  deriving newtype (ToJSON, FromJSON)
+
 deriving newtype instance FromJSON a => FromJSON (I a)
 deriving newtype instance ToJSON   a => ToJSON   (I a)
 deriving instance (FromJSON (a Double), FromJSON (a Int), FromJSON (a NominalDiffTime), FromJSON (a Word64)) => FromJSON (MachPerf a)
@@ -297,20 +308,20 @@ testSlotStats g SlotStats{..} = \case
 --
 -- * Timeline rendering instances
 --
-bpFieldsForger :: DField a -> Bool
+bpFieldsForger :: Field DSelect p a -> Bool
 bpFieldsForger Field{fId} = elem fId
   [ "fChecked", "fLeading", "fForged", "fAdopted", "fAnnounced", "fSendStart" ]
 
-bpFieldsPeers :: DField a -> Bool
+bpFieldsPeers :: Field DSelect p a -> Bool
 bpFieldsPeers Field{fId} = elem fId
   [ "noticedVal", "requestedVal", "fetchedVal", "pAdoptedVal", "pAnnouncedVal", "pSendStartVal" ]
 
-bpFieldsPropagation :: DField a -> Bool
+bpFieldsPropagation :: Field DSelect p a -> Bool
 bpFieldsPropagation Field{fHead2} = elem fHead2
   [ "0.50", "0.80", "0.90", "0.92", "0.94", "0.96", "0.98", "1.00" ]
 
-instance RenderDirectCDFs BlockPropOne where
-  rdFields _ =
+instance RenderCDFs BlockProp p where
+  rdFields =
     --  Width LeftPad
     [ Field 6 0 "fChecked"      (f!!0) "Checkd" $ DDeltaT bpForgerChecks
     , Field 6 0 "fLeading"      (f!!1) "Leadin" $ DDeltaT bpForgerLeads
@@ -411,12 +422,12 @@ instance RenderTimeline BlockEvents where
 
   rtCommentary BlockEvents{..} = ("    " <>) . show <$> beErrors
 
-mtFieldsReport :: DField a -> Bool
+mtFieldsReport :: Field DSelect p a -> Bool
 mtFieldsReport Field{fId} = elem fId
   [ "CPU", "GC", "MUT", "RSS", "Heap", "Live", "Alloc" ]
 
-instance RenderDirectCDFs MachPerfOne where
-  rdFields _ =
+instance RenderCDFs MachPerf p where
+  rdFields =
     --  Width LeftPad
     [ Field 4 0 "missR"       "Miss"  "ratio" $ DFloat                 sMissCDF
     , Field 5 0 "CheckΔ"      (d!!0)  "Check" $ DDeltaT                sSpanCheckCDF
@@ -426,8 +437,7 @@ instance RenderDirectCDFs MachPerfOne where
     , Field 5 0 "chDensity"   "Dens"  "ity"   $ DFloat                 sDensityCDF
     , Field 3 0 "CPU"         "CPU"   "%"     $ DWord64 (rCentiCpu   . sResourceCDFs)
     , Field 3 0 "GC"          "GC"    "%"     $ DWord64 (rCentiGC    . sResourceCDFs)
-    , Field 3 0 "MUT"         "MUT"   "%"     $ DWord64 (fmap (min 999) .
-                                                         rCentiMut   . sResourceCDFs)
+    , Field 3 0 "MUT"         "MUT"   "%"     $ DWord64 (rCentiMut   . sResourceCDFs)
     , Field 3 0 "GcMaj"       "GC "   "Maj"   $ DWord64 (rGcsMajor   . sResourceCDFs)
     , Field 3 0 "GcMin"       "flt "  "Min"   $ DWord64 (rGcsMinor   . sResourceCDFs)
     , Field 5 0 "RSS"         (m!!0)  "RSS"   $ DWord64 (rRSS        . sResourceCDFs)

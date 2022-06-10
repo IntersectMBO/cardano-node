@@ -67,6 +67,7 @@ library
                      , scientific
                      , split
                      , statistics
+                     , system-filepath
                      , template-haskell
                      , text
                      , text-short
