@@ -72,6 +72,7 @@ import qualified Cardano.Ledger.Coin as Ledger
 import qualified Cardano.Ledger.Core as Ledger
 import qualified Cardano.Ledger.Crypto as Ledger
 import qualified Cardano.Ledger.Era as Ledger.Era (Crypto)
+import qualified Cardano.Ledger.Hashes as Ledger
 import qualified Cardano.Ledger.Keys as Ledger
 import qualified Cardano.Ledger.Shelley.API as Ledger (CLI, DCert, TxIn, Wdrl)
 import qualified Cardano.Ledger.Shelley.API.Wallet as Ledger (evaluateTransactionBalance,
@@ -88,6 +89,7 @@ import           Cardano.Ledger.Alonzo.PParams (PParams' (..))
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 import qualified Cardano.Ledger.Alonzo.Tools as Alonzo
 import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
+import qualified Cardano.Ledger.Alonzo.TxInfo as Alonzo
 import qualified Cardano.Ledger.Alonzo.TxWitness as Alonzo
 
 import qualified Plutus.V1.Ledger.Api as Plutus
@@ -340,7 +342,10 @@ type PlutusScriptBytes = ShortByteString
 type ResolvablePointers =
        Map
          Alonzo.RdmrPtr
-         (Alonzo.ScriptPurpose Ledger.StandardCrypto, Maybe (PlutusScriptBytes, Alonzo.Language))
+         ( Alonzo.ScriptPurpose Ledger.StandardCrypto
+         , Maybe (PlutusScriptBytes, Alonzo.Language)
+         , Ledger.ScriptHash Ledger.StandardCrypto
+         )
 
 -- | The different possible reasons that executing a script can fail,
 -- as reported by 'evaluateTransactionExecutionUnits'.
@@ -382,7 +387,11 @@ data ScriptExecutionError =
 
        -- | An attempt was made to spend a key witnessed tx input
        -- with a script witness.
-     | ScriptErrorNotPlutusWitnessedTxIn ScriptWitnessIndex
+     | ScriptErrorNotPlutusWitnessedTxIn ScriptWitnessIndex ScriptHash
+
+       -- | The redeemer pointer points to a script hash that does not exist
+       -- in the transaction nor in the UTxO as a reference script"
+     | ScriptErrorRedeemerPointsToUnknownScriptHash ScriptWitnessIndex
 
        -- | A redeemer pointer points to a script that does not exist.
      | ScriptErrorMissingScript
@@ -421,9 +430,14 @@ instance Error ScriptExecutionError where
    ++ "impossible. So this probably indicates a chain configuration problem, "
    ++ "perhaps with the values in the cost model."
 
-  displayError (ScriptErrorNotPlutusWitnessedTxIn scriptWitness) =
+  displayError (ScriptErrorNotPlutusWitnessedTxIn scriptWitness scriptHash) =
       renderScriptWitnessIndex scriptWitness <> " is not a Plutus script \
       \witnessed tx input and cannot be spent using a Plutus script witness."
+      <> "The script hash is " <> show scriptHash <> "."
+
+  displayError (ScriptErrorRedeemerPointsToUnknownScriptHash scriptWitness) =
+      renderScriptWitnessIndex scriptWitness <> " points to a script hash \
+      \that is not known."
 
   displayError (ScriptErrorMissingScript rdmrPtr resolveable) =
      "The redeemer pointer: " <> show rdmrPtr <> " points to a Plutus \
@@ -452,7 +466,7 @@ data TransactionValidityError =
     -- of their validity interval more than 36 hours into the future.
     TransactionValidityIntervalError Consensus.PastHorizonException
 
-  | TransactionValidityBasicFailure (Alonzo.BasicFailure Ledger.StandardCrypto)
+  | TransactionValidityTranslationError (Alonzo.TranslationError Ledger.StandardCrypto)
 
   | TransactionValidityCostModelError (Map AnyPlutusScriptVersion CostModel) String
 
@@ -477,10 +491,7 @@ instance Error TransactionValidityError where
 
         | otherwise
         = 0 -- This should be impossible.
-  displayError (TransactionValidityBasicFailure (Alonzo.UnknownTxIns txins)) =
-    "The transaction contains inputs that are not present in the UTxO: "
-    <> show (map (renderTxIn . fromShelleyTxIn) $ Set.toList txins)
-  displayError (TransactionValidityBasicFailure (Alonzo.BadTranslation errmsg)) =
+  displayError (TransactionValidityTranslationError errmsg) =
     "Error translating the transaction context: " <> show errmsg
 
   displayError (TransactionValidityCostModelError cModels err) =
@@ -541,7 +552,7 @@ evaluateTransactionExecutionUnits _eraInMode systemstart history pparams utxo tx
              (toLedgerEpochInfo history)
              systemstart
              cModelArray
-        of Left err -> Left (TransactionValidityBasicFailure err)
+        of Left err -> Left (TransactionValidityTranslationError err)
            Right exmap -> Right (fromLedgerScriptExUnitsMap exmap)
 
     evalBabbage :: forall ledgerera.
@@ -563,7 +574,7 @@ evaluateTransactionExecutionUnits _eraInMode systemstart history pparams utxo tx
              (toLedgerEpochInfo history)
              systemstart
              costModelsArray
-        of Left err    -> Left (TransactionValidityBasicFailure err)
+        of Left err    -> Left (TransactionValidityTranslationError err)
            Right exmap -> Right (fromLedgerScriptExUnitsMap exmap)
 
     toLedgerEpochInfo :: EraHistory mode -> EpochInfo (Either Text.Text)
@@ -579,7 +590,7 @@ evaluateTransactionExecutionUnits _eraInMode systemstart history pparams utxo tx
       return $ Array.array (minBound, maxBound) (Map.toList cModels)
 
     fromLedgerScriptExUnitsMap
-      :: Map Alonzo.RdmrPtr (Either (Alonzo.ScriptFailure Ledger.StandardCrypto)
+      :: Map Alonzo.RdmrPtr (Either (Alonzo.TransactionScriptFailure Ledger.StandardCrypto)
                                     Alonzo.ExUnits)
       -> Map ScriptWitnessIndex (Either ScriptExecutionError ExecutionUnits)
     fromLedgerScriptExUnitsMap exmap =
@@ -588,7 +599,7 @@ evaluateTransactionExecutionUnits _eraInMode systemstart history pparams utxo tx
            bimap fromAlonzoScriptExecutionError fromAlonzoExUnits exunitsOrFailure)
         | (rdmrptr, exunitsOrFailure) <- Map.toList exmap ]
 
-    fromAlonzoScriptExecutionError :: Alonzo.ScriptFailure Ledger.StandardCrypto
+    fromAlonzoScriptExecutionError :: Alonzo.TransactionScriptFailure Ledger.StandardCrypto
                                    -> ScriptExecutionError
     fromAlonzoScriptExecutionError failure =
       case failure of
@@ -604,17 +615,18 @@ evaluateTransactionExecutionUnits _eraInMode systemstart history pparams utxo tx
         -- This is only possible for spending scripts and occurs when
         -- we attempt to spend a key witnessed tx input with a Plutus
         -- script witness.
-        Alonzo.RedeemerNotNeeded rdmrPtr ->
-          ScriptErrorNotPlutusWitnessedTxIn $ fromAlonzoRdmrPtr rdmrPtr
+        Alonzo.RedeemerNotNeeded rdmrPtr scriptHash ->
+          ScriptErrorNotPlutusWitnessedTxIn
+            (fromAlonzoRdmrPtr rdmrPtr)
+            (fromShelleyScriptHash scriptHash)
+        Alonzo.RedeemerPointsToUnknownScriptHash rdmrPtr ->
+          ScriptErrorRedeemerPointsToUnknownScriptHash $ fromAlonzoRdmrPtr rdmrPtr
         -- This should not occur while using cardano-cli because we zip together
         -- the Plutus script and the use site (txin, certificate etc). Therefore
         -- the redeemer pointer will always point to a Plutus script.
         Alonzo.MissingScript rdmrPtr resolveable -> ScriptErrorMissingScript rdmrPtr resolveable
 
-        Alonzo.NoCostModel l -> ScriptErrorMissingCostModel l
-
-        Alonzo.CorruptCostModel _l ->
-          error "fromAlonzoScriptExecutionError: CorruptCostModel will be removed"
+        Alonzo.NoCostModelInLedgerState l -> ScriptErrorMissingCostModel l
 
 
     obtainHasFieldConstraint
