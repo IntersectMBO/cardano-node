@@ -6,13 +6,14 @@ The **latest** version of the node may be downloaded from the [cardano-node GitH
 
 To set up your platform, you will need:
 
-* An x86 host \(AMD or Intel\)
-* A virtual machine or AWS instance with at least 2 cores
-* 8GB of RAM and at least 10GB of free disk space
-* A recent version of Linux
 
-**Note** The node can be built and run on other operating systems, including Windows and MacOSX, but we recommend that
-stake pool operators use Linux to take advantage of the associated performance advantages. If you are building on Windows, we recommend using WSL2 under Windows 10 as this provides a development and execution environment that is very similar to Ubuntu.
+| Network | CPU Cores | Free RAM | Free storage | OS for Pasive Node | OS for Stake pool |
+| :---: | :---: | :---: | :---: | :---: | :---: | 
+| Mainnet | 2 | 16GB | 75GB of free storage (100GB recommended for future growth | Linux / Windows** / MacOS | Linux | 
+| Testnet | 2 | 4GB | 20GB | Linux / Windows** / MacOS | Linux |
+
+****Note** If you are building on Windows, we recommend using WSL2 under Windows 10 as this provides a development and execution environment that is very similar to Ubuntu.
+
 
 #### Installation dependencies
 
