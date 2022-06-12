@@ -7,7 +7,7 @@ module Cardano.CLI.Shelley.Run.Address
   , buildShelleyAddress
   , renderShelleyAddressCmdError
   , runAddressCmd
-  , runAddressKeyGen
+  , runAddressKeyGenToFile
   , readAddressVerificationKeyTextOrFile
   ) where
 
@@ -57,17 +57,17 @@ renderShelleyAddressCmdError err =
 runAddressCmd :: AddressCmd -> ExceptT ShelleyAddressCmdError IO ()
 runAddressCmd cmd =
   case cmd of
-    AddressKeyGen kt vkf skf -> runAddressKeyGen kt vkf skf
+    AddressKeyGen kt vkf skf -> runAddressKeyGenToFile kt vkf skf
     AddressKeyHash vkf mOFp -> runAddressKeyHash vkf mOFp
     AddressBuild paymentVerifier mbStakeVerifier nw mOutFp -> runAddressBuild paymentVerifier mbStakeVerifier nw mOutFp
     AddressBuildMultiSig sFp nId mOutFp -> runAddressBuildScript sFp nId mOutFp
     AddressInfo txt mOFp -> firstExceptT ShelleyAddressCmdAddressInfoError $ runAddressInfo txt mOFp
 
-runAddressKeyGen :: AddressKeyType
+runAddressKeyGenToFile :: AddressKeyType
                  -> VerificationKeyFile
                  -> SigningKeyFile
                  -> ExceptT ShelleyAddressCmdError IO ()
-runAddressKeyGen kt (VerificationKeyFile vkeyPath) (SigningKeyFile skeyPath) =
+runAddressKeyGenToFile kt (VerificationKeyFile vkeyPath) (SigningKeyFile skeyPath) =
     case kt of
       AddressKeyShelley         -> generateAndWriteKeyFiles AsPaymentKey
       AddressKeyShelleyExtended -> generateAndWriteKeyFiles AsPaymentExtendedKey

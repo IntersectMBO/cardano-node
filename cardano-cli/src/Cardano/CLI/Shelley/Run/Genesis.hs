@@ -80,7 +80,7 @@ import           Cardano.CLI.Shelley.Run.Node (ShelleyNodeCmdError (..), renderS
                    runNodeIssueOpCert, runNodeKeyGenCold, runNodeKeyGenKES, runNodeKeyGenVRF)
 import           Cardano.CLI.Shelley.Run.Pool (ShelleyPoolCmdError (..), renderShelleyPoolCmdError)
 import           Cardano.CLI.Shelley.Run.StakeAddress (ShelleyStakeAddressCmdError (..),
-                   renderShelleyStakeAddressCmdError, runStakeAddressKeyGen)
+                   renderShelleyStakeAddressCmdError, runStakeAddressKeyGenToFile)
 import           Cardano.CLI.Types
 
 import           Cardano.CLI.Byron.Delegation
@@ -846,7 +846,7 @@ createPoolCredentials dir index = do
         (KESPeriod 0)
         (OutputFile $ dir </> "opcert" ++ strIndex ++ ".cert")
   firstExceptT ShelleyGenesisCmdStakeAddressCmdError $
-    runStakeAddressKeyGen
+    runStakeAddressKeyGenToFile
         (VerificationKeyFile $ dir </> "staking-reward" ++ strIndex ++ ".vkey")
         (SigningKeyFile $ dir </> "staking-reward" ++ strIndex ++ ".skey")
  where
@@ -859,12 +859,12 @@ createDelegatorCredentials :: FilePath -> Word -> ExceptT ShelleyGenesisCmdError
 createDelegatorCredentials dir index = do
   liftIO $ createDirectoryIfMissing False dir
   firstExceptT ShelleyGenesisCmdAddressCmdError $ do
-    runAddressKeyGen
+    runAddressKeyGenToFile
         AddressKeyShelley
         addrVK
         (SigningKeyFile $ dir </> "payment" ++ strIndex ++ ".skey")
   firstExceptT ShelleyGenesisCmdStakeAddressCmdError $
-    runStakeAddressKeyGen
+    runStakeAddressKeyGenToFile
         (VerificationKeyFile $ dir </> "staking" ++ strIndex ++ ".vkey")
         (SigningKeyFile $ dir </> "staking" ++ strIndex ++ ".skey")
  where
