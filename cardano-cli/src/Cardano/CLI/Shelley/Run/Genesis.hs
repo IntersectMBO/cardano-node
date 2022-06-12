@@ -691,20 +691,21 @@ runGenesisCreateStaked (GenesisDir rootdir)
   forM_ (zip [ 1 .. bulkPoolCredFiles ] bulkSlices) $
     uncurry (writeBulkPoolCredentials pooldir)
 
-  forM_ [ 1 .. genNumStDelegs ] $ \index ->
-    createDelegatorCredentials stdeldir index
+  let distribution =
+        [ (pool, delegIx)
+        | (pool, poolIx) <- zip pools [1 ..]
+        , delegIxLocal <- [ 1 .. delegsPerPool ] ++
+                          -- Add all remaining delegates to the last pool:
+                          if delegsRemaining /= 0 && poolIx == genNumPools
+                            then [ delegsPerPool + 1 .. delegsPerPool + delegsRemaining ]
+                            else []
+        , let delegIx = delegIxLocal + delegsPerPool * (poolIx - 1)
+        ]
 
-  delegations :: [Delegation] <-
-    -- Distribute M delegates across N pools:
-    forM [ (pool, delegIx)
-         | (pool, poolIx) <- zip pools [1 ..]
-         , delegIxLocal <- [ 1 .. delegsPerPool ] ++
-                           -- Add all remaining delegates to the last pool:
-                           if delegsRemaining /= 0 && poolIx == genNumPools
-                           then [ delegsPerPool + 1 .. delegsPerPool + delegsRemaining ]
-                           else []
-         , let delegIx = delegIxLocal + delegsPerPool * (poolIx - 1)] $
-      uncurry (computeDelegation network stdeldir)
+  -- Distribute M delegates across N pools:
+  delegations :: [Delegation] <- forM distribution $ \(poolParams, index) -> do
+    createDelegatorCredentials stdeldir index
+    computeDelegation network stdeldir poolParams index
 
   genDlgs <- readGenDelegsMap gendir deldir
   nonDelegAddrs <- readInitialFundAddresses utxodir network
