@@ -1,5 +1,4 @@
 {-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DeriveGeneric #-}
 module Cardano.Analysis.Version
   (Version (..), getVersion, renderProgramAndVersion)
 where

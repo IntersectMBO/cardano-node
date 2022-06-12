@@ -96,6 +96,9 @@ package cardano-tracer
 package trace-resources
   tests: True
 
+package locli
+  tests: True
+
 -- The following is needed because Nix is doing something crazy.
 package byron-spec-ledger
   tests: False

@@ -121,7 +121,7 @@ data CDF p a =
   , cdfRange     :: (a, a)
   , cdfSamples  :: [(Centile, p a)]
   }
-  deriving (Functor, Generic, Show)
+  deriving (Eq, Functor, Generic, Show)
   deriving anyclass NFData
 
 instance (FromJSON (p a), FromJSON a) => FromJSON (CDF p a)

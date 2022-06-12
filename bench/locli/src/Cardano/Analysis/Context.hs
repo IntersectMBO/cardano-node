@@ -1,5 +1,4 @@
 {-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE StrictData #-}
 module Cardano.Analysis.Context (module Cardano.Analysis.Context) where
 
