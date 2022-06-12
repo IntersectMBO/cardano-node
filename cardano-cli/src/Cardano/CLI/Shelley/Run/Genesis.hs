@@ -855,22 +855,6 @@ createPoolCredentials dir index = do
    coldSK = SigningKeyFile $ dir </> "cold" ++ strIndex ++ ".skey"
    opCertCtr = OpCertCounterFile $ dir </> "opcert" ++ strIndex ++ ".counter"
 
-createDelegatorCredentials :: FilePath -> Word -> ExceptT ShelleyGenesisCmdError IO ()
-createDelegatorCredentials dir index = do
-  liftIO $ createDirectoryIfMissing False dir
-  firstExceptT ShelleyGenesisCmdAddressCmdError $ do
-    runAddressKeyGenToFile
-        AddressKeyShelley
-        addrVK
-        (SigningKeyFile $ dir </> "payment" ++ strIndex ++ ".skey")
-  firstExceptT ShelleyGenesisCmdStakeAddressCmdError $
-    runStakeAddressKeyGenToFile
-        (VerificationKeyFile $ dir </> "staking" ++ strIndex ++ ".vkey")
-        (SigningKeyFile $ dir </> "staking" ++ strIndex ++ ".skey")
- where
-   strIndex = show index
-   addrVK = VerificationKeyFile $ dir </> "payment" ++ strIndex ++ ".vkey"
-
 data Delegation
   = Delegation
     { dInitialUtxoAddr  :: AddressInEra ShelleyEra
@@ -942,7 +926,20 @@ computeDelegation :: ()
   -> Word
   -> ExceptT ShelleyGenesisCmdError IO Delegation
 computeDelegation nw delegDir pool delegIx = do
-    createDelegatorCredentials delegDir delegIx
+    let strIndex = show delegIx
+    let addrVK = VerificationKeyFile $ delegDir </> "payment" ++ strIndex ++ ".vkey"
+
+    -- liftIO $ createDirectoryIfMissing False delegDir
+    firstExceptT ShelleyGenesisCmdAddressCmdError $ do
+      runAddressKeyGenToFile
+          AddressKeyShelley
+          addrVK
+          (SigningKeyFile $ delegDir </> "payment" ++ strIndex ++ ".skey")
+    firstExceptT ShelleyGenesisCmdStakeAddressCmdError $
+      runStakeAddressKeyGenToFile
+          (VerificationKeyFile $ delegDir </> "staking" ++ strIndex ++ ".vkey")
+          (SigningKeyFile $ delegDir </> "staking" ++ strIndex ++ ".skey")
+
     paySVK <- firstExceptT (ShelleyGenesisCmdAddressCmdError
                            . ShelleyAddressCmdVerificationKeyTextOrFileError) $
                  readAddressVerificationKeyTextOrFile
