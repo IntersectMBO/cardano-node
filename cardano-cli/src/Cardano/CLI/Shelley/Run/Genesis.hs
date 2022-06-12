@@ -704,7 +704,6 @@ runGenesisCreateStaked (GenesisDir rootdir)
 
   -- Distribute M delegates across N pools:
   delegations :: [Delegation] <- forM distribution $ \(poolParams, index) -> do
-    createDelegatorCredentials stdeldir index
     computeDelegation network stdeldir poolParams index
 
   genDlgs <- readGenDelegsMap gendir deldir
@@ -936,8 +935,14 @@ writeBulkPoolCredentials dir bulkIx poolIxs = do
      firstExceptT (ShelleyGenesisCmdAesonDecodeError fp . Text.pack) . hoistEither $
        Aeson.eitherDecodeStrict' content
 
-computeDelegation :: NetworkId -> FilePath -> Ledger.PoolParams StandardCrypto -> Word -> ExceptT ShelleyGenesisCmdError IO Delegation
+computeDelegation :: ()
+  => NetworkId
+  -> FilePath
+  -> Ledger.PoolParams StandardCrypto
+  -> Word
+  -> ExceptT ShelleyGenesisCmdError IO Delegation
 computeDelegation nw delegDir pool delegIx = do
+    createDelegatorCredentials delegDir delegIx
     paySVK <- firstExceptT (ShelleyGenesisCmdAddressCmdError
                            . ShelleyAddressCmdVerificationKeyTextOrFileError) $
                  readAddressVerificationKeyTextOrFile
