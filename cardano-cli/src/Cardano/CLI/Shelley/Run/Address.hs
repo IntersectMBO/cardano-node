@@ -147,12 +147,10 @@ makeStakeAddressRef
   -> ExceptT ShelleyAddressCmdError IO StakeAddressReference
 makeStakeAddressRef stakeVerifier = case stakeVerifier of
       StakeVerifierKey stkVkeyOrFile -> do
-        mstakeVKey <- firstExceptT ShelleyAddressCmdReadKeyFileError $
-          fmap Just $ newExceptT $ readVerificationKeyOrFile AsStakeKey stkVkeyOrFile
+        stakeVKey <- firstExceptT ShelleyAddressCmdReadKeyFileError $
+          newExceptT $ readVerificationKeyOrFile AsStakeKey stkVkeyOrFile
 
-        return $ maybe NoStakeAddress
-          (StakeAddressByValue . StakeCredentialByKey . verificationKeyHash)
-          mstakeVKey
+        return . StakeAddressByValue . StakeCredentialByKey . verificationKeyHash $ stakeVKey
 
       StakeVerifierScriptFile (ScriptFile fp) -> do
         ScriptInAnyLang _lang script <-
