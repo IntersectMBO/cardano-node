@@ -934,13 +934,12 @@ computeDelegation nw delegDir pool delegIx = do
       let paymentSK = SigningKeyFile $ delegDir </> "payment" ++ strIndex ++ ".skey"
       runAddressKeyGenToFile AddressKeyShelley paymentVK paymentSK
 
+    let stakingVK = VerificationKeyFile $ delegDir </> "staking" ++ strIndex ++ ".vkey"
+
     -- TODO use return values
     void $ firstExceptT ShelleyGenesisCmdStakeAddressCmdError $ do
-      let stakingVK = VerificationKeyFile $ delegDir </> "staking" ++ strIndex ++ ".vkey"
       let stakingSK = SigningKeyFile $ delegDir </> "staking" ++ strIndex ++ ".skey"
       runStakeAddressKeyGenToFile stakingVK stakingSK
-
-    let stakingVK = delegDir </> "staking" ++ strIndex ++ ".vkey"
 
     paySVK <- firstExceptT (ShelleyGenesisCmdAddressCmdError
                            . ShelleyAddressCmdVerificationKeyTextOrFileError) $
@@ -949,13 +948,13 @@ computeDelegation nw delegDir pool delegIx = do
     initialUtxoAddr <- case paySVK of
       APaymentVerificationKey payVK -> do
         firstExceptT ShelleyGenesisCmdAddressCmdError $ do
-          let mbStakeVerifier = Just . StakeVerifierKey . VerificationKeyFilePath . VerificationKeyFile $ stakingVK
-          makeShelleyAddress nw (PaymentCredentialByKey (verificationKeyHash payVK)) <$> maybe (return NoStakeAddress) makeStakeAddressRef mbStakeVerifier
+          let stakeVerifier = StakeVerifierKey . VerificationKeyFilePath $ stakingVK
+          makeShelleyAddress nw (PaymentCredentialByKey (verificationKeyHash payVK)) <$> makeStakeAddressRef stakeVerifier
       _ -> left $ ShelleyGenesisCmdUnexpectedAddressVerificationKey paymentVK "APaymentVerificationKey" paySVK
 
     StakeVerificationKey stakeVK <- firstExceptT ShelleyGenesisCmdTextEnvReadFileError
       . newExceptT
-      $ readFileTextEnvelope (AsVerificationKey AsStakeKey) stakingVK
+      $ readFileTextEnvelope (AsVerificationKey AsStakeKey) (unVerificationKeyFile stakingVK)
 
     pure Delegation
       { dInitialUtxoAddr = shelleyAddressInEra initialUtxoAddr
