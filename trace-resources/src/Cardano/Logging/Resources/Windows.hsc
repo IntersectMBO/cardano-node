@@ -4,7 +4,7 @@
 {-# LANGUAGE TypeApplications #-}
 
 module Cardano.Logging.Resources.Windows
-    ( readRessoureStatsInternal
+    ( readResourceStatsInternal
     ) where
 
 
@@ -137,8 +137,8 @@ getMemoryInfo pid =
                     (c_get_process_memory_info2 ptr (fromIntegral pid))
       peek ptr
 
-readRessoureStatsInternal :: IO (Maybe ResourceStats)
-readRessoureStatsInternal = getCurrentProcessId >>= \pid -> do
+readResourceStatsInternal :: IO (Maybe ResourceStats)
+readResourceStatsInternal = getCurrentProcessId >>= \pid -> do
   cpu <- getCpuTimes   pid
   mem <- getMemoryInfo pid
   rts <- GhcStats.getRTSStats
