@@ -47,7 +47,7 @@ import           Hedgehog.Extras.Stock.Time (formatIso8601, showUTCTimeSeconds)
 import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter (..))
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
 import           System.FilePath.Posix ((</>))
-import           System.IO (FilePath)
+import           Test.Runtime (TestnetRuntime(..), TestnetNode(..), Wallet(..))
 import           Text.Read (Read)
 import           Text.Show (Show(show))
 
@@ -124,33 +124,11 @@ defaultTestnetNodeOptions = TestnetNodeOptions
   { extraNodeCliArgs = []
   }
 
-data TestnetRuntime = TestnetRuntime
-  { configurationFile :: FilePath
-  , testnetMagic :: Int
-  , bftNodes :: [TestnetNode]
-  , poolNodes :: [TestnetNode]
-  , wallets :: [Wallet]
-  }
-
 bftSprockets :: TestnetRuntime -> [Sprocket]
 bftSprockets = fmap nodeSprocket . bftNodes
 
 allNodes :: TestnetRuntime -> [TestnetNode]
 allNodes tr = bftNodes tr <> poolNodes tr
-
-data TestnetNode = TestnetNode
-  { nodeName :: String
-  , nodeSprocket :: Sprocket
-  , nodeStdinHandle :: IO.Handle
-  , nodeStdout :: FilePath
-  , nodeStderr :: FilePath
-  , nodeProcessHandle :: IO.ProcessHandle
-  }
-
-data Wallet = Wallet
-  { paymentVKey :: FilePath
-  , paymentSKey :: FilePath
-  } deriving (Eq, Show)
 
 ifaceAddress :: String
 ifaceAddress = "127.0.0.1"
