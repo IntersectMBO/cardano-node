@@ -8,6 +8,10 @@ A reference script is a script that exists at a particular transaction output. I
 
 An inline datum, is a datum that exists at a transaction output. We no longer have to include a datum within our transaction for our plutus spending scripts. Instead we can specify the transaction output where our datum exists to be used in conjunction with our Plutus spending script. This reduces the overall size of our transaction.
 
+## What is a read only reference input
+
+In the case where we are not using a reference input to reference another transaction input (at a Plutus script address), we can specify a read only reference input that is simply exposed in the Plutus script context.
+
 ### An example of using a Plutus V2 reference script
 
 Below is an example that shows how to use a Plutus spending script and an inline datum. Here we discuss a [shell script example of how to use a reference script to spend a tx input](scripts/plutus/example-babbage-script-usage.sh). This is a step-by-step process involving:
@@ -17,6 +21,7 @@ Below is an example that shows how to use a Plutus spending script and an inline
 + the creation of the inline datum at a transaction output
 + sending ada to the Plutus script address
 + spending ada at the Plutus script address using the Plutus reference script
++ creating a read only reference tx output
 
 In this example we will use the [Required Redeemer](scripts/plutus/scripts/v2/required-redeemer.plutus) Plutus spending script. In order to execute a reference Plutus spending script, we require the following:
 
@@ -24,6 +29,7 @@ In this example we will use the [Required Redeemer](scripts/plutus/scripts/v2/re
 - A Plutus tx output. This is the tx output that sits at the Plutus script address.
 - The reference transaction input containing the corresponding Plutus script. We must create the transaction output containing the reference Plutus script.
 - An inline datum at the Plutus tx output. The Plutus spending script requires an inline datum or datum hash and in this case we are using an inline datum.
+- A read only reference input with an inline datum.
 
 #### Creating the `Required Redeemer` Plutus spending script
 
@@ -69,10 +75,12 @@ cardano-cli transaction build \
   --testnet-magic 42 \
   --change-address "$utxoaddr" \
   --tx-in "$txin" \
+  --tx-out "$readonlyaddress+$lovelaceattxindiv5" \
+  --tx-out-inline-datum-file "$datumfilepath" \
   --tx-out "$utxoaddr+$lovelace" \
   --tx-out "$plutusscriptaddr+$lovelace" \
   --tx-out-inline-datum-file "$datumfilepath" \
-  --tx-out "$dummyaddress+$lovelaceattxindiv3" \
+  --tx-out "$dummyaddress+$lovelaceattxindiv5" \
   --tx-out-reference-script-file "$plutusscriptinuse" \
   --protocol-params-file "$WORK/pparams.json" \
   --out-file "$WORK/create-datum-output.body"
@@ -95,12 +103,21 @@ Secondly, we are creating a reference script at a tx output:
 
 ```bash
 ...
---tx-out "$dummyaddress+$lovelaceattxindiv3" \
+--tx-out "$dummyaddress+$lovelaceattxindiv5" \
 --tx-out-reference-script-file "$plutusscriptinuse" \
 ...
 ```
 
 Specifying the `--reference-script-file` after the `--tx-out` option will construct a transaction that creates a reference script at that transaction output.
+
+Thirdly, we are preparing a txout to be used as a read only reference input:
+
+```bash
+...
+--tx-out "$readonlyaddress+$lovelaceattxindiv5" \
+--tx-out-inline-datum-file "$datumfilepath" \
+...
+```
 
 We sign and then submit as usual:
 
@@ -123,6 +140,7 @@ Because we are using the `build` command, we should only note the following:
 `plutus-script-v2`- This specifies the version of the reference script at the reference input.
 `reference-tx-in-inline-datum-present` - This indicates that we are using an inline datum which exists at the utxo we are trying to spend (the utxo at the Plutus script address).
 `reference-tx-in-redeemer-file` - This is the redeemer to be used with the reference script.
+`read-only-tx-in-reference` - This is a non-witnessing reference input. This will only be exposed in the Plutus script context.
 
 ```bash
 cardano-cli transaction build \
@@ -130,6 +148,7 @@ cardano-cli transaction build \
   --cardano-mode \
   --testnet-magic "$TESTNET_MAGIC" \
   --change-address "$utxoaddr" \
+  --read-only-tx-in-reference "$readonlyrefinput" \
   --tx-in "$txin1" \
   --tx-in-collateral "$txinCollateral" \
   --out-file "$WORK/test-alonzo-ref-script.body" \
@@ -150,5 +169,4 @@ cardano-cli transaction sign \
 
 If there is ada at `$dummyaddress2`, then the Plutus script was successfully executed.
 
-You can use the [example-txin-locking-plutus-script.sh](../../../scripts/plutus/example-txin-locking-plutus-script.sh) in conjunction with [mkfiles.sh alonzo](../../../scripts/byron-to-alonzo/mkfiles.sh) script to automagically run the `AlwaysSucceeds` script.
 
