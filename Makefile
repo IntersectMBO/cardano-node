@@ -43,10 +43,11 @@ ci-targets:  $(CI_TARGETS)
 ##
 ## Base targets:
 ##
-shell:                                           ## Nix shell, CI mode (from Nix store), vars: PROFILE, CMD
+shell:                                           ## Nix shell, (workbench from /nix/store), vars: PROFILE, CMD
 	nix-shell --max-jobs 8 --cores 0 --show-trace --argstr profileName ${PROFILE} ${ARGS} ${if ${CMD},--run "${CMD}"}
-shell-dev: shell
-shell-dev: ARGS += --arg 'workbenchDevMode' true ## Nix shell, dev mode (from checkout), vars: PROFILE, CMD
+shell-dev shell-prof shell-nix: shell
+shell-nix: ARGS += --arg 'workbenchDevMode' false ## Nix shell, (workbench from Nix store), vars: PROFILE, CMD
+shell-prof: ARGS += --arg 'profiled' true        ## Nix shell, everything Haskell built profiled
 
 list-profiles:                                   ## List workbench profiles
 	nix build .#workbench.profile-names-json --json | jq '.[0].outputs.out' -r | xargs jq .

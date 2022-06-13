@@ -50,7 +50,7 @@ let
 
   shell =
     let cluster = pkgs.supervisord-workbench-for-profile
-      { inherit profileName useCabalRun; };
+      { inherit profileName useCabalRun profiled; };
     in project.shellFor {
     name = "cluster-shell";
 
@@ -103,7 +103,7 @@ let
 
     shellHook = ''
       ${with customConfig.localCluster;
-        (import ./nix/workbench/shell.nix { inherit lib workbenchDevMode profileName useCabalRun; }).shellHook}
+        (import ./nix/workbench/shell.nix { inherit lib workbenchDevMode profileName useCabalRun profiled; }).shellHook}
 
       function workbench_atexit() {
           if wb backend is-running

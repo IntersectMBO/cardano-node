@@ -3,6 +3,7 @@
 , workbenchDevMode ? false
 , useCabalRun ? false
 , checkoutWbMode ? "unknown"
+, profiled ? false
 }:
 
 with lib;
@@ -29,7 +30,7 @@ let
       useCabalRun
       ''
       . nix/workbench/lib.sh
-      . nix/workbench/lib-cabal.sh
+      . nix/workbench/lib-cabal.sh ${optionalString profiled "--profiled"}
       ''}
 
     export CARDANO_NODE_SOCKET_PATH=run/current/node-0/node.socket
