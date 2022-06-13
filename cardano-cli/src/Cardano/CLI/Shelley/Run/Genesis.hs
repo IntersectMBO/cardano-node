@@ -947,9 +947,10 @@ computeDelegation nw delegDir pool delegIx = do
                  readAddressVerificationKeyTextOrFile
                    (VktofVerificationKeyFile paymentVK)
     initialUtxoAddr <- case paySVK of
-      APaymentVerificationKey payVK ->
-        firstExceptT ShelleyGenesisCmdAddressCmdError
-        $ buildShelleyAddress payVK (Just . StakeVerifierKey . VerificationKeyFilePath . VerificationKeyFile $ stakingVK) nw
+      APaymentVerificationKey payVK -> do
+        firstExceptT ShelleyGenesisCmdAddressCmdError $ do
+          let mbStakeVerifier = Just . StakeVerifierKey . VerificationKeyFilePath . VerificationKeyFile $ stakingVK
+          makeShelleyAddress nw (PaymentCredentialByKey (verificationKeyHash payVK)) <$> maybe (return NoStakeAddress) makeStakeAddressRef mbStakeVerifier
       _ -> left $ ShelleyGenesisCmdUnexpectedAddressVerificationKey paymentVK "APaymentVerificationKey" paySVK
 
     StakeVerificationKey stakeVK <- firstExceptT ShelleyGenesisCmdTextEnvReadFileError

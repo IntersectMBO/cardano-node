@@ -9,6 +9,7 @@ module Cardano.CLI.Shelley.Run.Address
   , runAddressCmd
   , runAddressKeyGenToFile
   , readAddressVerificationKeyTextOrFile
+  , makeStakeAddressRef
   ) where
 
 import           Cardano.Prelude hiding (putStrLn)
