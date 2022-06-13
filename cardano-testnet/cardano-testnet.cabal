@@ -57,6 +57,7 @@ library
   hs-source-dirs:       src
   exposed-modules:      Test.Base
                         Test.Process
+                        Test.Runtime
                         Testnet.Babbage
                         Testnet.Byron
                         Testnet.Cardano

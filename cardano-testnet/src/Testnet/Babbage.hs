@@ -38,7 +38,7 @@ import           GHC.Float (Double)
 import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket (..))
 import           Hedgehog.Extras.Stock.Time (showUTCTimeSeconds)
 import           System.FilePath.Posix ((</>))
-import           System.IO (FilePath)
+import           Test.Runtime (TestnetNode (..), TestnetRuntime (..), Wallet (..))
 import           Text.Show (Show (show))
 
 import qualified Data.Aeson.Lens as J
@@ -86,27 +86,6 @@ data TestnetNodeOptions = TestnetNodeOptions deriving (Eq, Show)
 
 defaultTestnetNodeOptions :: TestnetNodeOptions
 defaultTestnetNodeOptions = TestnetNodeOptions
-
-data TestnetRuntime = TestnetRuntime
-  { configurationFile :: FilePath
-  , testnetMagic :: Int
-  , poolNodes :: [TestnetNode]
-  , wallets :: [Wallet]
-  }
-
-data TestnetNode = TestnetNode
-  { nodeName :: String
-  , nodeSprocket :: Sprocket
-  , nodeStdinHandle :: IO.Handle
-  , nodeStdout :: FilePath
-  , nodeStderr :: FilePath
-  , nodeProcessHandle :: IO.ProcessHandle
-  }
-
-data Wallet = Wallet
-  { paymentVKey :: FilePath
-  , paymentSKey :: FilePath
-  } deriving (Eq, Show)
 
 -- | For an unknown reason, CLI commands are a lot slower on Windows than on Linux and
 -- MacOS.  We need to allow a lot more time to set up a testnet.
@@ -398,5 +377,6 @@ testnet testnetOptions H.Conf {..} = do
         poolStdouts
         poolStderrs
         poolProcessHandles
-    , wallets = []
+    , wallets = wallets
+    , bftNodes = []
     }
