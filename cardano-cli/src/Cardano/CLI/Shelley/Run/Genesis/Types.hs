@@ -8,12 +8,12 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
-{-# HLINT ignore "Monoid law, left identity" #-}
+{- HLINT ignore "Monoid law, left identity" -}
 
 module Cardano.CLI.Shelley.Run.Genesis.Types
   ( OutputShelleyGenesis(..)
+  , OutputShelleyGenesisStaking(..)
   , ListMap(..)
   , toOutputTemplate
   ) where
@@ -25,7 +25,6 @@ import Cardano.Ledger.BaseTypes (PositiveUnitInterval, Network)
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Era (Era(Crypto))
 import Cardano.Ledger.Keys (KeyHash, KeyRole(Genesis), GenDelegPair)
-import Cardano.Ledger.Shelley.Genesis (ShelleyGenesisStaking)
 import Cardano.Ledger.Shelley.PParams ( PParams )
 import Cardano.Slotting.Slot (EpochSize(..))
 import Data.Aeson (ToJSON(..), (.=))
@@ -39,7 +38,9 @@ import GHC.Generics (Generic)
 import Text.Show (Show)
 
 import qualified Cardano.Ledger.Crypto as Ledger
+import qualified Cardano.Ledger.Keys as Ledger
 import qualified Cardano.Ledger.Shelley.Genesis as Ledger
+import qualified Cardano.Ledger.Shelley.TxBody as Ledger
 import qualified Data.Aeson as Aeson
 import qualified Data.Map as Map
 
@@ -58,7 +59,7 @@ data OutputShelleyGenesis era = OutputShelleyGenesis
   , sgProtocolParams :: !(PParams era)
   , sgGenDelegs :: !(ListMap (KeyHash 'Genesis (Crypto era)) (GenDelegPair (Crypto era)))
   , sgInitialFunds :: !(ListMap (Addr (Crypto era)) Coin)
-  , sgStaking :: !(ShelleyGenesisStaking (Crypto era))
+  , sgStaking :: !(OutputShelleyGenesisStaking era)
   }
   deriving stock (Eq, Show, Generic)
 
@@ -114,12 +115,14 @@ toOutputTemplate template = OutputShelleyGenesis
   , sgProtocolParams = Ledger.sgProtocolParams template
   , sgGenDelegs = ListMap (Map.toList (Ledger.sgGenDelegs template))
   , sgInitialFunds = ListMap (Map.toList (Ledger.sgInitialFunds template))
-  , sgStaking = Ledger.sgStaking template
+  , sgStaking = OutputShelleyGenesisStaking
+    { osgsPools = ListMap $ Map.toList $ Ledger.sgsPools $ Ledger.sgStaking template
+    , osgsStake = ListMap $ Map.toList $ Ledger.sgsStake $ Ledger.sgStaking template
+    }
   }
 
 instance
   ( Ledger.Crypto (Crypto era)
-  , ToJSON (ShelleyGenesisStaking (Crypto era))
   ) => LazyToJson (OutputShelleyGenesis era) where
   lazyToJson sg =
     -- Forced evaluation of each field allows the parent object to no longer be
@@ -155,5 +158,28 @@ instance
         <> ",\"protocolParams\": "    <> lazyToJson (toJSON protocolParams)
         <> ",\"genDelegs\": "         <> lazyToJson genDelegs
         <> ",\"initialFunds\": "      <> lazyToJson initialFunds
-        <> ",\"staking\": "           <> lazyToJson (toJSON staking)
+        <> ",\"staking\": "           <> lazyToJson staking
         <> "}"
+
+data OutputShelleyGenesisStaking era = OutputShelleyGenesisStaking
+  { osgsPools :: !(ListMap (KeyHash 'Ledger.StakePool (Crypto era)) (Ledger.PoolParams         (Crypto era)))
+  , osgsStake :: !(ListMap (KeyHash 'Ledger.Staking   (Crypto era)) (KeyHash 'Ledger.StakePool (Crypto era)))
+  }
+  deriving stock (Eq, Show, Generic)
+
+instance
+  ( Ledger.Crypto (Crypto era)
+  ) => LazyToJson (OutputShelleyGenesisStaking era) where
+  lazyToJson sg =
+    let !pools = osgsPools sg
+        !stake = osgsStake sg
+    in mempty
+        <> "{\"pools\":" <> lazyToJson pools
+        <> ",\"stake\":" <> lazyToJson stake
+        <> "}"
+
+instance Era era => ToJSON (OutputShelleyGenesisStaking era) where
+  toJSON sg = Aeson.object
+    [ "pools" .= osgsPools sg
+    , "stake" .= osgsStake sg
+    ]

@@ -68,26 +68,43 @@ runAddressKeyGenToFile :: AddressKeyType
                  -> VerificationKeyFile
                  -> SigningKeyFile
                  -> ExceptT ShelleyAddressCmdError IO ()
-runAddressKeyGenToFile kt (VerificationKeyFile vkeyPath) (SigningKeyFile skeyPath) =
-    case kt of
-      AddressKeyShelley         -> generateAndWriteKeyFiles AsPaymentKey
-      AddressKeyShelleyExtended -> generateAndWriteKeyFiles AsPaymentExtendedKey
-      AddressKeyByron           -> generateAndWriteKeyFiles AsByronKey
-  where
-    generateAndWriteKeyFiles asType = do
-      skey <- liftIO $ generateSigningKey asType
-      let vkey = getVerificationKey skey
-      firstExceptT ShelleyAddressCmdWriteFileError
-        . newExceptT
-        $ writeFileTextEnvelope skeyPath (Just skeyDesc) skey
-      firstExceptT ShelleyAddressCmdWriteFileError
-        . newExceptT
-        $ writeFileTextEnvelope vkeyPath (Just vkeyDesc) vkey
+runAddressKeyGenToFile kt vkf skf = case kt of
+  AddressKeyShelley         -> generateAndWriteKeyFiles AsPaymentKey          vkf skf
+  AddressKeyShelleyExtended -> generateAndWriteKeyFiles AsPaymentExtendedKey  vkf skf
+  AddressKeyByron           -> generateAndWriteKeyFiles AsByronKey            vkf skf
 
+generateAndWriteKeyFiles :: ()
+  => Key keyrole
+  => AsType keyrole
+  -> VerificationKeyFile
+  -> SigningKeyFile
+  -> ExceptT ShelleyAddressCmdError IO ()
+generateAndWriteKeyFiles asType vkf skf = do
+  uncurry (writePaymentKeyFiles vkf skf) =<< generatePaymentKeys asType
+
+generatePaymentKeys :: ()
+  => Key keyrole
+  => AsType keyrole
+  -> ExceptT ShelleyAddressCmdError IO (VerificationKey keyrole, SigningKey keyrole)
+generatePaymentKeys asType = do
+  skey <- liftIO $ generateSigningKey asType
+  return (getVerificationKey skey, skey)
+
+writePaymentKeyFiles :: ()
+  => Key keyrole
+  => VerificationKeyFile
+  -> SigningKeyFile
+  -> VerificationKey keyrole
+  -> SigningKey keyrole
+  -> ExceptT ShelleyAddressCmdError IO ()
+writePaymentKeyFiles (VerificationKeyFile vkeyPath) (SigningKeyFile skeyPath) vkey skey = do
+  firstExceptT ShelleyAddressCmdWriteFileError $ do
+    newExceptT $ writeFileTextEnvelope skeyPath (Just skeyDesc) skey
+    newExceptT $ writeFileTextEnvelope vkeyPath (Just vkeyDesc) vkey
+  where
     skeyDesc, vkeyDesc :: TextEnvelopeDescr
     skeyDesc = "Payment Signing Key"
     vkeyDesc = "Payment Verification Key"
-
 
 runAddressKeyHash :: VerificationKeyTextOrFile
                   -> Maybe OutputFile

@@ -1,13 +1,14 @@
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE LambdaCase #-}
 
 module Cardano.CLI.Shelley.Run.Genesis.LazyToJson
-  ( LazyToJson(..)
+  ( Aeson(..)
+  , LazyToJson(..)
   ) where
 
 import Cardano.Ledger.Address (Addr)
 import Cardano.Ledger.Crypto (StandardCrypto)
-import Data.Aeson (Value)
+import Data.Aeson (Value, ToJSON)
 import Data.Functor ((<$>))
 import Data.Monoid (Monoid(..))
 import Data.Semigroup (Semigroup(..))
@@ -38,3 +39,8 @@ instance LazyToJson a => LazyToJson [a] where
 
 instance LazyToJson (Addr StandardCrypto) where
   lazyToJson = B.lazyByteString . J.encode
+
+newtype Aeson a = Aeson a
+
+instance ToJSON a => LazyToJson (Aeson a) where
+  lazyToJson (Aeson a) = B.lazyByteString (J.encode a)

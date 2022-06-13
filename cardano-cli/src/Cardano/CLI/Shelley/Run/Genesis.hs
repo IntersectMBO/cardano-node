@@ -80,7 +80,7 @@ import           Cardano.CLI.Shelley.Run.Node (ShelleyNodeCmdError (..), renderS
                    runNodeIssueOpCert, runNodeKeyGenCold, runNodeKeyGenKES, runNodeKeyGenVRF)
 import           Cardano.CLI.Shelley.Run.Pool (ShelleyPoolCmdError (..), renderShelleyPoolCmdError)
 import           Cardano.CLI.Shelley.Run.StakeAddress (ShelleyStakeAddressCmdError (..),
-                   renderShelleyStakeAddressCmdError, runStakeAddressKeyGenToFile, keyGenStakeAddress)
+                   renderShelleyStakeAddressCmdError, runStakeAddressKeyGenToFile)
 import           Cardano.CLI.Types
 
 import           Cardano.CLI.Byron.Delegation
@@ -703,8 +703,31 @@ runGenesisCreateStaked (GenesisDir rootdir)
         ]
 
   -- Distribute M delegates across N pools:
-  delegations :: [Delegation] <- forM distribution $ \(poolParams, index) -> do
+  delegations <- liftIO $ Lazy.forM distribution $ \(poolParams, index) -> do
     computeDelegation network stdeldir poolParams index
+
+  liftIO $ LBS.writeFile (stdeldir </> "delegations.jsonl") $ B.toLazyByteString $
+    mconcat (List.intersperse "\n" (B.lazyByteString . Aeson.encode <$> delegations))
+
+  -- NOTE The following code which reads from the same file 'delegations.jsonl' multiple times
+  -- looks like duplication, but it is not.  The file is read lazily, and it is important that
+  -- they be read multiple times because the code is streaming and reading the file multiple
+  -- times ensures that any data structures that are created as a result of the read is not
+  -- retained in memory.
+
+  !numDelegations <- fmap length $ liftIO $ LBS.lines <$> LBS.readFile (stdeldir </> "delegations.jsonl")
+
+  delegations2 <- do
+    delegationLines <- liftIO $ LBS.lines <$> LBS.readFile (stdeldir </> "delegations.jsonl")
+    return $ catMaybes $ Aeson.decode @Delegation <$> delegationLines
+
+  delegations3 <- do
+    delegationLines <- liftIO $ LBS.lines <$> LBS.readFile (stdeldir </> "delegations.jsonl")
+    return $ catMaybes $ Aeson.decode @Delegation <$> delegationLines
+
+  delegations4 <- do
+    delegationLines <- liftIO $ LBS.lines <$> LBS.readFile (stdeldir </> "delegations.jsonl")
+    return $ catMaybes $ Aeson.decode @Delegation <$> delegationLines
 
   genDlgs <- readGenDelegsMap gendir deldir
   nonDelegAddrs <- readInitialFundAddresses utxodir network
@@ -712,14 +735,14 @@ runGenesisCreateStaked (GenesisDir rootdir)
 
   stuffedUtxoAddrs <- liftIO $ Lazy.replicateM (fromIntegral numStuffedUtxo) genStuffedAddress
 
-  let poolMap :: Map (Ledger.KeyHash Ledger.Staking StandardCrypto) (Ledger.PoolParams StandardCrypto)
-      poolMap = Map.fromList $ mkDelegationMapEntry <$> delegations
-      delegAddrs = dInitialUtxoAddr <$> delegations
+  let stake = second Ledger._poolId . mkDelegationMapEntry <$> delegations2
+      stakePools = [ (Ledger._poolId poolParams, poolParams) | poolParams <- snd . mkDelegationMapEntry <$> delegations3 ]
+      delegAddrs = dInitialUtxoAddr <$> delegations4
       !shelleyGenesis =
         updateOutputTemplate
           -- Shelley genesis parameters
-          start genDlgs mNonDlgAmount nonDelegAddrs poolMap
-          stDlgAmount delegAddrs stuffedUtxoAddrs (toOutputTemplate template)
+          start genDlgs mNonDlgAmount (length nonDelegAddrs) nonDelegAddrs stakePools stake
+          stDlgAmount numDelegations delegAddrs stuffedUtxoAddrs (toOutputTemplate template)
 
   -- shelleyGenesis contains lazy loaded data, so using lazyToJson to serialise to avoid
   -- retaining large datastructures in memory.
@@ -735,9 +758,7 @@ runGenesisCreateStaked (GenesisDir rootdir)
     , textShow genNumUTxOKeys, " non-delegating UTxO keys, "
     , textShow genNumPools, " stake pools, "
     , textShow genNumStDelegs, " delegating UTxO keys, "
-    , textShow (length delegations), " delegation relationships, "
-    , textShow (Map.size poolMap), " delegation map entries, "
-    , textShow (length delegAddrs), " delegating addresses"
+    , textShow numDelegations, " delegation map entries, "
     ] ++
     [ mconcat
       [ ", "
@@ -855,12 +876,24 @@ createPoolCredentials dir index = do
    coldSK = SigningKeyFile $ dir </> "cold" ++ strIndex ++ ".skey"
    opCertCtr = OpCertCounterFile $ dir </> "opcert" ++ strIndex ++ ".counter"
 
-data Delegation
-  = Delegation
-    { dInitialUtxoAddr  :: AddressInEra ShelleyEra
-    , dDelegStaking     :: Ledger.KeyHash Ledger.Staking StandardCrypto
-    , dPoolParams       :: Ledger.PoolParams StandardCrypto
-    }
+data Delegation = Delegation
+  { dInitialUtxoAddr  :: AddressInEra ShelleyEra
+  , dDelegStaking     :: Ledger.KeyHash Ledger.Staking StandardCrypto
+  , dPoolParams       :: Ledger.PoolParams StandardCrypto
+  }
+
+instance ToJSON Delegation where
+  toJSON delegation = Aeson.object
+    [ "initialUtxoAddr" .= dInitialUtxoAddr delegation
+    , "delegStaking"    .= dDelegStaking delegation
+    , "poolParams"      .= dPoolParams delegation
+    ]
+
+instance FromJSON Delegation where
+  parseJSON = Aeson.withObject "Delegation" $ \v -> Delegation
+    <$> (v .: "initialUtxoAddr")
+    <*> (v .: "delegStaking")
+    <*> (v .: "poolParams")
 
 buildPool :: NetworkId -> FilePath -> Word -> ExceptT ShelleyGenesisCmdError IO (Ledger.PoolParams StandardCrypto)
 buildPool nw dir index = do
@@ -924,34 +957,13 @@ computeDelegation :: ()
   -> FilePath
   -> Ledger.PoolParams StandardCrypto
   -> Word
-  -> ExceptT ShelleyGenesisCmdError IO Delegation
-computeDelegation nw delegDir pool delegIx = do
-    let strIndex = show delegIx
+  -> IO Delegation
+computeDelegation nw _delegDir pool _delegIx = do
+    paymentVK <- fmap getVerificationKey $ generateSigningKey AsPaymentKey
+    stakeVK   <- fmap getVerificationKey $ generateSigningKey AsStakeKey
 
-    let paymentVKF = VerificationKeyFile $ delegDir </> "payment" ++ strIndex ++ ".vkey"
-
-    firstExceptT ShelleyGenesisCmdAddressCmdError $ do
-      let paymentSKF = SigningKeyFile $ delegDir </> "payment" ++ strIndex ++ ".skey"
-      runAddressKeyGenToFile AddressKeyShelley paymentVKF paymentSKF
-
-    let stakingVKF = VerificationKeyFile $ delegDir </> "staking" ++ strIndex ++ ".vkey"
-
-    (_, stakeVK) <- firstExceptT ShelleyGenesisCmdStakeAddressCmdError $ do
-      -- let stakingSK = SigningKeyFile $ delegDir </> "staking" ++ strIndex ++ ".skey"
-      -- runStakeAddressKeyGenToFile stakingVKF stakingSK
-      keyGenStakeAddress
-
-    paySVK <- firstExceptT (ShelleyGenesisCmdAddressCmdError
-                           . ShelleyAddressCmdVerificationKeyTextOrFileError) $
-                 readAddressVerificationKeyTextOrFile
-                   (VktofVerificationKeyFile paymentVKF)
-
-    initialUtxoAddr <- case paySVK of
-      APaymentVerificationKey payVK -> do
-        firstExceptT ShelleyGenesisCmdAddressCmdError $ do
-          let stakeVerifier = StakeVerifierKey . VerificationKeyFilePath $ stakingVKF
-          makeShelleyAddress nw (PaymentCredentialByKey (verificationKeyHash payVK)) <$> makeStakeAddressRef stakeVerifier
-      _ -> left $ ShelleyGenesisCmdUnexpectedAddressVerificationKey paymentVKF "APaymentVerificationKey" paySVK
+    let stakeAddressReference = StakeAddressByValue . StakeCredentialByKey . verificationKeyHash $ stakeVK
+    let initialUtxoAddr = makeShelleyAddress nw (PaymentCredentialByKey (verificationKeyHash paymentVK)) stakeAddressReference
 
     pure Delegation
       { dInitialUtxoAddr = shelleyAddressInEra initialUtxoAddr
@@ -1084,17 +1096,20 @@ updateOutputTemplate
     -> Map (Hash GenesisKey) (Hash GenesisDelegateKey, Hash VrfKey)
     -- Non-delegated initial UTxO spec:
     -> Maybe Lovelace
+    -> Int
     -> [AddressInEra ShelleyEra]
     -- Genesis staking: pools/delegation map & delegated initial UTxO spec:
-    -> Map (Ledger.KeyHash 'Ledger.Staking StandardCrypto) (Ledger.PoolParams StandardCrypto)
+    -> [(Ledger.KeyHash 'Ledger.StakePool StandardCrypto, Ledger.PoolParams StandardCrypto)]
+    -> [(Ledger.KeyHash 'Ledger.Staking StandardCrypto, Ledger.KeyHash 'Ledger.StakePool StandardCrypto)]
     -> Lovelace
-    -> [AddressInEra ShelleyEra]
+    -> Int
+    -> [AddressInEra ShelleyEra] --
     -> [AddressInEra ShelleyEra]
     -> OT.OutputShelleyGenesis StandardShelley
     -> OT.OutputShelleyGenesis StandardShelley
 updateOutputTemplate (SystemStart start)
-               genDelegMap mAmountNonDeleg utxoAddrsNonDeleg
-               poolSpecs (Lovelace amountDeleg) utxoAddrsDeleg stuffedUtxoAddrs
+               genDelegMap mAmountNonDeleg nUtxoAddrsNonDeleg utxoAddrsNonDeleg
+               pools stake (Lovelace amountDeleg) nUtxoAddrsDeleg utxoAddrsDeleg stuffedUtxoAddrs
                template = do
 
     let pparamsFromTemplate = OT.sgProtocolParams template
@@ -1105,15 +1120,16 @@ updateOutputTemplate (SystemStart start)
           , OT.sgInitialFunds = ListMap
                               [ (toShelleyAddr addr, toShelleyLovelace v)
                               | (addr, v) <-
-                                distribute (nonDelegCoin - subtractForTreasury) utxoAddrsNonDeleg ++
-                                distribute (delegCoin - subtractForTreasury)    utxoAddrsDeleg ++
-                                mkStuffedUtxo stuffedUtxoAddrs ]
+                                distribute (nonDelegCoin - subtractForTreasury) nUtxoAddrsNonDeleg  utxoAddrsNonDeleg
+                                ++
+                                distribute (delegCoin - subtractForTreasury)    nUtxoAddrsDeleg     utxoAddrsDeleg
+                                ++
+                                mkStuffedUtxo stuffedUtxoAddrs
+                                ]
           , OT.sgStaking =
-            ShelleyGenesisStaking
-              { sgsPools = Map.fromList
-                            [ (Ledger._poolId poolParams, poolParams)
-                            | poolParams <- Map.elems poolSpecs ]
-              , sgsStake = Ledger._poolId <$> poolSpecs
+            OT.OutputShelleyGenesisStaking
+              { OT.osgsPools = ListMap pools
+              , OT.osgsStake = ListMap stake
               }
           , OT.sgProtocolParams = pparamsFromTemplate
           }
@@ -1128,22 +1144,11 @@ updateOutputTemplate (SystemStart start)
     nonDelegCoin = fromIntegral (fromMaybe maximumLovelaceSupply (unLovelace <$> mAmountNonDeleg))
     delegCoin = fromIntegral amountDeleg
 
-    distribute :: Integer -> [AddressInEra ShelleyEra] -> [(AddressInEra ShelleyEra, Lovelace)]
-    distribute funds addrs =
-      fst $ List.foldl' folder ([], fromIntegral funds) addrs
-     where
-       nAddrs, coinPerAddr, splitThreshold :: Integer
-       nAddrs = fromIntegral $ length addrs
-       coinPerAddr = funds `div` nAddrs
-       splitThreshold = coinPerAddr + nAddrs
-
-       folder :: ([(AddressInEra ShelleyEra, Lovelace)], Integer)
-              -> AddressInEra ShelleyEra
-              -> ([(AddressInEra ShelleyEra, Lovelace)], Integer)
-       folder (acc, rest) addr
-         | rest > splitThreshold =
-             ((addr, Lovelace coinPerAddr) : acc, rest - coinPerAddr)
-         | otherwise = ((addr, Lovelace rest) : acc, 0)
+    distribute :: Integer -> Int -> [AddressInEra ShelleyEra] -> [(AddressInEra ShelleyEra, Lovelace)]
+    distribute funds nAddrs addrs = zipWith (,) addrs (fmap Lovelace (coinPerAddr + rest:repeat coinPerAddr))
+      where coinPerAddr :: Integer
+            coinPerAddr = funds `div` fromIntegral nAddrs
+            rest = coinPerAddr * fromIntegral nAddrs
 
     mkStuffedUtxo :: [AddressInEra ShelleyEra] -> [(AddressInEra ShelleyEra, Lovelace)]
     mkStuffedUtxo xs = (, Lovelace minUtxoVal) <$> xs

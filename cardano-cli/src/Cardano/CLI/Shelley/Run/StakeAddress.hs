@@ -3,7 +3,6 @@ module Cardano.CLI.Shelley.Run.StakeAddress
   , renderShelleyStakeAddressCmdError
   , runStakeAddressCmd
   , runStakeAddressKeyGenToFile
-  , keyGenStakeAddress
   ) where
 
 import           Cardano.Prelude
@@ -54,11 +53,6 @@ runStakeAddressCmd (StakeCredentialDeRegistrationCert stakeVerifier outputFp) =
 -- Stake address command implementations
 --
 
-keyGenStakeAddress :: MonadIO m => m (SigningKey StakeKey, VerificationKey StakeKey)
-keyGenStakeAddress = do
-  skey <- liftIO $ generateSigningKey AsStakeKey
-  return (skey, getVerificationKey skey)
-
 runStakeAddressKeyGenToFile :: ()
   => VerificationKeyFile
   -> SigningKeyFile
@@ -67,7 +61,9 @@ runStakeAddressKeyGenToFile (VerificationKeyFile vkFp) (SigningKeyFile skFp) = d
   let skeyDesc = "Stake Signing Key"
   let vkeyDesc = "Stake Verification Key"
 
-  (skey, vkey) <- keyGenStakeAddress
+  skey <- liftIO $ generateSigningKey AsStakeKey
+
+  let vkey = getVerificationKey skey
 
   firstExceptT ShelleyStakeAddressCmdWriteFileError $ do
     newExceptT $ writeFileTextEnvelope skFp (Just skeyDesc) skey
