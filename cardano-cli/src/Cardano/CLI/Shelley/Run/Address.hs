@@ -136,19 +136,16 @@ runAddressBuild paymentVerifier mbStakeVerifier nw mOutFp = do
 
       let payCred = PaymentCredentialByScript (hashScript script)
 
-      serialiseAddress . makeShelleyAddress nw payCred <$> makeStakeAddressRef mbStakeVerifier
+      serialiseAddress . makeShelleyAddress nw payCred <$> maybe (return NoStakeAddress) makeStakeAddressRef mbStakeVerifier
 
   case mOutFp of
     Just (OutputFile fpath) -> liftIO $ Text.writeFile fpath outText
     Nothing                 -> liftIO $ Text.putStr          outText
 
 makeStakeAddressRef
-  :: Maybe StakeVerifier
+  :: StakeVerifier
   -> ExceptT ShelleyAddressCmdError IO StakeAddressReference
-makeStakeAddressRef mbStakeVerifier = do
-  case mbStakeVerifier of
-    Nothing -> pure NoStakeAddress
-    Just stakeVerifier -> case stakeVerifier of
+makeStakeAddressRef stakeVerifier = case stakeVerifier of
       StakeVerifierKey stkVkeyOrFile -> do
         mstakeVKey <- firstExceptT ShelleyAddressCmdReadKeyFileError $
           fmap Just $ newExceptT $ readVerificationKeyOrFile AsStakeKey stkVkeyOrFile
@@ -171,7 +168,7 @@ buildShelleyAddress
   -> NetworkId
   -> ExceptT ShelleyAddressCmdError IO (Address ShelleyAddr)
 buildShelleyAddress vkey mbStakeVerifier nw =
-  makeShelleyAddress nw (PaymentCredentialByKey (verificationKeyHash vkey)) <$> makeStakeAddressRef mbStakeVerifier
+  makeShelleyAddress nw (PaymentCredentialByKey (verificationKeyHash vkey)) <$> maybe (return NoStakeAddress) makeStakeAddressRef mbStakeVerifier
 
 
 --
