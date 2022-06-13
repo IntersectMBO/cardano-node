@@ -80,7 +80,7 @@ import           Cardano.CLI.Shelley.Run.Node (ShelleyNodeCmdError (..), renderS
                    runNodeIssueOpCert, runNodeKeyGenCold, runNodeKeyGenKES, runNodeKeyGenVRF)
 import           Cardano.CLI.Shelley.Run.Pool (ShelleyPoolCmdError (..), renderShelleyPoolCmdError)
 import           Cardano.CLI.Shelley.Run.StakeAddress (ShelleyStakeAddressCmdError (..),
-                   renderShelleyStakeAddressCmdError, runStakeAddressKeyGenToFile)
+                   renderShelleyStakeAddressCmdError, runStakeAddressKeyGenToFile, keyGenStakeAddress)
 import           Cardano.CLI.Types
 
 import           Cardano.CLI.Byron.Delegation
@@ -928,37 +928,34 @@ computeDelegation :: ()
 computeDelegation nw delegDir pool delegIx = do
     let strIndex = show delegIx
 
-    let paymentVK = VerificationKeyFile $ delegDir </> "payment" ++ strIndex ++ ".vkey"
+    let paymentVKF = VerificationKeyFile $ delegDir </> "payment" ++ strIndex ++ ".vkey"
 
     firstExceptT ShelleyGenesisCmdAddressCmdError $ do
-      let paymentSK = SigningKeyFile $ delegDir </> "payment" ++ strIndex ++ ".skey"
-      runAddressKeyGenToFile AddressKeyShelley paymentVK paymentSK
+      let paymentSKF = SigningKeyFile $ delegDir </> "payment" ++ strIndex ++ ".skey"
+      runAddressKeyGenToFile AddressKeyShelley paymentVKF paymentSKF
 
-    let stakingVK = VerificationKeyFile $ delegDir </> "staking" ++ strIndex ++ ".vkey"
+    let stakingVKF = VerificationKeyFile $ delegDir </> "staking" ++ strIndex ++ ".vkey"
 
-    -- TODO use return values
-    void $ firstExceptT ShelleyGenesisCmdStakeAddressCmdError $ do
-      let stakingSK = SigningKeyFile $ delegDir </> "staking" ++ strIndex ++ ".skey"
-      runStakeAddressKeyGenToFile stakingVK stakingSK
+    (_, stakeVK) <- firstExceptT ShelleyGenesisCmdStakeAddressCmdError $ do
+      -- let stakingSK = SigningKeyFile $ delegDir </> "staking" ++ strIndex ++ ".skey"
+      -- runStakeAddressKeyGenToFile stakingVKF stakingSK
+      keyGenStakeAddress
 
     paySVK <- firstExceptT (ShelleyGenesisCmdAddressCmdError
                            . ShelleyAddressCmdVerificationKeyTextOrFileError) $
                  readAddressVerificationKeyTextOrFile
-                   (VktofVerificationKeyFile paymentVK)
+                   (VktofVerificationKeyFile paymentVKF)
+
     initialUtxoAddr <- case paySVK of
       APaymentVerificationKey payVK -> do
         firstExceptT ShelleyGenesisCmdAddressCmdError $ do
-          let stakeVerifier = StakeVerifierKey . VerificationKeyFilePath $ stakingVK
+          let stakeVerifier = StakeVerifierKey . VerificationKeyFilePath $ stakingVKF
           makeShelleyAddress nw (PaymentCredentialByKey (verificationKeyHash payVK)) <$> makeStakeAddressRef stakeVerifier
-      _ -> left $ ShelleyGenesisCmdUnexpectedAddressVerificationKey paymentVK "APaymentVerificationKey" paySVK
-
-    StakeVerificationKey stakeVK <- firstExceptT ShelleyGenesisCmdTextEnvReadFileError
-      . newExceptT
-      $ readFileTextEnvelope (AsVerificationKey AsStakeKey) (unVerificationKeyFile stakingVK)
+      _ -> left $ ShelleyGenesisCmdUnexpectedAddressVerificationKey paymentVKF "APaymentVerificationKey" paySVK
 
     pure Delegation
       { dInitialUtxoAddr = shelleyAddressInEra initialUtxoAddr
-      , dDelegStaking = Ledger.hashKey stakeVK
+      , dDelegStaking = Ledger.hashKey (unStakeVerificationKey stakeVK)
       , dPoolParams = pool
       }
 

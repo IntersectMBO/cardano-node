@@ -323,8 +323,9 @@ instance HasTypeProxy StakeKey where
 
 instance Key StakeKey where
 
-    newtype VerificationKey StakeKey =
-        StakeVerificationKey (Shelley.VKey Shelley.Staking StandardCrypto)
+    newtype VerificationKey StakeKey = StakeVerificationKey
+      { unStakeVerificationKey :: Shelley.VKey Shelley.Staking StandardCrypto
+      }
       deriving stock (Eq)
       deriving newtype (ToCBOR, FromCBOR)
       deriving anyclass SerialiseAsCBOR
