@@ -394,6 +394,10 @@ runTxBuildRaw (AnyCardanoEra era)
     let referenceInputsWithWits = [ (input, wit)
                                   | (_, wit@(Just (PlutusReferenceScriptWitnessFiles input _ _ _ _)))
                                        <- inputsAndScripts
+                                  ] ++
+                                  [(input, wit)
+                                  | (_, wit@(Just (SimpleReferenceScriptWitnessFiles input _)))
+                                       <- inputsAndScripts
                                   ]
 
     txBodyContent <-
@@ -482,6 +486,10 @@ runTxBuild (AnyCardanoEra era) (AnyConsensusModeParams cModeParams) networkId mS
       referenceInputsWithWits = [ (input, wit)
                                 | (_, wit@(Just (PlutusReferenceScriptWitnessFiles input _ _ _ _)))
                                     <- txins
+                                ] ++
+                                [(input, wit)
+                                | (_, wit@(Just (SimpleReferenceScriptWitnessFiles input _)))
+                                     <- txins
                                 ]
       referenceInputs = map fst referenceInputsWithWits
   case (consensusMode, cardanoEraStyle era) of
@@ -697,7 +705,10 @@ validateTxInsReference era txins =
             return $ Just refIn
           PlutusScriptWitness _ _ PScript{} _ _ _ ->
             return Nothing
-          SimpleScriptWitness {} -> return Nothing
+          SimpleScriptWitness _ _ (SReferenceScript refIn)  ->
+            return $ Just refIn
+          SimpleScriptWitness _ _ SScript{}  ->
+            return Nothing
       Nothing -> return Nothing
 
 validateTxOuts :: forall era.
@@ -1063,8 +1074,8 @@ createScriptWitness era (SimpleScriptWitnessFile (ScriptFile scriptFile)) = do
     ScriptInEra langInEra script'   <- validateScriptSupportedInEra era script
     case script' of
       SimpleScript version sscript ->
-        return $ SimpleScriptWitness
-                   langInEra version sscript
+        return . SimpleScriptWitness
+                   langInEra version $ SScript sscript
 
       -- If the supplied cli flags were for a simple script (i.e. the user did
       -- not supply the datum, redeemer or ex units), but the script file turns
@@ -1107,18 +1118,37 @@ createScriptWitness era (PlutusReferenceScriptWitnessFiles refTxIn
     Nothing -> left $ ShelleyTxCmdReferenceScriptsNotSupportedInEra
                     $ getIsCardanoEraConstraint era (AnyCardanoEra era)
     Just _ -> do
-      datum    <- readScriptDatumOrFile    datumOrFile
-      redeemer <- readScriptRedeemerOrFile redeemerOrFile
+
       case scriptLanguageSupportedInEra era anyScriptLanguage of
         Just sLangInEra ->
           case languageOfScriptLanguageInEra sLangInEra of
-            SimpleScriptLanguage _v -> panic "TODO: createScriptWitness: SimpleScriptLanguage"
-            PlutusScriptLanguage version ->
+            SimpleScriptLanguage _v ->
+              -- TODO: We likely need another datatype eg data ReferenceScriptWitness lang
+              -- in order to make this branch unrepresentable.
+              panic "createScriptWitness: Should not be possible to specify a simple script"
+            PlutusScriptLanguage version -> do
+              datum    <- readScriptDatumOrFile    datumOrFile
+              redeemer <- readScriptRedeemerOrFile redeemerOrFile
               return $ PlutusScriptWitness
                          sLangInEra
                          version
                          (PReferenceScript refTxIn)
                          datum redeemer execUnits
+        Nothing ->
+          left $ ShelleyTxCmdScriptLanguageNotSupportedInEra anyScrLang (anyCardanoEra era)
+createScriptWitness era (SimpleReferenceScriptWitnessFiles refTxIn
+                         anyScrLang@(AnyScriptLanguage anyScriptLanguage)) = do
+  case refInsScriptsAndInlineDatsSupportedInEra era of
+    Nothing -> left $ ShelleyTxCmdReferenceScriptsNotSupportedInEra
+                    $ getIsCardanoEraConstraint era (AnyCardanoEra era)
+    Just _ -> do
+      case scriptLanguageSupportedInEra era anyScriptLanguage of
+        Just sLangInEra ->
+          case languageOfScriptLanguageInEra sLangInEra of
+            SimpleScriptLanguage v ->
+              return . SimpleScriptWitness sLangInEra v $ SReferenceScript refTxIn
+            PlutusScriptLanguage{} ->
+              panic "createScriptWitness: Should not be possible to specify a plutus script"
         Nothing ->
           left $ ShelleyTxCmdScriptLanguageNotSupportedInEra anyScrLang (anyCardanoEra era)
 

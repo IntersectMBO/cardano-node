@@ -288,19 +288,22 @@ data ScriptWitnessFiles witctx where
                               -> ScriptWitnessFiles witctx
 
      PlutusScriptWitnessFiles :: ScriptFile
-                              -> ScriptDatumOrFile witctx -- TODO: Babbage Modify to allow specification of inline datums
+                              -> ScriptDatumOrFile witctx
                               -> ScriptRedeemerOrFile
                               -> ExecutionUnits
                               -> ScriptWitnessFiles witctx
 
-     -- TODO: SimpleReferenceScriptWitnessFiles :: ScriptWitnessFiles witctx
-
      PlutusReferenceScriptWitnessFiles
        :: TxIn
        -> AnyScriptLanguage
-       -> ScriptDatumOrFile witctx -- TODO: Babbage Modify to allow specification of inline datums
+       -> ScriptDatumOrFile witctx
        -> ScriptRedeemerOrFile
        -> ExecutionUnits
+       -> ScriptWitnessFiles witctx
+
+     SimpleReferenceScriptWitnessFiles
+       :: TxIn
+       -> AnyScriptLanguage
        -> ScriptWitnessFiles witctx
 
 
