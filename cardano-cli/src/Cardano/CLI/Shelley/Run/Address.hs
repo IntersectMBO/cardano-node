@@ -136,7 +136,9 @@ runAddressBuild paymentVerifier mbStakeVerifier nw mOutFp = do
 
       let payCred = PaymentCredentialByScript (hashScript script)
 
-      serialiseAddress . makeShelleyAddress nw payCred <$> maybe (return NoStakeAddress) makeStakeAddressRef mbStakeVerifier
+      stakeAddressReference <- maybe (return NoStakeAddress) makeStakeAddressRef mbStakeVerifier
+
+      return $ serialiseAddress . makeShelleyAddress nw payCred $ stakeAddressReference
 
   case mOutFp of
     Just (OutputFile fpath) -> liftIO $ Text.writeFile fpath outText
