@@ -845,7 +845,7 @@ createPoolCredentials dir index = do
         opCertCtr
         (KESPeriod 0)
         (OutputFile $ dir </> "opcert" ++ strIndex ++ ".cert")
-  firstExceptT ShelleyGenesisCmdStakeAddressCmdError $
+  void . firstExceptT ShelleyGenesisCmdStakeAddressCmdError $
     runStakeAddressKeyGenToFile
         (VerificationKeyFile $ dir </> "staking-reward" ++ strIndex ++ ".vkey")
         (SigningKeyFile $ dir </> "staking-reward" ++ strIndex ++ ".skey")
@@ -934,7 +934,8 @@ computeDelegation nw delegDir pool delegIx = do
       let paymentSK = SigningKeyFile $ delegDir </> "payment" ++ strIndex ++ ".skey"
       runAddressKeyGenToFile AddressKeyShelley paymentVK paymentSK
 
-    firstExceptT ShelleyGenesisCmdStakeAddressCmdError $ do
+    -- TODO use return values
+    void $ firstExceptT ShelleyGenesisCmdStakeAddressCmdError $ do
       let stakingVK = VerificationKeyFile $ delegDir </> "staking" ++ strIndex ++ ".vkey"
       let stakingSK = SigningKeyFile $ delegDir </> "staking" ++ strIndex ++ ".skey"
       runStakeAddressKeyGenToFile stakingVK stakingSK
