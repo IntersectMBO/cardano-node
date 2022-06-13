@@ -1,7 +1,11 @@
 usage_analyse() {
      usage "analyse" "Analyse cluster runs" <<EOF
-    standard RUN-NAME..   Standard batch of analyses: block-propagation, and
-                            machine-timeline
+    multi-run RUN-NAME..  Standard analyses on a batch of runs, followed by a multi-run summary.
+
+    full-run-analysis RUN-NAME..
+                          Standard batch of analyses: block-propagation, and machine-timeline
+    multi-run-summary-only RUN-NAME..
+                          Summarise results of multiple runs: results in \$global_rundir
 
     call RUN-NAME OPS..   Execute 'locli' "uops" on the specified run
 
@@ -14,7 +18,7 @@ EOF
 }
 
 analyse() {
-local filters=() aws= sargs=()
+local filters=() aws= sargs=() unfiltered=
 local dump_logobjects= dump_machviews= dump_chain_raw= dump_chain= dump_slots_raw= dump_slots=
 while test $# -gt 0
 do case "$1" in
@@ -23,7 +27,8 @@ do case "$1" in
        --dump-chain-raw  | -cr )  sargs+=($1);    dump_chain_raw='true';;
        --dump-chain      | -c )   sargs+=($1);    dump_chain='true';;
        --filters )                sargs+=($1 $2); analysis_set_filters "base,$2"; shift;;
-       --no-filters )             sargs+=($1);    analysis_set_filters "";;
+       --no-filters | --unfiltered | -u )
+                                  sargs+=($1);    analysis_set_filters ""; unfiltered='true';;
        * ) break;; esac; shift; done
 
 if curl --connect-timeout 0.5 http://169.254.169.254/latest/meta-data >/dev/null 2>&1
@@ -41,7 +46,36 @@ local op=${1:-standard}; if test $# != 0; then shift; fi
 
 case "$op" in
     # 'read-mach-views' "${logs[@]/#/--log }"
-    everything | full | all | standard | std )
+    multi-run-full-pattern | multi-pattern | multipat | mp )
+        analyse multi-run-full $(run list-pattern $1)
+        ;;
+
+    multi-run-full | multi-run | multi )
+        progress "analysis" "$(white multi-summary) on: $(yellow $*)"
+
+        analyse full-run-analysis      "$*"
+        analyse multi-run-summary-only "$*"
+        ;;
+
+    multi-run-summary-only | summary )
+        local script=(
+            read-clusterperfs
+            summarise-clusterperfs
+            dump-multi-clusterperf
+
+            read-propagations
+            summarise-propagations
+            dump-multi-propagation
+
+            report-multi-clusterperf-{full,brief}
+
+            report-multi-prop-{forger,peers,endtoend,full}
+        )
+        progress "analysis" "$(white multi-summary), calling script: $(colorise ${script[*]})"
+        analyse ${sargs[*]} multi-call "$*" ${script[*]}
+        ;;
+
+    full-run-analysis | standard | std )
         local script=(
             logs               $(test -n "$dump_logobjects" && echo 'dump-logobjects')
             context
@@ -62,9 +96,12 @@ case "$op" in
 
             machperf
             dump-machperf
-            report-perf-{full,brief}
+            clusterperf
+            dump-clusterperf
+            report-machperf-{full,brief}
+            report-clusterperf-{full,brief}
          )
-        progress "analysis" "$(with_color white full), calling script:  $(colorise ${script[*]})"
+        progress "analysis" "$(white full), calling script:  $(colorise ${script[*]})"
         analyse ${sargs[*]} map "call ${script[*]}" "$@"
         ;;
 
@@ -81,7 +118,7 @@ case "$op" in
             dump-machperf
             report-perf-{full,brief}
         )
-        progress "analysis" "$(with_color white performance), calling script:  $(colorise ${script[*]})"
+        progress "analysis" "$(white performance), calling script:  $(colorise ${script[*]})"
         analyse ${sargs[*]} map "call ${script[*]}" "$@"
         ;;
 
@@ -150,7 +187,7 @@ case "$op" in
                           then ls "$adir"/logs-*.flt.json
                           else ls "$adir"/logs-$host.flt.json; fi))
 
-        if test -z "${filters[*]}"
+        if test -z "${filters[*]}" -a -z "$unfiltered"
         then local filter_names=$(jq '.analysis.filters
                                       | join(",")
                                      ' "$dir"/profile.json --raw-output)
@@ -167,13 +204,42 @@ case "$op" in
         local v6=(${v5[*]/#dump-chain/         'dump-chain'            --chain "$adir"/chain.json})
         local v7=(${v6[*]/#chain-timeline/     'timeline-chain'     --timeline "$adir"/chain.txt})
         local v8=(${v7[*]/#filter-slots/       'filter-slots'                  ${filters[*]}})
-        local v9=(${v8[*]/#dump-propagation/   'dump-propagation'   --analysis "$adir"/blockprop.json})
+        local v9=(${v8[*]/#dump-propagation/   'dump-propagation'       --prop "$adir"/blockprop.json})
 
         local va=(${v9[*]/#report-prop-forger/  'report-prop-forger'  --report "$adir"/blockprop-forger.txt  })
         local vb=(${va[*]/#report-prop-peers/   'report-prop-peers'   --report "$adir"/blockprop-peers.txt   })
         local vc=(${vb[*]/#report-prop-endtoend/'report-prop-endtoend' --report "$adir"/blockprop-endtoend.txt})
         local vd=(${vc[*]/#report-prop-full/    'report-prop-full'    --report "$adir"/blockprop-full.txt    })
-        local ops_final=(${vd[*]})
+        local ve=(${vd[*]/#dump-clusterperf/   'dump-clusterperf' --clusterperf "$adir"/cluster-perf.json })
+        local vf=(${ve[*]/#report-clusterperf-full/ 'report-clusterperf-full' --report "$adir"/clusterperf-full.txt    })
+        local vg=(${vf[*]/#report-clusterperf-brief/'report-clusterperf-brief' --report "$adir"/clusterperf-brief.txt    })
+        local ops_final=(${vg[*]})
+
+        progress "analysis | locli" "$(with_color reset ${locli_rts_args[@]}) $(colorise "${ops_final[@]}")"
+        time locli "${locli_rts_args[@]}" "${ops_final[@]}"
+        ;;
+
+    multi-call )
+        local usage="USAGE: wb analyse $op \"RUN-NAMES..\" OPS.."
+
+        local runs=${1:?$usage}; shift
+        local dirs=(  $(for run  in $runs;       do run get "$run"; echo; done))
+        local adirs=( $(for dir  in ${dirs[*]};  do echo $dir/analysis; done))
+        local props=( $(for adir in ${adirs[*]}; do echo --prop        ${adir}/blockprop.json;    done))
+        local cperfs=($(for adir in ${adirs[*]}; do echo --clusterperf ${adir}/cluster-perf.json; done))
+
+        local v0=("$@")
+        local v1=(${v0[*]/#read-clusterperfs/ 'read-clusterperfs' ${cperfs[*]} })
+        local v2=(${v1[*]/#read-propagations/ 'read-propagations' ${props[*]}  })
+        local v3=(${v2[*]/#dump-multi-clusterperf/ 'dump-multi-clusterperf' --multi-clusterperf $global_rundir'/multi-cluster-perf.json' })
+        local v4=(${v3[*]/#dump-multi-propagation/ 'dump-multi-propagation' --multi-prop $global_rundir'/multi-blockprop.json' })
+        local v5=(${v4[*]/#report-multi-prop-forger/ 'report-multi-prop-forger' --report $global_rundir'/multi-prop-forger.json' })
+        local v6=(${v5[*]/#report-multi-prop-peers/ 'report-multi-prop-peers' --report $global_rundir'/multi-prop-peers.txt' })
+        local v7=(${v6[*]/#report-multi-prop-endtoend/ 'report-multi-prop-endtoend' --report $global_rundir'/multi-prop-endtoend.txt' })
+        local v8=(${v7[*]/#report-multi-prop-full/ 'report-multi-prop-full' --report $global_rundir'/multi-prop-full.txt' })
+        local v9=(${v8[*]/#report-multi-clusterperf-full/ 'report-multi-clusterperf-full' --report $global_rundir'/multi-clusterperf-full.txt' })
+        local va=(${v9[*]/#report-multi-clusterperf-brief/ 'report-multi-clusterperf-brief' --report $global_rundir'/multi-clusterperf-brief.txt' })
+        local ops_final=(${va[*]})
 
         progress "analysis | locli" "$(with_color reset ${locli_rts_args[@]}) $(colorise "${ops_final[@]}")"
         time locli "${locli_rts_args[@]}" "${ops_final[@]}"
@@ -185,6 +251,8 @@ case "$op" in
         local name=${1:-current}; if test $# != 0; then shift; fi
         local dir=$(run get "$name")
         test -n "$dir" || fail "malformed run: $name"
+
+        run trim "$name"
 
         progress "analyse" "preparing run for analysis:  $(with_color white $name)"
         local adir=$dir/analysis

@@ -60,6 +60,14 @@ case "$op" in
                  cut -c3- |
                  sort || true);;
 
+    list-pattern | lsp )
+        test -d "$global_rundir" &&
+            (cd "$global_rundir"
+             ls $1/meta.json |
+                 grep -v 'current$\|deploy-logs$' |
+                 cut -d/ -f1 |
+                 sort || true);;
+
     compute-path )
         if test -f "$1/meta.json"
         then echo -n "$1"
@@ -508,15 +516,12 @@ case "$op" in
         local tag=${1:?$usage}
         local dir=$global_rundir/$tag
 
-        if ! run check "$tag"
-        then fatal "run fails sanity checks:  $tag at $dir"; fi
-
-        jq_fmutate "$dir"/genesis-shelley.json '
-           del(.initialFunds)
-         | del(.staking)
-         | .initialFunds = {}
+        progress "run" "trimming genesis"
+        mv   "$dir"/genesis-shelley.json "$dir"/genesis-shelley.orig.json
+        jq > "$dir"/genesis-shelley.json '
+           .initialFunds = {}
          | .staking      = {}
-        ';;
+        ' "$dir"/genesis-shelley.orig.json;;
 
     describe )
         local usage="USAGE: wb run $op TAG"
