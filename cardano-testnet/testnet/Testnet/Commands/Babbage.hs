@@ -25,7 +25,35 @@ data BabbageOptions = BabbageOptions
   } deriving (Eq, Show)
 
 optsTestnet :: Parser TestnetOptions
-optsTestnet = pure TestnetOptions
+optsTestnet = TestnetOptions
+  <$> OA.option auto
+      (   OA.long "num-spo-nodes"
+      <>  OA.help "Number of SPO nodes"
+      <>  OA.metavar "COUNT"
+      <>  OA.showDefault
+      <>  OA.value (numSpoNodes defaultTestnetOptions)
+      )
+  <*> OA.option auto
+      (   OA.long "slot-duration"
+      <>  OA.help "Slot duration"
+      <>  OA.metavar "MILLISECONDS"
+      <>  OA.showDefault
+      <>  OA.value (slotDuration defaultTestnetOptions)
+      )
+  <*> OA.option auto
+      (   OA.long "security-param"
+      <>  OA.help "Security parameter"
+      <>  OA.metavar "INT"
+      <>  OA.showDefault
+      <>  OA.value (securityParam defaultTestnetOptions)
+      )
+  <*> OA.option auto
+      (   OA.long "total-balance"
+      <>  OA.help "Total balance"
+      <>  OA.metavar "INT"
+      <>  OA.showDefault
+      <>  OA.value (totalBalance defaultTestnetOptions)
+      )
 
 optsBabbage :: Parser BabbageOptions
 optsBabbage = BabbageOptions
