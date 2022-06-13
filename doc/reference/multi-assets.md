@@ -59,7 +59,7 @@ cardano-cli transaction build-raw \
             --tx-in $TXIN \
             --tx-out "$ADDR + 5 $POLICYID.636f75747473636f696e" \
             --mint "5 $POLICYID.$YOUR_ASSET_NAME" \
-            --minting-script-file $SCRIPT \
+            --mint-script-file $SCRIPT \
             --out-file txbody
 ```
 
@@ -95,7 +95,7 @@ cardano-cli transaction build-raw \
             --tx-in $TXIN \
             --tx-out $TXOUT\
             --mint "-5 $POLICYID.636f75747473636f696e" \
-            --minting-script-file $SCRIPT \
+            --mint-script-file $SCRIPT \
             --out-file txbodyburn
 ```
 

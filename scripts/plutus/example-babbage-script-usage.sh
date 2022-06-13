@@ -45,10 +45,12 @@ cat $WORK/utxo-1.json
 
 txin=$(jq -r 'keys[0]' $WORK/utxo-1.json)
 lovelaceattxin=$(jq -r ".[\"$txin\"].value.lovelace" $WORK/utxo-1.json)
-lovelaceattxindiv3=$(expr $lovelaceattxin / 4)
+lovelaceattxindiv5=$(expr $lovelaceattxin / 5)
 
 $CARDANO_CLI query protocol-parameters --testnet-magic "$TESTNET_MAGIC" --out-file $WORK/pparams.json
 dummyaddress=addr_test1vpqgspvmh6m2m5pwangvdg499srfzre2dd96qq57nlnw6yctpasy4
+dummyaddress2=addr_test1vzq57nyrwdwne9vzjxr908qqkdxwuavlgzl20qveua303vq024qkk
+readonlyaddress=addr_test1vz3t3f2kgy2re66tnhgxc4t8jgylw2cqfnxdwlrq9agfmtstxxkm5
 
 # We first:
 # - Create the reference script at the utxoaddr
@@ -59,10 +61,12 @@ $CARDANO_CLI transaction build \
   --testnet-magic "$TESTNET_MAGIC" \
   --change-address "$utxoaddr" \
   --tx-in "$txin" \
-  --tx-out "$utxoaddr+$lovelaceattxindiv3" \
-  --tx-out "$plutusscriptaddr+$lovelaceattxindiv3" \
+  --tx-out "$readonlyaddress+$lovelaceattxindiv5" \
   --tx-out-inline-datum-file "$datumfilepath" \
-  --tx-out "$dummyaddress+$lovelaceattxindiv3" \
+  --tx-out "$utxoaddr+$lovelaceattxindiv5" \
+  --tx-out "$plutusscriptaddr+$lovelaceattxindiv5" \
+  --tx-out-inline-datum-file "$datumfilepath" \
+  --tx-out "$dummyaddress+$lovelaceattxindiv5" \
   --tx-out-inline-datum-file "$datumfilepath" \
   --tx-out-reference-script-file "$plutusscriptinuse" \
   --protocol-params-file "$WORK/pparams.json" \
@@ -101,8 +105,10 @@ $CARDANO_CLI query utxo --address $plutusscriptaddr --testnet-magic "$TESTNET_MA
 plutuslockedutxotxin=$(jq -r 'keys[0]' $WORK/plutusutxo.json)
 lovelaceatplutusscriptaddr=$(jq -r ".[\"$plutuslockedutxotxin\"].value.lovelace" $WORK/plutusutxo.json)
 
-dummyaddress2=addr_test1vzq57nyrwdwne9vzjxr908qqkdxwuavlgzl20qveua303vq024qkk
-
+#Get read only reference input
+$CARDANO_CLI query utxo --address "$readonlyaddress" --cardano-mode \
+  --testnet-magic "$TESTNET_MAGIC" --out-file $WORK/read-only-ref-input-utxo.json
+readonlyrefinput=$(jq -r 'keys[0]' $WORK/read-only-ref-input-utxo.json)
 
 echo "Plutus txin"
 echo "$plutuslockedutxotxin"
@@ -142,6 +148,7 @@ $CARDANO_CLI transaction build \
   --cardano-mode \
   --testnet-magic "$TESTNET_MAGIC" \
   --change-address "$utxoaddr" \
+  --read-only-tx-in-reference "$readonlyrefinput" \
   --tx-in "$txin1" \
   --tx-in-collateral "$txinCollateral" \
   --out-file "$WORK/test-alonzo-ref-script.body" \

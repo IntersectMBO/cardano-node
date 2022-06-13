@@ -1424,7 +1424,7 @@ Usage: cardano-cli transaction build-raw [--byron-era | --shelley-era |
                                          [--txin-script-file FILE])
                                          [--tx-out TX-OUT]
                                          [--mint VALUE
-                                           (--minting-script-file FILE)]
+                                           (--mint-script-file FILE)]
                                          [--invalid-before SLOT]
                                          [--invalid-hereafter SLOT]
                                          [--fee LOVELACE]
@@ -1454,7 +1454,7 @@ Available options:
                            amount in Lovelace.
   --mint VALUE             Mint multi-asset value(s) with the multi-asset cli
                            syntax. You must specify a script witness.
-  --minting-script-file FILE
+  --mint-script-file FILE
                            Filepath of the multi-asset witness script.
   --invalid-before SLOT    Time that transaction is valid from (in slots).
   --invalid-hereafter SLOT Time that transaction is valid until (in slots).
