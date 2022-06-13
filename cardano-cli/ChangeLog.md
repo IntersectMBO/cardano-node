@@ -104,7 +104,7 @@
     paired with the thing they are witnessing. E.g.
     ```
     --certificate-file  $certfile --certificate-script-file $scriptfile
-    --tx-out $txout --minting-script-file $scriptfile
+    --tx-out $txout --mint-script-file $scriptfile
     --withdrawal $withdrawal --withdrawal-script-file $scriptfile
     --tx-in $txin --txin-script-file $scriptfile
     ```

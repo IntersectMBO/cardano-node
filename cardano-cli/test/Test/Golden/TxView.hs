@@ -218,8 +218,8 @@ golden_view_mary =
             \142\
               \ a06ee5ffdd7f9b5bd992eb9543f44418323f81229526b77b0e4be067\
               \.736b79"
-        , "--minting-script-file", "test/data/golden/mary/scripts/mint.all"
-        , "--minting-script-file", "test/data/golden/mary/scripts/mint.sig"
+        , "--mint-script-file", "test/data/golden/mary/scripts/mint.all"
+        , "--mint-script-file", "test/data/golden/mary/scripts/mint.sig"
         , "--out-file", transactionBodyFile
         ]
 

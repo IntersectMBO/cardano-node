@@ -90,7 +90,7 @@ golden_shelleyTransactionBuild_Minting =
       [ "transaction","build-raw"
       , "--mary-era"
       , "--tx-in", txIn
-      , "--tx-out", txOut ++ "+" ++ dummyMA, "--minting-script-file", scriptWit
+      , "--tx-out", txOut ++ "+" ++ dummyMA, "--mint-script-file", scriptWit
       , "--mint", dummyMA
       , "--fee", "12"
       , "--tx-body-file", txBodyOutFile

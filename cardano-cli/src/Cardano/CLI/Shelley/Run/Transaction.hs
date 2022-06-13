@@ -234,7 +234,7 @@ renderShelleyTxCmdError err =
     ShelleyTxCmdPolicyIdsMissing policyids ->
       "The \"--mint\" flag specifies an asset with a policy Id, but no \
       \corresponding monetary policy script has been provided as a witness \
-      \(via the \"--minting-script-file\" flag). The policy Id in question is: "
+      \(via the \"--mint-script-file\" flag). The policy Id in question is: "
       <> Text.intercalate ", " (map serialiseToRawBytesHexText policyids)
 
     ShelleyTxCmdPolicyIdsExcess policyids ->
