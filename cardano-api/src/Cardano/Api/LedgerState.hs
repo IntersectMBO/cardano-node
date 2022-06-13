@@ -1364,6 +1364,7 @@ nextEpochEligibleLeadershipSlots sbe sGen serCurrEpochState ptclState
   let Consensus.PraosNonces { Consensus.candidateNonce, Consensus.evolvingNonce } =
         Consensus.getPraosNonces (Proxy @(Api.ConsensusProtocol era)) chainDepState
 
+  -- Let's do a nonce check. The candidate nonce and the evolving nonce should not be equal.
   when (evolvingNonce == candidateNonce)
    $ Left LeaderErrCandidateNonceStillEvolving
 
