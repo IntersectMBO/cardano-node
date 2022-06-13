@@ -311,18 +311,18 @@ renderFeature TxFeatureReturnCollateral     = "Return collateral"
 runTransactionCmd :: TransactionCmd -> ExceptT ShelleyTxCmdError IO ()
 runTransactionCmd cmd =
   case cmd of
-    TxBuild era consensusModeParams nid mScriptValidity mOverrideWits txins reqSigners
-            txinsc mReturnColl mTotCollateral txouts changeAddr mValue mLowBound
+    TxBuild era consensusModeParams nid mScriptValidity mOverrideWits txins readOnlyRefIns
+            reqSigners txinsc mReturnColl mTotCollateral txouts changeAddr mValue mLowBound
             mUpperBound certs wdrls metadataSchema scriptFiles metadataFiles mpparams
             mUpProp outputFormat output ->
-      runTxBuild era consensusModeParams nid mScriptValidity txins txinsc mReturnColl
-                 mTotCollateral txouts changeAddr mValue mLowBound
+      runTxBuild era consensusModeParams nid mScriptValidity txins readOnlyRefIns txinsc
+                 mReturnColl mTotCollateral txouts changeAddr mValue mLowBound
                  mUpperBound certs wdrls reqSigners metadataSchema scriptFiles
                  metadataFiles mpparams mUpProp outputFormat mOverrideWits output
-    TxBuildRaw era mScriptValidity txins txinsc mReturnColl mTotColl reqSigners
+    TxBuildRaw era mScriptValidity txins readOnlyRefIns txinsc mReturnColl mTotColl reqSigners
                txouts mValue mLowBound mUpperBound fee certs wdrls metadataSchema scriptFiles
                metadataFiles mpparams mUpProp outputFormat out ->
-      runTxBuildRaw era mScriptValidity txins txinsc mReturnColl mTotColl txouts
+      runTxBuildRaw era mScriptValidity txins readOnlyRefIns txinsc mReturnColl mTotColl txouts
                     mLowBound mUpperBound fee mValue certs wdrls reqSigners metadataSchema
                     scriptFiles metadataFiles mpparams mUpProp outputFormat out
     TxSign txinfile skfiles network txoutfile ->
@@ -354,6 +354,8 @@ runTxBuildRaw
   -> [(TxIn, Maybe (ScriptWitnessFiles WitCtxTxIn))]
   -- ^ TxIn with potential script witness
   -> [TxIn]
+  -- ^ Read only reference inputs
+  -> [TxIn]
   -- ^ TxIn for collateral
   -> Maybe TxOutAnyEra
   -- ^ Return collateral
@@ -382,7 +384,8 @@ runTxBuildRaw
   -> TxBodyFile
   -> ExceptT ShelleyTxCmdError IO ()
 runTxBuildRaw (AnyCardanoEra era)
-              mScriptValidity inputsAndScripts inputsCollateral
+              mScriptValidity inputsAndScripts
+              readOnlyRefIns inputsCollateral
               mReturnCollateral mTotCollateral txouts
               mLowerBound mUpperBound
               mFee mValue
@@ -406,7 +409,7 @@ runTxBuildRaw (AnyCardanoEra era)
         <*> validateTxInsCollateral
                            era inputsCollateral
         <*> validateTxInsReference
-                           era referenceInputsWithWits
+                           era referenceInputsWithWits readOnlyRefIns
         <*> validateTxOuts era txouts
         <*> validateTxTotalCollateral era mTotCollateral
         <*> validateTxReturnCollateral era mReturnCollateral
@@ -443,6 +446,8 @@ runTxBuild
   -> Maybe ScriptValidity
   -- ^ Mark script as expected to pass or fail validation
   -> [(TxIn, Maybe (ScriptWitnessFiles WitCtxTxIn))]
+  -- ^ Read only reference inputs
+  -> [TxIn]
   -- ^ TxIn with potential script witness
   -> [TxIn]
   -- ^ TxIn for collateral
@@ -475,7 +480,7 @@ runTxBuild
   -> TxBuildOutputOptions
   -> ExceptT ShelleyTxCmdError IO ()
 runTxBuild (AnyCardanoEra era) (AnyConsensusModeParams cModeParams) networkId mScriptValidity
-           txins txinsc mReturnCollateral mtotcoll txouts (TxOutChangeAddress changeAddr) mValue mLowerBound mUpperBound
+           txins readOnlyRefIns txinsc mReturnCollateral mtotcoll txouts (TxOutChangeAddress changeAddr) mValue mLowerBound mUpperBound
            certFiles withdrawals reqSigners metadataSchema scriptFiles metadataFiles mpparams
            mUpdatePropFile outputFormat mOverrideWits outputOptions = do
   SocketPath sockPath <- firstExceptT ShelleyTxCmdSocketEnvError readEnvSocketPath
@@ -491,14 +496,15 @@ runTxBuild (AnyCardanoEra era) (AnyConsensusModeParams cModeParams) networkId mS
                                 | (_, wit@(Just (SimpleReferenceScriptWitnessFiles input _)))
                                      <- txins
                                 ]
-      referenceInputs = map fst referenceInputsWithWits
+      referenceInputs = map fst referenceInputsWithWits ++ readOnlyRefIns
+
   case (consensusMode, cardanoEraStyle era) of
     (CardanoMode, ShelleyBasedEra sbe) -> do
       txBodyContent <-
         TxBodyContent
           <$> validateTxIns               era txins
           <*> validateTxInsCollateral     era txinsc
-          <*> validateTxInsReference      era referenceInputsWithWits
+          <*> validateTxInsReference      era referenceInputsWithWits readOnlyRefIns
           <*> validateTxOuts              era txouts
           <*> validateTxTotalCollateral   era mtotcoll
           <*> validateTxReturnCollateral  era mReturnCollateral
@@ -684,14 +690,15 @@ validateTxInsCollateral era txins =
 
 validateTxInsReference :: forall era. CardanoEra era
                        -> [(TxIn, Maybe (ScriptWitnessFiles WitCtxTxIn))]
+                       -> [TxIn] -- ^ Read only reference inputs
                        -> ExceptT ShelleyTxCmdError IO (TxInsReference BuildTx era)
-validateTxInsReference _ [] = return TxInsReferenceNone
-validateTxInsReference era txins =
+validateTxInsReference _ [] [] = return TxInsReferenceNone
+validateTxInsReference era txins readOnlyRefIns =
   case refInsScriptsAndInlineDatsSupportedInEra era of
     Nothing -> txFeatureMismatch era TxFeatureReferenceInputs
     Just supp -> do
       final <- mapM convert txins
-      return $ TxInsReference supp $ catMaybes final
+      return $ TxInsReference supp $ readOnlyRefIns ++ catMaybes final
  where
   convert
     :: (TxIn, Maybe (ScriptWitnessFiles WitCtxTxIn))

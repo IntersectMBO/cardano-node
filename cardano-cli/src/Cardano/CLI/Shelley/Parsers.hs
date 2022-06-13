@@ -302,6 +302,16 @@ pReferenceTxIn =
                 \ a plutus reference script attached."
     )
 
+pReadOnlyReferenceTxIn :: Parser TxIn
+pReadOnlyReferenceTxIn =
+  Opt.option (readerFromParsecParser parseTxIn)
+    (  Opt.long "read-only-tx-in-reference"
+    <> Opt.metavar "TX-IN"
+    <> Opt.help "Specify a read only reference input. This reference input is not witnessing anything \
+                \it is simply provided in the plutus script context."
+    )
+
+
 pScriptWitnessFiles :: forall witctx.
                        WitCtx witctx
                     -> BalanceTxExecUnits -- ^ Use the @execution-units@ flag.
@@ -753,6 +763,7 @@ pTransaction =
             <*> optional pScriptValidity
             <*> optional pWitnessOverride
             <*> some (pTxIn AutoBalance)
+            <*> many pReadOnlyReferenceTxIn
             <*> many pRequiredSigner
             <*> many pTxInCollateral
             <*> optional pReturnCollateral
@@ -789,6 +800,7 @@ pTransaction =
     TxBuildRaw <$> pCardanoEra
                <*> optional pScriptValidity
                <*> some (pTxIn ManualBalance)
+               <*> many pReadOnlyReferenceTxIn
                <*> many pTxInCollateral
                <*> optional pReturnCollateral
                <*> optional pTotalCollateral
