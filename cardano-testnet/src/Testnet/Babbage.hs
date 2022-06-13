@@ -27,9 +27,9 @@ import           Data.Aeson ((.=))
 import           Data.Bool (Bool(..))
 import           Data.Eq (Eq)
 import           Data.Function (($), (.))
-import           Data.Functor ((<&>))
+import           Data.Functor ((<&>), (<$>))
 import           Data.Int (Int)
-import           Data.List (unzip5, zipWith6)
+import           Data.List (unzip5, zipWith6, (++))
 import           Data.Maybe (Maybe(Just))
 import           Data.Ord (Ord((<=)))
 import           Data.Semigroup (Semigroup((<>)))
@@ -68,10 +68,20 @@ import qualified Testnet.Conf as H
 {- HLINT ignore "Use let" -}
 
 
-data TestnetOptions = TestnetOptions deriving (Eq, Show)
+data TestnetOptions = TestnetOptions
+  { numSpoNodes :: Int
+  , slotDuration :: Int
+  , securityParam :: Int
+  , totalBalance :: Int
+  } deriving (Eq, Show)
 
 defaultTestnetOptions :: TestnetOptions
 defaultTestnetOptions = TestnetOptions
+  { numSpoNodes = 3
+  , slotDuration = 1000
+  , securityParam = 10
+  , totalBalance = 10020000000
+  }
 
 data TestnetNodeOptions = TestnetNodeOptions deriving (Eq, Show)
 
@@ -116,7 +126,7 @@ testnet testnetOptions H.Conf {..} = do
     , "maxProposalSize"   .= ("700" :: String)
     , "mpcThd"            .= ("20000000000000" :: String)
     , "scriptVersion"     .= (0 :: Int)
-    , "slotDuration"      .= ("1000" :: String)
+    , "slotDuration"      .= show @Int (slotDuration testnetOptions)
     , "unlockStakeEpoch"  .= ("18446744073709551615" :: String)
     , "updateImplicit"    .= ("10000" :: String)
     , "updateProposalThd" .= ("100000000000000" :: String)
@@ -136,18 +146,14 @@ testnet testnetOptions H.Conf {..} = do
   currentTime <- H.noteShowIO DTC.getCurrentTime
   startTime <- H.noteShow $ DTC.addUTCTime startTimeOffsetSeconds currentTime
 
-  let securityParam = 10
-  let numSpoNodes = 3
-  let initSupply = 10020000000
-
   void . H.execCli $
     [ "byron", "genesis", "genesis"
     , "--protocol-magic", show @Int testnetMagic
     , "--start-time", showUTCTimeSeconds startTime
-    , "--k", show @Int securityParam
+    , "--k", show @Int (securityParam testnetOptions)
     , "--n-poor-addresses", "0"
-    , "--n-delegate-addresses", show @Int numSpoNodes
-    , "--total-balance", show @Int initSupply
+    , "--n-delegate-addresses", show @Int (numSpoNodes testnetOptions)
+    , "--total-balance", show @Int (totalBalance testnetOptions)
     , "--delegate-share", "1"
     , "--avvm-entry-count", "0"
     , "--avvm-entry-balance", "0"
@@ -206,7 +212,7 @@ testnet testnetOptions H.Conf {..} = do
       , paymentVKey = tempAbsPath </> "utxo-keys/utxo" <> show @Int idx <> ".vkey"
       }
 
-  let spoNodes :: [String] = ["node-spo1", "node-spo2", "node-spo3"]
+  let spoNodes :: [String] = ("node-spo" ++) . show <$> [1 .. numSpoNodes testnetOptions]
 
   -- Create the node directories
 
