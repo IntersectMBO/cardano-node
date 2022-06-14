@@ -714,7 +714,7 @@ runGenesisCreateStaked (GenesisDir rootdir)
       stakePools = [ (Ledger._poolId poolParams, poolParams) | poolParams <- snd . mkDelegationMapEntry <$> delegations ]
       delegAddrs = dInitialUtxoAddr <$> delegations
       !shelleyGenesis =
-        updateOutputTemplate
+        updateCreateStakedOutputTemplate
           -- Shelley genesis parameters
           start genDlgs mNonDlgAmount (length nonDelegAddrs) nonDelegAddrs stakePools stake
           stDlgAmount numDelegations delegAddrs stuffedUtxoAddrs (toOutputTemplate template)
@@ -1063,7 +1063,7 @@ updateTemplate (SystemStart start)
     unLovelace :: Integral a => Lovelace -> a
     unLovelace (Lovelace coin) = fromIntegral coin
 
-updateOutputTemplate
+updateCreateStakedOutputTemplate
     :: SystemStart
     -- Genesis delegation (not stake-based):
     -> Map (Hash GenesisKey) (Hash GenesisDelegateKey, Hash VrfKey)
@@ -1080,11 +1080,13 @@ updateOutputTemplate
     -> [AddressInEra ShelleyEra]
     -> OT.OutputShelleyGenesis StandardShelley
     -> OT.OutputShelleyGenesis StandardShelley
-updateOutputTemplate (SystemStart start)
-               genDelegMap mAmountNonDeleg nUtxoAddrsNonDeleg utxoAddrsNonDeleg
-               pools stake (Lovelace amountDeleg) nUtxoAddrsDeleg utxoAddrsDeleg stuffedUtxoAddrs
-               template = do
-
+updateCreateStakedOutputTemplate
+  (SystemStart start)
+  genDelegMap mAmountNonDeleg nUtxoAddrsNonDeleg utxoAddrsNonDeleg
+  pools stake
+  (Lovelace amountDeleg)
+  nUtxoAddrsDeleg utxoAddrsDeleg stuffedUtxoAddrs
+  template = do
     let pparamsFromTemplate = OT.sgProtocolParams template
         shelleyGenesis = template
           { OT.sgSystemStart = start
