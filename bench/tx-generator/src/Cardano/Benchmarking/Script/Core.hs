@@ -11,6 +11,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE DataKinds #-}
 
 module Cardano.Benchmarking.Script.Core
 where
@@ -25,6 +26,7 @@ import           Control.Concurrent (threadDelay)
 import           Control.Tracer (nullTracer)
 
 import           Ouroboros.Network.Protocol.LocalTxSubmission.Type (SubmitResult (..))
+import           Ouroboros.Network.Protocol.LocalStateQuery.Type
 import           Cardano.Api
 import           Cardano.Api.Shelley (ProtocolParameters, protocolParamMaxTxExUnits, protocolParamPrices)
 
@@ -171,7 +173,7 @@ queryRemoteProtocolParameters = do
   chainTip  <- liftIO $ getLocalChainTip localNodeConnectInfo
   era <- queryEra
   let
-    callQuery :: forall a. Show a => QueryInMode CardanoMode (Either a ProtocolParameters) -> ActionM ProtocolParameters
+    callQuery :: forall a. Show a => QueryInMode CardanoMode SmallL (Either a ProtocolParameters) -> ActionM ProtocolParameters
     callQuery query = do
       res <- liftIO $ queryNodeLocalState localNodeConnectInfo (Just $ chainTipToChainPoint chainTip) query
       case res of
