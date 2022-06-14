@@ -94,6 +94,7 @@ final: prev: with final; {
     , profileName           ? customConfig.localCluster.profileName
     , useCabalRun           ? false
     , workbenchDevMode      ? false
+    , profiled              ? false
     , supervisord-workbench ? pkgs.callPackage ./workbench/supervisor.nix { inherit useCabalRun; }
     }:
     pkgs.callPackage ./workbench/supervisor-run.nix

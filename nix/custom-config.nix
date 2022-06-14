@@ -7,7 +7,7 @@ self: {
     profileName = "default-bage";
     basePort    = 30000;
     enableEKG        = true;
-    workbenchDevMode = false;
+    workbenchDevMode = true;
     extraSupervisorConfig = {};
   };
   membench = {

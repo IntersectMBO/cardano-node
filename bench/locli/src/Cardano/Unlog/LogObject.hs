@@ -207,14 +207,14 @@ logObjectStreamInterpreterKeysLegacy = Map.keys (fst interpreters)
 logObjectStreamInterpreterKeys       = Map.keys (snd interpreters)
 
 data LOBody
-  = LOTraceStartLeadershipCheck !SlotNo !Word64 !Float
+  = LOTraceStartLeadershipCheck !SlotNo !Word64 !Double
   | LOTraceLeadershipDecided    !SlotNo !Bool
   | LOResources !ResourceStats
   | LOMempoolTxs !Word64
   | LOMempoolRejectedTx
   | LOLedgerTookSnapshot
   | LOBlockContext !Word64
-  | LOGeneratorSummary !Bool !Word64 !NominalDiffTime (Vector Float)
+  | LOGeneratorSummary !Bool !Word64 !NominalDiffTime (Vector Double)
   | LOTxsAcked !(Vector Text)
   | LOTxsCollected !Word64
   | LOTxsProcessed !Word64 !Int
