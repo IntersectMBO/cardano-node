@@ -5,6 +5,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE DeriveAnyClass #-}
 
 -- | Cardano addresses: payment and stake addresses.
 --
@@ -106,6 +107,7 @@ import           Cardano.Api.Script
 import           Cardano.Api.SerialiseBech32
 import           Cardano.Api.SerialiseRaw
 import           Cardano.Api.Utils
+import           Control.DeepSeq (NFData(..), deepseq)
 
 
 
@@ -192,6 +194,10 @@ deriving instance Eq   (Address addrtype)
 deriving instance Ord  (Address addrtype)
 deriving instance Show (Address addrtype)
 
+instance NFData (Address addrtype) where
+  rnf = \case
+    ByronAddress address -> deepseq address ()
+    ShelleyAddress n pc sr -> deepseq (deepseq (deepseq n pc) sr) ()
 
 instance HasTypeProxy addrtype => HasTypeProxy (Address addrtype) where
     data AsType (Address addrtype) = AsAddress (AsType addrtype)
@@ -337,6 +343,9 @@ data AddressInEra era where
                   -> Address addrtype
                   -> AddressInEra era
 
+instance NFData (AddressInEra era) where
+  rnf (AddressInEra t a) = deepseq (deepseq t a) ()
+
 instance IsCardanoEra era => ToJSON (AddressInEra era) where
   toJSON = Aeson.String . serialiseAddress
 
@@ -387,6 +396,10 @@ data AddressTypeInEra addrtype era where
 
 deriving instance Show (AddressTypeInEra addrtype era)
 
+instance NFData (AddressTypeInEra addrtype era) where
+  rnf = \case
+    ByronAddressInAnyEra -> ()
+    ShelleyAddressInEra sbe -> deepseq sbe ()
 
 instance HasTypeProxy era => HasTypeProxy (AddressInEra era) where
     data AsType (AddressInEra era) = AsAddressInEra (AsType era)

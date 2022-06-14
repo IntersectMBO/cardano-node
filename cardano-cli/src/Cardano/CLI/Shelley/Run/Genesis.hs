@@ -1,6 +1,8 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections #-}
@@ -877,10 +879,11 @@ createPoolCredentials dir index = do
    opCertCtr = OpCertCounterFile $ dir </> "opcert" ++ strIndex ++ ".counter"
 
 data Delegation = Delegation
-  { dInitialUtxoAddr  :: AddressInEra ShelleyEra
-  , dDelegStaking     :: Ledger.KeyHash Ledger.Staking StandardCrypto
-  , dPoolParams       :: Ledger.PoolParams StandardCrypto
+  { dInitialUtxoAddr  :: !(AddressInEra ShelleyEra)
+  , dDelegStaking     :: !(Ledger.KeyHash Ledger.Staking StandardCrypto)
+  , dPoolParams       :: !(Ledger.PoolParams StandardCrypto)
   }
+  deriving (Generic, NFData)
 
 instance ToJSON Delegation where
   toJSON delegation = Aeson.object
@@ -965,11 +968,13 @@ computeDelegation nw _delegDir pool _delegIx = do
     let stakeAddressReference = StakeAddressByValue . StakeCredentialByKey . verificationKeyHash $ stakeVK
     let initialUtxoAddr = makeShelleyAddress nw (PaymentCredentialByKey (verificationKeyHash paymentVK)) stakeAddressReference
 
-    pure Delegation
-      { dInitialUtxoAddr = shelleyAddressInEra initialUtxoAddr
-      , dDelegStaking = Ledger.hashKey (unStakeVerificationKey stakeVK)
-      , dPoolParams = pool
-      }
+    let !delegation = force Delegation
+          { dInitialUtxoAddr = shelleyAddressInEra initialUtxoAddr
+          , dDelegStaking = Ledger.hashKey (unStakeVerificationKey stakeVK)
+          , dPoolParams = pool
+          }
+
+    pure delegation
 
 -- | Current UTCTime plus 30 seconds
 getCurrentTimePlus30 :: ExceptT a IO UTCTime
