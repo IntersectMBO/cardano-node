@@ -27,7 +27,7 @@ import           Cardano.Api.Shelley
 import           Cardano.CLI.Helpers
 import           Cardano.CLI.Shelley.Key (InputDecodeError, PaymentVerifier (..),
                    StakeVerifier (..), VerificationKeyTextOrFile,
-                   VerificationKeyTextOrFileError (..), readVerificationKeyOrFile,
+                   VerificationKeyTextOrFileError (..), generatePaymentKeys, readVerificationKeyOrFile,
                    readVerificationKeyTextOrFileAnyOf, renderVerificationKeyTextOrFileError)
 import           Cardano.CLI.Shelley.Parsers (AddressCmd (..), AddressKeyType (..), OutputFile (..))
 import           Cardano.CLI.Shelley.Run.Address.Info (ShelleyAddressInfoError, runAddressInfo)
@@ -80,15 +80,7 @@ generateAndWriteKeyFiles :: ()
   -> SigningKeyFile
   -> ExceptT ShelleyAddressCmdError IO ()
 generateAndWriteKeyFiles asType vkf skf = do
-  uncurry (writePaymentKeyFiles vkf skf) =<< generatePaymentKeys asType
-
-generatePaymentKeys :: ()
-  => Key keyrole
-  => AsType keyrole
-  -> ExceptT ShelleyAddressCmdError IO (VerificationKey keyrole, SigningKey keyrole)
-generatePaymentKeys asType = do
-  skey <- liftIO $ generateSigningKey asType
-  return (getVerificationKey skey, skey)
+  uncurry (writePaymentKeyFiles vkf skf) =<< liftIO (generatePaymentKeys asType)
 
 writePaymentKeyFiles :: ()
   => Key keyrole
