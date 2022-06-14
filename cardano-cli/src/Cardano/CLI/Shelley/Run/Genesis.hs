@@ -693,43 +693,16 @@ runGenesisCreateStaked (GenesisDir rootdir)
   forM_ (zip [ 1 .. bulkPoolCredFiles ] bulkSlices) $
     uncurry (writeBulkPoolCredentials pooldir)
 
-  let distribution =
-        [ (pool, delegIx)
-        | (pool, poolIx) <- zip pools [1 ..]
-        , delegIxLocal <- [ 1 .. delegsPerPool ] ++
-                          -- Add all remaining delegates to the last pool:
-                          if delegsRemaining /= 0 && poolIx == genNumPools
-                            then [ delegsPerPool + 1 .. delegsPerPool + delegsRemaining ]
-                            else []
-        , let delegIx = delegIxLocal + delegsPerPool * (poolIx - 1)
-        ]
+  let (delegsPerPool, delegsRemaining) = divMod genNumStDelegs genNumPools
+      delegsForPool poolIx = if delegsRemaining /= 0 && poolIx == genNumPools
+        then delegsPerPool
+        else delegsPerPool + delegsRemaining
+      distribution = [pool | (pool, poolIx) <- zip pools [1 ..], _ <- [1 .. delegsForPool poolIx]]
 
   -- Distribute M delegates across N pools:
-  delegations <- liftIO $ Lazy.forM distribution $ \(poolParams, index) -> do
-    computeDelegation network stdeldir poolParams index
+  delegations <- liftIO $ Lazy.forM distribution $ computeDelegation network
 
-  liftIO $ LBS.writeFile (stdeldir </> "delegations.jsonl") $ B.toLazyByteString $
-    mconcat (List.intersperse "\n" (B.lazyByteString . Aeson.encode <$> delegations))
-
-  -- NOTE The following code which reads from the same file 'delegations.jsonl' multiple times
-  -- looks like duplication, but it is not.  The file is read lazily, and it is important that
-  -- they be read multiple times because the code is streaming and reading the file multiple
-  -- times ensures that any data structures that are created as a result of the read is not
-  -- retained in memory.
-
-  !numDelegations <- fmap length $ liftIO $ LBS.lines <$> LBS.readFile (stdeldir </> "delegations.jsonl")
-
-  delegations2 <- do
-    delegationLines <- liftIO $ LBS.lines <$> LBS.readFile (stdeldir </> "delegations.jsonl")
-    return $ catMaybes $ Aeson.decode @Delegation <$> delegationLines
-
-  delegations3 <- do
-    delegationLines <- liftIO $ LBS.lines <$> LBS.readFile (stdeldir </> "delegations.jsonl")
-    return $ catMaybes $ Aeson.decode @Delegation <$> delegationLines
-
-  delegations4 <- do
-    delegationLines <- liftIO $ LBS.lines <$> LBS.readFile (stdeldir </> "delegations.jsonl")
-    return $ catMaybes $ Aeson.decode @Delegation <$> delegationLines
+  let numDelegations = length delegations
 
   genDlgs <- readGenDelegsMap gendir deldir
   nonDelegAddrs <- readInitialFundAddresses utxodir network
@@ -737,9 +710,9 @@ runGenesisCreateStaked (GenesisDir rootdir)
 
   stuffedUtxoAddrs <- liftIO $ Lazy.replicateM (fromIntegral numStuffedUtxo) genStuffedAddress
 
-  let stake = second Ledger._poolId . mkDelegationMapEntry <$> delegations2
-      stakePools = [ (Ledger._poolId poolParams, poolParams) | poolParams <- snd . mkDelegationMapEntry <$> delegations3 ]
-      delegAddrs = dInitialUtxoAddr <$> delegations4
+  let stake = second Ledger._poolId . mkDelegationMapEntry <$> delegations
+      stakePools = [ (Ledger._poolId poolParams, poolParams) | poolParams <- snd . mkDelegationMapEntry <$> delegations ]
+      delegAddrs = dInitialUtxoAddr <$> delegations
       !shelleyGenesis =
         updateOutputTemplate
           -- Shelley genesis parameters
@@ -773,7 +746,6 @@ runGenesisCreateStaked (GenesisDir rootdir)
     | bulkPoolCredFiles * bulkPoolsPerFile > 0 ]
 
   where
-    (,) delegsPerPool delegsRemaining = divMod genNumStDelegs genNumPools
     adjustTemplate t = t { sgNetworkMagic = unNetworkMagic (toNetworkMagic network) }
     mkDelegationMapEntry :: Delegation -> (Ledger.KeyHash Ledger.Staking StandardCrypto, Ledger.PoolParams StandardCrypto)
     mkDelegationMapEntry d = (dDelegStaking d, dPoolParams d)
@@ -957,24 +929,20 @@ writeBulkPoolCredentials dir bulkIx poolIxs = do
 
 computeDelegation :: ()
   => NetworkId
-  -> FilePath
   -> Ledger.PoolParams StandardCrypto
-  -> Word
   -> IO Delegation
-computeDelegation nw _delegDir pool _delegIx = do
+computeDelegation nw pool = do
     paymentVK <- fmap getVerificationKey $ generateSigningKey AsPaymentKey
     stakeVK   <- fmap getVerificationKey $ generateSigningKey AsStakeKey
 
     let stakeAddressReference = StakeAddressByValue . StakeCredentialByKey . verificationKeyHash $ stakeVK
     let initialUtxoAddr = makeShelleyAddress nw (PaymentCredentialByKey (verificationKeyHash paymentVK)) stakeAddressReference
 
-    let !delegation = force Delegation
-          { dInitialUtxoAddr = shelleyAddressInEra initialUtxoAddr
-          , dDelegStaking = Ledger.hashKey (unStakeVerificationKey stakeVK)
-          , dPoolParams = pool
-          }
-
-    pure delegation
+    pure $ force Delegation
+      { dInitialUtxoAddr = shelleyAddressInEra initialUtxoAddr
+      , dDelegStaking = Ledger.hashKey (unStakeVerificationKey stakeVK)
+      , dPoolParams = pool
+      }
 
 -- | Current UTCTime plus 30 seconds
 getCurrentTimePlus30 :: ExceptT a IO UTCTime
