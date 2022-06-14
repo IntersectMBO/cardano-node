@@ -841,6 +841,7 @@ testnet testnetOptions H.Conf {..} = do
 
   return TestnetRuntime
     { configurationFile
+    , shelleyGenesisFile = tempAbsPath </> "shelley/genesis.json"
     , testnetMagic
     , bftNodes = L.zipWith6 TestnetNode
         bftNodeNames

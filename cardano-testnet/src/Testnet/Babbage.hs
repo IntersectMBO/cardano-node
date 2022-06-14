@@ -29,7 +29,7 @@ import           Data.Eq (Eq)
 import           Data.Function (flip, ($), (.))
 import           Data.Functor ((<$>), (<&>))
 import           Data.Int (Int)
-import           Data.Maybe (Maybe (Just))
+import           Data.Maybe (Maybe (..))
 import           Data.Ord (Ord ((<=)))
 import           Data.Semigroup (Semigroup ((<>)))
 import           Data.String (String)
@@ -395,6 +395,7 @@ testnet testnetOptions H.Conf {..} = do
 
   return TestnetRuntime
     { configurationFile
+    , shelleyGenesisFile = tempAbsPath </> "genesis/shelley/genesis.json"
     , testnetMagic
     , poolNodes = L.zipWith7 PoolNode
         spoNodes
