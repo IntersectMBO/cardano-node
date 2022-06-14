@@ -53,8 +53,8 @@ runStakeAddressCmd (StakeCredentialDeRegistrationCert stakeVerifier outputFp) =
 -- Stake address command implementations
 --
 
-runStakeAddressKeyGenToFile :: ()
-  => VerificationKeyFile
+runStakeAddressKeyGenToFile ::
+     VerificationKeyFile
   -> SigningKeyFile
   -> ExceptT ShelleyStakeAddressCmdError IO (SigningKey StakeKey, VerificationKey StakeKey)
 runStakeAddressKeyGenToFile (VerificationKeyFile vkFp) (SigningKeyFile skFp) = do

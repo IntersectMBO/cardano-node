@@ -927,8 +927,8 @@ writeBulkPoolCredentials dir bulkIx poolIxs = do
      firstExceptT (ShelleyGenesisCmdAesonDecodeError fp . Text.pack) . hoistEither $
        Aeson.eitherDecodeStrict' content
 
-computeDelegation :: ()
-  => NetworkId
+computeDelegation ::
+     NetworkId
   -> Ledger.PoolParams StandardCrypto
   -> IO Delegation
 computeDelegation nw pool = do

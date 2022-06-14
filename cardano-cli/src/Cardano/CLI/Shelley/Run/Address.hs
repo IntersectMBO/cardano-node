@@ -73,8 +73,7 @@ runAddressKeyGenToFile kt vkf skf = case kt of
   AddressKeyShelleyExtended -> generateAndWriteKeyFiles AsPaymentExtendedKey  vkf skf
   AddressKeyByron           -> generateAndWriteKeyFiles AsByronKey            vkf skf
 
-generateAndWriteKeyFiles :: ()
-  => Key keyrole
+generateAndWriteKeyFiles :: Key keyrole
   => AsType keyrole
   -> VerificationKeyFile
   -> SigningKeyFile
@@ -82,8 +81,7 @@ generateAndWriteKeyFiles :: ()
 generateAndWriteKeyFiles asType vkf skf = do
   uncurry (writePaymentKeyFiles vkf skf) =<< liftIO (generatePaymentKeys asType)
 
-writePaymentKeyFiles :: ()
-  => Key keyrole
+writePaymentKeyFiles :: Key keyrole
   => VerificationKeyFile
   -> SigningKeyFile
   -> VerificationKey keyrole

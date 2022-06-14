@@ -484,10 +484,7 @@ readVerificationKeyOrHashOrTextEnvFile asType verKeyOrHashOrFile =
       pure (verificationKeyHash <$> eitherVk)
     VerificationKeyHash vkHash -> pure (Right vkHash)
 
-generatePaymentKeys :: ()
-  => Key keyrole
-  => AsType keyrole
-  -> IO (VerificationKey keyrole, SigningKey keyrole)
+generatePaymentKeys :: Key keyrole => AsType keyrole -> IO (VerificationKey keyrole, SigningKey keyrole)
 generatePaymentKeys asType = do
   skey <- generateSigningKey asType
   return (getVerificationKey skey, skey)
