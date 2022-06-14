@@ -117,9 +117,11 @@ test-suite cardano-testnet-tests
                       , tasty-expected-failure
                       , tasty-hedgehog
                       , text
+                      , time
 
   other-modules:
                         Spec.Cli.KesPeriodInfo
+                        Spec.Cli.LeadershipSchedule
                         Spec.Node.Shutdown
                         Spec.ShutdownOnSlotSynced
                         Testnet.Properties.Cli.KesPeriodInfo

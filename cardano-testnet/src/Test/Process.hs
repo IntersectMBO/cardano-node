@@ -1,5 +1,6 @@
 module Test.Process
   ( assertByDeadlineIOCustom
+  , assertByDeadlineMCustom
   , bashPath
   , execCli
   , execCli'
@@ -127,6 +128,21 @@ assertByDeadlineIOCustom str deadline f = GHC.withFrozenCallStack $ do
       then do
         liftIO $ IO.threadDelay 1000000
         assertByDeadlineIOCustom str deadline f
+      else do
+        H.annotateShow currentTime
+        failMessage GHC.callStack $ "Condition not met by deadline: " <> str
+
+assertByDeadlineMCustom
+  :: (MonadTest m, MonadIO m, HasCallStack)
+  => String -> UTCTime -> m Bool -> m ()
+assertByDeadlineMCustom str deadline f = GHC.withFrozenCallStack $ do
+  success <- f
+  unless success $ do
+    currentTime <- liftIO DTC.getCurrentTime
+    if currentTime < deadline
+      then do
+        liftIO $ IO.threadDelay 1000000
+        assertByDeadlineMCustom str deadline f
       else do
         H.annotateShow currentTime
         failMessage GHC.callStack $ "Condition not met by deadline: " <> str
