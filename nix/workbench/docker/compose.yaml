@@ -1,0 +1,211 @@
+# Overview of Docker Compose
+# https://docs.docker.com/compose/
+
+# Compose is a tool for defining and running multi-container Docker
+# applications. With Compose, you use a YAML file to configure your
+# application’s services. Then, with a single command, you create and start all
+# the services from your configuration. To learn more about all the features of
+# Compose, see the [list of features](https://docs.docker.com/compose/#features).
+
+# Using Compose is basically a three-step process:
+# 1. Define your app’s environment with a `Dockerfile` so it can be reproduced
+#    anywhere.
+# 2. Define the services that make up your app in `docker-compose.yml` so they
+#    can be run together in an isolated environment.
+# 3. Run `docker compose up` and the Docker compose command starts and runs your
+#    entire app. You can alternatively run `docker-compose up` using the
+#    docker-compose binary.
+
+# Compose specification:
+# https://docs.docker.com/compose/compose-file/
+# Compose file version 3 reference:
+# https://docs.docker.com/compose/compose-file/compose-file-v3/
+
+# The Compose application model
+
+# The Compose specification allows one to define a platform-agnostic container
+# based application. Such an application is designed as a set of containers
+# which have to both run together with adequate shared resources and
+# communication channels.
+
+# Computing components of an application are defined as Services. A Service is
+# an abstract concept implemented on platforms by running the same container
+# image (and configuration) one or more times.
+
+# Services communicate with each other through Networks. In this specification,
+# a Network is a platform capability abstraction to establish an IP route
+# between containers within services connected together. Low-level,
+# platform-specific networking options are grouped into the Network definition
+# and MAY be partially implemented on some platforms.
+
+# Services store and share persistent data into Volumes. The specification
+# describes such a persistent data as a high-level filesystem mount with global
+# options. Actual platform-specific implementation details are grouped into the
+# Volumes definition and MAY be partially implemented on some platforms.
+
+# Some services require configuration data that is dependent on the runtime or
+# platform. For this, the specification defines a dedicated concept: Configs.
+# From a Service container point of view, Configs are comparable to Volumes, in
+# that they are files mounted into the container. But the actual definition
+# involves distinct platform resources and services, which are abstracted by
+# this type.
+
+# A Secret is a specific flavor of configuration data for sensitive data that
+# SHOULD NOT be exposed without security considerations. Secrets are made
+# available to services as files mounted into their containers, but the
+# platform-specific resources to provide sensitive data are specific enough to
+# deserve a distinct concept and definition within the Compose specification.
+
+# Distinction within Volumes, Configs and Secret allows implementations to offer
+# a comparable abstraction at service level, but cover the specific
+# configuration of adequate platform resources for well identified data usages.
+
+# A Project is an individual deployment of an application specification on a
+# platform. A project’s name is used to group resources together and isolate
+# them from other applications or other installation of the same Compose
+# specified application with distinct parameters. A Compose implementation
+# creating resources on a platform MUST prefix resource names by project and set
+# the label com.docker.compose.project.
+
+# Project name can be set explicitly by top-level name attribute. Compose
+# implementation MUST offer a way for user to set a custom project name and
+# override this name, so that the same compose.yaml file can be deployed twice
+# on the same infrastructure, without changes, by just passing a distinct name.
+
+# While all of volumes, configs and secrets are exposed to service containers as
+# mounted files or directories, only a volume can be configured for read+write
+# access. Secrets and configs are read-only.
+
+# DEPRECATED
+# version: "3.9"
+
+# A service definition contains configuration that is applied to each container
+# started for that service, much like passing command-line parameters to docker
+# run. Likewise, network and volume definitions are analogous to docker network
+# create and docker volume create.
+services:
+
+  cardano-node-0:
+    # Specifies a custom container name, rather than a generated default name.
+    # Compose implementation MUST NOT scale a service beyond one container if
+    # the Compose file specifies a container_name.
+    container_name: cardano-node-0
+    # pull_policy defines the decisions Compose implementations will make when
+    # it starts to pull images.
+    # build: Compose implementations SHOULD build the image. Compose
+    # implementations SHOULD rebuild the image if already present.
+    # If pull_policy and build both presents, Compose implementations SHOULD
+    # build the image by default. Compose implementations MAY override this
+    # behavior in the toolchain.
+    pull_policy: build
+    # Compose file build reference
+    # https://docs.docker.com/compose/compose-file/build/
+    build:
+      context: ./
+      dockerfile: Dockerfile
+      args:
+        NODE_ID: "0"
+    # image specifies the image to start the container from. Image MUST follow
+    # the Open Container Specification addressable image format, as
+    # [<registry>/][<project>/]<image>[:<tag>|@<digest>].
+    # If the image does not exist on the platform, Compose implementations MUST
+    # attempt to pull it based on the pull_policy. Compose implementations with
+    # build support MAY offer alternative options for the end user to control
+    # precedence of pull over building the image from source, however pulling
+    # the image MUST be the default behavior.
+    # image MAY be omitted from a Compose file as long as a build section is
+    # declared. Compose implementations without build support MUST fail when
+    # image is missing from the Compose file.
+#    image: cardano-node-image
+    # entrypoint overrides the default entrypoint for the Docker image (i.e.
+    # ENTRYPOINT set by Dockerfile). Compose implementations MUST clear out any
+    # default command on the Docker image - both ENTRYPOINT and CMD instruction
+    # in the Dockerfile - when entrypoint is configured by a Compose file. If
+    # command is also set, it is used as parameter to entrypoint as a
+    # replacement for Docker image’s CMD.
+    # The entrypoint can also be a list, in a manner similar to Dockerfile.
+#    entrypoint:
+    # env_file adds environment variables to the container based on file
+    # content.
+    # env_file can also be a list. The files in the list MUST be processed from
+    # the top down. For the same variable specified in two env files, the value
+    # from the last file in the list MUST stand.
+    # Relative path MUST be resolved from the Compose file’s parent folder. As
+    # absolute paths prevent the Compose file from being portable, Compose
+    # implementations SHOULD warn users when such a path is used to set env_file.
+    # Environment variables declared in the environment section MUST override
+    # these values – this holds true even if those values are empty or
+    # undefined.
+#    env_file:
+    # environment defines environment variables set in the container.
+    # environment can use either an array or a map. Any boolean values; true,
+    # false, yes, no, SHOULD be enclosed in quotes to ensure they are not
+    # converted to True or False by the YAML parser.
+#    environment:
+    # Exposes container ports. Port mapping MUST NOT be used with network_mode:
+    # host and doing so MUST result in a runtime error.
+    ports:
+      - "30000"
+    networks:
+      - cardano-node-network
+#    configs:
+#      - cardano-node-config
+#    secrets:
+#      - cardano-node-keys
+  cardano-node-1:
+    container_name: cardano-node-1
+    pull_policy: build
+    build:
+      context: ./
+      dockerfile: Dockerfile
+      args:
+        NODE_ID: "1"
+    ports:
+      - "30001"
+    networks:
+      - cardano-node-network
+#    configs:
+#      - cardano-node-config
+#    secrets:
+#      - cardano-node-keys
+  cardano-node-2:
+    container_name: cardano-node-2
+    pull_policy: build
+    build:
+      context: ./
+      dockerfile: Dockerfile
+      args:
+        NODE_ID: "2"
+    ports:
+      - "30002"
+    networks:
+      - cardano-node-network
+#    configs:
+#      - cardano-node-config
+#    secrets:
+#      - cardano-node-keys
+
+#volumes:
+
+#configs:
+
+#secrets:
+
+networks:
+  cardano-node-network: {}
+
+# - Command `docker`:
+#   - Build the image:
+#     - sudo docker build -t cardano-node .
+#   - Run the image:
+#     - sudo docker run cardano-node
+#       - standard_init_linux.go:228: exec user process caused: no such file or directory
+#   - List images:
+#     - sudo docker image ls
+#   - Run an interactive shell container using that image:
+#     - Without an ENTRYPOINT: docker run -it cardano-node bash
+#     - With an ENTRYPOINT: sudo docker run -it --entrypoint bash cardano-node
+
+# docker-compose:
+# sudo docker-compose up --build
+# sudo docker-compose rm -f
