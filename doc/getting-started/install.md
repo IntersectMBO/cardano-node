@@ -74,6 +74,19 @@ and it should return a path of this shape: `/home/<user>/.ghcup/bin/cabal`.
 
 #### Installing Libsodium
 
+Cardano uses a custom fork of `libsodium` which exposes some internal functions
+and adds some other new functions. This fork lives in
+[https://github.com/input-output-hk/libsodium](https://github.com/input-output-hk/libsodium).
+Users can choose to either install that custom version of `libsodium` or
+otherwise tell `cabal` to use a ported version included in Cardano crypto
+libraries.
+
+The C code is merely a port of the bits missing in a normal `libsodium`
+installation, so it should be as performant as installing the custom `libsodium`
+fork.
+
+##### Installing the custom libsodium
+
 Create a working directory for your builds:
 
 ```bash
@@ -98,6 +111,25 @@ Add the following to your `~/.bashrc` file and source it (or re-open the termina
 ```bash
 export LD_LIBRARY_PATH="/usr/local/lib:$LD_LIBRARY_PATH"
 export PKG_CONFIG_PATH="/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH"
+```
+
+##### Using the ported `c` code
+
+In order to avoid having to install the custom version, `cardano-crypto-praos`
+defines a `cabal` flag that makes use of C code located
+[here](https://github.com/input-output-hk/cardano-base/tree/master/cardano-crypto-praos/cbits).
+To enable this code, one has to add the following code in the
+`cabal.project.local` file:
+
+```bash
+package cardano-crypto-praos
+  flags: -external-libsodium-vrf
+```
+
+For this to work, `libsodium` has to be in the system. For Ubuntu, this is achieved by:
+
+```bash
+sudo apt install libsodium-dev
 ```
 
 #### Installing Secp256k1
@@ -153,17 +185,10 @@ git checkout tags/<TAGGED VERSION>
 
 #### Configuring the build options
 
-We explicitly use the GHC version that we installed earlier.  This avoids defaulting to a system version of GHC that might be older than the one you have installed.
+We explicitly use the GHC version that we installed earlier.  This avoids defaulting to a system version of GHC that might be different than the one you have installed.
 
 ```bash
-cabal configure --with-compiler=ghc-8.10.7
-```
-
-Note, that for a development build you can avoid installing the custom `libsodium` library and add the following lines to the local project file:
-
-```bash
-echo "package cardano-crypto-praos" >>  cabal.project.local
-echo "  flags: -external-libsodium-vrf" >>  cabal.project.local
+echo "with-compiler: ghc-8.10.7" >> cabal.project.local
 ```
 
 #### Building and installing the node
