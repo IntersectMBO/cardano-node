@@ -35,7 +35,7 @@ import           Data.Function (($), (.), flip, id)
 import           Data.Functor ((<$>), (<&>))
 import           Data.Int (Int)
 import           Data.List ((\\))
-import           Data.Maybe (Maybe(Just), fromJust)
+import           Data.Maybe (Maybe(..), fromJust)
 import           Data.Ord (Ord((<=)))
 import           Data.Semigroup (Semigroup((<>)))
 import           Data.String (IsString(fromString), String)
@@ -845,6 +845,7 @@ testnet testnetOptions H.Conf {..} = do
 
   return TestnetRuntime
     { configurationFile
+    , shelleyGenesisFile = tempAbsPath </> "shelley/genesis.json"
     , testnetMagic
     , bftNodes = L.zipWith6 TestnetNode
         bftNodeNames

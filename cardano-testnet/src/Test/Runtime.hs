@@ -28,6 +28,7 @@ import qualified System.Process as IO
 
 data TestnetRuntime = TestnetRuntime
   { configurationFile :: FilePath
+  , shelleyGenesisFile :: FilePath
   , testnetMagic :: Int
   , bftNodes :: [TestnetNode]
   , poolNodes :: [PoolNode]
