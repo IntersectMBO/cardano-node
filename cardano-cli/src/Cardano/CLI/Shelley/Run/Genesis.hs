@@ -80,6 +80,7 @@ import           Cardano.CLI.Shelley.Commands
 import           Cardano.CLI.Shelley.Key
 import           Cardano.CLI.Shelley.Orphans ()
 import           Cardano.CLI.Shelley.Run.Address
+import qualified Cardano.CLI.Shelley.Run.Genesis.Types as OT
 import           Cardano.CLI.Shelley.Run.Node (ShelleyNodeCmdError (..), renderShelleyNodeCmdError,
                    runNodeIssueOpCert, runNodeKeyGenCold, runNodeKeyGenKES, runNodeKeyGenVRF)
 import           Cardano.CLI.Shelley.Run.Pool (ShelleyPoolCmdError (..), renderShelleyPoolCmdError)
@@ -109,7 +110,6 @@ import           Cardano.CLI.Shelley.Run.Genesis.ListMap (ListMap(..))
 import           Cardano.CLI.Shelley.Run.Genesis.LazyToJson (LazyToJson(lazyToJson))
 import           Cardano.CLI.Shelley.Run.Genesis.Types (toOutputTemplate)
 
-import qualified Cardano.CLI.Shelley.Run.Genesis.Types as OT
 import qualified HaskellWorks.Control.Monad.Lazy as Lazy
 
 {- HLINT ignore "Reduce duplication" -}
