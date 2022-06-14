@@ -147,6 +147,7 @@ data ProtocolParameters =
        --
        -- This is the \"d\" parameter from the design document.
        --
+       -- /Deprecated in Babbage/
        protocolParamDecentralization :: Maybe Rational,
 
        -- | Extra entropy for the Praos per-epoch nonce.
@@ -295,7 +296,7 @@ instance FromJSON ProtocolParameters where
       v <- o .: "protocolVersion"
       ProtocolParameters
         <$> ((,) <$> v .: "major" <*> v .: "minor")
-        <*> o .: "decentralization"
+        <*> o .:? "decentralization"
         <*> o .: "extraPraosEntropy"
         <*> o .: "maxBlockHeaderSize"
         <*> o .: "maxBlockBodySize"
@@ -1358,7 +1359,13 @@ toShelleyPParams ProtocolParameters {
                              = let (maj, minor) = protocolParamProtocolVersion
                                 in Ledger.ProtVer maj minor
      , Shelley._d            = case protocolParamDecentralization of
-                                 Nothing -> error "toAlonzoPParams: Decentralization value required in Shelley era"
+                                 -- The decentralization parameter is deprecated in Babbage
+                                 -- so we default to 0 if no dentralization parameter is found
+                                 -- in the api's 'ProtocolParameter' type. If we don't do this
+                                 -- we won't be able to construct an Alonzo tx using the Babbage
+                                 -- era's protocol parameter because our only other option is to
+                                 -- error.
+                                 Nothing -> minBound
                                  Just pDecentral ->
                                    fromMaybe
                                      (error "toAlonzoPParams: invalid Decentralization value")
@@ -1420,7 +1427,13 @@ toAlonzoPParams ProtocolParameters {
                            = let (maj, minor) = protocolParamProtocolVersion
                               in Ledger.ProtVer maj minor
     , Alonzo._d            = case protocolParamDecentralization of
-                                 Nothing -> error "toAlonzoPParams: Decentralization value required in Alonzo era"
+                                 -- The decentralization parameter is deprecated in Babbage
+                                 -- so we default to 0 if no dentralization parameter is found
+                                 -- in the api's 'ProtocolParameter' type. If we don't do this
+                                 -- we won't be able to construct an Alonzo tx using the Babbage
+                                 -- era's protocol parameter because our only other option is to
+                                 -- error.
+                                 Nothing -> minBound
                                  Just pDecentral ->
                                    fromMaybe
                                      (error "toAlonzoPParams: invalid Decentralization value")
@@ -1557,6 +1570,7 @@ toBabbagePParams ProtocolParameters { protocolParamCollateralPercent = Nothing }
   error "toBabbagePParams: must specify protocolParamCollateralPercent"
 toBabbagePParams ProtocolParameters { protocolParamMaxCollateralInputs = Nothing } =
   error "toBabbagePParams: must specify protocolParamMaxCollateralInputs"
+
 -- ----------------------------------------------------------------------------
 -- Conversion functions: protocol parameters from ledger types
 --
