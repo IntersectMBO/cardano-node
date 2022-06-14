@@ -26,6 +26,7 @@ import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.KeyMap as Aeson
 import qualified Data.Binary.Get as Bin
 import qualified Data.ByteString.Char8 as BS
+import qualified Data.ByteString.Builder as B
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import           Data.Coerce (coerce)
 import qualified Data.List as List
@@ -108,7 +109,6 @@ import           Cardano.CLI.Shelley.Run.Genesis.LazyToJson (LazyToJson(lazyToJs
 import           Cardano.CLI.Shelley.Run.Genesis.Types (toOutputTemplate)
 
 import qualified Cardano.CLI.Shelley.Run.Genesis.Types as OT
-import qualified Data.ByteString.Builder as B
 import qualified HaskellWorks.Control.Monad.Lazy as Lazy
 
 {- HLINT ignore "Reduce duplication" -}
