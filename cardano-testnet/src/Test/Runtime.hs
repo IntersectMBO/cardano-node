@@ -1,9 +1,12 @@
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 
 module Test.Runtime
-  ( NodeLoggingFormat(..)
+  ( LeadershipSlot(..)
+  , NodeLoggingFormat(..)
   , PaymentKeyPair(..)
   , StakingKeyPair(..)
   , TestnetRuntime(..)
@@ -17,6 +20,7 @@ module Test.Runtime
   , readNodeLoggingFormat
   ) where
 
+import           Data.Aeson (FromJSON)
 import           Data.Either (Either (..))
 import           Data.Eq (Eq)
 import           Data.Function (($), (.))
@@ -24,6 +28,8 @@ import           Data.Functor (fmap)
 import           Data.Int (Int)
 import           Data.Semigroup (Semigroup ((<>)))
 import           Data.String (String)
+import           Data.Text (Text)
+import           GHC.Generics (Generic)
 import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket (..))
 import           System.IO (FilePath)
 import           Text.Show (Show (..))
@@ -35,6 +41,7 @@ data NodeLoggingFormat = NodeLoggingFormatAsJson | NodeLoggingFormatAsText deriv
 
 data TestnetRuntime = TestnetRuntime
   { configurationFile :: FilePath
+  , shelleyGenesisFile :: FilePath
   , testnetMagic :: Int
   , bftNodes :: [TestnetNode]
   , poolNodes :: [PoolNode]
@@ -84,6 +91,11 @@ data Delegator = Delegator
   { paymentKeyPair :: PaymentKeyPair
   , stakingKeyPair :: StakingKeyPair
   } deriving (Eq, Show)
+
+data LeadershipSlot = LeadershipSlot
+  { slotNumber  :: Int
+  , slotTime    :: Text
+  } deriving (Eq, Show, Generic, FromJSON)
 
 poolNodeToTestnetNode :: PoolNode -> TestnetNode
 poolNodeToTestnetNode PoolNode
