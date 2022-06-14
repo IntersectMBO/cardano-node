@@ -33,8 +33,8 @@ import           Data.Eq (Eq)
 import           Data.Function (($), (.), flip, id)
 import           Data.Functor ((<$>), (<&>))
 import           Data.Int (Int)
-import           Data.List (length, replicate, unzip5, zip, zipWith6, (\\))
-import           Data.Maybe (Maybe(Just), fromJust)
+import           Data.List (length, replicate, unzip5, zip, (\\))
+import           Data.Maybe (Maybe(..), fromJust)
 import           Data.Ord (Ord((<=)))
 import           Data.Semigroup (Semigroup((<>)))
 import           Data.String (IsString(fromString), String)
@@ -126,6 +126,7 @@ defaultTestnetNodeOptions = TestnetNodeOptions
 
 data TestnetRuntime = TestnetRuntime
   { configurationFile :: FilePath
+  , shelleyGenesisFile :: FilePath
   , testnetMagic :: Int
   , bftNodes :: [TestnetNode]
   , poolNodes :: [TestnetNode]
@@ -145,6 +146,8 @@ data TestnetNode = TestnetNode
   , nodeStdout :: FilePath
   , nodeStderr :: FilePath
   , nodeProcessHandle :: IO.ProcessHandle
+  , nodeVrfVkey :: Maybe String
+  , nodeVrfSkey :: Maybe String
   }
 
 data Wallet = Wallet
@@ -492,7 +495,7 @@ testnet testnetOptions H.Conf {..} = do
 
   -- Make the pool operator cold keys
   -- This was done already for the BFT nodes as part of the genesis creation
-  forM_ poolNodeNames $ \node -> do
+  (poolVrfVkeys, poolVrfSkeys) <- fmap L.unzip $ forM poolNodeNames $ \node -> do
     void $ H.execCli
       [ "node", "key-gen"
       , "--cold-verification-key-file", tempAbsPath </> node </> "shelley/operator.vkey"
@@ -500,11 +503,16 @@ testnet testnetOptions H.Conf {..} = do
       , "--operational-certificate-issue-counter-file", tempAbsPath </> node </> "shelley/operator.counter"
       ]
 
+    let nodeVrfVkey = tempAbsPath </> node </> "shelley/vrf.vkey"
+    let nodeVrfSkey = tempAbsPath </> node </> "shelley/vrf.skey"
+
     void $ H.execCli
       [ "node", "key-gen-VRF"
-      , "--verification-key-file", tempAbsPath </> node </> "shelley/vrf.vkey"
-      , "--signing-key-file", tempAbsPath </> node </> "shelley/vrf.skey"
+      , "--verification-key-file", nodeVrfVkey
+      , "--signing-key-file", nodeVrfSkey
       ]
+    
+    return (nodeVrfVkey, nodeVrfSkey)
 
   -- Symlink the BFT operator keys from the genesis delegates, for uniformity
   forM_ bftNodesN $ \n -> do
@@ -841,20 +849,41 @@ testnet testnetOptions H.Conf {..} = do
 
   return TestnetRuntime
     { configurationFile
+    , shelleyGenesisFile = tempAbsPath </> "shelley/genesis.json"
     , testnetMagic
-    , bftNodes = zipWith6 TestnetNode
+    , bftNodes = zipWith8 TestnetNode
         bftNodeNames
         bftSprockets'
         bftStdins
         bftStdouts
         bftStderrs
         bftProcessHandles
-    , poolNodes = zipWith6 TestnetNode
+        (L.repeat Nothing)
+        (L.repeat Nothing)
+    , poolNodes = zipWith8 TestnetNode
         poolNodeNames
         poolSprockets
         poolStdins
         poolStdouts
         poolStderrs
         poolProcessHandles
+        (Just <$> poolVrfVkeys)
+        (Just <$> poolVrfSkeys)
     , wallets
     }
+
+zipWith8 :: ()
+  => (a -> b -> c -> d -> e -> f -> g -> h -> z)
+  -> [a]
+  -> [b]
+  -> [c]
+  -> [d]
+  -> [e]
+  -> [f]
+  -> [g]
+  -> [h]
+  -> [z]
+zipWith8 fun (a:as) (b:bs) (c:cs) (d:ds) (e:es) (f:fs) (g:gs) (h:hs) =
+  fun a b c d e f g h:zipWith8 fun as bs cs ds es fs gs hs
+zipWith8 fun _ _ _ _ _ _ _ _ =
+  []
