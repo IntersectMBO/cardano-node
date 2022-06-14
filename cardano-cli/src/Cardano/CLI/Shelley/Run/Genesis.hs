@@ -23,6 +23,7 @@ import           Prelude (id, unlines, zip3, error)
 
 import           Data.Aeson hiding (Key)
 import qualified Data.Aeson as Aeson
+import           Data.Aeson.Encode.Pretty (encodePretty)
 import qualified Data.Aeson.KeyMap as Aeson
 import qualified Data.Binary.Get as Bin
 import qualified Data.ByteString.Char8 as BS
@@ -573,7 +574,7 @@ runGenesisCreateCardano (GenesisDir rootdir)
           hashShelleyGenesis genesis = Crypto.hashToTextAsHex gh
             where
               content :: ByteString
-              content = LBS.toStrict $ encode genesis
+              content = LBS.toStrict $ encodePretty genesis
               gh :: Crypto.Hash Crypto.Blake2b_256 ByteString
               gh = Crypto.hashWith id content
           hashByronGenesis :: Genesis.GenesisData -> Text
@@ -840,7 +841,7 @@ createPoolCredentials dir index = do
         opCertCtr
         (KESPeriod 0)
         (OutputFile $ dir </> "opcert" ++ strIndex ++ ".cert")
-  void . firstExceptT ShelleyGenesisCmdStakeAddressCmdError $
+  firstExceptT ShelleyGenesisCmdStakeAddressCmdError $
     runStakeAddressKeyGenToFile
         (VerificationKeyFile $ dir </> "staking-reward" ++ strIndex ++ ".vkey")
         (SigningKeyFile $ dir </> "staking-reward" ++ strIndex ++ ".skey")

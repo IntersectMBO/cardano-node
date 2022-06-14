@@ -37,7 +37,7 @@ renderShelleyStakeAddressCmdError err =
     ShelleyStakeAddressCmdReadScriptFileError fileErr -> Text.pack (displayError fileErr)
 
 runStakeAddressCmd :: StakeAddressCmd -> ExceptT ShelleyStakeAddressCmdError IO ()
-runStakeAddressCmd (StakeAddressKeyGen vk sk) = void $ runStakeAddressKeyGenToFile vk sk
+runStakeAddressCmd (StakeAddressKeyGen vk sk) = runStakeAddressKeyGenToFile vk sk
 runStakeAddressCmd (StakeAddressKeyHash vk mOutputFp) = runStakeAddressKeyHash vk mOutputFp
 runStakeAddressCmd (StakeAddressBuild stakeVerifier nw mOutputFp) =
   runStakeAddressBuild stakeVerifier nw mOutputFp
@@ -56,7 +56,7 @@ runStakeAddressCmd (StakeCredentialDeRegistrationCert stakeVerifier outputFp) =
 runStakeAddressKeyGenToFile ::
      VerificationKeyFile
   -> SigningKeyFile
-  -> ExceptT ShelleyStakeAddressCmdError IO (SigningKey StakeKey, VerificationKey StakeKey)
+  -> ExceptT ShelleyStakeAddressCmdError IO ()
 runStakeAddressKeyGenToFile (VerificationKeyFile vkFp) (SigningKeyFile skFp) = do
   let skeyDesc = "Stake Signing Key"
   let vkeyDesc = "Stake Verification Key"
@@ -68,8 +68,6 @@ runStakeAddressKeyGenToFile (VerificationKeyFile vkFp) (SigningKeyFile skFp) = d
   firstExceptT ShelleyStakeAddressCmdWriteFileError $ do
     newExceptT $ writeFileTextEnvelope skFp (Just skeyDesc) skey
     newExceptT $ writeFileTextEnvelope vkFp (Just vkeyDesc) vkey
-
-  return (skey, vkey)
 
 runStakeAddressKeyHash
   :: VerificationKeyOrFile StakeKey
