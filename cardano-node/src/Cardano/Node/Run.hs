@@ -37,8 +37,6 @@ import           Network.Socket (Socket)
 import           System.Directory (canonicalizePath, createDirectoryIfMissing, makeAbsolute)
 import           System.Environment (lookupEnv)
 
-import System.IO.Unsafe
-
 #ifdef UNIX
 import           GHC.Weak (deRefWeak)
 import           System.Posix.Files
@@ -91,6 +89,7 @@ import           Ouroboros.Network.Subscription (DnsSubscriptionTarget (..),
 import           Cardano.Api
 import qualified Cardano.Api.Protocol.Types as Protocol
 
+import           Cardano.Node.Configuration.LedgerDB
 import           Cardano.Node.Configuration.Socket (SocketOrSocketInfo (..),
                    gatherConfiguredSockets, getSocketOrSocketInfoAddr)
 import qualified Cardano.Node.Configuration.Topology as TopologyNonP2P
@@ -104,8 +103,8 @@ import           Cardano.Node.TraceConstraints (TraceConstraints)
 import           Cardano.Tracing.Peer
 import           Cardano.Tracing.Tracers
 
-import Ouroboros.Consensus.Storage.LedgerDB.HD.LMDB
-import Ouroboros.Consensus.Storage.LedgerDB.OnDisk
+import           Ouroboros.Consensus.Storage.LedgerDB.HD.LMDB
+import           Ouroboros.Consensus.Storage.LedgerDB.OnDisk
 
 {- HLINT ignore "Use fewer imports" -}
 
@@ -391,11 +390,9 @@ handleSimpleNode runP p2pMode tracers nc onKernel = do
                 (Node.getChainDB nodeKernel)
               onKernel nodeKernel
           , rnEnableP2P      = p2pMode
-          , rnBackingStoreSelector = case unsafePerformIO (lookupEnv "BACKEND") of -- FIXME: should be a config flag
-                   Just "LMDB" -> LMDBBackingStore defaultLMDBLimits
-                   Just "MEM"  -> InMemoryBackingStore
-                   Just o      -> error $ "BACKEND is malformed: " <> o
-                   Nothing     -> error "Backend not set"
+          , rnBackingStoreSelector = case ncLedgerDBBackend nc of
+                   LMDB newLimit -> LMDBBackingStore $ maybe id (\y x -> x { mapSize = y }) newLimit defaultLMDBLimits
+                   InMemory      -> InMemoryBackingStore
           }
     in case p2pMode of
       EnabledP2PMode -> do
