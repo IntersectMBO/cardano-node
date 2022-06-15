@@ -19,7 +19,6 @@ module Cardano.CLI.Shelley.Run.Genesis.Types
   ) where
 
 import Cardano.CLI.Shelley.Run.Genesis.ListMap (ListMap(..))
-import Cardano.CLI.Shelley.Run.Genesis.LazyToJson (LazyToJson(..))
 import Cardano.Ledger.Address (Addr)
 import Cardano.Ledger.BaseTypes (PositiveUnitInterval, Network)
 import Cardano.Ledger.Coin (Coin)
@@ -31,7 +30,6 @@ import Data.Aeson (ToJSON(..), (.=))
 import Data.Eq (Eq)
 import Data.Function (($))
 import Data.Monoid (Monoid(..), mconcat)
-import Data.Semigroup ((<>))
 import Data.Time (NominalDiffTime, UTCTime(..))
 import Data.Word (Word32, Word64)
 import GHC.Generics (Generic)
@@ -63,42 +61,6 @@ data OutputShelleyGenesis era = OutputShelleyGenesis
   }
   deriving stock (Eq, Show, Generic)
 
-instance Era era => ToJSON (OutputShelleyGenesis era) where
-  toJSON sg = Aeson.object
-    [ "systemStart" .= sgSystemStart sg
-    , "networkMagic" .= sgNetworkMagic sg
-    , "networkId" .= sgNetworkId sg
-    , "activeSlotsCoeff" .= sgActiveSlotsCoeff sg
-    , "securityParam" .= sgSecurityParam sg
-    , "epochLength" .= sgEpochLength sg
-    , "slotsPerKESPeriod" .= sgSlotsPerKESPeriod sg
-    , "maxKESEvolutions" .= sgMaxKESEvolutions sg
-    , "slotLength" .= sgSlotLength sg
-    , "updateQuorum" .= sgUpdateQuorum sg
-    , "maxLovelaceSupply" .= sgMaxLovelaceSupply sg
-    , "protocolParams" .= sgProtocolParams sg
-    , "genDelegs" .= sgGenDelegs sg
-    , "initialFunds" .= sgInitialFunds sg
-    , "staking" .= sgStaking sg
-    ]
-  toEncoding sg = Aeson.pairs $ mconcat
-        [ "systemStart" .= sgSystemStart sg
-        , "networkMagic" .= sgNetworkMagic sg
-        , "networkId" .= sgNetworkId sg
-        , "activeSlotsCoeff" .= sgActiveSlotsCoeff sg
-        , "securityParam" .= sgSecurityParam sg
-        , "epochLength" .= sgEpochLength sg
-        , "slotsPerKESPeriod" .= sgSlotsPerKESPeriod sg
-        , "maxKESEvolutions" .= sgMaxKESEvolutions sg
-        , "slotLength" .= sgSlotLength sg
-        , "updateQuorum" .= sgUpdateQuorum sg
-        , "maxLovelaceSupply" .= sgMaxLovelaceSupply sg
-        , "protocolParams" .= sgProtocolParams sg
-        , "genDelegs" .= sgGenDelegs sg
-        , "staking" .= sgStaking sg
-        , "initialFunds" .= sgInitialFunds sg
-        ]
-
 toOutputTemplate :: Ledger.ShelleyGenesis era -> OutputShelleyGenesis era
 toOutputTemplate template = OutputShelleyGenesis
   { sgSystemStart = Ledger.sgSystemStart template
@@ -123,8 +85,8 @@ toOutputTemplate template = OutputShelleyGenesis
 
 instance
   ( Ledger.Crypto (Crypto era)
-  ) => LazyToJson (OutputShelleyGenesis era) where
-  lazyToJson sg =
+  ) => ToJSON (OutputShelleyGenesis era) where
+  toJSON sg =
     -- Forced evaluation of each field allows the parent object to no longer be
     -- referenced, which helps prevent retention of any fields that have already
     -- been serialised.
@@ -143,23 +105,56 @@ instance
         !genDelegs          = sgGenDelegs sg
         !initialFunds       = sgInitialFunds sg
         !staking            = sgStaking sg
-    in mempty
-        <> "{\"systemStart\": "       <> lazyToJson (toJSON systemStart)
-        <> ",\"networkMagic\": "      <> lazyToJson (toJSON networkMagic)
-        <> ",\"networkId\": "         <> lazyToJson (toJSON networkId)
-        <> ",\"activeSlotsCoeff\": "  <> lazyToJson (toJSON activeSlotsCoeff)
-        <> ",\"securityParam\": "     <> lazyToJson (toJSON securityParam)
-        <> ",\"epochLength\": "       <> lazyToJson (toJSON epochLength)
-        <> ",\"slotsPerKESPeriod\": " <> lazyToJson (toJSON slotsPerKESPeriod)
-        <> ",\"maxKESEvolutions\": "  <> lazyToJson (toJSON maxKESEvolutions)
-        <> ",\"slotLength\": "        <> lazyToJson (toJSON slotLength)
-        <> ",\"updateQuorum\": "      <> lazyToJson (toJSON updateQuorum)
-        <> ",\"maxLovelaceSupply\": " <> lazyToJson (toJSON maxLovelaceSupply)
-        <> ",\"protocolParams\": "    <> lazyToJson (toJSON protocolParams)
-        <> ",\"genDelegs\": "         <> lazyToJson genDelegs
-        <> ",\"initialFunds\": "      <> lazyToJson initialFunds
-        <> ",\"staking\": "           <> lazyToJson staking
-        <> "}"
+    in Aeson.object
+        [ "systemStart"       .= systemStart
+        , "networkMagic"      .= networkMagic
+        , "networkId"         .= networkId
+        , "activeSlotsCoeff"  .= activeSlotsCoeff
+        , "securityParam"     .= securityParam
+        , "epochLength"       .= epochLength
+        , "slotsPerKESPeriod" .= slotsPerKESPeriod
+        , "maxKESEvolutions"  .= maxKESEvolutions
+        , "slotLength"        .= slotLength
+        , "updateQuorum"      .= updateQuorum
+        , "maxLovelaceSupply" .= maxLovelaceSupply
+        , "protocolParams"    .= protocolParams
+        , "genDelegs"         .= genDelegs
+        , "initialFunds"      .= initialFunds
+        , "staking"           .= staking
+        ]
+  toEncoding sg =
+    let !systemStart        = sgSystemStart sg
+        !networkMagic       = sgNetworkMagic sg
+        !networkId          = sgNetworkId sg
+        !activeSlotsCoeff   = sgActiveSlotsCoeff sg
+        !securityParam      = sgSecurityParam sg
+        !epochLength        = sgEpochLength sg
+        !slotsPerKESPeriod  = sgSlotsPerKESPeriod sg
+        !maxKESEvolutions   = sgMaxKESEvolutions sg
+        !slotLength         = sgSlotLength sg
+        !updateQuorum       = sgUpdateQuorum sg
+        !maxLovelaceSupply  = sgMaxLovelaceSupply sg
+        !protocolParams     = sgProtocolParams sg
+        !genDelegs          = sgGenDelegs sg
+        !staking            = sgStaking sg
+        !initialFunds       = sgInitialFunds sg
+    in Aeson.pairs $ mconcat
+        [ "systemStart"       .= systemStart
+        , "networkMagic"      .= networkMagic
+        , "networkId"         .= networkId
+        , "activeSlotsCoeff"  .= activeSlotsCoeff
+        , "securityParam"     .= securityParam
+        , "epochLength"       .= epochLength
+        , "slotsPerKESPeriod" .= slotsPerKESPeriod
+        , "maxKESEvolutions"  .= maxKESEvolutions
+        , "slotLength"        .= slotLength
+        , "updateQuorum"      .= updateQuorum
+        , "maxLovelaceSupply" .= maxLovelaceSupply
+        , "protocolParams"    .= protocolParams
+        , "genDelegs"         .= genDelegs
+        , "staking"           .= staking
+        , "initialFunds"      .= initialFunds
+        ]
 
 data OutputShelleyGenesisStaking era = OutputShelleyGenesisStaking
   { osgsPools :: !(ListMap (KeyHash 'Ledger.StakePool (Crypto era)) (Ledger.PoolParams         (Crypto era)))
@@ -169,17 +164,18 @@ data OutputShelleyGenesisStaking era = OutputShelleyGenesisStaking
 
 instance
   ( Ledger.Crypto (Crypto era)
-  ) => LazyToJson (OutputShelleyGenesisStaking era) where
-  lazyToJson sg =
+  ) => ToJSON (OutputShelleyGenesisStaking era) where
+  toJSON sg =
     let !pools = osgsPools sg
         !stake = osgsStake sg
-    in mempty
-        <> "{\"pools\":" <> lazyToJson pools
-        <> ",\"stake\":" <> lazyToJson stake
-        <> "}"
-
-instance Era era => ToJSON (OutputShelleyGenesisStaking era) where
-  toJSON sg = Aeson.object
-    [ "pools" .= osgsPools sg
-    , "stake" .= osgsStake sg
-    ]
+    in Aeson.object
+        [ "pools" .= pools
+        , "stake" .= stake
+        ]
+  toEncoding sg =
+    let !pools       = osgsPools sg
+        !stake       = osgsStake sg
+    in Aeson.pairs $ mconcat
+        [ "pools" .= pools
+        , "stake" .= stake
+        ]

@@ -79,7 +79,6 @@ library
                         Cardano.CLI.Shelley.Run.Address
                         Cardano.CLI.Shelley.Run.Address.Info
                         Cardano.CLI.Shelley.Run.Genesis
-                        Cardano.CLI.Shelley.Run.Genesis.LazyToJson
                         Cardano.CLI.Shelley.Run.Genesis.ListMap
                         Cardano.CLI.Shelley.Run.Genesis.Types
                         Cardano.CLI.Shelley.Run.Governance

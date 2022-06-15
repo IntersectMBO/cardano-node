@@ -27,7 +27,6 @@ import           Data.Aeson.Encode.Pretty (encodePretty)
 import qualified Data.Aeson.KeyMap as Aeson
 import qualified Data.Binary.Get as Bin
 import qualified Data.ByteString.Char8 as BS
-import qualified Data.ByteString.Builder as B
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import           Data.Coerce (coerce)
 import qualified Data.List as List
@@ -107,7 +106,6 @@ import qualified Data.Yaml as Yaml
 import           Text.JSON.Canonical (parseCanonicalJSON, renderCanonicalJSON)
 
 import           Cardano.CLI.Shelley.Run.Genesis.ListMap (ListMap(..))
-import           Cardano.CLI.Shelley.Run.Genesis.LazyToJson (LazyToJson(lazyToJson))
 import           Cardano.CLI.Shelley.Run.Genesis.Types (toOutputTemplate)
 
 import qualified HaskellWorks.Control.Monad.Lazy as Lazy
@@ -722,8 +720,7 @@ runGenesisCreateStaked (GenesisDir rootdir)
 
   -- shelleyGenesis contains lazy loaded data, so using lazyToJson to serialise to avoid
   -- retaining large datastructures in memory.
-  liftIO $ LBS.writeFile (rootdir </> "genesis.json")
-    $ B.toLazyByteString $ lazyToJson shelleyGenesis
+  liftIO $ LBS.writeFile (rootdir </> "genesis.json") $ Aeson.encode shelleyGenesis
 
   writeFileGenesis (rootdir </> "genesis.alonzo.json") alonzoGenesis
   --TODO: rationalise the naming convention on these genesis json files.

@@ -5,22 +5,17 @@ module Cardano.CLI.Shelley.Run.Genesis.ListMap
   ( ListMap(..)
   ) where
 
-import Cardano.CLI.Shelley.Run.Genesis.LazyToJson (LazyToJson(..))
 import Data.Aeson (Value(..), ToJSON(..), ToJSON1(..), ToJSON2(..), ToJSONKey(..), ToJSONKeyFunction(..))
 import Data.Aeson.Encoding ( dict )
 import Data.Aeson.Types (listValue)
 import Data.Eq (Eq(..))
 import Data.Function ((.), id)
-import Data.Functor ((<$>))
-import Data.Monoid (Monoid(..))
-import Data.Semigroup (Semigroup(..))
 import Prelude (uncurry)
 import Text.Show (Show(..))
 
 import qualified Data.Aeson as J
 import qualified Data.Aeson.Encoding as E
 import qualified Data.Aeson.KeyMap as KM
-import qualified Data.ByteString.Builder as B
 import qualified Data.List as L
 import qualified Data.Vector as V
 
@@ -49,8 +44,3 @@ instance (ToJSON v, ToJSONKey k) => ToJSON (ListMap k v) where
 
 foldrWithKey :: ((k, a) -> b -> b) -> b -> ListMap k a -> b
 foldrWithKey f z = L.foldr f z . unListMap
-
-instance forall k v. (ToJSON k, ToJSON v) => LazyToJson (ListMap k v) where
-  lazyToJson (ListMap kvs) = "{" <> mconcat (L.intersperse "," (elementLazyToJson <$> kvs)) <> "}"
-    where elementLazyToJson :: (k, v) -> B.Builder
-          elementLazyToJson (k, v)= lazyToJson (toJSON k) <> ":" <> lazyToJson (toJSON v)
