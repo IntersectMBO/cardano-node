@@ -27,6 +27,7 @@ module Data.CDF
   , unliftCDFVal
   , centilesCDF
   , filterCDF
+  , subsetCDF
   , zeroCDF
   , projectCDF
   , projectCDF'
@@ -34,6 +35,7 @@ module Data.CDF
   , DirectCDF
   , cdf
   , mapToCDF
+  , cdfCentilesCDF
   , Divisible (..)
   , Combine (..)
   , stdCombine1
@@ -156,6 +158,9 @@ filterCDF :: ((Centile, p a) -> Bool) -> CDF p a -> CDF p a
 filterCDF f d =
   d { cdfSamples = cdfSamples d & filter f }
 
+subsetCDF :: [Centile] ->  CDF p b -> CDF p b
+subsetCDF = filterCDF . \cs c -> elem (fst c) cs
+
 indexCDF :: Int -> CDF p a -> p a
 indexCDF i d = snd $ cdfSamples d !! i
 
@@ -212,8 +217,12 @@ cdf centiles (sort -> sorted) =
          then (0,           0)
          else (vec Vec.! 0, Vec.last vec)
 
-mapToCDF :: Real a => (b -> a) -> [Centile] -> [b] -> DirectCDF a
+mapToCDF :: (Real a, KnownCDF p) => (b -> a) -> [Centile] -> [b] -> CDF p a
 mapToCDF f pspecs xs = cdf pspecs (f <$> xs)
+
+cdfCentilesCDF :: KnownCDF p => CDF p a -> CDF p Double
+cdfCentilesCDF c =
+  mapToCDF unCentile (centilesCDF c) (centilesCDF c)
 
 type CDF2 a = CDF (CDF I) a
 

@@ -101,12 +101,54 @@ renderTimeline run flt withCommentary xs =
    renderLine' lpfn wfn rfn = renderField lpfn wfn rfn <$> fields
    renderField lpfn wfn rfn f = T.replicate (lpfn f) " " <> T.center (wfn f) ' ' (rfn f)
 
+renderFields :: a p -> (forall v. Divisible v => CDF p v -> [v]) -> Field DSelect p a -> [Text]
+renderFields x cdfProj =
+  \Field{..} ->
+    T.pack <$> case fSelect of
+      DInt    (cdfProj . ($x) ->ds) ->               printf "%*d" fWidth          <$> ds
+      DWord64 (cdfProj . ($x) ->ds) ->               printf "%*d" fWidth          <$> ds
+      DFloat  (cdfProj . ($x) ->ds) -> take fWidth . printf "%*F" (fWidth - 2)    <$> ds
+      DDeltaT (cdfProj . ($x) ->ds) -> take fWidth . dropWhileEnd (== 's') . show <$> ds
+
+mapRenderCDF :: forall p a. (RenderCDFs a p, KnownCDF p) => (Field DSelect p a -> Bool) -> Maybe [Centile] -> a p -> [[Text]]
+mapRenderCDF select mCentis x =
+  fields <&> (renderFields x $ index)
+ where
+   -- Pick relevant fields:
+   fields :: [Field DSelect p a]
+   fields = centiField : filter select rdFields
+
+   -- Pick relevant centiles:
+   subset :: CDF p b -> CDF p b
+   subset = maybe id subsetCDF mCentis
+
+   -- Get relevant values
+   index :: Divisible c => CDF p c -> [c]
+   index = fmap (unliftCDFVal cdfIx . snd) . cdfSamples . subset
+
+   -- The leftmost index "CDF":  just list the centiles
+   centiField = Field 6 0 "centi" "" "centi" (DFloat $ const centiCDF)
+   centiCDF   = mapSomeFieldDirectCDF (cdfCentilesCDF . subset) x (fSelect $ head rdFields)
+
+renderCDFsAsText :: (RenderCDFs a p, KnownCDF p) => Anchor -> (Field DSelect p a -> Bool) -> a p -> [(Text, [Text])]
+renderCDFsAsText a select x =
+  filter select rdFields <&>
+  \Field{fId=cdfField} ->
+    (,) cdfField $
+    renderAnchor a :
+    (mapRenderCDF ((== cdfField) . fId) Nothing x
+     & fmap (T.intercalate " "))
+
 renderCDFs :: forall p a. (RenderCDFs a p, KnownCDF p) => Anchor -> RenderMode -> (Field DSelect p a -> Bool) -> Maybe [Centile] -> a p
   -> [Text]
 renderCDFs a mode flt mCentis x =
   case mode of
-    RenderPretty -> renderAnchor a : catMaybes [head1, head2] <> pLines <> sizeAvg
-    RenderCsv    -> headCsv : pLines
+    RenderPretty -> renderAnchor a
+                    :  catMaybes [head1, head2]
+                    <> pLines
+                    <> sizeAvg
+    RenderCsv    -> headCsv
+                    :  pLines
      where headCsv = T.intercalate "," $ fId <$> fields
 
  where
@@ -183,17 +225,7 @@ renderCDFs a mode flt mCentis x =
    percField :: Field DSelect p a
    percField = Field 6 0 "%tile" "" "%tile" (DFloat $ const percsDistrib)
    nCentis = length $ cdfSamples percsDistrib
-   percsDistrib = mapSomeFieldDirectCDF
-                    (distribCentisAsDistrib . subsetDistrib) x (fSelect $ head rdFields)
-   distribCentisAsDistrib :: CDF p b -> CDF p Double
-   distribCentisAsDistrib CDF{..} =
-     CDF
-       (length cdfSamples)
-       0.5
-       0.5
-       (head cdfSamples & unCentile . fst,
-        last cdfSamples & unCentile . fst)
-       $ (id &&& flip liftCDFVal cdfIx . unCentile) . fst <$> cdfSamples
+   percsDistrib = mapSomeFieldDirectCDF (cdfCentilesCDF . subsetDistrib) x (fSelect $ head rdFields)
 
    nsamplesField :: Field DSelect p a
    nsamplesField = Field 6 0 "Nsamp" "" "Nsamp" (DInt $ const nsamplesDistrib)
