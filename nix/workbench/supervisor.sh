@@ -197,7 +197,7 @@ EOF
         local usage="USAGE: wb supervisor $op RUN-DIR"
         local dir=${1:?$usage}; shift
 
-        supervisorctl stop all
+        supervisorctl stop all || true
 
         if test -f "${dir}/supervisor/supervisord.pid"
         then kill $(<${dir}/supervisor/supervisord.pid) $(<${dir}/supervisor/child.pids) 2>/dev/null

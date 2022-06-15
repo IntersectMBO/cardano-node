@@ -12,7 +12,7 @@ ifeq ($(7),true)
 $(1): ARGS += --arg 'profiled' true
 endif
 ifeq ($(5)$(6),truetrue)
-$(1): CMD := start-cluster
+$(1): CMD := start-cluster; return
 endif
 ifeq ($(5)$(6),truefalse)
 $(1): RUN := start-cluster
