@@ -123,12 +123,12 @@ getStartupInfo nc (SomeConsensusProtocol whichP pForInfo) fp = do
 
 namesStartupInfo :: StartupTrace blk -> [Text]
 namesStartupInfo = \case
-  StartupInfo {}                            -> ["StartupInfo"]
-  StartupP2PInfo {}                         -> ["StartupP2PInfo"]
-  StartupTime {}                            -> ["StartupTime"]
-  StartupNetworkMagic {}                    -> ["StartupNetworkMagic"]
-  StartupSocketConfigError {}               -> ["StartupSocketConfigError"]
-  StartupDBValidation {}                    -> ["StartupDBValidation"]
+  StartupInfo {}                            -> ["Info"]
+  StartupP2PInfo {}                         -> ["P2PInfo"]
+  StartupTime {}                            -> ["Time"]
+  StartupNetworkMagic {}                    -> ["NetworkMagic"]
+  StartupSocketConfigError {}               -> ["SocketConfigError"]
+  StartupDBValidation {}                    -> ["DBValidation"]
   NetworkConfigUpdate {}                    -> ["NetworkConfigUpdate"]
   NetworkConfigUpdateUnsupported            -> ["NetworkConfigUpdateUnsupported"]
   NetworkConfigUpdateError {}               -> ["NetworkConfigUpdateError"]
@@ -369,27 +369,27 @@ p2pWarningDevelopmentNetworkProtocolsMessage =
 docStartupInfo :: Documented (StartupTrace blk)
 docStartupInfo = Documented [
     DocMsg
-      ["StartupInfo"]
+      ["Info"]
       []
       ""
   , DocMsg
-      ["StartupP2PInfo"]
+      ["P2PInfo"]
       []
       ""
   , DocMsg
-      ["StartupTime"]
+      ["Time"]
       []
       ""
   , DocMsg
-      ["StartupNetworkMagic"]
+      ["NetworkMagic"]
       []
       ""
   , DocMsg
-      ["StartupSocketConfigError"]
+      ["SocketConfigError"]
       []
       ""
   , DocMsg
-      ["StartupDBValidation"]
+      ["DBValidation"]
       []
       ""
   , DocMsg

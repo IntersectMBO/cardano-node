@@ -3,54 +3,49 @@
 
 
 ## [Trace Messages](#trace-messages)
-1. __AcceptPolicy__
-	1. [ConnectionHardLimit](#acceptpolicyconnectionhardlimit)
-	1. [ConnectionLimitResume](#acceptpolicyconnectionlimitresume)
-	1. [ConnectionRateLimiting](#acceptpolicyconnectionratelimiting)
 1. __BlockFetch__
-	1. __NodeToNode__
-		1. __Recieve__
-			1. [BatchDone](#blockfetchnodetonoderecievebatchdone)
-			1. [Block](#blockfetchnodetonoderecieveblock)
-			1. [ClientDone](#blockfetchnodetonoderecieveclientdone)
-			1. [NoBlocks](#blockfetchnodetonoderecievenoblocks)
-			1. [RequestRange](#blockfetchnodetonoderecieverequestrange)
-			1. [StartBatch](#blockfetchnodetonoderecievestartbatch)
+	1. __ClientEvent__
+		1. [AcknowledgedFetchRequest](#blockfetchclienteventacknowledgedfetchrequest)
+		1. [AddedFetchRequest](#blockfetchclienteventaddedfetchrequest)
+		1. [ClientTerminating](#blockfetchclienteventclientterminating)
+		1. [CompletedBlockFetch](#blockfetchclienteventcompletedblockfetch)
+		1. [CompletedFetchBatch](#blockfetchclienteventcompletedfetchbatch)
+		1. [RejectedFetchBatch](#blockfetchclienteventrejectedfetchbatch)
+		1. [SendFetchRequest](#blockfetchclienteventsendfetchrequest)
+		1. [StartedFetchBatch](#blockfetchclienteventstartedfetchbatch)
+	1. [Decision](#blockfetchdecision)
+	1. __Remote__
+		1. __Receive__
+			1. [BatchDone](#blockfetchremotereceivebatchdone)
+			1. [Block](#blockfetchremotereceiveblock)
+			1. [ClientDone](#blockfetchremotereceiveclientdone)
+			1. [NoBlocks](#blockfetchremotereceivenoblocks)
+			1. [RequestRange](#blockfetchremotereceiverequestrange)
+			1. [StartBatch](#blockfetchremotereceivestartbatch)
 		1. __Send__
-			1. [BatchDone](#blockfetchnodetonodesendbatchdone)
-			1. [Block](#blockfetchnodetonodesendblock)
-			1. [ClientDone](#blockfetchnodetonodesendclientdone)
-			1. [NoBlocks](#blockfetchnodetonodesendnoblocks)
-			1. [RequestRange](#blockfetchnodetonodesendrequestrange)
-			1. [StartBatch](#blockfetchnodetonodesendstartbatch)
-1. __BlockFetchClient__
-	1. [AcknowledgedFetchRequest](#blockfetchclientacknowledgedfetchrequest)
-	1. [AddedFetchRequest](#blockfetchclientaddedfetchrequest)
-	1. [ClientTerminating](#blockfetchclientclientterminating)
-	1. [CompletedBlockFetch](#blockfetchclientcompletedblockfetch)
-	1. [CompletedFetchBatch](#blockfetchclientcompletedfetchbatch)
-	1. [RejectedFetchBatch](#blockfetchclientrejectedfetchbatch)
-	1. [SendFetchRequest](#blockfetchclientsendfetchrequest)
-	1. [StartedFetchBatch](#blockfetchclientstartedfetchbatch)
-1. [BlockFetchDecision](#blockfetchdecision)
-1. __BlockFetchSerialised__
-	1. __NodeToNode__
-		1. __Recieve__
-			1. [BatchDone](#blockfetchserialisednodetonoderecievebatchdone)
-			1. [Block](#blockfetchserialisednodetonoderecieveblock)
-			1. [ClientDone](#blockfetchserialisednodetonoderecieveclientdone)
-			1. [NoBlocks](#blockfetchserialisednodetonoderecievenoblocks)
-			1. [RequestRange](#blockfetchserialisednodetonoderecieverequestrange)
-			1. [StartBatch](#blockfetchserialisednodetonoderecievestartbatch)
-		1. __Send__
-			1. [BatchDone](#blockfetchserialisednodetonodesendbatchdone)
-			1. [Block](#blockfetchserialisednodetonodesendblock)
-			1. [ClientDone](#blockfetchserialisednodetonodesendclientdone)
-			1. [NoBlocks](#blockfetchserialisednodetonodesendnoblocks)
-			1. [RequestRange](#blockfetchserialisednodetonodesendrequestrange)
-			1. [StartBatch](#blockfetchserialisednodetonodesendstartbatch)
-1. __BlockFetchServer__
-	1. [SendBlock](#blockfetchserversendblock)
+			1. [BatchDone](#blockfetchremotesendbatchdone)
+			1. [Block](#blockfetchremotesendblock)
+			1. [ClientDone](#blockfetchremotesendclientdone)
+			1. [NoBlocks](#blockfetchremotesendnoblocks)
+			1. [RequestRange](#blockfetchremotesendrequestrange)
+			1. [StartBatch](#blockfetchremotesendstartbatch)
+		1. __Serialised__
+			1. __Receive__
+				1. [BatchDone](#blockfetchremoteserialisedreceivebatchdone)
+				1. [Block](#blockfetchremoteserialisedreceiveblock)
+				1. [ClientDone](#blockfetchremoteserialisedreceiveclientdone)
+				1. [NoBlocks](#blockfetchremoteserialisedreceivenoblocks)
+				1. [RequestRange](#blockfetchremoteserialisedreceiverequestrange)
+				1. [StartBatch](#blockfetchremoteserialisedreceivestartbatch)
+			1. __Send__
+				1. [BatchDone](#blockfetchremoteserialisedsendbatchdone)
+				1. [Block](#blockfetchremoteserialisedsendblock)
+				1. [ClientDone](#blockfetchremoteserialisedsendclientdone)
+				1. [NoBlocks](#blockfetchremoteserialisedsendnoblocks)
+				1. [RequestRange](#blockfetchremoteserialisedsendrequestrange)
+				1. [StartBatch](#blockfetchremoteserialisedsendstartbatch)
+	1. __ServerBlock__
+		1. [SendBlock](#blockfetchserverblocksendblock)
 1. __BlockchainTime__
 	1. [CurrentSlotUnknown](#blockchaintimecurrentslotunknown)
 	1. [StartTimeInTheFuture](#blockchaintimestarttimeinthefuture)
@@ -151,711 +146,652 @@
 		1. [StartedOpeningImmutableDB](#chaindbopeneventstartedopeningimmutabledb)
 		1. [StartedOpeningLgrDB](#chaindbopeneventstartedopeninglgrdb)
 		1. [StartedOpeningVolatileDB](#chaindbopeneventstartedopeningvolatiledb)
+	1. __ReplayBlock__
+		1. [LedgerReplay](#chaindbreplayblockledgerreplay)
 	1. __VolatileDBEvent__
 		1. [BlockAlreadyHere](#chaindbvolatiledbeventblockalreadyhere)
 		1. [DBAlreadyClosed](#chaindbvolatiledbeventdbalreadyclosed)
 		1. [InvalidFileNames](#chaindbvolatiledbeventinvalidfilenames)
 		1. [Truncate](#chaindbvolatiledbeventtruncate)
 1. __ChainSync__
-	1. __NodeToClient__
-		1. __Recieve__
-			1. [AwaitReply](#chainsyncnodetoclientrecieveawaitreply)
-			1. [Done](#chainsyncnodetoclientrecievedone)
-			1. [FindIntersect](#chainsyncnodetoclientrecievefindintersect)
-			1. [IntersectFound](#chainsyncnodetoclientrecieveintersectfound)
-			1. [IntersectNotFound](#chainsyncnodetoclientrecieveintersectnotfound)
-			1. [RequestNext](#chainsyncnodetoclientrecieverequestnext)
-			1. [RollBackward](#chainsyncnodetoclientrecieverollbackward)
-			1. [RollForward](#chainsyncnodetoclientrecieverollforward)
+	1. __ClientEvent__
+		1. [DownloadedHeader](#chainsyncclienteventdownloadedheader)
+		1. [Exception](#chainsyncclienteventexception)
+		1. [FoundIntersection](#chainsyncclienteventfoundintersection)
+		1. [RolledBack](#chainsyncclienteventrolledback)
+		1. [Termination](#chainsyncclienteventtermination)
+	1. __Local__
+		1. __Receive__
+			1. [AwaitReply](#chainsynclocalreceiveawaitreply)
+			1. [Done](#chainsynclocalreceivedone)
+			1. [FindIntersect](#chainsynclocalreceivefindintersect)
+			1. [IntersectFound](#chainsynclocalreceiveintersectfound)
+			1. [IntersectNotFound](#chainsynclocalreceiveintersectnotfound)
+			1. [RequestNext](#chainsynclocalreceiverequestnext)
+			1. [RollBackward](#chainsynclocalreceiverollbackward)
+			1. [RollForward](#chainsynclocalreceiverollforward)
 		1. __Send__
-			1. [AwaitReply](#chainsyncnodetoclientsendawaitreply)
-			1. [Done](#chainsyncnodetoclientsenddone)
-			1. [FindIntersect](#chainsyncnodetoclientsendfindintersect)
-			1. [IntersectFound](#chainsyncnodetoclientsendintersectfound)
-			1. [IntersectNotFound](#chainsyncnodetoclientsendintersectnotfound)
-			1. [RequestNext](#chainsyncnodetoclientsendrequestnext)
-			1. [RollBackward](#chainsyncnodetoclientsendrollbackward)
-			1. [RollForward](#chainsyncnodetoclientsendrollforward)
-1. __ChainSyncClient__
-	1. __ChainSyncClientEvent__
-		1. [DownloadedHeader](#chainsyncclientchainsyncclienteventdownloadedheader)
-		1. [Exception](#chainsyncclientchainsyncclienteventexception)
-		1. [FoundIntersection](#chainsyncclientchainsyncclienteventfoundintersection)
-		1. [RolledBack](#chainsyncclientchainsyncclienteventrolledback)
-		1. [Termination](#chainsyncclientchainsyncclienteventtermination)
-1. __ChainSyncNode__
-	1. __NodeToNode__
-		1. __Recieve__
-			1. [AwaitReply](#chainsyncnodenodetonoderecieveawaitreply)
-			1. [Done](#chainsyncnodenodetonoderecievedone)
-			1. [FindIntersect](#chainsyncnodenodetonoderecievefindintersect)
-			1. [IntersectFound](#chainsyncnodenodetonoderecieveintersectfound)
-			1. [IntersectNotFound](#chainsyncnodenodetonoderecieveintersectnotfound)
-			1. [RequestNext](#chainsyncnodenodetonoderecieverequestnext)
-			1. [RollBackward](#chainsyncnodenodetonoderecieverollbackward)
-			1. [RollForward](#chainsyncnodenodetonoderecieverollforward)
+			1. [AwaitReply](#chainsynclocalsendawaitreply)
+			1. [Done](#chainsynclocalsenddone)
+			1. [FindIntersect](#chainsynclocalsendfindintersect)
+			1. [IntersectFound](#chainsynclocalsendintersectfound)
+			1. [IntersectNotFound](#chainsynclocalsendintersectnotfound)
+			1. [RequestNext](#chainsynclocalsendrequestnext)
+			1. [RollBackward](#chainsynclocalsendrollbackward)
+			1. [RollForward](#chainsynclocalsendrollforward)
+	1. __Remote__
+		1. __Receive__
+			1. [AwaitReply](#chainsyncremotereceiveawaitreply)
+			1. [Done](#chainsyncremotereceivedone)
+			1. [FindIntersect](#chainsyncremotereceivefindintersect)
+			1. [IntersectFound](#chainsyncremotereceiveintersectfound)
+			1. [IntersectNotFound](#chainsyncremotereceiveintersectnotfound)
+			1. [RequestNext](#chainsyncremotereceiverequestnext)
+			1. [RollBackward](#chainsyncremotereceiverollbackward)
+			1. [RollForward](#chainsyncremotereceiverollforward)
 		1. __Send__
-			1. [AwaitReply](#chainsyncnodenodetonodesendawaitreply)
-			1. [Done](#chainsyncnodenodetonodesenddone)
-			1. [FindIntersect](#chainsyncnodenodetonodesendfindintersect)
-			1. [IntersectFound](#chainsyncnodenodetonodesendintersectfound)
-			1. [IntersectNotFound](#chainsyncnodenodetonodesendintersectnotfound)
-			1. [RequestNext](#chainsyncnodenodetonodesendrequestnext)
-			1. [RollBackward](#chainsyncnodenodetonodesendrollbackward)
-			1. [RollForward](#chainsyncnodenodetonodesendrollforward)
-1. __ChainSyncSerialised__
-	1. __NodeToNode__
-		1. __Recieve__
-			1. [AwaitReply](#chainsyncserialisednodetonoderecieveawaitreply)
-			1. [Done](#chainsyncserialisednodetonoderecievedone)
-			1. [FindIntersect](#chainsyncserialisednodetonoderecievefindintersect)
-			1. [IntersectFound](#chainsyncserialisednodetonoderecieveintersectfound)
-			1. [IntersectNotFound](#chainsyncserialisednodetonoderecieveintersectnotfound)
-			1. [RequestNext](#chainsyncserialisednodetonoderecieverequestnext)
-			1. [RollBackward](#chainsyncserialisednodetonoderecieverollbackward)
-			1. [RollForward](#chainsyncserialisednodetonoderecieverollforward)
-		1. __Send__
-			1. [AwaitReply](#chainsyncserialisednodetonodesendawaitreply)
-			1. [Done](#chainsyncserialisednodetonodesenddone)
-			1. [FindIntersect](#chainsyncserialisednodetonodesendfindintersect)
-			1. [IntersectFound](#chainsyncserialisednodetonodesendintersectfound)
-			1. [IntersectNotFound](#chainsyncserialisednodetonodesendintersectnotfound)
-			1. [RequestNext](#chainsyncserialisednodetonodesendrequestnext)
-			1. [RollBackward](#chainsyncserialisednodetonodesendrollbackward)
-			1. [RollForward](#chainsyncserialisednodetonodesendrollforward)
-1. __ChainSyncServerBlock__
-	1. __ChainSyncServerEvent__
-		1. __ServerRead__
-			1. [RollBackward](#chainsyncserverblockchainsyncservereventserverreadrollbackward)
-			1. [RollForward](#chainsyncserverblockchainsyncservereventserverreadrollforward)
-			1. [ServerRead](#chainsyncserverblockchainsyncservereventserverreadserverread)
-			1. [ServerReadBlocked](#chainsyncserverblockchainsyncservereventserverreadserverreadblocked)
-1. __ChainSyncServerHeader__
-	1. __ChainSyncServerEvent__
-		1. __ServerRead__
-			1. [RollBackward](#chainsyncserverheaderchainsyncservereventserverreadrollbackward)
-			1. [RollForward](#chainsyncserverheaderchainsyncservereventserverreadrollforward)
-			1. [ServerRead](#chainsyncserverheaderchainsyncservereventserverreadserverread)
-			1. [ServerReadBlocked](#chainsyncserverheaderchainsyncservereventserverreadserverreadblocked)
-1. __ConnectionManager__
-	1. [Connect](#connectionmanagerconnect)
-	1. [ConnectError](#connectionmanagerconnecterror)
-	1. [ConnectionCleanup](#connectionmanagerconnectioncleanup)
-	1. [ConnectionExists](#connectionmanagerconnectionexists)
-	1. [ConnectionFailure](#connectionmanagerconnectionfailure)
-	1. [ConnectionHandler](#connectionmanagerconnectionhandler)
-	1. [ConnectionManagerCounters](#connectionmanagerconnectionmanagercounters)
-	1. [ConnectionNotFound](#connectionmanagerconnectionnotfound)
-	1. [ConnectionTimeWait](#connectionmanagerconnectiontimewait)
-	1. [ConnectionTimeWaitDone](#connectionmanagerconnectiontimewaitdone)
-	1. [ForbiddenConnection](#connectionmanagerforbiddenconnection)
-	1. [ForbiddenOperation](#connectionmanagerforbiddenoperation)
-	1. [ImpossibleConnection](#connectionmanagerimpossibleconnection)
-	1. [IncludeConnection](#connectionmanagerincludeconnection)
-	1. [PruneConnections](#connectionmanagerpruneconnections)
-	1. [Shutdown](#connectionmanagershutdown)
-	1. [State](#connectionmanagerstate)
-	1. [TerminatedConnection](#connectionmanagerterminatedconnection)
-	1. [TerminatingConnection](#connectionmanagerterminatingconnection)
-	1. [UnexpectedlyFalseAssertion](#connectionmanagerunexpectedlyfalseassertion)
-	1. [UnknownConnection](#connectionmanagerunknownconnection)
-	1. [UnregisterConnection](#connectionmanagerunregisterconnection)
-1. __ConnectionManagerTransition__
-	1. [ConnectionManagerTransition](#connectionmanagertransitionconnectionmanagertransition)
-1. __DNSResolver__
-	1. [LookupAAAAError](#dnsresolverlookupaaaaerror)
-	1. [LookupAAAAResult](#dnsresolverlookupaaaaresult)
-	1. [LookupAError](#dnsresolverlookupaerror)
-	1. [LookupAResult](#dnsresolverlookuparesult)
-	1. [LookupException](#dnsresolverlookupexception)
-	1. [LookupIPv4First](#dnsresolverlookupipv4first)
-	1. [LookupIPv6First](#dnsresolverlookupipv6first)
-1. __DNSSubscription__
-	1. __DNS__
-		1. [AllocateSocket](#dnssubscriptiondnsallocatesocket)
-		1. [ApplicationException](#dnssubscriptiondnsapplicationexception)
-		1. [CloseSocket](#dnssubscriptiondnsclosesocket)
-		1. [ConnectEnd](#dnssubscriptiondnsconnectend)
-		1. [ConnectException](#dnssubscriptiondnsconnectexception)
-		1. [ConnectStart](#dnssubscriptiondnsconnectstart)
-		1. [ConnectionExist](#dnssubscriptiondnsconnectionexist)
-		1. [MissingLocalAddress](#dnssubscriptiondnsmissinglocaladdress)
-		1. [Restart](#dnssubscriptiondnsrestart)
-		1. [SkippingPeer](#dnssubscriptiondnsskippingpeer)
-		1. [SocketAllocationException](#dnssubscriptiondnssocketallocationexception)
-		1. [Start](#dnssubscriptiondnsstart)
-		1. [SubscriptionFailed](#dnssubscriptiondnssubscriptionfailed)
-		1. [SubscriptionRunning](#dnssubscriptiondnssubscriptionrunning)
-		1. [SubscriptionWaiting](#dnssubscriptiondnssubscriptionwaiting)
-		1. [SubscriptionWaitingNewConnection](#dnssubscriptiondnssubscriptionwaitingnewconnection)
-		1. [TryConnectToPeer](#dnssubscriptiondnstryconnecttopeer)
-		1. [UnsupportedRemoteAddr](#dnssubscriptiondnsunsupportedremoteaddr)
-1. __DebugPeerSelection__
-	1. __DebugPeerSelection__
-		1. [GovernorState](#debugpeerselectiondebugpeerselectiongovernorstate)
-1. __DebugPeerSelectionResponder__
-	1. __DebugPeerSelection__
-		1. [GovernorState](#debugpeerselectionresponderdebugpeerselectiongovernorstate)
-1. __DiffusionInit__
-	1. [ConfiguringLocalSocket](#diffusioninitconfiguringlocalsocket)
-	1. [ConfiguringServerSocket](#diffusioninitconfiguringserversocket)
-	1. [CreateSystemdSocketForSnocketPath](#diffusioninitcreatesystemdsocketforsnocketpath)
-	1. [CreatedLocalSocket](#diffusioninitcreatedlocalsocket)
-	1. [CreatingServerSocket](#diffusioninitcreatingserversocket)
-	1. [DiffusionErrored](#diffusioninitdiffusionerrored)
-	1. [ListeningLocalSocket](#diffusioninitlisteninglocalsocket)
-	1. [ListeningServerSocket](#diffusioninitlisteningserversocket)
-	1. [LocalSocketUp](#diffusioninitlocalsocketup)
-	1. [RunLocalServer](#diffusioninitrunlocalserver)
-	1. [RunServer](#diffusioninitrunserver)
-	1. [ServerSocketUp](#diffusioninitserversocketup)
-	1. [UnsupportedLocalSystemdSocket](#diffusioninitunsupportedlocalsystemdsocket)
-	1. [UnsupportedReadySocketCase](#diffusioninitunsupportedreadysocketcase)
-	1. [UsingSystemdSocket](#diffusioninitusingsystemdsocket)
-1. __ErrorPolicy__
-	1. [AcceptException](#errorpolicyacceptexception)
-	1. [KeepSuspended](#errorpolicykeepsuspended)
-	1. [LocalNodeError](#errorpolicylocalnodeerror)
-	1. [ResumeConsumer](#errorpolicyresumeconsumer)
-	1. [ResumePeer](#errorpolicyresumepeer)
-	1. [ResumeProducer](#errorpolicyresumeproducer)
-	1. [SuspendConsumer](#errorpolicysuspendconsumer)
-	1. [SuspendPeer](#errorpolicysuspendpeer)
-	1. [UnhandledApplicationException](#errorpolicyunhandledapplicationexception)
-	1. [UnhandledConnectionException](#errorpolicyunhandledconnectionexception)
+			1. [AwaitReply](#chainsyncremotesendawaitreply)
+			1. [Done](#chainsyncremotesenddone)
+			1. [FindIntersect](#chainsyncremotesendfindintersect)
+			1. [IntersectFound](#chainsyncremotesendintersectfound)
+			1. [IntersectNotFound](#chainsyncremotesendintersectnotfound)
+			1. [RequestNext](#chainsyncremotesendrequestnext)
+			1. [RollBackward](#chainsyncremotesendrollbackward)
+			1. [RollForward](#chainsyncremotesendrollforward)
+		1. __Serialised__
+			1. __Receive__
+				1. [AwaitReply](#chainsyncremoteserialisedreceiveawaitreply)
+				1. [Done](#chainsyncremoteserialisedreceivedone)
+				1. [FindIntersect](#chainsyncremoteserialisedreceivefindintersect)
+				1. [IntersectFound](#chainsyncremoteserialisedreceiveintersectfound)
+				1. [IntersectNotFound](#chainsyncremoteserialisedreceiveintersectnotfound)
+				1. [RequestNext](#chainsyncremoteserialisedreceiverequestnext)
+				1. [RollBackward](#chainsyncremoteserialisedreceiverollbackward)
+				1. [RollForward](#chainsyncremoteserialisedreceiverollforward)
+			1. __Send__
+				1. [AwaitReply](#chainsyncremoteserialisedsendawaitreply)
+				1. [Done](#chainsyncremoteserialisedsenddone)
+				1. [FindIntersect](#chainsyncremoteserialisedsendfindintersect)
+				1. [IntersectFound](#chainsyncremoteserialisedsendintersectfound)
+				1. [IntersectNotFound](#chainsyncremoteserialisedsendintersectnotfound)
+				1. [RequestNext](#chainsyncremoteserialisedsendrequestnext)
+				1. [RollBackward](#chainsyncremoteserialisedsendrollbackward)
+				1. [RollForward](#chainsyncremoteserialisedsendrollforward)
+	1. __ServerBlock__
+		1. [Update](#chainsyncserverblockupdate)
+	1. __ServerHeader__
+		1. [Update](#chainsyncserverheaderupdate)
 1. __Forge__
-	1. [AdoptedBlock](#forgeadoptedblock)
-	1. [BlockContext](#forgeblockcontext)
-	1. [BlockFromFuture](#forgeblockfromfuture)
-	1. [DidntAdoptBlock](#forgedidntadoptblock)
-	1. [ForgeStateUpdateError](#forgeforgestateupdateerror)
-	1. [ForgedBlock](#forgeforgedblock)
-	1. [ForgedInvalidBlock](#forgeforgedinvalidblock)
-	1. [LedgerState](#forgeledgerstate)
-	1. [LedgerView](#forgeledgerview)
-	1. [NoLedgerState](#forgenoledgerstate)
-	1. [NoLedgerView](#forgenoledgerview)
-	1. [NodeCannotForge](#forgenodecannotforge)
-	1. [NodeIsLeader](#forgenodeisleader)
-	1. [NodeNotLeader](#forgenodenotleader)
-	1. [SlotIsImmutable](#forgeslotisimmutable)
-	1. [StartLeadershipCheck](#forgestartleadershipcheck)
-	1. [StartLeadershipCheckPlus](#forgestartleadershipcheckplus)
-1. [ForgeStateInfo](#forgestateinfo)
-1. [ForgeStats](#forgestats)
-1. __Handshake__
-	1. __Receive__
-		1. [AcceptVersion](#handshakereceiveacceptversion)
-		1. [ProposeVersions](#handshakereceiveproposeversions)
-		1. [Refuse](#handshakereceiverefuse)
-		1. [ReplyVersions](#handshakereceivereplyversions)
-	1. __Send__
-		1. [AcceptVersion](#handshakesendacceptversion)
-		1. [ProposeVersions](#handshakesendproposeversions)
-		1. [Refuse](#handshakesendrefuse)
-		1. [ReplyVersions](#handshakesendreplyversions)
-1. __InboundGovernor__
-	1. [DemotedToColdRemote](#inboundgovernordemotedtocoldremote)
-	1. [DemotedToWarmRemote](#inboundgovernordemotedtowarmremote)
-	1. [InboundGovernorCounters](#inboundgovernorinboundgovernorcounters)
-	1. [InboundGovernorError](#inboundgovernorinboundgovernorerror)
-	1. [MuxCleanExit](#inboundgovernormuxcleanexit)
-	1. [MuxErrored](#inboundgovernormuxerrored)
-	1. [NewConnection](#inboundgovernornewconnection)
-	1. [PromotedToHotRemote](#inboundgovernorpromotedtohotremote)
-	1. [PromotedToWarmRemote](#inboundgovernorpromotedtowarmremote)
-	1. [RemoteState](#inboundgovernorremotestate)
-	1. [ResponderErrored](#inboundgovernorrespondererrored)
-	1. [ResponderRestarted](#inboundgovernorresponderrestarted)
-	1. [ResponderStartFailure](#inboundgovernorresponderstartfailure)
-	1. [ResponderStarted](#inboundgovernorresponderstarted)
-	1. [ResponderTerminated](#inboundgovernorresponderterminated)
-	1. [UnexpectedlyFalseAssertion](#inboundgovernorunexpectedlyfalseassertion)
-	1. [WaitIdleRemote](#inboundgovernorwaitidleremote)
-1. __InboundGovernorTransition__
-	1. [InboundGovernorTransition](#inboundgovernortransitioninboundgovernortransition)
-1. __IpSubscription__
-	1. __IP__
-		1. [AllocateSocket](#ipsubscriptionipallocatesocket)
-		1. [ApplicationException](#ipsubscriptionipapplicationexception)
-		1. [CloseSocket](#ipsubscriptionipclosesocket)
-		1. [ConnectEnd](#ipsubscriptionipconnectend)
-		1. [ConnectException](#ipsubscriptionipconnectexception)
-		1. [ConnectStart](#ipsubscriptionipconnectstart)
-		1. [ConnectionExist](#ipsubscriptionipconnectionexist)
-		1. [MissingLocalAddress](#ipsubscriptionipmissinglocaladdress)
-		1. [Restart](#ipsubscriptioniprestart)
-		1. [SkippingPeer](#ipsubscriptionipskippingpeer)
-		1. [SocketAllocationException](#ipsubscriptionipsocketallocationexception)
-		1. [Start](#ipsubscriptionipstart)
-		1. [SubscriptionFailed](#ipsubscriptionipsubscriptionfailed)
-		1. [SubscriptionRunning](#ipsubscriptionipsubscriptionrunning)
-		1. [SubscriptionWaiting](#ipsubscriptionipsubscriptionwaiting)
-		1. [SubscriptionWaitingNewConnection](#ipsubscriptionipsubscriptionwaitingnewconnection)
-		1. [TryConnectToPeer](#ipsubscriptioniptryconnecttopeer)
-		1. [UnsupportedRemoteAddr](#ipsubscriptionipunsupportedremoteaddr)
-1. [KeepAliveClient](#keepaliveclient)
-1. __LedgerPeers__
-	1. [DisabledLedgerPeers](#ledgerpeersdisabledledgerpeers)
-	1. [FallingBackToBootstrapPeers](#ledgerpeersfallingbacktobootstrappeers)
-	1. [FetchingNewLedgerState](#ledgerpeersfetchingnewledgerstate)
-	1. [PickedPeer](#ledgerpeerspickedpeer)
-	1. [PickedPeers](#ledgerpeerspickedpeers)
-	1. [RequestForPeers](#ledgerpeersrequestforpeers)
-	1. [ReusingLedgerState](#ledgerpeersreusingledgerstate)
-	1. [TraceUseLedgerAfter](#ledgerpeerstraceuseledgerafter)
-	1. [WaitingOnRequest](#ledgerpeerswaitingonrequest)
-1. __LocalConnectionManager__
-	1. [Connect](#localconnectionmanagerconnect)
-	1. [ConnectError](#localconnectionmanagerconnecterror)
-	1. [ConnectionCleanup](#localconnectionmanagerconnectioncleanup)
-	1. [ConnectionExists](#localconnectionmanagerconnectionexists)
-	1. [ConnectionFailure](#localconnectionmanagerconnectionfailure)
-	1. [ConnectionHandler](#localconnectionmanagerconnectionhandler)
-	1. [ConnectionManagerCounters](#localconnectionmanagerconnectionmanagercounters)
-	1. [ConnectionNotFound](#localconnectionmanagerconnectionnotfound)
-	1. [ConnectionTimeWait](#localconnectionmanagerconnectiontimewait)
-	1. [ConnectionTimeWaitDone](#localconnectionmanagerconnectiontimewaitdone)
-	1. [ForbiddenConnection](#localconnectionmanagerforbiddenconnection)
-	1. [ForbiddenOperation](#localconnectionmanagerforbiddenoperation)
-	1. [ImpossibleConnection](#localconnectionmanagerimpossibleconnection)
-	1. [IncludeConnection](#localconnectionmanagerincludeconnection)
-	1. [PruneConnections](#localconnectionmanagerpruneconnections)
-	1. [Shutdown](#localconnectionmanagershutdown)
-	1. [State](#localconnectionmanagerstate)
-	1. [TerminatedConnection](#localconnectionmanagerterminatedconnection)
-	1. [TerminatingConnection](#localconnectionmanagerterminatingconnection)
-	1. [UnexpectedlyFalseAssertion](#localconnectionmanagerunexpectedlyfalseassertion)
-	1. [UnknownConnection](#localconnectionmanagerunknownconnection)
-	1. [UnregisterConnection](#localconnectionmanagerunregisterconnection)
-1. __LocalErrorPolicy__
-	1. [AcceptException](#localerrorpolicyacceptexception)
-	1. [KeepSuspended](#localerrorpolicykeepsuspended)
-	1. [LocalNodeError](#localerrorpolicylocalnodeerror)
-	1. [ResumeConsumer](#localerrorpolicyresumeconsumer)
-	1. [ResumePeer](#localerrorpolicyresumepeer)
-	1. [ResumeProducer](#localerrorpolicyresumeproducer)
-	1. [SuspendConsumer](#localerrorpolicysuspendconsumer)
-	1. [SuspendPeer](#localerrorpolicysuspendpeer)
-	1. [UnhandledApplicationException](#localerrorpolicyunhandledapplicationexception)
-	1. [UnhandledConnectionException](#localerrorpolicyunhandledconnectionexception)
-1. __LocalHandshake__
-	1. __Receive__
-		1. [AcceptVersion](#localhandshakereceiveacceptversion)
-		1. [ProposeVersions](#localhandshakereceiveproposeversions)
-		1. [Refuse](#localhandshakereceiverefuse)
-		1. [ReplyVersions](#localhandshakereceivereplyversions)
-	1. __Send__
-		1. [AcceptVersion](#localhandshakesendacceptversion)
-		1. [ProposeVersions](#localhandshakesendproposeversions)
-		1. [Refuse](#localhandshakesendrefuse)
-		1. [ReplyVersions](#localhandshakesendreplyversions)
-1. __LocalInboundGovernor__
-	1. [DemotedToColdRemote](#localinboundgovernordemotedtocoldremote)
-	1. [DemotedToWarmRemote](#localinboundgovernordemotedtowarmremote)
-	1. [InboundGovernorCounters](#localinboundgovernorinboundgovernorcounters)
-	1. [InboundGovernorError](#localinboundgovernorinboundgovernorerror)
-	1. [MuxCleanExit](#localinboundgovernormuxcleanexit)
-	1. [MuxErrored](#localinboundgovernormuxerrored)
-	1. [NewConnection](#localinboundgovernornewconnection)
-	1. [PromotedToHotRemote](#localinboundgovernorpromotedtohotremote)
-	1. [PromotedToWarmRemote](#localinboundgovernorpromotedtowarmremote)
-	1. [RemoteState](#localinboundgovernorremotestate)
-	1. [ResponderErrored](#localinboundgovernorrespondererrored)
-	1. [ResponderRestarted](#localinboundgovernorresponderrestarted)
-	1. [ResponderStartFailure](#localinboundgovernorresponderstartfailure)
-	1. [ResponderStarted](#localinboundgovernorresponderstarted)
-	1. [ResponderTerminated](#localinboundgovernorresponderterminated)
-	1. [UnexpectedlyFalseAssertion](#localinboundgovernorunexpectedlyfalseassertion)
-	1. [WaitIdleRemote](#localinboundgovernorwaitidleremote)
-1. __LocalRootPeers__
-	1. [LocalRootDomains](#localrootpeerslocalrootdomains)
-	1. [LocalRootError](#localrootpeerslocalrooterror)
-	1. [LocalRootFailure](#localrootpeerslocalrootfailure)
-	1. [LocalRootGroups](#localrootpeerslocalrootgroups)
-	1. [LocalRootResult](#localrootpeerslocalrootresult)
-	1. [LocalRootWaiting](#localrootpeerslocalrootwaiting)
-1. __LocalServer__
-	1. [AcceptConnection](#localserveracceptconnection)
-	1. [AcceptError](#localserveraccepterror)
-	1. [AcceptPolicy](#localserveracceptpolicy)
-	1. [Error](#localservererror)
-	1. [Started](#localserverstarted)
-	1. [Stopped](#localserverstopped)
-1. __LocalTxSubmissionServer__
-	1. [ReceivedTx](#localtxsubmissionserverreceivedtx)
+	1. [KESInfo](#forgekesinfo)
+	1. __StateInfo__
+		1. [AdoptedBlock](#forgestateinfoadoptedblock)
+		1. [BlockContext](#forgestateinfoblockcontext)
+		1. [BlockFromFuture](#forgestateinfoblockfromfuture)
+		1. [DidntAdoptBlock](#forgestateinfodidntadoptblock)
+		1. [ForgeStateUpdateError](#forgestateinfoforgestateupdateerror)
+		1. [ForgedBlock](#forgestateinfoforgedblock)
+		1. [ForgedInvalidBlock](#forgestateinfoforgedinvalidblock)
+		1. [LedgerState](#forgestateinfoledgerstate)
+		1. [LedgerView](#forgestateinfoledgerview)
+		1. [NoLedgerState](#forgestateinfonoledgerstate)
+		1. [NoLedgerView](#forgestateinfonoledgerview)
+		1. [NodeCannotForge](#forgestateinfonodecannotforge)
+		1. [NodeIsLeader](#forgestateinfonodeisleader)
+		1. [NodeNotLeader](#forgestateinfonodenotleader)
+		1. [SlotIsImmutable](#forgestateinfoslotisimmutable)
+		1. [StartLeadershipCheck](#forgestateinfostartleadershipcheck)
+		1. [StartLeadershipCheckPlus](#forgestateinfostartleadershipcheckplus)
+	1. [Stats](#forgestats)
 1. __Mempool__
 	1. [AddedTx](#mempooladdedtx)
 	1. [ManuallyRemovedTxs](#mempoolmanuallyremovedtxs)
 	1. [RejectedTx](#mempoolrejectedtx)
 	1. [RemoveTxs](#mempoolremovetxs)
-1. __Mux__
-	1. [ChannelRecvEnd](#muxchannelrecvend)
-	1. [ChannelRecvStart](#muxchannelrecvstart)
-	1. [ChannelSendEnd](#muxchannelsendend)
-	1. [ChannelSendStart](#muxchannelsendstart)
-	1. [CleanExit](#muxcleanexit)
-	1. [ExceptionExit](#muxexceptionexit)
-	1. [HandshakeClientEnd](#muxhandshakeclientend)
-	1. [HandshakeClientError](#muxhandshakeclienterror)
-	1. [HandshakeServerEnd](#muxhandshakeserverend)
-	1. [HandshakeServerError](#muxhandshakeservererror)
-	1. [HandshakeStart](#muxhandshakestart)
-	1. [RecvDeltaQObservation](#muxrecvdeltaqobservation)
-	1. [RecvDeltaQSample](#muxrecvdeltaqsample)
-	1. [RecvEnd](#muxrecvend)
-	1. [RecvHeaderEnd](#muxrecvheaderend)
-	1. [RecvHeaderStart](#muxrecvheaderstart)
-	1. [RecvStart](#muxrecvstart)
-	1. [SDUReadTimeoutException](#muxsdureadtimeoutexception)
-	1. [SDUWriteTimeoutException](#muxsduwritetimeoutexception)
-	1. [SendEnd](#muxsendend)
-	1. [SendStart](#muxsendstart)
-	1. [Shutdown](#muxshutdown)
-	1. [StartEagerly](#muxstarteagerly)
-	1. [StartOnDemand](#muxstartondemand)
-	1. [StartedOnDemand](#muxstartedondemand)
-	1. [State](#muxstate)
-	1. [TCPInfo](#muxtcpinfo)
-	1. [Terminating](#muxterminating)
-1. __MuxLocal__
-	1. [ChannelRecvEnd](#muxlocalchannelrecvend)
-	1. [ChannelRecvStart](#muxlocalchannelrecvstart)
-	1. [ChannelSendEnd](#muxlocalchannelsendend)
-	1. [ChannelSendStart](#muxlocalchannelsendstart)
-	1. [CleanExit](#muxlocalcleanexit)
-	1. [ExceptionExit](#muxlocalexceptionexit)
-	1. [HandshakeClientEnd](#muxlocalhandshakeclientend)
-	1. [HandshakeClientError](#muxlocalhandshakeclienterror)
-	1. [HandshakeServerEnd](#muxlocalhandshakeserverend)
-	1. [HandshakeServerError](#muxlocalhandshakeservererror)
-	1. [HandshakeStart](#muxlocalhandshakestart)
-	1. [RecvDeltaQObservation](#muxlocalrecvdeltaqobservation)
-	1. [RecvDeltaQSample](#muxlocalrecvdeltaqsample)
-	1. [RecvEnd](#muxlocalrecvend)
-	1. [RecvHeaderEnd](#muxlocalrecvheaderend)
-	1. [RecvHeaderStart](#muxlocalrecvheaderstart)
-	1. [RecvStart](#muxlocalrecvstart)
-	1. [SDUReadTimeoutException](#muxlocalsdureadtimeoutexception)
-	1. [SDUWriteTimeoutException](#muxlocalsduwritetimeoutexception)
-	1. [SendEnd](#muxlocalsendend)
-	1. [SendStart](#muxlocalsendstart)
-	1. [Shutdown](#muxlocalshutdown)
-	1. [StartEagerly](#muxlocalstarteagerly)
-	1. [StartOnDemand](#muxlocalstartondemand)
-	1. [StartedOnDemand](#muxlocalstartedondemand)
-	1. [State](#muxlocalstate)
-	1. [TCPInfo](#muxlocaltcpinfo)
-	1. [Terminating](#muxlocalterminating)
-1. __PeerSelection__
-	1. [ChurnMode](#peerselectionchurnmode)
-	1. [ChurnWait](#peerselectionchurnwait)
-	1. [DemoteAsynchronous](#peerselectiondemoteasynchronous)
-	1. [DemoteHotDone](#peerselectiondemotehotdone)
-	1. [DemoteHotFailed](#peerselectiondemotehotfailed)
-	1. [DemoteHotPeers](#peerselectiondemotehotpeers)
-	1. [DemoteLocalHotPeers](#peerselectiondemotelocalhotpeers)
-	1. [DemoteWarmDone](#peerselectiondemotewarmdone)
-	1. [DemoteWarmFailed](#peerselectiondemotewarmfailed)
-	1. [DemoteWarmPeers](#peerselectiondemotewarmpeers)
-	1. [ForgetColdPeers](#peerselectionforgetcoldpeers)
-	1. [GossipRequests](#peerselectiongossiprequests)
-	1. [GossipResults](#peerselectiongossipresults)
-	1. [GovernorWakeup](#peerselectiongovernorwakeup)
-	1. [LocalRootPeersChanged](#peerselectionlocalrootpeerschanged)
-	1. [PromoteColdDone](#peerselectionpromotecolddone)
-	1. [PromoteColdFailed](#peerselectionpromotecoldfailed)
-	1. [PromoteColdLocalPeers](#peerselectionpromotecoldlocalpeers)
-	1. [PromoteColdPeers](#peerselectionpromotecoldpeers)
-	1. [PromoteWarmAborted](#peerselectionpromotewarmaborted)
-	1. [PromoteWarmDone](#peerselectionpromotewarmdone)
-	1. [PromoteWarmFailed](#peerselectionpromotewarmfailed)
-	1. [PromoteWarmLocalPeers](#peerselectionpromotewarmlocalpeers)
-	1. [PromoteWarmPeers](#peerselectionpromotewarmpeers)
-	1. [PublicRootsFailure](#peerselectionpublicrootsfailure)
-	1. [PublicRootsRequest](#peerselectionpublicrootsrequest)
-	1. [PublicRootsResults](#peerselectionpublicrootsresults)
-	1. [TargetsChanged](#peerselectiontargetschanged)
-1. __PeerSelectionActions__
-	1. [MonitoringError](#peerselectionactionsmonitoringerror)
-	1. [MonitoringResult](#peerselectionactionsmonitoringresult)
-	1. [StatusChangeFailure](#peerselectionactionsstatuschangefailure)
-	1. [StatusChanged](#peerselectionactionsstatuschanged)
-1. __PeerSelectionCounters__
-	1. [PeerSelectionCounters](#peerselectioncounterspeerselectioncounters)
-1. [Peers](#peers)
-1. __PublicRootPeers__
-	1. __PublicRootPeers__
-		1. [PublicRootDomains](#publicrootpeerspublicrootpeerspublicrootdomains)
-		1. [PublicRootFailure](#publicrootpeerspublicrootpeerspublicrootfailure)
-		1. [PublicRootRelayAccessPoint](#publicrootpeerspublicrootpeerspublicrootrelayaccesspoint)
-		1. [PublicRootResult](#publicrootpeerspublicrootpeerspublicrootresult)
-1. __ReplayBlock__
-	1. [LedgerReplay](#replayblockledgerreplay)
+1. __Net__
+	1. __AcceptPolicy__
+		1. [ConnectionHardLimit](#netacceptpolicyconnectionhardlimit)
+		1. [ConnectionLimitResume](#netacceptpolicyconnectionlimitresume)
+		1. [ConnectionRateLimiting](#netacceptpolicyconnectionratelimiting)
+	1. __ConnectionManager__
+		1. __Local__
+			1. [Connect](#netconnectionmanagerlocalconnect)
+			1. [ConnectError](#netconnectionmanagerlocalconnecterror)
+			1. [ConnectionCleanup](#netconnectionmanagerlocalconnectioncleanup)
+			1. [ConnectionExists](#netconnectionmanagerlocalconnectionexists)
+			1. [ConnectionFailure](#netconnectionmanagerlocalconnectionfailure)
+			1. [ConnectionHandler](#netconnectionmanagerlocalconnectionhandler)
+			1. [ConnectionManagerCounters](#netconnectionmanagerlocalconnectionmanagercounters)
+			1. [ConnectionNotFound](#netconnectionmanagerlocalconnectionnotfound)
+			1. [ConnectionTimeWait](#netconnectionmanagerlocalconnectiontimewait)
+			1. [ConnectionTimeWaitDone](#netconnectionmanagerlocalconnectiontimewaitdone)
+			1. [ForbiddenConnection](#netconnectionmanagerlocalforbiddenconnection)
+			1. [ForbiddenOperation](#netconnectionmanagerlocalforbiddenoperation)
+			1. [ImpossibleConnection](#netconnectionmanagerlocalimpossibleconnection)
+			1. [IncludeConnection](#netconnectionmanagerlocalincludeconnection)
+			1. [PruneConnections](#netconnectionmanagerlocalpruneconnections)
+			1. [Shutdown](#netconnectionmanagerlocalshutdown)
+			1. [State](#netconnectionmanagerlocalstate)
+			1. [TerminatedConnection](#netconnectionmanagerlocalterminatedconnection)
+			1. [TerminatingConnection](#netconnectionmanagerlocalterminatingconnection)
+			1. [UnexpectedlyFalseAssertion](#netconnectionmanagerlocalunexpectedlyfalseassertion)
+			1. [UnregisterConnection](#netconnectionmanagerlocalunregisterconnection)
+		1. __Remote__
+			1. [Connect](#netconnectionmanagerremoteconnect)
+			1. [ConnectError](#netconnectionmanagerremoteconnecterror)
+			1. [ConnectionCleanup](#netconnectionmanagerremoteconnectioncleanup)
+			1. [ConnectionExists](#netconnectionmanagerremoteconnectionexists)
+			1. [ConnectionFailure](#netconnectionmanagerremoteconnectionfailure)
+			1. [ConnectionHandler](#netconnectionmanagerremoteconnectionhandler)
+			1. [ConnectionManagerCounters](#netconnectionmanagerremoteconnectionmanagercounters)
+			1. [ConnectionNotFound](#netconnectionmanagerremoteconnectionnotfound)
+			1. [ConnectionTimeWait](#netconnectionmanagerremoteconnectiontimewait)
+			1. [ConnectionTimeWaitDone](#netconnectionmanagerremoteconnectiontimewaitdone)
+			1. [ForbiddenConnection](#netconnectionmanagerremoteforbiddenconnection)
+			1. [ForbiddenOperation](#netconnectionmanagerremoteforbiddenoperation)
+			1. [ImpossibleConnection](#netconnectionmanagerremoteimpossibleconnection)
+			1. [IncludeConnection](#netconnectionmanagerremoteincludeconnection)
+			1. [PruneConnections](#netconnectionmanagerremotepruneconnections)
+			1. [Shutdown](#netconnectionmanagerremoteshutdown)
+			1. [State](#netconnectionmanagerremotestate)
+			1. [TerminatedConnection](#netconnectionmanagerremoteterminatedconnection)
+			1. [TerminatingConnection](#netconnectionmanagerremoteterminatingconnection)
+			1. __Transition__
+				1. [ConnectionManagerTransition](#netconnectionmanagerremotetransitionconnectionmanagertransition)
+			1. [UnexpectedlyFalseAssertion](#netconnectionmanagerremoteunexpectedlyfalseassertion)
+			1. [UnregisterConnection](#netconnectionmanagerremoteunregisterconnection)
+	1. __DNSResolver__
+		1. [LookupAAAAError](#netdnsresolverlookupaaaaerror)
+		1. [LookupAAAAResult](#netdnsresolverlookupaaaaresult)
+		1. [LookupAError](#netdnsresolverlookupaerror)
+		1. [LookupAResult](#netdnsresolverlookuparesult)
+		1. [LookupException](#netdnsresolverlookupexception)
+		1. [LookupIPv4First](#netdnsresolverlookupipv4first)
+		1. [LookupIPv6First](#netdnsresolverlookupipv6first)
+	1. __ErrorPolicy__
+		1. __Local__
+			1. [AcceptException](#neterrorpolicylocalacceptexception)
+			1. [KeepSuspended](#neterrorpolicylocalkeepsuspended)
+			1. [LocalNodeError](#neterrorpolicylocallocalnodeerror)
+			1. [ResumeConsumer](#neterrorpolicylocalresumeconsumer)
+			1. [ResumePeer](#neterrorpolicylocalresumepeer)
+			1. [ResumeProducer](#neterrorpolicylocalresumeproducer)
+			1. [SuspendConsumer](#neterrorpolicylocalsuspendconsumer)
+			1. [SuspendPeer](#neterrorpolicylocalsuspendpeer)
+			1. [UnhandledApplicationException](#neterrorpolicylocalunhandledapplicationexception)
+			1. [UnhandledConnectionException](#neterrorpolicylocalunhandledconnectionexception)
+		1. __Remote__
+			1. [AcceptException](#neterrorpolicyremoteacceptexception)
+			1. [KeepSuspended](#neterrorpolicyremotekeepsuspended)
+			1. [LocalNodeError](#neterrorpolicyremotelocalnodeerror)
+			1. [ResumeConsumer](#neterrorpolicyremoteresumeconsumer)
+			1. [ResumePeer](#neterrorpolicyremoteresumepeer)
+			1. [ResumeProducer](#neterrorpolicyremoteresumeproducer)
+			1. [SuspendConsumer](#neterrorpolicyremotesuspendconsumer)
+			1. [SuspendPeer](#neterrorpolicyremotesuspendpeer)
+			1. [UnhandledApplicationException](#neterrorpolicyremoteunhandledapplicationexception)
+			1. [UnhandledConnectionException](#neterrorpolicyremoteunhandledconnectionexception)
+	1. __Handshake__
+		1. __Local__
+			1. __Receive__
+				1. [AcceptVersion](#nethandshakelocalreceiveacceptversion)
+				1. [ProposeVersions](#nethandshakelocalreceiveproposeversions)
+				1. [Refuse](#nethandshakelocalreceiverefuse)
+				1. [ReplyVersions](#nethandshakelocalreceivereplyversions)
+			1. __Send__
+				1. [AcceptVersion](#nethandshakelocalsendacceptversion)
+				1. [ProposeVersions](#nethandshakelocalsendproposeversions)
+				1. [Refuse](#nethandshakelocalsendrefuse)
+				1. [ReplyVersions](#nethandshakelocalsendreplyversions)
+		1. __Remote__
+			1. __Receive__
+				1. [AcceptVersion](#nethandshakeremotereceiveacceptversion)
+				1. [ProposeVersions](#nethandshakeremotereceiveproposeversions)
+				1. [Refuse](#nethandshakeremotereceiverefuse)
+				1. [ReplyVersions](#nethandshakeremotereceivereplyversions)
+			1. __Send__
+				1. [AcceptVersion](#nethandshakeremotesendacceptversion)
+				1. [ProposeVersions](#nethandshakeremotesendproposeversions)
+				1. [Refuse](#nethandshakeremotesendrefuse)
+				1. [ReplyVersions](#nethandshakeremotesendreplyversions)
+	1. __InboundGovernor__
+		1. __Local__
+			1. [DemotedToColdRemote](#netinboundgovernorlocaldemotedtocoldremote)
+			1. [DemotedToWarmRemote](#netinboundgovernorlocaldemotedtowarmremote)
+			1. [InboundGovernorCounters](#netinboundgovernorlocalinboundgovernorcounters)
+			1. [InboundGovernorError](#netinboundgovernorlocalinboundgovernorerror)
+			1. [MuxCleanExit](#netinboundgovernorlocalmuxcleanexit)
+			1. [MuxErrored](#netinboundgovernorlocalmuxerrored)
+			1. [NewConnection](#netinboundgovernorlocalnewconnection)
+			1. [PromotedToHotRemote](#netinboundgovernorlocalpromotedtohotremote)
+			1. [PromotedToWarmRemote](#netinboundgovernorlocalpromotedtowarmremote)
+			1. [RemoteState](#netinboundgovernorlocalremotestate)
+			1. [ResponderErrored](#netinboundgovernorlocalrespondererrored)
+			1. [ResponderRestarted](#netinboundgovernorlocalresponderrestarted)
+			1. [ResponderStartFailure](#netinboundgovernorlocalresponderstartfailure)
+			1. [ResponderStarted](#netinboundgovernorlocalresponderstarted)
+			1. [ResponderTerminated](#netinboundgovernorlocalresponderterminated)
+			1. [UnexpectedlyFalseAssertion](#netinboundgovernorlocalunexpectedlyfalseassertion)
+			1. [WaitIdleRemote](#netinboundgovernorlocalwaitidleremote)
+		1. __Remote__
+			1. [DemotedToColdRemote](#netinboundgovernorremotedemotedtocoldremote)
+			1. [DemotedToWarmRemote](#netinboundgovernorremotedemotedtowarmremote)
+			1. [InboundGovernorCounters](#netinboundgovernorremoteinboundgovernorcounters)
+			1. [InboundGovernorError](#netinboundgovernorremoteinboundgovernorerror)
+			1. [MuxCleanExit](#netinboundgovernorremotemuxcleanexit)
+			1. [MuxErrored](#netinboundgovernorremotemuxerrored)
+			1. [NewConnection](#netinboundgovernorremotenewconnection)
+			1. [PromotedToHotRemote](#netinboundgovernorremotepromotedtohotremote)
+			1. [PromotedToWarmRemote](#netinboundgovernorremotepromotedtowarmremote)
+			1. [RemoteState](#netinboundgovernorremoteremotestate)
+			1. [ResponderErrored](#netinboundgovernorremoterespondererrored)
+			1. [ResponderRestarted](#netinboundgovernorremoteresponderrestarted)
+			1. [ResponderStartFailure](#netinboundgovernorremoteresponderstartfailure)
+			1. [ResponderStarted](#netinboundgovernorremoteresponderstarted)
+			1. [ResponderTerminated](#netinboundgovernorremoteresponderterminated)
+			1. __Transition__
+				1. [InboundGovernorTransition](#netinboundgovernorremotetransitioninboundgovernortransition)
+			1. [UnexpectedlyFalseAssertion](#netinboundgovernorremoteunexpectedlyfalseassertion)
+			1. [WaitIdleRemote](#netinboundgovernorremotewaitidleremote)
+	1. [KeepAliveClient](#netkeepaliveclient)
+	1. __Mux__
+		1. __Local__
+			1. [ChannelRecvEnd](#netmuxlocalchannelrecvend)
+			1. [ChannelRecvStart](#netmuxlocalchannelrecvstart)
+			1. [ChannelSendEnd](#netmuxlocalchannelsendend)
+			1. [ChannelSendStart](#netmuxlocalchannelsendstart)
+			1. [CleanExit](#netmuxlocalcleanexit)
+			1. [ExceptionExit](#netmuxlocalexceptionexit)
+			1. [HandshakeClientEnd](#netmuxlocalhandshakeclientend)
+			1. [HandshakeClientError](#netmuxlocalhandshakeclienterror)
+			1. [HandshakeServerEnd](#netmuxlocalhandshakeserverend)
+			1. [HandshakeServerError](#netmuxlocalhandshakeservererror)
+			1. [HandshakeStart](#netmuxlocalhandshakestart)
+			1. [RecvDeltaQObservation](#netmuxlocalrecvdeltaqobservation)
+			1. [RecvDeltaQSample](#netmuxlocalrecvdeltaqsample)
+			1. [RecvEnd](#netmuxlocalrecvend)
+			1. [RecvHeaderEnd](#netmuxlocalrecvheaderend)
+			1. [RecvHeaderStart](#netmuxlocalrecvheaderstart)
+			1. [RecvStart](#netmuxlocalrecvstart)
+			1. [SDUReadTimeoutException](#netmuxlocalsdureadtimeoutexception)
+			1. [SDUWriteTimeoutException](#netmuxlocalsduwritetimeoutexception)
+			1. [SendEnd](#netmuxlocalsendend)
+			1. [SendStart](#netmuxlocalsendstart)
+			1. [Shutdown](#netmuxlocalshutdown)
+			1. [StartEagerly](#netmuxlocalstarteagerly)
+			1. [StartOnDemand](#netmuxlocalstartondemand)
+			1. [StartedOnDemand](#netmuxlocalstartedondemand)
+			1. [State](#netmuxlocalstate)
+			1. [TCPInfo](#netmuxlocaltcpinfo)
+			1. [Terminating](#netmuxlocalterminating)
+		1. __Remote__
+			1. [ChannelRecvEnd](#netmuxremotechannelrecvend)
+			1. [ChannelRecvStart](#netmuxremotechannelrecvstart)
+			1. [ChannelSendEnd](#netmuxremotechannelsendend)
+			1. [ChannelSendStart](#netmuxremotechannelsendstart)
+			1. [CleanExit](#netmuxremotecleanexit)
+			1. [ExceptionExit](#netmuxremoteexceptionexit)
+			1. [HandshakeClientEnd](#netmuxremotehandshakeclientend)
+			1. [HandshakeClientError](#netmuxremotehandshakeclienterror)
+			1. [HandshakeServerEnd](#netmuxremotehandshakeserverend)
+			1. [HandshakeServerError](#netmuxremotehandshakeservererror)
+			1. [HandshakeStart](#netmuxremotehandshakestart)
+			1. [RecvDeltaQObservation](#netmuxremoterecvdeltaqobservation)
+			1. [RecvDeltaQSample](#netmuxremoterecvdeltaqsample)
+			1. [RecvEnd](#netmuxremoterecvend)
+			1. [RecvHeaderEnd](#netmuxremoterecvheaderend)
+			1. [RecvHeaderStart](#netmuxremoterecvheaderstart)
+			1. [RecvStart](#netmuxremoterecvstart)
+			1. [SDUReadTimeoutException](#netmuxremotesdureadtimeoutexception)
+			1. [SDUWriteTimeoutException](#netmuxremotesduwritetimeoutexception)
+			1. [SendEnd](#netmuxremotesendend)
+			1. [SendStart](#netmuxremotesendstart)
+			1. [Shutdown](#netmuxremoteshutdown)
+			1. [StartEagerly](#netmuxremotestarteagerly)
+			1. [StartOnDemand](#netmuxremotestartondemand)
+			1. [StartedOnDemand](#netmuxremotestartedondemand)
+			1. [State](#netmuxremotestate)
+			1. [TCPInfo](#netmuxremotetcpinfo)
+			1. [Terminating](#netmuxremoteterminating)
+	1. __PeerSelection__
+		1. __Actions__
+			1. [MonitoringError](#netpeerselectionactionsmonitoringerror)
+			1. [MonitoringResult](#netpeerselectionactionsmonitoringresult)
+			1. [StatusChangeFailure](#netpeerselectionactionsstatuschangefailure)
+			1. [StatusChanged](#netpeerselectionactionsstatuschanged)
+		1. [Counters](#netpeerselectioncounters)
+		1. __Initiator__
+			1. [GovernorState](#netpeerselectioninitiatorgovernorstate)
+		1. __Responder__
+			1. [GovernorState](#netpeerselectionrespondergovernorstate)
+		1. __Selection__
+			1. [ChurnMode](#netpeerselectionselectionchurnmode)
+			1. [ChurnWait](#netpeerselectionselectionchurnwait)
+			1. [DemoteAsynchronous](#netpeerselectionselectiondemoteasynchronous)
+			1. [DemoteHotDone](#netpeerselectionselectiondemotehotdone)
+			1. [DemoteHotFailed](#netpeerselectionselectiondemotehotfailed)
+			1. [DemoteHotPeers](#netpeerselectionselectiondemotehotpeers)
+			1. [DemoteLocalHotPeers](#netpeerselectionselectiondemotelocalhotpeers)
+			1. [DemoteWarmDone](#netpeerselectionselectiondemotewarmdone)
+			1. [DemoteWarmFailed](#netpeerselectionselectiondemotewarmfailed)
+			1. [DemoteWarmPeers](#netpeerselectionselectiondemotewarmpeers)
+			1. [ForgetColdPeers](#netpeerselectionselectionforgetcoldpeers)
+			1. [GossipRequests](#netpeerselectionselectiongossiprequests)
+			1. [GossipResults](#netpeerselectionselectiongossipresults)
+			1. [GovernorWakeup](#netpeerselectionselectiongovernorwakeup)
+			1. [LocalRootPeersChanged](#netpeerselectionselectionlocalrootpeerschanged)
+			1. [PromoteColdDone](#netpeerselectionselectionpromotecolddone)
+			1. [PromoteColdFailed](#netpeerselectionselectionpromotecoldfailed)
+			1. [PromoteColdLocalPeers](#netpeerselectionselectionpromotecoldlocalpeers)
+			1. [PromoteColdPeers](#netpeerselectionselectionpromotecoldpeers)
+			1. [PromoteWarmAborted](#netpeerselectionselectionpromotewarmaborted)
+			1. [PromoteWarmDone](#netpeerselectionselectionpromotewarmdone)
+			1. [PromoteWarmFailed](#netpeerselectionselectionpromotewarmfailed)
+			1. [PromoteWarmLocalPeers](#netpeerselectionselectionpromotewarmlocalpeers)
+			1. [PromoteWarmPeers](#netpeerselectionselectionpromotewarmpeers)
+			1. [PublicRootsFailure](#netpeerselectionselectionpublicrootsfailure)
+			1. [PublicRootsRequest](#netpeerselectionselectionpublicrootsrequest)
+			1. [PublicRootsResults](#netpeerselectionselectionpublicrootsresults)
+			1. [TargetsChanged](#netpeerselectionselectiontargetschanged)
+	1. __Peers__
+		1. __Ledger__
+			1. [DisabledLedgerPeers](#netpeersledgerdisabledledgerpeers)
+			1. [FallingBackToBootstrapPeers](#netpeersledgerfallingbacktobootstrappeers)
+			1. [FetchingNewLedgerState](#netpeersledgerfetchingnewledgerstate)
+			1. [PickedPeer](#netpeersledgerpickedpeer)
+			1. [PickedPeers](#netpeersledgerpickedpeers)
+			1. [RequestForPeers](#netpeersledgerrequestforpeers)
+			1. [ReusingLedgerState](#netpeersledgerreusingledgerstate)
+			1. [TraceUseLedgerAfter](#netpeersledgertraceuseledgerafter)
+			1. [WaitingOnRequest](#netpeersledgerwaitingonrequest)
+		1. [List](#netpeerslist)
+		1. __LocalRoot__
+			1. [LocalRootDomains](#netpeerslocalrootlocalrootdomains)
+			1. [LocalRootError](#netpeerslocalrootlocalrooterror)
+			1. [LocalRootFailure](#netpeerslocalrootlocalrootfailure)
+			1. [LocalRootGroups](#netpeerslocalrootlocalrootgroups)
+			1. [LocalRootResult](#netpeerslocalrootlocalrootresult)
+			1. [LocalRootWaiting](#netpeerslocalrootlocalrootwaiting)
+		1. __PublicRoot__
+			1. [PublicRootDomains](#netpeerspublicrootpublicrootdomains)
+			1. [PublicRootFailure](#netpeerspublicrootpublicrootfailure)
+			1. [PublicRootRelayAccessPoint](#netpeerspublicrootpublicrootrelayaccesspoint)
+			1. [PublicRootResult](#netpeerspublicrootpublicrootresult)
+	1. __Server__
+		1. __Local__
+			1. [AcceptConnection](#netserverlocalacceptconnection)
+			1. [AcceptError](#netserverlocalaccepterror)
+			1. [AcceptPolicy](#netserverlocalacceptpolicy)
+			1. [Error](#netserverlocalerror)
+			1. [Started](#netserverlocalstarted)
+			1. [Stopped](#netserverlocalstopped)
+		1. __Remote__
+			1. [AcceptConnection](#netserverremoteacceptconnection)
+			1. [AcceptError](#netserverremoteaccepterror)
+			1. [AcceptPolicy](#netserverremoteacceptpolicy)
+			1. [Error](#netserverremoteerror)
+			1. [Started](#netserverremotestarted)
+			1. [Stopped](#netserverremotestopped)
+	1. __Subscription__
+		1. __DNS__
+			1. [AllocateSocket](#netsubscriptiondnsallocatesocket)
+			1. [ApplicationException](#netsubscriptiondnsapplicationexception)
+			1. [CloseSocket](#netsubscriptiondnsclosesocket)
+			1. [ConnectEnd](#netsubscriptiondnsconnectend)
+			1. [ConnectException](#netsubscriptiondnsconnectexception)
+			1. [ConnectStart](#netsubscriptiondnsconnectstart)
+			1. [ConnectionExist](#netsubscriptiondnsconnectionexist)
+			1. [MissingLocalAddress](#netsubscriptiondnsmissinglocaladdress)
+			1. [Restart](#netsubscriptiondnsrestart)
+			1. [SkippingPeer](#netsubscriptiondnsskippingpeer)
+			1. [SocketAllocationException](#netsubscriptiondnssocketallocationexception)
+			1. [Start](#netsubscriptiondnsstart)
+			1. [SubscriptionFailed](#netsubscriptiondnssubscriptionfailed)
+			1. [SubscriptionRunning](#netsubscriptiondnssubscriptionrunning)
+			1. [SubscriptionWaiting](#netsubscriptiondnssubscriptionwaiting)
+			1. [SubscriptionWaitingNewConnection](#netsubscriptiondnssubscriptionwaitingnewconnection)
+			1. [TryConnectToPeer](#netsubscriptiondnstryconnecttopeer)
+			1. [UnsupportedRemoteAddr](#netsubscriptiondnsunsupportedremoteaddr)
+		1. __IP__
+			1. [AllocateSocket](#netsubscriptionipallocatesocket)
+			1. [ApplicationException](#netsubscriptionipapplicationexception)
+			1. [CloseSocket](#netsubscriptionipclosesocket)
+			1. [ConnectEnd](#netsubscriptionipconnectend)
+			1. [ConnectException](#netsubscriptionipconnectexception)
+			1. [ConnectStart](#netsubscriptionipconnectstart)
+			1. [ConnectionExist](#netsubscriptionipconnectionexist)
+			1. [MissingLocalAddress](#netsubscriptionipmissinglocaladdress)
+			1. [Restart](#netsubscriptioniprestart)
+			1. [SkippingPeer](#netsubscriptionipskippingpeer)
+			1. [SocketAllocationException](#netsubscriptionipsocketallocationexception)
+			1. [Start](#netsubscriptionipstart)
+			1. [SubscriptionFailed](#netsubscriptionipsubscriptionfailed)
+			1. [SubscriptionRunning](#netsubscriptionipsubscriptionrunning)
+			1. [SubscriptionWaiting](#netsubscriptionipsubscriptionwaiting)
+			1. [SubscriptionWaitingNewConnection](#netsubscriptionipsubscriptionwaitingnewconnection)
+			1. [TryConnectToPeer](#netsubscriptioniptryconnecttopeer)
+			1. [UnsupportedRemoteAddr](#netsubscriptionipunsupportedremoteaddr)
+1. __NodeState__
+	1. [NodeAddBlock](#nodestatenodeaddblock)
+	1. [NodeInitChainSelection](#nodestatenodeinitchainselection)
+	1. [NodeKernelOnline](#nodestatenodekernelonline)
+	1. [NodeOpeningDbs](#nodestatenodeopeningdbs)
+	1. [NodeReplays](#nodestatenodereplays)
+	1. [NodeShutdown](#nodestatenodeshutdown)
+	1. [NodeStartup](#nodestatenodestartup)
+	1. [NodeTracingOnlineConfiguring](#nodestatenodetracingonlineconfiguring)
 1. [Resources](#resources)
-1. __Server__
-	1. [AcceptConnection](#serveracceptconnection)
-	1. [AcceptError](#serveraccepterror)
-	1. [AcceptPolicy](#serveracceptpolicy)
-	1. [Error](#servererror)
-	1. [Started](#serverstarted)
-	1. [Stopped](#serverstopped)
 1. __Shutdown__
-	1. [AbnormalShutdown](#shutdownabnormalshutdown)
-	1. [RequestingShutdown](#shutdownrequestingshutdown)
-	1. [ShutdownArmedAtSlot](#shutdownshutdownarmedatslot)
-	1. [ShutdownRequested](#shutdownshutdownrequested)
-	1. [ShutdownUnexpectedInput](#shutdownshutdownunexpectedinput)
+	1. [Abnormal](#shutdownabnormal)
+	1. [ArmedAt](#shutdownarmedat)
+	1. [Requested](#shutdownrequested)
+	1. [Requesting](#shutdownrequesting)
+	1. [UnexpectedInput](#shutdownunexpectedinput)
 1. __Startup__
 	1. [Byron](#startupbyron)
 	1. [Common](#startupcommon)
+	1. [DBValidation](#startupdbvalidation)
+	1. __DiffusionInit__
+		1. [ConfiguringLocalSocket](#startupdiffusioninitconfiguringlocalsocket)
+		1. [ConfiguringServerSocket](#startupdiffusioninitconfiguringserversocket)
+		1. [CreateSystemdSocketForSnocketPath](#startupdiffusioninitcreatesystemdsocketforsnocketpath)
+		1. [CreatedLocalSocket](#startupdiffusioninitcreatedlocalsocket)
+		1. [CreatingServerSocket](#startupdiffusioninitcreatingserversocket)
+		1. [DiffusionErrored](#startupdiffusioninitdiffusionerrored)
+		1. [ListeningLocalSocket](#startupdiffusioninitlisteninglocalsocket)
+		1. [ListeningServerSocket](#startupdiffusioninitlisteningserversocket)
+		1. [LocalSocketUp](#startupdiffusioninitlocalsocketup)
+		1. [RunLocalServer](#startupdiffusioninitrunlocalserver)
+		1. [RunServer](#startupdiffusioninitrunserver)
+		1. [ServerSocketUp](#startupdiffusioninitserversocketup)
+		1. [UnsupportedLocalSystemdSocket](#startupdiffusioninitunsupportedlocalsystemdsocket)
+		1. [UnsupportedReadySocketCase](#startupdiffusioninitunsupportedreadysocketcase)
+		1. [UsingSystemdSocket](#startupdiffusioninitusingsystemdsocket)
+	1. [Info](#startupinfo)
 	1. [Network](#startupnetwork)
 	1. [NetworkConfig](#startupnetworkconfig)
 	1. [NetworkConfigUpdate](#startupnetworkconfigupdate)
 	1. [NetworkConfigUpdateError](#startupnetworkconfigupdateerror)
+	1. [NetworkMagic](#startupnetworkmagic)
+	1. [P2PInfo](#startupp2pinfo)
 	1. [P2PWarning](#startupp2pwarning)
 	1. [P2PWarningDevelopementNetworkProtocols](#startupp2pwarningdevelopementnetworkprotocols)
 	1. [ShelleyBased](#startupshelleybased)
-	1. [StartupDBValidation](#startupstartupdbvalidation)
-	1. [StartupInfo](#startupstartupinfo)
-	1. [StartupNetworkMagic](#startupstartupnetworkmagic)
-	1. [StartupP2PInfo](#startupstartupp2pinfo)
-	1. [StartupSocketConfigError](#startupstartupsocketconfigerror)
-	1. [StartupTime](#startupstartuptime)
+	1. [SocketConfigError](#startupsocketconfigerror)
+	1. [Time](#startuptime)
 	1. [WarningDevelopmentNetworkProtocols](#startupwarningdevelopmentnetworkprotocols)
-1. __StateQueryClient__
-	1. __Recieve__
-		1. [Acquire](#statequeryclientrecieveacquire)
-		1. [Acquired](#statequeryclientrecieveacquired)
-		1. [Done](#statequeryclientrecievedone)
-		1. [Failure](#statequeryclientrecievefailure)
-		1. [Query](#statequeryclientrecievequery)
-		1. [ReAcquire](#statequeryclientrecievereacquire)
-		1. [Release](#statequeryclientrecieverelease)
-		1. [Result](#statequeryclientrecieveresult)
+1. __StateQueryServer__
+	1. __Receive__
+		1. [Acquire](#statequeryserverreceiveacquire)
+		1. [Acquired](#statequeryserverreceiveacquired)
+		1. [Done](#statequeryserverreceivedone)
+		1. [Failure](#statequeryserverreceivefailure)
+		1. [Query](#statequeryserverreceivequery)
+		1. [ReAcquire](#statequeryserverreceivereacquire)
+		1. [Release](#statequeryserverreceiverelease)
+		1. [Result](#statequeryserverreceiveresult)
 	1. __Send__
-		1. [Acquire](#statequeryclientsendacquire)
-		1. [Acquired](#statequeryclientsendacquired)
-		1. [Done](#statequeryclientsenddone)
-		1. [Failure](#statequeryclientsendfailure)
-		1. [Query](#statequeryclientsendquery)
-		1. [ReAcquire](#statequeryclientsendreacquire)
-		1. [Release](#statequeryclientsendrelease)
-		1. [Result](#statequeryclientsendresult)
-1. __TxInbound__
-	1. [TxInboundCanRequestMoreTxs](#txinboundtxinboundcanrequestmoretxs)
-	1. [TxInboundCannotRequestMoreTxs](#txinboundtxinboundcannotrequestmoretxs)
-	1. [TxInboundTerminated](#txinboundtxinboundterminated)
-	1. [TxSubmissionCollected](#txinboundtxsubmissioncollected)
-	1. [TxSubmissionProcessed](#txinboundtxsubmissionprocessed)
-1. __TxMonitorClient__
-	1. __Recieve__
-		1. [Acquire](#txmonitorclientrecieveacquire)
-		1. [Acquired](#txmonitorclientrecieveacquired)
-		1. [Done](#txmonitorclientrecievedone)
-		1. [Failure](#txmonitorclientrecievefailure)
-		1. [Query](#txmonitorclientrecievequery)
-		1. [ReAcquire](#txmonitorclientrecievereacquire)
-		1. [Release](#txmonitorclientrecieverelease)
-		1. [Result](#txmonitorclientrecieveresult)
-	1. __Send__
-		1. [Acquire](#txmonitorclientsendacquire)
-		1. [Acquired](#txmonitorclientsendacquired)
-		1. [Done](#txmonitorclientsenddone)
-		1. [Failure](#txmonitorclientsendfailure)
-		1. [Query](#txmonitorclientsendquery)
-		1. [ReAcquire](#txmonitorclientsendreacquire)
-		1. [Release](#txmonitorclientsendrelease)
-		1. [Result](#txmonitorclientsendresult)
-1. __TxOutbound__
-	1. [ControlMessage](#txoutboundcontrolmessage)
-	1. [RecvMsgRequest](#txoutboundrecvmsgrequest)
-	1. [SendMsgReply](#txoutboundsendmsgreply)
-1. __TxSubmission2__
-	1. __NodeToNode__
-		1. __Recieve__
-			1. [Done](#txsubmission2nodetonoderecievedone)
-			1. [MsgHello](#txsubmission2nodetonoderecievemsghello)
-			1. [ReplyTxIds](#txsubmission2nodetonoderecievereplytxids)
-			1. [ReplyTxs](#txsubmission2nodetonoderecievereplytxs)
-			1. [RequestTxIds](#txsubmission2nodetonoderecieverequesttxids)
-			1. [RequestTxs](#txsubmission2nodetonoderecieverequesttxs)
+		1. [Acquire](#statequeryserversendacquire)
+		1. [Acquired](#statequeryserversendacquired)
+		1. [Done](#statequeryserversenddone)
+		1. [Failure](#statequeryserversendfailure)
+		1. [Query](#statequeryserversendquery)
+		1. [ReAcquire](#statequeryserversendreacquire)
+		1. [Release](#statequeryserversendrelease)
+		1. [Result](#statequeryserversendresult)
+1. __TxSubmission__
+	1. __Local__
+		1. __Receive__
+			1. [AcceptTx](#txsubmissionlocalreceiveaccepttx)
+			1. [Done](#txsubmissionlocalreceivedone)
+			1. [RejectTx](#txsubmissionlocalreceiverejecttx)
+			1. [SubmitTx](#txsubmissionlocalreceivesubmittx)
 		1. __Send__
-			1. [Done](#txsubmission2nodetonodesenddone)
-			1. [MsgHello](#txsubmission2nodetonodesendmsghello)
-			1. [ReplyTxIds](#txsubmission2nodetonodesendreplytxids)
-			1. [ReplyTxs](#txsubmission2nodetonodesendreplytxs)
-			1. [RequestTxIds](#txsubmission2nodetonodesendrequesttxids)
-			1. [RequestTxs](#txsubmission2nodetonodesendrequesttxs)
-1. __TxSubmissionClient__
-	1. __Recieve__
-		1. [AcceptTx](#txsubmissionclientrecieveaccepttx)
-		1. [Done](#txsubmissionclientrecievedone)
-		1. [RejectTx](#txsubmissionclientrecieverejecttx)
-		1. [SubmitTx](#txsubmissionclientrecievesubmittx)
-	1. __Send__
-		1. [AcceptTx](#txsubmissionclientsendaccepttx)
-		1. [Done](#txsubmissionclientsenddone)
-		1. [RejectTx](#txsubmissionclientsendrejecttx)
-		1. [SubmitTx](#txsubmissionclientsendsubmittx)
+			1. [AcceptTx](#txsubmissionlocalsendaccepttx)
+			1. [Done](#txsubmissionlocalsenddone)
+			1. [RejectTx](#txsubmissionlocalsendrejecttx)
+			1. [SubmitTx](#txsubmissionlocalsendsubmittx)
+	1. __LocalServer__
+		1. [ReceivedTx](#txsubmissionlocalserverreceivedtx)
+	1. __MonitorClient__
+		1. __Receive__
+			1. [Acquire](#txsubmissionmonitorclientreceiveacquire)
+			1. [Acquired](#txsubmissionmonitorclientreceiveacquired)
+			1. [Done](#txsubmissionmonitorclientreceivedone)
+			1. [Failure](#txsubmissionmonitorclientreceivefailure)
+			1. [Query](#txsubmissionmonitorclientreceivequery)
+			1. [ReAcquire](#txsubmissionmonitorclientreceivereacquire)
+			1. [Release](#txsubmissionmonitorclientreceiverelease)
+			1. [Result](#txsubmissionmonitorclientreceiveresult)
+		1. __Send__
+			1. [Acquire](#txsubmissionmonitorclientsendacquire)
+			1. [Acquired](#txsubmissionmonitorclientsendacquired)
+			1. [Done](#txsubmissionmonitorclientsenddone)
+			1. [Failure](#txsubmissionmonitorclientsendfailure)
+			1. [Query](#txsubmissionmonitorclientsendquery)
+			1. [ReAcquire](#txsubmissionmonitorclientsendreacquire)
+			1. [Release](#txsubmissionmonitorclientsendrelease)
+			1. [Result](#txsubmissionmonitorclientsendresult)
+	1. __Remote__
+		1. __Receive__
+			1. [Done](#txsubmissionremotereceivedone)
+			1. [MsgHello](#txsubmissionremotereceivemsghello)
+			1. [ReplyTxIds](#txsubmissionremotereceivereplytxids)
+			1. [ReplyTxs](#txsubmissionremotereceivereplytxs)
+			1. [RequestTxIds](#txsubmissionremotereceiverequesttxids)
+			1. [RequestTxs](#txsubmissionremotereceiverequesttxs)
+		1. __Send__
+			1. [Done](#txsubmissionremotesenddone)
+			1. [MsgHello](#txsubmissionremotesendmsghello)
+			1. [ReplyTxIds](#txsubmissionremotesendreplytxids)
+			1. [ReplyTxs](#txsubmissionremotesendreplytxs)
+			1. [RequestTxIds](#txsubmissionremotesendrequesttxids)
+			1. [RequestTxs](#txsubmissionremotesendrequesttxs)
+	1. __TxInbound__
+		1. [CanRequestMoreTxs](#txsubmissiontxinboundcanrequestmoretxs)
+		1. [CannotRequestMoreTxs](#txsubmissiontxinboundcannotrequestmoretxs)
+		1. [Collected](#txsubmissiontxinboundcollected)
+		1. [Processed](#txsubmissiontxinboundprocessed)
+		1. [Terminated](#txsubmissiontxinboundterminated)
+	1. __TxOutbound__
+		1. [ControlMessage](#txsubmissiontxoutboundcontrolmessage)
+		1. [RecvMsgRequest](#txsubmissiontxoutboundrecvmsgrequest)
+		1. [SendMsgReply](#txsubmissiontxoutboundsendmsgreply)
 
 ## [Metrics](#metrics)
-1. [Block replay progress (%)](#block replay progress (%))
-1. [blocksForgedNum](#blocksforgednum)
-1. __cardano__
-	1. __node__
-		1. [aboutToLeadSlotLast](#cardanonodeabouttoleadslotlast)
-		1. [aboutToLeadSlotLast](#cardanonodeabouttoleadslotlast)
-		1. [adoptedSlotLast](#cardanonodeadoptedslotlast)
-		1. [blockContext](#cardanonodeblockcontext)
-		1. [blockFromFuture](#cardanonodeblockfromfuture)
-		1. [blocks](#cardanonodeblocks)
-		1. [blocks](#cardanonodeblocks)
-		1. [connectedPeers](#cardanonodeconnectedpeers)
-		1. __connectionManager__
-			1. [duplexConns](#cardanonodeconnectionmanagerduplexconns)
-			1. [duplexConns](#cardanonodeconnectionmanagerduplexconns)
-			1. [fullDuplexConns](#cardanonodeconnectionmanagerfullduplexconns)
-			1. [fullDuplexConns](#cardanonodeconnectionmanagerfullduplexconns)
-			1. [inboundConns](#cardanonodeconnectionmanagerinboundconns)
-			1. [inboundConns](#cardanonodeconnectionmanagerinboundconns)
-			1. [outboundConns](#cardanonodeconnectionmanageroutboundconns)
-			1. [outboundConns](#cardanonodeconnectionmanageroutboundconns)
-			1. [unidirectionalConns](#cardanonodeconnectionmanagerunidirectionalconns)
-			1. [unidirectionalConns](#cardanonodeconnectionmanagerunidirectionalconns)
-		1. [couldNotForgeSlotLast](#cardanonodecouldnotforgeslotlast)
-		1. [couldNotForgeSlotLast](#cardanonodecouldnotforgeslotlast)
-		1. [currentKESPeriod](#cardanonodecurrentkesperiod)
-		1. [delegMapSize](#cardanonodedelegmapsize)
-		1. [density](#cardanonodedensity)
-		1. [density](#cardanonodedensity)
-		1. [epoch](#cardanonodeepoch)
-		1. [epoch](#cardanonodeepoch)
-		1. [forgedInvalidSlotLast](#cardanonodeforgedinvalidslotlast)
-		1. [forgedSlotLast](#cardanonodeforgedslotlast)
-		1. __inbound-governor__
-			1. [cold](#cardanonodeinbound-governorcold)
-			1. [cold](#cardanonodeinbound-governorcold)
-			1. [hot](#cardanonodeinbound-governorhot)
-			1. [hot](#cardanonodeinbound-governorhot)
-			1. [idle](#cardanonodeinbound-governoridle)
-			1. [idle](#cardanonodeinbound-governoridle)
-			1. [warm](#cardanonodeinbound-governorwarm)
-			1. [warm](#cardanonodeinbound-governorwarm)
-		1. [ledgerState](#cardanonodeledgerstate)
-		1. [ledgerView](#cardanonodeledgerview)
-		1. [mempoolBytes](#cardanonodemempoolbytes)
-		1. [mempoolBytes](#cardanonodemempoolbytes)
-		1. [mempoolBytes](#cardanonodemempoolbytes)
-		1. [mempoolBytes](#cardanonodemempoolbytes)
-		1. __metrics__
-			1. __served__
-				1. [header](#cardanonodemetricsservedheader)
-				1. [header](#cardanonodemetricsservedheader)
-				1. [header](#cardanonodemetricsservedheader)
-				1. [header](#cardanonodemetricsservedheader)
-		1. [nodeCannotForge](#cardanonodenodecannotforge)
-		1. [nodeIsLeader](#cardanonodenodeisleader)
-		1. [nodeNotLeader](#cardanonodenodenotleader)
-		1. [notAdoptedSlotLast](#cardanonodenotadoptedslotlast)
-		1. [operationalCertificateExpiryKESPeriod](#cardanonodeoperationalcertificateexpirykesperiod)
-		1. [operationalCertificateStartKESPeriod](#cardanonodeoperationalcertificatestartkesperiod)
-		1. __peerSelection__
-			1. [cold](#cardanonodepeerselectioncold)
-			1. [hot](#cardanonodepeerselectionhot)
-			1. [warm](#cardanonodepeerselectionwarm)
-		1. [remainingKESPeriods](#cardanonoderemainingkesperiods)
-		1. __served__
-			1. [block](#cardanonodeservedblock)
-		1. [slotInEpoch](#cardanonodeslotinepoch)
-		1. [slotInEpoch](#cardanonodeslotinepoch)
-		1. [slotIsImmutable](#cardanonodeslotisimmutable)
-		1. [slots](#cardanonodeslots)
-		1. [slots](#cardanonodeslots)
-		1. __submissions__
-			1. [accepted](#cardanonodesubmissionsaccepted)
-			1. [rejected](#cardanonodesubmissionsrejected)
-			1. [submitted](#cardanonodesubmissionssubmitted)
-		1. [txsInMempool](#cardanonodetxsinmempool)
-		1. [txsInMempool](#cardanonodetxsinmempool)
-		1. [txsInMempool](#cardanonodetxsinmempool)
-		1. [txsInMempool](#cardanonodetxsinmempool)
-		1. [txsProcessedNum](#cardanonodetxsprocessednum)
-		1. [utxoSize](#cardanonodeutxosize)
-1. __mem__
-	1. [resident](#memresident)
-1. [nodeCannotForgeNum](#nodecannotforgenum)
-1. [nodeIsLeaderNum](#nodeisleadernum)
-1. [peersFromNodeKernel](#peersfromnodekernel)
-1. __rts__
-	1. [gcLiveBytes](#rtsgclivebytes)
-	1. [gcMajorNum](#rtsgcmajornum)
-	1. [gcMinorNum](#rtsgcminornum)
-	1. [gcticks](#rtsgcticks)
-	1. [mutticks](#rtsmutticks)
-	1. [threads](#rtsthreads)
-1. [slotsMissed](#slotsmissed)
-1. __stat__
-	1. [cputicks](#statcputicks)
+1. __BlockFetch__
+	1. [BlocksServed](#blockfetchblocksserved)
+	1. [ConnectedPeers](#blockfetchconnectedpeers)
+1. __ChainDB__
+	1. [BlockReplayProgress](#chaindbblockreplayprogress)
+	1. [Blocks](#chaindbblocks)
+	1. [Density](#chaindbdensity)
+	1. [Epoch](#chaindbepoch)
+	1. [SlotInEpoch](#chaindbslotinepoch)
+	1. [Slots](#chaindbslots)
+1. __ChainSync__
+	1. [HeadersServed](#chainsyncheadersserved)
+1. __Forge__
+	1. [AboutToLeadSlotLast](#forgeabouttoleadslotlast)
+	1. [AdoptedOwnBlockSlotLast](#forgeadoptedownblockslotlast)
+	1. [BlockContext](#forgeblockcontext)
+	1. [BlockFromFuture](#forgeblockfromfuture)
+	1. [BlocksForgedNum](#forgeblocksforgednum)
+	1. [CouldNotForgeSlotLast](#forgecouldnotforgeslotlast)
+	1. [CurrentKESPeriod](#forgecurrentkesperiod)
+	1. [DelegMapSize](#forgedelegmapsize)
+	1. [ForgedInvalidSlotLast](#forgeforgedinvalidslotlast)
+	1. [ForgedSlotLast](#forgeforgedslotlast)
+	1. [LastSlot](#forgelastslot)
+	1. [LedgerState](#forgeledgerstate)
+	1. [LedgerView](#forgeledgerview)
+	1. [NodeCannotForge](#forgenodecannotforge)
+	1. [NodeCannotForgeNum](#forgenodecannotforgenum)
+	1. [NodeIsLeader](#forgenodeisleader)
+	1. [NodeIsLeaderNum](#forgenodeisleadernum)
+	1. [NodeNotLeader](#forgenodenotleader)
+	1. [NotAdoptedSlotLast](#forgenotadoptedslotlast)
+	1. [OperationalCertificateExpiryKESPeriod](#forgeoperationalcertificateexpirykesperiod)
+	1. [OperationalCertificateStartKESPeriod](#forgeoperationalcertificatestartkesperiod)
+	1. [RemainingKESPeriods](#forgeremainingkesperiods)
+	1. [SlotIsImmutable](#forgeslotisimmutable)
+	1. [SlotsMissed](#forgeslotsmissed)
+	1. [UtxoSize](#forgeutxosize)
+1. __Mempool__
+	1. [MempoolBytes](#mempoolmempoolbytes)
+	1. [TxsInMempool](#mempooltxsinmempool)
+	1. [TxsProcessedNum](#mempooltxsprocessednum)
+1. __Net__
+	1. __ConnectionManager__
+		1. [DuplexConns](#netconnectionmanagerduplexconns)
+		1. [DuplexConns](#netconnectionmanagerduplexconns)
+		1. [FullDuplexConns](#netconnectionmanagerfullduplexconns)
+		1. [FullDuplexConns](#netconnectionmanagerfullduplexconns)
+		1. [InboundConns](#netconnectionmanagerinboundconns)
+		1. [InboundConns](#netconnectionmanagerinboundconns)
+		1. [OutboundConns](#netconnectionmanageroutboundconns)
+		1. [OutboundConns](#netconnectionmanageroutboundconns)
+		1. [UnidirectionalConns](#netconnectionmanagerunidirectionalconns)
+		1. [UnidirectionalConns](#netconnectionmanagerunidirectionalconns)
+	1. __InboundGovernor__
+		1. [Cold](#netinboundgovernorcold)
+		1. [Hot](#netinboundgovernorhot)
+		1. [Idle](#netinboundgovernoridle)
+		1. [Warm](#netinboundgovernorwarm)
+	1. __LocalInboundGovernor__
+		1. [Cold](#netlocalinboundgovernorcold)
+		1. [Hot](#netlocalinboundgovernorhot)
+		1. [Idle](#netlocalinboundgovernoridle)
+		1. [Warm](#netlocalinboundgovernorwarm)
+	1. __PeerSelection__
+		1. [Cold](#netpeerselectioncold)
+		1. [Hot](#netpeerselectionhot)
+		1. [Warm](#netpeerselectionwarm)
+	1. [PeersFromNodeKernel](#netpeersfromnodekernel)
+1. __Resources__
+	1. __Mem__
+		1. [Resident](#resourcesmemresident)
+	1. __RTS__
+		1. [GcLiveBytes](#resourcesrtsgclivebytes)
+		1. [GcMajorNum](#resourcesrtsgcmajornum)
+		1. [GcMinorNum](#resourcesrtsgcminornum)
+		1. [Gcticks](#resourcesrtsgcticks)
+		1. [Mutticks](#resourcesrtsmutticks)
+		1. [Threads](#resourcesrtsthreads)
+	1. __Stat__
+		1. [Cputicks](#resourcesstatcputicks)
+1. __TxSubmission__
+	1. [Accepted](#txsubmissionaccepted)
+	1. [Rejected](#txsubmissionrejected)
+	1. [Submitted](#txsubmissionsubmitted)
 
 ## [Datapoints](#datapoints)
 1. [NodeInfo](#nodeinfo)
 
 ## Trace Messages
-### AcceptPolicy.ConnectionHardLimit
+### BlockFetch.ClientEvent.AcknowledgedFetchRequest
 
 
-***
-Hard rate limit reached, waiting until the number of connections drops below n.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Info`
-
-### AcceptPolicy.ConnectionLimitResume
-
-
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Info`
-
-### AcceptPolicy.ConnectionRateLimiting
-
-
-***
-Rate limiting accepting connections, delaying next accept for given time, currently serving n connections.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Info`
-
-### BlockFetch.NodeToNode.Recieve.BatchDone
-
-
-***
-End of block streaming.
-***
+> Mark the point when the fetch client picks up the request added by the block fetch decision thread. Note that this event can happen fewer times than the 'AddedFetchRequest' due to fetch request merging.
 
 
 From current configuration:
@@ -866,28 +802,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### BlockFetch.NodeToNode.Recieve.Block
+### BlockFetch.ClientEvent.AddedFetchRequest
 
 
-***
-Stream a single block.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### BlockFetch.NodeToNode.Recieve.ClientDone
-
-
-***
-Client termination message.
-***
+> The block fetch decision thread has added a new fetch instruction consisting of one or more individual request ranges.
 
 
 From current configuration:
@@ -898,28 +816,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### BlockFetch.NodeToNode.Recieve.NoBlocks
+### BlockFetch.ClientEvent.ClientTerminating
 
 
-***
-Respond that there are no blocks.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### BlockFetch.NodeToNode.Recieve.RequestRange
-
-
-***
-Request range of blocks.
-***
+> The client is terminating.  Log the number of outstanding requests.
 
 
 From current configuration:
@@ -930,28 +830,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### BlockFetch.NodeToNode.Recieve.StartBatch
+### BlockFetch.ClientEvent.CompletedBlockFetch
 
 
-***
-Start block streaming.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### BlockFetch.NodeToNode.Send.BatchDone
-
-
-***
-End of block streaming.
-***
+> Mark the successful end of receiving a streaming batch of blocks.
 
 
 From current configuration:
@@ -962,28 +844,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### BlockFetch.NodeToNode.Send.Block
+### BlockFetch.ClientEvent.CompletedFetchBatch
 
 
-***
-Stream a single block.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### BlockFetch.NodeToNode.Send.ClientDone
-
-
-***
-Client termination message.
-***
+> Mark the successful end of receiving a streaming batch of blocks
 
 
 From current configuration:
@@ -994,28 +858,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### BlockFetch.NodeToNode.Send.NoBlocks
+### BlockFetch.ClientEvent.RejectedFetchBatch
 
 
-***
-Respond that there are no blocks.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### BlockFetch.NodeToNode.Send.RequestRange
-
-
-***
-Request range of blocks.
-***
+> If the other peer rejects our request then we have this event instead of 'StartedFetchBatch' and 'CompletedFetchBatch'.
 
 
 From current configuration:
@@ -1026,28 +872,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### BlockFetch.NodeToNode.Send.StartBatch
+### BlockFetch.ClientEvent.SendFetchRequest
 
 
-***
-Start block streaming.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### BlockFetchClient.AcknowledgedFetchRequest
-
-
-***
-Mark the point when the fetch client picks up the request added by the block fetch decision thread. Note that this event can happen fewer times than the 'AddedFetchRequest' due to fetch request merging.
-***
+> Mark the point when fetch request for a fragment is actually sent over the wire.
 
 
 From current configuration:
@@ -1058,28 +886,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### BlockFetchClient.AddedFetchRequest
+### BlockFetch.ClientEvent.StartedFetchBatch
 
 
-***
-The block fetch decision thread has added a new fetch instruction consisting of one or more individual request ranges.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### BlockFetchClient.ClientTerminating
-
-
-***
-The client is terminating.  Log the number of outstanding requests.
-***
+> Mark the start of receiving a streaming batch of blocks. This will be followed by one or more 'CompletedBlockFetch' and a final 'CompletedFetchBatch'
 
 
 From current configuration:
@@ -1090,29 +900,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### BlockFetchClient.CompletedBlockFetch
+### BlockFetch.Decision
 
 
-***
-Mark the successful end of receiving a streaming batch of blocks.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-Limiters: Limiter `BlockFetchClient.CompletedBlockFetch` with frequency `2.0`
-
-### BlockFetchClient.CompletedFetchBatch
-
-
-***
-Mark the successful end of receiving a streaming batch of blocks
-***
+> Throughout the decision making process we accumulate reasons to decline to fetch any blocks. This message carries the intermediate and final results.
 
 
 From current configuration:
@@ -1123,28 +914,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### BlockFetchClient.RejectedFetchBatch
+### BlockFetch.Remote.Receive.BatchDone
 
 
-***
-If the other peer rejects our request then we have this event instead of 'StartedFetchBatch' and 'CompletedFetchBatch'.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### BlockFetchClient.SendFetchRequest
-
-
-***
-Mark the point when fetch request for a fragment is actually sent over the wire.
-***
+> End of block streaming.
 
 
 From current configuration:
@@ -1155,28 +928,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### BlockFetchClient.StartedFetchBatch
+### BlockFetch.Remote.Receive.Block
 
 
-***
-Mark the start of receiving a streaming batch of blocks. This will be followed by one or more 'CompletedBlockFetch' and a final 'CompletedFetchBatch'
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### BlockFetchDecision
-
-
-***
-Throughout the decision making process we accumulate reasons to decline to fetch any blocks. This message carries the intermediate and final results.
-***
+> Stream a single block.
 
 
 From current configuration:
@@ -1187,28 +942,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### BlockFetchSerialised.NodeToNode.Recieve.BatchDone
+### BlockFetch.Remote.Receive.ClientDone
 
 
-***
-End of block streaming.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### BlockFetchSerialised.NodeToNode.Recieve.Block
-
-
-***
-Stream a single block.
-***
+> Client termination message.
 
 
 From current configuration:
@@ -1219,28 +956,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### BlockFetchSerialised.NodeToNode.Recieve.ClientDone
+### BlockFetch.Remote.Receive.NoBlocks
 
 
-***
-Client termination message.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### BlockFetchSerialised.NodeToNode.Recieve.NoBlocks
-
-
-***
-Respond that there are no blocks.
-***
+> Respond that there are no blocks.
 
 
 From current configuration:
@@ -1251,28 +970,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### BlockFetchSerialised.NodeToNode.Recieve.RequestRange
+### BlockFetch.Remote.Receive.RequestRange
 
 
-***
-Request range of blocks.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### BlockFetchSerialised.NodeToNode.Recieve.StartBatch
-
-
-***
-Start block streaming.
-***
+> Request range of blocks.
 
 
 From current configuration:
@@ -1283,28 +984,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### BlockFetchSerialised.NodeToNode.Send.BatchDone
+### BlockFetch.Remote.Receive.StartBatch
 
 
-***
-End of block streaming.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### BlockFetchSerialised.NodeToNode.Send.Block
-
-
-***
-Stream a single block.
-***
+> Start block streaming.
 
 
 From current configuration:
@@ -1315,28 +998,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### BlockFetchSerialised.NodeToNode.Send.ClientDone
+### BlockFetch.Remote.Send.BatchDone
 
 
-***
-Client termination message.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### BlockFetchSerialised.NodeToNode.Send.NoBlocks
-
-
-***
-Respond that there are no blocks.
-***
+> End of block streaming.
 
 
 From current configuration:
@@ -1347,28 +1012,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### BlockFetchSerialised.NodeToNode.Send.RequestRange
+### BlockFetch.Remote.Send.Block
 
 
-***
-Request range of blocks.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### BlockFetchSerialised.NodeToNode.Send.StartBatch
-
-
-***
-Start block streaming.
-***
+> Stream a single block.
 
 
 From current configuration:
@@ -1379,12 +1026,234 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### BlockFetchServer.SendBlock
+### BlockFetch.Remote.Send.ClientDone
 
 
-***
-The server sent a block to the peer.
-***
+> Client termination message.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### BlockFetch.Remote.Send.NoBlocks
+
+
+> Respond that there are no blocks.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### BlockFetch.Remote.Send.RequestRange
+
+
+> Request range of blocks.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### BlockFetch.Remote.Send.StartBatch
+
+
+> Start block streaming.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### BlockFetch.Remote.Serialised.Receive.BatchDone
+
+
+> End of block streaming.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### BlockFetch.Remote.Serialised.Receive.Block
+
+
+> Stream a single block.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### BlockFetch.Remote.Serialised.Receive.ClientDone
+
+
+> Client termination message.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### BlockFetch.Remote.Serialised.Receive.NoBlocks
+
+
+> Respond that there are no blocks.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### BlockFetch.Remote.Serialised.Receive.RequestRange
+
+
+> Request range of blocks.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### BlockFetch.Remote.Serialised.Receive.StartBatch
+
+
+> Start block streaming.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### BlockFetch.Remote.Serialised.Send.BatchDone
+
+
+> End of block streaming.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### BlockFetch.Remote.Serialised.Send.Block
+
+
+> Stream a single block.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### BlockFetch.Remote.Serialised.Send.ClientDone
+
+
+> Client termination message.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### BlockFetch.Remote.Serialised.Send.NoBlocks
+
+
+> Respond that there are no blocks.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### BlockFetch.Remote.Serialised.Send.RequestRange
+
+
+> Request range of blocks.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### BlockFetch.Remote.Serialised.Send.StartBatch
+
+
+> Start block streaming.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### BlockFetch.ServerBlock.SendBlock
+
+
+> The server sent a block to the peer.
 
 
 From current configuration:
@@ -1398,11 +1267,9 @@ Filtered  by config value: `Notice`
 ### BlockchainTime.CurrentSlotUnknown
 
 
-***
-Current slot is not yet known
- This happens when the tip of our current chain is so far in the past that we cannot translate the current wallclock to a slot number, typically during syncing. Until the current slot number is known, we cannot produce blocks. Seeing this message during syncing therefore is normal and to be expected.
- We record the current time (the time we tried to translate to a 'SlotNo') as well as the 'PastHorizonException', which provides detail on the bounds between which we /can/ do conversions. The distance between the current time and the upper bound should rapidly decrease with consecutive 'CurrentSlotUnknown' messages during syncing.
-***
+> Current slot is not yet known
+>  This happens when the tip of our current chain is so far in the past that we cannot translate the current wallclock to a slot number, typically during syncing. Until the current slot number is known, we cannot produce blocks. Seeing this message during syncing therefore is normal and to be expected.
+>  We record the current time (the time we tried to translate to a 'SlotNo') as well as the 'PastHorizonException', which provides detail on the bounds between which we /can/ do conversions. The distance between the current time and the upper bound should rapidly decrease with consecutive 'CurrentSlotUnknown' messages during syncing.
 
 
 From current configuration:
@@ -1416,10 +1283,8 @@ Filtered  by config value: `Notice`
 ### BlockchainTime.StartTimeInTheFuture
 
 
-***
-The start time of the blockchain time is in the future
- We have to block (for 'NominalDiffTime') until that time comes.
-***
+> The start time of the blockchain time is in the future
+>  We have to block (for 'NominalDiffTime') until that time comes.
 
 
 From current configuration:
@@ -1433,11 +1298,9 @@ Filtered  by config value: `Notice`
 ### BlockchainTime.SystemClockMovedBack
 
 
-***
-The system clock moved back an acceptable time span, e.g., because of an NTP sync.
- The system clock moved back such that the new current slot would be smaller than the previous one. If this is within the configured limit, we trace this warning but *do not change the current slot*. The current slot never decreases, but the current slot may stay the same longer than expected.
- When the system clock moved back more than the configured limit, we shut down with a fatal exception.
-***
+> The system clock moved back an acceptable time span, e.g., because of an NTP sync.
+>  The system clock moved back such that the new current slot would be smaller than the previous one. If this is within the configured limit, we trace this warning but *do not change the current slot*. The current slot never decreases, but the current slot may stay the same longer than expected.
+>  When the system clock moved back more than the configured limit, we shut down with a fatal exception.
 
 
 From current configuration:
@@ -1451,9 +1314,7 @@ Filtered  by config value: `Notice`
 ### ChainDB.AddBlockEvent.AddBlockValidation.CandidateContainsFutureBlocks
 
 
-***
-An event traced during validating performed while adding a block. Candidate contains headers from the future which do no exceed the clock skew.
-***
+> An event traced during validating performed while adding a block. Candidate contains headers from the future which do no exceed the clock skew.
 
 
 From current configuration:
@@ -1467,9 +1328,7 @@ Filtered  by config value: `Info`
 ### ChainDB.AddBlockEvent.AddBlockValidation.CandidateContainsFutureBlocksExceedingClockSkew
 
 
-***
-An event traced during validating performed while adding a block. Candidate contains headers from the future which exceed the clock skew.
-***
+> An event traced during validating performed while adding a block. Candidate contains headers from the future which exceed the clock skew.
 
 
 From current configuration:
@@ -1483,9 +1342,7 @@ Filtered  by config value: `Info`
 ### ChainDB.AddBlockEvent.AddBlockValidation.InvalidBlock
 
 
-***
-An event traced during validating performed while adding a block. A point was found to be invalid.
-***
+> An event traced during validating performed while adding a block. A point was found to be invalid.
 
 
 From current configuration:
@@ -1499,9 +1356,6 @@ Filtered  by config value: `Info`
 ### ChainDB.AddBlockEvent.AddBlockValidation.UpdateLedgerDb
 
 
-***
-
-***
 
 
 From current configuration:
@@ -1515,9 +1369,7 @@ Filtered  by config value: `Info`
 ### ChainDB.AddBlockEvent.AddBlockValidation.ValidCandidate
 
 
-***
-An event traced during validating performed while adding a block. A candidate chain was valid.
-***
+> An event traced during validating performed while adding a block. A candidate chain was valid.
 
 
 From current configuration:
@@ -1532,9 +1384,7 @@ Limiters: Limiter `ChainDB.AddBlockEvent.AddBlockValidation.ValidCandidate` with
 ### ChainDB.AddBlockEvent.AddedBlockToQueue
 
 
-***
-The block was added to the queue and will be added to the ChainDB by the background thread. The size of the queue is included..
-***
+> The block was added to the queue and will be added to the ChainDB by the background thread. The size of the queue is included..
 
 
 From current configuration:
@@ -1549,9 +1399,7 @@ Limiters: Limiter `ChainDB.AddBlockEvent.AddedBlockToQueue` with frequency `2.0`
 ### ChainDB.AddBlockEvent.AddedBlockToVolatileDB
 
 
-***
-A block was added to the Volatile DB
-***
+> A block was added to the Volatile DB
 
 
 From current configuration:
@@ -1566,9 +1414,7 @@ Limiters: Limiter `ChainDB.AddBlockEvent.AddedBlockToVolatileDB` with frequency 
 ### ChainDB.AddBlockEvent.AddedToCurrentChain
 
 
-***
-The new block fits onto the current chain (first fragment) and we have successfully used it to extend our (new) current chain (second fragment).
-***
+> The new block fits onto the current chain (first fragment) and we have successfully used it to extend our (new) current chain (second fragment).
 
 
 From current configuration:
@@ -1582,9 +1428,7 @@ Filtered  by config value: `Info`
 ### ChainDB.AddBlockEvent.BlockInTheFuture
 
 
-***
-The block is from the future, i.e., its slot number is greater than the current slot (the second argument).
-***
+> The block is from the future, i.e., its slot number is greater than the current slot (the second argument).
 
 
 From current configuration:
@@ -1598,9 +1442,7 @@ Filtered  by config value: `Info`
 ### ChainDB.AddBlockEvent.ChainSelectionForFutureBlock
 
 
-***
-Run chain selection for a block that was previously from the future. This is done for all blocks from the future each time a new block is added.
-***
+> Run chain selection for a block that was previously from the future. This is done for all blocks from the future each time a new block is added.
 
 
 From current configuration:
@@ -1614,9 +1456,7 @@ Filtered  by config value: `Info`
 ### ChainDB.AddBlockEvent.IgnoreBlockAlreadyInVolatileDB
 
 
-***
-A block that is already in the Volatile DB was ignored.
-***
+> A block that is already in the Volatile DB was ignored.
 
 
 From current configuration:
@@ -1630,9 +1470,7 @@ Filtered  by config value: `Info`
 ### ChainDB.AddBlockEvent.IgnoreBlockOlderThanK
 
 
-***
-A block with a 'BlockNo' more than @k@ back than the current tip was ignored.
-***
+> A block with a 'BlockNo' more than @k@ back than the current tip was ignored.
 
 
 From current configuration:
@@ -1646,9 +1484,7 @@ Filtered  by config value: `Info`
 ### ChainDB.AddBlockEvent.IgnoreInvalidBlock
 
 
-***
-A block that is already in the Volatile DB was ignored.
-***
+> A block that is already in the Volatile DB was ignored.
 
 
 From current configuration:
@@ -1662,9 +1498,7 @@ Filtered  by config value: `Info`
 ### ChainDB.AddBlockEvent.PipeliningEvent.OutdatedTentativeHeader
 
 
-***
-An event traced during block selection when the tentative header got cleared on chain selection.
-***
+> An event traced during block selection when the tentative header got cleared on chain selection.
 
 
 From current configuration:
@@ -1678,9 +1512,7 @@ Filtered  by config value: `Info`
 ### ChainDB.AddBlockEvent.PipeliningEvent.SetTentativeHeader
 
 
-***
-An event traced during block selection when the tentative header (in the context of diffusion pipelining) is set.
-***
+> An event traced during block selection when the tentative header (in the context of diffusion pipelining) is set.
 
 
 From current configuration:
@@ -1694,9 +1526,7 @@ Filtered  by config value: `Info`
 ### ChainDB.AddBlockEvent.PipeliningEvent.TrapTentativeHeader
 
 
-***
-An event traced during block selection when the body of the tentative header turned out to be invalid.
-***
+> An event traced during block selection when the body of the tentative header turned out to be invalid.
 
 
 From current configuration:
@@ -1710,9 +1540,6 @@ Filtered  by config value: `Info`
 ### ChainDB.AddBlockEvent.PoppedBlockFromQueue
 
 
-***
-
-***
 
 
 From current configuration:
@@ -1726,9 +1553,7 @@ Filtered  by config value: `Info`
 ### ChainDB.AddBlockEvent.StoreButDontChange
 
 
-***
-The block fits onto some fork, we'll try to switch to that fork (if it is preferable to our chain).
-***
+> The block fits onto some fork, we'll try to switch to that fork (if it is preferable to our chain).
 
 
 From current configuration:
@@ -1742,9 +1567,7 @@ Filtered  by config value: `Info`
 ### ChainDB.AddBlockEvent.SwitchedToAFork
 
 
-***
-The new block fits onto some fork and we have switched to that fork (second fragment), as it is preferable to our (previous) current chain (first fragment).
-***
+> The new block fits onto some fork and we have switched to that fork (second fragment), as it is preferable to our (previous) current chain (first fragment).
 
 
 From current configuration:
@@ -1758,9 +1581,7 @@ Filtered  by config value: `Info`
 ### ChainDB.AddBlockEvent.TryAddToCurrentChain
 
 
-***
-The block fits onto the current chain, we'll try to use it to extend our chain.
-***
+> The block fits onto the current chain, we'll try to use it to extend our chain.
 
 
 From current configuration:
@@ -1774,9 +1595,7 @@ Filtered  by config value: `Info`
 ### ChainDB.AddBlockEvent.TrySwitchToAFork
 
 
-***
-The block fits onto some fork, we'll try to switch to that fork (if it is preferable to our chain)
-***
+> The block fits onto some fork, we'll try to switch to that fork (if it is preferable to our chain)
 
 
 From current configuration:
@@ -1790,9 +1609,7 @@ Filtered  by config value: `Info`
 ### ChainDB.CopyToImmutableDBEvent.CopiedBlockToImmutableDB
 
 
-***
-A block was successfully copied to the ImmDB.
-***
+> A block was successfully copied to the ImmDB.
 
 
 From current configuration:
@@ -1807,9 +1624,7 @@ Limiters: Limiter `ChainDB.CopyToImmutableDBEvent.CopiedBlockToImmutableDB` with
 ### ChainDB.CopyToImmutableDBEvent.NoBlocksToCopyToImmutableDB
 
 
-***
-There are no block to copy to the ImmDB.
-***
+> There are no block to copy to the ImmDB.
 
 
 From current configuration:
@@ -1823,9 +1638,7 @@ Filtered  by config value: `Info`
 ### ChainDB.FollowerEvent.FollowerNewImmIterator
 
 
-***
-The follower is in the 'FollowerInImmutableDB' state but the iterator is exhausted while the ImmDB has grown, so we open a new iterator to stream these blocks too.
-***
+> The follower is in the 'FollowerInImmutableDB' state but the iterator is exhausted while the ImmDB has grown, so we open a new iterator to stream these blocks too.
 
 
 From current configuration:
@@ -1839,9 +1652,7 @@ Filtered  by config value: `Info`
 ### ChainDB.FollowerEvent.FollowerNoLongerInMem
 
 
-***
-The follower was in the 'FollowerInImmutableDB' state and is switched to the 'FollowerInMem' state.
-***
+> The follower was in the 'FollowerInImmutableDB' state and is switched to the 'FollowerInMem' state.
 
 
 From current configuration:
@@ -1855,9 +1666,7 @@ Filtered  by config value: `Info`
 ### ChainDB.FollowerEvent.FollowerSwitchToMem
 
 
-***
-The follower was in the 'FollowerInImmutableDB' state and is switched to the 'FollowerInMem' state.
-***
+> The follower was in the 'FollowerInImmutableDB' state and is switched to the 'FollowerInMem' state.
 
 
 From current configuration:
@@ -1871,9 +1680,7 @@ Filtered  by config value: `Info`
 ### ChainDB.FollowerEvent.NewFollower
 
 
-***
-A new follower was created.
-***
+> A new follower was created.
 
 
 From current configuration:
@@ -1887,9 +1694,7 @@ Filtered  by config value: `Info`
 ### ChainDB.GCEvent.PerformedGC
 
 
-***
-There are no block to copy to the ImmDB.
-***
+> There are no block to copy to the ImmDB.
 
 
 From current configuration:
@@ -1903,9 +1708,7 @@ Filtered  by config value: `Info`
 ### ChainDB.GCEvent.ScheduledGC
 
 
-***
-There are no block to copy to the ImmDB.
-***
+> There are no block to copy to the ImmDB.
 
 
 From current configuration:
@@ -1919,9 +1722,7 @@ Filtered  by config value: `Info`
 ### ChainDB.ImmutableDBEvent.CacheEvent.CurrentChunkHit
 
 
-***
-Current chunk found in the cache.
-***
+> Current chunk found in the cache.
 
 
 From current configuration:
@@ -1935,9 +1736,7 @@ Filtered  by config value: `Info`
 ### ChainDB.ImmutableDBEvent.CacheEvent.PastChunkEvict
 
 
-***
-The least recently used past chunk was evicted because the cache was full.
-***
+> The least recently used past chunk was evicted because the cache was full.
 
 
 From current configuration:
@@ -1951,9 +1750,6 @@ Filtered  by config value: `Info`
 ### ChainDB.ImmutableDBEvent.CacheEvent.PastChunkExpired
 
 
-***
-
-***
 
 
 From current configuration:
@@ -1967,9 +1763,7 @@ Filtered  by config value: `Info`
 ### ChainDB.ImmutableDBEvent.CacheEvent.PastChunkHit
 
 
-***
-Past chunk found in the cache
-***
+> Past chunk found in the cache
 
 
 From current configuration:
@@ -1983,9 +1777,7 @@ Filtered  by config value: `Info`
 ### ChainDB.ImmutableDBEvent.CacheEvent.PastChunkMiss
 
 
-***
-Past chunk was not found in the cache
-***
+> Past chunk was not found in the cache
 
 
 From current configuration:
@@ -1999,9 +1791,7 @@ Filtered  by config value: `Info`
 ### ChainDB.ImmutableDBEvent.ChunkFileDoesntFit
 
 
-***
-The hash of the last block in the previous epoch doesn't match the previous hash of the first block in the current epoch
-***
+> The hash of the last block in the previous epoch doesn't match the previous hash of the first block in the current epoch
 
 
 From current configuration:
@@ -2015,9 +1805,7 @@ Filtered  by config value: `Info`
 ### ChainDB.ImmutableDBEvent.ChunkValidation.InvalidChunkFile
 
 
-***
-Chunk file is invalid
-***
+> Chunk file is invalid
 
 
 From current configuration:
@@ -2031,9 +1819,7 @@ Filtered  by config value: `Info`
 ### ChainDB.ImmutableDBEvent.ChunkValidation.InvalidPrimaryIndex
 
 
-***
-The primary index is invalid.
-***
+> The primary index is invalid.
 
 
 From current configuration:
@@ -2047,9 +1833,6 @@ Filtered  by config value: `Info`
 ### ChainDB.ImmutableDBEvent.ChunkValidation.InvalidSecondaryIndex
 
 
-***
-
-***
 
 
 From current configuration:
@@ -2063,9 +1846,7 @@ Filtered  by config value: `Info`
 ### ChainDB.ImmutableDBEvent.ChunkValidation.MissingChunkFile
 
 
-***
-Chunk file is missing
-***
+> Chunk file is missing
 
 
 From current configuration:
@@ -2079,9 +1860,7 @@ Filtered  by config value: `Info`
 ### ChainDB.ImmutableDBEvent.ChunkValidation.MissingPrimaryIndex
 
 
-***
-The primary index is missing.
-***
+> The primary index is missing.
 
 
 From current configuration:
@@ -2095,9 +1874,7 @@ Filtered  by config value: `Info`
 ### ChainDB.ImmutableDBEvent.ChunkValidation.MissingSecondaryIndex
 
 
-***
-The secondary index is missing.
-***
+> The secondary index is missing.
 
 
 From current configuration:
@@ -2111,9 +1888,6 @@ Filtered  by config value: `Info`
 ### ChainDB.ImmutableDBEvent.ChunkValidation.RewritePrimaryIndex
 
 
-***
-
-***
 
 
 From current configuration:
@@ -2127,9 +1901,6 @@ Filtered  by config value: `Info`
 ### ChainDB.ImmutableDBEvent.ChunkValidation.RewriteSecondaryIndex
 
 
-***
-
-***
 
 
 From current configuration:
@@ -2143,9 +1914,6 @@ Filtered  by config value: `Info`
 ### ChainDB.ImmutableDBEvent.ChunkValidation.StartedValidatingChunk
 
 
-***
-
-***
 
 
 From current configuration:
@@ -2159,9 +1927,6 @@ Filtered  by config value: `Info`
 ### ChainDB.ImmutableDBEvent.ChunkValidation.ValidatedChunk
 
 
-***
-
-***
 
 
 From current configuration:
@@ -2175,9 +1940,7 @@ Filtered  by config value: `Info`
 ### ChainDB.ImmutableDBEvent.DBAlreadyClosed
 
 
-***
-The immutable DB is already closed
-***
+> The immutable DB is already closed
 
 
 From current configuration:
@@ -2191,9 +1954,7 @@ Filtered  by config value: `Info`
 ### ChainDB.ImmutableDBEvent.DBClosed
 
 
-***
-Closing the immutable DB
-***
+> Closing the immutable DB
 
 
 From current configuration:
@@ -2207,9 +1968,7 @@ Filtered  by config value: `Info`
 ### ChainDB.ImmutableDBEvent.DeletingAfter
 
 
-***
-Delete after
-***
+> Delete after
 
 
 From current configuration:
@@ -2223,9 +1982,7 @@ Filtered  by config value: `Info`
 ### ChainDB.ImmutableDBEvent.Migrating
 
 
-***
-Performing a migration of the on-disk files.
-***
+> Performing a migration of the on-disk files.
 
 
 From current configuration:
@@ -2239,9 +1996,7 @@ Filtered  by config value: `Info`
 ### ChainDB.ImmutableDBEvent.NoValidLastLocation
 
 
-***
-No valid last location was found
-***
+> No valid last location was found
 
 
 From current configuration:
@@ -2255,9 +2010,7 @@ Filtered  by config value: `Info`
 ### ChainDB.ImmutableDBEvent.ValidatedLastLocation
 
 
-***
-The last location was validatet
-***
+> The last location was validatet
 
 
 From current configuration:
@@ -2271,9 +2024,7 @@ Filtered  by config value: `Info`
 ### ChainDB.InitChainSelEvent.CandidateContainsFutureBlocks
 
 
-***
-Candidate contains headers from the future which do not exceed the clock skew.
-***
+> Candidate contains headers from the future which do not exceed the clock skew.
 
 
 From current configuration:
@@ -2287,9 +2038,7 @@ Filtered  by config value: `Info`
 ### ChainDB.InitChainSelEvent.CandidateContainsFutureBlocksExceedingClockSkew
 
 
-***
-Candidate contains headers from the future which exceed the clock skew, making them invalid.
-***
+> Candidate contains headers from the future which exceed the clock skew, making them invalid.
 
 
 From current configuration:
@@ -2303,9 +2052,7 @@ Filtered  by config value: `Info`
 ### ChainDB.InitChainSelEvent.InitalChainSelected
 
 
-***
-InitalChainSelected
-***
+> InitalChainSelected
 
 
 From current configuration:
@@ -2319,9 +2066,7 @@ Filtered  by config value: `Info`
 ### ChainDB.InitChainSelEvent.InvalidBlock
 
 
-***
-A point was found to be invalid.
-***
+> A point was found to be invalid.
 
 
 From current configuration:
@@ -2335,9 +2080,7 @@ Filtered  by config value: `Info`
 ### ChainDB.InitChainSelEvent.StartedInitChainSelection
 
 
-***
-StartedInitChainSelection
-***
+> StartedInitChainSelection
 
 
 From current configuration:
@@ -2351,9 +2094,7 @@ Filtered  by config value: `Info`
 ### ChainDB.InitChainSelEvent.UpdateLedgerDb
 
 
-***
-UpdateLedgerDb
-***
+> UpdateLedgerDb
 
 
 From current configuration:
@@ -2367,9 +2108,7 @@ Filtered  by config value: `Info`
 ### ChainDB.InitChainSelEvent.ValidCandidate
 
 
-***
-A candidate chain was valid.
-***
+> A candidate chain was valid.
 
 
 From current configuration:
@@ -2383,9 +2122,7 @@ Filtered  by config value: `Info`
 ### ChainDB.IteratorEvent.BlockGCedFromVolatileDB
 
 
-***
-A block is no longer in the VolatileDB and isn't in the ImmDB either; it wasn't part of the current chain.
-***
+> A block is no longer in the VolatileDB and isn't in the ImmDB either; it wasn't part of the current chain.
 
 
 From current configuration:
@@ -2399,9 +2136,7 @@ Filtered  by config value: `Info`
 ### ChainDB.IteratorEvent.BlockMissingFromVolatileDB
 
 
-***
-A block is no longer in the VolatileDB because it has been garbage collected. It might now be in the ImmDB if it was part of the current chain.
-***
+> A block is no longer in the VolatileDB because it has been garbage collected. It might now be in the ImmDB if it was part of the current chain.
 
 
 From current configuration:
@@ -2415,9 +2150,7 @@ Filtered  by config value: `Info`
 ### ChainDB.IteratorEvent.BlockWasCopiedToImmutableDB
 
 
-***
-A block that has been garbage collected from the VolatileDB is now found and streamed from the ImmDB.
-***
+> A block that has been garbage collected from the VolatileDB is now found and streamed from the ImmDB.
 
 
 From current configuration:
@@ -2431,9 +2164,7 @@ Filtered  by config value: `Info`
 ### ChainDB.IteratorEvent.StreamFromBoth
 
 
-***
-Stream from both the VolatileDB and the ImmDB.
-***
+> Stream from both the VolatileDB and the ImmDB.
 
 
 From current configuration:
@@ -2447,9 +2178,7 @@ Filtered  by config value: `Info`
 ### ChainDB.IteratorEvent.StreamFromImmutableDB
 
 
-***
-Stream only from the ImmDB.
-***
+> Stream only from the ImmDB.
 
 
 From current configuration:
@@ -2463,9 +2192,7 @@ Filtered  by config value: `Info`
 ### ChainDB.IteratorEvent.StreamFromVolatileDB
 
 
-***
-Stream only from the VolatileDB.
-***
+> Stream only from the VolatileDB.
 
 
 From current configuration:
@@ -2479,9 +2206,7 @@ Filtered  by config value: `Info`
 ### ChainDB.IteratorEvent.SwitchBackToVolatileDB
 
 
-***
-We have streamed one or more blocks from the ImmDB that were part of the VolatileDB when initialising the iterator. Now, we have to look back in the VolatileDB again because the ImmDB doesn't have the next block we're looking for.
-***
+> We have streamed one or more blocks from the ImmDB that were part of the VolatileDB when initialising the iterator. Now, we have to look back in the VolatileDB again because the ImmDB doesn't have the next block we're looking for.
 
 
 From current configuration:
@@ -2495,9 +2220,7 @@ Filtered  by config value: `Info`
 ### ChainDB.IteratorEvent.UnknownRangeRequested
 
 
-***
-An unknown range was requested, see 'UnknownRange'.
-***
+> An unknown range was requested, see 'UnknownRange'.
 
 
 From current configuration:
@@ -2511,9 +2234,7 @@ Filtered  by config value: `Info`
 ### ChainDB.LedgerEvent.DeletedSnapshot
 
 
-***
-An old or invalid on-disk snapshot was deleted.
-***
+> An old or invalid on-disk snapshot was deleted.
 
 
 From current configuration:
@@ -2527,9 +2248,7 @@ Filtered  by config value: `Info`
 ### ChainDB.LedgerEvent.InvalidSnapshot
 
 
-***
-An on disk snapshot was skipped because it was invalid.
-***
+> An on disk snapshot was skipped because it was invalid.
 
 
 From current configuration:
@@ -2543,9 +2262,7 @@ Filtered  by config value: `Info`
 ### ChainDB.LedgerEvent.TookSnapshot
 
 
-***
-A snapshot was written to disk.
-***
+> A snapshot was written to disk.
 
 
 From current configuration:
@@ -2559,9 +2276,7 @@ Filtered  by config value: `Info`
 ### ChainDB.LedgerReplayEvent.ReplayFromGenesis
 
 
-***
-There were no LedgerDB snapshots on disk, so we're replaying all blocks starting from Genesis against the initial ledger. The @replayTo@ parameter corresponds to the block at the tip of the ImmDB, i.e., the last block to replay.
-***
+> There were no LedgerDB snapshots on disk, so we're replaying all blocks starting from Genesis against the initial ledger. The @replayTo@ parameter corresponds to the block at the tip of the ImmDB, i.e., the last block to replay.
 
 
 From current configuration:
@@ -2575,9 +2290,7 @@ Filtered  by config value: `Info`
 ### ChainDB.LedgerReplayEvent.ReplayFromSnapshot
 
 
-***
-There was a LedgerDB snapshot on disk corresponding to the given tip. We're replaying more recent blocks against it. The @replayTo@ parameter corresponds to the block at the tip of the ImmDB, i.e., the last block to replay.
-***
+> There was a LedgerDB snapshot on disk corresponding to the given tip. We're replaying more recent blocks against it. The @replayTo@ parameter corresponds to the block at the tip of the ImmDB, i.e., the last block to replay.
 
 
 From current configuration:
@@ -2591,10 +2304,8 @@ Filtered  by config value: `Info`
 ### ChainDB.LedgerReplayEvent.ReplayedBlock
 
 
-***
-We replayed the given block (reference) on the genesis snapshot during the initialisation of the LedgerDB.
- The @blockInfo@ parameter corresponds replayed block and the @replayTo@ parameter corresponds to the block at the tip of the ImmDB, i.e., the last block to replay.
-***
+> We replayed the given block (reference) on the genesis snapshot during the initialisation of the LedgerDB.
+>  The @blockInfo@ parameter corresponds replayed block and the @replayTo@ parameter corresponds to the block at the tip of the ImmDB, i.e., the last block to replay.
 
 
 From current configuration:
@@ -2608,9 +2319,7 @@ Filtered  by config value: `Info`
 ### ChainDB.OpenEvent.ClosedDB
 
 
-***
-The ChainDB was closed.
-***
+> The ChainDB was closed.
 
 
 From current configuration:
@@ -2624,9 +2333,7 @@ Filtered  by config value: `Info`
 ### ChainDB.OpenEvent.OpenedDB
 
 
-***
-The ChainDB was opened.
-***
+> The ChainDB was opened.
 
 
 From current configuration:
@@ -2640,9 +2347,7 @@ Filtered  by config value: `Info`
 ### ChainDB.OpenEvent.OpenedImmutableDB
 
 
-***
-The ImmDB was opened.
-***
+> The ImmDB was opened.
 
 
 From current configuration:
@@ -2656,9 +2361,7 @@ Filtered  by config value: `Info`
 ### ChainDB.OpenEvent.OpenedLgrDB
 
 
-***
-The LedgerDB was opened.
-***
+> The LedgerDB was opened.
 
 
 From current configuration:
@@ -2672,9 +2375,7 @@ Filtered  by config value: `Info`
 ### ChainDB.OpenEvent.OpenedVolatileDB
 
 
-***
-The VolatileDB was opened.
-***
+> The VolatileDB was opened.
 
 
 From current configuration:
@@ -2688,9 +2389,6 @@ Filtered  by config value: `Info`
 ### ChainDB.OpenEvent.StartedOpeningDB
 
 
-***
-
-***
 
 
 From current configuration:
@@ -2704,9 +2402,6 @@ Filtered  by config value: `Info`
 ### ChainDB.OpenEvent.StartedOpeningImmutableDB
 
 
-***
-
-***
 
 
 From current configuration:
@@ -2720,9 +2415,7 @@ Filtered  by config value: `Info`
 ### ChainDB.OpenEvent.StartedOpeningLgrDB
 
 
-***
-The LedgerDB was opened.
-***
+> The LedgerDB was opened.
 
 
 From current configuration:
@@ -2736,9 +2429,20 @@ Filtered  by config value: `Info`
 ### ChainDB.OpenEvent.StartedOpeningVolatileDB
 
 
-***
 
-***
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Info`
+
+### ChainDB.ReplayBlock.LedgerReplay
+
+
+> Counts up the percent of a block replay.
 
 
 From current configuration:
@@ -2752,9 +2456,7 @@ Filtered  by config value: `Info`
 ### ChainDB.VolatileDBEvent.BlockAlreadyHere
 
 
-***
-A block was found to be already in the DB.
-***
+> A block was found to be already in the DB.
 
 
 From current configuration:
@@ -2768,9 +2470,7 @@ Filtered  by config value: `Info`
 ### ChainDB.VolatileDBEvent.DBAlreadyClosed
 
 
-***
-When closing the DB it was found itis closed already.
-***
+> When closing the DB it was found itis closed already.
 
 
 From current configuration:
@@ -2784,9 +2484,7 @@ Filtered  by config value: `Info`
 ### ChainDB.VolatileDBEvent.InvalidFileNames
 
 
-***
-Reports a list of invalid file paths.
-***
+> Reports a list of invalid file paths.
 
 
 From current configuration:
@@ -2800,9 +2498,7 @@ Filtered  by config value: `Info`
 ### ChainDB.VolatileDBEvent.Truncate
 
 
-***
-Truncates a file up to offset because of the error.
-***
+> Truncates a file up to offset because of the error.
 
 
 From current configuration:
@@ -2813,12 +2509,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Info`
 
-### ChainSync.NodeToClient.Recieve.AwaitReply
+### ChainSync.ClientEvent.DownloadedHeader
 
 
-***
-Acknowledge the request but require the consumer to wait for the nextupdate. This means that the consumer is synced with the producer, andthe producer is waiting for its own chain state to change.
-***
+> While following a candidate chain, we rolled forward by downloading a header.
 
 
 From current configuration:
@@ -2829,13 +2523,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### ChainSync.NodeToClient.Recieve.Done
+### ChainSync.ClientEvent.Exception
 
 
-***
-We have to explain to the framework what our states mean, in terms ofwhich party has agency in each state.
-Idle states are where it is for the client to send a message,busy states are where the server is expected to send a reply.
-***
+> An exception was thrown by the Chain Sync Client.
 
 
 From current configuration:
@@ -2846,12 +2537,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### ChainSync.NodeToClient.Recieve.FindIntersect
+### ChainSync.ClientEvent.FoundIntersection
 
 
-***
-Ask the producer to try to find an improved intersection point betweenthe consumer and producer's chains. The consumer sends a sequence ofpoints and it is up to the producer to find the first intersection pointon its chain and send it back to the consumer.
-***
+> We found an intersection between our chain fragment and the candidate's chain.
 
 
 From current configuration:
@@ -2862,13 +2551,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### ChainSync.NodeToClient.Recieve.IntersectFound
+### ChainSync.ClientEvent.RolledBack
 
 
-***
-The reply to the consumer about an intersection found.The consumer can decide weather to send more points.
-The message also tells the consumer about the head point of the producer.
-***
+> While following a candidate chain, we rolled back to the given point.
 
 
 From current configuration:
@@ -2879,13 +2565,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### ChainSync.NodeToClient.Recieve.IntersectNotFound
+### ChainSync.ClientEvent.Termination
 
 
-***
-The reply to the consumer that no intersection was found: none of thepoints the consumer supplied are on the producer chain.
-The message also tells the consumer about the head point of the producer.
-***
+> The client has terminated.
 
 
 From current configuration:
@@ -2896,12 +2579,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### ChainSync.NodeToClient.Recieve.RequestNext
+### ChainSync.Local.Receive.AwaitReply
 
 
-***
-Request the next update from the producer. The response can be a rollforward, a roll back or wait.
-***
+> Acknowledge the request but require the consumer to wait for the next update. This means that the consumer is synced with the producer, and the producer is waiting for its own chain state to change.
 
 
 From current configuration:
@@ -2912,13 +2593,11 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### ChainSync.NodeToClient.Recieve.RollBackward
+### ChainSync.Local.Receive.Done
 
 
-***
-Tell the consumer to roll back to a given point on their chain.
-The message also tells the consumer about the head point of the producer.
-***
+> We have to explain to the framework what our states mean, in terms of which party has agency in each state. 
+>  Idle states are where it is for the client to send a message, busy states are where the server is expected to send a reply.
 
 
 From current configuration:
@@ -2929,13 +2608,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### ChainSync.NodeToClient.Recieve.RollForward
+### ChainSync.Local.Receive.FindIntersect
 
 
-***
-Tell the consumer to extend their chain with the given header.
-The message also tells the consumer about the head point of the producer.
-***
+> Ask the producer to try to find an improved intersection point between the consumer and producer's chains. The consumer sends a sequence of points and it is up to the producer to find the first intersection point on its chain and send it back to the consumer.
 
 
 From current configuration:
@@ -2946,12 +2622,11 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### ChainSync.NodeToClient.Send.AwaitReply
+### ChainSync.Local.Receive.IntersectFound
 
 
-***
-Acknowledge the request but require the consumer to wait for the nextupdate. This means that the consumer is synced with the producer, andthe producer is waiting for its own chain state to change.
-***
+> The reply to the consumer about an intersection found. The consumer can decide weather to send more points. 
+>  The message also tells the consumer about the head point of the producer.
 
 
 From current configuration:
@@ -2962,13 +2637,11 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### ChainSync.NodeToClient.Send.Done
+### ChainSync.Local.Receive.IntersectNotFound
 
 
-***
-We have to explain to the framework what our states mean, in terms ofwhich party has agency in each state.
-Idle states are where it is for the client to send a message,busy states are where the server is expected to send a reply.
-***
+> The reply to the consumer that no intersection was found: none of the points the consumer supplied are on the producer chain. 
+>  The message also tells the consumer about the head point of the producer.
 
 
 From current configuration:
@@ -2979,12 +2652,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### ChainSync.NodeToClient.Send.FindIntersect
+### ChainSync.Local.Receive.RequestNext
 
 
-***
-Ask the producer to try to find an improved intersection point betweenthe consumer and producer's chains. The consumer sends a sequence ofpoints and it is up to the producer to find the first intersection pointon its chain and send it back to the consumer.
-***
+> Request the next update from the producer. The response can be a roll forward, a roll back or wait.
 
 
 From current configuration:
@@ -2995,13 +2666,11 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### ChainSync.NodeToClient.Send.IntersectFound
+### ChainSync.Local.Receive.RollBackward
 
 
-***
-The reply to the consumer about an intersection found.The consumer can decide weather to send more points.
-The message also tells the consumer about the head point of the producer.
-***
+> Tell the consumer to roll back to a given point on their chain. 
+>  The message also tells the consumer about the head point of the producer.
 
 
 From current configuration:
@@ -3012,13 +2681,11 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### ChainSync.NodeToClient.Send.IntersectNotFound
+### ChainSync.Local.Receive.RollForward
 
 
-***
-The reply to the consumer that no intersection was found: none of thepoints the consumer supplied are on the producer chain.
-The message also tells the consumer about the head point of the producer.
-***
+> Tell the consumer to extend their chain with the given header. 
+>  The message also tells the consumer about the head point of the producer.
 
 
 From current configuration:
@@ -3029,12 +2696,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### ChainSync.NodeToClient.Send.RequestNext
+### ChainSync.Local.Send.AwaitReply
 
 
-***
-Request the next update from the producer. The response can be a rollforward, a roll back or wait.
-***
+> Acknowledge the request but require the consumer to wait for the next update. This means that the consumer is synced with the producer, and the producer is waiting for its own chain state to change.
 
 
 From current configuration:
@@ -3045,13 +2710,11 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### ChainSync.NodeToClient.Send.RollBackward
+### ChainSync.Local.Send.Done
 
 
-***
-Tell the consumer to roll back to a given point on their chain.
-The message also tells the consumer about the head point of the producer.
-***
+> We have to explain to the framework what our states mean, in terms of which party has agency in each state. 
+>  Idle states are where it is for the client to send a message, busy states are where the server is expected to send a reply.
 
 
 From current configuration:
@@ -3062,13 +2725,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### ChainSync.NodeToClient.Send.RollForward
+### ChainSync.Local.Send.FindIntersect
 
 
-***
-Tell the consumer to extend their chain with the given header.
-The message also tells the consumer about the head point of the producer.
-***
+> Ask the producer to try to find an improved intersection point between the consumer and producer's chains. The consumer sends a sequence of points and it is up to the producer to find the first intersection point on its chain and send it back to the consumer.
 
 
 From current configuration:
@@ -3079,12 +2739,11 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### ChainSyncClient.ChainSyncClientEvent.DownloadedHeader
+### ChainSync.Local.Send.IntersectFound
 
 
-***
-While following a candidate chain, we rolled forward by downloading a header.
-***
+> The reply to the consumer about an intersection found. The consumer can decide weather to send more points. 
+>  The message also tells the consumer about the head point of the producer.
 
 
 From current configuration:
@@ -3095,12 +2754,11 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### ChainSyncClient.ChainSyncClientEvent.Exception
+### ChainSync.Local.Send.IntersectNotFound
 
 
-***
-An exception was thrown by the Chain Sync Client.
-***
+> The reply to the consumer that no intersection was found: none of the points the consumer supplied are on the producer chain. 
+>  The message also tells the consumer about the head point of the producer.
 
 
 From current configuration:
@@ -3111,12 +2769,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### ChainSyncClient.ChainSyncClientEvent.FoundIntersection
+### ChainSync.Local.Send.RequestNext
 
 
-***
-We found an intersection between our chain fragment and the candidate's chain.
-***
+> Request the next update from the producer. The response can be a roll forward, a roll back or wait.
 
 
 From current configuration:
@@ -3127,12 +2783,11 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### ChainSyncClient.ChainSyncClientEvent.RolledBack
+### ChainSync.Local.Send.RollBackward
 
 
-***
-While following a candidate chain, we rolled back to the given point.
-***
+> Tell the consumer to roll back to a given point on their chain. 
+>  The message also tells the consumer about the head point of the producer.
 
 
 From current configuration:
@@ -3143,12 +2798,11 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### ChainSyncClient.ChainSyncClientEvent.Termination
+### ChainSync.Local.Send.RollForward
 
 
-***
-The client has terminated.
-***
+> Tell the consumer to extend their chain with the given header. 
+>  The message also tells the consumer about the head point of the producer.
 
 
 From current configuration:
@@ -3159,12 +2813,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### ChainSyncNode.NodeToNode.Recieve.AwaitReply
+### ChainSync.Remote.Receive.AwaitReply
 
 
-***
-Acknowledge the request but require the consumer to wait for the nextupdate. This means that the consumer is synced with the producer, andthe producer is waiting for its own chain state to change.
-***
+> Acknowledge the request but require the consumer to wait for the next update. This means that the consumer is synced with the producer, and the producer is waiting for its own chain state to change.
 
 
 From current configuration:
@@ -3175,13 +2827,11 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### ChainSyncNode.NodeToNode.Recieve.Done
+### ChainSync.Remote.Receive.Done
 
 
-***
-We have to explain to the framework what our states mean, in terms ofwhich party has agency in each state.
-Idle states are where it is for the client to send a message,busy states are where the server is expected to send a reply.
-***
+> We have to explain to the framework what our states mean, in terms of which party has agency in each state. 
+>  Idle states are where it is for the client to send a message, busy states are where the server is expected to send a reply.
 
 
 From current configuration:
@@ -3192,12 +2842,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### ChainSyncNode.NodeToNode.Recieve.FindIntersect
+### ChainSync.Remote.Receive.FindIntersect
 
 
-***
-Ask the producer to try to find an improved intersection point betweenthe consumer and producer's chains. The consumer sends a sequence ofpoints and it is up to the producer to find the first intersection pointon its chain and send it back to the consumer.
-***
+> Ask the producer to try to find an improved intersection point between the consumer and producer's chains. The consumer sends a sequence of points and it is up to the producer to find the first intersection point on its chain and send it back to the consumer.
 
 
 From current configuration:
@@ -3208,13 +2856,11 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### ChainSyncNode.NodeToNode.Recieve.IntersectFound
+### ChainSync.Remote.Receive.IntersectFound
 
 
-***
-The reply to the consumer about an intersection found.The consumer can decide weather to send more points.
-The message also tells the consumer about the head point of the producer.
-***
+> The reply to the consumer about an intersection found. The consumer can decide weather to send more points. 
+>  The message also tells the consumer about the head point of the producer.
 
 
 From current configuration:
@@ -3225,13 +2871,11 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### ChainSyncNode.NodeToNode.Recieve.IntersectNotFound
+### ChainSync.Remote.Receive.IntersectNotFound
 
 
-***
-The reply to the consumer that no intersection was found: none of thepoints the consumer supplied are on the producer chain.
-The message also tells the consumer about the head point of the producer.
-***
+> The reply to the consumer that no intersection was found: none of the points the consumer supplied are on the producer chain. 
+>  The message also tells the consumer about the head point of the producer.
 
 
 From current configuration:
@@ -3242,12 +2886,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### ChainSyncNode.NodeToNode.Recieve.RequestNext
+### ChainSync.Remote.Receive.RequestNext
 
 
-***
-Request the next update from the producer. The response can be a rollforward, a roll back or wait.
-***
+> Request the next update from the producer. The response can be a roll forward, a roll back or wait.
 
 
 From current configuration:
@@ -3258,13 +2900,11 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### ChainSyncNode.NodeToNode.Recieve.RollBackward
+### ChainSync.Remote.Receive.RollBackward
 
 
-***
-Tell the consumer to roll back to a given point on their chain.
-The message also tells the consumer about the head point of the producer.
-***
+> Tell the consumer to roll back to a given point on their chain. 
+>  The message also tells the consumer about the head point of the producer.
 
 
 From current configuration:
@@ -3275,13 +2915,11 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### ChainSyncNode.NodeToNode.Recieve.RollForward
+### ChainSync.Remote.Receive.RollForward
 
 
-***
-Tell the consumer to extend their chain with the given header.
-The message also tells the consumer about the head point of the producer.
-***
+> Tell the consumer to extend their chain with the given header. 
+>  The message also tells the consumer about the head point of the producer.
 
 
 From current configuration:
@@ -3292,12 +2930,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### ChainSyncNode.NodeToNode.Send.AwaitReply
+### ChainSync.Remote.Send.AwaitReply
 
 
-***
-Acknowledge the request but require the consumer to wait for the nextupdate. This means that the consumer is synced with the producer, andthe producer is waiting for its own chain state to change.
-***
+> Acknowledge the request but require the consumer to wait for the next update. This means that the consumer is synced with the producer, and the producer is waiting for its own chain state to change.
 
 
 From current configuration:
@@ -3308,13 +2944,11 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### ChainSyncNode.NodeToNode.Send.Done
+### ChainSync.Remote.Send.Done
 
 
-***
-We have to explain to the framework what our states mean, in terms ofwhich party has agency in each state.
-Idle states are where it is for the client to send a message,busy states are where the server is expected to send a reply.
-***
+> We have to explain to the framework what our states mean, in terms of which party has agency in each state. 
+>  Idle states are where it is for the client to send a message, busy states are where the server is expected to send a reply.
 
 
 From current configuration:
@@ -3325,12 +2959,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### ChainSyncNode.NodeToNode.Send.FindIntersect
+### ChainSync.Remote.Send.FindIntersect
 
 
-***
-Ask the producer to try to find an improved intersection point betweenthe consumer and producer's chains. The consumer sends a sequence ofpoints and it is up to the producer to find the first intersection pointon its chain and send it back to the consumer.
-***
+> Ask the producer to try to find an improved intersection point between the consumer and producer's chains. The consumer sends a sequence of points and it is up to the producer to find the first intersection point on its chain and send it back to the consumer.
 
 
 From current configuration:
@@ -3341,13 +2973,11 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### ChainSyncNode.NodeToNode.Send.IntersectFound
+### ChainSync.Remote.Send.IntersectFound
 
 
-***
-The reply to the consumer about an intersection found.The consumer can decide weather to send more points.
-The message also tells the consumer about the head point of the producer.
-***
+> The reply to the consumer about an intersection found. The consumer can decide weather to send more points. 
+>  The message also tells the consumer about the head point of the producer.
 
 
 From current configuration:
@@ -3358,13 +2988,11 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### ChainSyncNode.NodeToNode.Send.IntersectNotFound
+### ChainSync.Remote.Send.IntersectNotFound
 
 
-***
-The reply to the consumer that no intersection was found: none of thepoints the consumer supplied are on the producer chain.
-The message also tells the consumer about the head point of the producer.
-***
+> The reply to the consumer that no intersection was found: none of the points the consumer supplied are on the producer chain. 
+>  The message also tells the consumer about the head point of the producer.
 
 
 From current configuration:
@@ -3375,12 +3003,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### ChainSyncNode.NodeToNode.Send.RequestNext
+### ChainSync.Remote.Send.RequestNext
 
 
-***
-Request the next update from the producer. The response can be a rollforward, a roll back or wait.
-***
+> Request the next update from the producer. The response can be a roll forward, a roll back or wait.
 
 
 From current configuration:
@@ -3391,13 +3017,11 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### ChainSyncNode.NodeToNode.Send.RollBackward
+### ChainSync.Remote.Send.RollBackward
 
 
-***
-Tell the consumer to roll back to a given point on their chain.
-The message also tells the consumer about the head point of the producer.
-***
+> Tell the consumer to roll back to a given point on their chain. 
+>  The message also tells the consumer about the head point of the producer.
 
 
 From current configuration:
@@ -3408,13 +3032,11 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### ChainSyncNode.NodeToNode.Send.RollForward
+### ChainSync.Remote.Send.RollForward
 
 
-***
-Tell the consumer to extend their chain with the given header.
-The message also tells the consumer about the head point of the producer.
-***
+> Tell the consumer to extend their chain with the given header. 
+>  The message also tells the consumer about the head point of the producer.
 
 
 From current configuration:
@@ -3425,12 +3047,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### ChainSyncSerialised.NodeToNode.Recieve.AwaitReply
+### ChainSync.Remote.Serialised.Receive.AwaitReply
 
 
-***
-Acknowledge the request but require the consumer to wait for the nextupdate. This means that the consumer is synced with the producer, andthe producer is waiting for its own chain state to change.
-***
+> Acknowledge the request but require the consumer to wait for the next update. This means that the consumer is synced with the producer, and the producer is waiting for its own chain state to change.
 
 
 From current configuration:
@@ -3441,13 +3061,11 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### ChainSyncSerialised.NodeToNode.Recieve.Done
+### ChainSync.Remote.Serialised.Receive.Done
 
 
-***
-We have to explain to the framework what our states mean, in terms ofwhich party has agency in each state.
-Idle states are where it is for the client to send a message,busy states are where the server is expected to send a reply.
-***
+> We have to explain to the framework what our states mean, in terms of which party has agency in each state. 
+>  Idle states are where it is for the client to send a message, busy states are where the server is expected to send a reply.
 
 
 From current configuration:
@@ -3458,12 +3076,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### ChainSyncSerialised.NodeToNode.Recieve.FindIntersect
+### ChainSync.Remote.Serialised.Receive.FindIntersect
 
 
-***
-Ask the producer to try to find an improved intersection point betweenthe consumer and producer's chains. The consumer sends a sequence ofpoints and it is up to the producer to find the first intersection pointon its chain and send it back to the consumer.
-***
+> Ask the producer to try to find an improved intersection point between the consumer and producer's chains. The consumer sends a sequence of points and it is up to the producer to find the first intersection point on its chain and send it back to the consumer.
 
 
 From current configuration:
@@ -3474,13 +3090,11 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### ChainSyncSerialised.NodeToNode.Recieve.IntersectFound
+### ChainSync.Remote.Serialised.Receive.IntersectFound
 
 
-***
-The reply to the consumer about an intersection found.The consumer can decide weather to send more points.
-The message also tells the consumer about the head point of the producer.
-***
+> The reply to the consumer about an intersection found. The consumer can decide weather to send more points. 
+>  The message also tells the consumer about the head point of the producer.
 
 
 From current configuration:
@@ -3491,13 +3105,11 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### ChainSyncSerialised.NodeToNode.Recieve.IntersectNotFound
+### ChainSync.Remote.Serialised.Receive.IntersectNotFound
 
 
-***
-The reply to the consumer that no intersection was found: none of thepoints the consumer supplied are on the producer chain.
-The message also tells the consumer about the head point of the producer.
-***
+> The reply to the consumer that no intersection was found: none of the points the consumer supplied are on the producer chain. 
+>  The message also tells the consumer about the head point of the producer.
 
 
 From current configuration:
@@ -3508,12 +3120,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### ChainSyncSerialised.NodeToNode.Recieve.RequestNext
+### ChainSync.Remote.Serialised.Receive.RequestNext
 
 
-***
-Request the next update from the producer. The response can be a rollforward, a roll back or wait.
-***
+> Request the next update from the producer. The response can be a roll forward, a roll back or wait.
 
 
 From current configuration:
@@ -3524,13 +3134,11 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### ChainSyncSerialised.NodeToNode.Recieve.RollBackward
+### ChainSync.Remote.Serialised.Receive.RollBackward
 
 
-***
-Tell the consumer to roll back to a given point on their chain.
-The message also tells the consumer about the head point of the producer.
-***
+> Tell the consumer to roll back to a given point on their chain. 
+>  The message also tells the consumer about the head point of the producer.
 
 
 From current configuration:
@@ -3541,13 +3149,11 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### ChainSyncSerialised.NodeToNode.Recieve.RollForward
+### ChainSync.Remote.Serialised.Receive.RollForward
 
 
-***
-Tell the consumer to extend their chain with the given header.
-The message also tells the consumer about the head point of the producer.
-***
+> Tell the consumer to extend their chain with the given header. 
+>  The message also tells the consumer about the head point of the producer.
 
 
 From current configuration:
@@ -3558,12 +3164,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### ChainSyncSerialised.NodeToNode.Send.AwaitReply
+### ChainSync.Remote.Serialised.Send.AwaitReply
 
 
-***
-Acknowledge the request but require the consumer to wait for the nextupdate. This means that the consumer is synced with the producer, andthe producer is waiting for its own chain state to change.
-***
+> Acknowledge the request but require the consumer to wait for the next update. This means that the consumer is synced with the producer, and the producer is waiting for its own chain state to change.
 
 
 From current configuration:
@@ -3574,13 +3178,11 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### ChainSyncSerialised.NodeToNode.Send.Done
+### ChainSync.Remote.Serialised.Send.Done
 
 
-***
-We have to explain to the framework what our states mean, in terms ofwhich party has agency in each state.
-Idle states are where it is for the client to send a message,busy states are where the server is expected to send a reply.
-***
+> We have to explain to the framework what our states mean, in terms of which party has agency in each state. 
+>  Idle states are where it is for the client to send a message, busy states are where the server is expected to send a reply.
 
 
 From current configuration:
@@ -3591,12 +3193,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### ChainSyncSerialised.NodeToNode.Send.FindIntersect
+### ChainSync.Remote.Serialised.Send.FindIntersect
 
 
-***
-Ask the producer to try to find an improved intersection point betweenthe consumer and producer's chains. The consumer sends a sequence ofpoints and it is up to the producer to find the first intersection pointon its chain and send it back to the consumer.
-***
+> Ask the producer to try to find an improved intersection point between the consumer and producer's chains. The consumer sends a sequence of points and it is up to the producer to find the first intersection point on its chain and send it back to the consumer.
 
 
 From current configuration:
@@ -3607,13 +3207,11 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### ChainSyncSerialised.NodeToNode.Send.IntersectFound
+### ChainSync.Remote.Serialised.Send.IntersectFound
 
 
-***
-The reply to the consumer about an intersection found.The consumer can decide weather to send more points.
-The message also tells the consumer about the head point of the producer.
-***
+> The reply to the consumer about an intersection found. The consumer can decide weather to send more points. 
+>  The message also tells the consumer about the head point of the producer.
 
 
 From current configuration:
@@ -3624,13 +3222,11 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### ChainSyncSerialised.NodeToNode.Send.IntersectNotFound
+### ChainSync.Remote.Serialised.Send.IntersectNotFound
 
 
-***
-The reply to the consumer that no intersection was found: none of thepoints the consumer supplied are on the producer chain.
-The message also tells the consumer about the head point of the producer.
-***
+> The reply to the consumer that no intersection was found: none of the points the consumer supplied are on the producer chain. 
+>  The message also tells the consumer about the head point of the producer.
 
 
 From current configuration:
@@ -3641,12 +3237,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### ChainSyncSerialised.NodeToNode.Send.RequestNext
+### ChainSync.Remote.Serialised.Send.RequestNext
 
 
-***
-Request the next update from the producer. The response can be a rollforward, a roll back or wait.
-***
+> Request the next update from the producer. The response can be a roll forward, a roll back or wait.
 
 
 From current configuration:
@@ -3657,13 +3251,11 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### ChainSyncSerialised.NodeToNode.Send.RollBackward
+### ChainSync.Remote.Serialised.Send.RollBackward
 
 
-***
-Tell the consumer to roll back to a given point on their chain.
-The message also tells the consumer about the head point of the producer.
-***
+> Tell the consumer to roll back to a given point on their chain. 
+>  The message also tells the consumer about the head point of the producer.
 
 
 From current configuration:
@@ -3674,13 +3266,11 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### ChainSyncSerialised.NodeToNode.Send.RollForward
+### ChainSync.Remote.Serialised.Send.RollForward
 
 
-***
-Tell the consumer to extend their chain with the given header.
-The message also tells the consumer about the head point of the producer.
-***
+> Tell the consumer to extend their chain with the given header. 
+>  The message also tells the consumer about the head point of the producer.
 
 
 From current configuration:
@@ -3691,286 +3281,12 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### ChainSyncServerBlock.ChainSyncServerEvent.ServerRead.RollBackward
+### ChainSync.ServerBlock.Update
 
 
-***
+> A server read has occurred, either for an add block or a rollback
 
-***
 
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### ChainSyncServerBlock.ChainSyncServerEvent.ServerRead.RollForward
-
-
-***
-Roll forward to the given point.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### ChainSyncServerBlock.ChainSyncServerEvent.ServerRead.ServerRead
-
-
-***
-A server read has occurred, either for an add block or a rollback
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### ChainSyncServerBlock.ChainSyncServerEvent.ServerRead.ServerReadBlocked
-
-
-***
-A server read has blocked, either for an add block or a rollback
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### ChainSyncServerHeader.ChainSyncServerEvent.ServerRead.RollBackward
-
-
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### ChainSyncServerHeader.ChainSyncServerEvent.ServerRead.RollForward
-
-
-***
-Roll forward to the given point.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### ChainSyncServerHeader.ChainSyncServerEvent.ServerRead.ServerRead
-
-
-***
-A server read has occurred, either for an add block or a rollback
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### ChainSyncServerHeader.ChainSyncServerEvent.ServerRead.ServerReadBlocked
-
-
-***
-A server read has blocked, either for an add block or a rollback
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### ConnectionManager.Connect
-
-
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### ConnectionManager.ConnectError
-
-
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### ConnectionManager.ConnectionCleanup
-
-
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### ConnectionManager.ConnectionExists
-
-
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### ConnectionManager.ConnectionFailure
-
-
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### ConnectionManager.ConnectionHandler
-
-
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### ConnectionManager.ConnectionManagerCounters
-
-
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### ConnectionManager.ConnectionNotFound
-
-
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### ConnectionManager.ConnectionTimeWait
-
-
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### ConnectionManager.ConnectionTimeWaitDone
-
-
-***
-
-***
-
-
 From current configuration:
 Details:   `DNormal`
 Backends:
@@ -3979,14 +3295,12 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### ConnectionManager.ForbiddenConnection
+### ChainSync.ServerHeader.Update
 
 
-***
+> A server read has occurred, either for an add block or a rollback
 
-***
 
-
 From current configuration:
 Details:   `DNormal`
 Backends:
@@ -3994,13 +3308,13 @@ Backends:
 			`Stdout MachineFormat`,
 			`Forwarder`
 Filtered  by config value: `Notice`
-
-### ConnectionManager.ForbiddenOperation
 
+### Forge.KESInfo
 
-***
 
-***
+> kesStartPeriod 
+> kesEndPeriod is kesStartPeriod + tpraosMaxKESEvo
+> kesEvolution is the current evolution or /relative period/.
 
 
 From current configuration:
@@ -4009,14 +3323,12 @@ Backends:
 			`EKGBackend`,
 			`Stdout MachineFormat`,
 			`Forwarder`
-Filtered  by config value: `Notice`
-
-### ConnectionManager.ImpossibleConnection
+Filtered  by config value: `Info`
 
+### Forge.StateInfo.AdoptedBlock
 
-***
 
-***
+> We adopted the block we produced, we also trace the transactions  that were adopted.
 
 
 From current configuration:
@@ -4025,14 +3337,12 @@ Backends:
 			`EKGBackend`,
 			`Stdout MachineFormat`,
 			`Forwarder`
-Filtered  by config value: `Notice`
-
-### ConnectionManager.IncludeConnection
+Filtered  by config value: `Info`
 
+### Forge.StateInfo.BlockContext
 
-***
 
-***
+> We found out to which block we are going to connect the block we are about  to forge.   We record the current slot number, the block number of the block to  connect to and its point.   Note that block number of the block we will try to forge is one more than  the recorded block number.
 
 
 From current configuration:
@@ -4041,14 +3351,12 @@ Backends:
 			`EKGBackend`,
 			`Stdout MachineFormat`,
 			`Forwarder`
-Filtered  by config value: `Notice`
-
-### ConnectionManager.PruneConnections
+Filtered  by config value: `Info`
 
+### Forge.StateInfo.BlockFromFuture
 
-***
 
-***
+> Leadership check failed: the current chain contains a block from a slot  /after/ the current slot   This can only happen if the system is under heavy load.   We record both the current slot number as well as the slot number of the  block at the tip of the chain.   See also <https://github.com/input-output-hk/ouroboros-network/issues/1462>
 
 
 From current configuration:
@@ -4057,14 +3365,12 @@ Backends:
 			`EKGBackend`,
 			`Stdout MachineFormat`,
 			`Forwarder`
-Filtered  by config value: `Notice`
-
-### ConnectionManager.Shutdown
+Filtered  by config value: `Info`
 
+### Forge.StateInfo.DidntAdoptBlock
 
-***
 
-***
+> We did not adopt the block we produced, but the block was valid. We  must have adopted a block that another leader of the same slot produced  before we got the chance of adopting our own block. This is very rare,  this warrants a warning.
 
 
 From current configuration:
@@ -4073,14 +3379,12 @@ Backends:
 			`EKGBackend`,
 			`Stdout MachineFormat`,
 			`Forwarder`
-Filtered  by config value: `Notice`
-
-### ConnectionManager.State
+Filtered  by config value: `Info`
 
+### Forge.StateInfo.ForgeStateUpdateError
 
-***
 
-***
+> Updating the forge state failed.   For example, the KES key could not be evolved anymore.   We record the error returned by 'updateForgeState'.
 
 
 From current configuration:
@@ -4089,14 +3393,17 @@ Backends:
 			`EKGBackend`,
 			`Stdout MachineFormat`,
 			`Forwarder`
-Filtered  by config value: `Notice`
-
-### ConnectionManager.TerminatedConnection
+Filtered  by config value: `Info`
 
+### Forge.StateInfo.ForgedBlock
 
-***
 
-***
+> We forged a block.
+>   We record the current slot number, the point of the predecessor, the block  itself, and the total size of the mempool snapshot at the time we produced  the block (which may be significantly larger than the block, due to  maximum block size)
+>   This will be followed by one of three messages:
+>   * AdoptedBlock (normally)
+>   * DidntAdoptBlock (rarely)
+>   * ForgedInvalidBlock (hopefully never -- this would indicate a bug)
 
 
 From current configuration:
@@ -4105,14 +3412,12 @@ Backends:
 			`EKGBackend`,
 			`Stdout MachineFormat`,
 			`Forwarder`
-Filtered  by config value: `Notice`
-
-### ConnectionManager.TerminatingConnection
+Filtered  by config value: `Info`
 
+### Forge.StateInfo.ForgedInvalidBlock
 
-***
 
-***
+> We forged a block that is invalid according to the ledger in the  ChainDB. This means there is an inconsistency between the mempool  validation and the ledger validation. This is a serious error!
 
 
 From current configuration:
@@ -4121,14 +3426,12 @@ Backends:
 			`EKGBackend`,
 			`Stdout MachineFormat`,
 			`Forwarder`
-Filtered  by config value: `Notice`
-
-### ConnectionManager.UnexpectedlyFalseAssertion
+Filtered  by config value: `Info`
 
+### Forge.StateInfo.LedgerState
 
-***
 
-***
+> We obtained a ledger state for the point of the block we want to  connect to   We record both the current slot number as well as the point of the block  we attempt to connect the new block to (that we requested the ledger  state for).
 
 
 From current configuration:
@@ -4137,14 +3440,12 @@ Backends:
 			`EKGBackend`,
 			`Stdout MachineFormat`,
 			`Forwarder`
-Filtered  by config value: `Notice`
-
-### ConnectionManager.UnknownConnection
+Filtered  by config value: `Info`
 
+### Forge.StateInfo.LedgerView
 
-***
 
-***
+> We obtained a ledger view for the current slot number   We record the current slot number.
 
 
 From current configuration:
@@ -4153,14 +3454,12 @@ Backends:
 			`EKGBackend`,
 			`Stdout MachineFormat`,
 			`Forwarder`
-Filtered  by config value: `Notice`
-
-### ConnectionManager.UnregisterConnection
+Filtered  by config value: `Info`
 
+### Forge.StateInfo.NoLedgerState
 
-***
 
-***
+> Leadership check failed: we were unable to get the ledger state for the  point of the block we want to connect to   This can happen if after choosing which block to connect to the node  switched to a different fork. We expect this to happen only rather  rarely, so this certainly merits a warning; if it happens a lot, that  merits an investigation.   We record both the current slot number as well as the point of the block  we attempt to connect the new block to (that we requested the ledger  state for).
 
 
 From current configuration:
@@ -4169,14 +3468,12 @@ Backends:
 			`EKGBackend`,
 			`Stdout MachineFormat`,
 			`Forwarder`
-Filtered  by config value: `Notice`
-
-### ConnectionManagerTransition.ConnectionManagerTransition
+Filtered  by config value: `Info`
 
+### Forge.StateInfo.NoLedgerView
 
-***
 
-***
+> Leadership check failed: we were unable to get the ledger view for the  current slot number   This will only happen if there are many missing blocks between the tip of  our chain and the current slot.   We record also the failure returned by 'forecastFor'.
 
 
 From current configuration:
@@ -4185,14 +3482,12 @@ Backends:
 			`EKGBackend`,
 			`Stdout MachineFormat`,
 			`Forwarder`
-Filtered  by config value: `Notice`
+Filtered  by config value: `Info`
 
-### DNSResolver.LookupAAAAError
+### Forge.StateInfo.NodeCannotForge
 
 
-***
-AAAA lookup failed with an error.
-***
+> We did the leadership check and concluded that we should lead and forge  a block, but cannot.   This should only happen rarely and should be logged with warning severity.   Records why we cannot forge a block.
 
 
 From current configuration:
@@ -4203,12 +3498,11 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Info`
 
-### DNSResolver.LookupAAAAResult
+### Forge.StateInfo.NodeIsLeader
 
 
-***
-Lookup AAAA result.
-***
+> We did the leadership check and concluded we /are/ the leader
+>   The node will soon forge; it is about to read its transactions from the  Mempool. This will be followed by ForgedBlock.
 
 
 From current configuration:
@@ -4219,12 +3513,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Info`
 
-### DNSResolver.LookupAError
+### Forge.StateInfo.NodeNotLeader
 
 
-***
-A lookup failed with an error.
-***
+> We did the leadership check and concluded we are not the leader   We record the current slot number
 
 
 From current configuration:
@@ -4235,12 +3527,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Info`
 
-### DNSResolver.LookupAResult
+### Forge.StateInfo.SlotIsImmutable
 
 
-***
-Lookup A result.
-***
+> Leadership check failed: the tip of the ImmutableDB inhabits the  current slot   This might happen in two cases.    1. the clock moved backwards, on restart we ignored everything from the      VolatileDB since it's all in the future, and now the tip of the      ImmutableDB points to a block produced in the same slot we're trying      to produce a block in    2. k = 0 and we already adopted a block from another leader of the same      slot.   We record both the current slot number as well as the tip of the  ImmutableDB.  See also <https://github.com/input-output-hk/ouroboros-network/issues/1462>
 
 
 From current configuration:
@@ -4251,12 +3541,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Info`
 
-### DNSResolver.LookupException
+### Forge.StateInfo.StartLeadershipCheck
 
 
-***
-A DNS lookup exception occurred.
-***
+> Start of the leadership check.
 
 
 From current configuration:
@@ -4267,12 +3555,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Info`
 
-### DNSResolver.LookupIPv4First
+### Forge.StateInfo.StartLeadershipCheckPlus
 
 
-***
-Returning IPv4 address first.
-***
+> We adopted the block we produced, we also trace the transactions  that were adopted.
 
 
 From current configuration:
@@ -4283,12 +3569,13 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Info`
 
-### DNSResolver.LookupIPv6First
+### Forge.Stats
 
 
-***
-Returning IPv6 address first.
-***
+> nodeCannotForgeNum shows how many times this node could not forge.
+> nodeIsLeaderNum shows how many times this node was leader.
+> blocksForgedNum shows how many blocks did forge in this node.
+> slotsMissed shows how many slots were missed in this node.
 
 
 From current configuration:
@@ -4298,3032 +3585,11 @@ Backends:
 			`Stdout MachineFormat`,
 			`Forwarder`
 Filtered  by config value: `Info`
-
-### DNSSubscription.DNS.AllocateSocket
-
-
-***
-DNS Subscription: Allocate socket to address.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Info`
-
-### DNSSubscription.DNS.ApplicationException
-
-
-***
-DNS Subscription: Application Exception occurred.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Info`
-
-### DNSSubscription.DNS.CloseSocket
-
-
-***
-DNS Subscription: Closed socket to address.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Info`
-
-### DNSSubscription.DNS.ConnectEnd
-
-
-***
-DNS Subscription: Connection Attempt end with destination and outcome.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Info`
-
-### DNSSubscription.DNS.ConnectException
-
-
-***
-DNS Subscription: Socket Allocation Exception with destination and the exception.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Info`
-
-### DNSSubscription.DNS.ConnectStart
-
-
-***
-DNS Subscription: Connection Attempt Start with destination.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Info`
-
-### DNSSubscription.DNS.ConnectionExist
-
-
-***
-DNS Subscription: Connection exists to destination.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Info`
-
-### DNSSubscription.DNS.MissingLocalAddress
-
-
-***
-DNS Subscription: Missing local address.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Info`
-
-### DNSSubscription.DNS.Restart
-
-
-***
-DNS Subscription: Restarting Subscription after duration with desired valency and current valency.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Info`
-
-### DNSSubscription.DNS.SkippingPeer
-
-
-***
-DNS Subscription: Skipping peer with address.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Info`
-
-### DNSSubscription.DNS.SocketAllocationException
-
-
-***
-DNS Subscription: Connection Attempt Exception with destination and exception.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Info`
-
-### DNSSubscription.DNS.Start
-
-
-***
-DNS Subscription: Starting Subscription Worker with a valency.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Info`
-
-### DNSSubscription.DNS.SubscriptionFailed
-
-
-***
-DNS Subscription: Failed to start all required subscriptions.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Info`
-
-### DNSSubscription.DNS.SubscriptionRunning
-
-
-***
-DNS Subscription: Required subscriptions started.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Info`
-
-### DNSSubscription.DNS.SubscriptionWaiting
-
-
-***
-DNS Subscription: Waiting on address with active connections.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Info`
-
-### DNSSubscription.DNS.SubscriptionWaitingNewConnection
-
-
-***
-DNS Subscription: Waiting delay time before attempting a new connection.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Info`
-
-### DNSSubscription.DNS.TryConnectToPeer
-
-
-***
-DNS Subscription: Trying to connect to peer with address.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Info`
-
-### DNSSubscription.DNS.UnsupportedRemoteAddr
-
-
-***
-DNS Subscription: Unsupported remote target address.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Info`
-
-### DebugPeerSelection.DebugPeerSelection.GovernorState
-
-
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### DebugPeerSelectionResponder.DebugPeerSelection.GovernorState
-
-
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### DiffusionInit.ConfiguringLocalSocket
-
-
-***
-ConfiguringLocalSocket 
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Info`
-
-### DiffusionInit.ConfiguringServerSocket
-
-
-***
-ConfiguringServerSocket 
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Info`
-
-### DiffusionInit.CreateSystemdSocketForSnocketPath
-
-
-***
-CreateSystemdSocketForSnocketPath 
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Info`
-
-### DiffusionInit.CreatedLocalSocket
-
-
-***
-CreatedLocalSocket 
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Info`
-
-### DiffusionInit.CreatingServerSocket
-
-
-***
-CreatingServerSocket 
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Info`
-
-### DiffusionInit.DiffusionErrored
-
-
-***
-DiffusionErrored 
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Info`
-
-### DiffusionInit.ListeningLocalSocket
-
-
-***
-ListeningLocalSocket 
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Info`
-
-### DiffusionInit.ListeningServerSocket
-
-
-***
-ListeningServerSocket 
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Info`
-
-### DiffusionInit.LocalSocketUp
-
-
-***
-LocalSocketUp 
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Info`
-
-### DiffusionInit.RunLocalServer
-
-
-***
-RunLocalServer 
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Info`
-
-### DiffusionInit.RunServer
-
-
-***
-RunServer 
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Info`
-
-### DiffusionInit.ServerSocketUp
-
-
-***
-ServerSocketUp 
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Info`
-
-### DiffusionInit.UnsupportedLocalSystemdSocket
-
-
-***
-UnsupportedLocalSystemdSocket 
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Info`
-
-### DiffusionInit.UnsupportedReadySocketCase
-
-
-***
-UnsupportedReadySocketCase 
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Info`
-
-### DiffusionInit.UsingSystemdSocket
-
-
-***
-UsingSystemdSocket 
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Info`
-
-### ErrorPolicy.AcceptException
-
-
-***
-'accept' threw an exception.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Info`
-
-### ErrorPolicy.KeepSuspended
-
-
-***
-Consumer was suspended until producer will resume.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Info`
-
-### ErrorPolicy.LocalNodeError
-
-
-***
-caught a local exception.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Info`
-
-### ErrorPolicy.ResumeConsumer
-
-
-***
-Resume consumer.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Info`
-
-### ErrorPolicy.ResumePeer
-
-
-***
-Resume a peer (both consumer and producer).
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Info`
-
-### ErrorPolicy.ResumeProducer
-
-
-***
-Resume producer.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Info`
-
-### ErrorPolicy.SuspendConsumer
-
-
-***
-Suspending consumer.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Info`
-
-### ErrorPolicy.SuspendPeer
-
-
-***
-Suspending peer with a given exception.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Info`
-
-### ErrorPolicy.UnhandledApplicationException
-
-
-***
-An application threw an exception, which was not handled.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Info`
-
-### ErrorPolicy.UnhandledConnectionException
-
-
-***
-'connect' threw an exception, which was not handled by any 'ErrorPolicy'.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Info`
-
-### Forge.AdoptedBlock
-
-
-***
-We adopted the block we produced, we also trace the transactions  that were adopted.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Info`
-
-### Forge.BlockContext
-
-
-***
-We found out to which block we are going to connect the block we are about  to forge.   We record the current slot number, the block number of the block to  connect to and its point.   Note that block number of the block we will try to forge is one more than  the recorded block number.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Info`
-
-### Forge.BlockFromFuture
-
-
-***
-Leadership check failed: the current chain contains a block from a slot  /after/ the current slot   This can only happen if the system is under heavy load.   We record both the current slot number as well as the slot number of the  block at the tip of the chain.   See also <https://github.com/input-output-hk/ouroboros-network/issues/1462>
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Info`
-
-### Forge.DidntAdoptBlock
-
-
-***
-We did not adopt the block we produced, but the block was valid. We  must have adopted a block that another leader of the same slot produced  before we got the chance of adopting our own block. This is very rare,  this warrants a warning.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Info`
-
-### Forge.ForgeStateUpdateError
-
-
-***
-Updating the forge state failed.   For example, the KES key could not be evolved anymore.   We record the error returned by 'updateForgeState'.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Info`
-
-### Forge.ForgedBlock
-
-
-***
-We forged a block.
-  We record the current slot number, the point of the predecessor, the block  itself, and the total size of the mempool snapshot at the time we produced  the block (which may be significantly larger than the block, due to  maximum block size)
-  This will be followed by one of three messages:
-  * AdoptedBlock (normally)
-  * DidntAdoptBlock (rarely)
-  * ForgedInvalidBlock (hopefully never -- this would indicate a bug)
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Info`
-
-### Forge.ForgedInvalidBlock
-
-
-***
-We forged a block that is invalid according to the ledger in the  ChainDB. This means there is an inconsistency between the mempool  validation and the ledger validation. This is a serious error!
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Info`
-
-### Forge.LedgerState
-
-
-***
-We obtained a ledger state for the point of the block we want to  connect to   We record both the current slot number as well as the point of the block  we attempt to connect the new block to (that we requested the ledger  state for).
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Info`
-
-### Forge.LedgerView
-
-
-***
-We obtained a ledger view for the current slot number   We record the current slot number.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Info`
-
-### Forge.NoLedgerState
-
-
-***
-Leadership check failed: we were unable to get the ledger state for the  point of the block we want to connect to   This can happen if after choosing which block to connect to the node  switched to a different fork. We expect this to happen only rather  rarely, so this certainly merits a warning; if it happens a lot, that  merits an investigation.   We record both the current slot number as well as the point of the block  we attempt to connect the new block to (that we requested the ledger  state for).
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Info`
-
-### Forge.NoLedgerView
-
-
-***
-Leadership check failed: we were unable to get the ledger view for the  current slot number   This will only happen if there are many missing blocks between the tip of  our chain and the current slot.   We record also the failure returned by 'forecastFor'.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Info`
-
-### Forge.NodeCannotForge
-
-
-***
-We did the leadership check and concluded that we should lead and forge  a block, but cannot.   This should only happen rarely and should be logged with warning severity.   Records why we cannot forge a block.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Info`
-
-### Forge.NodeIsLeader
-
-
-***
-We did the leadership check and concluded we /are/ the leader
-  The node will soon forge; it is about to read its transactions from the  Mempool. This will be followed by ForgedBlock.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Info`
-
-### Forge.NodeNotLeader
-
-
-***
-We did the leadership check and concluded we are not the leader   We record the current slot number
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Info`
-
-### Forge.SlotIsImmutable
-
-
-***
-Leadership check failed: the tip of the ImmutableDB inhabits the  current slot   This might happen in two cases.    1. the clock moved backwards, on restart we ignored everything from the      VolatileDB since it's all in the future, and now the tip of the      ImmutableDB points to a block produced in the same slot we're trying      to produce a block in    2. k = 0 and we already adopted a block from another leader of the same      slot.   We record both the current slot number as well as the tip of the  ImmutableDB.  See also <https://github.com/input-output-hk/ouroboros-network/issues/1462>
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Info`
-
-### Forge.StartLeadershipCheck
-
-
-***
-Start of the leadership check.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Info`
-
-### Forge.StartLeadershipCheckPlus
-
-
-***
-We adopted the block we produced, we also trace the transactions  that were adopted.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Info`
-
-### ForgeStateInfo
-
-
-***
-kesStartPeriod 
-kesEndPeriod is kesStartPeriod + tpraosMaxKESEvo
-kesEvolution is the current evolution or /relative period/.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### ForgeStats
-
-
-***
-nodeCannotForgeNum shows how many times this node could not forge.
-nodeIsLeaderNum shows how many times this node was leader.
-blocksForgedNum shows how many blocks did forge in this node.
-slotsMissed shows how many slots were missed in this node.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### Handshake.Receive.AcceptVersion
-
-
-***
-The remote end decides which version to use and sends chosen version.The server is allowed to modify version parameters.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### Handshake.Receive.ProposeVersions
-
-
-***
-Propose versions together with version parameters.  It must be encoded to a sorted list..
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### Handshake.Receive.Refuse
-
-
-***
-It refuses to run any version.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### Handshake.Receive.ReplyVersions
-
-
-***
-`MsgReplyVersions` received as a response to 'MsgProposeVersions'.  It is not supported to explicitly send this message. It can only be received as a copy of 'MsgProposeVersions' in a simultaneous open scenario.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### Handshake.Send.AcceptVersion
-
-
-***
-The remote end decides which version to use and sends chosen version.The server is allowed to modify version parameters.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### Handshake.Send.ProposeVersions
-
-
-***
-Propose versions together with version parameters.  It must be encoded to a sorted list..
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### Handshake.Send.Refuse
-
-
-***
-It refuses to run any version.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### Handshake.Send.ReplyVersions
-
-
-***
-`MsgReplyVersions` received as a response to 'MsgProposeVersions'.  It is not supported to explicitly send this message. It can only be received as a copy of 'MsgProposeVersions' in a simultaneous open scenario.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### InboundGovernor.DemotedToColdRemote
-
-
-***
-All mini-protocols terminated.  The boolean is true if this connection was not used by p2p-governor, and thus the connection will be terminated.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### InboundGovernor.DemotedToWarmRemote
-
-
-***
-All mini-protocols terminated.  The boolean is true if this connection was not used by p2p-governor, and thus the connection will be terminated.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### InboundGovernor.InboundGovernorCounters
-
-
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### InboundGovernor.InboundGovernorError
-
-
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### InboundGovernor.MuxCleanExit
-
-
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### InboundGovernor.MuxErrored
-
-
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### InboundGovernor.NewConnection
-
-
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### InboundGovernor.PromotedToHotRemote
-
-
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### InboundGovernor.PromotedToWarmRemote
-
-
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### InboundGovernor.RemoteState
-
-
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### InboundGovernor.ResponderErrored
-
-
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### InboundGovernor.ResponderRestarted
-
-
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### InboundGovernor.ResponderStartFailure
-
-
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### InboundGovernor.ResponderStarted
-
-
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### InboundGovernor.ResponderTerminated
-
-
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### InboundGovernor.UnexpectedlyFalseAssertion
-
-
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### InboundGovernor.WaitIdleRemote
-
-
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### InboundGovernorTransition.InboundGovernorTransition
-
-
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### IpSubscription.IP.AllocateSocket
-
-
-***
-IP Subscription: Allocate socket to address.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Info`
-
-### IpSubscription.IP.ApplicationException
-
-
-***
-IP Subscription: Application Exception occurred.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Info`
-
-### IpSubscription.IP.CloseSocket
-
-
-***
-IP Subscription: Closed socket to address.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Info`
-
-### IpSubscription.IP.ConnectEnd
-
-
-***
-IP Subscription: Connection Attempt end with destination and outcome.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Info`
-
-### IpSubscription.IP.ConnectException
-
-
-***
-IP Subscription: Socket Allocation Exception with destination and the exception.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Info`
-
-### IpSubscription.IP.ConnectStart
-
-
-***
-IP Subscription: Connection Attempt Start with destination.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Info`
-
-### IpSubscription.IP.ConnectionExist
-
-
-***
-IP Subscription: Connection exists to destination.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Info`
-
-### IpSubscription.IP.MissingLocalAddress
-
-
-***
-IP Subscription: Missing local address.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Info`
-
-### IpSubscription.IP.Restart
-
-
-***
-IP Subscription: Restarting Subscription after duration with desired valency and current valency.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Info`
-
-### IpSubscription.IP.SkippingPeer
-
-
-***
-IP Subscription: Skipping peer with address.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Info`
-
-### IpSubscription.IP.SocketAllocationException
-
-
-***
-IP Subscription: Connection Attempt Exception with destination and exception.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Info`
-
-### IpSubscription.IP.Start
-
-
-***
-IP Subscription: Starting Subscription Worker with a valency.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Info`
-
-### IpSubscription.IP.SubscriptionFailed
-
-
-***
-IP Subscription: Failed to start all required subscriptions.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Info`
-
-### IpSubscription.IP.SubscriptionRunning
-
-
-***
-IP Subscription: Required subscriptions started.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Info`
-
-### IpSubscription.IP.SubscriptionWaiting
-
-
-***
-IP Subscription: Waiting on address with active connections.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Info`
-
-### IpSubscription.IP.SubscriptionWaitingNewConnection
-
-
-***
-IP Subscription: Waiting delay time before attempting a new connection.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Info`
-
-### IpSubscription.IP.TryConnectToPeer
-
-
-***
-IP Subscription: Trying to connect to peer with address.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Info`
-
-### IpSubscription.IP.UnsupportedRemoteAddr
-
-
-***
-IP Subscription: Unsupported remote target address.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Info`
-
-### KeepAliveClient
-
-
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### LedgerPeers.DisabledLedgerPeers
-
-
-***
-Trace for when getting peers from the ledger is disabled, that is DontUseLedger.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### LedgerPeers.FallingBackToBootstrapPeers
-
-
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### LedgerPeers.FetchingNewLedgerState
-
-
-***
-Trace for fetching a new list of peers from the ledger. Int is the number of peers returned.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### LedgerPeers.PickedPeer
-
-
-***
-Trace for a peer picked with accumulated and relative stake of its pool.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### LedgerPeers.PickedPeers
-
-
-***
-Trace for the number of peers we wanted to pick and the list of peers picked.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### LedgerPeers.RequestForPeers
-
-
-***
-RequestForPeers (NumberOfPeers 1)
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### LedgerPeers.ReusingLedgerState
-
-
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### LedgerPeers.TraceUseLedgerAfter
-
-
-***
-Trace UseLedgerAfter value.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### LedgerPeers.WaitingOnRequest
-
-
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### LocalConnectionManager.Connect
-
-
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### LocalConnectionManager.ConnectError
-
-
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### LocalConnectionManager.ConnectionCleanup
-
-
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### LocalConnectionManager.ConnectionExists
-
-
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### LocalConnectionManager.ConnectionFailure
-
-
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### LocalConnectionManager.ConnectionHandler
-
-
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### LocalConnectionManager.ConnectionManagerCounters
-
-
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### LocalConnectionManager.ConnectionNotFound
-
-
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### LocalConnectionManager.ConnectionTimeWait
-
-
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### LocalConnectionManager.ConnectionTimeWaitDone
-
-
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### LocalConnectionManager.ForbiddenConnection
-
-
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### LocalConnectionManager.ForbiddenOperation
-
-
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### LocalConnectionManager.ImpossibleConnection
-
-
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### LocalConnectionManager.IncludeConnection
-
-
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### LocalConnectionManager.PruneConnections
-
-
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### LocalConnectionManager.Shutdown
-
-
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### LocalConnectionManager.State
-
-
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### LocalConnectionManager.TerminatedConnection
-
-
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### LocalConnectionManager.TerminatingConnection
-
-
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### LocalConnectionManager.UnexpectedlyFalseAssertion
-
-
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### LocalConnectionManager.UnknownConnection
-
-
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### LocalConnectionManager.UnregisterConnection
-
-
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### LocalErrorPolicy.AcceptException
-
-
-***
-'accept' threw an exception.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Info`
-
-### LocalErrorPolicy.KeepSuspended
-
-
-***
-Consumer was suspended until producer will resume.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Info`
-
-### LocalErrorPolicy.LocalNodeError
-
-
-***
-caught a local exception.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Info`
-
-### LocalErrorPolicy.ResumeConsumer
-
-
-***
-Resume consumer.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Info`
-
-### LocalErrorPolicy.ResumePeer
-
-
-***
-Resume a peer (both consumer and producer).
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Info`
-
-### LocalErrorPolicy.ResumeProducer
-
-
-***
-Resume producer.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Info`
-
-### LocalErrorPolicy.SuspendConsumer
-
-
-***
-Suspending consumer.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Info`
-
-### LocalErrorPolicy.SuspendPeer
-
-
-***
-Suspending peer with a given exception.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Info`
-
-### LocalErrorPolicy.UnhandledApplicationException
-
-
-***
-An application threw an exception, which was not handled.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Info`
-
-### LocalErrorPolicy.UnhandledConnectionException
-
-
-***
-'connect' threw an exception, which was not handled by any 'ErrorPolicy'.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Info`
-
-### LocalHandshake.Receive.AcceptVersion
-
-
-***
-The remote end decides which version to use and sends chosen version.The server is allowed to modify version parameters.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### LocalHandshake.Receive.ProposeVersions
-
-
-***
-Propose versions together with version parameters.  It must be encoded to a sorted list..
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### LocalHandshake.Receive.Refuse
-
-
-***
-It refuses to run any version.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### LocalHandshake.Receive.ReplyVersions
-
-
-***
-`MsgReplyVersions` received as a response to 'MsgProposeVersions'.  It is not supported to explicitly send this message. It can only be received as a copy of 'MsgProposeVersions' in a simultaneous open scenario.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### LocalHandshake.Send.AcceptVersion
-
-
-***
-The remote end decides which version to use and sends chosen version.The server is allowed to modify version parameters.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### LocalHandshake.Send.ProposeVersions
-
-
-***
-Propose versions together with version parameters.  It must be encoded to a sorted list..
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### LocalHandshake.Send.Refuse
-
-
-***
-It refuses to run any version.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### LocalHandshake.Send.ReplyVersions
-
-
-***
-`MsgReplyVersions` received as a response to 'MsgProposeVersions'.  It is not supported to explicitly send this message. It can only be received as a copy of 'MsgProposeVersions' in a simultaneous open scenario.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### LocalInboundGovernor.DemotedToColdRemote
-
-
-***
-All mini-protocols terminated.  The boolean is true if this connection was not used by p2p-governor, and thus the connection will be terminated.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### LocalInboundGovernor.DemotedToWarmRemote
-
-
-***
-All mini-protocols terminated.  The boolean is true if this connection was not used by p2p-governor, and thus the connection will be terminated.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### LocalInboundGovernor.InboundGovernorCounters
-
-
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### LocalInboundGovernor.InboundGovernorError
-
-
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### LocalInboundGovernor.MuxCleanExit
-
-
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### LocalInboundGovernor.MuxErrored
-
-
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### LocalInboundGovernor.NewConnection
-
-
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### LocalInboundGovernor.PromotedToHotRemote
-
-
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### LocalInboundGovernor.PromotedToWarmRemote
-
-
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### LocalInboundGovernor.RemoteState
-
-
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### LocalInboundGovernor.ResponderErrored
-
-
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### LocalInboundGovernor.ResponderRestarted
-
-
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### LocalInboundGovernor.ResponderStartFailure
-
-
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### LocalInboundGovernor.ResponderStarted
-
-
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### LocalInboundGovernor.ResponderTerminated
-
-
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### LocalInboundGovernor.UnexpectedlyFalseAssertion
-
-
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### LocalInboundGovernor.WaitIdleRemote
-
-
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### LocalRootPeers.LocalRootDomains
-
-
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### LocalRootPeers.LocalRootError
-
-
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### LocalRootPeers.LocalRootFailure
-
-
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### LocalRootPeers.LocalRootGroups
-
-
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### LocalRootPeers.LocalRootResult
-
-
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### LocalRootPeers.LocalRootWaiting
-
-
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### LocalServer.AcceptConnection
-
-
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### LocalServer.AcceptError
-
-
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### LocalServer.AcceptPolicy
-
-
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### LocalServer.Error
-
-
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### LocalServer.Started
-
-
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### LocalServer.Stopped
-
-
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### LocalTxSubmissionServer.ReceivedTx
-
-
-***
-A transaction was received.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
 
 ### Mempool.AddedTx
 
 
-***
-New, valid transaction that was added to the Mempool.
-***
+> New, valid transaction that was added to the Mempool.
 
 
 From current configuration:
@@ -7337,9 +3603,7 @@ Filtered  by config value: `Info`
 ### Mempool.ManuallyRemovedTxs
 
 
-***
-Transactions that have been manually removed from the Mempool.
-***
+> Transactions that have been manually removed from the Mempool.
 
 
 From current configuration:
@@ -7353,9 +3617,7 @@ Filtered  by config value: `Info`
 ### Mempool.RejectedTx
 
 
-***
-New, invalid transaction thas was rejected and thus not added to the Mempool.
-***
+> New, invalid transaction thas was rejected and thus not added to the Mempool.
 
 
 From current configuration:
@@ -7369,9 +3631,7 @@ Filtered  by config value: `Info`
 ### Mempool.RemoveTxs
 
 
-***
-Previously valid transactions that are no longer valid because of changes in the ledger state. These transactions have been removed from the Mempool.
-***
+> Previously valid transactions that are no longer valid because of changes in the ledger state. These transactions have been removed from the Mempool.
 
 
 From current configuration:
@@ -7382,12 +3642,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Info`
 
-### Mux.ChannelRecvEnd
+### Net.AcceptPolicy.ConnectionHardLimit
 
 
-***
-Channel receive end.
-***
+> Hard rate limit reached, waiting until the number of connections drops below n.
 
 
 From current configuration:
@@ -7398,12 +3656,9 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### Mux.ChannelRecvStart
+### Net.AcceptPolicy.ConnectionLimitResume
 
 
-***
-Channel receive start.
-***
 
 
 From current configuration:
@@ -7414,12 +3669,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### Mux.ChannelSendEnd
+### Net.AcceptPolicy.ConnectionRateLimiting
 
 
-***
-Channel send end.
-***
+> Rate limiting accepting connections, delaying next accept for given time, currently serving n connections.
 
 
 From current configuration:
@@ -7430,12 +3683,9 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### Mux.ChannelSendStart
+### Net.ConnectionManager.Local.Connect
 
 
-***
-Channel send start.
-***
 
 
 From current configuration:
@@ -7446,12 +3696,9 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### Mux.CleanExit
+### Net.ConnectionManager.Local.ConnectError
 
 
-***
-Miniprotocol terminated cleanly.
-***
 
 
 From current configuration:
@@ -7462,12 +3709,9 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### Mux.ExceptionExit
+### Net.ConnectionManager.Local.ConnectionCleanup
 
 
-***
-Miniprotocol terminated with exception.
-***
 
 
 From current configuration:
@@ -7478,12 +3722,9 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### Mux.HandshakeClientEnd
+### Net.ConnectionManager.Local.ConnectionExists
 
 
-***
-Handshake client end.
-***
 
 
 From current configuration:
@@ -7494,12 +3735,9 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### Mux.HandshakeClientError
+### Net.ConnectionManager.Local.ConnectionFailure
 
 
-***
-Handshake client error.
-***
 
 
 From current configuration:
@@ -7510,12 +3748,9 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### Mux.HandshakeServerEnd
+### Net.ConnectionManager.Local.ConnectionHandler
 
 
-***
-Handshake server end.
-***
 
 
 From current configuration:
@@ -7526,12 +3761,9 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### Mux.HandshakeServerError
+### Net.ConnectionManager.Local.ConnectionManagerCounters
 
 
-***
-Handshake server error.
-***
 
 
 From current configuration:
@@ -7542,12 +3774,9 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### Mux.HandshakeStart
+### Net.ConnectionManager.Local.ConnectionNotFound
 
 
-***
-Handshake start.
-***
 
 
 From current configuration:
@@ -7558,12 +3787,9 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### Mux.RecvDeltaQObservation
+### Net.ConnectionManager.Local.ConnectionTimeWait
 
 
-***
-Bearer DeltaQ observation.
-***
 
 
 From current configuration:
@@ -7574,12 +3800,9 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### Mux.RecvDeltaQSample
+### Net.ConnectionManager.Local.ConnectionTimeWaitDone
 
 
-***
-Bearer DeltaQ sample.
-***
 
 
 From current configuration:
@@ -7590,12 +3813,9 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### Mux.RecvEnd
+### Net.ConnectionManager.Local.ForbiddenConnection
 
 
-***
-Bearer receive end.
-***
 
 
 From current configuration:
@@ -7606,12 +3826,9 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### Mux.RecvHeaderEnd
+### Net.ConnectionManager.Local.ForbiddenOperation
 
 
-***
-Bearer receive header end.
-***
 
 
 From current configuration:
@@ -7622,12 +3839,9 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### Mux.RecvHeaderStart
+### Net.ConnectionManager.Local.ImpossibleConnection
 
 
-***
-Bearer receive header start.
-***
 
 
 From current configuration:
@@ -7638,12 +3852,9 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### Mux.RecvStart
+### Net.ConnectionManager.Local.IncludeConnection
 
 
-***
-Bearer receive start.
-***
 
 
 From current configuration:
@@ -7654,12 +3865,9 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### Mux.SDUReadTimeoutException
+### Net.ConnectionManager.Local.PruneConnections
 
 
-***
-Timed out reading SDU.
-***
 
 
 From current configuration:
@@ -7670,12 +3878,9 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### Mux.SDUWriteTimeoutException
+### Net.ConnectionManager.Local.Shutdown
 
 
-***
-Timed out writing SDU.
-***
 
 
 From current configuration:
@@ -7686,12 +3891,9 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### Mux.SendEnd
+### Net.ConnectionManager.Local.State
 
 
-***
-Bearer send end.
-***
 
 
 From current configuration:
@@ -7702,12 +3904,9 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### Mux.SendStart
+### Net.ConnectionManager.Local.TerminatedConnection
 
 
-***
-Bearer send start.
-***
 
 
 From current configuration:
@@ -7718,12 +3917,9 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### Mux.Shutdown
+### Net.ConnectionManager.Local.TerminatingConnection
 
 
-***
-Mux shutdown.
-***
 
 
 From current configuration:
@@ -7734,12 +3930,9 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### Mux.StartEagerly
+### Net.ConnectionManager.Local.UnexpectedlyFalseAssertion
 
 
-***
-Eagerly started.
-***
 
 
 From current configuration:
@@ -7750,12 +3943,9 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### Mux.StartOnDemand
+### Net.ConnectionManager.Local.UnregisterConnection
 
 
-***
-Preparing to start.
-***
 
 
 From current configuration:
@@ -7766,12 +3956,9 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### Mux.StartedOnDemand
+### Net.ConnectionManager.Remote.Connect
 
 
-***
-Started on demand.
-***
 
 
 From current configuration:
@@ -7782,12 +3969,9 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### Mux.State
+### Net.ConnectionManager.Remote.ConnectError
 
 
-***
-State.
-***
 
 
 From current configuration:
@@ -7798,12 +3982,9 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### Mux.TCPInfo
+### Net.ConnectionManager.Remote.ConnectionCleanup
 
 
-***
-TCPInfo.
-***
 
 
 From current configuration:
@@ -7814,12 +3995,9 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### Mux.Terminating
+### Net.ConnectionManager.Remote.ConnectionExists
 
 
-***
-Terminating.
-***
 
 
 From current configuration:
@@ -7830,12 +4008,9 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### MuxLocal.ChannelRecvEnd
+### Net.ConnectionManager.Remote.ConnectionFailure
 
 
-***
-Channel receive end.
-***
 
 
 From current configuration:
@@ -7846,12 +4021,9 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### MuxLocal.ChannelRecvStart
+### Net.ConnectionManager.Remote.ConnectionHandler
 
 
-***
-Channel receive start.
-***
 
 
 From current configuration:
@@ -7862,12 +4034,9 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### MuxLocal.ChannelSendEnd
+### Net.ConnectionManager.Remote.ConnectionManagerCounters
 
 
-***
-Channel send end.
-***
 
 
 From current configuration:
@@ -7878,12 +4047,9 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### MuxLocal.ChannelSendStart
+### Net.ConnectionManager.Remote.ConnectionNotFound
 
 
-***
-Channel send start.
-***
 
 
 From current configuration:
@@ -7894,12 +4060,9 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### MuxLocal.CleanExit
+### Net.ConnectionManager.Remote.ConnectionTimeWait
 
 
-***
-Miniprotocol terminated cleanly.
-***
 
 
 From current configuration:
@@ -7910,12 +4073,9 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### MuxLocal.ExceptionExit
+### Net.ConnectionManager.Remote.ConnectionTimeWaitDone
 
 
-***
-Miniprotocol terminated with exception.
-***
 
 
 From current configuration:
@@ -7926,12 +4086,9 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### MuxLocal.HandshakeClientEnd
+### Net.ConnectionManager.Remote.ForbiddenConnection
 
 
-***
-Handshake client end.
-***
 
 
 From current configuration:
@@ -7942,12 +4099,9 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### MuxLocal.HandshakeClientError
+### Net.ConnectionManager.Remote.ForbiddenOperation
 
 
-***
-Handshake client error.
-***
 
 
 From current configuration:
@@ -7958,12 +4112,9 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### MuxLocal.HandshakeServerEnd
+### Net.ConnectionManager.Remote.ImpossibleConnection
 
 
-***
-Handshake server end.
-***
 
 
 From current configuration:
@@ -7974,12 +4125,9 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### MuxLocal.HandshakeServerError
+### Net.ConnectionManager.Remote.IncludeConnection
 
 
-***
-Handshake server error.
-***
 
 
 From current configuration:
@@ -7990,12 +4138,9 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### MuxLocal.HandshakeStart
+### Net.ConnectionManager.Remote.PruneConnections
 
 
-***
-Handshake start.
-***
 
 
 From current configuration:
@@ -8006,12 +4151,9 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### MuxLocal.RecvDeltaQObservation
+### Net.ConnectionManager.Remote.Shutdown
 
 
-***
-Bearer DeltaQ observation.
-***
 
 
 From current configuration:
@@ -8022,12 +4164,9 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### MuxLocal.RecvDeltaQSample
+### Net.ConnectionManager.Remote.State
 
 
-***
-Bearer DeltaQ sample.
-***
 
 
 From current configuration:
@@ -8038,12 +4177,9 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### MuxLocal.RecvEnd
+### Net.ConnectionManager.Remote.TerminatedConnection
 
 
-***
-Bearer receive end.
-***
 
 
 From current configuration:
@@ -8054,12 +4190,9 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### MuxLocal.RecvHeaderEnd
+### Net.ConnectionManager.Remote.TerminatingConnection
 
 
-***
-Bearer receive header end.
-***
 
 
 From current configuration:
@@ -8070,12 +4203,9 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### MuxLocal.RecvHeaderStart
+### Net.ConnectionManager.Remote.Transition.ConnectionManagerTransition
 
 
-***
-Bearer receive header start.
-***
 
 
 From current configuration:
@@ -8086,12 +4216,9 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### MuxLocal.RecvStart
+### Net.ConnectionManager.Remote.UnexpectedlyFalseAssertion
 
 
-***
-Bearer receive start.
-***
 
 
 From current configuration:
@@ -8102,12 +4229,9 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### MuxLocal.SDUReadTimeoutException
+### Net.ConnectionManager.Remote.UnregisterConnection
 
 
-***
-Timed out reading SDU.
-***
 
 
 From current configuration:
@@ -8118,12 +4242,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### MuxLocal.SDUWriteTimeoutException
+### Net.DNSResolver.LookupAAAAError
 
 
-***
-Timed out writing SDU.
-***
+> AAAA lookup failed with an error.
 
 
 From current configuration:
@@ -8134,12 +4256,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### MuxLocal.SendEnd
+### Net.DNSResolver.LookupAAAAResult
 
 
-***
-Bearer send end.
-***
+> Lookup AAAA result.
 
 
 From current configuration:
@@ -8150,12 +4270,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### MuxLocal.SendStart
+### Net.DNSResolver.LookupAError
 
 
-***
-Bearer send start.
-***
+> A lookup failed with an error.
 
 
 From current configuration:
@@ -8166,12 +4284,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### MuxLocal.Shutdown
+### Net.DNSResolver.LookupAResult
 
 
-***
-Mux shutdown.
-***
+> Lookup A result.
 
 
 From current configuration:
@@ -8182,12 +4298,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### MuxLocal.StartEagerly
+### Net.DNSResolver.LookupException
 
 
-***
-Eagerly started.
-***
+> A DNS lookup exception occurred.
 
 
 From current configuration:
@@ -8198,12 +4312,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### MuxLocal.StartOnDemand
+### Net.DNSResolver.LookupIPv4First
 
 
-***
-Preparing to start.
-***
+> Returning IPv4 address first.
 
 
 From current configuration:
@@ -8214,12 +4326,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### MuxLocal.StartedOnDemand
+### Net.DNSResolver.LookupIPv6First
 
 
-***
-Started on demand.
-***
+> Returning IPv6 address first.
 
 
 From current configuration:
@@ -8230,12 +4340,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### MuxLocal.State
+### Net.ErrorPolicy.Local.AcceptException
 
 
-***
-State.
-***
+> 'accept' threw an exception.
 
 
 From current configuration:
@@ -8246,12 +4354,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### MuxLocal.TCPInfo
+### Net.ErrorPolicy.Local.KeepSuspended
 
 
-***
-TCPInfo.
-***
+> Consumer was suspended until producer will resume.
 
 
 From current configuration:
@@ -8262,12 +4368,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### MuxLocal.Terminating
+### Net.ErrorPolicy.Local.LocalNodeError
 
 
-***
-Terminating.
-***
+> caught a local exception.
 
 
 From current configuration:
@@ -8278,14 +4382,2455 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### PeerSelection.ChurnMode
+### Net.ErrorPolicy.Local.ResumeConsumer
 
 
-***
+> Resume consumer.
 
-***
 
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.ErrorPolicy.Local.ResumePeer
+
+
+> Resume a peer (both consumer and producer).
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.ErrorPolicy.Local.ResumeProducer
+
+
+> Resume producer.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.ErrorPolicy.Local.SuspendConsumer
+
+
+> Suspending consumer.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.ErrorPolicy.Local.SuspendPeer
+
+
+> Suspending peer with a given exception.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.ErrorPolicy.Local.UnhandledApplicationException
+
+
+> An application threw an exception, which was not handled.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.ErrorPolicy.Local.UnhandledConnectionException
+
+
+> 'connect' threw an exception, which was not handled by any 'ErrorPolicy'.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.ErrorPolicy.Remote.AcceptException
+
+
+> 'accept' threw an exception.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.ErrorPolicy.Remote.KeepSuspended
+
+
+> Consumer was suspended until producer will resume.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.ErrorPolicy.Remote.LocalNodeError
+
+
+> caught a local exception.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.ErrorPolicy.Remote.ResumeConsumer
+
+
+> Resume consumer.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.ErrorPolicy.Remote.ResumePeer
+
+
+> Resume a peer (both consumer and producer).
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.ErrorPolicy.Remote.ResumeProducer
+
+
+> Resume producer.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.ErrorPolicy.Remote.SuspendConsumer
+
+
+> Suspending consumer.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.ErrorPolicy.Remote.SuspendPeer
+
+
+> Suspending peer with a given exception.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.ErrorPolicy.Remote.UnhandledApplicationException
+
+
+> An application threw an exception, which was not handled.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.ErrorPolicy.Remote.UnhandledConnectionException
+
+
+> 'connect' threw an exception, which was not handled by any 'ErrorPolicy'.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Handshake.Local.Receive.AcceptVersion
+
+
+> The remote end decides which version to use and sends chosen version.The server is allowed to modify version parameters.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Handshake.Local.Receive.ProposeVersions
+
+
+> Propose versions together with version parameters.  It must be encoded to a sorted list..
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Handshake.Local.Receive.Refuse
+
+
+> It refuses to run any version.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Handshake.Local.Receive.ReplyVersions
+
+
+> `MsgReplyVersions` received as a response to 'MsgProposeVersions'.  It is not supported to explicitly send this message. It can only be received as a copy of 'MsgProposeVersions' in a simultaneous open scenario.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Handshake.Local.Send.AcceptVersion
+
+
+> The remote end decides which version to use and sends chosen version.The server is allowed to modify version parameters.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Handshake.Local.Send.ProposeVersions
+
+
+> Propose versions together with version parameters.  It must be encoded to a sorted list..
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Handshake.Local.Send.Refuse
+
+
+> It refuses to run any version.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Handshake.Local.Send.ReplyVersions
+
+
+> `MsgReplyVersions` received as a response to 'MsgProposeVersions'.  It is not supported to explicitly send this message. It can only be received as a copy of 'MsgProposeVersions' in a simultaneous open scenario.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Handshake.Remote.Receive.AcceptVersion
+
+
+> The remote end decides which version to use and sends chosen version.The server is allowed to modify version parameters.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Handshake.Remote.Receive.ProposeVersions
+
+
+> Propose versions together with version parameters.  It must be encoded to a sorted list..
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Handshake.Remote.Receive.Refuse
+
+
+> It refuses to run any version.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Handshake.Remote.Receive.ReplyVersions
+
+
+> `MsgReplyVersions` received as a response to 'MsgProposeVersions'.  It is not supported to explicitly send this message. It can only be received as a copy of 'MsgProposeVersions' in a simultaneous open scenario.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Handshake.Remote.Send.AcceptVersion
+
+
+> The remote end decides which version to use and sends chosen version.The server is allowed to modify version parameters.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Handshake.Remote.Send.ProposeVersions
+
+
+> Propose versions together with version parameters.  It must be encoded to a sorted list..
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Handshake.Remote.Send.Refuse
+
+
+> It refuses to run any version.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Handshake.Remote.Send.ReplyVersions
+
+
+> `MsgReplyVersions` received as a response to 'MsgProposeVersions'.  It is not supported to explicitly send this message. It can only be received as a copy of 'MsgProposeVersions' in a simultaneous open scenario.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.InboundGovernor.Local.DemotedToColdRemote
+
+
+> All mini-protocols terminated.  The boolean is true if this connection was not used by p2p-governor, and thus the connection will be terminated.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.InboundGovernor.Local.DemotedToWarmRemote
+
+
+> All mini-protocols terminated.  The boolean is true if this connection was not used by p2p-governor, and thus the connection will be terminated.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.InboundGovernor.Local.InboundGovernorCounters
+
+
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.InboundGovernor.Local.InboundGovernorError
+
+
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.InboundGovernor.Local.MuxCleanExit
+
+
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.InboundGovernor.Local.MuxErrored
+
+
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.InboundGovernor.Local.NewConnection
+
+
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.InboundGovernor.Local.PromotedToHotRemote
+
+
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.InboundGovernor.Local.PromotedToWarmRemote
+
+
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.InboundGovernor.Local.RemoteState
+
+
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.InboundGovernor.Local.ResponderErrored
+
+
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.InboundGovernor.Local.ResponderRestarted
+
+
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.InboundGovernor.Local.ResponderStartFailure
+
+
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.InboundGovernor.Local.ResponderStarted
+
+
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.InboundGovernor.Local.ResponderTerminated
+
+
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.InboundGovernor.Local.UnexpectedlyFalseAssertion
+
+
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.InboundGovernor.Local.WaitIdleRemote
+
+
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.InboundGovernor.Remote.DemotedToColdRemote
+
+
+> All mini-protocols terminated.  The boolean is true if this connection was not used by p2p-governor, and thus the connection will be terminated.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.InboundGovernor.Remote.DemotedToWarmRemote
+
+
+> All mini-protocols terminated.  The boolean is true if this connection was not used by p2p-governor, and thus the connection will be terminated.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.InboundGovernor.Remote.InboundGovernorCounters
+
+
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.InboundGovernor.Remote.InboundGovernorError
+
+
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.InboundGovernor.Remote.MuxCleanExit
+
+
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.InboundGovernor.Remote.MuxErrored
+
+
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.InboundGovernor.Remote.NewConnection
+
+
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.InboundGovernor.Remote.PromotedToHotRemote
+
+
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.InboundGovernor.Remote.PromotedToWarmRemote
+
+
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.InboundGovernor.Remote.RemoteState
+
+
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.InboundGovernor.Remote.ResponderErrored
+
+
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.InboundGovernor.Remote.ResponderRestarted
+
+
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.InboundGovernor.Remote.ResponderStartFailure
+
+
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.InboundGovernor.Remote.ResponderStarted
+
+
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.InboundGovernor.Remote.ResponderTerminated
+
+
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.InboundGovernor.Remote.Transition.InboundGovernorTransition
+
+
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.InboundGovernor.Remote.UnexpectedlyFalseAssertion
+
+
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.InboundGovernor.Remote.WaitIdleRemote
+
+
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.KeepAliveClient
+
+
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Mux.Local.ChannelRecvEnd
+
+
+> Channel receive end.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Mux.Local.ChannelRecvStart
+
+
+> Channel receive start.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Mux.Local.ChannelSendEnd
+
+
+> Channel send end.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Mux.Local.ChannelSendStart
+
+
+> Channel send start.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Mux.Local.CleanExit
+
+
+> Miniprotocol terminated cleanly.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Mux.Local.ExceptionExit
+
+
+> Miniprotocol terminated with exception.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Mux.Local.HandshakeClientEnd
+
+
+> Handshake client end.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Mux.Local.HandshakeClientError
+
+
+> Handshake client error.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Mux.Local.HandshakeServerEnd
+
+
+> Handshake server end.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Mux.Local.HandshakeServerError
+
+
+> Handshake server error.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Mux.Local.HandshakeStart
+
+
+> Handshake start.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Mux.Local.RecvDeltaQObservation
+
+
+> Bearer DeltaQ observation.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Mux.Local.RecvDeltaQSample
+
+
+> Bearer DeltaQ sample.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Mux.Local.RecvEnd
+
+
+> Bearer receive end.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Mux.Local.RecvHeaderEnd
+
+
+> Bearer receive header end.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Mux.Local.RecvHeaderStart
+
+
+> Bearer receive header start.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Mux.Local.RecvStart
+
+
+> Bearer receive start.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Mux.Local.SDUReadTimeoutException
+
+
+> Timed out reading SDU.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Mux.Local.SDUWriteTimeoutException
+
+
+> Timed out writing SDU.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Mux.Local.SendEnd
+
+
+> Bearer send end.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Mux.Local.SendStart
+
+
+> Bearer send start.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Mux.Local.Shutdown
+
+
+> Mux shutdown.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Mux.Local.StartEagerly
+
+
+> Eagerly started.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Mux.Local.StartOnDemand
+
+
+> Preparing to start.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Mux.Local.StartedOnDemand
+
+
+> Started on demand.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Mux.Local.State
+
+
+> State.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Mux.Local.TCPInfo
+
+
+> TCPInfo.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Mux.Local.Terminating
+
+
+> Terminating.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Mux.Remote.ChannelRecvEnd
+
+
+> Channel receive end.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Mux.Remote.ChannelRecvStart
+
+
+> Channel receive start.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Mux.Remote.ChannelSendEnd
+
+
+> Channel send end.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Mux.Remote.ChannelSendStart
+
+
+> Channel send start.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Mux.Remote.CleanExit
+
+
+> Miniprotocol terminated cleanly.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Mux.Remote.ExceptionExit
+
+
+> Miniprotocol terminated with exception.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Mux.Remote.HandshakeClientEnd
+
+
+> Handshake client end.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Mux.Remote.HandshakeClientError
+
+
+> Handshake client error.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Mux.Remote.HandshakeServerEnd
+
+
+> Handshake server end.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Mux.Remote.HandshakeServerError
+
+
+> Handshake server error.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Mux.Remote.HandshakeStart
+
+
+> Handshake start.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Mux.Remote.RecvDeltaQObservation
+
+
+> Bearer DeltaQ observation.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Mux.Remote.RecvDeltaQSample
+
+
+> Bearer DeltaQ sample.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Mux.Remote.RecvEnd
+
+
+> Bearer receive end.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Mux.Remote.RecvHeaderEnd
+
+
+> Bearer receive header end.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Mux.Remote.RecvHeaderStart
+
+
+> Bearer receive header start.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Mux.Remote.RecvStart
+
+
+> Bearer receive start.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Mux.Remote.SDUReadTimeoutException
+
+
+> Timed out reading SDU.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Mux.Remote.SDUWriteTimeoutException
+
+
+> Timed out writing SDU.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Mux.Remote.SendEnd
+
+
+> Bearer send end.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Mux.Remote.SendStart
+
+
+> Bearer send start.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Mux.Remote.Shutdown
+
+
+> Mux shutdown.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Mux.Remote.StartEagerly
+
+
+> Eagerly started.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Mux.Remote.StartOnDemand
+
+
+> Preparing to start.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Mux.Remote.StartedOnDemand
+
+
+> Started on demand.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Mux.Remote.State
+
+
+> State.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Mux.Remote.TCPInfo
+
+
+> TCPInfo.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Mux.Remote.Terminating
+
+
+> Terminating.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.PeerSelection.Actions.MonitoringError
+
+
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.PeerSelection.Actions.MonitoringResult
+
+
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.PeerSelection.Actions.StatusChangeFailure
+
+
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.PeerSelection.Actions.StatusChanged
+
+
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.PeerSelection.Counters
+
+
+> Counters for cold, warm and hot peers
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.PeerSelection.Initiator.GovernorState
+
+
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.PeerSelection.Responder.GovernorState
+
+
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.PeerSelection.Selection.ChurnMode
+
+
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.PeerSelection.Selection.ChurnWait
+
+
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.PeerSelection.Selection.DemoteAsynchronous
+
+
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.PeerSelection.Selection.DemoteHotDone
+
+
+> target active, actual active, peer
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.PeerSelection.Selection.DemoteHotFailed
+
+
+> target active, actual active, peer, reason
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.PeerSelection.Selection.DemoteHotPeers
+
+
+> target active, actual active, selected peers
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.PeerSelection.Selection.DemoteLocalHotPeers
+
+
+> local per-group (target active, actual active), selected peers
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.PeerSelection.Selection.DemoteWarmDone
+
+
+> target established, actual established, peer
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.PeerSelection.Selection.DemoteWarmFailed
+
+
+> target established, actual established, peer, reason
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.PeerSelection.Selection.DemoteWarmPeers
+
+
+> target established, actual established, selected peers
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.PeerSelection.Selection.ForgetColdPeers
+
+
+> target known peers, actual known peers, selected peers
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.PeerSelection.Selection.GossipRequests
+
+
+> target known peers, actual known peers, peers available for gossip, peers selected for gossip
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.PeerSelection.Selection.GossipResults
+
+
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.PeerSelection.Selection.GovernorWakeup
+
+
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.PeerSelection.Selection.LocalRootPeersChanged
+
+
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.PeerSelection.Selection.PromoteColdDone
+
+
+> target active, actual active, selected peers
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.PeerSelection.Selection.PromoteColdFailed
+
+
+> target established, actual established, peer, delay until next promotion, reason
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.PeerSelection.Selection.PromoteColdLocalPeers
+
+
+> target local established, actual local established, selected peers
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.PeerSelection.Selection.PromoteColdPeers
+
+
+> target established, actual established, selected peers
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.PeerSelection.Selection.PromoteWarmAborted
+
+
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.PeerSelection.Selection.PromoteWarmDone
+
+
+> target active, actual active, peer
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.PeerSelection.Selection.PromoteWarmFailed
+
+
+> target active, actual active, peer, reason
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.PeerSelection.Selection.PromoteWarmLocalPeers
+
+
+> local per-group (target active, actual active), selected peers
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.PeerSelection.Selection.PromoteWarmPeers
+
+
+> target active, actual active, selected peers
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.PeerSelection.Selection.PublicRootsFailure
+
+
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.PeerSelection.Selection.PublicRootsRequest
+
+
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.PeerSelection.Selection.PublicRootsResults
+
+
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.PeerSelection.Selection.TargetsChanged
+
+
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Peers.Ledger.DisabledLedgerPeers
+
+
+> Trace for when getting peers from the ledger is disabled, that is DontUseLedger.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Peers.Ledger.FallingBackToBootstrapPeers
+
+
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Peers.Ledger.FetchingNewLedgerState
+
+
+> Trace for fetching a new list of peers from the ledger. Int is the number of peers returned.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Peers.Ledger.PickedPeer
+
+
+> Trace for a peer picked with accumulated and relative stake of its pool.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Peers.Ledger.PickedPeers
+
+
+> Trace for the number of peers we wanted to pick and the list of peers picked.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Peers.Ledger.RequestForPeers
+
+
+> RequestForPeers (NumberOfPeers 1)
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Peers.Ledger.ReusingLedgerState
+
+
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Peers.Ledger.TraceUseLedgerAfter
+
+
+> Trace UseLedgerAfter value.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Peers.Ledger.WaitingOnRequest
+
+
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Peers.List
+
+
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Peers.LocalRoot.LocalRootDomains
+
+
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Peers.LocalRoot.LocalRootError
+
+
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Peers.LocalRoot.LocalRootFailure
+
+
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Peers.LocalRoot.LocalRootGroups
+
+
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Peers.LocalRoot.LocalRootResult
+
+
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Peers.LocalRoot.LocalRootWaiting
+
+
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Peers.PublicRoot.PublicRootDomains
+
+
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Peers.PublicRoot.PublicRootFailure
 
+
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Peers.PublicRoot.PublicRootRelayAccessPoint
+
+
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Peers.PublicRoot.PublicRootResult
+
+
+
+
 From current configuration:
 Details:   `DNormal`
 Backends:
@@ -8293,13 +6838,23 @@ Backends:
 			`Stdout MachineFormat`,
 			`Forwarder`
 Filtered  by config value: `Notice`
+
+### Net.Server.Local.AcceptConnection
 
-### PeerSelection.ChurnWait
+
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
 
+### Net.Server.Local.AcceptError
 
-***
 
-***
 
 
 From current configuration:
@@ -8309,13 +6864,23 @@ Backends:
 			`Stdout MachineFormat`,
 			`Forwarder`
 Filtered  by config value: `Notice`
+
+### Net.Server.Local.AcceptPolicy
+
 
-### PeerSelection.DemoteAsynchronous
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
 
+### Net.Server.Local.Error
 
-***
 
-***
 
 
 From current configuration:
@@ -8326,12 +6891,9 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### PeerSelection.DemoteHotDone
+### Net.Server.Local.Started
 
 
-***
-target active, actual active, peer
-***
 
 
 From current configuration:
@@ -8342,12 +6904,9 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### PeerSelection.DemoteHotFailed
+### Net.Server.Local.Stopped
 
 
-***
-target active, actual active, peer, reason
-***
 
 
 From current configuration:
@@ -8358,12 +6917,9 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### PeerSelection.DemoteHotPeers
+### Net.Server.Remote.AcceptConnection
 
 
-***
-target active, actual active, selected peers
-***
 
 
 From current configuration:
@@ -8374,12 +6930,9 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### PeerSelection.DemoteLocalHotPeers
+### Net.Server.Remote.AcceptError
 
 
-***
-local per-group (target active, actual active), selected peers
-***
 
 
 From current configuration:
@@ -8390,12 +6943,9 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### PeerSelection.DemoteWarmDone
+### Net.Server.Remote.AcceptPolicy
 
 
-***
-target established, actual established, peer
-***
 
 
 From current configuration:
@@ -8406,12 +6956,9 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### PeerSelection.DemoteWarmFailed
+### Net.Server.Remote.Error
 
 
-***
-target established, actual established, peer, reason
-***
 
 
 From current configuration:
@@ -8422,12 +6969,9 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### PeerSelection.DemoteWarmPeers
+### Net.Server.Remote.Started
 
 
-***
-target established, actual established, selected peers
-***
 
 
 From current configuration:
@@ -8438,12 +6982,9 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### PeerSelection.ForgetColdPeers
+### Net.Server.Remote.Stopped
 
 
-***
-target known peers, actual known peers, selected peers
-***
 
 
 From current configuration:
@@ -8454,12 +6995,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### PeerSelection.GossipRequests
+### Net.Subscription.DNS.AllocateSocket
 
 
-***
-target known peers, actual known peers, peers available for gossip, peers selected for gossip
-***
+> DNS Subscription: Allocate socket to address.
 
 
 From current configuration:
@@ -8469,13 +7008,25 @@ Backends:
 			`Stdout MachineFormat`,
 			`Forwarder`
 Filtered  by config value: `Notice`
+
+### Net.Subscription.DNS.ApplicationException
+
+
+> DNS Subscription: Application Exception occurred.
 
-### PeerSelection.GossipResults
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
 
+### Net.Subscription.DNS.CloseSocket
 
-***
 
-***
+> DNS Subscription: Closed socket to address.
 
 
 From current configuration:
@@ -8485,13 +7036,25 @@ Backends:
 			`Stdout MachineFormat`,
 			`Forwarder`
 Filtered  by config value: `Notice`
+
+### Net.Subscription.DNS.ConnectEnd
+
+
+> DNS Subscription: Connection Attempt end with destination and outcome.
+
 
-### PeerSelection.GovernorWakeup
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
 
+### Net.Subscription.DNS.ConnectException
 
-***
 
-***
+> DNS Subscription: Socket Allocation Exception with destination and the exception.
 
 
 From current configuration:
@@ -8501,13 +7064,25 @@ Backends:
 			`Stdout MachineFormat`,
 			`Forwarder`
 Filtered  by config value: `Notice`
+
+### Net.Subscription.DNS.ConnectStart
 
-### PeerSelection.LocalRootPeersChanged
+
+> DNS Subscription: Connection Attempt Start with destination.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
 
+### Net.Subscription.DNS.ConnectionExist
 
-***
 
-***
+> DNS Subscription: Connection exists to destination.
 
 
 From current configuration:
@@ -8518,12 +7093,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### PeerSelection.PromoteColdDone
+### Net.Subscription.DNS.MissingLocalAddress
 
 
-***
-target active, actual active, selected peers
-***
+> DNS Subscription: Missing local address.
 
 
 From current configuration:
@@ -8534,12 +7107,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### PeerSelection.PromoteColdFailed
+### Net.Subscription.DNS.Restart
 
 
-***
-target established, actual established, peer, delay until next promotion, reason
-***
+> DNS Subscription: Restarting Subscription after duration with desired valency and current valency.
 
 
 From current configuration:
@@ -8550,12 +7121,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### PeerSelection.PromoteColdLocalPeers
+### Net.Subscription.DNS.SkippingPeer
 
 
-***
-target local established, actual local established, selected peers
-***
+> DNS Subscription: Skipping peer with address.
 
 
 From current configuration:
@@ -8566,12 +7135,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### PeerSelection.PromoteColdPeers
+### Net.Subscription.DNS.SocketAllocationException
 
 
-***
-target established, actual established, selected peers
-***
+> DNS Subscription: Connection Attempt Exception with destination and exception.
 
 
 From current configuration:
@@ -8581,13 +7148,25 @@ Backends:
 			`Stdout MachineFormat`,
 			`Forwarder`
 Filtered  by config value: `Notice`
+
+### Net.Subscription.DNS.Start
+
 
-### PeerSelection.PromoteWarmAborted
+> DNS Subscription: Starting Subscription Worker with a valency.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
 
+### Net.Subscription.DNS.SubscriptionFailed
 
-***
 
-***
+> DNS Subscription: Failed to start all required subscriptions.
 
 
 From current configuration:
@@ -8598,12 +7177,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### PeerSelection.PromoteWarmDone
+### Net.Subscription.DNS.SubscriptionRunning
 
 
-***
-target active, actual active, peer
-***
+> DNS Subscription: Required subscriptions started.
 
 
 From current configuration:
@@ -8614,12 +7191,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### PeerSelection.PromoteWarmFailed
+### Net.Subscription.DNS.SubscriptionWaiting
 
 
-***
-target active, actual active, peer, reason
-***
+> DNS Subscription: Waiting on address with active connections.
 
 
 From current configuration:
@@ -8630,12 +7205,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### PeerSelection.PromoteWarmLocalPeers
+### Net.Subscription.DNS.SubscriptionWaitingNewConnection
 
 
-***
-local per-group (target active, actual active), selected peers
-***
+> DNS Subscription: Waiting delay time before attempting a new connection.
 
 
 From current configuration:
@@ -8646,12 +7219,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### PeerSelection.PromoteWarmPeers
+### Net.Subscription.DNS.TryConnectToPeer
 
 
-***
-target active, actual active, selected peers
-***
+> DNS Subscription: Trying to connect to peer with address.
 
 
 From current configuration:
@@ -8661,13 +7232,25 @@ Backends:
 			`Stdout MachineFormat`,
 			`Forwarder`
 Filtered  by config value: `Notice`
+
+### Net.Subscription.DNS.UnsupportedRemoteAddr
+
+
+> DNS Subscription: Unsupported remote target address.
 
-### PeerSelection.PublicRootsFailure
 
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Subscription.IP.AllocateSocket
 
-***
 
-***
+> IP Subscription: Allocate socket to address.
 
 
 From current configuration:
@@ -8678,12 +7261,24 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### PeerSelection.PublicRootsRequest
+### Net.Subscription.IP.ApplicationException
+
+
+> IP Subscription: Application Exception occurred.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
 
+### Net.Subscription.IP.CloseSocket
 
-***
 
-***
+> IP Subscription: Closed socket to address.
 
 
 From current configuration:
@@ -8693,13 +7288,25 @@ Backends:
 			`Stdout MachineFormat`,
 			`Forwarder`
 Filtered  by config value: `Notice`
+
+### Net.Subscription.IP.ConnectEnd
 
-### PeerSelection.PublicRootsResults
+
+> IP Subscription: Connection Attempt end with destination and outcome.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
 
+### Net.Subscription.IP.ConnectException
 
-***
 
-***
+> IP Subscription: Socket Allocation Exception with destination and the exception.
 
 
 From current configuration:
@@ -8709,15 +7316,27 @@ Backends:
 			`Stdout MachineFormat`,
 			`Forwarder`
 Filtered  by config value: `Notice`
+
+### Net.Subscription.IP.ConnectStart
+
 
-### PeerSelection.TargetsChanged
+> IP Subscription: Connection Attempt Start with destination.
 
 
-***
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Subscription.IP.ConnectionExist
 
-***
 
+> IP Subscription: Connection exists to destination.
 
+
 From current configuration:
 Details:   `DNormal`
 Backends:
@@ -8725,13 +7344,25 @@ Backends:
 			`Stdout MachineFormat`,
 			`Forwarder`
 Filtered  by config value: `Notice`
+
+### Net.Subscription.IP.MissingLocalAddress
+
+
+> IP Subscription: Missing local address.
 
-### PeerSelectionActions.MonitoringError
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
 
+### Net.Subscription.IP.Restart
 
-***
 
-***
+> IP Subscription: Restarting Subscription after duration with desired valency and current valency.
 
 
 From current configuration:
@@ -8741,13 +7372,25 @@ Backends:
 			`Stdout MachineFormat`,
 			`Forwarder`
 Filtered  by config value: `Notice`
+
+### Net.Subscription.IP.SkippingPeer
+
+
+> IP Subscription: Skipping peer with address.
+
 
-### PeerSelectionActions.MonitoringResult
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
 
+### Net.Subscription.IP.SocketAllocationException
 
-***
 
-***
+> IP Subscription: Connection Attempt Exception with destination and exception.
 
 
 From current configuration:
@@ -8757,15 +7400,27 @@ Backends:
 			`Stdout MachineFormat`,
 			`Forwarder`
 Filtered  by config value: `Notice`
+
+### Net.Subscription.IP.Start
 
-### PeerSelectionActions.StatusChangeFailure
 
+> IP Subscription: Starting Subscription Worker with a valency.
 
-***
 
-***
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Net.Subscription.IP.SubscriptionFailed
 
 
+> IP Subscription: Failed to start all required subscriptions.
+
+
 From current configuration:
 Details:   `DNormal`
 Backends:
@@ -8773,13 +7428,25 @@ Backends:
 			`Stdout MachineFormat`,
 			`Forwarder`
 Filtered  by config value: `Notice`
+
+### Net.Subscription.IP.SubscriptionRunning
+
 
-### PeerSelectionActions.StatusChanged
+> IP Subscription: Required subscriptions started.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
 
+### Net.Subscription.IP.SubscriptionWaiting
 
-***
 
-***
+> IP Subscription: Waiting on address with active connections.
 
 
 From current configuration:
@@ -8790,12 +7457,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### PeerSelectionCounters.PeerSelectionCounters
+### Net.Subscription.IP.SubscriptionWaitingNewConnection
 
 
-***
-Counters for cold, warm and hot peers
-***
+> IP Subscription: Waiting delay time before attempting a new connection.
 
 
 From current configuration:
@@ -8806,12 +7471,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### Peers
+### Net.Subscription.IP.TryConnectToPeer
 
 
-***
-TODO Doc
-***
+> IP Subscription: Trying to connect to peer with address.
 
 
 From current configuration:
@@ -8821,13 +7484,25 @@ Backends:
 			`Stdout MachineFormat`,
 			`Forwarder`
 Filtered  by config value: `Notice`
+
+### Net.Subscription.IP.UnsupportedRemoteAddr
+
+
+> IP Subscription: Unsupported remote target address.
 
-### PublicRootPeers.PublicRootPeers.PublicRootDomains
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
 
+### NodeState.NodeAddBlock
 
-***
 
-***
+> Applying block
 
 
 From current configuration:
@@ -8838,14 +7513,26 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### PublicRootPeers.PublicRootPeers.PublicRootFailure
+### NodeState.NodeInitChainSelection
 
 
-***
+> Performing initial chain selection
 
-***
 
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### NodeState.NodeKernelOnline
 
+
+> Node kernel online
+
+
 From current configuration:
 Details:   `DNormal`
 Backends:
@@ -8853,13 +7540,25 @@ Backends:
 			`Stdout MachineFormat`,
 			`Forwarder`
 Filtered  by config value: `Notice`
+
+### NodeState.NodeOpeningDbs
 
-### PublicRootPeers.PublicRootPeers.PublicRootRelayAccessPoint
+
+> ChainDB components being opened
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
 
+### NodeState.NodeReplays
 
-***
 
-***
+> Replaying chain
 
 
 From current configuration:
@@ -8869,13 +7568,25 @@ Backends:
 			`Stdout MachineFormat`,
 			`Forwarder`
 Filtered  by config value: `Notice`
+
+### NodeState.NodeShutdown
+
 
-### PublicRootPeers.PublicRootPeers.PublicRootResult
+> Node shutting down
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
 
+### NodeState.NodeStartup
 
-***
 
-***
+> Node startup
 
 
 From current configuration:
@@ -8886,12 +7597,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### ReplayBlock.LedgerReplay
+### NodeState.NodeTracingOnlineConfiguring
 
 
-***
-Counts up the percent of a block replay.
-***
+> Tracing system came online, system configuring now
 
 
 From current configuration:
@@ -8905,9 +7614,6 @@ Filtered  by config value: `Notice`
 ### Resources
 
 
-***
-TODO JNF
-***
 
 
 From current configuration:
@@ -8918,28 +7624,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Info`
 
-### Server.AcceptConnection
+### Shutdown.Abnormal
 
 
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### Server.AcceptError
-
-
-***
-
-***
+> non-isEOFerror shutdown request
 
 
 From current configuration:
@@ -8950,28 +7638,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### Server.AcceptPolicy
+### Shutdown.ArmedAt
 
 
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### Server.Error
-
-
-***
-
-***
+> Setting up node shutdown at given slot / block.
 
 
 From current configuration:
@@ -8982,28 +7652,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### Server.Started
+### Shutdown.Requested
 
 
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### Server.Stopped
-
-
-***
-
-***
+> Node shutdown was requested.
 
 
 From current configuration:
@@ -9014,28 +7666,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### Shutdown.AbnormalShutdown
+### Shutdown.Requesting
 
 
-***
-non-isEOFerror shutdown request
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### Shutdown.RequestingShutdown
-
-
-***
-Ringing the node shutdown doorbell
-***
+> Ringing the node shutdown doorbell
 
 
 From current configuration:
@@ -9046,44 +7680,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### Shutdown.ShutdownArmedAtSlot
+### Shutdown.UnexpectedInput
 
 
-***
-Setting up node shutdown at given slot / block.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### Shutdown.ShutdownRequested
-
-
-***
-Node shutdown was requested.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### Shutdown.ShutdownUnexpectedInput
-
-
-***
-Received shutdown request but found unexpected input in --shutdown-ipc FD: 
-***
+> Received shutdown request but found unexpected input in --shutdown-ipc FD: 
 
 
 From current configuration:
@@ -9097,11 +7697,9 @@ Filtered  by config value: `Notice`
 ### Startup.Byron
 
 
-***
-_bibSystemStartTime_: TODO JNF 
-_bibSlotLength_: gives the length of a slot as time interval. 
-_bibEpochLength_: gives the number of slots which forms an epoch.
-***
+> _bibSystemStartTime_: TODO JNF 
+> _bibSlotLength_: gives the length of a slot as time interval. 
+> _bibEpochLength_: gives the number of slots which forms an epoch.
 
 
 From current configuration:
@@ -9115,13 +7713,247 @@ Filtered  by config value: `Notice`
 ### Startup.Common
 
 
-***
-_biConfigPath_: is the path to the config in use. 
-_biProtocol_: is the name of the protocol, e.g. "Byron", "Shelley" or "Byron; Shelley". 
-_biVersion_: is the version of the node software running. 
-_biCommit_: is the commit revision of the software running. 
-_biNodeStartTime_: gives the time this node was started.
-***
+> _biConfigPath_: is the path to the config in use. 
+> _biProtocol_: is the name of the protocol, e.g. "Byron", "Shelley" or "Byron; Shelley". 
+> _biVersion_: is the version of the node software running. 
+> _biCommit_: is the commit revision of the software running. 
+> _biNodeStartTime_: gives the time this node was started.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Startup.DBValidation
+
+
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Startup.DiffusionInit.ConfiguringLocalSocket
+
+
+> ConfiguringLocalSocket 
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Startup.DiffusionInit.ConfiguringServerSocket
+
+
+> ConfiguringServerSocket 
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Startup.DiffusionInit.CreateSystemdSocketForSnocketPath
+
+
+> CreateSystemdSocketForSnocketPath 
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Startup.DiffusionInit.CreatedLocalSocket
+
+
+> CreatedLocalSocket 
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Startup.DiffusionInit.CreatingServerSocket
+
+
+> CreatingServerSocket 
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Startup.DiffusionInit.DiffusionErrored
+
+
+> DiffusionErrored 
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Startup.DiffusionInit.ListeningLocalSocket
+
+
+> ListeningLocalSocket 
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Startup.DiffusionInit.ListeningServerSocket
+
+
+> ListeningServerSocket 
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Startup.DiffusionInit.LocalSocketUp
+
+
+> LocalSocketUp 
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Startup.DiffusionInit.RunLocalServer
+
+
+> RunLocalServer 
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Startup.DiffusionInit.RunServer
+
+
+> RunServer 
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Startup.DiffusionInit.ServerSocketUp
+
+
+> ServerSocketUp 
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Startup.DiffusionInit.UnsupportedLocalSystemdSocket
+
+
+> UnsupportedLocalSystemdSocket 
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Startup.DiffusionInit.UnsupportedReadySocketCase
+
+
+> UnsupportedReadySocketCase 
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Startup.DiffusionInit.UsingSystemdSocket
+
+
+> UsingSystemdSocket 
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Startup.Info
+
+
 
 
 From current configuration:
@@ -9135,12 +7967,10 @@ Filtered  by config value: `Notice`
 ### Startup.Network
 
 
-***
-_niAddresses_: IPv4 or IPv6 socket ready to accept connectionsor diffusion addresses. 
-_niDiffusionMode_: shows if the node runs only initiator or bothinitiator or responder node. 
-_niDnsProducers_: shows the list of domain names to subscribe to. 
-_niIpProducers_: shows the list of ip subscription addresses.
-***
+> _niAddresses_: IPv4 or IPv6 socket ready to accept connectionsor diffusion addresses. 
+> _niDiffusionMode_: shows if the node runs only initiator or bothinitiator or responder node. 
+> _niDnsProducers_: shows the list of domain names to subscribe to. 
+> _niIpProducers_: shows the list of ip subscription addresses.
 
 
 From current configuration:
@@ -9154,9 +7984,6 @@ Filtered  by config value: `Notice`
 ### Startup.NetworkConfig
 
 
-***
-
-***
 
 
 From current configuration:
@@ -9170,9 +7997,6 @@ Filtered  by config value: `Notice`
 ### Startup.NetworkConfigUpdate
 
 
-***
-
-***
 
 
 From current configuration:
@@ -9186,9 +8010,32 @@ Filtered  by config value: `Notice`
 ### Startup.NetworkConfigUpdateError
 
 
-***
 
-***
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Startup.NetworkMagic
+
+
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### Startup.P2PInfo
+
+
 
 
 From current configuration:
@@ -9202,9 +8049,6 @@ Filtered  by config value: `Notice`
 ### Startup.P2PWarning
 
 
-***
-
-***
 
 
 From current configuration:
@@ -9218,9 +8062,6 @@ Filtered  by config value: `Notice`
 ### Startup.P2PWarningDevelopementNetworkProtocols
 
 
-***
-
-***
 
 
 From current configuration:
@@ -9234,13 +8075,11 @@ Filtered  by config value: `Notice`
 ### Startup.ShelleyBased
 
 
-***
-bisEra is the current era, e.g. "Shelley", "Allegra", "Mary" or "Alonzo". 
-_bisSystemStartTime_: TODO JNF 
-_bisSlotLength_: gives the length of a slot as time interval. 
-_bisEpochLength_: gives the number of slots which forms an epoch. 
-_bisSlotsPerKESPeriod_: gives the slots per KES period.
-***
+> bisEra is the current era, e.g. "Shelley", "Allegra", "Mary" or "Alonzo". 
+> _bisSystemStartTime_: TODO JNF 
+> _bisSlotLength_: gives the length of a slot as time interval. 
+> _bisEpochLength_: gives the number of slots which forms an epoch. 
+> _bisSlotsPerKESPeriod_: gives the slots per KES period.
 
 
 From current configuration:
@@ -9251,12 +8090,9 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### Startup.StartupDBValidation
+### Startup.SocketConfigError
 
 
-***
-
-***
 
 
 From current configuration:
@@ -9267,76 +8103,9 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### Startup.StartupInfo
+### Startup.Time
 
 
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### Startup.StartupNetworkMagic
-
-
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### Startup.StartupP2PInfo
-
-
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### Startup.StartupSocketConfigError
-
-
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### Startup.StartupTime
-
-
-***
-
-***
 
 
 From current configuration:
@@ -9350,9 +8119,6 @@ Filtered  by config value: `Notice`
 ### Startup.WarningDevelopmentNetworkProtocols
 
 
-***
-
-***
 
 
 From current configuration:
@@ -9363,29 +8129,11 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### StateQueryClient.Recieve.Acquire
+### StateQueryServer.Receive.Acquire
 
 
-***
-The client requests that the state as of a particular recent point onthe server's chain (within K of the tip) be made available to query,and waits for confirmation or failure.
-From 'NodeToClient_V8' onwards if the point is not specified, current tipwill be acquired.  For previous versions of the protocol 'point' must begiven.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### StateQueryClient.Recieve.Acquired
-
-
-***
-The server can confirm that it has the state at the requested point.
-***
+> The client requests that the state as of a particular recent point on the server's chain (within K of the tip) be made available to query, and waits for confirmation or failure. 
+>  From 'NodeToClient_V8' onwards if the point is not specified, current tip will be acquired.  For previous versions of the protocol 'point' must be given.
 
 
 From current configuration:
@@ -9396,28 +8144,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### StateQueryClient.Recieve.Done
+### StateQueryServer.Receive.Acquired
 
 
-***
-The client can terminate the protocol.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### StateQueryClient.Recieve.Failure
-
-
-***
-The server can report that it cannot obtain the state for therequested point.
-***
+> The server can confirm that it has the state at the requested point.
 
 
 From current configuration:
@@ -9428,30 +8158,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### StateQueryClient.Recieve.Query
+### StateQueryServer.Receive.Done
 
 
-***
-The client can perform queries on the current acquired state.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### StateQueryClient.Recieve.ReAcquire
-
-
-***
-This is like 'MsgAcquire' but for when the client already has astate. By moveing to another state directly without a 'MsgRelease' itenables optimisations on the server side (e.g. moving to the state forthe immediate next block).
-Note that failure to re-acquire is equivalent to 'MsgRelease',rather than keeping the exiting acquired state.
-From 'NodeToClient_V8' onwards if the point is not specified, current tipwill be acquired.  For previous versions of the protocol 'point' must begiven.
-***
+> The client can terminate the protocol.
 
 
 From current configuration:
@@ -9462,28 +8172,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### StateQueryClient.Recieve.Release
+### StateQueryServer.Receive.Failure
 
 
-***
-The client can instruct the server to release the state. This letsthe server free resources.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### StateQueryClient.Recieve.Result
-
-
-***
-The server must reply with the queries.
-***
+> The server can report that it cannot obtain the state for the requested point.
 
 
 From current configuration:
@@ -9494,13 +8186,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### StateQueryClient.Send.Acquire
+### StateQueryServer.Receive.Query
 
 
-***
-The client requests that the state as of a particular recent point onthe server's chain (within K of the tip) be made available to query,and waits for confirmation or failure.
-From 'NodeToClient_V8' onwards if the point is not specified, current tipwill be acquired.  For previous versions of the protocol 'point' must begiven.
-***
+> The client can perform queries on the current acquired state.
 
 
 From current configuration:
@@ -9511,28 +8200,12 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### StateQueryClient.Send.Acquired
+### StateQueryServer.Receive.ReAcquire
 
 
-***
-The server can confirm that it has the state at the requested point.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### StateQueryClient.Send.Done
-
-
-***
-The client can terminate the protocol.
-***
+> This is like 'MsgAcquire' but for when the client already has a state. By moveing to another state directly without a 'MsgRelease' it enables optimisations on the server side (e.g. moving to the state for the immediate next block). 
+>  Note that failure to re-acquire is equivalent to 'MsgRelease', rather than keeping the exiting acquired state. 
+>  From 'NodeToClient_V8' onwards if the point is not specified, current tip will be acquired.  For previous versions of the protocol 'point' must be given.
 
 
 From current configuration:
@@ -9543,28 +8216,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### StateQueryClient.Send.Failure
+### StateQueryServer.Receive.Release
 
 
-***
-The server can report that it cannot obtain the state for therequested point.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### StateQueryClient.Send.Query
-
-
-***
-The client can perform queries on the current acquired state.
-***
+> The client can instruct the server to release the state. This lets the server free resources.
 
 
 From current configuration:
@@ -9575,14 +8230,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### StateQueryClient.Send.ReAcquire
+### StateQueryServer.Receive.Result
 
 
-***
-This is like 'MsgAcquire' but for when the client already has astate. By moveing to another state directly without a 'MsgRelease' itenables optimisations on the server side (e.g. moving to the state forthe immediate next block).
-Note that failure to re-acquire is equivalent to 'MsgRelease',rather than keeping the exiting acquired state.
-From 'NodeToClient_V8' onwards if the point is not specified, current tipwill be acquired.  For previous versions of the protocol 'point' must begiven.
-***
+> The server must reply with the queries.
 
 
 From current configuration:
@@ -9593,28 +8244,11 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### StateQueryClient.Send.Release
+### StateQueryServer.Send.Acquire
 
 
-***
-The client can instruct the server to release the state. This letsthe server free resources.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### StateQueryClient.Send.Result
-
-
-***
-The server must reply with the queries.
-***
+> The client requests that the state as of a particular recent point on the server's chain (within K of the tip) be made available to query, and waits for confirmation or failure. 
+>  From 'NodeToClient_V8' onwards if the point is not specified, current tip will be acquired.  For previous versions of the protocol 'point' must be given.
 
 
 From current configuration:
@@ -9625,28 +8259,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### TxInbound.TxInboundCanRequestMoreTxs
+### StateQueryServer.Send.Acquired
 
 
-***
-There are no replies in flight, but we do know some more txs we can ask for, so lets ask for them and more txids.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### TxInbound.TxInboundCannotRequestMoreTxs
-
-
-***
-There's no replies in flight, and we have no more txs we can ask for so the only remaining thing to do is to ask for more txids. Since this is the only thing to do now, we make this a blocking call.
-***
+> The server can confirm that it has the state at the requested point.
 
 
 From current configuration:
@@ -9657,28 +8273,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### TxInbound.TxInboundTerminated
+### StateQueryServer.Send.Done
 
 
-***
-Server received 'MsgDone'.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### TxInbound.TxSubmissionCollected
-
-
-***
-Number of transactions just about to be inserted.
-***
+> The client can terminate the protocol.
 
 
 From current configuration:
@@ -9689,29 +8287,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### TxInbound.TxSubmissionProcessed
+### StateQueryServer.Send.Failure
 
 
-***
-Just processed transaction pass/fail breakdown.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### TxMonitorClient.Recieve.Acquire
-
-
-***
-The client requests that the state as of a particular recent point onthe server's chain (within K of the tip) be made available to query,and waits for confirmation or failure.
-From 'NodeToClient_V8' onwards if the point is not specified, current tipwill be acquired.  For previous versions of the protocol 'point' must begiven.
-***
+> The server can report that it cannot obtain the state for the requested point.
 
 
 From current configuration:
@@ -9722,28 +8301,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### TxMonitorClient.Recieve.Acquired
+### StateQueryServer.Send.Query
 
 
-***
-The server can confirm that it has the state at the requested point.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### TxMonitorClient.Recieve.Done
-
-
-***
-The client can terminate the protocol.
-***
+> The client can perform queries on the current acquired state.
 
 
 From current configuration:
@@ -9754,28 +8315,12 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### TxMonitorClient.Recieve.Failure
+### StateQueryServer.Send.ReAcquire
 
 
-***
-The server can report that it cannot obtain the state for therequested point.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### TxMonitorClient.Recieve.Query
-
-
-***
-The client can perform queries on the current acquired state.
-***
+> This is like 'MsgAcquire' but for when the client already has a state. By moveing to another state directly without a 'MsgRelease' it enables optimisations on the server side (e.g. moving to the state for the immediate next block). 
+>  Note that failure to re-acquire is equivalent to 'MsgRelease', rather than keeping the exiting acquired state. 
+>  From 'NodeToClient_V8' onwards if the point is not specified, current tip will be acquired.  For previous versions of the protocol 'point' must be given.
 
 
 From current configuration:
@@ -9786,14 +8331,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### TxMonitorClient.Recieve.ReAcquire
+### StateQueryServer.Send.Release
 
 
-***
-This is like 'MsgAcquire' but for when the client already has astate. By moveing to another state directly without a 'MsgRelease' itenables optimisations on the server side (e.g. moving to the state forthe immediate next block).
-Note that failure to re-acquire is equivalent to 'MsgRelease',rather than keeping the exiting acquired state.
-From 'NodeToClient_V8' onwards if the point is not specified, current tipwill be acquired.  For previous versions of the protocol 'point' must begiven.
-***
+> The client can instruct the server to release the state. This lets the server free resources.
 
 
 From current configuration:
@@ -9804,28 +8345,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### TxMonitorClient.Recieve.Release
+### StateQueryServer.Send.Result
 
 
-***
-The client can instruct the server to release the state. This letsthe server free resources.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### TxMonitorClient.Recieve.Result
-
-
-***
-The server must reply with the queries.
-***
+> The server must reply with the queries.
 
 
 From current configuration:
@@ -9836,13 +8359,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### TxMonitorClient.Send.Acquire
+### TxSubmission.Local.Receive.AcceptTx
 
 
-***
-The client requests that the state as of a particular recent point onthe server's chain (within K of the tip) be made available to query,and waits for confirmation or failure.
-From 'NodeToClient_V8' onwards if the point is not specified, current tipwill be acquired.  For previous versions of the protocol 'point' must begiven.
-***
+> The server can reply to inform the client that it has accepted the transaction.
 
 
 From current configuration:
@@ -9853,28 +8373,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### TxMonitorClient.Send.Acquired
+### TxSubmission.Local.Receive.Done
 
 
-***
-The server can confirm that it has the state at the requested point.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### TxMonitorClient.Send.Done
-
-
-***
-The client can terminate the protocol.
-***
+> The client can terminate the protocol.
 
 
 From current configuration:
@@ -9885,28 +8387,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### TxMonitorClient.Send.Failure
+### TxSubmission.Local.Receive.RejectTx
 
 
-***
-The server can report that it cannot obtain the state for therequested point.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### TxMonitorClient.Send.Query
-
-
-***
-The client can perform queries on the current acquired state.
-***
+> The server can reply to inform the client that it has rejected the transaction. A reason for the rejection is included.
 
 
 From current configuration:
@@ -9917,14 +8401,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### TxMonitorClient.Send.ReAcquire
+### TxSubmission.Local.Receive.SubmitTx
 
 
-***
-This is like 'MsgAcquire' but for when the client already has astate. By moveing to another state directly without a 'MsgRelease' itenables optimisations on the server side (e.g. moving to the state forthe immediate next block).
-Note that failure to re-acquire is equivalent to 'MsgRelease',rather than keeping the exiting acquired state.
-From 'NodeToClient_V8' onwards if the point is not specified, current tipwill be acquired.  For previous versions of the protocol 'point' must begiven.
-***
+> The client submits a single transaction and waits a reply.
 
 
 From current configuration:
@@ -9935,28 +8415,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### TxMonitorClient.Send.Release
+### TxSubmission.Local.Send.AcceptTx
 
 
-***
-The client can instruct the server to release the state. This letsthe server free resources.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### TxMonitorClient.Send.Result
-
-
-***
-The server must reply with the queries.
-***
+> The server can reply to inform the client that it has accepted the transaction.
 
 
 From current configuration:
@@ -9967,28 +8429,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### TxOutbound.ControlMessage
+### TxSubmission.Local.Send.Done
 
 
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### TxOutbound.RecvMsgRequest
-
-
-***
-The IDs of the transactions requested.
-***
+> The client can terminate the protocol.
 
 
 From current configuration:
@@ -9999,28 +8443,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### TxOutbound.SendMsgReply
+### TxSubmission.Local.Send.RejectTx
 
 
-***
-The transactions to be sent in the response.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### TxSubmission2.NodeToNode.Recieve.Done
-
-
-***
-Termination message, initiated by the client when the server ismaking a blocking call for more transaction identifiers.
-***
+> The server can reply to inform the client that it has rejected the transaction. A reason for the rejection is included.
 
 
 From current configuration:
@@ -10031,32 +8457,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### TxSubmission2.NodeToNode.Recieve.MsgHello
+### TxSubmission.Local.Send.SubmitTx
 
 
-***
-Client side hello message.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### TxSubmission2.NodeToNode.Recieve.ReplyTxIds
-
-
-***
-Reply with a list of transaction identifiers for availabletransactions, along with the size of each transaction.
-The list must not be longer than the maximum number requested.
-In the 'StTxIds' 'StBlocking' state the list must be non-empty whilein the 'StTxIds' 'StNonBlocking' state the list may be empty.
-These transactions are added to the notional FIFO of outstandingtransaction identifiers for the protocol.
-The order in which these transaction identifiers are returned must bethe order in which they are submitted to the mempool, to preservedependent transactions.
-***
+> The client submits a single transaction and waits a reply.
 
 
 From current configuration:
@@ -10067,14 +8471,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### TxSubmission2.NodeToNode.Recieve.ReplyTxs
+### TxSubmission.LocalServer.ReceivedTx
 
 
-***
-Reply with the requested transactions, or implicitly discard.
-Transactions can become invalid between the time the transactionidentifier was sent and the transaction being requested. Invalid(including committed) transactions do not need to be sent.
-Any transaction identifiers requested but not provided in this replyshould be considered as if this peer had never announced them. (Notethat this is no guarantee that the transaction is invalid, it may stillbe valid and available from another peer).
-***
+> A transaction was received.
 
 
 From current configuration:
@@ -10085,19 +8485,11 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### TxSubmission2.NodeToNode.Recieve.RequestTxIds
+### TxSubmission.MonitorClient.Receive.Acquire
 
 
-***
-Request a non-empty list of transaction identifiers from the client, and confirm a number of outstanding transaction identifiers. 
-With 'TokBlocking' this is a a blocking operation: the response will always have at least one transaction identifier, and it does not expect a prompt response: there is no timeout. This covers the case when there is nothing else to do but wait. For example this covers leaf nodes that rarely, if ever, create and submit a transaction. 
-With 'TokNonBlocking' this is a non-blocking operation: the response may be an empty list and this does expect a prompt response. This covers high throughput use cases where we wish to pipeline, by interleaving requests for additional transaction identifiers with requests for transactions, which requires these requests not block. 
-The request gives the maximum number of transaction identifiers that can be accepted in the response. This must be greater than zero in the 'TokBlocking' case. In the 'TokNonBlocking' case either the numbers acknowledged or the number requested must be non-zero. In either case, the number requested must not put the total outstanding over the fixed protocol limit. 
-The request also gives the number of outstanding transaction identifiers that can now be acknowledged. The actual transactions to acknowledge are known to the peer based on the FIFO order in which they were provided. 
-There is no choice about when to use the blocking case versus the non-blocking case, it depends on whether there are any remaining unacknowledged transactions (after taking into account the ones acknowledged in this message): 
-* The blocking case must be used when there are zero remaining   unacknowledged transactions. 
-* The non-blocking case must be used when there are non-zero remaining   unacknowledged transactions.
-***
+> The client requests that the state as of a particular recent point on the server's chain (within K of the tip) be made available to query, and waits for confirmation or failure. 
+>  From 'NodeToClient_V8' onwards if the point is not specified, current tip will be acquired.  For previous versions of the protocol 'point' must be given.
 
 
 From current configuration:
@@ -10108,15 +8500,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### TxSubmission2.NodeToNode.Recieve.RequestTxs
+### TxSubmission.MonitorClient.Receive.Acquired
 
 
-***
-Request one or more transactions corresponding to the given transaction identifiers. 
-While it is the responsibility of the replying peer to keep withinpipelining in-flight limits, the sender must also cooperate by keepingthe total requested across all in-flight requests within the limits.
-It is an error to ask for transaction identifiers that were notpreviously announced (via 'MsgReplyTxIds').
-It is an error to ask for transaction identifiers that are notoutstanding or that were already asked for.
-***
+> The server can confirm that it has the state at the requested point.
 
 
 From current configuration:
@@ -10127,28 +8514,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### TxSubmission2.NodeToNode.Send.Done
+### TxSubmission.MonitorClient.Receive.Done
 
 
-***
-Termination message, initiated by the client when the server ismaking a blocking call for more transaction identifiers.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### TxSubmission2.NodeToNode.Send.MsgHello
-
-
-***
-Client side hello message.
-***
+> The client can terminate the protocol.
 
 
 From current configuration:
@@ -10159,16 +8528,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### TxSubmission2.NodeToNode.Send.ReplyTxIds
+### TxSubmission.MonitorClient.Receive.Failure
 
 
-***
-Reply with a list of transaction identifiers for availabletransactions, along with the size of each transaction.
-The list must not be longer than the maximum number requested.
-In the 'StTxIds' 'StBlocking' state the list must be non-empty whilein the 'StTxIds' 'StNonBlocking' state the list may be empty.
-These transactions are added to the notional FIFO of outstandingtransaction identifiers for the protocol.
-The order in which these transaction identifiers are returned must bethe order in which they are submitted to the mempool, to preservedependent transactions.
-***
+> The server can report that it cannot obtain the state for the requested point.
 
 
 From current configuration:
@@ -10179,14 +8542,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### TxSubmission2.NodeToNode.Send.ReplyTxs
+### TxSubmission.MonitorClient.Receive.Query
 
 
-***
-Reply with the requested transactions, or implicitly discard.
-Transactions can become invalid between the time the transactionidentifier was sent and the transaction being requested. Invalid(including committed) transactions do not need to be sent.
-Any transaction identifiers requested but not provided in this replyshould be considered as if this peer had never announced them. (Notethat this is no guarantee that the transaction is invalid, it may stillbe valid and available from another peer).
-***
+> The client can perform queries on the current acquired state.
 
 
 From current configuration:
@@ -10197,19 +8556,12 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### TxSubmission2.NodeToNode.Send.RequestTxIds
+### TxSubmission.MonitorClient.Receive.ReAcquire
 
 
-***
-Request a non-empty list of transaction identifiers from the client, and confirm a number of outstanding transaction identifiers. 
-With 'TokBlocking' this is a a blocking operation: the response will always have at least one transaction identifier, and it does not expect a prompt response: there is no timeout. This covers the case when there is nothing else to do but wait. For example this covers leaf nodes that rarely, if ever, create and submit a transaction. 
-With 'TokNonBlocking' this is a non-blocking operation: the response may be an empty list and this does expect a prompt response. This covers high throughput use cases where we wish to pipeline, by interleaving requests for additional transaction identifiers with requests for transactions, which requires these requests not block. 
-The request gives the maximum number of transaction identifiers that can be accepted in the response. This must be greater than zero in the 'TokBlocking' case. In the 'TokNonBlocking' case either the numbers acknowledged or the number requested must be non-zero. In either case, the number requested must not put the total outstanding over the fixed protocol limit. 
-The request also gives the number of outstanding transaction identifiers that can now be acknowledged. The actual transactions to acknowledge are known to the peer based on the FIFO order in which they were provided. 
-There is no choice about when to use the blocking case versus the non-blocking case, it depends on whether there are any remaining unacknowledged transactions (after taking into account the ones acknowledged in this message): 
-* The blocking case must be used when there are zero remaining   unacknowledged transactions. 
-* The non-blocking case must be used when there are non-zero remaining   unacknowledged transactions.
-***
+> This is like 'MsgAcquire' but for when the client already has a state. By moveing to another state directly without a 'MsgRelease' it enables optimisations on the server side (e.g. moving to the state for the immediate next block). 
+>  Note that failure to re-acquire is equivalent to 'MsgRelease', rather than keeping the exiting acquired state. 
+>  From 'NodeToClient_V8' onwards if the point is not specified, current tip will be acquired.  For previous versions of the protocol 'point' must be given.
 
 
 From current configuration:
@@ -10220,15 +8572,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### TxSubmission2.NodeToNode.Send.RequestTxs
+### TxSubmission.MonitorClient.Receive.Release
 
 
-***
-Request one or more transactions corresponding to the given transaction identifiers. 
-While it is the responsibility of the replying peer to keep withinpipelining in-flight limits, the sender must also cooperate by keepingthe total requested across all in-flight requests within the limits.
-It is an error to ask for transaction identifiers that were notpreviously announced (via 'MsgReplyTxIds').
-It is an error to ask for transaction identifiers that are notoutstanding or that were already asked for.
-***
+> The client can instruct the server to release the state. This lets the server free resources.
 
 
 From current configuration:
@@ -10239,28 +8586,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### TxSubmissionClient.Recieve.AcceptTx
+### TxSubmission.MonitorClient.Receive.Result
 
 
-***
-The server can reply to inform the client that it has accepted thetransaction.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### TxSubmissionClient.Recieve.Done
-
-
-***
-The client can terminate the protocol.
-***
+> The server must reply with the queries.
 
 
 From current configuration:
@@ -10271,28 +8600,11 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### TxSubmissionClient.Recieve.RejectTx
+### TxSubmission.MonitorClient.Send.Acquire
 
 
-***
-The server can reply to inform the client that it has rejected thetransaction. A reason for the rejection is included.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### TxSubmissionClient.Recieve.SubmitTx
-
-
-***
-The client submits a single transaction and waits a reply.
-***
+> The client requests that the state as of a particular recent point on the server's chain (within K of the tip) be made available to query, and waits for confirmation or failure. 
+>  From 'NodeToClient_V8' onwards if the point is not specified, current tip will be acquired.  For previous versions of the protocol 'point' must be given.
 
 
 From current configuration:
@@ -10303,28 +8615,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### TxSubmissionClient.Send.AcceptTx
+### TxSubmission.MonitorClient.Send.Acquired
 
 
-***
-The server can reply to inform the client that it has accepted thetransaction.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### TxSubmissionClient.Send.Done
-
-
-***
-The client can terminate the protocol.
-***
+> The server can confirm that it has the state at the requested point.
 
 
 From current configuration:
@@ -10335,12 +8629,10 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### TxSubmissionClient.Send.RejectTx
+### TxSubmission.MonitorClient.Send.Done
 
 
-***
-The server can reply to inform the client that it has rejected thetransaction. A reason for the rejection is included.
-***
+> The client can terminate the protocol.
 
 
 From current configuration:
@@ -10351,12 +8643,379 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### TxSubmissionClient.Send.SubmitTx
+### TxSubmission.MonitorClient.Send.Failure
 
 
-***
-The client submits a single transaction and waits a reply.
-***
+> The server can report that it cannot obtain the state for the requested point.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### TxSubmission.MonitorClient.Send.Query
+
+
+> The client can perform queries on the current acquired state.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### TxSubmission.MonitorClient.Send.ReAcquire
+
+
+> This is like 'MsgAcquire' but for when the client already has a state. By moveing to another state directly without a 'MsgRelease' it enables optimisations on the server side (e.g. moving to the state for the immediate next block). 
+>  Note that failure to re-acquire is equivalent to 'MsgRelease', rather than keeping the exiting acquired state. 
+>  From 'NodeToClient_V8' onwards if the point is not specified, current tip will be acquired.  For previous versions of the protocol 'point' must be given.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### TxSubmission.MonitorClient.Send.Release
+
+
+> The client can instruct the server to release the state. This lets the server free resources.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### TxSubmission.MonitorClient.Send.Result
+
+
+> The server must reply with the queries.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### TxSubmission.Remote.Receive.Done
+
+
+> Termination message, initiated by the client when the server is making a blocking call for more transaction identifiers.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### TxSubmission.Remote.Receive.MsgHello
+
+
+> Client side hello message.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### TxSubmission.Remote.Receive.ReplyTxIds
+
+
+> Reply with a list of transaction identifiers for available transactions, along with the size of each transaction. 
+>  The list must not be longer than the maximum number requested. 
+>  In the 'StTxIds' 'StBlocking' state the list must be non-empty while in the 'StTxIds' 'StNonBlocking' state the list may be empty. 
+>  These transactions are added to the notional FIFO of outstanding transaction identifiers for the protocol. 
+>  The order in which these transaction identifiers are returned must be the order in which they are submitted to the mempool, to preserve dependent transactions.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### TxSubmission.Remote.Receive.ReplyTxs
+
+
+> Reply with the requested transactions, or implicitly discard. 
+>  Transactions can become invalid between the time the transaction identifier was sent and the transaction being requested. Invalid (including committed) transactions do not need to be sent. 
+>  Any transaction identifiers requested but not provided in this reply should be considered as if this peer had never announced them. (Note that this is no guarantee that the transaction is invalid, it may still be valid and available from another peer).
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### TxSubmission.Remote.Receive.RequestTxIds
+
+
+> Request a non-empty list of transaction identifiers from the client, and confirm a number of outstanding transaction identifiers. 
+> With 'TokBlocking' this is a a blocking operation: the response will always have at least one transaction identifier, and it does not expect a prompt response: there is no timeout. This covers the case when there is nothing else to do but wait. For example this covers leaf nodes that rarely, if ever, create and submit a transaction. 
+> With 'TokNonBlocking' this is a non-blocking operation: the response may be an empty list and this does expect a prompt response. This covers high throughput use cases where we wish to pipeline, by interleaving requests for additional transaction identifiers with requests for transactions, which requires these requests not block. 
+> The request gives the maximum number of transaction identifiers that can be accepted in the response. This must be greater than zero in the 'TokBlocking' case. In the 'TokNonBlocking' case either the numbers acknowledged or the number requested must be non-zero. In either case, the number requested must not put the total outstanding over the fixed protocol limit. 
+> The request also gives the number of outstanding transaction identifiers that can now be acknowledged. The actual transactions to acknowledge are known to the peer based on the FIFO order in which they were provided. 
+> There is no choice about when to use the blocking case versus the non-blocking case, it depends on whether there are any remaining unacknowledged transactions (after taking into account the ones acknowledged in this message): 
+> * The blocking case must be used when there are zero remaining   unacknowledged transactions. 
+> * The non-blocking case must be used when there are non-zero remaining   unacknowledged transactions.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### TxSubmission.Remote.Receive.RequestTxs
+
+
+> Request one or more transactions corresponding to the given  transaction identifiers.  
+>  While it is the responsibility of the replying peer to keep within pipelining in-flight limits, the sender must also cooperate by keeping the total requested across all in-flight requests within the limits. 
+>  It is an error to ask for transaction identifiers that were not previously announced (via 'MsgReplyTxIds'). 
+>  It is an error to ask for transaction identifiers that are not outstanding or that were already asked for.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### TxSubmission.Remote.Send.Done
+
+
+> Termination message, initiated by the client when the server is making a blocking call for more transaction identifiers.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### TxSubmission.Remote.Send.MsgHello
+
+
+> Client side hello message.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### TxSubmission.Remote.Send.ReplyTxIds
+
+
+> Reply with a list of transaction identifiers for available transactions, along with the size of each transaction. 
+>  The list must not be longer than the maximum number requested. 
+>  In the 'StTxIds' 'StBlocking' state the list must be non-empty while in the 'StTxIds' 'StNonBlocking' state the list may be empty. 
+>  These transactions are added to the notional FIFO of outstanding transaction identifiers for the protocol. 
+>  The order in which these transaction identifiers are returned must be the order in which they are submitted to the mempool, to preserve dependent transactions.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### TxSubmission.Remote.Send.ReplyTxs
+
+
+> Reply with the requested transactions, or implicitly discard. 
+>  Transactions can become invalid between the time the transaction identifier was sent and the transaction being requested. Invalid (including committed) transactions do not need to be sent. 
+>  Any transaction identifiers requested but not provided in this reply should be considered as if this peer had never announced them. (Note that this is no guarantee that the transaction is invalid, it may still be valid and available from another peer).
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### TxSubmission.Remote.Send.RequestTxIds
+
+
+> Request a non-empty list of transaction identifiers from the client, and confirm a number of outstanding transaction identifiers. 
+> With 'TokBlocking' this is a a blocking operation: the response will always have at least one transaction identifier, and it does not expect a prompt response: there is no timeout. This covers the case when there is nothing else to do but wait. For example this covers leaf nodes that rarely, if ever, create and submit a transaction. 
+> With 'TokNonBlocking' this is a non-blocking operation: the response may be an empty list and this does expect a prompt response. This covers high throughput use cases where we wish to pipeline, by interleaving requests for additional transaction identifiers with requests for transactions, which requires these requests not block. 
+> The request gives the maximum number of transaction identifiers that can be accepted in the response. This must be greater than zero in the 'TokBlocking' case. In the 'TokNonBlocking' case either the numbers acknowledged or the number requested must be non-zero. In either case, the number requested must not put the total outstanding over the fixed protocol limit. 
+> The request also gives the number of outstanding transaction identifiers that can now be acknowledged. The actual transactions to acknowledge are known to the peer based on the FIFO order in which they were provided. 
+> There is no choice about when to use the blocking case versus the non-blocking case, it depends on whether there are any remaining unacknowledged transactions (after taking into account the ones acknowledged in this message): 
+> * The blocking case must be used when there are zero remaining   unacknowledged transactions. 
+> * The non-blocking case must be used when there are non-zero remaining   unacknowledged transactions.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### TxSubmission.Remote.Send.RequestTxs
+
+
+> Request one or more transactions corresponding to the given  transaction identifiers.  
+>  While it is the responsibility of the replying peer to keep within pipelining in-flight limits, the sender must also cooperate by keeping the total requested across all in-flight requests within the limits. 
+>  It is an error to ask for transaction identifiers that were not previously announced (via 'MsgReplyTxIds'). 
+>  It is an error to ask for transaction identifiers that are not outstanding or that were already asked for.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### TxSubmission.TxInbound.CanRequestMoreTxs
+
+
+> There are no replies in flight, but we do know some more txs we can ask for, so lets ask for them and more txids.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### TxSubmission.TxInbound.CannotRequestMoreTxs
+
+
+> There's no replies in flight, and we have no more txs we can ask for so the only remaining thing to do is to ask for more txids. Since this is the only thing to do now, we make this a blocking call.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### TxSubmission.TxInbound.Collected
+
+
+> Number of transactions just about to be inserted.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### TxSubmission.TxInbound.Processed
+
+
+> Just processed transaction pass/fail breakdown.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### TxSubmission.TxInbound.Terminated
+
+
+> Server received 'MsgDone'.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### TxSubmission.TxOutbound.ControlMessage
+
+
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### TxSubmission.TxOutbound.RecvMsgRequest
+
+
+> The IDs of the transactions requested.
+
+
+From current configuration:
+Details:   `DNormal`
+Backends:
+			`EKGBackend`,
+			`Stdout MachineFormat`,
+			`Forwarder`
+Filtered  by config value: `Notice`
+
+### TxSubmission.TxOutbound.SendMsgReply
+
+
+> The transactions to be sent in the response.
 
 
 From current configuration:
@@ -10368,1127 +9027,541 @@ Backends:
 Filtered  by config value: `Notice`
 
 ## Metrics
-### Block replay progress (%)
+### BlockFetch.BlocksServed
 
-***
-Progress in percent
-***
 
 
 Dispatched by: 
-ReplayBlock.LedgerReplay
+BlockFetch.ServerBlock.SendBlock
 
-From current configuration:
-Filtered  by config value: `Notice`
+### BlockFetch.ConnectedPeers
 
-### blocksForgedNum
-
-***
-How many blocks did forge in this node?
-***
+> Number of connected peers
 
 
 Dispatched by: 
-ForgeStats
+BlockFetch.Decision
 
-From current configuration:
-Filtered  by config value: `Notice`
+### ChainDB.BlockReplayProgress
 
-### cardano.node.aboutToLeadSlotLast
-
-***
-
-***
+> Progress in percent
 
 
 Dispatched by: 
-Forge.StartLeadershipCheck
+ChainDB.ReplayBlock.LedgerReplay
 
-From current configuration:
-Filtered  by config value: `Info`
+### ChainDB.Blocks
 
-### cardano.node.aboutToLeadSlotLast
-
-***
-
-***
-
-
-Dispatched by: 
-Forge.StartLeadershipCheckPlus
-
-From current configuration:
-Filtered  by config value: `Info`
-
-### cardano.node.adoptedSlotLast
-
-***
-
-***
-
-
-Dispatched by: 
-Forge.AdoptedBlock
-
-From current configuration:
-Filtered  by config value: `Info`
-
-### cardano.node.blockContext
-
-***
-
-***
-
-
-Dispatched by: 
-Forge.BlockContext
-
-From current configuration:
-Filtered  by config value: `Info`
-
-### cardano.node.blockFromFuture
-
-***
-
-***
-
-
-Dispatched by: 
-Forge.BlockFromFuture
-
-From current configuration:
-Filtered  by config value: `Info`
-
-### cardano.node.blocks
-
-***
-Number of blocks in this chain fragment.
-***
+> Number of blocks in this chain fragment.
 
 
 Dispatched by: 
 ChainDB.AddBlockEvent.AddedToCurrentChain
-
-From current configuration:
-Filtered  by config value: `Info`
-
-### cardano.node.blocks
-
-***
-Number of blocks in this chain fragment.
-***
-
-
-Dispatched by: 
 ChainDB.AddBlockEvent.SwitchedToAFork
 
-From current configuration:
-Filtered  by config value: `Info`
+### ChainDB.Density
 
-### cardano.node.connectedPeers
-
-***
-Number of connected peers
-***
-
-
-Dispatched by: 
-BlockFetchDecision
-
-From current configuration:
-Filtered  by config value: `Notice`
-
-### cardano.node.connectionManager.duplexConns
-
-***
-
-***
-
-
-Dispatched by: 
-ConnectionManager.ConnectionManagerCounters
-
-From current configuration:
-Filtered  by config value: `Notice`
-
-### cardano.node.connectionManager.duplexConns
-
-***
-
-***
-
-
-Dispatched by: 
-LocalConnectionManager.ConnectionManagerCounters
-
-From current configuration:
-Filtered  by config value: `Notice`
-
-### cardano.node.connectionManager.fullDuplexConns
-
-***
-
-***
-
-
-Dispatched by: 
-ConnectionManager.ConnectionManagerCounters
-
-From current configuration:
-Filtered  by config value: `Notice`
-
-### cardano.node.connectionManager.fullDuplexConns
-
-***
-
-***
-
-
-Dispatched by: 
-LocalConnectionManager.ConnectionManagerCounters
-
-From current configuration:
-Filtered  by config value: `Notice`
-
-### cardano.node.connectionManager.inboundConns
-
-***
-
-***
-
-
-Dispatched by: 
-ConnectionManager.ConnectionManagerCounters
-
-From current configuration:
-Filtered  by config value: `Notice`
-
-### cardano.node.connectionManager.inboundConns
-
-***
-
-***
-
-
-Dispatched by: 
-LocalConnectionManager.ConnectionManagerCounters
-
-From current configuration:
-Filtered  by config value: `Notice`
-
-### cardano.node.connectionManager.outboundConns
-
-***
-
-***
-
-
-Dispatched by: 
-ConnectionManager.ConnectionManagerCounters
-
-From current configuration:
-Filtered  by config value: `Notice`
-
-### cardano.node.connectionManager.outboundConns
-
-***
-
-***
-
-
-Dispatched by: 
-LocalConnectionManager.ConnectionManagerCounters
-
-From current configuration:
-Filtered  by config value: `Notice`
-
-### cardano.node.connectionManager.unidirectionalConns
-
-***
-
-***
-
-
-Dispatched by: 
-ConnectionManager.ConnectionManagerCounters
-
-From current configuration:
-Filtered  by config value: `Notice`
-
-### cardano.node.connectionManager.unidirectionalConns
-
-***
-
-***
-
-
-Dispatched by: 
-LocalConnectionManager.ConnectionManagerCounters
-
-From current configuration:
-Filtered  by config value: `Notice`
-
-### cardano.node.couldNotForgeSlotLast
-
-***
-
-***
-
-
-Dispatched by: 
-Forge.NoLedgerState
-
-From current configuration:
-Filtered  by config value: `Info`
-
-### cardano.node.couldNotForgeSlotLast
-
-***
-
-***
-
-
-Dispatched by: 
-Forge.NoLedgerView
-
-From current configuration:
-Filtered  by config value: `Info`
-
-### cardano.node.currentKESPeriod
-
-***
-
-***
-
-
-Dispatched by: 
-Forge.ForgeStateUpdateError
-
-From current configuration:
-Filtered  by config value: `Info`
-
-### cardano.node.delegMapSize
-
-***
-
-***
-
-
-Dispatched by: 
-Forge.StartLeadershipCheckPlus
-
-From current configuration:
-Filtered  by config value: `Info`
-
-### cardano.node.density
-
-***
-The actual number of blocks created over the maximum expected number of blocks that could be created over the span of the last @k@ blocks.
-***
+> The actual number of blocks created over the maximum expected number of blocks that could be created over the span of the last @k@ blocks.
 
 
 Dispatched by: 
 ChainDB.AddBlockEvent.AddedToCurrentChain
-
-From current configuration:
-Filtered  by config value: `Info`
-
-### cardano.node.density
-
-***
-The actual number of blocks created over the maximum expected number of blocks that could be created over the span of the last @k@ blocks.
-***
-
-
-Dispatched by: 
 ChainDB.AddBlockEvent.SwitchedToAFork
 
-From current configuration:
-Filtered  by config value: `Info`
+### ChainDB.Epoch
 
-### cardano.node.epoch
-
-***
-In which epoch is the tip of the current chain.
-***
+> In which epoch is the tip of the current chain.
 
 
 Dispatched by: 
 ChainDB.AddBlockEvent.AddedToCurrentChain
-
-From current configuration:
-Filtered  by config value: `Info`
-
-### cardano.node.epoch
-
-***
-In which epoch is the tip of the current chain.
-***
-
-
-Dispatched by: 
 ChainDB.AddBlockEvent.SwitchedToAFork
 
-From current configuration:
-Filtered  by config value: `Info`
+### ChainDB.SlotInEpoch
 
-### cardano.node.forgedInvalidSlotLast
-
-***
-
-***
+> Relative slot number of the tip of the current chain within theepoch..
 
 
 Dispatched by: 
-Forge.ForgedInvalidBlock
+ChainDB.AddBlockEvent.AddedToCurrentChain
+ChainDB.AddBlockEvent.SwitchedToAFork
 
-From current configuration:
-Filtered  by config value: `Info`
+### ChainDB.Slots
 
-### cardano.node.forgedSlotLast
-
-***
-
-***
+> Number of slots in this chain fragment.
 
 
 Dispatched by: 
-Forge.ForgedBlock
+ChainDB.AddBlockEvent.AddedToCurrentChain
+ChainDB.AddBlockEvent.SwitchedToAFork
 
-From current configuration:
-Filtered  by config value: `Info`
+### ChainSync.HeadersServed
 
-### cardano.node.inbound-governor.cold
-
-***
-
-***
+> A counter triggered only on header event
 
 
 Dispatched by: 
-InboundGovernor.InboundGovernorCounters
+ChainSync.ServerHeader.Update
 
-From current configuration:
-Filtered  by config value: `Notice`
+### Forge.AboutToLeadSlotLast
 
-### cardano.node.inbound-governor.cold
-
-***
-
-***
 
 
 Dispatched by: 
-LocalInboundGovernor.InboundGovernorCounters
+Forge.StateInfo.StartLeadershipCheck
+Forge.StateInfo.StartLeadershipCheckPlus
 
-From current configuration:
-Filtered  by config value: `Notice`
+### Forge.AdoptedOwnBlockSlotLast
 
-### cardano.node.inbound-governor.hot
-
-***
-
-***
 
 
 Dispatched by: 
-InboundGovernor.InboundGovernorCounters
+Forge.StateInfo.AdoptedBlock
 
-From current configuration:
-Filtered  by config value: `Notice`
+### Forge.BlockContext
 
-### cardano.node.inbound-governor.hot
-
-***
-
-***
 
 
 Dispatched by: 
-LocalInboundGovernor.InboundGovernorCounters
+Forge.StateInfo.BlockContext
 
-From current configuration:
-Filtered  by config value: `Notice`
+### Forge.BlockFromFuture
 
-### cardano.node.inbound-governor.idle
-
-***
-
-***
 
 
 Dispatched by: 
-InboundGovernor.InboundGovernorCounters
+Forge.StateInfo.BlockFromFuture
 
-From current configuration:
-Filtered  by config value: `Notice`
+### Forge.BlocksForgedNum
 
-### cardano.node.inbound-governor.idle
-
-***
-
-***
+> How many blocks did forge in this node?
 
 
 Dispatched by: 
-LocalInboundGovernor.InboundGovernorCounters
+Forge.Stats
 
-From current configuration:
-Filtered  by config value: `Notice`
+### Forge.CouldNotForgeSlotLast
 
-### cardano.node.inbound-governor.warm
-
-***
-
-***
 
 
 Dispatched by: 
-InboundGovernor.InboundGovernorCounters
+Forge.StateInfo.NoLedgerState
+Forge.StateInfo.NoLedgerView
 
-From current configuration:
-Filtered  by config value: `Notice`
+### Forge.CurrentKESPeriod
 
-### cardano.node.inbound-governor.warm
-
-***
-
-***
 
 
 Dispatched by: 
-LocalInboundGovernor.InboundGovernorCounters
+Forge.StateInfo.ForgeStateUpdateError
 
-From current configuration:
-Filtered  by config value: `Notice`
+### Forge.DelegMapSize
 
-### cardano.node.ledgerState
-
-***
-
-***
 
 
 Dispatched by: 
-Forge.LedgerState
+Forge.StateInfo.StartLeadershipCheckPlus
 
-From current configuration:
-Filtered  by config value: `Info`
+### Forge.ForgedInvalidSlotLast
 
-### cardano.node.ledgerView
-
-***
-
-***
 
 
 Dispatched by: 
-Forge.LedgerView
+Forge.StateInfo.ForgedInvalidBlock
 
-From current configuration:
-Filtered  by config value: `Info`
+### Forge.ForgedSlotLast
 
-### cardano.node.mempoolBytes
 
-***
-Byte size of the mempool
-***
+
+Dispatched by: 
+Forge.StateInfo.ForgedBlock
+
+### Forge.LastSlot
+
+
+
+Dispatched by: 
+Forge.Stats
+
+### Forge.LedgerState
+
+
+
+Dispatched by: 
+Forge.StateInfo.LedgerState
+
+### Forge.LedgerView
+
+
+
+Dispatched by: 
+Forge.StateInfo.LedgerView
+
+### Forge.NodeCannotForge
+
+
+
+Dispatched by: 
+Forge.StateInfo.NodeCannotForge
+
+### Forge.NodeCannotForgeNum
+
+> How many times this node could not forge?
+
+
+Dispatched by: 
+Forge.Stats
+
+### Forge.NodeIsLeader
+
+
+
+Dispatched by: 
+Forge.StateInfo.NodeIsLeader
+
+### Forge.NodeIsLeaderNum
+
+> How many times this node was leader?
+
+
+Dispatched by: 
+Forge.Stats
+
+### Forge.NodeNotLeader
+
+
+
+Dispatched by: 
+Forge.StateInfo.NodeNotLeader
+
+### Forge.NotAdoptedSlotLast
+
+
+
+Dispatched by: 
+Forge.StateInfo.DidntAdoptBlock
+
+### Forge.OperationalCertificateExpiryKESPeriod
+
+
+
+Dispatched by: 
+Forge.StateInfo.ForgeStateUpdateError
+
+### Forge.OperationalCertificateStartKESPeriod
+
+
+
+Dispatched by: 
+Forge.StateInfo.ForgeStateUpdateError
+
+### Forge.RemainingKESPeriods
+
+
+
+Dispatched by: 
+Forge.StateInfo.ForgeStateUpdateError
+
+### Forge.SlotIsImmutable
+
+
+
+Dispatched by: 
+Forge.StateInfo.SlotIsImmutable
+
+### Forge.SlotsMissed
+
+> How many slots were missed in this node?
+
+
+Dispatched by: 
+Forge.Stats
+
+### Forge.UtxoSize
+
+
+
+Dispatched by: 
+Forge.StateInfo.StartLeadershipCheckPlus
+
+### Mempool.MempoolBytes
+
+> Byte size of the mempool
 
 
 Dispatched by: 
 Mempool.AddedTx
-
-From current configuration:
-Filtered  by config value: `Info`
-
-### cardano.node.mempoolBytes
-
-***
-Byte size of the mempool
-***
-
-
-Dispatched by: 
 Mempool.ManuallyRemovedTxs
-
-From current configuration:
-Filtered  by config value: `Info`
-
-### cardano.node.mempoolBytes
-
-***
-Byte size of the mempool
-***
-
-
-Dispatched by: 
 Mempool.RejectedTx
-
-From current configuration:
-Filtered  by config value: `Info`
-
-### cardano.node.mempoolBytes
-
-***
-Byte size of the mempool
-***
-
-
-Dispatched by: 
 Mempool.RemoveTxs
 
-From current configuration:
-Filtered  by config value: `Info`
+### Mempool.TxsInMempool
 
-### cardano.node.metrics.served.header
-
-***
-A counter triggered ony on header event
-***
-
-
-Dispatched by: 
-ChainSyncServerHeader.ChainSyncServerEvent.ServerRead.RollBackward
-
-From current configuration:
-Filtered  by config value: `Notice`
-
-### cardano.node.metrics.served.header
-
-***
-A counter triggered ony on header event
-***
-
-
-Dispatched by: 
-ChainSyncServerHeader.ChainSyncServerEvent.ServerRead.RollForward
-
-From current configuration:
-Filtered  by config value: `Notice`
-
-### cardano.node.metrics.served.header
-
-***
-A counter triggered ony on header event
-***
-
-
-Dispatched by: 
-ChainSyncServerHeader.ChainSyncServerEvent.ServerRead.ServerRead
-
-From current configuration:
-Filtered  by config value: `Notice`
-
-### cardano.node.metrics.served.header
-
-***
-A counter triggered ony on header event
-***
-
-
-Dispatched by: 
-ChainSyncServerHeader.ChainSyncServerEvent.ServerRead.ServerReadBlocked
-
-From current configuration:
-Filtered  by config value: `Notice`
-
-### cardano.node.nodeCannotForge
-
-***
-
-***
-
-
-Dispatched by: 
-Forge.NodeCannotForge
-
-From current configuration:
-Filtered  by config value: `Info`
-
-### cardano.node.nodeIsLeader
-
-***
-
-***
-
-
-Dispatched by: 
-Forge.NodeIsLeader
-
-From current configuration:
-Filtered  by config value: `Info`
-
-### cardano.node.nodeNotLeader
-
-***
-
-***
-
-
-Dispatched by: 
-Forge.NodeNotLeader
-
-From current configuration:
-Filtered  by config value: `Info`
-
-### cardano.node.notAdoptedSlotLast
-
-***
-
-***
-
-
-Dispatched by: 
-Forge.DidntAdoptBlock
-
-From current configuration:
-Filtered  by config value: `Info`
-
-### cardano.node.operationalCertificateExpiryKESPeriod
-
-***
-
-***
-
-
-Dispatched by: 
-Forge.ForgeStateUpdateError
-
-From current configuration:
-Filtered  by config value: `Info`
-
-### cardano.node.operationalCertificateStartKESPeriod
-
-***
-
-***
-
-
-Dispatched by: 
-Forge.ForgeStateUpdateError
-
-From current configuration:
-Filtered  by config value: `Info`
-
-### cardano.node.peerSelection.cold
-
-***
-Number of cold peers
-***
-
-
-Dispatched by: 
-PeerSelectionCounters.PeerSelectionCounters
-
-From current configuration:
-Filtered  by config value: `Notice`
-
-### cardano.node.peerSelection.hot
-
-***
-Number of hot peers
-***
-
-
-Dispatched by: 
-PeerSelectionCounters.PeerSelectionCounters
-
-From current configuration:
-Filtered  by config value: `Notice`
-
-### cardano.node.peerSelection.warm
-
-***
-Number of warm peers
-***
-
-
-Dispatched by: 
-PeerSelectionCounters.PeerSelectionCounters
-
-From current configuration:
-Filtered  by config value: `Notice`
-
-### cardano.node.remainingKESPeriods
-
-***
-
-***
-
-
-Dispatched by: 
-Forge.ForgeStateUpdateError
-
-From current configuration:
-Filtered  by config value: `Info`
-
-### cardano.node.served.block
-
-***
-
-***
-
-
-Dispatched by: 
-BlockFetchServer.SendBlock
-
-From current configuration:
-Filtered  by config value: `Notice`
-
-### cardano.node.slotInEpoch
-
-***
-Relative slot number of the tip of the current chain within theepoch..
-***
-
-
-Dispatched by: 
-ChainDB.AddBlockEvent.AddedToCurrentChain
-
-From current configuration:
-Filtered  by config value: `Info`
-
-### cardano.node.slotInEpoch
-
-***
-Relative slot number of the tip of the current chain within theepoch..
-***
-
-
-Dispatched by: 
-ChainDB.AddBlockEvent.SwitchedToAFork
-
-From current configuration:
-Filtered  by config value: `Info`
-
-### cardano.node.slotIsImmutable
-
-***
-
-***
-
-
-Dispatched by: 
-Forge.SlotIsImmutable
-
-From current configuration:
-Filtered  by config value: `Info`
-
-### cardano.node.slots
-
-***
-Number of slots in this chain fragment.
-***
-
-
-Dispatched by: 
-ChainDB.AddBlockEvent.AddedToCurrentChain
-
-From current configuration:
-Filtered  by config value: `Info`
-
-### cardano.node.slots
-
-***
-Number of slots in this chain fragment.
-***
-
-
-Dispatched by: 
-ChainDB.AddBlockEvent.SwitchedToAFork
-
-From current configuration:
-Filtered  by config value: `Info`
-
-### cardano.node.submissions.accepted
-
-***
-
-***
-
-
-Dispatched by: 
-TxInbound.TxSubmissionProcessed
-
-From current configuration:
-Filtered  by config value: `Notice`
-
-### cardano.node.submissions.rejected
-
-***
-
-***
-
-
-Dispatched by: 
-TxInbound.TxSubmissionProcessed
-
-From current configuration:
-Filtered  by config value: `Notice`
-
-### cardano.node.submissions.submitted
-
-***
-
-***
-
-
-Dispatched by: 
-TxInbound.TxSubmissionCollected
-
-From current configuration:
-Filtered  by config value: `Notice`
-
-### cardano.node.txsInMempool
-
-***
-Transactions in mempool
-***
+> Transactions in mempool
 
 
 Dispatched by: 
 Mempool.AddedTx
-
-From current configuration:
-Filtered  by config value: `Info`
-
-### cardano.node.txsInMempool
-
-***
-Transactions in mempool
-***
-
-
-Dispatched by: 
 Mempool.ManuallyRemovedTxs
-
-From current configuration:
-Filtered  by config value: `Info`
-
-### cardano.node.txsInMempool
-
-***
-Transactions in mempool
-***
-
-
-Dispatched by: 
 Mempool.RejectedTx
-
-From current configuration:
-Filtered  by config value: `Info`
-
-### cardano.node.txsInMempool
-
-***
-Transactions in mempool
-***
-
-
-Dispatched by: 
 Mempool.RemoveTxs
 
-From current configuration:
-Filtered  by config value: `Info`
+### Mempool.TxsProcessedNum
 
-### cardano.node.txsProcessedNum
-
-***
-
-***
 
 
 Dispatched by: 
 Mempool.ManuallyRemovedTxs
 
-From current configuration:
-Filtered  by config value: `Info`
+### Net.ConnectionManager.DuplexConns
 
-### cardano.node.utxoSize
-
-***
-
-***
 
 
 Dispatched by: 
-Forge.StartLeadershipCheckPlus
+Net.ConnectionManager.Remote.ConnectionManagerCounters
 
-From current configuration:
-Filtered  by config value: `Info`
+### Net.ConnectionManager.DuplexConns
 
-### mem.resident
-
-***
-TODO JNF
-***
 
 
 Dispatched by: 
-Resources
+Net.ConnectionManager.Local.ConnectionManagerCounters
 
-From current configuration:
-Filtered  by config value: `Info`
+### Net.ConnectionManager.FullDuplexConns
 
-### nodeCannotForgeNum
-
-***
-How many times this node could not forge?
-***
 
 
 Dispatched by: 
-ForgeStats
+Net.ConnectionManager.Remote.ConnectionManagerCounters
 
-From current configuration:
-Filtered  by config value: `Notice`
+### Net.ConnectionManager.FullDuplexConns
 
-### nodeIsLeaderNum
-
-***
-How many times this node was leader?
-***
 
 
 Dispatched by: 
-ForgeStats
+Net.ConnectionManager.Local.ConnectionManagerCounters
 
-From current configuration:
-Filtered  by config value: `Notice`
+### Net.ConnectionManager.InboundConns
 
-### peersFromNodeKernel
-
-***
-TODO Doc
-***
 
 
 Dispatched by: 
-Peers
+Net.ConnectionManager.Remote.ConnectionManagerCounters
 
-From current configuration:
-Filtered  by config value: `Notice`
+### Net.ConnectionManager.InboundConns
 
-### rts.gcLiveBytes
-
-***
-TODO JNF
-***
 
 
 Dispatched by: 
-Resources
+Net.ConnectionManager.Local.ConnectionManagerCounters
 
-From current configuration:
-Filtered  by config value: `Info`
+### Net.ConnectionManager.OutboundConns
 
-### rts.gcMajorNum
-
-***
-TODO JNF
-***
 
 
 Dispatched by: 
-Resources
+Net.ConnectionManager.Remote.ConnectionManagerCounters
 
-From current configuration:
-Filtered  by config value: `Info`
+### Net.ConnectionManager.OutboundConns
 
-### rts.gcMinorNum
-
-***
-TODO JNF
-***
 
 
 Dispatched by: 
-Resources
+Net.ConnectionManager.Local.ConnectionManagerCounters
 
-From current configuration:
-Filtered  by config value: `Info`
+### Net.ConnectionManager.UnidirectionalConns
 
-### rts.gcticks
-
-***
-TODO JNF
-***
 
 
 Dispatched by: 
-Resources
+Net.ConnectionManager.Remote.ConnectionManagerCounters
 
-From current configuration:
-Filtered  by config value: `Info`
+### Net.ConnectionManager.UnidirectionalConns
 
-### rts.mutticks
-
-***
-TODO JNF
-***
 
 
 Dispatched by: 
-Resources
+Net.ConnectionManager.Local.ConnectionManagerCounters
 
-From current configuration:
-Filtered  by config value: `Info`
+### Net.InboundGovernor.Cold
 
-### rts.threads
-
-***
-TODO JNF
-***
 
 
 Dispatched by: 
-Resources
+Net.InboundGovernor.Remote.InboundGovernorCounters
 
-From current configuration:
-Filtered  by config value: `Info`
+### Net.InboundGovernor.Hot
 
-### slotsMissed
-
-***
-How many slots were missed in this node?
-***
 
 
 Dispatched by: 
-ForgeStats
+Net.InboundGovernor.Remote.InboundGovernorCounters
 
-From current configuration:
-Filtered  by config value: `Notice`
+### Net.InboundGovernor.Idle
 
-### stat.cputicks
 
-***
-Reports the CPU ticks, sice the process was started
-***
+
+Dispatched by: 
+Net.InboundGovernor.Remote.InboundGovernorCounters
+
+### Net.InboundGovernor.Warm
+
+
+
+Dispatched by: 
+Net.InboundGovernor.Remote.InboundGovernorCounters
+
+### Net.LocalInboundGovernor.Cold
+
+
+
+Dispatched by: 
+Net.InboundGovernor.Local.InboundGovernorCounters
+
+### Net.LocalInboundGovernor.Hot
+
+
+
+Dispatched by: 
+Net.InboundGovernor.Local.InboundGovernorCounters
+
+### Net.LocalInboundGovernor.Idle
+
+
+
+Dispatched by: 
+Net.InboundGovernor.Local.InboundGovernorCounters
+
+### Net.LocalInboundGovernor.Warm
+
+
+
+Dispatched by: 
+Net.InboundGovernor.Local.InboundGovernorCounters
+
+### Net.PeerSelection.Cold
+
+> Number of cold peers
+
+
+Dispatched by: 
+Net.PeerSelection.Counters
+
+### Net.PeerSelection.Hot
+
+> Number of hot peers
+
+
+Dispatched by: 
+Net.PeerSelection.Counters
+
+### Net.PeerSelection.Warm
+
+> Number of warm peers
+
+
+Dispatched by: 
+Net.PeerSelection.Counters
+
+### Net.PeersFromNodeKernel
+
+
+
+Dispatched by: 
+Net.Peers.List
+
+### Resources.Mem.Resident
+
 
 
 Dispatched by: 
 Resources
 
-From current configuration:
-Filtered  by config value: `Info`
+### Resources.RTS.GcLiveBytes
+
+
+
+Dispatched by: 
+Resources
+
+### Resources.RTS.GcMajorNum
+
+
+
+Dispatched by: 
+Resources
+
+### Resources.RTS.GcMinorNum
+
+
+
+Dispatched by: 
+Resources
+
+### Resources.RTS.Gcticks
+
+
+
+Dispatched by: 
+Resources
+
+### Resources.RTS.Mutticks
+
+
+
+Dispatched by: 
+Resources
+
+### Resources.RTS.Threads
+
+
+
+Dispatched by: 
+Resources
+
+### Resources.Stat.Cputicks
+
+> Reports the CPU ticks, sice the process was started
+
+
+Dispatched by: 
+Resources
+
+### TxSubmission.Accepted
+
+
+
+Dispatched by: 
+TxSubmission.TxInbound.Processed
+
+### TxSubmission.Rejected
+
+
+
+Dispatched by: 
+TxSubmission.TxInbound.Processed
+
+### TxSubmission.Submitted
+
+
+
+Dispatched by: 
+TxSubmission.TxInbound.Collected
 
 ## Datapoints
 ### NodeInfo
 
 
-***
-Basic information about this node collected at startup
-
- _niName_: Name of the node. 
- _niProtocol_: Protocol which this nodes uses. 
- _niVersion_: Software version which this node is using. 
- _niStartTime_: Start time of this node. 
- _niSystemStartTime_: How long did the start of the node took.
-***
+> Basic information about this node collected at startup
+> 
+>  _niName_: Name of the node. 
+>  _niProtocol_: Protocol which this nodes uses. 
+>  _niVersion_: Software version which this node is using. 
+>  _niStartTime_: Start time of this node. 
+>  _niSystemStartTime_: How long did the start of the node took.
 
 
-Configuration: TraceConfig {tcOptions = fromList [([],[ConfSeverity {severity = Notice},ConfDetail {detail = DNormal},ConfBackend {backends = [Stdout MachineFormat,EKGBackend,Forwarder]}]),(["AcceptPolicy"],[ConfSeverity {severity = Info}]),(["BlockFetchClient","CompletedBlockFetch"],[ConfLimiter {maxFrequency = 2.0}]),(["ChainDB"],[ConfSeverity {severity = Info}]),(["ChainDB","AddBlockEvent","AddBlockValidation","ValidCandidate"],[ConfLimiter {maxFrequency = 2.0}]),(["ChainDB","AddBlockEvent","AddedBlockToQueue"],[ConfLimiter {maxFrequency = 2.0}]),(["ChainDB","AddBlockEvent","AddedBlockToVolatileDB"],[ConfLimiter {maxFrequency = 2.0}]),(["ChainDB","CopyToImmutableDBEvent","CopiedBlockToImmutableDB"],[ConfLimiter {maxFrequency = 2.0}]),(["DNSResolver"],[ConfSeverity {severity = Info}]),(["DNSSubscription"],[ConfSeverity {severity = Info}]),(["DiffusionInit"],[ConfSeverity {severity = Info}]),(["ErrorPolicy"],[ConfSeverity {severity = Info}]),(["Forge"],[ConfSeverity {severity = Info}]),(["IpSubscription"],[ConfSeverity {severity = Info}]),(["LocalErrorPolicy"],[ConfSeverity {severity = Info}]),(["Mempool"],[ConfSeverity {severity = Info}]),(["Resources"],[ConfSeverity {severity = Info}])], tcForwarder = TraceOptionForwarder {tofAddress = LocalSocket "/tmp/forwarder.sock", tofMode = Initiator, tofConnQueueSize = 2000, tofDisconnQueueSize = 200000, tofVerbosity = Minimum}, tcNodeName = Nothing, tcPeerFrequency = Just 2000, tcResourceFrequency = Just 5000}
+Configuration: TraceConfig {tcOptions = fromList [([],[ConfSeverity {severity = Notice},ConfDetail {detail = DNormal},ConfBackend {backends = [Stdout MachineFormat,EKGBackend,Forwarder]}]),(["AcceptPolicy"],[ConfSeverity {severity = Info}]),(["BlockFetchClient","CompletedBlockFetch"],[ConfLimiter {maxFrequency = 2.0}]),(["ChainDB"],[ConfSeverity {severity = Info}]),(["ChainDB","AddBlockEvent","AddBlockValidation","ValidCandidate"],[ConfLimiter {maxFrequency = 2.0}]),(["ChainDB","AddBlockEvent","AddedBlockToQueue"],[ConfLimiter {maxFrequency = 2.0}]),(["ChainDB","AddBlockEvent","AddedBlockToVolatileDB"],[ConfLimiter {maxFrequency = 2.0}]),(["ChainDB","CopyToImmutableDBEvent","CopiedBlockToImmutableDB"],[ConfLimiter {maxFrequency = 2.0}]),(["DNSResolver"],[ConfSeverity {severity = Info}]),(["DNSSubscription"],[ConfSeverity {severity = Info}]),(["DiffusionInit"],[ConfSeverity {severity = Info}]),(["ErrorPolicy"],[ConfSeverity {severity = Info}]),(["Forge"],[ConfSeverity {severity = Info}]),(["IpSubscription"],[ConfSeverity {severity = Info}]),(["LocalErrorPolicy"],[ConfSeverity {severity = Info}]),(["Mempool"],[ConfSeverity {severity = Info}]),(["Resources"],[ConfSeverity {severity = Info}])], tcForwarder = TraceOptionForwarder {tofConnQueueSize = 2000, tofDisconnQueueSize = 200000, tofVerbosity = Minimum}, tcNodeName = Nothing, tcPeerFrequency = Just 2000, tcResourceFrequency = Just 5000}
 
-677 log messages.
-Generated at 2022-06-03 12:11:02.013173249 CEST.
+662 log messages.
+Generated at 2022-07-06 17:02:52.510663705 CEST.

@@ -145,7 +145,7 @@ namesForSubscription SubscriptionTraceCloseSocket {} = ["CloseSocket"]
 namesForIPSubscription ::
      WithIPList (SubscriptionTrace Socket.SockAddr)
   -> [Text]
-namesForIPSubscription(WithIPList _ _ e) = "IP" : namesForSubscription e
+namesForIPSubscription(WithIPList _ _ e) = namesForSubscription e
 
 instance LogFormatting (WithIPList (SubscriptionTrace Socket.SockAddr)) where
   forMachine _dtal (WithIPList localAddresses dests ev) =
@@ -166,7 +166,7 @@ docIPSubscription = Documented $ map withIPList (undoc docSubscription)
   where
     withIPList (DocMsg v nl comment) =
       DocMsg
-        ("IP" : v)
+        v
         nl
         ("IP Subscription: " <> comment)
 
@@ -177,7 +177,7 @@ docIPSubscription = Documented $ map withIPList (undoc docSubscription)
 namesForDNSSubscription ::
      NtN.WithDomainName (SubscriptionTrace Socket.SockAddr)
   -> [Text]
-namesForDNSSubscription(NtN.WithDomainName _ e) = "DNS" : namesForSubscription e
+namesForDNSSubscription(NtN.WithDomainName _ e) = namesForSubscription e
 
 severityDNSSubscription ::
      NtN.WithDomainName (SubscriptionTrace Socket.SockAddr)
@@ -225,7 +225,7 @@ docDNSSubscription = Documented $ map withDomainName (undoc docSubscription)
   where
     withDomainName (DocMsg v nl comment) =
       DocMsg
-        ("DNS" : v)
+        v
         nl
         ("DNS Subscription: " <> comment)
 

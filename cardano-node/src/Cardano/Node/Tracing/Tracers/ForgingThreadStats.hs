@@ -58,11 +58,11 @@ instance LogFormatting ForgeThreadStats where
              , "lastSlot"           .= String (show ftsLastSlot)
              ]
   asMetrics ForgeThreadStats {..} =
-    [ IntM "nodeCannotForgeNum" (fromIntegral ftsNodeCannotForgeNum)
-    , IntM "nodeIsLeaderNum"    (fromIntegral ftsNodeIsLeaderNum)
-    , IntM "blocksForgedNum"    (fromIntegral ftsBlocksForgedNum)
-    , IntM "slotsMissed"        (fromIntegral ftsSlotsMissedNum)
-    , IntM "lastSlot"           (fromIntegral ftsLastSlot)
+    [ IntM "Forge.NodeCannotForgeNum" (fromIntegral ftsNodeCannotForgeNum)
+    , IntM "Forge.NodeIsLeaderNum"    (fromIntegral ftsNodeIsLeaderNum)
+    , IntM "Forge.BlocksForgedNum"    (fromIntegral ftsBlocksForgedNum)
+    , IntM "Forge.SlotsMissed"        (fromIntegral ftsSlotsMissedNum)
+    , IntM "Forge.LastSlot"           (fromIntegral ftsLastSlot)
     ]
 
 
@@ -76,14 +76,16 @@ docForgeStats :: Documented
 docForgeStats = Documented [
     DocMsg
       []
-      [("nodeCannotForgeNum",
+      [("Forge.NodeCannotForgeNum",
         "How many times this node could not forge?")
-      ,("nodeIsLeaderNum",
+      ,("Forge.NodeIsLeaderNum",
         "How many times this node was leader?")
-      ,("blocksForgedNum",
+      ,("Forge.BlocksForgedNum",
         "How many blocks did forge in this node?")
-      ,("slotsMissed",
+      ,("Forge.SlotsMissed",
         "How many slots were missed in this node?")
+      ,("Forge.LastSlot",
+        "")        
       ]
       "nodeCannotForgeNum shows how many times this node could not forge.\
       \\nnodeIsLeaderNum shows how many times this node was leader.\
@@ -120,11 +122,11 @@ instance LogFormatting ForgingStats where
              , "slotsMissed"        .= String (show fsSlotsMissedNum)
              ]
   asMetrics ForgingStats {..} =
-    [ IntM "nodeCannotForgeNum" (fromIntegral fsNodeCannotForgeNum)
-    , IntM "nodeIsLeaderNum"    (fromIntegral fsNodeIsLeaderNum)
-    , IntM "blocksForgedNum"    (fromIntegral fsBlocksForgedNum)
-    , IntM "slotsMissed"        (fromIntegral fsSlotsMissedNum)
-    ]
+    [ IntM "Forge.NodeCannotForgeNum" (fromIntegral fsNodeCannotForgeNum)
+    , IntM "Forge.NodeIsLeaderNum"    (fromIntegral fsNodeIsLeaderNum)
+    , IntM "Forge.BlocksForgedNum"    (fromIntegral fsBlocksForgedNum)
+    , IntM "Forge.SlotsMissed"        (fromIntegral fsSlotsMissedNum)
+    ]   
 
 emptyForgingStats :: ForgingStats
 emptyForgingStats = ForgingStats mempty 0 0 0 0
