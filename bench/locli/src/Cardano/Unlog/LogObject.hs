@@ -88,40 +88,40 @@ type ACouple t = (t, t)
 
 interpreters :: ACouple (Map Text (Object -> Parser LOBody))
 interpreters = (Map.fromList *** Map.fromList) . unzip . fmap ent $
-  [ (,,) "TraceStartLeadershipCheck" "Cardano.Node.Forge.StartLeadershipCheck" $
+  [ (,,) "TraceStartLeadershipCheck" "Forge.StartLeadershipCheck" $
     \v -> LOTraceStartLeadershipCheck
             <$> v .: "slot"
             <*> (v .:? "utxoSize"     <&> fromMaybe 0)
             <*> (v .:? "chainDensity" <&> fromMaybe 0)
 
-  , (,,) "TraceBlockContext" "Cardano.Node.Forge.BlockContext" $
+  , (,,) "TraceBlockContext" "Forge.BlockContext" $
     \v -> LOBlockContext
             <$> v .: "tipBlockNo"
 
-  , (,,) "TraceNodeIsLeader" "Cardano.Node.Forge.NodeIsLeader" $
+  , (,,) "TraceNodeIsLeader" "Forge.NodeIsLeader" $
     \v -> LOTraceLeadershipDecided
             <$> v .: "slot"
             <*> pure True
 
-  , (,,) "TraceNodeNotLeader" "Cardano.Node.Forge.NodeNotLeader" $
+  , (,,) "TraceNodeNotLeader" "Forge.NodeNotLeader" $
     \v -> LOTraceLeadershipDecided
             <$> v .: "slot"
             <*> pure False
 
-  , (,,) "TraceMempoolAddedTx" "Cardano.Node.Mempool.AddedTx" $
+  , (,,) "TraceMempoolAddedTx" "Mempool.AddedTx" $
     \v -> do
       x :: Object <- v .: "mempoolSize"
       LOMempoolTxs <$> x .: "numTxs"
 
-  , (,,) "TraceMempoolRemoveTxs" "Cardano.Node.Mempool.RemoveTxs" $
+  , (,,) "TraceMempoolRemoveTxs" "Mempool.RemoveTxs" $
     \v -> do
       x :: Object <- v .: "mempoolSize"
       LOMempoolTxs <$> x .: "numTxs"
 
-  , (,,) "TraceMempoolRejectedTx" "Cardano.Node.Mempool.RejectedTx" $
+  , (,,) "TraceMempoolRejectedTx" "Mempool.RejectedTx" $
     \_ -> pure LOMempoolRejectedTx
 
-  , (,,) "TraceLedgerEvent.TookSnapshot" "Cardano.Node.LedgerEvent.TookSnapshot" $
+  , (,,) "TraceLedgerEvent.TookSnapshot" "LedgerEvent.TookSnapshot" $
     \_ -> pure LOLedgerTookSnapshot
 
   , (,,) "TraceBenchTxSubSummary" "TraceBenchTxSubSummary" $
@@ -137,7 +137,7 @@ interpreters = (Map.fromList *** Map.fromList) . unzip . fmap ent $
   , (,,) "TraceBenchTxSubServAck" "TraceBenchTxSubServAck" $
     \v -> LOTxsAcked <$> v .: "txIds"
 
-  , (,,) "Resources" "Cardano.Node.Resources" $
+  , (,,) "Resources" "Resources" $
     \v -> LOResources <$> parsePartialResourceStates (Object v)
 
   , (,,) "TraceTxSubmissionCollected" "TraceTxSubmissionCollected" $
@@ -149,13 +149,13 @@ interpreters = (Map.fromList *** Map.fromList) . unzip . fmap ent $
             <$> v .: "accepted"
             <*> v .: "rejected"
 
-  , (,,) "TraceForgedBlock" "Cardano.Node.Forge.ForgedBlock" $
+  , (,,) "TraceForgedBlock" "Forge.ForgedBlock" $
     \v -> LOBlockForged
             <$> v .: "block"
             <*> v .: "blockPrev"
             <*> v .: "blockNo"
             <*> v .: "slot"
-  , (,,) "TraceAddBlockEvent.AddedToCurrentChain" "Cardano.Node.ChainDB.AddBlockEvent.AddedToCurrentChain" $
+  , (,,) "TraceAddBlockEvent.AddedToCurrentChain" "ChainDB.AddBlockEvent.AddedToCurrentChain" $
     \v -> LOBlockAddedToCurrentChain
             <$> ((v .: "newtip")     <&> hashFromPoint)
             <*> pure Nothing
@@ -163,35 +163,35 @@ interpreters = (Map.fromList *** Map.fromList) . unzip . fmap ent $
                 -- Compat for node versions 1.27 and older:
                  <&> fromMaybe 1)
   -- TODO: we should clarify the distinction between the two cases (^ and v).
-  , (,,) "TraceAdoptedBlock" "Cardano.Node.Forge.AdoptedBlock" $
+  , (,,) "TraceAdoptedBlock" "Forge.AdoptedBlock" $
     \v -> LOBlockAddedToCurrentChain
             <$> v .: "blockHash"
             <*> ((v .: "blockSize") <&> Just)
             <*> pure 1
-  , (,,) "ChainSyncServerEvent.TraceChainSyncServerRead.AddBlock" "Cardano.Node.ChainSyncServerHeader.ChainSyncServerEvent.ServerRead.AddBlock" $
+  , (,,) "ChainSyncServerEvent.TraceChainSyncServerRead.AddBlock" "ChainSyncServerHeader.ChainSyncServerEvent.ServerRead.AddBlock" $
     \v -> LOChainSyncServerSendHeader
             <$> v .: "block"
             <*> v .: "blockNo"
             <*> v .: "slot"
-  , (,,) "ChainSyncServerEvent.TraceChainSyncServerReadBlocked.AddBlock" "Cardano.Node.ChainSyncServerHeader.ChainSyncServerEvent.ServerReadBlocked.AddBlock" $
+  , (,,) "ChainSyncServerEvent.TraceChainSyncServerReadBlocked.AddBlock" "ChainSyncServerHeader.ChainSyncServerEvent.ServerReadBlocked.AddBlock" $
     \v -> LOChainSyncServerSendHeader
             <$> v .: "block"
             <*> v .: "blockNo"
             <*> v .: "slot"
   -- v, but not ^ -- how is that possible?
-  , (,,) "TraceBlockFetchServerSendBlock" "Cardano.Node.BlockFetchServer.SendBlock" $
+  , (,,) "TraceBlockFetchServerSendBlock" "BlockFetchServer.SendBlock" $
     \v -> LOBlockFetchServerSending
             <$> v .: "block"
-  , (,,) "SendFetchRequest" "Cardano.Node.BlockFetchClient.SendFetchRequest" $
+  , (,,) "SendFetchRequest" "BlockFetchClient.SendFetchRequest" $
     \v -> LOBlockFetchClientRequested
             <$> v .: "head"
             <*> v .: "length"
-  , (,,) "ChainSyncClientEvent.TraceDownloadedHeader" "Cardano.Node.ChainSyncClient.ChainSyncClientEvent.DownloadedHeader" $
+  , (,,) "ChainSyncClientEvent.TraceDownloadedHeader" "ChainSyncClient.ChainSyncClientEvent.DownloadedHeader" $
     \v -> LOChainSyncClientSeenHeader
             <$> v .: "block"
             <*> v .: "blockNo"
             <*> v .: "slot"
-  , (,,) "CompletedBlockFetch" "Cardano.Node.BlockFetchClient.CompletedBlockFetch" $
+  , (,,) "CompletedBlockFetch" "BlockFetchClient.CompletedBlockFetch" $
     \v -> LOBlockFetchClientCompletedFetch
             <$> v .: "block"
   ]
