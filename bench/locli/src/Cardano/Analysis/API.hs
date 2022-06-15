@@ -327,14 +327,15 @@ instance RenderCDFs BlockProp p where
     , Field 6 0 "fAdopted"      (f!!3) "Adopt"  $ DDeltaT bpForgerAdoptions
     , Field 6 0 "fAnnounced"    (f!!4) "Announ" $ DDeltaT bpForgerAnnouncements
     , Field 6 0 "fSendStart"    (f!!5) "Sendin" $ DDeltaT bpForgerSends
-    , Field 5 0 "noticedVal"    (p!!0) "Notic"  $ DDeltaT bpPeerNotices
-    , Field 5 0 "requestedVal"  (p!!1) "Reque"  $ DDeltaT bpPeerRequests
-    , Field 5 0 "fetchedVal"    (p!!2) "Fetch"  $ DDeltaT bpPeerFetches
-    , Field 5 0 "pAdoptedVal"   (p!!3) "Adopt"  $ DDeltaT bpPeerAdoptions
-    , Field 5 0 "pAnnouncedVal" (p!!4) "Annou"  $ DDeltaT bpPeerAnnouncements
-    , Field 5 0 "pSendStartVal" (p!!5) "Send"   $ DDeltaT bpPeerSends
+    , Field 5 0 "pNoticed"      (p!!0) "Notic"  $ DDeltaT bpPeerNotices
+    , Field 5 0 "pRequested"    (p!!1) "Reque"  $ DDeltaT bpPeerRequests
+    , Field 5 0 "pFetched"      (p!!2) "Fetch"  $ DDeltaT bpPeerFetches
+    , Field 5 0 "pAdopted"      (p!!3) "Adopt"  $ DDeltaT bpPeerAdoptions
+    , Field 5 0 "pAnnounced"    (p!!4) "Annou"  $ DDeltaT bpPeerAnnouncements
+    , Field 5 0 "pSendStart"    (p!!5) "Send"   $ DDeltaT bpPeerSends
     ] ++
-    [ Field 5 0 "propagation"   (r!!i)
+    [ Field 5 0 (printf "prop%.02f" ps & T.pack)
+                                (r!!i)
             (T.take 4 $ T.pack $ printf "%.04f" ps)
             (DDeltaT ((\(ps', d) ->
                          if ps' == ps then d
@@ -427,23 +428,23 @@ mtFieldsReport Field{fId} = elem fId
 instance RenderCDFs MachPerf p where
   rdFields =
     --  Width LeftPad
-    [ Field 4 0 "missR"       "Miss"  "ratio" $ DFloat                 sMissCDF
-    , Field 5 0 "CheckΔ"      (d!!0)  "Check" $ DDeltaT                sSpanCheckCDF
-    , Field 5 0 "LeadΔ"       (d!!1)  "Lead"  $ DDeltaT                sSpanLeadCDF
-    , Field 5 0 "ForgeΔ"      (d!!2)  "Forge" $ DDeltaT                sSpanForgeCDF
-    , Field 4 0 "BlkGap"      "Block" "gap"   $ DWord64                sBlocklessCDF
-    , Field 5 0 "chDensity"   "Dens"  "ity"   $ DFloat                 sDensityCDF
-    , Field 3 0 "CPU"         "CPU"   "%"     $ DWord64 (rCentiCpu   . sResourceCDFs)
-    , Field 3 0 "GC"          "GC"    "%"     $ DWord64 (rCentiGC    . sResourceCDFs)
-    , Field 3 0 "MUT"         "MUT"   "%"     $ DWord64 (rCentiMut   . sResourceCDFs)
-    , Field 3 0 "GcMaj"       "GC "   "Maj"   $ DWord64 (rGcsMajor   . sResourceCDFs)
-    , Field 3 0 "GcMin"       "flt "  "Min"   $ DWord64 (rGcsMinor   . sResourceCDFs)
-    , Field 5 0 "RSS"         (m!!0)  "RSS"   $ DWord64 (rRSS        . sResourceCDFs)
-    , Field 5 0 "Heap"        (m!!1)  "Heap"  $ DWord64 (rHeap       . sResourceCDFs)
-    , Field 5 0 "Live"        (m!!2)  "Live"  $ DWord64 (rLive       . sResourceCDFs)
-    , Field 5 0 "Allocd"      "Alloc" "MB"    $ DWord64 (rAlloc      . sResourceCDFs)
-    , Field 5 0 "CPULenAll"   (c!!0)  "All"   $ DInt                   sSpanLensCpuCDF
-    , Field 5 0 "CPULenEpoch" (c!!1)  "Epoch" $ DInt                   sSpanLensCpuEpochCDF
+    [ Field 4 0 "missRatio"     "Miss"  "ratio" $ DFloat                 sMissCDF
+    , Field 5 0 "checkΔ"        (d!!0)  "Check" $ DDeltaT                sSpanCheckCDF
+    , Field 5 0 "leadΔ"         (d!!1)  "Lead"  $ DDeltaT                sSpanLeadCDF
+    , Field 5 0 "forgeΔ"        (d!!2)  "Forge" $ DDeltaT                sSpanForgeCDF
+    , Field 4 0 "blockkGap"     "Block" "gap"   $ DWord64                sBlocklessCDF
+    , Field 5 0 "chainDensity"  "Dens"  "ity"   $ DFloat                 sDensityCDF
+    , Field 3 0 "cpuProcess"    "CPU"   "%"     $ DWord64 (rCentiCpu   . sResourceCDFs)
+    , Field 3 0 "cpuGC"         "GC"    "%"     $ DWord64 (rCentiGC    . sResourceCDFs)
+    , Field 3 0 "cpuMutator"    "MUT"   "%"     $ DWord64 (rCentiMut   . sResourceCDFs)
+    , Field 3 0 "gcMajor"       "GC "   "Maj"   $ DWord64 (rGcsMajor   . sResourceCDFs)
+    , Field 3 0 "gcMinor"       "flt "  "Min"   $ DWord64 (rGcsMinor   . sResourceCDFs)
+    , Field 5 0 "memRSS"        (m!!0)  "RSS"   $ DWord64 (rRSS        . sResourceCDFs)
+    , Field 5 0 "rtsHeap"       (m!!1)  "Heap"  $ DWord64 (rHeap       . sResourceCDFs)
+    , Field 5 0 "rtsLiveBytes"  (m!!2)  "Live"  $ DWord64 (rLive       . sResourceCDFs)
+    , Field 5 0 "rtsAllocation" "Alloc" "MB"    $ DWord64 (rAlloc      . sResourceCDFs)
+    , Field 5 0 "cpuSpanLenAll" (c!!0)  "All"   $ DInt                   sSpanLensCpuCDF
+    , Field 5 0 "cpuSpanLenEp"  (c!!1)  "Epoch" $ DInt                   sSpanLensCpuEpochCDF
     ]
    where
      d = nChunksEachOf  3 6 "---- Δt ----"
