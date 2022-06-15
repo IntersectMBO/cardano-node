@@ -210,20 +210,24 @@ def all_profile_variants:
      .generator.epochs                = 4
     ) as $for_4ep
   |
-    ({} |
-     .node.shutdown_on_block_synced   = 1
+    ({}
+     | .node.shutdown_on_block_synced   = 1
+     | .analysis.filters                = []
     ) as $for_1blk
   |
-    ({} |
-     .node.shutdown_on_block_synced   = 3
+    ({}
+     | .node.shutdown_on_block_synced   = 3
+     | .analysis.filters                = []
     ) as $for_3blk
   |
-    ({} |
-     .node.shutdown_on_block_synced   = 15
+    ({}
+     | .node.shutdown_on_block_synced   = 15
+     | .analysis.filters                = []
     ) as $for_15blk
   |
-    ({} |
-     .node.shutdown_on_block_synced   = 30
+    ({}
+     | .node.shutdown_on_block_synced   = 30
+     | .analysis.filters                = []
     ) as $for_30blk
   |
   ##
