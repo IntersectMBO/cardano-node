@@ -15,7 +15,7 @@ ifeq ($(5)$(6),truetrue)
 $(1): CMD := start-cluster
 endif
 ifeq ($(5)$(6),truefalse)
-$(1): CMD := start-cluster && exit || exit 1
+$(1): RUN := start-cluster
 endif
 ifeq ($(3)$(4)$(5)$(6),falsetruefalsefalse)
 define EXTRA_HELP +=
