@@ -29,6 +29,7 @@ import           Cardano.Logging.Resources.Types
 import           Cardano.Prelude hiding (trace)
 
 import           Cardano.Node.Tracing.Formatting ()
+import qualified Cardano.Node.Tracing.StateRep as SR
 import           Cardano.Node.Tracing.Tracers.BlockReplayProgress
 import           Cardano.Node.Tracing.Tracers.ChainDB
 import           Cardano.Node.Tracing.Tracers.Consensus
@@ -46,6 +47,7 @@ import           Cardano.Node.Tracing.Tracers.Startup
 import           Cardano.Node.Handlers.Shutdown (ShutdownTrace)
 import           Cardano.Node.Startup
 import           Cardano.Node.TraceConstraints
+
 
 import           Ouroboros.Consensus.Block.Forging
 import           Ouroboros.Consensus.BlockchainTime.WallClock.Types (RelativeTime)
@@ -68,6 +70,7 @@ import qualified Ouroboros.Consensus.Node.Run as Consensus
 import qualified Ouroboros.Consensus.Node.Tracers as Consensus
 import qualified Ouroboros.Consensus.Protocol.Ledger.HotKey as HotKey
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
+
 
 import           Ouroboros.Network.Block (Point (..), SlotNo, Tip)
 import qualified Ouroboros.Network.BlockFetch.ClientState as BlockFetch
@@ -193,10 +196,33 @@ docTracers configFileName outputFileName _ _ _ = do
     nodeInfoTrDoc <- documentTracer trConfig nodeInfoTr
       (docNodeInfoTraceEvent :: Documented NodeInfo)
 
+    -- State tracer
+    stateTr   <- mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["NodeState"]
+                SR.namesNodeState
+                SR.severityNodeState
+                allPublic
+    configureTracers trConfig SR.docNodeState [stateTr]
+    stateTrDoc <- documentTracer trConfig stateTr
+      (SR.docNodeState :: Documented SR.NodeState)
+
+--  Peers tracer
+
+    peersTr   <- mkCardanoTracer
+                trBase trForward mbTrEKG
+                ["Net", "Peers", "List"]
+                namesForPeers
+                severityPeers
+                allPublic
+    configureTracers trConfig docPeers [peersTr]
+    peersTrDoc <- documentTracer trConfig peersTr
+      (docPeers :: Documented [PeerT blk])
+
     -- Resource tracer
     resourcesTr <- mkCardanoTracer
                 trBase trForward mbTrEKG
-                "Resources"
+                ["Resources"]
                 (const [])
                 (const Info)
                 allPublic
@@ -207,7 +233,7 @@ docTracers configFileName outputFileName _ _ _ = do
     -- Startup tracer
     startupTr <- mkCardanoTracer
                 trBase trForward mbTrEKG
-                "Startup"
+                ["Startup"]
                 namesStartupInfo
                 (const Notice)
                 allPublic
@@ -217,7 +243,7 @@ docTracers configFileName outputFileName _ _ _ = do
 
     shutdownTr <- mkCardanoTracer
                 trBase trForward mbTrEKG
-                "Shutdown"
+                ["Shutdown"]
                 namesForShutdown
                 severityShutdown
                 allPublic
@@ -225,22 +251,12 @@ docTracers configFileName outputFileName _ _ _ = do
     shutdownTrDoc <- documentTracer trConfig shutdownTr
       (docShutdown :: Documented ShutdownTrace)
 
---  Peers tracer
 
-    peersTr   <- mkCardanoTracer
-                trBase trForward mbTrEKG
-                "Peers"
-                namesForPeers
-                severityPeers
-                allPublic
-    configureTracers trConfig docPeers [peersTr]
-    peersTrDoc <- documentTracer trConfig peersTr
-      (docPeers :: Documented [PeerT blk])
 
 
     chainDBTr <- mkCardanoTracer'
                 trBase trForward mbTrEKG
-                "ChainDB"
+                ["ChainDB"]
                 namesForChainDBTraceEvents
                 severityChainDB
                 allPublic
@@ -251,7 +267,7 @@ docTracers configFileName outputFileName _ _ _ = do
 
     replayBlockTr <- mkCardanoTracer
                 trBase trForward mbTrEKG
-                "ReplayBlock"
+                ["ChainDB", "ReplayBlock"]
                 namesForReplayBlockStats
                 severityReplayBlockStats
                 allPublic
@@ -263,7 +279,7 @@ docTracers configFileName outputFileName _ _ _ = do
 
     chainSyncClientTr  <- mkCardanoTracer
                 trBase trForward mbTrEKG
-                "ChainSyncClient"
+                ["ChainSync", "ClientEvent"]
                 namesForChainSyncClientEvent
                 severityChainSyncClientEvent
                 allPublic
@@ -275,7 +291,7 @@ docTracers configFileName outputFileName _ _ _ = do
 
     chainSyncServerHeaderTr <- mkCardanoTracer
                 trBase trForward mbTrEKG
-                "ChainSyncServerHeader"
+                ["ChainSync", "ServerHeader"]
                 namesForChainSyncServerEvent
                 severityChainSyncServerEvent
                 allPublic
@@ -285,7 +301,7 @@ docTracers configFileName outputFileName _ _ _ = do
 
     chainSyncServerBlockTr <- mkCardanoTracer
                 trBase trForward mbTrEKG
-                "ChainSyncServerBlock"
+                ["ChainSync", "ServerBlock"]
                 namesForChainSyncServerEvent
                 severityChainSyncServerEvent
                 allPublic
@@ -295,7 +311,7 @@ docTracers configFileName outputFileName _ _ _ = do
 
     blockFetchDecisionTr  <- mkCardanoTracer
                 trBase trForward mbTrEKG
-                "BlockFetchDecision"
+                ["BlockFetch", "Decision"]
                 namesForBlockFetchDecision
                 severityBlockFetchDecision
                 allConfidential
@@ -307,7 +323,7 @@ docTracers configFileName outputFileName _ _ _ = do
 
     blockFetchClientTr  <- mkCardanoTracer
                 trBase trForward mbTrEKG
-                "BlockFetchClient"
+                ["BlockFetch", "ClientEvent"]
                 namesForBlockFetchClient
                 severityBlockFetchClient
                 allPublic
@@ -319,7 +335,7 @@ docTracers configFileName outputFileName _ _ _ = do
 
     blockFetchServerTr  <- mkCardanoTracer
                 trBase trForward mbTrEKG
-                "BlockFetchServer"
+                ["BlockFetch", "ServerBlock"]
                 namesForBlockFetchServer
                 severityBlockFetchServer
                 allPublic
@@ -329,7 +345,7 @@ docTracers configFileName outputFileName _ _ _ = do
 
     forgeKESInfoTr  <- mkCardanoTracer
                 trBase trForward mbTrEKG
-                "ForgeStateInfo"
+                ["Forge", "KESInfo"]
                 namesForKESInfo
                 severityKESInfo
                 allPublic
@@ -339,7 +355,7 @@ docTracers configFileName outputFileName _ _ _ = do
 
     txInboundTr  <- mkCardanoTracer
                 trBase trForward mbTrEKG
-                "TxInbound"
+                ["TxSubmission", "TxInbound"]
                 namesForTxInbound
                 severityTxInbound
                 allPublic
@@ -351,7 +367,7 @@ docTracers configFileName outputFileName _ _ _ = do
 
     txOutboundTr  <- mkCardanoTracer
                 trBase trForward mbTrEKG
-                "TxOutbound"
+                ["TxSubmission", "TxOutbound"]
                 namesForTxOutbound
                 severityTxOutbound
                 allPublic
@@ -363,7 +379,7 @@ docTracers configFileName outputFileName _ _ _ = do
 
     localTxSubmissionServerTr <- mkCardanoTracer
                 trBase trForward mbTrEKG
-                "LocalTxSubmissionServer"
+                ["TxSubmission", "LocalServer"]
                 namesForLocalTxSubmissionServer
                 severityLocalTxSubmissionServer
                 allPublic
@@ -374,7 +390,7 @@ docTracers configFileName outputFileName _ _ _ = do
 
     mempoolTr   <- mkCardanoTracer
                 trBase trForward mbTrEKG
-                "Mempool"
+                ["Mempool"]
                 namesForMempool
                 severityMempool
                 allPublic
@@ -384,7 +400,7 @@ docTracers configFileName outputFileName _ _ _ = do
 
     forgeTr <-  mkCardanoTracer
                 trBase trForward mbTrEKG
-                "Forge"
+                ["Forge", "StateInfo"]
                 namesForForge
                 severityForge
                 allPublic
@@ -393,7 +409,7 @@ docTracers configFileName outputFileName _ _ _ = do
     forgeThreadStatsTr <-
                 mkCardanoTracer'
                 trBase trForward mbTrEKG
-                "ForgeStats"
+                ["Forge", "Stats"]
                 namesForForge
                 severityForge
                 allPublic
@@ -413,7 +429,7 @@ docTracers configFileName outputFileName _ _ _ = do
 
     blockchainTimeTr   <- mkCardanoTracer
                 trBase trForward mbTrEKG
-                "BlockchainTime"
+                ["BlockchainTime"]
                 namesForBlockchainTime
                 severityBlockchainTime
                 allPublic
@@ -425,7 +441,7 @@ docTracers configFileName outputFileName _ _ _ = do
 
     keepAliveClientTr  <- mkCardanoTracer
                 trBase trForward mbTrEKG
-                "KeepAliveClient"
+                ["Net", "KeepAliveClient"]
                 namesForKeepAliveClient
                 severityKeepAliveClient
                 allPublic
@@ -435,7 +451,7 @@ docTracers configFileName outputFileName _ _ _ = do
 
     chainSyncTr  <-  mkCardanoTracer
                 trBase trForward mbTrEKG
-                "ChainSync"
+                 ["ChainSync", "Local"]
                 namesForTChainSync
                 severityTChainSync
                 allPublic
@@ -448,7 +464,7 @@ docTracers configFileName outputFileName _ _ _ = do
     txMonitorTr <-
       mkCardanoTracer
         trBase trForward mbTrEKG
-        "TxMonitorClient"
+        ["TxSubmission", "MonitorClient"]
         namesForTTxMonitor
         severityTTxMonitor
         allPublic
@@ -463,7 +479,7 @@ docTracers configFileName outputFileName _ _ _ = do
 
     txSubmissionTr  <-  mkCardanoTracer
                 trBase trForward mbTrEKG
-                "TxSubmissionClient"
+                ["TxSubmission", "Local"]
                 namesForTTxSubmission
                 severityTTxSubmission
                 allPublic
@@ -479,7 +495,7 @@ docTracers configFileName outputFileName _ _ _ = do
 
     stateQueryTr  <-  mkCardanoTracer
                 trBase trForward mbTrEKG
-                "StateQueryClient"
+               ["StateQueryServer"]
                 namesForTStateQuery
                 severityTStateQuery
                 allPublic
@@ -494,7 +510,7 @@ docTracers configFileName outputFileName _ _ _ = do
 
     chainSyncNodeTr <-  mkCardanoTracer
                 trBase trForward mbTrEKG
-                "ChainSyncNode"
+                ["ChainSync", "Remote"]
                 namesForTChainSyncNode
                 severityTChainSyncNode
                 allPublic
@@ -505,7 +521,7 @@ docTracers configFileName outputFileName _ _ _ = do
 
     chainSyncSerialisedTr <-  mkCardanoTracer
                 trBase trForward mbTrEKG
-                "ChainSyncSerialised"
+                 ["ChainSync", "Remote", "Serialised"]
                 namesForTChainSyncSerialised
                 severityTChainSyncSerialised
                 allPublic
@@ -516,7 +532,7 @@ docTracers configFileName outputFileName _ _ _ = do
 
     blockFetchTr  <-  mkCardanoTracer
                 trBase trForward mbTrEKG
-                "BlockFetch"
+                ["BlockFetch", "Remote"]
                 namesForTBlockFetch
                 severityTBlockFetch
                 allPublic
@@ -529,7 +545,7 @@ docTracers configFileName outputFileName _ _ _ = do
 
     blockFetchSerialisedTr <-  mkCardanoTracer
                 trBase trForward mbTrEKG
-                "BlockFetchSerialised"
+                ["BlockFetch", "Remote", "Serialised"]
                 namesForTBlockFetchSerialised
                 severityTBlockFetchSerialised
                 allPublic
@@ -542,7 +558,7 @@ docTracers configFileName outputFileName _ _ _ = do
 
     txSubmission2Tr  <-  mkCardanoTracer
                 trBase trForward mbTrEKG
-                "TxSubmission2"
+                ["TxSubmission", "Remote"]
                 namesForTxSubmission2Node
                 severityTxSubmission2Node
                 allPublic
@@ -556,7 +572,7 @@ docTracers configFileName outputFileName _ _ _ = do
 -- Diffusion
     dtMuxTr   <-  mkCardanoTracer
                 trBase trForward mbTrEKG
-                "Mux"
+                ["Net", "Mux", "Remote"]
                 namesForMux
                 severityMux
                 allPublic
@@ -566,7 +582,7 @@ docTracers configFileName outputFileName _ _ _ = do
 
     dtLocalMuxTr   <-  mkCardanoTracer
                 trBase trForward mbTrEKG
-                "MuxLocal"
+                ["Net", "Mux", "Local"]
                 namesForMux
                 severityMux
                 allPublic
@@ -576,7 +592,7 @@ docTracers configFileName outputFileName _ _ _ = do
 
     dtHandshakeTr   <-  mkCardanoTracer
                 trBase trForward mbTrEKG
-                "Handshake"
+                ["Net", "Handshake", "Remote"]
                 namesForHandshake
                 severityHandshake
                 allPublic
@@ -587,7 +603,7 @@ docTracers configFileName outputFileName _ _ _ = do
 
     dtLocalHandshakeTr  <-  mkCardanoTracer
                 trBase trForward mbTrEKG
-                "LocalHandshake"
+                 ["Net", "Handshake", "Local"]
                 namesForLocalHandshake
                 severityLocalHandshake
                 allPublic
@@ -598,7 +614,7 @@ docTracers configFileName outputFileName _ _ _ = do
 
     dtDiffusionInitializationTr   <-  mkCardanoTracer
                 trBase trForward mbTrEKG
-                "DiffusionInit"
+                ["Startup", "DiffusionInit"]
                 namesForDiffusionInit
                 severityDiffusionInit
                 allPublic
@@ -609,7 +625,7 @@ docTracers configFileName outputFileName _ _ _ = do
 
     dtLedgerPeersTr  <- mkCardanoTracer
                 trBase trForward mbTrEKG
-                "LedgerPeers"
+                ["Net", "Peers", "Ledger"]
                 namesForLedgerPeers
                 severityLedgerPeers
                 allPublic
@@ -621,7 +637,7 @@ docTracers configFileName outputFileName _ _ _ = do
 
     localRootPeersTr  <-  mkCardanoTracer
       trBase trForward mbTrEKG
-      "LocalRootPeers"
+      ["Net", "Peers", "LocalRoot"]
       namesForLocalRootPeers
       severityLocalRootPeers
       allPublic
@@ -631,7 +647,7 @@ docTracers configFileName outputFileName _ _ _ = do
 
     publicRootPeersTr  <-  mkCardanoTracer
       trBase trForward mbTrEKG
-      "PublicRootPeers"
+      ["Net", "Peers", "PublicRoot"]
       namesForPublicRootPeers
       severityPublicRootPeers
       allPublic
@@ -641,7 +657,7 @@ docTracers configFileName outputFileName _ _ _ = do
 
     peerSelectionTr  <-  mkCardanoTracer
       trBase trForward mbTrEKG
-      "PeerSelection"
+      ["Net", "PeerSelection", "Selection"]
       namesForPeerSelection
       severityPeerSelection
       allPublic
@@ -651,7 +667,7 @@ docTracers configFileName outputFileName _ _ _ = do
 
     debugPeerSelectionTr  <-  mkCardanoTracer
       trBase trForward mbTrEKG
-      "DebugPeerSelection"
+      ["Net", "PeerSelection", "Initiator"]
       namesForDebugPeerSelection
       severityDebugPeerSelection
       allPublic
@@ -661,7 +677,7 @@ docTracers configFileName outputFileName _ _ _ = do
 
     debugPeerSelectionResponderTr  <-  mkCardanoTracer
       trBase trForward mbTrEKG
-      "DebugPeerSelectionResponder"
+      ["Net", "PeerSelection", "Responder"]
       namesForDebugPeerSelection
       severityDebugPeerSelection
       allPublic
@@ -671,7 +687,7 @@ docTracers configFileName outputFileName _ _ _ = do
 
     peerSelectionCountersTr  <-  mkCardanoTracer
       trBase trForward mbTrEKG
-      "PeerSelectionCounters"
+      ["Net", "PeerSelection", "Counters"]
       namesForPeerSelectionCounters
       severityPeerSelectionCounters
       allPublic
@@ -681,7 +697,7 @@ docTracers configFileName outputFileName _ _ _ = do
 
     peerSelectionActionsTr  <-  mkCardanoTracer
       trBase trForward mbTrEKG
-      "PeerSelectionActions"
+      ["Net", "PeerSelection", "Actions"]
       namesForPeerSelectionActions
       severityPeerSelectionActions
       allPublic
@@ -692,7 +708,7 @@ docTracers configFileName outputFileName _ _ _ = do
 
     connectionManagerTr  <-  mkCardanoTracer
       trBase trForward mbTrEKG
-      "ConnectionManager"
+      ["Net", "ConnectionManager", "Remote"]
       namesForConnectionManager
       severityConnectionManager
       allPublic
@@ -705,7 +721,7 @@ docTracers configFileName outputFileName _ _ _ = do
 
     connectionManagerTransitionsTr  <-  mkCardanoTracer
       trBase trForward mbTrEKG
-      "ConnectionManagerTransition"
+      ["Net", "ConnectionManager", "Remote", "Transition"]
       (namesForConnectionManagerTransition @RemoteAddress)
       severityConnectionManagerTransition
       allPublic
@@ -717,7 +733,7 @@ docTracers configFileName outputFileName _ _ _ = do
 
     serverTr  <-  mkCardanoTracer
       trBase trForward mbTrEKG
-      "Server"
+      ["Net", "Server", "Remote"]
       namesForServer
       severityServer
       allPublic
@@ -727,7 +743,7 @@ docTracers configFileName outputFileName _ _ _ = do
 
     inboundGovernorTr  <-  mkCardanoTracer
       trBase trForward mbTrEKG
-      "InboundGovernor"
+       ["Net", "InboundGovernor", "Remote"]
       namesForInboundGovernor
       severityInboundGovernor
       allPublic
@@ -737,7 +753,7 @@ docTracers configFileName outputFileName _ _ _ = do
 
     inboundGovernorTransitionsTr  <-  mkCardanoTracer
       trBase trForward mbTrEKG
-      "InboundGovernorTransition"
+      ["Net", "InboundGovernor", "Remote", "Transition"]
       namesForInboundGovernorTransition
       severityInboundGovernorTransition
       allPublic
@@ -749,7 +765,7 @@ docTracers configFileName outputFileName _ _ _ = do
 
     localConnectionManagerTr  <-  mkCardanoTracer
       trBase trForward mbTrEKG
-      "LocalConnectionManager"
+       ["Net", "ConnectionManager", "Local"]
       namesForConnectionManager
       severityConnectionManager
       allPublic
@@ -764,7 +780,7 @@ docTracers configFileName outputFileName _ _ _ = do
 
     localServerTr  <-  mkCardanoTracer
       trBase trForward mbTrEKG
-      "LocalServer"
+      ["Net", "Server", "Local"]
       namesForServer
       severityServer
       allPublic
@@ -775,7 +791,7 @@ docTracers configFileName outputFileName _ _ _ = do
 
     localInboundGovernorTr  <-  mkCardanoTracer
       trBase trForward mbTrEKG
-      "LocalInboundGovernor"
+       ["Net", "InboundGovernor", "Local"]
       namesForInboundGovernor
       severityInboundGovernor
       allPublic
@@ -787,7 +803,7 @@ docTracers configFileName outputFileName _ _ _ = do
 
     dtIpSubscriptionTr   <-  mkCardanoTracer
                 trBase trForward mbTrEKG
-                "IpSubscription"
+                ["Net", "Subscription", "IP"]
                 namesForIPSubscription
                 severityIPSubscription
                 allPublic
@@ -798,7 +814,7 @@ docTracers configFileName outputFileName _ _ _ = do
 
     dtDnsSubscriptionTr  <-  mkCardanoTracer
                 trBase trForward mbTrEKG
-                "DNSSubscription"
+                ["Net", "Subscription", "DNS"]
                 namesForDNSSubscription
                 severityDNSSubscription
                 allPublic
@@ -809,7 +825,7 @@ docTracers configFileName outputFileName _ _ _ = do
 
     dtDnsResolverTr  <-  mkCardanoTracer
                 trBase trForward mbTrEKG
-                "DNSResolver"
+                ["Net", "DNSResolver"]
                 namesForDNSResolver
                 severityDNSResolver
                 allPublic
@@ -819,7 +835,7 @@ docTracers configFileName outputFileName _ _ _ = do
 
     dtErrorPolicyTr  <-  mkCardanoTracer
                 trBase trForward mbTrEKG
-                "ErrorPolicy"
+                ["Net", "ErrorPolicy", "Remote"]
                 namesForErrorPolicy
                 severityErrorPolicy
                 allPublic
@@ -829,7 +845,7 @@ docTracers configFileName outputFileName _ _ _ = do
 
     dtLocalErrorPolicyTr <-  mkCardanoTracer
                 trBase trForward mbTrEKG
-                "LocalErrorPolicy"
+                ["Net", "ErrorPolicy", "Local"]
                 namesForLocalErrorPolicy
                 severityLocalErrorPolicy
                 allPublic
@@ -839,7 +855,7 @@ docTracers configFileName outputFileName _ _ _ = do
 
     dtAcceptPolicyTr    <-  mkCardanoTracer
                 trBase trForward mbTrEKG
-                "AcceptPolicy"
+                ["Net", "AcceptPolicy"]
                 namesForAcceptPolicy
                 severityAcceptPolicy
                 allPublic
@@ -848,6 +864,7 @@ docTracers configFileName outputFileName _ _ _ = do
       (docAcceptPolicy :: Documented NtN.AcceptConnectionsPolicyTrace)
 
     let bl =  nodeInfoTrDoc
+            <> stateTrDoc
             <> resourcesTrDoc
             <> startupTrDoc
             <> shutdownTrDoc

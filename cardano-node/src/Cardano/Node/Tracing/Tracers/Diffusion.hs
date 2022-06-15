@@ -287,7 +287,7 @@ namesForHandshake' ::
      TraceSendRecv (HS.Handshake nt CBOR.Term)
   -> [Text]
 namesForHandshake' (TraceSendMsg m) = "Send" : namesForHandshake'' m
-namesForHandshake' (TraceRecvMsg m) = "Recieve" : namesForHandshake'' m
+namesForHandshake' (TraceRecvMsg m) = "Receive" : namesForHandshake'' m
 
 namesForHandshake'' :: AnyMessageAndAgency (HS.Handshake nt CBOR.Term) -> [Text]
 namesForHandshake'' (AnyMessageAndAgency _agency msg) = namesForHandshake''' msg

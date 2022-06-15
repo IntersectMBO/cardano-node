@@ -48,16 +48,15 @@ instance LogFormatting ReplayBlockStats where
       ]
   forHuman ReplayBlockStats {..} = "Block replay progress " <> show rpsProgress <> "%"
   asMetrics ReplayBlockStats {..} =
-     [DoubleM "Block replay progress (%)" rpsProgress]
+     [DoubleM "ChainDB.BlockReplayProgress" rpsProgress]
 
 docReplayedBlock :: Documented ReplayBlockStats
 docReplayedBlock = Documented [
     DocMsg
       ["LedgerReplay"]
-      [("Block replay progress (%)",
-        "Progress in percent")]
+      [("ChainDB.BlockReplayProgress", "Progress in percent")]
       "Counts up the percent of a block replay."
-  ]
+  ] 
 
 withReplayedBlock :: Trace IO ReplayBlockStats
     -> IO (Trace IO (ChainDB.TraceEvent blk))
