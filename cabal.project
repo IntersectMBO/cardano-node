@@ -197,8 +197,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger
-  tag: 52da70e5a0472cd4433876289f1aebaa0c6e5c85
-  --sha256: 0aiislbwx5yqdidwd66zqqpskvay84iwkgsgi5l96rbfcsf0n8lq
+  tag: 9d5fe3e539605e3bf9d98d73ea892aa467d55058
+  --sha256: 1wxh221q0kxkig6bcnrw6rcnf18p7b8kbb3hjd9jns1g8gkb1drq
   subdir:
     eras/alonzo/impl
     eras/alonzo/test-suite
@@ -300,8 +300,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/plutus
-  tag: d24a7540e4659b57ce2ab25dadb968991e232191
-  --sha256: 15glaghkaa5kh1ayfkw2jahkqq3955kmfzplmb210gvrlnlghlaa
+  tag: f680ac6979e069fcc013e4389ee607ff5fa6672f
+  --sha256: 180jq8hd0jlg48ya7b5yw3bnd2d5czy0b1agy9ng3mgnzpyq747i
   subdir:
     plutus-core
     plutus-ledger-api
