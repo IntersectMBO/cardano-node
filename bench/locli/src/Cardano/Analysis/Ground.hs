@@ -104,6 +104,10 @@ newtype JsonOutputFile
   = JsonOutputFile { unJsonOutputFile :: FilePath }
   deriving (Show, Eq)
 
+newtype CDFOutputFile
+  = CDFOutputFile { unCDFOutputFile :: FilePath }
+  deriving (Show, Eq)
+
 newtype TextOutputFile
   = TextOutputFile { unTextOutputFile :: FilePath }
   deriving (Show, Eq)
@@ -198,6 +202,14 @@ optJsonOutputFile optname desc =
     Opt.option Opt.str
       $ long optname
       <> metavar "JSON-OUTFILE"
+      <> help desc
+
+optCDFOutputFile :: String -> String -> Parser CDFOutputFile
+optCDFOutputFile optname desc =
+  fmap CDFOutputFile $
+    Opt.option Opt.str
+      $ long optname
+      <> metavar "CDF-OUTFILE"
       <> help desc
 
 optTextOutputFile :: String -> String -> Parser TextOutputFile

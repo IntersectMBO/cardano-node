@@ -8,7 +8,7 @@ module Cardano.Analysis.API
   , module Cardano.Util)
 where
 
-import Prelude                  ((!!), error)
+import Prelude                  ((!!))
 import Cardano.Prelude          hiding (head)
 
 import Data.Aeson               (ToJSON(..), FromJSON(..))
@@ -59,8 +59,8 @@ deriving instance (Show     (f NominalDiffTime), Show     (f Int)) => Show     (
 deriving instance (FromJSON (f NominalDiffTime), FromJSON (f Int)) => FromJSON (BlockProp f)
 deriving instance (ToJSON   (f NominalDiffTime), ToJSON   (f Int)) => ToJSON   (BlockProp f)
 
-type BlockPropOne = BlockProp I
-type BlockProps   = BlockProp (CDF I)
+type BlockPropOne   = BlockProp I
+type MultiBlockProp = BlockProp (CDF I)
 
 -- | All events related to a block.
 data BlockEvents
@@ -215,8 +215,8 @@ type    ClusterPerf  = MachPerf (CDF I)
 
 -- | Bunch'a bunches'a machine performances.
 --   Same as above, since we collapse [CDF I] into CDF I -- just with more statistical confidence.
-newtype ClusterPerfs
-  = ClusterPerfs { unClusterPerfs :: ClusterPerf }
+newtype MultiClusterPerf
+  = MultiClusterPerf { unMultiClusterPerf :: ClusterPerf }
   deriving newtype (ToJSON, FromJSON)
 
 deriving newtype instance FromJSON a => FromJSON (I a)
@@ -306,17 +306,27 @@ testSlotStats g SlotStats{..} = \case
 --
 -- * Timeline rendering instances
 --
-bpFieldsForger :: Field DSelect p a -> Bool
-bpFieldsForger Field{fId} = elem fId
+bpFieldSelectForger :: Field DSelect p a -> Bool
+bpFieldSelectForger Field{fId} = elem fId
   [ "fChecked", "fLeading", "fForged", "fAdopted", "fAnnounced", "fSendStart" ]
 
-bpFieldsPeers :: Field DSelect p a -> Bool
-bpFieldsPeers Field{fId} = elem fId
-  [ "noticedVal", "requestedVal", "fetchedVal", "pAdoptedVal", "pAnnouncedVal", "pSendStartVal" ]
+bpFieldSelectPeers :: Field DSelect p a -> Bool
+bpFieldSelectPeers Field{fId} = elem fId
+  [ "pNoticed", "pRequested", "pFetched", "pAdopted", "pAnnounced", "pSendStart" ]
 
-bpFieldsPropagation :: Field DSelect p a -> Bool
-bpFieldsPropagation Field{fHead2} = elem fHead2
-  [ "0.50", "0.80", "0.90", "0.92", "0.94", "0.96", "0.98", "1.00" ]
+bpFieldSelectPropagation :: Field DSelect p a -> Bool
+bpFieldSelectPropagation Field{fHead2} = elem fHead2 adoptionPctsRendered
+
+renderAdoptionCentile :: Centile -> Text
+renderAdoptionCentile = T.pack . printf "prop%0.2f" . unCentile
+
+adoptionPctsRendered :: [Text]
+adoptionPctsRendered = adoptionPcts <&> T.drop 4 . renderAdoptionCentile
+
+adoptionPcts :: [Centile]
+adoptionPcts =
+  [ Centile 0.5, Centile 0.8, Centile 0.9
+  , Centile 0.92, Centile 0.94, Centile 0.96, Centile 0.98, Centile 1.0 ]
 
 instance RenderCDFs BlockProp p where
   rdFields =
@@ -334,27 +344,24 @@ instance RenderCDFs BlockProp p where
     , Field 5 0 "pAnnounced"    (p!!4) "Annou"  $ DDeltaT bpPeerAnnouncements
     , Field 5 0 "pSendStart"    (p!!5) "Send"   $ DDeltaT bpPeerSends
     ] ++
-    [ Field 5 0 (printf "prop%.02f" ps & T.pack)
+    [ Field 5 0 (renderAdoptionCentile ct)
                                 (r!!i)
-            (T.take 4 $ T.pack $ printf "%.04f" ps)
-            (DDeltaT ((\(ps', d) ->
-                         if ps' == ps then d
-                         else error $ printf "Centile mismatch: [%d]: exp=%f act=%f" i ps ps')
+                                       (T.take 4 $ T.pack $ printf "%.04f" centi)
+            (DDeltaT ((\(centi', d) ->
+                         if centi' == centi then d
+                         else error $ printf "Centile mismatch: [%d]: exp=%f act=%f"
+                                             i centi centi')
                       . fromMaybe
-                        (error $ printf "No centile %d/%f in bpPropagation." i ps)
+                        (error $ printf "No centile %d/%f in bpPropagation." i centi)
                       . flip atMay i . bpPropagation))
-    | (i, Centile ps) <- zip [0::Int ..] (adoptionPcts <> [Centile 1.0]) ] ++
+    | (i, ct@(Centile centi)) <- zip [0::Int ..] adoptionPcts ] ++
     [ Field 9 0 "sizes"         "Size"  "bytes" $ DInt    bpSizes
     ]
    where
      f = nChunksEachOf 6    7 "--- Forger event Δt: ---"
      p = nChunksEachOf 6    6 "--- Peer event Δt: ---"
      r = nChunksEachOf aLen 6 "Slot-rel. Δt to adoption centile:"
-     aLen = length adoptionPcts + 1 -- +1 is for the implied 1.0 centile
-
-adoptionPcts :: [Centile]
-adoptionPcts =
-  [ Centile 0.5, Centile 0.8, Centile 0.9, Centile 0.92, Centile 0.94, Centile 0.96, Centile 0.98 ]
+     aLen = length adoptionPcts
 
 instance RenderTimeline BlockEvents where
   rtFields _ =
@@ -382,7 +389,7 @@ instance RenderTimeline BlockEvents where
     , Field 5 0 "pSendStartVal" (p!!5) "Send"   $ IDeltaT (af' boSending   . valids)
     , Field 5 0 "pPropag0.5"    (r!!0) "0.5"    $ IDeltaT (percSpec 0.5  . bePropagation)
     , Field 5 0 "pPropag0.96"   (r!!1) "0.96"   $ IDeltaT (percSpec 0.96 . bePropagation)
-    , Field 5 0 "pPropag1.0"    (r!!2) "1.0"    $ IDeltaT (percSpec 1.0  . bePropagation)
+    , Field 5 0 "pPropag1.0"    (r!!2) "1.0"    $ IDeltaT (snd . cdfRange . bePropagation)
     , Field 5 0 "errors"        "all"  "errs"   $ IInt    (length . beErrors)
     , Field 3 0 "missAdopt"     (m!!0) "ado"    $ IInt    (count (bpeIsMissing Adopt) . beErrors)
     , Field 3 0 "missAnnou"     (m!!1) "ann"    $ IInt    (count (bpeIsMissing Announce) . beErrors)
@@ -423,7 +430,7 @@ instance RenderTimeline BlockEvents where
 
 mtFieldsReport :: Field DSelect p a -> Bool
 mtFieldsReport Field{fId} = elem fId
-  [ "CPU", "GC", "MUT", "RSS", "Heap", "Live", "Alloc" ]
+  [ "cpuProcess", "cpuGC", "cpuMutator", "cpuSpanLenAll", "memRSS", "rtsHeap", "rtsLive", "rtsAllocation" ]
 
 instance RenderCDFs MachPerf p where
   rdFields =

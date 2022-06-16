@@ -8,8 +8,8 @@
 {-# LANGUAGE ViewPatterns #-}
 module Cardano.Unlog.Render (module Cardano.Unlog.Render) where
 
-import Prelude                  (head, id, last, tail)
-import Cardano.Prelude          hiding (head)
+import Prelude                  (head, id, last, tail, show)
+import Cardano.Prelude          hiding (head, show)
 
 import Data.List                (dropWhileEnd)
 import Data.Text                qualified as T
@@ -101,18 +101,22 @@ renderTimeline run flt withCommentary xs =
    renderLine' lpfn wfn rfn = renderField lpfn wfn rfn <$> fields
    renderField lpfn wfn rfn f = T.replicate (lpfn f) " " <> T.center (wfn f) ' ' (rfn f)
 
-renderFields :: a p -> (forall v. Divisible v => CDF p v -> [v]) -> Field DSelect p a -> [Text]
-renderFields x cdfProj =
+renderFieldCentiles :: a p -> (forall v. Divisible v => CDF p v -> [[v]]) -> Field DSelect p a -> [[Text]]
+renderFieldCentiles x cdfProj =
   \Field{..} ->
-    T.pack <$> case fSelect of
-      DInt    (cdfProj . ($x) ->ds) ->               printf "%*d" fWidth          <$> ds
-      DWord64 (cdfProj . ($x) ->ds) ->               printf "%*d" fWidth          <$> ds
-      DFloat  (cdfProj . ($x) ->ds) -> take fWidth . printf "%*F" (fWidth - 2)    <$> ds
-      DDeltaT (cdfProj . ($x) ->ds) -> take fWidth . dropWhileEnd (== 's') . show <$> ds
+    fmap T.pack <$> case fSelect of
+      DInt    (cdfProj . ($x) ->ds) -> ds <&> fmap (printf "%d")
+      DWord64 (cdfProj . ($x) ->ds) -> ds <&> fmap (printf "%d")
+      DFloat  (cdfProj . ($x) ->ds) -> ds <&> fmap (take fWidth . printf "%F")
+      DDeltaT (cdfProj . ($x) ->ds) -> ds <&> fmap (take fWidth . dropWhileEnd (== 's') . show)
 
 mapRenderCDF :: forall p a. (RenderCDFs a p, KnownCDF p) => (Field DSelect p a -> Bool) -> Maybe [Centile] -> a p -> [[Text]]
 mapRenderCDF select mCentis x =
-  fields <&> (renderFields x $ index)
+  fields                          -- list of fields
+  <&> renderFieldCentiles x index -- for each field, list of per-sample lists of properties
+  & transpose                     -- for each sample, list of per-field lists of properties
+  & fmap (mapHead $ take 1)       -- drop all extra properties of the centile field
+  & fmap (fmap $ T.intercalate " ")
  where
    -- Pick relevant fields:
    fields :: [Field DSelect p a]
@@ -122,11 +126,12 @@ mapRenderCDF select mCentis x =
    subset :: CDF p b -> CDF p b
    subset = maybe id subsetCDF mCentis
 
-   -- Get relevant values
-   index :: Divisible c => CDF p c -> [c]
-   index = fmap (unliftCDFVal cdfIx . snd) . cdfSamples . subset
+   -- Get relevant values: for each selected sample, a list of properties (avg, min, max, avg-/+stddev)
+   index :: Divisible c => CDF p c -> [[c]]
+   index = fmap (unliftCDFValExtra cdfIx . snd) . cdfSamples . subset
 
    -- The leftmost index "CDF":  just list the centiles
+   centiField :: Field DSelect p a
    centiField = Field 6 0 "centi" "" "centi" (DFloat $ const centiCDF)
    centiCDF   = mapSomeFieldDirectCDF (cdfCentilesCDF . subset) x (fSelect $ head rdFields)
 
@@ -135,7 +140,7 @@ renderCDFsAsText a select x =
   filter select rdFields <&>
   \Field{fId=cdfField} ->
     (,) cdfField $
-    renderAnchor a :
+    "# " <> renderAnchor a :
     (mapRenderCDF ((== cdfField) . fId) Nothing x
      & fmap (T.intercalate " "))
 

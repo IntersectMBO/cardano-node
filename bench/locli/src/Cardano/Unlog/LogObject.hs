@@ -10,7 +10,7 @@
 
 module Cardano.Unlog.LogObject (module Cardano.Unlog.LogObject) where
 
-import Prelude (error, head, id, show)
+import Prelude (head, id, show)
 import Cardano.Prelude hiding (Text, head, show)
 
 import Control.Monad (fail)
@@ -273,8 +273,11 @@ instance FromJSON LogObject where
       <*> pure kind
       <*> v .: "host"
       <*> v .: "thread"
-      <*> case Map.lookup ns   (snd interpreters) <|>
-               Map.lookup kind (fst interpreters) of
+      <*> case Map.lookup  ns                                       (snd interpreters) <|>
+               Map.lookup (ns
+                           & Text.stripPrefix "Cardano.Node."
+                           & fromMaybe "")                          (snd interpreters) <|>
+               Map.lookup  kind                                     (fst interpreters) of
             Just interp -> interp unwrapped
             Nothing -> pure $ LOAny unwrapped
    where

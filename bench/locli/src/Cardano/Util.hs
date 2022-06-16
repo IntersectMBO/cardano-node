@@ -10,7 +10,7 @@ module Cardano.Util
   )
 where
 
-import Prelude                          (String)
+import Prelude                          (String, error)
 import Cardano.Prelude
 
 import Control.Arrow                    ((&&&), (***))
@@ -70,6 +70,10 @@ mapAndUnzip f (x:xs)
         (rs1, rs2) = mapAndUnzip f xs
     in
     (r1:rs1, r2:rs2)
+
+mapHead :: (a -> a) -> [a] -> [a]
+mapHead f (x:xs) = f x:xs
+mapHead _ [] = error "mapHead: partial"
 
 redistribute :: (a, (b, c)) -> ((a, b), (a, c))
 redistribute    (a, (b, c))  = ((a, b), (a, c))

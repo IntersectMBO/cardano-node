@@ -5,7 +5,7 @@
 {- HLINT ignore "Use head" -}
 {- HLINT ignore "Avoid lambda" -}
 module Cardano.Analysis.BlockProp
-  ( summariseBlockProps
+  ( summariseMultiBlockProp
   , MachView
   , buildMachViews
   , rebuildChain
@@ -54,9 +54,9 @@ import Cardano.Unlog.Resources
 import Cardano.Util
 
 
-summariseBlockProps :: [Centile] -> [BlockPropOne] -> Either CDFError BlockProps
-summariseBlockProps _ [] = error "Asked to summarise empty list of BlockPropOne"
-summariseBlockProps centiles bs@(headline:_) = do
+summariseMultiBlockProp :: [Centile] -> [BlockPropOne] -> Either CDFError MultiBlockProp
+summariseMultiBlockProp _ [] = error "Asked to summarise empty list of BlockPropOne"
+summariseMultiBlockProp centiles bs@(headline:_) = do
   bpForgerChecks           <- cdf2OfCDFs comb $ bs <&> bpForgerChecks
   bpForgerLeads            <- cdf2OfCDFs comb $ bs <&> bpForgerLeads
   bpForgerForges           <- cdf2OfCDFs comb $ bs <&> bpForgerForges

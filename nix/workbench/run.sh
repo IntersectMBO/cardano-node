@@ -52,6 +52,9 @@ do case "$1" in
 local op=${1:-list}; test $# -gt 0 && shift
 
 case "$op" in
+    get-rundir )
+        echo $global_rundir;;
+
     list | ls )
         test -d "$global_rundir" &&
             (cd "$global_rundir"

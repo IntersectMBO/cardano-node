@@ -10,6 +10,8 @@ import Data.Aeson qualified as Aeson
 import Data.Aeson (FromJSON(..), Object, ToJSON(..), withObject, (.:), (.:?))
 import Data.ByteString.Lazy.Char8 qualified as LBS
 import Data.Text qualified as T
+import Data.Time.Clock
+import Data.Time.Clock.POSIX
 
 import Cardano.Analysis.ChainFilter
 import Cardano.Analysis.Context
@@ -20,16 +22,17 @@ import Cardano.Util
 -- | Explain the poor human a little bit of what was going on:
 data Anchor
   = Anchor
-  { aRuns    :: ![Text]
-  , aFilters :: ![FilterName]
-  , aVersion :: !Version
+  { aRuns    :: [Text]
+  , aFilters :: [FilterName]
+  , aVersion :: Version
+  , aWhen    :: UTCTime
   }
 
-runAnchor :: Run -> [FilterName] -> Anchor
+runAnchor :: Run -> UTCTime -> [FilterName] -> Anchor
 runAnchor Run{..} = tagsAnchor [tag metadata]
 
-tagsAnchor :: [Text] -> [FilterName] -> Anchor
-tagsAnchor aRuns aFilters =
+tagsAnchor :: [Text] -> UTCTime -> [FilterName] -> Anchor
+tagsAnchor aRuns aWhen aFilters =
   Anchor { aVersion = getVersion, .. }
 
 renderAnchor :: Anchor -> Text
@@ -40,6 +43,8 @@ renderAnchor Anchor{..} = mconcat
                    xs -> T.intercalate ", " (unFilterName <$> xs)
   , ", "
   , renderProgramAndVersion aVersion
+  , ", analysed at "
+  , show (posixSecondsToUTCTime . utcTimeToPOSIXSeconds $ aWhen) -- Round to seconds.
   ]
 
 data AnalysisCmdError

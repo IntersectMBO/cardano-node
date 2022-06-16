@@ -61,18 +61,18 @@ with_color() {
 }
 
 colorise_colors=(
-    red green yellow blue cyan white reset red green yellow blue cyan white reset
-    red green yellow blue cyan white reset red green yellow blue cyan white reset
-    red green yellow blue cyan white reset red green yellow blue cyan white reset
-    red green yellow blue cyan white reset red green yellow blue cyan white reset
-    red green yellow blue cyan white reset red green yellow blue cyan white reset
-    red green yellow blue cyan white reset red green yellow blue cyan white reset
-    red green yellow blue cyan white reset red green yellow blue cyan white reset
-    red green yellow blue cyan white reset red green yellow blue cyan white reset
-    red green yellow blue cyan white reset red green yellow blue cyan white reset
-    red green yellow blue cyan white reset red green yellow blue cyan white reset
-    red green yellow blue cyan white reset red green yellow blue cyan white reset
-    red green yellow blue cyan white reset red green yellow blue cyan white reset
+    red green yellow blue cyan white red green yellow blue cyan white
+    red green yellow blue cyan white red green yellow blue cyan white
+    red green yellow blue cyan white red green yellow blue cyan white
+    red green yellow blue cyan white red green yellow blue cyan white
+    red green yellow blue cyan white red green yellow blue cyan white
+    red green yellow blue cyan white red green yellow blue cyan white
+    red green yellow blue cyan white red green yellow blue cyan white
+    red green yellow blue cyan white red green yellow blue cyan white
+    red green yellow blue cyan white red green yellow blue cyan white
+    red green yellow blue cyan white red green yellow blue cyan white
+    red green yellow blue cyan white red green yellow blue cyan white
+    red green yellow blue cyan white red green yellow blue cyan white
 )
 colorise() {
     for ((i=0; $#!=0; i++))
