@@ -34,7 +34,8 @@ case "$op" in
     fixed )
         backend start                "$dir"
 
-        scenario_setup_termination   "$dir"
+        scenario_setup_exit_trap     "$dir"
+        scenario_setup_workload_termination   "$dir"
         backend start-nodes          "$dir"
         backend wait-pools-stopped   "$dir"
         scenario_cleanup_termination
@@ -45,10 +46,11 @@ case "$op" in
     fixed-loaded )
         backend start                "$dir"
 
+        scenario_setup_exit_trap     "$dir"
         backend start-nodes          "$dir"
         backend start-generator      "$dir"
 
-        scenario_setup_termination   "$dir"
+        scenario_setup_workload_termination   "$dir"
         backend wait-pools-stopped   "$dir"
         scenario_cleanup_termination
 
@@ -124,10 +126,8 @@ scenario_watcher() {
     progress "scenario" "now:  $(yellow $(date))"
 }
 
-scenario_setup_termination() {
+scenario_setup_workload_termination() {
     local run_dir=$1
-
-    scenario_setup_exit_trap $run_dir
 
     export __scenario_watcher_self=$BASHPID
     local termination_tolerance_s=40

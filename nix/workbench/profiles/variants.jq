@@ -76,8 +76,11 @@ def all_profile_variants:
   |
     ($current_block_size *
      $current_plutus *
-     $current_dataset
-    ) as $dataset_status_quo
+     { genesis:
+       { utxo:                              0
+       , delegators:                        0
+       }
+     }) as $dataset_empty
   |
     ($current_block_size *
      $current_plutus *
@@ -86,6 +89,11 @@ def all_profile_variants:
        , delegators:                        (0.1 * $M)
        }
      }) as $dataset_miniature
+  |
+    ($current_block_size *
+     $current_plutus *
+     $current_dataset
+    ) as $dataset_status_quo
   |
     { genesis:
       { utxo:                               (30 * $M)
@@ -202,20 +210,24 @@ def all_profile_variants:
      .generator.epochs                = 4
     ) as $for_4ep
   |
-    ({} |
-     .node.shutdown_on_block_synced   = 1
+    ({}
+     | .node.shutdown_on_block_synced   = 1
+     | .analysis.filters                = []
     ) as $for_1blk
   |
-    ({} |
-     .node.shutdown_on_block_synced   = 3
+    ({}
+     | .node.shutdown_on_block_synced   = 3
+     | .analysis.filters                = []
     ) as $for_3blk
   |
-    ({} |
-     .node.shutdown_on_block_synced   = 15
+    ({}
+     | .node.shutdown_on_block_synced   = 15
+     | .analysis.filters                = []
     ) as $for_15blk
   |
-    ({} |
-     .node.shutdown_on_block_synced   = 30
+    ({}
+     | .node.shutdown_on_block_synced   = 30
+     | .analysis.filters                = []
     ) as $for_30blk
   |
   ##
@@ -275,7 +287,7 @@ def all_profile_variants:
   ##
   ### Definition vocabulary:  base variant
   ##
-   ($scenario_fixed_loaded * $doublet * $dataset_miniature * $for_1blk *
+   ($scenario_fixed_loaded * $doublet * $dataset_empty * $for_1blk *
     { desc: "Stop as soon as we've seen a single block"
     }) as $startstop_base
   |
