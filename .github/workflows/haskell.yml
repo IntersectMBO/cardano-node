@@ -227,6 +227,9 @@ jobs:
         echo "LMDB_PATH=$LMDB_PATH"
         echo "$LMDB_PATH" >> $GITHUB_PATH
 
+        echo "# Find files"
+        find "$RUNNER_TEMP/lib/vcpkg/packages/lmdb_x64-mingw-dynamic"
+
         echo "# pkg-config lmdb"
         pkg-config lmdb --cflags --libs
 
