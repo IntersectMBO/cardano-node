@@ -394,22 +394,16 @@ runTxBuildRaw (AnyCardanoEra era)
               metadataFiles mpparams mUpdatePropFile
               outputFormat
               (TxBodyFile fpath) = do
-    let referenceInputsWithWits = [ (input, wit)
-                                  | (_, wit@(Just (PlutusReferenceScriptWitnessFiles input _ _ _ _ _)))
-                                       <- inputsAndScripts
-                                  ] ++
-                                  [(input, wit)
-                                  | (_, wit@(Just (SimpleReferenceScriptWitnessFiles input _ _)))
-                                       <- inputsAndScripts
-                                  ]
+
+    allReferenceInputs
+      <- getAllReferenceInputs era inputsAndScripts mValue certFiles withdrawals readOnlyRefIns
 
     txBodyContent <-
       TxBodyContent
         <$> validateTxIns  era inputsAndScripts
         <*> validateTxInsCollateral
                            era inputsCollateral
-        <*> validateTxInsReference
-                           era referenceInputsWithWits withdrawals certFiles mValue readOnlyRefIns
+        <*> validateTxInsReference era allReferenceInputs
         <*> validateTxOuts era txouts
         <*> validateTxTotalCollateral era mTotCollateral
         <*> validateTxReturnCollateral era mReturnCollateral
@@ -488,27 +482,8 @@ runTxBuild (AnyCardanoEra era) (AnyConsensusModeParams cModeParams) networkId mS
       consensusMode = consensusModeOnly cModeParams
       dummyFee = Just $ Lovelace 0
       inputsThatRequireWitnessing = [input | (input,_) <- txins]
-      referenceInputs = map fst referenceInputsWithWits ++ readOnlyRefIns ++ mintingRefInputs
-      mintingRefInputs = case mValue of
-                           Nothing -> []
-                           Just (_, wits) ->
-                            [ input
-                            | (PlutusReferenceScriptWitnessFiles input _ _ _ _ _)
-                                <- wits
-                            ] ++
-                            [input
-                            | SimpleReferenceScriptWitnessFiles input _ _
-                                 <- wits
-                            ]
 
-      referenceInputsWithWits = [ (input, wit)
-                                | (_, wit@(Just (PlutusReferenceScriptWitnessFiles input _ _ _ _ _)))
-                                    <- txins
-                                ] ++
-                                [(input, wit)
-                                | (_, wit@(Just (SimpleReferenceScriptWitnessFiles input _ _)))
-                                     <- txins
-                                ]
+  allReferenceInputs <- getAllReferenceInputs era txins mValue certFiles withdrawals readOnlyRefIns
 
   case (consensusMode, cardanoEraStyle era) of
     (CardanoMode, ShelleyBasedEra sbe) -> do
@@ -516,8 +491,7 @@ runTxBuild (AnyCardanoEra era) (AnyConsensusModeParams cModeParams) networkId mS
         TxBodyContent
           <$> validateTxIns               era txins
           <*> validateTxInsCollateral     era txinsc
-          <*> validateTxInsReference
-                era referenceInputsWithWits withdrawals certFiles mValue readOnlyRefIns
+          <*> validateTxInsReference      era allReferenceInputs
           <*> validateTxOuts              era txouts
           <*> validateTxTotalCollateral   era mtotcoll
           <*> validateTxReturnCollateral  era mReturnCollateral
@@ -553,7 +527,7 @@ runTxBuild (AnyCardanoEra era) (AnyConsensusModeParams cModeParams) networkId mS
 
             utxo <- firstExceptT ShelleyTxCmdTxSubmitErrorEraMismatch . newExceptT . queryExpr
               $ QueryInEra eInMode $ QueryInShelleyBasedEra sbe
-              $ QueryUTxO (QueryUTxOByTxIn (Set.fromList $ inputsThatRequireWitnessing ++ referenceInputs))
+              $ QueryUTxO (QueryUTxOByTxIn (Set.fromList $ inputsThatRequireWitnessing ++ allReferenceInputs))
 
             txinsExist inputsThatRequireWitnessing utxo
 
@@ -702,41 +676,42 @@ validateTxInsCollateral era txins =
 
 validateTxInsReference
   :: forall era. CardanoEra era
-  -> [(TxIn, Maybe (ScriptWitnessFiles WitCtxTxIn))]
-  -- ^ We are only interested in inputs witnessed by reference inputs.
-  -> [(StakeAddress, Lovelace, Maybe (ScriptWitnessFiles WitCtxStake))]
-  -- ^ We are only interested in withdrawals witnessed by reference inputs.
-  -> [(CertificateFile, Maybe (ScriptWitnessFiles WitCtxStake))]
-  -- ^ We are only interested in certificates witnessed by reference inputs.
-  -> Maybe (Value, [ScriptWitnessFiles WitCtxMint])
-  -- ^ We are only interested in the minting values witnessed by reference inputs.
-  -> [TxIn] -- ^ Read only reference inputs
+  -> [TxIn]
   -> ExceptT ShelleyTxCmdError IO (TxInsReference BuildTx era)
-validateTxInsReference _ [] [] [] Nothing [] = return TxInsReferenceNone
-validateTxInsReference era txins withdrawals certFiles mMintWitnesses readOnlyRefIns =
+validateTxInsReference _ []  = return TxInsReferenceNone
+validateTxInsReference era allRefIns =
   case refInsScriptsAndInlineDatsSupportedInEra era of
     Nothing -> txFeatureMismatch era TxFeatureReferenceInputs
-    Just supp -> do
-      txinsWitByRefInputs <- mapM (getWitnessingReferenceInput . snd) txins
+    Just supp -> return $ TxInsReference supp allRefIns
 
-      withdrawalsWitByRefInputs
-        <- mapM (\(_, _, mSwit) -> getWitnessingReferenceInput mSwit) withdrawals
 
-      certsWitByRefInputs <- mapM (getWitnessingReferenceInput . snd) certFiles
+getAllReferenceInputs
+ :: CardanoEra era
+ -> [(TxIn, Maybe (ScriptWitnessFiles WitCtxTxIn))]
+ -> Maybe (Value, [ScriptWitnessFiles WitCtxMint ])
+ -> [(CertificateFile , Maybe (ScriptWitnessFiles WitCtxStake ))]
+ -> [(StakeAddress, Lovelace, Maybe (ScriptWitnessFiles WitCtxStake ))]
+ -> [TxIn]
+ -> ExceptT ShelleyTxCmdError IO [TxIn]
+getAllReferenceInputs era txins mValue certFiles withdrawals readOnlyRefIns = do
+  txinsWitByRefInputs <- mapM (getWitnessingReferenceInput . snd) txins
+  mintingRefInputs <-
+    case mValue of
+      Nothing -> return []
+      Just (_, mintWitnesses) ->
+       mapM (getWitnessingReferenceInput . Just) mintWitnesses
 
-      valuesWitByRefInputs
-        <- case mMintWitnesses of
-             Nothing -> return []
-             Just (_, mintWitnesses) ->
-               mapM (getWitnessingReferenceInput . Just) mintWitnesses
+  certsWitByRefInputs <- mapM (getWitnessingReferenceInput . snd) certFiles
 
-      return . TxInsReference supp
-             . catMaybes $ concat [ txinsWitByRefInputs
-                                  , withdrawalsWitByRefInputs
-                                  , certsWitByRefInputs
-                                  , valuesWitByRefInputs
-                                  , map Just readOnlyRefIns
-                                  ]
+  withdrawalsWitByRefInputs
+    <- mapM (\(_, _, mSwit) -> getWitnessingReferenceInput mSwit) withdrawals
+
+  return . catMaybes $ concat [ txinsWitByRefInputs
+                     , mintingRefInputs
+                     , certsWitByRefInputs
+                     , withdrawalsWitByRefInputs
+                     , map Just readOnlyRefIns
+                     ]
  where
   getWitnessingReferenceInput
     :: Maybe (ScriptWitnessFiles witctx)
