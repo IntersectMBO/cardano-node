@@ -202,6 +202,13 @@ jobs:
         echo "PKG_CONFIG_PATH=$PKG_CONFIG_PATH"
         echo "PKG_CONFIG_PATH=$PKG_CONFIG_PATH" >> $GITHUB_ENV
 
+        ( cd $RUNNER_TEMP/lib/vcpkg/packages/openssl_x64-mingw-dynamic/lib/pkgconfig
+          for x in *.pc; do
+            echo "# $x"
+            cat $x
+          done
+        )
+
         # Not sure why this the pc file points to a lib64 instead of lib where the files are.
         (cd "$RUNNER_TEMP/lib/vcpkg/packages/openssl_x64-mingw-dynamic"; ln -s lib lib64)
 
