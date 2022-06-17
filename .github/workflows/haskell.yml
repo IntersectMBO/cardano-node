@@ -84,23 +84,6 @@ jobs:
         echo "# pkg-config libsodium"
         pkg-config libsodium --cflags --libs
 
-    - name: Install lmdb (Windows)
-      if: matrix.os == 'windows-latest'
-      env:
-        RUNNER_TEMP: ${{ runner.temp }}
-      run: |
-        echo "RUNNER_TEMP=$RUNNER_TEMP"
-        cd "$RUNNER_TEMP"
-        RUNNER_TEMP_FWD="$(echo "$RUNNER_TEMP" | sed 's|\\|/|g')"
-        curl -Ls \
-          --connect-timeout 5 \
-          --max-time 10 \
-          --retry 5 \
-          --retry-delay 0 \
-          --retry-max-time 40 \
-          https://mirror.msys2.org/mingw/mingw64/mingw-w64-x86_64-lmdb-0.9.29-1-any.pkg.tar.zst -o lmdb-0.9.29.pkg.tar.zst
-        tar xvf lmdb-0.9.29.pkg.tar.zst
-
     - name: Install libsodium (MacOS)
       if: matrix.os == 'macos-latest'
       run: |
@@ -228,6 +211,24 @@ jobs:
 
         echo "# pkg-config openssl"
         pkg-config openssl --cflags --libs
+
+    - name: Install lmdb (Windows)
+      if: matrix.os == 'windows-latest'
+      run: |
+        vcpkg --triplet x64-mingw-dynamic install lmdb
+        export PKG_CONFIG_PATH="$PKG_CONFIG_PATH;$(readlink -f "$RUNNER_TEMP/lib/vcpkg/packages/lmdb_x64-mingw-dynamic/lib/pkgconfig" | sed 's|^/c|D:|g' | tr / '\\')"
+        echo "PKG_CONFIG_PATH=$PKG_CONFIG_PATH"
+        echo "PKG_CONFIG_PATH=$PKG_CONFIG_PATH" >> $GITHUB_ENV
+
+        # Not sure why this the pc file points to a lib64 instead of lib where the files are.
+        (cd "$RUNNER_TEMP/lib/vcpkg/packages/lmdb_x64-mingw-dynamic"; ln -s lib lib64)
+
+        export LMDB_PATH="$RUNNER_TEMP/lib/vcpkg/packages/lmdb_x64-mingw-dynamic/bin"
+        echo "LMDB_PATH=$LMDB_PATH"
+        echo "$LMDB_PATH" >> $GITHUB_PATH
+
+        echo "# pkg-config lmdb"
+        pkg-config lmdb --cflags --libs
 
     - name: Path
       run:  echo "$PATH"
