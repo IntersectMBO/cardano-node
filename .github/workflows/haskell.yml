@@ -310,13 +310,13 @@ jobs:
     - name: Run tests
       run: |
         if [ "${{github.event.inputs.tests}}" == "all" ]; then
-          TMPDIR="${{ runner.temp }}" TMP="${{ runner.temp }}" KEEP_WORKSPACE=1 cabal test all --test-show-details=direct
+          TMPDIR="${{ runner.temp }}" TMP="${{ runner.temp }}" KEEP_WORKSPACE=1 cabal test all --test-show-details=direct -v3
         fi
 
     - name: "Run tests"
       run: |
         if [ "${{github.event.inputs.tests}}" != "all" ]; then
-          TMPDIR="${{ runner.temp }}" TMP="${{ runner.temp }}" KEEP_WORKSPACE=1 cabal test --test-show-details=direct \
+          TMPDIR="${{ runner.temp }}" TMP="${{ runner.temp }}" KEEP_WORKSPACE=1 cabal test --test-show-details=direct -v3 \
             cardano-testnet \
             cardano-api \
             cardano-node \
