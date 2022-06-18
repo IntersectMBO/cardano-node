@@ -71,6 +71,7 @@ cardano-cli transaction build \
   --testnet-magic "$TESTNET_MAGIC" \
   --change-address "$utxoaddr" \
   --tx-in "$txin" \
+  --tx-out "$scriptpaymentaddrwithstakecred+999978" \
   --tx-out "$dummyaddress+$lovelaceattxindiv3" \
   --tx-out-reference-script-file "$certifyingscript" \
   --protocol-params-file "$WORK/pparams.json" \
@@ -114,7 +115,6 @@ cardano-cli transaction build \
   --testnet-magic "$TESTNET_MAGIC" \
   --change-address "$utxoaddr" \
   --tx-in "$txin2" \
-  --tx-out "$scriptpaymentaddrwithstakecred+999978" \
   --tx-out "$utxoaddr+$lovelaceattxin2div3" \
   --witness-override 3 \
   --certificate-file "$WORK/script.regcert" \
