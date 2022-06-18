@@ -77,6 +77,7 @@ cardano-cli transaction build \
   --change-address "$utxoaddr" \
   --tx-in "$txin" \
   --tx-out "$readonlyaddress+$lovelaceattxindiv6" \
+  --tx-out-reference-script-file "$plutusstakescript" \
   --tx-out-inline-datum-file "$datumfilepath" \
   --tx-out "$utxoaddr+$lovelace" \
   --tx-out "$plutusspendingscriptaddr+$lovelace" \

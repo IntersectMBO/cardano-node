@@ -21,6 +21,7 @@ ls -al "$CARDANO_NODE_SOCKET_PATH"
 
 plutusspendingscript="$BASE/scripts/plutus/scripts/v2/required-redeemer.plutus"
 plutusmintingscript="$BASE/scripts/plutus/scripts/v2/minting-script.plutus"
+plutusstakescript="scripts/plutus/scripts/v2/stake-script.plutus"
 mintpolicyid=$(cardano-cli transaction policyid --script-file $plutusmintingscript)
 ## This datum hash is the hash of the untyped 42
 scriptdatumhash="9e1199a988ba72ffd6e9c269cadb3b53b5f360ff99f112d9b2ee30c4d74ad88b"
@@ -65,6 +66,7 @@ $CARDANO_CLI transaction build \
   --change-address "$utxoaddr" \
   --tx-in "$txin" \
   --tx-out "$readonlyaddress+$lovelaceattxindiv6" \
+  --tx-out-reference-script-file "$plutusstakescript" \
   --tx-out-inline-datum-file "$datumfilepath" \
   --tx-out "$utxoaddr+$lovelaceattxindiv6" \
   --tx-out "$plutusspendingscriptaddr+$lovelaceattxindiv6" \
@@ -161,7 +163,7 @@ $CARDANO_CLI transaction build \
   --cardano-mode \
   --testnet-magic "$TESTNET_MAGIC" \
   --change-address "$utxoaddr" \
-  --read-only-tx-in-reference "$readonlyrefinput" \
+  --read-only-tx-in-reference  "$readonlyrefinput" \
   --tx-in "$txin1" \
   --tx-in-collateral "$txinCollateral" \
   --out-file "$WORK/test-alonzo-ref-script.body" \
