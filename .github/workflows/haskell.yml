@@ -262,6 +262,9 @@ jobs:
         cp -r "$RUNNER_TEMP/lib/vcpkg/packages/lmdb_x64-mingw-dynamic/bin" "D:/a/_temp/mingw64/bin"
         cp -r "$RUNNER_TEMP/lib/vcpkg/packages/lmdb_x64-mingw-dynamic/lib" "D:/a/_temp/mingw64/lib"
 
+        # D:/a/_temp/mingw64 files
+        find D:/a/_temp/mingw64
+
     - name: Path
       run:  echo "$PATH"
 
