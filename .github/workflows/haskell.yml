@@ -223,6 +223,23 @@ jobs:
       if: matrix.os == 'windows-latest'
       run: |
         vcpkg --triplet x64-mingw-dynamic install lmdb
+
+        mkdir -p "$RUNNER_TEMP/lib/vcpkg/packages/lmdb_x64-mingw-dynamic/lib/pkgconfig"
+        cat > "$RUNNER_TEMP/lib/vcpkg/packages/lmdb_x64-mingw-dynamic/lib/pkgconfig/lmdb.pc" <<EOF
+        prefix=\${pcfiledir}/../..
+        exec_prefix=\${prefix}
+        libdir=\${exec_prefix}/lib64
+        includedir=\${prefix}/include
+        Name: liblmdb
+        Description: Lightning Memory-Mapped Database Manager
+        Version: 3.0.3
+        Libs: -L"\${libdir}" -llmdb
+        Cflags: -I"\${includedir}"
+        EOF
+
+        echo "# $RUNNER_TEMP/lib/vcpkg/packages/lmdb_x64-mingw-dynamic/lib/pkgconfig/lmdb.pc"
+        cat "$RUNNER_TEMP/lib/vcpkg/packages/lmdb_x64-mingw-dynamic/lib/pkgconfig/lmdb.pc"
+
         export PKG_CONFIG_PATH="$PKG_CONFIG_PATH;$(readlink -f "$RUNNER_TEMP/lib/vcpkg/packages/lmdb_x64-mingw-dynamic/lib/pkgconfig" | sed 's|^/c|D:|g' | tr / '\\')"
         echo "PKG_CONFIG_PATH=$PKG_CONFIG_PATH"
         echo "PKG_CONFIG_PATH=$PKG_CONFIG_PATH" >> $GITHUB_ENV
