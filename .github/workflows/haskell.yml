@@ -225,12 +225,12 @@ jobs:
         vcpkg --triplet x64-mingw-dynamic install lmdb
 
         mkdir -p "$RUNNER_TEMP/lib/vcpkg/packages/lmdb_x64-mingw-dynamic/lib/pkgconfig"
-        cat > "$RUNNER_TEMP/lib/vcpkg/packages/lmdb_x64-mingw-dynamic/lib/pkgconfig/liblmdb.pc" <<EOF
+        cat > "$RUNNER_TEMP/lib/vcpkg/packages/lmdb_x64-mingw-dynamic/lib/pkgconfig/lmdb.pc" <<EOF
         prefix=\${pcfiledir}/../..
         exec_prefix=\${prefix}
         libdir=\${exec_prefix}/lib64
         includedir=\${prefix}/include
-        Name: liblmdb
+        Name: lmdb
         Description: Lightning Memory-Mapped Database Manager
         Version: 3.0.3
         Libs: -L"\${libdir}" -llmdb

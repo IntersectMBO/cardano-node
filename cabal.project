@@ -330,7 +330,7 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/haskell-works/haskell-lmdb
-  tag: bcfbfd25823e56f837a1057b82d57e068702e97e
+  tag: fed87a7157d771ca62581ec249feddfd9672fef8
   --sha256: 173dbqpn9czyjib6lnqa8f7ai66n3r4k44h5hvyl321ljychn5fm
 
 source-repository-package
