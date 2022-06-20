@@ -9,8 +9,10 @@
 {-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 
 module Cardano.CLI.Shelley.Run.Transaction
-  ( ShelleyTxCmdError
+  ( ShelleyTxCmdError(..)
   , renderShelleyTxCmdError
+  , readFileInAnyCardanoEra
+  , readFileTx
   , runTransactionCmd
   ) where
 

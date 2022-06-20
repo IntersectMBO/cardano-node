@@ -11,6 +11,7 @@ module Cardano.CLI.Byron.Parsers
   , parseMaxProposalSize
   , parseMpcThd
   , parseScriptVersion
+  , parseSigningKeyFile
   , parseSlotDuration
   , parseSoftforkRule
   , parseSystemTag
