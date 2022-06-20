@@ -225,7 +225,7 @@ jobs:
         vcpkg --triplet x64-mingw-dynamic install lmdb
 
         mkdir -p "$RUNNER_TEMP/lib/vcpkg/packages/lmdb_x64-mingw-dynamic/lib/pkgconfig"
-        cat > "$RUNNER_TEMP/lib/vcpkg/packages/lmdb_x64-mingw-dynamic/lib/pkgconfig/lmdb.pc" <<EOF
+        cat > "$RUNNER_TEMP/lib/vcpkg/packages/lmdb_x64-mingw-dynamic/lib/pkgconfig/liblmdb.pc" <<EOF
         prefix=\${pcfiledir}/../..
         exec_prefix=\${prefix}
         libdir=\${exec_prefix}/lib64
@@ -311,18 +311,6 @@ jobs:
 
         echo "# cabal.project.local"
         cat cabal.project.local
-
-
-    - name: Extra dirs (Windows)
-      if: matrix.os == 'windows-latest'
-      run: |
-        cat >> cabal.project.local <<EOF
-        package lmdb
-          extra-include-dirs: D:\a\_temp\mingw64\include
-          extra-lib-dirs:     D:\a\_temp\mingw64\lib
-                              D:\a\_temp\mingw64\bin
-        EOF
-        cat ./cabal.project.local
 
     - name: Record dependencies
       run: |
