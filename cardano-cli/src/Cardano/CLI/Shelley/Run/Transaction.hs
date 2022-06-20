@@ -5,6 +5,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 {-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 
@@ -12,10 +13,13 @@ module Cardano.CLI.Shelley.Run.Transaction
   ( ShelleyTxCmdError
   , renderShelleyTxCmdError
   , runTransactionCmd
+  , translateBody
+  , determineEra
   ) where
 
 import           Cardano.Prelude hiding (All, Any)
 import           Prelude (String, error)
+import qualified GHC.Show as GHC
 
 import qualified Data.Aeson as Aeson
 import           Data.Aeson.Encode.Pretty (encodePretty)
@@ -36,10 +40,19 @@ import           Cardano.Api
 import           Cardano.Api.Byron hiding (SomeByronSigningKey (..))
 import           Cardano.Api.Shelley
 import           Ouroboros.Consensus.Shelley.Eras (StandardAllegra, StandardCrypto, StandardMary,
-                   StandardShelley)
+                   StandardShelley, StandardAlonzo, StandardBabbage)
 
 --TODO: do this nicely via the API too:
 import qualified Cardano.Binary as CBOR
+import Cardano.Binary
+  ( Annotator (..),
+    FromCBOR (fromCBOR),
+    FullByteString (Full),
+    ToCBOR (toCBOR),
+  )
+import qualified Cardano.Ledger.Core as Core  
+import Codec.CBOR.Read (deserialiseFromBytes)
+import Codec.CBOR.Write (toLazyByteString)  
 
 --TODO: following import needed for orphan Eq Script instance
 import           Cardano.Ledger.Shelley.Scripts ()
@@ -52,9 +65,12 @@ import           Cardano.CLI.Shelley.Parsers
 import           Cardano.CLI.Shelley.Run.Genesis (ShelleyGenesisCmdError (..),
                    readShelleyGenesisWithDefault)
 import           Cardano.CLI.Shelley.Run.Query (ShelleyQueryCmdLocalStateQueryError (..),
-                   renderLocalStateQueryError)
+                   renderLocalStateQueryError, determineEra)
 import           Cardano.CLI.Shelley.Script
 import           Cardano.CLI.Types
+
+
+
 import           Ouroboros.Consensus.Byron.Ledger (ByronBlock)
 import           Ouroboros.Consensus.Cardano.Block (EraMismatch (..))
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr)
@@ -498,8 +514,10 @@ runTxBuild (AnyCardanoEra era) (AnyConsensusModeParams cModeParams) networkId mS
                                 ]
       referenceInputs = map fst referenceInputsWithWits ++ readOnlyRefIns
 
+  AnyCardanoEra eraCli <- determineEra2 cModeParams localNodeConnInfo
+  let ShelleyBasedEra sbe = cardanoEraStyle eraCli
   case (consensusMode, cardanoEraStyle era) of
-    (CardanoMode, ShelleyBasedEra sbe) -> do
+    (CardanoMode, ShelleyBasedEra _sbe) -> do
       txBodyContent <-
         TxBodyContent
           <$> validateTxIns               era txins
@@ -521,7 +539,7 @@ runTxBuild (AnyCardanoEra era) (AnyConsensusModeParams cModeParams) networkId mS
           <*> validateTxMintValue         era mValue
           <*> validateTxScriptValidity    era mScriptValidity
 
-      eInMode <- case toEraInMode era CardanoMode of
+      eInMode <- case toEraInMode eraCli CardanoMode of
                    Just result -> return result
                    Nothing ->
                      left (ShelleyTxCmdEraConsensusModeMismatchTxBalance outputOptions
@@ -558,7 +576,7 @@ runTxBuild (AnyCardanoEra era) (AnyConsensusModeParams cModeParams) networkId mS
 
             return (utxo, pparams, eraHistory, systemStart, stakePools)
 
-      let cAddr = case anyAddressInEra era changeAddr of
+      let cAddr = case anyAddressInEra eraCli changeAddr of
                     Just addr -> addr
                     Nothing -> error $ "runTxBuild: Byron address used: " <> show changeAddr
 
@@ -566,7 +584,8 @@ runTxBuild (AnyCardanoEra era) (AnyConsensusModeParams cModeParams) networkId mS
         firstExceptT ShelleyTxCmdBalanceTxBody
           . hoistEither
           $ makeTransactionBodyAutoBalance eInMode systemStart eraHistory
-                                           pparams stakePools utxo txBodyContent
+                                           pparams stakePools utxo
+                                           (transTxBC era eraCli txBodyContent)
                                            cAddr mOverrideWits
 
       putStrLn $ "Estimated transaction fee: " <> (show fee :: String)
@@ -1938,3 +1957,73 @@ readFileTxMetadata _ (MetadataFileCBOR fp) = do
         validateTxMetadata txMetadata
         return txMetadata
 
+
+-- ===================================================================
+-- A GADT that witnesses the cardano-ledger uninhabited types that
+-- Are the Cardano.Ledger.Era instances (for StandardCrypto) we need
+-- exactly these types for the CBOR instances to work.
+
+data Proof era where
+  Shelley :: Proof StandardShelley
+  Mary :: Proof StandardMary
+  Allegra :: Proof StandardAllegra
+  Alonzo ::  Proof StandardAlonzo
+  Babbage :: Proof StandardBabbage
+
+instance GHC.Show (Proof era) where
+  show Shelley = "Shelley"
+  show Allegra = "Allegra"
+  show Mary = "Mary"
+  show Alonzo = "Alonzo"
+  show Babbage = "Babbage"        
+
+liftSource :: (ToCBOR a, FromCBOR (Annotator p)) => [Char] -> a -> p
+liftSource thing src = target
+  where bytes =  toLazyByteString (toCBOR src)
+        target = case deserialiseFromBytes fromCBOR bytes of
+                   Left failure -> error ("Roundtrip of "++thing++" fails."++GHC.show failure)
+                   Right(_,Annotator f) -> f (Full bytes)
+
+-- | lift a TxBody from an earlier Era, to a TxBody in a later Era.
+translateBody :: Proof source -> Proof target -> Core.TxBody source -> Core.TxBody target
+translateBody Babbage Babbage body = body
+translateBody Alonzo  Babbage body = liftSource "TxBody" body
+translateBody Mary    Babbage body = liftSource "TxBody" body
+translateBody Allegra Babbage body = liftSource "TxBody" body
+translateBody Shelley Babbage body = liftSource "TxBody" body
+
+translateBody Alonzo  Alonzo  body = body
+translateBody Mary    Alonzo  body = liftSource "TxBody" body
+translateBody Allegra Alonzo  body = liftSource "TxBody" body
+translateBody Shelley Alonzo  body = liftSource "TxBody" body
+
+translateBody Mary    Mary  body = body
+translateBody Allegra Mary  body = liftSource "TxBody" body
+translateBody Shelley Mary  body = liftSource "TxBody" body
+
+translateBody Allegra Allegra  body = body
+translateBody Shelley Allegra  body = liftSource "TxBody" body
+
+translateBody Shelley Shelley  body = body
+
+translateBody srcEra targetEra _ =
+  error ("Cannot lift a TxBody in Era "++GHC.show srcEra++" into the Era "++GHC.show targetEra)
+
+
+determineEra2
+  :: ConsensusModeParams mode
+  -> LocalNodeConnectInfo mode
+  -> ExceptT ShelleyTxCmdError IO AnyCardanoEra
+determineEra2 cModeParams localNodeConnInfo =
+  case consensusModeOnly cModeParams of
+    ByronMode -> return $ AnyCardanoEra ByronEra
+    ShelleyMode -> return $ AnyCardanoEra ShelleyEra
+    CardanoMode -> do
+      eraQ <- liftIO . queryNodeLocalState localNodeConnInfo Nothing
+                     $ QueryCurrentEra CardanoModeIsMultiEra
+      case eraQ of
+        Left acqFail -> left $ ShelleyTxCmdAcquireFailure acqFail
+        Right anyCarEra -> return anyCarEra
+
+transTxBC ::  CardanoEra src ->  CardanoEra target -> TxBodyContent a src -> txBodyContent b target
+transTxBC _ _ _ = undefined
