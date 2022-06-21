@@ -14,7 +14,7 @@ In the case where we are not using a reference input to reference another transa
 
 ### An example of using a Plutus V2 reference script
 
-Below is an example that shows how to use a reference Plutus spending script with an inline datum and a reference minting script. Here we discuss a [shell script example of how to use a reference script to spend a tx input and a reference minting script to mint tokens](scripts/plutus/example-babbage-script-usage.sh). This is a step-by-step process involving:
+Below is an example that shows how to use a reference Plutus spending script with an inline datum and a reference minting script. Here we discuss a [shell script example of how to use a reference script to spend a tx input and a reference minting script to mint tokens](../../../scripts/babbage/example-babbage-script-usage.sh). This is a step-by-step process involving:
 
 + the creation of the `Required Redeemer` Plutus txin script
 + the creation of the `Required Redeemer` Plutus script at a transaction output (creation of the reference script)
@@ -24,7 +24,7 @@ Below is an example that shows how to use a reference Plutus spending script wit
 + creating a read only reference tx output
 + the creation of the reference [minting script](scripts/plutus/scripts/v2) at a transaction output.
 
-In this example we will use the [Required Redeemer](scripts/plutus/scripts/v2/required-redeemer.plutus) Plutus spending script and a [minting script](scripts/plutus/scripts/v2). In order to execute a reference Plutus spending script, we require the following:
+In this example we will use the [Required Redeemer](../../../scripts/plutus/scripts/v2/required-redeemer.plutus) Plutus spending script and a [minting script](../../../scripts/plutus/scripts/v2/minting-script.plutus). In order to execute a reference Plutus spending script, we require the following:
 
 - Collateral tx input(s) - these are provided and are forfeited in the event the Plutus script fails to execute.
 - A Plutus tx output. This is the tx output that sits at the Plutus script address.
@@ -61,7 +61,7 @@ cabal install cardano-node
 ```
 
 To start your babbage cluster, you need to run the `example/run/all.sh` shell script.
-The remainder of this guide provides a brief walkthrough of the [shell script example](scripts/plutus/example-babbage-script-usage.sh) that automatically creates a reference script and spends the utxo at
+The remainder of this guide provides a brief walkthrough of the [shell script example](../../../scripts/babbage/example-babbage-script-usage.sh) that automatically creates a reference script and spends the utxo at
 the reference script's corresponding script address.
 
 #### Creating a reference script at a transaction output, inline datum and
@@ -101,7 +101,7 @@ Firstly, we are sending ada and an inline datum to the plutus script address. Th
 ...
 ```
 
-We have seen this before in the [plutus-spending-script-example.md](doc/reference/plutus/plutus-spending-script-example.md).
+We have seen this before in the [plutus-spending-script-example.md](plutus-spending-script-example.md).
 
 Secondly, we are creating a reference script at a tx output:
 

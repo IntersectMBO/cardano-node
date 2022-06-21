@@ -4,7 +4,7 @@
 
 For an overview of reference script usuage in the Babbage era, please see [here](babbage-script-example.md).
 
-In this example we will delegate stake at a plutus script address to an SPO using a plutus reference script. This is achieved when we run the [register-and-deglegate-script-staking-address.sh](../../../scripts/babbage/staking-example/register-and-deglegate-script-staking-address.sh) script. Below we will outline the key parts
+In this example we will delegate stake at a plutus script address to an SPO using a plutus reference script. This is achieved when we run the [register-and-delegate-script-staking-address.sh](../../../scripts/babbage/staking-example/register-and-delegate-script-staking-address.sh) script. Below we will outline the key parts
 
 First we create the reference script at a tx output as usual with the following transaction:
 

@@ -4,7 +4,7 @@
 
 For an overview of reference script usuage in the Babbage era, please see [here](babbage-script-example.md).
 
-In this example we will withdraw our rewards from a plutus script address using a plutus reference script. We must first run the [register-and-deglegate-script-staking-address.sh](../../../scripts/babbage/staking-example/register-and-deglegate-script-staking-address.sh) script in order to register and delegate the stake at our plutus script address. We will briefly walk through the [claim-script-staking-rewards.sh](../../../scripts/babbage/staking-example/claim-script-staking-rewards.sh) script that automatically does this all for us.
+In this example we will withdraw our rewards from a plutus script address using a plutus reference script. We must first run the [register-and-delegate-script-staking-address.sh](../../../scripts/babbage/staking-example/register-and-delegate-script-staking-address.sh) script in order to register and delegate the stake at our plutus script address. We will briefly walk through the [claim-script-staking-rewards.sh](../../../scripts/babbage/staking-example/claim-script-staking-rewards.sh) script that automatically does this all for us.
 
 Now that we already have our certifying reference script at a tx output so we can use our reference input again to validate the withdrawal of our rewards at our plutus script address with the following tx:
 
