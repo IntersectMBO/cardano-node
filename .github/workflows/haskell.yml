@@ -258,16 +258,9 @@ jobs:
         mkdir -p D:/a/_temp/mingw64/lib
         mkdir -p D:/a/_temp/mingw64/bin
 
-        echo ls "$RUNNER_TEMP/lib/vcpkg/packages/lmdb_x64-mingw-dynamic/include/*"
-        ls "$RUNNER_TEMP/lib/vcpkg/packages/lmdb_x64-mingw-dynamic/include/*"
-        echo ls "$RUNNER_TEMP/lib/vcpkg/packages/lmdb_x64-mingw-dynamic/bin/*"
-        ls "$RUNNER_TEMP/lib/vcpkg/packages/lmdb_x64-mingw-dynamic/bin/*"
-        echo ls "$RUNNER_TEMP/lib/vcpkg/packages/lmdb_x64-mingw-dynamic/lib/*"
-        ls "$RUNNER_TEMP/lib/vcpkg/packages/lmdb_x64-mingw-dynamic/lib/*"
-
-        cp -r "$RUNNER_TEMP/lib/vcpkg/packages/lmdb_x64-mingw-dynamic/include/*" "D:/a/_temp/mingw64/include"
-        cp -r "$RUNNER_TEMP/lib/vcpkg/packages/lmdb_x64-mingw-dynamic/bin/*" "D:/a/_temp/mingw64/bin"
-        cp -r "$RUNNER_TEMP/lib/vcpkg/packages/lmdb_x64-mingw-dynamic/lib/*" "D:/a/_temp/mingw64/lib"
+        (cd "$RUNNER_TEMP/lib/vcpkg/packages/lmdb_x64-mingw-dynamic/include/"; cp -r * "D:/a/_temp/mingw64/include/")
+        (cd "$RUNNER_TEMP/lib/vcpkg/packages/lmdb_x64-mingw-dynamic/bin/"; cp -r * "D:/a/_temp/mingw64/bin/")
+        (cd "$RUNNER_TEMP/lib/vcpkg/packages/lmdb_x64-mingw-dynamic/lib/"; cp -r * "D:/a/_temp/mingw64/lib/")
 
         # D:/a/_temp/mingw64 files
         find D:/a/_temp/mingw64
