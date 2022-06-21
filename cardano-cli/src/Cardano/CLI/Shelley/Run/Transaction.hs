@@ -514,7 +514,8 @@ runTxBuild (AnyCardanoEra era) (AnyConsensusModeParams cModeParams) networkId mS
                                 ]
       referenceInputs = map fst referenceInputsWithWits ++ readOnlyRefIns
 
-  AnyCardanoEra eraCli <- determineEra2 cModeParams localNodeConnInfo
+  AnyCardanoEra someEra <- determineEra2 cModeParams localNodeConnInfo
+  SBE eraCli <- makeSBE <$> pure someEra
   let ShelleyBasedEra sbe = cardanoEraStyle eraCli
   case (consensusMode, cardanoEraStyle era) of
     (CardanoMode, ShelleyBasedEra _sbe) -> do
@@ -2025,5 +2026,18 @@ determineEra2 cModeParams localNodeConnInfo =
         Left acqFail -> left $ ShelleyTxCmdAcquireFailure acqFail
         Right anyCarEra -> return anyCarEra
 
+data SBE era where
+  SBE :: IsShelleyBasedEra era => CardanoEra era -> SBE era
+
+makeSBE :: CardanoEra era ->SBE era
+makeSBE ByronEra = error "ByronEra is not ShelleyBased"
+makeSBE ShelleyEra = SBE ShelleyEra
+makeSBE AllegraEra = SBE AllegraEra
+makeSBE MaryEra = SBE MaryEra
+makeSBE AlonzoEra = SBE AlonzoEra
+makeSBE BabbageEra = SBE BabbageEra
+
+
+
 transTxBC ::  CardanoEra src ->  CardanoEra target -> TxBodyContent a src -> txBodyContent b target
-transTxBC _ _ _ = undefined
+transTxBC _ _ _ = error "NOT YET"
