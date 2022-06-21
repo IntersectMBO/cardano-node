@@ -19,12 +19,15 @@ echo "Socket path: $(pwd)"
 
 ls -al "$CARDANO_NODE_SOCKET_PATH"
 
-plutusscriptinuse="$BASE/scripts/plutus/scripts/v2/required-redeemer.plutus"
+plutusspendingscript="$BASE/scripts/plutus/scripts/v2/required-redeemer.plutus"
+plutusmintingscript="$BASE/scripts/plutus/scripts/v2/minting-script.plutus"
+plutusstakescript="scripts/plutus/scripts/v2/stake-script.plutus"
+mintpolicyid=$(cardano-cli transaction policyid --script-file $plutusmintingscript)
 ## This datum hash is the hash of the untyped 42
 scriptdatumhash="9e1199a988ba72ffd6e9c269cadb3b53b5f360ff99f112d9b2ee30c4d74ad88b"
 datumfilepath="$BASE/scripts/plutus/data/42.datum"
 redeemerfilepath="$BASE/scripts/plutus/data/42.redeemer"
-echo "Script at: $plutusscriptinuse"
+echo "Script at: $plutusspendingscript"
 #
 #
 #
@@ -33,9 +36,9 @@ echo "Script at: $plutusscriptinuse"
 ## in order to accommodate this.
 #
 #
-plutusscriptaddr=$($CARDANO_CLI address build --payment-script-file "$plutusscriptinuse"  --testnet-magic "$TESTNET_MAGIC")
+plutusspendingscriptaddr=$($CARDANO_CLI address build --payment-script-file "$plutusspendingscript"  --testnet-magic "$TESTNET_MAGIC")
 echo "Plutus Script Address"
-echo "$plutusscriptaddr"
+echo "$plutusspendingscriptaddr"
 mkdir -p "$WORK"
 
 utxoaddr=$($CARDANO_CLI address build --testnet-magic "$TESTNET_MAGIC" --payment-verification-key-file "$UTXO_VKEY" --stake-verification-key-file example/stake-delegator-keys/staking1.vkey)
@@ -45,11 +48,12 @@ cat $WORK/utxo-1.json
 
 txin=$(jq -r 'keys[0]' $WORK/utxo-1.json)
 lovelaceattxin=$(jq -r ".[\"$txin\"].value.lovelace" $WORK/utxo-1.json)
-lovelaceattxindiv5=$(expr $lovelaceattxin / 5)
+lovelaceattxindiv6=$(expr $lovelaceattxin / 6)
 
 $CARDANO_CLI query protocol-parameters --testnet-magic "$TESTNET_MAGIC" --out-file $WORK/pparams.json
 dummyaddress=addr_test1vpqgspvmh6m2m5pwangvdg499srfzre2dd96qq57nlnw6yctpasy4
 dummyaddress2=addr_test1vzq57nyrwdwne9vzjxr908qqkdxwuavlgzl20qveua303vq024qkk
+addressformintingrefscript=addr_test1vq73yuplt9c5zmgw4ve7qhu49yxllw7q97h4smwvfgst32qrkwupd
 readonlyaddress=addr_test1vz3t3f2kgy2re66tnhgxc4t8jgylw2cqfnxdwlrq9agfmtstxxkm5
 
 # We first:
@@ -61,14 +65,17 @@ $CARDANO_CLI transaction build \
   --testnet-magic "$TESTNET_MAGIC" \
   --change-address "$utxoaddr" \
   --tx-in "$txin" \
-  --tx-out "$readonlyaddress+$lovelaceattxindiv5" \
+  --tx-out "$readonlyaddress+$lovelaceattxindiv6" \
+  --tx-out-reference-script-file "$plutusstakescript" \
   --tx-out-inline-datum-file "$datumfilepath" \
-  --tx-out "$utxoaddr+$lovelaceattxindiv5" \
-  --tx-out "$plutusscriptaddr+$lovelaceattxindiv5" \
+  --tx-out "$utxoaddr+$lovelaceattxindiv6" \
+  --tx-out "$plutusspendingscriptaddr+$lovelaceattxindiv6" \
   --tx-out-inline-datum-file "$datumfilepath" \
-  --tx-out "$dummyaddress+$lovelaceattxindiv5" \
+  --tx-out "$dummyaddress+$lovelaceattxindiv6" \
   --tx-out-inline-datum-file "$datumfilepath" \
-  --tx-out-reference-script-file "$plutusscriptinuse" \
+  --tx-out-reference-script-file "$plutusspendingscript" \
+  --tx-out "$addressformintingrefscript+$lovelaceattxindiv6" \
+  --tx-out-reference-script-file "$plutusmintingscript" \
   --protocol-params-file "$WORK/pparams.json" \
   --out-file "$WORK/create-datum-output.body"
 
@@ -101,14 +108,19 @@ lovelaceattxindiv31=$(expr $lovelaceattxin1 / 3)
 
 
 # Get input at plutus script that we will attempt to spend
-$CARDANO_CLI query utxo --address $plutusscriptaddr --testnet-magic "$TESTNET_MAGIC" --out-file $WORK/plutusutxo.json
+$CARDANO_CLI query utxo --address $plutusspendingscriptaddr --testnet-magic "$TESTNET_MAGIC" --out-file $WORK/plutusutxo.json
 plutuslockedutxotxin=$(jq -r 'keys[0]' $WORK/plutusutxo.json)
-lovelaceatplutusscriptaddr=$(jq -r ".[\"$plutuslockedutxotxin\"].value.lovelace" $WORK/plutusutxo.json)
+lovelaceatplutusspendingscriptaddr=$(jq -r ".[\"$plutuslockedutxotxin\"].value.lovelace" $WORK/plutusutxo.json)
 
 #Get read only reference input
 $CARDANO_CLI query utxo --address "$readonlyaddress" --cardano-mode \
   --testnet-magic "$TESTNET_MAGIC" --out-file $WORK/read-only-ref-input-utxo.json
 readonlyrefinput=$(jq -r 'keys[0]' $WORK/read-only-ref-input-utxo.json)
+
+#Get minting reference script input
+$CARDANO_CLI query utxo --address "$addressformintingrefscript" --cardano-mode \
+  --testnet-magic "$TESTNET_MAGIC" --out-file $WORK/minting-script-ref-input-utxo.json
+mintingscriptrefinput=$(jq -r 'keys[0]' $WORK/minting-script-ref-input-utxo.json)
 
 echo "Plutus txin"
 echo "$plutuslockedutxotxin"
@@ -124,6 +136,9 @@ echo "$plutusreferencescripttxin"
 
 echo "Plutus input we are trying to spend"
 echo "$plutuslockedutxotxin"
+
+echo "Policy id"
+echo "$mintpolicyid"
 
 # Alternative build-raw method
 #$CARDANO_CLI transaction build-raw \
@@ -148,16 +163,21 @@ $CARDANO_CLI transaction build \
   --cardano-mode \
   --testnet-magic "$TESTNET_MAGIC" \
   --change-address "$utxoaddr" \
-  --read-only-tx-in-reference "$readonlyrefinput" \
+  --read-only-tx-in-reference  "$readonlyrefinput" \
   --tx-in "$txin1" \
   --tx-in-collateral "$txinCollateral" \
   --out-file "$WORK/test-alonzo-ref-script.body" \
   --tx-in "$plutuslockedutxotxin" \
-  --tx-in-reference "$plutusreferencescripttxin" \
-  --plutus-script-v2 \
-  --reference-tx-in-inline-datum-present \
-  --reference-tx-in-redeemer-file "$redeemerfilepath" \
-  --tx-out "$dummyaddress2+10000000" \
+  --spending-tx-in-reference "$plutusreferencescripttxin" \
+  --spending-plutus-script-v2 \
+  --spending-reference-tx-in-inline-datum-present \
+  --spending-reference-tx-in-redeemer-file "$redeemerfilepath" \
+  --mint "5 $mintpolicyid.4D696C6C6172436F696E" \
+  --mint-tx-in-reference "$mintingscriptrefinput" \
+  --mint-plutus-script-v2 \
+  --mint-reference-tx-in-redeemer-file "$redeemerfilepath" \
+  --policy-id "$mintpolicyid" \
+  --tx-out "$dummyaddress2+10000000 + 5 $mintpolicyid.4D696C6C6172436F696E" \
   --protocol-params-file "$WORK/pparams.json"
 
 $CARDANO_CLI transaction sign \

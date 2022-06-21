@@ -117,6 +117,7 @@ module Cardano.Api (
     AssetId(..),
     Value,
     parseValue,
+    policyId,
     selectAsset,
     valueFromList,
     valueToList,

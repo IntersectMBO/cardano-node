@@ -415,6 +415,9 @@ cardano-cli transaction submit \
   --tx-file "$WORK/script-delegation-cert.tx" \
   --testnet-magic "$TESTNET_MAGIC"
 
+echo "Need to wait 2 epochs after current epoch for rewards"
+cardano-cli query tip --testnet-magic 42
+
 echo "Waiting 10 seconds..."
 sleep 10
 echo "Check to see if staking script was successfully delegated..."

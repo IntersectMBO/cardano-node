@@ -14,7 +14,7 @@ In the case where we are not using a reference input to reference another transa
 
 ### An example of using a Plutus V2 reference script
 
-Below is an example that shows how to use a Plutus spending script and an inline datum. Here we discuss a [shell script example of how to use a reference script to spend a tx input](scripts/plutus/example-babbage-script-usage.sh). This is a step-by-step process involving:
+Below is an example that shows how to use a reference Plutus spending script with an inline datum and a reference minting script. Here we discuss a [shell script example of how to use a reference script to spend a tx input and a reference minting script to mint tokens](../../../scripts/babbage/example-babbage-script-usage.sh). This is a step-by-step process involving:
 
 + the creation of the `Required Redeemer` Plutus txin script
 + the creation of the `Required Redeemer` Plutus script at a transaction output (creation of the reference script)
@@ -22,8 +22,9 @@ Below is an example that shows how to use a Plutus spending script and an inline
 + sending ada to the Plutus script address
 + spending ada at the Plutus script address using the Plutus reference script
 + creating a read only reference tx output
++ the creation of the reference [minting script](scripts/plutus/scripts/v2) at a transaction output.
 
-In this example we will use the [Required Redeemer](scripts/plutus/scripts/v2/required-redeemer.plutus) Plutus spending script. In order to execute a reference Plutus spending script, we require the following:
+In this example we will use the [Required Redeemer](../../../scripts/plutus/scripts/v2/required-redeemer.plutus) Plutus spending script and a [minting script](../../../scripts/plutus/scripts/v2/minting-script.plutus). In order to execute a reference Plutus spending script, we require the following:
 
 - Collateral tx input(s) - these are provided and are forfeited in the event the Plutus script fails to execute.
 - A Plutus tx output. This is the tx output that sits at the Plutus script address.
@@ -31,7 +32,7 @@ In this example we will use the [Required Redeemer](scripts/plutus/scripts/v2/re
 - An inline datum at the Plutus tx output. The Plutus spending script requires an inline datum or datum hash and in this case we are using an inline datum.
 - A read only reference input with an inline datum.
 
-#### Creating the `Required Redeemer` Plutus spending script
+#### Creating the `Required Redeemer` Plutus spending script and the minting script
 
 The plutus-example executable will automagically generate several Plutus scripts in the CLI-compatible text envelope format.
 
@@ -45,7 +46,7 @@ cd plutus-apps/plutus-example
 cabal run exe:plutus-example
 ```
 
-This will output `required-redeemer.plutus` in the `generated-plutus-scripts/v2` dir.
+This will output `required-redeemer.plutus` and `minting-script.plutus` in the `generated-plutus-scripts/v2` dir.
 
 #### Setting up a local Babbage node cluster
 
@@ -60,7 +61,7 @@ cabal install cardano-node
 ```
 
 To start your babbage cluster, you need to run the `example/run/all.sh` shell script.
-The remainder of this guide provides a brief walkthrough of the [shell script example](scripts/plutus/example-babbage-script-usage.sh) that automatically creates a reference script and spends the utxo at
+The remainder of this guide provides a brief walkthrough of the [shell script example](../../../scripts/babbage/example-babbage-script-usage.sh) that automatically creates a reference script and spends the utxo at
 the reference script's corresponding script address.
 
 #### Creating a reference script at a transaction output, inline datum and
@@ -75,13 +76,16 @@ cardano-cli transaction build \
   --testnet-magic 42 \
   --change-address "$utxoaddr" \
   --tx-in "$txin" \
-  --tx-out "$readonlyaddress+$lovelaceattxindiv5" \
+  --tx-out "$readonlyaddress+$lovelaceattxindiv6" \
+  --tx-out-reference-script-file "$plutusstakescript" \
   --tx-out-inline-datum-file "$datumfilepath" \
   --tx-out "$utxoaddr+$lovelace" \
-  --tx-out "$plutusscriptaddr+$lovelace" \
+  --tx-out "$plutusspendingscriptaddr+$lovelace" \
   --tx-out-inline-datum-file "$datumfilepath" \
-  --tx-out "$dummyaddress+$lovelaceattxindiv5" \
-  --tx-out-reference-script-file "$plutusscriptinuse" \
+  --tx-out "$dummyaddress+$lovelaceattxindiv6" \
+  --tx-out-reference-script-file "$plutusspendingscript" \
+  --tx-out "$addressformintingrefscript+$lovelaceattxindiv6" \
+  --tx-out-reference-script-file "$plutusmintingscript" \
   --protocol-params-file "$WORK/pparams.json" \
   --out-file "$WORK/create-datum-output.body"
 ```
@@ -92,19 +96,19 @@ Firstly, we are sending ada and an inline datum to the plutus script address. Th
 
 ```bash
 ...
---tx-out "$plutusscriptaddr+$lovelace" \
+--tx-out "$plutusspendingscriptaddr+$lovelace" \
 --tx-out-inline-datum-file "$datumfilepath" \
 ...
 ```
 
-We have seen this before in the [plutus-spending-script-example.md](doc/reference/plutus/plutus-spending-script-example.md).
+We have seen this before in the [plutus-spending-script-example.md](plutus-spending-script-example.md).
 
 Secondly, we are creating a reference script at a tx output:
 
 ```bash
 ...
---tx-out "$dummyaddress+$lovelaceattxindiv5" \
---tx-out-reference-script-file "$plutusscriptinuse" \
+--tx-out "$dummyaddress+$lovelaceattxindiv6" \
+--tx-out-reference-script-file "$plutusspendingscript" \
 ...
 ```
 
@@ -114,8 +118,17 @@ Thirdly, we are preparing a txout to be used as a read only reference input:
 
 ```bash
 ...
---tx-out "$readonlyaddress+$lovelaceattxindiv5" \
+--tx-out "$readonlyaddress+$lovelaceattxindiv6" \
 --tx-out-inline-datum-file "$datumfilepath" \
+...
+```
+
+Fourthly, we create the minting reference script at a tx output:
+
+```bash
+...
+--tx-out "$addressformintingrefscript+$lovelaceattxindiv6" \
+--tx-out-reference-script-file "$plutusmintingscript" \
 ...
 ```
 
@@ -130,17 +143,22 @@ cardano-cli transaction sign \
 ```
 
 
-#### Spending ada at the script address
+#### Spending ada at the script address and minting tokens
 
 Now that there is ada at our script address, we must construct the appropriate transaction in order to spend it.
 Because we are using the `build` command, we should only note the following:
 
 `$plutusutxotxin` - This is the tx input that sits at the Plutus script address (NB: It has a datum hash).
-`tx-in-reference` - This specifies the reference input you are using to witness a transaction input.
-`plutus-script-v2`- This specifies the version of the reference script at the reference input.
-`reference-tx-in-inline-datum-present` - This indicates that we are using an inline datum which exists at the utxo we are trying to spend (the utxo at the Plutus script address).
-`reference-tx-in-redeemer-file` - This is the redeemer to be used with the reference script.
+`spending-tx-in-reference` - This specifies the reference input you are using to witness a transaction input.
+`spending-plutus-script-v2`- This specifies the version of the reference script at the reference input.
+`spending-reference-tx-in-inline-datum-present` - This indicates that we are using an inline datum which exists at the utxo we are trying to spend (the utxo at the Plutus script address).
+`spending-reference-tx-in-redeemer-file` - This is the redeemer to be used with the reference script.
 `read-only-tx-in-reference` - This is a non-witnessing reference input. This will only be exposed in the Plutus script context.
+`mint-tx-in-reference` - This specifies the reference input you are using to mint tokens.
+`mint-plutus-script-v2` - This specifies the version of the reference script at the reference input.
+`mint-reference-tx-in-redeemer-file` - This is the redeemer to be used with the reference script.
+`policy-id` - Because we do not have direct access to the minting script we must specify the policy id.
+
 
 ```bash
 cardano-cli transaction build \
@@ -153,11 +171,16 @@ cardano-cli transaction build \
   --tx-in-collateral "$txinCollateral" \
   --out-file "$WORK/test-alonzo-ref-script.body" \
   --tx-in "$plutuslockedutxotxin" \
-  --tx-in-reference "$plutusreferencescripttxin" \
-  --plutus-script-v2 \
-  --reference-tx-in-inline-datum-present \
-  --reference-tx-in-redeemer-file "$redeemerfilepath" \
-  --tx-out "$dummyaddress2+10000000" \
+  --spending-tx-in-reference "$plutusreferencescripttxin" \
+  --spending-plutus-script-v2 \
+  --spending-reference-tx-in-inline-datum-present \
+  --spending-reference-tx-in-redeemer-file "$redeemerfilepath" \
+  --mint "5 $mintpolicyid.4D696C6C6172436F696E" \
+  --mint-tx-in-reference "$mintingscriptrefinput" \
+  --mint-plutus-script-v2 \
+  --mint-reference-tx-in-redeemer-file "$redeemerfilepath" \
+  --policy-id "$mintpolicyid" \
+  --tx-out "$dummyaddress2+10000000 + 5 $mintpolicyid.4D696C6C6172436F696E" \
   --protocol-params-file "$WORK/pparams.json"
 
 cardano-cli transaction sign \

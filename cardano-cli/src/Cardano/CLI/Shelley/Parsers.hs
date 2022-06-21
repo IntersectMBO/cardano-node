@@ -229,74 +229,10 @@ pScriptFor name (Just deprecated) help =
         <> Opt.internal
         )
 
-pReferenceScriptWitnessFiles
-  :: WitCtx witctx
-  -> BalanceTxExecUnits -- ^ Use the @execution-units@ flag.
-  -> Parser (ScriptWitnessFiles witctx)
-pReferenceScriptWitnessFiles witctx autoBalanceExecUnits =
-   toReferenceScriptWitnessFiles
-     <$> pReferenceTxIn
-     <*> (simpleWit <|> pPWitness)
-
-
- where
-  pPWitness =
-    (,,,) <$> pPlutusScriptLanguage
-          <*> (Just <$> pScriptDatumOrFile "reference-tx-in" witctx)
-          <*> (Just <$> pScriptRedeemerOrFile "reference-tx-in")
-          <*> (case autoBalanceExecUnits of
-                AutoBalance -> pure $ Just (ExecutionUnits 0 0)
-                ManualBalance -> Just <$> pExecutionUnits "reference-tx-in")
-
-  simpleWit
-    :: Parser ( AnyScriptLanguage
-              , Maybe (ScriptDatumOrFile witctx)
-              , Maybe ScriptRedeemerOrFile
-              , Maybe ExecutionUnits
-              )
-  simpleWit =
-    (,,,) <$> pSimpleScriptLang
-          <*> pure Nothing
-          <*> pure Nothing
-          <*> pure Nothing
-
-  pPlutusScriptLanguage :: Parser AnyScriptLanguage
-  pPlutusScriptLanguage =
-    Opt.flag' (AnyScriptLanguage $ PlutusScriptLanguage PlutusScriptV2)
-      (  Opt.long "plutus-script-v2"
-      <> Opt.help "Specify a plutus script v2 reference script."
-      )
-
-  pSimpleScriptLang :: Parser AnyScriptLanguage
-  pSimpleScriptLang =
-    Opt.flag' (AnyScriptLanguage $ SimpleScriptLanguage SimpleScriptV2)
-      (  Opt.long "simple-script"
-      <> Opt.help "Specify a simple script reference script. \
-                  \See documentation at doc/reference/simple-scripts.md"
-      )
-
-  toReferenceScriptWitnessFiles
-    :: TxIn
-    -> ( AnyScriptLanguage
-       , Maybe (ScriptDatumOrFile witctx)
-       , Maybe ScriptRedeemerOrFile
-       , Maybe ExecutionUnits
-       )
-    -> ScriptWitnessFiles witctx
-  toReferenceScriptWitnessFiles txin (sLang, mD, mR, mE) =
-    case sLang of
-      AnyScriptLanguage (SimpleScriptLanguage _) ->
-        SimpleReferenceScriptWitnessFiles txin sLang
-      AnyScriptLanguage (PlutusScriptLanguage _) ->
-        case (mD, mR, mE) of
-          (Just d, Just r, Just e) -> PlutusReferenceScriptWitnessFiles txin sLang d r e
-          (_,_,_) -> panic "toReferenceScriptWitnessFiles: Should not be possible"
-
-
-pReferenceTxIn :: Parser TxIn
-pReferenceTxIn =
+pReferenceTxIn :: String ->  Parser TxIn
+pReferenceTxIn prefix =
   Opt.option (readerFromParsecParser parseTxIn)
-    (  Opt.long "tx-in-reference"
+    (  Opt.long (prefix ++ "tx-in-reference")
     <> Opt.metavar "TX-IN"
     <> Opt.help "TxId#TxIx - Specify a reference input. The reference input may or may not have\
                 \ a plutus reference script attached."
@@ -364,16 +300,16 @@ pScriptDatumOrFile scriptFlagPrefix witctx =
                        (scriptFlagPrefix ++ "-datum")
                        "The script datum, in JSON syntax."
                        "The script datum, in the given JSON file.") <|>
-                    pInlineDatumPresent scriptFlagPrefix
+                    pInlineDatumPresent
     WitCtxMint  -> pure NoScriptDatumOrFileForMint
     WitCtxStake -> pure NoScriptDatumOrFileForStake
-
-pInlineDatumPresent :: String -> Parser (ScriptDatumOrFile WitCtxTxIn)
-pInlineDatumPresent scriptFlagPrefix =
-  flag' InlineDatumPresentAtTxIn
-    (  long (scriptFlagPrefix ++ "-inline-datum-present")
-    <> Opt.help "Inline datum present at transaction input."
-    )
+ where
+  pInlineDatumPresent :: Parser (ScriptDatumOrFile WitCtxTxIn)
+  pInlineDatumPresent  =
+    flag' InlineDatumPresentAtTxIn
+      (  long (scriptFlagPrefix ++ "-inline-datum-present")
+      <> Opt.help "Inline datum present at transaction input."
+      )
 
 pScriptDataOrFile :: String -> String -> String -> Parser ScriptDataOrFile
 pScriptDataOrFile dataFlagPrefix helpTextForValue helpTextForFile =
@@ -1501,17 +1437,21 @@ pCertificateFile balanceExecUnits =
                      Opt.strOption (Opt.long "certificate" <> Opt.internal)
                   )
           )
-      <*> optional (pScriptWitnessFiles
-                      WitCtxStake
-                      balanceExecUnits
-                      "certificate" Nothing
-                      "the use of the certificate.")
+      <*> optional (pCertifyingScriptOrReferenceScriptWit balanceExecUnits)
  where
-   helpText = "Filepath of the certificate. This encompasses all \
-              \types of certificates (stake pool certificates, \
-              \stake key certificates etc). Optionally specify a script witness."
+  pCertifyingScriptOrReferenceScriptWit
+    :: BalanceTxExecUnits -> Parser (ScriptWitnessFiles WitCtxStake)
+  pCertifyingScriptOrReferenceScriptWit bExecUnits =
+    pScriptWitnessFiles
+     WitCtxStake
+     balanceExecUnits
+     "certificate" Nothing
+     "the use of the certificate." <|>
+    pPlutusStakeReferenceScriptWitnessFiles "certificate-" bExecUnits
 
-
+  helpText = "Filepath of the certificate. This encompasses all \
+             \types of certificates (stake pool certificates, \
+             \stake key certificates etc). Optionally specify a script witness."
 
 pPoolMetadataFile :: Parser PoolMetadataFile
 pPoolMetadataFile =
@@ -1578,21 +1518,47 @@ pWithdrawal balance =
             <> Opt.metavar "WITHDRAWAL"
             <> Opt.help helpText
             )
-      <*> optional (pScriptWitnessFiles
-                      WitCtxStake
-                      balance
-                      "withdrawal" Nothing
-                      "the withdrawal of rewards.")
+      <*> optional pWithdrawalScriptOrReferenceScriptWit
  where
-   helpText = "The reward withdrawal as StakeAddress+Lovelace where \
-              \StakeAddress is the Bech32-encoded stake address \
-              \followed by the amount in Lovelace. Optionally specify \
-              \a script witness."
+  pWithdrawalScriptOrReferenceScriptWit :: Parser (ScriptWitnessFiles WitCtxStake)
+  pWithdrawalScriptOrReferenceScriptWit =
+   pScriptWitnessFiles
+     WitCtxStake
+     balance
+     "withdrawal" Nothing
+     "the withdrawal of rewards." <|>
+   pPlutusStakeReferenceScriptWitnessFiles "withdrawal-" balance
 
-   parseWithdrawal :: Parsec.Parser (StakeAddress, Lovelace)
-   parseWithdrawal =
-     (,) <$> parseStakeAddress <* Parsec.char '+' <*> parseLovelace
+  helpText = "The reward withdrawal as StakeAddress+Lovelace where \
+             \StakeAddress is the Bech32-encoded stake address \
+             \followed by the amount in Lovelace. Optionally specify \
+             \a script witness."
 
+  parseWithdrawal :: Parsec.Parser (StakeAddress, Lovelace)
+  parseWithdrawal =
+    (,) <$> parseStakeAddress <* Parsec.char '+' <*> parseLovelace
+
+pPlutusStakeReferenceScriptWitnessFiles
+  :: String
+  -> BalanceTxExecUnits -- ^ Use the @execution-units@ flag.
+  -> Parser (ScriptWitnessFiles WitCtxStake)
+pPlutusStakeReferenceScriptWitnessFiles prefix autoBalanceExecUnits =
+  PlutusReferenceScriptWitnessFiles
+    <$> pReferenceTxIn prefix
+    <*> pPlutusScriptLanguage prefix
+    <*> pure NoScriptDatumOrFileForStake
+    <*> pScriptRedeemerOrFile (prefix ++ "reference-tx-in")
+    <*> (case autoBalanceExecUnits of
+          AutoBalance -> pure (ExecutionUnits 0 0)
+          ManualBalance -> pExecutionUnits $ prefix ++ "reference-tx-in")
+    <*> pure Nothing
+
+pPlutusScriptLanguage :: String -> Parser AnyScriptLanguage
+pPlutusScriptLanguage prefix =
+  Opt.flag' (AnyScriptLanguage $ PlutusScriptLanguage PlutusScriptV2)
+    (  Opt.long (prefix ++ "plutus-script-v2")
+    <> Opt.help "Specify a plutus script v2 reference script."
+    )
 
 pUpdateProposalFile :: Parser UpdateProposalFile
 pUpdateProposalFile =
@@ -2109,15 +2075,51 @@ pTxIn balance =
                 <> Opt.metavar "TX-IN"
                <> Opt.help "TxId#TxIx"
                )
-         <*> optional pPlutusScriptOrReferenceInputWitness
+         <*> optional (pPlutusReferenceScriptWitness balance <|>
+                       pSimpleReferenceSpendingScriptWitess <|>
+                       pEmbeddedPlutusScriptWitness
+                       )
  where
-  pPlutusScriptOrReferenceInputWitness :: Parser (ScriptWitnessFiles WitCtxTxIn)
-  pPlutusScriptOrReferenceInputWitness =
-     pScriptWitnessFiles WitCtxTxIn balance
-      "tx-in" (Just "txin")
-      "the spending of the transaction input." <|>
-     pReferenceScriptWitnessFiles WitCtxTxIn balance
+  pSimpleReferenceSpendingScriptWitess :: Parser (ScriptWitnessFiles WitCtxTxIn)
+  pSimpleReferenceSpendingScriptWitess =
+    createSimpleReferenceScriptWitnessFiles
+      <$> pReferenceTxIn "simple-script-"
+   where
+    createSimpleReferenceScriptWitnessFiles
+      :: TxIn
+      -> ScriptWitnessFiles WitCtxTxIn
+    createSimpleReferenceScriptWitnessFiles refTxIn  =
+      let simpleLang = AnyScriptLanguage (SimpleScriptLanguage SimpleScriptV2)
+      in SimpleReferenceScriptWitnessFiles refTxIn simpleLang Nothing
 
+  pPlutusReferenceScriptWitness :: BalanceTxExecUnits -> Parser (ScriptWitnessFiles WitCtxTxIn)
+  pPlutusReferenceScriptWitness autoBalanceExecUnits =
+    createPlutusReferenceScriptWitnessFiles
+      <$> pReferenceTxIn "spending-"
+      <*> pPlutusScriptLanguage "spending-"
+      <*> pScriptDatumOrFile "spending-reference-tx-in" WitCtxTxIn
+      <*> pScriptRedeemerOrFile "spending-reference-tx-in"
+      <*> (case autoBalanceExecUnits of
+              AutoBalance -> pure (ExecutionUnits 0 0)
+              ManualBalance -> pExecutionUnits "spending-reference-tx-in")
+   where
+    createPlutusReferenceScriptWitnessFiles
+      :: TxIn
+      -> AnyScriptLanguage
+      -> ScriptDatumOrFile WitCtxTxIn
+      -> ScriptRedeemerOrFile
+      -> ExecutionUnits
+      -> ScriptWitnessFiles WitCtxTxIn
+    createPlutusReferenceScriptWitnessFiles refIn sLang sDatum sRedeemer execUnits =
+      PlutusReferenceScriptWitnessFiles refIn sLang sDatum sRedeemer execUnits Nothing
+
+  pEmbeddedPlutusScriptWitness :: Parser (ScriptWitnessFiles WitCtxTxIn)
+  pEmbeddedPlutusScriptWitness =
+    pScriptWitnessFiles
+      WitCtxTxIn
+      balance
+      "tx-in" (Just "txin")
+      "the spending of the transaction input."
 
 pTxInCollateral :: Parser TxIn
 pTxInCollateral =
@@ -2251,15 +2253,42 @@ pMintMultiAsset balanceExecUnits =
               <> Opt.metavar "VALUE"
               <> Opt.help helpText
               )
-      <*> some (pScriptWitnessFiles
-                  WitCtxMint
-                  balanceExecUnits
-                  "mint" (Just "minting")
-                  "the minting of assets for a particular policy Id."
-               )
+      <*> some (pMintingScriptOrReferenceScriptWit balanceExecUnits)
  where
+   pMintingScriptOrReferenceScriptWit
+     :: BalanceTxExecUnits -> Parser (ScriptWitnessFiles WitCtxMint)
+   pMintingScriptOrReferenceScriptWit bExecUnits =
+    pScriptWitnessFiles
+      WitCtxMint
+      balanceExecUnits
+      "mint" (Just "minting")
+      "the minting of assets for a particular policy Id." <|>
+    pPlutusMintReferenceScriptWitnessFiles bExecUnits
+
+   pPlutusMintReferenceScriptWitnessFiles
+     :: BalanceTxExecUnits ->  Parser (ScriptWitnessFiles WitCtxMint)
+   pPlutusMintReferenceScriptWitnessFiles autoBalanceExecUnits =
+    PlutusReferenceScriptWitnessFiles
+      <$> pReferenceTxIn "mint-"
+      <*> pPlutusScriptLanguage "mint-"
+      <*> pure NoScriptDatumOrFileForMint
+      <*> pScriptRedeemerOrFile "mint-reference-tx-in"
+      <*> (case autoBalanceExecUnits of
+            AutoBalance -> pure (ExecutionUnits 0 0)
+            ManualBalance -> pExecutionUnits "mint-reference-tx-in")
+      <*> (Just <$> pPolicyId)
+
    helpText = "Mint multi-asset value(s) with the multi-asset cli syntax. \
                \You must specify a script witness."
+
+pPolicyId :: Parser PolicyId
+pPolicyId =
+  Opt.option (readerFromParsecParser policyId)
+     (  Opt.long "policy-id"
+     <> Opt.metavar "HASH"
+     <> Opt.help "Policy id of minting script."
+     )
+
 
 pInvalidBefore :: Parser SlotNo
 pInvalidBefore =
