@@ -24,6 +24,13 @@ let
   inherit (localCluster) profileName workbenchDevMode;
   inherit (pkgs.haskell-nix) haskellLib;
   project = if profiled then cardanoNodeProject.profiled else cardanoNodeProject;
+
+  ## The default shell is defined by flake.nix: (cardanoNodeProject = flake.project.${final.system})
+  inherit (project) shell;
+
+  ## XXX: remove this once people retrain their muscle memory:
+  dev = project.shell;
+
   commandHelp =
     ''
       echo "
@@ -48,7 +55,7 @@ let
 
   haveGlibcLocales = pkgs.glibcLocales != null && stdenv.hostPlatform.libc == "glibc";
 
-  shell =
+  cluster-shell =
     let cluster = pkgs.supervisord-workbench-for-profile
       { inherit profileName useCabalRun profiled; };
     in project.shellFor {
@@ -185,8 +192,6 @@ let
     '';
   };
 
-  dev = project.shell;
-
 in
 
- shell // { inherit devops; inherit dev;}
+ shell // { inherit cluster-shell; inherit devops; inherit dev; }
