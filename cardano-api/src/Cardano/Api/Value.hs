@@ -144,7 +144,7 @@ quantityToLovelace :: Quantity -> Lovelace
 quantityToLovelace (Quantity x) = Lovelace x
 
 
-newtype PolicyId = PolicyId ScriptHash
+newtype PolicyId = PolicyId { unPolicyId :: ScriptHash }
   deriving stock (Eq, Ord)
   deriving (Show, IsString, ToJSON, FromJSON) via UsingRawBytesHex PolicyId
 

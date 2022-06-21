@@ -53,8 +53,8 @@ import           Data.Word (Word64)
 import qualified Cardano.Chain.Slotting as Byron
 
 import           Cardano.Api (AddressAny, AnyScriptLanguage, EpochNo, ExecutionUnits, Hash,
-                   InAnyCardanoEra, PaymentKey, ScriptData, SlotNo (SlotNo), Tx, TxIn, Value,
-                   WitCtxMint, WitCtxStake, WitCtxTxIn)
+                   InAnyCardanoEra, PaymentKey, PolicyId, ScriptData, SlotNo (SlotNo), Tx, TxIn,
+                   Value, WitCtxMint, WitCtxStake, WitCtxTxIn)
 
 import qualified Cardano.Ledger.Crypto as Crypto
 
@@ -293,17 +293,20 @@ data ScriptWitnessFiles witctx where
                               -> ExecutionUnits
                               -> ScriptWitnessFiles witctx
 
+     -- TODO: Need to figure out how to exclude PlutusV1 scripts at the type level
      PlutusReferenceScriptWitnessFiles
        :: TxIn
        -> AnyScriptLanguage
        -> ScriptDatumOrFile witctx
        -> ScriptRedeemerOrFile
        -> ExecutionUnits
+       -> Maybe PolicyId -- ^ For minting reference scripts
        -> ScriptWitnessFiles witctx
 
      SimpleReferenceScriptWitnessFiles
        :: TxIn
        -> AnyScriptLanguage
+       -> Maybe PolicyId -- ^ For minting reference scripts
        -> ScriptWitnessFiles witctx
 
 

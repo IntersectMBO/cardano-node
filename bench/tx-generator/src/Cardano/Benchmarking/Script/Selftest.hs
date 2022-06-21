@@ -13,7 +13,7 @@ import           Control.Monad
 import           Cardano.Api
 import           Ouroboros.Network.NodeToClient (IOManager)
 
-import           Cardano.Benchmarking.Tracer (createDebugTracers)
+import           Cardano.Benchmarking.LegacyTracer (createDebugTracers)
 import           Cardano.Benchmarking.Types
 import           Cardano.Benchmarking.Script.Aeson (prettyPrint)
 import           Cardano.Benchmarking.Script.Action

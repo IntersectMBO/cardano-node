@@ -8,6 +8,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NoMonomorphismRestriction #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PackageImports #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -33,7 +34,7 @@ import qualified Data.List.Extra as L
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Text as T
 
-import           Control.Tracer (Tracer, traceWith)
+import           "contra-tracer" Control.Tracer (Tracer, traceWith)
 
 import           Cardano.Tracing.OrphanInstances.Byron ()
 import           Cardano.Tracing.OrphanInstances.Common ()
@@ -59,7 +60,7 @@ import           Ouroboros.Network.Protocol.TxSubmission2.Type (BlockingReplyLis
 import           Cardano.Api
 import           Cardano.Api.Shelley (fromShelleyTxId, toConsensusGenTx)
 
-import           Cardano.Benchmarking.Tracer
+import           Cardano.Benchmarking.LogTypes
 import           Cardano.Benchmarking.Types
 type CardanoBlock    = Consensus.CardanoBlock  StandardCrypto
 

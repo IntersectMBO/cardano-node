@@ -6,6 +6,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NumericUnderscores #-}
+{-# LANGUAGE PackageImports #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -19,7 +20,7 @@ import           Control.Concurrent (threadDelay)
 import           Control.Monad
 import           Control.Monad.IO.Class
 import           Control.Monad.Trans.Except
-import           Control.Tracer (nullTracer)
+import           "contra-tracer" Control.Tracer (nullTracer)
 import           Data.Ratio ((%))
 import qualified Data.Text as Text (unpack)
 import           Prelude
@@ -46,7 +47,7 @@ import           Cardano.Benchmarking.ListBufferedSelector
 import           Cardano.Benchmarking.OuroborosImports as Core (LocalSubmitTx, SigningKeyFile,
                    makeLocalConnectInfo, protocolToCodecConfig)
 import           Cardano.Benchmarking.PlutusExample as PlutusExample
-import           Cardano.Benchmarking.Tracer as Core (btConnect_, btN2N_, btSubmission2_,
+import           Cardano.Benchmarking.LogTypes as Core (btConnect_, btN2N_, btSubmission2_,
                    btTxSubmit_)
 import           Cardano.Benchmarking.Types as Core (NumberOfInputsPerTx (..),
                    NumberOfOutputsPerTx (..), NumberOfTxs (..), SubmissionErrorPolicy (..), TPSRate,

@@ -728,13 +728,13 @@ data WitCtx witctx where
 -- or to mint tokens. This datatype encapsulates this concept.
 data PlutusScriptOrReferenceInput lang
   = PScript (PlutusScript lang)
-  | PReferenceScript TxIn
+  | PReferenceScript TxIn (Maybe ScriptHash)
   deriving (Eq, Show)
 
 
 data SimpleScriptOrReferenceInput lang
   = SScript (SimpleScript lang)
-  | SReferenceScript TxIn
+  | SReferenceScript TxIn (Maybe ScriptHash)
   deriving (Eq, Show)
 
 -- | A /use/ of a script within a transaction body to witness that something is
@@ -812,9 +812,9 @@ scriptWitnessScript (SimpleScriptWitness langInEra version (SScript script)) =
 scriptWitnessScript (PlutusScriptWitness langInEra version (PScript script) _ _ _) =
     Just $ ScriptInEra langInEra (PlutusScript version script)
 
-scriptWitnessScript (SimpleScriptWitness _ _ (SReferenceScript _)) =
+scriptWitnessScript (SimpleScriptWitness _ _ (SReferenceScript _ _)) =
     Nothing
-scriptWitnessScript (PlutusScriptWitness _ _ (PReferenceScript _) _ _ _) =
+scriptWitnessScript (PlutusScriptWitness _ _ (PReferenceScript _ _) _ _ _) =
     Nothing
 
 -- ----------------------------------------------------------------------------

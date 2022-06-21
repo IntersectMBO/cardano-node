@@ -1,4 +1,5 @@
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE PackageImports #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
@@ -21,7 +22,7 @@ import           Data.Proxy (Proxy (..))
 import           Network.Socket (AddrInfo (..))
 import           System.Random (newStdGen)
 
-import           Control.Tracer (Tracer, nullTracer)
+import           "contra-tracer" Control.Tracer (Tracer, nullTracer)
 import           Ouroboros.Consensus.Byron.Ledger.Mempool (GenTx)
 import           Ouroboros.Consensus.Block.Abstract
 import qualified Ouroboros.Consensus.Cardano as Consensus (CardanoBlock)
@@ -52,7 +53,7 @@ import           Ouroboros.Network.Protocol.TxSubmission2.Client (TxSubmissionCl
 
 import           Ouroboros.Network.Snocket (socketSnocket)
 
-import           Cardano.Benchmarking.Tracer (SendRecvConnect, SendRecvTxSubmission2)
+import           Cardano.Benchmarking.LogTypes (SendRecvConnect, SendRecvTxSubmission2)
 
 type CardanoBlock    = Consensus.CardanoBlock  StandardCrypto
 type ConnectClient = AddrInfo -> TxSubmissionClient (GenTxId CardanoBlock) (GenTx CardanoBlock) IO () -> IO ()

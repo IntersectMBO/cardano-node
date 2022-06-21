@@ -1,5 +1,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE PackageImports #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -23,7 +24,7 @@ import           Prelude (String, id)
 import qualified Control.Concurrent.STM as STM
 import           Control.Monad (fail)
 import           Control.Monad.Trans.Except.Extra (newExceptT)
-import           Control.Tracer (Tracer, traceWith)
+import           "contra-tracer" Control.Tracer (Tracer, traceWith)
 import qualified Data.Time.Clock as Clock
 
 import qualified Data.List.NonEmpty as NE
@@ -46,7 +47,7 @@ import           Cardano.Benchmarking.GeneratorTx.Submission
 import           Cardano.Benchmarking.GeneratorTx.SubmissionClient
 import           Cardano.Benchmarking.GeneratorTx.Tx
 import           Cardano.Benchmarking.TpsThrottle
-import           Cardano.Benchmarking.Tracer
+import           Cardano.Benchmarking.LogTypes
 import           Cardano.Benchmarking.Types
 import           Cardano.Benchmarking.Wallet (WalletScript)
 

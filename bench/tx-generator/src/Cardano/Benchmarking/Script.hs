@@ -14,7 +14,7 @@ import           Control.Monad
 
 import           Ouroboros.Network.NodeToClient (IOManager)
 
-import           Cardano.Benchmarking.Tracer (createDebugTracers)
+import           Cardano.Benchmarking.LegacyTracer (createDebugTracers)
 import           Cardano.Benchmarking.Script.Action
 import           Cardano.Benchmarking.Script.Aeson (parseScriptFileAeson)
 import           Cardano.Benchmarking.Script.Core (setProtocolParameters)
