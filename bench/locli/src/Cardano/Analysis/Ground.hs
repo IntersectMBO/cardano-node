@@ -3,6 +3,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 module Cardano.Analysis.Ground
   ( module Cardano.Analysis.Ground
+  , module Data.DataDomain
   , BlockNo (..), EpochNo (..), SlotNo (..)
   )
 where
@@ -24,6 +25,8 @@ import Quiet                            (Quiet (..))
 
 import Cardano.Slotting.Slot            (EpochNo(..), SlotNo(..))
 import Ouroboros.Network.Block          (BlockNo(..))
+
+import Data.DataDomain
 
 
 newtype TId = TId { unTId :: ShortText }
@@ -104,8 +107,12 @@ newtype JsonOutputFile
   = JsonOutputFile { unJsonOutputFile :: FilePath }
   deriving (Show, Eq)
 
-newtype CDFOutputFile
-  = CDFOutputFile { unCDFOutputFile :: FilePath }
+newtype GnuplotOutputFile
+  = GnuplotOutputFile { unGnuplotOutputFile :: FilePath }
+  deriving (Show, Eq)
+
+newtype OrgOutputFile
+  = OrgOutputFile { unOrgOutputFile :: FilePath }
   deriving (Show, Eq)
 
 newtype TextOutputFile
@@ -204,9 +211,9 @@ optJsonOutputFile optname desc =
       <> metavar "JSON-OUTFILE"
       <> help desc
 
-optCDFOutputFile :: String -> String -> Parser CDFOutputFile
-optCDFOutputFile optname desc =
-  fmap CDFOutputFile $
+optGnuplotOutputFile :: String -> String -> Parser GnuplotOutputFile
+optGnuplotOutputFile optname desc =
+  fmap GnuplotOutputFile $
     Opt.option Opt.str
       $ long optname
       <> metavar "CDF-OUTFILE"

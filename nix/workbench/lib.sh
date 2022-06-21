@@ -61,7 +61,7 @@ with_color() {
 }
 
 colorise_colors=(
-    red green yellow blue cyan white
+    red green blue yellow white cyan
 )
 colorise() {
     for ((i=0; $#!=0; i++))

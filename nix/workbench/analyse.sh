@@ -62,7 +62,7 @@ case "$op" in
         ;;
 
     multi-run-full | multi-run | multi )
-        progress "analysis" "$(white multi-summary) on runs: $(yellow $*)"
+        progress "analysis" "$(white multi-summary) on runs: $(colorise $*)"
 
         analyse ${sargs[*]} full-run-analysis      "$*"
         analyse ${sargs[*]} multi-run-summary-only "$*"
@@ -77,16 +77,18 @@ case "$op" in
             read-clusterperfs
             compute-multi-clusterperf
             multi-clusterperf-json
-            multi-clusterperf-cdfs
+            multi-clusterperf-gnuplot
+            multi-clusterperf-org
+            multi-clusterperf-report
+            multi-clusterperf-full
 
             read-propagations
             compute-multi-propagation
             multi-propagation-json
-            multi-propagation-cdfs
-
-            report-multi-clusterperf-{full,brief}
-
-            report-multi-prop-{forger,peers,endtoend,full}
+            multi-propagation-org
+            multi-propagation-{forger,peers,endtoend}
+            multi-propagation-gnuplot
+            multi-propagation-full
         )
         progress "analysis" "$(white multi-summary), calling script: $(colorise ${script[*]})"
         analyse ${sargs[*]} multi-call "$*" ${script[*]}
@@ -109,17 +111,20 @@ case "$op" in
 
             compute-propagation
             propagation-json
-            propagation-cdfs
-            report-prop-{forger,peers,endtoend,full}
+            propagation-org
+            propagation-{forger,peers,endtoend}
+            propagation-gnuplot
+            propagation-full
 
             compute-machperf
-            machperf-json
-            report-machperf-{full,brief}
+            render-machperf
 
             compute-clusterperf
             clusterperf-json
-            clusterperf-cdfs
-            report-clusterperf-{full,brief}
+            clusterperf-gnuplot
+            clusterperf-org
+            clusterperf-report
+            clusterperf-full
          )
         progress "analysis" "$(white full), calling script:  $(colorise ${script[*]})"
         analyse ${sargs[*]} map "call ${script[*]}" "$@"
@@ -135,8 +140,14 @@ case "$op" in
             timeline-slots
 
             compute-machperf
-            machperf-json
-            report-perf-{full,brief}
+            render-machperf
+
+            compute-clusterperf
+            clusterperf-json
+            clusterperf-gnuplot
+            clusterperf-org
+            clusterperf-report
+            clusterperf-full
         )
         progress "analysis" "$(white performance), calling script:  $(colorise ${script[*]})"
         analyse ${sargs[*]} map "call ${script[*]}" "$@"
@@ -155,8 +166,7 @@ case "$op" in
             timeline-slots
 
             compute-machperf
-            machperf-json
-            report-perf-{full,brief}
+            render-machperf
         )
         progress "analysis" "$(with_color white performance), calling script:  $(colorise ${script[*]})"
         analyse ${sargs[*]} map "call --host $host ${script[*]}" "$@"
@@ -214,30 +224,30 @@ case "$op" in
              analysis_set_filters "$filter_names"
         fi
 
-        local v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 va vb vc vd ve vf vg vh
+        local v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 va vb vc vd ve vf vg vh vi vj vk vl vm vn vo
         v0=("$@")
         v1=(${v0[*]/#logs/                 'unlog' --host-from-log-filename ${logfiles[*]/#/--log }})
-        v2=(${v1[*]/#context/              'meta-genesis'   --run-metafile "$dir"/meta.json
-                                                         --shelley-genesis "$dir"/genesis-shelley.json})
+        v2=(${v1[*]/#context/              'meta-genesis' --run-metafile    "$dir"/meta.json
+                                                          --shelley-genesis "$dir"/genesis-shelley.json })
         v3=(${v2[*]/#dump-chain-raw/       'dump-chain-raw'        --chain "$adir"/chain-raw.json})
         v4=(${v3[*]/#chain-timeline-raw/   'timeline-chain-raw' --timeline "$adir"/chain-raw.txt})
         v5=(${v4[*]/#filter-chain/         'filter-chain'                  ${filters[*]}})
         v6=(${v5[*]/#dump-chain/           'dump-chain'            --chain "$adir"/chain.json})
         v7=(${v6[*]/#chain-timeline/       'timeline-chain'     --timeline "$adir"/chain.txt})
         v8=(${v7[*]/#filter-slots/         'filter-slots'                  ${filters[*]}})
-        v9=(${v8[*]/#propagation-cdfs/     'propagation-cdfs' --cdf-pattern "$adir"/%s.cdf})
-        va=(${v9[*]/#propagation-json/     'propagation-json'       --prop "$adir"/blockprop.json})
-
-        vb=(${va[*]/#report-prop-forger/   'report-prop-forger'   --report "$adir"/blockprop-forger.txt  })
-        vc=(${vb[*]/#report-prop-peers/    'report-prop-peers'    --report "$adir"/blockprop-peers.txt   })
-        vd=(${vc[*]/#report-prop-endtoend/ 'report-prop-endtoend' --report "$adir"/blockprop-endtoend.txt})
-        ve=(${vd[*]/#report-prop-full/     'report-prop-full'     --report "$adir"/blockprop-full.txt    })
-        vf=(${ve[*]/#clusterperf-json/     'clusterperf-json' --clusterperf "$adir"/clusterperf.json })
-        vg=(${vf[*]/#clusterperf-cdfs/     'clusterperf-cdfs' --cdf-pattern "$adir"/%s.cdf })
-        vh=(${vg[*]/#report-clusterperf-full/ 'report-clusterperf-full'  --report "$adir"/clusterperf-full.txt    })
-        vi=(${vh[*]/#report-clusterperf-brief/'report-clusterperf-brief' --report "$adir"/clusterperf-brief.txt    })
-
-        local ops_final=(${vi[*]})
+        v9=(${v8[*]/#propagation-json/     'render-propagation'   --json "$adir"/blockprop.json     --full})
+        va=(${v9[*]/#propagation-org/      'render-propagation'    --org "$adir"/blockprop.org      --full})
+        vb=(${va[*]/#propagation-forger/   'render-propagation' --report "$adir"/blockprop.forger.org --forger})
+        vc=(${vb[*]/#propagation-peers/    'render-propagation' --report "$adir"/blockprop.peers.org --peers })
+        vd=(${vc[*]/#propagation-endtoend/ 'render-propagation' --report "$adir"/blockprop.endtoend.org --end-to-end})
+        ve=(${vd[*]/#propagation-gnuplot/  'render-propagation' --gnuplot "$adir"/%s.cdf            --full})
+        vf=(${ve[*]/#propagation-full/     'render-propagation' --pretty "$adir"/blockprop-full.txt --full})
+        vg=(${vf[*]/#clusterperf-json/     'render-clusterperf'   --json "$adir"/clusterperf.json --full })
+        vh=(${vg[*]/#clusterperf-org/      'render-clusterperf'    --org "$adir"/clusterperf.org --full })
+        vi=(${vh[*]/#clusterperf-report/   'render-clusterperf' --report "$adir"/clusterperf.report.org --summary })
+        vj=(${vi[*]/#clusterperf-gnuplot/  'render-clusterperf' --gnuplot "$adir"/%s.cdf --full })
+        vk=(${vj[*]/#clusterperf-full/     'render-clusterperf' --pretty "$adir"/clusterperf-full.txt --full })
+        local ops_final=(${vk[*]})
 
         progress "analysis | locli" "$(with_color reset ${locli_rts_args[@]}) $(colorise "${ops_final[@]}")"
         time locli "${locli_rts_args[@]}" "${ops_final[@]}"
@@ -257,20 +267,23 @@ case "$op" in
         mkdir -p "$adir"
         progress "analysis | multi-call" "tag $(yellow $tag), runs: $(white $runs)"
 
-        local v0=("$@")
-        local v1=(${v0[*]/#read-clusterperfs/ 'read-clusterperfs' ${cperfs[*]} })
-        local v2=(${v1[*]/#read-propagations/ 'read-propagations' ${props[*]}  })
-        local v3=(${v2[*]/#multi-clusterperf-json/ 'multi-clusterperf-json' --multi-clusterperf $adir/'multi-clusterperf.json' })
-        local v4=(${v3[*]/#multi-propagation-json/ 'multi-propagation-json' --multi-prop $adir/'multi-blockprop.json' })
-        local v5=(${v4[*]/#multi-clusterperf-cdfs/ 'multi-clusterperf-cdfs' --cdf-pattern $adir/'%s.cdf' })
-        local v6=(${v5[*]/#multi-propagation-cdfs/ 'multi-propagation-cdfs' --cdf-pattern $adir/'%s.cdf' })
-        local v7=(${v6[*]/#report-multi-prop-forger/ 'report-multi-prop-forger' --report $adir/'multi-blockprop-forger.json' })
-        local v8=(${v7[*]/#report-multi-prop-peers/ 'report-multi-prop-peers' --report $adir/'multi-blockprop-peers.txt' })
-        local v9=(${v8[*]/#report-multi-prop-endtoend/ 'report-multi-prop-endtoend' --report $adir/'multi-blockprop-endtoend.txt' })
-        local va=(${v9[*]/#report-multi-prop-full/ 'report-multi-prop-full' --report $adir/'multi-blockprop-full.txt' })
-        local vb=(${va[*]/#report-multi-clusterperf-full/ 'report-multi-clusterperf-full' --report $adir/'multi-clusterperf-full.txt' })
-        local vc=(${vb[*]/#report-multi-clusterperf-brief/ 'report-multi-clusterperf-brief' --report $adir/'multi-clusterperf-brief.txt' })
-        local ops_final=(${vc[*]})
+        local v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 va vb vc vd ve vf vg vh vi vj vk vl vm vn vo
+        v0=("$@")
+        v1=(${v0[*]/#read-clusterperfs/ 'read-clusterperfs' ${cperfs[*]} })
+        v2=(${v1[*]/#read-propagations/ 'read-propagations' ${props[*]}  })
+        v3=(${v2[*]/#multi-clusterperf-json/ 'render-multi-clusterperf' --json $adir/'multi-clusterperf.json' --full })
+        v4=(${v3[*]/#multi-clusterperf-org/     'render-multi-clusterperf' --org $adir/'multi-clusterperf.org' --full })
+        v5=(${v4[*]/#multi-clusterperf-report/  'render-multi-clusterperf' --report $adir/'multi-clusterperf.report.org' --summary })
+        v6=(${v5[*]/#multi-clusterperf-gnuplot/ 'render-multi-clusterperf' --gnuplot $adir/'%s.cdf' --full })
+        v7=(${v6[*]/#multi-clusterperf-full/    'render-multi-clusterperf' --pretty $adir/'multi-clusterperf-full.txt' --full })
+        v8=(${v7[*]/#multi-propagation-json/     'render-multi-propagation' --json $adir/'multi-blockprop.json' --full })
+        v9=(${v8[*]/#multi-propagation-org/      'render-multi-propagation' --org $adir/'multi-blockprop.org' --full })
+        va=(${v9[*]/#multi-propagation-forger/   'render-multi-propagation' --report $adir/'multi-blockprop-forger.org' --forger })
+        vb=(${va[*]/#multi-propagation-peers/    'render-multi-propagation' --report $adir/'multi-blockprop-peers.org' --peers })
+        vc=(${vb[*]/#multi-propagation-endtoend/ 'render-multi-propagation' --report $adir/'multi-blockprop-endtoend.org' --end-to-end })
+        vd=(${vc[*]/#multi-propagation-gnuplot/  'render-multi-propagation' --gnuplot $adir/'%s.cdf' --full })
+        ve=(${vd[*]/#multi-propagation-full/     'render-multi-propagation' --pretty $adir/'multi-blockprop-full.txt' --full })
+        local ops_final=(${ve[*]})
 
         progress "analysis | locli" "$(with_color reset ${locli_rts_args[@]}) $(colorise "${ops_final[@]}")"
         time locli "${locli_rts_args[@]}" "${ops_final[@]}"

@@ -518,13 +518,17 @@ case "$op" in
         local usage="USAGE: wb run $op TAG"
         local tag=${1:?$usage}
         local dir=$global_rundir/$tag
+        local genesis="$dir"/genesis-shelley.json
+        local genesis_orig="$genesis".orig
 
-        progress "run" "trimming genesis"
-        mv   "$dir"/genesis-shelley.json "$dir"/genesis-shelley.orig.json
-        jq > "$dir"/genesis-shelley.json '
-           .initialFunds = {}
-         | .staking      = {}
-        ' "$dir"/genesis-shelley.orig.json;;
+        local size=$(ls -s "$genesis" | cut -d' ' -f1)
+        if test "$size" -gt 1000
+        then progress "run" "genesis size: ${size}k, trimming.."
+             mv   "$genesis" "$genesis_orig"
+             jq > "$genesis" '
+               .initialFunds = {}
+             | .staking      = {}
+             ' "$genesis_orig"; fi;;
 
     describe )
         local usage="USAGE: wb run $op TAG"

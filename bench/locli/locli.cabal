@@ -33,6 +33,8 @@ common base
                        StandaloneDeriving
                        TupleSections
                        TypeApplications
+                       TypeFamilies
+                       TypeInType
                        ViewPatterns
 
   ghc-options:         -Wall
@@ -51,6 +53,7 @@ library
 
   exposed-modules:     Data.Accum
                        Data.CDF
+                       Data.DataDomain
 
                        Cardano.Command
                        Cardano.TopHandler
@@ -68,6 +71,7 @@ library
                        Cardano.Analysis.Version
 
                        Cardano.Unlog.LogObject
+                       Cardano.Unlog.Org
                        Cardano.Unlog.Render
                        Cardano.Unlog.Resources
 
@@ -96,6 +100,7 @@ library
                      , ouroboros-consensus
                      -- for Data.SOP.Strict:
                      , ouroboros-network
+                     , perf
                      , process
                      , quiet
                      , scientific
@@ -148,3 +153,4 @@ test-suite test-locli
                       , text
 
   other-modules:        Test.Analysis.CDF
+                        Test.Unlog.Org

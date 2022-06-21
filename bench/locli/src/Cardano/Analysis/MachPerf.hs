@@ -26,7 +26,6 @@ import Cardano.Analysis.ChainFilter
 import Cardano.Analysis.Context
 import Cardano.Analysis.Ground
 import Cardano.Analysis.Run
-import Cardano.Analysis.Version
 import Cardano.Unlog.LogObject hiding (Text)
 import Cardano.Unlog.Resources
 

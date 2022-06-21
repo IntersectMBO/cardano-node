@@ -369,7 +369,7 @@ rebuildChain run@Run{genesis} xs@(fmap snd -> machViews) = do
              <*> Just boeSending
              <*> Just boeErrorsCrit
              <*> Just boeErrorsSoft
-     , bePropagation  = cdf adoptionPcts adoptions
+     , bePropagation  = cdf adoptionCentiles adoptions
      , beOtherBlocks  = otherBlocks
      , beErrors =
          errs
@@ -455,7 +455,7 @@ blockProp run@Run{genesis} chain domSlot domBlock = do
     , bpPeerSends           = observerEventsCDF boSending            "sending"
     , bpPropagation         =
       [ (p', forgerEventsCDF (Just . unI . projectCDF' "bePropagation" p . bePropagation))
-      | p@(Centile p') <- adoptionPcts <> [Centile 1.0] ]
+      | p@(Centile p') <- adoptionCentiles <> [Centile 1.0] ]
     , bpSizes               = forgerEventsCDF   (Just . bfBlockSize . beForge)
     , bpVersion             = getVersion
     }
