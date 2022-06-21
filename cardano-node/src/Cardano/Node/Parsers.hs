@@ -195,7 +195,7 @@ parseMempoolCapacityOverride = parseOverride <|> parseNoOverride
         )
 
 parseLedgerDBBackend :: Parser BackingStoreSelectorFlag
-parseLedgerDBBackend = parseInMemory <|> parseLMDB
+parseLedgerDBBackend = parseInMemory <|> parseLMDB <*> optional parseMapSize
   where
     parseInMemory :: Parser BackingStoreSelectorFlag
     parseInMemory =
@@ -204,15 +204,31 @@ parseLedgerDBBackend = parseInMemory <|> parseLMDB
                              \ Incompatible with `--lmdb-ledger-db-backend`."
                      )
 
-    parseLMDB :: Parser BackingStoreSelectorFlag
+    parseLMDB :: Parser (Maybe Int -> BackingStoreSelectorFlag)
     parseLMDB =
-      LMDB . either (const Nothing) Just . parseValue ParseBinary <$>
-      strOption (  long "lmdb-ledger-db-backend"
-                <> metavar "MAPSIZE"
-                <> help "Use the LMDB ledger DB backend. The mapsize argument \
-                        \ must be a number followed by a unit, for example 10Gi \
-                        \ for 10 Gibibytes. Incompatible with `--in-memory-ledger-db-backend`."
+      flag' LMDB (  long "lmdb-ledger-db-backend"
+                 <> help "Use the LMDB ledger DB backend. By default, the \
+                         \ mapsize (maximum database size) of the backend \
+                         \ is set to 16 Gigabytes. Warning: if the database \
+                         \ size exceeds the given mapsize, the node will \
+                         \ abort. Therefore, the mapsize should be set to a \
+                         \ value high enough to guarantee that the maximum \
+                         \ database size will not be reached during the \
+                         \ expected node uptime. \
+                         \ Incompatible with `--in-memory-ledger-db-backend`."
                 )
+
+    parseMapSize :: Parser Int
+    parseMapSize =
+      option (eitherReader (parseValue ParseBinary)) (
+           long "lmdb-mapsize"
+        <> metavar "BIN"
+        <> help "The maximum database size defined as a binary \
+                \ number. The BIN argument must be a number \
+                \ followed by a unit, for example 10Gi for 10 \
+                \ Gibibytes. Note that BIN must be a multiple of \
+                \ the OS page size (in bytes)."
+      )
 
 parseDbPath :: Parser FilePath
 parseDbPath =
