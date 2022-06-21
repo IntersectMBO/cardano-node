@@ -14,6 +14,11 @@
 - add genesis create-cardano command (#3832)
 - Propagate protocol in block type (#3818)
 - Fix kes period info command (#3945)
+- Create VRF signing key file with correct permissions (#1948)
+- Set local encoding to UTF-8 in cardano-cli (#4018)
+- Update example-reference-script-usage.sh to also use inline datums (#4006)
+- Wire up simple reference scripts in cardano-cli (#4014)
+- Add read-only-tx-in-reference option to cardano-cli #(4042)
 
 ## 1.34.0 -- February 2022
 

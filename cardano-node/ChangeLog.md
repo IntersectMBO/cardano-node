@@ -9,6 +9,8 @@
 - cardano-node: implement --shutdown-on-block-synced (#3932)
 - Update dependencies and pins. (#3700)
 - Propagate protocol in block type (#3818)
+- Create VRF signing key file with correct permissions (#1948)
+- Fix for eliding of the ChainDB tracer (#4038)
 - Tracing infra updates:
   - Configuration structure rework, for better UX: (#3867)
   - Rework implementation to eliminate prototypes from trace definitions (#3731)
@@ -31,6 +33,8 @@
   - Update Haskell installation method and mention libsecp256k1 (#3796)
   - Update cardano-node-cli-reference.md (#3630)
   - Documentation improvements for new tracing. (#3834, #3842)
+  - Recommended system requirements. (#4005)
+  - Further explain the `libsodium` installation (#4000)
 - Various workbench, build, testing and benchmarking infrastructure improvements. (#3638, #3643, #3705, #3789, #3812, #3824, #3941, #3851)
 
 ### consensus changes
@@ -64,7 +68,7 @@
 - Diffusion Tests (#3619, #3629, #3633, #3636, #3707, #3727, #3728, #3761)
 - cardano-ping: fix misplaced `unless quiet` (#3729)
 - Import `getMonotonicNSec` from base rather than via FFI (#3735)
-- connection-manager: mini-protocol params )[#3606](https://github.com/input-output-hk/ouroboros-network/pull/3606))
+- connection-manager: mini-protocol params ([#3606](https://github.com/input-output-hk/ouroboros-network/pull/3606))
 - Remove TxSubmission V1 and all node-to-node versions smaller or equal to NodeToNodeV_6 (#3696)
 - Remove NodeToClientV_8 and below (#3699)
 - Relax overly strict disconnection rule for known-invalid blocks (#3726)
@@ -83,7 +87,7 @@
 - Implementing the Babbage era. (#2560, #2599, #2602, #2613, #2618, #2619,
   #2629, #2633, #2643, #2645, #2654, #2661, #2664, #2666, #2678, #2681, #2689,
   #2694, #2700, #2701, #2702, #2708, #2710, #2711, #2712, #2716, #2717, #2723,
-  #2727, #2751, #2766, #2789, #2799, #2807, #2813, #2814, #2815, #2816, #2819, #2821, #2822)
+  #2727, #2751, #2766, #2789, #2799, #2807, #2813, #2814, #2815, #2816, #2819, #2821, #2822, #2848, #2852)
 - Fix a bug in the computation of the exponential function via Taylor series
   approximation. This bug was not ever exhibited in code, but the fix is useful
   for future resilience. (#2591)
@@ -138,7 +142,7 @@
   result in a more even spread of load over the epoch. (#2676)
 - Prune the unused `cardano-ledger-example-shelley` package. (#2693)
 - Add logic to the STS rules to run certain things only if no failures have yet
-  been accumulated. This is useful to e.g. avoid evaluating Plutus scripts in places where the transaction is broken. (#2679)
+  been accumulated. This is useful to e.g. avoid evaluating Plutus scripts in places where the transaction is broken. (#2679, #2847)
 - Hide the `CostModel` constructor. The appropriate way to construct a
   `CostModel` is using `costModelParamsToCostModel`. (#2703, #2730)
 - Support querying the set of UTxO entries which are required to process a
@@ -165,8 +169,8 @@
 - Ensure pure `EpochInfo` is not overused. (#2818)
 
 ### Infrastructure changes
-- Nix changes (#3592, #3711, #3707, #3716, #3722, #3717, #3736, #3785, #3625, #3649, #3698, #3722, #3749, #3760)
-- CI changes (#3754, #3745, #3767, #3995, #3797, #3589, #3599, #3618, #3661, #3694, #3687, #3690, #3703, #3712, #3737)
+- Nix changes (#3592, #3711, #3707, #3716, #3722, #3717, #3736, #3785, #4015, #3637, #3649, #3698, #3722, #3749, #3760, #3789)
+- CI changes (#3754, #3745, #3767, #3995, #3797, #4031, #4035, #3589, #3599, #3618, #3625, #3661, #3694, #3687, #3690, #3703, #3712, #3737, #3792, #3801)
 
 ## 1.34.1 -- March 2022
 

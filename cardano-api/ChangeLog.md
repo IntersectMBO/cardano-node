@@ -21,6 +21,10 @@
 - Extend deserialiseFromRawBytesHex to produce error description (#3304)
 - add genesis create-cardano command (#3832)
 - Propagate protocol in block type (#3818)
+- Create VRF signing key file with correct permissions (#1948)
+- Update example-reference-script-usage.sh to also use inline datums (#4006)
+- Restore deleted comment (#4044)
+- Do not require decentralization parameter in protocol parameters (#4051)
 
 
 ## 1.34.0 -- February 2022
