@@ -1875,14 +1875,14 @@ acceptTxCDDLSerialisation err =
 
     _ -> left err
  where
-  teTypes = [ FromCDDLTx "Witnessed Tx Byron" CddlTx
-            , FromCDDLTx "Witnessed Tx Shelley" CddlTx
+  teTypes = [ FromCDDLTx "Witnessed Tx ByronEra" CddlTx
+            , FromCDDLTx "Witnessed Tx ShelleyEra" CddlTx
             , FromCDDLTx "Witnessed Tx AllegraEra" CddlTx
             , FromCDDLTx "Witnessed Tx MaryEra" CddlTx
             , FromCDDLTx "Witnessed Tx AlonzoEra" CddlTx
             , FromCDDLTx "Witnessed Tx BabbageEra" CddlTx
-            , FromCDDLTx "Unwitnessed Tx Byron" CddlTx
-            , FromCDDLTx "Unwitnessed Tx Shelley" CddlTx
+            , FromCDDLTx "Unwitnessed Tx ByronEra" CddlTx
+            , FromCDDLTx "Unwitnessed Tx ShelleyEra" CddlTx
             , FromCDDLTx "Unwitnessed Tx AllegraEra" CddlTx
             , FromCDDLTx "Unwitnessed Tx MaryEra" CddlTx
             , FromCDDLTx "Unwitnessed Tx AlonzoEra" CddlTx
