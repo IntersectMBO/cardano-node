@@ -270,22 +270,15 @@
               ## TODO: drop external membench, once we bump 'node-snapshot'
               # snapshot = membench.outputs.packages.x86_64-linux.snapshot;
               # membenches = pkgs.membench-node-this-5.batch-report;
-              # workbench-smoke-test =
-              #   (pkgs.supervisord-workbench-for-profile
-              #     {
-              #       inherit supervisord-workbench;
-              #       profileName = "smoke-alzo";
-              #     }
-              #   ).profile-run { trace = true; };
-              # workbench-ci-test =
-              #   (pkgs.supervisord-workbench-for-profile
-              #     {
-              #       inherit supervisord-workbench;
-              #       profileName = "k6-600slots-1000kU-1000kD-64kbs-10tps-fixed-loaded-alzo";
-              #     }
-              #   ).profile-run { };
-              # workbench-smoke-analysis = workbench-smoke-test.analysis;
-              # workbench-ci-analysis = workbench-ci-test.analysis;
+
+              ## This is a very light profile, no caching&pinning needed.
+              workbench-ci-test =
+                (pkgs.supervisord-workbench-for-profile
+                  {
+                    # inherit supervisord-workbench; ## Not required, as long as it's fast.
+                    profileName = "ci-test-bage";
+                  }).profile-run {};
+
               all-profiles-json = pkgs.all-profiles-json;
             }
             # Add checks to be able to build them individually
@@ -419,8 +412,6 @@
         let
           nonPrJobs = map lib.hasPrefix [
             "linux.native.membenches"
-            "linux.native.workbench-ci-analysis"
-            "linux.native.workbench-ci-test"
           ];
         in
         (lib.mapAttrsRecursiveCond (v: !(lib.isDerivation v))

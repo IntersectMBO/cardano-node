@@ -1,15 +1,20 @@
 reset
 set term pngcairo size 1024,768 lw 1
 
-set title ""
-
 set yrange [*:*]
 set ytics nomirror
 set logscale y
 
 set style data yerrorlines
 
+rundir = "../"
+
 cdfI_2(cdf, run1, run2) \
-  = sprintf("plot '%s/%s/analysis/%s.cdf' using 1:2, '%s/%s/analysis/%s.cdf' using 1:2", rundir, run1, cdf, rundir, run2, cdf)
-cdfI_3(cdf, run1, run2, run3) \
-  = sprintf("plot '%s/%s/analysis/%s.cdf' using 1:2, '%s/%s/analysis/%s.cdf' using 1:2, '%s/%s/analysis/%s.cdf' using 1:2", rundir, run1, cdf, rundir, run2, cdf, rundir, run3, cdf)
+  = "plot '".rundir."/".run1."/analysis/".cdf.".cdf' using 1:2, '".rundir."/".run2."/analysis/".cdf.".cdf' using 1:2"
+
+cdfI_3(cdf, run1, run2, run3) = \
+  "set title '".cdf."';". \
+  "plot '".rundir."/".run1."/analysis/".cdf.".cdf' using 1:2 t '".run1."', '". \
+           rundir."/".run2."/analysis/".cdf.".cdf' using 1:2 t '".run2."', '". \
+           rundir."/".run3."/analysis/".cdf.".cdf' using 1:2 t '".run3."'   ". \
+           ""

@@ -138,6 +138,7 @@ data BPErrorKind
   | BPEUnexpectedForObserver !Phase
   | BPEUnexpectedForForger   !Phase
   | BPEUnexpectedAsFirst     !Phase
+  | BPENoBlocks
   | BPEDuplicateForge
   | BPEMissingPhase          !Phase
   | BPENegativePhase         !Phase !NominalDiffTime

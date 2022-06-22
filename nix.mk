@@ -13,13 +13,5 @@ membench-5:    ## Membench:  5 iterations, current commit
 membench-5-at: ## Membench:  5 iterations, set commit by:  make membench-5-at REV=[master]
 	nix build .#membench-node-this-5.batch-report      --out-link result-batch-5-report --override-input node-measured github:input-output-hk/cardano-node/${REV}
 
-test-smoke: smoke ## Build the 'workbench-smoke-test' flake attr, same as the Hydra job
-smoke:
-	nix build -f 'default.nix' 'workbench-smoke-test'     --out-link result-smoke-run      --cores 0
-
-test-analysis: smoke-analysis ## Build the 'workbench-smoke-analysis' flake attr, same as the Hydra job
-smoke-analysis:
-	nix build -f 'default.nix' 'workbench-smoke-analysis' --out-link result-smoke-analysis --cores 0 --show-trace
-
-ci-analysis:
-	nix build -f 'default.nix' 'workbench-ci-analysis'    --out-link result-ci-analysis    --cores 0 --show-trace
+workbench-ci-test smoke: ## Workbench:  test a-la Hydra, the ci-test profile, full Nix engaged
+	nix build '.#hydraJobsPr.linux.native.workbench-ci-test' --cores 0

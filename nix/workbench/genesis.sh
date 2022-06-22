@@ -148,6 +148,8 @@ case "$op" in
         local cache_key_input=$4
         local cache_key=$5
 
+        progress "genesis" "new one:  $(yellow profile) $(blue $profile_json) $(yellow node_specs) $(blue $node_specs) $(yellow dir) $(blue $dir) $(yellow cache_key) $(blue $cache_key) $(yellow cache_key_input) $(blue $cache_key_input)"
+
         rm -rf   "$dir"/{*-keys,byron,pools,nodes,*.json,*.params,*.version}
         mkdir -p "$dir"
 
@@ -158,7 +160,6 @@ case "$op" in
            "$global_basedir"/profiles/presets/mainnet/genesis/genesis.alonzo.json \
            >   "$dir"/genesis.alonzo.spec.json
 
-        msg "genesis:  creating initial genesis"
         cardano-cli genesis create --genesis-dir "$dir"/ \
             $(jq '.cli_args.createSpec | join(" ")' "$profile_json" --raw-output)
 
@@ -287,7 +288,9 @@ Massage_the_key_file_layout_to_match_AWS() {
 
     set -euo pipefail
 
-    local pool_density_map=$(topology density-map "$profile_json" "$node_specs")
+    local pool_density_map=$(topology density-map "$node_specs")
+    if test -z "$pool_density_map"
+    then fatal "failed: topology density-map '$node_specs'"; fi
     msg "genesis: pool density map:  $pool_density_map"
 
     __KEY_ROOT=$dir

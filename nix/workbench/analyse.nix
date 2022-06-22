@@ -29,9 +29,9 @@ pkgs.runCommand "workbench-run-analysis-${profileNix.name}"
   ''${cmd[@]} 2>&1 |
       tee $out/wb-analyse.log
 
-  cat > $out/nix-support/hydra-build-products <<EOF
-  report block-propagation      $out block-propagation.txt
-  report node-1-timeline        $out logs-node-1.timeline.txt
-  report block-propagation.json $out block-propagation.json
+  cd $out
+  for x in $(ls *.json *.org *.txt | grep -v 'flt\.json$')
+  do echo "report $x $out $x" >> $out/nix-support/hydra-build-products
+  done
   EOF
   ''

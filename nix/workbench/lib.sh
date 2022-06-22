@@ -64,6 +64,7 @@ colorise_colors=(
     red green blue yellow white cyan
 )
 colorise() {
+    local i
     for ((i=0; $#!=0; i++))
     do echo -n "$(with_color ${colorise_colors[$((i % 6))]} $1) "
        shift

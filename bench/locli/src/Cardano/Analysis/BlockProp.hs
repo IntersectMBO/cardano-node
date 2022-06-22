@@ -248,14 +248,19 @@ type MachBlockMap a
 
 data MachView
   = MachView
-  { mvBlocks  :: !(MachBlockMap UTCTime)
+  { mvHost    :: !Host
+  , mvBlocks  :: !(MachBlockMap UTCTime)
   , mvChecked :: Maybe UTCTime
   , mvLeading :: Maybe UTCTime
   }
   deriving (FromJSON, Generic, NFData, ToJSON)
 
-blockMapMaxBlock :: MachBlockMap a -> MachBlockEvents a
-blockMapMaxBlock = maximumBy ordBlockEv . Map.elems
+machViewMaxBlock :: MachView -> MachBlockEvents UTCTime
+machViewMaxBlock MachView{..} =
+  Map.elems mvBlocks
+  & \case
+       [] -> MBE $ BPError { eHost=mvHost, eBlock=Hash "Genesis", eLO=Nothing, eDesc=BPENoBlocks }
+       xs -> maximumBy ordBlockEv xs
 
 beForgedAt :: BlockEvents -> UTCTime
 beForgedAt BlockEvents{beForge=BlockForge{..}} =
@@ -273,7 +278,7 @@ rebuildChain run@Run{genesis} xs@(fmap snd -> machViews) = do
  where
    eventMaps      = mvBlocks <$> machViews
 
-   finalBlockEv   = maximumBy ordBlockEv $ blockMapMaxBlock <$> eventMaps
+   finalBlockEv   = maximumBy ordBlockEv $ machViewMaxBlock <$> machViews
 
    tipHash        = rewindChain eventMaps 1 (mbeBlock finalBlockEv)
    tipBlock       = getBlockForge eventMaps tipHash
@@ -498,16 +503,15 @@ witherToDistrib distrify proj xs =
 
 -- | Given a single machine's log object stream, recover its block map.
 blockEventMapsFromLogObjects :: Run -> (JsonLogfile, [LogObject]) -> MachView
-blockEventMapsFromLogObjects run (f@(unJsonLogfile -> fp), xs) =
-  if Map.size (mvBlocks view) == 0
-  then error $ mconcat
-       ["No block events in ",fp," : ","LogObject count: ",show (length xs)]
-  else view
+blockEventMapsFromLogObjects run (f@(unJsonLogfile -> fp), []) =
+  error $ mconcat ["0 LogObjects in ", fp]
+blockEventMapsFromLogObjects run (f@(unJsonLogfile -> fp), xs@(x:_)) =
+  foldl' (blockPropMachEventsStep run f) initial xs
  where
-   view = foldl' (blockPropMachEventsStep run f) initial xs
    initial =
      MachView
-     { mvBlocks  = mempty
+     { mvHost    = loHost x
+     , mvBlocks  = mempty
      , mvChecked = Nothing
      , mvLeading = Nothing
      }

@@ -93,15 +93,13 @@ case "${op}" in
         ;;
 
     density-map )
-        local usage="USAGE:  wb topology density-map PROFILE-JSON NODE-SPECS"
-        local profile_json=${1:?$usage}
-        local node_specs=${2:?$usage}
+        local usage="USAGE:  wb topology density-map NODE-SPECS-JSON"
+        local node_specs_json=${1:?$usage}
 
-        args=(--slurpfile profile  "$profile_json"
-              --argjson   node_specs "$node_specs"
+        args=(--slurpfile node_specs "$node_specs"
               --null-input --compact-output
              )
-        jq ' $node_specs
+        jq ' $node_specs[0]
            | map
              ({ key:   "\(.i)"
               , value: ((.pools) // 0)

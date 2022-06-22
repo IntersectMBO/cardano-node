@@ -47,3 +47,6 @@ pkgs.runCommand "workbench-profile-output-${profileNix.name}"
 
   wb profile node-specs $out/profile.json > $out/node-specs.json
   ''
+// { inherit (profileNix) name;
+     inherit workbench;
+   }
