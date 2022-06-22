@@ -1,5 +1,5 @@
 name:                  tx-generator
-version:               2.2
+version:               2.3
 description:           The transaction generator for cardano node
 author:                IOHK
 maintainer:            operations@iohk.io
@@ -37,7 +37,6 @@ library
                        Cardano.Benchmarking.GeneratorTx.Tx.Byron
                        Cardano.Benchmarking.GeneratorTx.Submission
                        Cardano.Benchmarking.GeneratorTx.SubmissionClient
-                       Cardano.Benchmarking.LegacyTracer
                        Cardano.Benchmarking.LogTypes                       
                        Cardano.Benchmarking.NixOptions
                        Cardano.Benchmarking.OuroborosImports
@@ -52,7 +51,7 @@ library
                        Cardano.Benchmarking.Script.Store
                        Cardano.Benchmarking.Script.Types
                        Cardano.Benchmarking.TpsThrottle
-                       Cardano.Benchmarking.Tracer                       
+                       Cardano.Benchmarking.Tracer
                        Cardano.Benchmarking.Types
                        Cardano.Benchmarking.Wallet
                        Cardano.Benchmarking.ListBufferedSelector
@@ -90,7 +89,6 @@ library
                      , generic-monoid
                      , ghc-prim
                      , io-classes
-                     , iohk-monitoring
                      , ixset-typed
                      , network
                      , network-mux

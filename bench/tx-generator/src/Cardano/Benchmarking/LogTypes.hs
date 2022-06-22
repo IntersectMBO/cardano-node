@@ -4,7 +4,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PackageImports #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -20,7 +19,6 @@ module Cardano.Benchmarking.LogTypes
   , SendRecvTxSubmission2
   , SubmissionSummary(..)
   , TraceBenchTxSubmit(..)
-  , TraceLowLevelSubmit(..)
   ) where
 
 import           Prelude
@@ -59,7 +57,6 @@ data BenchTracers =
   { btTxSubmit_   :: Tracer IO (TraceBenchTxSubmit TxId)
   , btConnect_    :: Tracer IO SendRecvConnect
   , btSubmission2_:: Tracer IO SendRecvTxSubmission2
-  , btLowLevel_   :: Tracer IO TraceLowLevelSubmit
   , btN2N_        :: Tracer IO NodeToNodeSubmissionTrace
   }
 
@@ -119,15 +116,6 @@ data NodeToNodeSubmissionTrace
   | ReqTxs          Int
   | TxList          Int
   | EndOfProtocol
-  deriving stock (Show, Generic)
-
-data TraceLowLevelSubmit
-  = TraceLowLevelSubmitting
-  -- ^ Submitting transaction.
-  | TraceLowLevelAccepted
-  -- ^ The transaction has been accepted.
-  | TraceLowLevelRejected String
-  -- ^ The transaction has been rejected, with corresponding error message.
   deriving stock (Show, Generic)
 
 type SendRecvTxSubmission2 = TraceSendRecv (TxSubmission2 (GenTxId CardanoBlock) (GenTx CardanoBlock))

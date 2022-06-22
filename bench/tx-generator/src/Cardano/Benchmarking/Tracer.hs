@@ -1,11 +1,10 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PackageImports #-}
@@ -27,17 +26,15 @@ import           GHC.Generics
 import           Data.Aeson as A
 import qualified Data.Aeson.KeyMap as KeyMap
 import qualified Data.Map as Map
-import           Data.Text as Text
+
+import           Data.Text (Text)
+import qualified Data.Text as Text
 
 import           Cardano.Api
 import           Cardano.Logging
 
-import           Cardano.BM.Data.Tracer (TracingVerbosity (..), toObject)
-
-import           Cardano.Benchmarking.LegacyTracer ()
 import           Cardano.Benchmarking.LogTypes
 import           Cardano.Benchmarking.Types
-
 
 generatorTracer :: LogFormatting a => (a -> Namespace) -> Text -> Trace IO FormattedMessage -> IO (Trace IO a)
 generatorTracer namesFor tracerName tr = do
@@ -58,18 +55,11 @@ initDefaultTracers = do
   configureTracers initialTraceConfig sendRecvConnectDocumented [connectTracer]
   submitTracer <- generatorTracer namesForSubmission2 "submit" st
   configureTracers initialTraceConfig submission2Documented [submitTracer]
-  lowLevelSubmitTracer <- generatorTracer genericNames "llSubmit" st
-  configureTracers initialTraceConfig llsubmitDocumented [lowLevelSubmitTracer]
 
-  traceWith st $ FormattedHuman False "logging start up h"
-  traceWith benchTracer $ TraceBenchTxSubDebug "logging start up m1"
-  traceWith benchTracer $ TraceBenchTxSubDebug "logging start up m2"
-  traceWith benchTracer $ TraceBenchTxSubDebug "logging start up m3"
   return $ BenchTracers
     { btTxSubmit_    = Tracer (traceWith benchTracer)
     , btConnect_     = Tracer (traceWith connectTracer)
     , btSubmission2_ = Tracer (traceWith submitTracer)
-    , btLowLevel_    = Tracer (traceWith lowLevelSubmitTracer)
     , btN2N_         = Tracer (traceWith n2nSubmitTracer)
     }
 
@@ -92,7 +82,7 @@ initialTraceConfig = TraceConfig {
     initConf :: Text -> (Namespace, [ConfigOption])
     initConf tr = ([tr], [ConfDetail DMaximum])
 
-genericNames :: (ConstructorName f, Generic a, Rep a ~ M1 i c f) => a ->  [Text]
+genericNames :: (ConstructorName f, Generic a, Rep a ~ D1 c f) => a ->  [Text]
 genericNames x = [ Text.pack $ constructorName $ unM1 $ from x ]
 
 class ConstructorName f where
@@ -101,7 +91,7 @@ class ConstructorName f where
 instance (ConstructorName f, ConstructorName g) => ConstructorName (f :+: g) where
   constructorName (L1 x) = constructorName x
   constructorName (R1 x) = constructorName x
-instance (Constructor ('MetaCons n f r)) => ConstructorName (M1 C ('MetaCons n f r) x) where
+instance (Constructor ('MetaCons n f r)) => ConstructorName (C1 ('MetaCons n f r) x) where
   constructorName = conName
 
 instance LogFormatting (TraceBenchTxSubmit TxId) where
@@ -234,7 +224,7 @@ instance LogFormatting NodeToNodeSubmissionTrace where
        [ "kind" .= A.String "TxList"
        , "sent" .= A.toJSON sent ]
 
-nodeToNodeSubmissionTraceDocumented :: Documented (NodeToNodeSubmissionTrace)
+nodeToNodeSubmissionTraceDocumented :: Documented NodeToNodeSubmissionTrace
 nodeToNodeSubmissionTraceDocumented = Documented
   [ emptyDoc ["submitN2N", "ReqIdsBlocking"]
   , emptyDoc ["submitN2N", "IdsListBlocking"]
@@ -246,41 +236,25 @@ nodeToNodeSubmissionTraceDocumented = Documented
 
 instance LogFormatting SendRecvConnect where
   forHuman = Text.pack . show
-  forMachine v t = toObject (mapVerbosity v) t
+  forMachine _ _ = KeyMap.fromList [ "kind" .= A.String "SendRecvConnect" ]
 
-sendRecvConnectDocumented :: Documented (SendRecvConnect)
+
+sendRecvConnectDocumented :: Documented SendRecvConnect
 sendRecvConnectDocumented = Documented
   [ emptyDoc ["connect"]
   ]
 
 instance LogFormatting SendRecvTxSubmission2 where
   forHuman = Text.pack . show
-  forMachine v t = toObject (mapVerbosity v) t
+  forMachine _ _ = KeyMap.fromList [ "kind" .= A.String "SendRecvTxSubmission2" ]
 
 namesForSubmission2 :: SendRecvTxSubmission2 ->  [Text]
 namesForSubmission2 _ = []
 
-submission2Documented :: Documented (SendRecvTxSubmission2)
+submission2Documented :: Documented SendRecvTxSubmission2
 submission2Documented = Documented
   [ emptyDoc ["submission2"]
   ]
 
-instance LogFormatting TraceLowLevelSubmit where
-  forHuman = Text.pack . show
-  forMachine v t = toObject (mapVerbosity v) t
-
-llsubmitDocumented :: Documented (TraceLowLevelSubmit)
-llsubmitDocumented = Documented
-  [ emptyDoc ["llSubmit"]
-  ]
-
-
 emptyDoc :: Namespace -> DocMsg a
 emptyDoc ns = DocMsg ns [] "ToDo: write benchmark tracer docs"
-
-mapVerbosity :: DetailLevel -> TracingVerbosity
-mapVerbosity v = case v of
-  DMinimal  -> MinimalVerbosity
-  DNormal   -> NormalVerbosity
-  DDetailed -> MaximalVerbosity
-  DMaximum  -> MaximalVerbosity
