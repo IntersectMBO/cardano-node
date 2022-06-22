@@ -28,7 +28,7 @@ usage_run() {
   Options:
 
     --rundir DIR          Set the runs directory.  Defaults to $global_rundir_def,
-                            if it exists, otherwise to \$WORKBENCH_RUNDIR, if that
+                            if it exists, otherwise to \$WB_RUNDIR, if that
                             exists, and finally unconditionally to $global_rundir_def.
 EOF
 }
@@ -38,8 +38,8 @@ set -eu
 if   test -d "$global_rundir_def"
 then global_rundir=$global_rundir_def
 ## Allow compatibility with cardano-ops legacy runs directory layout:
-elif test -v "WORKBENCH_RUNDIR" && test -d "$WORKBENCH_RUNDIR"
-then global_rundir=$WORKBENCH_RUNDIR
+elif test -v "WB_RUNDIR" && test -d "$WB_RUNDIR"
+then global_rundir=$WB_RUNDIR
 else global_rundir=$global_rundir_def
      mkdir "$global_rundir"
 fi

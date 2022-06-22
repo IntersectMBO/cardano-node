@@ -51,7 +51,7 @@ let
         --profile      ${profile} \
         --cache-dir    ${cacheDir} \
         --base-port    ${toString basePort} \
-        ''${WORKBENCH_CABAL_MODE:+--cabal} \
+        ''${WB_MODE_CABAL:+--cabal} \
         "$@"
   '';
 
@@ -99,7 +99,7 @@ let
           mkdir -p $out/{cache,nix-support}
           cd       $out
 
-          export WORKBENCH_BACKEND=supervisor
+          export WB_BACKEND=supervisor
           export CARDANO_NODE_SOCKET_PATH=$(wb backend get-node-socket-path ${stateDir})
 
           cmd=(

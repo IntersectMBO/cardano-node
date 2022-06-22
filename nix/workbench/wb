@@ -131,7 +131,7 @@ start()
 
         --verbose )                      export verbose=t;;
         --trace | --debug )              set -x;;
-        --trace-wb | --trace-workbench ) export WORKBENCH_EXTRA_FLAGS=--trace;;
+        --trace-wb | --trace-workbench ) export WB_EXTRA_FLAGS=--trace;;
         --help )                         usage_start
                                          exit 1;;
         * ) fatal "while parsing remaining 'wb start' args:  $*";;
@@ -180,7 +180,7 @@ finish()
     while test $# -gt 0
     do case "$1" in
         --trace | --debug )              set -x;;
-        --trace-wb | --trace-workbench ) export WORKBENCH_EXTRA_FLAGS=--trace;;
+        --trace-wb | --trace-workbench ) export WB_EXTRA_FLAGS=--trace;;
         * ) break;; esac; shift; done
 
     run stop $(run current-tag)

@@ -1,18 +1,18 @@
 progress "workbench"  "cabal-inside-nix-shell mode enabled, calling cardano-* via '$(white cabal run)' (instead of using Nix store) $*"
 
-if test ! -v WORKBENCH_PROFILED
-then export  WORKBENCH_PROFILED=
+if test ! -v WB_PROFILED
+then export  WB_PROFILED=
 fi
 
 while test $# -gt 0
 do case "$1" in
        --profiled ) progress "workbench" "enabling $(white profiled) mode"
-                    export WORKBENCH_PROFILED='true';;
+                    export WB_PROFILED='true';;
        * ) break;; esac; shift; done
 
-export WBRTSARGS=${WORKBENCH_PROFILED:+-xc}
-export WBFLAGS_RTS=${WBRTSARGS:++RTS $WBRTSARGS -RTS}
-export WBFLAGS_CABAL=${WORKBENCH_PROFILED:+--enable-profiling}
+export WB_RTSARGS=${WB_PROFILED:+-xc}
+export WB_FLAGS_RTS=${WB_RTSARGS:++RTS $WB_RTSARGS -RTS}
+export WB_FLAGS_CABAL=${WB_PROFILED:+--enable-profiling}
 
 function workbench-prebuild-executables()
 {
@@ -26,40 +26,41 @@ function workbench-prebuild-executables()
     unset NIX_ENFORCE_PURITY
     for exe in cardano-node cardano-cli cardano-topology cardano-tracer tx-generator locli
     do echo "workbench:    $(blue prebuilding) $(red $exe)"
-       cabal -v0 build ${WBFLAGS_CABAL} -- exe:$exe 2>&1 >/dev/null |
+       cabal -v0 build ${WB_FLAGS_CABAL} -- exe:$exe 2>&1 >/dev/null |
            { grep -v 'exprType TYPE'; true; } || return 1
     done
     echo
 }
 
 function cardano-cli() {
-    cabal -v0 run exe:cardano-cli ${WBFLAGS_RTS} -- "$@"
+    cabal -v0 run   ${WB_FLAGS_CABAL} exe:cardano-cli      -- ${WB_FLAGS_RTS} "$@"
 }
 
 function cardano-node() {
-    cabal -v0 run exe:cardano-node ${WBFLAGS_RTS} -- "$@"
+    cabal -v0 run   ${WB_FLAGS_CABAL} exe:cardano-node     -- ${WB_FLAGS_RTS} "$@"
 }
 
 function cardano-topology() {
-    cabal -v0 run exe:cardano-topology ${WBFLAGS_RTS} -- "$@"
+    env | grep WB
+    cabal -v0 run   ${WB_FLAGS_CABAL} exe:cardano-topology -- ${WB_FLAGS_RTS} "$@"
 }
 
 function cardano-tracer() {
-    cabal -v0 run exe:cardano-tracer ${WBFLAGS_RTS} -- "$@"
+    cabal -v0 run   ${WB_FLAGS_CABAL} exe:cardano-tracer   -- ${WB_FLAGS_RTS} "$@"
 }
 
 function locli() {
-    cabal -v0 build ${WBFLAGS_CABAL} exe:locli
+    cabal -v0 build ${WB_FLAGS_CABAL} exe:locli
     set-git-rev \
         $(git rev-parse HEAD) \
         $(find ./dist-newstyle/build/ -type f -name locli) || true
-    cabal -v0 exec  ${WBFLAGS_CABAL} locli -- ${WBFLAGS_RTS} "$@"
+    cabal -v0 exec  ${WB_FLAGS_CABAL} exe:locli            -- ${WB_FLAGS_RTS} "$@"
 }
 
 function tx-generator() {
-    cabal -v0 run exe:tx-generator ${WBFLAGS_RTS} -- "$@"
+    cabal -v0 run   ${WB_FLAGS_CABAL} exe:tx-generator     -- ${WB_FLAGS_RTS} "$@"
 }
 
-export WORKBENCH_CABAL_MODE=t
+export WB_MODE_CABAL=t
 
 export -f cardano-cli cardano-node cardano-topology cardano-tracer locli tx-generator

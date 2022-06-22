@@ -11,17 +11,17 @@ with lib;
 let
   shellHook = ''
     echo 'workbench shellHook:  workbenchDevMode=${toString workbenchDevMode} useCabalRun=${toString useCabalRun} profileName=${profileName}'
-    export WORKBENCH_BACKEND=supervisor
-    export WORKBENCH_SHELL_PROFILE=${profileName}
+    export WB_BACKEND=supervisor
+    export WB_SHELL_PROFILE=${profileName}
 
     ${optionalString
       workbenchDevMode
     ''
-    export WORKBENCH_CARDANO_NODE_REPO_ROOT=$(git rev-parse --show-toplevel)
-    export WORKBENCH_EXTRA_FLAGS=
+    export WB_CARDANO_NODE_REPO_ROOT=$(git rev-parse --show-toplevel)
+    export WB_EXTRA_FLAGS=
 
     function wb() {
-      $WORKBENCH_CARDANO_NODE_REPO_ROOT/nix/workbench/wb --set-mode ${checkoutWbMode} $WORKBENCH_EXTRA_FLAGS "$@"
+      $WB_CARDANO_NODE_REPO_ROOT/nix/workbench/wb --set-mode ${checkoutWbMode} $WB_EXTRA_FLAGS "$@"
     }
     export -f wb
     ''}
