@@ -1,7 +1,5 @@
 bump-cardano-node-workbench:
 	nix flake lock --update-input cardano-node-workbench
-bump-node-measured:
-	nix flake lock --update-input node-measured
 bump-cardano-deployment: ## Sync the flake.lock to the CI check
 	nix run nixpkgs#nixUnstable -- build .#hydraJobs.cardano-deployment
 membench-1:    ## Membench:  one iteration, current commit

@@ -42,9 +42,12 @@
     customConfig.url = "github:input-output-hk/empty-flake";
 
     node-measured = {
-      url = "github:input-output-hk/cardano-node";
+      # Use --override-input node-measured github:input-output-hk/cardano-node/<rev>
+      # to select a different revision.
+      follows = "/";
     };
     node-snapshot = {
+      # TODO: also use follows = "/" for node-snapshot
       url = "github:input-output-hk/cardano-node/7f00e3ea5a61609e19eeeee4af35241571efdf5c";
     };
     node-process = {
