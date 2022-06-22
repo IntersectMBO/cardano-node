@@ -6,7 +6,6 @@ set -euo pipefail
 export LANG=C.UTF-8
 
 global_basedir=${global_basedir:-$(realpath "$(dirname "$0")")}
-global_mode='unknown'
 
 . "$global_basedir"/lib.sh
 . "$global_basedir"/env.sh
@@ -53,12 +52,10 @@ usage_extra() {
 
     scenario     (s)      Run scenario control
     call ARGS..           Call internal functions with arguments
-    mode                  Report mode set by --set-mode
 
   Extra options:
 
     --cls                 Clear screen, before acting further.
-    --set-mode MODE       Set mode.  Only has effect on 'mode' OP
 
 EOF
 }
@@ -93,6 +90,7 @@ start()
     local profile_name= profile=
     local backend=supervisor
     local cabal_mode=
+    local skip_prebuild=
     local genesis_cache_entry_dir=
     local topology_dir=
     local verbose=
@@ -126,6 +124,7 @@ start()
         --filters )                      analyse_args+=($1 $2); shift;;
 
         --cabal-mode | --cabal )         run_allocate_args+=($1); cabal_mode=t;;
+        --skip-prebuild | -sp )          skip_prebuild=t;;
         --supervisor | --backend-supervisor )
                                          backend=supervisor;;
 
@@ -139,7 +138,10 @@ start()
 
     if test -n "$cabal_mode"
     then . $(dirname "$0")/lib-cabal.sh
-         workbench-prebuild-executables
+         if test -z "$skip_prebuild"
+         then workbench-prebuild-executables
+         else progress "workbench | cabal" "skipping Cabal prebuilding due to $(yellow --skip-prebuild)"
+         fi
     fi
 
     backend assert-is $backend
@@ -193,8 +195,6 @@ do case "$1" in
            echo -en "\ec">&2;;
        --trace | --debug )
            set -x;;
-       --set-mode )
-           global_mode=$2; shift;;
        --help )
            usage_main; exit 1;;
        --help-full | --help-all | --help-extra )
@@ -228,7 +228,6 @@ main() {
         scenario     | s )        scenario            "$@";;
         backend )                 backend             "$@";;
         call )                                        "$@";;
-        mode )                    echo -n     $global_mode;;
         path )                    echo     $global_basedir;;
 
         ## Bail for help:

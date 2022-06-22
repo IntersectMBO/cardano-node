@@ -4,7 +4,7 @@
 pkgs.runCommand "workbench-topology-${profileNix.name}"
   { requiredSystemFeatures = [ "benchmark" ];
     nativeBuildInputs = with pkgs.haskellPackages; with pkgs;
-      [ bash cardano-cli coreutils gnused jq moreutils workbench.workbench ];
+      [ bash cardano-cli cardano-topology coreutils gnused jq moreutils workbench.workbench ];
   }
   ''
   mkdir $out

@@ -2,7 +2,6 @@
 , profileName
 , workbenchDevMode ? false
 , useCabalRun ? false
-, checkoutWbMode ? "unknown"
 , profiled ? false
 }:
 
@@ -10,7 +9,7 @@ with lib;
 
 let
   shellHook = ''
-    echo 'workbench shellHook:  workbenchDevMode=${toString workbenchDevMode} useCabalRun=${toString useCabalRun} profileName=${profileName}'
+    echo 'workbench shellHook:  workbenchDevMode=${toString workbenchDevMode} useCabalRun=${toString useCabalRun} profiled=${toString profiled} profileName=${profileName}'
     export WB_BACKEND=supervisor
     export WB_SHELL_PROFILE=${profileName}
 
@@ -21,7 +20,7 @@ let
     export WB_EXTRA_FLAGS=
 
     function wb() {
-      $WB_CARDANO_NODE_REPO_ROOT/nix/workbench/wb --set-mode ${checkoutWbMode} $WB_EXTRA_FLAGS "$@"
+      $WB_CARDANO_NODE_REPO_ROOT/nix/workbench/wb $WB_EXTRA_FLAGS "$@"
     }
     export -f wb
     ''}
