@@ -1,6 +1,8 @@
 progress "workbench"  "cabal-inside-nix-shell mode enabled, calling cardano-* via '$(white cabal run)' (instead of using Nix store) $*"
 
-export WORKBENCH_PROFILED=
+if test ! -v WORKBENCH_PROFILED
+then export  WORKBENCH_PROFILED=
+fi
 
 while test $# -gt 0
 do case "$1" in
