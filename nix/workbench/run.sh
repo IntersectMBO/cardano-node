@@ -1,5 +1,4 @@
 global_rundir_def=$PWD/run
-global_rundir_alt_def=$PWD/../cardano-ops/runs
 
 usage_run() {
      usage "run" "Managing cluster runs" <<EOF
@@ -35,11 +34,11 @@ EOF
 
 run() {
 set -eu
-if   test -d "$global_rundir_def"
-then global_rundir=$global_rundir_def
-## Allow compatibility with cardano-ops legacy runs directory layout:
-elif test -v "WB_RUNDIR" && test -d "$WB_RUNDIR"
+if   test -v "WB_RUNDIR" && test -d "$WB_RUNDIR"
 then global_rundir=$WB_RUNDIR
+## Allow compatibility with cardano-ops legacy runs directory layout:
+elif test -d "$global_rundir_def"
+then global_rundir=$global_rundir_def
 else global_rundir=$global_rundir_def
      mkdir "$global_rundir"
 fi
@@ -253,54 +252,52 @@ case "$op" in
                     sort ||
                     true'" 2>/dev/null;;
 
-    allocate-from-aws | steal-from-aws | aws-get )
+    allocate-from-aws | aws-get )
         local usage="USAGE: wb run $op RUN [MACHINE] [DEPLOYMENT=bench-1] [ENV=bench]"
         local run=${1:?$usage}
         local mach=${2:-}
         local depl=${3:-bench-1}
         local env=${4:-bench}
 
-        local meta=$(ssh $env -- sh -c "'jq . $depl/runs/$run/meta.json'")
-        if ! jq . <<<$meta >/dev/null
-        then fail "allocate-from-aws:  malformed $(yellow meta.json) in $(white $run) on $(white $depl)@$(white env)"; fi
-
-        ## Minor validation passed, create & populate run with remote data:
-        local dir=$global_rundir/$run
-        mkdir -p "$dir"
-        jq . <<<$meta > $dir/meta.json
-
-        local hosts=($(if test -n "$mach"; then echo $mach
-                       else jq -r '.hostname | keys | .[]' <<<$meta; fi))
-        local objects=(
-            ${hosts[*]}
-            genesis-shelley.json
-            genesis-alonzo.json
-            network-latency-matrix.json
-            machines.json
+        local args=(
+            "$run"
+            'if test -f compressed/logs-$obj.tar.zst; then cat compressed/logs-$obj.tar.zst; else tar c $obj --zstd --ignore-failed-read; fi'
+            $mach
+            $depl
+            $env
         )
+        run_aws_get "${args[@]}";;
 
-        local count=${#objects[*]}
-        progress "run | aws-get $(white $run)" "objects to fetch:  $(white $count) total:  $(yellow ${objects[*]})"
+    analysis-from-aws | aws-get-analysis | aws-geta | fetch-analysis | fa )
+        local usage="USAGE: wb run $op RUN.."
+        local runs=($*) run
 
-        local max_batch=9
-        progress "run | aws-get $(white $run)" "fetching in batches"
+        progress "aws" "trying to fetch analyses:  $(white ${runs[*]})"
+        for run in ${runs[*]}
+        do if   test "$(ssh $env -- sh -c "'ls -ld $depl/runs/$run          | wc -l'")" = 0
+           then fail "aws-analysis:  run does not exist on AWS: $(white $run)"
+           elif test "$(ssh $env -- sh -c "'ls -ld $depl/runs/$run/analysis | wc -l'")" = 0
+           then fail "aws-analysis:  run has not been analysed on AWS: $(white $run)"
+           else run_aws_get "$run" '{ ls {profile,machines}.json analysis/*.{json,cdf,org,txt} |
+                                                                              grep -v flt.json |
+                                                                      grep -v flt.logobjs.json |
+                           xargs tar c --ignore-failed-read --zstd; }' 'explorer' "$depl" "$env"
+           fi
+        done
+        ;;
 
-        local base=0 batch
-        while test $base -lt $count
-        do local batch=(${objects[*]:$base:$max_batch})
-           progress_ne "run | aws-get $(white $run)" "fetching batch: "
-           local obj=
-           for obj in ${batch[*]}
-           do { ssh $env -- \
-                    sh -c "'cd $depl/runs/$run && if test -f compressed/logs-$obj.tar.zst; then cat compressed/logs-$obj.tar.zst; else tar c $obj --zstd --ignore-failed-read; fi'" 2>/dev/null |
-                    (cd $dir; tar x --zstd)
-                echo -ne " $(yellow $obj)" >&2
-              } &
-           done
-           wait
-           echo >&2
-           base=$((base + max_batch))
-        done;;
+    analyse-aws | awsa )
+        local usage="USAGE: wb run $op RUN [MACHINE] [DEPLOYMENT=bench-1] [ENV=bench]"
+        local run=${1:?$usage}
+        local mach=${2:-}
+        local depl=${3:-bench-1}
+        local env=${4:-bench}
+
+        if   test "$(ssh $env -- sh -c "'ls -ld $depl/runs/$run          | wc -l'")" = 0
+        then fail "aws-analysis:  run does not exist on AWS: $(white $run)"
+        else ssh $env -- sh -c "'export WB_RUNDIR=../$depl/runs && cd cardano-node && echo env: $(yellow $env), rundir: $(color blue)\$WB_RUNDIR$(color reset), workbench: $(color yellow)\$(git log -n1)$(color reset) && make analyse TAG=$run'"
+        fi
+        ;;
 
     allocate )
         local usage="USAGE: wb run $op BATCH-NAME PROFILE-NAME [ENV-CONFIG-OPTS..] [-- BACKEND-ARGS-AND-ENV-CONFIG-OPTS..]"
@@ -472,18 +469,6 @@ case "$op" in
         then jq             'keys | .[]' -r "$dir"/node-specs.json
         else jq '.hostname | keys | .[]' -r "$dir"/meta.json; fi;;
 
-    fetch-analysis | fa )
-        local usage="USAGE: wb run $op ENV DEPL BATCH-OR-TAG.."
-        local   env=${1:?$usage}; shift
-        local  depl=${1:?$usage}; shift
-
-        for x in $*
-        do
-            ssh $env -- \
-                sh -c "'cd $depl/runs && tar c {*.$x.*,$x}/analysis/{block-propagation,logs-node-1.timeline}.txt --zstd --ignore-failed-read'" 2>/dev/null |
-                (cd run; tar x --zstd); done
-        ;;
-
     remote-machine-run-slice-list | rmrsl )
         local usage="USAGE: wb run $op ENV DEPL [HOST=DEPL]"
         local env=${1:?$usage}
@@ -630,4 +615,56 @@ EOF
         ;;
 
     * ) usage_run;; esac
+}
+
+run_aws_get() {
+    local usage='USAGE: run_aws_get RUN REMOTE-TAR-CMD [MACHINE] [DEPLOYMENT] [ENV]'
+    local run=${1:?$usage}
+    local remote_tar_cmd=${2:?$usage}
+    local mach=${3:-}
+    local depl=${4:-bench-1}
+    local env=${5:-bench}
+
+    progress "aws-get" "mach $(yellow $mach) depl $(yellow $depl) run $(white $run)"
+    progress "aws-get" "selector $(green $remote_tar_cmd)"
+
+    local meta=$(ssh $env -- sh -c "'jq . $depl/runs/$run/meta.json'")
+    if ! jq . <<<$meta >/dev/null
+    then fail "allocate-from-aws:  malformed $(yellow meta.json) in $(white $run) on $(white $depl)@$(white env)"; fi
+
+    ## Minor validation passed, create & populate run with remote data:
+    local dir=$global_rundir/$run
+    mkdir -p "$dir"
+    jq . <<<$meta > $dir/meta.json
+
+    local hosts=($(if test -n "$mach"; then echo $mach
+                   else jq -r '.hostname | keys | .[]' <<<$meta; fi))
+    local objects=(
+        ${hosts[*]}
+        genesis-alonzo.json
+        genesis-shelley.json
+        machines.json
+        network-latency-matrix.json
+        profile.json
+    )
+
+    local count=${#objects[*]}
+    progress "run | aws-get $(white $run)" "objects to fetch:  $(white $count) total:  $(yellow ${objects[*]})"
+
+    local max_batch=9 base=0 batch
+    while test $base -lt $count
+    do local batch=(${objects[*]:$base:$max_batch})
+       progress_ne "run | aws-get $(white $run)" "fetching batch: "
+       local obj=
+       for obj in ${batch[*]}
+       do { ssh $env -- \
+                sh -c "'cd $depl/runs/$run && ${remote_tar_cmd}'" 2>/dev/null |
+                (cd $dir; tar x --zstd)
+            echo -ne " $(yellow $obj)" >&2
+          } &
+       done
+       wait
+       echo >&2
+       base=$((base + max_batch))
+    done
 }

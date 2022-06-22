@@ -49,6 +49,9 @@ shell-dev shell-prof shell-nix: shell
 shell-nix: ARGS += --arg 'workbenchDevMode' false ## Nix shell, (workbench from Nix store), vars: PROFILE, CMD, RUN
 shell-prof: ARGS += --arg 'profiled' true        ## Nix shell, everything Haskell built profiled
 
+analyse: RUN := wb analyse std ${TAG}
+analyse: shell
+
 list-profiles:                                   ## List workbench profiles
 	nix build .#workbench.profile-names-json --json | jq '.[0].outputs.out' -r | xargs jq .
 show-profile:                                    ## NAME=profile-name
