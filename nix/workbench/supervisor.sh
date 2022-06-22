@@ -137,6 +137,7 @@ EOF
              progress_ne "supervisor" "waiting for $(yellow cardano-tracer) to create socket: "
              while test ! -e "$dir"/tracer/tracer.socket; do sleep 1; done
              echo $(green ' OK') >&2
+             backend_supervisor save-child-pids "$dir"
         fi;;
 
     get-node-socket-path )
