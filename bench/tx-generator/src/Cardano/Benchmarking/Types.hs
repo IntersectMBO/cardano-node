@@ -96,7 +96,7 @@ newtype ToAnnce tx = ToAnnce [tx]
 newtype UnAcked tx = UnAcked [tx]
 
 -- | Peer acknowledged this many txids of the outstanding window.
-newtype Ack = Ack Int deriving newtype (Enum, Eq, Integral, Num, Ord, Real)
+newtype Ack = Ack Int deriving newtype (Enum, Eq, Integral, Num, Ord, Real, Show)
 
 -- | Peer requested this many txids to add to the outstanding window.
 newtype Req = Req Int deriving newtype (Enum, Eq, Integral, Num, Ord, Real, Show)

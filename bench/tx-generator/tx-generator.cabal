@@ -1,5 +1,5 @@
 name:                  tx-generator
-version:               2.2
+version:               2.3
 description:           The transaction generator for cardano node
 author:                IOHK
 maintainer:            operations@iohk.io
@@ -37,6 +37,7 @@ library
                        Cardano.Benchmarking.GeneratorTx.Tx.Byron
                        Cardano.Benchmarking.GeneratorTx.Submission
                        Cardano.Benchmarking.GeneratorTx.SubmissionClient
+                       Cardano.Benchmarking.LogTypes                       
                        Cardano.Benchmarking.NixOptions
                        Cardano.Benchmarking.OuroborosImports
                        Cardano.Benchmarking.Script
@@ -88,7 +89,6 @@ library
                      , generic-monoid
                      , ghc-prim
                      , io-classes
-                     , iohk-monitoring
                      , ixset-typed
                      , network
                      , network-mux
@@ -107,16 +107,15 @@ library
                      , stm
                      , text
                      , time
+                     , trace-dispatcher
                      , transformers
                      , transformers-except
                      , unordered-containers
 
   default-language:    Haskell2010
-  default-extensions:  NoImplicitPrelude
-                       OverloadedStrings
+  default-extensions: OverloadedStrings
 
   ghc-options:         -Wall
-                       -Wno-implicit-prelude
                        -fno-warn-safe
                        -fno-warn-unsafe
                        -fno-warn-missing-import-lists

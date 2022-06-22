@@ -5,22 +5,23 @@ where
 import           Prelude
 
 import qualified Data.ByteString.Lazy.Char8 as BSL
-import           Data.Dependent.Sum ( (==>) )
+import           Data.Dependent.Sum ((==>))
 import           Data.String
 
 import           Control.Monad
+import           Control.Monad.IO.Class (liftIO)
 
 import           Cardano.Api
 import           Ouroboros.Network.NodeToClient (IOManager)
 
-import           Cardano.Benchmarking.Tracer (createDebugTracers)
-import           Cardano.Benchmarking.Types
-import           Cardano.Benchmarking.Script.Aeson (prettyPrint)
 import           Cardano.Benchmarking.Script.Action
+import           Cardano.Benchmarking.Script.Aeson (prettyPrint)
 import           Cardano.Benchmarking.Script.Env as Script
 import           Cardano.Benchmarking.Script.Setters
 import           Cardano.Benchmarking.Script.Store
 import           Cardano.Benchmarking.Script.Types
+import           Cardano.Benchmarking.Tracer (initDefaultTracers)
+import           Cardano.Benchmarking.Types
 
 import           Paths_tx_generator
 
@@ -30,8 +31,8 @@ runSelftest iom outFile = do
   let
     submitMode = maybe DiscardTX DumpToFile outFile
     fullScript = do
-        set BenchTracers createDebugTracers
-        forM_ (testScript protocolFile submitMode) action      
+        liftIO initDefaultTracers >>= set BenchTracers
+        forM_ (testScript protocolFile submitMode) action
   runActionM fullScript iom >>= \case
     (Right a  , _ ,  ()) -> return $ Right a
     (Left err , _  , ()) -> return $ Left err
