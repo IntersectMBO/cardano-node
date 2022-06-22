@@ -135,7 +135,7 @@ let
           ${pkgs.rsync}/bin/rsync --archive --ignore-errors --exclude 'clean' ${cfg.databasePath}/ ${instanceDbPath}/ || true
         fi
         ''}
-        exec ${toString cmd}'';
+        ${toString cmd}'';
 in {
   options = {
     services.cardano-node = {
@@ -203,7 +203,7 @@ in {
 
       executable = mkOption {
         type = types.str;
-        default = "${cfg.package}/bin/cardano-node";
+        default = "exec ${cfg.package}/bin/cardano-node";
         defaultText = "cardano-node";
         description = ''
           The cardano-node executable invocation to use
