@@ -99,6 +99,15 @@ let
       cluster.interactive-restart
     ] ++ lib.optional haveGlibcLocales pkgs.glibcLocales
     ## Workbench's main script is called directly in dev mode.
+    ++ lib.optionals (!useCabalRun)
+    [
+      cardano-cli
+      cardano-node
+      cardano-topology
+      cardano-tracer
+      locli
+      tx-generator
+    ]
     ++ lib.optionals (!workbenchDevMode)
     [
       cluster.workbench.workbench
