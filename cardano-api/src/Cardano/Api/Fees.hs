@@ -50,7 +50,8 @@ import qualified Data.ByteString as BS
 import           Data.ByteString.Short (ShortByteString)
 import           Data.Map (Map)
 import qualified Data.Map as Map
-import           Data.Maybe (fromMaybe, maybeToList)
+import           Data.Maybe (catMaybes, fromMaybe, maybeToList)
+import           Data.Ratio
 import           Data.Sequence.Strict (StrictSeq (..))
 import           Data.Set (Set)
 import qualified Data.Set as Set
@@ -970,18 +971,27 @@ makeTransactionBodyAutoBalance eraInMode systemstart history pparams
     -- output and fee. Yes this means this current code will only work for
     -- final fee of less than around 4000 ada (2^32-1 lovelace) and change output
     -- of less than around 18 trillion ada  (2^64-1 lovelace).
+
+    let (dummyCollRet, dummyTotColl) = maybeDummyTotalCollAndCollReturnOutput txbodycontent changeaddr
     txbody1 <- first TxBodyError $ -- TODO: impossible to fail now
                makeTransactionBody txbodycontent1 {
                  txFee  = TxFeeExplicit explicitTxFees $ Lovelace (2^(32 :: Integer) - 1),
                  txOuts = TxOut changeaddr
                                 (lovelaceToTxOutValue $ Lovelace (2^(64 :: Integer)) - 1)
                                 TxOutDatumNone ReferenceScriptNone
-                        : txOuts txbodycontent
+                        : txOuts txbodycontent,
+                 txReturnCollateral = dummyCollRet,
+                 txTotalCollateral = dummyTotColl
+
                }
 
     let nkeys = fromMaybe (estimateTransactionKeyWitnessCount txbodycontent1)
                           mnkeys
         fee   = evaluateTransactionFee pparams txbody1 nkeys 0 --TODO: byron keys
+        (retColl, reqCol) = calcReturnAndTotalCollateral
+                              fee pparams (txInsCollateral txbodycontent)
+                              (txReturnCollateral txbodycontent)
+                              (txTotalCollateral txbodycontent) changeaddr utxo
 
     -- Make a txbody for calculating the balance. For this the size of the tx
     -- does not matter, instead it's just the values of the fee and outputs.
@@ -989,9 +999,10 @@ makeTransactionBodyAutoBalance eraInMode systemstart history pparams
     -- we need to calculate.
     txbody2 <- first TxBodyError $ -- TODO: impossible to fail now
                makeTransactionBody txbodycontent1 {
-                 txFee = TxFeeExplicit explicitTxFees fee
+                 txFee = TxFeeExplicit explicitTxFees fee,
+                 txReturnCollateral = retColl,
+                 txTotalCollateral = reqCol
                }
-
     let balance = evaluateTransactionBalance pparams poolids utxo txbody2
 
     mapM_ (`checkMinUTxOValue` pparams) $ txOuts txbodycontent1
@@ -1004,6 +1015,7 @@ makeTransactionBodyAutoBalance eraInMode systemstart history pparams
         case valueToLovelace v of
           Nothing -> Left $ TxBodyErrorNonAdaAssetsUnbalanced v
           Just _ -> balanceCheck balance
+
 
     --TODO: we could add the extra fee for the CBOR encoding of the change,
     -- now that we know the magnitude of the change: i.e. 1-8 bytes extra.
@@ -1019,10 +1031,89 @@ makeTransactionBodyAutoBalance eraInMode systemstart history pparams
           txFee  = TxFeeExplicit explicitTxFees fee,
           txOuts = accountForNoChange
                      (TxOut changeaddr balance TxOutDatumNone ReferenceScriptNone)
-                     (txOuts txbodycontent)
+                     (txOuts txbodycontent),
+          txReturnCollateral = retColl,
+          txTotalCollateral = reqCol
         }
     return (BalancedTxBody txbody3 (TxOut changeaddr balance TxOutDatumNone ReferenceScriptNone) fee)
  where
+   -- Essentially we check for the existence of collateral inputs. If they exist we
+   -- create a fictitious collateral return output. Why? Because we need to put dummy values
+   -- to get a fee estimate (i.e we overestimate the fee.)
+   maybeDummyTotalCollAndCollReturnOutput
+     :: TxBodyContent BuildTx era -> AddressInEra era -> (TxReturnCollateral CtxTx era, TxTotalCollateral era)
+   maybeDummyTotalCollAndCollReturnOutput TxBodyContent{txInsCollateral, txReturnCollateral, txTotalCollateral} cAddr =
+     case txInsCollateral of
+       TxInsCollateralNone -> (TxReturnCollateralNone, TxTotalCollateralNone)
+       TxInsCollateral{} ->
+         case totalAndReturnCollateralSupportedInEra era' of
+           Nothing -> (TxReturnCollateralNone, TxTotalCollateralNone)
+           Just retColSup ->
+             let dummyRetCol = TxReturnCollateral
+                                 retColSup
+                                 (TxOut cAddr (lovelaceToTxOutValue $ Lovelace (2^(64 :: Integer)) - 1)
+                                 TxOutDatumNone ReferenceScriptNone)
+                 dummyTotCol = TxTotalCollateral retColSup (Lovelace (2^(32 :: Integer) - 1))
+             in case (txReturnCollateral, txTotalCollateral) of
+                  (rc@TxReturnCollateral{}, tc@TxTotalCollateral{}) -> (rc, tc)
+                  (rc@TxReturnCollateral{},TxTotalCollateralNone) -> (rc, dummyTotCol)
+                  (TxReturnCollateralNone,tc@TxTotalCollateral{}) -> (dummyRetCol, tc)
+                  (TxReturnCollateralNone, TxTotalCollateralNone) -> (dummyRetCol, dummyTotCol)
+   -- Calculation taken from validateInsufficientCollateral: https://github.com/input-output-hk/cardano-ledger/blob/389b266d6226dedf3d2aec7af640b3ca4984c5ea/eras/alonzo/impl/src/Cardano/Ledger/Alonzo/Rules/Utxo.hs#L335
+   -- TODO: Bug Jared to expose a function from the ledger that returns total and return collateral.
+   calcReturnAndTotalCollateral
+     :: Lovelace -- ^ Fee
+     -> ProtocolParameters
+     -> TxInsCollateral era -- ^ From the initial TxBodyContent
+     -> TxReturnCollateral CtxTx era -- ^ From the initial TxBodyContent
+     -> TxTotalCollateral era -- ^ From the initial TxBodyContent
+     -> AddressInEra era -- ^ Change address
+     -> UTxO era
+     -> (TxReturnCollateral CtxTx era, TxTotalCollateral era)
+   calcReturnAndTotalCollateral _ _ TxInsCollateralNone _ _ _ _= (TxReturnCollateralNone, TxTotalCollateralNone)
+   calcReturnAndTotalCollateral _ _ _ rc@TxReturnCollateral{} tc@TxTotalCollateral{} _ _ = (rc,tc)
+   calcReturnAndTotalCollateral fee pp (TxInsCollateral _ collIns) txReturnCollateral txTotalCollateral cAddr (UTxO utxo') = do
+
+    case totalAndReturnCollateralSupportedInEra era' of
+      Nothing -> (TxReturnCollateralNone, TxTotalCollateralNone)
+      Just retColSup ->
+        case protocolParamCollateralPercent pp of
+          Nothing -> (TxReturnCollateralNone, TxTotalCollateralNone)
+          Just colPerc -> do
+            -- We must first figure out how much lovelace we have committed
+            -- as collateral and we must determine if we have enough lovelace at our
+            -- collateral tx inputs to cover the tx
+            let txOuts = catMaybes [ Map.lookup txin utxo' | txin <- collIns]
+                totalCollateralLovelace = mconcat $ map (\(TxOut _ txOutVal _ _) -> txOutValueToLovelace txOutVal) txOuts
+                requiredCollateral@(Lovelace reqAmt) = fromIntegral colPerc * fee
+                totalCollateral = TxTotalCollateral retColSup . fromShelleyLovelace
+                                                              . Ledger.rationalToCoinViaCeiling
+                                                              $ reqAmt % 100
+                -- Why * 100? requiredCollateral is the product of the collateral percentage and the tx fee
+                -- We choose to multiply 100 rather than divide by 100 to make the calculation
+                -- easier to manage. At the end of the calculation we then use % 100 to perform our division
+                -- and round up.
+                enoughCollateral = totalCollateralLovelace * 100 >= requiredCollateral
+                Lovelace amt = totalCollateralLovelace * 100 - requiredCollateral
+                returnCollateral = fromShelleyLovelace . Ledger.rationalToCoinViaFloor $ amt % 100
+
+            case (txReturnCollateral, txTotalCollateral) of
+              (rc@TxReturnCollateral{}, tc@TxTotalCollateral{}) ->
+                (rc, tc)
+              (rc@TxReturnCollateral{}, TxTotalCollateralNone) ->
+                (rc, TxTotalCollateralNone)
+              (TxReturnCollateralNone, tc@TxTotalCollateral{}) ->
+                (TxReturnCollateralNone, tc)
+              (TxReturnCollateralNone, TxTotalCollateralNone) ->
+                if enoughCollateral
+                then
+                  ( TxReturnCollateral
+                      retColSup
+                      (TxOut cAddr (lovelaceToTxOutValue returnCollateral) TxOutDatumNone ReferenceScriptNone)
+                  , totalCollateral
+                  )
+                else (TxReturnCollateralNone, TxTotalCollateralNone)
+
    era :: ShelleyBasedEra era
    era = shelleyBasedEra
 

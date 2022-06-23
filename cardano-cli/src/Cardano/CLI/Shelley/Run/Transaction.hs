@@ -542,22 +542,14 @@ runTxBuild (AnyCardanoEra era) (AnyConsensusModeParams cModeParams) networkId mS
           Just qeInMode -> do
             newExceptT . fmap (join . first ShelleyTxCmdAcquireFailure) $
               executeLocalStateQueryExpr localNodeConnInfo Nothing $ \_ntcVersion -> runExceptT $ do
-                unless (null txinsc) $ do
-                  -- TODO: Question, why do we not need the collateralUtxo to be included in
-                  -- the utxo?
-                  collateralUtxo <- firstExceptT ShelleyTxCmdTxSubmitErrorEraMismatch . newExceptT . queryExpr
-                    $ QueryInEra qeInMode
-                    $ QueryInShelleyBasedEra qSbe (QueryUTxO . QueryUTxOByTxIn $ Set.fromList txinsc)
-                  txinsExist txinsc collateralUtxo
-                  notScriptLockedTxIns collateralUtxo
-
                 qUtxo <- firstExceptT ShelleyTxCmdTxSubmitErrorEraMismatch . newExceptT . queryExpr
                   $ QueryInEra qeInMode $ QueryInShelleyBasedEra qSbe
-                  $ QueryUTxO (QueryUTxOByTxIn (Set.fromList $ inputsThatRequireWitnessing ++ allReferenceInputs))
+                  $ QueryUTxO (QueryUTxOByTxIn (Set.fromList $ inputsThatRequireWitnessing ++ allReferenceInputs ++ txinsc))
 
                 utxo <- case first ShelleyTxCmdTxEraCastErr (eraCast era qUtxo) of { Right a -> pure a; Left e -> left e }
 
-                txinsExist inputsThatRequireWitnessing utxo
+                txinsExist (inputsThatRequireWitnessing ++ txinsc) utxo
+                notScriptLockedTxIns txinsc utxo
 
                 pparams <- firstExceptT ShelleyTxCmdTxSubmitErrorEraMismatch . newExceptT . queryExpr
                   $ QueryInEra qeInMode $ QueryInShelleyBasedEra qSbe QueryProtocolParameters
@@ -582,7 +574,6 @@ runTxBuild (AnyCardanoEra era) (AnyConsensusModeParams cModeParams) networkId mS
           $ makeTransactionBodyAutoBalance eInMode systemStart eraHistory
                                            pparams stakePools utxo txBodyContent
                                            cAddr mOverrideWits
-
       putStrLn $ "Estimated transaction fee: " <> (show fee :: String)
 
       case outputOptions of
@@ -626,10 +617,11 @@ runTxBuild (AnyCardanoEra era) (AnyConsensusModeParams cModeParams) networkId mS
           then return ()
           else left . ShelleyTxCmdTxInsDoNotExist $ ins \\ ins `intersect` occursInUtxo
 
-    notScriptLockedTxIns :: Monad m => UTxO era -> ExceptT ShelleyTxCmdError m ()
-    notScriptLockedTxIns (UTxO utxo) = do
-      let scriptLockedTxIns =
-            filter (\(_, TxOut aInEra _ _ _) -> not $ isKeyAddress aInEra ) $ Map.assocs utxo
+    notScriptLockedTxIns :: Monad m => [TxIn] -> UTxO era -> ExceptT ShelleyTxCmdError m ()
+    notScriptLockedTxIns collTxIns (UTxO utxo) = do
+      let onlyCollateralUTxOs = Map.restrictKeys utxo $ Set.fromList collTxIns
+          scriptLockedTxIns =
+            filter (\(_, TxOut aInEra _ _ _) -> not $ isKeyAddress aInEra ) $ Map.assocs onlyCollateralUTxOs
       if null scriptLockedTxIns
       then return ()
       else left . ShelleyTxCmdExpectedKeyLockedTxIn $ map fst scriptLockedTxIns
