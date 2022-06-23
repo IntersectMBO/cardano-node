@@ -317,19 +317,20 @@ case "$op" in
         if test x$prefilter != xtrue
         then return; fi
 
-        local jq_args=(
-            --sort-keys
-            --compact-output
-            'delpaths([["app"],["env"],["loc"],["msg"],["ns"],["sev"]])'
-        )
         progress "analyse" "filtering logs:  $(with_color black ${logdirs[@]})"
+        local grep_params=(
+            --binary-files=text
+            --file="$keyfile"
+            --fixed-strings
+            --no-filename
+        )
         for d in "${logdirs[@]}"
         do throttle_shell_job_spawns
            local logfiles="$(ls "$d"/stdout* 2>/dev/null | tac) $(ls "$d"/node-*.json 2>/dev/null)"
            if test -z "$logfiles"
            then msg "no logs in $d, skipping.."; fi
            local output="$adir"/logs-$(basename "$d").flt.json
-           grep -hFf "$keyfile" $logfiles > "$output" &
+           grep ${grep_params[*]} $logfiles > "$output" &
         done
 
         wait;;
