@@ -880,17 +880,8 @@ handleExUnitsErrors ScriptValid failuresMap exUnitsMap =
   where failures :: [(ScriptWitnessIndex, ScriptExecutionError)]
         failures = Map.toList failuresMap
 handleExUnitsErrors ScriptInvalid failuresMap exUnitsMap
-  | null scriptFailures = Left TxBodyScriptBadScriptValidity
-  | null nonScriptFailures = Right exUnitsMap
-  | otherwise = Left (TxBodyScriptExecutionError nonScriptFailures)
-  where nonScriptFailures :: [(ScriptWitnessIndex, ScriptExecutionError)]
-        nonScriptFailures = filter (not . isScriptErrorEvaluationFailed) (Map.toList failuresMap)
-        scriptFailures :: [(ScriptWitnessIndex, ScriptExecutionError)]
-        scriptFailures = filter isScriptErrorEvaluationFailed (Map.toList failuresMap)
-        isScriptErrorEvaluationFailed :: (ScriptWitnessIndex, ScriptExecutionError) -> Bool
-        isScriptErrorEvaluationFailed (_, e) = case e of
-            ScriptErrorEvaluationFailed _ _ -> True
-            _ -> True
+  | null failuresMap = Left TxBodyScriptBadScriptValidity
+  | otherwise = Right $ Map.map (\_ -> ExecutionUnits 0 0) failuresMap <> exUnitsMap
 
 data BalancedTxBody era
   = BalancedTxBody
