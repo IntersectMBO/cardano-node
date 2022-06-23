@@ -9,6 +9,7 @@ inputs:
 metadata: null
 mint: null
 outputs: []
+reference inputs: null
 required signers (payment key hashes needed for scripts):
 - 98717eaba8105a50a2a71831267552e337dfdc893bef5e40b8676d27
 - fafaaac8681b5050a8987f95bce4a7f99362f189879258fdbf733fa4
