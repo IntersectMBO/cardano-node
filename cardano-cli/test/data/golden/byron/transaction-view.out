@@ -13,6 +13,8 @@ outputs:
   amount: 68 Lovelace
 reference inputs: null
 required signers (payment key hashes needed for scripts): null
+return collateral: null
+total collateral: null
 update proposal: null
 validity range: null
 withdrawals: null

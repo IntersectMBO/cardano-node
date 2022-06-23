@@ -72,6 +72,8 @@ friendlyTxBody
       , txMetadata
       , txMintValue
       , txOuts
+      , txTotalCollateral
+      , txReturnCollateral
       , txInsReference
       , txUpdateProposal
       , txValidityRange
@@ -87,12 +89,23 @@ friendlyTxBody
     , "mint" .= friendlyMintValue txMintValue
     , "outputs" .= map friendlyTxOut txOuts
     , "reference inputs" .= friendlyReferenceInputs txInsReference
+    , "total collateral" .= friendlyTotalCollateral txTotalCollateral
+    , "return collateral" .= friendlyReturnCollateral txReturnCollateral
     , "required signers (payment key hashes needed for scripts)" .=
         friendlyExtraKeyWits txExtraKeyWits
     , "update proposal" .= friendlyUpdateProposal txUpdateProposal
     , "validity range" .= friendlyValidityRange era txValidityRange
     , "withdrawals" .= friendlyWithdrawals txWithdrawals
     ]
+
+friendlyTotalCollateral :: TxTotalCollateral era -> Aeson.Value
+friendlyTotalCollateral TxTotalCollateralNone = Aeson.Null
+friendlyTotalCollateral (TxTotalCollateral _ coll) = toJSON coll
+
+friendlyReturnCollateral
+  :: IsCardanoEra era => TxReturnCollateral CtxTx era -> Aeson.Value
+friendlyReturnCollateral TxReturnCollateralNone = Aeson.Null
+friendlyReturnCollateral (TxReturnCollateral _ collOut) = friendlyTxOut collOut
 
 friendlyExtraKeyWits :: TxExtraKeyWitnesses era -> Aeson.Value
 friendlyExtraKeyWits = \case
@@ -184,8 +197,6 @@ friendlyTxOut (TxOut addr amount mdatum script) =
   renderDatum (TxOutDatumInline _ sData) =
     scriptDataToJson ScriptDataJsonDetailedSchema sData
 
-
-          -- datum ShelleyBasedEraBabbage = panic "TODO: Babbage"
 
 friendlyStakeReference :: StakeAddressReference -> Aeson.Value
 friendlyStakeReference = \case
