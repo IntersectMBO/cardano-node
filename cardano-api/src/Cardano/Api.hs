@@ -242,6 +242,7 @@ module Cardano.Api (
 
     -- ** Fee calculation
     transactionFee,
+    toLedgerEpochInfo,
     estimateTransactionFee,
     evaluateTransactionFee,
     estimateTransactionKeyWitnessCount,
@@ -583,6 +584,7 @@ module Cardano.Api (
     -- *** Local state query
     LocalStateQueryClient(..),
     QueryInMode(..),
+    SystemStart(..),
     QueryInEra(..),
     QueryInShelleyBasedEra(..),
     QueryUTxOFilter(..),

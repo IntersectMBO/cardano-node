@@ -40,10 +40,8 @@ import           Ouroboros.Consensus.Shelley.Eras (StandardAllegra, StandardCryp
 
 --TODO: do this nicely via the API too:
 import qualified Cardano.Binary as CBOR
-
 --TODO: following import needed for orphan Eq Script instance
 import           Cardano.Ledger.Shelley.Scripts ()
-import           Cardano.Ledger.ShelleyMA.TxBody ()
 
 import           Cardano.CLI.Environment (EnvSocketError, readEnvSocketPath, renderEnvSocketError)
 import           Cardano.CLI.Run.Friendly (friendlyTxBS, friendlyTxBodyBS)
