@@ -1684,6 +1684,9 @@ runTxView = \case
         UnwitnessedCliFormattedTxBody anyTxBody -> pure anyTxBody
         IncompleteCddlFormattedTx (InAnyCardanoEra era tx) ->
           pure $ InAnyCardanoEra era (getTxBody tx)
+    --TODO: Why are we maintaining friendlyTxBodyBS and friendlyTxBS?
+    -- In the case of a transaction body, we can simply call makeSignedTransaction []
+    -- to get a transaction which allows us to reuse friendlyTxBS!
     liftIO $ BS.putStr $ friendlyTxBodyBS era txbody
   InputTxFile (TxFile txFile) -> do
     InAnyCardanoEra era tx <- readFileTx txFile
