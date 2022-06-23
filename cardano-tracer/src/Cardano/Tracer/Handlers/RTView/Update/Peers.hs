@@ -23,8 +23,8 @@ import           Cardano.Tracer.Handlers.RTView.State.Peers
 import           Cardano.Tracer.Handlers.RTView.State.TraceObjects
 import           Cardano.Tracer.Handlers.RTView.UI.HTML.Node.Peers
 import           Cardano.Tracer.Handlers.RTView.UI.Utils
-import           Cardano.Tracer.Handlers.RTView.Update.Utils
 import           Cardano.Tracer.Types
+import           Cardano.Tracer.Utils
 
 updateNodesPeers
   :: UI.Window

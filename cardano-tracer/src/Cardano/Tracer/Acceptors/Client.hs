@@ -36,10 +36,11 @@ import qualified Trace.Forward.Configuration.TraceObject as TF
 import           Trace.Forward.Run.DataPoint.Acceptor (acceptDataPointsInit)
 import           Trace.Forward.Run.TraceObject.Acceptor (acceptTraceObjectsInit)
 
-import           Cardano.Tracer.Acceptors.Utils (prepareDataPointRequestor,
-                   prepareMetricsStores, removeDisconnectedNode)
+import           Cardano.Tracer.Acceptors.Utils (notifyAboutNodeDisconnected,
+                   prepareDataPointRequestor, prepareMetricsStores, removeDisconnectedNode)
 import qualified Cardano.Tracer.Configuration as TC
 import           Cardano.Tracer.Handlers.Logs.TraceObjects (traceObjectsHandler)
+import           Cardano.Tracer.Handlers.RTView.Notifications.Types
 import           Cardano.Tracer.Handlers.RTView.Run (SavedTraceObjects)
 import           Cardano.Tracer.Types (AcceptedMetrics, ConnectedNodes, DataPointRequestors)
 import           Cardano.Tracer.Utils (connIdToNodeId)
@@ -56,9 +57,11 @@ runAcceptorsClient
   -> SavedTraceObjects
   -> DataPointRequestors
   -> Lock
+  -> EventsQueues
   -> IO ()
 runAcceptorsClient config p (ekgConfig, tfConfig, dpfConfig)
-                   connectedNodes acceptedMetrics savedTO dpRequestors currentLogLock =
+                   connectedNodes acceptedMetrics savedTO
+                   dpRequestors currentLogLock eventsQueues =
   withIOManager $ \iocp ->
     doConnectToForwarder
       (localSnocket iocp)
@@ -82,7 +85,9 @@ runAcceptorsClient config p (ekgConfig, tfConfig, dpfConfig)
          }
       | (protocol, num) <- protocolsWithNums
       ]
-  errorHandler = removeDisconnectedNode connectedNodes acceptedMetrics dpRequestors
+  errorHandler connId = do
+    removeDisconnectedNode connectedNodes acceptedMetrics dpRequestors connId
+    notifyAboutNodeDisconnected eventsQueues connId
 
 doConnectToForwarder
   :: Snocket IO LocalSocket LocalAddress

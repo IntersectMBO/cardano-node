@@ -1,9 +1,14 @@
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PackageImports #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+
+#if !defined(mingw32_HOST_OS)
+#define UNIX
+#endif
 
 module Cardano.Tracer.Utils
   ( applyBrake
@@ -14,8 +19,10 @@ module Cardano.Tracer.Utils
   , initProtocolsBrake
   , lift2M
   , lift3M
+  , nl
   , runInLoop
   , showProblemIfAny
+  , showT
   ) where
 
 import           Control.Applicative (liftA2, liftA3)
@@ -123,3 +130,13 @@ lift2M f x y = liftA2 (,) x y >>= uncurry f
 -- | Like 'liftM3', but for monadic function.
 lift3M :: Monad m => (a -> b -> c -> m d) -> m a -> m b -> m c -> m d
 lift3M f x y z = liftA3 (,,) x y z >>= uncurry3 f
+
+nl :: T.Text
+#ifdef UNIX
+nl = "\n"
+#else
+nl = "\r\n"
+#endif
+
+showT :: Show a => a -> T.Text
+showT = T.pack . show

@@ -8,11 +8,13 @@ import           Control.Concurrent.STM.TVar (readTVarIO)
 import           Control.Monad (void)
 import           Control.Monad.Extra (whenM)
 import           Data.List.NonEmpty (NonEmpty)
+import           Data.Text (pack)
 import qualified Graphics.UI.Threepenny as UI
 import           Graphics.UI.Threepenny.Core
 import           System.Time.Extra (sleep)
 
 import           Cardano.Tracer.Configuration
+import           Cardano.Tracer.Handlers.RTView.Notifications.Types
 import           Cardano.Tracer.Handlers.RTView.State.Displayed
 import           Cardano.Tracer.Handlers.RTView.State.EraSettings
 import           Cardano.Tracer.Handlers.RTView.State.Errors
@@ -24,6 +26,7 @@ import           Cardano.Tracer.Handlers.RTView.UI.CSS.Bulma
 import           Cardano.Tracer.Handlers.RTView.UI.CSS.Own
 import           Cardano.Tracer.Handlers.RTView.UI.HTML.Body
 import           Cardano.Tracer.Handlers.RTView.UI.Img.Icons
+import           Cardano.Tracer.Handlers.RTView.UI.Notifications
 import           Cardano.Tracer.Handlers.RTView.UI.Theme
 import           Cardano.Tracer.Handlers.RTView.UI.Utils
 import           Cardano.Tracer.Handlers.RTView.Update.EKG
@@ -33,6 +36,7 @@ import           Cardano.Tracer.Handlers.RTView.Update.Nodes
 import           Cardano.Tracer.Handlers.RTView.Update.NodeState
 import           Cardano.Tracer.Handlers.RTView.Update.Peers
 import           Cardano.Tracer.Handlers.RTView.Update.Reload
+import           Cardano.Tracer.Handlers.RTView.Update.Utils
 import           Cardano.Tracer.Types
 
 mkMainPage
@@ -49,11 +53,12 @@ mkMainPage
   -> BlockchainHistory
   -> TransactionsHistory
   -> Errors
+  -> EventsQueues
   -> UI.Window
   -> UI ()
 mkMainPage connectedNodes displayedElements acceptedMetrics savedTO
            nodesEraSettings dpRequestors reloadFlag loggingConfig networkConfig
-           resourcesHistory chainHistory txHistory nodesErrors window = do
+           resourcesHistory chainHistory txHistory nodesErrors eventsQueues window = do
   void $ return window # set UI.title pageTitle
   void $ UI.getHead window #+
     [ UI.link # set UI.rel "icon"
@@ -84,6 +89,7 @@ mkMainPage connectedNodes displayedElements acceptedMetrics savedTO
       txHistory
       datasetIndices
       datasetTimestamps
+      eventsQueues
 
   -- Prepare and run the timer, which will hide the page preloader.
   preloaderTimer <- UI.timer # set UI.interval 10
@@ -95,6 +101,19 @@ mkMainPage connectedNodes displayedElements acceptedMetrics savedTO
 
   restoreTheme window
   restoreChartsSettings
+  restoreEmailSettings window
+  restoreEventsSettings window
+
+  uiNoNodesProgressTimer <- UI.timer # set UI.interval 1000
+  on UI.tick uiNoNodesProgressTimer . const $ do
+    let elId = "no-nodes-progress"
+    valueS <- findAndGetValue window elId
+    let valueI = readInt (pack valueS) 0 
+    if valueI < 60
+      then findAndSet (set UI.value $ show (valueI + 1)) window elId
+      else do
+        UI.stop uiNoNodesProgressTimer
+        findAndSet hiddenOnly window elId
 
   uiErrorsTimer <- UI.timer # set UI.interval 3000
   on UI.tick uiErrorsTimer . const $
@@ -111,6 +130,7 @@ mkMainPage connectedNodes displayedElements acceptedMetrics savedTO
       datasetIndices
       nodesErrors
       uiErrorsTimer
+      uiNoNodesProgressTimer
     liftIO $ pageWasNotReload reloadFlag
 
   -- Uptime is a real-time clock, so update it every second.
@@ -137,6 +157,7 @@ mkMainPage connectedNodes displayedElements acceptedMetrics savedTO
       datasetIndices
       nodesErrors
       uiErrorsTimer
+      uiNoNodesProgressTimer
 
   uiPeersTimer <- UI.timer # set UI.interval 3000
   on UI.tick uiPeersTimer . const $ do
@@ -153,6 +174,7 @@ mkMainPage connectedNodes displayedElements acceptedMetrics savedTO
   UI.start uiPeersTimer
   UI.start uiErrorsTimer
   UI.start uiEKGTimer
+  UI.start uiNoNodesProgressTimer
 
   on UI.disconnect window . const $ do
     UI.stop uiNodesTimer
@@ -161,6 +183,7 @@ mkMainPage connectedNodes displayedElements acceptedMetrics savedTO
     UI.stop uiNodeStateTimer
     UI.stop uiEKGTimer
     UI.stop uiErrorsTimer
+    UI.stop uiNoNodesProgressTimer
     liftIO $ pageWasReload reloadFlag
 
   void $ UI.element pageBody

@@ -18,7 +18,7 @@ import           System.Time.Extra (sleep)
 
 import           Cardano.Tracer.Acceptors.Run (runAcceptors)
 import           Cardano.Tracer.Configuration
-import           Cardano.Tracer.Handlers.RTView.Run (initSavedTraceObjects)
+import           Cardano.Tracer.Handlers.RTView.Run (initEventsQueues, initSavedTraceObjects)
 import           Cardano.Tracer.Types (DataPointRequestors)
 import           Cardano.Tracer.Utils (initAcceptedMetrics, initConnectedNodes,
                    initDataPointRequestors, initProtocolsBrake)
@@ -38,9 +38,10 @@ launchAcceptorsSimple mode localSock dpName = do
   acceptedMetrics <- initAcceptedMetrics
   savedTO <- initSavedTraceObjects
   currentLogLock <- newLock
+  eventsQueues <- initEventsQueues dpRequestors
   void . sequenceConcurrently $
     [ runAcceptors mkConfig connectedNodes acceptedMetrics savedTO
-                   dpRequestors protocolsBrake currentLogLock
+                   dpRequestors protocolsBrake currentLogLock eventsQueues
     , runDataPointsPrinter dpName dpRequestors
     ]
  where

@@ -15,7 +15,8 @@ import           Cardano.Tracer.CLI (TracerParams (..))
 import           Cardano.Tracer.Configuration (TracerConfig, readTracerConfig)
 import           Cardano.Tracer.Handlers.Logs.Rotator (runLogsRotator)
 import           Cardano.Tracer.Handlers.Metrics.Servers (runMetricsServers)
-import           Cardano.Tracer.Handlers.RTView.Run (initSavedTraceObjects, runRTView)
+import           Cardano.Tracer.Handlers.RTView.Run (initEventsQueues, initSavedTraceObjects,
+                   runRTView)
 import           Cardano.Tracer.Types (DataPointRequestors, ProtocolsBrake)
 import           Cardano.Tracer.Utils (initAcceptedMetrics, initConnectedNodes,
                    initDataPointRequestors, initProtocolsBrake)
@@ -35,14 +36,17 @@ doRunCardanoTracer
   -> DataPointRequestors -- ^ The DataPointRequestors to ask 'DataPoint's.
   -> IO ()
 doRunCardanoTracer config protocolsBrake dpRequestors = do
-  connectedNodes <- initConnectedNodes
+  connectedNodes  <- initConnectedNodes
   acceptedMetrics <- initAcceptedMetrics
-  currentLogLock <- newLock
-  savedTO <- initSavedTraceObjects
+  currentLogLock  <- newLock
+  savedTO         <- initSavedTraceObjects
+  eventsQueues    <- initEventsQueues dpRequestors
   void . sequenceConcurrently $
     [ runLogsRotator    config currentLogLock
     , runMetricsServers config connectedNodes acceptedMetrics
     , runAcceptors      config connectedNodes acceptedMetrics savedTO
                         dpRequestors protocolsBrake currentLogLock
-    , runRTView         config connectedNodes acceptedMetrics savedTO dpRequestors
+                        eventsQueues
+    , runRTView         config connectedNodes acceptedMetrics savedTO
+                        dpRequestors eventsQueues
     ]
