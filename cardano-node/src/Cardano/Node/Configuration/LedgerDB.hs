@@ -28,6 +28,7 @@ data BackingStoreSelectorFlag =
 
 -- | Recommended settings for the LMDB backing store.
 --
+-- === @'lmdbMapSize'@
 -- The default @'LMDBLimits'@ uses an @'lmdbMapSize'@ of @16_000_000_000@
 -- bytes, or 16 GigaBytes. @'lmdbMapSize'@ sets the size of the memory map
 -- that is used internally by the LMDB backing store, and is also the
@@ -42,6 +43,29 @@ data BackingStoreSelectorFlag =
 -- @'lmdbMapSize'@. If this fatal error were to occur, we would expect that
 -- the node can continue normal operation if it is restarted with a higher
 -- @'lmdbMapSize'@ configured. Nonetheless, this situation should be avoided.
+--
+-- === @'lmdbMaxDatabases'@
+-- The @'lmdbMaxDatabases'@ is set to 10, which means that the LMDB backing
+-- store will allow up @<= 10@ internal databases. We say /internal/
+-- databases, since they are not exposed outside the backing store interface,
+-- such that from the outside view there is just one /logical/ database.
+-- Two of these internal databases are reserved for normal operation of the
+-- backing store, while the remaining databases will be used to store ledger
+-- tables. At the moment, there is at most one ledger table that will be
+-- stored in an internal database: the UTxO. Nonetheless, we set
+-- @'lmdbMaxDatabases'@ to @10@ in order to future-proof these limits.
+--
+-- === @'lmdbMaxReaders'@
+-- The @'lmdbMaxReaders'@ limit sets the maximum number of threads that can
+-- read from the LMDB database. Currently, there should only be a single reader
+-- active. Again, we set @'lmdbMaxReaders'@ to @16@ in order to future-proof
+-- these limits.
+--
+-- === References
+-- For more information about LMDB limits, one should inspect:
+-- * The @lmdb-simple@ and @haskell-lmdb@ forked repositories.
+-- * The official LMDB API documentation at
+--    <http://www.lmdb.tech/doc/group__mdb.html>.
 defaultLMDBLimits :: LMDBLimits
 defaultLMDBLimits = LMDBLimits {
     lmdbMapSize = 16_000_000_000

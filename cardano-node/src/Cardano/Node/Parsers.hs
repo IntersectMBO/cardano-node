@@ -240,7 +240,7 @@ parseLedgerDBBackend = parseInMemory <|> parseLMDB <*> optional parseMapSize
 
     parseMapSize :: Parser Int
     parseMapSize =
-      option (eitherReader (parseValue ParseBinary)) (
+      option (eitherReader (parseValue ParseExact)) (
            long "lmdb-mapsize"
         <> metavar "BIN"
         <> help "The maximum database size defined as a binary \

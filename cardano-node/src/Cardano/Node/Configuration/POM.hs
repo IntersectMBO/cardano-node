@@ -331,7 +331,7 @@ instance FromJSON PartialNodeConfiguration where
              maybeMapSize :: Maybe String <- v .:? "LMDBMapSize"
              mapSize <- case maybeMapSize of
                Nothing -> return Nothing
-               Just s  -> case parseValue ParseBinary s of
+               Just s  -> case parseValue ParseExact s of
                  Left e      -> fail ("Malformed LMDBMapSize: " <> e)
                  Right units -> return $ Just units
              return . Just . LMDB $ mapSize
