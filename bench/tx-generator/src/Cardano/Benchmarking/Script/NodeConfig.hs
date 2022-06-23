@@ -71,7 +71,6 @@ startProtocol filePath = do
   set (User TNetworkId) $ protocolToNetworkId protocol
   liftIO initDefaultTracers >>= set Store.BenchTracers
 
-
 shutDownLogging :: ActionM ()
 shutDownLogging = do
   traceError "QRT Last Message. LoggingLayer going to shutdown. 73 . . . ."

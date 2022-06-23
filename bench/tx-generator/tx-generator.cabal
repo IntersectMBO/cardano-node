@@ -53,6 +53,7 @@ library
                        Cardano.Benchmarking.TpsThrottle
                        Cardano.Benchmarking.Tracer
                        Cardano.Benchmarking.Types
+                       Cardano.Benchmarking.Version
                        Cardano.Benchmarking.Wallet
                        Cardano.Benchmarking.ListBufferedSelector
                        Cardano.Benchmarking.PlutusExample
@@ -72,6 +73,7 @@ library
                      , cardano-cli
                      , cardano-crypto-class
                      , cardano-crypto-wrapper
+                     , cardano-git-rev
                      , cardano-ledger-alonzo
                      , cardano-ledger-byron
                      , cardano-node
