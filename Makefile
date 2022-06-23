@@ -86,9 +86,6 @@ SHELL_PROFILES += $(PROFILES_VENDOR)
 
 $(eval $(call define_profile_targets,$(SHELL_PROFILES)))
 
-workbench-ci-test:  $(foreach x,$(PROFILES_CI_TEST),${x}-autonix)
-workbench-ci-bench: $(foreach x,$(PROFILES_CI_BENCH),${x}-autonix)
-
 ###
 ### Misc
 ###

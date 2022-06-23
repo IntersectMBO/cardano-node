@@ -277,6 +277,10 @@
                   {
                     # inherit supervisord-workbench; ## Not required, as long as it's fast.
                     profileName = "ci-test-bage";
+                    cardano-node-rev =
+                      if __hasAttr "rev" self
+                      then self.rev
+                      else throw "Cannot get git revision of 'cardano-node', unclean checkout?";
                   }).profile-run {};
 
               all-profiles-json = pkgs.all-profiles-json;

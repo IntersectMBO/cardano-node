@@ -90,6 +90,7 @@ start()
     local profile_name= profile=
     local backend=supervisor
     local node_source=.
+    local node_rev=
     local cabal_mode=
     local skip_prebuild=
     local genesis_cache_entry_dir=
@@ -125,6 +126,7 @@ start()
         --filters )                      analyse_args+=($1 $2); shift;;
 
         --node-source )                  node_source=$2; shift;;
+        --node-rev )                     node_rev=$2; shift;;
         --cabal-mode | --cabal )         run_allocate_args+=($1); cabal_mode=t;;
         --skip-prebuild | -sp )          skip_prebuild=t;;
         --supervisor | --backend-supervisor )
@@ -157,7 +159,7 @@ start()
     for ((i=0; i<$iterations; i++))
     do local args=(
             ${run_allocate_args[@]}
-            --manifest "$(manifest collect-from-checkout $node_source)"
+            --manifest "$(manifest collect-from-checkout "$node_source" $node_rev)"
         )
        run ${run_args[@]} 'allocate' $batch_name $profile_name "${args[@]}"
        local tag=$(run current-tag)

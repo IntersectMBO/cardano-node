@@ -271,6 +271,8 @@ case "$op" in
     analysis-from-aws | aws-get-analysis | aws-geta | fetch-analysis | fa )
         local usage="USAGE: wb run $op RUN.."
         local runs=($*) run
+        local env='bench'
+        local depl='bench-1'
 
         progress "aws" "trying to fetch analyses:  $(white ${runs[*]})"
         for run in ${runs[*]}

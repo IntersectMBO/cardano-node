@@ -14,4 +14,4 @@ membench-5-at: ## Membench:  5 iterations, set commit by:  make membench-5-at RE
 	nix build .#membench-node-this-5.batch-report      --out-link result-batch-5-report --override-input node-measured github:input-output-hk/cardano-node/${REV}
 
 workbench-ci-test smoke: ## Workbench:  test a-la Hydra, the ci-test profile, full Nix engaged
-	nix build '.#hydraJobsPr.linux.native.workbench-ci-test' --cores 0 --out-line result-ci-test
+	nix build '.#hydraJobsPr.linux.native.workbench-ci-test' --cores 0 --out-link result-ci-test

@@ -11,6 +11,7 @@ in
 , batchName             ? batchNameDefault
 ##
 , workbenchDevMode      ? false
+, cardano-node-rev      ? "0000000000000000000000000000000000000000"
 }:
 
 let
@@ -115,6 +116,7 @@ let
               --batch-name          smoke-test
               --base-port           ${toString basePort}
               --node-source         ${cardanoNodePackages.cardano-node.src.origSrc}
+              --node-rev            ${cardano-node-rev}
               --cache-dir           ./cache
           )
           echo "''${cmd[*]}" > $out/wb-start.sh
