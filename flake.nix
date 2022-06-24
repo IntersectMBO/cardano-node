@@ -43,9 +43,27 @@
 
     node-measured = {
       url = "github:input-output-hk/cardano-node";
+      inputs = {
+        # TODO: remove membench override with next pin update:
+        membench.url = "github:input-output-hk/empty-flake";
+        # Break recursion on old cardano-node versions (which won't be used anyway)
+        # to avoid exponential growth of flake.lock:
+        node-measured.follows = "node-measured";
+        node-snapshot.follows = "node-snapshot";
+        cardano-node-workbench.follows = "cardano-node-workbench";
+      };
     };
     node-snapshot = {
       url = "github:input-output-hk/cardano-node/7f00e3ea5a61609e19eeeee4af35241571efdf5c";
+      inputs = {
+        # TODO: remove membench override with next pin update:
+        membench.url = "github:input-output-hk/empty-flake";
+        # Break recursion on old cardano-node versions (which won't be used anyway)
+        # to avoid exponential growth of flake.lock:
+        node-measured.follows = "node-snapshot";
+        node-snapshot.follows = "node-snapshot";
+        cardano-node-workbench.follows = "cardano-node-workbench";
+      };
     };
     node-process = {
       url = "github:input-output-hk/cardano-node";
@@ -54,8 +72,15 @@
     ## This pin is to prevent workbench-produced geneses being regenerated each time the node is bumped.
     cardano-node-workbench = {
       url = "github:input-output-hk/cardano-node/ed9932c52aaa535b71f72a5b4cc0cecb3344a5a3";
-      # This is to avoid circular import (TODO: remove this workbench pin entirely using materialization):
-      inputs.membench.url = "github:input-output-hk/empty-flake";
+      inputs = {
+        # This is to avoid circular import (TODO: remove this workbench pin entirely using materialization):
+        membench.url = "github:input-output-hk/empty-flake";
+        # Break recursion on old cardano-node versions (which won't be used anyway)
+        # to avoid exponential growth of flake.lock:
+        node-measured.follows = "cardano-node-workbench";
+        node-snapshot.follows = "node-snapshot";
+        cardano-node-workbench.follows = "cardano-node-workbench";
+      };
     };
 
     cardano-mainnet-mirror.url = "github:input-output-hk/cardano-mainnet-mirror/nix";
