@@ -17,6 +17,7 @@ import           Options.Applicative
 import           System.IO (IO)
 import           Testnet.Cardano
 import           Testnet.Run (runTestnet)
+import           Test.Runtime (readNodeLoggingFormat)
 import           Text.Read
 import           Text.Show
 
@@ -79,6 +80,13 @@ optsTestnet = TestnetOptions
       <>  OA.metavar "BOOL"
       <>  OA.showDefault
       <>  OA.value (enableP2P defaultTestnetOptions)
+      )
+  <*> OA.option (OA.eitherReader readNodeLoggingFormat)
+      (   OA.long "nodeLoggingFormat"
+      <>  OA.help "Node logging format (json|text)"
+      <>  OA.metavar "LOGGING_FORMAT"
+      <>  OA.showDefault
+      <>  OA.value (nodeLoggingFormat defaultTestnetOptions)
       )
 
 optsCardano :: Parser CardanoOptions

@@ -37,7 +37,7 @@ import           GHC.Float (Double)
 import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket (..))
 import           Hedgehog.Extras.Stock.Time (showUTCTimeSeconds)
 import           System.FilePath.Posix ((</>))
-import           Test.Runtime (Delegator(..), PaymentKeyPair(..), PoolNode(PoolNode), PoolNodeKeys (..), StakingKeyPair(..), TestnetNode(..), TestnetRuntime(..))
+import           Test.Runtime (Delegator(..), NodeLoggingFormat(..), PaymentKeyPair(..), PoolNode(PoolNode), PoolNodeKeys(..), StakingKeyPair(..), TestnetNode(..), TestnetRuntime(..))
 import           Text.Show (Show(show))
 
 import qualified Data.Aeson as J
@@ -71,6 +71,7 @@ data TestnetOptions = TestnetOptions
   , slotDuration :: Int
   , securityParam :: Int
   , totalBalance :: Int
+  , nodeLoggingFormat :: NodeLoggingFormat
   } deriving (Eq, Show)
 
 defaultTestnetOptions :: TestnetOptions
@@ -79,6 +80,7 @@ defaultTestnetOptions = TestnetOptions
   , slotDuration = 1000
   , securityParam = 10
   , totalBalance = 10020000000
+  , nodeLoggingFormat = NodeLoggingFormatAsJson
   }
 
 data TestnetNodeOptions = TestnetNodeOptions deriving (Eq, Show)

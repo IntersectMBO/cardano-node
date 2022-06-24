@@ -40,6 +40,7 @@ import qualified Hedgehog.Extras.Test.Process as H
 import qualified System.Info as SYS
 import qualified Test.Base as H
 import qualified Test.Process as H
+import qualified Test.Runtime as TR
 import           Testnet.Cardano (TestnetOptions (..), TestnetRuntime (..), defaultTestnetOptions, defaultTestnetNodeOptions,
                    testnet)
 import qualified Testnet.Cardano as TC
@@ -70,7 +71,7 @@ hprop_kes_period_info = H.integration . H.runFinallies . H.workspace "chairman" 
                              , activeSlotsCoeff = 0.1
                              }
   runTime@TC.TestnetRuntime { testnetMagic } <- testnet fastTestnetOptions conf
-  let sprockets = TC.bftSprockets runTime
+  let sprockets = TR.bftSprockets runTime
   env <- H.evalIO getEnvironment
 
   execConfig <- H.noteShow H.ExecConfig
