@@ -1,5 +1,3 @@
-{-# LANGUAGE TypeApplications #-}
-
 module Testnet.Commands.Babbage
   ( BabbageOptions(..)
   , cmdBabbage
@@ -13,6 +11,7 @@ import           Data.Maybe
 import           Data.Semigroup
 import           Options.Applicative
 import           System.IO (IO)
+import           Test.Runtime (readNodeLoggingFormat)
 import           Testnet.Babbage
 import           Testnet.Run (runTestnet)
 import           Text.Show
@@ -53,6 +52,13 @@ optsTestnet = TestnetOptions
       <>  OA.metavar "INT"
       <>  OA.showDefault
       <>  OA.value (totalBalance defaultTestnetOptions)
+      )
+  <*> OA.option (OA.eitherReader readNodeLoggingFormat)
+      (   OA.long "nodeLoggingFormat"
+      <>  OA.help "Node logging format (json|text)"
+      <>  OA.metavar "LOGGING_FORMAT"
+      <>  OA.showDefault
+      <>  OA.value (nodeLoggingFormat defaultTestnetOptions)
       )
 
 optsBabbage :: Parser BabbageOptions

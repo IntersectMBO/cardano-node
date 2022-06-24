@@ -15,7 +15,6 @@ module Testnet.Cardano
 
   , Era(..)
   , TestnetRuntime (..)
-  , bftSprockets
   , allNodes
   , TestnetNode (..)
   , PaymentKeyPair(..)
@@ -47,8 +46,8 @@ import           Hedgehog.Extras.Stock.Time (formatIso8601, showUTCTimeSeconds)
 import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter (..))
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
 import           System.FilePath.Posix ((</>))
-import           Test.Runtime (PaymentKeyPair (..), PoolNode (PoolNode), PoolNodeKeys (..),
-                   TestnetNode (..), TestnetRuntime (..))
+import           Test.Runtime (NodeLoggingFormat (..), PaymentKeyPair (..), PoolNode (PoolNode),
+                   PoolNodeKeys (..), TestnetNode (..), TestnetRuntime (..))
 import           Text.Read (Read)
 import           Text.Show (Show (show))
 
@@ -61,7 +60,6 @@ import qualified Data.Map as M
 import qualified Data.Time.Clock as DTC
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Stock.Aeson as J
-import qualified Hedgehog.Extras.Stock.IO.File as IO
 import qualified Hedgehog.Extras.Stock.IO.Network.Socket as IO
 import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 import qualified Hedgehog.Extras.Stock.OS as OS
@@ -75,6 +73,7 @@ import qualified System.Directory as IO
 import qualified System.Info as OS
 import qualified System.IO as IO
 import qualified System.Process as IO
+import qualified Test.Assert as H
 import qualified Test.Process as H
 import qualified Test.Runtime as TR
 import qualified Testnet.Conf as H
@@ -102,6 +101,7 @@ data TestnetOptions = TestnetOptions
   , slotLength :: Double
   , activeSlotsCoeff :: Double
   , enableP2P :: Bool
+  , nodeLoggingFormat :: NodeLoggingFormat
   } deriving (Eq, Show)
 
 defaultTestnetOptions :: TestnetOptions
@@ -113,6 +113,7 @@ defaultTestnetOptions = TestnetOptions
   , slotLength = 0.2
   , activeSlotsCoeff = 0.2
   , enableP2P = False
+  , nodeLoggingFormat = NodeLoggingFormatAsText
   }
 
 newtype TestnetNodeOptions = TestnetNodeOptions
@@ -125,9 +126,6 @@ defaultTestnetNodeOptions :: TestnetNodeOptions
 defaultTestnetNodeOptions = TestnetNodeOptions
   { extraNodeCliArgs = []
   }
-
-bftSprockets :: TestnetRuntime -> [Sprocket]
-bftSprockets = fmap nodeSprocket . bftNodes
 
 allNodes :: TestnetRuntime -> [TestnetNode]
 allNodes tr = bftNodes tr <> fmap TR.poolNodeToTestnetNode (poolNodes tr)
@@ -837,8 +835,7 @@ testnet testnetOptions H.Conf {..} = do
 
   forM_ allNodeNames $ \node -> do
     nodeStdoutFile <- H.noteTempFile logDir $ node <> ".stdout.log"
-    H.assertByDeadlineIOCustom "stdout does not contain \"until genesis start time\"" deadline $ IO.fileContains "until genesis start time at" nodeStdoutFile
-    H.assertByDeadlineIOCustom "stdout does not contain \"Chain extended\"" deadline $ IO.fileContains "Chain extended, new tip" nodeStdoutFile
+    H.assertChainExtended deadline (nodeLoggingFormat testnetOptions) nodeStdoutFile
 
   H.noteShowIO_ DTC.getCurrentTime
 
