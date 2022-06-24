@@ -1,4 +1,5 @@
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE LambdaCase #-}
 
 module Testnet.Commands.Cardano
   ( CardanoOptions(..)
@@ -9,6 +10,8 @@ module Testnet.Commands.Cardano
 import           Data.Eq
 import           Data.Function
 import           Data.Int
+import           Data.String (String)
+import           Data.Either (Either(..))
 import           Data.List (replicate)
 import           Data.Maybe
 import           Data.Semigroup
@@ -79,6 +82,19 @@ optsTestnet = TestnetOptions
       <>  OA.showDefault
       <>  OA.value (enableP2P defaultTestnetOptions)
       )
+  <*> OA.option (OA.eitherReader readNodeLoggingFormat)
+      (   OA.long "nodeLoggingFormat"
+      <>  OA.help "Node logging format (json|text)"
+      <>  OA.metavar "LOGGING_FORMAT"
+      <>  OA.showDefault
+      <>  OA.value (nodeLoggingFormat defaultTestnetOptions)
+      )
+
+readNodeLoggingFormat :: String -> Either String NodeLoggingFormat
+readNodeLoggingFormat = \case
+  "json" -> Right NodeLoggingFormatAsJson
+  "text" -> Right NodeLoggingFormatAsText
+  s -> Left $ "Unrecognised node logging format: " <> show s <> ".  Valid options: \"json\", \"text\""
 
 optsCardano :: Parser CardanoOptions
 optsCardano = CardanoOptions

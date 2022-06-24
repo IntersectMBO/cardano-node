@@ -43,6 +43,8 @@ library
                       , hedgehog-extras
                       , http-client
                       , http-types
+                      , lens
+                      , lens-aeson
                       , ouroboros-network
                       , process
                       , random
@@ -53,7 +55,8 @@ library
                       , unordered-containers
 
   hs-source-dirs:       src
-  exposed-modules:      Test.Base
+  exposed-modules:      Test.Assert
+                        Test.Base
                         Test.Process
                         Testnet.Byron
                         Testnet.Cardano
@@ -112,16 +115,20 @@ test-suite cardano-testnet-tests
                       , filepath
                       , hedgehog
                       , hedgehog-extras
+                      , lens
+                      , lens-aeson
                       , process
+                      , resourcet
                       , tasty
                       , tasty-expected-failure
                       , tasty-hedgehog
                       , text
                       , time
+                      , transformers
 
   other-modules:
+                        Spec.Cli.Alonzo.LeadershipSchedule
                         Spec.Cli.KesPeriodInfo
-                        Spec.Cli.LeadershipSchedule
                         Spec.Node.Shutdown
                         Spec.ShutdownOnSlotSynced
                         Testnet.Properties.Cli.KesPeriodInfo

@@ -1,3 +1,4 @@
+{-# LANGUAGE BlockArguments           #-}
 {-# LANGUAGE DeriveAnyClass           #-}
 {-# LANGUAGE DeriveGeneric            #-}
 {-# LANGUAGE DisambiguateRecordFields #-}
@@ -8,32 +9,42 @@
 
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
+{- HLINT ignore "Redundant return" -}
 {- HLINT ignore "Use let" -}
 
-module Spec.Cli.LeadershipSchedule
+module Spec.Cli.Alonzo.LeadershipSchedule
   ( hprop_leadershipSchedule
   ) where
 
-import Cardano.Api
-import Cardano.Api.Shelley
-import Cardano.CLI.Shelley.Output
-import Cardano.CLI.Shelley.Run.Query
+import Cardano.Api (SerialiseAddress(serialiseAddress), UTxO(UTxO), AlonzoEra)
+import Cardano.Api.Shelley (PoolId)
+import Cardano.CLI.Shelley.Output (QueryTipLocalStateOutput(mEpoch))
+import Cardano.CLI.Shelley.Run.Query (mergeDelegsAndRewards, DelegationsAndRewards)
+import Control.Lens ( (^.), (^?), to )
 import Control.Monad (void)
-import Data.Monoid (Last (..))
+import Control.Monad.Trans.Reader (ReaderT)
+import Control.Monad.Trans.Resource (ResourceT)
+import Data.Aeson (FromJSON)
+import Data.List ((\\))
+import Data.Monoid (Last(..))
 import Data.Set (Set)
 import Data.Text (Text)
 import GHC.Generics (Generic)
 import GHC.Stack (callStack)
 import Hedgehog (Property, (===))
+import Hedgehog.Extras.Internal.Test.Integration (IntegrationState)
 import Prelude
 import System.Environment (getEnvironment)
 import System.FilePath ((</>))
 import System.Info (os)
-import Testnet.Cardano (TestnetOptions (..), TestnetRuntime (..), defaultTestnetOptions, testnet)
+import Testnet.Cardano (TestnetOptions(..), TestnetRuntime (..))
 import Testnet.Utils (waitUntilEpoch)
 
+import qualified Cardano.Api as Api
 import qualified Data.Aeson as J
+import qualified Data.Aeson.Lens as J
 import qualified Data.Aeson.Types as J
+import qualified Data.List as L
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import qualified Data.Text as T
@@ -46,10 +57,12 @@ import qualified Hedgehog.Extras.Test.File as H
 import qualified Hedgehog.Extras.Test.Process as H
 import qualified System.Directory as IO
 import qualified System.Info as SYS
+import qualified Test.Assert as H
 import qualified Test.Base as H
 import qualified Test.Process as H
 import qualified Testnet.Cardano as TC
 import qualified Testnet.Conf as H
+import qualified Data.Maybe as Maybe
 
 isLinux :: Bool
 isLinux = os == "linux"
@@ -67,15 +80,16 @@ hprop_leadershipSchedule = H.integration . H.runFinallies . H.workspace "alonzo"
   conf@H.Conf { H.tempBaseAbsPath, H.tempAbsPath } <- H.noteShowM $
     H.mkConf (H.ProjectBase base) (H.YamlFilePath configurationTemplate) tempAbsBasePath' Nothing
 
-  fastTestnetOptions <- pure defaultTestnetOptions
+  fastTestnetOptions <- pure TC.defaultTestnetOptions
     { epochLength = 500
     , slotLength = 0.01
     , activeSlotsCoeff = 0.1
+    , nodeLoggingFormat = TC.NodeLoggingFormatAsJson
     }
   tr@TC.TestnetRuntime
     { testnetMagic
     , poolNodes
-    } <- testnet fastTestnetOptions conf
+    } <- TC.testnet fastTestnetOptions conf
 
   poolNode1 <- H.headM poolNodes
 
@@ -175,7 +189,7 @@ hprop_leadershipSchedule = H.integration . H.runFinallies . H.workspace "alonzo"
     , "--alonzo-era"
     , "--testnet-magic", show @Int testnetMagic
     , "--change-address",  utxoAddr
-    , "--tx-in", T.unpack $ renderTxIn txin
+    , "--tx-in", T.unpack $ Api.renderTxIn txin
     , "--tx-out", poolowneraddresswstakecred <> "+" <> show @Int 5000000
     , "--tx-out", utxoaddrwithstaking <> "+" <> show @Int 5000000
     , "--witness-override", show @Int 3
@@ -251,7 +265,7 @@ hprop_leadershipSchedule = H.integration . H.runFinallies . H.workspace "alonzo"
     , "--alonzo-era"
     , "--testnet-magic", show @Int testnetMagic
     , "--change-address", utxoaddrwithstaking
-    , "--tx-in", T.unpack (renderTxIn txinForStakeReg)
+    , "--tx-in", T.unpack (Api.renderTxIn txinForStakeReg)
     , "--tx-out", utxoaddrwithstaking <> "+" <> show @Int 1000000
     , "--witness-override", show @Int 3
     , "--certificate-file", work </> "stakekey.regcert"
@@ -325,7 +339,7 @@ hprop_leadershipSchedule = H.integration . H.runFinallies . H.workspace "alonzo"
     , "--alonzo-era"
     , "--testnet-magic", show @Int testnetMagic
     , "--change-address",  utxoAddr
-    , "--tx-in", T.unpack $ renderTxIn txin2
+    , "--tx-in", T.unpack $ Api.renderTxIn txin2
     , "--tx-out", utxoAddr <> "+" <> show @Int 10000000
     , "--witness-override", show @Int 3
     , "--certificate-file", tempAbsPath </> "node-pool1/registration.cert"
@@ -364,7 +378,7 @@ hprop_leadershipSchedule = H.integration . H.runFinallies . H.workspace "alonzo"
   poolId <- H.noteShow $ head $ Set.toList poolIds
 
   H.note_ "Check stake pool was successfully registered"
-  T.unpack (serialiseToBech32 poolId) === stakePoolId
+  T.unpack (Api.serialiseToBech32 poolId) === stakePoolId
 
   H.note_ "Check pledge was successfully delegated"
   void $ H.execCli' execConfig
@@ -383,7 +397,7 @@ hprop_leadershipSchedule = H.integration . H.runFinallies . H.workspace "alonzo"
   H.note_ "Check pledge has been delegated to pool"
   case pledgerDelegPoolId of
     Nothing               -> H.failMessage callStack "Pledge was not delegated to pool"
-    Just pledgerDelagator ->  T.unpack (serialiseToBech32 pledgerDelagator) === stakePoolId
+    Just pledgerDelagator -> T.unpack (Api.serialiseToBech32 pledgerDelagator) === stakePoolId
   T.unpack (serialiseAddress pledgeSAddr) === poolownerstakeaddr
 
   H.note_ "Get updated UTxO"
@@ -501,6 +515,30 @@ hprop_leadershipSchedule = H.integration . H.runFinallies . H.workspace "alonzo"
 
   scheduleJson <- H.leftFailM $ H.readJsonFile scheduleFile
 
-  _leadershipSlotNumbers <- H.noteShowM $ fmap (fmap slotNumber) $ H.leftFail $ J.parseEither (J.parseJSON @[LeadershipSlot]) scheduleJson
+  expectedLeadershipSlotNumbers <- H.noteShowM $ fmap (fmap slotNumber) $ H.leftFail $ J.parseEither (J.parseJSON @[LeadershipSlot]) scheduleJson
 
-  True === False
+  H.assert $ not (L.null expectedLeadershipSlotNumbers)
+
+  leadershipDeadline <- H.noteShowM $ DTC.addUTCTime 90 <$> H.noteShowIO DTC.getCurrentTime
+
+  H.assertByDeadlineMCustom "Leader schedule is correct" leadershipDeadline $ do
+    leaderSlots <- getRelevantLeaderSlots (TC.nodeStdout poolNode1) (minimum expectedLeadershipSlotNumbers)
+    maxSlotExpected <- H.noteShow $ maximum expectedLeadershipSlotNumbers
+    maxActualSlot <- H.noteShow $ maximum leaderSlots
+    return $ maxActualSlot >= maxSlotExpected
+
+  leaderSlots <- getRelevantLeaderSlots (TC.nodeStdout poolNode1) (minimum expectedLeadershipSlotNumbers)
+
+  H.assert $ L.length (expectedLeadershipSlotNumbers \\ leaderSlots) <= 1
+
+getRelevantLeaderSlots :: FilePath -> Int -> H.PropertyT (ReaderT IntegrationState (ResourceT IO)) [Int]
+getRelevantLeaderSlots poolNodeStdoutFile slotLowerBound = do
+  vs <- H.readJsonLines poolNodeStdoutFile
+  leaderSlots <- H.noteShow
+    $ Maybe.mapMaybe (\v -> v ^? J.key "data" . J.key "val" . J.key "slot" . J._Integer. to fromIntegral)
+    $ L.filter       (\v -> v ^. J.key "data" . J.key "val" . J.key "kind" . J._String == "TraceNodeIsLeader")
+    vs
+  relevantLeaderSlots <- H.noteShow
+    $ L.filter       (>= slotLowerBound)
+    leaderSlots
+  return relevantLeaderSlots

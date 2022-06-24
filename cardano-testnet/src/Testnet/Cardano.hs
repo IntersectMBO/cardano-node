@@ -1,3 +1,4 @@
+{-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -8,6 +9,7 @@
 
 module Testnet.Cardano
   ( ForkPoint(..)
+  , NodeLoggingFormat(..)
   , TestnetOptions(..)
   , defaultTestnetOptions
   , TestnetNodeOptions(..)
@@ -24,17 +26,19 @@ module Testnet.Cardano
   ) where
 
 import           Control.Applicative (pure)
+import           Control.Lens ((^.))
 import           Control.Monad (Monad (..), forM_, void, forM, (=<<), when, fmap, return)
-import           Control.Monad.IO.Class (liftIO)
+import           Control.Monad.IO.Class (liftIO, MonadIO)
 import           Data.Aeson ((.=))
+import           Data.Aeson.Types (Value)
 import           Data.Bool (Bool(..))
 import           Data.ByteString.Lazy (ByteString)
-import           Data.Eq (Eq)
+import           Data.Eq (Eq (..))
 import           Data.Function (($), (.), flip, id)
 import           Data.Functor ((<$>), (<&>))
 import           Data.Int (Int)
 import           Data.List (length, replicate, unzip5, zip, (\\))
-import           Data.Maybe (Maybe(..), fromJust)
+import           Data.Maybe (Maybe(..), fromJust, mapMaybe)
 import           Data.Ord (Ord((<=)))
 import           Data.Semigroup (Semigroup((<>)))
 import           Data.String (IsString(fromString), String)
@@ -47,13 +51,15 @@ import           Hedgehog.Extras.Stock.Time (formatIso8601, showUTCTimeSeconds)
 import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter (..))
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
 import           System.FilePath.Posix ((</>))
-import           System.IO (FilePath)
+import           System.IO (FilePath, IO)
 import           Text.Read (Read)
 import           Text.Show (Show(show))
 
 import qualified Cardano.Node.Configuration.Topology as NonP2P
 import qualified Cardano.Node.Configuration.TopologyP2P as P2P
 import qualified Data.Aeson as J
+import qualified Data.Aeson.Lens as J
+import qualified Data.ByteString.Lazy as LBS
 import qualified Data.HashMap.Lazy as HM
 import qualified Data.List as L
 import qualified Data.Map as M
@@ -90,6 +96,8 @@ data ForkPoint
 
 data Era = Byron | Shelley | Allegra | Mary | Alonzo deriving (Eq, Enum, Bounded, Read, Show)
 
+data NodeLoggingFormat = NodeLoggingFormatAsJson | NodeLoggingFormatAsText deriving (Eq, Show)
+
 data TestnetOptions = TestnetOptions
   { -- | List of node options. Each option will result in a single node being
     -- created.
@@ -100,6 +108,7 @@ data TestnetOptions = TestnetOptions
   , slotLength :: Double
   , activeSlotsCoeff :: Double
   , enableP2P :: Bool
+  , nodeLoggingFormat :: NodeLoggingFormat
   } deriving (Eq, Show)
 
 defaultTestnetOptions :: TestnetOptions
@@ -111,6 +120,7 @@ defaultTestnetOptions = TestnetOptions
   , slotLength = 0.2
   , activeSlotsCoeff = 0.2
   , enableP2P = False
+  , nodeLoggingFormat = NodeLoggingFormatAsText
   }
 
 newtype TestnetNodeOptions = TestnetNodeOptions
@@ -200,6 +210,27 @@ mkTopologyConfig numNodes allPorts port True = J.encode topologyP2P
         []
         (P2P.UseLedger DontUseLedger)
 
+fileJsonGrep :: FilePath -> (Value -> Bool) -> IO Bool
+fileJsonGrep fp f = do
+  lines <- LBS.split 10 <$> LBS.readFile fp
+  jsons <- pure $ mapMaybe (J.decode @Value) lines
+  return $ L.any f jsons
+
+-- assertChainExtended :: (H.MonadTest m, MonadIO m)
+--   => DTC.UTCTime
+--   -> p
+--   -> FilePath
+--   -> m ()
+assertChainExtended :: (H.MonadTest m, MonadIO m)
+  => DTC.UTCTime
+  -> TestnetOptions
+  -> FilePath
+  -> m ()
+assertChainExtended deadline testnetOptions nodeStdoutFile =
+  H.assertByDeadlineIOCustom "Chain not extended" deadline $ do
+    case nodeLoggingFormat testnetOptions of
+      NodeLoggingFormatAsText -> IO.fileContains "Chain extended, new tip" nodeStdoutFile
+      NodeLoggingFormatAsJson ->    fileJsonGrep nodeStdoutFile (\v -> v ^. J.key "data" . J.key "kind" . J._String == "")
 
 testnet :: TestnetOptions -> H.Conf -> H.Integration TestnetRuntime
 testnet testnetOptions H.Conf {..} = do
@@ -275,6 +306,13 @@ testnet testnetOptions H.Conf {..} = do
     . HM.insert "TestEnableDevelopmentHardForkEras" (J.toJSON @Bool True)
     . HM.insert "TestEnableDevelopmentNetworkProtocols" (J.toJSON @Bool True)
     . HM.insert "EnableP2P" (J.toJSON @Bool (enableP2P testnetOptions))
+    . flip HM.alter "setupScribes" do
+        fmap do
+          J.rewriteArrayElements do
+            J.rewriteObject do
+              HM.insert "scFormat" case nodeLoggingFormat testnetOptions of
+                NodeLoggingFormatAsJson -> "ScJson"
+                NodeLoggingFormatAsText -> "ScText"
     . forkOptions
 
   forM_ allNodeNames $ \node -> do
@@ -842,8 +880,8 @@ testnet testnetOptions H.Conf {..} = do
 
   forM_ allNodeNames $ \node -> do
     nodeStdoutFile <- H.noteTempFile logDir $ node <> ".stdout.log"
-    H.assertByDeadlineIOCustom "stdout does not contain \"until genesis start time\"" deadline $ IO.fileContains "until genesis start time at" nodeStdoutFile
-    H.assertByDeadlineIOCustom "stdout does not contain \"Chain extended\"" deadline $ IO.fileContains "Chain extended, new tip" nodeStdoutFile
+    -- H.assertByDeadlineIOCustom "stdout does not contain \"until genesis start time\"" deadline $ IO.fileContains "until genesis start time at" nodeStdoutFile
+    assertChainExtended deadline testnetOptions nodeStdoutFile
 
   H.noteShowIO_ DTC.getCurrentTime
 
