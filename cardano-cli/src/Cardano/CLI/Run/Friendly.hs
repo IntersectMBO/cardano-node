@@ -72,6 +72,7 @@ friendlyTxBody
       , txMetadata
       , txMintValue
       , txOuts
+      , txInsReference
       , txUpdateProposal
       , txValidityRange
       , txWithdrawals
@@ -85,6 +86,7 @@ friendlyTxBody
     , "metadata" .= friendlyMetadata txMetadata
     , "mint" .= friendlyMintValue txMintValue
     , "outputs" .= map friendlyTxOut txOuts
+    , "reference inputs" .= friendlyReferenceInputs txInsReference
     , "required signers (payment key hashes needed for scripts)" .=
         friendlyExtraKeyWits txExtraKeyWits
     , "update proposal" .= friendlyUpdateProposal txUpdateProposal
@@ -179,7 +181,9 @@ friendlyTxOut (TxOut addr amount mdatum script) =
     Aeson.String $ serialiseToRawBytesHexText h
   renderDatum (TxOutDatumInTx _ sData) =
     scriptDataToJson ScriptDataJsonDetailedSchema sData
-  renderDatum (TxOutDatumInline _ _) = panic "TODO: Babbage"
+  renderDatum (TxOutDatumInline _ sData) =
+    scriptDataToJson ScriptDataJsonDetailedSchema sData
+
 
           -- datum ShelleyBasedEraBabbage = panic "TODO: Babbage"
 
@@ -451,6 +455,10 @@ friendlyAuxScripts :: TxAuxScripts era -> Aeson.Value
 friendlyAuxScripts = \case
   TxAuxScriptsNone -> Null
   TxAuxScripts _ scripts -> String $ textShow scripts
+
+friendlyReferenceInputs :: TxInsReference build era -> Aeson.Value
+friendlyReferenceInputs TxInsReferenceNone = Null
+friendlyReferenceInputs (TxInsReference _ txins) = toJSON txins
 
 friendlyInputs :: [(TxIn, build)] -> Aeson.Value
 friendlyInputs = toJSON . map fst

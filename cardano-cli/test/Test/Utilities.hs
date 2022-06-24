@@ -9,6 +9,8 @@ import           Data.Algorithm.DiffOutput (ppDiff)
 import           Hedgehog (MonadTest)
 import           Hedgehog.Extras.Test.Base (failMessage)
 
+-- TODO: Improve the help output by saying the difference of
+-- each input.
 diffVsGoldenFile
   :: (MonadIO m, MonadTest m)
   => String   -- ^ actual content
