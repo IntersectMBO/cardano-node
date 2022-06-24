@@ -229,13 +229,13 @@ pScriptFor name (Just deprecated) help =
         <> Opt.internal
         )
 
-pReferenceTxIn :: String ->  Parser TxIn
-pReferenceTxIn prefix =
+pReferenceTxIn :: String -> String -> Parser TxIn
+pReferenceTxIn prefix scriptType =
   Opt.option (readerFromParsecParser parseTxIn)
     (  Opt.long (prefix ++ "tx-in-reference")
     <> Opt.metavar "TX-IN"
-    <> Opt.help "TxId#TxIx - Specify a reference input. The reference input may or may not have\
-                \ a plutus reference script attached."
+    <> Opt.help ("TxId#TxIx - Specify a reference input. The reference input must have\
+                 \ a " <> scriptType <> " reference script attached.")
     )
 
 pReadOnlyReferenceTxIn :: Parser TxIn
@@ -1544,7 +1544,7 @@ pPlutusStakeReferenceScriptWitnessFiles
   -> Parser (ScriptWitnessFiles WitCtxStake)
 pPlutusStakeReferenceScriptWitnessFiles prefix autoBalanceExecUnits =
   PlutusReferenceScriptWitnessFiles
-    <$> pReferenceTxIn prefix
+    <$> pReferenceTxIn prefix "plutus"
     <*> pPlutusScriptLanguage prefix
     <*> pure NoScriptDatumOrFileForStake
     <*> pScriptRedeemerOrFile (prefix ++ "reference-tx-in")
@@ -2083,7 +2083,7 @@ pTxIn balance =
   pSimpleReferenceSpendingScriptWitess :: Parser (ScriptWitnessFiles WitCtxTxIn)
   pSimpleReferenceSpendingScriptWitess =
     createSimpleReferenceScriptWitnessFiles
-      <$> pReferenceTxIn "simple-script-"
+      <$> pReferenceTxIn "simple-script-" "simple"
    where
     createSimpleReferenceScriptWitnessFiles
       :: TxIn
@@ -2095,7 +2095,7 @@ pTxIn balance =
   pPlutusReferenceScriptWitness :: BalanceTxExecUnits -> Parser (ScriptWitnessFiles WitCtxTxIn)
   pPlutusReferenceScriptWitness autoBalanceExecUnits =
     createPlutusReferenceScriptWitnessFiles
-      <$> pReferenceTxIn "spending-"
+      <$> pReferenceTxIn "spending-" "plutus"
       <*> pPlutusScriptLanguage "spending-"
       <*> pScriptDatumOrFile "spending-reference-tx-in" WitCtxTxIn
       <*> pScriptRedeemerOrFile "spending-reference-tx-in"
@@ -2253,33 +2253,49 @@ pMintMultiAsset balanceExecUnits =
               <> Opt.metavar "VALUE"
               <> Opt.help helpText
               )
-      <*> some (pMintingScriptOrReferenceScriptWit balanceExecUnits)
+      <*> some (pMintingScriptOrReferenceScriptWit balanceExecUnits <|>
+                pSimpleReferenceMintingScriptWitness <|>
+                pPlutusMintReferenceScriptWitnessFiles balanceExecUnits
+               )
  where
-   pMintingScriptOrReferenceScriptWit
-     :: BalanceTxExecUnits -> Parser (ScriptWitnessFiles WitCtxMint)
-   pMintingScriptOrReferenceScriptWit bExecUnits =
-    pScriptWitnessFiles
-      WitCtxMint
-      balanceExecUnits
-      "mint" (Just "minting")
-      "the minting of assets for a particular policy Id." <|>
-    pPlutusMintReferenceScriptWitnessFiles bExecUnits
+  pMintingScriptOrReferenceScriptWit
+    :: BalanceTxExecUnits -> Parser (ScriptWitnessFiles WitCtxMint)
+  pMintingScriptOrReferenceScriptWit bExecUnits =
+   pScriptWitnessFiles
+     WitCtxMint
+     bExecUnits
+     "mint" (Just "minting")
+     "the minting of assets for a particular policy Id."
 
-   pPlutusMintReferenceScriptWitnessFiles
-     :: BalanceTxExecUnits ->  Parser (ScriptWitnessFiles WitCtxMint)
-   pPlutusMintReferenceScriptWitnessFiles autoBalanceExecUnits =
-    PlutusReferenceScriptWitnessFiles
-      <$> pReferenceTxIn "mint-"
-      <*> pPlutusScriptLanguage "mint-"
-      <*> pure NoScriptDatumOrFileForMint
-      <*> pScriptRedeemerOrFile "mint-reference-tx-in"
-      <*> (case autoBalanceExecUnits of
-            AutoBalance -> pure (ExecutionUnits 0 0)
-            ManualBalance -> pExecutionUnits "mint-reference-tx-in")
-      <*> (Just <$> pPolicyId)
+  pSimpleReferenceMintingScriptWitness :: Parser (ScriptWitnessFiles WitCtxMint)
+  pSimpleReferenceMintingScriptWitness =
+    createSimpleMintingReferenceScriptWitnessFiles
+      <$> pReferenceTxIn "simple-minting-script-" "simple"
+      <*> pPolicyId
+   where
+    createSimpleMintingReferenceScriptWitnessFiles
+      :: TxIn
+      -> PolicyId
+      -> ScriptWitnessFiles WitCtxMint
+    createSimpleMintingReferenceScriptWitnessFiles refTxIn pid =
+      let simpleLang = AnyScriptLanguage (SimpleScriptLanguage SimpleScriptV2)
+      in SimpleReferenceScriptWitnessFiles refTxIn simpleLang (Just pid)
 
-   helpText = "Mint multi-asset value(s) with the multi-asset cli syntax. \
-               \You must specify a script witness."
+  pPlutusMintReferenceScriptWitnessFiles
+    :: BalanceTxExecUnits ->  Parser (ScriptWitnessFiles WitCtxMint)
+  pPlutusMintReferenceScriptWitnessFiles autoBalanceExecUnits =
+   PlutusReferenceScriptWitnessFiles
+     <$> pReferenceTxIn "mint-" "plutus"
+     <*> pPlutusScriptLanguage "mint-"
+     <*> pure NoScriptDatumOrFileForMint
+     <*> pScriptRedeemerOrFile "mint-reference-tx-in"
+     <*> (case autoBalanceExecUnits of
+           AutoBalance -> pure (ExecutionUnits 0 0)
+           ManualBalance -> pExecutionUnits "mint-reference-tx-in")
+     <*> (Just <$> pPolicyId)
+
+  helpText = "Mint multi-asset value(s) with the multi-asset cli syntax. \
+              \You must specify a script witness."
 
 pPolicyId :: Parser PolicyId
 pPolicyId =
