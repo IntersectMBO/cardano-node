@@ -55,7 +55,8 @@ library
                       , unordered-containers
 
   hs-source-dirs:       src
-  exposed-modules:      Test.Base
+  exposed-modules:      Test.Assert
+                        Test.Base
                         Test.Process
                         Test.Runtime
                         Testnet.Babbage
