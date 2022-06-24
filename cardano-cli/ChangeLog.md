@@ -3,6 +3,7 @@
 ## 1.35.0 -- June 2022
 - Add Vasil hardfork to cardano-api and cardano-cli (#3765)
 - Reference script integration (#3953)
+- Wire up remaining Plutusv2 reference script types (#4034)
 - Add friendly printing of transactions (envelopes) with signatures (#3617)
 - cardano-cli transaction view: Add friendly certificate printing (#3377)
 - cardano-cli query kes-period-info: Always display metrics (#3683)

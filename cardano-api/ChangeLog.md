@@ -3,6 +3,7 @@
 ## 1.35.0 -- June 2022
 - Add Vasil hardfork to cardano-api and cardano-cli (#3765)
 - Reference script integration (#3953)
+- Wire up remaining Plutusv2 reference script types (#4034)
 - Add `IsString` (Hash BlockHeader) (#3619)
 - Make `LedgerStateEvents` a type alias (#3692)
 - Propagate protocol epoch state decode error (#3696)

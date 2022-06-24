@@ -16,7 +16,7 @@
   - Rework implementation to eliminate prototypes from trace definitions (#3731)
   - Fix tracing config to allow selection of the new tracing system (#3655)
   - Register GC metrics. (#3858)
-  - Metrics are no longer impacted by severities and frequecy limits (#3876)
+  - Metrics are no longer impacted by severities and frequency limits (#3876)
   - Porting ekg-direct metrics to new-tracing (#3873)
   - Node state data point extensions and fixes: (#3854, #3656)
   - Old peers tracing was erroneously called in new tracing (#3880)
@@ -167,10 +167,14 @@
   parameters. This is consistent with how cost model parameters are treated in
   update proposals. (#2792)
 - Ensure pure `EpochInfo` is not overused. (#2818)
+- Do not serialize empty txbody fields (#2863)
+- Remove empty `SuccessfulPlutusScriptsEvent` events (#2861)
+- Disable staking Ptr optimization (#2875)
+- integrity hash not needed for all ref scripts (#2878)
 
 ### Infrastructure changes
 - Nix changes (#3592, #3711, #3707, #3716, #3722, #3717, #3736, #3785, #4015, #3637, #3649, #3698, #3722, #3749, #3760, #3789)
-- CI changes (#3754, #3745, #3767, #3995, #3797, #4031, #4035, #3589, #3599, #3618, #3625, #3661, #3694, #3687, #3690, #3703, #3712, #3737, #3792, #3801)
+- CI changes (#3754, #3745, #3767, #3995, #3797, #4031, #4035, #3589, #3599, #3618, #3625, #3661, #3694, #3687, #3690, #3703, #3712, #3737, #3792, #3801, #4059, #4063)
 
 ## 1.34.1 -- March 2022
 
