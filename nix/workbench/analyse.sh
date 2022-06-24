@@ -27,7 +27,7 @@ EOF
 }
 
 analyse() {
-local filters=() aws= sargs=() unfiltered=
+local filters=() aws= sargs=() unfiltered= perf_omit_hosts=()
 local dump_logobjects= dump_machviews= dump_chain_raw= dump_chain= dump_slots_raw= dump_slots=
 while test $# -gt 0
 do case "$1" in
@@ -37,6 +37,7 @@ do case "$1" in
        --dump-chain      | -c )   sargs+=($1);    dump_chain='true';;
        --dump-slots-raw  | -sr )  sargs+=($1);    dump_slots_raw='true';;
        --dump-slots      | -s )   sargs+=($1);    dump_slots='true';;
+       --perf-omit-host )         sargs+=($1 $2); perf_omit_hosts+=($2); shift;;
        --filters )                sargs+=($1 $2); analysis_set_filters "base,$2"; shift;;
        --no-filters | --unfiltered | -u )
                                   sargs+=($1);    analysis_set_filters ""; unfiltered='true';;
@@ -213,9 +214,13 @@ case "$op" in
         local adir=$dir/analysis
         test -n "$dir" -a -d "$adir" || fail "malformed run: $name"
 
-        local logfiles=($(if test -z "$host"
-                          then ls "$adir"/logs-*.flt.json
-                          else ls "$adir"/logs-$host.flt.json; fi))
+        local logfiles=(
+            $(if test -z "$host"
+              then ls "$adir"/logs-*.flt.json
+              else ls "$adir"/logs-$host.flt.json; fi))
+        local minus_logfiles=(
+            $(for host in ${perf_omit_hosts[*]}
+              do ls "$adir"/logs-$host.flt.json; done))
 
         if test -z "${filters[*]}" -a -z "$unfiltered"
         then local filter_names=$(jq '.analysis.filters
@@ -231,23 +236,24 @@ case "$op" in
                                                           --shelley-genesis "$dir"/genesis-shelley.json })
         v3=(${v2[*]/#dump-chain-raw/       'dump-chain-raw'        --chain "$adir"/chain-raw.json})
         v4=(${v3[*]/#chain-timeline-raw/   'timeline-chain-raw' --timeline "$adir"/chain-raw.txt})
-        v5=(${v4[*]/#filter-chain/         'filter-chain'                  ${filters[*]}})
+        v5=(${v4[*]/#filter-chain/         'filter-chain'                   ${filters[*]}})
         v6=(${v5[*]/#dump-chain/           'dump-chain'            --chain "$adir"/chain.json})
         v7=(${v6[*]/#chain-timeline/       'timeline-chain'     --timeline "$adir"/chain.txt})
-        v8=(${v7[*]/#filter-slots/         'filter-slots'                  ${filters[*]}})
-        v9=(${v8[*]/#propagation-json/     'render-propagation'   --json "$adir"/blockprop.json     --full})
-        va=(${v9[*]/#propagation-org/      'render-propagation'    --org "$adir"/blockprop.org      --full})
-        vb=(${va[*]/#propagation-forger/   'render-propagation' --report "$adir"/blockprop.forger.org --forger})
-        vc=(${vb[*]/#propagation-peers/    'render-propagation' --report "$adir"/blockprop.peers.org --peers })
-        vd=(${vc[*]/#propagation-endtoend/ 'render-propagation' --report "$adir"/blockprop.endtoend.org --end-to-end})
-        ve=(${vd[*]/#propagation-gnuplot/  'render-propagation' --gnuplot "$adir"/%s.cdf            --full})
-        vf=(${ve[*]/#propagation-full/     'render-propagation' --pretty "$adir"/blockprop-full.txt --full})
-        vg=(${vf[*]/#clusterperf-json/     'render-clusterperf'   --json "$adir"/clusterperf.json --full })
-        vh=(${vg[*]/#clusterperf-org/      'render-clusterperf'    --org "$adir"/clusterperf.org --full })
-        vi=(${vh[*]/#clusterperf-report/   'render-clusterperf' --report "$adir"/clusterperf.report.org --summary })
-        vj=(${vi[*]/#clusterperf-gnuplot/  'render-clusterperf' --gnuplot "$adir"/%s.cdf --full })
-        vk=(${vj[*]/#clusterperf-full/     'render-clusterperf' --pretty "$adir"/clusterperf-full.txt --full })
-        local ops_final=(${vk[*]})
+        v8=(${v7[*]/#collect-slots/        'collect-slots'           ${minus_logfiles[*]/#/--ignore-log }})
+        v9=(${v8[*]/#filter-slots/         'filter-slots'                   ${filters[*]}})
+        va=(${v9[*]/#propagation-json/     'render-propagation'   --json "$adir"/blockprop.json     --full})
+        vb=(${va[*]/#propagation-org/      'render-propagation'    --org "$adir"/blockprop.org      --full})
+        vc=(${vb[*]/#propagation-forger/   'render-propagation' --report "$adir"/blockprop.forger.org --forger})
+        vd=(${vc[*]/#propagation-peers/    'render-propagation' --report "$adir"/blockprop.peers.org --peers })
+        ve=(${vd[*]/#propagation-endtoend/ 'render-propagation' --report "$adir"/blockprop.endtoend.org --end-to-end})
+        vf=(${ve[*]/#propagation-gnuplot/  'render-propagation' --gnuplot "$adir"/%s.cdf            --full})
+        vg=(${vf[*]/#propagation-full/     'render-propagation' --pretty "$adir"/blockprop-full.txt --full})
+        vh=(${vg[*]/#clusterperf-json/     'render-clusterperf'   --json "$adir"/clusterperf.json --full })
+        vi=(${vh[*]/#clusterperf-org/      'render-clusterperf'    --org "$adir"/clusterperf.org --full })
+        vj=(${vi[*]/#clusterperf-report/   'render-clusterperf' --report "$adir"/clusterperf.report.org --summary })
+        vk=(${vj[*]/#clusterperf-gnuplot/  'render-clusterperf' --gnuplot "$adir"/%s.cdf --full })
+        vl=(${vk[*]/#clusterperf-full/     'render-clusterperf' --pretty "$adir"/clusterperf-full.txt --full })
+        local ops_final=(${vl[*]})
 
         progress "analysis | locli" "$(with_color reset ${locli_rts_args[@]}) $(colorise "${ops_final[@]}")"
         time locli "${locli_rts_args[@]}" "${ops_final[@]}"

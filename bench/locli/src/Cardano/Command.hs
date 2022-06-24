@@ -105,7 +105,9 @@ parseChainCommand =
 
    subparser (mconcat [ commandGroup "Machine performance analysis:  slot stats"
    , op "collect-slots" "Collect per-slot performance stats"
-     (CollectSlots & pure)
+     (CollectSlots
+       <$> many
+           (optJsonLogfile    "ignore-log"   "Omit data from listed log files from perf statistics"))
    , op "dump-slots-raw" "Dump unfiltered slot stats JSON streams, alongside input files"
      (DumpSlotsRaw & pure)
    , op "filter-slots" "Filter per-slot performance stats"
@@ -223,7 +225,7 @@ data ChainCommand
   |            DumpChain    JsonOutputFile
   |        TimelineChain    TextOutputFile
 
-  |         CollectSlots
+  |         CollectSlots    [JsonLogfile]
   |            DumpSlotsRaw
   |          FilterSlots    [JsonFilterFile]
   |            DumpSlots
@@ -395,13 +397,16 @@ runChainCommand _ c@TimelineChain{} = missingCommandData c
   ["run metadata & genesis", "filtered chain"]
 
 runChainCommand s@State{sRun=Just run, sObjLists=Just objs}
-  c@CollectSlots = do
+  c@(CollectSlots ignores) = do
+  let nonIgnored = flip filter objs $ (`notElem` ignores) . fst
+  forM_ ignores $
+    progress "perf-ignored-log" . R . unJsonLogfile
   (scalars, slotsRaw) <-
-    fmap (mapAndUnzip redistribute) <$> collectSlotStats run objs
+    fmap (mapAndUnzip redistribute) <$> collectSlotStats run nonIgnored
     & newExceptT
     & firstExceptT (CommandError c)
   pure s { sScalars = Just scalars, sSlotsRaw = Just slotsRaw }
-runChainCommand _ c@CollectSlots = missingCommandData c
+runChainCommand _ c@CollectSlots{} = missingCommandData c
   ["run metadata & genesis", "lifted logobjects"]
 
 runChainCommand s@State{sSlotsRaw=Just slotsRaw}
