@@ -128,6 +128,7 @@ test-suite cardano-testnet-tests
 
   other-modules:
                         Spec.Cli.Alonzo.LeadershipSchedule
+                        Spec.Cli.Babbage.LeadershipSchedule
                         Spec.Cli.KesPeriodInfo
                         Spec.Node.Shutdown
                         Spec.ShutdownOnSlotSynced

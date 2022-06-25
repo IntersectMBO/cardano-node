@@ -63,7 +63,7 @@ assertChainExtended deadline nodeLoggingFormat nodeStdoutFile =
   H.assertByDeadlineIOCustom "Chain not extended" deadline $ do
     case nodeLoggingFormat of
       NodeLoggingFormatAsText -> IO.fileContains "Chain extended, new tip" nodeStdoutFile
-      NodeLoggingFormatAsJson -> fileJsonGrep nodeStdoutFile (\v -> v ^. J.key "data" . J.key "kind" . J._String == "")
+      NodeLoggingFormatAsJson -> fileJsonGrep nodeStdoutFile (\v -> v ^. J.key "data" . J.key "kind" . J._String == "TraceAddBlockEvent.AddedToCurrentChain")
 
 getRelevantLeaderSlots :: FilePath -> Int -> H.PropertyT (ReaderT IntegrationState (ResourceT IO)) [Int]
 getRelevantLeaderSlots poolNodeStdoutFile slotLowerBound = do

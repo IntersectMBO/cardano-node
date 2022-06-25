@@ -8,6 +8,7 @@ import           Prelude
 import           Test.Tasty (TestTree)
 
 import qualified Spec.Cli.Alonzo.LeadershipSchedule
+import qualified Spec.Cli.Babbage.LeadershipSchedule
 -- import qualified Spec.Cli.KesPeriodInfo
 import qualified Spec.Node.Shutdown
 import qualified Spec.ShutdownOnSlotSynced
@@ -23,6 +24,9 @@ tests = pure $ T.testGroup "test/Spec.hs"
     , H.ignoreOnWindows "ShutdownOnSlotSynced" Spec.ShutdownOnSlotSynced.hprop_shutdownOnSlotSynced
     , T.testGroup "Alonzo"
       [ H.ignoreOnWindows "leadership-schedule" Spec.Cli.Alonzo.LeadershipSchedule.hprop_leadershipSchedule
+      ]
+    , T.testGroup "Babbage"
+      [ H.ignoreOnWindows "leadership-schedule" Spec.Cli.Babbage.LeadershipSchedule.hprop_leadershipSchedule
       ]
       -- Ignored on Windows due to <stdout>: commitBuffer: invalid argument (invalid character)
       -- as a result of the kes-period-info output to stdout.
