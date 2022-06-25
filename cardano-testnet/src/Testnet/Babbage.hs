@@ -48,7 +48,6 @@ import qualified Data.List as L
 import qualified Data.Time.Clock as DTC
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Stock.Aeson as J
-import qualified Hedgehog.Extras.Stock.IO.File as IO
 import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 import qualified Hedgehog.Extras.Stock.OS as OS
 import qualified Hedgehog.Extras.Stock.String as S
@@ -58,6 +57,7 @@ import qualified Hedgehog.Extras.Test.Process as H
 import qualified System.Info as OS
 import qualified System.IO as IO
 import qualified System.Process as IO
+import qualified Test.Assert as H
 import qualified Test.Process as H
 import qualified Testnet.Conf as H
 
@@ -156,24 +156,29 @@ testnet testnetOptions H.Conf {..} = do
 
   H.rewriteYamlFile (tempAbsPath </> "configuration.yaml") . J.rewriteObject
     $ HM.delete "GenesisFile"
-    . HM.insert "Protocol"                              (toJSON @String "Cardano")
-    . HM.insert "PBftSignatureThreshold"                (toJSON @Double 0.6)
-    . HM.insert "minSeverity"                           (toJSON @String "Debug")
-    . HM.insert "ByronGenesisFile"                      (toJSON @String "genesis/byron/genesis.json")
-    . HM.insert "ShelleyGenesisFile"                    (toJSON @String "genesis/shelley/genesis.json")
-    . HM.insert "AlonzoGenesisFile"                     (toJSON @String "genesis/shelley/genesis.alonzo.json")
-    . HM.insert "RequiresNetworkMagic"                  (toJSON @String "RequiresMagic")
-    . HM.insert "LastKnownBlockVersion-Major"           (toJSON @Int 6)
-    . HM.insert "LastKnownBlockVersion-Minor"           (toJSON @Int 0)
-    . HM.insert "TestShelleyHardForkAtEpoch"            (toJSON @Int 0)
-    . HM.insert "TestAllegraHardForkAtEpoch"            (toJSON @Int 0)
-    . HM.insert "TestMaryHardForkAtEpoch"               (toJSON @Int 0)
-    . HM.insert "TestAlonzoHardForkAtEpoch"             (toJSON @Int 0)
-    . HM.insert "TestBabbageHardForkAtEpoch"            (toJSON @Int 0)
-    . HM.insert "TestEnableDevelopmentHardForkEras"     (toJSON True)
-    . HM.insert "TestEnableDevelopmentNetworkProtocols" (toJSON True)
-
-  -- Copy the cost model
+    . HM.insert "Protocol" (toJSON @String "Cardano")
+    . HM.insert "PBftSignatureThreshold" (toJSON @Double 0.6)
+    . HM.insert "minSeverity" (toJSON @String "Debug")
+    . HM.insert "ByronGenesisFile" (toJSON @String "genesis/byron/genesis.json")
+    . HM.insert "ShelleyGenesisFile" (toJSON @String "genesis/shelley/genesis.json")
+    . HM.insert "AlonzoGenesisFile" (toJSON @String "genesis/shelley/genesis.alonzo.json")
+    . HM.insert "RequiresNetworkMagic" (toJSON @String "RequiresMagic")
+    . HM.insert "LastKnownBlockVersion-Major" (toJSON @Int 6)
+    . HM.insert "LastKnownBlockVersion-Minor" (toJSON @Int 0)
+    . HM.insert "TestShelleyHardForkAtEpoch" (toJSON @Int 0)
+    . HM.insert "TestAllegraHardForkAtEpoch" (toJSON @Int 0)
+    . HM.insert "TestMaryHardForkAtEpoch" (toJSON @Int 0)
+    . HM.insert "TestAlonzoHardForkAtEpoch" (toJSON @Int 0)
+    . HM.insert "TestBabbageHardForkAtEpoch" (toJSON @Int 0)
+    . HM.insert "TestEnableDevelopmentHardForkEras" (toJSON True)
+    . flip HM.alter "setupScribes"
+        ( fmap
+          . J.rewriteArrayElements
+            . J.rewriteObject
+              . HM.insert "scFormat"
+                $ case nodeLoggingFormat testnetOptions of
+                    NodeLoggingFormatAsJson -> "ScJson"
+                    NodeLoggingFormatAsText -> "ScText")
 
   let numPoolNodes = 3 :: Int
 
@@ -385,7 +390,7 @@ testnet testnetOptions H.Conf {..} = do
 
   forM_ spoNodes $ \node -> do
     nodeStdoutFile <- H.noteTempFile logDir $ node <> ".stdout.log"
-    H.assertByDeadlineIOCustom "stdout does not contain \"Chain extended\"" deadline $ IO.fileContains "Chain extended, new tip" nodeStdoutFile
+    H.assertChainExtended deadline (nodeLoggingFormat testnetOptions) nodeStdoutFile
 
   H.noteShowIO_ DTC.getCurrentTime
 
