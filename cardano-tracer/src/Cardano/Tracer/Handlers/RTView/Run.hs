@@ -8,6 +8,7 @@ module Cardano.Tracer.Handlers.RTView.Run
   ) where
 
 import           Control.Concurrent.Async.Extra (sequenceConcurrently)
+import           Control.Concurrent.Extra (Lock)
 import           Control.Monad (void)
 import           Control.Monad.Extra (whenJust)
 import qualified Data.Text as T
@@ -45,10 +46,12 @@ runRTView
   -> AcceptedMetrics
   -> SavedTraceObjects
   -> DataPointRequestors
+  -> Lock
   -> EventsQueues
   -> IO ()
 runRTView TracerConfig{logging, network, hasRTView}
-          connectedNodes acceptedMetrics savedTO dpRequestors eventsQueues =
+          connectedNodes acceptedMetrics savedTO
+          dpRequestors currentDPLock eventsQueues =
   whenJust hasRTView $ \(Endpoint host port) -> do
     -- Pause to prevent collision between "Listening"-notifications from servers.
     sleep 0.3
@@ -78,6 +81,7 @@ runRTView TracerConfig{logging, network, hasRTView}
             savedTO
             eraSettings
             dpRequestors
+            currentDPLock
             reloadFlag
             logging
             network
@@ -96,7 +100,8 @@ runRTView TracerConfig{logging, network, hasRTView}
       , runEraSettingsUpdater
           connectedNodes
           eraSettings
-          savedTO
+          dpRequestors
+          currentDPLock
       , runErrorsUpdater
           connectedNodes
           errors

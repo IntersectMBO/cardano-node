@@ -38,7 +38,8 @@ launchAcceptorsSimple mode localSock dpName = do
   acceptedMetrics <- initAcceptedMetrics
   savedTO <- initSavedTraceObjects
   currentLogLock <- newLock
-  eventsQueues <- initEventsQueues dpRequestors
+  currentDPLock <- newLock
+  eventsQueues <- initEventsQueues dpRequestors currentDPLock
   void . sequenceConcurrently $
     [ runAcceptors mkConfig connectedNodes acceptedMetrics savedTO
                    dpRequestors protocolsBrake currentLogLock eventsQueues

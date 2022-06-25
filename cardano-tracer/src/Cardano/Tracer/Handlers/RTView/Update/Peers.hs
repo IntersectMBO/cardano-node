@@ -5,73 +5,70 @@ module Cardano.Tracer.Handlers.RTView.Update.Peers
   ( updateNodesPeers
   ) where
 
+import           Control.Concurrent.Extra (Lock)
 import           Control.Concurrent.STM.TVar (readTVarIO)
 import           Control.Monad (forM_, void)
 import           Control.Monad.Extra (whenJustM)
 import           Data.List (find)
 import           Data.List.Extra (notNull)
-import qualified Data.Map.Strict as M
 import           Data.Maybe (mapMaybe)
 import           Data.Set ((\\))
 import qualified Data.Set as S
-import           Data.Text (Text, unpack)
+import           Data.Text (unpack)
 import qualified Data.Text as T
 import qualified Graphics.UI.Threepenny as UI
 import           Graphics.UI.Threepenny.Core
 
+import           Cardano.Node.Tracing.Peers
+
 import           Cardano.Tracer.Handlers.RTView.State.Peers
-import           Cardano.Tracer.Handlers.RTView.State.TraceObjects
 import           Cardano.Tracer.Handlers.RTView.UI.HTML.Node.Peers
 import           Cardano.Tracer.Handlers.RTView.UI.Utils
+import           Cardano.Tracer.Handlers.RTView.Update.Utils
 import           Cardano.Tracer.Types
 import           Cardano.Tracer.Utils
 
 updateNodesPeers
   :: UI.Window
+  -> ConnectedNodes
+  -> DataPointRequestors
+  -> Lock
   -> Peers
-  -> SavedTraceObjects
   -> UI ()
-updateNodesPeers window displayedPeers savedTO = do
-  savedTraceObjects <- liftIO $ readTVarIO savedTO
-  forM_ (M.toList savedTraceObjects) $ \(nodeId, savedTOForNode) ->
-    forM_ (M.toList savedTOForNode) $ \(namespace, (trObValue, _, _)) ->
-      case namespace of
-        "Peers" -> doUpdatePeers window nodeId displayedPeers trObValue
-        _ -> return ()
+updateNodesPeers window connectedNodes dpRequestors currentDPLock displayedPeers = do
+  connected <- liftIO $ readTVarIO connectedNodes
+  forM_ connected $ \nodeId -> do
+    whenJustM (liftIO $ askDataPoint dpRequestors currentDPLock nodeId "NodePeers") $
+      doUpdatePeers window nodeId displayedPeers
 
 doUpdatePeers
   :: UI.Window
   -> NodeId
   -> Peers
-  -> Text
+  -> NodePeers
   -> UI ()
-doUpdatePeers window nodeId@(NodeId anId) displayedPeers trObValue =
-  if "NodeKernelPeers" `T.isInfixOf` trObValue
-    then return () -- It was empty 'TraceObject' (without useful info), ignore it.
-    else do
-      -- Update peers number.
-      setTextValue (anId <> "__node-peers-num") (showT (length peersParts))
-      -- If there is at least one connected peer, we enable 'Details' button.
-      findAndSet (set UI.enabled $ notNull peersParts)
-                 window $ anId <> "__node-peers-details-button"
-      -- Update particular info about peers.
-      let connectedPeers = getConnectedPeers
-          connectedPeersAddresses = getConnectedPeersAddresses
-      displayedPeersAddresses <- liftIO $ getPeersAddresses displayedPeers nodeId
-      if displayedPeersAddresses /= connectedPeersAddresses
-        then do
-          -- There are some changes with number of peers: some new were connected
-          -- and/or some displayed ones were disconnected.
-          let disconnectedPeers   = displayedPeersAddresses \\ connectedPeersAddresses -- Not in connected
-              newlyConnectedPeers = connectedPeersAddresses \\ displayedPeersAddresses -- Not in displayed
-          deleteRowsForDisconnected disconnectedPeers
-          addRowsForNewlyConnected newlyConnectedPeers connectedPeers
-        else
-          -- No changes with number of peers, only their data was changed.
-          updateConnectedPeersData connectedPeers
+doUpdatePeers window nodeId@(NodeId anId) displayedPeers (NodePeers peersParts) = do
+  -- Update peers number.
+  setTextValue (anId <> "__node-peers-num") (showT (length peersParts))
+  -- If there is at least one connected peer, we enable 'Details' button.
+  findAndSet (set UI.enabled $ notNull peersParts)
+             window $ anId <> "__node-peers-details-button"
+  -- Update particular info about peers.
+  let connectedPeers = getConnectedPeers
+      connectedPeersAddresses = getConnectedPeersAddresses
+  displayedPeersAddresses <- liftIO $ getPeersAddresses displayedPeers nodeId
+  if displayedPeersAddresses /= connectedPeersAddresses
+    then do
+      -- There are some changes with number of peers: some new were connected
+      -- and/or some displayed ones were disconnected.
+      let disconnectedPeers   = displayedPeersAddresses \\ connectedPeersAddresses -- Not in connected
+          newlyConnectedPeers = connectedPeersAddresses \\ displayedPeersAddresses -- Not in displayed
+      deleteRowsForDisconnected disconnectedPeers
+      addRowsForNewlyConnected newlyConnectedPeers connectedPeers
+    else
+      -- No changes with number of peers, only their data was changed.
+      updateConnectedPeersData connectedPeers
  where
-  peersParts = T.splitOn "," trObValue
-
   getConnectedPeers = S.fromList $
     mapMaybe
       (\peerPart -> let peerData = T.words peerPart in

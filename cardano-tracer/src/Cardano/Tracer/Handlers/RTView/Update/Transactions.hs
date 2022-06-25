@@ -22,9 +22,9 @@ updateTransactionsHistory
   -> IO ()
 updateTransactionsHistory nodeId (TXHistory tHistory) metricName metricValue now =
   case metricName of
-    "cardano.node.txsProcessedNum" -> updateTxsProcessedNum
-    "cardano.node.mempoolBytes"    -> updateMempoolBytes
-    "cardano.node.txsInMempool"    -> updateTxsInMempool
+    "Mempool.TxsProcessedNum" -> updateTxsProcessedNum
+    "Mempool.MempoolBytes"    -> updateMempoolBytes
+    "Mempool.TxsInMempool"    -> updateTxsInMempool
     _ -> return ()
  where
   updateTxsProcessedNum =

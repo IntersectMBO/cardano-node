@@ -4,6 +4,7 @@ module Cardano.Tracer.Handlers.RTView.UI.HTML.Main
   ( mkMainPage
   ) where
 
+import           Control.Concurrent.Extra (Lock)
 import           Control.Concurrent.STM.TVar (readTVarIO)
 import           Control.Monad (void)
 import           Control.Monad.Extra (whenM)
@@ -46,6 +47,7 @@ mkMainPage
   -> SavedTraceObjects
   -> ErasSettings
   -> DataPointRequestors
+  -> Lock
   -> PageReloadedFlag
   -> NonEmpty LoggingParams
   -> Network
@@ -57,7 +59,7 @@ mkMainPage
   -> UI.Window
   -> UI ()
 mkMainPage connectedNodes displayedElements acceptedMetrics savedTO
-           nodesEraSettings dpRequestors reloadFlag loggingConfig networkConfig
+           nodesEraSettings dpRequestors currentDPLock reloadFlag loggingConfig networkConfig
            resourcesHistory chainHistory txHistory nodesErrors eventsQueues window = do
   void $ return window # set UI.title pageTitle
   void $ UI.getHead window #+
@@ -120,11 +122,13 @@ mkMainPage connectedNodes displayedElements acceptedMetrics savedTO
     updateNodesErrors window connectedNodes nodesErrors
 
   whenM (liftIO $ readTVarIO reloadFlag) $ do
+    liftIO $ cleanupDisplayedValues displayedElements
     updateUIAfterReload
       window
       connectedNodes
       displayedElements
       dpRequestors
+      currentDPLock
       loggingConfig
       colors
       datasetIndices
@@ -152,6 +156,7 @@ mkMainPage connectedNodes displayedElements acceptedMetrics savedTO
       savedTO
       nodesEraSettings
       dpRequestors
+      currentDPLock
       loggingConfig
       colors
       datasetIndices
@@ -159,18 +164,14 @@ mkMainPage connectedNodes displayedElements acceptedMetrics savedTO
       uiErrorsTimer
       uiNoNodesProgressTimer
 
-  uiPeersTimer <- UI.timer # set UI.interval 3000
+  uiPeersTimer <- UI.timer # set UI.interval 4000
   on UI.tick uiPeersTimer . const $ do
-    updateNodesPeers window peers savedTO
+    askNSetNodeState connectedNodes dpRequestors currentDPLock displayedElements
+    updateNodesPeers window connectedNodes dpRequestors currentDPLock peers
     updateKESInfo window acceptedMetrics nodesEraSettings displayedElements
-
-  uiNodeStateTimer <- UI.timer # set UI.interval 5000
-  on UI.tick uiNodeStateTimer . const $
-    askNSetNodeState window connectedNodes dpRequestors displayedElements
 
   UI.start uiUptimeTimer
   UI.start uiNodesTimer
-  UI.start uiNodeStateTimer
   UI.start uiPeersTimer
   UI.start uiErrorsTimer
   UI.start uiEKGTimer
@@ -180,7 +181,6 @@ mkMainPage connectedNodes displayedElements acceptedMetrics savedTO
     UI.stop uiNodesTimer
     UI.stop uiUptimeTimer
     UI.stop uiPeersTimer
-    UI.stop uiNodeStateTimer
     UI.stop uiEKGTimer
     UI.stop uiErrorsTimer
     UI.stop uiNoNodesProgressTimer

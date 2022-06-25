@@ -65,6 +65,8 @@ addNodeColumn window loggingConfig nodesErrors updateErrorsTimer
                          , UI.span ## (id' <> "__node-name")
                                    #. "has-text-weight-bold is-size-4 rt-view-node-name"
                                    # set text "Node"
+                         , image "has-tooltip-multiline has-tooltip-bottom rt-view-what-icon" whatSVG
+                                 # set dataTooltip "Node's name, taken from its configuration file"
                          ]
   addNodeCell "version"  [ UI.span ## (id' <> "__node-version")
                                    # set text "—"
@@ -189,7 +191,7 @@ logsSettings loggingConfig anId =
         let pathToSubdir = root </> anId
 
         copyPath <- UI.button #. "button is-info"
-                               #+ [image "rt-view-copy-icon" copySVG]
+                               #+ [image "rt-view-copy-icon-on-button" copySVG]
         on UI.click copyPath . const $
           copyTextToClipboard pathToSubdir
 

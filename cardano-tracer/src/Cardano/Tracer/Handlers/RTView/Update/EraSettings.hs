@@ -5,47 +5,44 @@ module Cardano.Tracer.Handlers.RTView.Update.EraSettings
   ( runEraSettingsUpdater
   ) where
 
+import           Control.Concurrent.Extra (Lock)
 import           Control.Concurrent.STM.TVar (readTVarIO)
 import           Control.Monad (forM_, forever)
-import           Control.Monad.Extra (whenJust)
-import qualified Data.Map.Strict as M
+import           Control.Monad.Extra (whenJustM)
 import           Data.Set (Set)
-import qualified Data.Text as T
+import           Data.Time.Clock (nominalDiffTimeToSeconds)
 import           System.Time.Extra (sleep)
 
+import           Cardano.Node.Startup (NodeStartupInfo (..))
+
 import           Cardano.Tracer.Handlers.RTView.State.EraSettings
-import           Cardano.Tracer.Handlers.RTView.State.TraceObjects
 import           Cardano.Tracer.Handlers.RTView.Update.Utils
 import           Cardano.Tracer.Types
 
 runEraSettingsUpdater
   :: ConnectedNodes
   -> ErasSettings
-  -> SavedTraceObjects
+  -> DataPointRequestors
+  -> Lock
   -> IO ()
-runEraSettingsUpdater connectedNodes settings savedTO = forever $ do
+runEraSettingsUpdater connectedNodes settings dpRequestors currentDPLock = forever $ do
   connected <- readTVarIO connectedNodes
-  updateErasSettings connected settings savedTO
-  sleep 1.0
+  updateErasSettings connected settings dpRequestors currentDPLock
+  sleep 5.0
 
 updateErasSettings
   :: Set NodeId
   -> ErasSettings
-  -> SavedTraceObjects
+  -> DataPointRequestors
+  -> Lock
   -> IO ()
-updateErasSettings connected settings savedTO = do
-  savedTraceObjects <- readTVarIO savedTO
+updateErasSettings connected settings dpRequestors currentDPLock =
   forM_ connected $ \nodeId ->
-    whenJust (M.lookup nodeId savedTraceObjects) $ \savedTOForNode ->
-      whenJust (M.lookup "Startup.ShelleyBased" savedTOForNode) $ \(trObValue, _, _) ->
-        -- Example: "Era Alonzo, Slot length 1s, Epoch length 432000, Slots per KESPeriod 129600"
-        case T.words $ T.replace "," "" trObValue of
-          [_, era, _, _, slotLen, _, _, epochLen, _, _, _, kesPeriod] ->
-            addEraSettings settings nodeId $
-              EraSettings
-                { esEra             = era
-                , esSlotLengthInS   = readInt (T.init slotLen) 0
-                , esEpochLength     = readInt epochLen 0
-                , esKESPeriodLength = readInt kesPeriod 0
-                }
-          _ -> return ()
+    whenJustM (askDataPoint dpRequestors currentDPLock nodeId "NodeStartupInfo") $ \nsi ->
+      addEraSettings settings nodeId $
+        EraSettings
+          { esEra             = suiEra nsi
+          , esSlotLengthInS   = floor . nominalDiffTimeToSeconds $ suiSlotLength nsi
+          , esEpochLength     = fromIntegral $ suiEpochLength nsi
+          , esKESPeriodLength = fromIntegral $ suiSlotsPerKESPeriod nsi
+          }

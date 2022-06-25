@@ -5,6 +5,7 @@ module Cardano.Tracer.Handlers.RTView.Notifications.Send
   ( makeAndSendNotification
   ) where
 
+import           Control.Concurrent.Extra (Lock)
 import           Control.Concurrent.STM (atomically)
 import           Control.Concurrent.STM.TBQueue (flushTBQueue)
 import           Control.Concurrent.STM.TVar (TVar, modifyTVar', readTVarIO)
@@ -27,10 +28,11 @@ import           Cardano.Tracer.Utils
 
 makeAndSendNotification
   :: DataPointRequestors
+  -> Lock
   -> TVar UTCTime
   -> EventsQueue
   -> IO ()
-makeAndSendNotification dpRequestors lastTime eventsQueue = do
+makeAndSendNotification dpRequestors currentDPLock lastTime eventsQueue = do
   emailSettings <- readSavedEmailSettings
   unless (incompleteEmailSettings emailSettings) $ do
     events <- atomically $ nub <$> flushTBQueue eventsQueue
@@ -38,7 +40,7 @@ makeAndSendNotification dpRequestors lastTime eventsQueue = do
     unless (null nodeIds) $ do
       nodeNames <-
         forM nodeIds $ \nodeId@(NodeId anId) ->
-          askDataPoint dpRequestors nodeId "NodeInfo" >>= \case
+          askDataPoint dpRequestors currentDPLock nodeId "NodeInfo" >>= \case
             Nothing -> return anId
             Just ni -> return $ niName ni
       lastEventTime <- readTVarIO lastTime

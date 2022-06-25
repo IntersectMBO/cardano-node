@@ -5,6 +5,7 @@ module Cardano.Tracer.Handlers.RTView.Update.Reload
   ( updateUIAfterReload
   ) where
 
+import           Control.Concurrent.Extra (Lock)
 import           Control.Concurrent.STM.TVar (readTVarIO)
 import           Data.List.NonEmpty (NonEmpty)
 import qualified Graphics.UI.Threepenny as UI
@@ -23,6 +24,7 @@ updateUIAfterReload
   -> ConnectedNodes
   -> DisplayedElements
   -> DataPointRequestors
+  -> Lock
   -> NonEmpty LoggingParams
   -> Colors
   -> DatasetsIndices
@@ -30,7 +32,7 @@ updateUIAfterReload
   -> UI.Timer
   -> UI.Timer
   -> UI ()
-updateUIAfterReload window connectedNodes displayedElements dpRequestors
+updateUIAfterReload window connectedNodes displayedElements dpRequestors currentDPLock
                     loggingConfig colors datasetIndices nodesErrors updateErrorsTimer
                     noNodesProgressTimer = do
   -- Ok, web-page was reload (i.e. it's the first update after DOM-rendering),
@@ -44,6 +46,6 @@ updateUIAfterReload window connectedNodes displayedElements dpRequestors
     updateErrorsTimer
     displayedElements
   checkNoNodesState window connected noNodesProgressTimer
-  askNSetNodeInfo window dpRequestors connected displayedElements
+  askNSetNodeInfo window dpRequestors currentDPLock connected displayedElements
   addDatasetsForConnected window connected colors datasetIndices displayedElements
   liftIO $ updateDisplayedElements displayedElements connected

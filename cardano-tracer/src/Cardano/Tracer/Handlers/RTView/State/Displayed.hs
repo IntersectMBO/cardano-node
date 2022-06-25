@@ -1,6 +1,7 @@
 module Cardano.Tracer.Handlers.RTView.State.Displayed
   ( DisplayedElements
   , PageReloadedFlag
+  , cleanupDisplayedValues
   , getDisplayedValue
   , getDisplayedValuePure
   , initDisplayedElements
@@ -39,6 +40,12 @@ type DisplayedElements = TVar (Map NodeId DisplayedForNode)
 
 initDisplayedElements :: IO DisplayedElements
 initDisplayedElements = newTVarIO M.empty
+
+cleanupDisplayedValues
+  :: DisplayedElements
+  -> IO ()
+cleanupDisplayedValues displayedElements = atomically $
+  modifyTVar' displayedElements $ M.map (const M.empty)
 
 getDisplayedValue
   :: DisplayedElements

@@ -34,13 +34,13 @@ updateKESInfo _window acceptedMetrics settings displayed = do
     metrics <- liftIO $ getListOfMetrics ekgStore
     forM_ metrics $ \(metricName, metricValue) ->
       case metricName of
-        "cardano.node.currentKESPeriod" ->
+        "Forge.CurrentKESPeriod" ->
           setDisplayedValue nodeId displayed (anId <> "__node-current-kes-period") metricValue
-        "cardano.node.operationalCertificateExpiryKESPeriod" ->
+        "Forge.OperationalCertificateExpiryKESPeriod" ->
           setDisplayedValue nodeId displayed (anId <> "__node-op-cert-expiry-kes-period") metricValue
-        "cardano.node.operationalCertificateStartKESPeriod" ->
+        "Forge.OperationalCertificateStartKESPeriod" ->
           setDisplayedValue nodeId displayed (anId <> "__node-op-cert-start-kes-period") metricValue
-        "cardano.node.remainingKESPeriods" -> do
+        "Forge.RemainingKESPeriods" -> do
           setDisplayedValue nodeId displayed (anId <> "__node-remaining-kes-periods") metricValue
           allSettings <- liftIO $ readTVarIO settings
           whenJust (M.lookup nodeId allSettings) $

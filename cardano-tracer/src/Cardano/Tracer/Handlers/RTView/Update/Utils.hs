@@ -1,3 +1,4 @@
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NumericUnderscores #-}
 
 module Cardano.Tracer.Handlers.RTView.Update.Utils
@@ -9,6 +10,7 @@ module Cardano.Tracer.Handlers.RTView.Update.Utils
   , nullTime
   ) where
 
+import           Control.Concurrent.Extra (Lock, withLock)
 import           Control.Concurrent.STM.TVar (readTVarIO)
 import           Data.Aeson (FromJSON, decode')
 import qualified Data.Map.Strict as M
@@ -35,17 +37,17 @@ import           Cardano.Tracer.Types
 askDataPoint
   :: FromJSON a
   => DataPointRequestors
+  -> Lock
   -> NodeId
   -> DataPointName
   -> IO (Maybe a)
-askDataPoint dpRequestors nodeId dpName = do
+askDataPoint dpRequestors currentDPLock nodeId dpName = withLock currentDPLock $ do
   requestors <- readTVarIO dpRequestors
   case M.lookup nodeId requestors of
     Nothing -> return Nothing
-    Just dpRequestor -> do
-      dp <- askForDataPoints dpRequestor [dpName]
-      case lookup dpName dp of
-        Just (Just rawValue) -> return $ decode' rawValue
+    Just dpRequestor ->
+      askForDataPoints dpRequestor [dpName] >>= \case
+        [(_, Just rawDPValue)] -> return $ decode' rawDPValue
         _ -> return Nothing
 
 -- | Converts a timestamp to seconds since Unix epoch.

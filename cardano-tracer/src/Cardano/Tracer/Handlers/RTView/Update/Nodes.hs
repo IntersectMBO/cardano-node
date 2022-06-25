@@ -11,6 +11,7 @@ module Cardano.Tracer.Handlers.RTView.Update.Nodes
   , updateNodesUptime
   ) where
 
+import           Control.Concurrent.Extra (Lock)
 import           Control.Concurrent.STM (atomically)
 import           Control.Concurrent.STM.TVar
 import           Control.Monad (forM_, unless, when)
@@ -54,6 +55,7 @@ updateNodesUI
   -> SavedTraceObjects
   -> ErasSettings
   -> DataPointRequestors
+  -> Lock
   -> NonEmpty LoggingParams
   -> Colors
   -> DatasetsIndices
@@ -62,8 +64,8 @@ updateNodesUI
   -> UI.Timer
   -> UI ()
 updateNodesUI window connectedNodes displayedElements acceptedMetrics savedTO nodesEraSettings
-              dpRequestors loggingConfig colors datasetIndices nodesErrors updateErrorsTimer
-              noNodesProgressTimer = do
+              dpRequestors currentDPLock loggingConfig colors datasetIndices nodesErrors
+              updateErrorsTimer noNodesProgressTimer = do
   (connected, displayedEls) <- liftIO . atomically $ (,)
     <$> readTVar connectedNodes
     <*> readTVar displayedElements
@@ -81,7 +83,7 @@ updateNodesUI window connectedNodes displayedElements acceptedMetrics savedTO no
       updateErrorsTimer
       displayedElements
     checkNoNodesState window connected noNodesProgressTimer
-    askNSetNodeInfo window dpRequestors newlyConnected displayedElements
+    askNSetNodeInfo window dpRequestors currentDPLock newlyConnected displayedElements
     addDatasetsForConnected window newlyConnected colors datasetIndices displayedElements
     liftIO $ updateDisplayedElements displayedElements connected
   setBlockReplayProgress connected displayedElements acceptedMetrics
@@ -187,7 +189,7 @@ setBlockReplayProgress connected _displayedElements acceptedMetrics = do
   forM_ connected $ \nodeId ->
     whenJust (M.lookup nodeId allMetrics) $ \(ekgStore, _) -> do
       metrics <- liftIO $ getListOfMetrics ekgStore
-      whenJust (lookup "Block replay progress (%)" metrics) $ \metricValue ->
+      whenJust (lookup "ChainDB.BlockReplayProgress" metrics) $ \metricValue ->
         updateBlockReplayProgress nodeId metricValue
  where
   updateBlockReplayProgress (NodeId anId) mValue =
@@ -264,13 +266,13 @@ setLeadershipStats connected displayed acceptedMetrics = do
       forM_ metrics $ \(mName, mValue) ->
         case mName of
           -- How many times this node was a leader.
-          "nodeIsLeaderNum"    -> setDisplayedValue nodeId displayed (anId <> "__node-leadership") mValue
+          "Forge.NodeIsLeaderNum"    -> setDisplayedValue nodeId displayed (anId <> "__node-leadership") mValue
           -- How many blocks were forged by this node.
-          "blocksForgedNum"    -> setDisplayedValue nodeId displayed (anId <> "__node-forged-blocks") mValue
+          "Forge.BlocksForgedNum"    -> setDisplayedValue nodeId displayed (anId <> "__node-forged-blocks") mValue
           -- How many times this node could not forge.
-          "nodeCannotForgeNum" -> setDisplayedValue nodeId displayed (anId <> "__node-cannot-forge") mValue
+          "Forge.NodeCannotForgeNum" -> setDisplayedValue nodeId displayed (anId <> "__node-cannot-forge") mValue
           -- How many slots were missed in this node.
-          "slotsMissed"        -> setDisplayedValue nodeId displayed (anId <> "__node-missed-slots") mValue
+          "Forge.SlotsMissed"        -> setDisplayedValue nodeId displayed (anId <> "__node-missed-slots") mValue
           _ -> return ()
 
 setEraEpochInfo
@@ -282,20 +284,23 @@ setEraEpochInfo
 setEraEpochInfo connected displayed acceptedMetrics nodesEraSettings = do
   allSettings <- liftIO $ readTVarIO nodesEraSettings
   allMetrics <- liftIO $ readTVarIO acceptedMetrics
-  forM_ connected $ \nodeId@(NodeId anId) ->
+  forM_ connected $ \nodeId@(NodeId anId) -> do
+    epochS <-
+      case M.lookup nodeId allMetrics of
+        Just (ekgStore, _) -> do
+          metrics <- liftIO $ getListOfMetrics ekgStore
+          return $ fromMaybe "" $ lookup "ChainDB.Epoch" metrics
+        Nothing -> return ""
+    unless (T.null epochS) $
+      setDisplayedValue nodeId displayed (anId <> "__node-epoch-num") epochS
+
     whenJust (M.lookup nodeId allSettings) $ \settings -> do
       setDisplayedValue nodeId displayed (anId <> "__node-era") $ esEra settings
-      whenJust (M.lookup nodeId allMetrics) $ \(ekgStore, _) -> do
-        metrics <- liftIO $ getListOfMetrics ekgStore
-        let epoch       = fromMaybe "" $ lookup "cardano.node.epoch"       metrics
-            slotInEpoch = fromMaybe "" $ lookup "cardano.node.slotInEpoch" metrics
-        updateEpochInfo settings nodeId epoch slotInEpoch
+      updateEpochInfo settings nodeId epochS
  where
-  updateEpochInfo settings nodeId@(NodeId anId) epochS slotInEpochS =
-    unless (T.null epochS || T.null slotInEpochS) $ do
+  updateEpochInfo settings (NodeId anId) epochS =
+    unless (T.null epochS) $ do
       let epochNum = readInt epochS 0
-          _slotInEpoch = readInt slotInEpochS 0
-      setDisplayedValue nodeId displayed (anId <> "__node-epoch-num") epochS
       case getEndOfCurrentEpoch settings epochNum of
         Nothing -> return ()
         Just (_start, end) -> do

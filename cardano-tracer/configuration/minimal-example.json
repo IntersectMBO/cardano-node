@@ -1,8 +1,8 @@
 {
   "networkMagic": 764824073,
   "network": {
-    "tag": "ConnectTo",
-    "contents": ["/tmp/forwarder.sock"]
+    "tag": "AcceptAt",
+    "contents": "/tmp/forwarder.sock"
   },
   "logging": [
     {

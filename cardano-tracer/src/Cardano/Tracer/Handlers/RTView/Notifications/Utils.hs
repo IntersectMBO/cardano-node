@@ -8,6 +8,7 @@ module Cardano.Tracer.Handlers.RTView.Notifications.Utils
   , updateNotificationsPeriods
   ) where
 
+import           Control.Concurrent.Extra (Lock)
 import           Control.Concurrent.STM (atomically)
 import           Control.Concurrent.STM.TBQueue (flushTBQueue, isFullTBQueue, newTBQueueIO,
                    writeTBQueue)
@@ -22,8 +23,11 @@ import           Cardano.Tracer.Handlers.RTView.Notifications.Types
 import           Cardano.Tracer.Handlers.RTView.Update.Utils
 import           Cardano.Tracer.Types
 
-initEventsQueues :: DataPointRequestors -> IO EventsQueues
-initEventsQueues dpRequestors = do
+initEventsQueues
+  :: DataPointRequestors
+  -> Lock
+  -> IO EventsQueues
+initEventsQueues dpRequestors currentDPLock = do
   lastTime <- newTVarIO nullTime
 
   warnQ <- initEventsQueue
@@ -41,12 +45,13 @@ initEventsQueues dpRequestors = do
       (emrgS, emrgP) = evsEmergencies settings
       (nodeDisconS, nodeDisconP) = evsNodeDisconnected settings
 
-  warnT <- mkTimer (makeAndSendNotification dpRequestors lastTime warnQ) warnS warnP
-  errsT <- mkTimer (makeAndSendNotification dpRequestors lastTime errsQ) errsS errsP
-  critT <- mkTimer (makeAndSendNotification dpRequestors lastTime critQ) critS critP
-  alrtT <- mkTimer (makeAndSendNotification dpRequestors lastTime alrtQ) alrtS alrtP
-  emrgT <- mkTimer (makeAndSendNotification dpRequestors lastTime emrgQ) emrgS emrgP
-  nodeDisconT <- mkTimer (makeAndSendNotification dpRequestors lastTime nodeDisconQ) nodeDisconS nodeDisconP
+  warnT <- mkTimer (makeAndSendNotification dpRequestors currentDPLock lastTime warnQ) warnS warnP
+  errsT <- mkTimer (makeAndSendNotification dpRequestors currentDPLock lastTime errsQ) errsS errsP
+  critT <- mkTimer (makeAndSendNotification dpRequestors currentDPLock lastTime critQ) critS critP
+  alrtT <- mkTimer (makeAndSendNotification dpRequestors currentDPLock lastTime alrtQ) alrtS alrtP
+  emrgT <- mkTimer (makeAndSendNotification dpRequestors currentDPLock lastTime emrgQ) emrgS emrgP
+  nodeDisconT <- mkTimer (makeAndSendNotification dpRequestors currentDPLock lastTime nodeDisconQ)
+                         nodeDisconS nodeDisconP
 
   newTVarIO $ M.fromList
     [ (EventWarnings,         (warnQ, warnT))
