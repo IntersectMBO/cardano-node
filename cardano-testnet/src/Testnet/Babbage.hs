@@ -1,11 +1,12 @@
+{-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
 {-# OPTIONS_GHC -Wno-unused-local-binds -Wno-unused-matches #-}
-{-# LANGUAGE ScopedTypeVariables #-}
 
 module Testnet.Babbage
   ( TestnetOptions(..)
@@ -41,13 +42,12 @@ import           Test.Runtime (Delegator(..), NodeLoggingFormat(..), PaymentKeyP
 import           Text.Show (Show(show))
 
 import qualified Data.Aeson as J
-import qualified Data.HashMap.Lazy as HM
 import qualified Data.Aeson.Lens as J
+import qualified Data.HashMap.Lazy as HM
 import qualified Data.List as L
 import qualified Data.Time.Clock as DTC
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Stock.Aeson as J
-import qualified Hedgehog.Extras.Stock.IO.File as IO
 import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 import qualified Hedgehog.Extras.Stock.OS as OS
 import qualified Hedgehog.Extras.Stock.String as S
@@ -57,6 +57,7 @@ import qualified Hedgehog.Extras.Test.Process as H
 import qualified System.Info as OS
 import qualified System.IO as IO
 import qualified System.Process as IO
+import qualified Test.Assert as H
 import qualified Test.Process as H
 import qualified Testnet.Conf as H
 
@@ -171,8 +172,13 @@ testnet testnetOptions H.Conf {..} = do
     . HM.insert "TestBabbageHardForkAtEpoch" (J.toJSON @Int 0)
     . HM.insert "TestEnableDevelopmentHardForkEras" (J.toJSON True)
     . HM.insert "TestEnableDevelopmentNetworkProtocols" (J.toJSON True)
-
-  -- Copy the cost model
+    . flip HM.alter "setupScribes" do
+        fmap do
+          J.rewriteArrayElements do
+            J.rewriteObject do
+              HM.insert "scFormat" case nodeLoggingFormat testnetOptions of
+                NodeLoggingFormatAsJson -> "ScJson"
+                NodeLoggingFormatAsText -> "ScText"
 
   let numPoolNodes = 3 :: Int
 
@@ -384,7 +390,7 @@ testnet testnetOptions H.Conf {..} = do
 
   forM_ spoNodes $ \node -> do
     nodeStdoutFile <- H.noteTempFile logDir $ node <> ".stdout.log"
-    H.assertByDeadlineIOCustom "stdout does not contain \"Chain extended\"" deadline $ IO.fileContains "Chain extended, new tip" nodeStdoutFile
+    H.assertChainExtended deadline (nodeLoggingFormat testnetOptions) nodeStdoutFile
 
   H.noteShowIO_ DTC.getCurrentTime
 
