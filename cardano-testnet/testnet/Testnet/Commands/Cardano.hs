@@ -1,3 +1,4 @@
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Testnet.Commands.Cardano
@@ -9,7 +10,6 @@ module Testnet.Commands.Cardano
 import           Data.Eq
 import           Data.Function
 import           Data.Int
-import           Data.List (replicate)
 import           Data.Maybe
 import           Data.Semigroup
 import           GHC.Enum
@@ -20,6 +20,7 @@ import           Testnet.Run (runTestnet)
 import           Text.Read
 import           Text.Show
 
+import qualified Data.List as L
 import qualified Options.Applicative as OA
 
 data CardanoOptions = CardanoOptions
@@ -30,7 +31,7 @@ data CardanoOptions = CardanoOptions
 optsTestnet :: Parser TestnetOptions
 optsTestnet = TestnetOptions
   <$> OA.option
-      ((`replicate` defaultTestnetNodeOptions) <$> auto)
+      ((`L.replicate` defaultTestnetNodeOptions) <$> auto)
       (   OA.long "num-bft-nodes"
       <>  OA.help "Number of BFT nodes"
       <>  OA.metavar "COUNT"

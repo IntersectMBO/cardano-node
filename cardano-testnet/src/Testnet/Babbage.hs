@@ -15,7 +15,7 @@ module Testnet.Babbage
 
   , TestnetRuntime (..)
   , TestnetNode (..)
-  , Wallet(..)
+  , PaymentKeyPair(..)
 
   , testnet
   ) where
@@ -26,10 +26,9 @@ import           Control.Monad (Monad (..), fmap, forM, forM_, return, void, whe
 import           Data.Aeson (encode, object, toJSON, (.=))
 import           Data.Bool (Bool (..))
 import           Data.Eq (Eq)
-import           Data.Function (($), (.))
+import           Data.Function (flip, ($), (.))
 import           Data.Functor ((<$>), (<&>))
 import           Data.Int (Int)
-import           Data.List (unzip5, zipWith6, (++))
 import           Data.Maybe (Maybe (Just))
 import           Data.Ord (Ord ((<=)))
 import           Data.Semigroup (Semigroup ((<>)))
@@ -38,7 +37,8 @@ import           GHC.Float (Double)
 import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket (..))
 import           Hedgehog.Extras.Stock.Time (showUTCTimeSeconds)
 import           System.FilePath.Posix ((</>))
-import           Test.Runtime (TestnetNode (..), TestnetRuntime (..), Wallet (..))
+import           Test.Runtime (Delegator (..), PaymentKeyPair (..), PoolNode (PoolNode),
+                   PoolNodeKeys (..), StakingKeyPair (..), TestnetNode (..), TestnetRuntime (..))
 import           Text.Show (Show (show))
 
 import qualified Data.Aeson.Lens as J
@@ -65,7 +65,6 @@ import qualified Testnet.Conf as H
 {- HLINT ignore "Redundant flip" -}
 {- HLINT ignore "Redundant id" -}
 {- HLINT ignore "Use let" -}
-
 
 data TestnetOptions = TestnetOptions
   { numSpoNodes :: Int
@@ -173,6 +172,8 @@ testnet testnetOptions H.Conf {..} = do
 
   -- Copy the cost model
 
+  let numPoolNodes = 3 :: Int
+
   void . H.execCli $
     [ "genesis", "create-staked"
     , "--genesis-dir", tempAbsPath
@@ -184,13 +185,35 @@ testnet testnetOptions H.Conf {..} = do
     , "--gen-utxo-keys", "3"
     ]
 
+  poolKeys <- H.noteShow $ flip fmap [1..numPoolNodes] $ \n ->
+    PoolNodeKeys
+      { poolNodeKeysColdVkey = tempAbsPath </> "pools" </> "cold" <> show n <> ".vkey"
+      , poolNodeKeysColdSkey = tempAbsPath </> "pools" </> "cold" <> show n <> ".skey"
+      , poolNodeKeysVrfVkey = tempAbsPath </> "node-spo" <> show n </> "vrf.vkey"
+      , poolNodeKeysVrfSkey = tempAbsPath </> "node-spo" <> show n </> "vrf.skey"
+      , poolNodeKeysStakingVkey = tempAbsPath </> "pools" </> "staking-reward" <> show n <> ".vkey"
+      , poolNodeKeysStakingSkey = tempAbsPath </> "pools" </> "staking-reward" <> show n <> ".skey"
+      }
+
   wallets <- forM [1..3] $ \idx -> do
-    pure $ Wallet
+    pure $ PaymentKeyPair
       { paymentSKey = tempAbsPath </> "utxo-keys/utxo" <> show @Int idx <> ".skey"
       , paymentVKey = tempAbsPath </> "utxo-keys/utxo" <> show @Int idx <> ".vkey"
       }
 
-  let spoNodes :: [String] = ("node-spo" ++) . show <$> [1 .. numSpoNodes testnetOptions]
+  delegators <- forM [1..3] $ \idx -> do
+    pure $ Delegator
+      { paymentKeyPair = PaymentKeyPair
+        { paymentSKey = tempAbsPath </> "stake-delegator-keys/payment" <> show @Int idx <> ".skey"
+        , paymentVKey = tempAbsPath </> "stake-delegator-keys/payment" <> show @Int idx <> ".vkey"
+        }
+      , stakingKeyPair = StakingKeyPair
+        { stakingSKey = tempAbsPath </> "stake-delegator-keys/staking" <> show @Int idx <> ".skey"
+        , stakingVKey = tempAbsPath </> "stake-delegator-keys/staking" <> show @Int idx <> ".vkey"
+        }
+      }
+
+  let spoNodes :: [String] = ("node-spo" <>) . show <$> [1 .. numSpoNodes testnetOptions]
 
   -- Create the node directories
 
@@ -310,7 +333,7 @@ testnet testnetOptions H.Conf {..} = do
       ]
     ]
 
-  (poolSprockets, poolStdins, poolStdouts, poolStderrs, poolProcessHandles) <- fmap unzip5 . forM spoNodes $ \node -> do
+  (poolSprockets, poolStdins, poolStdouts, poolStderrs, poolProcessHandles) <- fmap L.unzip5 . forM spoNodes $ \node -> do
     dbDir <- H.noteShow $ tempAbsPath </> "db/" <> node
     nodeStdoutFile <- H.noteTempFile logDir $ node <> ".stdout.log"
     nodeStderrFile <- H.noteTempFile logDir $ node <> ".stderr.log"
@@ -370,13 +393,15 @@ testnet testnetOptions H.Conf {..} = do
   return TestnetRuntime
     { configurationFile
     , testnetMagic
-    , poolNodes = zipWith6 TestnetNode
+    , poolNodes = L.zipWith7 PoolNode
         spoNodes
         poolSprockets
         poolStdins
         poolStdouts
         poolStderrs
         poolProcessHandles
+        poolKeys
     , wallets = wallets
     , bftNodes = []
+    , delegators = delegators
     }
