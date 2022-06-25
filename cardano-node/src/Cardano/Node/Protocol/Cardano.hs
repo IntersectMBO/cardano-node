@@ -198,7 +198,7 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
           -- version that this node will declare that it understands, when it
           -- is in the Alonzo era. That is, it is the version of protocol
           -- /after/ Alonzo, i.e. Babbage.
-          alonzoProtVer = ProtVer 6 0,
+          alonzoProtVer = ProtVer 7 0,
           alonzoMaxTxCapacityOverrides =
             TxLimits.mkOverrides TxLimits.noOverridesMeasure
         }
