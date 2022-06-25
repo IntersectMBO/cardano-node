@@ -5,11 +5,12 @@ module Main
   ) where
 
 import           Prelude
+import           Test.Tasty (TestTree)
+
 -- import qualified Spec.Cli.KesPeriodInfo
 import qualified Spec.Node.Shutdown
 import qualified Spec.ShutdownOnSlotSynced
 import qualified System.Environment as E
-import           Test.Tasty (TestTree)
 import qualified Test.Tasty as T
 import qualified Test.Tasty.Ingredients as T
 import qualified Test.Util as H
@@ -17,7 +18,7 @@ import qualified Test.Util as H
 tests :: IO TestTree
 tests = pure $ T.testGroup "test/Spec.hs"
   [ T.testGroup "Spec"
-    [  H.ignoreOnWindows "Shutdown" Spec.Node.Shutdown.hprop_shutdown
+    [ H.ignoreOnWindows "Shutdown" Spec.Node.Shutdown.hprop_shutdown
     , H.ignoreOnWindows "ShutdownOnSlotSynced" Spec.ShutdownOnSlotSynced.hprop_shutdownOnSlotSynced
       -- Ignored on Windows due to <stdout>: commitBuffer: invalid argument (invalid character)
       -- as a result of the kes-period-info output to stdout.

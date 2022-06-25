@@ -330,6 +330,12 @@ source-repository-package
   tag: ee59880f47ab835dbd73bea0847dab7869fc20d8
   --sha256: 1lrzknw765pz2j97nvv9ip3l1mcpf2zr4n56hwlz0rk7wq7ls4cm
 
+source-repository-package
+  type: git
+  location: https://github.com/haskell-works/hw-aeson
+  tag: fe7d7753123794df2dd858095e4978af5e9a6829
+  --sha256: 11jc9m3kxj92vfap6ybss7mldh75r46gfc1dwmkq1xzsgjj954j9
+
 constraints:
     hedgehog >= 1.0
   , bimap >= 0.4.0
