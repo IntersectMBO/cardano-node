@@ -85,7 +85,7 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
                              npcAlonzoGenesisFileHash
                            }
                            NodeHardForkProtocolConfiguration {
-                            npcTestEnableDevelopmentHardForkEras,
+                            -- npcTestEnableDevelopmentHardForkEras,
                             -- During testing of the Alonzo era, we conditionally declared that we
                             -- knew about the Alonzo era. We do so only when a config option for
                             -- testing development/unstable eras is used. This lets us include
@@ -198,7 +198,7 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
           -- version that this node will declare that it understands, when it
           -- is in the Alonzo era. That is, it is the version of protocol
           -- /after/ Alonzo, i.e. Babbage.
-          alonzoProtVer = ProtVer 6 0,
+          alonzoProtVer = ProtVer 7 0,
           alonzoMaxTxCapacityOverrides =
             TxLimits.mkOverrides TxLimits.noOverridesMeasure
         }
@@ -207,10 +207,7 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
           -- version that this node will declare that it understands, when it
           -- is in the Babbage era. Since Babbage is currently the last known
           -- protocol version then this is also the Babbage protocol version.
-          Praos.babbageProtVer =
-            if npcTestEnableDevelopmentHardForkEras
-            then ProtVer 7 0  -- Advertise we can support Babbage
-            else ProtVer 6 0, -- Otherwise we only advertise we know about (the second) Alonzo
+          Praos.babbageProtVer = ProtVer 7 0,
           Praos.babbageMaxTxCapacityOverrides =
             TxLimits.mkOverrides TxLimits.noOverridesMeasure
         }
