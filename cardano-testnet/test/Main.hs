@@ -5,11 +5,12 @@ module Main
   ) where
 
 import           Prelude
+import           Test.Tasty (TestTree)
+
 -- import qualified Spec.Cli.KesPeriodInfo
 import qualified Spec.Node.Shutdown
 import qualified Spec.ShutdownOnSlotSynced
 import qualified System.Environment as E
-import           Test.Tasty (TestTree)
 import qualified Test.Tasty as T
 import qualified Test.Tasty.Ingredients as T
 import qualified Test.Util as H
