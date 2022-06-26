@@ -477,12 +477,6 @@ testnet testnetOptions H.Conf {..} = do
   -- Make the pool operator cold keys
   -- This was done already for the BFT nodes as part of the genesis creation
 
-        -- poolVrfVkeys
-        -- poolVrfSkeys
-        -- poolStakingVkeys
-        -- poolStakingSkeys
-        -- (poolVrfVkeys, poolVrfSkeys, poolStakingVkeys, poolStakingSkeys)
-
   poolKeys <- forM poolNodesN $ \i -> do
     let node = "node-pool" <> show @Int i
 

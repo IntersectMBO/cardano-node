@@ -52,6 +52,7 @@ library
                       , safe-exceptions
                       , text
                       , time
+                      , transformers
                       , unordered-containers
 
   hs-source-dirs:       src
@@ -123,8 +124,10 @@ test-suite cardano-testnet-tests
                       , tasty-expected-failure
                       , tasty-hedgehog
                       , text
+                      , time
 
   other-modules:
+                        Spec.Cli.Alonzo.LeadershipSchedule
                         Spec.Cli.KesPeriodInfo
                         Spec.Node.Shutdown
                         Spec.ShutdownOnSlotSynced
