@@ -249,6 +249,13 @@ testnet testnetOptions H.Conf {..} = do
     . HM.insert "TestEnableDevelopmentHardForkEras" (J.toJSON @Bool True)
     . HM.insert "TestEnableDevelopmentNetworkProtocols" (J.toJSON @Bool True)
     . HM.insert "EnableP2P" (J.toJSON @Bool (enableP2P testnetOptions))
+    . flip HM.alter "setupScribes" do
+        fmap do
+          J.rewriteArrayElements do
+            J.rewriteObject do
+              HM.insert "scFormat" case nodeLoggingFormat testnetOptions of
+                NodeLoggingFormatAsJson -> "ScJson"
+                NodeLoggingFormatAsText -> "ScText"
     . forkOptions
 
   forM_ allNodeNames $ \node -> do
