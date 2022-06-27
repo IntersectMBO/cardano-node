@@ -7,7 +7,6 @@ module Test.Util
   ) where
 
 import           Data.Bool (bool)
-import           Data.String (IsString (..))
 import           Hedgehog (Property)
 import           Hedgehog.Extras.Stock.OS (isWin32)
 import           Prelude
@@ -42,4 +41,4 @@ ignoreOn os = wrapTest $ const $ return $
     }
 
 disabled :: String -> Property -> TestTree
-disabled pName prop = ignoreOn "Disabled" $ H.testPropertyNamed pName (fromString pName) prop
+disabled pName prop = ignoreOn "Disabled" $ H.testProperty pName prop

@@ -50,7 +50,6 @@ import           Prelude
 
 import           Cardano.Api.HasTypeProxy
 
-import           Control.DeepSeq
 import           Data.Aeson (FromJSON (..), ToJSON, toJSON, withText)
 import qualified Data.Text as Text
 import           Data.Type.Equality (TestEquality (..), (:~:) (Refl))
