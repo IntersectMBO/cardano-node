@@ -676,7 +676,7 @@ runQueryProtocolState
   -> Maybe OutputFile
   -> ExceptT ShelleyQueryCmdError IO ()
 runQueryProtocolState (AnyConsensusModeParams cModeParams)
-                      network _mOutFile = do
+                      network mOutFile = do
   SocketPath sockPath <- firstExceptT ShelleyQueryCmdEnvVarSocketErr readEnvSocketPath
   let localNodeConnInfo = LocalNodeConnectInfo cModeParams network sockPath
 
@@ -689,12 +689,16 @@ runQueryProtocolState (AnyConsensusModeParams cModeParams)
       let qInMode = QueryInEra eInMode
                       . QueryInShelleyBasedEra sbe
                       $ QueryProtocolState
-      _result <- executeQuery
+      result <- executeQuery
                   era
                   cModeParams
                   localNodeConnInfo
                   qInMode
-      panic "currentlyBroken: runQueryProtocolState writeProtocolState mOutFile result"
+
+      case cMode of
+        CardanoMode -> eligibleWriteProtocolStateConstaints sbe $ writeProtocolState mOutFile result
+        mode -> left . ShelleyQueryCmdUnsupportedMode $ AnyConsensusMode mode
+
     Nothing -> left $ ShelleyQueryCmdEraConsensusModeMismatch (AnyConsensusMode cMode) anyE
 
 -- | Query the current delegations and reward accounts, filtered by a given
@@ -853,16 +857,18 @@ writePoolParams (StakePoolKeyHash hk) qState =
 
       liftIO . LBS.putStrLn $ encodePretty $ Params poolParams fPoolParams retiring
 
-_writeProtocolState :: FromCBOR (Consensus.ChainDepState (ConsensusProtocol era))
-                   => ToJSON (Consensus.ChainDepState (ConsensusProtocol era))
-                   => Maybe OutputFile
-                   -> ProtocolState era
-                   -> ExceptT ShelleyQueryCmdError IO ()
-_writeProtocolState mOutFile ps@(ProtocolState pstate) =
+writeProtocolState ::
+  ( FromCBOR (Consensus.ChainDepState (ConsensusProtocol era))
+  , ToJSON (Consensus.ChainDepState (ConsensusProtocol era))
+  )
+  => Maybe OutputFile
+  -> ProtocolState era
+  -> ExceptT ShelleyQueryCmdError IO ()
+writeProtocolState mOutFile ps@(ProtocolState pstate) =
   case mOutFile of
     Nothing -> case decodeProtocolState ps of
-                 Left (bs, _) -> firstExceptT ShelleyQueryCmdHelpersError $ pPrintCBOR bs
-                 Right chainDepstate -> liftIO . LBS.putStrLn $ encodePretty chainDepstate
+      Left (bs, _) -> firstExceptT ShelleyQueryCmdHelpersError $ pPrintCBOR bs
+      Right chainDepstate -> liftIO . LBS.putStrLn $ encodePretty chainDepstate
     Just (OutputFile fpath) ->
       handleIOExceptT (ShelleyQueryCmdWriteFileError . FileIOError fpath)
         . LBS.writeFile fpath $ unSerialised pstate
@@ -1364,6 +1370,19 @@ eligibleLeaderSlotsConstaints ShelleyBasedEraAllegra f = f
 eligibleLeaderSlotsConstaints ShelleyBasedEraMary    f = f
 eligibleLeaderSlotsConstaints ShelleyBasedEraAlonzo  f = f
 eligibleLeaderSlotsConstaints ShelleyBasedEraBabbage f = f
+
+eligibleWriteProtocolStateConstaints
+  :: ShelleyBasedEra era
+  -> (( FromCBOR (Consensus.ChainDepState (ConsensusProtocol era))
+      , ToJSON (Consensus.ChainDepState (ConsensusProtocol era))
+      ) => a
+     )
+  -> a
+eligibleWriteProtocolStateConstaints ShelleyBasedEraShelley f = f
+eligibleWriteProtocolStateConstaints ShelleyBasedEraAllegra f = f
+eligibleWriteProtocolStateConstaints ShelleyBasedEraMary    f = f
+eligibleWriteProtocolStateConstaints ShelleyBasedEraAlonzo  f = f
+eligibleWriteProtocolStateConstaints ShelleyBasedEraBabbage f = f
 
 -- Required instances
 -- instance FromCBOR (TPraosState StandardCrypto) where
