@@ -1,22 +1,22 @@
-WORKBENCH_ENV_DEFAULT='
+WB_ENV_DEFAULT='
 { "type":         "supervisor"
 , "cacheDir":     "'$HOME'/.cache/cardano-workbench"
 , "basePort":     30000
 , "staggerPorts": true
 }'
 
-export WORKBENCH_ENV=$WORKBENCH_ENV_DEFAULT
+export WB_ENV=$WB_ENV_DEFAULT
 
 envjq() {
-    jq ".$1" <<<$WORKBENCH_ENV
+    jq ".$1" <<<$WB_ENV
 }
 
 envjqr() {
-    jq -r ".$1" <<<$WORKBENCH_ENV
+    jq -r ".$1" <<<$WB_ENV
 }
 
 setenvjq() {
-    export WORKBENCH_ENV=$(jq ". * { $1: $2 }" <<<$WORKBENCH_ENV)
+    export WB_ENV=$(jq ". * { $1: $2 }" <<<$WB_ENV)
 }
 
 setenvjqstr() {

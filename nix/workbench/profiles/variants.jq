@@ -291,7 +291,7 @@ def all_profile_variants:
     { desc: "Stop as soon as we've seen a single block"
     }) as $startstop_base
   |
-   ($scenario_fixed_loaded * $doublet * $dataset_miniature * $for_3blk *
+   ($scenario_fixed_loaded * $doublet * $dataset_empty * $for_3blk *
     { desc: "Miniature dataset, CI-friendly duration, test scale"
     }) as $citest_base
   |

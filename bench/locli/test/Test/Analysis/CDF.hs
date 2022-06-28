@@ -2,7 +2,7 @@
 {-# OPTIONS_GHC -Wno-missing-signatures #-}
 module Test.Analysis.CDF where
 
-import Prelude (error, head)
+import Prelude (head)
 import Cardano.Prelude hiding (handle, head)
 
 import Hedgehog
@@ -63,47 +63,33 @@ cdf2_3x3x3sh =
   & cdf2OfCDFs (stdCombine2 centi3x3)
   & handle
 
-prop_CDF_I_2x2                         = property $ cdfI_2x2     === cdfI_2x2_golden
-prop_CDF_CDF_I_3x3                     = property $ cdf2_3x3     === cdf2_3x3_golden
-prop_CDF_CDF_I_3x3_shifted             = property $ cdf2_3x3sh   === cdf2_3x3sh_golden
-prop_CDF_CDF_I_3x3x3_collapsed_shifted = property $ cdf2_3x3x3sh === cdf2_3x3x3sh_golden
-
-tests :: IO Bool
-tests =
-  checkSequential $$discover
-
---
--- * Golden values
---
-cdfI_2x2_golden :: CDF I Double
-cdf2_3x3_golden, cdf2_3x3sh_golden, cdf2_3x3x3sh_golden :: CDF (CDF I) Double
-
-cdfI_2x2_golden =
+prop_CDF_I_2x2 = property $ cdfI_2x2 ===
   CDF
   { cdfSize = 2
   , cdfAverage = 0.5
   , cdfStddev = 0.7071067811865476
   , cdfRange = (0.0,1.0)
   , cdfSamples =
-    [(Centile 0.0,I 0.0),(Centile 1.0,I 1.0)]}
+    [(Centile 0.25,I 0.0)
+    ,(Centile 0.75,I 1.0)]}
 
-cdf2_3x3_golden =
+prop_CDF_CDF_I_3x3 = property $ cdf2_3x3 ===
   CDF
   { cdfSize = 9
   , cdfAverage = 1.0
   , cdfStddev = 1.0
   , cdfRange = (0.0,2.0)
   , cdfSamples =
-    [(Centile 0.0
+    [(Centile 0.16666666666666666
      ,CDF
       { cdfSize = 3
       , cdfAverage = 0.0
       , cdfStddev = 0.0
       , cdfRange = (0.0,0.0)
       , cdfSamples =
-        [(Centile 0.0,I 0.0)
-        ,(Centile 0.5,I 0.0)
-        ,(Centile 1.0,I 0.0)]})
+        [(Centile 0.16666666666666666, I 0.0)
+        ,(Centile 0.5,                 I 0.0)
+        ,(Centile 0.8333333333333333,  I 0.0)]})
     ,(Centile 0.5
      ,CDF
       { cdfSize = 3
@@ -111,37 +97,37 @@ cdf2_3x3_golden =
       , cdfStddev = 0.0
       , cdfRange = (1.0,1.0)
       , cdfSamples =
-        [(Centile 0.0,I 1.0)
-        ,(Centile 0.5,I 1.0)
-        ,(Centile 1.0,I 1.0)]})
-    ,(Centile 1.0
+        [(Centile 0.16666666666666666, I 1.0)
+        ,(Centile 0.5,                 I 1.0)
+        ,(Centile 0.8333333333333333,  I 1.0)]})
+    ,(Centile 0.8333333333333333
      ,CDF
       { cdfSize = 3
       , cdfAverage = 2.0
       , cdfStddev = 0.0
       , cdfRange = (2.0,2.0)
       , cdfSamples =
-        [(Centile 0.0,I 2.0)
-        ,(Centile 0.5,I 2.0)
-        ,(Centile 1.0,I 2.0)]})]}
+        [(Centile 0.16666666666666666, I 2.0)
+        ,(Centile 0.5,                 I 2.0)
+        ,(Centile 0.8333333333333333,  I 2.0)]})]}
 
-cdf2_3x3sh_golden =
+prop_CDF_CDF_I_3x3_shifted = property $ cdf2_3x3sh ===
   CDF
   { cdfSize = 9
   , cdfAverage = 1.0
   , cdfStddev = 1.0
   , cdfRange = (-1.0,3.0)
   , cdfSamples =
-    [(Centile 0.0
+    [(Centile 0.16666666666666666
      ,CDF
       { cdfSize = 3
       , cdfAverage = 0.0
       , cdfStddev = 1.0
       , cdfRange = (-1.0,1.0)
       , cdfSamples =
-        [(Centile 0.0,I (-1.0))
-        ,(Centile 0.5,I 0.0)
-        ,(Centile 1.0,I 1.0)]})
+        [(Centile 0.16666666666666666, I (-1.0))
+        ,(Centile 0.5,                 I 0.0)
+        ,(Centile 0.8333333333333333,  I 1.0)]})
     ,(Centile 0.5
      ,CDF
       { cdfSize = 3
@@ -149,37 +135,37 @@ cdf2_3x3sh_golden =
       , cdfStddev = 1.0
       , cdfRange = (0.0,2.0)
       , cdfSamples =
-        [(Centile 0.0,I 0.0)
-        ,(Centile 0.5,I 1.0)
-        ,(Centile 1.0,I 2.0)]})
-    ,(Centile 1.0
+        [(Centile 0.16666666666666666, I 0.0)
+        ,(Centile 0.5,                 I 1.0)
+        ,(Centile 0.8333333333333333,  I 2.0)]})
+    ,(Centile 0.8333333333333333
      ,CDF
       { cdfSize = 3
       , cdfAverage = 2.0
       , cdfStddev = 1.0
       , cdfRange = (1.0,3.0)
       , cdfSamples =
-        [(Centile 0.0,I 1.0)
-        ,(Centile 0.5,I 2.0)
-        ,(Centile 1.0,I 3.0)]})]}
+        [(Centile 0.16666666666666666, I 1.0)
+        ,(Centile 0.5,                 I 2.0)
+        ,(Centile 0.8333333333333333,  I 3.0)]})]}
 
-cdf2_3x3x3sh_golden =
+prop_CDF_CDF_I_3x3x3_collapsed_shifted = property $ cdf2_3x3x3sh ===
   CDF
   { cdfSize = 27
   , cdfAverage = 1.0
   , cdfStddev = 1.0
   , cdfRange = (-3.0,5.0)
   , cdfSamples =
-    [(Centile 0.0
+    [(Centile 0.16666666666666666
      ,CDF
       { cdfSize = 9
       , cdfAverage = 0.0
       , cdfStddev = 1.0
       , cdfRange = (-3.0,3.0)
       , cdfSamples =
-        [(Centile 0.0,I (-1.0))
-        ,(Centile 0.5,I 0.0)
-        ,(Centile 1.0,I 1.0)]})
+        [(Centile 0.16666666666666666, I (-1.0))
+        ,(Centile 0.5,                 I 0.0)
+        ,(Centile 0.8333333333333333,  I 1.0)]})
     ,(Centile 0.5
      ,CDF
       { cdfSize = 9
@@ -187,16 +173,20 @@ cdf2_3x3x3sh_golden =
       , cdfStddev = 1.0
       , cdfRange = (-2.0,4.0)
       , cdfSamples =
-        [(Centile 0.0,I 0.0)
-        ,(Centile 0.5,I 1.0)
-        ,(Centile 1.0,I 2.0)]})
-    ,(Centile 1.0
+        [(Centile 0.16666666666666666, I 0.0)
+        ,(Centile 0.5,                 I 1.0)
+        ,(Centile 0.8333333333333333,  I 2.0)]})
+    ,(Centile 0.8333333333333333
      ,CDF
       { cdfSize = 9
       , cdfAverage = 2.0
       , cdfStddev = 1.0
       , cdfRange = (-1.0,5.0)
       , cdfSamples =
-        [(Centile 0.0,I 1.0)
-        ,(Centile 0.5,I 2.0)
-        ,(Centile 1.0,I 3.0)]})]}
+        [(Centile 0.16666666666666666, I 1.0)
+        ,(Centile 0.5,                 I 2.0)
+        ,(Centile 0.8333333333333333,  I 3.0)]})]}
+
+tests :: IO Bool
+tests =
+  checkSequential $$discover

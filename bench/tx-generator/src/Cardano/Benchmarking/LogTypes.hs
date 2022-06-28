@@ -51,6 +51,7 @@ import           Ouroboros.Network.Protocol.Handshake.Type (Handshake)
 import           Ouroboros.Network.Protocol.TxSubmission2.Type (TxSubmission2)
 
 import           Cardano.Benchmarking.Types
+import           Cardano.Benchmarking.Version as Version
 
 data BenchTracers =
   BenchTracers
@@ -61,7 +62,8 @@ data BenchTracers =
   }
 
 data TraceBenchTxSubmit txid
-  = TraceBenchTxSubRecv [txid]
+  = TraceTxGeneratorVersion Version.Version
+  | TraceBenchTxSubRecv [txid]
   -- ^ Received from generator.
   | TraceBenchTxSubStart [txid]
   -- ^ The @txid@ has been submitted to `TxSubmission`

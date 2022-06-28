@@ -47,8 +47,9 @@ import           Cardano.Benchmarking.ListBufferedSelector
 import           Cardano.Benchmarking.OuroborosImports as Core (LocalSubmitTx, SigningKeyFile,
                    makeLocalConnectInfo, protocolToCodecConfig)
 import           Cardano.Benchmarking.PlutusExample as PlutusExample
-import           Cardano.Benchmarking.LogTypes as Core (btConnect_, btN2N_, btSubmission2_,
-                   btTxSubmit_)
+
+import           Cardano.Benchmarking.LogTypes as Core (TraceBenchTxSubmit (..), btConnect_, btN2N_,
+                   btSubmission2_, btTxSubmit_)
 import           Cardano.Benchmarking.Types as Core (NumberOfInputsPerTx (..),
                    NumberOfOutputsPerTx (..), NumberOfTxs (..), SubmissionErrorPolicy (..), TPSRate,
                    TxAdditionalSize (..))
@@ -59,6 +60,7 @@ import           Cardano.Benchmarking.Script.Env
 import           Cardano.Benchmarking.Script.Setters
 import           Cardano.Benchmarking.Script.Store as Store
 import           Cardano.Benchmarking.Script.Types
+import           Cardano.Benchmarking.Version as Version
 
 liftCoreWithEra :: AnyCardanoEra -> (forall era. IsShelleyBasedEra era => AsType era -> ExceptT TxGenError IO x) -> ActionM (Either TxGenError x)
 liftCoreWithEra era coreCall = withEra era ( liftIO . runExceptT . coreCall)
@@ -648,6 +650,9 @@ spendAutoScript sourceWallet submitMode loopScriptFile threadName txCount tps er
              test <- f m
              if test then search f m b else search f a m
 
+traceTxGeneratorVersion :: ActionM ()
+traceTxGeneratorVersion = traceBenchTxSubmit TraceTxGeneratorVersion Version.txGeneratorVersion
+
 {-
 This is for dirty hacking and testing and quick-fixes.
 Its a function that can be called from the JSON scripts
@@ -656,3 +661,4 @@ and for which the JSON encoding is "reserved".
 reserved :: [String] -> ActionM ()
 reserved _ = do
   throwE $ UserError "no dirty hack is implemented"
+

@@ -130,13 +130,33 @@ EOF
         local usage="USAGE: wb supervisor $op RUN-DIR"
         local dir=${1:?$usage}; shift
 
-        supervisord --config  "$dir"/supervisor/supervisord.conf $@
+        if ! supervisord --config  "$dir"/supervisor/supervisord.conf $@
+        then progress "supervisor" "$(red fatal: failed to start) $(white supervisord)"
+             echo "$(red supervisord.conf) --------------------------------" >&2
+             cat "$dir"/supervisor/supervisord.conf
+             echo "$(red supervisord.log) ---------------------------------" >&2
+             cat "$dir"/supervisor/supervisord.log
+             echo "$(white -------------------------------------------------)" >&2
+             fatal "could not start $(white supervisord)"
+        fi
 
         if jqtest ".node.tracer" "$dir"/profile.json
-        then supervisorctl start tracer
+        then if ! supervisorctl start tracer
+             then progress "supervisor" "$(red fatal: failed to start) $(white cardano-tracer)"
+                  echo "$(red tracer-config.json) ------------------------------" >&2
+                  cat "$dir"/tracer/tracer-config.json
+                  echo "$(red tracer stdout) -----------------------------------" >&2
+                  cat "$dir"/tracer/stdout
+                  echo "$(red tracer stderr) -----------------------------------" >&2
+                  cat "$dir"/tracer/stderr
+                  echo "$(white -------------------------------------------------)" >&2
+                  fatal "could not start $(white cardano-tracer)"
+             fi
+
              progress_ne "supervisor" "waiting for $(yellow cardano-tracer) to create socket: "
              while test ! -e "$dir"/tracer/tracer.socket; do sleep 1; done
              echo $(green ' OK') >&2
+             backend_supervisor save-child-pids "$dir"
         fi;;
 
     get-node-socket-path )
@@ -156,7 +176,17 @@ EOF
                --* ) msg "FATAL:  unknown flag '$1'"; usage_supervisor;;
                * ) break;; esac; shift; done
 
-        supervisorctl start generator
+        if ! supervisorctl start generator
+        then progress "supervisor" "$(red fatal: failed to start) $(white generator)"
+             echo "$(red generator.json) ------------------------------" >&2
+             cat "$dir"/tracer/tracer-config.json
+             echo "$(red tracer stdout) -----------------------------------" >&2
+             cat "$dir"/tracer/stdout
+             echo "$(red tracer stderr) -----------------------------------" >&2
+             cat "$dir"/tracer/stderr
+             echo "$(white -------------------------------------------------)" >&2
+             fatal "could not start $(white supervisord)"
+        fi
         backend_supervisor save-child-pids "$dir";;
 
     wait-node-stopped )

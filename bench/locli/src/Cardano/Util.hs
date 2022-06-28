@@ -6,11 +6,12 @@ module Cardano.Util
   , module Control.Applicative
   , module Control.Concurrent.Async
   , module Control.Monad.Trans.Except.Extra
+  , module Ouroboros.Consensus.Util.Time
   , module Text.Printf
   )
 where
 
-import Prelude                          (String)
+import Prelude                          (String, error)
 import Cardano.Prelude
 
 import Control.Arrow                    ((&&&), (***))
@@ -29,6 +30,8 @@ import GHC.Base                         (build)
 import Text.Printf                      (printf)
 
 import System.FilePath                  qualified as F
+
+import Ouroboros.Consensus.Util.Time
 
 import Cardano.Analysis.Ground
 import Cardano.Ledger.BaseTypes         (StrictMaybe (..), fromSMaybe)
@@ -71,8 +74,19 @@ mapAndUnzip f (x:xs)
     in
     (r1:rs1, r2:rs2)
 
+mapHead :: (a -> a) -> [a] -> [a]
+mapHead f (x:xs) = f x:xs
+mapHead _ [] = error "mapHead: partial"
+
 redistribute :: (a, (b, c)) -> ((a, b), (a, c))
 redistribute    (a, (b, c))  = ((a, b), (a, c))
+
+nChunksEachOf :: Int -> Int -> Text -> [Text]
+nChunksEachOf chunks each center =
+  T.chunksOf each (T.center (each * chunks) ' ' center)
+
+toDouble :: forall a. Real a => a -> Double
+toDouble = fromRational . toRational
 
 data F
   = R String

@@ -11,6 +11,7 @@ in
 , batchName             ? batchNameDefault
 ##
 , workbenchDevMode      ? false
+, cardano-node-rev      ? "0000000000000000000000000000000000000000"
 }:
 
 let
@@ -51,7 +52,7 @@ let
         --profile      ${profile} \
         --cache-dir    ${cacheDir} \
         --base-port    ${toString basePort} \
-        ''${WORKBENCH_CABAL_MODE:+--cabal} \
+        ''${WB_MODE_CABAL:+--cabal} \
         "$@"
   '';
 
@@ -93,14 +94,16 @@ let
             pstree
             python3Packages.supervisor
             workbench.workbench
+            zstd
           ];
         }
           ''
-          mkdir -p $out/{cache,nix-support}
-          cd       $out
+          mkdir -p    $out/{cache,nix-support}
+          cd          $out
+          export HOME=$out
 
-          export WORKBENCH_BACKEND=supervisor
-          export CARDANO_NODE_SOCKET_PATH=$(wb backend get-node-socket-path ${stateDir})
+          export WB_BACKEND=supervisor
+          export CARDANO_NODE_SOCKET_PATH=$(wb backend get-node-socket-path ${stateDir} node-0)
 
           cmd=(
               wb
@@ -112,6 +115,8 @@ let
               --genesis-cache-entry ${genesis}
               --batch-name          smoke-test
               --base-port           ${toString basePort}
+              --node-source         ${cardanoNodePackages.cardano-node.src.origSrc}
+              --node-rev            ${cardano-node-rev}
               --cache-dir           ./cache
           )
           echo "''${cmd[*]}" > $out/wb-start.sh
@@ -122,17 +127,19 @@ let
           ## Convert structure from $out/run/RUN-ID/* to $out/*:
           rm -rf cache
           rm -f run/{current,-current}
+          find $out -type s | xargs rm -f
           tag=$(cd run; ls)
-          mv       run/$tag/*   .
-          rmdir    run/$tag run
-          rm -f    node-*/node.socket
+          (cd run; tar c $tag --zstd) > archive.tar.zst
+          mv       run/$tag/*  .
+          rmdir    run/$tag    run
 
           cat > $out/nix-support/hydra-build-products <<EOF
-          report workbench.log $out wb-start.log
-          report meta.json     $out meta.json
+          report workbench.log   $out wb-start.log
+          report meta.json       $out meta.json
           ${pkgs.lib.concatStringsSep "\n"
             (map nodeBuildProducts (__attrNames profileNix.node-specs.value))}
-          report node-0        $out meta.json
+          report node-0          $out meta.json
+          report archive.tar.zst $out archive.tar.zst
           EOF
 
           echo "workbench-test:  completed run $tag"

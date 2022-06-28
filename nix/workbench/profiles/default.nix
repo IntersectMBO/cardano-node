@@ -5,22 +5,11 @@
 , backend
 
 , profileName
-, profileOverride ? {}
 }:
 
 let
-  baseJSON = runWorkbenchJqOnly "profile-${profileName}.json"
-    "profile json ${profileName}";
-  JSON =
-    if profileOverride == {}
-    then baseJSON
-    else
-      runJq "profile-${profileName}-overridden.json"
-      ''--slurpfile profile  ${baseJSON}
-        --slurpfile override ${writeText "profile-override.json" profileOverride}
-        --null-input
-      ''
-      "($profile[0] * $override[0])";
+  JSON = runWorkbenchJqOnly "profile-${profileName}.json"
+                            "profile json ${profileName}";
 
   value = __fromJSON (__readFile JSON);
 
@@ -31,16 +20,15 @@ let
       inherit JSON value;
 
       topology.files =
-        runCommand "topology-${profile.name}" {}
-          "${workbench}/bin/wb topology make ${profile.JSON} $out";
+        runCommand "topology-${profileName}" {}
+          "${workbench}/bin/wb topology make ${JSON} $out";
 
       node-specs  =
-        rec {
-          JSON = runWorkbenchJqOnly
-            "node-specs-${profile.name}.json"
-            "profile node-specs ${profile.JSON}";
+        {
+          JSON = runWorkbenchJqOnly "node-specs-${profileName}.json"
+                                    "profile node-specs ${JSON}";
 
-          value = __fromJSON (__readFile JSON);
+          value = __fromJSON (__readFile node-specs.JSON);
         };
 
       inherit (pkgs.callPackage

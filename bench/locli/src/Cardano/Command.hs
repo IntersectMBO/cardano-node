@@ -1,14 +1,14 @@
-{-# OPTIONS_GHC -fmax-pmcheck-models=5000 #-}
+{-# OPTIONS_GHC -fmax-pmcheck-models=15000 #-}
 module Cardano.Command (module Cardano.Command) where
 
-import Prelude                          (error)
-import Cardano.Prelude                  hiding (State)
+import Cardano.Prelude                  hiding (State, head)
 
 import Data.Aeson                       qualified as Aeson
 import Data.ByteString.Lazy.Char8       qualified as LBS
 import Data.Text                        (pack)
 import Data.Text                        qualified as T
 import Data.Text.Short                  (toText)
+import Data.Time.Clock
 import Options.Applicative
 import Options.Applicative              qualified as Opt
 
@@ -20,7 +20,6 @@ import Cardano.Analysis.ChainFilter
 import Cardano.Analysis.Ground
 import Cardano.Analysis.MachPerf
 import Cardano.Analysis.Run
-import Cardano.Analysis.Version
 import Cardano.Unlog.LogObject          hiding (Text)
 import Cardano.Unlog.Render
 import Data.CDF
@@ -106,7 +105,9 @@ parseChainCommand =
 
    subparser (mconcat [ commandGroup "Machine performance analysis:  slot stats"
    , op "collect-slots" "Collect per-slot performance stats"
-     (CollectSlots & pure)
+     (CollectSlots
+       <$> many
+           (optJsonLogfile    "ignore-log"   "Omit data from listed log files from perf statistics"))
    , op "dump-slots-raw" "Dump unfiltered slot stats JSON streams, alongside input files"
      (DumpSlotsRaw & pure)
    , op "filter-slots" "Filter per-slot performance stats"
@@ -120,100 +121,45 @@ parseChainCommand =
    ]) <|>
 
    subparser (mconcat [ commandGroup "Block propagation:  analysis"
-   , op "propagation" "Block propagation analysis from chain"
-     (Propagation & pure)
-   , op "dump-propagation" "Dump block propagation analysis as JSON"
-     (DumpPropagation
-       <$> optJsonOutputFile "prop"          "JSON block propagation output file")
+   , op "compute-propagation" "Block propagation analysis from chain"
+     (ComputePropagation & pure)
+   , op "render-propagation" "Write block propagation analysis results"
+     (writerOpts RenderPropagation "Render"
+      <*> parsePropSubset)
    , op "read-propagations" "Read block propagation analyses from JSON files"
      (ReadPropagations
        <$> some
        (optJsonInputFile     "prop"          "JSON block propagation input file"))
-   , op "summarise-propagations" "Summarise a multi-run block propagation analysis"
-     (SummarisePropagations & pure)
-   , op "dump-multi-propagation" "Dump a multi-run block propagation analysis as JSON"
-     (DumpMultiPropagation
-       <$> optJsonOutputFile "multi-prop"         "JSON multi-run block propagation output file")
+   , op "compute-multi-propagation" "Summarise a multi-run block propagation analysis"
+     (ComputeMultiPropagation & pure)
+   , op "render-multi-propagation" "Write multi-run block propagation stats"
+     (writerOpts RenderMultiPropagation "Render"
+      <*> parsePropSubset)
    ]) <|>
 
    subparser (mconcat [ commandGroup "Machine performance:  analysis"
-   , op "machperf" "Statistical analysis on per-slot machine data"
-     (Cardano.Command.MachPerf & pure)
-   , op "dump-machperf" "Dump machine performance analysis as JSON, alongside input files"
-     (DumpMachPerf & pure)
+   , op "compute-machperf" "Statistical analysis on per-slot machine data"
+     (ComputeMachPerf & pure)
+   , op "render-machperf" "Write machine performance analysis results, along input files"
+     (pure $ RenderMachPerf AsPretty PerfFull)
    ]) <|>
 
    subparser (mconcat [ commandGroup "Cluster performance:  analysis"
-   , op "clusterperf" "Summarise machine performances into cluster performance"
-     (ClusterPerf & pure)
-   , op "dump-clusterperf" "Dump cluster performance stats as JSON"
-     (DumpClusterPerf
-       <$> optJsonOutputFile "clusterperf"   "JSON cluster performance output file")
+   , op "compute-clusterperf" "Summarise machine performances into cluster performance"
+     (ComputeClusterPerf & pure)
+   , op "render-clusterperf" "Write cluster performance stats"
+     (writerOpts RenderClusterPerf "Render"
+      <*> parsePerfSubset)
 
    , op "read-clusterperfs" "Read multi-run cluster performance analysis as JSON"
-     (ReadClusterPerfs
+     (ReadMultiClusterPerf
        <$> some
        (optJsonInputFile "clusterperf"   "JSON cluster performance input file"))
-   , op "summarise-clusterperfs" "Consolidate cluster performance stats."
-     (SummariseClusterPerfs & pure)
-   , op "dump-multi-clusterperf" "Dump cluster performance stats as JSON"
-     (DumpMultiClusterPerf
-       <$> optJsonOutputFile "multi-clusterperf"  "JSON block propagation output file")
-   ]) <|>
-
-   subparser (mconcat [ commandGroup "Block propagation:  single-run reports"
-   , op "report-prop-forger" "Render forger propagation report"
-     (ReportPropForger
-       <$> optTextOutputFile "report"        "Render a human-readable propagation report")
-   , op "report-prop-peers" "Render peer propagation report"
-     (ReportPropPeers
-       <$> optTextOutputFile "report"        "Render a human-readable propagation report")
-   , op "report-prop-endtoend" "Render end-to-end propagation report"
-     (ReportPropEndToEnd
-       <$> optTextOutputFile "report"        "Render a human-readable propagation report")
-   , op "report-prop-full" "Render all propagation reports combined as a single table"
-     (ReportPropFull
-       <$> optTextOutputFile "report"        "Render a human-readable propagation report")
-   ]) <|>
-
-   subparser (mconcat [ commandGroup "Block propagation:  multi-run reports"
-   , op "report-multi-prop-forger" "Render forger propagation report"
-     (ReportMultiPropForger
-       <$> optTextOutputFile "report"        "Render a human-readable propagation multi-run report summary")
-   , op "report-multi-prop-peers" "Render peer propagation report"
-     (ReportMultiPropPeers
-       <$> optTextOutputFile "report"        "Render a human-readable propagation multi-run report summary")
-   , op "report-multi-prop-endtoend" "Render end-to-end propagation report"
-     (ReportMultiPropEndToEnd
-       <$> optTextOutputFile "report"        "Render a human-readable propagation multi-run report summary")
-   , op "report-multi-prop-full" "Render all propagation reports combined as a single table"
-     (ReportMultiPropFull
-       <$> optTextOutputFile "report"        "Render a human-readable propagation multi-run report summary")
-   ]) <|>
-
-   subparser (mconcat [ commandGroup "Machine performance:  reports"
-   , op "report-machperf-full" "Render machine performance reports, alongside input files"
-     (ReportMachPerfFull & pure)
-   , op "report-machperf-brief" "Render machine performance reports, alongside input files"
-     (ReportMachPerfBrief & pure)
-   ]) <|>
-
-   subparser (mconcat [ commandGroup "Cluster performance:  single-run reports"
-   , op "report-clusterperf-full" "Render cluster performance report"
-     (ReportClusterPerfFull
-       <$> optTextOutputFile "report"        "Render a human-readable cluster performance report")
-   , op "report-clusterperf-brief" "Render cluster performance report"
-     (ReportClusterPerfBrief
-       <$> optTextOutputFile "report"        "Render a human-readable cluster performance report")
-   ]) <|>
-
-   subparser (mconcat [ commandGroup "Cluster performance:  multi-run reports"
-   , op "report-multi-clusterperf-full" "Render cluster performance report"
-     (ReportMultiClusterPerfFull
-       <$> optTextOutputFile "report"        "Render a human-readable cluster performance multi-run report summary")
-   , op "report-multi-clusterperf-brief" "Render cluster performance report"
-     (ReportMultiClusterPerfBrief
-       <$> optTextOutputFile "report"        "Render a human-readable cluster performance multi-run report summary")
+   , op "compute-multi-clusterperf" "Consolidate cluster performance stats."
+     (ComputeMultiClusterPerf & pure)
+   , op "render-multi-clusterperf" "Write multi-run cluster performance results"
+     (writerOpts RenderMultiClusterPerf "Render"
+      <*> parsePerfSubset)
    ])
  where
    op :: String -> String -> Parser a -> Mod CommandFields a
@@ -228,134 +174,115 @@ parseChainCommand =
      <> Opt.help desc
      )
 
+parseRenderMode :: Parser RenderMode
+parseRenderMode =
+  [ Opt.flag' AsJSON    (Opt.long "json"    <> Opt.help "Full JSON dump output file")
+  , Opt.flag' AsGnuplot (Opt.long "gnuplot" <> Opt.help "%s-pattern for separate Gnuplot output files, per CDF")
+  , Opt.flag' AsOrg     (Opt.long "org"     <> Opt.help "Org mode table output file")
+  , Opt.flag' AsReport  (Opt.long "report"  <> Opt.help "Org mode table output file, brief stats")
+  , Opt.flag' AsPretty  (Opt.long "pretty"  <> Opt.help "Text report output file")
+  ] & \case
+        (x:xs) -> foldl (<|>) x xs
+        [] -> error "Crazy world."
+
+writerOpt :: (RenderMode -> TextOutputFile -> a) -> String -> RenderMode -> Parser a
+writerOpt ctor desc mode = ctor mode <$> optTextOutputFile opt (desc <> descSuf)
+ where
+   (,) opt descSuf = optDescSuf mode
+   optDescSuf :: RenderMode -> (String, String)
+   optDescSuf = \case
+     AsJSON    -> (,) "json"    " results as complete JSON dump"
+     AsGnuplot -> (,) "gnuplot" " as individual Gnuplot files"
+     AsOrg     -> (,) "org"     " as Org-mode table"
+     AsReport  -> (,) "report"  " as Org-mode summary table"
+     AsPretty  -> (,) "pretty"  " as text report"
+
+writerOpts :: (RenderMode -> TextOutputFile -> a) -> String -> Parser a
+writerOpts ctor desc = enumFromTo minBound maxBound
+                       <&> writerOpt ctor desc
+                       & \case
+                           (x:xs) -> foldl (<|>) x xs
+                           [] -> error "Crazy world."
+
 data ChainCommand
-  = ListLogobjectKeys
-      TextOutputFile
-  | ListLogobjectKeysLegacy
-      TextOutputFile
+  = ListLogobjectKeys       TextOutputFile
+  | ListLogobjectKeysLegacy TextOutputFile
 
-  | MetaGenesis         -- () -> Run
-      JsonRunMetafile
-      JsonGenesisFile
+  |        MetaGenesis      JsonRunMetafile JsonGenesisFile
 
-  | Unlog               -- () -> [(JsonLogfile, [LogObject])]
-      [JsonLogfile]
-      (Maybe HostDeduction)
-  | DumpLogObjects
+  |        Unlog            [JsonLogfile] (Maybe HostDeduction)
+  |        DumpLogObjects
 
-  | BuildMachViews      -- [(JsonLogfile, [LogObject])] -> [(JsonLogfile, MachView)]
-  | DumpMachViews
-  | ReadMachViews
-      [JsonLogfile]
+  |        BuildMachViews
+  |         DumpMachViews
+  |         ReadMachViews   [JsonLogfile]
 
-  | RebuildChain        -- [(JsonLogfile, MachView)] -> [BlockEvents]
-  | ReadChain           -- () -> [BlockEvents]
-      JsonInputFile
-  | DumpChainRaw
-      JsonOutputFile
-  | TimelineChainRaw
-      TextOutputFile
+  |         RebuildChain
+  |            ReadChain    JsonInputFile
+  |            DumpChainRaw JsonOutputFile
+  |        TimelineChainRaw TextOutputFile
+  |          FilterChain    [JsonFilterFile]
+  |            DumpChain    JsonOutputFile
+  |        TimelineChain    TextOutputFile
 
-  | FilterChain         -- [ChainFilter] -> [BlockEvents] -> [BlockEvents]
-      [JsonFilterFile]
-  | DumpChain
-      JsonOutputFile
-  | TimelineChain
-      TextOutputFile
+  |         CollectSlots    [JsonLogfile]
+  |            DumpSlotsRaw
+  |          FilterSlots    [JsonFilterFile]
+  |            DumpSlots
+  |        TimelineSlots
 
-  | CollectSlots
-  | DumpSlotsRaw
+  |      ComputePropagation
+  |       RenderPropagation RenderMode TextOutputFile PropSubset
+  |        ReadPropagations [JsonInputFile]
 
-  | FilterSlots
-      [JsonFilterFile]
-  | DumpSlots
-  | TimelineSlots
+  | ComputeMultiPropagation
+  |  RenderMultiPropagation RenderMode TextOutputFile PropSubset
 
-  | Propagation
-  | DumpPropagation
-      JsonOutputFile
-  | ReadPropagations
-      [JsonInputFile]
-  | SummarisePropagations
-  | DumpMultiPropagation
-      JsonOutputFile
+  |         ComputeMachPerf
+  |          RenderMachPerf RenderMode PerfSubset
 
-  | MachPerf
-  | DumpMachPerf
+  |      ComputeClusterPerf
+  |       RenderClusterPerf RenderMode TextOutputFile PerfSubset
 
-  | ClusterPerf
-  | DumpClusterPerf
-      JsonOutputFile
-
-  | ReadClusterPerfs
-      [JsonInputFile]
-  | SummariseClusterPerfs
-  | DumpMultiClusterPerf
-      JsonOutputFile
-
-  | ReportPropForger
-      TextOutputFile
-  | ReportPropPeers
-      TextOutputFile
-  | ReportPropEndToEnd
-      TextOutputFile
-  | ReportPropFull
-      TextOutputFile
-
-  | ReportMultiPropForger
-      TextOutputFile
-  | ReportMultiPropPeers
-      TextOutputFile
-  | ReportMultiPropEndToEnd
-      TextOutputFile
-  | ReportMultiPropFull
-      TextOutputFile
-
-  | ReportMachPerfFull
-  | ReportMachPerfBrief
-
-  | ReportClusterPerfFull
-      TextOutputFile
-  | ReportClusterPerfBrief
-      TextOutputFile
-
-  | ReportMultiClusterPerfFull
-      TextOutputFile
-  | ReportMultiClusterPerfBrief
-      TextOutputFile
+  |    ReadMultiClusterPerf [JsonInputFile]
+  | ComputeMultiClusterPerf
+  |  RenderMultiClusterPerf RenderMode TextOutputFile PerfSubset
 
   deriving Show
 
 data State
   = State
   { -- common
-    sFilters       :: [FilterName]
-  , sTags          :: [Text]
-  , sRun           :: Maybe Run
-  , sObjLists      :: Maybe [(JsonLogfile, [LogObject])]
-  , sDomSlots      :: Maybe (DataDomain SlotNo)
-  , sDomBlocks     :: Maybe (DataDomain BlockNo)
+    sWhen             :: UTCTime
+  , sFilters          :: [FilterName]
+  , sTags             :: [Text]
+  , sRun              :: Maybe Run
+  , sObjLists         :: Maybe [(JsonLogfile, [LogObject])]
+  , sDomSlots         :: Maybe (DataDomain SlotNo)
+  , sDomBlocks        :: Maybe (DataDomain BlockNo)
     -- propagation
-  , sMachViews     :: Maybe [(JsonLogfile, MachView)]
-  , sChainRaw      :: Maybe [BlockEvents]
-  , sChain         :: Maybe [BlockEvents]
-  , sBlockProp     :: Maybe [BlockPropOne]
-  , sBlockProps    :: Maybe BlockProps
+  , sMachViews        :: Maybe [(JsonLogfile, MachView)]
+  , sChainRaw         :: Maybe [BlockEvents]
+  , sChain            :: Maybe [BlockEvents]
+  , sBlockProp        :: Maybe [BlockPropOne]
+  , sMultiBlockProp   :: Maybe MultiBlockProp
     -- performance
-  , sSlotsRaw      :: Maybe [(JsonLogfile, [SlotStats])]
-  , sScalars       :: Maybe [(JsonLogfile, RunScalars)]
-  , sSlots         :: Maybe [(JsonLogfile, [SlotStats])]
-  , sMachPerf      :: Maybe [(JsonLogfile, MachPerfOne)]
-  , sClusterPerf   :: Maybe [ClusterPerf]
-  , sClusterPerfs  :: Maybe ClusterPerfs
+  , sSlotsRaw         :: Maybe [(JsonLogfile, [SlotStats])]
+  , sScalars          :: Maybe [(JsonLogfile, RunScalars)]
+  , sSlots            :: Maybe [(JsonLogfile, [SlotStats])]
+  , sMachPerf         :: Maybe [(JsonLogfile, MachPerfOne)]
+  , sClusterPerf      :: Maybe [ClusterPerf]
+  , sMultiClusterPerf :: Maybe MultiClusterPerf
   }
 
 sRunAnchor :: State -> Anchor
-sRunAnchor State{sRun = Just run, sFilters} = runAnchor run sFilters
+sRunAnchor State{sRun = Just run, sFilters, sWhen, sDomSlots, sDomBlocks}
+  = runAnchor run sWhen sFilters sDomSlots sDomBlocks
 sRunAnchor _ = error "sRunAnchor with no run."
 
 sTagsAnchor :: State -> Anchor
-sTagsAnchor State{sFilters, sTags} = tagsAnchor sTags sFilters
+sTagsAnchor State{sFilters, sTags, sWhen, sDomSlots, sDomBlocks}
+  = tagsAnchor sTags sWhen sFilters sDomSlots sDomBlocks
 
 runChainCommand :: State -> ChainCommand -> ExceptT CommandError IO State
 
@@ -470,13 +397,16 @@ runChainCommand _ c@TimelineChain{} = missingCommandData c
   ["run metadata & genesis", "filtered chain"]
 
 runChainCommand s@State{sRun=Just run, sObjLists=Just objs}
-  c@CollectSlots = do
+  c@(CollectSlots ignores) = do
+  let nonIgnored = flip filter objs $ (`notElem` ignores) . fst
+  forM_ ignores $
+    progress "perf-ignored-log" . R . unJsonLogfile
   (scalars, slotsRaw) <-
-    fmap (mapAndUnzip redistribute) <$> collectSlotStats run objs
+    fmap (mapAndUnzip redistribute) <$> collectSlotStats run nonIgnored
     & newExceptT
     & firstExceptT (CommandError c)
   pure s { sScalars = Just scalars, sSlotsRaw = Just slotsRaw }
-runChainCommand _ c@CollectSlots = missingCommandData c
+runChainCommand _ c@CollectSlots{} = missingCommandData c
   ["run metadata & genesis", "lifted logobjects"]
 
 runChainCommand s@State{sSlotsRaw=Just slotsRaw}
@@ -517,17 +447,20 @@ runChainCommand _ c@TimelineSlots{} = missingCommandData c
   ["run metadata & genesis", "filtered slots"]
 
 runChainCommand s@State{sRun=Just run, sChain=Just chain, sDomSlots=Just domS, sDomBlocks=Just domB}
-  Propagation = do
+  ComputePropagation = do
   prop <- blockProp run chain domS domB & liftIO
   pure s { sBlockProp = Just [prop] }
-runChainCommand _ c@Propagation = missingCommandData c
+runChainCommand _ c@ComputePropagation = missingCommandData c
   ["run metadata & genesis", "filtered chain", "data domains for slots & blocks"]
 
 runChainCommand s@State{sBlockProp=Just [prop]}
-  c@(DumpPropagation f) = do
-  dumpObject "blockprop" prop f & firstExceptT (CommandError c)
+  c@(RenderPropagation mode f subset) = do
+  forM_ (renderCDF (sRunAnchor s) (propSubsetFn subset) Nothing mode prop) $
+    \(name, body) ->
+      dumpText (T.unpack name) body (modeFilename f name mode)
+      & firstExceptT (CommandError c)
   pure s
-runChainCommand _ c@DumpPropagation{} = missingCommandData c
+runChainCommand _ c@RenderPropagation{} = missingCommandData c
   ["block propagation"]
 
 runChainCommand s@State{}
@@ -540,57 +473,63 @@ runChainCommand s@State{}
          , sTags = pack . takeBaseName . takeDirectory . takeDirectory . unJsonInputFile <$> fs }
 
 runChainCommand s@State{sBlockProp=Just props}
-  c@SummarisePropagations = do
-  xs <- pure (summariseBlockProps (nEquicentiles $ max 7 (length props)) props)
+  c@ComputeMultiPropagation = do
+  xs <- pure (summariseMultiBlockProp (nEquicentiles $ max 7 (length props)) props)
     & newExceptT
     & firstExceptT (CommandError c . show)
-  pure s { sBlockProps = Just xs }
-runChainCommand _ c@SummarisePropagations{} = missingCommandData c
+  pure s { sMultiBlockProp = Just xs }
+runChainCommand _ c@ComputeMultiPropagation{} = missingCommandData c
   ["block propagation"]
 
-runChainCommand s@State{sBlockProps=Just props}
-  c@(DumpMultiPropagation f) = do
-  dumpObject "blockprops" props f & firstExceptT (CommandError c)
+runChainCommand s@State{sMultiBlockProp=Just prop}
+  c@(RenderMultiPropagation mode f subset) = do
+  forM_ (renderCDF (sTagsAnchor s) (propSubsetFn subset) Nothing mode prop) $
+    \(name, body) ->
+      dumpText (T.unpack name) body (modeFilename f name mode)
+      & firstExceptT (CommandError c)
   pure s
-runChainCommand _ c@DumpMultiPropagation{} = missingCommandData c
-  ["multi-run block propagations"]
+runChainCommand _ c@RenderMultiPropagation{} = missingCommandData c
+  ["multi-run block propagation"]
 
 runChainCommand s@State{sRun=Just run, sSlots=Just slots}
-  c@Cardano.Command.MachPerf = do
+  c@ComputeMachPerf = do
   perf <- mapConcurrentlyPure (slotStatsMachPerf run) slots
           & fmap sequence
           & newExceptT
           & firstExceptT (CommandError c)
   pure s { sMachPerf = Just perf }
-runChainCommand _ c@Cardano.Command.MachPerf{} = missingCommandData c
+runChainCommand _ c@ComputeMachPerf{} = missingCommandData c
   ["run metadata & genesis", "filtered slots"]
 
 runChainCommand s@State{sMachPerf=Just perf}
-  c@DumpMachPerf = do
+  c@(RenderMachPerf _mode _subset) = do
   dumpAssociatedObjects "perf-stats" perf
     & firstExceptT (CommandError c)
   pure s
-runChainCommand _ c@DumpMachPerf = missingCommandData c
+runChainCommand _ c@RenderMachPerf{} = missingCommandData c
   ["machine performance stats"]
 
 runChainCommand s@State{sMachPerf=Just machPerfs}
-  c@Cardano.Command.ClusterPerf = do
+  c@ComputeClusterPerf = do
   clusterPerf <- pure (summariseClusterPerf (nEquicentiles $ max 7 (length machPerfs)) (machPerfs <&> snd))
     & newExceptT
     & firstExceptT (CommandError c . show)
   pure s { sClusterPerf = Just [clusterPerf] }
-runChainCommand _ c@Cardano.Command.ClusterPerf{} = missingCommandData c
+runChainCommand _ c@ComputeClusterPerf{} = missingCommandData c
   ["machine performance stats"]
 
-runChainCommand s@State{sClusterPerf=Just [perf]}
-  c@(DumpClusterPerf f) = do
-  dumpObject "cluster-perf" perf f & firstExceptT (CommandError c)
+runChainCommand s@State{sClusterPerf=Just [prop]}
+  c@(RenderClusterPerf mode f subset) = do
+  forM_ (renderCDF (sRunAnchor s) (perfSubsetFn subset) Nothing mode prop) $
+    \(name, body) ->
+      dumpText (T.unpack name) body (modeFilename f name mode)
+      & firstExceptT (CommandError c)
   pure s
-runChainCommand _ c@DumpClusterPerf{} = missingCommandData c
-  ["cluster performance stats"]
+runChainCommand _ c@RenderClusterPerf{} = missingCommandData c
+  ["multi-run block propagation"]
 
 runChainCommand s@State{}
-  c@(ReadClusterPerfs fs) = do
+  c@(ReadMultiClusterPerf fs) = do
   xs <- mapConcurrently (fmap (Aeson.eitherDecode @ClusterPerf) . LBS.readFile . unJsonInputFile) fs
     & fmap sequence
     & newExceptT
@@ -599,145 +538,23 @@ runChainCommand s@State{}
          , sTags = pack . takeBaseName . takeDirectory . takeDirectory . unJsonInputFile <$> fs }
 
 runChainCommand s@State{sClusterPerf=Just perfs}
-  c@SummariseClusterPerfs = do
-  xs <- pure (summariseClusterPerfs (nEquicentiles $ max 7 (length perfs)) perfs)
+  c@ComputeMultiClusterPerf = do
+  xs <- pure (summariseMultiClusterPerf (nEquicentiles $ max 7 (length perfs)) perfs)
     & newExceptT
     & firstExceptT (CommandError c . show)
-  pure s { sClusterPerfs = Just xs }
-runChainCommand _ c@SummariseClusterPerfs{} = missingCommandData c
+  pure s { sMultiClusterPerf = Just xs }
+runChainCommand _ c@ComputeMultiClusterPerf{} = missingCommandData c
   ["cluster performance stats"]
 
-runChainCommand s@State{sClusterPerfs=Just mcp}
-  c@(DumpMultiClusterPerf f) = do
-  dumpObject "multi-cluster-perf" mcp f & firstExceptT (CommandError c)
+runChainCommand s@State{sMultiClusterPerf=Just (MultiClusterPerf perf)}
+  c@(RenderMultiClusterPerf mode f subset) = do
+  forM_ (renderCDF (sTagsAnchor s) (perfSubsetFn subset) Nothing mode perf) $
+    \(name, body) ->
+      dumpText (T.unpack name) body (modeFilename f name mode)
+      & firstExceptT (CommandError c)
   pure s
-runChainCommand _ c@DumpMultiClusterPerf{} = missingCommandData c
-  ["multi-run cluster performance stats"]
-
-runChainCommand s@State{sBlockProp=Just (prop:_)}
-  c@(ReportPropForger f) = do
-  dumpText "blockprop-forger"
-    (renderCDFs (sRunAnchor s) RenderPretty bpFieldsForger Nothing prop) f
-    & firstExceptT (CommandError c)
-  pure s
-runChainCommand _ c@ReportPropForger{} = missingCommandData c
-  ["block propagation"]
-
-runChainCommand s@State{sBlockProp=Just (prop:_)}
-  c@(ReportPropPeers f) = do
-  dumpText "blockprop-peers"
-    (renderCDFs (sRunAnchor s) RenderPretty bpFieldsPeers Nothing prop) f
-    & firstExceptT (CommandError c)
-  pure s
-runChainCommand _ c@ReportPropPeers{} = missingCommandData c
-  ["block propagation"]
-
-runChainCommand s@State{sBlockProp=Just (prop:_)}
-  c@(ReportPropEndToEnd f) = do
-  dumpText "blockprop-endtoend"
-    (renderCDFs (sRunAnchor s) RenderPretty bpFieldsPropagation (Just briefCentiles) prop) f
-    & firstExceptT (CommandError c)
-  pure s
-runChainCommand _ c@ReportPropEndToEnd{} = missingCommandData c
-  ["block propagation"]
-
-runChainCommand s@State{sBlockProp=Just (prop:_)}
-  c@(ReportPropFull f) = do
-  dumpText "blockprop-full" (renderCDFs (sRunAnchor s) RenderPretty (const True) Nothing prop) f
-    & firstExceptT (CommandError c)
-  pure s
-runChainCommand _ c@ReportPropFull{} = missingCommandData c
-  ["block propagation"]
-
-runChainCommand s@State{sBlockProps=Just prop}
-  c@(ReportMultiPropForger f) = do
-  dumpText "blockprop-multi-forger"
-    (renderCDFs (sTagsAnchor s) RenderPretty bpFieldsForger Nothing prop) f
-    & firstExceptT (CommandError c)
-  pure s
-runChainCommand _ c@ReportMultiPropForger{} = missingCommandData c
-  ["multi-run block propagation"]
-
-runChainCommand s@State{sBlockProps=Just prop}
-  c@(ReportMultiPropPeers f) = do
-  dumpText "blockprop-multi-peers"
-    (renderCDFs (sTagsAnchor s) RenderPretty bpFieldsPeers Nothing prop) f
-    & firstExceptT (CommandError c)
-  pure s
-runChainCommand _ c@ReportMultiPropPeers{} = missingCommandData c
-  ["multi-run block propagation"]
-
-runChainCommand s@State{sBlockProps=Just prop}
-  c@(ReportMultiPropEndToEnd f) = do
-  dumpText "blockprop-multi-endtoend"
-    (renderCDFs (sTagsAnchor s) RenderPretty bpFieldsPropagation (Just briefCentiles) prop) f
-    & firstExceptT (CommandError c)
-  pure s
-runChainCommand _ c@ReportMultiPropEndToEnd{} = missingCommandData c
-  ["multi-run block propagation"]
-
-runChainCommand s@State{sBlockProps=Just prop}
-  c@(ReportMultiPropFull f) = do
-  dumpText "blockprop-multi-full"
-    (renderCDFs (sTagsAnchor s) RenderPretty (const True) Nothing prop) f
-    & firstExceptT (CommandError c)
-  pure s
-runChainCommand _ c@ReportMultiPropFull{} = missingCommandData c
-  ["multi-run block propagation"]
-
-runChainCommand s@State{sMachPerf=Just perf}
-  c@ReportMachPerfFull = do
-  dumpAssociatedTextStreams "machperf-full"
-    (fmap (fmap $ renderCDFs (sRunAnchor s) RenderPretty (const True) Nothing) perf)
-    & firstExceptT (CommandError c)
-  pure s
-runChainCommand _ c@ReportMachPerfFull{} = missingCommandData c
-  ["machine performance stats"]
-
-runChainCommand s@State{sMachPerf=Just perf}
-  c@ReportMachPerfBrief = do
-  dumpAssociatedTextStreams "machperf-brief"
-    (fmap (fmap $ renderCDFs (sRunAnchor s) RenderPretty mtFieldsReport Nothing) perf)
-    & firstExceptT (CommandError c)
-  pure s
-runChainCommand _ c@ReportMachPerfBrief{} = missingCommandData c
-  ["machine performance stats"]
-
-runChainCommand s@State{sClusterPerf=Just [perf]}
-  c@(ReportClusterPerfFull f) = do
-  dumpText "clusterperf-full"
-    (renderCDFs (sRunAnchor s) RenderPretty (const True) Nothing perf) f
-    & firstExceptT (CommandError c)
-  pure s
-runChainCommand _ c@ReportClusterPerfFull{} = missingCommandData c
-  ["machine performance stats"]
-
-runChainCommand s@State{sClusterPerf=Just [perf]}
-  c@(ReportClusterPerfBrief f) = do
-  dumpText "clusterperf-brief"
-    (renderCDFs (sRunAnchor s) RenderPretty mtFieldsReport Nothing perf) f
-    & firstExceptT (CommandError c)
-  pure s
-runChainCommand _ c@ReportClusterPerfBrief{} = missingCommandData c
-  ["machine performance stats"]
-
-runChainCommand s@State{sClusterPerfs=Just (ClusterPerfs perf)}
-  c@(ReportMultiClusterPerfFull f) = do
-  dumpText "clusterperf-full"
-    (renderCDFs (sTagsAnchor s) RenderPretty (const True) Nothing perf) f
-    & firstExceptT (CommandError c)
-  pure s
-runChainCommand _ c@ReportMultiClusterPerfFull{} = missingCommandData c
-  ["machine performance stats"]
-
-runChainCommand s@State{sClusterPerfs=Just (ClusterPerfs perf)}
-  c@(ReportMultiClusterPerfBrief f) = do
-  dumpText "clusterperf-brief"
-    (renderCDFs (sTagsAnchor s) RenderPretty mtFieldsReport Nothing perf) f
-    & firstExceptT (CommandError c)
-  pure s
-runChainCommand _ c@ReportMultiClusterPerfBrief{} = missingCommandData c
-  ["machine performance stats"]
+runChainCommand _ c@RenderMultiClusterPerf{} = missingCommandData c
+  ["multi-run cluster preformance stats"]
 
 
 missingCommandData :: ChainCommand -> [String] -> ExceptT CommandError IO a
@@ -766,12 +583,13 @@ fromAnalysisError c o = CommandError c (show o)
 
 runCommand :: Command -> ExceptT CommandError IO ()
 
-runCommand (ChainCommand cs) =
-  foldM_ runChainCommand initialState cs
+runCommand (ChainCommand cs) = do
+  now <- liftIO getCurrentTime
+  foldM_ runChainCommand (initialState now) cs
  where
-   initialState :: State
-   initialState =
-     State [] []
+   initialState :: UTCTime -> State
+   initialState now =
+     State now [] []
            Nothing Nothing Nothing Nothing
            Nothing Nothing Nothing Nothing
            Nothing Nothing Nothing Nothing

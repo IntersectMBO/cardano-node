@@ -140,7 +140,7 @@ scenario_setup_workload_termination() {
     progress "scenario" "until end:  workload $(yellow $till_workload), $(blue shutdown) $(yellow $till_shutdown), $(blue earliest) $(yellow $till_earliest)"
     progress "scenario" "shutdown tolerance:  $(yellow $termination_tolerance_s) s"
     # progress "scenario" "until end: workload $(yellow $(date --date=@$__scenario_watcher_end_time))"
-    progress "scenario" "termination in $(white $((till_earliest + termination_tolerance_s))) seconds.."
+    progress "scenario" "force-termination in $(white $((till_earliest + termination_tolerance_s))) seconds.."
     scenario_watcher &
     __scenario_watcher_pid=$!
 }

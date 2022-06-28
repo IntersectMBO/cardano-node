@@ -12,12 +12,13 @@ case "${op}" in
     collect-from-checkout )
         local usage="USAGE: wb manifest $0 CARDANO-NODE-CHECKOUT"
         local dir=${1:-.}; if test $# -ge 1; then shift; fi
+        local node_rev=${1:-$(manifest_git_head_commit "$dir")}
         local real_dir=$(realpath "$dir")
 
         local args=(
             --null-input
             --arg dir               "$real_dir"
-            --arg node              $(manifest_git_head_commit            "$dir")
+            --arg node              "$node_rev"
             --arg node_branch       $(manifest_local_repo_branch          "$dir")
             --arg node_status       $(manifest_git_checkout_state_desc    "$dir")
             --arg ouroboros_network $(manifest_cabal_project_dep_pin_hash "$dir" ouroboros-network)
@@ -96,14 +97,20 @@ case "${op}" in
 
 manifest_git_head_commit() {
     local dir=$1
-    git -C "$dir" rev-parse HEAD
+    if test -d "$dir"/.git
+    then git -C "$dir" rev-parse HEAD
+    else echo      -n "0000000000000000000000000000000000000000"
+    fi
 }
 
 manifest_git_checkout_state_desc() {
     local dir=$1
-    if git -C "$dir" diff --quiet --exit-code
-    then echo -n "clean"
-    else echo -n "modified"
+    if test -d "$dir"/.git
+    then if git -C "$dir" diff --quiet --exit-code
+         then echo -n "clean"
+         else echo -n "modified"
+         fi
+    else echo      -n "not-a-git-checkout"
     fi
 }
 
@@ -115,7 +122,10 @@ manifest_cabal_project_dep_pin_hash() {
 }
 
 manifest_local_repo_branch() {
-        local dir=$1 rev=${2:-HEAD}
-        git -C "$dir" describe --all "$rev" |
-                sed 's_^\(.*/\|\)\([^/]*\)$_\2_'
+    local dir=$1 rev=${2:-HEAD}
+    if test -d "$dir"/.git
+    then git -C "$dir" describe --all "$rev" |
+            sed 's_^\(.*/\|\)\([^/]*\)$_\2_'
+    else echo      -n "unknown-branch"
+    fi
 }

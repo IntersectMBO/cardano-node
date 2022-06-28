@@ -5,7 +5,7 @@
 {- HLINT ignore "Use head" -}
 {- HLINT ignore "Avoid lambda" -}
 module Cardano.Analysis.BlockProp
-  ( summariseBlockProps
+  ( summariseMultiBlockProp
   , MachView
   , buildMachViews
   , rebuildChain
@@ -54,9 +54,9 @@ import Cardano.Unlog.Resources
 import Cardano.Util
 
 
-summariseBlockProps :: [Centile] -> [BlockPropOne] -> Either CDFError BlockProps
-summariseBlockProps _ [] = error "Asked to summarise empty list of BlockPropOne"
-summariseBlockProps centiles bs@(headline:_) = do
+summariseMultiBlockProp :: [Centile] -> [BlockPropOne] -> Either CDFError MultiBlockProp
+summariseMultiBlockProp _ [] = error "Asked to summarise empty list of BlockPropOne"
+summariseMultiBlockProp centiles bs@(headline:_) = do
   bpForgerChecks           <- cdf2OfCDFs comb $ bs <&> bpForgerChecks
   bpForgerLeads            <- cdf2OfCDFs comb $ bs <&> bpForgerLeads
   bpForgerForges           <- cdf2OfCDFs comb $ bs <&> bpForgerForges
@@ -248,14 +248,19 @@ type MachBlockMap a
 
 data MachView
   = MachView
-  { mvBlocks  :: !(MachBlockMap UTCTime)
+  { mvHost    :: !Host
+  , mvBlocks  :: !(MachBlockMap UTCTime)
   , mvChecked :: Maybe UTCTime
   , mvLeading :: Maybe UTCTime
   }
   deriving (FromJSON, Generic, NFData, ToJSON)
 
-blockMapMaxBlock :: MachBlockMap a -> MachBlockEvents a
-blockMapMaxBlock = maximumBy ordBlockEv . Map.elems
+machViewMaxBlock :: MachView -> MachBlockEvents UTCTime
+machViewMaxBlock MachView{..} =
+  Map.elems mvBlocks
+  & \case
+       [] -> MBE $ BPError { eHost=mvHost, eBlock=Hash "Genesis", eLO=Nothing, eDesc=BPENoBlocks }
+       xs -> maximumBy ordBlockEv xs
 
 beForgedAt :: BlockEvents -> UTCTime
 beForgedAt BlockEvents{beForge=BlockForge{..}} =
@@ -273,7 +278,7 @@ rebuildChain run@Run{genesis} xs@(fmap snd -> machViews) = do
  where
    eventMaps      = mvBlocks <$> machViews
 
-   finalBlockEv   = maximumBy ordBlockEv $ blockMapMaxBlock <$> eventMaps
+   finalBlockEv   = maximumBy ordBlockEv $ machViewMaxBlock <$> machViews
 
    tipHash        = rewindChain eventMaps 1 (mbeBlock finalBlockEv)
    tipBlock       = getBlockForge eventMaps tipHash
@@ -369,7 +374,7 @@ rebuildChain run@Run{genesis} xs@(fmap snd -> machViews) = do
              <*> Just boeSending
              <*> Just boeErrorsCrit
              <*> Just boeErrorsSoft
-     , bePropagation  = cdf adoptionPcts adoptions
+     , bePropagation  = cdf adoptionCentiles adoptions
      , beOtherBlocks  = otherBlocks
      , beErrors =
          errs
@@ -455,7 +460,7 @@ blockProp run@Run{genesis} chain domSlot domBlock = do
     , bpPeerSends           = observerEventsCDF boSending            "sending"
     , bpPropagation         =
       [ (p', forgerEventsCDF (Just . unI . projectCDF' "bePropagation" p . bePropagation))
-      | p@(Centile p') <- adoptionPcts <> [Centile 1.0] ]
+      | p@(Centile p') <- adoptionCentiles <> [Centile 1.0] ]
     , bpSizes               = forgerEventsCDF   (Just . bfBlockSize . beForge)
     , bpVersion             = getVersion
     }
@@ -498,16 +503,15 @@ witherToDistrib distrify proj xs =
 
 -- | Given a single machine's log object stream, recover its block map.
 blockEventMapsFromLogObjects :: Run -> (JsonLogfile, [LogObject]) -> MachView
-blockEventMapsFromLogObjects run (f@(unJsonLogfile -> fp), xs) =
-  if Map.size (mvBlocks view) == 0
-  then error $ mconcat
-       ["No block events in ",fp," : ","LogObject count: ",show (length xs)]
-  else view
+blockEventMapsFromLogObjects run (f@(unJsonLogfile -> fp), []) =
+  error $ mconcat ["0 LogObjects in ", fp]
+blockEventMapsFromLogObjects run (f@(unJsonLogfile -> fp), xs@(x:_)) =
+  foldl' (blockPropMachEventsStep run f) initial xs
  where
-   view = foldl' (blockPropMachEventsStep run f) initial xs
    initial =
      MachView
-     { mvBlocks  = mempty
+     { mvHost    = loHost x
+     , mvBlocks  = mempty
      , mvChecked = Nothing
      , mvLeading = Nothing
      }

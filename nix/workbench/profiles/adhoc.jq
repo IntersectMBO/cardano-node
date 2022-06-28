@@ -1,5 +1,6 @@
 def adhoc_profiles:
 [ { name: "devops"
+  , scenario:               "idle"
   , genesis:
     { slot_duration:         0.2
     , parameter_k:           10
@@ -9,8 +10,11 @@ def adhoc_profiles:
     , utxo:                  0
 
     , shelley:
-      { updateQuorum: 1
+      { updateQuorum:        1
       }
+    }
+  , analysis:
+    { type:                  null
     }
   }
 ];

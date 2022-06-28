@@ -6,7 +6,6 @@ set -euo pipefail
 export LANG=C.UTF-8
 
 global_basedir=${global_basedir:-$(realpath "$(dirname "$0")")}
-global_mode='unknown'
 
 . "$global_basedir"/lib.sh
 . "$global_basedir"/env.sh
@@ -53,12 +52,10 @@ usage_extra() {
 
     scenario     (s)      Run scenario control
     call ARGS..           Call internal functions with arguments
-    mode                  Report mode set by --set-mode
 
   Extra options:
 
     --cls                 Clear screen, before acting further.
-    --set-mode MODE       Set mode.  Only has effect on 'mode' OP
 
 EOF
 }
@@ -92,7 +89,10 @@ start()
     local batch_name=
     local profile_name= profile=
     local backend=supervisor
+    local node_source=.
+    local node_rev=
     local cabal_mode=
+    local skip_prebuild=
     local genesis_cache_entry_dir=
     local topology_dir=
     local verbose=
@@ -125,13 +125,16 @@ start()
         --analysis-can-fail | -af )      analysis_can_fail=t;;
         --filters )                      analyse_args+=($1 $2); shift;;
 
+        --node-source )                  node_source=$2; shift;;
+        --node-rev )                     node_rev=$2; shift;;
         --cabal-mode | --cabal )         run_allocate_args+=($1); cabal_mode=t;;
+        --skip-prebuild | -sp )          skip_prebuild=t;;
         --supervisor | --backend-supervisor )
                                          backend=supervisor;;
 
         --verbose )                      export verbose=t;;
         --trace | --debug )              set -x;;
-        --trace-wb | --trace-workbench ) export WORKBENCH_EXTRA_FLAGS=--trace;;
+        --trace-wb | --trace-workbench ) export WB_EXTRA_FLAGS=--trace;;
         --help )                         usage_start
                                          exit 1;;
         * ) fatal "while parsing remaining 'wb start' args:  $*";;
@@ -139,7 +142,10 @@ start()
 
     if test -n "$cabal_mode"
     then . $(dirname "$0")/lib-cabal.sh
-         workbench-prebuild-executables
+         if test -z "$skip_prebuild"
+         then workbench-prebuild-executables
+         else progress "workbench | cabal" "skipping Cabal prebuilding due to $(yellow --skip-prebuild)"
+         fi
     fi
 
     backend assert-is $backend
@@ -153,7 +159,7 @@ start()
     for ((i=0; i<$iterations; i++))
     do local args=(
             ${run_allocate_args[@]}
-            --manifest "$(manifest collect-from-checkout .)"
+            --manifest "$(manifest collect-from-checkout "$node_source" $node_rev)"
         )
        run ${run_args[@]} 'allocate' $batch_name $profile_name "${args[@]}"
        local tag=$(run current-tag)
@@ -180,7 +186,7 @@ finish()
     while test $# -gt 0
     do case "$1" in
         --trace | --debug )              set -x;;
-        --trace-wb | --trace-workbench ) export WORKBENCH_EXTRA_FLAGS=--trace;;
+        --trace-wb | --trace-workbench ) export WB_EXTRA_FLAGS=--trace;;
         * ) break;; esac; shift; done
 
     run stop $(run current-tag)
@@ -193,8 +199,6 @@ do case "$1" in
            echo -en "\ec">&2;;
        --trace | --debug )
            set -x;;
-       --set-mode )
-           global_mode=$2; shift;;
        --help )
            usage_main; exit 1;;
        --help-full | --help-all | --help-extra )
@@ -228,7 +232,6 @@ main() {
         scenario     | s )        scenario            "$@";;
         backend )                 backend             "$@";;
         call )                                        "$@";;
-        mode )                    echo -n     $global_mode;;
         path )                    echo     $global_basedir;;
 
         ## Bail for help:

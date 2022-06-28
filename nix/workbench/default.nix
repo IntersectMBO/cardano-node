@@ -118,7 +118,7 @@ let
 
       topology = profile-topology { inherit profileNix profile; };
 
-      genesis = profile-topology-genesis { inherit profileNix profile topology; };
+      genesis = profile-topology-genesis { inherit profile; };
     in {
       inherit
         profileNix profile

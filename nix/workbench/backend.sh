@@ -39,33 +39,33 @@ backend() {
 local op=${1:-$(usage_backend)} # No need to shift -- backends will use the op.
 
 case "${op}" in
-    is-running )                 backend_$WORKBENCH_BACKEND "$@";;
-    setenv-defaults )            backend_$WORKBENCH_BACKEND "$@";;
-    allocate-run )               backend_$WORKBENCH_BACKEND "$@";;
-    describe-run )               backend_$WORKBENCH_BACKEND "$@";;
-    start )                      backend_$WORKBENCH_BACKEND "$@";;
-    start-nodes )                backend_$WORKBENCH_BACKEND "$@";;
-    start-node )                 backend_$WORKBENCH_BACKEND "$@";;
-    stop-node )                  backend_$WORKBENCH_BACKEND "$@";;
-    wait-node )                  backend_$WORKBENCH_BACKEND "$@";;
-    wait-node-stopped )          backend_$WORKBENCH_BACKEND "$@";;
-    get-node-socket-path )       backend_$WORKBENCH_BACKEND "$@";;
-    start-generator )            backend_$WORKBENCH_BACKEND "$@";;
-    wait-pools-stopped )         backend_$WORKBENCH_BACKEND "$@";;
-    stop-cluster )               backend_$WORKBENCH_BACKEND "$@";;
-    cleanup-cluster )            backend_$WORKBENCH_BACKEND "$@";;
+    is-running )                 backend_$WB_BACKEND "$@";;
+    setenv-defaults )            backend_$WB_BACKEND "$@";;
+    allocate-run )               backend_$WB_BACKEND "$@";;
+    describe-run )               backend_$WB_BACKEND "$@";;
+    start )                      backend_$WB_BACKEND "$@";;
+    start-nodes )                backend_$WB_BACKEND "$@";;
+    start-node )                 backend_$WB_BACKEND "$@";;
+    stop-node )                  backend_$WB_BACKEND "$@";;
+    wait-node )                  backend_$WB_BACKEND "$@";;
+    wait-node-stopped )          backend_$WB_BACKEND "$@";;
+    get-node-socket-path )       backend_$WB_BACKEND "$@";;
+    start-generator )            backend_$WB_BACKEND "$@";;
+    wait-pools-stopped )         backend_$WB_BACKEND "$@";;
+    stop-cluster )               backend_$WB_BACKEND "$@";;
+    cleanup-cluster )            backend_$WB_BACKEND "$@";;
 
     ## Handle non-generic calls:
-    passthrough | pass )         backend_$WORKBENCH_BACKEND "$@";;
+    passthrough | pass )         backend_$WB_BACKEND "$@";;
 
     assert-is )
         local usage="USAGE: wb run $op BACKEND-NAME"
         local name=${2:?$usage}
 
         ## Check the backend echoes own name:
-        local actual_name=$(backend_$WORKBENCH_BACKEND name)
+        local actual_name=$(backend_$WB_BACKEND name)
         if test "$actual_name" != "$name"
-        then fatal "Workbench is broken:  'workbench_$WORKBENCH_BACKEND name' returned:  '$actual_name'"; fi
+        then fatal "Workbench is broken:  'workbench_$WB_BACKEND name' returned:  '$actual_name'"; fi
         ;;
 
     assert-stopped )

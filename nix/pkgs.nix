@@ -96,10 +96,11 @@ final: prev: with final; {
     , workbenchDevMode      ? false
     , profiled              ? false
     , supervisord-workbench ? pkgs.callPackage ./workbench/supervisor.nix { inherit useCabalRun; }
+    , cardano-node-rev      ? null
     }:
     pkgs.callPackage ./workbench/supervisor-run.nix
       {
-        inherit batchName profileName supervisord-workbench;
+        inherit batchName profileName supervisord-workbench cardano-node-rev;
       };
 
   # Disable failing python uvloop tests

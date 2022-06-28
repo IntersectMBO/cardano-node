@@ -4,7 +4,7 @@
 {- HLINT ignore "Use head" -}
 module Cardano.Analysis.MachPerf (module Cardano.Analysis.MachPerf) where
 
-import Prelude (error, head, last)
+import Prelude (head, last)
 import Cardano.Prelude hiding (head)
 import Cardano.Prelude qualified as CP
 
@@ -26,14 +26,13 @@ import Cardano.Analysis.ChainFilter
 import Cardano.Analysis.Context
 import Cardano.Analysis.Ground
 import Cardano.Analysis.Run
-import Cardano.Analysis.Version
 import Cardano.Unlog.LogObject hiding (Text)
 import Cardano.Unlog.Resources
 
 
-summariseClusterPerfs :: [Centile] -> [ClusterPerf] -> Either CDFError ClusterPerfs
-summariseClusterPerfs _ [] = error "Asked to summarise empty list of MachPerfOne"
-summariseClusterPerfs centiles mps@(headline:_) = do
+summariseMultiClusterPerf :: [Centile] -> [ClusterPerf] -> Either CDFError MultiClusterPerf
+summariseMultiClusterPerf _ [] = error "Asked to summarise empty list of MachPerfOne"
+summariseMultiClusterPerf centiles mps@(headline:_) = do
   sMissCDF              <- cdf2OfCDFs comb $ mps <&> sMissCDF
   sLeadsCDF             <- cdf2OfCDFs comb $ mps <&> sLeadsCDF
   sUtxoCDF              <- cdf2OfCDFs comb $ mps <&> sUtxoCDF
@@ -50,7 +49,7 @@ summariseClusterPerfs centiles mps@(headline:_) = do
       [] -> Left CDFEmptyDataset
       (xs :: [CDF (CDF I) Word64]) -> cdf2OfCDFs comb xs :: Either CDFError (CDF (CDF I) Word64)
 
-  pure . ClusterPerfs $ MachPerf
+  pure . MultiClusterPerf $ MachPerf
     { sVersion          = sVersion headline
     , sDomainSlots      = dataDomainsMergeOuter $ mps <&> sDomainSlots
     , ..

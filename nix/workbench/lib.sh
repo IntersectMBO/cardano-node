@@ -61,22 +61,12 @@ with_color() {
 }
 
 colorise_colors=(
-    red green yellow blue cyan white reset red green yellow blue cyan white reset
-    red green yellow blue cyan white reset red green yellow blue cyan white reset
-    red green yellow blue cyan white reset red green yellow blue cyan white reset
-    red green yellow blue cyan white reset red green yellow blue cyan white reset
-    red green yellow blue cyan white reset red green yellow blue cyan white reset
-    red green yellow blue cyan white reset red green yellow blue cyan white reset
-    red green yellow blue cyan white reset red green yellow blue cyan white reset
-    red green yellow blue cyan white reset red green yellow blue cyan white reset
-    red green yellow blue cyan white reset red green yellow blue cyan white reset
-    red green yellow blue cyan white reset red green yellow blue cyan white reset
-    red green yellow blue cyan white reset red green yellow blue cyan white reset
-    red green yellow blue cyan white reset red green yellow blue cyan white reset
+    red green blue yellow white cyan
 )
 colorise() {
+    local i
     for ((i=0; $#!=0; i++))
-    do echo -n "$(with_color ${colorise_colors[$i]} $1) "
+    do echo -n "$(with_color ${colorise_colors[$((i % 6))]} $1) "
        shift
     done
 }

@@ -72,7 +72,7 @@ def era_defaults($era):
 
   , node:
     { rts_flags_override:             []
-    , shutdown_on_slot_synced:        300
+    , shutdown_on_slot_synced:        null
     , shutdown_on_block_synced:       null
     , tracing_backend:                "trace-dispatcher"  ## or "iohk-monitoring"
     , tracer:                         true

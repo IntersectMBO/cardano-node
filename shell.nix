@@ -24,6 +24,13 @@ let
   inherit (localCluster) profileName workbenchDevMode;
   inherit (pkgs.haskell-nix) haskellLib;
   project = if profiled then cardanoNodeProject.profiled else cardanoNodeProject;
+
+  ## The default shell is defined by flake.nix: (cardanoNodeProject = flake.project.${final.system})
+  inherit (project) shell;
+
+  ## XXX: remove this once people retrain their muscle memory:
+  dev = project.shell;
+
   commandHelp =
     ''
       echo "
@@ -48,84 +55,26 @@ let
 
   haveGlibcLocales = pkgs.glibcLocales != null && stdenv.hostPlatform.libc == "glibc";
 
-  shell =
-    let cluster = pkgs.supervisord-workbench-for-profile
-      { inherit profileName useCabalRun profiled; };
-    in project.shellFor {
-    name = "cluster-shell";
-
-    inherit withHoogle;
-
-    packages = ps: builtins.attrValues (haskellLib.selectProjectPackages ps);
-
-    tools = {
-      haskell-language-server = {
-        version = "latest";
-        inherit (project) index-state;
+  workbench-shell = with customConfig.localCluster;
+    import ./nix/workbench/shell.nix
+      { inherit pkgs lib haskellLib project;
+        inherit setLocale haveGlibcLocales commandHelp;
+        inherit cardano-mainnet-mirror;
+        inherit profileName workbenchDevMode useCabalRun;
+        inherit profiled withHoogle;
       };
-    };
-
-    # These programs will be available inside the nix-shell.
-    nativeBuildInputs = with haskellPackages; with cardanoNodePackages; [
-      cardano-ping
-      cabalWrapped
-      db-analyser
-      ghcid
-      haskellBuildUtils
-      pkgs.graphviz
-      weeder
-      nixWrapped
-      pkgconfig
-      profiteur
-      profiterole
-      python3Packages.supervisor
-      ghc-prof-flamegraph
-      sqlite-interactive
-      tmux
-      pkgs.git
-      pkgs.hlint
-      pkgs.moreutils
-      pkgs.pstree
-      pkgs.time
-      cluster.interactive-start
-      cluster.interactive-stop
-      cluster.interactive-restart
-    ] ++ lib.optional haveGlibcLocales pkgs.glibcLocales
-    ## Workbench's main script is called directly in dev mode.
-    ++ lib.optionals (!workbenchDevMode)
-    [
-      cluster.workbench.workbench
-    ];
-
-    # Prevents cabal from choosing alternate plans, so that
-    # *all* dependencies are provided by Nix.
-    exactDeps = true;
-
-    shellHook = ''
-      ${with customConfig.localCluster;
-        (import ./nix/workbench/shell.nix { inherit lib workbenchDevMode profileName useCabalRun profiled; }).shellHook}
-
-      function workbench_atexit() {
-          if wb backend is-running
-          then stop-cluster
-          fi
-      }
-      trap workbench_atexit EXIT
-
-      export CARDANO_MAINNET_MIRROR=${cardano-mainnet-mirror.outputs.defaultPackage.x86_64-linux.outPath}
-
-      ${setLocale}
-      ${commandHelp}
-
-      set +e
-    '';
-  };
 
   devops =
-    let cluster = pkgs.supervisord-workbench-for-profile
-      { profileName = "devops-bage";
-        useCabalRun = false;
-      };
+    let devopsShellParams =
+          { inherit workbenchDevMode profiled;
+            profileName = "devops-bage";
+            withMainnet = false;
+            useCabalRun = false;
+          };
+        cluster = pkgs.supervisord-workbench-for-profile
+          {
+            inherit (devopsShellParams) profileName useCabalRun;
+          };
     in project.shellFor {
     name = "devops-shell";
 
@@ -136,7 +85,12 @@ let
       cardano-cli
       bech32
       cardano-ping
+      cardano-cli
       cardano-node
+      cardano-topology
+      cardano-tracer
+      locli
+      tx-generator
       pkgs.graphviz
       python3Packages.supervisor
       python3Packages.ipython
@@ -158,11 +112,10 @@ let
       | ${figlet}/bin/figlet -f banner -c \
       | ${lolcat}/bin/lolcat
 
-      ${with customConfig.localCluster;
-        (import ./nix/workbench/shell.nix { inherit lib workbenchDevMode profileName; useCabalRun = false; }).shellHook}
+      ${workbench-shell.shellHook devopsShellParams}
 
       # Socket path default to first node launched by "start-cluster":
-      export CARDANO_NODE_SOCKET_PATH=$(wb backend get-node-socket-path ${cluster.stateDir})
+      export CARDANO_NODE_SOCKET_PATH=$(wb backend get-node-socket-path ${cluster.stateDir} 'node-0')
 
       ${setLocale}
 
@@ -185,8 +138,6 @@ let
     '';
   };
 
-  dev = project.shell;
-
 in
 
- shell // { inherit devops; inherit dev;}
+ shell // { inherit workbench-shell; inherit devops; inherit dev; }

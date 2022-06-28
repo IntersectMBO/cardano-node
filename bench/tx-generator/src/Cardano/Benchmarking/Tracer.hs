@@ -10,11 +10,13 @@
 {-# LANGUAGE PackageImports #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators #-}
 
 {-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
 {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
+{-# OPTIONS_GHC -fno-warn-redundant-constraints #-}
 
 module Cardano.Benchmarking.Tracer
   ( initDefaultTracers
@@ -25,8 +27,10 @@ import           GHC.Generics
 
 import           Data.Aeson as A
 import qualified Data.Aeson.KeyMap as KeyMap
+import           Data.Kind
 import qualified Data.Map as Map
 
+import           Data.Proxy
 import           Data.Text (Text)
 import qualified Data.Text as Text
 
@@ -35,6 +39,7 @@ import           Cardano.Logging
 
 import           Cardano.Benchmarking.LogTypes
 import           Cardano.Benchmarking.Types
+import           Cardano.Benchmarking.Version as Version
 
 generatorTracer :: LogFormatting a => (a -> Namespace) -> Text -> Trace IO FormattedMessage -> IO (Trace IO a)
 generatorTracer namesFor tracerName tr = do
@@ -47,11 +52,11 @@ generatorTracer namesFor tracerName tr = do
 initDefaultTracers :: IO BenchTracers
 initDefaultTracers = do
   st <-  standardTracer
-  benchTracer <-  generatorTracer genericNames "benchmark" st
+  benchTracer <-  generatorTracer singletonName "benchmark" st
   configureTracers initialTraceConfig benchTracerDocumented [benchTracer]
-  n2nSubmitTracer <- generatorTracer genericNames "submitN2N" st
+  n2nSubmitTracer <- generatorTracer singletonName "submitN2N" st
   configureTracers initialTraceConfig nodeToNodeSubmissionTraceDocumented [n2nSubmitTracer]
-  connectTracer <- generatorTracer genericNames "connect" st
+  connectTracer <- generatorTracer singletonName "connect" st
   configureTracers initialTraceConfig sendRecvConnectDocumented [connectTracer]
   submitTracer <- generatorTracer namesForSubmission2 "submit" st
   configureTracers initialTraceConfig submission2Documented [submitTracer]
@@ -82,8 +87,11 @@ initialTraceConfig = TraceConfig {
     initConf :: Text -> (Namespace, [ConfigOption])
     initConf tr = ([tr], [ConfDetail DMaximum])
 
-genericNames :: (ConstructorName f, Generic a, Rep a ~ D1 c f) => a ->  [Text]
-genericNames x = [ Text.pack $ constructorName $ unM1 $ from x ]
+singletonName :: (ConstructorName f, Generic a, Rep a ~ D1 c f) => a -> [Text]
+singletonName a = [ genericName a ]
+
+genericName :: (ConstructorName f, Generic a, Rep a ~ D1 c f) => a -> Text
+genericName x = Text.pack $ constructorName $ unM1 $ from x
 
 class ConstructorName f where
   constructorName :: f p -> String
@@ -94,27 +102,25 @@ instance (ConstructorName f, ConstructorName g) => ConstructorName (f :+: g) whe
 instance (Constructor ('MetaCons n f r)) => ConstructorName (C1 ('MetaCons n f r) x) where
   constructorName = conName
 
+genericConstructorsOf :: forall a c f. (Rep a ~ D1 c f, ConstructorsOf f) => Proxy a -> [Text]
+genericConstructorsOf _ = map Text.pack $ constructorsOf (Proxy :: Proxy f)
+
+class ConstructorsOf (f :: Type -> Type ) where
+  constructorsOf :: Proxy f -> [String]
+
+instance (ConstructorsOf f, ConstructorsOf g) => ConstructorsOf (f :+: g) where
+  constructorsOf _ = constructorsOf (Proxy :: Proxy f) ++ constructorsOf (Proxy :: Proxy g)
+
+instance (Constructor ('MetaCons n f r)) => ConstructorsOf (C1 ('MetaCons n f r) x) where
+  constructorsOf _ = [ conName @('MetaCons n f r) undefined ]
+
 instance LogFormatting (TraceBenchTxSubmit TxId) where
   forHuman = Text.pack . show
   forMachine DMinimal _ = mempty
-  forMachine DNormal t = case t of
-    TraceBenchTxSubRecv _      -> mconcat ["kind" .= A.String "TraceBenchTxSubRecv"]
-    TraceBenchTxSubStart _     -> mconcat ["kind" .= A.String "TraceBenchTxSubStart"]
-    TraceBenchTxSubServAnn _   -> mconcat ["kind" .= A.String "TraceBenchTxSubServAnn"]
-    TraceBenchTxSubServReq _   -> mconcat ["kind" .= A.String "TraceBenchTxSubServReq"]
-    TraceBenchTxSubServAck _   -> mconcat ["kind" .= A.String "TraceBenchTxSubServAck"]
-    TraceBenchTxSubServDrop _  -> mconcat ["kind" .= A.String "TraceBenchTxSubServDrop"]
-    TraceBenchTxSubServOuts _  -> mconcat ["kind" .= A.String "TraceBenchTxSubServOuts"]
-    TraceBenchTxSubServUnav _  -> mconcat ["kind" .= A.String "TraceBenchTxSubServUnav"]
-    TraceBenchTxSubServFed _ _ -> mconcat ["kind" .= A.String "TraceBenchTxSubServFed"]
-    TraceBenchTxSubServCons _  -> mconcat ["kind" .= A.String "TraceBenchTxSubServCons"]
-    TraceBenchTxSubIdle        -> mconcat ["kind" .= A.String "TraceBenchTxSubIdle"]
-    TraceBenchTxSubRateLimit _ -> mconcat ["kind" .= A.String "TraceBenchTxSubRateLimit"]
-    TraceBenchTxSubSummary _   -> mconcat ["kind" .= A.String "TraceBenchTxSubSummary"]
-    TraceBenchTxSubDebug _     -> mconcat ["kind" .= A.String "TraceBenchTxSubDebug"]
-    TraceBenchTxSubError _     -> mconcat ["kind" .= A.String "TraceBenchTxSubError"]
+  forMachine DNormal t = mconcat [ "kind" .= A.String (genericName t) ]
   forMachine DDetailed t = forMachine DMaximum t
   forMachine DMaximum t = case t of
+    TraceTxGeneratorVersion v -> mconcat [ "kind" .= A.String "TraceTxGeneratorVersion" ] <> Version.toJsonLogMsg v
     TraceBenchTxSubRecv txIds ->
       mconcat [ "kind"  .= A.String "TraceBenchTxSubRecv"
               , "txIds" .= toJSON txIds
@@ -177,27 +183,8 @@ instance LogFormatting (TraceBenchTxSubmit TxId) where
               ]
 
 benchTracerDocumented :: Documented (TraceBenchTxSubmit TxId)
-benchTracerDocumented = Documented
-  [ emptyDoc ["benchmark", "TraceBenchTxSubRecv"]
-  , emptyDoc ["benchmark", "TraceBenchTxSubStart"]
-  , emptyDoc ["benchmark", "TraceBenchTxSubServAnn"]
-  , emptyDoc ["benchmark", "TraceBenchTxSubServReq"]
-  , emptyDoc ["benchmark", "TraceBenchTxSubServAck"]
-  , emptyDoc ["benchmark", "TraceBenchTxSubServDrop"]
-  , emptyDoc ["benchmark", "TraceBenchTxSubServOuts"]
-  , emptyDoc ["benchmark", "TraceBenchTxSubServUnav"]
-  , emptyDoc ["benchmark", "TraceBenchTxSubServFed"]
-  , emptyDoc ["benchmark", "TraceBenchTxSubServCons"]
-  , emptyDoc ["benchmark", "TraceBenchTxSubIdle"]
-  , emptyDoc ["benchmark", "TraceBenchTxSubRateLimit"]
-  , emptyDoc ["benchmark", "TraceBenchTxSubServCons"]
-  , emptyDoc ["benchmark", "TraceBenchTxSubIdle"]
-  , emptyDoc ["benchmark", "TraceBenchTxSubRateLimit"]
-  , emptyDoc ["benchmark", "TraceBenchTxSubSummary"]
-  , emptyDoc ["benchmark", "TraceBenchTxSubDebug"]
-  , emptyDoc ["benchmark", "TraceBenchTxSubError"]
-  ]
-
+benchTracerDocumented
+  = Documented $ map (emptyDoc2 "benchmark") $ genericConstructorsOf (Proxy :: Proxy (TraceBenchTxSubmit x))
 
 instance LogFormatting NodeToNodeSubmissionTrace where
   forHuman = Text.pack . show
@@ -225,19 +212,12 @@ instance LogFormatting NodeToNodeSubmissionTrace where
        , "sent" .= A.toJSON sent ]
 
 nodeToNodeSubmissionTraceDocumented :: Documented NodeToNodeSubmissionTrace
-nodeToNodeSubmissionTraceDocumented = Documented
-  [ emptyDoc ["submitN2N", "ReqIdsBlocking"]
-  , emptyDoc ["submitN2N", "IdsListBlocking"]
-  , emptyDoc ["submitN2N", "ReqIdsPrompt"]
-  , emptyDoc ["submitN2N", "IdsListPrompt"]
-  , emptyDoc ["submitN2N", "ReqTxs"]
-  , emptyDoc ["submitN2N", "TxList"]
-  ]
+nodeToNodeSubmissionTraceDocumented
+  = Documented $ map (emptyDoc2 "submitN2N") $ genericConstructorsOf (Proxy :: Proxy NodeToNodeSubmissionTrace)
 
 instance LogFormatting SendRecvConnect where
   forHuman = Text.pack . show
   forMachine _ _ = KeyMap.fromList [ "kind" .= A.String "SendRecvConnect" ]
-
 
 sendRecvConnectDocumented :: Documented SendRecvConnect
 sendRecvConnectDocumented = Documented
@@ -258,3 +238,6 @@ submission2Documented = Documented
 
 emptyDoc :: Namespace -> DocMsg a
 emptyDoc ns = DocMsg ns [] "ToDo: write benchmark tracer docs"
+
+emptyDoc2 :: Text -> Text -> DocMsg a
+emptyDoc2 n1 n2 = DocMsg [n1, n2] [] "ToDo: write benchmark tracer docs"

@@ -17,7 +17,7 @@ import           Ouroboros.Network.NodeToClient (IOManager)
 
 import           Cardano.Benchmarking.Script.Action
 import           Cardano.Benchmarking.Script.Aeson (parseScriptFileAeson)
-import           Cardano.Benchmarking.Script.Core (setProtocolParameters)
+import           Cardano.Benchmarking.Script.Core (setProtocolParameters, traceTxGeneratorVersion)
 import           Cardano.Benchmarking.Script.Env
 import           Cardano.Benchmarking.Script.NodeConfig (shutDownLogging)
 import           Cardano.Benchmarking.Script.Store
@@ -40,5 +40,6 @@ runScript script iom = runActionM execScript iom >>= \case
   cleanup s a = void $ runActionMEnv s a iom
   execScript = do
     liftIO initDefaultTracers >>= set BenchTracers
+    traceTxGeneratorVersion
     setProtocolParameters QueryLocalNode
     forM_ script action

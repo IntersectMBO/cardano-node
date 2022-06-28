@@ -25,8 +25,10 @@ module Data.CDF
   , KnownCDF (..)
   , liftCDFVal
   , unliftCDFVal
+  , unliftCDFValExtra
   , centilesCDF
   , filterCDF
+  , subsetCDF
   , zeroCDF
   , projectCDF
   , projectCDF'
@@ -34,6 +36,7 @@ module Data.CDF
   , DirectCDF
   , cdf
   , mapToCDF
+  , cdfCentilesCDF
   , Divisible (..)
   , Combine (..)
   , stdCombine1
@@ -48,6 +51,7 @@ module Data.CDF
 import Prelude (String, (!!), error, head, show)
 import Cardano.Prelude hiding (head, show)
 
+import Control.Arrow ((&&&))
 import Data.Aeson (FromJSON(..), ToJSON(..))
 import Data.SOP.Strict
 import Data.Time.Clock (NominalDiffTime)
@@ -74,7 +78,8 @@ briefCentiles =
 
 stdCentiles :: [Centile]
 stdCentiles =
-  [ Centile 0.01, Centile 0.05
+  [ Centile 0.0
+  , Centile 0.01, Centile 0.05
   , Centile 0.1, Centile 0.2, Centile 0.3, Centile 0.4
   , Centile 0.5, Centile 0.6
   , Centile 0.7, Centile 0.75
@@ -82,10 +87,10 @@ stdCentiles =
   , Centile 0.9, Centile 0.925, Centile 0.95, Centile 0.97, Centile 0.98, Centile 0.99
   , Centile 0.995, Centile 0.997, Centile 0.998, Centile 0.999
   , Centile 0.9995, Centile 0.9997, Centile 0.9998, Centile 0.9999
+  , Centile 1.0
   ]
 
--- | Given a N-large population, produce centiles for each element, except for min and max.
---   We don't need min and max, because CDF already has range.
+-- | Given a N-large population, produce centiles "pointing" into middle of each each element.
 nEquicentiles :: Int -> [Centile]
 nEquicentiles n =
   if reindices == indices
@@ -94,9 +99,7 @@ nEquicentiles n =
  where
    reindices = centiles <&> runCentile n
    centiles  = [ step * (fromIntegral i + 0.5) | i <- indices ]
-   indices   = if n > 2
-               then [1 .. n - 2] -- ignore first and last indices, standing for min and max.
-               else []
+   indices   = [0 .. n - 1]
    step :: Double
    step = 1.0 / fromIntegral n
 
@@ -156,17 +159,21 @@ filterCDF :: ((Centile, p a) -> Bool) -> CDF p a -> CDF p a
 filterCDF f d =
   d { cdfSamples = cdfSamples d & filter f }
 
+subsetCDF :: [Centile] ->  CDF p b -> CDF p b
+subsetCDF = filterCDF . \cs c -> elem (fst c) cs
+
 indexCDF :: Int -> CDF p a -> p a
 indexCDF i d = snd $ cdfSamples d !! i
+-- indexCDF i d = snd $ cdfSamples (trace (printf "i=%d of %d" i (length $ cdfSamples d) :: String) d) !! i
 
 projectCDF :: Centile -> CDF p a -> Maybe (p a)
 projectCDF p = fmap snd . find ((== p) . fst) . cdfSamples
 
 projectCDF' :: String -> Centile -> CDF p a -> p a
-projectCDF' desc p =
-  maybe (error er) snd . find ((== p) . fst) . cdfSamples
+projectCDF' desc p x =
+  maybe (error er) snd . find ((== p) . fst) $ cdfSamples x
  where
-   er = printf "Missing centile %f in %s" (show $ unCentile p) desc
+   er = printf "Missing centile %f in %s (samples %s)" (unCentile p) desc (show $ fst <$> cdfSamples x)
 
 --
 -- * Trivial instantiation: samples are value points
@@ -183,9 +190,20 @@ liftCDFVal x = \case
               , cdfSamples = []
               , .. }
 
-unliftCDFVal :: Divisible a => CDFIx p -> p a -> a
-unliftCDFVal CDFI (I x) =x
-unliftCDFVal CDF2 CDF{cdfRange = (mi, ma)} = (mi + ma) `divide` 2
+unliftCDFVal :: forall a p. Divisible a => CDFIx p -> p a -> a
+unliftCDFVal CDFI (I x) = x
+unliftCDFVal CDF2 CDF{cdfAverage} = (1 :: a) `divide` (1 / cdfAverage)
+
+unliftCDFValExtra :: forall a p. Divisible a => CDFIx p -> p a -> [a]
+unliftCDFValExtra CDFI (I x) = [x]
+unliftCDFValExtra i@CDF2 c@CDF{cdfRange=(mi, ma), ..} = [ mean
+                                                        , mi
+                                                        , ma
+                                                        , mean - stddev
+                                                        , mean + stddev
+                                                        ]
+ where mean   = unliftCDFVal i c
+       stddev = (1 :: a) `divide` (1 / cdfStddev)
 
 cdf :: (Real a, KnownCDF p) => [Centile] -> [a] -> CDF p a
 cdf centiles (sort -> sorted) =
@@ -195,8 +213,6 @@ cdf centiles (sort -> sorted) =
   , cdfStddev      = Stat.stdDev doubleVec
   , cdfRange       = (mini, maxi)
   , cdfSamples =
-    (    (Centile   0, liftCDFVal mini ix) :) .
-    (<> [(Centile 1.0, liftCDFVal maxi ix) ]) $
     centiles <&>
       \spec ->
         let sample = if size == 0 then 0
@@ -212,8 +228,16 @@ cdf centiles (sort -> sorted) =
          then (0,           0)
          else (vec Vec.! 0, Vec.last vec)
 
-mapToCDF :: Real a => (b -> a) -> [Centile] -> [b] -> DirectCDF a
+mapToCDF :: (KnownCDF p, Real a) => (b -> a) -> [Centile] -> [b] -> CDF p a
 mapToCDF f pspecs xs = cdf pspecs (f <$> xs)
+
+cdfCentilesCDF :: forall p a. KnownCDF p => CDF p a -> CDF p Double
+cdfCentilesCDF c =
+  (mapToCDF unCentile cs cs :: CDF p Double)
+  { cdfSamples = (identity &&& flip liftCDFVal cdfIx . unCentile) <$> cs }
+ where
+   cs :: [Centile]
+   cs = centilesCDF c
 
 type CDF2 a = CDF (CDF I) a
 
@@ -225,7 +249,7 @@ data CDFError
 
 -- | Avoiding `Fractional`
 class Real a => Divisible a where
-  divide :: a -> Double -> a
+  divide   :: a -> Double -> a
 
 instance Divisible Double where
   divide = (/)

@@ -60,7 +60,9 @@ let
             topology       = "topology.json";
             nodeConfigFile = "config.json";
           } // optionalAttrs useCabalRun {
-            executable     = ''time -f "${time_fmtstr}" -o kernel-resource-summary.json cabal run exe:cardano-node -- +RTS -sghc-rts-report.txt -RTS'';
+            # Make the shell function take over.
+            executable = "cardano-node";
+            # executable     = ''time -f "${time_fmtstr}" -o kernel-resource-summary.json cabal run exe:cardano-node ''${WB_FLAGS_RTS} -- +RTS -sghc-rts-report.txt -RTS'';
           } // optionalAttrs isProducer {
             operationalCertificate = "../genesis/node-keys/node${toString i}.opcert";
             kesKey         = "../genesis/node-keys/node-kes${toString i}.skey";
@@ -102,6 +104,8 @@ let
             AlonzoGenesisFile    = "../genesis.alonzo.json";
             ShelleyGenesisFile   = "../genesis-shelley.json";
             ByronGenesisFile     = "../genesis/byron/genesis.json";
+          } // optionalAttrs useCabalRun {
+            executable           = "tx-generator";
           });
 
       finaliseTracerService =
@@ -110,7 +114,7 @@ let
             configFile     = "config.json";
             logRoot        = ".";
           } // optionalAttrs useCabalRun {
-            executable     = "cabal run exe:cardano-tracer --";
+            executable     = "cardano-tracer";
           });
 
       materialise-profile =
