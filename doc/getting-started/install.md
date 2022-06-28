@@ -35,14 +35,14 @@ In Redhat, Fedora, and Centos:
 ```bash
 sudo yum update -y
 sudo yum install git gcc gcc-c++ tmux gmp-devel make tar xz wget zlib-devel libtool autoconf -y
-sudo yum install systemd-devel ncurses-devel ncurses-compat-libs -y
+sudo install systemd-devel ncurses-devel ncurses-compat-libs which jq openssl-devel lmdb-devel -y
 ```
 
 For Debian/Ubuntu, use the following instead:
 
 ```bash
 sudo apt-get update -y
-sudo apt-get install automake build-essential pkg-config libffi-dev libgmp-dev libssl-dev libtinfo-dev libsystemd-dev zlib1g-dev make g++ tmux git jq wget libncursesw5 libtool autoconf -y
+sudo apt-get install automake build-essential pkg-config libffi-dev libgmp-dev libssl-dev libtinfo-dev libsystemd-dev zlib1g-dev make g++ tmux git jq wget libncursesw5 libtool autoconf liblmdb-dev -y
 ```
 
 If you are using a different flavor of Linux, you will need to use the correct package manager for your platform instead of `yum` or `apt-get`, and the names of the packages you need to install might differ.  On MacOSX, use the Homebrew (`brew`) installer.
