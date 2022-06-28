@@ -1,5 +1,5 @@
-{-# LANGUAGE RankNTypes          #-}
-{-# LANGUAGE RecordWildCards     #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Cardano.Logging.Tracer.EKG (
@@ -11,29 +11,28 @@ import           Cardano.Logging.Types
 
 import           Control.Monad.IO.Class (MonadIO, liftIO)
 import qualified Control.Tracer as T
-import           Data.IORef (newIORef, readIORef, writeIORef, IORef)
+import           Control.Concurrent.MVar
 import qualified Data.Map.Strict as Map
-import           Data.Text (pack, Text)
+import           Data.Text (Text, pack)
 import qualified System.Metrics as Metrics
 import qualified System.Metrics.Counter as Counter
 import qualified System.Metrics.Gauge as Gauge
 import qualified System.Metrics.Label as Label
-import           System.Remote.Monitoring (Server, getCounter, getGauge,
-                     getLabel)
+import           System.Remote.Monitoring (Server, getCounter, getGauge, getLabel)
 
 
 ekgTracer :: MonadIO m => Either Metrics.Store Server-> m (Trace m FormattedMessage)
 ekgTracer storeOrServer = liftIO $ do
-    rgsGauges   <- newIORef Map.empty
-    rgsLabels   <- newIORef Map.empty
-    rgsCounters <- newIORef Map.empty
+    rgsGauges   <- newMVar Map.empty
+    rgsLabels   <- newMVar Map.empty
+    rgsCounters <- newMVar Map.empty
     pure $ Trace $ T.arrow $ T.emit $
       output rgsGauges rgsLabels rgsCounters
   where
     output :: MonadIO m =>
-         IORef (Map.Map Text Gauge.Gauge)
-      -> IORef (Map.Map Text Label.Label)
-      -> IORef (Map.Map Text Counter.Counter)
+         MVar (Map.Map Text Gauge.Gauge)
+      -> MVar (Map.Map Text Label.Label)
+      -> MVar (Map.Map Text Counter.Counter)
       -> (LoggingContext, Either TraceControl FormattedMessage)
       -> m ()
     output rgsGauges rgsLabels rgsCounters
@@ -46,49 +45,40 @@ ekgTracer storeOrServer = liftIO $ do
       pure ()
 
     setIt ::
-         IORef (Map.Map Text Gauge.Gauge)
-      -> IORef (Map.Map Text Label.Label)
-      -> IORef (Map.Map Text Counter.Counter)
+         MVar (Map.Map Text Gauge.Gauge)
+      -> MVar (Map.Map Text Label.Label)
+      -> MVar (Map.Map Text Counter.Counter)
       -> Namespace
       -> Metric
       -> IO ()
     setIt rgsGauges _rgsLabels _rgsCounters _namespace
       (IntM name theInt) = do
-        rgsMap <- readIORef rgsGauges
-        case Map.lookup name rgsMap of
-          Just gauge -> Gauge.set gauge (fromIntegral theInt)
-          Nothing -> do
-            gauge <- case storeOrServer of
-                        Left store   -> Metrics.createGauge name store
-                        Right server -> getGauge name server
-            let rgsGauges' = Map.insert name gauge rgsMap
-            writeIORef rgsGauges rgsGauges'
-            Gauge.set gauge (fromIntegral theInt)
+      gauge <- modifyMVar rgsGauges (setFunc Metrics.createGauge getGauge name)
+      Gauge.set gauge (fromIntegral theInt)
     setIt _rgsGauges rgsLabels _rgsCounters _namespace
       (DoubleM name theDouble) = do
-        rgsMap <- readIORef rgsLabels
-        case Map.lookup name rgsMap of
-          Just label -> Label.set label ((pack . show) theDouble)
-          Nothing -> do
-            label <- case storeOrServer of
-                        Left store   -> Metrics.createLabel name store
-                        Right server -> getLabel name server
-            let rgsLabels' = Map.insert name label rgsMap
-            writeIORef rgsLabels rgsLabels'
-            Label.set label ((pack . show) theDouble)
+        label <- modifyMVar rgsLabels (setFunc Metrics.createLabel getLabel name)
+        Label.set label ((pack . show) theDouble)
     setIt _rgsGauges _rgsLabels rgsCounters _namespace
       (CounterM name mbInt) = do
-        rgsMap <- readIORef rgsCounters
+        counter <- modifyMVar rgsCounters (setFunc Metrics.createCounter getCounter name)
+        case mbInt of
+          Nothing -> Counter.inc counter
+          Just i  -> Counter.add counter (fromIntegral i)
+
+    setFunc :: 
+         (Text -> Metrics.Store -> IO m) 
+      -> (Text -> Server -> IO m) 
+      -> Text 
+      -> Map.Map Text m
+      -> IO (Map.Map Text m, m)
+    setFunc creator1 creator2 name rgsMap = do
         case Map.lookup name rgsMap of
-          Just counter -> case mbInt of
-                            Nothing -> Counter.inc counter
-                            Just i  -> Counter.add counter (fromIntegral i)
+          Just gauge -> do
+            pure (rgsMap, gauge)
           Nothing -> do
-            counter <- case storeOrServer of
-                        Left store   -> Metrics.createCounter name store
-                        Right server -> getCounter name server
-            let rgsCounters' = Map.insert name counter rgsMap
-            writeIORef rgsCounters rgsCounters'
-            case mbInt of
-              Nothing -> Counter.inc counter
-              Just i  -> Counter.add counter (fromIntegral i)
+            gauge <- case storeOrServer of
+                        Left store   -> creator1 name store
+                        Right server -> creator2 name server
+            let rgsMap' = Map.insert name gauge rgsMap
+            pure (rgsMap', gauge)
