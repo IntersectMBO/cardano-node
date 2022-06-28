@@ -1,0 +1,27 @@
+cabal-version: 3.0
+
+name: cardano-temp
+version: 0.0.1
+
+common base
+  default-language:     Haskell2010
+  default-extensions:   NoImplicitPrelude
+                        OverloadedStrings
+
+executable cardano-new-faucet
+  import:             base
+  main-is:            cardano-faucet.hs
+  build-depends:      base
+                    , bytestring
+                    , cardano-api
+                    , cardano-cli
+                    , cardano-prelude
+                    , containers
+                    , ouroboros-consensus
+                    , ouroboros-network
+                    , parsec
+                    , servant-server
+                    , stm
+                    , text
+                    , transformers-except
+                    , warp
