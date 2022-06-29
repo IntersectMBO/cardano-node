@@ -9,12 +9,20 @@
 {-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 
 module Cardano.CLI.Shelley.Run.Transaction
-  ( ShelleyTxCmdError
+  ( ShelleyTxCmdError(..)
   , renderShelleyTxCmdError
   , runTransactionCmd
   , readWitnessSigningData
   , SomeWitness(..)
   , toTxOutValueInAnyEra
+  , toTxOutInAnyEra
+  , TxFeature(..)
+  , createScriptWitness
+  , readFileTxMetadata
+  , validateScriptSupportedInEra
+  , readRequiredSigner
+  , readProtocolParametersSourceSpec
+  , scriptWitnessPolicyId
   ) where
 
 import           Cardano.Prelude hiding (All, Any)

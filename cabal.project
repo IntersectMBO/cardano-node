@@ -18,7 +18,6 @@ packages:
     trace-dispatcher
     trace-resources
     trace-forward
-    cardano-temp
 
 package cardano-api
   ghc-options: -Werror

@@ -70,6 +70,8 @@ library
                         Cardano.CLI.Byron.UpdateProposal
                         Cardano.CLI.Byron.Vote
 
+                        Cardano.CLI.Faucet
+
                         Cardano.CLI.Shelley.Commands
                         Cardano.CLI.Shelley.Key
                         Cardano.CLI.Shelley.Orphans
@@ -138,7 +140,9 @@ library
                       , prettyprinter
                       , cardano-ledger-shelley
                       , set-algebra
+                      , servant-server
                       , split
+                      , stm
                       , strict-containers
                       , text
                       , time
@@ -146,6 +150,7 @@ library
                       , transformers-except
                       , utf8-string
                       , vector
+                      , warp
                       , yaml
 
 executable cardano-cli
