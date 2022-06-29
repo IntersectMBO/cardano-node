@@ -46,3 +46,11 @@ With this we are able to generate an operational certificate for our stake pool:
     --out-file node.cert
 
 The command above will increment the number in the `cold.counter` file by one. Note that from the Vasil hard fork onwards this is required behavior: it is only valid for new operational certificates to use the counter value (previously used in a block successfully included on the chain) plus *exactly* one. Prior to Vasil, it was permitted to use any strictly larger counter value than used on chain previously, but this is no longer permitted. It must be incremented by exactly one. In particular, this means one cannot use the current time or slot number as an issue number.
+
+To find out the actual `OpCert` value used on-chain, run this command:
+
+```
+$ cardano-cli query kes-period-info --testnet-magic 42 --op-cert-file opcert.cert | grep "qKesNodeStateOperationalCertificateNumber"
+
+"qKesNodeStateOperationalCertificateNumber": 1,
+```
