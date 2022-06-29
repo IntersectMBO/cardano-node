@@ -1,3 +1,4 @@
+{-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
@@ -12,34 +13,101 @@
 
 module Cardano.CLI.Faucet where
 
-import           Cardano.Api
-import           Prelude (show, error, id)
-import qualified Data.ByteString.Lazy     as LBS
-import           Cardano.Prelude
-import           Text.Parsec
-import           Ouroboros.Network.Protocol.LocalStateQuery.Type (AcquireFailure (..))
-import           Cardano.Api.Byron
-import qualified Data.Set as Set
-import qualified Data.Map.Strict as Map
-import qualified Ouroboros.Network.Protocol.LocalStateQuery.Client as Net.Query
-import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (EraMismatch)
-import           Control.Concurrent.STM
-import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Client as Net.Tx
-import           Servant
-import           Network.Wai.Handler.Warp
-import           Data.String
-import           Cardano.CLI.Shelley.Run.Address
-import           Cardano.CLI.Types
-import Cardano.CLI.Shelley.Key
-import qualified Data.Text as T
-import           Control.Monad.Trans.Except.Exit (orDie)
+
+
+import Cardano.Api
+import Cardano.Api.Byron (WitnessNetworkIdOrByronAddress(..))
+import Cardano.Api.Shelley ( StakePoolKey, ReferenceScript(..))
 import Cardano.CLI.Shelley.Commands
-import Cardano.CLI.Shelley.Run.Transaction
+import Cardano.CLI.Shelley.Key
+import Cardano.CLI.Shelley.Run.Address
+import Cardano.CLI.Types
+import Cardano.Prelude
+import Control.Concurrent.STM
+import Control.Monad.Trans.Except.Exit (orDie)
 import Control.Monad.Trans.Except.Extra (firstExceptT, left, newExceptT, hoistEither)
-import qualified Data.List as L
-import Cardano.CLI.Environment (readEnvSocketPath)
-import qualified System.IO as IO
-import qualified Data.Text as Text
+import Data.ByteString.Lazy     qualified as LBS
+import Data.List qualified as L
+import Data.Map.Strict qualified as Map
+import Data.Set qualified as Set
+import Data.String
+import Data.Text qualified as T
+import Data.Text qualified as Text
+import Network.Wai.Handler.Warp
+import Ouroboros.Consensus.HardFork.Combinator.AcrossEras (EraMismatch)
+import Ouroboros.Network.Protocol.LocalStateQuery.Client qualified as Net.Query
+import Ouroboros.Network.Protocol.LocalStateQuery.Type (AcquireFailure (..))
+import Ouroboros.Network.Protocol.LocalTxSubmission.Client qualified as Net.Tx
+import Prelude (show, error, id)
+import Servant
+import System.Environment (lookupEnv)
+import System.IO qualified as IO
+import Text.Parsec
+
+newtype EnvSocketError = CliEnvVarLookup Text deriving Show
+
+data SomeWitness
+  = AByronSigningKey           (SigningKey ByronKey) (Maybe (Address ByronAddr))
+  | APaymentSigningKey         (SigningKey PaymentKey)
+  | APaymentExtendedSigningKey (SigningKey PaymentExtendedKey)
+  | AStakeSigningKey           (SigningKey StakeKey)
+  | AStakeExtendedSigningKey   (SigningKey StakeExtendedKey)
+  | AStakePoolSigningKey       (SigningKey StakePoolKey)
+  | AGenesisSigningKey         (SigningKey GenesisKey)
+  | AGenesisExtendedSigningKey (SigningKey GenesisExtendedKey)
+  | AGenesisDelegateSigningKey (SigningKey GenesisDelegateKey)
+  | AGenesisDelegateExtendedSigningKey
+                               (SigningKey GenesisDelegateExtendedKey)
+  | AGenesisUTxOSigningKey     (SigningKey GenesisUTxOKey)
+
+-- | Data required for constructing a Shelley bootstrap witness.
+data ShelleyBootstrapWitnessSigningKeyData
+  = ShelleyBootstrapWitnessSigningKeyData
+      !(SigningKey ByronKey)
+      -- ^ Byron signing key.
+      !(Maybe (Address ByronAddr))
+      -- ^ An optionally specified Byron address.
+      --
+      -- If specified, both the network ID and derivation path are extracted
+      -- from the address and used in the construction of the Byron witness.
+
+-- | Some kind of Byron or Shelley witness.
+data ByronOrShelleyWitness
+  = AByronWitness !ShelleyBootstrapWitnessSigningKeyData
+  | AShelleyKeyWitness !ShelleyWitnessSigningKey
+
+-- | Read the node socket path from the environment.
+-- Fails if the environment variable is not set.
+readEnvSocketPath :: ExceptT EnvSocketError IO SocketPath
+readEnvSocketPath =
+    maybe (left $ CliEnvVarLookup (Text.pack envName)) (pure . SocketPath)
+      =<< liftIO (lookupEnv envName)
+  where
+    envName :: String
+    envName = "CARDANO_NODE_SOCKET_PATH"
+
+-- | Error constructing a Shelley bootstrap witness (i.e. a Byron key witness
+-- in the Shelley era).
+data ShelleyBootstrapWitnessError
+  = MissingNetworkIdOrByronAddressError
+  -- ^ Neither a network ID nor a Byron address were provided to construct the
+  -- Shelley bootstrap witness. One or the other is required.
+  deriving Show
+
+data ShelleyTxCmdError
+  = ShelleyTxCmdBootstrapWitnessError !ShelleyBootstrapWitnessError
+  | ShelleyTxCmdSocketEnvError !EnvSocketError
+  | ShelleyTxCmdTxSubmitError !Text
+  | ShelleyTxCmdTxSubmitErrorEraMismatch !EraMismatch
+  | ShelleyTxCmdTxFeatureMismatch !AnyCardanoEra !TxFeature
+  | ShelleyTxCmdAcquireFailure !AcquireFailure
+  | ShelleyTxCmdEraConsensusModeMismatchTxBalance !TxBuildOutputOptions !AnyConsensusMode !AnyCardanoEra
+  | ShelleyTxCmdBalanceTxBody !TxBodyErrorAutoBalance
+  | ShelleyTxCmdTxInsDoNotExist ![TxIn]
+  | ShelleyTxCmdScriptFileError
+
+data TxFeature = TxFeatureExplicitFees | TxFeatureImplicitFees | TxFeatureValidityNoUpperBound | TxFeatureShelleyAddresses | TxFeatureMultiAssetOutputs
+  deriving Show
 
 testnet :: NetworkId
 testnet = Testnet $ NetworkMagic 1097911063
@@ -181,34 +249,13 @@ startApiServer txQueue utxoTMVar key era = do
 foo :: WitnessSigningData
 foo = KeyWitnessSigningData (SigningKeyFile "/home/clever/iohk/cardano-node/pay.skey") Nothing
 
-bar :: IO SomeWitness
-bar = orDie (T.pack . Prelude.show) $ readWitnessSigningData foo
-
-baz :: SomeWitness -> ShelleyWitnessSigningKey
-baz (APaymentSigningKey sk) = WitnessPaymentKey sk
-baz (Cardano.CLI.Shelley.Run.Transaction.AByronSigningKey _ _) = error "not implemented"
-baz (APaymentExtendedSigningKey _) = error "not implemented"
-baz (AStakeSigningKey _) = error "not implemented"
-baz (AStakeExtendedSigningKey _) = error "not implemented"
-baz (AStakePoolSigningKey _) = error "not implemented"
-baz (AGenesisSigningKey _) = error "not implemented"
-baz (AGenesisExtendedSigningKey _) = error "not implemented"
-baz (AGenesisDelegateSigningKey _) = error "not implemented"
-baz (AGenesisDelegateExtendedSigningKey _) = error "not implemented"
-baz (AGenesisUTxOSigningKey _) = error "not implemented"
-
-qux :: IO ShelleyWitnessSigningKey
-qux = do
-  y <- bar
-  return $ baz y
-
 main :: IO ()
 main = do
   let
     network = testnet
   txQueue <- newTQueueIO
   utxoTMVar <- newEmptyTMVarIO
-  key <- qux
+  -- key <- qux
   pay_vkey <- loadvkey "/home/clever/iohk/cardano-node/pay.vkey"
   addressAny <- orDie (T.pack . Prelude.show) $ vkeyToAddr network pay_vkey
   let
@@ -247,7 +294,7 @@ main = do
         runQueryThen (QueryCurrentEra CardanoModeIsMultiEra) $ \(AnyCardanoEra era3) -> do
           putStrLn @Text "new era"
           print era3
-          _child <- forkIO $ startApiServer txQueue utxoTMVar key ShelleyEra
+          _child <- forkIO $ startApiServer txQueue utxoTMVar (error "key") ShelleyEra
           case cardanoEraStyle era3 of
             ShelleyBasedEra sbe ->
               runQueryThen (getUtxoQuery addressAny sbe (toEraInMode era3 CardanoMode)) $ \case
@@ -271,15 +318,13 @@ main = do
                     pure $ Net.Query.SendMsgDone ()
                 Left _e -> error "not handled"
             _ -> error "not handled"
-    waitForTxAndLoop :: IO (Net.Tx.LocalTxClientStIdle (TxInMode CardanoMode) reject IO a)
-    waitForTxAndLoop = do
+    _waitForTxAndLoop :: IO (Net.Tx.LocalTxClientStIdle (TxInMode CardanoMode) reject IO a)
+    _waitForTxAndLoop = do
       tx <- waitForTx
       pure $ Net.Tx.SendMsgSubmitTx tx $ \_result -> do
         --print result
-        waitForTxAndLoop
-    submissionClient =
-      LocalTxSubmissionClient $
-        waitForTxAndLoop
+        _waitForTxAndLoop
+    submissionClient = error "LocalTxSubmissionClient $ waitForTxAndLoop"
 
   connectToLocalNode
     localNodeConnInfo
@@ -418,7 +463,7 @@ txSign networkId txBody sks = do
 
   -- Byron witnesses require the network ID. This can either be provided
   -- directly or derived from a provided Byron address.
-  byronWitnesses <- firstExceptT ShelleyTxCmdBootstrapWitnessError . hoistEither $
+  byronWitnesses <- firstExceptT (ShelleyTxCmdBootstrapWitnessError) . hoistEither $
     mkShelleyBootstrapWitnesses (Just networkId) txBody sksByron
 
   let shelleyKeyWitnesses = map (makeShelleyKeyWitness txBody) sksShelley
@@ -465,3 +510,100 @@ txBuildSignSubmit sbe cModeParams eraInMode networkId txin txouts txChangeAddres
   txBody <- txBuild sbe cModeParams networkId txin txouts txChangeAddress outputOptions
   tx <- txSign networkId txBody sks
   txSubmit eraInMode cModeParams networkId tx
+
+
+toTxOutInAnyEra :: CardanoEra era
+                -> TxOutAnyEra
+                -> ExceptT ShelleyTxCmdError IO (TxOut CtxTx era)
+toTxOutInAnyEra era (TxOutAnyEra addr' val' _mDatumHash _refScriptFp) = do
+  addr <- toAddressInAnyEra era addr'
+  val <- toTxOutValueInAnyEra era val'
+  pure $ TxOut addr val TxOutDatumNone ReferenceScriptNone
+
+-- | Attempt to construct Shelley bootstrap witnesses until an error is
+-- encountered.
+mkShelleyBootstrapWitnesses
+  :: IsShelleyBasedEra era
+  => Maybe NetworkId
+  -> TxBody era
+  -> [ShelleyBootstrapWitnessSigningKeyData]
+  -> Either ShelleyBootstrapWitnessError [KeyWitness era]
+mkShelleyBootstrapWitnesses mnw txBody =
+  mapM (mkShelleyBootstrapWitness mnw txBody)
+
+-- | Construct a Shelley bootstrap witness (i.e. a Byron key witness in the
+-- Shelley era).
+mkShelleyBootstrapWitness
+  :: IsShelleyBasedEra era
+  => Maybe NetworkId
+  -> TxBody era
+  -> ShelleyBootstrapWitnessSigningKeyData
+  -> Either ShelleyBootstrapWitnessError (KeyWitness era)
+mkShelleyBootstrapWitness Nothing _ (ShelleyBootstrapWitnessSigningKeyData _ Nothing) =
+  Left MissingNetworkIdOrByronAddressError
+mkShelleyBootstrapWitness (Just nw) txBody (ShelleyBootstrapWitnessSigningKeyData skey Nothing) =
+  Right $ makeShelleyBootstrapWitness (WitnessNetworkId nw) txBody skey
+mkShelleyBootstrapWitness _ txBody (ShelleyBootstrapWitnessSigningKeyData skey (Just addr)) =
+  Right $ makeShelleyBootstrapWitness (WitnessByronAddress addr) txBody skey
+
+partitionSomeWitnesses
+  :: [ByronOrShelleyWitness]
+  -> ( [ShelleyBootstrapWitnessSigningKeyData]
+     , [ShelleyWitnessSigningKey]
+     )
+partitionSomeWitnesses = reversePartitionedWits . foldl' go mempty
+  where
+    reversePartitionedWits (bw, skw) =
+      (reverse bw, reverse skw)
+
+    go (byronAcc, shelleyKeyAcc) byronOrShelleyWit =
+      case byronOrShelleyWit of
+        AByronWitness byronWit ->
+          (byronWit:byronAcc, shelleyKeyAcc)
+        AShelleyKeyWitness shelleyKeyWit ->
+          (byronAcc, shelleyKeyWit:shelleyKeyAcc)
+
+
+
+categoriseSomeWitness :: SomeWitness -> ByronOrShelleyWitness
+categoriseSomeWitness swsk =
+  case swsk of
+    AByronSigningKey           sk addr -> AByronWitness (ShelleyBootstrapWitnessSigningKeyData sk addr)
+    APaymentSigningKey         sk      -> AShelleyKeyWitness (WitnessPaymentKey         sk)
+    APaymentExtendedSigningKey sk      -> AShelleyKeyWitness (WitnessPaymentExtendedKey sk)
+    AStakeSigningKey           sk      -> AShelleyKeyWitness (WitnessStakeKey           sk)
+    AStakeExtendedSigningKey   sk      -> AShelleyKeyWitness (WitnessStakeExtendedKey   sk)
+    AStakePoolSigningKey       sk      -> AShelleyKeyWitness (WitnessStakePoolKey       sk)
+    AGenesisSigningKey         sk      -> AShelleyKeyWitness (WitnessGenesisKey sk)
+    AGenesisExtendedSigningKey sk      -> AShelleyKeyWitness (WitnessGenesisExtendedKey sk)
+    AGenesisDelegateSigningKey sk      -> AShelleyKeyWitness (WitnessGenesisDelegateKey sk)
+    AGenesisDelegateExtendedSigningKey sk
+                                       -> AShelleyKeyWitness (WitnessGenesisDelegateExtendedKey sk)
+    AGenesisUTxOSigningKey     sk      -> AShelleyKeyWitness (WitnessGenesisUTxOKey     sk)
+
+
+toAddressInAnyEra
+  :: CardanoEra era
+  -> AddressAny
+  -> ExceptT ShelleyTxCmdError IO (AddressInEra era)
+toAddressInAnyEra era addrAny =
+  case addrAny of
+    AddressByron   bAddr -> return (AddressInEra ByronAddressInAnyEra bAddr)
+    AddressShelley sAddr ->
+      case cardanoEraStyle era of
+        LegacyByronEra -> txFeatureMismatch era TxFeatureShelleyAddresses
+        ShelleyBasedEra era' ->
+          return (AddressInEra (ShelleyAddressInEra era') sAddr)
+
+
+toTxOutValueInAnyEra
+  :: CardanoEra era
+  -> Value
+  -> ExceptT ShelleyTxCmdError IO (TxOutValue era)
+toTxOutValueInAnyEra era val =
+  case multiAssetSupportedInEra era of
+    Left adaOnlyInEra ->
+      case valueToLovelace val of
+        Just l  -> return (TxOutAdaOnly adaOnlyInEra l)
+        Nothing -> txFeatureMismatch era TxFeatureMultiAssetOutputs
+    Right multiAssetInEra -> return (TxOutValue multiAssetInEra val)
