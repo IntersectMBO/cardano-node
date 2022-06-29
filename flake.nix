@@ -212,7 +212,7 @@
 
           shell = import ./shell.nix { inherit pkgs customConfig cardano-mainnet-mirror; };
           devShells = {
-            inherit (shell) devops;
+            inherit (shell) devops workbench-shell;
             cluster = shell;
             profiled = project.profiled.shell;
           };
