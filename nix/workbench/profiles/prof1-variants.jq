@@ -470,4 +470,24 @@ def all_profile_variants:
   , $scenario_chainsync * $chaindb_early_alonzo * $p2p *
     { name: "chainsync-early-alonzo-p2p"
     }
+
+  ## Last, but not least, the profile used by "nix-shell -A devops":
+  , { name: "devops"
+    , scenario:               "idle"
+    , genesis:
+      { slot_duration:         0.2
+      , parameter_k:           10
+      , epoch_length:          1000
+      , active_slots_coeff:    0.1
+      , genesis_future_offset: "10 seconds"
+      , utxo:                  0
+
+      , shelley:
+        { updateQuorum:        1
+        }
+      }
+    , analysis:
+      { type:                  null
+      }
+    }
   ];

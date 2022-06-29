@@ -30,13 +30,13 @@ case "$op" in
 
     all-profiles | generate-all | all )
         with_era_profiles '
-          map (profiles(.; null; null; []))
+          map (generate_all_era_profiles(.; null; null))
           | add
         ';;
 
     all-profile-names | names | all-names )
         with_era_profiles '
-          map (profile_names(.; null; null; []))
+          map (generate_all_era_profiles(.; null; null) | map(.name))
           | add
         ';;
 
@@ -45,7 +45,9 @@ case "$op" in
         local name=${1:?$usage}
 
         with_era_profiles '
-          map (has_profile(.; null; null; []; $name))
+          map (generate_all_era_profiles(.; null; null)
+               | map (.name == $name)
+               | any)
           | any
         ' --exit-status --arg name "$name" >/dev/null
         ;;
@@ -84,7 +86,7 @@ case "$op" in
         local name=${1:?$usage}
 
         profile json $name |
-        jq 'include "derived";
+        jq 'include "prof2-derived";
 
            profile_pretty_describe(.)
            ' --raw-output -L "$global_basedir/profiles" -L "$global_basedir";;
