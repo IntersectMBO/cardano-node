@@ -17,12 +17,9 @@ module Cardano.CLI.Shelley.Run.Transaction
   , toTxOutValueInAnyEra
   , toTxOutInAnyEra
   , TxFeature(..)
-  , createScriptWitness
-  , readFileTxMetadata
-  , validateScriptSupportedInEra
-  , readRequiredSigner
-  , readProtocolParametersSourceSpec
-  , scriptWitnessPolicyId
+  , partitionSomeWitnesses
+  , categoriseSomeWitness
+  , mkShelleyBootstrapWitnesses
   ) where
 
 import           Cardano.Prelude hiding (All, Any)
