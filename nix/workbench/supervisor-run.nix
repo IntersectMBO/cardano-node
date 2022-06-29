@@ -69,9 +69,9 @@ let
         echo "workbench:  alternate command for this action:  wb run restart" >&2
   '';
 
-  nodeBuildProducts =
+  nodeBuildProduct =
     name:
-    "report ${name}.log $out ${name}/stdout";
+    "report ${name}-log $out ${name}/stdout";
 
   profile-run =
     { trace ? false }:
@@ -134,12 +134,11 @@ let
           rmdir    run/$tag    run
 
           cat > $out/nix-support/hydra-build-products <<EOF
-          report workbench.log   $out wb-start.log
-          report meta.json       $out meta.json
+          report workbench-log   $out wb-start.log
+          report meta            $out meta.json
           ${pkgs.lib.concatStringsSep "\n"
-            (map nodeBuildProducts (__attrNames profileNix.node-specs.value))}
-          report node-0          $out meta.json
-          report archive.tar.zst $out archive.tar.zst
+            (map nodeBuildProduct (__attrNames profileNix.node-specs.value))}
+          report archive-tar-zst $out archive.tar.zst
           EOF
 
           echo "workbench-test:  completed run $tag"
