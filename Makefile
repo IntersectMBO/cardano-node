@@ -16,7 +16,9 @@ ARGS    ?=
 CMD     ?=
 RUN     ?=
 
-lint hlint:
+lint hlint: ## Run the CI version of hlint
+	nix build --no-link '.#checks/hlint' --cores 0
+host-hlint: ## Run the system (not Nix) version of hlint
 	hlint bench cardano-{api,cli,client-demo,node,node-capi,node-chairman,submit-api,testnet,tracer}
 
 stylish-haskell: ## Apply stylish-haskell on all *.hs files

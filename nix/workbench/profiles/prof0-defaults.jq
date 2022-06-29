@@ -1,6 +1,6 @@
 ## Testable with:
 ##
-##   jq -n 'include "defaults" { search: "nix/workbench/profiles" }; era_defaults("babbage")'
+##   jq -n 'include "prof0-defaults" { search: "nix/workbench/profiles" }; era_defaults("babbage")'
 ##
 def era_defaults($era):
 { common:

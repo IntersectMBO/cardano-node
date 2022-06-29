@@ -100,7 +100,6 @@ library
                      , ouroboros-consensus
                      -- for Data.SOP.Strict:
                      , ouroboros-network
-                     , perf
                      , process
                      , quiet
                      , scientific

@@ -17,8 +17,8 @@
 ##  - era-dependent defaults for the aforementioned sections:
 ##    - profiles/defaults.jq
 ##
-##  - overlaid with generated profile variants + ad-hoc profiles:
-##    - profiles/variants.jq and profiles/adhoc.jq
+##  - overlaid with generated profile variants (including adhoc profiles):
+##    - profiles/variants.jq
 ##
 ##  - each then further overlaid with derived parameters, computed from the above:
 ##    - profiles/derived.jq
@@ -58,39 +58,54 @@
 ## ..which simply calls ./profiles.nix with {} params.
 ##
 
-include "topology";
-include "defaults";
-include "adhoc";
-include "variants";
-include "derived";
+include "prof0-defaults";
+include "prof1-variants";
+include "prof2-derived";
 
-def compute_profiles($era; $mcompo; $topo; $extra_profiles):
+## Cluster composition is an extract from the topology,
+## that classifies nodes into BFT, regular pools and dense pools,
+## based on the 'pools' field.
+##
+## Testable with:
+##
+##   jq -n 'include "composition" { search: "nix/workbench/profiles" }; topology_composition({ coreNodes: { bft1: { pools: 0 } } })'
+##
+def topology_composition($topo):
+    $topo
+  | (.Producers // .coreNodes // {})
+  | to_entries
+  | map (.value.pools // 0)
+  | length                           as $n_hosts
+  | map (select (. == 0))            as $bfts
+  | map (select (. != 0))            as $pools
+  | ($pools | map (select (. == 1))) as $singular_pools
+  | ($pools | map (select (.  > 1))) as $dense_pools
+  | ($singular_pools | length)       as $n_singular_hosts
+  | { n_bft_hosts:      ($bfts           | length)
+    , n_singular_hosts: ($singular_pools | length)
+    , n_dense_hosts:    ($dense_pools    | length)
+    };
+
+##
+## This is the workbench's entry point for everything profile.
+##
+##  generate_all_era_profiles :: Era -> Maybe Composition -> Topology -> Map Name Profile
+##
+def generate_all_era_profiles($era; $mcompo; $topo):
     ($mcompo // topology_composition($topo // {}) // {}) as $compo
 
-  ## Profiles are variants + custom (or aux) profiles:
-  | all_profile_variants + adhoc_profiles + $extra_profiles
-  | map (## Each profile extends defaults:
-         era_defaults($era) * .
+  | all_profile_variants
+  | map (## Each profile is defined as extension of defaults:
+         era_defaults($era)                                    ## prof0-defaults.jq
+         * .                                                   ## prof1-variants.jq
 
-         ## Profiles can define their own cluster composition.
+         ## Profiles define their own cluster composition:
          | . * { composition: (.composition // $compo) }
 
-         ## Compute the derived params.
-         | add_derived_params
-        );
-
-def profiles($era; $mcompo; $topo; $extra_profiles):
-  compute_profiles($era; $mcompo; $topo; $extra_profiles)
+         ## Finally, compute the derived ("computed") params.
+         | add_derived_params                                  ## prof2-derived.jq
+        )
   | map (## Assemble into a dictionary..
            { "\(.name)": .
            })
   | add;
-
-def profile_names($era; $mcompo; $topo; $extra_profiles):
-  compute_profiles($era; $mcompo; $topo; $extra_profiles)
-  | map (.name);
-
-def has_profile($era; $mcompo; $topo; $extra_profiles; $name):
-  compute_profiles($era; $mcompo; $topo; $extra_profiles)
-  | map (.name == $name)
-  | any;
