@@ -65,7 +65,7 @@ shelleyGenesisDefaults =
       -- genesis keys and initial funds
     , sgGenDelegs             = Map.empty
     , sgStaking               = emptyGenesisStaking
-    , sgInitialFunds          = Map.empty
+    , sgInitialFunds          = mempty
     , sgMaxLovelaceSupply     = 0
     }
   where

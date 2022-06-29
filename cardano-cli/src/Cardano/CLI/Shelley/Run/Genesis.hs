@@ -28,6 +28,7 @@ import qualified Data.ByteString.Lazy.Char8 as LBS
 import           Data.Coerce (coerce)
 import qualified Data.List as List
 import qualified Data.List.Split as List
+import qualified Data.ListMap as ListMap
 import qualified Data.Map.Strict as Map
 
 import qualified Data.Sequence.Strict as Seq
@@ -1012,7 +1013,7 @@ updateTemplate (SystemStart start)
           { sgSystemStart = start
           , sgMaxLovelaceSupply = fromIntegral $ nonDelegCoin + delegCoin
           , sgGenDelegs = shelleyDelKeys
-          , sgInitialFunds = Map.fromList
+          , sgInitialFunds = ListMap.ListMap
                               [ (toShelleyAddr addr, toShelleyLovelace v)
                               | (addr, v) <-
                                 distribute (nonDelegCoin - subtractForTreasury) utxoAddrsNonDeleg ++
@@ -1020,10 +1021,10 @@ updateTemplate (SystemStart start)
                                 mkStuffedUtxo stuffedUtxoAddrs ]
           , sgStaking =
             ShelleyGenesisStaking
-              { sgsPools = Map.fromList
+              { sgsPools = ListMap.ListMap
                             [ (Ledger._poolId poolParams, poolParams)
                             | poolParams <- Map.elems poolSpecs ]
-              , sgsStake = Ledger._poolId <$> poolSpecs
+              , sgsStake = ListMap.ListMap . Map.toList $ Ledger._poolId <$> poolSpecs
               }
           , sgProtocolParams = pparamsFromTemplate
           }

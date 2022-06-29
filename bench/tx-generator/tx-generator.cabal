@@ -73,6 +73,7 @@ library
                      , cardano-cli
                      , cardano-crypto-class
                      , cardano-crypto-wrapper
+                     , cardano-data
                      , cardano-git-rev
                      , cardano-ledger-alonzo
                      , cardano-ledger-byron
