@@ -62,30 +62,6 @@ include "prof0-defaults";
 include "prof1-variants";
 include "prof2-derived";
 
-##
-## This is the workbench's entry point for everything profile.
-##
-##  generate_all_era_profiles :: Era -> Maybe Composition -> Topology -> Map Name Profile
-##
-def generate_all_era_profiles($era; $mcompo; $topo):
-    ($mcompo // topology_composition($topo // {}) // {}) as $compo
-
-  | all_profile_variants
-  | map (## Each profile is defined as extension of defaults:
-         era_defaults($era) * .
-
-         ## Profiles define their own cluster composition:
-         | . * { composition: (.composition // $compo) }
-
-         ## Finally, compute the derived ("computed") params.
-         | add_derived_params
-        );
-  | map (## Assemble into a dictionary..
-           { "\(.name)": .
-           })
-  | add;
-
-
 ## Cluster composition is an extract from the topology,
 ## that classifies nodes into BFT, regular pools and dense pools,
 ## based on the 'pools' field.
@@ -109,3 +85,27 @@ def topology_composition($topo):
     , n_singular_hosts: ($singular_pools | length)
     , n_dense_hosts:    ($dense_pools    | length)
     };
+
+##
+## This is the workbench's entry point for everything profile.
+##
+##  generate_all_era_profiles :: Era -> Maybe Composition -> Topology -> Map Name Profile
+##
+def generate_all_era_profiles($era; $mcompo; $topo):
+    ($mcompo // topology_composition($topo // {}) // {}) as $compo
+
+  | all_profile_variants
+  | map (## Each profile is defined as extension of defaults:
+         era_defaults($era)                                    ## prof0-defaults.jq
+         * .                                                   ## prof1-variants.jq
+
+         ## Profiles define their own cluster composition:
+         | . * { composition: (.composition // $compo) }
+
+         ## Finally, compute the derived ("computed") params.
+         | add_derived_params                                  ## prof2-derived.jq
+        )
+  | map (## Assemble into a dictionary..
+           { "\(.name)": .
+           })
+  | add;
