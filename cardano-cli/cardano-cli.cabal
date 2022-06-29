@@ -71,6 +71,11 @@ library
                         Cardano.CLI.Byron.Vote
 
                         Cardano.CLI.Faucet
+                        Cardano.CLI.Faucet.Misc
+                        Cardano.CLI.Faucet.TxUtils
+                        Cardano.CLI.Faucet.Types
+                        Cardano.CLI.Faucet.Utils
+                        Cardano.CLI.Faucet.Web
 
                         Cardano.CLI.Shelley.Commands
                         Cardano.CLI.Shelley.Key
@@ -112,7 +117,6 @@ library
                       , cardano-crypto-wrapper
                       , cardano-data
                       , cardano-ledger-alonzo
-                      , cardano-ledger-babbage
                       , cardano-ledger-byron
                       , cardano-ledger-core
                       , cardano-ledger-shelley-ma
@@ -210,6 +214,11 @@ test-suite cardano-cli-test
                         Test.OptParse
 
   ghc-options:          -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T
+
+executable cardano-new-faucet
+  import:               base, project-config
+  main-is:              cardano-new-faucet.hs
+  build-depends:        cardano-cli
 
 test-suite cardano-cli-golden
   import:               base, project-config
