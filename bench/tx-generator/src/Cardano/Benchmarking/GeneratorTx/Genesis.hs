@@ -8,7 +8,7 @@ module Cardano.Benchmarking.GeneratorTx.Genesis
 where
 
 import           Cardano.Prelude hiding (TypeError, filter)
-import qualified Data.Map.Strict as Map
+import qualified Data.ListMap as ListMap
 import           Prelude (error, filter)
 
 import           Cardano.Api
@@ -25,7 +25,7 @@ genesisFunds :: forall era. IsShelleyBasedEra era
   => NetworkId -> ShelleyGenesis StandardShelley -> [(AddressInEra era, Lovelace)]
 genesisFunds networkId g
  = map (castAddr *** fromShelleyLovelace)
-     $ Map.toList
+     $ ListMap.toList
      $ sgInitialFunds g
  where
   castAddr (Addr _ pcr stref)
