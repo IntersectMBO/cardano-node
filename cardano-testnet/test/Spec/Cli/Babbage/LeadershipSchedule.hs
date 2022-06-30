@@ -7,6 +7,7 @@
 
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
+{- HLINT ignore "Redundant id" -}
 {- HLINT ignore "Redundant return" -}
 {- HLINT ignore "Use head" -}
 {- HLINT ignore "Use let" -}
@@ -110,8 +111,8 @@ hprop_leadershipSchedule = H.integration . H.runFinallies . H.workspace "alonzo"
 
   let poolVrfSkey = TR.poolNodeKeysVrfSkey $ TR.poolNodeKeys poolNode1
 
-  id $ do
-    currentScheduleFile <- H.noteTempFile tempAbsPath "schedule.log"
+  id do
+    scheduleFile <- H.noteTempFile tempAbsPath "schedule.log"
 
     leadershipScheduleDeadline <- H.noteShowM $ DTC.addUTCTime 180 <$> H.noteShowIO DTC.getCurrentTime
 
@@ -122,11 +123,11 @@ hprop_leadershipSchedule = H.integration . H.runFinallies . H.workspace "alonzo"
         , "--genesis", TC.shelleyGenesisFile tr
         , "--stake-pool-id", stakePoolId
         , "--vrf-signing-key-file", poolVrfSkey
-        , "--out-file", currentScheduleFile
+        , "--out-file", scheduleFile
         , "--current"
         ]
 
-    scheduleJson <- H.leftFailM $ H.readJsonFile currentScheduleFile
+    scheduleJson <- H.leftFailM $ H.readJsonFile scheduleFile
 
     expectedLeadershipSlotNumbers <- H.noteShowM $ fmap (fmap slotNumber) $ H.leftFail $ J.parseEither (J.parseJSON @[LeadershipSlot]) scheduleJson
 
@@ -151,8 +152,8 @@ hprop_leadershipSchedule = H.integration . H.runFinallies . H.workspace "alonzo"
     -- As there are no BFT nodes, the next leadership schedule should match slots assigned exactly
     H.assert $ L.null (expectedLeadershipSlotNumbers \\ leaderSlots)
 
-  id $ do
-    currentScheduleFile <- H.noteTempFile tempAbsPath "schedule.log"
+  id do
+    scheduleFile <- H.noteTempFile tempAbsPath "schedule.log"
 
     leadershipScheduleDeadline <- H.noteShowM $ DTC.addUTCTime 180 <$> H.noteShowIO DTC.getCurrentTime
 
@@ -163,11 +164,11 @@ hprop_leadershipSchedule = H.integration . H.runFinallies . H.workspace "alonzo"
         , "--genesis", TC.shelleyGenesisFile tr
         , "--stake-pool-id", stakePoolId
         , "--vrf-signing-key-file", poolVrfSkey
-        , "--out-file", currentScheduleFile
+        , "--out-file", scheduleFile
         , "--next"
         ]
 
-    scheduleJson <- H.leftFailM $ H.readJsonFile currentScheduleFile
+    scheduleJson <- H.leftFailM $ H.readJsonFile scheduleFile
 
     expectedLeadershipSlotNumbers <- H.noteShowM $ fmap (fmap slotNumber) $ H.leftFail $ J.parseEither (J.parseJSON @[LeadershipSlot]) scheduleJson
 

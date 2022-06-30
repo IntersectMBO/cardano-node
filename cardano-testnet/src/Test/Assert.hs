@@ -69,7 +69,7 @@ getRelevantLeaderSlots :: FilePath -> Int -> H.PropertyT (ReaderT IntegrationSta
 getRelevantLeaderSlots poolNodeStdoutFile slotLowerBound = do
   vs <- readJsonLines poolNodeStdoutFile
   leaderSlots <- H.noteShow
-    $ Maybe.mapMaybe (\v -> v ^? J.key "data" . J.key "val" . J.key "slot" . J._Integer. to fromIntegral)
+    $ Maybe.mapMaybe (\v -> v ^? J.key "data" . J.key "val" . J.key "slot" . J._Integer . to fromIntegral)
     $ L.filter       (\v -> v ^. J.key "data" . J.key "val" . J.key "kind" . J._String == "TraceNodeIsLeader")
     vs
   relevantLeaderSlots <- H.noteShow
