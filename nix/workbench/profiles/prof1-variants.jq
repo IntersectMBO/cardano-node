@@ -351,6 +351,10 @@ def all_profile_variants:
     { name: "plutus"
     , desc: "Default with Plutus workload"
     }
+  , $old_tracing *
+    { name: "oldtracing"
+    , desc: "Default in legacy tracing mode"
+    }
 
   ## Fastest -- start-stop
   , $startstop_base *
