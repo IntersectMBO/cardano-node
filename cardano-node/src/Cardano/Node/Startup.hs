@@ -160,6 +160,7 @@ docNodeInfoTraceEvent = Documented [
         \\n _niName_: Name of the node. \
         \\n _niProtocol_: Protocol which this nodes uses. \
         \\n _niVersion_: Software version which this node is using. \
+        \\n _niCommit_: Commit this node is built from. \
         \\n _niStartTime_: Start time of this node. \
         \\n _niSystemStartTime_: How long did the start of the node took."
   ]

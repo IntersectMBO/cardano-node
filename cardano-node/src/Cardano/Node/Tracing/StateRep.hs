@@ -128,14 +128,17 @@ instance LogFormatting NodeState where
 docNodeState :: Documented NodeState
 docNodeState = addDocumentedNamespace  [] $
   Documented
-  [ DocMsg ["NodeTracingOnlineConfiguring"] [] "Tracing system came online, system configuring now"
-  , DocMsg ["NodeOpeningDbs"]               [] "ChainDB components being opened"
-  , DocMsg ["NodeReplays"]                  [] "Replaying chain"
-  , DocMsg ["NodeInitChainSelection"]       [] "Performing initial chain selection"
-  , DocMsg ["NodeKernelOnline"]             [] "Node kernel online"
-  , DocMsg ["NodeAddBlock"]                 [] "Applying block"
-  , DocMsg ["NodeStartup"]                  [] "Node startup"
-  , DocMsg ["NodeShutdown"]                 [] "Node shutting down"
+  [ DocMsg ["NodeState"] []
+    "State information about this node. It is presented as a sum of the following states\
+    \\n\
+    \\n _NodeTracingOnlineConfiguring_: Tracing system came online, system configuring now. \
+    \\n _NodeOpeningDbs_: ChainDB components being opened. \
+    \\n _NodeReplays_: Replaying chain. \
+    \\n _NodeInitChainSelection_: Performing initial chain selection. \
+    \\n _NodeKernelOnline_: Node kernel online. \
+    \\n _NodeAddBlock_: Applying block. \
+    \\n _NodeStartup_: Node startup. \
+    \\n _NodeShutdown_: Node shutting down."
   ]
 
 namesNodeState :: NodeState -> [Text]

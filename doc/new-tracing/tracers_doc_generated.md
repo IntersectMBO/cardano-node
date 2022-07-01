@@ -225,18 +225,12 @@
 			1. [RollForward](#chainsyncserialisednodetonodesendrollforward)
 1. __ChainSyncServerBlock__
 	1. __ChainSyncServerEvent__
-		1. __ServerRead__
-			1. [RollBackward](#chainsyncserverblockchainsyncservereventserverreadrollbackward)
-			1. [RollForward](#chainsyncserverblockchainsyncservereventserverreadrollforward)
-			1. [ServerRead](#chainsyncserverblockchainsyncservereventserverreadserverread)
-			1. [ServerReadBlocked](#chainsyncserverblockchainsyncservereventserverreadserverreadblocked)
+		1. __Update__
+			1. [Update](#chainsyncserverblockchainsyncservereventupdateupdate)
 1. __ChainSyncServerHeader__
 	1. __ChainSyncServerEvent__
-		1. __ServerRead__
-			1. [RollBackward](#chainsyncserverheaderchainsyncservereventserverreadrollbackward)
-			1. [RollForward](#chainsyncserverheaderchainsyncservereventserverreadrollforward)
-			1. [ServerRead](#chainsyncserverheaderchainsyncservereventserverreadserverread)
-			1. [ServerReadBlocked](#chainsyncserverheaderchainsyncservereventserverreadserverreadblocked)
+		1. __Update__
+			1. [Update](#chainsyncserverheaderchainsyncservereventupdateupdate)
 1. __ConnectionManager__
 	1. [Connect](#connectionmanagerconnect)
 	1. [ConnectError](#connectionmanagerconnecterror)
@@ -603,7 +597,7 @@
 1. __Shutdown__
 	1. [AbnormalShutdown](#shutdownabnormalshutdown)
 	1. [RequestingShutdown](#shutdownrequestingshutdown)
-	1. [ShutdownArmedAtSlot](#shutdownshutdownarmedatslot)
+	1. [ShutdownArmedAt](#shutdownshutdownarmedat)
 	1. [ShutdownRequested](#shutdownshutdownrequested)
 	1. [ShutdownUnexpectedInput](#shutdownshutdownunexpectedinput)
 1. __Startup__
@@ -751,9 +745,6 @@
 		1. __metrics__
 			1. __served__
 				1. [header](#cardanonodemetricsservedheader)
-				1. [header](#cardanonodemetricsservedheader)
-				1. [header](#cardanonodemetricsservedheader)
-				1. [header](#cardanonodemetricsservedheader)
 		1. [nodeCannotForge](#cardanonodenodecannotforge)
 		1. [nodeIsLeader](#cardanonodenodeisleader)
 		1. [nodeNotLeader](#cardanonodenodenotleader)
@@ -800,6 +791,8 @@
 
 ## [Datapoints](#datapoints)
 1. [NodeInfo](#nodeinfo)
+1. [NodePeers](#nodepeers)
+1. [NodeState](#nodestate)
 
 ## Trace Messages
 ### AcceptPolicy.ConnectionHardLimit
@@ -3691,39 +3684,7 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### ChainSyncServerBlock.ChainSyncServerEvent.ServerRead.RollBackward
-
-
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### ChainSyncServerBlock.ChainSyncServerEvent.ServerRead.RollForward
-
-
-***
-Roll forward to the given point.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### ChainSyncServerBlock.ChainSyncServerEvent.ServerRead.ServerRead
+### ChainSyncServerBlock.ChainSyncServerEvent.Update.Update
 
 
 ***
@@ -3739,75 +3700,11 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### ChainSyncServerBlock.ChainSyncServerEvent.ServerRead.ServerReadBlocked
-
-
-***
-A server read has blocked, either for an add block or a rollback
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### ChainSyncServerHeader.ChainSyncServerEvent.ServerRead.RollBackward
-
-
-***
-
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### ChainSyncServerHeader.ChainSyncServerEvent.ServerRead.RollForward
-
-
-***
-Roll forward to the given point.
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### ChainSyncServerHeader.ChainSyncServerEvent.ServerRead.ServerRead
+### ChainSyncServerHeader.ChainSyncServerEvent.Update.Update
 
 
 ***
 A server read has occurred, either for an add block or a rollback
-***
-
-
-From current configuration:
-Details:   `DNormal`
-Backends:
-			`EKGBackend`,
-			`Stdout MachineFormat`,
-			`Forwarder`
-Filtered  by config value: `Notice`
-
-### ChainSyncServerHeader.ChainSyncServerEvent.ServerRead.ServerReadBlocked
-
-
-***
-A server read has blocked, either for an add block or a rollback
 ***
 
 
@@ -9046,7 +8943,7 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
-### Shutdown.ShutdownArmedAtSlot
+### Shutdown.ShutdownArmedAt
 
 
 ***
@@ -10943,51 +10840,12 @@ Filtered  by config value: `Info`
 ### cardano.node.metrics.served.header
 
 ***
-A counter triggered ony on header event
+A counter triggered only on header event
 ***
 
 
 Dispatched by: 
-ChainSyncServerHeader.ChainSyncServerEvent.ServerRead.RollBackward
-
-From current configuration:
-Filtered  by config value: `Notice`
-
-### cardano.node.metrics.served.header
-
-***
-A counter triggered ony on header event
-***
-
-
-Dispatched by: 
-ChainSyncServerHeader.ChainSyncServerEvent.ServerRead.RollForward
-
-From current configuration:
-Filtered  by config value: `Notice`
-
-### cardano.node.metrics.served.header
-
-***
-A counter triggered ony on header event
-***
-
-
-Dispatched by: 
-ChainSyncServerHeader.ChainSyncServerEvent.ServerRead.ServerRead
-
-From current configuration:
-Filtered  by config value: `Notice`
-
-### cardano.node.metrics.served.header
-
-***
-A counter triggered ony on header event
-***
-
-
-Dispatched by: 
-ChainSyncServerHeader.ChainSyncServerEvent.ServerRead.ServerReadBlocked
+ChainSyncServerHeader.ChainSyncServerEvent.Update.Update
 
 From current configuration:
 Filtered  by config value: `Notice`
@@ -11483,12 +11341,38 @@ Basic information about this node collected at startup
  _niName_: Name of the node. 
  _niProtocol_: Protocol which this nodes uses. 
  _niVersion_: Software version which this node is using. 
+ _niCommit_: Commit this node is built from. 
  _niStartTime_: Start time of this node. 
  _niSystemStartTime_: How long did the start of the node took.
 ***
 
 
-Configuration: TraceConfig {tcOptions = fromList [([],[ConfSeverity {severity = Notice},ConfDetail {detail = DNormal},ConfBackend {backends = [Stdout MachineFormat,EKGBackend,Forwarder]}]),(["AcceptPolicy"],[ConfSeverity {severity = Info}]),(["BlockFetchClient","CompletedBlockFetch"],[ConfLimiter {maxFrequency = 2.0}]),(["ChainDB"],[ConfSeverity {severity = Info}]),(["ChainDB","AddBlockEvent","AddBlockValidation","ValidCandidate"],[ConfLimiter {maxFrequency = 2.0}]),(["ChainDB","AddBlockEvent","AddedBlockToQueue"],[ConfLimiter {maxFrequency = 2.0}]),(["ChainDB","AddBlockEvent","AddedBlockToVolatileDB"],[ConfLimiter {maxFrequency = 2.0}]),(["ChainDB","CopyToImmutableDBEvent","CopiedBlockToImmutableDB"],[ConfLimiter {maxFrequency = 2.0}]),(["DNSResolver"],[ConfSeverity {severity = Info}]),(["DNSSubscription"],[ConfSeverity {severity = Info}]),(["DiffusionInit"],[ConfSeverity {severity = Info}]),(["ErrorPolicy"],[ConfSeverity {severity = Info}]),(["Forge"],[ConfSeverity {severity = Info}]),(["IpSubscription"],[ConfSeverity {severity = Info}]),(["LocalErrorPolicy"],[ConfSeverity {severity = Info}]),(["Mempool"],[ConfSeverity {severity = Info}]),(["Resources"],[ConfSeverity {severity = Info}])], tcForwarder = TraceOptionForwarder {tofAddress = LocalSocket "/tmp/forwarder.sock", tofMode = Initiator, tofConnQueueSize = 2000, tofDisconnQueueSize = 200000, tofVerbosity = Minimum}, tcNodeName = Nothing, tcPeerFrequency = Just 2000, tcResourceFrequency = Just 5000}
+### NodePeers
 
-677 log messages.
-Generated at 2022-06-03 12:11:02.013173249 CEST.
+
+***
+Information about peers of this node. Contains a list of _PeerInfoPP_ messages.
+***
+
+
+### NodeState
+
+
+***
+State information about this node. It is presented as a sum of the following states
+
+ _NodeTracingOnlineConfiguring_: Tracing system came online, system configuring now. 
+ _NodeOpeningDbs_: ChainDB components being opened. 
+ _NodeReplays_: Replaying chain. 
+ _NodeInitChainSelection_: Performing initial chain selection. 
+ _NodeKernelOnline_: Node kernel online. 
+ _NodeAddBlock_: Applying block. 
+ _NodeStartup_: Node startup. 
+ _NodeShutdown_: Node shutting down.
+***
+
+
+Configuration: TraceConfig {tcOptions = fromList [([],[ConfSeverity {severity = Notice},ConfDetail {detail = DNormal},ConfBackend {backends = [Stdout MachineFormat,EKGBackend,Forwarder]}]),(["AcceptPolicy"],[ConfSeverity {severity = Info}]),(["BlockFetchClient","CompletedBlockFetch"],[ConfLimiter {maxFrequency = 2.0}]),(["ChainDB"],[ConfSeverity {severity = Info}]),(["ChainDB","AddBlockEvent","AddBlockValidation","ValidCandidate"],[ConfLimiter {maxFrequency = 2.0}]),(["ChainDB","AddBlockEvent","AddedBlockToQueue"],[ConfLimiter {maxFrequency = 2.0}]),(["ChainDB","AddBlockEvent","AddedBlockToVolatileDB"],[ConfLimiter {maxFrequency = 2.0}]),(["ChainDB","CopyToImmutableDBEvent","CopiedBlockToImmutableDB"],[ConfLimiter {maxFrequency = 2.0}]),(["DNSResolver"],[ConfSeverity {severity = Info}]),(["DNSSubscription"],[ConfSeverity {severity = Info}]),(["DiffusionInit"],[ConfSeverity {severity = Info}]),(["ErrorPolicy"],[ConfSeverity {severity = Info}]),(["Forge"],[ConfSeverity {severity = Info}]),(["IpSubscription"],[ConfSeverity {severity = Info}]),(["LocalErrorPolicy"],[ConfSeverity {severity = Info}]),(["Mempool"],[ConfSeverity {severity = Info}]),(["Resources"],[ConfSeverity {severity = Info}])], tcForwarder = TraceOptionForwarder {tofConnQueueSize = 2000, tofDisconnQueueSize = 200000, tofVerbosity = Minimum}, tcNodeName = Nothing, tcPeerFrequency = Just 2000, tcResourceFrequency = Just 5000}
+
+670 log messages.
+Generated at 2022-07-01 14:37:24.670427671 +04.

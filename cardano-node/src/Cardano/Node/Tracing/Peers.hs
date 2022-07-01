@@ -3,6 +3,7 @@
 
 module Cardano.Node.Tracing.Peers
   ( NodePeers (..)
+  , docNodePeers
   , traceNodePeers
   ) where
 
@@ -29,3 +30,9 @@ traceNodePeers
   -> [PeerT blk]
   -> IO ()
 traceNodePeers tr ev = traceWith tr $ NodePeers (map ppPeer ev)
+
+docNodePeers :: Documented NodePeers
+docNodePeers = Documented [
+    DocMsg ["NodePeers"] []
+    "Information about peers of this node. Contains a list of _PeerInfoPP_ messages."
+  ]

@@ -29,6 +29,8 @@ import           Cardano.Logging.Resources.Types
 import           Cardano.Prelude hiding (trace)
 
 import           Cardano.Node.Tracing.Formatting ()
+import           Cardano.Node.Tracing.Peers
+import           Cardano.Node.Tracing.StateRep
 import           Cardano.Node.Tracing.Tracers.BlockReplayProgress
 import           Cardano.Node.Tracing.Tracers.ChainDB
 import           Cardano.Node.Tracing.Tracers.Consensus
@@ -192,6 +194,22 @@ docTracers configFileName outputFileName _ _ _ = do
     configureTracers trConfig docNodeInfoTraceEvent [nodeInfoTr]
     nodeInfoTrDoc <- documentTracer trConfig nodeInfoTr
       (docNodeInfoTraceEvent :: Documented NodeInfo)
+
+    -- NodeState tracer
+    nodeStateTr <- mkDataPointTracer
+                trDataPoint
+                (const ["NodeState"])
+    configureTracers trConfig docNodeState [nodeStateTr]
+    nodeStateTrDoc <- documentTracer trConfig nodeStateTr
+      (docNodeState :: Documented NodeState)
+
+    -- NodeState tracer
+    nodePeersTr <- mkDataPointTracer
+                trDataPoint
+                (const ["NodePeers"])
+    configureTracers trConfig docNodePeers [nodePeersTr]
+    nodePeersTrDoc <- documentTracer trConfig nodePeersTr
+      (docNodePeers :: Documented NodePeers)
 
     -- Resource tracer
     resourcesTr <- mkCardanoTracer
@@ -847,7 +865,9 @@ docTracers configFileName outputFileName _ _ _ = do
     dtAcceptPolicyTrDoc <- documentTracer trConfig dtAcceptPolicyTr
       (docAcceptPolicy :: Documented NtN.AcceptConnectionsPolicyTrace)
 
-    let bl =  nodeInfoTrDoc
+    let bl =   nodeInfoTrDoc
+            <> nodeStateTrDoc
+            <> nodePeersTrDoc
             <> resourcesTrDoc
             <> startupTrDoc
             <> shutdownTrDoc

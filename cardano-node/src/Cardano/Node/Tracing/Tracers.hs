@@ -97,6 +97,7 @@ mkDispatchTracers nodeKernel trBase trForward mbTrEKG trDataPoint trConfig enabl
     nodeStateDP <- mkDataPointTracer
                 trDataPoint
                 (const ["NodeState"])
+    configureTracers trConfig SR.docNodeState [nodeStateDP]
 
     -- State tracer
     stateTr   <- mkCardanoTracer
@@ -110,6 +111,7 @@ mkDispatchTracers nodeKernel trBase trForward mbTrEKG trDataPoint trConfig enabl
     nodePeersDP <- mkDataPointTracer
                 trDataPoint
                 (const ["NodePeers"])
+    configureTracers trConfig docNodePeers [nodePeersDP]
 
     -- Peers tracer
     peersTr   <- mkCardanoTracer
