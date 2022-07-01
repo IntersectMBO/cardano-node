@@ -686,7 +686,7 @@ pTransaction =
       , Opt.help $ mconcat
         [ "Assertion that the script is invalid.  "
         , "If a transaction is submitted with such a script, "
-        , "the script will fail and the collateral taken"
+        , "the script will fail and the collateral will be taken."
         ]
       ]
     ]
