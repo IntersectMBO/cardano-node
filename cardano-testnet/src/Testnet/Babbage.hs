@@ -21,7 +21,6 @@ module Testnet.Babbage
   ) where
 
 import           Control.Applicative (Applicative (..))
-import           Control.Lens ((.~))
 import           Control.Monad (Monad (..), fmap, forM, forM_, return, void, when, (=<<))
 import           Data.Aeson (encode, object, toJSON, (.=))
 import           Data.Bool (Bool (..))
@@ -42,7 +41,6 @@ import           Test.Runtime (Delegator (..), NodeLoggingFormat (..), PaymentKe
                    TestnetRuntime (..))
 import           Text.Show (Show (show))
 
-import qualified Data.Aeson.Lens as J
 import qualified Data.HashMap.Lazy as HM
 import qualified Data.List as L
 import qualified Data.Time.Clock as DTC
@@ -244,23 +242,24 @@ testnet testnetOptions H.Conf {..} = do
   H.renameFile (tempAbsPath </> "genesis.alonzo.json") (tempAbsPath </> "genesis/shelley/genesis.alonzo.json")
   H.renameFile (tempAbsPath </> "genesis.json") (tempAbsPath </> "genesis/shelley/genesis.json")
 
-  H.rewriteJsonFile (tempAbsPath </> "genesis/byron/genesis.json")
-    $ J.key "protocolConsts" . J.key "protocolMagic" .~                              toJSON @Int testnetMagic
+  H.rewriteJsonFile (tempAbsPath </> "genesis/byron/genesis.json") $ J.rewriteObject
+    $ flip HM.adjust "protocolConsts"
+      ( J.rewriteObject ( HM.insert "protocolMagic" (toJSON @Int testnetMagic)))
 
-  H.rewriteJsonFile (tempAbsPath </> "genesis/shelley/genesis.json")
-    ( (J.key "slotLength"             .~ toJSON @Double 0.1)
-    . (J.key "activeSlotsCoeff"       .~ toJSON @Double 0.1)
-    . (J.key "securityParam"          .~ toJSON @Int 10)
-    . (J.key "epochLength"            .~ toJSON @Int 500)
-    . (J.key "maxLovelaceSupply"      .~ toJSON @Int 1000000000000)
-    . (J.key "minFeeA"                .~ toJSON @Int 44)
-    . (J.key "minFeeB"                .~ toJSON @Int 155381)
-    . (J.key "minUTxOValue"           .~ toJSON @Int 1000000)
-    . (J.key "decentralisationParam"  .~ toJSON @Double 0.7)
-    . (J.key "major"                  .~ toJSON @Int 7)
-    . (J.key "rho"                    .~ toJSON @Double 0.1)
-    . (J.key "tau"                    .~ toJSON @Double 0.1)
-    . (J.key "updateQuorum"           .~ toJSON @Int 2)
+  H.rewriteJsonFile (tempAbsPath </> "genesis/shelley/genesis.json") $ J.rewriteObject
+    ( HM.insert "slotLength"             (toJSON @Double 0.1)
+    . HM.insert "activeSlotsCoeff"       (toJSON @Double 0.1)
+    . HM.insert "securityParam"          (toJSON @Int 10)
+    . HM.insert "epochLength"            (toJSON @Int 500)
+    . HM.insert "maxLovelaceSupply"      (toJSON @Int 1000000000000)
+    . HM.insert "minFeeA"                (toJSON @Int 44)
+    . HM.insert "minFeeB"                (toJSON @Int 155381)
+    . HM.insert "minUTxOValue"           (toJSON @Int 1000000)
+    . HM.insert "decentralisationParam"  (toJSON @Double 0.7)
+    . HM.insert "major"                  (toJSON @Int 7)
+    . HM.insert "rho"                    (toJSON @Double 0.1)
+    . HM.insert "tau"                    (toJSON @Double 0.1)
+    . HM.insert "updateQuorum"           (toJSON @Int 2)
     )
 
   H.renameFile (tempAbsPath </> "pools/vrf1.skey") (tempAbsPath </> "node-spo1/vrf.skey")
