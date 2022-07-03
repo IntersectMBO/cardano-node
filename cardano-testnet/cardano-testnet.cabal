@@ -43,8 +43,6 @@ library
                       , hedgehog-extras
                       , http-client
                       , http-types
-                      , lens
-                      , lens-aeson
                       , ouroboros-network
                       , process
                       , random
