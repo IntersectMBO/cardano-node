@@ -42,7 +42,6 @@ import           Cardano.Slotting.Time (SystemStart (..))
 
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import qualified Cardano.Ledger.Alonzo.Data as Alonzo
-import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 import qualified Cardano.Ledger.Babbage.PParams as Babbage
 import qualified Cardano.Ledger.Babbage.TxBody as Babbage
 import qualified Cardano.Ledger.Coin as Shelley
@@ -61,7 +60,6 @@ import qualified Cardano.Ledger.Shelley.Rewards as Shelley
 import qualified Ouroboros.Consensus.Shelley.Eras as Consensus
 
 import           Cardano.Api.Script
-import           Cardano.Api.SerialiseRaw (serialiseToRawBytesHexText)
 
 -- Orphan instances involved in the JSON output of the API queries.
 -- We will remove/replace these as we provide more API wrapper types
@@ -240,12 +238,6 @@ instance ( Ledger.Era era
   toJSON d = case Alonzo.datumDataHash d of
                SNothing -> Aeson.Null
                SJust dH -> toJSON $ ScriptDataHash dH
-
-instance ToJSON (Alonzo.Script (Babbage.BabbageEra Consensus.StandardCrypto)) where
-  toJSON s = Aeson.String . serialiseToRawBytesHexText
-               $ ScriptHash $ Ledger.hashScript @(Babbage.BabbageEra Consensus.StandardCrypto) s
-
-
 
 instance Crypto.Crypto crypto => ToJSON (Shelley.DPState crypto) where
   toJSON dpState = object [ "dstate" .= Shelley.dpsDState dpState
