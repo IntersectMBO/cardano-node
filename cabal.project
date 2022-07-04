@@ -237,7 +237,7 @@ source-repository-package
   type: git
   location: https://github.com/input-output-hk/goblins
   tag: cde90a2b27f79187ca8310b6549331e59595e7ba
-  --sha256: 1x0hl7393yvag54440gg4ds2q5330q4ksj73w6108rmhnk2pspsm
+  --sha256: 17c88rbva3iw82yg9srlxjv2ia5wjb9cyqw44hik565f5v9svnyg
 
 source-repository-package
   type: git
