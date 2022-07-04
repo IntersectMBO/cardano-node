@@ -193,6 +193,13 @@ docTracers configFileName outputFileName _ _ _ = do
     nodeInfoTrDoc <- documentTracer trConfig nodeInfoTr
       (docNodeInfoTraceEvent :: Documented NodeInfo)
 
+    nodeStartupInfoTr <- mkDataPointTracer
+                trDataPoint
+                (const ["NodeStartupInfo"])
+    configureTracers trConfig docNodeStartupInfoTraceEvent [nodeStartupInfoTr]
+    nodeStartupInfoTrDoc <- documentTracer trConfig nodeStartupInfoTr
+      (docNodeStartupInfoTraceEvent :: Documented NodeStartupInfo)
+
     -- Resource tracer
     resourcesTr <- mkCardanoTracer
                 trBase trForward mbTrEKG
@@ -848,6 +855,7 @@ docTracers configFileName outputFileName _ _ _ = do
       (docAcceptPolicy :: Documented NtN.AcceptConnectionsPolicyTrace)
 
     let bl =  nodeInfoTrDoc
+            <> nodeStartupInfoTrDoc
             <> resourcesTrDoc
             <> startupTrDoc
             <> shutdownTrDoc

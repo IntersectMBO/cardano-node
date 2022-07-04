@@ -21,7 +21,7 @@ import Ouroboros.Network.NodeToNode   (NodeToNodeVersion, RemoteAddress)
 import Ouroboros.Network.NodeToClient (LocalAddress, NodeToClientVersion)
 
 import Cardano.Node.Handlers.Shutdown (ShutdownTrace)
-import Cardano.Node.Startup           (NodeInfo, StartupTrace)
+import Cardano.Node.Startup           (NodeInfo, NodeStartupInfo, StartupTrace)
 
 import Cardano.Logging.Resources
 import Cardano.Node.Tracing.StateRep (NodeState)
@@ -46,6 +46,7 @@ data Tracers peer localPeer blk p2p = Tracers
   , startupTracer         :: Tracer IO (StartupTrace blk)
   , shutdownTracer        :: Tracer IO ShutdownTrace
   , nodeInfoTracer        :: Tracer IO NodeInfo
+  , nodeStartupInfoTracer :: Tracer IO NodeStartupInfo
   , nodeStateTracer       :: Tracer IO NodeState
   , resourcesTracer       :: Tracer IO ResourceStats
   , peersTracer           :: Tracer IO [PeerT blk]

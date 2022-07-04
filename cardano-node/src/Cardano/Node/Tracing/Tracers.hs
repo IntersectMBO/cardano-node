@@ -94,6 +94,11 @@ mkDispatchTracers nodeKernel trBase trForward mbTrEKG trDataPoint trConfig enabl
                 (const ["NodeInfo"])
     configureTracers trConfig docNodeInfoTraceEvent [nodeInfoDP]
 
+    nodeStartupInfoDP <- mkDataPointTracer
+                trDataPoint
+                (const ["NodeStartupInfo"])
+    configureTracers trConfig docNodeStartupInfoTraceEvent [nodeStartupInfoDP]
+
     nodeStateDP <- mkDataPointTracer
                 trDataPoint
                 (const ["NodeState"])
@@ -217,6 +222,7 @@ mkDispatchTracers nodeKernel trBase trForward mbTrEKG trDataPoint trConfig enabl
       , shutdownTracer  = Tracer (traceWith shutdownTr)
                         <> Tracer (SR.traceNodeStateShutdown nodeStateDP)
       , nodeInfoTracer  = Tracer (traceWith nodeInfoDP)
+      , nodeStartupInfoTracer = Tracer (traceWith nodeStartupInfoDP)
       , nodeStateTracer = Tracer (traceWith stateTr)
                         <> Tracer (traceWith nodeStateDP)
       , resourcesTracer = Tracer (traceWith resourcesTr)
