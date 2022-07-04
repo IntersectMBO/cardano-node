@@ -9,7 +9,7 @@ import           Test.Tasty (TestTree)
 
 import qualified Spec.Cli.Alonzo.LeadershipSchedule
 import qualified Spec.Cli.Babbage.LeadershipSchedule
--- import qualified Spec.Cli.KesPeriodInfo
+import qualified Spec.Cli.KesPeriodInfo
 import qualified Spec.Node.Shutdown
 import qualified Spec.ShutdownOnSlotSynced
 import qualified System.Environment as E
@@ -23,15 +23,15 @@ tests = pure $ T.testGroup "test/Spec.hs"
     [ H.ignoreOnWindows "Shutdown" Spec.Node.Shutdown.hprop_shutdown
     , H.ignoreOnWindows "ShutdownOnSlotSynced" Spec.ShutdownOnSlotSynced.hprop_shutdownOnSlotSynced
     , T.testGroup "Alonzo"
-      [ H.ignoreOnWindows "leadership-schedule" Spec.Cli.Alonzo.LeadershipSchedule.hprop_leadershipSchedule
+      [ H.ignoreOnMacAndWindows "leadership-schedule" Spec.Cli.Alonzo.LeadershipSchedule.hprop_leadershipSchedule
       ]
     , T.testGroup "Babbage"
-      [ H.ignoreOnWindows "leadership-schedule" Spec.Cli.Babbage.LeadershipSchedule.hprop_leadershipSchedule
+      [ H.ignoreOnMacAndWindows "leadership-schedule" Spec.Cli.Babbage.LeadershipSchedule.hprop_leadershipSchedule
       ]
       -- Ignored on Windows due to <stdout>: commitBuffer: invalid argument (invalid character)
       -- as a result of the kes-period-info output to stdout.
       -- TODO: Babbage temporarily ignored due to broken protocol-state query
-      -- H.ignoreOnWindows "kes-period-info" Spec.Cli.KesPeriodInfo.hprop_kes_period_info
+    , H.disabled "kes-period-info" Spec.Cli.KesPeriodInfo.hprop_kes_period_info
     ]
   ]
 
