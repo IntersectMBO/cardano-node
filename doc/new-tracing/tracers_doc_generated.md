@@ -190,6 +190,7 @@
 			1. [RollBackward](#chainsyncremotereceiverollbackward)
 			1. [RollForward](#chainsyncremotereceiverollforward)
 		1. __Send__
+<<<<<<< HEAD
 			1. [AwaitReply](#chainsyncremotesendawaitreply)
 			1. [Done](#chainsyncremotesenddone)
 			1. [FindIntersect](#chainsyncremotesendfindintersect)
@@ -221,6 +222,110 @@
 		1. [Update](#chainsyncserverblockupdate)
 	1. __ServerHeader__
 		1. [Update](#chainsyncserverheaderupdate)
+=======
+			1. [AwaitReply](#chainsyncserialisednodetonodesendawaitreply)
+			1. [Done](#chainsyncserialisednodetonodesenddone)
+			1. [FindIntersect](#chainsyncserialisednodetonodesendfindintersect)
+			1. [IntersectFound](#chainsyncserialisednodetonodesendintersectfound)
+			1. [IntersectNotFound](#chainsyncserialisednodetonodesendintersectnotfound)
+			1. [RequestNext](#chainsyncserialisednodetonodesendrequestnext)
+			1. [RollBackward](#chainsyncserialisednodetonodesendrollbackward)
+			1. [RollForward](#chainsyncserialisednodetonodesendrollforward)
+1. __ChainSyncServerBlock__
+	1. __ChainSyncServerEvent__
+		1. __Update__
+			1. [Update](#chainsyncserverblockchainsyncservereventupdateupdate)
+1. __ChainSyncServerHeader__
+	1. __ChainSyncServerEvent__
+		1. __Update__
+			1. [Update](#chainsyncserverheaderchainsyncservereventupdateupdate)
+1. __ConnectionManager__
+	1. [Connect](#connectionmanagerconnect)
+	1. [ConnectError](#connectionmanagerconnecterror)
+	1. [ConnectionCleanup](#connectionmanagerconnectioncleanup)
+	1. [ConnectionExists](#connectionmanagerconnectionexists)
+	1. [ConnectionFailure](#connectionmanagerconnectionfailure)
+	1. [ConnectionHandler](#connectionmanagerconnectionhandler)
+	1. [ConnectionManagerCounters](#connectionmanagerconnectionmanagercounters)
+	1. [ConnectionNotFound](#connectionmanagerconnectionnotfound)
+	1. [ConnectionTimeWait](#connectionmanagerconnectiontimewait)
+	1. [ConnectionTimeWaitDone](#connectionmanagerconnectiontimewaitdone)
+	1. [ForbiddenConnection](#connectionmanagerforbiddenconnection)
+	1. [ForbiddenOperation](#connectionmanagerforbiddenoperation)
+	1. [ImpossibleConnection](#connectionmanagerimpossibleconnection)
+	1. [IncludeConnection](#connectionmanagerincludeconnection)
+	1. [PruneConnections](#connectionmanagerpruneconnections)
+	1. [Shutdown](#connectionmanagershutdown)
+	1. [State](#connectionmanagerstate)
+	1. [TerminatedConnection](#connectionmanagerterminatedconnection)
+	1. [TerminatingConnection](#connectionmanagerterminatingconnection)
+	1. [UnexpectedlyFalseAssertion](#connectionmanagerunexpectedlyfalseassertion)
+	1. [UnknownConnection](#connectionmanagerunknownconnection)
+	1. [UnregisterConnection](#connectionmanagerunregisterconnection)
+1. __ConnectionManagerTransition__
+	1. [ConnectionManagerTransition](#connectionmanagertransitionconnectionmanagertransition)
+1. __DNSResolver__
+	1. [LookupAAAAError](#dnsresolverlookupaaaaerror)
+	1. [LookupAAAAResult](#dnsresolverlookupaaaaresult)
+	1. [LookupAError](#dnsresolverlookupaerror)
+	1. [LookupAResult](#dnsresolverlookuparesult)
+	1. [LookupException](#dnsresolverlookupexception)
+	1. [LookupIPv4First](#dnsresolverlookupipv4first)
+	1. [LookupIPv6First](#dnsresolverlookupipv6first)
+1. __DNSSubscription__
+	1. __DNS__
+		1. [AllocateSocket](#dnssubscriptiondnsallocatesocket)
+		1. [ApplicationException](#dnssubscriptiondnsapplicationexception)
+		1. [CloseSocket](#dnssubscriptiondnsclosesocket)
+		1. [ConnectEnd](#dnssubscriptiondnsconnectend)
+		1. [ConnectException](#dnssubscriptiondnsconnectexception)
+		1. [ConnectStart](#dnssubscriptiondnsconnectstart)
+		1. [ConnectionExist](#dnssubscriptiondnsconnectionexist)
+		1. [MissingLocalAddress](#dnssubscriptiondnsmissinglocaladdress)
+		1. [Restart](#dnssubscriptiondnsrestart)
+		1. [SkippingPeer](#dnssubscriptiondnsskippingpeer)
+		1. [SocketAllocationException](#dnssubscriptiondnssocketallocationexception)
+		1. [Start](#dnssubscriptiondnsstart)
+		1. [SubscriptionFailed](#dnssubscriptiondnssubscriptionfailed)
+		1. [SubscriptionRunning](#dnssubscriptiondnssubscriptionrunning)
+		1. [SubscriptionWaiting](#dnssubscriptiondnssubscriptionwaiting)
+		1. [SubscriptionWaitingNewConnection](#dnssubscriptiondnssubscriptionwaitingnewconnection)
+		1. [TryConnectToPeer](#dnssubscriptiondnstryconnecttopeer)
+		1. [UnsupportedRemoteAddr](#dnssubscriptiondnsunsupportedremoteaddr)
+1. __DebugPeerSelection__
+	1. __DebugPeerSelection__
+		1. [GovernorState](#debugpeerselectiondebugpeerselectiongovernorstate)
+1. __DebugPeerSelectionResponder__
+	1. __DebugPeerSelection__
+		1. [GovernorState](#debugpeerselectionresponderdebugpeerselectiongovernorstate)
+1. __DiffusionInit__
+	1. [ConfiguringLocalSocket](#diffusioninitconfiguringlocalsocket)
+	1. [ConfiguringServerSocket](#diffusioninitconfiguringserversocket)
+	1. [CreateSystemdSocketForSnocketPath](#diffusioninitcreatesystemdsocketforsnocketpath)
+	1. [CreatedLocalSocket](#diffusioninitcreatedlocalsocket)
+	1. [CreatingServerSocket](#diffusioninitcreatingserversocket)
+	1. [DiffusionErrored](#diffusioninitdiffusionerrored)
+	1. [ListeningLocalSocket](#diffusioninitlisteninglocalsocket)
+	1. [ListeningServerSocket](#diffusioninitlisteningserversocket)
+	1. [LocalSocketUp](#diffusioninitlocalsocketup)
+	1. [RunLocalServer](#diffusioninitrunlocalserver)
+	1. [RunServer](#diffusioninitrunserver)
+	1. [ServerSocketUp](#diffusioninitserversocketup)
+	1. [UnsupportedLocalSystemdSocket](#diffusioninitunsupportedlocalsystemdsocket)
+	1. [UnsupportedReadySocketCase](#diffusioninitunsupportedreadysocketcase)
+	1. [UsingSystemdSocket](#diffusioninitusingsystemdsocket)
+1. __ErrorPolicy__
+	1. [AcceptException](#errorpolicyacceptexception)
+	1. [KeepSuspended](#errorpolicykeepsuspended)
+	1. [LocalNodeError](#errorpolicylocalnodeerror)
+	1. [ResumeConsumer](#errorpolicyresumeconsumer)
+	1. [ResumePeer](#errorpolicyresumepeer)
+	1. [ResumeProducer](#errorpolicyresumeproducer)
+	1. [SuspendConsumer](#errorpolicysuspendconsumer)
+	1. [SuspendPeer](#errorpolicysuspendpeer)
+	1. [UnhandledApplicationException](#errorpolicyunhandledapplicationexception)
+	1. [UnhandledConnectionException](#errorpolicyunhandledconnectionexception)
+>>>>>>> 152cc0649 (cardano-node: NodeStartupInfo as datapoint.)
 1. __Forge__
 	1. [KESInfo](#forgekesinfo)
 	1. __Loop__
@@ -581,11 +686,19 @@
 	1. [NodeTracingOnlineConfiguring](#nodestatenodetracingonlineconfiguring)
 1. [Resources](#resources)
 1. __Shutdown__
+<<<<<<< HEAD
 	1. [Abnormal](#shutdownabnormal)
 	1. [ArmedAt](#shutdownarmedat)
 	1. [Requested](#shutdownrequested)
 	1. [Requesting](#shutdownrequesting)
 	1. [UnexpectedInput](#shutdownunexpectedinput)
+=======
+	1. [AbnormalShutdown](#shutdownabnormalshutdown)
+	1. [RequestingShutdown](#shutdownrequestingshutdown)
+	1. [ShutdownArmedAt](#shutdownshutdownarmedat)
+	1. [ShutdownRequested](#shutdownshutdownrequested)
+	1. [ShutdownUnexpectedInput](#shutdownshutdownunexpectedinput)
+>>>>>>> 152cc0649 (cardano-node: NodeStartupInfo as datapoint.)
 1. __Startup__
 	1. [Byron](#startupbyron)
 	1. [Common](#startupcommon)
@@ -698,6 +811,7 @@
 		1. [SendMsgReply](#txsubmissiontxoutboundsendmsgreply)
 
 ## [Metrics](#metrics)
+<<<<<<< HEAD
 1. __BlockFetch__
 	1. [BlocksServed](#blockfetchblocksserved)
 	1. [ConnectedPeers](#blockfetchconnectedpeers)
@@ -783,9 +897,106 @@
 	1. [Accepted](#txsubmissionaccepted)
 	1. [Rejected](#txsubmissionrejected)
 	1. [Submitted](#txsubmissionsubmitted)
+=======
+1. [Block replay progress (%)](#block replay progress (%))
+1. [blocksForgedNum](#blocksforgednum)
+1. __cardano__
+	1. __node__
+		1. [aboutToLeadSlotLast](#cardanonodeabouttoleadslotlast)
+		1. [aboutToLeadSlotLast](#cardanonodeabouttoleadslotlast)
+		1. [adoptedSlotLast](#cardanonodeadoptedslotlast)
+		1. [blockContext](#cardanonodeblockcontext)
+		1. [blockFromFuture](#cardanonodeblockfromfuture)
+		1. [blocks](#cardanonodeblocks)
+		1. [blocks](#cardanonodeblocks)
+		1. [connectedPeers](#cardanonodeconnectedpeers)
+		1. __connectionManager__
+			1. [duplexConns](#cardanonodeconnectionmanagerduplexconns)
+			1. [duplexConns](#cardanonodeconnectionmanagerduplexconns)
+			1. [fullDuplexConns](#cardanonodeconnectionmanagerfullduplexconns)
+			1. [fullDuplexConns](#cardanonodeconnectionmanagerfullduplexconns)
+			1. [inboundConns](#cardanonodeconnectionmanagerinboundconns)
+			1. [inboundConns](#cardanonodeconnectionmanagerinboundconns)
+			1. [outboundConns](#cardanonodeconnectionmanageroutboundconns)
+			1. [outboundConns](#cardanonodeconnectionmanageroutboundconns)
+			1. [unidirectionalConns](#cardanonodeconnectionmanagerunidirectionalconns)
+			1. [unidirectionalConns](#cardanonodeconnectionmanagerunidirectionalconns)
+		1. [couldNotForgeSlotLast](#cardanonodecouldnotforgeslotlast)
+		1. [couldNotForgeSlotLast](#cardanonodecouldnotforgeslotlast)
+		1. [currentKESPeriod](#cardanonodecurrentkesperiod)
+		1. [delegMapSize](#cardanonodedelegmapsize)
+		1. [density](#cardanonodedensity)
+		1. [density](#cardanonodedensity)
+		1. [epoch](#cardanonodeepoch)
+		1. [epoch](#cardanonodeepoch)
+		1. [forgedInvalidSlotLast](#cardanonodeforgedinvalidslotlast)
+		1. [forgedSlotLast](#cardanonodeforgedslotlast)
+		1. __inbound-governor__
+			1. [cold](#cardanonodeinbound-governorcold)
+			1. [cold](#cardanonodeinbound-governorcold)
+			1. [hot](#cardanonodeinbound-governorhot)
+			1. [hot](#cardanonodeinbound-governorhot)
+			1. [idle](#cardanonodeinbound-governoridle)
+			1. [idle](#cardanonodeinbound-governoridle)
+			1. [warm](#cardanonodeinbound-governorwarm)
+			1. [warm](#cardanonodeinbound-governorwarm)
+		1. [ledgerState](#cardanonodeledgerstate)
+		1. [ledgerView](#cardanonodeledgerview)
+		1. [mempoolBytes](#cardanonodemempoolbytes)
+		1. [mempoolBytes](#cardanonodemempoolbytes)
+		1. [mempoolBytes](#cardanonodemempoolbytes)
+		1. [mempoolBytes](#cardanonodemempoolbytes)
+		1. __metrics__
+			1. __served__
+				1. [header](#cardanonodemetricsservedheader)
+		1. [nodeCannotForge](#cardanonodenodecannotforge)
+		1. [nodeIsLeader](#cardanonodenodeisleader)
+		1. [nodeNotLeader](#cardanonodenodenotleader)
+		1. [notAdoptedSlotLast](#cardanonodenotadoptedslotlast)
+		1. [operationalCertificateExpiryKESPeriod](#cardanonodeoperationalcertificateexpirykesperiod)
+		1. [operationalCertificateStartKESPeriod](#cardanonodeoperationalcertificatestartkesperiod)
+		1. __peerSelection__
+			1. [cold](#cardanonodepeerselectioncold)
+			1. [hot](#cardanonodepeerselectionhot)
+			1. [warm](#cardanonodepeerselectionwarm)
+		1. [remainingKESPeriods](#cardanonoderemainingkesperiods)
+		1. __served__
+			1. [block](#cardanonodeservedblock)
+		1. [slotInEpoch](#cardanonodeslotinepoch)
+		1. [slotInEpoch](#cardanonodeslotinepoch)
+		1. [slotIsImmutable](#cardanonodeslotisimmutable)
+		1. [slots](#cardanonodeslots)
+		1. [slots](#cardanonodeslots)
+		1. __submissions__
+			1. [accepted](#cardanonodesubmissionsaccepted)
+			1. [rejected](#cardanonodesubmissionsrejected)
+			1. [submitted](#cardanonodesubmissionssubmitted)
+		1. [txsInMempool](#cardanonodetxsinmempool)
+		1. [txsInMempool](#cardanonodetxsinmempool)
+		1. [txsInMempool](#cardanonodetxsinmempool)
+		1. [txsInMempool](#cardanonodetxsinmempool)
+		1. [txsProcessedNum](#cardanonodetxsprocessednum)
+		1. [utxoSize](#cardanonodeutxosize)
+1. __mem__
+	1. [resident](#memresident)
+1. [nodeCannotForgeNum](#nodecannotforgenum)
+1. [nodeIsLeaderNum](#nodeisleadernum)
+1. [peersFromNodeKernel](#peersfromnodekernel)
+1. __rts__
+	1. [gcLiveBytes](#rtsgclivebytes)
+	1. [gcMajorNum](#rtsgcmajornum)
+	1. [gcMinorNum](#rtsgcminornum)
+	1. [gcticks](#rtsgcticks)
+	1. [mutticks](#rtsmutticks)
+	1. [threads](#rtsthreads)
+1. [slotsMissed](#slotsmissed)
+1. __stat__
+	1. [cputicks](#statcputicks)
+>>>>>>> 152cc0649 (cardano-node: NodeStartupInfo as datapoint.)
 
 ## [Datapoints](#datapoints)
 1. [NodeInfo](#nodeinfo)
+1. [NodeStartupInfo](#nodestartupinfo)
 
 ## Trace Messages
 ### BlockFetch.Client.AcknowledgedFetchRequest
@@ -3281,6 +3492,7 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
+<<<<<<< HEAD
 ### ChainSync.ServerBlock.Update
 
 
@@ -3310,6 +3522,9 @@ Backends:
 Filtered  by config value: `Notice`
 
 ### Forge.KESInfo
+=======
+### ChainSyncServerBlock.ChainSyncServerEvent.Update.Update
+>>>>>>> 152cc0649 (cardano-node: NodeStartupInfo as datapoint.)
 
 
 > kesStartPeriod 
@@ -3325,6 +3540,7 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Info`
 
+<<<<<<< HEAD
 ### Forge.Loop.AdoptedBlock
 
 
@@ -3368,6 +3584,9 @@ Backends:
 Filtered  by config value: `Info`
 
 ### Forge.Loop.DidntAdoptBlock
+=======
+### ChainSyncServerHeader.ChainSyncServerEvent.Update.Update
+>>>>>>> 152cc0649 (cardano-node: NodeStartupInfo as datapoint.)
 
 
 > We did not adopt the block we produced, but the block was valid. We  must have adopted a block that another leader of the same slot produced  before we got the chance of adopting our own block. This is very rare,  this warrants a warning.
@@ -3381,6 +3600,7 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Info`
 
+<<<<<<< HEAD
 ### Forge.Loop.ForgeStateUpdateError
 
 
@@ -3394,6 +3614,9 @@ Backends:
 			`Stdout MachineFormat`,
 			`Forwarder`
 Filtered  by config value: `Info`
+=======
+### ConnectionManager.Connect
+>>>>>>> 152cc0649 (cardano-node: NodeStartupInfo as datapoint.)
 
 ### Forge.Loop.ForgedBlock
 
@@ -7853,7 +8076,11 @@ Backends:
 			`Forwarder`
 Filtered  by config value: `Notice`
 
+<<<<<<< HEAD
 ### Startup.DiffusionInit.LocalSocketUp
+=======
+### Shutdown.ShutdownArmedAt
+>>>>>>> 152cc0649 (cardano-node: NodeStartupInfo as datapoint.)
 
 
 > LocalSocketUp 
@@ -9308,6 +9535,7 @@ Mempool.RemoveTxs
 
 ### Mempool.TxsProcessedNum
 
+<<<<<<< HEAD
 
 
 Dispatched by: 
@@ -9333,6 +9561,17 @@ Net.ConnectionManager.Local.ConnectionManagerCounters
 
 Dispatched by: 
 Net.ConnectionManager.Remote.ConnectionManagerCounters
+=======
+### cardano.node.metrics.served.header
+
+***
+A counter triggered only on header event
+***
+
+
+Dispatched by: 
+ChainSyncServerHeader.ChainSyncServerEvent.Update.Update
+>>>>>>> 152cc0649 (cardano-node: NodeStartupInfo as datapoint.)
 
 ### Net.ConnectionManager.FullDuplexConns
 
@@ -9561,7 +9800,27 @@ TxSubmission.TxInbound.Collected
 >  _niSystemStartTime_: How long did the start of the node took.
 
 
+<<<<<<< HEAD
 Configuration: TraceConfig {tcOptions = fromList [([],[ConfSeverity {severity = Notice},ConfDetail {detail = DNormal},ConfBackend {backends = [Stdout MachineFormat,EKGBackend,Forwarder]}]),(["AcceptPolicy"],[ConfSeverity {severity = Info}]),(["BlockFetchClient","CompletedBlockFetch"],[ConfLimiter {maxFrequency = 2.0}]),(["ChainDB"],[ConfSeverity {severity = Info}]),(["ChainDB","AddBlockEvent","AddBlockValidation","ValidCandidate"],[ConfLimiter {maxFrequency = 2.0}]),(["ChainDB","AddBlockEvent","AddedBlockToQueue"],[ConfLimiter {maxFrequency = 2.0}]),(["ChainDB","AddBlockEvent","AddedBlockToVolatileDB"],[ConfLimiter {maxFrequency = 2.0}]),(["ChainDB","CopyToImmutableDBEvent","CopiedBlockToImmutableDB"],[ConfLimiter {maxFrequency = 2.0}]),(["DNSResolver"],[ConfSeverity {severity = Info}]),(["DNSSubscription"],[ConfSeverity {severity = Info}]),(["DiffusionInit"],[ConfSeverity {severity = Info}]),(["ErrorPolicy"],[ConfSeverity {severity = Info}]),(["Forge"],[ConfSeverity {severity = Info}]),(["IpSubscription"],[ConfSeverity {severity = Info}]),(["LocalErrorPolicy"],[ConfSeverity {severity = Info}]),(["Mempool"],[ConfSeverity {severity = Info}]),(["Resources"],[ConfSeverity {severity = Info}])], tcForwarder = TraceOptionForwarder {tofConnQueueSize = 2000, tofDisconnQueueSize = 200000, tofVerbosity = Minimum}, tcNodeName = Nothing, tcPeerFrequency = Just 2000, tcResourceFrequency = Just 5000}
 
 662 log messages.
 Generated at 2022-07-08 01:53:08.217148774 MSK.
+=======
+### NodeStartupInfo
+
+
+***
+Startup information about this node, required for RTView
+
+ _suiEra_: Name of the current era. 
+ _suiSlotLength_: Slot length, in seconds. 
+ _suiEpochLength_: Epoch length, in slots. 
+ _suiSlotsPerKESPeriod_: KES period length, in slots.
+***
+
+
+Configuration: TraceConfig {tcOptions = fromList [([],[ConfSeverity {severity = Notice},ConfDetail {detail = DNormal},ConfBackend {backends = [Stdout MachineFormat,EKGBackend,Forwarder]}]),(["AcceptPolicy"],[ConfSeverity {severity = Info}]),(["BlockFetchClient","CompletedBlockFetch"],[ConfLimiter {maxFrequency = 2.0}]),(["ChainDB"],[ConfSeverity {severity = Info}]),(["ChainDB","AddBlockEvent","AddBlockValidation","ValidCandidate"],[ConfLimiter {maxFrequency = 2.0}]),(["ChainDB","AddBlockEvent","AddedBlockToQueue"],[ConfLimiter {maxFrequency = 2.0}]),(["ChainDB","AddBlockEvent","AddedBlockToVolatileDB"],[ConfLimiter {maxFrequency = 2.0}]),(["ChainDB","CopyToImmutableDBEvent","CopiedBlockToImmutableDB"],[ConfLimiter {maxFrequency = 2.0}]),(["DNSResolver"],[ConfSeverity {severity = Info}]),(["DNSSubscription"],[ConfSeverity {severity = Info}]),(["DiffusionInit"],[ConfSeverity {severity = Info}]),(["ErrorPolicy"],[ConfSeverity {severity = Info}]),(["Forge"],[ConfSeverity {severity = Info}]),(["IpSubscription"],[ConfSeverity {severity = Info}]),(["LocalErrorPolicy"],[ConfSeverity {severity = Info}]),(["Mempool"],[ConfSeverity {severity = Info}]),(["Resources"],[ConfSeverity {severity = Info}])], tcForwarder = TraceOptionForwarder {tofConnQueueSize = 2000, tofDisconnQueueSize = 200000, tofVerbosity = Minimum}, tcNodeName = Nothing, tcPeerFrequency = Just 2000, tcResourceFrequency = Just 5000}
+
+669 log messages.
+Generated at 2022-07-04 17:09:35.02423809 +04.
+>>>>>>> 152cc0649 (cardano-node: NodeStartupInfo as datapoint.)

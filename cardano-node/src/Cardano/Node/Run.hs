@@ -3,6 +3,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PackageImports #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -200,6 +201,11 @@ handleNodeWithTracers cmdPc nc p networkMagic runP = do
               networkMagic
               nodeKernelData
               p2pMode
+
+          startupInfo <- getStartupInfo nc p fp
+          mapM_ (traceWith $ startupTracer tracers) startupInfo
+          traceNodeStartupInfo (nodeStartupInfoTracer tracers) startupInfo
+
           handleSimpleNode runP p2pMode tracers nc
             (\nk -> do
                 setNodeKernel nodeKernelData nk
@@ -249,6 +255,17 @@ handleNodeWithTracers cmdPc nc p networkMagic runP = do
                     forM_ eLoggingLayer
                       shutdownLoggingLayer
 
+-- | Currently, we trace only 'ShelleyBased'-info which will be asked
+--   by 'cardano-tracer' service as a datapoint. It can be extended in the future.
+traceNodeStartupInfo
+  :: Tracer IO NodeStartupInfo
+  -> [StartupTrace blk]
+  -> IO ()
+traceNodeStartupInfo t startupTrace =
+  forM_ startupTrace $ \case
+    BIShelley (BasicInfoShelleyBased era _ sl el spkp) ->
+      traceWith t $ NodeStartupInfo era sl el spkp
+    _ -> return ()
 
 logTracingVerbosity :: NodeConfiguration -> Tracer IO String -> IO ()
 logTracingVerbosity nc tracer =
