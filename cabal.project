@@ -1,5 +1,5 @@
 -- run `nix flake lock --update-input hackageNix` after updating index-state.
-index-state: 2022-06-01T00:00:00Z
+index-state: 2022-07-01T00:00:00Z
 
 packages:
     cardano-api
@@ -227,7 +227,7 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-prelude
-  tag: bb4ed71ba8e587f672d06edf9d2e376f4b055555
+  tag: 66baa7470d76f8cc0d75a65bda8283eafd3e81e1
   --sha256: 00h10l5mmiza9819p9v5q5749nb9pzgi20vpzpy1d34zmh6gf1cj
   subdir:
     cardano-prelude
@@ -237,7 +237,7 @@ source-repository-package
   type: git
   location: https://github.com/input-output-hk/goblins
   tag: cde90a2b27f79187ca8310b6549331e59595e7ba
-  --sha256: 17c88rbva3iw82yg9srlxjv2ia5wjb9cyqw44hik565f5v9svnyg
+  --sha256: 1x0hl7393yvag54440gg4ds2q5330q4ksj73w6108rmhnk2pspsm
 
 source-repository-package
   type: git
