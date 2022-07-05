@@ -669,19 +669,23 @@ module Cardano.Api (
     chainPointToHeaderHash,
     makeChainTip,
     parseFilePath,
-    writeSecrets
+    writeSecrets,
+
+    -- ** Cast functions
+    EraCast (..),
 
   ) where
 
 import           Cardano.Api.Address
 import           Cardano.Api.Block
 import           Cardano.Api.Certificate
+import           Cardano.Api.EraCast
 import           Cardano.Api.Eras
 import           Cardano.Api.Error
 import           Cardano.Api.Fees
 import           Cardano.Api.GenesisParameters
-import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Hash
+import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.IPC
 import           Cardano.Api.IPC.Monad
 import           Cardano.Api.Key

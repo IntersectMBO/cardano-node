@@ -17,6 +17,8 @@ module Cardano.CLI.Shelley.Run.Transaction
 import           Cardano.Prelude hiding (All, Any)
 import           Prelude (String, error)
 
+import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, handleLeftT,
+                   hoistEither, hoistMaybe, left, newExceptT)
 import qualified Data.Aeson as Aeson
 import           Data.Aeson.Encode.Pretty (encodePretty)
 import qualified Data.ByteString.Char8 as BS
@@ -26,13 +28,11 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import qualified Data.Text as Text
 import           Data.Type.Equality (TestEquality (..))
+import qualified System.IO as IO
 
-import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, handleLeftT,
-                   hoistEither, hoistMaybe, left, newExceptT)
-
-import           Cardano.CLI.Shelley.Output
 
 import           Cardano.Api
+import qualified Cardano.Api as Api
 import           Cardano.Api.Byron hiding (SomeByronSigningKey (..))
 import           Cardano.Api.Shelley
 import           Ouroboros.Consensus.Shelley.Eras (StandardAllegra, StandardCrypto, StandardMary,
@@ -48,6 +48,7 @@ import           Cardano.Ledger.ShelleyMA.TxBody ()
 import           Cardano.CLI.Environment (EnvSocketError, readEnvSocketPath, renderEnvSocketError)
 import           Cardano.CLI.Run.Friendly (friendlyTxBS, friendlyTxBodyBS)
 import           Cardano.CLI.Shelley.Key (InputDecodeError, readSigningKeyFileAnyOf)
+import           Cardano.CLI.Shelley.Output
 import           Cardano.CLI.Shelley.Parsers
 import           Cardano.CLI.Shelley.Run.Genesis (ShelleyGenesisCmdError (..),
                    readShelleyGenesisWithDefault)
@@ -55,6 +56,7 @@ import           Cardano.CLI.Shelley.Run.Query (ShelleyQueryCmdLocalStateQueryEr
                    renderLocalStateQueryError)
 import           Cardano.CLI.Shelley.Script
 import           Cardano.CLI.Types
+
 import           Ouroboros.Consensus.Byron.Ledger (ByronBlock)
 import           Ouroboros.Consensus.Cardano.Block (EraMismatch (..))
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr)
@@ -62,8 +64,6 @@ import qualified Ouroboros.Consensus.Protocol.TPraos as TPraos
 import           Ouroboros.Consensus.Shelley.Ledger (ShelleyBlock)
 import           Ouroboros.Network.Protocol.LocalStateQuery.Type (AcquireFailure (..))
 import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Client as Net.Tx
-
-import qualified System.IO as IO
 
 {- HLINT ignore "Use let" -}
 
@@ -131,6 +131,7 @@ data ShelleyTxCmdError
   | ShelleyTxCmdTxExecUnitsErr !TransactionValidityError
   | ShelleyTxCmdPlutusScriptCostErr !PlutusScriptCostError
   | ShelleyTxCmdPParamExecutionUnitsNotAvailable
+  | ShelleyTxCmdTxCastErr Text
 
 renderShelleyTxCmdError :: ShelleyTxCmdError -> Text
 renderShelleyTxCmdError err =
@@ -274,6 +275,7 @@ renderShelleyTxCmdError err =
       \likely due to not being in the Alonzo era"
     ShelleyTxCmdReferenceScriptsNotSupportedInEra (AnyCardanoEra era) ->
       "TxCmd: Reference scripts not supported in era: " <> show era
+    ShelleyTxCmdTxCastErr msg -> "Unable to cast value: " <> show msg
 
 renderEra :: AnyCardanoEra -> Text
 renderEra (AnyCardanoEra ByronEra)   = "Byron"
@@ -432,6 +434,24 @@ runTxBuildRaw (AnyCardanoEra era)
         in firstExceptT ShelleyTxCmdWriteFileError . newExceptT $
              writeTxFileTextEnvelopeCddl fpath noWitTx
 
+getSbe :: Monad m => CardanoEraStyle era -> ExceptT ShelleyTxCmdError m (Api.ShelleyBasedEra era)
+getSbe LegacyByronEra = left ShelleyTxCmdByronEra
+getSbe (Api.ShelleyBasedEra sbe) = return sbe
+
+determineEra
+  :: ConsensusModeParams mode
+  -> LocalNodeConnectInfo mode
+  -> ExceptT ShelleyTxCmdError IO AnyCardanoEra
+determineEra cModeParams localNodeConnInfo =
+  case consensusModeOnly cModeParams of
+    ByronMode -> return $ AnyCardanoEra ByronEra
+    ShelleyMode -> return $ AnyCardanoEra ShelleyEra
+    CardanoMode -> do
+      eraQ <- liftIO . queryNodeLocalState localNodeConnInfo Nothing
+                     $ QueryCurrentEra CardanoModeIsMultiEra
+      case eraQ of
+        Left acqFail -> left $ ShelleyTxCmdAcquireFailure acqFail
+        Right anyCarEra -> return anyCarEra
 
 runTxBuild
   :: AnyCardanoEra
@@ -486,7 +506,7 @@ runTxBuild (AnyCardanoEra era) (AnyConsensusModeParams cModeParams) networkId mS
   allReferenceInputs <- getAllReferenceInputs era txins mValue certFiles withdrawals readOnlyRefIns
 
   case (consensusMode, cardanoEraStyle era) of
-    (CardanoMode, ShelleyBasedEra sbe) -> do
+    (CardanoMode, ShelleyBasedEra _sbe) -> do
       txBodyContent <-
         TxBodyContent
           <$> validateTxIns               era txins
@@ -513,36 +533,43 @@ runTxBuild (AnyCardanoEra era) (AnyConsensusModeParams cModeParams) networkId mS
                      left (ShelleyTxCmdEraConsensusModeMismatchTxBalance outputOptions
                             (AnyConsensusMode CardanoMode) (AnyCardanoEra era))
 
-      (utxo, pparams, eraHistory, systemStart, stakePools) <-
-        newExceptT . fmap (join . first ShelleyTxCmdAcquireFailure) $
-          executeLocalStateQueryExpr localNodeConnInfo Nothing $ \_ntcVersion -> runExceptT $ do
-            unless (null txinsc) $ do
-              -- TODO: Question, why do we not need the collateralUtxo to be included in
-              -- the utxo?
-              collateralUtxo <- firstExceptT ShelleyTxCmdTxSubmitErrorEraMismatch . newExceptT . queryExpr
-                $ QueryInEra eInMode
-                $ QueryInShelleyBasedEra sbe (QueryUTxO . QueryUTxOByTxIn $ Set.fromList txinsc)
-              txinsExist txinsc collateralUtxo
-              notScriptLockedTxIns collateralUtxo
+      (utxo, pparams, eraHistory, systemStart, stakePools) <- do
+        qAnyE@(AnyCardanoEra qEra) <- determineEra cModeParams localNodeConnInfo
+        qSbe <- getSbe $ cardanoEraStyle qEra
 
-            utxo <- firstExceptT ShelleyTxCmdTxSubmitErrorEraMismatch . newExceptT . queryExpr
-              $ QueryInEra eInMode $ QueryInShelleyBasedEra sbe
-              $ QueryUTxO (QueryUTxOByTxIn (Set.fromList $ inputsThatRequireWitnessing ++ allReferenceInputs))
+        case toEraInMode qEra CardanoMode of
+          Just qeInMode -> do
+            newExceptT . fmap (join . first ShelleyTxCmdAcquireFailure) $
+              executeLocalStateQueryExpr localNodeConnInfo Nothing $ \_ntcVersion -> runExceptT $ do
+                unless (null txinsc) $ do
+                  -- TODO: Question, why do we not need the collateralUtxo to be included in
+                  -- the utxo?
+                  collateralUtxo <- firstExceptT ShelleyTxCmdTxSubmitErrorEraMismatch . newExceptT . queryExpr
+                    $ QueryInEra qeInMode
+                    $ QueryInShelleyBasedEra qSbe (QueryUTxO . QueryUTxOByTxIn $ Set.fromList txinsc)
+                  txinsExist txinsc collateralUtxo
+                  notScriptLockedTxIns collateralUtxo
 
-            txinsExist inputsThatRequireWitnessing utxo
+                qUtxo <- firstExceptT ShelleyTxCmdTxSubmitErrorEraMismatch . newExceptT . queryExpr
+                  $ QueryInEra qeInMode $ QueryInShelleyBasedEra qSbe
+                  $ QueryUTxO (QueryUTxOByTxIn (Set.fromList $ inputsThatRequireWitnessing ++ allReferenceInputs))
 
-            pparams <- firstExceptT ShelleyTxCmdTxSubmitErrorEraMismatch . newExceptT . queryExpr
-              $ QueryInEra eInMode $ QueryInShelleyBasedEra sbe QueryProtocolParameters
+                utxo <- case first ShelleyTxCmdTxCastErr (eraCast qUtxo) of { Right a -> pure a; Left e -> left e }
 
-            eraHistory <- lift . queryExpr $ QueryEraHistory CardanoModeIsMultiEra
+                txinsExist inputsThatRequireWitnessing utxo
 
-            systemStart <- lift $ queryExpr QuerySystemStart
+                pparams <- firstExceptT ShelleyTxCmdTxSubmitErrorEraMismatch . newExceptT . queryExpr
+                  $ QueryInEra qeInMode $ QueryInShelleyBasedEra qSbe QueryProtocolParameters
 
+                eraHistory <- lift . queryExpr $ QueryEraHistory CardanoModeIsMultiEra
 
-            stakePools <- firstExceptT ShelleyTxCmdTxSubmitErrorEraMismatch . ExceptT $
-              queryExpr . QueryInEra eInMode . QueryInShelleyBasedEra sbe $ QueryStakePools
+                systemStart <- lift $ queryExpr QuerySystemStart
 
-            return (utxo, pparams, eraHistory, systemStart, stakePools)
+                stakePools <- firstExceptT ShelleyTxCmdTxSubmitErrorEraMismatch . ExceptT $
+                  queryExpr . QueryInEra qeInMode . QueryInShelleyBasedEra qSbe $ QueryStakePools
+
+                return (utxo, pparams, eraHistory, systemStart, stakePools)
+          Nothing -> left $ ShelleyTxCmdEraConsensusModeMismatch Nothing (AnyConsensusMode consensusMode) qAnyE
 
       let cAddr = case anyAddressInEra era changeAddr of
                     Just addr -> addr
