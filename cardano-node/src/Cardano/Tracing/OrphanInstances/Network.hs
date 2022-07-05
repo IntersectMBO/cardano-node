@@ -459,7 +459,6 @@ instance HasSeverityAnnotation (ConnectionManagerTrace addr (ConnectionHandlerTr
       TrConnectionManagerCounters {}          -> Info
       TrState {}                              -> Info
       ConnMgr.TrUnexpectedlyFalseAssertion {} -> Error
-      TrUnknownConnection {}                  -> Debug
 
 instance HasPrivacyAnnotation (ConnMgr.AbstractTransitionTrace addr)
 instance HasSeverityAnnotation (ConnMgr.AbstractTransitionTrace addr) where
@@ -1916,10 +1915,6 @@ instance (Show addr, Show versionNumber, Show agreedOptions, ToObject addr,
         mconcat
           [ "kind" .= String "UnexpectedlyFalseAssertion"
           , "info" .= String (pack . show $ info)
-          ]
-      TrUnknownConnection {} ->
-        mconcat
-          [ "kind" .= String "UnknownConnection"
           ]
 
 instance ToJSON state => ToJSON (ConnMgr.MaybeUnknown state) where

@@ -199,6 +199,7 @@ test-suite cardano-api-test
                       , cardano-api
                       , cardano-api:gen
                       , cardano-binary
+                      , cardano-data
                       , cardano-crypto
                       , cardano-crypto-class
                       , cardano-crypto-test
