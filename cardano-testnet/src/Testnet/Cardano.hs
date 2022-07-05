@@ -270,7 +270,6 @@ testnet testnetOptions H.Conf {..} = do
     . HM.insert "TraceBlockchainTime" (J.toJSON True)
     . HM.delete "GenesisFile"
     . HM.insert "TestEnableDevelopmentHardForkEras" (J.toJSON @Bool True)
-    . HM.insert "TestEnableDevelopmentNetworkProtocols" (J.toJSON @Bool True)
     . HM.insert "EnableP2P" (J.toJSON @Bool (enableP2P testnetOptions))
     . forkOptions
 
