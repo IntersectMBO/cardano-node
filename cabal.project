@@ -1,5 +1,5 @@
 -- run `nix flake lock --update-input hackageNix` after updating index-state.
-index-state: 2022-02-18T00:00:00Z
+index-state: 2022-07-01T00:00:00Z
 
 packages:
     cardano-api
@@ -227,8 +227,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-prelude
-  tag: bb4ed71ba8e587f672d06edf9d2e376f4b055555
-  --sha256: 00h10l5mmiza9819p9v5q5749nb9pzgi20vpzpy1d34zmh6gf1cj
+  tag: c7fc9fba236972c27a55e0f3d34c2758cf616bfc
+  --sha256: 0sg1hhnifqxfc5n5f9ikbxyrjlg77hynbhsql0h4smqniw29dbwk
   subdir:
     cardano-prelude
     cardano-prelude-test
@@ -339,6 +339,8 @@ constraints:
     -- that dependency
   , network >= 3.1.1.0
   , HSOpenSSL >= 0.11.7.2
+  , algebraic-graphs < 0.7
+  , protolude < 0.3.1
 
 package snap-server
   flags: +openssl
