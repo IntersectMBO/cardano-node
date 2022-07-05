@@ -115,6 +115,7 @@ import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
 import           Cardano.Api.Address
 import           Cardano.Api.Block
 import           Cardano.Api.Certificate
+import           Cardano.Api.EraCast (EraCast (..))
 import           Cardano.Api.Eras
 import           Cardano.Api.GenesisParameters
 import           Cardano.Api.KeysShelley
@@ -124,9 +125,10 @@ import           Cardano.Api.Orphans ()
 import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.TxBody
 import           Cardano.Api.Value
+import           Control.Monad (forM)
+import           Data.Word (Word64)
 
 import qualified Data.Aeson.KeyMap as KeyMap
-import           Data.Word (Word64)
 
 -- ----------------------------------------------------------------------------
 -- Queries
@@ -274,6 +276,9 @@ newtype ByronUpdateState = ByronUpdateState Byron.Update.State
 
 newtype UTxO era = UTxO { unUTxO :: Map TxIn (TxOut CtxUTxO era) }
   deriving (Eq, Show)
+
+instance EraCast UTxO where
+  eraCast (UTxO m) = UTxO <$> forM m eraCast
 
 data UTxOInAnyEra where
   UTxOInAnyEra :: CardanoEra era

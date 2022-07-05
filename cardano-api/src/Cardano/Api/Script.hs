@@ -2,12 +2,16 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+
+{- HLINT ignore "Avoid lambda using `infix`" -}
+{- HLINT ignore "Use section" -}
 
 module Cardano.Api.Script (
     -- * Languages
@@ -150,10 +154,11 @@ import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 
 import qualified Plutus.V1.Ledger.Examples as Plutus
 
+import           Cardano.Api.EraCast (EraCast (eraCast))
 import           Cardano.Api.Eras
 import           Cardano.Api.Error
-import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Hash
+import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.KeysShelley
 import           Cardano.Api.ScriptData
 import           Cardano.Api.SerialiseCBOR
@@ -161,11 +166,9 @@ import           Cardano.Api.SerialiseJSON
 import           Cardano.Api.SerialiseRaw
 import           Cardano.Api.SerialiseTextEnvelope
 import           Cardano.Api.SerialiseUsing
+import           Cardano.Api.Summon (Summon (..))
 import           Cardano.Api.TxIn
 import           Cardano.Api.Utils (failEitherWith)
-
-{- HLINT ignore "Use section" -}
-
 
 -- ----------------------------------------------------------------------------
 -- Types for script language and version
@@ -1432,11 +1435,25 @@ instance IsCardanoEra era => FromJSON (ReferenceScript era) where
       Just refSupInEra ->
         ReferenceScript refSupInEra <$> o .: "referenceScript"
 
+instance EraCast ReferenceScript where
+  eraCast = \case
+    ReferenceScriptNone               -> pure ReferenceScriptNone
+    ReferenceScript _ scriptInAnyLang -> ReferenceScript <$> summon <*> pure scriptInAnyLang
+
 data ReferenceTxInsScriptsInlineDatumsSupportedInEra era where
     ReferenceTxInsScriptsInlineDatumsInBabbageEra :: ReferenceTxInsScriptsInlineDatumsSupportedInEra BabbageEra
 
 deriving instance Eq (ReferenceTxInsScriptsInlineDatumsSupportedInEra era)
 deriving instance Show (ReferenceTxInsScriptsInlineDatumsSupportedInEra era)
+
+instance IsCardanoEra era => Summon (ReferenceTxInsScriptsInlineDatumsSupportedInEra era) where
+  summon = case cardanoEra @era of
+    ByronEra -> Left "ReferenceTxInsScriptsInlineDatumsSupportedInEra ByronEra does not exist"
+    ShelleyEra -> Left "ReferenceTxInsScriptsInlineDatumsSupportedInEra ShelleyEra does not exist"
+    AllegraEra -> Left "ReferenceTxInsScriptsInlineDatumsSupportedInEra AllegraEra does not exist"
+    MaryEra -> Left "ReferenceTxInsScriptsInlineDatumsSupportedInEra MaryEra does not exist"
+    AlonzoEra -> Left "ReferenceTxInsScriptsInlineDatumsSupportedInEra AlonzoEra does not exist"
+    BabbageEra -> Right ReferenceTxInsScriptsInlineDatumsInBabbageEra
 
 refInsScriptsAndInlineDatsSupportedInEra
   :: CardanoEra era -> Maybe (ReferenceTxInsScriptsInlineDatumsSupportedInEra era)
