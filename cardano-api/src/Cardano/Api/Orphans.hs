@@ -6,7 +6,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -40,6 +39,7 @@ import           Cardano.Ledger.UnifiedMap (UnifiedMap)
 import           Cardano.Slotting.Slot (SlotNo (..))
 import           Cardano.Slotting.Time (SystemStart (..))
 
+import qualified Cardano.Binary as CBOR
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import qualified Cardano.Ledger.Alonzo.Data as Alonzo
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
@@ -242,10 +242,7 @@ instance ( Ledger.Era era
                SJust dH -> toJSON $ ScriptDataHash dH
 
 instance ToJSON (Alonzo.Script (Babbage.BabbageEra Consensus.StandardCrypto)) where
-  toJSON s = Aeson.String . serialiseToRawBytesHexText
-               $ ScriptHash $ Ledger.hashScript @(Babbage.BabbageEra Consensus.StandardCrypto) s
-
-
+  toJSON = Aeson.String . Text.decodeUtf8 . B16.encode . CBOR.serialize'
 
 instance Crypto.Crypto crypto => ToJSON (Shelley.DPState crypto) where
   toJSON dpState = object [ "dstate" .= Shelley.dpsDState dpState
