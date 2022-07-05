@@ -9,7 +9,6 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -44,6 +43,7 @@ import           Cardano.Slotting.Slot (SlotNo (..))
 import           Cardano.Slotting.Time (SystemStart (..))
 import           Control.State.Transition (STS (State))
 
+import qualified Cardano.Binary as CBOR
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import qualified Cardano.Ledger.Alonzo.Data as Alonzo
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
@@ -65,7 +65,6 @@ import qualified Cardano.Ledger.Shelley.RewardUpdate as Shelley
 import qualified Ouroboros.Consensus.Shelley.Eras as Consensus
 
 import           Cardano.Api.Script
-import           Cardano.Api.SerialiseRaw (serialiseToRawBytesHexText)
 
 -- Orphan instances involved in the JSON output of the API queries.
 -- We will remove/replace these as we provide more API wrapper types
@@ -338,11 +337,10 @@ instance ( Ledger.Era era
       SNothing -> toEncoding Aeson.Null
       SJust dH -> toEncoding $ ScriptDataHash dH
 
+
+
 instance ToJSON (Alonzo.Script (Babbage.BabbageEra Consensus.StandardCrypto)) where
-  toJSON s = Aeson.String . serialiseToRawBytesHexText
-               $ ScriptHash $ Ledger.hashScript @(Babbage.BabbageEra Consensus.StandardCrypto) s
-
-
+  toJSON = Aeson.String . Text.decodeUtf8 . B16.encode . CBOR.serialize'
 
 instance Crypto.Crypto crypto => ToJSON (Shelley.DPState crypto) where
   toJSON = object . toDpStatePairs
