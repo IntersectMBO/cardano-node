@@ -6,6 +6,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
@@ -15,6 +16,9 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE ViewPatterns #-}
 
+{- HLINT ignore "Avoid lambda using `infix`" -}
+{- HLINT ignore "Redundant flip" -}
+{- HLINT ignore "Use section" -}
 
 -- | Transaction bodies
 --
@@ -181,10 +185,12 @@ import           Data.Type.Equality (TestEquality (..), (:~:) (Refl))
 import           Data.Word (Word16, Word32, Word64)
 import           GHC.Generics
 import           GHC.Records (HasField (..))
-import           Text.Parsec ((<?>))
 import qualified Text.Parsec as Parsec
+import           Text.Parsec ((<?>))
 import qualified Text.Parsec.String as Parsec
 
+import           Cardano.Api.EraCast (EraCast (..))
+import           Cardano.Api.Summon (Summon (..))
 import           Cardano.Binary (Annotated (..), reAnnotate, recoverBytes)
 import qualified Cardano.Binary as CBOR
 import qualified Cardano.Crypto.Hash.Class as Crypto
@@ -241,8 +247,8 @@ import           Cardano.Api.Address
 import           Cardano.Api.Certificate
 import           Cardano.Api.Eras
 import           Cardano.Api.Error
-import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Hash
+import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.KeysByron
 import           Cardano.Api.KeysShelley
 import           Cardano.Api.NetworkId
@@ -258,10 +264,6 @@ import           Cardano.Api.TxMetadata
 import           Cardano.Api.Utils
 import           Cardano.Api.Value
 import           Cardano.Api.ValueParser
-
-
-{- HLINT ignore "Redundant flip" -}
-{- HLINT ignore "Use section" -}
 
 -- | Indicates whether a script is expected to fail or pass validation.
 data ScriptValidity
@@ -355,6 +357,13 @@ data TxOut ctx era = TxOut (AddressInEra    era)
 
 deriving instance Eq   (TxOut ctx era)
 deriving instance Show (TxOut ctx era)
+
+instance EraCast (TxOut ctx) where
+  eraCast (TxOut addressInEra txOutValue txOutDatum referenceScript) = TxOut
+    <$> eraCast addressInEra
+    <*> eraCast txOutValue
+    <*> eraCast txOutDatum
+    <*> eraCast referenceScript
 
 data TxOutInAnyEra where
      TxOutInAnyEra :: CardanoEra era
@@ -795,6 +804,15 @@ data MultiAssetSupportedInEra era where
      -- | Multi-asset transactions are supported in the 'Babbage' era.
      MultiAssetInBabbageEra :: MultiAssetSupportedInEra BabbageEra
 
+instance IsCardanoEra era => Summon (MultiAssetSupportedInEra era) where
+  summon = case cardanoEra @era of
+    ByronEra -> Left "MultiAssetSupportedInEra ByronEra does not exist"
+    ShelleyEra -> Left "MultiAssetSupportedInEra ShelleyEra does not exist"
+    AllegraEra -> Left "MultiAssetSupportedInEra AllegraEra does not exist"
+    MaryEra -> Right MultiAssetInMaryEra
+    AlonzoEra -> Right MultiAssetInAlonzoEra
+    BabbageEra -> Right MultiAssetInBabbageEra
+
 deriving instance Eq   (MultiAssetSupportedInEra era)
 deriving instance Show (MultiAssetSupportedInEra era)
 
@@ -817,6 +835,15 @@ data OnlyAdaSupportedInEra era where
 
 deriving instance Eq   (OnlyAdaSupportedInEra era)
 deriving instance Show (OnlyAdaSupportedInEra era)
+
+instance IsCardanoEra era => Summon (OnlyAdaSupportedInEra era) where
+  summon = case cardanoEra @era of
+    ByronEra -> Right AdaOnlyInByronEra
+    ShelleyEra -> Right AdaOnlyInShelleyEra
+    AllegraEra -> Right AdaOnlyInAllegraEra
+    MaryEra -> Left "OnlyAdaSupportedInEra MaryEra does not exist"
+    AlonzoEra -> Left "OnlyAdaSupportedInEra MaryEra does not exist"
+    BabbageEra -> Left "OnlyAdaSupportedInEra MaryEra does not exist"
 
 multiAssetSupportedInEra :: CardanoEra era
                          -> Either (OnlyAdaSupportedInEra era)
@@ -1041,6 +1068,15 @@ data ScriptDataSupportedInEra era where
      ScriptDataInAlonzoEra  :: ScriptDataSupportedInEra AlonzoEra
      ScriptDataInBabbageEra :: ScriptDataSupportedInEra BabbageEra
 
+instance IsCardanoEra era => Summon (ScriptDataSupportedInEra era) where
+  summon = case cardanoEra @era of
+    ByronEra -> Left "ScriptDataSupportedInEra ByronEra does not exist"
+    ShelleyEra -> Left "ScriptDataSupportedInEra ShelleyEra does not exist"
+    AllegraEra -> Left "ScriptDataSupportedInEra AllegraEra does not exist"
+    MaryEra -> Left "OnlyAdaSupportedInEra MaryEra does not exist"
+    AlonzoEra -> Right ScriptDataInAlonzoEra
+    BabbageEra -> Right ScriptDataInBabbageEra
+
 deriving instance Eq   (ScriptDataSupportedInEra era)
 deriving instance Show (ScriptDataSupportedInEra era)
 
@@ -1188,6 +1224,11 @@ data TxOutValue era where
 
      TxOutValue   :: MultiAssetSupportedInEra era -> Value -> TxOutValue era
 
+instance EraCast TxOutValue where
+  eraCast = \case
+    TxOutAdaOnly _ lovelace -> TxOutAdaOnly <$> summon <*> pure lovelace
+    TxOutValue   _ value    -> TxOutValue   <$> summon <*> pure value
+
 deriving instance Eq   (TxOutValue era)
 deriving instance Show (TxOutValue era)
 deriving instance Generic (TxOutValue era)
@@ -1333,6 +1374,12 @@ data TxOutDatum ctx era where
 deriving instance Eq   (TxOutDatum ctx era)
 deriving instance Show (TxOutDatum ctx era)
 
+instance EraCast (TxOutDatum ctx)  where
+  eraCast = \case
+    TxOutDatumNone                    -> pure TxOutDatumNone
+    TxOutDatumHash _ hash             -> TxOutDatumHash   <$> summon <*> pure hash
+    TxOutDatumInTx' _ scriptData hash -> TxOutDatumInTx'  <$> summon <*> pure scriptData <*> pure hash
+    TxOutDatumInline _ scriptData     -> TxOutDatumInline <$> summon <*> pure scriptData
 
 pattern TxOutDatumInTx
   :: ScriptDataSupportedInEra era
