@@ -71,6 +71,7 @@ PROFILES_CI_TEST      := ci-test ci-test-p2p ci-test-plutus ci-test-notracer
 PROFILES_CI_BENCH     := ci-bench ci-bench-p2p ci-bench-plutus ci-bench-notracer
 PROFILES_10           := 10 10-p2p 10-plutus 10-notracer
 PROFILES_FORGE_STRESS := forge-stress forge-stress-p2p forge-stress-plutus forge-stress-plutus-singleton forge-stress-notracer
+PROFILES_FORGE_STRESS_PRE := forge-stress-pre forge-stress-pre-plutus forge-stress-pre-notracer
 PROFILES_CHAINSYNC    := chainsync-early-byron  chainsync-early-byron-notracer  chainsync-early-byron-oldtracing
 PROFILES_CHAINSYNC    += chainsync-early-alonzo chainsync-early-alonzo-notracer chainsync-early-alonzo-oldtracing chainsync-early-alonzo-p2p
 PROFILES_VENDOR       := dish dish-plutus dish-10M dish-10M-plutus
@@ -81,6 +82,7 @@ SHELL_PROFILES += $(PROFILES_CI_TEST)
 SHELL_PROFILES += $(PROFILES_CI_BENCH)
 SHELL_PROFILES += $(PROFILES_10)
 SHELL_PROFILES += $(PROFILES_FORGE_STRESS)
+SHELL_PROFILES += $(PROFILES_FORGE_STRESS_PRE)
 SHELL_PROFILES += $(PROFILES_CHAINSYNC)
 SHELL_PROFILES += $(PROFILES_VENDOR)
 
