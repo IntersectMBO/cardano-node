@@ -318,6 +318,8 @@ case "$op" in
                --* ) msg "FATAL:  unknown flag '$1'"; usage_run;;
                * ) break;; esac; shift; done
 
+        local node_specs="$profile"/node-specs.json
+
         if profile has-preset "$profile"/profile.json
         then preset=$(profile json "$profile"/profile.json | jq '.preset' -r)
              progress "run" "allocating from preset '$preset'"
@@ -330,7 +332,6 @@ case "$op" in
         local hash=$(jq '."cardano-node" | .[:5]' -r <<<$manifest)
 
         ## 1. compute cluster composition
-        local node_specs=$(profile node-specs "$profile"/profile.json)
 
         ## 2. genesis cache entry population
         progress "run | genesis" "cache entry:  $(if test -n "$genesis_cache_entry"; then echo pre-supplied; else echo preparing a new one..; fi)"
@@ -378,14 +379,12 @@ case "$op" in
         then
             test "$(jq -r .name $profile/profile.json)" = "$profile_name" ||
                 fatal "profile | allocate incoherence:  --profile $profile/profile.json mismatches '$profile_name'"
-            ln -s "$profile"              "$dir"/profile
-            cp    "$profile"/profile.json "$dir"/profile.json
+            ln -s "$profile"                 "$dir"/profile
+            cp    "$profile"/profile.json    "$dir"/profile.json
+            cp    "$profile"/node-specs.json "$dir"/node-specs.json
         else
-            profile has-profile          "$profile_name" ||
-                fatal  "no such profile:  $profile_name"
-            profile json                 "$profile_name" > "$dir"/profile.json
+            fail "Mode no longer supported:  operation without profile/ directory."
         fi
-        jq '.' <<<$node_specs > "$dir"/node-specs.json
 
         local args=(
             --arg       tag              "$tag"

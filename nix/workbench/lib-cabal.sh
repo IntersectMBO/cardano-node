@@ -1,4 +1,3 @@
-echo 'lib-cabal args: '"$*"
 progress "workbench"  "cabal-inside-nix-shell mode enabled, calling cardano-* via '$(white cabal run)' (instead of using Nix store); $(red lib-cabal.sh) flags: $(yellow $*)"
 
 if test ! -v WB_PROFILED; then export WB_PROFILED= ; fi

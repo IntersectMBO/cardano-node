@@ -200,13 +200,14 @@ case "$op" in
         msg "genesis:  removing delegator keys.."
         rm "$dir"/stake-delegator-keys -rf
 
-        cat <<<$cache_key_input               > "$dir"/cache.key.input
-        cat <<<$cache_key                     > "$dir"/cache.key
-        cat <<<$global_genesis_format_version > "$dir"/layout.version
-
         msg "genesis:  moving keys"
         ## TODO: try to get rid of this step:
-        Massage_the_key_file_layout_to_match_AWS "$profile_json" "$node_specs" "$dir";;
+        Massage_the_key_file_layout_to_match_AWS "$profile_json" "$node_specs" "$dir"
+
+        msg "genesis:  sealing"
+        cat <<<$cache_key_input               > "$dir"/cache.key.input
+        cat <<<$cache_key                     > "$dir"/cache.key
+        cat <<<$global_genesis_format_version > "$dir"/layout.version;;
 
     derive-from-cache )
         local usage="USAGE:  wb genesis $op PROFILE-OUT TIMING-JSON-EXPR CACHE-ENTRY-DIR OUTDIR"
