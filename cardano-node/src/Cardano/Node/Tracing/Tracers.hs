@@ -240,7 +240,7 @@ mkConsensusTracers :: forall blk.
 mkConsensusTracers trBase trForward mbTrEKG _trDataPoint trConfig nodeKernel = do
     chainSyncClientTr  <- mkCardanoTracer
                 trBase trForward mbTrEKG
-                 ["ChainSync", "ClientEvent"]
+                 ["ChainSync", "Client"]
                 namesForChainSyncClientEvent
                 severityChainSyncClientEvent
                 allPublic
@@ -278,7 +278,7 @@ mkConsensusTracers trBase trForward mbTrEKG _trDataPoint trConfig nodeKernel = d
     configureTracers trConfig docBlockFetchDecision [blockFetchDecisionTr]
     blockFetchClientTr  <- mkCardanoTracer
                 trBase trForward mbTrEKG
-                ["BlockFetch", "ClientEvent"]
+                ["BlockFetch", "Client"]
                 namesForBlockFetchClient
                 severityBlockFetchClient
                 allPublic
@@ -296,7 +296,7 @@ mkConsensusTracers trBase trForward mbTrEKG _trDataPoint trConfig nodeKernel = d
 
     blockFetchServerTr  <- mkCardanoTracer
                 trBase trForward mbTrEKG
-                ["BlockFetch", "ServerBlock"]
+                ["BlockFetch", "Server"]
                 namesForBlockFetchServer
                 severityBlockFetchServer
                 allPublic
