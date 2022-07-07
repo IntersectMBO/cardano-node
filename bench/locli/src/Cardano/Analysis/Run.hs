@@ -3,19 +3,19 @@
 {-# OPTIONS_GHC -Wno-incomplete-patterns -Wno-name-shadowing -Wno-orphans #-}
 module Cardano.Analysis.Run (module Cardano.Analysis.Run) where
 
-import Cardano.Prelude
+import           Cardano.Prelude
 
-import Control.Monad (fail)
-import Data.Aeson qualified as Aeson
-import Data.Aeson (FromJSON(..), Object, ToJSON(..), withObject, (.:), (.:?))
-import Data.ByteString.Lazy.Char8 qualified as LBS
-import Data.Text qualified as T
+import           Control.Monad (fail)
+import           Data.Aeson (FromJSON (..), Object, ToJSON (..), withObject, (.:), (.:?))
+import qualified Data.Aeson as Aeson
+import qualified Data.ByteString.Lazy.Char8 as LBS
+import qualified Data.Text as T
 
-import Cardano.Analysis.ChainFilter
-import Cardano.Analysis.Context
-import Cardano.Analysis.Ground
-import Cardano.Analysis.Version
-import Cardano.Util
+import           Cardano.Analysis.ChainFilter
+import           Cardano.Analysis.Context
+import           Cardano.Analysis.Ground
+import           Cardano.Analysis.Version
+import           Cardano.Util
 
 -- | Explain the poor human a little bit of what was going on:
 data Anchor
@@ -38,8 +38,25 @@ renderAnchor Anchor{..} = mconcat
   , "filters: ", case aFilters of
                    [] -> "unfiltered"
                    xs -> T.intercalate ", " (unFilterName <$> xs)
-  , ", "
-  , renderProgramAndVersion aVersion
+  , renderAnchorDomains a]
+
+renderAnchorDomains :: Anchor -> Text
+renderAnchorDomains Anchor{..} = mconcat $
+  maybe [] ((:[]) . renderDomain "slot"  (show . unSlotNo)) aSlots
+  <>
+  maybe [] ((:[]) . renderDomain "block" (show . unBlockNo)) aBlocks
+ where renderDomain :: Text -> (a -> Text) -> DataDomain a -> Text
+       renderDomain ty r DataDomain{..} = mconcat
+         [ ", ", ty
+         , " range: raw(", r ddRawFirst,      "-", r ddRawLast , ")"
+         ,   " filtered(", r ddFilteredFirst, "-", r ddFilteredLast, ")"
+         ]
+
+renderAnchorNoRuns :: Anchor -> Text
+renderAnchorNoRuns a@Anchor{..} = mconcat
+  [ renderAnchorFiltersAndDomains a
+  , ", ", renderProgramAndVersion aVersion
+  , ", analysed at ", renderAnchorDate a
   ]
 
 data AnalysisCmdError
