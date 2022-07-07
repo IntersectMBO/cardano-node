@@ -1,5 +1,23 @@
 # Changelog for cardano-node
 
+## 1.35.1 -- July 2022
+
+### node changes
+
+- Update ledger to tip of release/1.0.0 (#4146)
+
+### consensus changes
+
+None
+
+### network changes
+
+None
+
+### ledger changes
+
+- Ensure Babbage TxOut decoder can't fail due to malformed Ptr. This bug manifests itself if a node is running in the Babbage era and shuts down, it has to re-sync from genesis when started back up. (#2897)
+
 ## 1.35.0 -- June 2022
 
 ### node changes

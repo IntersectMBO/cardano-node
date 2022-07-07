@@ -1,5 +1,9 @@
 # Changelog for cardano-api
 
+## 1.35.1 -- July 2022
+
+None
+
 ## 1.35.0 -- June 2022
 - Add Vasil hardfork to cardano-api and cardano-cli (#3765)
 - Reference script integration (#3953)
