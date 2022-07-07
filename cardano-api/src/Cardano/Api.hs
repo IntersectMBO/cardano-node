@@ -48,6 +48,7 @@ module Cardano.Api (
     castVerificationKey,
     castSigningKey,
     generateSigningKey,
+    generateInsecureSigningKey,
 
     -- ** Hashes
     -- | In Cardano most keys are identified by their hash, and hashes are

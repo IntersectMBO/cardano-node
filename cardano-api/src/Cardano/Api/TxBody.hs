@@ -2680,8 +2680,8 @@ getByronTxBodyContent (Annotated Byron.UnsafeTx{txInputs, txOutputs} _) =
       txScriptValidity   = TxScriptValidityNone
     }
 
-makeShelleyTransactionBody :: ()
-  => ShelleyBasedEra era
+makeShelleyTransactionBody
+  :: ShelleyBasedEra era
   -> TxBodyContent BuildTx era
   -> Either TxBodyError (TxBody era)
 makeShelleyTransactionBody era@ShelleyBasedEraShelley

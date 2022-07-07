@@ -34,6 +34,8 @@ module Cardano.CLI.Shelley.Key
 
   , PaymentVerifier(..)
   , StakeVerifier(..)
+
+  , generateKeyPair
   ) where
 
 import           Cardano.Prelude
@@ -481,3 +483,8 @@ readVerificationKeyOrHashOrTextEnvFile asType verKeyOrHashOrFile =
       eitherVk <- readVerificationKeyOrTextEnvFile asType vkOrFile
       pure (verificationKeyHash <$> eitherVk)
     VerificationKeyHash vkHash -> pure (Right vkHash)
+
+generateKeyPair :: Key keyrole => AsType keyrole -> IO (VerificationKey keyrole, SigningKey keyrole)
+generateKeyPair asType = do
+  skey <- generateSigningKey asType
+  return (getVerificationKey skey, skey)
