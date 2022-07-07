@@ -12,10 +12,10 @@ ifeq ($(7),true)
 $(1): ARGS += --arg 'profiled' true
 endif
 ifeq ($(5)$(6),truetrue)
-$(1): CMD := start-cluster; return
+$(1): CMD := start-cluster $(if ${ITER},--iterations ${ITER}); return
 endif
 ifeq ($(5)$(6),truefalse)
-$(1): RUN := start-cluster
+$(1): RUN := start-cluster $(if ${ITER},--iterations ${ITER})
 endif
 ifeq ($(3)$(4)$(5)$(6),falsetruefalsefalse)
 define EXTRA_HELP +=

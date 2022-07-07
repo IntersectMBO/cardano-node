@@ -155,9 +155,10 @@ start()
     profile_name=${profile_name:-$(jq '.name' -r $profile/profile.json)}
     analysis_type=$(jq '.analysis.type' -r $profile/profile.json)
 
-    progress "top-level" "iterations of profile $(with_color 'yellow' $profile_name):  $(with_color 'white' $iterations)"
-    for ((i=0; i<$iterations; i++))
-    do local args=(
+    local top_i
+    for ((top_i=0; top_i<$iterations; top_i++))
+    do progress "top-level" "profile $(with_color 'yellow' $profile_name), iteration $(with_color 'white' $((top_i+1))) of $(with_color 'yellow' $iterations)"
+       local args=(
             ${run_allocate_args[@]}
             --manifest "$(manifest collect-from-checkout "$node_source" $node_rev)"
         )
@@ -172,7 +173,8 @@ start()
        if test -n "$no_analysis" -o $analysis_type = null; then continue; fi
 
        progress "top-level | analysis" "analysis type $(with_color yellow $analysis_type) on $(with_color white $tag)"
-       analyse ${analyse_args[@]} $analysis_type $tag ||
+       analyse ${analyse_args[@]} $analysis_type $tag &&
+           progress "run | analysis" "done" ||
            if test -n "$analysis_can_fail" -a -z "$no_retry_failed_runs"
            then progress "run | analysis" "log processing failed, but --analysis-can-fail prevents failure:  $(with_color red $tag)"
                 iterations=$((iterations + 1))

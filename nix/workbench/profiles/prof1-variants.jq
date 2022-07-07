@@ -299,6 +299,13 @@ def all_profile_variants:
     { desc: "Miniature dataset, CI-friendly duration, bench scale"
     }) as $cibench_base
   |
+   ($scenario_fixed_loaded * $doublet * $dataset_oct2021 *
+    { node:
+      { shutdown_on_slot_synced:        2400
+      }
+    , desc: "Oct 2021 dataset size, honest four epochs."
+    }) as $forge_stress_pre_base
+  |
    ($scenario_fixed_loaded * $doublet * $dataset_status_quo *
     { node:
       { shutdown_on_slot_synced:        2400
@@ -350,6 +357,10 @@ def all_profile_variants:
   , $plutus *
     { name: "plutus"
     , desc: "Default with Plutus workload"
+    }
+  , $old_tracing *
+    { name: "oldtracing"
+    , desc: "Default in legacy tracing mode"
     }
 
   ## Fastest -- start-stop
@@ -446,6 +457,16 @@ def all_profile_variants:
     }
   , $forge_stress_base * $without_tracer *
     { name: "forge-stress-notracer"
+    }
+
+  , $forge_stress_pre_base *
+    { name: "forge-stress-pre"
+    }
+  , $forge_stress_pre_base * $plutus *
+    { name: "forge-stress-pre-plutus"
+    }
+  , $forge_stress_pre_base * $without_tracer *
+    { name: "forge-stress-pre-notracer"
     }
 
   , $scenario_chainsync * $chaindb_early_byron *

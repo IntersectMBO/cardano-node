@@ -96,7 +96,7 @@ case "${op}" in
         local usage="USAGE:  wb topology density-map NODE-SPECS-JSON"
         local node_specs_json=${1:?$usage}
 
-        args=(--slurpfile node_specs "$node_specs"
+        args=(--slurpfile node_specs "$node_specs_json"
               --null-input --compact-output
              )
         jq ' $node_specs[0]

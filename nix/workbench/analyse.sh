@@ -418,7 +418,55 @@ analysis_config_extract_legacy_tracing() {
           let f = __fromJSON (__readFile "'$file'");
           in with f;
              __toJSON
-             { inherit rotation;
+             { inherit
+               TraceAcceptPolicy
+               TraceBlockFetchClient
+               TraceBlockFetchDecisions
+               TraceBlockFetchProtocol
+               TraceBlockFetchProtocolSerialised
+               TraceBlockFetchServer
+               TraceChainDb
+               TraceChainSyncBlockServer
+               TraceChainSyncClient
+               TraceChainSyncHeaderServer
+               TraceChainSyncProtocol
+               TraceConnectionManager
+               TraceDNSResolver
+               TraceDNSSubscription
+               TraceDiffusionInitialization
+               TraceErrorPolicy
+               TraceForge
+               TraceHandshake
+               TraceInboundGovernor
+               TraceIpSubscription
+               TraceLedgerPeers
+               TraceLocalChainSyncProtocol
+               TraceLocalErrorPolicy
+               TraceLocalHandshake
+               TraceLocalRootPeers
+               TraceLocalTxSubmissionProtocol
+               TraceLocalTxSubmissionServer
+               TraceMempool
+               TraceMux
+               TracePeerSelection
+               TracePeerSelectionActions
+               TracePublicRootPeers
+               TraceServer
+               TraceTxInbound
+               TraceTxOutbound
+               TraceTxSubmissionProtocol
+               TracingVerbosity
+               TurnOnLogMetrics
+               TurnOnLogging
+               defaultBackends
+               defaultScribes
+               hasEKG
+               hasPrometheus
+               minSeverity
+               options
+               rotation
+               setupBackends
+               setupScribes;
              }'
     )
     nix eval "${nix_eval_args[@]}" | jq --sort-keys

@@ -19,15 +19,15 @@ cabal.project                                                 @Jimbo4350 @newhog
 doc                                                           @docs-access
 README.*                                                      @docs-access
 
-bench/tx-generator                                            @Jimbo4350 @newhoggy @deepfire @MarcFontaine
-bench                                                         @Jimbo4350 @newhoggy @deepfire @denisshevchenko @jutaro @MarcFontaine @mgmeier @cleverca22
+bench/tx-generator                                            @Jimbo4350 @newhoggy @deepfire @mgmeier @MarcFontaine
+bench                                                         @Jimbo4350 @newhoggy @deepfire @denisshevchenko @jutaro @MarcFontaine @mgmeier @fmaste @cleverca22
 cardano-tracer                                                @Jimbo4350 @newhoggy @deepfire @denisshevchenko
-nix/workbench                                                 @Jimbo4350 @newhoggy @deepfire @denisshevchenko @jutaro @MarcFontaine @mgmeier
+nix/workbench                                                 @Jimbo4350 @newhoggy @deepfire @denisshevchenko @jutaro @MarcFontaine @mgmeier @fmaste
 trace-dispatcher                                              @Jimbo4350 @newhoggy @deepfire @denisshevchenko @jutaro @mgmeier
 trace-forward                                                 @Jimbo4350 @newhoggy @deepfire @denisshevchenko @jutaro @mgmeier
 trace-resources                                               @Jimbo4350 @newhoggy @deepfire @denisshevchenko @jutaro @mgmeier
-Makefile                                                      @Jimbo4350 @newhoggy @deepfire @mgmeier
-*.mk                                                          @Jimbo4350 @newhoggy @deepfire @mgmeier
+Makefile                                                      @Jimbo4350 @newhoggy @deepfire @mgmeier @fmaste
+*.mk                                                          @Jimbo4350 @newhoggy @deepfire @mgmeier @fmaste
 
 .buildkite                                                    @Jimbo4350 @newhoggy @devops
 .github                                                       @Jimbo4350 @newhoggy @devops
