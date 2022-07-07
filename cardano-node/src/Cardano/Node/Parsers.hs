@@ -1,5 +1,6 @@
 {-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Cardano.Node.Parsers
@@ -19,13 +20,13 @@ import qualified Options.Applicative as Opt
 import qualified Options.Applicative.Help as OptI
 import           System.Posix.Types (Fd (..))
 
-import           Ouroboros.Network.Block (MaxSlotNo (..), SlotNo (..))
-
 import           Ouroboros.Consensus.Mempool.API (MempoolCapacityBytes (..),
                    MempoolCapacityBytesOverride (..))
 import           Ouroboros.Consensus.Storage.LedgerDB.DiskPolicy (SnapshotInterval (..))
 
-import           Cardano.Node.Configuration.NodeAddress
+import           Cardano.Logging.Types
+import           Cardano.Node.Configuration.NodeAddress (NodeHostIPv4Address (NodeHostIPv4Address),
+                   NodeHostIPv6Address (NodeHostIPv6Address), PortNumber, SocketPath (SocketPath))
 import           Cardano.Node.Configuration.POM (PartialNodeConfiguration (..), lastOption)
 import           Cardano.Node.Configuration.Socket
 import           Cardano.Node.Handlers.Shutdown
@@ -46,6 +47,7 @@ nodeRunParser = do
   topFp <- lastOption parseTopologyFile
   dbFp <- lastOption parseDbPath
   socketFp <- lastOption $ parseSocketPath "Path to a cardano-node socket"
+  traceForwardSocket <- lastOption parseTracerSocketMode
 
   -- Protocol files
   byronCertFile   <- optional parseByronDelegationCert
@@ -66,7 +68,7 @@ nodeRunParser = do
 
   validate <- lastOption parseValidateDB
   shutdownIPC <- lastOption parseShutdownIPC
-  shutdownOnSlot <- lastOption parseShutdownOnSlotSynced
+  shutdownOnLimit <- lastOption parseShutdownOn
 
   maybeMempoolCapacityOverride <- lastOption parseMempoolCapacityOverride
 
@@ -93,13 +95,14 @@ nodeRunParser = do
              }
            , pncValidateDB = validate
            , pncShutdownConfig =
-               Last . Just $ ShutdownConfig (getLast shutdownIPC) (getLast shutdownOnSlot)
+               Last . Just $ ShutdownConfig (getLast shutdownIPC) (getLast shutdownOnLimit)
            , pncProtocolConfig = mempty
            , pncMaxConcurrencyBulkSync = mempty
            , pncMaxConcurrencyDeadline = mempty
            , pncLoggingSwitch = mempty
            , pncLogMetrics = mempty
            , pncTraceConfig = mempty
+           , pncTraceForwardSocket = traceForwardSocket
            , pncMaybeMempoolCapacityOverride = maybeMempoolCapacityOverride
            , pncProtocolIdleTimeout = mempty
            , pncTimeWaitTimeout = mempty
@@ -119,6 +122,22 @@ parseSocketPath helpMessage =
         <> completer (bashCompleter "file")
         <> metavar "FILEPATH"
     )
+
+parseTracerSocketMode :: Parser (SocketPath, ForwarderMode)
+parseTracerSocketMode =
+  ((, Responder) . SocketPath <$> strOption
+   ( long "tracer-socket-path-accept"
+       <> help "Accept incoming cardano-tracer connection at local socket"
+       <> completer (bashCompleter "file")
+       <> metavar "FILEPATH"
+    ))
+  <|>
+  ((, Initiator) . SocketPath <$> strOption
+   ( long "tracer-socket-path-connect"
+       <> help "Connect to cardano-tracer listening on a local socket"
+       <> completer (bashCompleter "file")
+       <> metavar "FILEPATH"
+    ))
 
 parseHostIPv4Addr :: Parser NodeHostIPv4Address
 parseHostIPv4Addr =
@@ -214,16 +233,6 @@ parseShutdownIPC =
         <> help "Shut down the process when this inherited FD reaches EOF"
         <> hidden
       )
-
-parseShutdownOnSlotSynced :: Parser MaxSlotNo
-parseShutdownOnSlotSynced =
-    fmap (fromMaybe NoMaxSlotNo) $
-    optional $ option (MaxSlotNo . SlotNo <$> auto) (
-         long "shutdown-on-slot-synced"
-      <> metavar "SLOT"
-      <> help "Shut down the process after ChainDB is synced up to the specified slot"
-      <> hidden
-    )
 
 parseTopologyFile :: Parser FilePath
 parseTopologyFile =

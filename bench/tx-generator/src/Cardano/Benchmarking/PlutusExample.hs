@@ -33,7 +33,7 @@ mkUtxoScript networkId (scriptFile, script, txOutDatum) validity values
  where
   mkTxOut v = TxOut
                  plutusScriptAddr
-                 (mkTxOutValueAdaOnly v)
+                 (lovelaceToTxOutValue v)
                  (TxOutDatumHash ScriptDataInAlonzoEra $ hashScriptData txOutDatum)
                  ReferenceScriptNone   
                     
@@ -47,7 +47,7 @@ mkUtxoScript networkId (scriptFile, script, txOutDatum) validity values
   mkNewFund :: TxId -> TxIx -> Lovelace -> Fund
   mkNewFund txId txIx val = Fund $ InAnyCardanoEra AlonzoEra $ FundInEra {
       _fundTxIn = TxIn txId txIx
-    , _fundVal = mkTxOutValueAdaOnly val
+    , _fundVal = lovelaceToTxOutValue val
     , _fundSigningKey = Nothing
     , _fundValidity = validity
     , _fundVariant = PlutusScriptFund scriptFile txOutDatum
@@ -81,8 +81,8 @@ preExecuteScript protocolParameters (PlutusScript _ (PlutusScriptSerialised scri
     Just (CostModel x) -> Right x
     Nothing -> Left "costModel unavailable"
   evaluationContext <- case Plutus.mkEvaluationContext costModel of
-    Just x -> Right x
-    Nothing -> Left "evaluationContext unavailable"
+    Right x  -> Right x
+    Left err -> Left $ "evaluationContext unavailable: " <> show err
   let
     apiVersion = protocolParamProtocolVersion protocolParameters
     protocolVersion = Plutus.ProtocolVersion (fromIntegral $ fst apiVersion) (fromIntegral $ snd apiVersion)

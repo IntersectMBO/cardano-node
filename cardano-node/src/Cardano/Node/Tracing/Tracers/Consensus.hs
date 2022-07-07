@@ -263,47 +263,31 @@ docChainSyncClientEvent' = Documented [
 severityChainSyncServerEvent :: TraceChainSyncServerEvent blk -> SeverityS
 severityChainSyncServerEvent (TraceChainSyncServerUpdate _tip _upd _blocking enclosing) =
     case enclosing of
-      RisingEdge         -> Info
-      FallingEdgeWith () -> Debug
+      RisingEdge  -> Info
+      FallingEdge -> Debug
 
 namesForChainSyncServerEvent :: TraceChainSyncServerEvent blk -> [Text]
 namesForChainSyncServerEvent ev =
     "ChainSyncServerEvent" : namesForChainSyncServerEvent' ev
 
 namesForChainSyncServerEvent' :: TraceChainSyncServerEvent blk -> [Text]
-namesForChainSyncServerEvent' (TraceChainSyncServerUpdate _tip _update NonBlocking _enclosing) =
-      ["ServerRead"]
-namesForChainSyncServerEvent' (TraceChainSyncServerUpdate _tip _update Blocking _enclosing) =
-      ["ServerReadBlocked"]
+namesForChainSyncServerEvent' (TraceChainSyncServerUpdate _tip _update _blocking _enclosing) =
+      ["Update"]
 
 instance ConvertRawHash blk
       => LogFormatting (TraceChainSyncServerEvent blk) where
-  forMachine _dtal (TraceChainSyncServerUpdate tip (AddBlock _hdr) NonBlocking enclosing) =
+  forMachine dtal (TraceChainSyncServerUpdate tip update blocking enclosing) =
       mconcat $
-               [ "kind" .= String "ChainSyncServerRead.AddBlock"
-               , tipToObject tip
-               ]
-               <> [ "risingEdge" .= True | RisingEdge <- [enclosing] ]
-  forMachine _dtal (TraceChainSyncServerUpdate tip (RollBack _pt) NonBlocking enclosing) =
-      mconcat $
-               [ "kind" .= String "ChainSyncServerRead.RollBack"
-               , tipToObject tip
-               ]
-               <> [ "risingEdge" .= True | RisingEdge <- [enclosing] ]
-  forMachine _dtal (TraceChainSyncServerUpdate tip (AddBlock _pt) Blocking enclosing) =
-      mconcat $
-               [ "kind" .= String "ChainSyncServerReadBlocked.AddBlock"
-               , tipToObject tip
-               ]
-               <> [ "risingEdge" .= True | RisingEdge <- [enclosing] ]
-  forMachine _dtal (TraceChainSyncServerUpdate tip (RollBack _pt) Blocking enclosing) =
-      mconcat $
-               [ "kind" .= String "ChainSyncServerReadBlocked.RollBack"
-               , tipToObject tip
+               [ "kind" .= String "ChainSyncServer.Update"
+               , "tip" .= tipToObject tip
+               , case update of
+                   AddBlock pt -> "addBlock" .= renderPointForDetails dtal pt
+                   RollBack pt -> "rollBackTo" .= renderPointForDetails dtal pt
+               , "blockingRead" .= case blocking of Blocking -> True; NonBlocking -> False
                ]
                <> [ "risingEdge" .= True | RisingEdge <- [enclosing] ]
 
-  asMetrics (TraceChainSyncServerUpdate _tip (AddBlock _hdr) _blocking FallingEdge) =
+  asMetrics (TraceChainSyncServerUpdate _tip (AddBlock _pt) _blocking FallingEdge) =
       [CounterM "cardano.node.chainSync.rollForward" Nothing]
   asMetrics _ = []
 
@@ -311,54 +295,30 @@ instance ConvertRawHash blk
 docChainSyncServerEventHeader :: Documented (TraceChainSyncServerEvent blk)
 docChainSyncServerEventHeader =
     addDocumentedNamespace
-      ["ChainSyncServerEvent", "ServerRead"]
+      ["ChainSyncServerEvent", "Update"]
       docChainSyncServerEventHeader'
 
 -- | Metrics documented here, but implemented specially
 docChainSyncServerEventHeader' :: Documented (TraceChainSyncServerEvent blk)
 docChainSyncServerEventHeader' = Documented [
     DocMsg
-      ["ServerRead"]
-      [("cardano.node.metrics.served.header", "A counter triggered ony on header event")]
+      ["Update"]
+      [("cardano.node.metrics.served.header", "A counter triggered only on header event")]
       "A server read has occurred, either for an add block or a rollback"
-    , DocMsg
-       ["ServerReadBlocked"]
-      [("cardano.node.metrics.served.header", "A counter triggered ony on header event")]
-      "A server read has blocked, either for an add block or a rollback"
-    , DocMsg
-      ["RollForward"]
-      [("cardano.node.metrics.served.header", "A counter triggered ony on header event")]
-      "Roll forward to the given point."
-    , DocMsg
-      ["RollBackward"]
-      [("cardano.node.metrics.served.header", "A counter triggered ony on header event")]
-      ""
   ]
 
 docChainSyncServerEventBlock :: Documented (TraceChainSyncServerEvent blk)
 docChainSyncServerEventBlock =
     addDocumentedNamespace
-      ["ChainSyncServerEvent", "ServerRead"]
+      ["ChainSyncServerEvent", "Update"]
       docChainSyncServerEventBlock'
 
 docChainSyncServerEventBlock' :: Documented (TraceChainSyncServerEvent blk)
 docChainSyncServerEventBlock' = Documented [
     DocMsg
-      ["ServerRead"]
+      ["Update"]
       []
       "A server read has occurred, either for an add block or a rollback"
-    , DocMsg
-       ["ServerReadBlocked"]
-      []
-      "A server read has blocked, either for an add block or a rollback"
-    , DocMsg
-      ["RollForward"]
-      []
-      "Roll forward to the given point."
-    , DocMsg
-      ["RollBackward"]
-      []
-      ""
   ]
 
 --------------------------------------------------------------------------------

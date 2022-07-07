@@ -27,6 +27,7 @@ import           Ouroboros.Consensus.Node.NetworkProtocolVersion
 instance HasSeverityAnnotation (StartupTrace blk) where
     getSeverityAnnotation (StartupSocketConfigError _) = Error
     getSeverityAnnotation (NetworkConfigUpdateError _) = Error
+    getSeverityAnnotation NetworkConfigUpdateUnsupported = Warning
     getSeverityAnnotation P2PWarning = Warning
     getSeverityAnnotation P2PWarningDevelopementNetworkProtocols = Warning
     getSeverityAnnotation WarningDevelopmentNetworkProtocols {} = Warning

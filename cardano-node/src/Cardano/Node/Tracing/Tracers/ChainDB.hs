@@ -182,16 +182,16 @@ docChainDBTraceEvent = addDocumentedNamespace [] docChainDBTraceEvent'
 docChainDBTraceEvent' :: Documented (ChainDB.TraceEvent blk)
 docChainDBTraceEvent' =
     addDocumentedNamespace ["AddBlockEvent"] docChainDBAddBlock
-    `addDocs` addDocumentedNamespace ["TraceFollowerEvent"] docChainDBFollower
-    `addDocs` addDocumentedNamespace ["TraceCopyToImmutableDBEvent"] docChainDBImmtable
-    `addDocs` addDocumentedNamespace ["TraceGCEvent"] docChainDBGCEvent
-    `addDocs` addDocumentedNamespace ["TraceInitChainSelEvent"] docChainDBInitChainSel
-    `addDocs` addDocumentedNamespace ["TraceOpenEvent"] docChainDBOpenEvent
-    `addDocs` addDocumentedNamespace ["TraceIteratorEvent"] docChainDBIteratorEvent
-    `addDocs` addDocumentedNamespace ["TraceLedgerEvent"] docChainDBLedgerEvent
-    `addDocs` addDocumentedNamespace ["TraceLedgerReplayEvent"] docChainDBLedgerReplayEvent
-    `addDocs` addDocumentedNamespace ["TraceImmutableDBEvent"] docChainDBImmutableDBEvent
-    `addDocs` addDocumentedNamespace ["TraceVolatileDBEvent"] docChainDBVolatileDBEvent
+    `addDocs` addDocumentedNamespace ["FollowerEvent"] docChainDBFollower
+    `addDocs` addDocumentedNamespace ["CopyToImmutableDBEvent"] docChainDBImmtable
+    `addDocs` addDocumentedNamespace ["GCEvent"] docChainDBGCEvent
+    `addDocs` addDocumentedNamespace ["InitChainSelEvent"] docChainDBInitChainSel
+    `addDocs` addDocumentedNamespace ["OpenEvent"] docChainDBOpenEvent
+    `addDocs` addDocumentedNamespace ["IteratorEvent"] docChainDBIteratorEvent
+    `addDocs` addDocumentedNamespace ["LedgerEvent"] docChainDBLedgerEvent
+    `addDocs` addDocumentedNamespace ["LedgerReplayEvent"] docChainDBLedgerReplayEvent
+    `addDocs` addDocumentedNamespace ["ImmutableDBEvent"] docChainDBImmutableDBEvent
+    `addDocs` addDocumentedNamespace ["VolatileDBEvent"] docChainDBVolatileDBEvent
 
 --------------------------------------------------------------------------------
 -- AddBlockEvent
@@ -297,7 +297,7 @@ instance ( LogFormatting (Header blk)
         RisingEdge ->
           "About to add block to queue: " <> renderRealPointAsPhrase pt
         FallingEdgeWith sz ->
-          "Block added to queue: " <> renderRealPointAsPhrase pt <> " queue size " <> condenseT sz
+          "Block added to queue: " <> renderRealPointAsPhrase pt <> ", queue size " <> condenseT sz
   forHuman (ChainDB.PoppedBlockFromQueue edgePt) =
       case edgePt of
         RisingEdge ->
@@ -323,8 +323,8 @@ instance ( LogFormatting (Header blk)
   forHuman (ChainDB.AddBlockValidation ev') = forHuman ev'
   forHuman (ChainDB.AddedBlockToVolatileDB pt _ _ enclosing) =
       case enclosing of
-        RisingEdge         -> "Chain about to add block " <> renderRealPointAsPhrase pt
-        FallingEdgeWith () -> "Chain added block " <> renderRealPointAsPhrase pt
+        RisingEdge  -> "Chain about to add block " <> renderRealPointAsPhrase pt
+        FallingEdge -> "Chain added block " <> renderRealPointAsPhrase pt
   forHuman (ChainDB.ChainSelectionForFutureBlock pt) =
       "Chain selection run for block previously from future: " <> renderRealPointAsPhrase pt
   forHuman (ChainDB.PipeliningEvent ev') = forHuman ev'
@@ -341,10 +341,14 @@ instance ( LogFormatting (Header blk)
   forMachine dtal (ChainDB.AddedBlockToQueue pt edgeSz) =
       mconcat [ "kind" .= String "AddedBlockToQueue"
                , "block" .= forMachine dtal pt
-               , case edgeSz of RisingEdge -> "risingEdge" .= True; FallingEdgeWith sz -> "queueSize" .= toJSON sz ]
+               , case edgeSz of
+                   RisingEdge         -> "risingEdge" .= True
+                   FallingEdgeWith sz -> "queueSize" .= toJSON sz ]
   forMachine dtal (ChainDB.PoppedBlockFromQueue edgePt) =
       mconcat [ "kind" .= String "TraceAddBlockEvent.PoppedBlockFromQueue"
-               , case edgePt of RisingEdge -> "risingEdge" .= True; FallingEdgeWith pt -> "block" .= forMachine dtal pt ]
+               , case edgePt of
+                   RisingEdge         -> "risingEdge" .= True
+                   FallingEdgeWith pt -> "block" .= forMachine dtal pt ]
   forMachine dtal (ChainDB.BlockInTheFuture pt slot) =
       mconcat [ "kind" .= String "BlockInTheFuture"
                , "block" .= forMachine dtal pt
@@ -417,8 +421,8 @@ instance ( ConvertRawHash (Header blk)
          ) => LogFormatting (ChainDB.TracePipeliningEvent blk) where
   forHuman (ChainDB.SetTentativeHeader hdr enclosing) =
       case enclosing of
-        RisingEdge         -> "About to set tentative header to " <> renderPointAsPhrase (blockPoint hdr)
-        FallingEdgeWith () -> "Set tentative header to " <> renderPointAsPhrase (blockPoint hdr)
+        RisingEdge  -> "About to set tentative header to " <> renderPointAsPhrase (blockPoint hdr)
+        FallingEdge -> "Set tentative header to " <> renderPointAsPhrase (blockPoint hdr)
   forHuman (ChainDB.TrapTentativeHeader hdr) =
       "Discovered trap tentative header " <> renderPointAsPhrase (blockPoint hdr)
   forHuman (ChainDB.OutdatedTentativeHeader hdr) =
@@ -588,6 +592,10 @@ docChainDBAddBlock = Documented [
         "The block was added to the queue and will be added to the ChainDB by\
         \ the background thread. The size of the queue is included.."
     , DocMsg
+        ["PoppedBlockFromQueue"]
+        []
+        ""
+    , DocMsg
         ["BlockInTheFuture"]
         []
         "The block is from the future, i.e., its slot number is greater than\
@@ -670,6 +678,10 @@ docChainDBAddBlock = Documented [
         []
         "An event traced during validating performed while adding a block.\
         \ A point was found to be invalid."
+    , DocMsg
+        ["AddBlockValidation", "UpdateLedgerDb"]
+        []
+        ""
     , DocMsg
         ["ChainSelectionForFutureBlock"]
         []

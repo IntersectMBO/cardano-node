@@ -1,6 +1,7 @@
 module Cardano.Api.ValueParser
   ( parseValue
   , assetName
+  , policyId
   ) where
 
 import           Prelude

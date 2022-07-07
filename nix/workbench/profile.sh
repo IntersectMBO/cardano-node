@@ -17,13 +17,14 @@ global_profile_eras=(
     allegra
     mary
     alonzo
+    babbage
 )
 
 profile() {
 local op=${1:-show}; test $# -gt 0 && shift
 
 case "$op" in
-    list | names )
+    list | names | ls )
         profile generate-all | jq 'keys'
         ;;
 
@@ -49,6 +50,7 @@ case "$op" in
         ' --exit-status --arg name "$name" >/dev/null
         ;;
 
+    ## XXX:  does not respect overlays!!
     compose )
         local profile_names="$@"
 
@@ -64,10 +66,17 @@ case "$op" in
         local usage="USAGE: wb profile $op [NAME=<current-shell-profile>"
         local name=${1:-${WORKBENCH_SHELL_PROFILE:?variable unset, no profile name to use as a default.}}
 
-        if test -f  "$name"
-        then jq '.' "$name"
-        else profile generate-all |
-             jq '.["'$name'"]'
+        local json=$(if test -f  "$name"
+                     then jq '.' "$name"
+                     else profile generate-all |
+                             jq '.["'$name'"]'
+                     fi)
+
+        local preset=$(jq -r '.preset // ""' <<<$json)
+        local preset_overlay=$global_basedir/profiles/presets/$preset/overlay.json
+        if test -z "$preset" -o ! -f $preset_overlay
+        then echo "$json"
+        else jq '. * $overlay[0]' <<<$json --slurpfile overlay $preset_overlay
         fi;;
 
     describe )

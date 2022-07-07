@@ -46,7 +46,7 @@ TurnOnLogging: True
 UseTraceDispatcher: True
 
 TraceOptions:
-  Node:
+  "":
     severity: Silence
     detail: DNormal
     backends:
@@ -54,77 +54,77 @@ TraceOptions:
       - EKGBackend
       - Forwarder
 
-  Node.ChainDB:
+  ChainDB:
      severity: Info
 
-  Node.ChainDB.AddBlockEvent.AddBlockValidation.ValidCandidate:
+  ChainDB.AddBlockEvent.AddBlockValidation.ValidCandidate:
     severity: Silence
 
-  Node.ChainDB.InitChainSelEvent.UpdateLedgerDb:
+  ChainDB.InitChainSelEvent.UpdateLedgerDb:
     severity: Silence
 
-  Node.ConnectionManager:
+  ConnectionManager:
     severity: Info
 
-  Node.AcceptPolicy:
+  AcceptPolicy:
     severity: Info
 
-  Node.DNSResolver:
+  DNSResolver:
     severity: Info
 
-  Node.DNSSubscription:
+  DNSSubscription:
     severity: Info
 
-  Node.DiffusionInit:
+  DiffusionInit:
     severity: Info
 
-  Node.ErrorPolicy:
+  ErrorPolicy:
     severity: Info
 
-  Node.Forge:
+  Forge:
     severity: Info
 
-  Node.InboundGovernor:
+  InboundGovernor:
     severity: Info
 
-  Node.IpSubscription:
+  IpSubscription:
     severity: Info
 
-  Node.LedgerPeers:
+  LedgerPeers:
     severity: Info
 
-  Node.LocalErrorPolicy:
+  LocalErrorPolicy:
     severity: Info
 
-  Node.LocalRootPeers:
+  LocalRootPeers:
     severity: Info
 
-  Node.Mempool:
+  Mempool:
     severity: Info
 
-  Node.PeerSelection:
+  PeerSelection:
     severity: Info
 
-  Node.PeerSelectionActions:
+  PeerSelectionActions:
     severity: Info
 
-  Node.PublicRootPeers:
+  PublicRootPeers:
     severity: Info
 
 
-  Node.ChainDB.AddBlockEvent.AddedBlockToQueue:
+  ChainDB.AddBlockEvent.AddedBlockToQueue:
     maxFrequency: 2.0
 
-  Node.ChainDB.AddBlockEvent.AddedBlockToVolatileDB:
+  ChainDB.AddBlockEvent.AddedBlockToVolatileDB:
     maxFrequency: 2.0
 
-  Node.ChainDB.CopyToImmutableDBEvent.CopiedBlockToImmutableDB:
+  ChainDB.CopyToImmutableDBEvent.CopiedBlockToImmutableDB:
     maxFrequency: 2.0
 
-  Node.ChainDB.AddBlockEvent.AddBlockValidation.ValidCandidate:
+  ChainDB.AddBlockEvent.AddBlockValidation.ValidCandidate:
     maxFrequency: 2.0
 
-  Node.BlockFetchClient.CompletedBlockFetch:
+  BlockFetchClient.CompletedBlockFetch:
     maxFrequency: 2.0
 
 # Options for the trace forwarder

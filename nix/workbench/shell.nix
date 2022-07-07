@@ -3,13 +3,14 @@
 , workbenchDevMode ? false
 , useCabalRun ? false
 , checkoutWbMode ? "unknown"
+, profiled ? false
 }:
 
 with lib;
 
 let
   shellHook = ''
-    echo 'workbench shellHook:  workbenchDevMode=${toString workbenchDevMode} useCabalRun=${toString useCabalRun}'
+    echo 'workbench shellHook:  workbenchDevMode=${toString workbenchDevMode} useCabalRun=${toString useCabalRun} profileName=${profileName}'
     export WORKBENCH_BACKEND=supervisor
     export WORKBENCH_SHELL_PROFILE=${profileName}
 
@@ -29,7 +30,7 @@ let
       useCabalRun
       ''
       . nix/workbench/lib.sh
-      . nix/workbench/lib-cabal.sh
+      . nix/workbench/lib-cabal.sh ${optionalString profiled "--profiled"}
       ''}
 
     export CARDANO_NODE_SOCKET_PATH=run/current/node-0/node.socket

@@ -19,7 +19,10 @@ def profile_name($p):
 | era_defaults($p.era).generator   as   $generator_defaults
 | era_defaults($p.era).composition as $composition_defaults
 | era_defaults($p.era).node        as        $node_defaults
-| $p.node.shutdown_on_slot_synced  as       $shutdown_slots
+| $p.node.shutdown_on_block_synced as       $shutdown_block
+| ($p.node.shutdown_on_slot_synced // (($shutdown_block * 1.5 / $p.genesis.active_slots_coeff)
+                                       | ceil))
+                                   as       $shutdown_slots
   ## Genesis
 | [ "k\($p.composition.n_pools)" ]
   + if $p.composition.n_dense_hosts > 0
@@ -29,7 +32,7 @@ def profile_name($p):
   + if $shutdown_slots | type == "number"
     then [($shutdown_slots | tostring) + "slots"]
     else [ ($p.generator.epochs                  | tostring) + "ep"
-         , ($p.generator.tx_count     | . / 1000 | tostring) + "kTx" ]
+         , ($p.generator.tx_count | . / 1000 | ceil | tostring) + "kTx" ]
     end
   + [ ($p.genesis.utxo           | . / 1000 | tostring) + "kU"
     , ($p.genesis.delegators     | . / 1000 | tostring) + "kD"
@@ -84,7 +87,10 @@ def add_derived_params:
 
 ## Absolute durations:
 | ($gsis.epoch_length * $gsis.slot_duration) as $epoch_duration
-| $node.shutdown_on_slot_synced              as $shutdown_slots
+| $node.shutdown_on_block_synced             as $shutdown_block
+| ($node.shutdown_on_slot_synced // (($shutdown_block * 1.5 / $gsis.active_slots_coeff)
+                                     | ceil))
+                                             as $shutdown_slots
 | (if $shutdown_slots | type == "number"
    then $shutdown_slots / $gsis.epoch_length | ceil
    else $gtor.epochs
@@ -97,7 +103,7 @@ def add_derived_params:
 
 ## Tx count for inferred absolute duration.
 ##   Note that this the workload would take longer, if we saturate the cluster.
-| ($gtor.tx_count // ($generator_duration * $gtor.tps))
+| ($gtor.tx_count // ($generator_duration * $gtor.tps) | ceil)
                                              as $generator_tx_count
 ## Effective cluster composition:
 | (if $compo.dense_pool_density > 1
@@ -128,7 +134,7 @@ def add_derived_params:
          , utxo_delegated:                $effective_delegators
          , utxo_generated:                $utxo_generated
            ## Stuffed UTxO is what we need over requested-UTxO + delegators' UTxO:
-         , utxo_stuffed:                  ([ $gsis.utxo - $utxo_generated - $effective_delegators
+         , utxo_stuffed:                  ([ $gsis.utxo
                                            , 0
                                            ] | max)
 
@@ -234,13 +240,17 @@ def profile_pretty_describe($p):
   , "  - generator duration: \($p.derived.generator_duration              | tostring)s"
   , "    - requested epochs:   \($p.generator.epochs                      | tostring)ep"
   , "    - effective epochs:   \($p.derived.effective_epochs              | tostring)ep"
-  , "    - transaction count:  \($p.derived.generator_tx_count | . / 1000 | tostring)kTx"
+  , "    - transaction count:  \($p.derived.generator_tx_count | . / 1000 | ceil | tostring)kTx"
   , "    - full blocks:        \($p.derived.generator_blocks_lower_bound  | tostring)"
   , ""
   ]
   | . + if $p.node.shutdown_on_slot_synced == null then []
         else [
     "  - terminate at slot:  \($p.node.shutdown_on_slot_synced)"
+        ] end
+  | . + if $p.node.shutdown_on_block_synced == null then []
+        else [
+    "  - terminate at block: \($p.node.shutdown_on_block_synced)"
         ] end
   | . + [""]
   | join("\n");

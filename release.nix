@@ -9,6 +9,7 @@
 
 # The project sources
 { cardano-node ? { outPath = ./.; rev = "abcdef"; }
+, pr ? null
 }:
 
 let
@@ -16,7 +17,7 @@ let
     src = cardano-node;
   }) defaultNix;
 
-  jobs = defaultNix.hydraJobs;
+  jobs = if (pr == null) then defaultNix.hydraJobs else defaultNix.hydraJobsPr;
 
 in
 jobs

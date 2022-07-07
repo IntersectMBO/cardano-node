@@ -21,7 +21,9 @@ module Cardano.Benchmarking.Tracer
   , TraceBenchTxSubmit(..)
   , TraceLowLevelSubmit(..)
   , createLoggingLayerTracers
+  , createTracers
   , createDebugTracers
+  , initTracers
   ) where
 
 
@@ -73,10 +75,13 @@ data BenchTracers =
   , btN2N_        :: Tracer IO NodeToNodeSubmissionTrace
   }
 
-createDebugTracers :: BenchTracers
-createDebugTracers = initTracers tr tr
+createTracers :: Tracer IO String -> BenchTracers
+createTracers baseTr = initTracers tr tr
   where
-    tr = contramap (\(_,t) -> BSL.unpack $ encode t) debugTracer
+    tr = contramap (\(_,t) -> BSL.unpack $ encode t) baseTr
+
+createDebugTracers :: BenchTracers
+createDebugTracers = createTracers debugTracer
 
 createLoggingLayerTracers :: LoggingLayer -> BenchTracers
 createLoggingLayerTracers loggingLayer

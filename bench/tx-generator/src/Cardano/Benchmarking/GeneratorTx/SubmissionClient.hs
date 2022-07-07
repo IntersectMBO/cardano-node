@@ -23,7 +23,7 @@ module Cardano.Benchmarking.GeneratorTx.SubmissionClient
   , txSubmissionClient
   ) where
 
-import           Prelude (error, fail)
+import           Prelude (error,fail)
 import           Cardano.Prelude hiding (ByteString, atomically, retry, state, threadDelay)
 
 import           Control.Arrow ((&&&))
@@ -44,12 +44,10 @@ import           Cardano.Tracing.OrphanInstances.Shelley ()
 import qualified Ouroboros.Consensus.Cardano as Consensus (CardanoBlock)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTx, GenTxId, txInBlockSize)
 import qualified Ouroboros.Consensus.Ledger.SupportsMempool as Mempool
-import           Ouroboros.Consensus.Shelley.Ledger.Mempool (mkShelleyTx)
 import qualified Ouroboros.Consensus.Shelley.Ledger.Mempool as Mempool (TxId(ShelleyTxId))
 import           Ouroboros.Consensus.Shelley.Eras (StandardCrypto)
 
-import           Ouroboros.Consensus.Cardano.Block (GenTx (GenTxAllegra, GenTxAlonzo, GenTxShelley, GenTxMary))
-import qualified Ouroboros.Consensus.Cardano.Block as Block (TxId(GenTxIdShelley, GenTxIdAllegra, GenTxIdAlonzo, GenTxIdMary))
+import qualified Ouroboros.Consensus.Cardano.Block as Block (TxId(GenTxIdShelley, GenTxIdAllegra, GenTxIdAlonzo, GenTxIdMary,GenTxIdBabbage ))
 
 import           Ouroboros.Network.Protocol.TxSubmission2.Client (ClientStIdle (..),
                                                                   ClientStTxIds (..),
@@ -59,7 +57,7 @@ import           Ouroboros.Network.Protocol.TxSubmission2.Type (BlockingReplyLis
                                                                 TokBlockingStyle (..), TxSizeInBytes)
 
 import           Cardano.Api
-import           Cardano.Api.Shelley (Tx(ShelleyTx), fromShelleyTxId)
+import           Cardano.Api.Shelley (fromShelleyTxId, toConsensusGenTx)
 
 import           Cardano.Benchmarking.Tracer
 import           Cardano.Benchmarking.Types
@@ -191,19 +189,20 @@ txSubmissionClient tr bmtr initialTxSource endOfProtocolCallback =
   txToIdSize = (Mempool.txId &&& txInBlockSize) . toGenTx
 
   toGenTx :: tx -> GenTx CardanoBlock
-  toGenTx tx = case (shelleyBasedEra @ era , tx) of
-    (ShelleyBasedEraShelley, ShelleyTx _ tx') -> GenTxShelley (mkShelleyTx tx')
-    (ShelleyBasedEraAllegra, ShelleyTx _ tx') -> GenTxAllegra (mkShelleyTx tx')
-    (ShelleyBasedEraMary, ShelleyTx _ tx') -> GenTxMary (mkShelleyTx tx')
-    (ShelleyBasedEraAlonzo, ShelleyTx _ tx') -> GenTxAlonzo (mkShelleyTx tx')
-    (ShelleyBasedEraBabbage, ShelleyTx _ _tx') -> error "TODO:Babbage"
+  toGenTx tx = case shelleyBasedEra @ era of
+    ShelleyBasedEraShelley  -> toConsensusGenTx $ TxInMode tx ShelleyEraInCardanoMode
+    ShelleyBasedEraAllegra  -> toConsensusGenTx $ TxInMode tx AllegraEraInCardanoMode
+    ShelleyBasedEraMary     -> toConsensusGenTx $ TxInMode tx MaryEraInCardanoMode
+    ShelleyBasedEraAlonzo   -> toConsensusGenTx $ TxInMode tx AlonzoEraInCardanoMode
+    ShelleyBasedEraBabbage  -> toConsensusGenTx $ TxInMode tx BabbageEraInCardanoMode
 
   fromGenTxId :: GenTxId CardanoBlock -> TxId
   fromGenTxId (Block.GenTxIdShelley (Mempool.ShelleyTxId i)) = fromShelleyTxId i
   fromGenTxId (Block.GenTxIdAllegra (Mempool.ShelleyTxId i)) = fromShelleyTxId i
   fromGenTxId (Block.GenTxIdMary    (Mempool.ShelleyTxId i)) = fromShelleyTxId i
   fromGenTxId (Block.GenTxIdAlonzo  (Mempool.ShelleyTxId i)) = fromShelleyTxId i
-  fromGenTxId _ = error "submission.hs: fromGenTxId"
+  fromGenTxId (Block.GenTxIdBabbage (Mempool.ShelleyTxId i)) = fromShelleyTxId i
+  fromGenTxId _ = error "TODO: fix incomplete match"
 
   tokIsBlocking :: TokBlockingStyle a -> Bool
   tokIsBlocking = \case

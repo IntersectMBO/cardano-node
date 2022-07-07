@@ -131,6 +131,7 @@ readByteStringTx = firstExceptT TxCmdTxReadError . hoistEither . deserialiseAnyO
   , FromSomeType (AsTx AsAllegraEra) (InAnyCardanoEra AllegraEra)
   , FromSomeType (AsTx AsMaryEra)    (InAnyCardanoEra MaryEra)
   , FromSomeType (AsTx AsAlonzoEra)  (InAnyCardanoEra AlonzoEra)
+  , FromSomeType (AsTx AsBabbageEra) (InAnyCardanoEra BabbageEra)
   ]
 
 txSubmitPost

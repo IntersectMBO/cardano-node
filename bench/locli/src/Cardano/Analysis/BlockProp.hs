@@ -1,21 +1,16 @@
 {-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE ImportQualifiedPost #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StrictData #-}
-{-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-incomplete-patterns -Wno-name-shadowing #-}
 {-# OPTIONS_GHC -Wno-unused-imports -Wno-partial-fields -Wno-unused-matches -Wno-deprecations -Wno-unused-local-binds -Wno-incomplete-record-updates #-}
 {- HLINT ignore "Use head" -}
 {- HLINT ignore "Avoid lambda" -}
 module Cardano.Analysis.BlockProp
-  (MachView, buildMachViews, rebuildChain, filterChain, blockProp)
+  ( summariseBlockProps
+  , MachView
+  , buildMachViews
+  , rebuildChain
+  , filterChain
+  , blockProp)
 where
 
 import Prelude                  (String, (!!), error, head, last, id, show, tail)
@@ -45,7 +40,7 @@ import Cardano.Slotting.Slot    (EpochNo(..), SlotNo(..))
 import Ouroboros.Network.Block  (BlockNo(..))
 
 import Data.Accum
-import Data.Distribution
+import Data.CDF
 
 import Cardano.Analysis.API
 import Cardano.Analysis.Chain
@@ -58,6 +53,39 @@ import Cardano.Unlog.Render
 import Cardano.Unlog.Resources
 import Cardano.Util
 
+
+summariseBlockProps :: [Centile] -> [BlockPropOne] -> Either CDFError BlockProps
+summariseBlockProps _ [] = error "Asked to summarise empty list of BlockPropOne"
+summariseBlockProps centiles bs@(headline:_) = do
+  bpForgerChecks           <- cdf2OfCDFs comb $ bs <&> bpForgerChecks
+  bpForgerLeads            <- cdf2OfCDFs comb $ bs <&> bpForgerLeads
+  bpForgerForges           <- cdf2OfCDFs comb $ bs <&> bpForgerForges
+  bpForgerAdoptions        <- cdf2OfCDFs comb $ bs <&> bpForgerAdoptions
+  bpForgerAnnouncements    <- cdf2OfCDFs comb $ bs <&> bpForgerAnnouncements
+  bpForgerSends            <- cdf2OfCDFs comb $ bs <&> bpForgerSends
+  bpPeerNotices            <- cdf2OfCDFs comb $ bs <&> bpPeerNotices
+  bpPeerRequests           <- cdf2OfCDFs comb $ bs <&> bpPeerRequests
+  bpPeerFetches            <- cdf2OfCDFs comb $ bs <&> bpPeerFetches
+  bpPeerAdoptions          <- cdf2OfCDFs comb $ bs <&> bpPeerAdoptions
+  bpPeerAnnouncements      <- cdf2OfCDFs comb $ bs <&> bpPeerAnnouncements
+  bpPeerSends              <- cdf2OfCDFs comb $ bs <&> bpPeerSends
+  bpSizes                  <- cdf2OfCDFs comb $ bs <&> bpSizes
+  bpPropagation            <- sequence $ transpose (bs <&> bpPropagation) <&>
+    \case
+      [] -> Left CDFEmptyDataset
+      xs@((d,_):ds) -> do
+        unless (all (d ==) $ fmap fst ds) $
+          Left $ CDFIncoherentSamplingCentiles [Centile . fst <$> xs]
+        (d,) <$> cdf2OfCDFs comb (snd <$> xs)
+  pure $ BlockProp
+    { bpVersion             = bpVersion headline
+    , bpDomainSlots         = dataDomainsMergeOuter $ bs <&> bpDomainSlots
+    , bpDomainBlocks        = dataDomainsMergeOuter $ bs <&> bpDomainBlocks
+    , ..
+    }
+ where
+   comb :: forall a. Divisible a => Combine I a
+   comb = stdCombine1 centiles
 
 -- | Block's events, as seen by its forger.
 data ForgerEvents a
@@ -233,32 +261,6 @@ beForgedAt :: BlockEvents -> UTCTime
 beForgedAt BlockEvents{beForge=BlockForge{..}} =
   bfForged `afterSlot` bfSlotStart
 
-mapChainToBlockEventCDF ::
-  (Real a, ToRealFrac a Float)
-  => [PercSpec Float]
-  -> [BlockEvents]
-  -> (BlockEvents -> Maybe a)
-  -> Distribution Float a
-mapChainToBlockEventCDF percs cbes proj =
-  computeDistribution percs $ mapMaybe proj cbes
-
-mapChainToPeerBlockObservationCDF ::
-     [PercSpec Float]
-  -> [BlockEvents]
-  -> (BlockObservation -> Maybe NominalDiffTime)
-  -> String
-  -> Distribution Float NominalDiffTime
-mapChainToPeerBlockObservationCDF percs cbes proj desc =
-  computeDistribution percs allObservations
- where
-   allObservations :: [NominalDiffTime]
-   allObservations =
-     concat $ cbes <&> blockObservations
-
-   blockObservations :: BlockEvents -> [NominalDiffTime]
-   blockObservations be =
-     proj `mapMaybe` filter isValidBlockObservation (beObservations be)
-
 buildMachViews :: Run -> [(JsonLogfile, [LogObject])] -> IO [(JsonLogfile, MachView)]
 buildMachViews run = mapConcurrentlyPure (fst &&& blockEventMapsFromLogObjects run)
 
@@ -347,8 +349,10 @@ rebuildChain run@Run{genesis} xs@(fmap snd -> machViews) = do
        , bfForged     = bfeForged    & handleMiss "Δt Forged"
        , bfAdopted    = bfeAdopted   & handleMiss "Δt Adopted (forger)"
        , bfChainDelta = bfeChainDelta
-       , bfAnnounced  = bfeAnnounced & handleMiss "Δt Announced (forger)"
-       , bfSending    = bfeSending   & handleMiss "Δt Sending (forger)"
+       , bfAnnounced  = (bfeAnnounced <|> Just 0.05) -- Temporary hack until ChainSync tracing is fixed
+                        & handleMiss "Δt Announced (forger)"
+       , bfSending    = (bfeSending <|> Just 0.01) -- Temporary hack until ChainSync tracing is fixed
+                        & handleMiss "Δt Sending (forger)"
        }
      , beObservations =
          catMaybes $
@@ -365,7 +369,7 @@ rebuildChain run@Run{genesis} xs@(fmap snd -> machViews) = do
              <*> Just boeSending
              <*> Just boeErrorsCrit
              <*> Just boeErrorsSoft
-     , bePropagation  = computeDistribution adoptionPcts adoptions
+     , bePropagation  = cdf adoptionPcts adoptions
      , beOtherBlocks  = otherBlocks
      , beErrors =
          errs
@@ -404,11 +408,11 @@ rebuildChain run@Run{genesis} xs@(fmap snd -> machViews) = do
        ]
 
 filterChain :: Run -> ([ChainFilter], [FilterName]) -> [BlockEvents]
-            -> IO (DataDomain SlotNo, DataDomain BlockNo, [BlockEvents])
+            -> IO (DataDomain SlotNo, DataDomain BlockNo, [FilterName], [BlockEvents])
 filterChain Run{genesis} (flts, fltNames) chain = do
   progress "filtered-chain-slot-domain"  $ J domSlot
   progress "filtered-chain-block-domain" $ J domBlock
-  pure (domSlot, domBlock, fltrd)
+  pure (domSlot, domBlock, fltNames, fltrd)
  where
    fltrd = filter (isValidBlockEvent genesis flts) chain &
            \case
@@ -428,10 +432,10 @@ filterChain Run{genesis} (flts, fltNames) chain = do
               (blk0V & beBlockNo) (blkLV & beBlockNo)
               (length chain) (length fltrd)
 
-blockProp :: Run -> [BlockEvents] -> DataDomain SlotNo -> DataDomain BlockNo -> IO BlockPropagation
+blockProp :: Run -> [BlockEvents] -> DataDomain SlotNo -> DataDomain BlockNo -> IO BlockPropOne
 blockProp run@Run{genesis} chain domSlot domBlock = do
   progress "block-propagation" $ J (domSlot, domBlock)
-  pure $ BlockPropagation
+  pure $ BlockProp
     { bpDomainSlots         = domSlot
     , bpDomainBlocks        = domBlock
     , bpForgerChecks        = forgerEventsCDF   (Just . bfChecked   . beForge)
@@ -450,24 +454,55 @@ blockProp run@Run{genesis} chain domSlot domBlock = do
     , bpPeerAnnouncements   = observerEventsCDF boAnnounced          "announced"
     , bpPeerSends           = observerEventsCDF boSending            "sending"
     , bpPropagation         =
-      [ (p', forgerEventsCDF (Just . dPercSpec' "bePropagation" p . bePropagation))
-      | p@(Perc p') <- adoptionPcts <> [Perc 1.0] ]
+      [ (p', forgerEventsCDF (Just . unI . projectCDF' "bePropagation" p . bePropagation))
+      | p@(Centile p') <- adoptionPcts <> [Centile 1.0] ]
     , bpSizes               = forgerEventsCDF   (Just . bfBlockSize . beForge)
     , bpVersion             = getVersion
     }
  where
-   forgerEventsCDF   :: (Real a, ToRealFrac a Float) => (BlockEvents -> Maybe a) -> Distribution Float a
-   forgerEventsCDF   = mapChainToBlockEventCDF           stdPercSpecs chain
-   observerEventsCDF = mapChainToPeerBlockObservationCDF stdPercSpecs chain
+   forgerEventsCDF   :: (Real a, KnownCDF p) => (BlockEvents -> Maybe a) -> CDF p a
+   forgerEventsCDF   = flip (witherToDistrib (cdf stdCentiles)) chain
+   observerEventsCDF = mapChainToPeerBlockObservationCDF stdCentiles chain
+
+   mapChainToBlockEventCDF ::
+     (Real a)
+     => [Centile]
+     -> [BlockEvents]
+     -> (BlockEvents -> Maybe a)
+     -> DirectCDF a
+   mapChainToBlockEventCDF percs cbes proj =
+     cdf percs $
+       mapMaybe proj cbes
+
+   mapChainToPeerBlockObservationCDF ::
+        [Centile]
+     -> [BlockEvents]
+     -> (BlockObservation -> Maybe NominalDiffTime)
+     -> String
+     -> DirectCDF NominalDiffTime
+   mapChainToPeerBlockObservationCDF percs cbes proj desc =
+     cdf percs $
+       concat $ cbes <&> blockObservations
+    where
+      blockObservations :: BlockEvents -> [NominalDiffTime]
+      blockObservations be =
+        proj `mapMaybe` filter isValidBlockObservation (beObservations be)
+
+witherToDistrib ::
+     ([b] -> CDF p b)
+  -> (a -> Maybe b)
+  -> [a]
+  -> CDF p b
+witherToDistrib distrify proj xs =
+  distrify $ mapMaybe proj xs
 
 -- | Given a single machine's log object stream, recover its block map.
 blockEventMapsFromLogObjects :: Run -> (JsonLogfile, [LogObject]) -> MachView
 blockEventMapsFromLogObjects run (f@(unJsonLogfile -> fp), xs) =
-  trace ("processing " <> fp)
-  $ if Map.size (mvBlocks view) == 0
-    then error $ mconcat
-         ["No block events in ",fp," : ","LogObject count: ",show (length xs)]
-    else view
+  if Map.size (mvBlocks view) == 0
+  then error $ mconcat
+       ["No block events in ",fp," : ","LogObject count: ",show (length xs)]
+  else view
  where
    view = foldl' (blockPropMachEventsStep run f) initial xs
    initial =

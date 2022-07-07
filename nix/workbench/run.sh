@@ -17,7 +17,7 @@ usage_run() {
                             --scenario forces a scenario, different from what
                                 is implied by the run profile;
                                 See 'wb scenario --help' for scenario descriptions
-                            --idle is a short-cut for the 'generic-idle' scenario
+                            --idle is a short-cut for '--scenario idle'
                             --analyse triggers analysis after 'start' returns
 
     stop TAG              Stop the named run
@@ -58,6 +58,14 @@ case "$op" in
              find . -mindepth 2 -maxdepth 2 -type f -name 'meta.json' -exec dirname \{\} \; |
                  grep -v 'current$\|deploy-logs$' |
                  cut -c3- |
+                 sort || true);;
+
+    list-pattern | lsp )
+        test -d "$global_rundir" &&
+            (cd "$global_rundir"
+             ls $1/meta.json |
+                 grep -v 'current$\|deploy-logs$' |
+                 cut -d/ -f1 |
                  sort || true);;
 
     compute-path )
@@ -229,18 +237,81 @@ case "$op" in
 
         echo $dir;;
 
+    list-aws | lsaws )
+        local usage="USAGE: wb run $op [DEPLOYMENT=bench-1] [ENV=bench]"
+        local depl=${1:-bench-1}
+        local env=${2:-bench}
+
+        ssh $env -- \
+            sh -c "'cd $depl/runs &&
+                    find . -mindepth 2 -maxdepth 2 -type f -name 'meta.json' -exec dirname \{\} \; |
+                    grep -v current\$\\|deploy-logs\$ |
+                    cut -c3- |
+                    sort ||
+                    true'" 2>/dev/null;;
+
+    allocate-from-aws | steal-from-aws | aws-get )
+        local usage="USAGE: wb run $op RUN [MACHINE] [DEPLOYMENT=bench-1] [ENV=bench]"
+        local run=${1:?$usage}
+        local mach=${2:-}
+        local depl=${3:-bench-1}
+        local env=${4:-bench}
+
+        local meta=$(ssh $env -- sh -c "'jq . $depl/runs/$run/meta.json'")
+        if ! jq . <<<$meta >/dev/null
+        then fail "allocate-from-aws:  malformed $(yellow meta.json) in $(white $run) on $(white $depl)@$(white env)"; fi
+
+        ## Minor validation passed, create & populate run with remote data:
+        local dir=$global_rundir/$run
+        mkdir -p "$dir"
+        jq . <<<$meta > $dir/meta.json
+
+        local hosts=($(if test -n "$mach"; then echo $mach
+                       else jq -r '.hostname | keys | .[]' <<<$meta; fi))
+        local objects=(
+            ${hosts[*]}
+            genesis-shelley.json
+            genesis-alonzo.json
+            network-latency-matrix.json
+            machines.json
+        )
+
+        local count=${#objects[*]}
+        progress "run | aws-get $(white $run)" "objects to fetch:  $(white $count) total:  $(yellow ${objects[*]})"
+
+        local max_batch=9
+        progress "run | aws-get $(white $run)" "fetching in batches"
+
+        local base=0 batch
+        while test $base -lt $count
+        do local batch=(${objects[*]:$base:$max_batch})
+           progress_ne "run | aws-get $(white $run)" "fetching batch: "
+           local obj=
+           for obj in ${batch[*]}
+           do { ssh $env -- \
+                    sh -c "'cd $depl/runs/$run && if test -f compressed/logs-$obj.tar.zst; then cat compressed/logs-$obj.tar.zst; else tar c $obj --zstd --ignore-failed-read; fi'" 2>/dev/null |
+                    (cd $dir; tar x --zstd)
+                echo -ne " $(yellow $obj)" >&2
+              } &
+           done
+           wait
+           echo >&2
+           base=$((base + max_batch))
+        done;;
+
     allocate )
         local usage="USAGE: wb run $op BATCH-NAME PROFILE-NAME [ENV-CONFIG-OPTS..] [-- BACKEND-ARGS-AND-ENV-CONFIG-OPTS..]"
         local batch=${1:?$usage}; shift
         local profile_name=${1:?$usage}; shift
 
-        local profile= topology= genesis_cache_entry= manifest= preset=
+        local profile= topology= genesis_cache_entry= manifest= preset= cabal_mode=
         while test $# -gt 0
         do case "$1" in
                --manifest )            manifest=$2; shift;;
                --profile )             profile=$2; shift;;
                --topology )            topology=$2; shift;;
                --genesis-cache-entry ) genesis_cache_entry=$2; shift;;
+               --cabal-mode | --cabal ) cabal_mode=t;;
                -- ) shift; break;;
                --* ) msg "FATAL:  unknown flag '$1'"; usage_run;;
                * ) break;; esac; shift; done
@@ -285,7 +356,7 @@ case "$op" in
         profile describe-timing "$timing"
 
         ## 3. decide the tag:
-        local tag=$(jq '.start_tag' -r <<<$timing)$(if test "$batch" != 'plain'; then echo -n .$batch; fi).$hash.$profile_name
+        local tag=$(jq '.start_tag' -r <<<$timing)$(if test "$batch" != 'plain'; then echo -n .$batch; fi).$hash.$profile_name$(test -z "$cabal_mode" && echo '.nix')
         progress "run | tag" "allocated run identifier (tag):  $(with_color white $tag)"
 
         ## 4. allocate directory:
@@ -373,6 +444,14 @@ case "$op" in
         cp $(jq '."start"'          -r $gtor) "$gen_dir"/start.sh
         ln -s          ../node-0/config.json  "$gen_dir"
 
+        local trac=$profile/tracer-service.json
+        trac_dir="$dir"/tracer
+        mkdir -p                              "$trac_dir"
+        cp $(jq '."tracer-config"'        -r $trac) "$trac_dir"/tracer-config.json
+        cp $(jq '."nixos-service-config"' -r $trac) "$trac_dir"/nixos-service-config.json
+        cp $(jq '."config"'               -r $trac) "$trac_dir"/config.json
+        cp $(jq '."start"'                -r $trac) "$trac_dir"/start.sh
+
         backend allocate-run "$dir"
 
         progress "run" "allocated $(with_color white $tag) @ $dir"
@@ -431,6 +510,18 @@ case "$op" in
             sh -c "cd $depl && tar c $depl/node-$slice.json --zstd" |
             (cd $dir; tar x --zstd)
         ;;
+
+    trim )
+        local usage="USAGE: wb run $op TAG"
+        local tag=${1:?$usage}
+        local dir=$global_rundir/$tag
+
+        progress "run" "trimming genesis"
+        mv   "$dir"/genesis-shelley.json "$dir"/genesis-shelley.orig.json
+        jq > "$dir"/genesis-shelley.json '
+           .initialFunds = {}
+         | .staking      = {}
+        ' "$dir"/genesis-shelley.orig.json;;
 
     describe )
         local usage="USAGE: wb run $op TAG"

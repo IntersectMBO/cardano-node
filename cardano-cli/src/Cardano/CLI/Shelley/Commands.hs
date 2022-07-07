@@ -57,8 +57,8 @@ import           Cardano.CLI.Shelley.Key (PaymentVerifier, StakeVerifier, Verifi
                    VerificationKeyOrHashOrFile, VerificationKeyTextOrFile)
 import           Cardano.CLI.Types
 
-import           Cardano.Ledger.Shelley.TxBody (MIRPot)
 import           Cardano.Chain.Common (BlockCount)
+import           Cardano.Ledger.Shelley.TxBody (MIRPot)
 --
 -- Shelley CLI command data types
 --
@@ -165,13 +165,13 @@ data TransactionCmd
       [(TxIn, Maybe (ScriptWitnessFiles WitCtxTxIn))]
       -- ^ Transaction inputs with optional spending scripts
       [TxIn]
+      -- ^ Read only reference inputs
+      [TxIn]
       -- ^ Transaction inputs for collateral, only key witnesses, no scripts.
       (Maybe TxOutAnyEra)
       -- ^ Return collateral
       (Maybe Lovelace)
       -- ^ Total collateral
-      [TxIn]
-      -- ^ Reference inputs
       [RequiredSigner]
       -- ^ Required signers
       [TxOutAnyEra]
@@ -204,6 +204,8 @@ data TransactionCmd
       (Maybe Word)
       -- ^ Override the required number of tx witnesses
       [(TxIn, Maybe (ScriptWitnessFiles WitCtxTxIn))]
+      -- ^ Read only reference inputs
+      [TxIn]
       -- ^ Required signers
       [RequiredSigner]
       -- ^ Transaction inputs with optional spending scripts
@@ -213,8 +215,6 @@ data TransactionCmd
       -- ^ Return collateral
       (Maybe Lovelace)
       -- ^ Total collateral
-      [TxIn]
-      -- ^ Reference inputs
       [TxOutAnyEra]
       -- ^ Normal outputs
       TxOutChangeAddress
@@ -408,6 +408,7 @@ data GovernanceCmd
   | GovernanceUpdateProposal OutputFile EpochNo
                              [VerificationKeyFile]
                              ProtocolParametersUpdate
+                             (Maybe FilePath)
   deriving Show
 
 renderGovernanceCmd :: GovernanceCmd -> Text

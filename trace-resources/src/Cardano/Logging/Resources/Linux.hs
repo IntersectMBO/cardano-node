@@ -2,7 +2,7 @@
 
 module Cardano.Logging.Resources.Linux
     (
-      readRessoureStatsInternal
+      readResourceStatsInternal
     ) where
 
 import           Cardano.Logging.Resources.Types
@@ -16,8 +16,8 @@ import           Text.Read                       (readMaybe)
 
 -- | TODO we have to expand the |readMemStats| function
 -- to read full data from |proc|
-readRessoureStatsInternal :: IO (Maybe ResourceStats)
-readRessoureStatsInternal = do
+readResourceStatsInternal :: IO (Maybe ResourceStats)
+readResourceStatsInternal = do
   rts <- GhcStats.getRTSStats
   mkProcStats rts . fmap fromIntegral <$> readProcList "/proc/self/stat"
  where

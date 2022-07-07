@@ -6,9 +6,11 @@ module Cardano.CLI.Shelley.Run.Governance
 
 import           Cardano.Prelude
 
+import           Data.Aeson
+import qualified Data.ByteString.Lazy as LB
 import qualified Data.Text as Text
 
-import           Control.Monad.Trans.Except.Extra (firstExceptT, left, newExceptT)
+import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, left, newExceptT)
 
 import           Cardano.Api
 import           Cardano.Api.Shelley
@@ -24,6 +26,7 @@ import qualified Cardano.Ledger.Shelley.TxBody as Shelley
 data ShelleyGovernanceCmdError
   = ShelleyGovernanceCmdTextEnvReadError !(FileError TextEnvelopeError)
   | ShelleyGovernanceCmdKeyReadError !(FileError InputDecodeError)
+  | ShelleyGovernanceCmdCostModelReadError !(FileError ())
   | ShelleyGovernanceCmdTextEnvWriteError !(FileError ())
   | ShelleyGovernanceCmdEmptyUpdateProposalError
   | ShelleyGovernanceCmdMIRCertificateKeyRewardMistmach
@@ -32,6 +35,7 @@ data ShelleyGovernanceCmdError
       -- ^ Number of stake verification keys
       !Int
       -- ^ Number of reward amounts
+  | ShelleyGovernanceCmdCostModelsJsonDecodeErr !FilePath !Text
   deriving Show
 
 renderShelleyGovernanceError :: ShelleyGovernanceCmdError -> Text
@@ -48,6 +52,10 @@ renderShelleyGovernanceError err =
        <> " The number of staking keys: " <> textShow numVKeys
        <> " and the number of reward amounts: " <> textShow numRwdAmts
        <> " are not equivalent."
+    ShelleyGovernanceCmdCostModelsJsonDecodeErr err' fp ->
+      "Error decoding cost model: " <> Text.pack err' <> " at: " <> fp
+    ShelleyGovernanceCmdCostModelReadError err' ->
+      "Error reading the cost model: " <> Text.pack (displayError err')
   where
     textShow x = Text.pack (show x)
 
@@ -59,8 +67,8 @@ runGovernanceCmd (GovernanceMIRTransfer amt out direction) =
   runGovernanceMIRCertificateTransfer amt out direction
 runGovernanceCmd (GovernanceGenesisKeyDelegationCertificate genVk genDelegVk vrfVk out) =
   runGovernanceGenesisKeyDelegationCertificate genVk genDelegVk vrfVk out
-runGovernanceCmd (GovernanceUpdateProposal out eNo genVKeys ppUp) =
-  runGovernanceUpdateProposal out eNo genVKeys ppUp
+runGovernanceCmd (GovernanceUpdateProposal out eNo genVKeys ppUp mCostModelFp) =
+  runGovernanceUpdateProposal out eNo genVKeys ppUp mCostModelFp
 
 runGovernanceMIRCertificatePayStakeAddrs
   :: Shelley.MIRPot
@@ -143,9 +151,21 @@ runGovernanceUpdateProposal
   -> [VerificationKeyFile]
   -- ^ Genesis verification keys
   -> ProtocolParametersUpdate
+  -> Maybe FilePath -- ^ Cost models file path
   -> ExceptT ShelleyGovernanceCmdError IO ()
-runGovernanceUpdateProposal (OutputFile upFile) eNo genVerKeyFiles upPprams = do
-    when (upPprams == mempty) $ left ShelleyGovernanceCmdEmptyUpdateProposalError
+runGovernanceUpdateProposal (OutputFile upFile) eNo genVerKeyFiles upPprams mCostModelFp = do
+    finalUpPprams
+      <- case mCostModelFp of
+           Nothing -> return upPprams
+           Just fp -> do
+             costModelsBs <-
+               handleIOExceptT (ShelleyGovernanceCmdCostModelReadError . FileIOError fp)
+                 $ LB.readFile fp
+             case eitherDecode costModelsBs of
+               Right cModels -> return $ upPprams {protocolUpdateCostModels = fromAlonzoCostModels cModels}
+               Left err -> left $ ShelleyGovernanceCmdCostModelsJsonDecodeErr fp $ Text.pack err
+
+    when (finalUpPprams == mempty) $ left ShelleyGovernanceCmdEmptyUpdateProposalError
     genVKeys <- sequence
                   [ firstExceptT ShelleyGovernanceCmdTextEnvReadError . newExceptT $
                       readFileTextEnvelope
@@ -153,6 +173,7 @@ runGovernanceUpdateProposal (OutputFile upFile) eNo genVerKeyFiles upPprams = do
                         vkeyFile
                   | VerificationKeyFile vkeyFile <- genVerKeyFiles ]
     let genKeyHashes = map verificationKeyHash genVKeys
-        upProp = makeShelleyUpdateProposal upPprams genKeyHashes eNo
+        upProp = makeShelleyUpdateProposal finalUpPprams genKeyHashes eNo
     firstExceptT ShelleyGovernanceCmdTextEnvWriteError . newExceptT $
       writeFileTextEnvelope upFile Nothing upProp
+

@@ -8,6 +8,7 @@ module Cardano.Node.Tracing.API
   ) where
 
 import           Prelude
+import           Cardano.Prelude (first)
 
 import           "contra-tracer" Control.Tracer (traceWith)
 import           "trace-dispatcher" Control.Tracer (nullTracer)
@@ -28,6 +29,7 @@ import           Ouroboros.Network.Magic (NetworkMagic)
 import           Ouroboros.Network.NodeToClient (withIOManager)
 import           Ouroboros.Network.NodeToNode (RemoteAddress)
 
+import           Cardano.Node.Configuration.NodeAddress (SocketPath (..))
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..), ncProtocol)
 import           Cardano.Node.Protocol.Types
 import           Cardano.Node.Queries
@@ -92,8 +94,9 @@ initTraceDispatcher nc p networkMagic nodeKernel p2pMode = do
       if forwarderBackendEnabled
         then do
           -- TODO: check if this is the correct way to use withIOManager
-          (forwardSink, dpStore) <- withIOManager $ \iomgr ->
-            initForwarding iomgr trConfig networkMagic ekgStore
+          (forwardSink, dpStore) <- withIOManager $ \iomgr -> do
+            let tracerSocketMode = Just . first unSocketPath =<< ncTraceForwardSocket nc
+            initForwarding iomgr trConfig networkMagic ekgStore tracerSocketMode
           pure (forwardTracer forwardSink, dataPointTracer dpStore)
         else
           -- Since 'Forwarder' backend isn't enabled, there is no forwarding.

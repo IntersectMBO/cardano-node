@@ -79,6 +79,10 @@ data StartupTrace blk =
   --
   | NetworkConfigUpdate
 
+  -- | Re-configuration of network config is not supported.
+  --
+  | NetworkConfigUpdateUnsupported
+
   -- | Log network configuration update error.
   --
   | NetworkConfigUpdateError Text

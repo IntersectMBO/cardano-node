@@ -87,6 +87,7 @@ data TracerConfig = TracerConfig
   , ekgRequestFreq :: !(Maybe Pico)                 -- ^ How often to request for EKG-metrics, in seconds.
   , hasEKG         :: !(Maybe (Endpoint, Endpoint)) -- ^ Endpoint for EKG web-page (list of nodes, monitoring).
   , hasPrometheus  :: !(Maybe Endpoint)             -- ^ Endpoint for Promeheus web-page.
+  , hasRTView      :: !(Maybe Endpoint)             -- ^ Endpoint for RTView web-page.
   , logging        :: !(NonEmpty LoggingParams)     -- ^ Logging parameters.
   , rotation       :: !(Maybe RotationParams)       -- ^ Rotation parameters.
   , verbosity      :: !(Maybe Verbosity)            -- ^ Verbosity of the tracer itself.
@@ -103,7 +104,7 @@ readTracerConfig pathToConfig =
         Right _ -> return config
 
 checkMeaninglessValues :: TracerConfig -> Either String ()
-checkMeaninglessValues TracerConfig{network, hasEKG, hasPrometheus, logging} =
+checkMeaninglessValues TracerConfig{network, hasEKG, hasPrometheus, hasRTView, logging} =
   if null problems
     then Right ()
     else Left $ intercalate ", " problems
@@ -115,6 +116,7 @@ checkMeaninglessValues TracerConfig{network, hasEKG, hasPrometheus, logging} =
     , check "empty logRoot(s)" $ notNull . NE.filter invalidFileMode $ logging
     , (check "no host(s) in hasEKG" . nullEndpoints) =<< hasEKG
     , (check "no host in hasPrometheus" . nullEndpoint) =<< hasPrometheus
+    , (check "no host in hasRTView" . nullEndpoint) =<< hasRTView
     ]
 
   check msg cond = if cond then Just msg else Nothing

@@ -720,7 +720,7 @@ To generate the documentation, first call `documentMarkdown` with the `Documente
 
 The generated documentation for a simple message my look like this:
 
-> #### cardano.node.StartLeadershipCheck
+> #### StartLeadershipCheck
 >   For human:
 >   `Checking for leadership in slot 1`
 >

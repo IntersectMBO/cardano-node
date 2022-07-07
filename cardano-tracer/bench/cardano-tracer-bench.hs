@@ -11,6 +11,7 @@ import           Cardano.Logging hiding (LocalSocket)
 
 import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.Handlers.Logs.TraceObjects (traceObjectsHandler)
+import           Cardano.Tracer.Handlers.RTView.State.TraceObjects (initSavedTraceObjects)
 import           Cardano.Tracer.Types (NodeId (..))
 
 main :: IO ()
@@ -25,19 +26,21 @@ main = do
   to100  <- generate 100
   to1000 <- generate 1000
 
+  savedTO <- initSavedTraceObjects
+
   removePathForcibly root
 
   defaultMain
     [ bgroup "cardano-tracer"
       [ -- 10 'TraceObject's per request.
-        bench "Handle TraceObjects LOG,  10"   $ whnfIO $ traceObjectsHandler c1 nId lock to10
-      , bench "Handle TraceObjects JSON, 10"   $ whnfIO $ traceObjectsHandler c2 nId lock to10
+        bench "Handle TraceObjects LOG,  10"   $ whnfIO $ traceObjectsHandler c1 nId lock savedTO to10
+      , bench "Handle TraceObjects JSON, 10"   $ whnfIO $ traceObjectsHandler c2 nId lock savedTO to10
         -- 100 'TraceObject's per request.
-      , bench "Handle TraceObjects LOG,  100"  $ whnfIO $ traceObjectsHandler c1 nId lock to100
-      , bench "Handle TraceObjects JSON, 100"  $ whnfIO $ traceObjectsHandler c2 nId lock to100
+      , bench "Handle TraceObjects LOG,  100"  $ whnfIO $ traceObjectsHandler c1 nId lock savedTO to100
+      , bench "Handle TraceObjects JSON, 100"  $ whnfIO $ traceObjectsHandler c2 nId lock savedTO to100
         -- 1000 'TraceObject's per request.
-      , bench "Handle TraceObjects LOG,  1000" $ whnfIO $ traceObjectsHandler c1 nId lock to1000
-      , bench "Handle TraceObjects JSON, 1000" $ whnfIO $ traceObjectsHandler c2 nId lock to1000
+      , bench "Handle TraceObjects LOG,  1000" $ whnfIO $ traceObjectsHandler c1 nId lock savedTO to1000
+      , bench "Handle TraceObjects JSON, 1000" $ whnfIO $ traceObjectsHandler c2 nId lock savedTO to1000
       ]
     ]
  where
@@ -50,6 +53,7 @@ main = do
     , ekgRequestFreq = Nothing
     , hasEKG         = Nothing
     , hasPrometheus  = Nothing
+    , hasRTView      = Nothing
     , logging        = NE.fromList [LoggingParams root FileMode format]
     , rotation       = Nothing
     , verbosity      = Nothing

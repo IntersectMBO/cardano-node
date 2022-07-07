@@ -7,8 +7,8 @@ cardano-cli/README.md                                         @fsancheziohk @nah
 cabal.project                                                 @LaurenceIO
 
 # General reviewers per PR
-#                       David          Duncan   Jordan     Erik   John      Nick Jared
-*                       @DavidEichmann @dcoutts @Jimbo4350 @erikd @newhoggy @nc6 @JaredCorduan
+#                        Duncan   Jordan     Erik   John      Jared
+*                        @dcoutts @Jimbo4350 @erikd @newhoggy @JaredCorduan
 
 # Specific reviewers for code pieces
 # NB - The last matching pattern takes precedence
@@ -26,7 +26,8 @@ nix/workbench                                                 @deepfire @denissh
 trace-dispatcher                                              @deepfire @denisshevchenko @jutaro @mgmeier
 trace-forward                                                 @deepfire @denisshevchenko @jutaro @mgmeier
 trace-resources                                               @deepfire @denisshevchenko @jutaro @mgmeier
-Makefile                                                      @deepfire
+Makefile                                                      @deepfire @mgmeier
+*.mk                                                          @deepfire @mgmeier
 
 .buildkite                                                    @devops
 .github                                                       @devops

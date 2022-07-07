@@ -63,9 +63,11 @@ module Cardano.Api.Script (
     TimeLocksSupported(..),
     timeLocksSupported,
     adjustSimpleScriptVersion,
+    SimpleScriptOrReferenceInput(..),
 
     -- * The Plutus script language
     PlutusScript(..),
+    PlutusScriptOrReferenceInput(..),
     examplePlutusScriptAlwaysSucceeds,
     examplePlutusScriptAlwaysFails,
 
@@ -159,6 +161,7 @@ import           Cardano.Api.SerialiseJSON
 import           Cardano.Api.SerialiseRaw
 import           Cardano.Api.SerialiseTextEnvelope
 import           Cardano.Api.SerialiseUsing
+import           Cardano.Api.TxIn
 import           Cardano.Api.Utils (failEitherWith)
 
 {- HLINT ignore "Use section" -}
@@ -619,6 +622,15 @@ scriptLanguageSupportedInEra era lang =
       (AlonzoEra, PlutusScriptLanguage PlutusScriptV1) ->
         Just PlutusScriptV1InAlonzo
 
+      (BabbageEra, SimpleScriptLanguage SimpleScriptV1) ->
+        Just SimpleScriptV1InBabbage
+
+      (BabbageEra, SimpleScriptLanguage SimpleScriptV2) ->
+        Just SimpleScriptV2InBabbage
+
+      (BabbageEra, PlutusScriptLanguage PlutusScriptV1) ->
+        Just PlutusScriptV1InBabbage
+
       (BabbageEra, PlutusScriptLanguage PlutusScriptV2) ->
         Just PlutusScriptV2InBabbage
 
@@ -677,7 +689,6 @@ toScriptInEra era (ScriptInAnyLang lang s) = do
 eraOfScriptInEra :: ScriptInEra era -> ShelleyBasedEra era
 eraOfScriptInEra (ScriptInEra langInEra _) = eraOfScriptLanguageInEra langInEra
 
-
 -- ----------------------------------------------------------------------------
 -- Scripts used in a transaction (in an era) to witness authorised use
 --
@@ -711,6 +722,20 @@ data WitCtx witctx where
      WitCtxMint  :: WitCtx WitCtxMint
      WitCtxStake :: WitCtx WitCtxStake
 
+-- | Scripts can now exist in the UTxO at a transaction output. We can
+-- reference these scripts via specification of a reference transaction input
+-- in order to witness spending inputs, withdrawals, certificates
+-- or to mint tokens. This datatype encapsulates this concept.
+data PlutusScriptOrReferenceInput lang
+  = PScript (PlutusScript lang)
+  | PReferenceScript TxIn (Maybe ScriptHash)
+  deriving (Eq, Show)
+
+
+data SimpleScriptOrReferenceInput lang
+  = SScript (SimpleScript lang)
+  | SReferenceScript TxIn (Maybe ScriptHash)
+  deriving (Eq, Show)
 
 -- | A /use/ of a script within a transaction body to witness that something is
 -- being used in an authorised manner. That can be
@@ -729,12 +754,12 @@ data ScriptWitness witctx era where
 
      SimpleScriptWitness :: ScriptLanguageInEra lang era
                          -> SimpleScriptVersion lang
-                         -> SimpleScript        lang
+                         -> SimpleScriptOrReferenceInput lang
                          -> ScriptWitness witctx era
 
      PlutusScriptWitness :: ScriptLanguageInEra  lang era
                          -> PlutusScriptVersion  lang
-                         -> PlutusScript         lang
+                         -> PlutusScriptOrReferenceInput lang
                          -> ScriptDatum witctx
                          -> ScriptRedeemer
                          -> ExecutionUnits
@@ -770,20 +795,27 @@ type ScriptRedeemer = ScriptData
 
 data ScriptDatum witctx where
      ScriptDatumForTxIn    :: ScriptData -> ScriptDatum WitCtxTxIn
+     InlineScriptDatum     ::               ScriptDatum WitCtxTxIn
      NoScriptDatumForMint  ::               ScriptDatum WitCtxMint
      NoScriptDatumForStake ::               ScriptDatum WitCtxStake
 
 deriving instance Eq   (ScriptDatum witctx)
 deriving instance Show (ScriptDatum witctx)
 
+-- We cannot always extract a script from a script witness due to reference scripts.
+-- Reference scripts exist in the UTxO, so without access to the UTxO we cannot
+-- retrieve the script.
+scriptWitnessScript :: ScriptWitness witctx era -> Maybe (ScriptInEra era)
+scriptWitnessScript (SimpleScriptWitness langInEra version (SScript script)) =
+    Just $ ScriptInEra langInEra (SimpleScript version script)
 
-scriptWitnessScript :: ScriptWitness witctx era -> ScriptInEra era
-scriptWitnessScript (SimpleScriptWitness langInEra version script) =
-    ScriptInEra langInEra (SimpleScript version script)
+scriptWitnessScript (PlutusScriptWitness langInEra version (PScript script) _ _ _) =
+    Just $ ScriptInEra langInEra (PlutusScript version script)
 
-scriptWitnessScript (PlutusScriptWitness langInEra version script _ _ _) =
-    ScriptInEra langInEra (PlutusScript version script)
-
+scriptWitnessScript (SimpleScriptWitness _ _ (SReferenceScript _ _)) =
+    Nothing
+scriptWitnessScript (PlutusScriptWitness _ _ (PReferenceScript _ _) _ _ _) =
+    Nothing
 
 -- ----------------------------------------------------------------------------
 -- The kind of witness to use, key (signature) or script
@@ -930,10 +962,10 @@ hashScript (PlutusScript PlutusScriptV1 (PlutusScriptSerialised script)) =
     ScriptHash
   . Ledger.hashScript @(ShelleyLedgerEra AlonzoEra)
   $ Alonzo.PlutusScript Alonzo.PlutusV1 script
--- TODO: Babbage era PV2 only exists in Babbage era onwards!
+
 hashScript (PlutusScript PlutusScriptV2 (PlutusScriptSerialised script)) =
     ScriptHash
-  . Ledger.hashScript @(ShelleyLedgerEra AlonzoEra)
+  . Ledger.hashScript @(ShelleyLedgerEra BabbageEra)
   $ Alonzo.PlutusScript Alonzo.PlutusV2 script
 
 toShelleyScriptHash :: ScriptHash -> Shelley.ScriptHash StandardCrypto
@@ -944,7 +976,7 @@ fromShelleyScriptHash = ScriptHash
 
 
 -- ----------------------------------------------------------------------------
--- The simple native script language
+-- The simple script language
 --
 
 data SimpleScript lang where
@@ -1127,7 +1159,6 @@ toShelleyScript (ScriptInEra langInEra (PlutusScript PlutusScriptV2
                                          (PlutusScriptSerialised script))) =
     case langInEra of
       PlutusScriptV2InBabbage -> Alonzo.PlutusScript Alonzo.PlutusV2 script
-
 
 fromShelleyBasedScript  :: ShelleyBasedEra era
                         -> Ledger.Script (ShelleyLedgerEra era)
@@ -1432,21 +1463,14 @@ fromShelleyScriptToReferenceScript sbe script =
    scriptInEraToRefScript $ fromShelleyBasedScript sbe script
 
 scriptInEraToRefScript :: ScriptInEra era -> ReferenceScript era
-scriptInEraToRefScript sIne@(ScriptInEra langInEra s) =
-  let sLang = languageOfScriptLanguageInEra langInEra
-      era = shelleyBasedToCardanoEra $ eraOfScriptInEra sIne
-  in case refInsScriptsAndInlineDatsSupportedInEra era of
-       Nothing -> ReferenceScriptNone
-       Just supp ->
-         case sLang of
-           PlutusScriptLanguage PlutusScriptV2 ->
-             ReferenceScript supp $ toScriptInAnyLang s
-           SimpleScriptLanguage SimpleScriptV1 ->
-             ReferenceScriptNone
-           SimpleScriptLanguage SimpleScriptV2 ->
-             ReferenceScriptNone
-           PlutusScriptLanguage PlutusScriptV1 ->
-             ReferenceScriptNone
+scriptInEraToRefScript sIne@(ScriptInEra _ s) =
+  case refInsScriptsAndInlineDatsSupportedInEra era of
+    Nothing -> ReferenceScriptNone
+    Just supp ->
+      -- Any script can be a reference script
+      ReferenceScript supp $ toScriptInAnyLang s
+ where
+  era = shelleyBasedToCardanoEra $ eraOfScriptInEra sIne
 
 -- Helpers
 

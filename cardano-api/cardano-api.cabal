@@ -61,6 +61,7 @@ library
                         Cardano.Api.HasTypeProxy
                         Cardano.Api.IPC
                         Cardano.Api.IPC.Monad
+                        Cardano.Api.InMode
                         Cardano.Api.Json
                         Cardano.Api.Key
                         Cardano.Api.KeysByron
@@ -86,7 +87,7 @@ library
                         Cardano.Api.StakePoolMetadata
                         Cardano.Api.Tx
                         Cardano.Api.TxBody
-                        Cardano.Api.InMode
+                        Cardano.Api.TxIn
                         Cardano.Api.TxMetadata
                         Cardano.Api.TxSubmit.ErrorRender
                         Cardano.Api.TxSubmit.Types
@@ -139,6 +140,7 @@ library
                       , parsec
                       , plutus-ledger-api
                       , prettyprinter
+                      , prettyprinter-configurable
                       , scientific
                       , serialise
                       , small-steps
@@ -233,6 +235,7 @@ test-suite cardano-api-test
                         Test.Cardano.Api.Typed.Orphans
                         Test.Cardano.Api.Typed.RawBytes
                         Test.Cardano.Api.Typed.Script
+                        Test.Cardano.Api.Typed.TxBody
                         Test.Cardano.Api.Typed.Value
 
   ghc-options:          -threaded -rtsopts -with-rtsopts=-N -with-rtsopts=-T

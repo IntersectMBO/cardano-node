@@ -8,10 +8,10 @@ set -o pipefail
 export WORK="${WORK:-example/work}"
 export BASE="${BASE:-.}"
 export CARDANO_CLI="${CARDANO_CLI:-cardano-cli}"
-export CARDANO_NODE_SOCKET_PATH="${CARDANO_NODE_SOCKET_PATH:-example/node-bft1/node.sock}"
+export CARDANO_NODE_SOCKET_PATH="${CARDANO_NODE_SOCKET_PATH:-example/main.sock}"
 export TESTNET_MAGIC="${TESTNET_MAGIC:-42}"
-export UTXO_VKEY="${UTXO_VKEY:-example/shelley/utxo-keys/utxo1.vkey}"
-export UTXO_SKEY="${UTXO_SKEY:-example/shelley/utxo-keys/utxo1.skey}"
+export UTXO_VKEY="${UTXO_VKEY:-example/utxo-keys/utxo1.vkey}"
+export UTXO_SKEY="${UTXO_SKEY:-example/utxo-keys/utxo1.skey}"
 export RESULT_FILE="${RESULT_FILE:-$WORK/result.out}"
 
 echo "Socket path: $CARDANO_NODE_SOCKET_PATH"
@@ -19,9 +19,26 @@ echo "Socket path: $(pwd)"
 
 ls -al "$CARDANO_NODE_SOCKET_PATH"
 
+export ERA="$($CARDANO_CLI query tip --testnet-magic $TESTNET_MAGIC | jq -r .era)"
+
+case $ERA in
+  Alonzo)
+    export ERA_FLAG="--alonzo-era"
+    export PV=v1 # Plutus Script Version
+    ;;
+  Babbage)
+    export ERA_FLAG="--babbage-era"
+    export PV=v2 # Plutus Script Version
+    ;;
+  *)
+    echo "Unsupported: $ERA"
+    exit 1
+    ;;
+esac
+
 if [ "$1" == "guessinggame" ]; then
  # NB: This plutus script uses a "typed" redeemer and "typed" datum.
- plutusscriptinuse="$BASE/scripts/plutus/scripts/custom-guess-42-datum-42.plutus"
+ plutusscriptinuse="$BASE/scripts/plutus/scripts/$PV/custom-guess-42-datum-42.plutus"
  # This datum hash is the hash of the typed 42
  scriptdatumhash="fcaa61fb85676101d9e3398a484674e71c45c3fd41b492682f3b0054f4cf3273"
  datumfilepath="$BASE/scripts/plutus/data/typed-42.datum"
@@ -30,7 +47,7 @@ if [ "$1" == "guessinggame" ]; then
  echo "Script at: $plutusscriptinuse"
 
 elif [ "$1" == "" ]; then
- plutusscriptinuse="$BASE/scripts/plutus/scripts/always-succeeds-spending.plutus"
+ plutusscriptinuse="$BASE/scripts/plutus/scripts/$PV/always-succeeds-spending.plutus"
  # This datum hash is the hash of the untyped 42
  scriptdatumhash="9e1199a988ba72ffd6e9c269cadb3b53b5f360ff99f112d9b2ee30c4d74ad88b"
  datumfilepath="$BASE/scripts/plutus/data/42.datum"
@@ -61,7 +78,7 @@ lovelaceattxindiv3=$(expr $lovelaceattxin / 3)
 $CARDANO_CLI query protocol-parameters --testnet-magic "$TESTNET_MAGIC" --out-file $WORK/pparams.json
 
 $CARDANO_CLI transaction build \
-  --alonzo-era \
+  $ERA_FLAG \
   --cardano-mode \
   --testnet-magic "$TESTNET_MAGIC" \
   --change-address "$utxoaddr" \
@@ -107,7 +124,7 @@ echo "Collateral"
 echo "$txinCollateral"
 
 $CARDANO_CLI transaction build \
-  --alonzo-era \
+  $ERA_FLAG \
   --cardano-mode \
   --testnet-magic "$TESTNET_MAGIC" \
   --change-address "$utxoaddr" \

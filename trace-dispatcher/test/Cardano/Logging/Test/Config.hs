@@ -33,12 +33,12 @@ config2 = emptyTraceConfig {
          , ConfDetail DNormal
          , ConfBackend [Stdout HumanFormatColoured, Forwarder, EKGBackend]
          ])
-    , (["Node", "Test", "Message1"],
+    , (["Test", "Message1"],
          [ ConfSeverity (SeverityF (Just Info))
          , ConfDetail DNormal
          , ConfBackend [Stdout HumanFormatColoured, EKGBackend]
          ])
-    , (["Node", "Test", "Message2"],
+    , (["Test", "Message2"],
          [ ConfSeverity (SeverityF (Just Error))
          , ConfDetail DMinimal
          , ConfBackend [Forwarder, EKGBackend]
@@ -55,13 +55,13 @@ config3 = emptyTraceConfig {
          , ConfDetail DNormal
          , ConfBackend [Stdout HumanFormatColoured, Forwarder, EKGBackend]
          ])
-    , (["Node", "Test", "Message1"],
+    , (["Test", "Message1"],
          [ ConfSeverity (SeverityF (Just Debug))
          , ConfDetail DNormal
          , ConfBackend [Stdout HumanFormatColoured, EKGBackend]
          , ConfLimiter 100
          ])
-    , (["Node", "Test", "Message2"],
+    , (["Test", "Message2"],
          [ ConfSeverity (SeverityF (Just Error))
          , ConfDetail DMinimal
          , ConfBackend [Forwarder, EKGBackend]

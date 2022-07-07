@@ -87,7 +87,7 @@ defaultBackends:
 #   - "127.0.0.1"
 #   - 12789
 
-# To enable the 'TraceForwarder' backend, uncomment the following setting. Log
+# To enable the legacy 'TraceForwarder' backend, uncomment the following setting. Log
 # items are then forwarded based on an entry in 'mapBackends' to a separate
 # process running a 'TraceAcceptor'.
 # Example using UNIX pipes:

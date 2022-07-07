@@ -21,6 +21,7 @@ import qualified Data.Aeson as Aeson
 import           Data.Aeson.Types (ToJSONKey (..), toJSONKeyText)
 import           Data.BiMap (BiMap (..), Bimap)
 import qualified Data.ByteString.Base16 as B16
+import qualified Data.ByteString.Short as Short
 import qualified Data.Map.Strict as Map
 import           Data.Text (Text)
 import qualified Data.Text as Text
@@ -40,6 +41,7 @@ import           Cardano.Slotting.Slot (SlotNo (..))
 import           Cardano.Slotting.Time (SystemStart (..))
 
 import qualified Cardano.Crypto.Hash.Class as Crypto
+import qualified Cardano.Ledger.Alonzo.Data as Alonzo
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 import qualified Cardano.Ledger.Babbage.PParams as Babbage
 import qualified Cardano.Ledger.Babbage.TxBody as Babbage
@@ -74,7 +76,7 @@ instance ToJSON (Mary.Value era) where
 instance ToJSONKey Mary.AssetName where
   toJSONKey = toJSONKeyText render
     where
-      render = Text.decodeLatin1 . B16.encode . Mary.assetName
+      render = Text.decodeLatin1 . B16.encode . Short.fromShort . Mary.assetName
 
 instance ToJSON (Mary.PolicyID era) where
   toJSON (Mary.PolicyID (Shelley.ScriptHash h)) = Aeson.String (hashToText h)
@@ -85,7 +87,7 @@ instance ToJSONKey (Mary.PolicyID era) where
       render (Mary.PolicyID (Shelley.ScriptHash h)) = hashToText h
 
 instance ToJSON Mary.AssetName where
-  toJSON = Aeson.String . Text.decodeLatin1 . B16.encode . Mary.assetName
+  toJSON = Aeson.String . Text.decodeLatin1 . B16.encode . Short.fromShort . Mary.assetName
 
 instance ToJSON Shelley.AccountState where
   toJSON (Shelley.AccountState tr rs) = object [ "treasury" .= tr
@@ -232,11 +234,12 @@ instance ( Ledger.Era era
       , "referenceScript" .= mRefScript
       ]
 
-instance Ledger.Crypto era ~ Consensus.StandardCrypto
-  => ToJSON (Babbage.Datum era) where
-    toJSON d = case Babbage.datumDataHash d of
-                 SNothing -> Aeson.Null
-                 SJust dH -> toJSON $ ScriptDataHash dH
+instance ( Ledger.Era era
+         , Ledger.Crypto era ~ Consensus.StandardCrypto
+         ) => ToJSON (Babbage.Datum era) where
+  toJSON d = case Alonzo.datumDataHash d of
+               SNothing -> Aeson.Null
+               SJust dH -> toJSON $ ScriptDataHash dH
 
 instance ToJSON (Alonzo.Script (Babbage.BabbageEra Consensus.StandardCrypto)) where
   toJSON s = Aeson.String . serialiseToRawBytesHexText

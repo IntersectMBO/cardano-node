@@ -2,7 +2,7 @@
 {-# LANGUAGE ForeignFunctionInterface #-}
 
 module Cardano.Logging.Resources.Darwin
-    ( readRessoureStatsInternal
+    ( readResourceStatsInternal
     ) where
 
 #include "os-support-darwin.h"
@@ -82,8 +82,8 @@ getMemoryInfo pid =
                     (succ <$> c_get_process_memory_info2 ptr (fromIntegral pid))
       peek ptr
 
-readRessoureStatsInternal :: IO (Maybe ResourceStats)
-readRessoureStatsInternal = getProcessID >>= \pid -> do
+readResourceStatsInternal :: IO (Maybe ResourceStats)
+readResourceStatsInternal = getProcessID >>= \pid -> do
   cpu <- getMemoryInfo pid
   rts <- GhcStats.getRTSStats
   mem <- getMemoryInfo pid

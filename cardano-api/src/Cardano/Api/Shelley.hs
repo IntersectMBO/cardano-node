@@ -115,6 +115,8 @@ module Cardano.Api.Shelley
     toShelleyScriptHash,
     fromShelleyScriptHash,
     PlutusScript(..),
+    PlutusScriptOrReferenceInput(..),
+    SimpleScriptOrReferenceInput(..),
     toPlutusData,
     fromPlutusData,
     toAlonzoData,
@@ -209,8 +211,11 @@ module Cardano.Api.Shelley
     LeadershipError(..),
     currentEpochEligibleLeadershipSlots,
     nextEpochEligibleLeadershipSlots,
+
     -- ** Conversions
     shelleyPayAddrToPlutusPubKHash,
+    toConsensusGenTx,
+    fromAlonzoCostModels,
     --TODO: arrange not to export these
     toShelleyNetwork,
     fromShelleyPParams,
@@ -223,6 +228,7 @@ import           Cardano.Api.Block
 import           Cardano.Api.Certificate
 import           Cardano.Api.Eras
 import           Cardano.Api.IPC
+import           Cardano.Api.InMode
 import           Cardano.Api.KeysPraos
 import           Cardano.Api.KeysShelley
 import           Cardano.Api.LedgerState

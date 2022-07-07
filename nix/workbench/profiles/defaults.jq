@@ -1,13 +1,13 @@
 ## Testable with:
 ##
-##   jq -n 'include "defaults" { search: "nix/workbench/profiles" }; era_defaults("alonzo")'
+##   jq -n 'include "defaults" { search: "nix/workbench/profiles" }; era_defaults("babbage")'
 ##
 def era_defaults($era):
 { common:
   { era:                              $era
 
   ## Choice of a cluster run scenario (wb scenario --help):
-  , scenario:                         "default"
+  , scenario:                         "fixed-loaded"
 
   ## Cluster topology and composition:
   , composition:
@@ -36,12 +36,12 @@ def era_defaults($era):
 
     ## Blockchain time & block density
     , active_slots_coeff:             0.05
-    , epoch_length:                   2200   # Ought to be at least (10 * k / f).
-    , parameter_k:                    10
+    , epoch_length:                   600   # Ought to be at least (10 * k / f).
+    , parameter_k:                    3
     , slot_duration:                  1
 
     ## Block size & contents
-    , max_block_size:                 64000
+    , max_block_size:                 80000
     , max_tx_size:                    16384
 
     ## Verbatim overlay, for all era-specific genesis slices:
@@ -61,23 +61,41 @@ def era_defaults($era):
     }
 
   , generator:
-    { add_tx_size:                    0
-    , init_cooldown:                  25
+    { add_tx_size:                    100
+    , init_cooldown:                  5
     , inputs_per_tx:                  2
     , outputs_per_tx:                 2
     , tx_fee:                         1000000
-    , epochs:                         10
-    , tps:                            2
+    , epochs:                         3
+    , tps:                            12
     }
 
   , node:
     { rts_flags_override:             []
-    , shutdown_on_slot_synced:        null
+    , shutdown_on_slot_synced:        300
+    , shutdown_on_block_synced:       null
     , tracing_backend:                "trace-dispatcher"  ## or "iohk-monitoring"
+    , tracer:                         true
+    , verbatim:
+      { EnableP2P:                       false
+
+      , MempoolCapacityBytesOverride:    "NoOverride"
+      , ProtocolIdleTimeout:             5
+      , TimeWaitTimeout:                 60
+      , AcceptedConnectionsLimit:
+        { hardLimit:                     512
+        , softLimit:                     384
+        , delay:                         5
+        }
+      , TargetNumberOfRootPeers:         100
+      , TargetNumberOfKnownPeers:        100
+      , TargetNumberOfEstablishedPeers:  50
+      , TargetNumberOfActivePeers:       20
+      }
     }
 
   , analysis:
-    { type:                           null
+    { type:                           "standard"
     , cluster_startup_overhead_s:     10
     , start_log_spread_s:             120
     , last_log_spread_s:              120
@@ -103,15 +121,16 @@ def era_defaults($era):
   }
 
 , alonzo:
-  { genesis:
-    { shelley:
-      { protocolParams:
-        { protocolVersion:
-          { major: 5
-          , minor: 0
-          }
-        }
-      }
-    }
-  }
+  ({} |
+    .genesis.shelley.protocolParams.protocolVersion =
+      { major: 5
+      , minor: 0
+      })
+
+, babbage:
+  ({} |
+    .genesis.shelley.protocolParams.protocolVersion =
+      { major: 5
+      , minor: 0
+      })
 } | (.common * .[$era]);

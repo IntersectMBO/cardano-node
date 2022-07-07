@@ -5,6 +5,7 @@ in
 { withHoogle ? defaultCustomConfig.withHoogle
 , profileName ? defaultCustomConfig.localCluster.profileName
 , workbenchDevMode ? defaultCustomConfig.localCluster.workbenchDevMode
+, useCabalRun ? true
 , customConfig ? {
     inherit withHoogle;
     localCluster =  {
@@ -12,6 +13,8 @@ in
     };
   }
 , pkgs ? import ./nix customConfig
+# to use profiled build of haskell dependencies:
+, profiled ? false
 , cardano-mainnet-mirror ? __getFlake "github:input-output-hk/cardano-mainnet-mirror/nix"
 }:
 with pkgs;
@@ -20,6 +23,7 @@ let
   inherit (customConfig) withHoogle localCluster;
   inherit (localCluster) profileName workbenchDevMode;
   inherit (pkgs.haskell-nix) haskellLib;
+  project = if profiled then cardanoNodeProject.profiled else cardanoNodeProject;
   commandHelp =
     ''
       echo "
@@ -46,10 +50,8 @@ let
 
   shell =
     let cluster = pkgs.supervisord-workbench-for-profile
-      { inherit profileName;
-        useCabalRun = true;
-      };
-    in cardanoNodeProject.shellFor {
+      { inherit profileName useCabalRun profiled; };
+    in project.shellFor {
     name = "cluster-shell";
 
     inherit withHoogle;
@@ -59,7 +61,7 @@ let
     tools = {
       haskell-language-server = {
         version = "latest";
-        inherit (cardanoNodeProject) index-state;
+        inherit (project) index-state;
       };
     };
 
@@ -84,6 +86,7 @@ let
       pkgs.hlint
       pkgs.moreutils
       pkgs.pstree
+      pkgs.time
       cluster.interactive-start
       cluster.interactive-stop
       cluster.interactive-restart
@@ -99,22 +102,19 @@ let
     exactDeps = true;
 
     shellHook = ''
-      echo 'nix-shell top-level shellHook:  withHoogle=${toString withHoogle} profileName=${profileName} workbenchDevMode=${toString workbenchDevMode}'
-
       ${with customConfig.localCluster;
-        (import ./nix/workbench/shell.nix { inherit lib workbenchDevMode profileName; useCabalRun = true; }).shellHook}
+        (import ./nix/workbench/shell.nix { inherit lib workbenchDevMode profileName useCabalRun profiled; }).shellHook}
 
-      function atexit() {
+      function workbench_atexit() {
           if wb backend is-running
           then stop-cluster
           fi
       }
-      trap atexit EXIT
-
-      ${setLocale}
+      trap workbench_atexit EXIT
 
       export CARDANO_MAINNET_MIRROR=${cardano-mainnet-mirror.outputs.defaultPackage.x86_64-linux.outPath}
 
+      ${setLocale}
       ${commandHelp}
 
       set +e
@@ -123,10 +123,10 @@ let
 
   devops =
     let cluster = pkgs.supervisord-workbench-for-profile
-      { profileName = "devops-alzo";
+      { profileName = "devops-bage";
         useCabalRun = false;
       };
-    in cardanoNodeProject.shellFor {
+    in project.shellFor {
     name = "devops-shell";
 
     packages = _: [];
@@ -146,6 +146,7 @@ let
       cardanolib-py
       cluster.workbench.workbench
       pstree
+      pkgs.time
     ];
 
     # Prevents cabal from choosing alternate plans, so that
@@ -184,7 +185,7 @@ let
     '';
   };
 
-  dev = cardanoNodeProject.shell;
+  dev = project.shell;
 
 in
 

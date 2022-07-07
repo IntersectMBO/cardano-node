@@ -1,9 +1,11 @@
 usage_scenario() {
      usage "scenario" "Run scenario control" <<EOF
-    idle DIR              Idle, isolated cluster scenario, runs indefinitely;
-                            Aliased as 'default' scenario
+    idle DIR              Idle, isolated cluster scenario, runs indefinitely
 
-    loaded DIR            Isolated cluster under tx-generator workload;
+    fixed DIR             Isolated cluster;
+                            Terminates after profile-implied time elapses
+
+    fixed-loaded DIR      Isolated cluster under tx-generator workload;
                             Terminates after profile-implied transaction
                             amount is submitted
 
@@ -24,34 +26,35 @@ local p=$dir/profile.json
 
 progress "run | scenario" "starting $(yellow $op)"
 case "$op" in
-    idle | default )
-        backend start-cluster "$dir"
+    idle )
+        backend start                "$dir"
+        backend start-nodes          "$dir"
         ;;
 
     fixed )
-        backend start-cluster      "$dir"
+        backend start                "$dir"
 
-        scenario_setup_termination "$dir"
-        backend wait-pools-stopped "$dir"
+        scenario_setup_exit_trap     "$dir"
+        scenario_setup_workload_termination   "$dir"
+        backend start-nodes          "$dir"
+        backend wait-pools-stopped   "$dir"
         scenario_cleanup_termination
 
-        backend stop-cluster       "$dir"
-        ;;
-
-    loaded )
-        backend start-cluster   "$dir"
-        backend start-generator "$dir"
+        backend stop-cluster         "$dir"
         ;;
 
     fixed-loaded )
-        backend start-cluster      "$dir"
-        backend start-generator    "$dir"
+        backend start                "$dir"
 
-        scenario_setup_termination "$dir"
-        backend wait-pools-stopped "$dir"
+        scenario_setup_exit_trap     "$dir"
+        backend start-nodes          "$dir"
+        backend start-generator      "$dir"
+
+        scenario_setup_workload_termination   "$dir"
+        backend wait-pools-stopped   "$dir"
         scenario_cleanup_termination
 
-        backend stop-cluster       "$dir"
+        backend stop-cluster         "$dir"
         ;;
 
     chainsync )
@@ -73,8 +76,10 @@ case "$op" in
         progress "scenario" "preparing ChainDB for the $(green server node)"
         chaindb "${chaindb_server[@]}"
 
+        backend start "$dir"
+
         progress "scenario" "starting the $(yellow ChainDB server node)"
-        backend start-cluster "$dir"
+        backend start-node        "$dir" 'node-0'
 
         progress "scenario" "starting the $(yellow fetcher node)"
         backend start-node        "$dir" 'node-1'
@@ -112,23 +117,30 @@ scenario_cleanup_exit_trap() {
 
 __scenario_watcher_pid=
 scenario_watcher() {
-    while test $__scenario_watcher_end_time -gt $(date +%s)
-    do sleep 3; done
+    while test $__scenario_watcher_end_time -ge $(date +%s)
+    do sleep 1; done
     echo >&2
-    msg "scenario:  $(with_color yellow end of time reached) for:  $(with_color red $(jq '.meta.tag' -r $__scenario_exit_trap_dir/meta.json))"
+    msg "scenario:  $(yellow end of time reached) for:  $(red $(jq '.meta.tag' -r $__scenario_exit_trap_dir/meta.json))"
     rm -f $dir/flag/cluster-termination
-    msg "scenario:  $(with_color red signalled termination)"
+    msg "scenario:  $(red signalled termination)"
+    progress "scenario" "now:  $(yellow $(date))"
 }
 
-scenario_setup_termination() {
+scenario_setup_workload_termination() {
     local run_dir=$1
-
-    scenario_setup_exit_trap $run_dir
 
     export __scenario_watcher_self=$BASHPID
     local termination_tolerance_s=40
-    export __scenario_watcher_end_time=$(jq '
-           .meta.timing.earliest_end + '$termination_tolerance_s  $run_dir/meta.json)
+    local now=$(date +%s)
+    local till_shutdown=$(($(jq '.meta.timing.shutdown_end' $run_dir/meta.json) - now))
+    local till_workload=$(($(jq '.meta.timing.workload_end' $run_dir/meta.json) - now))
+    local till_earliest=$(($(jq '.meta.timing.earliest_end' $run_dir/meta.json) - now))
+    export __scenario_watcher_end_time=$((now + till_earliest + termination_tolerance_s))
+    progress "scenario" "now:  $(yellow $(date --date=@$now))"
+    progress "scenario" "until end:  workload $(yellow $till_workload), $(blue shutdown) $(yellow $till_shutdown), $(blue earliest) $(yellow $till_earliest)"
+    progress "scenario" "shutdown tolerance:  $(yellow $termination_tolerance_s) s"
+    # progress "scenario" "until end: workload $(yellow $(date --date=@$__scenario_watcher_end_time))"
+    progress "scenario" "termination in $(white $((till_earliest + termination_tolerance_s))) seconds.."
     scenario_watcher &
     __scenario_watcher_pid=$!
 }

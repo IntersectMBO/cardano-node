@@ -14,7 +14,7 @@ module Cardano.Node.Tracing.Tracers.Shutdown
 
 import           Cardano.Logging
 import           Cardano.Node.Handlers.Shutdown
-import           Data.Aeson (ToJSON (..), Value (..), (.=))
+import           Data.Aeson (Value (..), (.=))
 import           Data.Monoid (mconcat, (<>))
 import           Data.Text (Text, pack)
 import           Prelude (show)
@@ -29,7 +29,7 @@ namesForShutdown = \case
   AbnormalShutdown{}          -> ["AbnormalShutdown"]
   ShutdownUnexpectedInput{}   -> ["ShutdownUnexpectedInput"]
   RequestingShutdown{}        -> ["RequestingShutdown"]
-  ShutdownArmedAtSlot{}       -> ["ShutdownArmedAtSlot"]
+  ShutdownArmedAt{}           -> ["ShutdownArmedAt"]
 
 severityShutdown :: ShutdownTrace -> SeverityS
 severityShutdown = \case
@@ -37,7 +37,7 @@ severityShutdown = \case
   AbnormalShutdown{}          -> Error
   ShutdownUnexpectedInput{}   -> Error
   RequestingShutdown{}        -> Warning
-  ShutdownArmedAtSlot{}       -> Warning
+  ShutdownArmedAt{}           -> Warning
 
 ppShutdownTrace :: ShutdownTrace -> Text
 ppShutdownTrace = \case
@@ -46,7 +46,7 @@ ppShutdownTrace = \case
   ShutdownUnexpectedInput text  ->
     "Received shutdown request but found unexpected input in --shutdown-ipc FD: " <> text
   RequestingShutdown reason     -> "Ringing the node shutdown doorbell:  " <> reason
-  ShutdownArmedAtSlot slot      -> "Will terminate upon reaching " <> pack (show slot)
+  ShutdownArmedAt lim           -> "Will terminate upon reaching " <> pack (show lim)
 
 instance LogFormatting ShutdownTrace where
   forHuman = ppShutdownTrace
@@ -58,13 +58,13 @@ instance LogFormatting ShutdownTrace where
           mconcat [ "kind"   .= String "AbnormalShutdown" ]
     ShutdownUnexpectedInput text ->
           mconcat [ "kind"   .= String "AbnormalShutdown"
-                   , "unexpected" .= String text ]
+                  , "unexpected" .= String text ]
     RequestingShutdown reason ->
           mconcat [ "kind"   .= String "RequestingShutdown"
-                   , "reason" .= String reason ]
-    ShutdownArmedAtSlot slot  ->
-          mconcat [ "kind"   .= String "ShutdownArmedAtSlot"
-                   , "slot"   .= toJSON slot ]
+                  , "reason" .= String reason ]
+    ShutdownArmedAt lim ->
+          mconcat [ "kind"   .= String "ShutdownArmedAt"
+                  , "limit"  .= lim ]
 
 docShutdown :: Documented ShutdownTrace
 docShutdown = addDocumentedNamespace  [] docShutdown'
@@ -88,7 +88,7 @@ docShutdown' = Documented
       []
       "Ringing the node shutdown doorbell"
   , DocMsg
-      ["ShutdownArmedAtSlot"]
+      ["ShutdownArmedAt"]
       []
-      "Setting up node shutdown at given slot."
+      "Setting up node shutdown at given slot / block."
   ]

@@ -6,7 +6,7 @@ let
                   targetNodes = targetNodesList cfg.targetNodes;
                   era = capitalise cfg.era;
                   plutusLoopScript = plutusScriptFile cfg "loop.plutus";
-                  inherit                 
+                  inherit
                   plutusMode
                   plutusData
                   plutusRedeemer
@@ -21,7 +21,7 @@ let
                   tx_fee
                   tps
                   init_cooldown
-                  sigKey  
+                  sigKey
                   min_utxo_value
                   nodeConfigFile
                   localNodeSocketPath;
@@ -37,7 +37,7 @@ let
         (if runScript != null
          then runScript
          else runScriptFn cfg);
-    
+
   capitalise = x: (pkgs.lib.toUpper (__substring 0 1 x)) + __substring 1 99999 x;
 
   plutusScript = cfg: plutusScriptFile cfg cfg.plutusScript;
@@ -80,7 +80,8 @@ in pkgs.commonLib.defServiceModule
         inputs_per_tx   = opt int 4          "Inputs per Tx.";
         outputs_per_tx  = opt int 4          "Outputs per Tx.";
         tx_fee          = opt int 10000000   "Tx fee, in Lovelace.";
-        tps             = opt int 100        "Strength of generated load, in TPS.";
+        tps             = opt (either float int) 100
+                                             "Strength of generated load, in TPS.";
         init_cooldown   = opt int 50         "Delay between init and main submissions.";
         min_utxo_value  = opt int 10000000   "Minimum value allowed per UTxO entry";
         runScriptFn     = opt (functionTo attrs) defaultGeneratorScriptFn
@@ -105,6 +106,7 @@ in pkgs.commonLib.defServiceModule
                                       "allegra"
                                       "mary"
                                       "alonzo"
+                                      "babbage"
                                     ])
                               "mary"
                               "Cardano era to generate transactions for.";
@@ -113,7 +115,7 @@ in pkgs.commonLib.defServiceModule
         decideRunScript = opt (functionTo str) defaultDecideRunScript
           "Decision procedure for the run script content.";
       };
-      
+
       configExeArgsFn = cfg: [
           "json_highlevel"
           "${pkgs.writeText "tx-gen-config.json" (cfg.decideRunScript cfg)}"

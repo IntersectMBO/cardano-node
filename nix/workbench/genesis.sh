@@ -173,10 +173,26 @@ case "$op" in
         sponge "$dir"/genesis.spec.json
 
         msg "genesis:  mutating into staked genesis"
+#         local time=(
+#             -f '{
+# , "wall_clock_s":       %e
+# , "user_cpu_s":         %U
+# , "sys_cpu_s":          %S
+# , "avg_cpu_pct":       "%P"
+# , "rss_peak_kb":        %M
+# , "ctxsw_involuntary":  %c
+# , "ctxsw_volunt_waits": %w
+# , "pageflt_major":      %F
+# , "pageflt_minor":      %R
+# , "io_fs_reads":        %I
+# , "io_fs_writes":       %O
+# }'
+#             -o "$dir"/cardano-cli-execution-stats.json
+#         )
         params=(--genesis-dir "$dir"
                 $(jq '.cli_args.createFinalBulk | join(" ")' "$profile_json" --raw-output)
                )
-        cardano-cli genesis create-staked "${params[@]}"
+        time cardano-cli genesis create-staked "${params[@]}"
         mv "$dir"/genesis.json "$dir"/genesis-shelley.json
         mv "$dir"/genesis.spec.json "$dir"/genesis-shelley.spec.json
 

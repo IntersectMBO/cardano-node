@@ -33,6 +33,7 @@ module Cardano.Api.ProtocolParameters (
     ExecutionUnitPrices(..),
     CostModel(..),
     validateCostModel,
+    fromAlonzoCostModels,
 
     -- * Update proposals to change the protocol parameters
     UpdateProposal(..),
@@ -66,7 +67,7 @@ import           Prelude
 import           Control.Monad
 import           Data.Aeson (FromJSON (..), ToJSON (..), object, withObject, (.!=), (.:), (.:?),
                    (.=))
-import           Data.Bifunctor (bimap)
+import           Data.Bifunctor (bimap, first)
 import           Data.ByteString (ByteString)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -76,7 +77,7 @@ import           Data.Text (Text)
 import           GHC.Generics
 import           Numeric.Natural
 
-import           Cardano.Api.Json
+import           Cardano.Api.Json (toRationalJSON)
 import qualified Cardano.Binary as CBOR
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import           Cardano.Slotting.Slot (EpochNo)
@@ -100,6 +101,8 @@ import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 
 import qualified Cardano.Ledger.Babbage.PParams as Babbage
 import           Cardano.Ledger.Babbage.Translation (coinsPerUTxOWordToCoinsPerUTxOByte)
+
+import           Text.PrettyBy.Default (display)
 
 import           Cardano.Api.Address
 import           Cardano.Api.Eras
@@ -144,6 +147,7 @@ data ProtocolParameters =
        --
        -- This is the \"d\" parameter from the design document.
        --
+       -- /Deprecated in Babbage/
        protocolParamDecentralization :: Maybe Rational,
 
        -- | Extra entropy for the Praos per-epoch nonce.
@@ -292,7 +296,7 @@ instance FromJSON ProtocolParameters where
       v <- o .: "protocolVersion"
       ProtocolParameters
         <$> ((,) <$> v .: "major" <*> v .: "minor")
-        <*> o .: "decentralization"
+        <*> o .:? "decentralization"
         <*> o .: "extraPraosEntropy"
         <*> o .: "maxBlockHeaderSize"
         <*> o .: "maxBlockBodySize"
@@ -752,20 +756,21 @@ newtype CostModel = CostModel (Map Text Integer)
 validateCostModel :: PlutusScriptVersion lang
                   -> CostModel
                   -> Either InvalidCostModel ()
-validateCostModel PlutusScriptV1 (CostModel m)
-  | Alonzo.isCostModelParamsWellFormed m = Right ()
-  | otherwise                        = Left (InvalidCostModel (CostModel m))
-validateCostModel PlutusScriptV2 (CostModel m)
-  | Alonzo.isCostModelParamsWellFormed m = Right ()
-  | otherwise                        = Left (InvalidCostModel (CostModel m))
+validateCostModel PlutusScriptV1 (CostModel m) =
+    first (InvalidCostModel (CostModel m))
+  $ Alonzo.assertWellFormedCostModelParams m
+validateCostModel PlutusScriptV2 (CostModel m) =
+    first (InvalidCostModel (CostModel m))
+  $ Alonzo.assertWellFormedCostModelParams m
 
 -- TODO alonzo: it'd be nice if the library told us what was wrong
-newtype InvalidCostModel = InvalidCostModel CostModel
+data InvalidCostModel = InvalidCostModel CostModel Alonzo.CostModelApplyError
   deriving Show
 
 instance Error InvalidCostModel where
-  displayError (InvalidCostModel cm) =
-    "Invalid cost model: " ++ show cm
+  displayError (InvalidCostModel cm err) =
+    "Invalid cost model: " ++ display err ++
+    " Cost model: " ++ show cm
 
 
 toAlonzoCostModels
@@ -777,7 +782,8 @@ toAlonzoCostModels m = do
  where
   conv :: (AnyPlutusScriptVersion, CostModel) -> Either String (Alonzo.Language, Alonzo.CostModel)
   conv (anySVer, cModel )= do
-    alonzoCostModel <- toAlonzoCostModel cModel (toAlonzoScriptLanguage anySVer)
+    -- TODO: Propagate InvalidCostModel further
+    alonzoCostModel <- first displayError $ toAlonzoCostModel cModel (toAlonzoScriptLanguage anySVer)
     Right (toAlonzoScriptLanguage anySVer, alonzoCostModel)
 
 fromAlonzoCostModels
@@ -796,8 +802,8 @@ fromAlonzoScriptLanguage :: Alonzo.Language -> AnyPlutusScriptVersion
 fromAlonzoScriptLanguage Alonzo.PlutusV1 = AnyPlutusScriptVersion PlutusScriptV1
 fromAlonzoScriptLanguage Alonzo.PlutusV2 = AnyPlutusScriptVersion PlutusScriptV2
 
-toAlonzoCostModel :: CostModel -> Alonzo.Language -> Either String Alonzo.CostModel
-toAlonzoCostModel (CostModel m) l = Alonzo.mkCostModel l m
+toAlonzoCostModel :: CostModel -> Alonzo.Language -> Either InvalidCostModel Alonzo.CostModel
+toAlonzoCostModel (CostModel m) l = first (InvalidCostModel (CostModel m)) $ Alonzo.mkCostModel l m
 
 fromAlonzoCostModel :: Alonzo.CostModel -> CostModel
 fromAlonzoCostModel m = CostModel $ Alonzo.getCostModelParams m
@@ -1353,7 +1359,13 @@ toShelleyPParams ProtocolParameters {
                              = let (maj, minor) = protocolParamProtocolVersion
                                 in Ledger.ProtVer maj minor
      , Shelley._d            = case protocolParamDecentralization of
-                                 Nothing -> error "toAlonzoPParams: Decentralization value required in Shelley era"
+                                 -- The decentralization parameter is deprecated in Babbage
+                                 -- so we default to 0 if no dentralization parameter is found
+                                 -- in the api's 'ProtocolParameter' type. If we don't do this
+                                 -- we won't be able to construct an Alonzo tx using the Babbage
+                                 -- era's protocol parameter because our only other option is to
+                                 -- error.
+                                 Nothing -> minBound
                                  Just pDecentral ->
                                    fromMaybe
                                      (error "toAlonzoPParams: invalid Decentralization value")
@@ -1415,7 +1427,13 @@ toAlonzoPParams ProtocolParameters {
                            = let (maj, minor) = protocolParamProtocolVersion
                               in Ledger.ProtVer maj minor
     , Alonzo._d            = case protocolParamDecentralization of
-                                 Nothing -> error "toAlonzoPParams: Decentralization value required in Alonzo era"
+                                 -- The decentralization parameter is deprecated in Babbage
+                                 -- so we default to 0 if no dentralization parameter is found
+                                 -- in the api's 'ProtocolParameter' type. If we don't do this
+                                 -- we won't be able to construct an Alonzo tx using the Babbage
+                                 -- era's protocol parameter because our only other option is to
+                                 -- error.
+                                 Nothing -> minBound
                                  Just pDecentral ->
                                    fromMaybe
                                      (error "toAlonzoPParams: invalid Decentralization value")
@@ -1552,6 +1570,7 @@ toBabbagePParams ProtocolParameters { protocolParamCollateralPercent = Nothing }
   error "toBabbagePParams: must specify protocolParamCollateralPercent"
 toBabbagePParams ProtocolParameters { protocolParamMaxCollateralInputs = Nothing } =
   error "toBabbagePParams: must specify protocolParamMaxCollateralInputs"
+
 -- ----------------------------------------------------------------------------
 -- Conversion functions: protocol parameters from ledger types
 --

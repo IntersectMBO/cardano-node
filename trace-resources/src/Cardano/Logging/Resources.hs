@@ -20,4 +20,4 @@ import qualified Cardano.Logging.Resources.Dummy as Platform
 
 
 readResourceStats :: IO (Maybe ResourceStats)
-readResourceStats = Platform.readRessoureStatsInternal
+readResourceStats = Platform.readResourceStatsInternal

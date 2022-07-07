@@ -89,12 +89,12 @@ mkDispatchTracers
 mkDispatchTracers nodeKernel trBase trForward mbTrEKG trDataPoint trConfig enableP2P p = do
     -- Some special tracers
     -- NodeInfo tracer
-    nodeInfoTr <- mkDataPointTracer
+    nodeInfoDP <- mkDataPointTracer
                 trDataPoint
                 (const ["NodeInfo"])
-    configureTracers trConfig docNodeInfoTraceEvent [nodeInfoTr]
+    configureTracers trConfig docNodeInfoTraceEvent [nodeInfoDP]
 
-    nodeStateTr <- mkDataPointTracer
+    nodeStateDP <- mkDataPointTracer
                 trDataPoint
                 (const ["NodeState"])
 
@@ -107,7 +107,7 @@ mkDispatchTracers nodeKernel trBase trForward mbTrEKG trDataPoint trConfig enabl
                 allPublic
     configureTracers trConfig SR.docNodeState [stateTr]
 
-    nodePeersTr <- mkDataPointTracer
+    nodePeersDP <- mkDataPointTracer
                 trDataPoint
                 (const ["NodePeers"])
 
@@ -204,19 +204,24 @@ mkDispatchTracers nodeKernel trBase trForward mbTrEKG trDataPoint trConfig enabl
     diffusionTrExtra :: Diffusion.ExtraTracers p2p <-
       mkDiffusionTracersExtra trBase trForward mbTrEKG trDataPoint trConfig enableP2P
     pure Tracers
-      { chainDBTracer = Tracer (\x -> traceWith chainDBTr' x >> SR.traceNodeStateChainDB p nodeStateTr x)
-                     <> Tracer (\x -> traceWith replayBlockTr' x >> SR.traceNodeStateChainDB p nodeStateTr x)
+      { chainDBTracer = Tracer (traceWith chainDBTr')
+                     <> Tracer (traceWith replayBlockTr')
+                     <> Tracer (SR.traceNodeStateChainDB p nodeStateDP)
       , consensusTracers = consensusTr
       , nodeToClientTracers = nodeToClientTr
       , nodeToNodeTracers = nodeToNodeTr
       , diffusionTracers = diffusionTr
       , diffusionTracersExtra = diffusionTrExtra
-      , startupTracer = Tracer $ \x -> traceWith startupTr x >> SR.traceNodeStateStartup nodeStateTr x
-      , shutdownTracer = Tracer $ \x -> traceWith shutdownTr x >> SR.traceNodeStateShutdown nodeStateTr x
-      , nodeInfoTracer = Tracer (traceWith nodeInfoTr)
-      , nodeStateTracer = Tracer (traceWith stateTr) <> Tracer (traceWith nodeStateTr)
+      , startupTracer   = Tracer (traceWith startupTr)
+                        <> Tracer (SR.traceNodeStateStartup nodeStateDP)
+      , shutdownTracer  = Tracer (traceWith shutdownTr)
+                        <> Tracer (SR.traceNodeStateShutdown nodeStateDP)
+      , nodeInfoTracer  = Tracer (traceWith nodeInfoDP)
+      , nodeStateTracer = Tracer (traceWith stateTr)
+                        <> Tracer (traceWith nodeStateDP)
       , resourcesTracer = Tracer (traceWith resourcesTr)
-      , peersTracer = Tracer $ \x -> traceWith peersTr x >> traceNodePeers nodePeersTr x
+      , peersTracer     = Tracer (traceWith peersTr)
+                        <> Tracer (traceNodePeers nodePeersDP)
     }
 
 mkConsensusTracers :: forall blk.

@@ -46,6 +46,17 @@ let
       };
     }
     //
+    {
+      "program:tracer" = {
+        directory      = "${stateDir}/tracer";
+        command        = "sh start.sh";
+        stdout_logfile = "${stateDir}/tracer/stdout";
+        stderr_logfile = "${stateDir}/tracer/stderr";
+        autostart      = false;
+        startretries   = 0;
+      };
+    }
+    //
     extraSupervisorConfig;
 
   ##
@@ -60,8 +71,7 @@ let
       stdout_logfile = "${service.value.stateDir}/stdout";
       stderr_logfile = "${service.value.stateDir}/stderr";
       startretries   = 0;
-      autostart      = nodeSpec.value.autostart
-                       or true; ## Backward compatibility for profiles coming from old pinned workbench.
+      autostart      = false;
       autorestart    = false;
     };
 

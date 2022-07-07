@@ -18,6 +18,7 @@ import           System.Time.Extra (sleep)
 
 import           Cardano.Tracer.Acceptors.Run (runAcceptors)
 import           Cardano.Tracer.Configuration
+import           Cardano.Tracer.Handlers.RTView.Run (initSavedTraceObjects)
 import           Cardano.Tracer.Types (DataPointRequestors)
 import           Cardano.Tracer.Utils (initAcceptedMetrics, initConnectedNodes,
                    initDataPointRequestors, initProtocolsBrake)
@@ -35,9 +36,10 @@ launchAcceptorsSimple mode localSock dpName = do
   dpRequestors <- initDataPointRequestors
   connectedNodes <- initConnectedNodes
   acceptedMetrics <- initAcceptedMetrics
+  savedTO <- initSavedTraceObjects
   currentLogLock <- newLock
   void . sequenceConcurrently $
-    [ runAcceptors mkConfig connectedNodes acceptedMetrics
+    [ runAcceptors mkConfig connectedNodes acceptedMetrics savedTO
                    dpRequestors protocolsBrake currentLogLock
     , runDataPointsPrinter dpName dpRequestors
     ]
@@ -51,6 +53,7 @@ launchAcceptorsSimple mode localSock dpName = do
     , ekgRequestFreq = Just 1.0
     , hasEKG         = Nothing
     , hasPrometheus  = Nothing
+    , hasRTView      = Nothing
     , logging        = NE.fromList [LoggingParams "/tmp/demo-acceptor" FileMode ForHuman]
     , rotation       = Nothing
     , verbosity      = Just Minimum

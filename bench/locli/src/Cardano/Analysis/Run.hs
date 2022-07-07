@@ -1,5 +1,4 @@
 {-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE StrictData #-}
 {-# OPTIONS_GHC -Wno-incomplete-patterns -Wno-name-shadowing -Wno-orphans #-}
 module Cardano.Analysis.Run (module Cardano.Analysis.Run) where
@@ -15,8 +14,33 @@ import Data.Text qualified as T
 import Cardano.Analysis.ChainFilter
 import Cardano.Analysis.Context
 import Cardano.Analysis.Ground
+import Cardano.Analysis.Version
 import Cardano.Util
 
+-- | Explain the poor human a little bit of what was going on:
+data Anchor
+  = Anchor
+  { aRuns    :: ![Text]
+  , aFilters :: ![FilterName]
+  , aVersion :: !Version
+  }
+
+runAnchor :: Run -> [FilterName] -> Anchor
+runAnchor Run{..} = tagsAnchor [tag metadata]
+
+tagsAnchor :: [Text] -> [FilterName] -> Anchor
+tagsAnchor aRuns aFilters =
+  Anchor { aVersion = getVersion, .. }
+
+renderAnchor :: Anchor -> Text
+renderAnchor Anchor{..} = mconcat
+  [ "runs: ",    T.intercalate ", " aRuns, ", "
+  , "filters: ", case aFilters of
+                   [] -> "unfiltered"
+                   xs -> T.intercalate ", " (unFilterName <$> xs)
+  , ", "
+  , renderProgramAndVersion aVersion
+  ]
 
 data AnalysisCmdError
   = AnalysisCmdError                         !Text

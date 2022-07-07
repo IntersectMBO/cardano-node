@@ -25,11 +25,11 @@ import           Control.Monad.Trans.RWS.Strict (RWST)
 import qualified Control.Monad.Trans.RWS.Strict as RWS
 import           Control.Tracer (traceWith)
 
+import qualified Cardano.Node.Types (ConfigError)
 import qualified Cardano.Benchmarking.Tracer as Tracer
 import           Ouroboros.Network.NodeToClient (IOManager)
 
 import           Cardano.Benchmarking.GeneratorTx.Error (TxGenError)
-import           Cardano.Benchmarking.GeneratorTx.LocalProtocolDefinition (CliError)
 import           Cardano.Benchmarking.Script.Setters as Setters
 import           Cardano.Benchmarking.Script.Store
 
@@ -51,7 +51,9 @@ type SetKeyVal = DSum Setters.Tag Identity
 data Error where
   LookupError :: !(Store v)  -> Error
   TxGenError  :: !TxGenError -> Error
-  CliError    :: !CliError   -> Error
+  NodeConfigError :: Cardano.Node.Types.ConfigError -> Error
+  ProtocolInstantiationError :: !String -> Error
+  MkNodeConfigError :: !String -> Error
   ApiError    :: !String     -> Error
   UserError   :: !String     -> Error
   WalletError :: !String     -> Error

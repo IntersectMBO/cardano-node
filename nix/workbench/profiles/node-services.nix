@@ -123,10 +123,17 @@ let
             TestMaryHardForkAtEpoch    = 0;
             TestAlonzoHardForkAtEpoch  = 0;
           };
+        babbage =
+          { TestShelleyHardForkAtEpoch = 0;
+            TestAllegraHardForkAtEpoch = 0;
+            TestMaryHardForkAtEpoch    = 0;
+            TestAlonzoHardForkAtEpoch  = 0;
+            TestBabbageHardForkAtEpoch = 0;
+          };
       }.${profile.value.era};
     };
     in
-    backend.finaliseNodeService nodeSpec
+    backend.finaliseNodeService profile.value nodeSpec
     {
       inherit port;
 
@@ -137,25 +144,35 @@ let
       ##   3. overlay the tracing config
       nodeConfig =
         nodeConfigBits.tracing-transform.${profile.value.node.tracing_backend}
-          (backend.finaliseNodeConfig nodeSpec
-            (recursiveUpdate
+          (recursiveUpdate
+            (backend.finaliseNodeConfig nodeSpec
               (recursiveUpdate
-                nodeConfigBits.base
-                (if __hasAttr "preset" profile.value
-                 then readJSONMay (./presets + "/${profile.value.preset}/config.json")
-                 else nodeConfigBits.era_setup_hardforks))
-              nodeConfigBits.tracing.${profile.value.node.tracing_backend}));
+                (recursiveUpdate
+                  nodeConfigBits.base
+                  (if __hasAttr "preset" profile.value
+                   then readJSONMay (./presets + "/${profile.value.preset}/config.json")
+                   else nodeConfigBits.era_setup_hardforks))
+                nodeConfigBits.tracing.${profile.value.node.tracing_backend}))
+            profile.value.node.verbatim);
 
       extraArgs =
-        let shutdownSlot = profile.value.node.shutdown_on_slot_synced;
-        in backend.finaliseNodeArgs nodeSpec
-          (if shutdownSlot != null
-           then if isAttrs shutdownSlot
-                then if shutdownSlot.${nodeSpec.kind} or null != null
-                     then ["--shutdown-on-slot-synced" (toString shutdownSlot.${nodeSpec.kind})]
-                     else []
-                else ["--shutdown-on-slot-synced" (toString shutdownSlot)]
-           else []);
+        let shutdownSlot  = profile.value.node.shutdown_on_slot_synced;
+            shutdownBlock = profile.value.node.shutdown_on_block_synced;
+            mayKindArgs =
+              val: kind: flag:
+              if val != null
+              then if isAttrs val
+                   then if val.${kind} or null != null
+                        then [flag (toString val.${kind})]
+                        else []
+                   else [flag (toString val)]
+              else [];
+            shutBlockArgs = mayKindArgs shutdownBlock nodeSpec.kind "--shutdown-on-block-synced";
+            shutSlotArgs  = mayKindArgs shutdownSlot  nodeSpec.kind "--shutdown-on-slot-synced";
+        in backend.finaliseNodeArgs profile nodeSpec
+          (if   shutBlockArgs != []
+           then shutBlockArgs
+           else shutSlotArgs);
     };
 
   ## Given an env config, evaluate it and produce the node service.

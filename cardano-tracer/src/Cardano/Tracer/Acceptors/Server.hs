@@ -43,6 +43,7 @@ import           Cardano.Tracer.Acceptors.Utils (prepareDataPointRequestor,
                    prepareMetricsStores, removeDisconnectedNode)
 import qualified Cardano.Tracer.Configuration as TC
 import           Cardano.Tracer.Handlers.Logs.TraceObjects (traceObjectsHandler)
+import           Cardano.Tracer.Handlers.RTView.Run (SavedTraceObjects)
 import           Cardano.Tracer.Types (AcceptedMetrics, ConnectedNodes, DataPointRequestors)
 import           Cardano.Tracer.Utils (connIdToNodeId)
 
@@ -55,11 +56,12 @@ runAcceptorsServer
      )
   -> ConnectedNodes
   -> AcceptedMetrics
+  -> SavedTraceObjects
   -> DataPointRequestors
   -> Lock
   -> IO ()
-runAcceptorsServer config p (ekgConfig, tfConfig, dpfConfig)
-                   connectedNodes acceptedMetrics dpRequestors currentLogLock = withIOManager $ \iocp ->
+runAcceptorsServer config p (ekgConfig, tfConfig, dpfConfig) connectedNodes 
+                   acceptedMetrics savedTO dpRequestors currentLogLock = withIOManager $ \iocp ->
   doListenToForwarder
     (localSnocket iocp)
     (localAddressFromPath p)
@@ -69,7 +71,7 @@ runAcceptorsServer config p (ekgConfig, tfConfig, dpfConfig)
     -- there is no mechanism to disable some of them.
     appResponder
       [ (runEKGAcceptor ekgConfig connectedNodes acceptedMetrics errorHandler, 1)
-      , (runTraceObjectsAcceptor config tfConfig currentLogLock  errorHandler, 2)
+      , (runTraceObjectsAcceptor config tfConfig currentLogLock savedTO errorHandler, 2)
       , (runDataPointsAcceptor dpfConfig connectedNodes dpRequestors errorHandler, 3)
       ]
  where
@@ -129,13 +131,14 @@ runTraceObjectsAcceptor
   :: TC.TracerConfig
   -> TF.AcceptorConfiguration TraceObject
   -> Lock
+  -> SavedTraceObjects
   -> (ConnectionId LocalAddress -> IO ())
   -> ConnectionId LocalAddress
   -> RunMiniProtocol 'ResponderMode LBS.ByteString IO Void ()
-runTraceObjectsAcceptor config tfConfig currentLogLock errorHandler connId =
+runTraceObjectsAcceptor config tfConfig currentLogLock savedTO errorHandler connId =
   acceptTraceObjectsResp
     tfConfig
-    (traceObjectsHandler config (connIdToNodeId connId) currentLogLock)
+    (traceObjectsHandler config (connIdToNodeId connId) currentLogLock savedTO)
     (errorHandler connId)
 
 runDataPointsAcceptor

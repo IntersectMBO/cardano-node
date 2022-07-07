@@ -96,6 +96,9 @@ package cardano-tracer
 package trace-resources
   tests: True
 
+package locli
+  tests: True
+
 -- The following is needed because Nix is doing something crazy.
 package byron-spec-ledger
   tests: False
@@ -129,6 +132,9 @@ package small-steps
 
 package small-steps-test
   tests: False
+
+package tx-generator
+  tests: True
 
 package goblins
   tests: False
@@ -168,8 +174,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: 631cb6cf1fa01ab346233b610a38b3b4cba6e6ab
-  --sha256: 0944wg2nqazmhlmsynwgdwxxj6ay0hb9qig9l128isb2cjia0hlp
+  tag: 0f3a867493059e650cda69e20a5cbf1ace289a57
+  --sha256: 0p0az3sbkhb7njji8xxdrfb0yx2gc8fmrh872ffm8sfip1w29gg1
   subdir:
     base-deriving-via
     binary
@@ -191,8 +197,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger
-  tag: c415253fff9a5ce9d7575230fc9098bcfee97653
-  --sha256: 1m4hq8yxcm7ny5vjzqkrl9qn9zmpr8c9xs0c98ix9hm9xd79fapc
+  tag: ce3057e0863304ccb3f79d78c77136219dc786c6
+  --sha256: 19ijcy1sl1iqa7diy5nsydnjsn3281kp75i2i42qv0fpn58238s9
   subdir:
     eras/alonzo/impl
     eras/alonzo/test-suite
@@ -236,8 +242,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/iohk-monitoring-framework
-  tag: eb7854d1337637b8672af1227b276aa33a658f47
-  --sha256: 1ll81hlhkhj96f5v6lswjkq2h8f7zcmdrj2azqhi4ylzafn026r3
+  tag: 066f7002aac5a0efc20e49643fea45454f226caa
+  --sha256: 0s6x4in11k5ba7nl7la896g28sznf9185xlqg9c604jqz58vj9nj
   subdir:
     contra-tracer
     iohk-monitoring
@@ -257,8 +263,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: ea202b7b21983140d1944ccfde8750b891b59699
-  --sha256: 0bixx0b61sjzls7hzwjlgmvl0yk1ckd40cfazda8b3smqvxfrphq
+  tag: a65c29b6a85e90d430c7f58d362b7eb097fd4949
+  --sha256: 1fmab5hmi1y8lss97xh6hhikmyhsx9x31yhvg6zpr2kcq7kc6qkf
   subdir:
     monoidal-synchronisation
     network-mux
@@ -274,8 +280,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/io-sim
-  tag: 606de33fa2f467d108fb1efb86daeb3348bf34e3
-  --sha256: 048djqfdkzrbmdz670knbkjy12wddpvsmhm4x5yldg3w9lwqi1yx
+  tag: f4183f274d88d0ad15817c7052df3a6a8b40e6dc
+  --sha256: 0vb2pd9hl89v2y5hrhrsm69yx0jf98vppjmfncj2fraxr3p3lldw
   subdir:
     io-classes
     io-sim
@@ -284,8 +290,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/typed-protocols
-  tag: 91c3fba44d68439df207796171cd6f867354b76b
-  --sha256: 1h1nh10859kd7j8bb55y577jfdp42aqpppx8fn0pm6fra5748a50
+  tag: 181601bc3d9e9d21a671ce01e0b481348b3ca104
+  --sha256: 1lr97b2z7l0rpsmmz92rsv27qzd5vavz10cf7n25svya4kkiysp5
   subdir:
     typed-protocols
     typed-protocols-cborg
@@ -294,8 +300,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/plutus
-  tag: fec94223a985e34d3b270460c8f150002f41b85b
-  --sha256: 1mwknikvbpv9lj43c3ya24v7wpcbpcsrk0fnh6knpi7ds4rmj9j0
+  tag: f680ac6979e069fcc013e4389ee607ff5fa6672f
+  --sha256: 180jq8hd0jlg48ya7b5yw3bnd2d5czy0b1agy9ng3mgnzpyq747i
   subdir:
     plutus-core
     plutus-ledger-api
@@ -313,9 +319,9 @@ source-repository-package
 
 source-repository-package
   type: git
-  location: https://github.com/HeinrichApfelmus/threepenny-gui
-  tag: e3bb8283fc7d2e8aa374eea29426002e8dcd67a8
-  --sha256: 0nf836b552asgpwn2gxwl7yd7ssdhb1wkvdqz6s4dpzqnlpyivx9
+  location: https://github.com/denisshevchenko/threepenny-gui
+  tag: 4ec92ded05ccf59ba4a874be4b404ac1b6d666b6
+  --sha256: 00fvvaf4ir4hskq4a6gggbh2wmdvy8j8kn6s4m1p1vlh8m8mq514
 
 -- Drops an instance breaking our code. Should be released to Hackage eventually.
 source-repository-package
@@ -332,6 +338,10 @@ constraints:
     -- systemd-2.3.0 requires at least network 3.1.1.0 but it doesn't declare
     -- that dependency
   , network >= 3.1.1.0
+  , HSOpenSSL >= 0.11.7.2
+
+package snap-server
+  flags: +openssl
 
 package comonad
   flags: -test-doctests
