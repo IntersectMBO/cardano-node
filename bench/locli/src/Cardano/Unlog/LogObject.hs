@@ -10,7 +10,7 @@
 
 module Cardano.Unlog.LogObject (module Cardano.Unlog.LogObject) where
 
-import Prelude (head, id, show)
+import Prelude (head, id, show, unzip3)
 import Cardano.Prelude hiding (Text, head, show)
 
 import Control.Monad (fail)
@@ -24,6 +24,7 @@ import Data.Text qualified as LText
 import Data.Text.Short qualified as Text
 import Data.Text.Short (ShortText, fromText, toText)
 import Data.Time.Clock (NominalDiffTime, UTCTime)
+import Data.Tuple.Extra (fst3, snd3, thd3)
 import Data.Map qualified as Map
 import Data.Vector (Vector)
 import Data.Vector qualified as V
@@ -83,48 +84,47 @@ deriving instance NFData a => NFData (Resources a)
 --
 -- LogObject stream interpretation
 --
+type Threeple t = (t, t, t)
 
-type ACouple t = (t, t)
-
-interpreters :: ACouple (Map Text (Object -> Parser LOBody))
-interpreters = (Map.fromList *** Map.fromList) . unzip . fmap ent $
-  [ (,,) "TraceStartLeadershipCheck" "Forge.StartLeadershipCheck" $
+interpreters :: Threeple (Map Text (Object -> Parser LOBody))
+interpreters = map3ple Map.fromList . unzip3 . fmap ent $
+  [ (,,,) "TraceStartLeadershipCheck" "Forge.StartLeadershipCheck" "Forge.Loop.StartLeadershipCheck" $
     \v -> LOTraceStartLeadershipCheck
             <$> v .: "slot"
             <*> (v .:? "utxoSize"     <&> fromMaybe 0)
             <*> (v .:? "chainDensity" <&> fromMaybe 0)
 
-  , (,,) "TraceBlockContext" "Forge.BlockContext" $
+  , (,,,) "TraceBlockContext" "Forge.BlockContext" "Forge.Loop.BlockContext" $
     \v -> LOBlockContext
             <$> v .: "tipBlockNo"
 
-  , (,,) "TraceNodeIsLeader" "Forge.NodeIsLeader" $
+  , (,,,) "TraceNodeIsLeader" "Forge.NodeIsLeader" "Forge.Loop.NodeIsLeader" $
     \v -> LOTraceLeadershipDecided
             <$> v .: "slot"
             <*> pure True
 
-  , (,,) "TraceNodeNotLeader" "Forge.NodeNotLeader" $
+  , (,,,) "TraceNodeNotLeader" "Forge.NodeNotLeader" "Forge.Loop.NodeNotLeader" $
     \v -> LOTraceLeadershipDecided
             <$> v .: "slot"
             <*> pure False
 
-  , (,,) "TraceMempoolAddedTx" "Mempool.AddedTx" $
+  , (,,,) "TraceMempoolAddedTx" "Mempool.AddedTx" "Mempool.AddedTx" $
     \v -> do
       x :: Object <- v .: "mempoolSize"
       LOMempoolTxs <$> x .: "numTxs"
 
-  , (,,) "TraceMempoolRemoveTxs" "Mempool.RemoveTxs" $
+  , (,,,) "TraceMempoolRemoveTxs" "Mempool.RemoveTxs" "Mempool.RemoveTxs" $
     \v -> do
       x :: Object <- v .: "mempoolSize"
       LOMempoolTxs <$> x .: "numTxs"
 
-  , (,,) "TraceMempoolRejectedTx" "Mempool.RejectedTx" $
+  , (,,,) "TraceMempoolRejectedTx" "Mempool.RejectedTx" "Mempool.RejectedTx" $
     \_ -> pure LOMempoolRejectedTx
 
-  , (,,) "TraceLedgerEvent.TookSnapshot" "LedgerEvent.TookSnapshot" $
+  , (,,,) "TraceLedgerEvent.TookSnapshot" "LedgerEvent.TookSnapshot" "ChainDB.LedgerEvent.TookSnapshot" $
     \_ -> pure LOLedgerTookSnapshot
 
-  , (,,) "TraceBenchTxSubSummary" "TraceBenchTxSubSummary" $
+  , (,,,) "TraceBenchTxSubSummary" "TraceBenchTxSubSummary" "TraceBenchTxSubSummary" $
     \v -> do
        x :: Object <- v .: "summary"
        LOGeneratorSummary
@@ -134,28 +134,28 @@ interpreters = (Map.fromList *** Map.fromList) . unzip . fmap ent $
          <*> x .: "ssElapsed"
          <*> x .: "ssThreadwiseTps"
 
-  , (,,) "TraceBenchTxSubServAck" "TraceBenchTxSubServAck" $
+  , (,,,) "TraceBenchTxSubServAck" "TraceBenchTxSubServAck" "TraceBenchTxSubServAck" $
     \v -> LOTxsAcked <$> v .: "txIds"
 
-  , (,,) "Resources" "Resources" $
+  , (,,,) "Resources" "Resources" "" $
     \v -> LOResources <$> parsePartialResourceStates (Object v)
 
-  , (,,) "TraceTxSubmissionCollected" "TraceTxSubmissionCollected" $
+  , (,,,) "TraceTxSubmissionCollected" "TraceTxSubmissionCollected" "TraceTxSubmissionCollected" $
     \v -> LOTxsCollected
             <$> v .: "count"
 
-  , (,,) "TraceTxSubmissionProcessed" "TraceTxSubmissionProcessed" $
+  , (,,,) "TraceTxSubmissionProcessed" "TraceTxSubmissionProcessed" "TraceTxSubmissionProcessed" $
     \v -> LOTxsProcessed
             <$> v .: "accepted"
             <*> v .: "rejected"
 
-  , (,,) "TraceForgedBlock" "Forge.ForgedBlock" $
+  , (,,,) "TraceForgedBlock" "Forge.ForgedBlock" "Forge.Loop.ForgedBlock" $
     \v -> LOBlockForged
             <$> v .: "block"
             <*> v .: "blockPrev"
             <*> v .: "blockNo"
             <*> v .: "slot"
-  , (,,) "TraceAddBlockEvent.AddedToCurrentChain" "ChainDB.AddBlockEvent.AddedToCurrentChain" $
+  , (,,,) "TraceAddBlockEvent.AddedToCurrentChain" "ChainDB.AddBlockEvent.AddedToCurrentChain" "ChainDB.AddBlockEvent.AddedToCurrentChain" $
     \v -> LOBlockAddedToCurrentChain
             <$> ((v .: "newtip")     <&> hashFromPoint)
             <*> pure Nothing
@@ -163,35 +163,35 @@ interpreters = (Map.fromList *** Map.fromList) . unzip . fmap ent $
                 -- Compat for node versions 1.27 and older:
                  <&> fromMaybe 1)
   -- TODO: we should clarify the distinction between the two cases (^ and v).
-  , (,,) "TraceAdoptedBlock" "Forge.AdoptedBlock" $
+  , (,,,) "TraceAdoptedBlock" "Forge.AdoptedBlock" "Forge.Loop.AdoptedBlock" $
     \v -> LOBlockAddedToCurrentChain
             <$> v .: "blockHash"
             <*> ((v .: "blockSize") <&> Just)
             <*> pure 1
-  , (,,) "ChainSyncServerEvent.TraceChainSyncServerRead.AddBlock" "ChainSyncServerHeader.ChainSyncServerEvent.ServerRead.AddBlock" $
+  , (,,,) "ChainSyncServerEvent.TraceChainSyncServerRead.AddBlock" "ChainSyncServerHeader.ChainSyncServerEvent.ServerRead.AddBlock" "" $
     \v -> LOChainSyncServerSendHeader
             <$> v .: "block"
             <*> v .: "blockNo"
             <*> v .: "slot"
-  , (,,) "ChainSyncServerEvent.TraceChainSyncServerReadBlocked.AddBlock" "ChainSyncServerHeader.ChainSyncServerEvent.ServerReadBlocked.AddBlock" $
+  , (,,,) "ChainSyncServerEvent.TraceChainSyncServerReadBlocked.AddBlock" "ChainSyncServerHeader.ChainSyncServerEvent.ServerReadBlocked.AddBlock" "ChainSync.ServerHeader.ChainSyncServerEvent.ServerReadBlocked.AddBlock" $
     \v -> LOChainSyncServerSendHeader
             <$> v .: "block"
             <*> v .: "blockNo"
             <*> v .: "slot"
   -- v, but not ^ -- how is that possible?
-  , (,,) "TraceBlockFetchServerSendBlock" "BlockFetchServer.SendBlock" $
+  , (,,,) "TraceBlockFetchServerSendBlock" "BlockFetchServer.SendBlock" "BlockFetch.Server.SendBlock" $
     \v -> LOBlockFetchServerSending
             <$> v .: "block"
-  , (,,) "SendFetchRequest" "BlockFetchClient.SendFetchRequest" $
+  , (,,,) "SendFetchRequest" "BlockFetchClient.SendFetchRequest" "BlockFetch.Client.SendFetchRequest" $
     \v -> LOBlockFetchClientRequested
             <$> v .: "head"
             <*> v .: "length"
-  , (,,) "ChainSyncClientEvent.TraceDownloadedHeader" "ChainSyncClient.ChainSyncClientEvent.DownloadedHeader" $
+  , (,,,) "ChainSyncClientEvent.TraceDownloadedHeader" "ChainSyncClient.ChainSyncClientEvent.DownloadedHeader" "ChainSync.Client.DownloadedHeader" $
     \v -> LOChainSyncClientSeenHeader
             <$> v .: "block"
             <*> v .: "blockNo"
             <*> v .: "slot"
-  , (,,) "CompletedBlockFetch" "BlockFetchClient.CompletedBlockFetch" $
+  , (,,,) "CompletedBlockFetch" "BlockFetchClient.CompletedBlockFetch" "BlockFetch.Client.CompletedBlockFetch" $
     \v -> LOBlockFetchClientCompletedFetch
             <$> v .: "block"
   ]
@@ -199,12 +199,16 @@ interpreters = (Map.fromList *** Map.fromList) . unzip . fmap ent $
    hashFromPoint :: LText.Text -> Hash
    hashFromPoint = Hash . fromText . Prelude.head . LText.splitOn "@"
 
-   ent :: (a,b,c) -> ((a,c), (b,c))
-   ent (a,b,c) = ((a,c), (b,c))
+   ent :: (a,b,c,d) -> ((a,d), (b,d), (c, d))
+   ent (a,b,c,d) = ((a,d), (b,d), (c, d))
 
-logObjectStreamInterpreterKeysLegacy, logObjectStreamInterpreterKeys :: [Text]
-logObjectStreamInterpreterKeysLegacy = Map.keys (fst interpreters)
-logObjectStreamInterpreterKeys       = Map.keys (snd interpreters)
+   map3ple :: (a -> b) -> (a,a,a) -> (b,b,b)
+   map3ple f (x,y,z) = (f x, f y, f z)
+
+logObjectStreamInterpreterKeysLegacy, logObjectStreamInterpreterKeysOldOrg, logObjectStreamInterpreterKeys :: [Text]
+logObjectStreamInterpreterKeysLegacy = Map.keys (interpreters & fst3)
+logObjectStreamInterpreterKeysOldOrg = Map.keys (interpreters & snd3)
+logObjectStreamInterpreterKeys       = Map.keys (interpreters & thd3)
 
 data LOBody
   = LOTraceStartLeadershipCheck !SlotNo !Word64 !Double
@@ -273,11 +277,12 @@ instance FromJSON LogObject where
       <*> pure kind
       <*> v .: "host"
       <*> v .: "thread"
-      <*> case Map.lookup  ns                                       (snd interpreters) <|>
+      <*> case Map.lookup  ns                                       (thd3 interpreters) <|>
+               Map.lookup  ns                                       (snd3 interpreters) <|>
                Map.lookup (ns
                            & Text.stripPrefix "Cardano.Node."
-                           & fromMaybe "")                          (snd interpreters) <|>
-               Map.lookup  kind                                     (fst interpreters) of
+                           & fromMaybe "")                          (snd3 interpreters) <|>
+               Map.lookup  kind                                     (fst3 interpreters) of
             Just interp -> interp unwrapped
             Nothing -> pure $ LOAny unwrapped
    where

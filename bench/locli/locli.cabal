@@ -91,6 +91,7 @@ library
                      , containers
                      , deepseq
                      , directory
+                     , extra
                      , filepath
                      , file-embed
                      , gnuplot
