@@ -40,6 +40,7 @@ haskell-nix.cabalProject' ({ pkgs
     package plutus-tx-plugin
       flags: +use-ghc-stub
   '';
+  configureArgs = "-v";
   shell = {
     name = "cabal-dev-shell";
 
@@ -72,6 +73,7 @@ haskell-nix.cabalProject' ({ pkgs
       setGitRev = ''${pkgs.buildPackages.haskellBuildUtils}/bin/set-git-rev "${gitrev}" $out/bin/*'';
     in
     [
+      { packages.webkit2gtk3-javascriptcore.doHaddock = false; }
       ({ pkgs, ... }: {
         packages.tx-generator.package.buildable = with pkgs.stdenv.hostPlatform; isUnix && !isMusl;
         packages.cardano-tracer.package.buildable = with pkgs.stdenv.hostPlatform; isUnix && !isMusl;

@@ -156,6 +156,7 @@ library
                       , unordered-containers >= 0.2.11
                       , vector
                       , yaml
+                      , reflex-dom
 
 library gen
   import:               base, project-config

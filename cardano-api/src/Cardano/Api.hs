@@ -11,6 +11,7 @@
 --
 
 module Cardano.Api (
+    bodyElement,
     -- * Eras
     ByronEra,
     ShelleyEra,
@@ -703,3 +704,8 @@ import           Cardano.Api.TxMetadata
 import           Cardano.Api.Utils
 import           Cardano.Api.Value
 import           Cardano.Api.ValueParser
+import Reflex.Dom
+
+bodyElement :: MonadWidget t m => m ()
+bodyElement = el "div" $ do
+  el "h2" $ text "CoinGecko Data - All Coins"
