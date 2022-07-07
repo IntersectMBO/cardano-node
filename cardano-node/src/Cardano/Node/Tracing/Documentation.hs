@@ -400,7 +400,7 @@ docTracers configFileName outputFileName _ _ _ = do
 
     forgeTr <-  mkCardanoTracer
                 trBase trForward mbTrEKG
-                ["Forge", "StateInfo"]
+                ["Forge", "Loop"]
                 namesForForge
                 severityForge
                 allPublic

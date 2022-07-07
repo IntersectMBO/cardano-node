@@ -338,7 +338,7 @@ mkConsensusTracers trBase trForward mbTrEKG _trDataPoint trConfig nodeKernel = d
     configureTracers trConfig docMempool [mempoolTr]
     forgeTr    <- mkCardanoTracer'
                 trBase trForward mbTrEKG
-                ["Forge", "StateInfo"]
+                ["Forge", "Loop"]
                 namesForForge
                 severityForge
                 allPublic
