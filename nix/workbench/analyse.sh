@@ -59,7 +59,7 @@ local op=${1:-standard}; if test $# != 0; then shift; fi
 case "$op" in
     # 'read-mach-views' "${logs[@]/#/--log }"
     multi-run-pattern | multi-pattern | multipat | mp )
-        analyse ${sargs[*]} multi-run-full $(run list-pattern $1)
+        analyse ${sargs[*]} multi-run $(run list-pattern $1)
         ;;
 
     multi-run | multi )

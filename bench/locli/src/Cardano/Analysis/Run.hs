@@ -73,7 +73,7 @@ renderAnchorDomains Anchor{..} = mconcat $
 renderAnchorNoRuns :: Anchor -> Text
 renderAnchorNoRuns a@Anchor{..} = mconcat
   [ renderAnchorFiltersAndDomains a
-  , renderProgramAndVersion aVersion
+  , ", ", renderProgramAndVersion aVersion
   , ", analysed at ", renderAnchorDate a
   ]
 
