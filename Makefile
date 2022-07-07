@@ -12,6 +12,7 @@ ERA     ?= bage
 
 PROFILE ?= default-${ERA}
 REV     ?= master
+ITER    ?=
 ARGS    ?=
 CMD     ?=
 RUN     ?=

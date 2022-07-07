@@ -15,4 +15,4 @@ membench-5-at: ## Membench:  5 iterations, set commit by:  make membench-5-at RE
 
 workbench-ci-test smoke: ## Workbench:  test a-la Hydra, the ci-test profile, full Nix engaged
 	nix build --out-link result-ci-test '.#hydraJobsPr.linux.native.workbench-ci-test' --cores 0
-	mv                   result-ci-test run/`jq -r .meta.tag result-ci-test/meta.json`/
+	ID=`jq -r .meta.tag result-ci-test/meta.json`; test -e "run/$$ID" || mv result-ci-test "run/$$ID"
