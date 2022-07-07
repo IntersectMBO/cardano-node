@@ -291,6 +291,8 @@ jobs:
         # For some reason, cabal test cardano-cli will silently fail without any
         # message unless the library is accessible, and it seems like the above isn't enough.
         cp /d/a/_temp/mingw64/bin/liblmdb.dll ./cardano-cli
+        cp /d/a/_temp/mingw64/bin/liblmdb.dll ./cardano-testnet
+        cp /d/a/_temp/mingw64/bin/liblmdb.dll ./cardano-node-chairman
 
     - name: Record dependencies
       run: |
