@@ -435,6 +435,9 @@ testnet testnetOptions H.Conf {..} = do
         , "--host-addr", ifaceAddress
         , "--port", portString
         , "--socket-path", IO.sprocketArgumentName sprocket
+        -- UTxO-HD configurations
+        , "--lmdb-ledger-db-backend"
+        , "--lmdb-mapsize", "2Gi"
         ] <&>
         ( \cp -> cp
           { IO.std_in = IO.CreatePipe

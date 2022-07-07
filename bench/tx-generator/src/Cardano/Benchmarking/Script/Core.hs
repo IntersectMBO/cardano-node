@@ -25,12 +25,11 @@ import           Data.Ratio ((%))
 import qualified Data.Text as Text (unpack)
 import           Prelude
 
-import           Ouroboros.Network.Protocol.LocalTxSubmission.Type (SubmitResult (..))
 import           Ouroboros.Network.Protocol.LocalStateQuery.Type
+import           Ouroboros.Network.Protocol.LocalTxSubmission.Type (SubmitResult (..))
 import           Cardano.Api
 import           Cardano.Api.Shelley (PlutusScriptOrReferenceInput (..), ProtocolParameters,
                    protocolParamMaxTxExUnits, protocolParamPrices)
-import           Ouroboros.Network.Protocol.LocalTxSubmission.Type (SubmitResult (..))
 
 import           Cardano.Benchmarking.FundSet (FundInEra (..), Validity (..), Variant (..),
                    liftAnyEra)
