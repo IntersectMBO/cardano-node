@@ -279,7 +279,7 @@ docTracers configFileName outputFileName _ _ _ = do
 
     chainSyncClientTr  <- mkCardanoTracer
                 trBase trForward mbTrEKG
-                ["ChainSync", "ClientEvent"]
+                ["ChainSync", "Client"]
                 namesForChainSyncClientEvent
                 severityChainSyncClientEvent
                 allPublic
@@ -323,7 +323,7 @@ docTracers configFileName outputFileName _ _ _ = do
 
     blockFetchClientTr  <- mkCardanoTracer
                 trBase trForward mbTrEKG
-                ["BlockFetch", "ClientEvent"]
+                ["BlockFetch", "Client"]
                 namesForBlockFetchClient
                 severityBlockFetchClient
                 allPublic
@@ -335,7 +335,7 @@ docTracers configFileName outputFileName _ _ _ = do
 
     blockFetchServerTr  <- mkCardanoTracer
                 trBase trForward mbTrEKG
-                ["BlockFetch", "ServerBlock"]
+                ["BlockFetch", "Server"]
                 namesForBlockFetchServer
                 severityBlockFetchServer
                 allPublic
