@@ -88,14 +88,13 @@ import           Cardano.Api.SerialiseRaw
 import           Cardano.Api.SerialiseUsing
 import           Cardano.Api.Utils (failEitherWith)
 
-
 -- ----------------------------------------------------------------------------
 -- Lovelace
 --
 
 newtype Lovelace = Lovelace Integer
   deriving stock (Eq, Ord, Show)
-  deriving newtype (Enum, Num, ToJSON, FromJSON, ToCBOR, FromCBOR)
+  deriving newtype (Enum, Real, Integral, Num, ToJSON, FromJSON, ToCBOR, FromCBOR)
 
 instance Semigroup Lovelace where
   Lovelace a <> Lovelace b = Lovelace (a + b)
