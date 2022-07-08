@@ -22,6 +22,7 @@ module Cardano.CLI.Shelley.Run.Query
   , mergeDelegsAndRewards
   , percentage
   , executeQuery
+  , getSbe
   ) where
 
 import           Cardano.Prelude
@@ -65,8 +66,8 @@ import qualified Cardano.Ledger.Shelley.PParams as Shelley
 import           Cardano.Ledger.Shelley.Scripts ()
 import           Cardano.Slotting.EpochInfo (EpochInfo (..), epochInfoSlotToUTCTime, hoistEpochInfo)
 import           Control.Monad.Trans.Except (except)
-import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistMaybe, left,
-                   newExceptT, hoistEither)
+import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistEither,
+                   hoistMaybe, left, newExceptT)
 import           Data.Aeson.Encode.Pretty (encodePretty)
 import           Data.Aeson.Types as Aeson
 import           Data.Coerce (coerce)
@@ -85,13 +86,13 @@ import           Ouroboros.Network.Protocol.LocalStateQuery.Type (AcquireFailure
 import           Text.Printf (printf)
 
 import qualified Data.ByteString.Lazy.Char8 as LBS
-import qualified Data.VMap as VMap
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import qualified Data.Text.IO as T
 import qualified Data.Text.IO as Text
+import qualified Data.VMap as VMap
 import qualified Data.Vector as Vector
 import           Formatting.Buildable (build)
 import           Numeric (showEFloat)
