@@ -366,7 +366,8 @@ The node can be configured to use any of two *backends*:
 (LMDB)](http://www.lmdb.tech/doc/index.html), stores parts of the ledger state
 on disk. Optionally, a configuration can be included that sets the maximum
 database size (mapsize) of the on-disk database that is used to store parts of
-the ledger state. By default, the mapsize is set to 16 Gigabytes. **Warning**:
+the ledger state. The mapsize argument should be defined as a number of Gigabytes.
+By default, the mapsize is set to 16 Gigabytes. **Warning**:
 if the database size exceeds the given mapsize, the node will abort. Therefore,
 the mapsize should be set to a value high enough to guarantee that the maximum
 database size will not be reached during the expected node uptime. The current
@@ -374,7 +375,7 @@ default value is sufficient to offer this guarantee, and setting the mapsize
 to anything less is therefore not recommended.
   ```json
   "LedgerDBBackend": "LMDB",
-  "LMDBMapSize": "16G",
+  "LMDBMapSize": "16",
   ```
 * The *InMemory backend* stores parts of the ledger state in memory.
   ```json

@@ -15,7 +15,6 @@ import           Cardano.Prelude hiding (option)
 import           Prelude (String)
 
 import           Data.Time.Clock (secondsToDiffTime)
-import           Data.Prefix.Units
 import           Options.Applicative hiding (str)
 import qualified Options.Applicative as Opt
 import qualified Options.Applicative.Help as OptI
@@ -224,7 +223,7 @@ parseLedgerDBBackend = parseInMemory <|> parseLMDB <*> optional parseMapSize
                              \ Incompatible with `--lmdb-ledger-db-backend`."
                      )
 
-    parseLMDB :: Parser (Maybe Int -> BackingStoreSelectorFlag)
+    parseLMDB :: Parser (Maybe Gigabyte -> BackingStoreSelectorFlag)
     parseLMDB =
       flag' LMDB (  long "lmdb-ledger-db-backend"
                  <> help "Use the LMDB ledger DB backend. By default, the \
@@ -238,16 +237,12 @@ parseLedgerDBBackend = parseInMemory <|> parseLMDB <*> optional parseMapSize
                          \ Incompatible with `--in-memory-ledger-db-backend`."
                 )
 
-    parseMapSize :: Parser Int
+    parseMapSize :: Parser Gigabyte
     parseMapSize =
-      option (eitherReader (parseValue ParseExact)) (
+      option auto (
            long "lmdb-mapsize"
-        <> metavar "BIN"
-        <> help "The maximum database size defined as a binary \
-                \ number. The BIN argument must be a number \
-                \ followed by a unit, for example 10Gi for 10 \
-                \ Gibibytes. Note that BIN must be a multiple of \
-                \ the OS page size (in bytes)."
+        <> metavar "NR_GIGABYTES"
+        <> help "The maximum database size defined in number of Gigabytes."
       )
 
 parseDbPath :: Parser FilePath

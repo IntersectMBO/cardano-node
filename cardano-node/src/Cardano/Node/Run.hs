@@ -391,8 +391,9 @@ handleSimpleNode runP p2pMode tracers nc onKernel = do
               onKernel nodeKernel
           , rnEnableP2P      = p2pMode
           , rnBackingStoreSelector = case ncLedgerDBBackend nc of
-                   LMDB newLimit -> LMDBBackingStore $ maybe id (\y x -> x { lmdbMapSize = y }) newLimit defaultLMDBLimits
-                   InMemory      -> InMemoryBackingStore
+              LMDB newLimit -> LMDBBackingStore $
+                maybe id (\y x -> x { lmdbMapSize = toBytes y }) newLimit defaultLMDBLimits
+              InMemory      -> InMemoryBackingStore
           }
     in case p2pMode of
       EnabledP2PMode -> do

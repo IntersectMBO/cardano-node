@@ -171,7 +171,6 @@ library
                       , ouroboros-consensus-shelley
                       , ouroboros-network
                       , ouroboros-network-framework
-                      , prefix-units
                       , psqueues
                       , safe-exceptions
                       , scientific

@@ -1,13 +1,17 @@
-{-# LANGUAGE NumericUnderscores #-}
+{-# LANGUAGE DerivingStrategies         #-}
+{-# LANGUAGE GeneralisedNewtypeDeriving #-}
 
 module Cardano.Node.Configuration.LedgerDB (
     BackingStoreSelectorFlag(..)
+  , Gigabyte
+  , toBytes
   , defaultLMDBLimits
   ) where
 
 import           Prelude
 
 import           Ouroboros.Consensus.Storage.LedgerDB.HD.LMDB (LMDBLimits (..))
+import qualified Data.Aeson.Types as Aeson (FromJSON)
 
 -- | Choose the LedgerDB Backend
 --
@@ -20,17 +24,24 @@ import           Ouroboros.Consensus.Storage.LedgerDB.HD.LMDB (LMDBLimits (..))
 --
 -- See 'Ouroboros.Consnesus.Storage.LedgerDB.OnDisk.BackingStoreSelector'.
 data BackingStoreSelectorFlag =
-    LMDB (Maybe Int) -- ^ A map size can be specified, this is the maximum disk
-                     -- space the LMDB database can fill. If not provided, the
-                     -- default of 12Gi will be used.
+    LMDB (Maybe Gigabyte) -- ^ A map size can be specified, this is the maximum
+                          -- disk space the LMDB database can fill. If not
+                          -- provided, the default of 16GB will be used.
   | InMemory
   deriving (Eq, Show)
+
+newtype Gigabyte = Gigabyte Int
+  deriving stock (Eq, Show)
+  deriving newtype (Read, Aeson.FromJSON)
+
+toBytes :: Gigabyte -> Int
+toBytes (Gigabyte x) = x * 1024 * 1024 * 1024
 
 -- | Recommended settings for the LMDB backing store.
 --
 -- === @'lmdbMapSize'@
--- The default @'LMDBLimits'@ uses an @'lmdbMapSize'@ of @16_000_000_000@
--- bytes, or 16 GigaBytes. @'lmdbMapSize'@ sets the size of the memory map
+-- The default @'LMDBLimits'@ uses an @'lmdbMapSize'@ of @1024 * 1024 * 1024 * 16@
+-- bytes, or 16 Gigabytes. @'lmdbMapSize'@ sets the size of the memory map
 -- that is used internally by the LMDB backing store, and is also the
 -- maximum size of the on-disk database. 16 GB should be sufficient for the
 -- medium term, i.e., it is sufficient until a more performant alternative to
@@ -68,7 +79,7 @@ data BackingStoreSelectorFlag =
 --    <http://www.lmdb.tech/doc/group__mdb.html>.
 defaultLMDBLimits :: LMDBLimits
 defaultLMDBLimits = LMDBLimits {
-    lmdbMapSize = 16_000_000_000
+    lmdbMapSize = 16 * 1024 * 1024 * 1024
   , lmdbMaxDatabases = 10
   , lmdbMaxReaders = 16
   }
