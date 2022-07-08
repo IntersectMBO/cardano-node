@@ -4,10 +4,13 @@ module Cardano.Api.EraCast
   ( EraCast(..)
   ) where
 
-import           Cardano.Api.Eras (IsCardanoEra)
+import           Cardano.Api.Eras (CardanoEra (..), IsCardanoEra)
 import           Data.Either (Either)
 import           Data.Kind (Type)
 import           Data.Text (Text)
 
 class EraCast (f :: Type -> Type) where
-  eraCast :: (IsCardanoEra era1, IsCardanoEra era2) => f era1 -> Either Text (f era2)
+  eraCast :: (IsCardanoEra fromEra, IsCardanoEra toEra)
+          => f fromEra
+          -> CardanoEra toEra
+          -> Either Text (f toEra)

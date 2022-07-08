@@ -6,7 +6,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
@@ -185,12 +184,11 @@ import           Data.Type.Equality (TestEquality (..), (:~:) (Refl))
 import           Data.Word (Word16, Word32, Word64)
 import           GHC.Generics
 import           GHC.Records (HasField (..))
-import qualified Text.Parsec as Parsec
 import           Text.Parsec ((<?>))
+import qualified Text.Parsec as Parsec
 import qualified Text.Parsec.String as Parsec
 
 import           Cardano.Api.EraCast (EraCast (..))
-import           Cardano.Api.Summon (Summon (..))
 import           Cardano.Binary (Annotated (..), reAnnotate, recoverBytes)
 import qualified Cardano.Binary as CBOR
 import qualified Cardano.Crypto.Hash.Class as Crypto
@@ -247,8 +245,8 @@ import           Cardano.Api.Address
 import           Cardano.Api.Certificate
 import           Cardano.Api.Eras
 import           Cardano.Api.Error
-import           Cardano.Api.Hash
 import           Cardano.Api.HasTypeProxy
+import           Cardano.Api.Hash
 import           Cardano.Api.KeysByron
 import           Cardano.Api.KeysShelley
 import           Cardano.Api.NetworkId
@@ -359,11 +357,12 @@ deriving instance Eq   (TxOut ctx era)
 deriving instance Show (TxOut ctx era)
 
 instance EraCast (TxOut ctx) where
-  eraCast (TxOut addressInEra txOutValue txOutDatum referenceScript) = TxOut
-    <$> eraCast addressInEra
-    <*> eraCast txOutValue
-    <*> eraCast txOutDatum
-    <*> eraCast referenceScript
+  eraCast (TxOut addressInEra txOutValue txOutDatum referenceScript) toEra =
+    TxOut
+      <$> eraCast addressInEra toEra
+      <*> eraCast txOutValue toEra
+      <*> eraCast txOutDatum toEra
+      <*> eraCast referenceScript toEra
 
 data TxOutInAnyEra where
      TxOutInAnyEra :: CardanoEra era
@@ -804,15 +803,6 @@ data MultiAssetSupportedInEra era where
      -- | Multi-asset transactions are supported in the 'Babbage' era.
      MultiAssetInBabbageEra :: MultiAssetSupportedInEra BabbageEra
 
-instance IsCardanoEra era => Summon (MultiAssetSupportedInEra era) where
-  summon = case cardanoEra @era of
-    ByronEra -> Left "MultiAssetSupportedInEra ByronEra does not exist"
-    ShelleyEra -> Left "MultiAssetSupportedInEra ShelleyEra does not exist"
-    AllegraEra -> Left "MultiAssetSupportedInEra AllegraEra does not exist"
-    MaryEra -> Right MultiAssetInMaryEra
-    AlonzoEra -> Right MultiAssetInAlonzoEra
-    BabbageEra -> Right MultiAssetInBabbageEra
-
 deriving instance Eq   (MultiAssetSupportedInEra era)
 deriving instance Show (MultiAssetSupportedInEra era)
 
@@ -835,15 +825,6 @@ data OnlyAdaSupportedInEra era where
 
 deriving instance Eq   (OnlyAdaSupportedInEra era)
 deriving instance Show (OnlyAdaSupportedInEra era)
-
-instance IsCardanoEra era => Summon (OnlyAdaSupportedInEra era) where
-  summon = case cardanoEra @era of
-    ByronEra -> Right AdaOnlyInByronEra
-    ShelleyEra -> Right AdaOnlyInShelleyEra
-    AllegraEra -> Right AdaOnlyInAllegraEra
-    MaryEra -> Left "OnlyAdaSupportedInEra MaryEra does not exist"
-    AlonzoEra -> Left "OnlyAdaSupportedInEra MaryEra does not exist"
-    BabbageEra -> Left "OnlyAdaSupportedInEra MaryEra does not exist"
 
 multiAssetSupportedInEra :: CardanoEra era
                          -> Either (OnlyAdaSupportedInEra era)
@@ -1068,15 +1049,6 @@ data ScriptDataSupportedInEra era where
      ScriptDataInAlonzoEra  :: ScriptDataSupportedInEra AlonzoEra
      ScriptDataInBabbageEra :: ScriptDataSupportedInEra BabbageEra
 
-instance IsCardanoEra era => Summon (ScriptDataSupportedInEra era) where
-  summon = case cardanoEra @era of
-    ByronEra -> Left "ScriptDataSupportedInEra ByronEra does not exist"
-    ShelleyEra -> Left "ScriptDataSupportedInEra ShelleyEra does not exist"
-    AllegraEra -> Left "ScriptDataSupportedInEra AllegraEra does not exist"
-    MaryEra -> Left "OnlyAdaSupportedInEra MaryEra does not exist"
-    AlonzoEra -> Right ScriptDataInAlonzoEra
-    BabbageEra -> Right ScriptDataInBabbageEra
-
 deriving instance Eq   (ScriptDataSupportedInEra era)
 deriving instance Show (ScriptDataSupportedInEra era)
 
@@ -1225,9 +1197,19 @@ data TxOutValue era where
      TxOutValue   :: MultiAssetSupportedInEra era -> Value -> TxOutValue era
 
 instance EraCast TxOutValue where
-  eraCast = \case
-    TxOutAdaOnly _ lovelace -> TxOutAdaOnly <$> summon <*> pure lovelace
-    TxOutValue   _ value    -> TxOutValue   <$> summon <*> pure value
+  eraCast txOutVal toEra =
+    case txOutVal of
+      TxOutAdaOnly _previousEra lovelace ->
+        case multiAssetSupportedInEra toEra of
+          Left adaOnly -> Right $ TxOutAdaOnly adaOnly lovelace
+          Right multiAssetSupp ->
+            Right $ TxOutValue multiAssetSupp $ lovelaceToValue lovelace
+      TxOutValue  _previousEra value  ->
+        case multiAssetSupportedInEra toEra of
+          Left _adaOnly -> Left "Error"
+          Right multiAssetSupp ->
+            Right $ TxOutValue multiAssetSupp value
+
 
 deriving instance Eq   (TxOutValue era)
 deriving instance Show (TxOutValue era)
@@ -1375,11 +1357,24 @@ deriving instance Eq   (TxOutDatum ctx era)
 deriving instance Show (TxOutDatum ctx era)
 
 instance EraCast (TxOutDatum ctx)  where
-  eraCast = \case
-    TxOutDatumNone                    -> pure TxOutDatumNone
-    TxOutDatumHash _ hash             -> TxOutDatumHash   <$> summon <*> pure hash
-    TxOutDatumInTx' _ scriptData hash -> TxOutDatumInTx'  <$> summon <*> pure scriptData <*> pure hash
-    TxOutDatumInline _ scriptData     -> TxOutDatumInline <$> summon <*> pure scriptData
+  eraCast txOutDatum toEra =
+    case txOutDatum of
+      TxOutDatumNone                    -> pure TxOutDatumNone
+      TxOutDatumHash _previousEra hash             ->
+        case scriptDataSupportedInEra toEra of
+          Nothing -> Left "Error"
+          Just sDatumsSupported ->
+            Right $ TxOutDatumHash sDatumsSupported hash
+      TxOutDatumInTx' _previousEra scriptData hash ->
+        case scriptDataSupportedInEra toEra of
+          Nothing -> Left "Error"
+          Just sDatumsSupported ->
+            Right $ TxOutDatumInTx' sDatumsSupported scriptData hash
+      TxOutDatumInline _previousEra scriptData     ->
+        case refInsScriptsAndInlineDatsSupportedInEra toEra of
+          Nothing -> Left "Error"
+          Just refInsAndInlineSupported ->
+            Right $ TxOutDatumInline refInsAndInlineSupported scriptData
 
 pattern TxOutDatumInTx
   :: ScriptDataSupportedInEra era
