@@ -6,6 +6,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
@@ -356,7 +357,7 @@ data TxOut ctx era = TxOut (AddressInEra    era)
 deriving instance Eq   (TxOut ctx era)
 deriving instance Show (TxOut ctx era)
 
-instance EraCast (TxOut ctx) where
+instance EraCast (TxOut ctx) String where
   eraCast (TxOut addressInEra txOutValue txOutDatum referenceScript) toEra =
     TxOut
       <$> eraCast addressInEra toEra
@@ -1196,7 +1197,7 @@ data TxOutValue era where
 
      TxOutValue   :: MultiAssetSupportedInEra era -> Value -> TxOutValue era
 
-instance EraCast TxOutValue where
+instance EraCast TxOutValue String where
   eraCast txOutVal toEra =
     case txOutVal of
       TxOutAdaOnly _previousEra lovelace ->
@@ -1356,7 +1357,7 @@ data TxOutDatum ctx era where
 deriving instance Eq   (TxOutDatum ctx era)
 deriving instance Show (TxOutDatum ctx era)
 
-instance EraCast (TxOutDatum ctx)  where
+instance EraCast (TxOutDatum ctx) String where
   eraCast txOutDatum toEra =
     case txOutDatum of
       TxOutDatumNone                    -> pure TxOutDatumNone

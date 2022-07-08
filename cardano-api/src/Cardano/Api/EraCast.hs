@@ -1,4 +1,5 @@
 {-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 
 module Cardano.Api.EraCast
   ( EraCast(..)
@@ -7,10 +8,9 @@ module Cardano.Api.EraCast
 import           Cardano.Api.Eras (CardanoEra (..), IsCardanoEra)
 import           Data.Either (Either)
 import           Data.Kind (Type)
-import           Data.Text (Text)
 
-class EraCast (f :: Type -> Type) where
+class EraCast (f :: Type -> Type) error where
   eraCast :: (IsCardanoEra fromEra, IsCardanoEra toEra)
           => f fromEra
           -> CardanoEra toEra
-          -> Either Text (f toEra)
+          -> Either error (f toEra)

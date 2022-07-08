@@ -1,6 +1,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -348,7 +349,7 @@ instance IsShelleyBasedEra era => FromJSON (AddressInEra era) where
     addressAny <- runParsecParser parseAddressAny txt
     pure $ anyAddressInShelleyBasedEra addressAny
 
-instance EraCast AddressInEra where
+instance EraCast AddressInEra String where
   eraCast (AddressInEra addressTypeInEra address) toEra = AddressInEra
     <$> eraCast addressTypeInEra toEra
     <*> pure address
@@ -421,7 +422,8 @@ instance IsCardanoEra era => SerialiseAddress (AddressInEra era) where
     deserialiseAddress _ t =
       anyAddressInEra cardanoEra =<< deserialiseAddress AsAddressAny t
 
-instance EraCast (AddressTypeInEra addrtype) where
+
+instance EraCast (AddressTypeInEra addrtype) String where
   eraCast addrInType toEra =
     case addrInType of
       ByronAddressInAnyEra -> pure ByronAddressInAnyEra

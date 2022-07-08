@@ -2,12 +2,14 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+
 
 {- HLINT ignore "Avoid lambda using `infix`" -}
 {- HLINT ignore "Use section" -}
@@ -1433,7 +1435,7 @@ instance IsCardanoEra era => FromJSON (ReferenceScript era) where
       Just refSupInEra ->
         ReferenceScript refSupInEra <$> o .: "referenceScript"
 
-instance EraCast ReferenceScript where
+instance EraCast ReferenceScript String where
   eraCast rScript toEra =
     case rScript of
       ReferenceScriptNone               -> pure ReferenceScriptNone

@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -270,7 +271,7 @@ newtype ByronUpdateState = ByronUpdateState Byron.Update.State
 newtype UTxO era = UTxO { unUTxO :: Map TxIn (TxOut CtxUTxO era) }
   deriving (Eq, Show)
 
-instance EraCast UTxO where
+instance EraCast UTxO String where
   eraCast (UTxO m) toEra = UTxO <$> forM m (\txout -> eraCast txout toEra)
 
 data UTxOInAnyEra where
