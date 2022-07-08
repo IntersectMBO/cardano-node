@@ -127,6 +127,7 @@ library
                       , formatting
                       , iproute
                       , memory
+                      , network
                       , nothunks
                       , optparse-applicative-fork
                       , ouroboros-consensus
