@@ -71,7 +71,7 @@ import           Data.Bifunctor (bimap, first)
 import           Data.ByteString (ByteString)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import           Data.Maybe (fromMaybe, isJust, isNothing)
+import           Data.Maybe (fromMaybe, isJust)
 import           Data.String (IsString)
 import           Data.Text (Text)
 import           GHC.Generics
@@ -100,7 +100,6 @@ import qualified Cardano.Ledger.Alonzo.PParams as Alonzo
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 
 import qualified Cardano.Ledger.Babbage.PParams as Babbage
-import           Cardano.Ledger.Babbage.Translation (coinsPerUTxOWordToCoinsPerUTxOByte)
 
 import           Text.PrettyBy.Default (display)
 
@@ -286,7 +285,13 @@ data ProtocolParameters =
        -- | The maximum number of collateral inputs allowed in a transaction.
        --
        -- /Introduced in Alonzo/
-       protocolParamMaxCollateralInputs :: Maybe Natural
+       protocolParamMaxCollateralInputs :: Maybe Natural,
+
+       -- | Cost in ada per byte of UTxO storage.
+       --
+       -- /Introduced in Babbage/
+       protocolParamUTxOCostPerByte :: Maybe Lovelace
+
     }
   deriving (Eq, Generic, Show)
 
@@ -320,6 +325,7 @@ instance FromJSON ProtocolParameters where
         <*> o .:? "maxValueSize"
         <*> o .:? "collateralPercentage"
         <*> o .:? "maxCollateralInputs"
+        <*> o .:? "utxoCostPerByte"
 
 instance ToJSON ProtocolParameters where
   toJSON ProtocolParameters{..} =
@@ -351,6 +357,8 @@ instance ToJSON ProtocolParameters where
       , "maxValueSize"           .= protocolParamMaxValueSize
       , "collateralPercentage"   .= protocolParamCollateralPercent
       , "maxCollateralInputs"    .= protocolParamMaxCollateralInputs
+      -- Babbage era:
+      , "utxoCostPerByte"        .= protocolParamUTxOCostPerByte
       ]
 
 
@@ -473,12 +481,14 @@ data ProtocolParametersUpdate =
        --
        protocolUpdateTreasuryCut :: Maybe Rational,
 
-       -- Introduced in Alonzo
+       -- Introduced in Alonzo,
 
        -- | Cost in ada per word of UTxO storage.
        --
-       -- /Introduced in Alonzo/
+       -- /Introduced in Alonzo, obsoleted in Babbage by 'protocolUpdateUTxOCostPerByte'/
        protocolUpdateUTxOCostPerWord :: Maybe Lovelace,
+
+       -- Introduced in Alonzo,
 
        -- | Cost models for script languages that use them.
        --
@@ -514,7 +524,12 @@ data ProtocolParametersUpdate =
        -- | The maximum number of collateral inputs allowed in a transaction.
        --
        -- /Introduced in Alonzo/
-       protocolUpdateMaxCollateralInputs :: Maybe Natural
+       protocolUpdateMaxCollateralInputs :: Maybe Natural,
+
+       -- | Cost in ada per byte of UTxO storage.
+       --
+       -- /Introduced in Babbage.  Supercedes 'protocolUpdateUTxOCostPerWord'/
+       protocolUpdateUTxOCostPerByte :: Maybe Lovelace
     }
   deriving (Eq, Show)
 
@@ -547,6 +562,8 @@ instance Semigroup ProtocolParametersUpdate where
       , protocolUpdateMaxValueSize        = merge protocolUpdateMaxValueSize
       , protocolUpdateCollateralPercent   = merge protocolUpdateCollateralPercent
       , protocolUpdateMaxCollateralInputs = merge protocolUpdateMaxCollateralInputs
+      -- Introduced in Babbage below.
+      , protocolUpdateUTxOCostPerByte     = merge protocolUpdateUTxOCostPerByte
       }
       where
         -- prefer the right hand side:
@@ -585,11 +602,12 @@ instance Monoid ProtocolParametersUpdate where
       , protocolUpdateMaxValueSize        = Nothing
       , protocolUpdateCollateralPercent   = Nothing
       , protocolUpdateMaxCollateralInputs = Nothing
+      , protocolUpdateUTxOCostPerByte     = Nothing
       }
 
 instance ToCBOR ProtocolParametersUpdate where
     toCBOR ProtocolParametersUpdate{..} =
-        CBOR.encodeListLen 25
+        CBOR.encodeListLen 26
      <> toCBOR protocolUpdateProtocolVersion
      <> toCBOR protocolUpdateDecentralization
      <> toCBOR protocolUpdateExtraPraosEntropy
@@ -615,12 +633,14 @@ instance ToCBOR ProtocolParametersUpdate where
      <> toCBOR protocolUpdateMaxValueSize
      <> toCBOR protocolUpdateCollateralPercent
      <> toCBOR protocolUpdateMaxCollateralInputs
+     <> toCBOR protocolUpdateUTxOCostPerByte
 
 instance FromCBOR ProtocolParametersUpdate where
     fromCBOR = do
-      CBOR.enforceSize "ProtocolParametersUpdate" 25
+      CBOR.enforceSize "ProtocolParametersUpdate" 26
       ProtocolParametersUpdate
         <$> fromCBOR
+        <*> fromCBOR
         <*> fromCBOR
         <*> fromCBOR
         <*> fromCBOR
@@ -1033,7 +1053,6 @@ toBabbagePParamsUpdate
     , protocolUpdatePoolPledgeInfluence
     , protocolUpdateMonetaryExpansion
     , protocolUpdateTreasuryCut
-    , protocolUpdateUTxOCostPerWord
     , protocolUpdateCostModels
     , protocolUpdatePrices
     , protocolUpdateMaxTxExUnits
@@ -1041,6 +1060,7 @@ toBabbagePParamsUpdate
     , protocolUpdateMaxValueSize
     , protocolUpdateCollateralPercent
     , protocolUpdateMaxCollateralInputs
+    , protocolUpdateUTxOCostPerByte
     } =
     Babbage.PParams {
       Babbage._minfeeA     = noInlineMaybeToStrictMaybe protocolUpdateTxFeePerByte
@@ -1064,8 +1084,6 @@ toBabbagePParamsUpdate
                                   noInlineMaybeToStrictMaybe protocolUpdateProtocolVersion
     , Babbage._minPoolCost     = toShelleyLovelace <$>
                                    noInlineMaybeToStrictMaybe protocolUpdateMinPoolCost
-    , Babbage._coinsPerUTxOByte = coinsPerUTxOWordToCoinsPerUTxOByte  . toShelleyLovelace <$>
-                                    noInlineMaybeToStrictMaybe protocolUpdateUTxOCostPerWord
     , Babbage._costmdls        = if Map.null protocolUpdateCostModels
                                   then Ledger.SNothing
                                   else either (const Ledger.SNothing) Ledger.SJust
@@ -1079,6 +1097,8 @@ toBabbagePParamsUpdate
     , Babbage._maxValSize      = noInlineMaybeToStrictMaybe protocolUpdateMaxValueSize
     , Babbage._collateralPercentage = noInlineMaybeToStrictMaybe protocolUpdateCollateralPercent
     , Babbage._maxCollateralInputs  = noInlineMaybeToStrictMaybe protocolUpdateMaxCollateralInputs
+    , Babbage._coinsPerUTxOByte = toShelleyLovelace <$>
+                                    noInlineMaybeToStrictMaybe protocolUpdateUTxOCostPerByte
     }
 
 -- ----------------------------------------------------------------------------
@@ -1175,6 +1195,7 @@ fromShelleyPParamsUpdate
     , protocolUpdateMaxValueSize        = Nothing
     , protocolUpdateCollateralPercent   = Nothing
     , protocolUpdateMaxCollateralInputs = Nothing
+    , protocolUpdateUTxOCostPerByte     = Nothing
     }
 
 fromAlonzoPParamsUpdate :: Alonzo.PParamsUpdate ledgerera
@@ -1246,6 +1267,7 @@ fromAlonzoPParamsUpdate
     , protocolUpdateMaxValueSize        = strictMaybeToMaybe _maxValSize
     , protocolUpdateCollateralPercent   = strictMaybeToMaybe _collateralPercentage
     , protocolUpdateMaxCollateralInputs = strictMaybeToMaybe _maxCollateralInputs
+    , protocolUpdateUTxOCostPerByte     = Nothing
     }
 
 
@@ -1301,8 +1323,7 @@ fromBabbagePParamsUpdate
                                             strictMaybeToMaybe _rho
     , protocolUpdateTreasuryCut         = Ledger.unboundRational <$>
                                             strictMaybeToMaybe _tau
-    , protocolUpdateUTxOCostPerWord     = (*8) . fromShelleyLovelace <$>
-                                            strictMaybeToMaybe _coinsPerUTxOByte
+    , protocolUpdateUTxOCostPerWord     = Nothing
     , protocolUpdateCostModels          = maybe mempty fromAlonzoCostModels
                                                (strictMaybeToMaybe _costmdls)
     , protocolUpdatePrices              = fromAlonzoPrices <$>
@@ -1314,6 +1335,8 @@ fromBabbagePParamsUpdate
     , protocolUpdateMaxValueSize        = strictMaybeToMaybe _maxValSize
     , protocolUpdateCollateralPercent   = strictMaybeToMaybe _collateralPercentage
     , protocolUpdateMaxCollateralInputs = strictMaybeToMaybe _maxCollateralInputs
+    , protocolUpdateUTxOCostPerByte     = fromShelleyLovelace <$>
+                                            strictMaybeToMaybe _coinsPerUTxOByte
     }
 
 
@@ -1483,11 +1506,11 @@ toAlonzoPParams ProtocolParameters { protocolParamMaxTxExUnits    = Nothing } =
 toAlonzoPParams ProtocolParameters { protocolParamMaxBlockExUnits = Nothing } =
   error "toAlonzoPParams: must specify protocolParamMaxBlockExUnits"
 toAlonzoPParams ProtocolParameters { protocolParamMaxValueSize    = Nothing } =
-    error "toAlonzoPParams: must specify protocolParamMaxValueSize"
+  error "toAlonzoPParams: must specify protocolParamMaxValueSize"
 toAlonzoPParams ProtocolParameters { protocolParamCollateralPercent = Nothing } =
-    error "toAlonzoPParams: must specify protocolParamCollateralPercent"
+  error "toAlonzoPParams: must specify protocolParamCollateralPercent"
 toAlonzoPParams ProtocolParameters { protocolParamMaxCollateralInputs = Nothing } =
-    error "toAlonzoPParams: must specify protocolParamMaxCollateralInputs"
+  error "toAlonzoPParams: must specify protocolParamMaxCollateralInputs"
 
 
 toBabbagePParams :: ProtocolParameters -> Babbage.PParams ledgerera
@@ -1506,7 +1529,7 @@ toBabbagePParams ProtocolParameters {
                    protocolParamPoolPledgeInfluence,
                    protocolParamMonetaryExpansion,
                    protocolParamTreasuryCut,
-                   protocolParamUTxOCostPerWord = Just utxoCostPerWord,
+                   protocolParamUTxOCostPerByte = Just utxoCostPerByte,
                    protocolParamCostModels,
                    protocolParamPrices          = Just prices,
                    protocolParamMaxTxExUnits    = Just maxTxExUnits,
@@ -1540,8 +1563,7 @@ toBabbagePParams ProtocolParameters {
                                (Ledger.boundRational protocolParamTreasuryCut)
 
       -- New params in Babbage.
-    , Babbage._coinsPerUTxOByte = coinsPerUTxOWordToCoinsPerUTxOByte
-                                   (toShelleyLovelace utxoCostPerWord)
+    , Babbage._coinsPerUTxOByte = toShelleyLovelace utxoCostPerByte
 
     , Babbage._costmdls        = either
                                   (\e -> error $ "toAlonzoPParams: invalid cost models, error: " <> e)
@@ -1556,8 +1578,8 @@ toBabbagePParams ProtocolParameters {
     , Babbage._collateralPercentage = collateralPercentage
     , Babbage._maxCollateralInputs  = maxCollateralInputs
     }
-toBabbagePParams ProtocolParameters { protocolParamUTxOCostPerWord = Nothing } =
-  error "toBabbagePParams: must specify protocolParamUTxOCostPerWord"
+toBabbagePParams ProtocolParameters { protocolParamUTxOCostPerByte = Nothing } =
+  error "toBabbagePParams: must specify protocolParamUTxOCostPerByte"
 toBabbagePParams ProtocolParameters { protocolParamPrices          = Nothing } =
   error "toBabbagePParams: must specify protocolParamPrices"
 toBabbagePParams ProtocolParameters { protocolParamMaxTxExUnits    = Nothing } =
@@ -1627,14 +1649,15 @@ fromShelleyPParams
     , protocolParamPoolPledgeInfluence = Ledger.unboundRational _a0
     , protocolParamMonetaryExpansion   = Ledger.unboundRational _rho
     , protocolParamTreasuryCut         = Ledger.unboundRational _tau
-    , protocolParamUTxOCostPerWord     = Nothing
-    , protocolParamCostModels          = Map.empty
-    , protocolParamPrices              = Nothing
-    , protocolParamMaxTxExUnits        = Nothing
-    , protocolParamMaxBlockExUnits     = Nothing
-    , protocolParamMaxValueSize        = Nothing
-    , protocolParamCollateralPercent   = Nothing
-    , protocolParamMaxCollateralInputs = Nothing
+    , protocolParamUTxOCostPerWord     = Nothing    -- Only in Alonzo
+    , protocolParamCostModels          = Map.empty  -- Only from Alonzo onwards
+    , protocolParamPrices              = Nothing    -- Only from Alonzo onwards
+    , protocolParamMaxTxExUnits        = Nothing    -- Only from Alonzo onwards
+    , protocolParamMaxBlockExUnits     = Nothing    -- Only from Alonzo onwards
+    , protocolParamMaxValueSize        = Nothing    -- Only from Alonzo onwards
+    , protocolParamCollateralPercent   = Nothing    -- Only from Alonzo onwards
+    , protocolParamMaxCollateralInputs = Nothing    -- Only from Alonzo onwards
+    , protocolParamUTxOCostPerByte     = Nothing    -- Only from babbage onwards
     }
 
 
@@ -1693,6 +1716,7 @@ fromAlonzoPParams
     , protocolParamMaxValueSize        = Just _maxValSize
     , protocolParamCollateralPercent   = Just _collateralPercentage
     , protocolParamMaxCollateralInputs = Just _maxCollateralInputs
+    , protocolParamUTxOCostPerByte     = Nothing    -- Only from babbage onwards
     }
 
 fromBabbagePParams :: Babbage.PParams ledgerera -> ProtocolParameters
@@ -1740,7 +1764,7 @@ fromBabbagePParams
     , protocolParamPoolPledgeInfluence = Ledger.unboundRational _a0
     , protocolParamMonetaryExpansion   = Ledger.unboundRational _rho
     , protocolParamTreasuryCut         = Ledger.unboundRational _tau
-    , protocolParamUTxOCostPerWord     = Just (8 * fromShelleyLovelace _coinsPerUTxOByte)
+    , protocolParamUTxOCostPerWord     = Nothing    -- Obsolete from babbage onwards
     , protocolParamCostModels          = fromAlonzoCostModels _costmdls
     , protocolParamPrices              = Just (fromAlonzoPrices _prices)
     , protocolParamMaxTxExUnits        = Just (fromAlonzoExUnits _maxTxExUnits)
@@ -1748,6 +1772,7 @@ fromBabbagePParams
     , protocolParamMaxValueSize        = Just _maxValSize
     , protocolParamCollateralPercent   = Just _collateralPercentage
     , protocolParamMaxCollateralInputs = Just _maxCollateralInputs
+    , protocolParamUTxOCostPerByte     = Just (fromShelleyLovelace _coinsPerUTxOByte)
     }
 
 data ProtocolParametersError =
@@ -1790,33 +1815,47 @@ checkProtocolParameters sbe ProtocolParameters{..} =
    maxValueSize = isJust protocolParamMaxValueSize
    collateralPercent = isJust protocolParamCollateralPercent
    maxCollateralInputs = isJust protocolParamMaxCollateralInputs
+   costPerByte = isJust protocolParamUTxOCostPerByte
+   decentralization = isJust protocolParamDecentralization
+   extraPraosEntropy = isJust protocolParamExtraPraosEntropy
 
-   alonzoRequiredPParamFields :: [Bool]
-   alonzoRequiredPParamFields =
-     [ costPerWord
-     , cModel
-     , prices
-     , maxTxUnits
-     , maxBlockExUnits
-     , maxValueSize
-     , collateralPercent
-     , maxCollateralInputs
+   alonzoPParamFieldsRequirements :: [Bool]
+   alonzoPParamFieldsRequirements =
+     [     costPerWord
+     ,     cModel
+     ,     prices
+     ,     maxTxUnits
+     ,     maxBlockExUnits
+     ,     maxValueSize
+     ,     collateralPercent
+     ,     maxCollateralInputs
+     , not costPerByte
+     ]
+
+   babbagePParamFieldsRequirements :: [Bool]
+   babbagePParamFieldsRequirements =
+     [ not costPerWord
+     ,     cModel
+     ,     prices
+     ,     maxTxUnits
+     ,     maxBlockExUnits
+     ,     maxValueSize
+     ,     collateralPercent
+     ,     maxCollateralInputs
+     ,     costPerByte
+     , not decentralization
+     , not extraPraosEntropy
      ]
 
    checkAlonzoParams :: Either ProtocolParametersError ()
    checkAlonzoParams = do
-     if all (== True) alonzoRequiredPParamFields
+     if all (== True) alonzoPParamFieldsRequirements
      then return ()
      else Left PParamsErrorMissingAlonzoProtocolParameter
 
-   babbageDeprecatedFields :: [Bool]
-   babbageDeprecatedFields = [ isNothing protocolParamDecentralization
-                             , isNothing protocolParamExtraPraosEntropy
-                             ]
-
    checkBabbageParams :: Either ProtocolParametersError ()
    checkBabbageParams =
-     if all (== True) $ alonzoRequiredPParamFields ++ babbageDeprecatedFields
+     if all (== True) babbagePParamFieldsRequirements
      then return ()
      else Left PParamsErrorMissingAlonzoProtocolParameter
 

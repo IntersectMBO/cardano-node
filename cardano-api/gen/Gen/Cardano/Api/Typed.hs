@@ -765,6 +765,7 @@ genProtocolParameters =
     <*> Gen.maybe genNat
     <*> Gen.maybe genNat
     <*> Gen.maybe genNat
+    <*> Gen.maybe genLovelace
 
 genProtocolParametersUpdate :: Gen ProtocolParametersUpdate
 genProtocolParametersUpdate = do
@@ -795,6 +796,7 @@ genProtocolParametersUpdate = do
   protocolUpdateMaxValueSize        <- Gen.maybe genNat
   protocolUpdateCollateralPercent   <- Gen.maybe genNat
   protocolUpdateMaxCollateralInputs <- Gen.maybe genNat
+  protocolUpdateUTxOCostPerByte     <- Gen.maybe genLovelace
   pure ProtocolParametersUpdate{..}
 
 

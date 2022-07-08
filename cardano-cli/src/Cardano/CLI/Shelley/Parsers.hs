@@ -2903,6 +2903,7 @@ pProtocolParametersUpdate =
     <*> optional pMaxValueSize
     <*> optional pCollateralPercent
     <*> optional pMaxCollateralInputs
+    <*> optional pUTxOCostPerByte
 
 pCostModels :: Parser FilePath
 pCostModels =
@@ -3060,6 +3061,14 @@ pUTxOCostPerWord =
       (  Opt.long "utxo-cost-per-word"
       <> Opt.metavar "LOVELACE"
       <> Opt.help "Cost in lovelace per unit of UTxO storage (from Alonzo era)."
+      )
+
+pUTxOCostPerByte :: Parser Lovelace
+pUTxOCostPerByte =
+    Opt.option (readerFromParsecParser parseLovelace)
+      (  Opt.long "utxo-cost-per-byte"
+      <> Opt.metavar "LOVELACE"
+      <> Opt.help "Cost in lovelace per unit of UTxO storage (from Babbage era)."
       )
 
 pExecutionUnitPrices :: Parser ExecutionUnitPrices
