@@ -42,13 +42,13 @@ import           Data.ByteString (ByteString)
 import qualified Data.Foldable as Foldable
 import qualified Data.Map.Strict as Map
 import           Data.Maybe
+import           Data.Word (Word16)
 import qualified Data.Sequence.Strict as Seq
 import qualified Data.Set as Set
 import           Data.Text (Text)
 import qualified Data.Text.Encoding as Text
 
 import           Data.IP (IPv4, IPv6)
-import           Network.Socket (PortNumber)
 
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import           Cardano.Slotting.Slot (EpochNo (..))
@@ -160,11 +160,11 @@ data StakePoolRelay =
 
        -- | One or both of IPv4 & IPv6
        StakePoolRelayIp
-          (Maybe IPv4) (Maybe IPv6) (Maybe PortNumber)
+          (Maybe IPv4) (Maybe IPv6) (Maybe Word16)
 
        -- | An DNS name pointing to a @A@ or @AAAA@ record.
      | StakePoolRelayDnsARecord
-          ByteString (Maybe PortNumber)
+          ByteString (Maybe Word16)
 
        -- | A DNS name pointing to a @SRV@ record.
      | StakePoolRelayDnsSrvRecord
