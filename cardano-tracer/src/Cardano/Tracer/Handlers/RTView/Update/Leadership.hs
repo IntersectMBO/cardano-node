@@ -21,23 +21,23 @@ updateLeadershipHistory
 updateLeadershipHistory nodeId (ChainHistory cHistory) metricName metricValue now =
   case metricName of
     -- Slot when the node was a leader, but couldn't forge the block.
-    "cardano.node.nodeCannotForge"       -> updateNodeCannotForge
+    "Forge.NodeCannotForge"         -> updateNodeCannotForge
     -- Slot when this node forged last block.
-    "cardano.node.forgedSlotLast"        -> updateForgedSlotLast
+    "Forge.ForgedSlotLast"          -> updateForgedSlotLast
     -- Slot when this node is leader.
-    "cardano.node.nodeIsLeader"          -> updateNodeIsLeader
+    "Forge.NodeIsLeader"            -> updateNodeIsLeader
     -- Slot when this node made leadership check and concludes it's not leader.
-    "cardano.node.nodeNotLeader"         -> updateNodeIsNotLeader
+    "Forge.NodeNotLeader"           -> updateNodeIsNotLeader
     -- Slot when invalid block was forged.
-    "cardano.node.forgedInvalidSlotLast" -> updateForgedInvalidSlotLast
+    "Forge.ForgedInvalidSlotLast"   -> updateForgedInvalidSlotLast
     -- Slot when the node adopted the block it forged.
-    "cardano.node.adoptedSlotLast"       -> updateAdoptedSlotLast
+    "Forge.AdoptedOwnBlockSlotLast" -> updateAdoptedSlotLast
     -- Slot when the node didn't adopted the block it forged, but the block was valid.
-    "cardano.node.notAdoptedSlotLast"    -> updateNotAdoptedSlotLast
+    "Forge.NotAdoptedSlotLast"      -> updateNotAdoptedSlotLast
     -- Slot when the leadership check is started.
-    "cardano.node.aboutToLeadSlotLast"   -> updateAboutToLeadSlotLast
+    "Forge.AboutToLeadSlotLast"     -> updateAboutToLeadSlotLast
     -- Slot when the leadership check is failed.
-    "cardano.node.couldNotForgeSlotLast" -> updateCouldNotForgeSlotLast
+    "Forge.CouldNotForgeSlotLast"   -> updateCouldNotForgeSlotLast
     _ -> return ()
  where
   updateNodeCannotForge =

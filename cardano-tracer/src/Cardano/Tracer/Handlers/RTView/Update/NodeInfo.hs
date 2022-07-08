@@ -4,6 +4,7 @@ module Cardano.Tracer.Handlers.RTView.Update.NodeInfo
   ( askNSetNodeInfo
   ) where
 
+import           Control.Concurrent.Extra (Lock)
 import           Control.Monad (forM_, unless)
 import           Control.Monad.Extra (whenJustM)
 import           Data.Set (Set)
@@ -23,13 +24,14 @@ import           Cardano.Tracer.Types
 askNSetNodeInfo
   :: UI.Window
   -> DataPointRequestors
+  -> Lock
   -> Set NodeId
   -> DisplayedElements
   -> UI ()
-askNSetNodeInfo window dpRequestors newlyConnected displayedElements =
+askNSetNodeInfo window dpRequestors currentDPLock newlyConnected displayedElements =
   unless (S.null newlyConnected) $
     forM_ newlyConnected $ \nodeId@(NodeId anId) ->
-      whenJustM (liftIO $ askDataPoint dpRequestors nodeId "NodeInfo") $ \ni -> do
+      whenJustM (liftIO $ askDataPoint dpRequestors currentDPLock nodeId "NodeInfo") $ \ni -> do
         let nodeNameElId = anId <> "__node-name"
             shortName = shortenName $ niName ni
 
@@ -57,12 +59,10 @@ askNSetNodeInfo window dpRequestors newlyConnected displayedElements =
 
   setProtocol p id' = do
     justCleanText id'
-    let byronTag   = UI.span #. "tag is-warning is-rounded is-medium" # set text "Byron"
-        shelleyTag = UI.span #. "tag is-info is-rounded is-medium ml-3" # set text "Shelley"
     case p of
-      "Byron"   -> findAndAdd [byronTag] window id'
-      "Shelley" -> findAndAdd [shelleyTag] window id'
-      _         -> findAndAdd [byronTag, shelleyTag] window id'
+      "Byron"   -> setTextValue id' "Byron"
+      "Shelley" -> setTextValue id' "Shelley"
+      _         -> setTextValue id' "Cardano"
 
   setTime ts id' = do
     justCleanText id'

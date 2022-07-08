@@ -18,6 +18,7 @@
    7. [Prometheus](#Prometheus)
    8. [EKG Monitoring](#EKG-monitoring)
    9. [Verbosity](#Verbosity)
+   10. [RTView](#RTView)
 
 # Introduction
 
@@ -401,3 +402,7 @@ The optional field `verbosity` specifies the verbosity level for the `cardano-tr
 3. `Maximum` - all the messages will be shown in standard output. **Caution**: the number of messages can be huge.
 
 Please note that if you skip this field, `ErrorsOnly` verbosity will be used by default.
+
+## RTView
+
+It is a real-time monitoring tool for Cardano nodes (RTView is an abbreviation for "Real Time View"). It provides an interactive web page where you can see different kinds of information about connected nodes. Please read its documentation [here](https://github.com/input-output-hk/cardano-node/blob/master/cardano-tracer/docs/cardano-rtview.md).

@@ -204,6 +204,11 @@ span[data-tooltip] {
   margin-top: 6px;
 }
 
+.rt-view-search-errors-icon svg {
+  width: 18px;
+  color: whitesmoke;
+}
+
 .rt-view-notifications-errors-select-wrapper {
   padding-top: 7px;
   padding-bottom: 11px;
@@ -236,6 +241,26 @@ span[data-tooltip] {
 .dark .navbar-link, a.navbar-item {
   font-size: 18px;
   cursor: pointer;
+}
+
+@media screen and (min-width: 1024px) {
+  .dark .navbar-item.has-dropdown:hover .navbar-link {
+    background-color: #434360;
+  }
+
+  .dark .navbar-dropdown {
+    background-color: #434360;
+    border-top: 1px solid #aaa;
+  }
+}
+
+.dark .navbar-dropdown.is-right .navbar-item {
+  background-color: #434360;
+  color: #cecece;
+}
+
+.dark .navbar-dropdown.is-right a.navbar-item:hover {
+  background-color: #545478;
 }
 
 .dark .rt-view-href-icon svg {
@@ -286,6 +311,11 @@ span[data-tooltip] {
   cursor: pointer;
 }
 
+.dark .rt-view-copy-icon-on-button svg {
+  width: 20px;
+  color: whitesmoke;
+  margin-top: 5px;
+}
 
 .dark .rt-view-show-hide-pass-icon svg {
   width: 20px;
@@ -315,12 +345,6 @@ span[data-tooltip] {
   width: 29px;
   margin-top: 5px;
   margin-right: 5px;
-  color: whitesmoke;
-  cursor: pointer;
-}
-
-.dark .rt-view-search-errors-icon svg {
-  width: 18px;
   color: whitesmoke;
   cursor: pointer;
 }
@@ -432,6 +456,13 @@ span[data-tooltip] {
 }
 
 .dark .rt-view-errors-foot {
+  color: whitesmoke;
+  background-color: #282841;
+  border-top: 1px solid #555;
+  display: block;
+}
+
+.dark .rt-view-notification-settings-foot {
   color: whitesmoke;
   background-color: #282841;
   border-top: 1px solid #555;
@@ -559,6 +590,13 @@ span[data-tooltip] {
   color: #0cc9cb;
 }
 
+.dark .rt-view-footer-doc svg {
+  width: 20px;
+  margin-top: 1px;
+  margin-left: 15px;
+  color: #0cc9cb;
+}
+
 .dark .rt-view-percent-done {
   color: #07e949;
 }
@@ -592,6 +630,7 @@ span[data-tooltip] {
 .dark .rt-view-label {
   font-size: 80%;
   font-weight: 600;
+  color: whitesmoke;
 }
 
 .dark .rt-view-test-status-message-ok {
@@ -677,6 +716,12 @@ span[data-tooltip] {
   cursor: pointer;
 }
 
+.light .rt-view-copy-icon-on-button svg {
+  width: 20px;
+  color: whitesmoke;
+  margin-top: 5px;
+}
+
 .light .rt-view-show-hide-pass-icon svg {
   width: 20px;
   cursor: pointer;
@@ -705,13 +750,7 @@ span[data-tooltip] {
   width: 29px;
   margin-top: 5px;
   margin-right: 5px;
-  color: #444;
-  cursor: pointer;
-}
-
-.light .rt-view-search-errors-icon svg {
-  width: 18px;
-  color: #444;
+  color: #0033ad;
   cursor: pointer;
 }
 
@@ -815,6 +854,13 @@ span[data-tooltip] {
 }
 
 .light .rt-view-errors-foot {
+  color: #555;
+  background-color: whitesmoke;
+  border-top: 1px solid #bebebe;
+  display: block;
+}
+
+.light .rt-view-notification-settings-foot {
   color: #555;
   background-color: whitesmoke;
   border-top: 1px solid #bebebe;
@@ -942,6 +988,13 @@ span[data-tooltip] {
   color: #038b8c;
 }
 
+.light .rt-view-footer-doc svg {
+  width: 20px;
+  margin-top: 1px;
+  margin-left: 15px;
+  color: #038b8c;
+}
+
 .light .rt-view-percent-done {
   color: #048b04;
 }
@@ -982,6 +1035,7 @@ span[data-tooltip] {
 .light .rt-view-label {
   font-size: 80%;
   font-weight: 600;
+  color: #555;
 }
 
 .light .rt-view-test-status-message-ok {

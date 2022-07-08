@@ -1,8 +1,8 @@
 {
   "networkMagic": 764824073,
   "network": {
-    "tag": "AcceptAt",
-    "contents": "/tmp/forwarder.sock"
+    "tag": "ConnectTo",
+    "contents": ["/tmp/forwarder.sock"]
   },
   "loRequestNum": 100,
   "ekgRequestFreq": 2,
@@ -19,6 +19,10 @@
   "hasPrometheus": {
     "epHost": "127.0.0.1",
     "epPort": 3000
+  },
+  "hasRTView": {
+    "epHost": "127.0.0.1",
+    "epPort": 3300
   },
   "logging": [
     {

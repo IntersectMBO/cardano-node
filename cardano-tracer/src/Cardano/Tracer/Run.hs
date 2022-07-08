@@ -39,8 +39,9 @@ doRunCardanoTracer config protocolsBrake dpRequestors = do
   connectedNodes  <- initConnectedNodes
   acceptedMetrics <- initAcceptedMetrics
   currentLogLock  <- newLock
+  currentDPLock   <- newLock
   savedTO         <- initSavedTraceObjects
-  eventsQueues    <- initEventsQueues dpRequestors
+  eventsQueues    <- initEventsQueues dpRequestors currentDPLock
   void . sequenceConcurrently $
     [ runLogsRotator    config currentLogLock
     , runMetricsServers config connectedNodes acceptedMetrics
@@ -48,5 +49,5 @@ doRunCardanoTracer config protocolsBrake dpRequestors = do
                         dpRequestors protocolsBrake currentLogLock
                         eventsQueues
     , runRTView         config connectedNodes acceptedMetrics savedTO
-                        dpRequestors eventsQueues
+                        dpRequestors currentDPLock eventsQueues
     ]

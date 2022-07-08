@@ -58,13 +58,18 @@ mkNoNodesInfo networkConfig = do
                 [ UI.span # set UI.html cardanoTracerNote
                 ]
             , UI.p #. "mt-5" #+
-                [ UI.span # set UI.html cardanoNodeNote
-                ]
-            , UI.p #. "mt-5" #+
-                [ UI.span # set UI.html nodeNameNote
+                [ UI.span # set UI.html localNote
                 ]
             , UI.p #. "mt-5" #+
                 [ UI.span # set UI.html sshNote
+                , UI.anchor # set UI.href "https://github.com/input-output-hk/cardano-node/blob/master/cardano-tracer/docs/cardano-tracer.md#distributed-scenario"
+                            # set text "here"
+                            # set UI.target "_blank"
+                , image "rt-view-href-icon" externalLinkSVG
+                , string "."
+                ]
+            , UI.p #. "mt-5" #+
+                [ UI.span # set UI.html nodeNameNote
                 ]
             , UI.p #. "mt-5" #+
                 [ string "For more details, please read "
@@ -81,7 +86,7 @@ mkNoNodesInfo networkConfig = do
   pleaseWait =
     "If your nodes and <code>cardano-tracer</code> are configured properly, "
     <> "the connection between them will be established automatically, "
-    <> "but it can take some time."
+    <> "but it may take some time."
 
   intro =
     "However, if there is no connection after 1 minute, please check your configuration."
@@ -91,7 +96,8 @@ mkNoNodesInfo networkConfig = do
       AcceptAt (LocalSocket p) ->
         "Currently, your <code>cardano-tracer</code> is configured as a server, "
         <> "so it accepts connections from your nodes via the local socket <code>"
-        <> p <> "</code>."
+        <> p <> "</code>. Correspondingly, your nodes should be configured to "
+        <> "initiate connections using tracing socket."
       ConnectTo addrs ->
         let manySocks = NE.length addrs > 1 in
         "Currently, your <code>cardano-tracer</code> is configured as a client, "
@@ -104,25 +110,27 @@ mkNoNodesInfo networkConfig = do
                 in "sockets " <> intercalate ", " socks <> "."
               else
                 "socket <code>" <> let LocalSocket p = NE.head addrs in p <> "</code>.")
+        <> " Correspondingly, our nodes should be configured to accept connections using tracing socket."
 
-  cardanoNodeNote =
+  localNote =
     case networkConfig of
-      AcceptAt (LocalSocket _p) ->
-        "Correspondingly, your nodes should be configured to initiate connections using tracing socket."
-        <> " Make sure their command line invocations contain <code>--tracer-socket-path-connect"
-        <> " PATH-TO-LOCAL-SOCKET</code>."
+      AcceptAt (LocalSocket p) ->
+        "Thus, if your <code>cardano-tracer</code> and your nodes are running on the same machine, run "
+         <> "the nodes with this argument: <code>--tracer-socket-path-connect " <> p <> "</code>."
       ConnectTo{} ->
-        "Correspondingly, your nodes should be configured to accept connections using tracing socket."
-        <> " Make sure their command line invocations contain <code>--tracer-socket-path-accept"
-        <> " PATH-TO-LOCAL-SOCKET</code>."
+        "Thus, if your <code>cardano-tracer</code> and your nodes are running on the same machine, run "
+         <> "the nodes with this argument: <code>--tracer-socket-path-accept SOCKET</code>, where "
+         <> "<code>SOCKET</code> is the path to one of sockets specified in <code>ConnectTo</code>-list "
+         <> "in <code>cardano-tracer</code> configuration file."
+
+  sshNote =
+    "But if your <code>cardano-tracer</code> and your nodes are running on different machines, the only "
+    <> "way to connect them is SSH tunneling with your credentials. Please see an explanation with the "
+    <> "real-life example "
 
   nodeNameNote =
     "Also, please add a meaningful name for your nodes using <code>TraceOptionNodeName</code> field"
     <> " in their configuration files. For example: <pre>" <> traceOptionNodeName <> "</pre>"
-
-  sshNote =
-    "If your <code>cardano-tracer</code> and your nodes are running on different machines, the only "
-    <> "way to connect them is SSH tunneling with your credentials."
 
 traceOptionNodeName :: String
 traceOptionNodeName = [s|

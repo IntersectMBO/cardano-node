@@ -22,11 +22,11 @@ updateBlockchainHistory
   -> IO ()
 updateBlockchainHistory nodeId (ChainHistory cHistory) metricName metricValue now =
   case metricName of
-    "cardano.node.density"     -> updateChainDensity
-    "cardano.node.slotNum"     -> updateSlotNum
-    "cardano.node.blockNum"    -> updateBlockNum
-    "cardano.node.slotInEpoch" -> updateSlotInEpoch
-    "cardano.node.epoch"       -> updateEpoch
+    "ChainDB.Density"     -> updateChainDensity
+    "ChainDB.SlotNum"     -> updateSlotNum
+    "ChainDB.BlockNum"    -> updateBlockNum
+    "ChainDB.SlotInEpoch" -> updateSlotInEpoch
+    "ChainDB.Epoch"       -> updateEpoch
     _ -> return ()
  where
   updateChainDensity =

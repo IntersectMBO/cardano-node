@@ -27,10 +27,12 @@ mkAboutInfo = do
     ["-c",       path] -> makeAbsolute path
     ["--config", path] -> makeAbsolute path
     _                  -> return ""
-  copyPath <- image "has-tooltip-multiline has-tooltip-top rt-view-copy-icon" copySVG
-                    # set dataTooltip "Click to copy the path"
+
+  copyPath <- UI.button #. "button is-info"
+                        #+ [image "rt-view-copy-icon-on-button" copySVG]
   on UI.click copyPath . const $
     copyTextToClipboard pathToConfig
+
   closeIt <- UI.button #. "delete"
   pid <- getProcessId
   info <-
@@ -56,11 +58,11 @@ mkAboutInfo = do
                           [ image "rt-view-overview-icon" platformSVG
                           , string "Platform"
                           ]
-                      , UI.p #. "mb-3" #+
+                      , UI.p #. "mb-3 mt-4" #+
                           [ image "rt-view-overview-icon" configSVG
                           , string "Configuration"
                           ]
-                      , UI.p #. "mb-1" #+
+                      , UI.p #. "mb-1 mt-4" #+
                           [ image "rt-view-overview-icon" serverSVG
                           , string "Process ID"
                           ]
@@ -83,11 +85,17 @@ mkAboutInfo = do
                                         | otherwise -> "Linux"
                           ]
                       , UI.p #. "mb-3" #+
-                          [ UI.span #. ("tag is-info is-light is-rounded is-medium mr-3"
-                                        <> " has-tooltip-multiline has-tooltip-top rt-view-logs-path")
-                                    # set dataTooltip "The path to configuration file"
-                                    # set text (shortenPath pathToConfig)
-                          , element copyPath
+                          [ UI.div #. "field has-addons" #+
+                              [ UI.p #. "control" #+
+                                  [ UI.input #. "input rt-view-logs-input"
+                                             # set UI.type_ "text"
+                                             # set (UI.attr "readonly") "readonly"
+                                             # set UI.value pathToConfig
+                                  ]
+                              , UI.p #. "control" #+
+                                  [ element copyPath
+                                  ]
+                              ]
                           ]
                       , UI.p #. "mb-1" #+
                           [ string $ show pid
