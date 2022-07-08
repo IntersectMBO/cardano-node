@@ -133,7 +133,7 @@ data ShelleyTxCmdError
   | ShelleyTxCmdTxExecUnitsErr !TransactionValidityError
   | ShelleyTxCmdPlutusScriptCostErr !PlutusScriptCostError
   | ShelleyTxCmdPParamExecutionUnitsNotAvailable
-  | ShelleyTxCmdTxCastErr Text
+  | ShelleyTxCmdTxCastErr String
 
 renderShelleyTxCmdError :: ShelleyTxCmdError -> Text
 renderShelleyTxCmdError err =
