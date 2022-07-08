@@ -434,7 +434,7 @@ instance ( ShelleyBasedEra era
     mconcat [ "kind" .= String "InvalidWitnessesUTXOW"
              , "invalidWitnesses" .= map textShow wits'
              ]
-  forMachine _dtal (MissingVKeyWitnessesUTXOW (WitHashes wits')) =
+  forMachine _dtal (MissingVKeyWitnessesUTXOW wits') =
     mconcat [ "kind" .= String "MissingVKeyWitnessesUTXOW"
              , "missingWitnesses" .= wits'
              ]

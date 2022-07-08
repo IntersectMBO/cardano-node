@@ -793,10 +793,6 @@ data TxBodyErrorAutoBalance =
        -- parameter, for eras that use this parameter.
      | TxBodyErrorMissingParamMinUTxO
 
-       -- | The 'ProtocolParameters' must provide the value for the cost per
-       -- word parameter, for eras that use this parameter.
-     | TxBodyErrorMissingParamCostPerWord
-
        -- | The transaction validity interval is too far into the future.
        -- See 'TransactionValidityIntervalError' for details.
      | TxBodyErrorValidityInterval TransactionValidityError
@@ -855,9 +851,6 @@ instance Error TxBodyErrorAutoBalance where
 
   displayError TxBodyErrorMissingParamMinUTxO =
       "The minUTxOValue protocol parameter is required but missing"
-
-  displayError TxBodyErrorMissingParamCostPerWord =
-      "The utxoCostPerWord protocol parameter is required but missing"
 
   displayError (TxBodyErrorValidityInterval err) =
       displayError err
@@ -1259,13 +1252,9 @@ calculateMinimumUTxO era txout@(TxOut _ v _ _) pparams' =
 
 data MinimumUTxOError =
     PParamsMinUTxOMissing
-  | PParamsUTxOCostPerWordMissing
   deriving Show
 
 instance Error MinimumUTxOError where
   displayError PParamsMinUTxOMissing =
     "\"minUtxoValue\" field not present in protocol parameters when \
-    \trying to calculate minimum UTxO value."
-  displayError PParamsUTxOCostPerWordMissing =
-    "\"utxoCostPerWord\" field not present in protocol parameters when \
     \trying to calculate minimum UTxO value."

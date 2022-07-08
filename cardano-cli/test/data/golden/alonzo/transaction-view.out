@@ -18,7 +18,7 @@ update proposal:
   updates:
   - genesis key hash: 1bafa294233a5a7ffbf539ae798da0943aa83d2a19398c2d0e5af114
     update:
-      UTxO storage cost per unit: 194 Lovelace
+      UTxO storage cost per word: 194 Lovelace
       collateral inputs share: 200%
       execution prices:
         memory: 196/197
