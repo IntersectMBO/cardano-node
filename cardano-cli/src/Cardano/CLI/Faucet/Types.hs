@@ -1,16 +1,19 @@
 {-# LANGUAGE ImportQualifiedPost #-}
+{-# LANGUAGE NamedFieldPuns #-}
 
 module Cardano.CLI.Faucet.Types where
 
-import Cardano.Api (AnyCardanoEra, TxBodyErrorAutoBalance, IsCardanoEra, TxIn, TxOut, CtxUTxO, NetworkId, TxInMode, CardanoMode, AnyConsensusMode)
+import Cardano.Api (AnyCardanoEra, TxBodyErrorAutoBalance, IsCardanoEra, TxIn, TxOut, CtxUTxO, NetworkId, TxInMode, CardanoMode, AnyConsensusMode, TxId, FileError)
 import Cardano.CLI.Environment (EnvSocketError)
-import Cardano.CLI.Shelley.Run.Transaction
-import Ouroboros.Consensus.Cardano.Block
-import Text.Parsec
+import Cardano.CLI.Shelley.Run.Address (SomeAddressVerificationKey)
+import Cardano.CLI.Shelley.Run.Transaction (ShelleyTxCmdError, TxFeature, SomeWitness, renderShelleyTxCmdError)
 import Cardano.Prelude
 import Control.Concurrent.STM (TMVar, TQueue)
-import Cardano.CLI.Shelley.Run.Address
-import Ouroboros.Network.Protocol.LocalStateQuery.Type
+import Data.Aeson (ToJSON(..), object, (.=))
+import Ouroboros.Consensus.Cardano.Block (EraMismatch)
+import Ouroboros.Network.Protocol.LocalStateQuery.Type (AcquireFailure)
+import Text.Parsec
+import Cardano.CLI.Shelley.Key
 
 data FaucetError = FaucetErrorInvalidAddress Text ParseError
   | FaucetErrorUtxoNotFound
@@ -22,14 +25,23 @@ data FaucetError = FaucetErrorInvalidAddress Text ParseError
   | FaucetErrorFeatureMismatch AnyCardanoEra TxFeature
   | FaucetErrorAcquireFailure AcquireFailure
   | FaucetErrorConsensusModeMismatchTxBalance AnyConsensusMode AnyCardanoEra
+  | FaucetErrorLoadingKey (FileError InputDecodeError)
 
 data IsCardanoEra era => FaucetState era = FaucetState
   { utxoTMVar :: TMVar (Map TxIn (TxOut CtxUTxO era))
   , network :: NetworkId
-  , queue :: TQueue (TxInMode CardanoMode)
+  , queue :: TQueue (TxInMode CardanoMode, ByteString)
   , skey :: SomeWitness
   , vkey :: SomeAddressVerificationKey
   }
+
+data SendMoneyReply = SendMoneyReply
+  { txid :: TxId
+  , txin :: TxIn
+  }
+
+instance ToJSON SendMoneyReply where
+  toJSON (SendMoneyReply{txid,txin}) = object [ "txid" .= txid, "txin" .= txin ]
 
 renderFaucetError :: FaucetError -> Text
 renderFaucetError (FaucetErrorInvalidAddress a b) = show a <> show b

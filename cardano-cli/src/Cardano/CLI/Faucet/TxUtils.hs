@@ -7,12 +7,12 @@ import Control.Monad.Trans.Except.Extra (firstExceptT, left, newExceptT, hoistEi
 import Cardano.CLI.Environment (readEnvSocketPath)
 import Cardano.Prelude
 import System.IO qualified as IO
-import Prelude qualified
-import Data.Map.Strict qualified as Map
-import Cardano.CLI.Faucet.Types
-import Cardano.CLI.Types
+import Cardano.CLI.Faucet.Types (FaucetError(..))
 import Cardano.CLI.Faucet.Utils
 import Cardano.CLI.Shelley.Run.Transaction
+import Cardano.CLI.Types
+import Data.Map.Strict qualified as Map
+import Prelude qualified
 
 txBuild :: IsShelleyBasedEra era
   => ShelleyBasedEra era

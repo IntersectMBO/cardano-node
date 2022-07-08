@@ -14,7 +14,7 @@
 
 module Cardano.CLI.Faucet (main) where
 
-import Cardano.Api (TxInMode, CardanoMode, AddressAny(AddressByron, AddressShelley), CardanoEra, EraInMode, IsShelleyBasedEra, ShelleyBasedEra, QueryInMode(QueryInEra, QueryCurrentEra), UTxO(unUTxO), QueryUTxOFilter(QueryUTxOByAddress), BlockInMode, ChainPoint, AnyCardanoEra(AnyCardanoEra), CardanoEraStyle(ShelleyBasedEra), LocalNodeConnectInfo(LocalNodeConnectInfo), LocalNodeClientProtocols(LocalNodeClientProtocols, localChainSyncClient, localStateQueryClient, localTxSubmissionClient, localTxMonitoringClient), NetworkId(Testnet), NetworkMagic(NetworkMagic), toEraInMode, ConsensusMode(CardanoMode), makeByronAddress, castVerificationKey, QueryInEra(QueryInShelleyBasedEra), QueryInShelleyBasedEra(QueryUTxO), LocalStateQueryClient(LocalStateQueryClient), ConsensusModeIsMultiEra(CardanoModeIsMultiEra), cardanoEraStyle, connectToLocalNode, LocalChainSyncClient(NoLocalChainSyncClient))
+import Cardano.Api (TxInMode, CardanoMode, AddressAny(AddressByron, AddressShelley), CardanoEra, EraInMode, IsShelleyBasedEra, ShelleyBasedEra, QueryInMode(QueryInEra, QueryCurrentEra), UTxO(unUTxO), QueryUTxOFilter(QueryUTxOByAddress), BlockInMode, ChainPoint, AnyCardanoEra(AnyCardanoEra), CardanoEraStyle(ShelleyBasedEra), LocalNodeConnectInfo(LocalNodeConnectInfo), LocalNodeClientProtocols(LocalNodeClientProtocols, localChainSyncClient, localStateQueryClient, localTxSubmissionClient, localTxMonitoringClient), NetworkId(Testnet), NetworkMagic(NetworkMagic), toEraInMode, ConsensusMode(CardanoMode), makeByronAddress, castVerificationKey, QueryInEra(QueryInShelleyBasedEra), QueryInShelleyBasedEra(QueryUTxO), LocalStateQueryClient(LocalStateQueryClient), ConsensusModeIsMultiEra(CardanoModeIsMultiEra), cardanoEraStyle, connectToLocalNode, LocalChainSyncClient(NoLocalChainSyncClient), SigningKey, AsType(AsSigningKey, AsPaymentKey), FromSomeType(FromSomeType), PaymentKey, getVerificationKey)
 import Cardano.Api.Byron ()
 import Cardano.Api.Shelley ()
 import Cardano.CLI.Environment (readEnvSocketPath, renderEnvSocketError)
@@ -37,9 +37,10 @@ import Ouroboros.Consensus.HardFork.Combinator.AcrossEras (EraMismatch)
 import Ouroboros.Network.Protocol.LocalStateQuery.Client qualified as Net.Query
 import Ouroboros.Network.Protocol.LocalStateQuery.Type ()
 import Ouroboros.Network.Protocol.LocalTxSubmission.Client qualified as Net.Tx
-import Prelude qualified (show, error)
+import Prelude qualified
 import Servant
 import System.Environment (lookupEnv)
+import Control.Monad.Trans.Except.Extra (left)
 
 testnet :: NetworkId
 testnet = Testnet $ NetworkMagic 1097911063
@@ -129,93 +130,104 @@ startApiServer era sbe faucetState = do
 main :: IO ()
 main = do
   txQueue <- newTQueueIO
-  pay_skey <- bar
-  pay_vkey <- loadvkey "/home/clever/iohk/cardano-node/pay.vkey"
+  --pay_skey <- bar
+  --pay_vkey <- loadvkey "/home/clever/iohk/cardano-node/pay.vkey"
   -- note:
   -- getVerificationKey :: Key keyrole => SigningKey keyrole -> VerificationKey keyrole
   let
     net = testnet
   dryRun <- maybe False (== "1") <$> lookupEnv "DRY_RUN"
-  SocketPath sockPath <- orDie renderEnvSocketError readEnvSocketPath
-  let
-    localNodeConnInfo = LocalNodeConnectInfo defaultCModeParams net sockPath
-    getUtxoQuery :: AddressAny -> ShelleyBasedEra era2 -> Maybe (EraInMode era2 mode) ->  QueryInMode mode (Either EraMismatch (UTxO era2))
-    getUtxoQuery _address _sbe Nothing = Prelude.error "not handled"
-    getUtxoQuery address sbe (Just eInMode) = QueryInEra eInMode query
-      where
-        qfilter :: QueryUTxOFilter
-        qfilter = QueryUTxOByAddress $ Set.singleton address
-        query   = QueryInShelleyBasedEra sbe (QueryUTxO qfilter)
-  let
-    aquireConnection aquireComplete = do
-      pure $ Net.Query.SendMsgAcquire Nothing $ Net.Query.ClientStAcquiring
-        { Net.Query.recvMsgAcquired = aquireComplete
-        , Net.Query.recvMsgFailure = Prelude.error "not implemented"
-        }
-    runQueryThen :: query t -> (t -> IO (Net.Query.ClientStAcquired block point query IO a)) -> IO (Net.Query.ClientStAcquired block point query IO a)
-    runQueryThen query queryDone = do
-      pure $ Net.Query.SendMsgQuery query $
-        Net.Query.ClientStQuerying {
-          Net.Query.recvMsgResult = \result -> do
-            queryDone result
-        }
-    queryClient :: Net.Query.LocalStateQueryClient (BlockInMode CardanoMode) ChainPoint (QueryInMode CardanoMode) IO ()
-    queryClient = LocalStateQueryClient $ do
-      aquireConnection $ do
-        runQueryThen (QueryCurrentEra CardanoModeIsMultiEra) $ \(AnyCardanoEra era3) -> do
-          tmvar <- newEmptyTMVarIO
-          let
-            faucetState = FaucetState
-              { utxoTMVar = tmvar
-              , network = net
-              , queue = txQueue
-              , skey = pay_skey
-              , vkey = pay_vkey
-              }
-          addressAny <- orDie (T.pack . Prelude.show) $ vkeyToAddr (network faucetState) pay_vkey
-          print addressAny
-          putStrLn @Text "new era"
-          print era3
-          case cardanoEraStyle era3 of
-            ShelleyBasedEra sbe -> do
-              _child <- forkIO $ startApiServer era3 sbe faucetState
-              runQueryThen (getUtxoQuery addressAny sbe (toEraInMode era3 CardanoMode)) $ \case
-                Right result -> do
-                  let
-                    --reduceTxo :: TxOut ctx era -> (Lovelace, TxOut ctx era)
-                    --reduceTxo out@(TxOut _ value _ _) = (getValue value, out)
-                    --reducedUtxo :: Map TxIn (Lovelace, TxOut CtxUTxO era)
-                    --reducedUtxo = Map.map reduceTxo $ unUTxO result
-                  --atomically $ putTMVar utxoTMVar $ unUTxO result
-                  atomically $ putTMVar (utxoTMVar faucetState) (unUTxO result)
-                  putStrLn @Text "utxo set initialized"
-                  --print result
-                  void . forever $ threadDelay 43200 {- day in seconds -}
-                  pure $ Net.Query.SendMsgRelease $
-                    pure $ Net.Query.SendMsgDone ()
-                Left _e -> Prelude.error "not handled"
-            _ -> Prelude.error "not handled"
-    waitForTxAndLoop :: IO (Net.Tx.LocalTxClientStIdle (TxInMode CardanoMode) reject IO a)
-    waitForTxAndLoop = do
-      tx <- atomically $ readTQueue txQueue
-      case dryRun of
-        True -> do
-          putStrLn @Text "dry-run, not sending the following tx:"
-          print tx
-          waitForTxAndLoop
-        False -> pure $ Net.Tx.SendMsgSubmitTx tx $ \_result -> do
-          --print result
-          waitForTxAndLoop
-    submissionClient = Net.Tx.LocalTxSubmissionClient waitForTxAndLoop
+  eResult <- runExceptT $ do
+    pay_skey <- foo "/home/clever/iohk/cardano-node/pay.skey"
+    let pay_vkey = getVerificationKey pay_skey
+    print "vkeys"
+    print pay_vkey
+    print "skey"
+    print pay_skey
+    SocketPath sockPath <- withExceptT FaucetErrorSocketNotFound readEnvSocketPath
+    let
+      localNodeConnInfo :: LocalNodeConnectInfo CardanoMode
+      localNodeConnInfo = LocalNodeConnectInfo defaultCModeParams net sockPath
+      aquireConnection aquireComplete = do
+        pure $ Net.Query.SendMsgAcquire Nothing $ Net.Query.ClientStAcquiring
+          { Net.Query.recvMsgAcquired = aquireComplete
+          , Net.Query.recvMsgFailure = Prelude.error "not implemented"
+          }
+      runQueryThen :: query t -> (t -> IO (Net.Query.ClientStAcquired block point query IO a)) -> IO (Net.Query.ClientStAcquired block point query IO a)
+      runQueryThen query queryDone = do
+        pure $ Net.Query.SendMsgQuery query $
+          Net.Query.ClientStQuerying {
+            Net.Query.recvMsgResult = \result -> do
+              queryDone result
+          }
+      getUtxoQuery :: AddressAny -> ShelleyBasedEra era2 -> Maybe (EraInMode era2 mode) ->  QueryInMode mode (Either EraMismatch (UTxO era2))
+      getUtxoQuery _address _sbe Nothing = Prelude.error "not handled"
+      getUtxoQuery address sbe (Just eInMode) = QueryInEra eInMode query
+        where
+          qfilter :: QueryUTxOFilter
+          qfilter = QueryUTxOByAddress $ Set.singleton address
+          query   = QueryInShelleyBasedEra sbe (QueryUTxO qfilter)
 
-  connectToLocalNode
-    localNodeConnInfo
-    LocalNodeClientProtocols
-      { localChainSyncClient    = NoLocalChainSyncClient
-      , localStateQueryClient   = Just queryClient
-      , localTxSubmissionClient = Just submissionClient
-      , localTxMonitoringClient = Nothing
-    }
+      queryClient :: Net.Query.LocalStateQueryClient (BlockInMode CardanoMode) ChainPoint (QueryInMode CardanoMode) IO ()
+      queryClient = LocalStateQueryClient $ do
+        aquireConnection $ do
+          runQueryThen (QueryCurrentEra CardanoModeIsMultiEra) $ \(AnyCardanoEra era3) -> do
+            tmvar <- newEmptyTMVarIO
+            let
+              faucetState = FaucetState
+                { utxoTMVar = tmvar
+                , network = net
+                , queue = txQueue
+                , skey = APaymentSigningKey pay_skey
+                , vkey = APaymentVerificationKey pay_vkey
+                }
+            addressAny <- orDie (T.pack . Prelude.show) $ vkeyToAddr (network faucetState) (vkey faucetState)
+            print addressAny
+            putStrLn @Text "new era"
+            print era3
+            case cardanoEraStyle era3 of
+              ShelleyBasedEra sbe -> do
+                _child <- forkIO $ startApiServer era3 sbe faucetState
+                runQueryThen (getUtxoQuery addressAny sbe (toEraInMode era3 CardanoMode)) $ \case
+                  Right result -> do
+                    let
+                      --reduceTxo :: TxOut ctx era -> (Lovelace, TxOut ctx era)
+                      --reduceTxo out@(TxOut _ value _ _) = (getValue value, out)
+                      --reducedUtxo :: Map TxIn (Lovelace, TxOut CtxUTxO era)
+                      --reducedUtxo = Map.map reduceTxo $ unUTxO result
+                    --atomically $ putTMVar utxoTMVar $ unUTxO result
+                    atomically $ putTMVar (utxoTMVar faucetState) (unUTxO result)
+                    putStrLn @Text "utxo set initialized"
+                    void . forever $ threadDelay 43200 {- day in seconds -}
+                    pure $ Net.Query.SendMsgRelease $
+                      pure $ Net.Query.SendMsgDone ()
+                  Left _e -> Prelude.error "not handled"
+              _ -> Prelude.error "not handled"
+      waitForTxAndLoop :: IO (Net.Tx.LocalTxClientStIdle (TxInMode CardanoMode) reject IO a)
+      waitForTxAndLoop = do
+        (tx, prettyTx) <- atomically $ readTQueue txQueue
+        case dryRun of
+          True -> do
+            putStrLn @Text "dry-run, not sending the following tx:"
+            putStrLn prettyTx
+            waitForTxAndLoop
+          False -> pure $ Net.Tx.SendMsgSubmitTx tx $ \_result -> do
+            --print result
+            waitForTxAndLoop
+      submissionClient = Net.Tx.LocalTxSubmissionClient waitForTxAndLoop
+
+    liftIO $ connectToLocalNode
+      localNodeConnInfo
+      LocalNodeClientProtocols
+        { localChainSyncClient    = NoLocalChainSyncClient
+        , localStateQueryClient   = Just queryClient
+        , localTxSubmissionClient = Just submissionClient
+        , localTxMonitoringClient = Nothing
+      }
+  case eResult of
+    Right msg -> print msg
+    Left err -> putStrLn $ renderFaucetError err
+
 
 -- | Construct a Shelley bootstrap witness (i.e. a Byron key witness in the
 -- Shelley era).
@@ -253,3 +265,9 @@ bar = do
     foo = KeyWitnessSigningData (SigningKeyFile "/home/clever/iohk/cardano-node/pay.skey") Nothing
   orDie (T.pack . Prelude.show) $ readWitnessSigningData foo
 
+foo :: FilePath -> ExceptT FaucetError IO (SigningKey PaymentKey)
+foo skey_path = do
+  eResult <- liftIO $ readSigningKeyFileAnyOf [] [ FromSomeType (AsSigningKey AsPaymentKey) Prelude.id ] $ SigningKeyFile skey_path
+  case eResult of
+    Left err -> left $ FaucetErrorLoadingKey err
+    Right key -> pure key
