@@ -207,11 +207,9 @@ instance LogFormatting TracePublicRootPeers where
              ]
   forHuman = pack . show
 
-docPublicRootPeers :: Documented TracePublicRootPeers
-docPublicRootPeers =  addDocumentedNamespace  ["PublicRootPeers"] docPublicRootPeers'
 
-docPublicRootPeers' :: Documented TracePublicRootPeers
-docPublicRootPeers' = Documented [
+docPublicRootPeers :: Documented TracePublicRootPeers
+docPublicRootPeers = Documented [
     DocMsg
       ["PublicRootRelayAccessPoint"]
       []
@@ -623,7 +621,7 @@ instance Show peerConn => LogFormatting (DebugPeerSelection SockAddr peerConn) w
 docDebugPeerSelection :: Documented (DebugPeerSelection SockAddr peerConn)
 docDebugPeerSelection = Documented
   [  DocMsg
-      ["DebugPeerSelection", "GovernorState"]
+      ["GovernorState"]
       []
       ""
   ]
@@ -644,23 +642,23 @@ instance LogFormatting PeerSelectionCounters where
   forHuman = pack . show
   asMetrics PeerSelectionCounters {..} =
     [ IntM
-        "cardano.node.peerSelection.cold"
+        "Net.PeerSelection.Cold"
         (fromIntegral coldPeers)
     , IntM
-        "cardano.node.peerSelection.warm"
+        "Net.PeerSelection.Warm"
         (fromIntegral warmPeers)
     , IntM
-        "cardano.node.peerSelection.hot"
+        "Net.PeerSelection.Hot"
         (fromIntegral hotPeers)
       ]
 
 docPeerSelectionCounters :: Documented PeerSelectionCounters
 docPeerSelectionCounters = Documented
   [  DocMsg
-      ["PeerSelectionCounters"]
-      [ ("cardano.node.peerSelection.cold", "Number of cold peers")
-      , ("cardano.node.peerSelection.warm", "Number of warm peers")
-      , ("cardano.node.peerSelection.hot", "Number of hot peers") ]
+      []
+      [ ("Net.PeerSelection.Cold", "Number of cold peers")
+      , ("Net.PeerSelection.Warm", "Number of warm peers")
+      , ("Net.PeerSelection.Hot", "Number of hot peers") ]
       "Counters for cold, warm and hot peers"
   ]
 
@@ -928,19 +926,19 @@ instance (Show addr, Show versionNumber, Show agreedOptions, LogFormatting addr,
     forHuman = pack . show
     asMetrics (TrConnectionManagerCounters ConnectionManagerCounters {..}) =
           [ IntM
-              "cardano.node.connectionManager.fullDuplexConns"
+              "Net.ConnectionManager.FullDuplexConns"
               (fromIntegral fullDuplexConns)
           , IntM
-              "cardano.node.connectionManager.duplexConns"
+              "Net.ConnectionManager.DuplexConns"
               (fromIntegral duplexConns)
           , IntM
-              "cardano.node.connectionManager.unidirectionalConns"
+              "Net.ConnectionManager.UnidirectionalConns"
               (fromIntegral unidirectionalConns)
           , IntM
-              "cardano.node.connectionManager.inboundConns"
+              "Net.ConnectionManager.InboundConns"
               (fromIntegral inboundConns)
           , IntM
-              "cardano.node.connectionManager.outboundConns"
+              "Net.ConnectionManager.OutboundConns"
               (fromIntegral outboundConns)
             ]
     asMetrics _ = []
@@ -1060,11 +1058,11 @@ docConnectionManager' = Documented
       ""
   ,  DocMsg
       ["ConnectionManagerCounters"]
-      [("cardano.node.connectionManager.fullDuplexConns","")
-      ,("cardano.node.connectionManager.duplexConns","")
-      ,("cardano.node.connectionManager.unidirectionalConns","")
-      ,("cardano.node.connectionManager.inboundConns","")
-      ,("cardano.node.connectionManager.outboundConns","")
+      [("Net.ConnectionManager.FullDuplexConns","")
+      ,("Net.ConnectionManager.DuplexConns","")
+      ,("Net.ConnectionManager.UnidirectionalConns","")
+      ,("Net.ConnectionManager.InboundConns","")
+      ,("Net.ConnectionManager.OutboundConns","")
       ]
       ""
   ,  DocMsg
@@ -1073,10 +1071,6 @@ docConnectionManager' = Documented
       ""
   ,  DocMsg
       ["UnexpectedlyFalseAssertion"]
-      []
-      ""
-  ,  DocMsg
-      ["UnknownConnection"]
       []
       ""
   ]
@@ -1238,8 +1232,7 @@ severityInboundGovernor TrRemoteState {}                                = Debug
 severityInboundGovernor InboundGovernor.TrUnexpectedlyFalseAssertion {} = Error
 severityInboundGovernor InboundGovernor.TrInboundGovernorError {}       = Error
 
-instance (ToJSON addr, Show addr)
-      => LogFormatting (InboundGovernorTrace addr) where
+instance LogFormatting (InboundGovernorTrace LocalAddress) where
   forMachine _dtal (TrNewConnection p connId)            =
     mconcat [ "kind" .= String "NewConnection"
              , "provenance" .= show p
@@ -1326,33 +1319,133 @@ instance (ToJSON addr, Show addr)
   forHuman = pack . show
   asMetrics (TrInboundGovernorCounters InboundGovernorCounters {..}) =
             [ IntM
-                "cardano.node.inbound-governor.idle"
+                "Net.LocalInboundGovernor.Idle"
                 (fromIntegral idlePeersRemote)
             , IntM
-                "cardano.node.inbound-governor.cold"
+                "Net.LocalInboundGovernor.Cold"
                 (fromIntegral coldPeersRemote)
             , IntM
-                "cardano.node.inbound-governor.warm"
+                "Net.LocalInboundGovernor.Warm"
                 (fromIntegral warmPeersRemote)
             , IntM
-                "cardano.node.inbound-governor.hot"
+                "Net.LocalInboundGovernor.Hot"
                 (fromIntegral hotPeersRemote)
               ]
   asMetrics _ = []
 
+instance LogFormatting (InboundGovernorTrace SockAddr) where
+  forMachine _dtal (TrNewConnection p connId)            =
+    mconcat [ "kind" .= String "NewConnection"
+             , "provenance" .= show p
+             , "connectionId" .= toJSON connId
+             ]
+  forMachine _dtal (TrResponderRestarted connId m)       =
+    mconcat [ "kind" .= String "ResponderStarted"
+             , "connectionId" .= toJSON connId
+             , "miniProtocolNum" .= toJSON m
+             ]
+  forMachine _dtal (TrResponderStartFailure connId m s)  =
+    mconcat [ "kind" .= String "ResponderStartFailure"
+             , "connectionId" .= toJSON connId
+             , "miniProtocolNum" .= toJSON m
+             , "reason" .= show s
+             ]
+  forMachine _dtal (TrResponderErrored connId m s)       =
+    mconcat [ "kind" .= String "ResponderErrored"
+             , "connectionId" .= toJSON connId
+             , "miniProtocolNum" .= toJSON m
+             , "reason" .= show s
+             ]
+  forMachine _dtal (TrResponderStarted connId m)         =
+    mconcat [ "kind" .= String "ResponderStarted"
+             , "connectionId" .= toJSON connId
+             , "miniProtocolNum" .= toJSON m
+             ]
+  forMachine _dtal (TrResponderTerminated connId m)      =
+    mconcat [ "kind" .= String "ResponderTerminated"
+             , "connectionId" .= toJSON connId
+             , "miniProtocolNum" .= toJSON m
+             ]
+  forMachine _dtal (TrPromotedToWarmRemote connId opRes) =
+    mconcat [ "kind" .= String "PromotedToWarmRemote"
+             , "connectionId" .= toJSON connId
+             , "result" .= toJSON opRes
+             ]
+  forMachine _dtal (TrPromotedToHotRemote connId)        =
+    mconcat [ "kind" .= String "PromotedToHotRemote"
+             , "connectionId" .= toJSON connId
+             ]
+  forMachine _dtal (TrDemotedToColdRemote connId od)     =
+    mconcat [ "kind" .= String "DemotedToColdRemote"
+             , "connectionId" .= toJSON connId
+             , "result" .= show od
+             ]
+  forMachine _dtal (TrDemotedToWarmRemote connId)     =
+    mconcat [ "kind" .= String "DemotedToWarmRemote"
+             , "connectionId" .= toJSON connId
+             ]
+  forMachine _dtal (TrWaitIdleRemote connId opRes) =
+    mconcat [ "kind" .= String "WaitIdleRemote"
+             , "connectionId" .= toJSON connId
+             , "result" .= toJSON opRes
+             ]
+  forMachine _dtal (TrMuxCleanExit connId)               =
+    mconcat [ "kind" .= String "MuxCleanExit"
+             , "connectionId" .= toJSON connId
+             ]
+  forMachine _dtal (TrMuxErrored connId s)               =
+    mconcat [ "kind" .= String "MuxErrored"
+             , "connectionId" .= toJSON connId
+             , "reason" .= show s
+             ]
+  forMachine _dtal (TrInboundGovernorCounters counters) =
+    mconcat [ "kind" .= String "InboundGovernorCounters"
+             , "idlePeers" .= idlePeersRemote counters
+             , "coldPeers" .= coldPeersRemote counters
+             , "warmPeers" .= warmPeersRemote counters
+             , "hotPeers" .= hotPeersRemote counters
+             ]
+  forMachine _dtal (TrRemoteState st) =
+    mconcat [ "kind" .= String "RemoteState"
+             , "remoteSt" .= toJSON st
+             ]
+  forMachine _dtal (InboundGovernor.TrUnexpectedlyFalseAssertion info) =
+    mconcat [ "kind" .= String "UnexpectedlyFalseAssertion"
+             , "remoteSt" .= String (pack . show $ info)
+             ]
+  forMachine _dtal (InboundGovernor.TrInboundGovernorError err) =
+    mconcat [ "kind" .= String "InboundGovernorError"
+             , "remoteSt" .= String (pack . show $ err)
+             ]
+  forHuman = pack . show
+  asMetrics (TrInboundGovernorCounters InboundGovernorCounters {..}) =
+            [ IntM
+                "Net.InboundGovernor.Idle"
+                (fromIntegral idlePeersRemote)
+            , IntM
+                "Net.InboundGovernor.Cold"
+                (fromIntegral coldPeersRemote)
+            , IntM
+                "Net.InboundGovernor.Warm"
+                (fromIntegral warmPeersRemote)
+            , IntM
+                "Net.InboundGovernor.Hot"
+                (fromIntegral hotPeersRemote)
+              ]
+  asMetrics _ = []
 
 docInboundGovernorLocal ::
    Documented (InboundGovernorTrace LocalAddress)
 docInboundGovernorLocal =
-    addDocumentedNamespace  [] docInboundGovernor
+    addDocumentedNamespace  [] (docInboundGovernor True)
 
 docInboundGovernorRemote ::
    Documented (InboundGovernorTrace SockAddr)
 docInboundGovernorRemote =
-    addDocumentedNamespace  [] docInboundGovernor
+    addDocumentedNamespace  [] (docInboundGovernor False)
 
-docInboundGovernor :: Documented (InboundGovernorTrace peerAddr)
-docInboundGovernor = Documented
+docInboundGovernor :: Bool -> Documented (InboundGovernorTrace peerAddr)
+docInboundGovernor isLocal = Documented
   [  DocMsg
       ["NewConnection"]
       []
@@ -1409,11 +1502,19 @@ docInboundGovernor = Documented
       ""
   ,  DocMsg
       ["InboundGovernorCounters"]
-      [("cardano.node.inbound-governor.idle","")
-      ,("cardano.node.inbound-governor.cold","")
-      ,("cardano.node.inbound-governor.warm","")
-      ,("cardano.node.inbound-governor.hot","")
-      ]
+      (if isLocal 
+        then
+          [("Net.LocalInboundGovernor.Idle","")
+          ,("Net.LocalInboundGovernor.Cold","")
+          ,("Net.LocalInboundGovernor.Warm","")
+          ,("Net.LocalInboundGovernor.Hot","")
+          ]          
+        else 
+          [("Net.InboundGovernor.Idle","")
+          ,("Net.InboundGovernor.Cold","")
+          ,("Net.InboundGovernor.Warm","")
+          ,("Net.InboundGovernor.Hot","")
+          ])
       ""
   ,  DocMsg
       ["RemoteState"]

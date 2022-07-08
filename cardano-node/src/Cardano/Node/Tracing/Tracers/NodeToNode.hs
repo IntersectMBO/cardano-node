@@ -84,7 +84,7 @@ severityTChainSyncNode (BlockFetch.TraceLabelPeer _ v) = severityTChainSync' v
 
 namesForTChainSyncNode :: BlockFetch.TraceLabelPeer peer (TraceSendRecv
     (ChainSync (Header blk) (Point blk) (Tip blk))) -> [Text]
-namesForTChainSyncNode (BlockFetch.TraceLabelPeer _ v) = "NodeToNode" : namesTChainSync v
+namesForTChainSyncNode (BlockFetch.TraceLabelPeer _ v) = namesTChainSync v
   where
 
     namesTChainSync (TraceSendMsg msg) = "Send" : namesTChainSync' msg
@@ -130,8 +130,7 @@ severityTChainSyncSerialised (BlockFetch.TraceLabelPeer _ v) = severityTChainSyn
 
 namesForTChainSyncSerialised :: BlockFetch.TraceLabelPeer peer (TraceSendRecv
     (ChainSync (SerialisedHeader blk) (Point blk) (Tip blk))) -> [Text]
-namesForTChainSyncSerialised (BlockFetch.TraceLabelPeer _ v) =
-  "NodeToNode" : namesTChainSync v
+namesForTChainSyncSerialised (BlockFetch.TraceLabelPeer _ v) = namesTChainSync v
   where
     namesTChainSync (TraceSendMsg msg) = "Send" : namesTChainSync' msg
     namesTChainSync (TraceRecvMsg msg) = "Receive" : namesTChainSync' msg
@@ -173,8 +172,7 @@ severityTBlockFetch (BlockFetch.TraceLabelPeer _ v) = severityTBlockFetch' v
 
 namesForTBlockFetch :: BlockFetch.TraceLabelPeer peer
   (TraceSendRecv (BlockFetch blk (Point blk))) -> [Text]
-namesForTBlockFetch (BlockFetch.TraceLabelPeer _ v) =
-  "NodeToNode" : namesTBlockFetch v
+namesForTBlockFetch (BlockFetch.TraceLabelPeer _ v) = namesTBlockFetch v
   where
     namesTBlockFetch (TraceSendMsg msg) = "Send" : namesTBlockFetch' msg
     namesTBlockFetch (TraceRecvMsg msg) = "Receive" : namesTBlockFetch' msg
@@ -244,8 +242,8 @@ docTBlockFetch :: Documented
       (TraceSendRecv
         (BlockFetch x (Point blk))))
 docTBlockFetch =
-  addDocumentedNamespace  ["NodeToNode", "Send"] docTBlockFetch'
-  `addDocs` addDocumentedNamespace  ["NodeToNode", "Recieve"] docTBlockFetch'
+  addDocumentedNamespace  ["Send"] docTBlockFetch'
+  `addDocs` addDocumentedNamespace  ["Receive"] docTBlockFetch'
 
 docTBlockFetch' :: Documented
       (BlockFetch.TraceLabelPeer peer
@@ -302,8 +300,7 @@ severityTBlockFetchSerialised (BlockFetch.TraceLabelPeer _ v) = severityTBlockFe
 
 namesForTBlockFetchSerialised :: BlockFetch.TraceLabelPeer peer
   (TraceSendRecv (BlockFetch (Serialised blk) (Point blk))) -> [Text]
-namesForTBlockFetchSerialised (BlockFetch.TraceLabelPeer _ v) =
-  "NodeToNode" : namesTBlockFetch v
+namesForTBlockFetchSerialised (BlockFetch.TraceLabelPeer _ v) = namesTBlockFetch v
   where
     namesTBlockFetch (TraceSendMsg msg) = "Send" : namesTBlockFetch' msg
     namesTBlockFetch (TraceRecvMsg msg) = "Receive" : namesTBlockFetch' msg
@@ -400,7 +397,7 @@ severityTxSubmissionNode (BlockFetch.TraceLabelPeer _ v) = severityTxSubNode v
 namesForTxSubmissionNode :: BlockFetch.TraceLabelPeer peer
   (TraceSendRecv (TXS.TxSubmission2 (GenTxId blk) (GenTx blk))) -> [Text]
 namesForTxSubmissionNode (BlockFetch.TraceLabelPeer _ v) =
-  "NodeToNode" : namesTxSubNode v
+  namesTxSubNode v
   where
     namesTxSubNode (TraceSendMsg msg) = "Send" : namesTxSubNode' msg
     namesTxSubNode (TraceRecvMsg msg) = "Receive" : namesTxSubNode' msg
@@ -461,8 +458,8 @@ docTTxSubmissionNode :: Documented
     (TraceSendRecv
       (TXS.TxSubmission2 (GenTxId blk) (GenTx blk))))
 docTTxSubmissionNode =
-  addDocumentedNamespace  ["NodeToNode", "Send"] docTTxSubmissionNode'
-  `addDocs` addDocumentedNamespace  ["NodeToNode", "Recieve"] docTTxSubmissionNode'
+  addDocumentedNamespace  ["Send"] docTTxSubmissionNode'
+  `addDocs` addDocumentedNamespace  ["Receive"] docTTxSubmissionNode'
 
 docTTxSubmissionNode' :: Documented
   (BlockFetch.TraceLabelPeer peer
@@ -472,66 +469,66 @@ docTTxSubmissionNode' = Documented [
       DocMsg
         ["RequestTxIds"]
         []
-        "Request a non-empty list of transaction identifiers from the client,\
-        \and confirm a number of outstanding transaction identifiers.\
+        "Request a non-empty list of transaction identifiers from the client, \
+        \and confirm a number of outstanding transaction identifiers. \
+        \\n \
+        \With 'TokBlocking' this is a a blocking operation: the response will \
+        \always have at least one transaction identifier, and it does not expect \
+        \a prompt response: there is no timeout. This covers the case when there \
+        \is nothing else to do but wait. For example this covers leaf nodes that \
+        \rarely, if ever, create and submit a transaction. \
+        \\n \
+        \With 'TokNonBlocking' this is a non-blocking operation: the response \
+        \may be an empty list and this does expect a prompt response. This \
+        \covers high throughput use cases where we wish to pipeline, by \
+        \interleaving requests for additional transaction identifiers with \
+        \requests for transactions, which requires these requests not block. \
+        \\n \
+        \The request gives the maximum number of transaction identifiers that \
+        \can be accepted in the response. This must be greater than zero in the \
+        \'TokBlocking' case. In the 'TokNonBlocking' case either the numbers \
+        \acknowledged or the number requested must be non-zero. In either case, \
+        \the number requested must not put the total outstanding over the fixed \
+        \protocol limit. \
         \\n\
-        \With 'TokBlocking' this is a a blocking operation: the response will\
-        \always have at least one transaction identifier, and it does not expect\
-        \a prompt response: there is no timeout. This covers the case when there\
-        \is nothing else to do but wait. For example this covers leaf nodes that\
-        \rarely, if ever, create and submit a transaction.\
-        \\n\
-        \With 'TokNonBlocking' this is a non-blocking operation: the response\
-        \may be an empty list and this does expect a prompt response. This\
-        \covers high throughput use cases where we wish to pipeline, by\
-        \interleaving requests for additional transaction identifiers with\
-        \requests for transactions, which requires these requests not block.\
-        \\n\
-        \The request gives the maximum number of transaction identifiers that\
-        \can be accepted in the response. This must be greater than zero in the\
-        \'TokBlocking' case. In the 'TokNonBlocking' case either the numbers\
-        \acknowledged or the number requested must be non-zero. In either case,\
-        \the number requested must not put the total outstanding over the fixed\
-        \protocol limit.\
-        \\n\
-        \The request also gives the number of outstanding transaction\
-        \identifiers that can now be acknowledged. The actual transactions\
-        \to acknowledge are known to the peer based on the FIFO order in which\
-        \they were provided.\
-        \\n\
-        \There is no choice about when to use the blocking case versus the\
-        \non-blocking case, it depends on whether there are any remaining\
-        \unacknowledged transactions (after taking into account the ones\
-        \acknowledged in this message):\
-        \\n\
-        \* The blocking case must be used when there are zero remaining\
-        \  unacknowledged transactions.\
-        \\n\
-        \* The non-blocking case must be used when there are non-zero remaining\
+        \The request also gives the number of outstanding transaction \
+        \identifiers that can now be acknowledged. The actual transactions \
+        \to acknowledge are known to the peer based on the FIFO order in which \
+        \they were provided. \
+        \\n \
+        \There is no choice about when to use the blocking case versus the \
+        \non-blocking case, it depends on whether there are any remaining \
+        \unacknowledged transactions (after taking into account the ones \
+        \acknowledged in this message): \
+        \\n \
+        \* The blocking case must be used when there are zero remaining \
+        \  unacknowledged transactions. \
+        \\n \
+        \* The non-blocking case must be used when there are non-zero remaining \
         \  unacknowledged transactions."
     , DocMsg
         ["ReplyTxIds"]
         []
-        "Reply with a list of transaction identifiers for available\
-        \transactions, along with the size of each transaction.\
-        \\n\
-        \The list must not be longer than the maximum number requested.\
-        \\n\
-        \In the 'StTxIds' 'StBlocking' state the list must be non-empty while\
-        \in the 'StTxIds' 'StNonBlocking' state the list may be empty.\
-        \\n\
-        \These transactions are added to the notional FIFO of outstanding\
-        \transaction identifiers for the protocol.\
-        \\n\
-        \The order in which these transaction identifiers are returned must be\
-        \the order in which they are submitted to the mempool, to preserve\
+        "Reply with a list of transaction identifiers for available \
+        \transactions, along with the size of each transaction. \
+        \\n \
+        \The list must not be longer than the maximum number requested. \
+        \\n \
+        \In the 'StTxIds' 'StBlocking' state the list must be non-empty while \
+        \in the 'StTxIds' 'StNonBlocking' state the list may be empty. \
+        \\n \
+        \These transactions are added to the notional FIFO of outstanding \
+        \transaction identifiers for the protocol. \
+        \\n \
+        \The order in which these transaction identifiers are returned must be \
+        \the order in which they are submitted to the mempool, to preserve \
         \dependent transactions."
     , DocMsg
         ["RequestTxs"]
         []
-        "Request one or more transactions corresponding to the given \
-        \transaction identifiers. \
-        \\n\
+        "Request one or more transactions corresponding to the given  \
+        \transaction identifiers.  \
+        \\n \
         \While it is the responsibility of the replying peer to keep within \
         \pipelining in-flight limits, the sender must also cooperate by keeping \
         \the total requested across all in-flight requests within the limits. \
@@ -591,7 +588,7 @@ severityTxSubmission2Node (BlockFetch.TraceLabelPeer _ v) = severityTxSubNode v
 namesForTxSubmission2Node :: forall blk peer. BlockFetch.TraceLabelPeer peer
   (TraceSendRecv (TXS.TxSubmission2 (GenTxId blk) (GenTx blk))) -> [Text]
 namesForTxSubmission2Node (BlockFetch.TraceLabelPeer _ v) =
-  "NodeToNode" : namesTxSubNode v
+  namesTxSubNode v
   where
     namesTxSubNode (TraceSendMsg msg) = "Send" : namesTxSubNode' msg
     namesTxSubNode (TraceRecvMsg msg) = "Receive" : namesTxSubNode' msg
@@ -617,8 +614,8 @@ docTTxSubmission2Node :: Documented
     (TraceSendRecv
       (TXS.TxSubmission2 (GenTxId blk) (GenTx blk))))
 docTTxSubmission2Node =
-  addDocumentedNamespace  ["NodeToNode", "Send"] docTTxSubmission2Node'
-  `addDocs` addDocumentedNamespace  ["NodeToNode", "Recieve"] docTTxSubmission2Node'
+  addDocumentedNamespace  ["Send"] docTTxSubmission2Node'
+  `addDocs` addDocumentedNamespace  ["Receive"] docTTxSubmission2Node'
 
 docTTxSubmission2Node' :: Documented
   (BlockFetch.TraceLabelPeer peer
@@ -672,52 +669,52 @@ docTTxSubmission2Node' = Documented [
     , DocMsg
         ["ReplyTxIds"]
         []
-        "Reply with a list of transaction identifiers for available\
-        \transactions, along with the size of each transaction.\
-        \\n\
-        \The list must not be longer than the maximum number requested.\
-        \\n\
-        \In the 'StTxIds' 'StBlocking' state the list must be non-empty while\
-        \in the 'StTxIds' 'StNonBlocking' state the list may be empty.\
-        \\n\
-        \These transactions are added to the notional FIFO of outstanding\
-        \transaction identifiers for the protocol.\
-        \\n\
-        \The order in which these transaction identifiers are returned must be\
-        \the order in which they are submitted to the mempool, to preserve\
+        "Reply with a list of transaction identifiers for available \
+        \transactions, along with the size of each transaction. \
+        \\n \
+        \The list must not be longer than the maximum number requested. \
+        \\n \
+        \In the 'StTxIds' 'StBlocking' state the list must be non-empty while \
+        \in the 'StTxIds' 'StNonBlocking' state the list may be empty. \
+        \\n \
+        \These transactions are added to the notional FIFO of outstanding \
+        \transaction identifiers for the protocol. \
+        \\n \
+        \The order in which these transaction identifiers are returned must be \
+        \the order in which they are submitted to the mempool, to preserve \
         \dependent transactions."
     , DocMsg
         ["RequestTxs"]
         []
-        "Request one or more transactions corresponding to the given \
-        \transaction identifiers. \
-        \\n\
-        \While it is the responsibility of the replying peer to keep within\
-        \pipelining in-flight limits, the sender must also cooperate by keeping\
-        \the total requested across all in-flight requests within the limits.\
-        \\n\
-        \It is an error to ask for transaction identifiers that were not\
-        \previously announced (via 'MsgReplyTxIds').\
-        \\n\
-        \It is an error to ask for transaction identifiers that are not\
+        "Request one or more transactions corresponding to the given  \
+        \transaction identifiers.  \
+        \\n \
+        \While it is the responsibility of the replying peer to keep within \
+        \pipelining in-flight limits, the sender must also cooperate by keeping \
+        \the total requested across all in-flight requests within the limits. \
+        \\n \
+        \It is an error to ask for transaction identifiers that were not \
+        \previously announced (via 'MsgReplyTxIds'). \
+        \\n \
+        \It is an error to ask for transaction identifiers that are not \
         \outstanding or that were already asked for."
     , DocMsg
         ["ReplyTxs"]
         []
-        "Reply with the requested transactions, or implicitly discard.\
-        \\n\
-        \Transactions can become invalid between the time the transaction\
-        \identifier was sent and the transaction being requested. Invalid\
-        \(including committed) transactions do not need to be sent.\
-        \\n\
-        \Any transaction identifiers requested but not provided in this reply\
-        \should be considered as if this peer had never announced them. (Note\
-        \that this is no guarantee that the transaction is invalid, it may still\
+        "Reply with the requested transactions, or implicitly discard. \
+        \\n \
+        \Transactions can become invalid between the time the transaction \
+        \identifier was sent and the transaction being requested. Invalid \
+        \(including committed) transactions do not need to be sent. \
+        \\n \
+        \Any transaction identifiers requested but not provided in this reply \
+        \should be considered as if this peer had never announced them. (Note \
+        \that this is no guarantee that the transaction is invalid, it may still \
         \be valid and available from another peer)."
     , DocMsg
         ["Done"]
         []
-        "Termination message, initiated by the client when the server is\
+        "Termination message, initiated by the client when the server is \
         \making a blocking call for more transaction identifiers."
   --TODO: Can't use 'MsgKThxBye' because NodeToNodeV_2 is not introduced yet.
   ]

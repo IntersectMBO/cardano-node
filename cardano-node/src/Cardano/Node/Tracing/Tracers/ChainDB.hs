@@ -399,20 +399,20 @@ instance ( LogFormatting (Header blk)
   asMetrics (ChainDB.SwitchedToAFork _warnings newTipInfo _oldChain newChain) =
     let ChainInformation { slots, blocks, density, epoch, slotInEpoch } =
           chainInformation newTipInfo newChain 0
-    in  [ DoubleM "cardano.node.density" (fromRational density)
-        , IntM    "cardano.node.slotNum" (fromIntegral slots)
-        , IntM    "cardano.node.blockNum" (fromIntegral blocks)
-        , IntM    "cardano.node.slotInEpoch" (fromIntegral slotInEpoch)
-        , IntM    "cardano.node.epoch" (fromIntegral (unEpochNo epoch))
+    in  [ DoubleM "ChainDB.Density" (fromRational density)
+        , IntM    "ChainDB.SlotNum" (fromIntegral slots)
+        , IntM    "ChainDB.BlockNum" (fromIntegral blocks)
+        , IntM    "ChainDB.SlotInEpoch" (fromIntegral slotInEpoch)
+        , IntM    "ChainDB.Epoch" (fromIntegral (unEpochNo epoch))
         ]
   asMetrics (ChainDB.AddedToCurrentChain _warnings newTipInfo _oldChain newChain) =
     let ChainInformation { slots, blocks, density, epoch, slotInEpoch } =
           chainInformation newTipInfo newChain 0
-    in  [ DoubleM "cardano.node.density" (fromRational density)
-        , IntM    "cardano.node.slotNum" (fromIntegral slots)
-        , IntM    "cardano.node.blockNum" (fromIntegral blocks)
-        , IntM    "cardano.node.slotInEpoch" (fromIntegral slotInEpoch)
-        , IntM    "cardano.node.epoch" (fromIntegral (unEpochNo epoch))
+    in  [ DoubleM "ChainDB.Density" (fromRational density)
+        , IntM    "ChainDB.SlotNum" (fromIntegral slots)
+        , IntM    "ChainDB.BlockNum" (fromIntegral blocks)
+        , IntM    "ChainDB.SlotInEpoch" (fromIntegral slotInEpoch)
+        , IntM    "ChainDB.Epoch" (fromIntegral (unEpochNo epoch))
         ]
   asMetrics _ = []
 
@@ -621,17 +621,17 @@ docChainDBAddBlock = Documented [
         \ it is preferable to our chain)."
     , DocMsg
          ["AddedToCurrentChain"]
-        [("cardano.node.density",
+        [("ChainDB.Density",
           "The actual number of blocks created over the maximum expected number\
           \ of blocks that could be created over the span of the last @k@ blocks.")
-        , ("cardano.node.slots",
+        , ("ChainDB.Slots",
           "Number of slots in this chain fragment.")
-        , ("cardano.node.blocks",
+        , ("ChainDB.Blocks",
           "Number of blocks in this chain fragment.")
-        , ("cardano.node.slotInEpoch",
+        , ("ChainDB.SlotInEpoch",
           "Relative slot number of the tip of the current chain within the\
           \epoch..")
-        , ("cardano.node.epoch",
+        , ("ChainDB.Epoch",
           "In which epoch is the tip of the current chain.")
         ]
         "The new block fits onto the current chain (first\
@@ -639,17 +639,17 @@ docChainDBAddBlock = Documented [
         \ chain (second fragment)."
     , DocMsg
          ["SwitchedToAFork"]
-        [ ("cardano.node.density",
+        [ ("ChainDB.Density",
           "The actual number of blocks created over the maximum expected number\
           \ of blocks that could be created over the span of the last @k@ blocks.")
-        , ("cardano.node.slots",
+        , ("ChainDB.Slots",
           "Number of slots in this chain fragment.")
-        , ("cardano.node.blocks",
+        , ("ChainDB.Blocks",
           "Number of blocks in this chain fragment.")
-        , ("cardano.node.slotInEpoch",
+        , ("ChainDB.SlotInEpoch",
           "Relative slot number of the tip of the current chain within the\
           \epoch..")
-        , ("cardano.node.epoch",
+        , ("ChainDB.Epoch",
           "In which epoch is the tip of the current chain.")
         ]
         "The new block fits onto some fork and we have switched to that fork\

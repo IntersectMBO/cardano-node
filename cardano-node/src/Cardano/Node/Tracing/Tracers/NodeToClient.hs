@@ -91,7 +91,7 @@ severityTChainSync (BlockFetch.TraceLabelPeer _ v) = severityTChainSync' v
 
 namesForTChainSync :: BlockFetch.TraceLabelPeer peer (TraceSendRecv
     (ChainSync (Serialised blk) (Point blk) (Tip blk))) -> [Text]
-namesForTChainSync (BlockFetch.TraceLabelPeer _ v) = "NodeToClient" : namesTChainSync v
+namesForTChainSync (BlockFetch.TraceLabelPeer _ v) = namesTChainSync v
   where
 
     namesTChainSync (TraceSendMsg msg) = "Send" : namesTChainSync' msg
@@ -148,21 +148,21 @@ instance LogFormatting (AnyMessageAndAgency (ChainSync blk pt tip)) where
 docTChainSyncNodeToClient :: Documented (BlockFetch.TraceLabelPeer peer (TraceSendRecv
     (ChainSync x (Point blk) (Tip blk))))
 docTChainSyncNodeToClient =
-    addDocumentedNamespace  ["NodeToClient", "Send"] docTChainSync
-    `addDocs` addDocumentedNamespace  ["NodeToClient", "Recieve"] docTChainSync
+    addDocumentedNamespace  ["Send"] docTChainSync
+    `addDocs` addDocumentedNamespace  ["Receive"] docTChainSync
 
 
 docTChainSyncNodeToNode :: Documented (BlockFetch.TraceLabelPeer peer (TraceSendRecv
     (ChainSync x (Point blk) (Tip blk))))
 docTChainSyncNodeToNode =
-    addDocumentedNamespace  ["NodeToNode", "Send"] docTChainSync
-    `addDocs` addDocumentedNamespace  ["NodeToNode", "Recieve"] docTChainSync
+    addDocumentedNamespace  ["Send"] docTChainSync
+    `addDocs` addDocumentedNamespace  ["Receive"] docTChainSync
 
 docTChainSyncNodeToNodeSerisalised :: Documented (BlockFetch.TraceLabelPeer peer (TraceSendRecv
     (ChainSync x (Point blk) (Tip blk))))
 docTChainSyncNodeToNodeSerisalised =
-    addDocumentedNamespace  ["NodeToNode", "Send"] docTChainSync
-    `addDocs` addDocumentedNamespace  ["NodeToNode", "Recieve"] docTChainSync
+    addDocumentedNamespace  ["Send"] docTChainSync
+    `addDocs` addDocumentedNamespace  ["Receive"] docTChainSync
 
 
 docTChainSync :: Documented (BlockFetch.TraceLabelPeer peer (TraceSendRecv
@@ -171,54 +171,54 @@ docTChainSync = Documented [
       DocMsg
         ["RequestNext"]
         []
-        "Request the next update from the producer. The response can be a roll\
+        "Request the next update from the producer. The response can be a roll \
         \forward, a roll back or wait."
     , DocMsg
         ["AwaitReply"]
         []
-        "Acknowledge the request but require the consumer to wait for the next\
-        \update. This means that the consumer is synced with the producer, and\
+        "Acknowledge the request but require the consumer to wait for the next \
+        \update. This means that the consumer is synced with the producer, and \
         \the producer is waiting for its own chain state to change."
     , DocMsg
         ["RollForward"]
         []
-        "Tell the consumer to extend their chain with the given header.\
-        \\n\
+        "Tell the consumer to extend their chain with the given header. \
+        \\n \
         \The message also tells the consumer about the head point of the producer."
     , DocMsg
         ["RollBackward"]
         []
-        "Tell the consumer to roll back to a given point on their chain.\
-        \\n\
+        "Tell the consumer to roll back to a given point on their chain. \
+        \\n \
         \The message also tells the consumer about the head point of the producer."
     , DocMsg
         ["FindIntersect"]
         []
-        "Ask the producer to try to find an improved intersection point between\
-        \the consumer and producer's chains. The consumer sends a sequence of\
-        \points and it is up to the producer to find the first intersection point\
+        "Ask the producer to try to find an improved intersection point between \
+        \the consumer and producer's chains. The consumer sends a sequence of \
+        \points and it is up to the producer to find the first intersection point \
         \on its chain and send it back to the consumer."
     , DocMsg
         ["IntersectFound"]
         []
-        "The reply to the consumer about an intersection found.\
-        \The consumer can decide weather to send more points.\
-        \\n\
+        "The reply to the consumer about an intersection found. \
+        \The consumer can decide weather to send more points. \
+        \\n \
         \The message also tells the consumer about the head point of the producer."
     , DocMsg
         ["IntersectNotFound"]
         []
-        "The reply to the consumer that no intersection was found: none of the\
-        \points the consumer supplied are on the producer chain.\
-        \\n\
+        "The reply to the consumer that no intersection was found: none of the \
+        \points the consumer supplied are on the producer chain. \
+        \\n \
         \The message also tells the consumer about the head point of the producer."
     , DocMsg
         ["Done"]
         []
-        "We have to explain to the framework what our states mean, in terms of\
-        \which party has agency in each state.\
-        \\n\
-        \Idle states are where it is for the client to send a message,\
+        "We have to explain to the framework what our states mean, in terms of \
+        \which party has agency in each state. \
+        \\n \
+        \Idle states are where it is for the client to send a message, \
         \busy states are where the server is expected to send a reply."
   ]
 
@@ -312,7 +312,7 @@ docTTxMonitor :: Documented
            (GenTxId blk) (GenTx blk) SlotNo)))
 docTTxMonitor =
   addDocumentedNamespace  ["Send"] docTState
-   `addDocs` addDocumentedNamespace  ["Recieve"] docTState
+   `addDocs` addDocumentedNamespace  ["Receive"] docTState
 
 
 --------------------------------------------------------------------------------
@@ -383,7 +383,7 @@ docTTxSubmission :: Documented
            (GenTx blk) (ApplyTxErr blk))))
 docTTxSubmission =
   addDocumentedNamespace  ["Send"] docTTxSubmission'
-   `addDocs` addDocumentedNamespace  ["Recieve"] docTTxSubmission'
+   `addDocs` addDocumentedNamespace  ["Receive"] docTTxSubmission'
 
 docTTxSubmission' :: Documented
    (BlockFetch.TraceLabelPeer
@@ -399,12 +399,12 @@ docTTxSubmission' = Documented [
     , DocMsg
         ["AcceptTx"]
         []
-        "The server can reply to inform the client that it has accepted the\
+        "The server can reply to inform the client that it has accepted the \
         \transaction."
     , DocMsg
         ["RejectTx"]
         []
-        "The server can reply to inform the client that it has rejected the\
+        "The server can reply to inform the client that it has rejected the \
         \transaction. A reason for the rejection is included."
     , DocMsg
         ["Done"]
@@ -502,7 +502,7 @@ docTStateQuery :: Documented
        (LSQ.LocalStateQuery blk pt (Query blk))))
 docTStateQuery =
    addDocumentedNamespace  ["Send"] docTState
-    `addDocs` addDocumentedNamespace  ["Recieve"] docTState
+    `addDocs` addDocumentedNamespace  ["Receive"] docTState
 
 docTState :: Documented
       (BlockFetch.TraceLabelPeer peer
@@ -512,12 +512,12 @@ docTState = Documented [
       DocMsg
         ["Acquire"]
         []
-        "The client requests that the state as of a particular recent point on\
-        \the server's chain (within K of the tip) be made available to query,\
-        \and waits for confirmation or failure.\
-        \\n\
-        \From 'NodeToClient_V8' onwards if the point is not specified, current tip\
-        \will be acquired.  For previous versions of the protocol 'point' must be\
+        "The client requests that the state as of a particular recent point on \
+        \the server's chain (within K of the tip) be made available to query, \
+        \and waits for confirmation or failure. \
+        \\n \
+        \From 'NodeToClient_V8' onwards if the point is not specified, current tip \
+        \will be acquired.  For previous versions of the protocol 'point' must be \
         \given."
     , DocMsg
         ["Acquired"]
@@ -526,7 +526,7 @@ docTState = Documented [
     , DocMsg
         ["Failure"]
         []
-        "The server can report that it cannot obtain the state for the\
+        "The server can report that it cannot obtain the state for the \
         \requested point."
     , DocMsg
         ["Query"]
@@ -539,21 +539,21 @@ docTState = Documented [
     , DocMsg
         ["Release"]
         []
-        "The client can instruct the server to release the state. This lets\
+        "The client can instruct the server to release the state. This lets \
         \the server free resources."
     , DocMsg
         ["ReAcquire"]
         []
-        "This is like 'MsgAcquire' but for when the client already has a\
-        \state. By moveing to another state directly without a 'MsgRelease' it\
-        \enables optimisations on the server side (e.g. moving to the state for\
-        \the immediate next block).\
-        \\n\
-        \Note that failure to re-acquire is equivalent to 'MsgRelease',\
-        \rather than keeping the exiting acquired state.\
-        \\n\
-        \From 'NodeToClient_V8' onwards if the point is not specified, current tip\
-        \will be acquired.  For previous versions of the protocol 'point' must be\
+        "This is like 'MsgAcquire' but for when the client already has a \
+        \state. By moveing to another state directly without a 'MsgRelease' it \
+        \enables optimisations on the server side (e.g. moving to the state for \
+        \the immediate next block). \
+        \\n \
+        \Note that failure to re-acquire is equivalent to 'MsgRelease', \
+        \rather than keeping the exiting acquired state. \
+        \\n \
+        \From 'NodeToClient_V8' onwards if the point is not specified, current tip \
+        \will be acquired.  For previous versions of the protocol 'point' must be \
         \given."
     , DocMsg
         ["Done"]

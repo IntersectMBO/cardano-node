@@ -25,11 +25,11 @@ import           Prelude (show)
 
 namesForShutdown :: ShutdownTrace -> [Text]
 namesForShutdown = \case
-  ShutdownRequested{}         -> ["ShutdownRequested"]
-  AbnormalShutdown{}          -> ["AbnormalShutdown"]
-  ShutdownUnexpectedInput{}   -> ["ShutdownUnexpectedInput"]
-  RequestingShutdown{}        -> ["RequestingShutdown"]
-  ShutdownArmedAt{}           -> ["ShutdownArmedAt"]
+  ShutdownRequested{}         -> ["Requested"]
+  AbnormalShutdown{}          -> ["Abnormal"]
+  ShutdownUnexpectedInput{}   -> ["UnexpectedInput"]
+  RequestingShutdown{}        -> ["Requesting"]
+  ShutdownArmedAt{}           -> ["ArmedAt"]
 
 severityShutdown :: ShutdownTrace -> SeverityS
 severityShutdown = \case
@@ -72,23 +72,23 @@ docShutdown = addDocumentedNamespace  [] docShutdown'
 docShutdown' :: Documented ShutdownTrace
 docShutdown' = Documented
   [ DocMsg
-      ["ShutdownRequested"]
+      ["Requested"]
       []
       "Node shutdown was requested."
   ,  DocMsg
-      ["AbnormalShutdown"]
+      ["Abnormal"]
       []
       "non-isEOFerror shutdown request"
   ,  DocMsg
-      ["ShutdownUnexpectedInput"]
+      ["UnexpectedInput"]
       []
       "Received shutdown request but found unexpected input in --shutdown-ipc FD: "
   , DocMsg
-      ["RequestingShutdown"]
+      ["Requesting"]
       []
       "Ringing the node shutdown doorbell"
   , DocMsg
-      ["ShutdownArmedAt"]
+      ["ArmedAt"]
       []
       "Setting up node shutdown at given slot / block."
   ]

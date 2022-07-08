@@ -52,7 +52,7 @@ mkCardanoTracer :: forall evt.
   => Trace IO FormattedMessage
   -> Trace IO FormattedMessage
   -> Maybe (Trace IO FormattedMessage)
-  -> Text
+  -> [Text]
   -> (evt -> [Text])
   -> (evt -> SeverityS)
   -> (evt -> Privacy)
@@ -70,7 +70,7 @@ mkCardanoTracer' :: forall evt evt1.
   => Trace IO FormattedMessage
   -> Trace IO FormattedMessage
   -> Maybe (Trace IO FormattedMessage)
-  -> Text
+  -> [Text]
   -> (evt -> [Text])
   -> (evt -> SeverityS)
   -> (evt -> Privacy)
@@ -97,7 +97,7 @@ mkCardanoTracer' trStdout trForward mbTrEkg tracerName namesFor severityFor priv
       tr'  <- withDetailsFromConfig tr
       tr'' <- filterSeverityFromConfig tr'
       pure  $ withNamesAppended namesFor
-              $ appendName tracerName
+              $ appendNames tracerName
                $ withSeverity severityFor
                  $ withPrivacy privacyFor
                    tr''
