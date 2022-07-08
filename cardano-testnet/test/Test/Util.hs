@@ -4,19 +4,20 @@ module Test.Util
   , ignoreOnWindows
   , ignoreOnMac
   , ignoreOnMacAndWindows
+  , disabled
   ) where
 
 import           Data.Bool (bool)
-import           Data.String (IsString(..))
+import           Data.String (IsString (..))
 import           Hedgehog (Property)
 import           Hedgehog.Extras.Stock.OS (isWin32)
 import           Prelude
 import           Test.Tasty.ExpectedFailure (wrapTest)
 import           Test.Tasty.Providers (testPassed)
-import           Test.Tasty.Runners (TestTree, Result(resultShortDescription))
+import           Test.Tasty.Runners (Result (resultShortDescription), TestTree)
 
-import qualified Test.Tasty.Hedgehog as H
 import qualified System.Info as SYS
+import qualified Test.Tasty.Hedgehog as H
 
 type Os = String
 
@@ -40,3 +41,6 @@ ignoreOn os = wrapTest $ const $ return $
   (testPassed ("IGNORED on " <> os))
     { resultShortDescription = "IGNORED on " <> os
     }
+
+disabled :: String -> Property -> TestTree
+disabled pName prop = ignoreOn "Disabled" $ H.testPropertyNamed pName (fromString pName) prop

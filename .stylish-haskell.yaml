@@ -86,7 +86,6 @@ language_extensions:
   - LambdaCase
   - MultiParamTypeClasses
   - MultiWayIf
-  - NoImplicitPrelude
   - OverloadedStrings
   - PolyKinds
   - RecordWildCards
