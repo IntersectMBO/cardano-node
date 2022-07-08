@@ -119,7 +119,7 @@ instance LogFormatting ResourceStats where
 
     asMetrics rs =
       [ IntM "Resources.Stat.Cputicks" (fromIntegral $ rCentiCpu rs)
-      , IntM "Resources.mem.Resident" (fromIntegral $ rRSS rs)
+      , IntM "Resources.Mem.Resident" (fromIntegral $ rRSS rs)
       , IntM "Resources.RTS.GcLiveBytes" (fromIntegral $ rLive rs)
       , IntM "Resources.RTS.GcMajorNum" (fromIntegral $ rGcsMajor rs)
       , IntM "Resources.RTS.GcMinorNum" (fromIntegral $ rGcsMinor rs)
