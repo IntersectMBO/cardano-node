@@ -30,7 +30,7 @@ updateResourcesHistory
 updateResourcesHistory nodeId (ResHistory rHistory) lastResources metricName metricValue now =
   case metricName of
     "Resources.Stat.Cputicks"    -> updateCPUUsage
-    "Resources.mem.Resident"     -> updateRSSMemory
+    "Resources.Mem.Resident"     -> updateRSSMemory
     "Resources.RTS.GcLiveBytes"  -> updateGCLiveMemory
     "Resources.RTS.GcMajorNum"   -> updateGCMajorNum
     "Resources.RTS.GcMinorNum"   -> updateGCMinorNum
