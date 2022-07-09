@@ -11,6 +11,6 @@ import           Data.Text (Text)
 
 class EraCast (f :: Type -> Type) where
   eraCast :: (IsCardanoEra fromEra, IsCardanoEra toEra)
-          => f fromEra
-          -> CardanoEra toEra
+          => CardanoEra toEra
+          -> f fromEra
           -> Either Text (f toEra)

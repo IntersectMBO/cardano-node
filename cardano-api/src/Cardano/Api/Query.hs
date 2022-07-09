@@ -70,10 +70,10 @@ import qualified Data.HashMap.Strict as HMS
 import           Data.Map (Map)
 import qualified Data.Map as Map
 import           Data.Maybe (mapMaybe)
-import           Data.SOP.Strict (SListI)
 import           Data.Set (Set)
 import qualified Data.Set as Set
 import           Data.Sharing (FromSharedCBOR, Interns, Share)
+import           Data.SOP.Strict (SListI)
 import           Data.Text (Text)
 import           Data.Typeable
 import           Prelude
@@ -271,7 +271,7 @@ newtype UTxO era = UTxO { unUTxO :: Map TxIn (TxOut CtxUTxO era) }
   deriving (Eq, Show)
 
 instance EraCast UTxO where
-  eraCast (UTxO m) toEra = UTxO <$> forM m (\txout -> eraCast txout toEra)
+  eraCast toEra (UTxO m) = UTxO <$> forM m (eraCast toEra)
 
 data UTxOInAnyEra where
   UTxOInAnyEra :: CardanoEra era
