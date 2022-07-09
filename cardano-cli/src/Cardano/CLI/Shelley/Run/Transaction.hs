@@ -131,7 +131,7 @@ data ShelleyTxCmdError
   | ShelleyTxCmdTxExecUnitsErr !TransactionValidityError
   | ShelleyTxCmdPlutusScriptCostErr !PlutusScriptCostError
   | ShelleyTxCmdPParamExecutionUnitsNotAvailable
-  | ShelleyTxCmdTxCastErr Text
+  | ShelleyTxCmdTxEraCastErr EraCastError
 
 renderShelleyTxCmdError :: ShelleyTxCmdError -> Text
 renderShelleyTxCmdError err =
@@ -275,7 +275,8 @@ renderShelleyTxCmdError err =
       \likely due to not being in the Alonzo era"
     ShelleyTxCmdReferenceScriptsNotSupportedInEra (AnyCardanoEra era) ->
       "TxCmd: Reference scripts not supported in era: " <> show era
-    ShelleyTxCmdTxCastErr msg -> "Unable to cast value: " <> show msg
+    ShelleyTxCmdTxEraCastErr (EraCastError value fromEra toEra) ->
+      "Unable to cast era from " <> show fromEra <> " to " <> show toEra <> " the value " <> show value
 
 renderEra :: AnyCardanoEra -> Text
 renderEra (AnyCardanoEra ByronEra)   = "Byron"
@@ -554,7 +555,7 @@ runTxBuild (AnyCardanoEra era) (AnyConsensusModeParams cModeParams) networkId mS
                   $ QueryInEra qeInMode $ QueryInShelleyBasedEra qSbe
                   $ QueryUTxO (QueryUTxOByTxIn (Set.fromList $ inputsThatRequireWitnessing ++ allReferenceInputs))
 
-                utxo <- case first ShelleyTxCmdTxCastErr (eraCast qUtxo era) of { Right a -> pure a; Left e -> left e }
+                utxo <- case first ShelleyTxCmdTxEraCastErr (eraCast era qUtxo) of { Right a -> pure a; Left e -> left e }
 
                 txinsExist inputsThatRequireWitnessing utxo
 

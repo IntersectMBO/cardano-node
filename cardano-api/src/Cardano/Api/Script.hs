@@ -2,6 +2,7 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -153,11 +154,11 @@ import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 
 import qualified Plutus.V1.Ledger.Examples as Plutus
 
-import           Cardano.Api.EraCast (EraCast (eraCast))
+import           Cardano.Api.EraCast
 import           Cardano.Api.Eras
 import           Cardano.Api.Error
-import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Hash
+import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.KeysShelley
 import           Cardano.Api.ScriptData
 import           Cardano.Api.SerialiseCBOR
@@ -1421,6 +1422,7 @@ data ReferenceScript era where
 
 deriving instance Eq (ReferenceScript era)
 deriving instance Show (ReferenceScript era)
+deriving instance Typeable (ReferenceScript era)
 
 instance IsCardanoEra era => ToJSON (ReferenceScript era) where
   toJSON (ReferenceScript _ s) = object ["referenceScript" .= s]
@@ -1434,13 +1436,12 @@ instance IsCardanoEra era => FromJSON (ReferenceScript era) where
         ReferenceScript refSupInEra <$> o .: "referenceScript"
 
 instance EraCast ReferenceScript where
-  eraCast rScript toEra =
-    case rScript of
-      ReferenceScriptNone               -> pure ReferenceScriptNone
-      ReferenceScript _ scriptInAnyLang ->
-        case refInsScriptsAndInlineDatsSupportedInEra toEra of
-          Nothing -> Left "Error"
-          Just supportedInEra -> Right $ ReferenceScript supportedInEra scriptInAnyLang
+  eraCast toEra = \case
+    ReferenceScriptNone -> pure ReferenceScriptNone
+    v@(ReferenceScript (_ :: ReferenceTxInsScriptsInlineDatumsSupportedInEra fromEra) scriptInAnyLang) ->
+      case refInsScriptsAndInlineDatsSupportedInEra toEra of
+        Nothing -> Left $ EraCastError v (cardanoEra @fromEra) toEra
+        Just supportedInEra -> Right $ ReferenceScript supportedInEra scriptInAnyLang
 
 data ReferenceTxInsScriptsInlineDatumsSupportedInEra era where
     ReferenceTxInsScriptsInlineDatumsInBabbageEra :: ReferenceTxInsScriptsInlineDatumsSupportedInEra BabbageEra

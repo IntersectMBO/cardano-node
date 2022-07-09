@@ -51,8 +51,8 @@ import qualified Data.Text.IO as T
 import qualified Data.Text.IO as Text
 import           Data.Text.Lazy.Builder (toLazyText)
 import           Data.Time.Clock
-import qualified Data.VMap as VMap
 import qualified Data.Vector as Vector
+import qualified Data.VMap as VMap
 import           Formatting.Buildable (build)
 import           Numeric (showEFloat)
 import           Text.Printf (printf)
