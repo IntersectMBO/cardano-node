@@ -99,8 +99,8 @@ import qualified Plutus.V1.Ledger.Api as Plutus
 
 import           Cardano.Api.EraCast (EraCast (..))
 import           Cardano.Api.Eras
-import           Cardano.Api.Hash
 import           Cardano.Api.HasTypeProxy
+import           Cardano.Api.Hash
 import           Cardano.Api.Key
 import           Cardano.Api.KeysByron
 import           Cardano.Api.KeysShelley
@@ -108,7 +108,6 @@ import           Cardano.Api.NetworkId
 import           Cardano.Api.Script
 import           Cardano.Api.SerialiseBech32
 import           Cardano.Api.SerialiseRaw
-import           Cardano.Api.Summon (Summon (..))
 import           Cardano.Api.Utils
 import           Control.DeepSeq (NFData(..), deepseq)
 
@@ -358,8 +357,8 @@ instance IsShelleyBasedEra era => FromJSON (AddressInEra era) where
     pure $ anyAddressInShelleyBasedEra addressAny
 
 instance EraCast AddressInEra where
-  eraCast (AddressInEra addressTypeInEra address) = AddressInEra
-    <$> eraCast addressTypeInEra
+  eraCast (AddressInEra addressTypeInEra address) toEra = AddressInEra
+    <$> eraCast addressTypeInEra toEra
     <*> pure address
 
 parseAddressAny :: Parsec.Parser AddressAny
@@ -435,9 +434,13 @@ instance IsCardanoEra era => SerialiseAddress (AddressInEra era) where
       anyAddressInEra cardanoEra =<< deserialiseAddress AsAddressAny t
 
 instance EraCast (AddressTypeInEra addrtype) where
-  eraCast = \case
-    ByronAddressInAnyEra  -> pure ByronAddressInAnyEra
-    ShelleyAddressInEra _ -> ShelleyAddressInEra <$> summon
+  eraCast addrInType toEra =
+    case addrInType of
+      ByronAddressInAnyEra -> pure ByronAddressInAnyEra
+      ShelleyAddressInEra _previousEra ->
+        case cardanoEraStyle toEra of
+          LegacyByronEra -> Left "Error"
+          ShelleyBasedEra newSbe -> Right $ ShelleyAddressInEra newSbe
 
 byronAddressInEra :: Address ByronAddr -> AddressInEra era
 byronAddressInEra = AddressInEra ByronAddressInAnyEra

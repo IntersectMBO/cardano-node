@@ -554,7 +554,7 @@ runTxBuild (AnyCardanoEra era) (AnyConsensusModeParams cModeParams) networkId mS
                   $ QueryInEra qeInMode $ QueryInShelleyBasedEra qSbe
                   $ QueryUTxO (QueryUTxOByTxIn (Set.fromList $ inputsThatRequireWitnessing ++ allReferenceInputs))
 
-                utxo <- case first ShelleyTxCmdTxCastErr (eraCast qUtxo) of { Right a -> pure a; Left e -> left e }
+                utxo <- case first ShelleyTxCmdTxCastErr (eraCast qUtxo era) of { Right a -> pure a; Left e -> left e }
 
                 txinsExist inputsThatRequireWitnessing utxo
 
