@@ -86,7 +86,6 @@ library
                         Cardano.Api.Shelley.Genesis
                         Cardano.Api.SpecialByron
                         Cardano.Api.StakePoolMetadata
-                        Cardano.Api.Summon
                         Cardano.Api.Tx
                         Cardano.Api.TxBody
                         Cardano.Api.TxIn

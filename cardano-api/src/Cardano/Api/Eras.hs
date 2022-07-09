@@ -50,7 +50,6 @@ module Cardano.Api.Eras
 import           Prelude
 
 import           Cardano.Api.HasTypeProxy
-import           Cardano.Api.Summon (Summon (..))
 import           Data.Aeson (FromJSON (..), ToJSON, toJSON, withText)
 import           Data.Type.Equality (TestEquality (..), (:~:) (Refl))
 import           Ouroboros.Consensus.Shelley.Eras as Consensus (StandardAllegra, StandardAlonzo,
@@ -312,14 +311,6 @@ deriving instance Eq   (ShelleyBasedEra era)
 deriving instance Ord  (ShelleyBasedEra era)
 deriving instance Show (ShelleyBasedEra era)
 
-instance IsCardanoEra era => Summon (ShelleyBasedEra era) where
-  summon = case cardanoEra @era of
-    ByronEra -> Left "ShelleyBasedEra ByronEra does not exist"
-    ShelleyEra -> Right ShelleyBasedEraShelley
-    AllegraEra -> Right ShelleyBasedEraAllegra
-    MaryEra -> Right ShelleyBasedEraMary
-    AlonzoEra -> Right ShelleyBasedEraAlonzo
-    BabbageEra -> Right ShelleyBasedEraBabbage
 
 -- | The class of eras that are based on Shelley. This allows uniform handling
 -- of Shelley-based eras, but also non-uniform by making case distinctions on
