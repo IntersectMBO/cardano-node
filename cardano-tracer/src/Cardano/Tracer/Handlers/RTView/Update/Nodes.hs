@@ -16,6 +16,7 @@ import           Control.Concurrent.STM (atomically)
 import           Control.Concurrent.STM.TVar
 import           Control.Monad (forM_, unless, when)
 import           Control.Monad.Extra (whenJust)
+import           Data.List (find)
 import           Data.List.NonEmpty (NonEmpty)
 import qualified Data.Map.Strict as M
 import           Data.Maybe (catMaybes, fromMaybe)
@@ -318,14 +319,21 @@ setEraEpochInfo connected displayed acceptedMetrics nodesEraSettings = do
 
   getEndOfCurrentEpoch EraSettings{esEra, esSlotLengthInS, esEpochLength} currentEpoch =
     case lookup esEra epochsInfo of
-      Nothing -> Nothing
-      Just (epochStartDate, firstEpochInEra) ->
-        let elapsedEpochsInEra = currentEpoch - firstEpochInEra
-            epochLengthInS = esSlotLengthInS * esEpochLength
-            secondsFromEpochStartToEpoch = epochLengthInS * elapsedEpochsInEra
-            !dateOfEpochStart = epochStartDate + fromIntegral secondsFromEpochStartToEpoch
-            !dateOfEpochEnd = dateOfEpochStart + fromIntegral epochLengthInS
-        in Just (s2utc dateOfEpochStart, s2utc dateOfEpochEnd)
+      Nothing ->
+        -- So, there is no such an era. The possible reason: this is "too new" era
+        -- (not officially forked yet). Try to find corresponding epoch directly.
+        case find (\(_, (_, firstEpoch)) -> currentEpoch >= firstEpoch) epochsInfo of
+          Nothing -> Nothing
+          Just (_, (epochStart, firstEpoch)) -> getEpochDates epochStart firstEpoch
+      Just (epochStart, firstEpoch) -> getEpochDates epochStart firstEpoch
+   where
+    getEpochDates startDate firstEpoch =
+      let elapsedEpochsInEra = currentEpoch - firstEpoch
+          epochLengthInS = esSlotLengthInS * esEpochLength
+          secondsFromEpochStartToEpoch = epochLengthInS * elapsedEpochsInEra
+          !dateOfEpochStart = startDate + fromIntegral secondsFromEpochStartToEpoch
+          !dateOfEpochEnd = dateOfEpochStart + fromIntegral epochLengthInS
+      in Just (s2utc dateOfEpochStart, s2utc dateOfEpochEnd)
 
 type EraName         = T.Text
 type FirstEpochInEra = Int
