@@ -32,6 +32,30 @@ import qualified Cardano.Api as Api
 import           Cardano.Api.Byron
 import           Cardano.Api.Orphans ()
 import           Cardano.Api.Shelley
+
+import           Control.Monad.Trans.Except (except)
+import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistEither,
+                   hoistMaybe, left, newExceptT)
+import           Data.Aeson.Encode.Pretty (encodePretty)
+import           Data.Aeson.Types as Aeson
+import qualified Data.ByteString.Lazy.Char8 as LBS
+import           Data.Coerce (coerce)
+import           Data.List (nub)
+import qualified Data.Map.Strict as Map
+import qualified Data.Set as Set
+import           Data.Sharing (Interns, Share)
+import qualified Data.Text as Text
+import qualified Data.Text.Encoding as Text
+import qualified Data.Text.IO as T
+import qualified Data.Text.IO as Text
+import           Data.Text.Lazy.Builder (toLazyText)
+import           Data.Time.Clock
+import qualified Data.Vector as Vector
+import qualified Data.VMap as VMap
+import           Formatting.Buildable (build)
+import           Numeric (showEFloat)
+import           Text.Printf (printf)
+
 import           Cardano.Binary (DecoderError)
 import           Cardano.CLI.Environment (EnvSocketError, readEnvSocketPath, renderEnvSocketError)
 import           Cardano.CLI.Helpers (HelpersError (..), hushM, pPrintCBOR, renderHelpersError)
@@ -65,8 +89,8 @@ import qualified Cardano.Ledger.Shelley.PParams as Shelley
 import           Cardano.Ledger.Shelley.Scripts ()
 import           Cardano.Slotting.EpochInfo (EpochInfo (..), epochInfoSlotToUTCTime, hoistEpochInfo)
 import           Control.Monad.Trans.Except (except)
-import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistMaybe, left,
-                   newExceptT, hoistEither)
+import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistEither,
+                   hoistMaybe, left, newExceptT)
 import           Data.Aeson.Encode.Pretty (encodePretty)
 import           Data.Aeson.Types as Aeson
 import           Data.Coerce (coerce)
@@ -85,7 +109,6 @@ import           Ouroboros.Network.Protocol.LocalStateQuery.Type (AcquireFailure
 import           Text.Printf (printf)
 
 import qualified Data.ByteString.Lazy.Char8 as LBS
-import qualified Data.VMap as VMap
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import qualified Data.Text as Text
@@ -93,6 +116,7 @@ import qualified Data.Text.Encoding as Text
 import qualified Data.Text.IO as T
 import qualified Data.Text.IO as Text
 import qualified Data.Vector as Vector
+import qualified Data.VMap as VMap
 import           Formatting.Buildable (build)
 import           Numeric (showEFloat)
 import qualified Ouroboros.Consensus.HardFork.History as Consensus

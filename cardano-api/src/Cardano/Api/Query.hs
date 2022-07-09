@@ -61,6 +61,7 @@ module Cardano.Api.Query (
 
   ) where
 
+import           Control.Monad (forM)
 import           Data.Aeson (FromJSON (..), ToJSON (..), object, withObject, (.=))
 import qualified Data.Aeson as Aeson
 import           Data.Aeson.Types (Parser)
@@ -70,10 +71,10 @@ import qualified Data.HashMap.Strict as HMS
 import           Data.Map (Map)
 import qualified Data.Map as Map
 import           Data.Maybe (mapMaybe)
-import           Data.SOP.Strict (SListI)
 import           Data.Set (Set)
 import qualified Data.Set as Set
 import           Data.Sharing (FromSharedCBOR, Interns, Share)
+import           Data.SOP.Strict (SListI)
 import           Data.Text (Text)
 import           Data.Typeable
 import           Prelude
@@ -111,7 +112,7 @@ import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
 import           Cardano.Api.Address
 import           Cardano.Api.Block
 import           Cardano.Api.Certificate
-import           Cardano.Api.EraCast (EraCast (..))
+import           Cardano.Api.EraCast
 import           Cardano.Api.Eras
 import           Cardano.Api.GenesisParameters
 import           Cardano.Api.KeysShelley
@@ -121,7 +122,6 @@ import           Cardano.Api.Orphans ()
 import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.TxBody
 import           Cardano.Api.Value
-import           Control.Monad (forM)
 import           Data.Word (Word64)
 
 import qualified Data.Aeson.KeyMap as KeyMap
@@ -271,7 +271,7 @@ newtype UTxO era = UTxO { unUTxO :: Map TxIn (TxOut CtxUTxO era) }
   deriving (Eq, Show)
 
 instance EraCast UTxO where
-  eraCast (UTxO m) toEra = UTxO <$> forM m (\txout -> eraCast txout toEra)
+  eraCast toEra' (UTxO m) = UTxO <$> forM m (eraCast toEra')
 
 data UTxOInAnyEra where
   UTxOInAnyEra :: CardanoEra era
