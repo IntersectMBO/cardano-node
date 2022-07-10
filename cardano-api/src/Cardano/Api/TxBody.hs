@@ -189,7 +189,7 @@ import qualified Text.Parsec as Parsec
 import           Text.Parsec ((<?>))
 import qualified Text.Parsec.String as Parsec
 
-import           Cardano.Api.EraCast (EraCast (..))
+import           Cardano.Api.EraCast (EraCast (..), EraCastError (EraCastError))
 import           Cardano.Binary (Annotated (..), reAnnotate, recoverBytes)
 import qualified Cardano.Binary as CBOR
 import qualified Cardano.Crypto.Hash.Class as Crypto
@@ -1202,13 +1202,11 @@ instance EraCast TxOutValue where
     TxOutAdaOnly _previousEra lovelace ->
       case multiAssetSupportedInEra toEra of
         Left adaOnly -> Right $ TxOutAdaOnly adaOnly lovelace
-        Right multiAssetSupp ->
-          Right $ TxOutValue multiAssetSupp $ lovelaceToValue lovelace
-    TxOutValue  _previousEra value  ->
+        Right multiAssetSupp -> Right $ TxOutValue multiAssetSupp $ lovelaceToValue lovelace
+    TxOutValue  (_ :: MultiAssetSupportedInEra fromEra) value  ->
       case multiAssetSupportedInEra toEra of
-        Left _adaOnly -> Left "Error"
-        Right multiAssetSupp ->
-          Right $ TxOutValue multiAssetSupp value
+        Left _adaOnly -> Left $ EraCastError "TxOutValue" (cardanoEra @fromEra) toEra
+        Right multiAssetSupp -> Right $ TxOutValue multiAssetSupp value
 
 
 deriving instance Eq   (TxOutValue era)
@@ -1359,19 +1357,19 @@ deriving instance Show (TxOutDatum ctx era)
 instance EraCast (TxOutDatum ctx)  where
   eraCast toEra = \case
     TxOutDatumNone -> pure TxOutDatumNone
-    TxOutDatumHash _previousEra hash ->
+    TxOutDatumHash (_ :: ScriptDataSupportedInEra fromEra) hash ->
       case scriptDataSupportedInEra toEra of
-        Nothing -> Left "Error"
+        Nothing -> Left $ EraCastError "TxOutDatum ctx" (cardanoEra @fromEra) toEra
         Just sDatumsSupported ->
           Right $ TxOutDatumHash sDatumsSupported hash
-    TxOutDatumInTx' _previousEra scriptData hash ->
+    TxOutDatumInTx' (_ :: ScriptDataSupportedInEra fromEra) scriptData hash ->
       case scriptDataSupportedInEra toEra of
-        Nothing -> Left "Error"
+        Nothing -> Left $ EraCastError "TxOutDatum ctx" (cardanoEra @fromEra) toEra
         Just sDatumsSupported ->
           Right $ TxOutDatumInTx' sDatumsSupported scriptData hash
-    TxOutDatumInline _previousEra scriptData ->
+    TxOutDatumInline (_ :: ReferenceTxInsScriptsInlineDatumsSupportedInEra fromEra) scriptData ->
       case refInsScriptsAndInlineDatsSupportedInEra toEra of
-        Nothing -> Left "Error"
+        Nothing -> Left $ EraCastError "TxOutDatum ctx" (cardanoEra @fromEra) toEra
         Just refInsAndInlineSupported ->
           Right $ TxOutDatumInline refInsAndInlineSupported scriptData
 

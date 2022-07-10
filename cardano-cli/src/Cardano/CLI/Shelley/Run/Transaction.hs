@@ -45,7 +45,7 @@ import qualified Cardano.Binary as CBOR
 import           Cardano.Ledger.Shelley.Scripts ()
 import           Cardano.Ledger.ShelleyMA.TxBody ()
 
-import           Cardano.Api.EraCast (EraCast (..))
+import           Cardano.Api.EraCast (EraCast (..), EraCastError (..))
 import           Cardano.CLI.Environment (EnvSocketError, readEnvSocketPath, renderEnvSocketError)
 import           Cardano.CLI.Run.Friendly (friendlyTxBS, friendlyTxBodyBS)
 import           Cardano.CLI.Shelley.Key (InputDecodeError, readSigningKeyFileAnyOf)
@@ -133,7 +133,7 @@ data ShelleyTxCmdError
   | ShelleyTxCmdTxExecUnitsErr !TransactionValidityError
   | ShelleyTxCmdPlutusScriptCostErr !PlutusScriptCostError
   | ShelleyTxCmdPParamExecutionUnitsNotAvailable
-  | ShelleyTxCmdTxCastErr Text
+  | ShelleyTxCmdTxEraCastErr EraCastError
 
 renderShelleyTxCmdError :: ShelleyTxCmdError -> Text
 renderShelleyTxCmdError err =
@@ -277,7 +277,8 @@ renderShelleyTxCmdError err =
       \likely due to not being in the Alonzo era"
     ShelleyTxCmdReferenceScriptsNotSupportedInEra (AnyCardanoEra era) ->
       "TxCmd: Reference scripts not supported in era: " <> show era
-    ShelleyTxCmdTxCastErr msg -> "Unable to cast value: " <> show msg
+    ShelleyTxCmdTxEraCastErr (EraCastError typeName fromEra toEra) ->
+      "Unable to cast era of type " <> typeName <> " from " <> show fromEra <> " to " <> show toEra
 
 renderEra :: AnyCardanoEra -> Text
 renderEra (AnyCardanoEra ByronEra)   = "Byron"
@@ -556,7 +557,7 @@ runTxBuild (AnyCardanoEra era) (AnyConsensusModeParams cModeParams) networkId mS
                   $ QueryInEra qeInMode $ QueryInShelleyBasedEra qSbe
                   $ QueryUTxO (QueryUTxOByTxIn (Set.fromList $ inputsThatRequireWitnessing ++ allReferenceInputs))
 
-                utxo <- case first ShelleyTxCmdTxCastErr (eraCast era qUtxo) of { Right a -> pure a; Left e -> left e }
+                utxo <- case first ShelleyTxCmdTxEraCastErr (eraCast era qUtxo) of { Right a -> pure a; Left e -> left e }
 
                 txinsExist inputsThatRequireWitnessing utxo
 
