@@ -22,7 +22,7 @@ import           Cardano.Api (AnyCardanoEra, ExecutionUnits, Lovelace, ScriptDat
 
 import           Cardano.Benchmarking.Script.Env
 import           Cardano.Benchmarking.Script.Store
-import           Cardano.Benchmarking.Types (TPSRate, NumberOfTxs, NodeIPv4Address)
+import           Cardano.Benchmarking.Types (TPSRate, NodeIPv4Address)
 
 data Action where
   Set                :: !SetKeyVal -> Action
@@ -35,7 +35,7 @@ data Action where
   AddFund            :: !AnyCardanoEra -> !WalletName -> !TxIn -> !Lovelace -> !KeyName -> Action
   ImportGenesisFund  :: !AnyCardanoEra -> !WalletName -> !SubmitMode -> !KeyName -> !KeyName -> Action
   CreateChange       :: !AnyCardanoEra -> !WalletName -> !WalletName -> !SubmitMode -> !PayMode -> !Lovelace -> !Int -> Action
-  RunBenchmark       :: !AnyCardanoEra -> !WalletName -> !SubmitMode -> !SpendMode -> !ThreadName -> !NumberOfTxs -> !TPSRate -> Action
+  RunBenchmark       :: !AnyCardanoEra -> !WalletName -> !SubmitMode -> !SpendMode -> !ThreadName -> !RunBenchmarkAux -> !TPSRate -> Action
   WaitBenchmark      :: !ThreadName -> Action
   CancelBenchmark    :: !ThreadName -> Action
   Reserved           :: [String] -> Action
@@ -78,3 +78,15 @@ data ScriptBudget where
   CheckScriptBudget  :: !ExecutionUnits -> ScriptBudget
   deriving (Show, Eq)
 deriving instance Generic ScriptBudget
+
+data RunBenchmarkAux = RunBenchmarkAux {
+    auxTxCount :: Int
+  , auxFee :: Lovelace
+  , auxOutputsPerTx :: Int
+  , auxInputsPerTx :: Int
+  , auxInputs :: Int
+  , auxOutputs ::Int
+  , auxMinValuePerUTxO :: Lovelace
+  }
+  deriving (Show, Eq)
+deriving instance Generic RunBenchmarkAux

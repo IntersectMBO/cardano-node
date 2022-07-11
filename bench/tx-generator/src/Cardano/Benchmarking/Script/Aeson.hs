@@ -102,6 +102,12 @@ instance ToJSON Action where
 instance FromJSON Action where
   parseJSON = genericParseJSON jsonOptionsUnTaggedSum
 
+instance ToJSON RunBenchmarkAux where
+  toJSON     = genericToJSON jsonOptionsUnTaggedSum
+  toEncoding = genericToEncoding jsonOptionsUnTaggedSum
+instance FromJSON RunBenchmarkAux where
+  parseJSON = genericParseJSON jsonOptionsUnTaggedSum
+
 scanScriptFile :: FilePath -> IO Value
 scanScriptFile filePath = do
   input <- BS.readFile filePath
