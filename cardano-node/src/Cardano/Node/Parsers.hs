@@ -221,7 +221,9 @@ parseLedgerDBBackend = parseInMemory <|> parseLMDB <*> optional parseMapSize
     parseInMemory =
       flag' InMemory (  long "in-memory-ledger-db-backend"
                      <> help "Use the InMemory ledger DB backend. \
-                             \ Incompatible with `--lmdb-ledger-db-backend`."
+                             \ Incompatible with `--lmdb-ledger-db-backend`. \
+                             \ The node uses the in-memory backend by default \
+                             \ if no ``--*-db-backend`` flags are set."
                      )
 
     parseLMDB :: Parser (Maybe Int -> BackingStoreSelectorFlag)
