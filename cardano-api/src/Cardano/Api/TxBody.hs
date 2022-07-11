@@ -181,8 +181,8 @@ import           Data.Type.Equality (TestEquality (..), (:~:) (Refl))
 import           Data.Word (Word16, Word32, Word64)
 import           GHC.Generics
 import           GHC.Records (HasField (..))
-import           Text.Parsec ((<?>))
 import qualified Text.Parsec as Parsec
+import           Text.Parsec ((<?>))
 import qualified Text.Parsec.String as Parsec
 
 import           Cardano.Binary (Annotated (..), reAnnotate, recoverBytes)
@@ -241,8 +241,8 @@ import           Cardano.Api.Address
 import           Cardano.Api.Certificate
 import           Cardano.Api.Eras
 import           Cardano.Api.Error
-import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Hash
+import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.KeysByron
 import           Cardano.Api.KeysShelley
 import           Cardano.Api.NetworkId
@@ -3031,7 +3031,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraAlonzo
              BuildTxWith (Just pparams) ->
                Alonzo.hashScriptIntegrity
                  (Set.map
-                    (Alonzo.getLanguageView (toLedgerPParams ShelleyBasedEraAlonzo pparams))
+                    (Alonzo.getLanguageView (toLedgerPParams "[a]" ShelleyBasedEraAlonzo pparams))
                     languages
                  )
                  redeemers
@@ -3216,7 +3216,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraBabbage
                  BuildTxWith (Just pparams) ->
                     Alonzo.hashScriptIntegrity
                       (Set.map
-                         (Alonzo.getLanguageView (toLedgerPParams ShelleyBasedEraBabbage pparams))
+                         (Alonzo.getLanguageView (toLedgerPParams "[b]" ShelleyBasedEraBabbage pparams))
                          languages
                       )
                       redeemers

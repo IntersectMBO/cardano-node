@@ -263,7 +263,7 @@ evaluateTransactionFee pparams txbody keywitcount _byronwitcount =
     evalShelleyBasedEra era tx =
       fromShelleyLovelace $
         Ledger.evaluateTransactionFee
-          (toLedgerPParams era pparams)
+          (toLedgerPParams "[d]" era pparams)
           tx
           keywitcount
 
@@ -546,7 +546,7 @@ evaluateTransactionExecutionUnits _eraInMode systemstart history pparams utxo tx
     evalAlonzo era tx = do
       cModelArray <- toAlonzoCostModelsArray (protocolParamCostModels pparams)
       case Alonzo.evaluateTransactionExecutionUnits
-             (toLedgerPParams era pparams)
+             (toLedgerPParams "[e]" era pparams)
              tx
              (toLedgerUTxO era utxo)
              (toLedgerEpochInfo history)
@@ -568,7 +568,7 @@ evaluateTransactionExecutionUnits _eraInMode systemstart history pparams utxo tx
     evalBabbage era tx = do
       costModelsArray <- toAlonzoCostModelsArray (protocolParamCostModels pparams)
       case Alonzo.evaluateTransactionExecutionUnits
-             (toLedgerPParams era pparams)
+             (toLedgerPParams "[g]" era pparams)
              tx
              (toLedgerUTxO era utxo)
              (toLedgerEpochInfo history)
@@ -674,7 +674,7 @@ evaluateTransactionBalance pparams poolids utxo
     evalMultiAsset evidence =
       TxOutValue evidence . fromMaryValue $
          Ledger.evaluateTransactionBalance
-           (toLedgerPParams era pparams)
+           (toLedgerPParams "[h]" era pparams)
            (toLedgerUTxO era utxo)
            isNewPool
            txbody
@@ -688,7 +688,7 @@ evaluateTransactionBalance pparams poolids utxo
     evalAdaOnly evidence =
      TxOutAdaOnly evidence . fromShelleyLovelace
        $ Ledger.evaluateTransactionBalance
-           (toLedgerPParams era pparams)
+           (toLedgerPParams "[i]" era pparams)
            (toLedgerUTxO era utxo)
            isNewPool
            txbody
@@ -1228,7 +1228,7 @@ calculateMinimumUTxO era txout@(TxOut _ v _ _) pparams' =
     ShelleyBasedEraMary -> calcMinUTxOAllegraMary
     ShelleyBasedEraAlonzo ->
       let lTxOut = toShelleyTxOutAny era txout
-          babPParams = toAlonzoPParams pparams'
+          babPParams = toAlonzoPParams "[j]" pparams'
           minUTxO = Shelley.evaluateMinLovelaceOutput babPParams lTxOut
           val = lovelaceToValue $ fromShelleyLovelace minUTxO
       in Right val

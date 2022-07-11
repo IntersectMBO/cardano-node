@@ -106,8 +106,8 @@ import           Text.PrettyBy.Default (display)
 import           Cardano.Api.Address
 import           Cardano.Api.Eras
 import           Cardano.Api.Error
-import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Hash
+import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.KeysByron
 import           Cardano.Api.KeysShelley
 import           Cardano.Api.Script
@@ -1348,14 +1348,15 @@ fromBabbagePParamsUpdate
 -- Both parameters that must be present or absent in specific eras,
 -- and parameter values that need validation, such as the Rational values
 toLedgerPParams
-  :: ShelleyBasedEra era
+  :: String
+  -> ShelleyBasedEra era
   -> ProtocolParameters
   -> Ledger.PParams (ShelleyLedgerEra era)
-toLedgerPParams ShelleyBasedEraShelley = toShelleyPParams
-toLedgerPParams ShelleyBasedEraAllegra = toShelleyPParams
-toLedgerPParams ShelleyBasedEraMary    = toShelleyPParams
-toLedgerPParams ShelleyBasedEraAlonzo  = toAlonzoPParams
-toLedgerPParams ShelleyBasedEraBabbage = toBabbagePParams
+toLedgerPParams _   ShelleyBasedEraShelley = toShelleyPParams
+toLedgerPParams _   ShelleyBasedEraAllegra = toShelleyPParams
+toLedgerPParams _   ShelleyBasedEraMary    = toShelleyPParams
+toLedgerPParams ctx ShelleyBasedEraAlonzo  = toAlonzoPParams ctx
+toLedgerPParams _   ShelleyBasedEraBabbage = toBabbagePParams
 
 toShelleyPParams :: ProtocolParameters -> Shelley.PParams ledgerera
 toShelleyPParams ProtocolParameters {
@@ -1418,8 +1419,8 @@ toShelleyPParams ProtocolParameters {
 toShelleyPParams ProtocolParameters { protocolParamMinUTxOValue = Nothing } =
   error "toShelleyPParams: must specify protocolParamMinUTxOValue"
 
-toAlonzoPParams :: ProtocolParameters -> Alonzo.PParams ledgerera
-toAlonzoPParams ProtocolParameters {
+toAlonzoPParams :: String -> ProtocolParameters -> Alonzo.PParams ledgerera
+toAlonzoPParams ctx ProtocolParameters {
                    protocolParamProtocolVersion,
                    protocolParamDecentralization,
                    protocolParamExtraPraosEntropy,
@@ -1459,7 +1460,7 @@ toAlonzoPParams ProtocolParameters {
                                  Nothing -> minBound
                                  Just pDecentral ->
                                    fromMaybe
-                                     (error "toAlonzoPParams: invalid Decentralization value")
+                                     (error $ "toAlonzoPParams[" <> ctx <> "]: invalid Decentralization value")
                                      (Ledger.boundRational pDecentral)
     , Alonzo._extraEntropy = toLedgerNonce protocolParamExtraPraosEntropy
     , Alonzo._maxBHSize    = protocolParamMaxBlockHeaderSize
@@ -1473,23 +1474,23 @@ toAlonzoPParams ProtocolParameters {
     , Alonzo._eMax         = protocolParamPoolRetireMaxEpoch
     , Alonzo._nOpt         = protocolParamStakePoolTargetNum
     , Alonzo._a0           = fromMaybe
-                               (error "toAlonzoPParams: invalid PoolPledgeInfluence value")
+                               (error $ "toAlonzoPParams[" <> ctx <> "]: invalid PoolPledgeInfluence value")
                                (Ledger.boundRational protocolParamPoolPledgeInfluence)
     , Alonzo._rho          = fromMaybe
-                               (error "toAlonzoPParams: invalid MonetaryExpansion value")
+                               (error $ "toAlonzoPParams[" <> ctx <> "]: invalid MonetaryExpansion value")
                                (Ledger.boundRational protocolParamMonetaryExpansion)
     , Alonzo._tau          = fromMaybe
-                               (error "toAlonzoPParams: invalid TreasuryCut value")
+                               (error $ "toAlonzoPParams[" <> ctx <> "]: invalid TreasuryCut value")
                                (Ledger.boundRational protocolParamTreasuryCut)
 
       -- New params in Alonzo:
     , Alonzo._coinsPerUTxOWord  = toShelleyLovelace utxoCostPerWord
     , Alonzo._costmdls        = either
-                                  (\e -> error $ "toAlonzoPParams: invalid cost models, error: " <> e)
+                                  (\e -> error $ "toAlonzoPParams[" <> ctx <> "]: invalid cost models, error: " <> e)
                                   id
                                   (toAlonzoCostModels protocolParamCostModels)
     , Alonzo._prices          = fromMaybe
-                                  (error "toAlonzoPParams: invalid Price values")
+                                  (error $ "toAlonzoPParams[" <> ctx <> "]: invalid Price values")
                                   (toAlonzoPrices prices)
     , Alonzo._maxTxExUnits    = toAlonzoExUnits maxTxExUnits
     , Alonzo._maxBlockExUnits = toAlonzoExUnits maxBlockExUnits
@@ -1497,20 +1498,20 @@ toAlonzoPParams ProtocolParameters {
     , Alonzo._collateralPercentage = collateralPercentage
     , Alonzo._maxCollateralInputs  = maxCollateralInputs
     }
-toAlonzoPParams ProtocolParameters { protocolParamUTxOCostPerWord = Nothing } =
-  error "toAlonzoPParams: must specify protocolParamUTxOCostPerWord"
-toAlonzoPParams ProtocolParameters { protocolParamPrices          = Nothing } =
-  error "toAlonzoPParams: must specify protocolParamPrices"
-toAlonzoPParams ProtocolParameters { protocolParamMaxTxExUnits    = Nothing } =
-  error "toAlonzoPParams: must specify protocolParamMaxTxExUnits"
-toAlonzoPParams ProtocolParameters { protocolParamMaxBlockExUnits = Nothing } =
-  error "toAlonzoPParams: must specify protocolParamMaxBlockExUnits"
-toAlonzoPParams ProtocolParameters { protocolParamMaxValueSize    = Nothing } =
-  error "toAlonzoPParams: must specify protocolParamMaxValueSize"
-toAlonzoPParams ProtocolParameters { protocolParamCollateralPercent = Nothing } =
-  error "toAlonzoPParams: must specify protocolParamCollateralPercent"
-toAlonzoPParams ProtocolParameters { protocolParamMaxCollateralInputs = Nothing } =
-  error "toAlonzoPParams: must specify protocolParamMaxCollateralInputs"
+toAlonzoPParams ctx ProtocolParameters { protocolParamUTxOCostPerWord = Nothing } =
+  error $ "toAlonzoPParams[" <> ctx <> "]: must specify protocolParamUTxOCostPerWord"
+toAlonzoPParams ctx ProtocolParameters { protocolParamPrices          = Nothing } =
+  error $ "toAlonzoPParams[" <> ctx <> "]: must specify protocolParamPrices"
+toAlonzoPParams ctx ProtocolParameters { protocolParamMaxTxExUnits    = Nothing } =
+  error $ "toAlonzoPParams[" <> ctx <> "]: must specify protocolParamMaxTxExUnits"
+toAlonzoPParams ctx ProtocolParameters { protocolParamMaxBlockExUnits = Nothing } =
+  error $ "toAlonzoPParams[" <> ctx <> "]: must specify protocolParamMaxBlockExUnits"
+toAlonzoPParams ctx ProtocolParameters { protocolParamMaxValueSize    = Nothing } =
+  error $ "toAlonzoPParams[" <> ctx <> "]: must specify protocolParamMaxValueSize"
+toAlonzoPParams ctx ProtocolParameters { protocolParamCollateralPercent = Nothing } =
+  error $ "toAlonzoPParams[" <> ctx <> "]: must specify protocolParamCollateralPercent"
+toAlonzoPParams ctx ProtocolParameters { protocolParamMaxCollateralInputs = Nothing } =
+  error $ "toAlonzoPParams[" <> ctx <> "]: must specify protocolParamMaxCollateralInputs"
 
 
 toBabbagePParams :: ProtocolParameters -> Babbage.PParams ledgerera
