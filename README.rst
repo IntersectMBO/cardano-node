@@ -98,7 +98,9 @@ The general synopsis is as follows:
                            [--host-ipv6-addr IPV6-ADDRESS]
                            [--port PORT]
                            [--config NODE-CONFIGURATION] [--validate-db]
-                           [ --in-memory-ledger-db-backend | --lmdb-ledger-db-backend [--lmdb-mapsize BIN]]
+                           [ --in-memory-ledger-db-backend
+                           | --lmdb-ledger-db-backend [--lmdb-mapsize NR_GIGABYTES]
+                           ]
 
      Run the node.
 

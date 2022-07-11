@@ -30,7 +30,6 @@ import           Data.Aeson
 import qualified Data.Aeson.Types as Aeson
 import qualified Data.Text as Text
 import           Data.Time.Clock (DiffTime)
-import           Data.Prefix.Units
 import           Data.Yaml (decodeFileThrow)
 import           Generic.Data (gmappend)
 import           Generic.Data.Orphans ()
@@ -328,12 +327,7 @@ instance FromJSON PartialNodeConfiguration where
         case maybeString of
            Just "InMemory" -> return $ Just InMemory
            Just "LMDB"     -> do
-             maybeMapSize :: Maybe String <- v .:? "LMDBMapSize"
-             mapSize <- case maybeMapSize of
-               Nothing -> return Nothing
-               Just s  -> case parseValue ParseExact s of
-                 Left e      -> fail ("Malformed LMDBMapSize: " <> e)
-                 Right units -> return $ Just units
+             mapSize :: Maybe Gigabytes <- v .:? "LMDBMapSize"
              return . Just . LMDB $ mapSize
            Nothing         -> return Nothing
            Just whatever   -> fail $ "Malformed LedgerDBBackend" <> whatever
