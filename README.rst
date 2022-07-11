@@ -133,11 +133,11 @@ The general synopsis is as follows:
 * ``--in-memory-ledger-db-backend`` - Use the in-memory backend to store the
   UTxO portion of the ledger state in memory. As a result, the whole ledger
   state will be stored in memory. Incompatible with
-  ``--lmdb-ledger-db-backend``.
+  ``--lmdb-ledger-db-backend``. The node uses the in-memory backend by default
+  if no ``--*-db-backend`` flags are set.
 * ``--lmdb-ledger-db-backend`` - Use the LMDB backend to store the UTxO portion
   of the ledger state on disk. The remainder of the ledger state will still be
-  stored in memory. Incompatible with ``--in-memory-ledger-db-backend``. The
-  node uses the LMDB backend by default if no ``--*-db-backend`` flags are set.
+  stored in memory. Incompatible with ``--in-memory-ledger-db-backend``.
 
   * ``--lmdb-mapsize`` - Set the maximum database size (mapsize) for the LMDB
     backend. By default, the mapsize of the backend is set to 16 Gigabytes.
