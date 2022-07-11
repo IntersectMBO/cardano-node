@@ -55,6 +55,7 @@ import           Ouroboros.Consensus.Shelley.Eras as Consensus (StandardAllegra,
                    StandardBabbage, StandardMary, StandardShelley)
 
 import           Cardano.Api.HasTypeProxy
+import           Control.DeepSeq (NFData(..))
 
 
 -- | A type used as a tag to distinguish the Byron era.
@@ -305,6 +306,14 @@ data ShelleyBasedEra era where
      ShelleyBasedEraMary    :: ShelleyBasedEra MaryEra
      ShelleyBasedEraAlonzo  :: ShelleyBasedEra AlonzoEra
      ShelleyBasedEraBabbage :: ShelleyBasedEra BabbageEra
+
+instance NFData (ShelleyBasedEra era) where
+  rnf = \case
+    ShelleyBasedEraShelley -> ()
+    ShelleyBasedEraAllegra -> ()
+    ShelleyBasedEraMary    -> ()
+    ShelleyBasedEraAlonzo  -> ()
+    ShelleyBasedEraBabbage -> ()
 
 deriving instance Eq   (ShelleyBasedEra era)
 deriving instance Ord  (ShelleyBasedEra era)

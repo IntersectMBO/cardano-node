@@ -70,6 +70,8 @@ library
                         Cardano.CLI.Byron.UpdateProposal
                         Cardano.CLI.Byron.Vote
 
+                        Cardano.CLI.IO.Lazy
+
                         Cardano.CLI.Shelley.Commands
                         Cardano.CLI.Shelley.Key
                         Cardano.CLI.Shelley.Orphans
@@ -135,6 +137,7 @@ library
                       , ouroboros-network
                       , parsec
                       , prettyprinter
+                      , random
                       , cardano-ledger-shelley
                       , set-algebra
                       , split
@@ -143,6 +146,7 @@ library
                       , time
                       , transformers
                       , transformers-except
+                      , unliftio-core
                       , utf8-string
                       , vector
                       , yaml
