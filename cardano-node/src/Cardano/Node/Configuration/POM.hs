@@ -327,7 +327,7 @@ instance FromJSON PartialNodeConfiguration where
         case maybeString of
            Just "InMemory" -> return $ Just InMemory
            Just "LMDB"     -> do
-             mapSize :: Maybe Gigabyte <- v .:? "LMDBMapSize"
+             mapSize :: Maybe Gigabytes <- v .:? "LMDBMapSize"
              return . Just . LMDB $ mapSize
            Nothing         -> return Nothing
            Just whatever   -> fail $ "Malformed LedgerDBBackend" <> whatever

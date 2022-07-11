@@ -223,7 +223,7 @@ parseLedgerDBBackend = parseInMemory <|> parseLMDB <*> optional parseMapSize
                              \ Incompatible with `--lmdb-ledger-db-backend`."
                      )
 
-    parseLMDB :: Parser (Maybe Gigabyte -> BackingStoreSelectorFlag)
+    parseLMDB :: Parser (Maybe Gigabytes -> BackingStoreSelectorFlag)
     parseLMDB =
       flag' LMDB (  long "lmdb-ledger-db-backend"
                  <> help "Use the LMDB ledger DB backend. By default, the \
@@ -237,7 +237,7 @@ parseLedgerDBBackend = parseInMemory <|> parseLMDB <*> optional parseMapSize
                          \ Incompatible with `--in-memory-ledger-db-backend`."
                 )
 
-    parseMapSize :: Parser Gigabyte
+    parseMapSize :: Parser Gigabytes
     parseMapSize =
       option auto (
            long "lmdb-mapsize"

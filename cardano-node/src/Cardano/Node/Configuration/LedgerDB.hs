@@ -3,7 +3,7 @@
 
 module Cardano.Node.Configuration.LedgerDB (
     BackingStoreSelectorFlag(..)
-  , Gigabyte
+  , Gigabytes
   , toBytes
   , defaultLMDBLimits
   ) where
@@ -24,18 +24,20 @@ import qualified Data.Aeson.Types as Aeson (FromJSON)
 --
 -- See 'Ouroboros.Consnesus.Storage.LedgerDB.OnDisk.BackingStoreSelector'.
 data BackingStoreSelectorFlag =
-    LMDB (Maybe Gigabyte) -- ^ A map size can be specified, this is the maximum
+    LMDB (Maybe Gigabytes) -- ^ A map size can be specified, this is the maximum
                           -- disk space the LMDB database can fill. If not
                           -- provided, the default of 16GB will be used.
   | InMemory
   deriving (Eq, Show)
 
-newtype Gigabyte = Gigabyte Int
+-- | A number of gigabytes.
+newtype Gigabytes = Gigabytes Int
   deriving stock (Eq, Show)
   deriving newtype (Read, Aeson.FromJSON)
 
-toBytes :: Gigabyte -> Int
-toBytes (Gigabyte x) = x * 1024 * 1024 * 1024
+-- | Convert a number of Gigabytes to the equivalent number of bytes.
+toBytes :: Gigabytes -> Int
+toBytes (Gigabytes x) = x * 1024 * 1024 * 1024
 
 -- | Recommended settings for the LMDB backing store.
 --
