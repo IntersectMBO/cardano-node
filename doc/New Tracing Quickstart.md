@@ -28,11 +28,11 @@ advice to use namespaces for any analysis tools of traces!
 
   ~~~yaml
   # Show messages of Severity Notice or higher as default
-  Node:
+  "":
       severity: Notice
 
     # But show ChainDB messages starting from Info
-  Node.ChainDB:
+  ChainDB:
       severity: Info
   ~~~
 
@@ -47,7 +47,7 @@ advice to use namespaces for any analysis tools of traces!
 2. Specify in which detail level, the messages get shown.
 
   ~~~yaml
-  Node:
+  "":
       # Keep this
       severity: Notice      
       # All messages are shown with normal detail level
@@ -62,7 +62,7 @@ advice to use namespaces for any analysis tools of traces!
     frequency in which messages get shown.
 
     ~~~yaml
-    Node.ChainDB.AddBlockEvent.AddedBlockToQueue:
+    ChainDB.AddBlockEvent.AddedBlockToQueue:
         # Only show a maximum of 2 of these messages per second
         maxFrequency: 2.0
     ~~~
@@ -72,7 +72,7 @@ advice to use namespaces for any analysis tools of traces!
 4. Specify the backends the messages are routed to.
 
   ~~~yaml
-  Node:
+  "":
       # Keep this
       severity: Notice      
       # And this
