@@ -530,20 +530,20 @@ all messages with Info or higher Priority are shown:
 But if you want to see Debug messages of the ChainDB tracer, then add:
 
 ```yaml
-  Node:
+  "":
     severity: Info
-  Node.ChainDB:
+  ChainDB:
     severity: Debug
 ```
 
 And if you never want to see any message of the AcceptPolicy tracer, then add:
 
 ```yaml
-  Node:
+  "":
     severity: Info
-  Node.ChainDB:
+  ChainDB:
     severity: Debug
-  Node.AcceptPolicy:
+  AcceptPolicy:
     severity: SilentF
 ```
 
@@ -551,7 +551,7 @@ As another example, if you don't want to see more then 1 BlockFetchClient
 message per second, then add this to your configuration file:
 
 ```yaml
-  Node.BlockFetchClient:
+  BlockFetchClient:
     maxFrequency: 1.0
 ```
 

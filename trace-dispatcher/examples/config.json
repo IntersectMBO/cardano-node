@@ -1,6 +1,6 @@
 {
   "TraceOptions": {
-    "Node": {
+    "": {
       "severity": "Notice",
       "detail": "DNormal",
       "backends": [
@@ -9,54 +9,68 @@
         "Forwarder"
       ]
     },
-    "Node.ChainDB": {
+    "BlockFetch.Client": {
+      "severity": "Info",
+      "detail": "DMinimal"
+    },
+    "BlockFetch.Client.CompletedBlockFetch": {
+      "maxFrequency": 2.0  
+    },
+    "BlockFetch.Server": {
       "severity": "Info"
     },
-    "Node.AcceptPolicy": {
+    "ChainDB": {
       "severity": "Info"
     },
-    "Node.DNSResolver": {
+    "ChainDB.AddBlockEvent.AddBlockValidation.ValidCandidate": {
+      "maxFrequency": 2.0  
+    },
+    "ChainDB.AddBlockEvent.AddedBlockToQueue": {
+      "maxFrequency": 2.0  
+    },
+    "ChainDB.AddBlockEvent.AddedBlockToVolatileDB": {
+      "maxFrequency": 2.0  
+    },
+    "ChainDB.CopyToImmutableDBEvent.CopiedBlockToImmutableDB": {
+      "maxFrequency": 2.0  
+    },
+    "ChainSync.Client": {
+      "maxFrequency": 2.0,
+      "detail": "DMinimal"  
+    },
+    "ChainSync.ServerBlock": {
       "severity": "Info"
     },
-    "Node.DNSSubscription": {
+    "ChainSync.ServerHeader": {
       "severity": "Info"
     },
-    "Node.DiffusionInit": {
+    "Forge": {
       "severity": "Info"
     },
-    "Node.ErrorPolicy": {
+    "Mempool": {
       "severity": "Info"
     },
-    "Node.Forge": {
+    "Net.AcceptPolicy": {
       "severity": "Info"
     },
-    "Node.IpSubscription": {
+    "Net.DNSResolver": {
       "severity": "Info"
     },
-    "Node.LocalErrorPolicy": {
+    "Net.ErrorPolicy": {
       "severity": "Info"
     },
-    "Node.Mempool": {
+    "Net.Subscription": {
       "severity": "Info"
     },
-    "Node.Resources": {
+    "Resources": {
       "severity": "Info"
     },
-    "Node.ChainDB.AddBlockEvent.AddedBlockToQueue": {
-      "maxFrequency": 2
+    "Startup.DiffusionInit": {
+      "severity": "Info"
     },
-    "Node.ChainDB.AddBlockEvent.AddedBlockToVolatileDB": {
-      "maxFrequency": 2
+    "TxSubmission.Remote": {
+      "severity": "Info"
     },
-    "Node.ChainDB.CopyToImmutableDBEvent.CopiedBlockToImmutableDB": {
-      "maxFrequency": 2
-    },
-    "Node.ChainDB.AddBlockEvent.AddBlockValidation.ValidCandidate": {
-      "maxFrequency": 2
-    },
-    "Node.BlockFetchClient.CompletedBlockFetch": {
-      "maxFrequency": 2
-    }
   },
   "TraceOptionPeerFrequency": 2000,
   "TraceOptionResourceFrequency": 5000

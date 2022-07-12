@@ -15,4 +15,3 @@ To add in node-services.nix
                  {ns = ""; backends = ["Stdout HumanFormatColoured"; "Forwarder"; "EKGBackend"];}
                  {ns = "ChainDB"; backends = ["Forwarder"];}
                ];
-               TraceOptionForwarder = {filePath: "/tmp/forwarder.sock";};
