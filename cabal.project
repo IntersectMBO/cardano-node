@@ -335,6 +335,9 @@ source-repository-package
   location: https://github.com/input-output-hk/aeson
   tag: be4774468e651d1d512edad278cca7276e978034
   --sha256: 12fr5xnr3ax0r5gzwbf4v49yirppgprmvzlfj1ldx4zhcrdf5j7j
+
+source-repository-package
+  type: git
   location: https://github.com/input-output-hk/haskell-lmdb
   tag: d9ba8e382161aec999de12ae46e98c0eb83096b9
   --sha256: 173dbqpn9czyjib6lnqa8f7ai66n3r4k44h5hvyl321ljychn5fm
