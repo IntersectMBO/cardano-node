@@ -35,7 +35,6 @@ jobs:
 
     - name: (WIN) Setup MSYS2 and libraries
       if: matrix.os == 'windows-latest'
-      shell: msys2 {0}
       uses: msys2/setup-msys2@v2
       with:
         update: true
