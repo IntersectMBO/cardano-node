@@ -80,11 +80,11 @@ jobs:
         echo "# Original cabal config"
         cat /c/cabal/config
 
-        sed -i 's/extra-include-dirs/-- extra-include-dirs/g' /c/cabal/config
-        sed -i 's/ghcup\msys64\mingw64\lib/ghcup\ghc\${{ matrix.ghc }}\mingw\x86_64-w64-mingw32\lib' /c/cabal/config
-        sed -i 's/cabal\bin,/cabal\bin' /c/cabal/config
-        sed -i 's/ghcup\msys64\mingw64\bin,/-- ghcup\msys64\mingw64\bin,/s' /c/cabal/config
-        sed -i 's/ghcup\msys64\usr\bin,/-- ghcup\msys64\usr\bin,/s' /c/cabal/config
+        sed -i 's/C:\\msys64\\mingw64\\lib/C:\\ghcup\\ghc\\8.10.7\\mingw\\x86_64-w64-mingw32\\lib, C:\\msys64\\mingw64\\lib/g' /c/cabal/config
+        # sed -i 's/ghcup\msys64\mingw64\lib/ghcup\ghc\${{ matrix.ghc }}\mingw\x86_64-w64-mingw32\lib' /c/cabal/config
+        # sed -i 's/cabal\bin,/cabal\bin' /c/cabal/config
+        # sed -i 's/ghcup\msys64\mingw64\bin,/-- ghcup\msys64\mingw64\bin,/s' /c/cabal/config
+        # sed -i 's/ghcup\msys64\usr\bin,/-- ghcup\msys64\usr\bin,/s' /c/cabal/config
 
         echo "# Modified cabal config"
         cat /c/cabal/config
@@ -101,7 +101,8 @@ jobs:
         echo "PATH: $PATH"
         echo "APPDATA: $APPDATA"
         cat /c/cabal/config
-
+# extra-lib-dirs: C:\ghcup\ghc\8.10.7\mingw\x86_64-w64-mingw32\lib,
+#                 C:\msys64\mingw64\lib
     - name: "WIN: List all pkg-config packages"
       if: matrix.os == 'windows-latest'
       shell: msys2 {0}
@@ -127,26 +128,13 @@ jobs:
       run: |
         if [ "${{github.event.inputs.tests}}" == "all" ]; then
           echo "Reconfigure cabal projects to run tests for all dependencies"
-          cat cabal.project | sed 's|tests: False|tests: True|g' > cabal.project.new
-          mv cabal.project.new cabal.project
+          sed -i 's|tests: False|tests: True|g' cabal.project
         fi
 
         cp .github/workflows/cabal.project.local.$RUNNER_OS cabal.project.local
 
         echo "# cabal.project.local"
         cat cabal.project.local
-
-
-    - name: "WIN: Extra dirs"
-      if: matrix.os == 'windows-latest'
-      shell: msys2 {0}
-      run: |
-        cat >> cabal.project.local <<EOF
-        package lmdb
-          extra-include-dirs: D:\a\_temp\mingw64\include
-          extra-lib-dirs:     D:\a\_temp\mingw64\lib
-        EOF
-        cat ./cabal.project.local
 
     - name: Record dependencies
       run: |
