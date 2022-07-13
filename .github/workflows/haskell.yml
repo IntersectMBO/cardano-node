@@ -33,7 +33,7 @@ jobs:
 
     steps:
 
-    - name: WIN: Setup MSYS2 and libraries
+    - name: (WIN) Setup MSYS2 and libraries
       if: matrix.os == 'windows-latest'
       shell: msys2 {0}
       uses: msys2/setup-msys2@v2
@@ -52,7 +52,7 @@ jobs:
           mingw-w64-x86_64-lmdb
           mingw-w64-x86_64-cmake
 
-    - name: WIN: Build and install libsecp256k1
+    - name: (WIN) Build and install libsecp256k1
       if: matrix.os == 'windows-latest'
       shell: msys2 {0}
       run: |
@@ -67,7 +67,7 @@ jobs:
         rm -rf secp256k1
 
 
-    - name: WIN: Setup Haskell
+    - name: (WIN) Setup Haskell
       if: matrix.os == 'windows-latest'
       shell: msys2 {0}
       run: |
@@ -126,7 +126,7 @@ jobs:
         cat cabal.project.local
 
 
-    - name: WIN: Extra dirs
+    - name: (WIN) Extra dirs
       if: matrix.os == 'windows-latest'
       shell: msys2 {0}
       run: |
