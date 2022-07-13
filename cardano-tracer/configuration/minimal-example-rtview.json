@@ -1,0 +1,18 @@
+{
+  "networkMagic": 764824073,
+  "network": {
+    "tag": "AcceptAt",
+    "contents": "/tmp/forwarder.sock"
+  },
+  "hasRTView": {
+    "epHost": "127.0.0.1",
+    "epPort": 3300
+  },
+  "logging": [
+    {
+      "logRoot": "/tmp/cardano-tracer-logs",
+      "logMode": "FileMode",
+      "logFormat": "ForMachine"
+    }
+  ]
+}
