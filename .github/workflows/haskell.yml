@@ -39,6 +39,7 @@ jobs:
     - uses: msys2/setup-msys2@v2
       with:
         update: true
+        #path-type: inherit
         install: >-
           base-devel
           autoconf-wrapper
@@ -52,7 +53,8 @@ jobs:
           mingw-w64-x86_64-lmdb
           mingw-w64-x86_64-cmake
 
-    - run: |
+    - name: Build and install libsecp256k1
+      run: |
         git clone https://github.com/bitcoin-core/secp256k1
         cd secp256k1
         git switch $SECP256K1_REF --detach
@@ -62,33 +64,41 @@ jobs:
         make install
 
 
-    - uses: haskell/actions/setup@v1
-      id: setup-haskell
-      with:
-        ghc-version: ${{ matrix.ghc }}
-        cabal-version: 3.6.2.0
+    - name: Setup Haskell
+      run: |
+        Set-ExecutionPolicy Bypass -Scope Process -Force;[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072;Invoke-Command -ScriptBlock ([ScriptBlock]::Create((Invoke-WebRequest https://www.haskell.org/ghcup/sh/bootstrap-haskell.ps1 -UseBasicParsing))) -ArgumentList $false,$true,$true,$false,$false,$false,$false,"C:\","https://www.haskell.org/ghcup/sh/bootstrap-haskell","C:\msys64"
+        ghcup install ghc-8.10.7
+        ghcup install cabal-3.6.2.0
+      #   uses: haskell/actions/setup@v1
+      # id: setup-haskell
+      # with:
+      #   ghc-version: ${{ matrix.ghc }}
+      #   cabal-version: 3.6.2.0
 
     - uses: actions/checkout@v2
 
-    - name: Haskell versions
-      run: |
-        ghc --version
-        cabal --version
-
     - name: Path
-      run:  echo "$PATH"
+      run: |
+        echo "PATH: $PATH"
+        echo "APPDATA: $APPDATA"
+        cat $APPDATA/cabal/config
 
     - name: List all pkg-config packages
       if: matrix.os == 'windows-latest'
       run: |
         echo "=== Package list ==="
         pkg-config --list-all
-        
+
         echo "=== Package details ==="
         for x in $(pkg-config --list-all | cut -d ' ' -f 1); do
           echo "# $x"
           pkg-config "$x" --cflags --libs
         done
+
+    - name: Haskell versions
+      run: |
+        ghc --version
+        cabal --version
 
     - name: Cabal update
       run: retry 2 cabal update
