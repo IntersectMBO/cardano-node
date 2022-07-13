@@ -99,8 +99,8 @@ import qualified Plutus.V1.Ledger.Api as Plutus
 
 import           Cardano.Api.EraCast (EraCast (..), EraCastError (..))
 import           Cardano.Api.Eras
-import           Cardano.Api.Hash
 import           Cardano.Api.HasTypeProxy
+import           Cardano.Api.Hash
 import           Cardano.Api.Key
 import           Cardano.Api.KeysByron
 import           Cardano.Api.KeysShelley
@@ -424,9 +424,9 @@ instance IsCardanoEra era => SerialiseAddress (AddressInEra era) where
 instance EraCast (AddressTypeInEra addrtype) where
   eraCast toEra' = \case
     ByronAddressInAnyEra -> pure ByronAddressInAnyEra
-    ShelleyAddressInEra previousEra ->
+    t@(ShelleyAddressInEra _) ->
       case cardanoEraStyle toEra' of
-        LegacyByronEra -> Left $ EraCastError "AddressTypeInEra addrtype" (shelleyBasedToCardanoEra previousEra) toEra'
+        LegacyByronEra -> Left $ EraCastError t toEra'
         ShelleyBasedEra newSbe -> Right $ ShelleyAddressInEra newSbe
 
 byronAddressInEra :: Address ByronAddr -> AddressInEra era

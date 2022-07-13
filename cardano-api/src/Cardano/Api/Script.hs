@@ -157,8 +157,8 @@ import qualified Plutus.V1.Ledger.Examples as Plutus
 import           Cardano.Api.EraCast (EraCast (eraCast), EraCastError (..))
 import           Cardano.Api.Eras
 import           Cardano.Api.Error
-import           Cardano.Api.Hash
 import           Cardano.Api.HasTypeProxy
+import           Cardano.Api.Hash
 import           Cardano.Api.KeysShelley
 import           Cardano.Api.ScriptData
 import           Cardano.Api.SerialiseCBOR
@@ -1437,9 +1437,9 @@ instance IsCardanoEra era => FromJSON (ReferenceScript era) where
 instance EraCast ReferenceScript where
   eraCast toEra = \case
     ReferenceScriptNone -> pure ReferenceScriptNone
-    ReferenceScript (_ :: ReferenceTxInsScriptsInlineDatumsSupportedInEra fromEra) scriptInAnyLang ->
+    t@(ReferenceScript _ scriptInAnyLang) ->
       case refInsScriptsAndInlineDatsSupportedInEra toEra of
-        Nothing -> Left $ EraCastError "ReferenceScript" (cardanoEra @fromEra) toEra
+        Nothing -> Left $ EraCastError t toEra
         Just supportedInEra -> Right $ ReferenceScript supportedInEra scriptInAnyLang
 
 data ReferenceTxInsScriptsInlineDatumsSupportedInEra era where

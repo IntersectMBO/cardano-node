@@ -6,18 +6,20 @@ module Cardano.Api.EraCast
   , EraCastError(..)
   ) where
 
-import           Cardano.Api.Eras (CardanoEra (..), IsCardanoEra)
-import           Data.Either (Either)
-import           Data.Kind (Type)
-import           Data.Text (Text)
+import           Prelude
 
-data EraCastError = forall fromEra toEra.
-  ( IsCardanoEra fromEra
-  , IsCardanoEra toEra
+import           Cardano.Api.Eras (CardanoEra (..), IsCardanoEra)
+
+import           Data.Kind (Type)
+
+
+
+data EraCastError = forall toEra thing.
+  ( IsCardanoEra toEra
+  , Show thing
   ) =>
     EraCastError
-    { typeName :: Text
-    , fromEra :: CardanoEra fromEra
+    { typeName :: thing
     , toEra :: CardanoEra toEra
     }
 

@@ -277,8 +277,8 @@ renderShelleyTxCmdError err =
       \likely due to not being in the Alonzo era"
     ShelleyTxCmdReferenceScriptsNotSupportedInEra (AnyCardanoEra era) ->
       "TxCmd: Reference scripts not supported in era: " <> show era
-    ShelleyTxCmdTxEraCastErr (EraCastError typeName fromEra toEra) ->
-      "Unable to cast era of type " <> typeName <> " from " <> show fromEra <> " to " <> show toEra
+    ShelleyTxCmdTxEraCastErr (EraCastError t toEra) ->
+      "Unable to cast type " <> show t <> " to " <> show toEra
 
 renderEra :: AnyCardanoEra -> Text
 renderEra (AnyCardanoEra ByronEra)   = "Byron"

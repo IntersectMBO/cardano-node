@@ -54,13 +54,13 @@ data ValueExpr
 
 parseValueExpr :: Parser ValueExpr
 parseValueExpr =
-    buildExpressionParser operatorTable valueExprTerm
-      <?> "multi-asset value expression"
+   buildExpressionParser operatorTable valueExprTerm
+     <?> "multi-asset value expression"
   where
-    operatorTable =
-      [ [Prefix negateOp]
-      , [Infix  plusOp AssocLeft]
-      ]
+   operatorTable =
+     [ [Prefix negateOp]
+     , [Infix  plusOp AssocLeft]
+     ]
 
 -- | Parse either a 'ValueExprLovelace' or 'ValueExprMultiAsset'.
 valueExprTerm :: Parser ValueExpr
