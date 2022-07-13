@@ -66,8 +66,12 @@ jobs:
 
     - name: Setup Haskell
       run: |
-        curl --proto '=https' --tlsv1.2 -sSf https://get-ghcup.haskell.org | BOOTSTRAP_HASKELL_NONINTERACTIVE=1 BOOTSTRAP_HASKELL_ADJUST_CABAL_CONFIG=1 BOOTSTRAP_HASKELL_GHC_VERSION="${{ matrix.ghc }}" BOOTSTRAP_HASKELL_CABAL_VERSION="3.6.2.0" sh
-        source /c/ghcup/env
+        curl --proto '=https' --tlsv1.2 -sSf https://get-ghcup.haskell.org | \
+          BOOTSTRAP_HASKELL_NONINTERACTIVE=1 \
+          BOOTSTRAP_HASKELL_ADJUST_CABAL_CONFIG=1 \
+          BOOTSTRAP_HASKELL_GHC_VERSION="${{ matrix.ghc }}" \
+          BOOTSTRAP_HASKELL_CABAL_VERSION="3.6.2.0" \
+          sh
         ghc --version
         cabal --version
 
@@ -77,7 +81,7 @@ jobs:
       run: |
         echo "PATH: $PATH"
         echo "APPDATA: $APPDATA"
-        cat $APPDATA/cabal/config
+        cat /c/cabal/config
 
     - name: List all pkg-config packages
       if: matrix.os == 'windows-latest'
