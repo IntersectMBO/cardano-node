@@ -1,21 +1,50 @@
+{-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+
 module Cardano.Tracer.Handlers.RTView.Update.Historical
-  ( runHistoricalUpdater
+  ( backupAllHistory
+  , restoreHistoryFromBackup
+  , restoreHistoryFromBackupAll
+  , runHistoricalBackup
+  , runHistoricalUpdater
   ) where
 
-import           Control.Concurrent.STM.TVar (readTVarIO)
-import           Control.Monad (forM_, forever)
+import           Control.Concurrent.Async (forConcurrently_)
+import           Control.Concurrent.Extra (Lock)
+import           Control.Concurrent.STM (atomically)
+import           Control.Concurrent.STM.TVar (modifyTVar', readTVar, readTVarIO)
+import           Control.Exception.Extra (ignore, try_)
+import           Control.Monad (forM, forM_, forever, unless)
+import           Control.Monad.Extra (ifM, whenJust)
+import qualified Data.ByteString.Lazy as BSL
+import qualified Data.Csv as CSV
+import           Data.List (find, isInfixOf, partition)
 import qualified Data.Map.Strict as M
+import           Data.Set (Set)
+import qualified Data.Set as S
+import qualified Data.Text as T
 import           Data.Time.Clock.System (getSystemTime, systemToUTCTime)
+import qualified Data.Vector as V
+import           System.Directory (createDirectoryIfMissing, doesDirectoryExist, doesFileExist)
+import           System.Directory.Extra (listFiles)
+import           System.FilePath ((</>), takeBaseName)
 import           System.Time.Extra (sleep)
+import           Text.Read (readMaybe)
+
+import           Cardano.Node.Startup (NodeInfo (..))
 
 import           Cardano.Tracer.Handlers.Metrics.Utils
 import           Cardano.Tracer.Handlers.RTView.State.Historical
 import           Cardano.Tracer.Handlers.RTView.State.Last
 import           Cardano.Tracer.Handlers.RTView.State.TraceObjects
+import           Cardano.Tracer.Handlers.RTView.System
 import           Cardano.Tracer.Handlers.RTView.Update.Chain
 import           Cardano.Tracer.Handlers.RTView.Update.Leadership
 import           Cardano.Tracer.Handlers.RTView.Update.Resources
 import           Cardano.Tracer.Handlers.RTView.Update.Transactions
+import           Cardano.Tracer.Handlers.RTView.Update.Utils
 import           Cardano.Tracer.Types
 
 -- | A lot of information received from the node is useful as historical data.
@@ -41,7 +70,6 @@ runHistoricalUpdater
 runHistoricalUpdater _savedTO acceptedMetrics resourcesHistory
                      lastResources chainHistory txHistory = forever $ do
   sleep 1.0 -- TODO: should it be configured?
-
   now <- systemToUTCTime <$> getSystemTime
   allMetrics <- readTVarIO acceptedMetrics
   forM_ (M.toList allMetrics) $ \(nodeId, (ekgStore, _)) -> do
@@ -51,3 +79,255 @@ runHistoricalUpdater _savedTO acceptedMetrics resourcesHistory
       updateResourcesHistory nodeId resourcesHistory lastResources metricName metricValue now
       updateBlockchainHistory nodeId chainHistory metricName metricValue now
       updateLeadershipHistory nodeId chainHistory metricName metricValue now
+
+runHistoricalBackup
+  :: ConnectedNodes
+  -> BlockchainHistory
+  -> ResourcesHistory
+  -> TransactionsHistory
+  -> DataPointRequestors
+  -> Lock
+  -> IO ()
+runHistoricalBackup connectedNodes
+                    chainHistory resourcesHistory txHistory
+                    dpRequestors currentDPLock = forever $ do
+  sleep 300.0 -- TODO: 5 minutes, should it be changed?
+  backupAllHistory connectedNodes
+                   chainHistory resourcesHistory txHistory
+                   dpRequestors currentDPLock
+
+backupAllHistory
+  :: ConnectedNodes
+  -> BlockchainHistory
+  -> ResourcesHistory
+  -> TransactionsHistory
+  -> DataPointRequestors
+  -> Lock
+  -> IO ()
+backupAllHistory connectedNodes
+                 chainHistory resourcesHistory txHistory
+                 dpRequestors currentDPLock = do
+  connected <- S.toList <$> readTVarIO connectedNodes
+  backupAllHistory'
+    connected
+    chainHistory
+    resourcesHistory
+    txHistory
+    dpRequestors
+    currentDPLock
+
+backupAllHistory'
+  :: [NodeId]
+  -> BlockchainHistory
+  -> ResourcesHistory
+  -> TransactionsHistory
+  -> DataPointRequestors
+  -> Lock
+  -> IO ()
+backupAllHistory' [] _ _ _ _ _ = return ()
+backupAllHistory' connected
+                 (ChainHistory chainHistory)
+                 (ResHistory resourcesHistory)
+                 (TXHistory txHistory)
+                 dpRequestors currentDPLock = do
+  nodesIdsWithNames <- getNodesIdsWithNames connected dpRequestors currentDPLock
+  backupDir <- getPathToBackupDir
+  (cHistory, rHistory, tHistory) <- atomically $ (,,)
+    <$> readTVar chainHistory
+    <*> readTVar resourcesHistory
+    <*> readTVar txHistory
+  -- We can safely work with files for different nodes concurrently.
+  forConcurrently_ nodesIdsWithNames $ \(nodeId, nodeName) -> do
+    backupHistory backupDir cHistory nodeId nodeName
+    backupHistory backupDir rHistory nodeId nodeName
+    backupHistory backupDir tHistory nodeId nodeName
+  -- Now we can remove historical points from histories,
+  -- to prevent big memory consumption.
+  cleanupHistoryPoints chainHistory
+  cleanupHistoryPoints resourcesHistory
+  cleanupHistoryPoints txHistory
+ where
+  backupHistory backupDir history nodeId nodeName =
+    whenJust (M.lookup nodeId history) $ \historyData -> ignore $ do
+      let nodeSubdir = backupDir </> T.unpack nodeName
+      createDirectoryIfMissing True nodeSubdir
+      forM_ (M.toList historyData) $ \(historyDataName, historyPoints) -> do
+        let historyDataFile = nodeSubdir </> show historyDataName
+        ifM (doesFileExist historyDataFile)
+          (BSL.appendFile historyDataFile $ pointsToBS historyPoints)
+          (BSL.writeFile  historyDataFile $ pointsToBS historyPoints)
+
+  pointsToBS = CSV.encode . S.toAscList
+
+  -- Remove sets of historical points only, because they are already backed up.
+  cleanupHistoryPoints history = atomically $
+    modifyTVar' history $ M.map (M.map (const S.empty))
+
+data HistoryMark = LatestHistory | AllHistory
+
+restoreHistoryFromBackup
+  :: Set NodeId
+  -> BlockchainHistory
+  -> ResourcesHistory
+  -> TransactionsHistory
+  -> DataPointRequestors
+  -> Lock
+  -> IO ()
+restoreHistoryFromBackup = restoreHistoryFromBackup' LatestHistory Nothing
+
+restoreHistoryFromBackupAll
+  :: DataName
+  -> Set NodeId
+  -> BlockchainHistory
+  -> ResourcesHistory
+  -> TransactionsHistory
+  -> DataPointRequestors
+  -> Lock
+  -> IO ()
+restoreHistoryFromBackupAll dataName = restoreHistoryFromBackup' AllHistory (Just dataName)
+
+restoreHistoryFromBackup'
+  :: HistoryMark
+  -> Maybe DataName
+  -> Set NodeId
+  -> BlockchainHistory
+  -> ResourcesHistory
+  -> TransactionsHistory
+  -> DataPointRequestors
+  -> Lock
+  -> IO ()
+restoreHistoryFromBackup' historyMark aDataName connected
+                          (ChainHistory chainHistory)
+                          (ResHistory resourcesHistory)
+                          (TXHistory txHistory)
+                          dpRequestors currentDPLock = ignore $ do
+  nodesIdsWithNames <-
+    getNodesIdsWithNames (S.toList connected) dpRequestors currentDPLock
+  backupDir <- getPathToBackupDir
+  forM_ nodesIdsWithNames $ \(nodeId, nodeName) -> do
+    let nodeSubdir = backupDir </> T.unpack nodeName
+    doesDirectoryExist nodeSubdir >>= \case
+      False -> return () -- There is no backup for this node.
+      True -> do
+        backupFiles <- listFiles nodeSubdir
+        -- Check if we need a history for all historical data or for particular one only.
+        namesWithPoints <-
+          case aDataName of
+            Nothing ->
+              forM backupFiles $
+                extractNamesWithHistoricalPoints nodeSubdir
+            Just oneDataName ->
+              case find (\bFile -> show oneDataName `isInfixOf` bFile) backupFiles of
+                Nothing -> return []
+                Just backupFile -> do
+                  nameWithPoints <- extractNamesWithHistoricalPoints nodeSubdir backupFile
+                  return [nameWithPoints]
+
+        fillHistory nodeId chainHistory     chainData namesWithPoints
+        fillHistory nodeId resourcesHistory resData   namesWithPoints
+        fillHistory nodeId txHistory        txData    namesWithPoints
+ where
+  extractNamesWithHistoricalPoints nodeSubdir bFile = do
+    let pureFile = takeBaseName bFile
+    case readMaybe pureFile of
+      Nothing -> return noPoints
+      Just (dataName :: DataName) -> do
+        -- Ok, this file contains historical points for 'dataName', extract them...
+        let backupFile = nodeSubdir </> pureFile
+        try_ (BSL.readFile backupFile) >>= \case
+          Left _ -> return noPoints
+          Right rawPoints ->
+            case CSV.decode CSV.NoHeader rawPoints of
+              Left _ -> return noPoints -- Maybe file was broken...
+              Right (pointsV :: V.Vector HistoricalPoint) -> do
+                let points = V.toList pointsV
+                if null points
+                  then return noPoints
+                  else
+                    -- Now we extracted all the points from this backup file.
+                    -- Check if we need all of them or the latest ones only.
+                    case historyMark of
+                      LatestHistory -> do
+                        now <- systemToUTCTime <$> getSystemTime
+                        -- Ok, take the points for the last 6 hours, and only these
+                        -- points will be rendered on JS-charts.
+                        let sixHoursInS = 21600
+                            !firstTSWeNeed = utc2s now - sixHoursInS
+                            (earlyPoints, pointsWeNeed) =
+                              partition (\(ts, _) -> ts < firstTSWeNeed) points
+                        unless (null pointsWeNeed) $
+                          -- Now we re-write backup file with all the points
+                          -- except points we need now. These "last" points
+                          -- will be stored in this file again (with the new points)
+                          -- during the first backup.
+                          BSL.writeFile backupFile $ CSV.encode earlyPoints
+                        return (Just dataName, S.fromList pointsWeNeed)
+                      AllHistory ->
+                        -- Ok, take all the history.
+                        return (Just dataName, S.fromList points)
+
+  noPoints = (Nothing, S.empty)
+
+  fillHistory _ _ _ [] = return ()
+  fillHistory nodeId history dataNames dataNamesWithPoints = do
+    let backupData = mkMapOfData dataNamesWithPoints M.empty
+    atomically . modifyTVar' history $ \currentHistory ->
+      case M.lookup nodeId currentHistory of
+        Nothing -> M.insert nodeId backupData currentHistory
+        Just currentData -> M.adjust (const $ M.unionWith S.union currentData backupData)
+                                     nodeId currentHistory
+   where
+    mkMapOfData [] aMap = aMap
+    mkMapOfData ((mDataName, points):others) aMap =
+      case mDataName of
+        Nothing -> mkMapOfData others aMap
+        Just dataName ->
+          if dataName `elem` dataNames
+            then mkMapOfData others $ M.insert dataName points aMap
+            else mkMapOfData others aMap
+
+  chainData =
+    [ ChainDensityData
+    , SlotNumData
+    , BlockNumData
+    , SlotInEpochData
+    , EpochData
+    , NodeCannotForgeData
+    , ForgedSlotLastData
+    , NodeIsLeaderData
+    , NodeIsNotLeaderData
+    , ForgedInvalidSlotLastData
+    , AdoptedSlotLastData
+    , NotAdoptedSlotLastData
+    , AboutToLeadSlotLastData
+    , CouldNotForgeSlotLastData
+    ]
+
+  resData =
+    [ CPUData
+    , MemoryData
+    , GCMajorNumData
+    , GCMinorNumData
+    , GCLiveMemoryData
+    , CPUTimeGCData
+    , CPUTimeAppData
+    , ThreadsNumData
+    ]
+
+  txData =
+    [ TxsProcessedNumData
+    , MempoolBytesData
+    , TxsInMempoolData
+    ]
+
+getNodesIdsWithNames
+  :: [NodeId]
+  -> DataPointRequestors
+  -> Lock
+  -> IO [(NodeId, T.Text)]
+getNodesIdsWithNames [] _ _ = return []
+getNodesIdsWithNames connected dpRequestors currentDPLock =
+  forM connected $ \nodeId@(NodeId anId) ->
+    askDataPoint dpRequestors currentDPLock nodeId "NodeInfo" >>= \case
+      Nothing -> return (nodeId, anId)
+      Just ni -> return (nodeId, niName ni)

@@ -89,6 +89,8 @@ mkMainPage connectedNodes displayedElements acceptedMetrics savedTO
       resourcesHistory
       chainHistory
       txHistory
+      dpRequestors
+      currentDPLock
       datasetIndices
       datasetTimestamps
       eventsQueues
@@ -110,7 +112,7 @@ mkMainPage connectedNodes displayedElements acceptedMetrics savedTO
   on UI.tick uiNoNodesProgressTimer . const $ do
     let elId = "no-nodes-progress"
     valueS <- findAndGetValue window elId
-    let valueI = readInt (pack valueS) 0 
+    let valueI = readInt (pack valueS) 0
     if valueI < 60
       then findAndSet (set UI.value $ show (valueI + 1)) window elId
       else do
@@ -123,10 +125,14 @@ mkMainPage connectedNodes displayedElements acceptedMetrics savedTO
 
   whenM (liftIO $ readTVarIO reloadFlag) $ do
     liftIO $ cleanupDisplayedValues displayedElements
+
     updateUIAfterReload
       window
       connectedNodes
       displayedElements
+      chainHistory
+      resourcesHistory
+      txHistory
       dpRequestors
       currentDPLock
       loggingConfig
@@ -135,6 +141,7 @@ mkMainPage connectedNodes displayedElements acceptedMetrics savedTO
       nodesErrors
       uiErrorsTimer
       uiNoNodesProgressTimer
+
     liftIO $ pageWasNotReload reloadFlag
 
   -- Uptime is a real-time clock, so update it every second.
@@ -155,6 +162,9 @@ mkMainPage connectedNodes displayedElements acceptedMetrics savedTO
       acceptedMetrics
       savedTO
       nodesEraSettings
+      chainHistory
+      resourcesHistory
+      txHistory
       dpRequestors
       currentDPLock
       loggingConfig

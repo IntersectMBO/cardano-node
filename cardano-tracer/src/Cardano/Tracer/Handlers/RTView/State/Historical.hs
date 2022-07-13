@@ -1,10 +1,13 @@
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Cardano.Tracer.Handlers.RTView.State.Historical
   ( BlockchainHistory (..)
   , DataName (..)
   , History
   , HistoricalPoint
+  , HistoricalPoints
   , POSIXTime
   , ResourcesHistory (..)
   , TransactionsHistory (..)
@@ -20,14 +23,19 @@ module Cardano.Tracer.Handlers.RTView.State.Historical
 
 import           Control.Concurrent.STM (atomically)
 import           Control.Concurrent.STM.TVar (TVar, modifyTVar', newTVarIO, readTVarIO)
+import           Control.Monad (mzero)
+import qualified Data.ByteString.Char8 as BSC
+import           Data.Csv (FromField (..), ToField (..))
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
 import           Data.Set (Set)
 import qualified Data.Set as S
-import           Data.Text (Text)
+import           Data.Text (Text, isInfixOf)
+import           Data.Text.Encoding (decodeUtf8)
 import           Data.Text.Read (decimal, double)
 import           Data.Time.Clock (UTCTime)
 import           Data.Word (Word64)
+import           Text.Printf (printf)
 
 import           Cardano.Tracer.Handlers.RTView.Update.Utils
 import           Cardano.Tracer.Types (NodeId)
@@ -73,6 +81,17 @@ instance Num ValueH where
 
 type HistoricalPoint = (POSIXTime, ValueH)
 
+instance FromField ValueH where
+  parseField s =
+    let t = decodeUtf8 s in
+    if "." `isInfixOf` t
+      then either (const mzero) (return . ValueD . fst) $ double t
+      else either (const mzero) (return . ValueI . fst) $ decimal t
+
+instance ToField ValueH where
+  toField (ValueI i) = toField i
+  toField (ValueD d) = BSC.pack $ printf "%.3f" d
+
 type HistoricalPoints = Set HistoricalPoint
 
 -- | Historical points for particular data.
@@ -104,7 +123,7 @@ data DataName
   | TxsProcessedNumData
   | MempoolBytesData
   | TxsInMempoolData
-  deriving (Eq, Ord)
+  deriving (Eq, Ord, Read, Show)
 
 type HistoricalData = Map DataName HistoricalPoints
 type History        = TVar (Map NodeId HistoricalData)

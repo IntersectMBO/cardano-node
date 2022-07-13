@@ -50,7 +50,7 @@ var chart = new Chart(ctx, {
     animation: false,
     normalized: true,
     showLine: true,
-    spanGaps: false,
+    spanGaps: true,
     interaction: {
       intersect: false,
       mode: 'index',

@@ -10,16 +10,16 @@ import           Control.Concurrent.Async.Extra (sequenceConcurrently)
 import           Control.Concurrent.Extra (newLock)
 import           Control.Monad (void)
 
-import           Cardano.Tracer.Acceptors.Run (runAcceptors)
-import           Cardano.Tracer.CLI (TracerParams (..))
-import           Cardano.Tracer.Configuration (TracerConfig, readTracerConfig)
-import           Cardano.Tracer.Handlers.Logs.Rotator (runLogsRotator)
-import           Cardano.Tracer.Handlers.Metrics.Servers (runMetricsServers)
-import           Cardano.Tracer.Handlers.RTView.Run (initEventsQueues, initSavedTraceObjects,
-                   runRTView)
-import           Cardano.Tracer.Types (DataPointRequestors, ProtocolsBrake)
-import           Cardano.Tracer.Utils (initAcceptedMetrics, initConnectedNodes,
-                   initDataPointRequestors, initProtocolsBrake)
+import           Cardano.Tracer.Acceptors.Run
+import           Cardano.Tracer.CLI
+import           Cardano.Tracer.Configuration
+import           Cardano.Tracer.Handlers.Logs.Rotator
+import           Cardano.Tracer.Handlers.Metrics.Servers
+import           Cardano.Tracer.Handlers.RTView.Run
+import           Cardano.Tracer.Handlers.RTView.State.Historical
+import           Cardano.Tracer.Handlers.RTView.Update.Historical
+import           Cardano.Tracer.Types
+import           Cardano.Tracer.Utils
 
 -- | Top-level run function, called by 'cardano-tracer' app.
 runCardanoTracer :: TracerParams -> IO ()
@@ -38,10 +38,26 @@ doRunCardanoTracer
 doRunCardanoTracer config protocolsBrake dpRequestors = do
   connectedNodes  <- initConnectedNodes
   acceptedMetrics <- initAcceptedMetrics
-  currentLogLock  <- newLock
-  currentDPLock   <- newLock
   savedTO         <- initSavedTraceObjects
-  eventsQueues    <- initEventsQueues dpRequestors currentDPLock
+
+  resourcesHistory <- initResourcesHistory
+  chainHistory     <- initBlockchainHistory
+  txHistory        <- initTransactionsHistory
+
+  currentLogLock <- newLock
+  currentDPLock  <- newLock
+  eventsQueues   <- initEventsQueues dpRequestors currentDPLock
+
+  -- Specify what should be done before program stops.
+  beforeProgramStops $
+    backupAllHistory
+      connectedNodes
+      chainHistory
+      resourcesHistory
+      txHistory
+      dpRequestors
+      currentDPLock
+
   void . sequenceConcurrently $
     [ runLogsRotator    config currentLogLock
     , runMetricsServers config connectedNodes acceptedMetrics
@@ -49,5 +65,6 @@ doRunCardanoTracer config protocolsBrake dpRequestors = do
                         dpRequestors protocolsBrake currentLogLock
                         eventsQueues
     , runRTView         config connectedNodes acceptedMetrics savedTO
+                        chainHistory resourcesHistory txHistory
                         dpRequestors currentDPLock eventsQueues
     ]

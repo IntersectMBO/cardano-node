@@ -284,7 +284,7 @@ readSavedChartsSettings = liftIO $
     [ (chartId, ChartSettings defaultTimeRangeInS defaultUpdatePeriodInS)
     | chartId <- chartsIds
     ]
-  defaultTimeRangeInS = 0 -- All time
+  defaultTimeRangeInS = 21600 -- Last 6 hours
   defaultUpdatePeriodInS = 15
 
 changeChartsToLightTheme :: UI ()

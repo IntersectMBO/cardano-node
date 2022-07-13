@@ -45,12 +45,16 @@ runRTView
   -> ConnectedNodes
   -> AcceptedMetrics
   -> SavedTraceObjects
+  -> BlockchainHistory
+  -> ResourcesHistory
+  -> TransactionsHistory
   -> DataPointRequestors
   -> Lock
   -> EventsQueues
   -> IO ()
 runRTView TracerConfig{logging, network, hasRTView}
           connectedNodes acceptedMetrics savedTO
+          chainHistory resourcesHistory txHistory
           dpRequestors currentDPLock eventsQueues =
   whenJust hasRTView $ \(Endpoint host port) -> do
     -- Pause to prevent collision between "Listening"-notifications from servers.
@@ -65,12 +69,9 @@ runRTView TracerConfig{logging, network, hasRTView}
     -- independently from RTView web-server. As a result, we'll be able to
     -- show charts with historical data (where X axis is the time) for the
     -- period when RTView web-page wasn't opened.
-    resourcesHistory <- initResourcesHistory
-    lastResources    <- initLastResources
-    chainHistory     <- initBlockchainHistory
-    txHistory        <- initTransactionsHistory
-    eraSettings      <- initErasSettings
-    errors           <- initErrors
+    lastResources <- initLastResources
+    eraSettings   <- initErasSettings
+    errors        <- initErrors
 
     void . sequenceConcurrently $
       [ UI.startGUI (config host port certFile keyFile) $
@@ -97,6 +98,13 @@ runRTView TracerConfig{logging, network, hasRTView}
           lastResources
           chainHistory
           txHistory
+      , runHistoricalBackup
+          connectedNodes
+          chainHistory
+          resourcesHistory
+          txHistory
+          dpRequestors
+          currentDPLock
       , runEraSettingsUpdater
           connectedNodes
           eraSettings

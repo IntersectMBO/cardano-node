@@ -14,7 +14,9 @@ import           Graphics.UI.Threepenny.Core
 import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.Handlers.RTView.State.Displayed
 import           Cardano.Tracer.Handlers.RTView.State.Errors
+import           Cardano.Tracer.Handlers.RTView.State.Historical
 import           Cardano.Tracer.Handlers.RTView.UI.Types
+import           Cardano.Tracer.Handlers.RTView.Update.Historical
 import           Cardano.Tracer.Handlers.RTView.Update.NodeInfo
 import           Cardano.Tracer.Handlers.RTView.Update.Nodes
 import           Cardano.Tracer.Types
@@ -23,6 +25,9 @@ updateUIAfterReload
   :: UI.Window
   -> ConnectedNodes
   -> DisplayedElements
+  -> BlockchainHistory
+  -> ResourcesHistory
+  -> TransactionsHistory
   -> DataPointRequestors
   -> Lock
   -> NonEmpty LoggingParams
@@ -32,7 +37,8 @@ updateUIAfterReload
   -> UI.Timer
   -> UI.Timer
   -> UI ()
-updateUIAfterReload window connectedNodes displayedElements dpRequestors currentDPLock
+updateUIAfterReload window connectedNodes displayedElements
+                    chainHistory resourcesHistory txHistory dpRequestors currentDPLock
                     loggingConfig colors datasetIndices nodesErrors updateErrorsTimer
                     noNodesProgressTimer = do
   -- Ok, web-page was reload (i.e. it's the first update after DOM-rendering),
@@ -48,4 +54,12 @@ updateUIAfterReload window connectedNodes displayedElements dpRequestors current
   checkNoNodesState window connected noNodesProgressTimer
   askNSetNodeInfo window dpRequestors currentDPLock connected displayedElements
   addDatasetsForConnected window connected colors datasetIndices displayedElements
-  liftIO $ updateDisplayedElements displayedElements connected
+  liftIO $ do
+    restoreHistoryFromBackup
+      connected
+      chainHistory
+      resourcesHistory
+      txHistory
+      dpRequestors
+      currentDPLock
+    updateDisplayedElements displayedElements connected
