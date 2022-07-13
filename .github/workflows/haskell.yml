@@ -11,22 +11,19 @@ on:
       tests:
         description: 'Tests'
         required: false
-        default: some
+        default: 'some'
+        options:
+        - some
+        - all
   create:
 
 jobs:
   build:
     runs-on: ${{ matrix.os }}
 
-    defaults:
-      run:
-        shell: msys2 {0}
-
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - { sys: mingw64, env: x86_64 }
         ghc: ["8.10.7"]
         os: [windows-latest]
 
@@ -36,10 +33,12 @@ jobs:
 
     steps:
 
-    - uses: msys2/setup-msys2@v2
+    - name: WIN: Setup MSYS2 and libraries
+      if: matrix.os == 'windows-latest'
+      shell: msys2 {0}
+      uses: msys2/setup-msys2@v2
       with:
         update: true
-        #path-type: inherit
         install: >-
           base-devel
           autoconf-wrapper
@@ -53,18 +52,24 @@ jobs:
           mingw-w64-x86_64-lmdb
           mingw-w64-x86_64-cmake
 
-    - name: Build and install libsecp256k1
+    - name: WIN: Build and install libsecp256k1
+      if: matrix.os == 'windows-latest'
+      shell: msys2 {0}
       run: |
         git clone https://github.com/bitcoin-core/secp256k1
-        cd secp256k1
-        git switch $SECP256K1_REF --detach
-        ./autogen.sh
-        ./configure
-        make
-        make install
+        ( cd secp256k1
+          git switch $SECP256K1_REF --detach
+          ./autogen.sh
+          ./configure
+          make
+          make install
+        )
+        rm -rf secp256k1
 
 
-    - name: Setup Haskell
+    - name: WIN: Setup Haskell
+      if: matrix.os == 'windows-latest'
+      shell: msys2 {0}
       run: |
         curl --proto '=https' --tlsv1.2 -sSf https://get-ghcup.haskell.org | \
           BOOTSTRAP_HASKELL_NONINTERACTIVE=1 \
@@ -72,12 +77,15 @@ jobs:
           BOOTSTRAP_HASKELL_GHC_VERSION="${{ matrix.ghc }}" \
           BOOTSTRAP_HASKELL_CABAL_VERSION="3.6.2.0" \
           sh
+        source /c/ghcup/env
         ghc --version
         cabal --version
 
     - uses: actions/checkout@v2
 
     - name: Path
+      if: matrix.os == 'windows-latest'
+      shell: msys2 {0}
       run: |
         echo "PATH: $PATH"
         echo "APPDATA: $APPDATA"
@@ -85,6 +93,7 @@ jobs:
 
     - name: List all pkg-config packages
       if: matrix.os == 'windows-latest'
+      shell: msys2 {0}
       run: |
         echo "=== Package list ==="
         pkg-config --list-all
@@ -117,8 +126,9 @@ jobs:
         cat cabal.project.local
 
 
-    - name: Extra dirs (Windows)
+    - name: WIN: Extra dirs
       if: matrix.os == 'windows-latest'
+      shell: msys2 {0}
       run: |
         cat >> cabal.project.local <<EOF
         package lmdb
