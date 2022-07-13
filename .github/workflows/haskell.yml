@@ -81,7 +81,7 @@ jobs:
         cat /c/cabal/config
 
         sed -i 's/extra-include-dirs/-- extra-include-dirs/g' /c/cabal/config
-        sed -i 's/ghcup\msys64\mingw64\lib/ghcup\ghc\${{ m atrix.ghc }}\mingw\x86_64-w64-mingw32\lib' /c/cabal/config
+        sed -i 's/ghcup\msys64\mingw64\lib/ghcup\ghc\${{ matrix.ghc }}\mingw\x86_64-w64-mingw32\lib' /c/cabal/config
         sed -i 's/cabal\bin,/cabal\bin' /c/cabal/config
         sed -i 's/ghcup\msys64\mingw64\bin,/-- ghcup\msys64\mingw64\bin,/s' /c/cabal/config
         sed -i 's/ghcup\msys64\usr\bin,/-- ghcup\msys64\usr\bin,/s' /c/cabal/config
