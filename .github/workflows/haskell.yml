@@ -33,7 +33,7 @@ jobs:
 
     steps:
 
-    - name: (WIN) Setup MSYS2 and libraries
+    - name: "WIN: Setup MSYS2 and libraries"
       if: matrix.os == 'windows-latest'
       uses: msys2/setup-msys2@v2
       with:
@@ -51,7 +51,7 @@ jobs:
           mingw-w64-x86_64-lmdb
           mingw-w64-x86_64-cmake
 
-    - name: (WIN) Build and install libsecp256k1
+    - name: "WIN: Build and install libsecp256k1"
       if: matrix.os == 'windows-latest'
       shell: msys2 {0}
       run: |
@@ -66,7 +66,7 @@ jobs:
         rm -rf secp256k1
 
 
-    - name: (WIN) Setup Haskell
+    - name: "WIN: Setup Haskell"
       if: matrix.os == 'windows-latest'
       shell: msys2 {0}
       run: |
@@ -77,6 +77,18 @@ jobs:
           BOOTSTRAP_HASKELL_CABAL_VERSION="3.6.2.0" \
           sh
         source /c/ghcup/env
+        echo "# Original cabal config"
+        cat /c/cabal/config
+
+        sed -i 's/extra-include-dirs/-- extra-include-dirs/g' /c/cabal/config
+        sed -i 's/ghcup\msys64\mingw64\lib/ghcup\ghc\${{ m atrix.ghc }}\mingw\x86_64-w64-mingw32\lib' /c/cabal/config
+        sed -i 's/cabal\bin,/cabal\bin' /c/cabal/config
+        sed -i 's/ghcup\msys64\mingw64\bin,/-- ghcup\msys64\mingw64\bin,/s' /c/cabal/config
+        sed -i 's/ghcup\msys64\usr\bin,/-- ghcup\msys64\usr\bin,/s' /c/cabal/config
+
+        echo "# Modified cabal config"
+        cat /c/cabal/config
+
         ghc --version
         cabal --version
 
@@ -90,7 +102,7 @@ jobs:
         echo "APPDATA: $APPDATA"
         cat /c/cabal/config
 
-    - name: List all pkg-config packages
+    - name: "WIN: List all pkg-config packages"
       if: matrix.os == 'windows-latest'
       shell: msys2 {0}
       run: |
@@ -109,7 +121,7 @@ jobs:
         cabal --version
 
     - name: Cabal update
-      run: retry 2 cabal update
+      run: cabal update
 
     - name: Configure build
       run: |
@@ -125,7 +137,7 @@ jobs:
         cat cabal.project.local
 
 
-    - name: (WIN) Extra dirs
+    - name: "WIN: Extra dirs"
       if: matrix.os == 'windows-latest'
       shell: msys2 {0}
       run: |
@@ -145,13 +157,13 @@ jobs:
     - name: Build
       run: cabal build cardano-node cardano-cli cardano-node-chairman cardano-submit-api
 
-    - name: Run tests
+    - name: Run tests (all)
       run: |
         if [ "${{github.event.inputs.tests}}" == "all" ]; then
           TMPDIR="${{ runner.temp }}" TMP="${{ runner.temp }}" KEEP_WORKSPACE=1 cabal test all
         fi
 
-    - name: "Run tests"
+    - name: Run tests (some)
       run: |
         if [ "${{github.event.inputs.tests}}" != "all" ]; then
           TMPDIR="${{ runner.temp }}" TMP="${{ runner.temp }}" KEEP_WORKSPACE=1 cabal test \
