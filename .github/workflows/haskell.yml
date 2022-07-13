@@ -66,14 +66,10 @@ jobs:
 
     - name: Setup Haskell
       run: |
-        Set-ExecutionPolicy Bypass -Scope Process -Force;[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072;Invoke-Command -ScriptBlock ([ScriptBlock]::Create((Invoke-WebRequest https://www.haskell.org/ghcup/sh/bootstrap-haskell.ps1 -UseBasicParsing))) -ArgumentList $false,$true,$true,$false,$false,$false,$false,"C:\","https://www.haskell.org/ghcup/sh/bootstrap-haskell","C:\msys64"
-        ghcup install ghc-8.10.7
-        ghcup install cabal-3.6.2.0
-      #   uses: haskell/actions/setup@v1
-      # id: setup-haskell
-      # with:
-      #   ghc-version: ${{ matrix.ghc }}
-      #   cabal-version: 3.6.2.0
+        curl --proto '=https' --tlsv1.2 -sSf https://get-ghcup.haskell.org | BOOTSTRAP_HASKELL_NONINTERACTIVE=1 BOOTSTRAP_HASKELL_ADJUST_CABAL_CONFIG=1 BOOTSTRAP_HASKELL_GHC_VERSION="${{ matrix.ghc }}" BOOTSTRAP_HASKELL_CABAL_VERSION="3.6.2.0" sh
+        source /c/ghcup/env
+        ghc --version
+        cabal --version
 
     - uses: actions/checkout@v2
 
