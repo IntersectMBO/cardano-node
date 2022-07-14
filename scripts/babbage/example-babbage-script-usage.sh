@@ -10,8 +10,8 @@ export BASE="${BASE:-.}"
 export CARDANO_CLI="${CARDANO_CLI:-cardano-cli}"
 export CARDANO_NODE_SOCKET_PATH="${CARDANO_NODE_SOCKET_PATH:-example/node-spo1/node.sock}"
 export TESTNET_MAGIC="${TESTNET_MAGIC:-42}"
-export UTXO_VKEY="${UTXO_VKEY:-example/stake-delegator-keys/payment1.vkey}"
-export UTXO_SKEY="${UTXO_SKEY:-example/stake-delegator-keys/payment1.skey}"
+export UTXO_VKEY="${UTXO_VKEY:-example/utxo-keys/utxo1.vkey}"
+export UTXO_SKEY="${UTXO_SKEY:-example/utxo-keys/utxo1.skey}"
 export RESULT_FILE="${RESULT_FILE:-$WORK/result.out}"
 
 echo "Socket path: $CARDANO_NODE_SOCKET_PATH"
@@ -41,7 +41,7 @@ echo "Plutus Script Address"
 echo "$plutusspendingscriptaddr"
 mkdir -p "$WORK"
 
-utxoaddr=$($CARDANO_CLI address build --testnet-magic "$TESTNET_MAGIC" --payment-verification-key-file "$UTXO_VKEY" --stake-verification-key-file example/stake-delegator-keys/staking1.vkey)
+utxoaddr=$($CARDANO_CLI address build --testnet-magic "$TESTNET_MAGIC" --payment-verification-key-file "$UTXO_VKEY")
 
 $CARDANO_CLI query utxo --address "$utxoaddr" --cardano-mode --testnet-magic "$TESTNET_MAGIC" --out-file $WORK/utxo-1.json
 cat $WORK/utxo-1.json
@@ -103,9 +103,7 @@ $CARDANO_CLI query utxo --address "$utxoaddr" --cardano-mode --testnet-magic "$T
 
 txin1=$(jq -r 'keys[0]' $WORK/utxo-2.json)
 txinCollateral=$(jq -r 'keys[1]' $WORK/utxo-2.json)
-lovelaceattxin1=$(jq -r ".[\"$txin1\"].value.lovelace" $WORK/utxo-2.json)
-lovelaceattxindiv31=$(expr $lovelaceattxin1 / 3)
-
+suppliedCollateral=$(jq -r ".[\"$txinCollateral\"].value.lovelace" $WORK/utxo-2.json)
 
 # Get input at plutus script that we will attempt to spend
 $CARDANO_CLI query utxo --address $plutusspendingscriptaddr --testnet-magic "$TESTNET_MAGIC" --out-file $WORK/plutusutxo.json
@@ -124,16 +122,17 @@ mintingscriptrefinput=$(jq -r 'keys[0]' $WORK/minting-script-ref-input-utxo.json
 
 echo "Plutus txin"
 echo "$plutuslockedutxotxin"
-
+echo ""
 echo "Collateral"
 echo "$txinCollateral"
-
+echo "$suppliedCollateral"
+echo ""
 echo "Funding utxo"
 echo "$txin1"
-
+echo ""
 echo "Plutus reference script txin"
 echo "$plutusreferencescripttxin"
-
+echo ""
 echo "Plutus input we are trying to spend"
 echo "$plutuslockedutxotxin"
 
@@ -157,6 +156,10 @@ echo "$mintpolicyid"
 #  --tx-out "$utxoaddr+149988741087" \
 #  --fee "1000000" \
 #  --protocol-params-file "$WORK/pparams.json"
+#   --tx-out-return-collateral
+#
+returncollateral=$(expr $suppliedCollateral - 529503)
+
 
 $CARDANO_CLI transaction build \
   --babbage-era \
@@ -166,6 +169,8 @@ $CARDANO_CLI transaction build \
   --read-only-tx-in-reference  "$readonlyrefinput" \
   --tx-in "$txin1" \
   --tx-in-collateral "$txinCollateral" \
+  --tx-total-collateral 529503 \
+  --tx-out-return-collateral "$utxoaddr+$returncollateral" \
   --out-file "$WORK/test-alonzo-ref-script.body" \
   --tx-in "$plutuslockedutxotxin" \
   --spending-tx-in-reference "$plutusreferencescripttxin" \
