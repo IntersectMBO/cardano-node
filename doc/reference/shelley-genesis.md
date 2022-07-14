@@ -498,6 +498,11 @@ And if we compare this with the `initialFunds` from the generated file we see
         "6003662510383a9901958f7a16ceb977917d8102eb2013f4ba5e0b0763": 0
     },
 ```
+The above are hex representations of addresses. To find out hex representations for the address from the output of `cardano-cli genesis initial-addr`
+call 
+```
+cardano-cli address info --address $ADDR
+```
 
 This means we'll start with 0 lovelace in a special genesis UTxO at that
 address.
