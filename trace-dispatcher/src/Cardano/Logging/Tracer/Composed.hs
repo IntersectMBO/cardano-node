@@ -13,7 +13,7 @@ import           Control.Exception (catch, SomeException)
 import           Data.Aeson.Types (ToJSON)
 import           Data.Maybe (fromMaybe)
 import           Data.Symbol
-import           Data.Text
+import           Data.Text hiding(map)
 
 import           Trace.Forward.Utils.DataPoint (DataPoint (..))
 
@@ -98,7 +98,7 @@ mkCardanoTracer' trStdout trForward mbTrEkg tracerName namesFor severityFor priv
       tr'  <- withDetailsFromConfig tr
       tr'' <- filterSeverityFromConfig tr'
       pure  $ withNamesAppended namesFor
-              $ appendNames tracerName
+              $ appendNames (map (intern . unpack) tracerName)
                $ withSeverity severityFor
                  $ withPrivacy privacyFor
                    tr''

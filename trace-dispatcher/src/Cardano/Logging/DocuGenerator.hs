@@ -326,19 +326,19 @@ documentMarkdown (Documented documented) tracers = do
                       , configBuilder ld
                       ]
 
-    documentMetrics :: (Int, LogDoc) -> [([Symbol], DocuResult)]
-    documentMetrics (_idx, ld@LogDoc {..}) =
-      map (\(name, builder) -> ([(intern . T.unpack) name] , DocuMetric $
-          mconcat $ intersperse (fromText "\n\n")
-            [ builder
-            , namespacesMetricsBuilder (nub ldNamespace)
-            , configMetricsBuilder ld
-            ]))
-          $ metricsBuilder ldMetricsDoc
+    documentMetrics :: [LogDoc] -> [([Symbol], DocuResult)]
+    documentMetrics logDocs =
+      let nameCommentNamespaceList = 
+            concatMap (\ld -> zip (Map.toList (ldMetricsDoc ld)) (repeat (ldNamespace ld))) logDocs
+          sortedNameCommentNamespaceList =
+            sortBy (\a b -> compare ((fst . fst) a) ((fst . fst) b)) nameCommentNamespaceList
+          groupedNameCommentNamespaceList =
+            groupBy (\a b -> (fst . fst) a == (fst . fst) b) sortedNameCommentNamespaceList
+      in map documentMetrics' groupedNameCommentNamespaceList
 
-    documentMetrics' :: [((Text, Text), [Namespace])] -> ([Text], DocuResult)
+    documentMetrics' :: [((Text, Text), [Namespace])] -> ([Symbol], DocuResult)
     documentMetrics' ncns@(((name, comment), _) : _tail) =
-      ([name], DocuMetric 
+      ([(intern. T.unpack) name], DocuMetric 
               $ mconcat $ intersperse(fromText "\n\n")
                     [ metricToBuilder (name,comment)
                     , namespacesMetricsBuilder (nub (concatMap snd ncns))

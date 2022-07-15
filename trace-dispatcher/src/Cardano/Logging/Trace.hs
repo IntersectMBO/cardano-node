@@ -118,7 +118,7 @@ appendName name (Trace tr) = Trace $
 -- | Appends a name to the context.
 -- E.g. appendName "specific" $ appendName "middle" $ appendName "general" tracer
 -- give the result: `general.middle.specific`.
-appendNames :: Monad m => [Text] -> Trace m a -> Trace m a
+appendNames :: Monad m => [Symbol] -> Trace m a -> Trace m a
 appendNames names (Trace tr) = Trace $
     T.contramap
       (\

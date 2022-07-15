@@ -1,5 +1,6 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -21,20 +22,21 @@ module Cardano.Logging.Configuration
 import           Control.Monad.IO.Class (MonadIO, liftIO)
 import           Control.Monad.IO.Unlift (MonadUnliftIO)
 import qualified Control.Tracer as T
+import qualified Data.Aeson as AE
 import           Data.IORef (IORef, newIORef, readIORef, writeIORef)
 import           Data.List (maximumBy, nub)
 import qualified Data.Map as Map
 import           Data.Maybe (fromMaybe, mapMaybe)
-import           Data.Text (Text, intercalate, unpack)
+import           Data.Text (intercalate, pack)
 import           Data.Symbol
-import           Data.Text (Text, split, unpack)
+import           Data.Text (Text, unpack)
 import           Data.Yaml
 import           GHC.Generics
 
 import           Cardano.Logging.DocuGenerator (addFiltered, addLimiter)
 import           Cardano.Logging.FrequencyLimiter (LimitingMessage (..), limitFrequency)
 import           Cardano.Logging.Trace (filterTraceBySeverity, setDetails)
-import           Cardano.Logging.Types
+import           Cardano.Logging.Types hiding (severity, detail, backends)
 
 
 
@@ -321,7 +323,7 @@ getLimiterSpec :: TraceConfig -> Namespace -> Maybe (Text, Double)
 getLimiterSpec config ns = getOption limiterSelector config ns
   where
     limiterSelector :: ConfigOption -> Maybe (Text, Double)
-    limiterSelector (ConfLimiter f) = Just (intercalate "." ns, f)
+    limiterSelector (ConfLimiter f) = Just (intercalate "." (map (pack . unintern) ns), f)
     limiterSelector _               = Nothing
 
 -- | Searches in the config to find an option
@@ -338,54 +340,6 @@ getOption sel config ns =
     Just options -> case mapMaybe sel options of
                       []        -> getOption sel config (init ns)
                       (opt : _) -> Just opt
-
--- -----------------------------------------------------------------------------
--- Configuration file
-
-readConfiguration :: FilePath -> IO TraceConfig
-readConfiguration fp =
-    either throwIO pure . parseRepresentation =<< BS.readFile fp
-
-parseRepresentation :: ByteString -> Either ParseException TraceConfig
-parseRepresentation bs = transform (decodeEither' bs)
-  where
-    transform ::
-         Either ParseException ConfigRepresentation
-      -> Either ParseException TraceConfig
-    transform (Left e)   = Left e
-    transform (Right rl) = Right $ transform' emptyTraceConfig rl
-    transform' :: TraceConfig -> ConfigRepresentation -> TraceConfig
-    transform' TraceConfig {tcOptions=tc} cr =
-      let tc'  = foldl' (\ tci (TraceOptionSeverity ns severity') ->
-                          let ns' = split (=='.') ns
-                              ns'' = if ns' == [""] then [] else ns'
-                          in Map.insertWith (++) (map (intern . unpack) ns'') [ConfSeverity severity'] tci)
-                        tc
-                        (traceOptionSeverity cr)
-          tc'' = foldl' (\ tci (TraceOptionDetail ns detail') ->
-                          let ns' = split (=='.') ns
-                              ns'' = if ns' == [""] then [] else ns'
-                          in Map.insertWith (++) (map (intern . unpack) ns'') [ConfDetail detail'] tci)
-                        tc'
-                        (traceOptionDetail cr)
-          tc''' = foldl' (\ tci (TraceOptionBackend ns backend') ->
-                          let ns' = split (=='.') ns
-                              ns'' = if ns' == [""] then [] else ns'
-                          in Map.insertWith (++) (map (intern . unpack) ns'') [ConfBackend backend'] tci)
-                        tc''
-                        (traceOptionBackend cr)
-          tc'''' = foldl' (\ tci (TraceOptionLimiter ns name frequ) ->
-                          let ns' = split (=='.') ns
-                              ns'' = if ns' == [""] then [] else ns'
-                          in Map.insertWith (++) (map (intern . unpack) ns'') [ConfLimiter name frequ] tci)
-                        tc'''
-                        (traceOptionLimiter cr)
-      in TraceConfig
-          tc''''
-          (traceOptionForwarder cr)
-          (traceOptionNodeName cr)
-          (traceOptionPeerFreqency cr)
-          (traceOptionResourceFreqency cr)
 
 data TraceOptionSeverity = TraceOptionSeverity {
       nsS      :: Text
@@ -453,25 +407,4 @@ instance AE.FromJSON TraceOptionLimiter where
 
 
 
-data ConfigRepresentation = ConfigRepresentation {
-    traceOptionSeverity         :: [TraceOptionSeverity]
-  , traceOptionDetail           :: [TraceOptionDetail]
-  , traceOptionBackend          :: [TraceOptionBackend]
-  , traceOptionLimiter          :: [TraceOptionLimiter]
-  , traceOptionForwarder        :: TraceOptionForwarder
-  , traceOptionNodeName         :: Maybe Text
-  , traceOptionPeerFreqency     :: Maybe Int
-  , traceOptionResourceFreqency :: Maybe Int
-  }
-  deriving (Eq, Ord, Show)
 
-instance AE.FromJSON ConfigRepresentation where
-    parseJSON (Object obj) = ConfigRepresentation
-                           <$> obj .: "TraceOptionSeverity"
-                           <*> obj .: "TraceOptionDetail"
-                           <*> obj .: "TraceOptionBackend"
-                           <*> obj .: "TraceOptionLimiter"
-                           <*> obj .: "TraceOptionForwarder"
-                           <*> obj .:? "TraceOptionNodeName"
-                           <*> obj .:? "TraceOptionPeerFreqency"
-                           <*> obj .:? "TraceOptionResourceFreqency"

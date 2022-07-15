@@ -57,8 +57,7 @@ metricsFormatter application (Trace tr) =
 -- | Format this trace as TraceObject for the trace forwarder
 forwardFormatter
   :: forall a m . (LogFormatting a, MonadIO m)
-  => Symbol
-  => Maybe Text
+  => Maybe Symbol
   -> Trace m FormattedMessage
   -> m (Trace m a)
 forwardFormatter condApplication (Trace tr) = do
@@ -104,8 +103,7 @@ forwardFormatter condApplication (Trace tr) = do
 humanFormatter
   :: forall a m . (LogFormatting a, MonadIO m)
   => Bool
-  -> Symbol
-  -> Maybe Text
+  -> Maybe Symbol
   -> Trace m FormattedMessage
   -> m (Trace m a)
 humanFormatter withColor condApplication (Trace tr) = do
@@ -131,8 +129,7 @@ humanFormatter withColor condApplication (Trace tr) = do
 formatContextHuman ::
      Bool
   -> String
-  -> Symbol
-  -> Maybe Text
+  -> Maybe Symbol
   -> LoggingContext
   -> Text
   -> IO Text
@@ -150,8 +147,8 @@ formatContextHuman withColor hostname condApplication LoggingContext {..}  txt =
                       <> singleton ':'
                       <> mconcat (intersperse (singleton '.')
                           (case condApplication of
-                            Just app -> map fromText (app : lcNamespace)
-                            Nothing  -> map fromText lcNamespace))
+                            Just app -> map (fromString . unintern)  (app : lcNamespace)
+                            Nothing  -> map (fromString . unintern) lcNamespace))
 
       tadd     = fromText " ("
                   <> fromString (show severity)
@@ -174,7 +171,7 @@ formatContextHuman withColor hostname condApplication LoggingContext {..}  txt =
 -- The text argument gives the application name which is prepended to the namespace
 machineFormatter
   :: forall a m . (LogFormatting a, MonadIO m)
-  => Maybe Text
+  => Maybe Symbol
   -> Trace m FormattedMessage
   -> m (Trace m a)
 machineFormatter condApplication (Trace tr) = do
@@ -200,7 +197,7 @@ machineFormatter condApplication (Trace tr) = do
 
 formatContextMachine ::
      String
-  -> Maybe Text
+  -> Maybe Symbol
   -> LoggingContext
   -> AE.Object
   -> IO AE.Encoding
@@ -212,8 +209,8 @@ formatContextMachine hostname condApplication LoggingContext {..} obj = do
                     ((stripPrefix "ThreadId " . pack . show) thid)
       ns       = mconcat (intersperse (singleton '.')
                      (case condApplication of
-                       Just app -> map fromText (app : lcNamespace)
-                       Nothing  -> map fromText lcNamespace))
+                       Just app -> map (fromString . unintern) (app : lcNamespace)
+                       Nothing  -> map (fromString . unintern) lcNamespace))
       ts       = pack $ formatTime defaultTimeLocale "%F %H:%M:%S%4QZ" time
   pure $ AE.pairs $    "at"      .= ts
                     <> "ns"      .= toStrict (toLazyText ns)

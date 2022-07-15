@@ -16,9 +16,10 @@ import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as BS
 import           Data.Functor
 import           Data.List (foldl')
-import           Data.Maybe (fromMaybe)
 import qualified Data.Map as Map
-import           Data.Text (Text, split)
+import           Data.Maybe (fromMaybe)
+import           Data.Symbol
+import           Data.Text (Text, split, unpack)
 import           Data.Yaml
 import           GHC.Generics
 
@@ -56,9 +57,7 @@ parseRepresentation bs = transform (decodeEither' bs)
       let to''  = foldl' (\ tci (nsp, opts') ->
                               let ns' = split (=='.') nsp
                                   ns'' = if ns' == [""] then [] else ns'
-                                  ns''' = case ns'' of
-                                            "Cardano" : tl -> tl
-                                            other -> other
+                                  ns''' = map (intern . unpack) ns''
                               in Map.insertWith
                                   (++)
                                   ns'''
