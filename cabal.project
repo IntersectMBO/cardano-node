@@ -263,8 +263,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: 47588c5379f8bd05d4d72cdb877b5d4575901e19
-  --sha256: 06bdx3qz5r0ji0zzwjpj21nflwhg1ppanr07bkywi91s2pa3ynkz
+  tag: 0a4e19163e5510ce05d12f3a88c55294b4f48351
+  --sha256: 179d6n9fiwwz0vimxn5cgad5fkq9vg13nnb5qk43pln4x7i9yx24
   subdir:
     monoidal-synchronisation
     network-mux
