@@ -10,8 +10,7 @@ module Test.Assert
   , getRelevantLeaderSlots
   ) where
 
-import           Control.Applicative ((<*>))
-import           Control.Monad (Monad (..))
+import           Control.Monad (Monad (..), fail)
 import           Control.Monad.IO.Class (MonadIO)
 import           Control.Monad.Trans.Reader (ReaderT)
 import           Control.Monad.Trans.Resource (ResourceT)
@@ -86,10 +85,11 @@ data TraceNodeIsLeader = TraceNodeIsLeader
   } deriving (Eq, Show)
 
 instance FromJSON TraceNodeIsLeader where
-  parseJSON = Aeson.withObject "TraceNodeIsLeader" $ \v ->
-    TraceNodeIsLeader
-      <$> v .: "kind"
-      <*> v .: "slot"
+  parseJSON = Aeson.withObject "TraceNodeIsLeader" $ \v -> do
+    k <- v .: "val" >>= (.: "kind")
+    if k == "TraceNodeIsLeader"
+    then TraceNodeIsLeader k <$> (v .: "val" >>= (.: "slot"))
+    else fail "Not the right kind"
 
 instance FromJSON Kind where
   parseJSON = Aeson.withObject "Kind" $ \v ->
