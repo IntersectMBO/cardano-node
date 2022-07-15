@@ -977,26 +977,16 @@ readAndDecodeShelleyGenesis fpath = runExceptT $ do
     . hoistEither $ Aeson.eitherDecode' lbs
 
 updateTemplate
-    -- | System start time
-    :: SystemStart
-    -- | Genesis delegation (not stake-based)
-    -> Map (Hash GenesisKey) (Hash GenesisDelegateKey, Hash VrfKey)
-    -- | Amount of lovelace not delegated
-    -> Maybe Lovelace
-    -- | UTxO addresses that are not delegating
-    -> [AddressInEra ShelleyEra]
-    -- | Genesis staking: pools/delegation map & delegated initial UTxO spec
-    -> Map (Ledger.KeyHash 'Ledger.Staking StandardCrypto) (Ledger.PoolParams StandardCrypto)
-    -- | Number of UTxO Addresses for delegation
-    -> Lovelace
-    -- | UTxO Addresses for delegation
-    -> [AddressInEra ShelleyEra]
-    -- | Stuffed UTxO addresses
-    -> [AddressInEra ShelleyEra]
-    -- | Template from which to build a genesis
-    -> ShelleyGenesis StandardShelley
-    -- | Updated genesis
-    -> ShelleyGenesis StandardShelley
+    :: SystemStart  -- ^ System start time
+    -> Map (Hash GenesisKey) (Hash GenesisDelegateKey, Hash VrfKey) -- ^ Genesis delegation (not stake-based)
+    -> Maybe Lovelace -- ^ Amount of lovelace not delegated
+    -> [AddressInEra ShelleyEra] -- ^ UTxO addresses that are not delegating
+    -> Map (Ledger.KeyHash 'Ledger.Staking StandardCrypto) (Ledger.PoolParams StandardCrypto) -- ^ Genesis staking: pools/delegation map & delegated initial UTxO spec
+    -> Lovelace -- ^ Number of UTxO Addresses for delegation
+    -> [AddressInEra ShelleyEra] -- ^ UTxO Addresses for delegation
+    -> [AddressInEra ShelleyEra] -- ^ Stuffed UTxO addresses
+    -> ShelleyGenesis StandardShelley -- ^ Template from which to build a genesis
+    -> ShelleyGenesis StandardShelley -- ^ Updated genesis
 updateTemplate (SystemStart start)
                genDelegMap mAmountNonDeleg utxoAddrsNonDeleg
                poolSpecs (Lovelace amountDeleg) utxoAddrsDeleg stuffedUtxoAddrs
@@ -1065,32 +1055,19 @@ updateTemplate (SystemStart start)
     unLovelace (Lovelace coin) = fromIntegral coin
 
 updateCreateStakedOutputTemplate
-    -- | System start time
-    :: SystemStart
-    -- | Genesis delegation (not stake-based)
-    -> Map (Hash GenesisKey) (Hash GenesisDelegateKey, Hash VrfKey)
-    -- | Amount of lovelace not delegated
-    -> Maybe Lovelace
-    -- | Number of UTxO addresses that are delegating
-    -> Int
-    -- | UTxO addresses that are not delegating
-    -> [AddressInEra ShelleyEra]
-    -- | Pool map
-    -> [(Ledger.KeyHash 'Ledger.StakePool StandardCrypto, Ledger.PoolParams StandardCrypto)]
-    -- | Delegaton map
-    -> [(Ledger.KeyHash 'Ledger.Staking StandardCrypto, Ledger.KeyHash 'Ledger.StakePool StandardCrypto)]
-    -- | Amount of lovelace to delegate
-    -> Lovelace
-    -- | Number of UTxO address for delegationg
-    -> Int
-    -- | UTxO address for delegationg
-    -> [AddressInEra ShelleyEra]
-    -- | Stuffed UTxO addresses
-    -> [AddressInEra ShelleyEra]
-    -- | Template from which to build a genesis
-    -> ShelleyGenesis StandardShelley
-    -- | Updated genesis
-    -> ShelleyGenesis StandardShelley
+    :: SystemStart -- ^ System start time
+    -> Map (Hash GenesisKey) (Hash GenesisDelegateKey, Hash VrfKey) -- ^ Genesis delegation (not stake-based)
+    -> Maybe Lovelace -- ^ Amount of lovelace not delegated
+    -> Int -- ^ Number of UTxO addresses that are delegating
+    -> [AddressInEra ShelleyEra] -- ^ UTxO addresses that are not delegating
+    -> [(Ledger.KeyHash 'Ledger.StakePool StandardCrypto, Ledger.PoolParams StandardCrypto)] -- ^ Pool map
+    -> [(Ledger.KeyHash 'Ledger.Staking StandardCrypto, Ledger.KeyHash 'Ledger.StakePool StandardCrypto)] -- ^ Delegaton map
+    -> Lovelace -- ^ Amount of lovelace to delegate
+    -> Int -- ^ Number of UTxO address for delegationg
+    -> [AddressInEra ShelleyEra] -- ^ UTxO address for delegationg
+    -> [AddressInEra ShelleyEra] -- ^ Stuffed UTxO addresses
+    -> ShelleyGenesis StandardShelley -- ^ Template from which to build a genesis
+    -> ShelleyGenesis StandardShelley -- ^ Updated genesis
 updateCreateStakedOutputTemplate
   (SystemStart start)
   genDelegMap mAmountNonDeleg nUtxoAddrsNonDeleg utxoAddrsNonDeleg pools stake
