@@ -8,7 +8,7 @@ do case "$1" in
                     export WB_PROFILED='true';;
        * ) break;; esac; shift; done
 
-export WB_RTSARGS=${WB_PROFILED:+-xc}
+export WB_RTSARGS=${WB_PROFILED:+-p}
 export WB_FLAGS_RTS=${WB_RTSARGS:++RTS $WB_RTSARGS -RTS}
 export WB_FLAGS_CABAL=${WB_PROFILED:+--enable-profiling}
 WB_TIME=(
