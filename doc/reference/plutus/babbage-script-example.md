@@ -12,6 +12,12 @@ An inline datum, is a datum that exists at a transaction output. We no longer ha
 
 In the case where we are not using a reference input to reference another transaction input (at a Plutus script address), we can specify a read only reference input that is simply exposed in the Plutus script context.
 
+## What are total and return collateral?
+
+The total collateral field lets users write transactions whose collateral is evident by just looking at the tx body instead of requiring information in the UTxO. The specification of total collateral is optional. It does not change how the collateral is computed but transactions whose collateral is different than the amount specified will be invalid.
+
+Return collateral allows us to specify an output with the remainder of our collateral input(s) in the event we overcollateralize our transaction. This allows us to avoid overpaying the collateral.
+
 ### An example of using a Plutus V2 reference script
 
 Below is an example that shows how to use a reference Plutus spending script with an inline datum and a reference minting script. Here we discuss a [shell script example of how to use a reference script to spend a tx input and a reference minting script to mint tokens](../../../scripts/babbage/example-babbage-script-usage.sh). This is a step-by-step process involving:
@@ -158,7 +164,8 @@ Because we are using the `build` command, we should only note the following:
 `mint-plutus-script-v2` - This specifies the version of the reference script at the reference input.
 `mint-reference-tx-in-redeemer-file` - This is the redeemer to be used with the reference script.
 `policy-id` - Because we do not have direct access to the minting script we must specify the policy id.
-
+`tx-total-collateral` - This is the total required collateral for our transaction. This can be computed by multiplying the `collateralPercentage` and the transaction fee.
+`tx-out-return-collateral` - If our collateral inputs over collateralize our transaction, we can return the excess to ourselves via this cli option.
 
 ```bash
 cardano-cli transaction build \
@@ -169,6 +176,8 @@ cardano-cli transaction build \
   --read-only-tx-in-reference "$readonlyrefinput" \
   --tx-in "$txin1" \
   --tx-in-collateral "$txinCollateral" \
+  --tx-total-collateral 529503 \
+  --tx-out-return-collateral "$utxoaddr+$returncollateral" \
   --out-file "$WORK/test-alonzo-ref-script.body" \
   --tx-in "$plutuslockedutxotxin" \
   --spending-tx-in-reference "$plutusreferencescripttxin" \

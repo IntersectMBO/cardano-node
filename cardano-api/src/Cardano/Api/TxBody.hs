@@ -291,7 +291,7 @@ isValidToScriptValidity (Alonzo.IsValid True) = ScriptValid
 
 -- | A representation of whether the era supports tx script validity.
 --
--- The Mary and subsequent eras support script validity.
+-- The Alonzo and subsequent eras support script validity.
 --
 data TxScriptValidity era where
   TxScriptValidityNone :: TxScriptValidity era
