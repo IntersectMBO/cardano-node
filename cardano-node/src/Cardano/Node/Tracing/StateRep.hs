@@ -92,7 +92,6 @@ data StartupState
   | NetworkConfigUpdate
   | NetworkConfigUpdateError Text
   | P2PWarning
-  | P2PWarningDevelopementNetworkProtocols
   | WarningDevelopmentNetworkProtocols [NPV.NodeToNodeVersion] [NPV.NodeToClientVersion]
   deriving (Generic, FromJSON, ToJSON)
 
@@ -228,10 +227,6 @@ traceNodeStateStartup tr ev =
       traceWith tr $ NodeStartup $ NetworkConfigUpdateError e
     Startup.P2PWarning ->
       traceWith tr $ NodeStartup P2PWarning
-    Startup.P2PWarningDevelopementNetworkProtocols ->
-      traceWith tr $ NodeStartup P2PWarningDevelopementNetworkProtocols
-    Startup.WarningDevelopmentNetworkProtocols n2ns n2cs ->
-      traceWith tr $ NodeStartup $ WarningDevelopmentNetworkProtocols n2ns n2cs
     _ -> return ()
 
 traceNodeStateShutdown
