@@ -19,7 +19,8 @@ Tells your node to which nodes in the network it should talk to. A minimal versi
 
 * `valency` tells the node how many connections your node should have. It only has an effect for dns addresses. If a dns address is given, valency governs to how many resolved ip addresses should we maintain active (hot) connection; for ip addresses, valency is used as a Boolean value, where `0` means to ignore the address.
 
-Your __block-producing__ node must __ONLY__ talk to your __relay nodes__, and the relay node should talk to other relay nodes in the network. Go to our telegram channel to find out IP addresses and ports of peers.
+Your __block-producing__ node must __ONLY__ talk to your __relay nodes__, and
+the relay node should talk to other relay nodes in the network.
 
 #### The P2P topology.json file
 
@@ -93,6 +94,17 @@ You __can__ tell the node that the topology configuration file changed by sendin
 signal to the `cardano-node` process, e.g. `pkill -HUP cardano-node`. After receiving the
 signal, `cardano-node` will re-read the file and restart all dns resolution. Please
 **note** that this only applies to the topology configuration file!
+
+If you are synchronizing the network for the first time, please connect to IOG
+relays `relays.cardano-node.iohk.io` by adding it to your local root peers and
+set `useLedgerAfterSlot` to `0` (to disable ledger peers).   You can use
+different relays as long as you trust them to provide you the honest chain.
+When the node is synced, you can remove it from the local root peers, you
+should also manually check if other stake pool relays are on the same chain as
+you are.  Once you enabled ledger peers by setting `useLedgerAfterSlot` the
+node will connect to relays registered on the chain, and churn through them by
+randomly picking new peers (weighted by stake distribution) and forgetting 20%
+least performing ones.
 
 #### The genesis.json file
 
