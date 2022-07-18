@@ -135,7 +135,6 @@ namesStartupInfo = \case
   NetworkConfig {}                          -> ["NetworkConfig"]
   NetworkConfigLegacy {}                    -> ["NetworkConfigLegacy"]
   P2PWarning {}                             -> ["P2PWarning"]
-  P2PWarningDevelopementNetworkProtocols {} -> ["P2PWarningDevelopementNetworkProtocols"]
   WarningDevelopmentNetworkProtocols {}     -> ["WarningDevelopmentNetworkProtocols"]
   BICommon {}                               -> ["Common"]
   BIShelley {}                              -> ["ShelleyBased"]
@@ -220,9 +219,6 @@ instance ( Show (BlockNodeToNodeVersion blk)
   forMachine _dtal P2PWarning =
       mconcat [ "kind" .= String "P2PWarning"
                , "message" .= String p2pWarningMessage ]
-  forMachine _dtal P2PWarningDevelopementNetworkProtocols =
-      mconcat [ "kind" .= String "P2PWarningDevelopementNetworkProtocols"
-               , "message" .= String p2pWarningDevelopmentNetworkProtocolsMessage ]
   forMachine _ver (WarningDevelopmentNetworkProtocols ntnVersions ntcVersions) =
       mconcat [ "kind" .= String "WarningDevelopmentNetworkProtocols"
                , "message" .= String "enabled development network protocols"
@@ -328,9 +324,6 @@ ppStartupInfoTrace NetworkConfigLegacy = p2pNetworkConfigLegacyMessage
 
 ppStartupInfoTrace P2PWarning = p2pWarningMessage
 
-ppStartupInfoTrace P2PWarningDevelopementNetworkProtocols =
-    p2pWarningDevelopmentNetworkProtocolsMessage
-
 ppStartupInfoTrace (WarningDevelopmentNetworkProtocols ntnVersions ntcVersions) =
      "enabled development network protocols: "
   <> showT ntnVersions
@@ -366,10 +359,6 @@ p2pWarningMessage :: Text
 p2pWarningMessage =
       "unsupported and unverified version of "
    <> "`cardano-node` with peer-to-peer networking capabilities"
-
-p2pWarningDevelopmentNetworkProtocolsMessage :: Text
-p2pWarningDevelopmentNetworkProtocolsMessage =
-    "peer-to-peer requires TestEnableDevelopmentNetworkProtocols to be set to True"
 
 p2pNetworkConfigLegacyMessage :: Text
 p2pNetworkConfigLegacyMessage =
