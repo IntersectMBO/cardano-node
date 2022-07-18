@@ -351,8 +351,8 @@ ppStartupInfoTrace (BICommon BasicInfoCommon {..}) =
 
 p2pWarningMessage :: Text
 p2pWarningMessage =
-      "unsupported and unverified version of "
-   <> "`cardano-node` with peer-to-peer networking capabilities"
+      "You are using an early release of peer-to-peer capabilities, "
+   <> "please report any issues."
 
 
 docStartupInfo :: Documented (StartupTrace blk)
