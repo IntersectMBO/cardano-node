@@ -197,8 +197,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger
-  tag: f49879a79098d9372d63baa13b94a941a56eda34
-  --sha256: 0i9x66yqkrvx2w79dy6lzlya82yxc8567rgjj828vc2d46d6nvx6
+  tag: 49613f11e034485c8377945c86c0465726c0860c
+  --sha256: 0gxb9xghsacr0qaljhq3qzvmb2f1wwmly89prwqy4fdm9mvqiq95
   subdir:
     eras/alonzo/impl
     eras/alonzo/test-suite
@@ -227,7 +227,7 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-prelude
-  tag: 6ea36cf2247ac0bc33e08c327abec34dfd05bd99
+  tag: 533aec85c1ca05c7d171da44b89341fb736ecfe5
   --sha256: 0z2y3wzppc12bpn9bl48776ms3nszw8j58xfsdxf97nzjgrmd62g
   subdir:
     cardano-prelude
@@ -263,14 +263,15 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: c764553561bed8978d2c6753d1608dc65449617a
-  --sha256: 0hdh7xdrvxw943r6qr0xr4kwszindh5mnsn1lww6qdnxnmn7wcsc
+  tag: 9128bfcc044fc882decb0cf112545abf9bc2d615
+  --sha256: 0a6zq8nfyadd7vdfl2y5l4ixyh0pkgjsw1p0ijj9vlm6x39jhkbc
   subdir:
     monoidal-synchronisation
     network-mux
     ouroboros-consensus
     ouroboros-consensus-byron
     ouroboros-consensus-cardano
+    ouroboros-consensus-cardano-tools
     ouroboros-consensus-protocol
     ouroboros-consensus-shelley
     ouroboros-network
@@ -300,8 +301,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/plutus
-  tag: f680ac6979e069fcc013e4389ee607ff5fa6672f
-  --sha256: 180jq8hd0jlg48ya7b5yw3bnd2d5czy0b1agy9ng3mgnzpyq747i
+  tag: 8ab4c3355c5fdf67dcf6acc1f5a14668d5e6f0a9
+  --sha256: 12d6bndmj0dxl6xlaqmf78326yp5hw093bmybmqfpdkvk4mgz03j
   subdir:
     plutus-core
     plutus-ledger-api

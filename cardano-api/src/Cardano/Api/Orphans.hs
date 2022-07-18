@@ -56,7 +56,7 @@ import qualified Cardano.Ledger.Mary.Value as Mary
 import qualified Cardano.Ledger.PoolDistr as Ledger
 import qualified Cardano.Ledger.SafeHash as SafeHash
 import qualified Cardano.Ledger.Shelley.API as Shelley
-import qualified Cardano.Ledger.Shelley.Constraints as Shelley
+import qualified Cardano.Ledger.Shelley.Orphans as Shelley
 import qualified Cardano.Ledger.Shelley.EpochBoundary as ShelleyEpoch
 import qualified Cardano.Ledger.Shelley.LedgerState as ShelleyLedger
 import           Cardano.Ledger.Shelley.PParams (PParamsUpdate)

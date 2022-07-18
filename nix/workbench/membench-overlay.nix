@@ -43,7 +43,7 @@ in
   mainnet-chain = cardano-mainnet-mirror.defaultPackage.${self.system};
 
   # TODO, fix this
-  #db-analyser = ouroboros-network-snapshot.haskellPackages.ouroboros-consensus-cardano.components.exes.db-analyser;
+  #db-analyser = ouroboros-network-snapshot.haskellPackages.ouroboros-consensus-cardano-tools.components.exes.db-analyser;
 
   ## 1. Ledger snapshot
   inherit node-snapshot;
