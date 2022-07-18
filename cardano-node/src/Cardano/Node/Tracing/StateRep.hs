@@ -79,7 +79,6 @@ data StartupState
   | NetworkConfigUpdate
   | NetworkConfigUpdateError Text
   | P2PWarning
-  | P2PWarningDevelopementNetworkProtocols
   | WarningDevelopmentNodeToNodeVersions [NPV.NodeToNodeVersion]
   | WarningDevelopmentNodeToClientVersions [NPV.NodeToClientVersion]
   deriving (Generic, FromJSON, ToJSON)

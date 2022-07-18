@@ -1,4 +1,3 @@
-{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -29,7 +28,6 @@ instance HasSeverityAnnotation (StartupTrace blk) where
     getSeverityAnnotation (NetworkConfigUpdateError _) = Error
     getSeverityAnnotation NetworkConfigUpdateUnsupported = Warning
     getSeverityAnnotation P2PWarning = Warning
-    getSeverityAnnotation P2PWarningDevelopementNetworkProtocols = Warning
     getSeverityAnnotation WarningDevelopmentNodeToNodeVersions {} = Warning
     getSeverityAnnotation WarningDevelopmentNodeToClientVersions {} = Warning
     getSeverityAnnotation _ = Info
