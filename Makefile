@@ -68,7 +68,7 @@ ps:                                              ## Plain-text list of profiles
 ##
 PROFILES_BASE         := default plutus oldtracing
 PROFILES_STARTSTOP    := startstop startstop-p2p startstop-plutus startstop-notracer startstop-oldtracing
-PROFILES_CI_TEST      := ci-test ci-test-p2p ci-test-plutus ci-test-notracer
+PROFILES_CI_TEST      := ci-test ci-test-p2p ci-test-plutus ci-test-notracer ci-test-dense10
 PROFILES_CI_BENCH     := ci-bench ci-bench-p2p ci-bench-plutus ci-bench-notracer
 PROFILES_10           := 10 10-p2p 10-plutus 10-notracer
 PROFILES_FORGE_STRESS := forge-stress forge-stress-p2p forge-stress-plutus forge-stress-plutus-singleton forge-stress-notracer
