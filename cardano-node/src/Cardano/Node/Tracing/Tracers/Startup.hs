@@ -222,9 +222,6 @@ instance ( Show (BlockNodeToNodeVersion blk)
   forMachine _dtal P2PWarning =
       mconcat [ "kind" .= String "P2PWarning"
                , "message" .= String p2pWarningMessage ]
-  forMachine _dtal P2PWarningDevelopementNetworkProtocols =
-      mconcat [ "kind" .= String "P2PWarningDevelopementNetworkProtocols"
-               , "message" .= String p2pWarningDevelopmentNetworkProtocolsMessage ]
   forMachine _ver (WarningDevelopmentNodeToNodeVersions ntnVersions) =
       mconcat [ "kind" .= String "WarningDevelopmentNodeToNodeVersions"
                , "message" .= String "enabled development network protocols"
@@ -291,8 +288,6 @@ instance MetaTrace  (StartupTrace blk) where
     Namespace [] ["NetworkConfigLegacy"]
   namespaceFor P2PWarning {}  =
     Namespace [] ["P2PWarning"]
-  namespaceFor P2PWarningDevelopementNetworkProtocols {}  =
-    Namespace [] ["P2PWarningDevelopementNetworkProtocols"]
   namespaceFor WarningDevelopmentNodeToNodeVersions {}  =
     Namespace [] ["WarningDevelopmentNodeToNodeVersions"]
   namespaceFor WarningDevelopmentNodeToClientVersions {}  =
@@ -311,7 +306,6 @@ instance MetaTrace  (StartupTrace blk) where
   severityFor (Namespace _ ["NetworkConfigUpdateError"]) _ = Just Error
   severityFor (Namespace _ ["NetworkConfigUpdateUnsupported"]) _ = Just Warning
   severityFor (Namespace _ ["P2PWarning"]) _ = Just Warning
-  severityFor (Namespace _ ["P2PWarningDevelopementNetworkProtocols"]) _ = Just Warning
   severityFor (Namespace _ ["WarningDevelopmentNodeToNodeVersions"]) _ = Just Warning
   severityFor (Namespace _ ["WarningDevelopmentNodeToClientVersions"]) _ = Just Warning
   severityFor _ _ = Just Info
@@ -339,8 +333,6 @@ instance MetaTrace  (StartupTrace blk) where
   documentFor (Namespace [] ["NetworkConfigLegacy"]) = Just
     ""
   documentFor (Namespace [] ["P2PWarning"]) = Just
-    ""
-  documentFor (Namespace [] ["P2PWarningDevelopementNetworkProtocols"]) = Just
     ""
   documentFor (Namespace [] ["WarningDevelopmentNodeToNodeVersions"]) = Just
     ""
@@ -390,7 +382,6 @@ instance MetaTrace  (StartupTrace blk) where
     , Namespace [] ["NetworkConfig"]
     , Namespace [] ["NetworkConfigLegacy"]
     , Namespace [] ["P2PWarning"]
-    , Namespace [] ["P2PWarningDevelopementNetworkProtocols"]
     , Namespace [] ["WarningDevelopmentNodeToNodeVersions"]
     , Namespace [] ["WarningDevelopmentNodeToClientVersions"]
     , Namespace [] ["Common"]
@@ -474,9 +465,6 @@ ppStartupInfoTrace NetworkConfigLegacy = p2pNetworkConfigLegacyMessage
 
 ppStartupInfoTrace P2PWarning = p2pWarningMessage
 
-ppStartupInfoTrace P2PWarningDevelopementNetworkProtocols =
-    p2pWarningDevelopmentNetworkProtocolsMessage
-
 ppStartupInfoTrace (WarningDevelopmentNodeToNodeVersions ntnVersions) =
      "enabled development node-to-node versions: "
   <> showT ntnVersions
@@ -514,10 +502,6 @@ p2pWarningMessage :: Text
 p2pWarningMessage =
       "unsupported and unverified version of "
    <> "`cardano-node` with peer-to-peer networking capabilities"
-
-p2pWarningDevelopmentNetworkProtocolsMessage :: Text
-p2pWarningDevelopmentNetworkProtocolsMessage =
-    "peer-to-peer requires TestEnableDevelopmentNetworkProtocols to be set to True"
 
 p2pNetworkConfigLegacyMessage :: Text
 p2pNetworkConfigLegacyMessage =
