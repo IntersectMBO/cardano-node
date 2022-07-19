@@ -17,6 +17,7 @@ import System.FilePath
 import Cardano.Analysis.API
 import Cardano.Analysis.BlockProp
 import Cardano.Analysis.ChainFilter
+import Cardano.Analysis.Context
 import Cardano.Analysis.Ground
 import Cardano.Analysis.MachPerf
 import Cardano.Analysis.Run
@@ -49,8 +50,8 @@ parseChainCommand =
        <$> optTextOutputFile  "keys-legacy"     "Text file to write logobject keys to")
    , op "meta-genesis" "Machine performance timeline"
      (MetaGenesis
-       <$> optJsonRunMetafile "run-metafile"    "The meta.json file from the benchmark run"
-       <*> optJsonGenesisFile "shelley-genesis" "Genesis file of the run")
+       <$> optJsonInputFile "run-metafile"    "The meta.json file from the benchmark run"
+       <*> optJsonInputFile "shelley-genesis" "Genesis file of the run")
    ]) <|>
 
   subparser (mconcat [ commandGroup "Basic log objects"
@@ -208,7 +209,7 @@ data ChainCommand
   = ListLogobjectKeys       TextOutputFile
   | ListLogobjectKeysLegacy TextOutputFile
 
-  |        MetaGenesis      JsonRunMetafile JsonGenesisFile
+  |        MetaGenesis      (JsonInputFile RunPartial) (JsonInputFile Genesis)
 
   |        Unlog            [JsonLogfile] (Maybe HostDeduction)
   |        DumpLogObjects
@@ -218,11 +219,11 @@ data ChainCommand
   |         ReadMachViews   [JsonLogfile]
 
   |         RebuildChain
-  |            ReadChain    JsonInputFile
-  |            DumpChainRaw JsonOutputFile
+  |            ReadChain    (JsonInputFile [BlockEvents])
+  |            DumpChainRaw (JsonOutputFile [BlockEvents])
   |        TimelineChainRaw TextOutputFile
   |          FilterChain    [JsonFilterFile]
-  |            DumpChain    JsonOutputFile
+  |            DumpChain    (JsonOutputFile [BlockEvents])
   |        TimelineChain    TextOutputFile
 
   |         CollectSlots    [JsonLogfile]
@@ -233,7 +234,7 @@ data ChainCommand
 
   |      ComputePropagation
   |       RenderPropagation RenderMode TextOutputFile PropSubset
-  |        ReadPropagations [JsonInputFile]
+  |        ReadPropagations [JsonInputFile BlockPropOne]
 
   | ComputeMultiPropagation
   |  RenderMultiPropagation RenderMode TextOutputFile PropSubset
@@ -244,7 +245,7 @@ data ChainCommand
   |      ComputeClusterPerf
   |       RenderClusterPerf RenderMode TextOutputFile PerfSubset
 
-  |    ReadMultiClusterPerf [JsonInputFile]
+  |    ReadMultiClusterPerf [JsonInputFile MultiClusterPerf]
   | ComputeMultiClusterPerf
   |  RenderMultiClusterPerf RenderMode TextOutputFile PerfSubset
 
