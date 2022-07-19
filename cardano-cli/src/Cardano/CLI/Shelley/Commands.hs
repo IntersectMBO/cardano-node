@@ -368,7 +368,6 @@ data QueryCmd =
   | QueryDebugLedgerState' AnyConsensusModeParams NetworkId (Maybe OutputFile)
   | QueryProtocolState' AnyConsensusModeParams NetworkId (Maybe OutputFile)
   | QueryStakeSnapshot' AnyConsensusModeParams NetworkId (Hash StakePoolKey)
-  | QueryPoolParams' AnyConsensusModeParams NetworkId (Hash StakePoolKey)
   | QueryKesPeriodInfo
       AnyConsensusModeParams
       NetworkId
@@ -391,7 +390,6 @@ renderQueryCmd cmd =
     QueryDebugLedgerState' {} -> "query ledger-state"
     QueryProtocolState' {} -> "query protocol-state"
     QueryStakeSnapshot' {} -> "query stake-snapshot"
-    QueryPoolParams' {} -> "query pool-params"
     QueryKesPeriodInfo {} -> "query kes-period-info"
     QueryPoolState' {} -> "query pool-state"
 

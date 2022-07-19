@@ -6,7 +6,6 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 
 {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
@@ -59,9 +58,8 @@ import qualified Cardano.Ledger.Era as Ledger
 import           Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import           Cardano.Ledger.Shelley.Constraints
 import           Cardano.Ledger.Shelley.EpochBoundary
-import           Cardano.Ledger.Shelley.LedgerState (DPState (..),
-                   EpochState (esLState, esSnapshots), LedgerState (..), NewEpochState (nesEs),
-                   PState (_fPParams, _pParams, _retiring))
+import           Cardano.Ledger.Shelley.LedgerState (EpochState (esSnapshots),
+                   NewEpochState (nesEs), PState (_fPParams, _pParams, _retiring))
 import qualified Cardano.Ledger.Shelley.LedgerState as SL
 import qualified Cardano.Ledger.Shelley.PParams as Shelley
 import           Cardano.Ledger.Shelley.Scripts ()
@@ -132,7 +130,7 @@ data ShelleyQueryCmdError
   | ShelleyQueryCmdNodeUnknownStakePool
       FilePath
       -- ^ Operational certificate of the unknown stake pool.
-  | ShelleyQueryCmdDecodeError Text DecoderError
+  | ShelleyQueryCmdPoolStateDecodeError DecoderError
 
   deriving Show
 
@@ -168,8 +166,8 @@ renderShelleyQueryCmdError err =
       Text.pack $ "The stake pool associated with: " <> nodeOpCert <> " was not found. Ensure the correct KES key has been " <>
                   "specified and that the stake pool is registered. If you have submitted a stake pool registration certificate " <>
                   "in the current epoch, you must wait until the following epoch for the registration to take place."
-    ShelleyQueryCmdDecodeError typeName decoderError ->
-      "Failed to decode " <> typeName <> ".  Error: " <> Text.pack (show decoderError)
+    ShelleyQueryCmdPoolStateDecodeError decoderError ->
+      "Failed to decode PoolState.  Error: " <> Text.pack (show decoderError)
 
 runQueryCmd :: QueryCmd -> ExceptT ShelleyQueryCmdError IO ()
 runQueryCmd cmd =
@@ -190,8 +188,6 @@ runQueryCmd cmd =
       runQueryLedgerState consensusModeParams network mOutFile
     QueryStakeSnapshot' consensusModeParams network poolid ->
       runQueryStakeSnapshot consensusModeParams network poolid
-    QueryPoolParams' consensusModeParams network poolid ->
-      runQueryPoolParams consensusModeParams network poolid
     QueryProtocolState' consensusModeParams network mOutFile ->
       runQueryProtocolState consensusModeParams network mOutFile
     QueryUTxO' consensusModeParams qFilter networkId mOutFile ->
@@ -601,32 +597,6 @@ renderOpCertIntervalInformation opCertFile
 -- | Query the current and future parameters for a stake pool, including the retirement date.
 -- Any of these may be empty (in which case a null will be displayed).
 --
-runQueryPoolParams
-  :: AnyConsensusModeParams
-  -> NetworkId
-  -> Hash StakePoolKey
-  -> ExceptT ShelleyQueryCmdError IO ()
-runQueryPoolParams (AnyConsensusModeParams cModeParams) network poolIds = do
-  liftIO . IO.hPutStrLn IO.stderr $ "WARNING: The query pool-params command is deprecated.  Use query pool-state instead"
-
-  SocketPath sockPath <- firstExceptT ShelleyQueryCmdEnvVarSocketErr readEnvSocketPath
-  let localNodeConnInfo = LocalNodeConnectInfo cModeParams network sockPath
-
-  anyE@(AnyCardanoEra era) <- determineEra cModeParams localNodeConnInfo
-  let cMode = consensusModeOnly cModeParams
-  sbe <- getSbe $ cardanoEraStyle era
-
-  eInMode <- toEraInMode era cMode
-    & hoistMaybe (ShelleyQueryCmdEraConsensusModeMismatch (AnyConsensusMode cMode) anyE)
-
-  let qInMode = QueryInEra eInMode . QueryInShelleyBasedEra sbe $ QueryDebugLedgerState
-  result <- executeQuery era cModeParams localNodeConnInfo qInMode
-  obtainLedgerEraClassConstraints sbe (writePoolParams poolIds) result
-
-
--- | Query the current and future parameters for a stake pool, including the retirement date.
--- Any of these may be empty (in which case a null will be displayed).
---
 runQueryPoolState
   :: AnyConsensusModeParams
   -> NetworkId
@@ -861,34 +831,6 @@ getAllStake (SnapShot stake _ _) = activeStake
 
 -- | This function obtains the pool parameters, equivalent to the following jq query on the output of query ledger-state
 --   .nesEs.esLState._delegationState._pstate._pParams.<pool_id>
-writePoolParams :: forall era ledgerera. ()
-  => ShelleyLedgerEra era ~ ledgerera
-  => FromCBOR (DebugLedgerState era)
-  => Crypto.Crypto (Era.Crypto ledgerera)
-  => Era.Crypto ledgerera ~ StandardCrypto
-  => PoolId
-  -> SerialisedDebugLedgerState era
-    -> ExceptT ShelleyQueryCmdError IO ()
-writePoolParams (StakePoolKeyHash hk) qState =
-  case decodeDebugLedgerState qState of
-    -- In the event of decode failure print the CBOR instead
-    Left bs -> firstExceptT ShelleyQueryCmdHelpersError $ pPrintCBOR bs
-
-    Right ledgerState -> do
-      let DebugLedgerState snapshot = ledgerState
-
-      let poolState :: PState StandardCrypto
-          poolState = dpsPState . lsDPState $ esLState $ nesEs snapshot
-
-      -- Pool parameters
-      let poolParams = Map.lookup hk $ _pParams poolState
-      let fPoolParams = Map.lookup hk $ _fPParams poolState
-      let retiring = Map.lookup hk $ _retiring poolState
-
-      liftIO . LBS.putStrLn $ encodePretty $ Params poolParams fPoolParams retiring
-
--- | This function obtains the pool parameters, equivalent to the following jq query on the output of query ledger-state
---   .nesEs.esLState._delegationState._pstate._pParams.<pool_id>
 writePoolState :: forall era ledgerera. ()
   => ShelleyLedgerEra era ~ ledgerera
   => Era.Crypto ledgerera ~ StandardCrypto
@@ -897,7 +839,7 @@ writePoolState :: forall era ledgerera. ()
   -> ExceptT ShelleyQueryCmdError IO ()
 writePoolState serialisedCurrentEpochState =
   case decodePoolState serialisedCurrentEpochState of
-    Left err -> left (ShelleyQueryCmdDecodeError "PoolState" err)
+    Left err -> left (ShelleyQueryCmdPoolStateDecodeError err)
 
     Right (PoolState poolState) -> do
       let hks = Set.toList $ Set.fromList $ Map.keys (_pParams poolState) <> Map.keys (_fPParams poolState) <> Map.keys (_retiring poolState)

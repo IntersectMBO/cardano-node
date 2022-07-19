@@ -795,7 +795,7 @@ fromConsensusQueryResultShelleyBased _ QueryCurrentEpochState q' r' =
 fromConsensusQueryResultShelleyBased _ QueryPoolState{} q' r' =
   case q' of
     Consensus.GetCBOR Consensus.GetPoolState {} -> SerialisedPoolState r'
-    _                                           -> error "moomoo"
+    _                                           -> fromConsensusQueryResultMismatch
 
 -- | This should /only/ happen if we messed up the mapping in 'toConsensusQuery'
 -- and 'fromConsensusQueryResult' so they are inconsistent with each other.

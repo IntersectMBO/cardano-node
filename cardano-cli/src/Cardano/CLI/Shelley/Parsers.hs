@@ -934,8 +934,8 @@ pQueryCmd =
         (Opt.info pQueryProtocolState $ Opt.progDesc "Dump the current protocol state of the node (Ledger.ChainDepState -- advanced command)")
     , subParser "stake-snapshot"
         (Opt.info pQueryStakeSnapshot $ Opt.progDesc "Obtain the three stake snapshots for a pool, plus the total active stake (advanced command)")
-    , subParser "pool-params"
-        (Opt.info pQueryPoolParams $ Opt.progDesc "DEPRECATE.  Use query pool-state instead.  Dump the pool parameters (Ledger.NewEpochState.esLState._delegationState._pState._pParams -- advanced command)")
+    , hiddenSubParser "pool-params"
+        (Opt.info pQueryPoolState $ Opt.progDesc "DEPRECATED.  Use query pool-state instead.  Dump the pool parameters (Ledger.NewEpochState.esLState._delegationState._pState._pParams -- advanced command)")
     , subParser "leadership-schedule"
         (Opt.info pLeadershipSchedule $ Opt.progDesc "Get the slots the node is expected to mint a block in (advanced command)")
     , subParser "kes-period-info"
@@ -1001,12 +1001,6 @@ pQueryCmd =
 
     pQueryStakeSnapshot :: Parser QueryCmd
     pQueryStakeSnapshot = QueryStakeSnapshot'
-      <$> pConsensusModeParams
-      <*> pNetworkId
-      <*> pStakePoolVerificationKeyHash
-
-    pQueryPoolParams :: Parser QueryCmd
-    pQueryPoolParams = QueryPoolParams'
       <$> pConsensusModeParams
       <*> pNetworkId
       <*> pStakePoolVerificationKeyHash
@@ -3319,3 +3313,7 @@ readerFromParsecParser p =
 subParser :: String -> ParserInfo a -> Parser a
 subParser availableCommand pInfo =
   Opt.hsubparser $ Opt.command availableCommand pInfo <> Opt.metavar availableCommand
+
+hiddenSubParser :: String -> ParserInfo a -> Parser a
+hiddenSubParser availableCommand pInfo =
+  Opt.hsubparser $ Opt.command availableCommand pInfo <> Opt.metavar availableCommand <> Opt.hidden
