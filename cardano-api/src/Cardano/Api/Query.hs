@@ -43,6 +43,10 @@ module Cardano.Api.Query (
     CurrentEpochState(..),
     decodeCurrentEpochState,
 
+    SerialisedPoolState(..),
+    PoolState(..),
+    decodePoolState,
+
     EraHistory(..),
     SystemStart(..),
 
@@ -234,6 +238,10 @@ data QueryInShelleyBasedEra era result where
   QueryCurrentEpochState
     :: QueryInShelleyBasedEra era (SerialisedCurrentEpochState era)
 
+  QueryPoolState
+    :: Maybe (Set PoolId)
+    -> QueryInShelleyBasedEra era (SerialisedPoolState era)
+
 deriving instance Show (QueryInShelleyBasedEra era result)
 
 
@@ -356,6 +364,18 @@ decodeCurrentEpochState
   => SerialisedCurrentEpochState era
   -> Either DecoderError (CurrentEpochState era)
 decodeCurrentEpochState (SerialisedCurrentEpochState (Serialised ls)) = CurrentEpochState <$> decodeFull ls
+
+newtype SerialisedPoolState era
+  = SerialisedPoolState (Serialised (Shelley.PState (Ledger.Crypto (ShelleyLedgerEra era))))
+
+newtype PoolState era = PoolState (Shelley.PState (Ledger.Crypto (ShelleyLedgerEra era)))
+
+decodePoolState
+  :: forall era. ()
+  => FromCBOR (Shelley.PState (Ledger.Crypto (ShelleyLedgerEra era)))
+  => SerialisedPoolState era
+  -> Either DecoderError (PoolState era)
+decodePoolState (SerialisedPoolState (Serialised ls)) = PoolState <$> decodeFull ls
 
 toShelleyAddrSet :: CardanoEra era
                  -> Set AddressAny
@@ -536,6 +556,11 @@ toConsensusQueryShelleyBased erainmode QueryProtocolState =
 toConsensusQueryShelleyBased erainmode QueryCurrentEpochState =
     Some (consensusQueryInEraInMode erainmode (Consensus.GetCBOR Consensus.DebugEpochState))
 
+toConsensusQueryShelleyBased erainmode (QueryPoolState poolIds) =
+    Some (consensusQueryInEraInMode erainmode (Consensus.GetCBOR (Consensus.GetPoolState (getPoolIds <$> poolIds))))
+  where
+    getPoolIds :: Set PoolId -> Set (Shelley.KeyHash Shelley.StakePool Consensus.StandardCrypto)
+    getPoolIds = Set.map (\(StakePoolKeyHash kh) -> kh)
 
 consensusQueryInEraInMode
   :: forall era mode erablock modeblock result result' xs.
@@ -766,6 +791,11 @@ fromConsensusQueryResultShelleyBased _ QueryCurrentEpochState q' r' =
   case q' of
     Consensus.GetCBOR Consensus.DebugEpochState -> SerialisedCurrentEpochState r'
     _                                           -> fromConsensusQueryResultMismatch
+
+fromConsensusQueryResultShelleyBased _ QueryPoolState{} q' r' =
+  case q' of
+    Consensus.GetCBOR Consensus.GetPoolState {} -> SerialisedPoolState r'
+    _                                           -> error "moomoo"
 
 -- | This should /only/ happen if we messed up the mapping in 'toConsensusQuery'
 -- and 'fromConsensusQueryResult' so they are inconsistent with each other.

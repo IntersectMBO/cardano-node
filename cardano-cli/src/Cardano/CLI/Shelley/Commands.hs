@@ -375,6 +375,7 @@ data QueryCmd =
       FilePath
       -- ^ Node operational certificate
       (Maybe OutputFile)
+  | QueryPoolState' AnyConsensusModeParams NetworkId [Hash StakePoolKey]
   deriving Show
 
 renderQueryCmd :: QueryCmd -> Text
@@ -392,6 +393,7 @@ renderQueryCmd cmd =
     QueryStakeSnapshot' {} -> "query stake-snapshot"
     QueryPoolParams' {} -> "query pool-params"
     QueryKesPeriodInfo {} -> "query kes-period-info"
+    QueryPoolState' {} -> "query pool-state"
 
 data GovernanceCmd
   = GovernanceMIRPayStakeAddressesCertificate

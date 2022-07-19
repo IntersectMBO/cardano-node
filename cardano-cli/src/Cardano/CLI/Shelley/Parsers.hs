@@ -35,8 +35,8 @@ import           Options.Applicative hiding (help, str)
 import qualified Options.Applicative as Opt
 import qualified Options.Applicative.Help as H
 import           Prettyprinter (line, pretty)
-import           Text.Parsec ((<?>))
 import qualified Text.Parsec as Parsec
+import           Text.Parsec ((<?>))
 import qualified Text.Parsec.Error as Parsec
 import qualified Text.Parsec.Language as Parsec
 import qualified Text.Parsec.String as Parsec
@@ -49,12 +49,12 @@ import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
 import           Cardano.Api
 import           Cardano.Api.Shelley
 
+import           Cardano.Chain.Common (BlockCount (BlockCount))
 import           Cardano.CLI.Shelley.Commands
 import           Cardano.CLI.Shelley.Key (InputFormat (..), PaymentVerifier (..),
                    StakeVerifier (..), VerificationKeyOrFile (..), VerificationKeyOrHashOrFile (..),
                    VerificationKeyTextOrFile (..), deserialiseInput, renderInputDecodeError)
 import           Cardano.CLI.Types
-import           Cardano.Chain.Common (BlockCount (BlockCount))
 
 {- HLINT ignore "Use <$>" -}
 
@@ -935,11 +935,13 @@ pQueryCmd =
     , subParser "stake-snapshot"
         (Opt.info pQueryStakeSnapshot $ Opt.progDesc "Obtain the three stake snapshots for a pool, plus the total active stake (advanced command)")
     , subParser "pool-params"
-        (Opt.info pQueryPoolParams $ Opt.progDesc "Dump the pool parameters (Ledger.NewEpochState.esLState._delegationState._pState._pParams -- advanced command)")
+        (Opt.info pQueryPoolParams $ Opt.progDesc "DEPRECATE.  Use query pool-state instead.  Dump the pool parameters (Ledger.NewEpochState.esLState._delegationState._pState._pParams -- advanced command)")
     , subParser "leadership-schedule"
         (Opt.info pLeadershipSchedule $ Opt.progDesc "Get the slots the node is expected to mint a block in (advanced command)")
     , subParser "kes-period-info"
         (Opt.info pKesPeriodInfo $ Opt.progDesc "Get information about the current KES period and your node's operational certificate.")
+    , subParser "pool-state"
+        (Opt.info pQueryPoolState $ Opt.progDesc "Dump the pool state")
     ]
   where
     pQueryProtocolParameters :: Parser QueryCmd
@@ -1008,6 +1010,12 @@ pQueryCmd =
       <$> pConsensusModeParams
       <*> pNetworkId
       <*> pStakePoolVerificationKeyHash
+
+    pQueryPoolState :: Parser QueryCmd
+    pQueryPoolState = QueryPoolState'
+      <$> pConsensusModeParams
+      <*> pNetworkId
+      <*> many pStakePoolVerificationKeyHash
 
     pLeadershipSchedule :: Parser QueryCmd
     pLeadershipSchedule = QueryLeadershipSchedule
