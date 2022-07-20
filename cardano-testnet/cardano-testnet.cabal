@@ -109,7 +109,7 @@ test-suite cardano-testnet-tests
   type:                 exitcode-stdio-1.0
 
   build-depends:        cardano-testnet
-                      , aeson
+                      , aeson                         >= 2.1.0.0
                       , cardano-api
                       , cardano-cli
                       , containers
