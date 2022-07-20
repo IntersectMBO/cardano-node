@@ -1391,7 +1391,7 @@ toShelleyPParams ProtocolParameters {
                                  Nothing -> minBound
                                  Just pDecentral ->
                                    fromMaybe
-                                     (error "toAlonzoPParams: invalid Decentralization value")
+                                     (error "toShelleyPParams: invalid Decentralization value")
                                      (Ledger.boundRational pDecentral)
      , Shelley._extraEntropy = toLedgerNonce protocolParamExtraPraosEntropy
      , Shelley._maxBHSize    = protocolParamMaxBlockHeaderSize
@@ -1406,13 +1406,13 @@ toShelleyPParams ProtocolParameters {
      , Shelley._eMax         = protocolParamPoolRetireMaxEpoch
      , Shelley._nOpt         = protocolParamStakePoolTargetNum
      , Shelley._a0           = fromMaybe
-                                 (error "toAlonzoPParams: invalid PoolPledgeInfluence value")
+                                 (error "toShelleyPParams: invalid PoolPledgeInfluence value")
                                  (Ledger.boundRational protocolParamPoolPledgeInfluence)
      , Shelley._rho          = fromMaybe
-                                 (error "toAlonzoPParams: invalid MonetaryExpansion value")
+                                 (error "toShelleyPParams: invalid MonetaryExpansion value")
                                  (Ledger.boundRational protocolParamMonetaryExpansion)
      , Shelley._tau          = fromMaybe
-                                 (error "toAlonzoPParams: invalid TreasuryCut value")
+                                 (error "toShelleyPParams: invalid TreasuryCut value")
                                  (Ledger.boundRational protocolParamTreasuryCut)
      }
 toShelleyPParams ProtocolParameters { protocolParamMinUTxOValue = Nothing } =
@@ -1553,24 +1553,24 @@ toBabbagePParams ProtocolParameters {
     , Babbage._eMax         = protocolParamPoolRetireMaxEpoch
     , Babbage._nOpt         = protocolParamStakePoolTargetNum
     , Babbage._a0           = fromMaybe
-                               (error "toAlonzoPParams: invalid PoolPledgeInfluence value")
+                               (error "toBabbagePParams: invalid PoolPledgeInfluence value")
                                (Ledger.boundRational protocolParamPoolPledgeInfluence)
     , Babbage._rho          = fromMaybe
-                               (error "toAlonzoPParams: invalid MonetaryExpansion value")
+                               (error "toBabbagePParams: invalid MonetaryExpansion value")
                                (Ledger.boundRational protocolParamMonetaryExpansion)
     , Babbage._tau          = fromMaybe
-                               (error "toAlonzoPParams: invalid TreasuryCut value")
+                               (error "toBabbagePParams: invalid TreasuryCut value")
                                (Ledger.boundRational protocolParamTreasuryCut)
 
       -- New params in Babbage.
     , Babbage._coinsPerUTxOByte = toShelleyLovelace utxoCostPerByte
 
     , Babbage._costmdls        = either
-                                  (\e -> error $ "toAlonzoPParams: invalid cost models, error: " <> e)
+                                  (\e -> error $ "toBabbagePParams: invalid cost models, error: " <> e)
                                   id
                                   (toAlonzoCostModels protocolParamCostModels)
     , Babbage._prices          = fromMaybe
-                                  (error "toAlonzoPParams: invalid Price values")
+                                  (error "toBabbagePParams: invalid Price values")
                                   (toAlonzoPrices prices)
     , Babbage._maxTxExUnits    = toAlonzoExUnits maxTxExUnits
     , Babbage._maxBlockExUnits = toAlonzoExUnits maxBlockExUnits
