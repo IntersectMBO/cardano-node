@@ -23,7 +23,7 @@ module Cardano.CLI.Shelley.Run.Genesis
   ) where
 
 import           Cardano.Prelude hiding (unlines)
-import           Prelude (id, unlines, zip3, error)
+import           Prelude (error, id, unlines, zip3)
 
 import           Data.Aeson hiding (Key)
 import qualified Data.Aeson as Aeson
@@ -42,14 +42,15 @@ import qualified Data.Sequence.Strict as Seq
 import           Data.String (fromString)
 import qualified Data.Text as Text
 import qualified Data.Text.IO as Text
-import           Data.Time.Clock (NominalDiffTime, UTCTime, addUTCTime, getCurrentTime, secondsToNominalDiffTime)
+import           Data.Time.Clock (NominalDiffTime, UTCTime, addUTCTime, getCurrentTime,
+                   secondsToNominalDiffTime)
 
-import           Cardano.Binary (ToCBOR (..), Annotated(Annotated))
+import           Cardano.Binary (Annotated (Annotated), ToCBOR (..))
 
+import qualified Cardano.Crypto as CC
 import           Cardano.Crypto.Hash (HashAlgorithm)
 import qualified Cardano.Crypto.Hash as Hash
 import qualified Cardano.Crypto.Random as Crypto
-import qualified Cardano.Crypto as CC
 import           Crypto.Random as Crypto
 
 import           System.Directory (createDirectoryIfMissing, listDirectory)
@@ -62,10 +63,10 @@ import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT
 import qualified Cardano.Crypto.Hash as Crypto
 
 import           Cardano.Api
-import           Cardano.Api.Byron (toByronRequiresNetworkMagic, toByronProtocolMagicId, toByronLovelace)
+import           Cardano.Api.Byron (toByronLovelace, toByronProtocolMagicId,
+                   toByronRequiresNetworkMagic)
 import           Cardano.Api.Shelley
 
-import           Ouroboros.Consensus.BlockchainTime (SystemStart (..))
 import           Ouroboros.Consensus.Shelley.Eras (StandardShelley)
 import           Ouroboros.Consensus.Shelley.Node (ShelleyGenesisStaking (..))
 
@@ -92,29 +93,30 @@ import           Cardano.CLI.Shelley.Run.StakeAddress (ShelleyStakeAddressCmdErr
 import           Cardano.CLI.Types
 
 import           Cardano.CLI.Byron.Delegation
-import qualified Cardano.CLI.Byron.Key as Byron
-import qualified Cardano.Crypto.Signing as Byron
 import           Cardano.CLI.Byron.Genesis as Byron
-import           Cardano.Chain.Genesis (FakeAvvmOptions (..), TestnetBalanceOptions (..), gsDlgIssuersSecrets, gsRichSecrets, gsPoorSecrets, gdProtocolParameters)
-import qualified Cardano.Chain.Common as Byron (rationalToLovelacePortion, mkKnownLovelace, KeyHash)
+import qualified Cardano.CLI.Byron.Key as Byron
+import qualified Cardano.Chain.Common as Byron (KeyHash, mkKnownLovelace, rationalToLovelacePortion)
+import           Cardano.Chain.Genesis (FakeAvvmOptions (..), TestnetBalanceOptions (..),
+                   gdProtocolParameters, gsDlgIssuersSecrets, gsPoorSecrets, gsRichSecrets)
+import qualified Cardano.Crypto.Signing as Byron
 
-import           Cardano.Chain.Common (BlockCount(unBlockCount))
-import qualified Cardano.Chain.Genesis as Genesis
-import           Cardano.Chain.Delegation (delegateVK)
 import           Cardano.Api.SerialiseTextEnvelope (textEnvelopeToJSON)
+import           Cardano.Chain.Common (BlockCount (unBlockCount))
+import           Cardano.Chain.Delegation (delegateVK)
 import qualified Cardano.Chain.Delegation as Dlg
-import           Cardano.Slotting.Slot (EpochSize(EpochSize))
+import qualified Cardano.Chain.Genesis as Genesis
 import           Cardano.Chain.Update
-import           Data.Fixed (Fixed(MkFixed))
+import           Cardano.Slotting.Slot (EpochSize (EpochSize))
+import           Data.Fixed (Fixed (MkFixed))
 import qualified Data.Yaml as Yaml
 import           Text.JSON.Canonical (parseCanonicalJSON, renderCanonicalJSON)
 
-import           Data.ListMap (ListMap(..))
+import           Data.ListMap (ListMap (..))
 
 import qualified Cardano.CLI.IO.Lazy as Lazy
 
+import           System.Random (StdGen)
 import qualified System.Random as Random
-import System.Random (StdGen)
 
 data ShelleyGenesisCmdError
   = ShelleyGenesisCmdAesonDecodeError !FilePath !Text
@@ -917,7 +919,7 @@ writeBulkPoolCredentials dir bulkIx poolIxs = do
        Aeson.eitherDecodeStrict' content
 
 -- | This function should only be used for testing purposes.
--- Keys returned by this function are not cryptographically secure.  
+-- Keys returned by this function are not cryptographically secure.
 computeInsecureDelegation
   :: StdGen
   -> NetworkId

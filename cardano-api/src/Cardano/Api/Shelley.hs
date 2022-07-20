@@ -211,6 +211,9 @@ module Cardano.Api.Shelley
     SerialisedPoolState(..),
     decodePoolState,
     UTxO(..),
+    AcquireFailure(..),
+    SystemStart(..),
+
 
     -- ** Various calculations
     LeadershipError(..),
@@ -232,8 +235,8 @@ import           Cardano.Api.Address
 import           Cardano.Api.Block
 import           Cardano.Api.Certificate
 import           Cardano.Api.Eras
-import           Cardano.Api.InMode
 import           Cardano.Api.IPC
+import           Cardano.Api.InMode
 import           Cardano.Api.KeysByron
 import           Cardano.Api.KeysPraos
 import           Cardano.Api.KeysShelley
