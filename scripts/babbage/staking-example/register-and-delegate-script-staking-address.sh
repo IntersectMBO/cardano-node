@@ -12,6 +12,7 @@ export CARDANO_NODE_SOCKET_PATH="${CARDANO_NODE_SOCKET_PATH:-example/main.sock}"
 export TESTNET_MAGIC="${TESTNET_MAGIC:-42}"
 export UTXO_VKEY1="${UTXO_VKEY1:-example/utxo-keys/utxo1.vkey}"
 export UTXO_SKEY1="${UTXO_SKEY1:-example/utxo-keys/utxo1.skey}"
+export UTXO_VKEY2="${UTXO_VKEY2:-example/utxo-keys/utxo2.vkey}"
 export UTXO_STAKING_VKEY2="${UTXO_STAKING_VKEY2:=example/utxo-keys/utxo2-stake.vkey}"
 export PV=v2 # Plutus Script Version
 
