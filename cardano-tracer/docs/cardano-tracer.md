@@ -75,7 +75,7 @@ Distributed scenario is for real-life case: for example, you have `N` nodes work
 
 Local scenario is for testing case: for example, you want to try your new infrastructure from scratch, so you run `N` nodes and one `cardano-tracer` process on your machine.
 
-**IMPORTANT NOTICE**: Please note that `cardano-tracer` **does not** support connection via IP-address and port, to avoid unauthorized connections. The **only** way to establish connection with the node is a local socket (Unix sockets or Windows named pipes).
+**IMPORTANT NOTICE**: Please note that `cardano-tracer` **does not** support connection via IP-address and port, to avoid unauthorized connections. The **only** way to establish connection with the node is the local socket (Unix sockets or Windows named pipes).
 
 ## Distributed Scenario
 
@@ -103,7 +103,7 @@ The minimalistic configuration file for `cardano-tracer` would be:
   "networkMagic": 764824073,
   "network": {
     "tag": "AcceptAt",
-    "contents": "/tmp/cardano-tracer.sock"
+    "contents": "/tmp/forwarder.sock"
   },
   "logging": [
     {
@@ -115,79 +115,86 @@ The minimalistic configuration file for `cardano-tracer` would be:
 }
 ```
 
-The `network` field specifies the way how `cardano-tracer` will be connected to your nodes. Here you see `AcceptAt` tag, which means that `cardano-tracer` works as a server: it _accepts_ network connections by listening the local socket `/tmp/cardano-tracer.sock`. Your nodes work as clients: they _initiate_ network connections using their local sockets. It can be shown like this:
+The `network` field specifies the way how `cardano-tracer` will be connected to your nodes. Here you see `AcceptAt` tag, which means that `cardano-tracer` works as a server: it _accepts_ network connections by listening the local socket `/tmp/forwarder.sock`. Your nodes work as clients: they _initiate_ network connections using their local sockets. It can be shown like this:
 
 ```
-machine A            machine B            machine C
-+-----------------+  +-----------------+  +-----------------+
-| node 1          |  | node 2          |  | node 3          |
-|      \          |  |      \          |  |      \          |
-|       v         |  |       v         |  |       v         |
-|    local socket |  |    local socket |  |    local socket |
-+-----------------+  +-----------------+  +-----------------+
+machine A                 machine B                 machine C
++----------------------+  +----------------------+  +----------------------+
+| node 1               |  | node 2               |  | node 3               |
+|      \               |  |      \               |  |      \               |
+|       v              |  |       v              |  |       v              |
+|  /tmp/forwarder.sock |  |  /tmp/forwarder.sock |  |  /tmp/forwarder.sock |
++----------------------+  +----------------------+  +----------------------+
 
 
 
 
 
-                   +---------------------+
-                   | local socket        |
-                   |      ^              |
-                   |       \             |
-                   |      cardano-tracer |
-                   +---------------------+
-                   machine D
+                          +---------------------+
+                          | /tmp/forwarder.sock |
+                          |      ^              |
+                          |       \             |
+                          |      cardano-tracer |
+                          +---------------------+
+                          machine D
 ```
 
 To establish the real network connections between your machines, you need SSH forwarding:
 
 ```
-machine A            machine B            machine C
-+-----------------+  +-----------------+  +-----------------+
-| node 1          |  | node 2          |  | node 3          |
-|      \          |  |      \          |  |      \          |
-|       v         |  |       v         |  |       v         |
-|    local socket |  |    local socket |  |    local socket |
-+-----------------+  +-----------------+  +-----------------+
-                ^             ^             ^
-                 \            |            /
-                 SSH         SSH          SSH
-                   \          |          /
-                    v         v         v
-                   +---------------------+
-                   | local socket        |
-                   |      ^              |
-                   |       \             |
-                   |      cardano-tracer |
-                   +---------------------+
-                   machine D
+machine A                 machine B                 machine C
++----------------------+  +----------------------+  +----------------------+
+| node 1               |  | node 2               |  | node 3               |
+|      \               |  |      \               |  |      \               |
+|       v              |  |       v              |  |       v              |
+|  /tmp/forwarder.sock |  |  /tmp/forwarder.sock |  |  /tmp/forwarder.sock |
++----------------------+  +----------------------+  +----------------------+
+                       ^             ^              ^
+                        \            |             /
+                        SSH         SSH           SSH
+                          \          |           /
+                           v         v          v
+                          +---------------------+
+                          | /tmp/forwarder.sock |
+                          |      ^              |
+                          |       \             |
+                          |      cardano-tracer |
+                          +---------------------+
+                          machine D
 ```
 
 The idea of SSH forwarding is simple: we do connect not the processes directly, but their network endpoints instead. You can think of it as a network channel from the local socket on one machine to the local socket on another machine:
 
 ```
-machine A                                      machine D
-+----------------------------+                 +------------------------------------+
-| node 1 ---> local socket <-|---SSH channel---|-> local socket <--- cardano-tracer |
-+----------------------------+                 +------------------------------------+
+machine A                                            machine D
++----------------------------------+                 +------------------------------------------+
+| node 1 --> /tmp/forwarder.sock <-|---SSH channel---|-> /tmp/forwarder.sock <-- cardano-tracer |
++----------------------------------+                 +------------------------------------------+
 ```
 
 So neither your nodes nor `cardano-tracer` know anything about SSH, they only know about their local sockets. But because of SSH forwarding mechanism they work together from different machines. And since you already have your SSH credentials, the connection between your nodes and `cardano-tracer` will be secure.
 
+Please note that the path `/tmp/forwarder.sock` is just an example. You can use any other name in any other directory where you have read/write permissions.
+
 So, to connect `cardano-node` working on machine `A` with `cardano-tracer` working on machine `D`, run this command on machine `A`:
 
 ```
-ssh -nNT -L /tmp/cardano-tracer.sock:/tmp/cardano-node.sock -o "ExitOnForwardFailure yes" john@109.75.33.121
+ssh -nNT -L /tmp/forwarder.sock:/tmp/forwarder.sock -o "ExitOnForwardFailure yes" john@109.75.33.121
 ```
 
 where:
 
-- `/tmp/cardano-tracer.sock` is a path to the local socket on machine `A`,
-- `/tmp/cardano-node.sock` is a path to the local socket on machine `D`,
-- `john` is a user you use to login on machine `D`,
+- `/tmp/forwarder.sock` is a path to the local socket on machine `A` _and_ a path to the local socket on machine `D`,
+- `john` is a user name you use to login on machine `D`,
 - `109.75.33.121` is an IP-adress of machine `D`.
 
-Run the same command on machines `B` and `C` to connect corresponding nodes with the same `cardano-tracer` working on machine `D`.
+Now run the same command on machines `B` and `C` to connect corresponding nodes with the same `cardano-tracer` working on machine `D`.
+
+Please note that your nodes working on machines `A`, `B` and `C` should specify paths `/tmp/forwarder.sock` using node's CLI-parameter `--tracer-socket-path-connect` or `--tracer-socket-path-accept` (see explanation below). There is another CLI-parameter `--socket-path` as well, but it's **not** related to `cardano-tracer`.
+
+### Important
+
+Please make sure you run `ssh`-command **before** you start your node. Since `ssh` creates the channel and `cardano-node` uses that channel, you should _create_ it before _using_ it.
 
 ## Local Scenario
 
@@ -198,7 +205,7 @@ As was mentioned above, local scenario is for testing, when your nodes and `card
   "networkMagic": 764824073,
   "network": {
     "tag": "AcceptAt",
-    "contents": "/tmp/cardano-tracer.sock"
+    "contents": "/tmp/forwarder.sock"
   },
   "logging": [
     {
@@ -210,7 +217,7 @@ As was mentioned above, local scenario is for testing, when your nodes and `card
 }
 ```
 
-As you see, it is the same configuration file: the `cardano-tracer` works as a server: it _accepts_ network connections by listening the local socket `/tmp/cardano-tracer.sock`. Your local nodes work as clients: they _initiate_ network connections using the _same_ local socket `/tmp/cardano-tracer.sock`.
+As you see, it is the same configuration file: the `cardano-tracer` works as a server: it _accepts_ network connections by listening the local socket `/tmp/forwarder.sock`. Your local nodes work as clients: they _initiate_ network connections using the _same_ local socket `/tmp/forwarder.sock`.
 
 There is another way to connect `cardano-tracer` to your nodes: the `cardano-tracer` can work as _initiator_, this is an example of configuration file:
 
@@ -237,13 +244,13 @@ There is another way to connect `cardano-tracer` to your nodes: the `cardano-tra
 
 As you see, the tag in `network` field is `ConnectTo` now, which means that `cardano-tracer` works as a client: it _establishes_ network connections with your local nodes via the local sockets `/tmp/cardano-node-*.sock`. In this case each socket is used by a particular node.
 
-Please use `ConnectTo`-based scenario only if you really need it. Otherwise, it is **highly recommended** to use `AcceptAt`-based scenario.
+Please use `ConnectTo`-based scenario only if you really need it. Otherwise, it is **highly recommended** to use `AcceptAt`-based scenario. The reason is easier maintainance. Suppose you have 3 working nodes, and they are connected to the same `cardano-tracer`. And then you want to connect 4-th node to it. If `cardano-tracer` is configured using `AcceptAt`, you shouldn't change its configuration - you just connect your 4-th node to it. But if `cardano-tracer` is configured using `ConnectTo`, you should add path to 4-th socket in its configuration file and then restart `cardano-tracer` process.
 
 ## Network Magic
 
 The field `networkMagic` specifies the value of network magic. It is an integer constant from the genesis file, the node uses this value for the network handshake with peers. Since `cardano-tracer` should be connected to the node, it needs that network magic.
 
-The value from the example above, `764824073`, is taken from the Shelley genesis file for Mainnet. Please take this value from the genesis file your nodes are launched with.
+The value from the example above, `764824073`, is taken from the Shelley genesis file for [Mainnet](https://hydra.iohk.io/job/Cardano/cardano-node/cardano-deployment/latest-finished/download/1/index.html). Please take this value from the genesis file your nodes are launched with.
 
 ## Requests
 
@@ -340,9 +347,9 @@ Here the web page is available at `http://127.0.0.1:3000`. Please note that if y
 After you open `http://127.0.0.1:3000` in your browser, you will see the list of identifiers of connected nodes (or the warning message, if there are no connected nodes yet), for example:
 
 ```
-* tmp-cardano-tracer.sock@0
-* tmp-cardano-tracer.sock@1
-* tmp-cardano-tracer.sock@2
+* tmp-forwarder.sock@0
+* tmp-forwarder.sock@1
+* tmp-forwarder.sock@2
 ```
 
 Each identifier is a hyperlink to the page where you will see the **current** list of metrics received from the corresponding node, in such a format:
@@ -368,7 +375,7 @@ The optional field `hasEKG` specifies the hosts and ports of two web pages:
 1. the list of identifiers of connected nodes,
 2. EKG monitoring page.
 
-For example:
+For example, if you use JSON configuration file:
 
 ```
 "hasEKG": [
@@ -386,9 +393,9 @@ For example:
 The page with the list of identifiers of connected nodes will be available at `http://127.0.0.1:3100`, for example:
 
 ```
-* tmp-cardano-tracer.sock@0
-* tmp-cardano-tracer.sock@1
-* tmp-cardano-tracer.sock@2
+* tmp-forwarder.sock@0
+* tmp-forwarder.sock@1
+* tmp-forwarder.sock@2
 ```
 
 Each identifier is a hyperlink, after clicking to it you will be redirected to `http://127.0.0.1:3101` where you will see EKG monitoring page for corresponding node.

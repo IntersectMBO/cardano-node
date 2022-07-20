@@ -13,3 +13,7 @@ For more details please [read its documentation](https://github.com/input-output
 ## Developers
 
 Benchmarking team is responsible for this service. The primary developer is [@denisshevchenko](https://github.com/denisshevchenko).
+
+## Feedback
+
+Your bug reports and/or Feature Requests are welcome! Feel free to open a ticket in [this repository](https://github.com/input-output-hk/cardano-node/issues) with labels `RTView` and `tracing`.
