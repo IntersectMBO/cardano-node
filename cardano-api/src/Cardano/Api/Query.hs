@@ -43,6 +43,10 @@ module Cardano.Api.Query (
     CurrentEpochState(..),
     decodeCurrentEpochState,
 
+    SerialisedPoolState(..),
+    PoolState(..),
+    decodePoolState,
+
     EraHistory(..),
     SystemStart(..),
 
@@ -70,10 +74,10 @@ import qualified Data.HashMap.Strict as HMS
 import           Data.Map (Map)
 import qualified Data.Map as Map
 import           Data.Maybe (mapMaybe)
-import           Data.SOP.Strict (SListI)
 import           Data.Set (Set)
 import qualified Data.Set as Set
 import           Data.Sharing (FromSharedCBOR, Interns, Share)
+import           Data.SOP.Strict (SListI)
 import           Data.Text (Text)
 import           Data.Typeable
 import           Prelude
@@ -189,51 +193,54 @@ deriving instance Show (QueryInEra era result)
 
 
 data QueryInShelleyBasedEra era result where
-     QueryEpoch
-       :: QueryInShelleyBasedEra era EpochNo
+  QueryEpoch
+    :: QueryInShelleyBasedEra era EpochNo
 
-     QueryGenesisParameters
-       :: QueryInShelleyBasedEra era GenesisParameters
+  QueryGenesisParameters
+    :: QueryInShelleyBasedEra era GenesisParameters
 
-     QueryProtocolParameters
-       :: QueryInShelleyBasedEra era ProtocolParameters
+  QueryProtocolParameters
+    :: QueryInShelleyBasedEra era ProtocolParameters
 
-     QueryProtocolParametersUpdate
-       :: QueryInShelleyBasedEra era
+  QueryProtocolParametersUpdate
+    :: QueryInShelleyBasedEra era
             (Map (Hash GenesisKey) ProtocolParametersUpdate)
 
-     QueryStakeDistribution
-       :: QueryInShelleyBasedEra era (Map (Hash StakePoolKey) Rational)
+  QueryStakeDistribution
+    :: QueryInShelleyBasedEra era (Map (Hash StakePoolKey) Rational)
 
-     QueryUTxO
-       :: QueryUTxOFilter
-       -> QueryInShelleyBasedEra era (UTxO era)
+  QueryUTxO
+    :: QueryUTxOFilter
+    -> QueryInShelleyBasedEra era (UTxO era)
 
-     QueryStakeAddresses
-       :: Set StakeCredential
-       -> NetworkId
-       -> QueryInShelleyBasedEra era (Map StakeAddress Lovelace,
-                                      Map StakeAddress PoolId)
+  QueryStakeAddresses
+    :: Set StakeCredential
+    -> NetworkId
+    -> QueryInShelleyBasedEra era (Map StakeAddress Lovelace, Map StakeAddress PoolId)
 
-     QueryStakePools
-       :: QueryInShelleyBasedEra era (Set PoolId)
+  QueryStakePools
+    :: QueryInShelleyBasedEra era (Set PoolId)
 
-     QueryStakePoolParameters
-       :: Set PoolId
-       -> QueryInShelleyBasedEra era (Map PoolId StakePoolParameters)
+  QueryStakePoolParameters
+    :: Set PoolId
+    -> QueryInShelleyBasedEra era (Map PoolId StakePoolParameters)
 
      -- TODO: add support for RewardProvenance
      -- QueryPoolRanking
      --   :: QueryInShelleyBasedEra era RewardProvenance
 
-     QueryDebugLedgerState
-       :: QueryInShelleyBasedEra era (SerialisedDebugLedgerState era)
+  QueryDebugLedgerState
+    :: QueryInShelleyBasedEra era (SerialisedDebugLedgerState era)
 
-     QueryProtocolState
-       :: QueryInShelleyBasedEra era (ProtocolState era)
+  QueryProtocolState
+    :: QueryInShelleyBasedEra era (ProtocolState era)
 
-     QueryCurrentEpochState
-       :: QueryInShelleyBasedEra era (SerialisedCurrentEpochState era)
+  QueryCurrentEpochState
+    :: QueryInShelleyBasedEra era (SerialisedCurrentEpochState era)
+
+  QueryPoolState
+    :: Maybe (Set PoolId)
+    -> QueryInShelleyBasedEra era (SerialisedPoolState era)
 
 deriving instance Show (QueryInShelleyBasedEra era result)
 
@@ -357,6 +364,18 @@ decodeCurrentEpochState
   => SerialisedCurrentEpochState era
   -> Either DecoderError (CurrentEpochState era)
 decodeCurrentEpochState (SerialisedCurrentEpochState (Serialised ls)) = CurrentEpochState <$> decodeFull ls
+
+newtype SerialisedPoolState era
+  = SerialisedPoolState (Serialised (Shelley.PState (Ledger.Crypto (ShelleyLedgerEra era))))
+
+newtype PoolState era = PoolState (Shelley.PState (Ledger.Crypto (ShelleyLedgerEra era)))
+
+decodePoolState
+  :: forall era. ()
+  => FromCBOR (Shelley.PState (Ledger.Crypto (ShelleyLedgerEra era)))
+  => SerialisedPoolState era
+  -> Either DecoderError (PoolState era)
+decodePoolState (SerialisedPoolState (Serialised ls)) = PoolState <$> decodeFull ls
 
 toShelleyAddrSet :: CardanoEra era
                  -> Set AddressAny
@@ -537,6 +556,11 @@ toConsensusQueryShelleyBased erainmode QueryProtocolState =
 toConsensusQueryShelleyBased erainmode QueryCurrentEpochState =
     Some (consensusQueryInEraInMode erainmode (Consensus.GetCBOR Consensus.DebugEpochState))
 
+toConsensusQueryShelleyBased erainmode (QueryPoolState poolIds) =
+    Some (consensusQueryInEraInMode erainmode (Consensus.GetCBOR (Consensus.GetPoolState (getPoolIds <$> poolIds))))
+  where
+    getPoolIds :: Set PoolId -> Set (Shelley.KeyHash Shelley.StakePool Consensus.StandardCrypto)
+    getPoolIds = Set.map (\(StakePoolKeyHash kh) -> kh)
 
 consensusQueryInEraInMode
   :: forall era mode erablock modeblock result result' xs.
@@ -766,6 +790,11 @@ fromConsensusQueryResultShelleyBased _ QueryProtocolState q' r' =
 fromConsensusQueryResultShelleyBased _ QueryCurrentEpochState q' r' =
   case q' of
     Consensus.GetCBOR Consensus.DebugEpochState -> SerialisedCurrentEpochState r'
+    _                                           -> fromConsensusQueryResultMismatch
+
+fromConsensusQueryResultShelleyBased _ QueryPoolState{} q' r' =
+  case q' of
+    Consensus.GetCBOR Consensus.GetPoolState {} -> SerialisedPoolState r'
     _                                           -> fromConsensusQueryResultMismatch
 
 -- | This should /only/ happen if we messed up the mapping in 'toConsensusQuery'

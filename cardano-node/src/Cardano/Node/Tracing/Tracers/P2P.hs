@@ -591,13 +591,13 @@ peerSelectionTargetsToObject
 -- DebugPeerSelection Tracer
 --------------------------------------------------------------------------------
 
-namesForDebugPeerSelection :: DebugPeerSelection SockAddr peerConn -> [Text]
+namesForDebugPeerSelection :: DebugPeerSelection SockAddr -> [Text]
 namesForDebugPeerSelection _ = ["GovernorState"]
 
-severityDebugPeerSelection :: DebugPeerSelection SockAddr peerConn -> SeverityS
+severityDebugPeerSelection :: DebugPeerSelection SockAddr -> SeverityS
 severityDebugPeerSelection _ = Debug
 
-instance Show peerConn => LogFormatting (DebugPeerSelection SockAddr peerConn) where
+instance LogFormatting (DebugPeerSelection SockAddr) where
   forMachine DNormal (TraceGovernorState blockedAt wakeupAfter
                    PeerSelectionState { targets, knownPeers, establishedPeers, activePeers }) =
     mconcat [ "kind" .= String "DebugPeerSelection"
@@ -618,7 +618,7 @@ instance Show peerConn => LogFormatting (DebugPeerSelection SockAddr peerConn) w
              ]
   forHuman = pack . show
 
-docDebugPeerSelection :: Documented (DebugPeerSelection SockAddr peerConn)
+docDebugPeerSelection :: Documented (DebugPeerSelection SockAddr)
 docDebugPeerSelection = Documented
   [  DocMsg
       ["GovernorState"]
@@ -1502,14 +1502,14 @@ docInboundGovernor isLocal = Documented
       ""
   ,  DocMsg
       ["InboundGovernorCounters"]
-      (if isLocal 
+      (if isLocal
         then
           [("Net.LocalInboundGovernor.Idle","")
           ,("Net.LocalInboundGovernor.Cold","")
           ,("Net.LocalInboundGovernor.Warm","")
           ,("Net.LocalInboundGovernor.Hot","")
-          ]          
-        else 
+          ]
+        else
           [("Net.InboundGovernor.Idle","")
           ,("Net.InboundGovernor.Cold","")
           ,("Net.InboundGovernor.Warm","")
