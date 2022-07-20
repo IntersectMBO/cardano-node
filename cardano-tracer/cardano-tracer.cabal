@@ -123,6 +123,7 @@ library
                        , bytestring
                        , cardano-git-rev
                        , cardano-node
+                       , cassava
                        , cborg
                        , containers
                        , contra-tracer
@@ -137,6 +138,7 @@ library
                        , optparse-applicative
                        , ouroboros-network
                        , ouroboros-network-framework
+                       , signal
                        , smtp-mail == 0.3.0.0
                        , snap-blaze
                        , snap-core
@@ -149,6 +151,7 @@ library
                        , trace-dispatcher
                        , trace-forward
                        , unordered-containers
+                       , vector
                        , yaml
 
   if os(linux)

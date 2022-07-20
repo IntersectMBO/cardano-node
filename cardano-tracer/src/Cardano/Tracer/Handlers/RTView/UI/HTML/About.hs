@@ -1,17 +1,17 @@
 {-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE MultiWayIf #-}
 
 module Cardano.Tracer.Handlers.RTView.UI.HTML.About
   ( mkAboutInfo
   ) where
 
+import           Data.List.Extra (lower)
 import qualified Data.Text as T
 import           Data.Version (showVersion)
 import qualified Graphics.UI.Threepenny as UI
 import           Graphics.UI.Threepenny.Core
 import           System.Directory (makeAbsolute)
 import           System.Environment (getArgs)
-import           System.Info.Extra (isMac, isWindows)
+import           System.Info (os)
 
 import           Cardano.Git.Rev (gitRev)
 
@@ -80,9 +80,7 @@ mkAboutInfo = do
                           , image "rt-view-href-icon" externalLinkSVG
                           ]
                       , UI.p #. "mb-3" #+
-                          [ string $ if | isWindows -> "Windows"
-                                        | isMac     -> "macOS"
-                                        | otherwise -> "Linux"
+                          [ string currentOS
                           ]
                       , UI.p #. "mb-3" #+
                           [ UI.div #. "field has-addons" #+
@@ -109,3 +107,14 @@ mkAboutInfo = do
   return info
  where
   commit = T.unpack . T.take 7 $ gitRev
+
+currentOS :: String
+currentOS =
+  case lower os of
+    "darwin"  -> "macOS"
+    "mingw32" -> "Windows"
+    "linux"   -> "Linux"
+    "freebsd" -> "FreeBSD"
+    "netbsd"  -> "NetBSD"
+    "openbsd" -> "OpenBSD"
+    _         -> "Unknown"

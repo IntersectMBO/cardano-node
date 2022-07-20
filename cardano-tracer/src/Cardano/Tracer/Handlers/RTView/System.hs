@@ -1,7 +1,8 @@
 {-# LANGUAGE CPP #-}
 
 module Cardano.Tracer.Handlers.RTView.System
-  ( getPathToChartsConfig
+  ( getPathToBackupDir
+  , getPathToChartsConfig
   , getPathToThemeConfig
   , getPathsToNotificationsSettings
   , getPathsToSSLCerts
@@ -59,6 +60,16 @@ getPathsToNotificationsSettings = do
 getPathToConfigDir :: IO FilePath
 getPathToConfigDir = do
   configDir <- D.getXdgDirectory D.XdgConfig ""
-  let pathToRTViewConfigDir = configDir </> "cardano-rt-view"
+  let pathToRTViewConfigDir = configDir </> rtViewRootDir
   D.createDirectoryIfMissing True pathToRTViewConfigDir
   return pathToRTViewConfigDir
+
+getPathToBackupDir :: IO FilePath
+getPathToBackupDir = do
+  dataDir <- D.getXdgDirectory D.XdgData ""
+  let pathToRTViewBackupDir = dataDir </> rtViewRootDir </> "backup"
+  D.createDirectoryIfMissing True pathToRTViewBackupDir
+  return pathToRTViewBackupDir
+
+rtViewRootDir :: FilePath
+rtViewRootDir = "cardano-rt-view"

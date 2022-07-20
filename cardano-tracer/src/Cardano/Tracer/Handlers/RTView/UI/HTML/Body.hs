@@ -5,6 +5,8 @@ module Cardano.Tracer.Handlers.RTView.UI.HTML.Body
   ( mkPageBody
   ) where
 
+import           Control.Concurrent.Extra (Lock)
+import           Control.Concurrent.STM.TVar (readTVarIO)
 import           Control.Monad (unless, void, when)
 import           Control.Monad.Extra (whenJustM, whenM)
 import           Data.Text (Text)
@@ -28,6 +30,7 @@ import           Cardano.Tracer.Handlers.RTView.UI.Notifications
 import           Cardano.Tracer.Handlers.RTView.UI.Theme
 import           Cardano.Tracer.Handlers.RTView.UI.Types
 import           Cardano.Tracer.Handlers.RTView.UI.Utils
+import           Cardano.Tracer.Handlers.RTView.Update.Historical
 import           Cardano.Tracer.Types
 
 mkPageBody
@@ -37,20 +40,25 @@ mkPageBody
   -> ResourcesHistory
   -> BlockchainHistory
   -> TransactionsHistory
+  -> DataPointRequestors
+  -> Lock
   -> DatasetsIndices
   -> DatasetsTimestamps
   -> EventsQueues
   -> UI Element
 mkPageBody window networkConfig connected
-           (ResHistory rHistory) (ChainHistory cHistory) (TXHistory tHistory)
+           resourcesHistory@(ResHistory rHistory)
+           chainHistory@(ChainHistory cHistory)
+           txHistory@(TXHistory tHistory)
+           dpRequestors currentDPLock
            dsIxs dsTss eventsQueues = do
   txsProcessedNumTimer <- mkChartTimer connected tHistory dsIxs dsTss TxsProcessedNumData TxsProcessedNumChart
   mempoolBytesTimer    <- mkChartTimer connected tHistory dsIxs dsTss MempoolBytesData    MempoolBytesChart
   txsInMempoolTimer    <- mkChartTimer connected tHistory dsIxs dsTss TxsInMempoolData    TxsInMempoolChart
 
-  txsProcessedNumChart <- mkChart window txsProcessedNumTimer TxsProcessedNumChart "Processed txs"
-  mempoolBytesChart    <- mkChart window mempoolBytesTimer    MempoolBytesChart    "Mempool size"
-  txsInMempoolChart    <- mkChart window txsInMempoolTimer    TxsInMempoolChart    "Txs in mempool"
+  txsProcessedNumChart <- mkChart txsProcessedNumTimer TxsProcessedNumData TxsProcessedNumChart "Processed txs"
+  mempoolBytesChart    <- mkChart mempoolBytesTimer    MempoolBytesData    MempoolBytesChart    "Mempool size"
+  txsInMempoolChart    <- mkChart txsInMempoolTimer    TxsInMempoolData    TxsInMempoolChart    "Txs in mempool"
 
   -- Resources charts.
   cpuTimer          <- mkChartTimer connected rHistory dsIxs dsTss CPUData          CPUChart
@@ -62,14 +70,14 @@ mkPageBody window networkConfig connected
   cpuTimeAppTimer   <- mkChartTimer connected rHistory dsIxs dsTss CPUTimeAppData   CPUTimeAppChart
   threadsNumTimer   <- mkChartTimer connected rHistory dsIxs dsTss ThreadsNumData   ThreadsNumChart
 
-  cpuChart          <- mkChart window cpuTimer          CPUChart          "CPU usage"
-  memoryChart       <- mkChart window memoryTimer       MemoryChart       "Memory usage"
-  gcMajorNumChart   <- mkChart window gcMajorNumTimer   GCMajorNumChart   "Number of major GCs"
-  gcMinorNumChart   <- mkChart window gcMinorNumTimer   GCMinorNumChart   "Number of minor GCs"
-  gcLiveMemoryChart <- mkChart window gcLiveMemoryTimer GCLiveMemoryChart "GC, live data in heap"
-  cpuTimeGCChart    <- mkChart window cpuTimeGCTimer    CPUTimeGCChart    "CPU time used by GC"
-  cpuTimeAppChart   <- mkChart window cpuTimeAppTimer   CPUTimeAppChart   "CPU time used by app"
-  threadsNumChart   <- mkChart window threadsNumTimer   ThreadsNumChart   "Number of threads"
+  cpuChart          <- mkChart cpuTimer          CPUData          CPUChart          "CPU usage"
+  memoryChart       <- mkChart memoryTimer       MemoryData       MemoryChart       "Memory usage"
+  gcMajorNumChart   <- mkChart gcMajorNumTimer   GCMajorNumData   GCMajorNumChart   "Number of major GCs"
+  gcMinorNumChart   <- mkChart gcMinorNumTimer   GCMinorNumData   GCMinorNumChart   "Number of minor GCs"
+  gcLiveMemoryChart <- mkChart gcLiveMemoryTimer GCLiveMemoryData GCLiveMemoryChart "GC, live data in heap"
+  cpuTimeGCChart    <- mkChart cpuTimeGCTimer    CPUTimeGCData    CPUTimeGCChart    "CPU time used by GC"
+  cpuTimeAppChart   <- mkChart cpuTimeAppTimer   CPUTimeAppData   CPUTimeAppChart   "CPU time used by app"
+  threadsNumChart   <- mkChart threadsNumTimer   ThreadsNumData   ThreadsNumChart   "Number of threads"
 
   -- Blockchain charts.
   chainDensityTimer <- mkChartTimer connected cHistory dsIxs dsTss ChainDensityData ChainDensityChart
@@ -78,11 +86,11 @@ mkPageBody window networkConfig connected
   slotInEpochTimer  <- mkChartTimer connected cHistory dsIxs dsTss SlotInEpochData  SlotInEpochChart
   epochTimer        <- mkChartTimer connected cHistory dsIxs dsTss EpochData        EpochChart
 
-  chainDensityChart <- mkChart window chainDensityTimer ChainDensityChart "Chain density"
-  slotNumChart      <- mkChart window slotNumTimer      SlotNumChart      "Slot height"
-  blockNumChart     <- mkChart window blockNumTimer     BlockNumChart     "Block height"
-  slotInEpochChart  <- mkChart window slotInEpochTimer  SlotInEpochChart  "Slot in epoch"
-  epochChart        <- mkChart window epochTimer        EpochChart        "Epoch"
+  chainDensityChart <- mkChart chainDensityTimer ChainDensityData ChainDensityChart "Chain density"
+  slotNumChart      <- mkChart slotNumTimer      SlotNumData      SlotNumChart      "Slot height"
+  blockNumChart     <- mkChart blockNumTimer     BlockNumData     BlockNumChart     "Block height"
+  slotInEpochChart  <- mkChart slotInEpochTimer  SlotInEpochData  SlotInEpochChart  "Slot in epoch"
+  epochChart        <- mkChart epochTimer        EpochData        EpochChart        "Epoch"
 
   -- Leadership charts.
   cannotForgeTimer     <- mkChartTimer' connected cHistory dsIxs dsTss NodeCannotForgeData       NodeCannotForgeChart
@@ -95,15 +103,15 @@ mkPageBody window networkConfig connected
   aboutToLeadTimer     <- mkChartTimer' connected cHistory dsIxs dsTss AboutToLeadSlotLastData   AboutToLeadSlotLastChart
   couldNotForgeTimer   <- mkChartTimer' connected cHistory dsIxs dsTss CouldNotForgeSlotLastData CouldNotForgeSlotLastChart
 
-  cannotForgeChart     <- mkChart window cannotForgeTimer     NodeCannotForgeChart       "Cannot forge"
-  forgedSlotChart      <- mkChart window forgedSlotTimer      ForgedSlotLastChart        "Forged"
-  nodeIsLeaderChart    <- mkChart window nodeIsLeaderTimer    NodeIsLeaderChart          "Is leader"
-  nodeIsNotLeaderChart <- mkChart window nodeIsNotLeaderTimer NodeIsNotLeaderChart       "Is not leader"
-  forgedInvalidChart   <- mkChart window forgedInvalidTimer   ForgedInvalidSlotLastChart "Forged invalid"
-  adoptedChart         <- mkChart window adoptedTimer         AdoptedSlotLastChart       "Is adopted"
-  notAdoptedChart      <- mkChart window notAdoptedTimer      NotAdoptedSlotLastChart    "Is not adopted"
-  aboutToLeadChart     <- mkChart window aboutToLeadTimer     AboutToLeadSlotLastChart   "About to lead"
-  couldNotForgeChart   <- mkChart window couldNotForgeTimer   CouldNotForgeSlotLastChart "Could not forge"
+  cannotForgeChart     <- mkChart cannotForgeTimer     NodeCannotForgeData       NodeCannotForgeChart       "Cannot forge"
+  forgedSlotChart      <- mkChart forgedSlotTimer      ForgedSlotLastData        ForgedSlotLastChart        "Forged"
+  nodeIsLeaderChart    <- mkChart nodeIsLeaderTimer    NodeIsLeaderData          NodeIsLeaderChart          "Is leader"
+  nodeIsNotLeaderChart <- mkChart nodeIsNotLeaderTimer NodeIsNotLeaderData       NodeIsNotLeaderChart       "Is not leader"
+  forgedInvalidChart   <- mkChart forgedInvalidTimer   ForgedInvalidSlotLastData ForgedInvalidSlotLastChart "Forged invalid"
+  adoptedChart         <- mkChart adoptedTimer         AdoptedSlotLastData       AdoptedSlotLastChart       "Is adopted"
+  notAdoptedChart      <- mkChart notAdoptedTimer      NotAdoptedSlotLastData    NotAdoptedSlotLastChart    "Is not adopted"
+  aboutToLeadChart     <- mkChart aboutToLeadTimer     AboutToLeadSlotLastData   AboutToLeadSlotLastChart   "About to lead"
+  couldNotForgeChart   <- mkChart couldNotForgeTimer   CouldNotForgeSlotLastData CouldNotForgeSlotLastChart "Could not forge"
 
   -- Visibility of charts groups.
   showHideTxs        <- image "has-tooltip-multiline has-tooltip-top rt-view-show-hide-chart-group" showSVG
@@ -478,6 +486,78 @@ mkPageBody window networkConfig connected
     UI.stop couldNotForgeTimer
 
   return body
+ where
+  mkChart chartUpdateTimer dataName chartId chartName = do
+    selectTimeRange <-
+      UI.select ## (show chartId <> show TimeRangeSelect) #+
+        -- Values are ranges in seconds.
+        [ UI.option # set value "0"     # set text "All time"
+        , UI.option # set value "300"   # set text "Last 5 minutes"
+        , UI.option # set value "900"   # set text "Last 15 minutes"
+        , UI.option # set value "1800"  # set text "Last 30 minutes"
+        , UI.option # set value "3600"  # set text "Last 1 hour"
+        , UI.option # set value "10800" # set text "Last 3 hours"
+        , UI.option # set value "21600" # set text "Last 6 hours"
+        ]
+    selectUpdatePeriod <-
+      UI.select ## (show chartId <> show UpdatePeriodSelect) #+
+        -- Values are periods in seconds.
+        [ UI.option # set value "0"    # set text "Off"
+        , UI.option # set value "15"   # set text "15 seconds"
+        , UI.option # set value "30"   # set text "30 seconds"
+        , UI.option # set value "60"   # set text "1 minute"
+        , UI.option # set value "300"  # set text "5 minutes"
+        , UI.option # set value "900"  # set text "15 minutes"
+        , UI.option # set value "1800" # set text "30 minutes"
+        , UI.option # set value "3600" # set text "1 hour"
+        ]
+
+    on UI.selectionChange selectTimeRange . const $
+      whenJustM (readMaybe <$> get value selectTimeRange) $ \(rangeInSec :: Int) -> do
+        Chart.setTimeRange chartId rangeInSec
+        when (rangeInSec == 0) $ do
+          Chart.resetZoomChartJS chartId
+          -- Since the user changed '0' (which means "All time"),
+          -- we have to load all the history for currently connected nodes,
+          -- but for this 'chartName' only!
+          liftIO $ do
+            connected' <- readTVarIO connected
+            restoreHistoryFromBackupAll
+              dataName
+              connected'
+              chainHistory
+              resourcesHistory
+              txHistory
+              dpRequestors
+              currentDPLock
+        saveChartsSettings window
+
+    on UI.selectionChange selectUpdatePeriod . const $
+      whenJustM (readMaybe <$> get value selectUpdatePeriod) $ \(periodInSec :: Int) -> do
+        whenM (get UI.running chartUpdateTimer) $ UI.stop chartUpdateTimer
+        unless (periodInSec == 0) $ do
+          void $ return chartUpdateTimer # set UI.interval (periodInSec * 1000)
+          UI.start chartUpdateTimer
+        saveChartsSettings window
+
+    UI.div #. "rt-view-chart-container" #+
+      [ UI.div #. "columns" #+
+          [ UI.div #. "column mt-1" #+
+              [ UI.span #. "rt-view-chart-name" # set text chartName
+              ]
+          , UI.div #. "column has-text-right" #+
+              [ UI.div #. "field is-grouped mt-3" #+
+                  [ image "has-tooltip-multiline has-tooltip-top rt-view-chart-icon" timeRangeSVG
+                          # set dataTooltip "Select time range"
+                  , UI.div #. "select is-link is-small mr-4" #+ [element selectTimeRange]
+                  , image "has-tooltip-multiline has-tooltip-top rt-view-chart-icon" refreshSVG
+                          # set dataTooltip "Select update period"
+                  , UI.div #. "select is-link is-small" #+ [element selectUpdatePeriod]
+                  ]
+              ]
+          ]
+      , UI.canvas ## show chartId #. "rt-view-chart-area" #+ []
+      ]
 
 topNavigation
   :: UI.Window
@@ -561,70 +641,6 @@ footer =
                 ]
             ]
         ]
-    ]
-
-mkChart
-  :: UI.Window
-  -> UI.Timer
-  -> ChartId
-  -> String
-  -> UI Element
-mkChart window chartUpdateTimer chartId chartName = do
-  selectTimeRange <-
-    UI.select ## (show chartId <> show TimeRangeSelect) #+
-      -- Values are ranges in seconds.
-      [ UI.option # set value "0"     # set text "All time"
-      , UI.option # set value "300"   # set text "Last 5 minutes"
-      , UI.option # set value "900"   # set text "Last 15 minutes"
-      , UI.option # set value "1800"  # set text "Last 30 minutes"
-      , UI.option # set value "3600"  # set text "Last 1 hour"
-      , UI.option # set value "10800" # set text "Last 3 hours"
-      , UI.option # set value "21600" # set text "Last 6 hours"
-      ]
-  selectUpdatePeriod <-
-    UI.select ## (show chartId <> show UpdatePeriodSelect) #+
-      -- Values are periods in seconds.
-      [ UI.option # set value "0"    # set text "Off"
-      , UI.option # set value "15"   # set text "15 seconds"
-      , UI.option # set value "30"   # set text "30 seconds"
-      , UI.option # set value "60"   # set text "1 minute"
-      , UI.option # set value "300"  # set text "5 minutes"
-      , UI.option # set value "900"  # set text "15 minutes"
-      , UI.option # set value "1800" # set text "30 minutes"
-      , UI.option # set value "3600" # set text "1 hour"
-      ]
-
-  on UI.selectionChange selectTimeRange . const $
-    whenJustM (readMaybe <$> get value selectTimeRange) $ \(rangeInSec :: Int) -> do
-      Chart.setTimeRange chartId rangeInSec
-      when (rangeInSec == 0) $ Chart.resetZoomChartJS chartId
-      saveChartsSettings window
-
-  on UI.selectionChange selectUpdatePeriod . const $
-    whenJustM (readMaybe <$> get value selectUpdatePeriod) $ \(periodInSec :: Int) -> do
-      whenM (get UI.running chartUpdateTimer) $ UI.stop chartUpdateTimer
-      unless (periodInSec == 0) $ do
-        void $ return chartUpdateTimer # set UI.interval (periodInSec * 1000)
-        UI.start chartUpdateTimer
-      saveChartsSettings window
-
-  UI.div #. "rt-view-chart-container" #+
-    [ UI.div #. "columns" #+
-        [ UI.div #. "column mt-1" #+
-            [ UI.span #. "rt-view-chart-name" # set text chartName
-            ]
-        , UI.div #. "column has-text-right" #+
-            [ UI.div #. "field is-grouped mt-3" #+
-                [ image "has-tooltip-multiline has-tooltip-top rt-view-chart-icon" timeRangeSVG
-                        # set dataTooltip "Select time range"
-                , UI.div #. "select is-link is-small mr-4" #+ [element selectTimeRange]
-                , image "has-tooltip-multiline has-tooltip-top rt-view-chart-icon" refreshSVG
-                        # set dataTooltip "Select update period"
-                , UI.div #. "select is-link is-small" #+ [element selectUpdatePeriod]
-                ]
-            ]
-        ]
-    , UI.canvas ## show chartId #. "rt-view-chart-area" #+ []
     ]
 
 changeVisibilityForCharts

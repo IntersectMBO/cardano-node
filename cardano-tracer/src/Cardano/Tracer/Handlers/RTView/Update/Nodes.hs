@@ -38,12 +38,14 @@ import           Cardano.Tracer.Handlers.Metrics.Utils
 import           Cardano.Tracer.Handlers.RTView.State.Displayed
 import           Cardano.Tracer.Handlers.RTView.State.EraSettings
 import           Cardano.Tracer.Handlers.RTView.State.Errors
+import           Cardano.Tracer.Handlers.RTView.State.Historical
 import           Cardano.Tracer.Handlers.RTView.State.TraceObjects
 import           Cardano.Tracer.Handlers.RTView.UI.Charts
 import           Cardano.Tracer.Handlers.RTView.UI.HTML.Node.Column
 import           Cardano.Tracer.Handlers.RTView.UI.HTML.NoNodes
 import           Cardano.Tracer.Handlers.RTView.UI.Types
 import           Cardano.Tracer.Handlers.RTView.UI.Utils
+import           Cardano.Tracer.Handlers.RTView.Update.Historical
 import           Cardano.Tracer.Handlers.RTView.Update.NodeInfo
 import           Cardano.Tracer.Handlers.RTView.Update.Utils
 import           Cardano.Tracer.Types
@@ -55,6 +57,9 @@ updateNodesUI
   -> AcceptedMetrics
   -> SavedTraceObjects
   -> ErasSettings
+  -> BlockchainHistory
+  -> ResourcesHistory
+  -> TransactionsHistory
   -> DataPointRequestors
   -> Lock
   -> NonEmpty LoggingParams
@@ -65,8 +70,9 @@ updateNodesUI
   -> UI.Timer
   -> UI ()
 updateNodesUI window connectedNodes displayedElements acceptedMetrics savedTO nodesEraSettings
-              dpRequestors currentDPLock loggingConfig colors datasetIndices nodesErrors
-              updateErrorsTimer noNodesProgressTimer = do
+              chainHistory resourcesHistory txHistory dpRequestors currentDPLock
+              loggingConfig colors datasetIndices nodesErrors updateErrorsTimer
+              noNodesProgressTimer = do
   (connected, displayedEls) <- liftIO . atomically $ (,)
     <$> readTVar connectedNodes
     <*> readTVar displayedElements
@@ -86,7 +92,15 @@ updateNodesUI window connectedNodes displayedElements acceptedMetrics savedTO no
     checkNoNodesState window connected noNodesProgressTimer
     askNSetNodeInfo window dpRequestors currentDPLock newlyConnected displayedElements
     addDatasetsForConnected window newlyConnected colors datasetIndices displayedElements
-    liftIO $ updateDisplayedElements displayedElements connected
+    liftIO $ do
+      restoreHistoryFromBackup
+        newlyConnected
+        chainHistory
+        resourcesHistory
+        txHistory
+        dpRequestors
+        currentDPLock
+      updateDisplayedElements displayedElements connected
   setBlockReplayProgress connected displayedElements acceptedMetrics
   setChunkValidationProgress connected savedTO
   setLedgerDBProgress connected savedTO
