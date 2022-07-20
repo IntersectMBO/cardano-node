@@ -1,0 +1,75 @@
+#+CONSTANTS: perf=clusterperf.report.org forge=blockprop.forger.org peers=blockprop.peers.org end2end=blockprop.endtoend.org
+#+CONSTANTS: base=../{{ base.meta.tag }}/analysis
+{% for run in runs %}
+#+CONSTANTS: run{{ run.index }}=../{{ run.value.meta.tag }}/analysis
+{% endfor %}
+#+LATEX_CLASS: report
+#+LATEX_CLASS_OPTIONS: [a4paper,7pt]
+#+LATEX_HEADER: \usepackage[margin=0.5in]{geometry}
+#+latex_header: \usepackage{setspace}
+#+latex_header: \onehalfspacing
+#+LATEX_COMPILER: xelatex
+#+EXPORT_FILE_NAME: {{ report.target }}.{{ base.workload }}.pdf
+#+TITLE: {{ report.target }} against {{ base.ver }}
+#+SUBTITLE: {{ base.workload }} workload
+#+SUBTITLE: \break\small{revision} ={{ report.revision }}=
+#+AUTHOR: {{ report.author }}, Cardano Performance team
+#+DATE: {{ report.date }}
+
+*** Manifest
+
+We compare ... relative to ={{ base.ver }}= /{{ base.meta.era | toTitle }}, under {{ base.workload }} workload.
+
+{% include "manifest.ede" %}
+
+***** Revision history
+      - rev 1, {{ report.date }}:  initial release
+
+*** Analysis
+***** Resource Usage
+
+{% include "table.ede" with table = { "rows":"1234567", "src":"perf" } %}
+
+***** Forging
+
+{% include "table.ede" with table = { "rows":"1234", "src":"forge" } %}
+
+***** Individual peer propagation
+
+{% include "table.ede" with table = { "rows":"1234", "src":"peers" } %}
+
+***** End-to-end propagation
+
+{% include "table.ede" with table = { "rows":"12345678", "src":"end2end" } %}
+
+*** Observations
+***** Resources
+
+1. ...
+
+***** Forging
+
+1. ...
+
+***** Peer propagation
+
+1. ...
+
+***** End-to-end propagation
+
+...
+
+@duncan, @Kevin Hammond, @Nigel Hemsley, @neil, @jared.corduan, @Damian, @nfrisby, @amesgen, @marcin, @Vitor Silva, @Javier Franco, @carlos.lopezdelara, @disasm, @michael.karg
+
+* Appendix: charts
+
+{% include "chart.ede" with args = { "title": "Kernel-reported CPU usage", "ylabel": "CPU usage, %", "metric": "cpuProcess", "yrange": "1:200", "logscale": false } %}
+{% include "chart.ede" with args = { "title": "RTS memory allocation rate", "ylabel": "Memory allocation rate, MB/s", "metric": "rtsAllocation", "yrange": "0:5000", "logscale": false } %}
+{% include "chart.ede" with args = { "title": "Kernel reported memory usage", "ylabel": "RSS, MB", "metric": "memRSS", "logscale": false } %}
+{% include "chart.ede" with args = { "title": "RTS GC live bytes", "ylabel": "GC live bytes, MB", "metric": "rtsLiveBytes", "logscale": false } %}
+{% include "chart.ede" with args = { "title": "Single peer fetched-to-adopted time", "metric": "pAdopted" } %}
+{% include "chart.ede" with args = { "title": "First peer notice time", "metric": "pNoticed" } %}
+{% include "chart.ede" with args = { "title": "Block adoption, 50% of cluster", "metric": "prop0.50" } %}
+{% include "chart.ede" with args = { "title": "Block adoption, 80% of cluster", "metric": "prop0.80" } %}
+{% include "chart.ede" with args = { "title": "Block adoption, 90% of cluster", "metric": "prop0.90" } %}
+{% include "chart.ede" with args = { "title": "Block adoption, 96% of cluster", "metric": "prop0.96" } %}

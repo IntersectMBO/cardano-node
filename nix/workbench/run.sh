@@ -682,4 +682,51 @@ run_aws_get() {
        echo >&2
        base=$((base + max_batch))
     done
+
+    progress "run | aws-get" "adding manifest"
+    jq_fmutate "$dir"/meta.json '.meta.manifest = $manifest
+    ' --argjson manifest "$(legacy_run_manifest $dir)"
+}
+
+node_cabal_source_at() {
+    local node=$1
+    local pin=$2
+
+    git show $node:cabal.project |
+        grep "location: .*/$pin\$" -A1 |
+        tail -n1 |
+        cut -d: -f2 |
+        cut -c 2-
+}
+
+legacy_run_manifest() {
+    local dir=$1
+    local node=$(       jq -r '.meta.pins."cardano-node"' $dir/meta.json)
+    local node_branch=$(jq -r '.meta.node_commit_spec'    $dir/meta.json)
+    local node_ver=$(   jq -r '.meta.node_commit_desc'    $dir/meta.json)
+
+    local args=(
+      --arg Node          $node
+      --arg NodeBranch    $node_branch
+      --arg NodeApproxVer $node_ver
+      --arg Network  $(node_cabal_source_at $node ouroboros-network)
+      --arg Ledger   $(node_cabal_source_at $node cardano-ledger)
+      --arg Plutus   $(node_cabal_source_at $node plutus)
+      --arg Crypto   $(node_cabal_source_at $node cardano-crypto)
+      --arg Base     $(node_cabal_source_at $node cardano-base)
+      --arg Prelude  $(node_cabal_source_at $node cardano-prelude)
+    )
+    jq '
+  { "cardano-node"         : $Node
+  , "cardano-node-branch"  : $NodeBranch
+  , "cardano-node-version" : $NodeApproxVer
+  , "cardano-node-status"  : "unknown"
+  , "ouroboros-network"    : $Network
+  , "cardano-ledger"       : $Ledger
+  , "plutus"               : $Plutus
+  , "cardano-crypto"       : $Crypto
+  , "cardano-base"         : $Base
+  , "cardano-prelude"      : $Prelude
+  }
+  ' --null-input "${args[@]}"
 }

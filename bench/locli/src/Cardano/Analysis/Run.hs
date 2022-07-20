@@ -30,7 +30,7 @@ data Anchor
   , aFilters :: [FilterName]
   , aSlots   :: Maybe (DataDomain SlotNo)
   , aBlocks  :: Maybe (DataDomain BlockNo)
-  , aVersion :: Version
+  , aVersion :: Cardano.Analysis.Version.Version
   , aWhen    :: UTCTime
   }
 
@@ -113,6 +113,8 @@ instance FromJSON RunPartial where
     --
     tag       <- meta .: "tag"
     profile   <- meta .: "profile"
+    batch     <- meta .: "batch"
+    manifest  <- meta .: "manifest"
 
     eraGtor   <- generator       .:? "era"
     eraTop    <- profile_content .:? "era"

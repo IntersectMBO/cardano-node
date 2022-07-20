@@ -1,0 +1,9 @@
+#+LATEX: \scriptsize
+| load  | era     | approx ver |  node | plutu | ledge | conse |                                                                     |
+|-------+---------+------------+-------+-------+-------+-------+---------------------------------------------------------------------|
+| {{ base.workload }} | {{ base.meta.era | toTitle }} | {{ base.ver}} | {{ base.rev.node }} | {{ base.rev.plutus }} | {{ base.rev.ledger }} | {{ base.rev.network }} | {{ base.meta.tag }}     |
+{% for run in runs %}
+| {{ run.value.workload }} | {{ run.value.meta.era | toTitle }} | {{ run.value.ver}} | {{ run.value.rev.node }} | {{ run.value.rev.plutus }} | {{ run.value.rev.ledger }} | {{ run.value.rev.network }} | {{ run.value.meta.tag }}     |
+{% endfor %}
+|-------+---------+------------+-------+-------+-------+-------+---------------------------------------------------------------------|
+#+LATEX: \normalsize

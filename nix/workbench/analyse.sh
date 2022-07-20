@@ -58,6 +58,18 @@ local op=${1:-standard}; if test $# != 0; then shift; fi
 
 case "$op" in
     # 'read-mach-views' "${logs[@]/#/--log }"
+    compare | cmp )
+        local baseline=$1; shift
+        progress "analysis" "$(white comparing) $(colorise $*) $(plain against baseline) $(white $baseline)"
+        analyse ${sargs[*]} multi-call "$baseline $*" 'compare'
+        ;;
+
+    recompare | rcmp )
+        local baseline=$1; shift
+        progress "analysis" "$(white regenerating comparison) of $(colorise $*) $(plain against baseline) $(white $baseline)"
+        analyse ${sargs[*]} multi-call "$baseline $*" 'update'
+        ;;
+
     multi-run-pattern | multi-pattern | multipat | mp )
         analyse ${sargs[*]} multi-run $(run list-pattern $1)
         ;;
@@ -267,6 +279,10 @@ case "$op" in
         local adirs=( $(for dir  in ${dirs[*]};  do echo $dir/analysis; done))
         local props=( $(for adir in ${adirs[*]}; do echo --prop        ${adir}/blockprop.json;   done))
         local cperfs=($(for adir in ${adirs[*]}; do echo --clusterperf ${adir}/clusterperf.json; done))
+        local compares=($(for adir in ${adirs[*]}
+                          do echo --run-metafile    ${adir}/../meta.json \
+                                  --shelley-genesis ${adir}/../genesis-shelley.json
+                          done))
         local tag=$(for dir in ${dirs[*]}; do basename $dir; done | sort -r | head -n1 | cut -d. -f1-2)-multirun
         local adir=$(run get-rundir)/$tag
 
@@ -289,7 +305,9 @@ case "$op" in
         vc=(${vb[*]/#multi-propagation-endtoend/ 'render-multi-propagation' --report $adir/'multi-blockprop-endtoend.org' --end-to-end })
         vd=(${vc[*]/#multi-propagation-gnuplot/  'render-multi-propagation' --gnuplot $adir/'%s.cdf' --full })
         ve=(${vd[*]/#multi-propagation-full/     'render-multi-propagation' --pretty $adir/'multi-blockprop-full.txt' --full })
-        local ops_final=(${ve[*]})
+        vf=(${ve[*]/#compare/ 'compare' --ede nix/workbench/ede --report $adir/report-$tag.org ${compares[*]} })
+        vg=(${vf[*]/#update/  'compare' --ede nix/workbench/ede --report $adir/report-$tag.org ${compares[*]} --template $adir/report-$tag.ede })
+        local ops_final=(${vg[*]})
 
         progress "analysis | locli" "$(with_color reset ${locli_rts_args[@]}) $(colorise "${ops_final[@]}")"
         time locli "${locli_rts_args[@]}" "${ops_final[@]}"

@@ -82,6 +82,11 @@ data HostDeduction
 ---
 --- Files
 ---
+newtype InputDir
+  = InputDir { unInputDir :: FilePath }
+  deriving (Show, Eq)
+  deriving newtype (NFData)
+
 newtype JsonLogfile
   = JsonLogfile { unJsonLogfile :: FilePath }
   deriving (Show, Eq)
@@ -103,6 +108,10 @@ newtype OrgOutputFile
   = OrgOutputFile { unOrgOutputFile :: FilePath }
   deriving (Show, Eq)
 
+newtype TextInputFile
+  = TextInputFile { unTextInputFile :: FilePath }
+  deriving (Show, Eq)
+
 newtype TextOutputFile
   = TextOutputFile { unTextOutputFile :: FilePath }
   deriving (Show, Eq)
@@ -118,6 +127,14 @@ newtype OutputFile
 ---
 --- Parsers
 ---
+optInputDir :: String -> String -> Parser InputDir
+optInputDir optname desc =
+  fmap InputDir $
+    Opt.option Opt.str
+      $ long optname
+      <> metavar "DIR"
+      <> help desc
+
 optJsonLogfile :: String -> String -> Parser JsonLogfile
 optJsonLogfile optname desc =
   fmap JsonLogfile $
@@ -153,6 +170,14 @@ optGnuplotOutputFile optname desc =
     Opt.option Opt.str
       $ long optname
       <> metavar "CDF-OUTFILE"
+      <> help desc
+
+optTextInputFile :: String -> String -> Parser TextInputFile
+optTextInputFile optname desc =
+  fmap TextInputFile $
+    Opt.option Opt.str
+      $ long optname
+      <> metavar "TEXT-INFILE"
       <> help desc
 
 optTextOutputFile :: String -> String -> Parser TextOutputFile

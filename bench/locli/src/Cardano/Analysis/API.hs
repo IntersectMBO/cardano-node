@@ -37,7 +37,7 @@ import Cardano.Util
 -- | Results of block propagation analysis.
 data BlockProp f
   = BlockProp
-    { bpVersion             :: !Version
+    { bpVersion             :: !Cardano.Analysis.Version.Version
     , bpDomainSlots         :: !(DataDomain SlotNo)
     , bpDomainBlocks        :: !(DataDomain BlockNo)
     , bpForgerChecks        :: !(CDF f NominalDiffTime)
@@ -148,7 +148,7 @@ data BPErrorKind
 -- | The top-level representation of the machine timeline analysis results.
 data MachPerf f
   = MachPerf
-    { sVersion              :: !Version
+    { sVersion              :: !Cardano.Analysis.Version.Version
     , sDomainSlots          :: !(DataDomain SlotNo)
     -- distributions
     , sMissCDF              :: !(CDF f Double)
