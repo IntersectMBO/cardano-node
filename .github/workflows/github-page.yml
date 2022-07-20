@@ -69,8 +69,6 @@ jobs:
       run: cabal update
 
     - name: Disable reorder goals on MacOS and Linux
-      # Avoid reorder goals for platforms that don't need it because re-order goals can take up to 10 minutes
-      if: matrix.os == 'macos-latest' || matrix.os == 'ubuntu-latest'
       run: |
         cat cabal.project | sed 's|reorder-goals: True|reorder-goals: False|g' > cabal.project.tmp
         mv cabal.project.tmp cabal.project
@@ -85,20 +83,24 @@ jobs:
         DRY_RUN=1 ./scripts/haddocs.sh ./haddocks true
 
     - name: Record dependencies
+      id: record-deps
       run: |
         cat ${{ env.PLAN_JSON }} | jq -r '."install-plan"[].id' | sort | uniq > dependencies.txt
+        echo "::set-output name=weeknum::$(/bin/date -u "+%W")"
 
     - uses: actions/cache@v2
       name: Cache cabal store
       with:
         path: ${{ steps.setup-haskell.outputs.cabal-store }}
         key: cache-${{ env.CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}-${{ hashFiles('dependencies.txt') }}
-        restore-keys: |
-          cache-${{ env.CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}-${{ hashFiles('dependencies.txt') }}
-          cache-${{ env.CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}-
+        restore-keys: cache-${{ env.CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}
 
-    - name: Install dependencies
-      run: cabal build all
+    - uses: actions/cache@v2
+      name: Cache dist newstyle
+      with:
+        path: dist-newstyle
+        key: cache-dist-${{ env.CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}-${{ steps.record-deps.outputs.weeknum }}
+        restore-keys: cache-dist-${{ env.CACHE_VERSION }}-${{ runner.os }}-${{ matrix.ghc }}
 
     - name: Build Haddock documentation 🔧
       run: ./scripts/haddocs.sh ./haddocks true
