@@ -9,9 +9,10 @@
 {-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 
 module Cardano.CLI.Shelley.Run.Transaction
-  ( ShelleyTxCmdError
+  ( ShelleyTxCmdError(..)
   , renderShelleyTxCmdError
   , runTransactionCmd
+  , readFileTx
   ) where
 
 import           Cardano.Prelude hiding (All, Any)
@@ -60,7 +61,6 @@ import           Ouroboros.Consensus.Cardano.Block (EraMismatch (..))
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr)
 import qualified Ouroboros.Consensus.Protocol.TPraos as TPraos
 import           Ouroboros.Consensus.Shelley.Ledger (ShelleyBlock)
-import           Ouroboros.Network.Protocol.LocalStateQuery.Type (AcquireFailure (..))
 import qualified Ouroboros.Network.Protocol.LocalTxSubmission.Client as Net.Tx
 
 import qualified System.IO as IO
