@@ -79,6 +79,8 @@ Now, open your node's configuration file (if you took it from [Hydra](https://hy
 "TraceOptionNodeName": "relay-1"
 ```
 
+Please make sure you specified the _real name_ of your node in `TraceOptionNodeName` field.
+
 Finally, run the node with this configuration file and add tracer's CLI-parameter like this:
 
 ```
@@ -86,6 +88,16 @@ $ ./cardano-node run --tracer-socket-path-connect /tmp/forwarder.sock
 ```
 
 That's it. Now you can open [https://127.0.0.1:3300](https://127.0.0.1:3300/) in your browser.
+
+### Important
+
+Please note that the node has another CLI-parameter for the socket:
+
+```
+--socket-path FILEPATH   Path to a cardano-node socket
+```
+
+But `--socket-path` is **not** for working with `cardano-tracer`. The only CLI-parameters you need to specify the path to the socket for working with `cardano-tracer` are `--tracer-socket-path-connect` (if your node should _initiate_ connection) or `--tracer-socket-path-accept` (if your node should _accept_ connection). They are **not** related to `--socket-path`, so you can use these CLI-parameters independently from each other.
 
 # Configuration
 
@@ -108,7 +120,7 @@ hasRTView:
   epPort: 3300
 ```
 
-Here `epHost` and `epPort` specify the host and the port for RTView web page.
+Here `epHost` and `epPort` specify the host and the port for RTView web page. Also, you can find examples of configuration files in [configuration directory](https://github.com/input-output-hk/cardano-node/tree/master/cardano-tracer/configuration).
 
 That's it. Now run `cardano-tracer` and open [127.0.0.1:3300](https://127.0.0.1:3300) in your browser.
 
