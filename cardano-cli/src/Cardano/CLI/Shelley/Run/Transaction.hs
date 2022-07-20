@@ -567,6 +567,7 @@ runTxBuild (AnyCardanoEra era) (AnyConsensusModeParams cModeParams) networkId mS
                                           pparams utxo balancedTxBody
               scriptCostOutput <- firstExceptT ShelleyTxCmdPlutusScriptCostErr $ hoistEither
                                     $ renderScriptCosts
+                                        utxo
                                         executionUnitPrices
                                         (collectTxBodyScriptWitnesses txBodyContent)
                                         scriptExecUnitsMap

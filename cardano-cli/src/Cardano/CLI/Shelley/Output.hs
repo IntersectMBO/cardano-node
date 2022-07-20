@@ -22,6 +22,7 @@ import qualified Data.List as List
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Text (Text)
+import qualified Data.Text as Text
 import           Data.Time.Clock (UTCTime)
 import           Data.Word
 
@@ -225,7 +226,7 @@ instance FromJSON QueryTipLocalStateOutput where
 
 data ScriptCostOutput =
   ScriptCostOutput
-    { scScriptHash :: Maybe ScriptHash
+    { scScriptHash :: ScriptHash
     , scExecutionUnits :: ExecutionUnits
     , scAda :: Lovelace
     }
@@ -241,6 +242,8 @@ data PlutusScriptCostError
   = PlutusScriptCostErrPlutusScriptNotFound ScriptWitnessIndex
   | PlutusScriptCostErrExecError ScriptWitnessIndex (Maybe ScriptHash) ScriptExecutionError
   | PlutusScriptCostErrRationalExceedsBound ExecutionUnitPrices  ExecutionUnits
+  | PlutusScriptCostErrRefInputNoScript TxIn
+  | PlutusScriptCostErrRefInputNotInUTxO TxIn
   deriving Show
 
 
@@ -253,9 +256,14 @@ instance Error PlutusScriptCostError where
   displayError (PlutusScriptCostErrRationalExceedsBound eUnitPrices eUnits) =
     "Either the execution unit prices: " <> show eUnitPrices <> " or the execution units: " <>
     show eUnits <> " or both are either too precise or not within bounds"
+  displayError (PlutusScriptCostErrRefInputNoScript txin) =
+    "No reference script found at input: " <> Text.unpack (renderTxIn txin)
+  displayError (PlutusScriptCostErrRefInputNotInUTxO txin) =
+    "Reference input was not found in utxo: " <> Text.unpack (renderTxIn txin)
 
 renderScriptCosts
-  :: ExecutionUnitPrices
+  :: UTxO era
+  -> ExecutionUnitPrices
   -> [(ScriptWitnessIndex, AnyScriptWitness era)]
   -- ^ Initial mapping of script witness index to actual script.
   -- We need this in order to know which script corresponds to the
@@ -264,7 +272,7 @@ renderScriptCosts
   -- ^ Post execution cost calculation mapping of script witness
   -- index to execution units.
   -> Either PlutusScriptCostError [ScriptCostOutput]
-renderScriptCosts eUnitPrices scriptMapping executionCostMapping =
+renderScriptCosts (UTxO utxo) eUnitPrices scriptMapping executionCostMapping =
   sequenceA $ Map.foldlWithKey
     (\accum sWitInd eExecUnits -> do
       case List.lookup sWitInd scriptMapping of
@@ -276,7 +284,7 @@ renderScriptCosts eUnitPrices scriptMapping executionCostMapping =
             Right execUnits ->
               case calculateExecutionUnitsLovelace eUnitPrices execUnits of
                 Just llCost ->
-                  Right (ScriptCostOutput (Just scriptHash) execUnits llCost)
+                  Right (ScriptCostOutput scriptHash execUnits llCost)
                     : accum
                 Nothing ->
                   Left (PlutusScriptCostErrRationalExceedsBound eUnitPrices execUnits)
@@ -284,17 +292,23 @@ renderScriptCosts eUnitPrices scriptMapping executionCostMapping =
             Left err -> Left (PlutusScriptCostErrExecError sWitInd (Just scriptHash) err) : accum
         -- TODO: Create a new sum type to encapsulate the fact that we can also
         -- have a txin and render the txin in the case of reference scripts.
-        Just (AnyScriptWitness (PlutusScriptWitness _ _ (PReferenceScript _refTxIn _) _ _ _)) ->
-          case eExecUnits of
-            Right execUnits ->
-              case calculateExecutionUnitsLovelace eUnitPrices execUnits of
-                Just llCost ->
-                  Right (ScriptCostOutput Nothing execUnits llCost)
-                    : accum
-                Nothing ->
-                  Left (PlutusScriptCostErrRationalExceedsBound eUnitPrices execUnits)
-                    : accum
-            Left err -> Left (PlutusScriptCostErrExecError sWitInd Nothing err) : accum
+        Just (AnyScriptWitness (PlutusScriptWitness _ _ (PReferenceScript refTxIn _) _ _ _)) ->
+          case Map.lookup refTxIn utxo of
+            Nothing -> Left (PlutusScriptCostErrRefInputNotInUTxO refTxIn) : accum
+            Just (TxOut _ _ _ refScript) ->
+              case refScript of
+                ReferenceScriptNone -> Left (PlutusScriptCostErrRefInputNoScript refTxIn) : accum
+                ReferenceScript _ (ScriptInAnyLang _ script) ->
+                  case eExecUnits of
+                    Right execUnits ->
+                      case calculateExecutionUnitsLovelace eUnitPrices execUnits of
+                        Just llCost ->
+                          Right (ScriptCostOutput (hashScript script) execUnits llCost)
+                            : accum
+                        Nothing ->
+                          Left (PlutusScriptCostErrRationalExceedsBound eUnitPrices execUnits)
+                            : accum
+                    Left err -> Left (PlutusScriptCostErrExecError sWitInd Nothing err) : accum
 
 
         Nothing -> Left (PlutusScriptCostErrPlutusScriptNotFound sWitInd) : accum
