@@ -37,6 +37,7 @@ import           Cardano.Api.Shelley
 import           Control.Monad.Trans.Except (except)
 import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistEither,
                    hoistMaybe, left, newExceptT)
+import           Data.Aeson as Aeson
 import           Data.Aeson.Encode.Pretty (encodePretty)
 import           Data.Aeson.Types as Aeson
 import qualified Data.ByteString.Lazy.Char8 as LBS
@@ -55,6 +56,7 @@ import qualified Data.Vector as Vector
 import qualified Data.VMap as VMap
 import           Formatting.Buildable (build)
 import           Numeric (showEFloat)
+import qualified System.IO as IO
 import           Text.Printf (printf)
 
 import           Cardano.Binary (DecoderError)
@@ -102,7 +104,6 @@ import qualified Ouroboros.Consensus.Protocol.Praos.Common as Consensus
 
 import qualified Ouroboros.Consensus.HardFork.History.Qry as Qry
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as LocalStateQuery
-import qualified System.IO as IO
 
 {- HLINT ignore "Reduce duplication" -}
 {- HLINT ignore "Use const" -}
@@ -782,9 +783,10 @@ writeLedgerState :: forall era ledgerera.
                  -> ExceptT ShelleyQueryCmdError IO ()
 writeLedgerState mOutFile qState@(SerialisedDebugLedgerState serLedgerState) =
   case mOutFile of
-    Nothing -> case decodeDebugLedgerState qState of
-                 Left bs -> firstExceptT ShelleyQueryCmdHelpersError $ pPrintCBOR bs
-                 Right ledgerState -> liftIO . LBS.putStrLn $ encodePretty ledgerState
+    Nothing ->
+      case decodeDebugLedgerState qState of
+        Left bs -> firstExceptT ShelleyQueryCmdHelpersError $ pPrintCBOR bs
+        Right ledgerState -> liftIO . LBS.putStrLn $ Aeson.encode ledgerState
     Just (OutputFile fpath) ->
       handleIOExceptT (ShelleyQueryCmdWriteFileError . FileIOError fpath)
         $ LBS.writeFile fpath $ unSerialised serLedgerState
