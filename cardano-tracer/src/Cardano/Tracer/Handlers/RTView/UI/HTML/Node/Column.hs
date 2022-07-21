@@ -196,21 +196,19 @@ logsSettings loggingConfig anId =
           copyTextToClipboard pathToSubdir
 
         return $
-          UI.p #+
-            [ UI.div #. "field has-addons" #+
-                [ UI.p #. "control" #+
-                    [ UI.button #. "button is-static"
-                                # set text (if format == ForHuman then "LOG" else "JSON")
-                    ]
-                , UI.p #. "control" #+
-                    [ UI.input #. "input rt-view-logs-input"
-                               # set UI.type_ "text"
-                               # set (UI.attr "readonly") "readonly"
-                               # set UI.value pathToSubdir
-                    ]
-                , UI.p #. "control" #+
-                    [ element copyPath
-                    ]
+          UI.div #. "field has-addons" #+
+            [ UI.p #. "control" #+
+                [ UI.button #. "button is-static"
+                            # set html (if format == ForHuman then "&nbsp;LOG&nbsp;" else "JSON")
+                ]
+            , UI.p #. "control" #+
+                [ UI.input #. "input rt-view-logs-input"
+                           # set UI.type_ "text"
+                           # set (UI.attr "readonly") "readonly"
+                           # set UI.value pathToSubdir
+                ]
+            , UI.p #. "control" #+
+                [ element copyPath
                 ]
             ]
       JournalMode -> do
@@ -220,21 +218,19 @@ logsSettings loggingConfig anId =
           copyTextToClipboard anId
 
         return $
-          UI.p #+
-            [ UI.div #. "field has-addons" #+
-                [ UI.p #. "control" #+
-                    [ UI.button #. "button is-static"
-                                # set text "JRNL"
-                    ]
-                , UI.p #. "control" #+
-                    [ UI.input #. "input rt-view-logs-input"
-                               # set UI.type_ "text"
-                               # set (UI.attr "readonly") "readonly"
-                               # set UI.value anId
-                    ]
-                , UI.p #. "control" #+
-                    [ element copyId
-                    ]
+          UI.div #. "field has-addons" #+
+            [ UI.p #. "control" #+
+                [ UI.button #. "button is-static"
+                            # set text "JRNL"
+                ]
+            , UI.p #. "control" #+
+                [ UI.input #. "input rt-view-logs-input"
+                           # set UI.type_ "text"
+                           # set (UI.attr "readonly") "readonly"
+                           # set UI.value anId
+                ]
+            , UI.p #. "control" #+
+                [ element copyId
                 ]
             ]
 
