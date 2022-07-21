@@ -1,4 +1,4 @@
-# Operational Certificate anKey Evolving Signature
+# Operational Certificate and Key Evolving Signature
 
 To create an Operational Certificate for a block-producing node, you need a _KES key pair_.
 
@@ -12,8 +12,8 @@ This means that before that number of periods has passed, the node operator has 
 
 ```bash
 cardano-cli node key-gen-KES \
---verification-key-file kes.vkey \
---signing-key-file kes.skey
+  --verification-key-file kes.vkey \
+  --signing-key-file kes.skey
 ```
 
 To find out how long one period is and for how long a key can evolve, we can look into the _genesis file_. If that file is called `mainnet-shelley-genesis.json`,
@@ -52,11 +52,11 @@ expr 26633911 / 129600
 
 ```bash
 cardano-cli node issue-op-cert \
---kes-verification-key-file kes.vkey \
---cold-signing-key-file cold.skey \
---operational-certificate-issue-counter opcert.counter \
---kes-period 205 \
---out-file opcert.cert
+  --kes-verification-key-file kes.vkey \
+  --cold-signing-key-file cold.skey \
+  --operational-certificate-issue-counter opcert.counter \
+  --kes-period 205 \
+  --out-file opcert.cert
 ```
 
 **This command increments the cold counter by 1.**
@@ -180,27 +180,27 @@ Take the **OnChain** Counter from above. In this case `"qKesNodeStateOperational
 
 ```bash
 cardano-cli node new-counter \
---cold-verification-key-file cold.vkey \
---counter-value $((2 + 1)) \
---operational-certificate-issue-counter-file opcert.counter
+  --cold-verification-key-file cold.vkey \
+  --counter-value $((2 + 1)) \
+  --operational-certificate-issue-counter-file opcert.counter
 ```
 
 3. Generate new KES keys if needed (because of _MaxKESEvolutions_ reached):
 
 ```bash
 cardano-cli node key-gen-KES \
---verification-key-file kes.vkey \
---signing-key-file kes.skey
+  --verification-key-file kes.vkey \
+  --signing-key-file kes.skey
 ```
 
 4. Issue the new Operational Certificate:
 
 ```bash
-cardano-cli node issue-op-cert --kes-verification-key-file kes.vkey \
---cold-signing-key-file cold.skey \
---operational-certificate-issue-counter-file opcert.counter \
---kes-period 18 \
---out-file opcert.cert
+  cardano-cli node issue-op-cert --kes-verification-key-file kes.vkey \
+  --cold-signing-key-file cold.skey \
+  --operational-certificate-issue-counter-file opcert.counter \
+  --kes-period 18 \
+  --out-file opcert.cert
 ```
 
 5. Copy the new `opcert.cert` and `kes.skey` to your block producer node and restart it.
