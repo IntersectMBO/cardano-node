@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -282,6 +283,7 @@ deriving instance Show UTxOInAnyEra
 
 instance IsCardanoEra era => ToJSON (UTxO era) where
   toJSON (UTxO m) = toJSON m
+  toEncoding (UTxO m) = toEncoding m
 
 instance (IsCardanoEra era, IsShelleyBasedEra era, FromJSON (TxOut CtxUTxO era))
   => FromJSON (UTxO era) where
@@ -329,13 +331,32 @@ instance ( IsShelleyBasedEra era
          , ToJSON (Core.TxOut ledgerera)
          , Share (Core.TxOut (ShelleyLedgerEra era)) ~ Interns (Shelley.Credential 'Shelley.Staking (Ledger.Crypto (ShelleyLedgerEra era)))
          ) => ToJSON (DebugLedgerState era) where
-  toJSON (DebugLedgerState newEpochS) = object [ "lastEpoch" .= Shelley.nesEL newEpochS
-                                          , "blocksBefore" .= Shelley.nesBprev newEpochS
-                                          , "blocksCurrent" .= Shelley.nesBcur newEpochS
-                                          , "stateBefore" .= Shelley.nesEs newEpochS
-                                          , "possibleRewardUpdate" .= Shelley.nesRu newEpochS
-                                          , "stakeDistrib" .= Shelley.nesPd newEpochS
-                                          ]
+  toJSON = object . toDebugLedgerStatePair
+  toEncoding = Aeson.pairs . mconcat . toDebugLedgerStatePair
+
+toDebugLedgerStatePair ::
+  ( ShelleyLedgerEra era ~ ledgerera
+  , Consensus.ShelleyBasedEra ledgerera
+  , ToJSON (Core.PParams ledgerera)
+  , ToJSON (Core.PParamsDelta ledgerera)
+  , ToJSON (Core.TxOut ledgerera)
+  , Aeson.KeyValue a
+  ) => DebugLedgerState era -> [a]
+toDebugLedgerStatePair (DebugLedgerState newEpochS) =
+    let !nesEL = Shelley.nesEL newEpochS
+        !nesBprev = Shelley.nesBprev newEpochS
+        !nesBcur = Shelley.nesBcur newEpochS
+        !nesEs = Shelley.nesEs newEpochS
+        !nesRu = Shelley.nesRu newEpochS
+        !nesPd = Shelley.nesPd newEpochS
+    in  [ "lastEpoch" .= nesEL
+        , "blocksBefore" .= nesBprev
+        , "blocksCurrent" .= nesBcur
+        , "stateBefore" .= nesEs
+        , "possibleRewardUpdate" .= nesRu
+        , "stakeDistrib" .= nesPd
+        ]
+
 newtype ProtocolState era
   = ProtocolState (Serialised (Consensus.ChainDepState (ConsensusProtocol era)))
 
