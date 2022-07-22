@@ -188,16 +188,11 @@ validateScriptData d =
       err:_ -> Left err
   where
     -- collect all errors in a monoidal fold style:
-    collect (ScriptDataNumber n) =
-        [ ScriptDataNumberOutOfRange n
-        |    n >         fromIntegral (maxBound :: Word64)
-          || n < negate (fromIntegral (maxBound :: Word64))
-        ]
-    collect (ScriptDataBytes bs) =
-        [ ScriptDataBytesTooLong len
-        | let len = BS.length bs
-        , len > scriptDataByteStringMaxLength
-        ]
+    
+    -- Arbitrary size numbers are fine
+    collect (ScriptDataNumber _) = []
+    -- Arbitrary sized bytes are fine
+    collect (ScriptDataBytes _) = []
     collect (ScriptDataList xs) =
         foldMap collect xs
 
@@ -206,51 +201,27 @@ validateScriptData d =
                          <> collect v)
                 kvs
 
+    -- Constr tags do need to be less than a Word64
     collect (ScriptDataConstructor n xs) =
         [ ScriptDataConstructorOutOfRange n
         | n > fromIntegral (maxBound :: Word64) || n < 0 ]
      <> foldMap collect xs
 
 
--- | The maximum length of a script data byte string value.
-scriptDataByteStringMaxLength :: Int
-scriptDataByteStringMaxLength = 64
-
-
 -- | An error in script data due to an out-of-range value.
 --
-data ScriptDataRangeError =
+newtype ScriptDataRangeError =
 
     -- | The number is outside the maximum range of @-2^64-1 .. 2^64-1@.
     --
-    ScriptDataNumberOutOfRange !Integer
-
-    -- | The number is outside the maximum range of @-2^64-1 .. 2^64-1@.
-    --
-  | ScriptDataConstructorOutOfRange !Integer
-
-    -- | The length of a byte string metadatum value exceeds the maximum of
-    -- 64 bytes.
-    --
-  | ScriptDataBytesTooLong !Int
+  ScriptDataConstructorOutOfRange Integer
   deriving (Eq, Show)
 
 instance Error ScriptDataRangeError where
-  displayError (ScriptDataNumberOutOfRange n) =
-      "Number in script data value "
-        <> show n
-        <> " is outside the range -(2^64-1) .. 2^64-1."
   displayError (ScriptDataConstructorOutOfRange n) =
       "Constructor numbers in script data value "
         <> show n
         <> " is outside the range 0 .. 2^64-1."
-  displayError (ScriptDataBytesTooLong actualLen) =
-      "Byte strings in script data must consist of at most "
-        <> show scriptDataByteStringMaxLength
-        <> " bytes, but it consists of "
-        <> show actualLen
-        <> " bytes."
-
 
 -- ----------------------------------------------------------------------------
 -- JSON conversion
