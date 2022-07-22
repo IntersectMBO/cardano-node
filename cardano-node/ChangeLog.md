@@ -5,7 +5,7 @@
 ### node changes
 
 - Bump Babbage to report it supports 7.1 in block header (#4211)
-- Update Plutus, Ledger, and Network dependencies (#4212)
+- Update Plutus, Ledger, and Network dependencies (#4220)
 
 ### consensus changes
 
