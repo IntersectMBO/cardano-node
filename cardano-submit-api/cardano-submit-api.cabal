@@ -20,7 +20,7 @@ common base                         { build-depends: base                       
 common cardano-api                  { build-depends: cardano-api                                                  }
 common cardano-submit-api           { build-depends: cardano-submit-api                                           }
 
-common aeson                        { build-depends: aeson                            >= 1.5.5.1                  }
+common aeson                        { build-depends: aeson                            >= 2.1.0.0                  }
 common async                        { build-depends: async                            >= 2.2.2                    }
 common bytestring                   { build-depends: bytestring                       >= 0.10.8.2                 }
 common cardano-binary               { build-depends: cardano-binary                   >= 1.5.0                    }

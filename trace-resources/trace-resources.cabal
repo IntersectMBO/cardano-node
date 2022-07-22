@@ -22,7 +22,7 @@ library
   build-depends:      base >=4.12 && <5
                       , trace-dispatcher
                       , text
-                      , aeson
+                      , aeson                         >= 2.1.0.0
 
   if os(windows)
      build-depends:    Win32
@@ -60,7 +60,7 @@ test-suite trace-resources-test
   build-depends:       base >=4.12 && <5
                       , trace-dispatcher
                       , text
-                      , aeson
+                      , aeson                         >= 2.1.0.0
                       , QuickCheck
                       , tasty
                       , tasty-quickcheck

@@ -35,7 +35,7 @@ library
   default-language:   Haskell2010
   default-extensions: OverloadedStrings
   build-depends:      base >=4.12 && <5
-                      , aeson
+                      , aeson                         >= 2.1.0.0
                       , async
                       , bytestring
                       , cborg
@@ -91,7 +91,7 @@ executable trace-dispatcher-examples
     default-language: Haskell2010
     default-extensions:  OverloadedStrings
     build-depends:    base >=4.12 && <5
-                      , aeson
+                      , aeson                         >= 2.1.0.0
                       , bytestring
                       , containers
                       , ekg
@@ -131,7 +131,7 @@ test-suite trace-dispatcher-test
   default-language:    Haskell2010
   default-extensions:  OverloadedStrings
   build-depends:       base >=4.12 && <5
-                      , aeson
+                      , aeson                         >= 2.1.0.0
                       , bytestring
                       , containers
                       , ekg
@@ -173,7 +173,7 @@ benchmark trace-dispatcher-bench
                        Cardano.Logging.Test.Messages
                        Cardano.Logging.Test.Script
   build-depends:       base >=4.12 && <5
-                       , aeson
+                       , aeson                         >= 2.1.0.0
                        , containers
                        , criterion
                        , ekg
