@@ -3,6 +3,3 @@ package cardano-crypto-praos
 
 package HsOpenSSL
   flags: +use-pkg-config
-
-package lmdb
-  flags: +use-pkg-config

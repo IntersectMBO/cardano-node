@@ -263,8 +263,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: 9be0e771edf7e5f241220bab635bebffa29d05c8
-  --sha256: 130acrfll51sv9fhkbxq7674md6ghaji9x9y1yqivh5c8nnp1sv1
+  tag: 66043d25c0d9722e9e746820da0539d01547ee61
+  --sha256: 094fjxiz3qfp7alvdbyrh4pzysggj7344293d4kwh2f8dc3zjz41
   subdir:
     monoidal-synchronisation
     network-mux
@@ -339,8 +339,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/haskell-lmdb
-  tag: 3197dc555cd4edb1fa7f79ad04748b0f217752fa
-  --sha256: 0kp2mibaav8gm36drdsa9snn4x3hv2jjrm2h99xhmsg05dpbi6x2
+  tag: 5aef2ccc8b7e5e91aa609dc531df392c46eaae09
+  --sha256: 09sxgxylf9m78qmf1sh82ydvq3ihkgfh829yy9cd526kp75wiy86
 
 source-repository-package
   type: git
