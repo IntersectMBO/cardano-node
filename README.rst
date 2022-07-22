@@ -481,3 +481,4 @@ test if the documentation is working, build the documentation locally with `./sc
 open `haddocks/index.html` in the browser.
 
 __ TO REMOVE: just changing this to make CI run again on this branch!
+__ ONCE AGAIN
