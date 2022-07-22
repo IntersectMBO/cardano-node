@@ -197,8 +197,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger
-  tag: 3be8a19083fc13d9261b1640e27dd389b51bb08e
-  --sha256: 0dvm9l43mp1i34bcywmznd0660hhcfxwgawypk9q1hjkml1i41z3
+  tag: ebcf1a8936dd84de0182d54004473f4ce66c7923
+  --sha256: 1nx07kcjhj39alarr0bxw9viw3m6flfr8d14g2a3crymf6hxwg36
   subdir:
     eras/alonzo/impl
     eras/alonzo/test-suite
@@ -263,8 +263,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: a65c29b6a85e90d430c7f58d362b7eb097fd4949
-  --sha256: 1fmab5hmi1y8lss97xh6hhikmyhsx9x31yhvg6zpr2kcq7kc6qkf
+  tag: cb9eba406ceb2df338d8384b35c8addfe2067201
+  --sha256: 066llskxzjgcs13lwlvklb28azb9kd9b77j61x8fvrj1rlf5njfw
   subdir:
     monoidal-synchronisation
     network-mux
@@ -300,8 +300,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/plutus
-  tag: f680ac6979e069fcc013e4389ee607ff5fa6672f
-  --sha256: 180jq8hd0jlg48ya7b5yw3bnd2d5czy0b1agy9ng3mgnzpyq747i
+  tag: a3fba9f4e776c38bc54cb9a1c1cae82d2338b718
+  --sha256: 1vy4fwrq5jbghwkfgnrd5c22zjv8ym9y2j8g38pq50da4nfyv3dh
   subdir:
     plutus-core
     plutus-ledger-api
@@ -345,9 +345,6 @@ package snap-server
 
 package comonad
   flags: -test-doctests
-
-package cardano-ledger-alonzo-test
-  tests: False
 
 allow-newer:
   *:aeson,
