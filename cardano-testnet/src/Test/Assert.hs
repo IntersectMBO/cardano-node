@@ -22,6 +22,7 @@ import           Data.Functor ((<$>))
 import           Data.Int (Int)
 import           Data.Maybe (Maybe (..), mapMaybe)
 import           Data.Ord (Ord (..))
+import           Data.Semigroup ((<>))
 import           Data.Text (Text)
 import           Data.Word (Word8)
 import           GHC.Stack (HasCallStack)
@@ -89,7 +90,7 @@ instance FromJSON TraceNodeIsLeader where
     k <- v .: "val" >>= (.: "kind")
     if k == "TraceNodeIsLeader"
     then TraceNodeIsLeader k <$> (v .: "val" >>= (.: "slot"))
-    else fail "Not the right kind"
+    else fail $ "Expected kind was TraceNodeIsLeader, found " <> show k <> "instead"
 
 instance FromJSON Kind where
   parseJSON = Aeson.withObject "Kind" $ \v ->
