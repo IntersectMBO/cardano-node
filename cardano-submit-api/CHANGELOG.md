@@ -1,6 +1,10 @@
-# Changelog
+# Changelog for Cardano-submit-api
 
-## 1.35.1 -- July 2022
+## 1.35.2 -- July 2022
+
+None
+
+## 1.35.1 -- July 2022 (not released)
 
 None
 

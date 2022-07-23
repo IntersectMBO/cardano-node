@@ -1,6 +1,34 @@
 # Changelog for cardano-node
 
-## 1.35.1 -- July 2022
+## 1.35.2 -- July 2022
+
+### node changes
+
+- Bump Babbage to report it supports 7.1 in block header (#4211)
+- Update Plutus, Ledger, and Network dependencies (#4220)
+
+### consensus changes
+
+- The obsolete node check in the new 'Praos' protocol was not performing the
+   check that was intended. It is supposed to check that the current protocol
+   version is no greater than the max major protocol version. It was instead
+   checking that the max major protocol version was not greater than the
+   protocol version listed in the block header (which is currently not supposed
+   to have any semantic meaning, and is used to manually check the readiness
+   of the network for a hard fork). Note that this mistake is only in the Praos
+   protocol, not in TPraos. The consequence of this incorrect check is that
+   nodes will not properly halt after a hard fork when they do not have the
+   required software for the hard fork. (#3891)
+
+### network changes
+
+None
+
+### ledger changes
+
+- Update plutus #2917
+
+## 1.35.1 -- July 2022 (not released)
 
 ### node changes
 
