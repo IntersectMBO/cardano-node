@@ -257,8 +257,8 @@ restoreChartsSettings = readSavedChartsSettings >>= setCharts
       Chart.setTimeRange chartId tr
       when (tr == 0) $ Chart.resetZoomChartJS chartId
 
-saveChartsSettings :: Window -> UI ()
-saveChartsSettings window = do
+saveChartsSettings :: UI ()
+saveChartsSettings = do
   settings <-
     forM chartsIds $ \chartId -> do
       selectedTR <- getOptionValue $ show chartId <> show TimeRangeSelect
@@ -268,7 +268,8 @@ saveChartsSettings window = do
     pathToChartsConfig <- getPathToChartsConfig
     encodeFile pathToChartsConfig settings
  where
-   getOptionValue selectId = do
+  getOptionValue selectId = do
+    window <- askWindow
     v <- findAndGetValue window (pack selectId)
     case readMaybe v of
       Just (valueInS :: Int) -> return valueInS

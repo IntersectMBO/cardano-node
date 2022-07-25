@@ -22,20 +22,18 @@ import           System.FilePath ((</>), takeDirectory)
 import           System.Time.Extra (sleep)
 
 import           Cardano.Tracer.Configuration
+import           Cardano.Tracer.Environment
 import           Cardano.Tracer.Handlers.Logs.Utils (createEmptyLogRotation,
                    getTimeStampFromLog, isItLog)
 import           Cardano.Tracer.Utils (showProblemIfAny)
 
 -- | Runs rotation mechanism for the log files.
-runLogsRotator
-  :: TracerConfig
-  -> Lock
-  -> IO ()
-runLogsRotator TracerConfig{rotation, logging, verbosity} currentLogLock =
-  whenJust rotation $ \rotParams ->
-    launchRotator loggingParamsForFiles rotParams verbosity currentLogLock
+runLogsRotator :: TracerEnv -> IO ()
+runLogsRotator TracerEnv{teConfig, teCurrentLogLock} =
+  whenJust (rotation teConfig) $ \rotParams ->
+    launchRotator loggingParamsForFiles rotParams (verbosity teConfig) teCurrentLogLock
  where
-  loggingParamsForFiles = nub . NE.filter filesOnly $ logging
+  loggingParamsForFiles = nub . NE.filter filesOnly $ logging teConfig
   filesOnly LoggingParams{logMode} = logMode == FileMode
 
 launchRotator

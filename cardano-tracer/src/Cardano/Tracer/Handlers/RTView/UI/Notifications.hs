@@ -28,31 +28,32 @@ import           Cardano.Tracer.Handlers.RTView.UI.Utils
 import           Cardano.Tracer.Handlers.RTView.UI.JS.Utils
 import           Cardano.Tracer.Handlers.RTView.Update.Utils
 
-restoreEmailSettings :: Window -> UI ()
-restoreEmailSettings window = do
+restoreEmailSettings :: UI ()
+restoreEmailSettings = do
   eSettings <- liftIO readSavedEmailSettings
   setEmailSettings eSettings
-  setStatusTestEmailButton window
+  setStatusTestEmailButton
  where
   setEmailSettings settings = do
-    setValue (unpack $ esSMTPHost settings)  "es-smtp-host"
-    setValue (show   $ esSMTPPort settings)  "es-smtp-port"
-    setValue (unpack $ esUsername settings)  "es-username"
-    setValue (unpack $ esPassword settings)  "es-password"
-    setValue (show   $ esSSL settings)       "es-ssl"
-    setValue (unpack $ esEmailFrom settings) "es-email-from"
-    setValue (unpack $ esEmailTo settings)   "es-email-to"
-    setValue (unpack $ esSubject settings)   "es-subject"
+    window <- askWindow
+    setValue window (unpack $ esSMTPHost settings)  "es-smtp-host"
+    setValue window (show   $ esSMTPPort settings)  "es-smtp-port"
+    setValue window (unpack $ esUsername settings)  "es-username"
+    setValue window (unpack $ esPassword settings)  "es-password"
+    setValue window (show   $ esSSL settings)       "es-ssl"
+    setValue window (unpack $ esEmailFrom settings) "es-email-from"
+    setValue window (unpack $ esEmailTo settings)   "es-email-to"
+    setValue window (unpack $ esSubject settings)   "es-subject"
 
-  setValue elValue elId =
+  setValue window elValue elId =
     unless (null elValue || elValue == "-1") $
       findAndSet (set value elValue) window elId
 
-restoreEventsSettings :: Window -> UI ()
-restoreEventsSettings window = do
+restoreEventsSettings :: UI ()
+restoreEventsSettings = do
   eSettings <- liftIO readSavedEventsSettings
   setEventsSettings eSettings
-  setNotifyIconState window
+  setNotifyIconState
   setSwitchAllState eSettings
  where
   setEventsSettings settings = do
@@ -70,7 +71,8 @@ restoreEventsSettings window = do
     setPeriod (snd $ evsEmergencies settings)      "select-period-emergencies"
     setPeriod (snd $ evsNodeDisconnected settings) "select-period-node-disconnected"
 
-  setState elState elId =
+  setState elState elId = do
+    window <- askWindow
     findAndSet (set UI.checked elState) window elId
 
   setPeriod elPeriod elId =
@@ -87,9 +89,10 @@ restoreEventsSettings window = do
           ]
     setState allChecked "switch-all"
 
-setNotifyIconState :: Window -> UI ()
-setNotifyIconState window = do
-  settings <- getCurrentEventsSettings window
+setNotifyIconState :: UI ()
+setNotifyIconState = do
+  window <- askWindow
+  settings <- getCurrentEventsSettings
   let switches =
         [ fst (evsWarnings settings)
         , fst (evsErrors settings)
@@ -104,16 +107,15 @@ setNotifyIconState window = do
   when noChecked  $ findAndSet (set html rtViewNoNotifySVG) window "notifications-icon"
   findAndSet (set UI.checked allChecked) window "switch-all"
 
-saveEmailSettings :: Window -> UI ()
-saveEmailSettings window =
-  (liftIO . saveEmailSettingsOnDisk) =<< getCurrentEmailSettings window
+saveEmailSettings :: UI ()
+saveEmailSettings = (liftIO . saveEmailSettingsOnDisk) =<< getCurrentEmailSettings
 
-saveEventsSettings :: Window -> UI ()
-saveEventsSettings window =
-  (liftIO . saveEventsSettingsOnDisk) =<< getCurrentEventsSettings window
+saveEventsSettings :: UI ()
+saveEventsSettings = (liftIO . saveEventsSettingsOnDisk) =<< getCurrentEventsSettings
 
-getCurrentEmailSettings :: Window -> UI EmailSettings
-getCurrentEmailSettings window = do
+getCurrentEmailSettings :: UI EmailSettings
+getCurrentEmailSettings = do
+  window <- askWindow
   smtpHost  <- findAndGetValue window "es-smtp-host"
   smtpPort  <- findAndGetValue window "es-smtp-port"
   username  <- findAndGetValue window "es-username"
@@ -133,8 +135,10 @@ getCurrentEmailSettings window = do
     , esSubject   = pack subject
     }
 
-getCurrentEventsSettings :: Window -> UI EventsSettings
-getCurrentEventsSettings window = do
+getCurrentEventsSettings :: UI EventsSettings
+getCurrentEventsSettings = do
+  window <- askWindow
+
   warningsState    <- fromMaybe False <$> findAndGetCheckboxState window "switch-warnings"
   errorsState      <- fromMaybe False <$> findAndGetCheckboxState window "switch-errors"
   criticalsState   <- fromMaybe False <$> findAndGetCheckboxState window "switch-criticals"
@@ -164,15 +168,16 @@ getCurrentEventsSettings window = do
       Left _ -> defP
       Right (i :: Int, _) -> fromIntegral i
 
-setStatusTestEmailButton :: Window -> UI ()
-setStatusTestEmailButton window = do
-  EmailSettings host _ user pass _ eFrom eTo _ <- getCurrentEmailSettings window
+setStatusTestEmailButton :: UI ()
+setStatusTestEmailButton = do
+  EmailSettings host _ user pass _ eFrom eTo _ <- getCurrentEmailSettings
   let allRequiredIsHere =
            isHere host
         && isHere user
         && isHere pass
         && isHere eFrom
         && isHere eTo
+  window <- askWindow
   findAndSet (set UI.enabled allRequiredIsHere) window "send-test-email"
  where
   isHere = not . T.null

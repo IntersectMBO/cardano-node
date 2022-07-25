@@ -11,7 +11,6 @@ module Cardano.Tracer.Handlers.RTView.Update.Nodes
   , updateNodesUptime
   ) where
 
-import           Control.Concurrent.Extra (Lock)
 import           Control.Concurrent.STM (atomically)
 import           Control.Concurrent.STM.TVar
 import           Control.Monad (forM_, unless, when)
@@ -34,11 +33,11 @@ import           Graphics.UI.Threepenny.Core
 import           Text.Read (readMaybe)
 
 import           Cardano.Tracer.Configuration
+import           Cardano.Tracer.Environment
 import           Cardano.Tracer.Handlers.Metrics.Utils
 import           Cardano.Tracer.Handlers.RTView.State.Displayed
 import           Cardano.Tracer.Handlers.RTView.State.EraSettings
 import           Cardano.Tracer.Handlers.RTView.State.Errors
-import           Cardano.Tracer.Handlers.RTView.State.Historical
 import           Cardano.Tracer.Handlers.RTView.State.TraceObjects
 import           Cardano.Tracer.Handlers.RTView.UI.Charts
 import           Cardano.Tracer.Handlers.RTView.UI.HTML.Node.Column
@@ -48,20 +47,13 @@ import           Cardano.Tracer.Handlers.RTView.UI.Utils
 import           Cardano.Tracer.Handlers.RTView.Update.Historical
 import           Cardano.Tracer.Handlers.RTView.Update.NodeInfo
 import           Cardano.Tracer.Handlers.RTView.Update.Utils
+import           Cardano.Tracer.Handlers.RTView.Utils
 import           Cardano.Tracer.Types
 
 updateNodesUI
-  :: UI.Window
-  -> ConnectedNodes
+  :: TracerEnv
   -> DisplayedElements
-  -> AcceptedMetrics
-  -> SavedTraceObjects
   -> ErasSettings
-  -> BlockchainHistory
-  -> ResourcesHistory
-  -> TransactionsHistory
-  -> DataPointRequestors
-  -> Lock
   -> NonEmpty LoggingParams
   -> Colors
   -> DatasetsIndices
@@ -69,54 +61,46 @@ updateNodesUI
   -> UI.Timer
   -> UI.Timer
   -> UI ()
-updateNodesUI window connectedNodes displayedElements acceptedMetrics savedTO nodesEraSettings
-              chainHistory resourcesHistory txHistory dpRequestors currentDPLock
-              loggingConfig colors datasetIndices nodesErrors updateErrorsTimer
-              noNodesProgressTimer = do
+updateNodesUI tracerEnv@TracerEnv{teConnectedNodes, teAcceptedMetrics, teSavedTO}
+              displayedElements nodesEraSettings loggingConfig colors
+              datasetIndices nodesErrors updateErrorsTimer noNodesProgressTimer = do
   (connected, displayedEls) <- liftIO . atomically $ (,)
-    <$> readTVar connectedNodes
+    <$> readTVar teConnectedNodes
     <*> readTVar displayedElements
   -- Check connected/disconnected nodes since previous UI's update.
   let displayed = S.fromList $ M.keys displayedEls
   when (connected /= displayed) $ do
     let disconnected   = displayed \\ connected -- In 'displayed' but not in 'connected'.
         newlyConnected = connected \\ displayed -- In 'connected' but not in 'displayed'.
-    deleteColumnsForDisconnected window connected disconnected
+    deleteColumnsForDisconnected connected disconnected
     addColumnsForConnected
-      window
       newlyConnected
       loggingConfig
       nodesErrors
       updateErrorsTimer
       displayedElements
-    checkNoNodesState window connected noNodesProgressTimer
-    askNSetNodeInfo window dpRequestors currentDPLock newlyConnected displayedElements
-    addDatasetsForConnected window newlyConnected colors datasetIndices displayedElements
+    checkNoNodesState connected noNodesProgressTimer
+    askNSetNodeInfo tracerEnv newlyConnected displayedElements
+    addDatasetsForConnected newlyConnected colors datasetIndices displayedElements
     liftIO $ do
-      restoreHistoryFromBackup
-        newlyConnected
-        chainHistory
-        resourcesHistory
-        txHistory
-        dpRequestors
-        currentDPLock
+      restoreHistoryFromBackup tracerEnv newlyConnected
       updateDisplayedElements displayedElements connected
-  setBlockReplayProgress connected displayedElements acceptedMetrics
-  setChunkValidationProgress connected savedTO
-  setLedgerDBProgress connected savedTO
-  setLeadershipStats connected displayedElements acceptedMetrics
-  setEraEpochInfo connected displayedElements acceptedMetrics nodesEraSettings
+  setBlockReplayProgress connected teAcceptedMetrics
+  setChunkValidationProgress connected teSavedTO
+  setLedgerDBProgress connected teSavedTO
+  setLeadershipStats connected displayedElements teAcceptedMetrics
+  setEraEpochInfo connected displayedElements teAcceptedMetrics nodesEraSettings
 
 addColumnsForConnected
-  :: UI.Window
-  -> Set NodeId
+  :: Set NodeId
   -> NonEmpty LoggingParams
   -> Errors
   -> UI.Timer
   -> DisplayedElements
   -> UI ()
-addColumnsForConnected window newlyConnected loggingConfig
+addColumnsForConnected newlyConnected loggingConfig
                        nodesErrors updateErrorsTimer displayedElements = do
+  window <- askWindow
   unless (S.null newlyConnected) $
     findAndShow window "main-table-container"
   forM_ newlyConnected $
@@ -128,24 +112,24 @@ addColumnsForConnected window newlyConnected loggingConfig
       displayedElements
 
 addDatasetsForConnected
-  :: UI.Window
-  -> Set NodeId
+  :: Set NodeId
   -> Colors
   -> DatasetsIndices
   -> DisplayedElements
   -> UI ()
-addDatasetsForConnected window newlyConnected colors datasetIndices displayedElements = do
+addDatasetsForConnected newlyConnected colors datasetIndices displayedElements = do
+  window <- askWindow
   unless (S.null newlyConnected) $
     findAndShow window "main-charts-container"
   forM_ newlyConnected $ \nodeId ->
     addNodeDatasetsToCharts window nodeId colors datasetIndices displayedElements
 
 deleteColumnsForDisconnected
-  :: UI.Window
-  -> Set NodeId
+  :: Set NodeId
   -> Set NodeId
   -> UI ()
-deleteColumnsForDisconnected window connected disconnected = do
+deleteColumnsForDisconnected connected disconnected = do
+  window <- askWindow
   forM_ disconnected $ deleteNodeColumn window
   when (S.null connected) $ do
     findAndHide window "main-table-container"
@@ -155,51 +139,49 @@ deleteColumnsForDisconnected window connected disconnected = do
   -- historical data even for the node that already disconnected.
 
 checkNoNodesState
-  :: UI.Window
-  -> Set NodeId
+  :: Set NodeId
   -> UI.Timer
   -> UI ()
-checkNoNodesState window connected noNodesProgressTimer =
+checkNoNodesState connected noNodesProgressTimer = do
+  window <- askWindow
   if S.null connected
     then showNoNodes window noNodesProgressTimer
     else hideNoNodes window noNodesProgressTimer
 
 updateNodesUptime
-  :: ConnectedNodes
+  :: TracerEnv
   -> DisplayedElements
   -> UI ()
-updateNodesUptime connectedNodes displayedElements = do
-  connected <- liftIO $ readTVarIO connectedNodes
+updateNodesUptime tracerEnv displayedElements = do
   now <- systemToUTCTime <$> liftIO getSystemTime
   displayed <- liftIO $ readTVarIO displayedElements
-  let elsIdsWithUptimes = map (getUptimeForNode now displayed) $ S.toList connected
+  elsIdsWithUptimes <- forConnectedUI tracerEnv $ getUptimeForNode now displayed
   setTextValues $ catMaybes elsIdsWithUptimes
  where
-  getUptimeForNode now displayed nodeId@(NodeId anId) =
+   getUptimeForNode now displayed nodeId@(NodeId anId) = do
     let nodeStartElId  = anId <> "__node-start-time"
         nodeUptimeElId = anId <> "__node-uptime"
-    in case getDisplayedValuePure displayed nodeId nodeStartElId of
-         Nothing -> Nothing
-         Just tsRaw ->
-           case readMaybe (T.unpack tsRaw) of
-             Nothing -> Nothing
-             Just (startTime :: UTCTime) ->
-               let uptimeDiff = now `diffUTCTime` startTime
-                   uptime = uptimeDiff `addUTCTime` nullTime
-                   uptimeFormatted = formatTime defaultTimeLocale "%X" uptime
-                   daysNum = utctDay uptime `diffDays` utctDay nullTime
-                   uptimeWithDays = if daysNum > 0
-                                      -- Show days only if 'uptime' > 23:59:59.
-                                      then show daysNum <> "d " <> uptimeFormatted
-                                      else uptimeFormatted
-               in Just (nodeUptimeElId, T.pack uptimeWithDays)
+    case getDisplayedValuePure displayed nodeId nodeStartElId of
+       Nothing -> return Nothing
+       Just tsRaw ->
+         case readMaybe (T.unpack tsRaw) of
+           Nothing -> return Nothing
+           Just (startTime :: UTCTime) -> do
+             let uptimeDiff = now `diffUTCTime` startTime
+                 uptime = uptimeDiff `addUTCTime` nullTime
+                 uptimeFormatted = formatTime defaultTimeLocale "%X" uptime
+                 daysNum = utctDay uptime `diffDays` utctDay nullTime
+                 uptimeWithDays = if daysNum > 0
+                                    -- Show days only if 'uptime' > 23:59:59.
+                                    then show daysNum <> "d " <> uptimeFormatted
+                                    else uptimeFormatted
+             return $ Just (nodeUptimeElId, T.pack uptimeWithDays)
 
 setBlockReplayProgress
   :: Set NodeId
-  -> DisplayedElements
   -> AcceptedMetrics
   -> UI ()
-setBlockReplayProgress connected _displayedElements acceptedMetrics = do
+setBlockReplayProgress connected acceptedMetrics = do
   allMetrics <- liftIO $ readTVarIO acceptedMetrics
   forM_ connected $ \nodeId ->
     whenJust (M.lookup nodeId allMetrics) $ \(ekgStore, _) -> do

@@ -1,5 +1,6 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -12,7 +13,6 @@ module Cardano.Tracer.Handlers.RTView.Update.Historical
   ) where
 
 import           Control.Concurrent.Async (forConcurrently_)
-import           Control.Concurrent.Extra (Lock)
 import           Control.Concurrent.STM (atomically)
 import           Control.Concurrent.STM.TVar (modifyTVar', readTVar, readTVarIO)
 import           Control.Exception.Extra (ignore, try_)
@@ -35,10 +35,10 @@ import           Text.Read (readMaybe)
 
 import           Cardano.Node.Startup (NodeInfo (..))
 
+import           Cardano.Tracer.Environment
 import           Cardano.Tracer.Handlers.Metrics.Utils
 import           Cardano.Tracer.Handlers.RTView.State.Historical
 import           Cardano.Tracer.Handlers.RTView.State.Last
-import           Cardano.Tracer.Handlers.RTView.State.TraceObjects
 import           Cardano.Tracer.Handlers.RTView.System
 import           Cardano.Tracer.Handlers.RTView.Update.Chain
 import           Cardano.Tracer.Handlers.RTView.Update.Leadership
@@ -60,77 +60,32 @@ import           Cardano.Tracer.Types
 --   It allows to collect historical data even when RTView web-page is closed.
 --
 runHistoricalUpdater
-  :: SavedTraceObjects
-  -> AcceptedMetrics
-  -> ResourcesHistory
+  :: TracerEnv
   -> LastResources
-  -> BlockchainHistory
-  -> TransactionsHistory
   -> IO ()
-runHistoricalUpdater _savedTO acceptedMetrics resourcesHistory
-                     lastResources chainHistory txHistory = forever $ do
+runHistoricalUpdater tracerEnv lastResources = forever $ do
   sleep 1.0 -- TODO: should it be configured?
   now <- systemToUTCTime <$> getSystemTime
-  allMetrics <- readTVarIO acceptedMetrics
+  allMetrics <- readTVarIO teAcceptedMetrics
   forM_ (M.toList allMetrics) $ \(nodeId, (ekgStore, _)) -> do
     metrics <- getListOfMetrics ekgStore
     forM_ metrics $ \(metricName, metricValue) -> do
-      updateTransactionsHistory nodeId txHistory metricName metricValue now
-      updateResourcesHistory nodeId resourcesHistory lastResources metricName metricValue now
-      updateBlockchainHistory nodeId chainHistory metricName metricValue now
-      updateLeadershipHistory nodeId chainHistory metricName metricValue now
+      updateTransactionsHistory nodeId teTxHistory metricName metricValue now
+      updateResourcesHistory nodeId teResourcesHistory lastResources metricName metricValue now
+      updateBlockchainHistory nodeId teBlockchainHistory metricName metricValue now
+      updateLeadershipHistory nodeId teBlockchainHistory metricName metricValue now
+ where
+  TracerEnv{teAcceptedMetrics, teTxHistory, teResourcesHistory, teBlockchainHistory} = tracerEnv
 
-runHistoricalBackup
-  :: ConnectedNodes
-  -> BlockchainHistory
-  -> ResourcesHistory
-  -> TransactionsHistory
-  -> DataPointRequestors
-  -> Lock
-  -> IO ()
-runHistoricalBackup connectedNodes
-                    chainHistory resourcesHistory txHistory
-                    dpRequestors currentDPLock = forever $ do
+runHistoricalBackup :: TracerEnv -> IO ()
+runHistoricalBackup tracerEnv = forever $ do
   sleep 300.0 -- TODO: 5 minutes, should it be changed?
-  backupAllHistory connectedNodes
-                   chainHistory resourcesHistory txHistory
-                   dpRequestors currentDPLock
+  backupAllHistory tracerEnv
 
-backupAllHistory
-  :: ConnectedNodes
-  -> BlockchainHistory
-  -> ResourcesHistory
-  -> TransactionsHistory
-  -> DataPointRequestors
-  -> Lock
-  -> IO ()
-backupAllHistory connectedNodes
-                 chainHistory resourcesHistory txHistory
-                 dpRequestors currentDPLock = do
-  connected <- S.toList <$> readTVarIO connectedNodes
-  backupAllHistory'
-    connected
-    chainHistory
-    resourcesHistory
-    txHistory
-    dpRequestors
-    currentDPLock
-
-backupAllHistory'
-  :: [NodeId]
-  -> BlockchainHistory
-  -> ResourcesHistory
-  -> TransactionsHistory
-  -> DataPointRequestors
-  -> Lock
-  -> IO ()
-backupAllHistory' [] _ _ _ _ _ = return ()
-backupAllHistory' connected
-                 (ChainHistory chainHistory)
-                 (ResHistory resourcesHistory)
-                 (TXHistory txHistory)
-                 dpRequestors currentDPLock = do
-  nodesIdsWithNames <- getNodesIdsWithNames connected dpRequestors currentDPLock
+backupAllHistory :: TracerEnv -> IO ()
+backupAllHistory tracerEnv@TracerEnv{teConnectedNodes} = do
+  connected <- S.toList <$> readTVarIO teConnectedNodes
+  nodesIdsWithNames <- getNodesIdsWithNames tracerEnv connected
   backupDir <- getPathToBackupDir
   (cHistory, rHistory, tHistory) <- atomically $ (,,)
     <$> readTVar chainHistory
@@ -147,6 +102,11 @@ backupAllHistory' connected
   cleanupHistoryPoints resourcesHistory
   cleanupHistoryPoints txHistory
  where
+  TracerEnv{teBlockchainHistory, teResourcesHistory, teTxHistory} = tracerEnv
+  ChainHistory chainHistory   = teBlockchainHistory
+  ResHistory resourcesHistory = teResourcesHistory
+  TXHistory txHistory         = teTxHistory
+
   backupHistory backupDir history nodeId nodeName =
     whenJust (M.lookup nodeId history) $ \historyData -> ignore $ do
       let nodeSubdir = backupDir </> T.unpack nodeName
@@ -166,43 +126,26 @@ backupAllHistory' connected
 data HistoryMark = LatestHistory | AllHistory
 
 restoreHistoryFromBackup
-  :: Set NodeId
-  -> BlockchainHistory
-  -> ResourcesHistory
-  -> TransactionsHistory
-  -> DataPointRequestors
-  -> Lock
+  :: TracerEnv
+  -> Set NodeId
   -> IO ()
 restoreHistoryFromBackup = restoreHistoryFromBackup' LatestHistory Nothing
 
 restoreHistoryFromBackupAll
-  :: DataName
-  -> Set NodeId
-  -> BlockchainHistory
-  -> ResourcesHistory
-  -> TransactionsHistory
-  -> DataPointRequestors
-  -> Lock
+  :: TracerEnv
+  -> DataName
   -> IO ()
-restoreHistoryFromBackupAll dataName = restoreHistoryFromBackup' AllHistory (Just dataName)
+restoreHistoryFromBackupAll tracerEnv@TracerEnv{teConnectedNodes} dataName =
+  readTVarIO teConnectedNodes >>= restoreHistoryFromBackup' AllHistory (Just dataName) tracerEnv
 
 restoreHistoryFromBackup'
   :: HistoryMark
   -> Maybe DataName
+  -> TracerEnv
   -> Set NodeId
-  -> BlockchainHistory
-  -> ResourcesHistory
-  -> TransactionsHistory
-  -> DataPointRequestors
-  -> Lock
   -> IO ()
-restoreHistoryFromBackup' historyMark aDataName connected
-                          (ChainHistory chainHistory)
-                          (ResHistory resourcesHistory)
-                          (TXHistory txHistory)
-                          dpRequestors currentDPLock = ignore $ do
-  nodesIdsWithNames <-
-    getNodesIdsWithNames (S.toList connected) dpRequestors currentDPLock
+restoreHistoryFromBackup' historyMark aDataName tracerEnv connected = ignore $ do
+  nodesIdsWithNames <- getNodesIdsWithNames tracerEnv (S.toList connected)
   backupDir <- getPathToBackupDir
   forM_ nodesIdsWithNames $ \(nodeId, nodeName) -> do
     let nodeSubdir = backupDir </> T.unpack nodeName
@@ -227,6 +170,11 @@ restoreHistoryFromBackup' historyMark aDataName connected
         fillHistory nodeId resourcesHistory resData   namesWithPoints
         fillHistory nodeId txHistory        txData    namesWithPoints
  where
+  TracerEnv{teBlockchainHistory, teResourcesHistory, teTxHistory} = tracerEnv
+  ChainHistory chainHistory   = teBlockchainHistory
+  ResHistory resourcesHistory = teResourcesHistory
+  TXHistory txHistory         = teTxHistory
+
   extractNamesWithHistoricalPoints nodeSubdir bFile = do
     let pureFile = takeBaseName bFile
     case readMaybe pureFile of
@@ -321,13 +269,12 @@ restoreHistoryFromBackup' historyMark aDataName connected
     ]
 
 getNodesIdsWithNames
-  :: [NodeId]
-  -> DataPointRequestors
-  -> Lock
+  :: TracerEnv
+  -> [NodeId]
   -> IO [(NodeId, T.Text)]
-getNodesIdsWithNames [] _ _ = return []
-getNodesIdsWithNames connected dpRequestors currentDPLock =
+getNodesIdsWithNames _ [] = return []
+getNodesIdsWithNames TracerEnv{teDPRequestors, teCurrentDPLock} connected =
   forM connected $ \nodeId@(NodeId anId) ->
-    askDataPoint dpRequestors currentDPLock nodeId "NodeInfo" >>= \case
+    askDataPoint teDPRequestors teCurrentDPLock nodeId "NodeInfo" >>= \case
       Nothing -> return (nodeId, anId)
       Just ni -> return (nodeId, niName ni)

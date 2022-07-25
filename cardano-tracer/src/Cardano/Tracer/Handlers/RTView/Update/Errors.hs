@@ -1,4 +1,5 @@
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -25,33 +26,32 @@ import           Text.Read (readMaybe)
 
 import           Cardano.Logging (SeverityS (..))
 
+import           Cardano.Tracer.Environment
 import           Cardano.Tracer.Handlers.RTView.Notifications.Check
-import           Cardano.Tracer.Handlers.RTView.Notifications.Types
 import           Cardano.Tracer.Handlers.RTView.State.Errors
-import           Cardano.Tracer.Handlers.RTView.State.TraceObjects
 import           Cardano.Tracer.Handlers.RTView.UI.Img.Icons
 import           Cardano.Tracer.Handlers.RTView.UI.JS.Utils
 import           Cardano.Tracer.Handlers.RTView.UI.Utils
+import           Cardano.Tracer.Handlers.RTView.Utils
 import           Cardano.Tracer.Types
 import           Cardano.Tracer.Utils
 
 runErrorsUpdater
-  :: ConnectedNodes
+  :: TracerEnv
   -> Errors
-  -> SavedTraceObjects
-  -> EventsQueues
   -> IO ()
-runErrorsUpdater connectedNodes nodesErrors savedTO eventsQueues = forever $ do
+runErrorsUpdater tracerEnv nodesErrors = forever $ do
   sleep 2.0
-  connected <- readTVarIO connectedNodes
-  savedTraceObjects <- readTVarIO savedTO
-  forM_ connected $ \nodeId ->
+  savedTraceObjects <- readTVarIO teSavedTO
+  forConnected_ tracerEnv $ \nodeId ->
     whenJust (M.lookup nodeId savedTraceObjects) $ \savedTOForNode ->
       forM_ (M.toList savedTOForNode) $ \(_, trObInfo@(_, severity, _)) ->
         when (itIsError severity) $ do
           addError nodesErrors nodeId trObInfo
-          checkCommonErrors nodeId trObInfo eventsQueues
+          checkCommonErrors nodeId trObInfo teEventsQueues
  where
+  TracerEnv{teSavedTO, teEventsQueues} = tracerEnv
+
   itIsError sev =
     case sev of
       Warning   -> True
@@ -63,13 +63,12 @@ runErrorsUpdater connectedNodes nodesErrors savedTO eventsQueues = forever $ do
 
 -- | Update error messages in a corresponding modal window.
 updateNodesErrors
-  :: UI.Window
-  -> ConnectedNodes
+  :: TracerEnv
   -> Errors
   -> UI ()
-updateNodesErrors window connectedNodes nodesErrors = do
-  connected <- liftIO $ readTVarIO connectedNodes
-  forM_ connected $ \nodeId@(NodeId anId) -> do
+updateNodesErrors tracerEnv nodesErrors = do
+  window <- askWindow
+  forConnectedUI_ tracerEnv $ \nodeId@(NodeId anId) -> do
     errorsFromNode <- liftIO $ getErrors nodesErrors nodeId
     unless (null errorsFromNode) $ do
       -- Update errors number (as it is in the state).

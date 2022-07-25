@@ -40,7 +40,6 @@ import qualified Data.Map.Strict as M
 import qualified Data.Set as S
 import qualified Data.Text as T
 import           Data.Tuple.Extra (uncurry3)
--- import           System.Exit (exitSuccess)
 import           System.IO (hFlush, stdout)
 import           System.Mem.Weak (deRefWeak)
 import qualified System.Signal as S

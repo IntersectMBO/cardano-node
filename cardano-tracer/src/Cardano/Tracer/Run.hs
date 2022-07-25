@@ -13,6 +13,7 @@ import           Control.Monad (void)
 import           Cardano.Tracer.Acceptors.Run
 import           Cardano.Tracer.CLI
 import           Cardano.Tracer.Configuration
+import           Cardano.Tracer.Environment
 import           Cardano.Tracer.Handlers.Logs.Rotator
 import           Cardano.Tracer.Handlers.Metrics.Servers
 import           Cardano.Tracer.Handlers.RTView.Run
@@ -40,31 +41,38 @@ doRunCardanoTracer config protocolsBrake dpRequestors = do
   acceptedMetrics <- initAcceptedMetrics
   savedTO         <- initSavedTraceObjects
 
-  resourcesHistory <- initResourcesHistory
   chainHistory     <- initBlockchainHistory
+  resourcesHistory <- initResourcesHistory
   txHistory        <- initTransactionsHistory
 
   currentLogLock <- newLock
   currentDPLock  <- newLock
   eventsQueues   <- initEventsQueues dpRequestors currentDPLock
 
-  -- Specify what should be done before program stops.
+  -- Environment for all following functions.
+  let tracerEnv =
+        TracerEnv
+          { teConfig            = config
+          , teConnectedNodes    = connectedNodes
+          , teAcceptedMetrics   = acceptedMetrics
+          , teSavedTO           = savedTO
+          , teBlockchainHistory = chainHistory
+          , teResourcesHistory  = resourcesHistory
+          , teTxHistory         = txHistory
+          , teCurrentLogLock    = currentLogLock
+          , teCurrentDPLock     = currentDPLock
+          , teEventsQueues      = eventsQueues
+          , teDPRequestors      = dpRequestors
+          , teProtocolsBrake    = protocolsBrake
+          }
+
+  -- Specify what should be done before 'cardano-tracer' stops.
   beforeProgramStops $
-    backupAllHistory
-      connectedNodes
-      chainHistory
-      resourcesHistory
-      txHistory
-      dpRequestors
-      currentDPLock
+    backupAllHistory tracerEnv
 
   void . sequenceConcurrently $
-    [ runLogsRotator    config currentLogLock
-    , runMetricsServers config connectedNodes acceptedMetrics
-    , runAcceptors      config connectedNodes acceptedMetrics savedTO
-                        dpRequestors protocolsBrake currentLogLock
-                        eventsQueues
-    , runRTView         config connectedNodes acceptedMetrics savedTO
-                        chainHistory resourcesHistory txHistory
-                        dpRequestors currentDPLock eventsQueues
+    [ runLogsRotator    tracerEnv
+    , runMetricsServers tracerEnv
+    , runAcceptors      tracerEnv
+    , runRTView         tracerEnv
     ]
