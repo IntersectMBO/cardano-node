@@ -1,6 +1,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 module Cardano.Benchmarking.PlutusExample
 where
 import           Prelude
@@ -21,31 +22,34 @@ import           Cardano.Benchmarking.Wallet
 import qualified Plutus.V1.Ledger.Api as Plutus
 import           Plutus.V1.Ledger.Contexts (ScriptContext(..), ScriptPurpose(..), TxInfo(..), TxOutRef(..))
 
-mkUtxoScript ::
-     NetworkId
+mkUTxOScript :: forall era.
+     (IsCardanoEra era, IsShelleyBasedEra era)
+  => NetworkId
   -> (FilePath, Script PlutusScriptV1, ScriptData)
   -> Validity
-  -> ToUTxO AlonzoEra
-mkUtxoScript networkId (scriptFile, script, txOutDatum) validity values
+  -> ToUTxO era
+mkUTxOScript networkId (scriptFile, script, txOutDatum) validity values
   = ( map mkTxOut values
     , newFunds
     )
  where
-  mkTxOut v = TxOut
-                 plutusScriptAddr
-                 (lovelaceToTxOutValue v)
-                 (TxOutDatumHash ScriptDataInAlonzoEra $ hashScriptData txOutDatum)
-                 ReferenceScriptNone   
-                    
   plutusScriptAddr = makeShelleyAddressInEra
                        networkId
                        (PaymentCredentialByScript $ hashScript script)
                        NoStakeAddress
 
+  mkTxOut v = case scriptDataSupportedInEra (cardanoEra @ era) of
+    Nothing -> error " mkUtxOScript scriptDataSupportedInEra==Nothing"
+    Just tag -> TxOut
+                  plutusScriptAddr
+                  (lovelaceToTxOutValue v)
+                  (TxOutDatumHash tag $ hashScriptData txOutDatum)
+                  ReferenceScriptNone   
+
   newFunds txId = zipWith (mkNewFund txId) [TxIx 0 ..] values
 
   mkNewFund :: TxId -> TxIx -> Lovelace -> Fund
-  mkNewFund txId txIx val = Fund $ InAnyCardanoEra AlonzoEra $ FundInEra {
+  mkNewFund txId txIx val = Fund $ InAnyCardanoEra (cardanoEra @ era) $ FundInEra {
       _fundTxIn = TxIn txId txIx
     , _fundVal = lovelaceToTxOutValue val
     , _fundSigningKey = Nothing

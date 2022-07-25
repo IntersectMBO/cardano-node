@@ -265,6 +265,7 @@ runBenchmarkInEra sourceWallet submitMode (ThreadName threadName) shape tps era 
   let walletRefDst = walletRefSrc
   metadata <- makeMetadata
 
+
   fundSource <- liftIO (mkBufferedSource walletRefSrc
                    (auxInputs shape)
                    (auxMinValuePerUTxO shape)
@@ -326,6 +327,7 @@ runPlutusBenchmark sourceWallet submitMode scriptFile scriptBudget scriptData sc
     walletRefDst = walletRefSrc
     walletRefCollateral = walletRefSrc
   fundKey <- getName $ KeyName "pass-partout"
+
   script <- liftIO $ PlutusExample.readScript scriptFile
   -- This does not remove the collateral from the wallet, i.e. same collateral is uses for everything.
   -- This is fine unless a script ever fails.
@@ -464,72 +466,44 @@ initWallet :: WalletName -> ActionM ()
 initWallet name = liftIO Wallet.initWallet >>= setName name
 
 createChange :: AnyCardanoEra -> WalletName -> WalletName -> SubmitMode -> PayMode -> Lovelace -> Int -> ActionM ()
-createChange era sourceWallet dstWallet submitMode payMode value count = case payMode of
-  PayToAddr keyName -> withEra era $ createChangeInEra sourceWallet dstWallet submitMode PlainOldFund keyName value count
-  -- Problem here: PayToCollateral will create an output marked as collateral
-  -- and also return any change to a collateral, which makes the returned change unusable.
-  PayToCollateral keyName -> withEra era $ createChangeInEra sourceWallet dstWallet submitMode CollateralFund keyName value count
-  PayToScript scriptFile scriptData -> createChangeScriptFunds sourceWallet dstWallet submitMode scriptFile scriptData value count
-
-createChangeScriptFunds :: WalletName -> WalletName -> SubmitMode -> FilePath -> ScriptData -> Lovelace -> Int -> ActionM ()
-createChangeScriptFunds sourceWallet dstWallet submitMode scriptFile scriptData value count = do
-  walletRef <- getName dstWallet
-  networkId <- getUser TNetworkId
-  protocolParameters <- getProtocolParameters
-  _fundKey <- getName $ KeyName "pass-partout"
-  fee <- getUser TFee
-  script <- liftIO $ PlutusExample.readScript scriptFile --TODO: this should throw a file-not-found-error !
-  let
-    createCoins fundSource coins = do
-      let
---        selector :: FundSet.FundSource
---        selector = mkWalletFundSource walletRef $ FundSet.selectMinValue $ sum coins + fee
-        inOut :: [Lovelace] -> [Lovelace]
-        inOut = Wallet.includeChange fee coins
-        toUTxO = PlutusExample.mkUtxoScript networkId (scriptFile, script, scriptData) Confirmed
-        fundToStore = mkWalletFundStore walletRef
-
-      tx <- liftIO $ sourceToStoreTransaction
-                                      (genTx protocolParameters (TxInsCollateralNone, [])
-                                       (mkFee fee) TxMetadataNone (KeyWitness KeyWitnessForSpending))
-                                      fundSource inOut toUTxO fundToStore
-      return $ fmap txInModeCardano tx
-    addressMsg =  Text.unpack $ serialiseAddress $ makeShelleyAddress networkId (PaymentCredentialByScript $ hashScript script) NoStakeAddress
-  createChangeGeneric sourceWallet submitMode createCoins addressMsg value count
+createChange era sourceWallet dstWallet submitMode payMode value count
+  = withEra era $ createChangeInEra sourceWallet dstWallet submitMode payMode value count
 
 createChangeInEra :: forall era. IsShelleyBasedEra era
   => WalletName
   -> WalletName
   -> SubmitMode
-  -> Variant
-  -> KeyName
+  -> PayMode
   -> Lovelace
   -> Int
   -> AsType era
   -> ActionM ()
-createChangeInEra sourceWallet dstWallet submitMode variant keyName value count _proxy = do
+createChangeInEra sourceWallet dstWallet submitMode payMode value count era = do
   networkId <- getUser TNetworkId
   walletRef <- getName dstWallet
   fee <- getUser TFee
   protocolParameters <- getProtocolParameters
-  fundKey <- getName keyName
+  (toUTxO, addressMsg) <- case payMode of
+    PayToAddr keyName -> do
+      fundKey <- getName keyName
+      return ( Wallet.mkUTxOVariant PlainOldFund networkId fundKey Confirmed
+             , Text.unpack $ serialiseAddress $ keyAddress @ era networkId fundKey)
+    PayToCollateral keyName -> do
+      fundKey <- getName keyName
+      return ( Wallet.mkUTxOVariant CollateralFund networkId fundKey Confirmed
+             , Text.unpack $ serialiseAddress $ keyAddress @ era networkId fundKey)
+    PayToScript scriptFile scriptData -> do
+      script <- liftIO $ PlutusExample.readScript scriptFile --TODO: this should throw a file-not-found-error !
+      return ( PlutusExample.mkUTxOScript networkId (scriptFile, script, scriptData) Confirmed
+               , Text.unpack $ serialiseAddress $ makeShelleyAddress networkId (PaymentCredentialByScript $ hashScript script) NoStakeAddress )
   let
     createCoins :: FundSet.FundSource -> [Lovelace] -> ActionM (Either String (TxInMode CardanoMode))
     createCoins fundSource coins = do
-      let
---        selector :: FundSet.FundSource
---        selector = mkWalletFundSource walletRef $ FundSet.selectMinValue $ sum coins + fee
-        inOut :: [Lovelace] -> [Lovelace]
-        inOut = Wallet.includeChange fee coins
-        toUTxO = Wallet.mkUTxOVariant variant networkId fundKey Confirmed
-        fundToStore = mkWalletFundStore walletRef
-
       (tx :: Either String (Tx era)) <- liftIO $ sourceToStoreTransaction
                                                   (genTx protocolParameters (TxInsCollateralNone, [])
                                                    (mkFee fee) TxMetadataNone (KeyWitness KeyWitnessForSpending))
-                                                  fundSource inOut toUTxO fundToStore
+                                                  fundSource (Wallet.includeChange fee coins) toUTxO (mkWalletFundStore walletRef)
       return $ fmap txInModeCardano tx
-    addressMsg = Text.unpack $ serialiseAddress $ keyAddress @ era networkId fundKey
   createChangeGeneric sourceWallet submitMode createCoins addressMsg value count
 
 createChangeGeneric ::

@@ -18,6 +18,8 @@ import           Cardano.Api.Shelley (ProtocolParameters, ReferenceScript(..))
 type WalletRef = MVar Wallet
 
 type TxGenerator era = [Fund] -> [TxOut CtxTx era] -> Either String (Tx era, TxId)
+-- Todo: ToUTxO implicitly assumes that all outputs are of the same type (Plutus. normal, collateral).
+-- This is too special
 type ToUTxO era = [Lovelace] -> ([TxOut CtxTx era], TxId -> [Fund])
 
 data Wallet = Wallet {
