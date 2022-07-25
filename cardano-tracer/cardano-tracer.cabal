@@ -106,8 +106,11 @@ library
                        Cardano.Tracer.Handlers.RTView.Update.Transactions
                        Cardano.Tracer.Handlers.RTView.Update.Utils
 
+                       Cardano.Tracer.Handlers.RTView.Utils
+
                        Cardano.Tracer.CLI
                        Cardano.Tracer.Configuration
+                       Cardano.Tracer.Environment
                        Cardano.Tracer.Run
                        Cardano.Tracer.Types
                        Cardano.Tracer.Utils

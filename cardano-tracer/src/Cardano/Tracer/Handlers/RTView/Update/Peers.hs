@@ -1,12 +1,11 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Cardano.Tracer.Handlers.RTView.Update.Peers
   ( updateNodesPeers
   ) where
 
-import           Control.Concurrent.Extra (Lock)
-import           Control.Concurrent.STM.TVar (readTVarIO)
 import           Control.Monad (forM_, void)
 import           Control.Monad.Extra (whenJustM)
 import           Data.List (find)
@@ -21,24 +20,23 @@ import           Graphics.UI.Threepenny.Core
 
 import           Cardano.Node.Tracing.Peers
 
+import           Cardano.Tracer.Environment
 import           Cardano.Tracer.Handlers.RTView.State.Peers
 import           Cardano.Tracer.Handlers.RTView.UI.HTML.Node.Peers
 import           Cardano.Tracer.Handlers.RTView.UI.Utils
 import           Cardano.Tracer.Handlers.RTView.Update.Utils
+import           Cardano.Tracer.Handlers.RTView.Utils
 import           Cardano.Tracer.Types
 import           Cardano.Tracer.Utils
 
 updateNodesPeers
-  :: UI.Window
-  -> ConnectedNodes
-  -> DataPointRequestors
-  -> Lock
+  :: TracerEnv
   -> Peers
   -> UI ()
-updateNodesPeers window connectedNodes dpRequestors currentDPLock displayedPeers = do
-  connected <- liftIO $ readTVarIO connectedNodes
-  forM_ connected $ \nodeId -> do
-    whenJustM (liftIO $ askDataPoint dpRequestors currentDPLock nodeId "NodePeers") $
+updateNodesPeers tracerEnv@TracerEnv{teDPRequestors, teCurrentDPLock} displayedPeers = do
+  window <- askWindow
+  forConnectedUI_ tracerEnv $ \nodeId -> do
+    whenJustM (liftIO $ askDataPoint teDPRequestors teCurrentDPLock nodeId "NodePeers") $
       doUpdatePeers window nodeId displayedPeers
 
 doUpdatePeers

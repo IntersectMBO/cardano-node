@@ -9,10 +9,14 @@ import           System.Directory (getTemporaryDirectory, removePathForcibly)
 
 import           Cardano.Logging hiding (LocalSocket)
 
+import           Cardano.Tracer.Handlers.RTView.Run
+import           Cardano.Tracer.Handlers.RTView.State.Historical
+import           Cardano.Tracer.Utils
+
 import           Cardano.Tracer.Configuration
-import           Cardano.Tracer.Handlers.Logs.TraceObjects (traceObjectsHandler)
-import           Cardano.Tracer.Handlers.RTView.State.TraceObjects (initSavedTraceObjects)
-import           Cardano.Tracer.Types (NodeId (..))
+import           Cardano.Tracer.Environment
+import           Cardano.Tracer.Handlers.Logs.TraceObjects
+import           Cardano.Tracer.Types
 
 main :: IO ()
 main = do
@@ -20,27 +24,70 @@ main = do
   let root = tmpDir </> "cardano-tracer-bench"
       c1 = mkConfig root ForHuman
       c2 = mkConfig root ForMachine
-  lock <- newLock
 
   to10   <- generate 10
   to100  <- generate 100
   to1000 <- generate 1000
 
-  savedTO <- initSavedTraceObjects
+  connectedNodes  <- initConnectedNodes
+  acceptedMetrics <- initAcceptedMetrics
+  savedTO         <- initSavedTraceObjects
+
+  chainHistory     <- initBlockchainHistory
+  resourcesHistory <- initResourcesHistory
+  txHistory        <- initTransactionsHistory
+
+  protocolsBrake <- initProtocolsBrake
+  dpRequestors   <- initDataPointRequestors
+
+  currentLogLock <- newLock
+  currentDPLock  <- newLock
+  eventsQueues   <- initEventsQueues dpRequestors currentDPLock
+
+  let te1 =
+        TracerEnv
+          { teConfig            = c1
+          , teConnectedNodes    = connectedNodes
+          , teAcceptedMetrics   = acceptedMetrics
+          , teSavedTO           = savedTO
+          , teBlockchainHistory = chainHistory
+          , teResourcesHistory  = resourcesHistory
+          , teTxHistory         = txHistory
+          , teCurrentLogLock    = currentLogLock
+          , teCurrentDPLock     = currentDPLock
+          , teEventsQueues      = eventsQueues
+          , teDPRequestors      = dpRequestors
+          , teProtocolsBrake    = protocolsBrake
+          }
+      te2 =
+        TracerEnv
+          { teConfig            = c2
+          , teConnectedNodes    = connectedNodes
+          , teAcceptedMetrics   = acceptedMetrics
+          , teSavedTO           = savedTO
+          , teBlockchainHistory = chainHistory
+          , teResourcesHistory  = resourcesHistory
+          , teTxHistory         = txHistory
+          , teCurrentLogLock    = currentLogLock
+          , teCurrentDPLock     = currentDPLock
+          , teEventsQueues      = eventsQueues
+          , teDPRequestors      = dpRequestors
+          , teProtocolsBrake    = protocolsBrake
+          }
 
   removePathForcibly root
 
   defaultMain
     [ bgroup "cardano-tracer"
       [ -- 10 'TraceObject's per request.
-        bench "Handle TraceObjects LOG,  10"   $ whnfIO $ traceObjectsHandler c1 nId lock savedTO to10
-      , bench "Handle TraceObjects JSON, 10"   $ whnfIO $ traceObjectsHandler c2 nId lock savedTO to10
+        bench "Handle TraceObjects LOG,  10"   $ whnfIO $ traceObjectsHandler te1 nId to10
+      , bench "Handle TraceObjects JSON, 10"   $ whnfIO $ traceObjectsHandler te2 nId to10
         -- 100 'TraceObject's per request.
-      , bench "Handle TraceObjects LOG,  100"  $ whnfIO $ traceObjectsHandler c1 nId lock savedTO to100
-      , bench "Handle TraceObjects JSON, 100"  $ whnfIO $ traceObjectsHandler c2 nId lock savedTO to100
+      , bench "Handle TraceObjects LOG,  100"  $ whnfIO $ traceObjectsHandler te1 nId to100
+      , bench "Handle TraceObjects JSON, 100"  $ whnfIO $ traceObjectsHandler te2 nId to100
         -- 1000 'TraceObject's per request.
-      , bench "Handle TraceObjects LOG,  1000" $ whnfIO $ traceObjectsHandler c1 nId lock savedTO to1000
-      , bench "Handle TraceObjects JSON, 1000" $ whnfIO $ traceObjectsHandler c2 nId lock savedTO to1000
+      , bench "Handle TraceObjects LOG,  1000" $ whnfIO $ traceObjectsHandler te1 nId to1000
+      , bench "Handle TraceObjects JSON, 1000" $ whnfIO $ traceObjectsHandler te2 nId to1000
       ]
     ]
  where

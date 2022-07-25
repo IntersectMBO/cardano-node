@@ -8,7 +8,6 @@ module Cardano.Tracer.Handlers.RTView.Run
   ) where
 
 import           Control.Concurrent.Async.Extra (sequenceConcurrently)
-import           Control.Concurrent.Extra (Lock)
 import           Control.Monad (void)
 import           Control.Monad.Extra (whenJust)
 import qualified Data.Text as T
@@ -17,20 +16,18 @@ import qualified Graphics.UI.Threepenny as UI
 import           System.Time.Extra (sleep)
 
 import           Cardano.Tracer.Configuration
-import           Cardano.Tracer.Handlers.RTView.Notifications.Types
+import           Cardano.Tracer.Environment
 import           Cardano.Tracer.Handlers.RTView.Notifications.Utils
 import           Cardano.Tracer.Handlers.RTView.SSL.Certs
 import           Cardano.Tracer.Handlers.RTView.State.Displayed
 import           Cardano.Tracer.Handlers.RTView.State.EraSettings
 import           Cardano.Tracer.Handlers.RTView.State.Errors
-import           Cardano.Tracer.Handlers.RTView.State.Historical
 import           Cardano.Tracer.Handlers.RTView.State.Last
 import           Cardano.Tracer.Handlers.RTView.State.TraceObjects
 import           Cardano.Tracer.Handlers.RTView.UI.HTML.Main
 import           Cardano.Tracer.Handlers.RTView.Update.EraSettings
 import           Cardano.Tracer.Handlers.RTView.Update.Errors
 import           Cardano.Tracer.Handlers.RTView.Update.Historical
-import           Cardano.Tracer.Types
 
 -- | RTView is a part of 'cardano-tracer' that provides an ability
 --   to monitor Cardano nodes in a real-time. The core idea is simple:
@@ -40,22 +37,8 @@ import           Cardano.Tracer.Types
 --   The web-page is built using 'threepenny-gui' library. Please note
 --   Gitub-version of this library is used, not Hackage-version!
 
-runRTView
-  :: TracerConfig
-  -> ConnectedNodes
-  -> AcceptedMetrics
-  -> SavedTraceObjects
-  -> BlockchainHistory
-  -> ResourcesHistory
-  -> TransactionsHistory
-  -> DataPointRequestors
-  -> Lock
-  -> EventsQueues
-  -> IO ()
-runRTView TracerConfig{logging, network, hasRTView}
-          connectedNodes acceptedMetrics savedTO
-          chainHistory resourcesHistory txHistory
-          dpRequestors currentDPLock eventsQueues =
+runRTView :: TracerEnv -> IO ()
+runRTView tracerEnv =
   whenJust hasRTView $ \(Endpoint host port) -> do
     -- Pause to prevent collision between "Listening"-notifications from servers.
     sleep 0.3
@@ -76,47 +59,21 @@ runRTView TracerConfig{logging, network, hasRTView}
     void . sequenceConcurrently $
       [ UI.startGUI (config host port certFile keyFile) $
           mkMainPage
-            connectedNodes
+            tracerEnv
             displayedElements
-            acceptedMetrics
-            savedTO
             eraSettings
-            dpRequestors
-            currentDPLock
             reloadFlag
             logging
             network
-            resourcesHistory
-            chainHistory
-            txHistory
             errors
-            eventsQueues
-      , runHistoricalUpdater
-          savedTO
-          acceptedMetrics
-          resourcesHistory
-          lastResources
-          chainHistory
-          txHistory
-      , runHistoricalBackup
-          connectedNodes
-          chainHistory
-          resourcesHistory
-          txHistory
-          dpRequestors
-          currentDPLock
-      , runEraSettingsUpdater
-          connectedNodes
-          eraSettings
-          dpRequestors
-          currentDPLock
-      , runErrorsUpdater
-          connectedNodes
-          errors
-          savedTO
-          eventsQueues
+      , runHistoricalUpdater  tracerEnv lastResources
+      , runHistoricalBackup   tracerEnv
+      , runEraSettingsUpdater tracerEnv eraSettings
+      , runErrorsUpdater      tracerEnv errors
       ]
  where
+  TracerConfig{network, logging, hasRTView} = teConfig tracerEnv
+
   -- RTView's web page is available via 'https://' url only.
   config h p cert key = UI.defaultConfig
     { UI.jsSSLBind = Just . encodeUtf8 . T.pack $ h

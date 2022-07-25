@@ -1,3 +1,4 @@
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Cardano.Tracer.Handlers.RTView.Update.EKG
@@ -11,14 +12,15 @@ import qualified Data.Map.Strict as M
 import           Data.Text (intercalate, isPrefixOf)
 import           Graphics.UI.Threepenny.Core (UI, liftIO)
 
+import           Cardano.Tracer.Environment
 import           Cardano.Tracer.Handlers.Metrics.Utils
 import           Cardano.Tracer.Handlers.RTView.UI.Utils
 import           Cardano.Tracer.Types
 import           Cardano.Tracer.Utils
 
-updateEKGMetrics :: AcceptedMetrics -> UI ()
-updateEKGMetrics acceptedMetrics = do
-  allMetrics <- liftIO $ readTVarIO acceptedMetrics
+updateEKGMetrics :: TracerEnv -> UI ()
+updateEKGMetrics TracerEnv{teAcceptedMetrics} = do
+  allMetrics <- liftIO $ readTVarIO teAcceptedMetrics
   forM_ (M.toList allMetrics) $ \(NodeId anId, (ekgStore, _)) -> do
     metrics <- liftIO $ getListOfMetrics ekgStore
     unless (null metrics) $ do

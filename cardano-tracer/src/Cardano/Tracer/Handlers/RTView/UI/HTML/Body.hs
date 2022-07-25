@@ -1,3 +1,4 @@
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -5,8 +6,6 @@ module Cardano.Tracer.Handlers.RTView.UI.HTML.Body
   ( mkPageBody
   ) where
 
-import           Control.Concurrent.Extra (Lock)
-import           Control.Concurrent.STM.TVar (readTVarIO)
 import           Control.Monad (unless, void, when)
 import           Control.Monad.Extra (whenJustM, whenM)
 import           Data.Text (Text)
@@ -16,7 +15,7 @@ import           Graphics.UI.Threepenny.JQuery (Easing (..), fadeIn, fadeOut)
 import           Text.Read (readMaybe)
 
 import           Cardano.Tracer.Configuration
-import           Cardano.Tracer.Handlers.RTView.Notifications.Types
+import           Cardano.Tracer.Environment
 import           Cardano.Tracer.Handlers.RTView.State.Historical
 import           Cardano.Tracer.Handlers.RTView.UI.Charts
 import           Cardano.Tracer.Handlers.RTView.UI.HTML.About
@@ -34,24 +33,17 @@ import           Cardano.Tracer.Handlers.RTView.Update.Historical
 import           Cardano.Tracer.Types
 
 mkPageBody
-  :: UI.Window
+  :: TracerEnv
   -> Network
-  -> ConnectedNodes
-  -> ResourcesHistory
-  -> BlockchainHistory
-  -> TransactionsHistory
-  -> DataPointRequestors
-  -> Lock
   -> DatasetsIndices
   -> DatasetsTimestamps
-  -> EventsQueues
   -> UI Element
-mkPageBody window networkConfig connected
-           resourcesHistory@(ResHistory rHistory)
-           chainHistory@(ChainHistory cHistory)
-           txHistory@(TXHistory tHistory)
-           dpRequestors currentDPLock
-           dsIxs dsTss eventsQueues = do
+mkPageBody tracerEnv networkConfig dsIxs dsTss = do
+  let connected = teConnectedNodes tracerEnv
+      ResHistory rHistory   = teResourcesHistory tracerEnv
+      ChainHistory cHistory = teBlockchainHistory tracerEnv
+      TXHistory tHistory    = teTxHistory tracerEnv
+
   txsProcessedNumTimer <- mkChartTimer connected tHistory dsIxs dsTss TxsProcessedNumData TxsProcessedNumChart
   mempoolBytesTimer    <- mkChartTimer connected tHistory dsIxs dsTss MempoolBytesData    MempoolBytesChart
   txsInMempoolTimer    <- mkChartTimer connected tHistory dsIxs dsTss TxsInMempoolData    TxsInMempoolChart
@@ -128,22 +120,23 @@ mkPageBody window networkConfig connected
                               # set dataState shownState
 
   on UI.click showHideTxs . const $
-    changeVisibilityForCharts window showHideTxs "transactions-charts" "Transactions"
+    changeVisibilityForCharts showHideTxs "transactions-charts" "Transactions"
   on UI.click showHideChain . const $
-    changeVisibilityForCharts window showHideChain "chain-charts" "Blockchain"
+    changeVisibilityForCharts showHideChain "chain-charts" "Blockchain"
   on UI.click showHideLeadership . const $
-    changeVisibilityForCharts window showHideLeadership "leadership-charts" "Leadership"
+    changeVisibilityForCharts showHideLeadership "leadership-charts" "Leadership"
   on UI.click showHideResources . const $
-    changeVisibilityForCharts window showHideResources "resources-charts" "Resources"
+    changeVisibilityForCharts showHideResources "resources-charts" "Resources"
 
   -- Body.
+  window <- askWindow
   body <-
     UI.getBody window #+
       [ UI.div #. "wrapper" #+
           [ UI.div ## "preloader" #. "pageloader is-active" #+
               [ UI.span #. "title" # set text "Just a second..."
               ]
-          , topNavigation window eventsQueues
+          , topNavigation tracerEnv
           , mkNoNodesInfo networkConfig
           , UI.mkElement "section" #. "section" #+
               [ UI.div ## "main-table-container"
@@ -520,17 +513,8 @@ mkPageBody window networkConfig connected
           -- Since the user changed '0' (which means "All time"),
           -- we have to load all the history for currently connected nodes,
           -- but for this 'chartName' only!
-          liftIO $ do
-            connected' <- readTVarIO connected
-            restoreHistoryFromBackupAll
-              dataName
-              connected'
-              chainHistory
-              resourcesHistory
-              txHistory
-              dpRequestors
-              currentDPLock
-        saveChartsSettings window
+          liftIO $ restoreHistoryFromBackupAll tracerEnv dataName 
+        saveChartsSettings
 
     on UI.selectionChange selectUpdatePeriod . const $
       whenJustM (readMaybe <$> get value selectUpdatePeriod) $ \(periodInSec :: Int) -> do
@@ -538,7 +522,7 @@ mkPageBody window networkConfig connected
         unless (periodInSec == 0) $ do
           void $ return chartUpdateTimer # set UI.interval (periodInSec * 1000)
           UI.start chartUpdateTimer
-        saveChartsSettings window
+        saveChartsSettings
 
     UI.div #. "rt-view-chart-container" #+
       [ UI.div #. "columns" #+
@@ -559,18 +543,15 @@ mkPageBody window networkConfig connected
       , UI.canvas ## show chartId #. "rt-view-chart-area" #+ []
       ]
 
-topNavigation
-  :: UI.Window
-  -> EventsQueues
-  -> UI Element
-topNavigation window eventsQueues = do
+topNavigation :: TracerEnv -> UI Element
+topNavigation TracerEnv{teEventsQueues} = do
   info <- mkAboutInfo
   infoIcon <- image "has-tooltip-multiline has-tooltip-bottom rt-view-info-icon mr-1" rtViewInfoSVG
                     ## "info-icon"
                     # set dataTooltip "RTView info"
   on UI.click infoIcon . const $ fadeInModal info
 
-  notificationsEvents   <- mkNotificationsEvents eventsQueues
+  notificationsEvents   <- mkNotificationsEvents teEventsQueues
   notificationsSettings <- mkNotificationsSettings
 
   notificationsEventsItem <- UI.anchor #. "navbar-item" #+
@@ -584,7 +565,7 @@ topNavigation window eventsQueues = do
   on UI.click notificationsEventsItem . const $
     fadeInModal notificationsEvents
   on UI.click notificationsSettingsItem . const $ do
-    restoreEmailSettings window
+    restoreEmailSettings
     fadeInModal notificationsSettings
 
   notificationsIcon <- image "rt-view-info-icon mr-2" rtViewNotifySVG
@@ -593,7 +574,7 @@ topNavigation window eventsQueues = do
   themeIcon <- image "has-tooltip-multiline has-tooltip-bottom rt-view-theme-icon" rtViewThemeToLightSVG
                      ## "theme-icon"
                      # set dataTooltip "Switch to light theme"
-  on UI.click themeIcon . const $ switchTheme window
+  on UI.click themeIcon . const $ askWindow >>= switchTheme
 
   UI.div ## "top-bar" #. "navbar rt-view-top-bar" #+
     [ element info
@@ -644,12 +625,12 @@ footer =
     ]
 
 changeVisibilityForCharts
-  :: UI.Window
-  -> Element
+  :: Element
   -> Text
   -> String
   -> UI ()
-changeVisibilityForCharts window showHideIcon areaId areaName = do
+changeVisibilityForCharts showHideIcon areaId areaName = do
+  window <- askWindow
   state <- get dataState showHideIcon
   let haveToHide = state == shownState
   if haveToHide

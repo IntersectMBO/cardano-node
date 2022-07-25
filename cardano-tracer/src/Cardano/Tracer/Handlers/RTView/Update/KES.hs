@@ -12,10 +12,10 @@ import           Control.Monad.Extra (whenJust)
 import qualified Data.Map.Strict as M
 import           Data.Text (pack)
 import           Data.Text.Read (decimal)
-import qualified Graphics.UI.Threepenny as UI
 import           Graphics.UI.Threepenny.Core (UI, liftIO)
 import           Text.Printf (printf)
 
+import           Cardano.Tracer.Environment
 import           Cardano.Tracer.Handlers.Metrics.Utils
 import           Cardano.Tracer.Handlers.RTView.State.Displayed
 import           Cardano.Tracer.Handlers.RTView.State.EraSettings
@@ -23,13 +23,12 @@ import           Cardano.Tracer.Handlers.RTView.UI.Utils
 import           Cardano.Tracer.Types
 
 updateKESInfo
-  :: UI.Window
-  -> AcceptedMetrics
+  :: TracerEnv
   -> ErasSettings
   -> DisplayedElements
   -> UI ()
-updateKESInfo _window acceptedMetrics settings displayed = do
-  allMetrics <- liftIO $ readTVarIO acceptedMetrics
+updateKESInfo TracerEnv{teAcceptedMetrics} settings displayed = do
+  allMetrics <- liftIO $ readTVarIO teAcceptedMetrics
   forM_ (M.toList allMetrics) $ \(nodeId@(NodeId anId), (ekgStore, _)) -> do
     metrics <- liftIO $ getListOfMetrics ekgStore
     forM_ metrics $ \(metricName, metricValue) ->

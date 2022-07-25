@@ -87,35 +87,33 @@ mkNotificationsEvents eventsQueues = do
           ]
       ]
 
-  window <- askWindow
-
   on UI.click closeIt . const $ do
     void $ element notifications #. "modal"
-    saveEventsSettings window
+    saveEventsSettings
 
   on UI.checkedChange switchWarnings $ \state -> do
-    setNotifyIconState window
-    saveEventsSettings window
+    setNotifyIconState
+    saveEventsSettings
     liftIO $ updateNotificationsEvents eventsQueues EventWarnings state
   on UI.checkedChange switchErrors $ \state -> do
-    setNotifyIconState window
-    saveEventsSettings window
+    setNotifyIconState
+    saveEventsSettings
     liftIO $ updateNotificationsEvents eventsQueues EventErrors state
   on UI.checkedChange switchCriticals $ \state -> do
-    setNotifyIconState window
-    saveEventsSettings window
+    setNotifyIconState
+    saveEventsSettings
     liftIO $ updateNotificationsEvents eventsQueues EventCriticals state
   on UI.checkedChange switchAlerts $ \state -> do
-    setNotifyIconState window
-    saveEventsSettings window
+    setNotifyIconState
+    saveEventsSettings
     liftIO $ updateNotificationsEvents eventsQueues EventAlerts state
   on UI.checkedChange switchEmergencies $ \state -> do
-    setNotifyIconState window
-    saveEventsSettings window
+    setNotifyIconState
+    saveEventsSettings
     liftIO $ updateNotificationsEvents eventsQueues EventEmergencies state
   on UI.checkedChange switchNodeDiscon $ \state -> do
-    setNotifyIconState window
-    saveEventsSettings window
+    setNotifyIconState
+    saveEventsSettings
     liftIO $ updateNotificationsEvents eventsQueues EventNodeDisconnected state
 
   on UI.checkedChange switchAll $ \state -> do
@@ -126,8 +124,8 @@ mkNotificationsEvents eventsQueues = do
     void $ element switchEmergencies # set UI.checked state
     void $ element switchNodeDiscon  # set UI.checked state
 
-    setNotifyIconState window
-    saveEventsSettings window
+    setNotifyIconState
+    saveEventsSettings
 
     liftIO $ do
       updateNotificationsEvents eventsQueues EventWarnings state
@@ -214,7 +212,6 @@ mkSwitch switchId switchName bulmaColorName = do
 
 mkNotificationsSettings :: UI Element
 mkNotificationsSettings = do
-  window <- askWindow
   closeIt <- UI.button #. "delete"
   sendTestEmail <- UI.button ## "send-test-email"
                              #. "button is-primary"
@@ -320,13 +317,13 @@ mkNotificationsSettings = do
   on UI.click closeIt . const $ do
     void $ element notifications #. "modal"
     void $ element sendTestEmailStatus # set text ""
-    saveEmailSettings window
+    saveEmailSettings
 
   on UI.click sendTestEmail . const $ do
     void $ element sendTestEmailStatus # set text ""
     void $ element sendTestEmail #. "button is-primary is-loading"
                                  # set UI.enabled False
-    statusMessage <- liftIO . createAndSendTestEmail =<< getCurrentEmailSettings window
+    statusMessage <- liftIO . createAndSendTestEmail =<< getCurrentEmailSettings
     let msgClass =
           if statusIsOK statusMessage
             then "rt-view-test-status-message-ok"
@@ -349,11 +346,11 @@ mkNotificationsSettings = do
         void $ element showHidePassword # set dataState shownState
         void $ element inputPassword # set UI.type_ "text"
 
-  on UI.valueChange inputHost . const      $ setStatusTestEmailButton window
-  on UI.valueChange inputUser . const      $ setStatusTestEmailButton window
-  on UI.valueChange inputPassword . const  $ setStatusTestEmailButton window
-  on UI.valueChange inputEmailFrom . const $ setStatusTestEmailButton window
-  on UI.valueChange inputEmailTo . const   $ setStatusTestEmailButton window
+  on UI.valueChange inputHost      $ const setStatusTestEmailButton
+  on UI.valueChange inputUser      $ const setStatusTestEmailButton
+  on UI.valueChange inputPassword  $ const setStatusTestEmailButton
+  on UI.valueChange inputEmailFrom $ const setStatusTestEmailButton
+  on UI.valueChange inputEmailTo   $ const setStatusTestEmailButton
 
   return notifications
 

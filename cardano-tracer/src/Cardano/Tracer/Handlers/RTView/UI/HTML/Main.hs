@@ -4,7 +4,6 @@ module Cardano.Tracer.Handlers.RTView.UI.HTML.Main
   ( mkMainPage
   ) where
 
-import           Control.Concurrent.Extra (Lock)
 import           Control.Concurrent.STM.TVar (readTVarIO)
 import           Control.Monad (void)
 import           Control.Monad.Extra (whenM)
@@ -15,13 +14,11 @@ import           Graphics.UI.Threepenny.Core
 import           System.Time.Extra (sleep)
 
 import           Cardano.Tracer.Configuration
-import           Cardano.Tracer.Handlers.RTView.Notifications.Types
+import           Cardano.Tracer.Environment
 import           Cardano.Tracer.Handlers.RTView.State.Displayed
 import           Cardano.Tracer.Handlers.RTView.State.EraSettings
 import           Cardano.Tracer.Handlers.RTView.State.Errors
-import           Cardano.Tracer.Handlers.RTView.State.Historical
 import           Cardano.Tracer.Handlers.RTView.State.Peers
-import           Cardano.Tracer.Handlers.RTView.State.TraceObjects
 import           Cardano.Tracer.Handlers.RTView.UI.Charts
 import           Cardano.Tracer.Handlers.RTView.UI.CSS.Bulma
 import           Cardano.Tracer.Handlers.RTView.UI.CSS.Own
@@ -38,29 +35,19 @@ import           Cardano.Tracer.Handlers.RTView.Update.NodeState
 import           Cardano.Tracer.Handlers.RTView.Update.Peers
 import           Cardano.Tracer.Handlers.RTView.Update.Reload
 import           Cardano.Tracer.Handlers.RTView.Update.Utils
-import           Cardano.Tracer.Types
 
 mkMainPage
-  :: ConnectedNodes
+  :: TracerEnv
   -> DisplayedElements
-  -> AcceptedMetrics
-  -> SavedTraceObjects
   -> ErasSettings
-  -> DataPointRequestors
-  -> Lock
   -> PageReloadedFlag
   -> NonEmpty LoggingParams
   -> Network
-  -> ResourcesHistory
-  -> BlockchainHistory
-  -> TransactionsHistory
   -> Errors
-  -> EventsQueues
   -> UI.Window
   -> UI ()
-mkMainPage connectedNodes displayedElements acceptedMetrics savedTO
-           nodesEraSettings dpRequestors currentDPLock reloadFlag loggingConfig networkConfig
-           resourcesHistory chainHistory txHistory nodesErrors eventsQueues window = do
+mkMainPage tracerEnv displayedElements nodesEraSettings reloadFlag
+           loggingConfig networkConfig nodesErrors window = do
   void $ return window # set UI.title pageTitle
   void $ UI.getHead window #+
     [ UI.link # set UI.rel "icon"
@@ -81,19 +68,7 @@ mkMainPage connectedNodes displayedElements acceptedMetrics savedTO
   datasetTimestamps <- initDatasetsTimestamps
   peers <- liftIO initPeers
 
-  pageBody <-
-    mkPageBody
-      window
-      networkConfig
-      connectedNodes
-      resourcesHistory
-      chainHistory
-      txHistory
-      dpRequestors
-      currentDPLock
-      datasetIndices
-      datasetTimestamps
-      eventsQueues
+  pageBody <- mkPageBody tracerEnv networkConfig datasetIndices datasetTimestamps
 
   -- Prepare and run the timer, which will hide the page preloader.
   preloaderTimer <- UI.timer # set UI.interval 10
@@ -105,8 +80,8 @@ mkMainPage connectedNodes displayedElements acceptedMetrics savedTO
 
   restoreTheme window
   restoreChartsSettings
-  restoreEmailSettings window
-  restoreEventsSettings window
+  restoreEmailSettings
+  restoreEventsSettings
 
   uiNoNodesProgressTimer <- UI.timer # set UI.interval 1000
   on UI.tick uiNoNodesProgressTimer . const $ do
@@ -121,20 +96,14 @@ mkMainPage connectedNodes displayedElements acceptedMetrics savedTO
 
   uiErrorsTimer <- UI.timer # set UI.interval 3000
   on UI.tick uiErrorsTimer . const $
-    updateNodesErrors window connectedNodes nodesErrors
+    updateNodesErrors tracerEnv nodesErrors
 
   whenM (liftIO $ readTVarIO reloadFlag) $ do
     liftIO $ cleanupDisplayedValues displayedElements
 
     updateUIAfterReload
-      window
-      connectedNodes
-      displayedElements
-      chainHistory
-      resourcesHistory
-      txHistory
-      dpRequestors
-      currentDPLock
+      tracerEnv
+      displayedElements 
       loggingConfig
       colors
       datasetIndices
@@ -147,26 +116,18 @@ mkMainPage connectedNodes displayedElements acceptedMetrics savedTO
   -- Uptime is a real-time clock, so update it every second.
   uiUptimeTimer <- UI.timer # set UI.interval 1000
   on UI.tick uiUptimeTimer . const $
-    updateNodesUptime connectedNodes displayedElements
+    updateNodesUptime tracerEnv displayedElements
 
   uiEKGTimer <- UI.timer # set UI.interval 1000
   on UI.tick uiEKGTimer . const $
-    updateEKGMetrics acceptedMetrics
+    updateEKGMetrics tracerEnv
 
   uiNodesTimer <- UI.timer # set UI.interval 1500
   on UI.tick uiNodesTimer . const $
     updateNodesUI
-      window
-      connectedNodes
+      tracerEnv
       displayedElements
-      acceptedMetrics
-      savedTO
       nodesEraSettings
-      chainHistory
-      resourcesHistory
-      txHistory
-      dpRequestors
-      currentDPLock
       loggingConfig
       colors
       datasetIndices
@@ -176,9 +137,9 @@ mkMainPage connectedNodes displayedElements acceptedMetrics savedTO
 
   uiPeersTimer <- UI.timer # set UI.interval 4000
   on UI.tick uiPeersTimer . const $ do
-    askNSetNodeState connectedNodes dpRequestors currentDPLock displayedElements
-    updateNodesPeers window connectedNodes dpRequestors currentDPLock peers
-    updateKESInfo window acceptedMetrics nodesEraSettings displayedElements
+    askNSetNodeState tracerEnv displayedElements
+    updateNodesPeers tracerEnv peers
+    updateKESInfo tracerEnv nodesEraSettings displayedElements
 
   UI.start uiUptimeTimer
   UI.start uiNodesTimer

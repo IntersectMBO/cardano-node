@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE NamedFieldPuns #-}
 
 module Cardano.Tracer.Acceptors.Utils
   ( notifyAboutNodeDisconnected
@@ -21,34 +22,33 @@ import           Trace.Forward.Utils.DataPoint (DataPointRequestor, initDataPoin
 
 import           Cardano.Logging (SeverityS (..))
 
+import           Cardano.Tracer.Environment
 import           Cardano.Tracer.Handlers.RTView.Notifications.Types
 import           Cardano.Tracer.Handlers.RTView.Notifications.Utils
-import           Cardano.Tracer.Types (AcceptedMetrics, ConnectedNodes, DataPointRequestors)
-import           Cardano.Tracer.Utils (connIdToNodeId)
+import           Cardano.Tracer.Types
+import           Cardano.Tracer.Utils
 
 prepareDataPointRequestor
-  :: ConnectedNodes
-  -> DataPointRequestors
+  :: TracerEnv
   -> ConnectionId LocalAddress
   -> IO DataPointRequestor
-prepareDataPointRequestor connectedNodes dpRequestors connId = do
-  addConnectedNode connectedNodes connId
+prepareDataPointRequestor TracerEnv{teConnectedNodes, teDPRequestors} connId = do
+  addConnectedNode teConnectedNodes connId
   dpRequestor <- initDataPointRequestor
   atomically $
-    modifyTVar' dpRequestors $ M.insert (connIdToNodeId connId) dpRequestor
+    modifyTVar' teDPRequestors $ M.insert (connIdToNodeId connId) dpRequestor
   return dpRequestor
 
 prepareMetricsStores
-  :: ConnectedNodes
-  -> AcceptedMetrics
+  :: TracerEnv
   -> ConnectionId LocalAddress
   -> IO (EKG.Store, TVar MetricsLocalStore)
-prepareMetricsStores connectedNodes acceptedMetrics connId = do
-  addConnectedNode connectedNodes connId
+prepareMetricsStores TracerEnv{teConnectedNodes, teAcceptedMetrics} connId = do
+  addConnectedNode teConnectedNodes connId
   storesForNewNode <- (,) <$> EKG.newStore
                           <*> newTVarIO emptyMetricsLocalStore
   atomically $
-    modifyTVar' acceptedMetrics $ M.insert (connIdToNodeId connId) storesForNewNode
+    modifyTVar' teAcceptedMetrics $ M.insert (connIdToNodeId connId) storesForNewNode
   return storesForNewNode
 
 addConnectedNode
@@ -61,26 +61,25 @@ addConnectedNode connectedNodes connId = atomically $
 -- | This handler is called when 'runPeer' function throws an exception,
 --   which means that there is a problem with network connection.
 removeDisconnectedNode
-  :: ConnectedNodes
-  -> AcceptedMetrics
-  -> DataPointRequestors
+  :: TracerEnv
   -> ConnectionId LocalAddress
   -> IO ()
-removeDisconnectedNode connectedNodes acceptedMetrics dpRequestors connId = atomically $ do
+removeDisconnectedNode TracerEnv{teConnectedNodes, teAcceptedMetrics, teDPRequestors} connId =
   -- Remove all the stuff related to disconnected node.
-  modifyTVar' connectedNodes  $ S.delete nodeId
-  modifyTVar' acceptedMetrics $ M.delete nodeId
-  modifyTVar' dpRequestors    $ M.delete nodeId
+  atomically $ do
+    modifyTVar' teConnectedNodes  $ S.delete nodeId
+    modifyTVar' teAcceptedMetrics $ M.delete nodeId
+    modifyTVar' teDPRequestors    $ M.delete nodeId
  where
   nodeId = connIdToNodeId connId
 
 notifyAboutNodeDisconnected
-  :: EventsQueues
+  :: TracerEnv
   -> ConnectionId LocalAddress
   -> IO ()
-notifyAboutNodeDisconnected eventsQueues connId = do
+notifyAboutNodeDisconnected TracerEnv{teEventsQueues} connId = do
   now <- systemToUTCTime <$> getSystemTime
-  addNewEvent eventsQueues EventNodeDisconnected $ Event nodeId now Warning msg
+  addNewEvent teEventsQueues EventNodeDisconnected $ Event nodeId now Warning msg
  where
   nodeId = connIdToNodeId connId
   msg = "Node is disconnected"
