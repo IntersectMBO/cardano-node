@@ -47,6 +47,9 @@ common base
 
   build-depends:       base
 
+  if os(windows)
+    buildable: False
+
 library
   import:              base
   hs-source-dirs:      src
