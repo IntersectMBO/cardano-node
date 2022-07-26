@@ -281,8 +281,8 @@ runBenchmarkInEra sourceWallet submitMode (ThreadName threadName) shape tps era 
 
     txGenerator = genTx protocolParameters (TxInsCollateralNone, []) (mkFee (auxFee shape)) metadata (KeyWitness KeyWitnessForSpending)
 
-    toUTxO :: FundSet.Target -> FundSet.SeqNumber -> ToUTxO era
-    toUTxO target seqNumber = Wallet.mkUTxO networkId fundKey (InFlight target seqNumber)
+    toUTxO :: FundSet.Target -> FundSet.SeqNumber -> ToUTxOList era
+    toUTxO target seqNumber = Wallet.mkUTxOList networkId fundKey (InFlight target seqNumber)
 
     fundToStore = mkWalletFundStore walletRefDst
 
@@ -409,8 +409,8 @@ runPlutusBenchmark sourceWallet submitMode scriptFile scriptBudget scriptData sc
 
     fundToStore = mkWalletFundStore walletRefDst
 
-    toUTxO :: FundSet.Target -> FundSet.SeqNumber -> ToUTxO era
-    toUTxO target seqNumber = Wallet.mkUTxO networkId fundKey (InFlight target seqNumber)
+    toUTxO :: FundSet.Target -> FundSet.SeqNumber -> ToUTxOList era
+    toUTxO target seqNumber = Wallet.mkUTxOList networkId fundKey (InFlight target seqNumber)
 
     walletScript :: FundSet.Target -> WalletScript era
     walletScript = benchmarkWalletScript walletRefSrc txGenerator (NumberOfTxs $ auxTxCount extraArgs) (const fundSource) inToOut toUTxO fundToStore
@@ -478,7 +478,7 @@ createChangeInEra :: forall era. IsShelleyBasedEra era
   -> Int
   -> AsType era
   -> ActionM ()
-createChangeInEra sourceWallet dstWallet submitMode payMode value count era = do
+createChangeInEra sourceWallet dstWallet submitMode payMode value count _era = do
   networkId <- getUser TNetworkId
   walletRef <- getName dstWallet
   fee <- getUser TFee
@@ -486,15 +486,15 @@ createChangeInEra sourceWallet dstWallet submitMode payMode value count era = do
   (toUTxO, addressMsg) <- case payMode of
     PayToAddr keyName -> do
       fundKey <- getName keyName
-      return ( Wallet.mkUTxOVariant PlainOldFund networkId fundKey Confirmed
+      return ( Wallet.mkUTxOVariantList PlainOldFund networkId fundKey Confirmed
              , Text.unpack $ serialiseAddress $ keyAddress @ era networkId fundKey)
     PayToCollateral keyName -> do
       fundKey <- getName keyName
-      return ( Wallet.mkUTxOVariant CollateralFund networkId fundKey Confirmed
+      return ( Wallet.mkUTxOVariantList CollateralFund networkId fundKey Confirmed
              , Text.unpack $ serialiseAddress $ keyAddress @ era networkId fundKey)
     PayToScript scriptFile scriptData -> do
       script <- liftIO $ PlutusExample.readScript scriptFile --TODO: this should throw a file-not-found-error !
-      return ( PlutusExample.mkUTxOScript networkId (scriptFile, script, scriptData) Confirmed
+      return ( PlutusExample.mkUTxOScriptList networkId (scriptFile, script, scriptData) Confirmed
                , Text.unpack $ serialiseAddress $ makeShelleyAddress networkId (PaymentCredentialByScript $ hashScript script) NoStakeAddress )
   let
     createCoins :: FundSet.FundSource -> [Lovelace] -> ActionM (Either String (TxInMode CardanoMode))

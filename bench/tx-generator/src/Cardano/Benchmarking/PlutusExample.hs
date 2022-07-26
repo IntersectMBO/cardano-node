@@ -22,15 +22,24 @@ import           Cardano.Benchmarking.Wallet
 import qualified Plutus.V1.Ledger.Api as Plutus
 import           Plutus.V1.Ledger.Contexts (ScriptContext(..), ScriptPurpose(..), TxInfo(..), TxOutRef(..))
 
+mkUTxOScriptList :: forall era.
+     IsShelleyBasedEra era
+  => NetworkId
+  -> (FilePath, Script PlutusScriptV1, ScriptData)
+  -> Validity
+  -> ToUTxOList era
+mkUTxOScriptList networkId (scriptFile, script, txOutDatum) validity
+  = mapToUTxO $ repeat $ mkUTxOScript networkId (scriptFile, script, txOutDatum) validity
+
 mkUTxOScript :: forall era.
-     (IsCardanoEra era, IsShelleyBasedEra era)
+     IsShelleyBasedEra era
   => NetworkId
   -> (FilePath, Script PlutusScriptV1, ScriptData)
   -> Validity
   -> ToUTxO era
-mkUTxOScript networkId (scriptFile, script, txOutDatum) validity values
-  = ( map mkTxOut values
-    , newFunds
+mkUTxOScript networkId (scriptFile, script, txOutDatum) validity value
+  = ( mkTxOut value
+    , mkNewFund value
     )
  where
   plutusScriptAddr = makeShelleyAddressInEra
@@ -46,10 +55,8 @@ mkUTxOScript networkId (scriptFile, script, txOutDatum) validity values
                   (TxOutDatumHash tag $ hashScriptData txOutDatum)
                   ReferenceScriptNone   
 
-  newFunds txId = zipWith (mkNewFund txId) [TxIx 0 ..] values
-
-  mkNewFund :: TxId -> TxIx -> Lovelace -> Fund
-  mkNewFund txId txIx val = Fund $ InAnyCardanoEra (cardanoEra @ era) $ FundInEra {
+  mkNewFund :: Lovelace -> TxIx -> TxId -> Fund
+  mkNewFund val txIx txId = Fund $ InAnyCardanoEra (cardanoEra @ era) $ FundInEra {
       _fundTxIn = TxIn txId txIx
     , _fundVal = lovelaceToTxOutValue val
     , _fundSigningKey = Nothing

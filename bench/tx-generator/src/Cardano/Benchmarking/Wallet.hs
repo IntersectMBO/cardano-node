@@ -18,9 +18,9 @@ import           Cardano.Api.Shelley (ProtocolParameters, ReferenceScript(..))
 type WalletRef = MVar Wallet
 
 type TxGenerator era = [Fund] -> [TxOut CtxTx era] -> Either String (Tx era, TxId)
--- Todo: ToUTxO implicitly assumes that all outputs are of the same type (Plutus. normal, collateral).
--- This is too special
-type ToUTxO era = [Lovelace] -> ([TxOut CtxTx era], TxId -> [Fund])
+type ToUTxOList era = [Lovelace] -> ([TxOut CtxTx era], TxId -> [Fund])
+
+type ToUTxO era = Lovelace -> (TxOut CtxTx era, TxIx -> TxId -> Fund)
 
 data Wallet = Wallet {
     walletSeqNumber :: !SeqNumber
@@ -80,7 +80,7 @@ sourceToStoreTransaction ::
      TxGenerator era
   -> FundSource
   -> ([Lovelace] -> [Lovelace])
-  -> ToUTxO era
+  -> ToUTxOList era
   -> FundToStore
   -> IO (Either String (Tx era))
 sourceToStoreTransaction txGenerator fundSource inToOut mkTxOut fundToStore = do
@@ -105,12 +105,30 @@ includeChange fee spend have = case compare changeValue 0 of
   LT -> error "genTX: Bad transaction: insufficient funds"
   where changeValue = sum have - sum spend - fee
 
-mkUTxO :: forall era. IsShelleyBasedEra era
+mkUTxOList :: forall era. IsShelleyBasedEra era
   => NetworkId
   -> SigningKey PaymentKey
   -> Validity
-  -> ToUTxO era
-mkUTxO = mkUTxOVariant PlainOldFund
+  -> ToUTxOList era
+mkUTxOList = mkUTxOVariantList PlainOldFund
+
+mkUTxOVariantList :: forall era. IsShelleyBasedEra era
+  => Variant
+  -> NetworkId
+  -> SigningKey PaymentKey
+  -> Validity
+  -> ToUTxOList era
+mkUTxOVariantList variant networkId key validity
+ = mapToUTxO $ repeat $ mkUTxOVariant variant networkId key validity
+
+mapToUTxO :: [ ToUTxO era ]-> ToUTxOList era
+mapToUTxO fkts values 
+  = (outs, \txId -> map (\f -> f txId) fs)
+  where
+    (outs, fs) =unzip $ map worker $ zip3 fkts values [TxIx 0 ..]
+    worker (toUTxO, value, idx)
+      = let (o, f ) = toUTxO value
+        in  (o, f idx) 
 
 mkUTxOVariant :: forall era. IsShelleyBasedEra era
   => Variant
@@ -118,17 +136,15 @@ mkUTxOVariant :: forall era. IsShelleyBasedEra era
   -> SigningKey PaymentKey
   -> Validity
   -> ToUTxO era
-mkUTxOVariant variant networkId key validity values
-  = ( map mkTxOut values
-    , newFunds
+mkUTxOVariant variant networkId key validity value
+  = ( mkTxOut value
+    , mkNewFund value
     )
  where
   mkTxOut v = TxOut (keyAddress @ era networkId key) (lovelaceToTxOutValue v) TxOutDatumNone ReferenceScriptNone
 
-  newFunds txId = zipWith (mkNewFund txId) [TxIx 0 ..] values
-
-  mkNewFund :: TxId -> TxIx -> Lovelace -> Fund
-  mkNewFund txId txIx val = Fund $ InAnyCardanoEra (cardanoEra @ era) $ FundInEra {
+  mkNewFund :: Lovelace -> TxIx -> TxId -> Fund
+  mkNewFund val txIx txId = Fund $ InAnyCardanoEra (cardanoEra @ era) $ FundInEra {
       _fundTxIn = TxIn txId txIx
     , _fundVal = lovelaceToTxOutValue val
     , _fundSigningKey = Just key
@@ -196,7 +212,7 @@ benchmarkWalletScript :: forall era .
   -> NumberOfTxs
   -> (Target -> FundSource)
   -> ([Lovelace] -> [Lovelace])
-  -> (Target -> SeqNumber -> ToUTxO era)
+  -> (Target -> SeqNumber -> ToUTxOList era)
   -> FundToStore
   -> Target
   -> WalletScript era
