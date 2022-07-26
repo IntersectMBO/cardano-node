@@ -1,6 +1,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 
@@ -47,15 +48,15 @@ module Cardano.Api.Eras
 
 import           Prelude
 
+import           Cardano.Api.HasTypeProxy
+
+import           Control.DeepSeq
 import           Data.Aeson (FromJSON (..), ToJSON, toJSON, withText)
 import qualified Data.Text as Text
 import           Data.Type.Equality (TestEquality (..), (:~:) (Refl))
 
 import           Ouroboros.Consensus.Shelley.Eras as Consensus (StandardAllegra, StandardAlonzo,
                    StandardBabbage, StandardMary, StandardShelley)
-
-import           Cardano.Api.HasTypeProxy
-import           Control.DeepSeq (NFData(..))
 
 
 -- | A type used as a tag to distinguish the Byron era.
@@ -318,6 +319,7 @@ instance NFData (ShelleyBasedEra era) where
 deriving instance Eq   (ShelleyBasedEra era)
 deriving instance Ord  (ShelleyBasedEra era)
 deriving instance Show (ShelleyBasedEra era)
+
 
 -- | The class of eras that are based on Shelley. This allows uniform handling
 -- of Shelley-based eras, but also non-uniform by making case distinctions on

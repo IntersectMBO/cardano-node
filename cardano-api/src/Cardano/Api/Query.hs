@@ -65,6 +65,7 @@ module Cardano.Api.Query (
 
   ) where
 
+import           Control.Monad (forM)
 import           Data.Aeson (FromJSON (..), ToJSON (..), object, withObject, (.=))
 import qualified Data.Aeson as Aeson
 import           Data.Aeson.Types (Parser)
@@ -115,6 +116,7 @@ import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
 import           Cardano.Api.Address
 import           Cardano.Api.Block
 import           Cardano.Api.Certificate
+import           Cardano.Api.EraCast
 import           Cardano.Api.Eras
 import           Cardano.Api.GenesisParameters
 import           Cardano.Api.KeysShelley
@@ -124,9 +126,9 @@ import           Cardano.Api.Orphans ()
 import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.TxBody
 import           Cardano.Api.Value
+import           Data.Word (Word64)
 
 import qualified Data.Aeson.KeyMap as KeyMap
-import           Data.Word (Word64)
 
 -- ----------------------------------------------------------------------------
 -- Queries
@@ -274,6 +276,9 @@ newtype ByronUpdateState = ByronUpdateState Byron.Update.State
 
 newtype UTxO era = UTxO { unUTxO :: Map TxIn (TxOut CtxUTxO era) }
   deriving (Eq, Show)
+
+instance EraCast UTxO where
+  eraCast toEra' (UTxO m) = UTxO <$> forM m (eraCast toEra')
 
 data UTxOInAnyEra where
   UTxOInAnyEra :: CardanoEra era

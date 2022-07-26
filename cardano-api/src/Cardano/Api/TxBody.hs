@@ -15,6 +15,9 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE ViewPatterns #-}
 
+{- HLINT ignore "Avoid lambda using `infix`" -}
+{- HLINT ignore "Redundant flip" -}
+{- HLINT ignore "Use section" -}
 
 -- | Transaction bodies
 --
@@ -181,8 +184,8 @@ import           Data.Type.Equality (TestEquality (..), (:~:) (Refl))
 import           Data.Word (Word16, Word32, Word64)
 import           GHC.Generics
 import           GHC.Records (HasField (..))
-import           Text.Parsec ((<?>))
 import qualified Text.Parsec as Parsec
+import           Text.Parsec ((<?>))
 import qualified Text.Parsec.String as Parsec
 
 import           Cardano.Binary (Annotated (..), reAnnotate, recoverBytes)
@@ -239,10 +242,11 @@ import           Ouroboros.Consensus.Shelley.Eras (StandardAllegra, StandardAlon
 
 import           Cardano.Api.Address
 import           Cardano.Api.Certificate
+import           Cardano.Api.EraCast
 import           Cardano.Api.Eras
 import           Cardano.Api.Error
-import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Hash
+import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.KeysByron
 import           Cardano.Api.KeysShelley
 import           Cardano.Api.NetworkId
@@ -258,10 +262,6 @@ import           Cardano.Api.TxMetadata
 import           Cardano.Api.Utils
 import           Cardano.Api.Value
 import           Cardano.Api.ValueParser
-
-
-{- HLINT ignore "Redundant flip" -}
-{- HLINT ignore "Use section" -}
 
 -- | Indicates whether a script is expected to fail or pass validation.
 data ScriptValidity
@@ -355,6 +355,14 @@ data TxOut ctx era = TxOut (AddressInEra    era)
 
 deriving instance Eq   (TxOut ctx era)
 deriving instance Show (TxOut ctx era)
+
+instance EraCast (TxOut ctx) where
+  eraCast toEra (TxOut addressInEra txOutValue txOutDatum referenceScript) =
+    TxOut
+      <$> eraCast toEra addressInEra
+      <*> eraCast toEra txOutValue
+      <*> eraCast toEra txOutDatum
+      <*> eraCast toEra referenceScript
 
 data TxOutInAnyEra where
      TxOutInAnyEra :: CardanoEra era
@@ -1188,6 +1196,18 @@ data TxOutValue era where
 
      TxOutValue   :: MultiAssetSupportedInEra era -> Value -> TxOutValue era
 
+instance EraCast TxOutValue where
+  eraCast toEra v = case v of
+    TxOutAdaOnly _previousEra lovelace ->
+      case multiAssetSupportedInEra toEra of
+        Left adaOnly -> Right $ TxOutAdaOnly adaOnly lovelace
+        Right multiAssetSupp -> Right $ TxOutValue multiAssetSupp $ lovelaceToValue lovelace
+    TxOutValue  (_ :: MultiAssetSupportedInEra fromEra) value  ->
+      case multiAssetSupportedInEra toEra of
+        Left _adaOnly -> Left $ EraCastError v (cardanoEra @fromEra) toEra
+        Right multiAssetSupp -> Right $ TxOutValue multiAssetSupp value
+
+
 deriving instance Eq   (TxOutValue era)
 deriving instance Show (TxOutValue era)
 deriving instance Generic (TxOutValue era)
@@ -1333,6 +1353,24 @@ data TxOutDatum ctx era where
 deriving instance Eq   (TxOutDatum ctx era)
 deriving instance Show (TxOutDatum ctx era)
 
+instance EraCast (TxOutDatum ctx)  where
+  eraCast toEra v = case v of
+    TxOutDatumNone -> pure TxOutDatumNone
+    TxOutDatumHash (_ :: ScriptDataSupportedInEra fromEra) hash ->
+      case scriptDataSupportedInEra toEra of
+        Nothing -> Left $ EraCastError v (cardanoEra @fromEra) toEra
+        Just sDatumsSupported ->
+          Right $ TxOutDatumHash sDatumsSupported hash
+    TxOutDatumInTx' (_ :: ScriptDataSupportedInEra fromEra) scriptData hash ->
+      case scriptDataSupportedInEra toEra of
+        Nothing -> Left $ EraCastError v (cardanoEra @fromEra) toEra
+        Just sDatumsSupported ->
+          Right $ TxOutDatumInTx' sDatumsSupported scriptData hash
+    TxOutDatumInline (_ :: ReferenceTxInsScriptsInlineDatumsSupportedInEra fromEra) scriptData ->
+      case refInsScriptsAndInlineDatsSupportedInEra toEra of
+        Nothing -> Left $ EraCastError v (cardanoEra @fromEra) toEra
+        Just refInsAndInlineSupported ->
+          Right $ TxOutDatumInline refInsAndInlineSupported scriptData
 
 pattern TxOutDatumInTx
   :: ScriptDataSupportedInEra era

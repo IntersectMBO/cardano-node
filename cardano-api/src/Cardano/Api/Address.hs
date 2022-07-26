@@ -6,6 +6,8 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 
+{- HLINT ignore "Avoid lambda using `infix`" -}
+
 -- | Cardano addresses: payment and stake addresses.
 --
 module Cardano.Api.Address (
@@ -95,9 +97,10 @@ import qualified Cardano.Ledger.Credential as Shelley
 import           Cardano.Ledger.Crypto (StandardCrypto)
 import qualified Plutus.V1.Ledger.Api as Plutus
 
+import           Cardano.Api.EraCast
 import           Cardano.Api.Eras
-import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Hash
+import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Key
 import           Cardano.Api.KeysByron
 import           Cardano.Api.KeysShelley
@@ -353,6 +356,11 @@ instance IsShelleyBasedEra era => FromJSON (AddressInEra era) where
     addressAny <- runParsecParser parseAddressAny txt
     pure $ anyAddressInShelleyBasedEra addressAny
 
+instance EraCast AddressInEra where
+  eraCast toEra' (AddressInEra addressTypeInEra address) = AddressInEra
+    <$> eraCast toEra' addressTypeInEra
+    <*> pure address
+
 parseAddressAny :: Parsec.Parser AddressAny
 parseAddressAny = do
     str <- lexPlausibleAddressString
@@ -425,6 +433,13 @@ instance IsCardanoEra era => SerialiseAddress (AddressInEra era) where
     deserialiseAddress _ t =
       anyAddressInEra cardanoEra =<< deserialiseAddress AsAddressAny t
 
+instance EraCast (AddressTypeInEra addrtype) where
+  eraCast toEra' v = case v of
+    ByronAddressInAnyEra -> pure ByronAddressInAnyEra
+    ShelleyAddressInEra previousEra ->
+      case cardanoEraStyle toEra' of
+        LegacyByronEra -> Left $ EraCastError v (shelleyBasedToCardanoEra previousEra) toEra'
+        ShelleyBasedEra newSbe -> Right $ ShelleyAddressInEra newSbe
 
 byronAddressInEra :: Address ByronAddr -> AddressInEra era
 byronAddressInEra = AddressInEra ByronAddressInAnyEra
