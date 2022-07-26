@@ -7,26 +7,26 @@ module Cardano.Tracer.Handlers.RTView.UI.HTML.Node.Errors
 
 import           Control.Monad (when)
 import           Control.Monad.Extra (unlessM)
-import           Data.Maybe (fromMaybe)
 import           Data.Text (unpack)
 import qualified Graphics.UI.Threepenny as UI
 import           Graphics.UI.Threepenny.Core
 
-import           Cardano.Tracer.Handlers.RTView.State.Displayed
+import           Cardano.Tracer.Environment
 import           Cardano.Tracer.Handlers.RTView.State.Errors
 import           Cardano.Tracer.Handlers.RTView.UI.Img.Icons
 import           Cardano.Tracer.Handlers.RTView.UI.Utils
 import           Cardano.Tracer.Handlers.RTView.Update.Errors
 import           Cardano.Tracer.Types
+import           Cardano.Tracer.Utils
 
 mkErrorsTable
-  :: UI.Window
+  :: TracerEnv
   -> NodeId
   -> Errors
   -> UI.Timer
-  -> DisplayedElements
   -> UI Element
-mkErrorsTable window nodeId@(NodeId anId) nodesErrors updateErrorsTimer displayedElements = do
+mkErrorsTable tracerEnv nodeId@(NodeId anId) nodesErrors updateErrorsTimer = do
+  window <- askWindow
   let id' = unpack anId
   closeIt <- UI.button #. "delete"
   deleteAll <- image "has-tooltip-multiline has-tooltip-left rt-view-delete-errors-icon" trashSVG
@@ -70,9 +70,8 @@ mkErrorsTable window nodeId@(NodeId anId) nodesErrors updateErrorsTimer displaye
 
   exportToJSON <- image "has-tooltip-multiline has-tooltip-left rt-view-export-icon" exportSVG
                         # set dataTooltip "Click to export errors to JSON-file"
-  on UI.click exportToJSON . const $ do
-    nName <- liftIO $ getDisplayedValue displayedElements nodeId (anId <> "__node-name")
-    exportErrorsToJSONFile nodesErrors nodeId $ fromMaybe anId nName
+  on UI.click exportToJSON . const $
+    liftIO (askNodeName tracerEnv nodeId) >>= exportErrorsToJSONFile nodesErrors nodeId
 
   errorsTable <-
     UI.div #. "modal" #+

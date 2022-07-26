@@ -81,5 +81,5 @@ runRTView tracerEnv =
     , UI.jsSSLCert = Just cert
     , UI.jsSSLKey  = Just key
     , UI.jsLog     = const $ return () -- To hide 'threepenny-gui' internal messages.
-    -- , UI.jsWindowReloadOnDisconnect = False
+    , UI.jsWindowReloadOnDisconnect = False
     }

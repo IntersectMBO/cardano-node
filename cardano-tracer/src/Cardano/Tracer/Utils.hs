@@ -12,14 +12,20 @@
 
 module Cardano.Tracer.Utils
   ( applyBrake
+  , askNodeId
+  , askNodeName
+  , askNodeNameRaw
   , beforeProgramStops
   , connIdToNodeId
   , initAcceptedMetrics
   , initConnectedNodes
+  , initConnectedNodesNames
   , initDataPointRequestors
   , initProtocolsBrake
   , lift2M
   , lift3M
+  , forMM
+  , forMM_
   , nl
   , runInLoop
   , showProblemIfAny
@@ -27,14 +33,17 @@ module Cardano.Tracer.Utils
   ) where
 
 import           Control.Applicative (liftA2, liftA3)
-import           Control.Concurrent
+import           Control.Concurrent (killThread, mkWeakThreadId, myThreadId)
+import           Control.Concurrent.Extra (Lock)
 import           Control.Concurrent.STM (atomically)
-import           Control.Concurrent.STM.TVar (modifyTVar', newTVarIO)
+import           Control.Concurrent.STM.TVar (modifyTVar', newTVarIO, readTVarIO)
 import           Control.Exception (SomeException, SomeAsyncException (..), finally,
                    fromException, try, tryJust)
 import           Control.Monad (forM_)
 import           Control.Monad.Extra (whenJustM)
 import           "contra-tracer" Control.Tracer (showTracing, stdoutTracer, traceWith)
+import           Data.Bimap ((!>))
+import qualified Data.Bimap as BM
 import           Data.List.Extra (dropPrefix, dropSuffix, replace)
 import qualified Data.Map.Strict as M
 import qualified Data.Set as S
@@ -45,11 +54,14 @@ import           System.Mem.Weak (deRefWeak)
 import qualified System.Signal as S
 import           System.Time.Extra (sleep)
 
+import           Cardano.Node.Startup (NodeInfo (..))
+
 import           Ouroboros.Network.Socket (ConnectionId (..))
 
-import           Cardano.Tracer.Configuration (Verbosity (..))
-import           Cardano.Tracer.Types (AcceptedMetrics, ConnectedNodes,
-                   DataPointRequestors, NodeId (..), ProtocolsBrake)
+import           Cardano.Tracer.Configuration
+import           Cardano.Tracer.Environment
+import           Cardano.Tracer.Handlers.RTView.Update.Utils
+import           Cardano.Tracer.Types
 
 -- | Run monadic action in a loop. If there's an exception,
 --   it will re-run the action again, after pause that grows.
@@ -116,6 +128,9 @@ connIdToNodeId ConnectionId{remoteAddress} = NodeId preparedAddress
 initConnectedNodes :: IO ConnectedNodes
 initConnectedNodes = newTVarIO S.empty
 
+initConnectedNodesNames :: IO ConnectedNodesNames
+initConnectedNodesNames = newTVarIO BM.empty
+
 initAcceptedMetrics :: IO AcceptedMetrics
 initAcceptedMetrics = newTVarIO M.empty
 
@@ -124,6 +139,43 @@ initDataPointRequestors = newTVarIO M.empty
 
 initProtocolsBrake :: IO ProtocolsBrake
 initProtocolsBrake = newTVarIO False
+
+askNodeName
+  :: TracerEnv
+  -> NodeId
+  -> IO NodeName
+askNodeName TracerEnv{teConnectedNodesNames, teDPRequestors, teCurrentDPLock} =
+  askNodeNameRaw teConnectedNodesNames teDPRequestors teCurrentDPLock
+
+askNodeNameRaw
+  :: ConnectedNodesNames
+  -> DataPointRequestors
+  -> Lock
+  -> NodeId
+  -> IO NodeName
+askNodeNameRaw connectedNodesNames dpRequestors currentDPLock nodeId@(NodeId anId) = do
+  nodesNames <- readTVarIO connectedNodesNames
+  case BM.lookup nodeId nodesNames of
+    Just nodeName -> return nodeName
+    Nothing -> do
+      -- There is no name yet, so we have to ask for 'NodeInfo' datapoint to get the name.
+      nodeName <-
+        askDataPoint dpRequestors currentDPLock nodeId "NodeInfo" >>= \case
+          Nothing -> return anId
+          Just NodeInfo{niName} -> return $ if T.null niName then anId else niName
+      -- Store it in for the future using.
+      atomically . modifyTVar' connectedNodesNames $ BM.insert nodeId nodeName
+      return nodeName
+
+askNodeId
+  :: TracerEnv
+  -> NodeName
+  -> IO (Maybe NodeId)
+askNodeId TracerEnv{teConnectedNodesNames} nodeName = do
+  nodesNames <- readTVarIO teConnectedNodesNames
+  return $ if nodeName `BM.memberR` nodesNames
+             then Just $ nodesNames !> nodeName
+             else Nothing
 
 -- | Stop the protocols. As a result, 'MsgDone' will be sent and interaction
 --   between acceptor's part and forwarder's part will be finished.
@@ -137,6 +189,12 @@ lift2M f x y = liftA2 (,) x y >>= uncurry f
 -- | Like 'liftM3', but for monadic function.
 lift3M :: Monad m => (a -> b -> c -> m d) -> m a -> m b -> m c -> m d
 lift3M f x y z = liftA3 (,,) x y z >>= uncurry3 f
+
+forMM :: (Traversable t, Monad m) => m (t a) -> (a -> m b) -> m (t b)
+forMM mVals f = mVals >>= mapM f
+
+forMM_ :: (Foldable t, Monad m) => m (t a) -> (a -> m ()) -> m ()
+forMM_ mVals f = mVals >>= mapM_ f
 
 nl :: T.Text
 #ifdef UNIX

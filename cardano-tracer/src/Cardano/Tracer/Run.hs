@@ -8,6 +8,7 @@ module Cardano.Tracer.Run
 
 import           Control.Concurrent.Async.Extra (sequenceConcurrently)
 import           Control.Concurrent.Extra (newLock)
+import           Control.Concurrent.STM.TVar (newTVarIO)
 import           Control.Monad (void)
 
 import           Cardano.Tracer.Acceptors.Run
@@ -37,7 +38,8 @@ doRunCardanoTracer
   -> DataPointRequestors -- ^ The DataPointRequestors to ask 'DataPoint's.
   -> IO ()
 doRunCardanoTracer config protocolsBrake dpRequestors = do
-  connectedNodes  <- initConnectedNodes
+  connectedNodes      <- initConnectedNodes
+  connectedNodesNames <- initConnectedNodesNames
   acceptedMetrics <- initAcceptedMetrics
   savedTO         <- initSavedTraceObjects
 
@@ -47,28 +49,33 @@ doRunCardanoTracer config protocolsBrake dpRequestors = do
 
   currentLogLock <- newLock
   currentDPLock  <- newLock
-  eventsQueues   <- initEventsQueues dpRequestors currentDPLock
+  eventsQueues   <- initEventsQueues connectedNodesNames dpRequestors currentDPLock
+
+  rtViewPageOpened <- newTVarIO False
 
   -- Environment for all following functions.
   let tracerEnv =
         TracerEnv
-          { teConfig            = config
-          , teConnectedNodes    = connectedNodes
-          , teAcceptedMetrics   = acceptedMetrics
-          , teSavedTO           = savedTO
-          , teBlockchainHistory = chainHistory
-          , teResourcesHistory  = resourcesHistory
-          , teTxHistory         = txHistory
-          , teCurrentLogLock    = currentLogLock
-          , teCurrentDPLock     = currentDPLock
-          , teEventsQueues      = eventsQueues
-          , teDPRequestors      = dpRequestors
-          , teProtocolsBrake    = protocolsBrake
+          { teConfig              = config
+          , teConnectedNodes      = connectedNodes
+          , teConnectedNodesNames = connectedNodesNames
+          , teAcceptedMetrics     = acceptedMetrics
+          , teSavedTO             = savedTO
+          , teBlockchainHistory   = chainHistory
+          , teResourcesHistory    = resourcesHistory
+          , teTxHistory           = txHistory
+          , teCurrentLogLock      = currentLogLock
+          , teCurrentDPLock       = currentDPLock
+          , teEventsQueues        = eventsQueues
+          , teDPRequestors        = dpRequestors
+          , teProtocolsBrake      = protocolsBrake
+          , teRTViewPageOpened    = rtViewPageOpened
           }
 
   -- Specify what should be done before 'cardano-tracer' stops.
-  beforeProgramStops $
+  beforeProgramStops $ do
     backupAllHistory tracerEnv
+    applyBrake (teProtocolsBrake tracerEnv)
 
   void . sequenceConcurrently $
     [ runLogsRotator    tracerEnv

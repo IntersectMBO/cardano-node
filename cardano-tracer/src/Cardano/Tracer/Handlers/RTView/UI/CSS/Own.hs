@@ -117,7 +117,7 @@ span[data-tooltip] {
 }
 
 .rt-view-ekg-metrics-modal {
-  width: 50%;
+  width: 60%;
 }
 
 .rt-view-divider {

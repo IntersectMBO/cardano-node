@@ -121,6 +121,7 @@ library
                        , aeson-pretty
                        , async
                        , async-extras
+                       , bimap
                        , blaze-html
                        , blaze-markup
                        , bytestring
@@ -299,6 +300,7 @@ benchmark cardano-tracer-bench
                        , directory
                        , extra
                        , filepath
+                       , stm
                        , time
                        , trace-dispatcher
 

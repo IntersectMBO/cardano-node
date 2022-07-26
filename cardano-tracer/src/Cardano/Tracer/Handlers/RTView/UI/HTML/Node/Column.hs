@@ -15,7 +15,7 @@ import           Graphics.UI.Threepenny.Core
 import           System.FilePath ((</>))
 
 import           Cardano.Tracer.Configuration
-import           Cardano.Tracer.Handlers.RTView.State.Displayed
+import           Cardano.Tracer.Environment
 import           Cardano.Tracer.Handlers.RTView.State.Errors
 import           Cardano.Tracer.Handlers.RTView.UI.HTML.Node.EKG
 import           Cardano.Tracer.Handlers.RTView.UI.HTML.Node.Errors
@@ -24,20 +24,21 @@ import           Cardano.Tracer.Handlers.RTView.UI.Img.Icons
 import           Cardano.Tracer.Handlers.RTView.UI.JS.Utils
 import           Cardano.Tracer.Handlers.RTView.UI.Utils
 import           Cardano.Tracer.Types
+import           Cardano.Tracer.Utils
 
 -- | For every connected node the new column should be added.
 addNodeColumn
-  :: UI.Window
+  :: TracerEnv
   -> NonEmpty LoggingParams
   -> Errors
   -> UI.Timer
-  -> DisplayedElements
   -> NodeId
   -> UI ()
-addNodeColumn window loggingConfig nodesErrors updateErrorsTimer
-              displayedElements nodeId@(NodeId anId) = do
+addNodeColumn tracerEnv loggingConfig nodesErrors updateErrorsTimer nodeId@(NodeId anId) = do
+  nodeName <- liftIO $ askNodeName tracerEnv nodeId
+
   let id' = unpack anId
-  ls <- logsSettings loggingConfig id'
+  ls <- logsSettings loggingConfig nodeName
 
   peersTable <- mkPeersTable id'
   peersDetailsButton <- UI.button ## (id' <> "__node-peers-details-button")
@@ -46,7 +47,7 @@ addNodeColumn window loggingConfig nodesErrors updateErrorsTimer
                                   # set text "Details"
   on UI.click peersDetailsButton . const $ fadeInModal peersTable
 
-  errorsTable <- mkErrorsTable window nodeId nodesErrors updateErrorsTimer displayedElements
+  errorsTable <- mkErrorsTable tracerEnv nodeId nodesErrors updateErrorsTimer
   errorsDetailsButton <- UI.button ## (id' <> "__node-errors-details-button")
                                    #. "button is-danger"
                                    # set UI.enabled False
@@ -110,12 +111,12 @@ addNodeColumn window loggingConfig nodesErrors updateErrorsTimer
   addNodeCell "block-replay" [ UI.span ## (id' <> "__node-block-replay")
                                        # set html "0&nbsp;%"
                              ]
-  addNodeCell "chunk-validation" [ UI.span ## (id' <> "__node-chunk-validation")
-                                           # set text "—"
-                                 ]
-  addNodeCell "update-ledger-db" [ UI.span ## (id' <> "__node-update-ledger-db")
-                                           # set html "0&nbsp;%"
-                                 ]
+  --addNodeCell "chunk-validation" [ UI.span ## (id' <> "__node-chunk-validation")
+  --                                         # set text "—"
+  --                               ]
+  --addNodeCell "update-ledger-db" [ UI.span ## (id' <> "__node-update-ledger-db")
+  --                                         # set html "0&nbsp;%"
+  --                               ]
   addNodeCell "peers" [ UI.div #. "buttons has-addons" #+
                           [ UI.button ## (id' <> "__node-peers-num")
                                       #. "button is-static"
@@ -168,12 +169,14 @@ addNodeColumn window loggingConfig nodesErrors updateErrorsTimer
                             , element ekgMetricsWindow
                             ]
  where
-  addNodeCellH rowId cellContent =
+  addNodeCellH rowId cellContent = do
+    window <- askWindow
     whenJustM (UI.getElementById window ("node-" <> rowId <> "-row")) $ \el ->
       void $ element el #+ [ UI.th #. (unpack anId <> "__column_cell")
                                    #+ cellContent
                            ]
-  addNodeCell rowId cellContent =
+  addNodeCell rowId cellContent = do
+    window <- askWindow
     whenJustM (UI.getElementById window ("node-" <> rowId <> "-row")) $ \el ->
       void $ element el #+ [ UI.td #. (unpack anId <> "__column_cell")
                                    #+ cellContent
@@ -182,13 +185,13 @@ addNodeColumn window loggingConfig nodesErrors updateErrorsTimer
 -- | The new node is already connected, so we can display its logging settings.
 logsSettings
   :: NonEmpty LoggingParams
-  -> String
+  -> NodeName
   -> UI [UI Element]
-logsSettings loggingConfig anId =
+logsSettings loggingConfig nodeName =
   forM (NE.toList loggingConfig) $ \(LoggingParams root mode format) ->
     case mode of
       FileMode -> do
-        let pathToSubdir = root </> anId
+        let pathToSubdir = root </> unpack nodeName
 
         copyPath <- UI.button #. "button is-info"
                                #+ [image "rt-view-copy-icon-on-button" copySVG]
@@ -215,7 +218,7 @@ logsSettings loggingConfig anId =
         copyId <- UI.button #. "button is-info"
                                #+ [image "rt-view-copy-icon" copySVG]
         on UI.click copyId . const $
-          copyTextToClipboard anId
+          copyTextToClipboard (unpack nodeName)
 
         return $
           UI.div #. "field has-addons" #+
@@ -227,7 +230,7 @@ logsSettings loggingConfig anId =
                 [ UI.input #. "input rt-view-logs-input"
                            # set UI.type_ "text"
                            # set (UI.attr "readonly") "readonly"
-                           # set UI.value anId
+                           # set UI.value (unpack nodeName)
                 ]
             , UI.p #. "control" #+
                 [ element copyId

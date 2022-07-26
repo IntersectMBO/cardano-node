@@ -6,6 +6,7 @@ module Cardano.Tracer.Handlers.RTView.State.Historical
   ( BlockchainHistory (..)
   , DataName (..)
   , History
+  , HistoricalData
   , HistoricalPoint
   , HistoricalPoints
   , POSIXTime

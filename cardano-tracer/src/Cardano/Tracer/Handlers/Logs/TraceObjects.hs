@@ -26,13 +26,15 @@ traceObjectsHandler
   -> [TraceObject]     -- ^ The list of received 'TraceObject's (may be empty).
   -> IO ()
 traceObjectsHandler _ _ [] = return ()
-traceObjectsHandler TracerEnv{teConfig, teCurrentLogLock, teSavedTO} nodeId traceObjects = do
+traceObjectsHandler tracerEnv nodeId traceObjects = do
+  nodeName <- askNodeName tracerEnv nodeId
   forConcurrently_ (NE.nub logging) $ \LoggingParams{logMode, logRoot, logFormat} ->
     showProblemIfAny verbosity $
       case logMode of
-        FileMode    -> writeTraceObjectsToFile nodeId teCurrentLogLock logRoot logFormat traceObjects
-        JournalMode -> writeTraceObjectsToJournal nodeId traceObjects
+        FileMode    -> writeTraceObjectsToFile nodeName teCurrentLogLock logRoot logFormat traceObjects
+        JournalMode -> writeTraceObjectsToJournal nodeName traceObjects
   whenJust hasRTView . const $
     saveTraceObjects teSavedTO nodeId traceObjects
  where
+  TracerEnv{teConfig, teCurrentLogLock, teSavedTO} = tracerEnv
   TracerConfig{logging, verbosity, hasRTView} = teConfig

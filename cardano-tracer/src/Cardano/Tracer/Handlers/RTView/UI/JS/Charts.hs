@@ -7,6 +7,7 @@ module Cardano.Tracer.Handlers.RTView.UI.JS.Charts
   ( prepareChartsJS
   , addDatasetChartJS
   , addAllPointsChartJS
+  , clearPointsChartJS
   , getDatasetsLengthChartJS
   , newTimeChartJS
   , resetZoomChartJS
@@ -69,7 +70,7 @@ var chart = new Chart(ctx, {
       zoom: {
         zoom: {
           drag: {
-            enabled: false
+            enabled: true
           },
           mode: 'x'
         }
@@ -94,7 +95,7 @@ var chart = new Chart(ctx, {
             second: 'HH:mm:ss',
             minute: 'HH:mm',
             hour:   'hh a',
-            day:    'MMM D YYYY'
+            day:    'D'
           },
           unit: 'minute'
         },
@@ -129,15 +130,14 @@ addDatasetChartJS chartId nodeName (Color color) =
 
 addDatasetChartJS' :: String
 addDatasetChartJS' = [s|
-const newDataset = {
+var chart = window.charts.get(%1);
+chart.data.datasets.push({
   label: %2,
   backgroundColor: %3,
   borderColor: %3,
   data: [],
   fill: false
-};
-var chart = window.charts.get(%1);
-chart.data.datasets.push(newDataset);
+});
 chart.update();
 |]
 
@@ -146,10 +146,26 @@ getDatasetsLengthChartJS chartId = do
   (l :: Int) <- UI.callFunction $ UI.ffi "window.charts.get(%1).data.datasets.length;" (show chartId)
   return $ fromIntegral l
 
+clearPointsChartJS
+  :: ChartId
+  -> [Index]
+  -> UI ()
+clearPointsChartJS _ [] = return ()
+clearPointsChartJS chartId ixs =
+  UI.runFunction $ UI.ffi clearAllDatasets
+ where
+  clearAllDatasets =
+       "var chart = window.charts.get('" <> show chartId <> "');"
+    <> concatMap clearDataset ixs
+    <> "chart.update();"
+
+  clearDataset (Index ix) = "chart.data.datasets[" <> show ix <> "].data = [];"
+
 addAllPointsChartJS
   :: ChartId
   -> [(Index, [HistoricalPoint])]
   -> UI ()
+addAllPointsChartJS _ [] = return ()
 addAllPointsChartJS chartId datasetIxsWithPoints =
   UI.runFunction $ UI.ffi pushToAllDatasets
  where
@@ -158,6 +174,7 @@ addAllPointsChartJS chartId datasetIxsWithPoints =
     <> concatMap pushToDataset datasetIxsWithPoints
     <> "chart.update();"
 
+  pushToDataset (_, []) = ""
   pushToDataset (Index ix, points) =
     "chart.data.datasets[" <> show ix <> "].data.push(" <> prepareArrayToPush points <> ");"
 
@@ -204,7 +221,7 @@ setTimeRange chartId rangeInSec = do
       !maxInMs   = utc2s now * 1000
       !minInMs   = maxInMs - fromIntegral rangeInMs
   -- Set time units depends on selected range.
-  let timeUnit = if | rangeInSec == 0                        -> "hour"
+  let timeUnit = if | rangeInSec == 0                        -> "day"
                     | rangeInSec > 0   && rangeInSec <= 300  -> "second"
                     | rangeInSec > 300 && rangeInSec <= 1800 -> "minute"
                     | otherwise                              -> "hour"

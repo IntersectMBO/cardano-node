@@ -10,6 +10,7 @@ module Cardano.Tracer.Acceptors.Utils
 
 import           Control.Concurrent.STM (atomically)
 import           Control.Concurrent.STM.TVar (TVar, newTVarIO, modifyTVar')
+import qualified Data.Bimap as BM
 import qualified Data.Map.Strict as M
 import qualified Data.Set as S
 import           Data.Time.Clock.System (getSystemTime, systemToUTCTime)
@@ -64,13 +65,15 @@ removeDisconnectedNode
   :: TracerEnv
   -> ConnectionId LocalAddress
   -> IO ()
-removeDisconnectedNode TracerEnv{teConnectedNodes, teAcceptedMetrics, teDPRequestors} connId =
+removeDisconnectedNode tracerEnv connId =
   -- Remove all the stuff related to disconnected node.
   atomically $ do
-    modifyTVar' teConnectedNodes  $ S.delete nodeId
-    modifyTVar' teAcceptedMetrics $ M.delete nodeId
-    modifyTVar' teDPRequestors    $ M.delete nodeId
+    modifyTVar' teConnectedNodes      $ S.delete  nodeId
+    modifyTVar' teConnectedNodesNames $ BM.delete nodeId
+    modifyTVar' teAcceptedMetrics     $ M.delete  nodeId
+    modifyTVar' teDPRequestors        $ M.delete  nodeId
  where
+  TracerEnv{teConnectedNodes, teConnectedNodesNames, teAcceptedMetrics, teDPRequestors} = tracerEnv
   nodeId = connIdToNodeId connId
 
 notifyAboutNodeDisconnected

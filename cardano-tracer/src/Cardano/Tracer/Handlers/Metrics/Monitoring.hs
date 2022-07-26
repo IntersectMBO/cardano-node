@@ -1,4 +1,5 @@
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -22,9 +23,10 @@ import           Graphics.UI.Threepenny.Core (UI, Element, liftIO, set, (#), (#+
 import           System.Remote.Monitoring (forkServerWith, serverThreadId)
 import           System.Time.Extra (sleep)
 
-import           Cardano.Tracer.Configuration (Endpoint (..))
-import           Cardano.Tracer.Handlers.RTView.SSL.Certs (placeDefaultSSLFiles)
-import           Cardano.Tracer.Types (AcceptedMetrics, ConnectedNodes, NodeId (..))
+import           Cardano.Tracer.Configuration
+import           Cardano.Tracer.Environment
+import           Cardano.Tracer.Handlers.RTView.SSL.Certs
+import           Cardano.Tracer.Types
 
 -- | 'ekg' package allows to run only one EKG server, to display only one web page
 --   for particular EKG.Store. Since 'cardano-tracer' can be connected to any number
@@ -37,17 +39,16 @@ import           Cardano.Tracer.Types (AcceptedMetrics, ConnectedNodes, NodeId (
 --   the EKG server will be restarted and the monitoring page will display the metrics
 --   received from that node.
 runMonitoringServer
-  :: (Endpoint, Endpoint) -- ^ (web page with list of connected nodes, EKG web page).
-  -> ConnectedNodes
-  -> AcceptedMetrics
+  :: TracerEnv
+  -> (Endpoint, Endpoint) -- ^ (web page with list of connected nodes, EKG web page).
   -> IO ()
-runMonitoringServer (Endpoint listHost listPort, monitorEP) connectedNodes acceptedMetrics = do
+runMonitoringServer tracerEnv (Endpoint listHost listPort, monitorEP) = do
   -- Pause to prevent collision between "Listening"-notifications from servers.
   sleep 0.2
   (certFile, keyFile) <- placeDefaultSSLFiles
   UI.startGUI (config certFile keyFile) $ \window -> do
     void $ return window # set UI.title "EKG Monitoring Nodes"
-    void $ mkPageBody window connectedNodes monitorEP acceptedMetrics
+    void $ mkPageBody window tracerEnv monitorEP
  where
   config cert key = UI.defaultConfig
     { UI.jsSSLBind = Just . encodeUtf8 . T.pack $ listHost
@@ -64,12 +65,11 @@ type CurrentEKGServer = TMVar (NodeId, ThreadId)
 --   corresponding to currently connected nodes.
 mkPageBody
   :: UI.Window
-  -> ConnectedNodes
+  -> TracerEnv
   -> Endpoint
-  -> AcceptedMetrics
   -> UI Element
-mkPageBody window connectedNodes mEP@(Endpoint monitorHost monitorPort) acceptedMetrics = do
-  nodes <- liftIO $ S.toList <$> readTVarIO connectedNodes
+mkPageBody window tracerEnv mEP@(Endpoint monitorHost monitorPort) = do
+  nodes <- liftIO $ S.toList <$> readTVarIO teConnectedNodes
   nodesHrefs <-
     if null nodes
       then UI.string "There are no connected nodes yet"
@@ -85,23 +85,25 @@ mkPageBody window connectedNodes mEP@(Endpoint monitorHost monitorPort) accepted
                             # set UI.text (T.unpack anId)
                 ]
             void $ UI.on UI.click nodeLink $ const $
-              restartEKGServer nodeId acceptedMetrics mEP currentServer
+              restartEKGServer tracerEnv nodeId mEP currentServer
             return $ UI.element nodeLink
         UI.ul #+ nodesLinks
   UI.getBody window #+ [ UI.element nodesHrefs ]
+ where
+  TracerEnv{teConnectedNodes} = tracerEnv
 
 -- | After clicking on the node's href, the user will be redirected to the monitoring page
 --   which is rendered by 'ekg' package. But before, we have to check if EKG server is
 --   already launched, and if so, restart the server if needed.
 restartEKGServer
-  :: NodeId
-  -> AcceptedMetrics
+  :: TracerEnv
+  -> NodeId
   -> Endpoint
   -> CurrentEKGServer
   -> UI ()
-restartEKGServer newNodeId acceptedMetrics
+restartEKGServer TracerEnv{teAcceptedMetrics} newNodeId
                  (Endpoint monitorHost monitorPort) currentServer = liftIO $ do
-  metrics <- readTVarIO acceptedMetrics
+  metrics <- readTVarIO teAcceptedMetrics
   whenJust (metrics M.!? newNodeId) $ \(storeForSelectedNode, _) ->
     atomically (tryReadTMVar currentServer) >>= \case
       Just (_curNodeId, _sThread) ->

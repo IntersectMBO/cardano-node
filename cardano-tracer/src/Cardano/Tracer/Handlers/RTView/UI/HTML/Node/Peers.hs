@@ -35,7 +35,7 @@ mkPeersTable anId = do
                       [ UI.mkElement "thead" #+
                           [ UI.tr #+
                               [ UI.th #+ [UI.span # set text "Address"]
-                              , UI.th #+ [UI.span # set text "Status"]
+                              , UI.th #+ [UI.mkElement "abbr" # set UI.title__ "Block fetch status" # set text "BF status"]
                               , UI.th #+ [UI.span # set text "Slot no."]
                               , UI.th #+ [UI.mkElement "abbr" # set UI.title__ "Requests in flight" # set text "Req"]
                               , UI.th #+ [UI.mkElement "abbr" # set UI.title__ "Blocks in flight" # set text "Blk"]

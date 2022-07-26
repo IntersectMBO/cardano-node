@@ -7,10 +7,10 @@ module Cardano.Tracer.Handlers.Metrics.Servers
 import           Control.Concurrent.Async.Extra (sequenceConcurrently)
 import           Control.Monad (void)
 
-import           Cardano.Tracer.Configuration (TracerConfig (..))
+import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.Environment
-import           Cardano.Tracer.Handlers.Metrics.Monitoring (runMonitoringServer)
-import           Cardano.Tracer.Handlers.Metrics.Prometheus (runPrometheusServer)
+import           Cardano.Tracer.Handlers.Metrics.Monitoring
+import           Cardano.Tracer.Handlers.Metrics.Prometheus
 
 -- | Runs metrics servers if needed:
 --
@@ -18,12 +18,12 @@ import           Cardano.Tracer.Handlers.Metrics.Prometheus (runPrometheusServer
 --   2. EKG monitoring web-page.
 --
 runMetricsServers :: TracerEnv -> IO ()
-runMetricsServers TracerEnv{teConfig, teConnectedNodes, teAcceptedMetrics} =
+runMetricsServers tracerEnv@TracerEnv{teConfig} =
   case (hasEKG teConfig, hasPrometheus teConfig) of
     (Nothing,  Nothing)   -> return ()
-    (Nothing,  Just prom) -> runPrometheusServer prom teConnectedNodes teAcceptedMetrics
-    (Just ekg, Nothing)   -> runMonitoringServer ekg  teConnectedNodes teAcceptedMetrics
+    (Nothing,  Just prom) -> runPrometheusServer tracerEnv prom
+    (Just ekg, Nothing)   -> runMonitoringServer tracerEnv ekg
     (Just ekg, Just prom) -> void . sequenceConcurrently $
-                               [ runPrometheusServer prom teConnectedNodes teAcceptedMetrics
-                               , runMonitoringServer ekg  teConnectedNodes teAcceptedMetrics
+                               [ runPrometheusServer tracerEnv prom
+                               , runMonitoringServer tracerEnv ekg
                                ]

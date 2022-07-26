@@ -65,10 +65,11 @@ mkMainPage tracerEnv displayedElements nodesEraSettings reloadFlag
 
   colors <- initColors
   datasetIndices <- initDatasetsIndices
-  datasetTimestamps <- initDatasetsTimestamps
   peers <- liftIO initPeers
 
-  pageBody <- mkPageBody tracerEnv networkConfig datasetIndices datasetTimestamps
+  webPageIsOpened tracerEnv
+
+  pageBody <- mkPageBody tracerEnv networkConfig datasetIndices
 
   -- Prepare and run the timer, which will hide the page preloader.
   preloaderTimer <- UI.timer # set UI.interval 10
@@ -149,6 +150,7 @@ mkMainPage tracerEnv displayedElements nodesEraSettings reloadFlag
   UI.start uiNoNodesProgressTimer
 
   on UI.disconnect window . const $ do
+    webPageIsClosed tracerEnv
     UI.stop uiNodesTimer
     UI.stop uiUptimeTimer
     UI.stop uiPeersTimer

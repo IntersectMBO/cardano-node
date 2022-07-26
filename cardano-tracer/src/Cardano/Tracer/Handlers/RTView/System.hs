@@ -2,6 +2,7 @@
 
 module Cardano.Tracer.Handlers.RTView.System
   ( getPathToBackupDir
+  , getPathToChartColorsDir
   , getPathToChartsConfig
   , getPathToThemeConfig
   , getPathsToNotificationsSettings
@@ -70,6 +71,13 @@ getPathToBackupDir = do
   let pathToRTViewBackupDir = dataDir </> rtViewRootDir </> "backup"
   D.createDirectoryIfMissing True pathToRTViewBackupDir
   return pathToRTViewBackupDir
+
+getPathToChartColorsDir :: IO FilePath
+getPathToChartColorsDir = do
+  configDir <- getPathToConfigDir
+  let pathToColorsSubDir = configDir </> "color"
+  D.createDirectoryIfMissing True pathToColorsSubDir
+  return pathToColorsSubDir
 
 rtViewRootDir :: FilePath
 rtViewRootDir = "cardano-rt-view"

@@ -24,10 +24,10 @@ import           System.FilePath ((</>))
 
 import           Cardano.Logging (Namespace, TraceObject (..))
 
-import           Cardano.Tracer.Configuration (LogFormat (..))
-import           Cardano.Tracer.Handlers.Logs.Utils (createEmptyLog, isItLog)
-import           Cardano.Tracer.Types (NodeId (..))
-import           Cardano.Tracer.Utils (nl)
+import           Cardano.Tracer.Configuration
+import           Cardano.Tracer.Handlers.Logs.Utils
+import           Cardano.Tracer.Types
+import           Cardano.Tracer.Utils
 
 -- | Append the list of 'TraceObject's to the latest log via symbolic link.
 --
@@ -36,20 +36,20 @@ import           Cardano.Tracer.Utils (nl)
 -- the symbolic link will be switched to the new log file and writing can
 -- be interrupted. To prevent it, we use 'Lock'.
 writeTraceObjectsToFile
-  :: NodeId
+  :: NodeName
   -> Lock
   -> FilePath
   -> LogFormat
   -> [TraceObject]
   -> IO ()
-writeTraceObjectsToFile nodeId currentLogLock rootDir format traceObjects = do
+writeTraceObjectsToFile nodeName currentLogLock rootDir format traceObjects = do
   rootDirAbs <- makeAbsolute rootDir
   let converter = case format of
                     ForHuman   -> traceObjectToText
                     ForMachine -> traceObjectToJSON
   let itemsToWrite = mapMaybe converter traceObjects
   unless (null itemsToWrite) $ do
-    pathToCurrentLog <- getPathToCurrentlog nodeId rootDirAbs format
+    pathToCurrentLog <- getPathToCurrentlog nodeName rootDirAbs format
     let preparedLine = TE.encodeUtf8 $ T.concat itemsToWrite
     withLock currentLogLock $
       BS.appendFile pathToCurrentLog preparedLine
@@ -66,16 +66,16 @@ writeTraceObjectsToFile nodeId currentLogLock rootDir format traceObjects = do
 --       logs from node N
 --
 getPathToCurrentlog
-  :: NodeId
+  :: NodeName
   -> FilePath
   -> LogFormat
   -> IO FilePath
-getPathToCurrentlog (NodeId anId) rootDirAbs format =
+getPathToCurrentlog nodeName rootDirAbs format =
   ifM (doesDirectoryExist subDirForLogs)
     getPathToCurrentLogIfExists
     prepareLogsStructure
  where
-  subDirForLogs = rootDirAbs </> T.unpack anId
+  subDirForLogs = rootDirAbs </> T.unpack nodeName
 
   getPathToCurrentLogIfExists = do
     logsWeNeed <- filter (isItLog format) <$> listFiles subDirForLogs
