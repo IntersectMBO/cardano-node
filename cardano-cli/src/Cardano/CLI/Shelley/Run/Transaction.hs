@@ -13,6 +13,8 @@ module Cardano.CLI.Shelley.Run.Transaction
   , renderShelleyTxCmdError
   , runTransactionCmd
   , readFileTx
+  , readProtocolParametersSourceSpec
+  , toTxOutInAnyEra
   ) where
 
 import           Cardano.Prelude hiding (All, Any)
