@@ -84,7 +84,7 @@ final: prev: with final; {
   supervisord-workbench-nix =
     { workbench ? pkgs.workbench, ... }@args: pkgs.callPackage ./workbench/supervisor.nix args;
 
-  all-profiles-json = (pkgs.callPackage ./workbench/supervisor.nix {}).all-profiles.JSON;
+  all-profiles-json = (workbench.all-profiles{ inherit (supervisord-workbench-nix) backend; }).JSON;
 
   # An instance of the workbench, specialised to the supervisord backend and a profile,
   # that can be used with nix-shell or lorri.

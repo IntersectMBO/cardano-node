@@ -8,7 +8,7 @@ in
 , workbench
 ##
 , cacheDir              ? cacheDirDefault
-, extraSupervisorConfig ? {}
+, extraBackendConfig    ? {}
 , useCabalRun           ? false
 , enableEKG             ? true
 ##
@@ -24,35 +24,27 @@ let
 
       materialise-profile =
         { profileNix }:
-        pkgs.runCommand "workbench-profile-outputs-${profileNix.name}-supervisord" {}
-          ''
-          mkdir $out
-          cp ${supervisord.mkSupervisorConf profileNix} $out/supervisor.conf
-          '';
+          pkgs.runCommand "workbench-profile-outputs-${profileNix.name}-${name}d" {}
+            ''
+            mkdir $out
+            cp ${mkBackendConf profileNix} $out/supervisor.conf
+            '';
 
       ## Backend-specific Nix bits:
-      supervisord =
-        {
-          ## mkSupervisorConf :: Profile -> SupervisorConf
-          mkSupervisorConf =
-            profile:
-            pkgs.callPackage ./supervisor-conf.nix
-            { inherit (profile) node-services;
-              inherit
-                pkgs lib stateDir
-                basePort
-                extraSupervisorConfig;
-            };
+      ## mkBackendConf :: Profile -> SupervisorConf/DockerConf
+      mkBackendConf =
+        profile:
+        pkgs.callPackage ./supervisor-conf.nix
+        { inherit (profile) node-services;
+          inherit
+            pkgs lib stateDir
+            basePort
+            extraBackendConfig;
         };
     };
-
-  all-profiles =
-    workbench.all-profiles
-      { inherit backend; };
 in
 {
   inherit cacheDir stateDir basePort;
   inherit workbench;
   inherit backend;
-  inherit all-profiles;
 }

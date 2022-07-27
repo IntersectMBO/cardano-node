@@ -104,10 +104,7 @@ let
       profileNix = ps.value."${profileName}"
         or (throw "No such profile: ${profileName};  Known profiles: ${toString (__attrNames ps.value)}");
 
-      profile = materialise-profile
-        { inherit profileNix;
-          backendProfile = backend.materialise-profile { inherit profileNix; };
-        };
+      profile = materialise-profile { inherit profileNix backend; };
 
       topology = profile-topology { inherit profileNix profile; };
 

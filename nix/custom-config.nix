@@ -8,7 +8,7 @@ self: {
     basePort    = 30000;
     enableEKG        = true;
     workbenchDevMode = true;
-    extraSupervisorConfig = {};
+    extraBackendConfig = {};
   };
   membench = {
     snapshotSlot = 37173650;

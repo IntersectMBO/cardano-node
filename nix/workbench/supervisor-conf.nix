@@ -4,7 +4,7 @@
 , basePort
 , node-services
   ## Last-moment overrides:
-, extraSupervisorConfig
+, extraBackendConfig
 }:
 
 with lib;
@@ -56,7 +56,7 @@ let
       };
     }
     //
-    extraSupervisorConfig;
+    extraBackendConfig;
 
   ##
   ## nodeSvcSupervisorProgram :: NodeService -> SupervisorConfSection
