@@ -18,11 +18,9 @@ let
   inherit (supervisord-workbench) workbench backend cacheDir stateDir basePort;
 
   with-supervisord-profile =
-    { envArgsOverride ? {} }:
+    { envArgsOverride ? {} }: ## TODO: envArgsOverride is not used!
     workbench.with-profile
-      { inherit backend profileName;
-        envArgs = supervisord-workbench.env-args-base // envArgsOverride;
-      };
+      { inherit backend profileName; };
 
   inherit
     (with-supervisord-profile {})

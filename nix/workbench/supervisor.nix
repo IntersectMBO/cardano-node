@@ -30,25 +30,14 @@ let
           cp ${supervisord.mkSupervisorConf profileNix} $out/supervisor.conf
           '';
 
-      ## IMPORTANT:  keep in sync with envArgs in 'workbench/default.nix/generateProfiles/environment'.
-      env-args-base =
-        {
-          inherit (pkgs) cardanoLib;
-          inherit stateDir cacheDir basePort;
-          staggerPorts = true;
-        };
-
       ## Backend-specific Nix bits:
       supervisord =
         {
-          inherit
-            extraSupervisorConfig;
-
           ## mkSupervisorConf :: Profile -> SupervisorConf
           mkSupervisorConf =
             profile:
             pkgs.callPackage ./supervisor-conf.nix
-            { inherit (profile) node-services generator-service;
+            { inherit (profile) node-services;
               inherit
                 pkgs lib stateDir
                 basePort
@@ -59,9 +48,7 @@ let
 
   all-profiles =
     workbench.all-profiles
-      { inherit backend;
-        envArgs = backend.env-args-base;
-      };
+      { inherit backend; };
 in
 {
   inherit cacheDir stateDir basePort;

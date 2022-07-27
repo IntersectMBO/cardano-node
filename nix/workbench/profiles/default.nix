@@ -1,5 +1,5 @@
 { pkgs, cardanoLib
-, runCommand, runWorkbenchJqOnly, runJq, workbench, writeText
+, runCommand, runWorkbenchJqOnly, runJq, workbench
 
 ## An attrset of specific methods and parameters.
 , services-config

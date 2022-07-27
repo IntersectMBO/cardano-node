@@ -3,10 +3,9 @@ with lib;
 
 { profileNix
 , backendProfile ## Backend-specific results for forwarding
-, workbench
 }:
 pkgs.runCommand "workbench-profile-output-${profileNix.name}"
-  { buildInputs = with pkgs; [ jq workbench ];
+  { buildInputs = [];
     nodeServices =
       __toJSON
       (flip mapAttrs profileNix.node-services
@@ -47,6 +46,3 @@ pkgs.runCommand "workbench-profile-output-${profileNix.name}"
 
   wb profile node-specs $out/profile.json > $out/node-specs.json
   ''
-// { inherit (profileNix) name;
-     inherit workbench;
-   }

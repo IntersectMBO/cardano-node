@@ -3,7 +3,6 @@
 , stateDir
 , basePort
 , node-services
-, generator-service
   ## Last-moment overrides:
 , extraSupervisorConfig
 }:
