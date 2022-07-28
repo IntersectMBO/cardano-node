@@ -1,6 +1,13 @@
 # Changelog for cardano-cli
 
-## 1.35.2 -- July 2022
+## 1.35.3 -- August 2022
+
+- Update build and build-raw commands to accept simple reference minting scripts (#4087)
+- Fix query protocol-state (#4102)
+- Render reference script hashes when using `--calculate-plutus-script-cost` option (#4204)
+- Transaction build in any alonzo era when on babbage testnet (#4135)
+
+## 1.35.2 -- July 2022 (not released)
 
 None
 
