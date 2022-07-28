@@ -49,9 +49,9 @@ Executables
 
 You can download the latest version of ``cardano-node`` and ``cardano-cli``:
 
-* `linux <https://hydra.iohk.io/job/Cardano/cardano-node/linux.musl.cardano-node-linux/latest-finished>`_
-* `win64 <https://hydra.iohk.io/job/Cardano/cardano-node/linux.windows.cardano-node-win64/latest-finished>`_
-* `macos <https://hydra.iohk.io/job/Cardano/cardano-node/macos.cardano-node-macos/latest-finished>`_
+* `linux <https://hydra.iohk.io/build/13065769>`_
+* `win64 <https://hydra.iohk.io/build/13065783>`_
+* `macos <https://hydra.iohk.io/build/13065616>`_
 
 Windows Executable
 ==================
@@ -59,7 +59,7 @@ Windows Executable
 Download
 --------
 
-You can download `here <https://hydra.iohk.io/job/Cardano/cardano-node/linux.windows.cardano-node-win64/latest-finished>`_.
+You can download `here <https://hydra.iohk.io/build/13065783>`_.
 
 Instructions
 ------------
