@@ -276,7 +276,7 @@ runBenchmarkInEra sourceWallet submitMode (ThreadName threadName) shape tps era 
 
   let
     inToOut :: [Lovelace] -> [Lovelace]
-    inToOut = FundSet.inputsToOutputsWithFee (auxFee shape) (auxOutputs shape)
+    inToOut = FundSet.inputsToOutputsWithFee (auxFee shape) (auxOutputsPerTx shape)
 
     txGenerator = genTx protocolParameters (TxInsCollateralNone, []) (mkFee (auxFee shape)) metadata (KeyWitness KeyWitnessForSpending)
 
@@ -642,4 +642,3 @@ and for which the JSON encoding is "reserved".
 reserved :: [String] -> ActionM ()
 reserved _ = do
   throwE $ UserError "no dirty hack is implemented"
-
