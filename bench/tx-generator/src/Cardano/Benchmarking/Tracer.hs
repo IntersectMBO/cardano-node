@@ -129,24 +129,24 @@ instance LogFormatting (TraceBenchTxSubmit TxId) where
       mconcat [ "kind"  .= A.String "TraceBenchTxSubStart"
               , "txIds" .= toJSON txIds
               ]
-    TraceBenchTxSubServAnn txIds ->
-      mconcat [ "kind"  .= A.String "TraceBenchTxSubServAnn"
+    SubmissionClientReplyTxIds txIds ->
+      mconcat [ "kind"  .= A.String "SubmissionClientReplyTxIds"
               , "txIds" .= toJSON txIds
               ]
     TraceBenchTxSubServReq txIds ->
       mconcat [ "kind"  .= A.String "TraceBenchTxSubServReq"
               , "txIds" .= toJSON txIds
               ]
-    TraceBenchTxSubServAck txIds ->
-      mconcat [ "kind"  .= A.String "TraceBenchTxSubServAck"
+    SubmissionClientDiscardAcknowledged txIds ->
+      mconcat [ "kind"  .= A.String "SubmissionClientDiscardAcknowledged"
               , "txIds" .= toJSON txIds
               ]
     TraceBenchTxSubServDrop txIds ->
       mconcat [ "kind"  .= A.String "TraceBenchTxSubServDrop"
               , "txIds" .= toJSON txIds
               ]
-    TraceBenchTxSubServOuts txIds ->
-      mconcat [ "kind"  .= A.String "TraceBenchTxSubServOuts"
+    SubmissionClientUnAcked txIds ->
+      mconcat [ "kind"  .= A.String "SubmissionClientUnAcked"
               , "txIds" .= toJSON txIds
               ]
     TraceBenchTxSubServUnav txIds ->
@@ -196,12 +196,12 @@ instance LogFormatting NodeToNodeSubmissionTrace where
     IdsListBlocking sent -> KeyMap.fromList
       [ "kind" .= A.String "IdsListBlocking"
       , "sent" .= A.toJSON sent ]
-    ReqIdsPrompt (Ack ack) (Req req) -> KeyMap.fromList
-      [ "kind" .= A.String "ReqIdsPrompt"
+    ReqIdsNonBlocking (Ack ack) (Req req) -> KeyMap.fromList
+      [ "kind" .= A.String "ReqIdsNonBlocking"
       , "ack"  .= A.toJSON ack
       , "req"  .= A.toJSON req ]
-    IdsListPrompt sent -> KeyMap.fromList
-      [ "kind" .= A.String "IdsListPrompt"
+    IdsListNonBlocking sent -> KeyMap.fromList
+      [ "kind" .= A.String "IdsListNonBlocking"
       , "sent" .= A.toJSON sent ]
     EndOfProtocol -> KeyMap.fromList [ "kind" .= A.String "EndOfProtocol" ]
     ReqTxs req -> KeyMap.fromList

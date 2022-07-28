@@ -112,16 +112,13 @@ txSubmissionClient tr bmtr initialTxSource endOfProtocolCallback =
       fail (T.unpack err)
     let (stillUnacked, acked) = L.splitAtEnd ack unAcked
     let newStats = stats { stsAcked = stsAcked stats + Ack ack }
-    traceWith bmtr $ TraceBenchTxSubServAck  (getTxId . getTxBody <$> acked)
+    traceWith bmtr $ SubmissionClientDiscardAcknowledged  (getTxId . getTxBody <$> acked)
     return (txSource, UnAcked stillUnacked, newStats)
 
   queueNewTxs :: [tx] -> LocalState era -> LocalState era
   queueNewTxs newTxs (txSource, UnAcked unAcked, stats)
     = (txSource, UnAcked (newTxs <> unAcked), stats)
 
-  -- Sadly, we can't just return what we want, we instead have to
-  -- communicate via IORefs, because..
-  -- The () return type is forced by Ouroboros.Network.NodeToNode.connectTo
   client ::LocalState era -> ClientStIdle (GenTxId CardanoBlock) (GenTx CardanoBlock) m ()
 
   client localState = ClientStIdle
@@ -140,13 +137,14 @@ txSubmissionClient tr bmtr initialTxSource endOfProtocolCallback =
         req = Req $ fromIntegral reqNum
     traceWith tr $ reqIdsTrace ack req blocking
     stateA <- discardAcknowledged blocking ack state
-
+    traceWith bmtr $ TraceBenchTxSubDebug "return from discard"
     (stateB, newTxs) <- produceNextTxs blocking req stateA
+    traceWith bmtr $ TraceBenchTxSubDebug "return from produceNext"
     let stateC@(_, UnAcked outs , stats) = queueNewTxs newTxs stateB
 
     traceWith tr $ idListTrace (ToAnnce newTxs) blocking
-    traceWith bmtr $ TraceBenchTxSubServAnn  (getTxId . getTxBody <$> newTxs)
-    traceWith bmtr $ TraceBenchTxSubServOuts (getTxId . getTxBody <$> outs)
+    traceWith bmtr $ SubmissionClientReplyTxIds (getTxId . getTxBody <$> newTxs)
+    traceWith bmtr $ SubmissionClientUnAcked (getTxId . getTxBody <$> outs)
 
     case blocking of
       TokBlocking -> case NE.nonEmpty newTxs of
@@ -175,8 +173,8 @@ txSubmissionClient tr bmtr initialTxSource endOfProtocolCallback =
         missIds = reqTxIds L.\\ uaIds
 
     traceWith tr $ TxList (length toSend)
+    traceWith bmtr $ SubmissionClientUnAcked (getTxId . getTxBody <$> ua)
     traceWith bmtr $ TraceBenchTxSubServReq reqTxIds
-    traceWith bmtr $ TraceBenchTxSubServOuts (getTxId . getTxBody <$> ua)
     unless (L.null missIds) $
       traceWith bmtr $ TraceBenchTxSubServUnav missIds
     pure $ SendMsgReplyTxs (toGenTx <$> toSend)
@@ -213,10 +211,9 @@ txSubmissionClient tr bmtr initialTxSource endOfProtocolCallback =
   reqIdsTrace :: Ack -> Req -> TokBlockingStyle a -> NodeToNodeSubmissionTrace
   reqIdsTrace ack req = \case
      TokBlocking    -> ReqIdsBlocking ack req
-     TokNonBlocking -> ReqIdsPrompt   ack req
+     TokNonBlocking -> ReqIdsNonBlocking ack req
 
   idListTrace :: ToAnnce tx -> TokBlockingStyle a -> NodeToNodeSubmissionTrace
   idListTrace (ToAnnce toAnn) = \case
      TokBlocking    -> IdsListBlocking $ length toAnn
-     TokNonBlocking -> IdsListPrompt   $ length toAnn
-
+     TokNonBlocking -> IdsListNonBlocking $ length toAnn
