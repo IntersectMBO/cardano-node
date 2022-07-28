@@ -1,6 +1,24 @@
 # Changelog for cardano-node
 
-## 1.35.2 -- July 2022
+## 1.35.3 -- July 2022
+
+### node changes
+
+- Update ledger and Plutus to the tip of release/1.0.0 (#4242)
+
+### consensus changes
+
+None
+
+### network changes
+
+None
+
+### ledger changes
+
+- Fix the alonzo UTxO rule to use alonzo minfee function (#2938)
+
+## 1.35.2 -- July 2022 (not released)
 
 ### node changes
 
