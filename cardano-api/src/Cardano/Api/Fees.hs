@@ -101,6 +101,7 @@ import qualified Ouroboros.Consensus.HardFork.History as Consensus
 
 import           Cardano.Api.Address
 import           Cardano.Api.Certificate
+import           Cardano.Api.EraCast
 import           Cardano.Api.Eras
 import           Cardano.Api.Error
 import           Cardano.Api.Modes
@@ -505,8 +506,9 @@ instance Error TransactionValidityError where
 -- are actually used.
 --
 evaluateTransactionExecutionUnits
-  :: forall era mode.
-     EraInMode era mode
+  :: forall era mode nodeEra .
+     CardanoEra nodeEra
+  -> EraInMode era mode
   -> SystemStart
   -> EraHistory mode
   -> ProtocolParameters
@@ -514,19 +516,24 @@ evaluateTransactionExecutionUnits
   -> TxBody era
   -> Either TransactionValidityError
             (Map ScriptWitnessIndex (Either ScriptExecutionError ExecutionUnits))
-evaluateTransactionExecutionUnits _eraInMode systemstart history pparams utxo txbody =
-    case makeSignedTransaction [] txbody of
-      ByronTx {}                 -> evalPreAlonzo
-      ShelleyTx era tx' ->
-        case era of
-          ShelleyBasedEraShelley -> evalPreAlonzo
-          ShelleyBasedEraAllegra -> evalPreAlonzo
-          ShelleyBasedEraMary    -> evalPreAlonzo
-          ShelleyBasedEraAlonzo  -> evalAlonzo era tx'
-          ShelleyBasedEraBabbage ->
-            case collateralSupportedInEra $ shelleyBasedToCardanoEra era of
-              Just supp -> obtainHasFieldConstraint supp $ evalBabbage era tx'
-              Nothing -> return mempty
+evaluateTransactionExecutionUnits nodeEra _eraInMode systemstart history pparams utxo' txbody =
+    case eraCast nodeEra $ makeSignedTransaction [] txbody of
+      Left _notCompatible -> error "Could not cast"
+      Right ByronTx {}          -> evalPreAlonzo
+      Right (ShelleyTx era tx') ->
+        case eraCast nodeEra utxo' of --TODO: Left off here. You need to add a casting error to TransactionValidityError. this will make things more readable
+          Left _notComp -> error ""
+          Right castedUTxO ->
+            case nodeEra of
+              ByronEra -> error "Byron!"
+              ShelleyEra -> evalPreAlonzo
+              AllegraEra -> evalPreAlonzo
+              MaryEra    -> evalPreAlonzo
+              AlonzoEra  -> evalAlonzo tx' castedUTxO
+              BabbageEra ->
+                case collateralSupportedInEra $ shelleyBasedToCardanoEra era of
+                  Just supp -> error "obtainHasFieldConstraint supp $ error evalBabbage nodeEra tx'"
+                  Nothing -> return mempty
   where
     -- Pre-Alonzo eras do not support languages with execution unit accounting.
     evalPreAlonzo :: Either TransactionValidityError
@@ -534,21 +541,17 @@ evaluateTransactionExecutionUnits _eraInMode systemstart history pparams utxo tx
                                  (Either ScriptExecutionError ExecutionUnits))
     evalPreAlonzo = Right Map.empty
 
-    evalAlonzo :: forall ledgerera.
-                  ShelleyLedgerEra era ~ ledgerera
-               => ledgerera ~ Alonzo.AlonzoEra Ledger.StandardCrypto
-               => LedgerEraConstraints ledgerera
-               => ShelleyBasedEra era
-               -> Ledger.Tx ledgerera
+    evalAlonzo :: Ledger.Tx (Alonzo.AlonzoEra Ledger.StandardCrypto)
+               -> UTxO AlonzoEra
                -> Either TransactionValidityError
                          (Map ScriptWitnessIndex
                               (Either ScriptExecutionError ExecutionUnits))
-    evalAlonzo era tx = do
+    evalAlonzo tx utxo = do
       cModelArray <- toAlonzoCostModelsArray (protocolParamCostModels pparams)
       case Alonzo.evaluateTransactionExecutionUnits
-             (toLedgerPParams era pparams)
+             (toLedgerPParams ShelleyBasedEraAlonzo pparams)
              tx
-             (toLedgerUTxO era utxo)
+             (toLedgerUTxO ShelleyBasedEraAlonzo utxo)
              (toLedgerEpochInfo history)
              systemstart
              cModelArray
