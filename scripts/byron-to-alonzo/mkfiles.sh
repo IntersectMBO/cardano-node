@@ -315,23 +315,6 @@ cp ../configuration/cardano/shelley_qa-alonzo-genesis.json shelley/genesis.alonz
 
 cardano-cli genesis create --testnet-magic ${NETWORK_MAGIC} --genesis-dir shelley
 
-# We're going to use really quick epochs (300 seconds), by using short slots 0.2s
-# and K=10, but we'll keep long KES periods so we don't have to bother
-# cycling KES keys
-$SED -i shelley/genesis.spec.json \
-    -e 's/"slotLength": 1/"slotLength": 0.1/' \
-    -e 's/"activeSlotsCoeff": 5.0e-2/"activeSlotsCoeff": 0.1/' \
-    -e 's/"securityParam": 2160/"securityParam": 10/' \
-    -e 's/"epochLength": 432000/"epochLength": 500/' \
-    -e 's/"maxLovelaceSupply": 0/"maxLovelaceSupply": 1000000000000/' \
-    -e 's/"minFeeA": 1/"minFeeA": 44/' \
-    -e 's/"minFeeB": 0/"minFeeB": 155381/' \
-    -e 's/"minUTxOValue": 0/"minUTxOValue": 1000000/' \
-    -e 's/"decentralisationParam": 1.0/"decentralisationParam": 0.7/' \
-    -e 's/"major": 0/"major": 2/' \
-    -e 's/"rho": 0.0/"rho": 0.1/' \
-    -e 's/"tau": 0.0/"tau": 0.1/' \
-    -e 's/"updateQuorum": 5/"updateQuorum": 2/'
 
 # Now generate for real:
 
@@ -340,6 +323,22 @@ cardano-cli genesis create \
     --genesis-dir shelley/ \
     --gen-genesis-keys ${NUM_BFT_NODES} \
     --gen-utxo-keys 1
+
+echo "What is in shelley"
+echo "$(ls shelley)"
+
+cp "shelley/genesis.json" "shelley/copy-genesis.json"
+
+# We're going to use really quick epochs (300 seconds), by using short slots 0.2s
+# and K=10, but we'll keep long KES periods so we don't have to bother
+# cycling KES keys
+
+
+jq -M '. + {slotLength:0.1, securityParam:10, activeSlotsCoeff:0.1, securityParam:10, epochLength:500, maxLovelaceSupply:1000000000000, updateQuorum:2}' "shelley/copy-genesis.json" > "shelley/copy2-genesis.json"
+jq --raw-output '.protocolParams.protocolVersion.major = 2 | .protocolParams.minFeeA = 44 | .protocolParams.minFeeB = 155381 | .protocolParams.minUTxOValue = 1000000 | .protocolParams.decentralisationParam = 0.7 | .protocolParams.rho = 0.1 | .protocolParams.tau = 0.1' "shelley/copy2-genesis.json" > "shelley/genesis.json"
+
+rm "shelley/copy2-genesis.json"
+rm "shelley/copy-genesis.json"
 
 cardano-cli stake-address key-gen \
   --verification-key-file shelley/utxo-keys/utxo-stake.vkey \
