@@ -68,16 +68,16 @@ data TraceBenchTxSubmit txid
   | TraceBenchTxSubStart [txid]
   -- ^ The @txid@ has been submitted to `TxSubmission`
   --   protocol peer.
-  | TraceBenchTxSubServAnn [txid]
+  | SubmissionClientReplyTxIds [txid]
   -- ^ Announcing txids in response for server's request.
   | TraceBenchTxSubServReq [txid]
   -- ^ Request for @tx@ received from `TxSubmission` protocol
   --   peer.
-  | TraceBenchTxSubServAck [txid]
+  | SubmissionClientDiscardAcknowledged [txid]
   -- ^ An ack (window moved over) received for these transactions.
   | TraceBenchTxSubServDrop [txid]
   -- ^ Transactions the server implicitly dropped.
-  | TraceBenchTxSubServOuts [txid]
+  | SubmissionClientUnAcked [txid]
   -- ^ Transactions outstanding.
   | TraceBenchTxSubServUnav [txid]
   -- ^ Transactions requested, but unavailable in the outstanding set.
@@ -113,8 +113,8 @@ instance ToJSON SubmissionSummary
 data NodeToNodeSubmissionTrace
   = ReqIdsBlocking  Ack Req
   | IdsListBlocking Int
-  | ReqIdsPrompt    Ack Req
-  | IdsListPrompt   Int
+  | ReqIdsNonBlocking Ack Req
+  | IdsListNonBlocking Int
   | ReqTxs          Int
   | TxList          Int
   | EndOfProtocol

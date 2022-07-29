@@ -19,12 +19,13 @@ data TpsThrottle = TpsThrottle {
     startSending :: IO ()
   , sendStop :: STM ()
   , receiveBlocking :: STM Step
-  , receiveNoneBlocking :: STM (Maybe Step)
+  , receiveNonBlocking :: STM (Maybe Step)
   }
 
 -- TVar state ::
 -- empty ->  Block submission
--- Just n -> allow n transmissions
+-- Just 0 -> illegal state
+-- Just n -> allow n transmissions ( n must be >0 )
 -- Nothing -> teminate transmission 
 
 newTpsThrottle :: Int -> Int -> TPSRate -> IO TpsThrottle
@@ -34,11 +35,8 @@ newTpsThrottle buffersize count tpsRate = do
       startSending = sendNTicks tpsRate buffersize count var
     , sendStop = putTMVar var Nothing 
     , receiveBlocking = takeTMVar var >>= receiveAction var
-    , receiveNoneBlocking = do
-        s <- tryTakeTMVar var
-        case s of
-          Nothing -> return Nothing
-          Just state -> Just <$> receiveAction var state
+    , receiveNonBlocking =
+        (Just <$> (takeTMVar var >>= receiveAction var )) `orElse` return Nothing
   }
 
 receiveAction :: TMVar (Maybe Int) -> Maybe Int -> STM Step
@@ -46,7 +44,7 @@ receiveAction var state = case state of
   Nothing -> do
     putTMVar var Nothing
     return Stop
-  Just 1 -> return Next  -- leave var empty
+  Just 1 -> return Next  -- leave var empty, i.e. block submission until sendNTicks unblocks
   Just n -> do
      -- decrease counter and let other threads transmit
     putTMVar var $ Just $ pred n
@@ -59,7 +57,7 @@ sendNTicks (TPSRate rate) buffersize count var = do
   where
     worker 0 _ _ = return ()
     worker n lastPreDelay lastDelay = do
-      atomically increaseWatermark
+      increaseWatermark
       now <- Clock.getCurrentTime
       let targetDelay = realToFrac $ 1.0 / rate
           loopCost = (now `Clock.diffUTCTime` lastPreDelay) - lastDelay
@@ -67,7 +65,7 @@ sendNTicks (TPSRate rate) buffersize count var = do
       threadDelay . ceiling $ (realToFrac delay * 1000000.0 :: Double)
       worker (pred n) now delay
     -- increaseWatermark can retry/block if there are already buffersize ticks in the "queue"
-    increaseWatermark = do
+    increaseWatermark = atomically $ do
       s <- tryTakeTMVar var
       case s of
         Nothing -> putTMVar var $ Just 1
@@ -90,12 +88,10 @@ consumeTxsNonBlocking tpsThrottle req
  = if req==0
       then pure (Next, 0)
       else do
-        STM.atomically (receiveNoneBlocking tpsThrottle) >>= \case
+        STM.atomically (receiveNonBlocking tpsThrottle) >>= \case
           Nothing -> pure (Next, 0)
           Just Stop -> pure (Stop, 0)
           Just Next -> pure (Next, 1)
-
-
 
 test :: IO ()
 test = do
@@ -103,6 +99,7 @@ test = do
   _threadId <- startThrottle t
   threadDelay 5000000
   forM_ [1 .. 5] $ \i -> forkIO $ consumer t i
+  forM_ [6 .. 7] $ \i -> forkIO $ consumer2 t i
   putStrLn "done"
  where
   startThrottle t = forkIO $ do
@@ -114,4 +111,16 @@ test = do
   consumer t n = do
     s <- atomically $ receiveBlocking t
     print (n, s)
-    if s==Next then consumer t n else putStrLn $ "Done " ++ show n
+    if s == Next then consumer t n else putStrLn $ "Done " ++ show n
+
+  consumer2 :: TpsThrottle -> Int -> IO ()
+  consumer2 t n = do
+    r <- atomically $ receiveNonBlocking t
+    case r of
+      Just s -> do 
+        print (n, s)
+        if s == Next then consumer2 t n else putStrLn $ "Done " ++ show n
+      Nothing -> do
+        putStrLn $ "wait " ++ show n
+        threadDelay 100000
+        consumer2 t n
