@@ -102,6 +102,7 @@ import qualified Cardano.Ledger.Alonzo.TxWitness as Alonzo
 
 import           Cardano.Api.Address
 import           Cardano.Api.Certificate
+import           Cardano.Api.EraCast
 import           Cardano.Api.Eras
 import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Key
@@ -174,6 +175,14 @@ instance Show (Tx era) where
       showParen (p >= 11) $
         showString "ShelleyTx ShelleyBasedEraBabbage "
       . showsPrec 11 tx
+
+instance EraCast Tx where
+  eraCast _ ByronTx{} = Left $ error "we can't cast"
+  eraCast toEra' tx@ShelleyTx{} = do
+    let (body, keyWits) = getTxBodyAndWitnesses tx
+    castedBody <- eraCast toEra' body
+    castedKeyWits <- mapM (eraCast toEra') keyWits
+    Right $ makeSignedTransaction castedKeyWits castedBody
 
 instance HasTypeProxy era => HasTypeProxy (Tx era) where
     data AsType (Tx era) = AsTx (AsType era)
@@ -356,6 +365,21 @@ instance Show (KeyWitness era) where
       showParen (p >= 11) $
         showString "ShelleyKeyWitness ShelleyBasedEraBabbage "
       . showsPrec 11 tx
+
+instance EraCast KeyWitness where
+    eraCast _  ByronKeyWitness{} = error "EraCast: KeyWitness ByronEra"
+    eraCast toEra' oWit@(ShelleyBootstrapWitness curEra wit) =
+      case cardanoEraStyle toEra' of
+        LegacyByronEra ->
+          Left $ EraCastError oWit (shelleyBasedToCardanoEra curEra) toEra'
+        ShelleyBasedEra sbe ->
+          return $ ShelleyBootstrapWitness sbe wit
+    eraCast toEra' oWit@(ShelleyKeyWitness curEra wit) =
+      case cardanoEraStyle toEra' of
+        LegacyByronEra ->
+          Left $ EraCastError oWit (shelleyBasedToCardanoEra curEra) toEra'
+        ShelleyBasedEra sbe ->
+          return $ ShelleyKeyWitness sbe wit
 
 instance HasTypeProxy era => HasTypeProxy (KeyWitness era) where
     data AsType (KeyWitness era) = AsKeyWitness (AsType era)

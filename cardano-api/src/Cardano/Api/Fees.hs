@@ -470,6 +470,8 @@ data TransactionValidityError =
   | TransactionValidityTranslationError (Alonzo.TranslationError Ledger.StandardCrypto)
 
   | TransactionValidityCostModelError (Map AnyPlutusScriptVersion CostModel) String
+  | TransactionValidityCastError EraCastError
+  | TransactionValdityByronEra
 
 deriving instance Show TransactionValidityError
 
@@ -500,6 +502,10 @@ instance Error TransactionValidityError where
     " models to the cardano-ledger cost models. Error: " <> err <>
     " Cost models: " <> show cModels
 
+  displayError TransactionValdityByronEra = "Byron era not supported"
+
+  displayError (TransactionValidityCastError castError) = renderEraCastError castError
+
 -- | Compute the 'ExecutionUnits' needed for each script in the transaction.
 --
 -- This works by running all the scripts and counting how many execution units
@@ -507,7 +513,9 @@ instance Error TransactionValidityError where
 --
 evaluateTransactionExecutionUnits
   :: forall era mode nodeEra .
-     CardanoEra nodeEra
+     IsCardanoEra nodeEra
+  => IsCardanoEra era
+  => CardanoEra nodeEra
   -> EraInMode era mode
   -> SystemStart
   -> EraHistory mode
@@ -516,24 +524,21 @@ evaluateTransactionExecutionUnits
   -> TxBody era
   -> Either TransactionValidityError
             (Map ScriptWitnessIndex (Either ScriptExecutionError ExecutionUnits))
-evaluateTransactionExecutionUnits nodeEra _eraInMode systemstart history pparams utxo' txbody =
-    case eraCast nodeEra $ makeSignedTransaction [] txbody of
-      Left _notCompatible -> error "Could not cast"
-      Right ByronTx {}          -> evalPreAlonzo
-      Right (ShelleyTx era tx') ->
-        case eraCast nodeEra utxo' of --TODO: Left off here. You need to add a casting error to TransactionValidityError. this will make things more readable
-          Left _notComp -> error ""
-          Right castedUTxO ->
-            case nodeEra of
-              ByronEra -> error "Byron!"
-              ShelleyEra -> evalPreAlonzo
-              AllegraEra -> evalPreAlonzo
-              MaryEra    -> evalPreAlonzo
-              AlonzoEra  -> evalAlonzo tx' castedUTxO
-              BabbageEra ->
-                case collateralSupportedInEra $ shelleyBasedToCardanoEra era of
-                  Just supp -> error "obtainHasFieldConstraint supp $ error evalBabbage nodeEra tx'"
-                  Nothing -> return mempty
+evaluateTransactionExecutionUnits nodeEra _eraInMode systemstart history pparams utxo' txbody = do
+  res <- first TransactionValidityCastError
+           . eraCast nodeEra
+           $ makeSignedTransaction [] txbody
+  case res of
+    ByronTx {}          -> evalPreAlonzo
+    (ShelleyTx _ tx') -> do
+      castedUTxO <- first TransactionValidityCastError $ eraCast nodeEra utxo'
+      case nodeEra of
+        ByronEra   -> Left TransactionValdityByronEra
+        ShelleyEra -> evalPreAlonzo
+        AllegraEra -> evalPreAlonzo
+        MaryEra    -> evalPreAlonzo
+        AlonzoEra  -> evalAlonzo tx' castedUTxO
+        BabbageEra -> evalBabbage castedUTxO tx'
   where
     -- Pre-Alonzo eras do not support languages with execution unit accounting.
     evalPreAlonzo :: Either TransactionValidityError
@@ -558,22 +563,20 @@ evaluateTransactionExecutionUnits nodeEra _eraInMode systemstart history pparams
         of Left err -> Left (TransactionValidityTranslationError err)
            Right exmap -> Right (fromLedgerScriptExUnitsMap exmap)
 
-    evalBabbage :: forall ledgerera.
-                  ShelleyLedgerEra era ~ ledgerera
-               => ledgerera ~ Babbage.BabbageEra Ledger.StandardCrypto
+    evalBabbage :: forall ledgerera. ledgerera ~ Babbage.BabbageEra Ledger.StandardCrypto
                => HasField "_maxTxExUnits" (Ledger.PParams ledgerera) Alonzo.ExUnits
                => HasField"_protocolVersion" (Ledger.PParams ledgerera) Ledger.ProtVer
-               => ShelleyBasedEra era
-               -> Ledger.Tx ledgerera
+               => UTxO BabbageEra
+               -> Ledger.Tx (Babbage.BabbageEra Ledger.StandardCrypto)
                -> Either TransactionValidityError
                          (Map ScriptWitnessIndex
                               (Either ScriptExecutionError ExecutionUnits))
-    evalBabbage era tx = do
+    evalBabbage utxo tx = do
       costModelsArray <- toAlonzoCostModelsArray (protocolParamCostModels pparams)
       case Alonzo.evaluateTransactionExecutionUnits
-             (toLedgerPParams era pparams)
+             (toLedgerPParams ShelleyBasedEraBabbage pparams)
              tx
-             (toLedgerUTxO era utxo)
+             (toLedgerUTxO ShelleyBasedEraBabbage utxo)
              (toLedgerEpochInfo history)
              systemstart
              costModelsArray
@@ -631,14 +634,14 @@ evaluateTransactionExecutionUnits nodeEra _eraInMode systemstart history pparams
 
         Alonzo.NoCostModelInLedgerState l -> ScriptErrorMissingCostModel l
 
-
-    obtainHasFieldConstraint
-      :: ShelleyLedgerEra era ~ ledgerera
-      => CollateralSupportedInEra era
-      -> (HasField "_maxTxExUnits" (Ledger.PParams ledgerera) Alonzo.ExUnits => a) ->  a
-    obtainHasFieldConstraint CollateralInAlonzoEra f =  f
-    obtainHasFieldConstraint CollateralInBabbageEra f =  f
-
+getIsCardanoEraConstraint
+  :: CardanoEra era -> (IsCardanoEra era => a) -> a
+getIsCardanoEraConstraint ByronEra f = f
+getIsCardanoEraConstraint ShelleyEra f = f
+getIsCardanoEraConstraint AllegraEra f = f
+getIsCardanoEraConstraint MaryEra f = f
+getIsCardanoEraConstraint AlonzoEra f = f
+getIsCardanoEraConstraint BabbageEra f = f
 
 -- ----------------------------------------------------------------------------
 -- Transaction balance
@@ -915,9 +918,10 @@ data BalancedTxBody era
 -- which can be queried from a local node.
 --
 makeTransactionBodyAutoBalance
-  :: forall era mode.
+  :: forall era mode nodeEra.
      IsShelleyBasedEra era
-  => EraInMode era mode
+  => CardanoEra nodeEra
+  -> EraInMode era mode
   -> SystemStart
   -> EraHistory mode
   -> ProtocolParameters
@@ -927,8 +931,8 @@ makeTransactionBodyAutoBalance
   -> AddressInEra era -- ^ Change address
   -> Maybe Word       -- ^ Override key witnesses
   -> Either TxBodyErrorAutoBalance (BalancedTxBody era)
-makeTransactionBodyAutoBalance eraInMode systemstart history pparams
-                            poolids utxo txbodycontent changeaddr mnkeys = do
+makeTransactionBodyAutoBalance nodeEra eraInMode systemstart history pparams
+                               poolids utxo txbodycontent changeaddr mnkeys = do
 
     -- Our strategy is to:
     -- 1. evaluate all the scripts to get the exec units, update with ex units
@@ -945,7 +949,9 @@ makeTransactionBodyAutoBalance eraInMode systemstart history pparams
         }
 
     exUnitsMap <- first TxBodyErrorValidityInterval $
+                    getIsCardanoEraConstraint nodeEra $
                     evaluateTransactionExecutionUnits
+                      nodeEra
                       eraInMode
                       systemstart history
                       pparams

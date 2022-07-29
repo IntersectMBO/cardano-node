@@ -29,6 +29,7 @@ module Cardano.Api.ScriptData (
     fromPlutusData,
     toAlonzoData,
     fromAlonzoData,
+    scriptDataToTxDats,
 
     -- * Data family instances
     AsType(..),
@@ -44,6 +45,7 @@ import qualified Data.ByteString.Char8 as BSC
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import qualified Data.Char as Char
 import qualified Data.List as List
+import qualified Data.Map.Strict as Map
 import           Data.Maybe (fromMaybe)
 import qualified Data.Scientific as Scientific
 import           Data.String (IsString)
@@ -51,6 +53,7 @@ import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import qualified Data.Text.Lazy as Text.Lazy
+import           Data.Typeable
 import qualified Data.Vector as Vector
 import           Data.Word
 
@@ -64,14 +67,16 @@ import           Control.Applicative (Alternative (..))
 
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import qualified Cardano.Ledger.Alonzo.Data as Alonzo
+import qualified Cardano.Ledger.Alonzo.TxWitness as Alonzo
+import qualified Cardano.Ledger.Era as Ledger
 import qualified Cardano.Ledger.SafeHash as Ledger
 import           Ouroboros.Consensus.Shelley.Eras (StandardAlonzo, StandardCrypto)
 import qualified Plutus.V1.Ledger.Api as Plutus
 
 import           Cardano.Api.Eras
 import           Cardano.Api.Error
-import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.Hash
+import           Cardano.Api.HasTypeProxy
 import           Cardano.Api.KeysShelley
 import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseJSON
@@ -146,6 +151,17 @@ toAlonzoData = Alonzo.Data . toPlutusData
 
 fromAlonzoData :: Alonzo.Data ledgerera -> ScriptData
 fromAlonzoData = fromPlutusData . Alonzo.getPlutusData
+
+scriptDataToTxDats
+ :: Ledger.Era ledger
+ => ShelleyBasedEra era -> [ScriptData] -> Alonzo.TxDats ledger
+scriptDataToTxDats _ scriptdata =
+  Alonzo.TxDats $
+    Map.fromList
+      [ (Alonzo.hashData d', d')
+      | d <- scriptdata
+      , let d' = toAlonzoData d
+      ]
 
 
 toPlutusData :: ScriptData -> Plutus.Data

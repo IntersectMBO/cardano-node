@@ -1618,6 +1618,17 @@ data TxBody era where
      -- ledger lib. The 'Ledger.TxBody' type family maps that to a specific
      -- tx body type, which is different for each Shelley-based era.
 
+instance EraCast TxBody where
+  eraCast _ ByronTxBody{} = error "EraCast: TxBody ByronEra"
+  eraCast toEra' (ShelleyTxBody curEra lTxBody scripts txBodyScriptData mAuxData txScriptValidity) = do
+
+    castedTxbodyScriptData <- eraCast toEra' txBodyScriptData
+    castedScriptValidity <- eraCast toEra' txScriptValidity
+    case cardanoEraStyle toEra' of
+      LegacyByronEra -> error "EraCast: TxBody ByronEra"
+      ShelleyBasedEra sbe ->
+        return $ ShelleyTxBody sbe (error "lTxBody") (error "castedScripts") castedTxbodyScriptData (error "mAuxData") castedScriptValidity
+
 
 data TxBodyScriptData era where
      TxBodyNoScriptData :: TxBodyScriptData era
@@ -1628,6 +1639,12 @@ data TxBodyScriptData era where
 
 deriving instance Eq   (TxBodyScriptData era)
 deriving instance Show (TxBodyScriptData era)
+
+instance EraCast TxBodyScriptData where
+  eraCast _ TxBodyNoScriptData = Right TxBodyNoScriptData
+  eraCast toEra' (TxBodyScriptData _ dats redeemers) = do
+    let apiDatums = fromAlonzoData
+    error ""
 
 
 -- The GADT in the ShelleyTxBody case requires a custom instance
@@ -3289,13 +3306,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraBabbage
 
     -- Note these do not include inline datums!
     datums :: Alonzo.TxDats StandardBabbage
-    datums =
-      Alonzo.TxDats $
-        Map.fromList
-          [ (Alonzo.hashData d', d')
-          | d <- scriptdata
-          , let d' = toAlonzoData d
-          ]
+    datums = scriptDataToTxDats era scriptdata
 
     scriptdata :: [ScriptData]
     scriptdata =

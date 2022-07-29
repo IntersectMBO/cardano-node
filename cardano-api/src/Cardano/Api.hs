@@ -669,6 +669,7 @@ module Cardano.Api (
     -- ** Cast functions
     EraCast (..),
     EraCastError (..),
+    renderEraCastError,
   ) where
 
 import           Cardano.Api.Address
