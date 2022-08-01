@@ -16,7 +16,7 @@ mkBufferedSource ::
      WalletRef
   -> Int
   -> Lovelace
-  -> Variant
+  -> Maybe Variant
   -> Int
   -> IO (Either String FundSource)
 mkBufferedSource walletRef count minValue variant munch

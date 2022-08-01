@@ -18,7 +18,6 @@ import           Cardano.Api.Shelley (ProtocolParameters, ReferenceScript(..))
 type WalletRef = MVar Wallet
 
 type TxGenerator era = [Fund] -> [TxOut CtxTx era] -> Either String (Tx era, TxId)
-type ToUTxOList era = [Lovelace] -> ([TxOut CtxTx era], TxId -> [Fund])
 
 type ToUTxO era = Lovelace -> (TxOut CtxTx era, TxIx -> TxId -> Fund)
 
@@ -80,7 +79,7 @@ sourceToStoreTransaction ::
      TxGenerator era
   -> FundSource
   -> ([Lovelace] -> [Lovelace])
-  -> ToUTxOList era
+  -> [ToUTxO era]
   -> FundToStore
   -> IO (Either String (Tx era))
 sourceToStoreTransaction txGenerator fundSource inToOut mkTxOut fundToStore = do
@@ -91,11 +90,14 @@ sourceToStoreTransaction txGenerator fundSource inToOut mkTxOut fundToStore = do
   work inputFunds = do
     let
       outValues = inToOut $ map getFundLovelace inputFunds
-      (outputs, toFunds) = mkTxOut outValues
-    case txGenerator inputFunds outputs of
+      outs = zipWith ($) mkTxOut outValues
+    case txGenerator inputFunds $ map fst outs of
         Left err -> return $ Left err
         Right (tx, txId) -> do
-          fundToStore $ toFunds txId
+          let
+            fkt :: (a, TxIx -> TxId -> Fund) -> TxIx -> Fund
+            fkt a txIx = snd a txIx txId
+          fundToStore $ zipWith fkt outs [TxIx 0 ..]
           return $ Right tx
 
 includeChange :: Lovelace -> [Lovelace] -> [Lovelace] -> [Lovelace]
@@ -104,31 +106,6 @@ includeChange fee spend have = case compare changeValue 0 of
   EQ -> spend
   LT -> error "genTX: Bad transaction: insufficient funds"
   where changeValue = sum have - sum spend - fee
-
-mkUTxOList :: forall era. IsShelleyBasedEra era
-  => NetworkId
-  -> SigningKey PaymentKey
-  -> Validity
-  -> ToUTxOList era
-mkUTxOList = mkUTxOVariantList PlainOldFund
-
-mkUTxOVariantList :: forall era. IsShelleyBasedEra era
-  => Variant
-  -> NetworkId
-  -> SigningKey PaymentKey
-  -> Validity
-  -> ToUTxOList era
-mkUTxOVariantList variant networkId key validity
- = mapToUTxO $ repeat $ mkUTxOVariant variant networkId key validity
-
-mapToUTxO :: [ ToUTxO era ]-> ToUTxOList era
-mapToUTxO fkts values 
-  = (outs, \txId -> map (\f -> f txId) fs)
-  where
-    (outs, fs) =unzip $ map worker $ zip3 fkts values [TxIx 0 ..]
-    worker (toUTxO, value, idx)
-      = let (o, f ) = toUTxO value
-        in  (o, f idx) 
 
 mkUTxOVariant :: forall era. IsShelleyBasedEra era
   => Variant
@@ -146,10 +123,47 @@ mkUTxOVariant variant networkId key validity value
   mkNewFund :: Lovelace -> TxIx -> TxId -> Fund
   mkNewFund val txIx txId = Fund $ InAnyCardanoEra (cardanoEra @ era) $ FundInEra {
       _fundTxIn = TxIn txId txIx
+    , _fundWitness = KeyWitness KeyWitnessForSpending
     , _fundVal = lovelaceToTxOutValue val
     , _fundSigningKey = Just key
     , _fundValidity = validity
     , _fundVariant = variant
+    }
+
+-- to be merged with mkUTxOVariant
+mkUTxOScript :: forall era.
+     IsShelleyBasedEra era
+  => NetworkId
+  -> (Script PlutusScriptV1, ScriptData)
+  -> Witness WitCtxTxIn era
+  -> Validity
+  -> ToUTxO era
+mkUTxOScript networkId (script, txOutDatum) witness validity value
+  = ( mkTxOut value
+    , mkNewFund value
+    )
+ where
+  plutusScriptAddr = makeShelleyAddressInEra
+                       networkId
+                       (PaymentCredentialByScript $ hashScript script)
+                       NoStakeAddress
+
+  mkTxOut v = case scriptDataSupportedInEra (cardanoEra @ era) of
+    Nothing -> error " mkUtxOScript scriptDataSupportedInEra==Nothing"
+    Just tag -> TxOut
+                  plutusScriptAddr
+                  (lovelaceToTxOutValue v)
+                  (TxOutDatumHash tag $ hashScriptData txOutDatum)
+                  ReferenceScriptNone   
+
+  mkNewFund :: Lovelace -> TxIx -> TxId -> Fund
+  mkNewFund val txIx txId = Fund $ InAnyCardanoEra (cardanoEra @ era) $ FundInEra {
+      _fundTxIn = TxIn txId txIx
+    , _fundWitness = witness
+    , _fundVal = lovelaceToTxOutValue val
+    , _fundSigningKey = Nothing
+    , _fundValidity = validity
+    , _fundVariant = PlutusScriptFund
     }
 
 genTx :: forall era. IsShelleyBasedEra era =>
@@ -157,9 +171,8 @@ genTx :: forall era. IsShelleyBasedEra era =>
   -> (TxInsCollateral era, [Fund])
   -> TxFee era
   -> TxMetadataInEra era
-  -> Witness WitCtxTxIn era
   -> TxGenerator era
-genTx protocolParameters (collateral, collFunds) fee metadata witness inFunds outputs
+genTx protocolParameters (collateral, collFunds) fee metadata inFunds outputs
   = case makeTransactionBody txBodyContent of
       Left err -> error $ show err
       Right b -> Right ( signShelleyTransaction b $ map WitnessPaymentKey allKeys
@@ -168,7 +181,7 @@ genTx protocolParameters (collateral, collFunds) fee metadata witness inFunds ou
  where
   allKeys = mapMaybe getFundKey $ inFunds ++ collFunds
   txBodyContent = TxBodyContent {
-      txIns = map (\f -> (getFundTxIn f, BuildTxWith witness)) inFunds
+      txIns = map (\f -> (getFundTxIn f, BuildTxWith $ getFundWitness f)) inFunds
     , txInsCollateral = collateral
     , txInsReference = TxInsReferenceNone
     , txOuts = outputs
@@ -212,7 +225,7 @@ benchmarkWalletScript :: forall era .
   -> NumberOfTxs
   -> (Target -> FundSource)
   -> ([Lovelace] -> [Lovelace])
-  -> (Target -> SeqNumber -> ToUTxOList era)
+  -> ( Target -> SeqNumber -> [ToUTxO era])
   -> FundToStore
   -> Target
   -> WalletScript era

@@ -35,7 +35,7 @@ data Action where
   AddFund            :: !AnyCardanoEra -> !WalletName -> !TxIn -> !Lovelace -> !KeyName -> Action
   ImportGenesisFund  :: !AnyCardanoEra -> !WalletName -> !SubmitMode -> !KeyName -> !KeyName -> Action
   CreateChange       :: !AnyCardanoEra -> !WalletName -> !WalletName -> !SubmitMode -> !PayMode -> !Lovelace -> !Int -> Action
-  RunBenchmark       :: !AnyCardanoEra -> !WalletName -> !SubmitMode -> !SpendMode -> !ThreadName -> !RunBenchmarkAux -> !TPSRate -> Action
+  RunBenchmark       :: !AnyCardanoEra -> !WalletName -> !SubmitMode -> !ThreadName -> !RunBenchmarkAux -> Maybe WalletName -> !TPSRate -> Action
   WaitBenchmark      :: !ThreadName -> Action
   CancelBenchmark    :: !ThreadName -> Action
   Reserved           :: [String] -> Action
@@ -61,23 +61,24 @@ deriving instance Generic SubmitMode
 data PayMode where
   PayToAddr :: !KeyName -> PayMode
   PayToCollateral :: !KeyName  -> PayMode
-  PayToScript :: !FilePath -> !ScriptData -> PayMode
+  PayToScript :: !ScriptSpec -> PayMode
   deriving (Show, Eq)
 deriving instance Generic PayMode
 
-data SpendMode where
-  SpendOutput :: SpendMode
-  SpendScript :: !FilePath -> ScriptBudget -> !ScriptData -> !ScriptRedeemer -> SpendMode
-  SpendAutoScript :: !FilePath -> SpendMode
-  deriving (Show, Eq)
-deriving instance Generic SpendMode
-
 data ScriptBudget where
-  StaticScriptBudget :: !ExecutionUnits -> ScriptBudget
-  PreExecuteScript   :: ScriptBudget
-  CheckScriptBudget  :: !ExecutionUnits -> ScriptBudget
+  StaticScriptBudget :: !ScriptData -> !ScriptRedeemer -> !ExecutionUnits -> ScriptBudget
+  CheckScriptBudget  :: !ScriptData -> !ScriptRedeemer -> !ExecutionUnits -> ScriptBudget
+  AutoScript :: ScriptBudget --todo: add fraction of total available budget to use (==2 with 2 inputs !)
   deriving (Show, Eq)
 deriving instance Generic ScriptBudget
+
+data ScriptSpec = ScriptSpec
+  {
+    scriptSpecFile :: !FilePath
+  , scriptSpecBudget :: !ScriptBudget
+  }
+  deriving (Show, Eq)
+deriving instance Generic ScriptSpec
 
 data RunBenchmarkAux = RunBenchmarkAux {
     auxTxCount :: Int

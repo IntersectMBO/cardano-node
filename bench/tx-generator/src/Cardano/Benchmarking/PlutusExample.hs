@@ -1,7 +1,6 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 module Cardano.Benchmarking.PlutusExample
 where
 import           Prelude
@@ -13,56 +12,12 @@ import qualified Data.ByteString.Char8 as BSC
 import           Cardano.CLI.Shelley.Script (readFileScriptInAnyLang)
 
 import           Cardano.Api
-import           Cardano.Api.Shelley ( ProtocolParameters(..), PlutusScript(..), ReferenceScript(..)
+import           Cardano.Api.Shelley ( ProtocolParameters(..), PlutusScript(..)
                                      , fromAlonzoExUnits, protocolParamCostModels, toPlutusData)
 import           Cardano.Ledger.Alonzo.TxInfo (exBudgetToExUnits)
-import           Cardano.Benchmarking.FundSet
-import           Cardano.Benchmarking.Wallet
 
 import qualified Plutus.V1.Ledger.Api as Plutus
 import           Plutus.V1.Ledger.Contexts (ScriptContext(..), ScriptPurpose(..), TxInfo(..), TxOutRef(..))
-
-mkUTxOScriptList :: forall era.
-     IsShelleyBasedEra era
-  => NetworkId
-  -> (FilePath, Script PlutusScriptV1, ScriptData)
-  -> Validity
-  -> ToUTxOList era
-mkUTxOScriptList networkId (scriptFile, script, txOutDatum) validity
-  = mapToUTxO $ repeat $ mkUTxOScript networkId (scriptFile, script, txOutDatum) validity
-
-mkUTxOScript :: forall era.
-     IsShelleyBasedEra era
-  => NetworkId
-  -> (FilePath, Script PlutusScriptV1, ScriptData)
-  -> Validity
-  -> ToUTxO era
-mkUTxOScript networkId (scriptFile, script, txOutDatum) validity value
-  = ( mkTxOut value
-    , mkNewFund value
-    )
- where
-  plutusScriptAddr = makeShelleyAddressInEra
-                       networkId
-                       (PaymentCredentialByScript $ hashScript script)
-                       NoStakeAddress
-
-  mkTxOut v = case scriptDataSupportedInEra (cardanoEra @ era) of
-    Nothing -> error " mkUtxOScript scriptDataSupportedInEra==Nothing"
-    Just tag -> TxOut
-                  plutusScriptAddr
-                  (lovelaceToTxOutValue v)
-                  (TxOutDatumHash tag $ hashScriptData txOutDatum)
-                  ReferenceScriptNone   
-
-  mkNewFund :: Lovelace -> TxIx -> TxId -> Fund
-  mkNewFund val txIx txId = Fund $ InAnyCardanoEra (cardanoEra @ era) $ FundInEra {
-      _fundTxIn = TxIn txId txIx
-    , _fundVal = lovelaceToTxOutValue val
-    , _fundSigningKey = Nothing
-    , _fundValidity = validity
-    , _fundVariant = PlutusScriptFund scriptFile txOutDatum
-    }
 
 readScript :: FilePath -> IO (Script PlutusScriptV1)
 readScript fp = do
