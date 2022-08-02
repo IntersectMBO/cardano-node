@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -109,6 +110,7 @@ import           Cardano.Api.Key
 import           Cardano.Api.KeysByron
 import           Cardano.Api.KeysShelley
 import           Cardano.Api.NetworkId
+import           Cardano.Api.Script
 import           Cardano.Api.SerialiseCBOR
 import           Cardano.Api.SerialiseTextEnvelope
 import           Cardano.Api.TxBody
@@ -964,3 +966,53 @@ signShelleyTransaction txbody sks =
     makeSignedTransaction witnesses txbody
   where
     witnesses = map (makeShelleyKeyWitness txbody) sks
+
+
+
+-- TODO: Essentially you are missing witnessing information. I would create a new function
+-- using the ledger tx and I would reuse TxBodyContent, but just return it with BuildTx
+-- since you have the required information. Need to think about what to do with TxBodyContent.
+-- Probably rename it to TxContent and add in the possibility for KeyWitnesses. I think
+-- that
+fromLedgerTx
+  :: ShelleyBasedEra era
+  -> TxScriptValidity era
+  -> Ledger.Tx (ShelleyLedgerEra era)
+  -> TxBodyScriptData era
+  -> Maybe (Ledger.AuxiliaryData (ShelleyLedgerEra era))
+  -> TxBodyContent BuildTx era
+fromLedgerTx era scriptValidity tx scriptdata mAux =
+    TxBodyContent
+      { txIns              = txFromLedgerTxIns               era tx
+      , txInsCollateral    = error "txFromLedgerTxInsCollateral     era tx"
+      , txInsReference     = error "txFromLedgerTxInsReference      era tx"
+      , txOuts             = error "txFromLedgerTxOuts              era tx scriptdata"
+      , txTotalCollateral  = error "txFromLedgerTxTotalCollateral   era tx"
+      , txReturnCollateral = error "txFromLedgerTxReturnCollateral  era tx"
+      , txFee              = error "txFromLedgerTxFee               era tx"
+      , txValidityRange    = error "txFromLedgerTxValidityRange     era tx"
+      , txWithdrawals      = error "txFromLedgerTxWithdrawals       era tx"
+      , txCertificates     = error "txFromLedgerTxCertificates      era tx"
+      , txUpdateProposal   = error "txFromLedgerTxUpdateProposal    era tx"
+      , txMintValue        = error "txFromLedgerTxMintValue         era tx"
+      , txExtraKeyWits     = error "txFromLedgerTxExtraKeyWitnesses era tx"
+      , txProtocolParams   = error "ViewTx"
+      , txMetadata
+      , txAuxScripts
+      , txScriptValidity   = scriptValidity
+      }
+  where
+    (txMetadata, txAuxScripts) = fromLedgerTxAuxiliaryData era mAux
+-- TODO: Left off here. You will need to match the datum and redeemer
+-- with the right tx input! Look at ledger
+txFromLedgerTxIns
+  :: ShelleyBasedEra era
+  -> Ledger.Tx (ShelleyLedgerEra era)
+  -> [(TxIn, BuildTxWith BuildTx (Witness WitCtxTxIn era))]
+txFromLedgerTxIns sbe tx =
+  let ShelleyTxBody _ ledgerTxBody _ _ _ _ = getTxBody (ShelleyTx sbe tx)
+      ins = map fromShelleyTxIn $ Set.toList $ getLedgerTxBodyInputs sbe ledgerTxBody
+  in zip ins (map BuildTxWith $ witnessFromLedgerTx sbe tx)
+
+witnessFromLedgerTx :: ShelleyBasedEra era -> Ledger.Tx (ShelleyLedgerEra era) -> [Witness WitCtxTxIn era]
+witnessFromLedgerTx = error ""

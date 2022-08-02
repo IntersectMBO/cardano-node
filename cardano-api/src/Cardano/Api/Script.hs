@@ -559,6 +559,14 @@ instance Eq (ScriptInEra era) where
         Nothing   -> False
         Just Refl -> script == script'
 
+instance EraCast ScriptInEra where
+  eraCast toEra' sina@(ScriptInEra sLangInEra script) =
+    case scriptLanguageSupportedInEra toEra' $ languageOfScriptLanguageInEra sLangInEra of
+      Nothing ->
+        let curEra = shelleyBasedToCardanoEra $ eraOfScriptLanguageInEra sLangInEra
+        in Left $ EraCastError sina curEra toEra'
+      Just sup ->
+        return $ ScriptInEra sup script
 
 data ScriptLanguageInEra lang era where
 

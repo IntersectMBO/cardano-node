@@ -53,7 +53,6 @@ import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import qualified Data.Text.Lazy as Text.Lazy
-import           Data.Typeable
 import qualified Data.Vector as Vector
 import           Data.Word
 

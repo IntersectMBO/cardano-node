@@ -146,6 +146,7 @@ module Cardano.Api.TxBody (
 
     -- * Misc helpers
     calculateExecutionUnitsLovelace,
+    getLedgerTxBodyInputs,
     orderStakeAddrs,
     orderTxIns,
 
@@ -305,6 +306,24 @@ data TxScriptValidity era where
 deriving instance Eq   (TxScriptValiditySupportedInEra era)
 deriving instance Show (TxScriptValiditySupportedInEra era)
 
+instance EraCast TxScriptValidity where
+  eraCast _ TxScriptValidityNone = return TxScriptValidityNone
+  eraCast toEra' txsv@(TxScriptValidity supp sValid) =
+    case txScriptValiditySupportedInCardanoEra toEra' of
+      Nothing ->
+         case supp of
+           TxScriptValiditySupportedInAlonzoEra
+             -> Left $ EraCastError { originalValue = txsv
+                                    , fromEra = AlonzoEra
+                                    , toEra = toEra'
+                                    }
+           TxScriptValiditySupportedInBabbageEra
+             -> Left $ EraCastError { originalValue = txsv
+                                    , fromEra = BabbageEra
+                                    , toEra = toEra'
+                                    }
+      Just suppToEra ->
+        return $ TxScriptValidity suppToEra sValid
 data TxScriptValiditySupportedInEra era where
   TxScriptValiditySupportedInAlonzoEra  :: TxScriptValiditySupportedInEra AlonzoEra
   TxScriptValiditySupportedInBabbageEra :: TxScriptValiditySupportedInEra BabbageEra
@@ -1621,13 +1640,21 @@ data TxBody era where
 instance EraCast TxBody where
   eraCast _ ByronTxBody{} = error "EraCast: TxBody ByronEra"
   eraCast toEra' (ShelleyTxBody curEra lTxBody scripts txBodyScriptData mAuxData txScriptValidity) = do
-
-    castedTxbodyScriptData <- eraCast toEra' txBodyScriptData
-    castedScriptValidity <- eraCast toEra' txScriptValidity
     case cardanoEraStyle toEra' of
       LegacyByronEra -> error "EraCast: TxBody ByronEra"
-      ShelleyBasedEra sbe ->
-        return $ ShelleyTxBody sbe (error "lTxBody") (error "castedScripts") castedTxbodyScriptData (error "mAuxData") castedScriptValidity
+      ShelleyBasedEra sbe -> do
+        castedAuxData <- case mAuxData of
+                           Nothing -> return Nothing
+                           Just auxData -> do
+                            -- Note: Auxiliary data is supported from the Shelley era onwards
+                            let (metaDataMap, scripts') = fromLedgerAuxiliaryData curEra auxData
+                            castedScripts <- mapM (eraCast toEra') scripts'
+                            return . Just $ toLedgerAuxiliaryData sbe metaDataMap castedScripts
+        castedScripts <- mapM (eraCast toEra' . fromShelleyBasedScript curEra) scripts
+        castedTxbodyScriptData <- eraCast toEra' txBodyScriptData
+        castedScriptValidity <- eraCast toEra' txScriptValidity
+
+        return $ ShelleyTxBody sbe (error "lTxBody") (map toShelleyScript castedScripts) castedTxbodyScriptData castedAuxData castedScriptValidity
 
 
 data TxBodyScriptData era where
@@ -2117,7 +2144,6 @@ fromLedgerTxBody era scriptValidity body scriptdata mAux =
   where
     (txMetadata, txAuxScripts) = fromLedgerTxAuxiliaryData era mAux
 
-
 fromLedgerTxIns
   :: forall era.
      ShelleyBasedEra era
@@ -2125,16 +2151,17 @@ fromLedgerTxIns
   -> [(TxIn,BuildTxWith ViewTx (Witness WitCtxTxIn era))]
 fromLedgerTxIns era body =
     [ (fromShelleyTxIn input, ViewTx)
-    | input <- Set.toList (inputs era body) ]
-  where
-    inputs :: ShelleyBasedEra era
-           -> Ledger.TxBody (ShelleyLedgerEra era)
-           -> Set (Ledger.TxIn StandardCrypto)
-    inputs ShelleyBasedEraShelley = Shelley._inputs
-    inputs ShelleyBasedEraAllegra = Allegra.inputs'
-    inputs ShelleyBasedEraMary    = Mary.inputs'
-    inputs ShelleyBasedEraAlonzo  = Alonzo.inputs'
-    inputs ShelleyBasedEraBabbage = Babbage.inputs
+    | input <- Set.toList (getLedgerTxBodyInputs era body) ]
+
+getLedgerTxBodyInputs
+  :: ShelleyBasedEra era
+  -> Ledger.TxBody (ShelleyLedgerEra era)
+  -> Set (Ledger.TxIn StandardCrypto)
+getLedgerTxBodyInputs ShelleyBasedEraShelley = Shelley._inputs
+getLedgerTxBodyInputs ShelleyBasedEraAllegra = Allegra.inputs'
+getLedgerTxBodyInputs ShelleyBasedEraMary    = Mary.inputs'
+getLedgerTxBodyInputs ShelleyBasedEraAlonzo  = Alonzo.inputs'
+getLedgerTxBodyInputs ShelleyBasedEraBabbage = Babbage.inputs
 
 
 fromLedgerTxInsCollateral
@@ -2669,7 +2696,6 @@ fromLedgerTxMintValue era body =
       where
         mint = Babbage.mint' body
 
-
 makeByronTransactionBody :: TxBodyContent BuildTx ByronEra
                          -> Either TxBodyError (TxBody ByronEra)
 makeByronTransactionBody TxBodyContent { txIns, txOuts } = do
@@ -2806,7 +2832,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraShelley
     txAuxData :: Maybe (Ledger.AuxiliaryData StandardShelley)
     txAuxData
       | Map.null ms = Nothing
-      | otherwise   = Just (toShelleyAuxiliaryData ms)
+      | otherwise   = Just (toLedgerAuxiliaryData era ms [])
       where
         ms = case txMetadata of
                TxMetadataNone                     -> Map.empty
@@ -2888,7 +2914,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraAllegra
     txAuxData
       | Map.null ms
       , null ss   = Nothing
-      | otherwise = Just (toAllegraAuxiliaryData ms ss)
+      | otherwise = Just (toLedgerAuxiliaryData era ms ss)
       where
         ms = case txMetadata of
                TxMetadataNone                     -> Map.empty
@@ -2985,7 +3011,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraMary
     txAuxData
       | Map.null ms
       , null ss   = Nothing
-      | otherwise = Just (toAllegraAuxiliaryData ms ss)
+      | otherwise = Just (toLedgerAuxiliaryData era ms ss)
       where
         ms = case txMetadata of
                TxMetadataNone                     -> Map.empty
@@ -3149,7 +3175,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraAlonzo
     txAuxData
       | Map.null ms
       , null ss   = Nothing
-      | otherwise = Just (toAlonzoAuxiliaryData ms ss)
+      | otherwise = Just (toLedgerAuxiliaryData era ms ss)
       where
         ms = case txMetadata of
                TxMetadataNone                     -> Map.empty
@@ -3341,7 +3367,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraBabbage
     txAuxData
       | Map.null ms
       , null ss   = Nothing
-      | otherwise = Just (toAlonzoAuxiliaryData ms ss)
+      | otherwise = Just (toLedgerAuxiliaryData era ms ss)
       where
         ms = case txMetadata of
                TxMetadataNone                     -> Map.empty
@@ -3554,6 +3580,22 @@ fromShelleyWithdrawal (Shelley.Wdrl withdrawals) =
   | (stakeAddr, value) <- Map.assocs withdrawals
   ]
 
+toLedgerAuxiliaryData
+  :: ShelleyLedgerEra era ~ ledgerera
+  => ShelleyBasedEra era
+  -> Map Word64 TxMetadataValue
+  -> [ScriptInEra era]
+  -> Ledger.AuxiliaryData ledgerera
+toLedgerAuxiliaryData ShelleyBasedEraShelley m _ =
+  toShelleyAuxiliaryData m
+toLedgerAuxiliaryData ShelleyBasedEraAllegra m scripts =
+  toAllegraAuxiliaryData m scripts
+toLedgerAuxiliaryData ShelleyBasedEraMary m scripts =
+  toAllegraAuxiliaryData m scripts
+toLedgerAuxiliaryData ShelleyBasedEraAlonzo m scripts =
+  toAlonzoAuxiliaryData m scripts
+toLedgerAuxiliaryData ShelleyBasedEraBabbage m scripts =
+  toAlonzoAuxiliaryData m scripts
 
 -- | In the Shelley era the auxiliary data consists only of the tx metadata
 toShelleyAuxiliaryData :: Map Word64 TxMetadataValue
