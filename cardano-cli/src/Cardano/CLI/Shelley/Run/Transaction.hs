@@ -10,11 +10,17 @@
 
 module Cardano.CLI.Shelley.Run.Transaction
   ( ShelleyTxCmdError(..)
+  , SomeWitness(..)
+  , TxFeature(..)
   , renderShelleyTxCmdError
   , runTransactionCmd
   , readFileTx
   , readProtocolParametersSourceSpec
   , toTxOutInAnyEra
+  , mkShelleyBootstrapWitnesses
+  , partitionSomeWitnesses
+  , categoriseSomeWitness
+  , readWitnessSigningData
   ) where
 
 import           Cardano.Prelude hiding (All, Any)

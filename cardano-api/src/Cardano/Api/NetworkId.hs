@@ -1,3 +1,5 @@
+{-# LANGUAGE LambdaCase #-}
+
 -- | The 'NetworkId' type and related functions
 --
 module Cardano.Api.NetworkId (
@@ -26,6 +28,8 @@ import qualified Cardano.Crypto.ProtocolMagic as Byron (ProtocolMagicId (..),
                    RequiresNetworkMagic (..))
 import qualified Cardano.Ledger.BaseTypes as Shelley (Network (..))
 
+import Data.Aeson (ToJSON(..), object, (.=), FromJSON(parseJSON), Value(Object, String), (.:?))
+
 
 -- ----------------------------------------------------------------------------
 -- NetworkId type
@@ -34,6 +38,21 @@ import qualified Cardano.Ledger.BaseTypes as Shelley (Network (..))
 data NetworkId = Mainnet
                | Testnet !NetworkMagic
   deriving (Eq, Show)
+
+-- copied from tx-generator
+instance ToJSON NetworkId where
+  toJSON Mainnet = "Mainnet"
+  toJSON (Testnet (NetworkMagic t)) = object ["Testnet" .= t]
+
+instance FromJSON NetworkId where
+  parseJSON j = case j of
+    (String "Mainnet") -> return Mainnet
+    (Object v) -> v .:? "Testnet" >>= \case
+      Nothing -> failed
+      Just w -> return $ Testnet $ NetworkMagic w
+    _invalid -> failed
+    where
+      failed = fail $ "Parsing of NetworkId failed: " <> show j
 
 fromNetworkMagic :: NetworkMagic -> NetworkId
 fromNetworkMagic nm =
