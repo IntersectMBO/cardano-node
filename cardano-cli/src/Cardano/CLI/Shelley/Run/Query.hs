@@ -88,16 +88,6 @@ import           Cardano.Ledger.Shelley.LedgerState (DPState (..),
 import qualified Cardano.Ledger.Shelley.PParams as Shelley
 import           Cardano.Ledger.Shelley.Scripts ()
 import           Cardano.Slotting.EpochInfo (EpochInfo (..), epochInfoSlotToUTCTime, hoistEpochInfo)
-import           Control.Monad.Trans.Except (except)
-import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistEither,
-                   hoistMaybe, left, newExceptT)
-import           Data.Aeson.Encode.Pretty (encodePretty)
-import           Data.Aeson.Types as Aeson
-import           Data.Coerce (coerce)
-import           Data.List (nub)
-import           Data.Sharing (Interns, Share)
-import           Data.Text.Lazy.Builder (toLazyText)
-import           Data.Time.Clock
 
 import           Ouroboros.Consensus.BlockchainTime.WallClock.Types (RelativeTime (..),
                    SystemStart (..), toRelativeTime)
@@ -106,19 +96,7 @@ import           Ouroboros.Consensus.Cardano.Block as Consensus (EraMismatch (..
 import           Ouroboros.Consensus.Protocol.TPraos
 import           Ouroboros.Network.Block (Serialised (..))
 import           Ouroboros.Network.Protocol.LocalStateQuery.Type (AcquireFailure (..))
-import           Text.Printf (printf)
 
-import qualified Data.ByteString.Lazy.Char8 as LBS
-import qualified Data.Map.Strict as Map
-import qualified Data.Set as Set
-import qualified Data.Text as Text
-import qualified Data.Text.Encoding as Text
-import qualified Data.Text.IO as T
-import qualified Data.Text.IO as Text
-import qualified Data.Vector as Vector
-import qualified Data.VMap as VMap
-import           Formatting.Buildable (build)
-import           Numeric (showEFloat)
 import qualified Ouroboros.Consensus.HardFork.History as Consensus
 import qualified Ouroboros.Consensus.Protocol.Abstract as Consensus
 import qualified Ouroboros.Consensus.Protocol.Praos.Common as Consensus
