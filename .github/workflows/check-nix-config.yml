@@ -2,6 +2,9 @@ name: Check nix configuration
 
 on:
   push:
+    paths-ignore:
+      - '**.md'
+      - '**.rst'
 
 jobs:
   build:
