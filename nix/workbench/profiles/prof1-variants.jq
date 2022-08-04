@@ -153,6 +153,13 @@ def all_profile_variants:
     } as $singleton
   |
     { composition:
+      { n_singular_hosts:               0
+      , n_dense_hosts:                  1
+      , dense_pool_density:             10
+      }
+    } as $singleton_dense10
+  |
+    { composition:
       { n_singular_hosts:               2
       , n_dense_hosts:                  0
       }
@@ -408,7 +415,12 @@ def all_profile_variants:
     { name: "ci-bench-notracer"
     }
 
-  ## Dish variants
+  ## CI variants: test duration, 3 blocks, dense10
+  , $citest_base * $singleton_dense10 *
+    { name: "ci-test-dense10"
+    }
+
+## Dish variants
   , $dish_base *
     { name: "dish"
     }

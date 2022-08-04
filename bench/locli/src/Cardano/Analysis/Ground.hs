@@ -82,28 +82,21 @@ data HostDeduction
 ---
 --- Files
 ---
-newtype JsonGenesisFile
-  = JsonGenesisFile { unJsonGenesisFile :: FilePath }
+newtype InputDir
+  = InputDir { unInputDir :: FilePath }
   deriving (Show, Eq)
-
-newtype JsonRunMetafile
-  = JsonRunMetafile { unJsonRunMetafile :: FilePath }
-  deriving (Show, Eq)
-
-newtype JsonDomainFile
-  = JsonDomainFile { unJsonDomainFile :: FilePath }
-  deriving (Show, Eq)
+  deriving newtype (NFData)
 
 newtype JsonLogfile
   = JsonLogfile { unJsonLogfile :: FilePath }
   deriving (Show, Eq)
   deriving newtype (NFData)
 
-newtype JsonInputFile
+newtype JsonInputFile (a :: Type)
   = JsonInputFile { unJsonInputFile :: FilePath }
   deriving (Show, Eq)
 
-newtype JsonOutputFile
+newtype JsonOutputFile (a :: Type)
   = JsonOutputFile { unJsonOutputFile :: FilePath }
   deriving (Show, Eq)
 
@@ -113,6 +106,10 @@ newtype GnuplotOutputFile
 
 newtype OrgOutputFile
   = OrgOutputFile { unOrgOutputFile :: FilePath }
+  deriving (Show, Eq)
+
+newtype TextInputFile
+  = TextInputFile { unTextInputFile :: FilePath }
   deriving (Show, Eq)
 
 newtype TextOutputFile
@@ -127,59 +124,15 @@ newtype OutputFile
   = OutputFile { unOutputFile :: FilePath }
   deriving (Show, Eq)
 
-data MachineTimelineOutputFiles
-  = MachineTimelineOutputFiles
-  { mtofSlotStats          :: Maybe JsonOutputFile
-  , mtofAnalysis           :: Maybe JsonOutputFile
-  , mtofFullStatsPretty    :: Maybe TextOutputFile
-  , mtofReportStatsPretty  :: Maybe TextOutputFile
-  , mtofTimelinePretty     :: Maybe TextOutputFile
-  , mtofTimelineCsv        :: Maybe  CsvOutputFile
-  , mtofFullStatsCsv       :: Maybe  CsvOutputFile
-  , mtofDerivedVectors0Csv :: Maybe  CsvOutputFile
-  , mtofDerivedVectors1Csv :: Maybe  CsvOutputFile
-  }
-  deriving (Show)
-
-data BlockPropOutputFiles
-  = BlockPropOutputFiles
-  { bpofForgerPretty       :: Maybe TextOutputFile
-  , bpofPeersPretty        :: Maybe TextOutputFile
-  , bpofPropagationPretty  :: Maybe TextOutputFile
-  , bpofFullStatsPretty    :: Maybe TextOutputFile
-  , bpofMachViews          :: Maybe JsonOutputFile
-  , bpofChainPretty        :: Maybe TextOutputFile
-  , bpofChain              :: Maybe JsonOutputFile
-  , bpofChainRaw           :: Maybe JsonOutputFile
-  , bpofAnalysis           :: Maybe JsonOutputFile
-  }
-  deriving (Show)
-
 ---
 --- Parsers
 ---
-optJsonGenesisFile :: String -> String -> Parser JsonGenesisFile
-optJsonGenesisFile optname desc =
-  fmap JsonGenesisFile $
+optInputDir :: String -> String -> Parser InputDir
+optInputDir optname desc =
+  fmap InputDir $
     Opt.option Opt.str
       $ long optname
-      <> metavar "GENESIS-FILE"
-      <> help desc
-
-optJsonRunMetafile :: String -> String -> Parser JsonRunMetafile
-optJsonRunMetafile optname desc =
-  fmap JsonRunMetafile $
-    Opt.option Opt.str
-      $ long optname
-      <> metavar "RUN-METAFILE"
-      <> help desc
-
-optJsonDomainFile :: String -> String -> Parser JsonDomainFile
-optJsonDomainFile optname desc =
-  fmap JsonDomainFile $
-    Opt.option Opt.str
-      $ long optname
-      <> metavar "DOMAINFILE"
+      <> metavar "DIR"
       <> help desc
 
 optJsonLogfile :: String -> String -> Parser JsonLogfile
@@ -195,7 +148,7 @@ argJsonLogfile =
   JsonLogfile <$>
     Opt.argument Opt.str (Opt.metavar "LOGFILE")
 
-optJsonInputFile :: String -> String -> Parser JsonInputFile
+optJsonInputFile :: String -> String -> Parser (JsonInputFile a)
 optJsonInputFile optname desc =
   fmap JsonInputFile $
     Opt.option Opt.str
@@ -203,7 +156,7 @@ optJsonInputFile optname desc =
       <> metavar "JSON-FILE"
       <> help desc
 
-optJsonOutputFile :: String -> String -> Parser JsonOutputFile
+optJsonOutputFile :: String -> String -> Parser (JsonOutputFile a)
 optJsonOutputFile optname desc =
   fmap JsonOutputFile $
     Opt.option Opt.str
@@ -217,6 +170,14 @@ optGnuplotOutputFile optname desc =
     Opt.option Opt.str
       $ long optname
       <> metavar "CDF-OUTFILE"
+      <> help desc
+
+optTextInputFile :: String -> String -> Parser TextInputFile
+optTextInputFile optname desc =
+  fmap TextInputFile $
+    Opt.option Opt.str
+      $ long optname
+      <> metavar "TEXT-INFILE"
       <> help desc
 
 optTextOutputFile :: String -> String -> Parser TextOutputFile
@@ -279,56 +240,3 @@ optWord optname desc def =
     <> metavar "INT"
     <> help desc
     <> value def
-
-parseMachineTimelineOutputFiles :: Parser MachineTimelineOutputFiles
-parseMachineTimelineOutputFiles =
-  MachineTimelineOutputFiles
-    <$> optional
-        (optJsonOutputFile "slotstats-json"
-           "Per-slot performance summaries")
-    <*> optional
-        (optJsonOutputFile "analysis-json"
-           "Write analysis JSON to this file, if specified -- otherwise print to stdout.")
-    <*> optional
-        (optTextOutputFile "fullstats-text"
-           "Full performance statistics breakdown")
-    <*> optional
-        (optTextOutputFile "reportstats-text"
-           "Report performance statistics breakdown")
-    <*> optional
-        (optTextOutputFile "timeline-text"
-           "Dump pretty timeline of extracted slot leadership summaries, as a side-effect of log analysis")
-    <*> optional
-        (optCsvOutputFile "timeline-csv"
-           "Dump CSV of the timeline")
-    <*> optional
-        (optCsvOutputFile "stats-csv"
-           "Dump CSV of the timeline statistics")
-    <*> optional
-        (optCsvOutputFile "derived-vectors-0-csv"
-           "Dump CSV of vectors derived from the timeline")
-    <*> optional
-        (optCsvOutputFile "derived-vectors-1-csv"
-           "Dump CSV of vectors derived from the timeline")
-
-parseBlockPropOutputFiles :: Parser BlockPropOutputFiles
-parseBlockPropOutputFiles =
-  BlockPropOutputFiles
-    <$> optional
-        (optTextOutputFile "forger-text"       "Forger stats")
-    <*> optional
-        (optTextOutputFile "peers-text"        "Peers stats")
-    <*> optional
-        (optTextOutputFile "propagation-text"  "Propagation stats")
-    <*> optional
-        (optTextOutputFile "fullstats-text"    "Full (forger+peers+propagation) stats")
-    <*> optional
-        (optJsonOutputFile "mach-views-json"   "Machine chain views as JSON")
-    <*> optional
-        (optTextOutputFile "chain-text"        "Timeline of chain evolution, one line per block")
-    <*> optional
-        (optJsonOutputFile "chain-raw-json"    "Unfiltered chain as JSON")
-    <*> optional
-        (optJsonOutputFile "chain-json"        "Chain as JSON")
-    <*> optional
-        (optJsonOutputFile "analysis-json"     "Analysis as JSON")

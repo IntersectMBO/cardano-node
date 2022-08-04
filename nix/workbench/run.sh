@@ -255,16 +255,18 @@ case "$op" in
     allocate-from-aws | aws-get )
         local usage="USAGE: wb run $op RUN [MACHINE] [DEPLOYMENT=bench-1] [ENV=bench]"
         local run=${1:?$usage}
-        local mach=${2:-}
+        local mach=${2:-all-hosts}
         local depl=${3:-bench-1}
         local env=${4:-bench}
 
         local args=(
+            "$env"
+            "$depl"
             "$run"
             'if test -f compressed/logs-$obj.tar.zst; then cat compressed/logs-$obj.tar.zst; else tar c $obj --zstd --ignore-failed-read; fi'
+
+            common-run-files
             $mach
-            $depl
-            $env
         )
         run_aws_get "${args[@]}";;
 
@@ -280,10 +282,21 @@ case "$op" in
            then fail "aws-analysis:  run does not exist on AWS: $(white $run)"
            elif test "$(ssh $env -- sh -c "'ls -ld $depl/runs/$run/analysis | wc -l'")" = 0
            then fail "aws-analysis:  run has not been analysed on AWS: $(white $run)"
-           else run_aws_get "$run" '{ ls {profile,machines}.json analysis/*.{json,cdf,org,txt} |
-                                                                              grep -v flt.json |
-                                                                      grep -v flt.logobjs.json |
-                           xargs tar c --ignore-failed-read --zstd; }' 'explorer' "$depl" "$env"
+           else local analysis_files=(
+                   $(ssh $env -- \
+                     sh -c "'cd $depl/runs/$run && ls analysis/*.{json,cdf,org,txt} | grep -v flt.json | grep -v flt.logobjs.json | grep -v flt.mach.txt | grep -v flt.perf-stats.json'" \
+                     2>/dev/null)
+                )
+                local args=(
+                   "$env"
+                   "$depl"
+                   "$run"
+                   'if test -f compressed/logs-$obj.tar.zst; then cat compressed/logs-$obj.tar.zst; else tar c $obj --zstd --ignore-failed-read; fi'
+
+                   common-run-files
+                   ${analysis_files[*]}
+                )
+                run_aws_get "${args[@]}"
            fi
         done
         ;;
@@ -619,15 +632,15 @@ EOF
 }
 
 run_aws_get() {
-    local usage='USAGE: run_aws_get RUN REMOTE-TAR-CMD [MACHINE] [DEPLOYMENT] [ENV]'
-    local run=${1:?$usage}
-    local remote_tar_cmd=${2:?$usage}
-    local mach=${3:-}
-    local depl=${4:-bench-1}
-    local env=${5:-bench}
+    local usage='USAGE: run_aws_get ENV DEPLOYMENT RUN REMOTE-TAR-CMD OBJ..'
+    local env=${1:?$usage}; shift
+    local depl=${1:?$usage}; shift
+    local run=${1:?$usage}; shift
+    local remote_tar_cmd=${1:?$usage}; shift
+    local objects=($*)
 
-    progress "aws-get" "mach $(yellow $mach) depl $(yellow $depl) run $(white $run)"
-    progress "aws-get" "selector $(green $remote_tar_cmd)"
+    progress "aws-get" "env $(yellow $env) depl $(yellow $depl) run $(white $run)"
+    progress "aws-get" "tar $(green $remote_tar_cmd) objects ${objects[*]}"
 
     local meta=$(ssh $env -- sh -c "'jq . $depl/runs/$run/meta.json'")
     if ! jq . <<<$meta >/dev/null
@@ -638,28 +651,29 @@ run_aws_get() {
     mkdir -p "$dir"
     jq . <<<$meta > $dir/meta.json
 
-    local hosts=($(if test -n "$mach"; then echo $mach
-                   else jq -r '.hostname | keys | .[]' <<<$meta; fi))
-    local objects=(
-        ${hosts[*]}
+    local common_run_files=(
         genesis-alonzo.json
         genesis-shelley.json
         machines.json
         network-latency-matrix.json
         profile.json
     )
+    local xs0=(${objects[*]})
+    local xs1=(${xs0[*]/#all-hosts/        $(jq -r '.hostname | keys | .[]' <<<$meta)})
+    local xs2=(${xs1[*]/#common-run-files/ ${common_run_files[*]}})
+    local xs=(${xs2[*]})
 
-    local count=${#objects[*]}
-    progress "run | aws-get $(white $run)" "objects to fetch:  $(white $count) total:  $(yellow ${objects[*]})"
+    local count=${#xs[*]}
+    progress "run | aws-get $(white $run)" "objects to fetch:  $(white $count) total:  $(yellow ${xs[*]})"
 
     local max_batch=9 base=0 batch
     while test $base -lt $count
-    do local batch=(${objects[*]:$base:$max_batch})
+    do local batch=(${xs[*]:$base:$max_batch})
        progress_ne "run | aws-get $(white $run)" "fetching batch: "
        local obj=
        for obj in ${batch[*]}
        do { ssh $env -- \
-                sh -c "'cd $depl/runs/$run && ${remote_tar_cmd}'" 2>/dev/null |
+                sh -c "'obj=${obj}; cd $depl/runs/$run && ${remote_tar_cmd}'" 2>/dev/null |
                 (cd $dir; tar x --zstd)
             echo -ne " $(yellow $obj)" >&2
           } &
@@ -668,4 +682,51 @@ run_aws_get() {
        echo >&2
        base=$((base + max_batch))
     done
+
+    progress "run | aws-get" "adding manifest"
+    jq_fmutate "$dir"/meta.json '.meta.manifest = $manifest
+    ' --argjson manifest "$(legacy_run_manifest $dir)"
+}
+
+node_cabal_source_at() {
+    local node=$1
+    local pin=$2
+
+    git show $node:cabal.project |
+        grep "location: .*/$pin\$" -A1 |
+        tail -n1 |
+        cut -d: -f2 |
+        cut -c 2-
+}
+
+legacy_run_manifest() {
+    local dir=$1
+    local node=$(       jq -r '.meta.pins."cardano-node"' $dir/meta.json)
+    local node_branch=$(jq -r '.meta.node_commit_spec'    $dir/meta.json)
+    local node_ver=$(   jq -r '.meta.node_commit_desc'    $dir/meta.json)
+
+    local args=(
+      --arg Node          $node
+      --arg NodeBranch    $node_branch
+      --arg NodeApproxVer $node_ver
+      --arg Network  $(node_cabal_source_at $node ouroboros-network)
+      --arg Ledger   $(node_cabal_source_at $node cardano-ledger)
+      --arg Plutus   $(node_cabal_source_at $node plutus)
+      --arg Crypto   $(node_cabal_source_at $node cardano-crypto)
+      --arg Base     $(node_cabal_source_at $node cardano-base)
+      --arg Prelude  $(node_cabal_source_at $node cardano-prelude)
+    )
+    jq '
+  { "cardano-node"         : $Node
+  , "cardano-node-branch"  : $NodeBranch
+  , "cardano-node-version" : $NodeApproxVer
+  , "cardano-node-status"  : "unknown"
+  , "ouroboros-network"    : $Network
+  , "cardano-ledger"       : $Ledger
+  , "plutus"               : $Plutus
+  , "cardano-crypto"       : $Crypto
+  , "cardano-base"         : $Base
+  , "cardano-prelude"      : $Prelude
+  }
+  ' --null-input "${args[@]}"
 }

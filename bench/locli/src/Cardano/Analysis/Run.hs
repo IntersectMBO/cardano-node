@@ -30,7 +30,7 @@ data Anchor
   , aFilters :: [FilterName]
   , aSlots   :: Maybe (DataDomain SlotNo)
   , aBlocks  :: Maybe (DataDomain BlockNo)
-  , aVersion :: Version
+  , aVersion :: Cardano.Analysis.Version.Version
   , aWhen    :: UTCTime
   }
 
@@ -82,12 +82,12 @@ renderAnchorDate :: Anchor -> Text
 renderAnchorDate = show . posixSecondsToUTCTime . secondsToNominalDiffTime . fromIntegral @Int . round . utcTimeToPOSIXSeconds . aWhen
 
 data AnalysisCmdError
-  = AnalysisCmdError                         !Text
+  = AnalysisCmdError                                   !Text
   | MissingRunContext
   | MissingLogfiles
-  | RunMetaParseError      !JsonRunMetafile  !Text
-  | GenesisParseError      !JsonGenesisFile  !Text
-  | ChainFiltersParseError !JsonFilterFile   !Text
+  | RunMetaParseError      !(JsonInputFile RunPartial) !Text
+  | GenesisParseError      !(JsonInputFile Genesis)    !Text
+  | ChainFiltersParseError !JsonFilterFile             !Text
   deriving Show
 
 data ARunWith a
@@ -113,6 +113,8 @@ instance FromJSON RunPartial where
     --
     tag       <- meta .: "tag"
     profile   <- meta .: "profile"
+    batch     <- meta .: "batch"
+    manifest  <- meta .: "manifest"
 
     eraGtor   <- generator       .:? "era"
     eraTop    <- profile_content .:? "era"
@@ -124,17 +126,17 @@ instance FromJSON RunPartial where
         genesis  = ()
     pure Run{..}
 
-readRun :: JsonGenesisFile -> JsonRunMetafile -> ExceptT AnalysisCmdError IO Run
+readRun :: JsonInputFile Genesis -> JsonInputFile RunPartial -> ExceptT AnalysisCmdError IO Run
 readRun shelleyGenesis runmeta = do
   runPartial <- firstExceptT (RunMetaParseError runmeta . T.pack)
                        (newExceptT $
-                        Aeson.eitherDecode @RunPartial <$> LBS.readFile (unJsonRunMetafile runmeta))
-  progress "meta"    (Q $ unJsonRunMetafile runmeta)
+                        Aeson.eitherDecode @RunPartial <$> LBS.readFile (unJsonInputFile runmeta))
+  progress "meta"    (Q $ unJsonInputFile runmeta)
   run        <- firstExceptT (GenesisParseError shelleyGenesis . T.pack)
                        (newExceptT $
-                        Aeson.eitherDecode @Genesis <$> LBS.readFile (unJsonGenesisFile shelleyGenesis))
+                        Aeson.eitherDecode @Genesis <$> LBS.readFile (unJsonInputFile shelleyGenesis))
                 <&> completeRun runPartial
-  progress "genesis" (Q $ unJsonGenesisFile shelleyGenesis)
+  progress "genesis" (Q $ unJsonInputFile shelleyGenesis)
   progress "run"     (J run)
   pure run
 

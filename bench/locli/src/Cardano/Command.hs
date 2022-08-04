@@ -4,6 +4,7 @@ module Cardano.Command (module Cardano.Command) where
 import Cardano.Prelude                  hiding (State, head)
 
 import Data.Aeson                       qualified as Aeson
+import Data.ByteString                  qualified as BS
 import Data.ByteString.Lazy.Char8       qualified as LBS
 import Data.Text                        (pack)
 import Data.Text                        qualified as T
@@ -13,15 +14,18 @@ import Options.Applicative
 import Options.Applicative              qualified as Opt
 
 import System.FilePath
+import System.Posix.Files               qualified as IO
 
 import Cardano.Analysis.API
 import Cardano.Analysis.BlockProp
 import Cardano.Analysis.ChainFilter
+import Cardano.Analysis.Context
 import Cardano.Analysis.Ground
 import Cardano.Analysis.MachPerf
 import Cardano.Analysis.Run
 import Cardano.Unlog.LogObject          hiding (Text)
 import Cardano.Unlog.Render
+import Cardano.Report
 import Data.CDF
 
 data CommandError
@@ -49,8 +53,8 @@ parseChainCommand =
        <$> optTextOutputFile  "keys-legacy"     "Text file to write logobject keys to")
    , op "meta-genesis" "Machine performance timeline"
      (MetaGenesis
-       <$> optJsonRunMetafile "run-metafile"    "The meta.json file from the benchmark run"
-       <*> optJsonGenesisFile "shelley-genesis" "Genesis file of the run")
+       <$> optJsonInputFile "run-metafile"    "The meta.json file from the benchmark run"
+       <*> optJsonInputFile "shelley-genesis" "Genesis file of the run")
    ]) <|>
 
   subparser (mconcat [ commandGroup "Basic log objects"
@@ -160,6 +164,18 @@ parseChainCommand =
    , op "render-multi-clusterperf" "Write multi-run cluster performance results"
      (writerOpts RenderMultiClusterPerf "Render"
       <*> parsePerfSubset)
+
+   , op "compare" "Generate a report comparing multiple runs"
+     (Compare
+       <$> optInputDir       "ede"      "Directory with EDE templates."
+       <*> optional
+           (optTextInputFile "template" "Template to use as base.")
+       <*> optTextOutputFile "report"   "Report .org file to create."
+       <*> some
+       ((,)
+        <$> optJsonInputFile "run-metafile"    "The meta.json file of a benchmark run"
+        <*> optJsonInputFile "shelley-genesis" "Genesis file of the run"
+       ))
    ])
  where
    op :: String -> String -> Parser a -> Mod CommandFields a
@@ -208,7 +224,7 @@ data ChainCommand
   = ListLogobjectKeys       TextOutputFile
   | ListLogobjectKeysLegacy TextOutputFile
 
-  |        MetaGenesis      JsonRunMetafile JsonGenesisFile
+  |        MetaGenesis      (JsonInputFile RunPartial) (JsonInputFile Genesis)
 
   |        Unlog            [JsonLogfile] (Maybe HostDeduction)
   |        DumpLogObjects
@@ -218,11 +234,11 @@ data ChainCommand
   |         ReadMachViews   [JsonLogfile]
 
   |         RebuildChain
-  |            ReadChain    JsonInputFile
-  |            DumpChainRaw JsonOutputFile
+  |            ReadChain    (JsonInputFile [BlockEvents])
+  |            DumpChainRaw (JsonOutputFile [BlockEvents])
   |        TimelineChainRaw TextOutputFile
   |          FilterChain    [JsonFilterFile]
-  |            DumpChain    JsonOutputFile
+  |            DumpChain    (JsonOutputFile [BlockEvents])
   |        TimelineChain    TextOutputFile
 
   |         CollectSlots    [JsonLogfile]
@@ -233,7 +249,7 @@ data ChainCommand
 
   |      ComputePropagation
   |       RenderPropagation RenderMode TextOutputFile PropSubset
-  |        ReadPropagations [JsonInputFile]
+  |        ReadPropagations [JsonInputFile BlockPropOne]
 
   | ComputeMultiPropagation
   |  RenderMultiPropagation RenderMode TextOutputFile PropSubset
@@ -244,9 +260,12 @@ data ChainCommand
   |      ComputeClusterPerf
   |       RenderClusterPerf RenderMode TextOutputFile PerfSubset
 
-  |    ReadMultiClusterPerf [JsonInputFile]
+  |    ReadMultiClusterPerf [JsonInputFile MultiClusterPerf]
   | ComputeMultiClusterPerf
   |  RenderMultiClusterPerf RenderMode TextOutputFile PerfSubset
+
+  |             Compare     InputDir (Maybe TextInputFile) TextOutputFile
+                            [(JsonInputFile RunPartial, JsonInputFile Genesis)]
 
   deriving Show
 
@@ -556,6 +575,22 @@ runChainCommand s@State{sMultiClusterPerf=Just (MultiClusterPerf perf)}
 runChainCommand _ c@RenderMultiClusterPerf{} = missingCommandData c
   ["multi-run cluster preformance stats"]
 
+runChainCommand s c@(Compare ede mTmpl outf@(TextOutputFile outfp) runs) = do
+  xs :: [Run] <- forM runs $
+    \(mf,gf)-> readRun gf mf & firstExceptT (fromAnalysisError c)
+  (tmpl, orgReport) <- case xs of
+    baseline:deltas@(_:_) -> liftIO $
+      Cardano.Report.generate ede mTmpl baseline deltas
+    _ -> throwE $ CommandError c $ mconcat
+         [ "At least two runs required for comparison." ]
+  dumpText "report" [orgReport] outf
+    & firstExceptT (CommandError c)
+
+  let tmplPath = Cardano.Analysis.API.replaceExtension outfp "ede"
+  liftIO . unlessM (IO.fileExist tmplPath) $
+    BS.writeFile tmplPath tmpl
+
+  pure s
 
 missingCommandData :: ChainCommand -> [String] -> ExceptT CommandError IO a
 missingCommandData c xs =

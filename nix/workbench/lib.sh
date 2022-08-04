@@ -79,6 +79,10 @@ msg_ne() {
     echo -ne "workbench:  $*" >&2
 }
 
+plain() {
+    with_color reset $*
+}
+
 green() {
     with_color green $*
 }

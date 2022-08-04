@@ -118,12 +118,12 @@ hostDeduction = \case
 replaceExtension :: FilePath -> String -> FilePath
 replaceExtension f new = F.dropExtension f <> "." <> new
 
-dumpObject :: ToJSON a => String -> a -> JsonOutputFile -> ExceptT Text IO ()
+dumpObject :: ToJSON a => String -> a -> JsonOutputFile a -> ExceptT Text IO ()
 dumpObject ident x (JsonOutputFile f) = liftIO $ do
   progress ident (Q f)
   withFile f WriteMode $ \hnd -> LBS.hPutStrLn hnd $ encode x
 
-dumpObjects :: ToJSON a => String -> [a] -> JsonOutputFile -> ExceptT Text IO ()
+dumpObjects :: ToJSON a => String -> [a] -> JsonOutputFile [a] -> ExceptT Text IO ()
 dumpObjects ident xs (JsonOutputFile f) = liftIO $ do
   progress ident (Q f)
   withFile f WriteMode $ \hnd -> do

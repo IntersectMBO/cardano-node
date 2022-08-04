@@ -47,6 +47,9 @@ common base
 
   build-depends:       base
 
+  if os(windows)
+    buildable: False
+
 library
   import:              base
   hs-source-dirs:      src
@@ -56,6 +59,7 @@ library
                        Data.DataDomain
 
                        Cardano.Command
+                       Cardano.Report
                        Cardano.TopHandler
                        Cardano.Util
 
@@ -91,6 +95,7 @@ library
                      , containers
                      , deepseq
                      , directory
+                     , ede
                      , extra
                      , filepath
                      , file-embed
@@ -114,6 +119,7 @@ library
                      , trace-resources
                      , transformers
                      , transformers-except
+                     , unix
                      , unordered-containers
                      , utf8-string
                      , vector
