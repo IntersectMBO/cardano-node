@@ -42,7 +42,7 @@ None
 - Implement two functions: `currentEpochEligibleLeadershipSlots` and
   `nextEpochEligibleLeadershipSlots` to get the leadership slots for the
   current/next epoch respectively. (#3464, #3494)
-- Various small intenral fixes. (#3466)
+- Various small internal fixes. (#3466)
 - Add a `capi` library to support using the cardano node as a C library in other
   software. (#3501)
 - `fromShelleyAddr` now takes an explicit `ShelleyBasedEra` parameter to
