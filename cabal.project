@@ -175,7 +175,7 @@ source-repository-package
   type: git
   location: https://github.com/haskell-works/hw-aeson
   tag: 6dc309ff4260c71d9a18c220cbae8aa1dfe2a02e
-  --sha256: 0i0f7rnbr49rk59fzap9433b00hklgiq26aq9vqgmw9dmafv43i3
+  --sha256: 08zxzkk1fy8xrvl46lhzmpyisizl0nzl1n00g417vc0l170wsr9j
 
 source-repository-package
   type: git
