@@ -1,10 +1,11 @@
 # Changelog for cardano-node
 
-## 1.35.3 -- July 2022
+## 1.35.3 -- August 2022
 
 ### node changes
 
 - Update ledger and Plutus to the tip of release/1.0.0 (#4242)
+- Bump block header protocol version (#4260)
 
 ### consensus changes
 

@@ -1,8 +1,11 @@
 # Changelog for cardano-api
 
-## 1.35.3 -- July 2022
+## 1.35.3 -- August 2022
 
-None
+- Fix leadership schedule for current on babbage (#4106)
+- Update build to allow all invalid scripts (again) (#4088)
+- Fix building of Alonzo transaction in Babbage era. (#4166)
+- Add `utxoCostPerByte` protocol parameter (#4141)
 
 ## 1.35.2 -- July 2022 (not released)
 
