@@ -198,7 +198,12 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
           -- version that this node will declare that it understands, when it
           -- is in the Alonzo era. That is, it is the version of protocol
           -- /after/ Alonzo, i.e. Babbage.
-          alonzoProtVer = ProtVer 7 1,
+          -- NOTE:
+          -- We are not actually transitioning to version 7.2,
+          -- this is a HACK so that we can distinguish between others
+          -- versions of the node that are broadcasting major version 7.
+          -- We intentionally broadcast 7.0 starting in Babbage.
+          alonzoProtVer = ProtVer 7 2,
           alonzoMaxTxCapacityOverrides =
             TxLimits.mkOverrides TxLimits.noOverridesMeasure
         }
@@ -207,7 +212,7 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
           -- version that this node will declare that it understands, when it
           -- is in the Babbage era. Since Babbage is currently the last known
           -- protocol version then this is also the Babbage protocol version.
-          Praos.babbageProtVer = ProtVer 7 1,
+          Praos.babbageProtVer = ProtVer 7 0,
           Praos.babbageMaxTxCapacityOverrides =
             TxLimits.mkOverrides TxLimits.noOverridesMeasure
         }
