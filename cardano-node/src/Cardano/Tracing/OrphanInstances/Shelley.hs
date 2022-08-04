@@ -372,10 +372,10 @@ instance ( ShelleyBasedEra era
     mconcat [ "kind" .= String "InvalidWitnessesUTXOW"
              , "invalidWitnesses" .= map textShow wits'
              ]
-  toObject _verb (MissingVKeyWitnessesUTXOW (WitHashes wits')) =
+  toObject _verb (MissingVKeyWitnessesUTXOW wits') =
     mconcat [ "kind" .= String "MissingVKeyWitnessesUTXOW"
-             , "missingWitnesses" .= wits'
-             ]
+            , "missingWitnesses" .= String (Text.pack $ show wits')
+            ]
   toObject _verb (MissingScriptWitnessesUTXOW missingScripts) =
     mconcat [ "kind" .= String "MissingScriptWitnessesUTXOW"
              , "missingScripts" .= missingScripts

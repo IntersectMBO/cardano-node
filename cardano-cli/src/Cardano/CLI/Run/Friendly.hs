@@ -231,6 +231,7 @@ friendlyProtocolParametersUpdate
     , protocolUpdateMaxTxExUnits
     , protocolUpdateMaxValueSize
     , protocolUpdatePrices
+    , protocolUpdateUTxOCostPerByte
     } =
   object . catMaybes $
     [ protocolUpdateProtocolVersion <&> \(major, minor) ->
@@ -258,7 +259,7 @@ friendlyProtocolParametersUpdate
         ("monetary expansion" .=) . friendlyRational
     , protocolUpdateTreasuryCut <&> ("treasury expansion" .=) . friendlyRational
     , protocolUpdateUTxOCostPerWord <&>
-        ("UTxO storage cost per unit" .=) . friendlyLovelace
+        ("UTxO storage cost per word" .=) . friendlyLovelace
     , protocolUpdateCollateralPercent <&>
         ("collateral inputs share" .=) . (<> "%") . textShow
     , protocolUpdateMaxBlockExUnits <&> ("max block execution units" .=)
@@ -266,6 +267,8 @@ friendlyProtocolParametersUpdate
     , protocolUpdateMaxTxExUnits <&> ("max transaction execution units" .=)
     , protocolUpdateMaxValueSize <&> ("max value size" .=)
     , protocolUpdatePrices <&> ("execution prices" .=) . friendlyPrices
+    , protocolUpdateUTxOCostPerByte <&>
+        ("UTxO storage cost per byte" .=) . friendlyLovelace
     ]
 
 friendlyPrices :: ExecutionUnitPrices -> Aeson.Value

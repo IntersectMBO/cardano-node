@@ -32,6 +32,30 @@ import qualified Cardano.Api as Api
 import           Cardano.Api.Byron
 import           Cardano.Api.Orphans ()
 import           Cardano.Api.Shelley
+
+import           Control.Monad.Trans.Except (except)
+import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistEither,
+                   hoistMaybe, left, newExceptT)
+import           Data.Aeson.Encode.Pretty (encodePretty)
+import           Data.Aeson.Types as Aeson
+import qualified Data.ByteString.Lazy.Char8 as LBS
+import           Data.Coerce (coerce)
+import           Data.List (nub)
+import qualified Data.Map.Strict as Map
+import qualified Data.Set as Set
+import           Data.Sharing (Interns, Share)
+import qualified Data.Text as Text
+import qualified Data.Text.Encoding as Text
+import qualified Data.Text.IO as T
+import qualified Data.Text.IO as Text
+import           Data.Text.Lazy.Builder (toLazyText)
+import           Data.Time.Clock
+import qualified Data.Vector as Vector
+import qualified Data.VMap as VMap
+import           Formatting.Buildable (build)
+import           Numeric (showEFloat)
+import           Text.Printf (printf)
+
 import           Cardano.Binary (DecoderError)
 import           Cardano.CLI.Environment (EnvSocketError, readEnvSocketPath, renderEnvSocketError)
 import           Cardano.CLI.Helpers (HelpersError (..), hushM, pPrintCBOR, renderHelpersError)
@@ -64,16 +88,6 @@ import           Cardano.Ledger.Shelley.LedgerState (DPState (..),
 import qualified Cardano.Ledger.Shelley.PParams as Shelley
 import           Cardano.Ledger.Shelley.Scripts ()
 import           Cardano.Slotting.EpochInfo (EpochInfo (..), epochInfoSlotToUTCTime, hoistEpochInfo)
-import           Control.Monad.Trans.Except (except)
-import           Control.Monad.Trans.Except.Extra (firstExceptT, handleIOExceptT, hoistMaybe, left,
-                   newExceptT, hoistEither)
-import           Data.Aeson.Encode.Pretty (encodePretty)
-import           Data.Aeson.Types as Aeson
-import           Data.Coerce (coerce)
-import           Data.List (nub)
-import           Data.Sharing (Interns, Share)
-import           Data.Text.Lazy.Builder (toLazyText)
-import           Data.Time.Clock
 
 import           Ouroboros.Consensus.BlockchainTime.WallClock.Types (RelativeTime (..),
                    SystemStart (..), toRelativeTime)
@@ -82,19 +96,7 @@ import           Ouroboros.Consensus.Cardano.Block as Consensus (EraMismatch (..
 import           Ouroboros.Consensus.Protocol.TPraos
 import           Ouroboros.Network.Block (Serialised (..))
 import           Ouroboros.Network.Protocol.LocalStateQuery.Type (AcquireFailure (..))
-import           Text.Printf (printf)
 
-import qualified Data.ByteString.Lazy.Char8 as LBS
-import qualified Data.VMap as VMap
-import qualified Data.Map.Strict as Map
-import qualified Data.Set as Set
-import qualified Data.Text as Text
-import qualified Data.Text.Encoding as Text
-import qualified Data.Text.IO as T
-import qualified Data.Text.IO as Text
-import qualified Data.Vector as Vector
-import           Formatting.Buildable (build)
-import           Numeric (showEFloat)
 import qualified Ouroboros.Consensus.HardFork.History as Consensus
 import qualified Ouroboros.Consensus.Protocol.Abstract as Consensus
 import qualified Ouroboros.Consensus.Protocol.Praos.Common as Consensus
@@ -676,7 +678,7 @@ runQueryProtocolState
   -> Maybe OutputFile
   -> ExceptT ShelleyQueryCmdError IO ()
 runQueryProtocolState (AnyConsensusModeParams cModeParams)
-                      network _mOutFile = do
+                      network mOutFile = do
   SocketPath sockPath <- firstExceptT ShelleyQueryCmdEnvVarSocketErr readEnvSocketPath
   let localNodeConnInfo = LocalNodeConnectInfo cModeParams network sockPath
 
@@ -689,12 +691,16 @@ runQueryProtocolState (AnyConsensusModeParams cModeParams)
       let qInMode = QueryInEra eInMode
                       . QueryInShelleyBasedEra sbe
                       $ QueryProtocolState
-      _result <- executeQuery
+      result <- executeQuery
                   era
                   cModeParams
                   localNodeConnInfo
                   qInMode
-      panic "currentlyBroken: runQueryProtocolState writeProtocolState mOutFile result"
+
+      case cMode of
+        CardanoMode -> eligibleWriteProtocolStateConstaints sbe $ writeProtocolState mOutFile result
+        mode -> left . ShelleyQueryCmdUnsupportedMode $ AnyConsensusMode mode
+
     Nothing -> left $ ShelleyQueryCmdEraConsensusModeMismatch (AnyConsensusMode cMode) anyE
 
 -- | Query the current delegations and reward accounts, filtered by a given
@@ -853,16 +859,18 @@ writePoolParams (StakePoolKeyHash hk) qState =
 
       liftIO . LBS.putStrLn $ encodePretty $ Params poolParams fPoolParams retiring
 
-_writeProtocolState :: FromCBOR (Consensus.ChainDepState (ConsensusProtocol era))
-                   => ToJSON (Consensus.ChainDepState (ConsensusProtocol era))
-                   => Maybe OutputFile
-                   -> ProtocolState era
-                   -> ExceptT ShelleyQueryCmdError IO ()
-_writeProtocolState mOutFile ps@(ProtocolState pstate) =
+writeProtocolState ::
+  ( FromCBOR (Consensus.ChainDepState (ConsensusProtocol era))
+  , ToJSON (Consensus.ChainDepState (ConsensusProtocol era))
+  )
+  => Maybe OutputFile
+  -> ProtocolState era
+  -> ExceptT ShelleyQueryCmdError IO ()
+writeProtocolState mOutFile ps@(ProtocolState pstate) =
   case mOutFile of
     Nothing -> case decodeProtocolState ps of
-                 Left (bs, _) -> firstExceptT ShelleyQueryCmdHelpersError $ pPrintCBOR bs
-                 Right chainDepstate -> liftIO . LBS.putStrLn $ encodePretty chainDepstate
+      Left (bs, _) -> firstExceptT ShelleyQueryCmdHelpersError $ pPrintCBOR bs
+      Right chainDepstate -> liftIO . LBS.putStrLn $ encodePretty chainDepstate
     Just (OutputFile fpath) ->
       handleIOExceptT (ShelleyQueryCmdWriteFileError . FileIOError fpath)
         . LBS.writeFile fpath $ unSerialised pstate
@@ -1364,6 +1372,19 @@ eligibleLeaderSlotsConstaints ShelleyBasedEraAllegra f = f
 eligibleLeaderSlotsConstaints ShelleyBasedEraMary    f = f
 eligibleLeaderSlotsConstaints ShelleyBasedEraAlonzo  f = f
 eligibleLeaderSlotsConstaints ShelleyBasedEraBabbage f = f
+
+eligibleWriteProtocolStateConstaints
+  :: ShelleyBasedEra era
+  -> (( FromCBOR (Consensus.ChainDepState (ConsensusProtocol era))
+      , ToJSON (Consensus.ChainDepState (ConsensusProtocol era))
+      ) => a
+     )
+  -> a
+eligibleWriteProtocolStateConstaints ShelleyBasedEraShelley f = f
+eligibleWriteProtocolStateConstaints ShelleyBasedEraAllegra f = f
+eligibleWriteProtocolStateConstaints ShelleyBasedEraMary    f = f
+eligibleWriteProtocolStateConstaints ShelleyBasedEraAlonzo  f = f
+eligibleWriteProtocolStateConstaints ShelleyBasedEraBabbage f = f
 
 -- Required instances
 -- instance FromCBOR (TPraosState StandardCrypto) where

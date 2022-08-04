@@ -40,6 +40,7 @@ library
                         Cardano.Api.ChainSync.Client
                         Cardano.Api.ChainSync.ClientPipelined
                         Cardano.Api.Crypto.Ed25519Bip32
+                        Cardano.Api.EraCast
                         Cardano.Api.Protocol.Types
                         Cardano.Api.Shelley
                         -- TODO: Eliminate in the future when

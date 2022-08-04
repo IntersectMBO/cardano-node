@@ -793,10 +793,6 @@ data TxBodyErrorAutoBalance =
        -- parameter, for eras that use this parameter.
      | TxBodyErrorMissingParamMinUTxO
 
-       -- | The 'ProtocolParameters' must provide the value for the cost per
-       -- word parameter, for eras that use this parameter.
-     | TxBodyErrorMissingParamCostPerWord
-
        -- | The transaction validity interval is too far into the future.
        -- See 'TransactionValidityIntervalError' for details.
      | TxBodyErrorValidityInterval TransactionValidityError
@@ -856,9 +852,6 @@ instance Error TxBodyErrorAutoBalance where
   displayError TxBodyErrorMissingParamMinUTxO =
       "The minUTxOValue protocol parameter is required but missing"
 
-  displayError TxBodyErrorMissingParamCostPerWord =
-      "The utxoCostPerWord protocol parameter is required but missing"
-
   displayError (TxBodyErrorValidityInterval err) =
       displayError err
 
@@ -887,17 +880,8 @@ handleExUnitsErrors ScriptValid failuresMap exUnitsMap =
   where failures :: [(ScriptWitnessIndex, ScriptExecutionError)]
         failures = Map.toList failuresMap
 handleExUnitsErrors ScriptInvalid failuresMap exUnitsMap
-  | null scriptFailures = Left TxBodyScriptBadScriptValidity
-  | null nonScriptFailures = Right exUnitsMap
-  | otherwise = Left (TxBodyScriptExecutionError nonScriptFailures)
-  where nonScriptFailures :: [(ScriptWitnessIndex, ScriptExecutionError)]
-        nonScriptFailures = filter (not . isScriptErrorEvaluationFailed) (Map.toList failuresMap)
-        scriptFailures :: [(ScriptWitnessIndex, ScriptExecutionError)]
-        scriptFailures = filter isScriptErrorEvaluationFailed (Map.toList failuresMap)
-        isScriptErrorEvaluationFailed :: (ScriptWitnessIndex, ScriptExecutionError) -> Bool
-        isScriptErrorEvaluationFailed (_, e) = case e of
-            ScriptErrorEvaluationFailed _ _ -> True
-            _ -> True
+  | null failuresMap = Left TxBodyScriptBadScriptValidity
+  | otherwise = Right $ Map.map (\_ -> ExecutionUnits 0 0) failuresMap <> exUnitsMap
 
 data BalancedTxBody era
   = BalancedTxBody
@@ -1268,13 +1252,9 @@ calculateMinimumUTxO era txout@(TxOut _ v _ _) pparams' =
 
 data MinimumUTxOError =
     PParamsMinUTxOMissing
-  | PParamsUTxOCostPerWordMissing
   deriving Show
 
 instance Error MinimumUTxOError where
   displayError PParamsMinUTxOMissing =
     "\"minUtxoValue\" field not present in protocol parameters when \
-    \trying to calculate minimum UTxO value."
-  displayError PParamsUTxOCostPerWordMissing =
-    "\"utxoCostPerWord\" field not present in protocol parameters when \
     \trying to calculate minimum UTxO value."

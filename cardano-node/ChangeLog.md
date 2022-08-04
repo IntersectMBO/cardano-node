@@ -1,6 +1,6 @@
 # Changelog for cardano-node
 
-## 1.35.3 -- July 2022
+## 1.35.3 -- August 2022
 
 ### node changes
 

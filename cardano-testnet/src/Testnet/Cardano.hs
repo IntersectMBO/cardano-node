@@ -15,41 +15,41 @@ module Testnet.Cardano
 
   , Era(..)
   , TestnetRuntime (..)
-  , bftSprockets
   , allNodes
   , TestnetNode (..)
-  , Wallet(..)
+  , PaymentKeyPair(..)
 
   , testnet
   ) where
 
 import           Control.Applicative (pure)
-import           Control.Monad (Monad (..), forM_, void, forM, (=<<), when, fmap, return)
+import           Control.Monad (Monad (..), fmap, forM, forM_, return, void, when, (=<<))
 import           Control.Monad.IO.Class (liftIO)
 import           Data.Aeson ((.=))
-import           Data.Bool (Bool(..))
+import           Data.Bool (Bool (..))
 import           Data.ByteString.Lazy (ByteString)
-import           Data.Eq (Eq)
-import           Data.Function (($), (.), flip, id)
+import           Data.Eq (Eq (..))
+import           Data.Function (flip, id, ($), (.))
 import           Data.Functor ((<$>), (<&>))
 import           Data.Int (Int)
-import           Data.List (length, replicate, unzip5, zip, zipWith6, (\\))
-import           Data.Maybe (Maybe(Just), fromJust)
-import           Data.Ord (Ord((<=)))
-import           Data.Semigroup (Semigroup((<>)))
-import           Data.String (IsString(fromString), String)
+import           Data.List ((\\))
+import           Data.Maybe (Maybe (Just), fromJust)
+import           Data.Ord (Ord ((<=)))
+import           Data.Semigroup (Semigroup ((<>)))
+import           Data.String (IsString (fromString), String)
 import           GHC.Enum (Bounded, Enum)
 import           GHC.Float (Double)
-import           GHC.Num (Num((-), (+)))
-import           GHC.Real (fromIntegral, Integral(div))
+import           GHC.Num (Num ((+), (-)))
+import           GHC.Real (Integral (div), fromIntegral)
 import           Hedgehog.Extras.Stock.IO.Network.Sprocket (Sprocket (..))
 import           Hedgehog.Extras.Stock.Time (formatIso8601, showUTCTimeSeconds)
 import           Ouroboros.Network.PeerSelection.LedgerPeers (UseLedgerAfter (..))
 import           Ouroboros.Network.PeerSelection.RelayAccessPoint (RelayAccessPoint (..))
 import           System.FilePath.Posix ((</>))
-import           System.IO (FilePath)
+import           Test.Runtime (NodeLoggingFormat (..), PaymentKeyPair (..), PoolNode (PoolNode),
+                   PoolNodeKeys (..), TestnetNode (..), TestnetRuntime (..))
 import           Text.Read (Read)
-import           Text.Show (Show(show))
+import           Text.Show (Show (show))
 
 import qualified Cardano.Node.Configuration.Topology as NonP2P
 import qualified Cardano.Node.Configuration.TopologyP2P as P2P
@@ -60,7 +60,6 @@ import qualified Data.Map as M
 import qualified Data.Time.Clock as DTC
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Stock.Aeson as J
-import qualified Hedgehog.Extras.Stock.IO.File as IO
 import qualified Hedgehog.Extras.Stock.IO.Network.Socket as IO
 import qualified Hedgehog.Extras.Stock.IO.Network.Sprocket as IO
 import qualified Hedgehog.Extras.Stock.OS as OS
@@ -74,7 +73,9 @@ import qualified System.Directory as IO
 import qualified System.Info as OS
 import qualified System.IO as IO
 import qualified System.Process as IO
+import qualified Test.Assert as H
 import qualified Test.Process as H
+import qualified Test.Runtime as TR
 import qualified Testnet.Conf as H
 
 {- HLINT ignore "Reduce duplication" -}
@@ -100,17 +101,19 @@ data TestnetOptions = TestnetOptions
   , slotLength :: Double
   , activeSlotsCoeff :: Double
   , enableP2P :: Bool
+  , nodeLoggingFormat :: NodeLoggingFormat
   } deriving (Eq, Show)
 
 defaultTestnetOptions :: TestnetOptions
 defaultTestnetOptions = TestnetOptions
-  { bftNodeOptions = replicate 2 defaultTestnetNodeOptions
+  { bftNodeOptions = L.replicate 2 defaultTestnetNodeOptions
   , numPoolNodes = 1
   , era = Alonzo
   , epochLength = 1500
   , slotLength = 0.2
   , activeSlotsCoeff = 0.2
   , enableP2P = False
+  , nodeLoggingFormat = NodeLoggingFormatAsText
   }
 
 newtype TestnetNodeOptions = TestnetNodeOptions
@@ -124,33 +127,8 @@ defaultTestnetNodeOptions = TestnetNodeOptions
   { extraNodeCliArgs = []
   }
 
-data TestnetRuntime = TestnetRuntime
-  { configurationFile :: FilePath
-  , testnetMagic :: Int
-  , bftNodes :: [TestnetNode]
-  , poolNodes :: [TestnetNode]
-  , wallets :: [Wallet]
-  }
-
-bftSprockets :: TestnetRuntime -> [Sprocket]
-bftSprockets = fmap nodeSprocket . bftNodes
-
 allNodes :: TestnetRuntime -> [TestnetNode]
-allNodes tr = bftNodes tr <> poolNodes tr
-
-data TestnetNode = TestnetNode
-  { nodeName :: String
-  , nodeSprocket :: Sprocket
-  , nodeStdinHandle :: IO.Handle
-  , nodeStdout :: FilePath
-  , nodeStderr :: FilePath
-  , nodeProcessHandle :: IO.ProcessHandle
-  }
-
-data Wallet = Wallet
-  { paymentVKey :: FilePath
-  , paymentSKey :: FilePath
-  } deriving (Eq, Show)
+allNodes tr = bftNodes tr <> fmap TR.poolNodeToTestnetNode (poolNodes tr)
 
 ifaceAddress :: String
 ifaceAddress = "127.0.0.1"
@@ -197,14 +175,13 @@ mkTopologyConfig numNodes allPorts port True = J.encode topologyP2P
         []
         (P2P.UseLedger DontUseLedger)
 
-
 testnet :: TestnetOptions -> H.Conf -> H.Integration TestnetRuntime
 testnet testnetOptions H.Conf {..} = do
   void $ H.note OS.os
   currentTime <- H.noteShowIO DTC.getCurrentTime
   startTime <- H.noteShow $ DTC.addUTCTime startTimeOffsetSeconds currentTime
   configurationFile <- H.noteShow $ tempAbsPath </> "configuration.yaml"
-  let numBftNodes = length (bftNodeOptions testnetOptions)
+  let numBftNodes = L.length (bftNodeOptions testnetOptions)
       bftNodesN = [1 .. numBftNodes]
       poolNodesN = [1 .. numPoolNodes testnetOptions]
       bftNodeNames = ("node-bft" <>) . show @Int <$> bftNodesN
@@ -270,8 +247,15 @@ testnet testnetOptions H.Conf {..} = do
     . HM.insert "TraceBlockchainTime" (J.toJSON True)
     . HM.delete "GenesisFile"
     . HM.insert "TestEnableDevelopmentHardForkEras" (J.toJSON @Bool True)
-    . HM.insert "TestEnableDevelopmentNetworkProtocols" (J.toJSON @Bool True)
     . HM.insert "EnableP2P" (J.toJSON @Bool (enableP2P testnetOptions))
+    . flip HM.alter "setupScribes"
+        ( fmap
+          . J.rewriteArrayElements
+            . J.rewriteObject
+              . HM.insert "scFormat"
+                $ case nodeLoggingFormat testnetOptions of
+                  NodeLoggingFormatAsJson -> "ScJson"
+                  NodeLoggingFormatAsText -> "ScText")
     . forkOptions
 
   forM_ allNodeNames $ \node -> do
@@ -492,7 +476,10 @@ testnet testnetOptions H.Conf {..} = do
 
   -- Make the pool operator cold keys
   -- This was done already for the BFT nodes as part of the genesis creation
-  forM_ poolNodeNames $ \node -> do
+
+  poolKeys <- forM poolNodesN $ \i -> do
+    let node = "node-pool" <> show @Int i
+
     void $ H.execCli
       [ "node", "key-gen"
       , "--cold-verification-key-file", tempAbsPath </> node </> "shelley/operator.vkey"
@@ -500,11 +487,27 @@ testnet testnetOptions H.Conf {..} = do
       , "--operational-certificate-issue-counter-file", tempAbsPath </> node </> "shelley/operator.counter"
       ]
 
+    poolNodeKeysColdVkey <- H.note $ tempAbsPath </> "node-pool" <> show i <> "/shelley/operator.vkey"
+    poolNodeKeysColdSkey <- H.note $ tempAbsPath </> "node-pool" <> show i <> "/shelley/operator.skey"
+    poolNodeKeysVrfVkey <- H.note $ tempAbsPath </> node </> "shelley/vrf.vkey"
+    poolNodeKeysVrfSkey <- H.note $ tempAbsPath </> node </> "shelley/vrf.skey"
+    poolNodeKeysStakingVkey <- H.note $ tempAbsPath </> node </> "shelley/staking.vkey"
+    poolNodeKeysStakingSkey <- H.note $ tempAbsPath </> node </> "shelley/staking.skey"
+
     void $ H.execCli
       [ "node", "key-gen-VRF"
-      , "--verification-key-file", tempAbsPath </> node </> "shelley/vrf.vkey"
-      , "--signing-key-file", tempAbsPath </> node </> "shelley/vrf.skey"
+      , "--verification-key-file", poolNodeKeysVrfVkey
+      , "--signing-key-file", poolNodeKeysVrfSkey
       ]
+
+    return PoolNodeKeys
+      { TR.poolNodeKeysColdVkey
+      , TR.poolNodeKeysColdSkey
+      , TR.poolNodeKeysVrfVkey
+      , TR.poolNodeKeysVrfSkey
+      , TR.poolNodeKeysStakingVkey
+      , TR.poolNodeKeysStakingSkey
+      }
 
   -- Symlink the BFT operator keys from the genesis delegates, for uniformity
   forM_ bftNodesN $ \n -> do
@@ -605,7 +608,7 @@ testnet testnetOptions H.Conf {..} = do
       , "--out-file", tempAbsPath </> "addresses/" <> addr <> "-stake.reg.cert"
       ]
 
-    pure $ Wallet
+    pure $ PaymentKeyPair
       { paymentSKey
       , paymentVKey
       }
@@ -732,8 +735,8 @@ testnet testnetOptions H.Conf {..} = do
   --------------------------------
   -- Launch cluster of three nodes
 
-  let bftNodeNameAndOpts = zip bftNodeNames (bftNodeOptions testnetOptions)
-  (bftSprockets', bftStdins, bftStdouts, bftStderrs, bftProcessHandles) <- fmap unzip5 . forM bftNodeNameAndOpts $ \(node, nodeOpts) -> do
+  let bftNodeNameAndOpts = L.zip bftNodeNames (bftNodeOptions testnetOptions)
+  (bftSprockets', bftStdins, bftStdouts, bftStderrs, bftProcessHandles) <- fmap L.unzip5 . forM bftNodeNameAndOpts $ \(node, nodeOpts) -> do
     dbDir <- H.noteShow $ tempAbsPath </> "db/" <> node
     nodeStdoutFile <- H.noteTempFile logDir $ node <> ".stdout.log"
     nodeStderrFile <- H.noteTempFile logDir $ node <> ".stderr.log"
@@ -781,7 +784,7 @@ testnet testnetOptions H.Conf {..} = do
 
   H.threadDelay 100000
 
-  (poolSprockets, poolStdins, poolStdouts, poolStderrs, poolProcessHandles) <- fmap unzip5 . forM poolNodeNames $ \node -> do
+  (poolSprockets, poolStdins, poolStdouts, poolStderrs, poolProcessHandles) <- fmap L.unzip5 . forM poolNodeNames $ \node -> do
     dbDir <- H.noteShow $ tempAbsPath </> "db/" <> node
     nodeStdoutFile <- H.noteTempFile logDir $ node <> ".stdout.log"
     nodeStderrFile <- H.noteTempFile logDir $ node <> ".stderr.log"
@@ -834,27 +837,29 @@ testnet testnetOptions H.Conf {..} = do
 
   forM_ allNodeNames $ \node -> do
     nodeStdoutFile <- H.noteTempFile logDir $ node <> ".stdout.log"
-    H.assertByDeadlineIOCustom "stdout does not contain \"until genesis start time\"" deadline $ IO.fileContains "until genesis start time at" nodeStdoutFile
-    H.assertByDeadlineIOCustom "stdout does not contain \"Chain extended\"" deadline $ IO.fileContains "Chain extended, new tip" nodeStdoutFile
+    H.assertChainExtended deadline (nodeLoggingFormat testnetOptions) nodeStdoutFile
 
   H.noteShowIO_ DTC.getCurrentTime
 
   return TestnetRuntime
     { configurationFile
+    , shelleyGenesisFile = tempAbsPath </> "shelley/genesis.json"
     , testnetMagic
-    , bftNodes = zipWith6 TestnetNode
+    , bftNodes = L.zipWith6 TestnetNode
         bftNodeNames
         bftSprockets'
         bftStdins
         bftStdouts
         bftStderrs
         bftProcessHandles
-    , poolNodes = zipWith6 TestnetNode
+    , poolNodes = L.zipWith7 PoolNode
         poolNodeNames
         poolSprockets
         poolStdins
         poolStdouts
         poolStderrs
         poolProcessHandles
+        poolKeys
     , wallets
+    , delegators = [] -- TODO this should be populated
     }

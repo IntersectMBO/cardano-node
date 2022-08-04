@@ -50,11 +50,15 @@ library
                       , safe-exceptions
                       , text
                       , time
+                      , transformers
                       , unordered-containers
 
   hs-source-dirs:       src
-  exposed-modules:      Test.Base
+  exposed-modules:      Test.Assert
+                        Test.Base
                         Test.Process
+                        Test.Runtime
+                        Testnet.Babbage
                         Testnet.Byron
                         Testnet.Cardano
                         Testnet.Conf
@@ -84,6 +88,7 @@ executable cardano-testnet
 
   other-modules:        Paths_cardano_testnet
                         Testnet.Commands
+                        Testnet.Commands.Babbage
                         Testnet.Commands.Byron
                         Testnet.Commands.Cardano
                         Testnet.Commands.Shelley
@@ -117,8 +122,11 @@ test-suite cardano-testnet-tests
                       , tasty-expected-failure
                       , tasty-hedgehog
                       , text
+                      , time
 
   other-modules:
+                        Spec.Cli.Alonzo.LeadershipSchedule
+                        Spec.Cli.Babbage.LeadershipSchedule
                         Spec.Cli.KesPeriodInfo
                         Spec.Node.Shutdown
                         Spec.ShutdownOnSlotSynced

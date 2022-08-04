@@ -9,17 +9,18 @@ module Testnet.Commands.Cardano
 import           Data.Eq
 import           Data.Function
 import           Data.Int
-import           Data.List (replicate)
 import           Data.Maybe
 import           Data.Semigroup
 import           GHC.Enum
 import           Options.Applicative
 import           System.IO (IO)
+import           Test.Runtime (readNodeLoggingFormat)
 import           Testnet.Cardano
 import           Testnet.Run (runTestnet)
 import           Text.Read
 import           Text.Show
 
+import qualified Data.List as L
 import qualified Options.Applicative as OA
 
 data CardanoOptions = CardanoOptions
@@ -30,7 +31,7 @@ data CardanoOptions = CardanoOptions
 optsTestnet :: Parser TestnetOptions
 optsTestnet = TestnetOptions
   <$> OA.option
-      ((`replicate` defaultTestnetNodeOptions) <$> auto)
+      ((`L.replicate` defaultTestnetNodeOptions) <$> auto)
       (   OA.long "num-bft-nodes"
       <>  OA.help "Number of BFT nodes"
       <>  OA.metavar "COUNT"
@@ -78,6 +79,13 @@ optsTestnet = TestnetOptions
       <>  OA.metavar "BOOL"
       <>  OA.showDefault
       <>  OA.value (enableP2P defaultTestnetOptions)
+      )
+  <*> OA.option (OA.eitherReader readNodeLoggingFormat)
+      (   OA.long "nodeLoggingFormat"
+      <>  OA.help "Node logging format (json|text)"
+      <>  OA.metavar "LOGGING_FORMAT"
+      <>  OA.showDefault
+      <>  OA.value (nodeLoggingFormat defaultTestnetOptions)
       )
 
 optsCardano :: Parser CardanoOptions
