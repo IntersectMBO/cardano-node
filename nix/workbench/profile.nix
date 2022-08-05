@@ -4,7 +4,7 @@ with lib;
 { profileNix
 , backend ## Backend-specifics for forwarding
 }:
-pkgs.runCommand "workbench-profile-output-${profileNix.name}"
+pkgs.runCommand "workbench-profile-output-${profileNix.name}-${backend.name}d"
   { buildInputs = [];
     profileConfigJsonPath = profileNix.JSON;
     nodeSpecsJsonPath = profileNix.node-specs.JSON;

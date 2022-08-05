@@ -80,9 +80,9 @@ final: prev: with final; {
   workbench = pkgs.callPackage ./workbench {};
 
   supervisord-workbench-cabal =
-    { workbench ? pkgs.workbench, ... }@args: pkgs.callPackage ./workbench/supervisor.nix (args // { useCabalRun = true; });
+    { workbench ? pkgs.workbench, ... }@args: pkgs.callPackage ./workbench/backend/supervisor.nix (args // { useCabalRun = true; });
   supervisord-workbench-nix =
-    { workbench ? pkgs.workbench, ... }@args: pkgs.callPackage ./workbench/supervisor.nix args;
+    { workbench ? pkgs.workbench, ... }@args: pkgs.callPackage ./workbench/backend/supervisor.nix args;
 
   all-profiles-json = (workbench.all-profiles{ inherit (supervisord-workbench-nix) backend; }).JSON;
 
@@ -95,10 +95,10 @@ final: prev: with final; {
     , useCabalRun           ? false
     , workbenchDevMode      ? false
     , profiled              ? false
-    , supervisord-workbench ? pkgs.callPackage ./workbench/supervisor.nix { inherit useCabalRun; }
+    , supervisord-workbench ? pkgs.callPackage ./workbench/backend/supervisor.nix { inherit useCabalRun; }
     , cardano-node-rev      ? null
     }:
-    pkgs.callPackage ./workbench/supervisor-run.nix
+    pkgs.callPackage ./workbench/backend/supervisor-run.nix
       {
         inherit batchName profileName supervisord-workbench cardano-node-rev;
       };

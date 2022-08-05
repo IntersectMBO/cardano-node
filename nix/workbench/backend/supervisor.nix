@@ -20,11 +20,11 @@ let
     rec
     { name = "supervisor";
 
-      services-config = import ./profiles/services-config.nix {inherit lib workbench basePort stateDir useCabalRun enableEKG;};
+      services-config = import ./services-config.nix {inherit lib workbench basePort stateDir useCabalRun enableEKG;};
 
       materialise-profile =
         { profileNix }:
-          pkgs.runCommand "workbench-profile-outputs-${profileNix.name}-${name}d" {}
+          pkgs.runCommand "workbench-backend-output-${profileNix.name}-${name}d" {}
             ''
             mkdir $out
             cp ${mkBackendConf profileNix} $out/supervisor.conf
