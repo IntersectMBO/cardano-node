@@ -46,6 +46,8 @@ outputs:
   stake reference: null
 reference inputs: null
 required signers (payment key hashes needed for scripts): null
+return collateral: null
+total collateral: null
 update proposal:
   epoch: 64
   updates:

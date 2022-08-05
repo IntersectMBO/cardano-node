@@ -157,9 +157,10 @@ echo "$mintpolicyid"
 #  --fee "1000000" \
 #  --protocol-params-file "$WORK/pparams.json"
 #   --tx-out-return-collateral
-#
 returncollateral=$(expr $suppliedCollateral - 529503)
 
+echo "Return collateral amount"
+echo "$returncollateral"
 
 $CARDANO_CLI transaction build \
   --babbage-era \
