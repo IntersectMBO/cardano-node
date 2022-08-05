@@ -5,6 +5,8 @@
 {-# Language GeneralizedNewtypeDeriving #-}
 {-# Language MultiParamTypeClasses #-}
 {-# Language RankNTypes #-}
+{-# Language TypeApplications #-}
+{-# Language ScopedTypeVariables #-}
 
 module Cardano.Benchmarking.FundSet
 where
@@ -21,6 +23,7 @@ import           Cardano.Api as Api
 
 data FundInEra era = FundInEra {
     _fundTxIn :: !TxIn
+  , _fundWitness :: Witness WitCtxTxIn era
   , _fundVal  :: !(TxOutValue era)
   , _fundSigningKey :: !(Maybe (SigningKey PaymentKey))
   , _fundVariant :: !Variant
@@ -30,7 +33,7 @@ data FundInEra era = FundInEra {
 data Variant
   = PlainOldFund
   -- maybe better use the script itself instead of the filePath
-  | PlutusScriptFund !FilePath !ScriptData
+  | PlutusScriptFund
   -- A collateralFund is just a regular (PlainOldFund) on the chain,
   -- but tagged in the wallet so that it is not selected for spending.
   | CollateralFund
@@ -65,6 +68,22 @@ getFundLovelace :: Fund -> Lovelace
 getFundLovelace (Fund (InAnyCardanoEra _ a)) = case _fundVal a of
   TxOutAdaOnly _era l -> l
   TxOutValue _era v -> selectLovelace v
+
+
+-- This effectively rules out era-transitions for transactions !
+-- This is not what we want !!
+getFundWitness :: forall era. IsShelleyBasedEra era => Fund -> Witness WitCtxTxIn era
+getFundWitness fund = case (cardanoEra @ era, fund) of
+  (ByronEra   , Fund (InAnyCardanoEra ByronEra   a)) -> _fundWitness a
+  (ShelleyEra , Fund (InAnyCardanoEra ShelleyEra a)) -> _fundWitness a
+  (AllegraEra , Fund (InAnyCardanoEra AllegraEra a)) -> _fundWitness a
+  (MaryEra    , Fund (InAnyCardanoEra MaryEra    a)) -> _fundWitness a
+  (AlonzoEra  , Fund (InAnyCardanoEra AlonzoEra  a)) -> _fundWitness a
+  (BabbageEra , Fund (InAnyCardanoEra BabbageEra a)) -> _fundWitness a
+-- This effectively rules out era-transitions for transactions !
+-- This is not what we want !!
+-- It should be possible to cast KeyWitnesses from one era to an other !
+  (_ , _) -> error "getFundWitness: era mismatch"
 
 data IsConfirmed = IsConfirmed | IsNotConfirmed
   deriving  (Show, Eq, Ord)
@@ -227,7 +246,7 @@ selectInputs allowRecycle count minTotalValue variant targetNode fs
 selectToBuffer ::
      Int
   -> Lovelace
-  -> Variant
+  -> Maybe Variant
   -> FundSet
   -> Either String [Fund]
 selectToBuffer count minValue variant fs
@@ -239,8 +258,9 @@ selectToBuffer count minValue variant fs
       ]
     else Right coins
  where
-  coins = take count $ toAscList ( Proxy :: Proxy Lovelace) (fs @=variant @= IsConfirmed @>= minValue)
-
+  coins = case variant of
+    Just v -> take count $ toAscList ( Proxy :: Proxy Lovelace) (fs @=v @= IsConfirmed @>= minValue)
+    Nothing -> take count $ toAscList ( Proxy :: Proxy Lovelace) (fs @= IsConfirmed @>= minValue)
 -- Todo: check sufficient funds and minimumValuePerUtxo
 inputsToOutputsWithFee :: Lovelace -> Int -> [Lovelace] -> [Lovelace]
 inputsToOutputsWithFee fee count inputs = map (quantityToLovelace . Quantity) outputs

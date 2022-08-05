@@ -60,8 +60,7 @@ testScript protocolFile submitMode =
   , createChange 2300000000 9000
   , RunBenchmark era wallet
     submitMode
-    SpendOutput
-    (ThreadName "walletBasedBenchmark") extraArgs (TPSRate 10.0)
+    (ThreadName "walletBasedBenchmark") extraArgs Nothing (TPSRate 10.0)
   ]
   where
     era = AnyCardanoEra AllegraEra

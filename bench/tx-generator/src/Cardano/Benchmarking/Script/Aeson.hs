@@ -73,16 +73,16 @@ instance ToJSON PayMode where
 instance FromJSON PayMode where
   parseJSON = genericParseJSON jsonOptionsUnTaggedSum
 
-instance ToJSON SpendMode where
-  toJSON     = genericToJSON jsonOptionsUnTaggedSum
-  toEncoding = genericToEncoding jsonOptionsUnTaggedSum
-instance FromJSON SpendMode where
-  parseJSON = genericParseJSON jsonOptionsUnTaggedSum
-
 instance ToJSON ScriptBudget where
   toJSON     = genericToJSON jsonOptionsUnTaggedSum
   toEncoding = genericToEncoding jsonOptionsUnTaggedSum
 instance FromJSON ScriptBudget where
+  parseJSON = genericParseJSON jsonOptionsUnTaggedSum
+
+instance ToJSON ScriptSpec where
+  toJSON     = genericToJSON jsonOptionsUnTaggedSum
+  toEncoding = genericToEncoding jsonOptionsUnTaggedSum
+instance FromJSON ScriptSpec where
   parseJSON = genericParseJSON jsonOptionsUnTaggedSum
 
 instance ToJSON (DSum Tag Identity) where
