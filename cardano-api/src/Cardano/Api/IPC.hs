@@ -84,6 +84,7 @@ import           Prelude
 
 import           Data.Void (Void)
 
+import           Data.Aeson (ToJSON, (.=), object, toJSON)
 import           Data.Bifunctor (first)
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Map.Strict as Map
@@ -133,6 +134,7 @@ import           Cardano.Api.Modes
 import           Cardano.Api.NetworkId
 import           Cardano.Api.Protocol.Types
 import           Cardano.Api.Query
+import           Cardano.Api.Tx (getTxBody)
 import           Cardano.Api.TxBody
 
 -- ----------------------------------------------------------------------------
@@ -660,6 +662,35 @@ data LocalTxMonitoringResult mode
   | LocalTxMonitoringMempoolSizeAndCapacity
       Consensus.MempoolSizeAndCapacity
       SlotNo -- ^ Slot number at which the mempool snapshot was taken
+
+instance ToJSON (LocalTxMonitoringResult mode) where
+  toJSON result =
+    object $ case result of
+      LocalTxMonitoringTxExists tx slot ->
+          [ "exists" .= True
+          , "txId" .= tx
+          , "slot" .= slot
+          ]
+      LocalTxMonitoringTxDoesNotExist tx slot ->
+          [ "exists" .= False
+          , "txId" .= tx
+          , "slot" .= slot
+          ]
+      LocalTxMonitoringNextTx txInMode slot ->
+          [ "nextTx" .= txId
+          , "slot" .= slot
+          ]
+        where
+          txId = case txInMode of
+            Just (TxInMode tx _) -> Just $ getTxId $ getTxBody tx
+            -- TODO: support fetching the ID of a Byron Era transaction
+            _ -> Nothing
+      LocalTxMonitoringMempoolSizeAndCapacity mempool slot ->
+          [ "capacityInBytes" .= Consensus.capacityInBytes mempool
+          , "sizeInBytes" .= Consensus.sizeInBytes mempool
+          , "numberOfTxs" .= Consensus.numberOfTxs mempool
+          , "slot" .= slot
+          ]
 
 data LocalTxMonitoringQuery mode
   -- | Query if a particular tx exists in the mempool. Note that, the absence

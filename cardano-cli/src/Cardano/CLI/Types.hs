@@ -34,6 +34,7 @@ module Cardano.CLI.Types
   , TxOutChangeAddress (..)
   , TxOutDatumAnyEra (..)
   , TxFile (..)
+  , TxMempoolQuery (..)
   , UpdateProposalFile (..)
   , VerificationKeyFile (..)
   , Stakes (..)
@@ -51,8 +52,8 @@ import           Data.Word (Word64)
 import qualified Cardano.Chain.Slotting as Byron
 
 import           Cardano.Api (AddressAny, AnyScriptLanguage, EpochNo, ExecutionUnits, Hash,
-                   InAnyCardanoEra, PaymentKey, PolicyId, ScriptData, SlotNo (SlotNo), Tx, TxIn,
-                   Value, WitCtxMint, WitCtxStake, WitCtxTxIn)
+                   InAnyCardanoEra, PaymentKey, PolicyId, ScriptData, SlotNo (SlotNo), Tx, TxId,
+                   TxIn, Value, WitCtxMint, WitCtxStake, WitCtxTxIn)
 
 import qualified Cardano.Ledger.Crypto as Crypto
 
@@ -383,4 +384,8 @@ newtype TxFile
   = TxFile FilePath
   deriving Show
 
-
+data TxMempoolQuery =
+      TxMempoolQueryTxExists TxId
+    | TxMempoolQueryNextTx
+    | TxMempoolQueryInfo
+  deriving Show

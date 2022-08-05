@@ -595,6 +595,8 @@ module Cardano.Api (
     MempoolSizeAndCapacity(..),
     queryTxMonitoringLocal,
 
+    TxIdInMode(..),
+
     EraHistory(..),
     getProgress,
 
@@ -718,6 +720,7 @@ import           Cardano.Api.Fees
 import           Cardano.Api.GenesisParameters
 import           Cardano.Api.Hash
 import           Cardano.Api.HasTypeProxy
+import           Cardano.Api.InMode
 import           Cardano.Api.IPC
 import           Cardano.Api.IPC.Monad
 import           Cardano.Api.Key

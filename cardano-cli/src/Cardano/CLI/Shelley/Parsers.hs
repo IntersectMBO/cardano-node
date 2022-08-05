@@ -939,6 +939,8 @@ pQueryCmd =
         (Opt.info pKesPeriodInfo $ Opt.progDesc "Get information about the current KES period and your node's operational certificate.")
     , subParser "pool-state"
         (Opt.info pQueryPoolState $ Opt.progDesc "Dump the pool state")
+    , subParser "tx-mempool"
+        (Opt.info pQueryTxMempool $ Opt.progDesc "Local Mempool info")
     ]
   where
     pQueryProtocolParameters :: Parser QueryCmd
@@ -1008,6 +1010,25 @@ pQueryCmd =
       <*> pNetworkId
       <*> many pStakePoolVerificationKeyHash
 
+    pQueryTxMempool :: Parser QueryCmd
+    pQueryTxMempool = QueryTxMempool
+      <$> pConsensusModeParams
+      <*> pNetworkId
+      <*> pTxMempoolQuery
+      <*> pMaybeOutputFile
+      where
+        pTxMempoolQuery :: Parser TxMempoolQuery
+        pTxMempoolQuery = asum
+          [ subParser "info"
+            (Opt.info (pure TxMempoolQueryInfo) $
+              Opt.progDesc "Ask the node about the current mempool's capacity and sizes")
+          , subParser "next-tx"
+            (Opt.info (pure TxMempoolQueryNextTx) $
+              Opt.progDesc "Requests the next transaction from the mempool's current list")
+          , subParser "tx-exists"
+            (Opt.info (TxMempoolQueryTxExists <$> argument Opt.str (metavar "TX_ID")) $
+              Opt.progDesc "Query if a particular transaction exists in the mempool")
+          ]
     pLeadershipSchedule :: Parser QueryCmd
     pLeadershipSchedule = QueryLeadershipSchedule
       <$> pConsensusModeParams

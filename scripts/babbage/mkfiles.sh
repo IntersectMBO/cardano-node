@@ -31,6 +31,7 @@ case $UNAME in
                 DATE="date";;
 esac
 
+CARDANO_CLI="${CARDANO_CLI:-cardano-cli}"
 NETWORK_MAGIC=42
 SECURITY_PARAM=10
 NUM_SPO_NODES=3
@@ -65,7 +66,7 @@ cat > "${ROOT}/byron.genesis.spec.json" <<EOF
 }
 EOF
 
-cardano-cli byron genesis genesis \
+$CARDANO_CLI byron genesis genesis \
   --protocol-magic ${NETWORK_MAGIC} \
   --start-time "${START_TIME}" \
   --k ${SECURITY_PARAM} \
@@ -107,7 +108,7 @@ $SED -i "${ROOT}/configuration.yaml" \
 # Copy the cost mode
 
 
-cardano-cli genesis create-staked --genesis-dir "${ROOT}" \
+$CARDANO_CLI genesis create-staked --genesis-dir "${ROOT}" \
   --testnet-magic "${NETWORK_MAGIC}" \
   --gen-pools 3 \
   --supply 1000000000000 \

@@ -78,6 +78,9 @@ The `query` command contains the following subcommands:
 * `pool-params` (advanced): gets the current and future parameters for a stake pool
 * `leadership-schedule`: gets the slots in which the node is slot leader for the current or following epoch
 * `kes-period-info` (advanced): returns diagnostic information about your operational certificate
+* `tx-mempool info`: returns details about a node's mempool's resource usage
+* `tx-mempool next-tx`: returns the next transaction to be processed
+* `tx-mempool tx-exists`: queries whether or not a transaction is in the node's mempool
 
 *cardano-cli governance*
 The `governance` command contains the following subcommands:

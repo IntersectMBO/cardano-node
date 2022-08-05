@@ -2,7 +2,11 @@
 
 ## vNext
 
-Default to the ledger's CDDL format for transaction body creation by removing flags `--cddl-format` and `--cli-format` from `build` and `build-raw` ([PR 4303](https://github.com/input-output-hk/cardano-node/pull/4303))
+### Features
+
+- Default to the ledger's CDDL format for transaction body creation by removing flags `--cddl-format` and `--cli-format` from `build` and `build-raw` ([PR 4303](https://github.com/input-output-hk/cardano-node/pull/4303))
+
+- Add `query tx-mempool` ([PR 4276](https://github.com/input-output-hk/cardano-node/pull/4276))
 
 ### Bugs
 

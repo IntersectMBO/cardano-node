@@ -371,6 +371,7 @@ data QueryCmd =
       -- ^ Node operational certificate
       (Maybe OutputFile)
   | QueryPoolState' AnyConsensusModeParams NetworkId [Hash StakePoolKey]
+  | QueryTxMempool AnyConsensusModeParams NetworkId TxMempoolQuery (Maybe OutputFile)
   deriving Show
 
 renderQueryCmd :: QueryCmd -> Text
@@ -388,6 +389,14 @@ renderQueryCmd cmd =
     QueryStakeSnapshot' {} -> "query stake-snapshot"
     QueryKesPeriodInfo {} -> "query kes-period-info"
     QueryPoolState' {} -> "query pool-state"
+    QueryTxMempool _ _ query _ -> "query tx-mempool" <> renderTxMempoolQuery query
+  where
+    renderTxMempoolQuery query =
+      case query of
+        TxMempoolQueryTxExists tx -> "tx-exists " <> serialiseToRawBytesHexText tx
+        TxMempoolQueryNextTx -> "next-tx"
+        TxMempoolQueryInfo -> "info"
+
 
 data GovernanceCmd
   = GovernanceMIRPayStakeAddressesCertificate
