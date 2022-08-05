@@ -24,10 +24,11 @@ import           Cardano.Tracer.Handlers.RTView.Update.Utils
 import           Cardano.Tracer.Types
 
 initEventsQueues
-  :: DataPointRequestors
+  :: ConnectedNodesNames
+  -> DataPointRequestors
   -> Lock
   -> IO EventsQueues
-initEventsQueues dpRequestors currentDPLock = do
+initEventsQueues nodesNames dpReqs curDPLock = do
   lastTime <- newTVarIO nullTime
 
   warnQ <- initEventsQueue
@@ -45,12 +46,12 @@ initEventsQueues dpRequestors currentDPLock = do
       (emrgS, emrgP) = evsEmergencies settings
       (nodeDisconS, nodeDisconP) = evsNodeDisconnected settings
 
-  warnT <- mkTimer (makeAndSendNotification dpRequestors currentDPLock lastTime warnQ) warnS warnP
-  errsT <- mkTimer (makeAndSendNotification dpRequestors currentDPLock lastTime errsQ) errsS errsP
-  critT <- mkTimer (makeAndSendNotification dpRequestors currentDPLock lastTime critQ) critS critP
-  alrtT <- mkTimer (makeAndSendNotification dpRequestors currentDPLock lastTime alrtQ) alrtS alrtP
-  emrgT <- mkTimer (makeAndSendNotification dpRequestors currentDPLock lastTime emrgQ) emrgS emrgP
-  nodeDisconT <- mkTimer (makeAndSendNotification dpRequestors currentDPLock lastTime nodeDisconQ)
+  warnT <- mkTimer (makeAndSendNotification nodesNames dpReqs curDPLock lastTime warnQ) warnS warnP
+  errsT <- mkTimer (makeAndSendNotification nodesNames dpReqs curDPLock lastTime errsQ) errsS errsP
+  critT <- mkTimer (makeAndSendNotification nodesNames dpReqs curDPLock lastTime critQ) critS critP
+  alrtT <- mkTimer (makeAndSendNotification nodesNames dpReqs curDPLock lastTime alrtQ) alrtS alrtP
+  emrgT <- mkTimer (makeAndSendNotification nodesNames dpReqs curDPLock lastTime emrgQ) emrgS emrgP
+  nodeDisconT <- mkTimer (makeAndSendNotification nodesNames dpReqs curDPLock lastTime nodeDisconQ)
                          nodeDisconS nodeDisconP
 
   newTVarIO $ M.fromList

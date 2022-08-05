@@ -14,8 +14,8 @@ import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.Environment
 import           Cardano.Tracer.Handlers.RTView.State.Displayed
 import           Cardano.Tracer.Handlers.RTView.State.Errors
+import           Cardano.Tracer.Handlers.RTView.UI.Charts
 import           Cardano.Tracer.Handlers.RTView.UI.Types
-import           Cardano.Tracer.Handlers.RTView.Update.Historical
 import           Cardano.Tracer.Handlers.RTView.Update.NodeInfo
 import           Cardano.Tracer.Handlers.RTView.Update.Nodes
 
@@ -35,14 +35,14 @@ updateUIAfterReload tracerEnv displayedElements loggingConfig colors datasetIndi
   -- so displayed state should be restored immediately.
   connected <- liftIO $ readTVarIO (teConnectedNodes tracerEnv)
   addColumnsForConnected
+    tracerEnv
     connected
     loggingConfig
     nodesErrors
     updateErrorsTimer
-    displayedElements
   checkNoNodesState connected noNodesProgressTimer
   askNSetNodeInfo tracerEnv connected displayedElements
-  addDatasetsForConnected connected colors datasetIndices displayedElements
-  liftIO $ do
-    restoreHistoryFromBackup tracerEnv connected
+  addDatasetsForConnected tracerEnv connected colors datasetIndices
+  restoreLastHistoryOnAllCharts tracerEnv datasetIndices
+  liftIO $
     updateDisplayedElements displayedElements connected

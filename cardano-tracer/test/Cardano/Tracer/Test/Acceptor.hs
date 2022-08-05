@@ -6,7 +6,7 @@ module Cardano.Tracer.Test.Acceptor
   , launchAcceptorsSimple
   ) where
 
-import           Control.Concurrent.STM.TVar (readTVarIO)
+import           Control.Concurrent.STM.TVar (newTVarIO, readTVarIO)
 import           Control.Concurrent.Async.Extra (sequenceConcurrently)
 import           Control.Concurrent.Extra (newLock)
 import           Control.Monad (forever, forM_, void)
@@ -17,14 +17,13 @@ import qualified Data.Text as T
 import           System.Time.Extra (sleep)
 
 import           Cardano.Tracer.Environment
-import           Cardano.Tracer.Acceptors.Run (runAcceptors)
+import           Cardano.Tracer.Acceptors.Run
 import           Cardano.Tracer.Configuration
-import           Cardano.Tracer.Handlers.RTView.Run (initEventsQueues, initSavedTraceObjects)
+import           Cardano.Tracer.Handlers.RTView.Run
 import           Cardano.Tracer.Handlers.RTView.State.Historical
-import           Cardano.Tracer.Types (DataPointRequestors)
-import           Cardano.Tracer.Utils (initAcceptedMetrics, initConnectedNodes,
-                   initDataPointRequestors, initProtocolsBrake)
-import           Trace.Forward.Utils.DataPoint (askForDataPoints)
+import           Cardano.Tracer.Types
+import           Cardano.Tracer.Utils
+import           Trace.Forward.Utils.DataPoint
 
 data AcceptorsMode = Initiator | Responder
 
@@ -37,30 +36,35 @@ launchAcceptorsSimple mode localSock dpName = do
   protocolsBrake <- initProtocolsBrake
   dpRequestors <- initDataPointRequestors
   connectedNodes <- initConnectedNodes
+  connectedNodesNames <- initConnectedNodesNames
   acceptedMetrics <- initAcceptedMetrics
   savedTO <- initSavedTraceObjects
   currentLogLock <- newLock
   currentDPLock <- newLock
-  eventsQueues <- initEventsQueues dpRequestors currentDPLock
+  eventsQueues <- initEventsQueues connectedNodesNames dpRequestors currentDPLock
 
   chainHistory <- initBlockchainHistory
   resourcesHistory <- initResourcesHistory
   txHistory <- initTransactionsHistory
 
+  rtViewPageOpened <- newTVarIO False
+
   let tracerEnv =
         TracerEnv
-          { teConfig            = mkConfig
-          , teConnectedNodes    = connectedNodes
-          , teAcceptedMetrics   = acceptedMetrics
-          , teSavedTO           = savedTO
-          , teBlockchainHistory = chainHistory
-          , teResourcesHistory  = resourcesHistory
-          , teTxHistory         = txHistory
-          , teCurrentLogLock    = currentLogLock
-          , teCurrentDPLock     = currentDPLock
-          , teEventsQueues      = eventsQueues
-          , teDPRequestors      = dpRequestors
-          , teProtocolsBrake    = protocolsBrake
+          { teConfig              = mkConfig
+          , teConnectedNodes      = connectedNodes
+          , teConnectedNodesNames = connectedNodesNames
+          , teAcceptedMetrics     = acceptedMetrics
+          , teSavedTO             = savedTO
+          , teBlockchainHistory   = chainHistory
+          , teResourcesHistory    = resourcesHistory
+          , teTxHistory           = txHistory
+          , teCurrentLogLock      = currentLogLock
+          , teCurrentDPLock       = currentDPLock
+          , teEventsQueues        = eventsQueues
+          , teDPRequestors        = dpRequestors
+          , teProtocolsBrake      = protocolsBrake
+          , teRTViewPageOpened    = rtViewPageOpened
           }
 
   void . sequenceConcurrently $

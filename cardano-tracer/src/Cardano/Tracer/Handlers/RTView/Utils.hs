@@ -1,7 +1,9 @@
 {-# LANGUAGE NamedFieldPuns #-}
 
 module Cardano.Tracer.Handlers.RTView.Utils
-  ( forConnected
+  ( forAcceptedMetrics_
+  , forAcceptedMetricsUI_
+  , forConnected
   , forConnected_
   , forConnectedUI
   , forConnectedUI_
@@ -9,6 +11,7 @@ module Cardano.Tracer.Handlers.RTView.Utils
 
 import           Control.Concurrent.STM.TVar (readTVarIO)
 import qualified Data.Set as S
+import qualified Data.Map.Strict as M
 import           Graphics.UI.Threepenny.Core
 
 import           Cardano.Tracer.Environment
@@ -29,3 +32,17 @@ forConnectedUI TracerEnv{teConnectedNodes} action =
 forConnectedUI_ :: TracerEnv -> (NodeId -> UI ()) -> UI ()
 forConnectedUI_ TracerEnv{teConnectedNodes} action =
   mapM_ action =<< liftIO (readTVarIO teConnectedNodes)
+
+forAcceptedMetrics_
+  :: TracerEnv
+  -> ((NodeId, MetricsStores) -> IO ())
+  -> IO ()
+forAcceptedMetrics_ TracerEnv{teAcceptedMetrics} action =
+  mapM_ action . M.toList =<< readTVarIO teAcceptedMetrics
+
+forAcceptedMetricsUI_
+  :: TracerEnv
+  -> ((NodeId, MetricsStores) -> UI ())
+  -> UI ()
+forAcceptedMetricsUI_ TracerEnv{teAcceptedMetrics} action =
+  mapM_ action . M.toList =<< liftIO (readTVarIO teAcceptedMetrics)

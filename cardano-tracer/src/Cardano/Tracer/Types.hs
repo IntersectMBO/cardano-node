@@ -1,12 +1,16 @@
 module Cardano.Tracer.Types
   ( AcceptedMetrics
   , ConnectedNodes
+  , ConnectedNodesNames
   , DataPointRequestors
+  , MetricsStores
   , NodeId (..)
+  , NodeName
   , ProtocolsBrake
   ) where
 
 import           Control.Concurrent.STM.TVar (TVar)
+import           Data.Bimap (Bimap)
 import           Data.Map.Strict (Map)
 import           Data.Set (Set)
 import           Data.Text (Text)
@@ -21,9 +25,13 @@ import           Trace.Forward.Utils.DataPoint (DataPointRequestor)
 newtype NodeId = NodeId Text
   deriving (Eq, Ord, Show)
 
+type NodeName = Text
+
+type MetricsStores = (EKG.Store, TVar MetricsLocalStore)
+
 -- | We have to create EKG.Store and MetricsLocalStore
 --   to keep all the metrics accepted from the node.
-type AcceptedMetrics = TVar (Map NodeId (EKG.Store, TVar MetricsLocalStore))
+type AcceptedMetrics = TVar (Map NodeId MetricsStores)
 
 -- | We have to store 'DataPointRequestor's to be able
 --   to ask particular node for some 'DataPoint's.
@@ -35,6 +43,9 @@ type DataPointRequestors = TVar (Map NodeId DataPointRequestor)
 --   So, 'ConnectedNodes' is used as a "source of truth" about currently
 --   connected nodes.
 type ConnectedNodes = TVar (Set NodeId)
+
+-- | We have to map node's id to its name (received with 'NodeInfo').
+type ConnectedNodesNames = TVar (Bimap NodeId NodeName)
 
 -- | The flag we use to stop the protocols from their acceptor's side.
 type ProtocolsBrake = TVar Bool

@@ -7,7 +7,6 @@ module Cardano.Tracer.Handlers.RTView.Update.KES
   ) where
 
 import           Control.Concurrent.STM.TVar (readTVarIO)
-import           Control.Monad (forM_)
 import           Control.Monad.Extra (whenJust)
 import qualified Data.Map.Strict as M
 import           Data.Text (pack)
@@ -20,18 +19,18 @@ import           Cardano.Tracer.Handlers.Metrics.Utils
 import           Cardano.Tracer.Handlers.RTView.State.Displayed
 import           Cardano.Tracer.Handlers.RTView.State.EraSettings
 import           Cardano.Tracer.Handlers.RTView.UI.Utils
+import           Cardano.Tracer.Handlers.RTView.Utils
 import           Cardano.Tracer.Types
+import           Cardano.Tracer.Utils
 
 updateKESInfo
   :: TracerEnv
   -> ErasSettings
   -> DisplayedElements
   -> UI ()
-updateKESInfo TracerEnv{teAcceptedMetrics} settings displayed = do
-  allMetrics <- liftIO $ readTVarIO teAcceptedMetrics
-  forM_ (M.toList allMetrics) $ \(nodeId@(NodeId anId), (ekgStore, _)) -> do
-    metrics <- liftIO $ getListOfMetrics ekgStore
-    forM_ metrics $ \(metricName, metricValue) ->
+updateKESInfo tracerEnv settings displayed =
+  forAcceptedMetricsUI_ tracerEnv $ \(nodeId@(NodeId anId), (ekgStore, _)) -> 
+    forMM_ (liftIO $ getListOfMetrics ekgStore) $ \(metricName, metricValue) ->
       case metricName of
         "Forge.CurrentKESPeriod" ->
           setDisplayedValue nodeId displayed (anId <> "__node-current-kes-period") metricValue

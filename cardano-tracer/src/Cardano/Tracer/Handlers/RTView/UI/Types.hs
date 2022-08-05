@@ -9,8 +9,8 @@ module Cardano.Tracer.Handlers.RTView.UI.Types
   , Color (..)
   , Colors
   , DatasetsIndices
-  , DatasetsTimestamps
   , Index (..)
+  , WebPageStatus
   ) where
 
 import           Control.Concurrent.STM.TBQueue (TBQueue)
@@ -20,8 +20,7 @@ import           Data.Map.Strict (Map)
 import           Data.Word (Word16)
 import           GHC.Generics (Generic)
 
-import           Cardano.Tracer.Handlers.RTView.State.Historical
-import           Cardano.Tracer.Types (NodeId (..))
+import           Cardano.Tracer.Types
 
 data ChartId
   = CPUChart
@@ -74,11 +73,11 @@ type Colors = TBQueue Color
 
 -- | After the node is connected, we have to add a new dataset to all historical charts.
 --   The metrics received from this node will be added in these datasets.
---   Since each dataset has its index, we need a map 'NodeId -> ix',
+--   Since each dataset has its index, we need a map 'NodeName -> ix',
 --   where 'ix' is an index of a dataset in _each_ chart.
-type DatasetsIndices = TVar (Map NodeId Index)
+--   We use node's name instead of node's id, because we want to keep the same color
+--   for the same node.
+type DatasetsIndices = TVar (Map NodeName Index)
 
--- | When we add points to chart, we have to remember the timestamp of the latest point,
---   for each chart, to avoid duplicated rendering of the same points.
-type LatestTimestamps   = Map DataName POSIXTime
-type DatasetsTimestamps = TVar (Map NodeId LatestTimestamps)
+-- | It's 'True' if the web page is opened, 'False' otherwise.
+type WebPageStatus = TVar Bool

@@ -25,17 +25,17 @@ import           Systemd.Journal (Priority (..), message, mkJournalField, priori
 import           Cardano.Logging (TraceObject (..))
 import qualified Cardano.Logging as L
 
-import           Cardano.Tracer.Types (NodeId (..))
+import           Cardano.Tracer.Types
 #else
 import           Cardano.Logging (TraceObject)
 
-import           Cardano.Tracer.Types (NodeId)
+import           Cardano.Tracer.Types
 #endif
 
 #ifdef LINUX
 -- | Store 'TraceObject's in Linux systemd's journal service.
-writeTraceObjectsToJournal :: NodeId -> [TraceObject] -> IO ()
-writeTraceObjectsToJournal (NodeId anId) = mapM_ (sendJournalFields . mkJournalFields)
+writeTraceObjectsToJournal :: NodeName -> [TraceObject] -> IO ()
+writeTraceObjectsToJournal nodeName = mapM_ (sendJournalFields . mkJournalFields)
  where
   mkJournalFields trOb@TraceObject{toHuman, toMachine} =
     case (toHuman, toMachine) of
@@ -45,7 +45,7 @@ writeTraceObjectsToJournal (NodeId anId) = mapM_ (sendJournalFields . mkJournalF
       (Nothing,          Nothing)            -> HM.empty
 
   mkJournalFields' TraceObject{toSeverity, toNamespace, toThreadId, toTimestamp} msg =
-       syslogIdentifier anId
+       syslogIdentifier nodeName
     <> message msg
     <> priority (mkPriority toSeverity)
     <> HM.fromList
@@ -73,6 +73,6 @@ writeTraceObjectsToJournal (NodeId anId) = mapM_ (sendJournalFields . mkJournalF
   mkPriority L.Emergency = Emergency
 #else
 -- It works on Linux only.
-writeTraceObjectsToJournal :: NodeId -> [TraceObject] -> IO ()
+writeTraceObjectsToJournal :: NodeName -> [TraceObject] -> IO ()
 writeTraceObjectsToJournal _ _ = return ()
 #endif

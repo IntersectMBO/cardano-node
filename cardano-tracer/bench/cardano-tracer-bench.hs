@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 import           Control.Concurrent.Extra (newLock)
+import           Control.Concurrent.STM.TVar (newTVarIO)
 import           Criterion.Main
 import qualified Data.List.NonEmpty as NE
 import           Data.Time.Clock (getCurrentTime)
@@ -29,7 +30,8 @@ main = do
   to100  <- generate 100
   to1000 <- generate 1000
 
-  connectedNodes  <- initConnectedNodes
+  connectedNodes <- initConnectedNodes
+  connectedNodesNames <- initConnectedNodesNames
   acceptedMetrics <- initAcceptedMetrics
   savedTO         <- initSavedTraceObjects
 
@@ -42,12 +44,15 @@ main = do
 
   currentLogLock <- newLock
   currentDPLock  <- newLock
-  eventsQueues   <- initEventsQueues dpRequestors currentDPLock
+  eventsQueues   <- initEventsQueues connectedNodesNames dpRequestors currentDPLock
+
+  rtViewPageOpened <- newTVarIO False
 
   let te1 =
         TracerEnv
           { teConfig            = c1
           , teConnectedNodes    = connectedNodes
+          , teConnectedNodesNames = connectedNodesNames
           , teAcceptedMetrics   = acceptedMetrics
           , teSavedTO           = savedTO
           , teBlockchainHistory = chainHistory
@@ -58,11 +63,13 @@ main = do
           , teEventsQueues      = eventsQueues
           , teDPRequestors      = dpRequestors
           , teProtocolsBrake    = protocolsBrake
+          , teRTViewPageOpened  = rtViewPageOpened
           }
       te2 =
         TracerEnv
           { teConfig            = c2
           , teConnectedNodes    = connectedNodes
+          , teConnectedNodesNames = connectedNodesNames
           , teAcceptedMetrics   = acceptedMetrics
           , teSavedTO           = savedTO
           , teBlockchainHistory = chainHistory
@@ -73,6 +80,7 @@ main = do
           , teEventsQueues      = eventsQueues
           , teDPRequestors      = dpRequestors
           , teProtocolsBrake    = protocolsBrake
+          , teRTViewPageOpened  = rtViewPageOpened
           }
 
   removePathForcibly root

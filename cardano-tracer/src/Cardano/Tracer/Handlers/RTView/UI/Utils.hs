@@ -1,4 +1,5 @@
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes #-}
 
@@ -40,8 +41,12 @@ module Cardano.Tracer.Handlers.RTView.UI.Utils
   , exportErrorsToJSONFile
   , shownState
   , hiddenState
+  , webPageIsOpened
+  , webPageIsClosed
   ) where
 
+import           Control.Concurrent.STM (atomically)
+import           Control.Concurrent.STM.TVar (TVar, modifyTVar')
 import           Control.Monad (unless, void)
 import           Control.Monad.Extra (whenJustM)
 import           Data.String.QQ
@@ -55,6 +60,7 @@ import qualified Graphics.UI.Threepenny as UI
 import           Graphics.UI.Threepenny.Core
 import           Graphics.UI.Threepenny.JQuery (Easing (..), fadeIn, fadeOut)
 
+import           Cardano.Tracer.Environment
 import           Cardano.Tracer.Handlers.RTView.State.Displayed
 import           Cardano.Tracer.Handlers.RTView.State.Errors
 import           Cardano.Tracer.Handlers.RTView.UI.JS.Utils
@@ -276,3 +282,10 @@ exportErrorsToJSONFile nodesErrors nodeId nodeName =
     let nowF = formatTime defaultTimeLocale "%FT%T%z" now
         fileName = "node-" <> unpack nodeName <> "-errors-" <> nowF <> ".json"
     downloadJSONFile fileName errorsAsJSON
+
+webPageIsOpened, webPageIsClosed :: TracerEnv -> UI ()
+webPageIsOpened TracerEnv{teRTViewPageOpened} = setFlag teRTViewPageOpened True
+webPageIsClosed TracerEnv{teRTViewPageOpened} = setFlag teRTViewPageOpened False
+
+setFlag :: TVar Bool -> Bool -> UI ()
+setFlag flag state = liftIO . atomically . modifyTVar' flag $ const state

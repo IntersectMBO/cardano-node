@@ -29,38 +29,34 @@ import           Cardano.Tracer.Handlers.RTView.UI.Notifications
 import           Cardano.Tracer.Handlers.RTView.UI.Theme
 import           Cardano.Tracer.Handlers.RTView.UI.Types
 import           Cardano.Tracer.Handlers.RTView.UI.Utils
-import           Cardano.Tracer.Handlers.RTView.Update.Historical
-import           Cardano.Tracer.Types
 
 mkPageBody
   :: TracerEnv
   -> Network
   -> DatasetsIndices
-  -> DatasetsTimestamps
   -> UI Element
-mkPageBody tracerEnv networkConfig dsIxs dsTss = do
-  let connected = teConnectedNodes tracerEnv
-      ResHistory rHistory   = teResourcesHistory tracerEnv
+mkPageBody tracerEnv networkConfig dsIxs = do
+  let ResHistory rHistory   = teResourcesHistory tracerEnv
       ChainHistory cHistory = teBlockchainHistory tracerEnv
       TXHistory tHistory    = teTxHistory tracerEnv
 
-  txsProcessedNumTimer <- mkChartTimer connected tHistory dsIxs dsTss TxsProcessedNumData TxsProcessedNumChart
-  mempoolBytesTimer    <- mkChartTimer connected tHistory dsIxs dsTss MempoolBytesData    MempoolBytesChart
-  txsInMempoolTimer    <- mkChartTimer connected tHistory dsIxs dsTss TxsInMempoolData    TxsInMempoolChart
+  txsProcessedNumTimer <- mkChartTimer tracerEnv tHistory dsIxs TxsProcessedNumData TxsProcessedNumChart
+  mempoolBytesTimer    <- mkChartTimer tracerEnv tHistory dsIxs MempoolBytesData    MempoolBytesChart
+  txsInMempoolTimer    <- mkChartTimer tracerEnv tHistory dsIxs TxsInMempoolData    TxsInMempoolChart
 
   txsProcessedNumChart <- mkChart txsProcessedNumTimer TxsProcessedNumData TxsProcessedNumChart "Processed txs"
   mempoolBytesChart    <- mkChart mempoolBytesTimer    MempoolBytesData    MempoolBytesChart    "Mempool size"
   txsInMempoolChart    <- mkChart txsInMempoolTimer    TxsInMempoolData    TxsInMempoolChart    "Txs in mempool"
 
   -- Resources charts.
-  cpuTimer          <- mkChartTimer connected rHistory dsIxs dsTss CPUData          CPUChart
-  memoryTimer       <- mkChartTimer connected rHistory dsIxs dsTss MemoryData       MemoryChart
-  gcMajorNumTimer   <- mkChartTimer connected rHistory dsIxs dsTss GCMajorNumData   GCMajorNumChart
-  gcMinorNumTimer   <- mkChartTimer connected rHistory dsIxs dsTss GCMinorNumData   GCMinorNumChart
-  gcLiveMemoryTimer <- mkChartTimer connected rHistory dsIxs dsTss GCLiveMemoryData GCLiveMemoryChart
-  cpuTimeGCTimer    <- mkChartTimer connected rHistory dsIxs dsTss CPUTimeGCData    CPUTimeGCChart
-  cpuTimeAppTimer   <- mkChartTimer connected rHistory dsIxs dsTss CPUTimeAppData   CPUTimeAppChart
-  threadsNumTimer   <- mkChartTimer connected rHistory dsIxs dsTss ThreadsNumData   ThreadsNumChart
+  cpuTimer          <- mkChartTimer tracerEnv rHistory dsIxs CPUData          CPUChart
+  memoryTimer       <- mkChartTimer tracerEnv rHistory dsIxs MemoryData       MemoryChart
+  gcMajorNumTimer   <- mkChartTimer tracerEnv rHistory dsIxs GCMajorNumData   GCMajorNumChart
+  gcMinorNumTimer   <- mkChartTimer tracerEnv rHistory dsIxs GCMinorNumData   GCMinorNumChart
+  gcLiveMemoryTimer <- mkChartTimer tracerEnv rHistory dsIxs GCLiveMemoryData GCLiveMemoryChart
+  cpuTimeGCTimer    <- mkChartTimer tracerEnv rHistory dsIxs CPUTimeGCData    CPUTimeGCChart
+  cpuTimeAppTimer   <- mkChartTimer tracerEnv rHistory dsIxs CPUTimeAppData   CPUTimeAppChart
+  threadsNumTimer   <- mkChartTimer tracerEnv rHistory dsIxs ThreadsNumData   ThreadsNumChart
 
   cpuChart          <- mkChart cpuTimer          CPUData          CPUChart          "CPU usage"
   memoryChart       <- mkChart memoryTimer       MemoryData       MemoryChart       "Memory usage"
@@ -72,11 +68,11 @@ mkPageBody tracerEnv networkConfig dsIxs dsTss = do
   threadsNumChart   <- mkChart threadsNumTimer   ThreadsNumData   ThreadsNumChart   "Number of threads"
 
   -- Blockchain charts.
-  chainDensityTimer <- mkChartTimer connected cHistory dsIxs dsTss ChainDensityData ChainDensityChart
-  slotNumTimer      <- mkChartTimer connected cHistory dsIxs dsTss SlotNumData      SlotNumChart
-  blockNumTimer     <- mkChartTimer connected cHistory dsIxs dsTss BlockNumData     BlockNumChart
-  slotInEpochTimer  <- mkChartTimer connected cHistory dsIxs dsTss SlotInEpochData  SlotInEpochChart
-  epochTimer        <- mkChartTimer connected cHistory dsIxs dsTss EpochData        EpochChart
+  chainDensityTimer <- mkChartTimer tracerEnv cHistory dsIxs ChainDensityData ChainDensityChart
+  slotNumTimer      <- mkChartTimer tracerEnv cHistory dsIxs SlotNumData      SlotNumChart
+  blockNumTimer     <- mkChartTimer tracerEnv cHistory dsIxs BlockNumData     BlockNumChart
+  slotInEpochTimer  <- mkChartTimer tracerEnv cHistory dsIxs SlotInEpochData  SlotInEpochChart
+  epochTimer        <- mkChartTimer tracerEnv cHistory dsIxs EpochData        EpochChart
 
   chainDensityChart <- mkChart chainDensityTimer ChainDensityData ChainDensityChart "Chain density"
   slotNumChart      <- mkChart slotNumTimer      SlotNumData      SlotNumChart      "Slot height"
@@ -85,15 +81,15 @@ mkPageBody tracerEnv networkConfig dsIxs dsTss = do
   epochChart        <- mkChart epochTimer        EpochData        EpochChart        "Epoch"
 
   -- Leadership charts.
-  cannotForgeTimer     <- mkChartTimer' connected cHistory dsIxs dsTss NodeCannotForgeData       NodeCannotForgeChart
-  forgedSlotTimer      <- mkChartTimer' connected cHistory dsIxs dsTss ForgedSlotLastData        ForgedSlotLastChart
-  nodeIsLeaderTimer    <- mkChartTimer' connected cHistory dsIxs dsTss NodeIsLeaderData          NodeIsLeaderChart
-  nodeIsNotLeaderTimer <- mkChartTimer' connected cHistory dsIxs dsTss NodeIsNotLeaderData       NodeIsNotLeaderChart
-  forgedInvalidTimer   <- mkChartTimer' connected cHistory dsIxs dsTss ForgedInvalidSlotLastData ForgedInvalidSlotLastChart
-  adoptedTimer         <- mkChartTimer' connected cHistory dsIxs dsTss AdoptedSlotLastData       AdoptedSlotLastChart
-  notAdoptedTimer      <- mkChartTimer' connected cHistory dsIxs dsTss NotAdoptedSlotLastData    NotAdoptedSlotLastChart
-  aboutToLeadTimer     <- mkChartTimer' connected cHistory dsIxs dsTss AboutToLeadSlotLastData   AboutToLeadSlotLastChart
-  couldNotForgeTimer   <- mkChartTimer' connected cHistory dsIxs dsTss CouldNotForgeSlotLastData CouldNotForgeSlotLastChart
+  cannotForgeTimer     <- mkChartTimer' tracerEnv cHistory dsIxs NodeCannotForgeData       NodeCannotForgeChart
+  forgedSlotTimer      <- mkChartTimer' tracerEnv cHistory dsIxs ForgedSlotLastData        ForgedSlotLastChart
+  nodeIsLeaderTimer    <- mkChartTimer' tracerEnv cHistory dsIxs NodeIsLeaderData          NodeIsLeaderChart
+  nodeIsNotLeaderTimer <- mkChartTimer' tracerEnv cHistory dsIxs NodeIsNotLeaderData       NodeIsNotLeaderChart
+  forgedInvalidTimer   <- mkChartTimer' tracerEnv cHistory dsIxs ForgedInvalidSlotLastData ForgedInvalidSlotLastChart
+  adoptedTimer         <- mkChartTimer' tracerEnv cHistory dsIxs AdoptedSlotLastData       AdoptedSlotLastChart
+  notAdoptedTimer      <- mkChartTimer' tracerEnv cHistory dsIxs NotAdoptedSlotLastData    NotAdoptedSlotLastChart
+  aboutToLeadTimer     <- mkChartTimer' tracerEnv cHistory dsIxs AboutToLeadSlotLastData   AboutToLeadSlotLastChart
+  couldNotForgeTimer   <- mkChartTimer' tracerEnv cHistory dsIxs CouldNotForgeSlotLastData CouldNotForgeSlotLastChart
 
   cannotForgeChart     <- mkChart cannotForgeTimer     NodeCannotForgeData       NodeCannotForgeChart       "Cannot forge"
   forgedSlotChart      <- mkChart forgedSlotTimer      ForgedSlotLastData        ForgedSlotLastChart        "Forged"
@@ -208,16 +204,16 @@ mkPageBody tracerEnv networkConfig dsIxs dsTss = do
                                          , string "Block replay"
                                          ]
                               ]
-                          , UI.tr ## "node-chunk-validation-row" #+
-                              [ UI.td #+ [ image "rt-view-overview-icon" dbSVG
-                                         , string "Chunk validation"
-                                         ]
-                              ]
-                          , UI.tr ## "node-update-ledger-db-row" #+
-                              [ UI.td #+ [ image "rt-view-overview-icon" dbSVG
-                                         , string "Ledger DB"
-                                         ]
-                              ]
+                          --, UI.tr ## "node-chunk-validation-row" #+
+                          --    [ UI.td #+ [ image "rt-view-overview-icon" dbSVG
+                          --               , string "Chunk validation"
+                          --               ]
+                          --    ]
+                          --, UI.tr ## "node-update-ledger-db-row" #+
+                          --    [ UI.td #+ [ image "rt-view-overview-icon" dbSVG
+                          --               , string "Ledger DB"
+                          --               ]
+                          --    ]
                           , UI.tr ## "node-peers-row" #+
                               [ UI.td #+ [ image "rt-view-overview-icon" peersSVG
                                          , string "Peers"
@@ -509,11 +505,11 @@ mkPageBody tracerEnv networkConfig dsIxs dsTss = do
       whenJustM (readMaybe <$> get value selectTimeRange) $ \(rangeInSec :: Int) -> do
         Chart.setTimeRange chartId rangeInSec
         when (rangeInSec == 0) $ do
-          Chart.resetZoomChartJS chartId
           -- Since the user changed '0' (which means "All time"),
           -- we have to load all the history for currently connected nodes,
-          -- but for this 'chartName' only!
-          liftIO $ restoreHistoryFromBackupAll tracerEnv dataName 
+          -- but for this 'dataName' only!
+          restoreAllHistoryOnChart tracerEnv dataName chartId dsIxs
+          Chart.resetZoomChartJS chartId
         saveChartsSettings
 
     on UI.selectionChange selectUpdatePeriod . const $
@@ -650,10 +646,9 @@ changeVisibilityForCharts showHideIcon areaId areaName = do
                                     # set dataTooltip ("Click to hide " <> areaName)
 
 mkChartTimer, mkChartTimer'
-  :: ConnectedNodes
+  :: TracerEnv
   -> History
   -> DatasetsIndices
-  -> DatasetsTimestamps
   -> DataName
   -> ChartId
   -> UI UI.Timer
@@ -661,28 +656,25 @@ mkChartTimer  = doMakeChartTimer addPointsToChart
 mkChartTimer' = doMakeChartTimer addAllPointsToChart
 
 type PointsAdder =
-     ConnectedNodes
+     TracerEnv
   -> History
   -> DatasetsIndices
-  -> DatasetsTimestamps
   -> DataName
   -> ChartId
   -> UI ()
 
 doMakeChartTimer
   :: PointsAdder
-  -> ConnectedNodes
+  -> TracerEnv
   -> History
   -> DatasetsIndices
-  -> DatasetsTimestamps
   -> DataName
   -> ChartId
   -> UI UI.Timer
-doMakeChartTimer addPoints connectedNodes history datasetIndices
-                 datasetTimestamps dataName chartId = do
+doMakeChartTimer addPoints tracerEnv history datasetIndices dataName chartId = do
   uiUpdateTimer <- UI.timer # set UI.interval defaultUpdatePeriodInMs
   on UI.tick uiUpdateTimer . const $
-    addPoints connectedNodes history datasetIndices datasetTimestamps dataName chartId
+    addPoints tracerEnv history datasetIndices dataName chartId
   return uiUpdateTimer
  where
   defaultUpdatePeriodInMs = 15 * 1000

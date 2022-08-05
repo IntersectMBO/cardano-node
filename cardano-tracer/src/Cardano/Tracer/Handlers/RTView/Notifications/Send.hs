@@ -1,4 +1,3 @@
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Cardano.Tracer.Handlers.RTView.Notifications.Send
@@ -17,32 +16,27 @@ import qualified Data.Text as T
 import           Data.Time.Clock (UTCTime)
 import           Data.Time.Format (defaultTimeLocale, formatTime)
 
-import           Cardano.Node.Startup (NodeInfo (..))
-
 import           Cardano.Tracer.Handlers.RTView.Notifications.Email
 import           Cardano.Tracer.Handlers.RTView.Notifications.Settings
 import           Cardano.Tracer.Handlers.RTView.Notifications.Types
-import           Cardano.Tracer.Handlers.RTView.Update.Utils
 import           Cardano.Tracer.Types
 import           Cardano.Tracer.Utils
 
 makeAndSendNotification
-  :: DataPointRequestors
+  :: ConnectedNodesNames
+  -> DataPointRequestors
   -> Lock
   -> TVar UTCTime
   -> EventsQueue
   -> IO ()
-makeAndSendNotification dpRequestors currentDPLock lastTime eventsQueue = do
+makeAndSendNotification connectedNodesNames dpRequestors currentDPLock lastTime eventsQueue = do
   emailSettings <- readSavedEmailSettings
   unless (incompleteEmailSettings emailSettings) $ do
     events <- atomically $ nub <$> flushTBQueue eventsQueue
     let (nodeIds, tss) = unzip $ nub [(nodeId, ts) | Event nodeId ts _ _ <- events]
     unless (null nodeIds) $ do
       nodeNames <-
-        forM nodeIds $ \nodeId@(NodeId anId) ->
-          askDataPoint dpRequestors currentDPLock nodeId "NodeInfo" >>= \case
-            Nothing -> return anId
-            Just ni -> return $ niName ni
+        forM nodeIds $ askNodeNameRaw connectedNodesNames dpRequestors currentDPLock
       lastEventTime <- readTVarIO lastTime
       let onlyNewEvents = filter (\(Event _ ts _ _) -> ts > lastEventTime) events
       sendNotification emailSettings onlyNewEvents $ zip nodeIds nodeNames
