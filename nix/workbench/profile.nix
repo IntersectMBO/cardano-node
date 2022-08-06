@@ -1,7 +1,5 @@
-{ pkgs, lib }: with lib;
-  { profileNix
-  , backend ## Backend-specifics for forwarding
-  }:
+{ pkgs, lib, profileNix, backend }:
+  with lib;
     pkgs.runCommand "workbench-profile-output-${profileNix.name}-${backend.name}d"
       { buildInputs = [];
         profileConfigJsonPath = profileNix.JSON;

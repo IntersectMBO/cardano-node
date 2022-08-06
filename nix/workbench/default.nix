@@ -89,13 +89,6 @@ let
       JSON = pkgs.writeText "all-profiles.json" (__toJSON (mapAttrs (_: x: x.value) value));
     };
 
-  ## materialise-profile :: ProfileNix -> BackendProfile -> Profile
-  materialise-profile      = import ./profile.nix  { inherit pkgs lib; };
-  ## profile-topology :: ProfileNix -> Topology
-  profile-topology         = import ./topology.nix { inherit pkgs; };
-  ## profile-topology :: ProfileNix -> Topology -> Genesis
-  profile-topology-genesis = import ./genesis.nix  { inherit pkgs; };
-
   with-profile =
     { backend, profileName }:
     let
@@ -104,11 +97,11 @@ let
       profileNix = ps.value."${profileName}"
         or (throw "No such profile: ${profileName};  Known profiles: ${toString (__attrNames ps.value)}");
 
-      profile = materialise-profile { inherit profileNix backend; };
+      profile = import ./profile.nix   { inherit pkgs lib profileNix backend; };
 
-      topology = profile-topology { inherit profileNix profile; };
+      topology = import ./topology.nix { inherit pkgs profileNix profile; };
 
-      genesis = profile-topology-genesis { inherit profile; };
+      genesis = import ./genesis.nix   { inherit pkgs profile; };
     in {
       inherit
         profileNix profile
