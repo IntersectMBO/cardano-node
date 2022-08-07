@@ -38,7 +38,15 @@ addNodeColumn tracerEnv loggingConfig nodesErrors updateErrorsTimer nodeId@(Node
   nodeName <- liftIO $ askNodeName tracerEnv nodeId
 
   let id' = unpack anId
+
+  bi <- basicInfo id'
+  st <- startTime id'
+  ut <- nodeUptime id'
   ls <- logsSettings loggingConfig nodeName
+  leadership <- nodeLeadership id'
+  epoch <- nodeEpoch id'
+  kes <- nodeKES id'
+  opCert <- nodeOpCert id'
 
   peersTable <- mkPeersTable id'
   peersDetailsButton <- UI.button ## (id' <> "__node-peers-details-button")
@@ -69,48 +77,19 @@ addNodeColumn tracerEnv loggingConfig nodesErrors updateErrorsTimer nodeId@(Node
                          , image "has-tooltip-multiline has-tooltip-bottom rt-view-what-icon" whatSVG
                                  # set dataTooltip "Node's name, taken from its configuration file"
                          ]
-  addNodeCell "version"  [ UI.span ## (id' <> "__node-version")
-                                   # set text "—"
-                         ]
-  addNodeCell "commit"   [ UI.anchor ## (id' <> "__node-commit")
-                                     #. ("rt-view-href is-family-monospace has-text-weight-normal"
-                                         <> " has-tooltip-multiline has-tooltip-right")
-                                     # set UI.href "#"
-                                     # set UI.target "_blank"
-                                     # set dataTooltip "Browse cardano-node repository on this commit"
-                                     # set text "—"
-                         , image "rt-view-href-icon" externalLinkSVG
-                         ]
-  addNodeCell "protocol" [ UI.span ## (id' <> "__node-protocol")
-                                   # set text "—"
-                         ]
-  addNodeCell "era" [ UI.span ## (id' <> "__node-era")
-                              # set text "—"
+  addNodeCell "basic-info" bi
+  addNodeCell "era" [ UI.span ## (id' <> "__node-era") #. "has-text-weight-semibold" # set text "—"
                     ]
-  addNodeCell "epoch" [ string "#"
-                      , UI.span ## (id' <> "__node-epoch-num") # set text "—"
-                      , image "has-tooltip-multiline has-tooltip-top rt-view-epoch-end" endSVG
-                              # set dataTooltip "End date of this epoch"
-                      , UI.span ## (id' <> "__node-epoch-end") # set text "—"
-                      ]
-  addNodeCell "sync" [ UI.span ## (id' <> "__node-sync-progress")
-                               # set text "—"
-                     ]
-  addNodeCell "system-start-time" [ UI.span ## (id' <> "__node-system-start-time")
-                                            # set text "—"
-                                  ]
-  addNodeCell "start-time"        [ UI.span ## (id' <> "__node-start-time")
-                                            # set text "—"
-                                  ]
-  addNodeCell "uptime"   [ UI.span ## (id' <> "__node-uptime")
-                                   # set text "—"
-                         ]
-  addNodeCell "logs"     [ UI.span ## (id' <> "__node-logs")
-                                   #+ ls
-                         ]
+  addNodeCell "epoch" epoch 
   addNodeCell "block-replay" [ UI.span ## (id' <> "__node-block-replay")
                                        # set html "0&nbsp;%"
                              ]
+  addNodeCell "sync" [ UI.span ## (id' <> "__node-sync-progress")
+                               # set text "—"
+                     ]
+  addNodeCell "start-time" st
+  addNodeCell "uptime" ut
+  addNodeCell "logs" ls 
   --addNodeCell "chunk-validation" [ UI.span ## (id' <> "__node-chunk-validation")
   --                                         # set text "—"
   --                               ]
@@ -133,33 +112,9 @@ addNodeColumn tracerEnv loggingConfig nodesErrors updateErrorsTimer nodeId@(Node
                            ]
                        , element errorsTable
                        ]
-  addNodeCell "leadership" [ UI.span ## (id' <> "__node-leadership")
-                                     # set text "—"
-                           ]
-  addNodeCell "forged-blocks" [ UI.span ## (id' <> "__node-forged-blocks")
-                                        # set text "—"
-                              ]
-  addNodeCell "cannot-forge" [ UI.span ## (id' <> "__node-cannot-forge")
-                                       # set text "—"
-                             ]
-  addNodeCell "missed-slots" [ UI.span ## (id' <> "__node-missed-slots")
-                                       # set text "—"
-                             ]
-  addNodeCell "current-kes-period" [ UI.span ## (id' <> "__node-current-kes-period")
-                                             # set text "—"
-                                   ]
-  addNodeCell "op-cert-expiry-kes-period" [ UI.span ## (id' <> "__node-op-cert-expiry-kes-period")
-                                                    # set text "—"
-                                          ]
-  addNodeCell "remaining-kes-periods" [ UI.span ## (id' <> "__node-remaining-kes-periods")
-                                                # set text "—"
-                                      ]
-  addNodeCell "op-cert-start-kes-period" [ UI.span ## (id' <> "__node-op-cert-start-kes-period")
-                                                   # set text "—"
-                                         ]
-  addNodeCell "days-until-op-cert-renew" [ UI.span ## (id' <> "__node-days-until-op-cert-renew")
-                                                   # set text "—"
-                                         ]
+  addNodeCell "leadership" leadership
+  addNodeCell "kes" kes
+  addNodeCell "op-cert" opCert 
   addNodeCell "ekg-metrics" [ UI.div #. "buttons has-addons" #+
                                 [ UI.button ## (id' <> "__node-ekg-metrics-num")
                                             #. "button is-static"
@@ -181,6 +136,215 @@ addNodeColumn tracerEnv loggingConfig nodesErrors updateErrorsTimer nodeId@(Node
       void $ element el #+ [ UI.td #. (unpack anId <> "__column_cell")
                                    #+ cellContent
                            ]
+
+basicInfo :: String -> UI [UI Element]
+basicInfo id' = return
+  [ UI.div #. "field is-grouped" #+
+      [ UI.p #. "control" #+
+          [ UI.div #. "tags has-addons" #+
+              [ UI.span #. "tag is-info is-medium" #+ [image "rt-view-info-icon-on-button" versionSVG]
+              , UI.span ## (id' <> "__node-version")
+                        #. "tag is-medium has-tooltip-multiline has-tooltip-top"
+                        # set dataTooltip "Node's version"
+                        # set text "—"
+              ]
+          ]
+      , UI.p #. "control" #+
+          [ UI.div #. "tags has-addons" #+
+              [ UI.span #. "tag is-link is-medium" #+ [image "rt-view-info-icon-on-button" commitSVG]
+              , UI.span ## (id' <> "__node-commit")
+                        #. "tag is-medium is-family-monospace has-tooltip-multiline has-tooltip-top"
+                        # set dataTooltip "Node's commit hash"
+                        # set text "—"
+              ]
+          ]
+      , UI.p #. "control" #+
+          [ UI.div #. "tags has-addons" #+
+              [ UI.span #. "tag is-success is-medium" #+ [image "rt-view-info-icon-on-button" protocolSVG]
+              , UI.span ## (id' <> "__node-protocol")
+                        #. "tag is-medium has-tooltip-multiline has-tooltip-top"
+                        # set dataTooltip "Node's protocol"
+                        # set text "—"
+              ]
+          ]
+      ]
+  ]
+
+nodeEpoch :: String -> UI [UI Element]
+nodeEpoch id' = return
+  [ UI.div #. "field is-grouped" #+
+      [ UI.p #. "control" #+
+          [ UI.div #. "tags has-addons" #+
+              [ UI.span #. "tag is-info is-medium" #+ [image "rt-view-leader-icon-2-on-button" hashtagSVG]
+              , UI.span ## (id' <> "__node-epoch-num")
+                        #. "tag is-medium"
+                        # set text "—"
+              ]
+          ]
+      , UI.p #. "control" #+
+          [ UI.div #. "tags has-addons has-tooltip-multiline has-tooltip-top"
+                   # set dataTooltip "End date of this epoch"
+                   #+
+              [ UI.span #. "tag is-info is-medium" #+ [image "rt-view-leader-icon-2-on-button" endSVG]
+              , UI.span ## (id' <> "__node-epoch-end")
+                        #. "tag is-medium"
+                        # set text "—"
+              ]
+          ]
+      ]
+  ]
+
+nodeKES :: String -> UI [UI Element]
+nodeKES id' = return
+  [ UI.div #. "field is-grouped" #+
+      [ UI.p #. "control" #+
+          [ UI.div #. "tags has-addons has-tooltip-multiline has-tooltip-top"
+                   # set dataTooltip "KES current"
+                   #+
+              [ UI.span #. "tag is-info is-medium" #+ [image "rt-view-leader-icon-2-on-button" cSVG]
+              , UI.span ## (id' <> "__node-current-kes-period")
+                        #. "tag is-medium"
+                        # set text "—"
+              ]
+          ] 
+      , UI.p #. "control" #+
+          [ UI.div #. "tags has-addons has-tooltip-multiline has-tooltip-top"
+                   # set dataTooltip "KES expiry"
+                   #+
+              [ UI.span #. "tag is-info is-medium" #+ [image "rt-view-leader-icon-3-on-button" eSVG]
+              , UI.span ## (id' <> "__node-op-cert-expiry-kes-period")
+                        #. "tag is-medium"
+                        # set text "—"
+              ]
+          ]
+      , UI.p #. "control" #+
+          [ UI.div #. "tags has-addons has-tooltip-multiline has-tooltip-top"
+                   # set dataTooltip "KES remaining"
+                   #+
+              [ UI.span #. "tag is-info is-medium" #+ [image "rt-view-leader-icon-3-on-button" rSVG]
+              , UI.span ## (id' <> "__node-remaining-kes-periods")
+                        #. "tag is-medium"
+                        # set text "—"
+              ]
+          ]
+      ]
+  ]
+
+nodeOpCert :: String -> UI [UI Element]
+nodeOpCert id' = return
+  [ UI.div #. "field is-grouped" #+
+      [ UI.p #. "control" #+
+          [ UI.div #. "tags has-addons has-tooltip-multiline has-tooltip-top"
+                   # set dataTooltip "Op Cert start KES"
+                   #+
+              [ UI.span #. "tag is-info is-medium" #+ [image "rt-view-leader-icon-2-on-button" start2SVG]
+              , UI.span ## (id' <> "__node-op-cert-start-kes-period")
+                        #. "tag is-medium"
+                        # set text "—"
+              ]
+          ] 
+      , UI.p #. "control" #+
+          [ UI.div #. "tags has-addons has-tooltip-multiline has-tooltip-top"
+                   # set dataTooltip "Days until Op Cert renew"
+                   #+
+              [ UI.span #. "tag is-danger is-medium" #+ [image "rt-view-leader-icon-2-on-button" endSVG]
+              , UI.span ## (id' <> "__node-days-until-op-cert-renew")
+                        #. "tag is-medium"
+                        # set text "—"
+              ]
+          ]
+      ]
+  ]
+
+nodeLeadership :: String -> UI [UI Element]
+nodeLeadership id' = return
+  [ UI.div #. "field is-grouped" #+
+      [ UI.p #. "control" #+
+          [ UI.div #. "tags has-addons has-tooltip-multiline has-tooltip-top"
+                   # set dataTooltip "How many times this node was a leader"
+                   #+
+              [ UI.span #. "tag is-info is-medium" #+ [image "rt-view-leader-icon-on-button" leaderSVG]
+              , UI.span ## (id' <> "__node-leadership")
+                        #. "tag is-medium"
+                        # set text "—"
+              ]
+          ]
+      , UI.p #. "control" #+
+          [ UI.div #. "tags has-addons has-tooltip-multiline has-tooltip-top"
+                   # set dataTooltip "How many blocks were forge by this node"
+                   #+
+              [ UI.span #. "tag is-info is-medium" #+ [image "rt-view-leader-icon-on-button" forgeSVG]
+              , UI.span ## (id' <> "__node-forged-blocks")
+                        #. "tag is-medium"
+                        # set text "—"
+              ]
+          ]
+      , UI.p #. "control" #+
+          [ UI.div #. "tags has-addons has-tooltip-multiline has-tooltip-top"
+                   # set dataTooltip "How many times this node could not forge"
+                   #+
+              [ UI.span #. "tag is-danger is-medium" #+ [image "rt-view-leader-icon-on-button" notForgeSVG]
+              , UI.span ## (id' <> "__node-cannot-forge")
+                        #. "tag is-medium"
+                        # set text "—"
+              ]
+          ]
+      , UI.p #. "control" #+
+          [ UI.div #. "tags has-addons has-tooltip-multiline has-tooltip-top"
+                   # set dataTooltip "How many slots were missed by this node"
+                   #+
+              [ UI.span #. "tag is-danger is-medium" #+ [image "rt-view-leader-icon-2-on-button" missedSVG]
+              , UI.span ## (id' <> "__node-missed-slots")
+                        #. "tag is-medium"
+                        # set text "—"
+              ]
+          ]
+      ]
+  ]
+
+startTime :: String -> UI [UI Element]
+startTime id' = return
+  [ UI.div #. "field is-grouped" #+
+      [ UI.p #. "control" #+
+          [ UI.div #. "tags has-addons has-tooltip-multiline has-tooltip-top"
+                   # set dataTooltip "Blockchain's start time in UTC"
+                   #+
+              [ UI.span #. "tag is-primary is-medium" #+ [image "rt-view-leader-icon-2-on-button" bSVG]
+              , UI.span ## (id' <> "__node-system-start-time")
+                        #. "tag is-medium"
+                        # set text "—"
+              ]
+          ]
+      , UI.p #. "control" #+
+          [ UI.div #. "tags has-addons has-tooltip-multiline has-tooltip-top"
+                   # set dataTooltip "Node's start time in UTC"
+                   #+
+              [ UI.span #. "tag is-primary is-medium" #+ [image "rt-view-leader-icon-2-on-button" nSVG]
+              , UI.span ## (id' <> "__node-start-time")
+                        #. "tag is-medium"
+                        # set text "—"
+              ]
+          ]
+      ]
+  ]
+
+nodeUptime :: String -> UI [UI Element]
+nodeUptime id' = return
+  [ UI.div #. "field is-grouped" #+
+      [ UI.p #. "control" #+
+          [ UI.span ## (id' <> "__node-uptime-days")  #. "tag is-medium is-link" # set text "—"
+          ]
+      , UI.p #. "control" #+
+          [ UI.span ## (id' <> "__node-uptime-hours") #. "tag is-medium is-link" # set text "—"
+          ]
+      , UI.p #. "control" #+
+          [ UI.span ## (id' <> "__node-uptime-mins")  #. "tag is-medium is-link" # set text "—"
+          ]
+      , UI.p #. "control" #+
+          [ UI.span ## (id' <> "__node-uptime-secs")  #. "tag is-medium is-link" # set text "—"
+          ]
+      ]
+  ]
 
 -- | The new node is already connected, so we can display its logging settings.
 logsSettings

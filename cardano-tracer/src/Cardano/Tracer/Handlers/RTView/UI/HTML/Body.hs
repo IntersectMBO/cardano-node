@@ -146,19 +146,9 @@ mkPageBody tracerEnv networkConfig dsIxs = do
                               ]
                           ]
                       , UI.mkElement "tbody" #+
-                          [ UI.tr ## "node-version-row" #+
-                              [ UI.td #+ [ image "rt-view-overview-icon" versionSVG
-                                         , string "Version"
-                                         ]
-                              ]
-                          , UI.tr ## "node-commit-row" #+
-                              [ UI.td #+ [ image "rt-view-overview-icon" commitSVG
-                                         , string "Commit"
-                                         ]
-                              ]
-                          , UI.tr ## "node-protocol-row" #+
-                              [ UI.td #+ [ image "rt-view-overview-icon" protocolSVG
-                                         , string "Protocol"
+                          [ UI.tr ## "node-basic-info-row" #+
+                              [ UI.td #+ [ image "rt-view-overview-icon" infoSVG
+                                         , string "Basic info"
                                          ]
                               ]
                           , UI.tr ## "node-era-row" #+
@@ -174,19 +164,19 @@ mkPageBody tracerEnv networkConfig dsIxs = do
                                                                     <> " It can be outdated because of node's out of sync!")
                                          ]
                               ]
+                          , UI.tr ## "node-block-replay-row" #+
+                              [ UI.td #+ [ image "rt-view-overview-icon" blocksSVG
+                                         , string "Block replay"
+                                         ]
+                              ]
                           , UI.tr ## "node-sync-row" #+
                               [ UI.td #+ [ image "rt-view-overview-icon" refreshSVG
                                          , string "Sync"
                                          ]
                               ]
-                          , UI.tr ## "node-system-start-time-row" #+
-                              [ UI.td #+ [ image "rt-view-overview-icon" systemStartSVG
-                                         , string "Blockchain start"
-                                         ]
-                              ]
                           , UI.tr ## "node-start-time-row" #+
                               [ UI.td #+ [ image "rt-view-overview-icon" startSVG
-                                         , string "Node start"
+                                         , string "Start time"
                                          ]
                               ]
                           , UI.tr ## "node-uptime-row" #+
@@ -197,11 +187,6 @@ mkPageBody tracerEnv networkConfig dsIxs = do
                           , UI.tr ## "node-logs-row" #+
                               [ UI.td #+ [ image "rt-view-overview-icon" logsSVG
                                          , string "Logs"
-                                         ]
-                              ]
-                          , UI.tr ## "node-block-replay-row" #+
-                              [ UI.td #+ [ image "rt-view-overview-icon" blocksSVG
-                                         , string "Block replay"
                                          ]
                               ]
                           --, UI.tr ## "node-chunk-validation-row" #+
@@ -225,56 +210,18 @@ mkPageBody tracerEnv networkConfig dsIxs = do
                                          ]
                               ]
                           , UI.tr ## "node-leadership-row" #+
-                              [ UI.td #+ [ image "rt-view-overview-icon" leaderSVG
+                              [ UI.td #+ [ image "rt-view-overview-icon" firstSVG
                                          , string "Leadership"
-                                         , image "has-tooltip-multiline has-tooltip-right rt-view-what-icon" whatSVG
-                                                 # set dataTooltip "How many times this node was leader"
                                          ]
                               ]
-                          , UI.tr ## "node-forged-blocks-row" #+
-                              [ UI.td #+ [ image "rt-view-overview-icon" forgeSVG
-                                         , string "Forged blocks"
-                                         , image "has-tooltip-multiline has-tooltip-right rt-view-what-icon" whatSVG
-                                                 # set dataTooltip "How many blocks did forge by this node"
+                          , UI.tr ## "node-kes-row" #+
+                              [ UI.td #+ [ image "rt-view-overview-icon" kesSVG
+                                         , string "KES"
                                          ]
                               ]
-                          , UI.tr ## "node-cannot-forge-row" #+
-                              [ UI.td #+ [ image "rt-view-overview-icon" notForgeSVG
-                                         , string "Cannot forge"
-                                         , image "has-tooltip-multiline has-tooltip-right rt-view-what-icon" whatSVG
-                                                 # set dataTooltip "How many times this node could not forge"
-                                         ]
-                              ]
-                          , UI.tr ## "node-missed-slots-row" #+
-                              [ UI.td #+ [ image "rt-view-overview-icon" missedSVG
-                                         , string "Missed slots"
-                                         , image "has-tooltip-multiline has-tooltip-right rt-view-what-icon" whatSVG
-                                                 # set dataTooltip "How many slots were missed by this node"
-                                         ]
-                              ]
-                          , UI.tr ## "node-current-kes-period-row" #+
+                          , UI.tr ## "node-op-cert-row" #+
                               [ UI.td #+ [ image "rt-view-overview-icon" certificateSVG
-                                         , string "KES current"
-                                         ]
-                              ]
-                          , UI.tr ## "node-op-cert-expiry-kes-period-row" #+
-                              [ UI.td #+ [ image "rt-view-overview-icon" certificateSVG
-                                         , string "KES Expiry"
-                                         ]
-                              ]
-                          , UI.tr ## "node-remaining-kes-periods-row" #+
-                              [ UI.td #+ [ image "rt-view-overview-icon" certificateSVG
-                                         , string "Remainig KES"
-                                         ]
-                              ]
-                          , UI.tr ## "node-op-cert-start-kes-period-row" #+
-                              [ UI.td #+ [ image "rt-view-overview-icon" certificateSVG
-                                         , string "Op Cert Start KES"
-                                         ]
-                              ]
-                          , UI.tr ## "node-days-until-op-cert-renew-row" #+
-                              [ UI.td #+ [ image "rt-view-overview-icon" endSVG
-                                         , string "Days until Op Cert renew"
+                                         , string "Op Cert"
                                          ]
                               ]
                           , UI.tr ## "node-ekg-metrics-row" #+

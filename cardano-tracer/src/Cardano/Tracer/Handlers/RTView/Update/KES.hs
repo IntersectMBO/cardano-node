@@ -29,7 +29,7 @@ updateKESInfo
   -> DisplayedElements
   -> UI ()
 updateKESInfo tracerEnv settings displayed =
-  forAcceptedMetricsUI_ tracerEnv $ \(nodeId@(NodeId anId), (ekgStore, _)) -> 
+  forAcceptedMetricsUI_ tracerEnv $ \(nodeId@(NodeId anId), (ekgStore, _)) ->
     forMM_ (liftIO $ getListOfMetrics ekgStore) $ \(metricName, metricValue) ->
       case metricName of
         "Forge.CurrentKESPeriod" ->

@@ -177,7 +177,7 @@ span[data-tooltip] {
 }
 
 .rt-view-logs-input {
-  max-width: 150px;
+  max-width: 200px;
 }
 
 .rt-view-error-msg-input {
@@ -315,6 +315,30 @@ span[data-tooltip] {
   width: 20px;
   color: whitesmoke;
   margin-top: 5px;
+}
+
+.dark .rt-view-info-icon-on-button svg {
+  width: 20px;
+  color: whitesmoke;
+  margin-top: 6px;
+}
+
+.dark .rt-view-leader-icon-on-button svg {
+  width: 20px;
+  color: whitesmoke;
+  margin-top: 7px;
+}
+
+.dark .rt-view-leader-icon-2-on-button svg {
+  width: 14px;
+  color: whitesmoke;
+  margin-top: 7px;
+}
+
+.dark .rt-view-leader-icon-3-on-button svg {
+  width: 11px;
+  color: whitesmoke;
+  margin-top: 7px;
 }
 
 .dark .rt-view-show-hide-pass-icon svg {
@@ -720,6 +744,30 @@ span[data-tooltip] {
   width: 20px;
   color: whitesmoke;
   margin-top: 5px;
+}
+
+.light .rt-view-info-icon-on-button svg {
+  width: 20px;
+  color: whitesmoke;
+  margin-top: 6px;
+}
+
+.light .rt-view-leader-icon-on-button svg {
+  width: 20px;
+  color: whitesmoke;
+  margin-top: 7px;
+}
+
+.light .rt-view-leader-icon-2-on-button svg {
+  width: 14px;
+  color: whitesmoke;
+  margin-top: 7px;
+}
+
+.light .rt-view-leader-icon-3-on-button svg {
+  width: 11px;
+  color: whitesmoke;
+  margin-top: 7px;
 }
 
 .light .rt-view-show-hide-pass-icon svg {

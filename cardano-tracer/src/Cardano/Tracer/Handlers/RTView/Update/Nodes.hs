@@ -18,7 +18,7 @@ import           Control.Monad.Extra (whenJust)
 import           Data.List (find)
 import           Data.List.NonEmpty (NonEmpty)
 import qualified Data.Map.Strict as M
-import           Data.Maybe (catMaybes, fromMaybe)
+import           Data.Maybe (fromMaybe)
 import           Data.Set (Set, (\\))
 import qualified Data.Set as S
 import qualified Data.Text as T
@@ -48,6 +48,7 @@ import           Cardano.Tracer.Handlers.RTView.Update.NodeInfo
 import           Cardano.Tracer.Handlers.RTView.Update.Utils
 import           Cardano.Tracer.Handlers.RTView.Utils
 import           Cardano.Tracer.Types
+import           Cardano.Tracer.Utils
 
 updateNodesUI
   :: TracerEnv
@@ -152,27 +153,32 @@ updateNodesUptime
 updateNodesUptime tracerEnv displayedElements = do
   now <- systemToUTCTime <$> liftIO getSystemTime
   displayed <- liftIO $ readTVarIO displayedElements
-  elsIdsWithUptimes <- forConnectedUI tracerEnv $ getUptimeForNode now displayed
-  setTextValues $ catMaybes elsIdsWithUptimes
+  forConnectedUI_ tracerEnv $ getUptimeForNode now displayed
  where
-   getUptimeForNode now displayed nodeId@(NodeId anId) = do
-    let nodeStartElId  = anId <> "__node-start-time"
-        nodeUptimeElId = anId <> "__node-uptime"
+  getUptimeForNode now displayed nodeId@(NodeId anId) = do
+    let nodeStartElId   = anId <> "__node-start-time"
+        nodeUptimeDElId = anId <> "__node-uptime-days"
+        nodeUptimeHElId = anId <> "__node-uptime-hours"
+        nodeUptimeMElId = anId <> "__node-uptime-mins"
+        nodeUptimeSElId = anId <> "__node-uptime-secs"
     case getDisplayedValuePure displayed nodeId nodeStartElId of
-       Nothing -> return Nothing
-       Just tsRaw ->
-         case readMaybe (T.unpack tsRaw) of
-           Nothing -> return Nothing
-           Just (startTime :: UTCTime) -> do
-             let uptimeDiff = now `diffUTCTime` startTime
-                 uptime = uptimeDiff `addUTCTime` nullTime
-                 uptimeFormatted = formatTime defaultTimeLocale "%X" uptime
-                 daysNum = utctDay uptime `diffDays` utctDay nullTime
-                 uptimeWithDays = if daysNum > 0
-                                    -- Show days only if 'uptime' > 23:59:59.
-                                    then show daysNum <> "d " <> uptimeFormatted
-                                    else uptimeFormatted
-             return $ Just (nodeUptimeElId, T.pack uptimeWithDays)
+      Nothing -> return ()
+      Just tsRaw ->
+        case readMaybe (T.unpack tsRaw) of
+          Nothing -> return ()
+          Just (startTime :: UTCTime) -> do
+            let uptimeDiff = now `diffUTCTime` startTime
+                uptime     = uptimeDiff `addUTCTime` nullTime
+                hoursNum   = formatTime defaultTimeLocale "%H" uptime
+                minsNum    = formatTime defaultTimeLocale "%M" uptime
+                secsNum    = formatTime defaultTimeLocale "%S" uptime
+                daysNum    = utctDay uptime `diffDays` utctDay nullTime
+            setTextValues 
+              [ (nodeUptimeDElId, showT daysNum   <> "d")
+              , (nodeUptimeHElId, T.pack hoursNum <> "h")
+              , (nodeUptimeMElId, T.pack minsNum  <> "m")
+              , (nodeUptimeSElId, T.pack secsNum  <> "s")
+              ]
 
 setBlockReplayProgress
   :: Set NodeId
