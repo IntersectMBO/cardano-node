@@ -718,7 +718,6 @@ pTransaction =
             <*> many pMetadataFile
             <*> optional pProtocolParamsSourceSpec
             <*> optional pUpdateProposalFile
-            <*> pure OutputLedgerCDDLSerialisation
             <*> (OutputTxBodyOnly <$> pTxBodyFile Output <|> pCalculatePlutusScriptCost)
 
   pChangeAddress :: Parser TxOutChangeAddress
@@ -755,7 +754,6 @@ pTransaction =
                <*> many pMetadataFile
                <*> optional pProtocolParamsSourceSpec
                <*> optional pUpdateProposalFile
-               <*> pure OutputLedgerCDDLSerialisation
                <*> pTxBodyFile Output
 
   pTransactionSign  :: Parser TransactionCmd
