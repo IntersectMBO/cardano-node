@@ -111,7 +111,7 @@ connIdToNodeId ConnectionId{remoteAddress} = NodeId preparedAddress
  where
   -- We have to remove "wrong" symbols from 'NodeId',
   -- to make it appropriate for the name of the subdirectory.
-  preparedAddress =
+  !preparedAddress =
       T.pack
     . dropPrefix "-"
     . dropSuffix "-"
@@ -173,9 +173,9 @@ askNodeId
   -> IO (Maybe NodeId)
 askNodeId TracerEnv{teConnectedNodesNames} nodeName = do
   nodesNames <- readTVarIO teConnectedNodesNames
-  return $ if nodeName `BM.memberR` nodesNames
-             then Just $ nodesNames !> nodeName
-             else Nothing
+  return $! if nodeName `BM.memberR` nodesNames
+              then Just $ nodesNames !> nodeName
+              else Nothing
 
 -- | Stop the protocols. As a result, 'MsgDone' will be sent and interaction
 --   between acceptor's part and forwarder's part will be finished.

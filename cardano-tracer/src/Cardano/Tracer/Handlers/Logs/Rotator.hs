@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE NamedFieldPuns #-}
@@ -109,7 +110,7 @@ checkIfCurrentLogIsFull currentLogLock pathToCurrentLog format maxSizeInBytes =
  where
   logIsFull = do
     size <- getFileSize pathToCurrentLog
-    return $ fromIntegral size >= maxSizeInBytes
+    return $! fromIntegral size >= maxSizeInBytes
 
 -- | If there are too old log files - they will be removed.
 --   Please note that some number of log files can be kept in any case.
@@ -129,7 +130,7 @@ checkIfThereAreOldLogs fromOldestToNewest maxAgeInHours keepFilesNum = do
   checkOldLogs (oldestLog:otherLogs) now' =
     case getTimeStampFromLog oldestLog of
       Just ts -> do
-        let oldestLogAge = toSeconds $ now' `diffUTCTime` ts
+        let !oldestLogAge = toSeconds $ now' `diffUTCTime` ts
         when (oldestLogAge >= maxAgeInSecs) $ do
           removeFile oldestLog
           checkOldLogs otherLogs now'

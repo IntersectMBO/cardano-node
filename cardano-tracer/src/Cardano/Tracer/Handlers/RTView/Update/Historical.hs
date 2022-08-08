@@ -198,7 +198,7 @@ getAllHistoryFromBackup tracerEnv@TracerEnv{teConnectedNodes} dataName = do
       Right rawPoints ->
         case CSV.decode CSV.NoHeader rawPoints of
           Left _ -> return [] -- Maybe file was broken...
-          Right (pointsV :: V.Vector HistoricalPoint) -> return $ V.toList pointsV
+          Right (pointsV :: V.Vector HistoricalPoint) -> return $! V.toList pointsV
 
 getLastHistoryFromBackupsAll
   :: TracerEnv

@@ -36,12 +36,13 @@ initSavedTraceObjects = newTVarIO M.empty
 
 saveTraceObjects :: SavedTraceObjects -> NodeId -> [TraceObject] -> IO ()
 saveTraceObjects savedTraceObjects nodeId traceObjects =
-  unless (null itemsToSave) $ atomically $ modifyTVar' savedTraceObjects $ \savedTO ->
-    case M.lookup nodeId savedTO of
-      Nothing ->
-        M.insert nodeId (M.fromList itemsToSave) savedTO
-      Just savedTOForThisNode ->
-        M.adjust (const $ savedTOForThisNode `updateSavedBy` itemsToSave) nodeId savedTO
+  unless (null itemsToSave) $
+    atomically $ modifyTVar' savedTraceObjects $ \savedTO ->
+      case M.lookup nodeId savedTO of
+        Nothing ->
+          M.insert nodeId (M.fromList itemsToSave) savedTO
+        Just savedTOForThisNode ->
+          M.adjust (const $! savedTOForThisNode `updateSavedBy` itemsToSave) nodeId savedTO
  where
   itemsToSave = mapMaybe getTOValue traceObjects
 

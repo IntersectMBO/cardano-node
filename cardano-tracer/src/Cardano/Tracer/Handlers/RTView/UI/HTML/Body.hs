@@ -1,4 +1,5 @@
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -624,4 +625,4 @@ doMakeChartTimer addPoints tracerEnv history datasetIndices dataName chartId = d
     addPoints tracerEnv history datasetIndices dataName chartId
   return uiUpdateTimer
  where
-  defaultUpdatePeriodInMs = 15 * 1000
+  defaultUpdatePeriodInMs = 15_000
