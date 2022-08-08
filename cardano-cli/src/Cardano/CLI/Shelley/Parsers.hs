@@ -718,7 +718,7 @@ pTransaction =
             <*> many pMetadataFile
             <*> optional pProtocolParamsSourceSpec
             <*> optional pUpdateProposalFile
-            <*> pOutputSerialisation
+            <*> pure OutputLedgerCDDLSerialisation
             <*> (OutputTxBodyOnly <$> pTxBodyFile Output <|> pCalculatePlutusScriptCost)
 
   pChangeAddress :: Parser TxOutChangeAddress
@@ -755,7 +755,7 @@ pTransaction =
                <*> many pMetadataFile
                <*> optional pProtocolParamsSourceSpec
                <*> optional pUpdateProposalFile
-               <*> pOutputSerialisation
+               <*> pure OutputLedgerCDDLSerialisation
                <*> pTxBodyFile Output
 
   pTransactionSign  :: Parser TransactionCmd
@@ -1766,17 +1766,6 @@ pOutputFormat =
     <> Opt.help "Optional output format. Accepted output formats are \"hex\" \
                 \and \"bech32\" (default is \"bech32\")."
     <> Opt.value OutputFormatBech32
-    )
-
-pOutputSerialisation :: Parser OutputSerialisation
-pOutputSerialisation =
-  Opt.flag' OutputLedgerCDDLSerialisation
-    (  Opt.long "cddl-format"
-    <> Opt.help "Serialise in the ledger CDDL specified CBOR format."
-    ) <|>
-  Opt.flag OutputCliSerialisation OutputCliSerialisation
-    (  Opt.long "cli-format"
-    <> Opt.help "Serialise in the cardano-cli CBOR format."
     )
 
 pMaybeOutputFile :: Parser (Maybe OutputFile)
