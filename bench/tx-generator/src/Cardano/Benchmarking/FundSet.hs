@@ -142,8 +142,8 @@ liftAnyEra f x = case x of
   InAnyCardanoEra BabbageEra a  ->  InAnyCardanoEra BabbageEra $ f a  
 
 type FundSelector = FundSet -> Either String [Fund]
-type FundSource = IO (Either String [Fund])
-type FundToStore = [Fund] -> IO ()
+type FundSource m = m (Either String [Fund])
+type FundToStore m = [Fund] -> m ()
 
 -- Select Funds to cover a minimum value.
 -- TODO:

@@ -66,22 +66,23 @@ walletExtractFunds w s
     Left err -> Left err
     Right funds -> Right (foldl (flip walletDeleteFund) w funds, funds)
 
-mkWalletFundSource :: WalletRef -> FundSelector -> FundSource
+mkWalletFundSource :: WalletRef -> FundSelector -> FundSource IO
 mkWalletFundSource walletRef selector
   = modifyWalletRefEither walletRef (\wallet -> return $ walletExtractFunds wallet selector)
 
-mkWalletFundStore :: WalletRef -> FundToStore
+mkWalletFundStore :: WalletRef -> FundToStore IO
 mkWalletFundStore walletRef funds = modifyWalletRef walletRef
   $ \wallet -> return (foldl (flip walletInsertFund) wallet funds, ())
 
 --TODO use Error monad
 sourceToStoreTransaction ::
-     TxGenerator era
-  -> FundSource
+     Monad m
+  => TxGenerator era
+  -> FundSource m
   -> ([Lovelace] -> [Lovelace])
   -> [ToUTxO era]
-  -> FundToStore
-  -> IO (Either String (Tx era))
+  -> FundToStore m
+  -> m (Either String (Tx era))
 sourceToStoreTransaction txGenerator fundSource inToOut mkTxOut fundToStore = do
   fundSource >>= \case
     Left err -> return $ Left err
@@ -223,10 +224,10 @@ benchmarkWalletScript :: forall era .
   => WalletRef
   -> TxGenerator era
   -> NumberOfTxs
-  -> (Target -> FundSource)
+  -> (Target -> FundSource IO)
   -> ([Lovelace] -> [Lovelace])
   -> ( Target -> SeqNumber -> [ToUTxO era])
-  -> FundToStore
+  -> FundToStore IO
   -> Target
   -> WalletScript era
 benchmarkWalletScript wRef txGenerator (NumberOfTxs maxCount) fundSource inOut toUTxO fundToStore targetNode

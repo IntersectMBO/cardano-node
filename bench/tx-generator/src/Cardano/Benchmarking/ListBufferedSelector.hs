@@ -18,7 +18,7 @@ mkBufferedSource ::
   -> Lovelace
   -> Maybe Variant
   -> Int
-  -> IO (Either String FundSource)
+  -> IO (Either String (FundSource IO))
 mkBufferedSource walletRef count minValue variant munch
   = mkWalletFundSource walletRef (selectToBuffer count minValue variant) >>= \case
     Left err -> return $ Left err
