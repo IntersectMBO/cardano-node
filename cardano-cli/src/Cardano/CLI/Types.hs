@@ -19,7 +19,6 @@ module Cardano.CLI.Types
   , OpCertNodeStateCounter (..)
   , OpCertStartingKesPeriod (..)
   , OutputFormat (..)
-  , OutputSerialisation (..)
   , TxBuildOutputOptions(..)
   , ReferenceScriptAnyEra (..)
   , SigningKeyFile (..)
@@ -186,14 +185,6 @@ data OutputFormat
   | OutputFormatBech32
   deriving (Eq, Show)
 
--- | Specify whether to serialise a value according to the ledger's CDDL spec
--- or the cli's intermediate format. Note the intermediate format is defined
--- within SerialiseAsCBOR instances. The plan is to merge TextEnvelope with
--- SerialiseAsCBOR.
-data OutputSerialisation
-  = OutputLedgerCDDLSerialisation
-  | OutputCliSerialisation
-  deriving Show
 
 -- | This data structure is used to allow nicely formatted output within the query stake-snapshot command.
 --

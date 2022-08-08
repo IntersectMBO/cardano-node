@@ -315,17 +315,17 @@ runTransactionCmd cmd =
     TxBuild era consensusModeParams nid mScriptValidity mOverrideWits txins readOnlyRefIns
             reqSigners txinsc mReturnColl mTotCollateral txouts changeAddr mValue mLowBound
             mUpperBound certs wdrls metadataSchema scriptFiles metadataFiles mpparams
-            mUpProp outputFormat output ->
+            mUpProp output ->
       runTxBuild era consensusModeParams nid mScriptValidity txins readOnlyRefIns txinsc
                  mReturnColl mTotCollateral txouts changeAddr mValue mLowBound
                  mUpperBound certs wdrls reqSigners metadataSchema scriptFiles
-                 metadataFiles mpparams mUpProp outputFormat mOverrideWits output
+                 metadataFiles mpparams mUpProp mOverrideWits output
     TxBuildRaw era mScriptValidity txins readOnlyRefIns txinsc mReturnColl mTotColl reqSigners
                txouts mValue mLowBound mUpperBound fee certs wdrls metadataSchema scriptFiles
-               metadataFiles mpparams mUpProp outputFormat out ->
+               metadataFiles mpparams mUpProp out ->
       runTxBuildRaw era mScriptValidity txins readOnlyRefIns txinsc mReturnColl mTotColl txouts
                     mLowBound mUpperBound fee mValue certs wdrls reqSigners metadataSchema
-                    scriptFiles metadataFiles mpparams mUpProp outputFormat out
+                    scriptFiles metadataFiles mpparams mUpProp out
     TxSign txinfile skfiles network txoutfile ->
       runTxSign txinfile skfiles network txoutfile
     TxSubmit anyConensusModeParams network txFp ->
@@ -381,7 +381,6 @@ runTxBuildRaw
   -> [MetadataFile]
   -> Maybe ProtocolParamsSourceSpec
   -> Maybe UpdateProposalFile
-  -> OutputSerialisation
   -> TxBodyFile
   -> ExceptT ShelleyTxCmdError IO ()
 runTxBuildRaw (AnyCardanoEra era)
@@ -393,7 +392,6 @@ runTxBuildRaw (AnyCardanoEra era)
               certFiles withdrawals reqSigners
               metadataSchema scriptFiles
               metadataFiles mpparams mUpdatePropFile
-              outputFormat
               (TxBodyFile fpath) = do
 
     allReferenceInputs
@@ -424,14 +422,10 @@ runTxBuildRaw (AnyCardanoEra era)
     txBody <-
       firstExceptT ShelleyTxCmdTxBodyError . hoistEither $
         makeTransactionBody txBodyContent
-    case outputFormat of
-      OutputCliSerialisation ->
-        firstExceptT ShelleyTxCmdWriteFileError . newExceptT $
-          writeFileTextEnvelope fpath Nothing txBody
-      OutputLedgerCDDLSerialisation ->
-        let noWitTx = makeSignedTransaction [] txBody
-        in firstExceptT ShelleyTxCmdWriteFileError . newExceptT $
-             writeTxFileTextEnvelopeCddl fpath noWitTx
+
+    let noWitTx = makeSignedTransaction [] txBody
+    firstExceptT ShelleyTxCmdWriteFileError . newExceptT $
+      writeTxFileTextEnvelopeCddl fpath noWitTx
 
 getSbe :: Monad m => CardanoEraStyle era -> ExceptT ShelleyTxCmdError m (Api.ShelleyBasedEra era)
 getSbe LegacyByronEra = left ShelleyTxCmdByronEra
@@ -488,14 +482,13 @@ runTxBuild
   -> [MetadataFile]
   -> Maybe ProtocolParamsSourceSpec
   -> Maybe UpdateProposalFile
-  -> OutputSerialisation
   -> Maybe Word
   -> TxBuildOutputOptions
   -> ExceptT ShelleyTxCmdError IO ()
 runTxBuild (AnyCardanoEra era) (AnyConsensusModeParams cModeParams) networkId mScriptValidity
            txins readOnlyRefIns txinsc mReturnCollateral mtotcoll txouts (TxOutChangeAddress changeAddr) mValue mLowerBound mUpperBound
            certFiles withdrawals reqSigners metadataSchema scriptFiles metadataFiles mpparams
-           mUpdatePropFile outputFormat mOverrideWits outputOptions = do
+           mUpdatePropFile mOverrideWits outputOptions = do
   SocketPath sockPath <- firstExceptT ShelleyTxCmdSocketEnvError readEnvSocketPath
   let localNodeConnInfo = LocalNodeConnectInfo cModeParams networkId sockPath
       consensusMode = consensusModeOnly cModeParams
@@ -592,14 +585,9 @@ runTxBuild (AnyCardanoEra era) (AnyConsensusModeParams cModeParams) networkId mS
 
             Nothing -> left ShelleyTxCmdPParamExecutionUnitsNotAvailable
         OutputTxBodyOnly (TxBodyFile fpath)  ->
-          case outputFormat of
-            OutputCliSerialisation ->
-              firstExceptT ShelleyTxCmdWriteFileError . newExceptT $
-                writeFileTextEnvelope fpath Nothing balancedTxBody
-            OutputLedgerCDDLSerialisation ->
-              let noWitTx = makeSignedTransaction [] balancedTxBody
-              in firstExceptT ShelleyTxCmdWriteFileError . newExceptT $
-                   writeTxFileTextEnvelopeCddl fpath noWitTx
+          let noWitTx = makeSignedTransaction [] balancedTxBody
+          in firstExceptT ShelleyTxCmdWriteFileError . newExceptT $
+               writeTxFileTextEnvelopeCddl fpath noWitTx
 
     (CardanoMode, LegacyByronEra) -> left ShelleyTxCmdByronEra
 
