@@ -18,9 +18,11 @@ global_basedir=${global_basedir:-$(realpath "$(dirname "$0")")}
 . "$global_basedir"/scenario.sh
 . "$global_basedir"/analyse.sh
 . "$global_basedir"/explain-mode.sh
+. "$global_basedir"/app.sh
 
 . "$global_basedir"/backend.sh
 . "$global_basedir"/backend/supervisor.sh
+. "$global_basedir"/backend/docker.sh
 
 usage_main() {
     test $# -lt 1 ||
@@ -38,6 +40,7 @@ usage_main() {
     $(red chaindb)      ($(red c))      ChainDB
     $(red genesis)      ($(red g))      Genesis
     $(red topology)     ($(red t))      Topology generation
+    $(red app)                          Multi-container (services) application
 
   $(white wb) $(blue options):
 
@@ -100,7 +103,7 @@ start()
 {
     local batch_name=
     local profile_name= profile=
-    local backend=supervisor
+    local backend=${WB_BACKEND:-supervisor}
     local node_source=.
     local node_rev=
     local cabal_mode=
@@ -257,6 +260,9 @@ main() {
         backend )                 backend             "$@";;
         call         | c )                            "$@";;
         path )                    echo     $global_basedir;;
+
+        ## Docker's compose application (services) description.
+        app )                     app             "$@";;
 
         ## Bail for help:
         * ) usage_main "$op"; exit 1;; esac

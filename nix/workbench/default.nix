@@ -29,7 +29,7 @@ let
         mkdir -p                                     $out/bin
         cp    -a wb chain-filters profiles *.sh *.jq $out/bin
         mkdir -p                                     $out/bin/backend
-        cp    -a backend/*.sh                        $out/bin/backend
+        cp    -a backend/*.sh backend/*.jq           $out/bin/backend
       '';
 
       dontStrip = true;
@@ -37,7 +37,7 @@ let
 
   workbench = with cardanoNodePackages; with pkgs; workbench' (
     [ git graphviz
-      jq
+      jq yq
       moreutils
       procps
 

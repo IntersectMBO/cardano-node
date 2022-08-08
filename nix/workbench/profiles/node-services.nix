@@ -181,23 +181,21 @@ let
           profile.value.node.verbatim;
 
       extraArgs =
-        let shutdownSlot  = profile.value.node.shutdown_on_slot_synced;
-            shutdownBlock = profile.value.node.shutdown_on_block_synced;
-            mayKindArgs =
-              val: kind: flag:
-              if val != null
-              then if isAttrs val
-                   then if val.${kind} or null != null
-                        then [flag (toString val.${kind})]
-                        else []
-                   else [flag (toString val)]
-              else [];
-            shutBlockArgs = mayKindArgs shutdownBlock nodeSpec.kind "--shutdown-on-block-synced";
-            shutSlotArgs  = mayKindArgs shutdownSlot  nodeSpec.kind "--shutdown-on-slot-synced";
-        in services-config.finaliseNodeArgs profile nodeSpec
-          (if   shutBlockArgs != []
-           then shutBlockArgs
-           else shutSlotArgs);
+        (if nodeSpec.shutdown_on_block_synced != null
+          then [
+            "--shutdown-on-block-synced"
+            (toString nodeSpec.shutdown_on_slot_synced)
+          ]
+          else []
+        )
+        ++
+        (if nodeSpec.shutdown_on_slot_synced != null
+            then [
+              "--shutdown-on-slot-synced"
+              (toString nodeSpec.shutdown_on_slot_synced)
+            ]
+            else []
+        );
     };
 
   ## Given an env config, evaluate it and produce the node service.
