@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -51,6 +52,6 @@ updateKESInfo tracerEnv settings displayed =
       Right (remainingKesPeriods :: Int, _) -> do
         let secondsUntilRenew = remainingKesPeriods * esKESPeriodLength * esSlotLengthInS
             daysUntilRenew :: Double
-            daysUntilRenew = fromIntegral secondsUntilRenew / 3600 / 24
+            !daysUntilRenew = fromIntegral secondsUntilRenew / 3600 / 24
         setDisplayedValue nodeId displayed (anId <> "__node-days-until-op-cert-renew") $
                           pack $ printf "%.1f" daysUntilRenew

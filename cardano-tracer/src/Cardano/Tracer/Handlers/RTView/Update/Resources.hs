@@ -52,8 +52,8 @@ updateResourcesHistory nodeId (ResHistory rHistory) lastResources metricName met
             let tns        = utc2ns now
                 tDiffInSec = max 0.1 $ fromIntegral (tns - cpuLastNS resourcesForNode) / 1000_000_000 :: Double
                 ticksDiff  = cpuTicks - cpuLastTicks resourcesForNode
-                !cpuV      = fromIntegral ticksDiff / fromIntegral (100 :: Int) / tDiffInSec
-                newCPUPct  = if cpuV < 0 then 0.0 else cpuV * 100.0
+                cpuV       = fromIntegral ticksDiff / fromIntegral (100 :: Int) / tDiffInSec
+                !newCPUPct = if cpuV < 0 then 0.0 else cpuV * 100.0
             addHistoricalData rHistory nodeId now CPUData $ ValueD newCPUPct
             updateLastResources lastResources nodeId $ \current ->
               current { cpuLastTicks = cpuTicks
@@ -93,8 +93,8 @@ updateResourcesHistory nodeId (ResHistory rHistory) lastResources metricName met
             let tns        = utc2ns now
                 tDiffInSec = max 0.1 $ fromIntegral (tns - cpuGCLastNS resourcesForNode) / 1000_000_000 :: Double
                 ticksDiff  = cpuTimeGCInCentiS - cpuGCLastTicks resourcesForNode
-                !cpuV      = fromIntegral ticksDiff / fromIntegral (100 :: Int) / tDiffInSec
-                newCPUPct  = if cpuV < 0 then 0.0 else cpuV * 100.0
+                cpuV       = fromIntegral ticksDiff / fromIntegral (100 :: Int) / tDiffInSec
+                !newCPUPct = if cpuV < 0 then 0.0 else cpuV * 100.0
             addHistoricalData rHistory nodeId now CPUTimeGCData $ ValueD newCPUPct
             updateLastResources lastResources nodeId $ \current ->
               current { cpuGCLastTicks = cpuTimeGCInCentiS
@@ -114,8 +114,8 @@ updateResourcesHistory nodeId (ResHistory rHistory) lastResources metricName met
             let tns        = utc2ns now
                 tDiffInSec = max 0.1 $ fromIntegral (tns - cpuAppLastNS resourcesForNode) / 1000_000_000 :: Double
                 ticksDiff  = cpuTimeAppInCentiS - cpuAppLastTicks resourcesForNode
-                !cpuV      = fromIntegral ticksDiff / fromIntegral (100 :: Int) / tDiffInSec
-                newCPUPct  = if cpuV < 0 then 0.0 else cpuV * 100.0
+                cpuV       = fromIntegral ticksDiff / fromIntegral (100 :: Int) / tDiffInSec
+                !newCPUPct = if cpuV < 0 then 0.0 else cpuV * 100.0
             addHistoricalData rHistory nodeId now CPUTimeAppData $ ValueD newCPUPct
             updateLastResources lastResources nodeId $ \current ->
               current { cpuAppLastTicks = cpuTimeAppInCentiS

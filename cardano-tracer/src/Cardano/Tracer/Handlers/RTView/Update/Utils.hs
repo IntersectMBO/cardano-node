@@ -56,7 +56,7 @@ utc2s utc = fromInteger . round $ utcTimeToPOSIXSeconds utc
 
 -- | Converts a timestamp to nanoseconds since Unix epoch.
 utc2ns :: UTCTime -> Word64
-utc2ns utc = fromInteger . round $ 1000_000_000 * utcTimeToPOSIXSeconds utc
+utc2ns utc = fromInteger . round $! 1000_000_000 * utcTimeToPOSIXSeconds utc
 
 s2utc :: Word64 -> UTCTime
 s2utc posixTime = posixSecondsToUTCTime $ fromIntegral posixTime
