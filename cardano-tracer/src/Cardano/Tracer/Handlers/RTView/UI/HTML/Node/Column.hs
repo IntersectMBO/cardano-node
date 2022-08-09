@@ -80,7 +80,7 @@ addNodeColumn tracerEnv loggingConfig nodesErrors updateErrorsTimer nodeId@(Node
   addNodeCell "basic-info" bi
   addNodeCell "era" [ UI.span ## (id' <> "__node-era") #. "has-text-weight-semibold" # set text "—"
                     ]
-  addNodeCell "epoch" epoch 
+  addNodeCell "epoch" epoch
   addNodeCell "block-replay" [ UI.span ## (id' <> "__node-block-replay")
                                        # set html "0&nbsp;%"
                              ]
@@ -89,7 +89,7 @@ addNodeColumn tracerEnv loggingConfig nodesErrors updateErrorsTimer nodeId@(Node
                      ]
   addNodeCell "start-time" st
   addNodeCell "uptime" ut
-  addNodeCell "logs" ls 
+  addNodeCell "logs" ls
   --addNodeCell "chunk-validation" [ UI.span ## (id' <> "__node-chunk-validation")
   --                                         # set text "—"
   --                               ]
@@ -114,7 +114,7 @@ addNodeColumn tracerEnv loggingConfig nodesErrors updateErrorsTimer nodeId@(Node
                        ]
   addNodeCell "leadership" leadership
   addNodeCell "kes" kes
-  addNodeCell "op-cert" opCert 
+  addNodeCell "op-cert" opCert
   addNodeCell "ekg-metrics" [ UI.div #. "buttons has-addons" #+
                                 [ UI.button ## (id' <> "__node-ekg-metrics-num")
                                             #. "button is-static"
@@ -183,12 +183,25 @@ nodeEpoch id' = return
           ]
       , UI.p #. "control" #+
           [ UI.div #. "tags has-addons has-tooltip-multiline has-tooltip-top"
-                   # set dataTooltip "End date of this epoch"
+                   # set dataTooltip "Current epoch ends..."
                    #+
               [ UI.span #. "tag is-info is-medium" #+ [image "rt-view-leader-icon-2-on-button" endSVG]
               , UI.span ## (id' <> "__node-epoch-end")
                         #. "tag is-medium"
                         # set text "—"
+              ]
+          ]
+      , UI.p #. "control" #+
+          [ UI.div #. "rt-view-progress-container has-tooltip-multiline has-tooltip-top"
+                   # set dataTooltip "Current epoch progress"
+                   #+
+              [ UI.div #. "rt-view-progress-container-text" #+
+                  [ UI.div ## (id' <> "__node-epoch-progress-label")
+                           #. "rt-view-progress-container-text-label"
+                           # set text "0%"
+                  ]
+              , UI.div ## (id' <> "__node-epoch-progress")
+                       #. "rt-view-loading-bar"
               ]
           ]
       ]
@@ -206,7 +219,7 @@ nodeKES id' = return
                         #. "tag is-medium"
                         # set text "—"
               ]
-          ] 
+          ]
       , UI.p #. "control" #+
           [ UI.div #. "tags has-addons has-tooltip-multiline has-tooltip-top"
                    # set dataTooltip "KES expiry"
@@ -242,7 +255,7 @@ nodeOpCert id' = return
                         #. "tag is-medium"
                         # set text "—"
               ]
-          ] 
+          ]
       , UI.p #. "control" #+
           [ UI.div #. "tags has-addons has-tooltip-multiline has-tooltip-top"
                    # set dataTooltip "Days until Op Cert renew"
