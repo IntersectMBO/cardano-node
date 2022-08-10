@@ -92,7 +92,6 @@ library
                      , generic-monoid
                      , ghc-prim
                      , io-classes
-                     , ixset-typed
                      , network
                      , network-mux
                      , optparse-applicative-fork

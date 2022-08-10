@@ -55,7 +55,7 @@ instance FromJSON NumberOfOutputsPerTx where parseJSON = genericParseJSON myJson
 
 newtype NumberOfTxs =
   NumberOfTxs { unNumberOfTxs :: Int }
-  deriving newtype (Eq, Ord, Num, Show)
+  deriving newtype (Eq, Ord, Enum, Real, Num, Integral, Show)
 deriving stock instance Generic NumberOfTxs
 instance ToJSON NumberOfTxs where
   toJSON     = genericToJSON myJsonOptions

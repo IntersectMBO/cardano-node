@@ -39,7 +39,6 @@ import           Ouroboros.Consensus.Shelley.Eras (StandardShelley)
 
 import           Cardano.Api hiding (txFee)
 
-import qualified Cardano.Benchmarking.FundSet as FundSet
 import           Cardano.Benchmarking.GeneratorTx.Error
 import           Cardano.Benchmarking.GeneratorTx.Genesis
 import           Cardano.Benchmarking.GeneratorTx.NodeToNode
@@ -152,7 +151,7 @@ walletBenchmark :: forall era. IsShelleyBasedEra era
   -> SubmissionErrorPolicy
   -> AsType era
   -> NumberOfTxs
-  -> (FundSet.Target -> WalletScript era)
+  -> WalletScript era
   -> ExceptT TxGenError IO AsyncBenchmarkControl
 walletBenchmark
   traceSubmit
@@ -184,7 +183,7 @@ walletBenchmark
           client = txSubmissionClient
                      traceN2N
                      traceSubmit
-                     (walletTxSource (walletScript (FundSet.Target $ show remoteAddr)) tpsThrottle)
+                     (walletTxSource walletScript tpsThrottle)
                      (submitSubmissionThreadStats reportRef)
       async $ handle errorHandler (connectClient remoteAddr client)
 

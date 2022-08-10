@@ -57,23 +57,6 @@ walletInsertFund :: Fund -> Wallet -> Wallet
 walletInsertFund f w
   = w { walletFunds = FundSet.insertFund (walletFunds w) f }
 
-walletDeleteFund :: Fund -> Wallet -> Wallet
-walletDeleteFund f w
-  = w { walletFunds = FundSet.deleteFund (walletFunds w) f }
-
-walletSelectFunds :: Wallet -> FundSelector -> Either String [Fund]
-walletSelectFunds w s = s $ walletFunds w
-
-walletExtractFunds :: Wallet -> FundSelector -> Either String (Wallet, [Fund])
-walletExtractFunds w s
-  = case walletSelectFunds w s of
-    Left err -> Left err
-    Right funds -> Right (foldl (flip walletDeleteFund) w funds, funds)
-
-mkWalletFundSource :: WalletRef -> FundSelector -> FundSource IO
-mkWalletFundSource walletRef selector
-  = modifyWalletRefEither walletRef (\wallet -> return $ walletExtractFunds wallet selector)
-
 mkWalletFundStore :: WalletRef -> FundToStore IO
 mkWalletFundStore walletRef funds = modifyWalletRef walletRef
   $ \wallet -> return (foldl (flip walletInsertFund) wallet funds, ())
@@ -118,12 +101,10 @@ includeChange fee spend have = case compare changeValue 0 of
   where changeValue = sum have - sum spend - fee
 
 mkUTxOVariant :: forall era. IsShelleyBasedEra era
-  => Variant
-  -> NetworkId
+  => NetworkId
   -> SigningKey PaymentKey
-  -> Validity
   -> ToUTxO era
-mkUTxOVariant variant networkId key validity value
+mkUTxOVariant networkId key value
   = ( mkTxOut value
     , mkNewFund value
     )
@@ -136,8 +117,6 @@ mkUTxOVariant variant networkId key validity value
     , _fundWitness = KeyWitness KeyWitnessForSpending
     , _fundVal = lovelaceToTxOutValue val
     , _fundSigningKey = Just key
-    , _fundValidity = validity
-    , _fundVariant = variant
     }
 
 -- to be merged with mkUTxOVariant
@@ -146,9 +125,8 @@ mkUTxOScript :: forall era.
   => NetworkId
   -> (Script PlutusScriptV1, ScriptData)
   -> Witness WitCtxTxIn era
-  -> Validity
   -> ToUTxO era
-mkUTxOScript networkId (script, txOutDatum) witness validity value
+mkUTxOScript networkId (script, txOutDatum) witness value
   = ( mkTxOut value
     , mkNewFund value
     )
@@ -172,8 +150,6 @@ mkUTxOScript networkId (script, txOutDatum) witness validity value
     , _fundWitness = witness
     , _fundVal = lovelaceToTxOutValue val
     , _fundSigningKey = Nothing
-    , _fundValidity = validity
-    , _fundVariant = PlutusScriptFund
     }
 
 genTx :: forall era. IsShelleyBasedEra era =>
@@ -233,30 +209,19 @@ benchmarkWalletScript :: forall era .
   => WalletRef
   -> TxGenerator era
   -> NumberOfTxs
-  -> (Target -> FundSource IO)
+  -> FundSource IO
   -> ([Lovelace] -> [Lovelace])
-  -> ( Target -> SeqNumber -> [ToUTxO era] )
+  -> [ToUTxO era]
   -> FundToStore IO
-  -> Target
   -> WalletScript era
-benchmarkWalletScript wRef txGenerator (NumberOfTxs maxCount) fundSource inOut toUTxO fundToStore targetNode
-  = WalletScript walletStep
+benchmarkWalletScript wRef txGenerator totalCount fundSource inOut toUTxO fundToStore
+  = WalletScript $ walletStep totalCount
  where
-  nextCall = benchmarkWalletScript wRef txGenerator (NumberOfTxs maxCount) fundSource inOut toUTxO fundToStore targetNode
-
-  walletStep :: IO (WalletStep era)
-  walletStep = modifyMVarMasked wRef nextSeqNumber >>= \case
-    Nothing -> return Done
-    Just seqNumber -> do
-      sourceToStoreTransaction txGenerator (fundSource targetNode) inOut (makeToUTxOList $ toUTxO targetNode seqNumber) fundToStore >>= \case
-        Left err -> return $ Error err
-        Right tx -> return $ NextTx nextCall tx
-
-  nextSeqNumber :: Wallet -> IO (Wallet, Maybe SeqNumber)
-  nextSeqNumber w = if n > SeqNumber (fromIntegral maxCount)
-      then return (w, Nothing)
-      else return (w {walletSeqNumber = succ n }, Just n)
-    where n = walletSeqNumber w
+  walletStep :: NumberOfTxs -> IO (WalletStep era)
+  walletStep (NumberOfTxs 0) = return Done
+  walletStep count = sourceToStoreTransaction txGenerator fundSource inOut (makeToUTxOList toUTxO) fundToStore >>= \case
+    Left err -> return $ Error err
+    Right tx -> return $ NextTx (benchmarkWalletScript wRef txGenerator (pred count) fundSource inOut toUTxO fundToStore) tx
 
 limitSteps ::
      NumberOfTxs

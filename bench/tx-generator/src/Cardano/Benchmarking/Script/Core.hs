@@ -30,7 +30,7 @@ import           Cardano.Api.Shelley (PlutusScriptOrReferenceInput (..), Protoco
                    protocolParamMaxTxExUnits, protocolParamPrices)
 import           Ouroboros.Network.Protocol.LocalTxSubmission.Type (SubmitResult (..))
 
-import           Cardano.Benchmarking.FundSet (FundInEra (..), Validity (..), Variant (..),
+import           Cardano.Benchmarking.FundSet (FundInEra (..),
                    liftAnyEra)
 
 import qualified Cardano.Benchmarking.FundSet as FundSet
@@ -123,8 +123,6 @@ addFundToWallet wallet txIn outVal skey = do
          , _fundWitness = KeyWitness KeyWitnessForSpending
          , _fundVal = value
          , _fundSigningKey = Just skey
-         , _fundValidity = Confirmed
-         , _fundVariant = PlainOldFund
          }
 
 getLocalSubmitTx :: ActionM LocalSubmitTx
@@ -275,14 +273,7 @@ runBenchmarkInEra sourceWallet submitMode (ThreadName threadName) shape collater
   let walletRefDst = walletRefSrc
   metadata <- makeMetadata
 
-  fundSource <- liftIO (mkBufferedSource walletRefSrc
-                   (auxInputs shape)
-                   (auxMinValuePerUTxO shape)
-                   Nothing
-                   (auxInputsPerTx shape)
-                   ) >>= \case
-    Right a  -> return a
-    Left err -> throwE $ WalletError err
+  fundSource <- liftIO (mkBufferedSource walletRefSrc (auxInputsPerTx shape))
 
   collaterals <- selectCollateralFunds collateralWallet
 
@@ -292,14 +283,14 @@ runBenchmarkInEra sourceWallet submitMode (ThreadName threadName) shape collater
 
     txGenerator = genTx protocolParameters collaterals (mkFee (auxFee shape)) metadata
 
-    toUTxO :: FundSet.Target -> FundSet.SeqNumber -> [ ToUTxO era ]
-    toUTxO target seqNumber = repeat $ Wallet.mkUTxOVariant PlainOldFund networkId fundKey (InFlight target seqNumber)
+    toUTxO :: [ ToUTxO era ]
+    toUTxO = repeat $ Wallet.mkUTxOVariant networkId fundKey
   
     fundToStore = mkWalletFundStore walletRefDst
 
-    walletScript :: FundSet.Target -> WalletScript era
+    walletScript :: WalletScript era
     walletScript = benchmarkWalletScript walletRefSrc txGenerator (NumberOfTxs $ auxTxCount shape)
-                     (const fundSource) inToOut toUTxO fundToStore
+                     fundSource inToOut toUTxO fundToStore
 
   case submitMode of
     NodeToNode targetNodes -> do
@@ -312,7 +303,7 @@ runBenchmarkInEra sourceWallet submitMode (ThreadName threadName) shape collater
       case ret of
         Left err -> liftTxGenError err
         Right ctl -> setName (ThreadName threadName) ctl
-    _otherwise -> runWalletScriptInMode submitMode $ walletScript $ FundSet.Target "alternate-submit-mode"
+    _otherwise -> runWalletScriptInMode submitMode walletScript
 
 selectCollateralFunds :: forall era. IsShelleyBasedEra era
   => Maybe WalletName
@@ -320,9 +311,9 @@ selectCollateralFunds :: forall era. IsShelleyBasedEra era
 selectCollateralFunds Nothing = return (TxInsCollateralNone, [])
 selectCollateralFunds (Just walletName) = do
   cw <- getName walletName
-  collateralFunds <- liftIO ( askWalletRef cw (FundSet.selectCollateral . walletFunds)) >>= \case
-    Right c -> return c
-    Left err -> throwE $ WalletError err
+  collateralFunds <- liftIO ( askWalletRef cw walletFunds) >>= \case
+    [] -> throwE $ WalletError "selectCollateralFunds: emptylist"
+    l -> return l
   case collateralSupportedInEra (cardanoEra @ era) of
       Nothing -> throwE $ WalletError $ "selectCollateralFunds: collateral: era not supported :" ++ show (cardanoEra @ era)
       Just p -> return (TxInsCollateral p $  map getFundTxIn collateralFunds, collateralFunds)
@@ -403,15 +394,15 @@ interpretPayMode payMode = do
   case payMode of
     PayToAddr keyName -> do
       fundKey <- getName keyName
-      return ( Wallet.mkUTxOVariant PlainOldFund networkId fundKey Confirmed
+      return ( Wallet.mkUTxOVariant networkId fundKey
              , Text.unpack $ serialiseAddress $ keyAddress @ era networkId fundKey)
     PayToCollateral keyName -> do
       fundKey <- getName keyName
-      return ( Wallet.mkUTxOVariant CollateralFund networkId fundKey Confirmed
+      return ( Wallet.mkUTxOVariant networkId fundKey
              , Text.unpack $ serialiseAddress $ keyAddress @ era networkId fundKey)
     PayToScript scriptSpec -> do
       (witness, script, scriptData, _scriptFee) <- makePlutusContext scriptSpec
-      return ( mkUTxOScript networkId (script, scriptData) witness Confirmed
+      return ( mkUTxOScript networkId (script, scriptData) witness
                , Text.unpack $ serialiseAddress $ makeShelleyAddress networkId (PaymentCredentialByScript $ hashScript script) NoStakeAddress )
   
 createChangeGeneric ::
@@ -430,16 +421,14 @@ createChangeGeneric sourceWallet submitMode createCoins addressMsg value count =
     maxTxSize = 30
     chunks = chunkList maxTxSize coinsList
     txCount = length chunks
-    txValue = fromIntegral (min maxTxSize count) * value + fee
+    _txValue = fromIntegral (min maxTxSize count) * value + fee
     msg = mconcat [ "createChangeGeneric: outputs: ", show count
                   , " value: ", show value
                   , " number of txs: ", show txCount
                   , " address: ", addressMsg
                   ]
   traceDebug msg
-  fundSource <- liftIO (mkBufferedSource walletRef txCount txValue (Just PlainOldFund) 1) >>= \case
-    Right a  -> return a
-    Left err -> throwE $ WalletError err
+  fundSource <- liftIO (mkBufferedSource walletRef 1)
 
   forM_ chunks $ \coins -> do
     gen <- createCoins fundSource coins

@@ -1,4 +1,4 @@
-{-# LANGUAGE LambdaCase #-}
+-- todo: remove
 module Cardano.Benchmarking.ListBufferedSelector
 (
   mkBufferedSource
@@ -7,7 +7,6 @@ where
 import           Prelude
 
 import           Control.Concurrent.MVar
-import           Cardano.Api
 
 import           Cardano.Benchmarking.FundSet as FundSet
 import           Cardano.Benchmarking.Wallet as Wallet
@@ -15,16 +14,11 @@ import           Cardano.Benchmarking.Wallet as Wallet
 mkBufferedSource ::
      WalletRef
   -> Int
-  -> Lovelace
-  -> Maybe Variant
-  -> Int
-  -> IO (Either String (FundSource IO))
-mkBufferedSource walletRef count minValue variant munch
-  = mkWalletFundSource walletRef (selectToBuffer count minValue variant) >>= \case
-    Left err -> return $ Left err
-    Right funds -> do
-      buffer <- newMVar funds
-      return $ Right $ listSource buffer munch
+  -> IO (FundSource IO)
+mkBufferedSource walletRef munch = do
+  funds <- askWalletRef walletRef walletFunds
+  buffer <- newMVar funds
+  return $ listSource buffer munch
 
 listSource :: MVar [Fund] -> Int -> IO (Either String [Fund])
 listSource mvar count = modifyMVarMasked mvar popFunds
