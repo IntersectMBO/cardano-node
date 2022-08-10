@@ -21,6 +21,10 @@ type TxGenerator era = [Fund] -> [TxOut CtxTx era] -> Either String (Tx era, TxI
 
 type ToUTxO era = Lovelace -> (TxOut CtxTx era, TxIx -> TxId -> Fund)
 
+type ToUTxOList era = [Lovelace] -> ([TxOut CtxTx era], TxId -> [Fund])
+-- 'ToUTxOList era' is more powerful than '[ ToUTxO era ]' but
+-- '[ ToUTxO era ]` is easier to construct.
+
 data Wallet = Wallet {
     walletSeqNumber :: !SeqNumber
   , walletFunds :: !FundSet
@@ -74,15 +78,23 @@ mkWalletFundStore :: WalletRef -> FundToStore IO
 mkWalletFundStore walletRef funds = modifyWalletRef walletRef
   $ \wallet -> return (foldl (flip walletInsertFund) wallet funds, ())
 
+makeToUTxOList :: [ ToUTxO era ] -> ToUTxOList era
+makeToUTxOList fkts values 
+  = (outs, \txId -> map (\f -> f txId) fs)
+  where
+    (outs, fs) =unzip $ map worker $ zip3 fkts values [TxIx 0 ..]
+    worker (toUTxO, value, idx)
+      = let (o, f ) = toUTxO value
+         in  (o, f idx) 
+
 --TODO use Error monad
 sourceToStoreTransaction ::
-     Monad m
-  => TxGenerator era
-  -> FundSource m
+     TxGenerator era
+  -> FundSource IO
   -> ([Lovelace] -> [Lovelace])
-  -> [ToUTxO era]
-  -> FundToStore m
-  -> m (Either String (Tx era))
+  -> ToUTxOList era
+  -> FundToStore IO
+  -> IO (Either String (Tx era))
 sourceToStoreTransaction txGenerator fundSource inToOut mkTxOut fundToStore = do
   fundSource >>= \case
     Left err -> return $ Left err
@@ -91,14 +103,11 @@ sourceToStoreTransaction txGenerator fundSource inToOut mkTxOut fundToStore = do
   work inputFunds = do
     let
       outValues = inToOut $ map getFundLovelace inputFunds
-      outs = zipWith ($) mkTxOut outValues
-    case txGenerator inputFunds $ map fst outs of
+      (outputs, toFunds) = mkTxOut outValues
+    case txGenerator inputFunds outputs of
         Left err -> return $ Left err
         Right (tx, txId) -> do
-          let
-            fkt :: (a, TxIx -> TxId -> Fund) -> TxIx -> Fund
-            fkt a txIx = snd a txIx txId
-          fundToStore $ zipWith fkt outs [TxIx 0 ..]
+          fundToStore $ toFunds txId
           return $ Right tx
 
 includeChange :: Lovelace -> [Lovelace] -> [Lovelace] -> [Lovelace]
@@ -226,7 +235,7 @@ benchmarkWalletScript :: forall era .
   -> NumberOfTxs
   -> (Target -> FundSource IO)
   -> ([Lovelace] -> [Lovelace])
-  -> ( Target -> SeqNumber -> [ToUTxO era])
+  -> ( Target -> SeqNumber -> [ToUTxO era] )
   -> FundToStore IO
   -> Target
   -> WalletScript era
@@ -239,7 +248,7 @@ benchmarkWalletScript wRef txGenerator (NumberOfTxs maxCount) fundSource inOut t
   walletStep = modifyMVarMasked wRef nextSeqNumber >>= \case
     Nothing -> return Done
     Just seqNumber -> do
-      sourceToStoreTransaction txGenerator (fundSource targetNode) inOut (toUTxO targetNode seqNumber) fundToStore >>= \case
+      sourceToStoreTransaction txGenerator (fundSource targetNode) inOut (makeToUTxOList $ toUTxO targetNode seqNumber) fundToStore >>= \case
         Left err -> return $ Error err
         Right tx -> return $ NextTx nextCall tx
 

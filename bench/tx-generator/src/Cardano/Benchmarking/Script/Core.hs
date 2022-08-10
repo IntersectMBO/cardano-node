@@ -292,13 +292,14 @@ runBenchmarkInEra sourceWallet submitMode (ThreadName threadName) shape collater
 
     txGenerator = genTx protocolParameters collaterals (mkFee (auxFee shape)) metadata
 
-    toUTxO :: FundSet.Target -> FundSet.SeqNumber -> [ToUTxO era]
+    toUTxO :: FundSet.Target -> FundSet.SeqNumber -> [ ToUTxO era ]
     toUTxO target seqNumber = repeat $ Wallet.mkUTxOVariant PlainOldFund networkId fundKey (InFlight target seqNumber)
   
     fundToStore = mkWalletFundStore walletRefDst
 
     walletScript :: FundSet.Target -> WalletScript era
-    walletScript = benchmarkWalletScript walletRefSrc txGenerator (NumberOfTxs $ auxTxCount shape) (const fundSource) inToOut toUTxO fundToStore
+    walletScript = benchmarkWalletScript walletRefSrc txGenerator (NumberOfTxs $ auxTxCount shape)
+                     (const fundSource) inToOut toUTxO fundToStore
 
   case submitMode of
     NodeToNode targetNodes -> do
@@ -390,7 +391,9 @@ createChangeInEra sourceWallet dstWallet submitMode payMode value count _era = d
       (tx :: Either String (Tx era)) <- liftIO $ sourceToStoreTransaction
                                                   (genTx protocolParameters (TxInsCollateralNone, [])
                                                    (mkFee fee) TxMetadataNone )
-                                                  fundSource (Wallet.includeChange fee coins) (repeat toUTxO) (mkWalletFundStore walletRef)
+                                                  fundSource (Wallet.includeChange fee coins)
+                                                  (makeToUTxOList $ repeat toUTxO)
+                                                  (mkWalletFundStore walletRef)
       return $ fmap txInModeCardano tx
   createChangeGeneric sourceWallet submitMode createCoins addressMsg value count
 
