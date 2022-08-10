@@ -69,7 +69,7 @@ After certificate submission, relay nodes will be added to the topology file ena
 
 **Related topics:**
 
--   [Establishing connectivity between nodes](https://docs.cardano.org/en/latest/getting-started/stake-pool-operators/establishing-connectivity-between-the-nodes.html)
+-   [Establishing connectivity between nodes](https://docs.cardano.org/getting-started/operating-a-stake-pool/node-connectivity)
 
 ### Generate Stake pool registration certificate
 
