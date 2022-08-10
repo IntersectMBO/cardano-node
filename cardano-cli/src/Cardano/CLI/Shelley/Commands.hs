@@ -442,7 +442,7 @@ data GenesisCmd
       Word
       Word
       Word
-      FilePath -- ^ Relay specification filepath
+      (Maybe FilePath) -- ^ Relay specification filepath
   | GenesisKeyGenGenesis VerificationKeyFile SigningKeyFile
   | GenesisKeyGenDelegate VerificationKeyFile SigningKeyFile OpCertCounterFile
   | GenesisKeyGenUTxO VerificationKeyFile SigningKeyFile

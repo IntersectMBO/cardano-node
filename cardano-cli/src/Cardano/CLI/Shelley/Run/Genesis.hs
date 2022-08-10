@@ -670,7 +670,7 @@ runGenesisCreateStaked
   -> Word           -- ^ bulk credential files to write
   -> Word           -- ^ pool credentials per bulk file
   -> Word           -- ^ num stuffed UTxO entries
-  -> FilePath       -- ^ Specified stake pool relays
+  -> Maybe FilePath -- ^ Specified stake pool relays
   -> ExceptT ShelleyGenesisCmdError IO ()
 runGenesisCreateStaked (GenesisDir rootdir)
                  genNumGenesisKeys genNumUTxOKeys genNumPools genNumStDelegs
@@ -695,17 +695,17 @@ runGenesisCreateStaked (GenesisDir rootdir)
   forM_ [ 1 .. genNumUTxOKeys ] $ \index ->
     createUtxoKeys utxodir index
 
-  relaySpecificationJsonBs
-    <- handleIOExceptT (ShelleyGenesisStakePoolRelayFileError sPoolRelayFp)
-         $ LBS.readFile sPoolRelayFp
-
-  specifiedStakePoolRelays
-    <- firstExceptT (ShelleyGenesisStakePoolRelayJsonDecodeError sPoolRelayFp)
-         . hoistEither $ Aeson.eitherDecode relaySpecificationJsonBs
+  mayStakePoolRelays
+    <- forM sPoolRelayFp $
+       \fp -> do
+         relaySpecJsonBs <-
+           handleIOExceptT (ShelleyGenesisStakePoolRelayFileError fp) (LBS.readFile fp)
+         firstExceptT (ShelleyGenesisStakePoolRelayJsonDecodeError fp)
+           . hoistEither $ Aeson.eitherDecode relaySpecJsonBs
 
   poolParams <- forM [ 1 .. genNumPools ] $ \index -> do
     createPoolCredentials pooldir index
-    buildPoolParams network pooldir index specifiedStakePoolRelays
+    buildPoolParams network pooldir index (fromMaybe mempty mayStakePoolRelays)
 
   when (numBulkPoolCredFiles * bulkPoolsPerFile > genNumPools) $
     left $ ShelleyGenesisCmdTooFewPoolsForBulkCreds  genNumPools numBulkPoolCredFiles bulkPoolsPerFile
@@ -884,7 +884,7 @@ buildPoolParams
   :: NetworkId
   -> FilePath -- ^ File directory where the necessary pool credentials were created
   -> Word
-  -> Map Word Ledger.StakePoolRelay -- ^ User submitted stake pool relay map
+  -> Map Word [Ledger.StakePoolRelay] -- ^ User submitted stake pool relay map
   -> ExceptT ShelleyGenesisCmdError IO (Ledger.PoolParams StandardCrypto)
 buildPoolParams nw dir index specifiedRelays = do
     StakePoolVerificationKey poolColdVK
@@ -912,11 +912,10 @@ buildPoolParams nw dir index specifiedRelays = do
       }
  where
    lookupPoolRelay
-     :: Map Word Ledger.StakePoolRelay -> Seq.StrictSeq Ledger.StakePoolRelay
+     :: Map Word [Ledger.StakePoolRelay] -> Seq.StrictSeq Ledger.StakePoolRelay
    lookupPoolRelay m =
      case Map.lookup index m of
-       Just spRelay ->
-        Seq.singleton spRelay
+       Just spRelays -> Seq.fromList spRelays
        Nothing -> mempty
 
    strIndex = show index

@@ -1232,7 +1232,7 @@ pGenesisCmd =
         <*> pBulkPoolCredFiles
         <*> pBulkPoolsPerFile
         <*> pStuffedUtxoCount
-        <*> pRelayJsonFp
+        <*> Opt.optional pRelayJsonFp
 
     pGenesisHash :: Parser GenesisCmd
     pGenesisHash =
