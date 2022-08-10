@@ -190,7 +190,24 @@ case "$op" in
 # }'
 #             -o "$dir"/cardano-cli-execution-stats.json
 #         )
+
+        jq '
+          to_entries
+        | map
+          ({ key:   (.value.i | tostring)
+           , value:
+             [{ "single host name":
+                { dnsName: .key
+                , port:    .value.port
+                }
+              }
+             ]
+           })
+        | from_entries
+        ' "$node_specs" > "$dir"/pool-relays.json
+
         params=(--genesis-dir "$dir"
+                --relay-specification-file "$dir/pool-relays.json"
                 $(jq '.cli_args.createFinalBulk | join(" ")' "$profile_json" --raw-output)
                )
         time cardano-cli genesis create-staked "${params[@]}"
