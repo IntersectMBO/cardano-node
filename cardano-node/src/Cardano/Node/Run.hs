@@ -326,6 +326,8 @@ handleSimpleNode
 handleSimpleNode runP p2pMode tracers nc onKernel = do
   logStartupWarnings
 
+  traceWith (startupTracer tracers) (StartupConfig nc)
+
   traceWith (startupTracer tracers)
     =<< StartupTime <$> getCurrentTime
 

@@ -126,6 +126,7 @@ namesStartupInfo = \case
   StartupInfo {}                            -> ["Info"]
   StartupP2PInfo {}                         -> ["P2PInfo"]
   StartupTime {}                            -> ["Time"]
+  StartupConfig {}                          -> ["Config"]
   StartupNetworkMagic {}                    -> ["NetworkMagic"]
   StartupSocketConfigError {}               -> ["SocketConfigError"]
   StartupDBValidation {}                    -> ["DBValidation"]
@@ -186,6 +187,10 @@ instance ( Show (BlockNodeToNodeVersion blk)
                                          . utcTimeToPOSIXSeconds
                                          $ time
                                          )
+               ]
+  forMachine _dtal (StartupConfig nc) =
+      mconcat [ "kind" .= String "StartupConfig"
+               , "config" .= String (showT nc)
                ]
   forMachine _dtal (StartupNetworkMagic networkMagic) =
       mconcat [ "kind" .= String "StartupNetworkMagic"
@@ -294,6 +299,8 @@ ppStartupInfoTrace (StartupTime time) =
        . utcTimeToPOSIXSeconds
        $ time
      )
+ppStartupInfoTrace (StartupConfig nc) =
+  "config: " <> showT nc
 ppStartupInfoTrace (StartupNetworkMagic networkMagic) =
   "network magic: " <> showT (unNetworkMagic networkMagic)
 
