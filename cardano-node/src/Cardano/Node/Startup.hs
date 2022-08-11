@@ -45,6 +45,7 @@ import           Ouroboros.Network.Subscription.Ip (IPSubscriptionTarget (..))
 
 import           Cardano.Api.Protocol.Types (BlockType (..), protocolInfo)
 import           Cardano.Logging
+import           Cardano.Node.Configuration.POM (NodeConfiguration)
 import           Cardano.Node.Configuration.Socket
 import           Cardano.Node.Protocol.Types (Protocol (..), SomeConsensusProtocol (..))
 
@@ -68,6 +69,8 @@ data StartupTrace blk =
   | StartupP2PInfo DiffusionMode
 
   | StartupTime UTCTime
+
+  | StartupConfig NodeConfiguration
 
   | StartupNetworkMagic NetworkMagic
 
