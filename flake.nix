@@ -61,7 +61,8 @@
     cardano-mainnet-mirror.url = "github:input-output-hk/cardano-mainnet-mirror/nix";
     # Used to create OCI/Docker images for the workbench.
     # It's a parameter to nix/workbench/default.nix
-    cardano-world.url = "github:input-output-hk/cardano-world";
+    #cardano-world.url = "github:input-output-hk/cardano-world";
+    cardano-world.url = "github:input-output-hk/cardano-world/bench-new-infra";
   };
 
   outputs =
