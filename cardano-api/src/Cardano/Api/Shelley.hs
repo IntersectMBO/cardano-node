@@ -235,8 +235,8 @@ import           Cardano.Api.Address
 import           Cardano.Api.Block
 import           Cardano.Api.Certificate
 import           Cardano.Api.Eras
-import           Cardano.Api.IPC
 import           Cardano.Api.InMode
+import           Cardano.Api.IPC
 import           Cardano.Api.KeysByron
 import           Cardano.Api.KeysPraos
 import           Cardano.Api.KeysShelley
