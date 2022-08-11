@@ -1,24 +1,13 @@
-let
-  basePort              = 30000;
-  cacheDirDefault       = "${__getEnv "HOME"}/.cache/cardano-workbench";
-  stateDir              = "run/current";
-in
-{ pkgs
-, lib
+{ lib
 , workbench
 ##
-, cacheDir              ? cacheDirDefault
-, extraSupervisorConfig ? {}
+, basePort              ? 30000
+, stateDir              ? "run/current"
 , useCabalRun           ? false
 , enableEKG             ? true
-##
-, ...
 }:
 with lib;
-let
-  backend =
-    rec
-    { name = "supervisor";
+{
       ## Generic Nix bits:
       topologyForNodeSpec =
         { profile, nodeSpec }:
@@ -73,17 +62,23 @@ let
 
       finaliseNodeConfig =
         { port, ... }: cfg: recursiveUpdate cfg
-          ({
-            AlonzoGenesisFile    = "../genesis.alonzo.json";
-            ShelleyGenesisFile   = "../genesis-shelley.json";
-            ByronGenesisFile     = "../genesis/byron/genesis.json";
-          } // optionalAttrs enableEKG {
-            hasEKG               = port + supervisord.portShiftEkg;
-            hasPrometheus        = [ "127.0.0.1" (port + supervisord.portShiftPrometheus) ];
-            setupBackends = [
-              "EKGViewBK"
-            ];
-          });
+          (
+            {
+              AlonzoGenesisFile    = "../genesis/genesis.alonzo.json";
+              ShelleyGenesisFile   = "../genesis/genesis-shelley.json";
+              ByronGenesisFile     = "../genesis/byron/genesis.json";
+            }
+            // optionalAttrs enableEKG
+            (let portShiftEkg        = 100;
+                 portShiftPrometheus = 200;
+            in {
+              hasEKG = port + portShiftEkg;
+              hasPrometheus = ["127.0.0.1" (port + portShiftPrometheus)];
+              setupBackends = [
+                "EKGViewBK"
+              ];
+            })
+          );
 
       finaliseNodeArgs =
         profile: nodeSpec: args: args;
@@ -101,8 +96,8 @@ let
       finaliseGeneratorConfig =
         cfg: recursiveUpdate cfg
           ({
-            AlonzoGenesisFile    = "../genesis.alonzo.json";
-            ShelleyGenesisFile   = "../genesis-shelley.json";
+            AlonzoGenesisFile    = "../genesis/genesis.alonzo.json";
+            ShelleyGenesisFile   = "../genesis/genesis-shelley.json";
             ByronGenesisFile     = "../genesis/byron/genesis.json";
           } // optionalAttrs useCabalRun {
             executable           = "tx-generator";
@@ -117,53 +112,4 @@ let
             executable     = "cardano-tracer";
           });
 
-      materialise-profile =
-        { profileNix }:
-        pkgs.runCommand "workbench-profile-outputs-${profileNix.name}-supervisord" {}
-          ''
-          mkdir $out
-          cp ${supervisord.mkSupervisorConf profileNix} $out/supervisor.conf
-          '';
-
-      ## IMPORTANT:  keep in sync with envArgs in 'workbench/default.nix/generateProfiles/environment'.
-      env-args-base =
-        {
-          inherit (pkgs) cardanoLib;
-          inherit stateDir cacheDir basePort;
-          staggerPorts = true;
-        };
-
-      ## Backend-specific Nix bits:
-      supervisord =
-        {
-          inherit
-            extraSupervisorConfig;
-
-          portShiftEkg        = 100;
-          portShiftPrometheus = 200;
-
-          ## mkSupervisorConf :: Profile -> SupervisorConf
-          mkSupervisorConf =
-            profile:
-            pkgs.callPackage ./supervisor-conf.nix
-            { inherit (profile) node-services generator-service;
-              inherit
-                pkgs lib stateDir
-                basePort
-                extraSupervisorConfig;
-            };
-        };
-    };
-
-  all-profiles =
-    workbench.all-profiles
-      { inherit backend;
-        envArgs = backend.env-args-base;
-      };
-in
-{
-  inherit cacheDir stateDir basePort;
-  inherit workbench;
-  inherit backend;
-  inherit all-profiles;
 }

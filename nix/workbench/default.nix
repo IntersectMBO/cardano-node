@@ -72,13 +72,7 @@ let
 
   all-profiles =
     ## The backend is an attrset of AWS/supervisord-specific methods and parameters.
-    { backend
-
-    ## Environment arguments:
-    ##   - either affect semantics on all backends equally,
-    ##   - or have no semantic effect
-    , envArgs
-    }:
+    { backend }:
     rec {
       mkProfile =
         profileName:
@@ -86,8 +80,8 @@ let
           { inherit
               pkgs
               runWorkbenchJqOnly runJq workbench
-              backend
               profileName;
+            inherit (backend) services-config;
           };
 
       value = genAttrs profile-names mkProfile;
@@ -95,30 +89,19 @@ let
       JSON = pkgs.writeText "all-profiles.json" (__toJSON (mapAttrs (_: x: x.value) value));
     };
 
-  ## materialise-profile :: ProfileNix -> BackendProfile -> Profile
-  materialise-profile      = import ./profile.nix  { inherit pkgs lib; };
-  ## profile-topology :: ProfileNix -> Topology
-  profile-topology         = import ./topology.nix { inherit pkgs; };
-  ## profile-topology :: ProfileNix -> Topology -> Genesis
-  profile-topology-genesis = import ./genesis.nix  { inherit pkgs; };
-
   with-profile =
-    { backend, envArgs, profileName }:
+    { backend, profileName }:
     let
-      ps = all-profiles { inherit backend envArgs; };
+      ps = all-profiles { inherit backend; };
 
       profileNix = ps.value."${profileName}"
         or (throw "No such profile: ${profileName};  Known profiles: ${toString (__attrNames ps.value)}");
 
-      profile = materialise-profile
-        { inherit profileNix workbench;
-          backendProfile =
-            backend.materialise-profile { inherit profileNix; };
-        };
+      profile = import ./profile.nix   { inherit pkgs lib profileNix backend; };
 
-      topology = profile-topology { inherit profileNix profile; };
+      topology = import ./topology.nix { inherit pkgs profileNix profile; };
 
-      genesis = profile-topology-genesis { inherit profile; };
+      genesis = import ./genesis.nix   { inherit pkgs profile; };
     in {
       inherit
         profileNix profile

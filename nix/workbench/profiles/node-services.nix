@@ -1,8 +1,8 @@
 { pkgs
 , runJq
 
-## The backend is an attrset of AWS/supervisord-specific methods and parameters.
-, backend
+## An attrset of specific methods and parameters.
+, services-config
 
 ## The cardano-node config used as baseline:
 , baseNodeConfig
@@ -133,7 +133,7 @@ let
       }.${profile.value.era};
     };
     in
-    backend.finaliseNodeService profile.value nodeSpec
+    services-config.finaliseNodeService profile.value nodeSpec
     {
       inherit port;
 
@@ -145,7 +145,7 @@ let
       nodeConfig =
         nodeConfigBits.tracing-transform.${profile.value.node.tracing_backend}
           (recursiveUpdate
-            (backend.finaliseNodeConfig nodeSpec
+            (services-config.finaliseNodeConfig nodeSpec
               (recursiveUpdate
                 (recursiveUpdate
                   nodeConfigBits.base
@@ -169,7 +169,7 @@ let
               else [];
             shutBlockArgs = mayKindArgs shutdownBlock nodeSpec.kind "--shutdown-on-block-synced";
             shutSlotArgs  = mayKindArgs shutdownSlot  nodeSpec.kind "--shutdown-on-slot-synced";
-        in backend.finaliseNodeArgs profile nodeSpec
+        in services-config.finaliseNodeArgs profile nodeSpec
           (if   shutBlockArgs != []
            then shutBlockArgs
            else shutSlotArgs);
@@ -242,7 +242,7 @@ let
       };
 
       topology = rec {
-        JSON  = backend.topologyForNodeSpec { inherit profile nodeSpec; };
+        JSON  = services-config.topologyForNodeSpec { inherit profile nodeSpec; };
         value = __fromJSON (__readFile JSON);
       };
 

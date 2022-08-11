@@ -3,9 +3,8 @@
 , stateDir
 , basePort
 , node-services
-, generator-service
   ## Last-moment overrides:
-, extraSupervisorConfig
+, extraBackendConfig
 }:
 
 with lib;
@@ -57,7 +56,7 @@ let
       };
     }
     //
-    extraSupervisorConfig;
+    extraBackendConfig;
 
   ##
   ## nodeSvcSupervisorProgram :: NodeService -> SupervisorConfSection
