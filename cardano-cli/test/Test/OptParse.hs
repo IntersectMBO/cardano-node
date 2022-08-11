@@ -1,5 +1,6 @@
 module Test.OptParse
-  ( checkTextEnvelopeFormat
+  ( checkTxCddlFormat
+  , checkTextEnvelopeFormat
   , equivalence
   , execCardanoCLI
   , propertyOnce
@@ -16,6 +17,8 @@ import           Control.Monad.Catch
 import qualified GHC.Stack as GHC
 
 import           Cardano.Api
+
+import           Cardano.CLI.Shelley.Run.Transaction
 
 import qualified Hedgehog as H
 import qualified Hedgehog.Extras.Test.Process as H
@@ -63,6 +66,17 @@ checkTextEnvelopeFormat tve reference created = do
                         (TextEnvelope createdType createdTitle _) = do
      equivalence refType createdType
      equivalence refTitle createdTitle
+
+checkTxCddlFormat
+  :: (MonadTest m, MonadIO m, HasCallStack)
+  => FilePath -- ^ Reference/golden file
+  -> FilePath -- ^ Newly created file
+  -> m ()
+checkTxCddlFormat reference created = do
+  r <- liftIO $ readCddlTx reference
+  c <- liftIO $ readCddlTx created
+  r H.=== c
+
 
 --------------------------------------------------------------------------------
 -- Helpers, Error rendering & Clean up

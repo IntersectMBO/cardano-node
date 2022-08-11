@@ -2,6 +2,7 @@
 
 module Gen.Hedgehog.Roundtrip.CBOR
   ( roundtrip_CBOR
+  , roundtrip_CDDL_Tx
   ) where
 
 import           Cardano.Api
@@ -19,3 +20,11 @@ roundtrip_CBOR typeProxy gen =
   H.property $ do
     val <- H.forAll gen
     H.tripping val serialiseToCBOR (deserialiseFromCBOR typeProxy)
+
+
+roundtrip_CDDL_Tx
+  :: IsCardanoEra era => CardanoEra era -> Gen (Tx era) -> Property
+roundtrip_CDDL_Tx era gen =
+  H.property $ do
+    val <- H.forAll gen
+    H.tripping val serialiseTxLedgerCddl (deserialiseTxLedgerCddl era)

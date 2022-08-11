@@ -12,6 +12,10 @@ module Cardano.CLI.Shelley.Run.Transaction
   ( ShelleyTxCmdError
   , renderShelleyTxCmdError
   , runTransactionCmd
+  , readCddlTx
+  , readFileTx
+  , readProtocolParametersSourceSpec
+  , toTxOutInAnyEra
   ) where
 
 import           Cardano.Prelude hiding (All, Any)
@@ -1272,7 +1276,7 @@ runTxSign txOrTxBody witSigningData mnw (TxFile outTxFile) = do
           signedTx = makeSignedTransaction allKeyWits txbody
 
       firstExceptT ShelleyTxCmdWriteFileError . newExceptT $
-        writeFileTextEnvelope outTxFile Nothing signedTx
+        writeTxFileTextEnvelopeCddl outTxFile signedTx
 
     (InputTxBodyFile (TxBodyFile txbodyFile)) -> do
       unwitnessed <- readFileTxBody txbodyFile
@@ -1824,9 +1828,28 @@ readFileWitness fp =
 -- (respectively needs additional witnesses or totally unwitnessed)
 -- while UnwitnessedCliFormattedTxBody is CLI formatted TxBody and
 -- needs to be key witnessed.
+
 data IncompleteTx
   = UnwitnessedCliFormattedTxBody (InAnyCardanoEra TxBody)
   | IncompleteCddlFormattedTx (InAnyCardanoEra Tx)
+
+
+readCddlTx :: FilePath -> IO (Either (FileError TextEnvelopeCddlError) CddlTx)
+readCddlTx = readFileTextEnvelopeCddlAnyOf teTypes
+ where
+    teTypes = [ FromCDDLTx "Witnessed Tx ByronEra" CddlTx
+              , FromCDDLTx "Witnessed Tx ShelleyEra" CddlTx
+              , FromCDDLTx "Witnessed Tx AllegraEra" CddlTx
+              , FromCDDLTx "Witnessed Tx MaryEra" CddlTx
+              , FromCDDLTx "Witnessed Tx AlonzoEra" CddlTx
+              , FromCDDLTx "Witnessed Tx BabbageEra" CddlTx
+              , FromCDDLTx "Unwitnessed Tx ByronEra" CddlTx
+              , FromCDDLTx "Unwitnessed Tx ShelleyEra" CddlTx
+              , FromCDDLTx "Unwitnessed Tx AllegraEra" CddlTx
+              , FromCDDLTx "Unwitnessed Tx MaryEra" CddlTx
+              , FromCDDLTx "Unwitnessed Tx AlonzoEra" CddlTx
+              , FromCDDLTx "Unwitnessed Tx BabbageEra" CddlTx
+              ]
 
 readFileTxBody :: FilePath -> ExceptT ShelleyTxCmdError IO IncompleteTx
 readFileTxBody fp =
@@ -1872,7 +1895,6 @@ readFileTx fp =
   handleLeftT
     (\e -> unCddlTx <$> acceptTxCDDLSerialisation e)
     (readFileInAnyCardanoEra AsTx fp)
-
 
 readFileInAnyCardanoEra
   :: ( HasTextEnvelope (thing ByronEra)

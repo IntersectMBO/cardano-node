@@ -75,7 +75,7 @@ data CBORObject = CBORBlockByron Byron.EpochSlots
                 | CBORVoteByron
                 deriving Show
 
-newtype CddlTx = CddlTx {unCddlTx :: InAnyCardanoEra Tx}
+newtype CddlTx = CddlTx {unCddlTx :: InAnyCardanoEra Tx} deriving (Show, Eq)
 
 -- Encompasses stake certificates, stake pool certificates,
 -- genesis delegate certificates and MIR certificates.
