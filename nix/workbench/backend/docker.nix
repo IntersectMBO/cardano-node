@@ -29,12 +29,16 @@ let
             { buildInputs = [ workbench.workbench ];
               cardanoNodeImageName = cardano-world.x86_64-linux.cardano.oci-images.cardano-node.imageName;
               cardanoNodeImageTag = cardano-world.x86_64-linux.cardano.oci-images.cardano-node.imageTag;
+              cardanoTracerImageName = cardano-world.x86_64-linux.cardano.oci-images.cardano-tracer.imageName;
+              cardanoTracerImageTag = cardano-world.x86_64-linux.cardano.oci-images.cardano-tracer.imageTag;
             }
             ''
             mkdir $out
-            echo $cardanoNodeImageName              > $out/cardanoNodeImageName
-            echo $cardanoNodeImageTag               > $out/cardanoNodeImageTag
-            wb app compose ${profileNix.JSON} ${profileNix.node-specs.JSON} $cardanoNodeImageName $cardanoNodeImageTag > $out/docker-compose.yaml
+            echo $cardanoNodeImageName             > $out/cardanoNodeImageName
+            echo $cardanoNodeImageTag              > $out/cardanoNodeImageTag
+            echo $cardanoTracerImageName           > $out/cardanoTracerImageName
+            echo $cardanoTracerImageTag            > $out/cardanoTracerImageTag
+            wb app compose ${profileNix.JSON} ${profileNix.node-specs.JSON} $cardanoNodeImageName $cardanoNodeImageTag $cardanoTracerImageName $cardanoTracerImageTag > $out/docker-compose.yaml
             '';
     };
 in

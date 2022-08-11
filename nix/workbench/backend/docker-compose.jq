@@ -8,6 +8,35 @@
   ##############################################################################
   "services": (
   ##############################################################################
+    ############################
+    # `tracer` profile services.
+    ############################
+    ({
+      "tracer": {
+          profiles: [ "tracer" ]
+        , pull_policy: "never"
+        , image: "${WB_TRACER_IMAGE_NAME:-\($tracerImageName)}:${WB_TRACER_IMAGE_TAG:-\($tracerImageTag)}"
+        #############################################################
+        # Using the 172.21.0.1 - 172.21.255.255 IP range for tracers.
+        #############################################################
+        , networks: {
+          "cardano-cluster": {
+            ipv4_address: "172.21.0.1"
+          }
+        }
+        , volumes: [
+          "TRACER:/var/cardano-tracer:rw"
+        ]
+        , environment: [
+            "HOME=/var/cardano-tracer"
+          , "TRACER_CONFIG=/var/cardano-tracer/config.json"
+        ]
+        # Ensure that these default values are used.
+        , restart: "no"
+        , logging: {driver: "json-file"}
+      }
+    })
+    +
     ##########################
     # `node` profile services.
     ##########################
@@ -32,6 +61,7 @@
               , volumes: [
                     "NODE-\(.value.name):/var/cardano-node:rw"
                   , "GENESIS:/var/cardano-node/genesis:ro"
+                  , "TRACER:/var/cardano-tracer:rw"
                 ]
               , environment: (
                 [
@@ -121,6 +151,19 @@
   ##############################################################################
   , volumes: (
   ##############################################################################
+      {TRACER:
+        {
+          # Networks and volumes defined as `external` are never removed.
+            external: false
+          , driver: "local"
+          , driver_opts: {
+              type: "none"
+            , o: "bind"
+            , device: "${WB_RUNDIR:-./run/current}/tracer"
+          }
+        }
+      }
+    +
       (
           .
         |

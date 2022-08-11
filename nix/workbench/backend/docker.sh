@@ -72,6 +72,13 @@ case "$op" in
         then
             fatal "Docker image ${nodeImageName}:${nodeImageTag} does not exists"
         fi
+        # Check that the `cardano-tracer` OCI image exists.
+        local tracerImageName=${WB_TRACER_IMAGE_NAME:-$(cat "$dir/profile/cardanoTracerImageName")}
+        local tracerImageTag=${WB_TRACER_IMAGE_TAG:-$(cat "$dir/profile/cardanoTracerImageTag")}
+        if ! docker images --format "{{.Repository}}:{{.Tag}}" | grep --quiet "${tracerImageName}:${tracerImageTag}"
+        then
+            fatal "Docker image ${tracerImageName}:${tracerImageTag} does not exists"
+        fi
         # Info about the `--format` parameter and Go templates:
         # https://docs.docker.com/config/formatting/
 
@@ -267,8 +274,28 @@ case "$op" in
         local dir=${1:?$usage}; shift
 
         if jqtest ".node.tracer" "$dir"/profile.json
-        then progress "docker" "faking $(yellow cardano-tracer)"
-        fi;;
+        then
+          backend_docker service-up "$dir" tracer
+          # Wait for tracer socket
+          # If tracer fails here, the rest of the cluster is brought up without
+          # any problems.
+          local socket=$(jq -r '.network.contents' "$dir/tracer/config.json")
+          local patience=$(jq '.analysis.cluster_startup_overhead_s | ceil' "$dir/profile.json") i=0
+          echo -n "workbench:  docker:  waiting ${patience}s for socket of tracer: " >&2
+          while test ! -S "$dir/tracer/$socket"
+          do printf "%3d" $i; sleep 1
+             i=$((i+1))
+             if test $i -ge $patience
+             then echo
+                  progress "docker" "$(red FATAL):  workbench:  docker:  patience ran out for $(white tracer) after ${patience}s, socket $socket"
+                  backend_docker stop-cluster "$dir"
+                  fatal "$node startup did not succeed:  check logs in $(dirname $socket)/stdout & stderr"
+             fi
+             echo -ne "\b\b\b"
+          done >&2
+          echo " tracer up (${i}s)" >&2
+        fi
+        ;;
 
     get-node-socket-path )
         local usage="USAGE: wb docker $op RUN-DIR NODE-NAME"
