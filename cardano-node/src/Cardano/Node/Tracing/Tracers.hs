@@ -44,6 +44,7 @@ import qualified Cardano.Node.Tracing.StateRep as SR
 import           "contra-tracer" Control.Tracer (Tracer (..))
 
 import           Ouroboros.Consensus.Ledger.Inspect (LedgerEvent)
+import           Ouroboros.Consensus.Ledger.Basics
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client (TraceChainSyncClientEvent)
 import qualified Ouroboros.Consensus.Network.NodeToClient as NodeToClient
 import qualified Ouroboros.Consensus.Network.NodeToClient as NtC
@@ -69,15 +70,17 @@ import           Ouroboros.Network.NodeToNode (RemoteAddress)
 -- | Construct tracers for all system components.
 --
 mkDispatchTracers
-  :: forall blk p2p.
+  :: forall blk p2p wt.
   ( Consensus.RunNode blk
   , TraceConstraints blk
   , LogFormatting (LedgerEvent blk)
   , LogFormatting
     (TraceLabelPeer
       (ConnectionId RemoteAddress) (TraceChainSyncClientEvent blk))
+  , GetTip (LedgerState blk wt EmptyMK)
+  , IsSwitchLedgerTables wt
   )
-  => NodeKernelData blk
+  => NodeKernelData blk wt
   -> Trace IO FormattedMessage
   -> Trace IO FormattedMessage
   -> Maybe (Trace IO FormattedMessage)
@@ -230,18 +233,20 @@ mkDispatchTracers nodeKernel trBase trForward mbTrEKG trDataPoint trConfig enabl
                         <> Tracer (traceNodePeers nodePeersDP)
     }
 
-mkConsensusTracers :: forall blk.
+mkConsensusTracers :: forall blk wt.
   ( Consensus.RunNode blk
   , TraceConstraints blk
   , LogFormatting (TraceLabelPeer
                     (ConnectionId RemoteAddress) (TraceChainSyncClientEvent blk))
+  , GetTip (LedgerState blk wt EmptyMK)
+  , IsSwitchLedgerTables wt
   )
   => Trace IO FormattedMessage
   -> Trace IO FormattedMessage
   -> Maybe (Trace IO FormattedMessage)
   -> Trace IO DataPoint
   -> TraceConfig
-  -> NodeKernelData blk
+  -> NodeKernelData blk wt
   -> IO (Consensus.Tracers IO (ConnectionId RemoteAddress) (ConnectionId LocalAddress) blk)
 mkConsensusTracers trBase trForward mbTrEKG _trDataPoint trConfig nodeKernel = do
     chainSyncClientTr  <- mkCardanoTracer

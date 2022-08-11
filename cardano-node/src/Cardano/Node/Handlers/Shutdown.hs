@@ -136,7 +136,7 @@ maybeSpawnOnSlotSyncedShutdownHandler
   => ShutdownConfig
   -> Tracer IO ShutdownTrace
   -> ResourceRegistry IO
-  -> ChainDB.ChainDB IO blk
+  -> ChainDB.ChainDB IO blk wt
   -> IO ()
 maybeSpawnOnSlotSyncedShutdownHandler sc tr registry chaindb =
   case scOnSyncLimit sc of

@@ -6,6 +6,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PackageImports #-}
+{-# LANGUAGE RankNTypes  #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
@@ -75,6 +76,11 @@ import           Ouroboros.Consensus.Node (NetworkP2PMode (..), RunNode, RunNode
 import qualified Ouroboros.Consensus.Node as Node (getChainDB, run)
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
 import           Ouroboros.Consensus.Node.ProtocolInfo
+import           Ouroboros.Consensus.Ledger.Basics
+import           Ouroboros.Consensus.Ledger.Extended
+import           Ouroboros.Consensus.Ledger.SupportsUTxOHD
+
+import           Ouroboros.Consensus.Storage.ChainDB.Impl.Types
 import           Ouroboros.Consensus.Util.Orphans ()
 import qualified Ouroboros.Network.Diffusion as Diffusion
 import qualified Ouroboros.Network.Diffusion.NonP2P as NonP2P
@@ -154,7 +160,7 @@ runNode cmdPc = do
 
     case p of
       SomeConsensusProtocol _ runP ->
-        handleNodeWithTracers cmdPc nc p networkMagic runP
+        handleNodeWithTracers (Proxy @WithoutLedgerTables) cmdPc nc p networkMagic runP
 
 -- | Workaround to ensure that the main thread throws an async exception on
 -- receiving a SIGTERM signal.
@@ -177,19 +183,24 @@ installSigTermHandler = do
   return ()
 
 handleNodeWithTracers
-  :: ( TraceConstraints blk
+  :: forall blk wt. ( TraceConstraints blk
      , Protocol.Protocol IO blk
+     , IsSwitchLedgerTables wt
+     , GetTip (Ouroboros.Consensus.Ledger.Basics.LedgerState blk wt EmptyMK)
+     , SerialiseDiskConstraints blk wt
+     , LedgerMustSupportUTxOHD' blk wt
      )
-  => PartialNodeConfiguration
+  => Proxy wt
+  -> PartialNodeConfiguration
   -> NodeConfiguration
   -> SomeConsensusProtocol
   -> NetworkMagic
   -> Protocol.ProtocolInfoArgs IO blk
   -> IO ()
-handleNodeWithTracers cmdPc nc p networkMagic runP = do
+handleNodeWithTracers px cmdPc nc p networkMagic runP = do
   -- This IORef contains node kernel structure which holds node kernel.
   -- Used for ledger queries and peer connection status.
-  nodeKernelData <- mkNodeKernelData
+  nodeKernelData :: NodeKernelData blk wt <- mkNodeKernelData px
   let ProtocolInfo { pInfoConfig = cfg } = Protocol.protocolInfo runP
   case ncEnableP2P nc of
     SomeNetworkP2PMode p2pMode -> do
@@ -303,7 +314,7 @@ setupTrace loggingLayer = do
 
 handlePeersListSimple
   :: Trace IO Text
-  -> NodeKernelData blk
+  -> NodeKernelData blk wt
   -> IO ()
 handlePeersListSimple tr nodeKern = forever $ do
   getCurrentPeers nodeKern >>= tracePeers tr
@@ -314,15 +325,17 @@ handlePeersListSimple tr nodeKern = forever $ do
 -- create a new block.
 
 handleSimpleNode
-  :: forall blk p2p
+  :: forall blk p2p wt
   . ( RunNode blk
     , Protocol.Protocol IO blk
+    , SerialiseDiskConstraints blk wt
+    , LedgerMustSupportUTxOHD' blk wt
     )
   => Protocol.ProtocolInfoArgs IO blk
   -> NetworkP2PMode p2p
   -> Tracers RemoteConnectionId LocalConnectionId blk p2p
   -> NodeConfiguration
-  -> (NodeKernel IO RemoteConnectionId LocalConnectionId blk -> IO ())
+  -> (NodeKernel IO RemoteConnectionId LocalConnectionId blk wt -> IO ())
   -- ^ Called on the 'NodeKernel' after creating it, but before the network
   -- layer is initialised.  This implies this function must not block,
   -- otherwise the node won't actually start.

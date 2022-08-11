@@ -22,6 +22,7 @@ import           System.Metrics as EKG
 import           Network.Mux.Trace (TraceLabelPeer (..))
 
 import           Ouroboros.Consensus.Ledger.Inspect (LedgerEvent)
+import           Ouroboros.Consensus.Ledger.Basics
 import           Ouroboros.Consensus.MiniProtocol.ChainSync.Client (TraceChainSyncClientEvent)
 import           Ouroboros.Consensus.Node (NetworkP2PMode, RunNode)
 import           Ouroboros.Network.ConnectionId (ConnectionId)
@@ -45,17 +46,19 @@ import           Cardano.Node.Tracing.Tracers.Peer (startPeerTracer)
 import           Cardano.Node.Tracing.Tracers.Resources (startResourceTracer)
 
 initTraceDispatcher ::
-  forall blk p2p.
+  forall blk p2p wt.
   ( RunNode blk
   , TraceConstraints blk
   , LogFormatting (LedgerEvent blk)
   , LogFormatting
     (TraceLabelPeer (ConnectionId RemoteAddress) (TraceChainSyncClientEvent blk))
+  , GetTip (LedgerState blk wt EmptyMK)
+  , IsSwitchLedgerTables wt
   )
   => NodeConfiguration
   -> SomeConsensusProtocol
   -> NetworkMagic
-  -> NodeKernelData blk
+  -> NodeKernelData blk wt
   -> NetworkP2PMode p2p
   -> IO (Tracers RemoteConnectionId LocalConnectionId blk p2p)
 initTraceDispatcher nc p networkMagic nodeKernel p2pMode = do

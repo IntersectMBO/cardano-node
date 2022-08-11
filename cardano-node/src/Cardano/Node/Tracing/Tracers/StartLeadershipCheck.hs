@@ -25,13 +25,13 @@ import           Ouroboros.Network.NodeToNode (RemoteConnectionId)
 import           Ouroboros.Consensus.Block (SlotNo (..))
 import           Ouroboros.Consensus.HardFork.Combinator
 import           Ouroboros.Consensus.Ledger.Abstract (IsLedger)
-import           Ouroboros.Consensus.Ledger.Basics (EmptyMK)
+import           Ouroboros.Consensus.Ledger.Basics (EmptyMK, destroyTables, GetTip, IsSwitchLedgerTables)
 import           Ouroboros.Consensus.Ledger.Extended (ExtLedgerState, ledgerState)
 import           Ouroboros.Consensus.Node (NodeKernel (..))
 import           Ouroboros.Consensus.Node.Tracers
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 
-import           Cardano.Node.Queries (LedgerQueries (..), NodeKernelData (..))
+import           Cardano.Node.Queries
 import           Cardano.Slotting.Slot (fromWithOrigin)
 
 import           Cardano.Ledger.BaseTypes (StrictMaybe (..), fromSMaybe)
@@ -51,8 +51,11 @@ data TraceStartLeadershipCheckPlus =
 forgeTracerTransform ::
   (  IsLedger (LedgerState blk)
   ,  LedgerQueries blk
-  ,  AF.HasHeader (Header blk))
-  => NodeKernelData blk
+  ,  AF.HasHeader (Header blk)
+  , GetTip (LedgerState blk wt EmptyMK)
+  , IsSwitchLedgerTables wt
+  )
+  => NodeKernelData blk wt
   -> Trace IO (ForgeTracerType blk)
   -> IO (Trace IO (ForgeTracerType blk))
 forgeTracerTransform nodeKern (Trace tr) = pure $ Trace $ T.arrow $ T.emit $
@@ -80,14 +83,6 @@ forgeTracerTransform nodeKern (Trace tr) = pure $ Trace $ T.arrow $ T.emit $
       (lc, Left control) ->
           T.traceWith tr (lc, Left control)
 
-nkQueryLedger ::
-     IsLedger (LedgerState blk)
-  => (ExtLedgerState blk EmptyMK -> a)
-  -> NodeKernel IO RemoteConnectionId LocalConnectionId blk
-  -> IO a
-nkQueryLedger f NodeKernel{getChainDB} =
-  f <$> atomically (ChainDB.getCurrentLedger getChainDB)
-
 fragmentChainDensity ::
   AF.HasHeader (Header blk)
   => AF.AnchoredFragment (Header blk) -> Rational
@@ -112,18 +107,3 @@ fragmentChainDensity frag = calcDensity blockD slotD
       -- don't let it contribute to the number of blocks
       Right 0 -> 1
       Right b -> b
-
-nkQueryChain ::
-     (AF.AnchoredFragment (Header blk) -> a)
-  -> NodeKernel IO RemoteConnectionId LocalConnectionId blk
-  -> IO a
-nkQueryChain f NodeKernel{getChainDB} =
-  f <$> atomically (ChainDB.getCurrentChain getChainDB)
-
-
-mapNodeKernelDataIO ::
-  (NodeKernel IO RemoteConnectionId LocalConnectionId blk -> IO a)
-  -> NodeKernelData blk
-  -> IO (StrictMaybe a)
-mapNodeKernelDataIO f (NodeKernelData ref) =
-  readIORef ref >>= traverse f

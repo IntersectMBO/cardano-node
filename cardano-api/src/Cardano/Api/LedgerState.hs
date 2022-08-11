@@ -148,7 +148,7 @@ import qualified Ouroboros.Consensus.HardFork.Combinator as Consensus
 import qualified Ouroboros.Consensus.HardFork.Combinator.AcrossEras as HFC
 import qualified Ouroboros.Consensus.HardFork.Combinator.Basics as HFC
 import qualified Ouroboros.Consensus.Ledger.Abstract as Ledger
-import           Ouroboros.Consensus.Ledger.Basics (EmptyMK, ValuesMK, LedgerResult (lrEvents), lrResult)
+import           Ouroboros.Consensus.Ledger.Basics hiding (LedgerState)
 import qualified Ouroboros.Consensus.Ledger.Extended as Ledger
 import qualified Ouroboros.Consensus.Mempool.TxLimits as TxLimits
 import qualified Ouroboros.Consensus.Node.ProtocolInfo as Consensus
@@ -249,27 +249,27 @@ applyBlock env oldState validationMode block
         ShelleyBasedEraBabbage -> Consensus.BlockBabbage shelleyBlock
 
 pattern LedgerStateByron
-  :: Ledger.LedgerState Byron.ByronBlock EmptyMK
+  :: Ledger.LedgerState Byron.ByronBlock WithoutLedgerTables EmptyMK
   -> LedgerState
 pattern LedgerStateByron st <- LedgerState (Consensus.LedgerStateByron st)
 
 pattern LedgerStateShelley
-  :: Ledger.LedgerState (Shelley.ShelleyBlock protocol (Shelley.ShelleyEra Shelley.StandardCrypto)) EmptyMK
+  :: Ledger.LedgerState (Shelley.ShelleyBlock protocol (Shelley.ShelleyEra Shelley.StandardCrypto)) WithoutLedgerTables EmptyMK
   -> LedgerState
 pattern LedgerStateShelley st <- LedgerState  (Consensus.LedgerStateShelley st)
 
 pattern LedgerStateAllegra
-  :: Ledger.LedgerState (Shelley.ShelleyBlock protocol (Shelley.AllegraEra Shelley.StandardCrypto)) EmptyMK
+  :: Ledger.LedgerState (Shelley.ShelleyBlock protocol (Shelley.AllegraEra Shelley.StandardCrypto)) WithoutLedgerTables EmptyMK
   -> LedgerState
 pattern LedgerStateAllegra st <- LedgerState  (Consensus.LedgerStateAllegra st)
 
 pattern LedgerStateMary
-  :: Ledger.LedgerState (Shelley.ShelleyBlock protocol (Shelley.MaryEra Shelley.StandardCrypto)) EmptyMK
+  :: Ledger.LedgerState (Shelley.ShelleyBlock protocol (Shelley.MaryEra Shelley.StandardCrypto)) WithoutLedgerTables EmptyMK
   -> LedgerState
 pattern LedgerStateMary st <- LedgerState  (Consensus.LedgerStateMary st)
 
 pattern LedgerStateAlonzo
-  :: Ledger.LedgerState (Shelley.ShelleyBlock protocol (Shelley.AlonzoEra Shelley.StandardCrypto)) EmptyMK
+  :: Ledger.LedgerState (Shelley.ShelleyBlock protocol (Shelley.AlonzoEra Shelley.StandardCrypto)) WithoutLedgerTables EmptyMK
   -> LedgerState
 pattern LedgerStateAlonzo st <- LedgerState  (Consensus.LedgerStateAlonzo st)
 
@@ -860,7 +860,7 @@ initLedgerStateVar genesisConfig = LedgerState
 newtype LedgerState = LedgerState
   { clsState :: Ledger.LedgerState
                   (HFC.HardForkBlock
-                    (Consensus.CardanoEras Consensus.StandardCrypto)) EmptyMK
+                    (Consensus.CardanoEras Consensus.StandardCrypto)) WithoutLedgerTables EmptyMK
   }
 
 type LedgerStateEvents = (LedgerState, [LedgerEvent])
@@ -872,7 +872,7 @@ toLedgerStateEvents ::
     )
     ( Shelley.LedgerState
         (HFC.HardForkBlock (Consensus.CardanoEras Shelley.StandardCrypto))
-        EmptyMK
+        WithoutLedgerTables EmptyMK
     ) ->
   LedgerStateEvents
 toLedgerStateEvents lr = (ledgerState, ledgerEvents)
@@ -1223,7 +1223,7 @@ tickThenReapplyCheckHash
     -> Consensus.CardanoBlock Consensus.StandardCrypto
     -> Shelley.LedgerState
         (HFC.HardForkBlock
-            (Consensus.CardanoEras Shelley.StandardCrypto)) EmptyMK
+            (Consensus.CardanoEras Shelley.StandardCrypto)) WithoutLedgerTables EmptyMK
     -> Either LedgerStateError LedgerStateEvents
 tickThenReapplyCheckHash cfg block lsb =
   if Consensus.blockPrevHash block == Ledger.ledgerTipHash lsb
@@ -1258,7 +1258,7 @@ tickThenApply
     -> Consensus.CardanoBlock Consensus.StandardCrypto
     -> Shelley.LedgerState
         (HFC.HardForkBlock
-            (Consensus.CardanoEras Shelley.StandardCrypto)) EmptyMK
+            (Consensus.CardanoEras Shelley.StandardCrypto)) WithoutLedgerTables EmptyMK
     -> Either LedgerStateError LedgerStateEvents
 tickThenApply cfg block lsb
   = either (Left . ApplyBlockError) (Right . toLedgerStateEvents . fmap Ledger.forgetLedgerTables)

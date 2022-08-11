@@ -67,8 +67,8 @@ import           Ouroboros.Consensus.HardFork.Combinator
 import           Ouroboros.Consensus.HardFork.Combinator.AcrossEras (OneEraForgeStateInfo (..),
                    OneEraForgeStateUpdateError (..))
 import           Ouroboros.Consensus.HardFork.Combinator.Embed.Unary
-import           Ouroboros.Consensus.HardFork.Combinator.Util.Functors (Flip (..))
-import           Ouroboros.Consensus.Ledger.Basics (EmptyMK)
+import           Ouroboros.Consensus.HardFork.Combinator.Util.Functors
+import           Ouroboros.Consensus.Ledger.Basics
 import           Ouroboros.Consensus.Ledger.Abstract (IsLedger)
 import           Ouroboros.Consensus.Ledger.Extended (ExtLedgerState)
 import           Ouroboros.Consensus.Node (NodeKernel (..))
@@ -233,8 +233,8 @@ instance All GetKESInfo xs => GetKESInfo (HardForkBlock xs) where
 -- * General ledger
 --
 class LedgerQueries blk where
-  ledgerUtxoSize     :: LedgerState blk EmptyMK -> Int
-  ledgerDelegMapSize :: LedgerState blk EmptyMK -> Int
+  ledgerUtxoSize     :: forall wt. IsSwitchLedgerTables wt => LedgerState blk wt EmptyMK -> Int
+  ledgerDelegMapSize :: forall wt. IsSwitchLedgerTables wt => LedgerState blk wt EmptyMK -> Int
 
 instance LedgerQueries Byron.ByronBlock where
   ledgerUtxoSize = Map.size . Byron.unUTxO . Byron.cvsUtxo . Byron.byronLedgerState
@@ -260,8 +260,8 @@ instance LedgerQueries (Shelley.ShelleyBlock protocol era) where
 
 instance (LedgerQueries x, NoHardForks x)
       => LedgerQueries (HardForkBlock '[x]) where
-  ledgerUtxoSize = ledgerUtxoSize . unFlip . project . Flip
-  ledgerDelegMapSize = ledgerDelegMapSize . unFlip . project . Flip
+  ledgerUtxoSize = ledgerUtxoSize . unFlip2 . project . Flip2
+  ledgerDelegMapSize = ledgerDelegMapSize . unFlip2 . project . Flip2
 
 instance LedgerQueries (Cardano.CardanoBlock c) where
   ledgerUtxoSize = \case
@@ -281,38 +281,40 @@ instance LedgerQueries (Cardano.CardanoBlock c) where
 --
 -- * Node kernel
 --
-newtype NodeKernelData blk =
+newtype NodeKernelData blk wt =
   NodeKernelData
-  { unNodeKernelData :: IORef (StrictMaybe (NodeKernel IO RemoteConnectionId LocalConnectionId blk))
+  { unNodeKernelData :: IORef (StrictMaybe (NodeKernel IO RemoteConnectionId LocalConnectionId blk wt))
   }
 
-mkNodeKernelData :: IO (NodeKernelData blk)
-mkNodeKernelData = NodeKernelData <$> newIORef SNothing
+mkNodeKernelData :: IsSwitchLedgerTables wt => Proxy wt -> IO (NodeKernelData blk wt)
+mkNodeKernelData _ = NodeKernelData <$> newIORef SNothing
 
-setNodeKernel :: NodeKernelData blk
-              -> NodeKernel IO RemoteConnectionId LocalConnectionId blk
+setNodeKernel :: NodeKernelData blk wt
+              -> NodeKernel IO RemoteConnectionId LocalConnectionId blk wt
               -> IO ()
 setNodeKernel (NodeKernelData ref) nodeKern =
   writeIORef ref $ SJust nodeKern
 
 mapNodeKernelDataIO ::
-  (NodeKernel IO RemoteConnectionId LocalConnectionId blk -> IO a)
-  -> NodeKernelData blk
+  (NodeKernel IO RemoteConnectionId LocalConnectionId blk wt -> IO a)
+  -> NodeKernelData blk wt
   -> IO (StrictMaybe a)
 mapNodeKernelDataIO f (NodeKernelData ref) =
   readIORef ref >>= traverse f
 
 nkQueryLedger ::
-     IsLedger (LedgerState blk)
-  => (ExtLedgerState blk EmptyMK -> a)
-  -> NodeKernel IO RemoteConnectionId LocalConnectionId blk
+     ( IsLedger (LedgerState blk)
+     , GetTip (LedgerState blk wt EmptyMK)
+     )
+  => (ExtLedgerState blk wt EmptyMK -> a)
+  -> NodeKernel IO RemoteConnectionId LocalConnectionId blk wt
   -> IO a
 nkQueryLedger f NodeKernel{getChainDB} =
   f <$> atomically (ChainDB.getCurrentLedger getChainDB)
 
 nkQueryChain ::
      (AF.AnchoredFragment (Header blk) -> a)
-  -> NodeKernel IO RemoteConnectionId LocalConnectionId blk
+  -> NodeKernel IO RemoteConnectionId LocalConnectionId blk wt
   -> IO a
 nkQueryChain f NodeKernel{getChainDB} =
   f <$> atomically (ChainDB.getCurrentChain getChainDB)

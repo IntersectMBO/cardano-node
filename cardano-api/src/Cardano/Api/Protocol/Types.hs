@@ -21,6 +21,7 @@ import           Ouroboros.Consensus.Cardano
 import           Ouroboros.Consensus.Cardano.Block
 import           Ouroboros.Consensus.Cardano.ByronHFC (ByronBlockHFC)
 import           Ouroboros.Consensus.Cardano.Node
+import           Ouroboros.Consensus.Ledger.SupportsUTxOHD
 import           Ouroboros.Consensus.HardFork.Combinator.Embed.Unary
 import           Ouroboros.Consensus.Node.ProtocolInfo (ProtocolClientInfo (..), ProtocolInfo (..))
 import           Ouroboros.Consensus.Node.Run (RunNode)
@@ -53,6 +54,10 @@ class RunNode blk => ProtocolClient blk where
 instance IOLike m => Protocol m ByronBlockHFC where
   data ProtocolInfoArgs m ByronBlockHFC = ProtocolInfoArgsByron ProtocolParamsByron
   protocolInfo (ProtocolInfoArgsByron params) = inject $ protocolInfoByron params
+
+-- instance CardanoHardForkConstraints StandardCrypto => LedgerMustSupportsUTxOHD LedgerState (CardanoBlock StandardCrypto) WithLedgerTables
+-- instance CardanoHardForkConstraints StandardCrypto => LedgerMustSupportsUTxOHD LedgerState (CardanoBlock StandardCrypto) WithoutLedgerTables
+-- instance CardanoHardForkConstraints StandardCrypto => LedgerSupportsUTxOHD LedgerState (CardanoBlock StandardCrypto)
 
 instance (CardanoHardForkConstraints StandardCrypto, IOLike m) => Protocol m (CardanoBlock StandardCrypto) where
   data ProtocolInfoArgs m (CardanoBlock StandardCrypto) =

@@ -61,7 +61,7 @@ import           Ouroboros.Consensus.Block (BlockConfig, BlockProtocol, CannotFo
 import           Ouroboros.Consensus.BlockchainTime (SystemStart (..),
                    TraceBlockchainTimeEvent (..))
 import           Ouroboros.Consensus.HeaderValidation (OtherHeaderEnvelopeError)
-import           Ouroboros.Consensus.Ledger.Abstract (LedgerErr, LedgerState)
+import           Ouroboros.Consensus.Ledger.Abstract (LedgerErr, LedgerState, IsSwitchLedgerTables, GetTip, EmptyMK)
 import           Ouroboros.Consensus.Ledger.Extended (ledgerState)
 import           Ouroboros.Consensus.Ledger.Inspect (InspectLedger, LedgerEvent)
 import           Ouroboros.Consensus.Ledger.Query (BlockQuery)
@@ -297,14 +297,16 @@ instance (StandardHash header, Eq peer) => ElidingTracer
 -- | Tracers for all system components.
 --
 mkTracers
-  :: forall blk p2p.
+  :: forall blk p2p wt.
      ( Consensus.RunNode blk
      , TraceConstraints blk
+     , IsSwitchLedgerTables wt
+     , GetTip (LedgerState blk wt EmptyMK)
      )
   => BlockConfig blk
   -> TraceOptions
   -> Trace IO Text
-  -> NodeKernelData blk
+  -> NodeKernelData blk wt
   -> Maybe EKGDirect
   -> NetworkP2PMode p2p
   -> IO (Tracers (ConnectionId RemoteAddress) (ConnectionId LocalAddress) blk p2p)
@@ -621,7 +623,7 @@ isRollForward (TraceChainSyncServerUpdate _tip (AddBlock _pt) _blocking FallingE
 isRollForward _ = False
 
 mkConsensusTracers
-  :: forall blk peer localPeer.
+  :: forall blk peer localPeer wt.
      ( Show peer
      , Eq peer
      , LedgerQueries blk
@@ -637,12 +639,14 @@ mkConsensusTracers
      , Consensus.RunNode blk
      , HasKESMetricsData blk
      , HasKESInfo blk
+     , IsSwitchLedgerTables wt
+     , GetTip (LedgerState blk wt EmptyMK)
      )
   => Maybe EKGDirect
   -> TraceSelection
   -> TracingVerbosity
   -> Trace IO Text
-  -> NodeKernelData blk
+  -> NodeKernelData blk wt
   -> ForgingStats
   -> IO (Consensus.Tracers' peer localPeer blk (Tracer IO))
 mkConsensusTracers mbEKGDirect trSel verb tr nodeKern fStats = do
@@ -920,12 +924,14 @@ traceBlockFetchClientMetrics (Just ekgDirect) slotMapVar cdf1sVar cdf3sVar cdf5s
 
 
 traceLeadershipChecks ::
-  forall blk
+  forall blk wt
   . ( Consensus.RunNode blk
      , LedgerQueries blk
+     , IsSwitchLedgerTables wt
+     , GetTip (LedgerState blk wt EmptyMK)
      )
   => ForgeTracers
-  -> NodeKernelData blk
+  -> NodeKernelData blk wt
   -> TracingVerbosity
   -> Trace IO Text
   -> Tracer IO (WithSeverity (Consensus.TraceLabelCreds (Consensus.TraceForgeEvent blk)))

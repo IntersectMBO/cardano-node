@@ -40,7 +40,7 @@ import           Cardano.Node.Queries
 
 startPeerTracer
   :: Tracer IO [PeerT blk]
-  -> NodeKernelData blk
+  -> NodeKernelData blk wt
   -> Int
   -> IO ()
 startPeerTracer tr nodeKern delayMilliseconds = do
@@ -86,7 +86,7 @@ ppStatus PeerFetchStatusBusy     = "fetching"
 ppStatus PeerFetchStatusReady {} = "ready"
 
 getCurrentPeers
-  :: NodeKernelData blk
+  :: NodeKernelData blk wt
   -> IO [PeerT blk]
 getCurrentPeers nkd = mapNodeKernelDataIO extractPeers nkd
                       <&> fromSMaybe mempty
@@ -99,7 +99,7 @@ getCurrentPeers nkd = mapNodeKernelDataIO extractPeers nkd
     -> STM.STM IO (Map peer (Net.AnchoredFragment (Header blk)))
   getCandidates var = STM.readTVar var >>= traverse STM.readTVar
 
-  extractPeers :: NodeKernel IO RemoteConnectionId LocalConnectionId blk
+  extractPeers :: NodeKernel IO RemoteConnectionId LocalConnectionId blk wt
                 -> IO [PeerT blk]
   extractPeers kernel = do
     peerStates <- fmap tuple3pop <$> (   STM.atomically

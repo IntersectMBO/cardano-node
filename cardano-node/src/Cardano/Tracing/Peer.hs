@@ -76,7 +76,7 @@ ppStatus PeerFetchStatusBusy     = "fetching"
 ppStatus PeerFetchStatusReady {} = "ready"
 
 getCurrentPeers
-  :: NodeKernelData blk
+  :: NodeKernelData blk wt
   -> IO [Peer blk]
 getCurrentPeers nkd = mapNodeKernelDataIO extractPeers nkd
                       <&> fromSMaybe mempty
@@ -89,7 +89,7 @@ getCurrentPeers nkd = mapNodeKernelDataIO extractPeers nkd
     -> STM.STM IO (Map peer (Net.AnchoredFragment (Header blk)))
   getCandidates var = STM.readTVar var >>= traverse STM.readTVar
 
-  extractPeers :: NodeKernel IO RemoteConnectionId LocalConnectionId blk
+  extractPeers :: NodeKernel IO RemoteConnectionId LocalConnectionId blk wt
                 -> IO [Peer blk]
   extractPeers kernel = do
     peerStates <- fmap tuple3pop <$> (   STM.atomically
