@@ -913,10 +913,7 @@ buildPoolParams nw dir index specifiedRelays = do
  where
    lookupPoolRelay
      :: Map Word [Ledger.StakePoolRelay] -> Seq.StrictSeq Ledger.StakePoolRelay
-   lookupPoolRelay m =
-     case Map.lookup index m of
-       Just spRelays -> Seq.fromList spRelays
-       Nothing -> mempty
+   lookupPoolRelay m = maybe mempty Seq.fromList (Map.lookup index m)
 
    strIndex = show index
    poolColdVKF = dir </> "cold" ++ strIndex ++ ".vkey"
