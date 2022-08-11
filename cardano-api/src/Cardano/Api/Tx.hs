@@ -29,6 +29,7 @@ module Cardano.Api.Tx (
     toShelleySigningKey,
     signByronTransaction,
     signShelleyTransaction,
+
     -- ** Incremental signing and separate witnesses
     makeSignedTransaction,
     KeyWitness(..),
@@ -57,7 +58,9 @@ import qualified Data.ByteString.Lazy as LBS
 import           Data.Functor.Identity (Identity)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
+import           Data.Type.Equality (TestEquality (..), (:~:) (Refl))
 import qualified Data.Vector as Vector
+
 --
 -- Common types, consensus, network
 --
@@ -126,6 +129,16 @@ data Tx era where
        :: ShelleyBasedEra era
        -> Ledger.Tx (ShelleyLedgerEra era)
        -> Tx era
+
+
+instance Show (InAnyCardanoEra Tx) where
+    show (InAnyCardanoEra _ tx) = show tx
+
+instance Eq (InAnyCardanoEra Tx) where
+    (==) (InAnyCardanoEra eraA txA) (InAnyCardanoEra eraB txB) =
+      case testEquality eraA eraB of
+        Nothing -> False
+        Just Refl -> txA == txB
 
 -- The GADT in the ShelleyTx case requires a custom instance
 instance Eq (Tx era) where

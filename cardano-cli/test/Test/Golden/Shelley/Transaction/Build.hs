@@ -41,7 +41,7 @@ golden_shelleyTransactionBuild =
       , "--tx-body-file", txBodyOutFile
       ]
 
-    H.assertFileOccurences 1 "TxBodyMary" txBodyOutFile
+    H.assertFileOccurences 1 "Tx MaryEra" txBodyOutFile
 
     H.assertEndsWithSingleNewline txBodyOutFile
 
@@ -64,7 +64,7 @@ golden_shelleyTransactionBuild_CertificateScriptWitnessed =
       , "--tx-body-file", txBodyOutFile
       ]
 
-    H.assertFileOccurences 1 "TxBodyMary" txBodyOutFile
+    H.assertFileOccurences 1 "Tx MaryEra" txBodyOutFile
 
     H.assertEndsWithSingleNewline txBodyOutFile
 
@@ -96,7 +96,7 @@ golden_shelleyTransactionBuild_Minting =
       , "--tx-body-file", txBodyOutFile
       ]
 
-    H.assertFileOccurences 1 "TxBodyMary" txBodyOutFile
+    H.assertFileOccurences 1 "Tx MaryEra" txBodyOutFile
 
     H.assertEndsWithSingleNewline txBodyOutFile
 
@@ -120,7 +120,7 @@ golden_shelleyTransactionBuild_WithdrawalScriptWitnessed =
       , "--tx-body-file", txBodyOutFile
       ]
 
-    H.assertFileOccurences 1 "TxBodyMary" txBodyOutFile
+    H.assertFileOccurences 1 "Tx MaryEra" txBodyOutFile
 
     H.assertEndsWithSingleNewline txBodyOutFile
 
@@ -140,6 +140,6 @@ golden_shelleyTransactionBuild_TxInScriptWitnessed =
       , "--tx-body-file", txBodyOutFile
       ]
 
-    H.assertFileOccurences 1 "TxBodyMary" txBodyOutFile
+    H.assertFileOccurences 1 "Tx MaryEra" txBodyOutFile
 
     H.assertEndsWithSingleNewline txBodyOutFile

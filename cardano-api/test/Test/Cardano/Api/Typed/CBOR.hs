@@ -8,9 +8,9 @@ module Test.Cardano.Api.Typed.CBOR
 
 import           Cardano.Api
 import           Cardano.Prelude
-import           Data.String (IsString(..))
+import           Data.String (IsString (..))
 import           Gen.Cardano.Api.Typed
-import           Gen.Hedgehog.Roundtrip.CBOR (roundtrip_CBOR)
+import           Gen.Hedgehog.Roundtrip.CBOR (roundtrip_CBOR, roundtrip_CDDL_Tx)
 import           Hedgehog (Property, forAll, property, success, tripping)
 import           Test.Cardano.Api.Typed.Orphans ()
 import           Test.Tasty (TestTree, testGroup)
@@ -24,14 +24,14 @@ import           Test.Tasty.Hedgehog (testPropertyNamed)
 test_roundtrip_txbody_CBOR :: [TestTree]
 test_roundtrip_txbody_CBOR =
   [ testPropertyNamed (show era) (fromString (show era)) $
-    roundtrip_CBOR (proxyToAsType Proxy) (genTxBody era)
-  | AnyCardanoEra era <- [minBound..(AnyCardanoEra AlonzoEra)] -- TODO: Babbage era
+    roundtrip_CDDL_Tx era (makeSignedTransaction [] <$> genTxBody era)
+  | AnyCardanoEra era <- [minBound..(AnyCardanoEra BabbageEra)]
   ]
 
 test_roundtrip_tx_CBOR :: [TestTree]
 test_roundtrip_tx_CBOR =
   [ testPropertyNamed (show era) (fromString (show era)) $ roundtrip_CBOR (proxyToAsType Proxy) (genTx era)
-  | AnyCardanoEra era <- [minBound..(AnyCardanoEra AlonzoEra)] -- TODO: Babbage era
+  | AnyCardanoEra era <- [minBound..(AnyCardanoEra BabbageEra)]
   ]
 
 prop_roundtrip_witness_byron_CBOR :: Property

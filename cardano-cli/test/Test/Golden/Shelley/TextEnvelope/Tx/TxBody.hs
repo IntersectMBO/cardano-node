@@ -4,8 +4,8 @@ module Test.Golden.Shelley.TextEnvelope.Tx.TxBody
   ( golden_shelleyTxBody
   ) where
 
-import           Cardano.Api (AsType (..), HasTextEnvelope (..))
 import           Cardano.Prelude
+
 import           Hedgehog (Property)
 import           Test.OptParse
 
@@ -34,8 +34,7 @@ golden_shelleyTxBody = propertyOnce . H.moduleWorkspace "tmp" $ \tempDir -> do
     , "--out-file", transactionBodyFile
     ]
 
-  let txBodyType = textEnvelopeType AsMaryTxBody
 
   -- Check the newly created files have not deviated from the
   -- golden files
-  checkTextEnvelopeFormat txBodyType referenceTxBody transactionBodyFile
+  checkTxCddlFormat referenceTxBody transactionBodyFile
