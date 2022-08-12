@@ -17,6 +17,7 @@ RTView is a part of `cardano-tracer` [service](https://github.com/input-output-h
 5. [UI](#UI)
    1. [Security Alert](#Security-Alert)
    2. [Missing Metrics](#Missing-Metrics)
+   3. [Producer or Relay?](#Producer-or-Relay?)
 
 # Introduction
 
@@ -180,3 +181,10 @@ When the node connects to `cardano-tracer` and RTView's page displays the first 
 2. The node _cannot_ provide corresponding metrics. For example, forging-related metrics make sense only for producer node, not for relay node.
 3. The node doesn't provide corresponding metrics because of node's configuration. For example, it can specify severity filter for particular metric, so it just filtered out.
 4. The node is incompatible with `cardano-tracer` (they were built from different branches of `cardano-node` repository). For example, particular metric may be renamed in the node, but `cardano-tracer` is still using outdated name.
+
+## Producer or Relay?
+
+If the node is configured as a _producer_ - i.e. it can forge the new blocks - you will see a hammer icon near the node's name. So, there are two possible reasons if you don't see this hammer icon:
+
+1. The node is configured as a relay, not as a producer.
+2. The node is not reported about its "producer status" yet.
