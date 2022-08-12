@@ -2,7 +2,7 @@
 
 ## What is a Plutus minting script?
 
-This is a type of Plutus script that is required to validate the minting of multi-asset tokens. We can do this using Mary era scripts, however, Plutus scripts allow us to encode more logic beyond requiring verification keys and timelocks. The Plutus minting script expects only a redeemer in order to successfully validate the minting of a multi-asset.
+A Plutus minting script is required to validate the minting of multi-asset tokens. Unlike Mary-era scripts, Plutus scripts support more logic beyond required signatures and timelocks.
 
 ### An example of using a Plutus minting script
 
@@ -12,10 +12,10 @@ process involving:
 + the creation of the `AlwaysSucceeds` Plutus minting script (i.e. anybody can mint)
 + the creation of a transaction that mints multi-assets using the `AlwaysSucceeds` Plutus minting script
 
-In this example we will use the [anyone can mint](../../../plutus-example/plutus-example/src/Cardano/PlutusExample/MintingScript.hs) Plutus minting script. In order to execute a Plutus minting script, we require the following:
+In this example we will use the [anyone can mint](../../../plutus-example/plutus-example/src/Cardano/PlutusExample/MintingScript.hs) Plutus minting script. To execute it, we require the following:
 
-- Collateral tx input(s) - these are provided and are forfeited in the event the Plutus script fails to execute.
-- The Plutus script should be serialized in the text envelope format. `cardano-cli` expects Plutus scripts to be serialized in the text envelope format.
+- Collateral tx input(s) that are provided and forfeited if the Plutus script fails to execute.
+- Serialization of the Plutus script in the text envelope format (required for cardano-cli).
 - A redeemer.
 
 #### Creating the `AlwaysSucceeds` Plutus minting script
@@ -34,9 +34,7 @@ This will output `anyone-can-mint.plutus` in the `generated-plutus-scripts` dir.
 
 #### Setting up a local Alonzo node cluster
 
-There is a convenient script that will set up an Alonzo cluster immediately on your local machine.
-
-Run the following command:
+This convenient script will set up an Alonzo cluster immediately on your local machine:
 
 ```bash
 cabal install cardano-cli
@@ -48,14 +46,14 @@ Follow the instructions displayed in the terminal to start your Alonzo cluster.
 
 #### Minting multi-assets using the Plutus minting script
 
-We need the policy ID of our Plutus script and a redeemer. In this case, we can use any redeemer because the minting script always succeeds:
+To mint a multi-asset, you need the Plutus script policy ID and a redeemer. Because this minting script always succeeds, you can use any redeemer:
 
 ```bash
 > cardano-cli transaction policyid --script-file scripts/plutus/scripts/anyone-can-mint.plutus
-> fda1b6b487bee2e7f64ecf24d24b1224342484c0195ee1b7b943db50
+> $policyid
 ```
 
-There is an example redeemer at: `scripts/plutus/data/42.redeemer`
+You can find an example redeemer at: `scripts/plutus/data/42.redeemer`
 
 For more information regarding `tx-in-collateral` and `mint-execution-units` see [here](plutus-spending-script-example.md).
 
@@ -68,8 +66,8 @@ cardano-cli transaction build-raw \
   --mint-script-file "scripts/plutus/scripts/anyone-can-mint.plutus" \
   --mint-redeemer-file "scripts/plutus/data/42.redeemer" \
   --mint-execution-units "($plutusrequiredspace, $plutusrequiredtime)" \
-  --tx-out "$dummyaddress+$spendable + 5 2dce00a8d52ccd0c53be5165dd7a7e8e1d08d87f05f8f91047ca5d0b.4D696C6C6172436F696E0A" \
-  --mint "5 2dce00a8d52ccd0c53be5165dd7a7e8e1d08d87f05f8f91047ca5d0b.4D696C6C6172436F696E0A" \
+  --tx-out "$dummyaddress+$spendable + 5 $policyid.4D696C6C6172436F696E0A" \
+  --mint "5 $policyid.4D696C6C6172436F696E0A" \
   --protocol-params-file pparams.json \
   --out-file "plutusmint.body"
 
