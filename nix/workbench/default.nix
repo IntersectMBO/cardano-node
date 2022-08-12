@@ -15,7 +15,7 @@ let
 
       src = ./.;
 
-      buildInputs = with pkgs; [ jq makeWrapper ];
+      buildInputs = with pkgs; [ makeWrapper ];
 
       buildPhase = ''
         patchShebangs .
@@ -26,8 +26,8 @@ let
       '';
 
       installPhase = ''
-        mkdir -p         $out/bin
-        cp -a wb chain-filters profiles *.sh *.jq $out/bin
+        mkdir -p                                     $out/bin
+        cp    -a wb chain-filters profiles *.sh *.jq $out/bin
       '';
 
       dontStrip = true;

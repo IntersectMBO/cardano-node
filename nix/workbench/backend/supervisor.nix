@@ -24,23 +24,23 @@ let
 
       materialise-profile =
         { profileNix }:
-          pkgs.runCommand "workbench-backend-output-${profileNix.name}-${name}d" {}
+          pkgs.runCommand "workbench-backend-output-${profileNix.name}-${name}d"
+            {
+              ## Backend-specific Nix bits:
+              ## mkBackendConf :: Profile -> SupervisorConf/DockerConf
+              supervisorConfPath =
+                import ./supervisor-conf.nix
+                { inherit (profileNix) node-services;
+                  inherit
+                    pkgs lib stateDir
+                    basePort
+                    extraBackendConfig;
+                };
+            }
             ''
             mkdir $out
-            cp ${mkBackendConf profileNix} $out/supervisor.conf
+            cp    $supervisorConfPath           $out/supervisor.conf
             '';
-
-      ## Backend-specific Nix bits:
-      ## mkBackendConf :: Profile -> SupervisorConf/DockerConf
-      mkBackendConf =
-        profile:
-        pkgs.callPackage ./supervisor-conf.nix
-        { inherit (profile) node-services;
-          inherit
-            pkgs lib stateDir
-            basePort
-            extraBackendConfig;
-        };
     };
 in
 {
