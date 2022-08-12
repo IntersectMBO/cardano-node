@@ -697,6 +697,12 @@ span[data-tooltip] {
   color: #f7967f;
 }
 
+.dark .rt-view-node-producer-label svg {
+  width: 22px;
+  margin-left: 10px;
+  color: lightgreen;
+}
+
 /********************* Light Theme *********************/
 
 .light {
@@ -1124,6 +1130,12 @@ span[data-tooltip] {
 
 .light .rt-view-test-status-message-fail {
   color: #e6380d;
+}
+
+.light .rt-view-node-producer-label svg {
+  width: 22px;
+  margin-left: 10px;
+  color: green;
 }
 |]
 

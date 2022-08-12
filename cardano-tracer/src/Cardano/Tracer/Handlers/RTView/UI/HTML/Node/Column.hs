@@ -76,6 +76,10 @@ addNodeColumn tracerEnv loggingConfig nodesErrors updateErrorsTimer nodeId@(Node
                                    # set text "Node"
                          , image "has-tooltip-multiline has-tooltip-bottom rt-view-what-icon" whatSVG
                                  # set dataTooltip "Node's name, taken from its configuration file"
+                         , image "rt-view-node-producer-label has-tooltip-multiline has-tooltip-right" forgeSVG
+                                 ## (id' <> "__node-producer-label")
+                                 # set dataTooltip "This node is a producer"
+                                 # hideIt
                          ]
   addNodeCell "basic-info" bi
   addNodeCell "era" [ UI.span ## (id' <> "__node-era") #. "has-text-weight-semibold" # set text "—"

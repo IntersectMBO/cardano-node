@@ -89,6 +89,7 @@ updateNodesUI tracerEnv@TracerEnv{teConnectedNodes, teAcceptedMetrics, teSavedTO
   setBlockReplayProgress connected teAcceptedMetrics
   setChunkValidationProgress connected teSavedTO
   setLedgerDBProgress connected teSavedTO
+  setProducerMode connected teAcceptedMetrics
   setLeadershipStats connected displayedElements teAcceptedMetrics
   setEraEpochInfo connected displayedElements teAcceptedMetrics nodesEraSettings
 
@@ -253,6 +254,26 @@ setLedgerDBProgress connected savedTO = do
                   else setTextValue nodeLedgerDBUpdateElId $ T.init progressPct <> "&nbsp;%"
               _ -> return ()
           _ -> return ()
+
+setProducerMode
+  :: Set NodeId
+  -> AcceptedMetrics
+  -> UI ()
+setProducerMode connected acceptedMetrics = do
+  allMetrics <- liftIO $ readTVarIO acceptedMetrics
+  forM_ connected $ \nodeId@(NodeId anId) ->
+    whenJust (M.lookup nodeId allMetrics) $ \(ekgStore, _) ->
+      forMM_ (liftIO $ getListOfMetrics ekgStore) $ \(mName, _) ->
+        case mName of
+          "Forge.NodeIsLeader"    -> showProducerMode anId
+          "Forge.NodeIsLeaderNum" -> showProducerMode anId
+          _ -> return ()
+ where
+  -- The presence of these metrics is a proof that this node is
+  -- configured as a producer, so display corresponding icon.
+  showProducerMode anId = do
+    window <- askWindow
+    findAndSet showInline window (anId <> "__node-producer-label")
 
 setLeadershipStats
   :: Set NodeId
