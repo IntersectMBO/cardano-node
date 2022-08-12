@@ -23,7 +23,7 @@ module Cardano.CLI.Shelley.Run.Genesis
   ) where
 
 import           Cardano.Prelude hiding (unlines)
-import           Prelude (error, id, unlines, zip3)
+import           Prelude (String, error, id, unlines, zip3)
 
 import           Data.Aeson hiding (Key)
 import qualified Data.Aeson as Aeson
@@ -92,12 +92,12 @@ import           Cardano.CLI.Shelley.Run.StakeAddress (ShelleyStakeAddressCmdErr
                    renderShelleyStakeAddressCmdError, runStakeAddressKeyGenToFile)
 import           Cardano.CLI.Types
 
-import           Cardano.CLI.Byron.Delegation
-import           Cardano.CLI.Byron.Genesis as Byron
-import qualified Cardano.CLI.Byron.Key as Byron
 import qualified Cardano.Chain.Common as Byron (KeyHash, mkKnownLovelace, rationalToLovelacePortion)
 import           Cardano.Chain.Genesis (FakeAvvmOptions (..), TestnetBalanceOptions (..),
                    gdProtocolParameters, gsDlgIssuersSecrets, gsPoorSecrets, gsRichSecrets)
+import           Cardano.CLI.Byron.Delegation
+import           Cardano.CLI.Byron.Genesis as Byron
+import qualified Cardano.CLI.Byron.Key as Byron
 import qualified Cardano.Crypto.Signing as Byron
 
 import           Cardano.Api.SerialiseTextEnvelope (textEnvelopeToJSON)
@@ -115,8 +115,8 @@ import           Data.ListMap (ListMap (..))
 
 import qualified Cardano.CLI.IO.Lazy as Lazy
 
-import           System.Random (StdGen)
 import qualified System.Random as Random
+import           System.Random (StdGen)
 
 data ShelleyGenesisCmdError
   = ShelleyGenesisCmdAesonDecodeError !FilePath !Text
@@ -136,6 +136,8 @@ data ShelleyGenesisCmdError
   | ShelleyGenesisCmdStakeAddressCmdError !ShelleyStakeAddressCmdError
   | ShelleyGenesisCmdCostModelsError !FilePath
   | ShelleyGenesisCmdByronError !ByronGenesisError
+  | ShelleyGenesisStakePoolRelayFileError !FilePath !IOException
+  | ShelleyGenesisStakePoolRelayJsonDecodeError !FilePath !String
   deriving Show
 
 instance Error ShelleyGenesisCmdError where
@@ -176,6 +178,12 @@ instance Error ShelleyGenesisCmdError where
        " Error: " <>  Text.unpack e
       ShelleyGenesisCmdGenesisFileReadError e -> displayError e
       ShelleyGenesisCmdByronError e -> show e
+      ShelleyGenesisStakePoolRelayFileError fp e ->
+        "Error occurred while reading the stake pool relay specification file: " <> fp <>
+        " Error: " <> show e
+      ShelleyGenesisStakePoolRelayJsonDecodeError fp e ->
+        "Error occurred while decoding the stake pool relay specification file: " <> fp <>
+        " Error: " <>  e
 
 runGenesisCmd :: GenesisCmd -> ExceptT ShelleyGenesisCmdError IO ()
 runGenesisCmd (GenesisKeyGenGenesis vk sk) = runGenesisKeyGenGenesis vk sk
@@ -187,7 +195,8 @@ runGenesisCmd (GenesisTxIn vk nw mOutFile) = runGenesisTxIn vk nw mOutFile
 runGenesisCmd (GenesisAddr vk nw mOutFile) = runGenesisAddr vk nw mOutFile
 runGenesisCmd (GenesisCreate gd gn un ms am nw) = runGenesisCreate gd gn un ms am nw
 runGenesisCmd (GenesisCreateCardano gd gn un ms am k slotLength sc nw bg sg ag mNodeCfg) = runGenesisCreateCardano gd gn un ms am k slotLength sc nw bg sg ag mNodeCfg
-runGenesisCmd (GenesisCreateStaked gd gn gp gl un ms am ds nw bf bp su) = runGenesisCreateStaked gd gn gp gl un ms am ds nw bf bp su
+runGenesisCmd (GenesisCreateStaked gd gn gp gl un ms am ds nw bf bp su relayJsonFp) =
+  runGenesisCreateStaked gd gn gp gl un ms am ds nw bf bp su relayJsonFp
 runGenesisCmd (GenesisHashFile gf) = runGenesisHashFile gf
 
 --
@@ -661,11 +670,13 @@ runGenesisCreateStaked
   -> Word           -- ^ bulk credential files to write
   -> Word           -- ^ pool credentials per bulk file
   -> Word           -- ^ num stuffed UTxO entries
+  -> Maybe FilePath -- ^ Specified stake pool relays
   -> ExceptT ShelleyGenesisCmdError IO ()
 runGenesisCreateStaked (GenesisDir rootdir)
                  genNumGenesisKeys genNumUTxOKeys genNumPools genNumStDelegs
                  mStart mNonDlgAmount stDlgAmount network
-                 bulkPoolCredFiles bulkPoolsPerFile numStuffedUtxo = do
+                 numBulkPoolCredFiles bulkPoolsPerFile numStuffedUtxo
+                 sPoolRelayFp = do
   liftIO $ do
     createDirectoryIfMissing False rootdir
     createDirectoryIfMissing False gendir
@@ -678,31 +689,39 @@ runGenesisCreateStaked (GenesisDir rootdir)
   alonzoGenesis <- readAlonzoGenesis (rootdir </> "genesis.alonzo.spec.json")
 
   forM_ [ 1 .. genNumGenesisKeys ] $ \index -> do
-    createGenesisKeys  gendir  index
+    createGenesisKeys gendir index
     createDelegateKeys deldir index
 
   forM_ [ 1 .. genNumUTxOKeys ] $ \index ->
     createUtxoKeys utxodir index
 
-  pools <- forM [ 1 .. genNumPools ] $ \index -> do
-    createPoolCredentials pooldir index
-    buildPool network pooldir index
+  mayStakePoolRelays
+    <- forM sPoolRelayFp $
+       \fp -> do
+         relaySpecJsonBs <-
+           handleIOExceptT (ShelleyGenesisStakePoolRelayFileError fp) (LBS.readFile fp)
+         firstExceptT (ShelleyGenesisStakePoolRelayJsonDecodeError fp)
+           . hoistEither $ Aeson.eitherDecode relaySpecJsonBs
 
-  when (bulkPoolCredFiles * bulkPoolsPerFile > genNumPools) $
-    left $ ShelleyGenesisCmdTooFewPoolsForBulkCreds  genNumPools bulkPoolCredFiles bulkPoolsPerFile
+  poolParams <- forM [ 1 .. genNumPools ] $ \index -> do
+    createPoolCredentials pooldir index
+    buildPoolParams network pooldir index (fromMaybe mempty mayStakePoolRelays)
+
+  when (numBulkPoolCredFiles * bulkPoolsPerFile > genNumPools) $
+    left $ ShelleyGenesisCmdTooFewPoolsForBulkCreds  genNumPools numBulkPoolCredFiles bulkPoolsPerFile
   -- We generate the bulk files for the last pool indices,
   -- so that all the non-bulk pools have stable indices at beginning:
-  let bulkOffset  = fromIntegral $ genNumPools - bulkPoolCredFiles * bulkPoolsPerFile
+  let bulkOffset  = fromIntegral $ genNumPools - numBulkPoolCredFiles * bulkPoolsPerFile
       bulkIndices :: [Word]   = [ 1 + bulkOffset .. genNumPools ]
       bulkSlices  :: [[Word]] = List.chunksOf (fromIntegral bulkPoolsPerFile) bulkIndices
-  forM_ (zip [ 1 .. bulkPoolCredFiles ] bulkSlices) $
+  forM_ (zip [ 1 .. numBulkPoolCredFiles ] bulkSlices) $
     uncurry (writeBulkPoolCredentials pooldir)
 
   let (delegsPerPool, delegsRemaining) = divMod genNumStDelegs genNumPools
       delegsForPool poolIx = if delegsRemaining /= 0 && poolIx == genNumPools
         then delegsPerPool
         else delegsPerPool + delegsRemaining
-      distribution = [pool | (pool, poolIx) <- zip pools [1 ..], _ <- [1 .. delegsForPool poolIx]]
+      distribution = [pool | (pool, poolIx) <- zip poolParams [1 ..], _ <- [1 .. delegsForPool poolIx]]
 
   g <- Random.getStdGen
 
@@ -718,7 +737,7 @@ runGenesisCreateStaked (GenesisDir rootdir)
   stuffedUtxoAddrs <- liftIO $ Lazy.replicateM (fromIntegral numStuffedUtxo) genStuffedAddress
 
   let stake = second Ledger._poolId . mkDelegationMapEntry <$> delegations
-      stakePools = [ (Ledger._poolId poolParams, poolParams) | poolParams <- snd . mkDelegationMapEntry <$> delegations ]
+      stakePools = [ (Ledger._poolId poolParams', poolParams') | poolParams' <- snd . mkDelegationMapEntry <$> delegations ]
       delegAddrs = dInitialUtxoAddr <$> delegations
       !shelleyGenesis =
         updateCreateStakedOutputTemplate
@@ -741,13 +760,13 @@ runGenesisCreateStaked (GenesisDir rootdir)
     ] ++
     [ mconcat
       [ ", "
-      , textShow bulkPoolCredFiles, " bulk pool credential files, "
+      , textShow numBulkPoolCredFiles, " bulk pool credential files, "
       , textShow bulkPoolsPerFile, " pools per bulk credential file, indices starting from "
       , textShow bulkOffset, ", "
       , textShow $ length bulkIndices, " total pools in bulk nodes, each bulk node having this many entries: "
       , textShow $ length <$> bulkSlices
       ]
-    | bulkPoolCredFiles * bulkPoolsPerFile > 0 ]
+    | numBulkPoolCredFiles * bulkPoolsPerFile > 0 ]
 
   where
     adjustTemplate t = t { sgNetworkMagic = unNetworkMagic (toNetworkMagic network) }
@@ -861,19 +880,24 @@ data Delegation = Delegation
   }
   deriving (Generic, NFData)
 
-buildPool :: NetworkId -> FilePath -> Word -> ExceptT ShelleyGenesisCmdError IO (Ledger.PoolParams StandardCrypto)
-buildPool nw dir index = do
-    StakePoolVerificationKey poolColdVK <- firstExceptT (ShelleyGenesisCmdPoolCmdError
-                                                         . ShelleyPoolCmdReadFileError)
-      . newExceptT
-      $ readFileTextEnvelope (AsVerificationKey AsStakePoolKey) poolColdVKF
-    VrfVerificationKey poolVrfVK <- firstExceptT (ShelleyGenesisCmdNodeCmdError
-                                                  . ShelleyNodeCmdReadFileError)
-      . newExceptT
-      $ readFileTextEnvelope (AsVerificationKey AsVrfKey) poolVrfVKF
-    rewardsSVK <- firstExceptT ShelleyGenesisCmdTextEnvReadFileError
-      . newExceptT
-      $ readFileTextEnvelope (AsVerificationKey AsStakeKey) poolRewardVKF
+buildPoolParams
+  :: NetworkId
+  -> FilePath -- ^ File directory where the necessary pool credentials were created
+  -> Word
+  -> Map Word [Ledger.StakePoolRelay] -- ^ User submitted stake pool relay map
+  -> ExceptT ShelleyGenesisCmdError IO (Ledger.PoolParams StandardCrypto)
+buildPoolParams nw dir index specifiedRelays = do
+    StakePoolVerificationKey poolColdVK
+      <- firstExceptT (ShelleyGenesisCmdPoolCmdError . ShelleyPoolCmdReadFileError)
+           . newExceptT $ readFileTextEnvelope (AsVerificationKey AsStakePoolKey) poolColdVKF
+
+    VrfVerificationKey poolVrfVK
+      <- firstExceptT (ShelleyGenesisCmdNodeCmdError . ShelleyNodeCmdReadFileError)
+           . newExceptT $ readFileTextEnvelope (AsVerificationKey AsVrfKey) poolVrfVKF
+    rewardsSVK
+      <- firstExceptT ShelleyGenesisCmdTextEnvReadFileError
+           . newExceptT $ readFileTextEnvelope (AsVerificationKey AsStakeKey) poolRewardVKF
+
     pure Ledger.PoolParams
       { Ledger._poolId     = Ledger.hashKey poolColdVK
       , Ledger._poolVrf    = Ledger.hashVerKeyVRF poolVrfVK
@@ -883,10 +907,14 @@ buildPool nw dir index = do
       , Ledger._poolRAcnt  =
           toShelleyStakeAddr $ makeStakeAddress nw $ StakeCredentialByKey (verificationKeyHash rewardsSVK)
       , Ledger._poolOwners = mempty
-      , Ledger._poolRelays = Seq.empty
+      , Ledger._poolRelays = lookupPoolRelay specifiedRelays
       , Ledger._poolMD     = Ledger.SNothing
       }
  where
+   lookupPoolRelay
+     :: Map Word [Ledger.StakePoolRelay] -> Seq.StrictSeq Ledger.StakePoolRelay
+   lookupPoolRelay m = maybe mempty Seq.fromList (Map.lookup index m)
+
    strIndex = show index
    poolColdVKF = dir </> "cold" ++ strIndex ++ ".vkey"
    poolVrfVKF = dir </> "vrf" ++ strIndex ++ ".vkey"
@@ -903,12 +931,12 @@ writeBulkPoolCredentials dir bulkIx poolIxs = do
    readPoolCreds :: Word -> ExceptT ShelleyGenesisCmdError IO
                                    (TextEnvelope, TextEnvelope, TextEnvelope)
    readPoolCreds ix = do
-     (,,) <$> readEnvelope poolCert
+     (,,) <$> readEnvelope poolOpCert
           <*> readEnvelope poolVrfSKF
           <*> readEnvelope poolKesSKF
     where
       strIndex = show ix
-      poolCert = dir </> "opcert" ++ strIndex ++ ".cert"
+      poolOpCert = dir </> "opcert" ++ strIndex ++ ".cert"
       poolVrfSKF = dir </> "vrf" ++ strIndex ++ ".skey"
       poolKesSKF = dir </> "kes" ++ strIndex ++ ".skey"
    readEnvelope :: FilePath -> ExceptT ShelleyGenesisCmdError IO TextEnvelope

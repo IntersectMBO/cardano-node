@@ -429,7 +429,20 @@ renderTextViewCmd (TextViewInfo _ _) = "text-view decode-cbor"
 data GenesisCmd
   = GenesisCreate GenesisDir Word Word (Maybe SystemStart) (Maybe Lovelace) NetworkId
   | GenesisCreateCardano GenesisDir Word Word (Maybe SystemStart) (Maybe Lovelace) BlockCount Word Rational NetworkId FilePath FilePath FilePath (Maybe FilePath)
-  | GenesisCreateStaked GenesisDir Word Word Word Word (Maybe SystemStart) (Maybe Lovelace) Lovelace NetworkId Word Word Word
+  | GenesisCreateStaked
+      GenesisDir
+      Word
+      Word
+      Word
+      Word
+      (Maybe SystemStart)
+      (Maybe Lovelace)
+      Lovelace
+      NetworkId
+      Word
+      Word
+      Word
+      (Maybe FilePath) -- ^ Relay specification filepath
   | GenesisKeyGenGenesis VerificationKeyFile SigningKeyFile
   | GenesisKeyGenDelegate VerificationKeyFile SigningKeyFile OpCertCounterFile
   | GenesisKeyGenUTxO VerificationKeyFile SigningKeyFile

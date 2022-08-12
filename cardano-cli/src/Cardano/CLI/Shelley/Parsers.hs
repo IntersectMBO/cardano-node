@@ -1232,6 +1232,7 @@ pGenesisCmd =
         <*> pBulkPoolCredFiles
         <*> pBulkPoolsPerFile
         <*> pStuffedUtxoCount
+        <*> Opt.optional pRelayJsonFp
 
     pGenesisHash :: Parser GenesisCmd
     pGenesisHash =
@@ -1303,6 +1304,15 @@ pGenesisCmd =
           <> Opt.help "The number of fake UTxO entries to generate [default is 0]."
           <> Opt.value 0
           )
+
+    pRelayJsonFp :: Parser FilePath
+    pRelayJsonFp =
+      Opt.strOption
+        (  Opt.long "relay-specification-file"
+        <> Opt.metavar "FILE"
+        <> Opt.help "JSON file specified the relays of each stake pool."
+        <> Opt.completer (Opt.bashCompleter "file")
+        )
 
     convertTime :: String -> UTCTime
     convertTime =
@@ -2779,7 +2789,7 @@ eDNSName :: String -> Either String ByteString
 eDNSName str =
   -- We're using 'Shelley.textToDns' to validate the string.
   case Shelley.textToDns (toS str) of
-    Nothing -> Left "DNS name is more than 64 bytes"
+    Nothing -> Left $ "DNS name is more than 64 bytes: " <> str
     Just dnsName -> Right . Text.encodeUtf8 . Shelley.dnsToText $ dnsName
 
 pSingleHostAddress :: Parser StakePoolRelay
