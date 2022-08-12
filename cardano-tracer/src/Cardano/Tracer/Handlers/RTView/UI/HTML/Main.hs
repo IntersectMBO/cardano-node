@@ -123,7 +123,7 @@ mkMainPage tracerEnv displayedElements nodesEraSettings reloadFlag
   on UI.tick uiEKGTimer . const $
     updateEKGMetrics tracerEnv
 
-  uiNodesTimer <- UI.timer # set UI.interval 1500
+  uiNodesTimer <- UI.timer # set UI.interval 1000
   on UI.tick uiNodesTimer . const $
     updateNodesUI
       tracerEnv

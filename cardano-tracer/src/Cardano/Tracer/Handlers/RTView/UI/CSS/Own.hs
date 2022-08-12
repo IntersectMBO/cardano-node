@@ -216,6 +216,38 @@ span[data-tooltip] {
   clear: right;
 }
 
+.rt-view-progress-container {
+  width: 110px;
+  background-color: #f5f5f5;
+  height: 32px;
+  position: relative;
+  border-radius: 4px;
+}
+
+.rt-view-progress-container-text {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 100%;
+  border-radius: 4px;
+}
+
+.rt-view-progress-container-text-label {
+  display: flex;
+  height: 100%;
+  justify-content: center;
+  align-items: center;
+  border-radius: 4px;
+  color: #444;
+}
+
+.rt-view-loading-bar {
+  width: 0%;
+  height: 100%;
+  background-color: #f14668;
+  border-radius: 4px;
+}
+
 /* Dark Theme */
 
 .dark {
