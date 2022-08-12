@@ -43,9 +43,11 @@ else global_rundir=$global_rundir_def
      mkdir "$global_rundir"
 fi
 
+local keep_packed=
 while test $# -gt 0
 do case "$1" in
        --rundir ) global_rundir=$2; shift;;
+       --packed | --keep-packed ) keep_packed='t';;
        * ) break;; esac; shift; done
 
 local op=${1:-list}; test $# -gt 0 && shift
@@ -264,6 +266,7 @@ case "$op" in
             "$depl"
             "$run"
             'if test -f compressed/logs-$obj.tar.zst; then cat compressed/logs-$obj.tar.zst; else tar c $obj --zstd --ignore-failed-read; fi'
+            'default-untar-cmd'
 
             common-run-files
             $mach
@@ -284,7 +287,7 @@ case "$op" in
            then fail "aws-analysis:  run has not been analysed on AWS: $(white $run)"
            else local analysis_files=(
                    $(ssh $env -- \
-                     sh -c "'cd $depl/runs/$run && ls analysis/*.{json,cdf,org,txt} | grep -v flt.json | grep -v flt.logobjs.json | grep -v flt.mach.txt | grep -v flt.perf-stats.json'" \
+                     sh -c "'cd $depl/runs/$run && ls analysis/*.{json,cdf,org,txt} | grep -v flt.json | grep -v flt.logobjs.json | grep -v flt.perf-stats.json'" \
                      2>/dev/null)
                 )
                 local args=(
@@ -292,6 +295,8 @@ case "$op" in
                    "$depl"
                    "$run"
                    'if test -f compressed/logs-$obj.tar.zst; then cat compressed/logs-$obj.tar.zst; else tar c $obj --zstd --ignore-failed-read; fi'
+                   "$(if test -n "$keep_packed"
+                      then echo "tee --append ../$run.tar.zst | default-untar-cmd"; fi)"
 
                    common-run-files
                    ${analysis_files[*]}
@@ -637,10 +642,12 @@ run_aws_get() {
     local depl=${1:?$usage}; shift
     local run=${1:?$usage}; shift
     local remote_tar_cmd=${1:?$usage}; shift
+    local untar_cmd=${1/default-untar-cmd/tar x --zstd}; shift
     local objects=($*)
 
     progress "aws-get" "env $(yellow $env) depl $(yellow $depl) run $(white $run)"
-    progress "aws-get" "tar $(green $remote_tar_cmd) objects ${objects[*]}"
+    progress "aws-get" "tar $(green $remote_tar_cmd)"
+    progress "aws-get" "untar $(green $untar_cmd)"
 
     local meta=$(ssh $env -- sh -c "'jq . $depl/runs/$run/meta.json'")
     if ! jq . <<<$meta >/dev/null
@@ -674,7 +681,7 @@ run_aws_get() {
        for obj in ${batch[*]}
        do { ssh $env -- \
                 sh -c "'obj=${obj}; cd $depl/runs/$run && ${remote_tar_cmd}'" 2>/dev/null |
-                (cd $dir; tar x --zstd)
+                (cd $dir; eval $untar_cmd)
             echo -ne " $(yellow $obj)" >&2
           } &
        done
