@@ -11,6 +11,7 @@ import           Control.Applicative (Applicative (pure), (<$>))
 import           Control.Concurrent.Async (Async, async)
 import           Control.Monad.Reader (MonadIO (liftIO), MonadReader (ask), ReaderT (runReaderT))
 import           Data.Function (($), (.))
+import           Data.Int
 import           Data.Monoid (Monoid (mempty))
 import           System.IO (IO)
 import           System.Metrics.Prometheus.Concurrent.RegistryT (RegistryT (..), registerGauge,
@@ -22,12 +23,12 @@ newtype TxSubmitMetrics = TxSubmitMetrics
   { tsmCount :: Gauge
   }
 
-registerMetricsServer :: IO (TxSubmitMetrics, Async ())
-registerMetricsServer =
+registerMetricsServer :: Int -> IO (TxSubmitMetrics, Async ())
+registerMetricsServer metricsPort =
   runRegistryT $ do
     metrics <- makeMetrics
     registry <- RegistryT ask
-    server <- liftIO . async $ runReaderT (unRegistryT $ serveMetricsT 8081 []) registry
+    server <- liftIO . async $ runReaderT (unRegistryT $ serveMetricsT metricsPort []) registry
     pure (metrics, server)
 
 makeMetrics :: RegistryT IO TxSubmitMetrics
