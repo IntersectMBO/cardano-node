@@ -7,6 +7,7 @@
 module Cardano.Logging.ConfigurationParser
   (
     readConfiguration
+  , readConfigurationWithDefault
   , defaultConfig
   ) where
 
@@ -42,6 +43,16 @@ defaultConfig = emptyTraceConfig {
 readConfiguration :: FilePath -> IO TraceConfig
 readConfiguration fp =
     either throwIO pure . parseRepresentation =<< BS.readFile fp
+
+readConfigurationWithDefault :: FilePath -> TraceConfig -> IO TraceConfig
+readConfigurationWithDefault fp defaultConf = do
+    fileConf <- either throwIO pure . parseRepresentation =<< BS.readFile fp
+    pure $ mergeWithDefault fileConf defaultConf
+
+
+-- TODO Implement
+mergeWithDefault ::  TraceConfig -> TraceConfig -> TraceConfig
+mergeWithDefault fileConf _defaultConf = fileConf
 
 parseRepresentation :: ByteString -> Either ParseException TraceConfig
 parseRepresentation bs = transform (decodeEither' bs)
