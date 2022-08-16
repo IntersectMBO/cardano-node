@@ -1,5 +1,11 @@
 # Changelog for cardano-api
 
+## vNext
+
+### Features
+
+- Append, not prepend change output when balancing a transaction ([PR 4343](https://github.com/input-output-hk/cardano-node/pull/4343))
+
 ## 1.33.0 -- December 2021
 ## 1.32.1 -- November 2021
 
