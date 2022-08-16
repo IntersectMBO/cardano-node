@@ -7,8 +7,8 @@ module Cardano.Node.Tracing.API
   ( initTraceDispatcher
   ) where
 
-import           Prelude
 import           Cardano.Prelude (first)
+import           Prelude
 
 import           "contra-tracer" Control.Tracer (traceWith)
 import           "trace-dispatcher" Control.Tracer (nullTracer)
@@ -39,6 +39,7 @@ import           Cardano.Node.Tracing
 import           Cardano.Node.Types
 
 import           Cardano.Logging hiding (traceWith)
+import           Cardano.Node.Tracing.DefaultTraceConfig (defaultCardanoConfig)
 import           Cardano.Node.Tracing.StateRep (NodeState (..))
 import           Cardano.Node.Tracing.Tracers
 import           Cardano.Node.Tracing.Tracers.Peer (startPeerTracer)
@@ -59,7 +60,7 @@ initTraceDispatcher ::
   -> NetworkP2PMode p2p
   -> IO (Tracers RemoteConnectionId LocalConnectionId blk p2p)
 initTraceDispatcher nc p networkMagic nodeKernel p2pMode = do
-  trConfig <- readConfiguration (unConfigPath $ ncConfigFile nc)
+  trConfig <- readConfigurationWithDefault (unConfigPath $ ncConfigFile nc) defaultCardanoConfig
   putStrLn $ "New tracer configuration: " <> show trConfig
 
   tracers <- mkTracers trConfig
