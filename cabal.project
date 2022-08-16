@@ -1,5 +1,5 @@
 -- run `nix flake lock --update-input hackageNix` after updating index-state.
-index-state: 2022-07-01T00:00:00Z
+index-state: 2022-08-15T00:00:00Z
 
 packages:
     cardano-api
