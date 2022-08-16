@@ -1,65 +1,10 @@
 # Changelog for cardano-api
 
-## 1.35.3 -- August 2022
+## vNext
 
-- Fix leadership schedule for current on babbage (#4106)
-- Update build to allow all invalid scripts (again) (#4088)
-- Fix building of Alonzo transaction in Babbage era. (#4166)
-- Add `utxoCostPerByte` protocol parameter (#4141)
+### Features
 
-## 1.35.2 -- July 2022 (not released)
-
-None
-
-## 1.35.1 -- July 2022 (not released)
-
-None
-
-## 1.35.0 -- June 2022
-- Add Vasil hardfork to cardano-api and cardano-cli (#3765)
-- Reference script integration (#3953)
-- Wire up remaining Plutusv2 reference script types (#4034)
-- Add `IsString` (Hash BlockHeader) (#3619)
-- Make `LedgerStateEvents` a type alias (#3692)
-- Propagate protocol epoch state decode error (#3696)
-- Expose the tx mempool monitoring mini protocol in cardano-api (#3706)
-- Babbage functionality integration in cardano api Part 1 (#3803)
-- Remove unused package (#3816)
-- Add `IsCardanoEra` constraint to BlockInMode (#3665)
-- Update cardano-api's TxOut with inline datum (#3773)
-- Update cardano-api txout with reference scripts (#3779)
-- Implement return and total collateral in cardano-api (#3787)
-- Add reference transaction inputs to cardano-api (#3804)
-- Fix datum in tx and ref scripts (#3882)
-- Support the babbage era in the API function `cddlTypeToEra` (#3916)
-- Fix typo for TxWitness BabbageEra (#3961)
-- kes-period-info property test (#3718)
-- Extend deserialiseFromRawBytesHex to produce error description (#3304)
-- add genesis create-cardano command (#3832)
-- Propagate protocol in block type (#3818)
-- Create VRF signing key file with correct permissions (#1948)
-- Update example-reference-script-usage.sh to also use inline datums (#4006)
-- Restore deleted comment (#4044)
-- Do not require decentralization parameter in protocol parameters (#4051)
-
-
-## 1.34.0 -- February 2022
-
-- Expose `lovelaceToTxOutValue`. (#3381)
-- Implement two functions: `currentEpochEligibleLeadershipSlots` and
-  `nextEpochEligibleLeadershipSlots` to get the leadership slots for the
-  current/next epoch respectively. (#3464, #3494)
-- Various small intenral fixes. (#3466)
-- Add a `capi` library to support using the cardano node as a C library in other
-  software. (#3501)
-- `fromShelleyAddr` now takes an explicit `ShelleyBasedEra` parameter to
-  determine the era. The previous behaviour (with an implicit
-  `IsShelleyBasedEra` constraint) can be obtained with `fromShelleyAddrIsSbe`.
-  (#2253, #3606)
-
-### Bugs
-
-- Allow reading text envelopes from pipes ([PR 4384](https://github.com/input-output-hk/cardano-node/pull/4384))
+- Append, not prepend change output when balancing a transaction ([PR 4343](https://github.com/input-output-hk/cardano-node/pull/4343))
 
 ## 1.33.0 -- December 2021
 ## 1.32.1 -- November 2021
