@@ -26,18 +26,11 @@ import           Cardano.Logging
 import           Cardano.Prelude
 import           Data.Aeson
 import           Data.Time.Clock
+import           Data.Time.Clock.POSIX
 
-import           Cardano.Api.Protocol.Types (BlockType (..), protocolInfo)
-import qualified Cardano.Ledger.Shelley.API as SL
 import           Cardano.Node.Protocol.Types (SomeConsensusProtocol (..))
 import qualified Ouroboros.Consensus.Block.RealPoint as RP
-import           Ouroboros.Consensus.Cardano.Block
-import           Ouroboros.Consensus.Cardano.CanHardFork (shelleyLedgerConfig)
-import qualified Ouroboros.Consensus.Config as Consensus
-import           Ouroboros.Consensus.HardFork.Combinator.Degenerate
 import qualified Ouroboros.Consensus.Node.NetworkProtocolVersion as NPV
-import           Ouroboros.Consensus.Node.ProtocolInfo (ProtocolInfo (..))
-import           Ouroboros.Consensus.Shelley.Ledger.Ledger
 import qualified Ouroboros.Consensus.Storage.ChainDB as ChainDB
 import           Ouroboros.Consensus.Storage.ImmutableDB.Chunks.Internal
 import qualified Ouroboros.Consensus.Storage.LedgerDB.OnDisk as LgrDb
@@ -165,7 +158,7 @@ traceNodeStateChainDB
   -> Trace IO NodeState
   -> ChainDB.TraceEvent blk
   -> IO ()
-traceNodeStateChainDB scp tr ev =
+traceNodeStateChainDB _scp tr ev =
   case ev of
     ChainDB.TraceOpenEvent ev' ->
       case ev' of
@@ -201,12 +194,13 @@ traceNodeStateChainDB scp tr ev =
       case ev' of
         ChainDB.AddedToCurrentChain _ (ChainDB.NewTipInfo currentTip ntEpoch sInEpoch _) _ _ -> do
           -- The slot of the latest block consumed (our progress).
-          let RP.RealPoint slotSinceSystemStart _ = currentTip
+          let RP.RealPoint ourSlotSinceSystemStart _ = currentTip
           -- The slot corresponding to the latest wall-clock time (our target).
-          slotNow <- getSlotForNow scp slotSinceSystemStart
+          slotSinceSystemStart <- getSlotForNow
           let syncProgressPct :: SyncPercentage
-              syncProgressPct =
-                (fromIntegral (unSlotNo slotSinceSystemStart) / fromIntegral (unSlotNo slotNow)) * 100.0
+              syncProgressPct = (   fromIntegral (unSlotNo ourSlotSinceSystemStart)
+                                  / fromIntegral (unSlotNo slotSinceSystemStart)
+                                ) * 100.0
           traceWith tr $ NodeAddBlock $
             AddedToCurrentChain ntEpoch (SlotNo sInEpoch) syncProgressPct
         _ -> return ()
@@ -242,32 +236,15 @@ traceNodeStateShutdown tr = traceWith tr . NodeShutdown
 
 -- Misc.
 
-getSlotForNow
-  :: SomeConsensusProtocol
-  -> SlotNo
-  -> IO SlotNo
-getSlotForNow (SomeConsensusProtocol whichP pInfo) s = do
-  now <- getCurrentTime
-  let cfg = pInfoConfig $ protocolInfo pInfo
-  case whichP of
-    ShelleyBlockType -> do
-      let DegenLedgerConfig cfgShelley = Consensus.configLedger cfg
-          nowSinceSystemStart = now `diffUTCTime` getSystemStartTime cfgShelley
-      return . SlotNo $ floor nowSinceSystemStart
-    CardanoBlockType -> do
-      let CardanoLedgerConfig _ cfgShelley cfgAllegra cfgMary
-                                cfgAlonzo cfgBabbage =
-            Consensus.configLedger cfg
-          latestNowSinceSystemStart = minimum
-            [ now `diffUTCTime` getSystemStartTime cfgShelley
-            , now `diffUTCTime` getSystemStartTime cfgAllegra
-            , now `diffUTCTime` getSystemStartTime cfgMary
-            , now `diffUTCTime` getSystemStartTime cfgAlonzo
-            , now `diffUTCTime` getSystemStartTime cfgBabbage
-            ]
-      return . SlotNo $ floor latestNowSinceSystemStart
-    _ ->
-      -- It is assumed that Byron isn't used already.
-      return s
+getSlotForNow :: IO SlotNo
+getSlotForNow = do
+  posixNow <- utc2s <$> getCurrentTime
+  -- Since Shelley era the slot length is 1 second, so the number of seconds is the number of slots.
+  let numberOfSlotsFromShelleyTillNow = posixNow - posixStartOfShelleyEra
+      totalNumberOfSlotsTillNow = numberOfSlotsInByronEra + numberOfSlotsFromShelleyTillNow
+  return $ SlotNo totalNumberOfSlotsTillNow
  where
-  getSystemStartTime = SL.sgSystemStart . shelleyLedgerGenesis . shelleyLedgerConfig
+  -- These numbers are taken from 'First-Block-of-Each-Era' wiki page.
+  posixStartOfShelleyEra = 1596073491
+  numberOfSlotsInByronEra = 4492799
+  utc2s = fromInteger . round . utcTimeToPOSIXSeconds
