@@ -47,66 +47,15 @@ UseTraceDispatcher: True
 TraceOptions:
   "":
     severity: Notice
-    detail: DNormal
-    backends:
-      - Stdout MachineFormat
-      - EKGBackend
-      - Forwarder
 
-# More interesing tracers
+  "ErrorPolicy":
+    severity: Notice
 
-  ChainDB:
-    severity: Info
+  "BlockFetchClient.CompletedBlockFetch":
+    maxFrequency: 0.0
 
-  AcceptPolicy:
-    severity: Info
+TraceOptionPeerFrequency: 3000
 
-  DNSResolver:
-    severity: Info
-
-  DNSSubscription:
-    severity: Info
-
-  DiffusionInit:
-    severity: Info
-
-  ErrorPolicy:
-    severity: Info
-
-  Forge:
-    severity: Info
-
-  IpSubscription:
-    severity: Info
-
-  LocalErrorPolicy:
-    severity: Info
-
-  Mempool:
-    severity: Info
-
-  Resources:
-    severity: Info
-
-#---------------------------
-# Frequency limited tracer
-  ChainDB.AddBlockEvent.AddedBlockToQueue:
-    maxFrequency: 2.0
-
-  ChainDB.AddBlockEvent.AddedBlockToVolatileDB:
-    maxFrequency: 2.0
-
-  ChainDB.CopyToImmutableDBEvent.CopiedBlockToImmutableDB:
-    maxFrequency: 2.0
-
-  ChainDB.AddBlockEvent.AddBlockValidation.ValidCandidate:
-    maxFrequency: 2.0
-
-  BlockFetchClient.CompletedBlockFetch:
-    maxFrequency: 2.0
-
-TraceOptionPeerFrequency: 2000
-
-TraceOptionResourceFrequency: 5000
+TraceOptionResourceFrequency: 4000
 
 TurnOnLogMetrics: False

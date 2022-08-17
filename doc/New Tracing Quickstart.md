@@ -20,19 +20,21 @@ on the namespace, and require a one-to-one correspondence between namespaces and
 
 As we have two mechanisms for the same purpose for historic reasons, we will soon
 __deprecate the Kind field__, and it will disappear in the near future. So we strongly
-advice to use namespaces for any analysis tools of traces!  
+advise to use namespaces for any analysis tools of traces!
 
 ### Configuration of new tracing
+
+In Cardano a default configuration is given in the module [Link text Here](https://link-url-here.or [Cardano.Node.Tracing.DefaultTraceConfig](https://github.com/input-output-hk/cardano-node/blob/master/cardano-node/src/Cardano/Node/Tracing/DefaultTraceConfig.hs). In the config file all entries of the default configuration can be overridden. To remove a frequency limiter, define a limiter with maxFrequency 0.0.
 
 1. Specify a filter for the severity of the messages you want to see, e.g.:
 
   ~~~yaml
   # Show messages of Severity Notice or higher as default
-  Node:
+  "":
       severity: Notice
 
     # But show ChainDB messages starting from Info
-  Node.ChainDB:
+  ChainDB:
       severity: Info
   ~~~
 
@@ -47,9 +49,9 @@ advice to use namespaces for any analysis tools of traces!
 2. Specify in which detail level, the messages get shown.
 
   ~~~yaml
-  Node:
+  "":
       # Keep this
-      severity: Notice      
+      severity: Notice
       # All messages are shown with normal detail level
       detail: DNormal
   ~~~
@@ -62,7 +64,7 @@ advice to use namespaces for any analysis tools of traces!
     frequency in which messages get shown.
 
     ~~~yaml
-    Node.ChainDB.AddBlockEvent.AddedBlockToQueue:
+    ChainDB.AddBlockEvent.AddedBlockToQueue:
         # Only show a maximum of 2 of these messages per second
         maxFrequency: 2.0
     ~~~
@@ -72,11 +74,11 @@ advice to use namespaces for any analysis tools of traces!
 4. Specify the backends the messages are routed to.
 
   ~~~yaml
-  Node:
+  "":
       # Keep this
-      severity: Notice      
+      severity: Notice
       # And this
-      detail: DNormal  
+      detail: DNormal
       # And specify a list of backends to use
       backends:
         - Stdout MachineFormat

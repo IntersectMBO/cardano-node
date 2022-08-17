@@ -555,6 +555,8 @@ message per second, then add this to your configuration file:
     maxFrequency: 1.0
 ```
 
+In Cardano a default configuration is given in the module [Cardano.Node.Tracing.DefaultTraceConfig](https://github.com/input-output-hk/cardano-node/blob/master/cardano-node/src/Cardano/Node/Tracing/DefaultTraceConfig.hs). In the config file all entries of the default configuration can be overridden. To remove a frequency limiter, define a limiter with maxFrequency 0.0.
+
 ## Documentation
 
 The self-documentation features of `trace-dispatcher` are provided by a combination of:
