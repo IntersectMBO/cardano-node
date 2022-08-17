@@ -1,7 +1,9 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+
 
 
 module Cardano.Logging.ConfigurationParser
@@ -17,7 +19,7 @@ import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as BS
 import           Data.Functor
 import           Data.List (foldl')
-import           Data.Maybe (fromMaybe)
+import           Data.Maybe (fromMaybe, isJust)
 import qualified Data.Map as Map
 import           Data.Text (Text, split)
 import           Data.Yaml
@@ -50,9 +52,58 @@ readConfigurationWithDefault fp defaultConf = do
     pure $ mergeWithDefault fileConf defaultConf
 
 
--- TODO Implement
 mergeWithDefault ::  TraceConfig -> TraceConfig -> TraceConfig
-mergeWithDefault fileConf _defaultConf = fileConf
+mergeWithDefault fileConf defaultConf =
+  TraceConfig
+    (mergeOptionsWithDefault (tcOptions fileConf) (tcOptions defaultConf))
+    (tcForwarder fileConf)
+    (if isJust (tcNodeName fileConf)
+        then tcNodeName fileConf
+        else tcNodeName defaultConf)
+    (if isJust (tcPeerFrequency fileConf)
+        then tcPeerFrequency fileConf
+        else tcPeerFrequency defaultConf)
+    (if isJust (tcResourceFrequency fileConf)
+        then tcResourceFrequency fileConf
+        else tcResourceFrequency defaultConf)
+
+mergeOptionsWithDefault ::
+     Map.Map Namespace [ConfigOption]
+  -> Map.Map Namespace [ConfigOption]
+  -> Map.Map Namespace [ConfigOption]
+mergeOptionsWithDefault fileOpts defaultOpts =
+    foldr mergeOptsNs defaultOpts (Map.toList fileOpts)
+  where
+    mergeOptsNs :: (Namespace,[ConfigOption]) -> Map.Map Namespace [ConfigOption] -> Map.Map Namespace [ConfigOption]
+    mergeOptsNs (ns,opts) into =
+      case Map.lookup ns into of
+        Nothing -> Map.insert ns opts into
+        Just currentOpts -> Map.insert ns (mergeOpts opts currentOpts) into
+
+    mergeOpts :: [ConfigOption] ->  [ConfigOption] -> [ConfigOption]
+    mergeOpts fromFile fromDefault = foldr mergeOpt fromDefault fromFile
+
+    mergeOpt :: ConfigOption -> [ConfigOption] ->  [ConfigOption]
+    mergeOpt (ConfSeverity severityF) configList =
+      ConfSeverity severityF : filter (\case
+                                            ConfSeverity _ -> False
+                                            _ -> True) configList
+    mergeOpt (ConfDetail detailLevel) configList =
+      ConfDetail detailLevel : filter (\case
+                                            ConfDetail _ -> False
+                                            _ -> True) configList
+    mergeOpt (ConfBackend backendConfig) configList =
+      ConfBackend backendConfig : filter (\case
+                                            ConfBackend _ -> False
+                                            _ -> True) configList
+    mergeOpt (ConfLimiter maxFrequency) configList =
+      if maxFrequency /= 0.0
+        then ConfLimiter maxFrequency : filter (\case
+                                            ConfLimiter _ -> False
+                                            _ -> True) configList
+        else filter (\case
+                      ConfLimiter _ -> False
+                      _ -> True) configList
 
 parseRepresentation :: ByteString -> Either ParseException TraceConfig
 parseRepresentation bs = transform (decodeEither' bs)
