@@ -48,12 +48,6 @@ TraceOptions:
   "":
     severity: Notice
 
-  "ErrorPolicy":
-    severity: Notice
-
-  "BlockFetchClient.CompletedBlockFetch":
-    maxFrequency: 0.0
-
 TraceOptionPeerFrequency: 3000
 
 TraceOptionResourceFrequency: 4000

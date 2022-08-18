@@ -62,6 +62,8 @@ defaultCardanoConfig = emptyTraceConfig {
          [ ConfLimiter 2.0])
     ,(["ChainDB", "CopyToImmutableDBEvent", "CopiedBlockToImmutableDB"],
          [ ConfLimiter 2.0])
+    ,(["ChainSync","Client","DownloadedHeader"],
+         [ ConfLimiter 2.0])
     ,(["BlockFetchClient", "CompletedBlockFetch"],
         [ ConfLimiter 2.0])
     ]
