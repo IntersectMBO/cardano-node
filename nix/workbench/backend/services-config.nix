@@ -89,6 +89,8 @@ with lib;
             sigKey         = "../genesis/utxo-keys/utxo1.skey";
             nodeConfigFile = "config.json";
             runScriptFile  = "run-script.json";
+            ## path to the socket of the locally running node.
+            localNodeSocketPath = "../node-0/node.socket";
           } // optionalAttrs useCabalRun {
             executable     = "cabal run exe:tx-generator --";
           });

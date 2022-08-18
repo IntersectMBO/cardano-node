@@ -38,9 +38,6 @@ let
               })
             nodeSpecs;
 
-          ## path to the socket of the locally running node.
-          localNodeSocketPath = "../node-0/node.socket";
-
           ## nodeConfig of the locally running node.
           localNodeConf = removeAttrs exemplarNode.serviceConfig.value ["executable"];
 
