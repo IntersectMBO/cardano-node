@@ -14,6 +14,8 @@ import           Prelude
 
 import           Cardano.Api as Api
 
+import Cardano.Benchmarking.Fifo as Fifo
+
 -- Outputs that are available for spending.
 -- When building a new TX they provide the TxIn parts.
 
@@ -26,13 +28,10 @@ data FundInEra era = FundInEra {
 
 newtype Fund = Fund {unFund :: InAnyCardanoEra FundInEra}
 
-type FundSet = [ Fund ]
+type FundSet = Fifo Fund
 
 type FundSource m = m (Either String [Fund])
 type FundToStore m = [Fund] -> m ()
-
-newtype SeqNumber = SeqNumber Int
-  deriving  (Show, Eq, Ord, Enum)
 
 getFundTxIn :: Fund -> TxIn
 getFundTxIn (Fund (InAnyCardanoEra _ a)) = _fundTxIn a
@@ -73,11 +72,11 @@ instance Ord Fund where
   compare a b = compare (getFundTxIn a) (getFundTxIn b)
 
 
-emptyFunds :: FundSet
-emptyFunds = [ ]
+emptyFundSet :: FundSet
+emptyFundSet = Fifo.emptyFifo
 
 insertFund :: FundSet -> Fund -> FundSet
-insertFund s f = f : s
+insertFund = Fifo.insert
 
 liftAnyEra :: ( forall era. IsCardanoEra era => f1 era -> f2 era ) -> InAnyCardanoEra f1 -> InAnyCardanoEra f2
 liftAnyEra f x = case x of

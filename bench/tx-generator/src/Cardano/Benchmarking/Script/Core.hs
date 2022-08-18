@@ -33,6 +33,7 @@ import           Ouroboros.Network.Protocol.LocalTxSubmission.Type (SubmitResult
 import           Cardano.Benchmarking.FundSet (FundInEra (..),
                    liftAnyEra)
 
+import qualified Cardano.Benchmarking.Fifo as Fifo
 import qualified Cardano.Benchmarking.FundSet as FundSet
 import           Cardano.Benchmarking.FundSet as FundSet (getFundTxIn)
 import           Cardano.Benchmarking.GeneratorTx as GeneratorTx (AsyncBenchmarkControl, TxGenError)
@@ -44,7 +45,6 @@ import           Cardano.Benchmarking.GeneratorTx.NodeToNode (ConnectClient,
 import           Cardano.Benchmarking.GeneratorTx.SizedMetadata (mkMetadata)
 import           Cardano.Benchmarking.GeneratorTx.Tx as Core (keyAddress, mkFee, txInModeCardano)
 
-import           Cardano.Benchmarking.ListBufferedSelector
 import           Cardano.Benchmarking.OuroborosImports as Core (LocalSubmitTx, SigningKeyFile,
                    makeLocalConnectInfo, protocolToCodecConfig)
 import           Cardano.Benchmarking.PlutusExample as PlutusExample
@@ -231,11 +231,17 @@ localSubmitTx tx = do
   submit <- getLocalSubmitTx
   ret <- liftIO $ submit tx
   case ret of
-    SubmitSuccess -> return ()
-    SubmitFail e -> traceDebug $ concat
-                        [ "local submit failed: " , show e , " (" , show tx , ")"]
-  return ret
+    SubmitSuccess -> return ret
+    SubmitFail e -> do
+      let msg = concat [ "local submit failed: " , show e , " (" , show tx , ")" ]
+      traceDebug msg
+      return ret      
+--      throwE $ ApiError msg
 
+-- TODO:
+-- It should be possible to exit the tx-generator with an exception and also get the log messages.
+-- Problem 1: When doing throwE $ ApiError msg logmessages get lost !
+-- Problem 2: Workbench restarts the tx-generator -> this may be the reason for loss of messages
 makeMetadata :: forall era. IsShelleyBasedEra era => ActionM (TxMetadataInEra era)
 makeMetadata = do
   payloadSize <- getUser TTxAdditionalSize
@@ -273,7 +279,7 @@ runBenchmarkInEra sourceWallet submitMode (ThreadName threadName) shape collater
   let walletRefDst = walletRefSrc
   metadata <- makeMetadata
 
-  fundSource <- liftIO (mkBufferedSource walletRefSrc (auxInputsPerTx shape))
+  let fundSource = walletSource walletRefSrc (auxInputsPerTx shape)
 
   collaterals <- selectCollateralFunds collateralWallet
 
@@ -311,7 +317,7 @@ selectCollateralFunds :: forall era. IsShelleyBasedEra era
 selectCollateralFunds Nothing = return (TxInsCollateralNone, [])
 selectCollateralFunds (Just walletName) = do
   cw <- getName walletName
-  collateralFunds <- liftIO ( askWalletRef cw walletFunds) >>= \case
+  collateralFunds <- liftIO ( askWalletRef cw Fifo.toList ) >>= \case
     [] -> throwE $ WalletError "selectCollateralFunds: emptylist"
     l -> return l
   case collateralSupportedInEra (cardanoEra @ era) of
@@ -428,7 +434,7 @@ createChangeGeneric sourceWallet submitMode createCoins addressMsg value count =
                   , " address: ", addressMsg
                   ]
   traceDebug msg
-  fundSource <- liftIO (mkBufferedSource walletRef 1)
+  let fundSource = walletSource walletRef 1
 
   forM_ chunks $ \coins -> do
     gen <- createCoins fundSource coins

@@ -80,7 +80,7 @@ addCollaterals src = do
     True -> do      
       tx_fee <- askNixOption _nix_tx_fee
       safeCollateral <- _safeCollateral <$> evilFeeMagic
-      collateralWallet <- newWallet "collaeral_wallet"
+      collateralWallet <- newWallet "collateral_wallet"
       emit $ CreateChange era src src LocalSocket (PayToAddr $ KeyName "pass-partout") (safeCollateral + tx_fee) 1
       emit $ CreateChange era src collateralWallet LocalSocket (PayToCollateral $ KeyName "pass-partout") safeCollateral 1
       return $ Just collateralWallet

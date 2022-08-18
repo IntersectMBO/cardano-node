@@ -13,53 +13,45 @@ import           Control.Concurrent.MVar
 import           Cardano.Api
 
 import           Cardano.Benchmarking.FundSet as FundSet
+import           Cardano.Benchmarking.Fifo as Fifo
 import           Cardano.Benchmarking.Types (NumberOfTxs (..))
 import           Cardano.Api.Shelley (ProtocolParameters, ReferenceScript(..))
-type WalletRef = MVar Wallet
+
+-- All the actual functionality of Wallet / WalletRef has been removed
+-- and WalletRef has been stripped down to MVar FundSet.
+-- The implementation of Wallet has become trivial.
+-- Todo: Remove trivial wrapper functions.
+
+type WalletRef = MVar FundSet
 
 type TxGenerator era = [Fund] -> [TxOut CtxTx era] -> Either String (Tx era, TxId)
 
 type ToUTxO era = Lovelace -> (TxOut CtxTx era, TxIx -> TxId -> Fund)
 
+--todo: inline inToOut :: [Lovelace] -> [Lovelace] and FundToStore
 type ToUTxOList era = [Lovelace] -> ([TxOut CtxTx era], TxId -> [Fund])
 -- 'ToUTxOList era' is more powerful than '[ ToUTxO era ]' but
 -- '[ ToUTxO era ]` is easier to construct.
 
-data Wallet = Wallet {
-    walletSeqNumber :: !SeqNumber
-  , walletFunds :: !FundSet
-  }
+initWallet :: IO WalletRef
+initWallet = newMVar emptyFundSet
 
-initWallet :: IO (MVar Wallet)
-initWallet = newMVar $ Wallet {
-    walletSeqNumber = SeqNumber 1
-  , walletFunds = emptyFunds
-  }
-
-askWalletRef :: WalletRef -> (Wallet -> a) -> IO a
+askWalletRef :: WalletRef -> (FundSet -> a) -> IO a
 askWalletRef r f = do
   w <- readMVar r
   return $ f w
 
-modifyWalletRef :: WalletRef -> (Wallet -> IO (Wallet, a)) -> IO a
-modifyWalletRef = modifyMVar
-
-modifyWalletRefEither :: WalletRef -> (Wallet -> IO (Either err (Wallet,a))) -> IO (Either err a)
-modifyWalletRefEither ref action
-  = modifyMVar ref $ \w -> action w >>= \case
-     Right (newWallet, res) -> return (newWallet, Right res)
-     Left err -> return (w, Left err)
-
 walletRefInsertFund :: WalletRef -> Fund -> IO ()
-walletRefInsertFund ref fund = modifyMVar_  ref $ \w -> return $ walletInsertFund fund w
-
-walletInsertFund :: Fund -> Wallet -> Wallet
-walletInsertFund f w
-  = w { walletFunds = FundSet.insertFund (walletFunds w) f }
+walletRefInsertFund ref fund = modifyMVar_  ref $ \w -> return $ FundSet.insertFund w fund
 
 mkWalletFundStore :: WalletRef -> FundToStore IO
-mkWalletFundStore walletRef funds = modifyWalletRef walletRef
-  $ \wallet -> return (foldl (flip walletInsertFund) wallet funds, ())
+mkWalletFundStore walletRef funds = modifyMVar_  walletRef
+  $ \wallet -> return (foldl FundSet.insertFund wallet funds)
+
+walletSource :: WalletRef -> Int -> FundSource IO
+walletSource ref munch = modifyMVar ref $ \fifo -> return $ case Fifo.removeN munch fifo of
+  Nothing -> (fifo, Left "WalletSource: out of funds")
+  Just (newFifo, funds) -> (newFifo, Right funds) 
 
 makeToUTxOList :: [ ToUTxO era ] -> ToUTxOList era
 makeToUTxOList fkts values 
@@ -71,12 +63,13 @@ makeToUTxOList fkts values
          in  (o, f idx) 
 
 --TODO use Error monad
+--TODO need to break this up
 sourceToStoreTransaction ::
      TxGenerator era
-  -> FundSource IO
-  -> ([Lovelace] -> [Lovelace])
+  -> FundSource IO         
+  -> ([Lovelace] -> [Lovelace]) --inline to ToUTxOList
   -> ToUTxOList era
-  -> FundToStore IO
+  -> FundToStore IO                --inline to ToUTxOList
   -> IO (Either String (Tx era))
 sourceToStoreTransaction txGenerator fundSource inToOut mkTxOut fundToStore = do
   fundSource >>= \case
