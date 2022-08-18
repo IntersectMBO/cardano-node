@@ -31,6 +31,7 @@ module Cardano.Node.Tracing.Tracers.Consensus
   , ClientMetrics(..)
   , initialClientMetrics
   , calculateBlockFetchClientMetrics
+  , docBlockFetchClientMetrics
 
   , severityBlockFetchServer
   , namesForBlockFetchServer
@@ -277,7 +278,7 @@ instance ConvertRawHash blk
                <> [ "risingEdge" .= True | RisingEdge <- [enclosing] ]
 
   asMetrics (TraceChainSyncServerUpdate _tip (AddBlock _pt) _blocking FallingEdge) =
-      [CounterM "cardano.node.chainSync.rollForward" Nothing]
+      [CounterM "ChainSync.HeadersServed.Falling" Nothing]
   asMetrics _ = []
 
 
@@ -287,7 +288,8 @@ docChainSyncServerEventHeader :: Documented (TraceChainSyncServerEvent blk)
 docChainSyncServerEventHeader = Documented [
     DocMsg
       ["Update"]
-      [("ChainSync.HeadersServed", "A counter triggered only on header event")]
+      [("ChainSync.HeadersServed", "A counter triggered on any header event")
+      ,("ChainSync.HeadersServed.Falling", "A counter triggered only on header event with falling edge")]
       "A server read has occurred, either for an add block or a rollback"
   ]
 
@@ -417,21 +419,21 @@ instance LogFormatting ClientMetrics where
         let  size = Pq.size cmSlotMap
              msgs =
                [ DoubleM
-                    "cardano.node.metrics.blockfetchclient.blockdelay.s"
+                    "Blockfetch.Client.Blockdelay"
                     cmDelay
                , IntM
-                    "cardano.node.metrics.blockfetchclient.blocksize"
+                    "Blockfetch.Client.Blocksize"
                     (fromIntegral cmBlockSize)
-               , DoubleM "cardano.node.metrics.blockfetchclient.blockdelay.cdfOne"
+               , DoubleM "Blockfetch.Client.Blockdelay.cdfOne"
                     (fromIntegral (counter cmCdf1sVar) / fromIntegral size)
-               , DoubleM "cardano.node.metrics.blockfetchclient.blockdelay.cdfThree"
+               , DoubleM "Blockfetch.Client.Blockdelay.cdfThree"
                     (fromIntegral (counter cmCdf3sVar) / fromIntegral size)
-               , DoubleM "cardano.node.metrics.blockfetchclient.blockdelay.cdfFive"
+               , DoubleM "Blockfetch.Client.Blockdelay.cdfFive"
                     (fromIntegral (counter cmCdf5sVar) / fromIntegral size)
                ]
         in if cmDelay > 5
              then
-               CounterM "cardano.node.metrics.blockfetchclient.lateblocks" Nothing
+               CounterM "Blockfetch.Client.Lateblocks" Nothing
                  : msgs
              else msgs
       else []
@@ -507,6 +509,19 @@ calculateBlockFetchClientMetrics cm@ClientMetrics {..} _lc
                                       , cmSlotMap   = slotMap'}
 
 calculateBlockFetchClientMetrics cm _lc _ = pure cm
+
+docBlockFetchClientMetrics :: Documented (BlockFetch.TraceLabelPeer peer (BlockFetch.TraceFetchClientState header))
+docBlockFetchClientMetrics = Documented [
+    DocMsg
+      ["ClientMetrics"]
+      [ ("Blockfetch.Client.Blockdelay", "")
+      , ("Blockfetch.Client.Blocksize", "")
+      , ("Blockfetch.Client.Blockdelay.cdfOne", "")
+      , ("Blockfetch.Client.Blockdelay.cdfThree", "")
+      , ("Blockfetch.Client.Blockdelay.cdfFive", "")
+      ]
+      ""
+    ]
 
 severityBlockFetchClient ::
      BlockFetch.TraceLabelPeer peer (BlockFetch.TraceFetchClientState header)
@@ -1298,7 +1313,7 @@ instance ( tx ~ GenTx blk
         <> ": " <> renderHeaderHash (Proxy @blk) (blockHash blk)
 
   asMetrics (TraceForgeStateUpdateError slot reason) =
-    IntM "cardano.node.forgeStateUpdateError" (fromIntegral $ unSlotNo slot) :
+    IntM "Forge.StateUpdateError" (fromIntegral $ unSlotNo slot) :
       (case getKESInfo (Proxy @blk) reason of
         Nothing -> []
         Just kesInfo ->
