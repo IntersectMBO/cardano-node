@@ -1,16 +1,19 @@
-{ profile, nodeSpec }:
+{ nodeSpec
+, tracer
+}:
 {
   UseTraceDispatcher   = true;
 
   TraceOptions  = {
-    ""                            = { severity = "Notice";
-                                      backends = [
-                                        "Stdout MachineFormat"
-                                        "EKGBackend"
-                                      ] ++ (if !profile.node.tracer then [] else
-                                      [
-                                        "Forwarder"
-                                      ]);
-                                    };
+    "" =
+      { severity = "Notice";
+        backends = [
+          "Stdout MachineFormat"
+          "EKGBackend"
+        ] ++ (if !tracer then [] else
+          [
+            "Forwarder"
+          ]);
+      };
   };
 }
