@@ -29,7 +29,7 @@ main = toplevelExceptionHandler $ do
     cmd <- Opt.customExecParser p opts
 
     case cmd of
-      RunCmd args -> runRunCommand args
+      RunCmd args -> runNode args
       TraceDocumentation tdc -> runTraceDocumentationCmd tdc
       VersionCmd  -> runVersionCommand
 
@@ -94,9 +94,6 @@ runVersionCommand =
   where
     renderVersion = Text.pack . showVersion
 
-
-runRunCommand :: PartialNodeConfiguration -> IO ()
-runRunCommand pnc = liftIO $ runNode pnc
 
 command' :: String -> String -> Parser a -> Mod CommandFields a
 command' c descr p =
