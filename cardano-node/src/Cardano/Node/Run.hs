@@ -451,8 +451,7 @@ handleSimpleNode runP p2pMode tracers nc onKernel = do
               )
               Nothing
 #endif
-        eitherTopology <- TopologyNonP2P.readTopologyFile nc
-        nt <- either (\err -> panic $ "Cardano.Node.Run.handleSimpleNodeNonP2P.readTopologyFile: " <> err) pure eitherTopology
+        nt <- TopologyNonP2P.readTopologyFileOrError nc
         let (ipProducerAddrs, dnsProducerAddrs) = producerAddressesNonP2P nt
 
             dnsProducers :: [DnsSubscriptionTarget]
