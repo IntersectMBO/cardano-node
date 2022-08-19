@@ -21,7 +21,7 @@ action a = case a of
   AddFund era wallet txIn lovelace keyName -> addFund era wallet txIn lovelace keyName
   Delay t -> delay t
   ImportGenesisFund era wallet submitMode genesisKey fundKey -> importGenesisFund era wallet submitMode genesisKey fundKey
-  CreateChange era sourceWallet dstWallet payMode submitMode value count -> createChange era sourceWallet dstWallet payMode submitMode value count
+  CreateChange era sourceWallet payMode changeMode submitMode value count -> createChange era sourceWallet payMode changeMode submitMode value count
   RunBenchmark era sourceWallet submitMode thread auxArgs collateralWallet tps
     -> runBenchmark era sourceWallet submitMode thread auxArgs collateralWallet tps
   WaitBenchmark thread -> waitBenchmark thread

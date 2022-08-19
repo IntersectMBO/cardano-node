@@ -2,7 +2,6 @@
 {-# Language DataKinds #-}
 {-# Language FlexibleInstances #-}
 {-# Language GADTs #-}
-{-# Language GeneralizedNewtypeDeriving #-}
 {-# Language MultiParamTypeClasses #-}
 {-# Language RankNTypes #-}
 {-# Language TypeApplications #-}
@@ -31,7 +30,8 @@ newtype Fund = Fund {unFund :: InAnyCardanoEra FundInEra}
 type FundSet = Fifo Fund
 
 type FundSource m = m (Either String [Fund])
-type FundToStore m = [Fund] -> m ()
+type FundToStore m = Fund -> m ()
+type FundToStoreList m = [Fund] -> m ()
 
 getFundTxIn :: Fund -> TxIn
 getFundTxIn (Fund (InAnyCardanoEra _ a)) = _fundTxIn a
@@ -70,7 +70,6 @@ instance Eq Fund where
 
 instance Ord Fund where
   compare a b = compare (getFundTxIn a) (getFundTxIn b)
-
 
 emptyFundSet :: FundSet
 emptyFundSet = Fifo.emptyFifo

@@ -9,6 +9,7 @@ data Fifo a = Fifo ![a] ![a]
 emptyFifo :: Fifo a
 emptyFifo = Fifo [] []
 
+-- Warning : bad complexity when used as a persistent data structure.
 toList :: Fifo a -> [a]
 toList (Fifo x y) = x ++ reverse y
 

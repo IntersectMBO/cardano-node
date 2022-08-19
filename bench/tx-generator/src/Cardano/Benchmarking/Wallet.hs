@@ -27,11 +27,20 @@ type WalletRef = MVar FundSet
 type TxGenerator era = [Fund] -> [TxOut CtxTx era] -> Either String (Tx era, TxId)
 
 type ToUTxO era = Lovelace -> (TxOut CtxTx era, TxIx -> TxId -> Fund)
+type ToUTxOList era split = split -> ([TxOut CtxTx era], TxId -> [Fund])
 
---todo: inline inToOut :: [Lovelace] -> [Lovelace] and FundToStore
-type ToUTxOList era = [Lovelace] -> ([TxOut CtxTx era], TxId -> [Fund])
+type CreateAndStore m era = Lovelace -> (TxOut CtxTx era, TxIx -> TxId -> m ())
+
+type CreateAndStoreList m era split = split -> ([TxOut CtxTx era], TxId -> m ())
+
 -- 'ToUTxOList era' is more powerful than '[ ToUTxO era ]' but
 -- '[ ToUTxO era ]` is easier to construct.
+
+createAndStore :: ToUTxO era -> (Fund -> m ()) -> CreateAndStore m era
+createAndStore create store lovelace = (utxo, toStore)
+  where
+    (utxo, mkFund) = create lovelace
+    toStore txIx txId = store $ mkFund txIx txId
 
 initWallet :: IO WalletRef
 initWallet = newMVar emptyFundSet
@@ -44,18 +53,40 @@ askWalletRef r f = do
 walletRefInsertFund :: WalletRef -> Fund -> IO ()
 walletRefInsertFund ref fund = modifyMVar_  ref $ \w -> return $ FundSet.insertFund w fund
 
-mkWalletFundStore :: WalletRef -> FundToStore IO
-mkWalletFundStore walletRef funds = modifyMVar_  walletRef
+mkWalletFundStoreList :: WalletRef -> FundToStoreList IO
+mkWalletFundStoreList walletRef funds = modifyMVar_  walletRef
   $ \wallet -> return (foldl FundSet.insertFund wallet funds)
+
+mkWalletFundStore :: WalletRef -> FundToStore IO
+mkWalletFundStore walletRef fund = modifyMVar_  walletRef
+  $ \wallet -> return $ FundSet.insertFund wallet fund
 
 walletSource :: WalletRef -> Int -> FundSource IO
 walletSource ref munch = modifyMVar ref $ \fifo -> return $ case Fifo.removeN munch fifo of
   Nothing -> (fifo, Left "WalletSource: out of funds")
   Just (newFifo, funds) -> (newFifo, Right funds) 
 
-makeToUTxOList :: [ ToUTxO era ] -> ToUTxOList era
+makeToUTxOList :: [ ToUTxO era ] -> ToUTxOList era [ Lovelace ]
 makeToUTxOList fkts values 
   = (outs, \txId -> map (\f -> f txId) fs)
+  where
+    (outs, fs) =unzip $ map worker $ zip3 fkts values [TxIx 0 ..]
+    worker (toUTxO, value, idx)
+      = let (o, f ) = toUTxO value
+         in  (o, f idx) 
+
+data PayWithChange
+  = PayExact [Lovelace]
+  | PayWithChange Lovelace [Lovelace]
+  
+mangleWithChange :: Monad m => CreateAndStore m era -> CreateAndStore m era -> CreateAndStoreList m era PayWithChange
+mangleWithChange mkChange mkPayment outs = case outs of
+  PayExact l -> mangle (repeat mkPayment) l
+  PayWithChange change payments -> mangle (mkChange : repeat mkPayment) (change : payments)
+
+mangle :: Monad m => [ CreateAndStore m era ] -> CreateAndStoreList m era [ Lovelace ]
+mangle fkts values 
+  = (outs, \txId -> mapM_ (\f -> f txId) fs)
   where
     (outs, fs) =unzip $ map worker $ zip3 fkts values [TxIx 0 ..]
     worker (toUTxO, value, idx)
@@ -67,9 +98,9 @@ makeToUTxOList fkts values
 sourceToStoreTransaction ::
      TxGenerator era
   -> FundSource IO         
-  -> ([Lovelace] -> [Lovelace]) --inline to ToUTxOList
-  -> ToUTxOList era
-  -> FundToStore IO                --inline to ToUTxOList
+  -> ([Lovelace] -> split)
+  -> ToUTxOList era split
+  -> FundToStoreList IO                --inline to ToUTxOList
   -> IO (Either String (Tx era))
 sourceToStoreTransaction txGenerator fundSource inToOut mkTxOut fundToStore = do
   fundSource >>= \case
@@ -86,10 +117,38 @@ sourceToStoreTransaction txGenerator fundSource inToOut mkTxOut fundToStore = do
           fundToStore $ toFunds txId
           return $ Right tx
 
+sourceToStoreTransactionNew ::
+     TxGenerator era
+  -> FundSource IO         
+  -> ([Lovelace] -> split)
+  -> CreateAndStoreList IO era split
+  -> IO (Either String (Tx era))
+sourceToStoreTransactionNew txGenerator fundSource valueSplitter toStore = do
+  fundSource >>= \case
+    Left err -> return $ Left err
+    Right inputFunds -> work inputFunds
+ where
+  work inputFunds = do
+    let
+      split = valueSplitter $ map getFundLovelace inputFunds
+      (outputs, storeAction) = toStore split
+    case txGenerator inputFunds outputs of
+        Left err -> return $ Left err
+        Right (tx, txId) -> do
+          storeAction txId
+          return $ Right tx
+
 includeChange :: Lovelace -> [Lovelace] -> [Lovelace] -> [Lovelace]
 includeChange fee spend have = case compare changeValue 0 of
   GT -> changeValue : spend
   EQ -> spend
+  LT -> error "genTX: Bad transaction: insufficient funds"
+  where changeValue = sum have - sum spend - fee
+
+includeChangeNew :: Lovelace -> [Lovelace] -> [Lovelace] -> PayWithChange
+includeChangeNew fee spend have = case compare changeValue 0 of
+  GT -> PayWithChange changeValue spend
+  EQ -> PayExact spend
   LT -> error "genTX: Bad transaction: insufficient funds"
   where changeValue = sum have - sum spend - fee
 
@@ -195,26 +254,23 @@ data WalletStep era
   | Error String
 
 -- TODO:
--- use explicit tx- counter for each walletscript
--- Do not rely on global walletSeqNum
+-- Define generator for a single transaction and define combinator for
+-- repeat and sequence.
+
+
 benchmarkWalletScript :: forall era .
      IsShelleyBasedEra era
-  => WalletRef
-  -> TxGenerator era
+  => IO (Either String (Tx era)) -- make polymorphic
   -> NumberOfTxs
-  -> FundSource IO
-  -> ([Lovelace] -> [Lovelace])
-  -> [ToUTxO era]
-  -> FundToStore IO
   -> WalletScript era
-benchmarkWalletScript wRef txGenerator totalCount fundSource inOut toUTxO fundToStore
+benchmarkWalletScript sourceToStore totalCount
   = WalletScript $ walletStep totalCount
  where
   walletStep :: NumberOfTxs -> IO (WalletStep era)
   walletStep (NumberOfTxs 0) = return Done
-  walletStep count = sourceToStoreTransaction txGenerator fundSource inOut (makeToUTxOList toUTxO) fundToStore >>= \case
+  walletStep count = sourceToStore >>= \case
     Left err -> return $ Error err
-    Right tx -> return $ NextTx (benchmarkWalletScript wRef txGenerator (pred count) fundSource inOut toUTxO fundToStore) tx
+    Right tx -> return $ NextTx (benchmarkWalletScript sourceToStore (pred count)) tx
 
 limitSteps ::
      NumberOfTxs

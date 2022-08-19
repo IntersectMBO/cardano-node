@@ -242,6 +242,7 @@ localSubmitTx tx = do
 -- It should be possible to exit the tx-generator with an exception and also get the log messages.
 -- Problem 1: When doing throwE $ ApiError msg logmessages get lost !
 -- Problem 2: Workbench restarts the tx-generator -> this may be the reason for loss of messages
+
 makeMetadata :: forall era. IsShelleyBasedEra era => ActionM (TxMetadataInEra era)
 makeMetadata = do
   payloadSize <- getUser TTxAdditionalSize
@@ -273,7 +274,7 @@ runBenchmarkInEra :: forall era. IsShelleyBasedEra era
 runBenchmarkInEra sourceWallet submitMode (ThreadName threadName) shape collateralWallet tps era = do
   tracers  <- get BenchTracers
   networkId <- getUser TNetworkId
-  fundKey <- getName $ KeyName "pass-partout" -- should be walletkey
+  fundKey <- getName $ KeyName "pass-partout" -- should be walletkey -- TODO: Remove magic
   protocolParameters <- getProtocolParameters
   walletRefSrc <- getName sourceWallet
   let walletRefDst = walletRefSrc
@@ -282,7 +283,6 @@ runBenchmarkInEra sourceWallet submitMode (ThreadName threadName) shape collater
   let fundSource = walletSource walletRefSrc (auxInputsPerTx shape)
 
   collaterals <- selectCollateralFunds collateralWallet
-
   let
     inToOut :: [Lovelace] -> [Lovelace]
     inToOut = FundSet.inputsToOutputsWithFee (auxFee shape) (auxOutputsPerTx shape)
@@ -290,14 +290,15 @@ runBenchmarkInEra sourceWallet submitMode (ThreadName threadName) shape collater
     txGenerator = genTx protocolParameters collaterals (mkFee (auxFee shape)) metadata
 
     toUTxO :: [ ToUTxO era ]
-    toUTxO = repeat $ Wallet.mkUTxOVariant networkId fundKey
+    toUTxO = repeat $ Wallet.mkUTxOVariant networkId fundKey -- TODO: make configurable
   
-    fundToStore = mkWalletFundStore walletRefDst
+    fundToStore = mkWalletFundStoreList walletRefDst
+
+    sourceToStore = sourceToStoreTransaction txGenerator fundSource inToOut (makeToUTxOList toUTxO) fundToStore
 
     walletScript :: WalletScript era
-    walletScript = benchmarkWalletScript walletRefSrc txGenerator (NumberOfTxs $ auxTxCount shape)
-                     fundSource inToOut toUTxO fundToStore
-
+    walletScript = benchmarkWalletScript sourceToStore (NumberOfTxs $ auxTxCount shape)
+  
   case submitMode of
     NodeToNode targetNodes -> do
       connectClient <- getConnectClient
@@ -364,51 +365,49 @@ importGenesisFund era wallet submitMode genesisKeyName destKey = do
 initWallet :: WalletName -> ActionM ()
 initWallet name = liftIO Wallet.initWallet >>= setName name
 
-createChange :: AnyCardanoEra -> WalletName -> WalletName -> SubmitMode -> PayMode -> Lovelace -> Int -> ActionM ()
-createChange era sourceWallet dstWallet submitMode payMode value count
-  = withEra era $ createChangeInEra sourceWallet dstWallet submitMode payMode value count
+createChange :: AnyCardanoEra -> WalletName -> SubmitMode -> PayMode -> PayMode -> Lovelace -> Int -> ActionM ()
+createChange era sourceWallet submitMode payMode changeMode value count
+  = withEra era $ createChangeInEra sourceWallet submitMode payMode changeMode value count
 
 createChangeInEra :: forall era. IsShelleyBasedEra era
   => WalletName
-  -> WalletName
   -> SubmitMode
   -> PayMode
+  -> PayMode  
   -> Lovelace
   -> Int
   -> AsType era
   -> ActionM ()
-createChangeInEra sourceWallet dstWallet submitMode payMode value count _era = do
-  walletRef <- getName dstWallet
+createChangeInEra sourceWallet submitMode payMode changeMode value count _era = do
   fee <- getUser TFee
   protocolParameters <- getProtocolParameters
   (toUTxO, addressMsg) <- interpretPayMode payMode
+  (toUTxOChange, _) <- interpretPayMode changeMode  
   let
     createCoins :: FundSet.FundSource IO -> [Lovelace] -> ActionM (Either String (TxInMode CardanoMode))
     createCoins fundSource coins = do
-      (tx :: Either String (Tx era)) <- liftIO $ sourceToStoreTransaction
+      (tx :: Either String (Tx era)) <- liftIO $ sourceToStoreTransactionNew
                                                   (genTx protocolParameters (TxInsCollateralNone, [])
                                                    (mkFee fee) TxMetadataNone )
-                                                  fundSource (Wallet.includeChange fee coins)
-                                                  (makeToUTxOList $ repeat toUTxO)
-                                                  (mkWalletFundStore walletRef)
+                                                  fundSource
+                                                  (Wallet.includeChangeNew fee coins)
+                                                  (mangleWithChange toUTxOChange toUTxO)
       return $ fmap txInModeCardano tx
   createChangeGeneric sourceWallet submitMode createCoins addressMsg value count
 
-interpretPayMode :: forall era. IsShelleyBasedEra era => PayMode -> ActionM (ToUTxO era, String)
+interpretPayMode :: forall era. IsShelleyBasedEra era => PayMode -> ActionM (CreateAndStore IO era, String)
 interpretPayMode payMode = do
   networkId <- getUser TNetworkId
   case payMode of
-    PayToAddr keyName -> do
+    PayToAddr keyName destWallet -> do
       fundKey <- getName keyName
-      return ( Wallet.mkUTxOVariant networkId fundKey
+      walletRef <- getName destWallet
+      return ( createAndStore (Wallet.mkUTxOVariant networkId fundKey) (mkWalletFundStore walletRef)
              , Text.unpack $ serialiseAddress $ keyAddress @ era networkId fundKey)
-    PayToCollateral keyName -> do
-      fundKey <- getName keyName
-      return ( Wallet.mkUTxOVariant networkId fundKey
-             , Text.unpack $ serialiseAddress $ keyAddress @ era networkId fundKey)
-    PayToScript scriptSpec -> do
+    PayToScript scriptSpec destWallet -> do
+      walletRef <- getName destWallet      
       (witness, script, scriptData, _scriptFee) <- makePlutusContext scriptSpec
-      return ( mkUTxOScript networkId (script, scriptData) witness
+      return ( createAndStore (mkUTxOScript networkId (script, scriptData) witness) (mkWalletFundStore walletRef)
                , Text.unpack $ serialiseAddress $ makeShelleyAddress networkId (PaymentCredentialByScript $ hashScript script) NoStakeAddress )
   
 createChangeGeneric ::
