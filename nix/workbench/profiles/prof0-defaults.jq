@@ -77,20 +77,7 @@ def era_defaults($era):
     , tracing_backend:                "trace-dispatcher"  ## or "iohk-monitoring"
     , tracer:                         true
     , verbatim:
-      { EnableP2P:                       false
-
-      , MempoolCapacityBytesOverride:    "NoOverride"
-      , ProtocolIdleTimeout:             5
-      , TimeWaitTimeout:                 60
-      , AcceptedConnectionsLimit:
-        { hardLimit:                     512
-        , softLimit:                     384
-        , delay:                         5
-        }
-      , TargetNumberOfRootPeers:         100
-      , TargetNumberOfKnownPeers:        100
-      , TargetNumberOfEstablishedPeers:  50
-      , TargetNumberOfActivePeers:       20
+      {
       }
     }
 
