@@ -11,6 +11,7 @@ import           Prelude
 
 import           Data.Aeson (FromJSON, ToJSON)
 import           Data.Map (Map)
+import           Data.Monoid (Last (..), getLast)
 import           Data.Text (Text, pack)
 import           Data.Time.Clock (NominalDiffTime, UTCTime)
 import           Data.Version (showVersion)
@@ -45,8 +46,9 @@ import           Ouroboros.Network.Subscription.Ip (IPSubscriptionTarget (..))
 
 import           Cardano.Api.Protocol.Types (BlockType (..), protocolInfo)
 import           Cardano.Logging
+import           Cardano.Node.Configuration.POM (NodeConfiguration (..), ncProtocol)
 import           Cardano.Node.Configuration.Socket
-import           Cardano.Node.Protocol.Types (Protocol (..), SomeConsensusProtocol (..))
+import           Cardano.Node.Protocol.Types (SomeConsensusProtocol (..))
 
 import           Cardano.Git.Rev (gitRev)
 import           Paths_cardano_node (version)
@@ -166,16 +168,16 @@ docNodeInfoTraceEvent = Documented [
 
 -- | Prepare basic info about the node. This info will be sent to 'cardano-tracer'.
 prepareNodeInfo
-  :: Protocol
+  :: NodeConfiguration
   -> SomeConsensusProtocol
   -> TraceConfig
   -> UTCTime
   -> IO NodeInfo
-prepareNodeInfo ptcl (SomeConsensusProtocol whichP pForInfo) tc nodeStartTime = do
+prepareNodeInfo nc (SomeConsensusProtocol whichP pForInfo) tc nodeStartTime = do
   nodeName <- prepareNodeName
   return $ NodeInfo
     { niName            = nodeName
-    , niProtocol        = pack . show $ ptcl
+    , niProtocol        = pack . show . ncProtocol $ nc
     , niVersion         = pack . showVersion $ version
     , niCommit          = gitRev
     , niStartTime       = nodeStartTime
@@ -208,7 +210,15 @@ prepareNodeInfo ptcl (SomeConsensusProtocol whichP pForInfo) tc nodeStartTime = 
   prepareNodeName =
     case tcNodeName tc of
       Just aName -> return aName
-      Nothing    -> pack <$> getHostName
+      Nothing -> do
+        -- The user didn't specify node's name in the configuration.
+        -- In this case we should form node's name as "host:port", where 'host' and 'port'
+        -- are taken from '--host-addr' and '--port' CLI-parameters correspondingly.
+        let SocketConfig hostIPv4 hostIPv6 port _ = ncSocketConfig nc
+        hostName <- case (show <$> hostIPv6) <> (show <$> hostIPv4) of
+          Last (Just addr) -> return addr
+          Last  Nothing    -> getHostName
+        return . pack $ hostName <> maybe "" ((":" ++) . show) (getLast port)
 
 -- | This information is taken from 'BasicInfoShelleyBased'. It is required for
 --   'cardano-tracer' service (particularly, for RTView).

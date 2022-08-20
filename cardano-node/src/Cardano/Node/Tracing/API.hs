@@ -30,7 +30,7 @@ import           Ouroboros.Network.NodeToClient (withIOManager)
 import           Ouroboros.Network.NodeToNode (RemoteAddress)
 
 import           Cardano.Node.Configuration.NodeAddress (SocketPath (..))
-import           Cardano.Node.Configuration.POM (NodeConfiguration (..), ncProtocol)
+import           Cardano.Node.Configuration.POM (NodeConfiguration (..))
 import           Cardano.Node.Protocol.Types
 import           Cardano.Node.Queries
 import           Cardano.Node.Startup
@@ -76,8 +76,7 @@ initTraceDispatcher nc p networkMagic nodeKernel p2pMode = do
     (fromMaybe 2000 (tcPeerFrequency trConfig))
 
   now <- getCurrentTime
-  prepareNodeInfo (ncProtocol nc) p trConfig now
-    >>= traceWith (nodeInfoTracer tracers)
+  prepareNodeInfo nc p trConfig now >>= traceWith (nodeInfoTracer tracers)
 
   pure tracers
  where
