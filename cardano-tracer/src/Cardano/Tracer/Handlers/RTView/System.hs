@@ -5,6 +5,7 @@ module Cardano.Tracer.Handlers.RTView.System
   ( getPathToBackupDir
   , getPathToChartColorsDir
   , getPathToChartsConfig
+  , getPathToLogsLiveViewFontConfig
   , getPathToThemeConfig
   , getPathsToNotificationsSettings
   , getPathsToSSLCerts
@@ -34,9 +35,12 @@ getProcessId =
      return $ fromIntegral pid
 #endif
 
-getPathToChartsConfig, getPathToThemeConfig :: TracerEnv -> IO FilePath
+getPathToChartsConfig
+  , getPathToThemeConfig
+  , getPathToLogsLiveViewFontConfig :: TracerEnv -> IO FilePath
 getPathToChartsConfig = getPathToConfig "charts"
 getPathToThemeConfig  = getPathToConfig "theme"
+getPathToLogsLiveViewFontConfig = getPathToConfig "llvFontSize"
 
 getPathToConfig :: FilePath -> TracerEnv -> IO FilePath
 getPathToConfig configName TracerEnv{teRTViewStateDir} = do

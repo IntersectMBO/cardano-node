@@ -16,9 +16,7 @@ import           System.FilePath ((</>))
 
 import           Cardano.Tracer.Configuration
 import           Cardano.Tracer.Environment
-import           Cardano.Tracer.Handlers.RTView.State.Errors
 import           Cardano.Tracer.Handlers.RTView.UI.HTML.Node.EKG
-import           Cardano.Tracer.Handlers.RTView.UI.HTML.Node.Errors
 import           Cardano.Tracer.Handlers.RTView.UI.HTML.Node.Peers
 import           Cardano.Tracer.Handlers.RTView.UI.Img.Icons
 import           Cardano.Tracer.Handlers.RTView.UI.JS.Utils
@@ -30,11 +28,9 @@ import           Cardano.Tracer.Utils
 addNodeColumn
   :: TracerEnv
   -> NonEmpty LoggingParams
-  -> Errors
-  -> UI.Timer
   -> NodeId
   -> UI ()
-addNodeColumn tracerEnv loggingConfig nodesErrors updateErrorsTimer nodeId@(NodeId anId) = do
+addNodeColumn tracerEnv loggingConfig nodeId@(NodeId anId) = do
   nodeName <- liftIO $ askNodeName tracerEnv nodeId
 
   let id' = unpack anId
@@ -54,13 +50,6 @@ addNodeColumn tracerEnv loggingConfig nodesErrors updateErrorsTimer nodeId@(Node
                                   # set UI.enabled False
                                   # set text "Details"
   on UI.click peersDetailsButton . const $ fadeInModal peersTable
-
-  errorsTable <- mkErrorsTable tracerEnv nodeId nodesErrors updateErrorsTimer
-  errorsDetailsButton <- UI.button ## (id' <> "__node-errors-details-button")
-                                   #. "button is-danger"
-                                   # set UI.enabled False
-                                   # set text "Details"
-  on UI.click errorsDetailsButton . const $ fadeInModal errorsTable
 
   ekgMetricsWindow <- mkEKGMetricsWindow id'
   ekgMetricsButton <- UI.button ## (id' <> "__node-ekg-metrics-button")
@@ -94,12 +83,6 @@ addNodeColumn tracerEnv loggingConfig nodesErrors updateErrorsTimer nodeId@(Node
   addNodeCell "start-time" st
   addNodeCell "uptime" ut
   addNodeCell "logs" ls
-  --addNodeCell "chunk-validation" [ UI.span ## (id' <> "__node-chunk-validation")
-  --                                         # set text "—"
-  --                               ]
-  --addNodeCell "update-ledger-db" [ UI.span ## (id' <> "__node-update-ledger-db")
-  --                                         # set html "0&nbsp;%"
-  --                               ]
   addNodeCell "peers" [ UI.div #. "buttons has-addons" #+
                           [ UI.button ## (id' <> "__node-peers-num")
                                       #. "button is-static"
@@ -108,14 +91,6 @@ addNodeColumn tracerEnv loggingConfig nodesErrors updateErrorsTimer nodeId@(Node
                           ]
                       , element peersTable
                       ]
-  addNodeCell "errors" [ UI.div #. "buttons has-addons" #+
-                           [ UI.button ## (id' <> "__node-errors-num")
-                                       #. "button is-static"
-                                       # set text "0"
-                           , element errorsDetailsButton
-                           ]
-                       , element errorsTable
-                       ]
   addNodeCell "leadership" leadership
   addNodeCell "kes" kes
   addNodeCell "op-cert" opCert
