@@ -42,7 +42,7 @@ doRunCardanoTracer config rtViewStateDir protocolsBrake dpRequestors = do
   connectedNodes      <- initConnectedNodes
   connectedNodesNames <- initConnectedNodesNames
   acceptedMetrics <- initAcceptedMetrics
-  savedTO         <- initSavedTraceObjects
+  savedTO <- initSavedTraceObjects
 
   chainHistory     <- initBlockchainHistory
   resourcesHistory <- initResourcesHistory
