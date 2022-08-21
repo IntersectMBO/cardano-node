@@ -10,6 +10,7 @@ module Cardano.Node.Configuration.Topology
   , RemoteAddress(..)
   , nodeAddressToSockAddr
   , readTopologyFile
+  , readTopologyFileOrError
   , remoteAddressToNodeAddress
   )
 where
@@ -147,3 +148,10 @@ readTopologyFile nc = do
                     \If you specified the correct topology file \
                     \make sure that you correctly setup EnableP2P \
                     \configuration flag. " <> Text.pack err
+
+readTopologyFileOrError :: NodeConfiguration -> IO NetworkTopology
+readTopologyFileOrError nc =
+      readTopologyFile nc
+  >>= either (\err -> panic $ "Cardano.Node.Configuration.Topology.readTopologyFile: "
+                           <> err)
+             pure

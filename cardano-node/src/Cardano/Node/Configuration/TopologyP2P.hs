@@ -217,6 +217,6 @@ readTopologyFile nc = do
 readTopologyFileOrError :: NodeConfiguration -> IO NetworkTopology
 readTopologyFileOrError nc =
       readTopologyFile nc
-  >>= either (\err -> panic $ "Cardano.Node.Run.handleSimpleNodeP2P.readTopologyFile: "
+  >>= either (\err -> panic $ "Cardano.Node.Configuration.TopologyP2P.readTopologyFile: "
                            <> err)
              pure

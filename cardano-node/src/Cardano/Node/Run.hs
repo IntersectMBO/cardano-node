@@ -20,9 +20,8 @@ module Cardano.Node.Run
 
 import           Cardano.Prelude hiding (ByteString, STM, atomically, show, take, trace)
 import           Data.IP (toSockAddr)
-import           Prelude (String, error, id, show)
+import           Prelude (String, id, show)
 
-import qualified Control.Concurrent.Async as Async
 import           Control.Monad.Class.MonadSTM.Strict
 import           Control.Monad.Trans.Except.Extra (left)
 import           "contra-tracer" Control.Tracer
@@ -100,7 +99,6 @@ import           Cardano.Node.Protocol (mkConsensusProtocol)
 import           Cardano.Node.Protocol.Types
 import           Cardano.Node.Queries
 import           Cardano.Node.TraceConstraints (TraceConstraints)
-import           Cardano.Tracing.Peer
 import           Cardano.Tracing.Tracers
 
 {- HLINT ignore "Use fewer imports" -}
@@ -243,17 +241,16 @@ handleNodeWithTracers cmdPc nc p networkMagic runP = do
           getStartupInfo nc p fp
             >>= mapM_ (traceWith $ startupTracer tracers)
 
-          Async.withAsync (handlePeersListSimple (error "Implement Tracer IO [Peer blk]") nodeKernelData)
-              $ \_peerLoggingThread ->
-                -- We ignore peer logging thread if it dies, but it will be killed
-                -- when 'handleSimpleNode' terminates.
-                    handleSimpleNode runP p2pMode tracers nc
-                      (\nk -> do
-                          setNodeKernel nodeKernelData nk
-                          traceWith (nodeStateTracer tracers) NodeKernelOnline)
-                    `finally`
-                    forM_ eLoggingLayer
-                      shutdownLoggingLayer
+          -- We ignore peer logging thread if it dies, but it will be killed
+          -- when 'handleSimpleNode' terminates.
+          handleSimpleNode runP p2pMode tracers nc
+            (\nk -> do
+                setNodeKernel nodeKernelData nk
+                traceWith (nodeStateTracer tracers) NodeKernelOnline)
+            `finally` do
+              putStrLn ("MAIN THREAD FAILED" :: String)
+              forM_ eLoggingLayer
+                shutdownLoggingLayer
 
 -- | Currently, we trace only 'ShelleyBased'-info which will be asked
 --   by 'cardano-tracer' service as a datapoint. It can be extended in the future.
@@ -297,6 +294,8 @@ setupTrace loggingLayer = do
       hn0 <- pack <$> getHostName
       return $ take 8 $ fst $ breakOn "." hn0
 
+{-
+-- TODO: needs to be finished (issue #4362)
 handlePeersListSimple
   :: Trace IO Text
   -> NodeKernelData blk
@@ -304,6 +303,7 @@ handlePeersListSimple
 handlePeersListSimple tr nodeKern = forever $ do
   getCurrentPeers nodeKern >>= tracePeers tr
   threadDelay 2000000 -- 2 seconds.
+-}
 
 -- | Sets up a simple node, which will run the chain sync protocol and block
 -- fetch protocol, and, if core, will also look at the mempool when trying to
@@ -451,8 +451,7 @@ handleSimpleNode runP p2pMode tracers nc onKernel = do
               )
               Nothing
 #endif
-        eitherTopology <- TopologyNonP2P.readTopologyFile nc
-        nt <- either (\err -> panic $ "Cardano.Node.Run.handleSimpleNodeNonP2P.readTopologyFile: " <> err) pure eitherTopology
+        nt <- TopologyNonP2P.readTopologyFileOrError nc
         let (ipProducerAddrs, dnsProducerAddrs) = producerAddressesNonP2P nt
 
             dnsProducers :: [DnsSubscriptionTarget]
