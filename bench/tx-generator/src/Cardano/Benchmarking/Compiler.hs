@@ -48,8 +48,8 @@ compileToScript = do
   emit . StartProtocol =<< askNixOption getNodeConfigFile
   genesisWallet <- newWallet "genesis_wallet"
   importGenesisFunds genesisWallet
-  splitWallet <- splittingPhase genesisWallet
   collateralWallet <- addCollaterals genesisWallet
+  splitWallet <- splittingPhase genesisWallet
   benchmarkingPhase splitWallet collateralWallet
 
 initConstants :: Compiler ()
@@ -78,11 +78,13 @@ addCollaterals src = do
   isAnyPlutusMode >>= \case
     False -> return Nothing
     True -> do      
-      tx_fee <- askNixOption _nix_tx_fee
       safeCollateral <- _safeCollateral <$> evilFeeMagic
-      collateralWallet <- newWallet "collaeral_wallet"
-      emit $ CreateChange era src src LocalSocket (PayToAddr $ KeyName "pass-partout") (safeCollateral + tx_fee) 1
-      emit $ CreateChange era src collateralWallet LocalSocket (PayToCollateral $ KeyName "pass-partout") safeCollateral 1
+      collateralWallet <- newWallet "collateral_wallet"
+      emit $ CreateChange era src LocalSocket
+               (PayToAddr (KeyName "pass-partout") collateralWallet)
+               (PayToAddr (KeyName "pass-partout") src)
+               safeCollateral
+               1
       return $ Just collateralWallet
 
 splittingPhase :: SrcWallet -> Compiler DstWallet
@@ -99,7 +101,7 @@ splittingPhase srcWallet = do
  where
   createChange :: AnyCardanoEra -> SplitStep -> Compiler DstWallet
   createChange era (src, dst, value, count) = do
-     emit $ CreateChange era src dst LocalSocket (PayToAddr $ KeyName "pass-partout") value count
+     emit $ CreateChange era src LocalSocket (PayToAddr (KeyName "pass-partout") dst ) (PayToAddr  (KeyName "pass-partout") src) value count
      delay
      return dst
 
@@ -116,7 +118,7 @@ splittingPhase srcWallet = do
                      <*> (ScriptDataNumber <$> askNixOption _nix_plutusRedeemer)
                      <*> pure executionUnits
          ScriptSpec <$> askNixOption _nix_plutusScript <*> pure budget
-     emit $ CreateChange era src dst LocalSocket (PayToScript scriptSpec) value count
+     emit $ CreateChange era src LocalSocket (PayToScript scriptSpec dst) (PayToScript scriptSpec src) value count
      delay
      return dst
 

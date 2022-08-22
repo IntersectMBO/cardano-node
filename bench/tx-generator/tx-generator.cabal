@@ -27,6 +27,7 @@ library
   exposed-modules:
                        Cardano.Benchmarking.Command
                        Cardano.Benchmarking.Compiler                       
+                       Cardano.Benchmarking.Fifo
                        Cardano.Benchmarking.FundSet
                        Cardano.Benchmarking.GeneratorTx
                        Cardano.Benchmarking.GeneratorTx.Error
@@ -55,7 +56,6 @@ library
                        Cardano.Benchmarking.Types
                        Cardano.Benchmarking.Version
                        Cardano.Benchmarking.Wallet
-                       Cardano.Benchmarking.ListBufferedSelector
                        Cardano.Benchmarking.PlutusExample
 
   other-modules:       Paths_tx_generator
@@ -92,7 +92,6 @@ library
                      , generic-monoid
                      , ghc-prim
                      , io-classes
-                     , ixset-typed
                      , network
                      , network-mux
                      , optparse-applicative-fork

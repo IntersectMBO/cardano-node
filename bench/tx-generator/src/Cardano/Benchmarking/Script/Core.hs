@@ -30,9 +30,10 @@ import           Cardano.Api.Shelley (PlutusScriptOrReferenceInput (..), Protoco
                    protocolParamMaxTxExUnits, protocolParamPrices)
 import           Ouroboros.Network.Protocol.LocalTxSubmission.Type (SubmitResult (..))
 
-import           Cardano.Benchmarking.FundSet (FundInEra (..), Validity (..), Variant (..),
+import           Cardano.Benchmarking.FundSet (FundInEra (..),
                    liftAnyEra)
 
+import qualified Cardano.Benchmarking.Fifo as Fifo
 import qualified Cardano.Benchmarking.FundSet as FundSet
 import           Cardano.Benchmarking.FundSet as FundSet (getFundTxIn)
 import           Cardano.Benchmarking.GeneratorTx as GeneratorTx (AsyncBenchmarkControl, TxGenError)
@@ -44,7 +45,6 @@ import           Cardano.Benchmarking.GeneratorTx.NodeToNode (ConnectClient,
 import           Cardano.Benchmarking.GeneratorTx.SizedMetadata (mkMetadata)
 import           Cardano.Benchmarking.GeneratorTx.Tx as Core (keyAddress, mkFee, txInModeCardano)
 
-import           Cardano.Benchmarking.ListBufferedSelector
 import           Cardano.Benchmarking.OuroborosImports as Core (LocalSubmitTx, SigningKeyFile,
                    makeLocalConnectInfo, protocolToCodecConfig)
 import           Cardano.Benchmarking.PlutusExample as PlutusExample
@@ -89,17 +89,20 @@ readSigningKey name filePath =
     Left err -> liftTxGenError err
     Right key -> setName name key
 
-defineSigningKey :: KeyName -> TextEnvelope -> ActionM ()
-defineSigningKey name descr
-  = case deserialiseFromTextEnvelopeAnyOf types descr of
-    Right key -> setName name key
-    Left err -> throwE $ ApiError $ show err
+parseSigningKey :: TextEnvelope -> Either TextEnvelopeError (SigningKey PaymentKey)
+parseSigningKey = deserialiseFromTextEnvelopeAnyOf types
   where
     types :: [FromSomeType HasTextEnvelope (SigningKey PaymentKey)]
     types =
       [ FromSomeType (AsSigningKey AsGenesisUTxOKey) castSigningKey
       , FromSomeType (AsSigningKey AsPaymentKey) id
       ]
+
+defineSigningKey :: KeyName -> TextEnvelope -> ActionM ()
+defineSigningKey name descr
+  = case parseSigningKey descr of
+    Right key -> setName name key
+    Left err -> throwE $ ApiError $ show err
 
 addFund :: AnyCardanoEra -> WalletName -> TxIn -> Lovelace -> KeyName -> ActionM ()
 addFund era wallet txIn lovelace keyName = do
@@ -120,8 +123,6 @@ addFundToWallet wallet txIn outVal skey = do
          , _fundWitness = KeyWitness KeyWitnessForSpending
          , _fundVal = value
          , _fundSigningKey = Just skey
-         , _fundValidity = Confirmed
-         , _fundVariant = PlainOldFund
          }
 
 getLocalSubmitTx :: ActionM LocalSubmitTx
@@ -230,10 +231,17 @@ localSubmitTx tx = do
   submit <- getLocalSubmitTx
   ret <- liftIO $ submit tx
   case ret of
-    SubmitSuccess -> return ()
-    SubmitFail e -> traceDebug $ concat
-                        [ "local submit failed: " , show e , " (" , show tx , ")"]
-  return ret
+    SubmitSuccess -> return ret
+    SubmitFail e -> do
+      let msg = concat [ "local submit failed: " , show e , " (" , show tx , ")" ]
+      traceDebug msg
+      return ret      
+--      throwE $ ApiError msg
+
+-- TODO:
+-- It should be possible to exit the tx-generator with an exception and also get the log messages.
+-- Problem 1: When doing throwE $ ApiError msg logmessages get lost !
+-- Problem 2: Workbench restarts the tx-generator -> this may be the reason for loss of messages
 
 makeMetadata :: forall era. IsShelleyBasedEra era => ActionM (TxMetadataInEra era)
 makeMetadata = do
@@ -266,37 +274,31 @@ runBenchmarkInEra :: forall era. IsShelleyBasedEra era
 runBenchmarkInEra sourceWallet submitMode (ThreadName threadName) shape collateralWallet tps era = do
   tracers  <- get BenchTracers
   networkId <- getUser TNetworkId
-  fundKey <- getName $ KeyName "pass-partout" -- should be walletkey
+  fundKey <- getName $ KeyName "pass-partout" -- should be walletkey -- TODO: Remove magic
   protocolParameters <- getProtocolParameters
   walletRefSrc <- getName sourceWallet
   let walletRefDst = walletRefSrc
   metadata <- makeMetadata
 
-  fundSource <- liftIO (mkBufferedSource walletRefSrc
-                   (auxInputs shape)
-                   (auxMinValuePerUTxO shape)
-                   Nothing
-                   (auxInputsPerTx shape)
-                   ) >>= \case
-    Right a  -> return a
-    Left err -> throwE $ WalletError err
+  let fundSource = walletSource walletRefSrc (auxInputsPerTx shape)
 
   collaterals <- selectCollateralFunds collateralWallet
-
   let
     inToOut :: [Lovelace] -> [Lovelace]
     inToOut = FundSet.inputsToOutputsWithFee (auxFee shape) (auxOutputsPerTx shape)
 
     txGenerator = genTx protocolParameters collaterals (mkFee (auxFee shape)) metadata
 
-    toUTxO :: FundSet.Target -> FundSet.SeqNumber -> [ToUTxO era]
-    toUTxO target seqNumber = repeat $ Wallet.mkUTxOVariant PlainOldFund networkId fundKey (InFlight target seqNumber)
+    toUTxO :: [ ToUTxO era ]
+    toUTxO = repeat $ Wallet.mkUTxOVariant networkId fundKey -- TODO: make configurable
   
-    fundToStore = mkWalletFundStore walletRefDst
+    fundToStore = mkWalletFundStoreList walletRefDst
 
-    walletScript :: FundSet.Target -> WalletScript era
-    walletScript = benchmarkWalletScript walletRefSrc txGenerator (NumberOfTxs $ auxTxCount shape) (const fundSource) inToOut toUTxO fundToStore
+    sourceToStore = sourceToStoreTransaction txGenerator fundSource inToOut (makeToUTxOList toUTxO) fundToStore
 
+    walletScript :: WalletScript era
+    walletScript = benchmarkWalletScript sourceToStore (NumberOfTxs $ auxTxCount shape)
+  
   case submitMode of
     NodeToNode targetNodes -> do
       connectClient <- getConnectClient
@@ -308,7 +310,7 @@ runBenchmarkInEra sourceWallet submitMode (ThreadName threadName) shape collater
       case ret of
         Left err -> liftTxGenError err
         Right ctl -> setName (ThreadName threadName) ctl
-    _otherwise -> runWalletScriptInMode submitMode $ walletScript $ FundSet.Target "alternate-submit-mode"
+    _otherwise -> runWalletScriptInMode submitMode walletScript
 
 selectCollateralFunds :: forall era. IsShelleyBasedEra era
   => Maybe WalletName
@@ -316,9 +318,9 @@ selectCollateralFunds :: forall era. IsShelleyBasedEra era
 selectCollateralFunds Nothing = return (TxInsCollateralNone, [])
 selectCollateralFunds (Just walletName) = do
   cw <- getName walletName
-  collateralFunds <- liftIO ( askWalletRef cw (FundSet.selectCollateral . walletFunds)) >>= \case
-    Right c -> return c
-    Left err -> throwE $ WalletError err
+  collateralFunds <- liftIO ( askWalletRef cw Fifo.toList ) >>= \case
+    [] -> throwE $ WalletError "selectCollateralFunds: emptylist"
+    l -> return l
   case collateralSupportedInEra (cardanoEra @ era) of
       Nothing -> throwE $ WalletError $ "selectCollateralFunds: collateral: era not supported :" ++ show (cardanoEra @ era)
       Just p -> return (TxInsCollateral p $  map getFundTxIn collateralFunds, collateralFunds)
@@ -363,55 +365,55 @@ importGenesisFund era wallet submitMode genesisKeyName destKey = do
 initWallet :: WalletName -> ActionM ()
 initWallet name = liftIO Wallet.initWallet >>= setName name
 
-createChange :: AnyCardanoEra -> WalletName -> WalletName -> SubmitMode -> PayMode -> Lovelace -> Int -> ActionM ()
-createChange era sourceWallet dstWallet submitMode payMode value count
-  = withEra era $ createChangeInEra sourceWallet dstWallet submitMode payMode value count
+createChange :: AnyCardanoEra -> WalletName -> SubmitMode -> PayMode -> PayMode -> Lovelace -> Int -> ActionM ()
+createChange era sourceWallet submitMode payMode changeMode value count
+  = withEra era $ createChangeInEra sourceWallet submitMode payMode changeMode value count
 
 createChangeInEra :: forall era. IsShelleyBasedEra era
   => WalletName
-  -> WalletName
   -> SubmitMode
   -> PayMode
+  -> PayMode  
   -> Lovelace
   -> Int
   -> AsType era
   -> ActionM ()
-createChangeInEra sourceWallet dstWallet submitMode payMode value count _era = do
-  walletRef <- getName dstWallet
+createChangeInEra sourceWallet submitMode payMode changeMode value count _era = do
   fee <- getUser TFee
   protocolParameters <- getProtocolParameters
   (toUTxO, addressMsg) <- interpretPayMode payMode
+  (toUTxOChange, _) <- interpretPayMode changeMode  
   let
-    createCoins :: FundSet.FundSource -> [Lovelace] -> ActionM (Either String (TxInMode CardanoMode))
+    createCoins :: FundSet.FundSource IO -> [Lovelace] -> ActionM (Either String (TxInMode CardanoMode))
     createCoins fundSource coins = do
-      (tx :: Either String (Tx era)) <- liftIO $ sourceToStoreTransaction
+      (tx :: Either String (Tx era)) <- liftIO $ sourceToStoreTransactionNew
                                                   (genTx protocolParameters (TxInsCollateralNone, [])
                                                    (mkFee fee) TxMetadataNone )
-                                                  fundSource (Wallet.includeChange fee coins) (repeat toUTxO) (mkWalletFundStore walletRef)
+                                                  fundSource
+                                                  (Wallet.includeChangeNew fee coins)
+                                                  (mangleWithChange toUTxOChange toUTxO)
       return $ fmap txInModeCardano tx
   createChangeGeneric sourceWallet submitMode createCoins addressMsg value count
 
-interpretPayMode :: forall era. IsShelleyBasedEra era => PayMode -> ActionM (ToUTxO era, String)
+interpretPayMode :: forall era. IsShelleyBasedEra era => PayMode -> ActionM (CreateAndStore IO era, String)
 interpretPayMode payMode = do
   networkId <- getUser TNetworkId
   case payMode of
-    PayToAddr keyName -> do
+    PayToAddr keyName destWallet -> do
       fundKey <- getName keyName
-      return ( Wallet.mkUTxOVariant PlainOldFund networkId fundKey Confirmed
+      walletRef <- getName destWallet
+      return ( createAndStore (Wallet.mkUTxOVariant networkId fundKey) (mkWalletFundStore walletRef)
              , Text.unpack $ serialiseAddress $ keyAddress @ era networkId fundKey)
-    PayToCollateral keyName -> do
-      fundKey <- getName keyName
-      return ( Wallet.mkUTxOVariant CollateralFund networkId fundKey Confirmed
-             , Text.unpack $ serialiseAddress $ keyAddress @ era networkId fundKey)
-    PayToScript scriptSpec -> do
+    PayToScript scriptSpec destWallet -> do
+      walletRef <- getName destWallet      
       (witness, script, scriptData, _scriptFee) <- makePlutusContext scriptSpec
-      return ( mkUTxOScript networkId (script, scriptData) witness Confirmed
+      return ( createAndStore (mkUTxOScript networkId (script, scriptData) witness) (mkWalletFundStore walletRef)
                , Text.unpack $ serialiseAddress $ makeShelleyAddress networkId (PaymentCredentialByScript $ hashScript script) NoStakeAddress )
   
 createChangeGeneric ::
      WalletName
   -> SubmitMode
-  -> (FundSet.FundSource -> [Lovelace] -> ActionM (Either String (TxInMode CardanoMode)))
+  -> (FundSet.FundSource IO -> [Lovelace] -> ActionM (Either String (TxInMode CardanoMode)))
   -> String
   -> Lovelace
   -> Int
@@ -424,16 +426,14 @@ createChangeGeneric sourceWallet submitMode createCoins addressMsg value count =
     maxTxSize = 30
     chunks = chunkList maxTxSize coinsList
     txCount = length chunks
-    txValue = fromIntegral (min maxTxSize count) * value + fee
+    _txValue = fromIntegral (min maxTxSize count) * value + fee
     msg = mconcat [ "createChangeGeneric: outputs: ", show count
                   , " value: ", show value
                   , " number of txs: ", show txCount
                   , " address: ", addressMsg
                   ]
   traceDebug msg
-  fundSource <- liftIO (mkBufferedSource walletRef txCount txValue (Just PlainOldFund) 1) >>= \case
-    Right a  -> return a
-    Left err -> throwE $ WalletError err
+  let fundSource = walletSource walletRef 1
 
   forM_ chunks $ \coins -> do
     gen <- createCoins fundSource coins
