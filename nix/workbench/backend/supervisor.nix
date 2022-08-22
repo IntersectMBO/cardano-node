@@ -20,7 +20,13 @@ let
     rec
     { name = "supervisor";
 
-      services-config = import ./services-config.nix {inherit lib workbench basePort stateDir useCabalRun enableEKG;};
+      services-config = import ./services-config.nix {inherit lib workbench basePort stateDir useCabalRun enableEKG;}
+      //
+      {
+        nodePublicIP =
+          { i, name, ... }@nodeSpec:
+          "127.0.0.1";
+      };
 
       materialise-profile =
         { profileNix }:

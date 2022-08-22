@@ -79,6 +79,13 @@ case "$op" in
         then
             fatal "Docker image ${tracerImageName}:${tracerImageTag} does not exists"
         fi
+        # Check that the `tx-generator` OCI image exists.
+        local generatorImageName=${WB_GENERATOR_IMAGE_NAME:-$(cat "$dir/profile/txGeneratorImageName")}
+        local generatorImageTag=${WB_GENERATOR_IMAGE_TAG:-$(cat "$dir/profile/txGeneratorImageTag")}
+        if ! docker images --format "{{.Repository}}:{{.Tag}}" | grep --quiet "${generatorImageName}:${generatorImageTag}"
+        then
+            fatal "Docker image ${generatorImageName}:${generatorImageTag} does not exists"
+        fi
         # Info about the `--format` parameter and Go templates:
         # https://docs.docker.com/config/formatting/
 
@@ -314,17 +321,7 @@ case "$op" in
                --* ) msg "FATAL:  unknown flag '$1'"; usage_docker;;
                * ) break;; esac; shift; done
 
-        if ! dockerctl start generator
-        then progress "docker" "$(red fatal: failed to start) $(white generator)"
-             echo "$(red generator.json) ------------------------------" >&2
-             cat "$dir"/tracer/tracer-config.json
-             echo "$(red tracer stdout) -----------------------------------" >&2
-             cat "$dir"/tracer/stdout
-             echo "$(red tracer stderr) -----------------------------------" >&2
-             cat "$dir"/tracer/stderr
-             echo "$(white -------------------------------------------------)" >&2
-             fatal "could not start $(white dockerd)"
-        fi
+        backend_docker service-up "$dir" generator
         ;;
 
     # Docker-specific

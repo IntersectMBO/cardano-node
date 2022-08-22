@@ -21,7 +21,13 @@ let
     rec
     { name = "docker";
 
-      services-config = import ./services-config.nix {inherit lib workbench basePort stateDir useCabalRun enableEKG;};
+      services-config = import ./services-config.nix {inherit lib workbench basePort stateDir useCabalRun enableEKG;}
+      //
+      {
+        nodePublicIP =
+          { i, name, ... }@nodeSpec:
+          "172.22.${toString (i / 254)}.${toString (i - (254 * (i / 254)) + 1)}";
+      };
 
       materialise-profile =
         { profileNix }:
@@ -31,6 +37,8 @@ let
               cardanoNodeImageTag = cardano-world.x86_64-linux.cardano.oci-images.cardano-node.imageTag;
               cardanoTracerImageName = cardano-world.x86_64-linux.cardano.oci-images.cardano-tracer.imageName;
               cardanoTracerImageTag = cardano-world.x86_64-linux.cardano.oci-images.cardano-tracer.imageTag;
+              txGeneratorImageName = cardano-world.x86_64-linux.cardano.oci-images.tx-generator.imageName;
+              txGeneratorImageTag = cardano-world.x86_64-linux.cardano.oci-images.tx-generator.imageTag;
             }
             ''
             mkdir $out
@@ -38,7 +46,9 @@ let
             echo $cardanoNodeImageTag              > $out/cardanoNodeImageTag
             echo $cardanoTracerImageName           > $out/cardanoTracerImageName
             echo $cardanoTracerImageTag            > $out/cardanoTracerImageTag
-            wb app compose ${profileNix.JSON} ${profileNix.node-specs.JSON} $cardanoNodeImageName $cardanoNodeImageTag $cardanoTracerImageName $cardanoTracerImageTag > $out/docker-compose.yaml
+            echo $txGeneratorImageName             > $out/txGeneratorImageName
+            echo $txGeneratorImageTag              > $out/txGeneratorImageTag
+            wb app compose ${profileNix.JSON} ${profileNix.node-specs.JSON} $cardanoNodeImageName $cardanoNodeImageTag $cardanoTracerImageName $cardanoTracerImageTag $txGeneratorImageName $txGeneratorImageTag > $out/docker-compose.yaml
             '';
     };
 in
