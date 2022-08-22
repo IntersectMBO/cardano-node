@@ -37,7 +37,7 @@ Integration of the `ledger <https://github.com/input-output-hk/cardano-ledger-sp
 Network Configuration, Genesis and Topology Files
 =================================================
 
-The latest supported networks can be found at `<https://hydra.iohk.io/job/Cardano/cardano-node/cardano-deployment/latest-finished/download/1/index.html>`_
+The latest supported networks can be found at `<https://book.world.dev.cardano.org/environments.html>`_
 
 How to build
 ============
