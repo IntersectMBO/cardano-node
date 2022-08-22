@@ -88,7 +88,6 @@ in project.shellFor {
   nativeBuildInputs = with pkgs; with haskellPackages; with cardanoNodePackages; [
     cardano-ping
     cabalWrapped
-    db-analyser
     ghcid
     haskellBuildUtils
     pkgs.graphviz

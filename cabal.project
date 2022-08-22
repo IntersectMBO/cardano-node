@@ -263,14 +263,15 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/ouroboros-network
-  tag: c764553561bed8978d2c6753d1608dc65449617a
-  --sha256: 0hdh7xdrvxw943r6qr0xr4kwszindh5mnsn1lww6qdnxnmn7wcsc
+  tag: 15b56d1fe5b94d8fa5d80d85a84a18eb3b22e513
+  --sha256: 165r3xzf1gzhp22iv1407n0xlbjsla45jhiyqcnbybng8s79513q
   subdir:
     monoidal-synchronisation
     network-mux
     ouroboros-consensus
     ouroboros-consensus-byron
     ouroboros-consensus-cardano
+    ouroboros-consensus-cardano-tools
     ouroboros-consensus-protocol
     ouroboros-consensus-shelley
     ouroboros-network
