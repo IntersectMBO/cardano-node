@@ -22,6 +22,10 @@ import           Control.Monad.IO.Class
 import           Control.Monad.Trans.Except
 import           "contra-tracer" Control.Tracer (nullTracer)
 import           Data.Ratio ((%))
+
+import           Streaming as Streaming
+import qualified Streaming.Prelude as Streaming
+
 import qualified Data.Text as Text (unpack)
 import           Prelude
 
@@ -38,7 +42,7 @@ import qualified Cardano.Benchmarking.FundSet as FundSet
 import           Cardano.Benchmarking.FundSet as FundSet (getFundTxIn)
 import           Cardano.Benchmarking.GeneratorTx as GeneratorTx (AsyncBenchmarkControl, TxGenError)
 import qualified Cardano.Benchmarking.GeneratorTx as GeneratorTx (readSigningKey, secureGenesisFund,
-                   waitBenchmark, walletBenchmark)
+                   waitBenchmark, walletBenchmark, walletBenchmarkNew)
 
 import           Cardano.Benchmarking.GeneratorTx.NodeToNode (ConnectClient,
                    benchmarkConnectTxSubmit)
@@ -208,24 +212,6 @@ waitForEra era = do
       liftIO $ threadDelay 1_000_000
       waitForEra era
 
-runWalletScriptInMode :: forall era.
-     IsShelleyBasedEra era
-  => SubmitMode
-  -> WalletScript era
-  -> ActionM ()
-runWalletScriptInMode submitMode s = do
-  step <- liftIO $ runWalletScript s
-  case step of
-    Done -> return ()
-    Error err -> throwE $ ApiError $ show err
-    NextTx nextScript tx -> do
-      case submitMode of
-        LocalSocket -> void $ localSubmitTx $ txInModeCardano tx
-        NodeToNode _ -> throwE $ ApiError "NodeToNodeMode not supported in runWalletScriptInMode"
-        DumpToFile filePath -> dumpToFile filePath $ txInModeCardano tx
-        DiscardTX -> return ()
-      runWalletScriptInMode submitMode nextScript
-
 localSubmitTx :: TxInMode CardanoMode -> ActionM (SubmitResult (TxValidationErrorInMode CardanoMode))
 localSubmitTx tx = do
   submit <- getLocalSubmitTx
@@ -249,6 +235,109 @@ makeMetadata = do
   case mkMetadata $ unTxAdditionalSize payloadSize of
     Right m -> return m
     Left err -> throwE $ MetadataError err
+
+submitAction :: AnyCardanoEra -> SubmitMode -> Generator -> ActionM ()
+submitAction era submitMode generator = withEra era $ submitInEra submitMode generator
+
+submitInEra :: forall era. IsShelleyBasedEra era => SubmitMode -> Generator -> AsType era -> ActionM ()
+submitInEra submitMode generator era = do
+  txStream <- evalGenerator generator era
+  case submitMode of
+    NodeToNode _ -> error "NodeToNode deprecated: ToDo: remove"
+    Benchmark nodes threadName tpsRate extra -> benchmarkTxStream txStream nodes threadName tpsRate extra era
+    LocalSocket -> submitAll (void . localSubmitTx . txInModeCardano) txStream
+    DumpToFile filePath -> liftIO $ Streaming.writeFile filePath $ Streaming.map showTx txStream
+    DiscardTX -> liftIO $ Streaming.effects txStream
+ where
+  showTx (Left err) = error err
+  showTx (Right tx) = '\n' : show tx
+   -- todo: use Streaming.run
+  submitAll :: (Tx era -> ActionM ()) -> TxStream IO era -> ActionM ()
+  submitAll callback stream = do
+    step <- liftIO $ Streaming.inspect stream
+    case step of
+      (Left ()) -> return ()
+      (Right (Left err :> _rest)) -> throwE $ ApiError err
+      (Right (Right tx :> rest)) -> do
+        callback tx
+        submitAll callback rest
+
+benchmarkTxStream :: forall era. IsShelleyBasedEra era
+  => TxStream IO era
+  -> TargetNodes
+  -> ThreadName
+  -> TPSRate
+  -> RunBenchmarkAux
+  -> AsType era
+  -> ActionM ()
+benchmarkTxStream txStream targetNodes (ThreadName threadName) tps shape era = do
+  tracers  <- get BenchTracers
+  connectClient <- getConnectClient
+  let
+    coreCall :: AsType era -> ExceptT TxGenError IO AsyncBenchmarkControl
+    coreCall eraProxy = GeneratorTx.walletBenchmarkNew (btTxSubmit_ tracers) (btN2N_ tracers) connectClient
+                                               threadName targetNodes tps LogErrors eraProxy (NumberOfTxs $ auxTxCount shape) txStream
+  ret <- liftIO $ runExceptT $ coreCall era
+  case ret of
+    Left err -> liftTxGenError err
+    Right ctl -> setName (ThreadName threadName) ctl
+
+runWalletScriptInMode :: forall era.
+     IsShelleyBasedEra era
+  => SubmitMode
+  -> WalletScript era
+  -> ActionM ()
+runWalletScriptInMode submitMode s = do
+  step <- liftIO $ runWalletScript s
+  case step of
+    Done -> return ()
+    Error err -> throwE $ ApiError $ show err
+    NextTx nextScript tx -> do
+      case submitMode of
+        LocalSocket -> void $ localSubmitTx $ txInModeCardano tx
+        NodeToNode _ -> throwE $ ApiError "NodeToNodeMode not supported in runWalletScriptInMode"
+        DumpToFile filePath -> dumpToFile filePath $ txInModeCardano tx
+        DiscardTX -> return ()
+        Benchmark {} -> error "ToDo: remove runWalletScriptInMode"
+      runWalletScriptInMode submitMode nextScript
+
+evalGenerator :: forall era. IsShelleyBasedEra era => Generator -> AsType era -> ActionM (TxStream IO era)
+evalGenerator generator era = do
+  networkId <- getUser TNetworkId  
+  protocolParameters <- getProtocolParameters
+  case generator of
+    Split _walletName _submitMode _payMode1 _payMode2 _coins -> do
+       error "todo: implement"
+    SplitN _walletName _submitMode _paymode1 _paymode2 _value _count -> do
+       error "todo: implement"
+    BechmarkTx sourceWallet shape collateralWallet -> do
+      fundKey <- getName $ KeyName "pass-partout" -- should be walletkey -- TODO: Remove magic
+      walletRefSrc <- getName sourceWallet
+      collaterals <- selectCollateralFunds collateralWallet
+      metadata <- makeMetadata
+      let
+        walletRefDst = walletRefSrc
+        fundSource = walletSource walletRefSrc (auxInputsPerTx shape)
+
+        inToOut :: [Lovelace] -> [Lovelace]
+        inToOut = FundSet.inputsToOutputsWithFee (auxFee shape) (auxOutputsPerTx shape)
+
+        txGenerator = genTx protocolParameters collaterals (mkFee (auxFee shape)) metadata
+
+        toUTxO :: [ ToUTxO era ]
+        toUTxO = repeat $ Wallet.mkUTxOVariant networkId fundKey -- TODO: make configurable
+  
+        fundToStore = mkWalletFundStoreList walletRefDst
+
+        sourceToStore = sourceToStoreTransaction txGenerator fundSource inToOut (makeToUTxOList toUTxO) fundToStore
+
+      return $ Streaming.cycle $ Streaming.effect (Streaming.yield <$> sourceToStore)
+    Repeat count g -> do
+      stream <- evalGenerator g era
+      return $ Streaming.take count $ Streaming.cycle stream
+    Sequence generatorList -> do
+      gList <- forM generatorList $ \g -> evalGenerator g era
+      return $ Streaming.for (Streaming.each gList) id
 
 runBenchmark ::
      AnyCardanoEra
@@ -345,6 +434,7 @@ importGenesisFund era wallet submitMode genesisKeyName destKey = do
     NodeToNode _ -> throwE $ WalletError "NodeToNode mode not supported in importGenesisFund"
     DumpToFile filePath -> return $ \tx -> dumpToFileIO filePath tx >> return SubmitSuccess
     DiscardTX -> return $ \_ -> return SubmitSuccess
+    Benchmark {} -> error "todo : remove importGenesisFund"
   networkId <- getUser TNetworkId
   genesis  <- get Genesis
   fee      <- getUser TFee
@@ -444,7 +534,7 @@ createChangeGeneric sourceWallet submitMode createCoins addressMsg value count =
         NodeToNode _ -> throwE $ WalletError "NodeToNode mode not supported in createChangeGeneric"
         DumpToFile filePath -> dumpToFile filePath tx
         DiscardTX -> return ()
-
+        Benchmark {} -> error "todo : remove createChangeGeneric"
   traceDebug "createChangeGeneric: splitting done"
  where
   chunkList :: Int -> [a] -> [[a]]

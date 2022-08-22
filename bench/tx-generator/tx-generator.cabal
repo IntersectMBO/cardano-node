@@ -104,6 +104,7 @@ library
                      , plutus-ledger-api
                      , random
                      , serialise
+                     , streaming
                      , strict-stm
                      , cardano-ledger-shelley
                      , stm

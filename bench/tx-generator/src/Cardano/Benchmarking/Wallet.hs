@@ -8,6 +8,7 @@ where
 import           Prelude
 
 import           Data.Maybe
+import           Streaming
 import           Control.Concurrent.MVar
 
 import           Cardano.Api
@@ -32,9 +33,11 @@ type ToUTxOList era split = split -> ([TxOut CtxTx era], TxId -> [Fund])
 type CreateAndStore m era = Lovelace -> (TxOut CtxTx era, TxIx -> TxId -> m ())
 
 type CreateAndStoreList m era split = split -> ([TxOut CtxTx era], TxId -> m ())
-
 -- 'ToUTxOList era' is more powerful than '[ ToUTxO era ]' but
 -- '[ ToUTxO era ]` is easier to construct.
+
+--type TxStream m era = Stream (Of (Tx era)) m (Maybe String)
+type TxStream m era = Stream (Of (Either String (Tx era))) m ()
 
 createAndStore :: ToUTxO era -> (Fund -> m ()) -> CreateAndStore m era
 createAndStore create store lovelace = (utxo, toStore)
@@ -93,15 +96,16 @@ mangle fkts values
       = let (o, f ) = toUTxO value
          in  (o, f idx) 
 
---TODO use Error monad
---TODO need to break this up
+--TODO: use Error monad.
+--TODO: need to break this up.
 sourceToStoreTransaction ::
-     TxGenerator era
-  -> FundSource IO         
+     Monad m
+  => TxGenerator era
+  -> FundSource m         
   -> ([Lovelace] -> split)
   -> ToUTxOList era split
-  -> FundToStoreList IO                --inline to ToUTxOList
-  -> IO (Either String (Tx era))
+  -> FundToStoreList m                --inline to ToUTxOList
+  -> m (Either String (Tx era))
 sourceToStoreTransaction txGenerator fundSource inToOut mkTxOut fundToStore = do
   fundSource >>= \case
     Left err -> return $ Left err
@@ -118,11 +122,12 @@ sourceToStoreTransaction txGenerator fundSource inToOut mkTxOut fundToStore = do
           return $ Right tx
 
 sourceToStoreTransactionNew ::
-     TxGenerator era
-  -> FundSource IO         
+     Monad m
+  => TxGenerator era
+  -> FundSource m
   -> ([Lovelace] -> split)
-  -> CreateAndStoreList IO era split
-  -> IO (Either String (Tx era))
+  -> CreateAndStoreList m era split
+  -> m (Either String (Tx era))
 sourceToStoreTransactionNew txGenerator fundSource valueSplitter toStore = do
   fundSource >>= \case
     Left err -> return $ Left err

@@ -50,7 +50,7 @@ compileToScript = do
   importGenesisFunds genesisWallet
   collateralWallet <- addCollaterals genesisWallet
   splitWallet <- splittingPhase genesisWallet
-  benchmarkingPhase splitWallet collateralWallet
+  benchmarkingPhaseNew splitWallet collateralWallet
 
 initConstants :: Compiler ()
 initConstants = do
@@ -158,6 +158,23 @@ benchmarkingPhase wallet collateralWallet = do
   era <- askNixOption _nix_era
   let target = if debugMode then LocalSocket else NodeToNode targetNodes
   emit $ RunBenchmark era wallet target (ThreadName "tx-submit-benchmark") extraArgs collateralWallet tps
+  unless debugMode $ do
+    emit $ WaitBenchmark $ ThreadName "tx-submit-benchmark"
+
+benchmarkingPhaseNew :: WalletName -> Maybe WalletName -> Compiler ()
+benchmarkingPhaseNew wallet collateralWallet = do
+  debugMode <- askNixOption _nix_debugMode
+  targetNodes <- askNixOption _nix_targetNodes
+  extraArgs <- evilValueMagic
+  tps <- askNixOption _nix_tps
+  era <- askNixOption _nix_era
+  (NumberOfTxs txCount) <- askNixOption _nix_tx_count
+  let
+    submitMode = if debugMode
+        then LocalSocket
+        else Benchmark targetNodes (ThreadName "tx-submit-benchmark") tps  extraArgs
+    generator = Repeat txCount $ BechmarkTx wallet extraArgs collateralWallet
+  emit $ Submit era submitMode generator
   unless debugMode $ do
     emit $ WaitBenchmark $ ThreadName "tx-submit-benchmark"
 

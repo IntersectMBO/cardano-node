@@ -37,6 +37,7 @@ data Action where
   CreateChange       :: !AnyCardanoEra -> !WalletName -> !SubmitMode -> !PayMode -> !PayMode -> !Lovelace -> !Int -> Action
   RunBenchmark       :: !AnyCardanoEra -> !WalletName -> !SubmitMode -> !ThreadName -> !RunBenchmarkAux -> Maybe WalletName -> !TPSRate -> Action
   WaitBenchmark      :: !ThreadName -> Action
+  Submit             :: !AnyCardanoEra -> !SubmitMode -> !Generator -> Action
   CancelBenchmark    :: !ThreadName -> Action
   Reserved           :: [String] -> Action
   WaitForEra         :: !AnyCardanoEra -> Action
@@ -44,17 +45,30 @@ data Action where
   deriving (Show, Eq)
 deriving instance Generic Action
 
+data Generator where
+--  SecureGenesis :: -> Generator
+  Split :: !WalletName -> !SubmitMode -> !PayMode -> !PayMode -> [ Lovelace ] -> Generator  
+  SplitN :: !WalletName -> !SubmitMode -> !PayMode -> !PayMode -> !Lovelace -> !Int -> Generator
+  BechmarkTx :: !WalletName -> !RunBenchmarkAux -> Maybe WalletName -> Generator
+  Repeat :: !Int -> !Generator -> Generator
+  Sequence :: [Generator] -> Generator
+  deriving (Show, Eq)
+deriving instance Generic Generator
+
 data ProtocolParametersSource where
   QueryLocalNode :: ProtocolParametersSource
   UseLocalProtocolFile :: !FilePath -> ProtocolParametersSource
   deriving (Show, Eq)
 deriving instance Generic ProtocolParametersSource
 
+type TargetNodes = NonEmpty NodeIPv4Address
+
 data SubmitMode where
   LocalSocket :: SubmitMode
-  NodeToNode  :: NonEmpty NodeIPv4Address -> SubmitMode
+  Benchmark   :: !TargetNodes -> !ThreadName -> !TPSRate -> !RunBenchmarkAux -> SubmitMode
   DumpToFile  :: !FilePath -> SubmitMode
   DiscardTX   :: SubmitMode
+  NodeToNode  :: NonEmpty NodeIPv4Address -> SubmitMode --deprecated
   deriving (Show, Eq)
 deriving instance Generic SubmitMode
 

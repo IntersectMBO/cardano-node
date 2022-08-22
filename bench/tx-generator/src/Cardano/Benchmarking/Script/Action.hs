@@ -20,6 +20,8 @@ action a = case a of
   DefineSigningKey name descr -> defineSigningKey name descr
   AddFund era wallet txIn lovelace keyName -> addFund era wallet txIn lovelace keyName
   Delay t -> delay t
+  Submit era submitMode generator -> submitAction era submitMode generator
+-- todo : use Generator for genesisimport
   ImportGenesisFund era wallet submitMode genesisKey fundKey -> importGenesisFund era wallet submitMode genesisKey fundKey
   CreateChange era sourceWallet payMode changeMode submitMode value count -> createChange era sourceWallet payMode changeMode submitMode value count
   RunBenchmark era sourceWallet submitMode thread auxArgs collateralWallet tps

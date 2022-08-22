@@ -61,6 +61,12 @@ instance FromJSON ScriptData where
     Right r -> return r
     Left err -> fail $ show err
 
+instance ToJSON Generator where
+  toJSON     = genericToJSON jsonOptionsUnTaggedSum
+  toEncoding = genericToEncoding jsonOptionsUnTaggedSum
+instance FromJSON Generator where
+  parseJSON = genericParseJSON jsonOptionsUnTaggedSum
+
 instance ToJSON SubmitMode where
   toJSON     = genericToJSON jsonOptionsUnTaggedSum
   toEncoding = genericToEncoding jsonOptionsUnTaggedSum
