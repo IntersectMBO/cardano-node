@@ -96,12 +96,13 @@ mangle fkts values
 --TODO use Error monad
 --TODO need to break this up
 sourceToStoreTransaction ::
-     TxGenerator era
-  -> FundSource IO         
+     Monad m
+  => TxGenerator era
+  -> FundSource m         
   -> ([Lovelace] -> split)
   -> ToUTxOList era split
-  -> FundToStoreList IO                --inline to ToUTxOList
-  -> IO (Either String (Tx era))
+  -> FundToStoreList m                --inline to ToUTxOList
+  -> m (Either String (Tx era))
 sourceToStoreTransaction txGenerator fundSource inToOut mkTxOut fundToStore = do
   fundSource >>= \case
     Left err -> return $ Left err
@@ -118,11 +119,12 @@ sourceToStoreTransaction txGenerator fundSource inToOut mkTxOut fundToStore = do
           return $ Right tx
 
 sourceToStoreTransactionNew ::
-     TxGenerator era
-  -> FundSource IO         
+     Monad m
+  => TxGenerator era
+  -> FundSource m
   -> ([Lovelace] -> split)
-  -> CreateAndStoreList IO era split
-  -> IO (Either String (Tx era))
+  -> CreateAndStoreList m era split
+  -> m (Either String (Tx era))
 sourceToStoreTransactionNew txGenerator fundSource valueSplitter toStore = do
   fundSource >>= \case
     Left err -> return $ Left err
