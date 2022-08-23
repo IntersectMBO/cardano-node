@@ -42,7 +42,7 @@ Network Configuration, Genesis and Topology Files
 The latest supported networks can be found at `<https://hydra.iohk.io/job/Cardano/cardano-node/cardano-deployment/latest-finished/download/1/index.html>`_
 
 ****
-Obtaining `cardano-node`
+Obtaining ``cardano-node``
 ****
 
 Building from source
@@ -332,7 +332,7 @@ Local node queries
 
 You can query the tip of your local node via the ``get-tip`` command as follows
 
-1. Open `tmux`
+1. Open ``tmux``
 2. Run ``cabal build cardano-node``
 3. Run ``./scripts/lite/shelley-testnet.sh example``
 4. Run ``export CARDANO_NODE_SOCKET_PATH=/cardano-node/example/socket/node-1-socket
@@ -375,7 +375,7 @@ The mandatory arguments are ``--mainnet | --testnet-magic``, ``signing-key``, ``
 
 The remaining arguments are optional parameters you want to update in your update proposal.
 
-You can also check your proposal's validity using the `validate-cbor` command. See: `Validate CBOR files`_.
+You can also check your proposal's validity using the ``validate-cbor`` command. See: `Validate CBOR files`_.
 
 See the `Byron specification <https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/byronLedgerSpec/latest/download-by-type/doc-pdf/ledger-spec>`_
 for more details on update proposals.
@@ -441,7 +441,7 @@ Haskell Language Server
 When using Haskell Language Server with Visual Studio Code, you may find that
 `HLINT annotations are ignored<https://github.com/haskell/haskell-language-server/issues/638>`.
 
-To work around this, you may run the script `./scripts/reconfigure-hlint.sh` to generate a `.hlint.yaml`
+To work around this, you may run the script ``./scripts/reconfigure-hlint.sh`` to generate a ``.hlint.yaml``
 file with HLINT ignore rules derived from the source code.
 
 Testing
@@ -493,6 +493,6 @@ API Documentation
 
 The API documentation is published `here <https://input-output-hk.github.io/cardano-node/>`_.
 
-The documentation is built with each push, but is only published from `master` branch.  In order to
-test if the documentation is working, build the documentation locally with `./scripts/haddocs.sh` and
-open `haddocks/index.html` in the browser.
+The documentation is built with each push, but is only published from ``master`` branch.  In order to
+test if the documentation is working, build the documentation locally with ``./scripts/haddocs.sh`` and
+open ``haddocks/index.html`` in the browser.
