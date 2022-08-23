@@ -438,12 +438,11 @@ instance HasSeverityAnnotation (ConnectionManagerTrace addr (ConnectionHandlerTr
       TrTerminatedConnection {}               -> Debug
       TrConnectionHandler _ ev'     ->
         case ev' of
-          TrHandshakeSuccess {}               -> Info
-          TrHandshakeClientError {}           -> Notice
-          TrHandshakeServerError {}           -> Info
-          TrError _ _ ShutdownNode            -> Critical
-          TrError _ _ ShutdownPeer            -> Info
-
+          TrHandshakeSuccess {}                     -> Info
+          TrHandshakeClientError {}                 -> Notice
+          TrHandshakeServerError {}                 -> Info
+          TrConnectionHandlerError _ _ ShutdownNode -> Critical
+          TrConnectionHandlerError _ _ ShutdownPeer -> Info
       TrShutdown                              -> Info
       TrConnectionExists {}                   -> Info
       TrForbiddenConnection {}                -> Info
@@ -1770,9 +1769,9 @@ instance (Show versionNumber, ToJSON versionNumber, ToJSON agreedOptions)
       [ "kind" .= String "HandshakeServerError"
       , "reason" .= toJSON err
       ]
-  toObject _verb (TrError e err cerr) =
+  toObject _verb (TrConnectionHandlerError e err cerr) =
     mconcat
-      [ "kind" .= String "Error"
+      [ "kind" .= String "ConnectionHandlerError"
       , "context" .= show e
       , "reason" .= show err
       , "command" .= show cerr
