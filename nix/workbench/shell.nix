@@ -92,6 +92,8 @@ in project.shellFor {
     ghcid
     haskellBuildUtils
     pkgs.graphviz
+    graphmod
+    cabal-plan
     weeder
     nixWrapped
     pkgconfig
