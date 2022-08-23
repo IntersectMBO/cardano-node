@@ -141,26 +141,15 @@ The general synopsis is as follows:
 Configuration
 ====
 
-The ``--config`` flag points to a ``.yaml`` file that is responsible to configuring the logging & other important settings for the node. E.g. see the Byron mainnet configuration in this
+The ``--config`` flag points to a ``.yaml`` (or a structurally equivalent ``.json``) file that is responsible to configuring the logging & other important settings for the node. E.g. see the Byron mainnet configuration in this
 `configuration.yaml <https://github.com/input-output-hk/cardano-node/blob/master/configuration/defaults/byron-mainnet/configuration.yaml>`_.
+
 Some of the more important settings are as follows:
 
 * ``Protocol: RealPBFT`` -- Protocol the node will execute
 
 * ``RequiresNetworkMagic``: RequiresNoMagic -- Used to distinguish between mainnet (``RequiresNoMagic``) and testnets (``RequiresMagic``)
 
-
-Logging
-========
-
-Logs are output to the ``logs/`` dir.
-
-Profiling & statistics
-======================
-
-Profiling data and RTS run stats are stored in the ``profile/`` dir.
-
-Please see ``scripts/README.md`` for how to obtain profiling information using the scripts.
 Scripts
 =======
 
@@ -451,8 +440,6 @@ Testing
 
 Developers on ``cardano-node`` can `launch their own testnets <doc/getting-started/launching-a-testnet.md>`_ or `run the chairman tests <doc/getting-started/running-chairman-tests.md>`_ locally.
 
-Chairman tests
---------------
 
 Debugging
 ====
