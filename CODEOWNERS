@@ -19,23 +19,24 @@ cabal.project                                                 @Jimbo4350 @newhog
 doc                                                           @docs-access
 README.*                                                      @docs-access
 
-bench/tx-generator                                            @Jimbo4350 @newhoggy @deepfire @mgmeier @MarcFontaine
-bench                                                         @Jimbo4350 @newhoggy @deepfire @denisshevchenko @jutaro @MarcFontaine @mgmeier @fmaste @cleverca22
-cardano-tracer                                                @Jimbo4350 @newhoggy @deepfire @denisshevchenko
-nix/workbench                                                 @Jimbo4350 @newhoggy @deepfire @denisshevchenko @jutaro @MarcFontaine @mgmeier @fmaste
-trace-dispatcher                                              @Jimbo4350 @newhoggy @deepfire @denisshevchenko @jutaro @mgmeier
-trace-forward                                                 @Jimbo4350 @newhoggy @deepfire @denisshevchenko @jutaro @mgmeier
-trace-resources                                               @Jimbo4350 @newhoggy @deepfire @denisshevchenko @jutaro @mgmeier
-Makefile                                                      @Jimbo4350 @newhoggy @deepfire @mgmeier @fmaste
-*.mk                                                          @Jimbo4350 @newhoggy @deepfire @mgmeier @fmaste
+bench/tx-generator                                            @deepfire @mgmeier @MarcFontaine
+bench                                                         @deepfire @denisshevchenko @jutaro @MarcFontaine @mgmeier @fmaste @cleverca22
+cardano-tracer                                                @deepfire @denisshevchenko
+nix/workbench                                                 @deepfire @denisshevchenko @jutaro @MarcFontaine @mgmeier @fmaste
+trace-dispatcher                                              @deepfire @denisshevchenko @jutaro @mgmeier
+trace-forward                                                 @deepfire @denisshevchenko @jutaro @mgmeier
+trace-resources                                               @deepfire @denisshevchenko @jutaro @mgmeier
+Makefile                                                      @deepfire @mgmeier @fmaste
+*.mk                                                          @deepfire @mgmeier @fmaste
+
+nix                                                           @devops @deepfire @mgmeier @fmaste
+*.nix                                                         @devops @deepfire @mgmeier @fmaste
+flake.lock                                                    @devops @deepfire @mgmeier @fmaste
 
 .buildkite                                                    @Jimbo4350 @newhoggy @devops
 .github                                                       @Jimbo4350 @newhoggy @devops
 ci                                                            @Jimbo4350 @newhoggy @devops
 configuration                                                 @Jimbo4350 @newhoggy @devops
-nix                                                           @Jimbo4350 @newhoggy @devops
-*.nix                                                         @Jimbo4350 @newhoggy @devops
-flake.lock                                                    @Jimbo4350 @newhoggy @devops
 bors.toml                                                     @Jimbo4350 @newhoggy @devops
 docker-compose.yml                                            @Jimbo4350 @newhoggy @devops
 cardano-node/src/Cardano/Tracing/OrphanInstances/Network.hs   @Jimbo4350 @newhoggy @devops @coot
