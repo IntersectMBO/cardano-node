@@ -15,6 +15,8 @@
     </tr>
   </table>
 
+.. contents:: Contents
+
 *************************
 ``cardano-node`` Overview
 *************************
