@@ -1,12 +1,8 @@
-{-# Language DerivingStrategies #-}
-{-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
-
-module Cardano.Benchmarking.GeneratorTx.Error
-  ( TxGenError (..)
-  ) where
+module Cardano.TxGenerator.Types (module Cardano.TxGenerator.Types) where
 
 import           Cardano.Api
 import           Cardano.Prelude
+
 
 data TxGenError =
     InsufficientFundsForRecipientTx !Lovelace !Lovelace
@@ -18,4 +14,4 @@ data TxGenError =
   -- ^ The supplied UTxO size (second value) was less than the requested
   --   number of transactions to send (first value).
   | BadPayloadSize !Text
-  deriving stock Show
+  deriving Show

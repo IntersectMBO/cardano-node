@@ -1,6 +1,6 @@
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE PackageImports #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -39,16 +39,17 @@ import           Ouroboros.Consensus.Shelley.Eras (StandardShelley)
 
 import           Cardano.Api hiding (txFee)
 
-import           Cardano.Benchmarking.GeneratorTx.Error
 import           Cardano.Benchmarking.GeneratorTx.Genesis
 import           Cardano.Benchmarking.GeneratorTx.NodeToNode
 import           Cardano.Benchmarking.GeneratorTx.Submission
 import           Cardano.Benchmarking.GeneratorTx.SubmissionClient
 import           Cardano.Benchmarking.GeneratorTx.Tx
-import           Cardano.Benchmarking.TpsThrottle
 import           Cardano.Benchmarking.LogTypes
+import           Cardano.Benchmarking.TpsThrottle
 import           Cardano.Benchmarking.Types
 import           Cardano.Benchmarking.Wallet (WalletScript)
+import           Cardano.TxGenerator.Types
+
 
 import           Cardano.Ledger.Shelley.API (ShelleyGenesis)
 import           Ouroboros.Network.Protocol.LocalTxSubmission.Type (SubmitResult (..))
