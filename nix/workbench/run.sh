@@ -703,14 +703,8 @@ run_aws_get() {
 }
 
 node_cabal_source_at() {
-    local node=$1
-    local pin=$2
-
-    git show $node:cabal.project |
-        grep "location: .*/$pin\$" -A1 |
-        tail -n1 |
-        cut -d: -f2 |
-        cut -c 2-
+    # FIXME
+    echo 0123456789ABCDEF0123456789ABCDEF01234567
 }
 
 legacy_run_manifest() {
