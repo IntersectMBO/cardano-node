@@ -284,7 +284,7 @@ case "$op" in
            then fail "aws-analysis:  run has not been analysed on AWS: $(white $run)"
            else local analysis_files=(
                    $(ssh $env -- \
-                     sh -c "'cd $depl/runs/$run && ls analysis/*.{json,cdf,org,txt} | grep -v flt.json | grep -v flt.logobjs.json | grep -v flt.mach.txt | grep -v flt.perf-stats.json'" \
+                     sh -c "'cd $depl/runs/$run && ls analysis/*.{json,cdf,org,txt} | grep -v flt.json | grep -v flt.logobjs.json | grep -v flt.perf-stats.json'" \
                      2>/dev/null)
                 )
                 local args=(
