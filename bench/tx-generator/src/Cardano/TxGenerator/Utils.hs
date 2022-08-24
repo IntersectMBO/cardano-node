@@ -1,38 +1,12 @@
-{-# OPTIONS_GHC -Wwarn #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 
-module Cardano.Benchmarking.FundSet
-       ( module Cardano.Benchmarking.FundSet
-       , module Cardano.TxGenerator.Fund
-       )
-      where
-
-import           Prelude
+module  Cardano.TxGenerator.Utils
+        (module Cardano.TxGenerator.Utils)
+        where
 
 import           Cardano.Api as Api
 
-import           Cardano.Benchmarking.Fifo as Fifo
-import           Cardano.TxGenerator.Fund
-
-
-type FundSet = Fifo Fund
-
-type FundSource m = m (Either String [Fund])
-type FundToStore m = Fund -> m ()
-type FundToStoreList m = [Fund] -> m ()
-
-
-emptyFundSet :: FundSet
-emptyFundSet = Fifo.emptyFifo
-
-insertFund :: FundSet -> Fund -> FundSet
-insertFund = Fifo.insert
 
 liftAnyEra :: ( forall era. IsCardanoEra era => f1 era -> f2 era ) -> InAnyCardanoEra f1 -> InAnyCardanoEra f2
 liftAnyEra f x = case x of

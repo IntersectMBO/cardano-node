@@ -7,22 +7,23 @@ module Cardano.Benchmarking.Wallet
 where
 import           Prelude
 
-import           Data.Maybe
 import           Control.Concurrent.MVar
+import           Data.Maybe
 
 import           Cardano.Api
 
-import           Cardano.Benchmarking.FundSet as FundSet
-import           Cardano.Benchmarking.Fifo as Fifo
+import           Cardano.TxGenerator.FundQueue as FundQueue
+import           Cardano.TxGenerator.Types
+
+import           Cardano.Api.Shelley (ProtocolParameters, ReferenceScript (..))
 import           Cardano.Benchmarking.Types (NumberOfTxs (..))
-import           Cardano.Api.Shelley (ProtocolParameters, ReferenceScript(..))
 
 -- All the actual functionality of Wallet / WalletRef has been removed
--- and WalletRef has been stripped down to MVar FundSet.
+-- and WalletRef has been stripped down to MVar FundQueue.
 -- The implementation of Wallet has become trivial.
 -- Todo: Remove trivial wrapper functions.
 
-type WalletRef = MVar FundSet
+type WalletRef = MVar FundQueue
 
 type TxGenerator era = [Fund] -> [TxOut CtxTx era] -> Either String (Tx era, TxId)
 
@@ -43,62 +44,62 @@ createAndStore create store lovelace = (utxo, toStore)
     toStore txIx txId = store $ mkFund txIx txId
 
 initWallet :: IO WalletRef
-initWallet = newMVar emptyFundSet
+initWallet = newMVar emptyFundQueue
 
-askWalletRef :: WalletRef -> (FundSet -> a) -> IO a
+askWalletRef :: WalletRef -> (FundQueue -> a) -> IO a
 askWalletRef r f = do
   w <- readMVar r
   return $ f w
 
 walletRefInsertFund :: WalletRef -> Fund -> IO ()
-walletRefInsertFund ref fund = modifyMVar_  ref $ \w -> return $ FundSet.insertFund w fund
+walletRefInsertFund ref fund = modifyMVar_  ref $ \w -> return $ FundQueue.insertFund w fund
 
 mkWalletFundStoreList :: WalletRef -> FundToStoreList IO
 mkWalletFundStoreList walletRef funds = modifyMVar_  walletRef
-  $ \wallet -> return (foldl FundSet.insertFund wallet funds)
+  $ \wallet -> return (foldl FundQueue.insertFund wallet funds)
 
 mkWalletFundStore :: WalletRef -> FundToStore IO
 mkWalletFundStore walletRef fund = modifyMVar_  walletRef
-  $ \wallet -> return $ FundSet.insertFund wallet fund
+  $ \wallet -> return $ FundQueue.insertFund wallet fund
 
 walletSource :: WalletRef -> Int -> FundSource IO
-walletSource ref munch = modifyMVar ref $ \fifo -> return $ case Fifo.removeN munch fifo of
+walletSource ref munch = modifyMVar ref $ \fifo -> return $ case FundQueue.removeFunds munch fifo of
   Nothing -> (fifo, Left "WalletSource: out of funds")
-  Just (newFifo, funds) -> (newFifo, Right funds) 
+  Just (newFifo, funds) -> (newFifo, Right funds)
 
 makeToUTxOList :: [ ToUTxO era ] -> ToUTxOList era [ Lovelace ]
-makeToUTxOList fkts values 
+makeToUTxOList fkts values
   = (outs, \txId -> map (\f -> f txId) fs)
   where
     (outs, fs) =unzip $ map worker $ zip3 fkts values [TxIx 0 ..]
     worker (toUTxO, value, idx)
       = let (o, f ) = toUTxO value
-         in  (o, f idx) 
+         in  (o, f idx)
 
 data PayWithChange
   = PayExact [Lovelace]
   | PayWithChange Lovelace [Lovelace]
-  
+
 mangleWithChange :: Monad m => CreateAndStore m era -> CreateAndStore m era -> CreateAndStoreList m era PayWithChange
 mangleWithChange mkChange mkPayment outs = case outs of
   PayExact l -> mangle (repeat mkPayment) l
   PayWithChange change payments -> mangle (mkChange : repeat mkPayment) (change : payments)
 
 mangle :: Monad m => [ CreateAndStore m era ] -> CreateAndStoreList m era [ Lovelace ]
-mangle fkts values 
+mangle fkts values
   = (outs, \txId -> mapM_ (\f -> f txId) fs)
   where
     (outs, fs) =unzip $ map worker $ zip3 fkts values [TxIx 0 ..]
     worker (toUTxO, value, idx)
       = let (o, f ) = toUTxO value
-         in  (o, f idx) 
+         in  (o, f idx)
 
 --TODO use Error monad
 --TODO need to break this up
 sourceToStoreTransaction ::
      Monad m
   => TxGenerator era
-  -> FundSource m         
+  -> FundSource m
   -> ([Lovelace] -> split)
   -> ToUTxOList era split
   -> FundToStoreList m                --inline to ToUTxOList
@@ -196,7 +197,7 @@ mkUTxOScript networkId (script, txOutDatum) witness value
                   plutusScriptAddr
                   (lovelaceToTxOutValue v)
                   (TxOutDatumHash tag $ hashScriptData txOutDatum)
-                  ReferenceScriptNone   
+                  ReferenceScriptNone
 
   mkNewFund :: Lovelace -> TxIx -> TxId -> Fund
   mkNewFund val txIx txId = Fund $ InAnyCardanoEra (cardanoEra @ era) $ FundInEra {

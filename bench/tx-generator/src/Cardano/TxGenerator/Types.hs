@@ -1,8 +1,16 @@
-module Cardano.TxGenerator.Types (module Cardano.TxGenerator.Types) where
+module  Cardano.TxGenerator.Types
+        (module Cardano.TxGenerator.Types)
+        where
 
 import           Cardano.Api
 import           Cardano.Prelude
 
+import           Cardano.TxGenerator.Fund (Fund)
+
+
+type FundSource m       = m (Either String [Fund])
+type FundToStore m      = Fund -> m ()
+type FundToStoreList m  = [Fund] -> m ()
 
 data TxGenError =
     InsufficientFundsForRecipientTx !Lovelace !Lovelace

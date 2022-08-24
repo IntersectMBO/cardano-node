@@ -1,18 +1,21 @@
-module Cardano.TxGenerator.PureExample
-where
+module  Cardano.TxGenerator.PureExample
+        (demo)
+        where
 
-import Data.Either (fromRight)
-import Data.String (fromString)
-import Control.Monad (foldM, void)
-import Control.Monad.Trans.State.Strict
+import           Control.Monad (foldM, void)
+import           Control.Monad.Trans.State.Strict
+import           Data.Either (fromRight)
+import           Data.String (fromString)
 
-import Cardano.Api
-import Cardano.Api.Shelley (ProtocolParameters )
+import           Cardano.Api
+import           Cardano.Api.Shelley (ProtocolParameters)
 
-import Cardano.Benchmarking.FundSet (Fund (..), FundInEra (..), inputsToOutputsWithFee)
-import Cardano.Benchmarking.Script.Aeson (readProtocolParametersFile)
-import Cardano.Benchmarking.Script.Core (parseSigningKey)
-import Cardano.Benchmarking.Wallet (TxGenerator, genTx, makeToUTxOList, mkUTxOVariant, sourceToStoreTransaction)
+import           Cardano.Benchmarking.Script.Aeson (readProtocolParametersFile)
+import           Cardano.Benchmarking.Script.Core (parseSigningKey)
+import           Cardano.Benchmarking.Wallet (TxGenerator, genTx, makeToUTxOList, mkUTxOVariant,
+                   sourceToStoreTransaction)
+import           Cardano.TxGenerator.Fund (Fund (..), FundInEra (..))
+import           Cardano.TxGenerator.Utils (inputsToOutputsWithFee)
 
 import           Paths_tx_generator
 
