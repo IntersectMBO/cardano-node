@@ -19,12 +19,32 @@ jq_check_json() {
     jq '.' "$1" >/dev/null
 }
 
+helptopcmd() {
+    local topcmd=$1 cmd=$2; shift 2
+    white $topcmd
+    echo -n " "
+    yellow $cmd
+    echo -n " "
+    green $*
+}
+
+helpcmd() {
+    local cmd=$1; shift
+    yellow $cmd
+    echo -n " "
+    green $*
+}
+
+helpopt() {
+    green $*
+}
+
 __usage() {
     local op=$1 desc=$2
     cat >&2 <<EOF
-USAGE:  $(basename "$0") OPTIONS.. $op SUBOP SUBOP-ARGS..
+$(red USAGE:)  $(white $(basename "$0")) $(blue WB-OPTS..) $(red $op) $(green ${op^^[a-z]}-OPTS..) $(yellow SUBOP) $(green SUBOP-ARGS..)
 
-  $desc:
+  $(blue $desc):
 
 $(cat)
 
@@ -61,24 +81,18 @@ with_color() {
 }
 
 colorise_colors=(
-    red green yellow blue cyan white reset red green yellow blue cyan white reset
-    red green yellow blue cyan white reset red green yellow blue cyan white reset
-    red green yellow blue cyan white reset red green yellow blue cyan white reset
-    red green yellow blue cyan white reset red green yellow blue cyan white reset
-    red green yellow blue cyan white reset red green yellow blue cyan white reset
-    red green yellow blue cyan white reset red green yellow blue cyan white reset
-    red green yellow blue cyan white reset red green yellow blue cyan white reset
-    red green yellow blue cyan white reset red green yellow blue cyan white reset
-    red green yellow blue cyan white reset red green yellow blue cyan white reset
-    red green yellow blue cyan white reset red green yellow blue cyan white reset
-    red green yellow blue cyan white reset red green yellow blue cyan white reset
-    red green yellow blue cyan white reset red green yellow blue cyan white reset
+    red green blue yellow white cyan
 )
 colorise() {
+    local i
     for ((i=0; $#!=0; i++))
-    do echo -n "$(with_color ${colorise_colors[$i]} $1) "
+    do echo -n "$(with_color ${colorise_colors[$((i % 6))]} $1) "
        shift
     done
+}
+
+newline() {
+    echo >&2
 }
 
 msg() {
@@ -87,6 +101,10 @@ msg() {
 
 msg_ne() {
     echo -ne "workbench:  $*" >&2
+}
+
+plain() {
+    with_color reset $*
 }
 
 green() {
@@ -99,6 +117,10 @@ blue() {
 
 white() {
     with_color white $*
+}
+
+blk() {
+    with_color black $*
 }
 
 yellow() {

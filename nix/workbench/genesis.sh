@@ -2,22 +2,22 @@ global_genesis_format_version=March-14-2022
 
 usage_genesis() {
      usage "genesis" "Genesis" <<EOF
-    prepare-cache-entry [--force] PROFILE-JSON RUN-META-JSON CACHEDIR TOPO-DIR OUTDIR
+    $(helpcmd prepare-cache-entry [--force] PROFILE-JSON CACHEDIR NODE-SPECS OUTDIR)
                      Prepare a genesis cache entry for the specified profile.
-                       Cache entry regeneration can be --force 'd
+                       Cache entry regeneration can be $(yellow --force)'d
 
-    profile-cache-key-input PROFILE-JSON
-                     Output effective profile parameters factoring into the
-                       genesis cache key
+    $(helpcmd derive-from-cache PROFILE-DIR TIMING-JSON-EXPR CACHE-ENTRY-DIR OUTDIR)
+                     Instantiate genesis from a cache entry
 
-    profile-cache-key PROFILE-JSON
-                     Output a genesis cache key for the specified profile
+    $(helpcmd genesis-from-preset PRESET-NAME OUTDIR)
+                     ($(red DEV)) Prepare genesis for an environment preset,
+                       like $(yellow mainnet)
 
-    actually-genesis PROFILE-JSON TOPO-DIR DIR
-                     (DEV) Internal procedure to actually generate genesis
+    $(helpcmd actually-genesis PROFILE-JSON NODE-SPECS OUTDIR CACHE-KEY-INPUT CACHE-KEY)
+                     ($(red DEV)) Internal procedure to actually generate genesis
 
-    finalise-cache-entry PROFILE-JSON TIMING-JSON-EXPR DIR
-                     (DEV) Update a genesis cache entry to the given profile
+    $(helpcmd finalise-cache-entry PROFILE-JSON TIMING-JSON-EXPR OUTDIR)
+                     ($(red DEV)) Update a genesis cache entry to the given profile
 EOF
 }
 
@@ -148,6 +148,8 @@ case "$op" in
         local cache_key_input=$4
         local cache_key=$5
 
+        progress "genesis" "new one:  $(yellow profile) $(blue $profile_json) $(yellow node_specs) $(blue $node_specs) $(yellow dir) $(blue $dir) $(yellow cache_key) $(blue $cache_key) $(yellow cache_key_input) $(blue $cache_key_input)"
+
         rm -rf   "$dir"/{*-keys,byron,pools,nodes,*.json,*.params,*.version}
         mkdir -p "$dir"
 
@@ -158,7 +160,6 @@ case "$op" in
            "$global_basedir"/profiles/presets/mainnet/genesis/genesis.alonzo.json \
            >   "$dir"/genesis.alonzo.spec.json
 
-        msg "genesis:  creating initial genesis"
         cardano-cli genesis create --genesis-dir "$dir"/ \
             $(jq '.cli_args.createSpec | join(" ")' "$profile_json" --raw-output)
 
@@ -189,7 +190,24 @@ case "$op" in
 # }'
 #             -o "$dir"/cardano-cli-execution-stats.json
 #         )
+
+        jq '
+          to_entries
+        | map
+          ({ key:   (.value.i | tostring)
+           , value:
+             [{ "single host name":
+                { dnsName: .key
+                , port:    .value.port
+                }
+              }
+             ]
+           })
+        | from_entries
+        ' "$node_specs" > "$dir"/pool-relays.json
+
         params=(--genesis-dir "$dir"
+                --relay-specification-file "$dir/pool-relays.json"
                 $(jq '.cli_args.createFinalBulk | join(" ")' "$profile_json" --raw-output)
                )
         time cardano-cli genesis create-staked "${params[@]}"
@@ -199,13 +217,14 @@ case "$op" in
         msg "genesis:  removing delegator keys.."
         rm "$dir"/stake-delegator-keys -rf
 
-        cat <<<$cache_key_input               > "$dir"/cache.key.input
-        cat <<<$cache_key                     > "$dir"/cache.key
-        cat <<<$global_genesis_format_version > "$dir"/layout.version
-
         msg "genesis:  moving keys"
         ## TODO: try to get rid of this step:
-        Massage_the_key_file_layout_to_match_AWS "$profile_json" "$node_specs" "$dir";;
+        Massage_the_key_file_layout_to_match_AWS "$profile_json" "$node_specs" "$dir"
+
+        msg "genesis:  sealing"
+        cat <<<$cache_key_input               > "$dir"/cache.key.input
+        cat <<<$cache_key                     > "$dir"/cache.key
+        cat <<<$global_genesis_format_version > "$dir"/layout.version;;
 
     derive-from-cache )
         local usage="USAGE:  wb genesis $op PROFILE-OUT TIMING-JSON-EXPR CACHE-ENTRY-DIR OUTDIR"
@@ -287,7 +306,9 @@ Massage_the_key_file_layout_to_match_AWS() {
 
     set -euo pipefail
 
-    local pool_density_map=$(topology density-map "$profile_json" "$node_specs")
+    local pool_density_map=$(topology density-map "$node_specs")
+    if test -z "$pool_density_map"
+    then fatal "failed: topology density-map '$node_specs'"; fi
     msg "genesis: pool density map:  $pool_density_map"
 
     __KEY_ROOT=$dir

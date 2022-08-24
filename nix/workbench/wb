@@ -6,7 +6,6 @@ set -euo pipefail
 export LANG=C.UTF-8
 
 global_basedir=${global_basedir:-$(realpath "$(dirname "$0")")}
-global_mode='unknown'
 
 . "$global_basedir"/lib.sh
 . "$global_basedir"/env.sh
@@ -21,44 +20,43 @@ global_mode='unknown'
 . "$global_basedir"/explain-mode.sh
 
 . "$global_basedir"/backend.sh
-. "$global_basedir"/supervisor.sh
+. "$global_basedir"/backend/supervisor.sh
 
 usage_main() {
     test $# -lt 1 ||
         msg "Unknown op: $1"
-     __usage "OP" "Main OPs" <<EOF
-    start        (s)      Start a run of profile chosen at 'nix-shell' entry
-    finish       (f)      Finish the current cluster run
+    #
+    # $(red start)        ($(red s))      Start a run of profile chosen at 'nix-shell' entry
+    # $(red finish)       ($(red f))      Finish the current cluster run
+     __usage "OP" "Top-level OPs" <<EOF
+    $(red profile)      ($(red p))      Cluster profile ops.  Default subop is $(yellow show)
+    $(red run)          ($(red r))      Managing cluster runs.  Default subop is $(yellow list)
+    $(red analyse)      ($(red a))      Analyse cluster runs.  Default subop is $(yellow full)
 
-    profile      (p)      Cluster profile ops.  Default op is 'list'
-    analyse      (a)      Analyse cluster runs
+  $(blue Secondary top-level OPs):
 
-    env          (e)      Environment configuration
-    chaindb      (c)      ChainDB
-    genesis      (g)      Genesis
-    topology     (t)      Topology generation
-    run          (r)      Managing cluster runs.  Default op is 'list'
+    $(red chaindb)      ($(red c))      ChainDB
+    $(red genesis)      ($(red g))      Genesis
+    $(red topology)     ($(red t))      Topology generation
 
-  Options:
+  $(white wb) $(blue options):
 
-    --trace / --debug     set -x
-    --help                This short help
-    --help-full           Extended help
+    $(helpopt --trace / --debug)     set -x
+    $(helpopt --help)                This short help
+    $(helpopt --help-full)           Extended help
 EOF
 }
 
 usage_extra() {
     cat >&2 <<EOF
-  Other OPs:
+  $(blue Extra top-level OPs):
 
-    scenario     (s)      Run scenario control
-    call ARGS..           Call internal functions with arguments
-    mode                  Report mode set by --set-mode
+    $(red scenario)     ($(red s))      Run scenario control
+    $(red call) $(green ARGS..)  ($(red c))      Call internal functions with arguments
 
-  Extra options:
+  $(blue Extra) $(white wb) $(blue options):
 
-    --cls                 Clear screen, before acting further.
-    --set-mode MODE       Set mode.  Only has effect on 'mode' OP
+    $(helpopt --cls)                 Clear screen, before acting further.
 
 EOF
 }
@@ -66,24 +64,35 @@ EOF
 usage_start()
 {
     cat <<EOF
-Usage:
-   start [FLAGS..]
+$(red USAGE:)
+   $(helpcmd start [FLAGS..])
 
-   Flags:
+   $(blue Flags):
 
-      --batch-name NAME               Override the batch name (default: ${batchName:-default})
+      $(helpopt --batch-name NAME)               Override the batch name (default: $(green ${batchName:-default}))
 
-      --profile-name NAME             Select profile by name (default: ${batchName:-default})
-      --profile DIR                   Select profile by complete spec stored in DIR
+      $(helpopt --profile-name NAME)             Select profile by name (default: $(green default))
+      $(helpopt --iterations \| --times \| --iter \| -n ITERATIONS)
+                                      Run this many iterations of the profile.
 
-      --no-generator | --no-gen       Don't auto-start the tx-generator
+      $(helpopt --profile DIR)                   Select profile by complete spec stored in DIR.
 
-      --cabal                         'cabal run' mode for cardano-* executables
+      $(helpopt --idle)                          Use the $(blue idle) scenario.
+      $(helpopt --scenario \| -s SCENARIO)        Use the specified scenario.
+                                        See: $(helptopcmd wb scenario --help)
 
-      --trace | --debug               Trace the start-cluster script
-      --trace-wb | --trace-workbench  Trace the workbench script
-      --verbose                       Print more of what's going
-      --help                          This help message
+      $(helpopt --no-analysis)                   Do not run analysis at the run's end.
+      $(helpopt --analysis-can-fail)             Do not fail on failed analysis.
+      $(helpopt --filters F,F,F,F)               Comma-separated list of filters, instead
+                                        of profile-specified defaults.
+
+      $(helpopt --supervisor \| --backend-supervisor)
+                                      Use the $(blue supervisor) backend.
+
+      $(helpopt --trace \| --debug)               Trace the start-cluster script
+      $(helpopt --trace-wb \| --trace-workbench)  Trace the workbench script
+      $(helpopt --verbose)                       Print more of what's going
+      $(helpopt --help)                          This help message
 EOF
 }
 
@@ -92,7 +101,11 @@ start()
     local batch_name=
     local profile_name= profile=
     local backend=supervisor
+    local node_source=.
+    local node_rev=
     local cabal_mode=
+    local skip_prebuild=
+    local prebuild_done=
     local genesis_cache_entry_dir=
     local topology_dir=
     local verbose=
@@ -125,13 +138,16 @@ start()
         --analysis-can-fail | -af )      analysis_can_fail=t;;
         --filters )                      analyse_args+=($1 $2); shift;;
 
+        --node-source )                  node_source=$2; shift;;
+        --node-rev )                     node_rev=$2; shift;;
         --cabal-mode | --cabal )         run_allocate_args+=($1); cabal_mode=t;;
+        --skip-prebuild | -sp )          skip_prebuild=t;;
         --supervisor | --backend-supervisor )
                                          backend=supervisor;;
 
-        --verbose )                      export verbose=t;;
+        --verbose | -v )                 export verbose=t;;
         --trace | --debug )              set -x;;
-        --trace-wb | --trace-workbench ) export WORKBENCH_EXTRA_FLAGS=--trace;;
+        --trace-wb | --trace-workbench ) export WB_EXTRA_FLAGS=--trace;;
         --help )                         usage_start
                                          exit 1;;
         * ) fatal "while parsing remaining 'wb start' args:  $*";;
@@ -139,7 +155,6 @@ start()
 
     if test -n "$cabal_mode"
     then . $(dirname "$0")/lib-cabal.sh
-         workbench-prebuild-executables
     fi
 
     backend assert-is $backend
@@ -149,28 +164,44 @@ start()
     profile_name=${profile_name:-$(jq '.name' -r $profile/profile.json)}
     analysis_type=$(jq '.analysis.type' -r $profile/profile.json)
 
-    progress "top-level" "iterations of profile $(with_color 'yellow' $profile_name):  $(with_color 'white' $iterations)"
-    for ((i=0; i<$iterations; i++))
-    do local args=(
+    local top_i
+    for ((top_i=0; top_i<$iterations; top_i++))
+    do newline
+       progress "manifest" "component versions:"
+       local manifest=$(manifest collect-from-checkout "$node_source" $node_rev)
+       manifest report "$manifest"
+
+       if test -z "$cabal_mode" -o -n "$prebuild_done"
+       then true
+       elif test -n "$skip_prebuild"
+       then progress "workbench | cabal" "skipping Cabal prebuilding due to $(yellow --skip-prebuild)"
+       else workbench-prebuild-executables
+            prebuild_done=t
+       fi
+
+       progress "top-level" "profile $(with_color 'yellow' $profile_name), iteration $(with_color 'white' $((top_i+1))) of $(with_color 'yellow' $iterations)"
+
+       local args=(
             ${run_allocate_args[@]}
-            --manifest "$(manifest collect-from-checkout .)"
+            --manifest "$manifest"
         )
        run ${run_args[@]} 'allocate' $batch_name $profile_name "${args[@]}"
-       local tag=$(run current-tag)
+       local run=$(run current-tag)
 
        current_run_path=$(run current-path)
        mkdir -p "$current_run_path"
 
-       run ${run_args[@]} 'start'    ${run_start_args[@]} $tag
+       run ${run_args[@]} 'start'    ${run_start_args[@]} $run
 
        if test -n "$no_analysis" -o $analysis_type = null; then continue; fi
 
-       progress "top-level | analysis" "analysis type $(with_color yellow $analysis_type) on $(with_color white $tag)"
-       analyse ${analyse_args[@]} $analysis_type $tag ||
+       progress "top-level | analysis" "analysis type $(with_color yellow $analysis_type) on $(with_color white $run)"
+       analyse ${analyse_args[@]} $analysis_type $run &&
+           progress "run | analysis" "done" ||
            if test -n "$analysis_can_fail" -a -z "$no_retry_failed_runs"
-           then progress "run | analysis" "log processing failed, but --analysis-can-fail prevents failure:  $(with_color red $tag)"
+           then progress "run | analysis" "log processing failed, but --analysis-can-fail prevents failure:  $(with_color red $run)"
                 iterations=$((iterations + 1))
-           else fail "analysis failed:  $tag"
+           else fail "analysis failed:  $run"
                 false; fi
     done
 }
@@ -180,7 +211,7 @@ finish()
     while test $# -gt 0
     do case "$1" in
         --trace | --debug )              set -x;;
-        --trace-wb | --trace-workbench ) export WORKBENCH_EXTRA_FLAGS=--trace;;
+        --trace-wb | --trace-workbench ) export WB_EXTRA_FLAGS=--trace;;
         * ) break;; esac; shift; done
 
     run stop $(run current-tag)
@@ -193,8 +224,6 @@ do case "$1" in
            echo -en "\ec">&2;;
        --trace | --debug )
            set -x;;
-       --set-mode )
-           global_mode=$2; shift;;
        --help )
            usage_main; exit 1;;
        --help-full | --help-all | --help-extra )
@@ -202,13 +231,13 @@ do case "$1" in
        * ) break;; esac; shift; done
 
 main() {
-    local op=${1:?$(usage_main)}; shift
+    local op=${1:?$(usage_main)}; shift || true
 
     case "$op" in
         ## Public, primary:
         #
-        start        | s )        start               "$@";;
-        finish       | f )        finish              "$@";;
+        start            )        start               "$@";;
+        finish           )        finish              "$@";;
 
         ## Public, secondary:
         profile      | profiles | prof | ps | p )
@@ -217,7 +246,6 @@ main() {
         analyse      | a )        analyse             "$@";;
 
         ## Public, internals-y:
-        env          | e )        env                 "$@";;
         chaindb      | c )        chaindb             "$@";;
         genesis      | g )        genesis             "$@";;
         topology     | topo | t ) topology            "$@";;
@@ -227,8 +255,7 @@ main() {
         #
         scenario     | s )        scenario            "$@";;
         backend )                 backend             "$@";;
-        call )                                        "$@";;
-        mode )                    echo -n     $global_mode;;
+        call         | c )                            "$@";;
         path )                    echo     $global_basedir;;
 
         ## Bail for help:

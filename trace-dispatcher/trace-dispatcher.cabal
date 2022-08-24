@@ -17,7 +17,7 @@ library
                       Cardano.Logging.Types
                       Cardano.Logging.Trace
                       Cardano.Logging.Configuration
-                      Cardano.Logging.ConfigurationParser                      
+                      Cardano.Logging.ConfigurationParser
                       Cardano.Logging.DocuGenerator
                       Cardano.Logging.Formatter
                       Cardano.Logging.Forwarding
@@ -43,7 +43,7 @@ library
                       , contra-tracer
                       , ekg
                       , ekg-core
-                      , ekg-forward
+                      , ekg-forward == 0.1.0
                       , hostname
                       , network
                       , optparse-applicative-fork

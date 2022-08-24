@@ -15,8 +15,10 @@
     </tr>
   </table>
 
+.. contents:: Contents
+
 *************************
-``cardano-node`` Overview
+Overview of the ``cardano-node`` repository
 *************************
 
 Integration of the `ledger <https://github.com/input-output-hk/cardano-ledger-specs>`_, `consensus <https://github.com/input-output-hk/ouroboros-network/tree/master/ouroboros-consensus>`_,
@@ -37,32 +39,25 @@ Integration of the `ledger <https://github.com/input-output-hk/cardano-ledger-sp
 Network Configuration, Genesis and Topology Files
 =================================================
 
-The latest supported networks can be found at `<https://hydra.iohk.io/job/Cardano/cardano-node/cardano-deployment/latest-finished/download/1/index.html>`_
+The latest supported networks can be found at `<https://book.world.dev.cardano.org/environments.html>`_
 
-How to build
-============
+****
+Obtaining ``cardano-node``
+****
+
+Building from source
+====
 
 Documentation for building the node can be found `here <https://docs.cardano.org/getting-started/installing-the-cardano-node>`_.
 
 Executables
 ===========
 
-You can download the latest version of ``cardano-node`` and ``cardano-cli``:
+You can download the hydra binaries of ``cardano-node`` and ``cardano-cli`` from the [release notes](https://github.com/input-output-hk/cardano-node/releases)
 
-* `linux <https://hydra.iohk.io/job/Cardano/cardano-node/linux.musl.cardano-node-linux/latest-finished>`_
-* `win64 <https://hydra.iohk.io/job/Cardano/cardano-node/linux.windows.cardano-node-win64/latest-finished>`_
-* `macos <https://hydra.iohk.io/job/Cardano/cardano-node/macos.cardano-node-macos/latest-finished>`_
 
-Windows Executable
-==================
-
-Download
---------
-
-You can download `here <https://hydra.iohk.io/job/Cardano/cardano-node/linux.windows.cardano-node-win64/latest-finished>`_.
-
-Instructions
-------------
+Running the node on Windows
+----
 
 The download includes cardano-node.exe and a .dll. To run the node with cardano-node run you need to reference a few files and directories as arguments. These can be copied from the cardano-node repo into the executables directory. The command to run the node on mainnet looks like this:
 
@@ -79,8 +74,12 @@ You can pull the docker image with the latest version of cardano-node from `here
 
     docker pull inputoutput/cardano-node
 
-``cardano-node``
-================
+****
+Using ``cardano-node``
+****
+
+Command line summary: ``cardano-node``
+====
 This refers to the client that is used for running a node.
 
 The general synopsis is as follows:
@@ -128,37 +127,26 @@ The general synopsis is as follows:
 
 * ``--validate-db`` - Flag to revalidate all on-disk database files
 
-Configuration ``.yaml`` files
-=============================
+Configuration
+====
 
-The ``--config`` flag points to a ``.yaml`` file that is responsible to configuring the logging & other important settings for the node. E.g. see the Byron mainnet configuration in this
+The ``--config`` flag points to a ``.yaml`` (or a structurally equivalent ``.json``) file that is responsible to configuring the logging & other important settings for the node. E.g. see the Byron mainnet configuration in this
 `configuration.yaml <https://github.com/input-output-hk/cardano-node/blob/master/configuration/defaults/byron-mainnet/configuration.yaml>`_.
+
 Some of the more important settings are as follows:
 
 * ``Protocol: RealPBFT`` -- Protocol the node will execute
 
 * ``RequiresNetworkMagic``: RequiresNoMagic -- Used to distinguish between mainnet (``RequiresNoMagic``) and testnets (``RequiresMagic``)
 
-
-Logging
-========
-
-Logs are output to the ``logs/`` dir.
-
-Profiling & statistics
-======================
-
-Profiling data and RTS run stats are stored in the ``profile/`` dir.
-
-Please see ``scripts/README.md`` for how to obtain profiling information using the scripts.
-
 Scripts
 =======
 
 Please see ``scripts/README.md`` for information on the various scripts.
 
-``cardano-cli``
-===============
+****
+Using ``cardano-cli``
+****
 
 A CLI utility to support a variety of key material operations (genesis, migration, pretty-printing..) for different system generations.
 Usage documentation can be found at ``cardano-cli/README.md``.
@@ -171,6 +159,9 @@ The general synopsis is as follows:
 
 > NOTE: the exact invocation command depends on the environment.  If you have only built ``cardano-cli``, without installing it, then you have to prepend ``cabal run -- ``
 before ``cardano-cli``.  We henceforth assume that the necessary environment-specific adjustment has been made, so we only mention ``cardano-cli``.
+
+Command line options: ``cardano-cli``
+====
 
 The subcommands are subdivided in groups, and their full list can be seen in the output of ``cardano-cli --help``.
 
@@ -194,11 +185,8 @@ All subcommands have help available.  For example:
      -h,--help                Show this help text
 
 
-Genesis operations
-==================
-
-Generation
-----------
+Genesis generation
+====
 
 The Byron genesis generation operations will create a directory that contains:
 
@@ -322,7 +310,7 @@ Local node queries
 
 You can query the tip of your local node via the ``get-tip`` command as follows
 
-1. Open `tmux`
+1. Open ``tmux``
 2. Run ``cabal build cardano-node``
 3. Run ``./scripts/lite/shelley-testnet.sh example``
 4. Run ``export CARDANO_NODE_SOCKET_PATH=/cardano-node/example/socket/node-1-socket
@@ -365,7 +353,7 @@ The mandatory arguments are ``--mainnet | --testnet-magic``, ``signing-key``, ``
 
 The remaining arguments are optional parameters you want to update in your update proposal.
 
-You can also check your proposal's validity using the `validate-cbor` command. See: `Validate CBOR files`_.
+You can also check your proposal's validity using the ``validate-cbor`` command. See: `Validate CBOR files`_.
 
 See the `Byron specification <https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/byronLedgerSpec/latest/download-by-type/doc-pdf/ledger-spec>`_
 for more details on update proposals.
@@ -413,54 +401,9 @@ Byron vote submission:
                           (--mainnet | --testnet-magic NATURAL)
                           --filepath UpdateProposalVoteFile
 
-Development
-===========
-
-GHCID
------
-
-run *ghcid* with: ``ghcid -c "cabal repl exe:cardano-node --reorder-goals"``
-
-Haskell Language Server
------------------------
-
-When using Haskell Language Server with Visual Studio Code, you may find that
-`HLINT annotations are ignored<https://github.com/haskell/haskell-language-server/issues/638>`.
-
-To work around this, you may run the script `./scripts/reconfigure-hlint.sh` to generate a `.hlint.yaml`
-file with HLINT ignore rules derived from the source code.
-
-Testing
-========
-
-``cardano-node`` is essentially a container which implements several components such networking, consensus, and storage. These components have individual test coverage. The node goes through integration and release testing by Devops/QA while automated CLI tests are ongoing alongside development.
-
-Developers on ``cardano-node`` can `launch their own testnets <doc/getting-started/launching-a-testnet.md>`_ or `run the chairman tests <doc/getting-started/running-chairman-tests.md>`_ locally.
-
-Chairman tests
---------------
-
-Debugging
-=========
-
-Pretty printing CBOR encoded files
-----------------------------------
-
-It may be useful to print the on chain representations of blocks, delegation certificates, txs and update proposals. There are two commands that do this (for any cbor encoded file):
-
-To pretty print as CBOR:
-``cabal exec cardano-cli -- pretty-print-cbor --filepath CBOREncodedFile``
-
-Validate CBOR files
--------------------
-
-You can validate Byron era blocks, delegation certificates, txs and update proposals with the ``validate-cbor`` command.
-
-``cabal exec cardano-cli -- validate-cbor --byron-block 21600 --filepath CBOREncodedByronBlockFile``
-
-
+****
 Native Tokens
-=======================================
+****
 
 Native tokens is a new feature that enables the transacting of multi-assets on Cardano. Native tokens are now supported on mainnet and users can transact with ada, and an unlimited number of user-defined (custom) tokens natively.
 
@@ -472,10 +415,19 @@ To help you get started we have compiled a handy list of resources:
 
 You can also read more about `native tokens and how they compare to ada and ERC20 <https://github.com/input-output-hk/cardano-ledger-specs/blob/master/doc/explanations/features.rst>`_. Browse native tokens created on the Cardano blockchain and see their transactions in an interactive dashboard that allows filtering and searching: nativetokens.da.iogservices.io.
 
+****
 API Documentation
-=================
+****
+
 The API documentation is published `here <https://input-output-hk.github.io/cardano-node/>`_.
 
-The documentation is built with each push, but is only published from `master` branch.  In order to
-test if the documentation is working, build the documentation locally with `./scripts/haddocs.sh` and
-open `haddocks/index.html` in the browser.
+The documentation is built with each push, but is only published from ``master`` branch.  In order to
+test if the documentation is working, build the documentation locally with ``./scripts/haddocs.sh`` and
+open ``haddocks/index.html`` in the browser.
+
+****
+Using the ``cardano-node`` Haskell packages
+****
+
+If you want to use the ``cardano-node`` Haskell packages from another project, you should use `CHaP <https://github.com/input-output-hk/cardano-haskell-packages>`_ to get the packages defined in this repository.
+Please note that you may need to use any ``source-repository-package`` stanzas defined in ``cabal.project``, although we will endeavour to keep these to an absolute minimum.

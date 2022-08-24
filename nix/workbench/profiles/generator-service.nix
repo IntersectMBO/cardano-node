@@ -1,8 +1,8 @@
 { pkgs
 , runJq
 
-## The backend is an attrset of AWS/supervisord-specific methods and parameters.
-, backend
+## An attrset of specific methods and parameters.
+, services-config
 
 , profile
 }:
@@ -26,26 +26,23 @@ let
                ShelleyGenesisFile ByronGenesisFile;
            };
     in
-        backend.finaliseGeneratorService
+        services-config.finaliseGeneratorService profile.value
         {
           inherit (profile.value) era;
 
           targetNodes = __mapAttrs
             (name: { name, port, ...}@nodeSpec:
               { inherit port;
-                ip = let ip = backend.nodePublicIP nodeSpec; # getPublicIp resources nodes name
+                ip = let ip = services-config.nodePublicIP nodeSpec; # getPublicIp resources nodes name
                      in __trace "generator target:  ${name}/${ip}:${toString port}" ip;
               })
             nodeSpecs;
-
-          ## path to the socket of the locally running node.
-          localNodeSocketPath = "../node-0/node.socket";
 
           ## nodeConfig of the locally running node.
           localNodeConf = removeAttrs exemplarNode.serviceConfig.value ["executable"];
 
           ## The nodeConfig of the Tx generator itself.
-          nodeConfig = backend.finaliseGeneratorConfig generatorNodeConfigDefault;
+          nodeConfig = services-config.finaliseGeneratorConfig generatorNodeConfigDefault;
 
           dsmPassthrough = {
             # rtsOpts = ["-xc"];

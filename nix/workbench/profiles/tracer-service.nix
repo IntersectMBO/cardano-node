@@ -1,8 +1,8 @@
 { pkgs
 , runJq
 
-## The backend is an attrset of AWS/supervisord-specific methods and parameters.
-, backend
+## An attrset of specific methods and parameters.
+, services-config
 
 , profile
 }:
@@ -20,14 +20,14 @@ let
     nodeSpecs:
     let
     in
-        backend.finaliseTracerService
+        services-config.finaliseTracerService
         {
           ## In both the local and remote scenarios, it's most frequently convenient to act as an acceptor.
           acceptingSocket = "tracer.socket";
 
           networkMagic = profile.value.genesis.network_magic;
 
-          ## logRoot = ## ..really depends on context -- available in backend.finaliseTracerService
+          ## logRoot = ## ..really depends on context -- available in services-config.finaliseTracerService
 
           dsmPassthrough = {
             # rtsOpts = ["-xc"];

@@ -1,8 +1,8 @@
 { pkgs
 , runJq
 
-## The backend is an attrset of AWS/supervisord-specific methods and parameters.
-, backend
+## An attrset of specific methods and parameters.
+, services-config
 
 ## The cardano-node config used as baseline:
 , baseNodeConfig
@@ -14,6 +14,76 @@ with pkgs.lib;
 with (import ../lib.nix pkgs.lib);
 
 let
+  ##
+  ## removeLegacyTracingOptions :: NodeConfig -> NodeConfig
+  ##
+  removeLegacyTracingOptions = cfg:
+    removeAttrs cfg
+    [
+      "TraceAcceptPolicy"
+      "TraceBlockchainTime"
+      "TraceBlockFetchClient"
+      "TraceBlockFetchDecisions"
+      "TraceBlockFetchProtocol"
+      "TraceBlockFetchProtocolSerialised"
+      "TraceBlockFetchServer"
+      "TraceChainDB"
+      "TraceChainSyncClient"
+      "TraceChainSyncBlockServer"
+      "TraceChainSyncHeaderServer"
+      "TraceChainSyncProtocol"
+      "TraceConnectionManager"
+      "TraceConnectionManagerCounters"
+      "TraceConnectionManagerTransitions"
+      "DebugPeerSelectionInitiator"
+      "DebugPeerSelectionInitiatorResponder"
+      "TraceDiffusionInitialization"
+      "TraceDnsResolver"
+      "TraceDnsSubscription"
+      "TraceErrorPolicy"
+      "TraceForge"
+      "TraceForgeStateInfo"
+      "TraceHandshake"
+      "TraceIpSubscription"
+      "TraceKeepAliveClient"
+      "TraceLedgerPeers"
+      "TraceLocalChainSyncProtocol"
+      "TraceLocalConnectionManager"
+      "TraceLocalErrorPolicy"
+      "TraceLocalHandshake"
+      "TraceLocalInboundGovernor"
+      "TraceLocalRootPeers"
+      "TraceLocalServer"
+      "TraceLocalStateQueryProtocol"
+      "TraceLocalTxMonitorProtocol"
+      "TraceLocalTxSubmissionProtocol"
+      "TraceLocalTxSubmissionServer"
+      "TraceMempool"
+      "TraceMux"
+      "TraceLocalMux"
+      "TracePeerSelection"
+      "TracePeerSelectionCounters"
+      "TracePeerSelectionActions"
+      "TracePublicRootPeers"
+      "TraceServer"
+      "TraceInboundGovernor"
+      "TraceInboundGovernorCounters"
+      "TraceInboundGovernorTransitions"
+      "TraceTxInbound"
+      "TraceTxOutbound"
+      "TraceTxSubmissionProtocol"
+      "TraceTxSubmission2Protocol"
+      "TracingVerbosity"
+      "defaultBackends"
+      "defaultScribes"
+      "hasEKG"
+      "hasPrometheus"
+      "minSeverity"
+      "options"
+      "rotation"
+      "setupBackends"
+      "setupScribes"
+    ];
 
   ## The AWS node is started with:
   ## cardano-node run
@@ -46,63 +116,20 @@ let
           TestEnableDevelopmentNetworkProtocols = true;
           TurnOnLogMetrics                      = true;
         };
-      tracing = {
-        trace-dispatcher = import ./tracing.nix        { inherit nodeSpec; profile = profile.value; };
-        iohk-monitoring  = import ./tracing-legacy.nix { inherit nodeSpec; profile = profile.value; };
-      };
       tracing-transform = {
-        trace-dispatcher = xs:
-          ## For trace-dispatcher, we remove all legacy tracing options:
-          removeAttrs xs
-            [
-              "TraceAcceptPolicy"
-              "TraceBlockFetchClient"
-              "TraceBlockFetchDecisions"
-              "TraceBlockFetchProtocol"
-              "TraceBlockFetchProtocolSerialised"
-              "TraceBlockFetchServer"
-              "TraceChainDb"
-              "TraceChainSyncBlockServer"
-              "TraceChainSyncClient"
-              "TraceChainSyncHeaderServer"
-              "TraceChainSyncProtocol"
-              "TraceConnectionManager"
-              "TraceDNSResolver"
-              "TraceDNSSubscription"
-              "TraceDiffusionInitialization"
-              "TraceErrorPolicy"
-              "TraceForge"
-              "TraceHandshake"
-              "TraceInboundGovernor"
-              "TraceIpSubscription"
-              "TraceLedgerPeers"
-              "TraceLocalChainSyncProtocol"
-              "TraceLocalErrorPolicy"
-              "TraceLocalHandshake"
-              "TraceLocalRootPeers"
-              "TraceLocalTxSubmissionProtocol"
-              "TraceLocalTxSubmissionServer"
-              "TraceMempool"
-              "TraceMux"
-              "TracePeerSelection"
-              "TracePeerSelectionActions"
-              "TracePublicRootPeers"
-              "TraceServer"
-              "TraceTxInbound"
-              "TraceTxOutbound"
-              "TraceTxSubmissionProtocol"
-              "TracingVerbosity"
-              "defaultBackends"
-              "defaultScribes"
-              "hasEKG"
-              "hasPrometheus"
-              "minSeverity"
-              "options"
-              "rotation"
-              "setupBackends"
-              "setupScribes"
-            ];
-        iohk-monitoring  = xs: xs;
+        trace-dispatcher = cfg:
+          recursiveUpdate
+            (import ./tracing.nix
+              { inherit nodeSpec;
+                inherit (profile.value.node) tracer;
+              })
+            (removeLegacyTracingOptions cfg);
+        iohk-monitoring  = cfg:
+          recursiveUpdate
+            (import ./tracing-legacy.nix
+              { inherit nodeSpec;
+              })
+            cfg;
       };
       era_setup_hardforks = {
         shelley =
@@ -133,7 +160,7 @@ let
       }.${profile.value.era};
     };
     in
-    backend.finaliseNodeService profile.value nodeSpec
+    services-config.finaliseNodeService profile.value nodeSpec
     {
       inherit port;
 
@@ -143,36 +170,32 @@ let
       ##   2. apply either the hardforks config, or the preset (typically mainnet)
       ##   3. overlay the tracing config
       nodeConfig =
-        nodeConfigBits.tracing-transform.${profile.value.node.tracing_backend}
-          (recursiveUpdate
-            (backend.finaliseNodeConfig nodeSpec
+        recursiveUpdate
+          (nodeConfigBits.tracing-transform.${profile.value.node.tracing_backend}
+            (services-config.finaliseNodeConfig nodeSpec
               (recursiveUpdate
-                (recursiveUpdate
-                  nodeConfigBits.base
-                  (if __hasAttr "preset" profile.value
-                   then readJSONMay (./presets + "/${profile.value.preset}/config.json")
-                   else nodeConfigBits.era_setup_hardforks))
-                nodeConfigBits.tracing.${profile.value.node.tracing_backend}))
-            profile.value.node.verbatim);
+                nodeConfigBits.base
+                (if __hasAttr "preset" profile.value
+                 then readJSONMay (./presets + "/${profile.value.preset}/config.json")
+                 else nodeConfigBits.era_setup_hardforks))))
+          profile.value.node.verbatim;
 
       extraArgs =
-        let shutdownSlot  = profile.value.node.shutdown_on_slot_synced;
-            shutdownBlock = profile.value.node.shutdown_on_block_synced;
-            mayKindArgs =
-              val: kind: flag:
-              if val != null
-              then if isAttrs val
-                   then if val.${kind} or null != null
-                        then [flag (toString val.${kind})]
-                        else []
-                   else [flag (toString val)]
-              else [];
-            shutBlockArgs = mayKindArgs shutdownBlock nodeSpec.kind "--shutdown-on-block-synced";
-            shutSlotArgs  = mayKindArgs shutdownSlot  nodeSpec.kind "--shutdown-on-slot-synced";
-        in backend.finaliseNodeArgs profile nodeSpec
-          (if   shutBlockArgs != []
-           then shutBlockArgs
-           else shutSlotArgs);
+        (if nodeSpec.shutdown_on_block_synced != null
+          then [
+            "--shutdown-on-block-synced"
+            (toString nodeSpec.shutdown_on_block_synced)
+          ]
+          else []
+        )
+        ++
+        (if nodeSpec.shutdown_on_slot_synced != null
+            then [
+              "--shutdown-on-slot-synced"
+              (toString nodeSpec.shutdown_on_slot_synced)
+            ]
+            else []
+        );
     };
 
   ## Given an env config, evaluate it and produce the node service.
@@ -242,7 +265,7 @@ let
       };
 
       topology = rec {
-        JSON  = backend.topologyForNodeSpec { inherit profile nodeSpec; };
+        JSON  = services-config.topologyForNodeSpec { inherit profile nodeSpec; };
         value = __fromJSON (__readFile JSON);
       };
 
@@ -254,6 +277,7 @@ let
           ${service.script}
           '';
     };
+
   ##
   ## node-services :: Map NodeName (NodeSpec, ServiceConfig, Service, NodeConfig, Script)
   ##

@@ -1,38 +1,28 @@
-{ profile, nodeSpec }:
+{ nodeSpec
+, tracer
+}:
 {
   UseTraceDispatcher   = true;
 
+  ## Please see the generated tracing configuration reference at:
+  ##
+  ## https://github.com/input-output-hk/cardano-node/blob/master/doc/new-tracing/tracers_doc_generated.md#trace-messages
+  ##
   TraceOptions  = {
-    ""                            = { severity = "Notice";
-                                      backends = [
-                                        "Stdout MachineFormat"
-                                        "EKGBackend"
-                                      ] ++ (if !profile.node.tracer then [] else
-                                      [
-                                        "Forwarder"
-                                      ]);
-                                    };
-    "AcceptPolicy"             = { severity = "Info"; };
-    "BlockFetchClient"         = { severity = "Info"; detail = "DMinimal"; };
-    "BlockFetchClient.CompletedBlockFetch" = { maxFrequency = 2.0; };
-    "BlockFetchServer"         = { severity = "Info"; };
-    "ChainDB"                  = { severity = "Info"; };
-    "ChainDB.AddBlockEvent.AddBlockValidation.ValidCandidate"  = { maxFrequency = 2.0; };
-    "ChainDB.AddBlockEvent.AddedBlockToQueue"                  = { maxFrequency = 2.0; };
-    "ChainDB.AddBlockEvent.AddedBlockToVolatileDB"             = { maxFrequency = 2.0; };
-    "ChainDB.CopyToImmutableDBEvent.CopiedBlockToImmutableDB"  = { maxFrequency = 2.0; };
-    "ChainSyncClient"          = { severity = "Info"; detail = "DMinimal"; };
-    "ChainSyncServerHeader"    = { severity = "Info"; };
-    "ChainSyncServerBlock"     = { severity = "Info"; };
-    "DNSResolver"              = { severity = "Info"; };
-    "DNSSubscription"          = { severity = "Info"; };
-    "DiffusionInit"            = { severity = "Info"; };
-    "ErrorPolicy"              = { severity = "Info"; };
-    "Forge"                    = { severity = "Info"; };
-    "IpSubscription"           = { severity = "Info"; };
-    "LocalErrorPolicy"         = { severity = "Info"; };
-    "Mempool"                  = { severity = "Info"; };
-    "Resources"                = { severity = "Info"; };
-    "TxSubmission2"            = { detail = "DMinimal"; };
+    "" =
+      { severity = "Notice";
+        backends = [
+          "Stdout MachineFormat"
+          "EKGBackend"
+        ] ++ (if !tracer then [] else
+          [
+            "Forwarder"
+          ]);
+      };
+    BlockFetch.severity = "Info";
+    ChainSync.severity = "Info";
+    "Forge.Loop.BlockContext".severity = "Info";
+    "Forge.Loop.LedgerView".severity = "Info";
+    "Forge.Loop.LedgerState".severity = "Info";
   };
 }
