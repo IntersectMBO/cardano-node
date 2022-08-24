@@ -22,7 +22,6 @@ Make the __block-producing__ node to "talk" only to __YOUR__ relay node. Do not 
 
 Make your __relay node__ `talk` to your __block-producing__ node and __other relays__ in the network by editing the `topology.json` file:
 
-
     nano mainnet-topology.json
 
     {
@@ -45,6 +44,6 @@ Make your __relay node__ `talk` to your __block-producing__ node and __other rel
       ]
     }
 
-**Note**: If you want to connect to IPv4 and IPv6 relays, you must either not
-specify host addresses when starting `cardano-node` or make sure to specify
-both an IPv4 and IPv6 host address.
+**Note**: If you want to connect to IPv4 and IPv6 relays, you must either not specify host addresses when starting `cardano-node` or make sure to specify both an IPv4 and IPv6 host address.
+
+To learn how to use P2P topology on the networks that support it, see [Understanding config files](../getting-started/understanding-config-files.md)
