@@ -44,7 +44,7 @@ Create a directory on your local machine to store your keys:
     cardano-cli node key-gen \
     --cold-verification-key-file cold.vkey \
     --cold-signing-key-file cold.skey \
-    --operational-certificate-issue-counter-file cold.counter
+    --operational-certificate-issue-counter-file opcert.counter
 
 #### Generate VRF Key pair
 
@@ -85,9 +85,9 @@ To generate the certificate:
     cardano-cli node issue-op-cert \
     --kes-verification-key-file kes.vkey \
     --cold-signing-key-file cold.skey \
-    --operational-certificate-issue-counter cold.counter \
+    --operational-certificate-issue-counter opcert.counter \
     --kes-period 7398 \
-    --out-file node.cert
+    --out-file opcert.cert
 
 #### Move the cold keys to secure storage and remove them from your local machine.
 
@@ -108,6 +108,6 @@ Log in to your server and verify that the files are there:
 
     ls pool-keys
 
-    > kes.skey  kes.vkey  node.cert  vrf.skey  vrf.vkey
+    > kes.skey  kes.vkey  opcert.cert  vrf.skey  vrf.vkey
 
 Later on we will learn how to register our pool in the blockchain.

@@ -2,11 +2,11 @@
 
 To retire a pool we need to:
 
-0. Make sure that any pool owners are aware of your retirement intention and will not remove their Pledge until the pool has retired. 
+0. Make sure that any pool owners are aware of your retirement intention and will not remove their Pledge until the pool has retired.
 1. Create a **deregistration certificate** and specify an epoch when your pool will retire. There is a limit on how far in the future this can be (given by a protocol parameter - see below). Make sure you give sufficient time for delegators to switch pools
 2. Submit the certificate to the blockchain with a **transaction**
 3. Notify your delegators of your intention to retire the pool using your usual communication mechanisms. Wallets and other tools should highlight that the pool is retiring and discourage new delegations.
-4. Keep your system working normally until we reach the epoch you chose on the certificate for the pool to expire. Retirement takes place when the first block of the selected epoch is processed (before the transactions for that block are processed.) 
+4. Keep your system working normally until we reach the epoch you chose on the certificate for the pool to expire. Retirement takes place when the first block of the selected epoch is processed (before the transactions for that block are processed.)
 5. Move your funds out from your pledge address to a different wallet.  
 6. When the pool is effectively retired, the pool deposit is sent back to the rewards account.
 7. **Wait for any pending rewards to be paid.**
@@ -137,3 +137,5 @@ And submit to the blockchain:
 The pool will retire at the end of epoch 52.
 
 If we change our mind, we can create and submit a new registration certificate before epoch 53, which will then overrule the deregistration certificate.
+
+**Note**`--mainnet` identifies the Cardano mainnet, for **preproduction testnet** use `--testnet-magic 1` and for **preview testnet** use `--testnet-magic 2`

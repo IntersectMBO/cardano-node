@@ -8,26 +8,34 @@ Starting the node and connecting it to the network requires 3 configuration file
 
 You can download the configuration files from:
 
- [https://hydra.iohk.io/job/Cardano/cardano-node/cardano-deployment/latest-finished/download/1/index.html](https://hydra.iohk.io/job/Cardano/cardano-node/cardano-deployment/latest-finished/download/1/index.html)
+ [https://book.world.dev.cardano.org/environments.html](https://book.world.dev.cardano.org/environments.html)
 
 
 From the CLI you can use
 
-For Cardano testnet
+For Preview Testnet
 
-    wget https://hydra.iohk.io/job/Cardano/cardano-node/cardano-deployment/latest-finished/download/1/testnet-config.json
-    wget https://hydra.iohk.io/job/Cardano/cardano-node/cardano-deployment/latest-finished/download/1/testnet-byron-genesis.json
-    wget https://hydra.iohk.io/job/Cardano/cardano-node/cardano-deployment/latest-finished/download/1/testnet-shelley-genesis.json
-    wget https://hydra.iohk.io/job/Cardano/cardano-node/cardano-deployment/latest-finished/download/1/testnet-alonzo-genesis.json
-    wget https://hydra.iohk.io/job/Cardano/cardano-node/cardano-deployment/latest-finished/download/1/testnet-topology.json
+    wget https://book.world.dev.cardano.org/environments/preview/config.json
+    wget https://book.world.dev.cardano.org/environments/preview/topology.json
+    wget https://book.world.dev.cardano.org/environments/preview/byron-genesis.json
+    wget https://book.world.dev.cardano.org/environments/preview/shelley-genesis.json
+    wget https://book.world.dev.cardano.org/environments/preview/alonzo-genesis.json
+
+For Preproduction testnets
+
+    wget https://book.world.dev.cardano.org/environments/preprod/config.json
+    wget https://book.world.dev.cardano.org/environments/preprod/topology.json
+    wget https://book.world.dev.cardano.org/environments/preprod/byron-genesis.json
+    wget https://book.world.dev.cardano.org/environments/preprod/shelley-genesis.json
+    wget https://book.world.dev.cardano.org/environments/preprod/alonzo-genesis.json
 
 For Mainnet:
 
-    wget https://hydra.iohk.io/job/Cardano/cardano-node/cardano-deployment/latest-finished/download/1/mainnet-config.json
-    wget https://hydra.iohk.io/job/Cardano/cardano-node/cardano-deployment/latest-finished/download/1/mainnet-byron-genesis.json
-    wget https://hydra.iohk.io/job/Cardano/cardano-node/cardano-deployment/latest-finished/download/1/mainnet-shelley-genesis.json
-    wget https://hydra.iohk.io/job/Cardano/cardano-node/cardano-deployment/latest-finished/download/1/mainnet-alonzo-genesis.json
-    wget https://hydra.iohk.io/job/Cardano/cardano-node/cardano-deployment/latest-finished/download/1/mainnet-topology.json
+    wget https://book.world.dev.cardano.org/environments/mainnet/config.json
+    wget https://book.world.dev.cardano.org/environments/mainnet/topology.json
+    wget https://book.world.dev.cardano.org/environments/mainnet/byron-genesis.json
+    wget https://book.world.dev.cardano.org/environments/mainnet/shelley-genesis.json
+    wget https://book.world.dev.cardano.org/environments/mainnet/alonzo-genesis.json
 
 Starting the node uses the command `cardano-node run` and a set of options.
 
@@ -50,12 +58,12 @@ Get the complete list of available options with `cardano-node run --help`
 To start a passive node:
 
      cardano-node run \
-       --topology path/to/mainnet-topology.json \
+       --topology path/to/topology.json \
        --database-path path/to/db \
        --socket-path path/to/db/node.socket \
        --host-addr x.x.x.x \
        --port 3001 \
-       --config path/to/mainnet-config.json
+       --config path/to/config.json
 
 **Replace x.x.x.x with your public IP and indicate the correct paths to the required files.**
 
@@ -74,4 +82,4 @@ Check that the node is syncing by fetching the current tip. When syncing `slot` 
         "block": 5580350
     }
 
-**Note**`--mainnet` identifies the Cardano mainnet, for testnets use `--testnet-magic 1097911063` instead.
+**Note**`--mainnet` identifies the Cardano mainnet, for **preproduction testnet** use `--testnet-magic 1` and for **preview testnet** use `--testnet-magic 2`

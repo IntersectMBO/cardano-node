@@ -27,6 +27,6 @@ by typing
         cardano-cli node key-gen \
             --cold-verification-key-file cold.vkey \
             --cold-signing-key-file cold.skey \
-            --operational-certificate-issue-counter-file cold.counter
+            --operational-certificate-issue-counter-file opcert.counter
 
 ![`cardano-cli` command hierarchy](images/cli.png)

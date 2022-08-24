@@ -63,7 +63,7 @@ cardano-cli node issue-op-cert \
 
 ## :warning: Vasil hard fork breaking changes
 
-Note that from the Vasil hard fork onwards there is a new rule for the cold.counter:
+Note that from the Vasil hard fork onwards there is a new rule for the opcert.counter:
 
 A new Operational Certificate will be considered valid only if its counter value is exactly one more than the previous Operational Certificate that has successfully minted at least one block.
 
