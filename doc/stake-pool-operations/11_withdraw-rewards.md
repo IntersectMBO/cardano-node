@@ -74,3 +74,5 @@ You'll withdraw rewards into a payment.addr which will pay for the transaction f
     cardano-cli transaction submit \
     --tx-file withdraw_rewards.signed \
     --mainnet
+
+**Note**`--mainnet` identifies the Cardano mainnet, for **preproduction testnet** use `--testnet-magic 1` and for **preview testnet** use `--testnet-magic 2`

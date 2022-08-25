@@ -3,27 +3,27 @@
 Start a __relay node__ with:
 
     cardano-node run \
-    --topology mainnet-topology.json \
+    --topology topology.json \
     --database-path /db \
     --socket-path /db/node.socket \
     --host-addr <PUBLIC IPv4 ADDRESS> \
     --port <PORT> \
-    --config mainnet-config.json
+    --config config.json
 
 Note: Use `--host-ipv6-addr` for IPv6 address.
 
 Start a __block producing__ node with:
 
     cardano-node run \
-    --topology mainnet-topology.json \
+    --topology topology.json \
     --database-path /db \
     --socket-path /db/node.socket \
     --host-addr <PUBLIC IP> \
     --port <PORT> \
-    --config mainnet-config.json \
+    --config config.json \
     --shelley-kes-key kes.skey \
     --shelley-vrf-key vrf.skey \
-    --shelley-operational-certificate node.cert
+    --shelley-operational-certificate opcert.cert
 
 Please note that when running a node, it is important to use process monitoring so that the node can be automatically restarted when it terminates unexpectedly. The node relies on being restarted as part of its mechanism for automatically recovering from disk file corruption or other unexpected conditions. In case the node process is not automatically restarted, the node will not be available. Thus for example, stake pools will not be able to create blocks and exchanges will not be able to get wallet information.
 

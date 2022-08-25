@@ -12,8 +12,8 @@ First, make sure you have access to:
 | `payment.addr` | funded address linked to `stake` |
 | `cold.vkey` | cold verification key |
 | `cold.skey` | cold signing key |
-| `cold.counter` | issue counter |
-| `node.cert` | operational certificate |
+| `opcert.counter` | issue counter |
+| `opcert.cert` | operational certificate |
 | `kes.vkey` | KES verification key |
 | `kes.skey` | KES signing key |
 | `vrf.vkey` | VRF verification key |
@@ -58,14 +58,14 @@ This validates that JSON fits the required schema, if it does, you will get the 
 
 The operator should register their relay nodes on-chain (including them into the pool’s registration certificate) to ensure that other peers on the network have an ability to connect to them. Registered relay nodes are continuously updated and added to a JSON dataset. IOG offers this [list of all registered relays categorized by geographical location](https://explorer.cardano-mainnet.iohk.io/relays/topology.json) for SPOs to consider for connection purposes. It is recommended that SPOs generate a configuration that uses 20 other SPOs as peers. The list allows selecting peers that are both nearby and far away so that there is strong inter-region connectivity.
 
-To register your relay nodes during the creation of the pool registration certificate, specify their IP addresses and/or domain name using: 
+To register your relay nodes during the creation of the pool registration certificate, specify their IP addresses and/or domain name using:
 
 ```
 --pool-relay-ipv4 <IPADDRESS>
 --single-host-pool-relay <DOMAIN_NAME>
 ```
 
-After certificate submission, relay nodes will be added to the topology file enabling other SPOs to connect to them. Additionally, one of the IOG nodes will also establish a connection so that an operator has at least one downstream peer. 
+After certificate submission, relay nodes will be added to the topology file enabling other SPOs to connect to them. Additionally, one of the IOG nodes will also establish a connection so that an operator has at least one downstream peer.
 
 **Related topics:**
 
@@ -207,3 +207,6 @@ Get Pool ID
 Check for the presence of your poolID in the network ledger state, with:
 
     cardano-cli query ledger-state --mainnet | grep publicKey | grep <poolId>
+
+
+    **Note**`--mainnet` identifies the Cardano mainnet, for **preproduction testnet** use `--testnet-magic 1` and for **preview testnet** use `--testnet-magic 2`
