@@ -19,12 +19,23 @@ jq_check_json() {
     jq '.' "$1" >/dev/null
 }
 
+helpcmd() {
+    local cmd=$1; shift
+    yellow $cmd
+    echo -n " "
+    green $*
+}
+
+helpopt() {
+    green $*
+}
+
 __usage() {
     local op=$1 desc=$2
     cat >&2 <<EOF
-USAGE:  $(basename "$0") OPTIONS.. $op SUBOP SUBOP-ARGS..
+$(red USAGE:)  $(blue $(basename "$0") WB-OPTIONS..) $(helpcmd $op ${op^^[a-z]}-OPTS SUBOP SUBOP-ARGS..)
 
-  $desc:
+  $(blue $desc):
 
 $(cat)
 
@@ -93,6 +104,10 @@ blue() {
 
 white() {
     with_color white $*
+}
+
+blk() {
+    with_color black $*
 }
 
 yellow() {

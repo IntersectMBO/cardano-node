@@ -1,28 +1,39 @@
 usage_analyse() {
      usage "analyse" "Analyse cluster runs" <<EOF
-    multi RUN-NAME..      Standard analyses on a batch of runs, followed by a multi-run summary.
-    multi-pattern RUN-NAME-PATTERN
-                          Same as 'multi', but the runs are specified by shell-wildcard -enabled
+
+    $(helpcmd compare RUN_NAME..)    Produce a comparative analysis between specified runs, in a new
+     $(blk cmp)                    run directory.  An .ede template will be provided to enable a later
+                            '$(yellow analyse recompare)' run.
+
+    $(helpcmd recompare RUN_NAME..)  Update an existing comparative analysis between specified runs,
+     $(blk recmp)                  using its .ede template as basis.
+
+    $(helpcmd multi-run RUN-NAME..)  Standard analyses on a batch of runs, followed by a multi-run summary.
+     $(blk multi)
+    $(helpcmd multi-pattern RUN-NAME-PATTERN)
+     $(blk multipat mp)          Same as 'multi', but the runs are specified by shell-wildcard -enabled
                             name patterns.
 
-    full-run-analysis RUN-NAME..
-                          Standard batch of analyses: block-propagation, and machine-timeline
-    multi-run-summary-only RUN-NAME..
-                          Summarise results of multiple runs: results in \$global_rundir
+    $(helpcmd multi-run-summary RUN-NAME..)
+     $(blk multi-summary summary sum) Summarise results of multiple runs: results in \$global_rundir
 
-    call RUN-NAME OPS..   Execute 'locli' "uops" on the specified run
+    $(helpcmd full-run-analysis RUN-NAME..)
+     $(blk full standard std)    Standard batch of analyses: block-propagation, and machine-timeline
 
-    Options of 'analyse' command:
+    $(helpcmd call RUN-NAME OPS..)   Execute 'locli' "uops" on the specified run
 
-       --filters F,F,F..  Comma-separated list of named chain filters:  see bench/chain-filters
+    $(blue Options of "'"$(yellow analyse)$(blue "'" subcommand)):
+
+       $(helpopt --filters F,F,F..)  Comma-separated list of named chain filters:  see bench/chain-filters
                             Note: filter names have no .json suffix
-       --no-filters       Disable implied filters.
-       --dump-logobjects  Dump the intermediate data: lifted log objects
-       --dump-machviews   Blockprop: dump machine views (JSON)
-       --dump-chain-raw   Blockprop: dump unfiltered chain (JSON)
-       --dump-chain       Blockprop: dump filtered chain (JSON)
-       --dump-slots-raw   Machperf:  dump unfiltered slots (JSON)
-       --dump-slots       Machperf:  dump filtered slots (JSON)
+                            Defaults are specified by the run's profile.
+       $(helpopt --no-filters)       Disable filters implied by the profile.
+       $(helpopt --dump-logobjects)  Dump the intermediate data: lifted log objects
+       $(helpopt --dump-machviews)   Blockprop: dump machine views (JSON)
+       $(helpopt --dump-chain-raw)   Blockprop: dump unfiltered chain (JSON)
+       $(helpopt --dump-chain)       Blockprop: dump filtered chain (JSON)
+       $(helpopt --dump-slots-raw)   Machperf:  dump unfiltered slots (JSON)
+       $(helpopt --dump-slots)       Machperf:  dump filtered slots (JSON)
 EOF
 }
 
@@ -64,28 +75,24 @@ case "$op" in
         analyse ${sargs[*]} multi-call "$baseline $*" 'compare'
         ;;
 
-    recompare | rcmp )
+    recompare | recmp )
         local baseline=$1; shift
         progress "analysis" "$(white regenerating comparison) of $(colorise $*) $(plain against baseline) $(white $baseline)"
         analyse ${sargs[*]} multi-call "$baseline $*" 'update'
+        ;;
+
+    multi-run | multi )
+        progress "analysis" "$(white multi-summary) on runs: $(colorise $*)"
+
+        analyse ${sargs[*]} full-run-analysis "$*"
+        analyse ${sargs[*]} multi-run-summary "$*"
         ;;
 
     multi-run-pattern | multi-pattern | multipat | mp )
         analyse ${sargs[*]} multi-run $(run list-pattern $1)
         ;;
 
-    multi-run | multi )
-        progress "analysis" "$(white multi-summary) on runs: $(colorise $*)"
-
-        analyse ${sargs[*]} full-run-analysis      "$*"
-        analyse ${sargs[*]} multi-run-summary-only "$*"
-        ;;
-
-    summary-pattern | sp )
-        analyse ${sargs[*]} multi-run-summary-only $(run list-pattern $1)
-        ;;
-
-    multi-run-summary-only | summary )
+    multi-run-summary | multi-summary | summary | sum )
         local script=(
             read-clusterperfs
             compute-multi-clusterperf
@@ -107,7 +114,7 @@ case "$op" in
         analyse ${sargs[*]} multi-call "$*" ${script[*]}
         ;;
 
-    full-run-analysis | standard | std )
+    full-run-analysis | full | standard | std )
         local script=(
             logs               $(test -n "$dump_logobjects" && echo 'dump-logobjects')
             context
