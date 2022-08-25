@@ -16,24 +16,30 @@ module Cardano.Api.Utils
   , noInlineMaybeToStrictMaybe
   , note
   , parseFilePath
+  , readFileBlocking
   , runParsecParser
   , writeSecrets
   ) where
 
 import           Prelude
 
+import           Control.Exception (bracket)
 import           Control.Monad (forM_)
 import qualified Data.Aeson.Types as Aeson
 import qualified Data.ByteString as BS
+import qualified Data.ByteString.Builder as Builder
+import qualified Data.ByteString.Lazy as LBS
 import           Data.Maybe.Strict
 import           Data.Text (Text)
 import qualified Data.Text as Text
+import           GHC.IO.Handle.FD (openFileBlocking)
 import qualified Text.Parsec as Parsec
 import qualified Text.Parsec.String as Parsec
 import qualified Text.ParserCombinators.Parsec.Error as Parsec
 import           Text.Printf (printf)
 import qualified Options.Applicative as Opt
 import           System.FilePath ((</>))
+import           System.IO (IOMode (ReadMode), hClose)
 #ifdef UNIX
 import           System.Posix.Files (ownerReadMode, setFileMode)
 #else
@@ -96,3 +102,18 @@ writeSecrets outDir prefix suffix secretOp xs =
 #else
     setPermissions filename (emptyPermissions {readable = True})
 #endif
+
+readFileBlocking :: FilePath -> IO BS.ByteString
+readFileBlocking path = bracket
+  (openFileBlocking path ReadMode)
+  hClose
+  (\fp -> do
+    -- An arbitrary block size.
+    let blockSize = 4096
+    let go acc = do
+          next <- BS.hGet fp blockSize
+          if BS.null next
+          then pure acc
+          else go (acc <> Builder.byteString next)
+    contents <- go mempty
+    pure $ LBS.toStrict $ Builder.toLazyByteString contents)
