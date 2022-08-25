@@ -25,37 +25,38 @@ global_basedir=${global_basedir:-$(realpath "$(dirname "$0")")}
 usage_main() {
     test $# -lt 1 ||
         msg "Unknown op: $1"
-     __usage "OP" "Main OPs" <<EOF
-    start        (s)      Start a run of profile chosen at 'nix-shell' entry
-    finish       (f)      Finish the current cluster run
+    #
+    # $(red start)        ($(red s))      Start a run of profile chosen at 'nix-shell' entry
+    # $(red finish)       ($(red f))      Finish the current cluster run
+     __usage "OP" "Top-level OPs" <<EOF
+    $(red profile)      ($(red p))      Cluster profile ops.  Default subop is $(yellow show)
+    $(red run)          ($(red r))      Managing cluster runs.  Default subop is $(yellow list)
+    $(red analyse)      ($(red a))      Analyse cluster runs.  Default subop is $(yellow full)
 
-    profile      (p)      Cluster profile ops.  Default op is 'list'
-    analyse      (a)      Analyse cluster runs
+  $(blue Secondary top-level OPs):
 
-    env          (e)      Environment configuration
-    chaindb      (c)      ChainDB
-    genesis      (g)      Genesis
-    topology     (t)      Topology generation
-    run          (r)      Managing cluster runs.  Default op is 'list'
+    $(red chaindb)      ($(red c))      ChainDB
+    $(red genesis)      ($(red g))      Genesis
+    $(red topology)     ($(red t))      Topology generation
 
-  Options:
+  $(white wb) $(blue options):
 
-    --trace / --debug     set -x
-    --help                This short help
-    --help-full           Extended help
+    $(helpopt --trace / --debug)     set -x
+    $(helpopt --help)                This short help
+    $(helpopt --help-full)           Extended help
 EOF
 }
 
 usage_extra() {
     cat >&2 <<EOF
-  Other OPs:
+  $(blue Extra top-level OPs):
 
-    scenario     (s)      Run scenario control
-    call ARGS..           Call internal functions with arguments
+    $(red scenario)     ($(red s))      Run scenario control
+    $(red call) $(green ARGS..)  ($(red c))      Call internal functions with arguments
 
-  Extra options:
+  $(blue Extra) $(white wb) $(blue options):
 
-    --cls                 Clear screen, before acting further.
+    $(helpopt --cls)                 Clear screen, before acting further.
 
 EOF
 }
@@ -63,24 +64,35 @@ EOF
 usage_start()
 {
     cat <<EOF
-Usage:
-   start [FLAGS..]
+$(red USAGE:)
+   $(helpcmd start [FLAGS..])
 
-   Flags:
+   $(blue Flags):
 
-      --batch-name NAME               Override the batch name (default: ${batchName:-default})
+      $(helpopt --batch-name NAME)               Override the batch name (default: $(green ${batchName:-default}))
 
-      --profile-name NAME             Select profile by name (default: ${batchName:-default})
-      --profile DIR                   Select profile by complete spec stored in DIR
+      $(helpopt --profile-name NAME)             Select profile by name (default: $(green default))
+      $(helpopt --iterations \| --times \| --iter \| -n ITERATIONS)
+                                      Run this many iterations of the profile.
 
-      --no-generator | --no-gen       Don't auto-start the tx-generator
+      $(helpopt --profile DIR)                   Select profile by complete spec stored in DIR.
 
-      --cabal                         'cabal run' mode for cardano-* executables
+      $(helpopt --idle)                          Use the $(blue idle) scenario.
+      $(helpopt --scenario \| -s SCENARIO)        Use the specified scenario.
+                                        See: $(helptopcmd wb scenario --help)
 
-      --trace | --debug               Trace the start-cluster script
-      --trace-wb | --trace-workbench  Trace the workbench script
-      --verbose                       Print more of what's going
-      --help                          This help message
+      $(helpopt --no-analysis)                   Do not run analysis at the run's end.
+      $(helpopt --analysis-can-fail)             Do not fail on failed analysis.
+      $(helpopt --filters F,F,F,F)               Comma-separated list of filters, instead
+                                        of profile-specified defaults.
+
+      $(helpopt --supervisor \| --backend-supervisor)
+                                      Use the $(blue supervisor) backend.
+
+      $(helpopt --trace \| --debug)               Trace the start-cluster script
+      $(helpopt --trace-wb \| --trace-workbench)  Trace the workbench script
+      $(helpopt --verbose)                       Print more of what's going
+      $(helpopt --help)                          This help message
 EOF
 }
 
@@ -163,22 +175,22 @@ start()
             --manifest "$(manifest collect-from-checkout "$node_source" $node_rev)"
         )
        run ${run_args[@]} 'allocate' $batch_name $profile_name "${args[@]}"
-       local tag=$(run current-tag)
+       local run=$(run current-tag)
 
        current_run_path=$(run current-path)
        mkdir -p "$current_run_path"
 
-       run ${run_args[@]} 'start'    ${run_start_args[@]} $tag
+       run ${run_args[@]} 'start'    ${run_start_args[@]} $run
 
        if test -n "$no_analysis" -o $analysis_type = null; then continue; fi
 
-       progress "top-level | analysis" "analysis type $(with_color yellow $analysis_type) on $(with_color white $tag)"
-       analyse ${analyse_args[@]} $analysis_type $tag &&
+       progress "top-level | analysis" "analysis type $(with_color yellow $analysis_type) on $(with_color white $run)"
+       analyse ${analyse_args[@]} $analysis_type $run &&
            progress "run | analysis" "done" ||
            if test -n "$analysis_can_fail" -a -z "$no_retry_failed_runs"
-           then progress "run | analysis" "log processing failed, but --analysis-can-fail prevents failure:  $(with_color red $tag)"
+           then progress "run | analysis" "log processing failed, but --analysis-can-fail prevents failure:  $(with_color red $run)"
                 iterations=$((iterations + 1))
-           else fail "analysis failed:  $tag"
+           else fail "analysis failed:  $run"
                 false; fi
     done
 }
@@ -208,13 +220,13 @@ do case "$1" in
        * ) break;; esac; shift; done
 
 main() {
-    local op=${1:?$(usage_main)}; shift
+    local op=${1:?$(usage_main)}; shift || true
 
     case "$op" in
         ## Public, primary:
         #
-        start        | s )        start               "$@";;
-        finish       | f )        finish              "$@";;
+        start            )        start               "$@";;
+        finish           )        finish              "$@";;
 
         ## Public, secondary:
         profile      | profiles | prof | ps | p )
@@ -223,7 +235,6 @@ main() {
         analyse      | a )        analyse             "$@";;
 
         ## Public, internals-y:
-        env          | e )        env                 "$@";;
         chaindb      | c )        chaindb             "$@";;
         genesis      | g )        genesis             "$@";;
         topology     | topo | t ) topology            "$@";;
@@ -233,7 +244,7 @@ main() {
         #
         scenario     | s )        scenario            "$@";;
         backend )                 backend             "$@";;
-        call )                                        "$@";;
+        call         | c )                            "$@";;
         path )                    echo     $global_basedir;;
 
         ## Bail for help:

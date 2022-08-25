@@ -19,6 +19,15 @@ jq_check_json() {
     jq '.' "$1" >/dev/null
 }
 
+helptopcmd() {
+    local topcmd=$1 cmd=$2; shift 2
+    white $topcmd
+    echo -n " "
+    yellow $cmd
+    echo -n " "
+    green $*
+}
+
 helpcmd() {
     local cmd=$1; shift
     yellow $cmd
@@ -33,7 +42,7 @@ helpopt() {
 __usage() {
     local op=$1 desc=$2
     cat >&2 <<EOF
-$(red USAGE:)  $(blue $(basename "$0") WB-OPTIONS..) $(helpcmd $op ${op^^[a-z]}-OPTS SUBOP SUBOP-ARGS..)
+$(red USAGE:)  $(white $(basename "$0")) $(blue WB-OPTS..) $(red $op) $(green ${op^^[a-z]}-OPTS..) $(yellow SUBOP) $(green SUBOP-ARGS..)
 
   $(blue $desc):
 

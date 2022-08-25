@@ -1,16 +1,15 @@
 usage_chaindb() {
      usage "chaindb" "Manage ChainDBs" <<EOF
-  Shared args:
-    --source IMMUTABLEDB-SRCDIR  Use the specified chainDB as source for immutable chunks
-    --geneses JSON               Geneses: { byron: PATH, shelley: PATH, alonzo: PATH }
-    --mainnet                    Use the Cardano mainnet as source of chunks
-    --cachedir DIR               Where to store mainnet snapshot cache
+    $(helpcmd immutable-until-chunk OUTDIR FINAL-CHUNK-NO)
+                                 Produce a ChainDB derivative trimmed up to specified chunk#
+    $(helpcmd snapshot-at-slot OUTDIR FINAL-SLOT-NO)
+                                 Produce a ChainDB derivative with snapshot at given slot#
 
-  Commands
-    immutable-until-chunk OUTDIR FINAL-CHUNK-NO
-                     Produce a ChainDB derivative trimmed up to specified chunk#
-    snapshot-at-slot OUTDIR FINAL-SLOT-NO
-                     Produce a ChainDB derivative with snapshot at given slot#
+  $(red chaindb) $(blue options):
+    $(helpopt --source IMMUTABLEDB-SRCDIR)  Use the specified chainDB as source for immutable chunks
+    $(helpopt --geneses JSON)               Geneses: { byron: PATH, shelley: PATH, alonzo: PATH }
+    $(helpopt --mainnet)                    Use the Cardano mainnet as source of chunks
+    $(helpopt --cachedir DIR)               Where to store mainnet snapshot cache
 EOF
 }
 

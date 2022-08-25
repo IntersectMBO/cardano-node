@@ -1,9 +1,8 @@
 usage_analyse() {
      usage "analyse" "Analyse cluster runs" <<EOF
-
     $(helpcmd compare RUN_NAME..)    Produce a comparative analysis between specified runs, in a new
      $(blk cmp)                    run directory.  An .ede template will be provided to enable a later
-                            '$(yellow analyse recompare)' run.
+                            $(red analyse) $(yellow recompare) run.
 
     $(helpcmd recompare RUN_NAME..)  Update an existing comparative analysis between specified runs,
      $(blk recmp)                  using its .ede template as basis.
@@ -11,29 +10,29 @@ usage_analyse() {
     $(helpcmd multi-run RUN-NAME..)  Standard analyses on a batch of runs, followed by a multi-run summary.
      $(blk multi)
     $(helpcmd multi-pattern RUN-NAME-PATTERN)
-     $(blk multipat mp)          Same as 'multi', but the runs are specified by shell-wildcard -enabled
+     $(blk multipat mp)          Same as $(yellow multi), but the runs are specified by shell-wildcard -enabled
                             name patterns.
 
     $(helpcmd multi-run-summary RUN-NAME..)
      $(blk multi-summary summary sum) Summarise results of multiple runs: results in \$global_rundir
 
-    $(helpcmd full-run-analysis RUN-NAME..)
-     $(blk full standard std)    Standard batch of analyses: block-propagation, and machine-timeline
+    $(helpcmd full RUN-NAME..)
+     $(blk standard std)    Standard batch of analyses: block-propagation, and machine-timeline
 
     $(helpcmd call RUN-NAME OPS..)   Execute 'locli' "uops" on the specified run
 
-    $(blue Options of "'"$(yellow analyse)$(blue "'" subcommand)):
+  $(red analyse) $(blue options):
 
-       $(helpopt --filters F,F,F..)  Comma-separated list of named chain filters:  see bench/chain-filters
-                            Note: filter names have no .json suffix
-                            Defaults are specified by the run's profile.
-       $(helpopt --no-filters)       Disable filters implied by the profile.
-       $(helpopt --dump-logobjects)  Dump the intermediate data: lifted log objects
-       $(helpopt --dump-machviews)   Blockprop: dump machine views (JSON)
-       $(helpopt --dump-chain-raw)   Blockprop: dump unfiltered chain (JSON)
-       $(helpopt --dump-chain)       Blockprop: dump filtered chain (JSON)
-       $(helpopt --dump-slots-raw)   Machperf:  dump unfiltered slots (JSON)
-       $(helpopt --dump-slots)       Machperf:  dump filtered slots (JSON)
+    $(helpopt --filters F,F,F..)  Comma-separated list of named chain filters:  see bench/chain-filters
+                         Note: filter names have no .json suffix
+                         Defaults are specified by the run's profile.
+    $(helpopt --no-filters)       Disable filters implied by the profile.
+    $(helpopt --dump-logobjects)  Dump the intermediate data: lifted log objects
+    $(helpopt --dump-machviews)   Blockprop: dump machine views (JSON)
+    $(helpopt --dump-chain-raw)   Blockprop: dump unfiltered chain (JSON)
+    $(helpopt --dump-chain)       Blockprop: dump filtered chain (JSON)
+    $(helpopt --dump-slots-raw)   Machperf:  dump unfiltered slots (JSON)
+    $(helpopt --dump-slots)       Machperf:  dump filtered slots (JSON)
 EOF
 }
 
@@ -84,7 +83,7 @@ case "$op" in
     multi-run | multi )
         progress "analysis" "$(white multi-summary) on runs: $(colorise $*)"
 
-        analyse ${sargs[*]} full-run-analysis "$*"
+        analyse ${sargs[*]} full "$*"
         analyse ${sargs[*]} multi-run-summary "$*"
         ;;
 
@@ -114,7 +113,7 @@ case "$op" in
         analyse ${sargs[*]} multi-call "$*" ${script[*]}
         ;;
 
-    full-run-analysis | full | standard | std )
+    full | standard | std )
         local script=(
             logs               $(test -n "$dump_logobjects" && echo 'dump-logobjects')
             context
@@ -290,11 +289,11 @@ case "$op" in
                           do echo --run-metafile    ${adir}/../meta.json \
                                   --shelley-genesis ${adir}/../genesis-shelley.json
                           done))
-        local tag=$(for dir in ${dirs[*]}; do basename $dir; done | sort -r | head -n1 | cut -d. -f1-2)-multirun
-        local adir=$(run get-rundir)/$tag
+        local run=$(for dir in ${dirs[*]}; do basename $dir; done | sort -r | head -n1 | cut -d. -f1-2)-multirun
+        local adir=$(run get-rundir)/$run
 
         mkdir -p "$adir"
-        progress "analysis | multi-call" "tag $(yellow $tag), runs: $(white $runs)"
+        progress "analysis | multi-call" "run $(yellow $run), runs: $(white $runs)"
 
         local v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 va vb vc vd ve vf vg vh vi vj vk vl vm vn vo
         v0=("$@")
@@ -312,8 +311,8 @@ case "$op" in
         vc=(${vb[*]/#multi-propagation-endtoend/ 'render-multi-propagation' --report $adir/'multi-blockprop-endtoend.org' --end-to-end })
         vd=(${vc[*]/#multi-propagation-gnuplot/  'render-multi-propagation' --gnuplot $adir/'%s.cdf' --full })
         ve=(${vd[*]/#multi-propagation-full/     'render-multi-propagation' --pretty $adir/'multi-blockprop-full.txt' --full })
-        vf=(${ve[*]/#compare/ 'compare' --ede nix/workbench/ede --report $adir/report-$tag.org ${compares[*]} })
-        vg=(${vf[*]/#update/  'compare' --ede nix/workbench/ede --report $adir/report-$tag.org ${compares[*]} --template $adir/report-$tag.ede })
+        vf=(${ve[*]/#compare/ 'compare' --ede nix/workbench/ede --report $adir/report-$run.org ${compares[*]} })
+        vg=(${vf[*]/#update/  'compare' --ede nix/workbench/ede --report $adir/report-$run.org ${compares[*]} --template $adir/report-$run.ede })
         local ops_final=(${vg[*]})
 
         progress "analysis | locli" "$(with_color reset ${locli_rts_args[@]}) $(colorise "${ops_final[@]}")"

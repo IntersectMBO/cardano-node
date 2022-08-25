@@ -1,14 +1,16 @@
 usage_profile() {
      usage "profile" "Cluster profile operations" <<EOF
-    list                  List profile names (json)
-    all-profiles | all    All profile contents (json)
-    compose NAME..        Create a profile composed from named profiles
-    json NAME             Get contents of either named profile, or profile JSON desc
-    describe NAME         Print a human description of a profile
-    node-specs PROFILE-NAME/JSON
+    $(yellow list \| ls)             List profile names (json)
+    $(yellow all-profiles \| all)    All profile contents (json)
+    $(helpcmd compose NAME..)        Create a profile composed from named profiles
+    $(helpcmd json NAME)             Get contents of either named profile, or profile JSON desc
+    $(helpcmd describe NAME)         Print a human description of a profile
+    $(helpcmd node-specs PROFILE-NAME/JSON)
                           Print node specs JSON for the given profile and environment
-    allocate-time PROFILE-NAME/JSON
+    $(helpcmd allocate-time PROFILE-NAME/JSON)
                           Allocate time for a run of a profile
+    $(helpcmd describe-timing TIMING-JSON)
+                          Explain timing allocation
 EOF
 }
 

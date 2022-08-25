@@ -20,18 +20,18 @@ usage_topology() {
 
     Whenever an observer node is present, it is connected to all producers.
 
-    Subcommands:
+  $(red topology) $(blue subops):
 
-    make PROFILE-JSON OUTDIR
+    $(helpcmd make PROFILE-JSON OUTDIR)
                           Generate the full cluster topology, including:
                             - the Nixops/'cardano-ops' style topology
                             - the .dot and .pdf rendering
 
-    density-map PROFILE-JSON TOPO-DIR
+    $(helpcmd density-map NODE-SPECS-JSON)
                           Generate the profile-induced map of node names
                             to pool density: 0, 1 or N (for dense pools)
 
-    projection-for ROLE N PROFILE TOPO-DIR BASE-PORT
+    $(helpcmd projection-for ROLE N PROFILE TOPO-DIR BASE-PORT)
                           Given TOPO-DIR, containing the full cluster topology,
                             print topology for the N-th node, given its ROLE,
                             while assigning it a local port number BASE-PORT+N
@@ -39,7 +39,7 @@ EOF
 }
 
 topology() {
-local op=${1:---help)}; shift
+local op=${1:---help)}; shift || true
 
 case "${op}" in
     make )
