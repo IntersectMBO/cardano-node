@@ -108,6 +108,7 @@ module Cardano.Api.Shelley
     ProtocolParametersError(..),
 
     -- * Scripts
+    fromShelleyBasedScript,
     toShelleyScript,
     toShelleyMultiSig,
     fromShelleyMultiSig,
