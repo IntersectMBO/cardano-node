@@ -34,12 +34,13 @@ data ChainFilter
 
 -- | Block classification -- primary for validity as subjects of analysis.
 data BlockCond
-  = BUnitaryChainDelta        -- ^ All timings account for
-                              --    processing of a single block.
-  | BFullnessGEq       Double -- ^ Block fullness is above fraction.
-  | BFullnessLEq       Double -- ^ Block fullness is below fraction.
-  | BSizeGEq           Word64
-  | BSizeLEq           Word64
+  = BUnitaryChainDelta            -- ^ All timings account for
+                                  --    processing of a single block.
+  | BFullnessGEq           Double -- ^ Block fullness is above fraction.
+  | BFullnessLEq           Double -- ^ Block fullness is below fraction.
+  | BSizeGEq               Word64
+  | BSizeLEq               Word64
+  | BMinimumObservations   Word64 -- ^ At least this many observations
   deriving (FromJSON, Generic, NFData, Show, ToJSON)
 
 data SlotCond

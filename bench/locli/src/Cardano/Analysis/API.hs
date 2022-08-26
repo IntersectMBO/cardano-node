@@ -9,6 +9,7 @@ module Cardano.Analysis.API
 where
 
 import Prelude                  ((!!))
+import Util                     (count)
 import Cardano.Prelude          hiding (head)
 
 import Data.Aeson               (ToJSON(..), FromJSON(..))
@@ -219,7 +220,9 @@ data SlotStats
 --
 testBlockEvents :: Genesis -> BlockEvents -> ChainFilter -> Bool
 testBlockEvents g@Genesis{..}
-                BlockEvents{beForge=BlockForge{..},..} = \case
+                BlockEvents{beForge=BlockForge{..}
+                           ,beObservations=seen
+                           ,..} = \case
   CBlock flt -> case flt of
     BUnitaryChainDelta -> bfChainDelta == 1
     BFullnessGEq f ->
@@ -228,6 +231,7 @@ testBlockEvents g@Genesis{..}
       bfBlockSize < floor ((fromIntegral (maxBlockBodySize protocolParams) :: Double) * f)
     BSizeGEq x -> bfBlockSize >= fromIntegral x
     BSizeLEq x -> bfBlockSize <= fromIntegral x
+    BMinimumObservations x -> count (isJust . boAdopted) seen >= fromIntegral x
   CSlot flt -> case flt of
     SlotGEq s -> beSlotNo >= s
     SlotLEq s -> beSlotNo <= s
