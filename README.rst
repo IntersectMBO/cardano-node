@@ -39,7 +39,7 @@ Integration of the `ledger <https://github.com/input-output-hk/cardano-ledger-sp
 Network Configuration, Genesis and Topology Files
 =================================================
 
-The latest supported networks can be found at `<https://book.world.dev.cardano.org/environments.html>`_
+The configuration files for the supported networks can be found at `<https://book.world.dev.cardano.org/environments.html>`_
 
 ****
 Obtaining ``cardano-node``
@@ -53,22 +53,14 @@ Documentation for building the node can be found `here <https://docs.cardano.org
 Executables
 ===========
 
-You can download the latest version of ``cardano-node`` and ``cardano-cli``:
+You can download the latest released version of ``cardano-node`` and ``cardano-cli``:
 
-* `linux <https://hydra.iohk.io/job/Cardano/cardano-node/linux.musl.cardano-node-linux/latest-finished>`_
-* `win64 <https://hydra.iohk.io/job/Cardano/cardano-node/linux.windows.cardano-node-win64/latest-finished>`_
-* `macos <https://hydra.iohk.io/job/Cardano/cardano-node/macos.cardano-node-macos/latest-finished>`_
+* `linux <https://hydra.iohk.io/build/17428084>`_
+* `win64 <https://hydra.iohk.io/build/17428205>`_
+* `macos <https://hydra.iohk.io/build/17428186>`_
 
-Windows Executable
+Running the node on Windows:
 ----
-
-Download
-++++
-
-You can download `here <https://hydra.iohk.io/job/Cardano/cardano-node/linux.windows.cardano-node-win64/latest-finished>`_.
-
-Instructions
-++++
 
 The download includes cardano-node.exe and a .dll. To run the node with cardano-node run you need to reference a few files and directories as arguments. These can be copied from the cardano-node repo into the executables directory. The command to run the node on mainnet looks like this:
 
