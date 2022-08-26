@@ -40,7 +40,7 @@ data BlockCond
   | BFullnessLEq           Double -- ^ Block fullness is below fraction.
   | BSizeGEq               Word64
   | BSizeLEq               Word64
-  | BMinimumObservations   Word64 -- ^ At least this many observations
+  | BMinimumAdoptions      Word64 -- ^ At least this many adoptions
   deriving (FromJSON, Generic, NFData, Show, ToJSON)
 
 data SlotCond

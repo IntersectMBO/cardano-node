@@ -628,7 +628,7 @@ runCommand (ChainCommand cs) = do
            Nothing Nothing Nothing Nothing
            Nothing Nothing Nothing Nothing
            Nothing Nothing Nothing Nothing
-           Nothing Nothing Nothing
+           Nothing Nothing
 
 opts :: ParserInfo Command
 opts =

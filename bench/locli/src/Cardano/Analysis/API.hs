@@ -231,7 +231,7 @@ testBlockEvents g@Genesis{..}
       bfBlockSize < floor ((fromIntegral (maxBlockBodySize protocolParams) :: Double) * f)
     BSizeGEq x -> bfBlockSize >= fromIntegral x
     BSizeLEq x -> bfBlockSize <= fromIntegral x
-    BMinimumObservations x -> count (isJust . boAdopted) seen >= fromIntegral x
+    BMinimumAdoptions x -> count (isJust . boAdopted) seen >= fromIntegral x
   CSlot flt -> case flt of
     SlotGEq s -> beSlotNo >= s
     SlotLEq s -> beSlotNo <= s
