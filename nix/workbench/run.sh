@@ -110,6 +110,11 @@ case "$op" in
                      mv "$logdir" "$dir"/$logs_less; done; fi
         else msg "fixing up a cardano-ops run in:  $dir"; fi
 
+        progress "run | aws-get" "adding manifest"
+        jq_fmutate "$dir"/meta.json '
+           .meta.manifest = $manifest
+           ' --argjson manifest "$(legacy_run_manifest $dir)"
+
         jq '.meta.profile_content' "$dir"/meta.json > "$dir"/profile.json;;
 
     check )
