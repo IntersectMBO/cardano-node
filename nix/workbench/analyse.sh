@@ -29,8 +29,7 @@ usage_analyse() {
     $(helpopt --no-filters)       Disable filters implied by the profile.
     $(helpopt --dump-logobjects)  Dump the intermediate data: lifted log objects
     $(helpopt --dump-machviews)   Blockprop: dump machine views (JSON)
-    $(helpopt --dump-chain-raw)   Blockprop: dump unfiltered chain (JSON)
-    $(helpopt --dump-chain)       Blockprop: dump filtered chain (JSON)
+    $(helpopt --dump-chain)       Blockprop: dump chain (JSON)
     $(helpopt --dump-slots-raw)   Machperf:  dump unfiltered slots (JSON)
     $(helpopt --dump-slots)       Machperf:  dump filtered slots (JSON)
 EOF
@@ -38,12 +37,11 @@ EOF
 
 analyse() {
 local filters=() aws= sargs=() unfiltered= perf_omit_hosts=()
-local dump_logobjects= dump_machviews= dump_chain_raw= dump_chain= dump_slots_raw= dump_slots=
+local dump_logobjects= dump_machviews= dump_chain= dump_slots_raw= dump_slots=
 while test $# -gt 0
 do case "$1" in
        --dump-logobjects | -lo )  sargs+=($1);    dump_logobjects='true';;
        --dump-machviews  | -mw )  sargs+=($1);    dump_machviews='true';;
-       --dump-chain-raw  | -cr )  sargs+=($1);    dump_chain_raw='true';;
        --dump-chain      | -c )   sargs+=($1);    dump_chain='true';;
        --dump-slots-raw  | -sr )  sargs+=($1);    dump_slots_raw='true';;
        --dump-slots      | -s )   sargs+=($1);    dump_slots='true';;
@@ -119,9 +117,7 @@ case "$op" in
             context
 
             build-mach-views   $(test -n "$dump_machviews"  && echo 'dump-mach-views')
-            build-chain        $(test -n "$dump_chain_raw"  && echo 'dump-chain-raw')
-            chain-timeline-raw
-            filter-chain       $(test -n "$dump_chain"      && echo 'dump-chain')
+            rebuild-chain      $(test -n "$dump_chain"      && echo 'dump-chain')
             chain-timeline
 
             collect-slots      $(test -n "$dump_slots_raw"  && echo 'dump-slots-raw')
@@ -252,9 +248,7 @@ case "$op" in
         v1=(${v0[*]/#logs/                 'unlog' --host-from-log-filename ${logfiles[*]/#/--log }})
         v2=(${v1[*]/#context/              'meta-genesis' --run-metafile    "$dir"/meta.json
                                                           --shelley-genesis "$dir"/genesis-shelley.json })
-        v3=(${v2[*]/#dump-chain-raw/       'dump-chain-raw'        --chain "$adir"/chain-raw.json})
-        v4=(${v3[*]/#chain-timeline-raw/   'timeline-chain-raw' --timeline "$adir"/chain-raw.txt})
-        v5=(${v4[*]/#filter-chain/         'filter-chain'                   ${filters[*]}})
+        v5=(${v2[*]/#rebuild-chain/        'rebuild-chain'                  ${filters[*]}})
         v6=(${v5[*]/#dump-chain/           'dump-chain'            --chain "$adir"/chain.json})
         v7=(${v6[*]/#chain-timeline/       'timeline-chain'     --timeline "$adir"/chain.txt})
         v8=(${v7[*]/#collect-slots/        'collect-slots'           ${minus_logfiles[*]/#/--ignore-log }})

@@ -67,18 +67,20 @@ type MultiBlockProp = BlockProp (CDF I)
 -- | All events related to a block.
 data BlockEvents
   =  BlockEvents
-  { beBlock        :: !Hash
-  , beBlockPrev    :: !Hash
-  , beBlockNo      :: !BlockNo
-  , beSlotNo       :: !SlotNo
-  , beEpochNo      :: !EpochNo
-  , beEpochSafeInt :: !EpochSafeInt
-  , beForge        :: !BlockForge
-  , beObservations :: [BlockObservation]
-  , bePropagation  :: !(DirectCDF NominalDiffTime)
-                      -- ^ CDF of slot-start-to-adoptions on cluster
-  , beOtherBlocks  :: [Hash]
-  , beErrors       :: [BPError]
+  { beBlock         :: !Hash
+  , beBlockPrev     :: !Hash
+  , beBlockNo       :: !BlockNo
+  , beSlotNo        :: !SlotNo
+  , beEpochNo       :: !EpochNo
+  , beEpochSafeInt  :: !EpochSafeInt
+  , beForge         :: !BlockForge
+  , beObservations  :: [BlockObservation]
+  , bePropagation   :: !(DirectCDF NominalDiffTime)
+                       -- ^ CDF of slot-start-to-adoptions on cluster
+  , beOtherBlocks   :: [Hash]
+  , beErrors        :: [BPError]
+  , beNegAcceptance :: [ChainFilter] -- ^ List of negative acceptance conditions,
+                                     --   preventing block's consideration for analysis.
   }
   deriving (Generic, FromJSON, ToJSON, Show)
 
@@ -376,16 +378,16 @@ instance RenderTimeline BlockEvents where
     , Field 6 0 "hash"         "block" "hash"   (IText   (shortHash . beBlock)) ""
     , Field 6 0 "hashPrev"     "prev"  "hash"   (IText   (shortHash . beBlockPrev)) ""
     , Field 7 0 "forger"       "forger" "host"  (IText   (toText . unHost . bfForger . beForge)) ""
-    , Field 9 0 "blockSize"    "size"  "bytes"  (IInt    (bfBlockSize . beForge)) ""
-    , Field 7 0 "blockGap"     "block" "gap"    (IDeltaT (bfBlockGap  . beForge)) ""
+    , Field 6 0 "blockSize"    "size"  "bytes"  (IInt    (bfBlockSize . beForge)) ""
+    , Field 5 0 "blockGap"     "block" "gap"    (IDeltaT (bfBlockGap  . beForge)) ""
     , Field 3 0 "forks"         "for"  "-ks"    (IInt    (count bpeIsFork . beErrors)) ""
-    , Field 6 0 "fChecked"      (f!!0) "Check"  (IDeltaT (bfChecked   . beForge)) ""
-    , Field 6 0 "fLeading"      (f!!1) "Lead"   (IDeltaT (bfLeading   . beForge)) ""
-    , Field 6 0 "fForged"       (f!!2) "Forge"  (IDeltaT (bfForged    . beForge)) ""
-    , Field 6 0 "fAdopted"      (f!!3) "Adopt"  (IDeltaT (bfAdopted   . beForge)) ""
-    , Field 6 0 "fAnnounced"    (f!!4) "Announ" (IDeltaT (bfAnnounced . beForge)) ""
-    , Field 6 0 "fSendStart"    (f!!5) "Sendin" (IDeltaT (bfSending   . beForge)) ""
-    , Field 5 0 "valid.observ" "valid" "obsrv"  (IInt    (length          . valids)) ""
+    , Field 5 0 "fChecked"      (f!!0) "Check"  (IDeltaT (bfChecked   . beForge)) ""
+    , Field 5 0 "fLeading"      (f!!1) "Lead"   (IDeltaT (bfLeading   . beForge)) ""
+    , Field 5 0 "fForged"       (f!!2) "Forge"  (IDeltaT (bfForged    . beForge)) ""
+    , Field 5 0 "fAdopted"      (f!!3) "Adopt"  (IDeltaT (bfAdopted   . beForge)) ""
+    , Field 5 0 "fAnnounced"    (f!!4) "Announ" (IDeltaT (bfAnnounced . beForge)) ""
+    , Field 5 0 "fSendStart"    (f!!5) "Sendin" (IDeltaT (bfSending   . beForge)) ""
+    , Field 2 0 "valid"         "va-"  "lid"    (IText   (bool "-" "+" . (== 0) . length . beNegAcceptance)) ""
     , Field 5 0 "noticedVal"    (p!!0) "Notic"  (IDeltaT (af  boNoticed   . valids)) ""
     , Field 5 0 "requestedVal"  (p!!1) "Requd"  (IDeltaT (af  boRequested . valids)) ""
     , Field 5 0 "fetchedVal"    (p!!2) "Fetch"  (IDeltaT (af  boFetched   . valids)) ""
@@ -404,7 +406,7 @@ instance RenderTimeline BlockEvents where
     ]
    where
      valids = filter isValidBlockObservation . beObservations
-     f = nChunksEachOf 6 7 "--- Forger event Δt: ---"
+     f = nChunksEachOf 6 6 "--- Forger event Δt: ---"
      p = nChunksEachOf 6 6 "Peer event Δt averages:"
      r = nChunksEachOf 3 6 "Propagation Δt:"
      m = nChunksEachOf 3 4 "Missing"

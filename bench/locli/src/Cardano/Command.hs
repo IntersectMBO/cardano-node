@@ -80,25 +80,14 @@ parseChainCommand =
        (optJsonLogfile     "log"             "JSON log stream"))
    ]) <|>
 
-   subparser (mconcat [ commandGroup "Block propagation:  chain input"
-   , op "build-chain" "Rebuild chain"
-     (RebuildChain & pure)
+   subparser (mconcat [ commandGroup "Block propagation"
+   , op "rebuild-chain" "Rebuild chain"
+     (RebuildChain
+       <$> many
+       (argChainFilterset  "filter"          "JSON list of block/slot selection criteria"))
    , op "read-chain" "Read reconstructed chain"
      (ReadChain
        <$> optJsonInputFile  "chain"         "Block event stream (JSON)")
-   , op "dump-chain-raw" "Dump raw chain"
-     (DumpChainRaw
-       <$> optJsonOutputFile "chain"         "JSON unfiltered chain output file")
-   , op "timeline-chain-raw" "Render unfiltered chain timeline"
-     (TimelineChainRaw
-       <$> optTextOutputFile "timeline"      "Render a human-readable reconstructed unfiltered chain view")
-   ]) <|>
-
-   subparser (mconcat [ commandGroup "Block propagation:  chain filtering"
-   , op "filter-chain" "Filter chain"
-     (FilterChain
-       <$> many
-       (argChainFilterset  "filter"          "JSON list of block/slot selection criteria"))
    , op "dump-chain" "Dump filtered chain"
      (DumpChain
        <$> optJsonOutputFile "chain"         "JSON filtered chain output file")
@@ -233,12 +222,9 @@ data ChainCommand
   |         DumpMachViews
   |         ReadMachViews   [JsonLogfile]
 
-  |         RebuildChain
-  |            ReadChain    (JsonInputFile [BlockEvents])
-  |            DumpChainRaw (JsonOutputFile [BlockEvents])
-  |        TimelineChainRaw TextOutputFile
-  |          FilterChain    [JsonFilterFile]
+  |         RebuildChain    [JsonFilterFile]
   |            DumpChain    (JsonOutputFile [BlockEvents])
+  |            ReadChain    (JsonInputFile [BlockEvents])
   |        TimelineChain    TextOutputFile
 
   |         CollectSlots    [JsonLogfile]
@@ -281,7 +267,6 @@ data State
   , sDomBlocks        :: Maybe (DataDomain BlockNo)
     -- propagation
   , sMachViews        :: Maybe [(JsonLogfile, MachView)]
-  , sChainRaw         :: Maybe [BlockEvents]
   , sChain            :: Maybe [BlockEvents]
   , sBlockProp        :: Maybe [BlockPropOne]
   , sMultiBlockProp   :: Maybe MultiBlockProp
@@ -356,49 +341,31 @@ runChainCommand s c@(ReadMachViews fs) = do
   pure s { sMachViews = Just machViews }
 
 runChainCommand s@State{sRun=Just run, sMachViews=Just mvs}
-  RebuildChain = do
-  chainRaw <- rebuildChain run mvs & liftIO
-  pure s { sChainRaw = Just chainRaw }
-runChainCommand _ c@RebuildChain = missingCommandData c
+  c@(RebuildChain fltfs) = do
+  flts <- readFilters fltfs
+          & firstExceptT (CommandError c)
+  (domSlot, domBlock, fltNames, chain) <- rebuildChain run flts mvs & liftIO
+  when (ddFilteredCount domBlock == 0) $
+    throwE $ CommandError c $ mconcat
+      [ "All ", show (ddRawCount domBlock), " blocks filtered out." ]
+  pure s { sChain = Just chain
+         , sDomSlots = Just domSlot
+         , sDomBlocks = Just domBlock
+         , sFilters = fltNames
+         }
+  -- pure s { sChain = Just chain }
+runChainCommand _ c@RebuildChain{} = missingCommandData c
   ["run metadata & genesis", "reconstructed chain"]
 
 runChainCommand s
   c@(ReadChain f) = do
-  chainRaw <- mapM (Aeson.eitherDecode @BlockEvents)
-              . filter ((> 5) . LBS.length)
-              . LBS.split '\n'
-              <$> LBS.readFile (unJsonInputFile f)
-              & newExceptT
-              & firstExceptT (CommandError c . pack)
-  pure s { sChainRaw = Just chainRaw, sChain = Just chainRaw }
-
-runChainCommand s@State{sChainRaw=Just chainRaw}
-  c@(DumpChainRaw f) = do
-  dumpObjects "raw-chain" chainRaw f & firstExceptT (CommandError c)
-  pure s
-runChainCommand _ c@DumpChainRaw{} = missingCommandData c
-  ["unfiltered chain"]
-
-runChainCommand s@State{sRun=Just run, sChainRaw=Just chainRaw}
-  c@(TimelineChainRaw f) = do
-  dumpText "chain" (renderTimeline run (const True) False chainRaw) f
-    & firstExceptT (CommandError c)
-  pure s
-runChainCommand _ c@TimelineChainRaw{} = missingCommandData c
-  ["run metadata & genesis", "unfiltered chain"]
-
-runChainCommand s@State{sRun=Just run, sChainRaw=Just chainRaw}
-  c@(FilterChain fltfs) = do
-  flts <- readFilters fltfs
-          & firstExceptT (CommandError c)
-  (domSlot, domBlock, fltNames, chain) <- filterChain run flts chainRaw
-                                & liftIO & firstExceptT (CommandError c)
-  when (ddFilteredCount domBlock == 0) $
-    throwE $ CommandError c $ mconcat
-      [ "All ", show (ddRawCount domBlock), " blocks filtered out." ]
-  pure s { sChain = Just chain, sDomSlots = Just domSlot, sDomBlocks = Just domBlock, sFilters = fltNames }
-runChainCommand _ c@FilterChain{} = missingCommandData c
-  ["run metadata & genesis", "unfiltered slot stats"]
+  chain <- mapM (Aeson.eitherDecode @BlockEvents)
+           . filter ((> 5) . LBS.length)
+           . LBS.split '\n'
+           <$> LBS.readFile (unJsonInputFile f)
+           & newExceptT
+           & firstExceptT (CommandError c . pack)
+  pure s { sChain = Just chain }
 
 runChainCommand s@State{sChain=Just chain}
   c@(DumpChain f) = do

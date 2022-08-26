@@ -9,7 +9,6 @@ module Cardano.Analysis.BlockProp
   , MachView
   , buildMachViews
   , rebuildChain
-  , filterChain
   , blockProp)
 where
 
@@ -269,13 +268,30 @@ beForgedAt BlockEvents{beForge=BlockForge{..}} =
 buildMachViews :: Run -> [(JsonLogfile, [LogObject])] -> IO [(JsonLogfile, MachView)]
 buildMachViews run = mapConcurrentlyPure (fst &&& blockEventMapsFromLogObjects run)
 
-rebuildChain :: Run -> [(JsonLogfile, MachView)] -> IO [BlockEvents]
-rebuildChain run@Run{genesis} xs@(fmap snd -> machViews) = do
+rebuildChain :: Run -> ([ChainFilter], [FilterName]) -> [(JsonLogfile, MachView)] -> IO (DataDomain SlotNo, DataDomain BlockNo, [FilterName], [BlockEvents])
+rebuildChain run@Run{genesis} (flts, fltNames) xs@(fmap snd -> machViews) = do
   progress "tip" $ Q $ show $ bfeBlock tipBlock
-  pure
-    $ computeChainBlockGaps
-    $ doRebuildChain (fmap deltifyEvents <$> eventMaps) tipHash
+  pure (domSlot, domBlock, fltNames, chain)
  where
+   (blk0,  blkL)  = (head chain, last chain)
+   (blk0V, blkLV) =
+     liftA2 (,) (find (null . beNegAcceptance) chain)
+     (find (null . beNegAcceptance) (reverse chain))
+     & fromMaybe (error "No acceptable blocks in chain")
+   domSlot = DataDomain
+             (blk0  & beSlotNo)  (blkL  & beSlotNo)
+             (blk0V & beSlotNo)  (blkLV & beSlotNo)
+             (fromIntegral . unSlotNo $ beSlotNo blkL  - beSlotNo blk0)
+             (fromIntegral . unSlotNo $ beSlotNo blkLV - beSlotNo blk0V)
+   domBlock = DataDomain
+              (blk0  & beBlockNo) (blkL  & beBlockNo)
+              (blk0V & beBlockNo) (blkLV & beBlockNo)
+              (beBlockNo blkL  - beBlockNo blk0  & fromIntegral . unBlockNo)
+              (beBlockNo blkLV - beBlockNo blk0V & fromIntegral . unBlockNo)
+
+   chain = computeChainBlockGaps $
+           doRebuildChain (fmap deltifyEvents <$> eventMaps) tipHash
+
    eventMaps      = mvBlocks <$> machViews
 
    finalBlockEv   = maximumBy ordBlockEv $ machViewMaxBlock <$> machViews
@@ -335,58 +351,63 @@ rebuildChain run@Run{genesis} xs@(fmap snd -> machViews) = do
                 go (bfePrevBlock forgerEv) (liftBlockEvents forgerEv oEvs ers : acc)
 
    liftBlockEvents :: ForgerEvents NominalDiffTime -> [ObserverEvents NominalDiffTime] -> [BPError] -> BlockEvents
-   liftBlockEvents ForgerEvents{bfeHost=host, ..} os errs =
-     BlockEvents
-     { beBlock        = bfeBlock
-     , beBlockPrev    = bfeBlockPrev
-     , beBlockNo      = bfeBlockNo
-     , beSlotNo       = bfeSlotNo
-     , beEpochNo      = bfeEpochNo
-     , beEpochSafeInt = slotEpochSafeInt genesis (snd $ genesis `unsafeParseSlot` bfeSlotNo)
-     , beForge =
-       BlockForge
-       { bfForger     = host
-       , bfSlotStart  = bfeSlotStart
-       , bfBlockGap   = 0 -- To be filled in after chain is rebuilt.
-       , bfBlockSize  = bfeBlockSize & handleMiss "Size"
-       , bfChecked    = bfeChecked   & handleMiss "Δt Checked"
-       , bfLeading    = bfeLeading   & handleMiss "Δt Leading"
-       , bfForged     = bfeForged    & handleMiss "Δt Forged"
-       , bfAdopted    = bfeAdopted   & handleMiss "Δt Adopted (forger)"
-       , bfChainDelta = bfeChainDelta
-       , bfAnnounced  = (bfeAnnounced <|> Just 0.05) -- Temporary hack until ChainSync tracing is fixed
-                        & handleMiss "Δt Announced (forger)"
-       , bfSending    = (bfeSending <|> Just 0.01) -- Temporary hack until ChainSync tracing is fixed
-                        & handleMiss "Δt Sending (forger)"
-       }
-     , beObservations =
-         catMaybes $
-         os <&> \ObserverEvents{..}->
-           BlockObservation
-             <$> Just boeHost
-             <*> Just bfeSlotStart
-             <*> boeNoticed
-             <*> boeRequested
-             <*> boeFetched
-             <*> Just boeAdopted
-             <*> Just boeChainDelta
-             <*> Just boeAnnounced
-             <*> Just boeSending
-             <*> Just boeErrorsCrit
-             <*> Just boeErrorsSoft
-     , bePropagation  = cdf adoptionCentiles adoptions
-     , beOtherBlocks  = otherBlocks
-     , beErrors =
-         errs
-         <> (otherBlocks <&>
-             \blk ->
-               fail' (findForger blk) bfeBlock $ BPEFork blk)
-         <> bfeErrs
-         <> concatMap boeErrorsCrit os
-         <> concatMap boeErrorsSoft os
-     }
+   liftBlockEvents ForgerEvents{bfeHost=host, ..} os errs = blockEvents
     where
-      adoptions    =
+      blockEvents =
+        BlockEvents
+        { beBlock        = bfeBlock
+        , beBlockPrev    = bfeBlockPrev
+        , beBlockNo      = bfeBlockNo
+        , beSlotNo       = bfeSlotNo
+        , beEpochNo      = bfeEpochNo
+        , beEpochSafeInt = slotEpochSafeInt genesis (snd $ genesis `unsafeParseSlot` bfeSlotNo)
+        , beForge =
+          BlockForge
+          { bfForger     = host
+          , bfSlotStart  = bfeSlotStart
+          , bfBlockGap   = 0 -- To be filled in after chain is rebuilt.
+          , bfBlockSize  = bfeBlockSize & handleMiss "Size"
+          , bfChecked    = bfeChecked   & handleMiss "Δt Checked"
+          , bfLeading    = bfeLeading   & handleMiss "Δt Leading"
+          , bfForged     = bfeForged    & handleMiss "Δt Forged"
+          , bfAdopted    = bfeAdopted   & handleMiss "Δt Adopted (forger)"
+          , bfChainDelta = bfeChainDelta
+          , bfAnnounced  = (bfeAnnounced <|> Just 0.05) -- Temporary hack until ChainSync tracing is fixed
+                           & handleMiss "Δt Announced (forger)"
+          , bfSending    = (bfeSending <|> Just 0.01) -- Temporary hack until ChainSync tracing is fixed
+                           & handleMiss "Δt Sending (forger)"
+          }
+        , beObservations =
+            catMaybes $
+            os <&> \ObserverEvents{..}->
+              BlockObservation
+                <$> Just boeHost
+                <*> Just bfeSlotStart
+                <*> boeNoticed
+                <*> boeRequested
+                <*> boeFetched
+                <*> Just boeAdopted
+                <*> Just boeChainDelta
+                <*> Just boeAnnounced
+                <*> Just boeSending
+                <*> Just boeErrorsCrit
+                <*> Just boeErrorsSoft
+        , bePropagation  = cdf adoptionCentiles adoptions
+        , beOtherBlocks  = otherBlocks
+        , beErrors =
+            errs
+            <> (otherBlocks <&>
+                \blk ->
+                  fail' (findForger blk) bfeBlock $ BPEFork blk)
+            <> bfeErrs
+            <> concatMap boeErrorsCrit os
+            <> concatMap boeErrorsSoft os
+        , beNegAcceptance =
+            -- Again, here we find out filters which reject this block:
+            filter (not . testBlockEvents genesis blockEvents) flts
+        }
+
+      adoptions =
         (fmap (`sinceSlot` bfeSlotStart) . Map.lookup bfeBlock) `mapMaybe` adoptionMap
 
       otherBlocks = Map.lookup bfeBlockNo heightMap
@@ -412,33 +433,8 @@ rebuildChain run@Run{genesis} xs@(fmap snd -> machViews) = do
        , " -- missing: ", slotDesc
        ]
 
-filterChain :: Run -> ([ChainFilter], [FilterName]) -> [BlockEvents]
-            -> IO (DataDomain SlotNo, DataDomain BlockNo, [FilterName], [BlockEvents])
-filterChain Run{genesis} (flts, fltNames) chain = do
-  progress "filtered-chain-slot-domain"  $ J domSlot
-  progress "filtered-chain-block-domain" $ J domBlock
-  pure (domSlot, domBlock, fltNames, fltrd)
- where
-   fltrd = filter (isValidBlockEvent genesis flts) chain &
-           \case
-             [] -> error $ mconcat
-                   ["All ", show (length chain)
-                   , " blocks dropped by chain filters: ", show flts]
-             xs -> xs
-   (blk0,  blkL)  = (head chain, last chain)
-   (blk0V, blkLV) = (head fltrd, last fltrd)
-   domSlot = DataDomain
-             (blk0  & beSlotNo)  (blkL  & beSlotNo)
-             (blk0V & beSlotNo)  (blkLV & beSlotNo)
-             (fromIntegral . unSlotNo $ beSlotNo blkL  - beSlotNo blk0)
-             (fromIntegral . unSlotNo $ beSlotNo blkLV - beSlotNo blk0V)
-   domBlock = DataDomain
-              (blk0  & beBlockNo) (blkL  & beBlockNo)
-              (blk0V & beBlockNo) (blkLV & beBlockNo)
-              (length chain) (length fltrd)
-
 blockProp :: Run -> [BlockEvents] -> DataDomain SlotNo -> DataDomain BlockNo -> IO BlockPropOne
-blockProp run@Run{genesis} chain domSlot domBlock = do
+blockProp run@Run{genesis} fullChain domSlot domBlock = do
   progress "block-propagation" $ J (domSlot, domBlock)
   pure $ BlockProp
     { bpDomainSlots         = domSlot
@@ -465,9 +461,11 @@ blockProp run@Run{genesis} chain domSlot domBlock = do
     , bpVersion             = getVersion
     }
  where
+   analysisChain = filter (null . beNegAcceptance) fullChain
+
    forgerEventsCDF   :: (Real a, KnownCDF p) => (BlockEvents -> Maybe a) -> CDF p a
-   forgerEventsCDF   = flip (witherToDistrib (cdf stdCentiles)) chain
-   observerEventsCDF = mapChainToPeerBlockObservationCDF stdCentiles chain
+   forgerEventsCDF   = flip (witherToDistrib (cdf stdCentiles)) analysisChain
+   observerEventsCDF = mapChainToPeerBlockObservationCDF stdCentiles analysisChain
 
    mapChainToBlockEventCDF ::
      (Real a)
