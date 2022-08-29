@@ -53,22 +53,11 @@ Documentation for building the node can be found `here <https://docs.cardano.org
 Executables
 ===========
 
-You can download the latest version of ``cardano-node`` and ``cardano-cli``:
+You can download the hydra binaries of ``cardano-node`` and ``cardano-cli`` from the [release notes](https://github.com/input-output-hk/cardano-node/releases)
 
-* `linux <https://hydra.iohk.io/job/Cardano/cardano-node/linux.musl.cardano-node-linux/latest-finished>`_
-* `win64 <https://hydra.iohk.io/job/Cardano/cardano-node/linux.windows.cardano-node-win64/latest-finished>`_
-* `macos <https://hydra.iohk.io/job/Cardano/cardano-node/macos.cardano-node-macos/latest-finished>`_
 
-Windows Executable
+Running the node on Windows
 ----
-
-Download
-++++
-
-You can download `here <https://hydra.iohk.io/job/Cardano/cardano-node/linux.windows.cardano-node-win64/latest-finished>`_.
-
-Instructions
-++++
 
 The download includes cardano-node.exe and a .dll. To run the node with cardano-node run you need to reference a few files and directories as arguments. These can be copied from the cardano-node repo into the executables directory. The command to run the node on mainnet looks like this:
 
