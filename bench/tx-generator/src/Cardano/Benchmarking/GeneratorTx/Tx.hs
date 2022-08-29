@@ -8,7 +8,6 @@ module Cardano.Benchmarking.GeneratorTx.Tx
   ( Fund
   , fundTxIn
   , fundAdaValue
-  , keyAddress
   , mkGenesisTransaction
   , mkFund
   , mkFee
@@ -34,13 +33,6 @@ fundTxIn (x,_) = x
 
 fundAdaValue :: Fund -> Lovelace
 fundAdaValue (_, InAnyCardanoEra _ txOut) = txOutValueToLovelace txOut
-
-keyAddress :: forall era. IsShelleyBasedEra era => NetworkId -> SigningKey PaymentKey -> AddressInEra era
-keyAddress networkId k
-  = makeShelleyAddressInEra
-      networkId
-      (PaymentCredentialByKey $ verificationKeyHash $ getVerificationKey k)
-      NoStakeAddress
 
 --{-# DEPRECATED mkGenesisTransaction "to be removed" #-}
 mkGenesisTransaction :: forall era .

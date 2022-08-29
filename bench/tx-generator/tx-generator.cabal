@@ -59,7 +59,9 @@ library
                        Cardano.TxGenerator.FundQueue
                        Cardano.TxGenerator.PureExample
                        Cardano.TxGenerator.Types
+                       Cardano.TxGenerator.Tx
                        Cardano.TxGenerator.Utils
+                       Cardano.TxGenerator.Utxo
 
   other-modules:       Cardano.TxGenerator.Internal.Fifo
                        Paths_tx_generator

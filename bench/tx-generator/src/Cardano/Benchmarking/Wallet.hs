@@ -2,41 +2,31 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 module Cardano.Benchmarking.Wallet
 where
 import           Prelude
 
 import           Control.Concurrent.MVar
-import           Data.Maybe
 
 import           Cardano.Api
 
 import           Cardano.TxGenerator.FundQueue as FundQueue
+import           Cardano.TxGenerator.Tx (CreateAndStore, CreateAndStoreList)
 import           Cardano.TxGenerator.Types
+import           Cardano.TxGenerator.Utxo
 
-import           Cardano.Api.Shelley (ProtocolParameters, ReferenceScript (..))
 import           Cardano.Benchmarking.Types (NumberOfTxs (..))
 
 -- All the actual functionality of Wallet / WalletRef has been removed
 -- and WalletRef has been stripped down to MVar FundQueue.
 -- The implementation of Wallet has become trivial.
--- Todo: Remove trivial wrapper functions.
+-- TODO: Remove trivial wrapper functions.
 
 type WalletRef = MVar FundQueue
 
-type TxGenerator era = [Fund] -> [TxOut CtxTx era] -> Either String (Tx era, TxId)
-
-type ToUTxO era = Lovelace -> (TxOut CtxTx era, TxIx -> TxId -> Fund)
-type ToUTxOList era split = split -> ([TxOut CtxTx era], TxId -> [Fund])
-
-type CreateAndStore m era = Lovelace -> (TxOut CtxTx era, TxIx -> TxId -> m ())
-
-type CreateAndStoreList m era split = split -> ([TxOut CtxTx era], TxId -> m ())
 
 -- 'ToUTxOList era' is more powerful than '[ ToUTxO era ]' but
 -- '[ ToUTxO era ]` is easier to construct.
-
 createAndStore :: ToUTxO era -> (Fund -> m ()) -> CreateAndStore m era
 createAndStore create store lovelace = (utxo, toStore)
   where
@@ -67,18 +57,6 @@ walletSource ref munch = modifyMVar ref $ \fifo -> return $ case FundQueue.remov
   Nothing -> (fifo, Left "WalletSource: out of funds")
   Just (newFifo, funds) -> (newFifo, Right funds)
 
-makeToUTxOList :: [ ToUTxO era ] -> ToUTxOList era [ Lovelace ]
-makeToUTxOList fkts values
-  = (outs, \txId -> map (\f -> f txId) fs)
-  where
-    (outs, fs) =unzip $ map worker $ zip3 fkts values [TxIx 0 ..]
-    worker (toUTxO, value, idx)
-      = let (o, f ) = toUTxO value
-         in  (o, f idx)
-
-data PayWithChange
-  = PayExact [Lovelace]
-  | PayWithChange Lovelace [Lovelace]
 
 mangleWithChange :: Monad m => CreateAndStore m era -> CreateAndStore m era -> CreateAndStoreList m era PayWithChange
 mangleWithChange mkChange mkPayment outs = case outs of
@@ -94,160 +72,6 @@ mangle fkts values
       = let (o, f ) = toUTxO value
          in  (o, f idx)
 
---TODO use Error monad
---TODO need to break this up
-sourceToStoreTransaction ::
-     Monad m
-  => TxGenerator era
-  -> FundSource m
-  -> ([Lovelace] -> split)
-  -> ToUTxOList era split
-  -> FundToStoreList m                --inline to ToUTxOList
-  -> m (Either String (Tx era))
-sourceToStoreTransaction txGenerator fundSource inToOut mkTxOut fundToStore = do
-  fundSource >>= \case
-    Left err -> return $ Left err
-    Right inputFunds -> work inputFunds
- where
-  work inputFunds = do
-    let
-      outValues = inToOut $ map getFundLovelace inputFunds
-      (outputs, toFunds) = mkTxOut outValues
-    case txGenerator inputFunds outputs of
-        Left err -> return $ Left err
-        Right (tx, txId) -> do
-          fundToStore $ toFunds txId
-          return $ Right tx
-
-sourceToStoreTransactionNew ::
-     Monad m
-  => TxGenerator era
-  -> FundSource m
-  -> ([Lovelace] -> split)
-  -> CreateAndStoreList m era split
-  -> m (Either String (Tx era))
-sourceToStoreTransactionNew txGenerator fundSource valueSplitter toStore = do
-  fundSource >>= \case
-    Left err -> return $ Left err
-    Right inputFunds -> work inputFunds
- where
-  work inputFunds = do
-    let
-      split = valueSplitter $ map getFundLovelace inputFunds
-      (outputs, storeAction) = toStore split
-    case txGenerator inputFunds outputs of
-        Left err -> return $ Left err
-        Right (tx, txId) -> do
-          storeAction txId
-          return $ Right tx
-
-includeChange :: Lovelace -> [Lovelace] -> [Lovelace] -> [Lovelace]
-includeChange fee spend have = case compare changeValue 0 of
-  GT -> changeValue : spend
-  EQ -> spend
-  LT -> error "genTX: Bad transaction: insufficient funds"
-  where changeValue = sum have - sum spend - fee
-
-includeChangeNew :: Lovelace -> [Lovelace] -> [Lovelace] -> PayWithChange
-includeChangeNew fee spend have = case compare changeValue 0 of
-  GT -> PayWithChange changeValue spend
-  EQ -> PayExact spend
-  LT -> error "genTX: Bad transaction: insufficient funds"
-  where changeValue = sum have - sum spend - fee
-
-mkUTxOVariant :: forall era. IsShelleyBasedEra era
-  => NetworkId
-  -> SigningKey PaymentKey
-  -> ToUTxO era
-mkUTxOVariant networkId key value
-  = ( mkTxOut value
-    , mkNewFund value
-    )
- where
-  mkTxOut v = TxOut (keyAddress @ era networkId key) (lovelaceToTxOutValue v) TxOutDatumNone ReferenceScriptNone
-
-  mkNewFund :: Lovelace -> TxIx -> TxId -> Fund
-  mkNewFund val txIx txId = Fund $ InAnyCardanoEra (cardanoEra @ era) $ FundInEra {
-      _fundTxIn = TxIn txId txIx
-    , _fundWitness = KeyWitness KeyWitnessForSpending
-    , _fundVal = lovelaceToTxOutValue val
-    , _fundSigningKey = Just key
-    }
-
--- to be merged with mkUTxOVariant
-mkUTxOScript :: forall era.
-     IsShelleyBasedEra era
-  => NetworkId
-  -> (Script PlutusScriptV1, ScriptData)
-  -> Witness WitCtxTxIn era
-  -> ToUTxO era
-mkUTxOScript networkId (script, txOutDatum) witness value
-  = ( mkTxOut value
-    , mkNewFund value
-    )
- where
-  plutusScriptAddr = makeShelleyAddressInEra
-                       networkId
-                       (PaymentCredentialByScript $ hashScript script)
-                       NoStakeAddress
-
-  mkTxOut v = case scriptDataSupportedInEra (cardanoEra @ era) of
-    Nothing -> error " mkUtxOScript scriptDataSupportedInEra==Nothing"
-    Just tag -> TxOut
-                  plutusScriptAddr
-                  (lovelaceToTxOutValue v)
-                  (TxOutDatumHash tag $ hashScriptData txOutDatum)
-                  ReferenceScriptNone
-
-  mkNewFund :: Lovelace -> TxIx -> TxId -> Fund
-  mkNewFund val txIx txId = Fund $ InAnyCardanoEra (cardanoEra @ era) $ FundInEra {
-      _fundTxIn = TxIn txId txIx
-    , _fundWitness = witness
-    , _fundVal = lovelaceToTxOutValue val
-    , _fundSigningKey = Nothing
-    }
-
-genTx :: forall era. IsShelleyBasedEra era =>
-     ProtocolParameters
-  -> (TxInsCollateral era, [Fund])
-  -> TxFee era
-  -> TxMetadataInEra era
-  -> TxGenerator era
-genTx protocolParameters (collateral, collFunds) fee metadata inFunds outputs
-  = case makeTransactionBody txBodyContent of
-      Left err -> error $ show err
-      Right b -> Right ( signShelleyTransaction b $ map WitnessPaymentKey allKeys
-                       , getTxId b
-                       )
- where
-  allKeys = mapMaybe getFundKey $ inFunds ++ collFunds
-  txBodyContent = TxBodyContent {
-      txIns = map (\f -> (getFundTxIn f, BuildTxWith $ getFundWitness f)) inFunds
-    , txInsCollateral = collateral
-    , txInsReference = TxInsReferenceNone
-    , txOuts = outputs
-    , txFee = fee
-    , txValidityRange = (TxValidityNoLowerBound, upperBound)
-    , txMetadata = metadata
-    , txAuxScripts = TxAuxScriptsNone
-    , txExtraKeyWits = TxExtraKeyWitnessesNone
-    , txProtocolParams = BuildTxWith $ Just protocolParameters
-    , txWithdrawals = TxWithdrawalsNone
-    , txCertificates = TxCertificatesNone
-    , txUpdateProposal = TxUpdateProposalNone
-    , txMintValue = TxMintNone
-    , txScriptValidity = TxScriptValidityNone
-    , txReturnCollateral = TxReturnCollateralNone
-    , txTotalCollateral = TxTotalCollateralNone
-    }
-
-  upperBound :: TxValidityUpperBound era
-  upperBound = case shelleyBasedEra @ era of
-    ShelleyBasedEraShelley -> TxValidityUpperBound ValidityUpperBoundInShelleyEra $ SlotNo maxBound
-    ShelleyBasedEraAllegra -> TxValidityNoUpperBound ValidityNoUpperBoundInAllegraEra
-    ShelleyBasedEraMary    -> TxValidityNoUpperBound ValidityNoUpperBoundInMaryEra
-    ShelleyBasedEraAlonzo  -> TxValidityNoUpperBound ValidityNoUpperBoundInAlonzoEra
-    ShelleyBasedEraBabbage -> TxValidityNoUpperBound ValidityNoUpperBoundInBabbageEra
 
 newtype WalletScript era = WalletScript { runWalletScript :: IO (WalletStep era) }
 
@@ -259,7 +83,6 @@ data WalletStep era
 -- TODO:
 -- Define generator for a single transaction and define combinator for
 -- repeat and sequence.
-
 
 benchmarkWalletScript :: forall era .
      IsShelleyBasedEra era
@@ -279,11 +102,4 @@ limitSteps ::
      NumberOfTxs
   -> WalletScript era
   -> WalletScript era
-limitSteps = undefined
-
-keyAddress :: forall era. IsShelleyBasedEra era => NetworkId -> SigningKey PaymentKey -> AddressInEra era
-keyAddress networkId k
-  = makeShelleyAddressInEra
-      networkId
-      (PaymentCredentialByKey $ verificationKeyHash $ getVerificationKey k)
-      NoStakeAddress
+limitSteps = undefined          -- FIXME

@@ -2,30 +2,35 @@ module  Cardano.TxGenerator.PureExample
         (demo)
         where
 
-import           Control.Monad (foldM, void)
+import           Control.Monad (foldM_)
 import           Control.Monad.Trans.State.Strict
 import           Data.Either (fromRight)
 import           Data.String (fromString)
+import           System.Exit (die)
 
 import           Cardano.Api
 import           Cardano.Api.Shelley (ProtocolParameters)
 
-import           Cardano.Benchmarking.Script.Aeson (readProtocolParametersFile)
+import           Data.Aeson (eitherDecodeFileStrict')
+
 import           Cardano.Benchmarking.Script.Core (parseSigningKey)
-import           Cardano.Benchmarking.Wallet (TxGenerator, genTx, makeToUTxOList, mkUTxOVariant,
-                   sourceToStoreTransaction)
+
 import           Cardano.TxGenerator.Fund (Fund (..), FundInEra (..))
+import           Cardano.TxGenerator.Tx (genTx, sourceToStoreTransaction)
+import           Cardano.TxGenerator.Types (TxGenerator)
 import           Cardano.TxGenerator.Utils (inputsToOutputsWithFee)
+import           Cardano.TxGenerator.Utxo (makeToUTxOList, mkUTxOVariant)
 
 import           Paths_tx_generator
+
 
 demo :: IO ()
 demo = getDataFileName "data/protocol-parameters.json" >>= demo'
 
 demo' :: FilePath -> IO ()
 demo' parametersFile = do
-  protocolParameters <- readProtocolParametersFile parametersFile
-  void $ foldM (worker $ generateTx protocolParameters) [genesisFund] [1..10]
+  protocolParameters <- either die pure =<< eitherDecodeFileStrict' parametersFile
+  foldM_ (worker $ generateTx protocolParameters) [genesisFund] [1..10]
   where
     worker ::
          Generator (Either String (Tx BabbageEra))

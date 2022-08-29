@@ -32,8 +32,10 @@ import           Ouroboros.Network.Protocol.LocalTxSubmission.Type (SubmitResult
 
 import           Cardano.TxGenerator.Fund as Fund (Fund (..), FundInEra (..), getFundTxIn)
 import qualified Cardano.TxGenerator.FundQueue as FundQueue
+import           Cardano.TxGenerator.Tx
 import           Cardano.TxGenerator.Types
 import           Cardano.TxGenerator.Utils
+import           Cardano.TxGenerator.Utxo
 
 import           Cardano.Benchmarking.GeneratorTx as GeneratorTx (AsyncBenchmarkControl)
 import qualified Cardano.Benchmarking.GeneratorTx as GeneratorTx (readSigningKey, secureGenesisFund,
@@ -42,7 +44,7 @@ import qualified Cardano.Benchmarking.GeneratorTx as GeneratorTx (readSigningKey
 import           Cardano.Benchmarking.GeneratorTx.NodeToNode (ConnectClient,
                    benchmarkConnectTxSubmit)
 import           Cardano.Benchmarking.GeneratorTx.SizedMetadata (mkMetadata)
-import           Cardano.Benchmarking.GeneratorTx.Tx as Core (keyAddress, mkFee, txInModeCardano)
+import           Cardano.Benchmarking.GeneratorTx.Tx as Core (mkFee, txInModeCardano)
 
 import           Cardano.Benchmarking.OuroborosImports as Core (LocalSubmitTx, SigningKeyFile,
                    makeLocalConnectInfo, protocolToCodecConfig)
@@ -52,7 +54,7 @@ import           Cardano.Benchmarking.LogTypes as Core (TraceBenchTxSubmit (..),
                    btSubmission2_, btTxSubmit_)
 import           Cardano.Benchmarking.Types as Core (NumberOfTxs (..), SubmissionErrorPolicy (..),
                    TPSRate, TxAdditionalSize (..))
-import           Cardano.Benchmarking.Wallet as Wallet hiding (keyAddress)
+import           Cardano.Benchmarking.Wallet as Wallet
 
 import           Cardano.Benchmarking.Script.Aeson (readProtocolParametersFile)
 import           Cardano.Benchmarking.Script.Env
@@ -289,7 +291,7 @@ runBenchmarkInEra sourceWallet submitMode (ThreadName threadName) shape collater
     txGenerator = genTx protocolParameters collaterals (mkFee (auxFee shape)) metadata
 
     toUTxO :: [ ToUTxO era ]
-    toUTxO = repeat $ Wallet.mkUTxOVariant networkId fundKey -- TODO: make configurable
+    toUTxO = repeat $ mkUTxOVariant networkId fundKey -- TODO: make configurable
 
     fundToStore = mkWalletFundStoreList walletRefDst
 
@@ -353,7 +355,7 @@ importGenesisFund era wallet submitMode genesisKeyName destKey = do
   let
     coreCall :: forall era. IsShelleyBasedEra era => AsType era -> ExceptT TxGenError IO Store.Fund
     coreCall _proxy = do
-      let addr = Core.keyAddress @ era networkId fundKey
+      let addr = keyAddress @ era networkId fundKey
       f <- GeneratorTx.secureGenesisFund tracer localSubmit networkId genesis fee ttl genesisKey addr
       return (f, fundKey)
   result <- liftCoreWithEra era coreCall
@@ -389,7 +391,7 @@ createChangeInEra sourceWallet submitMode payMode changeMode value count _era = 
                                                   (genTx protocolParameters (TxInsCollateralNone, [])
                                                    (mkFee fee) TxMetadataNone )
                                                   fundSource
-                                                  (Wallet.includeChangeNew fee coins)
+                                                  (includeChange fee coins)
                                                   (mangleWithChange toUTxOChange toUTxO)
       return $ fmap txInModeCardano tx
   createChangeGeneric sourceWallet submitMode createCoins addressMsg value count
@@ -401,7 +403,7 @@ interpretPayMode payMode = do
     PayToAddr keyName destWallet -> do
       fundKey <- getName keyName
       walletRef <- getName destWallet
-      return ( createAndStore (Wallet.mkUTxOVariant networkId fundKey) (mkWalletFundStore walletRef)
+      return ( createAndStore (mkUTxOVariant networkId fundKey) (mkWalletFundStore walletRef)
              , Text.unpack $ serialiseAddress $ keyAddress @ era networkId fundKey)
     PayToScript scriptSpec destWallet -> do
       walletRef <- getName destWallet

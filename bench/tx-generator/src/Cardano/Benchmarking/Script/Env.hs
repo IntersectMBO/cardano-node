@@ -13,26 +13,26 @@
 module Cardano.Benchmarking.Script.Env
 where
 
-import           Prelude
-import           Data.Functor.Identity
-import qualified Data.Text as Text
-import           Data.Dependent.Sum (DSum(..))
-import           Data.Dependent.Map (DMap)
-import qualified Data.Dependent.Map as DMap
 import           Control.Monad.IO.Class
 import           Control.Monad.Trans.Class
 import           Control.Monad.Trans.Except
 import           Control.Monad.Trans.RWS.Strict (RWST)
 import qualified Control.Monad.Trans.RWS.Strict as RWS
 import           "contra-tracer" Control.Tracer (traceWith)
+import           Data.Dependent.Map (DMap)
+import qualified Data.Dependent.Map as DMap
+import           Data.Dependent.Sum (DSum (..))
+import           Data.Functor.Identity
+import qualified Data.Text as Text
+import           Prelude
 
-import qualified Cardano.Node.Types (ConfigError)
 import qualified Cardano.Benchmarking.LogTypes as Tracer
+import qualified Cardano.Node.Types (ConfigError)
 import           Ouroboros.Network.NodeToClient (IOManager)
 
-import           Cardano.TxGenerator.Types (TxGenError)
 import           Cardano.Benchmarking.Script.Setters as Setters
 import           Cardano.Benchmarking.Script.Store
+import           Cardano.TxGenerator.Types (TxGenError)
 
 type Env = DMap Store Identity
 

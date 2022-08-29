@@ -8,9 +8,15 @@ import           Cardano.Prelude
 import           Cardano.TxGenerator.Fund (Fund)
 
 
+type TxGenerator era = [Fund] -> [TxOut CtxTx era] -> Either String (Tx era, TxId)
+
 type FundSource m       = m (Either String [Fund])
 type FundToStore m      = Fund -> m ()
 type FundToStoreList m  = [Fund] -> m ()
+
+data PayWithChange
+  = PayExact [Lovelace]
+  | PayWithChange Lovelace [Lovelace]
 
 data TxGenError =
     InsufficientFundsForRecipientTx !Lovelace !Lovelace

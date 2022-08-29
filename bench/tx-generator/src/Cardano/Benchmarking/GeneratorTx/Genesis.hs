@@ -12,14 +12,17 @@ import qualified Data.ListMap as ListMap
 import           Prelude (error, filter)
 
 import           Cardano.Api
-import           Cardano.Api.Shelley (fromShelleyLovelace, fromShelleyPaymentCredential,
-                   fromShelleyStakeReference, ReferenceScript(..))
+import           Cardano.Api.Shelley (ReferenceScript (..), fromShelleyLovelace,
+                   fromShelleyPaymentCredential, fromShelleyStakeReference)
 import           Control.Arrow ((***))
 
 import           Cardano.Benchmarking.GeneratorTx.Tx
 
 import           Cardano.Ledger.Shelley.API (Addr (..), ShelleyGenesis, sgInitialFunds)
 import           Ouroboros.Consensus.Shelley.Eras (StandardShelley)
+
+import           Cardano.TxGenerator.Utils (keyAddress)
+
 
 genesisFunds :: forall era. IsShelleyBasedEra era
   => NetworkId -> ShelleyGenesis StandardShelley -> [(AddressInEra era, Lovelace)]
