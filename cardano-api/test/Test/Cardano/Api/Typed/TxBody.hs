@@ -7,7 +7,6 @@ module Test.Cardano.Api.Typed.TxBody
 import           Cardano.Api
 import           Cardano.Api.Shelley (ReferenceScript (..), refScriptToShelleyScript)
 import           Cardano.Prelude
-import           Data.Type.Equality (TestEquality (testEquality))
 import           Gen.Cardano.Api.Typed (genTxBodyContent)
 import           Hedgehog (Property, annotateShow, failure, (===), MonadTest)
 import           Test.Cardano.Api.Typed.Orphans ()
@@ -57,22 +56,7 @@ prop_roundtrip_txbodycontent_txouts =
   -- NOTE: After Allegra, all eras interpret SimpleScriptV1 as SimpleScriptV2
   -- because V2 is a superset of V1. So we accept that as a valid conversion.
   matchRefScript :: MonadTest m => (ReferenceScript BabbageEra, ReferenceScript BabbageEra) -> m ()
-  matchRefScript (a, b)
-    | isSimpleScriptV1 a && isSimpleScriptV2 b =
-      refScriptToShelleyScript BabbageEra a === refScriptToShelleyScript BabbageEra b
-    | otherwise =
-      a === b
-
-  isSimpleScriptV1 :: ReferenceScript era -> Bool
-  isSimpleScriptV1 = isLang (SimpleScriptLanguage SimpleScriptV1)
-
-  isSimpleScriptV2 :: ReferenceScript era -> Bool
-  isSimpleScriptV2 = isLang (SimpleScriptLanguage SimpleScriptV2)
-
-  isLang :: ScriptLanguage a -> ReferenceScript era -> Bool
-  isLang expected = \case
-    (ReferenceScript _ (ScriptInAnyLang actual _)) -> isJust $ testEquality expected actual
-    _ -> False
+  matchRefScript (a, b) = refScriptToShelleyScript BabbageEra a === refScriptToShelleyScript BabbageEra b
 
 tests :: TestTree
 tests = testGroup "Test.Cardano.Api.Typed.TxBody"

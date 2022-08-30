@@ -10,6 +10,8 @@
 
 - Allow reading text envelopes from pipes ([PR 4384](https://github.com/input-output-hk/cardano-node/pull/4384))
 
+- Return the minimum SimpleScript version instead of the latest ([PR 4261](https://github.com/input-output-hk/cardano-node/pull/4261))
+
 ## 1.33.0 -- December 2021
 ## 1.32.1 -- November 2021
 

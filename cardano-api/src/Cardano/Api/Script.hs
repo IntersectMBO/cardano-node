@@ -1,14 +1,17 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 {- HLINT ignore "Avoid lambda using `infix`" -}
 {- HLINT ignore "Use section" -}
@@ -1168,23 +1171,15 @@ fromShelleyBasedScript  :: ShelleyBasedEra era
 fromShelleyBasedScript era script =
   case era of
     ShelleyBasedEraShelley ->
-      ScriptInEra SimpleScriptV1InShelley $
-      SimpleScript SimpleScriptV1 $
-      fromShelleyMultiSig script
+      minimumShelleySimpleScriptVersion @ShelleyEra @SimpleScriptV1 (fromShelleyMultiSig script)
     ShelleyBasedEraAllegra ->
-      ScriptInEra SimpleScriptV2InAllegra $
-      SimpleScript SimpleScriptV2 $
-      fromAllegraTimelock TimeLocksInSimpleScriptV2 script
+      minimumShelleySimpleScriptVersion (fromAllegraTimelock TimeLocksInSimpleScriptV2 script)
     ShelleyBasedEraMary ->
-      ScriptInEra SimpleScriptV2InMary $
-      SimpleScript SimpleScriptV2 $
-      fromAllegraTimelock TimeLocksInSimpleScriptV2 script
+      minimumShelleySimpleScriptVersion (fromAllegraTimelock TimeLocksInSimpleScriptV2 script)
     ShelleyBasedEraAlonzo ->
       case script of
         Alonzo.TimelockScript s ->
-          ScriptInEra SimpleScriptV2InAlonzo $
-          SimpleScript SimpleScriptV2 $
-          fromAllegraTimelock TimeLocksInSimpleScriptV2 s
+          minimumShelleySimpleScriptVersion (fromAllegraTimelock TimeLocksInSimpleScriptV2 s)
         Alonzo.PlutusScript Alonzo.PlutusV1 s ->
           ScriptInEra PlutusScriptV1InAlonzo $
           PlutusScript PlutusScriptV1 $
@@ -1194,9 +1189,7 @@ fromShelleyBasedScript era script =
     ShelleyBasedEraBabbage ->
       case script of
         Alonzo.TimelockScript s ->
-          ScriptInEra SimpleScriptV2InBabbage $
-          SimpleScript SimpleScriptV2 $
-          fromAllegraTimelock TimeLocksInSimpleScriptV2 s
+          minimumShelleySimpleScriptVersion (fromAllegraTimelock TimeLocksInSimpleScriptV2 s)
         Alonzo.PlutusScript Alonzo.PlutusV1 s ->
           ScriptInEra PlutusScriptV1InBabbage $
           PlutusScript PlutusScriptV1 $
@@ -1206,7 +1199,38 @@ fromShelleyBasedScript era script =
           PlutusScript PlutusScriptV2 $
           PlutusScriptSerialised s
 
+class SimpleScriptInEra era lang where
+  simpleScriptInEra :: SimpleScript lang -> ScriptInEra era
 
+instance SimpleScriptInEra ShelleyEra SimpleScriptV1 where
+  simpleScriptInEra = ScriptInEra SimpleScriptV1InShelley . SimpleScript SimpleScriptV1
+instance SimpleScriptInEra AllegraEra SimpleScriptV1 where
+  simpleScriptInEra = ScriptInEra SimpleScriptV1InAllegra . SimpleScript SimpleScriptV1
+instance SimpleScriptInEra AllegraEra SimpleScriptV2 where
+  simpleScriptInEra = ScriptInEra SimpleScriptV2InAllegra . SimpleScript SimpleScriptV2
+instance SimpleScriptInEra MaryEra SimpleScriptV1 where
+  simpleScriptInEra = ScriptInEra SimpleScriptV1InMary . SimpleScript SimpleScriptV1
+instance SimpleScriptInEra MaryEra SimpleScriptV2 where
+  simpleScriptInEra = ScriptInEra SimpleScriptV2InMary . SimpleScript SimpleScriptV2
+instance SimpleScriptInEra AlonzoEra SimpleScriptV1 where
+  simpleScriptInEra = ScriptInEra SimpleScriptV1InAlonzo . SimpleScript SimpleScriptV1
+instance SimpleScriptInEra AlonzoEra SimpleScriptV2 where
+  simpleScriptInEra = ScriptInEra SimpleScriptV2InAlonzo . SimpleScript SimpleScriptV2
+instance SimpleScriptInEra BabbageEra SimpleScriptV1 where
+  simpleScriptInEra = ScriptInEra SimpleScriptV1InBabbage . SimpleScript SimpleScriptV1
+instance SimpleScriptInEra BabbageEra SimpleScriptV2 where
+  simpleScriptInEra = ScriptInEra SimpleScriptV2InBabbage . SimpleScript SimpleScriptV2
+
+class MinimumShelleySimpleScriptVersion era lang where
+  minimumShelleySimpleScriptVersion :: SimpleScript lang -> ScriptInEra era
+
+instance (SimpleScriptInEra era SimpleScriptV1) => MinimumShelleySimpleScriptVersion era SimpleScriptV1 where
+  minimumShelleySimpleScriptVersion = simpleScriptInEra
+
+instance (SimpleScriptInEra era SimpleScriptV1, SimpleScriptInEra era SimpleScriptV2) => MinimumShelleySimpleScriptVersion era SimpleScriptV2 where
+  minimumShelleySimpleScriptVersion s = case adjustSimpleScriptVersion SimpleScriptV1 s of
+    Nothing -> simpleScriptInEra s
+    Just s' -> simpleScriptInEra s'
 
 -- | Conversion for the 'Shelley.MultiSig' language used by the Shelley era.
 --
