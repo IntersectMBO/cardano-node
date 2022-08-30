@@ -1,5 +1,5 @@
 {-# LANGUAGE TypeInType #-}
-module Cardano.Unlog.Render (module Cardano.Unlog.Render) where
+module Cardano.Render (module Cardano.Render) where
 
 import Prelude                  (head, id, last, tail, show)
 import Cardano.Prelude          hiding (head, show)
@@ -15,7 +15,7 @@ import Data.CDF
 
 import Cardano.Analysis.Ground
 import Cardano.Analysis.Run
-import Cardano.Unlog.Org
+import Cardano.Org
 import Cardano.Util
 
 

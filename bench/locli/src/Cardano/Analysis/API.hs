@@ -27,8 +27,8 @@ import Cardano.Analysis.Context
 import Cardano.Analysis.Ground
 import Cardano.Analysis.Version
 import Cardano.Logging.Resources.Types
+import Cardano.Render
 import Cardano.Unlog.LogObject  hiding (Text)
-import Cardano.Unlog.Render
 import Cardano.Util
 
 --

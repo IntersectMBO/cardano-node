@@ -23,8 +23,8 @@ import Cardano.Analysis.Context
 import Cardano.Analysis.Ground
 import Cardano.Analysis.MachPerf
 import Cardano.Analysis.Run
+import Cardano.Render
 import Cardano.Unlog.LogObject          hiding (Text)
-import Cardano.Unlog.Render
 import Cardano.Report
 import Data.CDF
 

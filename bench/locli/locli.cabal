@@ -74,9 +74,10 @@ library
                        Cardano.Analysis.MachPerf
                        Cardano.Analysis.Version
 
+                       Cardano.Org
+                       Cardano.Render
+
                        Cardano.Unlog.LogObject
-                       Cardano.Unlog.Org
-                       Cardano.Unlog.Render
                        Cardano.Unlog.Resources
 
   other-modules:       Paths_locli
