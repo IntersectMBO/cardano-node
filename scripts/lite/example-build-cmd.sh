@@ -16,7 +16,6 @@ export RESULT_FILE_TARGET="${RESULT_FILE:-$WORK/target.out}"
 export RESULT_FILE_CHANGE="${RESULT_FILE:-$WORK/change.out}"
 
 echo "Socket path: $CARDANO_NODE_SOCKET_PATH"
-echo "Socket path: $(pwd)"
 
 ls -al "$CARDANO_NODE_SOCKET_PATH"
 

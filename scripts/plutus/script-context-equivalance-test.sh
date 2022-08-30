@@ -16,7 +16,6 @@ export RESULT_FILE="${RESULT_FILE:-$WORK/result.out}"
 export PV=v1 # Plutus Script Version
 
 echo "Socket path: $CARDANO_NODE_SOCKET_PATH"
-echo "Socket path: $(pwd)"
 
 ls -al "$CARDANO_NODE_SOCKET_PATH"
 
@@ -94,7 +93,7 @@ echo "$plutusutxotxin"
 echo "Collateral"
 echo "$txinCollateral"
 
-# We need to generate a dummy redeemer in order to create a txbody from which we can generate
+# We need to generate a dummy redeemer (the cli demands a redeemer) in order to create a txbody from which we can generate
 # a tx and then derive the correct redeemer.
 create-script-context --out-file "$WORK/script-context.redeemer"
 

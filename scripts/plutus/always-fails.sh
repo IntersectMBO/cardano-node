@@ -16,7 +16,6 @@ export RESULT_FILE="${RESULT_FILE:-$WORK/result.out}"
 export PV=v1 # Plutus Script Version
 
 echo "Socket path: $CARDANO_NODE_SOCKET_PATH"
-echo "Socket path: $(pwd)"
 
 ls -al "$CARDANO_NODE_SOCKET_PATH"
 
