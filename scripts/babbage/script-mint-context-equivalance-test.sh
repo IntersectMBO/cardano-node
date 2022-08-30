@@ -17,7 +17,6 @@ export RESULT_FILE="${RESULT_FILE:-$WORK/result.out}"
 mkdir -p "$WORK"
 
 echo "Socket path: $CARDANO_NODE_SOCKET_PATH"
-echo "Socket path: $(pwd)"
 
 ls -al "$CARDANO_NODE_SOCKET_PATH"
 
@@ -70,7 +69,7 @@ txinfunding1=$(jq -r 'keys[1]' $WORK/utxo-2.json)
 dummyaddress=addr_test1vpqgspvmh6m2m5pwangvdg499srfzre2dd96qq57nlnw6yctpasy4
 
 
-# We need to generate a dummy redeemer in order to create a txbody from which we can generate
+# We need to generate a dummy redeemer (the cli demands a redeemer)  in order to create a txbody from which we can generate
 # a tx and then derive the correct redeemer.
 create-script-context --plutus-v2 --out-file "$WORK/script-context.redeemer"
 

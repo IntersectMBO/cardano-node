@@ -17,7 +17,6 @@ export RESULT_FILE="${RESULT_FILE:-$WORK/result.out}"
 mkdir -p "$WORK"
 
 echo "Socket path: $CARDANO_NODE_SOCKET_PATH"
-echo "Socket path: $(pwd)"
 
 ls -al "$CARDANO_NODE_SOCKET_PATH"
 
@@ -40,6 +39,7 @@ cardano-cli stake-address registration-certificate \
 
 
 plutusscriptaddr=$($CARDANO_CLI address build --payment-script-file "$plutusscriptinuse"  --testnet-magic "$TESTNET_MAGIC")
+# The input at the readonlyaddress will be used as a reference input
 readonlyaddress=addr_test1vz3t3f2kgy2re66tnhgxc4t8jgylw2cqfnxdwlrq9agfmtstxxkm5
 
 mkdir -p "$WORK"
@@ -96,14 +96,14 @@ dummyaddress=addr_test1vpqgspvmh6m2m5pwangvdg499srfzre2dd96qq57nlnw6yctpasy4
 
 lovelaceatplutusscriptaddr=$(jq -r ".[\"$plutusutxotxin\"].value.lovelace" $WORK/plutusutxo.json)
 
-#Get read only reference input
+# Get read only reference input
 $CARDANO_CLI query utxo --address "$readonlyaddress" --cardano-mode \
   --testnet-magic "$TESTNET_MAGIC" --out-file $WORK/read-only-ref-input-utxo.json
 readonlyrefinput=$(jq -r 'keys[0]' $WORK/read-only-ref-input-utxo.json)
 
 
 
-# We need to generate a dummy redeemer in order to create a txbody from which we can generate
+# We need to generate a dummy redeemer (the cli demands a redeemer) in order to create a txbody from which we can generate
 # a tx and then derive the correct redeemer.
 create-script-context --plutus-v2 --out-file "$WORK/script-context.redeemer"
 
