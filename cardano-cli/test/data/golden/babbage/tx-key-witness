@@ -1,0 +1,5 @@
+{
+    "type": "TxWitness BabbageEra",
+    "description": "",
+    "cborHex": "8200825820de40a0376a4953d0fd0ea543c0f5317269a40258f2986153f6304494b430eaab58403d6fcac7d92c75d564b88415c0df07e6442db08049abfeb11b58d1084db82a3480fdb6aa4cb34564b0dd2abb7e7e7d3acd954d0a2b9145939c80e967e0d5cb07"
+}

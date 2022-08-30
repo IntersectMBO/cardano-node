@@ -10,8 +10,8 @@ export BASE="${BASE:-.}"
 export CARDANO_CLI="${CARDANO_CLI:-cardano-cli}"
 export CARDANO_NODE_SOCKET_PATH="${CARDANO_NODE_SOCKET_PATH:-example/main.sock}"
 export TESTNET_MAGIC="${TESTNET_MAGIC:-42}"
-export UTXO_VKEY="${UTXO_VKEY:-example/shelley/utxo-keys/utxo1.vkey}"
-export UTXO_SKEY="${UTXO_SKEY:-example/shelley/utxo-keys/utxo1.skey}"
+export UTXO_VKEY="${UTXO_VKEY:-example/utxo-keys/utxo1.vkey}"
+export UTXO_SKEY="${UTXO_SKEY:-example/utxo-keys/utxo1.skey}"
 export RESULT_FILE_TARGET="${RESULT_FILE:-$WORK/target.out}"
 export RESULT_FILE_CHANGE="${RESULT_FILE:-$WORK/change.out}"
 
@@ -35,19 +35,20 @@ changeaddr=addr_test1qpmxr8d8jcl25kyz2tz9a9sxv7jxglhddyf475045y8j3zxjcg9vquzkljy
 targetaddr=addr_test1vpqgspvmh6m2m5pwangvdg499srfzre2dd96qq57nlnw6yctpasy4
 
 $CARDANO_CLI transaction build \
-  --alonzo-era \
+  --babbage-era \
   --cardano-mode \
+  --cli-format \
   --testnet-magic "$TESTNET_MAGIC" \
   --change-address "$changeaddr" \
   --tx-in $txin \
   --tx-out "$targetaddr+10000000" \
   --out-file $WORK/build.body
 
-$CARDANO_CLI transaction sign \
+$CARDANO_CLI transaction witness \
   --tx-body-file $WORK/build.body \
   --testnet-magic "$TESTNET_MAGIC" \
   --signing-key-file $UTXO_SKEY \
-  --out-file $WORK/build.tx
+  --out-file $WORK/witness.tx
 
 # SUBMIT
 $CARDANO_CLI transaction submit --tx-file $WORK/build.tx --testnet-magic "$TESTNET_MAGIC"

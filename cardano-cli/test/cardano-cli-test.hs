@@ -2,6 +2,7 @@ import           Cardano.Prelude
 
 import           Hedgehog.Main (defaultMain)
 
+import qualified Test.Cli.CliIntermediateFormat
 import qualified Test.Cli.FilePermissions
 import qualified Test.Cli.ITN
 import qualified Test.Cli.JSON
@@ -16,7 +17,8 @@ import qualified Test.Config.Mainnet
 main :: IO ()
 main =
   defaultMain
-    [ Test.Cli.FilePermissions.tests
+    [ Test.Cli.CliIntermediateFormat.tests
+    , Test.Cli.FilePermissions.tests
     , Test.Cli.ITN.tests
     , Test.Cli.JSON.tests
     , Test.Cli.MultiAssetParsing.tests

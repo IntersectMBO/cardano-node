@@ -451,9 +451,7 @@ runTxBuild (AnyCardanoEra era) (AnyConsensusModeParams cModeParams) networkId mS
            inputsAndScriptFiles readOnlyRefIns txinsc mReturnCollateral mTotCollateral txouts (TxOutChangeAddress changeAddr) mValue mLowerBound mUpperBound
            certFiles withdrawals reqSigners metadataSchema scriptFiles metadataFiles mpparams
            mUpdatePropFile mOverrideWits outputOptions = do
-  SocketPath sockPath <- firstExceptT ShelleyTxCmdSocketEnvError readEnvSocketPath
-  let localNodeConnInfo = LocalNodeConnectInfo cModeParams networkId sockPath
-      consensusMode = consensusModeOnly cModeParams
+  let consensusMode = consensusModeOnly cModeParams
       dummyFee = Just $ Lovelace 0
       inputsThatRequireWitnessing = [input | (input,_) <- inputsAndScriptFiles]
 
