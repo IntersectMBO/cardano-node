@@ -6,6 +6,9 @@
 - Fix query protocol-state (#4102)
 - Render reference script hashes when using `--calculate-plutus-script-cost` option (#4204)
 - Transaction build in any alonzo era when on babbage testnet (#4135)
+- Default to the ledger's CDDL format for transaction body creation by removing flags `--cddl-format` and `--cli-format` from `build` and `build-raw` ([PR 4303](https://github.com/input-output-hk/cardano-node/pull/4303))
+
+### Bugs
 
 ## 1.35.2 -- July 2022 (not released)
 
