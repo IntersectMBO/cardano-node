@@ -190,6 +190,7 @@ test-suite cardano-cli-test
                       , yaml
 
   other-modules:        Test.Config.Mainnet
+                        Test.Cli.CliIntermediateFormat
                         Test.Cli.FilePermissions
                         Test.Cli.ITN
                         Test.Cli.JSON
