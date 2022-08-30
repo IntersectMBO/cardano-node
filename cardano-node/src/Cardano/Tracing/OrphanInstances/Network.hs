@@ -1037,6 +1037,10 @@ instance (Show ntnAddr, Show ntcAddr) => ToObject (ND.InitializationTracer ntnAd
     [ "kind" .= String "DiffusionErrored"
     , "path" .= String (pack (show exception))
     ]
+  toObject _dtal (ND.SystemdSocketConfiguration warning) = mconcat
+    [ "kind" .= String "SystemdSocketConfiguration"
+    , "data" .= String (pack (show warning))
+    ]
 
 instance ToObject (NtC.HandshakeTr LocalAddress NodeToClientVersion) where
   toObject _verb (WithMuxBearer b ev) =

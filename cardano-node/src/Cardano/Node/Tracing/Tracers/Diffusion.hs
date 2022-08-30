@@ -407,6 +407,7 @@ severityDiffusionInit ND.ServerSocketUp {}                    = Info
 severityDiffusionInit ND.UnsupportedLocalSystemdSocket {}     = Info
 severityDiffusionInit ND.UnsupportedReadySocketCase {}        = Info
 severityDiffusionInit ND.DiffusionErrored {}                  = Info
+severityDiffusionInit ND.SystemdSocketConfiguration {}        = Warning
 
 namesForDiffusionInit  :: ND.InitializationTracer rard ladr -> [Text]
 namesForDiffusionInit  ND.RunServer {}                         =
@@ -439,6 +440,8 @@ namesForDiffusionInit  ND.UnsupportedReadySocketCase {}        =
   ["UnsupportedReadySocketCase"]
 namesForDiffusionInit  ND.DiffusionErrored {}                  =
   ["DiffusionErrored"]
+namesForDiffusionInit  ND.SystemdSocketConfiguration {}        =
+  ["SystemdSocketConfiguration"]
 
 instance (Show ntnAddr, Show ntcAddr) =>
   LogFormatting (ND.InitializationTracer ntnAddr ntcAddr)  where
@@ -506,6 +509,11 @@ instance (Show ntnAddr, Show ntcAddr) =>
     [ "kind" .= String "DiffusionErrored"
     , "path" .= String (pack (show exception))
     ]
+  forMachine _dtal (ND.SystemdSocketConfiguration warning) = mconcat
+    [ "kind" .= String "SystemdSocketConfiguration"
+    , "data" .= String (pack (show warning))
+    ]
+
 
 docDiffusionInit :: Documented (ND.InitializationTracer Socket.SockAddr NtC.LocalAddress)
 docDiffusionInit =  addDocumentedNamespace  [] docDiffusionInit'
