@@ -32,12 +32,15 @@ usage_analyse() {
     $(helpopt --dump-chain)       Blockprop: dump chain (JSON)
     $(helpopt --dump-slots-raw)   Machperf:  dump unfiltered slots (JSON)
     $(helpopt --dump-slots)       Machperf:  dump filtered slots (JSON)
+    $(helpopt --multi-overall)    Multirun:  Overall dataset statistical summary
+    $(helpopt --multi-inter-cdf)  Multirun:  Inter-sample (i.e. inter-CDF) stats
 EOF
 }
 
 analyse() {
 local filters=() aws= sargs=() unfiltered= perf_omit_hosts=()
 local dump_logobjects= dump_machviews= dump_chain= dump_slots_raw= dump_slots=
+local multi_aspect='--inter-cdf'
 while test $# -gt 0
 do case "$1" in
        --dump-logobjects | -lo )  sargs+=($1);    dump_logobjects='true';;
@@ -45,6 +48,8 @@ do case "$1" in
        --dump-chain      | -c )   sargs+=($1);    dump_chain='true';;
        --dump-slots-raw  | -sr )  sargs+=($1);    dump_slots_raw='true';;
        --dump-slots      | -s )   sargs+=($1);    dump_slots='true';;
+       --multi-overall )          sargs+=($1);    multi_aspect='--overall';;
+       --multi-inter-cdf )        sargs+=($1);    multi_aspect='--inter-cdf';;
        --perf-omit-host )         sargs+=($1 $2); perf_omit_hosts+=($2); shift;;
        --filters )                sargs+=($1 $2); analysis_set_filters "base,$2"; shift;;
        --no-filters | --unfiltered | -u )
@@ -293,18 +298,18 @@ case "$op" in
         v0=("$@")
         v1=(${v0[*]/#read-clusterperfs/ 'read-clusterperfs' ${cperfs[*]} })
         v2=(${v1[*]/#read-propagations/ 'read-propagations' ${props[*]}  })
-        v3=(${v2[*]/#multi-clusterperf-json/ 'render-multi-clusterperf' --json $adir/'multi-clusterperf.json' --full })
-        v4=(${v3[*]/#multi-clusterperf-org/     'render-multi-clusterperf' --org $adir/'multi-clusterperf.org' --full })
-        v5=(${v4[*]/#multi-clusterperf-report/  'render-multi-clusterperf' --report $adir/'multi-clusterperf.report.org' --summary })
-        v6=(${v5[*]/#multi-clusterperf-gnuplot/ 'render-multi-clusterperf' --gnuplot $adir/'%s.cdf' --full })
-        v7=(${v6[*]/#multi-clusterperf-full/    'render-multi-clusterperf' --pretty $adir/'multi-clusterperf-full.txt' --full })
-        v8=(${v7[*]/#multi-propagation-json/     'render-multi-propagation' --json $adir/'multi-blockprop.json' --full })
-        v9=(${v8[*]/#multi-propagation-org/      'render-multi-propagation' --org $adir/'multi-blockprop.org' --full })
-        va=(${v9[*]/#multi-propagation-forger/   'render-multi-propagation' --report $adir/'multi-blockprop-forger.org' --forger })
-        vb=(${va[*]/#multi-propagation-peers/    'render-multi-propagation' --report $adir/'multi-blockprop-peers.org' --peers })
-        vc=(${vb[*]/#multi-propagation-endtoend/ 'render-multi-propagation' --report $adir/'multi-blockprop-endtoend.org' --end-to-end })
-        vd=(${vc[*]/#multi-propagation-gnuplot/  'render-multi-propagation' --gnuplot $adir/'%s.cdf' --full })
-        ve=(${vd[*]/#multi-propagation-full/     'render-multi-propagation' --pretty $adir/'multi-blockprop-full.txt' --full })
+        v3=(${v2[*]/#multi-clusterperf-json/ 'render-multi-clusterperf' --json $adir/'multi-clusterperf.json' --full $multi_aspect })
+        v4=(${v3[*]/#multi-clusterperf-org/     'render-multi-clusterperf' --org $adir/'multi-clusterperf.org' --full $multi_aspect })
+        v5=(${v4[*]/#multi-clusterperf-report/  'render-multi-clusterperf' --report $adir/'multi-clusterperf.report.org' --summary $multi_aspect })
+        v6=(${v5[*]/#multi-clusterperf-gnuplot/ 'render-multi-clusterperf' --gnuplot $adir/'%s.cdf' --full $multi_aspect })
+        v7=(${v6[*]/#multi-clusterperf-full/    'render-multi-clusterperf' --pretty $adir/'multi-clusterperf-full.txt' --full $multi_aspect })
+        v8=(${v7[*]/#multi-propagation-json/     'render-multi-propagation' --json $adir/'multi-blockprop.json' --full $multi_aspect })
+        v9=(${v8[*]/#multi-propagation-org/      'render-multi-propagation' --org $adir/'multi-blockprop.org' --full $multi_aspect })
+        va=(${v9[*]/#multi-propagation-forger/   'render-multi-propagation' --report $adir/'multi-blockprop-forger.org' --forger $multi_aspect })
+        vb=(${va[*]/#multi-propagation-peers/    'render-multi-propagation' --report $adir/'multi-blockprop-peers.org' --peers $multi_aspect })
+        vc=(${vb[*]/#multi-propagation-endtoend/ 'render-multi-propagation' --report $adir/'multi-blockprop-endtoend.org' --end-to-end $multi_aspect })
+        vd=(${vc[*]/#multi-propagation-gnuplot/  'render-multi-propagation' --gnuplot $adir/'%s.cdf' --full $multi_aspect })
+        ve=(${vd[*]/#multi-propagation-full/     'render-multi-propagation' --pretty $adir/'multi-blockprop-full.txt' --full $multi_aspect })
         vf=(${ve[*]/#compare/ 'compare' --ede nix/workbench/ede --report $adir/report-$run.org ${compares[*]} })
         vg=(${vf[*]/#update/  'compare' --ede nix/workbench/ede --report $adir/report-$run.org ${compares[*]} --template $adir/report-$run.ede })
         local ops_final=(${vg[*]})

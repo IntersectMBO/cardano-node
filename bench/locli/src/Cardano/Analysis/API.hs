@@ -317,7 +317,15 @@ parsePropSubset =
   , Opt.flag' PropEndToEndBrief (Opt.long "e2e-brief"  <> Opt.help "Only brief end-to-end propagation")
   ] & \case
         (x:xs) -> foldl (<|>) x xs
-        [] -> error "Crazy world."
+        [] -> error "Crazy world, begone. 0"
+
+parseCDF2Aspect :: Opt.Parser CDF2Aspect
+parseCDF2Aspect =
+  [ Opt.flag' OfOverallDataset  (Opt.long "overall"    <> Opt.help "Overall dataset statistical summary")
+  , Opt.flag' OfInterCDF        (Opt.long "inter-cdf"  <> Opt.help "Inter-sample (i.e. inter-CDF) stats")
+  ] & \case
+        (x:xs) -> foldl (<|>) x xs
+        [] -> error "Crazy world, begone. 1"
 
 --
 -- * Timeline rendering instances

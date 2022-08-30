@@ -1,4 +1,5 @@
 {-# LANGUAGE TypeInType #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 module Cardano.Render (module Cardano.Render) where
 
 import Prelude                  (head, id, last, tail, show)
@@ -146,9 +147,7 @@ mapRenderCDF fieldSelr centiSelr fSampleProps x =
    centiField = Field 6 0 "centi" "" "centi" (DFloat $ const centiCDF) "Centile"
    centiCDF   = mapSomeFieldDirectCDF (cdfCentilesCDF . subset) x (fSelect $ head rdFields)
 
-data family RenderMode
-
-data instance RenderMode
+data RenderFormat
   = AsJSON
   | AsGnuplot
   | AsOrg
@@ -156,7 +155,13 @@ data instance RenderMode
   | AsPretty
   deriving (Show, Bounded, Enum)
 
-modeFilename :: TextOutputFile -> Text -> RenderMode -> TextOutputFile
+-- | When rendering a CDF-of-CDFs _and_ subsetting the data, how to subset:
+data CDF2Aspect
+  = OfOverallDataset   -- ^ Overall dataset statistical summary.
+  | OfInterCDF         -- ^ Inter-sample (i.e. inter-CDF) stats.
+  deriving (Show, Bounded, Enum)
+
+modeFilename :: TextOutputFile -> Text -> RenderFormat -> TextOutputFile
 modeFilename orig@(TextOutputFile f) name = \case
   AsJSON    -> orig
   AsGnuplot -> printf f name & TextOutputFile
@@ -164,12 +169,12 @@ modeFilename orig@(TextOutputFile f) name = \case
   AsReport  -> orig
   AsPretty  -> orig
 
-renderCDF :: forall a p. (RenderCDFs a p, KnownCDF p, ToJSON (a p)) => Anchor -> (Field DSelect p a -> Bool) -> Maybe [Centile] -> RenderMode -> a p -> [(Text, [Text])]
+renderCDF :: forall a p. (RenderCDFs a p, KnownCDF p, ToJSON (a p)) => Anchor -> (Field DSelect p a -> Bool) -> CDF2Aspect -> Maybe [Centile] -> RenderFormat -> a p -> [(Text, [Text])]
 
-renderCDF _anchor _fieldSelr _centileSelr AsJSON x = (:[]) . ("",) . (:[]) . LT.toStrict $
+renderCDF _anchor _fieldSelr _c2a _centileSelr AsJSON x = (:[]) . ("",) . (:[]) . LT.toStrict $
   encodeToLazyText x
 
-renderCDF anchor fieldSelr _centileSelr AsGnuplot x =
+renderCDF anchor fieldSelr _c2a _centileSelr AsGnuplot x =
   filter fieldSelr rdFields <&>
   \Field{fId=cdfField} ->
     (,) cdfField $
@@ -177,7 +182,7 @@ renderCDF anchor fieldSelr _centileSelr AsGnuplot x =
     (mapRenderCDF ((== cdfField) . fId) Nothing (unliftCDFValExtra cdfIx) x
      & fmap (T.intercalate " "))
 
-renderCDF a@Anchor{..} fieldSelr centileSelr AsOrg x =
+renderCDF a@Anchor{..} fieldSelr _c2a centileSelr AsOrg x =
   (:[]) . ("",) . render $
   Props
   { oProps = [ ("TITLE",    renderAnchorRuns a )
@@ -225,7 +230,7 @@ renderCDF a@Anchor{..} fieldSelr centileSelr AsOrg x =
    maxPopulationSize :: Int
    maxPopulationSize = last . sort $ mapSomeFieldDirectCDF cdfSize x . fSelect <$> rdFields @a @p
 
-renderCDF a@Anchor{..} fieldSelr _centileSelr AsReport x =
+renderCDF a@Anchor{..} fieldSelr aspect _centileSelr AsReport x =
   (:[]) . ("",) . render $
   Props
   { oProps = [ ("TITLE",    renderAnchorRuns a )
@@ -236,20 +241,13 @@ renderCDF a@Anchor{..} fieldSelr _centileSelr AsReport x =
   , oConstants = []
   , oBody = (:[]) $
     Table
-    { tColHeaders     = ["average", "min", "max", "stddev", "size"]
+    { tColHeaders     = fst (hdrsProjs @Integer) -- This is crazy.
     , tExtended       = True
     , tApexHeader     = Just "metric"
     , tColumns        = transpose $
                         fields <&>
                         fmap (T.take 6 . T.pack . printf "%f")
-                        . mapField x
-                        \CDF{..} ->
-                          [ cdfAverage
-                          , toDouble $ fst cdfRange
-                          , toDouble $ snd cdfRange
-                          , cdfStddev
-                          , fromIntegral cdfSize
-                          ]
+                        . mapField x (snd hdrsProjs)
     , tRowHeaders     = fields <&> fDesc
     , tSummaryHeaders = []
     , tSummaryValues  = []
@@ -260,7 +258,39 @@ renderCDF a@Anchor{..} fieldSelr _centileSelr AsReport x =
    fields :: [Field DSelect p a]
    fields = filter fieldSelr rdFields
 
-renderCDF a fieldSelr centiSelr AsPretty x =
+   hdrsProjs :: forall v. (Divisible v) => ([Text], CDF p v -> [Double])
+   hdrsProjs = aspectColHeadersAndProjections aspect
+
+   aspectColHeadersAndProjections :: forall v. (Divisible v)
+                                  => CDF2Aspect -> ([Text], CDF p v -> [Double])
+   aspectColHeadersAndProjections = \case
+     OfOverallDataset ->
+       (,)
+       ["average", "min", "max", "stddev", "size"]
+       \CDF{..} ->
+         [ cdfAverage
+         , fromRational . toRational $ fst cdfRange
+         , fromRational . toRational $ snd cdfRange
+         , cdfStddev
+         , fromIntegral cdfSize
+         ]
+     OfInterCDF ->
+       (,)
+       ["average", "min", "max", "stddev", "size"]
+       (mapCDF
+         (error "Cannot do inter-CDF statistics on plain CDFs")
+         (\c@CDF{} ->
+             let
+               samples = projectCDF' "CDF2" (Centile 0.5) c
+             in
+               [ cdfAverage c
+               , toDouble . fst $ cdfRange samples -- min of averages
+               , toDouble . snd $ cdfRange samples -- max of averages
+               , cdfStddev samples
+               , fromIntegral $ cdfSize samples
+               ]))
+
+renderCDF a fieldSelr _c2a centiSelr AsPretty x =
   (:[]) . ("",) $
   renderAnchor a
   :  catMaybes [head1, head2]

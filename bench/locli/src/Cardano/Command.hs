@@ -127,7 +127,8 @@ parseChainCommand =
      (ComputeMultiPropagation & pure)
    , op "render-multi-propagation" "Write multi-run block propagation stats"
      (writerOpts RenderMultiPropagation "Render"
-      <*> parsePropSubset)
+      <*> parsePropSubset
+      <*> parseCDF2Aspect)
    ]) <|>
 
    subparser (mconcat [ commandGroup "Machine performance:  analysis"
@@ -152,7 +153,8 @@ parseChainCommand =
      (ComputeMultiClusterPerf & pure)
    , op "render-multi-clusterperf" "Write multi-run cluster performance results"
      (writerOpts RenderMultiClusterPerf "Render"
-      <*> parsePerfSubset)
+      <*> parsePerfSubset
+      <*> parseCDF2Aspect)
 
    , op "compare" "Generate a report comparing multiple runs"
      (Compare
@@ -179,8 +181,8 @@ parseChainCommand =
      <> Opt.help desc
      )
 
-parseRenderMode :: Parser RenderMode
-parseRenderMode =
+parseRenderFormat :: Parser RenderFormat
+parseRenderFormat =
   [ Opt.flag' AsJSON    (Opt.long "json"    <> Opt.help "Full JSON dump output file")
   , Opt.flag' AsGnuplot (Opt.long "gnuplot" <> Opt.help "%s-pattern for separate Gnuplot output files, per CDF")
   , Opt.flag' AsOrg     (Opt.long "org"     <> Opt.help "Org mode table output file")
@@ -190,11 +192,11 @@ parseRenderMode =
         (x:xs) -> foldl (<|>) x xs
         [] -> error "Crazy world."
 
-writerOpt :: (RenderMode -> TextOutputFile -> a) -> String -> RenderMode -> Parser a
+writerOpt :: (RenderFormat -> TextOutputFile -> a) -> String -> RenderFormat -> Parser a
 writerOpt ctor desc mode = ctor mode <$> optTextOutputFile opt (desc <> descSuf)
  where
    (,) opt descSuf = optDescSuf mode
-   optDescSuf :: RenderMode -> (String, String)
+   optDescSuf :: RenderFormat -> (String, String)
    optDescSuf = \case
      AsJSON    -> (,) "json"    " results as complete JSON dump"
      AsGnuplot -> (,) "gnuplot" " as individual Gnuplot files"
@@ -202,7 +204,7 @@ writerOpt ctor desc mode = ctor mode <$> optTextOutputFile opt (desc <> descSuf)
      AsReport  -> (,) "report"  " as Org-mode summary table"
      AsPretty  -> (,) "pretty"  " as text report"
 
-writerOpts :: (RenderMode -> TextOutputFile -> a) -> String -> Parser a
+writerOpts :: (RenderFormat -> TextOutputFile -> a) -> String -> Parser a
 writerOpts ctor desc = enumFromTo minBound maxBound
                        <&> writerOpt ctor desc
                        & \case
@@ -234,21 +236,21 @@ data ChainCommand
   |        TimelineSlots
 
   |      ComputePropagation
-  |       RenderPropagation RenderMode TextOutputFile PropSubset
+  |       RenderPropagation RenderFormat TextOutputFile PropSubset
   |        ReadPropagations [JsonInputFile BlockPropOne]
 
   | ComputeMultiPropagation
-  |  RenderMultiPropagation RenderMode TextOutputFile PropSubset
+  |  RenderMultiPropagation RenderFormat TextOutputFile PropSubset CDF2Aspect
 
   |         ComputeMachPerf
-  |          RenderMachPerf RenderMode PerfSubset
+  |          RenderMachPerf RenderFormat PerfSubset
 
   |      ComputeClusterPerf
-  |       RenderClusterPerf RenderMode TextOutputFile PerfSubset
+  |       RenderClusterPerf RenderFormat TextOutputFile PerfSubset
 
   |    ReadMultiClusterPerf [JsonInputFile MultiClusterPerf]
   | ComputeMultiClusterPerf
-  |  RenderMultiClusterPerf RenderMode TextOutputFile PerfSubset
+  |  RenderMultiClusterPerf RenderFormat TextOutputFile PerfSubset CDF2Aspect
 
   |             Compare     InputDir (Maybe TextInputFile) TextOutputFile
                             [(JsonInputFile RunPartial, JsonInputFile Genesis)]
@@ -441,7 +443,7 @@ runChainCommand _ c@ComputePropagation = missingCommandData c
 
 runChainCommand s@State{sBlockProp=Just [prop]}
   c@(RenderPropagation mode f subset) = do
-  forM_ (renderCDF (sRunAnchor s) (propSubsetFn subset) Nothing mode prop) $
+  forM_ (renderCDF (sRunAnchor s) (propSubsetFn subset) OfOverallDataset Nothing mode prop) $
     \(name, body) ->
       dumpText (T.unpack name) body (modeFilename f name mode)
       & firstExceptT (CommandError c)
@@ -468,8 +470,8 @@ runChainCommand _ c@ComputeMultiPropagation{} = missingCommandData c
   ["block propagation"]
 
 runChainCommand s@State{sMultiBlockProp=Just prop}
-  c@(RenderMultiPropagation mode f subset) = do
-  forM_ (renderCDF (sTagsAnchor s) (propSubsetFn subset) Nothing mode prop) $
+  c@(RenderMultiPropagation mode f subset aspect) = do
+  forM_ (renderCDF (sTagsAnchor s) (propSubsetFn subset) aspect Nothing mode prop) $
     \(name, body) ->
       dumpText (T.unpack name) body (modeFilename f name mode)
       & firstExceptT (CommandError c)
@@ -506,7 +508,7 @@ runChainCommand _ c@ComputeClusterPerf{} = missingCommandData c
 
 runChainCommand s@State{sClusterPerf=Just [prop]}
   c@(RenderClusterPerf mode f subset) = do
-  forM_ (renderCDF (sRunAnchor s) (perfSubsetFn subset) Nothing mode prop) $
+  forM_ (renderCDF (sRunAnchor s) (perfSubsetFn subset) OfOverallDataset Nothing mode prop) $
     \(name, body) ->
       dumpText (T.unpack name) body (modeFilename f name mode)
       & firstExceptT (CommandError c)
@@ -533,8 +535,8 @@ runChainCommand _ c@ComputeMultiClusterPerf{} = missingCommandData c
   ["cluster performance stats"]
 
 runChainCommand s@State{sMultiClusterPerf=Just (MultiClusterPerf perf)}
-  c@(RenderMultiClusterPerf mode f subset) = do
-  forM_ (renderCDF (sTagsAnchor s) (perfSubsetFn subset) Nothing mode perf) $
+  c@(RenderMultiClusterPerf mode f subset aspect) = do
+  forM_ (renderCDF (sTagsAnchor s) (perfSubsetFn subset) aspect Nothing mode perf) $
     \(name, body) ->
       dumpText (T.unpack name) body (modeFilename f name mode)
       & firstExceptT (CommandError c)

@@ -35,6 +35,7 @@ module Data.CDF
   , indexCDF
   , DirectCDF
   , cdf
+  , mapCDF
   , mapToCDF
   , cdfCentilesCDF
   , Divisible (..)
@@ -227,6 +228,12 @@ cdf centiles (sort -> sorted) =
          if size == 0
          then (0,           0)
          else (vec Vec.! 0, Vec.last vec)
+
+mapCDF :: forall p a b. KnownCDF p => (CDF I a -> b) -> (CDF (CDF I) a -> b) -> CDF p a -> b
+mapCDF fi fcdf x =
+  case cdfIx @p of
+    CDFI -> fi   x
+    CDF2 -> fcdf x
 
 mapToCDF :: (KnownCDF p, Real a) => (b -> a) -> [Centile] -> [b] -> CDF p a
 mapToCDF f pspecs xs = cdf pspecs (f <$> xs)
