@@ -22,9 +22,9 @@ packages:
     cardano-git-rev
     cardano-node
     cardano-node-capi
-    cardano-node-chairman
-    cardano-submit-api
-    cardano-testnet
+--    cardano-node-chairman
+--    cardano-submit-api
+--    cardano-testnet
     cardano-tracer
     bench/cardano-topology
     bench/locli
@@ -32,6 +32,12 @@ packages:
     trace-dispatcher
     trace-resources
     trace-forward
+    ../generics-sop/sop-core
+    ../ouroboros-network/ouroboros-consensus
+    ../ouroboros-network/ouroboros-consensus-byron
+    ../ouroboros-network/ouroboros-consensus-cardano
+    ../ouroboros-network/ouroboros-consensus-protocol
+    ../ouroboros-network/ouroboros-consensus-shelley
 
 package cardano-api
   ghc-options: -Werror
