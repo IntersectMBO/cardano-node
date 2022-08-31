@@ -11,7 +11,7 @@ where
 import Prelude                          (String, fail, show)
 import Cardano.Prelude                  hiding (head)
 
-import Data.Aeson--                       (FromJSON (..), ToJSON (..), ToJSONKey (..), FromJSONKey (..))
+import Data.Aeson
 import Data.Aeson.Types                 (toJSONKeyText)
 import Data.Attoparsec.Text             qualified as Atto
 import Data.Attoparsec.Time             qualified as Iso8601
@@ -62,8 +62,8 @@ instance FromJSON BlockNo where
     Object o' -> BlockNo <$> o' .: "unBlockNo"
     _         -> fail "illegal type for BlockNo"
     -- FIXME: this workaround catches a faulty JSON serialisation of BlockNo
-    -- * is:         {"unBlockNo":1790}
-    -- * should be:  1790
+    --   is:         {"unBlockNo":1790}
+    --   should be:  1790
 instance ToJSON BlockNo where
   toJSON (BlockNo x) = toJSON x
 
