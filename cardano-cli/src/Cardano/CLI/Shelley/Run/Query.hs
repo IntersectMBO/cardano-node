@@ -82,7 +82,7 @@ import qualified Cardano.Ledger.Crypto as Crypto
 import qualified Cardano.Ledger.Era as Era
 import qualified Cardano.Ledger.Era as Ledger
 import           Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
-import           Cardano.Ledger.Shelley.Constraints
+-- import           Cardano.Ledger.Shelley.Constraints
 import           Cardano.Ledger.Shelley.EpochBoundary
 import           Cardano.Ledger.Shelley.LedgerState (EpochState (esSnapshots),
                    NewEpochState (nesEs), PState (_fPParams, _pParams, _retiring))
@@ -103,6 +103,8 @@ import qualified Ouroboros.Consensus.Protocol.Praos.Common as Consensus
 
 import qualified Ouroboros.Consensus.HardFork.History.Qry as Qry
 import qualified Ouroboros.Network.Protocol.LocalStateQuery.Type as LocalStateQuery
+
+import qualified Cardano.Ledger.SafeHash as Ledger
 
 {- HLINT ignore "Reduce duplication" -}
 {- HLINT ignore "Use const" -}
@@ -867,7 +869,7 @@ getAllStake (SnapShot stake _ _) = activeStake
 writePoolState :: forall era ledgerera. ()
   => ShelleyLedgerEra era ~ ledgerera
   => Era.Crypto ledgerera ~ StandardCrypto
-  => Ledger.Era ledgerera
+  -- => Ledger.Era ledgerera
   => SerialisedPoolState era
   -> ExceptT ShelleyQueryCmdError IO ()
 writePoolState serialisedCurrentEpochState =
@@ -921,6 +923,7 @@ writeFilteredUTxOs shelleyBasedEra' mOutFile utxo =
           ShelleyBasedEraMary -> writeUTxo fpath utxo
           ShelleyBasedEraAlonzo -> writeUTxo fpath utxo
           ShelleyBasedEraBabbage -> writeUTxo fpath utxo
+          ShelleyBasedEraConway -> writeUTxo fpath utxo
  where
    writeUTxo fpath utxo' =
      handleIOExceptT (ShelleyQueryCmdWriteFileError . FileIOError fpath)
@@ -940,6 +943,8 @@ printFilteredUTxOs shelleyBasedEra' (UTxO utxo) = do
     ShelleyBasedEraAlonzo ->
       mapM_ (printUtxo shelleyBasedEra') $ Map.toList utxo
     ShelleyBasedEraBabbage ->
+      mapM_ (printUtxo shelleyBasedEra') $ Map.toList utxo
+    ShelleyBasedEraConway ->
       mapM_ (printUtxo shelleyBasedEra') $ Map.toList utxo
 
  where
@@ -987,6 +992,14 @@ printUtxo shelleyBasedEra' txInOutTuple =
              , "        " <> printableValue value <> " + " <> Text.pack (show mDatum)
              ]
     ShelleyBasedEraBabbage ->
+      let (TxIn (TxId txhash) (TxIx index), TxOut _ value mDatum _) = txInOutTuple
+      in Text.putStrLn $
+           mconcat
+             [ Text.decodeLatin1 (hashToBytesAsHex txhash)
+             , textShowN 6 index
+             , "        " <> printableValue value <> " + " <> Text.pack (show mDatum)
+             ]
+    ShelleyBasedEraConway ->
       let (TxIn (TxId txhash) (TxIx index), TxOut _ value mDatum _) = txInOutTuple
       in Text.putStrLn $
            mconcat
@@ -1365,8 +1378,7 @@ toEpochInfo (EraHistory _ interpreter) =
 obtainLedgerEraClassConstraints
   :: ShelleyLedgerEra era ~ ledgerera
   => Api.ShelleyBasedEra era
-  -> (( UsesValue ledgerera
-      , ToJSON (DebugLedgerState era)
+  -> (( ToJSON (DebugLedgerState era)
       , FromCBOR (DebugLedgerState era)
       , Era.Crypto ledgerera ~ StandardCrypto
       ) => a) -> a
@@ -1375,6 +1387,7 @@ obtainLedgerEraClassConstraints ShelleyBasedEraAllegra f = f
 obtainLedgerEraClassConstraints ShelleyBasedEraMary    f = f
 obtainLedgerEraClassConstraints ShelleyBasedEraAlonzo  f = f
 obtainLedgerEraClassConstraints ShelleyBasedEraBabbage f = f
+obtainLedgerEraClassConstraints ShelleyBasedEraConway  f = f
 
 
 eligibleLeaderSlotsConstaints
@@ -1389,6 +1402,7 @@ eligibleLeaderSlotsConstaints
       , Crypto.Signable (Crypto.VRF (Ledger.Crypto ledgerera)) Seed
       , Share (Core.TxOut (ShelleyLedgerEra era)) ~ Interns (Ledger.Credential 'Staking StandardCrypto)
       ,  Crypto.ADDRHASH (Consensus.PraosProtocolSupportsNodeCrypto (ConsensusProtocol era)) ~ Blake2b.Blake2b_224
+      , Ledger.HashAnnotated (Core.TxBody (ShelleyLedgerEra era)) Core.EraIndependentTxBody StandardCrypto
       ) => a
      )
   -> a
@@ -1397,6 +1411,7 @@ eligibleLeaderSlotsConstaints ShelleyBasedEraAllegra f = f
 eligibleLeaderSlotsConstaints ShelleyBasedEraMary    f = f
 eligibleLeaderSlotsConstaints ShelleyBasedEraAlonzo  f = f
 eligibleLeaderSlotsConstaints ShelleyBasedEraBabbage f = f
+eligibleLeaderSlotsConstaints ShelleyBasedEraConway  f = f
 
 eligibleWriteProtocolStateConstaints
   :: ShelleyBasedEra era
@@ -1410,6 +1425,7 @@ eligibleWriteProtocolStateConstaints ShelleyBasedEraAllegra f = f
 eligibleWriteProtocolStateConstaints ShelleyBasedEraMary    f = f
 eligibleWriteProtocolStateConstaints ShelleyBasedEraAlonzo  f = f
 eligibleWriteProtocolStateConstaints ShelleyBasedEraBabbage f = f
+eligibleWriteProtocolStateConstaints ShelleyBasedEraConway  f = f
 
 -- Required instances
 -- instance FromCBOR (TPraosState StandardCrypto) where
