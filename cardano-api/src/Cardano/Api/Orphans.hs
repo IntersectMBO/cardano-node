@@ -203,7 +203,6 @@ toUtxoStatePairs utxoState =
 
 instance ( ToJSON (Core.PParamsUpdate era)
          , Crypto.Crypto (Core.Crypto era)
-        --  , Shelley.UsesPParams era
          ) => ToJSON (Shelley.PPUPState era) where
   toJSON = object . toPpupStatePairs
   toEncoding = Aeson.pairs . mconcat . toPpupStatePairs

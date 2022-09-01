@@ -12,7 +12,6 @@
 -- not export any from this API. We also use them unticked as nature intended.
 {-# LANGUAGE DataKinds #-}
 {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
-{-# LANGUAGE RankNTypes #-}
 
 -- | Complete, signed transactions
 --

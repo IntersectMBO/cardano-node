@@ -1421,19 +1421,6 @@ nextEpochEligibleLeadershipSlots sbe sGen serCurrEpochState ptclState poolid (Vr
   f = activeSlotCoeff globals
 
 
---getFromCbor
---  :: ShelleyBasedEra era
---  -> (( FromCBOR (Consensus.ChainDepState (ConsensusProtocol era))
---      , FromCBOR (ChainDepStateProtocol era)
---      ) => a)
---  -> a
---getFromCbor ShelleyBasedEraShelley f = f
---getFromCbor ShelleyBasedEraAllegra f = f
---getFromCbor ShelleyBasedEraMary f = f
---getFromCbor ShelleyBasedEraAlonzo f = f
---getFromCbor ShelleyBasedEraBabbage f = f
---getFromCbor ShelleyBasedEraConway f = f
-
 -- | Return slots a given stake pool operator is leading.
 -- See Leader Value Calculation in the Shelley ledger specification.
 -- We need the certified natural value from the VRF, active slot coefficient
@@ -1513,16 +1500,13 @@ obtainDecodeEpochStateConstraints ShelleyBasedEraConway  f = f
 -- expected to mint a block.
 currentEpochEligibleLeadershipSlots :: forall era ledgerera. ()
   => ShelleyLedgerEra era ~ ledgerera
-  -- => c ~ Crypto era
   => Ledger.Era ledgerera
   => Consensus.PraosProtocolSupportsNode (Api.ConsensusProtocol era)
   => HasField "_d" (Core.PParams ledgerera) UnitInterval
-  -- => Crypto.Signable (Crypto.VRF (Ledger.Crypto ledgerera)) Shelley.Spec.Seed
   => Share (Core.TxOut (ShelleyLedgerEra era)) ~ Interns (Shelley.Spec.Credential 'Shelley.Spec.Staking (Cardano.Ledger.Era.Crypto (ShelleyLedgerEra era)))
   => Ledger.Crypto ledgerera ~ Shelley.StandardCrypto
   => FromCBOR (Consensus.ChainDepState (Api.ConsensusProtocol era))
   => HashAnnotated (Core.TxBody ledgerera) Core.EraIndependentTxBody (Ledger.Crypto (ShelleyLedgerEra era))
-  -- => Consensus.ChainDepState (ConsensusProtocol era) ~ Consensus.ChainDepState (ConsensusProtocol era)
   => ShelleyBasedEra era
   -> ShelleyGenesis Shelley.StandardShelley
   -> EpochInfo (Either Text)

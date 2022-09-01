@@ -634,7 +634,7 @@ genWitnesses :: CardanoEra era -> Gen [KeyWitness era]
 genWitnesses era =
   case cardanoEraStyle era of
     LegacyByronEra    -> Gen.list (Range.constant 1 10) genByronKeyWitness
-    ShelleyBasedEra _sbe -> do
+    ShelleyBasedEra _ -> do
       bsWits  <- Gen.list (Range.constant 0 10)
                           (genShelleyBootstrapWitness era)
       keyWits <- Gen.list (Range.constant 0 10)

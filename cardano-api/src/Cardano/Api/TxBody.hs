@@ -199,15 +199,14 @@ import qualified Cardano.Chain.UTxO as Byron
 import qualified Cardano.Crypto.Hashing as Byron
 
 import qualified Cardano.Ledger.Address as Shelley
--- import qualified Cardano.Ledger.AuxiliaryData as Ledger (hashAuxiliaryData)
 import           Cardano.Ledger.BaseTypes (StrictMaybe (..), maybeToStrictMaybe)
+import qualified Cardano.Ledger.Block as Ledger
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Core as Ledger
 import qualified Cardano.Ledger.Credential as Shelley
 import           Cardano.Ledger.Crypto (StandardCrypto)
 import qualified Cardano.Ledger.Keys as Shelley
 import qualified Cardano.Ledger.SafeHash as SafeHash
--- import qualified Cardano.Ledger.Shelley.Constraints as Ledger
 
 import qualified Cardano.Ledger.Shelley.Genesis as Shelley
 import qualified Cardano.Ledger.Shelley.Metadata as Shelley
@@ -215,7 +214,6 @@ import qualified Cardano.Ledger.Shelley.Tx as Shelley
 import qualified Cardano.Ledger.Shelley.TxBody as Shelley
 import qualified Cardano.Ledger.TxIn as Ledger
 
-import qualified Cardano.Ledger.Block as Ledger
 import qualified Cardano.Ledger.Mary.Value as Mary
 import qualified Cardano.Ledger.ShelleyMA.AuxiliaryData as Allegra
 import qualified Cardano.Ledger.ShelleyMA.AuxiliaryData as Mary
@@ -724,7 +722,7 @@ toShelleyTxOut era (TxOut addr (TxOutValue MultiAssetInBabbageEra value) txoutda
 toShelleyTxOut era (TxOut addr (TxOutValue MultiAssetInConwayEra value) txoutdata refScript) =
     let cEra = shelleyBasedToCardanoEra era
     in Babbage.BabbageTxOut (toShelleyAddr addr) (toMaryValue value)
-                     (toConwayTxOutDatum txoutdata) (refScriptToShelleyScript cEra refScript)
+                     (toBabbageTxOutDatum txoutdata) (refScriptToShelleyScript cEra refScript)
 
 
 fromShelleyTxOut :: ShelleyLedgerEra era ~ ledgerera
@@ -785,7 +783,7 @@ fromShelleyTxOut era ledgerTxOut =
        TxOut (fromShelleyAddr era addr)
              (TxOutValue MultiAssetInConwayEra
                          (fromMaryValue value))
-             (fromConwayTxOutDatum
+             (fromBabbageTxOutDatum
                ScriptDataInConwayEra
                ReferenceTxInsScriptsInlineDatumsInConwayEra
                datum)
@@ -823,11 +821,6 @@ toBabbageTxOutDatum  TxOutDatumNone = Babbage.NoDatum
 toBabbageTxOutDatum (TxOutDatumHash _ (ScriptDataHash dh)) = Babbage.DatumHash dh
 toBabbageTxOutDatum (TxOutDatumInline _ sd) = scriptDataToInlineDatum sd
 
-toConwayTxOutDatum
-  :: Ledger.Crypto (ShelleyLedgerEra era) ~ StandardCrypto
-  => TxOutDatum CtxUTxO era -> Babbage.Datum (ShelleyLedgerEra era)
-toConwayTxOutDatum = toBabbageTxOutDatum
-
 fromBabbageTxOutDatum
   :: Ledger.Crypto ledgerera ~ StandardCrypto
   => ScriptDataSupportedInEra era
@@ -839,14 +832,6 @@ fromBabbageTxOutDatum supp _ (Babbage.DatumHash dh) =
   TxOutDatumHash supp $ ScriptDataHash dh
 fromBabbageTxOutDatum _ supp (Babbage.Datum binData) =
   TxOutDatumInline supp $ binaryDataToScriptData supp binData
-
-fromConwayTxOutDatum
-  :: Ledger.Crypto ledgerera ~ StandardCrypto
-  => ScriptDataSupportedInEra era
-  -> ReferenceTxInsScriptsInlineDatumsSupportedInEra era
-  -> Babbage.Datum ledgerera
-  -> TxOutDatum ctx era
-fromConwayTxOutDatum = fromBabbageTxOutDatum
 
 -- ----------------------------------------------------------------------------
 -- Era-dependent transaction body features
@@ -2305,6 +2290,7 @@ fromLedgerTxInsReference era txBody =
             ReferenceTxInsScriptsInlineDatumsInConwayEra -> Babbage.referenceInputs' txBody
       in TxInsReference suppInEra
            $ map fromShelleyTxIn . Set.toList $ ledgerRefInputs
+
 
 fromLedgerTxOuts
   :: forall era.
@@ -3837,7 +3823,7 @@ toShelleyTxOutAny era (TxOut addr (TxOutValue MultiAssetInBabbageEra value) txou
 toShelleyTxOutAny era (TxOut addr (TxOutValue MultiAssetInConwayEra value) txoutdata refScript) =
     let cEra = shelleyBasedToCardanoEra era
     in Babbage.BabbageTxOut (toShelleyAddr addr) (toMaryValue value)
-                    (toConwayTxOutDatum' txoutdata) (refScriptToShelleyScript cEra refScript)
+                    (toBabbageTxOutDatum' txoutdata) (refScriptToShelleyScript cEra refScript)
 
 toAlonzoTxOutDataHash' :: TxOutDatum ctx AlonzoEra
                        -> StrictMaybe (Alonzo.DataHash StandardCrypto)
@@ -3855,15 +3841,6 @@ toBabbageTxOutDatum'  TxOutDatumNone = Babbage.NoDatum
 toBabbageTxOutDatum' (TxOutDatumHash _ (ScriptDataHash dh)) = Babbage.DatumHash dh
 toBabbageTxOutDatum' (TxOutDatumInTx' _ (ScriptDataHash dh) _) = Babbage.DatumHash dh
 toBabbageTxOutDatum' (TxOutDatumInline _ sd) = scriptDataToInlineDatum sd
-
-toConwayTxOutDatum'
-  :: Ledger.Crypto (ShelleyLedgerEra era) ~ StandardCrypto
-  => TxOutDatum ctx era -> Babbage.Datum (ShelleyLedgerEra era)
-toConwayTxOutDatum'  TxOutDatumNone = Babbage.NoDatum
-toConwayTxOutDatum' (TxOutDatumHash _ (ScriptDataHash dh)) = Babbage.DatumHash dh
-toConwayTxOutDatum' (TxOutDatumInTx' _ (ScriptDataHash dh) _) = Babbage.DatumHash dh
-toConwayTxOutDatum' (TxOutDatumInline _ sd) = scriptDataToInlineDatum sd
-
 
 -- ----------------------------------------------------------------------------
 -- Script witnesses within the tx body

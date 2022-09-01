@@ -1870,7 +1870,6 @@ checkProtocolParameters sbe ProtocolParameters{..} =
      , not extraPraosEntropy
      ]
 
-   -- TODO Conway check these are correct
    conwayPParamFieldsRequirements :: [Bool]
    conwayPParamFieldsRequirements =
      [ not costPerWord
