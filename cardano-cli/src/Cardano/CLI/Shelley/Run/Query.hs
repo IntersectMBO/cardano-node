@@ -82,7 +82,6 @@ import qualified Cardano.Ledger.Crypto as Crypto
 import qualified Cardano.Ledger.Era as Era
 import qualified Cardano.Ledger.Era as Ledger
 import           Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
--- import           Cardano.Ledger.Shelley.Constraints
 import           Cardano.Ledger.Shelley.EpochBoundary
 import           Cardano.Ledger.Shelley.LedgerState (EpochState (esSnapshots),
                    NewEpochState (nesEs), PState (_fPParams, _pParams, _retiring))
@@ -869,7 +868,6 @@ getAllStake (SnapShot stake _ _) = activeStake
 writePoolState :: forall era ledgerera. ()
   => ShelleyLedgerEra era ~ ledgerera
   => Era.Crypto ledgerera ~ StandardCrypto
-  -- => Ledger.Era ledgerera
   => SerialisedPoolState era
   -> ExceptT ShelleyQueryCmdError IO ()
 writePoolState serialisedCurrentEpochState =

@@ -551,19 +551,6 @@ runTxBuild (AnyCardanoEra era) (AnyConsensusModeParams cModeParams) networkId mS
 
     (wrongMode, _) -> left (ShelleyTxCmdUnsupportedMode (AnyConsensusMode wrongMode))
 
-
--- genAddressInEra :: CardanoEra era -> Gen (AddressInEra era)
--- genAddressInEra era =
---   case cardanoEraStyle era of
---     LegacyByronEra ->
---       byronAddressInEra <$> genAddressByron
-
---     ShelleyBasedEra _ ->
---       Gen.choice
---         [ byronAddressInEra   <$> genAddressByron
---         , shelleyAddressInEra <$> genAddressShelley
---         ]
-
 -- ----------------------------------------------------------------------------
 -- Transaction body validation and conversion
 --
