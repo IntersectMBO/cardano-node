@@ -24,8 +24,8 @@ module Cardano.Benchmarking.GeneratorTx.SubmissionClient
   , txSubmissionClient
   ) where
 
-import           Prelude (error,fail)
 import           Cardano.Prelude hiding (ByteString, atomically, retry, state, threadDelay)
+import           Prelude (error, fail)
 
 import           Control.Arrow ((&&&))
 
@@ -45,17 +45,16 @@ import           Cardano.Tracing.OrphanInstances.Shelley ()
 import qualified Ouroboros.Consensus.Cardano as Consensus (CardanoBlock)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (GenTx, GenTxId, txInBlockSize)
 import qualified Ouroboros.Consensus.Ledger.SupportsMempool as Mempool
-import qualified Ouroboros.Consensus.Shelley.Ledger.Mempool as Mempool (TxId(ShelleyTxId))
 import           Ouroboros.Consensus.Shelley.Eras (StandardCrypto)
+import qualified Ouroboros.Consensus.Shelley.Ledger.Mempool as Mempool (TxId (ShelleyTxId))
 
-import qualified Ouroboros.Consensus.Cardano.Block as Block (TxId(GenTxIdShelley, GenTxIdAllegra, GenTxIdAlonzo, GenTxIdMary,GenTxIdBabbage ))
+import qualified Ouroboros.Consensus.Cardano.Block as Block
+                   (TxId (GenTxIdAllegra, GenTxIdAlonzo, GenTxIdBabbage, GenTxIdConway, GenTxIdMary, GenTxIdShelley))
 
 import           Ouroboros.Network.Protocol.TxSubmission2.Client (ClientStIdle (..),
-                                                                  ClientStTxIds (..),
-                                                                  ClientStTxs (..),
-                                                                  TxSubmissionClient (..))
+                   ClientStTxIds (..), ClientStTxs (..), TxSubmissionClient (..))
 import           Ouroboros.Network.Protocol.TxSubmission2.Type (BlockingReplyList (..),
-                                                                TokBlockingStyle (..), TxSizeInBytes)
+                   TokBlockingStyle (..), TxSizeInBytes)
 
 import           Cardano.Api
 import           Cardano.Api.Shelley (fromShelleyTxId, toConsensusGenTx)
@@ -156,7 +155,7 @@ txSubmissionClient tr bmtr initialTxSource endOfProtocolCallback =
       TokNonBlocking ->  pure $ SendMsgReplyTxIds
                              (NonBlockingReply $ txToIdSize <$> newTxs)
                              (client stateC)
-                    
+
   requestTxs ::
        LocalState era
     -> [GenTxId CardanoBlock]
@@ -192,6 +191,7 @@ txSubmissionClient tr bmtr initialTxSource endOfProtocolCallback =
     ShelleyBasedEraMary     -> toConsensusGenTx $ TxInMode tx MaryEraInCardanoMode
     ShelleyBasedEraAlonzo   -> toConsensusGenTx $ TxInMode tx AlonzoEraInCardanoMode
     ShelleyBasedEraBabbage  -> toConsensusGenTx $ TxInMode tx BabbageEraInCardanoMode
+    ShelleyBasedEraConway   -> toConsensusGenTx $ TxInMode tx ConwayEraInCardanoMode
 
   fromGenTxId :: GenTxId CardanoBlock -> TxId
   fromGenTxId (Block.GenTxIdShelley (Mempool.ShelleyTxId i)) = fromShelleyTxId i
@@ -199,6 +199,7 @@ txSubmissionClient tr bmtr initialTxSource endOfProtocolCallback =
   fromGenTxId (Block.GenTxIdMary    (Mempool.ShelleyTxId i)) = fromShelleyTxId i
   fromGenTxId (Block.GenTxIdAlonzo  (Mempool.ShelleyTxId i)) = fromShelleyTxId i
   fromGenTxId (Block.GenTxIdBabbage (Mempool.ShelleyTxId i)) = fromShelleyTxId i
+  fromGenTxId (Block.GenTxIdConway  (Mempool.ShelleyTxId i)) = fromShelleyTxId i
   fromGenTxId _ = error "TODO: fix incomplete match"
 
   tokIsBlocking :: TokBlockingStyle a -> Bool

@@ -38,8 +38,8 @@ import           Cardano.TxGenerator.Fund as Fund
 import qualified Cardano.TxGenerator.FundQueue as FundQueue
 import           Cardano.TxGenerator.Tx
 import           Cardano.TxGenerator.Types
-import           Cardano.TxGenerator.UTxO
 import qualified Cardano.TxGenerator.Utils as Utils
+import           Cardano.TxGenerator.UTxO
 
 import           Cardano.Benchmarking.GeneratorTx as GeneratorTx (AsyncBenchmarkControl)
 import qualified Cardano.Benchmarking.GeneratorTx as GeneratorTx (readSigningKey, waitBenchmark,
@@ -71,6 +71,7 @@ liftCoreWithEra era coreCall = withEra era ( liftIO . runExceptT . coreCall)
 withEra :: AnyCardanoEra -> (forall era. IsShelleyBasedEra era => AsType era -> ActionM x) -> ActionM x
 withEra era action = do
   case era of
+    AnyCardanoEra ConwayEra  -> action AsConwayEra
     AnyCardanoEra BabbageEra -> action AsBabbageEra
     AnyCardanoEra AlonzoEra  -> action AsAlonzoEra
     AnyCardanoEra MaryEra    -> action AsMaryEra
@@ -192,8 +193,9 @@ queryRemoteProtocolParameters = do
     AnyCardanoEra ShelleyEra -> callQuery $ QueryInEra ShelleyEraInCardanoMode $ QueryInShelleyBasedEra ShelleyBasedEraShelley QueryProtocolParameters
     AnyCardanoEra AllegraEra -> callQuery $ QueryInEra AllegraEraInCardanoMode $ QueryInShelleyBasedEra ShelleyBasedEraAllegra QueryProtocolParameters
     AnyCardanoEra MaryEra    -> callQuery $ QueryInEra    MaryEraInCardanoMode $ QueryInShelleyBasedEra ShelleyBasedEraMary    QueryProtocolParameters
-    AnyCardanoEra AlonzoEra  -> callQuery $ QueryInEra  AlonzoEraInCardanoMode $ QueryInShelleyBasedEra ShelleyBasedEraAlonzo QueryProtocolParameters
+    AnyCardanoEra AlonzoEra  -> callQuery $ QueryInEra  AlonzoEraInCardanoMode $ QueryInShelleyBasedEra ShelleyBasedEraAlonzo  QueryProtocolParameters
     AnyCardanoEra BabbageEra -> callQuery $ QueryInEra BabbageEraInCardanoMode $ QueryInShelleyBasedEra ShelleyBasedEraBabbage QueryProtocolParameters
+    AnyCardanoEra ConwayEra  -> callQuery $ QueryInEra  ConwayEraInCardanoMode $ QueryInShelleyBasedEra ShelleyBasedEraConway  QueryProtocolParameters
 
 getProtocolParameters :: ActionM ProtocolParameters
 getProtocolParameters = do

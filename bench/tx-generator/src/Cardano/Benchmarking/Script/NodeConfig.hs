@@ -36,9 +36,9 @@ makeConsensusProtocol
 makeConsensusProtocol nodeConfig = liftToAction $ case ncProtocolConfig nodeConfig of
   NodeProtocolConfigurationByron _    -> throwE $ ProtocolInstantiationError "NodeProtocolConfigurationByron not supported"
   NodeProtocolConfigurationShelley _  -> throwE $ ProtocolInstantiationError "NodeProtocolConfigurationShelley not supported"
-  NodeProtocolConfigurationCardano byronConfig shelleyConfig alonzoConfig hardforkConfig
+  NodeProtocolConfigurationCardano byronConfig shelleyConfig alonzoConfig conwayConfig hardforkConfig
     -> withExceptT (ProtocolInstantiationError . show) $
-         mkSomeConsensusProtocolCardano byronConfig shelleyConfig alonzoConfig hardforkConfig Nothing
+         mkSomeConsensusProtocolCardano byronConfig shelleyConfig alonzoConfig conwayConfig hardforkConfig Nothing
 
 makeNodeConfig :: FilePath -> ActionM NodeConfiguration
 makeNodeConfig logConfig = liftToAction $ ExceptT $ do
