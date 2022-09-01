@@ -441,8 +441,8 @@ instance HasSeverityAnnotation (ConnectionManagerTrace addr (ConnectionHandlerTr
           TrHandshakeSuccess {}               -> Info
           TrHandshakeClientError {}           -> Notice
           TrHandshakeServerError {}           -> Info
-          TrConnectionHandlerError _ _ ShutdownNode            -> Critical
-          TrConnectionHandlerError _ _ ShutdownPeer            -> Info
+          TrConnectionHandlerError _ _ ShutdownNode -> Critical
+          TrConnectionHandlerError _ _ ShutdownPeer -> Info
 
       TrShutdown                              -> Info
       TrConnectionExists {}                   -> Info

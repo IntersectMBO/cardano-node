@@ -21,6 +21,8 @@ import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Except.Extra (firstExceptT)
 
 import qualified Cardano.Chain.Update as Byron
+import           Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis)
+import           Cardano.Ledger.Conway.Genesis (ConwayGenesis)
 
 import           Ouroboros.Consensus.Cardano
 import qualified Ouroboros.Consensus.Cardano as Consensus
@@ -39,9 +41,6 @@ import           Cardano.Node.Types
 import           Cardano.Tracing.OrphanInstances.Byron ()
 import           Cardano.Tracing.OrphanInstances.Shelley ()
 
-import           Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis)
-import           Cardano.Ledger.Conway.Genesis (ConwayGenesis)
-import qualified Cardano.Ledger.Crypto as Crypto
 import qualified Cardano.Node.Protocol.Alonzo as Alonzo
 import qualified Cardano.Node.Protocol.Byron as Byron
 import qualified Cardano.Node.Protocol.Conway as Conway
@@ -147,7 +146,8 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
 
     --TODO: all these protocol versions below are confusing and unnecessary.
     -- It could and should all be automated and these config entries eliminated.
-    protocolInfoArgs :: ProtocolInfoArgs IO (CardanoBlock Crypto.StandardCrypto) <- pure $ ProtocolInfoArgsCardano
+    return $!
+      SomeConsensusProtocol CardanoBlockType $ ProtocolInfoArgsCardano
         Consensus.ProtocolParamsByron {
           byronGenesis = byronGenesis,
           byronPbftSignatureThreshold =
@@ -262,6 +262,7 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
               -- Version 5 is Alonzo
               -- Version 6 is Alonzo (intra era hardfork)
               -- Version 7 is Babbage
+              -- Version 8 is Conway
               --
               -- But we also provide an override to allow for simpler test setups
               -- such as triggering at the 0 -> 1 transition .
@@ -320,8 +321,6 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
                 Just epochNo -> Consensus.TriggerHardForkAtEpoch epochNo
 
         }
-
-    return $! SomeConsensusProtocol CardanoBlockType protocolInfoArgs
 
 ------------------------------------------------------------------------------
 -- Errors

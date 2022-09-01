@@ -524,7 +524,7 @@ makeNodeConfiguration pnc = do
   enableP2P <-
     lastToEither "Missing EnableP2P"
     $ pncEnableP2P pnc
-
+  -- TODO: Is it mandatory that we set the churn intervals
   ncDeadlineChurnInterval <- lastToEither "Missing DeadlineChurnInterval" $ pncDeadlineChurnInterval pnc
   ncBulkChurnInterval <- lastToEither "Missing BulkChurnInterval" $ pncBulkChurnInterval pnc
 
