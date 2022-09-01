@@ -141,6 +141,7 @@ serialiseTxLedgerCddl tx =
       MaryEra -> "Tx MaryEra"
       AlonzoEra -> "Tx AlonzoEra"
       BabbageEra -> "Tx BabbageEra"
+      ConwayEra -> "Tx ConwayEra"
 
 deserialiseTxLedgerCddl
   :: IsCardanoEra era
@@ -188,6 +189,7 @@ serialiseWitnessLedgerCddl sbe kw =
   witEra ShelleyBasedEraMary = "TxWitness MaryEra"
   witEra ShelleyBasedEraAlonzo = "TxWitness AlonzoEra"
   witEra ShelleyBasedEraBabbage = "TxWitness BabbageEra"
+  witEra ShelleyBasedEraConway = "TxWitness ConwayEra"
 
 deserialiseWitnessLedgerCddl
   :: ShelleyBasedEra era

@@ -76,6 +76,7 @@ prop_json_roundtrip_eraInMode = H.property $ do
       MaryEraInCardanoMode -> parseJSON $ toJSON MaryEraInCardanoMode
       AlonzoEraInCardanoMode -> parseJSON $ toJSON AlonzoEraInCardanoMode
       BabbageEraInCardanoMode -> parseJSON $ toJSON BabbageEraInCardanoMode
+      ConwayEraInCardanoMode -> parseJSON $ toJSON ConwayEraInCardanoMode
 
 prop_json_roundtrip_scriptdata_detailed_json :: Property
 prop_json_roundtrip_scriptdata_detailed_json = H.property $ do

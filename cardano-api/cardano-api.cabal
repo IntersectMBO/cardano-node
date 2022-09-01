@@ -72,6 +72,7 @@ library
                         Cardano.Api.KeysByron
                         Cardano.Api.KeysPraos
                         Cardano.Api.KeysShelley
+                        Cardano.Api.Ledger.Constraints
                         Cardano.Api.LedgerEvent
                         Cardano.Api.LedgerState
                         Cardano.Api.Modes
@@ -116,6 +117,7 @@ library
                       , cardano-ledger-alonzo
                       , cardano-ledger-babbage
                       , cardano-ledger-byron
+                      , cardano-ledger-conway
                       , cardano-ledger-core
                       , cardano-ledger-shelley-ma
                       , cardano-prelude
@@ -131,6 +133,7 @@ library
                       , formatting
                       , iproute
                       , memory
+                      , microlens
                       , network
                       , nothunks
                       , optparse-applicative-fork

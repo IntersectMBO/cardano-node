@@ -14,7 +14,7 @@ import           Data.Maybe (fromMaybe)
 import qualified Data.Time as Time
 
 import           Cardano.Ledger.BaseTypes as Ledger
-import           Cardano.Ledger.Shelley.PParams as Ledger (PParams' (..), emptyPParams)
+import qualified Cardano.Ledger.Shelley.PParams as Shelley
 import           Cardano.Slotting.Slot (EpochSize (..))
 
 import           Ouroboros.Consensus.Shelley.Node (ShelleyGenesis (..), emptyGenesisStaking)
@@ -53,14 +53,14 @@ shelleyGenesisDefaults =
 
     -- ledger protocol parameters
     , sgProtocolParams        =
-        Ledger.emptyPParams
-        { Ledger._d = maxBound
-        , Ledger._maxBHSize = 1100                  -- TODO: compute from crypto
-        , Ledger._maxBBSize = 64 * 1024             -- max 64kb blocks
-        , Ledger._maxTxSize = 16 * 1024             -- max 16kb txs
-        , Ledger._eMax      = 18
-        , Ledger._minfeeA   = 1                     -- The linear factor for the minimum fee calculation
-        , Ledger._minfeeB   = 0                     -- The constant factor for the minimum fee calculation
+        Shelley.emptyPParams
+        { Shelley._d = maxBound
+        , Shelley._maxBHSize = 1100                  -- TODO: compute from crypto
+        , Shelley._maxBBSize = 64 * 1024             -- max 64kb blocks
+        , Shelley._maxTxSize = 16 * 1024             -- max 16kb txs
+        , Shelley._eMax      = 18
+        , Shelley._minfeeA   = 1                     -- The linear factor for the minimum fee calculation
+        , Shelley._minfeeB   = 0                     -- The constant factor for the minimum fee calculation
         }
 
       -- genesis keys and initial funds

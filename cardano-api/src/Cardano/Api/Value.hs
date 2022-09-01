@@ -78,7 +78,7 @@ import qualified Cardano.Chain.Common as Byron
 import qualified Cardano.Ledger.Coin as Shelley
 import           Cardano.Ledger.Crypto (StandardCrypto)
 import qualified Cardano.Ledger.Mary.Value as Mary
-import qualified Cardano.Ledger.ShelleyMA.Rules.Utxo as Shelley
+import qualified Cardano.Ledger.ShelleyMA.Rules as Shelley
 
 import           Cardano.Api.Error (displayError)
 import           Cardano.Api.HasTypeProxy
@@ -263,9 +263,9 @@ valueToLovelace v =
       [(AdaAssetId, q)] -> Just (quantityToLovelace q)
       _                 -> Nothing
 
-toMaryValue :: Value -> Mary.Value StandardCrypto
+toMaryValue :: Value -> Mary.MaryValue StandardCrypto
 toMaryValue v =
-    Mary.Value lovelace other
+    Mary.MaryValue lovelace other
   where
     Quantity lovelace = selectAsset v AdaAssetId
       --TODO: write QC tests to show it's ok to use Map.fromAscListWith here
@@ -280,8 +280,8 @@ toMaryValue v =
     toMaryAssetName (AssetName n) = Mary.AssetName $ Short.toShort n
 
 
-fromMaryValue :: Mary.Value StandardCrypto -> Value
-fromMaryValue (Mary.Value lovelace other) =
+fromMaryValue :: Mary.MaryValue StandardCrypto -> Value
+fromMaryValue (Mary.MaryValue lovelace other) =
     Value $
       --TODO: write QC tests to show it's ok to use Map.fromAscList here
       Map.fromList $

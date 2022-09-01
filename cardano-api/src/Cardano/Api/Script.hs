@@ -142,7 +142,6 @@ import           Cardano.Slotting.Slot (SlotNo)
 
 import           Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import qualified Cardano.Ledger.Core as Ledger
-import qualified Cardano.Ledger.Era as Ledger
 
 import qualified Cardano.Ledger.Keys as Shelley
 import qualified Cardano.Ledger.Shelley.Scripts as Shelley
@@ -567,16 +566,20 @@ data ScriptLanguageInEra lang era where
      SimpleScriptV1InMary    :: ScriptLanguageInEra SimpleScriptV1 MaryEra
      SimpleScriptV1InAlonzo  :: ScriptLanguageInEra SimpleScriptV1 AlonzoEra
      SimpleScriptV1InBabbage :: ScriptLanguageInEra SimpleScriptV1 BabbageEra
+     SimpleScriptV1InConway  :: ScriptLanguageInEra SimpleScriptV1 ConwayEra
 
      SimpleScriptV2InAllegra :: ScriptLanguageInEra SimpleScriptV2 AllegraEra
      SimpleScriptV2InMary    :: ScriptLanguageInEra SimpleScriptV2 MaryEra
      SimpleScriptV2InAlonzo  :: ScriptLanguageInEra SimpleScriptV2 AlonzoEra
      SimpleScriptV2InBabbage :: ScriptLanguageInEra SimpleScriptV2 BabbageEra
+     SimpleScriptV2InConway  :: ScriptLanguageInEra SimpleScriptV2 ConwayEra
 
      PlutusScriptV1InAlonzo  :: ScriptLanguageInEra PlutusScriptV1 AlonzoEra
      PlutusScriptV1InBabbage :: ScriptLanguageInEra PlutusScriptV1 BabbageEra
+     PlutusScriptV1InConway  :: ScriptLanguageInEra PlutusScriptV1 ConwayEra
 
      PlutusScriptV2InBabbage :: ScriptLanguageInEra PlutusScriptV2 BabbageEra
+     PlutusScriptV2InConway  :: ScriptLanguageInEra PlutusScriptV2 ConwayEra
 
 
 
@@ -647,15 +650,20 @@ languageOfScriptLanguageInEra langInEra =
       SimpleScriptV1InMary    -> SimpleScriptLanguage SimpleScriptV1
       SimpleScriptV1InAlonzo  -> SimpleScriptLanguage SimpleScriptV1
       SimpleScriptV1InBabbage -> SimpleScriptLanguage SimpleScriptV1
+      SimpleScriptV1InConway  -> SimpleScriptLanguage SimpleScriptV1
 
       SimpleScriptV2InAllegra -> SimpleScriptLanguage SimpleScriptV2
       SimpleScriptV2InMary    -> SimpleScriptLanguage SimpleScriptV2
       SimpleScriptV2InAlonzo  -> SimpleScriptLanguage SimpleScriptV2
       SimpleScriptV2InBabbage -> SimpleScriptLanguage SimpleScriptV2
+      SimpleScriptV2InConway  -> SimpleScriptLanguage SimpleScriptV2
 
       PlutusScriptV1InAlonzo  -> PlutusScriptLanguage PlutusScriptV1
       PlutusScriptV1InBabbage -> PlutusScriptLanguage PlutusScriptV1
+      PlutusScriptV1InConway  -> PlutusScriptLanguage PlutusScriptV1
+
       PlutusScriptV2InBabbage -> PlutusScriptLanguage PlutusScriptV2
+      PlutusScriptV2InConway  -> PlutusScriptLanguage PlutusScriptV2
 
 eraOfScriptLanguageInEra :: ScriptLanguageInEra lang era
                          -> ShelleyBasedEra era
@@ -675,10 +683,16 @@ eraOfScriptLanguageInEra langInEra =
       PlutusScriptV1InAlonzo  -> ShelleyBasedEraAlonzo
 
       SimpleScriptV1InBabbage  -> ShelleyBasedEraBabbage
+      SimpleScriptV1InConway   -> ShelleyBasedEraConway
+
       SimpleScriptV2InBabbage  -> ShelleyBasedEraBabbage
+      SimpleScriptV2InConway   -> ShelleyBasedEraConway
 
       PlutusScriptV1InBabbage -> ShelleyBasedEraBabbage
+      PlutusScriptV1InConway  -> ShelleyBasedEraConway
+
       PlutusScriptV2InBabbage -> ShelleyBasedEraBabbage
+      PlutusScriptV2InConway  -> ShelleyBasedEraConway
 
 -- | Given a target era and a script in some language, check if the language is
 -- supported in that era, and if so return a 'ScriptInEra'.
@@ -1143,6 +1157,7 @@ toShelleyScript (ScriptInEra langInEra (SimpleScript SimpleScriptV1 script)) =
       SimpleScriptV1InMary    -> toAllegraTimelock script
       SimpleScriptV1InAlonzo  -> Alonzo.TimelockScript (toAllegraTimelock script)
       SimpleScriptV1InBabbage -> Alonzo.TimelockScript (toAllegraTimelock script)
+      SimpleScriptV1InConway  -> Alonzo.TimelockScript (toAllegraTimelock script)
 
 toShelleyScript (ScriptInEra langInEra (SimpleScript SimpleScriptV2 script)) =
     case langInEra of
@@ -1150,17 +1165,20 @@ toShelleyScript (ScriptInEra langInEra (SimpleScript SimpleScriptV2 script)) =
       SimpleScriptV2InMary    -> toAllegraTimelock script
       SimpleScriptV2InAlonzo  -> Alonzo.TimelockScript (toAllegraTimelock script)
       SimpleScriptV2InBabbage -> Alonzo.TimelockScript (toAllegraTimelock script)
+      SimpleScriptV2InConway  -> Alonzo.TimelockScript (toAllegraTimelock script)
 
 toShelleyScript (ScriptInEra langInEra (PlutusScript PlutusScriptV1
                                          (PlutusScriptSerialised script))) =
     case langInEra of
       PlutusScriptV1InAlonzo  -> Alonzo.PlutusScript Alonzo.PlutusV1 script
       PlutusScriptV1InBabbage -> Alonzo.PlutusScript Alonzo.PlutusV1 script
+      PlutusScriptV1InConway  -> Alonzo.PlutusScript Alonzo.PlutusV1 script
 
 toShelleyScript (ScriptInEra langInEra (PlutusScript PlutusScriptV2
                                          (PlutusScriptSerialised script))) =
     case langInEra of
       PlutusScriptV2InBabbage -> Alonzo.PlutusScript Alonzo.PlutusV2 script
+      PlutusScriptV2InConway  -> Alonzo.PlutusScript Alonzo.PlutusV2 script
 
 fromShelleyBasedScript  :: ShelleyBasedEra era
                         -> Ledger.Script (ShelleyLedgerEra era)
@@ -1203,6 +1221,20 @@ fromShelleyBasedScript era script =
           PlutusScriptSerialised s
         Alonzo.PlutusScript Alonzo.PlutusV2 s ->
           ScriptInEra PlutusScriptV2InBabbage $
+          PlutusScript PlutusScriptV2 $
+          PlutusScriptSerialised s
+    ShelleyBasedEraConway ->
+      case script of
+        Alonzo.TimelockScript s ->
+          ScriptInEra SimpleScriptV2InConway $
+          SimpleScript SimpleScriptV2 $
+          fromAllegraTimelock TimeLocksInSimpleScriptV2 s
+        Alonzo.PlutusScript Alonzo.PlutusV1 s ->
+          ScriptInEra PlutusScriptV1InConway $
+          PlutusScript PlutusScriptV1 $
+          PlutusScriptSerialised s
+        Alonzo.PlutusScript Alonzo.PlutusV2 s ->
+          ScriptInEra PlutusScriptV2InConway $
           PlutusScript PlutusScriptV2 $
           PlutusScriptSerialised s
 
@@ -1445,6 +1477,7 @@ instance EraCast ReferenceScript where
 
 data ReferenceTxInsScriptsInlineDatumsSupportedInEra era where
     ReferenceTxInsScriptsInlineDatumsInBabbageEra :: ReferenceTxInsScriptsInlineDatumsSupportedInEra BabbageEra
+    ReferenceTxInsScriptsInlineDatumsInConwayEra  :: ReferenceTxInsScriptsInlineDatumsSupportedInEra ConwayEra
 
 deriving instance Eq (ReferenceTxInsScriptsInlineDatumsSupportedInEra era)
 deriving instance Show (ReferenceTxInsScriptsInlineDatumsSupportedInEra era)
@@ -1457,6 +1490,7 @@ refInsScriptsAndInlineDatsSupportedInEra AllegraEra = Nothing
 refInsScriptsAndInlineDatsSupportedInEra MaryEra    = Nothing
 refInsScriptsAndInlineDatsSupportedInEra AlonzoEra  = Nothing
 refInsScriptsAndInlineDatsSupportedInEra BabbageEra = Just ReferenceTxInsScriptsInlineDatumsInBabbageEra
+refInsScriptsAndInlineDatsSupportedInEra ConwayEra  = Just ReferenceTxInsScriptsInlineDatumsInConwayEra
 
 refScriptToShelleyScript
   :: CardanoEra era

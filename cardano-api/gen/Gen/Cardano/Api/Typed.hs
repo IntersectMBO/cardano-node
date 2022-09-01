@@ -1,6 +1,8 @@
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections #-}
@@ -85,7 +87,6 @@ import qualified Data.Text as Text
 import qualified Cardano.Binary as CBOR
 import qualified Cardano.Crypto.Hash as Crypto
 import qualified Cardano.Crypto.Seed as Crypto
-import qualified Cardano.Ledger.Shelley.TxBody as Ledger (EraIndependentTxBody)
 import qualified PlutusCore as Plutus
 
 import           Hedgehog (Gen, Range)
@@ -95,6 +96,7 @@ import qualified Hedgehog.Range as Range
 import qualified Cardano.Crypto.Hash.Class as CRYPTO
 import           Cardano.Ledger.Alonzo.Language (Language (..))
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
+import qualified Cardano.Ledger.Core as Ledger
 import           Cardano.Ledger.SafeHash (unsafeMakeSafeHash)
 
 import           Gen.Cardano.Api.Metadata (genTxMetadata)
@@ -632,7 +634,7 @@ genWitnesses :: CardanoEra era -> Gen [KeyWitness era]
 genWitnesses era =
   case cardanoEraStyle era of
     LegacyByronEra    -> Gen.list (Range.constant 1 10) genByronKeyWitness
-    ShelleyBasedEra _ -> do
+    ShelleyBasedEra _sbe -> do
       bsWits  <- Gen.list (Range.constant 0 10)
                           (genShelleyBootstrapWitness era)
       keyWits <- Gen.list (Range.constant 0 10)
@@ -854,6 +856,12 @@ genTxOutDatumHashTxContext era = case era of
                     , TxOutDatumInTx ScriptDataInBabbageEra <$> genScriptData
                     , TxOutDatumInline ReferenceTxInsScriptsInlineDatumsInBabbageEra <$> genScriptData
                     ]
+    ConwayEra -> Gen.choice
+                    [ pure TxOutDatumNone
+                    , TxOutDatumHash ScriptDataInConwayEra <$> genHashScriptData
+                    , TxOutDatumInTx ScriptDataInConwayEra <$> genScriptData
+                    , TxOutDatumInline ReferenceTxInsScriptsInlineDatumsInConwayEra <$> genScriptData
+                    ]
 
 genTxOutDatumHashUTxOContext :: CardanoEra era -> Gen (TxOutDatum CtxUTxO era)
 genTxOutDatumHashUTxOContext era = case era of
@@ -869,6 +877,11 @@ genTxOutDatumHashUTxOContext era = case era of
                     [ pure TxOutDatumNone
                     , TxOutDatumHash ScriptDataInBabbageEra <$> genHashScriptData
                     , TxOutDatumInline ReferenceTxInsScriptsInlineDatumsInBabbageEra <$> genScriptData
+                    ]
+    ConwayEra -> Gen.choice
+                    [ pure TxOutDatumNone
+                    , TxOutDatumHash ScriptDataInConwayEra <$> genHashScriptData
+                    , TxOutDatumInline ReferenceTxInsScriptsInlineDatumsInConwayEra <$> genScriptData
                     ]
 
 mkDummyHash :: forall h a. CRYPTO.HashAlgorithm h => Int -> CRYPTO.Hash h a

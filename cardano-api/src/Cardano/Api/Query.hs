@@ -102,6 +102,7 @@ import qualified Ouroboros.Consensus.Protocol.Abstract as Consensus
 import qualified Ouroboros.Consensus.Shelley.Ledger as Consensus
 import           Ouroboros.Network.Block (Serialised (..))
 
+
 import           Cardano.Binary
 import           Cardano.Slotting.Slot (WithOrigin (..))
 import           Cardano.Slotting.Time (SystemStart (..))
@@ -111,6 +112,7 @@ import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Era as Ledger
 import qualified Control.State.Transition.Extended as Ledger
 
+import           Cardano.Ledger.SafeHash (HashAnnotated)
 import qualified Cardano.Ledger.Shelley.API as Shelley
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
 
@@ -326,6 +328,7 @@ instance
     , FromCBOR (Ledger.State (Core.EraRule "PPUP" (ShelleyLedgerEra era)))
     , Share (Core.TxOut (ShelleyLedgerEra era)) ~ Interns (Shelley.Credential 'Shelley.Staking (Ledger.Crypto (ShelleyLedgerEra era)))
     , FromSharedCBOR (Core.TxOut (ShelleyLedgerEra era))
+    , HashAnnotated (Core.TxBody (ShelleyLedgerEra era)) Core.EraIndependentTxBody (Ledger.Crypto (ShelleyLedgerEra era))
     ) => FromCBOR (DebugLedgerState era) where
   fromCBOR = DebugLedgerState <$> (fromCBOR :: Decoder s (Shelley.NewEpochState (ShelleyLedgerEra era)))
 
@@ -334,7 +337,7 @@ instance ( IsShelleyBasedEra era
          , ShelleyLedgerEra era ~ ledgerera
          , Consensus.ShelleyBasedEra ledgerera
          , ToJSON (Core.PParams ledgerera)
-         , ToJSON (Core.PParamsDelta ledgerera)
+         , ToJSON (Core.PParamsUpdate ledgerera)
          , ToJSON (Core.TxOut ledgerera)
          , Share (Core.TxOut (ShelleyLedgerEra era)) ~ Interns (Shelley.Credential 'Shelley.Staking (Ledger.Crypto (ShelleyLedgerEra era)))
          ) => ToJSON (DebugLedgerState era) where
@@ -345,7 +348,7 @@ toDebugLedgerStatePair ::
   ( ShelleyLedgerEra era ~ ledgerera
   , Consensus.ShelleyBasedEra ledgerera
   , ToJSON (Core.PParams ledgerera)
-  , ToJSON (Core.PParamsDelta ledgerera)
+  , ToJSON (Core.PParamsUpdate ledgerera)
   , ToJSON (Core.TxOut ledgerera)
   , Aeson.KeyValue a
   ) => DebugLedgerState era -> [a]
@@ -387,6 +390,7 @@ decodeCurrentEpochState
   => FromCBOR (Core.PParams (ShelleyLedgerEra era))
   => FromCBOR (Core.Value (ShelleyLedgerEra era))
   => FromCBOR (Ledger.State (Core.EraRule "PPUP" (ShelleyLedgerEra era)))
+  => HashAnnotated (Core.TxBody (ShelleyLedgerEra era)) Core.EraIndependentTxBody (Ledger.Crypto (ShelleyLedgerEra era))
   => SerialisedCurrentEpochState era
   -> Either DecoderError (CurrentEpochState era)
 decodeCurrentEpochState (SerialisedCurrentEpochState (Serialised ls)) = CurrentEpochState <$> decodeFull ls
@@ -516,6 +520,7 @@ toConsensusQuery (QueryInEra erainmode (QueryInShelleyBasedEra era q)) =
       MaryEraInCardanoMode    -> toConsensusQueryShelleyBased erainmode q
       AlonzoEraInCardanoMode  -> toConsensusQueryShelleyBased erainmode q
       BabbageEraInCardanoMode -> toConsensusQueryShelleyBased erainmode q
+      ConwayEraInCardanoMode  -> toConsensusQueryShelleyBased erainmode q
 
 
 toConsensusQueryShelleyBased
@@ -608,6 +613,7 @@ consensusQueryInEraInMode erainmode =
       MaryEraInCardanoMode    -> Consensus.QueryIfCurrentMary
       AlonzoEraInCardanoMode  -> Consensus.QueryIfCurrentAlonzo
       BabbageEraInCardanoMode -> Consensus.QueryIfCurrentBabbage
+      ConwayEraInCardanoMode  -> Consensus.QueryIfCurrentConway
 
 -- ----------------------------------------------------------------------------
 -- Conversions of query results from the consensus types.
@@ -728,6 +734,16 @@ fromConsensusQueryResult (QueryInEra BabbageEraInCardanoMode
         -> bimap fromConsensusEraMismatch
                  (fromConsensusQueryResultShelleyBased
                     ShelleyBasedEraBabbage q q'')
+                 r'
+      _ -> fromConsensusQueryResultMismatch
+
+fromConsensusQueryResult (QueryInEra ConwayEraInCardanoMode
+                                     (QueryInShelleyBasedEra _era q)) q' r' =
+    case q' of
+      Consensus.BlockQuery (Consensus.QueryIfCurrentConway q'')
+        -> bimap fromConsensusEraMismatch
+                 (fromConsensusQueryResultShelleyBased
+                    ShelleyBasedEraConway q q'')
                  r'
       _ -> fromConsensusQueryResultMismatch
 

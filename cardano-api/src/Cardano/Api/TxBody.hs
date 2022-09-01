@@ -183,7 +183,6 @@ import qualified Data.Text as Text
 import           Data.Type.Equality (TestEquality (..), (:~:) (Refl))
 import           Data.Word (Word16, Word32, Word64)
 import           GHC.Generics
-import           GHC.Records (HasField (..))
 import qualified Text.Parsec as Parsec
 import           Text.Parsec ((<?>))
 import qualified Text.Parsec.String as Parsec
@@ -200,17 +199,15 @@ import qualified Cardano.Chain.UTxO as Byron
 import qualified Cardano.Crypto.Hashing as Byron
 
 import qualified Cardano.Ledger.Address as Shelley
-import qualified Cardano.Ledger.AuxiliaryData as Ledger (hashAuxiliaryData)
+-- import qualified Cardano.Ledger.AuxiliaryData as Ledger (hashAuxiliaryData)
 import           Cardano.Ledger.BaseTypes (StrictMaybe (..), maybeToStrictMaybe)
-import qualified Cardano.Ledger.Coin as Ledger
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Core as Ledger
 import qualified Cardano.Ledger.Credential as Shelley
 import           Cardano.Ledger.Crypto (StandardCrypto)
-import qualified Cardano.Ledger.Era as Ledger
 import qualified Cardano.Ledger.Keys as Shelley
 import qualified Cardano.Ledger.SafeHash as SafeHash
-import qualified Cardano.Ledger.Shelley.Constraints as Ledger
+-- import qualified Cardano.Ledger.Shelley.Constraints as Ledger
 
 import qualified Cardano.Ledger.Shelley.Genesis as Shelley
 import qualified Cardano.Ledger.Shelley.Metadata as Shelley
@@ -218,6 +215,7 @@ import qualified Cardano.Ledger.Shelley.Tx as Shelley
 import qualified Cardano.Ledger.Shelley.TxBody as Shelley
 import qualified Cardano.Ledger.TxIn as Ledger
 
+import qualified Cardano.Ledger.Block as Ledger
 import qualified Cardano.Ledger.Mary.Value as Mary
 import qualified Cardano.Ledger.ShelleyMA.AuxiliaryData as Allegra
 import qualified Cardano.Ledger.ShelleyMA.AuxiliaryData as Mary
@@ -238,7 +236,7 @@ import qualified Cardano.Ledger.Babbage as Babbage
 import qualified Cardano.Ledger.Babbage.PParams as Babbage
 import qualified Cardano.Ledger.Babbage.TxBody as Babbage
 import           Ouroboros.Consensus.Shelley.Eras (StandardAllegra, StandardAlonzo, StandardBabbage,
-                   StandardMary, StandardShelley)
+                   StandardConway, StandardMary, StandardShelley)
 
 import           Cardano.Api.Address
 import           Cardano.Api.Certificate
@@ -308,6 +306,7 @@ deriving instance Show (TxScriptValiditySupportedInEra era)
 data TxScriptValiditySupportedInEra era where
   TxScriptValiditySupportedInAlonzoEra  :: TxScriptValiditySupportedInEra AlonzoEra
   TxScriptValiditySupportedInBabbageEra :: TxScriptValiditySupportedInEra BabbageEra
+  TxScriptValiditySupportedInConwayEra  :: TxScriptValiditySupportedInEra ConwayEra
 
 deriving instance Eq   (TxScriptValidity era)
 deriving instance Show (TxScriptValidity era)
@@ -319,6 +318,7 @@ txScriptValiditySupportedInCardanoEra AllegraEra = Nothing
 txScriptValiditySupportedInCardanoEra MaryEra    = Nothing
 txScriptValiditySupportedInCardanoEra AlonzoEra  = Just TxScriptValiditySupportedInAlonzoEra
 txScriptValiditySupportedInCardanoEra BabbageEra = Just TxScriptValiditySupportedInBabbageEra
+txScriptValiditySupportedInCardanoEra ConwayEra  = Just TxScriptValiditySupportedInConwayEra
 
 txScriptValiditySupportedInShelleyBasedEra :: ShelleyBasedEra era -> Maybe (TxScriptValiditySupportedInEra era)
 txScriptValiditySupportedInShelleyBasedEra ShelleyBasedEraShelley = Nothing
@@ -326,6 +326,7 @@ txScriptValiditySupportedInShelleyBasedEra ShelleyBasedEraAllegra = Nothing
 txScriptValiditySupportedInShelleyBasedEra ShelleyBasedEraMary    = Nothing
 txScriptValiditySupportedInShelleyBasedEra ShelleyBasedEraAlonzo  = Just TxScriptValiditySupportedInAlonzoEra
 txScriptValiditySupportedInShelleyBasedEra ShelleyBasedEraBabbage = Just TxScriptValiditySupportedInBabbageEra
+txScriptValiditySupportedInShelleyBasedEra ShelleyBasedEraConway = Just TxScriptValiditySupportedInConwayEra
 
 txScriptValidityToScriptValidity :: TxScriptValidity era -> ScriptValidity
 txScriptValidityToScriptValidity TxScriptValidityNone = ScriptValid
@@ -415,6 +416,15 @@ txOutToJsonValue era (TxOut addr val dat refScript) =
         , "inlineDatum" .= inlineDatumJsonVal dat
         , "referenceScript" .= refScriptJsonVal refScript
         ]
+    ConwayEra ->
+      object
+        [ "address" .= addr
+        , "value" .= val
+        , datHashJsonVal dat
+        , "datum" .= datJsonVal dat
+        , "inlineDatum" .= inlineDatumJsonVal dat
+        , "referenceScript" .= refScriptJsonVal refScript
+        ]
  where
    datHashJsonVal :: TxOutDatum ctx era -> Aeson.Pair
    datHashJsonVal d =
@@ -492,14 +502,38 @@ instance (IsShelleyBasedEra era, IsCardanoEra era)
 
             mReferenceScript <- o .:? "referenceScript"
 
-            reconcile alonzoTxOutInBabbage mInlineDatum mReferenceScript
+            reconcile ReferenceTxInsScriptsInlineDatumsInBabbageEra alonzoTxOutInBabbage mInlineDatum mReferenceScript
+
+          ShelleyBasedEraConway -> do
+            alonzoTxOutInConway <- alonzoTxOutParser ScriptDataInConwayEra o
+
+            -- We check for the existence of inline datums
+            inlineDatumHash <- o .:? "inlineDatumhash"
+            inlineDatum <- o .:? "inlineDatum"
+            mInlineDatum <-
+              case (inlineDatum, inlineDatumHash) of
+                (Just dVal, Just h) ->
+                  case scriptDataFromJson ScriptDataJsonDetailedSchema dVal of
+                    Left err ->
+                      fail $ "Error parsing TxOut JSON: " <> displayError err
+                    Right sData ->
+                      if hashScriptData sData /= h
+                      then fail "Inline datum not equivalent to inline datum hash"
+                      else return $ TxOutDatumInline ReferenceTxInsScriptsInlineDatumsInConwayEra sData
+                (Nothing, Nothing) -> return TxOutDatumNone
+                (_,_) -> fail "Should not be possible to create a tx output with either an inline datum hash or an inline datum"
+
+            mReferenceScript <- o .:? "referenceScript"
+
+            reconcile ReferenceTxInsScriptsInlineDatumsInConwayEra alonzoTxOutInConway mInlineDatum mReferenceScript
          where
            reconcile
-             :: TxOut CtxTx BabbageEra -- ^ Alonzo era datum in Babbage era
-             -> TxOutDatum CtxTx BabbageEra -- ^ Babbagae inline datum
+             :: ReferenceTxInsScriptsInlineDatumsSupportedInEra era
+             -> TxOut CtxTx era -- ^ Alonzo era datum in Babbage era
+             -> TxOutDatum CtxTx era -- ^ Babbagae inline datum
              -> Maybe ScriptInAnyLang
-             -> Aeson.Parser (TxOut CtxTx BabbageEra)
-           reconcile top@(TxOut addr v dat r) babbageDatum mBabRefScript = do
+             -> Aeson.Parser (TxOut CtxTx era)
+           reconcile supp top@(TxOut addr v dat r) babbageDatum mBabRefScript = do
              -- We check for conflicting datums
              finalDat <- case (dat, babbageDatum) of
                            (TxOutDatumNone, bDatum) -> return bDatum
@@ -511,8 +545,7 @@ instance (IsShelleyBasedEra era, IsCardanoEra era)
                                     "Babbage dat: " <> show babbageDat
              finalRefScript <- case mBabRefScript of
                                  Nothing -> return r
-                                 Just anyScript ->
-                                   return $ ReferenceScript ReferenceTxInsScriptsInlineDatumsInBabbageEra anyScript
+                                 Just anyScript -> return $ ReferenceScript supp anyScript
              return $ TxOut addr v finalDat finalRefScript
 
            alonzoTxOutParser
@@ -583,14 +616,39 @@ instance (IsShelleyBasedEra era, IsCardanoEra era)
             -- We check for a reference script
             mReferenceScript <- o .:? "referenceScript"
 
-            reconcile alonzoTxOutInBabbage mInlineDatum mReferenceScript
+            reconcile ReferenceTxInsScriptsInlineDatumsInBabbageEra alonzoTxOutInBabbage mInlineDatum mReferenceScript
+
+          ShelleyBasedEraConway -> do
+            alonzoTxOutInConway <- alonzoTxOutParser ScriptDataInConwayEra o
+
+            -- We check for the existence of inline datums
+            inlineDatumHash <- o .:? "inlineDatumhash"
+            inlineDatum <- o .:? "inlineDatum"
+            mInlineDatum <-
+              case (inlineDatum, inlineDatumHash) of
+                (Just dVal, Just h) ->
+                  case scriptDataFromJson ScriptDataJsonDetailedSchema dVal of
+                    Left err ->
+                      fail $ "Error parsing TxOut JSON: " <> displayError err
+                    Right sData ->
+                      if hashScriptData sData /= h
+                      then fail "Inline datum not equivalent to inline datum hash"
+                      else return $ TxOutDatumInline ReferenceTxInsScriptsInlineDatumsInConwayEra sData
+                (Nothing, Nothing) -> return TxOutDatumNone
+                (_,_) -> fail "Should not be possible to create a tx output with either an inline datum hash or an inline datum"
+
+            -- We check for a reference script
+            mReferenceScript <- o .:? "referenceScript"
+
+            reconcile ReferenceTxInsScriptsInlineDatumsInConwayEra alonzoTxOutInConway mInlineDatum mReferenceScript
          where
            reconcile
-             :: TxOut CtxUTxO BabbageEra -- ^ Alonzo era datum in Babbage era
-             -> TxOutDatum CtxUTxO BabbageEra -- ^ Babbagae inline datum
+             :: ReferenceTxInsScriptsInlineDatumsSupportedInEra era
+             -> TxOut CtxUTxO era -- ^ Alonzo era datum in Babbage era
+             -> TxOutDatum CtxUTxO era -- ^ Babbagae inline datum
              -> Maybe ScriptInAnyLang
-             -> Aeson.Parser (TxOut CtxUTxO BabbageEra)
-           reconcile (TxOut addr v dat r) babbageDatum mBabRefScript = do
+             -> Aeson.Parser (TxOut CtxUTxO era)
+           reconcile supp (TxOut addr v dat r) babbageDatum mBabRefScript = do
              -- We check for conflicting datums
              finalDat <- case (dat, babbageDatum) of
                            (TxOutDatumNone, bDatum) -> return bDatum
@@ -599,7 +657,7 @@ instance (IsShelleyBasedEra era, IsCardanoEra era)
              finalRefScript <- case mBabRefScript of
                                  Nothing -> return r
                                  Just anyScript ->
-                                   return $ ReferenceScript ReferenceTxInsScriptsInlineDatumsInBabbageEra anyScript
+                                   return $ ReferenceScript supp anyScript
 
              return $ TxOut addr v finalDat finalRefScript
 
@@ -646,22 +704,27 @@ toShelleyTxOut era (TxOut _ (TxOutAdaOnly AdaOnlyInByronEra _) _ _) =
     case era of {}
 
 toShelleyTxOut _ (TxOut addr (TxOutAdaOnly AdaOnlyInShelleyEra value) _ _) =
-    Shelley.TxOut (toShelleyAddr addr) (toShelleyLovelace value)
+    Shelley.ShelleyTxOut (toShelleyAddr addr) (toShelleyLovelace value)
 
 toShelleyTxOut _ (TxOut addr (TxOutAdaOnly AdaOnlyInAllegraEra value) _ _) =
-    Shelley.TxOut (toShelleyAddr addr) (toShelleyLovelace value)
+    Shelley.ShelleyTxOut (toShelleyAddr addr) (toShelleyLovelace value)
 
 toShelleyTxOut _ (TxOut addr (TxOutValue MultiAssetInMaryEra value) _ _) =
-    Shelley.TxOut (toShelleyAddr addr) (toMaryValue value)
+    Shelley.ShelleyTxOut (toShelleyAddr addr) (toMaryValue value)
 
 toShelleyTxOut _ (TxOut addr (TxOutValue MultiAssetInAlonzoEra value) txoutdata _) =
-    Alonzo.TxOut (toShelleyAddr addr) (toMaryValue value)
+    Alonzo.AlonzoTxOut (toShelleyAddr addr) (toMaryValue value)
                  (toAlonzoTxOutDataHash txoutdata)
 
 toShelleyTxOut era (TxOut addr (TxOutValue MultiAssetInBabbageEra value) txoutdata refScript) =
     let cEra = shelleyBasedToCardanoEra era
-    in Babbage.TxOut (toShelleyAddr addr) (toMaryValue value)
+    in Babbage.BabbageTxOut (toShelleyAddr addr) (toMaryValue value)
                      (toBabbageTxOutDatum txoutdata) (refScriptToShelleyScript cEra refScript)
+
+toShelleyTxOut era (TxOut addr (TxOutValue MultiAssetInConwayEra value) txoutdata refScript) =
+    let cEra = shelleyBasedToCardanoEra era
+    in Babbage.BabbageTxOut (toShelleyAddr addr) (toMaryValue value)
+                     (toConwayTxOutDatum txoutdata) (refScriptToShelleyScript cEra refScript)
 
 
 fromShelleyTxOut :: ShelleyLedgerEra era ~ ledgerera
@@ -676,7 +739,7 @@ fromShelleyTxOut era ledgerTxOut =
                             (fromShelleyLovelace value))
                TxOutDatumNone ReferenceScriptNone
       where
-        Shelley.TxOut addr value = ledgerTxOut
+        Shelley.ShelleyTxOut addr value = ledgerTxOut
 
     ShelleyBasedEraAllegra ->
         TxOut (fromShelleyAddr era addr)
@@ -684,7 +747,7 @@ fromShelleyTxOut era ledgerTxOut =
                             (fromShelleyLovelace value))
                TxOutDatumNone ReferenceScriptNone
       where
-        Shelley.TxOut addr value = ledgerTxOut
+        Shelley.ShelleyTxOut addr value = ledgerTxOut
 
     ShelleyBasedEraMary ->
         TxOut (fromShelleyAddr era addr)
@@ -692,7 +755,7 @@ fromShelleyTxOut era ledgerTxOut =
                           (fromMaryValue value))
                TxOutDatumNone ReferenceScriptNone
       where
-        Shelley.TxOut addr value = ledgerTxOut
+        Shelley.ShelleyTxOut addr value = ledgerTxOut
 
     ShelleyBasedEraAlonzo ->
        TxOut (fromShelleyAddr era addr)
@@ -701,7 +764,7 @@ fromShelleyTxOut era ledgerTxOut =
              (fromAlonzoTxOutDataHash ScriptDataInAlonzoEra datahash)
              ReferenceScriptNone
       where
-        Alonzo.TxOut addr value datahash = ledgerTxOut
+        Alonzo.AlonzoTxOut addr value datahash = ledgerTxOut
 
     ShelleyBasedEraBabbage ->
        TxOut (fromShelleyAddr era addr)
@@ -716,7 +779,22 @@ fromShelleyTxOut era ledgerTxOut =
                 SJust refScript ->
                   fromShelleyScriptToReferenceScript ShelleyBasedEraBabbage refScript)
       where
-        Babbage.TxOut addr value datum mRefScript = ledgerTxOut
+        Babbage.BabbageTxOut addr value datum mRefScript = ledgerTxOut
+
+    ShelleyBasedEraConway ->
+       TxOut (fromShelleyAddr era addr)
+             (TxOutValue MultiAssetInConwayEra
+                         (fromMaryValue value))
+             (fromConwayTxOutDatum
+               ScriptDataInConwayEra
+               ReferenceTxInsScriptsInlineDatumsInConwayEra
+               datum)
+             (case mRefScript of
+                SNothing -> ReferenceScriptNone
+                SJust refScript ->
+                  fromShelleyScriptToReferenceScript ShelleyBasedEraConway refScript)
+      where
+        Babbage.BabbageTxOut addr value datum mRefScript = ledgerTxOut
 
 
 
@@ -745,6 +823,11 @@ toBabbageTxOutDatum  TxOutDatumNone = Babbage.NoDatum
 toBabbageTxOutDatum (TxOutDatumHash _ (ScriptDataHash dh)) = Babbage.DatumHash dh
 toBabbageTxOutDatum (TxOutDatumInline _ sd) = scriptDataToInlineDatum sd
 
+toConwayTxOutDatum
+  :: Ledger.Crypto (ShelleyLedgerEra era) ~ StandardCrypto
+  => TxOutDatum CtxUTxO era -> Babbage.Datum (ShelleyLedgerEra era)
+toConwayTxOutDatum = toBabbageTxOutDatum
+
 fromBabbageTxOutDatum
   :: Ledger.Crypto ledgerera ~ StandardCrypto
   => ScriptDataSupportedInEra era
@@ -757,7 +840,13 @@ fromBabbageTxOutDatum supp _ (Babbage.DatumHash dh) =
 fromBabbageTxOutDatum _ supp (Babbage.Datum binData) =
   TxOutDatumInline supp $ binaryDataToScriptData supp binData
 
-
+fromConwayTxOutDatum
+  :: Ledger.Crypto ledgerera ~ StandardCrypto
+  => ScriptDataSupportedInEra era
+  -> ReferenceTxInsScriptsInlineDatumsSupportedInEra era
+  -> Babbage.Datum ledgerera
+  -> TxOutDatum ctx era
+fromConwayTxOutDatum = fromBabbageTxOutDatum
 
 -- ----------------------------------------------------------------------------
 -- Era-dependent transaction body features
@@ -772,6 +861,7 @@ data CollateralSupportedInEra era where
 
      CollateralInAlonzoEra  :: CollateralSupportedInEra AlonzoEra
      CollateralInBabbageEra :: CollateralSupportedInEra BabbageEra
+     CollateralInConwayEra  :: CollateralSupportedInEra ConwayEra
 
 deriving instance Eq   (CollateralSupportedInEra era)
 deriving instance Show (CollateralSupportedInEra era)
@@ -784,6 +874,7 @@ collateralSupportedInEra AllegraEra = Nothing
 collateralSupportedInEra MaryEra    = Nothing
 collateralSupportedInEra AlonzoEra  = Just CollateralInAlonzoEra
 collateralSupportedInEra BabbageEra = Just CollateralInBabbageEra
+collateralSupportedInEra ConwayEra  = Just CollateralInConwayEra
 
 
 -- | A representation of whether the era supports multi-asset transactions.
@@ -802,6 +893,9 @@ data MultiAssetSupportedInEra era where
 
      -- | Multi-asset transactions are supported in the 'Babbage' era.
      MultiAssetInBabbageEra :: MultiAssetSupportedInEra BabbageEra
+
+     -- | Multi-asset transactions are supported in the 'Conway' era.
+     MultiAssetInConwayEra :: MultiAssetSupportedInEra ConwayEra
 
 deriving instance Eq   (MultiAssetSupportedInEra era)
 deriving instance Show (MultiAssetSupportedInEra era)
@@ -835,6 +929,7 @@ multiAssetSupportedInEra AllegraEra = Left AdaOnlyInAllegraEra
 multiAssetSupportedInEra MaryEra    = Right MultiAssetInMaryEra
 multiAssetSupportedInEra AlonzoEra  = Right MultiAssetInAlonzoEra
 multiAssetSupportedInEra BabbageEra = Right MultiAssetInBabbageEra
+multiAssetSupportedInEra ConwayEra  = Right MultiAssetInConwayEra
 
 
 -- | A representation of whether the era requires explicitly specified fees in
@@ -851,6 +946,7 @@ data TxFeesExplicitInEra era where
      TxFeesExplicitInMaryEra    :: TxFeesExplicitInEra MaryEra
      TxFeesExplicitInAlonzoEra  :: TxFeesExplicitInEra AlonzoEra
      TxFeesExplicitInBabbageEra :: TxFeesExplicitInEra BabbageEra
+     TxFeesExplicitInConwayEra  :: TxFeesExplicitInEra ConwayEra
 
 deriving instance Eq   (TxFeesExplicitInEra era)
 deriving instance Show (TxFeesExplicitInEra era)
@@ -875,6 +971,7 @@ txFeesExplicitInEra AllegraEra = Right TxFeesExplicitInAllegraEra
 txFeesExplicitInEra MaryEra    = Right TxFeesExplicitInMaryEra
 txFeesExplicitInEra AlonzoEra  = Right TxFeesExplicitInAlonzoEra
 txFeesExplicitInEra BabbageEra = Right TxFeesExplicitInBabbageEra
+txFeesExplicitInEra ConwayEra  = Right TxFeesExplicitInConwayEra
 
 
 -- | A representation of whether the era supports transactions with an upper
@@ -891,6 +988,7 @@ data ValidityUpperBoundSupportedInEra era where
      ValidityUpperBoundInMaryEra    :: ValidityUpperBoundSupportedInEra MaryEra
      ValidityUpperBoundInAlonzoEra  :: ValidityUpperBoundSupportedInEra AlonzoEra
      ValidityUpperBoundInBabbageEra :: ValidityUpperBoundSupportedInEra BabbageEra
+     ValidityUpperBoundInConwayEra  :: ValidityUpperBoundSupportedInEra ConwayEra
 
 deriving instance Eq   (ValidityUpperBoundSupportedInEra era)
 deriving instance Show (ValidityUpperBoundSupportedInEra era)
@@ -903,6 +1001,7 @@ validityUpperBoundSupportedInEra AllegraEra = Just ValidityUpperBoundInAllegraEr
 validityUpperBoundSupportedInEra MaryEra    = Just ValidityUpperBoundInMaryEra
 validityUpperBoundSupportedInEra AlonzoEra  = Just ValidityUpperBoundInAlonzoEra
 validityUpperBoundSupportedInEra BabbageEra = Just ValidityUpperBoundInBabbageEra
+validityUpperBoundSupportedInEra ConwayEra  = Just ValidityUpperBoundInConwayEra
 
 
 -- | A representation of whether the era supports transactions having /no/
@@ -922,6 +1021,7 @@ data ValidityNoUpperBoundSupportedInEra era where
      ValidityNoUpperBoundInMaryEra    :: ValidityNoUpperBoundSupportedInEra MaryEra
      ValidityNoUpperBoundInAlonzoEra  :: ValidityNoUpperBoundSupportedInEra AlonzoEra
      ValidityNoUpperBoundInBabbageEra :: ValidityNoUpperBoundSupportedInEra BabbageEra
+     ValidityNoUpperBoundInConwayEra  :: ValidityNoUpperBoundSupportedInEra ConwayEra
 
 deriving instance Eq   (ValidityNoUpperBoundSupportedInEra era)
 deriving instance Show (ValidityNoUpperBoundSupportedInEra era)
@@ -934,6 +1034,7 @@ validityNoUpperBoundSupportedInEra AllegraEra = Just ValidityNoUpperBoundInAlleg
 validityNoUpperBoundSupportedInEra MaryEra    = Just ValidityNoUpperBoundInMaryEra
 validityNoUpperBoundSupportedInEra AlonzoEra  = Just ValidityNoUpperBoundInAlonzoEra
 validityNoUpperBoundSupportedInEra BabbageEra = Just ValidityNoUpperBoundInBabbageEra
+validityNoUpperBoundSupportedInEra ConwayEra  = Just ValidityNoUpperBoundInConwayEra
 
 
 -- | A representation of whether the era supports transactions with a lower
@@ -949,6 +1050,7 @@ data ValidityLowerBoundSupportedInEra era where
      ValidityLowerBoundInMaryEra    :: ValidityLowerBoundSupportedInEra MaryEra
      ValidityLowerBoundInAlonzoEra  :: ValidityLowerBoundSupportedInEra AlonzoEra
      ValidityLowerBoundInBabbageEra :: ValidityLowerBoundSupportedInEra BabbageEra
+     ValidityLowerBoundInConwayEra  :: ValidityLowerBoundSupportedInEra ConwayEra
 
 deriving instance Eq   (ValidityLowerBoundSupportedInEra era)
 deriving instance Show (ValidityLowerBoundSupportedInEra era)
@@ -961,6 +1063,7 @@ validityLowerBoundSupportedInEra AllegraEra = Just ValidityLowerBoundInAllegraEr
 validityLowerBoundSupportedInEra MaryEra    = Just ValidityLowerBoundInMaryEra
 validityLowerBoundSupportedInEra AlonzoEra  = Just ValidityLowerBoundInAlonzoEra
 validityLowerBoundSupportedInEra BabbageEra = Just ValidityLowerBoundInBabbageEra
+validityLowerBoundSupportedInEra ConwayEra  = Just ValidityLowerBoundInConwayEra
 
 -- | A representation of whether the era supports transaction metadata.
 --
@@ -973,6 +1076,7 @@ data TxMetadataSupportedInEra era where
      TxMetadataInMaryEra    :: TxMetadataSupportedInEra MaryEra
      TxMetadataInAlonzoEra  :: TxMetadataSupportedInEra AlonzoEra
      TxMetadataInBabbageEra :: TxMetadataSupportedInEra BabbageEra
+     TxMetadataInConwayEra  :: TxMetadataSupportedInEra ConwayEra
 
 deriving instance Eq   (TxMetadataSupportedInEra era)
 deriving instance Show (TxMetadataSupportedInEra era)
@@ -985,6 +1089,7 @@ txMetadataSupportedInEra AllegraEra = Just TxMetadataInAllegraEra
 txMetadataSupportedInEra MaryEra    = Just TxMetadataInMaryEra
 txMetadataSupportedInEra AlonzoEra  = Just TxMetadataInAlonzoEra
 txMetadataSupportedInEra BabbageEra = Just TxMetadataInBabbageEra
+txMetadataSupportedInEra ConwayEra  = Just TxMetadataInConwayEra
 
 
 -- | A representation of whether the era supports auxiliary scripts in
@@ -998,6 +1103,7 @@ data AuxScriptsSupportedInEra era where
      AuxScriptsInMaryEra    :: AuxScriptsSupportedInEra MaryEra
      AuxScriptsInAlonzoEra  :: AuxScriptsSupportedInEra AlonzoEra
      AuxScriptsInBabbageEra :: AuxScriptsSupportedInEra BabbageEra
+     AuxScriptsInConwayEra  :: AuxScriptsSupportedInEra ConwayEra
 
 deriving instance Eq   (AuxScriptsSupportedInEra era)
 deriving instance Show (AuxScriptsSupportedInEra era)
@@ -1010,6 +1116,7 @@ auxScriptsSupportedInEra AllegraEra = Just AuxScriptsInAllegraEra
 auxScriptsSupportedInEra MaryEra    = Just AuxScriptsInMaryEra
 auxScriptsSupportedInEra AlonzoEra  = Just AuxScriptsInAlonzoEra
 auxScriptsSupportedInEra BabbageEra = Just AuxScriptsInBabbageEra
+auxScriptsSupportedInEra ConwayEra  = Just AuxScriptsInConwayEra
 
 
 -- | A representation of whether the era supports transactions that specify
@@ -1023,6 +1130,7 @@ data TxExtraKeyWitnessesSupportedInEra era where
 
      ExtraKeyWitnessesInAlonzoEra  :: TxExtraKeyWitnessesSupportedInEra AlonzoEra
      ExtraKeyWitnessesInBabbageEra :: TxExtraKeyWitnessesSupportedInEra BabbageEra
+     ExtraKeyWitnessesInConwayEra  :: TxExtraKeyWitnessesSupportedInEra ConwayEra
 
 deriving instance Eq   (TxExtraKeyWitnessesSupportedInEra era)
 deriving instance Show (TxExtraKeyWitnessesSupportedInEra era)
@@ -1035,6 +1143,7 @@ extraKeyWitnessesSupportedInEra AllegraEra = Nothing
 extraKeyWitnessesSupportedInEra MaryEra    = Nothing
 extraKeyWitnessesSupportedInEra AlonzoEra  = Just ExtraKeyWitnessesInAlonzoEra
 extraKeyWitnessesSupportedInEra BabbageEra = Just ExtraKeyWitnessesInBabbageEra
+extraKeyWitnessesSupportedInEra ConwayEra  = Just ExtraKeyWitnessesInConwayEra
 
 
 -- | A representation of whether the era supports multi-asset transactions.
@@ -1048,6 +1157,7 @@ data ScriptDataSupportedInEra era where
      -- | Script data is supported in transactions in the 'Alonzo' era.
      ScriptDataInAlonzoEra  :: ScriptDataSupportedInEra AlonzoEra
      ScriptDataInBabbageEra :: ScriptDataSupportedInEra BabbageEra
+     ScriptDataInConwayEra  :: ScriptDataSupportedInEra ConwayEra
 
 deriving instance Eq   (ScriptDataSupportedInEra era)
 deriving instance Show (ScriptDataSupportedInEra era)
@@ -1060,6 +1170,7 @@ scriptDataSupportedInEra AllegraEra = Nothing
 scriptDataSupportedInEra MaryEra    = Nothing
 scriptDataSupportedInEra AlonzoEra  = Just ScriptDataInAlonzoEra
 scriptDataSupportedInEra BabbageEra = Just ScriptDataInBabbageEra
+scriptDataSupportedInEra ConwayEra  = Just ScriptDataInConwayEra
 
 
 -- | A representation of whether the era supports withdrawals from reward
@@ -1075,6 +1186,7 @@ data WithdrawalsSupportedInEra era where
      WithdrawalsInMaryEra    :: WithdrawalsSupportedInEra MaryEra
      WithdrawalsInAlonzoEra  :: WithdrawalsSupportedInEra AlonzoEra
      WithdrawalsInBabbageEra :: WithdrawalsSupportedInEra BabbageEra
+     WithdrawalsInConwayEra  :: WithdrawalsSupportedInEra ConwayEra
 
 deriving instance Eq   (WithdrawalsSupportedInEra era)
 deriving instance Show (WithdrawalsSupportedInEra era)
@@ -1087,6 +1199,7 @@ withdrawalsSupportedInEra AllegraEra = Just WithdrawalsInAllegraEra
 withdrawalsSupportedInEra MaryEra    = Just WithdrawalsInMaryEra
 withdrawalsSupportedInEra AlonzoEra  = Just WithdrawalsInAlonzoEra
 withdrawalsSupportedInEra BabbageEra = Just WithdrawalsInBabbageEra
+withdrawalsSupportedInEra ConwayEra  = Just WithdrawalsInConwayEra
 
 
 -- | A representation of whether the era supports 'Certificate's embedded in
@@ -1101,6 +1214,7 @@ data CertificatesSupportedInEra era where
      CertificatesInMaryEra    :: CertificatesSupportedInEra MaryEra
      CertificatesInAlonzoEra  :: CertificatesSupportedInEra AlonzoEra
      CertificatesInBabbageEra :: CertificatesSupportedInEra BabbageEra
+     CertificatesInConwayEra  :: CertificatesSupportedInEra ConwayEra
 
 deriving instance Eq   (CertificatesSupportedInEra era)
 deriving instance Show (CertificatesSupportedInEra era)
@@ -1113,6 +1227,7 @@ certificatesSupportedInEra AllegraEra = Just CertificatesInAllegraEra
 certificatesSupportedInEra MaryEra    = Just CertificatesInMaryEra
 certificatesSupportedInEra AlonzoEra  = Just CertificatesInAlonzoEra
 certificatesSupportedInEra BabbageEra = Just CertificatesInBabbageEra
+certificatesSupportedInEra ConwayEra  = Just CertificatesInConwayEra
 
 
 -- | A representation of whether the era supports 'UpdateProposal's embedded in
@@ -1129,6 +1244,7 @@ data UpdateProposalSupportedInEra era where
      UpdateProposalInMaryEra    :: UpdateProposalSupportedInEra MaryEra
      UpdateProposalInAlonzoEra  :: UpdateProposalSupportedInEra AlonzoEra
      UpdateProposalInBabbageEra :: UpdateProposalSupportedInEra BabbageEra
+     UpdateProposalInConwayEra  :: UpdateProposalSupportedInEra ConwayEra
 
 deriving instance Eq   (UpdateProposalSupportedInEra era)
 deriving instance Show (UpdateProposalSupportedInEra era)
@@ -1141,6 +1257,7 @@ updateProposalSupportedInEra AllegraEra = Just UpdateProposalInAllegraEra
 updateProposalSupportedInEra MaryEra    = Just UpdateProposalInMaryEra
 updateProposalSupportedInEra AlonzoEra  = Just UpdateProposalInAlonzoEra
 updateProposalSupportedInEra BabbageEra = Just UpdateProposalInBabbageEra
+updateProposalSupportedInEra ConwayEra  = Just UpdateProposalInConwayEra
 
 
 -- ----------------------------------------------------------------------------
@@ -1305,6 +1422,7 @@ deriving instance Show (TxTotalCollateral era)
 data TxTotalAndReturnCollateralSupportedInEra era where
 
      TxTotalAndReturnCollateralInBabbageEra :: TxTotalAndReturnCollateralSupportedInEra BabbageEra
+     TxTotalAndReturnCollateralInConwayEra :: TxTotalAndReturnCollateralSupportedInEra ConwayEra
 
 deriving instance Eq   (TxTotalAndReturnCollateralSupportedInEra era)
 deriving instance Show (TxTotalAndReturnCollateralSupportedInEra era)
@@ -1317,6 +1435,7 @@ totalAndReturnCollateralSupportedInEra AllegraEra = Nothing
 totalAndReturnCollateralSupportedInEra MaryEra = Nothing
 totalAndReturnCollateralSupportedInEra AlonzoEra = Nothing
 totalAndReturnCollateralSupportedInEra BabbageEra = Just TxTotalAndReturnCollateralInBabbageEra
+totalAndReturnCollateralSupportedInEra ConwayEra = Just TxTotalAndReturnCollateralInConwayEra
 
 -- ----------------------------------------------------------------------------
 -- Transaction output datum (era-dependent)
@@ -1662,6 +1781,12 @@ instance Eq (TxBody era) where
                                   && txmetadataA     == txmetadataB
                                   && scriptValidityA == scriptValidityB
 
+           ShelleyBasedEraConway -> txbodyA         == txbodyB
+                                  && txscriptsA      == txscriptsB
+                                  && redeemersA      == redeemersB
+                                  && txmetadataA     == txmetadataB
+                                  && scriptValidityA == scriptValidityB
+
     (==) ByronTxBody{} (ShelleyTxBody era _ _ _ _ _) = case era of {}
 
 
@@ -1748,6 +1873,21 @@ instance Show (TxBody era) where
         . showsPrec 11 scriptValidity
         )
 
+    showsPrec p (ShelleyTxBody ShelleyBasedEraConway
+                               txbody txscripts redeemers txmetadata scriptValidity) =
+      showParen (p >= 11)
+        ( showString "ShelleyTxBody ShelleyBasedEraConway "
+        . showsPrec 11 txbody
+        . showChar ' '
+        . showsPrec 11 txscripts
+        . showChar ' '
+        . showsPrec 11 redeemers
+        . showChar ' '
+        . showsPrec 11 txmetadata
+        . showChar ' '
+        . showsPrec 11 scriptValidity
+        )
+
 
 
 instance HasTypeProxy era => HasTypeProxy (TxBody era) where
@@ -1785,6 +1925,9 @@ instance IsCardanoEra era => SerialiseAsCBOR (TxBody era) where
 
         ShelleyBasedEraBabbage -> serialiseShelleyBasedTxBody
                                     era txbody txscripts redeemers txmetadata scriptValidity
+
+        ShelleyBasedEraConway  -> serialiseShelleyBasedTxBody
+                                    era txbody txscripts redeemers txmetadata scriptValidity
     deserialiseFromCBOR _ bs =
       case cardanoEra :: CardanoEra era of
         ByronEra ->
@@ -1800,6 +1943,7 @@ instance IsCardanoEra era => SerialiseAsCBOR (TxBody era) where
         MaryEra    -> deserialiseShelleyBasedTxBody ShelleyBasedEraMary    bs
         AlonzoEra  -> deserialiseShelleyBasedTxBody ShelleyBasedEraAlonzo  bs
         BabbageEra -> deserialiseShelleyBasedTxBody ShelleyBasedEraBabbage bs
+        ConwayEra  -> deserialiseShelleyBasedTxBody ShelleyBasedEraConway  bs
 
 -- | The serialisation format for the different Shelley-based eras are not the
 -- same, but they can be handled generally with one overloaded implementation.
@@ -1833,6 +1977,13 @@ serialiseShelleyBasedTxBody era txbody txscripts
          <> CBOR.toCBOR (txScriptValidityToScriptValidity scriptValidity)
          <> CBOR.encodeNullMaybe CBOR.toCBOR txmetadata
       ShelleyBasedEraBabbage ->
+        CBOR.serializeEncoding'
+          $ CBOR.encodeListLen 4
+         <> CBOR.toCBOR txbody
+         <> CBOR.toCBOR txscripts
+         <> CBOR.toCBOR (txScriptValidityToScriptValidity scriptValidity)
+         <> CBOR.encodeNullMaybe CBOR.toCBOR txmetadata
+      ShelleyBasedEraConway ->
         CBOR.serializeEncoding'
           $ CBOR.encodeListLen 4
          <> CBOR.toCBOR txbody
@@ -1966,6 +2117,7 @@ instance IsCardanoEra era => HasTextEnvelope (TxBody era) where
         MaryEra    -> "TxBodyMary"
         AlonzoEra  -> "TxBodyAlonzo"
         BabbageEra -> "TxBodyBabbage"
+        ConwayEra  -> "TxBodyConway"
 
 -- | Calculate the transaction identifier for a 'TxBody'.
 --
@@ -1987,7 +2139,7 @@ getTxId (ShelleyTxBody era tx _ _ _ _) =
   obtainConstraints
     :: ShelleyBasedEra era
     -> (( Ledger.Crypto (ShelleyLedgerEra era) ~ StandardCrypto
-        , Ledger.UsesTxBody (ShelleyLedgerEra era)
+        , Ledger.EraTxBody (ShelleyLedgerEra era)
         ) => a)
     -> a
   obtainConstraints ShelleyBasedEraShelley f = f
@@ -1995,10 +2147,11 @@ getTxId (ShelleyTxBody era tx _ _ _ _) =
   obtainConstraints ShelleyBasedEraMary    f = f
   obtainConstraints ShelleyBasedEraAlonzo  f = f
   obtainConstraints ShelleyBasedEraBabbage f = f
+  obtainConstraints ShelleyBasedEraConway  f = f
 
 getTxIdShelley
   :: Ledger.Crypto (ShelleyLedgerEra era) ~ StandardCrypto
-  => Ledger.UsesTxBody (ShelleyLedgerEra era)
+  => Ledger.EraTxBody (ShelleyLedgerEra era)
   => ShelleyBasedEra era -> Ledger.TxBody (ShelleyLedgerEra era) -> TxId
 getTxIdShelley _ tx =
     TxId
@@ -2118,6 +2271,7 @@ fromLedgerTxIns era body =
     inputs ShelleyBasedEraMary    = Mary.inputs'
     inputs ShelleyBasedEraAlonzo  = Alonzo.inputs'
     inputs ShelleyBasedEraBabbage = Babbage.inputs
+    inputs ShelleyBasedEraConway  = Babbage.inputs
 
 
 fromLedgerTxInsCollateral
@@ -2138,6 +2292,7 @@ fromLedgerTxInsCollateral era body =
       ShelleyBasedEraMary    -> []
       ShelleyBasedEraAlonzo  -> toList $ Alonzo.collateral' body
       ShelleyBasedEraBabbage -> toList $ Babbage.collateral body
+      ShelleyBasedEraConway -> toList $ Babbage.collateral body
 
 fromLedgerTxInsReference
   :: ShelleyBasedEra era -> Ledger.TxBody (ShelleyLedgerEra era) -> TxInsReference ViewTx era
@@ -2145,15 +2300,11 @@ fromLedgerTxInsReference era txBody =
   case refInsScriptsAndInlineDatsSupportedInEra $ shelleyBasedToCardanoEra era of
     Nothing -> TxInsReferenceNone
     Just suppInEra ->
-      let ledgerRefInputs = obtainReferenceInputsHasFieldConstraint suppInEra $ getField @"referenceInputs" txBody
+      let ledgerRefInputs = case suppInEra of
+            ReferenceTxInsScriptsInlineDatumsInBabbageEra -> Babbage.referenceInputs' txBody
+            ReferenceTxInsScriptsInlineDatumsInConwayEra -> Babbage.referenceInputs' txBody
       in TxInsReference suppInEra
            $ map fromShelleyTxIn . Set.toList $ ledgerRefInputs
- where
-  obtainReferenceInputsHasFieldConstraint
-    :: ReferenceTxInsScriptsInlineDatumsSupportedInEra era
-    -> (HasField "referenceInputs" (Ledger.TxBody (ShelleyLedgerEra era)) (Set (Ledger.TxIn StandardCrypto)) => a)
-    -> a
-  obtainReferenceInputsHasFieldConstraint ReferenceTxInsScriptsInlineDatumsInBabbageEra f = f
 
 fromLedgerTxOuts
   :: forall era.
@@ -2191,6 +2342,17 @@ fromLedgerTxOuts era body scriptdata =
       | let txdatums = selectTxDatums scriptdata
       , txouts <- toList (Babbage.outputs body)
       ]
+
+    ShelleyBasedEraConway ->
+      [ fromConwayTxOut
+          MultiAssetInConwayEra
+          ScriptDataInConwayEra
+          ReferenceTxInsScriptsInlineDatumsInConwayEra
+          txdatums
+          (CBOR.sizedValue txouts)
+      | let txdatums = selectTxDatums scriptdata
+      , txouts <- toList (Babbage.outputs body)
+      ]
   where
     selectTxDatums  TxBodyNoScriptData                            = Map.empty
     selectTxDatums (TxBodyScriptData _ (Alonzo.TxDats' datums) _) = datums
@@ -2199,15 +2361,15 @@ fromAlonzoTxOut :: forall era ledgerera.
                    IsShelleyBasedEra era
                 => Ledger.Era ledgerera
                 => Ledger.Crypto ledgerera ~ StandardCrypto
-                => Ledger.Value ledgerera ~ Mary.Value StandardCrypto
+                => Ledger.Value ledgerera ~ Mary.MaryValue StandardCrypto
                 => MultiAssetSupportedInEra era
                 -> ScriptDataSupportedInEra era
                 -> Map (Alonzo.DataHash StandardCrypto)
                        (Alonzo.Data ledgerera)
-                -> Alonzo.TxOut ledgerera
+                -> Alonzo.AlonzoTxOut ledgerera
                 -> TxOut CtxTx era
 fromAlonzoTxOut multiAssetInEra scriptDataInEra txdatums
-                (Alonzo.TxOut addr value datahash) =
+                (Alonzo.AlonzoTxOut addr value datahash) =
    TxOut (fromShelleyAddr shelleyBasedEra addr)
          (TxOutValue multiAssetInEra (fromMaryValue value))
          (fromAlonzoTxOutDatum scriptDataInEra datahash)
@@ -2228,13 +2390,13 @@ fromBabbageTxOut
   => IsShelleyBasedEra era
   => ShelleyLedgerEra era ~ ledgerera
   => Ledger.Crypto ledgerera ~ StandardCrypto
-  => Ledger.Value ledgerera ~ Mary.Value StandardCrypto
+  => Ledger.Value ledgerera ~ Mary.MaryValue StandardCrypto
   => MultiAssetSupportedInEra era
   -> ScriptDataSupportedInEra era
   -> ReferenceTxInsScriptsInlineDatumsSupportedInEra era
   -> Map (Alonzo.DataHash StandardCrypto)
          (Alonzo.Data ledgerera)
-  -> Babbage.TxOut ledgerera
+  -> Babbage.BabbageTxOut ledgerera
   -> TxOut CtxTx era
 fromBabbageTxOut multiAssetInEra scriptDataInEra inlineDatumsInEra txdatums txout =
    TxOut
@@ -2263,7 +2425,49 @@ fromBabbageTxOut multiAssetInEra scriptDataInEra inlineDatumsInEra txdatums txou
                   = TxOutDatumInTx' scriptDataInEra (ScriptDataHash dh) (fromAlonzoData d)
       | otherwise = TxOutDatumHash scriptDataInEra (ScriptDataHash dh)
 
-   (Babbage.TxOut addr val datum mRefScript) = txout
+   (Babbage.BabbageTxOut addr val datum mRefScript) = txout
+
+fromConwayTxOut
+  :: forall ledgerera era. Ledger.Era ledgerera
+  => IsShelleyBasedEra era
+  => ShelleyLedgerEra era ~ ledgerera
+  => Ledger.Crypto ledgerera ~ StandardCrypto
+  => Ledger.Value ledgerera ~ Mary.MaryValue StandardCrypto
+  => MultiAssetSupportedInEra era
+  -> ScriptDataSupportedInEra era
+  -> ReferenceTxInsScriptsInlineDatumsSupportedInEra era
+  -> Map (Alonzo.DataHash StandardCrypto)
+         (Alonzo.Data ledgerera)
+  -> Babbage.BabbageTxOut ledgerera
+  -> TxOut CtxTx era
+fromConwayTxOut multiAssetInEra scriptDataInEra inlineDatumsInEra txdatums txout =
+   TxOut
+     (fromShelleyAddr shelleyBasedEra addr)
+     (TxOutValue multiAssetInEra (fromMaryValue val))
+     conwayTxOutDatum
+     (case mRefScript of
+       SNothing -> ReferenceScriptNone
+       SJust rScript -> fromShelleyScriptToReferenceScript shelleyBasedEra rScript
+     )
+ where
+   -- NOTE: This is different to 'fromConwayTxOutDatum' as it may resolve
+   -- 'DatumHash' values using the datums included in the transaction.
+   conwayTxOutDatum :: TxOutDatum CtxTx era
+   conwayTxOutDatum =
+     case datum of
+       Babbage.NoDatum -> TxOutDatumNone
+       Babbage.DatumHash dh -> resolveDatumInTx dh
+       Babbage.Datum d ->
+         TxOutDatumInline inlineDatumsInEra $
+           binaryDataToScriptData inlineDatumsInEra d
+
+   resolveDatumInTx :: Alonzo.DataHash StandardCrypto -> TxOutDatum CtxTx era
+   resolveDatumInTx dh
+      | Just d <- Map.lookup dh txdatums
+                  = TxOutDatumInTx' scriptDataInEra (ScriptDataHash dh) (fromAlonzoData d)
+      | otherwise = TxOutDatumHash scriptDataInEra (ScriptDataHash dh)
+
+   (Babbage.BabbageTxOut addr val datum mRefScript) = txout
 
 fromLedgerTxTotalCollateral
   :: ShelleyBasedEra era
@@ -2273,15 +2477,13 @@ fromLedgerTxTotalCollateral era txbody =
   case totalAndReturnCollateralSupportedInEra $ shelleyBasedToCardanoEra era of
     Nothing -> TxTotalCollateralNone
     Just supp ->
-      case obtainTotalCollateralHasFieldConstraint supp $ getField @"totalCollateral" txbody of
+      let mTotalCollateral = case supp of
+            TxTotalAndReturnCollateralInBabbageEra -> Babbage.totalCollateral' txbody
+            TxTotalAndReturnCollateralInConwayEra -> Babbage.totalCollateral' txbody
+      in
+      case mTotalCollateral of
         SNothing -> TxTotalCollateralNone
         SJust totColl -> TxTotalCollateral supp $ fromShelleyLovelace totColl
- where
-  obtainTotalCollateralHasFieldConstraint
-    :: TxTotalAndReturnCollateralSupportedInEra era
-    -> (HasField "totalCollateral" (Ledger.TxBody (ShelleyLedgerEra era)) (StrictMaybe Ledger.Coin) => a)
-    -> a
-  obtainTotalCollateralHasFieldConstraint TxTotalAndReturnCollateralInBabbageEra f = f
 
 fromLedgerTxReturnCollateral
   :: ShelleyBasedEra era
@@ -2291,18 +2493,14 @@ fromLedgerTxReturnCollateral era txbody =
   case totalAndReturnCollateralSupportedInEra $ shelleyBasedToCardanoEra era of
     Nothing -> TxReturnCollateralNone
     Just supp ->
-      case obtainCollateralReturnHasFieldConstraint supp $ getField @"collateralReturn" txbody of
+      let mCollateralReturn = case supp of
+            TxTotalAndReturnCollateralInBabbageEra -> Babbage.collateralReturn' txbody
+            TxTotalAndReturnCollateralInConwayEra -> Babbage.collateralReturn' txbody
+      in
+      case mCollateralReturn of
         SNothing -> TxReturnCollateralNone
         SJust collReturnOut ->
           TxReturnCollateral supp $ fromShelleyTxOut era collReturnOut
- where
-  obtainCollateralReturnHasFieldConstraint
-    :: TxTotalAndReturnCollateralSupportedInEra era
-    -> (HasField "collateralReturn"
-          (Ledger.TxBody (ShelleyLedgerEra era))
-          (StrictMaybe (Ledger.TxOut (ShelleyLedgerEra era))) => a)
-    -> a
-  obtainCollateralReturnHasFieldConstraint TxTotalAndReturnCollateralInBabbageEra f = f
 
 
 fromLedgerTxFee
@@ -2323,6 +2521,9 @@ fromLedgerTxFee era body =
       fromShelleyLovelace $ Alonzo.txfee' body
     ShelleyBasedEraBabbage ->
       TxFeeExplicit TxFeesExplicitInBabbageEra $
+      fromShelleyLovelace $ Babbage.txfee body
+    ShelleyBasedEraConway ->
+      TxFeeExplicit TxFeesExplicitInConwayEra $
       fromShelleyLovelace $ Babbage.txfee body
 
 fromLedgerTxValidityRange
@@ -2381,27 +2582,42 @@ fromLedgerTxValidityRange era body =
       where
         Mary.ValidityInterval{invalidBefore, invalidHereafter} = Babbage.txvldt body
 
+    ShelleyBasedEraConway ->
+      ( case invalidBefore of
+          SNothing -> TxValidityNoLowerBound
+          SJust s  -> TxValidityLowerBound ValidityLowerBoundInConwayEra s
+      , case invalidHereafter of
+          SNothing -> TxValidityNoUpperBound ValidityNoUpperBoundInConwayEra
+          SJust s  -> TxValidityUpperBound   ValidityUpperBoundInConwayEra s
+      )
+      where
+        Mary.ValidityInterval{invalidBefore, invalidHereafter} = Babbage.txvldt body
+
 fromLedgerAuxiliaryData
   :: ShelleyBasedEra era
   -> Ledger.AuxiliaryData (ShelleyLedgerEra era)
   -> (Map Word64 TxMetadataValue, [ScriptInEra era])
 fromLedgerAuxiliaryData ShelleyBasedEraShelley (Shelley.Metadata metadata) =
   (fromShelleyMetadata metadata, [])
-fromLedgerAuxiliaryData ShelleyBasedEraAllegra (Allegra.AuxiliaryData ms ss) =
+fromLedgerAuxiliaryData ShelleyBasedEraAllegra (Allegra.MAAuxiliaryData ms ss) =
   ( fromShelleyMetadata ms
   , fromShelleyBasedScript ShelleyBasedEraAllegra <$> toList ss
   )
-fromLedgerAuxiliaryData ShelleyBasedEraMary (Mary.AuxiliaryData ms ss) =
+fromLedgerAuxiliaryData ShelleyBasedEraMary (Mary.MAAuxiliaryData ms ss) =
   ( fromShelleyMetadata ms
   , fromShelleyBasedScript ShelleyBasedEraMary <$> toList ss
   )
-fromLedgerAuxiliaryData ShelleyBasedEraAlonzo (Alonzo.AuxiliaryData ms ss) =
+fromLedgerAuxiliaryData ShelleyBasedEraAlonzo (Alonzo.AlonzoAuxiliaryData ms ss) =
   ( fromShelleyMetadata ms
   , fromShelleyBasedScript ShelleyBasedEraAlonzo <$> toList ss
   )
-fromLedgerAuxiliaryData ShelleyBasedEraBabbage (Alonzo.AuxiliaryData ms ss) =
+fromLedgerAuxiliaryData ShelleyBasedEraBabbage (Alonzo.AlonzoAuxiliaryData ms ss) =
   ( fromShelleyMetadata ms
   , fromShelleyBasedScript ShelleyBasedEraBabbage <$> toList ss
+  )
+fromLedgerAuxiliaryData ShelleyBasedEraConway (Alonzo.AlonzoAuxiliaryData ms ss) =
+  ( fromShelleyMetadata ms
+  , fromShelleyBasedScript ShelleyBasedEraConway <$> toList ss
   )
 
 fromLedgerTxAuxiliaryData
@@ -2454,6 +2670,15 @@ fromLedgerTxAuxiliaryData era (Just auxData) =
           [] -> TxAuxScriptsNone
           _  -> TxAuxScripts AuxScriptsInBabbageEra ss
       )
+    ShelleyBasedEraConway ->
+      ( if null ms then
+          TxMetadataNone
+        else
+          TxMetadataInEra TxMetadataInConwayEra $ TxMetadata ms
+      , case ss of
+          [] -> TxAuxScriptsNone
+          _  -> TxAuxScripts AuxScriptsInConwayEra ss
+      )
   where
     (ms, ss) = fromLedgerAuxiliaryData era auxData
 
@@ -2478,6 +2703,14 @@ fromLedgerTxExtraKeyWitnesses sbe body =
       | Set.null keyhashes -> TxExtraKeyWitnessesNone
       | otherwise          -> TxExtraKeyWitnesses
                                 ExtraKeyWitnessesInBabbageEra
+                                [ PaymentKeyHash (Shelley.coerceKeyRole keyhash)
+                                | keyhash <- Set.toList keyhashes ]
+      where
+        keyhashes = Babbage.reqSignerHashes body
+    ShelleyBasedEraConway
+      | Set.null keyhashes -> TxExtraKeyWitnessesNone
+      | otherwise          -> TxExtraKeyWitnesses
+                                ExtraKeyWitnessesInConwayEra
                                 [ PaymentKeyHash (Shelley.coerceKeyRole keyhash)
                                 | keyhash <- Set.toList keyhashes ]
       where
@@ -2523,6 +2756,13 @@ fromLedgerTxWithdrawals era body =
       | null (Shelley.unWdrl withdrawals) -> TxWithdrawalsNone
       | otherwise ->
           TxWithdrawals WithdrawalsInBabbageEra $ fromShelleyWithdrawal withdrawals
+      where
+        withdrawals = Babbage.wdrls' body
+
+    ShelleyBasedEraConway
+      | null (Shelley.unWdrl withdrawals) -> TxWithdrawalsNone
+      | otherwise ->
+          TxWithdrawals WithdrawalsInConwayEra $ fromShelleyWithdrawal withdrawals
       where
         withdrawals = Babbage.wdrls' body
 
@@ -2582,6 +2822,16 @@ fromLedgerTxCertificates era body =
       where
         certificates = Babbage.certs' body
 
+    ShelleyBasedEraConway
+      | null certificates -> TxCertificatesNone
+      | otherwise ->
+          TxCertificates
+            CertificatesInConwayEra
+            (map fromShelleyCertificate $ toList certificates)
+            ViewTx
+      where
+        certificates = Babbage.certs' body
+
 fromLedgerTxUpdateProposal
   :: ShelleyBasedEra era
   -> Ledger.TxBody (ShelleyLedgerEra era)
@@ -2623,6 +2873,13 @@ fromLedgerTxUpdateProposal era body =
           TxUpdateProposal UpdateProposalInBabbageEra
                            (fromLedgerUpdate era p)
 
+    ShelleyBasedEraConway ->
+      case Babbage.update' body of
+        SNothing -> TxUpdateProposalNone
+        SJust p ->
+          TxUpdateProposal UpdateProposalInConwayEra
+                           (fromLedgerUpdate era p)
+
 fromLedgerTxMintValue
   :: ShelleyBasedEra era
   -> Ledger.TxBody (ShelleyLedgerEra era)
@@ -2648,6 +2905,13 @@ fromLedgerTxMintValue era body =
     ShelleyBasedEraBabbage
       | isZero mint         -> TxMintNone
       | otherwise           -> TxMintValue MultiAssetInBabbageEra
+                                           (fromMaryValue mint) ViewTx
+      where
+        mint = Babbage.mint' body
+
+    ShelleyBasedEraConway
+      | isZero mint         -> TxMintNone
+      | otherwise           -> TxMintValue MultiAssetInConwayEra
                                            (fromMaryValue mint) ViewTx
       where
         mint = Babbage.mint' body
@@ -2750,7 +3014,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraShelley
 
     return $
       ShelleyTxBody era
-        (Shelley.TxBody
+        (Shelley.ShelleyTxBody
           (Set.fromList (map (toShelleyTxIn . fst) txIns))
           (Seq.fromList (map (toShelleyTxOutAny era) txOuts))
           (case txCertificates of
@@ -2825,7 +3089,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraAllegra
 
     return $
       ShelleyTxBody era
-        (Allegra.TxBody
+        (Allegra.MATxBody
           (Set.fromList (map (toShelleyTxIn . fst) txIns))
           (Seq.fromList (map (toShelleyTxOutAny era) txOuts))
           (case txCertificates of
@@ -2920,7 +3184,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraMary
 
     return $
       ShelleyTxBody era
-        (Allegra.TxBody
+        (Mary.MATxBody
           (Set.fromList (map (toShelleyTxIn . fst) txIns))
           (Seq.fromList (map (toShelleyTxOutAny era) txOuts))
           (case txCertificates of
@@ -3030,7 +3294,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraAlonzo
 
     return $
       ShelleyTxBody era
-        (Alonzo.TxBody
+        (Alonzo.AlonzoTxBody
           (Set.fromList (map (toShelleyTxIn . fst) txIns))
           (case txInsCollateral of
              TxInsCollateralNone     -> Set.empty
@@ -3196,7 +3460,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraBabbage
 
     return $
       ShelleyTxBody era
-        (Babbage.TxBody
+        (Babbage.BabbageTxBody
            { Babbage.inputs = Set.fromList $ map (toShelleyTxIn . fst) txIns
            , Babbage.collateral =
                case txInsCollateral of
@@ -3268,6 +3532,7 @@ makeShelleyTransactionBody era@ShelleyBasedEraBabbage
           datums redeemers)
         txAuxData
         txScriptValidity
+
   where
     referenceTxIns :: [TxIn]
     referenceTxIns =
@@ -3339,6 +3604,205 @@ makeShelleyTransactionBody era@ShelleyBasedEraBabbage
                TxAuxScriptsNone   -> []
                TxAuxScripts _ ss' -> ss'
 
+makeShelleyTransactionBody era@ShelleyBasedEraConway
+                            txbodycontent@TxBodyContent {
+                             txIns,
+                             txInsCollateral,
+                             txInsReference,
+                             txReturnCollateral,
+                             txTotalCollateral,
+                             txOuts,
+                             txFee,
+                             txValidityRange = (lowerBound, upperBound),
+                             txMetadata,
+                             txAuxScripts,
+                             txExtraKeyWits,
+                             txProtocolParams,
+                             txWithdrawals,
+                             txCertificates,
+                             txUpdateProposal,
+                             txMintValue,
+                             txScriptValidity
+                           } = do
+    guard (not (null txIns)) ?! TxBodyEmptyTxIns
+    sequence_
+      [ do allPositive
+           allWithinMaxBound
+           for_ txIns $ \(txin@(TxIn _ (TxIx txix)), _) ->
+              guard (fromIntegral txix <= maxShelleyTxInIx) ?! TxBodyInIxOverflow txin
+      | let maxTxOut = fromIntegral (maxBound :: Word64) :: Quantity
+      , txout@(TxOut _ (TxOutValue MultiAssetInConwayEra v) _ _) <- txOuts
+      , let allPositive =
+              case [ q | (_,q) <- valueToList v, q < 0 ] of
+                []  -> Right ()
+                q:_ -> Left (TxBodyOutputNegative q (txOutInAnyEra txout))
+            allWithinMaxBound =
+              case [ q | (_,q) <- valueToList v, q > maxTxOut ] of
+                []  -> Right ()
+                q:_ -> Left (TxBodyOutputOverflow q (txOutInAnyEra txout))
+      ]
+    case txMetadata of
+      TxMetadataNone      -> return ()
+      TxMetadataInEra _ m -> validateTxMetadata m ?!. TxBodyMetadataError
+    case txMintValue of
+      TxMintNone        -> return ()
+      TxMintValue _ v _ -> guard (selectLovelace v == 0) ?! TxBodyMintAdaError
+    case txInsCollateral of
+      TxInsCollateralNone | not (Set.null languages)
+        -> Left TxBodyEmptyTxInsCollateral
+      _ -> return ()
+    case txProtocolParams of
+      BuildTxWith Nothing | not (Set.null languages)
+        -> Left TxBodyMissingProtocolParams
+      _ -> return () --TODO alonzo: validate protocol params for the Conway era.
+                     --             All the necessary params must be provided.
+
+    return $
+      ShelleyTxBody era
+        (Babbage.BabbageTxBody
+           { Babbage.inputs = Set.fromList $ map (toShelleyTxIn . fst) txIns
+           , Babbage.collateral =
+               case txInsCollateral of
+                TxInsCollateralNone     -> Set.empty
+                TxInsCollateral _ txins -> Set.fromList (map toShelleyTxIn txins)
+           , Babbage.referenceInputs =
+               Set.fromList (map toShelleyTxIn referenceTxIns)
+
+           , Babbage.outputs = Seq.fromList (map (CBOR.mkSized . toShelleyTxOutAny era) txOuts)
+           , Babbage.collateralReturn =
+               case txReturnCollateral of
+                 TxReturnCollateralNone -> SNothing
+                 TxReturnCollateral _ colTxOut -> SJust $ CBOR.mkSized $ toShelleyTxOutAny era colTxOut
+           , Babbage.totalCollateral =
+               case txTotalCollateral of
+                 TxTotalCollateralNone -> SNothing
+                 TxTotalCollateral _ totCollLovelace -> SJust $ toShelleyLovelace totCollLovelace
+           , Babbage.txcerts =
+               case txCertificates of
+                 TxCertificatesNone    -> Seq.empty
+                 TxCertificates _ cs _ -> Seq.fromList (map toShelleyCertificate cs)
+           , Babbage.txwdrls =
+               case txWithdrawals of
+                 TxWithdrawalsNone  -> Shelley.Wdrl Map.empty
+                 TxWithdrawals _ ws -> toShelleyWithdrawal ws
+           , Babbage.txfee =
+               case txFee of
+                 TxFeeImplicit era'  -> case era' of {}
+                 TxFeeExplicit _ fee -> toShelleyLovelace fee
+           , Babbage.txvldt =
+               Allegra.ValidityInterval {
+                 invalidBefore    = case lowerBound of
+                                              TxValidityNoLowerBound   -> SNothing
+                                              TxValidityLowerBound _ s -> SJust s,
+                 invalidHereafter = case upperBound of
+                                              TxValidityNoUpperBound _ -> SNothing
+                                              TxValidityUpperBound _ s -> SJust s}
+           , Babbage.txUpdates =
+               case txUpdateProposal of
+                 TxUpdateProposalNone -> SNothing
+                 TxUpdateProposal _ p -> SJust (toLedgerUpdate era p)
+           , Babbage.reqSignerHashes =
+               case txExtraKeyWits of
+                 TxExtraKeyWitnessesNone   -> Set.empty
+                 TxExtraKeyWitnesses _ khs -> Set.fromList
+                                                [ Shelley.coerceKeyRole kh
+                                                | PaymentKeyHash kh <- khs ]
+           , Babbage.mint =
+               case txMintValue of
+                 TxMintNone        -> mempty
+                 TxMintValue _ v _ -> toMaryValue v
+           , Babbage.scriptIntegrityHash =
+               case txProtocolParams of
+                 BuildTxWith Nothing        -> SNothing
+                 BuildTxWith (Just pparams) ->
+                    Alonzo.hashScriptIntegrity
+                      (Set.map
+                         (Alonzo.getLanguageView (toLedgerPParams ShelleyBasedEraConway pparams))
+                         languages
+                      )
+                      redeemers
+                      datums
+           , Babbage.adHash =
+                maybeToStrictMaybe (Ledger.hashAuxiliaryData <$> txAuxData)
+           , Babbage.txnetworkid = SNothing
+           })
+        scripts
+        (TxBodyScriptData ScriptDataInConwayEra
+          datums redeemers)
+        txAuxData
+        txScriptValidity
+
+  where
+    referenceTxIns :: [TxIn]
+    referenceTxIns =
+      case txInsReference of
+        TxInsReferenceNone -> []
+        TxInsReference _ refTxins -> refTxins
+
+    maxShelleyTxInIx :: Word
+    maxShelleyTxInIx = fromIntegral $ maxBound @Word16
+
+    witnesses :: [(ScriptWitnessIndex, AnyScriptWitness ConwayEra)]
+    witnesses = collectTxBodyScriptWitnesses txbodycontent
+
+    scripts :: [Ledger.Script StandardConway]
+    scripts = catMaybes
+      [ toShelleyScript <$> scriptWitnessScript scriptwitness
+      | (_, AnyScriptWitness scriptwitness) <- witnesses
+      ]
+
+    -- Note these do not include inline datums!
+    datums :: Alonzo.TxDats StandardConway
+    datums =
+      Alonzo.TxDats $
+        Map.fromList
+          [ (Alonzo.hashData d', d')
+          | d <- scriptdata
+          , let d' = toAlonzoData d
+          ]
+
+    scriptdata :: [ScriptData]
+    scriptdata =
+        [ d | TxOut _ _ (TxOutDatumInTx _ d) _ <- txOuts ]
+     ++ [ d | (_, AnyScriptWitness
+                    (PlutusScriptWitness
+                       _ _ _ (ScriptDatumForTxIn d) _ _)) <- witnesses
+            ]
+
+    redeemers :: Alonzo.Redeemers StandardConway
+    redeemers =
+      Alonzo.Redeemers $
+        Map.fromList
+          [ (toAlonzoRdmrPtr idx, (toAlonzoData d, toAlonzoExUnits e))
+          | (idx, AnyScriptWitness
+                    (PlutusScriptWitness _ _ _ _ d e)) <- witnesses
+          ]
+
+    languages :: Set Alonzo.Language
+    languages =
+      Set.fromList $ catMaybes
+        [ getScriptLanguage sw
+        | (_, AnyScriptWitness sw) <- witnesses
+        ]
+
+    getScriptLanguage :: ScriptWitness witctx era -> Maybe Alonzo.Language
+    getScriptLanguage (PlutusScriptWitness _ v _ _ _ _) =
+      Just $ toAlonzoLanguage (AnyPlutusScriptVersion v)
+    getScriptLanguage SimpleScriptWitness{} = Nothing
+
+    txAuxData :: Maybe (Ledger.AuxiliaryData StandardConway)
+    txAuxData
+      | Map.null ms
+      , null ss   = Nothing
+      | otherwise = Just (toAlonzoAuxiliaryData ms ss)
+      where
+        ms = case txMetadata of
+               TxMetadataNone                     -> Map.empty
+               TxMetadataInEra _ (TxMetadata ms') -> ms'
+        ss = case txAuxScripts of
+               TxAuxScriptsNone   -> []
+               TxAuxScripts _ ss' -> ss'
+
 
 -- | A variant of 'toShelleyTxOutAny that is used only internally to this module
 -- that works with a 'TxOut' in any context (including CtxTx) by ignoring
@@ -3353,23 +3817,27 @@ toShelleyTxOutAny era (TxOut _ (TxOutAdaOnly AdaOnlyInByronEra _) _ _) =
     case era of {}
 
 toShelleyTxOutAny _ (TxOut addr (TxOutAdaOnly AdaOnlyInShelleyEra value) _ _) =
-    Shelley.TxOut (toShelleyAddr addr) (toShelleyLovelace value)
+    Shelley.ShelleyTxOut (toShelleyAddr addr) (toShelleyLovelace value)
 
 toShelleyTxOutAny _ (TxOut addr (TxOutAdaOnly AdaOnlyInAllegraEra value) _ _) =
-    Shelley.TxOut (toShelleyAddr addr) (toShelleyLovelace value)
+    Shelley.ShelleyTxOut (toShelleyAddr addr) (toShelleyLovelace value)
 
 toShelleyTxOutAny _ (TxOut addr (TxOutValue MultiAssetInMaryEra value) _ _) =
-    Shelley.TxOut (toShelleyAddr addr) (toMaryValue value)
+    Shelley.ShelleyTxOut (toShelleyAddr addr) (toMaryValue value)
 
 toShelleyTxOutAny _ (TxOut addr (TxOutValue MultiAssetInAlonzoEra value) txoutdata _) =
-    Alonzo.TxOut (toShelleyAddr addr) (toMaryValue value)
+    Alonzo.AlonzoTxOut (toShelleyAddr addr) (toMaryValue value)
                  (toAlonzoTxOutDataHash' txoutdata)
 
 toShelleyTxOutAny era (TxOut addr (TxOutValue MultiAssetInBabbageEra value) txoutdata refScript) =
     let cEra = shelleyBasedToCardanoEra era
-    in Babbage.TxOut (toShelleyAddr addr) (toMaryValue value)
+    in Babbage.BabbageTxOut (toShelleyAddr addr) (toMaryValue value)
                     (toBabbageTxOutDatum' txoutdata) (refScriptToShelleyScript cEra refScript)
 
+toShelleyTxOutAny era (TxOut addr (TxOutValue MultiAssetInConwayEra value) txoutdata refScript) =
+    let cEra = shelleyBasedToCardanoEra era
+    in Babbage.BabbageTxOut (toShelleyAddr addr) (toMaryValue value)
+                    (toConwayTxOutDatum' txoutdata) (refScriptToShelleyScript cEra refScript)
 
 toAlonzoTxOutDataHash' :: TxOutDatum ctx AlonzoEra
                        -> StrictMaybe (Alonzo.DataHash StandardCrypto)
@@ -3387,6 +3855,14 @@ toBabbageTxOutDatum'  TxOutDatumNone = Babbage.NoDatum
 toBabbageTxOutDatum' (TxOutDatumHash _ (ScriptDataHash dh)) = Babbage.DatumHash dh
 toBabbageTxOutDatum' (TxOutDatumInTx' _ (ScriptDataHash dh) _) = Babbage.DatumHash dh
 toBabbageTxOutDatum' (TxOutDatumInline _ sd) = scriptDataToInlineDatum sd
+
+toConwayTxOutDatum'
+  :: Ledger.Crypto (ShelleyLedgerEra era) ~ StandardCrypto
+  => TxOutDatum ctx era -> Babbage.Datum (ShelleyLedgerEra era)
+toConwayTxOutDatum'  TxOutDatumNone = Babbage.NoDatum
+toConwayTxOutDatum' (TxOutDatumHash _ (ScriptDataHash dh)) = Babbage.DatumHash dh
+toConwayTxOutDatum' (TxOutDatumInTx' _ (ScriptDataHash dh) _) = Babbage.DatumHash dh
+toConwayTxOutDatum' (TxOutDatumInline _ sd) = scriptDataToInlineDatum sd
 
 
 -- ----------------------------------------------------------------------------
@@ -3557,13 +4033,13 @@ toShelleyAuxiliaryData m =
 --
 toAllegraAuxiliaryData :: forall era ledgerera.
                           ShelleyLedgerEra era ~ ledgerera
-                       => Ledger.AuxiliaryData ledgerera ~ Allegra.AuxiliaryData ledgerera
-                       => Ledger.AnnotatedData (Ledger.Script ledgerera)
+                       => Ledger.AuxiliaryData ledgerera ~ Allegra.MAAuxiliaryData ledgerera
+                       => ToCBOR (Ledger.Script ledgerera)
                        => Map Word64 TxMetadataValue
                        -> [ScriptInEra era]
                        -> Ledger.AuxiliaryData ledgerera
 toAllegraAuxiliaryData m ss =
-    Allegra.AuxiliaryData
+    Allegra.MAAuxiliaryData
       (toShelleyMetadata m)
       (Seq.fromList (map toShelleyScript ss))
 
@@ -3573,14 +4049,14 @@ toAllegraAuxiliaryData m ss =
 --
 toAlonzoAuxiliaryData :: forall era ledgerera.
                          ShelleyLedgerEra era ~ ledgerera
-                      => Ledger.AuxiliaryData ledgerera ~ Alonzo.AuxiliaryData ledgerera
-                      => Ledger.Script ledgerera ~ Alonzo.Script ledgerera
+                      => Ledger.AuxiliaryData ledgerera ~ Alonzo.AlonzoAuxiliaryData ledgerera
+                      => Ledger.Script ledgerera ~ Alonzo.AlonzoScript ledgerera
                       => Ledger.Era ledgerera
                       => Map Word64 TxMetadataValue
                       -> [ScriptInEra era]
                       -> Ledger.AuxiliaryData ledgerera
 toAlonzoAuxiliaryData m ss =
-    Alonzo.AuxiliaryData
+    Alonzo.AlonzoAuxiliaryData
       (toShelleyMetadata m)
       (Seq.fromList (map toShelleyScript ss))
 
@@ -3630,6 +4106,8 @@ scriptDataToInlineDatum = Babbage.Datum . Alonzo.dataToBinaryData . toAlonzoData
 binaryDataToScriptData
   :: ReferenceTxInsScriptsInlineDatumsSupportedInEra era -> Alonzo.BinaryData ledgerera -> ScriptData
 binaryDataToScriptData ReferenceTxInsScriptsInlineDatumsInBabbageEra  d =
+  fromAlonzoData $ Alonzo.binaryDataToData d
+binaryDataToScriptData ReferenceTxInsScriptsInlineDatumsInConwayEra   d =
   fromAlonzoData $ Alonzo.binaryDataToData d
 
 

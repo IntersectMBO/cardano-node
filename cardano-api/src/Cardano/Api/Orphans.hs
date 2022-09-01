@@ -56,25 +56,26 @@ import qualified Cardano.Ledger.Mary.Value as Mary
 import qualified Cardano.Ledger.PoolDistr as Ledger
 import qualified Cardano.Ledger.SafeHash as SafeHash
 import qualified Cardano.Ledger.Shelley.API as Shelley
-import qualified Cardano.Ledger.Shelley.Constraints as Shelley
 import qualified Cardano.Ledger.Shelley.EpochBoundary as ShelleyEpoch
 import qualified Cardano.Ledger.Shelley.LedgerState as ShelleyLedger
-import           Cardano.Ledger.Shelley.PParams (PParamsUpdate)
+import           Cardano.Ledger.Shelley.PParams (ShelleyPParamsUpdate)
 import qualified Cardano.Ledger.Shelley.Rewards as Shelley
 import qualified Cardano.Ledger.Shelley.RewardUpdate as Shelley
+import qualified Cardano.Ledger.Val as Ledger
 import qualified Ouroboros.Consensus.Shelley.Eras as Consensus
 
 import           Cardano.Api.Script
+import qualified Cardano.Ledger.Conway as Conway
 
 -- Orphan instances involved in the JSON output of the API queries.
 -- We will remove/replace these as we provide more API wrapper types
 
-instance ToJSON (Mary.Value era) where
+instance ToJSON (Mary.MaryValue era) where
   toJSON = object . toMaryValuePairs
   toEncoding = Aeson.pairs . mconcat . toMaryValuePairs
 
-toMaryValuePairs :: Aeson.KeyValue a => Mary.Value crypto -> [a]
-toMaryValuePairs (Mary.Value !l !ps) =
+toMaryValuePairs :: Aeson.KeyValue a => Mary.MaryValue crypto -> [a]
+toMaryValuePairs (Mary.MaryValue !l !ps) =
   [ "lovelace" .= l
   , "policies" .= ps
   ]
@@ -109,7 +110,7 @@ instance forall era.
          ( Consensus.ShelleyBasedEra era
          , ToJSON (Core.TxOut era)
          , ToJSON (Core.PParams era)
-         , ToJSON (Core.PParamsDelta era)
+         , ToJSON (Core.PParamsUpdate era)
          ) => ToJSON (Shelley.EpochState era) where
   toJSON = object . toEpochStatePairs
   toEncoding = Aeson.pairs . mconcat . toEpochStatePairs
@@ -117,7 +118,7 @@ instance forall era.
 toEpochStatePairs ::
   ( Consensus.ShelleyBasedEra era
   , ToJSON (Core.TxOut era)
-  , ToJSON (Core.PParamsDelta era)
+  , ToJSON (Core.PParamsUpdate era)
   , ToJSON (Core.PParams era)
   , Aeson.KeyValue a
   )
@@ -141,7 +142,7 @@ toEpochStatePairs eState =
 
 instance ( Consensus.ShelleyBasedEra era
          , ToJSON (Core.TxOut era)
-         , ToJSON (Core.PParamsDelta era)
+         , ToJSON (Core.PParamsUpdate era)
          ) => ToJSON (Shelley.LedgerState era) where
   toJSON = object . toLedgerStatePairs
   toEncoding = Aeson.pairs . mconcat . toLedgerStatePairs
@@ -149,7 +150,7 @@ instance ( Consensus.ShelleyBasedEra era
 toLedgerStatePairs ::
   ( Consensus.ShelleyBasedEra era
   , ToJSON (Core.TxOut era)
-  , ToJSON (Core.PParamsDelta era)
+  , ToJSON (Core.PParamsUpdate era)
   , Aeson.KeyValue a
   ) => ShelleyLedger.LedgerState era -> [a]
 toLedgerStatePairs lState =
@@ -176,7 +177,7 @@ toIncrementalStakePairs iStake =
 
 instance ( Consensus.ShelleyBasedEra era
          , ToJSON (Core.TxOut era)
-         , ToJSON (Core.PParamsDelta era)
+         , ToJSON (Core.PParamsUpdate era)
          ) => ToJSON (Shelley.UTxOState era) where
   toJSON = object . toUtxoStatePairs
   toEncoding = Aeson.pairs . mconcat . toUtxoStatePairs
@@ -200,16 +201,17 @@ toUtxoStatePairs utxoState =
       , "stake" .= stakeDistro
       ]
 
-instance ( ToJSON (Core.PParamsDelta era)
-         , Shelley.UsesPParams era
+instance ( ToJSON (Core.PParamsUpdate era)
+         , Crypto.Crypto (Core.Crypto era)
+        --  , Shelley.UsesPParams era
          ) => ToJSON (Shelley.PPUPState era) where
   toJSON = object . toPpupStatePairs
   toEncoding = Aeson.pairs . mconcat . toPpupStatePairs
 
 toPpupStatePairs ::
   ( Aeson.KeyValue a
-  , ToJSON (Core.PParamsDelta era)
-  , Shelley.UsesPParams era
+  , Crypto.Crypto (Core.Crypto era)
+  , ToJSON (Core.PParamsUpdate era)
   ) => ShelleyLedger.PPUPState era -> [a]
 toPpupStatePairs ppUpState =
   let !proposals = Shelley.proposals ppUpState
@@ -218,13 +220,13 @@ toPpupStatePairs ppUpState =
       , "futureProposals" .= futureProposals
       ]
 
-instance ( ToJSON (Core.PParamsDelta era)
-         , Shelley.UsesPParams era
+instance ( Crypto.Crypto (Core.Crypto era)
+         , ToJSON (Core.PParamsUpdate era)
          ) => ToJSON (Shelley.ProposedPPUpdates era) where
   toJSON (Shelley.ProposedPPUpdates ppUpdates) = toJSON $ Map.toList ppUpdates
   toEncoding (Shelley.ProposedPPUpdates ppUpdates) = toEncoding $ Map.toList ppUpdates
 
-instance ToJSON (PParamsUpdate era) where
+instance ToJSON (ShelleyPParamsUpdate era) where
   toJSON pp =
     Aeson.object $
         [ "minFeeA"               .= x | x <- mbfield (Shelley._minfeeA pp) ]
@@ -245,7 +247,7 @@ instance ToJSON (PParamsUpdate era) where
      ++ [ "minUTxOValue"          .= x | x <- mbfield (Shelley._minUTxOValue pp) ]
      ++ [ "minPoolCost"           .= x | x <- mbfield (Shelley._minPoolCost pp) ]
 
-instance ToJSON (Babbage.PParamsUpdate era) where
+instance ToJSON (Babbage.BabbagePParamsUpdate era) where
   toJSON pp =
     Aeson.object $
         [ "minFeeA"               .= x | x <- mbfield (Babbage._minfeeA pp) ]
@@ -271,7 +273,34 @@ instance ToJSON (Babbage.PParamsUpdate era) where
      ++ [ "collateralPercentage"  .= x | x <- mbfield (Babbage._collateralPercentage pp) ]
      ++ [ "maxCollateralInputs"   .= x | x <- mbfield (Babbage._maxCollateralInputs pp) ]
 
-instance ToJSON (Babbage.PParams (Babbage.BabbageEra Consensus.StandardCrypto)) where
+instance ToJSON (Babbage.BabbagePParams (Babbage.BabbageEra Consensus.StandardCrypto)) where
+  toJSON pp =
+    Aeson.object
+      [ "minFeeA" .= Babbage._minfeeA pp
+      , "minFeeB" .= Babbage._minfeeB pp
+      , "maxBlockBodySize" .= Babbage._maxBBSize pp
+      , "maxTxSize" .= Babbage._maxTxSize pp
+      , "maxBlockHeaderSize" .= Babbage._maxBHSize pp
+      , "keyDeposit" .= Babbage._keyDeposit pp
+      , "poolDeposit" .= Babbage._poolDeposit pp
+      , "eMax" .= Babbage._eMax pp
+      , "nOpt" .= Babbage._nOpt pp
+      , "a0" .= Babbage._a0 pp
+      , "rho" .= Babbage._rho pp
+      , "tau" .= Babbage._tau pp
+      , "protocolVersion" .= Babbage._protocolVersion pp
+      , "minPoolCost" .= Babbage._minPoolCost pp
+      , "coinsPerUTxOByte" .= Babbage._coinsPerUTxOByte pp
+      , "costmdls" .= Babbage._costmdls pp
+      , "prices" .= Babbage._prices pp
+      , "maxTxExUnits" .= Babbage._maxTxExUnits pp
+      , "maxBlockExUnits" .= Babbage._maxBlockExUnits pp
+      , "maxValSize" .= Babbage._maxValSize pp
+      , "collateralPercentage" .= Babbage._collateralPercentage pp
+      , "maxCollateralInputs" .= Babbage._maxCollateralInputs pp
+      ]
+
+instance ToJSON (Babbage.BabbagePParams (Conway.ConwayEra Consensus.StandardCrypto)) where
   toJSON pp =
     Aeson.object
       [ "minFeeA" .= Babbage._minfeeA pp
@@ -307,7 +336,8 @@ instance ( Ledger.Era era
          , ToJSON (Babbage.Datum era)
          , ToJSON (Core.Script era)
          , Ledger.Crypto era ~ Consensus.StandardCrypto
-         ) => ToJSON (Babbage.TxOut era) where
+         , Ledger.Val (Core.Value era)
+         ) => ToJSON (Babbage.BabbageTxOut era) where
   toJSON = object . toBabbageTxOutPairs
   toEncoding = Aeson.pairs . mconcat . toBabbageTxOutPairs
 
@@ -317,8 +347,9 @@ toBabbageTxOutPairs ::
   , ToJSON (Core.Value era)
   , ToJSON (Core.Script era)
   , Ledger.Crypto era ~ Consensus.StandardCrypto
-  ) => Babbage.TxOut era -> [a]
-toBabbageTxOutPairs (Babbage.TxOut !addr !val !dat !mRefScript) =
+  , Ledger.Val (Core.Value era)
+  ) => Babbage.BabbageTxOut era -> [a]
+toBabbageTxOutPairs (Babbage.BabbageTxOut !addr !val !dat !mRefScript) =
   [ "address" .= addr
   , "value" .= val
   , "datum" .= dat
@@ -339,7 +370,10 @@ instance ( Ledger.Era era
 
 
 
-instance ToJSON (Alonzo.Script (Babbage.BabbageEra Consensus.StandardCrypto)) where
+instance ToJSON (Alonzo.AlonzoScript (Babbage.BabbageEra Consensus.StandardCrypto)) where
+  toJSON = Aeson.String . Text.decodeUtf8 . B16.encode . CBOR.serialize'
+
+instance ToJSON (Alonzo.AlonzoScript (Conway.ConwayEra Consensus.StandardCrypto)) where
   toJSON = Aeson.String . Text.decodeUtf8 . B16.encode . CBOR.serialize'
 
 instance Crypto.Crypto crypto => ToJSON (Shelley.DPState crypto) where
@@ -495,17 +529,16 @@ instance ( Consensus.ShelleyBasedEra era
 
 instance ( Consensus.ShelleyBasedEra era
          , ToJSON (Core.Value era)
-         ) => ToJSON (Shelley.TxOut era) where
+         ) => ToJSON (Shelley.ShelleyTxOut era) where
   toJSON = object . toTxOutPair
   toEncoding = Aeson.pairs . mconcat . toTxOutPair
 
 toTxOutPair ::
-  ( Ledger.Era era
-  , Aeson.KeyValue a
+  ( Aeson.KeyValue a
   , ToJSON (Core.Value era)
-  , Show (Core.Value era))
-  => Shelley.TxOut era -> [a]
-toTxOutPair (Shelley.TxOut !addr !amount) =
+  , Core.EraTxOut era)
+  => Shelley.ShelleyTxOut era -> [a]
+toTxOutPair (Shelley.ShelleyTxOut !addr !amount) =
   [ "address" .= addr
   , "amount" .= amount
   ]
