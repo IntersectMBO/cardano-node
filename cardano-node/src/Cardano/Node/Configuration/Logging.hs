@@ -334,13 +334,14 @@ nodeBasicInfo nc (SomeConsensusProtocol whichP pForInfo) nodeStartTime' = do
             in getGenesisValues "Shelley" cfgShelley
           CardanoBlockType ->
             let CardanoLedgerConfig cfgByron cfgShelley cfgAllegra
-                                    cfgMary cfgAlonzo cfgBabbage = Consensus.configLedger cfg
+                                    cfgMary cfgAlonzo cfgBabbage cfgConway = Consensus.configLedger cfg
             in getGenesisValuesByron cfg cfgByron
                ++ getGenesisValues "Shelley" cfgShelley
                ++ getGenesisValues "Allegra" cfgAllegra
                ++ getGenesisValues "Mary"    cfgMary
                ++ getGenesisValues "Alonzo"  cfgAlonzo
-               ++ getGenesisValues "Babbage"  cfgBabbage
+               ++ getGenesisValues "Babbage" cfgBabbage
+               ++ getGenesisValues "Conway"  cfgConway
       items = nub $
         [ ("protocol",      pack . show $ ncProtocol nc)
         , ("version",       pack . showVersion $ version)

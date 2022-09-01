@@ -23,7 +23,7 @@ where
 
 import           Cardano.Prelude
 import qualified GHC.Show as Show
-import           Prelude (String)
+import           Prelude (String, error)
 
 import           Control.Monad (fail)
 import           Data.Aeson
@@ -139,6 +139,10 @@ data NodeConfiguration
 
          -- Enable experimental P2P mode
        , ncEnableP2P :: SomeNetworkP2PMode
+
+         -- TODO describe me
+       , ncDeadlineChurnInterval :: !DiffTime
+       , ncBulkChurnInterval     :: !DiffTime
        } deriving (Eq, Show)
 
 
@@ -191,6 +195,10 @@ data PartialNodeConfiguration
 
          -- Enable experimental P2P mode
        , pncEnableP2P :: !(Last NetworkP2PMode)
+
+         -- TODO describe me
+       , pncDeadlineChurnInterval :: !(Last DiffTime)
+       , pncBulkChurnInterval     :: !(Last DiffTime)
        } deriving (Eq, Generic, Show)
 
 instance AdjustFilePaths PartialNodeConfiguration where
@@ -245,6 +253,7 @@ instance FromJSON PartialNodeConfiguration where
             Last . Just  <$> (NodeProtocolConfigurationCardano <$> parseByronProtocol v
                                                                <*> parseShelleyProtocol v
                                                                <*> parseAlonzoProtocol v
+                                                               <*> parseConwayProtocol v
                                                                <*> parseHardForkProtocol v)
       pncMaybeMempoolCapacityOverride <- Last <$> parseMempoolCapacityBytesOverride v
 
@@ -270,6 +279,9 @@ instance FromJSON PartialNodeConfiguration where
               Nothing    -> mempty
               Just False -> Last $ Just DisabledP2PMode
               Just True  -> Last $ Just EnabledP2PMode
+
+      pncDeadlineChurnInterval  <- Last <$> v .:? "DeadlineChurnInterval"
+      pncBulkChurnInterval      <- Last <$> v .:? "BulkChurnInterval"
 
       pure PartialNodeConfiguration {
              pncProtocolConfig
@@ -298,6 +310,8 @@ instance FromJSON PartialNodeConfiguration where
            , pncTargetNumberOfEstablishedPeers
            , pncTargetNumberOfActivePeers
            , pncEnableP2P
+           , pncDeadlineChurnInterval
+           , pncBulkChurnInterval
            }
     where
       parseMempoolCapacityBytesOverride v = parseNoOverride <|> parseOverride
@@ -373,6 +387,15 @@ instance FromJSON PartialNodeConfiguration where
              , npcAlonzoGenesisFileHash
              }
 
+      parseConwayProtocol v = do
+        npcConwayGenesisFile     <- v .:  "ConwayGenesisFile"
+        npcConwayGenesisFileHash <- v .:? "ConwayGenesisHash"
+
+        pure NodeConwayProtocolConfiguration {
+               npcConwayGenesisFile
+             , npcConwayGenesisFileHash
+             }
+
       parseHardForkProtocol v = do
         npcTestEnableDevelopmentHardForkEras
           <- v .:? "TestEnableDevelopmentHardForkEras"
@@ -393,6 +416,9 @@ instance FromJSON PartialNodeConfiguration where
         npcTestBabbageHardForkAtEpoch   <- v .:? "TestBabbageHardForkAtEpoch"
         npcTestBabbageHardForkAtVersion <- v .:? "TestBabbageHardForkAtVersion"
 
+        npcTestConwayHardForkAtEpoch   <- v .:? "TestConwayHardForkAtEpoch"
+        npcTestConwayHardForkAtVersion <- v .:? "TestConwayHardForkAtVersion"
+
         pure NodeHardForkProtocolConfiguration {
                npcTestEnableDevelopmentHardForkEras,
 
@@ -409,7 +435,10 @@ instance FromJSON PartialNodeConfiguration where
                npcTestAlonzoHardForkAtVersion,
 
                npcTestBabbageHardForkAtEpoch,
-               npcTestBabbageHardForkAtVersion
+               npcTestBabbageHardForkAtVersion,
+
+               npcTestConwayHardForkAtEpoch,
+               npcTestConwayHardForkAtVersion
              }
 
 -- | Default configuration is mainnet
@@ -449,6 +478,8 @@ defaultPartialNodeConfiguration =
     , pncTargetNumberOfEstablishedPeers = Last (Just 50)
     , pncTargetNumberOfActivePeers      = Last (Just 20)
     , pncEnableP2P                      = Last (Just DisabledP2PMode)
+    , pncDeadlineChurnInterval  = Last (error "Conway TODO pncDeadlineChurnInterval")
+    , pncBulkChurnInterval      = Last (error "Conway TODO pncBulkChurnInterval")
     }
 
 lastOption :: Parser a -> Parser (Last a)
@@ -494,6 +525,9 @@ makeNodeConfiguration pnc = do
     lastToEither "Missing EnableP2P"
     $ pncEnableP2P pnc
 
+  ncDeadlineChurnInterval <- lastToEither "Missing DeadlineChurnInterval" $ pncDeadlineChurnInterval pnc
+  ncBulkChurnInterval <- lastToEither "Missing BulkChurnInterval" $ pncBulkChurnInterval pnc
+
   -- TODO: This is not mandatory
   testEnableDevelopmentNetworkProtocols <-
     lastToEither "Missing TestEnableDevelopmentNetworkProtocols" $
@@ -534,6 +568,9 @@ makeNodeConfiguration pnc = do
              , ncEnableP2P = case enableP2P of
                  EnabledP2PMode  -> SomeNetworkP2PMode Consensus.EnabledP2PMode
                  DisabledP2PMode -> SomeNetworkP2PMode Consensus.DisabledP2PMode
+
+             , ncDeadlineChurnInterval
+             , ncBulkChurnInterval
              }
 
 ncProtocol :: NodeConfiguration -> Protocol

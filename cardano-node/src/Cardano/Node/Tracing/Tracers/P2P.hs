@@ -768,8 +768,8 @@ severityConnectionManager (TrConnectionHandler _ ev')             =
           TrHandshakeSuccess {}     -> Info
           TrHandshakeClientError {} -> Notice
           TrHandshakeServerError {} -> Info
-          TrError _ _ ShutdownNode  -> Critical
-          TrError _ _ ShutdownPeer  -> Info
+          TrConnectionHandlerError _ _ ShutdownNode  -> Critical
+          TrConnectionHandlerError _ _ ShutdownPeer  -> Info
 
 severityConnectionManager TrShutdown                              = Info
 severityConnectionManager TrConnectionExists {}                   = Info
@@ -961,9 +961,9 @@ instance (Show versionNumber, ToJSON versionNumber, ToJSON agreedOptions)
       [ "kind" .= String "HandshakeServerError"
       , "reason" .= toJSON err
       ]
-  forMachine _dtal (TrError e err cerr) =
+  forMachine _dtal (TrConnectionHandlerError e err cerr) =
     mconcat
-      [ "kind" .= String "Error"
+      [ "kind" .= String "ConnectionHandlerError"
       , "context" .= show e
       , "reason" .= show err
       , "command" .= show cerr

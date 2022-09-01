@@ -87,13 +87,15 @@ getStartupInfo nc (SomeConsensusProtocol whichP pForInfo) fp = do
             in [getGenesisValues "Shelley" cfgShelley]
           CardanoBlockType ->
             let CardanoLedgerConfig cfgByron cfgShelley cfgAllegra
-                                    cfgMary cfgAlonzo cfgBabbage = Consensus.configLedger cfg
-            in getGenesisValuesByron cfg cfgByron
-               : getGenesisValues  "Shelley" cfgShelley
-               : getGenesisValues  "Allegra" cfgAllegra
-               : getGenesisValues  "Mary"    cfgMary
-               : getGenesisValues  "Alonzo"  cfgAlonzo
-               : [getGenesisValues "Babbage" cfgBabbage]
+                                    cfgMary cfgAlonzo cfgBabbage cfgConway = Consensus.configLedger cfg
+            in [ getGenesisValuesByron cfg cfgByron
+               , getGenesisValues  "Shelley" cfgShelley
+               , getGenesisValues  "Allegra" cfgAllegra
+               , getGenesisValues  "Mary"    cfgMary
+               , getGenesisValues  "Alonzo"  cfgAlonzo
+               , getGenesisValues  "Babbage" cfgBabbage
+               , getGenesisValues  "Conway"  cfgConway
+               ]
   pure (basicInfoCommon : protocolDependentItems)
     where
       getGenesisValues era config =

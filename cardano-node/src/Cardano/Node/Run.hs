@@ -62,7 +62,7 @@ import           Cardano.Node.Configuration.POM (NodeConfiguration (..),
                    defaultPartialNodeConfiguration, makeNodeConfiguration, parseNodeConfigurationFP)
 import           Cardano.Node.Startup
 import           Cardano.Node.Tracing.API
-import           Cardano.Node.Tracing.StateRep (NodeState(NodeKernelOnline))
+import           Cardano.Node.Tracing.StateRep (NodeState (NodeKernelOnline))
 import           Cardano.Node.Tracing.Tracers.Startup (getStartupInfo)
 import           Cardano.Node.Types
 import           Cardano.Tracing.Config (TraceOptions (..), TraceSelection (..))
@@ -614,7 +614,9 @@ mkP2PArguments NodeConfiguration {
                  ncTargetNumberOfEstablishedPeers,
                  ncTargetNumberOfActivePeers,
                  ncProtocolIdleTimeout,
-                 ncTimeWaitTimeout
+                 ncTimeWaitTimeout,
+                 ncDeadlineChurnInterval,
+                 ncBulkChurnInterval
                }
                daReadLocalRootPeers
                daReadPublicRootPeers
@@ -624,8 +626,10 @@ mkP2PArguments NodeConfiguration {
       , P2P.daReadLocalRootPeers
       , P2P.daReadPublicRootPeers
       , P2P.daReadUseLedgerAfter
-      , P2P.daProtocolIdleTimeout = ncProtocolIdleTimeout
-      , P2P.daTimeWaitTimeout     = ncTimeWaitTimeout
+      , P2P.daProtocolIdleTimeout   = ncProtocolIdleTimeout
+      , P2P.daTimeWaitTimeout       = ncTimeWaitTimeout
+      , P2P.daDeadlineChurnInterval = ncDeadlineChurnInterval
+      , P2P.daBulkChurnInterval     = ncBulkChurnInterval
       }
   where
     daPeerSelectionTargets = PeerSelectionTargets {

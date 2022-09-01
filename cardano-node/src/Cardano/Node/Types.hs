@@ -25,6 +25,7 @@ module Cardano.Node.Types
   , NodeProtocolConfiguration(..)
   , NodeShelleyProtocolConfiguration(..)
   , NodeAlonzoProtocolConfiguration(..)
+  , NodeConwayProtocolConfiguration(..)
   , VRFPrivateKeyFilePermissionError(..)
   , renderVRFPrivateKeyFilePermissionError
   ) where
@@ -122,6 +123,7 @@ data NodeProtocolConfiguration =
      | NodeProtocolConfigurationCardano NodeByronProtocolConfiguration
                                         NodeShelleyProtocolConfiguration
                                         NodeAlonzoProtocolConfiguration
+                                        NodeConwayProtocolConfiguration
                                         NodeHardForkProtocolConfiguration
   deriving (Eq, Show)
 
@@ -136,6 +138,13 @@ data NodeAlonzoProtocolConfiguration =
      NodeAlonzoProtocolConfiguration {
        npcAlonzoGenesisFile     :: !GenesisFile
      , npcAlonzoGenesisFileHash :: !(Maybe GenesisHash)
+     }
+  deriving (Eq, Show)
+
+data NodeConwayProtocolConfiguration =
+     NodeConwayProtocolConfiguration {
+       npcConwayGenesisFile     :: !GenesisFile
+     , npcConwayGenesisFileHash :: !(Maybe GenesisHash)
      }
   deriving (Eq, Show)
 
@@ -266,6 +275,16 @@ data NodeHardForkProtocolConfiguration =
        -- configured the same, or they will disagree.
        --
      , npcTestBabbageHardForkAtVersion      :: Maybe Word
+
+     , npcTestConwayHardForkAtEpoch         :: Maybe EpochNo
+
+       -- | For testing purposes we support specifying that the hard fork
+       -- happens at a given major protocol version.
+       --
+       -- Obviously if this is used, all the nodes in the test cluster must be
+       -- configured the same, or they will disagree.
+       --
+     , npcTestConwayHardForkAtVersion       :: Maybe Word
      }
   deriving (Eq, Show)
 
@@ -281,10 +300,11 @@ instance AdjustFilePaths NodeProtocolConfiguration where
   adjustFilePaths f (NodeProtocolConfigurationShelley pc) =
     NodeProtocolConfigurationShelley (adjustFilePaths f pc)
 
-  adjustFilePaths f (NodeProtocolConfigurationCardano pcb pcs pca pch) =
+  adjustFilePaths f (NodeProtocolConfigurationCardano pcb pcs pca pcc pch) =
     NodeProtocolConfigurationCardano (adjustFilePaths f pcb)
                                      (adjustFilePaths f pcs)
                                      (adjustFilePaths f pca)
+                                     (adjustFilePaths f pcc)
                                      pch
 
 instance AdjustFilePaths NodeByronProtocolConfiguration where
@@ -304,6 +324,12 @@ instance AdjustFilePaths NodeAlonzoProtocolConfiguration where
                         npcAlonzoGenesisFile
                       } =
     x { npcAlonzoGenesisFile = adjustFilePaths f npcAlonzoGenesisFile }
+
+instance AdjustFilePaths NodeConwayProtocolConfiguration where
+  adjustFilePaths f x@NodeConwayProtocolConfiguration {
+                        npcConwayGenesisFile
+                      } =
+    x { npcConwayGenesisFile = adjustFilePaths f npcConwayGenesisFile }
 
 instance AdjustFilePaths SocketConfig where
   adjustFilePaths f x@SocketConfig{ncSocketPath} =

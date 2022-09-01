@@ -6,6 +6,7 @@ module Test.Cardano.Node.POM
   ) where
 
 import           Cardano.Prelude
+import           Prelude (error)
 
 import           Data.Time.Clock (secondsToDiffTime)
 
@@ -77,6 +78,8 @@ testPartialYamlConfig =
     , pncTargetNumberOfEstablishedPeers = mempty
     , pncTargetNumberOfActivePeers = mempty
     , pncEnableP2P = Last (Just DisabledP2PMode)
+    , pncDeadlineChurnInterval = Last (error "Conway TODO provide test defaults")
+    , pncBulkChurnInterval = Last (error "Conway TODO provide test defaults")
     }
 
 -- | Example partial configuration theoretically created
@@ -110,6 +113,8 @@ testPartialCliConfig =
     , pncTargetNumberOfEstablishedPeers = mempty
     , pncTargetNumberOfActivePeers = mempty
     , pncEnableP2P = Last (Just DisabledP2PMode)
+    , pncDeadlineChurnInterval = Last (error "Conway TODO provide test defaults")
+    , pncBulkChurnInterval = Last (error "Conway TODO provide test defaults")
     }
 
 -- | Expected final NodeConfiguration
@@ -151,6 +156,8 @@ eExpectedConfig = do
     , ncTargetNumberOfEstablishedPeers = 50
     , ncTargetNumberOfActivePeers = 20
     , ncEnableP2P = SomeNetworkP2PMode Consensus.DisabledP2PMode
+    , ncDeadlineChurnInterval = error "Conway TODO provide test defaults"
+    , ncBulkChurnInterval = error "Conway TODO provide test defaults"
     }
 
 -- -----------------------------------------------------------------------------

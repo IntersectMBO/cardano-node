@@ -112,6 +112,8 @@ nodeRunParser = do
            , pncTargetNumberOfEstablishedPeers = mempty
            , pncTargetNumberOfActivePeers = mempty
            , pncEnableP2P = mempty
+           , pncDeadlineChurnInterval = mempty
+           , pncBulkChurnInterval = mempty
            }
 
 parseSocketPath :: Text -> Parser SocketPath

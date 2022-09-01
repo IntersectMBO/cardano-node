@@ -72,6 +72,7 @@ library
                        Cardano.Node.Protocol.Alonzo
                        Cardano.Node.Protocol.Byron
                        Cardano.Node.Protocol.Cardano
+                       Cardano.Node.Protocol.Conway
                        Cardano.Node.Protocol.Shelley
                        Cardano.Node.Protocol.Types
                        Cardano.Node.Parsers
@@ -138,6 +139,7 @@ library
                       , cardano-ledger-alonzo
                       , cardano-ledger-babbage
                       , cardano-ledger-byron
+                      , cardano-ledger-conway
                       , cardano-ledger-core
                       , cardano-ledger-shelley-ma
                       , cardano-prelude
