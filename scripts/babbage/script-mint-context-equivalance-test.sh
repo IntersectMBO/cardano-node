@@ -13,26 +13,17 @@ export TESTNET_MAGIC="${TESTNET_MAGIC:-42}"
 export UTXO_VKEY="${UTXO_VKEY:-example/utxo-keys/utxo1.vkey}"
 export UTXO_SKEY="${UTXO_SKEY:-example/utxo-keys/utxo1.skey}"
 export RESULT_FILE="${RESULT_FILE:-$WORK/result.out}"
-export PV=v1 # Plutus Script Version
+
+mkdir -p "$WORK"
 
 echo "Socket path: $CARDANO_NODE_SOCKET_PATH"
 
 ls -al "$CARDANO_NODE_SOCKET_PATH"
 
 # NB: This plutus script uses a "typed" redeemer and "typed" datum.
-plutusscriptinuse="$BASE/scripts/plutus/scripts/$PV/context-equivalance-test.plutus"
-# This datum hash is the hash of the typed 42
-scriptdatumhash="fcaa61fb85676101d9e3398a484674e71c45c3fd41b492682f3b0054f4cf3273"
-datumfilepath="$BASE/scripts/plutus/data/typed-42.datum"
+plutusscriptinuse="$BASE/scripts/plutus/scripts/v2/minting-context-equivalance-test.plutus"
+policyid=$(cardano-cli transaction policyid --script-file $plutusscriptinuse)
 redeemerfilepath="$BASE/scripts/plutus/data/script-context.redeemer"
-
-
-# Step 1: Create a tx output with a datum hash at the script address. In order for a tx output to be locked
-# by a plutus script, it must have a datahash. We also need collateral tx inputs so we split the utxo
-# in order to accommodate this.
-
-
-plutusscriptaddr=$($CARDANO_CLI address build --payment-script-file "$plutusscriptinuse"  --testnet-magic "$TESTNET_MAGIC")
 
 mkdir -p "$WORK"
 
@@ -43,19 +34,17 @@ cat $WORK/utxo-1.json
 
 txin=$(jq -r 'keys[]' $WORK/utxo-1.json)
 lovelaceattxin=$(jq -r ".[\"$txin\"].value.lovelace" $WORK/utxo-1.json)
-lovelaceattxindiv3=$(expr $lovelaceattxin / 3)
+lovelaceattxindiv6=$(expr $lovelaceattxin / 6)
 
 $CARDANO_CLI query protocol-parameters --testnet-magic "$TESTNET_MAGIC" --out-file $WORK/pparams.json
 
 $CARDANO_CLI transaction build \
-  --alonzo-era \
+  --babbage-era \
   --cardano-mode \
   --testnet-magic "$TESTNET_MAGIC" \
   --change-address "$utxoaddr" \
   --tx-in "$txin" \
-  --tx-out "$plutusscriptaddr+$lovelaceattxindiv3" \
-  --tx-out-datum-hash "$scriptdatumhash" \
-  --tx-out "$utxoaddr+$lovelaceattxindiv3" \
+  --tx-out "$utxoaddr+$lovelaceattxindiv6" \
   --protocol-params-file "$WORK/pparams.json" \
   --out-file "$WORK/create-datum-output.body"
 
@@ -70,52 +59,39 @@ $CARDANO_CLI transaction submit --tx-file $WORK/create-datum-output.tx --testnet
 echo "Pausing for 5 seconds..."
 sleep 5
 
-# Step 2
-# After "locking" the tx output at the script address, we can now can attempt to spend
-# the "locked" tx output below.
-
-$CARDANO_CLI query utxo --address $plutusscriptaddr --testnet-magic "$TESTNET_MAGIC" --out-file $WORK/plutusutxo.json
-
-plutusutxotxin=$(jq -r 'keys[]' $WORK/plutusutxo.json)
 
 $CARDANO_CLI query utxo --address $utxoaddr --cardano-mode --testnet-magic "$TESTNET_MAGIC" --out-file $WORK/utxo-2.json
 cat $WORK/utxo-2.json
 txinCollateral=$(jq -r 'keys[0]' $WORK/utxo-2.json)
+txinfunding1=$(jq -r 'keys[1]' $WORK/utxo-2.json)
 
 
 dummyaddress=addr_test1vpqgspvmh6m2m5pwangvdg499srfzre2dd96qq57nlnw6yctpasy4
 
-lovelaceatplutusscriptaddr=$(jq -r ".[\"$plutusutxotxin\"].value.lovelace" $WORK/plutusutxo.json)
 
-echo "Plutus txin"
-echo "$plutusutxotxin"
-
-echo "Collateral"
-echo "$txinCollateral"
-
-# We need to generate a dummy redeemer (the cli demands a redeemer) in order to create a txbody from which we can generate
+# We need to generate a dummy redeemer (the cli demands a redeemer)  in order to create a txbody from which we can generate
 # a tx and then derive the correct redeemer.
-create-script-context --out-file "$WORK/script-context.redeemer"
+create-script-context --plutus-v2 --out-file "$WORK/script-context.redeemer"
 
 correctredeemer="$WORK/script-context.redeemer"
 
-# DUMMY TX!
+echo "Constructing dummy tx..."
+
+# DUMMY TX! We generate the actual redeemer from this!
+redeemerfilepath="$BASE/scripts/plutus/data/42.redeemer"
 $CARDANO_CLI transaction build \
-  --alonzo-era \
+  --babbage-era \
   --cardano-mode \
   --testnet-magic "$TESTNET_MAGIC" \
   --script-invalid \
   --change-address "$utxoaddr" \
-  --certificate-file "example/addresses/user1-stake.reg.cert" \
-  --invalid-before 1 \
-  --invalid-hereafter 3000 \
-  --tx-in "$plutusutxotxin" \
   --tx-in-collateral "$txinCollateral" \
-  --tx-out "$dummyaddress+10000000" \
-  --tx-in-script-file "$plutusscriptinuse" \
-  --tx-in-datum-file "$datumfilepath"  \
+  --tx-in "$txinfunding1" \
+  --mint "5 $policyid.4D696C6C6172436F696E" \
+  --mint-script-file "$plutusscriptinuse" \
+  --mint-redeemer-file "$correctredeemer" \
+  --tx-out "$dummyaddress+2000000 + 5 $policyid.4D696C6C6172436F696E" \
   --protocol-params-file "$WORK/pparams.json" \
-  --tx-in-redeemer-file "$correctredeemer" \
   --out-file $WORK/test-alonzo.body
 
 $CARDANO_CLI transaction sign \
@@ -128,27 +104,26 @@ $CARDANO_CLI transaction sign \
 
 create-script-context \
   --generate-tx "$WORK/test-alonzo.tx" \
+  --plutus-v2 \
   --out-file "$WORK/script-context.redeemer" \
   --cardano-mode \
   --testnet-magic 42 \
 
+echo "Constructing real tx..."
 # REAL TX!
+
 $CARDANO_CLI transaction build \
-  --alonzo-era \
+  --babbage-era \
   --cardano-mode \
   --testnet-magic "$TESTNET_MAGIC" \
-  --script-valid \
-  --invalid-before 1 \
-  --invalid-hereafter 3000 \
   --change-address "$utxoaddr" \
-  --certificate-file "example/addresses/user1-stake.reg.cert" \
-  --tx-in "$plutusutxotxin" \
   --tx-in-collateral "$txinCollateral" \
-  --tx-out "$dummyaddress+10000000" \
-  --tx-in-script-file "$plutusscriptinuse" \
-  --tx-in-datum-file "$datumfilepath"  \
+  --tx-in "$txinfunding1" \
+  --mint "5 $policyid.4D696C6C6172436F696E" \
+  --mint-script-file "$plutusscriptinuse" \
+  --mint-redeemer-file "$correctredeemer" \
+  --tx-out "$dummyaddress+2000000 + 5 $policyid.4D696C6C6172436F696E" \
   --protocol-params-file "$WORK/pparams.json" \
-  --tx-in-redeemer-file "$correctredeemer" \
   --out-file $WORK/test-alonzo-final.body
 
 $CARDANO_CLI transaction sign \

@@ -14,7 +14,6 @@
 -- | Fee calculation
 --
 module Cardano.Api.Fees (
-
     -- * Transaction fees
     transactionFee,
     estimateTransactionFee,
@@ -40,6 +39,7 @@ module Cardano.Api.Fees (
 
     -- * Internal helpers
     mapTxScriptWitnesses,
+    toLedgerEpochInfo,
   ) where
 
 import           Prelude
@@ -578,10 +578,6 @@ evaluateTransactionExecutionUnits _eraInMode systemstart history pparams utxo tx
         of Left err    -> Left (TransactionValidityTranslationError err)
            Right exmap -> Right (fromLedgerScriptExUnitsMap exmap)
 
-    toLedgerEpochInfo :: EraHistory mode -> EpochInfo (Either Text.Text)
-    toLedgerEpochInfo (EraHistory _ interpreter) =
-        hoistEpochInfo (first (Text.pack . show) . runExcept) $
-          Consensus.interpreterToEpochInfo interpreter
 
     toAlonzoCostModelsArray
       :: Map AnyPlutusScriptVersion CostModel
@@ -637,6 +633,10 @@ evaluateTransactionExecutionUnits _eraInMode systemstart history pparams utxo tx
     obtainHasFieldConstraint CollateralInAlonzoEra f =  f
     obtainHasFieldConstraint CollateralInBabbageEra f =  f
 
+toLedgerEpochInfo :: EraHistory mode -> EpochInfo (Either Text.Text)
+toLedgerEpochInfo (EraHistory _ interpreter) =
+    hoistEpochInfo (first (Text.pack . show) . runExcept) $
+      Consensus.interpreterToEpochInfo interpreter
 
 -- ----------------------------------------------------------------------------
 -- Transaction balance
