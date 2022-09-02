@@ -44,14 +44,14 @@ data BlockProp f
     , bpForgerChecks        :: !(CDF f NominalDiffTime)
     , bpForgerLeads         :: !(CDF f NominalDiffTime)
     , bpForgerForges        :: !(CDF f NominalDiffTime)
-    , bpForgerAdoptions     :: !(CDF f NominalDiffTime)
     , bpForgerAnnouncements :: !(CDF f NominalDiffTime)
+    , bpForgerAdoptions     :: !(CDF f NominalDiffTime)
     , bpForgerSends         :: !(CDF f NominalDiffTime)
     , bpPeerNotices         :: !(CDF f NominalDiffTime)
     , bpPeerRequests        :: !(CDF f NominalDiffTime)
     , bpPeerFetches         :: !(CDF f NominalDiffTime)
-    , bpPeerAdoptions       :: !(CDF f NominalDiffTime)
     , bpPeerAnnouncements   :: !(CDF f NominalDiffTime)
+    , bpPeerAdoptions       :: !(CDF f NominalDiffTime)
     , bpPeerSends           :: !(CDF f NominalDiffTime)
     , bpPropagation         :: ![(Double, CDF f NominalDiffTime)]
     , bpSizes               :: !(CDF f Int)
@@ -93,10 +93,10 @@ data BlockForge
   , bfChecked      :: !NominalDiffTime -- ^ Since slot start
   , bfLeading      :: !NominalDiffTime -- ^ Since check
   , bfForged       :: !NominalDiffTime -- ^ Since leading
-  , bfAdopted      :: !NominalDiffTime -- ^ Since forging
-  , bfChainDelta   :: !Int             -- ^ ChainDelta during adoption
-  , bfAnnounced    :: !NominalDiffTime -- ^ Since adoption
+  , bfAnnounced    :: !NominalDiffTime -- ^ Since forging
   , bfSending      :: !NominalDiffTime -- ^ Since announcement
+  , bfAdopted      :: !NominalDiffTime -- ^ Since announcement
+  , bfChainDelta   :: !Int             -- ^ ChainDelta during adoption
   }
   deriving (Generic, FromJSON, ToJSON, Show)
 
@@ -107,10 +107,10 @@ data BlockObservation
   , boNoticed    :: !NominalDiffTime         -- ^ Since slot start
   , boRequested  :: !NominalDiffTime         -- ^ Since noticing
   , boFetched    :: !NominalDiffTime         -- ^ Since requesting
-  , boAdopted    :: !(Maybe NominalDiffTime) -- ^ Since fetching
-  , boChainDelta :: !Int                     -- ^ ChainDelta during adoption
-  , boAnnounced  :: !(Maybe NominalDiffTime) -- ^ Since adoption
+  , boAnnounced  :: !(Maybe NominalDiffTime) -- ^ Since fetching
   , boSending    :: !(Maybe NominalDiffTime) -- ^ Since announcement
+  , boAdopted    :: !(Maybe NominalDiffTime) -- ^ Since announcement
+  , boChainDelta :: !Int                     -- ^ ChainDelta during adoption
   , boErrorsCrit :: [BPError]
   , boErrorsSoft :: [BPError]
   }
@@ -131,8 +131,8 @@ data Phase
   | Fetch
   | Forge
   | Acquire
-  | Adopt
   | Announce
+  | Adopt
   | Send
   deriving (FromJSON, Eq, Generic, NFData, Ord, Show, ToJSON)
 
@@ -282,11 +282,11 @@ data PropSubset
 
 bpFieldSelectForger :: Field DSelect p a -> Bool
 bpFieldSelectForger Field{fId} = elem fId
-  [ "fChecked", "fLeading", "fForged", "fAdopted", "fAnnounced", "fSendStart" ]
+  [ "fChecked", "fLeading", "fForged", "fAnnounced", "fAdopted", "fSendStart" ]
 
 bpFieldSelectPeers :: Field DSelect p a -> Bool
 bpFieldSelectPeers Field{fId} = elem fId
-  [ "pNoticed", "pRequested", "pFetched", "pAdopted", "pAnnounced", "pSendStart" ]
+  [ "pNoticed", "pRequested", "pFetched", "pAnnounced", "pAdopted", "pSendStart" ]
 
 bpFieldSelectEndToEnd :: Field DSelect p a -> Bool
 bpFieldSelectEndToEnd Field{fHead2} = elem fHead2 adoptionCentilesRendered
@@ -348,15 +348,15 @@ instance RenderCDFs BlockProp p where
     [ Field 6 0 "fChecked"      (f!!0) "Checkd" (DDeltaT bpForgerChecks)        "Forge loop tardiness"
     , Field 6 0 "fLeading"      (f!!1) "Leadin" (DDeltaT bpForgerLeads)         "Leadership check duration"
     , Field 6 0 "fForged"       (f!!2) "Forge"  (DDeltaT bpForgerForges)        "Leadership to forged"
-    , Field 6 0 "fAdopted"      (f!!3) "Adopt"  (DDeltaT bpForgerAdoptions)     "Forged to self-adopted"
-    , Field 6 0 "fAnnounced"    (f!!4) "Announ" (DDeltaT bpForgerAnnouncements) "Adopted to announced"
-    , Field 6 0 "fSendStart"    (f!!5) "Sendin" (DDeltaT bpForgerSends)         "Announced to sending"
+    , Field 6 0 "fAnnounced"    (f!!3) "Announ" (DDeltaT bpForgerAnnouncements) "Forged to announced"
+    , Field 6 0 "fSendStart"    (f!!4) "Sendin" (DDeltaT bpForgerSends)         "Announced to sending"
+    , Field 6 0 "fAdopted"      (f!!5) "Adopt"  (DDeltaT bpForgerAdoptions)     "Announced to self-adopted"
     , Field 5 0 "pNoticed"      (p!!0) "Notic"  (DDeltaT bpPeerNotices)         "First peer notice"
     , Field 5 0 "pRequested"    (p!!1) "Reque"  (DDeltaT bpPeerRequests)        "Notice to fetch request"
     , Field 5 0 "pFetched"      (p!!2) "Fetch"  (DDeltaT bpPeerFetches)         "Fetch duration"
-    , Field 5 0 "pAdopted"      (p!!3) "Adopt"  (DDeltaT bpPeerAdoptions)       "Fetched to adopted"
-    , Field 5 0 "pAnnounced"    (p!!4) "Annou"  (DDeltaT bpPeerAnnouncements)   "Adopted to announced"
-    , Field 5 0 "pSendStart"    (p!!5) "Send"   (DDeltaT bpPeerSends)           "Announced to sending"
+    , Field 5 0 "pAnnounced"    (p!!3) "Annou"  (DDeltaT bpPeerAnnouncements)   "Fetched to announced"
+    , Field 5 0 "pSendStart"    (p!!4) "Send"   (DDeltaT bpPeerSends)           "Announced to sending"
+    , Field 5 0 "pAdopted"      (p!!5) "Adopt"  (DDeltaT bpPeerAdoptions)       "Announced to adopted"
     ] ++
     [ Field 5 0 (renderAdoptionCentile ct)
                                 (r!!i)
@@ -392,19 +392,20 @@ instance RenderTimeline BlockEvents where
     , Field 5 0 "fChecked"      (f!!0) "Check"  (IDeltaT (bfChecked   . beForge)) ""
     , Field 5 0 "fLeading"      (f!!1) "Lead"   (IDeltaT (bfLeading   . beForge)) ""
     , Field 5 0 "fForged"       (f!!2) "Forge"  (IDeltaT (bfForged    . beForge)) ""
-    , Field 5 0 "fAdopted"      (f!!3) "Adopt"  (IDeltaT (bfAdopted   . beForge)) ""
-    , Field 5 0 "fAnnounced"    (f!!4) "Announ" (IDeltaT (bfAnnounced . beForge)) ""
-    , Field 5 0 "fSendStart"    (f!!5) "Sendin" (IDeltaT (bfSending   . beForge)) ""
+    , Field 5 0 "fAnnounced"    (f!!3) "Announ" (IDeltaT (bfAnnounced . beForge)) ""
+    , Field 5 0 "fSendStart"    (f!!4) "Sendin" (IDeltaT (bfSending   . beForge)) ""
+    , Field 5 0 "fAdopted"      (f!!5) "Adopt"  (IDeltaT (bfAdopted   . beForge)) ""
     , Field 2 0 "valid"         "va-"  "lid"    (IText   (bool "-" "+" . (== 0) . length . beNegAcceptance)) ""
     , Field 5 0 "noticedVal"    (p!!0) "Notic"  (IDeltaT (af  boNoticed   . valids)) ""
     , Field 5 0 "requestedVal"  (p!!1) "Requd"  (IDeltaT (af  boRequested . valids)) ""
     , Field 5 0 "fetchedVal"    (p!!2) "Fetch"  (IDeltaT (af  boFetched   . valids)) ""
-    , Field 5 0 "pAdoptedVal"   (p!!3) "Adopt"  (IDeltaT (af' boAdopted   . valids)) ""
-    , Field 5 0 "pAnnouncedVal" (p!!4) "Annou"  (IDeltaT (af' boAnnounced . valids)) ""
-    , Field 5 0 "pSendStartVal" (p!!5) "Send"   (IDeltaT (af' boSending   . valids)) ""
+    , Field 5 0 "pAnnouncedVal" (p!!3) "Annou"  (IDeltaT (af' boAnnounced . valids)) ""
+    , Field 5 0 "pSendStartVal" (p!!4) "Send"   (IDeltaT (af' boSending   . valids)) ""
+    , Field 5 0 "pAdoptedVal"   (p!!5) "Adopt"  (IDeltaT (af' boAdopted   . valids)) ""
     , Field 5 0 "pPropag0.5"    (r!!0) "0.5"    (IDeltaT (percSpec 0.5  . bePropagation)) ""
-    , Field 5 0 "pPropag0.96"   (r!!1) "0.96"   (IDeltaT (percSpec 0.96 . bePropagation)) ""
-    , Field 5 0 "pPropag1.0"    (r!!2) "1.0"    (IDeltaT (snd . cdfRange . bePropagation)) ""
+    , Field 5 0 "pPropag0.8"    (r!!1) "0.8"    (IDeltaT (percSpec 0.8  . bePropagation)) ""
+    , Field 5 0 "pPropag0.96"   (r!!2) "0.96"   (IDeltaT (percSpec 0.96 . bePropagation)) ""
+    , Field 5 0 "pPropag1.0"    (r!!3) "1.0"    (IDeltaT (snd . cdfRange . bePropagation)) ""
     , Field 5 0 "errors"        "all"  "errs"   (IInt    (length . beErrors)) ""
     , Field 3 0 "missAdopt"     (m!!0) "ado"    (IInt    (count (bpeIsMissing Adopt) . beErrors)) ""
     , Field 3 0 "missAnnou"     (m!!1) "ann"    (IInt    (count (bpeIsMissing Announce) . beErrors)) ""
@@ -414,9 +415,9 @@ instance RenderTimeline BlockEvents where
     ]
    where
      valids = filter isValidBlockObservation . beObservations
-     f = nChunksEachOf 6 6 "--- Forger event Δt: ---"
-     p = nChunksEachOf 6 6 "Peer event Δt averages:"
-     r = nChunksEachOf 3 6 "Propagation Δt:"
+     f = nChunksEachOf 6 6 "------ Forger event Δt: ------"
+     p = nChunksEachOf 6 6 "-- Peer event Δt averages: --"
+     r = nChunksEachOf 4 6 "- Propagation Δt: -"
      m = nChunksEachOf 3 4 "Missing"
      n = nChunksEachOf 2 4 "Negative"
 

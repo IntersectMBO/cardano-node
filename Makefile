@@ -20,7 +20,7 @@ RUN     ?=
 lint hlint: ## Run the CI version of hlint
 	nix build --no-link '.#checks/hlint' --cores 0
 haddock-hoogle haddocks hoogle:
-	cabal haddock all --haddock-hoogle
+	if test -z "$$IN_NIX_SHELL"; then nix-shell --run 'cabal haddock all --haddock-hoogle'; else cabal haddock all --haddock-hoogle; fi
 host-hlint: ## Run the system (not Nix) version of hlint
 	hlint bench cardano-{api,cli,client-demo,node,node-capi,node-chairman,submit-api,testnet,tracer}
 

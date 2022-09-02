@@ -20,5 +20,6 @@
           ]);
       };
     BlockFetch.severity = "Info";
+    ChainSync.severity = "Info";
   };
 }

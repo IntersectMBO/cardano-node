@@ -171,13 +171,21 @@ interpreters = map3ple Map.fromList . unzip3 . fmap ent $
   , (,,,) "ChainSyncServerEvent.TraceChainSyncServerRead.AddBlock" "ChainSyncServerHeader.ChainSyncServerEvent.ServerRead.AddBlock" "" $
     \v -> LOChainSyncServerSendHeader
             <$> v .: "block"
-            <*> v .: "blockNo"
-            <*> v .: "slot"
-  , (,,,) "ChainSyncServerEvent.TraceChainSyncServerReadBlocked.AddBlock" "ChainSyncServerHeader.ChainSyncServerEvent.ServerReadBlocked.AddBlock" "ChainSync.ServerHeader.ChainSyncServerEvent.ServerReadBlocked.AddBlock" $
-    \v -> LOChainSyncServerSendHeader
-            <$> v .: "block"
-            <*> v .: "blockNo"
-            <*> v .: "slot"
+  , (,,,) "ChainSyncServerEvent.TraceChainSyncServerReadBlocked.AddBlock" "ChainSyncServerHeader.ChainSyncServerEvent.ServerReadBlocked.AddBlock" "ChainSync.ServerHeader.Update" $
+    \v -> case (KeyMap.lookup "risingEdge" v, KeyMap.lookup "blockingRead" v) of
+            -- Skip the falling edge & non-blocking reads:
+            (Just (Bool False), _) -> pure $ LOAny v
+            (_, Just (Bool False)) -> pure $ LOAny v
+            -- Should be either rising edge, or legacy:
+            _ -> do
+              blockLegacy <- v .:? "block"
+              block       <- v .:? "addBlock"
+              pure $
+                LOChainSyncServerSendHeader
+                ((block <|> blockLegacy)
+                  & fromMaybe (error $ "Incompatible LOChainSyncServerSendHeader: " <> show v)
+                  & Text.take 64
+                  & Hash)
   -- v, but not ^ -- how is that possible?
   , (,,,) "TraceBlockFetchServerSendBlock" "BlockFetchServer.SendBlock" "BlockFetch.Server.SendBlock" $
     \v -> LOBlockFetchServerSending
@@ -235,8 +243,6 @@ data LOBody
     }
   | LOChainSyncServerSendHeader
     { loBlock            :: !Hash
-    , loBlockNo          :: !BlockNo
-    , loSlotNo           :: !SlotNo
     }
   | LOBlockFetchServerSending
     { loBlock            :: !Hash

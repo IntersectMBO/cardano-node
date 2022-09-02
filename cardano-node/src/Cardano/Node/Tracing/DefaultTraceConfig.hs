@@ -64,7 +64,7 @@ defaultCardanoConfig = emptyTraceConfig {
          [ ConfLimiter 2.0])
     ,(["ChainSync","Client","DownloadedHeader"],
          [ ConfLimiter 2.0])
-    ,(["BlockFetchClient", "CompletedBlockFetch"],
+    ,(["BlockFetch", "Client", "CompletedBlockFetch"],
         [ ConfLimiter 2.0])
     ]
   }

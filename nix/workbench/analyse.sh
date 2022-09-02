@@ -23,6 +23,7 @@ usage_analyse() {
 
   $(red analyse) $(blue options):
 
+    $(helpopt --refresh)          Redo initial log filtering.
     $(helpopt --filters F,F,F..)  Comma-separated list of named chain filters:  see bench/chain-filters
                          Note: filter names have no .json suffix
                          Defaults are specified by the run's profile.
@@ -40,9 +41,10 @@ EOF
 analyse() {
 local filters=() aws= sargs=() unfiltered= perf_omit_hosts=()
 local dump_logobjects= dump_machviews= dump_chain= dump_slots_raw= dump_slots=
-local multi_aspect='--inter-cdf'
+local multi_aspect='--inter-cdf' refresh=
 while test $# -gt 0
 do case "$1" in
+       --refresh | -re | -r )     sargs+=($1);    refresh='true';;
        --dump-logobjects | -lo )  sargs+=($1);    dump_logobjects='true';;
        --dump-machviews  | -mw )  sargs+=($1);    dump_machviews='true';;
        --dump-chain      | -c )   sargs+=($1);    dump_chain='true';;
@@ -341,7 +343,7 @@ case "$op" in
         ## 1. unless already done, filter logs according to locli's requirements
         local logdirs=($(ls -d "$dir"/node-*/ 2>/dev/null))
         local logfiles=($(ls "$adir"/logs-node-*.flt.json 2>/dev/null))
-        local prefilter=$(test -z "${logfiles[*]}" && echo 'true' || echo 'false')
+        local prefilter=$(test -z "${logfiles[*]}" -o -n "$refresh" && echo 'true' || echo 'false')
         echo "{ \"prefilter\": $prefilter }"
         if test x$prefilter != xtrue
         then return; fi
