@@ -2,7 +2,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 module Cardano.Render (module Cardano.Render) where
 
-import Prelude                  (head, id, tail, show)
+import Prelude                  (head, id, show)
 import Cardano.Prelude          hiding (head, show)
 
 import Data.Aeson               (ToJSON)
@@ -52,8 +52,8 @@ mapField x cdfProj Field{..} =
     DFloat  (cdfProj . ($x) ->r) -> r
     DDeltaT (cdfProj . ($x) ->r) -> r
 
-renderCentiles :: [Centile] -> [Text]
-renderCentiles = fmap (T.pack . printf "%.4f" . unCentile)
+renderCentiles :: Int -> [Centile] -> [Text]
+renderCentiles wi = fmap (T.take wi . T.pack . printf "%f" . unCentile)
 
 renderFieldCentiles :: a p -> (forall v. Divisible v => CDF p v -> [[v]]) -> Field DSelect p a -> [[Text]]
 renderFieldCentiles x cdfProj Field{..} =
@@ -137,7 +137,7 @@ mapRenderCDF :: forall p a. RenderCDFs a p
 mapRenderCDF fieldSelr centiSelr fSampleProps x =
   fields                                    -- list of fields
   <&> renderFieldCentiles x cdfSamplesProps -- for each field, list of per-sample lists of properties
-  & ([renderCentiles centiles] :)
+  & ([renderCentiles 6 centiles] :)
   & transpose                               -- for each sample, list of per-field lists of properties
   & fmap (fmap $ T.intercalate " ")
  where
@@ -301,48 +301,58 @@ renderAnalysisCDFs a fieldSelr _c2a centiSelr AsPretty x =
   :  catMaybes [head1, head2]
   <> pLines
   <> sizeAvg
-  -- CSV mode used to be:
-  -- (T.intercalate "," $ fId <$> fields)
-  -- :  pLines
  where
    head1, head2 :: Maybe Text
    head1 = if all ((== 0) . T.length . fHead1) fields then Nothing
            else Just (renderLineHead1 (uncurry T.take . ((+1) . fWidth &&& fHead1)))
    head2 = if all ((== 0) . T.length . fHead2) fields then Nothing
            else Just (renderLineHead2 (uncurry T.take . ((+1) . fWidth &&& fHead2)))
-   renderLineHead1 = mconcat . renderLine' (const 0) ((+ 1) . fWidth)
-   renderLineHead2 = mconcat . renderLine' fLeftPad  ((+ 1) . fWidth)
-
-   restrictCDF :: forall c. CDF p c -> CDF p c
-   restrictCDF = maybe id subsetCDF centiSelr
+   renderLineHead1 = mconcat . ("       ":) . renderLine' (const 0) ((+ 1) . fWidth)
+   renderLineHead2 = mconcat . (" %tile ":) . renderLine' fLeftPad  ((+ 1) . fWidth)
 
    pLines :: [Text]
    pLines = fields
             <&>
             fmap (T.intercalate " ") .
             renderFieldCentilesWidth x cdfSamplesProps
+            & ((T.justifyLeft 6 ' ' <$> renderCentiles 6 centiles) :)
             & transpose
             & fmap (T.intercalate " ")
 
    fields :: [Field DSelect p a]
    fields = filter fieldSelr rdFields
 
+   centiles :: [Centile]
+   centiles = mapSomeFieldCDF
+              centilesCDF
+              x
+              (fSelect $ head rdFields)
+
    cdfSamplesProps :: Divisible c => CDF p c -> [[c]]
-   cdfSamplesProps = fmap (pure . unliftCDFVal cdfIx . snd) . cdfSamples . restrictCDF
+   cdfSamplesProps = fmap (pure . unliftCDFVal cdfIx . snd)
+                     . cdfSamples
+                     . maybe id subsetCDF centiSelr
 
    sizeAvg :: [Text]
    sizeAvg = fmap (T.intercalate " ")
-     [ (T.center (fWidth (head fields)) ' ' "avg" :) $
+     [ (T.center 6 ' ' "avg" :) $
        (\f -> flip (renderField fLeftPad fWidth) f $ const $
                 mapSomeFieldCDF
-                  (T.take (fWidth f) .T.pack . printf "%F" . cdfAverageVal)  x (fSelect f))
-       <$> tail fields
-     , (T.center (fWidth (head fields)) ' ' "size" :) $
+                  (fit (fWidth f) .T.pack . printf "%F" . cdfAverageVal)  x (fSelect f))
+       <$> fields
+     , (T.center 6 ' ' "size" :) $
        (\f -> flip (renderField fLeftPad fWidth) f $ const $
                 mapSomeFieldCDF
-                  (T.take (fWidth f) . T.pack . show . cdfSize)    x (fSelect f))
-       <$> tail fields
+                  (fit (fWidth f) . T.pack . show . cdfSize)    x (fSelect f))
+       <$> fields
      ]
+
+   fit :: Int -> Text -> Text
+   fit w t = if T.length t > w &&
+                -- Drop all non-floats, and floats with significant digit overflowing:
+                maybe True (> w) (T.findIndex (== '.') t)
+             then "..."
+             else T.take w t
 
    renderLine' ::
      (Field DSelect p a -> Int) -> (Field DSelect p a -> Int) -> (Field DSelect p a -> Text) -> [Text]
