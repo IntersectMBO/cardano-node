@@ -196,8 +196,14 @@ data PartialNodeConfiguration
          -- Enable experimental P2P mode
        , pncEnableP2P :: !(Last NetworkP2PMode)
 
-         -- TODO describe me
+         -- Churn interval between churn events in deadline mode
+         -- Deadline mode follows a policy optimises for the latency
+         -- to fetch blocks, at the expense of wasting bandwidth
        , pncDeadlineChurnInterval :: !(Last DiffTime)
+
+         -- Churn interval between churn events in bulk sync mode
+         -- Bulk sync mode follows a policy that optimises for expected
+         -- bandwidth over latency to fetch any particular block
        , pncBulkChurnInterval     :: !(Last DiffTime)
        } deriving (Eq, Generic, Show)
 
