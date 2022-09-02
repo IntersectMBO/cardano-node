@@ -24,8 +24,6 @@ action a = case a of
 -- todo : use Generator for genesisimport
   ImportGenesisFund era wallet submitMode genesisKey fundKey -> importGenesisFund era wallet submitMode genesisKey fundKey
   CreateChange era sourceWallet payMode changeMode submitMode value count -> createChange era sourceWallet payMode changeMode submitMode value count
-  RunBenchmark era sourceWallet submitMode thread auxArgs collateralWallet tps
-    -> runBenchmark era sourceWallet submitMode thread auxArgs collateralWallet tps
   WaitBenchmark thread -> waitBenchmark thread
   CancelBenchmark thread -> cancelBenchmark thread
   WaitForEra era -> waitForEra era

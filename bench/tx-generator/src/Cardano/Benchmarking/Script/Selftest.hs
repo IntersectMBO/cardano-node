@@ -21,7 +21,6 @@ import           Cardano.Benchmarking.Script.Setters
 import           Cardano.Benchmarking.Script.Store
 import           Cardano.Benchmarking.Script.Types
 import           Cardano.Benchmarking.Tracer (initDefaultTracers)
-import           Cardano.Benchmarking.Types
 
 import           Paths_tx_generator
 
@@ -58,9 +57,7 @@ testScript protocolFile submitMode =
   , createChange 2200000000000 10
   , createChange 70000000000 300
   , createChange 2300000000 9000
-  , RunBenchmark era wallet
-    submitMode
-    (ThreadName "walletBasedBenchmark") extraArgs Nothing (TPSRate 10.0)
+  , Submit era submitMode $ Repeat 4000 $ BechmarkTx wallet extraArgs Nothing
   ]
   where
     era = AnyCardanoEra AllegraEra

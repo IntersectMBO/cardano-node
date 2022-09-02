@@ -22,7 +22,6 @@ module Cardano.Benchmarking.GeneratorTx.Submission
   , SubmissionThreadReport
   , TxSource
   , ReportRef
-  , walletTxSource -- deprecated
   , mkSubmissionSummary
   , submitThreadReport
   , submitSubmissionThreadStats
@@ -120,30 +119,6 @@ mkSubmissionSummary ssThreadName startTime reportsRefs
     SubmissionThreadReport
       { strStats=SubmissionThreadStats{stsAcked=Ack ack}, strEndOfProtocol } =
         txDiffTimeTPS ack (Clock.diffUTCTime strEndOfProtocol startTime)
-
-walletTxSource :: forall era. WalletScript era -> TpsThrottle -> TxSource era
-walletTxSource walletScript tpsThrottle = Active $ worker walletScript
- where
-  worker :: forall m blocking . MonadIO m => WalletScript era -> TokBlockingStyle blocking -> Req -> m (TxSource era, [Tx era])
-  worker script blocking req = do
-    (done, txCount) <- case blocking of
-       TokBlocking -> liftIO $ consumeTxsBlocking tpsThrottle req
-       TokNonBlocking -> liftIO $ consumeTxsNonBlocking tpsThrottle req
-    (txList, newScript) <- liftIO $ unFold script txCount
-    case done of
-      Stop -> return (Exhausted, txList)
-      Next -> return (Active $ worker newScript, txList)
-
-  unFold :: WalletScript era -> Int -> IO ([Tx era], WalletScript era)
-  unFold script 0 = return ([], script)
-  unFold script n = do
-    next <- runWalletScript script
-    case next of
-      Done -> error "unexpected WalletScript Done" --return ([], script)
-      NextTx s tx -> do
-        (l, out) <- unFold s $ pred n
-        return (tx:l, out)
-      Error err -> error err
 
 txStreamSource :: forall era. TxStream IO era -> TpsThrottle -> TxSource era
 txStreamSource stream tpsThrottle = Active $ worker stream

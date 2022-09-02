@@ -42,7 +42,7 @@ import qualified Cardano.Benchmarking.FundSet as FundSet
 import           Cardano.Benchmarking.FundSet as FundSet (getFundTxIn)
 import           Cardano.Benchmarking.GeneratorTx as GeneratorTx (AsyncBenchmarkControl, TxGenError)
 import qualified Cardano.Benchmarking.GeneratorTx as GeneratorTx (readSigningKey, secureGenesisFund,
-                   waitBenchmark, walletBenchmark, walletBenchmarkNew)
+                   waitBenchmark, walletBenchmark)
 
 import           Cardano.Benchmarking.GeneratorTx.NodeToNode (ConnectClient,
                    benchmarkConnectTxSubmit)
@@ -275,31 +275,12 @@ benchmarkTxStream txStream targetNodes (ThreadName threadName) tps shape era = d
   connectClient <- getConnectClient
   let
     coreCall :: AsType era -> ExceptT TxGenError IO AsyncBenchmarkControl
-    coreCall eraProxy = GeneratorTx.walletBenchmarkNew (btTxSubmit_ tracers) (btN2N_ tracers) connectClient
+    coreCall eraProxy = GeneratorTx.walletBenchmark (btTxSubmit_ tracers) (btN2N_ tracers) connectClient
                                                threadName targetNodes tps LogErrors eraProxy (NumberOfTxs $ auxTxCount shape) txStream
   ret <- liftIO $ runExceptT $ coreCall era
   case ret of
     Left err -> liftTxGenError err
     Right ctl -> setName (ThreadName threadName) ctl
-
-runWalletScriptInMode :: forall era.
-     IsShelleyBasedEra era
-  => SubmitMode
-  -> WalletScript era
-  -> ActionM ()
-runWalletScriptInMode submitMode s = do
-  step <- liftIO $ runWalletScript s
-  case step of
-    Done -> return ()
-    Error err -> throwE $ ApiError $ show err
-    NextTx nextScript tx -> do
-      case submitMode of
-        LocalSocket -> void $ localSubmitTx $ txInModeCardano tx
-        NodeToNode _ -> throwE $ ApiError "NodeToNodeMode not supported in runWalletScriptInMode"
-        DumpToFile filePath -> dumpToFile filePath $ txInModeCardano tx
-        DiscardTX -> return ()
-        Benchmark {} -> error "ToDo: remove runWalletScriptInMode"
-      runWalletScriptInMode submitMode nextScript
 
 evalGenerator :: forall era. IsShelleyBasedEra era => Generator -> AsType era -> ActionM (TxStream IO era)
 evalGenerator generator era = do
@@ -338,68 +319,6 @@ evalGenerator generator era = do
     Sequence generatorList -> do
       gList <- forM generatorList $ \g -> evalGenerator g era
       return $ Streaming.for (Streaming.each gList) id
-
-runBenchmark ::
-     AnyCardanoEra
-  -> WalletName
-  -> SubmitMode
-  -> ThreadName
-  -> RunBenchmarkAux
-  -> Maybe WalletName
-  -> TPSRate
-  -> ActionM ()
-runBenchmark era sourceWallet submitMode threadName extraArgs collateralWallet tps
-  = withEra era $ runBenchmarkInEra sourceWallet submitMode threadName extraArgs collateralWallet tps
-
-runBenchmarkInEra :: forall era. IsShelleyBasedEra era
-  => WalletName
-  -> SubmitMode
-  -> ThreadName
-  -> RunBenchmarkAux
-  -> Maybe WalletName
-  -> TPSRate
-  -> AsType era
-  -> ActionM ()
-runBenchmarkInEra sourceWallet submitMode (ThreadName threadName) shape collateralWallet tps era = do
-  tracers  <- get BenchTracers
-  networkId <- getUser TNetworkId
-  fundKey <- getName $ KeyName "pass-partout" -- should be walletkey -- TODO: Remove magic
-  protocolParameters <- getProtocolParameters
-  walletRefSrc <- getName sourceWallet
-  let walletRefDst = walletRefSrc
-  metadata <- makeMetadata
-
-  let fundSource = walletSource walletRefSrc (auxInputsPerTx shape)
-
-  collaterals <- selectCollateralFunds collateralWallet
-  let
-    inToOut :: [Lovelace] -> [Lovelace]
-    inToOut = FundSet.inputsToOutputsWithFee (auxFee shape) (auxOutputsPerTx shape)
-
-    txGenerator = genTx protocolParameters collaterals (mkFee (auxFee shape)) metadata
-
-    toUTxO :: [ ToUTxO era ]
-    toUTxO = repeat $ Wallet.mkUTxOVariant networkId fundKey -- TODO: make configurable
-  
-    fundToStore = mkWalletFundStoreList walletRefDst
-
-    sourceToStore = sourceToStoreTransaction txGenerator fundSource inToOut (makeToUTxOList toUTxO) fundToStore
-
-    walletScript :: WalletScript era
-    walletScript = benchmarkWalletScript sourceToStore (NumberOfTxs $ auxTxCount shape)
-  
-  case submitMode of
-    NodeToNode targetNodes -> do
-      connectClient <- getConnectClient
-      let
-        coreCall :: AsType era -> ExceptT TxGenError IO AsyncBenchmarkControl
-        coreCall eraProxy = GeneratorTx.walletBenchmark (btTxSubmit_ tracers) (btN2N_ tracers) connectClient
-                                               threadName targetNodes tps LogErrors eraProxy (NumberOfTxs $ auxTxCount shape) walletScript
-      ret <- liftIO $ runExceptT $ coreCall era
-      case ret of
-        Left err -> liftTxGenError err
-        Right ctl -> setName (ThreadName threadName) ctl
-    _otherwise -> runWalletScriptInMode submitMode walletScript
 
 selectCollateralFunds :: forall era. IsShelleyBasedEra era
   => Maybe WalletName

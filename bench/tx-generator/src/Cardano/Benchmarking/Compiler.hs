@@ -149,18 +149,6 @@ unfoldSplitSequence fee value count
     -- todo: this must be in sync with Scipt/Core.hs
     maxOutputs = 30
     
-benchmarkingPhase :: WalletName -> Maybe WalletName -> Compiler ()
-benchmarkingPhase wallet collateralWallet = do
-  debugMode <- askNixOption _nix_debugMode
-  targetNodes <- askNixOption _nix_targetNodes
-  extraArgs <- evilValueMagic
-  tps <- askNixOption _nix_tps
-  era <- askNixOption _nix_era
-  let target = if debugMode then LocalSocket else NodeToNode targetNodes
-  emit $ RunBenchmark era wallet target (ThreadName "tx-submit-benchmark") extraArgs collateralWallet tps
-  unless debugMode $ do
-    emit $ WaitBenchmark $ ThreadName "tx-submit-benchmark"
-
 benchmarkingPhaseNew :: WalletName -> Maybe WalletName -> Compiler ()
 benchmarkingPhaseNew wallet collateralWallet = do
   debugMode <- askNixOption _nix_debugMode

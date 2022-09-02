@@ -13,7 +13,6 @@ module Cardano.Benchmarking.GeneratorTx
   ( AsyncBenchmarkControl
   , TxGenError
   , walletBenchmark
-  , walletBenchmarkNew  
   , readSigningKey
   , secureGenesisFund
   , waitBenchmark
@@ -49,7 +48,7 @@ import           Cardano.Benchmarking.GeneratorTx.Tx
 import           Cardano.Benchmarking.TpsThrottle
 import           Cardano.Benchmarking.LogTypes
 import           Cardano.Benchmarking.Types
-import           Cardano.Benchmarking.Wallet (WalletScript, TxStream)
+import           Cardano.Benchmarking.Wallet (TxStream)
 
 import           Cardano.Ledger.Shelley.API (ShelleyGenesis)
 import           Ouroboros.Network.Protocol.LocalTxSubmission.Type (SubmitResult (..))
@@ -151,67 +150,6 @@ walletBenchmark :: forall era. IsShelleyBasedEra era
   -> TPSRate
   -> SubmissionErrorPolicy
   -> AsType era
-  -> NumberOfTxs
-  -> WalletScript era
-  -> ExceptT TxGenError IO AsyncBenchmarkControl
-walletBenchmark
-  traceSubmit
-  traceN2N
-  connectClient
-  threadName
-  targets
-  tpsRate
-  errorPolicy
-  _era
-  count
-  walletScript
-  = liftIO $ do
-  traceDebug "******* Tx generator, phase 2: pay to recipients *******"
-
-  remoteAddresses <- forM targets lookupNodeAddress
-  let numTargets :: Natural = fromIntegral $ NE.length targets
-
-  traceDebug $ "******* Tx generator, launching Tx peers:  " ++ show (NE.length remoteAddresses) ++ " of them"
-
-  startTime <- Clock.getCurrentTime
-  tpsThrottle <- newTpsThrottle 32 (unNumberOfTxs count) tpsRate
-
-  reportRefs <- STM.atomically $ replicateM (fromIntegral numTargets) STM.newEmptyTMVar
-
-  allAsyncs <- forM (zip reportRefs $ NE.toList remoteAddresses) $
-    \(reportRef, remoteAddr) -> do
-      let errorHandler = handleTxSubmissionClientError traceSubmit remoteAddr reportRef errorPolicy
-          client = txSubmissionClient
-                     traceN2N
-                     traceSubmit
-                     (walletTxSource walletScript tpsThrottle)
-                     (submitSubmissionThreadStats reportRef)
-      async $ handle errorHandler (connectClient remoteAddr client)
-
-  tpsThrottleThread <- async $ do
-    startSending tpsThrottle
-    traceWith traceSubmit $ TraceBenchTxSubDebug "tpsLimitedFeeder : transmitting done"
-    atomically $ sendStop tpsThrottle
-    traceWith traceSubmit $ TraceBenchTxSubDebug "tpsLimitedFeeder : shutdown done"
-
-  let tpsFeederShutdown = do
-        cancel tpsThrottleThread
-        liftIO $ atomically $ sendStop tpsThrottle
-
-  return (tpsThrottleThread, allAsyncs, mkSubmissionSummary threadName startTime reportRefs, tpsFeederShutdown)
- where
-  traceDebug :: String -> IO ()
-  traceDebug =   traceWith traceSubmit . TraceBenchTxSubDebug
-
-walletBenchmarkNew :: forall era. IsShelleyBasedEra era
-  => Tracer IO (TraceBenchTxSubmit TxId)
-  -> Tracer IO NodeToNodeSubmissionTrace
-  -> ConnectClient
-  -> String
-  -> NonEmpty NodeIPv4Address
-  -> TPSRate
-  -> SubmissionErrorPolicy
-  -> AsType era
 -- this is used in newTpsThrottle to limit the tx-count !
 -- This should not be needed, the stream should do it itself (but it does not!)
   -> NumberOfTxs
@@ -221,7 +159,7 @@ walletBenchmarkNew :: forall era. IsShelleyBasedEra era
 -- Todo: Use the stream behind an MVar !
   -> TxStream IO era
   -> ExceptT TxGenError IO AsyncBenchmarkControl
-walletBenchmarkNew
+walletBenchmark
   traceSubmit
   traceN2N
   connectClient

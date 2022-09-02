@@ -35,7 +35,6 @@ data Action where
   AddFund            :: !AnyCardanoEra -> !WalletName -> !TxIn -> !Lovelace -> !KeyName -> Action
   ImportGenesisFund  :: !AnyCardanoEra -> !WalletName -> !SubmitMode -> !KeyName -> !KeyName -> Action
   CreateChange       :: !AnyCardanoEra -> !WalletName -> !SubmitMode -> !PayMode -> !PayMode -> !Lovelace -> !Int -> Action
-  RunBenchmark       :: !AnyCardanoEra -> !WalletName -> !SubmitMode -> !ThreadName -> !RunBenchmarkAux -> Maybe WalletName -> !TPSRate -> Action
   WaitBenchmark      :: !ThreadName -> Action
   Submit             :: !AnyCardanoEra -> !SubmitMode -> !Generator -> Action
   CancelBenchmark    :: !ThreadName -> Action

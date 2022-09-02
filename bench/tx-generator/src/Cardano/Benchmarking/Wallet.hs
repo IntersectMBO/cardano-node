@@ -15,7 +15,6 @@ import           Cardano.Api
 
 import           Cardano.Benchmarking.FundSet as FundSet
 import           Cardano.Benchmarking.Fifo as Fifo
-import           Cardano.Benchmarking.Types (NumberOfTxs (..))
 import           Cardano.Api.Shelley (ProtocolParameters, ReferenceScript(..))
 
 -- All the actual functionality of Wallet / WalletRef has been removed
@@ -250,38 +249,6 @@ genTx protocolParameters (collateral, collFunds) fee metadata inFunds outputs
     ShelleyBasedEraMary    -> TxValidityNoUpperBound ValidityNoUpperBoundInMaryEra
     ShelleyBasedEraAlonzo  -> TxValidityNoUpperBound ValidityNoUpperBoundInAlonzoEra
     ShelleyBasedEraBabbage -> TxValidityNoUpperBound ValidityNoUpperBoundInBabbageEra
-
-newtype WalletScript era = WalletScript { runWalletScript :: IO (WalletStep era) }
-
-data WalletStep era
-  = Done
-  | NextTx !(WalletScript era) !(Tx era)
-  | Error String
-
--- TODO:
--- Define generator for a single transaction and define combinator for
--- repeat and sequence.
-
-
-benchmarkWalletScript :: forall era .
-     IsShelleyBasedEra era
-  => IO (Either String (Tx era)) -- make polymorphic
-  -> NumberOfTxs
-  -> WalletScript era
-benchmarkWalletScript sourceToStore totalCount
-  = WalletScript $ walletStep totalCount
- where
-  walletStep :: NumberOfTxs -> IO (WalletStep era)
-  walletStep (NumberOfTxs 0) = return Done
-  walletStep count = sourceToStore >>= \case
-    Left err -> return $ Error err
-    Right tx -> return $ NextTx (benchmarkWalletScript sourceToStore (pred count)) tx
-
-limitSteps ::
-     NumberOfTxs
-  -> WalletScript era
-  -> WalletScript era
-limitSteps = undefined
 
 keyAddress :: forall era. IsShelleyBasedEra era => NetworkId -> SigningKey PaymentKey -> AddressInEra era
 keyAddress networkId k
