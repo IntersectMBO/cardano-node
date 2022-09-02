@@ -75,7 +75,7 @@ data BlockEvents
   , beEpochSafeInt  :: !EpochSafeInt
   , beForge         :: !BlockForge
   , beObservations  :: [BlockObservation]
-  , bePropagation   :: !(DirectCDF NominalDiffTime)
+  , bePropagation   :: !(CDF I NominalDiffTime)
                        -- ^ CDF of slot-start-to-adoptions on cluster
   , beOtherBlocks   :: [Hash]
   , beErrors        :: [BPError]
@@ -420,7 +420,7 @@ instance RenderTimeline BlockEvents where
      m = nChunksEachOf 3 4 "Missing"
      n = nChunksEachOf 2 4 "Negative"
 
-     percSpec :: Double -> DirectCDF NominalDiffTime -> NominalDiffTime
+     percSpec :: Double -> CDF I NominalDiffTime -> NominalDiffTime
      percSpec ps d = unI $ Centile ps `projectCDF` d
        & fromMaybe (error $ printf "No centile %f in distribution." ps)
      af  f = avg . fmap f

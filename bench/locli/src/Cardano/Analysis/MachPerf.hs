@@ -194,7 +194,7 @@ slotStatsMachPerf run (f, slots) =
   , sResourceCDFs         = computeResCDF stdCentiles resDistProjs slots
   }
  where
-   dist :: (Real a) => [a] -> DirectCDF a
+   dist :: Divisible a => [a] -> CDF I a
    dist = cdf stdCentiles
 
    SlotStatsSummary{..} = slotStatsSummary run slots

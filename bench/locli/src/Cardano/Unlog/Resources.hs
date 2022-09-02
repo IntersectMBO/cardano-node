@@ -7,7 +7,6 @@ module Cardano.Unlog.Resources
   , mkResAccums
   , updateResAccums
   , extractResAccums
-  , ResDistribProjections
   , computeResCDF
   , ResContinuity
   , discardObsoleteValues
@@ -53,18 +52,16 @@ updateResAccums now rs ra =
 extractResAccums :: ResAccums -> Resources Word64
 extractResAccums = (aCurrent <$>)
 
-type ResDistribProjections a = Resources (a -> Maybe Word64)
-
 computeResCDF ::
   forall a
   .  [Centile]
-  -> ResDistribProjections a
+  -> Resources (a -> Maybe Word64)
   -> [a]
-  -> Resources (DirectCDF Word64)
+  -> Resources (CDF I Word64)
 computeResCDF centiles projs xs =
   compDist <$> projs
  where
-   compDist :: (a -> Maybe Word64) -> DirectCDF Word64
+   compDist :: (a -> Maybe Word64) -> CDF I Word64
    compDist proj = cdf centiles
      (catMaybes . toList $ proj <$> xs)
 

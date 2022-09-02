@@ -442,10 +442,7 @@ blockProp run@Run{genesis} fullChain domSlot domBlock = do
     , bpForgerChecks        = forgerEventsCDF   (Just . bfChecked   . beForge)
     , bpForgerLeads         = forgerEventsCDF   (Just . bfLeading   . beForge)
     , bpForgerForges        = forgerEventsCDF   (Just . bfForged    . beForge)
-    , bpForgerAdoptions     = forgerEventsCDF   ((\x ->
-                                                    if bfChainDelta x == 1
-                                                    then Just (bfAdopted x)
-                                                    else Nothing)   . beForge)
+    , bpForgerAdoptions     = forgerEventsCDF   (Just . bfAdopted   . beForge)
     , bpForgerAnnouncements = forgerEventsCDF   (Just . bfAnnounced . beForge)
     , bpForgerSends         = forgerEventsCDF   (Just . bfSending   . beForge)
     , bpPeerNotices         = observerEventsCDF (Just . boNoticed)   "noticed"
@@ -463,16 +460,16 @@ blockProp run@Run{genesis} fullChain domSlot domBlock = do
  where
    analysisChain = filter (null . beNegAcceptance) fullChain
 
-   forgerEventsCDF   :: (Real a, KnownCDF p) => (BlockEvents -> Maybe a) -> CDF p a
+   forgerEventsCDF   :: Divisible a => (BlockEvents -> Maybe a) -> CDF I a
    forgerEventsCDF   = flip (witherToDistrib (cdf stdCentiles)) analysisChain
    observerEventsCDF = mapChainToPeerBlockObservationCDF stdCentiles analysisChain
 
    mapChainToBlockEventCDF ::
-     (Real a)
+     Divisible a
      => [Centile]
      -> [BlockEvents]
      -> (BlockEvents -> Maybe a)
-     -> DirectCDF a
+     -> CDF I a
    mapChainToBlockEventCDF percs cbes proj =
      cdf percs $
        mapMaybe proj cbes
@@ -482,7 +479,7 @@ blockProp run@Run{genesis} fullChain domSlot domBlock = do
      -> [BlockEvents]
      -> (BlockObservation -> Maybe NominalDiffTime)
      -> String
-     -> DirectCDF NominalDiffTime
+     -> CDF I NominalDiffTime
    mapChainToPeerBlockObservationCDF percs cbes proj desc =
      cdf percs $
        concat $ cbes <&> blockObservations

@@ -443,7 +443,7 @@ runChainCommand _ c@ComputePropagation = missingCommandData c
 
 runChainCommand s@State{sBlockProp=Just [prop]}
   c@(RenderPropagation mode f subset) = do
-  forM_ (renderCDF (sRunAnchor s) (propSubsetFn subset) OfOverallDataset Nothing mode prop) $
+  forM_ (renderAnalysisCDFs (sRunAnchor s) (propSubsetFn subset) OfOverallDataset Nothing mode prop) $
     \(name, body) ->
       dumpText (T.unpack name) body (modeFilename f name mode)
       & firstExceptT (CommandError c)
@@ -471,7 +471,7 @@ runChainCommand _ c@ComputeMultiPropagation{} = missingCommandData c
 
 runChainCommand s@State{sMultiBlockProp=Just prop}
   c@(RenderMultiPropagation mode f subset aspect) = do
-  forM_ (renderCDF (sTagsAnchor s) (propSubsetFn subset) aspect Nothing mode prop) $
+  forM_ (renderAnalysisCDFs (sTagsAnchor s) (propSubsetFn subset) aspect Nothing mode prop) $
     \(name, body) ->
       dumpText (T.unpack name) body (modeFilename f name mode)
       & firstExceptT (CommandError c)
@@ -508,7 +508,7 @@ runChainCommand _ c@ComputeClusterPerf{} = missingCommandData c
 
 runChainCommand s@State{sClusterPerf=Just [prop]}
   c@(RenderClusterPerf mode f subset) = do
-  forM_ (renderCDF (sRunAnchor s) (perfSubsetFn subset) OfOverallDataset Nothing mode prop) $
+  forM_ (renderAnalysisCDFs (sRunAnchor s) (perfSubsetFn subset) OfOverallDataset Nothing mode prop) $
     \(name, body) ->
       dumpText (T.unpack name) body (modeFilename f name mode)
       & firstExceptT (CommandError c)
@@ -536,7 +536,7 @@ runChainCommand _ c@ComputeMultiClusterPerf{} = missingCommandData c
 
 runChainCommand s@State{sMultiClusterPerf=Just (MultiClusterPerf perf)}
   c@(RenderMultiClusterPerf mode f subset aspect) = do
-  forM_ (renderCDF (sTagsAnchor s) (perfSubsetFn subset) aspect Nothing mode perf) $
+  forM_ (renderAnalysisCDFs (sTagsAnchor s) (perfSubsetFn subset) aspect Nothing mode perf) $
     \(name, body) ->
       dumpText (T.unpack name) body (modeFilename f name mode)
       & firstExceptT (CommandError c)
