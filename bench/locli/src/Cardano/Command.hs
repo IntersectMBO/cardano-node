@@ -347,9 +347,6 @@ runChainCommand s@State{sRun=Just run, sMachViews=Just mvs}
   flts <- readFilters fltfs
           & firstExceptT (CommandError c)
   (domSlot, domBlock, fltNames, chain) <- rebuildChain run flts mvs & liftIO
-  when (ddFilteredCount domBlock == 0) $
-    throwE $ CommandError c $ mconcat
-      [ "All ", show (ddRawCount domBlock), " blocks filtered out." ]
   pure s { sChain = Just chain
          , sDomSlots = Just domSlot
          , sDomBlocks = Just domBlock

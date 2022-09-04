@@ -274,20 +274,23 @@ rebuildChain run@Run{genesis} (flts, fltNames) xs@(fmap snd -> machViews) = do
   pure (domSlot, domBlock, fltNames, chain)
  where
    (blk0,  blkL)  = (head chain, last chain)
-   (blk0V, blkLV) =
+   mblkV =
      liftA2 (,) (find (null . beNegAcceptance) chain)
      (find (null . beNegAcceptance) (reverse chain))
-     & fromMaybe (error "No acceptable blocks in chain")
    domSlot = DataDomain
              (blk0  & beSlotNo)  (blkL  & beSlotNo)
-             (blk0V & beSlotNo)  (blkLV & beSlotNo)
-             (fromIntegral . unSlotNo $ beSlotNo blkL  - beSlotNo blk0)
-             (fromIntegral . unSlotNo $ beSlotNo blkLV - beSlotNo blk0V)
+             (mblkV & maybe (-1) (beSlotNo . fst))
+             (mblkV & maybe (-1) (beSlotNo . snd))
+             (beSlotNo blkL - beSlotNo blk0 & fromIntegral . unSlotNo)
+             (mblkV &
+              maybe 0 (fromIntegral . unSlotNo . uncurry (on (-) beSlotNo)))
    domBlock = DataDomain
               (blk0  & beBlockNo) (blkL  & beBlockNo)
-              (blk0V & beBlockNo) (blkLV & beBlockNo)
+              (mblkV & maybe (-1) (beBlockNo . fst))
+              (mblkV & maybe (-1) (beBlockNo . snd))
               (beBlockNo blkL  - beBlockNo blk0  & fromIntegral . unBlockNo)
-              (beBlockNo blkLV - beBlockNo blk0V & fromIntegral . unBlockNo)
+             (mblkV &
+              maybe 0 (fromIntegral . unBlockNo . uncurry (on (-) beBlockNo)))
 
    chain = computeChainBlockGaps $
            doRebuildChain (fmap deltifyEvents <$> eventMaps) tipHash
