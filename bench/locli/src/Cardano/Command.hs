@@ -93,7 +93,8 @@ parseChainCommand =
        <$> optJsonOutputFile "chain"         "JSON filtered chain output file")
    , op "timeline-chain" "Render chain timeline"
      (TimelineChain
-       <$> optTextOutputFile "timeline"      "Render a human-readable reconstructed chain view")
+       <$> optTextOutputFile "timeline"      "Render a human-readable reconstructed chain view"
+       <*> many parseRTCommentsBP)
    ]) <|>
 
    subparser (mconcat [ commandGroup "Machine performance analysis:  slot stats"
@@ -181,6 +182,14 @@ parseChainCommand =
      <> Opt.help desc
      )
 
+parseRTCommentsBP :: Parser (RTComments BlockEvents)
+parseRTCommentsBP =
+  [ Opt.flag' BEErrors     (Opt.long "chain-errors"   <> Opt.help "Show per-block anomalies")
+  , Opt.flag' BEFilterOuts (Opt.long "filter-reasons" <> Opt.help "Explain per-block filter-out reasons")
+  ] & \case
+        (x:xs) -> foldl (<|>) x xs
+        [] -> error "Crazy world."
+
 parseRenderFormat :: Parser RenderFormat
 parseRenderFormat =
   [ Opt.flag' AsJSON    (Opt.long "json"    <> Opt.help "Full JSON dump output file")
@@ -227,7 +236,7 @@ data ChainCommand
   |         RebuildChain    [JsonFilterFile]
   |            DumpChain    (JsonOutputFile [BlockEvents])
   |            ReadChain    (JsonInputFile [BlockEvents])
-  |        TimelineChain    TextOutputFile
+  |        TimelineChain    TextOutputFile [RTComments BlockEvents]
 
   |         CollectSlots    [JsonLogfile]
   |            DumpSlotsRaw
@@ -374,8 +383,8 @@ runChainCommand _ c@DumpChain{} = missingCommandData c
   ["filtered chain"]
 
 runChainCommand s@State{sRun=Just run, sChain=Just chain}
-  c@(TimelineChain f) = do
-  dumpText "chain" (renderTimeline run (const True) False chain) f
+  c@(TimelineChain f comments) = do
+  dumpText "chain" (renderTimeline run (const True) comments chain) f
     & firstExceptT (CommandError c)
   pure s
 runChainCommand _ c@TimelineChain{} = missingCommandData c
@@ -425,7 +434,7 @@ runChainCommand _ c@DumpSlots = missingCommandData c
 runChainCommand s@State{sRun=Just run, sSlots=Just slots}
   c@TimelineSlots = do
   dumpAssociatedTextStreams "mach"
-    (fmap (fmap $ renderTimeline run (const True) False) slots)
+    (fmap (fmap $ renderTimeline run (const True) []) slots)
     & firstExceptT (CommandError c)
   pure s
 runChainCommand _ c@TimelineSlots{} = missingCommandData c

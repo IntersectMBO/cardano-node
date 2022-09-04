@@ -24,9 +24,10 @@ class RenderCDFs a p where
   rdFields :: [Field DSelect p a]
 
 class RenderTimeline a where
+  data RTComments a :: Type
   rtFields     :: Run -> [Field ISelect I a]
-  rtCommentary :: a -> [Text]
-  rtCommentary _ = []
+  rtCommentary :: a -> RTComments a -> [Text]
+  rtCommentary _ _ = []
 
 -- | Encapsulate all information necessary to render a column (projection) of
 --   a certain projectible (a kind of analysis results):
@@ -93,13 +94,18 @@ mapSomeFieldCDF f a = \case
   DFloat  s -> f (s a)
   DDeltaT s -> f (s a)
 
-renderTimeline :: forall (a :: Type). RenderTimeline a => Run -> (Field ISelect I a -> Bool) -> Bool -> [a] -> [Text]
-renderTimeline run flt withCommentary xs =
+renderTimeline :: forall (a :: Type). RenderTimeline a => Run -> (Field ISelect I a -> Bool) -> [RTComments a] -> [a] -> [Text]
+renderTimeline run flt comments xs =
   concatMap (uncurry fLine) $ zip xs [(0 :: Int)..]
  where
    fLine :: a -> Int -> [Text]
-   fLine l i = (if i `mod` 33 == 0 then catMaybes [head1, head2] else [])
-               <> (entry l : if withCommentary then rtCommentary l else [])
+   fLine l i =
+     -- 0. a periodic header
+     (if i `mod` 33 == 0 then catMaybes [head1, head2] else [])
+     -- 1. actual timeline entry
+     <> (entry l
+     -- 2. per-entry commentary, if any
+         : concat (fmap (rtCommentary l) comments))
 
    entry :: a -> Text
    entry v = renderLineDist $

@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE EmptyDataDeriving #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-name-shadowing -Wno-orphans #-}
@@ -442,7 +443,15 @@ instance RenderTimeline BlockEvents where
      bpeIsNegative p BPError{eDesc=BPENegativePhase p' _} = p == p'
      bpeIsNegative _ _ = False
 
-  rtCommentary BlockEvents{..} = ("    " <>) . show <$> beErrors
+  data RTComments BlockEvents
+    = BEErrors
+    | BEFilterOuts
+    deriving Show
+
+  rtCommentary BlockEvents{..} =
+    \case
+      BEErrors     -> ("           " <>) . show <$> beErrors
+      BEFilterOuts -> ("           " <>) . show <$> beNegAcceptance
 
 --
 -- * Machine performance report subsetting
@@ -496,6 +505,9 @@ instance RenderCDFs MachPerf p where
      c = nChunksEachOf  2 6 "CPU% spans"
 
 instance RenderTimeline SlotStats where
+  data RTComments SlotStats
+    deriving Show
+
   rtFields _ =
     --  Width LeftPad
     [ Field 5 0 "abs.slot"     "abs."  "slot#"   (IWord64 (unSlotNo      .slSlot)) ""

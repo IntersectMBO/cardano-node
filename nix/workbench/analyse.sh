@@ -23,11 +23,12 @@ usage_analyse() {
 
   $(red analyse) $(blue options):
 
-    $(helpopt --refresh)          Redo initial log filtering.
     $(helpopt --filters F,F,F..)  Comma-separated list of named chain filters:  see bench/chain-filters
                          Note: filter names have no .json suffix
                          Defaults are specified by the run's profile.
-    $(helpopt --no-filters)       Disable filters implied by the profile.
+    $(helpopt --no-filters)       Disable filters implied by the profile
+    $(helpopt --filter-reasons)   Chain timeline: explain per-block filter-out reasons
+    $(helpopt --chain-errors)     Chain timeline: show per-block anomalies
     $(helpopt --dump-logobjects)  Dump the intermediate data: lifted log objects
     $(helpopt --dump-machviews)   Blockprop: dump machine views (JSON)
     $(helpopt --dump-chain)       Blockprop: dump chain (JSON)
@@ -35,16 +36,21 @@ usage_analyse() {
     $(helpopt --dump-slots)       Machperf:  dump filtered slots (JSON)
     $(helpopt --multi-overall)    Multirun:  Overall dataset statistical summary
     $(helpopt --multi-inter-cdf)  Multirun:  Inter-sample (i.e. inter-CDF) stats
+    $(helpopt --refresh)          Redo initial log filtering
 EOF
 }
 
 analyse() {
-local filters=() aws= sargs=() unfiltered= perf_omit_hosts=()
+local filters=() filter_reasons= chain_errors= aws= sargs=() unfiltered= perf_omit_hosts=()
 local dump_logobjects= dump_machviews= dump_chain= dump_slots_raw= dump_slots=
 local multi_aspect='--inter-cdf' refresh=
 while test $# -gt 0
 do case "$1" in
-       --refresh | -re | -r )     sargs+=($1);    refresh='true';;
+       --filters | -f )           sargs+=($1 $2); analysis_set_filters "base,$2"; shift;;
+       --no-filters | --unfiltered | -u )
+                                  sargs+=($1);    analysis_set_filters ""; unfiltered='true';;
+       --filter-reasons  | -fr )  sargs+=($1);    filter_reasons='true';;
+       --chain-errors    | -er )  sargs+=($1);    chain_errors='true';;
        --dump-logobjects | -lo )  sargs+=($1);    dump_logobjects='true';;
        --dump-machviews  | -mw )  sargs+=($1);    dump_machviews='true';;
        --dump-chain      | -c )   sargs+=($1);    dump_chain='true';;
@@ -52,10 +58,8 @@ do case "$1" in
        --dump-slots      | -s )   sargs+=($1);    dump_slots='true';;
        --multi-overall )          sargs+=($1);    multi_aspect='--overall';;
        --multi-inter-cdf )        sargs+=($1);    multi_aspect='--inter-cdf';;
+       --refresh | -re | -r )     sargs+=($1);    refresh='true';;
        --perf-omit-host )         sargs+=($1 $2); perf_omit_hosts+=($2); shift;;
-       --filters )                sargs+=($1 $2); analysis_set_filters "base,$2"; shift;;
-       --no-filters | --unfiltered | -u )
-                                  sargs+=($1);    analysis_set_filters ""; unfiltered='true';;
        * ) break;; esac; shift; done
 
 if curl --connect-timeout 0.5 http://169.254.169.254/latest/meta-data >/dev/null 2>&1
@@ -257,7 +261,7 @@ case "$op" in
                                                           --shelley-genesis "$dir"/genesis-shelley.json })
         v5=(${v2[*]/#rebuild-chain/        'rebuild-chain'                  ${filters[*]}})
         v6=(${v5[*]/#dump-chain/           'dump-chain'            --chain "$adir"/chain.json})
-        v7=(${v6[*]/#chain-timeline/       'timeline-chain'     --timeline "$adir"/chain.txt})
+        v7=(${v6[*]/#chain-timeline/       'timeline-chain'     --timeline "$adir"/chain.txt ${filter_reasons:+--filter-reasons} ${chain_errors:+--chain-errors}})
         v8=(${v7[*]/#collect-slots/        'collect-slots'           ${minus_logfiles[*]/#/--ignore-log }})
         v9=(${v8[*]/#filter-slots/         'filter-slots'                   ${filters[*]}})
         va=(${v9[*]/#propagation-json/     'render-propagation'   --json "$adir"/blockprop.json     --full})
