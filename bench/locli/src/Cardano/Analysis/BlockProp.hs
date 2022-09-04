@@ -533,9 +533,16 @@ blockPropMachEventsStep run@Run{genesis} (JsonLogfile fp) mv@MachView{..} lo = c
     in if isJust mbe0 then mv else
       MOE
        (ObserverEvents
-        loHost loBlock loBlockNo loSlotNo
-        (slotStart genesis loSlotNo) (Just loAt)
-        Nothing Nothing Nothing Nothing Nothing 0 [] [])
+         loHost
+         loBlock loBlockNo loSlotNo
+         (slotStart genesis loSlotNo) -- t+0:  slot start
+         (Just loAt)                  -- Noticed
+         Nothing                      -- Requested
+         Nothing                      -- Fetched
+         Nothing                      -- Announced
+         Nothing                      -- Sending
+         Nothing 0                    -- Adopted & chain delta
+         [] [])
       & doInsert loBlock
   -- 1. Request (observer only)
   LogObject{loAt, loHost, loBody=LOBlockFetchClientRequested{loBlock,loLength}} ->
