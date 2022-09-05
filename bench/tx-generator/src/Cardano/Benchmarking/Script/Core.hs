@@ -287,10 +287,27 @@ evalGenerator generator era = do
   networkId <- getUser TNetworkId  
   protocolParameters <- getProtocolParameters
   case generator of
-    Split _walletName _submitMode _payMode1 _payMode2 _coins -> do
-       error "todo: implement"
-    SplitN _walletName _submitMode _paymode1 _paymode2 _value _count -> do
-       error "todo: implement"
+    Split fee walletName payMode payModeChange coins -> do
+      wallet <- getName walletName
+      (toUTxO, _addressMsg) <- interpretPayMode payMode
+      (toUTxOChange, _addressMsg) <- interpretPayMode payModeChange      
+      let
+        fundSource = walletSource wallet 1
+        inToOut = includeChangeNew fee coins
+        txGenerator = genTx protocolParameters (TxInsCollateralNone, []) (mkFee fee) TxMetadataNone
+        sourceToStore = sourceToStoreTransactionNew txGenerator fundSource inToOut $ mangleWithChange toUTxOChange toUTxO
+      return $ Streaming.effect (Streaming.yield <$> sourceToStore)
+
+    SplitN fee walletName payMode count -> do
+      wallet <- getName walletName
+      (toUTxO, _addressMsg) <- interpretPayMode payMode
+      let
+        fundSource = walletSource wallet 1
+        inToOut = FundSet.inputsToOutputsWithFee fee count
+        txGenerator = genTx protocolParameters (TxInsCollateralNone, []) (mkFee fee) TxMetadataNone
+        sourceToStore = sourceToStoreTransactionNew txGenerator fundSource inToOut (mangle $ repeat toUTxO)
+      return $ Streaming.effect (Streaming.yield <$> sourceToStore)
+
     BechmarkTx sourceWallet shape collateralWallet -> do
       fundKey <- getName $ KeyName "pass-partout" -- should be walletkey -- TODO: Remove magic
       walletRefSrc <- getName sourceWallet
@@ -312,13 +329,18 @@ evalGenerator generator era = do
 
         sourceToStore = sourceToStoreTransaction txGenerator fundSource inToOut (makeToUTxOList toUTxO) fundToStore
 
-      return $ Streaming.cycle $ Streaming.effect (Streaming.yield <$> sourceToStore)
-    Repeat count g -> do
-      stream <- evalGenerator g era
-      return $ Streaming.take count $ Streaming.cycle stream
-    Sequence generatorList -> do
-      gList <- forM generatorList $ \g -> evalGenerator g era
+      return $ Streaming.effect (Streaming.yield <$> sourceToStore)
+
+    Sequence l -> do
+      gList <- forM l $ \g -> evalGenerator g era
       return $ Streaming.for (Streaming.each gList) id
+    Cycle g -> Streaming.cycle <$> evalGenerator g era
+    Take count g -> Streaming.take count <$> evalGenerator g era
+    RoundRobin l -> do
+      _gList <- forM l $ \g -> evalGenerator g era
+      error "return $ foldr1 Streaming.interleaves gList"
+    OneOf _l -> error "todo: implement Quickcheck style oneOf generator"
+
 
 selectCollateralFunds :: forall era. IsShelleyBasedEra era
   => Maybe WalletName

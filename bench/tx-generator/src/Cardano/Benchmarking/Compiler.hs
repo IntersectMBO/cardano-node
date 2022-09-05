@@ -80,11 +80,12 @@ addCollaterals src = do
     True -> do      
       safeCollateral <- _safeCollateral <$> evilFeeMagic
       collateralWallet <- newWallet "collateral_wallet"
-      emit $ CreateChange era src LocalSocket
-               (PayToAddr (KeyName "pass-partout") collateralWallet)
-               (PayToAddr (KeyName "pass-partout") src)
-               safeCollateral
-               1
+      fee <- askNixOption _nix_tx_fee
+      let generator = Split fee src
+                        (PayToAddr (KeyName "pass-partout") collateralWallet)
+                        (PayToAddr (KeyName "pass-partout") src)
+                        [ safeCollateral ]
+      emit $ Submit era LocalSocket generator
       return $ Just collateralWallet
 
 splittingPhase :: SrcWallet -> Compiler DstWallet
@@ -161,7 +162,7 @@ benchmarkingPhaseNew wallet collateralWallet = do
     submitMode = if debugMode
         then LocalSocket
         else Benchmark targetNodes (ThreadName "tx-submit-benchmark") tps  extraArgs
-    generator = Repeat txCount $ BechmarkTx wallet extraArgs collateralWallet
+    generator = Take txCount $ Cycle $ BechmarkTx wallet extraArgs collateralWallet
   emit $ Submit era submitMode generator
   unless debugMode $ do
     emit $ WaitBenchmark $ ThreadName "tx-submit-benchmark"

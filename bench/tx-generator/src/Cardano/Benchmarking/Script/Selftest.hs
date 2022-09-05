@@ -57,7 +57,7 @@ testScript protocolFile submitMode =
   , createChange 2200000000000 10
   , createChange 70000000000 300
   , createChange 2300000000 9000
-  , Submit era submitMode $ Repeat 4000 $ BechmarkTx wallet extraArgs Nothing
+  , Submit era submitMode $ Take 4000 $ Cycle $ BechmarkTx wallet extraArgs Nothing
   ]
   where
     era = AnyCardanoEra AllegraEra

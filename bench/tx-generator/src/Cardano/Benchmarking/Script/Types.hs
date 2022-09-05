@@ -46,11 +46,15 @@ deriving instance Generic Action
 
 data Generator where
 --  SecureGenesis :: -> Generator
-  Split :: !WalletName -> !SubmitMode -> !PayMode -> !PayMode -> [ Lovelace ] -> Generator  
-  SplitN :: !WalletName -> !SubmitMode -> !PayMode -> !PayMode -> !Lovelace -> !Int -> Generator
+  Split :: !Lovelace -> !WalletName -> !PayMode -> !PayMode -> [ Lovelace ] -> Generator  
+  SplitN :: !Lovelace -> !WalletName -> !PayMode -> !Int -> Generator
   BechmarkTx :: !WalletName -> !RunBenchmarkAux -> Maybe WalletName -> Generator
-  Repeat :: !Int -> !Generator -> Generator
   Sequence :: [Generator] -> Generator
+  Cycle :: !Generator -> Generator
+  Take :: !Int -> !Generator -> Generator
+  RoundRobin :: [Generator] -> Generator
+  OneOf :: [(Generator, Double)] -> Generator
+--  AddLogMessages :: Text -> Text -> Generator -> Generator
   deriving (Show, Eq)
 deriving instance Generic Generator
 
