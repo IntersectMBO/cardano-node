@@ -268,30 +268,30 @@ beForgedAt BlockEvents{beForge=BlockForge{..}} =
 buildMachViews :: Run -> [(JsonLogfile, [LogObject])] -> IO [(JsonLogfile, MachView)]
 buildMachViews run = mapConcurrentlyPure (fst &&& blockEventMapsFromLogObjects run)
 
-rebuildChain :: Run -> ([ChainFilter], [FilterName]) -> [(JsonLogfile, MachView)] -> IO (DataDomain SlotNo, DataDomain BlockNo, [FilterName], [BlockEvents])
-rebuildChain run@Run{genesis} (flts, fltNames) xs@(fmap snd -> machViews) = do
+rebuildChain :: Run -> [ChainFilter] -> [FilterName] -> [(JsonLogfile, MachView)] -> IO (DataDomain SlotNo, DataDomain BlockNo, [BlockEvents])
+rebuildChain run@Run{genesis} flts fltNames xs@(fmap snd -> machViews) = do
   progress "tip" $ Q $ show $ bfeBlock tipBlock
-  pure (domSlot, domBlock, fltNames, chain)
+  pure (domSlot, domBlock, chain)
  where
    (blk0,  blkL)  = (head chain, last chain)
    mblkV =
-     liftA2 (,) (find (null . beNegAcceptance) chain)
-     (find (null . beNegAcceptance) (reverse chain))
+     liftA2 (,) (find (null . beNegAcceptance)          chain)
+                (find (null . beNegAcceptance) (reverse chain))
    domSlot = DataDomain
              (blk0  & beSlotNo)  (blkL  & beSlotNo)
-             (mblkV & maybe (-1) (beSlotNo . fst))
-             (mblkV & maybe (-1) (beSlotNo . snd))
+             (mblkV <&> beSlotNo . fst)
+             (mblkV <&> beSlotNo . snd)
              (beSlotNo blkL - beSlotNo blk0 & fromIntegral . unSlotNo)
              (mblkV &
               maybe 0 (fromIntegral . unSlotNo . uncurry (on (-) beSlotNo)))
    domBlock = DataDomain
               (blk0  & beBlockNo) (blkL  & beBlockNo)
-              (mblkV & maybe (-1) (beBlockNo . fst))
-              (mblkV & maybe (-1) (beBlockNo . snd))
-              (beBlockNo blkL  - beBlockNo blk0  & fromIntegral . unBlockNo)
-             (mblkV &
-              maybe 0 (fromIntegral . unBlockNo . uncurry (on (-) beBlockNo)))
+              (mblkV <&> beBlockNo . fst)
+              (mblkV <&> beBlockNo . snd)
+              (length chain)
+              (length acceptableChain)
 
+   acceptableChain = filter (null . beNegAcceptance) chain
    chain = computeChainBlockGaps $
            doRebuildChain (fmap deltifyEvents <$> eventMaps) tipHash
 

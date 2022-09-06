@@ -172,11 +172,14 @@ interpreters = map3ple Map.fromList . unzip3 . fmap ent $
     \v -> LOChainSyncServerSendHeader
             <$> v .: "block"
   , (,,,) "ChainSyncServerEvent.TraceChainSyncServerReadBlocked.AddBlock" "ChainSyncServerHeader.ChainSyncServerEvent.ServerReadBlocked.AddBlock" "ChainSync.ServerHeader.Update" $
-    \v -> case (KeyMap.lookup "risingEdge" v, KeyMap.lookup "blockingRead" v) of
+    \v -> case ( KeyMap.lookup "risingEdge" v
+               , KeyMap.lookup "blockingRead" v
+               , KeyMap.lookup "rollBackTo" v) of
             -- Skip the falling edge & non-blocking reads:
-            (Just (Bool False), _) -> pure $ LOAny v
-            (_, Just (Bool False)) -> pure $ LOAny v
-            -- Should be either rising edge, or legacy:
+            (Just (Bool False), _, _) -> pure $ LOAny v
+            (_, Just (Bool False), _) -> pure $ LOAny v
+            (_, _, Just _)            -> pure $ LOAny v
+            -- Should be either rising edge+rollforward, or legacy:
             _ -> do
               blockLegacy <- v .:? "block"
               block       <- v .:? "addBlock"

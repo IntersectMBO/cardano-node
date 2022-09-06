@@ -102,10 +102,10 @@ collectSlotStats run = fmap sequence <$> mapConcurrentlyPure (timelineFromLogObj
 
 runSlotFilters ::
      Run
-  -> ([ChainFilter], [FilterName])
+  -> [ChainFilter]
   -> [(JsonLogfile, [SlotStats])]
   -> IO (DataDomain SlotNo, [(JsonLogfile, [SlotStats])])
-runSlotFilters Run{genesis} (flts, _fltNames) slots = do
+runSlotFilters Run{genesis} flts slots = do
   filtered <- mapConcurrentlyPure (fmap $ filterSlotStats flts) slots
   let samplePre  =    slots !! 0 & snd
       samplePost = filtered !! 0 & snd

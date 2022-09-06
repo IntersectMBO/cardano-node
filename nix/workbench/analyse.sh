@@ -26,6 +26,10 @@ usage_analyse() {
     $(helpopt --filters F,F,F..)  Comma-separated list of named chain filters:  see bench/chain-filters
                          Note: filter names have no .json suffix
                          Defaults are specified by the run's profile.
+    $(helpopt --filter-expr JSON)
+                       A directly specified filter JSON expression.
+                         Please see workbench filters for an example of lists of
+                         the intended filter expressions.
     $(helpopt --no-filters)       Disable filters implied by the profile
     $(helpopt --filter-reasons)   Chain timeline: explain per-block filter-out reasons
     $(helpopt --chain-errors)     Chain timeline: show per-block anomalies
@@ -41,12 +45,13 @@ EOF
 }
 
 analyse() {
-local filters=() filter_reasons= chain_errors= aws= sargs=() unfiltered= perf_omit_hosts=()
+local filters=() filter_exprs=() filter_reasons= chain_errors= aws= sargs=() unfiltered= perf_omit_hosts=()
 local dump_logobjects= dump_machviews= dump_chain= dump_slots_raw= dump_slots=
 local multi_aspect='--inter-cdf' refresh=
 while test $# -gt 0
 do case "$1" in
-       --filters | -f )           sargs+=($1 $2); analysis_set_filters "base,$2"; shift;;
+       --filters | -f )           sargs+=($1 $2); analysis_set_filters "unitary,$2"; shift;;
+       --filter-expr | -fex )     sargs+=($1 $2); filter_exprs+=($2); shift;;
        --no-filters | --unfiltered | -u )
                                   sargs+=($1);    analysis_set_filters ""; unfiltered='true';;
        --filter-reasons  | -fr )  sargs+=($1);    filter_reasons='true';;
@@ -247,12 +252,18 @@ case "$op" in
             $(for host in ${perf_omit_hosts[*]}
               do ls "$adir"/logs-$host.flt.json; done))
 
-        if test -z "${filters[*]}" -a -z "$unfiltered"
-        then local filter_names=$(jq '.analysis.filters
+        if test -z "$unfiltered"
+        then local filter_names=$(jq '(.analysis.filters // [])
                                       | join(",")
                                      ' "$dir"/profile.json --raw-output)
              analysis_set_filters "$filter_names"
+             filter_exprs+=($(jq '(.analysis.filter_exprs // [])
+                                  | map(tojson)
+                                  | join(",")
+                                  ' "$dir"/profile.json --raw-output))
         fi
+        progress "analysis" "filters exprs: $(yellow ${filter_exprs[*]})"
+        filters+=(${filter_exprs[*]/#/--filter-expr })
 
         local v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 va vb vc vd ve vf vg vh vi vj vk vl vm vn vo
         v0=("$@")
@@ -392,6 +403,7 @@ analysis_set_filters() {
     do test -f "$f" ||
             fail "no such filter: $f"; done
 
+    progress "analysis" "filter files: $(yellow ${filter_files[*]})"
     filters+=(${filter_files[*]/#/--filter })
 }
 

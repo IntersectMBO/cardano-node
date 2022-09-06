@@ -89,7 +89,7 @@ def era_defaults($era):
     , silence_since_last_block_s:     120
     , tx_loss_ratio:                  0.02
     , finish_patience:                21
-    , filters:                        ["base", "size-full"]
+    , filters:                        ["unitary"]
     }
   }
 

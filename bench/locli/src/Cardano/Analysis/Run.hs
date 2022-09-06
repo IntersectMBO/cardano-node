@@ -67,7 +67,9 @@ renderAnchorDomains Anchor{..} = mconcat $
        renderDomain ty r DataDomain{..} = mconcat
          [ ", ", ty
          , " range: raw(", r ddRawFirst,      "-", r ddRawLast , ")"
-         ,   " filtered(", r ddFilteredFirst, "-", r ddFilteredLast, ")"
+         ,   " filtered("
+         , maybe "none" r ddFilteredFirst, "-"
+         , maybe "none" r ddFilteredLast , ")"
          ]
 
 renderAnchorNoRuns :: Anchor -> Text

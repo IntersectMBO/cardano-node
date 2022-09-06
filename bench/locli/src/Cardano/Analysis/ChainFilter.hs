@@ -81,6 +81,17 @@ argChainFilterset optname desc =
       <> metavar "FILTERSET-FILE"
       <> help desc
 
+argChainFilterExpr :: Parser ChainFilter
+argChainFilterExpr =
+  fmap (\arg ->
+          either (error . mconcat . (["Error while parsing JSON filter expression __", arg, "__: "] <>) . (:[])) identity
+        . eitherDecode @ChainFilter
+        $ LBS.pack arg) $
+    Opt.option Opt.str
+      $ long "filter-expr"
+      <> metavar "JSON"
+      <> help "A directly specified filter JSON expression"
+
 readFilters :: [JsonFilterFile] -> ExceptT Text IO ([ChainFilter], [FilterName])
 readFilters fltfs = do
   xs <-

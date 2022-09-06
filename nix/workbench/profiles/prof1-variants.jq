@@ -249,7 +249,7 @@ def all_profile_variants:
       , plutusAutoMode:                 true
       }
     , analysis:
-      { filters:                        ["base", "size-small"]
+      { filters:                        ["size-small"]
       }
     }) as $plutus
   |

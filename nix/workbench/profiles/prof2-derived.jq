@@ -84,13 +84,16 @@ def add_derived_params:
 | .node                                      as $node
 
 ## Absolute durations:
-| ($gsis.epoch_length * $gsis.slot_duration) as $epoch_duration
-| $node.shutdown_on_block_synced             as $shutdown_block
-| $node.shutdown_on_slot_synced              as $shutdown_slots
-| (if $shutdown_slots | type == "number"
-   then $shutdown_slots / $gsis.epoch_length | ceil
-   else $gtor.epochs
-   end)                                      as $effective_epochs
+| ($gsis.epoch_length * $gsis.slot_duration)       as $epoch_duration
+| ($gsis.slot_duration / $gsis.active_slots_coeff) as $block_duration
+| $node.shutdown_on_block_synced                   as $shutdown_blocks
+| $node.shutdown_on_slot_synced                    as $shutdown_slots
+| (if   $shutdown_slots  | type == "number"
+   then $shutdown_slots  / $gsis.epoch_length | ceil else
+   if   $shutdown_blocks | type == "number"
+   then $shutdown_blocks / $gsis.epoch_length | ceil else
+   $gtor.epochs
+   end end)                                      as $effective_epochs
 | ($epoch_duration * $effective_epochs)      as $generator_requested_duration
 | ($shutdown_slots | may_mult($gsis.slot_duration)) as $shutdown_time
 | ([ $generator_requested_duration
@@ -193,6 +196,11 @@ def add_derived_params:
      , analysis:
          { minimum_chain_density:      ($gsis.active_slots_coeff * 0.5)
          , cluster_startup_overhead_s: $dataset_induced_startup_delay_conservative
+         , filter_exprs:
+           ($ana.filter_exprs +
+            [ { tag: "CBlock", contents: { tag: "BMinimumAdoptions"
+                                         , contents: ($n_pools - 1) } }
+            ])
          }
      })
    }
