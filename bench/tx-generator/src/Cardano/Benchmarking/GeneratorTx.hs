@@ -14,7 +14,6 @@ module Cardano.Benchmarking.GeneratorTx
   , TxGenError
   , walletBenchmark
   , readSigningKey
-  , secureGenesisFund
   , waitBenchmark
   ) where
 
@@ -22,7 +21,6 @@ import           Cardano.Prelude
 import           Prelude (String, id)
 
 import qualified Control.Concurrent.STM as STM
-import           Control.Monad (fail)
 import           Control.Monad.Trans.Except.Extra (newExceptT)
 import           "contra-tracer" Control.Tracer (Tracer, traceWith)
 import qualified Data.Time.Clock as Clock
@@ -35,23 +33,16 @@ import           Network.Socket (AddrInfo (..), AddrInfoFlag (..), Family (..), 
 import           Cardano.CLI.Types (SigningKeyFile (..))
 import           Cardano.Node.Configuration.NodeAddress
 
-import           Ouroboros.Consensus.Shelley.Eras (StandardShelley)
-
 import           Cardano.Api hiding (txFee)
 
 import           Cardano.Benchmarking.GeneratorTx.Error
-import           Cardano.Benchmarking.GeneratorTx.Genesis
 import           Cardano.Benchmarking.GeneratorTx.NodeToNode
 import           Cardano.Benchmarking.GeneratorTx.Submission
 import           Cardano.Benchmarking.GeneratorTx.SubmissionClient
-import           Cardano.Benchmarking.GeneratorTx.Tx
 import           Cardano.Benchmarking.TpsThrottle
 import           Cardano.Benchmarking.LogTypes
 import           Cardano.Benchmarking.Types
 import           Cardano.Benchmarking.Wallet (TxStream)
-
-import           Cardano.Ledger.Shelley.API (ShelleyGenesis)
-import           Ouroboros.Network.Protocol.LocalTxSubmission.Type (SubmitResult (..))
 
 readSigningKey :: SigningKeyFile -> ExceptT TxGenError IO (SigningKey PaymentKey)
 readSigningKey =
@@ -62,37 +53,6 @@ readSigningKey =
     [ FromSomeType (AsSigningKey AsGenesisUTxOKey) castSigningKey
     , FromSomeType (AsSigningKey AsPaymentKey) id
     ]
-
-secureGenesisFund :: forall era. IsShelleyBasedEra era
-  => Tracer IO (TraceBenchTxSubmit TxId)
-  -> (TxInMode CardanoMode -> IO (SubmitResult (TxValidationErrorInMode CardanoMode)))
-  -> NetworkId
-  -> ShelleyGenesis StandardShelley
-  -> Lovelace
-  -> SlotNo
-  -> SigningKey PaymentKey
-  -> AddressInEra era
-  -> ExceptT TxGenError IO Fund
-secureGenesisFund submitTracer localSubmitTx networkId genesis txFee ttl key outAddr = do
-  let (_inAddr, lovelace) = genesisFundForKey @ era networkId genesis key
-      (tx, fund) =
-         genesisExpenditure networkId key outAddr lovelace txFee ttl
-  r <- liftIO $
-    catches (localSubmitTx $ txInModeCardano tx)
-      [ Handler $ \e@SomeException{} ->
-          fail $ mconcat
-            [ "Exception while moving genesis funds via local socket: "
-            , show e
-            ]]
-  case r of
-    SubmitSuccess ->
-      liftIO . traceWith submitTracer . TraceBenchTxSubDebug
-      $ mconcat
-      [ "******* Funding secured ("
-      , show $ fundTxIn fund, " -> ", show $ fundAdaValue fund
-      , ")"]
-    SubmitFail e -> fail $ show e
-  return fund
 
 type AsyncBenchmarkControl = (Async (), [Async ()], IO SubmissionSummary, IO ())
 

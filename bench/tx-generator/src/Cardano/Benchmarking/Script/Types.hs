@@ -15,6 +15,7 @@ import           Prelude
 import           GHC.Generics
 
 import           Data.List.NonEmpty
+import           Data.Text (Text)
 
 import           Cardano.Benchmarking.OuroborosImports (SigningKeyFile)
 import           Cardano.Api (AnyCardanoEra, ExecutionUnits, Lovelace, ScriptData, ScriptRedeemer, TextEnvelope, TxIn)
@@ -33,7 +34,6 @@ data Action where
   ReadSigningKey     :: !KeyName -> !SigningKeyFile -> Action
   DefineSigningKey   :: !KeyName -> !TextEnvelope -> Action
   AddFund            :: !AnyCardanoEra -> !WalletName -> !TxIn -> !Lovelace -> !KeyName -> Action
-  ImportGenesisFund  :: !AnyCardanoEra -> !WalletName -> !SubmitMode -> !KeyName -> !KeyName -> Action
   CreateChange       :: !AnyCardanoEra -> !WalletName -> !SubmitMode -> !PayMode -> !PayMode -> !Lovelace -> !Int -> Action
   WaitBenchmark      :: !ThreadName -> Action
   Submit             :: !AnyCardanoEra -> !SubmitMode -> !Generator -> Action
@@ -41,11 +41,12 @@ data Action where
   Reserved           :: [String] -> Action
   WaitForEra         :: !AnyCardanoEra -> Action
   SetProtocolParameters :: ProtocolParametersSource -> Action
+  LogMsg             :: !Text -> Action
   deriving (Show, Eq)
 deriving instance Generic Action
 
 data Generator where
---  SecureGenesis :: -> Generator
+  SecureGenesis :: !Lovelace -> !WalletName -> !KeyName -> !KeyName -> Generator
   Split :: !Lovelace -> !WalletName -> !PayMode -> !PayMode -> [ Lovelace ] -> Generator  
   SplitN :: !Lovelace -> !WalletName -> !PayMode -> !Int -> Generator
   BechmarkTx :: !WalletName -> !RunBenchmarkAux -> Maybe WalletName -> Generator

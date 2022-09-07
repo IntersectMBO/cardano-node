@@ -13,6 +13,7 @@ import           Control.Monad.Trans.RWS.CPS
 import           Data.Dependent.Sum ( (==>) )
 import           Data.DList (DList)
 import qualified Data.DList as DL
+import           Data.Text (Text)
 
 import           Cardano.Api
 import           Cardano.Benchmarking.Types
@@ -46,8 +47,7 @@ compileToScript :: Compiler ()
 compileToScript = do
   initConstants
   emit . StartProtocol =<< askNixOption getNodeConfigFile
-  genesisWallet <- newWallet "genesis_wallet"
-  importGenesisFunds genesisWallet
+  genesisWallet <- importGenesisFunds
   collateralWallet <- addCollaterals genesisWallet
   splitWallet <- splittingPhase genesisWallet
   benchmarkingPhaseNew splitWallet collateralWallet
@@ -65,19 +65,25 @@ initConstants = do
     setN :: Tag v -> (NixServiceOptions -> v) -> Compiler ()
     setN key s = askNixOption s >>= setConst key
 
-importGenesisFunds :: DstWallet -> Compiler ()
-importGenesisFunds wallet = do
+importGenesisFunds :: Compiler WalletName
+importGenesisFunds = do
+  logMsg "Importing Genesis Fund."
+  wallet <- newWallet "genesis_wallet"
   era <- askNixOption _nix_era
+  fee <- askNixOption _nix_tx_fee  
   cmd1 (ReadSigningKey $ KeyName "pass-partout") _nix_sigKey
-  emit $ ImportGenesisFund era wallet LocalSocket (KeyName "pass-partout") (KeyName "pass-partout")
+  emit $ Submit era LocalSocket $ SecureGenesis fee wallet (KeyName "pass-partout") (KeyName "pass-partout")
   delay
+  logMsg "Importing Genesis Fund. Done."
+  return wallet
 
 addCollaterals :: SrcWallet -> Compiler (Maybe WalletName)
 addCollaterals src = do
   era <- askNixOption _nix_era
   isAnyPlutusMode >>= \case
     False -> return Nothing
-    True -> do      
+    True -> do
+      logMsg "Create collaterals."
       safeCollateral <- _safeCollateral <$> evilFeeMagic
       collateralWallet <- newWallet "collateral_wallet"
       fee <- askNixOption _nix_tx_fee
@@ -86,6 +92,7 @@ addCollaterals src = do
                         (PayToAddr (KeyName "pass-partout") src)
                         [ safeCollateral ]
       emit $ Submit era LocalSocket generator
+      logMsg "Create collaterals. Done."
       return $ Just collateralWallet
 
 splittingPhase :: SrcWallet -> Compiler DstWallet
@@ -196,6 +203,9 @@ evilFeeMagic = do
 
 emit :: Action -> Compiler ()
 emit = tell . DL.singleton
+
+logMsg :: Text -> Compiler ()
+logMsg = emit . LogMsg
 
 cmd1 :: (v -> Action) -> (NixServiceOptions -> v) -> Compiler ()
 cmd1 cmd arg = emit . cmd =<< askNixOption arg

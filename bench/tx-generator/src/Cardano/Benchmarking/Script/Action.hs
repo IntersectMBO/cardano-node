@@ -3,6 +3,7 @@ where
 
 import           Data.Functor.Identity
 import           Data.Dependent.Sum (DSum(..))
+import qualified Data.Text as Text (unpack)
 
 import           Cardano.Benchmarking.Script.Core
 import           Cardano.Benchmarking.Script.Env
@@ -21,10 +22,9 @@ action a = case a of
   AddFund era wallet txIn lovelace keyName -> addFund era wallet txIn lovelace keyName
   Delay t -> delay t
   Submit era submitMode generator -> submitAction era submitMode generator
--- todo : use Generator for genesisimport
-  ImportGenesisFund era wallet submitMode genesisKey fundKey -> importGenesisFund era wallet submitMode genesisKey fundKey
   CreateChange era sourceWallet payMode changeMode submitMode value count -> createChange era sourceWallet payMode changeMode submitMode value count
   WaitBenchmark thread -> waitBenchmark thread
   CancelBenchmark thread -> cancelBenchmark thread
   WaitForEra era -> waitForEra era
+  LogMsg txt -> traceDebug $ Text.unpack txt
   Reserved options -> reserved options

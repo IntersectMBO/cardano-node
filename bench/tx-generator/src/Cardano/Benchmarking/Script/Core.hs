@@ -41,9 +41,9 @@ import qualified Cardano.Benchmarking.Fifo as Fifo
 import qualified Cardano.Benchmarking.FundSet as FundSet
 import           Cardano.Benchmarking.FundSet as FundSet (getFundTxIn)
 import           Cardano.Benchmarking.GeneratorTx as GeneratorTx (AsyncBenchmarkControl, TxGenError)
-import qualified Cardano.Benchmarking.GeneratorTx as GeneratorTx (readSigningKey, secureGenesisFund,
+import qualified Cardano.Benchmarking.GeneratorTx as GeneratorTx (readSigningKey,
                    waitBenchmark, walletBenchmark)
-
+import qualified Cardano.Benchmarking.GeneratorTx.Genesis as Genesis
 import           Cardano.Benchmarking.GeneratorTx.NodeToNode (ConnectClient,
                    benchmarkConnectTxSubmit)
 import           Cardano.Benchmarking.GeneratorTx.SizedMetadata (mkMetadata)
@@ -287,10 +287,26 @@ evalGenerator generator era = do
   networkId <- getUser TNetworkId  
   protocolParameters <- getProtocolParameters
   case generator of
+    SecureGenesis fee wallet genesisKeyName destKeyName -> do
+      genesis  <- get Genesis
+      ttl      <- getUser TTTL
+      destKey  <- getName destKeyName
+      destWallet  <- getName wallet
+      genesisKey  <- getName genesisKeyName
+      let
+        outAddr = Core.keyAddress @ era networkId destKey
+        (_inAddr, lovelace) = Genesis.genesisFundForKey @ era networkId genesis genesisKey
+        (tx, fund) = Genesis.genesisExpenditure networkId genesisKey outAddr lovelace fee ttl destKey
+        gen = do
+          walletRefInsertFund destWallet fund
+          return $ Right tx
+      return $ Streaming.effect (Streaming.yield <$> gen)
     Split fee walletName payMode payModeChange coins -> do
       wallet <- getName walletName
-      (toUTxO, _addressMsg) <- interpretPayMode payMode
-      (toUTxOChange, _addressMsg) <- interpretPayMode payModeChange      
+      (toUTxO, addressOut) <- interpretPayMode payMode
+      traceDebug $ "split output address : " ++ addressOut
+      (toUTxOChange, addressChange) <- interpretPayMode payModeChange
+      traceDebug $ "split change address : " ++ addressChange
       let
         fundSource = walletSource wallet 1
         inToOut = includeChangeNew fee coins
@@ -300,7 +316,8 @@ evalGenerator generator era = do
 
     SplitN fee walletName payMode count -> do
       wallet <- getName walletName
-      (toUTxO, _addressMsg) <- interpretPayMode payMode
+      (toUTxO, addressOut) <- interpretPayMode payMode
+      traceDebug $ "split output address : " ++ addressOut      
       let
         fundSource = walletSource wallet 1
         inToOut = FundSet.inputsToOutputsWithFee fee count
@@ -360,38 +377,6 @@ dumpToFile filePath tx = liftIO $ dumpToFileIO filePath tx
 
 dumpToFileIO :: FilePath -> TxInMode CardanoMode -> IO ()
 dumpToFileIO filePath tx = appendFile filePath ('\n' : show tx)
-
-importGenesisFund
-   :: AnyCardanoEra
-   -> WalletName
-   -> SubmitMode
-   -> KeyName
-   -> KeyName
-   -> ActionM ()
-importGenesisFund era wallet submitMode genesisKeyName destKey = do
-  tracer <- btTxSubmit_ <$> get BenchTracers
-  localSubmit <- case submitMode of
-    LocalSocket -> getLocalSubmitTx
-    NodeToNode _ -> throwE $ WalletError "NodeToNode mode not supported in importGenesisFund"
-    DumpToFile filePath -> return $ \tx -> dumpToFileIO filePath tx >> return SubmitSuccess
-    DiscardTX -> return $ \_ -> return SubmitSuccess
-    Benchmark {} -> error "todo : remove importGenesisFund"
-  networkId <- getUser TNetworkId
-  genesis  <- get Genesis
-  fee      <- getUser TFee
-  ttl      <- getUser TTTL
-  fundKey  <- getName destKey
-  genesisKey  <- getName genesisKeyName
-  let
-    coreCall :: forall era. IsShelleyBasedEra era => AsType era -> ExceptT TxGenError IO Store.Fund
-    coreCall _proxy = do
-      let addr = Core.keyAddress @ era networkId fundKey
-      f <- GeneratorTx.secureGenesisFund tracer localSubmit networkId genesis fee ttl genesisKey addr
-      return (f, fundKey)
-  result <- liftCoreWithEra era coreCall
-  case result of
-    Left err -> liftTxGenError err
-    Right ((txIn, outVal), skey) -> addFundToWallet wallet txIn outVal skey
 
 initWallet :: WalletName -> ActionM ()
 initWallet name = liftIO Wallet.initWallet >>= setName name
