@@ -70,10 +70,10 @@ let
   ##
   nodeSvcSupervisorProgram = { nodeSpec, service, ... }:
     nameValuePair "program:${nodeSpec.value.name}" {
-      directory      = "${service.value.stateDir}";
+      directory      = "${service.value.stateDir 0}";
       command        = "sh start.sh";
-      stdout_logfile = "${service.value.stateDir}/stdout";
-      stderr_logfile = "${service.value.stateDir}/stderr";
+      stdout_logfile = "${service.value.stateDir 0}/stdout";
+      stderr_logfile = "${service.value.stateDir 0}/stderr";
       autostart      = false;
       autorestart    = false;
       startretries   = 1;
