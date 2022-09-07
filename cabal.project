@@ -352,7 +352,18 @@ package cardano-ledger-alonzo-test
   tests: False
 
 allow-newer:
+  *:base,
+  *:containers,
+  *:directory,
+  *:time,
+  *:bytestring,
   *:aeson,
+  *:protolude,
+  *:template-haskell,
+  *:ghc-prim,
+  *:ghc,
+  *:cryptonite,
+  *:formatting,
   monoidal-containers:aeson,
   size-based:template-haskell,
   snap-server:attoparsec,
