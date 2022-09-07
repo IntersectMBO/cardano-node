@@ -7,7 +7,8 @@ with lib; with builtins;
 let
   cfg = config.services.cardano-node;
   envConfig = cfg.environments.${cfg.environment};
-  runtimeDir = if cfg.runtimeDir == null then cfg.stateDir else "/run/${cfg.runtimeDir}";
+  runtimeDir = i : if cfg.runtimeDir == null then cfg.stateDir i else "/run/${cfg.runtimeDir i}";
+  oneShotStateDir = "/var/lib/cardano-node-all";
   mkScript = cfg:
     let baseConfig =
           recursiveUpdate
@@ -107,7 +108,7 @@ let
           "--shelley-operational-certificate ${cfg.operationalCertificate}"}"
       ];
     };
-    instanceDbPath = "${cfg.databasePath}${optionalString (i > 0) "-${toString i}"}";
+    instanceDbPath = "${cfg.databasePath i}${optionalString (i > 0) "-${toString i}"}";
     cmd = builtins.filter (x: x != "") [
       "${cfg.executable} run"
       "--config ${nodeConfigFile}"
@@ -116,11 +117,11 @@ let
     ] ++ lib.optionals (!cfg.systemdSocketActivation) [
       "--host-addr ${cfg.hostAddr}"
       "--port ${toString (cfg.port + i)}"
-      "--socket-path ${cfg.socketPath}"
-    ] ++ lib.optionals (cfg.tracerSocketPathAccept != null) [
-        "--tracer-socket-path-accept ${cfg.tracerSocketPathAccept}"
-    ] ++ lib.optionals (cfg.tracerSocketPathConnect != null) [
-        "--tracer-socket-path-connect ${cfg.tracerSocketPathConnect}"
+      "--socket-path ${cfg.socketPath i}"
+    ] ++ lib.optionals (cfg.tracerSocketPathAccept != null && cfg.tracerSocketPathAccept i != null) [
+        "--tracer-socket-path-accept ${cfg.tracerSocketPathAccept i}"
+    ] ++ lib.optionals (cfg.tracerSocketPathConnect != null && cfg.tracerSocketPathConnect i != null) [
+        "--tracer-socket-path-connect ${cfg.tracerSocketPathConnect i}"
     ] ++ lib.optionals (cfg.ipv6HostAddr i != null) [
         "--host-ipv6-addr ${cfg.ipv6HostAddr i}"
     ] ++ consensusParams.${cfg.nodeConfig.Protocol} ++ cfg.extraArgs ++ cfg.rtsArgs;
@@ -130,9 +131,9 @@ let
         echo "${toString cmd}"
         ${lib.optionalString (i > 0) ''
         # If exist copy state from existing instance instead of syncing from scratch:
-        if [ ! -d ${instanceDbPath} ] && [ -d ${cfg.databasePath} ]; then
-          echo "Copying existing immutable db from ${cfg.databasePath}"
-          ${pkgs.rsync}/bin/rsync --archive --ignore-errors --exclude 'clean' ${cfg.databasePath}/ ${instanceDbPath}/ || true
+        if [ ! -d ${instanceDbPath} ] && [ -d ${cfg.databasePath i} ]; then
+          echo "Copying existing immutable db from ${cfg.databasePath i}"
+          ${pkgs.rsync}/bin/rsync --archive --ignore-errors --exclude 'clean' ${cfg.databasePath i}/ ${instanceDbPath}/ || true
         fi
         ''}
         exec ${toString cmd}'';
@@ -295,43 +296,56 @@ in {
       };
 
       stateDir = mkOption {
-        type = types.str;
-        default = "/var/lib/cardano-node";
+        type = types.either types.str (types.types.functionTo types.str);
+        default = i : "/var/lib/cardano-node-${toString i}";
+        apply = x : if (builtins.isFunction x) then x else _: x;
         description = ''
-          Directory to store blockchain data.
+          Directory to store blockchain data, for each instance.
         '';
       };
 
       runtimeDir = mkOption {
-        type = types.nullOr types.str;
-        default = "cardano-node";
+        type = types.nullOr (types.either types.str (types.functionTo types.str));
+        default = i : "cardano-node-${toString i}";
+        apply = x : if builtins.isFunction x then x else
+                       if x == null then _ : "cardano-node" else _ : x;
         description = ''
-          Runtime directory relative to /run
+          Runtime directory relative to /run, for each instance
         '';
       };
 
       databasePath = mkOption {
-        type = types.str;
-        default = "${cfg.stateDir}/${cfg.dbPrefix}";
-        description = ''Node database path.'';
+        type = types.either types.str (types.functionTo types.str);
+        default = i : "${cfg.stateDir i}/${cfg.dbPrefix}";
+        apply = x : if builtins.isFunction x then x else _ : x;
+        description = ''Node database path, for each instance.'';
       };
 
       socketPath = mkOption {
-        type = types.str;
-        default = "${runtimeDir}/node.socket";
-        description = ''Local communication socket path.'';
+        type = types.either types.str (types.functionTo types.str);
+        default = i : "${runtimeDir i}/node.socket";
+        apply = x : if builtins.isFunction x then x else _ : x;
+        description = ''Local communication socket path, for each instance.'';
       };
 
       tracerSocketPathAccept = mkOption {
-        type = types.nullOr types.str;
+        type = types.nullOr (types.either types.str (types.functionTo (types.nullOr types.str)));
         default = null;
-        description = ''Listen for incoming cardano-tracer connection on a local socket.'';
+        apply = x : if builtins.isFunction x then x else _ : x;
+        description = ''
+          Listen for incoming cardano-tracer connection on a local socket,
+          for each instance.
+        '';
       };
 
       tracerSocketPathConnect = mkOption {
-        type = types.nullOr types.str;
+        type = types.nullOr (types.either types.str (types.functionTo (types.nullOr types.str)));
         default = null;
-        description = ''Connect to cardano-tracer listening on a local socket.'';
+        apply = x : if builtins.isFunction x then x else _ : x;
+        description = ''
+          Connect to cardano-tracer listening on a local socket,
+          for each instance.
+        '';
       };
 
       systemdSocketActivation = mkOption {
@@ -622,11 +636,11 @@ in {
           Group = "cardano-node";
           Restart = "always";
           RuntimeDirectory = lib.mkIf (!cfg.systemdSocketActivation)
-            (lib.removePrefix runDirBase (if (i == 0) then runtimeDir else "${runtimeDir}-${toString i}"));
-          WorkingDirectory = cfg.stateDir;
+            (lib.removePrefix runDirBase (runtimeDir i));
+          WorkingDirectory = cfg.stateDir i;
           # This assumes /var/lib/ is a prefix of cfg.stateDir.
           # This is checked as an assertion below.
-          StateDirectory =  lib.removePrefix stateDirBase cfg.stateDir;
+          StateDirectory =  lib.removePrefix stateDirBase (cfg.stateDir i);
           NonBlocking = lib.mkIf cfg.systemdSocketActivation true;
           # time to sleep before restarting a service
           RestartSec = 1;
@@ -641,9 +655,9 @@ in {
           ListenStream = [ "${cfg.hostAddr}:${toString (if cfg.shareIpv4port then cfg.port else cfg.port + i)}" ]
             ++ optional (cfg.ipv6HostAddr i != null) "[${cfg.ipv6HostAddr i}]:${toString (if cfg.shareIpv6port then cfg.port else cfg.port + i)}"
             ++ (cfg.additionalListenStream i)
-            ++ [(if (i == 0) then cfg.socketPath else "${runtimeDir}-${toString i}/node.socket")];
+            ++ [(cfg.socketPath i)];
           RuntimeDirectory = lib.removePrefix runDirBase
-            (if (i == 0) then runtimeDir else "${runtimeDir}-${toString i}");
+            (cfg.runtimeDir i);
           ReusePort = "yes";
           SocketMode = "0660";
           SocketUser = "cardano-node";
@@ -664,16 +678,18 @@ in {
           User = "cardano-node";
           Group = "cardano-node";
           ExecStart = "${pkgs.coreutils}/bin/echo Starting ${toString cfg.instances} cardano-node instances";
-          WorkingDirectory = cfg.stateDir;
-          StateDirectory =  lib.removePrefix stateDirBase cfg.stateDir;
+          WorkingDirectory = oneShotStateDir;
+          StateDirectory =  lib.removePrefix stateDirBase oneShotStateDir;
         };
       };
     }
     {
       assertions = [
         {
-          assertion = lib.hasPrefix stateDirBase cfg.stateDir;
-          message = "The option services.cardano-node.stateDir should have ${stateDirBase} as a prefix!";
+          assertion = builtins.all (i : lib.hasPrefix stateDirBase (cfg.stateDir i))
+                                   (builtins.genList lib.trivial.id cfg.instances);
+          message = "The option services.cardano-node.stateDir should have ${stateDirBase}
+                     as a prefix, for each instance!";
         }
         {
           assertion = (cfg.kesKey == null) == (cfg.vrfKey == null) && (cfg.kesKey == null) == (cfg.operationalCertificate == null);
