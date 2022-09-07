@@ -572,6 +572,7 @@ span[data-tooltip] {
   color: whitesmoke;
   border-bottom: 2px solid #888;
   vertical-align: middle;
+  min-width: 450px;
 }
 
 .dark .rt-view-peer-table {
@@ -1000,6 +1001,7 @@ span[data-tooltip] {
   color: #444;
   border-bottom: 2px solid #cfcfcf;
   vertical-align: middle;
+  min-width: 450px;
 }
 
 .light .rt-view-peer-table {
