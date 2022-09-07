@@ -32,7 +32,7 @@ haskell-nix.cabalProject' ({ pkgs
       # removes socket files
       && lib.elem type [ "regular" "directory" "symlink" ];
   };
-  compiler-nix-name = "ghc8107";
+  compiler-nix-name = "ghc924";
   cabalProjectLocal = ''
     allow-newer: terminfo:base
   '' + lib.optionalString pkgs.stdenv.hostPlatform.isWindows ''

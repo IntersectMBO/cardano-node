@@ -10,12 +10,12 @@ final: prev: with final; {
     (name: lib.attrNames cardanoNodeProject.pkg-set.options.packages.value.${name}.components.exes);
 
   cabal = haskell-nix.tool compiler-nix-name "cabal" {
-    version = "latest";
+    version = "3.6.2.0";
     inherit (cardanoNodeProject) index-state;
   };
 
   hlint = haskell-nix.tool compiler-nix-name "hlint" {
-    version = "3.2.7";
+    version = "3.4.1";
     inherit (cardanoNodeProject) index-state;
   };
 
