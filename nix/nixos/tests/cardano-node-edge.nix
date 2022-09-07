@@ -39,7 +39,7 @@ with pkgs;
         enable = true;
         port = 8101;
         network = "mainnet";
-        socketPath = config.services.cardano-node.socketPath;
+        socketPath = config.services.cardano-node.socketPath 0;
       };
       systemd.services.cardano-submit-api.serviceConfig.SupplementaryGroups = "cardano-node";
     };
