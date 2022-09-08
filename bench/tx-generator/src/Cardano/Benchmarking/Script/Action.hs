@@ -22,7 +22,6 @@ action a = case a of
   AddFund era wallet txIn lovelace keyName -> addFund era wallet txIn lovelace keyName
   Delay t -> delay t
   Submit era submitMode generator -> submitAction era submitMode generator
-  CreateChange era sourceWallet payMode changeMode submitMode value count -> createChange era sourceWallet payMode changeMode submitMode value count
   WaitBenchmark thread -> waitBenchmark thread
   CancelBenchmark thread -> cancelBenchmark thread
   WaitForEra era -> waitForEra era

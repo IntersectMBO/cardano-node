@@ -63,9 +63,10 @@ testScript protocolFile submitMode =
     era = AnyCardanoEra AllegraEra
     wallet = WalletName "test-wallet"
     key = KeyName "pass-partout"
-    payMode = PayToAddr key wallet
-    createChange val count
-      = CreateChange era wallet submitMode payMode payMode (Lovelace val) count
+--    payMode = PayToAddr key wallet
+    createChange :: Int -> Int -> Action
+    createChange _val _count
+      =   LogMsg "TODO: Fix this " -- CreateChange era wallet submitMode payMode payMode (Lovelace val) count
     extraArgs = RunBenchmarkAux {
         auxTxCount = 4000
       , auxFee = 1000000

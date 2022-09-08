@@ -381,36 +381,6 @@ dumpToFileIO filePath tx = appendFile filePath ('\n' : show tx)
 initWallet :: WalletName -> ActionM ()
 initWallet name = liftIO Wallet.initWallet >>= setName name
 
-createChange :: AnyCardanoEra -> WalletName -> SubmitMode -> PayMode -> PayMode -> Lovelace -> Int -> ActionM ()
-createChange era sourceWallet submitMode payMode changeMode value count
-  = withEra era $ createChangeInEra sourceWallet submitMode payMode changeMode value count
-
-createChangeInEra :: forall era. IsShelleyBasedEra era
-  => WalletName
-  -> SubmitMode
-  -> PayMode
-  -> PayMode  
-  -> Lovelace
-  -> Int
-  -> AsType era
-  -> ActionM ()
-createChangeInEra sourceWallet submitMode payMode changeMode value count _era = do
-  fee <- getUser TFee
-  protocolParameters <- getProtocolParameters
-  (toUTxO, addressMsg) <- interpretPayMode payMode
-  (toUTxOChange, _) <- interpretPayMode changeMode  
-  let
-    createCoins :: FundSet.FundSource IO -> [Lovelace] -> ActionM (Either String (TxInMode CardanoMode))
-    createCoins fundSource coins = do
-      (tx :: Either String (Tx era)) <- liftIO $ sourceToStoreTransactionNew
-                                                  (genTx protocolParameters (TxInsCollateralNone, [])
-                                                   (mkFee fee) TxMetadataNone )
-                                                  fundSource
-                                                  (Wallet.includeChangeNew fee coins)
-                                                  (mangleWithChange toUTxOChange toUTxO)
-      return $ fmap txInModeCardano tx
-  createChangeGeneric sourceWallet submitMode createCoins addressMsg value count
-
 interpretPayMode :: forall era. IsShelleyBasedEra era => PayMode -> ActionM (CreateAndStore IO era, String)
 interpretPayMode payMode = do
   networkId <- getUser TNetworkId
@@ -425,47 +395,6 @@ interpretPayMode payMode = do
       (witness, script, scriptData, _scriptFee) <- makePlutusContext scriptSpec
       return ( createAndStore (mkUTxOScript networkId (script, scriptData) witness) (mkWalletFundStore walletRef)
                , Text.unpack $ serialiseAddress $ makeShelleyAddress networkId (PaymentCredentialByScript $ hashScript script) NoStakeAddress )
-  
-createChangeGeneric ::
-     WalletName
-  -> SubmitMode
-  -> (FundSet.FundSource IO -> [Lovelace] -> ActionM (Either String (TxInMode CardanoMode)))
-  -> String
-  -> Lovelace
-  -> Int
-  -> ActionM ()
-createChangeGeneric sourceWallet submitMode createCoins addressMsg value count = do
-  fee <- getUser TFee
-  walletRef <- getName sourceWallet
-  let
-    coinsList = replicate count value
-    maxTxSize = 30
-    chunks = chunkList maxTxSize coinsList
-    txCount = length chunks
-    _txValue = fromIntegral (min maxTxSize count) * value + fee
-    msg = mconcat [ "createChangeGeneric: outputs: ", show count
-                  , " value: ", show value
-                  , " number of txs: ", show txCount
-                  , " address: ", addressMsg
-                  ]
-  traceDebug msg
-  let fundSource = walletSource walletRef 1
-
-  forM_ chunks $ \coins -> do
-    gen <- createCoins fundSource coins
-    case gen of
-      Left err -> throwE $ WalletError err
-      Right tx -> case submitMode of
-        LocalSocket -> void $ localSubmitTx tx
-        NodeToNode _ -> throwE $ WalletError "NodeToNode mode not supported in createChangeGeneric"
-        DumpToFile filePath -> dumpToFile filePath tx
-        DiscardTX -> return ()
-        Benchmark {} -> error "todo : remove createChangeGeneric"
-  traceDebug "createChangeGeneric: splitting done"
- where
-  chunkList :: Int -> [a] -> [[a]]
-  chunkList _ [] = []
-  chunkList n xs = as : chunkList n bs where (as,bs) = splitAt n xs
 
 {-
 Use a binary search to find a loop counter that maxes out the available per transaction Plutus budget.

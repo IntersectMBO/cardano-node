@@ -14,6 +14,7 @@ import           Data.Dependent.Sum ( (==>) )
 import           Data.DList (DList)
 import qualified Data.DList as DL
 import           Data.Text (Text)
+import qualified Data.Text as Text
 
 import           Cardano.Api
 import           Cardano.Benchmarking.Types
@@ -26,6 +27,9 @@ data CompileError where
   SomeCompilerError :: CompileError
   deriving (Show)
 type Compiler a = RWST NixServiceOptions (DList Action) Int (Except CompileError) a
+
+maxOutputsPerTx :: Int
+maxOutputsPerTx = 30
 
 type SrcWallet = WalletName
 type DstWallet = WalletName
@@ -102,61 +106,70 @@ splittingPhase srcWallet = do
   tx_fee <- askNixOption _nix_tx_fee
   era <- askNixOption _nix_era  
   minValuePerInput <- _minValuePerInput <$> evilFeeMagic
-  splitSteps <- splitSequenceWalletNames srcWallet srcWallet $ unfoldSplitSequence tx_fee minValuePerInput (tx_count * inputs_per_tx)
-  forM_ (init splitSteps) $ createChange era
-  plutus <- isAnyPlutusMode
-  (if plutus then createChangePlutus era else createChange era) $ last splitSteps
+  finalDest <- newWallet "final_split_wallet"
+  splitSteps <- splitSequenceWalletNames srcWallet finalDest $ unfoldSplitSequence tx_fee minValuePerInput (tx_count * inputs_per_tx)
+  isPlutus <- isAnyPlutusMode
+  forM_ (init splitSteps) $ createChange False era
+  createChange isPlutus era $ last splitSteps
+  return finalDest
  where
-  createChange :: AnyCardanoEra -> SplitStep -> Compiler DstWallet
-  createChange era (src, dst, value, count) = do
-     emit $ CreateChange era src LocalSocket (PayToAddr (KeyName "pass-partout") dst ) (PayToAddr  (KeyName "pass-partout") src) value count
-     delay
-     return dst
+  createChange :: Bool -> AnyCardanoEra -> (SrcWallet, DstWallet, Split) -> Compiler ()
+  createChange isPlutus era (src, dst, split) = do
+    logMsg $ Text.pack $ "Splitting step: " ++ show split
+    tx_fee <- askNixOption _nix_tx_fee
+    payMode <- if isPlutus then plutusPayMode dst else return $ PayToAddr (KeyName "pass-partout") dst
+    let generator = case split of
+          SplitWithChange lovelace count -> Split tx_fee src payMode (PayToAddr  (KeyName "pass-partout") src) $ replicate count lovelace
+          FullSplits txCount -> Take txCount $ Cycle $ SplitN tx_fee src payMode maxOutputsPerTx
+    emit $ Submit era LocalSocket generator
+    delay
+    logMsg $ "Splitting step: Done"    
 
-  createChangePlutus :: AnyCardanoEra -> SplitStep -> Compiler DstWallet
-  createChangePlutus era (src, dst, value, count) = do
-     autoMode <- isPlutusAutoMode
-     scriptSpec <- if autoMode
-       then ScriptSpec <$> askNixOption _nix_plutusLoopScript <*> pure AutoScript
-       else do
-         executionUnits <- ExecutionUnits <$> askNixOption _nix_executionMemory <*> askNixOption _nix_executionSteps
-         debugMode <- askNixOption _nix_debugMode
-         budget <- (if debugMode then CheckScriptBudget else StaticScriptBudget)
-                     <$> (ScriptDataNumber <$> askNixOption _nix_plutusData)
-                     <*> (ScriptDataNumber <$> askNixOption _nix_plutusRedeemer)
-                     <*> pure executionUnits
-         ScriptSpec <$> askNixOption _nix_plutusScript <*> pure budget
-     emit $ CreateChange era src LocalSocket (PayToScript scriptSpec dst) (PayToScript scriptSpec src) value count
-     delay
-     return dst
+  plutusPayMode :: DstWallet -> Compiler PayMode
+  plutusPayMode dst = do
+    autoMode <- isPlutusAutoMode
+    scriptSpec <- if autoMode
+      then ScriptSpec <$> askNixOption _nix_plutusLoopScript <*> pure AutoScript
+      else do
+        executionUnits <- ExecutionUnits <$> askNixOption _nix_executionMemory <*> askNixOption _nix_executionSteps
+        debugMode <- askNixOption _nix_debugMode
+        budget <- (if debugMode then CheckScriptBudget else StaticScriptBudget)
+                    <$> (ScriptDataNumber <$> askNixOption _nix_plutusData)
+                    <*> (ScriptDataNumber <$> askNixOption _nix_plutusRedeemer)
+                    <*> pure executionUnits
+        ScriptSpec <$> askNixOption _nix_plutusScript <*> pure budget
+    return $ PayToScript scriptSpec dst
 
 -- Generate src and dst wallet names for a splitSequence.
 -- testCompiler (error "opts") $ splitSequenceWalletNames (WalletName "w1") (WalletName "w2") (unfoldSplitSequence 1 1000 10000)
-type SplitStep = (SrcWallet, DstWallet, Lovelace, Int)
 
-splitSequenceWalletNames :: SrcWallet -> DstWallet -> [(Lovelace, Int)] -> Compiler [ SplitStep ]
+data Split
+  = SplitWithChange Lovelace Int
+  | FullSplits Int
+  deriving Show
+
+splitSequenceWalletNames :: SrcWallet -> DstWallet -> [Split] -> Compiler [ (SrcWallet, DstWallet, Split) ]
 splitSequenceWalletNames _src _dst [] = return []
-splitSequenceWalletNames src dst [ (val,count) ] = return [( src, dst, val, count)]
-splitSequenceWalletNames src dst ((val, count):rest) = do
-  nextDst <- newWallet "change_wallet"
-  l <- splitSequenceWalletNames dst nextDst rest
-  return $ ( src, dst, val, count) : l
+splitSequenceWalletNames src dst [ split ] = return [( src, dst, split )]
+splitSequenceWalletNames src dst (split: rest) = do
+  tempWallet <- newWallet "change_wallet"
+  l <- splitSequenceWalletNames tempWallet dst rest
+  return $ ( src, tempWallet, split) : l
 
--- Return a list of splitSteps.
-unfoldSplitSequence :: Lovelace -> Lovelace -> Int -> [(Lovelace, Int)]
-unfoldSplitSequence fee value count
-  = if count < maxOutputs
-    then [
-           -- Add an extra transaction that just contains the desired output and possible fees.
-           (value * fromIntegral count + fee, 1)
-         , (value, count )
-         ]
-    else unfoldSplitSequence fee (value * fromIntegral maxOutputs + fee) (count `div` maxOutputs + 1) ++ [ (value, count) ]
+unfoldSplitSequence :: Lovelace -> Lovelace -> Int -> [ Split ]
+unfoldSplitSequence fee value outputs
+  = if outputs < maxOutputsPerTx
+      then [ SplitWithChange value outputs ]
+      else
+        let txs = outputs `divCeiling` maxOutputsPerTx
+        in unfoldSplitSequence fee (value * fromIntegral maxOutputsPerTx + fee) txs ++ [ FullSplits txs ]
   where
     -- maximal number of outputs in a TX.
     -- todo: this must be in sync with Scipt/Core.hs
-    maxOutputs = 30
-    
+    divCeiling a b = case divMod a b of
+     (x, 0) -> x
+     (x, _rest) -> x+1
+
 benchmarkingPhaseNew :: WalletName -> Maybe WalletName -> Compiler ()
 benchmarkingPhaseNew wallet collateralWallet = do
   debugMode <- askNixOption _nix_debugMode

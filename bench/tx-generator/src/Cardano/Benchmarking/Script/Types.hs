@@ -34,7 +34,6 @@ data Action where
   ReadSigningKey     :: !KeyName -> !SigningKeyFile -> Action
   DefineSigningKey   :: !KeyName -> !TextEnvelope -> Action
   AddFund            :: !AnyCardanoEra -> !WalletName -> !TxIn -> !Lovelace -> !KeyName -> Action
-  CreateChange       :: !AnyCardanoEra -> !WalletName -> !SubmitMode -> !PayMode -> !PayMode -> !Lovelace -> !Int -> Action
   WaitBenchmark      :: !ThreadName -> Action
   Submit             :: !AnyCardanoEra -> !SubmitMode -> !Generator -> Action
   CancelBenchmark    :: !ThreadName -> Action
@@ -46,10 +45,11 @@ data Action where
 deriving instance Generic Action
 
 data Generator where
-  SecureGenesis :: !Lovelace -> !WalletName -> !KeyName -> !KeyName -> Generator
-  Split :: !Lovelace -> !WalletName -> !PayMode -> !PayMode -> [ Lovelace ] -> Generator  
-  SplitN :: !Lovelace -> !WalletName -> !PayMode -> !Int -> Generator
-  BechmarkTx :: !WalletName -> !RunBenchmarkAux -> Maybe WalletName -> Generator
+  SecureGenesis :: !Lovelace -> !WalletName -> !KeyName -> !KeyName -> Generator -- 0 to N
+  Split :: !Lovelace -> !WalletName -> !PayMode -> !PayMode -> [ Lovelace ] -> Generator 
+  SplitN :: !Lovelace -> !WalletName -> !PayMode -> !Int -> Generator            -- 1 to N
+  BechmarkTx :: !WalletName -> !RunBenchmarkAux -> Maybe WalletName -> Generator -- N to M
+-- Generic NtoM ::  
   Sequence :: [Generator] -> Generator
   Cycle :: !Generator -> Generator
   Take :: !Int -> !Generator -> Generator
