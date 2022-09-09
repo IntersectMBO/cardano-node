@@ -123,7 +123,7 @@ splittingPhase srcWallet = do
           FullSplits txCount -> Take txCount $ Cycle $ SplitN tx_fee src payMode maxOutputsPerTx
     emit $ Submit era LocalSocket generator
     delay
-    logMsg $ "Splitting step: Done"    
+    logMsg "Splitting step: Done"    
 
   plutusPayMode :: DstWallet -> Compiler PayMode
   plutusPayMode dst = do

@@ -23,7 +23,7 @@ import           Control.Monad.Trans.Except
 import           "contra-tracer" Control.Tracer (nullTracer)
 import           Data.Ratio ((%))
 
-import           Streaming as Streaming
+import           Streaming
 import qualified Streaming.Prelude as Streaming
 
 import qualified Data.Text as Text (unpack)
@@ -34,12 +34,12 @@ import           Cardano.Api.Shelley (PlutusScriptOrReferenceInput (..), Protoco
                    protocolParamMaxTxExUnits, protocolParamPrices)
 import           Ouroboros.Network.Protocol.LocalTxSubmission.Type (SubmitResult (..))
 
-import           Cardano.Benchmarking.FundSet (FundInEra (..),
-                   liftAnyEra)
+import           Cardano.TxGenerator.Fund as Fund
+import qualified Cardano.TxGenerator.FundQueue as FundQueue
+import           Cardano.TxGenerator.Tx
+import qualified Cardano.TxGenerator.Utils as Utils (includeChange, inputsToOutputsWithFee, liftAnyEra)
+import           Cardano.TxGenerator.UTxO
 
-import qualified Cardano.Benchmarking.Fifo as Fifo
-import qualified Cardano.Benchmarking.FundSet as FundSet
-import           Cardano.Benchmarking.FundSet as FundSet (getFundTxIn)
 import           Cardano.Benchmarking.GeneratorTx as GeneratorTx (AsyncBenchmarkControl, TxGenError)
 import qualified Cardano.Benchmarking.GeneratorTx as GeneratorTx (readSigningKey,
                    waitBenchmark, walletBenchmark)
@@ -57,7 +57,7 @@ import           Cardano.Benchmarking.LogTypes as Core (TraceBenchTxSubmit (..),
                    btSubmission2_, btTxSubmit_)
 import           Cardano.Benchmarking.Types as Core (NumberOfTxs (..), SubmissionErrorPolicy (..),
                    TPSRate, TxAdditionalSize (..))
-import           Cardano.Benchmarking.Wallet as Wallet hiding (keyAddress)
+import           Cardano.Benchmarking.Wallet as Wallet
 
 import           Cardano.Benchmarking.Script.Aeson (readProtocolParametersFile)
 import           Cardano.Benchmarking.Script.Env
@@ -120,9 +120,9 @@ addFund era wallet txIn lovelace keyName = do
 addFundToWallet :: WalletName -> TxIn -> InAnyCardanoEra TxOutValue -> SigningKey PaymentKey -> ActionM ()
 addFundToWallet wallet txIn outVal skey = do
   walletRef <- getName wallet
-  liftIO (walletRefInsertFund walletRef (FundSet.Fund $ mkFund outVal))
+  liftIO (walletRefInsertFund walletRef (FundQueue.Fund $ mkFund outVal))
   where
-    mkFund = liftAnyEra $ \value -> FundInEra {
+    mkFund = Utils.liftAnyEra $ \value -> FundInEra {
            _fundTxIn = txIn
          , _fundWitness = KeyWitness KeyWitnessForSpending
          , _fundVal = value
@@ -309,7 +309,7 @@ evalGenerator generator era = do
       traceDebug $ "split change address : " ++ addressChange
       let
         fundSource = walletSource wallet 1
-        inToOut = includeChangeNew fee coins
+        inToOut = Utils.includeChange fee coins
         txGenerator = genTx protocolParameters (TxInsCollateralNone, []) (mkFee fee) TxMetadataNone
         sourceToStore = sourceToStoreTransactionNew txGenerator fundSource inToOut $ mangleWithChange toUTxOChange toUTxO
       return $ Streaming.effect (Streaming.yield <$> sourceToStore)
@@ -320,7 +320,7 @@ evalGenerator generator era = do
       traceDebug $ "split output address : " ++ addressOut      
       let
         fundSource = walletSource wallet 1
-        inToOut = FundSet.inputsToOutputsWithFee fee count
+        inToOut = Utils.inputsToOutputsWithFee fee count
         txGenerator = genTx protocolParameters (TxInsCollateralNone, []) (mkFee fee) TxMetadataNone
         sourceToStore = sourceToStoreTransactionNew txGenerator fundSource inToOut (mangle $ repeat toUTxO)
       return $ Streaming.effect (Streaming.yield <$> sourceToStore)
@@ -335,12 +335,12 @@ evalGenerator generator era = do
         fundSource = walletSource walletRefSrc (auxInputsPerTx shape)
 
         inToOut :: [Lovelace] -> [Lovelace]
-        inToOut = FundSet.inputsToOutputsWithFee (auxFee shape) (auxOutputsPerTx shape)
+        inToOut = Utils.inputsToOutputsWithFee (auxFee shape) (auxOutputsPerTx shape)
 
         txGenerator = genTx protocolParameters collaterals (mkFee (auxFee shape)) metadata
 
         toUTxO :: [ ToUTxO era ]
-        toUTxO = repeat $ Wallet.mkUTxOVariant networkId fundKey -- TODO: make configurable
+        toUTxO = repeat $ mkUTxOVariant networkId fundKey -- TODO: make configurable
   
         fundToStore = mkWalletFundStoreList walletRefDst
 
@@ -358,14 +358,13 @@ evalGenerator generator era = do
       error "return $ foldr1 Streaming.interleaves gList"
     OneOf _l -> error "todo: implement Quickcheck style oneOf generator"
 
-
 selectCollateralFunds :: forall era. IsShelleyBasedEra era
   => Maybe WalletName
-  -> ActionM (TxInsCollateral era, [FundSet.Fund])
+  -> ActionM (TxInsCollateral era, [FundQueue.Fund])
 selectCollateralFunds Nothing = return (TxInsCollateralNone, [])
 selectCollateralFunds (Just walletName) = do
   cw <- getName walletName
-  collateralFunds <- liftIO ( askWalletRef cw Fifo.toList ) >>= \case
+  collateralFunds <- liftIO ( askWalletRef cw FundQueue.toList ) >>= \case
     [] -> throwE $ WalletError "selectCollateralFunds: emptylist"
     l -> return l
   case collateralSupportedInEra (cardanoEra @ era) of
@@ -388,7 +387,7 @@ interpretPayMode payMode = do
     PayToAddr keyName destWallet -> do
       fundKey <- getName keyName
       walletRef <- getName destWallet
-      return ( createAndStore (Wallet.mkUTxOVariant networkId fundKey) (mkWalletFundStore walletRef)
+      return ( createAndStore (mkUTxOVariant networkId fundKey) (mkWalletFundStore walletRef)
              , Text.unpack $ serialiseAddress $ keyAddress @ era networkId fundKey)
     PayToScript scriptSpec destWallet -> do
       walletRef <- getName destWallet      

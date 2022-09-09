@@ -30,7 +30,7 @@ import qualified Cardano.Node.Types (ConfigError)
 import qualified Cardano.Benchmarking.LogTypes as Tracer
 import           Ouroboros.Network.NodeToClient (IOManager)
 
-import           Cardano.Benchmarking.GeneratorTx.Error (TxGenError)
+import           Cardano.TxGenerator.Types (TxGenError(..))
 import           Cardano.Benchmarking.Script.Setters as Setters
 import           Cardano.Benchmarking.Script.Store
 

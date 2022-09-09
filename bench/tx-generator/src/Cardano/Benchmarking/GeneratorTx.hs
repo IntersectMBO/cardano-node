@@ -2,7 +2,6 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE PackageImports #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 {-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
@@ -35,7 +34,7 @@ import           Cardano.Node.Configuration.NodeAddress
 
 import           Cardano.Api hiding (txFee)
 
-import           Cardano.Benchmarking.GeneratorTx.Error
+import           Cardano.TxGenerator.Types (TxGenError(..))
 import           Cardano.Benchmarking.GeneratorTx.NodeToNode
 import           Cardano.Benchmarking.GeneratorTx.Submission
 import           Cardano.Benchmarking.GeneratorTx.SubmissionClient
