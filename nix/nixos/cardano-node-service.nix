@@ -7,8 +7,10 @@ with lib; with builtins;
 let
   cfg = config.services.cardano-node;
   envConfig = cfg.environments.${cfg.environment};
-  runtimeDir = i : if cfg.runtimeDir == null then cfg.stateDir i else "/run/${cfg.runtimeDir i}";
-  oneShotStateDir = "/var/lib/cardano-node-all";
+  runtimeDir = i : if cfg.runtimeDir i == null then cfg.stateDir i else "/run/${cfg.runtimeDir i}";
+  suffixDir = base: i: "${base}${optionalString (i != 0) "-${toString i}"}";
+  nullOrStr = types.nullOr types.str;
+  funcToOr = t: types.either t (types.functionTo t);
   mkScript = cfg:
     let baseConfig =
           recursiveUpdate
@@ -108,7 +110,7 @@ let
           "--shelley-operational-certificate ${cfg.operationalCertificate}"}"
       ];
     };
-    instanceDbPath = "${cfg.databasePath i}${optionalString (i > 0) "-${toString i}"}";
+    instanceDbPath = cfg.databasePath i;
     cmd = builtins.filter (x: x != "") [
       "${cfg.executable} run"
       "--config ${nodeConfigFile}"
@@ -118,9 +120,9 @@ let
       "--host-addr ${cfg.hostAddr}"
       "--port ${toString (cfg.port + i)}"
       "--socket-path ${cfg.socketPath i}"
-    ] ++ lib.optionals (cfg.tracerSocketPathAccept != null && cfg.tracerSocketPathAccept i != null) [
+    ] ++ lib.optionals (cfg.tracerSocketPathAccept i != null) [
         "--tracer-socket-path-accept ${cfg.tracerSocketPathAccept i}"
-    ] ++ lib.optionals (cfg.tracerSocketPathConnect != null && cfg.tracerSocketPathConnect i != null) [
+    ] ++ lib.optionals (cfg.tracerSocketPathConnect i != null) [
         "--tracer-socket-path-connect ${cfg.tracerSocketPathConnect i}"
     ] ++ lib.optionals (cfg.ipv6HostAddr i != null) [
         "--host-ipv6-addr ${cfg.ipv6HostAddr i}"
@@ -131,9 +133,9 @@ let
         echo "${toString cmd}"
         ${lib.optionalString (i > 0) ''
         # If exist copy state from existing instance instead of syncing from scratch:
-        if [ ! -d ${instanceDbPath} ] && [ -d ${cfg.databasePath i} ]; then
-          echo "Copying existing immutable db from ${cfg.databasePath i}"
-          ${pkgs.rsync}/bin/rsync --archive --ignore-errors --exclude 'clean' ${cfg.databasePath i}/ ${instanceDbPath}/ || true
+        if [ ! -d ${instanceDbPath} ] && [ -d ${cfg.databasePath 0} ]; then
+          echo "Copying existing immutable db from ${cfg.databasePath 0}"
+          ${pkgs.rsync}/bin/rsync --archive --ignore-errors --exclude 'clean' ${cfg.databasePath 0}/ ${instanceDbPath}/ || true
         fi
         ''}
         exec ${toString cmd}'';
@@ -155,6 +157,7 @@ in {
           Number of instance of the service to run.
         '';
       };
+
       script = mkOption {
         type = types.str;
         default = mkScript cfg 0;
@@ -279,7 +282,7 @@ in {
       };
 
       ipv6HostAddr = mkOption {
-        type = types.nullOr (types.either types.str (types.functionTo (types.nullOr types.str)));
+        type = funcToOr nullOrStr;
         default = _: null;
         apply = ip: if (builtins.isFunction ip) then ip else _: ip;
         description = ''
@@ -296,40 +299,39 @@ in {
       };
 
       stateDir = mkOption {
-        type = types.either types.str (types.types.functionTo types.str);
-        default = i : "/var/lib/cardano-node-${toString i}";
-        apply = x : if (builtins.isFunction x) then x else _: x;
+        type = funcToOr types.str;
+        default = "/var/lib/cardano-node";
+        apply = x : if (builtins.isFunction x) then x else i: x;
         description = ''
           Directory to store blockchain data, for each instance.
         '';
       };
 
       runtimeDir = mkOption {
-        type = types.nullOr (types.either types.str (types.functionTo types.str));
-        default = i : "cardano-node-${toString i}";
-        apply = x : if builtins.isFunction x then x else
-                       if x == null then _ : "cardano-node" else _ : x;
+        type = funcToOr nullOrStr;
+        default = suffixDir "cardano-node";
+        apply = x : if builtins.isFunction x then x else if x == null then _: null else suffixDir x;
         description = ''
           Runtime directory relative to /run, for each instance
         '';
       };
 
       databasePath = mkOption {
-        type = types.either types.str (types.functionTo types.str);
-        default = i : "${cfg.stateDir i}/${cfg.dbPrefix}";
+        type = funcToOr types.str;
+        default = i : "${cfg.stateDir i}/${cfg.dbPrefix i}";
         apply = x : if builtins.isFunction x then x else _ : x;
         description = ''Node database path, for each instance.'';
       };
 
       socketPath = mkOption {
-        type = types.either types.str (types.functionTo types.str);
+        type = funcToOr types.str;
         default = i : "${runtimeDir i}/node.socket";
         apply = x : if builtins.isFunction x then x else _ : x;
         description = ''Local communication socket path, for each instance.'';
       };
 
       tracerSocketPathAccept = mkOption {
-        type = types.nullOr (types.either types.str (types.functionTo (types.nullOr types.str)));
+        type = funcToOr nullOrStr;
         default = null;
         apply = x : if builtins.isFunction x then x else _ : x;
         description = ''
@@ -339,7 +341,7 @@ in {
       };
 
       tracerSocketPathConnect = mkOption {
-        type = types.nullOr (types.either types.str (types.functionTo (types.nullOr types.str)));
+        type = funcToOr nullOrStr;
         default = null;
         apply = x : if builtins.isFunction x then x else _ : x;
         description = ''
@@ -377,8 +379,9 @@ in {
       };
 
       dbPrefix = mkOption {
-        type = types.str;
-        default = "db-${cfg.environment}";
+        type = types.either types.str (types.functionTo types.str);
+        default = suffixDir "db-${cfg.environment}";
+        apply = x : if builtins.isFunction x then x else suffixDir x;
         description = ''
           Prefix of database directories inside `stateDir`.
           (eg. for "db", there will be db-0, etc.).
@@ -435,7 +438,7 @@ in {
       };
 
       instancePublicProducers = mkOption {
-        # type = types.functionTo (types.listOf types.attrs);
+        type = types.functionTo (types.listOf types.attrs);
         default = _: [];
         description = ''Routes to public peers. Only used if slot < usePeersFromLedgerAfterSlot and specific to a given instance (when multiple instances are used).'';
       };
@@ -555,7 +558,7 @@ in {
       };
 
       nodeConfigFile = mkOption {
-        type = types.nullOr types.str;
+        type = nullOrStr;
         default = null;
         description = ''Actual configuration file (shell expression).'';
       };
@@ -678,8 +681,8 @@ in {
           User = "cardano-node";
           Group = "cardano-node";
           ExecStart = "${pkgs.coreutils}/bin/echo Starting ${toString cfg.instances} cardano-node instances";
-          WorkingDirectory = oneShotStateDir;
-          StateDirectory =  lib.removePrefix stateDirBase oneShotStateDir;
+          WorkingDirectory = "/var/lib/cardano-node";
+          StateDirectory = "cardano-node";
         };
       };
     }
