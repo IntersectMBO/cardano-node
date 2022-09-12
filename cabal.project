@@ -225,11 +225,12 @@ source-repository-package
     libs/small-steps-test
     libs/non-integral
 
+-- https://github.com/input-output-hk/cardano-prelude/pull/169
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-prelude
-  tag: 6ea36cf2247ac0bc33e08c327abec34dfd05bd99
-  --sha256: 0z2y3wzppc12bpn9bl48776ms3nszw8j58xfsdxf97nzjgrmd62g
+  tag: f3548c2bc620c8df4bc6e28830544f813ef533dc
+  --sha256: 04h8n0m93rgr8xcynypjh6mc7kmb450c17cfvpyzpa36yld599fy
   subdir:
     cardano-prelude
     cardano-prelude-test
@@ -377,13 +378,6 @@ source-repository-package
    location: https://github.com/erikd/canonical-json
    tag: 38734cacc5b1f20428ee1991ba054627982a62d5
    --sha256: 1g3gz26qi0g93q2nllyqxal4j5wpsydvrl297nmv8zq1zrnfr5nd
-
--- https://github.com/input-output-hk/cardano-prelude/pull/169
-source-repository-package
-  type: git
-  location: https://github.com/input-output-hk/cardano-prelude
-  tag: f3548c2bc620c8df4bc6e28830544f813ef533dc
-  --sha256: 04h8n0m93rgr8xcynypjh6mc7kmb450c17cfvpyzpa36yld599fy
 
 -- https://github.com/input-output-hk/nothunks/pull/18
 source-repository-package
