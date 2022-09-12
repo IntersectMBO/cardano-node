@@ -58,16 +58,15 @@ You can find an example redeemer at: `scripts/plutus/data/42.redeemer`
 For more information regarding `tx-in-collateral` and `mint-execution-units` see [here](plutus-spending-script-example.md).
 
 ```bash
-cardano-cli transaction build-raw \
-  --alonzo-era \
-  --fee "$txfee" \
+cardano-cli transaction build \
+  --babbage-era \
+  --cardano-mode \
   --tx-in "$txin" \
   --tx-in-collateral "$txinCollateral" \
+  --mint "5 $policyid.4D696C6C6172436F696E0A" \
   --mint-script-file "scripts/plutus/scripts/anyone-can-mint.plutus" \
   --mint-redeemer-file "scripts/plutus/data/42.redeemer" \
-  --mint-execution-units "($plutusrequiredspace, $plutusrequiredtime)" \
   --tx-out "$dummyaddress+$spendable + 5 $policyid.4D696C6C6172436F696E0A" \
-  --mint "5 $policyid.4D696C6C6172436F696E0A" \
   --protocol-params-file pparams.json \
   --out-file "plutusmint.body"
 
