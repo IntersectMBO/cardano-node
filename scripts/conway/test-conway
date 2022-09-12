@@ -1,0 +1,16 @@
+{
+    "genDelegs": {
+        "17a986daad8ffdb3f7cd069f2a6592953d75bce181e1599b43d87d8b": {
+            "delegate": "42a2388a9485ef69851254cf1d539b77dc786f3c1572f5da84b8f631",
+            "vrf": "ef97657f0796b6a82e6f579a5369c7acb876a2dea5534d443bcd38d9945b8710"
+        },
+        "88edf8527c47d8da16a4f9a82e0fc2f311a412b19a36b54b5294815a": {
+            "delegate": "5203c1e6be2c8da8d1c5287ddebb459126bdae2ed3f9f6bbec47e693",
+            "vrf": "f0a89a71b31a7684ba6da0c71698d4d1163ce6ff19c23aeb0bf5103ef8cb04d2"
+        },
+        "da519fc6048163826502b59ff305032b2afdcbf42580359796fc4b8a": {
+            "delegate": "ea5dd795aabb42349407fcb2ea304d0b97ecb573172ad00a1e8a7740",
+            "vrf": "08983db5a1302ac104b3fce997f7afd295237ae4dd92ea043d7c075888c0c8e2"
+        }
+    }
+}

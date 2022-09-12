@@ -311,13 +311,13 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
                 Just epochNo -> Consensus.TriggerHardForkAtEpoch epochNo
 
         }
-        -- Alonzo to Conway hard fork parameters
+        -- Babbage to Conway hard fork parameters
         Consensus.ProtocolTransitionParamsShelleyBased {
           transitionTranslationContext = conwayGenesis,
           transitionTrigger =
             case npcTestConwayHardForkAtEpoch of
                 Nothing -> Consensus.TriggerHardForkAtVersion
-                            (maybe 7 fromIntegral npcTestConwayHardForkAtVersion)
+                            (maybe 8 fromIntegral npcTestConwayHardForkAtVersion)
                 Just epochNo -> Consensus.TriggerHardForkAtEpoch epochNo
 
         }

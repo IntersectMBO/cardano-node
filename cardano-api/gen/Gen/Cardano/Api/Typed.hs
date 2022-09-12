@@ -20,6 +20,7 @@ module Gen.Cardano.Api.Typed
   , genValueNestedBundle
   , genByronKeyWitness
   , genShelleyKeyWitness
+  , genGenesisDelegations
 
   , genTxId
   , genTxIn
@@ -68,11 +69,13 @@ import           Cardano.Api hiding (txIns)
 import qualified Cardano.Api as Api
 import           Cardano.Api.Byron (KeyWitness (ByronKeyWitness),
                    WitnessNetworkIdOrByronAddress (..))
-import           Cardano.Api.Shelley (Hash (ScriptDataHash), KESPeriod (KESPeriod),
+import           Cardano.Api.Shelley
+                   (Hash (GenesisDelegateKeyHash, GenesisKeyHash, ScriptDataHash, VrfKeyHash),
+                   KESPeriod (KESPeriod),
                    OperationalCertificateIssueCounter (OperationalCertificateIssueCounter),
                    PlutusScript (PlutusScriptSerialised), ProtocolParameters (ProtocolParameters),
                    ReferenceScript (..), ReferenceTxInsScriptsInlineDatumsSupportedInEra (..),
-                   StakeCredential (StakeCredentialByKey), StakePoolKey,
+                   StakeCredential (StakeCredentialByKey), StakePoolKey, VrfKey,
                    refInsScriptsAndInlineDatsSupportedInEra)
 
 import           Cardano.Prelude
@@ -81,6 +84,7 @@ import           Control.Monad.Fail (fail)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Short as SBS
 import           Data.Coerce
+import qualified Data.Map as Map
 import           Data.String
 import qualified Data.Text as Text
 
@@ -99,6 +103,8 @@ import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 import qualified Cardano.Ledger.Core as Ledger
 import           Cardano.Ledger.SafeHash (unsafeMakeSafeHash)
 
+import           Cardano.Ledger.Crypto (StandardCrypto)
+import qualified Cardano.Ledger.Keys as Ledger
 import           Gen.Cardano.Api.Metadata (genTxMetadata)
 import           Test.Cardano.Chain.UTxO.Gen (genVKWitness)
 import           Test.Cardano.Crypto.Gen (genProtocolMagicId)
@@ -366,6 +372,42 @@ genSigningKey roletoken = do
   where
     seedSize :: Word
     seedSize = deterministicSigningKeySeedSize roletoken
+
+genGenesisDelegateSigningKey :: Gen (SigningKey GenesisDelegateKey)
+genGenesisDelegateSigningKey = genSigningKey AsGenesisDelegateKey
+
+genGenesisDelegateVerificatonKey :: Gen (VerificationKey GenesisDelegateKey)
+genGenesisDelegateVerificatonKey = getVerificationKey <$> genGenesisDelegateSigningKey
+
+genGenesisSigningKey :: Gen (SigningKey GenesisKey)
+genGenesisSigningKey = genSigningKey AsGenesisKey
+
+genGenesisVerificatonKey :: Gen (VerificationKey GenesisKey)
+genGenesisVerificatonKey = getVerificationKey <$> genGenesisSigningKey
+
+genVrfSigningKey :: Gen (SigningKey VrfKey)
+genVrfSigningKey = genSigningKey AsVrfKey
+
+genVrfVerificationKey :: Gen (VerificationKey VrfKey)
+genVrfVerificationKey = getVerificationKey <$> genVrfSigningKey
+
+genGenesisDelegationPair :: Gen (Ledger.GenDelegPair StandardCrypto)
+genGenesisDelegationPair = do
+  GenesisDelegateKeyHash gDelegHash <- verificationKeyHash <$> genGenesisDelegateVerificatonKey
+  VrfKeyHash vrfKeyHash <- verificationKeyHash <$> genVrfVerificationKey
+  return $ Ledger.GenDelegPair
+             { genDelegKeyHash = gDelegHash
+             , genDelegVrfHash = vrfKeyHash
+             }
+
+genGenesisDelegations :: Gen (Ledger.GenDelegs StandardCrypto)
+genGenesisDelegations = do
+  numOfDelegators <- Gen.integral (Range.constant 1 5)
+  delegatingVKeyHash <- Gen.list (Range.singleton numOfDelegators) (verificationKeyHash <$> genGenesisVerificatonKey)
+  genDelegPair <- Gen.list (Range.singleton numOfDelegators) genGenesisDelegationPair
+  let vKeyLedgerHashes = map (\(GenesisKeyHash h) -> h) delegatingVKeyHash
+      genDelegsList = zip vKeyLedgerHashes genDelegPair
+  return . Ledger.GenDelegs $ Map.fromList genDelegsList
 
 genStakeAddress :: Gen StakeAddress
 genStakeAddress = makeStakeAddress <$> genNetworkId <*> genStakeCredential

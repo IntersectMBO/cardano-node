@@ -23,13 +23,13 @@ where
 
 import           Cardano.Prelude
 import qualified GHC.Show as Show
-import           Prelude (String, error)
+import           Prelude (String)
 
 import           Control.Monad (fail)
 import           Data.Aeson
 import qualified Data.Aeson.Types as Aeson
 import qualified Data.Text as Text
-import           Data.Time.Clock (DiffTime)
+import           Data.Time.Clock (DiffTime, secondsToDiffTime)
 import           Data.Yaml (decodeFileThrow)
 import           Generic.Data (gmappend)
 import           Generic.Data.Orphans ()
@@ -484,8 +484,8 @@ defaultPartialNodeConfiguration =
     , pncTargetNumberOfEstablishedPeers = Last (Just 50)
     , pncTargetNumberOfActivePeers      = Last (Just 20)
     , pncEnableP2P                      = Last (Just DisabledP2PMode)
-    , pncDeadlineChurnInterval  = Last (error "Conway TODO pncDeadlineChurnInterval")
-    , pncBulkChurnInterval      = Last (error "Conway TODO pncBulkChurnInterval")
+    , pncDeadlineChurnInterval  = Last . Just $ secondsToDiffTime 300
+    , pncBulkChurnInterval      = Last . Just $ secondsToDiffTime 3300
     }
 
 lastOption :: Parser a -> Parser (Last a)
