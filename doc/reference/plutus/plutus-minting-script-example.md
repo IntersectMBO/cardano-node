@@ -48,14 +48,14 @@ Follow the instructions displayed in the terminal to start your Alonzo cluster.
 
 To mint a multi-asset, you need the Plutus script policy ID and a redeemer. Because this minting script always succeeds, you can use any redeemer:
 
-```bash
-> cardano-cli transaction policyid --script-file scripts/plutus/scripts/anyone-can-mint.plutus
+```
+$ cardano-cli transaction policyid --script-file scripts/plutus/scripts/anyone-can-mint.plutus
 > $policyid
 ```
 
 You can find an example redeemer at: `scripts/plutus/data/42.redeemer`
 
-For more information regarding `tx-in-collateral` and `mint-execution-units` see [here](plutus-spending-script-example.md).
+For more information regarding `tx-in-collateral` see [here](plutus-spending-script-example.md).
 
 ```bash
 cardano-cli transaction build \
