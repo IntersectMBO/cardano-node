@@ -38,7 +38,6 @@ module Cardano.Api.Fees (
 
     -- * Internal helpers
     mapTxScriptWitnesses,
-    toLedgerEpochInfo,
   ) where
 
 import           Prelude

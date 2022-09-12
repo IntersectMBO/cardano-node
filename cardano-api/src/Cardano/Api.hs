@@ -237,7 +237,6 @@ module Cardano.Api (
 
     -- ** Fee calculation
     transactionFee,
-    toLedgerEpochInfo,
     estimateTransactionFee,
     evaluateTransactionFee,
     estimateTransactionKeyWitnessCount,
