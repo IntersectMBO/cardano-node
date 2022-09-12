@@ -372,9 +372,10 @@ allow-newer:
   monoidal-containers:aeson,
   size-based:template-haskell,
   snap-server:attoparsec,
-  Unique:hashable,
   tasty-hedgehog:hedgehog,
-  protolude:hashable
+  Unique:hashable,
+  protolude:hashable,
+  ouroboros-network:hashable
 
 -- https://github.com/well-typed/canonical-json/pull/8
 source-repository-package
