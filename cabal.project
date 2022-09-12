@@ -1,5 +1,5 @@
 -- run `nix flake lock --update-input hackageNix` after updating index-state.
-index-state: 2022-07-01T00:00:00Z
+index-state: 2022-09-10T00:00:00Z
 
 packages:
     cardano-api
@@ -188,6 +188,7 @@ source-repository-package
     orphans-deriving-via
     slotting
     strict-containers
+    heapwords
 
 source-repository-package
   type: git
