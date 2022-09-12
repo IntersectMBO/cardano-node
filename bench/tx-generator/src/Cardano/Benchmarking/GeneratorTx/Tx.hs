@@ -5,12 +5,8 @@
 {-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
 
 module Cardano.Benchmarking.GeneratorTx.Tx
-  ( Fund
-  , fundTxIn
-  , fundAdaValue
-  , keyAddress
+  ( keyAddress
   , mkGenesisTransaction
-  , mkFund
   , mkFee
   , mkTxOutValueAdaOnly
   , mkValidityUpperBound
@@ -23,17 +19,6 @@ import           Prelude
 import           Cardano.Benchmarking.Types (TxAdditionalSize (..))
 
 import           Cardano.Api
-
-type Fund = (TxIn, InAnyCardanoEra TxOutValue)
-
-mkFund :: forall era. IsCardanoEra era => TxIn -> TxOutValue era -> Fund
-mkFund txIn val = (txIn, InAnyCardanoEra cardanoEra val)
-
-fundTxIn :: Fund -> TxIn
-fundTxIn (x,_) = x
-
-fundAdaValue :: Fund -> Lovelace
-fundAdaValue (_, InAnyCardanoEra _ txOut) = txOutValueToLovelace txOut
 
 keyAddress :: forall era. IsShelleyBasedEra era => NetworkId -> SigningKey PaymentKey -> AddressInEra era
 keyAddress networkId k

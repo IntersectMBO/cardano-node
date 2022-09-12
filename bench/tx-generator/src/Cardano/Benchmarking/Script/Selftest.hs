@@ -21,7 +21,6 @@ import           Cardano.Benchmarking.Script.Setters
 import           Cardano.Benchmarking.Script.Store
 import           Cardano.Benchmarking.Script.Types
 import           Cardano.Benchmarking.Tracer (initDefaultTracers)
-import           Cardano.Benchmarking.Types
 
 import           Paths_tx_generator
 
@@ -58,17 +57,16 @@ testScript protocolFile submitMode =
   , createChange 2200000000000 10
   , createChange 70000000000 300
   , createChange 2300000000 9000
-  , RunBenchmark era wallet
-    submitMode
-    (ThreadName "walletBasedBenchmark") extraArgs Nothing (TPSRate 10.0)
+  , Submit era submitMode $ Take 4000 $ Cycle $ BechmarkTx wallet extraArgs Nothing
   ]
   where
     era = AnyCardanoEra AllegraEra
     wallet = WalletName "test-wallet"
     key = KeyName "pass-partout"
-    payMode = PayToAddr key wallet
-    createChange val count
-      = CreateChange era wallet submitMode payMode payMode (Lovelace val) count
+--    payMode = PayToAddr key wallet
+    createChange :: Int -> Int -> Action
+    createChange _val _count
+      =   LogMsg "TODO: Fix this " -- CreateChange era wallet submitMode payMode payMode (Lovelace val) count
     extraArgs = RunBenchmarkAux {
         auxTxCount = 4000
       , auxFee = 1000000

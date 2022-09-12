@@ -15,6 +15,7 @@ import           Prelude
 import           GHC.Generics
 
 import           Data.List.NonEmpty
+import           Data.Text (Text)
 
 import           Cardano.Benchmarking.OuroborosImports (SigningKeyFile)
 import           Cardano.Api (AnyCardanoEra, ExecutionUnits, Lovelace, ScriptData, ScriptRedeemer, TextEnvelope, TxIn)
@@ -33,16 +34,30 @@ data Action where
   ReadSigningKey     :: !KeyName -> !SigningKeyFile -> Action
   DefineSigningKey   :: !KeyName -> !TextEnvelope -> Action
   AddFund            :: !AnyCardanoEra -> !WalletName -> !TxIn -> !Lovelace -> !KeyName -> Action
-  ImportGenesisFund  :: !AnyCardanoEra -> !WalletName -> !SubmitMode -> !KeyName -> !KeyName -> Action
-  CreateChange       :: !AnyCardanoEra -> !WalletName -> !SubmitMode -> !PayMode -> !PayMode -> !Lovelace -> !Int -> Action
-  RunBenchmark       :: !AnyCardanoEra -> !WalletName -> !SubmitMode -> !ThreadName -> !RunBenchmarkAux -> Maybe WalletName -> !TPSRate -> Action
   WaitBenchmark      :: !ThreadName -> Action
+  Submit             :: !AnyCardanoEra -> !SubmitMode -> !Generator -> Action
   CancelBenchmark    :: !ThreadName -> Action
   Reserved           :: [String] -> Action
   WaitForEra         :: !AnyCardanoEra -> Action
   SetProtocolParameters :: ProtocolParametersSource -> Action
+  LogMsg             :: !Text -> Action
   deriving (Show, Eq)
 deriving instance Generic Action
+
+data Generator where
+  SecureGenesis :: !Lovelace -> !WalletName -> !KeyName -> !KeyName -> Generator -- 0 to N
+  Split :: !Lovelace -> !WalletName -> !PayMode -> !PayMode -> [ Lovelace ] -> Generator 
+  SplitN :: !Lovelace -> !WalletName -> !PayMode -> !Int -> Generator            -- 1 to N
+  BechmarkTx :: !WalletName -> !RunBenchmarkAux -> Maybe WalletName -> Generator -- N to M
+-- Generic NtoM ::  
+  Sequence :: [Generator] -> Generator
+  Cycle :: !Generator -> Generator
+  Take :: !Int -> !Generator -> Generator
+  RoundRobin :: [Generator] -> Generator
+  OneOf :: [(Generator, Double)] -> Generator
+--  AddLogMessages :: Text -> Text -> Generator -> Generator
+  deriving (Show, Eq)
+deriving instance Generic Generator
 
 data ProtocolParametersSource where
   QueryLocalNode :: ProtocolParametersSource
@@ -50,11 +65,14 @@ data ProtocolParametersSource where
   deriving (Show, Eq)
 deriving instance Generic ProtocolParametersSource
 
+type TargetNodes = NonEmpty NodeIPv4Address
+
 data SubmitMode where
   LocalSocket :: SubmitMode
-  NodeToNode  :: NonEmpty NodeIPv4Address -> SubmitMode
+  Benchmark   :: !TargetNodes -> !ThreadName -> !TPSRate -> !RunBenchmarkAux -> SubmitMode
   DumpToFile  :: !FilePath -> SubmitMode
   DiscardTX   :: SubmitMode
+  NodeToNode  :: NonEmpty NodeIPv4Address -> SubmitMode --deprecated
   deriving (Show, Eq)
 deriving instance Generic SubmitMode
 

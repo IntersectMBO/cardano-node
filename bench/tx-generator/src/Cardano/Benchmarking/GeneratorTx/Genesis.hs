@@ -16,6 +16,7 @@ import           Cardano.Api.Shelley (fromShelleyLovelace, fromShelleyPaymentCre
                    fromShelleyStakeReference, ReferenceScript(..))
 import           Control.Arrow ((***))
 
+import           Cardano.TxGenerator.FundQueue
 import           Cardano.Benchmarking.GeneratorTx.Tx
 
 import           Cardano.Ledger.Shelley.API (Addr (..), ShelleyGenesis, sgInitialFunds)
@@ -53,18 +54,24 @@ genesisExpenditure ::
   -> Lovelace
   -> Lovelace
   -> SlotNo
+  -> SigningKey PaymentKey
   -> (Tx era, Fund)
-genesisExpenditure networkId key addr coin fee ttl = (tx, fund)
+genesisExpenditure networkId inputKey addr coin fee ttl outputKey = (tx, Fund $ InAnyCardanoEra cardanoEra fund)
  where
-  tx = mkGenesisTransaction (castKey key) 0 ttl fee [ pseudoTxIn ] [ txout ]
+  tx = mkGenesisTransaction (castKey inputKey) 0 ttl fee [ pseudoTxIn ] [ txout ]
 
   value = mkTxOutValueAdaOnly $ coin - fee
   txout = TxOut addr value TxOutDatumNone ReferenceScriptNone
 
   pseudoTxIn = genesisUTxOPseudoTxIn networkId
-                 (verificationKeyHash $ getVerificationKey $ castKey key)
+                 (verificationKeyHash $ getVerificationKey $ castKey inputKey)
 
   castKey :: SigningKey PaymentKey -> SigningKey GenesisUTxOKey
   castKey(PaymentSigningKey skey) = GenesisUTxOSigningKey skey
 
-  fund = mkFund (TxIn (getTxId $ getTxBody tx) (TxIx 0)) value
+  fund = FundInEra {
+    _fundTxIn = TxIn (getTxId $ getTxBody tx) (TxIx 0)
+  , _fundWitness = KeyWitness KeyWitnessForSpending
+  , _fundVal  = value
+  , _fundSigningKey = Just outputKey
+  }

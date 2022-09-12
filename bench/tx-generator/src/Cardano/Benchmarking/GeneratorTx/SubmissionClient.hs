@@ -137,9 +137,7 @@ txSubmissionClient tr bmtr initialTxSource endOfProtocolCallback =
         req = Req $ fromIntegral reqNum
     traceWith tr $ reqIdsTrace ack req blocking
     stateA <- discardAcknowledged blocking ack state
-    traceWith bmtr $ TraceBenchTxSubDebug "return from discard"
     (stateB, newTxs) <- produceNextTxs blocking req stateA
-    traceWith bmtr $ TraceBenchTxSubDebug "return from produceNext"
     let stateC@(_, UnAcked outs , stats) = queueNewTxs newTxs stateB
 
     traceWith tr $ idListTrace (ToAnnce newTxs) blocking

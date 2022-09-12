@@ -22,16 +22,18 @@ module Cardano.Benchmarking.GeneratorTx.Submission
   , SubmissionThreadReport
   , TxSource
   , ReportRef
-  , walletTxSource
   , mkSubmissionSummary
   , submitThreadReport
   , submitSubmissionThreadStats
+  , txStreamSource
   ) where
 
 import           Prelude (String, error)
 import           Cardano.Prelude hiding (ByteString, atomically, retry, state, threadDelay)
 
 import qualified Control.Concurrent.STM as STM
+
+import qualified Streaming.Prelude as Streaming
 
 import           Data.Time.Clock (NominalDiffTime, UTCTime)
 import qualified Data.Time.Clock as Clock
@@ -118,26 +120,29 @@ mkSubmissionSummary ssThreadName startTime reportsRefs
       { strStats=SubmissionThreadStats{stsAcked=Ack ack}, strEndOfProtocol } =
         txDiffTimeTPS ack (Clock.diffUTCTime strEndOfProtocol startTime)
 
-walletTxSource :: forall era. WalletScript era -> TpsThrottle -> TxSource era
-walletTxSource walletScript tpsThrottle = Active $ worker walletScript
+txStreamSource :: forall era. TxStream IO era -> TpsThrottle -> TxSource era
+txStreamSource stream tpsThrottle = Active $ worker stream
  where
-  worker :: forall m blocking . MonadIO m => WalletScript era -> TokBlockingStyle blocking -> Req -> m (TxSource era, [Tx era])
-  worker script blocking req = do
+  worker :: forall m blocking . MonadIO m => TxStream IO era -> TokBlockingStyle blocking -> Req -> m (TxSource era, [Tx era])
+  worker s blocking req = do
     (done, txCount) <- case blocking of
        TokBlocking -> liftIO $ consumeTxsBlocking tpsThrottle req
        TokNonBlocking -> liftIO $ consumeTxsNonBlocking tpsThrottle req
-    (txList, newScript) <- liftIO $ unFold script txCount
+    (txList, newScript) <- liftIO $ unFold s txCount
     case done of
       Stop -> return (Exhausted, txList)
       Next -> return (Active $ worker newScript, txList)
 
-  unFold :: WalletScript era -> Int -> IO ([Tx era], WalletScript era)
-  unFold script 0 = return ([], script)
-  unFold script n = do
-    next <- runWalletScript script
+  unFold :: TxStream IO era -> Int -> IO ([Tx era], TxStream IO era)
+  unFold s 0 = return ([], s)
+  unFold s n = do
+    next <- Streaming.next s
     case next of
-      Done -> error "unexpected WalletScript Done" --return ([], script)
-      NextTx s tx -> do
-        (l, out) <- unFold s $ pred n
+      -- Node2node clients buffer a number x of TXs internally (x is determined by the node.)
+      -- Therefore it is possible that the submission client requests TXs from an empty TxStream.
+      -- In other words, it is not an error to request more TXs than there are in the TxStream.
+      Left _ -> return ([], s)
+      Right (Right tx, t) -> do
+        (l, out) <- unFold t $ pred n
         return (tx:l, out)
-      Error err -> error err
+      Right (Left err, _) -> error err
