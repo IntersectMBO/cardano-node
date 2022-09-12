@@ -372,6 +372,7 @@ allow-newer:
   monoidal-containers:aeson,
   size-based:template-haskell,
   snap-server:attoparsec,
+  Unique:hashable,
 
 -- https://github.com/well-typed/canonical-json/pull/8
 source-repository-package
