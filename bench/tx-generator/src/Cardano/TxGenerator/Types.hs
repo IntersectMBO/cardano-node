@@ -21,18 +21,6 @@ data PayWithChange
   = PayExact [Lovelace]
   | PayWithChange Lovelace [Lovelace]
 
-{- TODO:
-data NixServiceOptions = NixServiceOptions {
-    _nix_debugMode        :: Bool
-  , _nix_tx_count         :: NumberOfTxs
-  , _nix_init_cooldown    :: Double
-  , _nix_era              :: AnyCardanoEra
-  , _nix_nodeConfigFile       :: Maybe FilePath
-  , _nix_sigKey               :: SigningKeyFile
-  , _nix_localNodeSocketPath  :: String
-  , _nix_targetNodes          :: NonEmpty NodeIPv4Address
-  } deriving (Show, Eq)
--}
 
 data TxGenTxParams = TxGenTxParams
   { txParamFee        :: !Lovelace  -- ^ Transaction fee, in Lovelace
