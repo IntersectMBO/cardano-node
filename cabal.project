@@ -375,7 +375,8 @@ allow-newer:
   tasty-hedgehog:hedgehog,
   Unique:hashable,
   protolude:hashable,
-  ouroboros-network:hashable
+  ouroboros-network:hashable,
+  ral:hashable
 
 -- https://github.com/well-typed/canonical-json/pull/8
 source-repository-package
