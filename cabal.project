@@ -374,6 +374,7 @@ allow-newer:
   snap-server:attoparsec,
   Unique:hashable,
   tasty-hedgehog:hedgehog,
+  protolude:hashable
 
 -- https://github.com/well-typed/canonical-json/pull/8
 source-repository-package
