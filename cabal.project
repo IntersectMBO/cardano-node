@@ -386,6 +386,6 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/nothunks
-  tag: be807ff5411a97c54e997706618c96bd686c2830
+  tag: 0412f852cb45fd7bc93e4d9e232113cf064b6e37
   --sha256: 08jblb8w01ciwlkmjam78q0qmhkm63l5wh8qhxbdxxpv412a8rcb
 
