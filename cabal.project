@@ -245,7 +245,7 @@ source-repository-package
   type: git
   location: https://github.com/newhoggy/goblins
   tag: 6a3e582951ff7d2709f5fddf3d09d733c2801e08
-  --sha256: 17c88rbva3iw82yg9srlxjv2ia5wjb9cyqw44hik565f5v9svnyg
+  --sha256: 1xhd5s0ak5qsqbklw79kx3zmvd75lhv386fim61l4b5m1s5m4gz4
 
 source-repository-package
   type: git
@@ -392,10 +392,11 @@ source-repository-package
   type: git
   location: https://github.com/input-output-hk/nothunks
   tag: 0412f852cb45fd7bc93e4d9e232113cf064b6e37
-  --sha256: 08jblb8w01ciwlkmjam78q0qmhkm63l5wh8qhxbdxxpv412a8rcb
+  --sha256: 0v2kydwxrvd69dyy3wjdxgisjla5vjqvvlrix41xn2vzf2lf3irm
 
 -- https://github.com/astanin/moo/pull/11
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/moo
   tag: b9ab5acfd19c2b16161b30357c09dcf18e2655be
+  --sha256: 1mdj218hgh7s5a6b9k14vg9i06zxah0wa42ycdgh245izs8nfv0x
