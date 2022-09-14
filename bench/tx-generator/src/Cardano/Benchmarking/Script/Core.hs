@@ -39,8 +39,7 @@ import qualified Cardano.TxGenerator.FundQueue as FundQueue
 import           Cardano.TxGenerator.Tx
 import           Cardano.TxGenerator.Types
 import           Cardano.TxGenerator.UTxO
-import qualified Cardano.TxGenerator.Utils as Utils (includeChange, inputsToOutputsWithFee,
-                   liftAnyEra)
+import qualified Cardano.TxGenerator.Utils as Utils
 
 import           Cardano.Benchmarking.GeneratorTx as GeneratorTx (AsyncBenchmarkControl)
 import qualified Cardano.Benchmarking.GeneratorTx as GeneratorTx (readSigningKey, waitBenchmark,
@@ -49,7 +48,6 @@ import qualified Cardano.Benchmarking.GeneratorTx.Genesis as Genesis
 import           Cardano.Benchmarking.GeneratorTx.NodeToNode (ConnectClient,
                    benchmarkConnectTxSubmit)
 import           Cardano.Benchmarking.GeneratorTx.SizedMetadata (mkMetadata)
-import           Cardano.Benchmarking.GeneratorTx.Tx as Core (keyAddress, mkFee, txInModeCardano)
 
 import           Cardano.Benchmarking.OuroborosImports as Core (LocalSubmitTx, SigningKeyFile,
                    makeLocalConnectInfo, protocolToCodecConfig)
@@ -246,7 +244,7 @@ submitInEra submitMode generator era = do
   case submitMode of
     NodeToNode _ -> error "NodeToNode deprecated: ToDo: remove"
     Benchmark nodes threadName tpsRate extra -> benchmarkTxStream txStream nodes threadName tpsRate extra era
-    LocalSocket -> submitAll (void . localSubmitTx . txInModeCardano) txStream
+    LocalSocket -> submitAll (void . localSubmitTx . Utils.mkTxInModeCardano) txStream
     DumpToFile filePath -> liftIO $ Streaming.writeFile filePath $ Streaming.map showTx txStream
     DiscardTX -> liftIO $ Streaming.effects txStream
  where
@@ -295,7 +293,7 @@ evalGenerator generator era = do
       destWallet  <- getName wallet
       genesisKey  <- getName genesisKeyName
       let
-        outAddr = Core.keyAddress @ era networkId destKey
+        outAddr = Utils.keyAddress @ era networkId destKey
         (_inAddr, lovelace) = Genesis.genesisFundForKey @ era networkId genesis genesisKey
         (tx, fund) = Genesis.genesisExpenditure networkId genesisKey outAddr lovelace fee ttl destKey
         gen = do
@@ -311,7 +309,7 @@ evalGenerator generator era = do
       let
         fundSource = walletSource wallet 1
         inToOut = Utils.includeChange fee coins
-        txGenerator = genTx protocolParameters (TxInsCollateralNone, []) (mkFee fee) TxMetadataNone
+        txGenerator = genTx protocolParameters (TxInsCollateralNone, []) (Utils.mkTxFee fee) TxMetadataNone
         sourceToStore = sourceToStoreTransactionNew txGenerator fundSource inToOut $ mangleWithChange toUTxOChange toUTxO
       return $ Streaming.effect (Streaming.yield <$> sourceToStore)
 
@@ -322,7 +320,7 @@ evalGenerator generator era = do
       let
         fundSource = walletSource wallet 1
         inToOut = Utils.inputsToOutputsWithFee fee count
-        txGenerator = genTx protocolParameters (TxInsCollateralNone, []) (mkFee fee) TxMetadataNone
+        txGenerator = genTx protocolParameters (TxInsCollateralNone, []) (Utils.mkTxFee fee) TxMetadataNone
         sourceToStore = sourceToStoreTransactionNew txGenerator fundSource inToOut (mangle $ repeat toUTxO)
       return $ Streaming.effect (Streaming.yield <$> sourceToStore)
 
@@ -338,7 +336,7 @@ evalGenerator generator era = do
         inToOut :: [Lovelace] -> [Lovelace]
         inToOut = Utils.inputsToOutputsWithFee (auxFee shape) (auxOutputsPerTx shape)
 
-        txGenerator = genTx protocolParameters collaterals (mkFee (auxFee shape)) metadata
+        txGenerator = genTx protocolParameters collaterals (Utils.mkTxFee (auxFee shape)) metadata
 
         toUTxO :: [ ToUTxO era ]
         toUTxO = repeat $ mkUTxOVariant networkId fundKey -- TODO: make configurable
@@ -389,7 +387,7 @@ interpretPayMode payMode = do
       fundKey <- getName keyName
       walletRef <- getName destWallet
       return ( createAndStore (mkUTxOVariant networkId fundKey) (mkWalletFundStore walletRef)
-             , Text.unpack $ serialiseAddress $ keyAddress @ era networkId fundKey)
+             , Text.unpack $ serialiseAddress $ Utils.keyAddress @ era networkId fundKey)
     PayToScript scriptSpec destWallet -> do
       walletRef <- getName destWallet
       (witness, script, scriptData, _scriptFee) <- makePlutusContext scriptSpec
