@@ -16,7 +16,7 @@ module Cardano.Benchmarking.GeneratorTx.Tx
 where
 
 import           Prelude
-import           Cardano.Benchmarking.Types (TxAdditionalSize (..))
+import           Cardano.TxGenerator.Types (TxAdditionalSize)
 
 import           Cardano.Api
 
@@ -37,7 +37,7 @@ mkGenesisTransaction :: forall era .
   -> [TxIn]
   -> [TxOut CtxTx era]
   -> Tx era
-mkGenesisTransaction key _payloadSize ttl fee txins txouts
+mkGenesisTransaction key _payloadSizesss ttl fee txins txouts
   = case makeTransactionBody txBodyContent of
     Right b -> signShelleyTransaction b [WitnessGenesisUTxOKey key]
     Left err -> error $ show err

@@ -2,92 +2,14 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# OPTIONS_GHC -Wno-all-missed-specialisations #-}
-{-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
-{-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Cardano.Benchmarking.Types
-  ( Ack(..)
-  , NodeIPv4Address
-  , NumberOfInputsPerTx(..)
-  , NumberOfOutputsPerTx(..)
-  , NumberOfTxs(..)
-  , Req(..)
-  , Sent(..)
-  , SubmissionErrorPolicy(..)
-  , ToAnnce(..)
-  , TxAdditionalSize(..)
-  , TPSRate(..)
-  , UnAcked(..)
-  , Unav(..)
+  ( module Cardano.Benchmarking.Types
   ) where
 
+import           GHC.Generics (Generic)
+import           Data.Aeson (ToJSON)
 
-import           Prelude
-import           GHC.Generics
-import           Data.Aeson
-
-import           Cardano.Node.Configuration.NodeAddress
-
-myJsonOptions :: Options
-myJsonOptions = defaultOptions {
-  unwrapUnaryRecords = True
-  }
-
-newtype NumberOfInputsPerTx =
-  NumberOfInputsPerTx Int
-  deriving newtype (Eq, Ord, Enum, Real, Num, Integral, Show)
-deriving stock instance Generic NumberOfInputsPerTx
-instance ToJSON NumberOfInputsPerTx where
-  toJSON     = genericToJSON myJsonOptions
-  toEncoding = genericToEncoding myJsonOptions
-
-instance FromJSON NumberOfInputsPerTx where parseJSON = genericParseJSON myJsonOptions
-
-newtype NumberOfOutputsPerTx =
-  NumberOfOutputsPerTx Int
-  deriving newtype (Eq, Ord, Num, Show)
-deriving stock instance Generic NumberOfOutputsPerTx
-instance ToJSON NumberOfOutputsPerTx where
-  toJSON     = genericToJSON myJsonOptions
-  toEncoding = genericToEncoding myJsonOptions
-instance FromJSON NumberOfOutputsPerTx where parseJSON = genericParseJSON myJsonOptions
-
-newtype NumberOfTxs =
-  NumberOfTxs { unNumberOfTxs :: Int }
-  deriving newtype (Eq, Ord, Enum, Real, Num, Integral, Show)
-deriving stock instance Generic NumberOfTxs
-instance ToJSON NumberOfTxs where
-  toJSON     = genericToJSON myJsonOptions
-  toEncoding = genericToEncoding myJsonOptions
-instance FromJSON NumberOfTxs where parseJSON = genericParseJSON myJsonOptions
-
-newtype TPSRate=
-  TPSRate Double
-  deriving newtype (Eq, Ord, Num, Show)
-deriving stock instance Generic TPSRate
-instance ToJSON TPSRate where
-  toJSON     = genericToJSON myJsonOptions
-  toEncoding = genericToEncoding myJsonOptions
-instance FromJSON TPSRate where parseJSON = genericParseJSON myJsonOptions
-
--- | This parameter specifies additional size (in bytes) of transaction.
---   Since 1 transaction is ([input] + [output] + attributes), its size
---   is defined by its inputs and outputs. We want to have an ability to
---   increase transaction's size without increasing the number of inputs/
---   outputs. Such a big transaction will give us more real-world results
---   of benchmarking.
---   Technically this parameter specifies the size of attribute we'll
---   add to transaction (by default attributes are empty, so if this
---   parameter is skipped, attributes will remain empty).
-newtype TxAdditionalSize =
-  TxAdditionalSize { unTxAdditionalSize :: Int }
-  deriving newtype (Eq, Ord, Num, Show)
-deriving stock instance Generic TxAdditionalSize
-instance ToJSON TxAdditionalSize where
-  toJSON     = genericToJSON myJsonOptions
-  toEncoding = genericToEncoding myJsonOptions
-instance FromJSON TxAdditionalSize where parseJSON = genericParseJSON myJsonOptions
 
 -- | Transactions we decided to announce now.
 newtype ToAnnce tx = ToAnnce [tx]

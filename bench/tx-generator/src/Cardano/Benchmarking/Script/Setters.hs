@@ -20,7 +20,7 @@ import           Data.GADT.Show.TH (deriveGShow)
 
 import           Cardano.Api (SlotNo, Lovelace, NetworkId)
 
-import           Cardano.Benchmarking.Types
+import           Cardano.TxGenerator.Types (TxAdditionalSize)
 
 -- Some boiler plate; ToDo may generate this.
 data Tag v where

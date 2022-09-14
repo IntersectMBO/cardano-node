@@ -1,6 +1,6 @@
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE PackageImports #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -10,7 +10,6 @@
 
 module Cardano.Benchmarking.GeneratorTx
   ( AsyncBenchmarkControl
-  , TxGenError
   , walletBenchmark
   , readSigningKey
   , waitBenchmark
@@ -34,14 +33,14 @@ import           Cardano.Node.Configuration.NodeAddress
 
 import           Cardano.Api hiding (txFee)
 
-import           Cardano.TxGenerator.Types (TxGenError(..))
 import           Cardano.Benchmarking.GeneratorTx.NodeToNode
 import           Cardano.Benchmarking.GeneratorTx.Submission
 import           Cardano.Benchmarking.GeneratorTx.SubmissionClient
-import           Cardano.Benchmarking.TpsThrottle
 import           Cardano.Benchmarking.LogTypes
+import           Cardano.Benchmarking.TpsThrottle
 import           Cardano.Benchmarking.Types
 import           Cardano.Benchmarking.Wallet (TxStream)
+import           Cardano.TxGenerator.Types (NumberOfTxs, TPSRate, TxGenError (..))
 
 readSigningKey :: SigningKeyFile -> ExceptT TxGenError IO (SigningKey PaymentKey)
 readSigningKey =
@@ -138,7 +137,7 @@ walletBenchmark
   traceDebug $ "******* Tx generator, launching Tx peers:  " ++ show (NE.length remoteAddresses) ++ " of them"
 
   startTime <- Clock.getCurrentTime
-  tpsThrottle <- newTpsThrottle 32 (unNumberOfTxs count) tpsRate
+  tpsThrottle <- newTpsThrottle 32 count tpsRate
 
   reportRefs <- STM.atomically $ replicateM (fromIntegral numTargets) STM.newEmptyTMVar
 

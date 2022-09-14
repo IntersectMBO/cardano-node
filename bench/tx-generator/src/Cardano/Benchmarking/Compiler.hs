@@ -17,7 +17,6 @@ import           Data.Text (Text)
 import qualified Data.Text as Text
 
 import           Cardano.Api
-import           Cardano.Benchmarking.Types
 import           Cardano.Benchmarking.NixOptions
 import           Cardano.Benchmarking.Script.Setters
 import           Cardano.Benchmarking.Script.Store (Name(..), WalletName)
@@ -101,8 +100,8 @@ addCollaterals src = do
 
 splittingPhase :: SrcWallet -> Compiler DstWallet
 splittingPhase srcWallet = do
-  (NumberOfTxs tx_count) <- askNixOption _nix_tx_count
-  (NumberOfInputsPerTx inputs_per_tx) <- askNixOption _nix_inputs_per_tx
+  tx_count <- askNixOption _nix_tx_count
+  inputs_per_tx <- askNixOption _nix_inputs_per_tx
   tx_fee <- askNixOption _nix_tx_fee
   era <- askNixOption _nix_era  
   minValuePerInput <- _minValuePerInput <$> evilFeeMagic
@@ -177,7 +176,7 @@ benchmarkingPhaseNew wallet collateralWallet = do
   extraArgs <- evilValueMagic
   tps <- askNixOption _nix_tps
   era <- askNixOption _nix_era
-  (NumberOfTxs txCount) <- askNixOption _nix_tx_count
+  txCount <- askNixOption _nix_tx_count
   let
     submitMode = if debugMode
         then LocalSocket
@@ -196,8 +195,8 @@ evilFeeMagic :: Compiler Fees
 evilFeeMagic = do
   (Quantity tx_fee) <- lovelaceToQuantity <$> askNixOption _nix_tx_fee
   plutusMode <- askNixOption _nix_plutusMode  
-  (NumberOfInputsPerTx inputs_per_tx) <- askNixOption _nix_inputs_per_tx
-  (NumberOfOutputsPerTx outputs_per_tx) <- askNixOption _nix_outputs_per_tx  
+  inputs_per_tx <- askNixOption _nix_inputs_per_tx
+  outputs_per_tx <- askNixOption _nix_outputs_per_tx  
   (Quantity min_utxo_value)  <- lovelaceToQuantity <$> askNixOption _nix_min_utxo_value
   let
     scriptFees = 5000000;
@@ -253,9 +252,9 @@ newWallet n = do
 -- Approximate the ada values for inputs of the benchmarking Phase
 evilValueMagic :: Compiler RunBenchmarkAux
 evilValueMagic = do
-  (NumberOfInputsPerTx inputsPerTx) <- askNixOption _nix_inputs_per_tx
-  (NumberOfOutputsPerTx outputsPerTx) <- askNixOption _nix_outputs_per_tx
-  (NumberOfTxs txCount) <- askNixOption _nix_tx_count
+  inputsPerTx <- askNixOption _nix_inputs_per_tx
+  outputsPerTx <- askNixOption _nix_outputs_per_tx
+  txCount <- askNixOption _nix_tx_count
   fee <- askNixOption _nix_tx_fee
   minValuePerUTxO <- askNixOption _nix_min_utxo_value
   let

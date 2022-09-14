@@ -47,6 +47,7 @@ import           Cardano.Tracing.OrphanInstances.Shelley ()
 import           Ouroboros.Network.Protocol.TxSubmission2.Type (TokBlockingStyle (..))
 
 import           Cardano.Api
+import           Cardano.TxGenerator.Types (TPSRate)
 
 import           Cardano.Benchmarking.TpsThrottle
 import           Cardano.Benchmarking.LogTypes
@@ -112,7 +113,7 @@ mkSubmissionSummary ssThreadName startTime reportsRefs
  where
   txDiffTimeTPS :: Int -> NominalDiffTime -> TPSRate
   txDiffTimeTPS n delta =
-    TPSRate $ realToFrac $ fromIntegral n / delta
+    realToFrac $ fromIntegral n / delta
 
   threadReportTps :: SubmissionThreadReport -> TPSRate
   threadReportTps
