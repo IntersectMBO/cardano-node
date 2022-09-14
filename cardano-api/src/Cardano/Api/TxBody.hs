@@ -4166,15 +4166,13 @@ makeShelleyTransactionBody era@ShelleyBasedEraConway
                TxAuxScripts _ ss' -> ss'
 
 
--- | A variant of 'toShelleyTxOutAny that is used only internally to this module
--- that works with a 'TxOut' in any context (including CtxTx) by ignoring
--- embedded datums (taking only their hash).
---
+-- | A variant of 'toShelleyTxOut' that works with a 'TxOut' in any context
+-- (including CtxTx) by ignoring embedded datums (taking only their hash).
 toShelleyTxOutAny :: forall ctx era ledgerera.
-                   ShelleyLedgerEra era ~ ledgerera
-                => ShelleyBasedEra era
-                -> TxOut ctx era
-                -> Ledger.TxOut ledgerera
+                     ShelleyLedgerEra era ~ ledgerera
+                  => ShelleyBasedEra era
+                  -> TxOut ctx era
+                  -> Ledger.TxOut ledgerera
 toShelleyTxOutAny era (TxOut _ (TxOutAdaOnly AdaOnlyInByronEra _) _ _) =
     case era of {}
 

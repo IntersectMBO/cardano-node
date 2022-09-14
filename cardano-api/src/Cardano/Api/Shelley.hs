@@ -52,6 +52,7 @@ module Cardano.Api.Shelley
     fromShelleyTxIn,
     TxOut(TxOut),
     toShelleyTxOut,
+    toShelleyTxOutAny,
     fromShelleyTxOut,
     TxIx(TxIx),
     Lovelace(Lovelace),
