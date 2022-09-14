@@ -141,13 +141,14 @@ walletBenchmark
 
   reportRefs <- STM.atomically $ replicateM (fromIntegral numTargets) STM.newEmptyTMVar
 
+  txStreamRef <- newMVar $ StreamActive txSource
   allAsyncs <- forM (zip reportRefs $ NE.toList remoteAddresses) $
     \(reportRef, remoteAddr) -> do
       let errorHandler = handleTxSubmissionClientError traceSubmit remoteAddr reportRef errorPolicy
           client = txSubmissionClient
                      traceN2N
                      traceSubmit
-                     (txStreamSource txSource tpsThrottle)
+                     (txStreamSource txStreamRef tpsThrottle)
                      (submitSubmissionThreadStats reportRef)
       async $ handle errorHandler (connectClient remoteAddr client)
 

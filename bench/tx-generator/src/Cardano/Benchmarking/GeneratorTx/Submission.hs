@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NoMonomorphismRestriction #-}
@@ -18,7 +19,8 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Cardano.Benchmarking.GeneratorTx.Submission
-  ( SubmissionParams(..)
+  ( StreamState (..)
+  , SubmissionParams(..)
   , SubmissionThreadReport
   , TxSource
   , ReportRef
@@ -121,29 +123,44 @@ mkSubmissionSummary ssThreadName startTime reportsRefs
       { strStats=SubmissionThreadStats{stsAcked=Ack ack}, strEndOfProtocol } =
         txDiffTimeTPS ack (Clock.diffUTCTime strEndOfProtocol startTime)
 
-txStreamSource :: forall era. TxStream IO era -> TpsThrottle -> TxSource era
-txStreamSource stream tpsThrottle = Active $ worker stream
+txStreamSource :: forall era. MVar (StreamState (TxStream IO era)) -> TpsThrottle -> TxSource era
+txStreamSource streamRef tpsThrottle = Active worker
  where
-  worker :: forall m blocking . MonadIO m => TxStream IO era -> TokBlockingStyle blocking -> Req -> m (TxSource era, [Tx era])
-  worker s blocking req = do
+  worker :: forall m blocking . MonadIO m => TokBlockingStyle blocking -> Req -> m (TxSource era, [Tx era])
+  worker blocking req = do
     (done, txCount) <- case blocking of
        TokBlocking -> liftIO $ consumeTxsBlocking tpsThrottle req
        TokNonBlocking -> liftIO $ consumeTxsNonBlocking tpsThrottle req
-    (txList, newScript) <- liftIO $ unFold s txCount
+    txList <- liftIO $ unFold txCount
     case done of
       Stop -> return (Exhausted, txList)
-      Next -> return (Active $ worker newScript, txList)
+      Next -> return (Active worker, txList)
 
-  unFold :: TxStream IO era -> Int -> IO ([Tx era], TxStream IO era)
-  unFold s 0 = return ([], s)
-  unFold s n = do
-    next <- Streaming.next s
-    case next of
-      -- Node2node clients buffer a number x of TXs internally (x is determined by the node.)
-      -- Therefore it is possible that the submission client requests TXs from an empty TxStream.
-      -- In other words, it is not an error to request more TXs than there are in the TxStream.
-      Left _ -> return ([], s)
-      Right (Right tx, t) -> do
-        (l, out) <- unFold t $ pred n
-        return (tx:l, out)
-      Right (Left err, _) -> error err
+  unFold :: Int -> IO [Tx era]
+  unFold 0 = return []
+  unFold n = nextOnMVar streamRef >>= \case
+    -- Node2node clients buffer a number x of TXs internally (x is determined by the node.)
+    -- Therefore it is possible that the submission client requests TXs from an empty TxStream.
+    -- In other words, it is not an error to request more TXs than there are in the TxStream.
+    StreamEmpty -> return []
+    StreamError err -> error err
+    StreamActive tx -> do
+      l <- unFold $ pred n
+      return $ tx:l
+
+  nextOnMVar :: MVar (StreamState (TxStream IO era)) -> IO (StreamState (Tx era))
+  nextOnMVar v = modifyMVar v $ \x -> case x of
+    StreamEmpty -> return (StreamEmpty, StreamEmpty)
+    StreamError err -> return (StreamError err, StreamError err)
+    StreamActive s -> update <$> Streaming.next s
+   where
+    update :: Either () (Either String (Tx era), TxStream IO era) -> (StreamState (TxStream IO era), StreamState (Tx era))
+    update x = case x of
+      Left () -> (StreamEmpty, StreamEmpty)
+      Right (Right tx, t) -> (StreamActive t, StreamActive tx)
+      Right (Left err, _) -> (StreamError err, StreamError err)
+
+data StreamState x
+  = StreamEmpty
+  | StreamError String
+  | StreamActive x
