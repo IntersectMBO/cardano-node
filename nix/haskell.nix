@@ -91,9 +91,8 @@ haskell-nix.cabalProject' ({ pkgs
       })
       ({ pkgs, ... }: {
         # Use the VRF fork of libsodium
-        packages = lib.genAttrs [ "cardano-crypto-praos" "cardano-crypto-class" ] (_: {
-          components.library.pkgconfig = lib.mkForce [ [ pkgs.libsodium-vrf ] ];
-        });
+        packages.cardano-crypto-class.components.library.pkgconfig = lib.mkForce [[ pkgs.libsodium-vrf pkgs.secp256k1 ]];
+        packages.cardano-crypto-praos.components.library.pkgconfig = lib.mkForce [[ pkgs.libsodium-vrf ]];
       })
       ({ pkgs, options, ... }: {
         # make sure that libsodium DLLs are available for windows binaries,
