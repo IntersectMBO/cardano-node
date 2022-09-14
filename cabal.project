@@ -210,6 +210,8 @@ source-repository-package
     eras/alonzo/test-suite
     eras/babbage/impl
     eras/babbage/test-suite
+    eras/conway/impl
+    eras/conway/test-suite    
     eras/byron/chain/executable-spec
     eras/byron/crypto
     eras/byron/crypto/test
