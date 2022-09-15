@@ -584,6 +584,7 @@ module Cardano.Api (
     QueryUTxOFilter(..),
     UTxO(..),
     queryNodeLocalState,
+    executeQueryCardanoMode,
 
     -- *** Local tx monitoring
     LocalTxMonitorClient(..),
@@ -596,6 +597,7 @@ module Cardano.Api (
     getProgress,
 
     -- *** Common queries
+    determineEra,
     getLocalChainTip,
 
     -- * Node operation
@@ -653,6 +655,12 @@ module Cardano.Api (
     SlotsToEpochEnd(..),
     slotToEpoch,
 
+    -- * Node socket related
+    EnvSocketError(..),
+    SocketPath(..),
+    readEnvSocketPath,
+    renderEnvSocketError,
+
     NodeToClientVersion(..),
 
     -- ** Monadic queries
@@ -670,11 +678,36 @@ module Cardano.Api (
     -- ** Cast functions
     EraCast (..),
     EraCastError (..),
+
+    -- * Convenience functions
+
+    -- ** Transaction construction
+    constructBalancedTx,
+
+    -- ** Queries
+    QueryConvenienceError(..),
+    queryStateForBalancedTx,
+    renderQueryConvenienceError,
+
+    -- ** Constraint satisfaction functions
+    getIsCardanoEraConstraint,
+
+    -- ** Misc
+    NotScriptLockedTxInsError(..),
+    TxInsExistError(..),
+    renderNotScriptLockedTxInsError,
+    renderTxInsExistError,
+    txinsExist,
+    notScriptLockedTxIns,
   ) where
 
 import           Cardano.Api.Address
 import           Cardano.Api.Block
 import           Cardano.Api.Certificate
+import           Cardano.Api.Convenience.Constraints
+import           Cardano.Api.Convenience.Construction
+import           Cardano.Api.Convenience.Query
+import           Cardano.Api.Environment
 import           Cardano.Api.EraCast
 import           Cardano.Api.Eras
 import           Cardano.Api.Error

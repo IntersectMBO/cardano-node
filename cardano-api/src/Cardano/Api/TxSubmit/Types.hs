@@ -8,9 +8,8 @@ module Cardano.Api.TxSubmit.Types
   , textShow
   ) where
 
-import           Cardano.Api.TxSubmit.ErrorRender
 import           Cardano.Binary (DecoderError)
-import           Cardano.Chain.Byron.API (ApplyMempoolPayloadErr(..))
+import           Cardano.Chain.Byron.API (ApplyMempoolPayloadErr (..))
 import qualified Cardano.Chain.Genesis as Genesis
 import qualified Cardano.Chain.UTxO as Utxo
 
@@ -22,15 +21,15 @@ import qualified Data.Text as Text
 
 import           Formatting (build, sformat, (%))
 
+import           Cardano.Api.Environment
+import           Cardano.Api.TxSubmit.ErrorRender
+
 
 data NodeApiEnv = NodeApiEnv
   { naeConfig :: Genesis.Config
   , naeSocket :: SocketPath
   }
 
-newtype SocketPath = SocketPath
-  { unSocketPath :: FilePath
-  }
 
 data TxSubmitStatus
   = TxSubmitOk Utxo.TxId

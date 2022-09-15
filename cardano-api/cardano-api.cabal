@@ -54,6 +54,10 @@ library
                         Cardano.Api.Address
                         Cardano.Api.Block
                         Cardano.Api.Certificate
+                        Cardano.Api.Convenience.Constraints
+                        Cardano.Api.Convenience.Construction
+                        Cardano.Api.Convenience.Query
+                        Cardano.Api.Environment
                         Cardano.Api.Eras
                         Cardano.Api.Error
                         Cardano.Api.Fees

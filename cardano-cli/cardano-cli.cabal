@@ -56,8 +56,6 @@ library
                         Cardano.CLI.Run.Friendly
                         Cardano.CLI.Types
 
-                        Cardano.CLI.Environment
-
                         Cardano.CLI.Byron.Commands
                         Cardano.CLI.Byron.Parsers
                         Cardano.CLI.Byron.Run

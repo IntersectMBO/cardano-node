@@ -33,7 +33,6 @@ import           Ouroboros.Network.Protocol.ChainSync.Client
 import           Cardano.Api
 import           Cardano.Api.Byron
 import           Cardano.Api.Shelley
-import           Cardano.Node.Configuration.NodeAddress (SocketPath (..))
 
 -- | The chairman checks for consensus and progress.
 --

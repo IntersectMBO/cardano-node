@@ -1,5 +1,5 @@
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE LambdaCase #-}
 
 #if !defined(mingw32_HOST_OS)
 #define UNIX
@@ -18,6 +18,7 @@ module Cardano.Api.Utils
   , parseFilePath
   , readFileBlocking
   , runParsecParser
+  , textShow
   , writeSecrets
   ) where
 
@@ -33,13 +34,13 @@ import           Data.Maybe.Strict
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import           GHC.IO.Handle.FD (openFileBlocking)
+import qualified Options.Applicative as Opt
+import           System.FilePath ((</>))
+import           System.IO (IOMode (ReadMode), hClose)
 import qualified Text.Parsec as Parsec
 import qualified Text.Parsec.String as Parsec
 import qualified Text.ParserCombinators.Parsec.Error as Parsec
 import           Text.Printf (printf)
-import qualified Options.Applicative as Opt
-import           System.FilePath ((</>))
-import           System.IO (IOMode (ReadMode), hClose)
 #ifdef UNIX
 import           System.Posix.Files (ownerReadMode, setFileMode)
 #else
@@ -117,3 +118,6 @@ readFileBlocking path = bracket
           else go (acc <> Builder.byteString next)
     contents <- go mempty
     pure $ LBS.toStrict $ Builder.toLazyByteString contents)
+
+textShow :: Show a => a -> Text
+textShow = Text.pack . show

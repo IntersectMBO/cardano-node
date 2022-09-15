@@ -207,6 +207,9 @@ module Cardano.Api.Shelley
     SerialisedCurrentEpochState(..),
     decodeCurrentEpochState,
     UTxO(..),
+    AcquiringFailure(..),
+    SystemStart(..),
+
 
     -- ** Various calculations
     LeadershipError(..),
