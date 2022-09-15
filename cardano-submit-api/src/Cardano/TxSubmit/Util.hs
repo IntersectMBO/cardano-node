@@ -2,7 +2,6 @@
 
 module Cardano.TxSubmit.Util
   ( logException
-  , textShow
   ) where
 
 import           Cardano.BM.Trace (Trace, logError)
@@ -27,5 +26,4 @@ logException tracer txt action = action `catch` logger
       logError tracer $ txt <> textShow e
       throwIO e
 
-textShow :: Show a => a -> Text
-textShow = T.pack . show
+
