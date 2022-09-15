@@ -9,16 +9,14 @@ module Cardano.CLI.Byron.Query
   , runGetLocalNodeTip
   ) where
 
+import           Cardano.Api
 import           Cardano.Prelude
 
-import           Control.Monad.Trans.Except.Extra (firstExceptT)
+import           Control.Monad.Trans.Except.Extra (firstExceptT, newExceptT)
 import           Data.Aeson.Encode.Pretty (encodePretty)
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.Text.Encoding as Text
 
-import           Cardano.Api
-import           Cardano.CLI.Environment (EnvSocketError, readEnvSocketPath, renderEnvSocketError)
-import           Cardano.CLI.Types (SocketPath (..))
 
 {- HLINT ignore "Reduce duplication" -}
 
@@ -37,7 +35,7 @@ renderByronQueryError err =
 runGetLocalNodeTip :: NetworkId -> ExceptT ByronQueryError IO ()
 runGetLocalNodeTip networkId = do
     SocketPath sockPath <- firstExceptT ByronQueryEnvVarSocketErr
-                           readEnvSocketPath
+                             $ newExceptT readEnvSocketPath
     let connctInfo =
           LocalNodeConnectInfo {
             localNodeSocketPath    = sockPath,

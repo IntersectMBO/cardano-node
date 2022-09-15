@@ -25,7 +25,7 @@ where
 import           Cardano.Prelude hiding (option, trace, (%))
 import           Prelude (error)
 
-import           Control.Monad.Trans.Except.Extra (firstExceptT, left)
+import           Control.Monad.Trans.Except.Extra (firstExceptT, left, newExceptT)
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.Map.Strict as Map
@@ -44,9 +44,8 @@ import qualified Cardano.Crypto.Signing as Crypto
 
 import           Cardano.Api.Byron
 import           Cardano.CLI.Byron.Key (byronWitnessToVerKey)
-import           Cardano.CLI.Environment
 import           Cardano.CLI.Helpers (textShow)
-import           Cardano.CLI.Types (SocketPath (..), TxFile (..))
+import           Cardano.CLI.Types (TxFile (..))
 import           Ouroboros.Consensus.Byron.Ledger (ByronBlock, GenTx (..))
 import qualified Ouroboros.Consensus.Byron.Ledger as Byron
 import           Ouroboros.Consensus.Cardano.Block (EraMismatch (..))
@@ -226,7 +225,7 @@ nodeSubmitTx
   -> GenTx ByronBlock
   -> ExceptT ByronTxError IO ()
 nodeSubmitTx network gentx = do
-    SocketPath socketPath <- firstExceptT EnvSocketError readEnvSocketPath
+    SocketPath socketPath <- firstExceptT EnvSocketError $ newExceptT readEnvSocketPath
     let connctInfo =
           LocalNodeConnectInfo {
             localNodeSocketPath = socketPath,
