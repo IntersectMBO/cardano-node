@@ -5,7 +5,13 @@ repository ghc-next-packages
   key-threshold: 0
 
 -- run `nix flake lock --update-input hackageNix` after updating index-state.
+-- the both lines are a bit of a quirk. The haskell.nix parser will just ignore
+-- the second line, which it can't parse anyway, while cabal will parse both
+-- lines just fine. As we want to _always_ use the latest from ghc-next-packages
+-- we specify HEAD. This is tracked in nix via
+-- `nix flake lock --update-input ghc-next-package`
 index-state: 2022-09-10T00:00:00Z
+index-state: ghc-next-packages HEAD
 
 packages:
     cardano-api
