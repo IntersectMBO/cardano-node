@@ -23,7 +23,6 @@ module Cardano.CLI.Types
   , TxBuildOutputOptions(..)
   , ReferenceScriptAnyEra (..)
   , SigningKeyFile (..)
-  , SocketPath (..)
   , ScriptFile (..)
   , ScriptDataOrFile (..)
   , ScriptRedeemerOrFile
@@ -258,8 +257,6 @@ newtype SigningKeyFile = SigningKeyFile
   { unSigningKeyFile :: FilePath }
   deriving stock (Eq, Ord)
   deriving newtype (IsString, Show)
-
-newtype SocketPath = SocketPath { unSocketPath :: FilePath }
 
 newtype UpdateProposalFile = UpdateProposalFile { unUpdateProposalFile :: FilePath }
                              deriving newtype (Eq, Show)

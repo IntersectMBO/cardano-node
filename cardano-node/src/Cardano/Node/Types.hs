@@ -39,7 +39,6 @@ import           Cardano.Api
 import qualified Cardano.Chain.Update as Byron
 import           Cardano.Crypto (RequiresNetworkMagic (..))
 import qualified Cardano.Crypto.Hash as Crypto
-import           Cardano.Node.Configuration.NodeAddress
 import           Cardano.Node.Configuration.Socket (SocketConfig (..))
 
 --TODO: things will probably be clearer if we don't use these newtype wrappers and instead

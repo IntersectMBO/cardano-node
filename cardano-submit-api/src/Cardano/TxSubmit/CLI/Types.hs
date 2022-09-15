@@ -28,6 +28,3 @@ newtype GenesisFile = GenesisFile
   { unGenesisFile :: FilePath
   }
 
-newtype SocketPath = SocketPath
-  { unSocketPath :: FilePath
-  }
