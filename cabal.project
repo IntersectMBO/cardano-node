@@ -202,3 +202,20 @@ allow-newer:
   snap-server:attoparsec,
 --  tasty-hedgehog:hedgehog,
   *:hashable
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/cardano-base
+  tag: acc99abf234f23332b87a49abff25f744d8d9f8b
+  --sha256: 0h492cz9mvzbsl5yzvp3iq40c0z0j5hmrifdrnnqzzk02g9j9c4b
+  subdir:
+    base-deriving-via
+    binary
+    binary/test
+    cardano-crypto-class
+    cardano-crypto-praos
+    cardano-crypto-tests
+    measures
+    orphans-deriving-via
+    slotting
+    strict-containers
