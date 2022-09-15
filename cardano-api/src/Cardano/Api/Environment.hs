@@ -1,20 +1,25 @@
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Cardano.CLI.Environment
+module Cardano.Api.Environment
   ( EnvSocketError(..)
+  , SocketPath(..)
   , readEnvSocketPath
   , renderEnvSocketError
   ) where
 
-import           Cardano.Prelude
-import           Prelude (String)
+import           Prelude
 
-import           Control.Monad.Trans.Except.Extra (left)
+import           Data.Aeson
+import           Data.Text (Text)
 import qualified Data.Text as Text
 import           System.Environment (lookupEnv)
 
-import           Cardano.CLI.Helpers (textShow)
-import           Cardano.CLI.Types (SocketPath (..))
+import           Cardano.Api.Utils (textShow)
+
+newtype SocketPath
+  = SocketPath { unSocketPath :: FilePath }
+  deriving (FromJSON, Show, Eq, Ord)
 
 newtype EnvSocketError = CliEnvVarLookup Text deriving Show
 
@@ -26,10 +31,14 @@ renderEnvSocketError err =
 
 -- | Read the node socket path from the environment.
 -- Fails if the environment variable is not set.
-readEnvSocketPath :: ExceptT EnvSocketError IO SocketPath
-readEnvSocketPath =
-    maybe (left $ CliEnvVarLookup (Text.pack envName)) (pure . SocketPath)
-      =<< liftIO (lookupEnv envName)
+readEnvSocketPath :: IO (Either EnvSocketError SocketPath)
+readEnvSocketPath = do
+    mEnvName <- lookupEnv envName
+    case mEnvName of
+      Just sPath ->
+        return . Right $ SocketPath sPath
+      Nothing ->
+        return . Left $ CliEnvVarLookup (Text.pack envName)
   where
     envName :: String
     envName = "CARDANO_NODE_SOCKET_PATH"
