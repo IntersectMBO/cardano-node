@@ -53,12 +53,10 @@ compileToScript = do
   genesisWallet <- importGenesisFunds
   collateralWallet <- addCollaterals genesisWallet
   splitWallet <- splittingPhase genesisWallet
-  benchmarkingPhaseNew splitWallet collateralWallet
+  benchmarkingPhase splitWallet collateralWallet
 
 initConstants :: Compiler ()
 initConstants = do
-  setN TTxAdditionalSize     _nix_add_tx_size
-  setN TFee                  _nix_tx_fee
   setN TLocalSocket          _nix_localNodeSocketPath
   setConst  TTTL             1000000
   where
@@ -169,19 +167,23 @@ unfoldSplitSequence fee value outputs
      (x, 0) -> x
      (x, _rest) -> x+1
 
-benchmarkingPhaseNew :: WalletName -> Maybe WalletName -> Compiler ()
-benchmarkingPhaseNew wallet collateralWallet = do
+benchmarkingPhase :: WalletName -> Maybe WalletName -> Compiler ()
+benchmarkingPhase wallet collateralWallet = do
   debugMode <- askNixOption _nix_debugMode
   targetNodes <- askNixOption _nix_targetNodes
-  extraArgs <- evilValueMagic
   tps <- askNixOption _nix_tps
   era <- askNixOption _nix_era
   txCount <- askNixOption _nix_tx_count
+  fee <- askNixOption _nix_tx_fee
+  inputs <- askNixOption _nix_inputs_per_tx
+  outputs <- askNixOption _nix_outputs_per_tx
+  metadataSize <- askNixOption _nix_add_tx_size
   let
+    payMode = PayToAddr (KeyName "pass-partout") wallet --todo: used different wallet here !
     submitMode = if debugMode
         then LocalSocket
-        else Benchmark targetNodes (ThreadName "tx-submit-benchmark") tps  extraArgs
-    generator = Take txCount $ Cycle $ BechmarkTx wallet extraArgs collateralWallet
+        else Benchmark targetNodes (ThreadName "tx-submit-benchmark") tps txCount
+    generator = Take txCount $ Cycle $ NtoM fee wallet payMode inputs outputs (Just metadataSize) collateralWallet
   emit $ Submit era submitMode generator
   unless debugMode $ do
     emit $ WaitBenchmark $ ThreadName "tx-submit-benchmark"
@@ -248,30 +250,3 @@ newWallet n = do
   name <- WalletName <$> newIdentifier n
   emit $ InitWallet name
   return name
-
--- Approximate the ada values for inputs of the benchmarking Phase
-evilValueMagic :: Compiler RunBenchmarkAux
-evilValueMagic = do
-  inputsPerTx <- askNixOption _nix_inputs_per_tx
-  outputsPerTx <- askNixOption _nix_outputs_per_tx
-  txCount <- askNixOption _nix_tx_count
-  fee <- askNixOption _nix_tx_fee
-  minValuePerUTxO <- askNixOption _nix_min_utxo_value
-  let
-    (Quantity minValue) = lovelaceToQuantity $ fromIntegral outputsPerTx * minValuePerUTxO + fee
-
-  -- this is not totally correct:
-  -- beware of rounding errors !
-    minValuePerInput = quantityToLovelace $ fromIntegral (if m==0 then d else d+1)
-      where
-        (d, m) = minValue `divMod` fromIntegral inputsPerTx
-  return $  RunBenchmarkAux {
-      auxTxCount = txCount
-    , auxFee = fee
-    , auxOutputsPerTx = outputsPerTx
-    , auxInputsPerTx = inputsPerTx
-    , auxInputs = inputsPerTx * txCount
-    , auxOutputs = inputsPerTx * txCount
-    , auxMinValuePerUTxO = minValuePerInput
-    }
-

@@ -149,7 +149,7 @@ txStreamSource streamRef tpsThrottle = Active worker
       return $ tx:l
 
   nextOnMVar :: MVar (StreamState (TxStream IO era)) -> IO (StreamState (Tx era))
-  nextOnMVar v = modifyMVar v $ \x -> case x of
+  nextOnMVar v = modifyMVar v $ \case
     StreamEmpty -> return (StreamEmpty, StreamEmpty)
     StreamError err -> return (StreamError err, StreamError err)
     StreamActive s -> update <$> Streaming.next s

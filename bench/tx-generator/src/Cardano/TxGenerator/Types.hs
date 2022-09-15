@@ -42,8 +42,8 @@ defaultTxGenTxParams :: TxGenTxParams
 defaultTxGenTxParams = TxGenTxParams
   { txParamFee        = 10_000_000
   , txParamAddTxSize  = 100
-  , txParamInputs     = 4
-  , txParamOutputs    = 4
+  , txParamInputs     = 2
+  , txParamOutputs    = 2
   }
 
 

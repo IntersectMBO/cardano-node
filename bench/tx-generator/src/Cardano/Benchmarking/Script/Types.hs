@@ -22,9 +22,10 @@ import           Cardano.Api (AnyCardanoEra, ExecutionUnits, Lovelace, ScriptDat
 import           Cardano.Benchmarking.OuroborosImports (SigningKeyFile)
 import           Cardano.Node.Configuration.NodeAddress (NodeIPv4Address)
 
+import           Cardano.TxGenerator.Types (NumberOfInputsPerTx, NumberOfOutputsPerTx, NumberOfTxs, TPSRate)
+
 import           Cardano.Benchmarking.Script.Env
 import           Cardano.Benchmarking.Script.Store
-import           Cardano.TxGenerator.Types (TPSRate)
 
 data Action where
   Set                :: !SetKeyVal -> Action
@@ -49,8 +50,8 @@ data Generator where
   SecureGenesis :: !Lovelace -> !WalletName -> !KeyName -> !KeyName -> Generator -- 0 to N
   Split :: !Lovelace -> !WalletName -> !PayMode -> !PayMode -> [ Lovelace ] -> Generator
   SplitN :: !Lovelace -> !WalletName -> !PayMode -> !Int -> Generator            -- 1 to N
-  BechmarkTx :: !WalletName -> !RunBenchmarkAux -> Maybe WalletName -> Generator -- N to M
--- Generic NtoM ::
+  NtoM  :: !Lovelace -> !WalletName -> !PayMode -> !NumberOfInputsPerTx -> !NumberOfOutputsPerTx
+        -> !(Maybe Int) -> Maybe WalletName -> Generator
   Sequence :: [Generator] -> Generator
   Cycle :: !Generator -> Generator
   Take :: !Int -> !Generator -> Generator
@@ -70,7 +71,7 @@ type TargetNodes = NonEmpty NodeIPv4Address
 
 data SubmitMode where
   LocalSocket :: SubmitMode
-  Benchmark   :: !TargetNodes -> !ThreadName -> !TPSRate -> !RunBenchmarkAux -> SubmitMode
+  Benchmark   :: !TargetNodes -> !ThreadName -> !TPSRate -> !NumberOfTxs -> SubmitMode
   DumpToFile  :: !FilePath -> SubmitMode
   DiscardTX   :: SubmitMode
   NodeToNode  :: NonEmpty NodeIPv4Address -> SubmitMode --deprecated
@@ -97,15 +98,3 @@ data ScriptSpec = ScriptSpec
   }
   deriving (Show, Eq)
 deriving instance Generic ScriptSpec
-
-data RunBenchmarkAux = RunBenchmarkAux {
-    auxTxCount :: Int
-  , auxFee :: Lovelace
-  , auxOutputsPerTx :: Int
-  , auxInputsPerTx :: Int
-  , auxInputs :: Int
-  , auxOutputs ::Int
-  , auxMinValuePerUTxO :: Lovelace
-  }
-  deriving (Show, Eq)
-deriving instance Generic RunBenchmarkAux

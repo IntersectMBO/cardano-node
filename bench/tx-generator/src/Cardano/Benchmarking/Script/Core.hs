@@ -228,12 +228,11 @@ localSubmitTx tx = do
 -- Problem 1: When doing throwE $ ApiError msg logmessages get lost !
 -- Problem 2: Workbench restarts the tx-generator -> this may be the reason for loss of messages
 
-makeMetadata :: forall era. IsShelleyBasedEra era => ActionM (TxMetadataInEra era)
-makeMetadata = do
-  payloadSize <- getUser TTxAdditionalSize
-  case mkMetadata payloadSize of
-    Right m -> return m
-    Left err -> throwE $ MetadataError err
+toMetadata :: forall era. IsShelleyBasedEra era => Maybe Int -> TxMetadataInEra era
+toMetadata Nothing = TxMetadataNone
+toMetadata (Just payloadSize) = case mkMetadata payloadSize of
+  Right m -> m
+  Left err -> error err
 
 submitAction :: AnyCardanoEra -> SubmitMode -> Generator -> ActionM ()
 submitAction era submitMode generator = withEra era $ submitInEra submitMode generator
@@ -243,7 +242,7 @@ submitInEra submitMode generator era = do
   txStream <- evalGenerator generator era
   case submitMode of
     NodeToNode _ -> error "NodeToNode deprecated: ToDo: remove"
-    Benchmark nodes threadName tpsRate extra -> benchmarkTxStream txStream nodes threadName tpsRate extra era
+    Benchmark nodes threadName tpsRate txCount -> benchmarkTxStream txStream nodes threadName tpsRate txCount era
     LocalSocket -> submitAll (void . localSubmitTx . Utils.mkTxInModeCardano) txStream
     DumpToFile filePath -> liftIO $ Streaming.writeFile filePath $ Streaming.map showTx txStream
     DiscardTX -> liftIO $ Streaming.effects txStream
@@ -266,16 +265,16 @@ benchmarkTxStream :: forall era. IsShelleyBasedEra era
   -> TargetNodes
   -> ThreadName
   -> TPSRate
-  -> RunBenchmarkAux
+  -> NumberOfTxs
   -> AsType era
   -> ActionM ()
-benchmarkTxStream txStream targetNodes (ThreadName threadName) tps shape era = do
+benchmarkTxStream txStream targetNodes (ThreadName threadName) tps txCount era = do
   tracers  <- get BenchTracers
   connectClient <- getConnectClient
   let
     coreCall :: AsType era -> ExceptT TxGenError IO AsyncBenchmarkControl
     coreCall eraProxy = GeneratorTx.walletBenchmark (btTxSubmit_ tracers) (btN2N_ tracers) connectClient
-                                               threadName targetNodes tps LogErrors eraProxy (auxTxCount shape) txStream
+                                               threadName targetNodes tps LogErrors eraProxy txCount txStream
   ret <- liftIO $ runExceptT $ coreCall era
   case ret of
     Left err -> liftTxGenError err
@@ -312,11 +311,10 @@ evalGenerator generator era = do
         txGenerator = genTx protocolParameters (TxInsCollateralNone, []) (Utils.mkTxFee fee) TxMetadataNone
         sourceToStore = sourceToStoreTransactionNew txGenerator fundSource inToOut $ mangleWithChange toUTxOChange toUTxO
       return $ Streaming.effect (Streaming.yield <$> sourceToStore)
-
     SplitN fee walletName payMode count -> do
       wallet <- getName walletName
       (toUTxO, addressOut) <- interpretPayMode payMode
-      traceDebug $ "split output address : " ++ addressOut
+      traceDebug $ "SplitN output address : " ++ addressOut
       let
         fundSource = walletSource wallet 1
         inToOut = Utils.inputsToOutputsWithFee fee count
@@ -324,29 +322,17 @@ evalGenerator generator era = do
         sourceToStore = sourceToStoreTransactionNew txGenerator fundSource inToOut (mangle $ repeat toUTxO)
       return $ Streaming.effect (Streaming.yield <$> sourceToStore)
 
-    BechmarkTx sourceWallet shape collateralWallet -> do
-      fundKey <- getName $ KeyName "pass-partout" -- should be walletkey -- TODO: Remove magic
-      walletRefSrc <- getName sourceWallet
+    NtoM fee walletName payMode inputs outputs metadataSize collateralWallet -> do
+      wallet <- getName walletName
       collaterals <- selectCollateralFunds collateralWallet
-      metadata <- makeMetadata
+      (toUTxO, addressOut) <- interpretPayMode payMode
+      traceDebug $ "NtoM output address : " ++ addressOut
       let
-        walletRefDst = walletRefSrc
-        fundSource = walletSource walletRefSrc (auxInputsPerTx shape)
-
-        inToOut :: [Lovelace] -> [Lovelace]
-        inToOut = Utils.inputsToOutputsWithFee (auxFee shape) (auxOutputsPerTx shape)
-
-        txGenerator = genTx protocolParameters collaterals (Utils.mkTxFee (auxFee shape)) metadata
-
-        toUTxO :: [ ToUTxO era ]
-        toUTxO = repeat $ mkUTxOVariant networkId fundKey -- TODO: make configurable
-
-        fundToStore = mkWalletFundStoreList walletRefDst
-
-        sourceToStore = sourceToStoreTransaction txGenerator fundSource inToOut (makeToUTxOList toUTxO) fundToStore
-
+        fundSource = walletSource wallet inputs
+        inToOut = Utils.inputsToOutputsWithFee fee outputs
+        txGenerator = genTx protocolParameters collaterals (Utils.mkTxFee fee) (toMetadata metadataSize)
+        sourceToStore = sourceToStoreTransactionNew txGenerator fundSource inToOut (mangle $ repeat toUTxO)
       return $ Streaming.effect (Streaming.yield <$> sourceToStore)
-
     Sequence l -> do
       gList <- forM l $ \g -> evalGenerator g era
       return $ Streaming.for (Streaming.each gList) id
