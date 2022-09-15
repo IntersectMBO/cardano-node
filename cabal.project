@@ -1,3 +1,9 @@
+repository ghc-next-packages
+  url: https://input-output-hk.github.io/ghc-next-packages
+  secure: True
+  root-keys:
+  key-threshold: 0
+
 -- run `nix flake lock --update-input hackageNix` after updating index-state.
 index-state: 2022-09-10T00:00:00Z
 
@@ -192,7 +198,6 @@ source-repository-package
     orphans-deriving-via
     slotting
     strict-containers
-    heapwords
 
 source-repository-package
   type: git
@@ -388,13 +393,6 @@ source-repository-package
    location: https://github.com/erikd/canonical-json
    tag: 38734cacc5b1f20428ee1991ba054627982a62d5
    --sha256: 1g3gz26qi0g93q2nllyqxal4j5wpsydvrl297nmv8zq1zrnfr5nd
-
--- https://github.com/input-output-hk/nothunks/pull/18
-source-repository-package
-  type: git
-  location: https://github.com/input-output-hk/nothunks
-  tag: 0412f852cb45fd7bc93e4d9e232113cf064b6e37
-  --sha256: 0v2kydwxrvd69dyy3wjdxgisjla5vjqvvlrix41xn2vzf2lf3irm
 
 -- https://github.com/astanin/moo/pull/11
 source-repository-package

@@ -31,6 +31,10 @@
       url = "github:input-output-hk/plutus-apps";
       flake = false;
     };
+    ghc-next-packages = {
+      url = "github:input-output-hk/ghc-next-packages?ref=repo";
+      flake = false;
+    };
 
     # Custom user config (default: empty), eg.:
     # { outputs = {...}: {
@@ -202,6 +206,7 @@
           project = (import ./nix/haskell.nix {
             inherit (pkgs) haskell-nix gitrev;
             inherit projectPackagesExes;
+            inherit input;
           }).appendModule customConfig.haskellNix // {
             profiled = profiledProject;
             asserted = assertedProject;
