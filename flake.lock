@@ -5532,11 +5532,11 @@
         "stackage": "stackage_2"
       },
       "locked": {
-        "lastModified": 1663212121,
-        "narHash": "sha256-TGmyPTWAN8WRY5mO3rENxglA5c3SmTyLKHKaQ6Ox9kY=",
+        "lastModified": 1663218785,
+        "narHash": "sha256-lwnZaWPb+NJ5cdRa+dnrso5tdD96pMdeaJwRNt6bzrg=",
         "owner": "input-output-hk",
         "repo": "haskell.nix",
-        "rev": "25b47bf1d02d215ef15829707d7e1a817e2aa76c",
+        "rev": "a197fd0afb0241649633ee9ada376400c7d62719",
         "type": "github"
       },
       "original": {
