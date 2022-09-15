@@ -698,7 +698,7 @@ module Cardano.Api (
     TxInsExistError(..),
     renderNotScriptLockedTxInsError,
     renderTxInsExistError,
-    txinsExist,
+    txInsExistInUTxO,
     notScriptLockedTxIns,
   ) where
 
