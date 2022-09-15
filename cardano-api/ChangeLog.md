@@ -36,6 +36,8 @@
   New type `BundledProtocolParameters` and new functions `bundleProtocolParams` and `unbundleProtocolParams`.
   ([PR4903](https://github.com/input-output-hk/cardano-node/pull/4903))
 
+- Auto-balance multi asset transactions ([PR 4450](https://github.com/input-output-hk/cardano-node/pull/4450))
+
 ### Bugs
 
 - Allow reading text envelopes from pipes ([PR 4384](https://github.com/input-output-hk/cardano-node/pull/4384))
