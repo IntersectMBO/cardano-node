@@ -4584,6 +4584,23 @@
         "type": "github"
       }
     },
+    "ghc-next-packages": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1663214328,
+        "narHash": "sha256-y2ZxoQqTDv2UfROqw5GDelsn2u32uZ04tUG/e1n+RCg=",
+        "owner": "input-output-hk",
+        "repo": "ghc-next-packages",
+        "rev": "dca362afe8a398730b94e21bfa055acc566843bc",
+        "type": "github"
+      },
+      "original": {
+        "owner": "input-output-hk",
+        "ref": "repo",
+        "repo": "ghc-next-packages",
+        "type": "github"
+      }
+    },
     "hackage": {
       "flake": false,
       "locked": {
@@ -5515,11 +5532,11 @@
         "stackage": "stackage_2"
       },
       "locked": {
-        "lastModified": 1663036871,
-        "narHash": "sha256-mzk3/XkD17OojDP1T2W0UUQz/Zke7HjMN8bEoIzRq0M=",
+        "lastModified": 1663212121,
+        "narHash": "sha256-TGmyPTWAN8WRY5mO3rENxglA5c3SmTyLKHKaQ6Ox9kY=",
         "owner": "input-output-hk",
         "repo": "haskell.nix",
-        "rev": "986a65b3974051baa3c6b029b58877772c60a71e",
+        "rev": "25b47bf1d02d215ef15829707d7e1a817e2aa76c",
         "type": "github"
       },
       "original": {
@@ -12146,11 +12163,11 @@
     "plutus-apps_8": {
       "flake": false,
       "locked": {
-        "lastModified": 1662987525,
-        "narHash": "sha256-hKs1rSe4jwCFLLgYx/gkHDJqzXBEETAVaHcjZYj0iqU=",
+        "lastModified": 1663164439,
+        "narHash": "sha256-bIYfk7EHlePl5o7eHkGa9VQPYuKW1mGnHxFapSlN6HY=",
         "owner": "input-output-hk",
         "repo": "plutus-apps",
-        "rev": "37312d54a96108f6bccda33c4545fb98d08d2c23",
+        "rev": "c0453004426a62e42ec30749beaabb52be7528a2",
         "type": "github"
       },
       "original": {
@@ -12383,6 +12400,7 @@
         "cardano-node-workbench": "cardano-node-workbench",
         "customConfig": "customConfig_2",
         "flake-compat": "flake-compat_2",
+        "ghc-next-packages": "ghc-next-packages",
         "hackageNix": "hackageNix",
         "haskellNix": "haskellNix_2",
         "hostNixpkgs": [
