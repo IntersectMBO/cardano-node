@@ -9,7 +9,7 @@ module Cardano.Api.Convenience.Construction (
     notScriptLockedTxIns,
     renderNotScriptLockedTxInsError,
     renderTxInsExistError,
-    txinsExist,
+    txInsExistInUTxO,
 
   ) where
 
@@ -74,15 +74,15 @@ renderTxInsExistError (TxInsDoNotExist txins) =
   Text.singleton '\n' <>
   Text.intercalate (Text.singleton '\n') (map renderTxIn txins)
 
-txinsExist :: [TxIn] -> UTxO era -> Either TxInsExistError ()
-txinsExist ins (UTxO utxo)
+txInsExistInUTxO :: [TxIn] -> UTxO era -> Either TxInsExistError ()
+txInsExistInUTxO ins (UTxO utxo)
   | null utxo = Left EmptyUTxO
   | otherwise = do
       let utxoIns = Map.keys utxo
           occursInUtxo = [ txin | txin <- ins, txin `elem` utxoIns ]
       if length occursInUtxo == length ins
       then return ()
-      else Left . TxInsDoNotExist $ ins List.\\ ins `List.intersect` occursInUtxo
+      else Left . TxInsDoNotExist $ ins List.\\ occursInUtxo
 
 newtype NotScriptLockedTxInsError = NotScriptLockedTxIns [TxIn]
 
