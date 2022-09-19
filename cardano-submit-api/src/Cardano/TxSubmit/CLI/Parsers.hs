@@ -11,9 +11,8 @@ module Cardano.TxSubmit.CLI.Parsers
   ) where
 
 import           Cardano.Api (AnyConsensusModeParams (..), ConsensusModeParams (..),
-                   EpochSlots (..), NetworkId (..), NetworkMagic (..))
-import           Cardano.TxSubmit.CLI.Types (ConfigFile (..), SocketPath (..),
-                   TxSubmitNodeParams (..))
+                   EpochSlots (..), NetworkId (..), NetworkMagic (..), SocketPath (..))
+import           Cardano.TxSubmit.CLI.Types (ConfigFile (..), TxSubmitNodeParams (..))
 import           Cardano.TxSubmit.Rest.Parsers (pWebserverConfig)
 import           Control.Applicative (Alternative (..), Applicative (..), (<**>))
 import           Data.Function ((.))
