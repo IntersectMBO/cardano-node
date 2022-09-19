@@ -699,6 +699,7 @@ module Cardano.Api (
     renderTxInsExistError,
     txInsExistInUTxO,
     notScriptLockedTxIns,
+    textShow,
   ) where
 
 import           Cardano.Api.Address

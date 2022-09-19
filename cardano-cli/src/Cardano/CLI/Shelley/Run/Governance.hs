@@ -56,8 +56,6 @@ renderShelleyGovernanceError err =
       "Error decoding cost model: " <> Text.pack err' <> " at: " <> fp
     ShelleyGovernanceCmdCostModelReadError err' ->
       "Error reading the cost model: " <> Text.pack (displayError err')
-  where
-    textShow x = Text.pack (show x)
 
 
 runGovernanceCmd :: GovernanceCmd -> ExceptT ShelleyGovernanceCmdError IO ()

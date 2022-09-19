@@ -8,13 +8,13 @@ module Cardano.Api.TxSubmit.ErrorRender
 -- They will be defined here for now and then moved where they are supposed to be once they
 -- are working.
 
+import           Cardano.Api.Utils (textShow)
+
 import           Cardano.Chain.Byron.API (ApplyMempoolPayloadErr (..))
 import           Cardano.Chain.UTxO.UTxO (UTxOError (..))
 import           Cardano.Chain.UTxO.Validation (TxValidationError (..), UTxOValidationError (..))
 
 import           Cardano.Prelude hiding ((%))
-
-import qualified Data.Text as Text
 
 import           Formatting (build, sformat, stext, (%))
 
@@ -65,5 +65,3 @@ renderUTxOError ue =
       UTxOMissingInput tx -> sformat ("Lookup of tx "% build %" failed") tx
       UTxOOverlappingUnion -> "Union or two overlapping UTxO sets"
 
-textShow :: Show a => a -> Text
-textShow = Text.pack . show

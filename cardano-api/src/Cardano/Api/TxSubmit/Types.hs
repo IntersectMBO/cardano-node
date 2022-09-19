@@ -5,7 +5,6 @@ module Cardano.Api.TxSubmit.Types
   , TxSubmitStatus (..)
   , ApplyMempoolPayloadErr(..)
   , renderTxSubmitStatus
-  , textShow
   ) where
 
 import           Cardano.Binary (DecoderError)
@@ -17,13 +16,11 @@ import           Cardano.Prelude hiding ((%))
 
 import           Data.Aeson (ToJSON (..), Value (..))
 import qualified Data.Aeson as Aeson
-import qualified Data.Text as Text
 
 import           Formatting (build, sformat, (%))
 
 import           Cardano.Api.Environment
 import           Cardano.Api.TxSubmit.ErrorRender
-
 
 data NodeApiEnv = NodeApiEnv
   { naeConfig :: Genesis.Config
@@ -66,5 +63,3 @@ renderTxSubmitStatus st =
     TxSubmitBadTx tt -> mconcat ["Transactions of type '", tt, "' not supported"]
     TxSubmitFail err -> renderApplyMempoolPayloadErr err
 
-textShow :: Show a => a -> Text
-textShow = Text.pack . show

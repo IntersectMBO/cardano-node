@@ -44,7 +44,6 @@ import qualified Cardano.Crypto.Signing as Crypto
 
 import           Cardano.Api.Byron
 import           Cardano.CLI.Byron.Key (byronWitnessToVerKey)
-import           Cardano.CLI.Helpers (textShow)
 import           Cardano.CLI.Types (TxFile (..))
 import           Ouroboros.Consensus.Byron.Ledger (ByronBlock, GenTx (..))
 import qualified Ouroboros.Consensus.Byron.Ledger as Byron
