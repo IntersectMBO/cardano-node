@@ -50,7 +50,7 @@ includeChange fee spend have = case compare changeValue 0 of
 mkTxFee :: forall era. IsCardanoEra era => Lovelace -> TxFee era
 mkTxFee f = either
   TxFeeImplicit
-  (\e -> TxFeeExplicit e f)
+  (`TxFeeExplicit` f)
   (txFeesExplicitInEra (cardanoEra @ era))
 
 mkTxValidityUpperBound :: forall era. IsShelleyBasedEra era => SlotNo -> TxValidityUpperBound era
@@ -59,7 +59,7 @@ mkTxValidityUpperBound =
 
 mkTxOutValueAdaOnly :: forall era . IsShelleyBasedEra era => Lovelace -> TxOutValue era
 mkTxOutValueAdaOnly l = either 
-  (\p -> TxOutAdaOnly p l) 
+  (`TxOutAdaOnly` l)
   (\p -> TxOutValue p $ lovelaceToValue l)
   (multiAssetSupportedInEra (cardanoEra @ era))
 
