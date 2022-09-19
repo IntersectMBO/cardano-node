@@ -13,6 +13,8 @@ module Cardano.Logging.Configuration
   , withBackendsFromConfig
   , withLimitersFromConfig
 
+  , maybeSilent
+
   , getSeverity
   , getDetails
   , getBackends
@@ -55,6 +57,28 @@ configureTracers config (Documented documented) tracers = do
         documented
 
 
+maybeSilent :: forall m a. (MonadIO m) =>
+     Namespace
+  -> Trace m a
+  -> m (Trace m a)
+maybeSilent ns tr = do
+    ref  <- liftIO (newIORef False)
+    pure $ Trace $ T.arrow $ T.emit $ mkTrace ref
+  where
+    mkTrace ref (lc, Right a) = do
+      silence <- liftIO $ readIORef ref
+      if silence
+        then pure ()
+        else T.traceWith (unpackTrace tr) (lc, Right a)
+    mkTrace ref (lc, Left (Config c)) = do
+      let val = isSilentTracer c ns
+      liftIO $ writeIORef ref val
+      T.traceWith (unpackTrace tr) (lc,  Left (Config c))
+    mkTrace _ref (lc, Left other) =
+      T.traceWith (unpackTrace tr) (lc,  Left other)
+
+isSilentTracer :: TraceConfig -> Namespace -> Bool
+isSilentTracer tc ns = getSeverity tc ns == SeverityF Nothing
 
 -- | Take a selector function called 'extract'.
 -- Take a function from trace to trace with this config dependent value.
