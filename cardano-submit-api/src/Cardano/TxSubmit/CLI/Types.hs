@@ -1,11 +1,10 @@
 module Cardano.TxSubmit.CLI.Types
   ( ConfigFile (..)
   , GenesisFile (..)
-  , SocketPath (..)
   , TxSubmitNodeParams (..)
   ) where
 
-import           Cardano.Api (AnyConsensusModeParams, NetworkId (..))
+import           Cardano.Api (AnyConsensusModeParams, NetworkId (..), SocketPath)
 import           Cardano.TxSubmit.Rest.Types (WebserverConfig)
 import           System.IO (FilePath)
 

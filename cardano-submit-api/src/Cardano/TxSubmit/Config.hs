@@ -12,7 +12,8 @@ module Cardano.TxSubmit.Config
   ) where
 
 
-import           Cardano.TxSubmit.Util (textShow)
+import           Cardano.Api
+
 import           Control.Applicative (Applicative (pure, (<*>)))
 import           Control.Exception (IOException, catch)
 import           Data.Aeson (FromJSON (..), Object, Value (..), (.:))
