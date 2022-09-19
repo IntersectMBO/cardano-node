@@ -29,7 +29,6 @@ import           Cardano.Api.Shelley (Address (ShelleyAddress),
                    KeyWitness (ShelleyBootstrapWitness, ShelleyKeyWitness), StakeAddress (..),
                    StakeCredential (..), StakePoolParameters (..), fromShelleyPaymentCredential,
                    fromShelleyStakeCredential, fromShelleyStakeReference)
-import           Cardano.CLI.Helpers (textShow)
 import qualified Cardano.Ledger.Shelley.API as Shelley
 
 yamlConfig :: Yaml.Config

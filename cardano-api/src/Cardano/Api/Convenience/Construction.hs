@@ -32,7 +32,7 @@ import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.Query
 import           Cardano.Api.Tx
 import           Cardano.Api.TxBody
-import           Cardano.Api.TxSubmit.Types (textShow)
+import           Cardano.Api.Utils
 
 -- | Construct a balanced transaction.
 -- See Cardano.Api.Convenience.Query.queryStateForBalancedTx for a

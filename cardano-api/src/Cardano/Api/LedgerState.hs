@@ -107,6 +107,7 @@ import           Cardano.Api.NetworkId (NetworkId (..), NetworkMagic (NetworkMag
 import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.Query (CurrentEpochState (..), ProtocolState,
                    SerialisedCurrentEpochState (..), decodeCurrentEpochState, decodeProtocolState)
+import           Cardano.Api.Utils (textShow)
 import           Cardano.Binary (DecoderError, FromCBOR)
 import qualified Cardano.Chain.Genesis
 import qualified Cardano.Chain.Update
@@ -1060,9 +1061,6 @@ readAlonzoGenesisConfig enc = do
   let file = unGenesisFile $ ncAlonzoGenesisFile enc
   firstExceptT (NEAlonzoConfig file . renderAlonzoGenesisError)
     $ readAlonzoGenesis (GenesisFile file) (ncAlonzoGenesisHash enc)
-
-textShow :: Show a => a -> Text
-textShow = Text.pack . show
 
 readShelleyGenesis
     :: GenesisFile -> GenesisHashShelley

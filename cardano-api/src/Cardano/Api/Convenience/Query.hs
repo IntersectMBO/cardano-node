@@ -32,7 +32,7 @@ import           Cardano.Api.NetworkId
 import           Cardano.Api.ProtocolParameters
 import           Cardano.Api.Query
 import           Cardano.Api.TxBody
-import           Cardano.Api.TxSubmit.Types (textShow)
+import           Cardano.Api.Utils
 
 data QueryConvenienceError
   = AcqFailure AcquiringFailure
