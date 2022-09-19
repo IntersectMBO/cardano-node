@@ -182,6 +182,7 @@ doConnectToAcceptor magic snocket address timeLimits
                     ekgConfig tfConfig dpfConfig sink ekgStore dpStore = do
   connectToNode
     snocket
+    mempty
     (codecHandshake forwardingVersionCodec)
     timeLimits
     (cborTermVersionDataCodec forwardingCodecCBORTerm)
@@ -231,6 +232,7 @@ doListenToAcceptor magic snocket address timeLimits
   race_ (cleanNetworkMutableState networkState)
         $ withServerNode
             snocket
+            mempty
             nullNetworkServerTracers
             networkState
             (AcceptedConnectionsLimit maxBound maxBound 0)
