@@ -115,7 +115,9 @@ case "$op" in
            .meta.manifest = $manifest
            ' --argjson manifest "$(legacy_run_manifest $dir)"
 
-        jq '.meta.profile_content' "$dir"/meta.json > "$dir"/profile.json;;
+        jq ' .meta.profile_content
+           | .analysis.filters += ["model"]
+           ' "$dir"/meta.json > "$dir"/profile.json;;
 
     check )
         local usage="USAGE: wb run $op RUN"
