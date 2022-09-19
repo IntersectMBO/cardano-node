@@ -88,8 +88,8 @@ mkCardanoTracer' trStdout trForward mbTrEkg tracerName namesFor severityFor priv
                           Nothing -> Trace NT.nullTracer
                           Just ekgTrace -> metricsFormatter "Cardano" ekgTrace
     let metricsTrace' = filterTrace (\(_,v) -> asMetrics v /= []) metricsTrace
-    let hookedTrace = messageTrace'' <> metricsTrace'
-    hook hookedTrace
+    metricsTrace'' <- hook metricsTrace'
+    maybeSilent tracerName (messageTrace''' <> metricsTrace'')
 
 
   where
