@@ -42,7 +42,10 @@ data BlockProp f
     { bpVersion             :: !Cardano.Analysis.Version.Version
     , bpDomainSlots         :: !(DataDomain SlotNo)
     , bpDomainBlocks        :: !(DataDomain BlockNo)
-    , bpForgerChecks        :: !(CDF f NominalDiffTime)
+    , bpForgerStarts        :: !(CDF f NominalDiffTime)
+    , bpForgerBlkCtx        :: !(CDF f NominalDiffTime)
+    , bpForgerLgrState      :: !(CDF f NominalDiffTime)
+    , bpForgerLgrView       :: !(CDF f NominalDiffTime)
     , bpForgerLeads         :: !(CDF f NominalDiffTime)
     , bpForgerForges        :: !(CDF f NominalDiffTime)
     , bpForgerAnnouncements :: !(CDF f NominalDiffTime)
@@ -91,8 +94,11 @@ data BlockForge
   , bfSlotStart    :: !SlotStart
   , bfBlockGap     :: !NominalDiffTime -- ^ Since previous forge event
   , bfBlockSize    :: !Int             -- ^ Bytes
-  , bfChecked      :: !NominalDiffTime -- ^ Since slot start
-  , bfLeading      :: !NominalDiffTime -- ^ Since check
+  , bfStarted      :: !NominalDiffTime -- ^ Since slot start
+  , bfBlkCtx       :: !(Maybe NominalDiffTime) -- ^ Since forge loop start
+  , bfLgrState     :: !(Maybe NominalDiffTime) -- ^ Since block context
+  , bfLgrView      :: !(Maybe NominalDiffTime) -- ^ Since ledger state
+  , bfLeading      :: !NominalDiffTime -- ^ Since ledger view
   , bfForged       :: !NominalDiffTime -- ^ Since leading
   , bfAnnounced    :: !NominalDiffTime -- ^ Since forging
   , bfSending      :: !NominalDiffTime -- ^ Since announcement
@@ -159,9 +165,12 @@ data MachPerf f
     , sLeadsCDF             :: !(CDF f Word64)
     , sUtxoCDF              :: !(CDF f Word64)
     , sDensityCDF           :: !(CDF f Double)
-    , sSpanCheckCDF         :: !(CDF f NominalDiffTime)
-    , sSpanLeadCDF          :: !(CDF f NominalDiffTime)
-    , sSpanForgeCDF         :: !(CDF f NominalDiffTime)
+    , sStartedCDF           :: !(CDF f NominalDiffTime)
+    , sBlkCtxCDF            :: !(CDF f NominalDiffTime)
+    , sLgrStateCDF          :: !(CDF f NominalDiffTime)
+    , sLgrViewCDF           :: !(CDF f NominalDiffTime)
+    , sLeadingCDF           :: !(CDF f NominalDiffTime)
+    , sForgedCDF            :: !(CDF f NominalDiffTime)
     , sBlocklessCDF         :: !(CDF f Word64)
     , sSpanLensCpuCDF       :: !(CDF f Int)
     , sSpanLensCpuEpochCDF  :: !(CDF f Int)
@@ -189,25 +198,31 @@ deriving instance (NFData   (a Double), NFData   (a Int), NFData   (a NominalDif
 deriving instance (Show     (a Double), Show     (a Int),   Show   (a NominalDiffTime), Show     (a Word64)) => Show     (MachPerf a)
 deriving instance (ToJSON   (a Double), ToJSON   (a Int), ToJSON   (a NominalDiffTime), ToJSON   (a Word64)) => ToJSON   (MachPerf a)
 
-data SlotStats
+data SlotStats a
   = SlotStats
     { slSlot         :: !SlotNo
     , slEpoch        :: !EpochNo
     , slEpochSlot    :: !EpochSlot
     , slEpochSafeInt :: !EpochSafeInt
     , slStart        :: !SlotStart
-    , slCountChecks  :: !Word64
+    , slCountStarts  :: !Word64
+    , slCountBlkCtx  :: !Word64
+    , slCountLgrState :: !Word64
+    , slCountLgrView :: !Word64
     , slCountLeads   :: !Word64
     , slCountForges  :: !Word64
     , slChainDBSnap  :: !Word64
     , slRejectedTx   :: !Word64
-    , slBlockNo      :: !Word64
+    , slBlockNo      :: !BlockNo
     , slBlockless    :: !Word64
-    , slSpanCheck    :: !(StrictMaybe NominalDiffTime)
-    , slSpanLead     :: !(StrictMaybe NominalDiffTime)
-    , slSpanForge    :: !(StrictMaybe NominalDiffTime)
+    , slStarted      :: !(SMaybe a)
+    , slBlkCtx       :: !(SMaybe a)
+    , slLgrState     :: !(SMaybe a)
+    , slLgrView      :: !(SMaybe a)
+    , slLeading      :: !(SMaybe a)
+    , slForged       :: !(SMaybe a)
     , slMempoolTxs   :: !Word64
-    , slSpanTxsMem   :: !(StrictMaybe NominalDiffTime)
+    , slSpanTxsMem   :: !(SMaybe NominalDiffTime)
     , slTxsCollected :: !Word64
     , slTxsAccepted  :: !Word64
     , slTxsRejected  :: !Word64
@@ -258,7 +273,7 @@ isValidBlockObservation BlockObservation{..} =
   -- 2. All timings account for processing of a single block
   boChainDelta == 1
 
-testSlotStats :: Genesis -> SlotStats -> SlotCond -> Bool
+testSlotStats :: Genesis -> SlotStats a -> SlotCond -> Bool
 testSlotStats g SlotStats{..} = \case
   SlotGEq  s -> slSlot >= s
   SlotLEq  s -> slSlot <= s
@@ -283,7 +298,7 @@ data PropSubset
 
 bpFieldSelectForger :: Field DSelect p a -> Bool
 bpFieldSelectForger Field{fId} = elem fId
-  [ "fChecked", "fLeading", "fForged", "fAnnounced", "fAdopted", "fSendStart" ]
+  [ "fStarted", "fLeading", "fForged", "fAnnounced", "fAdopted", "fSendStart" ]
 
 bpFieldSelectPeers :: Field DSelect p a -> Bool
 bpFieldSelectPeers Field{fId} = elem fId
@@ -346,12 +361,15 @@ adoptionCentilesBrief =
 instance RenderCDFs BlockProp p where
   rdFields =
     --  Width LeftPad
-    [ Field 6 0 "fChecked"      (f!!0) "Checkd" (DDeltaT bpForgerChecks)        "Forge loop tardiness"
-    , Field 6 0 "fLeading"      (f!!1) "Leadin" (DDeltaT bpForgerLeads)         "Leadership check duration"
-    , Field 6 0 "fForged"       (f!!2) "Forge"  (DDeltaT bpForgerForges)        "Leadership to forged"
-    , Field 6 0 "fAnnounced"    (f!!3) "Announ" (DDeltaT bpForgerAnnouncements) "Forged to announced"
-    , Field 6 0 "fSendStart"    (f!!4) "Sendin" (DDeltaT bpForgerSends)         "Announced to sending"
-    , Field 6 0 "fAdopted"      (f!!5) "Adopt"  (DDeltaT bpForgerAdoptions)     "Announced to self-adopted"
+    [ Field 6 0 "fStarted"      (f!!0) "Startd" (DDeltaT bpForgerStarts)        "Started forge loop iteration"
+    , Field 6 0 "fBlkCtx"       (f!!1) "BlkCtx" (DDeltaT bpForgerBlkCtx)        "Acquired block context"
+    , Field 6 0 "fLgrState"     (f!!2) "LgrSta" (DDeltaT bpForgerLgrState)      "Acquired ledger state"
+    , Field 6 0 "fLgrView"      (f!!3) "LgrVie" (DDeltaT bpForgerLgrView)       "Acquired ledger view"
+    , Field 6 0 "fLeading"      (f!!4) "Leadin" (DDeltaT bpForgerLeads)         "Leadership check duration"
+    , Field 6 0 "fForged"       (f!!5) "Forge"  (DDeltaT bpForgerForges)        "Leadership to forged"
+    , Field 6 0 "fAnnounced"    (f!!6) "Announ" (DDeltaT bpForgerAnnouncements) "Forged to announced"
+    , Field 6 0 "fSendStart"    (f!!7) "Sendin" (DDeltaT bpForgerSends)         "Announced to sending"
+    , Field 6 0 "fAdopted"      (f!!8) "Adopt"  (DDeltaT bpForgerAdoptions)     "Announced to self-adopted"
     , Field 5 0 "pNoticed"      (p!!0) "Notic"  (DDeltaT bpPeerNotices)         "First peer notice"
     , Field 5 0 "pRequested"    (p!!1) "Reque"  (DDeltaT bpPeerRequests)        "Notice to fetch request"
     , Field 5 0 "pFetched"      (p!!2) "Fetch"  (DDeltaT bpPeerFetches)         "Fetch duration"
@@ -374,9 +392,9 @@ instance RenderCDFs BlockProp p where
     [ Field 9 0 "sizes"         "Size"  "bytes" (DInt    bpSizes) ""
     ]
    where
-     f = nChunksEachOf 6    7 "--- Forger event Δt: ---"
-     p = nChunksEachOf 6    6 "--- Peer event Δt: ---"
-     r = nChunksEachOf aLen 6 "Slot-rel. Δt to adoption centile:"
+     f = nChunksEachOf 9    7 ",-------------------- Forger event Δt: --------------------."
+     p = nChunksEachOf 6    6 ",------- Peer event Δt: -------."
+     r = nChunksEachOf aLen 6 ",---- Slot-rel. Δt to adoption centile: ----."
      aLen = length adoptionCentiles
 
 instance RenderTimeline BlockEvents where
@@ -390,12 +408,15 @@ instance RenderTimeline BlockEvents where
     , Field 6 0 "blockSize"    "size"  "bytes"  (IInt    (bfBlockSize . beForge)) ""
     , Field 5 0 "blockGap"     "block" "gap"    (IDeltaT (bfBlockGap  . beForge)) ""
     , Field 3 0 "forks"         "for"  "-ks"    (IInt    (count bpeIsFork . beErrors)) ""
-    , Field 5 0 "fChecked"      (f!!0) "Check"  (IDeltaT (bfChecked   . beForge)) ""
-    , Field 5 0 "fLeading"      (f!!1) "Lead"   (IDeltaT (bfLeading   . beForge)) ""
-    , Field 5 0 "fForged"       (f!!2) "Forge"  (IDeltaT (bfForged    . beForge)) ""
-    , Field 5 0 "fAnnounced"    (f!!3) "Announ" (IDeltaT (bfAnnounced . beForge)) ""
-    , Field 5 0 "fSendStart"    (f!!4) "Sendin" (IDeltaT (bfSending   . beForge)) ""
-    , Field 5 0 "fAdopted"      (f!!5) "Adopt"  (IDeltaT (bfAdopted   . beForge)) ""
+    , Field 5 0 "fStarted"      (f!!0) "Start"  (IDeltaT (bfStarted   . beForge)) ""
+    , Field 5 0 "fBlkCtx"       (f!!1) "BlkCtx" (IText (maybe "?" show.bfBlkCtx  .beForge)) ""
+    , Field 5 0 "fLgrState"     (f!!2) "LgrSta" (IText (maybe "?" show.bfLgrState.beForge)) ""
+    , Field 5 0 "fLgrView"      (f!!3) "LgrVie" (IText (maybe "?" show.bfLgrView .beForge)) ""
+    , Field 5 0 "fLeading"      (f!!4) "Lead"   (IDeltaT (bfLeading   . beForge)) ""
+    , Field 5 0 "fForged"       (f!!5) "Forge"  (IDeltaT (bfForged    . beForge)) ""
+    , Field 5 0 "fAnnounced"    (f!!6) "Announ" (IDeltaT (bfAnnounced . beForge)) ""
+    , Field 5 0 "fSendStart"    (f!!7) "Sendin" (IDeltaT (bfSending   . beForge)) ""
+    , Field 5 0 "fAdopted"      (f!!8) "Adopt"  (IDeltaT (bfAdopted   . beForge)) ""
     , Field 5 0 "noticedVal"    (p!!0) "Notic"  (IDeltaT (af  boNoticed   . valids)) ""
     , Field 5 0 "requestedVal"  (p!!1) "Requd"  (IDeltaT (af  boRequested . valids)) ""
     , Field 5 0 "fetchedVal"    (p!!2) "Fetch"  (IDeltaT (af  boFetched   . valids)) ""
@@ -420,7 +441,7 @@ instance RenderTimeline BlockEvents where
     ]
    where
      valids = filter isValidBlockObservation . beObservations
-     f = nChunksEachOf 6 6 "------ Forger event Δt: ------"
+     f = nChunksEachOf 9 6 "------------ Forger event Δt: ------------"
      p = nChunksEachOf 6 6 "-- Peer event Δt averages: --"
      r = nChunksEachOf 4 5 "Propagation Δt:"
      m = nChunksEachOf 6 4 "Missing"
@@ -486,9 +507,12 @@ instance RenderCDFs MachPerf p where
   rdFields =
     --  Width LeftPad
     [ Field 4 0 "missRatio"     "Miss"  "ratio" (DFloat             sMissCDF)       "Leadership checks miss ratio"
-    , Field 5 0 "checkΔ"        (d!!0)  "Check" (DDeltaT            sSpanCheckCDF)  "Forge loop tardiness"
-    , Field 5 0 "leadΔ"         (d!!1)  "Lead"  (DDeltaT            sSpanLeadCDF)   "Leadership check duration"
-    , Field 5 0 "forgeΔ"        (d!!2)  "Forge" (DDeltaT            sSpanForgeCDF)  "Leading to block forged"
+    , Field 5 0 "checkΔ"        (d!!0)  "Start" (DDeltaT            sStartedCDF)  "Forge loop tardiness"
+    , Field 5 0 "blkCtΔ"        (d!!1)  "BlkCt" (DDeltaT            sBlkCtxCDF)  "Block context acquisition delay"
+    , Field 5 0 "lgrStΔ"        (d!!2)  "LgrSt" (DDeltaT            sLgrStateCDF)  "Ledger state acquisition delay"
+    , Field 5 0 "lgrViΔ"        (d!!3)  "LgrVi" (DDeltaT            sLgrViewCDF)  "Ledger view acquisition delay"
+    , Field 5 0 "leadΔ"         (d!!4)  "Lead"  (DDeltaT            sLeadingCDF)   "Leadership check duration"
+    , Field 5 0 "forgeΔ"        (d!!5)  "Forge" (DDeltaT            sForgedCDF)  "Leading to block forged"
     , Field 4 0 "blockGap"      "Block" "gap"   (DWord64            sBlocklessCDF)  "Interblock gap"
     , Field 5 0 "chainDensity"  "Dens"  "ity"   (DFloat             sDensityCDF)    "Chain density"
     , Field 3 0 "cpuProcess"    "CPU"   "%"     (DWord64 (rCentiCpu.sResourceCDFs)) "Process CPU usage pct"
@@ -504,12 +528,12 @@ instance RenderCDFs MachPerf p where
     , Field 5 0 "cpuSpanLenEp"  (c!!1)  "Epoch" (DInt         sSpanLensCpuEpochCDF) "CPU spans at Ep boundary"
     ]
    where
-     d = nChunksEachOf  3 6 "---- Δt ----"
+     d = nChunksEachOf  6 6 "------------- Δt -------------"
      m = nChunksEachOf  3 6 "Memory usage, MB"
      c = nChunksEachOf  2 6 "CPU% spans"
 
-instance RenderTimeline SlotStats where
-  data RTComments SlotStats
+instance RenderTimeline (SlotStats NominalDiffTime) where
+  data RTComments (SlotStats NominalDiffTime)
     deriving Show
 
   rtFields _ =
@@ -518,16 +542,22 @@ instance RenderTimeline SlotStats where
     , Field 4 0 "slot"         "  epo" "slot"    (IWord64 (unEpochSlot   .slEpochSlot)) ""
     , Field 2 0 "epoch"        "ch "   "#"       (IWord64 (unEpochNo     .slEpoch)) ""
     , Field 3 0 "safetyInt"    "safe"  "int"     (IWord64 (unEpochSafeInt.slEpochSafeInt)) ""
-    , Field 5 0 "block"        "block" "no."     (IWord64 slBlockNo) ""
+    , Field 5 0 "block"        "block" "no."     (IWord64 (unBlockNo.slBlockNo)) ""
     , Field 5 0 "blockGap"     "block" "gap"     (IWord64 slBlockless) ""
-    , Field 3 0 "leadChecks"   "lead"  "chk"     (IWord64 slCountChecks) ""
+    , Field 3 0 "forgeLoop"    "forg"  "loo"     (IWord64 slCountStarts) ""
+    , Field 3 0 "blockCtx"     "blok"  "ctx"     (IWord64 slCountBlkCtx) ""
+    , Field 3 0 "ledgerState"  "ledg"  "sta"     (IWord64 slCountLgrState) ""
+    , Field 3 0 "ledgerView"   "ledg"  "viw"     (IWord64 slCountLgrView) ""
     , Field 3 0 "leadShips"    "ship"  "win"     (IWord64 slCountLeads) ""
     , Field 3 0 "forges"       "For"   "ge"      (IWord64 slCountForges) ""
     , Field 4 0 "CDBSnap"      "CDB"   "snap"    (IWord64 slChainDBSnap) ""
     , Field 3 0 "rejTxs"       "rej"   "txs"     (IWord64 slRejectedTx) ""
-    , Field 7 0 "checkSpan"    "check" "span"    (IText (smaybe "" show.slSpanCheck)) ""
-    , Field 5 0 "leadSpan"     "lead"  "span"    (IText (smaybe "" show.slSpanLead)) ""
-    , Field 5 0 "forgeSpan"    "forg"  "span"    (IText (smaybe "" show.slSpanForge)) ""
+    , Field 7 0 "startDelay"   "loop"  "start"   (IText (smaybe "" show.slStarted)) ""
+    , Field 5 0 "blkCtx"       "block" "ctx"     (IText (smaybe "" show.slBlkCtx)) ""
+    , Field 5 0 "lgrState"     "ledgr" "state"   (IText (smaybe "" show.slLgrState)) ""
+    , Field 5 0 "lgrView"      "ledgr" "view"    (IText (smaybe "" show.slLgrView)) ""
+    , Field 5 0 "leadChecked"  "ledsh" "chekd"   (IText (smaybe "" show.slLeading)) ""
+    , Field 5 0 "forge"        "forge" "done"    (IText (smaybe "" show.slForged)) ""
     , Field 4 0 "mempoolTxSpan" (t 4!!0) "span"  (IText (smaybe "" show.slSpanTxsMem)) ""
     , Field 4 0 "txsColl"     (t 4!!1) "cold"    (IWord64 slTxsCollected) ""
     , Field 4 0 "txsAcc"      (t 4!!2) "accd"    (IWord64 slTxsAccepted) ""

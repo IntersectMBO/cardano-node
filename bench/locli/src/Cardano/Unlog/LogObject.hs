@@ -88,7 +88,12 @@ type Threeple t = (t, t, t)
 
 interpreters :: Threeple (Map Text (Object -> Parser LOBody))
 interpreters = map3ple Map.fromList . unzip3 . fmap ent $
-  [ (,,,) "TraceStartLeadershipCheck" "Forge.StartLeadershipCheck" "Forge.Loop.StartLeadershipCheck" $
+  -- Every second:
+  [ (,,,) "Resources" "Resources" "" $
+    \v -> LOResources <$> parsePartialResourceStates (Object v)
+
+  -- Leadership:
+  , (,,,) "TraceStartLeadershipCheck" "Forge.StartLeadershipCheck" "Forge.Loop.StartLeadershipCheck" $
     \v -> LOTraceStartLeadershipCheck
             <$> v .: "slot"
             <*> (v .:? "utxoSize"     <&> fromMaybe 0)
@@ -96,7 +101,16 @@ interpreters = map3ple Map.fromList . unzip3 . fmap ent $
 
   , (,,,) "TraceBlockContext" "Forge.BlockContext" "Forge.Loop.BlockContext" $
     \v -> LOBlockContext
-            <$> v .: "tipBlockNo"
+            <$> v .: "current slot"
+            <*> v .: "tipBlockNo"
+
+  , (,,,) "TraceLedgerState" "Forge.LedgerState" "Forge.Loop.LedgerState" $
+    \v -> LOLedgerState
+            <$> v .: "slot"
+
+  , (,,,) "TraceLedgerView" "Forge.LedgerView" "Forge.Loop.LedgerView" $
+    \v -> LOLedgerView
+            <$> v .: "slot"
 
   , (,,,) "TraceNodeIsLeader" "Forge.NodeIsLeader" "Forge.Loop.NodeIsLeader" $
     \v -> LOTraceLeadershipDecided
@@ -108,69 +122,35 @@ interpreters = map3ple Map.fromList . unzip3 . fmap ent $
             <$> v .: "slot"
             <*> pure False
 
-  , (,,,) "TraceMempoolAddedTx" "Mempool.AddedTx" "Mempool.AddedTx" $
-    \v -> do
-      x :: Object <- v .: "mempoolSize"
-      LOMempoolTxs <$> x .: "numTxs"
-
-  , (,,,) "TraceMempoolRemoveTxs" "Mempool.RemoveTxs" "Mempool.RemoveTxs" $
-    \v -> do
-      x :: Object <- v .: "mempoolSize"
-      LOMempoolTxs <$> x .: "numTxs"
-
-  , (,,,) "TraceMempoolRejectedTx" "Mempool.RejectedTx" "Mempool.RejectedTx" $
-    \_ -> pure LOMempoolRejectedTx
-
-  , (,,,) "TraceLedgerEvent.TookSnapshot" "LedgerEvent.TookSnapshot" "ChainDB.LedgerEvent.TookSnapshot" $
-    \_ -> pure LOLedgerTookSnapshot
-
-  , (,,,) "TraceBenchTxSubSummary" "TraceBenchTxSubSummary" "TraceBenchTxSubSummary" $
-    \v -> do
-       x :: Object <- v .: "summary"
-       LOGeneratorSummary
-         <$> ((x .: "ssFailures" :: Parser [Text])
-              <&> null)
-         <*> x .: "ssTxSent"
-         <*> x .: "ssElapsed"
-         <*> x .: "ssThreadwiseTps"
-
-  , (,,,) "TraceBenchTxSubServAck" "TraceBenchTxSubServAck" "TraceBenchTxSubServAck" $
-    \v -> LOTxsAcked <$> v .: "txIds"
-
-  , (,,,) "Resources" "Resources" "" $
-    \v -> LOResources <$> parsePartialResourceStates (Object v)
-
-  , (,,,) "TraceTxSubmissionCollected" "TraceTxSubmissionCollected" "TraceTxSubmissionCollected" $
-    \v -> LOTxsCollected
-            <$> v .: "count"
-
-  , (,,,) "TraceTxSubmissionProcessed" "TraceTxSubmissionProcessed" "TraceTxSubmissionProcessed" $
-    \v -> LOTxsProcessed
-            <$> v .: "accepted"
-            <*> v .: "rejected"
-
+  -- Forging:
   , (,,,) "TraceForgedBlock" "Forge.ForgedBlock" "Forge.Loop.ForgedBlock" $
     \v -> LOBlockForged
-            <$> v .: "block"
-            <*> v .: "blockPrev"
+            <$> v .: "slot"
             <*> v .: "blockNo"
-            <*> v .: "slot"
-  , (,,,) "TraceAddBlockEvent.AddedToCurrentChain" "ChainDB.AddBlockEvent.AddedToCurrentChain" "ChainDB.AddBlockEvent.AddedToCurrentChain" $
-    \v -> LOBlockAddedToCurrentChain
-            <$> ((v .: "newtip")     <&> hashFromPoint)
-            <*> pure Nothing
-            <*> (v .:? "chainLengthDelta"
-                -- Compat for node versions 1.27 and older:
-                 <&> fromMaybe 1)
-  -- TODO: we should clarify the distinction between the two cases (^ and v).
-  , (,,,) "TraceAdoptedBlock" "Forge.AdoptedBlock" "Forge.Loop.AdoptedBlock" $
-    \v -> LOBlockAddedToCurrentChain
-            <$> v .: "blockHash"
-            <*> ((v .: "blockSize") <&> Just)
-            <*> pure 1
+            <*> v .: "block"
+            <*> v .: "blockPrev"
+
+  -- Receipt:
+  , (,,,) "ChainSyncClientEvent.TraceDownloadedHeader" "ChainSyncClient.ChainSyncClientEvent.DownloadedHeader" "ChainSync.Client.DownloadedHeader" $
+    \v -> LOChainSyncClientSeenHeader
+            <$> v .: "slot"
+            <*> v .: "blockNo"
+            <*> v .: "block"
+
+  , (,,,) "SendFetchRequest" "BlockFetchClient.SendFetchRequest" "BlockFetch.Client.SendFetchRequest" $
+    \v -> LOBlockFetchClientRequested
+            <$> v .: "head"
+            <*> v .: "length"
+
+  , (,,,) "CompletedBlockFetch" "BlockFetchClient.CompletedBlockFetch" "BlockFetch.Client.CompletedBlockFetch" $
+    \v -> LOBlockFetchClientCompletedFetch
+            <$> v .: "block"
+
+  -- Forwarding:
   , (,,,) "ChainSyncServerEvent.TraceChainSyncServerRead.AddBlock" "ChainSyncServerHeader.ChainSyncServerEvent.ServerRead.AddBlock" "" $
     \v -> LOChainSyncServerSendHeader
             <$> v .: "block"
+
   , (,,,) "ChainSyncServerEvent.TraceChainSyncServerReadBlocked.AddBlock" "ChainSyncServerHeader.ChainSyncServerEvent.ServerReadBlocked.AddBlock" "ChainSync.ServerHeader.Update" $
     \v -> case ( KeyMap.lookup "risingEdge" v
                , KeyMap.lookup "blockingRead" v
@@ -189,22 +169,66 @@ interpreters = map3ple Map.fromList . unzip3 . fmap ent $
                   & fromMaybe (error $ "Incompatible LOChainSyncServerSendHeader: " <> show v)
                   & Text.take 64
                   & Hash)
-  -- v, but not ^ -- how is that possible?
+
   , (,,,) "TraceBlockFetchServerSendBlock" "BlockFetchServer.SendBlock" "BlockFetch.Server.SendBlock" $
     \v -> LOBlockFetchServerSending
             <$> v .: "block"
-  , (,,,) "SendFetchRequest" "BlockFetchClient.SendFetchRequest" "BlockFetch.Client.SendFetchRequest" $
-    \v -> LOBlockFetchClientRequested
-            <$> v .: "head"
-            <*> v .: "length"
-  , (,,,) "ChainSyncClientEvent.TraceDownloadedHeader" "ChainSyncClient.ChainSyncClientEvent.DownloadedHeader" "ChainSync.Client.DownloadedHeader" $
-    \v -> LOChainSyncClientSeenHeader
-            <$> v .: "block"
-            <*> v .: "blockNo"
-            <*> v .: "slot"
-  , (,,,) "CompletedBlockFetch" "BlockFetchClient.CompletedBlockFetch" "BlockFetch.Client.CompletedBlockFetch" $
-    \v -> LOBlockFetchClientCompletedFetch
-            <$> v .: "block"
+
+  -- Adoption:
+  , (,,,) "TraceAddBlockEvent.AddedToCurrentChain" "ChainDB.AddBlockEvent.AddedToCurrentChain" "ChainDB.AddBlockEvent.AddedToCurrentChain" $
+    \v -> LOBlockAddedToCurrentChain
+            <$> ((v .: "newtip")     <&> hashFromPoint)
+            <*> pure Nothing
+            <*> (v .:? "chainLengthDelta"
+                -- Compat for node versions 1.27 and older:
+                 <&> fromMaybe 1)
+  -- TODO: we should clarify the distinction between the two cases (^ and v).
+  , (,,,) "TraceAdoptedBlock" "Forge.AdoptedBlock" "Forge.Loop.AdoptedBlock" $
+    \v -> LOBlockAddedToCurrentChain
+            <$> v .: "blockHash"
+            <*> ((v .: "blockSize") <&> Just)
+            <*> pure 1
+
+  -- Ledger snapshots:
+  , (,,,) "TraceLedgerEvent.TookSnapshot" "LedgerEvent.TookSnapshot" "ChainDB.LedgerEvent.TookSnapshot" $
+    \_ -> pure LOLedgerTookSnapshot
+
+  -- Tx receive path & mempool:
+  , (,,,) "TraceBenchTxSubServAck" "TraceBenchTxSubServAck" "TraceBenchTxSubServAck" $
+    \v -> LOTxsAcked <$> v .: "txIds"
+
+  , (,,,) "TraceTxSubmissionCollected" "TraceTxSubmissionCollected" "TraceTxSubmissionCollected" $
+    \v -> LOTxsCollected
+            <$> v .: "count"
+
+  , (,,,) "TraceTxSubmissionProcessed" "TraceTxSubmissionProcessed" "TraceTxSubmissionProcessed" $
+    \v -> LOTxsProcessed
+            <$> v .: "accepted"
+            <*> v .: "rejected"
+
+  , (,,,) "TraceMempoolAddedTx" "Mempool.AddedTx" "Mempool.AddedTx" $
+    \v -> do
+      x :: Object <- v .: "mempoolSize"
+      LOMempoolTxs <$> x .: "numTxs"
+
+  , (,,,) "TraceMempoolRemoveTxs" "Mempool.RemoveTxs" "Mempool.RemoveTxs" $
+    \v -> do
+      x :: Object <- v .: "mempoolSize"
+      LOMempoolTxs <$> x .: "numTxs"
+
+  , (,,,) "TraceMempoolRejectedTx" "Mempool.RejectedTx" "Mempool.RejectedTx" $
+    \_ -> pure LOMempoolRejectedTx
+
+  -- Generator:
+  , (,,,) "TraceBenchTxSubSummary" "TraceBenchTxSubSummary" "TraceBenchTxSubSummary" $
+    \v -> do
+       x :: Object <- v .: "summary"
+       LOGeneratorSummary
+         <$> ((x .: "ssFailures" :: Parser [Text])
+              <&> null)
+         <*> x .: "ssTxSent"
+         <*> x .: "ssElapsed"
+         <*> x .: "ssThreadwiseTps"
   ]
  where
    hashFromPoint :: LText.Text -> Hash
@@ -222,46 +246,68 @@ logObjectStreamInterpreterKeysOldOrg = Map.keys (interpreters & snd3)
 logObjectStreamInterpreterKeys       = Map.keys (interpreters & thd3)
 
 data LOBody
-  = LOTraceStartLeadershipCheck !SlotNo !Word64 !Double
-  | LOTraceLeadershipDecided    !SlotNo !Bool
-  | LOResources !ResourceStats
-  | LOMempoolTxs !Word64
-  | LOMempoolRejectedTx
-  | LOLedgerTookSnapshot
-  | LOBlockContext !Word64
-  | LOGeneratorSummary !Bool !Word64 !NominalDiffTime (Vector Double)
-  | LOTxsAcked !(Vector Text)
-  | LOTxsCollected !Word64
-  | LOTxsProcessed !Word64 !Int
-  | LOBlockForged
-    { loBlock            :: !Hash
-    , loPrev             :: !Hash
+  -- Every second:
+  = LOResources !ResourceStats
+  -- Leadership:
+  | LOTraceStartLeadershipCheck !SlotNo !Word64 !Double
+  | LOBlockContext
+    { loSlotNo           :: !SlotNo
     , loBlockNo          :: !BlockNo
-    , loSlotNo           :: !SlotNo
     }
-  | LOBlockAddedToCurrentChain
+  | LOLedgerState
+    { loSlotNo           :: !SlotNo
+    }
+  | LOLedgerView
+    { loSlotNo           :: !SlotNo
+    }
+  | LOTraceLeadershipDecided
+    { loSlotNo           :: !SlotNo
+    , loLeader           :: !Bool
+    }
+  -- Forging:
+  | LOBlockForged
+    { loSlotNo           :: !SlotNo
+    , loBlockNo          :: !BlockNo
+    , loBlock            :: !Hash
+    , loPrev             :: !Hash
+    }
+  -- Receipt:
+  | LOChainSyncClientSeenHeader
+    { loSlotNo           :: !SlotNo
+    , loBlockNo          :: !BlockNo
+    , loBlock            :: !Hash
+    }
+  | LOBlockFetchClientRequested
     { loBlock            :: !Hash
-    , loSize             :: !(Maybe Int)
     , loLength           :: !Int
     }
+  | LOBlockFetchClientCompletedFetch
+    { loBlock            :: !Hash
+    }
+  -- Forwarding:
   | LOChainSyncServerSendHeader
     { loBlock            :: !Hash
     }
   | LOBlockFetchServerSending
     { loBlock            :: !Hash
     }
-  | LOBlockFetchClientRequested
+  -- Adoption:
+  | LOBlockAddedToCurrentChain
     { loBlock            :: !Hash
+    , loSize             :: !(Maybe Int)
     , loLength           :: !Int
     }
-  | LOChainSyncClientSeenHeader
-    { loBlock            :: !Hash
-    , loBlockNo          :: !BlockNo
-    , loSlotNo           :: !SlotNo
-    }
-  | LOBlockFetchClientCompletedFetch
-    { loBlock            :: !Hash
-    }
+  -- Ledger snapshots:
+  | LOLedgerTookSnapshot
+  -- Tx receive path & mempool:
+  | LOTxsAcked !(Vector Text)
+  | LOTxsCollected !Word64
+  | LOTxsProcessed !Word64 !Int
+  | LOMempoolTxs !Word64
+  | LOMempoolRejectedTx
+  -- Generator:
+  | LOGeneratorSummary !Bool !Word64 !NominalDiffTime (Vector Double)
+  -- Everything else:
   | LOAny !Object
   | LODecodeError !String
   deriving (Generic, Show)

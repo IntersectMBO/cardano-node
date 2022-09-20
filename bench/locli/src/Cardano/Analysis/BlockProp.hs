@@ -56,7 +56,10 @@ import Cardano.Util
 summariseMultiBlockProp :: [Centile] -> [BlockPropOne] -> Either CDFError MultiBlockProp
 summariseMultiBlockProp _ [] = error "Asked to summarise empty list of BlockPropOne"
 summariseMultiBlockProp centiles bs@(headline:_) = do
-  bpForgerChecks           <- cdf2OfCDFs comb $ bs <&> bpForgerChecks
+  bpForgerStarts           <- cdf2OfCDFs comb $ bs <&> bpForgerStarts
+  bpForgerBlkCtx           <- cdf2OfCDFs comb $ bs <&> bpForgerBlkCtx
+  bpForgerLgrState         <- cdf2OfCDFs comb $ bs <&> bpForgerLgrState
+  bpForgerLgrView          <- cdf2OfCDFs comb $ bs <&> bpForgerLgrView
   bpForgerLeads            <- cdf2OfCDFs comb $ bs <&> bpForgerLeads
   bpForgerForges           <- cdf2OfCDFs comb $ bs <&> bpForgerForges
   bpForgerAdoptions        <- cdf2OfCDFs comb $ bs <&> bpForgerAdoptions
@@ -97,7 +100,10 @@ data ForgerEvents a
   , bfeSlotStart    :: !SlotStart
   , bfeEpochNo      :: !EpochNo
   , bfeBlockSize    :: !(Maybe Int)
-  , bfeChecked      :: !(Maybe a)
+  , bfeStarted      :: !(Maybe a)
+  , bfeBlkCtx       :: !(Maybe a)
+  , bfeLgrState     :: !(Maybe a)
+  , bfeLgrView      :: !(Maybe a)
   , bfeLeading      :: !(Maybe a)
   , bfeForged       :: !(Maybe a)
   , bfeAnnounced    :: !(Maybe a)
@@ -247,10 +253,13 @@ type MachBlockMap a
 
 data MachView
   = MachView
-  { mvHost    :: !Host
-  , mvBlocks  :: !(MachBlockMap UTCTime)
-  , mvChecked :: Maybe UTCTime
-  , mvLeading :: Maybe UTCTime
+  { mvHost     :: !Host
+  , mvBlocks   :: !(MachBlockMap UTCTime)
+  , mvStarted  :: !(Maybe UTCTime)
+  , mvBlkCtx   :: !(Maybe UTCTime)
+  , mvLgrState :: !(Maybe UTCTime)
+  , mvLgrView  :: !(Maybe UTCTime)
+  , mvLeading  :: !(Maybe UTCTime)
   }
   deriving (FromJSON, Generic, NFData, ToJSON)
 
@@ -370,7 +379,10 @@ rebuildChain run@Run{genesis} flts fltNames xs@(fmap snd -> machViews) = do
           , bfSlotStart  = bfeSlotStart
           , bfBlockGap   = 0 -- To be filled in after chain is rebuilt.
           , bfBlockSize  = bfeBlockSize & handleMiss "Size"
-          , bfChecked    = bfeChecked   & handleMiss "Δt Checked"
+          , bfStarted    = bfeStarted   & handleMiss "Δt Started"
+          , bfBlkCtx     = bfeBlkCtx
+          , bfLgrState   = bfeLgrState
+          , bfLgrView    = bfeLgrView
           , bfLeading    = bfeLeading   & handleMiss "Δt Leading"
           , bfForged     = bfeForged    & handleMiss "Δt Forged"
           -- NOTE (XXX, TODO, FIXME):
@@ -453,7 +465,10 @@ blockProp run@Run{genesis} fullChain domSlot domBlock = do
   pure $ BlockProp
     { bpDomainSlots         = domSlot
     , bpDomainBlocks        = domBlock
-    , bpForgerChecks        = forgerEventsCDF   (Just . bfChecked   . beForge)
+    , bpForgerStarts        = forgerEventsCDF   (Just . bfStarted   . beForge)
+    , bpForgerBlkCtx        = forgerEventsCDF           (bfBlkCtx   . beForge)
+    , bpForgerLgrState      = forgerEventsCDF           (bfLgrState . beForge)
+    , bpForgerLgrView       = forgerEventsCDF           (bfLgrView  . beForge)
     , bpForgerLeads         = forgerEventsCDF   (Just . bfLeading   . beForge)
     , bpForgerForges        = forgerEventsCDF   (Just . bfForged    . beForge)
     , bpForgerAnnouncements = forgerEventsCDF   (Just . bfAnnounced . beForge)
@@ -519,10 +534,13 @@ blockEventMapsFromLogObjects run (f@(unJsonLogfile -> fp), xs@(x:_)) =
  where
    initial =
      MachView
-     { mvHost    = loHost x
-     , mvBlocks  = mempty
-     , mvChecked = Nothing
-     , mvLeading = Nothing
+     { mvHost     = loHost x
+     , mvBlocks   = mempty
+     , mvStarted  = Nothing
+     , mvBlkCtx   = Nothing
+     , mvLgrState = Nothing
+     , mvLgrView  = Nothing
+     , mvLeading  = Nothing
      }
 
 blockPropMachEventsStep :: Run -> JsonLogfile -> MachView -> LogObject -> MachView
@@ -582,7 +600,10 @@ blockPropMachEventsStep run@Run{genesis} (JsonLogfile fp) mv@MachView{..} lo = c
         , bfeSlotStart    = slotStart genesis loSlotNo
         , bfeEpochNo      = fst $ genesis `unsafeParseSlot` loSlotNo
         , bfeBlockSize    = Nothing
-        , bfeChecked      = mvChecked
+        , bfeStarted      = mvStarted
+        , bfeBlkCtx       = mvBlkCtx
+        , bfeLgrState     = mvLgrState
+        , bfeLgrView      = mvLgrView
         , bfeLeading      = mvLeading
         , bfeForged       = Just loAt
         , bfeAnnounced    = Nothing
@@ -631,7 +652,13 @@ blockPropMachEventsStep run@Run{genesis} (JsonLogfile fp) mv@MachView{..} lo = c
       mbe0
       & doInsert loBlock
   LogObject{loAt, loBody=LOTraceStartLeadershipCheck{}} ->
-    mv { mvChecked = Just loAt }
+    mv { mvStarted = Just loAt }
+  LogObject{loAt, loBody=LOBlockContext{}} ->
+    mv { mvBlkCtx = Just loAt }
+  LogObject{loAt, loBody=LOLedgerState{}} ->
+    mv { mvLgrState = Just loAt }
+  LogObject{loAt, loBody=LOLedgerView{}} ->
+    mv { mvLgrView = Just loAt }
   LogObject{loAt, loBody=LOTraceLeadershipDecided _ leading} ->
     if not leading then mv
     else mv { mvLeading = Just loAt }
@@ -653,8 +680,13 @@ deltifyEvents :: MachBlockEvents UTCTime -> MachBlockEvents NominalDiffTime
 deltifyEvents (MBE e) = MBE e
 deltifyEvents (MFE x@ForgerEvents{..}) =
   MFE x
-  { bfeChecked   = bfeChecked  <&> (`sinceSlot` bfeSlotStart)
-  , bfeLeading   = diffUTCTime <$> bfeLeading   <*> bfeChecked
+  { bfeStarted   = bfeStarted  <&> (`sinceSlot` bfeSlotStart)
+  , bfeBlkCtx    = diffUTCTime <$> bfeBlkCtx    <*> bfeStarted
+  , bfeLgrState  = diffUTCTime <$> bfeLgrState  <*> bfeBlkCtx
+  , bfeLgrView   = diffUTCTime <$> bfeLgrView   <*> bfeLgrState
+  , bfeLeading   = (diffUTCTime <$> bfeLeading   <*> bfeLgrView)
+                   <|>
+                   (diffUTCTime <$> bfeLeading   <*> bfeStarted)
   , bfeForged    = diffUTCTime <$> bfeForged    <*> bfeLeading
   , bfeAnnounced = diffUTCTime <$> bfeAnnounced <*> bfeForged
   , bfeSending   = diffUTCTime <$> bfeSending   <*> bfeForged

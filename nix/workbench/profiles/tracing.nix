@@ -21,5 +21,8 @@
       };
     BlockFetch.severity = "Info";
     ChainSync.severity = "Info";
+    "Forge.Loop.BlockContext".severity = "Info";
+    "Forge.Loop.LedgerView".severity = "Info";
+    "Forge.Loop.LedgerState".severity = "Info";
   };
 }

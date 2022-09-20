@@ -284,9 +284,9 @@ data State
   , sBlockProp        :: Maybe [BlockPropOne]
   , sMultiBlockProp   :: Maybe MultiBlockProp
     -- performance
-  , sSlotsRaw         :: Maybe [(JsonLogfile, [SlotStats])]
+  , sSlotsRaw         :: Maybe [(JsonLogfile, [SlotStats NominalDiffTime])]
   , sScalars          :: Maybe [(JsonLogfile, RunScalars)]
-  , sSlots            :: Maybe [(JsonLogfile, [SlotStats])]
+  , sSlots            :: Maybe [(JsonLogfile, [SlotStats NominalDiffTime])]
   , sMachPerf         :: Maybe [(JsonLogfile, MachPerfOne)]
   , sClusterPerf      :: Maybe [ClusterPerf]
   , sMultiClusterPerf :: Maybe MultiClusterPerf
@@ -405,7 +405,7 @@ runChainCommand s@State{sRun=Just run, sObjLists=Just objs}
     fmap (mapAndUnzip redistribute) <$> collectSlotStats run nonIgnored
     & newExceptT
     & firstExceptT (CommandError c)
-  pure s { sScalars = Just scalars, sSlotsRaw = Just slotsRaw }
+  pure s { sScalars = Just scalars, sSlotsRaw = Just (fmap (fmap (deltifySlotStats (genesis run))) <$> slotsRaw) }
 runChainCommand _ c@CollectSlots{} = missingCommandData c
   ["run metadata & genesis", "lifted logobjects"]
 
