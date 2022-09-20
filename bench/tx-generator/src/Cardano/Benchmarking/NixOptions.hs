@@ -3,17 +3,18 @@
 module Cardano.Benchmarking.NixOptions
 where
 
-import           Prelude
-import           GHC.Generics
-import           GHC.Natural
 import           Data.Aeson
 import           Data.List.NonEmpty
+import           GHC.Generics
+import           GHC.Natural
+import           Prelude
 
-import           Cardano.CLI.Types (SigningKeyFile(..))
+import           Cardano.CLI.Types (SigningKeyFile (..))
+import           Cardano.Node.Configuration.NodeAddress (NodeIPv4Address)
 
 import           Cardano.Api (AnyCardanoEra, Lovelace)
-import           Cardano.Benchmarking.Types
 import           Cardano.Benchmarking.Script.Aeson (parseJSONFile)
+import           Cardano.TxGenerator.Types
 
 parseNixServiceOptions :: FilePath -> IO NixServiceOptions
 parseNixServiceOptions = parseJSONFile fromJSON
@@ -58,7 +59,7 @@ jsonOptions = defaultOptions { fieldLabelModifier = stripPrefix }
     stripPrefix :: String -> String
     stripPrefix ('_':'n':'i':'x':'_':baseName) = baseName
     stripPrefix bad = error $ "bad fieldname: " ++ bad
- 
+
 instance ToJSON NixServiceOptions where
   toJSON     = genericToJSON jsonOptions
   toEncoding = genericToEncoding jsonOptions

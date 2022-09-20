@@ -2,15 +2,15 @@
 module Cardano.Benchmarking.TpsThrottle
 where
 
-import           Prelude
 import           Control.Concurrent (forkIO, threadDelay)
 import           Control.Concurrent.STM as STM
 import           Control.Monad
+import           Prelude
 
---import           Data.Time.Clock (NominalDiffTime, UTCTime)
 import qualified Data.Time.Clock as Clock
 
 import           Cardano.Benchmarking.Types
+import           Cardano.TxGenerator.Types (TPSRate)
 
 data Step = Next | Stop
   deriving (Eq, Show)
@@ -26,14 +26,14 @@ data TpsThrottle = TpsThrottle {
 -- empty ->  Block submission
 -- Just 0 -> illegal state
 -- Just n -> allow n transmissions ( n must be >0 )
--- Nothing -> teminate transmission 
+-- Nothing -> teminate transmission
 
 newTpsThrottle :: Int -> Int -> TPSRate -> IO TpsThrottle
 newTpsThrottle buffersize count tpsRate = do
   var <- newEmptyTMVarIO
   return $ TpsThrottle {
       startSending = sendNTicks tpsRate buffersize count var
-    , sendStop = putTMVar var Nothing 
+    , sendStop = putTMVar var Nothing
     , receiveBlocking = takeTMVar var >>= receiveAction var
     , receiveNonBlocking =
         (Just <$> (takeTMVar var >>= receiveAction var )) `orElse` return Nothing
@@ -51,7 +51,7 @@ receiveAction var state = case state of
     return Next
 
 sendNTicks :: TPSRate -> Int -> Int -> TMVar (Maybe Int) -> IO ()
-sendNTicks (TPSRate rate) buffersize count var = do
+sendNTicks rate buffersize count var = do
   now <- Clock.getCurrentTime
   worker count now 0
   where
@@ -117,7 +117,7 @@ test = do
   consumer2 t n = do
     r <- atomically $ receiveNonBlocking t
     case r of
-      Just s -> do 
+      Just s -> do
         print (n, s)
         if s == Next then consumer2 t n else putStrLn $ "Done " ++ show n
       Nothing -> do

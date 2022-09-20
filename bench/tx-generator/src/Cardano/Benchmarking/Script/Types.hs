@@ -1,29 +1,31 @@
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Benchmarking.Script.Types
 where
 
-import           Prelude
 import           GHC.Generics
+import           Prelude
 
 import           Data.List.NonEmpty
 import           Data.Text (Text)
 
+import           Cardano.Api (AnyCardanoEra, ExecutionUnits, Lovelace, ScriptData, ScriptRedeemer,
+                   TextEnvelope, TxIn)
 import           Cardano.Benchmarking.OuroborosImports (SigningKeyFile)
-import           Cardano.Api (AnyCardanoEra, ExecutionUnits, Lovelace, ScriptData, ScriptRedeemer, TextEnvelope, TxIn)
+import           Cardano.Node.Configuration.NodeAddress (NodeIPv4Address)
 
+import           Cardano.TxGenerator.Types (NumberOfInputsPerTx, NumberOfOutputsPerTx, NumberOfTxs, TPSRate)
 
 import           Cardano.Benchmarking.Script.Env
 import           Cardano.Benchmarking.Script.Store
-import           Cardano.Benchmarking.Types (TPSRate, NodeIPv4Address)
 
 data Action where
   Set                :: !SetKeyVal -> Action
@@ -46,10 +48,10 @@ deriving instance Generic Action
 
 data Generator where
   SecureGenesis :: !Lovelace -> !WalletName -> !KeyName -> !KeyName -> Generator -- 0 to N
-  Split :: !Lovelace -> !WalletName -> !PayMode -> !PayMode -> [ Lovelace ] -> Generator 
+  Split :: !Lovelace -> !WalletName -> !PayMode -> !PayMode -> [ Lovelace ] -> Generator
   SplitN :: !Lovelace -> !WalletName -> !PayMode -> !Int -> Generator            -- 1 to N
-  BechmarkTx :: !WalletName -> !RunBenchmarkAux -> Maybe WalletName -> Generator -- N to M
--- Generic NtoM ::  
+  NtoM  :: !Lovelace -> !WalletName -> !PayMode -> !NumberOfInputsPerTx -> !NumberOfOutputsPerTx
+        -> !(Maybe Int) -> Maybe WalletName -> Generator
   Sequence :: [Generator] -> Generator
   Cycle :: !Generator -> Generator
   Take :: !Int -> !Generator -> Generator
@@ -69,7 +71,7 @@ type TargetNodes = NonEmpty NodeIPv4Address
 
 data SubmitMode where
   LocalSocket :: SubmitMode
-  Benchmark   :: !TargetNodes -> !ThreadName -> !TPSRate -> !RunBenchmarkAux -> SubmitMode
+  Benchmark   :: !TargetNodes -> !ThreadName -> !TPSRate -> !NumberOfTxs -> SubmitMode
   DumpToFile  :: !FilePath -> SubmitMode
   DiscardTX   :: SubmitMode
   NodeToNode  :: NonEmpty NodeIPv4Address -> SubmitMode --deprecated
@@ -96,15 +98,3 @@ data ScriptSpec = ScriptSpec
   }
   deriving (Show, Eq)
 deriving instance Generic ScriptSpec
-
-data RunBenchmarkAux = RunBenchmarkAux {
-    auxTxCount :: Int
-  , auxFee :: Lovelace
-  , auxOutputsPerTx :: Int
-  , auxInputsPerTx :: Int
-  , auxInputs :: Int
-  , auxOutputs ::Int
-  , auxMinValuePerUTxO :: Lovelace
-  }
-  deriving (Show, Eq)
-deriving instance Generic RunBenchmarkAux

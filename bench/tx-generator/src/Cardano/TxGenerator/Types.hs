@@ -10,6 +10,13 @@ import           Cardano.Prelude (Text)
 
 import           Cardano.TxGenerator.Fund (Fund)
 
+-- some type aliases to keep compatibility with code in Cardano.Benchmarking
+type NumberOfInputsPerTx  = Int
+type NumberOfOutputsPerTx = Int
+type NumberOfTxs          = Int
+type TxAdditionalSize     = Int
+type TPSRate              = Double
+
 
 type TxGenerator era = [Fund] -> [TxOut CtxTx era] -> Either String (Tx era, TxId)
 
@@ -23,10 +30,10 @@ data PayWithChange
 
 
 data TxGenTxParams = TxGenTxParams
-  { txParamFee        :: !Lovelace  -- ^ Transaction fee, in Lovelace
-  , txParamAddTxSize  :: !Int       -- ^ Extra transaction payload, in bytes
-  , txParamInputs     :: !Int       -- ^ Inputs per transaction
-  , txParamOutputs    :: !Int       -- ^ Outputs per transaction
+  { txParamFee        :: !Lovelace              -- ^ Transaction fee, in Lovelace
+  , txParamAddTxSize  :: !Int                   -- ^ Extra transaction payload, in bytes -- Note [Tx additional size]
+  , txParamInputs     :: !NumberOfInputsPerTx   -- ^ Inputs per transaction
+  , txParamOutputs    :: !NumberOfOutputsPerTx  -- ^ Outputs per transaction
   }
   deriving Show
 
@@ -35,8 +42,8 @@ defaultTxGenTxParams :: TxGenTxParams
 defaultTxGenTxParams = TxGenTxParams
   { txParamFee        = 10_000_000
   , txParamAddTxSize  = 100
-  , txParamInputs     = 4
-  , txParamOutputs    = 4
+  , txParamInputs     = 2
+  , txParamOutputs    = 2
   }
 
 
@@ -74,3 +81,17 @@ data TxGenError =
   --   number of transactions to send (first value).
   | BadPayloadSize !Text
   deriving Show
+
+{-
+Note [Tx additional size]
+~~~~~~~~~~~~~~~~~~~~~~~~~
+This parameter specifies the additional size (in bytes) of a transaction.
+Since one transaction is ([input] + [output] + attributes), its size
+is defined by its inputs and outputs. We want to have an ability to
+increase a transaction's size without increasing the number of inputs or
+outputs. Such a big transaction will give us more real-world results
+of benchmarking.
+Technically, this parameter specifies the size of the attribute we'll
+add to the transaction (by default attributes are empty, so if this
+parameter is skipped, attributes will remain empty).
+-}

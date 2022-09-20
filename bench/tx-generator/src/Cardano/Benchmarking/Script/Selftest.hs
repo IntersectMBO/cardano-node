@@ -40,10 +40,8 @@ printJSON :: IO ()
 printJSON = BSL.putStrLn $ prettyPrint $ testScript "/dev/zero" DiscardTX
 
 testScript :: FilePath -> SubmitMode -> [Action]
-testScript protocolFile submitMode =
+testScript protocolFile _submitMode =
   [ SetProtocolParameters (UseLocalProtocolFile protocolFile)
-  , Set (TTxAdditionalSize ==>  39)
-  , Set (TFee ==>  Lovelace 212345)
   , Set (TTTL ==> SlotNo 1000000)
   , Set (TNetworkId ==> Testnet (NetworkMagic {unNetworkMagic = 42}))
   , InitWallet wallet
@@ -57,7 +55,7 @@ testScript protocolFile submitMode =
   , createChange 2200000000000 10
   , createChange 70000000000 300
   , createChange 2300000000 9000
-  , Submit era submitMode $ Take 4000 $ Cycle $ BechmarkTx wallet extraArgs Nothing
+--  , Submit era submitMode $ Take 4000 $ Cycle $ BechmarkTx wallet extraArgs Nothing
   ]
   where
     era = AnyCardanoEra AllegraEra
@@ -67,12 +65,3 @@ testScript protocolFile submitMode =
     createChange :: Int -> Int -> Action
     createChange _val _count
       =   LogMsg "TODO: Fix this " -- CreateChange era wallet submitMode payMode payMode (Lovelace val) count
-    extraArgs = RunBenchmarkAux {
-        auxTxCount = 4000
-      , auxFee = 1000000
-      , auxOutputsPerTx = 2
-      , auxInputsPerTx = 2
-      , auxInputs = 8000
-      , auxOutputs = 8000
-      , auxMinValuePerUTxO = 10500000
-      }

@@ -37,17 +37,17 @@ import           Ouroboros.Network.Protocol.LocalTxSubmission.Type (SubmitResult
 import           Cardano.TxGenerator.Fund as Fund
 import qualified Cardano.TxGenerator.FundQueue as FundQueue
 import           Cardano.TxGenerator.Tx
-import qualified Cardano.TxGenerator.Utils as Utils (includeChange, inputsToOutputsWithFee, liftAnyEra)
+import           Cardano.TxGenerator.Types
 import           Cardano.TxGenerator.UTxO
+import qualified Cardano.TxGenerator.Utils as Utils
 
-import           Cardano.Benchmarking.GeneratorTx as GeneratorTx (AsyncBenchmarkControl, TxGenError)
-import qualified Cardano.Benchmarking.GeneratorTx as GeneratorTx (readSigningKey,
-                   waitBenchmark, walletBenchmark)
+import           Cardano.Benchmarking.GeneratorTx as GeneratorTx (AsyncBenchmarkControl)
+import qualified Cardano.Benchmarking.GeneratorTx as GeneratorTx (readSigningKey, waitBenchmark,
+                   walletBenchmark)
 import qualified Cardano.Benchmarking.GeneratorTx.Genesis as Genesis
 import           Cardano.Benchmarking.GeneratorTx.NodeToNode (ConnectClient,
                    benchmarkConnectTxSubmit)
 import           Cardano.Benchmarking.GeneratorTx.SizedMetadata (mkMetadata)
-import           Cardano.Benchmarking.GeneratorTx.Tx as Core (keyAddress, mkFee, txInModeCardano)
 
 import           Cardano.Benchmarking.OuroborosImports as Core (LocalSubmitTx, SigningKeyFile,
                    makeLocalConnectInfo, protocolToCodecConfig)
@@ -55,8 +55,7 @@ import           Cardano.Benchmarking.PlutusExample as PlutusExample
 
 import           Cardano.Benchmarking.LogTypes as Core (TraceBenchTxSubmit (..), btConnect_, btN2N_,
                    btSubmission2_, btTxSubmit_)
-import           Cardano.Benchmarking.Types as Core (NumberOfTxs (..), SubmissionErrorPolicy (..),
-                   TPSRate, TxAdditionalSize (..))
+import           Cardano.Benchmarking.Types as Core (SubmissionErrorPolicy (..))
 import           Cardano.Benchmarking.Wallet as Wallet
 
 import           Cardano.Benchmarking.Script.Aeson (readProtocolParametersFile)
@@ -221,7 +220,7 @@ localSubmitTx tx = do
     SubmitFail e -> do
       let msg = concat [ "local submit failed: " , show e , " (" , show tx , ")" ]
       traceDebug msg
-      return ret      
+      return ret
 --      throwE $ ApiError msg
 
 -- TODO:
@@ -229,12 +228,11 @@ localSubmitTx tx = do
 -- Problem 1: When doing throwE $ ApiError msg logmessages get lost !
 -- Problem 2: Workbench restarts the tx-generator -> this may be the reason for loss of messages
 
-makeMetadata :: forall era. IsShelleyBasedEra era => ActionM (TxMetadataInEra era)
-makeMetadata = do
-  payloadSize <- getUser TTxAdditionalSize
-  case mkMetadata $ unTxAdditionalSize payloadSize of
-    Right m -> return m
-    Left err -> throwE $ MetadataError err
+toMetadata :: forall era. IsShelleyBasedEra era => Maybe Int -> TxMetadataInEra era
+toMetadata Nothing = TxMetadataNone
+toMetadata (Just payloadSize) = case mkMetadata payloadSize of
+  Right m -> m
+  Left err -> error err
 
 submitAction :: AnyCardanoEra -> SubmitMode -> Generator -> ActionM ()
 submitAction era submitMode generator = withEra era $ submitInEra submitMode generator
@@ -244,8 +242,8 @@ submitInEra submitMode generator era = do
   txStream <- evalGenerator generator era
   case submitMode of
     NodeToNode _ -> error "NodeToNode deprecated: ToDo: remove"
-    Benchmark nodes threadName tpsRate extra -> benchmarkTxStream txStream nodes threadName tpsRate extra era
-    LocalSocket -> submitAll (void . localSubmitTx . txInModeCardano) txStream
+    Benchmark nodes threadName tpsRate txCount -> benchmarkTxStream txStream nodes threadName tpsRate txCount era
+    LocalSocket -> submitAll (void . localSubmitTx . Utils.mkTxInModeCardano) txStream
     DumpToFile filePath -> liftIO $ Streaming.writeFile filePath $ Streaming.map showTx txStream
     DiscardTX -> liftIO $ Streaming.effects txStream
  where
@@ -267,16 +265,16 @@ benchmarkTxStream :: forall era. IsShelleyBasedEra era
   -> TargetNodes
   -> ThreadName
   -> TPSRate
-  -> RunBenchmarkAux
+  -> NumberOfTxs
   -> AsType era
   -> ActionM ()
-benchmarkTxStream txStream targetNodes (ThreadName threadName) tps shape era = do
+benchmarkTxStream txStream targetNodes (ThreadName threadName) tps txCount era = do
   tracers  <- get BenchTracers
   connectClient <- getConnectClient
   let
     coreCall :: AsType era -> ExceptT TxGenError IO AsyncBenchmarkControl
     coreCall eraProxy = GeneratorTx.walletBenchmark (btTxSubmit_ tracers) (btN2N_ tracers) connectClient
-                                               threadName targetNodes tps LogErrors eraProxy (NumberOfTxs $ auxTxCount shape) txStream
+                                               threadName targetNodes tps LogErrors eraProxy txCount txStream
   ret <- liftIO $ runExceptT $ coreCall era
   case ret of
     Left err -> liftTxGenError err
@@ -284,7 +282,7 @@ benchmarkTxStream txStream targetNodes (ThreadName threadName) tps shape era = d
 
 evalGenerator :: forall era. IsShelleyBasedEra era => Generator -> AsType era -> ActionM (TxStream IO era)
 evalGenerator generator era = do
-  networkId <- getUser TNetworkId  
+  networkId <- getUser TNetworkId
   protocolParameters <- getProtocolParameters
   case generator of
     SecureGenesis fee wallet genesisKeyName destKeyName -> do
@@ -294,7 +292,7 @@ evalGenerator generator era = do
       destWallet  <- getName wallet
       genesisKey  <- getName genesisKeyName
       let
-        outAddr = Core.keyAddress @ era networkId destKey
+        outAddr = Utils.keyAddress @ era networkId destKey
         (_inAddr, lovelace) = Genesis.genesisFundForKey @ era networkId genesis genesisKey
         (tx, fund) = Genesis.genesisExpenditure networkId genesisKey outAddr lovelace fee ttl destKey
         gen = do
@@ -310,44 +308,31 @@ evalGenerator generator era = do
       let
         fundSource = walletSource wallet 1
         inToOut = Utils.includeChange fee coins
-        txGenerator = genTx protocolParameters (TxInsCollateralNone, []) (mkFee fee) TxMetadataNone
+        txGenerator = genTx protocolParameters (TxInsCollateralNone, []) (Utils.mkTxFee fee) TxMetadataNone
         sourceToStore = sourceToStoreTransactionNew txGenerator fundSource inToOut $ mangleWithChange toUTxOChange toUTxO
       return $ Streaming.effect (Streaming.yield <$> sourceToStore)
-
     SplitN fee walletName payMode count -> do
       wallet <- getName walletName
       (toUTxO, addressOut) <- interpretPayMode payMode
-      traceDebug $ "split output address : " ++ addressOut      
+      traceDebug $ "SplitN output address : " ++ addressOut
       let
         fundSource = walletSource wallet 1
         inToOut = Utils.inputsToOutputsWithFee fee count
-        txGenerator = genTx protocolParameters (TxInsCollateralNone, []) (mkFee fee) TxMetadataNone
+        txGenerator = genTx protocolParameters (TxInsCollateralNone, []) (Utils.mkTxFee fee) TxMetadataNone
         sourceToStore = sourceToStoreTransactionNew txGenerator fundSource inToOut (mangle $ repeat toUTxO)
       return $ Streaming.effect (Streaming.yield <$> sourceToStore)
 
-    BechmarkTx sourceWallet shape collateralWallet -> do
-      fundKey <- getName $ KeyName "pass-partout" -- should be walletkey -- TODO: Remove magic
-      walletRefSrc <- getName sourceWallet
+    NtoM fee walletName payMode inputs outputs metadataSize collateralWallet -> do
+      wallet <- getName walletName
       collaterals <- selectCollateralFunds collateralWallet
-      metadata <- makeMetadata
+      (toUTxO, addressOut) <- interpretPayMode payMode
+      traceDebug $ "NtoM output address : " ++ addressOut
       let
-        walletRefDst = walletRefSrc
-        fundSource = walletSource walletRefSrc (auxInputsPerTx shape)
-
-        inToOut :: [Lovelace] -> [Lovelace]
-        inToOut = Utils.inputsToOutputsWithFee (auxFee shape) (auxOutputsPerTx shape)
-
-        txGenerator = genTx protocolParameters collaterals (mkFee (auxFee shape)) metadata
-
-        toUTxO :: [ ToUTxO era ]
-        toUTxO = repeat $ mkUTxOVariant networkId fundKey -- TODO: make configurable
-  
-        fundToStore = mkWalletFundStoreList walletRefDst
-
-        sourceToStore = sourceToStoreTransaction txGenerator fundSource inToOut (makeToUTxOList toUTxO) fundToStore
-
+        fundSource = walletSource wallet inputs
+        inToOut = Utils.inputsToOutputsWithFee fee outputs
+        txGenerator = genTx protocolParameters collaterals (Utils.mkTxFee fee) (toMetadata metadataSize)
+        sourceToStore = sourceToStoreTransactionNew txGenerator fundSource inToOut (mangle $ repeat toUTxO)
       return $ Streaming.effect (Streaming.yield <$> sourceToStore)
-
     Sequence l -> do
       gList <- forM l $ \g -> evalGenerator g era
       return $ Streaming.for (Streaming.each gList) id
@@ -370,7 +355,7 @@ selectCollateralFunds (Just walletName) = do
   case collateralSupportedInEra (cardanoEra @ era) of
       Nothing -> throwE $ WalletError $ "selectCollateralFunds: collateral: era not supported :" ++ show (cardanoEra @ era)
       Just p -> return (TxInsCollateral p $  map getFundTxIn collateralFunds, collateralFunds)
-  
+
 dumpToFile :: FilePath -> TxInMode CardanoMode -> ActionM ()
 dumpToFile filePath tx = liftIO $ dumpToFileIO filePath tx
 
@@ -388,9 +373,9 @@ interpretPayMode payMode = do
       fundKey <- getName keyName
       walletRef <- getName destWallet
       return ( createAndStore (mkUTxOVariant networkId fundKey) (mkWalletFundStore walletRef)
-             , Text.unpack $ serialiseAddress $ keyAddress @ era networkId fundKey)
+             , Text.unpack $ serialiseAddress $ Utils.keyAddress @ era networkId fundKey)
     PayToScript scriptSpec destWallet -> do
-      walletRef <- getName destWallet      
+      walletRef <- getName destWallet
       (witness, script, scriptData, _scriptFee) <- makePlutusContext scriptSpec
       return ( createAndStore (mkUTxOScript networkId (script, scriptData) witness) (mkWalletFundStore walletRef)
                , Text.unpack $ serialiseAddress $ makeShelleyAddress networkId (PaymentCredentialByScript $ hashScript script) NoStakeAddress )

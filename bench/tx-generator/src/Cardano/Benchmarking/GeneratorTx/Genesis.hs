@@ -12,12 +12,12 @@ import qualified Data.ListMap as ListMap
 import           Prelude (error, filter)
 
 import           Cardano.Api
-import           Cardano.Api.Shelley (fromShelleyLovelace, fromShelleyPaymentCredential,
-                   fromShelleyStakeReference, ReferenceScript(..))
+import           Cardano.Api.Shelley (ReferenceScript (..), fromShelleyLovelace,
+                   fromShelleyPaymentCredential, fromShelleyStakeReference)
 import           Control.Arrow ((***))
 
-import           Cardano.TxGenerator.FundQueue
-import           Cardano.Benchmarking.GeneratorTx.Tx
+import           Cardano.TxGenerator.Fund
+import           Cardano.TxGenerator.Utils
 
 import           Cardano.Ledger.Shelley.API (Addr (..), ShelleyGenesis, sgInitialFunds)
 import           Ouroboros.Consensus.Shelley.Eras (StandardShelley)
@@ -58,7 +58,7 @@ genesisExpenditure ::
   -> (Tx era, Fund)
 genesisExpenditure networkId inputKey addr coin fee ttl outputKey = (tx, Fund $ InAnyCardanoEra cardanoEra fund)
  where
-  tx = mkGenesisTransaction (castKey inputKey) 0 ttl fee [ pseudoTxIn ] [ txout ]
+  tx = mkGenesisTransaction (castKey inputKey) ttl fee [ pseudoTxIn ] [ txout ]
 
   value = mkTxOutValueAdaOnly $ coin - fee
   txout = TxOut addr value TxOutDatumNone ReferenceScriptNone
@@ -75,3 +75,36 @@ genesisExpenditure networkId inputKey addr coin fee ttl outputKey = (tx, Fund $ 
   , _fundVal  = value
   , _fundSigningKey = Just outputKey
   }
+
+mkGenesisTransaction :: forall era .
+     IsShelleyBasedEra era
+  => SigningKey GenesisUTxOKey
+  -> SlotNo
+  -> Lovelace
+  -> [TxIn]
+  -> [TxOut CtxTx era]
+  -> Tx era
+mkGenesisTransaction key ttl fee txins txouts
+  = case makeTransactionBody txBodyContent of
+    Right b -> signShelleyTransaction b [WitnessGenesisUTxOKey key]
+    Left err -> error $ show err
+ where
+  txBodyContent = TxBodyContent {
+      txIns = zip txins $ repeat $ BuildTxWith $ KeyWitness KeyWitnessForSpending
+    , txInsCollateral = TxInsCollateralNone
+    , txInsReference = TxInsReferenceNone
+    , txOuts = txouts
+    , txFee = mkTxFee fee
+    , txValidityRange = (TxValidityNoLowerBound, mkTxValidityUpperBound ttl)
+    , txMetadata = TxMetadataNone
+    , txAuxScripts = TxAuxScriptsNone
+    , txExtraKeyWits = TxExtraKeyWitnessesNone
+    , txProtocolParams = BuildTxWith Nothing
+    , txWithdrawals = TxWithdrawalsNone
+    , txCertificates = TxCertificatesNone
+    , txUpdateProposal = TxUpdateProposalNone
+    , txMintValue = TxMintNone
+    , txScriptValidity = TxScriptValidityNone
+    , txReturnCollateral = TxReturnCollateralNone
+    , txTotalCollateral = TxTotalCollateralNone
+    }

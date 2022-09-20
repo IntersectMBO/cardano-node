@@ -9,10 +9,12 @@ where
 import           Prelude
 
 import           Cardano.Api
-import           Cardano.Benchmarking.GeneratorTx.Tx
 import qualified Data.ByteString as BS
 import qualified Data.Map.Strict as Map
 import           Data.Word (Word64)
+
+import           Cardano.TxGenerator.Utils
+
 
 maxMapSize :: Int
 maxMapSize = 1000
@@ -110,8 +112,8 @@ dummyTxSizeInEra metadata = case makeTransactionBody dummyTx of
     , txInsCollateral = TxInsCollateralNone
     , txInsReference = TxInsReferenceNone
     , txOuts = []
-    , txFee = mkFee 0
-    , txValidityRange = (TxValidityNoLowerBound, mkValidityUpperBound 0)
+    , txFee = mkTxFee 0
+    , txValidityRange = (TxValidityNoLowerBound, mkTxValidityUpperBound 0)
     , txMetadata = metadata
     , txAuxScripts = TxAuxScriptsNone
     , txExtraKeyWits = TxExtraKeyWitnessesNone

@@ -52,6 +52,7 @@ import           Ouroboros.Network.Protocol.TxSubmission2.Type (TxSubmission2)
 
 import           Cardano.Benchmarking.Types
 import           Cardano.Benchmarking.Version as Version
+import           Cardano.TxGenerator.Types (TPSRate)
 
 data BenchTracers =
   BenchTracers
