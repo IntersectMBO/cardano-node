@@ -22,6 +22,8 @@ let cluster = pkgs.supervisord-workbench-for-profile {
       inherit profileName useCabalRun profiled;
     };
 
+    inherit (cluster) profile;
+
     shellHook = { workbenchDevMode, useCabalRun, profiled, profileName, withMainnet }: ''
       while test $# -gt 0
       do shift; done       ## Flush argv[]
@@ -29,6 +31,7 @@ let cluster = pkgs.supervisord-workbench-for-profile {
       echo 'workbench shellHook:  workbenchDevMode=${toString workbenchDevMode} useCabalRun=${toString useCabalRun} profiled=${toString profiled} profileName=${profileName}'
       export WB_BACKEND=supervisor
       export WB_SHELL_PROFILE=${profileName}
+      export WB_SHELL_PROFILE_DIR=${profile}
 
       ${optionalString
         workbenchDevMode
