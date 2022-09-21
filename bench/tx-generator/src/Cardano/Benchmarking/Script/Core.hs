@@ -105,7 +105,7 @@ defineSigningKey :: KeyName -> TextEnvelope -> ActionM ()
 defineSigningKey name descr
   = case parseSigningKey descr of
     Right key -> setName name key
-    Left err -> throwE $ ApiError $ show err
+    Left err -> liftTxGenError $ ApiError err
 
 addFund :: AnyCardanoEra -> WalletName -> TxIn -> Lovelace -> KeyName -> ActionM ()
 addFund era wallet txIn lovelace keyName = do
@@ -172,7 +172,7 @@ queryEra = do
   ret <- liftIO $ queryNodeLocalState localNodeConnectInfo (Just $ chainTipToChainPoint chainTip) $ QueryCurrentEra CardanoModeIsMultiEra
   case ret of
     Right era -> return era
-    Left err -> throwE $ ApiError $ show err
+    Left err -> liftTxGenError $ PlainError $ show err
 
 queryRemoteProtocolParameters :: ActionM ProtocolParameters
 queryRemoteProtocolParameters = do
@@ -185,10 +185,10 @@ queryRemoteProtocolParameters = do
       res <- liftIO $ queryNodeLocalState localNodeConnectInfo (Just $ chainTipToChainPoint chainTip) query
       case res of
         Right (Right pp) -> return pp
-        Right (Left err) -> throwE $ ApiError $ show err
-        Left err -> throwE $ ApiError $ show err
+        Right (Left err) -> liftTxGenError $ PlainError $ show err
+        Left err -> liftTxGenError $ PlainError $ show err
   case era of
-    AnyCardanoEra ByronEra   -> throwE $ ApiError "queryRemoteProtocolParameters Byron not supported"
+    AnyCardanoEra ByronEra   -> liftTxGenError $ PlainError "queryRemoteProtocolParameters Byron not supported"
     AnyCardanoEra ShelleyEra -> callQuery $ QueryInEra ShelleyEraInCardanoMode $ QueryInShelleyBasedEra ShelleyBasedEraShelley QueryProtocolParameters
     AnyCardanoEra AllegraEra -> callQuery $ QueryInEra AllegraEraInCardanoMode $ QueryInShelleyBasedEra ShelleyBasedEraAllegra QueryProtocolParameters
     AnyCardanoEra MaryEra    -> callQuery $ QueryInEra    MaryEraInCardanoMode $ QueryInShelleyBasedEra ShelleyBasedEraMary    QueryProtocolParameters
@@ -248,8 +248,8 @@ submitInEra submitMode generator era = do
     DiscardTX -> liftIO $ Streaming.mapM_ forceTx txStream
  where
   forceTx (Right _) = return ()
-  forceTx (Left err) = error err
-  showTx (Left err) = error err
+  forceTx (Left err) = error $ show err
+  showTx (Left err) = error $ show err
   showTx (Right tx) = '\n' : show tx
    -- todo: use Streaming.run
   submitAll :: (Tx era -> ActionM ()) -> TxStream IO era -> ActionM ()
@@ -257,7 +257,7 @@ submitInEra submitMode generator era = do
     step <- liftIO $ Streaming.inspect stream
     case step of
       (Left ()) -> return ()
-      (Right (Left err :> _rest)) -> throwE $ ApiError err
+      (Right (Left err :> _rest)) -> liftTxGenError $ PlainError $ show err
       (Right (Right tx :> rest)) -> do
         callback tx
         submitAll callback rest
@@ -395,7 +395,7 @@ spendAutoScript ::
   -> ActionM (ScriptData, ScriptRedeemer)
 spendAutoScript protocolParameters script = do
   perTxBudget <- case protocolParamMaxTxExUnits protocolParameters of
-    Nothing -> throwE $ ApiError "Cannot determine protocolParamMaxTxExUnits"
+    Nothing -> liftTxGenError $ PlainError "Cannot determine protocolParamMaxTxExUnits"
     Just b -> return b
   traceDebug $ "Plutus auto mode : Available budget per TX: " ++ show perTxBudget
 
@@ -412,7 +412,7 @@ spendAutoScript protocolParameters script = do
       Right use -> Right $ (executionSteps use <= executionSteps budget) && (executionMemory use <= executionMemory budget)
     searchUpperBound = 100000 -- The highest loop count that is tried. (This is about 50 times the current mainnet limit.)
   redeemer <- case startSearch isInLimits 0 searchUpperBound of
-    Left err -> throwE $ ApiError $ "cannot find fitting redeemer :" ++ err
+    Left err -> liftTxGenError $ PlainError $ "cannot find fitting redeemer :" ++ err
     Right n -> return $ toLoopArgument n
   return (ScriptDataNumber 0, redeemer)
   where
@@ -443,7 +443,7 @@ makePlutusContext scriptSpec = do
     Nothing -> throwE $ WalletError "unexpected protocolParamPrices == Nothing in runPlutusBenchmark"
 
   perTxBudget <- case protocolParamMaxTxExUnits protocolParameters of
-    Nothing -> throwE $ ApiError "Cannot determine protocolParamMaxTxExUnits"
+    Nothing -> liftTxGenError $ PlainError "Cannot determine protocolParamMaxTxExUnits"
     Just b -> return b
   traceDebug $ "Plutus auto mode : Available budget per TX: " ++ show perTxBudget
 

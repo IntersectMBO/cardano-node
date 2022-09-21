@@ -25,8 +25,8 @@ type WalletRef = MVar FundQueue
 -- 'ToUTxOList era' is more powerful than '[ ToUTxO era ]' but
 -- '[ ToUTxO era ]` is easier to construct.
 
---type TxStream m era = Stream (Of (Tx era)) m (Maybe String)
-type TxStream m era = Stream (Of (Either String (Tx era))) m ()
+--type TxStream m era = Stream (Of (Tx era)) m (Maybe TxGenError)
+type TxStream m era = Stream (Of (Either TxGenError (Tx era))) m ()
 
 createAndStore :: ToUTxO era -> (Fund -> m ()) -> CreateAndStore m era
 createAndStore create store lovelace = (utxo, toStore)
@@ -55,7 +55,7 @@ mkWalletFundStore walletRef fund = modifyMVar_  walletRef
 
 walletSource :: WalletRef -> Int -> FundSource IO
 walletSource ref munch = modifyMVar ref $ \fifo -> return $ case removeFunds munch fifo of
-  Nothing -> (fifo, Left "WalletSource: out of funds")
+  Nothing -> (fifo, Left $ PlainError "WalletSource: out of funds")
   Just (newFifo, funds) -> (newFifo, Right funds) 
 
 mangleWithChange :: Monad m => CreateAndStore m era -> CreateAndStore m era -> CreateAndStoreList m era PayWithChange

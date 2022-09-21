@@ -1,3 +1,5 @@
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# OPTIONS_GHC -fno-warn-partial-fields #-}
 
@@ -7,7 +9,13 @@ module  Cardano.TxGenerator.Types
 
 import           Cardano.Api
 
+import           Cardano.Api.Shelley (ProtocolParameters)
+import           Cardano.Ledger.Shelley.API (ShelleyGenesis)
+import           Cardano.Node.Protocol.Types (SomeConsensusProtocol)
+import           Ouroboros.Consensus.Shelley.Eras (StandardShelley)
+
 import           Cardano.TxGenerator.Fund (Fund)
+
 
 -- some type aliases to keep compatibility with code in Cardano.Benchmarking
 type NumberOfInputsPerTx  = Int
@@ -17,9 +25,9 @@ type TxAdditionalSize     = Int
 type TPSRate              = Double
 
 
-type TxGenerator era = [Fund] -> [TxOut CtxTx era] -> Either String (Tx era, TxId)
+type TxGenerator era = [Fund] -> [TxOut CtxTx era] -> Either TxGenError (Tx era, TxId)
 
-type FundSource m       = m (Either String [Fund])
+type FundSource m       = m (Either TxGenError [Fund])
 type FundToStore m      = Fund -> m ()
 type FundToStoreList m  = [Fund] -> m ()
 
@@ -33,6 +41,7 @@ data TxGenTxParams = TxGenTxParams
   , txParamAddTxSize  :: !Int                   -- ^ Extra transaction payload, in bytes -- Note [Tx additional size]
   , txParamInputs     :: !NumberOfInputsPerTx   -- ^ Inputs per transaction
   , txParamOutputs    :: !NumberOfOutputsPerTx  -- ^ Outputs per transaction
+  , txParamTTL        :: !SlotNo                -- ^ Time-to-live
   }
   deriving Show
 
@@ -43,8 +52,15 @@ defaultTxGenTxParams = TxGenTxParams
   , txParamAddTxSize  = 100
   , txParamInputs     = 2
   , txParamOutputs    = 2
+  , txParamTTL        = 1_000_000
   }
 
+data TxEnvironment = TxEnvironment
+  { txEnvNetworkId        :: !NetworkId
+  , txEnvGenesis          :: !(ShelleyGenesis StandardShelley)
+  , txEnvProtocolInfo     :: !SomeConsensusProtocol
+  , txEnvProtocolParams   :: !ProtocolParameters
+  }
 
 data TxGenConfig = TxGenConfig
   { confMinUtxoValue  :: !Lovelace  -- ^ Minimum value required per UTxO entry
@@ -68,9 +84,16 @@ data TxGenPlutusParams =
   | PlutusOff                           -- ^ Do not generate Plutus Txs
   deriving Show
 
-newtype TxGenError
-  = TxFileError (FileError TextEnvelopeError)
-  deriving Show
+
+data TxGenError where
+  ApiError    :: Error e => !e -> TxGenError
+  PlainError  :: !String -> TxGenError
+
+instance Show TxGenError where
+  show = \case
+    ApiError e    -> "cardano-api error: " ++ displayError e
+    PlainError s  -> s
+
 
 {-
 Note [Tx additional size]

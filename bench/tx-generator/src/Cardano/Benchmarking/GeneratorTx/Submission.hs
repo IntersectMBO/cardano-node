@@ -30,8 +30,8 @@ module Cardano.Benchmarking.GeneratorTx.Submission
   , txStreamSource
   ) where
 
-import           Prelude (String, error)
 import           Cardano.Prelude hiding (ByteString, atomically, retry, state, threadDelay)
+import           Prelude (String, error)
 
 import qualified Control.Concurrent.STM as STM
 
@@ -49,10 +49,10 @@ import           Cardano.Tracing.OrphanInstances.Shelley ()
 import           Ouroboros.Network.Protocol.TxSubmission2.Type (TokBlockingStyle (..))
 
 import           Cardano.Api
-import           Cardano.TxGenerator.Types (TPSRate)
+import           Cardano.TxGenerator.Types (TPSRate, TxGenError)
 
-import           Cardano.Benchmarking.TpsThrottle
 import           Cardano.Benchmarking.LogTypes
+import           Cardano.Benchmarking.TpsThrottle
 import           Cardano.Benchmarking.Types
 
 import           Cardano.Benchmarking.GeneratorTx.SubmissionClient
@@ -143,7 +143,7 @@ txStreamSource streamRef tpsThrottle = Active worker
     -- Therefore it is possible that the submission client requests TXs from an empty TxStream.
     -- In other words, it is not an error to request more TXs than there are in the TxStream.
     StreamEmpty -> return []
-    StreamError err -> error err
+    StreamError err -> error $ show err
     StreamActive tx -> do
       l <- unFold $ pred n
       return $ tx:l
@@ -154,7 +154,7 @@ txStreamSource streamRef tpsThrottle = Active worker
     StreamError err -> return (StreamError err, StreamError err)
     StreamActive s -> update <$> Streaming.next s
    where
-    update :: Either () (Either String (Tx era), TxStream IO era) -> (StreamState (TxStream IO era), StreamState (Tx era))
+    update :: Either () (Either TxGenError (Tx era), TxStream IO era) -> (StreamState (TxStream IO era), StreamState (Tx era))
     update x = case x of
       Left () -> (StreamEmpty, StreamEmpty)
       Right (Right tx, t) -> (StreamActive t, StreamActive tx)
@@ -162,5 +162,5 @@ txStreamSource streamRef tpsThrottle = Active worker
 
 data StreamState x
   = StreamEmpty
-  | StreamError String
+  | StreamError TxGenError
   | StreamActive x

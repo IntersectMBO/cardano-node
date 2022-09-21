@@ -44,7 +44,7 @@ import           Cardano.TxGenerator.Types (NumberOfTxs, TPSRate, TxGenError (..
 
 readSigningKey :: SigningKeyFile -> ExceptT TxGenError IO (SigningKey PaymentKey)
 readSigningKey =
-  withExceptT TxFileError . newExceptT . readKey . unSigningKeyFile
+  withExceptT ApiError . newExceptT . readKey . unSigningKeyFile
  where
   readKey :: FilePath -> IO (Either (FileError TextEnvelopeError) (SigningKey PaymentKey))
   readKey f = flip readFileTextEnvelopeAnyOf f
